@@ -1463,3 +1463,30 @@ test "a field this engine cannot compute keeps its cached result" {
   debug_inspect(input.runs[0].field, content="NotAField")
   inspect(input.runs[0].text, content="see section 4")
 }
+
+///|
+test "a level's off-grid hanging indent reaches the marker tab's ruler" {
+  // numbering ind: left=1352 twips (67.6pt), hanging=360 (18pt). The
+  // level's indents land after the style cascade resolves, so the
+  // implicit hanging stop has to be re-derived from them — this is the
+  // technical manual's exact geometry, where missing it started every
+  // numbered first line 4.4pt late and cascaded the paragraph's wraps.
+  let doc = @docx.read_docx(
+    docx_bytes(
+      (
+        #|<w:p><w:pPr><w:numPr><w:ilvl w:val="0"/><w:numId w:val="1"/></w:numPr></w:pPr><w:r><w:t>item</w:t></w:r></w:p>
+      ),
+      numbering=(
+        #|<w:abstractNum w:abstractNumId="100"><w:lvl w:ilvl="0"><w:start w:val="1"/><w:numFmt w:val="lowerLetter"/><w:lvlText w:val="(%1)"/><w:pPr><w:ind w:left="1352" w:hanging="360"/></w:pPr></w:lvl></w:abstractNum>
+        #|<w:num w:numId="1"><w:abstractNumId w:val="100"/></w:num>
+      ),
+    ),
+  )
+  guard! doc.blocks[0] is Paragraph(input~, ..)
+  inspect(input.style.indent_left_pt, content="67.6")
+  inspect(input.style.indent_first_pt, content="-18")
+  debug_inspect(
+    input.style.tabs.stops,
+    content="[{ position_pt: 67.6, align: TabLeft }]",
+  )
+}

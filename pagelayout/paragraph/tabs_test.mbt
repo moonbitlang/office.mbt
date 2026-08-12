@@ -275,3 +275,57 @@ test "a decimal stop aligns the separator on the stop" {
   }
   inspect(right, content="200")
 }
+
+///|
+test "a hanging indent supplies the implicit stop a marker tab aims for" {
+  // Word treats a hanging indent's text position as a tab stop. The
+  // indent here (67.6pt) is off the 36pt default grid; without the
+  // implicit stop the tab would sail to 72pt, starting every first line
+  // late and cascading the paragraph's wrap points — the corpus's
+  // technical manual paginated three pages long from exactly that.
+  let style = @paragraph.ParagraphStyle::{
+    ..@paragraph.ParagraphStyle::default(),
+    indent_left_pt: 67.6,
+    indent_first_pt: -18.0,
+  }.with_hanging_tab_stop()
+  debug_inspect(
+    style.tabs.stops,
+    content=(
+      #|[{ position_pt: 67.6, align: TabLeft }]
+    ),
+  )
+  // idempotent: applying again adds nothing
+  debug_inspect(
+    style.with_hanging_tab_stop().tabs.stops,
+    content=(
+      #|[{ position_pt: 67.6, align: TabLeft }]
+    ),
+  )
+  // and a non-hanging style is untouched
+  debug_inspect(
+    @paragraph.ParagraphStyle::default().with_hanging_tab_stop().tabs.stops,
+    content="[]",
+  )
+  let run = @paragraph.RunStyle::{
+    family: "Carlito",
+    size_pt: 10,
+    bold: false,
+    italic: false,
+    color: @pagelayout.black,
+  }
+  let input = @paragraph.ParagraphInput::{
+    runs: [{ text: "(a)\tthe", style: run, field: NotAField }],
+    style,
+  }
+  let laid = @paragraph.layout_paragraph(input, 453)
+  let line = laid.lines[0]
+  // pen after "(a)" and the tab: exactly the indent's text position
+  let mut x = line.runs[0].x_pt
+  for i, advance in line.runs[0].advances_pt {
+    if i == 4 {
+      break
+    }
+    x += advance
+  }
+  inspect(x, content="67.6")
+}

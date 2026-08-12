@@ -276,6 +276,10 @@ fn read_paragraph(
             }
         }
       }
+      // The level's indents arrive after ParaProps::resolve built the
+      // ruler, so the hanging stop the marker's suffix tab aims for has
+      // to be re-derived from them.
+      style = style.with_hanging_tab_stop()
       match counters.advance(numbering, num_id, depth) {
         Some(label) => {
           // Word styles a marker from the level's own w:rPr over the

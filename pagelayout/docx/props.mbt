@@ -216,7 +216,11 @@ pub fn ParaProps::resolve(
   self : ParaProps,
   default_tab_pt? : Double = 36.0,
 ) -> @paragraph.ParagraphStyle {
-  {
+  // The implicit hanging-indent tab stop (see
+  // ParagraphStyle::with_hanging_tab_stop) is applied here for indents
+  // the cascade supplies — and applied again by the reader after a
+  // numbering level's indents land, which arrive after this resolution.
+  let resolved = @paragraph.ParagraphStyle::{
     align: self.align.unwrap_or(AlignLeft),
     indent_left_pt: twips_pt(self.indent_left),
     indent_right_pt: twips_pt(self.indent_right),
@@ -229,4 +233,5 @@ pub fn ParaProps::resolve(
       default_interval_pt: default_tab_pt,
     },
   }
+  resolved.with_hanging_tab_stop()
 }

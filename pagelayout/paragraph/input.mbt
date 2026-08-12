@@ -69,6 +69,39 @@ pub(all) struct ParagraphStyle {
 } derive(Eq, Debug, ToJson)
 
 ///|
+/// The style with a hanging indent's implicit tab stop in its ruler.
+///
+/// A hanging indent carries an implicit tab stop at its text position —
+/// it is what a list marker's suffix tab is designed to hit. Word
+/// advances the tab after "(a)" to the indent-left position, not to the
+/// next default grid line beyond it; without this stop, every first line
+/// of a hanging paragraph whose indent is off the 36pt grid starts late,
+/// and the paragraph's every wrap point cascades from there. Idempotent,
+/// and a no-op for non-hanging styles.
+pub fn ParagraphStyle::with_hanging_tab_stop(
+  self : ParagraphStyle,
+) -> ParagraphStyle {
+  if self.indent_first_pt >= 0.0 {
+    return self
+  }
+  if self.tabs.stops
+    .iter()
+    .any(s => (s.position_pt - self.indent_left_pt).abs() < 0.01) {
+    return self
+  }
+  let merged = self.tabs.stops.copy()
+  let mut at = merged.length()
+  for i, stop in merged {
+    if stop.position_pt > self.indent_left_pt {
+      at = i
+      break
+    }
+  }
+  merged.insert(at, { position_pt: self.indent_left_pt, align: TabLeft })
+  { ..self, tabs: { ..self.tabs, stops: merged } }
+}
+
+///|
 /// Word's defaults: left-aligned, no indents or extra spacing, single
 /// line spacing.
 pub fn ParagraphStyle::default() -> ParagraphStyle {
