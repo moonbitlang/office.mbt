@@ -1046,14 +1046,17 @@ pub fn capability_commands() -> Array[CapabilityCommand] {
     },
     {
       name: "render",
-      summary: "Lay out a DOCX and draw it as a paginated PDF",
-      usage: "office render FILE --output OUT.pdf [--overwrite] [--json|--jsonl]",
+      summary: "Lay out a DOCX and draw it as paginated PDF or SVG",
+      usage: "office render FILE --output OUT.(pdf|svg) [--pages RANGE] [--overwrite] [--json|--jsonl]",
       formats: ["docx"],
       aliases: [],
       inputs: [
         capability_field("file", "path", true, "existing DOCX package"),
         capability_field(
-          "output", "path", true, "destination .pdf file; created atomically, refused when present unless --overwrite",
+          "output", "path", true, "destination path; the extension selects the backend (.pdf or .svg). Created atomically, refused when present unless --overwrite. A multi-page SVG render writes <stem>-<n>.svg per page and publishes each file individually, which is not a single atomic swap across the set",
+        ),
+        capability_field(
+          "pages", "string", false, "pages to render: 1-based numbers and N-M ranges separated by commas, e.g. `3`, `2-5`, `1,4-6`. Normalized to ascending order with duplicates removed, so a page is never published twice. Omitted renders every page",
         ),
         capability_field(
           "overwrite", "boolean", false, "replace an existing destination (remove-then-stage; not a single atomic swap)",
@@ -1074,22 +1077,25 @@ pub fn capability_commands() -> Array[CapabilityCommand] {
           "format", "literal(docx)", true, "the structurally verified package format",
         ),
         capability_field(
-          "output", "path", true, "the published PDF path, bounded",
+          "backend", "enum(pdf|svg)", true, "the emitter selected by the output extension",
         ),
         capability_field(
-          "backend", "literal(pdf)", true, "the emitter that drew the output",
+          "outputs", "array(object{path:path,bytes_written:integer})", true, "every published artifact in page order; one entry for PDF, one per rendered page for multi-page SVG",
         ),
         capability_field(
-          "bytes_written", "integer", true, "exact published byte count",
+          "bytes_written", "integer", true, "total bytes published across every artifact",
         ),
         capability_field(
-          "pages", "integer", true, "pages the document laid out to",
+          "pages_rendered", "integer", true, "pages actually drawn, after --pages selection",
         ),
         capability_field(
-          "page_width_pt", "number", true, "first page width in points",
+          "pages_total", "integer", true, "pages the whole document laid out to, before selection",
         ),
         capability_field(
-          "page_height_pt", "number", true, "first page height in points",
+          "page_width_pt", "number", true, "first rendered page width in points",
+        ),
+        capability_field(
+          "page_height_pt", "number", true, "first rendered page height in points",
         ),
         capability_field(
           "fonts_embedded", "integer", true, "distinct faces the document uses",
@@ -1104,7 +1110,7 @@ pub fn capability_commands() -> Array[CapabilityCommand] {
           "unsupported_total", "integer", true, "notices before bounding",
         ),
         capability_field(
-          "byte_determinism", "literal(per-runtime)", true, "rendering one document twice on one runtime is byte-identical; rendering it on native and wasm is not, because the deflate implementation differs by backend. The document is identical either way -- same pages, same glyph positions, same embedded font subset",
+          "byte_determinism", "enum(per-runtime|cross-runtime)", true, "PDF is per-runtime: identical on one runtime, not across native and wasm, because the deflate implementation differs by backend. The document is identical either way -- same pages, same glyph positions, same embedded font subset. SVG is cross-runtime, being uncompressed",
         ),
       ],
       output_modes: ["human", "json", "jsonl"],

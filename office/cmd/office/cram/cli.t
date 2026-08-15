@@ -17,7 +17,7 @@ and JSONL inventories without deferred PowerPoint or MCP entries.
   $ office.exe help | sed -n '1,8p'
   Office capability registry
     Schema: office.capabilities/2
-    Fingerprint: crc32:afe96983
+    Fingerprint: crc32:adde35a3
   Formats:
     docx (aliases: word) — WordprocessingML documents
     xlsx (aliases: excel) — SpreadsheetML workbooks
@@ -40,10 +40,10 @@ and JSONL inventories without deferred PowerPoint or MCP entries.
   {"formats":["xlsx"],"variants":[{"name":"xlsx","result_schema":"office.xlsx.query/1","constraints":["format=xlsx"]}]}
 
   $ office.exe help all --json | jq -c '{schema,success,capability_schema:.data.schema,fingerprint:.data.fingerprint,names:[.data.records[].name]}'
-  {"schema":"office.output/1","success":true,"capability_schema":"office.capabilities/2","fingerprint":"crc32:afe96983","names":["docx","xlsx","help","identify","outline","get","text","query","validate","dump","replay","issues","preview","render","create","template","edit","annotate","batch","raw"]}
+  {"schema":"office.output/1","success":true,"capability_schema":"office.capabilities/2","fingerprint":"crc32:adde35a3","names":["docx","xlsx","help","identify","outline","get","text","query","validate","dump","replay","issues","preview","render","create","template","edit","annotate","batch","raw"]}
 
   $ office.exe help all --jsonl | jq -s -c 'map({schema,fingerprint,kind,name})'
-  [{"schema":"office.capability/2","fingerprint":"crc32:afe96983","kind":"format","name":"docx"},{"schema":"office.capability/2","fingerprint":"crc32:afe96983","kind":"format","name":"xlsx"},{"schema":"office.capability/2","fingerprint":"crc32:afe96983","kind":"command","name":"help"},{"schema":"office.capability/2","fingerprint":"crc32:afe96983","kind":"command","name":"identify"},{"schema":"office.capability/2","fingerprint":"crc32:afe96983","kind":"command","name":"outline"},{"schema":"office.capability/2","fingerprint":"crc32:afe96983","kind":"command","name":"get"},{"schema":"office.capability/2","fingerprint":"crc32:afe96983","kind":"command","name":"text"},{"schema":"office.capability/2","fingerprint":"crc32:afe96983","kind":"command","name":"query"},{"schema":"office.capability/2","fingerprint":"crc32:afe96983","kind":"command","name":"validate"},{"schema":"office.capability/2","fingerprint":"crc32:afe96983","kind":"command","name":"dump"},{"schema":"office.capability/2","fingerprint":"crc32:afe96983","kind":"command","name":"replay"},{"schema":"office.capability/2","fingerprint":"crc32:afe96983","kind":"command","name":"issues"},{"schema":"office.capability/2","fingerprint":"crc32:afe96983","kind":"command","name":"preview"},{"schema":"office.capability/2","fingerprint":"crc32:afe96983","kind":"command","name":"render"},{"schema":"office.capability/2","fingerprint":"crc32:afe96983","kind":"command","name":"create"},{"schema":"office.capability/2","fingerprint":"crc32:afe96983","kind":"command","name":"template"},{"schema":"office.capability/2","fingerprint":"crc32:afe96983","kind":"command","name":"edit"},{"schema":"office.capability/2","fingerprint":"crc32:afe96983","kind":"command","name":"annotate"},{"schema":"office.capability/2","fingerprint":"crc32:afe96983","kind":"command","name":"batch"},{"schema":"office.capability/2","fingerprint":"crc32:afe96983","kind":"command","name":"raw"}]
+  [{"schema":"office.capability/2","fingerprint":"crc32:adde35a3","kind":"format","name":"docx"},{"schema":"office.capability/2","fingerprint":"crc32:adde35a3","kind":"format","name":"xlsx"},{"schema":"office.capability/2","fingerprint":"crc32:adde35a3","kind":"command","name":"help"},{"schema":"office.capability/2","fingerprint":"crc32:adde35a3","kind":"command","name":"identify"},{"schema":"office.capability/2","fingerprint":"crc32:adde35a3","kind":"command","name":"outline"},{"schema":"office.capability/2","fingerprint":"crc32:adde35a3","kind":"command","name":"get"},{"schema":"office.capability/2","fingerprint":"crc32:adde35a3","kind":"command","name":"text"},{"schema":"office.capability/2","fingerprint":"crc32:adde35a3","kind":"command","name":"query"},{"schema":"office.capability/2","fingerprint":"crc32:adde35a3","kind":"command","name":"validate"},{"schema":"office.capability/2","fingerprint":"crc32:adde35a3","kind":"command","name":"dump"},{"schema":"office.capability/2","fingerprint":"crc32:adde35a3","kind":"command","name":"replay"},{"schema":"office.capability/2","fingerprint":"crc32:adde35a3","kind":"command","name":"issues"},{"schema":"office.capability/2","fingerprint":"crc32:adde35a3","kind":"command","name":"preview"},{"schema":"office.capability/2","fingerprint":"crc32:adde35a3","kind":"command","name":"render"},{"schema":"office.capability/2","fingerprint":"crc32:adde35a3","kind":"command","name":"create"},{"schema":"office.capability/2","fingerprint":"crc32:adde35a3","kind":"command","name":"template"},{"schema":"office.capability/2","fingerprint":"crc32:adde35a3","kind":"command","name":"edit"},{"schema":"office.capability/2","fingerprint":"crc32:adde35a3","kind":"command","name":"annotate"},{"schema":"office.capability/2","fingerprint":"crc32:adde35a3","kind":"command","name":"batch"},{"schema":"office.capability/2","fingerprint":"crc32:adde35a3","kind":"command","name":"raw"}]
 
 Installed help exposes every consumed JSON input contract without requiring
 repository-only documentation. Inventory and individual records are versioned;
@@ -718,16 +718,24 @@ warnings with cell locations, and the exit status stays zero.
   $ office.exe issues issues-probe.xlsx
   xlsx: 0 error(s), 0 warning(s)
 
-The render command lays a DOCX out and draws it as a paginated PDF. Unlike
-preview, which produces reflowable HTML, this answers questions about pages:
-the report leads with the page count and geometry. Publication goes through
-the same atomic create-new path, and XLSX is refused by name rather than
-rendered blank, because the layout engine has no XLSX frontend yet.
+The render command lays a DOCX out and draws it as paginated PDF or SVG.
+Unlike preview, which produces reflowable HTML, this answers questions about
+pages: the report leads with the page counts. The output extension picks the
+backend, publication goes through the same atomic create-new path, and XLSX is
+refused by name rather than rendered blank.
 
-  $ office.exe render "$TESTDIR/../../../../docx2html/tests/cram/fixtures/single-paragraph.docx" --output rendered.pdf --json | jq -c '{success,data:{schema:.data.schema,format:.data.format,backend:.data.backend,pages:.data.pages,w:.data.page_width_pt,h:.data.page_height_pt,determinism:.data.byte_determinism}}'
-  {"success":true,"data":{"schema":"office.render/1","format":"docx","backend":"pdf","pages":1,"w":612,"h":792,"determinism":"per-runtime"}}
+  $ office.exe render "$TESTDIR/../../../../docx2html/tests/cram/fixtures/single-paragraph.docx" --output rendered.pdf --json | jq -c '{success,data:{schema:.data.schema,backend:.data.backend,rendered:.data.pages_rendered,total:.data.pages_total,w:.data.page_width_pt,h:.data.page_height_pt,det:.data.byte_determinism}}'
+  {"success":true,"data":{"schema":"office.render/1","backend":"pdf","rendered":1,"total":1,"w":595.3,"h":841.9,"det":"per-runtime"}}
   $ head -c 8 rendered.pdf
   %PDF-1.7 (no-eol)
+
+SVG is the readable backend: uncompressed, so it is identical on every runtime
+and an agent can read the coordinates a glyph was placed at.
+
+  $ office.exe render "$TESTDIR/../../../../docx2html/tests/cram/fixtures/single-paragraph.docx" --output page.svg --json | jq -c '{backend:.data.backend,det:.data.byte_determinism,outs:[.data.outputs[].path]}'
+  {"backend":"svg","det":"cross-runtime","outs":["page.svg"]}
+  $ head -c 5 page.svg
+  <svg  (no-eol)
 
 Rendering the same document twice on one runtime is byte-identical, which is
 the determinism the report advertises.
@@ -746,8 +754,8 @@ An existing destination is refused with the shared transaction code unless
   $ office.exe render "$TESTDIR/../../../../docx2html/tests/cram/fixtures/single-paragraph.docx" --output rendered.pdf --overwrite --jsonl | jq -c '{success,schema:.data.schema}'
   {"success":true,"schema":"office.render/1"}
 
-A workbook is refused by name, and a destination that is not a .pdf is
-refused before any work happens.
+A workbook is refused by name, and a destination whose extension names no
+backend is refused before any work happens.
 
   $ office.exe render "$TESTDIR/../../../../fixtures/excelize/test/Book1.xlsx" --output book.pdf --json > render-xlsx.json 2>&1; echo $?
   1
@@ -757,6 +765,24 @@ refused before any work happens.
   1
   $ jq -c '{success,code:.error.code}' render-ext.json
   {"success":false,"code":"office.invalid_arguments"}
+
+--pages selects a subset. A spec is normalized to ascending order with
+duplicates removed, so a page cannot be published twice by writing it twice,
+and SVG names each file after the document page it holds rather than its
+position in the selection.
+
+  $ office.exe render "$TESTDIR/../../../../docx2html/tests/stress/fixtures/docxcorp-reports-en-015012bf8890.docx" --output sel.svg --pages 3,1-2,3 --json | jq -c '{rendered:.data.pages_rendered,total:.data.pages_total,outs:[.data.outputs[].path]}'
+  {"rendered":3,"total":11,"outs":["sel-1.svg","sel-2.svg","sel-3.svg"]}
+  $ office.exe render "$TESTDIR/../../../../docx2html/tests/stress/fixtures/docxcorp-reports-en-015012bf8890.docx" --output pair.pdf --pages 2-3 --json | jq -c '{rendered:.data.pages_rendered,total:.data.pages_total,outs:[.data.outputs[].path]}'
+  {"rendered":2,"total":11,"outs":["pair.pdf"]}
+
+Page zero, a reversed range, and a page past the end are all refused with the
+same message, because all three are the same mistake from the caller's side.
+
+  $ for spec in 0 5-2 99; do office.exe render "$TESTDIR/../../../../docx2html/tests/stress/fixtures/docxcorp-reports-en-015012bf8890.docx" --output bad.pdf --pages "$spec" --json 2>&1 | jq -c '{code:.error.code}'; done
+  {"code":"office.invalid_arguments"}
+  {"code":"office.invalid_arguments"}
+  {"code":"office.invalid_arguments"}
 
 The preview command publishes one deterministic self-contained HTML document
 through the atomic create-new path: charts render as inline SVG, an existing
