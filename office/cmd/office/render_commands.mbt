@@ -34,6 +34,20 @@ let office_render_max_notices : Int = 64
 let office_render_max_pages : Int = 2048
 
 ///|
+/// Ceiling on the total bytes one invocation may publish across every
+/// artifact.
+///
+/// A per-file limit alone does not bound the work. One image referenced from
+/// every page produces a set that is arbitrarily large while every member
+/// stays comfortably under the per-file cap.
+let office_render_max_total_bytes : Int64 = 256L * 1024L * 1024L
+
+///|
+/// Ceiling on one engine notice, so a pathological message cannot make the
+/// report unbounded through a field that is otherwise bounded only by count.
+let office_render_max_notice_chars : Int = 512
+
+///|
 priv enum OfficeRenderBackend {
   RenderPdf
   RenderSvg
@@ -53,7 +67,7 @@ priv struct OfficeRenderStats {
   pages_rendered : Int
   width_pt : Double
   height_pt : Double
-  fonts_embedded : Int
+  fonts_used : Int
   unsupported : Array[String]
   unsupported_total : Int
   images_dropped : Int
@@ -118,7 +132,7 @@ fn office_render_page_number(text : StringView, total : Int) -> Int raise {
 fn office_render_parse_pages(spec : String, total : Int) -> Array[Int] raise {
   let selected : Map[Int, Unit] = Map([])
   for part in spec.split(",") {
-    let trimmed = part.trim_space()
+    let trimmed = part.trim()
     guard trimmed.length() > 0 else {
       raise CliFailure(office_render_pages_error(total))
     }
@@ -209,17 +223,29 @@ fn office_render_stats(
     if unsupported.length() >= office_render_max_notices {
       break
     }
-    unsupported.push(office_preview_clean_text(notice))
+    unsupported.push(
+      office_preview_clean_text(
+        human_text(notice, office_render_max_notice_chars),
+      ),
+    )
   }
   {
     pages_total: model.pages.length(),
     pages_rendered: selected.pages.length(),
     width_pt,
     height_pt,
-    fonts_embedded: selected.fonts.length(),
+    fonts_used: selected.fonts.length(),
     unsupported,
     unsupported_total: unsupported_all.length(),
-    images_dropped: @pagelayout_pdf.unembeddable_images(selected).length(),
+    // one entry per distinct *reason*, each carrying its own occurrence
+    // count, so the number of images is the sum and not the entry count
+    images_dropped: {
+      let mut total = 0
+      for entry in @pagelayout_pdf.unembeddable_images(selected) {
+        total = total + entry.1
+      }
+      total
+    },
   }
 }
 
@@ -248,22 +274,81 @@ fn office_render_page_path(
 }
 
 ///|
-/// Publish one artifact through the shared create-new transaction.
+/// Refuse every destination that already exists, before anything is drawn.
+///
+/// This is what keeps the common multi-file failure whole. Publishing page 5
+/// into an occupied path after pages 1-4 have landed leaves a set that is
+/// half new and half old, and no error envelope can put that back. Checking
+/// first turns it into a refusal with nothing written.
+///
+/// It is a check, not a lock: a path created between here and publication is
+/// still caught by the create-new transaction, which is the guarantee that
+/// actually holds.
+async fn office_render_preflight(
+  paths : Array[String],
+  overwrite : Bool,
+) -> Unit {
+  if overwrite {
+    return
+  }
+  for path in paths {
+    let taken = @afs.exists(path) catch { _ => false }
+    if taken {
+      raise CliFailure(
+        @lib.protocol_error(
+          "office.transaction.output_exists",
+          "destination already exists",
+          details=Json::object({
+            "output": Json::string(human_text(path, 512)),
+            "outputs_planned": Json::number(paths.length().to_double()),
+          }),
+        ),
+      )
+    }
+  }
+}
+
+///|
+/// Publish one artifact through the shared create-new transaction, charging
+/// it against the invocation's aggregate byte budget.
+///
+/// `published` is threaded through so a failure part-way into a multi-file
+/// render can name what already landed. A caller that cannot see that has to
+/// guess which files to clean up.
 async fn office_render_publish(
   path : String,
   payload : Bytes,
   overwrite : Bool,
-) -> Unit {
-  if payload.length() > office_render_max_output_bytes {
+  written : Int64,
+  published : Array[String],
+) -> Int64 {
+  let total = written + payload.length().to_int64()
+  if payload.length() > office_render_max_output_bytes ||
+    total > office_render_max_total_bytes {
     raise CliFailure(
       @lib.protocol_error(
         "office.docx.resource_limit",
         "rendered output exceeds the configured limit",
         details=Json::object({
-          "resource": Json::string("render_output_bytes"),
-          "limit": Json::number(office_render_max_output_bytes.to_double()),
-          "actual": Json::number(payload.length().to_double()),
+          "resource": Json::string(
+            if payload.length() > office_render_max_output_bytes {
+              "render_output_bytes"
+            } else {
+              "render_total_bytes"
+            },
+          ),
+          "limit": Json::number(
+            if payload.length() > office_render_max_output_bytes {
+              office_render_max_output_bytes.to_double()
+            } else {
+              office_render_max_total_bytes.to_double()
+            },
+          ),
+          "actual": Json::number(total.to_double()),
           "output": Json::string(human_text(path, 512)),
+          "published": Json::array(
+            published.map(done => Json::string(human_text(done, 512))),
+          ),
         }),
       ),
     )
@@ -278,6 +363,8 @@ async fn office_render_publish(
       raise transaction_failure(error)
     error => raise error
   }
+  published.push(path)
+  total
 }
 
 ///|
@@ -285,12 +372,9 @@ fn office_render_report(
   source : OfficeReadPackage,
   backend : OfficeRenderBackend,
   outputs : Array[(String, Int)],
+  written : Int64,
   stats : OfficeRenderStats,
 ) -> Json {
-  let mut written = 0
-  for entry in outputs {
-    written = written + entry.1
-  }
   Json::object({
     "schema": Json::string("office.render/1"),
     "file": Json::string(
@@ -313,7 +397,7 @@ fn office_render_report(
     "pages_total": Json::number(stats.pages_total.to_double()),
     "page_width_pt": Json::number(stats.width_pt),
     "page_height_pt": Json::number(stats.height_pt),
-    "fonts_embedded": Json::number(stats.fonts_embedded.to_double()),
+    "fonts_used": Json::number(stats.fonts_used.to_double()),
     "images_dropped": Json::number(stats.images_dropped.to_double()),
     "unsupported": Json::array(
       stats.unsupported.map(notice => Json::string(notice)),
@@ -376,8 +460,11 @@ async fn run_render(matches : @argparse.Matches) -> Unit {
   let selected = office_render_select(model, pages)
   let stats = office_render_stats(model, selected, unsupported)
   let outputs : Array[(String, Int)] = []
+  let published : Array[String] = []
+  let mut written : Int64 = 0
   match backend {
     RenderPdf => {
+      office_render_preflight([output], overwrite)
       let payload = @pagelayout_pdf.render_pdf(selected) catch {
         error =>
           raise CliFailure(
@@ -387,42 +474,50 @@ async fn run_render(matches : @argparse.Matches) -> Unit {
             ),
           )
       }
-      office_render_publish(output, payload, overwrite)
+      written = office_render_publish(
+        output, payload, overwrite, written, published,
+      )
       outputs.push((output, payload.length()))
     }
     RenderSvg => {
-      // Publication is per file. With more than one page this is not a single
-      // atomic swap: an interruption can leave earlier pages published and
-      // later ones absent. Each individual file is still created atomically
-      // and never half-written, and the report lists exactly what landed.
-      let documents = @pagelayout_svg.render_pages(selected)
-      for index, document in documents {
-        let path = office_render_page_path(
-          output,
-          pages[index],
-          documents.length(),
-          ".svg",
+      // Destinations are checked before a single page is drawn, so the
+      // ordinary "one of these already exists" failure publishes nothing at
+      // all rather than leaving a set that is part new and part old.
+      let paths = []
+      for page in pages {
+        paths.push(
+          office_render_page_path(output, page, pages.length(), ".svg"),
         )
+      }
+      office_render_preflight(paths, overwrite)
+      // One page at a time. Materializing every page first would hold the
+      // whole render in memory, which one image repeated across many pages
+      // turns into gigabytes while each individual file stays well under the
+      // per-file cap.
+      for index, page in pages {
+        let document = @pagelayout_svg.render_page(selected, index)
         let payload = @utf8.encode(document)
-        office_render_publish(path, payload, overwrite)
-        outputs.push((path, payload.length()))
+        written = office_render_publish(
+          paths[index],
+          payload,
+          overwrite,
+          written,
+          published,
+        )
+        outputs.push((paths[index], payload.length()))
+        ignore(page)
       }
     }
   }
-  let report = office_render_report(source, backend, outputs, stats)
+  let report = office_render_report(source, backend, outputs, written, stats)
   match mode {
     JsonDocument => println(@lib.output_success(report).stringify(indent=2))
     JsonLines => println(@lib.output_success(report).stringify())
-    Human => {
-      let mut written = 0
-      for entry in outputs {
-        written = written + entry.1
-      }
+    Human =>
       println(
         "docx rendered to \{outputs.length()} \{backend.name()} file(s), " +
         "\{stats.pages_rendered} of \{stats.pages_total} page(s), \{written} bytes",
       )
-    }
   }
 }
 
