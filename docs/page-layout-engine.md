@@ -50,7 +50,7 @@ unrepresentable in PDF output, since a simple font's WinAnsi encoding is
 
 **CJK now ships (#384–#389.)** Glyph outlines live in their own package,
 `pagelayout/fontoutlines`, apart from the metrics: every backend measures
-with metrics, only PDF embeds outlines, and an SVG or wasm build has no
+with metrics, only PDF embeds outlines, and an SVG-only build has no
 reason to carry ten megabytes of `glyf`. Families with a bundled program
 are written as Type0 composite fonts with Identity-H over a CIDFontType2
 descendant, subset to the characters the document actually uses; families
@@ -141,6 +141,38 @@ DOCX ──(frontend: pagelayout/docx)──► engine input (paragraphs/runs/pr
 - **Backends are thin.** SVG first (trivially inspectable — the dev-loop
   and golden-test target), then PDF (mostly mechanical once the IR is
   proven; the new work there is font embedding/subsetting).
+
+### A rendered PDF is deterministic per backend, not across backends
+
+The SVG backend builds wherever the engine does; the PDF backend builds
+on native and wasm. One thing does not carry across the two it has:
+`pdflite/flate` compresses through the vendored miniz
+via a C stub on native (`pdf_zlib_native.c`, which `#include`s
+`vendor/miniz/miniz.c`) and through its own pure-MoonBit deflate
+everywhere else. The bytes therefore differ, and the wasm file is the
+larger of the two: 13,102 against 14,663 on a Latin page (+12%), 47,748
+against 59,206 on a one-ideograph page (+24%).
+
+That the *document* is nonetheless identical is read from the code rather
+than measured, and the reading is weaker than it first looks. The split
+is not confined to the write path: the bundled metrics and outlines are
+themselves *inflated* through the same target-split flate
+(`pagelayout/fonts`, `pagelayout/fontoutlines/outlines.mbt`), so both
+decoders have to agree before anything downstream can. Decoding is
+exact where compressing is not — an inflater has no ratio to choose —
+but that is an argument, not a measurement. A byte-level cross-backend
+comparison would settle it, and is worth adding as soon as anything
+depends on the answer.
+
+Two consequences. Rendering the same model twice on one backend is
+byte-identical and stays a test; rendering it on two backends is not, and
+comparing file lengths across them measures the compressor. Any test that
+wants to observe subsetting has to read `/Length1` — the program length
+before any filter — rather than the length of the file that carries it.
+
+This is also the first thing `office` would publish whose bytes depend on
+the runtime: `zip/` is pure MoonBit with no native stub, so XLSX and DOCX
+output already agrees byte-for-byte on native and wasm.
 
 ## Decisions
 
