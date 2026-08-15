@@ -318,8 +318,13 @@ test "latin text stays a simple font, but an embedded one" {
 }
 
 ///|
-/// The `/Length1` values in a file, in order: the length of each embedded
-/// font program *before* any stream filter.
+/// The `/Length1` values carried by the file's stream dictionaries: the
+/// length of each embedded font program *before* any stream filter.
+///
+/// Read through the parser rather than by scanning the raw bytes for the
+/// text `/Length1`, which would also match inside a compressed stream, an
+/// unfiltered font program, or image data, and would count that as
+/// another embedded program.
 ///
 /// Subsetting has to be measured here rather than on the file length,
 /// because the file length also measures the compressor — and the
@@ -328,21 +333,21 @@ test "latin text stays a simple font, but an embedded one" {
 /// encoder everywhere else, so the identical program comes out at two
 /// different sizes. `/Length1` is by definition the unfiltered program
 /// length, which is the only thing subsetting moves.
-fn embedded_program_lengths(bytes : Bytes) -> Array[Int] {
-  let needle = b"/Length1 "
+fn embedded_program_lengths(bytes : Bytes) -> Array[Int] raise {
+  let document = @pdflite.pdf_read_document_from_bytes(bytes)
+  let wanted = @core.pdf_name_of_bytes(@utf8.encode("/Length1"))
   let lengths : Array[Int] = []
-  let mut at = 0
-  while bytes[at:].find(needle) is Some(offset) {
-    let mut cursor = at + offset + needle.length()
-    let mut value = 0
-    while cursor < bytes.length() &&
-          bytes[cursor] >= b'0' &&
-          bytes[cursor] <= b'9' {
-      value = value * 10 + (bytes[cursor].to_int() - b'0'.to_int())
-      cursor = cursor + 1
+  for number in document.objects.object_numbers() {
+    guard document.lookup_object_or_null(number) is PdfStreamObject(stream) else {
+      continue
     }
-    lengths.push(value)
-    at = cursor
+    guard stream.dictionary.dictionary_view() is Some(entries) else { continue }
+    for entry in entries {
+      let (key, value) = entry
+      if key == wanted && value is PdfInteger(length) {
+        lengths.push(length)
+      }
+    }
   }
   lengths
 }

@@ -153,10 +153,15 @@ larger of the two: 13,102 against 14,663 on a Latin page (+12%), 47,748
 against 59,206 on a one-ideograph page (+24%).
 
 That the *document* is nonetheless identical is read from the code rather
-than measured: the only `#cfg(target=...)` in the whole render path is
-the one in `pdflite/flate`, so nothing above the filter can vary. A
-byte-level cross-backend comparison would establish it properly, and that
-is worth adding when something depends on it.
+than measured, and the reading is weaker than it first looks. The split
+is not confined to the write path: the bundled metrics and outlines are
+themselves *inflated* through the same target-split flate
+(`pagelayout/fonts`, `pagelayout/fontoutlines/outlines.mbt`), so both
+decoders have to agree before anything downstream can. Decoding is
+exact where compressing is not — an inflater has no ratio to choose —
+but that is an argument, not a measurement. A byte-level cross-backend
+comparison would settle it, and is worth adding as soon as anything
+depends on the answer.
 
 Two consequences. Rendering the same model twice on one backend is
 byte-identical and stays a test; rendering it on two backends is not, and
