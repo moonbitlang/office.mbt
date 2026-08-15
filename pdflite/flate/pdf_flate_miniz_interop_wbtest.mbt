@@ -65,30 +65,44 @@ test "miniz accepts and decodes what the pure encoder produces" {
 /// The `try` covers only the encode. Wrapping the oracle too would catch the
 /// assertion failures it raises, so a miniz refusal would be indistinguishable
 /// from an encoder refusal and the test could not fail.
+/// The refusals are pinned as a set rather than counted. A count is the wrong
+/// instrument: every refusal skips an oracle check, so `>= n` silently trades
+/// one case for another, and a window-boundary case quietly dropping out looks
+/// identical to the empty input continuing not to encode. Naming them means a
+/// case that stops being checked fails here, and the only way to change the
+/// set is deliberately.
 test "miniz accepts what the match encoders produce directly" {
-  let mut checked = 0
+  let refused : Array[String] = []
   for entry in determinism_corpus() {
     let (name, input) = entry
     let header = pdf_flate_default_header()
     let fixed = Some(
       pdf_flate_encode_fixed_match_view_with_header(input, header, 64),
     ) catch {
-      _ => None
+      _ => {
+        refused.push("\{name} fixed")
+        None
+      }
     }
     if fixed is Some(encoded) {
       miniz_accepts(encoded, input, "\{name} through the fixed match encoder")
-      checked = checked + 1
     }
     let dynamic = Some(
       pdf_flate_encode_dynamic_match_view_with_header(input, header, 64),
     ) catch {
-      _ => None
+      _ => {
+        refused.push("\{name} dynamic")
+        None
+      }
     }
     if dynamic is Some(encoded) {
       miniz_accepts(encoded, input, "\{name} through the dynamic match encoder")
-      checked = checked + 1
     }
   }
-  // encoders that refused everything would otherwise pass this vacuously
-  assert_true(checked >= 24)
+  inspect(
+    refused,
+    content=(
+      #|[empty dynamic]
+    ),
+  )
 }
