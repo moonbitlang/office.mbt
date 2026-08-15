@@ -1053,7 +1053,7 @@ pub fn capability_commands() -> Array[CapabilityCommand] {
       inputs: [
         capability_field("file", "path", true, "existing DOCX package"),
         capability_field(
-          "output", "path", true, "destination path; the extension selects the backend (.pdf or .svg). Created atomically, refused when present unless --overwrite. A multi-page SVG render writes <stem>-<n>.svg per page and publishes each file individually. Every destination is checked before any page is drawn, so an occupied path refuses with nothing written; but publication across the set does not roll back, so an I/O failure part-way can leave earlier pages published, and the refusal then lists them under details.published",
+          "output", "path", true, "destination path; the extension selects the backend (.pdf or .svg). Created atomically, refused when present unless --overwrite. A multi-page SVG render writes <stem>-<n>.svg per page and publishes each file individually. Destinations are checked before any page is drawn, so an occupied path normally refuses with nothing written -- but that is a check and not a lock, and --overwrite skips it, so a later failure can still leave earlier pages published. Publication across the set does not roll back; when anything has landed the refusal is office.render.partial_publication and lists those paths under details.published",
         ),
         capability_field(
           "pages", "string", false, "pages to render: 1-based numbers and N-M ranges separated by commas, e.g. `3`, `2-5`, `1,4-6`. Normalized to ascending order with duplicates removed, so a page is never published twice. Omitted renders every page, subject to the same 2048-page ceiling",
@@ -1098,10 +1098,10 @@ pub fn capability_commands() -> Array[CapabilityCommand] {
           "page_height_pt", "number", true, "first rendered page height in points",
         ),
         capability_field(
-          "fonts_used", "integer", true, "distinct faces the rendered pages reference. PDF embeds a subset of each; SVG only names them in font-family and embeds nothing, so this is a usage count and not an embedding count",
+          "fonts_used", "integer", true, "distinct faces the rendered pages actually reference, counted over the selected pages rather than over the document. PDF embeds a subset of each; SVG only names them in font-family and embeds nothing, so this is a usage count and not an embedding count",
         ),
         capability_field(
-          "images_dropped", "integer", true, "image occurrences the PDF backend could not embed, summed across reasons rather than counted as distinct reasons; always 0 for the SVG backend, which embeds no image data",
+          "images_dropped", "integer", true, "image occurrences the PDF backend could not embed, summed across reasons rather than counted as distinct reasons. Always 0 for SVG, which embeds every image as a data URI and therefore drops none -- not because it carries no image data",
         ),
         capability_field(
           "unsupported", "array(string)", true, "bounded notices the layout frontend recorded for content it could not represent, each truncated to 512 characters. This is what the frontend chose to record, not a proof of completeness: some drops are still silent, floating drawings whose relationship does not resolve among them",

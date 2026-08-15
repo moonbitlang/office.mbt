@@ -209,9 +209,29 @@ fn office_render_select(
 }
 
 ///|
+/// Faces the selected pages actually reference.
+///
+/// Not `selected.fonts.length()`: the font table is deliberately carried
+/// whole so glyph runs keep their original indices, so its length describes
+/// the document rather than the selection. Rendering page 1 of a document
+/// whose later pages introduce other faces would otherwise report those too.
+fn office_render_font_count(selected : @pagelayout.PageModel) -> Int {
+  let seen : Map[Int, Unit] = Map([])
+  for page in selected.pages {
+    for item in page.items {
+      if item is Text(run) {
+        seen[run.font] = ()
+      }
+    }
+  }
+  seen.size()
+}
+
+///|
 fn office_render_stats(
   model : @pagelayout.PageModel,
   selected : @pagelayout.PageModel,
+  backend : OfficeRenderBackend,
   unsupported_all : Array[String],
 ) -> OfficeRenderStats {
   let (width_pt, height_pt) = match selected.pages.get(0) {
@@ -234,17 +254,23 @@ fn office_render_stats(
     pages_rendered: selected.pages.length(),
     width_pt,
     height_pt,
-    fonts_used: selected.fonts.length(),
+    fonts_used: office_render_font_count(selected),
     unsupported,
     unsupported_total: unsupported_all.length(),
-    // one entry per distinct *reason*, each carrying its own occurrence
-    // count, so the number of images is the sum and not the entry count
-    images_dropped: {
-      let mut total = 0
-      for entry in @pagelayout_pdf.unembeddable_images(selected) {
-        total = total + entry.1
+    // "which images can this backend not embed" is a PDF question. SVG
+    // embeds every image as a data URI, so asking the PDF checker about an
+    // SVG render would report a malformed PNG as dropped while it sits in
+    // the output. One entry per distinct reason carries its own occurrence
+    // count, so the image count is the sum and not the entry count.
+    images_dropped: match backend {
+      RenderPdf => {
+        let mut total = 0
+        for entry in @pagelayout_pdf.unembeddable_images(selected) {
+          total = total + entry.1
+        }
+        total
       }
-      total
+      RenderSvg => 0
     },
   }
 }
@@ -344,7 +370,13 @@ async fn office_render_publish(
               office_render_max_total_bytes.to_double()
             },
           ),
-          "actual": Json::number(total.to_double()),
+          "actual": Json::number(
+            if payload.length() > office_render_max_output_bytes {
+              payload.length().to_double()
+            } else {
+              total.to_double()
+            },
+          ),
           "output": Json::string(human_text(path, 512)),
           "published": Json::array(
             published.map(done => Json::string(human_text(done, 512))),
@@ -358,10 +390,34 @@ async fn office_render_publish(
       _ => ()
     }
   }
+  // Preflight cannot make this whole. It is a check and not a lock, so a
+  // destination can appear afterwards; and --overwrite skips it entirely,
+  // since "already there" is not a failure in that mode. Either way a page
+  // can fail after earlier pages have landed, and a refusal naming only the
+  // page that failed leaves a caller guessing which files to clean up. So
+  // once anything has been published, the refusal carries the list.
   @transaction.atomic_write_new(path, payload) catch {
-    @transaction.TransactionError(..) as error =>
-      raise transaction_failure(error)
-    error => raise error
+    error =>
+      if published.length() == 0 {
+        match error {
+          @transaction.TransactionError(..) as inner =>
+            raise transaction_failure(inner)
+          other => raise other
+        }
+      } else {
+        raise CliFailure(
+          @lib.protocol_error(
+            "office.render.partial_publication",
+            "publication failed after earlier pages were already written",
+            details=Json::object({
+              "output": Json::string(human_text(path, 512)),
+              "published": Json::array(
+                published.map(done => Json::string(human_text(done, 512))),
+              ),
+            }),
+          ),
+        )
+      }
   }
   published.push(path)
   total
@@ -458,7 +514,7 @@ async fn run_render(matches : @argparse.Matches) -> Unit {
     )
   }
   let selected = office_render_select(model, pages)
-  let stats = office_render_stats(model, selected, unsupported)
+  let stats = office_render_stats(model, selected, backend, unsupported)
   let outputs : Array[(String, Int)] = []
   let published : Array[String] = []
   let mut written : Int64 = 0
