@@ -99,10 +99,13 @@ test "miniz accepts what the match encoders produce directly" {
       miniz_accepts(encoded, input, "\{name} through the dynamic match encoder")
     }
   }
+  // joined rather than inspected directly: `inspect` on an Array reaches for
+  // Show, which is deprecated for debugging output, and the joined form reads
+  // better in a diff anyway
   inspect(
-    refused,
+    refused.join(", "),
     content=(
-      #|[empty dynamic]
+      #|empty dynamic
     ),
   )
 }
