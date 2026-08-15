@@ -463,6 +463,14 @@ staged_toolchain_manifest="$scratch/staged-toolchain.manifest"
     die "privately staged Moon toolchain differs from the pinned source closure"
   }
 
+# 0.10.8 replaced the per-target databases with a single one at the root of
+# _build. Reset whichever this toolchain wrote.
+root_bundle_db="$moon_toolchain_root/lib/core/_build/.moon_db"
+[ ! -L "$root_bundle_db" ] ||
+  die "generated Moon bundle database is a symlink: _build/.moon_db"
+/bin/rm -f -- "$root_bundle_db"
+[ ! -e "$root_bundle_db" ] ||
+  die "could not reset generated Moon bundle database: _build/.moon_db"
 for target in js llvm native wasm-gc wasm; do
   generated_bundle_db="$moon_toolchain_root/lib/core/_build/$target/release/bundle/bundle.moon_db"
   # Not every toolchain emits these: moonc 0.10.8 stopped writing them while
