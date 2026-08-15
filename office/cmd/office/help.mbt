@@ -262,7 +262,7 @@ fn render_field(field : @lib.CapabilityField) -> String {
 }
 
 ///|
-fn render_command(command : @lib.CapabilityCommand) -> String {
+fn capability_help_text(command : @lib.CapabilityCommand) -> String {
   let lines : Array[String] = [
     "Command: \{command.name}",
     "  \{command.summary}",
@@ -421,7 +421,7 @@ fn render_human_query(query : HelpQuery) -> String {
         None => ""
       }
     Format(format) => render_format(format)
-    Operation(_, command) => render_command(command)
+    Operation(_, command) => capability_help_text(command)
   }
 }
 

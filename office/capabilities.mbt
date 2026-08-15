@@ -1045,6 +1045,72 @@ pub fn capability_commands() -> Array[CapabilityCommand] {
       variants: [],
     },
     {
+      name: "render",
+      summary: "Lay out a DOCX and draw it as a paginated PDF",
+      usage: "office render FILE --output OUT.pdf [--overwrite] [--json|--jsonl]",
+      formats: ["docx"],
+      aliases: [],
+      inputs: [
+        capability_field("file", "path", true, "existing DOCX package"),
+        capability_field(
+          "output", "path", true, "destination .pdf file; created atomically, refused when present unless --overwrite",
+        ),
+        capability_field(
+          "overwrite", "boolean", false, "replace an existing destination (remove-then-stage; not a single atomic swap)",
+        ),
+        capability_field(
+          "json", "boolean", false, "emit one office.output/1 JSON document",
+        ),
+        capability_field(
+          "jsonl", "boolean", false, "emit one office.output/1 line",
+        ),
+      ],
+      outputs: [
+        capability_field(
+          "schema", "literal(office.render/1)", true, "versioned render result schema",
+        ),
+        capability_field("file", "path", true, "the input path, bounded"),
+        capability_field(
+          "format", "literal(docx)", true, "the structurally verified package format",
+        ),
+        capability_field(
+          "output", "path", true, "the published PDF path, bounded",
+        ),
+        capability_field(
+          "backend", "literal(pdf)", true, "the emitter that drew the output",
+        ),
+        capability_field(
+          "bytes_written", "integer", true, "exact published byte count",
+        ),
+        capability_field(
+          "pages", "integer", true, "pages the document laid out to",
+        ),
+        capability_field(
+          "page_width_pt", "number", true, "first page width in points",
+        ),
+        capability_field(
+          "page_height_pt", "number", true, "first page height in points",
+        ),
+        capability_field(
+          "fonts_embedded", "integer", true, "distinct faces the document uses",
+        ),
+        capability_field(
+          "images_dropped", "integer", true, "images the PDF backend could not embed",
+        ),
+        capability_field(
+          "unsupported", "array(string)", true, "bounded notices for content the layout engine could not represent; content it drops is reported here rather than silently omitted",
+        ),
+        capability_field(
+          "unsupported_total", "integer", true, "notices before bounding",
+        ),
+        capability_field(
+          "byte_determinism", "literal(per-runtime)", true, "rendering one document twice on one runtime is byte-identical; rendering it on native and wasm is not, because the deflate implementation differs by backend. The document is identical either way -- same pages, same glyph positions, same embedded font subset",
+        ),
+      ],
+      output_modes: ["human", "json", "jsonl"],
+      variants: [],
+    },
+    {
       name: "create",
       summary: "Create a validated Office document atomically",
       usage: "office create (xlsx OUTPUT [--sheet NAME] | docx OUTPUT) [--dry-run] [--overwrite] [--json]",

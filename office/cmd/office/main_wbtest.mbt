@@ -51,7 +51,7 @@ test "template help publishes the placeholder grammar and format examples" {
   guard @lib.find_capability_command("template") is Some(template) else {
     fail("expected template capability")
   }
-  let human = render_command(template)
+  let human = capability_help_text(template)
   let json = data_for_query(Operation(None, template)).stringify()
   for
     expected in [
