@@ -50,7 +50,7 @@ unrepresentable in PDF output, since a simple font's WinAnsi encoding is
 
 **CJK now ships (#384–#389.)** Glyph outlines live in their own package,
 `pagelayout/fontoutlines`, apart from the metrics: every backend measures
-with metrics, only PDF embeds outlines, and an SVG or wasm build has no
+with metrics, only PDF embeds outlines, and an SVG-only build has no
 reason to carry ten megabytes of `glyf`. Families with a bundled program
 are written as Type0 composite fonts with Identity-H over a CIDFontType2
 descendant, subset to the characters the document actually uses; families
@@ -144,8 +144,9 @@ DOCX ──(frontend: pagelayout/docx)──► engine input (paragraphs/runs/pr
 
 ### A rendered PDF is deterministic per backend, not across backends
 
-Both backends build on every target the engine supports. One thing does
-not carry across: `pdflite/flate` compresses through the vendored miniz
+The SVG backend builds wherever the engine does; the PDF backend builds
+on native and wasm. One thing does not carry across the two it has:
+`pdflite/flate` compresses through the vendored miniz
 via a C stub on native (`pdf_zlib_native.c`, which `#include`s
 `vendor/miniz/miniz.c`) and through its own pure-MoonBit deflate
 everywhere else. The bytes therefore differ, and the wasm file is the
