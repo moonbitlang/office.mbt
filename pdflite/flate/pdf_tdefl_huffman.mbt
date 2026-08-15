@@ -218,3 +218,78 @@ fn tdefl_code_sizes(
   }
   sizes
 }
+
+///|
+/// Build one Huffman table in `state`: code lengths, then canonical codes.
+///
+/// `static_table` takes the lengths already in `huff_code_sizes` rather than
+/// deriving them from counts, which is how the fixed-block tables are set up.
+///
+/// Codes come out **bit-reversed**. Deflate writes Huffman codes most
+/// significant bit first while the bit writer emits least significant bit
+/// first, so reversing here is what makes a single `put_bits` correct for both
+/// codes and the LSB-first extra bits that follow them.
+fn TdeflState::optimize_huffman_table(
+  self : TdeflState,
+  table_num : Int,
+  table_len : Int,
+  code_size_limit : Int,
+  static_table : Bool,
+) -> Unit {
+  let num_codes = FixedArray::make(1 + tdefl_max_supported_huff_codesize, 0)
+  if static_table {
+    for i in 0..<table_len {
+      let size = self.huff_code_sizes[table_num][i]
+      num_codes[size] = num_codes[size] + 1
+    }
+  } else {
+    let counts = self.huff_count[table_num]
+    let syms0 = FixedArray::makei(table_len, _ => { key: 0, sym_index: 0 })
+    let syms1 = FixedArray::makei(table_len, _ => { key: 0, sym_index: 0 })
+    let mut used = 0
+    for i in 0..<table_len {
+      if counts[i] != 0 {
+        syms0[used] = { key: counts[i], sym_index: i }
+        used = used + 1
+      }
+    }
+    let sorted = tdefl_radix_sort_syms(used, syms0, syms1)
+    tdefl_calculate_minimum_redundancy(sorted, used)
+    for i in 0..<used {
+      num_codes[sorted[i].key] = num_codes[sorted[i].key] + 1
+    }
+    tdefl_huffman_enforce_max_code_size(num_codes, used, code_size_limit)
+    for i in 0..<tdefl_max_huff_symbols_0 {
+      self.huff_code_sizes[table_num][i] = 0
+      self.huff_codes[table_num][i] = 0
+    }
+    let mut j = used
+    for i in 1..<=code_size_limit {
+      for _ in 0..<num_codes[i] {
+        j = j - 1
+        self.huff_code_sizes[table_num][sorted[j].sym_index] = i
+      }
+    }
+  }
+  let next_code = FixedArray::make(tdefl_max_supported_huff_codesize + 1, 0)
+  next_code[1] = 0
+  let mut j = 0
+  for i in 2..<=code_size_limit {
+    j = (j + num_codes[i - 1]) << 1
+    next_code[i] = j
+  }
+  for i in 0..<table_len {
+    let code_size = self.huff_code_sizes[table_num][i]
+    if code_size == 0 {
+      continue
+    }
+    let mut code = next_code[code_size]
+    next_code[code_size] = code + 1
+    let mut rev_code = 0
+    for _ in 0..<code_size {
+      rev_code = (rev_code << 1) | (code & 1)
+      code = code >> 1
+    }
+    self.huff_codes[table_num][i] = rev_code & 0xFFFF
+  }
+}
