@@ -814,7 +814,7 @@ jobs:
         if: ${{ always() && env.F1B_TOOLCHAIN_MANIFEST != '' }}
         uses: actions/upload-artifact@v4
         with:
-          name: fresh-agent-toolchain-ubuntu-${{ github.event.pull_request.head.sha || github.sha }}
+          name: fresh-agent-toolchain-ubuntu-${{ matrix.channel }}-${{ github.event.pull_request.head.sha || github.sha }}
           path: ${{ env.F1B_TOOLCHAIN_MANIFEST }}
           if-no-files-found: error
 
@@ -822,7 +822,7 @@ jobs:
         if: ${{ always() && env.F1B_CANARY_EVIDENCE != '' }}
         uses: actions/upload-artifact@v4
         with:
-          name: fresh-agent-canary-ubuntu-${{ github.event.pull_request.head.sha || github.sha }}
+          name: fresh-agent-canary-ubuntu-${{ matrix.channel }}-${{ github.event.pull_request.head.sha || github.sha }}
           path: ${{ env.F1B_CANARY_EVIDENCE }}
           if-no-files-found: warn
 
@@ -915,7 +915,7 @@ jobs:
         if: ${{ always() && runner.os == 'macOS' && env.F1B_CANARY_EVIDENCE != '' }}
         uses: actions/upload-artifact@v4
         with:
-          name: fresh-agent-canary-macos-${{ github.event.pull_request.head.sha || github.sha }}
+          name: fresh-agent-canary-macos-${{ matrix.channel }}-${{ github.event.pull_request.head.sha || github.sha }}
           path: ${{ env.F1B_CANARY_EVIDENCE }}
           if-no-files-found: warn
 
@@ -988,9 +988,16 @@ jobs:
   #
   # Every gate job runs on both channels with `continue-on-error`, so no single
   # leg is a verdict. This is: did *some* channel pass everything. That is a
-  # stronger question than "did each job pass somewhere" -- the per-job reading
-  # can go green while no single toolchain builds and tests the whole
-  # repository, which is precisely the state worth catching.
+  # stronger question than "did each job pass somewhere", which can go green
+  # while no channel builds and tests the whole repository.
+  #
+  # Precisely: "channel" here means whatever that mutable alias served each
+  # job, not one pinned build. Every leg resolves the alias independently, so a
+  # publication mid-run can hand two legs of the same channel different
+  # versions. Each job logs `moon version --all`, which is how you find out
+  # after the fact. Making this literally one toolchain would mean resolving
+  # once and distributing the resolved version, which is worth doing only if
+  # that race ever actually bites.
   #
   # Job results are read back from the run itself rather than passed through
   # artifacts, because a matrix leg cannot set a distinct job output.
@@ -1015,22 +1022,45 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
+          # The exact non-advisory legs each channel must contribute. Counting
+          # what the API happens to return is not enough: a renamed job, or a
+          # short page, would leave a channel looking complete at 1/1. Missing
+          # has to fail the same way failed does.
+          expected="lint (fmt + interface + type check)
+          test (native)
+          test (wasm)
+          test (js)
+          CLI smoke (cram + wasm CLIs + Office acceptance)
+          installed Office release smoke (Ubuntu)
+          office transactional editing (macos-latest)
+          office transactional editing (windows-latest)"
           jobs="$(gh api --paginate \
             "repos/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}/jobs" \
-            --jq '.jobs[] | select(.name | test("\\[(latest|nightly)")) |
-                  select(.name | test("advisory") | not) |
-                  "\(.name)\t\(.conclusion)"')"
+            --jq '.jobs[] | "\(.name)\t\(.conclusion)"')"
           echo "$jobs"
+          satisfied=""
           for channel in latest nightly; do
-            # a channel qualifies when it has at least one leg and no leg that
-            # failed; skipped or cancelled legs mean the channel is unproven
-            total="$(printf '%s\n' "$jobs" | grep -c "\[$channel" || true)"
-            good="$(printf '%s\n' "$jobs" | grep "\[$channel" | grep -c "success$" || true)"
-            echo "channel $channel: $good/$total green"
-            if [ "$total" -gt 0 ] && [ "$good" -eq "$total" ]; then
-              echo "::notice::gate satisfied by the $channel channel ($good/$total)"
-              exit 0
+            missing=0
+            while IFS= read -r job; do
+              job="$(printf '%s' "$job" | sed 's/^ *//')"
+              [ -n "$job" ] || continue
+              row="$(printf '%s\n' "$jobs" | grep -F "$job [$channel]" || true)"
+              if [ -z "$row" ]; then
+                echo "channel $channel: MISSING $job"
+                missing=1
+              elif ! printf '%s' "$row" | grep -q "success$"; then
+                echo "channel $channel: NOT GREEN $job"
+                missing=1
+              fi
+            done <<< "$expected"
+            if [ "$missing" -eq 0 ]; then
+              satisfied="$channel"
+              break
             fi
           done
+          if [ -n "$satisfied" ]; then
+            echo "::notice::gate satisfied by the $satisfied channel"
+            exit 0
+          fi
           echo "::error::no channel passed every gate job; see the per-leg results above"
           exit 1

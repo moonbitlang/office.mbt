@@ -41,11 +41,14 @@ office/tests/acceptance/fresh-agent/prepare.sh \
 
 The installer sanitizes its startup environment, derives the checkout from its
 own physical path, disables Git replacement objects plus ambient configuration
-and attributes, and exports the exact tree bound to `head`. It verifies a
-relocatable inventory of the complete toolchain distribution against the
-reviewed, platform-specific `build-lock.json` before executing it, privately
-stages that exact closure, and resolves dependencies without compiling
-candidate code. Moon's generated `all_pkgs.json` and `packages.json` indexes
+and attributes, and exports the exact tree bound to `head`. It inventories the
+complete toolchain distribution over the platform-specific entry list in
+`build-lock.json`, privately stages that closure, and resolves dependencies
+without compiling candidate code. The inventory is captured and compared
+within the run; it is **not** checked against a digest held in this
+repository, and nothing here authenticates or approves the downloaded
+toolchain. What it still catches is mutation: a toolchain that changes between
+staging, trusted regeneration, and the frozen builds. Moon's generated `all_pkgs.json` and `packages.json` indexes
 embed the physical toolchain root, so only those known index contents are
 hashed after replacing the current root and the preparer's explicit original
 root alias with a fixed marker. Generated
@@ -64,7 +67,13 @@ the check reported ordinary maintenance as a supply-chain alarm and blocked it.
 It is still captured, and still compared before and after the build, so a build
 that mutates its own dependencies is caught. The toolchain inventory keeps its
 tracked digests, because that distribution moves rarely and deliberately.
-Both inventories are reverified after the build and retained with the candidate. Every tracked controller asset
+Both inventories are reverified after the build and retained with the
+candidate. Generated bundle databases are inventoried by presence and mode
+rather than by content, since their bytes differ across equivalent
+installations, so their real digests are captured separately after trusted
+regeneration and compared again after the build -- otherwise the relaxation
+that makes two installations comparable would also let a build rewrite one
+unnoticed. Every tracked controller asset
 is copied from the snapshot, never from the mutable checkout.
 
 CI installs MoonBit from a moving release channel and runs the whole gate on

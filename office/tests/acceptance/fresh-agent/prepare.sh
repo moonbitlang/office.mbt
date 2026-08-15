@@ -336,7 +336,7 @@ build_lock="$script_dir/build-lock.json"
 case "$(/usr/bin/uname -s) $(/usr/bin/uname -m)" in
   "Darwin arm64") build_platform=darwin-arm64 ;;
   "Linux x86_64") build_platform=linux-x86_64 ;;
-  *) die "fresh candidate preparation has no pinned toolchain for this platform" ;;
+  *) die "fresh candidate preparation does not support this platform" ;;
 esac
 [ "$(/usr/bin/jq --arg platform "$build_platform" \
   '[.toolchains[] | select(.platform == $platform)] | length' "$build_lock")" = "1" ] ||
@@ -460,7 +460,7 @@ staged_toolchain_manifest="$scratch/staged-toolchain.manifest"
     /usr/bin/diff -u "$source_toolchain_manifest" \
       "$staged_toolchain_manifest" |
       /usr/bin/sed -n '1,200p' >&2 || true
-    die "privately staged Moon toolchain differs from the pinned source closure"
+    die "privately staged Moon toolchain differs from the installed source closure"
   }
 
 # 0.10.8 replaced the per-target databases with a single one at the root of
@@ -668,6 +668,25 @@ for target in js llvm native wasm-gc wasm; do
     chmod 0644 "$generated_bundle_db"
   fi
 done
+# The inventory records these databases by presence and mode only, because
+# their bytes vary across equivalent installations and their location has
+# already moved once between toolchains. That relaxation is right for comparing
+# two installations and wrong for comparing one installation to itself: it
+# would let a build rewrite a database without the post-build check noticing.
+# So their bytes are captured here, once, after the regeneration this script
+# performed and trusts, and compared again after the build.
+bundle_db_digests() {
+  local out="$1"
+  : > "$out"
+  local db
+  for db in "$moon_toolchain_root/lib/core/_build/.moon_db" \
+    "$moon_toolchain_root"/lib/core/_build/*/release/bundle/bundle.moon_db; do
+    [ -f "$db" ] && [ ! -L "$db" ] || continue
+    printf '%s\t%s\n' "${db#"$moon_toolchain_root/"}" "$(sha256_file "$db")" \
+      >> "$out"
+  done
+}
+
 regenerated_toolchain_manifest="$scratch/regenerated-toolchain.manifest"
 "$snapshot_inventory" \
   "$moon_toolchain_root" \
@@ -681,8 +700,11 @@ regenerated_toolchain_manifest="$scratch/regenerated-toolchain.manifest"
     /usr/bin/diff -u "$staged_toolchain_manifest" \
       "$regenerated_toolchain_manifest" |
       /usr/bin/sed -n '1,200p' >&2 || true
-    die "trusted core bundle regeneration changed the pinned toolchain closure"
+    die "trusted core bundle regeneration changed the toolchain closure"
   }
+
+trusted_bundle_db_digests="$scratch/trusted-bundle-dbs.txt"
+bundle_db_digests "$trusted_bundle_db_digests"
 
 resolve_log="$scratch/resolve.log"
 if ! (
@@ -690,7 +712,7 @@ if ! (
   run_moon update
   run_moon install
 ) >"$resolve_log" 2>&1; then
-  echo "error: pinned dependency resolution failed; complete log follows" >&2
+  echo "error: dependency resolution failed; complete log follows" >&2
   cat "$resolve_log" >&2
   exit 1
 fi
@@ -890,7 +912,16 @@ postbuild_toolchain_manifest="$scratch/postbuild-toolchain.manifest"
     /usr/bin/diff -u "$staged_toolchain_manifest" \
       "$postbuild_toolchain_manifest" |
       /usr/bin/sed -n '1,200p' >&2 || true
-    die "pinned Moon toolchain changed during frozen release builds"
+    die "Moon toolchain changed during frozen release builds"
+  }
+postbuild_bundle_db_digests="$scratch/postbuild-bundle-dbs.txt"
+bundle_db_digests "$postbuild_bundle_db_digests"
+/usr/bin/cmp "$trusted_bundle_db_digests" "$postbuild_bundle_db_digests" ||
+  {
+    echo "error: bundle database digest diff follows" >&2
+    /usr/bin/diff -u "$trusted_bundle_db_digests" \
+      "$postbuild_bundle_db_digests" >&2 || true
+    die "Moon bundle databases changed during frozen release builds"
   }
 postbuild_host_manifest="$scratch/postbuild-host.manifest"
 "$snapshot_inventory" \
