@@ -1,4 +1,4 @@
-supported_targets = "native"
+supported_targets = "native+wasm"
 
 import {
   "bobzhang/pagelayout",
@@ -16,9 +16,12 @@ import {
 import {
   "bobzhang/pagelayout",
   "bobzhang/pagelayout/docx",
+  "bobzhang/pagelayout/fontoutlines",
+  "bobzhang/pagelayout/fonts",
   "bobzhang/pagelayout/paginate",
   "bobzhang/pagelayout/paragraph",
   "bobzhang/pdflite",
   "bobzhang/mbtexcel/zip",
   "moonbitlang/core/encoding/utf8",
+  "moonbitlang/core/quickcheck",
 } for "test"

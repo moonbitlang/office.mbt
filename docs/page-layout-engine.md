@@ -142,6 +142,32 @@ DOCX ──(frontend: pagelayout/docx)──► engine input (paragraphs/runs/pr
   and golden-test target), then PDF (mostly mechanical once the IR is
   proven; the new work there is font embedding/subsetting).
 
+### A rendered PDF is deterministic per backend, not across backends
+
+Both backends build on every target the engine supports. One thing does
+not carry across: `pdflite/flate` compresses through the vendored miniz
+via a C stub on native (`pdf_zlib_native.c`, which `#include`s
+`vendor/miniz/miniz.c`) and through its own pure-MoonBit deflate
+everywhere else. The bytes therefore differ, and the wasm file is the
+larger of the two: 13,102 against 14,663 on a Latin page (+12%), 47,748
+against 59,206 on a one-ideograph page (+24%).
+
+That the *document* is nonetheless identical is read from the code rather
+than measured: the only `#cfg(target=...)` in the whole render path is
+the one in `pdflite/flate`, so nothing above the filter can vary. A
+byte-level cross-backend comparison would establish it properly, and that
+is worth adding when something depends on it.
+
+Two consequences. Rendering the same model twice on one backend is
+byte-identical and stays a test; rendering it on two backends is not, and
+comparing file lengths across them measures the compressor. Any test that
+wants to observe subsetting has to read `/Length1` — the program length
+before any filter — rather than the length of the file that carries it.
+
+This is also the first thing `office` would publish whose bytes depend on
+the runtime: `zip/` is pure MoonBit with no native stub, so XLSX and DOCX
+output already agrees byte-for-byte on native and wasm.
+
 ## Decisions
 
 | # | Decision | Choice | Why |

@@ -318,6 +318,36 @@ test "latin text stays a simple font, but an embedded one" {
 }
 
 ///|
+/// The `/Length1` values in a file, in order: the length of each embedded
+/// font program *before* any stream filter.
+///
+/// Subsetting has to be measured here rather than on the file length,
+/// because the file length also measures the compressor — and the
+/// compressor is not the same on every backend. pdflite deflates through
+/// the vendored miniz on native (`pdf_zlib_native.c`) and through its own
+/// encoder everywhere else, so the identical program comes out at two
+/// different sizes. `/Length1` is by definition the unfiltered program
+/// length, which is the only thing subsetting moves.
+fn embedded_program_lengths(bytes : Bytes) -> Array[Int] {
+  let needle = b"/Length1 "
+  let lengths : Array[Int] = []
+  let mut at = 0
+  while bytes[at:].find(needle) is Some(offset) {
+    let mut cursor = at + offset + needle.length()
+    let mut value = 0
+    while cursor < bytes.length() &&
+          bytes[cursor] >= b'0' &&
+          bytes[cursor] <= b'9' {
+      value = value * 10 + (bytes[cursor].to_int() - b'0'.to_int())
+      cursor = cursor + 1
+    }
+    lengths.push(value)
+    at = cursor
+  }
+  lengths
+}
+
+///|
 test "an embedded subset carries only the characters used" {
   // one ideograph pulls in a handful of glyphs, not all 31,036
   let small = @pdf.render_pdf(
@@ -332,9 +362,15 @@ test "an embedded subset carries only the characters used" {
       ),
     ]),
   )
+  let small_programs = embedded_program_lengths(small)
+  let large_programs = embedded_program_lengths(large)
+  // one program each: the CJK face, embedded because the text needs it
+  inspect(small_programs.length(), content="1")
+  inspect(large_programs.length(), content="1")
   // subsetting is what keeps a 10 MB face out of every document
-  assert_true(small.length() < 60000)
-  assert_true(large.length() > small.length())
+  assert_true(small_programs[0] < 400000)
+  // and the subset grows with the characters the document actually uses
+  assert_true(large_programs[0] > small_programs[0])
 }
 
 ///|
