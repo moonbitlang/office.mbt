@@ -634,6 +634,8 @@ if ! (
   run_moon -C "$moon_toolchain_root/lib/core" \
     bundle --warn-list -a --all
   run_moon -C "$moon_toolchain_root/lib/core" \
+    bundle --warn-list -a --target js
+  run_moon -C "$moon_toolchain_root/lib/core" \
     bundle --warn-list -a --target llvm
   run_moon -C "$moon_toolchain_root/lib/core" \
     bundle --warn-list -a --target wasm-gc --quiet

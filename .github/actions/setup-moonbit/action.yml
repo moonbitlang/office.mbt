@@ -58,6 +58,7 @@ runs:
         # the official all-target, LLVM and wasm-gc bundle sequence, which the
         # fresh-agent preparer reproduces from the same pinned core inputs
         "$toolchain/bin/moon" -C "$toolchain/lib/core" bundle --warn-list -a --all
+        "$toolchain/bin/moon" -C "$toolchain/lib/core" bundle --warn-list -a --target js
         "$toolchain/bin/moon" -C "$toolchain/lib/core" bundle --warn-list -a --target llvm
         "$toolchain/bin/moon" -C "$toolchain/lib/core" bundle --warn-list -a --target wasm-gc --quiet
 
@@ -85,8 +86,12 @@ runs:
           & powershell -ExecutionPolicy Bypass -File $installer $env:MOONBIT_CHANNEL
         }
         Remove-Item $installer -Force
-        New-Item -ItemType HardLink -Path "$toolchain\bin\moonx.exe" -Value "$toolchain\bin\moon.exe" | Out-Null
+        # the channel installer already provides moonx; only link if absent
+        if (-not (Test-Path -LiteralPath "$toolchain\bin\moonx.exe")) {
+          New-Item -ItemType HardLink -Path "$toolchain\bin\moonx.exe" -Value "$toolchain\bin\moon.exe" | Out-Null
+        }
         & "$toolchain\bin\moon.exe" -C "$toolchain\lib\core" bundle --warn-list -a --all
+        & "$toolchain\bin\moon.exe" -C "$toolchain\lib\core" bundle --warn-list -a --target js
         & "$toolchain\bin\moon.exe" -C "$toolchain\lib\core" bundle --warn-list -a --target wasm-gc --quiet
         "MOON_HOME=$toolchain" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
         "$toolchain\bin" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
