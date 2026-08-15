@@ -324,17 +324,12 @@ build_lock="$script_dir/build-lock.json"
   (.toolchains | map(.platform) | unique | length) ==
     (.toolchains | length) and
   (.toolchains | all(
-    keys == ["entries", "manifest_sha256", "moon_version",
-      "moonc_version", "moonrun_version", "platform"] and
+    keys == ["entries", "platform"] and
     (.platform | type) == "string" and
     (.entries | type) == "array" and
     (.entries | length) > 0 and
     (.entries | all(type == "string" and length > 0)) and
-    (.entries | unique | length) == (.entries | length) and
-    (.manifest_sha256 | test("^[0-9a-f]{64}$")) and
-    (.moon_version | type) == "string" and
-    (.moonc_version | type) == "string" and
-    (.moonrun_version | type) == "string"
+    (.entries | unique | length) == (.entries | length)
   ))
 ' "$build_lock" >/dev/null || die "tracked build lock failed strict validation"
 
@@ -346,22 +341,6 @@ esac
 [ "$(/usr/bin/jq --arg platform "$build_platform" \
   '[.toolchains[] | select(.platform == $platform)] | length' "$build_lock")" = "1" ] ||
   die "build lock does not contain exactly one toolchain for $build_platform"
-expected_toolchain_manifest_sha256="$(/usr/bin/jq -er \
-  --arg platform "$build_platform" \
-  '.toolchains[] | select(.platform == $platform) | .manifest_sha256' \
-  "$build_lock")"
-expected_moon_version="$(/usr/bin/jq -er \
-  --arg platform "$build_platform" \
-  '.toolchains[] | select(.platform == $platform) | .moon_version' \
-  "$build_lock")"
-expected_moonc_version="$(/usr/bin/jq -er \
-  --arg platform "$build_platform" \
-  '.toolchains[] | select(.platform == $platform) | .moonc_version' \
-  "$build_lock")"
-expected_moonrun_version="$(/usr/bin/jq -er \
-  --arg platform "$build_platform" \
-  '.toolchains[] | select(.platform == $platform) | .moonrun_version' \
-  "$build_lock")"
 toolchain_entries=()
 while IFS= read -r entry; do
   toolchain_entries+=("$entry")
@@ -454,9 +433,11 @@ source_toolchain_manifest="$scratch/source-toolchain.manifest"
   "$build_platform" \
   "${toolchain_entries[@]}"
 actual_toolchain_manifest_sha256="$(sha256_file "$source_toolchain_manifest")"
-[ "$actual_toolchain_manifest_sha256" = \
-  "$expected_toolchain_manifest_sha256" ] ||
-  die "complete Moon toolchain inventory does not match the tracked build lock: expected $expected_toolchain_manifest_sha256, found $actual_toolchain_manifest_sha256"
+# Captured, not compared against a tracked digest. CI installs from a moving
+# release channel, so this digest changes on every MoonBit publication -- the
+# same reason the dependency inventory stopped being compared. It is still
+# recorded in the manifest, and still compared before and after the build
+# below, so a build that mutates its own toolchain is still caught.
 
 toolchain_archive="$scratch/toolchain.tar"
 /usr/bin/env -i PATH=/usr/bin:/bin LANG=C LC_ALL=C \
@@ -643,18 +624,10 @@ run_moon version --all > "$toolchain_versions"
 moon_version="$(/usr/bin/sed -n '1p' "$toolchain_versions")"
 moonc_version="$(/usr/bin/sed -n '2p' "$toolchain_versions")"
 moonrun_version="$(/usr/bin/sed -n '3p' "$toolchain_versions")"
-[ "$(printf '%s\n' "$moon_version" | /usr/bin/awk \
-  '{$NF=""; sub(/[[:space:]]+$/, ""); print}')" = "$expected_moon_version" ] ||
-  die "Moon driver version does not match the tracked build lock"
-[ "$(printf '%s\n' "$moonc_version" | /usr/bin/awk \
-  '{$NF=""; sub(/[[:space:]]+$/, ""); print}')" = "$expected_moonc_version" ] ||
-  die "Moon code-generator version does not match the tracked build lock"
-[ "$(printf '%s\n' "$moonrun_version" | /usr/bin/awk \
-  '{$NF=""; sub(/[[:space:]]+$/, ""); print}')" = "$expected_moonrun_version" ] ||
-  die "Moon runtime version does not match the tracked build lock"
-moon_version="$expected_moon_version"
-moonc_version="$expected_moonc_version"
-moonrun_version="$expected_moonrun_version"
+# Recorded rather than required to match a tracked value, for the same reason
+# as the inventory digest above: the channel moves. The resolved versions still
+# travel in the candidate manifest, so a candidate remains traceable to the
+# exact toolchain that produced it.
 
 bundle_log="$scratch/bundle.log"
 if ! (

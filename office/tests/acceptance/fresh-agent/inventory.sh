@@ -215,7 +215,7 @@ for my $path (@paths) {
       (
         $relative eq 'lib/core/_build/packages.json' ||
         $relative =~
-          m{\Alib/core/_build/[^/]+/release/bundle/all_pkgs\.json\z}
+          m{\Alib/core/_build/[^/]+/release/bundle/(?:all_pkgs|packages)\.json\z}
       )
     ) {
       ($inventory_size, $sha256) =

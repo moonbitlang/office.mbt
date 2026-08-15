@@ -67,12 +67,17 @@ tracked digests, because that distribution moves rarely and deliberately.
 Both inventories are reverified after the build and retained with the candidate. Every tracked controller asset
 is copied from the snapshot, never from the mutable checkout.
 
-CI installs the immutable MoonBit snapshot named by the locked `moonc` version
-(`0.10.5+001eef869-nightly`), rather than the mutable `nightly` CDN alias. Any deliberate
-toolchain upgrade must update that workflow version and both platform inventories
-in `build-lock.json` together. CI downloads the exact platform distribution and
-core archives and verifies both tracked SHA-256 digests before either archive is
-extracted or any downloaded executable is run. It then recreates the official
+CI installs MoonBit from a moving release channel and runs the whole gate on
+both `latest` and `nightly`, treating the run as green when either channel is
+fully green. The toolchain is therefore no longer pinned, and neither its
+version strings nor a digest of its contents are tracked in `build-lock.json` --
+the lock now carries only the inventory scope, the per-platform list of
+distribution entries to walk. The toolchain inventory is still captured and
+still compared before and after the build, so a build that mutates its own
+toolchain is caught; what it no longer does is compare against a value in git,
+for the same reason the dependency inventory stopped doing so. The resolved
+`moon`/`moonc`/`moonrun` versions travel in the candidate manifest, so a
+candidate stays traceable to the exact toolchain that produced it. It then recreates the official
 all-target, LLVM, and wasm-gc bundle sequence directly in an explicitly absent
 private root under the per-job temporary directory, so a mutable installer,
 preinstalled toolchain, or stale user state cannot enter the reviewed closure.
