@@ -68,7 +68,7 @@ Both inventories are reverified after the build and retained with the candidate.
 is copied from the snapshot, never from the mutable checkout.
 
 CI installs the immutable MoonBit snapshot named by the locked `moonc` version
-(`0.10.5+001eef869-nightly`), rather than the mutable `nightly` CDN alias. Any deliberate
+(`0.10.7+bc794d341`, from the stable channel), rather than a mutable CDN alias. Any deliberate
 toolchain upgrade must update that workflow version and both platform inventories
 in `build-lock.json` together. CI downloads the exact platform distribution and
 core archives and verifies both tracked SHA-256 digests before either archive is

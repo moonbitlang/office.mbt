@@ -33,16 +33,23 @@ concurrency:
 # `scripts/ci/local-gate.sh` runs exactly what `lint` runs, in ~13 seconds.
 # Enable it as a pre-push hook with `git config core.hooksPath .githooks`.
 
-# `nightly` is a mutable CDN alias, while the fresh-agent build lock binds the
-# complete toolchain closure. Install the immutable moonc-version snapshot that
-# the lock describes so an unrelated nightly publication cannot break the gate.
+# `stable` and `nightly` are mutable CDN aliases, while the fresh-agent build
+# lock binds the complete toolchain closure. Install the immutable
+# moonc-version snapshot that the lock describes so an unrelated publication on
+# either channel cannot break the gate.
+#
+# The snapshot tracks the *stable* channel. Nightly is deliberately not
+# followed: on 2026-08-15 it tightened `lexscan` to reject String/StringView
+# targets, which `moonbitlang/x@0.4.49` still passes, so a nightly-following
+# gate would have been red on a dependency this repository does not own. The
+# advisory drift job below is where that shows up, which is its whole purpose.
 env:
-  MOONBIT_TOOLCHAIN_VERSION: "0.10.5+001eef869-nightly"
-  MOONBIT_DARWIN_ARCHIVE_SHA256: "7e675c0d118ee7f37b02c578551f0be7ad96e0c0c7b55d4a41367df23f32ecb9"
-  MOONBIT_LINUX_ARCHIVE_SHA256: "4c2085135f2c777c8440d48dc48567402d8d80c642b77d2dfeb742b75b5e3d51"
-  MOONBIT_WINDOWS_ARCHIVE_SHA256: "27206bc1dd8a8dfc520ec181f2f7e23a3ae6f80e6946293466a6c952c16e35ed"
-  MOONBIT_UNIX_CORE_SHA256: "e3d209d42b443b4b03cac91f59879a0d2d1a5dfddfedd30f209102a865c5b059"
-  MOONBIT_WINDOWS_CORE_SHA256: "231a3acd617bd706593631e02342f18a871f5759329481f6d0518dc35c559610"
+  MOONBIT_TOOLCHAIN_VERSION: "0.10.7+bc794d341"
+  MOONBIT_DARWIN_ARCHIVE_SHA256: "b4781a1e38c800d1fd65693b1970b2d2429faef31d8933d266a1f6e2693a96ef"
+  MOONBIT_LINUX_ARCHIVE_SHA256: "36f5e7cf1545594e17cd3f1c0b757fe6e86ad0218bc96f419369cbb8502e62ba"
+  MOONBIT_WINDOWS_ARCHIVE_SHA256: "c659625f5c3a9fca5d17866bff3de07b6328c59628d74df5d5b4d79b78524880"
+  MOONBIT_UNIX_CORE_SHA256: "06922d35dd94dc0baea7682295fe6084f0d854eed3b497cd6b527f77d899a7f5"
+  MOONBIT_WINDOWS_CORE_SHA256: "bdf280aaefe377976cc31f8c5e243464a56ec93a5a7942427e223118b81c8a61"
 
 jobs:
 
