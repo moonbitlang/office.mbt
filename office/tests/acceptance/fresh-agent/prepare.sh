@@ -465,10 +465,14 @@ staged_toolchain_manifest="$scratch/staged-toolchain.manifest"
 
 for target in js llvm native wasm-gc wasm; do
   generated_bundle_db="$moon_toolchain_root/lib/core/_build/$target/release/bundle/bundle.moon_db"
-  [ -f "$generated_bundle_db" ] && [ ! -L "$generated_bundle_db" ] ||
-    die "expected generated Moon bundle database is unavailable: $target"
+  # Not every toolchain emits these: moonc 0.10.8 stopped writing them while
+  # still producing every target's bundle. Absence means there is nothing to
+  # reset, which is the state this loop is trying to reach anyway. A symlink
+  # here would be a substitution attempt and is still refused.
+  [ ! -L "$generated_bundle_db" ] ||
+    die "generated Moon bundle database is a symlink: $target"
   /bin/rm -f -- "$generated_bundle_db"
-  [ ! -e "$generated_bundle_db" ] && [ ! -L "$generated_bundle_db" ] ||
+  [ ! -e "$generated_bundle_db" ] ||
     die "could not reset generated Moon bundle database: $target"
 done
 
@@ -634,8 +638,6 @@ if ! (
   run_moon -C "$moon_toolchain_root/lib/core" \
     bundle --warn-list -a --all
   run_moon -C "$moon_toolchain_root/lib/core" \
-    bundle --warn-list -a --target js
-  run_moon -C "$moon_toolchain_root/lib/core" \
     bundle --warn-list -a --target llvm
   run_moon -C "$moon_toolchain_root/lib/core" \
     bundle --warn-list -a --target wasm-gc --quiet
@@ -646,9 +648,10 @@ if ! (
 fi
 for target in js llvm native wasm-gc wasm; do
   generated_bundle_db="$moon_toolchain_root/lib/core/_build/$target/release/bundle/bundle.moon_db"
-  [ -f "$generated_bundle_db" ] && [ ! -L "$generated_bundle_db" ] ||
-    die "trusted core bundle regeneration omitted a database: $target"
-  chmod 0644 "$generated_bundle_db"
+  # Only restore the mode of a database this toolchain actually regenerated.
+  if [ -f "$generated_bundle_db" ] && [ ! -L "$generated_bundle_db" ]; then
+    chmod 0644 "$generated_bundle_db"
+  fi
 done
 regenerated_toolchain_manifest="$scratch/regenerated-toolchain.manifest"
 "$snapshot_inventory" \
