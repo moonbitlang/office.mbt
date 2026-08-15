@@ -199,12 +199,17 @@ for my $path (@paths) {
   } elsif (
     S_ISREG($mode) &&
     $label ne 'dependencies' &&
-    $relative =~ m{\Alib/core/_build/[^/]+/release/bundle/bundle\.moon_db\z}
+    (
+      $relative =~ m{\Alib/core/_build/[^/]+/release/bundle/bundle\.moon_db\z} ||
+      $relative eq 'lib/core/_build/.moon_db'
+    )
   ) {
-    # Moon regenerates these target-local lookup databases. Their record order
-    # and path-derived fingerprints vary across equivalent installations, so
-    # inventory their presence and mode while prepare.sh removes the databases
-    # for every target it consumes before candidate code can run.
+    # Moon regenerates these lookup databases. Their record order and
+    # path-derived fingerprints vary across equivalent installations, so
+    # inventory their presence and mode while prepare.sh removes them before
+    # candidate code can run. Where they live is a toolchain detail that has
+    # already moved once: 0.10.7 writes one per target under
+    # <target>/release/bundle, 0.10.8 writes a single _build/.moon_db.
     printf "G\t%04o\t-\t-\t%s\n", $mode & 07777, $relative;
   } elsif (S_ISREG($mode)) {
     open my $file, '<:raw', $path
@@ -215,7 +220,7 @@ for my $path (@paths) {
       (
         $relative eq 'lib/core/_build/packages.json' ||
         $relative =~
-          m{\Alib/core/_build/[^/]+/release/bundle/all_pkgs\.json\z}
+          m{\Alib/core/_build/[^/]+/release/bundle/(?:all_pkgs|packages)\.json\z}
       )
     ) {
       ($inventory_size, $sha256) =

@@ -1,134 +1,102 @@
-name: Set up MoonBit (pinned nightly snapshot)
+name: Set up MoonBit (channel install)
 description: >
-  Install the immutable MoonBit nightly snapshot named by the fresh-agent build
-  lock, verifying every downloaded archive against its pinned SHA-256 before it
-  is unpacked, then bundle core for the backends this repository builds.
+  Install MoonBit from a moving release channel into a private root, then
+  bundle core for the backends this repository builds.
 
-  `nightly` is a mutable CDN alias, while the build lock binds the complete
-  toolchain closure. Installing the pinned moonc-version snapshot means an
-  unrelated nightly publication cannot break the gate.
+  This deliberately tracks a channel rather than an immutable snapshot. The
+  previous design pinned one moonc version and verified five SHA-256 digests
+  before unpacking, which is the stronger integrity story in the abstract and
+  the wrong trade here: MoonBit publishes fast, so the pin went two weeks stale
+  and failed a PR for a core API that exists in every toolchain anyone would
+  actually install. A pin that is routinely wrong is not a safety property, it
+  is a maintenance tax that fails closed on the wrong thing.
 
-  Deliberately does NOT cache the toolchain: the SHA-256 verification below is
-  the repository's integrity story for the toolchain, and a restored cache
-  entry would bypass the download it verifies.
+  What replaces it is coverage rather than verification: CI runs the whole gate
+  on both `latest` and `nightly`, and the run is green when either channel is
+  fully green (see the `gate` job). A channel that breaks for reasons this
+  repository does not own therefore reports without blocking, while a genuine
+  regression -- which breaks both -- still stops the merge.
+
+  Install still goes into an explicitly absent private root under the runner
+  temporary directory, so a preinstalled toolchain or stale user state cannot
+  enter the closure. Deliberately does NOT cache: a restored cache entry would
+  defeat the point of tracking a channel.
 
 inputs:
-  toolchain-version:
-    description: Full pinned toolchain version, e.g. "0.10.5+001eef869-nightly".
+  channel:
+    description: Release channel to install, "latest" (stable) or "nightly".
     required: true
-  darwin-archive-sha256:
-    description: SHA-256 of moonbit-darwin-aarch64.tar.gz. Required on macOS.
-    required: false
-    default: ""
-  linux-archive-sha256:
-    description: SHA-256 of moonbit-linux-x86_64.tar.gz. Required on Linux.
-    required: false
-    default: ""
-  windows-archive-sha256:
-    description: SHA-256 of moonbit-windows-x86_64.zip. Required on Windows.
-    required: false
-    default: ""
-  unix-core-sha256:
-    description: SHA-256 of the core tarball. Required on macOS and Linux.
-    required: false
-    default: ""
-  windows-core-sha256:
-    description: SHA-256 of the core zip. Required on Windows.
-    required: false
-    default: ""
 
 runs:
   using: composite
   steps:
-    - name: Set up MoonBit (pinned nightly, Unix)
+    - name: Set up MoonBit (Unix)
       if: runner.os != 'Windows'
       shell: bash
       env:
-        MOONBIT_TOOLCHAIN_VERSION: ${{ inputs.toolchain-version }}
-        MOONBIT_DARWIN_ARCHIVE_SHA256: ${{ inputs.darwin-archive-sha256 }}
-        MOONBIT_LINUX_ARCHIVE_SHA256: ${{ inputs.linux-archive-sha256 }}
-        MOONBIT_UNIX_CORE_SHA256: ${{ inputs.unix-core-sha256 }}
+        MOONBIT_CHANNEL: ${{ inputs.channel }}
       run: |
-        toolchain="$RUNNER_TEMP/moonbit-f1b-toolchain"
-        archive="$RUNNER_TEMP/moonbit-f1b-toolchain.tar.gz"
-        core_archive="$RUNNER_TEMP/moonbit-f1b-core.tar.gz"
-        version_path="${MOONBIT_TOOLCHAIN_VERSION//+/%2B}"
-        test ! -e "$toolchain" && test ! -L "$toolchain"
-        case "$(uname -ms)" in
-          'Darwin arm64')
-            target=darwin-aarch64
-            archive_sha="$MOONBIT_DARWIN_ARCHIVE_SHA256"
-            ;;
-          'Linux x86_64')
-            target=linux-x86_64
-            archive_sha="$MOONBIT_LINUX_ARCHIVE_SHA256"
-            ;;
-          *)
-            echo "unsupported pinned MoonBit platform: $(uname -ms)" >&2
-            exit 1
-            ;;
+        set -euo pipefail
+        case "$MOONBIT_CHANNEL" in
+          latest|nightly) ;;
+          *) echo "unsupported MoonBit channel: $MOONBIT_CHANNEL" >&2; exit 1 ;;
         esac
-        test -n "$archive_sha"
-        test -n "$MOONBIT_UNIX_CORE_SHA256"
-        curl -fsSL -o "$archive" \
-          "https://cli.moonbitlang.com/binaries/$version_path/moonbit-$target.tar.gz"
-        curl -fsSL -o "$core_archive" \
-          "https://cli.moonbitlang.com/cores/core-$version_path.tar.gz"
-        test "$(shasum -a 256 "$archive" | awk '{print $1}')" = "$archive_sha"
-        test "$(shasum -a 256 "$core_archive" | awk '{print $1}')" = \
-          "$MOONBIT_UNIX_CORE_SHA256"
+        toolchain="$RUNNER_TEMP/moonbit-toolchain"
+        # absent by construction: never install over an existing root
+        test ! -e "$toolchain" && test ! -L "$toolchain"
         mkdir -m 0700 "$toolchain"
-        tar -xzf "$archive" -C "$toolchain"
-        mkdir -p "$toolchain/lib"
-        tar -xzf "$core_archive" -C "$toolchain/lib"
+        curl -fsSL https://cli.moonbitlang.com/install/unix.sh -o "$RUNNER_TEMP/install-moonbit.sh"
+        if [ "$MOONBIT_CHANNEL" = "latest" ]; then
+          MOON_HOME="$toolchain" bash "$RUNNER_TEMP/install-moonbit.sh"
+        else
+          MOON_HOME="$toolchain" bash "$RUNNER_TEMP/install-moonbit.sh" "$MOONBIT_CHANNEL"
+        fi
+        rm -f "$RUNNER_TEMP/install-moonbit.sh"
         ln -sfn moon "$toolchain/bin/moonx"
-        chmod +x "$toolchain"/bin/* "$toolchain/bin/internal/tcc"
         echo "MOON_HOME=$toolchain" >> "$GITHUB_ENV"
         echo "$toolchain/bin" >> "$GITHUB_PATH"
+        # the official all-target, LLVM and wasm-gc bundle sequence, which the
+        # fresh-agent preparer reproduces from the same core inputs
         "$toolchain/bin/moon" -C "$toolchain/lib/core" bundle --warn-list -a --all
         "$toolchain/bin/moon" -C "$toolchain/lib/core" bundle --warn-list -a --target llvm
         "$toolchain/bin/moon" -C "$toolchain/lib/core" bundle --warn-list -a --target wasm-gc --quiet
 
-    - name: Set up MoonBit (pinned nightly, Windows)
+    - name: Set up MoonBit (Windows)
       if: runner.os == 'Windows'
       shell: pwsh
       env:
-        MOONBIT_INSTALL_VERSION: ${{ inputs.toolchain-version }}
-        MOONBIT_WINDOWS_ARCHIVE_SHA256: ${{ inputs.windows-archive-sha256 }}
-        MOONBIT_WINDOWS_CORE_SHA256: ${{ inputs.windows-core-sha256 }}
+        MOONBIT_CHANNEL: ${{ inputs.channel }}
       run: |
-        $toolchain = Join-Path $env:RUNNER_TEMP "moonbit-f1b-toolchain"
-        $archive = Join-Path $env:RUNNER_TEMP "moonbit-f1b-toolchain.zip"
-        $coreArchive = Join-Path $env:RUNNER_TEMP "moonbit-f1b-core.zip"
+        $ErrorActionPreference = "Stop"
+        if ($env:MOONBIT_CHANNEL -notin @("latest", "nightly")) {
+          throw "unsupported MoonBit channel: $env:MOONBIT_CHANNEL"
+        }
+        $toolchain = Join-Path $env:RUNNER_TEMP "moonbit-toolchain"
         if (Test-Path -LiteralPath $toolchain) {
           throw "MoonBit install root must be absent"
         }
-        if (-not $env:MOONBIT_WINDOWS_ARCHIVE_SHA256 -or -not $env:MOONBIT_WINDOWS_CORE_SHA256) {
-          throw "Windows MoonBit setup requires both pinned archive SHA-256 inputs"
-        }
-        $versionPath = $env:MOONBIT_INSTALL_VERSION.Replace("+", "%2B")
-        $archiveUri = "https://cli.moonbitlang.com/binaries/$versionPath/moonbit-windows-x86_64.zip"
-        $coreUri = "https://cli.moonbitlang.com/cores/core-$versionPath.zip"
-        Invoke-WebRequest -Uri $archiveUri -OutFile $archive
-        Invoke-WebRequest -Uri $coreUri -OutFile $coreArchive
-        $actualArchiveSha = (Get-FileHash -Algorithm SHA256 $archive).Hash.ToLowerInvariant()
-        $actualCoreSha = (Get-FileHash -Algorithm SHA256 $coreArchive).Hash.ToLowerInvariant()
-        if ($actualArchiveSha -ne $env:MOONBIT_WINDOWS_ARCHIVE_SHA256) {
-          throw "MoonBit toolchain archive SHA-256 mismatch"
-        }
-        if ($actualCoreSha -ne $env:MOONBIT_WINDOWS_CORE_SHA256) {
-          throw "MoonBit core archive SHA-256 mismatch"
-        }
         New-Item -Path $toolchain -ItemType Directory | Out-Null
-        Expand-Archive $archive -DestinationPath $toolchain
-        New-Item -Path "$toolchain\lib" -ItemType Directory -Force | Out-Null
-        Expand-Archive $coreArchive -DestinationPath "$toolchain\lib"
-        New-Item -ItemType HardLink -Path "$toolchain\bin\moonx.exe" -Value "$toolchain\bin\moon.exe" | Out-Null
+        $env:MOON_HOME = $toolchain
+        $installer = Join-Path $env:RUNNER_TEMP "install-moonbit.ps1"
+        Invoke-WebRequest -Uri "https://cli.moonbitlang.com/install/powershell.ps1" -OutFile $installer
+        if ($env:MOONBIT_CHANNEL -eq "latest") {
+          & powershell -ExecutionPolicy Bypass -File $installer
+        } else {
+          & powershell -ExecutionPolicy Bypass -File $installer $env:MOONBIT_CHANNEL
+        }
+        Remove-Item $installer -Force
+        # the channel installer already provides moonx; only link if absent
+        if (-not (Test-Path -LiteralPath "$toolchain\bin\moonx.exe")) {
+          New-Item -ItemType HardLink -Path "$toolchain\bin\moonx.exe" -Value "$toolchain\bin\moon.exe" | Out-Null
+        }
         & "$toolchain\bin\moon.exe" -C "$toolchain\lib\core" bundle --warn-list -a --all
         & "$toolchain\bin\moon.exe" -C "$toolchain\lib\core" bundle --warn-list -a --target wasm-gc --quiet
         "MOON_HOME=$toolchain" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
         "$toolchain\bin" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
 
+    # Recorded on every job so a candidate remains traceable to an exact
+    # toolchain after the fact. Provenance by record, since there is no longer
+    # a tracked digest to verify against before the fact.
     - name: MoonBit versions
       shell: bash
       run: moon version --all

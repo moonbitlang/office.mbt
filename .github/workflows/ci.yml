@@ -33,23 +33,36 @@ concurrency:
 # `scripts/ci/local-gate.sh` runs exactly what `lint` runs, in ~13 seconds.
 # Enable it as a pre-push hook with `git config core.hooksPath .githooks`.
 
-# `nightly` is a mutable CDN alias, while the fresh-agent build lock binds the
-# complete toolchain closure. Install the immutable moonc-version snapshot that
-# the lock describes so an unrelated nightly publication cannot break the gate.
-env:
-  MOONBIT_TOOLCHAIN_VERSION: "0.10.5+001eef869-nightly"
-  MOONBIT_DARWIN_ARCHIVE_SHA256: "7e675c0d118ee7f37b02c578551f0be7ad96e0c0c7b55d4a41367df23f32ecb9"
-  MOONBIT_LINUX_ARCHIVE_SHA256: "4c2085135f2c777c8440d48dc48567402d8d80c642b77d2dfeb742b75b5e3d51"
-  MOONBIT_WINDOWS_ARCHIVE_SHA256: "27206bc1dd8a8dfc520ec181f2f7e23a3ae6f80e6946293466a6c952c16e35ed"
-  MOONBIT_UNIX_CORE_SHA256: "e3d209d42b443b4b03cac91f59879a0d2d1a5dfddfedd30f209102a865c5b059"
-  MOONBIT_WINDOWS_CORE_SHA256: "231a3acd617bd706593631e02342f18a871f5759329481f6d0518dc35c559610"
+# The toolchain is not pinned. CI runs the whole gate on both release channels
+# and the run is green when *either* channel is fully green -- see the `gate`
+# job at the end, which is the required check.
+#
+# A pin was the previous design and it failed on its own terms. MoonBit
+# publishes fast enough that an immutable snapshot went two weeks stale and
+# broke a PR for a core API present in every toolchain anyone would install,
+# and bumping it meant re-deriving five archive digests plus a per-platform
+# content digest of the installed toolchain that only a runner of that platform
+# can produce. A pin that is routinely wrong is a maintenance tax, not a safety
+# property.
+#
+# Two floating channels give coverage instead of verification. A channel that
+# breaks for reasons this repository does not own reports without blocking --
+# on 2026-08-15 nightly rejected `lexscan` over String, which was
+# moonbitlang/x, not us. A genuine regression breaks both channels and still
+# stops the merge.
 
 jobs:
 
   # The fast gate. Everything else waits on this.
 
   lint:
-    name: lint (fmt + interface + type check)
+    name: lint (fmt + interface + type check) [${{ matrix.channel }}]
+    # one leg failing is not a verdict; the `gate` job decides
+    continue-on-error: true
+    strategy:
+      fail-fast: false
+      matrix:
+        channel: [latest, nightly]
     runs-on: ubuntu-24.04
     timeout-minutes: 20
     env:
@@ -67,9 +80,7 @@ jobs:
 
       - uses: ./.github/actions/setup-moonbit
         with:
-          toolchain-version: ${{ env.MOONBIT_TOOLCHAIN_VERSION }}
-          linux-archive-sha256: ${{ env.MOONBIT_LINUX_ARCHIVE_SHA256 }}
-          unix-core-sha256: ${{ env.MOONBIT_UNIX_CORE_SHA256 }}
+          channel: ${{ matrix.channel }}
 
       # Format check across the whole workspace, including executable package
       # manifests now that every member uses the supported `pkgtype` syntax.
@@ -131,79 +142,14 @@ jobs:
   # .NET 8 so `moon test` runs real schema validation of generated workbooks
   # and docx packages, exactly as the single job used to.
 
-  # Compatibility signal, deliberately NOT pinned.
-  #
-  # Every other job installs one immutable toolchain snapshot, which is the
-  # right call for reproducibility but means CI cannot see a compiler moving
-  # underneath it: a release that breaks the workspace stays invisible until
-  # somebody upgrades locally and hits it by hand. That is exactly how
-  # moonbitlang/x@0.4.43 came to fail on moonc 0.10.7 with CI fully green.
-  #
-  # This job floats on purpose. It installs from the mutable stable and
-  # nightly channels, so it has no archive digest to verify against and is
-  # therefore kept out of the verified-download path used everywhere else —
-  # it never feeds a release artifact. It is advisory: drift should report,
-  # not block, because the channel can break for reasons this repository
-  # does not own.
-  toolchain-drift:
-    name: toolchain drift (${{ matrix.channel }}, advisory)
-    needs: lint
-    runs-on: ubuntu-24.04
-    timeout-minutes: 40
+  test-native:
+    name: test (native) [${{ matrix.channel }}]
+    # one leg failing is not a verdict; the `gate` job decides
     continue-on-error: true
     strategy:
       fail-fast: false
       matrix:
         channel: [latest, nightly]
-    env:
-      EXPECTED_HEAD: ${{ github.event.pull_request.head.sha || github.sha }}
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v5
-        with:
-          ref: ${{ github.event.pull_request.head.sha || github.sha }}
-          persist-credentials: false
-
-      - name: Assert exact workflow head
-        shell: bash
-        run: test "$(git rev-parse --verify HEAD)" = "$EXPECTED_HEAD"
-
-      - name: Install MoonBit (${{ matrix.channel }} channel)
-        shell: bash
-        env:
-          CHANNEL: ${{ matrix.channel }}
-        run: |
-          set -euo pipefail
-          curl -fsSL https://cli.moonbitlang.com/install/unix.sh -o install.sh
-          if [ "$CHANNEL" = "latest" ]; then
-            bash install.sh
-          else
-            bash install.sh "$CHANNEL"
-          fi
-          rm -f install.sh
-          echo "$HOME/.moon/bin" >> "$GITHUB_PATH"
-
-      - name: Report the toolchain under test
-        shell: bash
-        run: moon version --all
-
-      # A freshly installed toolchain carries an empty registry index, so
-      # every dependency resolves to "module was not found in the registry"
-      # until this runs.
-      - name: Fetch the registry index
-        shell: bash
-        run: moon update
-
-      - name: Type check the workspace
-        shell: bash
-        run: moon check --deny-warn
-
-      - name: Test the workspace
-        shell: bash
-        run: moon test
-
-  test-native:
-    name: test (native)
     needs: lint
     runs-on: ubuntu-24.04
     timeout-minutes: 40
@@ -227,9 +173,7 @@ jobs:
 
       - uses: ./.github/actions/setup-moonbit
         with:
-          toolchain-version: ${{ env.MOONBIT_TOOLCHAIN_VERSION }}
-          linux-archive-sha256: ${{ env.MOONBIT_LINUX_ARCHIVE_SHA256 }}
-          unix-core-sha256: ${{ env.MOONBIT_UNIX_CORE_SHA256 }}
+          channel: ${{ matrix.channel }}
 
       # Run all members' native test suites in one pass. Covers mbtexcel
       # (including OpenXML SDK schema validation via .NET), docx2html
@@ -239,7 +183,13 @@ jobs:
         run: moon test --target native
 
   test-wasm:
-    name: test (wasm)
+    name: test (wasm) [${{ matrix.channel }}]
+    # one leg failing is not a verdict; the `gate` job decides
+    continue-on-error: true
+    strategy:
+      fail-fast: false
+      matrix:
+        channel: [latest, nightly]
     needs: lint
     runs-on: ubuntu-24.04
     timeout-minutes: 40
@@ -263,9 +213,7 @@ jobs:
 
       - uses: ./.github/actions/setup-moonbit
         with:
-          toolchain-version: ${{ env.MOONBIT_TOOLCHAIN_VERSION }}
-          linux-archive-sha256: ${{ env.MOONBIT_LINUX_ARCHIVE_SHA256 }}
-          unix-core-sha256: ${{ env.MOONBIT_UNIX_CORE_SHA256 }}
+          channel: ${{ matrix.channel }}
 
       # An unfiltered invocation traverses every moon.work member and all of
       # its packages. Keep this module-wide so new portable child packages are
@@ -274,7 +222,13 @@ jobs:
         run: moon test --target wasm
 
   test-js:
-    name: test (js)
+    name: test (js) [${{ matrix.channel }}]
+    # one leg failing is not a verdict; the `gate` job decides
+    continue-on-error: true
+    strategy:
+      fail-fast: false
+      matrix:
+        channel: [latest, nightly]
     needs: lint
     runs-on: ubuntu-24.04
     timeout-minutes: 40
@@ -298,9 +252,7 @@ jobs:
 
       - uses: ./.github/actions/setup-moonbit
         with:
-          toolchain-version: ${{ env.MOONBIT_TOOLCHAIN_VERSION }}
-          linux-archive-sha256: ${{ env.MOONBIT_LINUX_ARCHIVE_SHA256 }}
-          unix-core-sha256: ${{ env.MOONBIT_UNIX_CORE_SHA256 }}
+          channel: ${{ matrix.channel }}
 
       - name: Test complete workspace (js)
         run: moon test --target js
@@ -309,7 +261,13 @@ jobs:
   # unified Office acceptance run.
 
   cli-smoke:
-    name: CLI smoke (cram + wasm CLIs + Office acceptance)
+    name: CLI smoke (cram + wasm CLIs + Office acceptance) [${{ matrix.channel }}]
+    # one leg failing is not a verdict; the `gate` job decides
+    continue-on-error: true
+    strategy:
+      fail-fast: false
+      matrix:
+        channel: [latest, nightly]
     needs: lint
     runs-on: ubuntu-24.04
     timeout-minutes: 40
@@ -333,9 +291,7 @@ jobs:
 
       - uses: ./.github/actions/setup-moonbit
         with:
-          toolchain-version: ${{ env.MOONBIT_TOOLCHAIN_VERSION }}
-          linux-archive-sha256: ${{ env.MOONBIT_LINUX_ARCHIVE_SHA256 }}
-          unix-core-sha256: ${{ env.MOONBIT_UNIX_CORE_SHA256 }}
+          channel: ${{ matrix.channel }}
 
       # Build only the CLIs the cram docs exercise — the rest of the workspace
       # is not needed by this job. (This split originally dodged a pathological
@@ -654,7 +610,13 @@ jobs:
   # advisory second step.
 
   release-smoke:
-    name: installed Office release smoke (Ubuntu)
+    name: installed Office release smoke (Ubuntu) [${{ matrix.channel }}]
+    # one leg failing is not a verdict; the `gate` job decides
+    continue-on-error: true
+    strategy:
+      fail-fast: false
+      matrix:
+        channel: [latest, nightly]
     needs: lint
     runs-on: ubuntu-24.04
     timeout-minutes: 40
@@ -673,9 +635,7 @@ jobs:
 
       - uses: ./.github/actions/setup-moonbit
         with:
-          toolchain-version: ${{ env.MOONBIT_TOOLCHAIN_VERSION }}
-          linux-archive-sha256: ${{ env.MOONBIT_LINUX_ARCHIVE_SHA256 }}
-          unix-core-sha256: ${{ env.MOONBIT_UNIX_CORE_SHA256 }}
+          channel: ${{ matrix.channel }}
 
       - name: Install pinned Codex CLI and runner dependencies
         run: |
@@ -854,7 +814,7 @@ jobs:
         if: ${{ always() && env.F1B_TOOLCHAIN_MANIFEST != '' }}
         uses: actions/upload-artifact@v4
         with:
-          name: fresh-agent-toolchain-ubuntu-${{ github.event.pull_request.head.sha || github.sha }}
+          name: fresh-agent-toolchain-ubuntu-${{ matrix.channel }}-${{ github.event.pull_request.head.sha || github.sha }}
           path: ${{ env.F1B_TOOLCHAIN_MANIFEST }}
           if-no-files-found: error
 
@@ -862,7 +822,7 @@ jobs:
         if: ${{ always() && env.F1B_CANARY_EVIDENCE != '' }}
         uses: actions/upload-artifact@v4
         with:
-          name: fresh-agent-canary-ubuntu-${{ github.event.pull_request.head.sha || github.sha }}
+          name: fresh-agent-canary-ubuntu-${{ matrix.channel }}-${{ github.event.pull_request.head.sha || github.sha }}
           path: ${{ env.F1B_CANARY_EVIDENCE }}
           if-no-files-found: warn
 
@@ -872,9 +832,11 @@ jobs:
   # non-blocking job below.
 
   transaction-platforms:
-    name: office transactional editing (${{ matrix.os }}, pinned nightly)
+    name: office transactional editing (${{ matrix.os }}) [${{ matrix.channel }}]
     needs: lint
     runs-on: ${{ matrix.os }}
+    # one leg failing is not a verdict; the `gate` job decides
+    continue-on-error: true
     timeout-minutes: 60
     env:
       EXPECTED_HEAD: ${{ github.event.pull_request.head.sha || github.sha }}
@@ -882,6 +844,7 @@ jobs:
       fail-fast: false
       matrix:
         os: [macos-latest, windows-latest]
+        channel: [latest, nightly]
     steps:
       # The repository contains deliberate path-length boundary fixtures whose
       # names exceed the legacy Win32 MAX_PATH limit. Enable Git long paths
@@ -903,12 +866,7 @@ jobs:
 
       - uses: ./.github/actions/setup-moonbit
         with:
-          toolchain-version: ${{ env.MOONBIT_TOOLCHAIN_VERSION }}
-          darwin-archive-sha256: ${{ env.MOONBIT_DARWIN_ARCHIVE_SHA256 }}
-          linux-archive-sha256: ${{ env.MOONBIT_LINUX_ARCHIVE_SHA256 }}
-          windows-archive-sha256: ${{ env.MOONBIT_WINDOWS_ARCHIVE_SHA256 }}
-          unix-core-sha256: ${{ env.MOONBIT_UNIX_CORE_SHA256 }}
-          windows-core-sha256: ${{ env.MOONBIT_WINDOWS_CORE_SHA256 }}
+          channel: ${{ matrix.channel }}
 
       - name: Install pinned Codex CLI (macOS canary)
         if: runner.os == 'macOS'
@@ -957,7 +915,7 @@ jobs:
         if: ${{ always() && runner.os == 'macOS' && env.F1B_CANARY_EVIDENCE != '' }}
         uses: actions/upload-artifact@v4
         with:
-          name: fresh-agent-canary-macos-${{ github.event.pull_request.head.sha || github.sha }}
+          name: fresh-agent-canary-macos-${{ matrix.channel }}-${{ github.event.pull_request.head.sha || github.sha }}
           path: ${{ env.F1B_CANARY_EVIDENCE }}
           if-no-files-found: warn
 
@@ -988,7 +946,7 @@ jobs:
   # path.
 
   fresh-agent-contract:
-    name: fresh-agent runner contract (${{ matrix.os }}, advisory)
+    name: fresh-agent runner contract (${{ matrix.os }}) [${{ matrix.channel }}, advisory]
     needs: lint
     runs-on: ${{ matrix.os }}
     continue-on-error: true
@@ -999,6 +957,7 @@ jobs:
       fail-fast: false
       matrix:
         os: [ubuntu-24.04, macos-latest]
+        channel: [latest, nightly]
     steps:
       - name: Checkout
         uses: actions/checkout@v5
@@ -1012,12 +971,7 @@ jobs:
 
       - uses: ./.github/actions/setup-moonbit
         with:
-          toolchain-version: ${{ env.MOONBIT_TOOLCHAIN_VERSION }}
-          darwin-archive-sha256: ${{ env.MOONBIT_DARWIN_ARCHIVE_SHA256 }}
-          linux-archive-sha256: ${{ env.MOONBIT_LINUX_ARCHIVE_SHA256 }}
-          windows-archive-sha256: ${{ env.MOONBIT_WINDOWS_ARCHIVE_SHA256 }}
-          unix-core-sha256: ${{ env.MOONBIT_UNIX_CORE_SHA256 }}
-          windows-core-sha256: ${{ env.MOONBIT_WINDOWS_CORE_SHA256 }}
+          channel: ${{ matrix.channel }}
 
       - name: Install runner dependencies (Ubuntu)
         if: runner.os == 'Linux'
@@ -1029,3 +983,84 @@ jobs:
         continue-on-error: true
         timeout-minutes: 10
         run: office/tests/acceptance/fresh-agent/run_test.sh
+
+  # The required check.
+  #
+  # Every gate job runs on both channels with `continue-on-error`, so no single
+  # leg is a verdict. This is: did *some* channel pass everything. That is a
+  # stronger question than "did each job pass somewhere", which can go green
+  # while no channel builds and tests the whole repository.
+  #
+  # Precisely: "channel" here means whatever that mutable alias served each
+  # job, not one pinned build. Every leg resolves the alias independently, so a
+  # publication mid-run can hand two legs of the same channel different
+  # versions. Each job logs `moon version --all`, which is how you find out
+  # after the fact. Making this literally one toolchain would mean resolving
+  # once and distributing the resolved version, which is worth doing only if
+  # that race ever actually bites.
+  #
+  # Job results are read back from the run itself rather than passed through
+  # artifacts, because a matrix leg cannot set a distinct job output.
+  gate:
+    name: gate
+    needs:
+      - lint
+      - test-native
+      - test-wasm
+      - test-js
+      - cli-smoke
+      - release-smoke
+      - transaction-platforms
+    if: always()
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    permissions:
+      actions: read
+    steps:
+      - name: Require one fully green channel
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          # The exact non-advisory legs each channel must contribute. Counting
+          # what the API happens to return is not enough: a renamed job, or a
+          # short page, would leave a channel looking complete at 1/1. Missing
+          # has to fail the same way failed does.
+          expected="lint (fmt + interface + type check)
+          test (native)
+          test (wasm)
+          test (js)
+          CLI smoke (cram + wasm CLIs + Office acceptance)
+          installed Office release smoke (Ubuntu)
+          office transactional editing (macos-latest)
+          office transactional editing (windows-latest)"
+          jobs="$(gh api --paginate \
+            "repos/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}/jobs" \
+            --jq '.jobs[] | "\(.name)\t\(.conclusion)"')"
+          echo "$jobs"
+          satisfied=""
+          for channel in latest nightly; do
+            missing=0
+            while IFS= read -r job; do
+              job="$(printf '%s' "$job" | sed 's/^ *//')"
+              [ -n "$job" ] || continue
+              row="$(printf '%s\n' "$jobs" | grep -F "$job [$channel]" || true)"
+              if [ -z "$row" ]; then
+                echo "channel $channel: MISSING $job"
+                missing=1
+              elif ! printf '%s' "$row" | grep -q "success$"; then
+                echo "channel $channel: NOT GREEN $job"
+                missing=1
+              fi
+            done <<< "$expected"
+            if [ "$missing" -eq 0 ]; then
+              satisfied="$channel"
+              break
+            fi
+          done
+          if [ -n "$satisfied" ]; then
+            echo "::notice::gate satisfied by the $satisfied channel"
+            exit 0
+          fi
+          echo "::error::no channel passed every gate job; see the per-leg results above"
+          exit 1

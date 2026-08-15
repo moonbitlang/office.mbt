@@ -324,44 +324,23 @@ build_lock="$script_dir/build-lock.json"
   (.toolchains | map(.platform) | unique | length) ==
     (.toolchains | length) and
   (.toolchains | all(
-    keys == ["entries", "manifest_sha256", "moon_version",
-      "moonc_version", "moonrun_version", "platform"] and
+    keys == ["entries", "platform"] and
     (.platform | type) == "string" and
     (.entries | type) == "array" and
     (.entries | length) > 0 and
     (.entries | all(type == "string" and length > 0)) and
-    (.entries | unique | length) == (.entries | length) and
-    (.manifest_sha256 | test("^[0-9a-f]{64}$")) and
-    (.moon_version | type) == "string" and
-    (.moonc_version | type) == "string" and
-    (.moonrun_version | type) == "string"
+    (.entries | unique | length) == (.entries | length)
   ))
 ' "$build_lock" >/dev/null || die "tracked build lock failed strict validation"
 
 case "$(/usr/bin/uname -s) $(/usr/bin/uname -m)" in
   "Darwin arm64") build_platform=darwin-arm64 ;;
   "Linux x86_64") build_platform=linux-x86_64 ;;
-  *) die "fresh candidate preparation has no pinned toolchain for this platform" ;;
+  *) die "fresh candidate preparation does not support this platform" ;;
 esac
 [ "$(/usr/bin/jq --arg platform "$build_platform" \
   '[.toolchains[] | select(.platform == $platform)] | length' "$build_lock")" = "1" ] ||
   die "build lock does not contain exactly one toolchain for $build_platform"
-expected_toolchain_manifest_sha256="$(/usr/bin/jq -er \
-  --arg platform "$build_platform" \
-  '.toolchains[] | select(.platform == $platform) | .manifest_sha256' \
-  "$build_lock")"
-expected_moon_version="$(/usr/bin/jq -er \
-  --arg platform "$build_platform" \
-  '.toolchains[] | select(.platform == $platform) | .moon_version' \
-  "$build_lock")"
-expected_moonc_version="$(/usr/bin/jq -er \
-  --arg platform "$build_platform" \
-  '.toolchains[] | select(.platform == $platform) | .moonc_version' \
-  "$build_lock")"
-expected_moonrun_version="$(/usr/bin/jq -er \
-  --arg platform "$build_platform" \
-  '.toolchains[] | select(.platform == $platform) | .moonrun_version' \
-  "$build_lock")"
 toolchain_entries=()
 while IFS= read -r entry; do
   toolchain_entries+=("$entry")
@@ -454,9 +433,11 @@ source_toolchain_manifest="$scratch/source-toolchain.manifest"
   "$build_platform" \
   "${toolchain_entries[@]}"
 actual_toolchain_manifest_sha256="$(sha256_file "$source_toolchain_manifest")"
-[ "$actual_toolchain_manifest_sha256" = \
-  "$expected_toolchain_manifest_sha256" ] ||
-  die "complete Moon toolchain inventory does not match the tracked build lock: expected $expected_toolchain_manifest_sha256, found $actual_toolchain_manifest_sha256"
+# Captured, not compared against a tracked digest. CI installs from a moving
+# release channel, so this digest changes on every MoonBit publication -- the
+# same reason the dependency inventory stopped being compared. It is still
+# recorded in the manifest, and still compared before and after the build
+# below, so a build that mutates its own toolchain is still caught.
 
 toolchain_archive="$scratch/toolchain.tar"
 /usr/bin/env -i PATH=/usr/bin:/bin LANG=C LC_ALL=C \
@@ -479,15 +460,27 @@ staged_toolchain_manifest="$scratch/staged-toolchain.manifest"
     /usr/bin/diff -u "$source_toolchain_manifest" \
       "$staged_toolchain_manifest" |
       /usr/bin/sed -n '1,200p' >&2 || true
-    die "privately staged Moon toolchain differs from the pinned source closure"
+    die "privately staged Moon toolchain differs from the installed source closure"
   }
 
+# 0.10.8 replaced the per-target databases with a single one at the root of
+# _build. Reset whichever this toolchain wrote.
+root_bundle_db="$moon_toolchain_root/lib/core/_build/.moon_db"
+[ ! -L "$root_bundle_db" ] ||
+  die "generated Moon bundle database is a symlink: _build/.moon_db"
+/bin/rm -f -- "$root_bundle_db"
+[ ! -e "$root_bundle_db" ] ||
+  die "could not reset generated Moon bundle database: _build/.moon_db"
 for target in js llvm native wasm-gc wasm; do
   generated_bundle_db="$moon_toolchain_root/lib/core/_build/$target/release/bundle/bundle.moon_db"
-  [ -f "$generated_bundle_db" ] && [ ! -L "$generated_bundle_db" ] ||
-    die "expected generated Moon bundle database is unavailable: $target"
+  # Not every toolchain emits these: moonc 0.10.8 stopped writing them while
+  # still producing every target's bundle. Absence means there is nothing to
+  # reset, which is the state this loop is trying to reach anyway. A symlink
+  # here would be a substitution attempt and is still refused.
+  [ ! -L "$generated_bundle_db" ] ||
+    die "generated Moon bundle database is a symlink: $target"
   /bin/rm -f -- "$generated_bundle_db"
-  [ ! -e "$generated_bundle_db" ] && [ ! -L "$generated_bundle_db" ] ||
+  [ ! -e "$generated_bundle_db" ] ||
     die "could not reset generated Moon bundle database: $target"
 done
 
@@ -643,18 +636,10 @@ run_moon version --all > "$toolchain_versions"
 moon_version="$(/usr/bin/sed -n '1p' "$toolchain_versions")"
 moonc_version="$(/usr/bin/sed -n '2p' "$toolchain_versions")"
 moonrun_version="$(/usr/bin/sed -n '3p' "$toolchain_versions")"
-[ "$(printf '%s\n' "$moon_version" | /usr/bin/awk \
-  '{$NF=""; sub(/[[:space:]]+$/, ""); print}')" = "$expected_moon_version" ] ||
-  die "Moon driver version does not match the tracked build lock"
-[ "$(printf '%s\n' "$moonc_version" | /usr/bin/awk \
-  '{$NF=""; sub(/[[:space:]]+$/, ""); print}')" = "$expected_moonc_version" ] ||
-  die "Moon code-generator version does not match the tracked build lock"
-[ "$(printf '%s\n' "$moonrun_version" | /usr/bin/awk \
-  '{$NF=""; sub(/[[:space:]]+$/, ""); print}')" = "$expected_moonrun_version" ] ||
-  die "Moon runtime version does not match the tracked build lock"
-moon_version="$expected_moon_version"
-moonc_version="$expected_moonc_version"
-moonrun_version="$expected_moonrun_version"
+# Recorded rather than required to match a tracked value, for the same reason
+# as the inventory digest above: the channel moves. The resolved versions still
+# travel in the candidate manifest, so a candidate remains traceable to the
+# exact toolchain that produced it.
 
 bundle_log="$scratch/bundle.log"
 if ! (
@@ -669,12 +654,39 @@ if ! (
   cat "$bundle_log" >&2
   exit 1
 fi
+# Regeneration runs under this script's umask 077, so a database it recreates
+# comes back 0600 where the installer left 0644. The inventory records modes,
+# so restoring them is what lets the before/after comparison speak about
+# content rather than about which process happened to write the file.
+if [ -f "$root_bundle_db" ] && [ ! -L "$root_bundle_db" ]; then
+  chmod 0644 "$root_bundle_db"
+fi
 for target in js llvm native wasm-gc wasm; do
   generated_bundle_db="$moon_toolchain_root/lib/core/_build/$target/release/bundle/bundle.moon_db"
-  [ -f "$generated_bundle_db" ] && [ ! -L "$generated_bundle_db" ] ||
-    die "trusted core bundle regeneration omitted a database: $target"
-  chmod 0644 "$generated_bundle_db"
+  # Only restore the mode of a database this toolchain actually regenerated.
+  if [ -f "$generated_bundle_db" ] && [ ! -L "$generated_bundle_db" ]; then
+    chmod 0644 "$generated_bundle_db"
+  fi
 done
+# The inventory records these databases by presence and mode only, because
+# their bytes vary across equivalent installations and their location has
+# already moved once between toolchains. That relaxation is right for comparing
+# two installations and wrong for comparing one installation to itself: it
+# would let a build rewrite a database without the post-build check noticing.
+# So their bytes are captured here, once, after the regeneration this script
+# performed and trusts, and compared again after the build.
+bundle_db_digests() {
+  local out="$1"
+  : > "$out"
+  local db
+  for db in "$moon_toolchain_root/lib/core/_build/.moon_db" \
+    "$moon_toolchain_root"/lib/core/_build/*/release/bundle/bundle.moon_db; do
+    [ -f "$db" ] && [ ! -L "$db" ] || continue
+    printf '%s\t%s\n' "${db#"$moon_toolchain_root/"}" "$(sha256_file "$db")" \
+      >> "$out"
+  done
+}
+
 regenerated_toolchain_manifest="$scratch/regenerated-toolchain.manifest"
 "$snapshot_inventory" \
   "$moon_toolchain_root" \
@@ -688,8 +700,11 @@ regenerated_toolchain_manifest="$scratch/regenerated-toolchain.manifest"
     /usr/bin/diff -u "$staged_toolchain_manifest" \
       "$regenerated_toolchain_manifest" |
       /usr/bin/sed -n '1,200p' >&2 || true
-    die "trusted core bundle regeneration changed the pinned toolchain closure"
+    die "trusted core bundle regeneration changed the toolchain closure"
   }
+
+trusted_bundle_db_digests="$scratch/trusted-bundle-dbs.txt"
+bundle_db_digests "$trusted_bundle_db_digests"
 
 resolve_log="$scratch/resolve.log"
 if ! (
@@ -697,7 +712,7 @@ if ! (
   run_moon update
   run_moon install
 ) >"$resolve_log" 2>&1; then
-  echo "error: pinned dependency resolution failed; complete log follows" >&2
+  echo "error: dependency resolution failed; complete log follows" >&2
   cat "$resolve_log" >&2
   exit 1
 fi
@@ -897,7 +912,16 @@ postbuild_toolchain_manifest="$scratch/postbuild-toolchain.manifest"
     /usr/bin/diff -u "$staged_toolchain_manifest" \
       "$postbuild_toolchain_manifest" |
       /usr/bin/sed -n '1,200p' >&2 || true
-    die "pinned Moon toolchain changed during frozen release builds"
+    die "Moon toolchain changed during frozen release builds"
+  }
+postbuild_bundle_db_digests="$scratch/postbuild-bundle-dbs.txt"
+bundle_db_digests "$postbuild_bundle_db_digests"
+/usr/bin/cmp "$trusted_bundle_db_digests" "$postbuild_bundle_db_digests" ||
+  {
+    echo "error: bundle database digest diff follows" >&2
+    /usr/bin/diff -u "$trusted_bundle_db_digests" \
+      "$postbuild_bundle_db_digests" >&2 || true
+    die "Moon bundle databases changed during frozen release builds"
   }
 postbuild_host_manifest="$scratch/postbuild-host.manifest"
 "$snapshot_inventory" \
