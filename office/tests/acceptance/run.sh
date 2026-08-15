@@ -103,7 +103,7 @@ jq -e '
   ([.data.records[].name] == [
     "docx", "xlsx", "help", "identify", "outline", "get", "text",
     "query", "validate", "dump", "replay", "issues", "preview",
-    "create", "template", "edit", "annotate", "batch", "raw"
+    "render", "create", "template", "edit", "annotate", "batch", "raw"
   ])
 ' >/dev/null <<<"$capabilities" || fail "capability registry"
 
@@ -294,6 +294,20 @@ jq -e '.data.format == "docx" and .data.images_embedded == 0' >/dev/null <<<"$(j
 jq -e '.data.format == "docx" and .data.images_embedded == 0' >/dev/null <<<"$(json office.preview/1 preview "$work/docx-reviewed.docx" --output "$work/docx-2.html" --json)" || fail "docx second preview"
 grep -q 'Ada Lovelace' "$work/docx.html" || fail "docx preview content"
 cmp -s "$work/docx.html" "$work/docx-2.html" || fail "docx preview is not deterministic"
+
+# render: the paginated artifacts, which preview deliberately cannot produce.
+# The SVG assertion is the interesting one -- it is uncompressed, so it is the
+# backend whose bytes are identical on every runtime, and a real glyph
+# coordinate is visible in it.
+jq -e '.data.backend == "pdf" and .data.pages_rendered >= 1 and .data.byte_determinism == "per-runtime"' >/dev/null <<<"$(json office.render/1 render "$work/docx-reviewed.docx" --output "$work/docx.pdf" --json)" || fail "docx render pdf"
+head -c 8 "$work/docx.pdf" | grep -q '^%PDF-1' || fail "docx render pdf header"
+json office.render/1 render "$work/docx-reviewed.docx" --output "$work/docx-2.pdf" --json >/dev/null
+cmp -s "$work/docx.pdf" "$work/docx-2.pdf" || fail "docx render is not deterministic"
+jq -e '.data.backend == "svg" and .data.byte_determinism == "cross-runtime"' >/dev/null <<<"$(json office.render/1 render "$work/docx-reviewed.docx" --output "$work/docx.svg" --json)" || fail "docx render svg"
+grep -q '<svg' "$work/docx.svg" || fail "docx render svg content"
+# a destination that names no backend is refused before any work happens
+office render "$work/docx-reviewed.docx" --output "$work/docx.txt" --json >/dev/null 2>&1 &&
+  fail "docx render accepted an unknown output extension"
 
 json office.dump/1 dump "$work/docx-reviewed.docx" --json >"$work/docx.dump.json"
 jq -e '.schema == "office.dump/1" and .format == "docx" and (.ops | length) > 0' "$work/docx.dump.json" >/dev/null || fail "docx dump"
