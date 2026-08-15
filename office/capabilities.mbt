@@ -1045,6 +1045,78 @@ pub fn capability_commands() -> Array[CapabilityCommand] {
       variants: [],
     },
     {
+      name: "render",
+      summary: "Lay out a DOCX and draw it as paginated PDF or SVG",
+      usage: "office render FILE --output OUT.(pdf|svg) [--pages RANGE] [--overwrite] [--json|--jsonl]",
+      formats: ["docx"],
+      aliases: [],
+      inputs: [
+        capability_field("file", "path", true, "existing DOCX package"),
+        capability_field(
+          "output", "path", true, "destination path; the extension selects the backend (.pdf or .svg). Created atomically, refused when present unless --overwrite. A multi-page SVG render writes <stem>-<n>.svg per page and publishes each file individually. Destinations are checked before any page is drawn, so an occupied path normally refuses with nothing written -- but that is a check and not a lock, and --overwrite skips it, so a later failure can still leave earlier pages published. Publication across the set does not roll back; when anything has landed the refusal is office.render.partial_publication and lists those paths under details.published",
+        ),
+        capability_field(
+          "pages", "string", false, "pages to render: 1-based numbers and N-M ranges separated by commas, e.g. `3`, `2-5`, `1,4-6`. Normalized to ascending order with duplicates removed, so a page is never published twice. Omitted renders every page, subject to the same 2048-page ceiling",
+        ),
+        capability_field(
+          "overwrite", "boolean", false, "replace an existing destination (remove-then-stage; not a single atomic swap)",
+        ),
+        capability_field(
+          "json", "boolean", false, "emit one office.output/1 JSON document",
+        ),
+        capability_field(
+          "jsonl", "boolean", false, "emit one office.output/1 line",
+        ),
+      ],
+      outputs: [
+        capability_field(
+          "schema", "literal(office.render/1)", true, "versioned render result schema",
+        ),
+        capability_field("file", "path", true, "the input path, bounded"),
+        capability_field(
+          "format", "literal(docx)", true, "the structurally verified package format",
+        ),
+        capability_field(
+          "backend", "enum(pdf|svg)", true, "the emitter selected by the output extension",
+        ),
+        capability_field(
+          "outputs", "array(object{path:path,bytes_written:integer})", true, "every published artifact in page order; one entry for PDF, one per rendered page for multi-page SVG",
+        ),
+        capability_field(
+          "bytes_written", "integer", true, "total bytes published across every artifact, accumulated in 64-bit. One artifact may not exceed 64 MiB and the set may not exceed 256 MiB; either ceiling refuses with office.docx.resource_limit",
+        ),
+        capability_field(
+          "pages_rendered", "integer", true, "pages actually drawn, after --pages selection",
+        ),
+        capability_field(
+          "pages_total", "integer", true, "pages the whole document laid out to, before selection",
+        ),
+        capability_field(
+          "page_width_pt", "number", true, "first rendered page width in points",
+        ),
+        capability_field(
+          "page_height_pt", "number", true, "first rendered page height in points",
+        ),
+        capability_field(
+          "fonts_used", "integer", true, "distinct faces the rendered pages actually reference, counted over the selected pages rather than over the document. PDF embeds a subset of each; SVG only names them in font-family and embeds nothing, so this is a usage count and not an embedding count",
+        ),
+        capability_field(
+          "images_dropped", "integer", true, "image occurrences the PDF backend could not embed, summed across reasons rather than counted as distinct reasons. Always 0 for SVG, which embeds every image as a data URI and therefore drops none -- not because it carries no image data",
+        ),
+        capability_field(
+          "unsupported", "array(string)", true, "bounded notices the layout frontend recorded for content it could not represent, each truncated to 512 characters. This is what the frontend chose to record, not a proof of completeness: some drops are still silent, floating drawings whose relationship does not resolve among them",
+        ),
+        capability_field(
+          "unsupported_total", "integer", true, "notices before bounding",
+        ),
+        capability_field(
+          "byte_determinism", "enum(per-runtime|cross-runtime)", true, "PDF is per-runtime: identical on one runtime, not across native and wasm, because the deflate implementation differs by backend. The document is identical either way -- same pages, same glyph positions, same embedded font subset. SVG is cross-runtime, being uncompressed",
+        ),
+      ],
+      output_modes: ["human", "json", "jsonl"],
+      variants: [],
+    },
+    {
       name: "create",
       summary: "Create a validated Office document atomically",
       usage: "office create (xlsx OUTPUT [--sheet NAME] | docx OUTPUT) [--dry-run] [--overwrite] [--json]",

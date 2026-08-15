@@ -74,6 +74,7 @@ the `moonx bobzhang/office` launcher shown above.
 | Run the exact mutation validation gate | `office validate FILE [--json\|--jsonl]` |
 | Report validation plus bounded actionable warnings | `office issues FILE [--json\|--jsonl]` |
 | Publish deterministic offline HTML | `office preview FILE --output OUT.html [--overwrite] [--json\|--jsonl]` |
+| Draw a DOCX as paginated PDF or SVG | `office render FILE --output OUT.(pdf\|svg) [--pages RANGE] [--overwrite] [--json\|--jsonl]` |
 | Create a blank validated file | `office create xlsx OUT.xlsx [--sheet NAME] [--dry-run] [--overwrite] [--json]` or `office create docx OUT.docx [--dry-run] [--overwrite] [--json]` |
 | Merge strict placeholders/row regions | `office template FILE DATA.json --out OUT [--dry-run] [--overwrite] [--allow-missing] [--json\|--jsonl]` |
 | Replace literal text, or accept/reject tracked changes, in an existing DOCX | `office edit FILE SCRIPT.json --out OUT.docx [--dry-run] [--overwrite] [--allow-unmatched] [--json\|--jsonl]` |

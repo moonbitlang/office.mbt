@@ -164,7 +164,7 @@ test "edit help publishes its bounded mutation controls" {
     fail("expected the edit capability")
   }
   assert_eq(command.formats, ["docx"])
-  let rendered = render_command(command)
+  let rendered = capability_help_text(command)
   assert_true(rendered.contains("LITERAL"))
   assert_true(rendered.contains("occurrence: N"))
 }

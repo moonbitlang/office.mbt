@@ -143,6 +143,7 @@ fn build_command() -> @argparse.Command {
       replay_command(),
       issues_command(),
       preview_command(),
+      render_command(),
       create_command(),
       batch_command(),
       template_command(),
@@ -167,6 +168,7 @@ fn is_implemented_command(name : StringView) -> Bool {
     | "replay"
     | "issues"
     | "preview"
+    | "render"
     | "create"
     | "batch"
     | "template"
@@ -195,6 +197,7 @@ async fn run_cli(args : Array[String]) -> Unit {
         "replay" => run_replay(values)
         "issues" => run_issues(values)
         "preview" => run_preview(values)
+        "render" => run_render(values)
         "create" => run_create(values)
         "batch" => run_batch(values)
         "template" => run_template(values)
