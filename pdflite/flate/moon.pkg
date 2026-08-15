@@ -7,9 +7,15 @@ import {
 } for "test"
 
 import {
+  "moonbitlang/core/quickcheck",
   "moonbitlang/core/test",
 } for "wbtest"
 
 options(
   "native-stub": [ "pdf_zlib_native.c" ],
+  targets: {
+    // miniz only exists on native, so the interoperability oracle only exists
+    // there too. Same per-file gating the root package uses for its stubs.
+    "pdf_flate_miniz_interop_wbtest.mbt": [ "native" ],
+  },
 )
