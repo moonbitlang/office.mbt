@@ -654,6 +654,13 @@ if ! (
   cat "$bundle_log" >&2
   exit 1
 fi
+# Regeneration runs under this script's umask 077, so a database it recreates
+# comes back 0600 where the installer left 0644. The inventory records modes,
+# so restoring them is what lets the before/after comparison speak about
+# content rather than about which process happened to write the file.
+if [ -f "$root_bundle_db" ] && [ ! -L "$root_bundle_db" ]; then
+  chmod 0644 "$root_bundle_db"
+fi
 for target in js llvm native wasm-gc wasm; do
   generated_bundle_db="$moon_toolchain_root/lib/core/_build/$target/release/bundle/bundle.moon_db"
   # Only restore the mode of a database this toolchain actually regenerated.
