@@ -397,13 +397,13 @@ async fn office_render_publish(
   // page that failed leaves a caller guessing which files to clean up. So
   // once anything has been published, the refusal carries the list.
   @transaction.atomic_write_new(path, payload) catch {
-    error =>
+    // Only a transaction failure becomes a publication report. Anything else
+    // -- cancellation above all -- keeps its own meaning: turning a cancelled
+    // run into "publication failed" would misreport why it stopped, and a
+    // list of published pages is not worth that.
+    @transaction.TransactionError(..) as inner =>
       if published.length() == 0 {
-        match error {
-          @transaction.TransactionError(..) as inner =>
-            raise transaction_failure(inner)
-          other => raise other
-        }
+        raise transaction_failure(inner)
       } else {
         raise CliFailure(
           @lib.protocol_error(
@@ -418,6 +418,7 @@ async fn office_render_publish(
           ),
         )
       }
+    other => raise other
   }
   published.push(path)
   total
