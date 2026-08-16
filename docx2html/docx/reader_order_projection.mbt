@@ -185,6 +185,18 @@ priv struct ReaderOrderWalker {
   budget : ReaderOrderBudget
   paragraphs : Array[ReaderOrderParagraph]
   field_carriers : Array[ReaderOrderFieldCarrierEvent]
+  /// Set while walking the content of a checkbox content control that has not
+  /// yet had its first text replaced.
+  ///
+  /// `replace_first_text_with_checkbox` rewrites the reader's element tree
+  /// after the fact, walking it in order until it finds a non-empty `Text`.
+  /// Every contribution here funnels through `add_contribution`, and that
+  /// funnel is visited in the same order, so the replacement can be applied as
+  /// the walk happens rather than by reconstructing the tree afterwards. This
+  /// matters because a control's contributions do not land in one place: at
+  /// block level they go to an output array, inline they go to the paragraph
+  /// under construction, and a nested block splits them across both.
+  mut pending_checkbox : Bool
 }
 
 ///|
@@ -791,9 +803,19 @@ fn ReaderOrderWalker::add_contribution(
 ) -> Unit raise DocxError {
   self.budget.charge_text(value.length())
   self.budget.charge_contributor()
+  // The reader replaces the first *non-empty* text: `replace_first_text_in_element`
+  // leaves an empty `Text` alone and keeps looking. The replacement element
+  // carries no text of its own, so the contribution survives with nothing to
+  // contribute -- which keeps its source span addressable while removing it
+  // from the story.
+  let mut projected = value
+  if self.pending_checkbox && kind is TextAtom && value.length() > 0 {
+    projected = ""
+    self.pending_checkbox = false
+  }
   paragraph.contributions.push({
     kind,
-    value,
+    value: projected,
     source_identity,
     paragraph_identity,
     run_identity,
@@ -802,6 +824,35 @@ fn ReaderOrderWalker::add_contribution(
     field_region: OutsideField,
     field_refusal: None,
   })
+}
+
+///|
+/// Whether the first `w:sdtPr` of a content control declares a checkbox.
+///
+/// Mirrors `read_structured_checkbox`: the marker is the presence of
+/// `w14:checkbox`, not its value, and a checkbox with no `w14:checked` child
+/// still counts. Only the checked state differs, and the projection does not
+/// need it -- the replacement contributes no text either way.
+fn ReaderOrderWalker::sdt_declares_checkbox(
+  self : ReaderOrderWalker,
+  identity : Int,
+  depth : Int,
+) -> Bool raise DocxError {
+  match self.first_wml_child(identity, "sdtPr", depth + 1) {
+    Some(properties) => {
+      let mut child = self.elements[properties].first_child_index
+      while child >= 0 {
+        let element = self.elements[child]
+        self.budget.charge_visit(depth + 2)
+        if element.uri == W14_NAMESPACE && element.local_name == "checkbox" {
+          return true
+        }
+        child = element.next_sibling_index
+      }
+      false
+    }
+    None => false
+  }
 }
 
 ///|
@@ -956,12 +1007,32 @@ fn ReaderOrderWalker::walk_structural_element(
       // controls -- narrower than before, when every content control was
       // skipped, but not yet correct. `reader_order_projection_wbtest.mbt`
       // pins the divergence rather than leaving it implicit.
-      "sdt" =>
+      "sdt" => {
+        let checkbox = self.sdt_declares_checkbox(identity, depth)
+        let before = output.length()
+        let outer = self.pending_checkbox
+        self.pending_checkbox = checkbox || outer
         match self.first_wml_child(identity, "sdtContent", depth + 1) {
           Some(content) =>
             self.walk_flow_children(content, depth + 1, from_text_box, output)
           None => ()
         }
+        // A checkbox control whose content held no text at all is replaced
+        // wholesale: `read_structured_document_tag` returns a bare checkbox
+        // rather than the content, so the content's paragraphs never reach the
+        // story. Dropping the text alone would leave their terminators behind
+        // -- the reader emits nothing here, not an empty paragraph.
+        if checkbox && self.pending_checkbox {
+          while output.length() > before {
+            ignore(output.pop())
+          }
+        }
+        self.pending_checkbox = if checkbox {
+          outer
+        } else {
+          self.pending_checkbox
+        }
+      }
       // Reached directly rather than through a `w:sdt`, this is transparent --
       // the reader's dispatch sends it to `read_children`.
       "sdtContent" =>
@@ -1305,6 +1376,9 @@ fn ReaderOrderWalker::walk_inline_element(
     // the first `w:sdtContent`'s children contribute.
     "sdt" => {
       add(TransparentSeam, "", reader_order_element_span(element))
+      let checkbox = self.sdt_declares_checkbox(identity, depth)
+      let outer = self.pending_checkbox
+      self.pending_checkbox = checkbox || outer
       match self.first_wml_child(identity, "sdtContent", depth + 1) {
         Some(content) =>
           self.walk_inline_children(
@@ -1316,6 +1390,22 @@ fn ReaderOrderWalker::walk_inline_element(
             true,
           )
         None => ()
+      }
+      // The wholesale replacement the block site performs is *not* done here.
+      // Inline, a nested block splits the paragraph, and the split flushes the
+      // text that preceded this control into the same completed paragraph as
+      // the control's own first nested one. Dropping by index therefore takes
+      // content the control never owned -- measured: the enclosing "x" vanished
+      // along with the control's content. Undoing it properly means undoing the
+      // split, which is a larger change than this slice.
+      //
+      // So an inline checkbox control whose content yields no text at all still
+      // diverges, and only that case. `reader_order_projection_wbtest.mbt` pins
+      // it by name.
+      self.pending_checkbox = if checkbox {
+        outer
+      } else {
+        self.pending_checkbox
       }
     }
     "sdtContent" => {
@@ -1529,6 +1619,7 @@ fn project_reader_order_from_source_tree(
     budget,
     paragraphs: [],
     field_carriers: [],
+    pending_checkbox: false,
   }
   walker.walk()
   let projection = ReaderOrderProjection::{

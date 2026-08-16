@@ -160,12 +160,13 @@ fn hostile_textbox(choices : HostileChoices, depth : Int) -> String {
 /// content controls in its extras pass loses it, and one that reads both
 /// contents gains text the reader never produced.
 ///
-/// No variant carries a `w14:checkbox`, and that is deliberate. The reader
-/// applies a second transform for those -- replacing the first non-empty text,
-/// or discarding the content when there is none -- which this projection does
-/// not model yet. Generating one would assert a divergence that is already
-/// known and pinned by `reader_order_projection_wbtest.mbt`, rather than
-/// finding a new one.
+/// Checkbox variants are generated at block level only. The reader applies a
+/// second transform for those -- replacing the first non-empty text, or
+/// discarding the content when there is none -- and the projection mirrors it
+/// except for one shape: an *inline* control whose content yields no text at
+/// all. That one is pinned by name in `reader_order_projection_wbtest.mbt`, so
+/// generating it here would re-assert a tracked divergence rather than find a
+/// new one.
 fn hostile_sdt(
   choices : HostileChoices,
   depth : Int,
@@ -174,6 +175,20 @@ fn hostile_sdt(
 ) -> String {
   let first = "<w:p><w:r><w:t>\{hostile_text(choices)}</w:t></w:r></w:p>"
   choices.tag("sdt@\{site}")
+  // `w14:checkbox` replaces the first non-empty text in the content, and
+  // discards the content wholesale when there is none. Only offered at block
+  // level -- see the note above for why.
+  let checkbox = site == "block" && variant < 0 && choices.next(3) == 0
+  let properties = if checkbox {
+    choices.tag("sdt.checkbox")
+    "<w:sdtPr><w14:checkbox><w14:checked w14:val=\"1\"/></w14:checkbox></w:sdtPr>"
+  } else {
+    "<w:sdtPr><w:alias w:val=\"a\"/></w:sdtPr>"
+  }
+  if checkbox && choices.next(2) == 0 {
+    choices.tag("sdt.checkbox.no_text")
+    return "<w:sdt>\{properties}<w:sdtContent><w:p><w:r><w:tab/></w:r></w:p></w:sdtContent></w:sdt>"
+  }
   // Built inside the branch that uses it, not before the branch is chosen.
   // `hostile_block` records tags of its own, and a variant that discarded this
   // string would have left those tags behind -- so the coverage guard could
@@ -200,19 +215,18 @@ fn hostile_sdt(
   // discarded subtrees.
   match (if variant >= 0 { variant } else { choices.next(4) }) {
     // properties before the content, which must not be read as content
-    0 =>
-      "<w:sdt><w:sdtPr><w:alias w:val=\"a\"/></w:sdtPr><w:sdtContent>\{nested()}</w:sdtContent></w:sdt>"
+    0 => "<w:sdt>\{properties}<w:sdtContent>\{nested()}</w:sdtContent></w:sdt>"
     // no content at all: the control contributes nothing
-    1 => "<w:sdt><w:sdtPr><w:alias w:val=\"b\"/></w:sdtPr></w:sdt>"
+    1 => "<w:sdt>\{properties}</w:sdt>"
     // a second content, whose text the reader never emits
     2 => {
       choices.tag("sdt.second_content@\{site}")
-      "<w:sdt><w:sdtContent>\{first}</w:sdtContent><w:sdtContent><w:p><w:r><w:t>suppressed</w:t></w:r></w:p></w:sdtContent></w:sdt>"
+      "<w:sdt>\{properties}<w:sdtContent>\{first}</w:sdtContent><w:sdtContent><w:p><w:r><w:t>suppressed</w:t></w:r></w:p></w:sdtContent></w:sdt>"
     }
     // a textbox inside that suppressed second content
     _ => {
       choices.tag("sdt.suppressed_textbox@\{site}")
-      "<w:sdt><w:sdtContent>\{first}</w:sdtContent><w:sdtContent><w:p><w:r>\{hostile_textbox(choices, depth + 1)}</w:r></w:p></w:sdtContent></w:sdt>"
+      "<w:sdt>\{properties}<w:sdtContent>\{first}</w:sdtContent><w:sdtContent><w:p><w:r>\{hostile_textbox(choices, depth + 1)}</w:r></w:p></w:sdtContent></w:sdt>"
     }
   }
 }
@@ -446,7 +460,7 @@ fn hostile_document_tagged(seeds : ArrayView[Int]) -> (String, Array[String]) {
   // `mc` has to be bound or the alternate-content branches resolve to an
   // unbound prefix rather than `MC_URI`, and the projection would take its
   // "not markup compatibility" path while the test looked like it passed.
-  let document = "<w:document xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\" xmlns:v=\"urn:schemas-microsoft-com:vml\" xmlns:mc=\"http://schemas.openxmlformats.org/markup-compatibility/2006\"><w:body>" +
+  let document = "<w:document xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\" xmlns:v=\"urn:schemas-microsoft-com:vml\" xmlns:mc=\"http://schemas.openxmlformats.org/markup-compatibility/2006\" xmlns:w14=\"http://schemas.microsoft.com/office/word/2010/wordml\"><w:body>" +
     body.to_string() +
     "</w:body></w:document>"
   (document, choices.tags)
@@ -539,6 +553,8 @@ test "the generator keeps producing documents worth testing" {
   assert_true(tagged("sdt.around_rows.suppressed_row") >= 1)
   assert_true(tagged("sdt.around_rows.stray_paragraph") >= 1)
   assert_true(tagged("sdt.under_pict") >= 3)
+  assert_true(tagged("sdt.checkbox") >= 3)
+  assert_true(tagged("sdt.checkbox.no_text") >= 1)
   assert_true(tagged("alternate") >= 10)
   assert_true(tagged("alternate.textbox_in_choice") >= 2)
   // Site and variant together, not each on its own: counting them separately
