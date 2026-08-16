@@ -310,18 +310,43 @@ fn hostile_alternate_content(
     // no fallback: contributes nothing at all
     1 => {
       choices.tag("alternate.no_fallback")
+      choices.tag("alternate.no_fallback@\{site}")
       "<mc:AlternateContent>\{choice}</mc:AlternateContent>"
     }
     // a textbox in the choice, which even the physical extras pass must miss
     2 => {
       choices.tag("alternate.textbox_in_choice")
+      choices.tag("alternate.textbox_in_choice@\{site}")
       "<mc:AlternateContent><mc:Choice\{requires}><w:p><w:r>\{hostile_textbox(choices, depth + 1)}</w:r></w:p></mc:Choice><mc:Fallback><w:p><w:r><w:t>\{hostile_text(choices)}</w:t></w:r></w:p></mc:Fallback></mc:AlternateContent>"
     }
     // and a textbox in the fallback, which it must find
     _ => {
       choices.tag("alternate.textbox_in_fallback")
+      choices.tag("alternate.textbox_in_fallback@\{site}")
       "<mc:AlternateContent>\{choice}<mc:Fallback><w:p><w:r>\{hostile_textbox(choices, depth + 1)}</w:r></w:p></mc:Fallback></mc:AlternateContent>"
     }
+  }
+}
+
+///|
+/// Alternate content wrapping table rows, the counterpart of
+/// `hostile_sdt_around_rows`.
+///
+/// `is_transparent_container` names `mc:Fallback`, so a second one is flattened
+/// into the vMerge prepass while the reader reads only the first. A stray
+/// paragraph there makes the row look malformed, the table fail open, and a
+/// continuation cell the reader removes get restored.
+fn hostile_alternate_around_rows(choices : HostileChoices) -> String {
+  choices.tag("alternate.around_rows")
+  let merged =
+    #|<w:tc><w:tcPr><w:vMerge w:val="restart"/></w:tcPr><w:p><w:r><w:t>top</w:t></w:r></w:p></w:tc>
+  let continued =
+    #|<w:tc><w:tcPr><w:vMerge/></w:tcPr><w:p><w:r><w:t>under</w:t></w:r></w:p></w:tc>
+  if choices.next(2) == 0 {
+    choices.tag("alternate.around_rows.second_fallback")
+    "<w:tbl><w:tr><mc:AlternateContent><mc:Fallback>\{merged}</mc:Fallback><mc:Fallback><w:p><w:r><w:t>stray</w:t></w:r></w:p></mc:Fallback></mc:AlternateContent></w:tr><w:tr>\{continued}</w:tr></w:tbl>"
+  } else {
+    "<w:tbl><w:tr><mc:AlternateContent><mc:Choice Requires=\"wps\"><w:p><w:r><w:t>stray</w:t></w:r></w:p></mc:Choice><mc:Fallback>\{merged}</mc:Fallback></mc:AlternateContent></w:tr><w:tr>\{continued}</w:tr></w:tbl>"
   }
 }
 
@@ -332,12 +357,13 @@ fn hostile_block(choices : HostileChoices, depth : Int) -> String {
   if depth >= 4 {
     return "<w:p><w:r><w:t>leaf</w:t></w:r></w:p>"
   }
-  match choices.next(14) {
+  match choices.next(15) {
     13 =>
       // the paragraph-site suppressed-textbox interaction, pinned rather than
       // left to chance: leaving it to the choice stream produced it at that
       // site zero times in 120 samples
       "<w:p><w:r><w:t>\{hostile_text(choices)}</w:t></w:r>\{hostile_sdt(choices, depth, "paragraph", variant=3)}</w:p>"
+    14 => hostile_alternate_around_rows(choices)
     9 => hostile_sdt_around_rows(choices)
     10 => hostile_sdt_under_pict(choices)
     11 => hostile_alternate_content(choices, depth)
@@ -515,8 +541,14 @@ test "the generator keeps producing documents worth testing" {
   assert_true(tagged("sdt.under_pict") >= 3)
   assert_true(tagged("alternate") >= 10)
   assert_true(tagged("alternate.textbox_in_choice") >= 2)
+  // Site and variant together, not each on its own: counting them separately
+  // would still pass if every textbox-in-choice had moved to a block site,
+  // and the paragraph site is the one whose extras pass switches modes.
+  assert_true(tagged("alternate.textbox_in_choice@paragraph") >= 1)
   assert_true(tagged("alternate.textbox_in_fallback") >= 2)
   assert_true(tagged("alternate.no_fallback") >= 2)
+  assert_true(tagged("alternate.around_rows") >= 3)
+  assert_true(tagged("alternate.around_rows.second_fallback") >= 1)
 }
 
 ///|

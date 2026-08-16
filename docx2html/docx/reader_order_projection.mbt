@@ -345,6 +345,27 @@ fn reader_order_first_direct_wml_child(
 }
 
 ///|
+/// The Markup Compatibility counterpart of `reader_order_first_direct_wml_child`.
+fn reader_order_first_direct_mc_child(
+  elements : Array[ScannedElement],
+  parent_identity : Int,
+  local_name : String,
+  depth : Int,
+  budget : ReaderOrderBudget,
+) -> Int? raise DocxError {
+  let mut child = elements[parent_identity].first_child_index
+  while child >= 0 {
+    let element = elements[child]
+    budget.charge_visit(depth)
+    if element.uri == MC_URI && element.local_name == local_name {
+      return Some(child)
+    }
+    child = element.next_sibling_index
+  }
+  None
+}
+
+///|
 fn reader_order_is_deleted_body_paragraph(
   elements : Array[ScannedElement],
   paragraph_identity : Int,
@@ -436,6 +457,37 @@ fn collect_reader_order_body_outputs(
           collect_reader_order_body_outputs(
             elements,
             content,
+            output,
+            reader_image_outputs,
+            depth + 2,
+            budget,
+          )
+        None => ()
+      }
+    } else if element.uri == MC_URI && element.local_name == "AlternateContent" {
+      // The same problem content controls have, for the same reason:
+      // `is_transparent_container` names `mc:Fallback`, so a second one would
+      // also be flattened into this prepass while the reader reads only the
+      // first. A stray paragraph in that second fallback makes a row look
+      // malformed, the table fail open, and a vMerge continuation cell the
+      // reader removes get restored. (An `mc:Choice` is already safe -- it is
+      // not a transparent container, so this pass never descends into one.)
+      match
+        reader_order_first_direct_mc_child(
+          elements,
+          child,
+          "Fallback",
+          depth + 1,
+          budget,
+        ) {
+        Some(fallback) =>
+          // `depth + 2` for the same reason the content-control branch uses
+          // it: the loop charged the alternate content at `depth`, the lookup
+          // charged the selected fallback at `depth + 1`, so the fallback's
+          // children sit one deeper again.
+          collect_reader_order_body_outputs(
+            elements,
+            fallback,
             output,
             reader_image_outputs,
             depth + 2,
