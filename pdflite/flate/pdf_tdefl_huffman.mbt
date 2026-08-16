@@ -172,54 +172,6 @@ fn tdefl_huffman_enforce_max_code_size(
 }
 
 ///|
-/// Code length per symbol for `freqs`, limited to `code_size_limit` bits.
-///
-/// This is the non-static half of miniz's `tdefl_optimize_huffman_table`,
-/// separated so it can be compared against the C directly. The assignment
-/// walks the sorted symbols backwards while walking lengths forwards, which
-/// is what makes the tie-break visible: three symbols of equal frequency come
-/// out 2, 2, 1 rather than symmetric, and any builder that disagrees produces
-/// a different stream.
-fn tdefl_code_sizes(
-  freqs : ArrayView[Int],
-  code_size_limit : Int,
-) -> FixedArray[Int] {
-  let table_len = freqs.length()
-  let sizes = FixedArray::make(table_len, 0)
-  let syms0 = FixedArray::make(table_len, { key: 0, sym_index: 0 })
-  let syms1 = FixedArray::make(table_len, { key: 0, sym_index: 0 })
-  for i in 0..<table_len {
-    syms0[i] = { key: 0, sym_index: 0 }
-    syms1[i] = { key: 0, sym_index: 0 }
-  }
-  let mut used = 0
-  for i in 0..<table_len {
-    if freqs[i] != 0 {
-      syms0[used] = { key: freqs[i], sym_index: i }
-      used = used + 1
-    }
-  }
-  if used == 0 {
-    return sizes
-  }
-  let sorted = tdefl_radix_sort_syms(used, syms0, syms1)
-  tdefl_calculate_minimum_redundancy(sorted, used)
-  let num_codes = FixedArray::make(1 + tdefl_max_supported_huff_codesize, 0)
-  for i in 0..<used {
-    num_codes[sorted[i].key] = num_codes[sorted[i].key] + 1
-  }
-  tdefl_huffman_enforce_max_code_size(num_codes, used, code_size_limit)
-  let mut k = used
-  for i in 1..<=code_size_limit {
-    for _ in 0..<num_codes[i] {
-      k = k - 1
-      sizes[sorted[k].sym_index] = i
-    }
-  }
-  sizes
-}
-
-///|
 /// Build one Huffman table in `state`: code lengths, then canonical codes.
 ///
 /// `static_table` takes the lengths already in `huff_code_sizes` rather than

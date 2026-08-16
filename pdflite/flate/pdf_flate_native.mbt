@@ -1,4 +1,7 @@
 ///|
+/// Retained as the differential oracle, not as a production path: encoding now
+/// goes through the MoonBit port on every backend, and this is what that port
+/// is compared against.
 #cfg(target="native")
 #borrow(data, status)
 extern "C" fn pdf_flate_zlib_encode_ffi(
@@ -26,27 +29,6 @@ fn pdf_flate_native_payload(
     raise InvalidFlateData
   }
   result
-}
-
-///|
-#cfg(target="native")
-#coverage.skip
-fn pdf_flate_encode_bytes_native(
-  data : @core.PdfBytes,
-  level : Int,
-) -> @core.PdfBytes raise @core.PdfError {
-  let _ = pdf_flate_header_for_level(level)
-  let status = Ref::{ val: 0 }
-  try
-    pdf_flate_native_payload(
-      pdf_flate_zlib_encode_ffi(data, level, status),
-      status,
-    )
-  catch {
-    _ => pdf_flate_encode_view_with_level_pure(data, level)
-  } noraise {
-    bytes => bytes
-  }
 }
 
 ///|

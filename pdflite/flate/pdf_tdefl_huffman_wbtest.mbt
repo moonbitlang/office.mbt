@@ -317,10 +317,16 @@ test "the ported Huffman builder agrees with miniz on every case" {
   ]
   for entry in cases {
     let (freqs, expected) = entry
-    let sizes = tdefl_code_sizes(freqs, 15)
+    // driven through the state the compressor actually uses, so this tests
+    // the shipping path rather than a duplicate kept for testability
+    let state = TdeflState::new(6)
+    for i, freq in freqs {
+      state.huff_count[0][i] = freq
+    }
+    state.optimize_huffman_table(0, freqs.length(), 15, false)
     let got = []
-    for size in sizes {
-      got.push(size)
+    for i in 0..<freqs.length() {
+      got.push(state.huff_code_sizes[0][i])
     }
     assert_eq(got, expected)
   }

@@ -82,24 +82,57 @@ test "the ported tdefl reproduces miniz on generated input at every level" {
 }
 
 ///|
-/// A large, highly structured real input: the PDF fixture bytes this library
-/// actually compresses. Long enough to cross the 64 KiB code-buffer flush and
-/// the 32 KiB window, which the generated inputs mostly are not.
-test "the ported tdefl reproduces miniz on a large real input" {
-  // built rather than read, so the test stays hermetic: a long period with
-  // drifting content defeats a trivial whole-input match while still
-  // compressing well and crossing every internal boundary
-  let bytes = []
-  for i in 0..<300000 {
-    let phase = i % 997
-    bytes.push((phase * 7 % 61 + 32).to_byte())
+/// Pseudorandom bytes with no exploitable structure, as a source of input that
+/// compresses badly and therefore produces one token per byte.
+fn tdefl_incompressible(count : Int) -> Bytes {
+  let out = Array::make(count, b'\x00')
+  let mut state = 0x2545F491
+  for i in 0..<count {
+    state = (state * 1103515245 + 12345) & 0x7FFFFFFF
+    out[i] = ((state >> 16) & 0xFF).to_byte()
   }
-  let input = Bytes::from_array(bytes)
-  for level in [1, 6, 9] {
+  Bytes::from_array(out)
+}
+
+///|
+/// Inputs large enough to force the LZ code buffer past its capacity, so the
+/// parser flushes mid-stream and the port has to agree with the C across a
+/// block boundary as well as within one.
+///
+/// The previous version of this test did not do that, and said it did. It used
+/// a 997-byte-periodic input, which produces long matches and therefore very
+/// few tokens, so 300 KB of it never approached the 64 KiB token buffer. What
+/// fills that buffer is input that compresses *badly*: roughly one token per
+/// byte, so ~200 KB of pseudorandom data crosses it several times over.
+///
+/// Level 0 is included deliberately. It forces every block raw, so this is
+/// also the only place multi-block forced-raw behaviour is compared.
+test "the ported tdefl agrees with miniz across block boundaries" {
+  let input = tdefl_incompressible(200000)
+  for level in [0, 1, 6, 9] {
     let ours = tdefl_compress_zlib(input, level)
     let theirs = miniz_compress(input, level)
-    assert_eq(ours.length(), theirs.length(), msg="300k at level \{level}")
-    assert_eq(ours, theirs, msg="300k bytes at level \{level}")
+    assert_eq(
+      ours.length(),
+      theirs.length(),
+      msg="200k at level \{level}: length differs",
+    )
+    assert_eq(ours, theirs, msg="200k at level \{level}: bytes differ")
+  }
+}
+
+///|
+/// The same input, checked to actually reach the multi-block path rather than
+/// assumed to. A test that means to cross a boundary should be able to say
+/// that it did.
+test "the large differential input really does span several blocks" {
+  let input = tdefl_incompressible(200000)
+  for level in [0, 6] {
+    let state = TdeflState::new(level)
+    state.adler32 = tdefl_adler32(input)
+    state.compress_input(input, level)
+    state.flush_block(level, true)
+    assert_true(state.block_index > 1)
   }
 }
 
