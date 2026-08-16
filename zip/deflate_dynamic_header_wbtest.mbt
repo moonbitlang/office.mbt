@@ -299,9 +299,14 @@ test "a dynamic block may declare an all-zero distance tree" {
 /// accept all of them and return the literals the block codes.
 ///
 /// This space is small enough to enumerate, which is stronger than sampling
-/// it: every declared `HDIST`, both distance-tree shapes, literals at both
-/// ends of the byte range, and run lengths that cross the zero-run encoding's
-/// 3-and-11 boundaries.
+/// it: every declared `HDIST` from 1 to 30, both distance-tree shapes,
+/// literals at both ends of the byte range, and four repeat counts.
+///
+/// Sweeping `HDIST` is also what drives `emit_zero_run` through all three of
+/// its branches, since the distance run is `hdist` zeros long: 1 and 2 take
+/// the literal-symbol branch, 3 to 10 the symbol-17 branch, and 11 upwards
+/// symbol 18. The literal-position runs are long (up to 255) and only ever
+/// reach symbol 18, so on their own they would leave two branches uncovered.
 test "the decoder accepts every dynamic header shape the emitters build" {
   let bytes = [0, 1, 65, 127, 128, 254, 255]
   let counts = [1, 2, 10, 48]
@@ -322,7 +327,7 @@ test "the decoder accepts every dynamic header shape the emitters build" {
       }
     }
   }
-  // 30 declared sizes x 7 literals x 4 run lengths x 2 distance shapes.
+  // 30 declared sizes x 7 literals x 4 repeat counts x 2 distance shapes.
   assert_eq(checked, 1680)
 }
 
@@ -371,19 +376,30 @@ test "the empty huffman table decodes no symbol" {
 /// measure what was generated rather than trusting that it varied.
 test "the decoder reproduces generated payloads" {
   let lengths : @sorted_set.SortedSet[Int] = SortedSet([])
+  let distinct : @sorted_set.SortedSet[String] = SortedSet([])
   let mut saw_a = false
   let mut saw_b = false
+  let mut mixed = 0
   @quickcheck.check(
     (raw : Array[Int]) => {
       let choices = raw.map(value => value % 2 != 0)
+      let shape = StringBuilder::new()
+      let mut ones = 0
       for choice in choices {
         if choice {
           saw_b = true
+          ones = ones + 1
+          shape.write_char('B')
         } else {
           saw_a = true
+          shape.write_char('A')
         }
       }
+      if ones > 0 && ones < choices.length() {
+        mixed = mixed + 1
+      }
       lengths.add(choices.length())
+      distinct.add(shape.to_string())
       let stream = emit_dynamic_payload_block(choices)
       let decoded = deflate_decode(stream, max_output=256)
       if decoded.length() != choices.length() {
@@ -402,8 +418,17 @@ test "the decoder reproduces generated payloads" {
     seed=0x7A69_705F_646FUL,
   )
   // Without these the property could pass while generating one payload 200
-  // times, which is what an earlier version of this test did.
+  // times, which is what an earlier version of this test did. Counting
+  // distinct payloads and payloads that mix both literals measures content,
+  // not just length -- a run of all-'A' payloads of varying length would
+  // satisfy a length-only guard while never walking between codes of
+  // different bit lengths, which is the thing this test exists to cover.
   assert_true(saw_a)
   assert_true(saw_b)
-  assert_true(lengths.length() >= 20)
+  // Floors set below what this seed actually produces (152 mixed, 144
+  // distinct, 46 lengths), so they fail loudly if the generator degenerates
+  // rather than encoding the current numbers as expectations.
+  assert_true(mixed >= 120)
+  assert_true(distinct.length() >= 120)
+  assert_true(lengths.length() >= 30)
 }
