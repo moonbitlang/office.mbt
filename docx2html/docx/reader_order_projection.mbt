@@ -410,6 +410,34 @@ fn collect_reader_order_body_outputs(
       element.local_name == "p" &&
       reader_order_is_deleted_body_paragraph(elements, child, depth, budget) {
       ()
+    } else if is_wml_uri(element.uri) && element.local_name == "sdt" {
+      // `is_transparent_container` treats a content control as fully
+      // transparent, which would expose *every* `w:sdtContent` to this
+      // prepass. The reader exposes one. That matters here and not only in
+      // the walk: this pass decides which table rows and cells the reader
+      // emits, so a second content holding a row would make a table fail open
+      // and restore vMerge continuation cells the reader removes -- and the
+      // walk would then select the right content out of an already-wrong
+      // visibility map.
+      match
+        reader_order_first_direct_wml_child(
+          elements,
+          child,
+          "sdtContent",
+          depth + 1,
+          budget,
+        ) {
+        Some(content) =>
+          collect_reader_order_body_outputs(
+            elements,
+            content,
+            output,
+            reader_image_outputs,
+            depth + 1,
+            budget,
+          )
+        None => ()
+      }
     } else if reader_order_is_body_flattening_container(element) {
       collect_reader_order_body_outputs(
         elements,
@@ -1292,6 +1320,13 @@ fn ReaderOrderWalker::walk_pict_extras(
       | "drawing"
       | "object"
       | "ins"
+      // `read_pict_extra_elements` sends everything it does not name to
+      // `read_element`, which dispatches content controls -- so a `w:sdt`
+      // directly under a `w:pict` contributes in the reader. Routing them
+      // through `walk_structural_element` applies the same first-content
+      // selection here.
+      | "sdt"
+      | "sdtContent"
       | "smartTag") {
       self.walk_structural_element(child, depth, true, output)
     }

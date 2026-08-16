@@ -49,6 +49,19 @@
 priv struct HostileChoices {
   seeds : ArrayView[Int]
   mut at : Int
+  /// What the generator actually built, recorded as it builds.
+  ///
+  /// The coverage guard used to search the finished XML for substrings, which
+  /// cannot distinguish shapes that differ only in where they sit -- a
+  /// content control at block level and one inside a paragraph serialise the
+  /// same way, and only the second reaches the paragraph's physical extras
+  /// pass. Tagging at the point of construction says which was built.
+  tags : Array[String]
+}
+
+///|
+fn HostileChoices::tag(self : HostileChoices, name : String) -> Unit {
+  self.tags.push(name)
 }
 
 ///|
@@ -151,27 +164,94 @@ fn hostile_textbox(choices : HostileChoices, depth : Int) -> String {
 /// it does not name, so the textbox is still emitted. A projection that skips
 /// content controls in its extras pass loses it, and one that reads both
 /// contents gains text the reader never produced.
+///
 /// No variant carries a `w14:checkbox`, and that is deliberate. The reader
 /// applies a second transform for those -- replacing the first non-empty text,
 /// or discarding the content when there is none -- which this projection does
 /// not model yet. Generating one would assert a divergence that is already
 /// known and pinned by `reader_order_projection_wbtest.mbt`, rather than
 /// finding a new one.
-fn hostile_sdt(choices : HostileChoices, depth : Int) -> String {
+fn hostile_sdt(choices : HostileChoices, depth : Int, site : String) -> String {
   let first = "<w:p><w:r><w:t>\{hostile_text(choices)}</w:t></w:r></w:p>"
+  choices.tag("sdt@\{site}")
+  // Inside a paragraph the nested content stays a paragraph rather than an
+  // arbitrary block. A table nested inside a paragraph hits a divergence that
+  // predates this work and is unrelated to content controls -- the reader
+  // finds a textbox in a deleted row through the enclosing paragraph's
+  // physical extras pass and this projection does not. It is pinned by name in
+  // `reader_order_projection_wbtest.mbt`; generating it here would only
+  // re-assert a divergence that is already tracked.
+  let nested = if site == "paragraph" {
+    "<w:p><w:r>\{hostile_run_content(choices, depth + 1)}</w:r></w:p>"
+  } else {
+    hostile_block(choices, depth + 1)
+  }
   match choices.next(4) {
     // properties before the content, which must not be read as content
     0 =>
-      "<w:sdt><w:sdtPr><w:alias w:val=\"a\"/></w:sdtPr><w:sdtContent>\{hostile_block(choices, depth + 1)}</w:sdtContent></w:sdt>"
+      "<w:sdt><w:sdtPr><w:alias w:val=\"a\"/></w:sdtPr><w:sdtContent>\{nested}</w:sdtContent></w:sdt>"
     // no content at all: the control contributes nothing
     1 => "<w:sdt><w:sdtPr><w:alias w:val=\"b\"/></w:sdtPr></w:sdt>"
     // a second content, whose text the reader never emits
-    2 =>
+    2 => {
+      choices.tag("sdt.second_content@\{site}")
       "<w:sdt><w:sdtContent>\{first}</w:sdtContent><w:sdtContent><w:p><w:r><w:t>suppressed</w:t></w:r></w:p></w:sdtContent></w:sdt>"
+    }
     // a textbox inside that suppressed second content
-    _ =>
+    _ => {
+      choices.tag("sdt.suppressed_textbox@\{site}")
       "<w:sdt><w:sdtContent>\{first}</w:sdtContent><w:sdtContent><w:p><w:r>\{hostile_textbox(choices, depth + 1)}</w:r></w:p></w:sdtContent></w:sdt>"
+    }
   }
+}
+
+///|
+/// A content control wrapping table rows, which is where the *prepass* has to
+/// agree with the reader rather than just the walk.
+///
+/// `collect_reader_order_body_outputs` decides which rows and cells the reader
+/// emits, and vertical-merge resolution runs on that decision. A control whose
+/// suppressed second content holds a row would, if the prepass flattened both
+/// contents, make the table fail open and restore continuation cells the
+/// reader removes.
+fn hostile_sdt_around_rows(choices : HostileChoices) -> String {
+  choices.tag("sdt.around_rows")
+  let cell = "<w:tc><w:p><w:r><w:t>\{hostile_text(choices)}</w:t></w:r></w:p></w:tc>"
+  let merged =
+    #|<w:tc><w:tcPr><w:vMerge w:val="restart"/></w:tcPr><w:p><w:r><w:t>top</w:t></w:r></w:p></w:tc>
+  let continued =
+    #|<w:tc><w:tcPr><w:vMerge/></w:tcPr><w:p><w:r><w:t>under</w:t></w:r></w:p></w:tc>
+  match choices.next(3) {
+    0 => {
+      choices.tag("sdt.around_rows.suppressed_row")
+      "<w:tbl><w:sdt><w:sdtContent><w:tr>\{merged}\{cell}</w:tr><w:tr>\{continued}\{cell}</w:tr></w:sdtContent><w:sdtContent><w:tr>\{cell}\{cell}</w:tr></w:sdtContent></w:sdt></w:tbl>"
+    }
+    // The shape that decides whether the prepass agrees with the reader: a
+    // control inside a row, whose *suppressed* second content holds a stray
+    // paragraph. Flattening both contents puts that paragraph among the row's
+    // children, the row looks malformed, the table fails open, and the vMerge
+    // continuation cell the reader removes is restored instead. The walk would
+    // then select the right content out of an already-wrong visibility map.
+    1 => {
+      choices.tag("sdt.around_rows.stray_paragraph")
+      "<w:tbl><w:tr><w:sdt><w:sdtContent>\{merged}</w:sdtContent><w:sdtContent><w:p><w:r><w:t>stray</w:t></w:r></w:p></w:sdtContent></w:sdt></w:tr><w:tr>\{continued}</w:tr></w:tbl>"
+    }
+    _ =>
+      "<w:tbl><w:sdt><w:sdtContent><w:tr>\{merged}\{cell}</w:tr></w:sdtContent></w:sdt><w:tr>\{continued}\{cell}</w:tr></w:tbl>"
+  }
+}
+
+///|
+/// A content control directly under a `w:pict`.
+///
+/// `read_pict_extra_elements` sends anything it does not name to
+/// `read_element`, so a control there contributes in the reader. The picture
+/// extras pass is a separate dispatch site from the paragraph one and has to
+/// select the first content the same way.
+fn hostile_sdt_under_pict(choices : HostileChoices) -> String {
+  choices.tag("sdt.under_pict")
+  let visible = "<w:p><w:r><w:t>\{hostile_text(choices)}</w:t></w:r></w:p>"
+  "<w:p><w:r><w:pict><v:shape><w:sdt><w:sdtContent>\{visible}</w:sdtContent><w:sdtContent><w:p><w:r><w:t>suppressed</w:t></w:r></w:p></w:sdtContent></w:sdt></v:shape></w:pict></w:r></w:p>"
 }
 
 ///|
@@ -181,12 +261,14 @@ fn hostile_block(choices : HostileChoices, depth : Int) -> String {
   if depth >= 4 {
     return "<w:p><w:r><w:t>leaf</w:t></w:r></w:p>"
   }
-  match choices.next(9) {
-    7 => hostile_sdt(choices, depth)
+  match choices.next(11) {
+    9 => hostile_sdt_around_rows(choices)
+    10 => hostile_sdt_under_pict(choices)
+    7 => hostile_sdt(choices, depth, "block")
     8 =>
       // a content control inside a paragraph, so the physical extras pass
       // walks through it as well as the content pass
-      "<w:p><w:r><w:t>\{hostile_text(choices)}</w:t></w:r>\{hostile_sdt(choices, depth)}</w:p>"
+      "<w:p><w:r><w:t>\{hostile_text(choices)}</w:t></w:r>\{hostile_sdt(choices, depth, "paragraph")}</w:p>"
     0 => "<w:p><w:r>\{hostile_run_content(choices, depth)}</w:r></w:p>"
     1 =>
       // hyperlink wraps runs and is flattened by the reader
@@ -241,15 +323,23 @@ fn hostile_table(choices : HostileChoices, depth : Int) -> String {
 ///|
 /// A whole document, from a seed.
 fn hostile_document(seeds : ArrayView[Int]) -> String {
-  let choices = HostileChoices::{ seeds, at: 0 }
+  let (document, _) = hostile_document_tagged(seeds)
+  document
+}
+
+///|
+/// The same document, plus what the generator recorded while building it.
+fn hostile_document_tagged(seeds : ArrayView[Int]) -> (String, Array[String]) {
+  let choices = HostileChoices::{ seeds, at: 0, tags: [] }
   let body = StringBuilder()
   let blocks = choices.next(4) + 1
   for _ in 0..<blocks {
     body.write_string(hostile_block(choices, 0))
   }
-  "<w:document xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\" xmlns:v=\"urn:schemas-microsoft-com:vml\"><w:body>" +
-  body.to_string() +
-  "</w:body></w:document>"
+  let document = "<w:document xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\" xmlns:v=\"urn:schemas-microsoft-com:vml\"><w:body>" +
+    body.to_string() +
+    "</w:body></w:document>"
+  (document, choices.tags)
 }
 
 ///|
@@ -279,9 +369,20 @@ test "the generator keeps producing documents worth testing" {
   let mut insertions = 0
   let mut textbox_in_deletion = 0
   let mut vmerge_pairs = 0
-  let mut controls = 0
-  let mut second_content = 0
-  let mut textbox_in_suppressed_content = 0
+  // Content-control coverage comes from what the generator recorded rather
+  // than from the finished XML. A control at block level and one inside a
+  // paragraph serialise identically, and only the second reaches the
+  // paragraph's physical extras pass, so a substring search cannot tell the
+  // two apart -- it would report the interaction as covered when only the
+  // block form had been built.
+  let tag_counts : Map[String, Int] = Map::new()
+  for case in cases {
+    let (_, tags) = hostile_document_tagged(case[:])
+    for tag in tags {
+      tag_counts[tag] = tag_counts.get(tag).unwrap_or(0) + 1
+    }
+  }
+  let tagged = fn(name : String) -> Int { tag_counts.get(name).unwrap_or(0) }
   for case in cases {
     let document = hostile_document(case[:])
     if document.contains("<w:tbl>") {
@@ -305,18 +406,6 @@ test "the generator keeps producing documents worth testing" {
       document.contains("<w:vMerge/>") {
       vmerge_pairs = vmerge_pairs + 1
     }
-    if document.contains("<w:sdt>") {
-      controls = controls + 1
-    }
-    // a control declaring a second content, whose text the reader discards
-    if document.contains("</w:sdtContent><w:sdtContent>") {
-      second_content = second_content + 1
-    }
-    // and the case where that discarded content holds a textbox: the content
-    // pass must not reach it, the physical extras pass must
-    if document.contains("</w:sdtContent><w:sdtContent><w:p><w:r><w:pict>") {
-      textbox_in_suppressed_content = textbox_in_suppressed_content + 1
-    }
   }
   assert_true(tables >= 2)
   assert_true(deletions >= 2)
@@ -324,9 +413,22 @@ test "the generator keeps producing documents worth testing" {
   assert_true(insertions >= 2)
   assert_true(textbox_in_deletion >= 1)
   assert_true(vmerge_pairs >= 1)
-  assert_true(controls >= 2)
-  assert_true(second_content >= 1)
-  assert_true(textbox_in_suppressed_content >= 1)
+  // Each content-control site is asserted separately: the block form, the
+  // form inside a paragraph (the only one the physical extras pass walks),
+  // the form around table rows (which the vMerge prepass must agree about),
+  // and the form under a picture (a fourth dispatch site). Before these were
+  // separated, the block form alone satisfied the guard.
+  println(
+    "TAGS " + tag_counts.iter().map(p => "\{p.0}=\{p.1}").collect().join(" "),
+  )
+  assert_true(tagged("sdt@block") >= 5)
+  assert_true(tagged("sdt@paragraph") >= 5)
+  assert_true(tagged("sdt.suppressed_textbox@paragraph") >= 1)
+  assert_true(tagged("sdt.second_content@paragraph") >= 1)
+  assert_true(tagged("sdt.around_rows") >= 3)
+  assert_true(tagged("sdt.around_rows.suppressed_row") >= 1)
+  assert_true(tagged("sdt.around_rows.stray_paragraph") >= 1)
+  assert_true(tagged("sdt.under_pict") >= 3)
 }
 
 ///|

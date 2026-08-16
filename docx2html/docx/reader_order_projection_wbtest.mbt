@@ -976,3 +976,33 @@ test "a checkbox content control still diverges from the reader" {
   // The projection still reports the replaced text.
   inspect(provisional_story_text(projection), content="hello\n\n")
 }
+
+///|
+/// A textbox inside a deleted table row, where the table sits inside a
+/// paragraph. Pre-existing divergence, unrelated to any content-control work.
+///
+/// The reader suppresses a deleted row's content but still finds textboxes
+/// inside it, because `read_paragraph_extra_elements` recurses physically
+/// through the enclosing paragraph and reaches the row regardless. This
+/// projection loses that textbox. The same table at block level agrees --
+/// nothing emits it there, because no paragraph extras pass covers it -- so
+/// the divergence needs the table nested inside a paragraph, which tolerant
+/// input allows and real documents occasionally contain.
+///
+/// Verified present on `main` before the content-control work, and reachable
+/// only once the generator began placing blocks inside paragraphs. Pinned here
+/// so it is visible while it waits for its own fix.
+test "a textbox in a deleted row inside a paragraph still diverges" {
+  let textbox =
+    #|<w:pict><v:shape><v:textbox><w:txbxContent><w:p><w:r><w:t>A</w:t></w:r></w:p></w:txbxContent></v:textbox></v:shape></w:pict>
+  let table = "<w:tbl><w:tr><w:trPr><w:del/></w:trPr><w:tc><w:p><w:r>\{textbox}<w:t>B</w:t></w:r></w:p></w:tc></w:tr></w:tbl>"
+  let source = "<w:document xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\" xmlns:v=\"urn:schemas-microsoft-com:vml\"><w:body><w:p><w:r><w:t>x</w:t></w:r>\{table}</w:p></w:body></w:document>"
+  let projection = scan_reader_order_projection(
+    "word/document.xml",
+    @utf8.encode(source),
+  )
+  // The reader finds the textbox through the paragraph's physical extras pass.
+  inspect(current_reader_story_text(source), content="x\n\nA\n\n")
+  // The projection does not.
+  inspect(provisional_story_text(projection), content="x\n\n")
+}
