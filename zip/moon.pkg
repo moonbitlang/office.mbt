@@ -9,4 +9,5 @@ import {
 
 import {
   "moonbitlang/core/quickcheck",
+  "moonbitlang/core/sorted_set",
 } for "wbtest"
