@@ -151,6 +151,12 @@ fn hostile_textbox(choices : HostileChoices, depth : Int) -> String {
 /// it does not name, so the textbox is still emitted. A projection that skips
 /// content controls in its extras pass loses it, and one that reads both
 /// contents gains text the reader never produced.
+/// No variant carries a `w14:checkbox`, and that is deliberate. The reader
+/// applies a second transform for those -- replacing the first non-empty text,
+/// or discarding the content when there is none -- which this projection does
+/// not model yet. Generating one would assert a divergence that is already
+/// known and pinned by `reader_order_projection_wbtest.mbt`, rather than
+/// finding a new one.
 fn hostile_sdt(choices : HostileChoices, depth : Int) -> String {
   let first = "<w:p><w:r><w:t>\{hostile_text(choices)}</w:t></w:r></w:p>"
   match choices.next(4) {

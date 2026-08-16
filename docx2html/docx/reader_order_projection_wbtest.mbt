@@ -947,3 +947,32 @@ test "reader order budgets bound cumulative visits depth text and contributors" 
     "DocxXmlTokens",
   )
 }
+
+///|
+/// A checkbox content control, which this projection does *not* yet mirror.
+///
+/// `BodyReader::read_structured_document_tag` applies a second transform after
+/// selecting the content: when the first `w:sdtPr` carries a `w14:checkbox`,
+/// `replace_first_text_with_checkbox` swaps the first non-empty text for a
+/// checkbox element, and if the content holds no text at all the whole content
+/// is dropped in favour of a bare checkbox. Neither is modelled here yet.
+///
+/// This pins the resulting divergence instead of leaving it to be discovered.
+/// The generated property in `reader_order_property_wbtest.mbt` cannot find it
+/// -- that generator deliberately emits no `w14:checkbox` -- so without this
+/// test the gap would be invisible in a green suite.
+///
+/// When the transform lands, this test fails, and the fix is to assert
+/// equality here rather than to relax it.
+test "a checkbox content control still diverges from the reader" {
+  let source =
+    #|<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main" xmlns:w14="http://schemas.microsoft.com/office/word/2010/wordml"><w:body><w:sdt><w:sdtPr><w14:checkbox><w14:checked w14:val="1"/></w14:checkbox></w:sdtPr><w:sdtContent><w:p><w:r><w:t>hello</w:t></w:r></w:p></w:sdtContent></w:sdt></w:body></w:document>
+  let projection = scan_reader_order_projection(
+    "word/document.xml",
+    @utf8.encode(source),
+  )
+  // The reader replaced "hello" with a checkbox, which contributes no text.
+  inspect(current_reader_story_text(source), content="\n\n")
+  // The projection still reports the replaced text.
+  inspect(provisional_story_text(projection), content="hello\n\n")
+}

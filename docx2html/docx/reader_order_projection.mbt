@@ -862,6 +862,15 @@ fn ReaderOrderWalker::walk_structural_element(
       // any other child are all suppressed. With no `w:sdtContent` at all the
       // control contributes nothing, because `first_or_empty` yields an element
       // with no children.
+      //
+      // NOT yet mirrored: the checkbox transform. When the first `w:sdtPr`
+      // carries a `w14:checkbox`, the reader replaces the first non-empty text
+      // in that content with a checkbox element, or discards the content
+      // entirely when there is no such text. This projection still reports the
+      // replaced text as reader-visible, so it diverges on exactly those
+      // controls -- narrower than before, when every content control was
+      // skipped, but not yet correct. `reader_order_projection_wbtest.mbt`
+      // pins the divergence rather than leaving it implicit.
       "sdt" =>
         match self.first_wml_child(identity, "sdtContent", depth + 1) {
           Some(content) =>
