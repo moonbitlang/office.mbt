@@ -1194,13 +1194,33 @@ fn assert_reader_order_intervals_index_the_reader(
         assert_true(seen_runs.get(run.identity) is Some(_))
       }
     }
-    expected_start = paragraph.projection_end +
-      reader_order_paragraph_separator_units
+    // The units the offset skips have to *be* the separator. Advancing past
+    // them without looking left a hole: for a story "abcd\n\n" a projection
+    // split as ["ab", ""] satisfies every check above -- starts 0 and 4,
+    // slices match, final offset 6 -- while projecting "ab\n\n\n\n".
+    assert_eq(
+      story
+      .view(
+        start_offset=paragraph.projection_end,
+        end_offset=paragraph.projection_end + 2,
+      )
+      .to_owned(),
+      "\n\n",
+    )
+    // Literal 2, not the constant the implementation uses. Sharing it made the
+    // oracle move with the code: setting the constant to 3 left this check
+    // green, because both sides agreed with each other and neither agreed with
+    // the reader.
+    expected_start = paragraph.projection_end + 2
   }
   // Every paragraph accounted for. The reader writes the separator after each
   // one, including the last, so the running offset ends on the story length --
   // which is what makes a dropped paragraph visible here.
   assert_eq(expected_start, story.length())
+  // And the total: what the projection projects is what the reader read. With
+  // this, no arrangement of individually-consistent intervals can describe a
+  // different story than the one they are indexing.
+  assert_eq(provisional_story_text(projection), story)
 }
 
 ///|

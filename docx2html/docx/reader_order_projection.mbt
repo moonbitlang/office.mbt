@@ -1,8 +1,9 @@
 // A bounded, private reader-order view over N0b1's physical source identities,
-// with story-wide complex-field classification and the reader's content-control
-// and Markup Compatibility transforms applied. This layer still stops before
-// final logical paths and UTF-16 intervals. Later N0b slices consume these
-// ordered physical contributors and their source-pinned field provenance.
+// with story-wide complex-field classification, the reader's content-control
+// and Markup Compatibility transforms, and final logical paths and UTF-16
+// projection intervals. N0c consumes these ordered physical contributors,
+// their source-pinned field provenance, and the `p[i]/r[j]` addresses that
+// let an edit name a run.
 
 ///|
 #warnings("-unused_field")

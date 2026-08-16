@@ -1,8 +1,10 @@
 ///|
 // A generated hostile oracle for the reader-order projection.
 //
-// The projection exists to say, for any document, exactly which source bytes
-// produced which reader-visible text. The hand-written tests next to this file
+// The projection exists to say, for a document in the grammar below, exactly
+// which source bytes produced which reader-visible text. "For any document" is
+// what it is working towards; the exclusions further down are the distance
+// still to go. The hand-written tests next to this file
 // each pin one construct the reader treats specially -- vMerge continuation,
 // deleted rows, textboxes inside deletions, flattened inline wrappers. Each is
 // a case somebody thought of.
