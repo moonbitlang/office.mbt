@@ -167,6 +167,25 @@ fn pdf_flate_build_huffman(
       counts[length] += 1
     }
   }
+  // Reject oversubscribed length sets, where the Kraft inequality is violated
+  // because more codes are declared at some depth than that depth can hold.
+  // The flat lookup table below assigns canonical codes without checking, so
+  // the surplus ones overwrite entries belonging to earlier symbols and the
+  // stream then "decodes" to whatever survived the collisions instead of being
+  // refused. zlib performs this validation; so does the sibling decoder in
+  // `mbtexcel/zip`, and this decoder was the only one of the three that did
+  // not.
+  //
+  // Incomplete sets stay accepted, matching that sibling -- a block with a
+  // single distance code is the common case, and rejecting it would break
+  // streams that decode correctly everywhere else.
+  let mut remaining = 1
+  for bits in 1..<=max_bits {
+    remaining = (remaining << 1) - counts[bits]
+    if remaining < 0 {
+      raise InvalidFlateData
+    }
+  }
   let next_code : Array[Int] = Array::make(max_bits + 1, 0)
   let mut code = 0
   for bits in 1..<=max_bits {
