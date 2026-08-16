@@ -949,32 +949,53 @@ test "reader order budgets bound cumulative visits depth text and contributors" 
 }
 
 ///|
-/// A checkbox content control, which this projection does *not* yet mirror.
+/// A checkbox content control, which the projection now mirrors.
 ///
 /// `BodyReader::read_structured_document_tag` applies a second transform after
 /// selecting the content: when the first `w:sdtPr` carries a `w14:checkbox`,
 /// `replace_first_text_with_checkbox` swaps the first non-empty text for a
-/// checkbox element, and if the content holds no text at all the whole content
-/// is dropped in favour of a bare checkbox. Neither is modelled here yet.
+/// checkbox element. The checkbox carries no text of its own, so the story
+/// loses that text while the paragraph around it survives.
 ///
-/// This pins the resulting divergence instead of leaving it to be discovered.
-/// The generated property in `reader_order_property_wbtest.mbt` cannot find it
-/// -- that generator deliberately emits no `w14:checkbox` -- so without this
-/// test the gap would be invisible in a green suite.
-///
-/// When the transform lands, this test fails, and the fix is to assert
-/// equality here rather than to relax it.
-test "a checkbox content control still diverges from the reader" {
+/// This test previously pinned the divergence and said that when the transform
+/// landed the correct change was to assert equality rather than relax it. That
+/// is what happened.
+test "a checkbox content control replaces its first text" {
   let source =
     #|<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main" xmlns:w14="http://schemas.microsoft.com/office/word/2010/wordml"><w:body><w:sdt><w:sdtPr><w14:checkbox><w14:checked w14:val="1"/></w14:checkbox></w:sdtPr><w:sdtContent><w:p><w:r><w:t>hello</w:t></w:r></w:p></w:sdtContent></w:sdt></w:body></w:document>
   let projection = scan_reader_order_projection(
     "word/document.xml",
     @utf8.encode(source),
   )
-  // The reader replaced "hello" with a checkbox, which contributes no text.
   inspect(current_reader_story_text(source), content="\n\n")
-  // The projection still reports the replaced text.
-  inspect(provisional_story_text(projection), content="hello\n\n")
+  inspect(provisional_story_text(projection), content="\n\n")
+}
+
+///|
+/// One of the two checkbox shapes still unmirrored: an *inline* control whose
+/// content yields no text at all. The other is a control wrapping a table
+/// cell, pinned below.
+///
+/// With no text to replace, the reader discards the content entirely and
+/// returns a bare checkbox, so the content's paragraph never reaches the
+/// story. At block level the projection does the same. Inline it cannot yet,
+/// because walking the content splits the enclosing paragraph, and that split
+/// flushes the text preceding the control into the same completed paragraph as
+/// the control's own -- so dropping by index takes content the control never
+/// owned. Undoing the split is a larger change than the slice that landed the
+/// rest of this transform.
+///
+/// Measured rather than reasoned about, and narrower than what it replaced:
+/// every checkbox control used to diverge.
+test "an inline checkbox control with no text still diverges" {
+  let source =
+    #|<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main" xmlns:w14="http://schemas.microsoft.com/office/word/2010/wordml"><w:body><w:p><w:r><w:t>x</w:t></w:r><w:sdt><w:sdtPr><w14:checkbox/></w:sdtPr><w:sdtContent><w:p><w:r><w:tab/></w:r></w:p></w:sdtContent></w:sdt></w:p></w:body></w:document>
+  let projection = scan_reader_order_projection(
+    "word/document.xml",
+    @utf8.encode(source),
+  )
+  inspect(current_reader_story_text(source), content="x\n\n")
+  inspect(provisional_story_text(projection), content="x\t\n\n\n\n")
 }
 
 ///|
@@ -1005,4 +1026,80 @@ test "a textbox in a deleted row inside a paragraph still diverges" {
   inspect(current_reader_story_text(source), content="x\n\nA\n\n")
   // The projection does not.
   inspect(provisional_story_text(projection), content="x\n\n")
+}
+
+///|
+/// The second no-text checkbox shape still unmirrored: one wrapping a table
+/// cell.
+///
+/// The vMerge prepass decides which rows and cells exist before the walk runs,
+/// and it does not know about the checkbox transform. So it sees the cell the
+/// control declares, while the reader has already replaced the whole content
+/// with a bare checkbox and has no cell there at all.
+///
+/// Teaching the prepass this rule means giving it its own answer to "does this
+/// content yield any text", separate from the walk's. An approximation that
+/// disagreed with the walk would trade one divergence for a subtler one, so it
+/// is left until the prepass and the walk can share that answer.
+///
+/// Predicted by review before it was measured, which is why it is here rather
+/// than waiting to be found.
+test "a no-text checkbox control wrapping a cell still diverges" {
+  let checkbox =
+    #|<w:sdtPr><w14:checkbox><w14:checked w14:val="1"/></w14:checkbox></w:sdtPr>
+  let under =
+    #|<w:tc><w:tcPr><w:vMerge/></w:tcPr><w:p><w:r><w:t>under</w:t></w:r></w:p></w:tc>
+  let body = "<w:tbl><w:tr><w:sdt>\{checkbox}<w:sdtContent><w:tc><w:p><w:r><w:tab/></w:r></w:p></w:tc></w:sdtContent></w:sdt></w:tr><w:tr>\{under}</w:tr></w:tbl>"
+  let source = "<w:document xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\" xmlns:w14=\"http://schemas.microsoft.com/office/word/2010/wordml\"><w:body>\{body}</w:body></w:document>"
+  let projection = scan_reader_order_projection(
+    "word/document.xml",
+    @utf8.encode(source),
+  )
+  inspect(current_reader_story_text(source), content="under\n\n")
+  inspect(provisional_story_text(projection), content="")
+}
+
+///|
+/// Checkbox shapes that one boolean and one atom kind got wrong.
+///
+/// Nested controls each contribute a transform, applied inside out, so a
+/// content control two deep inside checkbox controls loses its first *two*
+/// texts -- the inner replaces the first, then the outer replaces the first
+/// still standing in the result. Tracking that with a single flag replaced one
+/// text and then discarded the outer control wholesale.
+///
+/// And "text" is every element `read_element` turns into one, not just `w:t`.
+/// A soft hyphen, a non-breaking hyphen and a supported symbol all become text
+/// and are all replaceable; a tab does not and is not. Recognising only `w:t`
+/// made a control holding just a soft hyphen look textless, so the projection
+/// discarded a paragraph the reader keeps.
+///
+/// All six measured against the reader.
+test "checkbox controls nest, and every reader text kind is replaceable" {
+  let properties =
+    #|<w:sdtPr><w14:checkbox><w14:checked w14:val="1"/></w14:checkbox></w:sdtPr>
+  let control = fn(content : String) -> String {
+    "<w:sdt>\{properties}<w:sdtContent>\{content}</w:sdtContent></w:sdt>"
+  }
+  let run = fn(inner : String) -> String { "<w:p><w:r>\{inner}</w:r></w:p>" }
+  let cases = [
+    // both texts go: the inner transform takes the first, the outer the second
+    (control(control(run("<w:t>a</w:t><w:t>b</w:t>"))), "\n\n"),
+    // each of these is a text to the reader, so the paragraph survives
+    (control(run("<w:softHyphen/>")), "\n\n"),
+    (control(run("<w:noBreakHyphen/>")), "\n\n"),
+    (control(run("<w:sym w:font=\"Wingdings\" w:char=\"F0FC\"/>")), "\n\n"),
+    // a tab is not, so the control is textless and its content is discarded
+    (control(run("<w:tab/>")), ""),
+  ]
+  for case in cases {
+    let (body, expected) = case
+    let source = "<w:document xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\" xmlns:w14=\"http://schemas.microsoft.com/office/word/2010/wordml\"><w:body>\{body}</w:body></w:document>"
+    let projection = scan_reader_order_projection(
+      "word/document.xml",
+      @utf8.encode(source),
+    )
+    assert_eq(current_reader_story_text(source), expected)
+    assert_eq(provisional_story_text(projection), expected)
+  }
 }
