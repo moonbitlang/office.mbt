@@ -389,3 +389,77 @@ test "whole-run replacement handles a non-ascii document" {
     expected="😀😀\n\n",
   )
 }
+
+///|
+/// A run whose text the reader already replaces is refused.
+///
+/// Inside a checkbox content control the projection blanks the replaced text
+/// while keeping the contribution, so its bytes stay addressable. Writing into
+/// it produced a plan the reader answered by blanking the new text too: asked
+/// to set text, the document showed none. Measured before the refusal existed.
+test "whole-run replacement refuses text the reader replaces" {
+  let properties =
+    #|<w:sdtPr><w14:checkbox><w14:checked w14:val="1"/></w14:checkbox></w:sdtPr>
+  let source = "<w:document xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\" xmlns:w14=\"http://schemas.microsoft.com/office/word/2010/wordml\"><w:body><w:sdt>\{properties}<w:sdtContent><w:p><w:r><w:t>old</w:t></w:r></w:p></w:sdtContent></w:sdt></w:body></w:document>"
+  let bytes = @utf8.encode(source)
+  let projection = scan_reader_order_projection("word/document.xml", bytes)
+  let mut refused = false
+  try plan_whole_run_replacement(projection, bytes, 0, 0, "new") catch {
+    _ => refused = true
+  } noraise {
+    _ => ()
+  }
+  assert_true(refused)
+}
+
+///|
+/// `xml:space="default"` is replaced, not joined.
+///
+/// Detecting the attribute is not enough -- `default` declares the opposite of
+/// what edge whitespace needs, so a plan that only avoided duplicates would
+/// leave Word to strip the text it had just been asked to write.
+test "whole-run replacement replaces a wrong xml:space value" {
+  let source =
+    #|<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:body><w:p><w:r><w:t xml:space="default">old</w:t></w:r></w:p></w:body></w:document>
+  let bytes = @utf8.encode(source)
+  let projection = scan_reader_order_projection("word/document.xml", bytes)
+  let edits = plan_whole_run_replacement(projection, bytes, 0, 0, " new ")
+  let spliced = @utf8.decode(apply_run_surgery_edits(bytes, edits))
+  assert_eq(current_reader_story_text(spliced), " new \n\n")
+  assert_true(spliced.contains("xml:space=\"preserve\""))
+  assert_true(!spliced.contains("xml:space=\"default\""))
+}
+
+///|
+/// Synthesis uses the prefix the run itself is written with.
+///
+/// A part is free to bind the WML namespace to any prefix, or to make it the
+/// default. Hard-coding `<w:t>` produces an unbound prefix there, and a
+/// hard-coded `</w:r>` against an `<x:r/>` opening is not even well-formed.
+test "whole-run synthesis is namespace-correct" {
+  let cases = [
+    // an alternate prefix, self-closing run
+    (
+      "<x:document xmlns:x=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\"><x:body><x:p><x:r/></x:p></x:body></x:document>",
+      "written",
+    ),
+    // and an alternate prefix with a paired run holding only properties
+    (
+      "<x:document xmlns:x=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\"><x:body><x:p><x:r><x:rPr><x:b/></x:rPr></x:r></x:p></x:body></x:document>",
+      "written",
+    ),
+  ]
+  for case in cases {
+    let (source, text) = case
+    let bytes = @utf8.encode(source)
+    let projection = scan_reader_order_projection("word/document.xml", bytes)
+    let edits = plan_whole_run_replacement(projection, bytes, 0, 0, text)
+    let spliced_bytes = apply_run_surgery_edits(bytes, edits)
+    let spliced = @utf8.decode(spliced_bytes)
+    // it parses, and the reader sees the text
+    assert_eq(current_reader_story_text(spliced), "written\n\n")
+    // written with the document's own prefix, not a borrowed one
+    assert_true(spliced.contains("<x:t>"))
+    assert_true(!spliced.contains("<w:t>"))
+  }
+}

@@ -146,6 +146,16 @@ fn plan_whole_run_replacement(
       TransparentSeam => ()
       TextAtom =>
         if is_wml_uri(element.uri) && element.local_name == "t" {
+          // The projection blanks a contribution the checkbox transform
+          // replaced, keeping it so its bytes stay addressable. Writing into
+          // one would be answered by that transform blanking it again: the
+          // caller would ask to set text and silently get none.
+          if contribution.value.length() == 0 &&
+            element.content_end > element.content_start {
+            raise Unsupported(
+              message="run \{run_index} in paragraph \{paragraph_index} holds text the reader replaces, so writing to it would have no effect",
+            )
+          }
           match element.text_map {
             Some(map) =>
               if map.contains_cdata {
@@ -168,8 +178,22 @@ fn plan_whole_run_replacement(
     // The common case: the first `w:t` takes the new text in place, so its tag,
     // prefix and any existing `xml:space` are untouched.
     [first, .. rest] => {
-      let add_space = run_surgery_needs_space_preserve(text) &&
-        !run_surgery_declares_space(source, first)
+      let wants_space = run_surgery_needs_space_preserve(text)
+      let existing = run_surgery_space_declaration(source, first)
+      // An existing declaration is replaced rather than joined: it may say
+      // `default`, which is the opposite of what edge whitespace needs.
+      match existing {
+        Some((from, to)) =>
+          if wants_space {
+            edits.push({
+              byte_start: from,
+              byte_end: to,
+              replacement: "xml:space=\"preserve\"",
+            })
+          }
+        None => ()
+      }
+      let add_space = wants_space && existing is None
       let attribute = if add_space { " xml:space=\"preserve\"" } else { "" }
       if run_surgery_is_self_closing(first) {
         // `<w:t/>` has no content range to write into -- the scanner puts it at
@@ -209,7 +233,8 @@ fn plan_whole_run_replacement(
     // be synthesised, and the run's own element says where it goes.
     [] => {
       let run = projection.source_elements[owned[0].source_identity]
-      edits.push(run_surgery_synthesise_text(run, escaped, text))
+      let prefix = run_surgery_qualified_prefix(source, run)
+      edits.push(run_surgery_synthesise_text(run, prefix, escaped, text))
     }
   }
   for element in removals {
@@ -224,12 +249,105 @@ fn plan_whole_run_replacement(
 }
 
 ///|
-/// Whether this element's open tag already declares `xml:space`.
+/// Where an element's open tag ends: just before its content, or before the
+/// `/>` when it is self-closing.
+fn run_surgery_open_tag_end(element : ScannedElement) -> Int {
+  if run_surgery_is_self_closing(element) {
+    element.byte_end - 2
+  } else {
+    element.content_start
+  }
+}
+
+///|
+/// The byte range of an existing `xml:space` declaration in this open tag, if
+/// there is one.
 ///
-/// Adding a second one is malformed, and a tolerant reader will not say so --
-/// it took a look at the spliced bytes to notice. The open tag runs from the
-/// element's start to just before its content, or to the `/>` when the element
-/// is self-closing.
+/// Detecting the attribute is not enough: `xml:space="default"` declares the
+/// opposite of what edge whitespace needs, so a plan that only avoided
+/// duplicates would leave the text to be stripped. The declaration is replaced
+/// wholesale when it is there and appended when it is not.
+fn run_surgery_space_declaration(
+  source : BytesView,
+  element : ScannedElement,
+) -> (Int, Int)? {
+  let stop = run_surgery_open_tag_end(element)
+  if stop <= element.byte_start || stop > source.length() {
+    return None
+  }
+  let needle = b"xml:space"
+  let mut at = element.byte_start
+  while at + needle.length() <= stop {
+    let mut matched = true
+    for offset in 0..<needle.length() {
+      if source[at + offset] != needle[offset] {
+        matched = false
+        break
+      }
+    }
+    if matched {
+      // run to the end of the quoted value
+      let mut cursor = at + needle.length()
+      while cursor < stop && source[cursor] != b'"' && source[cursor] != b'\'' {
+        cursor = cursor + 1
+      }
+      if cursor >= stop {
+        return None
+      }
+      let quote = source[cursor]
+      cursor = cursor + 1
+      while cursor < stop && source[cursor] != quote {
+        cursor = cursor + 1
+      }
+      if cursor >= stop {
+        return None
+      }
+      return Some((at, cursor + 1))
+    }
+    at = at + 1
+  }
+  None
+}
+
+///|
+/// The qualified name an element is written with, taken from the source.
+///
+/// Synthesising `<w:t>` is only right when the document happens to bind `w` to
+/// the WML namespace with that prefix. A part that binds it as `x`, or as the
+/// default namespace, needs the prefix its own runs use -- and a hard-coded
+/// closing `</w:r>` against an `<x:r/>` opening would not even be well-formed.
+fn run_surgery_qualified_prefix(
+  source : BytesView,
+  element : ScannedElement,
+) -> String raise DocxError {
+  let stop = run_surgery_open_tag_end(element)
+  let mut at = element.byte_start + 1
+  let prefix : Array[Byte] = []
+  while at < stop && at < source.length() {
+    let byte = source[at]
+    if byte == b':' {
+      let out = StringBuilder::new()
+      for unit in prefix {
+        out.write_char(unit.to_int().unsafe_to_char())
+      }
+      return out.to_string() + ":"
+    }
+    if byte == b' ' ||
+      byte == b'\t' ||
+      byte == b'\n' ||
+      byte == b'\r' ||
+      byte == b'/' ||
+      byte == b'>' {
+      break
+    }
+    prefix.push(byte)
+    at = at + 1
+  }
+  ""
+}
+
+///|
+/// Whether this element's open tag already declares `xml:space`.
 fn run_surgery_declares_space(
   source : BytesView,
   element : ScannedElement,
@@ -269,6 +387,7 @@ fn run_surgery_declares_space(
 /// `w:rPr` has to stay first.
 fn run_surgery_synthesise_text(
   run : ScannedElement,
+  prefix : String,
   escaped : String,
   raw : String,
 ) -> RunSurgeryEdit {
@@ -277,13 +396,16 @@ fn run_surgery_synthesise_text(
   } else {
     ""
   }
-  let synthesised = "<w:t\{attribute}>\{escaped}</w:t>"
+  // The prefix comes from the run's own tag. A part that binds WML as `x`, or
+  // as the default namespace, needs `<x:t>` or `<t>` -- and a hard-coded
+  // `</w:r>` against an `<x:r/>` opening would not even be well-formed.
+  let synthesised = "<\{prefix}t\{attribute}>\{escaped}</\{prefix}t>"
   if run_surgery_is_self_closing(run) {
     // `<w:r/>` -> `<w:r><w:t>...</w:t></w:r>`, replacing the two bytes `/>`.
     {
       byte_start: run.byte_end - 2,
       byte_end: run.byte_end,
-      replacement: ">\{synthesised}</w:r>",
+      replacement: ">\{synthesised}</\{prefix}r>",
     }
   } else {
     {
