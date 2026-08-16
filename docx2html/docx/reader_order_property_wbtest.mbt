@@ -22,15 +22,10 @@
 // flattens some children and not others -- and the interesting failures come
 // from combinations of those, at depths a hand-written fixture does not reach.
 //
-// `mc:AlternateContent` is deliberately absent. The projection does not yet
-// perform that transform, so generating it would assert a divergence that is
-// known and tracked (N0b4, #234) rather than finding one. Adding it means
-// adding a branch to `hostile_block` and extending the coverage guard -- so
-// what these properties establish is the *supported* grammar, not every
-// document.
-//
-// `w:sdt` was in that list until the content-control transform landed and is
-// now generated.
+// `w:sdt` and `mc:AlternateContent` were both excluded here until their
+// transforms landed. Both are now generated, and the pair is worth generating
+// together: each suppresses a sibling, but the extras passes treat them
+// oppositely, so a projection that handled them alike would be wrong about one.
 
 ///|
 /// A deterministic stream of choices, so a generated document is a pure
@@ -272,20 +267,110 @@ fn hostile_sdt_under_pict(choices : HostileChoices) -> String {
 }
 
 ///|
+/// Markup Compatibility alternate content.
+///
+/// The reader always takes the fallback and never looks at a choice, whatever
+/// that choice requires: `read_element` reaches it with
+/// `first_or_empty("mc:Fallback")`. So a choice branch is suppressed outright.
+///
+/// The pairing with `hostile_sdt` is the point. Both suppress a sibling, but
+/// the extras passes treat them oppositely: a textbox inside a suppressed
+/// `w:sdtContent` is still emitted, because the paragraph pass recurses
+/// physically through anything it does not name, while a textbox inside an
+/// `mc:Choice` is not, because alternate content switches that pass into
+/// `read_text_box_elements`, which re-selects the fallback. A projection that
+/// treated the two alike would be wrong about one of them.
+fn hostile_alternate_content(
+  choices : HostileChoices,
+  depth : Int,
+  site? : String = "block",
+) -> String {
+  let requires = " Requires=\"wps\""
+  let choice = "<mc:Choice\{requires}><w:p><w:r><w:t>choice</w:t></w:r></w:p></mc:Choice>"
+  choices.tag("alternate")
+  choices.tag("alternate@\{site}")
+  // Inside a paragraph the fallback stays a paragraph, for the same reason
+  // `hostile_sdt` constrains its nested content -- see the note there.
+  //
+  // Built inside the branch that uses it, for the same reason `hostile_sdt`
+  // does: `hostile_block` records tags, and three of these four variants
+  // discard this string, so building it eagerly would leave tags behind for
+  // content that never reached the document.
+  let nested = fn() -> String {
+    if site == "paragraph" {
+      "<w:p><w:r>\{hostile_run_content(choices, depth + 1)}</w:r></w:p>"
+    } else {
+      hostile_block(choices, depth + 1)
+    }
+  }
+  match choices.next(4) {
+    // a choice whose text must never appear, before the fallback
+    0 =>
+      "<mc:AlternateContent>\{choice}<mc:Fallback>\{nested()}</mc:Fallback></mc:AlternateContent>"
+    // no fallback: contributes nothing at all
+    1 => {
+      choices.tag("alternate.no_fallback")
+      choices.tag("alternate.no_fallback@\{site}")
+      "<mc:AlternateContent>\{choice}</mc:AlternateContent>"
+    }
+    // a textbox in the choice, which even the physical extras pass must miss
+    2 => {
+      choices.tag("alternate.textbox_in_choice")
+      choices.tag("alternate.textbox_in_choice@\{site}")
+      "<mc:AlternateContent><mc:Choice\{requires}><w:p><w:r>\{hostile_textbox(choices, depth + 1)}</w:r></w:p></mc:Choice><mc:Fallback><w:p><w:r><w:t>\{hostile_text(choices)}</w:t></w:r></w:p></mc:Fallback></mc:AlternateContent>"
+    }
+    // and a textbox in the fallback, which it must find
+    _ => {
+      choices.tag("alternate.textbox_in_fallback")
+      choices.tag("alternate.textbox_in_fallback@\{site}")
+      "<mc:AlternateContent>\{choice}<mc:Fallback><w:p><w:r>\{hostile_textbox(choices, depth + 1)}</w:r></w:p></mc:Fallback></mc:AlternateContent>"
+    }
+  }
+}
+
+///|
+/// Alternate content wrapping table rows, the counterpart of
+/// `hostile_sdt_around_rows`.
+///
+/// `is_transparent_container` names `mc:Fallback`, so a second one is flattened
+/// into the vMerge prepass while the reader reads only the first. A stray
+/// paragraph there makes the row look malformed, the table fail open, and a
+/// continuation cell the reader removes get restored.
+fn hostile_alternate_around_rows(choices : HostileChoices) -> String {
+  choices.tag("alternate.around_rows")
+  let merged =
+    #|<w:tc><w:tcPr><w:vMerge w:val="restart"/></w:tcPr><w:p><w:r><w:t>top</w:t></w:r></w:p></w:tc>
+  let continued =
+    #|<w:tc><w:tcPr><w:vMerge/></w:tcPr><w:p><w:r><w:t>under</w:t></w:r></w:p></w:tc>
+  if choices.next(2) == 0 {
+    choices.tag("alternate.around_rows.second_fallback")
+    "<w:tbl><w:tr><mc:AlternateContent><mc:Fallback>\{merged}</mc:Fallback><mc:Fallback><w:p><w:r><w:t>stray</w:t></w:r></w:p></mc:Fallback></mc:AlternateContent></w:tr><w:tr>\{continued}</w:tr></w:tbl>"
+  } else {
+    "<w:tbl><w:tr><mc:AlternateContent><mc:Choice Requires=\"wps\"><w:p><w:r><w:t>stray</w:t></w:r></w:p></mc:Choice><mc:Fallback>\{merged}</mc:Fallback></mc:AlternateContent></w:tr><w:tr>\{continued}</w:tr></w:tbl>"
+  }
+}
+
+///|
 /// One block-level construct: a paragraph, a table, or a revision wrapper
 /// around either.
 fn hostile_block(choices : HostileChoices, depth : Int) -> String {
   if depth >= 4 {
     return "<w:p><w:r><w:t>leaf</w:t></w:r></w:p>"
   }
-  match choices.next(12) {
-    11 =>
+  match choices.next(15) {
+    13 =>
       // the paragraph-site suppressed-textbox interaction, pinned rather than
       // left to chance: leaving it to the choice stream produced it at that
       // site zero times in 120 samples
       "<w:p><w:r><w:t>\{hostile_text(choices)}</w:t></w:r>\{hostile_sdt(choices, depth, "paragraph", variant=3)}</w:p>"
+    14 => hostile_alternate_around_rows(choices)
     9 => hostile_sdt_around_rows(choices)
     10 => hostile_sdt_under_pict(choices)
+    11 => hostile_alternate_content(choices, depth)
+    12 =>
+      // alternate content inside a paragraph, which is where the extras pass
+      // switches modes on it
+      "<w:p><w:r><w:t>\{hostile_text(choices)}</w:t></w:r>\{hostile_alternate_content(choices, depth, site="paragraph")}</w:p>"
     7 => hostile_sdt(choices, depth, "block")
     8 =>
       // a content control inside a paragraph, so the physical extras pass
@@ -358,7 +443,10 @@ fn hostile_document_tagged(seeds : ArrayView[Int]) -> (String, Array[String]) {
   for _ in 0..<blocks {
     body.write_string(hostile_block(choices, 0))
   }
-  let document = "<w:document xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\" xmlns:v=\"urn:schemas-microsoft-com:vml\"><w:body>" +
+  // `mc` has to be bound or the alternate-content branches resolve to an
+  // unbound prefix rather than `MC_URI`, and the projection would take its
+  // "not markup compatibility" path while the test looked like it passed.
+  let document = "<w:document xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\" xmlns:v=\"urn:schemas-microsoft-com:vml\" xmlns:mc=\"http://schemas.openxmlformats.org/markup-compatibility/2006\"><w:body>" +
     body.to_string() +
     "</w:body></w:document>"
   (document, choices.tags)
@@ -451,6 +539,16 @@ test "the generator keeps producing documents worth testing" {
   assert_true(tagged("sdt.around_rows.suppressed_row") >= 1)
   assert_true(tagged("sdt.around_rows.stray_paragraph") >= 1)
   assert_true(tagged("sdt.under_pict") >= 3)
+  assert_true(tagged("alternate") >= 10)
+  assert_true(tagged("alternate.textbox_in_choice") >= 2)
+  // Site and variant together, not each on its own: counting them separately
+  // would still pass if every textbox-in-choice had moved to a block site,
+  // and the paragraph site is the one whose extras pass switches modes.
+  assert_true(tagged("alternate.textbox_in_choice@paragraph") >= 1)
+  assert_true(tagged("alternate.textbox_in_fallback") >= 2)
+  assert_true(tagged("alternate.no_fallback") >= 2)
+  assert_true(tagged("alternate.around_rows") >= 3)
+  assert_true(tagged("alternate.around_rows.second_fallback") >= 1)
 }
 
 ///|
