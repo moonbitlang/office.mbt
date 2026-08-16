@@ -499,16 +499,16 @@ test "the generator keeps producing documents worth testing" {
   // paragraph's physical extras pass, so a substring search cannot tell the
   // two apart -- it would report the interaction as covered when only the
   // block form had been built.
-  let tag_counts : Map[String, Int] = Map::new()
+  let tag_counts : Map[String, Int] = Map([])
   for case in cases {
-    let (_, tags) = hostile_document_tagged(case[:])
+    let (_, tags) = hostile_document_tagged(case)
     for tag in tags {
       tag_counts[tag] = tag_counts.get(tag).unwrap_or(0) + 1
     }
   }
   let tagged = fn(name : String) -> Int { tag_counts.get(name).unwrap_or(0) }
   for case in cases {
-    let document = hostile_document(case[:])
+    let document = hostile_document(case)
     if document.contains("<w:tbl>") {
       tables = tables + 1
     }
@@ -577,7 +577,7 @@ test "the generator keeps producing documents worth testing" {
 test "the projection matches the reader on generated documents" {
   @quickcheck.check(
     (seeds : Array[Int]) => {
-      let source = hostile_document(seeds[:])
+      let source = hostile_document(seeds)
       let projection = scan_reader_order_projection(
         "word/document.xml",
         @utf8.encode(source),
@@ -598,7 +598,7 @@ test "the projection matches the reader on generated documents" {
 test "generated documents keep every contribution inside its source element" {
   @quickcheck.check(
     (seeds : Array[Int]) => {
-      let source = hostile_document(seeds[:])
+      let source = hostile_document(seeds)
       let projection = scan_reader_order_projection(
         "word/document.xml",
         @utf8.encode(source),
@@ -628,7 +628,7 @@ test "generated documents keep every contribution inside its source element" {
 test "generated documents keep element spans addressable in the source" {
   @quickcheck.check(
     (seeds : Array[Int]) => {
-      let source = hostile_document(seeds[:])
+      let source = hostile_document(seeds)
       let bytes = @utf8.encode(source)
       let projection = scan_reader_order_projection("word/document.xml", bytes)
       for paragraph in projection.paragraphs {
