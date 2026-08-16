@@ -1,6 +1,6 @@
-// N0b2 reader-order oracles. These compare the provisional physical mapping
-// with the current BodyReader while pinning the absence of final logical
-// coordinates and field/SDT/Markup Compatibility transforms.
+// Reader-order oracles. These compare the projection with the current
+// BodyReader -- its story text, its paragraph structure, and the byte spans and
+// story intervals it claims -- and pin the divergences that remain open.
 
 ///|
 fn current_reader_story_text(source : String) -> String raise DocxError {
@@ -1102,4 +1102,253 @@ test "checkbox controls nest, and every reader text kind is replaceable" {
     assert_eq(current_reader_story_text(source), expected)
     assert_eq(provisional_story_text(projection), expected)
   }
+}
+
+///|
+/// Every contribution's interval indexes the *reader's* story text, and
+/// slicing there yields exactly what the contribution says it produced.
+///
+/// This is the claim surgery depends on. An interval that is merely
+/// self-consistent with the projection's own text proves nothing -- the
+/// projection built both. Slicing the reader's output instead makes the
+/// index answer for itself against the engine it models.
+fn assert_reader_order_intervals_index_the_reader(
+  source : String,
+) -> Unit raise {
+  let projection = scan_reader_order_projection(
+    "word/document.xml",
+    @utf8.encode(source),
+  )
+  let story = current_reader_story_text(source)
+  let mut expected_paragraph = 0
+  // Absolute placement, not just internal consistency. Without this the
+  // property passes on a projection that has lost a paragraph entirely: the
+  // surviving intervals stay self-consistent and the missing tail is never
+  // inspected. The first paragraph starts at zero, each next one two units
+  // past the previous one's end, and after the last the running offset has to
+  // land exactly on the end of the reader's story.
+  let mut expected_start = 0
+  for paragraph in projection.paragraphs {
+    assert_eq(paragraph.logical_index, expected_paragraph)
+    expected_paragraph = expected_paragraph + 1
+    assert_eq(paragraph.projection_start, expected_start)
+    assert_true(paragraph.projection_end >= paragraph.projection_start)
+    assert_true(paragraph.projection_end <= story.length())
+    let mut previous_end = paragraph.projection_start
+    // run identity -> the index it was assigned, to check that the mapping is
+    // a bijection onto a dense range rather than merely non-negative
+    let seen_runs : Map[Int, Int] = Map([])
+    let used_indices : Map[Int, Int] = Map([])
+    for contribution in paragraph.contributions {
+      // contiguous and in order: no gaps, no overlaps, no reordering
+      assert_eq(contribution.projection_start, previous_end)
+      assert_eq(
+        contribution.projection_end - contribution.projection_start,
+        contribution.value.length(),
+      )
+      previous_end = contribution.projection_end
+      // and the bytes there really are this contribution's text
+      assert_eq(
+        story
+        .view(
+          start_offset=contribution.projection_start,
+          end_offset=contribution.projection_end,
+        )
+        .to_owned(),
+        contribution.value,
+      )
+      // run indices are dense and assigned by first appearance
+      match contribution.run_identity {
+        Some(identity) => {
+          assert_true(contribution.logical_run_index >= 0)
+          // one index per run, and one run per index
+          match seen_runs.get(identity) {
+            Some(assigned) =>
+              assert_eq(contribution.logical_run_index, assigned)
+            None => {
+              assert_true(
+                used_indices.get(contribution.logical_run_index) is None,
+              )
+              // the next index, so the order is first appearance and not some
+              // other permutation a uniqueness check alone would accept
+              assert_eq(contribution.logical_run_index, seen_runs.length())
+              seen_runs[identity] = contribution.logical_run_index
+              used_indices[contribution.logical_run_index] = identity
+            }
+          }
+        }
+        None => assert_eq(contribution.logical_run_index, -1)
+      }
+    }
+    assert_eq(previous_end, paragraph.projection_end)
+    // dense from zero: with n distinct runs the indices are exactly 0..n-1, so
+    // a path like `p[i]/r[j]` names one run and every run has a path
+    for index in 0..<seen_runs.length() {
+      assert_true(used_indices.get(index) is Some(_))
+    }
+    // and every run the paragraph *declares* has a path, not only the ones
+    // that happened to contribute. An atomless `<w:r/>` contributes nothing
+    // but a seam, and run synthesis in N0c has to be able to address it.
+    for source in paragraph.sources {
+      for run in source.runs {
+        assert_true(seen_runs.get(run.identity) is Some(_))
+      }
+    }
+    // The units the offset skips have to *be* the separator. Advancing past
+    // them without looking left a hole: for a story "abcd\n\n" a projection
+    // split as ["ab", ""] satisfies every check above -- starts 0 and 4,
+    // slices match, final offset 6 -- while projecting "ab\n\n\n\n".
+    assert_eq(
+      story
+      .view(
+        start_offset=paragraph.projection_end,
+        end_offset=paragraph.projection_end + 2,
+      )
+      .to_owned(),
+      "\n\n",
+    )
+    // Literal 2, not the constant the implementation uses. Sharing it made the
+    // oracle move with the code: setting the constant to 3 left this check
+    // green, because both sides agreed with each other and neither agreed with
+    // the reader.
+    expected_start = paragraph.projection_end + 2
+  }
+  // Every paragraph accounted for. The reader writes the separator after each
+  // one, including the last, so the running offset ends on the story length --
+  // which is what makes a dropped paragraph visible here.
+  assert_eq(expected_start, story.length())
+  // And the total: what the projection projects is what the reader read. With
+  // this, no arrangement of individually-consistent intervals can describe a
+  // different story than the one they are indexing.
+  assert_eq(provisional_story_text(projection), story)
+  // Deliberately *not* compared against the reader's `Paragraph` element count
+  // here. The two shapes differ by design, though not for the reason it first
+  // looks: `read_paragraph_elements` appends text-box extras as *siblings* of
+  // the carrier paragraph, not inside it. The mismatch comes from nested
+  // blocks -- a `w:tbl` inside a `w:p` leaves the reader with one `Paragraph`
+  // element whose children serialise as several paragraphs of story, while
+  // `consume_inline_block_output` splits the carrier into separate projected
+  // paragraphs. Counting `Paragraph` elements without mirroring
+  // `to_raw_text`'s whole recursion undercounts: measured on a generated
+  // document, four against five projected, with identical flat text.
+  //
+  // The risk that comparison was meant to cover -- a projection splitting one
+  // reader paragraph whose own text contains the separator -- is covered
+  // directly by "a separator inside one paragraph does not split it" below,
+  // where the count is known from the source rather than from either side's
+  // output.
+}
+
+///|
+test "intervals index the reader's story text" {
+  let sources = [
+    // plain text, and an astral character, which is two UTF-16 units
+    "<w:p><w:r><w:t>hello</w:t></w:r></w:p>", "<w:p><w:r><w:t>a\u{1F600}b</w:t></w:r></w:p>",
+    // several runs, so run indices have to be assigned by first appearance
+     "<w:p><w:r><w:t>one</w:t></w:r><w:r><w:t>two</w:t></w:r><w:r><w:t>three</w:t></w:r></w:p>",
+    // more than one paragraph, so the separator has to be accounted for
+     "<w:p><w:r><w:t>first</w:t></w:r></w:p><w:p><w:r><w:t>second</w:t></w:r></w:p>",
+    // a checkbox control, whose replaced text must occupy an empty interval
+     "<w:sdt><w:sdtPr><w14:checkbox><w14:checked w14:val=\"1\"/></w14:checkbox></w:sdtPr><w:sdtContent><w:p><w:r><w:t>replaced</w:t><w:t>kept</w:t></w:r></w:p></w:sdtContent></w:sdt>",
+    // atoms that are not text
+     "<w:p><w:r><w:t>a</w:t><w:tab/><w:softHyphen/><w:t>b</w:t></w:r></w:p>",
+  ]
+  for body in sources {
+    assert_reader_order_intervals_index_the_reader(
+      "<w:document xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\" xmlns:w14=\"http://schemas.microsoft.com/office/word/2010/wordml\"><w:body>\{body}</w:body></w:document>",
+    )
+  }
+}
+
+///|
+/// The interval property has to be able to fail.
+///
+/// Its first version checked that intervals were contiguous and that each one
+/// sliced the reader's text correctly, but never where the first paragraph
+/// started or where the last one ended. That passes on a projection which has
+/// lost a paragraph outright: the surviving intervals stay self-consistent and
+/// the missing tail is never looked at. Review caught it.
+///
+/// #427 is a document where the projection does lose a paragraph, so it makes
+/// a ready-made negative case: the property must reject it. The generated
+/// corpus excludes the shape deliberately, which is why the suite stays green
+/// while this divergence is still open.
+test "the interval property rejects a projection that lost a paragraph" {
+  let textbox =
+    #|<w:pict><v:shape><v:textbox><w:txbxContent><w:p><w:r><w:t>A</w:t></w:r></w:p></w:txbxContent></v:textbox></v:shape></w:pict>
+  let table = "<w:tbl><w:tr><w:trPr><w:del/></w:trPr><w:tc><w:p><w:r>\{textbox}<w:t>B</w:t></w:r></w:p></w:tc></w:tr></w:tbl>"
+  let source = "<w:document xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\" xmlns:v=\"urn:schemas-microsoft-com:vml\"><w:body><w:p><w:r><w:t>x</w:t></w:r>\{table}</w:p></w:body></w:document>"
+  let mut rejected = false
+  try assert_reader_order_intervals_index_the_reader(source) catch {
+    _ => rejected = true
+  } noraise {
+    _ => ()
+  }
+  assert_true(rejected)
+}
+
+///|
+/// A paragraph whose own text contains the separator must not be split.
+///
+/// `"a\n\nb"` in a single `w:t` serialises exactly like two paragraphs holding
+/// `"a"` and `"b"`, so flat story equality cannot tell them apart. A projection
+/// that split the first would invent a `p[1]` that surgery could address and
+/// the reader has never heard of.
+///
+/// The expected counts come from the source, not from either side's output.
+test "a separator inside one paragraph does not split it" {
+  let document = fn(body : String) -> String {
+    "<w:document xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\"><w:body>\{body}</w:body></w:document>"
+  }
+  let joined = document("<w:p><w:r><w:t>a&#10;&#10;b</w:t></w:r></w:p>")
+  let split = document(
+    "<w:p><w:r><w:t>a</w:t></w:r></w:p><w:p><w:r><w:t>b</w:t></w:r></w:p>",
+  )
+  // identical stories
+  assert_eq(current_reader_story_text(joined), "a\n\nb\n\n")
+  assert_eq(current_reader_story_text(split), "a\n\nb\n\n")
+  // and distinguishable structures
+  let one = scan_reader_order_projection(
+    "word/document.xml",
+    @utf8.encode(joined),
+  )
+  let two = scan_reader_order_projection(
+    "word/document.xml",
+    @utf8.encode(split),
+  )
+  assert_eq(one.paragraphs.length(), 1)
+  assert_eq(two.paragraphs.length(), 2)
+  assert_reader_order_intervals_index_the_reader(joined)
+  assert_reader_order_intervals_index_the_reader(split)
+}
+
+///|
+/// An atomless run still has an address.
+///
+/// `<w:r/>` contributes no text, only the seam the walk opens for it. The run
+/// oracle derives its expectations from `paragraph.sources[*].runs`, which is
+/// the implementation's own output -- so a regression dropping such a run from
+/// both that list and the contributions would make every check vacuous rather
+/// than failing. The count here comes from the source instead.
+///
+/// N0c synthesises a `w:t` into exactly this kind of run, so losing its address
+/// would lose the ability to write into it.
+test "an atomless run is still addressable" {
+  let source =
+    #|<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:body><w:p><w:r/><w:r><w:t>x</w:t></w:r><w:r/></w:p></w:body></w:document>
+  let projection = scan_reader_order_projection(
+    "word/document.xml",
+    @utf8.encode(source),
+  )
+  assert_eq(projection.paragraphs.length(), 1)
+  let paragraph = projection.paragraphs[0]
+  // three runs in the source, so three distinct addresses, numbered in order
+  let indices : @sorted_set.SortedSet[Int] = SortedSet([])
+  for contribution in paragraph.contributions {
+    if contribution.run_identity is Some(_) {
+      indices.add(contribution.logical_run_index)
+    }
+  }
+  assert_eq(indices.to_array(), [0, 1, 2])
+  assert_reader_order_intervals_index_the_reader(source)
 }

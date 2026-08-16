@@ -1,8 +1,9 @@
 // A bounded, private reader-order view over N0b1's physical source identities,
-// with story-wide complex-field classification and the reader's content-control
-// and Markup Compatibility transforms applied. This layer still stops before
-// final logical paths and UTF-16 intervals. Later N0b slices consume these
-// ordered physical contributors and their source-pinned field provenance.
+// with story-wide complex-field classification, the reader's content-control
+// and Markup Compatibility transforms, and final logical paths and UTF-16
+// projection intervals. N0c consumes these ordered physical contributors,
+// their source-pinned field provenance, and the `p[i]/r[j]` addresses that
+// let an edit name a run.
 
 ///|
 #warnings("-unused_field")
@@ -24,10 +25,10 @@ priv enum ProvisionalContributionKind {
 } derive(Debug)
 
 ///|
-/// One provisional reader-visible atom or zero-width boundary. Its identity
-/// always indexes `ReaderOrderProjection.source_elements`; byte spans are
-/// physical source coordinates only. No logical or projection interval is
-/// assigned in N0b2.
+/// One reader-visible atom or zero-width boundary. Its identity always indexes
+/// `ReaderOrderProjection.source_elements`; `source_span` is a physical byte
+/// range, while `projection_start`/`projection_end` locate it in the reader's
+/// story and `logical_run_index` names its run.
 #warnings("-unused_field")
 priv struct ReaderOrderContribution {
   kind : ProvisionalContributionKind
@@ -39,6 +40,21 @@ priv struct ReaderOrderContribution {
   mut field_identity : Int?
   mut field_region : ReaderOrderFieldRegion
   mut field_refusal : Int?
+  /// Half-open interval this contribution occupies in the reader's story
+  /// text, in UTF-16 code units. Assigned only after every transform and
+  /// suppression decision, because a contribution the checkbox transform
+  /// blanked contributes nothing and must occupy an empty interval even
+  /// though its source span still names real bytes.
+  ///
+  /// Zero-width contributions -- seams and barriers -- get an empty interval
+  /// at the position they sit, which is what makes them usable as insertion
+  /// points.
+  mut projection_start : Int
+  mut projection_end : Int
+  /// Index of this contribution's run within its reader paragraph, by order of
+  /// first appearance, or -1 when it belongs to no run. With the paragraph's
+  /// own index this is the `p[i]/r[j]` address surgery will edit through.
+  mut logical_run_index : Int
 }
 
 ///|
@@ -65,6 +81,11 @@ priv struct ReaderOrderParagraph {
   from_text_box : Bool
   sources : Array[ReaderOrderParagraphSource]
   contributions : Array[ReaderOrderContribution]
+  /// Position of this paragraph in the reader's story, and the interval it
+  /// occupies there. Both assigned by `assign_reader_order_logical_coordinates`.
+  mut logical_index : Int
+  mut projection_start : Int
+  mut projection_end : Int
 }
 
 ///|
@@ -79,8 +100,10 @@ priv struct ReaderOrderFieldCarrierEvent {
 }
 
 ///|
-/// Private N0b2 result. `source_part` identifies the OPC part, while every
-/// other coordinate remains an exact N0b1 identity or physical byte span.
+/// Private result. `source_part` identifies the OPC part. Physical coordinates
+/// are exact source identities and byte spans; logical ones are the paragraph
+/// index, run index and UTF-16 story interval assigned once every transform
+/// has run.
 #warnings("-unused_field")
 priv struct ReaderOrderProjection {
   source_part : String
@@ -839,6 +862,9 @@ fn ReaderOrderWalker::add_contribution(
     field_identity: None,
     field_region: OutsideField,
     field_refusal: None,
+    projection_start: -1,
+    projection_end: -1,
+    logical_run_index: -1,
   })
 }
 
@@ -1144,7 +1170,14 @@ fn ReaderOrderWalker::new_reader_order_paragraph(
   from_text_box : Bool,
 ) -> ReaderOrderParagraph raise DocxError {
   self.budget.charge_contributor()
-  { from_text_box, sources: [], contributions: [] }
+  {
+    from_text_box,
+    sources: [],
+    contributions: [],
+    logical_index: -1,
+    projection_start: -1,
+    projection_end: -1,
+  }
 }
 
 ///|
@@ -1662,8 +1695,59 @@ fn project_reader_order_from_source_tree(
     projection,
     budget?=field_budget,
   )
+  assign_reader_order_logical_coordinates(projection)
   projection
 }
+
+///|
+/// Assign each paragraph its position in the reader's story and each
+/// contribution its interval there.
+///
+/// Runs last, after every transform, suppression decision and field
+/// classification. That order is the point: the checkbox transform blanks a
+/// contribution's value without removing it, and a control with no text has
+/// its paragraphs dropped outright, so any interval assigned earlier would
+/// claim story positions that no longer exist.
+///
+/// Offsets are UTF-16 code units, which is what `String::length` counts in
+/// MoonBit -- an astral character is two. Paragraphs are separated by the two
+/// units `BodyReader` puts between them, so a paragraph's interval covers its
+/// own text and not the separator that follows it.
+fn assign_reader_order_logical_coordinates(
+  projection : ReaderOrderProjection,
+) -> Unit {
+  let mut offset = 0
+  for index, paragraph in projection.paragraphs {
+    paragraph.logical_index = index
+    paragraph.projection_start = offset
+    // Runs are numbered by first appearance rather than by source identity, so
+    // the address stays stable when a run contributes in more than one place.
+    let run_indices : Map[Int, Int] = Map([])
+    for contribution in paragraph.contributions {
+      contribution.logical_run_index = match contribution.run_identity {
+        Some(identity) =>
+          match run_indices.get(identity) {
+            Some(assigned) => assigned
+            None => {
+              let assigned = run_indices.length()
+              run_indices[identity] = assigned
+              assigned
+            }
+          }
+        None => -1
+      }
+      contribution.projection_start = offset
+      offset = offset + contribution.value.length()
+      contribution.projection_end = offset
+    }
+    paragraph.projection_end = offset
+    offset = offset + reader_order_paragraph_separator_units
+  }
+}
+
+///|
+/// The `"\n\n"` `BodyReader` writes between paragraphs, in UTF-16 units.
+let reader_order_paragraph_separator_units : Int = 2
 
 ///|
 /// Convenience entry point that retains N0b1 identities and immediately
