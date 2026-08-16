@@ -25,21 +25,24 @@
 // Two constructs are deliberately absent: `w:sdt` and `mc:AlternateContent`.
 // The projection does not yet perform those transforms (N0b4, #234), so
 // generating them would assert a divergence that is known and tracked rather
-// than finding one. They are listed in `hostile_deferred_constructs` below so
-// that enabling them is a one-line change when that slice lands.
+// than finding one. Adding them means adding branches to `hostile_block` and
+// `hostile_run_content` and extending the coverage guard -- so what these
+// properties establish is the *supported* grammar, not every document.
 
 ///|
-/// Constructs this generator does not emit, and why.
+/// A deterministic stream of choices, so a generated document is a pure
+/// function of its seed and any counterexample reproduces exactly.
 ///
-/// Kept as data rather than a comment so the omission is visible to anyone
-/// reading the generator, and so enabling them later is an edit here.
-let hostile_deferred_constructs : Array[String] = [
-  "w:sdt", "mc:AlternateContent",
-]
-
-///|
-/// A tiny deterministic stream of choices, so a generated document is a pure
-/// function of its seed and a shrunk counterexample reproduces exactly.
+/// Shrinking is worth being precise about, because the obvious claim is
+/// wrong. Mixing each value with its position -- which is what stops the
+/// generator collapsing to one trivial paragraph -- means removing an element
+/// shifts every later value into a new position and changes unrelated
+/// choices. So a shrunk seed array reproduces a *smaller input*, not a
+/// structurally simpler document: `[0, 0, 1, 1]` shrunk to `[1, 1]` produces
+/// longer XML containing a table. What shrinking buys here is a smaller,
+/// exactly reproducible seed to re-run, not a minimal document to read.
+/// Getting the latter needs a document AST with its own Shrink instance,
+/// which is a larger change than this file.
 priv struct HostileChoices {
   seeds : ArrayView[Int]
   mut at : Int
@@ -48,9 +51,7 @@ priv struct HostileChoices {
 ///|
 fn HostileChoices::next(self : HostileChoices, bound : Int) -> Int {
   // Running out of choices returns 0, and every 0 branch below is the simple
-  // or terminating one. That is what makes the seed array's *length* control
-  // document size, so shrinking a counterexample shrinks the document rather
-  // than replacing it with an unrelated one.
+  // or terminating one, so a seed array always yields a finite document.
   if self.at >= self.seeds.length() || bound <= 1 {
     return 0
   }
@@ -112,15 +113,25 @@ fn hostile_run_content(choices : HostileChoices, depth : Int) -> String {
         }
       _ =>
         if depth < 3 {
-          out.write_string(
-            "<w:pict><v:shape><v:textbox><w:txbxContent>\{hostile_block(choices, depth + 1)}</w:txbxContent></v:textbox></v:shape></w:pict>",
-          )
+          out.write_string(hostile_textbox(choices, depth))
         } else {
           out.write_string("<w:t>p</w:t>")
         }
     }
   }
   out.to_string()
+}
+
+///|
+/// A textbox carrying a nested block. Factored out because it has to be
+/// reachable from inside a deletion as well as from ordinary run content --
+/// the reader suppresses deleted inline text while still walking the deletion
+/// for textboxes, and that interaction is one of the more surprising things
+/// the projection has to mirror.
+fn hostile_textbox(choices : HostileChoices, depth : Int) -> String {
+  "<w:pict><v:shape><v:textbox><w:txbxContent>" +
+  hostile_block(choices, depth + 1) +
+  "</w:txbxContent></v:textbox></v:shape></w:pict>"
 }
 
 ///|
@@ -140,7 +151,9 @@ fn hostile_block(choices : HostileChoices, depth : Int) -> String {
       // but is still walked for textboxes
       "<w:p><w:ins><w:r>\{hostile_run_content(choices, depth)}</w:r></w:ins></w:p>"
     3 =>
-      "<w:p><w:del><w:r><w:delText>\{hostile_text(choices)}</w:delText></w:r></w:del><w:r>\{hostile_run_content(choices, depth)}</w:r></w:p>"
+      // a deletion whose run also carries a textbox: the inline text is
+      // suppressed, the textbox is not
+      "<w:p><w:del><w:r><w:delText>\{hostile_text(choices)}</w:delText>\{hostile_textbox(choices, depth)}</w:r></w:del><w:r>\{hostile_run_content(choices, depth)}</w:r></w:p>"
     4 => hostile_table(choices, depth)
     5 =>
       "<w:p><w:r>\{hostile_run_content(choices, depth)}</w:r></w:p><w:p><w:r><w:t>\{hostile_text(choices)}</w:t></w:r></w:p>"
@@ -203,21 +216,22 @@ fn hostile_document(seeds : ArrayView[Int]) -> String {
 /// three properties below passed, over a corpus containing no table, no
 /// revision, no textbox and no nesting -- green, and testing nothing.
 ///
-/// Coverage is therefore asserted rather than assumed, and asserted here so a
-/// future change to the grammar or to QuickCheck's distribution fails loudly
-/// instead of quietly narrowing what the properties see.
+/// The interactions are asserted, not just the constructs. Finding a `w:del`
+/// and a textbox somewhere in the same document says nothing about the case
+/// that actually surprises the reader, which is a textbox *inside* a
+/// deletion: the inline text is suppressed and the textbox is not. Likewise a
+/// vMerge restart is only interesting paired with a continuation, since that
+/// pair is what makes the reader drop a cell.
 test "the generator keeps producing documents worth testing" {
   let cases : Array[Array[Int]] = @quickcheck.samples(40)
   let mut tables = 0
   let mut deletions = 0
   let mut textboxes = 0
   let mut insertions = 0
-  let mut longest = 0
+  let mut textbox_in_deletion = 0
+  let mut vmerge_pairs = 0
   for case in cases {
     let document = hostile_document(case[:])
-    if document.length() > longest {
-      longest = document.length()
-    }
     if document.contains("<w:tbl>") {
       tables = tables + 1
     }
@@ -230,21 +244,31 @@ test "the generator keeps producing documents worth testing" {
     if document.contains("<w:ins>") {
       insertions = insertions + 1
     }
+    // the deletion branch is the only place a textbox follows delText, so
+    // this substring identifies the nested case rather than co-occurrence
+    if document.contains("</w:delText><w:pict>") {
+      textbox_in_deletion = textbox_in_deletion + 1
+    }
+    if document.contains("<w:vMerge w:val=\"restart\"/>") &&
+      document.contains("<w:vMerge/>") {
+      vmerge_pairs = vmerge_pairs + 1
+    }
   }
   assert_true(tables >= 2)
   assert_true(deletions >= 2)
   assert_true(textboxes >= 2)
   assert_true(insertions >= 2)
-  // and at least one document deep enough to combine several constructs
-  assert_true(longest >= 600)
+  assert_true(textbox_in_deletion >= 1)
+  assert_true(vmerge_pairs >= 1)
 }
 
 ///|
 /// The claim the projection makes, over documents nobody wrote by hand.
 ///
-/// A failure arrives already shrunk, which matters more here than usual: the
-/// generator can produce several kilobytes of nested XML, and the useful
-/// question is always which construct combination broke it, not which blob.
+/// A failure reports the seed array that produced it, which re-runs exactly.
+/// It is not a minimal document -- see `HostileChoices::next` for why
+/// shrinking cannot simplify one here -- so reading a counterexample means
+/// printing the generated XML from that seed.
 test "the projection matches the reader on generated documents" {
   @quickcheck.check(
     (seeds : Array[Int]) => {
@@ -288,9 +312,14 @@ test "generated documents keep every contribution inside its source element" {
 ///
 /// The identity check above proves a contribution's interval lies within its
 /// element's interval. This proves the element's own interval is where the
-/// element actually is, by cutting the bytes out and looking at them -- an
-/// off-by-one that keeps both intervals well-ordered would pass the first
-/// check and fail this one.
+/// element actually is, by cutting the bytes out and looking at both ends.
+///
+/// Both ends, deliberately. An earlier version matched only the four bytes
+/// `<w:p` at the start, which `<w:pict>` and `<w:pPr>` also satisfy, and never
+/// looked at `byte_end` at all -- so the off-by-one this test exists to catch
+/// would have passed it. The start must be a `w:p` element and not merely a
+/// tag whose name begins that way, and the span must end where that element
+/// closes.
 test "generated documents keep element spans addressable in the source" {
   @quickcheck.check(
     (seeds : Array[Int]) => {
@@ -305,9 +334,20 @@ test "generated documents keep element spans addressable in the source" {
             span.byte_start < span.byte_end else {
             return false
           }
-          // a paragraph's span must actually open a paragraph element
-          let opening = bytes[span.byte_start:span.byte_start + 4]
-          guard opening == b"<w:p" else { return false }
+          // the QName has to end here, or `<w:pict>` and `<w:pPr>` qualify too
+          guard bytes[span.byte_start:span.byte_start + 4] == b"<w:p" else {
+            return false
+          }
+          let after = bytes[span.byte_start + 4]
+          guard after == b'>' || after == b' ' || after == b'/' else {
+            return false
+          }
+          // and the span has to reach that element's own close, which is what
+          // makes byte_end load-bearing rather than merely well-ordered
+          guard span.byte_end >= span.byte_start + 6 else { return false }
+          guard bytes[span.byte_end - 6:span.byte_end] == b"</w:p>" else {
+            return false
+          }
         }
       }
       true
