@@ -2,9 +2,16 @@
 //
 // A length set is *oversubscribed* when it declares more codes at some depth
 // than that depth can hold -- the Kraft inequality is violated. It is
-// *incomplete* when it declares fewer. Only the first is malformed: RFC 1951
-// sanctions a block with a single distance code, which is incomplete by
-// construction.
+// *incomplete* when it declares fewer.
+//
+// Oversubscription is always malformed. Incompleteness is not always legal:
+// zlib refuses incomplete code-length, literal and distance trees except the
+// single one-bit-code case, which RFC 1951 sanctions for a block with one
+// distance code. This decoder accepts every incomplete set, which is more
+// permissive than zlib and predates this check -- so an incomplete set like
+// `[2]` still decodes here where zlib would refuse it. Deliberate
+// permissiveness, not a claim that every incomplete set is legal; tightening
+// it is a separate change with its own compatibility question.
 //
 // This decoder checked for neither, so an oversubscribed stream produced
 // output instead of an error. The vectors here were built by an independent
@@ -76,12 +83,13 @@ test "the equivalent well-formed block still decodes" {
 }
 
 ///|
-/// An incomplete set is not malformed and must keep decoding.
+/// The one incomplete shape RFC 1951 explicitly sanctions must keep decoding.
 ///
 /// This block declares one distance code of length one and never uses it,
-/// which leaves half the code space unassigned. zlib accepts it. Rejecting
-/// every set that fails to fill its code space would refuse streams that
-/// decode correctly everywhere else, so the check is deliberately one-sided.
+/// which leaves half the code space unassigned. zlib accepts exactly this
+/// case. The check is deliberately one-sided and this decoder is looser still
+/// -- see the note at the top of the file -- but tightening incompleteness is
+/// a separate question from refusing oversubscription.
 test "an incomplete distance tree is still accepted" {
   let stream = b"\x05\xc0\x21\x09\x00\x00\x00\x00\x20\xff\xaf\x56\x80"
   assert_eq(pdf_deflate_decode_raw(stream), Bytes::make(8, b'\x00'))
