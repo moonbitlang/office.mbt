@@ -171,9 +171,19 @@ fn hostile_textbox(choices : HostileChoices, depth : Int) -> String {
 /// not model yet. Generating one would assert a divergence that is already
 /// known and pinned by `reader_order_projection_wbtest.mbt`, rather than
 /// finding a new one.
-fn hostile_sdt(choices : HostileChoices, depth : Int, site : String) -> String {
+fn hostile_sdt(
+  choices : HostileChoices,
+  depth : Int,
+  site : String,
+  variant? : Int = -1,
+) -> String {
   let first = "<w:p><w:r><w:t>\{hostile_text(choices)}</w:t></w:r></w:p>"
   choices.tag("sdt@\{site}")
+  // Built inside the branch that uses it, not before the branch is chosen.
+  // `hostile_block` records tags of its own, and a variant that discarded this
+  // string would have left those tags behind -- so the coverage guard could
+  // report an interaction that never reached the document.
+  //
   // Inside a paragraph the nested content stays a paragraph rather than an
   // arbitrary block. A table nested inside a paragraph hits a divergence that
   // predates this work and is unrelated to content controls -- the reader
@@ -181,15 +191,22 @@ fn hostile_sdt(choices : HostileChoices, depth : Int, site : String) -> String {
   // physical extras pass and this projection does not. It is pinned by name in
   // `reader_order_projection_wbtest.mbt`; generating it here would only
   // re-assert a divergence that is already tracked.
-  let nested = if site == "paragraph" {
-    "<w:p><w:r>\{hostile_run_content(choices, depth + 1)}</w:r></w:p>"
-  } else {
-    hostile_block(choices, depth + 1)
+  let nested = fn() -> String {
+    if site == "paragraph" {
+      "<w:p><w:r>\{hostile_run_content(choices, depth + 1)}</w:r></w:p>"
+    } else {
+      hostile_block(choices, depth + 1)
+    }
   }
-  match choices.next(4) {
+  // A caller may pin the variant. The suppressed-textbox shape inside a
+  // paragraph is the one the physical extras pass hinges on, and leaving it to
+  // the choice stream did not produce it at that site even once in 120
+  // samples -- the guard only appeared to cover it because tags leaked from
+  // discarded subtrees.
+  match (if variant >= 0 { variant } else { choices.next(4) }) {
     // properties before the content, which must not be read as content
     0 =>
-      "<w:sdt><w:sdtPr><w:alias w:val=\"a\"/></w:sdtPr><w:sdtContent>\{nested}</w:sdtContent></w:sdt>"
+      "<w:sdt><w:sdtPr><w:alias w:val=\"a\"/></w:sdtPr><w:sdtContent>\{nested()}</w:sdtContent></w:sdt>"
     // no content at all: the control contributes nothing
     1 => "<w:sdt><w:sdtPr><w:alias w:val=\"b\"/></w:sdtPr></w:sdt>"
     // a second content, whose text the reader never emits
@@ -261,7 +278,12 @@ fn hostile_block(choices : HostileChoices, depth : Int) -> String {
   if depth >= 4 {
     return "<w:p><w:r><w:t>leaf</w:t></w:r></w:p>"
   }
-  match choices.next(11) {
+  match choices.next(12) {
+    11 =>
+      // the paragraph-site suppressed-textbox interaction, pinned rather than
+      // left to chance: leaving it to the choice stream produced it at that
+      // site zero times in 120 samples
+      "<w:p><w:r><w:t>\{hostile_text(choices)}</w:t></w:r>\{hostile_sdt(choices, depth, "paragraph", variant=3)}</w:p>"
     9 => hostile_sdt_around_rows(choices)
     10 => hostile_sdt_under_pict(choices)
     7 => hostile_sdt(choices, depth, "block")

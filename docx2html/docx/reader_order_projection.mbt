@@ -428,12 +428,17 @@ fn collect_reader_order_body_outputs(
           budget,
         ) {
         Some(content) =>
+          // `depth + 2`, not `depth + 1`: the loop charged the control at
+          // `depth` and `reader_order_first_direct_wml_child` charged the
+          // selected content at `depth + 1`, so the content's children sit one
+          // deeper again. Charging them at the content's own depth would let a
+          // stack of nested controls understate `max_depth`.
           collect_reader_order_body_outputs(
             elements,
             content,
             output,
             reader_image_outputs,
-            depth + 1,
+            depth + 2,
             budget,
           )
         None => ()
