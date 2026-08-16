@@ -1,24 +1,18 @@
 ///|
-// Cross-backend determinism of the pure deflate encoder.
+// Cross-backend determinism of the encoder that ships.
 //
-// `pdf_flate_encode_view_with_level` is not one implementation. On native it
-// calls the vendored miniz through a C stub; everywhere else it calls
-// `pdf_flate_encode_view_with_level_pure`. So a PDF written on native and the
-// same PDF written on wasm are semantically identical and byte-different, and
-// nothing until now checked what the pure half does from one backend to the
-// next.
+// These used to pin `pdf_flate_encode_view_with_level_pure`, back when
+// encoding was target-split: miniz through a C stub on native, that pure
+// encoder everywhere else. The split is gone -- one MoonBit port of miniz now
+// serves every backend -- and these vectors follow it, because a suite that
+// pins a retired implementation cannot detect a divergence in the live one.
 //
-// That gap matters more than it looks. The pure encoder is the only compressor
-// that exists on every target, so it is the one candidate for making output
-// byte-identical everywhere -- and a candidate nobody has shown to be
-// self-consistent across targets is not a candidate at all. The miniz port
-// that eventually replaces this encoder inherits the same corpus and the same
-// layered shape.
-//
-// What these establish is bounded, and worth stating plainly: a fixed corpus
-// pins the inputs it contains. It does not prove determinism for every input,
-// and no finite set of vectors could. It is a tripwire on the cases most
-// likely to move, not a proof.
+// That matters more here than it looks. The differential against the C can
+// only run on native, since native is where miniz exists. So these vectors are
+// the *only* thing standing between a backend-specific fault in the port --
+// an Int shift, a wraparound lowered differently under wasm codegen -- and
+// silently different PDFs. If they were still measuring the old encoder,
+// nothing at all would be watching that.
 //
 // Two layers, because they fail for different reasons:
 //
@@ -30,15 +24,19 @@
 //     normally makes a snapshot worthless -- see the warning in
 //     docs/page-layout-engine.md about `moon test --update` freezing wrong
 //     answers three times. It is legitimate here precisely because the round
-//     trip already establishes correctness independently: the snapshot is
-//     asked only whether every backend agrees, which is not a question the
-//     input can answer.
+//     trip establishes correctness independently, leaving the snapshot one
+//     question the input cannot answer: do the backends agree.
 //
 // The corpus targets the matcher rather than the entropy coder. Random bytes
-// are the weakest input here -- they are incompressible, so they exercise the
-// stored and literal paths and almost nothing else. What finds real bugs is
+// are the weakest input here -- incompressible, so they exercise the stored
+// and literal paths and almost nothing else. What finds real bugs is
 // structure: runs, periodic repeats at chosen distances, and matches placed
 // against the boundaries the LZ77 window is built around.
+//
+// What these establish is bounded, and worth stating plainly: a fixed corpus
+// pins the inputs it contains. It does not prove determinism for every input,
+// and no finite set of vectors could. It is a tripwire on the cases most
+// likely to move, not a proof.
 
 ///|
 /// A compact printable fingerprint: byte length and FNV-1a 64.
@@ -139,21 +137,20 @@ fn determinism_corpus() -> Array[(String, Bytes)] {
 }
 
 ///|
-/// The levels worth pinning. The pure encoder takes two different paths by
-/// level -- `pdf_flate_encode_fast_view_with_header` at 1..3 and
-/// `pdf_flate_encode_shortest_view_with_header` above -- and the probe budget
-/// varies within each, so 1, 6 and 9 cover both shapes and both ends of the
-/// budget without pinning all ten.
+/// The levels worth pinning. tdefl derives its probe budget from the level and
+/// parses greedily at or below 3, so 1, 6 and 9 cover both parsing modes and
+/// both ends of the budget without pinning all ten. Level 0 is a third mode
+/// entirely -- every block stored -- and is covered by the differential.
 fn determinism_levels() -> Array[Int] {
   [1, 6, 9]
 }
 
 ///|
-test "the pure encoder round trips every corpus input at every level" {
+test "the shipping encoder round trips every corpus input at every level" {
   for entry in determinism_corpus() {
     let (name, input) = entry
     for level in determinism_levels() {
-      let encoded = pdf_flate_encode_view_with_level_pure(input, level)
+      let encoded = pdf_flate_encode_view_with_level(input, level)
       let decoded = pdf_flate_decode_view(encoded)
       assert_eq(decoded, input, msg="\{name} at level \{level}")
     }
@@ -161,21 +158,20 @@ test "the pure encoder round trips every corpus input at every level" {
 }
 
 ///|
-/// Round-tripping over generated input, across *every* level rather than the
-/// three the fingerprints pin.
+/// Round-tripping the shipping encoder over generated input, across *every*
+/// level rather than the three the fingerprints pin.
 ///
 /// This covers a different axis from the corpus above, which is why both
 /// exist: the corpus is hand-aimed at window boundaries at three levels, and
-/// this is unaimed input at all ten. Levels 0 and 4 in particular reach
-/// encoder paths -- stored-only, and the shortest-of-five search at its
-/// smallest probe budget -- that no fixed corpus entry visits.
+/// this is unaimed input at all ten. Level 0 in particular is a different mode
+/// -- every block stored -- that no fixed corpus entry visits.
 ///
 /// The driver is `samples` rather than `check` because `@quickcheck.check`
 /// does not exist in the moonc the CI matrix pins. `samples` seeds
 /// `@splitmix.new()` at its default 37, so a failure reproduces exactly.
 /// Shrinking would be worth having here and is worth revisiting when the pin
 /// moves.
-test "the pure encoder round trips generated input at every level" {
+test "the shipping encoder round trips generated input at every level" {
   let cases : Array[Array[Int]] = @quickcheck.samples(24)
   let mut checked = 0
   for case in cases {
@@ -185,7 +181,7 @@ test "the pure encoder round trips generated input at every level" {
     }
     let input = Bytes::from_array(bytes)
     for level in 0..<=9 {
-      let encoded = pdf_flate_encode_view_with_level_pure(input, level)
+      let encoded = pdf_flate_encode_view_with_level(input, level)
       let decoded = pdf_flate_decode_view(encoded)
       assert_eq(decoded, input, msg="generated case at level \{level}")
       checked = checked + 1
@@ -197,72 +193,39 @@ test "the pure encoder round trips generated input at every level" {
 }
 
 ///|
-/// The same window-boundary inputs, put through the two *match* encoders
-/// directly.
+/// The superseded pure encoder, kept exercised until it is removed.
 ///
-/// Fingerprinting `pdf_flate_encode_view_with_level_pure` on these inputs
-/// looked like it exercised the matcher and did not. The filler is
-/// pseudorandom, so a match block never wins the shortest-of-five in
-/// `pdf_flate_encode_shortest_view_with_header`, and every window vector came
-/// out a stored block -- 32810, 32811 and 32812 bytes, which is the input plus
-/// eleven bytes of overhead exactly. A wrong decision at distance 32768 would
-/// have changed a candidate that was then thrown away, and nothing would have
-/// failed.
-///
-/// Calling the match encoders directly removes the selector from the path, so
-/// what is frozen here is the matcher's own output. That is the difference
-/// between a vector that names a boundary and one that observes it.
-test "the match encoders agree across backends at the window boundary" {
-  let report = StringBuilder()
+/// It no longer compresses anything this library ships -- the tdefl port does
+/// that on every backend now -- so this is not production behaviour under
+/// test. It is here so the code is exercised rather than merely present,
+/// because deleting it also takes several whitebox tests with it and that
+/// deserves to be reviewed as its own change rather than buried in this one.
+test "the superseded pure encoder still round trips" {
   for entry in determinism_corpus() {
     let (name, input) = entry
-    let header = pdf_flate_default_header()
-    let fixed = compressed_fingerprint(
-      pdf_flate_encode_fixed_match_view_with_header(input, header, 64),
-    ) catch {
-      _ => "refused"
+    for level in determinism_levels() {
+      let encoded = pdf_flate_encode_view_with_level_pure(input, level)
+      let decoded = pdf_flate_decode_view(encoded)
+      assert_eq(decoded, input, msg="\{name} at level \{level}")
     }
-    let dynamic = compressed_fingerprint(
-      pdf_flate_encode_dynamic_match_view_with_header(input, header, 64),
-    ) catch {
-      _ => "refused"
-    }
-    report.write_string("\{name} -> fixed \{fixed}, dynamic \{dynamic}\n")
   }
-  inspect(
-    report.to_string(),
-    content=(
-      #|empty -> fixed 8/14824338622843246134, dynamic refused
-      #|one byte -> fixed 9/13568697314492027819, dynamic 18/11047135761050842108
-      #|run of one byte -> fixed 45/557724821224124885, dynamic 36/8612204165405055478
-      #|two byte alternation -> fixed 46/16279519239315844423, dynamic 37/5618370571900035297
-      #|short period -> fixed 47/6927378909121949868, dynamic 39/14678099569522409921
-      #|ascii text -> fixed 95/15587916932111909485, dynamic 87/1543866814679470439
-      #|incompressible -> fixed 4328/2917743237973570490, dynamic 4149/8194585243882375378
-      #|match at min length -> fixed 12/2639939916108656735, dynamic 24/8431668463424152740
-      #|match at max length -> fixed 4332/15730415509624980273, dynamic 4157/10313984095815335140
-      #|match just over max length -> fixed 4333/15476286444731857204, dynamic 4158/13094449772697927971
-      #|match inside the window -> fixed 34540/8188916071948798354, dynamic 32835/8485899633772460554
-      #|match at the window edge -> fixed 34541/3625857351499066867, dynamic 32836/2305518650226659544
-      #|match past the window -> fixed 34573/11816148757564220675, dynamic 32863/16625718742296044121
-      #|
-    ),
-  )
+  let encoded = pdf_flate_encode_view_pure(b"the superseded default path")
+  assert_eq(pdf_flate_decode_view(encoded), b"the superseded default path")
 }
 
 ///|
 /// The frozen cross-backend fingerprints.
 ///
-/// If this fails on one backend and passes on another, the pure encoder is not
-/// deterministic across targets and the whole idea of byte-identical output
+/// If this fails on one backend and passes on another, the shipping encoder
+/// is not deterministic across targets and the whole idea of byte-identical output
 /// rests on nothing. If it fails on all backends at once, the encoder simply
 /// changed -- check the round-trip test above still passes, then re-freeze.
-test "the pure encoder produces identical bytes on every backend" {
+test "the shipping encoder produces identical bytes on every backend" {
   let report = StringBuilder()
   for entry in determinism_corpus() {
     let (name, input) = entry
     for level in determinism_levels() {
-      let encoded = pdf_flate_encode_view_with_level_pure(input, level)
+      let encoded = pdf_flate_encode_view_with_level(input, level)
       report.write_string(
         "\{name} L\{level} -> \{compressed_fingerprint(encoded)}\n",
       )
@@ -274,43 +237,66 @@ test "the pure encoder produces identical bytes on every backend" {
       #|empty L1 -> 8/14824338622843246134
       #|empty L6 -> 8/6911146735378767749
       #|empty L9 -> 8/14759312151674839831
-      #|one byte L1 -> 9/13568697314492027819
-      #|one byte L6 -> 9/828246333215700918
-      #|one byte L9 -> 9/17653723601550578860
-      #|run of one byte L1 -> 45/557724821224124885
-      #|run of one byte L6 -> 36/12572656134146150957
-      #|run of one byte L9 -> 36/16552231566622930215
-      #|two byte alternation L1 -> 46/16279519239315844423
-      #|two byte alternation L6 -> 37/7418910060698619040
-      #|two byte alternation L9 -> 37/9347609185736776178
-      #|short period L1 -> 47/6927378909121949868
-      #|short period L6 -> 39/2581812125755959212
-      #|short period L9 -> 39/8876555857819478286
-      #|ascii text L1 -> 95/15587916932111909485
-      #|ascii text L6 -> 87/10489274318409934514
-      #|ascii text L9 -> 87/17066630369213191672
+      #|one byte L1 -> 12/15334653992341479941
+      #|one byte L6 -> 12/9103512613188771834
+      #|one byte L9 -> 12/1477187045979222560
+      #|run of one byte L1 -> 27/16909317384082252037
+      #|run of one byte L6 -> 27/5342862714225513024
+      #|run of one byte L9 -> 27/6320673573973985542
+      #|two byte alternation L1 -> 28/1790555792005547381
+      #|two byte alternation L6 -> 28/6206358874910773078
+      #|two byte alternation L9 -> 28/13925073964433396032
+      #|short period L1 -> 30/16622481287708767414
+      #|short period L6 -> 30/3861212437799193461
+      #|short period L9 -> 30/6639653733228650603
+      #|ascii text L1 -> 81/13065414424299247187
+      #|ascii text L6 -> 78/16076638798301380115
+      #|ascii text L9 -> 78/9897020229401360809
       #|incompressible L1 -> 4107/1796056689918308922
       #|incompressible L6 -> 4107/18113870579437559803
       #|incompressible L9 -> 4107/2944213211331891961
-      #|match at min length L1 -> 12/2639939916108656735
-      #|match at min length L6 -> 12/2045780800923981600
-      #|match at min length L9 -> 12/1413492088161137002
-      #|match at max length L1 -> 4332/15730415509624980273
-      #|match at max length L6 -> 4157/14761360415821845229
-      #|match at max length L9 -> 4157/8024987876748244523
-      #|match just over max length L1 -> 4333/15476286444731857204
-      #|match just over max length L6 -> 4158/16666636091135287276
-      #|match just over max length L9 -> 4158/7492761351085382806
-      #|match inside the window L1 -> 32810/4572843696782456202
-      #|match inside the window L6 -> 32810/17370746825549709153
-      #|match inside the window L9 -> 32810/11078468105645183003
-      #|match at the window edge L1 -> 32811/5486740597604588422
-      #|match at the window edge L6 -> 32811/10651560261308354067
-      #|match at the window edge L9 -> 32811/15331854772633486345
-      #|match past the window L1 -> 32812/8735179885577524760
-      #|match past the window L6 -> 32812/5094626065315791723
-      #|match past the window L9 -> 32812/12392486578709101729
+      #|match at min length L1 -> 17/12796437208713877008
+      #|match at min length L6 -> 17/9642731722754445741
+      #|match at min length L9 -> 17/17534497681747351687
+      #|match at max length L1 -> 4158/3812646275254487814
+      #|match at max length L6 -> 4158/2917575848151996797
+      #|match at max length L9 -> 4158/11049122108143090391
+      #|match just over max length L1 -> 4158/18415994867377575201
+      #|match just over max length L6 -> 4158/3129149196627366818
+      #|match just over max length L9 -> 4158/8047443120060652380
+      #|match inside the window L1 -> 32815/3700220301623607302
+      #|match inside the window L6 -> 32815/5777192330433584179
+      #|match inside the window L9 -> 32815/12682421586913109777
+      #|match at the window edge L1 -> 32816/15156081953735415434
+      #|match at the window edge L6 -> 32816/10589444655346571849
+      #|match at the window edge L9 -> 32816/910985093074615347
+      #|match past the window L1 -> 32817/16392211436829005332
+      #|match past the window L6 -> 32817/6146692398123617537
+      #|match past the window L9 -> 32817/17816882447211310851
       #|
     ),
   )
+}
+
+///|
+/// A dynamic block that declares a distance tree and uses none of it.
+///
+/// This decoder used to reject that as malformed, which made it unable to read
+/// streams the vendored miniz produces -- and therefore unable to read real
+/// PDFs, on any backend without the C decoder to fall back to. It went
+/// unnoticed because native decoded through the FFI and the old pure encoder
+/// never emitted the shape.
+///
+/// The input is 48 bytes with almost no repetition, which is what drives the
+/// compressor to encode literals only and leave the distance tree empty.
+test "a block with no matches decodes despite its empty distance tree" {
+  let bytes = []
+  // ascending-ish values with no repeats long enough to match
+  for i in 0..<48 {
+    bytes.push((i * 17 % 251 + 1).to_byte())
+  }
+  let input = Bytes::from_array(bytes)
+  let encoded = pdf_flate_encode_view_with_level(input, 6)
+  let decoded = pdf_flate_decode_view(encoded)
+  assert_eq(decoded, input)
 }
