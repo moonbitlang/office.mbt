@@ -157,16 +157,22 @@ fn TdeflState::compress_input(
     } else {
       tdefl_lz_dict_size
     }
-    // flush when the code buffer is nearly full, or when a large block is
-    // compressing badly enough that starting a fresh one is better
-    if self.lz_code_buf_len > tdefl_lz_code_buf_size - 8 ||
+    // Flush when the code buffer is nearly full, or when a large block is
+    // compressing badly enough that starting a fresh one is better. The two
+    // are recorded separately because they are easy to confuse from outside:
+    // literal-heavy input trips the second at 31 KiB, long before the first
+    // can happen, so a test aiming at the capacity path needs to know which
+    // one it actually reached.
+    let out_of_room = self.lz_code_buf_len > tdefl_lz_code_buf_size - 8
+    let compressing_badly = self.total_lz_bytes > 31 * 1024 &&
       (
-        self.total_lz_bytes > 31 * 1024 &&
-        (
-          (self.lz_code_buf_len * 115) >> 7 >= self.total_lz_bytes ||
-          self.force_raw
-        )
-      ) {
+        (self.lz_code_buf_len * 115) >> 7 >= self.total_lz_bytes ||
+        self.force_raw
+      )
+    if out_of_room || compressing_badly {
+      if out_of_room {
+        self.capacity_flushes = self.capacity_flushes + 1
+      }
       self.flush_block(level, false)
     }
   }

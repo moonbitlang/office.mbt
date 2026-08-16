@@ -158,21 +158,20 @@ test "the shipping encoder round trips every corpus input at every level" {
 }
 
 ///|
-/// Round-tripping over generated input, across *every* level rather than the
-/// three the fingerprints pin.
+/// Round-tripping the shipping encoder over generated input, across *every*
+/// level rather than the three the fingerprints pin.
 ///
 /// This covers a different axis from the corpus above, which is why both
 /// exist: the corpus is hand-aimed at window boundaries at three levels, and
-/// this is unaimed input at all ten. Levels 0 and 4 in particular reach
-/// encoder paths -- stored-only, and the shortest-of-five search at its
-/// smallest probe budget -- that no fixed corpus entry visits.
+/// this is unaimed input at all ten. Level 0 in particular is a different mode
+/// -- every block stored -- that no fixed corpus entry visits.
 ///
 /// The driver is `samples` rather than `check` because `@quickcheck.check`
 /// does not exist in the moonc the CI matrix pins. `samples` seeds
 /// `@splitmix.new()` at its default 37, so a failure reproduces exactly.
 /// Shrinking would be worth having here and is worth revisiting when the pin
 /// moves.
-test "the pure encoder round trips generated input at every level" {
+test "the shipping encoder round trips generated input at every level" {
   let cases : Array[Array[Int]] = @quickcheck.samples(24)
   let mut checked = 0
   for case in cases {
@@ -217,11 +216,11 @@ test "the superseded pure encoder still round trips" {
 ///|
 /// The frozen cross-backend fingerprints.
 ///
-/// If this fails on one backend and passes on another, the pure encoder is not
-/// deterministic across targets and the whole idea of byte-identical output
+/// If this fails on one backend and passes on another, the shipping encoder
+/// is not deterministic across targets and the whole idea of byte-identical output
 /// rests on nothing. If it fails on all backends at once, the encoder simply
 /// changed -- check the round-trip test above still passes, then re-freeze.
-test "the pure encoder produces identical bytes on every backend" {
+test "the shipping encoder produces identical bytes on every backend" {
   let report = StringBuilder()
   for entry in determinism_corpus() {
     let (name, input) = entry

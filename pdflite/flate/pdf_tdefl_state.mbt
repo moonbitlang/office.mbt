@@ -90,6 +90,12 @@ priv struct TdeflState {
   mut saved_match_len : Int
   mut saved_lit : Int
   mut block_index : Int
+  /// Blocks ended because the LZ code buffer ran out of room, as opposed
+  /// to the poor-compression heuristic. The two branches are easy to
+  /// confuse from the outside -- literal-heavy input trips the heuristic at
+  /// 31 KiB, long before the 64 KiB buffer fills -- so a test that means to
+  /// exercise the capacity path has to be able to say it did.
+  mut capacity_flushes : Int
   /// Dictionary position the current block's bytes start at, so a block
   /// that compresses badly can be re-sent verbatim from the dictionary.
   mut lz_code_buf_dict_pos : Int
@@ -139,6 +145,7 @@ fn TdeflState::new(level : Int) -> TdeflState {
     saved_match_len: 0,
     saved_lit: 0,
     block_index: 0,
+    capacity_flushes: 0,
     lz_code_buf_dict_pos: 0,
     adler32: 1,
     zlib_header: true,

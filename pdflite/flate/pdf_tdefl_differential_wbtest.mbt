@@ -122,18 +122,73 @@ test "the ported tdefl agrees with miniz across block boundaries" {
 }
 
 ///|
-/// The same input, checked to actually reach the multi-block path rather than
-/// assumed to. A test that means to cross a boundary should be able to say
-/// that it did.
-test "the large differential input really does span several blocks" {
-  let input = tdefl_incompressible(200000)
-  for level in [0, 6] {
-    let state = TdeflState::new(level)
-    state.adler32 = tdefl_adler32(input)
-    state.compress_input(input, level)
-    state.flush_block(level, true)
-    assert_true(state.block_index > 1)
+/// Input that fills the LZ code buffer without first tripping the
+/// poor-compression heuristic, which is the only way to reach the capacity
+/// branch at all.
+///
+/// The two flush reasons compete. A literal-heavy stream spends about 1.125
+/// code bytes per input byte, and the heuristic fires once
+/// `code_bytes * 115 >> 7 >= input_bytes` past 31 KiB -- which that ratio
+/// satisfies immediately. So incompressible input can never fill the 64 KiB
+/// buffer; it is flushed at 31 KiB every time.
+///
+/// What reaches capacity is input that compresses *moderately*: enough
+/// matches to keep the ratio well under 1.113, but short enough matches that
+/// tokens still accumulate. Short repeats from a small dictionary do that.
+fn tdefl_moderately_compressible(count : Int) -> Bytes {
+  let out = Array::make(count, b'\x00')
+  let mut state = 0x9E3779B9
+  let mut i = 0
+  while i < count {
+    state = (state * 1103515245 + 12345) & 0x7FFFFFFF
+    // a short run drawn from a small alphabet: matchable, but not so long
+    // that the token count collapses
+    let symbol = (((state >> 16) & 0x0F) + 97).to_byte()
+    let run = ((state >> 8) & 0x03) + 3
+    let mut k = 0
+    while k < run && i < count {
+      out[i] = symbol
+      i = i + 1
+      k = k + 1
+    }
   }
+  Bytes::from_array(out)
+}
+
+///|
+/// The capacity branch, reached and shown to have been reached.
+///
+/// An earlier version asserted only `block_index > 1`, which is true of any
+/// multi-block stream and was in fact being satisfied by the *other* branch.
+/// Counting capacity flushes separately is what makes this test about the path
+/// it names.
+test "the differential reaches the code-buffer capacity flush" {
+  let input = tdefl_moderately_compressible(400000)
+  let state = TdeflState::new(6)
+  state.adler32 = tdefl_adler32(input)
+  state.compress_input(input, 6)
+  state.flush_block(6, true)
+  assert_true(state.capacity_flushes > 0)
+  assert_true(state.block_index > 1)
+  // and the port still agrees with the C on that stream
+  for level in [1, 6, 9] {
+    let ours = tdefl_compress_zlib(input, level)
+    let theirs = miniz_compress(input, level)
+    assert_eq(ours, theirs, msg="capacity-flushing input at level \{level}")
+  }
+}
+
+///|
+/// The other branch, for contrast: incompressible input flushes on the
+/// poor-compression heuristic and never reaches capacity.
+test "incompressible input flushes on the heuristic, not on capacity" {
+  let input = tdefl_incompressible(200000)
+  let state = TdeflState::new(6)
+  state.adler32 = tdefl_adler32(input)
+  state.compress_input(input, 6)
+  state.flush_block(6, true)
+  assert_eq(state.capacity_flushes, 0)
+  assert_true(state.block_index > 1)
 }
 
 ///|
