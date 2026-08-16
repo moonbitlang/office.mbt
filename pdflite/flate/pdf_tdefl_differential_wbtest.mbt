@@ -95,15 +95,14 @@ fn tdefl_incompressible(count : Int) -> Bytes {
 }
 
 ///|
-/// Inputs large enough to force the LZ code buffer past its capacity, so the
-/// parser flushes mid-stream and the port has to agree with the C across a
-/// block boundary as well as within one.
+/// Input large enough to flush mid-stream, so the port has to agree with the C
+/// across a block boundary as well as within one.
 ///
-/// The previous version of this test did not do that, and said it did. It used
-/// a 997-byte-periodic input, which produces long matches and therefore very
-/// few tokens, so 300 KB of it never approached the 64 KiB token buffer. What
-/// fills that buffer is input that compresses *badly*: roughly one token per
-/// byte, so ~200 KB of pseudorandom data crosses it several times over.
+/// This one flushes on the poor-compression heuristic rather than on buffer
+/// capacity -- incompressible input trips that at 31 KiB and can never reach
+/// the 64 KiB buffer, which the companion test below asserts directly. The
+/// capacity branch has its own input and its own test, because an earlier
+/// version of this comment claimed this input covered both and it does not.
 ///
 /// Level 0 is included deliberately. It forces every block raw, so this is
 /// also the only place multi-block forced-raw behaviour is compared.
