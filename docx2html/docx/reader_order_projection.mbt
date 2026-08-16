@@ -25,10 +25,10 @@ priv enum ProvisionalContributionKind {
 } derive(Debug)
 
 ///|
-/// One provisional reader-visible atom or zero-width boundary. Its identity
-/// always indexes `ReaderOrderProjection.source_elements`; byte spans are
-/// physical source coordinates only. No logical or projection interval is
-/// assigned in N0b2.
+/// One reader-visible atom or zero-width boundary. Its identity always indexes
+/// `ReaderOrderProjection.source_elements`; `source_span` is a physical byte
+/// range, while `projection_start`/`projection_end` locate it in the reader's
+/// story and `logical_run_index` names its run.
 #warnings("-unused_field")
 priv struct ReaderOrderContribution {
   kind : ProvisionalContributionKind
@@ -100,8 +100,10 @@ priv struct ReaderOrderFieldCarrierEvent {
 }
 
 ///|
-/// Private N0b2 result. `source_part` identifies the OPC part, while every
-/// other coordinate remains an exact N0b1 identity or physical byte span.
+/// Private result. `source_part` identifies the OPC part. Physical coordinates
+/// are exact source identities and byte spans; logical ones are the paragraph
+/// index, run index and UTF-16 story interval assigned once every transform
+/// has run.
 #warnings("-unused_field")
 priv struct ReaderOrderProjection {
   source_part : String

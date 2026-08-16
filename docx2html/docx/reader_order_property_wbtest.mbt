@@ -444,13 +444,20 @@ fn hostile_block(choices : HostileChoices, depth : Int) -> String {
   if depth >= 4 {
     return "<w:p><w:r><w:t>leaf</w:t></w:r></w:p>"
   }
-  match choices.next(19) {
+  match choices.next(20) {
     // The three checkbox shapes are pinned to their own branches rather than
     // left to the choice stream. Each time one was left to chance the stream
     // shifted and some other shape fell to zero -- the stream is deterministic
     // per position, so a sub-branch of a sub-branch is not sampled, it is
     // decided.
     15 => hostile_sdt(choices, depth, "block", variant=4)
+    // an atomless run beside a normal one. It contributes only the seam the
+    // walk opens for it, and N0c synthesises a `w:t` into exactly this shape,
+    // so it has to keep an address.
+    19 => {
+      choices.tag("run.atomless")
+      "<w:p><w:r/><w:r><w:t>\{hostile_text(choices)}</w:t></w:r><w:r/></w:p>"
+    }
     18 =>
       // a textbox inside an mc:Choice, inside a paragraph -- the site whose
       // extras pass switches modes, and the one the choice stream never
@@ -641,6 +648,7 @@ test "the generator keeps producing documents worth testing" {
   assert_true(tagged("sdt.under_pict") >= 3)
   assert_true(tagged("sdt.checkbox") >= 3)
   assert_true(tagged("sdt.checkbox.no_text") >= 1)
+  assert_true(tagged("run.atomless") >= 2)
   assert_true(tagged("sdt.checkbox.nested") >= 1)
   assert_true(tagged("sdt.checkbox.other_text_kind") >= 1)
   assert_true(tagged("alternate") >= 10)

@@ -1,6 +1,6 @@
-// N0b2 reader-order oracles. These compare the provisional physical mapping
-// with the current BodyReader while pinning the absence of final logical
-// coordinates and field/SDT/Markup Compatibility transforms.
+// Reader-order oracles. These compare the projection with the current
+// BodyReader -- its story text, its paragraph structure, and the byte spans and
+// story intervals it claims -- and pin the divergences that remain open.
 
 ///|
 fn current_reader_story_text(source : String) -> String raise DocxError {
@@ -1221,6 +1221,18 @@ fn assert_reader_order_intervals_index_the_reader(
   // this, no arrangement of individually-consistent intervals can describe a
   // different story than the one they are indexing.
   assert_eq(provisional_story_text(projection), story)
+  // Deliberately *not* compared against the reader's `Paragraph` element count
+  // here. The two shapes differ by design: the reader nests a text-box
+  // paragraph inside the `Paragraph` whose run carried it, so one reader
+  // element can serialise as several paragraphs of story, while the projection
+  // holds a flat list. Measured on a generated document: four reader elements
+  // against five projected paragraphs, with identical flat text.
+  //
+  // The risk that comparison was meant to cover -- a projection splitting one
+  // reader paragraph whose own text contains the separator -- is covered
+  // directly by "a separator inside one paragraph does not split it" below,
+  // where the count is known from the source rather than from either side's
+  // output.
 }
 
 ///|
@@ -1269,4 +1281,70 @@ test "the interval property rejects a projection that lost a paragraph" {
     _ => ()
   }
   assert_true(rejected)
+}
+
+///|
+/// A paragraph whose own text contains the separator must not be split.
+///
+/// `"a\n\nb"` in a single `w:t` serialises exactly like two paragraphs holding
+/// `"a"` and `"b"`, so flat story equality cannot tell them apart. A projection
+/// that split the first would invent a `p[1]` that surgery could address and
+/// the reader has never heard of.
+///
+/// The expected counts come from the source, not from either side's output.
+test "a separator inside one paragraph does not split it" {
+  let document = fn(body : String) -> String {
+    "<w:document xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\"><w:body>\{body}</w:body></w:document>"
+  }
+  let joined = document("<w:p><w:r><w:t>a&#10;&#10;b</w:t></w:r></w:p>")
+  let split = document(
+    "<w:p><w:r><w:t>a</w:t></w:r></w:p><w:p><w:r><w:t>b</w:t></w:r></w:p>",
+  )
+  // identical stories
+  assert_eq(current_reader_story_text(joined), "a\n\nb\n\n")
+  assert_eq(current_reader_story_text(split), "a\n\nb\n\n")
+  // and distinguishable structures
+  let one = scan_reader_order_projection(
+    "word/document.xml",
+    @utf8.encode(joined),
+  )
+  let two = scan_reader_order_projection(
+    "word/document.xml",
+    @utf8.encode(split),
+  )
+  assert_eq(one.paragraphs.length(), 1)
+  assert_eq(two.paragraphs.length(), 2)
+  assert_reader_order_intervals_index_the_reader(joined)
+  assert_reader_order_intervals_index_the_reader(split)
+}
+
+///|
+/// An atomless run still has an address.
+///
+/// `<w:r/>` contributes no text, only the seam the walk opens for it. The run
+/// oracle derives its expectations from `paragraph.sources[*].runs`, which is
+/// the implementation's own output -- so a regression dropping such a run from
+/// both that list and the contributions would make every check vacuous rather
+/// than failing. The count here comes from the source instead.
+///
+/// N0c synthesises a `w:t` into exactly this kind of run, so losing its address
+/// would lose the ability to write into it.
+test "an atomless run is still addressable" {
+  let source =
+    #|<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:body><w:p><w:r/><w:r><w:t>x</w:t></w:r><w:r/></w:p></w:body></w:document>
+  let projection = scan_reader_order_projection(
+    "word/document.xml",
+    @utf8.encode(source),
+  )
+  assert_eq(projection.paragraphs.length(), 1)
+  let paragraph = projection.paragraphs[0]
+  // three runs in the source, so three distinct addresses, numbered in order
+  let indices : @sorted_set.SortedSet[Int] = SortedSet([])
+  for contribution in paragraph.contributions {
+    if contribution.run_identity is Some(_) {
+      indices.add(contribution.logical_run_index)
+    }
+  }
+  assert_eq(indices.to_array(), [0, 1, 2])
+  assert_reader_order_intervals_index_the_reader(source)
 }
