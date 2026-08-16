@@ -105,6 +105,7 @@ fn run_surgery_is_self_closing(element : ScannedElement) -> Bool {
 #warnings("-unused_value")
 fn plan_whole_run_replacement(
   projection : ReaderOrderProjection,
+  source : BytesView,
   paragraph_index : Int,
   run_index : Int,
   text : String,
@@ -165,25 +166,43 @@ fn plan_whole_run_replacement(
   }
   match texts {
     // The common case: the first `w:t` takes the new text in place, so its tag,
-    // prefix and any `xml:space` are untouched.
+    // prefix and any existing `xml:space` are untouched.
     [first, .. rest] => {
-      if run_surgery_needs_space_preserve(text) {
-        match run_surgery_space_preserve_edit(projection, first) {
-          Some(edit) => edits.push(edit)
-          None => ()
-        }
-      }
-      edits.push({
-        byte_start: first.content_start,
-        byte_end: first.content_end,
-        replacement: escaped,
-      })
-      for later in rest {
+      let add_space = run_surgery_needs_space_preserve(text) &&
+        !run_surgery_declares_space(source, first)
+      let attribute = if add_space { " xml:space=\"preserve\"" } else { "" }
+      if run_surgery_is_self_closing(first) {
+        // `<w:t/>` has no content range to write into -- the scanner puts it at
+        // the element's end -- so the self-closing marker becomes a body. Only
+        // the `/>` is rewritten, which keeps any attributes already there.
         edits.push({
-          byte_start: later.content_start,
-          byte_end: later.content_end,
-          replacement: "",
+          byte_start: first.byte_end - 2,
+          byte_end: first.byte_end,
+          replacement: "\{attribute}>\{escaped}</w:t>",
         })
+      } else {
+        if add_space {
+          edits.push({
+            byte_start: first.content_start - 1,
+            byte_end: first.content_start - 1,
+            replacement: attribute,
+          })
+        }
+        edits.push({
+          byte_start: first.content_start,
+          byte_end: first.content_end,
+          replacement: escaped,
+        })
+      }
+      for later in rest {
+        // A self-closing `w:t` already contributes nothing.
+        if !run_surgery_is_self_closing(later) {
+          edits.push({
+            byte_start: later.content_start,
+            byte_end: later.content_end,
+            replacement: "",
+          })
+        }
       }
     }
     // No `w:t` at all: an atom-only run, an empty one, or `<w:r/>`. One has to
@@ -205,25 +224,40 @@ fn plan_whole_run_replacement(
 }
 
 ///|
-/// Add `xml:space="preserve"` to a `w:t` that does not already declare it.
+/// Whether this element's open tag already declares `xml:space`.
 ///
-/// The attribute goes just before the open tag's `>`, which leaves the element
-/// name and every existing attribute exactly where they were. A `w:t` that
-/// already declares it needs no edit -- adding a second would be malformed.
-fn run_surgery_space_preserve_edit(
-  projection : ReaderOrderProjection,
+/// Adding a second one is malformed, and a tolerant reader will not say so --
+/// it took a look at the spliced bytes to notice. The open tag runs from the
+/// element's start to just before its content, or to the `/>` when the element
+/// is self-closing.
+fn run_surgery_declares_space(
+  source : BytesView,
   element : ScannedElement,
-) -> RunSurgeryEdit? {
-  ignore(projection)
-  let open_tag_end = element.content_start - 1
-  if open_tag_end <= element.byte_start {
-    return None
+) -> Bool {
+  let stop = if run_surgery_is_self_closing(element) {
+    element.byte_end - 2
+  } else {
+    element.content_start
   }
-  Some({
-    byte_start: open_tag_end,
-    byte_end: open_tag_end,
-    replacement: " xml:space=\"preserve\"",
-  })
+  if stop <= element.byte_start || stop > source.length() {
+    return false
+  }
+  let needle = b"xml:space"
+  let mut at = element.byte_start
+  while at + needle.length() <= stop {
+    let mut matched = true
+    for offset in 0..<needle.length() {
+      if source[at + offset] != needle[offset] {
+        matched = false
+        break
+      }
+    }
+    if matched {
+      return true
+    }
+    at = at + 1
+  }
+  false
 }
 
 ///|
