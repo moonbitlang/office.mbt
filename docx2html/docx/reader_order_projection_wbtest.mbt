@@ -1026,3 +1026,34 @@ test "a textbox in a deleted row inside a paragraph still diverges" {
   // The projection does not.
   inspect(provisional_story_text(projection), content="x\n\n")
 }
+
+///|
+/// The second no-text checkbox shape still unmirrored: one wrapping a table
+/// cell.
+///
+/// The vMerge prepass decides which rows and cells exist before the walk runs,
+/// and it does not know about the checkbox transform. So it sees the cell the
+/// control declares, while the reader has already replaced the whole content
+/// with a bare checkbox and has no cell there at all.
+///
+/// Teaching the prepass this rule means giving it its own answer to "does this
+/// content yield any text", separate from the walk's. An approximation that
+/// disagreed with the walk would trade one divergence for a subtler one, so it
+/// is left until the prepass and the walk can share that answer.
+///
+/// Predicted by review before it was measured, which is why it is here rather
+/// than waiting to be found.
+test "a no-text checkbox control wrapping a cell still diverges" {
+  let checkbox =
+    #|<w:sdtPr><w14:checkbox><w14:checked w14:val="1"/></w14:checkbox></w:sdtPr>
+  let under =
+    #|<w:tc><w:tcPr><w:vMerge/></w:tcPr><w:p><w:r><w:t>under</w:t></w:r></w:p></w:tc>
+  let body = "<w:tbl><w:tr><w:sdt>\{checkbox}<w:sdtContent><w:tc><w:p><w:r><w:tab/></w:r></w:p></w:tc></w:sdtContent></w:sdt></w:tr><w:tr>\{under}</w:tr></w:tbl>"
+  let source = "<w:document xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\" xmlns:w14=\"http://schemas.microsoft.com/office/word/2010/wordml\"><w:body>\{body}</w:body></w:document>"
+  let projection = scan_reader_order_projection(
+    "word/document.xml",
+    @utf8.encode(source),
+  )
+  inspect(current_reader_story_text(source), content="under\n\n")
+  inspect(provisional_story_text(projection), content="")
+}
