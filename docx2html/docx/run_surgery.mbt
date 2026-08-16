@@ -1,0 +1,261 @@
+// N0c1 -- whole-run surgery.
+//
+// Turns "replace the text of `p[i]/r[j]`" into byte edits against the source
+// part. The projection says which bytes produced which reader-visible text;
+// this says which bytes to change so the reader produces something else.
+//
+// A request this slice cannot carry out safely is refused by raising, with a
+// message naming the reason: an unaddressable run, text drawn from CDATA, an
+// element the projection could not classify, or replacement text XML cannot
+// represent. Each is a case where the edit's byte footprint is not knowable
+// from the projection alone, and approximating it would corrupt a document.
+//
+// Everything here works on physical byte ranges taken from the projection's
+// source elements. Nothing reconstructs XML: the first `w:t`'s *content* range
+// is rewritten in place, which leaves its tag, namespace prefix and any
+// existing `xml:space` untouched.
+
+///|
+/// One byte-range replacement in the source part.
+#warnings("-unused_field")
+priv struct RunSurgeryEdit {
+  byte_start : Int
+  byte_end : Int
+  replacement : String
+}
+
+///|
+/// The XML characters that cannot appear literally in element content.
+///
+/// `>` does not strictly require escaping outside `]]>`, but escaping it
+/// unconditionally is what every writer here already does and keeps the output
+/// stable under later re-reads.
+fn run_surgery_escape(text : String) -> String raise DocxError {
+  let out = StringBuilder::new()
+  for char in text {
+    let code = char.to_int()
+    // XML 1.0 forbids most C0 controls outright. Tab, newline and carriage
+    // return are the exceptions, and they survive as themselves.
+    if code < 0x20 && code != 0x09 && code != 0x0A && code != 0x0D {
+      raise Unsupported(
+        message="replacement text contains a control character U+\{code} that XML cannot represent",
+      )
+    }
+    match char {
+      '&' => out.write_string("&amp;")
+      '<' => out.write_string("&lt;")
+      '>' => out.write_string("&gt;")
+      _ => out.write_char(char)
+    }
+  }
+  out.to_string()
+}
+
+///|
+/// Whether replacing a `w:t`'s content with this text needs
+/// `xml:space="preserve"` to survive a round trip.
+///
+/// Word strips leading and trailing whitespace from a `w:t` without it, so
+/// text that starts or ends with a space would come back different.
+fn run_surgery_needs_space_preserve(text : String) -> Bool {
+  if text.length() == 0 {
+    return false
+  }
+  fn is_space(unit : Int) -> Bool {
+    unit == 0x20 || unit == 0x09 || unit == 0x0A || unit == 0x0D
+  }
+
+  let first = text.view(start_offset=0, end_offset=1).to_owned()
+  let last = text.view(start_offset=text.length() - 1).to_owned()
+  fn leading(one : String) -> Int {
+    let mut code = 0
+    for char in one {
+      code = char.to_int()
+    }
+    code
+  }
+
+  is_space(leading(first)) || is_space(leading(last))
+}
+
+///|
+/// True when this element is written in the self-closing form.
+///
+/// The scanner puts an empty content range at the element's end for `<w:r/>`,
+/// where a paired `<w:r></w:r>` would have its content range start after the
+/// open tag. That difference is what tells a run with no children from a run
+/// that was written without a body.
+fn run_surgery_is_self_closing(element : ScannedElement) -> Bool {
+  element.content_start == element.byte_end
+}
+
+///|
+/// Plan the byte edits that replace the whole projecting content of one run.
+///
+/// The run is named by its position in the reader's story -- `paragraph_index`
+/// among the projection's paragraphs, `run_index` among that paragraph's runs
+/// -- which is the address the projection assigns and the only one stable
+/// across the transforms the reader applies.
+///
+/// What the reader ends up seeing is `text` and nothing else from this run:
+/// the first `w:t` carries it, every later `w:t` is emptied, and every other
+/// projecting atom the run contributed is removed. Transparent seams are left
+/// alone; they produce no text and removing them would change the run's
+/// structure for no reason.
+#warnings("-unused_value")
+fn plan_whole_run_replacement(
+  projection : ReaderOrderProjection,
+  paragraph_index : Int,
+  run_index : Int,
+  text : String,
+) -> Array[RunSurgeryEdit] raise DocxError {
+  guard paragraph_index >= 0 && paragraph_index < projection.paragraphs.length() else {
+    raise Unsupported(
+      message="no paragraph \{paragraph_index} in this projection",
+    )
+  }
+  let paragraph = projection.paragraphs[paragraph_index]
+  let owned : Array[ReaderOrderContribution] = []
+  for contribution in paragraph.contributions {
+    if contribution.logical_run_index == run_index &&
+      contribution.run_identity is Some(_) {
+      owned.push(contribution)
+    }
+  }
+  guard owned.length() > 0 else {
+    raise Unsupported(
+      message="no run \{run_index} in paragraph \{paragraph_index}",
+    )
+  }
+  let escaped = run_surgery_escape(text)
+  let edits : Array[RunSurgeryEdit] = []
+  let texts : Array[ScannedElement] = []
+  let removals : Array[ScannedElement] = []
+  for contribution in owned {
+    let element = projection.source_elements[contribution.source_identity]
+    match contribution.kind {
+      // A barrier means the projection could not say what this contributes, so
+      // it cannot say what removing it would cost either.
+      HardBarrier =>
+        raise Unsupported(
+          message="run \{run_index} in paragraph \{paragraph_index} holds an unclassified element",
+        )
+      // Seams produce no text. They are the run's own opening marker and the
+      // wrappers the reader flattens, and they stay.
+      TransparentSeam => ()
+      TextAtom =>
+        if is_wml_uri(element.uri) && element.local_name == "t" {
+          match element.text_map {
+            Some(map) =>
+              if map.contains_cdata {
+                raise Unsupported(
+                  message="run \{run_index} in paragraph \{paragraph_index} draws text from a CDATA section",
+                )
+              }
+            None => ()
+          }
+          texts.push(element)
+        } else {
+          removals.push(element)
+        }
+      // Tabs, breaks, symbols and the two hyphens all project text of their
+      // own, so replacing the run's text means removing them.
+      _ => removals.push(element)
+    }
+  }
+  match texts {
+    // The common case: the first `w:t` takes the new text in place, so its tag,
+    // prefix and any `xml:space` are untouched.
+    [first, .. rest] => {
+      if run_surgery_needs_space_preserve(text) {
+        match run_surgery_space_preserve_edit(projection, first) {
+          Some(edit) => edits.push(edit)
+          None => ()
+        }
+      }
+      edits.push({
+        byte_start: first.content_start,
+        byte_end: first.content_end,
+        replacement: escaped,
+      })
+      for later in rest {
+        edits.push({
+          byte_start: later.content_start,
+          byte_end: later.content_end,
+          replacement: "",
+        })
+      }
+    }
+    // No `w:t` at all: an atom-only run, an empty one, or `<w:r/>`. One has to
+    // be synthesised, and the run's own element says where it goes.
+    [] => {
+      let run = projection.source_elements[owned[0].source_identity]
+      edits.push(run_surgery_synthesise_text(run, escaped, text))
+    }
+  }
+  for element in removals {
+    edits.push({
+      byte_start: element.byte_start,
+      byte_end: element.byte_end,
+      replacement: "",
+    })
+  }
+  edits.sort_by_key(edit => edit.byte_start)
+  edits
+}
+
+///|
+/// Add `xml:space="preserve"` to a `w:t` that does not already declare it.
+///
+/// The attribute goes just before the open tag's `>`, which leaves the element
+/// name and every existing attribute exactly where they were. A `w:t` that
+/// already declares it needs no edit -- adding a second would be malformed.
+fn run_surgery_space_preserve_edit(
+  projection : ReaderOrderProjection,
+  element : ScannedElement,
+) -> RunSurgeryEdit? {
+  ignore(projection)
+  let open_tag_end = element.content_start - 1
+  if open_tag_end <= element.byte_start {
+    return None
+  }
+  Some({
+    byte_start: open_tag_end,
+    byte_end: open_tag_end,
+    replacement: " xml:space=\"preserve\"",
+  })
+}
+
+///|
+/// Put a `w:t` into a run that has none.
+///
+/// A self-closing `<w:r/>` has to become a paired element to hold anything, so
+/// its `/>` is rewritten. A paired run keeps its tags and gains the element at
+/// the end of its content, after whatever properties it already declares --
+/// `w:rPr` has to stay first.
+fn run_surgery_synthesise_text(
+  run : ScannedElement,
+  escaped : String,
+  raw : String,
+) -> RunSurgeryEdit {
+  let attribute = if run_surgery_needs_space_preserve(raw) {
+    " xml:space=\"preserve\""
+  } else {
+    ""
+  }
+  let synthesised = "<w:t\{attribute}>\{escaped}</w:t>"
+  if run_surgery_is_self_closing(run) {
+    // `<w:r/>` -> `<w:r><w:t>...</w:t></w:r>`, replacing the two bytes `/>`.
+    {
+      byte_start: run.byte_end - 2,
+      byte_end: run.byte_end,
+      replacement: ">\{synthesised}</w:r>",
+    }
+  } else {
+    {
+      byte_start: run.content_end,
+      byte_end: run.content_end,
+      replacement: synthesised,
+    }
+  }
+}
