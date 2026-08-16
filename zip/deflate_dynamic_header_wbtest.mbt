@@ -323,23 +323,34 @@ test "the decoder accepts a literal declared at any position" {
 ///|
 /// Every declared distance-tree size, at both shapes.
 ///
-/// Sweeping `HDIST` is what drives `emit_zero_run` through all three of its
-/// branches from the distance side: the distance run is `hdist` zeros long
+/// `HDIST` is five bits plus one, so 32 is the format's limit and not 30.
+/// zlib is stricter than the format here and refuses more than 30 with "too
+/// many length or distance symbols", because distance codes 30 and 31 have no
+/// defined meaning. Declaring them is still legal as long as nothing uses
+/// them, so this decoder accepts 31 and 32 -- and if a block did reference
+/// code 30 or 31, `decode_huffman_block` bounds-checks the symbol against
+/// `dist_base` and raises rather than reading past it.
+///
+/// Those last two sizes are therefore checked against this decoder alone; the
+/// other 30 are shapes zlib accepts too.
+///
+/// Sweeping `HDIST` is also what drives `emit_zero_run` through all three of
+/// its branches from the distance side: the distance run is `hdist` zeros long
 /// under `AllZeroDistances` and `hdist - 1` under `SingleDistanceCode`, so
-/// between them the sweep covers runs of 0 through 30 and crosses both the
+/// between them the sweep covers runs of 0 through 32 and crosses both the
 /// 3-and 11-zero thresholds.
 ///
 /// The literal is swept here too, even though the test above already covers
 /// every literal position at `hdist` = 1. The literal's runs decide how many
-/// bits precede the distance-length description, so a given `HDIST` is
-/// described at a different bit offset for each literal -- and the zero-run
-/// codes are not byte-aligned. Sweeping only one literal would test each
-/// distance shape at a single alignment.
+/// bits precede the distance-length description, and the zero-run codes are
+/// not byte-aligned, so the description does not always start at the same bit
+/// offset. These seven literals start it at three distinct offsets (5, 6 and
+/// 7); across all 256 there are five.
 test "the decoder accepts every declared distance-tree size" {
   let bytes = [0, 1, 65, 127, 128, 254, 255]
   let shapes = [AllZeroDistances, SingleDistanceCode]
   let mut checked = 0
-  for hdist in 1..<=30 {
+  for hdist in 1..<=32 {
     for byte in bytes {
       for shape in shapes {
         let stream = emit_dynamic_literal_block(byte, 2, hdist, shape)
@@ -349,8 +360,8 @@ test "the decoder accepts every declared distance-tree size" {
       }
     }
   }
-  // 30 declared sizes x 7 literals x 2 distance-tree shapes.
-  assert_eq(checked, 420)
+  // 32 declared sizes x 7 literals x 2 distance-tree shapes.
+  assert_eq(checked, 448)
 }
 
 ///|
