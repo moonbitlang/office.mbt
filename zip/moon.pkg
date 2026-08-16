@@ -6,3 +6,8 @@ import {
 import {
   "moonbitlang/core/random",
 } for "test"
+
+import {
+  "moonbitlang/core/quickcheck",
+  "moonbitlang/core/sorted_set",
+} for "wbtest"

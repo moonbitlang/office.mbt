@@ -420,7 +420,31 @@ fn read_dynamic_tables(
   }
   let lit_lengths = lengths[:hlit]
   let dist_lengths = lengths[hlit:hlit + hdist]
-  (build_huffman(lit_lengths), build_huffman(dist_lengths))
+  // A block that codes no matches uses no distance codes, yet the format still
+  // requires it to declare a distance tree. Such a tree *may* be all zero --
+  // declaring unused nonzero codes is equally legal, and RFC 1951 3.2.7
+  // describes both forms -- and the all-zero one is what miniz emits. Refusing
+  // it as malformed left this decoder unable to read any archive containing
+  // such a block. Our own writer only emits fixed-Huffman blocks, which is why
+  // round-tripping through it never exercised this path.
+  //
+  // The empty tree decodes nothing, which is the correct behaviour: a block
+  // with no matches never asks it to, and a block that does ask gets a clean
+  // "invalid huffman code" from `decode_symbol` rather than a wrong distance.
+  let dist_table = if dist_lengths.iter().all(length => length == 0) {
+    empty_huffman()
+  } else {
+    build_huffman(dist_lengths)
+  }
+  (build_huffman(lit_lengths), dist_table)
+}
+
+///|
+/// A Huffman table that decodes no symbol at all. `decode_symbol` peeks
+/// `max_bits` = 0 bits, reads `len[0]` = 0, and raises -- so referencing this
+/// table is an error rather than a silent misdecode.
+fn empty_huffman() -> HuffmanTable {
+  { max_bits: 0, sym: [-1], len: [0] }
 }
 
 ///|
