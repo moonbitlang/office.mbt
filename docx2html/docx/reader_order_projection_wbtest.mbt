@@ -1222,11 +1222,15 @@ fn assert_reader_order_intervals_index_the_reader(
   // different story than the one they are indexing.
   assert_eq(provisional_story_text(projection), story)
   // Deliberately *not* compared against the reader's `Paragraph` element count
-  // here. The two shapes differ by design: the reader nests a text-box
-  // paragraph inside the `Paragraph` whose run carried it, so one reader
-  // element can serialise as several paragraphs of story, while the projection
-  // holds a flat list. Measured on a generated document: four reader elements
-  // against five projected paragraphs, with identical flat text.
+  // here. The two shapes differ by design, though not for the reason it first
+  // looks: `read_paragraph_elements` appends text-box extras as *siblings* of
+  // the carrier paragraph, not inside it. The mismatch comes from nested
+  // blocks -- a `w:tbl` inside a `w:p` leaves the reader with one `Paragraph`
+  // element whose children serialise as several paragraphs of story, while
+  // `consume_inline_block_output` splits the carrier into separate projected
+  // paragraphs. Counting `Paragraph` elements without mirroring
+  // `to_raw_text`'s whole recursion undercounts: measured on a generated
+  // document, four against five projected, with identical flat text.
   //
   // The risk that comparison was meant to cover -- a projection splitting one
   // reader paragraph whose own text contains the separator -- is covered
