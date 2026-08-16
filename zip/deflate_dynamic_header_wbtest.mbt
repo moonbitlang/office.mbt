@@ -6,7 +6,7 @@
 // dynamic one. Encoder and decoder were built together and agree with each
 // other, which is exactly why a legal shape neither of them uses could stay
 // broken: a dynamic block declaring an all-zero distance tree was rejected as
-// malformed, so archives written by miniz could not be read.
+// malformed, so an archive was unreadable whenever it contained such a block.
 //
 // That miniz emits this shape was checked against the vendored copy rather
 // than assumed: compressing a match-free payload with `tdefl_compress_mem_to_heap`
@@ -285,50 +285,72 @@ test "the block emitters reproduce externally verified streams" {
 /// The regression: a block whose distance tree is entirely zero.
 ///
 /// RFC 1951 3.2.7 requires a dynamic block to declare a distance tree even
-/// when it codes no matches, and every length in that tree is then zero. This
-/// decoder used to raise `UnsupportedFeature("empty huffman table")` here,
-/// which meant it could not read archives produced by miniz -- the compressor
-/// `pdflite` ships and a common choice elsewhere.
+/// when it codes no matches. Such a tree *may* be all zero -- it may equally
+/// declare unused nonzero codes, which is what `SingleDistanceCode` builds --
+/// and miniz emits the all-zero form. This decoder used to raise
+/// `UnsupportedFeature("empty huffman table")` for it, so an archive was
+/// unreadable whenever it contained such a block.
 test "a dynamic block may declare an all-zero distance tree" {
   let stream = emit_dynamic_literal_block(0, 8, 1, AllZeroDistances)
   inspect(deflate_decode(stream, max_output=64).length(), content="8")
 }
 
 ///|
-/// Every header shape these emitters build is legal, so the decoder has to
-/// accept all of them and return the literals the block codes.
+/// The literal's position sets the two zero-run lengths in the header, so
+/// sweeping all 256 of them enumerates every decomposition `emit_zero_run` can
+/// produce from that side -- including the ones either side of a maximal
+/// symbol-18 run, where 139 zeros become 138 plus a single literal symbol and
+/// 141 become 138 plus a symbol-17 run.
 ///
-/// This space is small enough to enumerate, which is stronger than sampling
-/// it: every declared `HDIST` from 1 to 30, both distance-tree shapes,
-/// literals at both ends of the byte range, and four repeat counts.
+/// The repeat count is swept separately, because it changes only the payload
+/// bits and not the header at all: folding it in here would multiply the case
+/// count without producing one additional distinct header.
+test "the decoder accepts a literal declared at any position" {
+  let shapes = [AllZeroDistances, SingleDistanceCode]
+  let mut checked = 0
+  for byte in 0..<256 {
+    for shape in shapes {
+      let stream = emit_dynamic_literal_block(byte, 3, 1, shape)
+      let decoded = deflate_decode(stream, max_output=64)
+      assert_eq(decoded, Bytes::make(3, byte.to_byte()))
+      checked = checked + 1
+    }
+  }
+  // 256 literal positions x 2 distance-tree shapes, every one a distinct header.
+  assert_eq(checked, 512)
+}
+
+///|
+/// Every declared distance-tree size, at both shapes.
 ///
-/// Sweeping `HDIST` is also what drives `emit_zero_run` through all three of
-/// its branches, since the distance run is `hdist` zeros long: 1 and 2 take
-/// the literal-symbol branch, 3 to 10 the symbol-17 branch, and 11 upwards
-/// symbol 18. The literal-position runs are long (up to 255) and only ever
-/// reach symbol 18, so on their own they would leave two branches uncovered.
-test "the decoder accepts every dynamic header shape the emitters build" {
-  let bytes = [0, 1, 65, 127, 128, 254, 255]
-  let counts = [1, 2, 10, 48]
+/// Sweeping `HDIST` is what drives `emit_zero_run` through all three of its
+/// branches from the distance side, since that run is `hdist` zeros long: 1
+/// and 2 take the literal-symbol branch, 3 to 10 the symbol-17 branch, and 11
+/// upwards symbol 18.
+test "the decoder accepts every declared distance-tree size" {
   let shapes = [AllZeroDistances, SingleDistanceCode]
   let mut checked = 0
   for hdist in 1..<=30 {
-    for byte in bytes {
-      for count in counts {
-        for shape in shapes {
-          let stream = emit_dynamic_literal_block(byte, count, hdist, shape)
-          let decoded = deflate_decode(stream, max_output=128)
-          assert_eq(decoded.length(), count)
-          for i in 0..<count {
-            assert_eq(decoded[i].to_int(), byte)
-          }
-          checked = checked + 1
-        }
+    for byte in [0, 65, 255] {
+      for shape in shapes {
+        let stream = emit_dynamic_literal_block(byte, 2, hdist, shape)
+        let decoded = deflate_decode(stream, max_output=64)
+        assert_eq(decoded, Bytes::make(2, byte.to_byte()))
+        checked = checked + 1
       }
     }
   }
-  // 30 declared sizes x 7 literals x 4 repeat counts x 2 distance shapes.
-  assert_eq(checked, 1680)
+  // 30 declared sizes x 3 literals x 2 distance-tree shapes.
+  assert_eq(checked, 180)
+}
+
+///|
+/// Repeat counts, which vary the payload bits rather than the header.
+test "the decoder returns every literal a block repeats" {
+  for count in [1, 2, 3, 10, 48, 200] {
+    let stream = emit_dynamic_literal_block(65, count, 1, AllZeroDistances)
+    assert_eq(deflate_decode(stream, max_output=256), Bytes::make(count, b'A'))
+  }
 }
 
 ///|
