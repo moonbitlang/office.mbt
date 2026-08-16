@@ -185,8 +185,15 @@ priv struct ReaderOrderWalker {
   budget : ReaderOrderBudget
   paragraphs : Array[ReaderOrderParagraph]
   field_carriers : Array[ReaderOrderFieldCarrierEvent]
-  /// Set while walking the content of a checkbox content control that has not
-  /// yet had its first text replaced.
+  /// How many enclosing checkbox content controls are still waiting to have a
+  /// text replaced.
+  ///
+  /// A count, not a flag: content controls nest, and each one that declares a
+  /// checkbox contributes its own transform. The reader applies them from the
+  /// inside out -- the inner control replaces the first text of its content,
+  /// then the outer control replaces the first text still standing in the
+  /// result -- so a control nested two deep inside checkbox controls loses its
+  /// first *two* texts. One boolean collapsed those into one replacement.
   ///
   /// `replace_first_text_with_checkbox` rewrites the reader's element tree
   /// after the fact, walking it in order until it finds a non-empty `Text`.
@@ -196,7 +203,7 @@ priv struct ReaderOrderWalker {
   /// matters because a control's contributions do not land in one place: at
   /// block level they go to an output array, inline they go to the paragraph
   /// under construction, and a nested block splits them across both.
-  mut pending_checkbox : Bool
+  mut pending_checkboxes : Int
 }
 
 ///|
@@ -808,10 +815,19 @@ fn ReaderOrderWalker::add_contribution(
   // carries no text of its own, so the contribution survives with nothing to
   // contribute -- which keeps its source span addressable while removing it
   // from the story.
+  //
+  // "Text" here means every element `read_element` turns into one, not just
+  // `w:t`: `w:noBreakHyphen` and `w:softHyphen` become text, and so does a
+  // supported `w:sym`. `w:tab` does not -- it becomes a tab element, which the
+  // replacement walk steps over. Recognising only `w:t` made a control holding
+  // just a soft hyphen look textless, so the projection discarded a paragraph
+  // the reader keeps.
   let mut projected = value
-  if self.pending_checkbox && kind is TextAtom && value.length() > 0 {
+  if self.pending_checkboxes > 0 &&
+    kind is (TextAtom | NoBreakHyphenAtom | SoftHyphenAtom | SymbolAtom) &&
+    value.length() > 0 {
     projected = ""
-    self.pending_checkbox = false
+    self.pending_checkboxes -= 1
   }
   paragraph.contributions.push({
     kind,
@@ -1009,9 +1025,12 @@ fn ReaderOrderWalker::walk_structural_element(
       // pins the divergence rather than leaving it implicit.
       "sdt" => {
         let checkbox = self.sdt_declares_checkbox(identity, depth)
-        let before = output.length()
-        let outer = self.pending_checkbox
-        self.pending_checkbox = checkbox || outer
+        let before_output = output.length()
+        let before_carriers = self.field_carriers.length()
+        let before_pending = self.pending_checkboxes
+        if checkbox {
+          self.pending_checkboxes = before_pending + 1
+        }
         match self.first_wml_child(identity, "sdtContent", depth + 1) {
           Some(content) =>
             self.walk_flow_children(content, depth + 1, from_text_box, output)
@@ -1022,15 +1041,23 @@ fn ReaderOrderWalker::walk_structural_element(
         // rather than the content, so the content's paragraphs never reach the
         // story. Dropping the text alone would leave their terminators behind
         // -- the reader emits nothing here, not an empty paragraph.
-        if checkbox && self.pending_checkbox {
-          while output.length() > before {
+        // The count still being above where it started means this control's own
+        // transform found nothing to replace, so the reader discarded its
+        // content entirely and returned a bare checkbox. A count at or below
+        // the entry value means it was consumed -- possibly along with an
+        // enclosing control's, when the content held more than one text.
+        if checkbox && self.pending_checkboxes > before_pending {
+          while output.length() > before_output {
             ignore(output.pop())
           }
-        }
-        self.pending_checkbox = if checkbox {
-          outer
-        } else {
-          self.pending_checkbox
+          // The carrier events the discarded content recorded go too. They feed
+          // field classification, and leaving them behind would let a field
+          // opened inside content the reader threw away leak into the
+          // paragraphs that follow.
+          while self.field_carriers.length() > before_carriers {
+            ignore(self.field_carriers.pop())
+          }
+          self.pending_checkboxes = before_pending
         }
       }
       // Reached directly rather than through a `w:sdt`, this is transparent --
@@ -1377,8 +1404,10 @@ fn ReaderOrderWalker::walk_inline_element(
     "sdt" => {
       add(TransparentSeam, "", reader_order_element_span(element))
       let checkbox = self.sdt_declares_checkbox(identity, depth)
-      let outer = self.pending_checkbox
-      self.pending_checkbox = checkbox || outer
+      let before_pending = self.pending_checkboxes
+      if checkbox {
+        self.pending_checkboxes = before_pending + 1
+      }
       match self.first_wml_child(identity, "sdtContent", depth + 1) {
         Some(content) =>
           self.walk_inline_children(
@@ -1402,10 +1431,8 @@ fn ReaderOrderWalker::walk_inline_element(
       // So an inline checkbox control whose content yields no text at all still
       // diverges, and only that case. `reader_order_projection_wbtest.mbt` pins
       // it by name.
-      self.pending_checkbox = if checkbox {
-        outer
-      } else {
-        self.pending_checkbox
+      if checkbox && self.pending_checkboxes > before_pending {
+        self.pending_checkboxes = before_pending
       }
     }
     "sdtContent" => {
@@ -1619,7 +1646,7 @@ fn project_reader_order_from_source_tree(
     budget,
     paragraphs: [],
     field_carriers: [],
-    pending_checkbox: false,
+    pending_checkboxes: 0,
   }
   walker.walk()
   let projection = ReaderOrderProjection::{

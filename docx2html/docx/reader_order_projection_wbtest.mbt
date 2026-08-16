@@ -1057,3 +1057,48 @@ test "a no-text checkbox control wrapping a cell still diverges" {
   inspect(current_reader_story_text(source), content="under\n\n")
   inspect(provisional_story_text(projection), content="")
 }
+
+///|
+/// Checkbox shapes that one boolean and one atom kind got wrong.
+///
+/// Nested controls each contribute a transform, applied inside out, so a
+/// content control two deep inside checkbox controls loses its first *two*
+/// texts -- the inner replaces the first, then the outer replaces the first
+/// still standing in the result. Tracking that with a single flag replaced one
+/// text and then discarded the outer control wholesale.
+///
+/// And "text" is every element `read_element` turns into one, not just `w:t`.
+/// A soft hyphen, a non-breaking hyphen and a supported symbol all become text
+/// and are all replaceable; a tab does not and is not. Recognising only `w:t`
+/// made a control holding just a soft hyphen look textless, so the projection
+/// discarded a paragraph the reader keeps.
+///
+/// All six measured against the reader.
+test "checkbox controls nest, and every reader text kind is replaceable" {
+  let properties =
+    #|<w:sdtPr><w14:checkbox><w14:checked w14:val="1"/></w14:checkbox></w:sdtPr>
+  let control = fn(content : String) -> String {
+    "<w:sdt>\{properties}<w:sdtContent>\{content}</w:sdtContent></w:sdt>"
+  }
+  let run = fn(inner : String) -> String { "<w:p><w:r>\{inner}</w:r></w:p>" }
+  let cases = [
+    // both texts go: the inner transform takes the first, the outer the second
+    (control(control(run("<w:t>a</w:t><w:t>b</w:t>"))), "\n\n"),
+    // each of these is a text to the reader, so the paragraph survives
+    (control(run("<w:softHyphen/>")), "\n\n"),
+    (control(run("<w:noBreakHyphen/>")), "\n\n"),
+    (control(run("<w:sym w:font=\"Wingdings\" w:char=\"F0FC\"/>")), "\n\n"),
+    // a tab is not, so the control is textless and its content is discarded
+    (control(run("<w:tab/>")), ""),
+  ]
+  for case in cases {
+    let (body, expected) = case
+    let source = "<w:document xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\" xmlns:w14=\"http://schemas.microsoft.com/office/word/2010/wordml\"><w:body>\{body}</w:body></w:document>"
+    let projection = scan_reader_order_projection(
+      "word/document.xml",
+      @utf8.encode(source),
+    )
+    assert_eq(current_reader_story_text(source), expected)
+    assert_eq(provisional_story_text(projection), expected)
+  }
+}

@@ -162,11 +162,13 @@ fn hostile_textbox(choices : HostileChoices, depth : Int) -> String {
 ///
 /// Checkbox variants are generated at block level only. The reader applies a
 /// second transform for those -- replacing the first non-empty text, or
-/// discarding the content when there is none -- and the projection mirrors it
-/// except for one shape: an *inline* control whose content yields no text at
-/// all. That one is pinned by name in `reader_order_projection_wbtest.mbt`, so
-/// generating it here would re-assert a tracked divergence rather than find a
-/// new one.
+/// discarding the content when there is none.
+///
+/// Two shapes are known to diverge and are pinned by name in
+/// `reader_order_projection_wbtest.mbt`: an *inline* control whose content
+/// yields no text, and one wrapping a table cell. Generating either here would
+/// re-assert a tracked divergence rather than find a new one. That list is
+/// what has been measured, not a proof that nothing else diverges.
 fn hostile_sdt(
   choices : HostileChoices,
   depth : Int,
@@ -185,9 +187,59 @@ fn hostile_sdt(
   } else {
     "<w:sdtPr><w:alias w:val=\"a\"/></w:sdtPr>"
   }
-  if checkbox && choices.next(2) == 0 {
-    choices.tag("sdt.checkbox.no_text")
-    return "<w:sdt>\{properties}<w:sdtContent><w:p><w:r><w:tab/></w:r></w:p></w:sdtContent></w:sdt>"
+  let checkbox_properties =
+    #|<w:sdtPr><w14:checkbox><w14:checked w14:val="1"/></w14:checkbox></w:sdtPr>
+  if variant >= 4 {
+    choices.tag("sdt.checkbox")
+    match variant {
+      // no text at all, so the reader discards the content entirely
+      4 => {
+        choices.tag("sdt.checkbox.no_text")
+        return "<w:sdt>\{checkbox_properties}<w:sdtContent><w:p><w:r><w:tab/></w:r></w:p></w:sdtContent></w:sdt>"
+      }
+      // nested controls, each contributing a transform: the inner takes the
+      // first text, the outer the next one still standing
+      5 => {
+        choices.tag("sdt.checkbox.nested")
+        return "<w:sdt>\{checkbox_properties}<w:sdtContent><w:sdt>\{checkbox_properties}<w:sdtContent><w:p><w:r><w:t>\{hostile_text(choices)}</w:t><w:t>\{hostile_text(choices)}</w:t></w:r></w:p></w:sdtContent></w:sdt></w:sdtContent></w:sdt>"
+      }
+      // an atom the reader turns into text even though it is not a `w:t`
+      _ => {
+        choices.tag("sdt.checkbox.other_text_kind")
+        let atom = match choices.next(3) {
+          0 => "<w:softHyphen/>"
+          1 => "<w:noBreakHyphen/>"
+          _ => "<w:sym w:font=\"Wingdings\" w:char=\"F0FC\"/>"
+        }
+        return "<w:sdt>\{checkbox_properties}<w:sdtContent><w:p><w:r>\{atom}</w:r></w:p></w:sdtContent></w:sdt>"
+      }
+    }
+  }
+  if checkbox {
+    match choices.next(4) {
+      // no text at all, so the reader discards the content entirely
+      0 => {
+        choices.tag("sdt.checkbox.no_text")
+        return "<w:sdt>\{properties}<w:sdtContent><w:p><w:r><w:tab/></w:r></w:p></w:sdtContent></w:sdt>"
+      }
+      // a control nested inside this one, each contributing a transform: the
+      // inner takes the first text, the outer the next one still standing
+      1 => {
+        choices.tag("sdt.checkbox.nested")
+        return "<w:sdt>\{properties}<w:sdtContent><w:sdt>\{properties}<w:sdtContent><w:p><w:r><w:t>\{hostile_text(choices)}</w:t><w:t>\{hostile_text(choices)}</w:t></w:r></w:p></w:sdtContent></w:sdt></w:sdtContent></w:sdt>"
+      }
+      // an atom the reader turns into text even though it is not a `w:t`
+      2 => {
+        choices.tag("sdt.checkbox.other_text_kind")
+        let atom = match choices.next(3) {
+          0 => "<w:softHyphen/>"
+          1 => "<w:noBreakHyphen/>"
+          _ => "<w:sym w:font=\"Wingdings\" w:char=\"F0FC\"/>"
+        }
+        return "<w:sdt>\{properties}<w:sdtContent><w:p><w:r>\{atom}</w:r></w:p></w:sdtContent></w:sdt>"
+      }
+      _ => ()
+    }
   }
   // Built inside the branch that uses it, not before the branch is chosen.
   // `hostile_block` records tags of its own, and a variant that discarded this
@@ -298,6 +350,7 @@ fn hostile_alternate_content(
   choices : HostileChoices,
   depth : Int,
   site? : String = "block",
+  variant? : Int = -1,
 ) -> String {
   let requires = " Requires=\"wps\""
   let choice = "<mc:Choice\{requires}><w:p><w:r><w:t>choice</w:t></w:r></w:p></mc:Choice>"
@@ -317,7 +370,8 @@ fn hostile_alternate_content(
       hostile_block(choices, depth + 1)
     }
   }
-  match choices.next(4) {
+  // A caller may pin the variant, for the same reason `hostile_sdt` allows it.
+  match (if variant >= 0 { variant } else { choices.next(4) }) {
     // a choice whose text must never appear, before the fallback
     0 =>
       "<mc:AlternateContent>\{choice}<mc:Fallback>\{nested()}</mc:Fallback></mc:AlternateContent>"
@@ -371,7 +425,20 @@ fn hostile_block(choices : HostileChoices, depth : Int) -> String {
   if depth >= 4 {
     return "<w:p><w:r><w:t>leaf</w:t></w:r></w:p>"
   }
-  match choices.next(15) {
+  match choices.next(19) {
+    // The three checkbox shapes are pinned to their own branches rather than
+    // left to the choice stream. Each time one was left to chance the stream
+    // shifted and some other shape fell to zero -- the stream is deterministic
+    // per position, so a sub-branch of a sub-branch is not sampled, it is
+    // decided.
+    15 => hostile_sdt(choices, depth, "block", variant=4)
+    18 =>
+      // a textbox inside an mc:Choice, inside a paragraph -- the site whose
+      // extras pass switches modes, and the one the choice stream never
+      // reached on its own
+      "<w:p><w:r><w:t>\{hostile_text(choices)}</w:t></w:r>\{hostile_alternate_content(choices, depth, site="paragraph", variant=2)}</w:p>"
+    16 => hostile_sdt(choices, depth, "block", variant=5)
+    17 => hostile_sdt(choices, depth, "block", variant=6)
     13 =>
       // the paragraph-site suppressed-textbox interaction, pinned rather than
       // left to chance: leaving it to the choice stream produced it at that
@@ -555,6 +622,8 @@ test "the generator keeps producing documents worth testing" {
   assert_true(tagged("sdt.under_pict") >= 3)
   assert_true(tagged("sdt.checkbox") >= 3)
   assert_true(tagged("sdt.checkbox.no_text") >= 1)
+  assert_true(tagged("sdt.checkbox.nested") >= 1)
+  assert_true(tagged("sdt.checkbox.other_text_kind") >= 1)
   assert_true(tagged("alternate") >= 10)
   assert_true(tagged("alternate.textbox_in_choice") >= 2)
   // Site and variant together, not each on its own: counting them separately
