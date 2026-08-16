@@ -410,6 +410,39 @@ fn collect_reader_order_body_outputs(
       element.local_name == "p" &&
       reader_order_is_deleted_body_paragraph(elements, child, depth, budget) {
       ()
+    } else if is_wml_uri(element.uri) && element.local_name == "sdt" {
+      // `is_transparent_container` treats a content control as fully
+      // transparent, which would expose *every* `w:sdtContent` to this
+      // prepass. The reader exposes one. That matters here and not only in
+      // the walk: this pass decides which table rows and cells the reader
+      // emits, so a second content holding a row would make a table fail open
+      // and restore vMerge continuation cells the reader removes -- and the
+      // walk would then select the right content out of an already-wrong
+      // visibility map.
+      match
+        reader_order_first_direct_wml_child(
+          elements,
+          child,
+          "sdtContent",
+          depth + 1,
+          budget,
+        ) {
+        Some(content) =>
+          // `depth + 2`, not `depth + 1`: the loop charged the control at
+          // `depth` and `reader_order_first_direct_wml_child` charged the
+          // selected content at `depth + 1`, so the content's children sit one
+          // deeper again. Charging them at the content's own depth would let a
+          // stack of nested controls understate `max_depth`.
+          collect_reader_order_body_outputs(
+            elements,
+            content,
+            output,
+            reader_image_outputs,
+            depth + 2,
+            budget,
+          )
+        None => ()
+      }
     } else if reader_order_is_body_flattening_container(element) {
       collect_reader_order_body_outputs(
         elements,
@@ -856,9 +889,34 @@ fn ReaderOrderWalker::walk_structural_element(
         }
       "hyperlink" | "drawing" | "object" | "ins" | "smartTag" =>
         self.walk_flow_children(identity, depth, from_text_box, output)
-      // Branch/SDT selection belongs to N0b4. Do not silently pick a branch
-      // or content node while constructing the provisional N0b2 order.
-      "sdt" | "sdtContent" | "txbxContent" => ()
+      // A content control contributes the children of its *first* `w:sdtContent`
+      // and nothing else: `BodyReader::read_structured_document_tag` reaches it
+      // with `first_or_empty`, so a second `w:sdtContent`, the `w:sdtPr`, and
+      // any other child are all suppressed. With no `w:sdtContent` at all the
+      // control contributes nothing, because `first_or_empty` yields an element
+      // with no children.
+      //
+      // NOT yet mirrored: the checkbox transform. When the first `w:sdtPr`
+      // carries a `w14:checkbox`, the reader replaces the first non-empty text
+      // in that content with a checkbox element, or discards the content
+      // entirely when there is no such text. This projection still reports the
+      // replaced text as reader-visible, so it diverges on exactly those
+      // controls -- narrower than before, when every content control was
+      // skipped, but not yet correct. `reader_order_projection_wbtest.mbt`
+      // pins the divergence rather than leaving it implicit.
+      "sdt" =>
+        match self.first_wml_child(identity, "sdtContent", depth + 1) {
+          Some(content) =>
+            self.walk_flow_children(content, depth + 1, from_text_box, output)
+          None => ()
+        }
+      // Reached directly rather than through a `w:sdt`, this is transparent --
+      // the reader's dispatch sends it to `read_children`.
+      "sdtContent" =>
+        self.walk_flow_children(identity, depth, from_text_box, output)
+      // Branch selection belongs to the Markup Compatibility slice. Do not
+      // silently pick a branch while constructing the provisional order.
+      "txbxContent" => ()
       _ => ()
     }
   } else if reader_order_is_vml_flattening_container(element) {
@@ -1143,6 +1201,30 @@ fn ReaderOrderWalker::walk_inline_element(
         identity, depth, state, paragraph_identity, current_run, true,
       )
     }
+    // Inline content controls take the same route as block ones: the reader
+    // dispatches `w:sdt` and `w:sdtContent` through one `read_element`, so only
+    // the first `w:sdtContent`'s children contribute.
+    "sdt" => {
+      add(TransparentSeam, "", reader_order_element_span(element))
+      match self.first_wml_child(identity, "sdtContent", depth + 1) {
+        Some(content) =>
+          self.walk_inline_children(
+            content,
+            depth + 1,
+            state,
+            paragraph_identity,
+            current_run,
+            true,
+          )
+        None => ()
+      }
+    }
+    "sdtContent" => {
+      add(TransparentSeam, "", reader_order_element_span(element))
+      self.walk_inline_children(
+        identity, depth, state, paragraph_identity, current_run, true,
+      )
+    }
     "pPr"
     | "rPr"
     | "proofErr"
@@ -1169,8 +1251,6 @@ fn ReaderOrderWalker::walk_inline_element(
     | "fldChar"
     | "fldSimple"
     | "instrText"
-    | "sdt"
-    | "sdtContent"
     | "txbxContent" => add(HardBarrier, "", reader_order_element_span(element))
     _ => add(HardBarrier, "", reader_order_element_span(element))
   }
@@ -1197,7 +1277,12 @@ fn ReaderOrderWalker::walk_paragraph_extras(
         // BodyReader suppresses deleted inline atoms, then independently
         // recurses through the physical paragraph to discover textboxes.
         "del" => self.walk_paragraph_extras(child, depth, output)
-        "sdt" | "sdtContent" => ()
+        // `read_paragraph_extra_elements` names only `w:pict`,
+        // `mc:AlternateContent` and `w:txbxContent`, and recurses into
+        // everything else -- content controls included. This pass is physical,
+        // so it reaches a textbox inside a `w:sdt` even though the reader's
+        // content pass would only take the first `w:sdtContent`. Skipping them
+        // here lost those textboxes.
         _ => self.walk_paragraph_extras(child, depth, output)
       }
     } else if element.uri == MC_URI && element.local_name == "AlternateContent" {
@@ -1240,6 +1325,13 @@ fn ReaderOrderWalker::walk_pict_extras(
       | "drawing"
       | "object"
       | "ins"
+      // `read_pict_extra_elements` sends everything it does not name to
+      // `read_element`, which dispatches content controls -- so a `w:sdt`
+      // directly under a `w:pict` contributes in the reader. Routing them
+      // through `walk_structural_element` applies the same first-content
+      // selection here.
+      | "sdt"
+      | "sdtContent"
       | "smartTag") {
       self.walk_structural_element(child, depth, true, output)
     }
