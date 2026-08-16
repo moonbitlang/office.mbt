@@ -921,9 +921,40 @@ fn ReaderOrderWalker::walk_structural_element(
     }
   } else if reader_order_is_vml_flattening_container(element) {
     self.walk_flow_children(identity, depth, from_text_box, output)
+  } else if element.uri == MC_URI && element.local_name == "AlternateContent" {
+    // The reader always takes the fallback: `read_element` reaches it with
+    // `first_or_empty("mc:Fallback")` and never looks at an `mc:Choice`, no
+    // matter what that choice requires. So every choice branch is suppressed
+    // outright, and an alternate-content block with no fallback contributes
+    // nothing.
+    match self.first_mc_child(identity, "Fallback", depth + 1) {
+      Some(fallback) =>
+        self.walk_flow_children(fallback, depth + 1, from_text_box, output)
+      None => ()
+    }
   } else {
     ()
   }
+}
+
+///|
+/// The Markup Compatibility counterpart of `first_wml_child`.
+fn ReaderOrderWalker::first_mc_child(
+  self : ReaderOrderWalker,
+  parent_identity : Int,
+  local_name : String,
+  child_depth : Int,
+) -> Int? raise DocxError {
+  let mut child = self.elements[parent_identity].first_child_index
+  while child >= 0 {
+    let element = self.elements[child]
+    self.budget.charge_visit(child_depth)
+    if element.uri == MC_URI && element.local_name == local_name {
+      return Some(child)
+    }
+    child = element.next_sibling_index
+  }
+  None
 }
 
 ///|
@@ -1143,6 +1174,22 @@ fn ReaderOrderWalker::walk_inline_element(
       self.walk_inline_children(
         identity, depth, state, paragraph_identity, current_run, true,
       )
+    } else if element.uri == MC_URI && element.local_name == "AlternateContent" {
+      // Same dispatch as at block level: the fallback's children, never a
+      // choice branch.
+      add(TransparentSeam, "", reader_order_element_span(element))
+      match self.first_mc_child(identity, "Fallback", depth + 1) {
+        Some(fallback) =>
+          self.walk_inline_children(
+            fallback,
+            depth + 1,
+            state,
+            paragraph_identity,
+            current_run,
+            true,
+          )
+        None => ()
+      }
     } else {
       add(HardBarrier, "", reader_order_element_span(element))
     }
@@ -1286,10 +1333,56 @@ fn ReaderOrderWalker::walk_paragraph_extras(
         _ => self.walk_paragraph_extras(child, depth, output)
       }
     } else if element.uri == MC_URI && element.local_name == "AlternateContent" {
-      ()
+      // `read_paragraph_extra_elements` hands alternate content to
+      // `read_text_box_elements`, which is a different mode: it selects the
+      // fallback and then hunts physically for textboxes, without the
+      // paragraph pass's `w:pict` handling. A choice branch is never entered,
+      // so a textbox inside one is invisible to this pass -- unlike a textbox
+      // inside a suppressed `w:sdtContent`, which the physical recursion above
+      // still reaches.
+      match self.first_mc_child(child, "Fallback", depth + 1) {
+        Some(fallback) => self.walk_text_box_extras(fallback, depth + 1, output)
+        None => ()
+      }
     } else {
       self.walk_paragraph_extras(child, depth, output)
     }
+    child = element.next_sibling_index
+  }
+}
+
+///|
+/// Mirrors `BodyReader::read_text_box_elements`.
+///
+/// A third extras mode, distinct from the paragraph and picture passes: it
+/// names only alternate content and `w:txbxContent`, and recurses into
+/// everything else looking for one. Reachable from the paragraph pass through
+/// an `mc:AlternateContent`.
+fn ReaderOrderWalker::walk_text_box_extras(
+  self : ReaderOrderWalker,
+  parent_identity : Int,
+  parent_depth : Int,
+  output : Array[ReaderOrderParagraph],
+) -> Unit raise DocxError {
+  let parent = self.elements[parent_identity]
+  if parent.uri == MC_URI && parent.local_name == "AlternateContent" {
+    match self.first_mc_child(parent_identity, "Fallback", parent_depth + 1) {
+      Some(fallback) =>
+        self.walk_text_box_extras(fallback, parent_depth + 1, output)
+      None => ()
+    }
+    return
+  }
+  if is_wml_uri(parent.uri) && parent.local_name == "txbxContent" {
+    self.walk_flow_children(parent_identity, parent_depth, true, output)
+    return
+  }
+  let mut child = parent.first_child_index
+  while child >= 0 {
+    let element = self.elements[child]
+    let depth = parent_depth + 1
+    self.budget.charge_visit(depth)
+    self.walk_text_box_extras(child, depth, output)
     child = element.next_sibling_index
   }
 }
@@ -1313,7 +1406,13 @@ fn ReaderOrderWalker::walk_pict_extras(
     } else if reader_order_is_vml_flattening_container(element) {
       self.walk_pict_extras(child, depth, output)
     } else if element.uri == MC_URI && element.local_name == "AlternateContent" {
-      ()
+      // `read_pict_extra_elements` stays in its own mode across alternate
+      // content, descending into the fallback rather than switching to the
+      // textbox hunt the paragraph pass uses.
+      match self.first_mc_child(child, "Fallback", depth + 1) {
+        Some(fallback) => self.walk_pict_extras(fallback, depth + 1, output)
+        None => ()
+      }
     } else if is_wml_uri(element.uri) &&
       element.local_name
       is ("p"
