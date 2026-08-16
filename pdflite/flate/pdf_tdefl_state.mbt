@@ -61,6 +61,10 @@ priv struct TdeflState {
   /// `match_len >= 32`, so a promising match gets a different search depth.
   max_probes : FixedArray[Int]
   greedy_parsing : Bool
+  /// Level 0 sets TDEFL_FORCE_ALL_RAW_BLOCKS: no matching at all, and
+  /// every block sent stored. It is not merely "search less" -- the
+  /// matcher is skipped and flush_block takes the stored path directly.
+  force_raw : Bool
   /// Oversized by `tdefl_max_match_len - 1` on purpose. `find_match` reads
   /// `dict[pos + match_len]` without masking, and the bytes past the window
   /// are a mirror of the first bytes written, so those reads stay in bounds
@@ -86,6 +90,12 @@ priv struct TdeflState {
   mut saved_match_len : Int
   mut saved_lit : Int
   mut block_index : Int
+  /// Dictionary position the current block's bytes start at, so a block
+  /// that compresses badly can be re-sent verbatim from the dictionary.
+  mut lz_code_buf_dict_pos : Int
+  mut adler32 : Int
+  /// Emit a zlib wrapper (header now, Adler-32 at finish).
+  zlib_header : Bool
   mut bit_buffer : Int
   mut bits_in : Int
   output : Array[Byte]
@@ -96,23 +106,27 @@ fn TdeflState::new(level : Int) -> TdeflState {
   let clamped = if level < 0 { 6 } else if level > 10 { 10 } else { level }
   let probes = tdefl_num_probes[clamped]
   {
-    max_probes: [1 + ((probes * 3) / 4), 1 + (probes >> 2)],
+    // straight from tdefl_init; the two budgets are derived from the same
+    // probe count by different divisions, and guessing the shape of that
+    // arithmetic changes how far the matcher searches
+    max_probes: [1 + (probes + 2) / 3, 1 + ((probes >> 2) + 2) / 3],
     greedy_parsing: clamped <= tdefl_greedy_max_level,
-    dict: FixedArray::make(tdefl_lz_dict_size + tdefl_max_match_len - 1, b'\x00'),
+    force_raw: level == 0,
+    dict: FixedArray::make(
+      tdefl_lz_dict_size + tdefl_max_match_len - 1,
+      b'\x00',
+    ),
     next: FixedArray::make(tdefl_lz_dict_size, 0),
     hash: FixedArray::make(tdefl_lz_hash_size, 0),
-    huff_count: FixedArray::makei(3, _ => FixedArray::make(
-      tdefl_max_huff_symbols_0,
-      0,
-    )),
-    huff_codes: FixedArray::makei(3, _ => FixedArray::make(
-      tdefl_max_huff_symbols_0,
-      0,
-    )),
-    huff_code_sizes: FixedArray::makei(3, _ => FixedArray::make(
-      tdefl_max_huff_symbols_0,
-      0,
-    )),
+    huff_count: FixedArray::makei(3, _ => {
+      FixedArray::make(tdefl_max_huff_symbols_0, 0)
+    }),
+    huff_codes: FixedArray::makei(3, _ => {
+      FixedArray::make(tdefl_max_huff_symbols_0, 0)
+    }),
+    huff_code_sizes: FixedArray::makei(3, _ => {
+      FixedArray::make(tdefl_max_huff_symbols_0, 0)
+    }),
     lz_code_buf: FixedArray::make(tdefl_lz_code_buf_size, b'\x00'),
     lz_code_buf_len: 1,
     lz_flags_index: 0,
@@ -125,6 +139,9 @@ fn TdeflState::new(level : Int) -> TdeflState {
     saved_match_len: 0,
     saved_lit: 0,
     block_index: 0,
+    lz_code_buf_dict_pos: 0,
+    adler32: 1,
+    zlib_header: true,
     bit_buffer: 0,
     bits_in: 0,
     output: [],

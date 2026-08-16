@@ -314,3 +314,26 @@ test "the pure encoder produces identical bytes on every backend" {
     ),
   )
 }
+
+///|
+/// A dynamic block that declares a distance tree and uses none of it.
+///
+/// This decoder used to reject that as malformed, which made it unable to read
+/// streams the vendored miniz produces -- and therefore unable to read real
+/// PDFs, on any backend without the C decoder to fall back to. It went
+/// unnoticed because native decoded through the FFI and the old pure encoder
+/// never emitted the shape.
+///
+/// The input is 48 bytes with almost no repetition, which is what drives the
+/// compressor to encode literals only and leave the distance tree empty.
+test "a block with no matches decodes despite its empty distance tree" {
+  let bytes = []
+  // ascending-ish values with no repeats long enough to match
+  for i in 0..<48 {
+    bytes.push((i * 17 % 251 + 1).to_byte())
+  }
+  let input = Bytes::from_array(bytes)
+  let encoded = pdf_flate_encode_view_with_level(input, 6)
+  let decoded = pdf_flate_decode_view(encoded)
+  assert_eq(decoded, input)
+}

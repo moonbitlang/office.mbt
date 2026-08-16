@@ -61,10 +61,18 @@ fn pdf_flate_read_dynamic_tables(
   }
   let literal_lengths = lengths[:hlit]
   let distance_lengths = lengths[hlit:hlit + hdist]
-  (
-    pdf_flate_build_huffman(literal_lengths),
-    pdf_flate_build_huffman(distance_lengths),
-  )
+  // A block that encodes no matches uses no distance codes, and the format
+  // still requires a distance tree to be declared -- so every length in it is
+  // zero. That is legal and miniz emits it routinely; rejecting it as
+  // malformed made this decoder unable to read streams the vendored
+  // compressor produces. The empty tree decodes nothing, which is correct,
+  // because a block with no matches never asks it to.
+  let distances = if distance_lengths.iter().all(length => length == 0) {
+    pdf_flate_empty_huffman()
+  } else {
+    pdf_flate_build_huffman(distance_lengths)
+  }
+  (pdf_flate_build_huffman(literal_lengths), distances)
 }
 
 ///|

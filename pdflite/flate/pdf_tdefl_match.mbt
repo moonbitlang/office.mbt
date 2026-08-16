@@ -43,13 +43,17 @@ fn tdefl_find_match(
   // the chain walk affordable
   let mut c0 = dict[pos + match_len]
   let mut c1 = dict[pos + match_len - 1]
-  let mut num_probes_left = state.max_probes[if match_len >= 32 { 1 } else { 0 }]
+  let mut num_probes_left = state.max_probes[if match_len >= 32 {
+      1
+    } else {
+      0
+    }]
   let mut dist = 0
-  for {
+  for ;; {
     // walk the hash chain until a candidate agrees on c0/c1, or the budget
     // or the window runs out
     let mut candidate = false
-    while not(candidate) {
+    while !candidate {
       num_probes_left = num_probes_left - 1
       if num_probes_left == 0 {
         return (match_dist, match_len)

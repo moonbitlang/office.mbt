@@ -1,106 +1,58 @@
 ///|
-/// Encode borrowed bytes as a zlib-wrapped Flate stream.
-///
-/// `level` must be in the zlib range `0..9`; invalid levels raise
-/// `@core.PdfError::InvalidFlateData`. On non-native targets this uses the pure MoonBit encoder.
-#cfg(not(target="native"))
-pub fn pdf_flate_encode_view_with_level(
-  data : BytesView,
-  level : Int,
-) -> @core.PdfBytes raise @core.PdfError {
-  pdf_flate_encode_view_with_level_pure(data, level)
-}
+// Encoding no longer depends on the target.
+//
+// These four entry points used to exist twice each: a native variant calling
+// miniz through a C stub, and a pure MoonBit variant everywhere else. That
+// split meant the same document compressed to different bytes on different
+// backends -- measured at +12% on a Latin PDF page and +24% on a
+// one-ideograph page -- so "deterministic output" could only ever be claimed
+// per runtime.
+//
+// `tdefl_compress_zlib` is a port of the vendored miniz's own compressor,
+// verified byte-for-byte against it, so there is one implementation and one
+// answer. Native output is unchanged, because the port reproduces what the C
+// produced; wasm and js output changes to match, and gets smaller doing so.
+//
+// The FFI is still there and still compiled on native: it is the oracle the
+// differential test compares against. It is no longer in the path any document
+// takes.
 
 ///|
 /// Encode borrowed bytes as a zlib-wrapped Flate stream.
 ///
 /// `level` must be in the zlib range `0..9`; invalid levels raise
-/// `@core.PdfError::InvalidFlateData`. On the native target this tries the zlib FFI first and
-/// falls back to the pure MoonBit encoder if the native call fails.
-#cfg(target="native")
-#coverage.skip
+/// `@core.PdfError::InvalidFlateData`.
 pub fn pdf_flate_encode_view_with_level(
   data : BytesView,
   level : Int,
 ) -> @core.PdfBytes raise @core.PdfError {
-  pdf_flate_encode_bytes_native(data.to_owned(), level)
+  guard level >= 0 && level <= 9 else { raise InvalidFlateData }
+  tdefl_compress_zlib(data, level)
 }
 
 ///|
 /// Encode borrowed bytes with the default compression level.
-///
-/// This non-native implementation uses the pure MoonBit encoder.
-#cfg(not(target="native"))
 pub fn pdf_flate_encode_view(data : BytesView) -> @core.PdfBytes {
-  pdf_flate_encode_view_pure(data)
-}
-
-///|
-/// Encode borrowed bytes with the default compression level.
-///
-/// On the native target this tries zlib at level `6` and falls back to the pure
-/// MoonBit encoder if the native call fails.
-#cfg(target="native")
-#coverage.skip
-pub fn pdf_flate_encode_view(data : BytesView) -> @core.PdfBytes {
-  try pdf_flate_encode_bytes_native(data.to_owned(), 6) catch {
-    _ => pdf_flate_encode_view_pure(data)
-  } noraise {
-    bytes => bytes
-  }
+  tdefl_compress_zlib(data, 6)
 }
 
 ///|
 /// Encode owned bytes as a zlib-wrapped Flate stream.
 ///
 /// `level` must be in the zlib range `0..9`; invalid levels raise
-/// `@core.PdfError::InvalidFlateData`. This non-native implementation uses the pure MoonBit
-/// encoder.
-#cfg(not(target="native"))
+/// `@core.PdfError::InvalidFlateData`.
 pub fn pdf_flate_encode_with_level(
   data : @core.PdfBytes,
   level : Int,
 ) -> @core.PdfBytes raise @core.PdfError {
-  pdf_flate_encode_view_with_level_pure(data, level)
-}
-
-///|
-/// Encode owned bytes as a zlib-wrapped Flate stream.
-///
-/// `level` must be in the zlib range `0..9`; invalid levels raise
-/// `@core.PdfError::InvalidFlateData`. On the native target this uses zlib FFI with a pure
-/// MoonBit fallback.
-#cfg(target="native")
-#coverage.skip
-pub fn pdf_flate_encode_with_level(
-  data : @core.PdfBytes,
-  level : Int,
-) -> @core.PdfBytes raise @core.PdfError {
-  pdf_flate_encode_bytes_native(data, level)
+  guard level >= 0 && level <= 9 else { raise InvalidFlateData }
+  tdefl_compress_zlib(data, level)
 }
 
 ///|
 /// Encode owned bytes with the default compression level.
-///
-/// This non-native implementation uses the pure MoonBit encoder.
-#cfg(not(target="native"))
 pub fn pdf_flate_encode(data : @core.PdfBytes) -> @core.PdfBytes {
-  pdf_flate_encode_view_pure(data)
-}
-
-///|
-/// Encode owned bytes with the default compression level.
-///
-/// On the native target this tries zlib at level `6` and falls back to the pure
-/// MoonBit encoder if the native call fails.
-#cfg(target="native")
-#coverage.skip
-pub fn pdf_flate_encode(data : @core.PdfBytes) -> @core.PdfBytes {
-  try pdf_flate_encode_bytes_native(data, 6) catch {
-    _ => pdf_flate_encode_view_pure(data)
-  } noraise {
-    bytes => bytes
-  }
+  tdefl_compress_zlib(data, 6)
 }
 
 ///|

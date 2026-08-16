@@ -136,6 +136,16 @@ fn pdf_flate_canonical_codes(lengths : ArrayView[Int]) -> Array[Int] {
 }
 
 ///|
+/// A tree with no symbols, for a declared-but-unused distance table.
+///
+/// Every lookup misses, so any attempt to decode a distance from it raises --
+/// which is what should happen, since a block that declared no distance codes
+/// has no business reading one.
+fn pdf_flate_empty_huffman() -> FlateHuffmanTable {
+  { max_bits: 1, sym: [-1, -1], len: [0, 0] }
+}
+
+///|
 fn pdf_flate_build_huffman(
   lengths : ArrayView[Int],
 ) -> FlateHuffmanTable raise @core.PdfError {
