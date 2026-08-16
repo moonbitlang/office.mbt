@@ -1103,3 +1103,99 @@ test "checkbox controls nest, and every reader text kind is replaceable" {
     assert_eq(provisional_story_text(projection), expected)
   }
 }
+
+///|
+/// Every contribution's interval indexes the *reader's* story text, and
+/// slicing there yields exactly what the contribution says it produced.
+///
+/// This is the claim surgery depends on. An interval that is merely
+/// self-consistent with the projection's own text proves nothing -- the
+/// projection built both. Slicing the reader's output instead makes the
+/// index answer for itself against the engine it models.
+fn assert_reader_order_intervals_index_the_reader(
+  source : String,
+) -> Unit raise {
+  let projection = scan_reader_order_projection(
+    "word/document.xml",
+    @utf8.encode(source),
+  )
+  let story = current_reader_story_text(source)
+  let mut expected_paragraph = 0
+  for paragraph in projection.paragraphs {
+    assert_eq(paragraph.logical_index, expected_paragraph)
+    expected_paragraph = expected_paragraph + 1
+    assert_true(paragraph.projection_start >= 0)
+    assert_true(paragraph.projection_end >= paragraph.projection_start)
+    assert_true(paragraph.projection_end <= story.length())
+    let mut previous_end = paragraph.projection_start
+    // run identity -> the index it was assigned, to check that the mapping is
+    // a bijection onto a dense range rather than merely non-negative
+    let seen_runs : Map[Int, Int] = Map([])
+    let used_indices : Map[Int, Int] = Map([])
+    for contribution in paragraph.contributions {
+      // contiguous and in order: no gaps, no overlaps, no reordering
+      assert_eq(contribution.projection_start, previous_end)
+      assert_eq(
+        contribution.projection_end - contribution.projection_start,
+        contribution.value.length(),
+      )
+      previous_end = contribution.projection_end
+      // and the bytes there really are this contribution's text
+      assert_eq(
+        story
+        .view(
+          start_offset=contribution.projection_start,
+          end_offset=contribution.projection_end,
+        )
+        .to_owned(),
+        contribution.value,
+      )
+      // run indices are dense and assigned by first appearance
+      match contribution.run_identity {
+        Some(identity) => {
+          assert_true(contribution.logical_run_index >= 0)
+          // one index per run, and one run per index
+          match seen_runs.get(identity) {
+            Some(assigned) =>
+              assert_eq(contribution.logical_run_index, assigned)
+            None => {
+              assert_true(
+                used_indices.get(contribution.logical_run_index) is None,
+              )
+              seen_runs[identity] = contribution.logical_run_index
+              used_indices[contribution.logical_run_index] = identity
+            }
+          }
+        }
+        None => assert_eq(contribution.logical_run_index, -1)
+      }
+    }
+    assert_eq(previous_end, paragraph.projection_end)
+    // dense from zero: with n distinct runs the indices are exactly 0..n-1, so
+    // a path like `p[i]/r[j]` names one run and every run has a path
+    for index in 0..<seen_runs.length() {
+      assert_true(used_indices.get(index) is Some(_))
+    }
+  }
+}
+
+///|
+test "intervals index the reader's story text" {
+  let sources = [
+    // plain text, and an astral character, which is two UTF-16 units
+    "<w:p><w:r><w:t>hello</w:t></w:r></w:p>", "<w:p><w:r><w:t>a\u{1F600}b</w:t></w:r></w:p>",
+    // several runs, so run indices have to be assigned by first appearance
+     "<w:p><w:r><w:t>one</w:t></w:r><w:r><w:t>two</w:t></w:r><w:r><w:t>three</w:t></w:r></w:p>",
+    // more than one paragraph, so the separator has to be accounted for
+     "<w:p><w:r><w:t>first</w:t></w:r></w:p><w:p><w:r><w:t>second</w:t></w:r></w:p>",
+    // a checkbox control, whose replaced text must occupy an empty interval
+     "<w:sdt><w:sdtPr><w14:checkbox><w14:checked w14:val=\"1\"/></w14:checkbox></w:sdtPr><w:sdtContent><w:p><w:r><w:t>replaced</w:t><w:t>kept</w:t></w:r></w:p></w:sdtContent></w:sdt>",
+    // atoms that are not text
+     "<w:p><w:r><w:t>a</w:t><w:tab/><w:softHyphen/><w:t>b</w:t></w:r></w:p>",
+  ]
+  for body in sources {
+    assert_reader_order_intervals_index_the_reader(
+      "<w:document xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\" xmlns:w14=\"http://schemas.microsoft.com/office/word/2010/wordml\"><w:body>\{body}</w:body></w:document>",
+    )
+  }
+}

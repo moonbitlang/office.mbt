@@ -748,3 +748,23 @@ test "generated documents keep element spans addressable in the source" {
     seed=0x646F_6378_72UL,
   )
 }
+
+///|
+/// The interval claim, over generated documents.
+///
+/// The hand-written cases next door cover the shapes somebody thought of. This
+/// drives the same check over the ones nobody did, and it is the claim that
+/// matters most for surgery: an edit addressed by a projection interval lands
+/// on the bytes that produced that text, or it lands somewhere else.
+test "generated documents keep every interval indexing the reader" {
+  @quickcheck.check(
+    (seeds : Array[Int]) => {
+      let source = hostile_document(seeds)
+      assert_reader_order_intervals_index_the_reader(source)
+      true
+    },
+    count=64,
+    max_size=60,
+    seed=0x696E_7465_7276UL,
+  )
+}
