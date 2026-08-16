@@ -324,14 +324,23 @@ test "the decoder accepts a literal declared at any position" {
 /// Every declared distance-tree size, at both shapes.
 ///
 /// Sweeping `HDIST` is what drives `emit_zero_run` through all three of its
-/// branches from the distance side, since that run is `hdist` zeros long: 1
-/// and 2 take the literal-symbol branch, 3 to 10 the symbol-17 branch, and 11
-/// upwards symbol 18.
+/// branches from the distance side: the distance run is `hdist` zeros long
+/// under `AllZeroDistances` and `hdist - 1` under `SingleDistanceCode`, so
+/// between them the sweep covers runs of 0 through 30 and crosses both the
+/// 3-and 11-zero thresholds.
+///
+/// The literal is swept here too, even though the test above already covers
+/// every literal position at `hdist` = 1. The literal's runs decide how many
+/// bits precede the distance-length description, so a given `HDIST` is
+/// described at a different bit offset for each literal -- and the zero-run
+/// codes are not byte-aligned. Sweeping only one literal would test each
+/// distance shape at a single alignment.
 test "the decoder accepts every declared distance-tree size" {
+  let bytes = [0, 1, 65, 127, 128, 254, 255]
   let shapes = [AllZeroDistances, SingleDistanceCode]
   let mut checked = 0
   for hdist in 1..<=30 {
-    for byte in [0, 65, 255] {
+    for byte in bytes {
       for shape in shapes {
         let stream = emit_dynamic_literal_block(byte, 2, hdist, shape)
         let decoded = deflate_decode(stream, max_output=64)
@@ -340,8 +349,8 @@ test "the decoder accepts every declared distance-tree size" {
       }
     }
   }
-  // 30 declared sizes x 3 literals x 2 distance-tree shapes.
-  assert_eq(checked, 180)
+  // 30 declared sizes x 7 literals x 2 distance-tree shapes.
+  assert_eq(checked, 420)
 }
 
 ///|
