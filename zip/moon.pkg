@@ -6,3 +6,7 @@ import {
 import {
   "moonbitlang/core/random",
 } for "test"
+
+import {
+  "moonbitlang/core/quickcheck",
+} for "wbtest"
