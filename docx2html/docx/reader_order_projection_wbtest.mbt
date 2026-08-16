@@ -1121,10 +1121,17 @@ fn assert_reader_order_intervals_index_the_reader(
   )
   let story = current_reader_story_text(source)
   let mut expected_paragraph = 0
+  // Absolute placement, not just internal consistency. Without this the
+  // property passes on a projection that has lost a paragraph entirely: the
+  // surviving intervals stay self-consistent and the missing tail is never
+  // inspected. The first paragraph starts at zero, each next one two units
+  // past the previous one's end, and after the last the running offset has to
+  // land exactly on the end of the reader's story.
+  let mut expected_start = 0
   for paragraph in projection.paragraphs {
     assert_eq(paragraph.logical_index, expected_paragraph)
     expected_paragraph = expected_paragraph + 1
-    assert_true(paragraph.projection_start >= 0)
+    assert_eq(paragraph.projection_start, expected_start)
     assert_true(paragraph.projection_end >= paragraph.projection_start)
     assert_true(paragraph.projection_end <= story.length())
     let mut previous_end = paragraph.projection_start
@@ -1162,6 +1169,9 @@ fn assert_reader_order_intervals_index_the_reader(
               assert_true(
                 used_indices.get(contribution.logical_run_index) is None,
               )
+              // the next index, so the order is first appearance and not some
+              // other permutation a uniqueness check alone would accept
+              assert_eq(contribution.logical_run_index, seen_runs.length())
               seen_runs[identity] = contribution.logical_run_index
               used_indices[contribution.logical_run_index] = identity
             }
@@ -1176,7 +1186,21 @@ fn assert_reader_order_intervals_index_the_reader(
     for index in 0..<seen_runs.length() {
       assert_true(used_indices.get(index) is Some(_))
     }
+    // and every run the paragraph *declares* has a path, not only the ones
+    // that happened to contribute. An atomless `<w:r/>` contributes nothing
+    // but a seam, and run synthesis in N0c has to be able to address it.
+    for source in paragraph.sources {
+      for run in source.runs {
+        assert_true(seen_runs.get(run.identity) is Some(_))
+      }
+    }
+    expected_start = paragraph.projection_end +
+      reader_order_paragraph_separator_units
   }
+  // Every paragraph accounted for. The reader writes the separator after each
+  // one, including the last, so the running offset ends on the story length --
+  // which is what makes a dropped paragraph visible here.
+  assert_eq(expected_start, story.length())
 }
 
 ///|
@@ -1198,4 +1222,31 @@ test "intervals index the reader's story text" {
       "<w:document xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\" xmlns:w14=\"http://schemas.microsoft.com/office/word/2010/wordml\"><w:body>\{body}</w:body></w:document>",
     )
   }
+}
+
+///|
+/// The interval property has to be able to fail.
+///
+/// Its first version checked that intervals were contiguous and that each one
+/// sliced the reader's text correctly, but never where the first paragraph
+/// started or where the last one ended. That passes on a projection which has
+/// lost a paragraph outright: the surviving intervals stay self-consistent and
+/// the missing tail is never looked at. Review caught it.
+///
+/// #427 is a document where the projection does lose a paragraph, so it makes
+/// a ready-made negative case: the property must reject it. The generated
+/// corpus excludes the shape deliberately, which is why the suite stays green
+/// while this divergence is still open.
+test "the interval property rejects a projection that lost a paragraph" {
+  let textbox =
+    #|<w:pict><v:shape><v:textbox><w:txbxContent><w:p><w:r><w:t>A</w:t></w:r></w:p></w:txbxContent></v:textbox></v:shape></w:pict>
+  let table = "<w:tbl><w:tr><w:trPr><w:del/></w:trPr><w:tc><w:p><w:r>\{textbox}<w:t>B</w:t></w:r></w:p></w:tc></w:tr></w:tbl>"
+  let source = "<w:document xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\" xmlns:v=\"urn:schemas-microsoft-com:vml\"><w:body><w:p><w:r><w:t>x</w:t></w:r>\{table}</w:p></w:body></w:document>"
+  let mut rejected = false
+  try assert_reader_order_intervals_index_the_reader(source) catch {
+    _ => rejected = true
+  } noraise {
+    _ => ()
+  }
+  assert_true(rejected)
 }
