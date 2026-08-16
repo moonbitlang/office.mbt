@@ -96,6 +96,18 @@ fn hostile_text(choices : HostileChoices) -> String {
 }
 
 ///|
+/// Text that is never empty, for shapes whose meaning depends on there being
+/// something to replace.
+fn hostile_nonempty_text(choices : HostileChoices) -> String {
+  let value = hostile_text(choices)
+  if value.length() > 0 {
+    value
+  } else {
+    "x"
+  }
+}
+
+///|
 /// One run's worth of inline children.
 fn hostile_run_content(choices : HostileChoices, depth : Int) -> String {
   let out = StringBuilder()
@@ -201,7 +213,12 @@ fn hostile_sdt(
       // first text, the outer the next one still standing
       5 => {
         choices.tag("sdt.checkbox.nested")
-        return "<w:sdt>\{checkbox_properties}<w:sdtContent><w:sdt>\{checkbox_properties}<w:sdtContent><w:p><w:r><w:t>\{hostile_text(choices)}</w:t><w:t>\{hostile_text(choices)}</w:t></w:r></w:p></w:sdtContent></w:sdt></w:sdtContent></w:sdt>"
+        // Both texts are non-empty by construction. `hostile_text` can return
+        // "", and an empty text is skipped rather than replaced -- so with it
+        // the tag would not prove two transforms were consumed.
+        let one = hostile_nonempty_text(choices)
+        let two = hostile_nonempty_text(choices)
+        return "<w:sdt>\{checkbox_properties}<w:sdtContent><w:sdt>\{checkbox_properties}<w:sdtContent><w:p><w:r><w:t>\{one}</w:t><w:t>\{two}</w:t></w:r></w:p></w:sdtContent></w:sdt></w:sdtContent></w:sdt>"
       }
       // an atom the reader turns into text even though it is not a `w:t`
       _ => {

@@ -972,8 +972,9 @@ test "a checkbox content control replaces its first text" {
 }
 
 ///|
-/// The one checkbox shape still unmirrored: an *inline* control whose content
-/// yields no text at all.
+/// One of the two checkbox shapes still unmirrored: an *inline* control whose
+/// content yields no text at all. The other is a control wrapping a table
+/// cell, pinned below.
 ///
 /// With no text to replace, the reader discards the content entirely and
 /// returns a bare checkbox, so the content's paragraph never reaches the

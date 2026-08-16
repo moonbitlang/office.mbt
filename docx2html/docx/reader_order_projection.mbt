@@ -1,8 +1,8 @@
-// N0b2/N0b3 — a bounded, private reader-order view over N0b1's physical
-// source identities, followed by story-wide complex-field classification.
-// This layer still stops before SDT/Markup Compatibility transforms, final
-// logical paths, and UTF-16 intervals. Later N0b slices consume these ordered
-// physical contributors and their source-pinned field provenance.
+// A bounded, private reader-order view over N0b1's physical source identities,
+// with story-wide complex-field classification and the reader's content-control
+// and Markup Compatibility transforms applied. This layer still stops before
+// final logical paths and UTF-16 intervals. Later N0b slices consume these
+// ordered physical contributors and their source-pinned field provenance.
 
 ///|
 #warnings("-unused_field")
@@ -1015,14 +1015,16 @@ fn ReaderOrderWalker::walk_structural_element(
       // control contributes nothing, because `first_or_empty` yields an element
       // with no children.
       //
-      // NOT yet mirrored: the checkbox transform. When the first `w:sdtPr`
-      // carries a `w14:checkbox`, the reader replaces the first non-empty text
-      // in that content with a checkbox element, or discards the content
-      // entirely when there is no such text. This projection still reports the
-      // replaced text as reader-visible, so it diverges on exactly those
-      // controls -- narrower than before, when every content control was
-      // skipped, but not yet correct. `reader_order_projection_wbtest.mbt`
-      // pins the divergence rather than leaving it implicit.
+      // The checkbox transform applies on top of that selection: when the
+      // first `w:sdtPr` carries a `w14:checkbox`, the reader replaces the
+      // first non-empty text in the content with a checkbox element, and
+      // discards the content entirely when there is none. Controls nest and
+      // each contributes one such transform, which is why `pending_checkboxes`
+      // counts rather than flags.
+      //
+      // Two shapes still diverge, both textless, both pinned by name in
+      // `reader_order_projection_wbtest.mbt`: an inline control, and one
+      // wrapping a table cell.
       "sdt" => {
         let checkbox = self.sdt_declares_checkbox(identity, depth)
         let before_output = output.length()
