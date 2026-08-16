@@ -22,12 +22,15 @@
 // flattens some children and not others -- and the interesting failures come
 // from combinations of those, at depths a hand-written fixture does not reach.
 //
-// Two constructs are deliberately absent: `w:sdt` and `mc:AlternateContent`.
-// The projection does not yet perform those transforms (N0b4, #234), so
-// generating them would assert a divergence that is known and tracked rather
-// than finding one. Adding them means adding branches to `hostile_block` and
-// `hostile_run_content` and extending the coverage guard -- so what these
-// properties establish is the *supported* grammar, not every document.
+// `mc:AlternateContent` is deliberately absent. The projection does not yet
+// perform that transform, so generating it would assert a divergence that is
+// known and tracked (N0b4, #234) rather than finding one. Adding it means
+// adding a branch to `hostile_block` and extending the coverage guard -- so
+// what these properties establish is the *supported* grammar, not every
+// document.
+//
+// `w:sdt` was in that list until the content-control transform landed and is
+// now generated.
 
 ///|
 /// A deterministic stream of choices, so a generated document is a pure
@@ -135,13 +138,49 @@ fn hostile_textbox(choices : HostileChoices, depth : Int) -> String {
 }
 
 ///|
+/// A content control.
+///
+/// `BodyReader::read_structured_document_tag` reaches the content with
+/// `first_or_empty("w:sdtContent")`, so exactly one child contributes and
+/// everything else in the control is suppressed -- a second `w:sdtContent`
+/// included. The variants below sit either side of that rule.
+///
+/// The last one is the interaction worth generating: a textbox in the
+/// *suppressed* second content. The reader's content pass never reaches it,
+/// but `read_paragraph_extra_elements` recurses physically through everything
+/// it does not name, so the textbox is still emitted. A projection that skips
+/// content controls in its extras pass loses it, and one that reads both
+/// contents gains text the reader never produced.
+fn hostile_sdt(choices : HostileChoices, depth : Int) -> String {
+  let first = "<w:p><w:r><w:t>\{hostile_text(choices)}</w:t></w:r></w:p>"
+  match choices.next(4) {
+    // properties before the content, which must not be read as content
+    0 =>
+      "<w:sdt><w:sdtPr><w:alias w:val=\"a\"/></w:sdtPr><w:sdtContent>\{hostile_block(choices, depth + 1)}</w:sdtContent></w:sdt>"
+    // no content at all: the control contributes nothing
+    1 => "<w:sdt><w:sdtPr><w:alias w:val=\"b\"/></w:sdtPr></w:sdt>"
+    // a second content, whose text the reader never emits
+    2 =>
+      "<w:sdt><w:sdtContent>\{first}</w:sdtContent><w:sdtContent><w:p><w:r><w:t>suppressed</w:t></w:r></w:p></w:sdtContent></w:sdt>"
+    // a textbox inside that suppressed second content
+    _ =>
+      "<w:sdt><w:sdtContent>\{first}</w:sdtContent><w:sdtContent><w:p><w:r>\{hostile_textbox(choices, depth + 1)}</w:r></w:p></w:sdtContent></w:sdt>"
+  }
+}
+
+///|
 /// One block-level construct: a paragraph, a table, or a revision wrapper
 /// around either.
 fn hostile_block(choices : HostileChoices, depth : Int) -> String {
   if depth >= 4 {
     return "<w:p><w:r><w:t>leaf</w:t></w:r></w:p>"
   }
-  match choices.next(7) {
+  match choices.next(9) {
+    7 => hostile_sdt(choices, depth)
+    8 =>
+      // a content control inside a paragraph, so the physical extras pass
+      // walks through it as well as the content pass
+      "<w:p><w:r><w:t>\{hostile_text(choices)}</w:t></w:r>\{hostile_sdt(choices, depth)}</w:p>"
     0 => "<w:p><w:r>\{hostile_run_content(choices, depth)}</w:r></w:p>"
     1 =>
       // hyperlink wraps runs and is flattened by the reader
@@ -223,13 +262,20 @@ fn hostile_document(seeds : ArrayView[Int]) -> String {
 /// vMerge restart is only interesting paired with a continuation, since that
 /// pair is what makes the reader drop a cell.
 test "the generator keeps producing documents worth testing" {
-  let cases : Array[Array[Int]] = @quickcheck.samples(40)
+  // Raised from 40 when content controls were added: two more block choices
+  // diluted every other branch, and at 40 samples deletions fell to one and
+  // vMerge pairs to none. The thresholds below are unchanged, so this is the
+  // sample count that keeps them honest rather than thresholds lowered to fit.
+  let cases : Array[Array[Int]] = @quickcheck.samples(120)
   let mut tables = 0
   let mut deletions = 0
   let mut textboxes = 0
   let mut insertions = 0
   let mut textbox_in_deletion = 0
   let mut vmerge_pairs = 0
+  let mut controls = 0
+  let mut second_content = 0
+  let mut textbox_in_suppressed_content = 0
   for case in cases {
     let document = hostile_document(case[:])
     if document.contains("<w:tbl>") {
@@ -253,6 +299,18 @@ test "the generator keeps producing documents worth testing" {
       document.contains("<w:vMerge/>") {
       vmerge_pairs = vmerge_pairs + 1
     }
+    if document.contains("<w:sdt>") {
+      controls = controls + 1
+    }
+    // a control declaring a second content, whose text the reader discards
+    if document.contains("</w:sdtContent><w:sdtContent>") {
+      second_content = second_content + 1
+    }
+    // and the case where that discarded content holds a textbox: the content
+    // pass must not reach it, the physical extras pass must
+    if document.contains("</w:sdtContent><w:sdtContent><w:p><w:r><w:pict>") {
+      textbox_in_suppressed_content = textbox_in_suppressed_content + 1
+    }
   }
   assert_true(tables >= 2)
   assert_true(deletions >= 2)
@@ -260,6 +318,9 @@ test "the generator keeps producing documents worth testing" {
   assert_true(insertions >= 2)
   assert_true(textbox_in_deletion >= 1)
   assert_true(vmerge_pairs >= 1)
+  assert_true(controls >= 2)
+  assert_true(second_content >= 1)
+  assert_true(textbox_in_suppressed_content >= 1)
 }
 
 ///|
