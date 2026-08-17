@@ -45,6 +45,95 @@ fn reader_order_projection_with_all_image_outputs(
 }
 
 ///|
+/// The reader's own paragraph partition, taken from its tree and checked
+/// against its own renderer.
+///
+/// Comparing story text compares only the concatenation, and the concatenation
+/// is ambiguous: one paragraph reading `a\n\nb` and two reading `a` and `b`
+/// serialise identically while offering different addressable paths. Surgery
+/// addresses paragraphs, so the partition -- not the join of it -- is what has
+/// to agree.
+///
+/// A `Paragraph` emits its own separator, so a paragraph nested inside another
+/// splits the enclosing one: the outer prefix closes with the inner
+/// paragraph's content, and the outer suffix becomes a further paragraph. That
+/// is why this accumulates into one buffer instead of recursing per node -- it
+/// is the flattening the reader already performs, not one invented here. The
+/// rebuild check below is what holds it to that: if these arms ever drift from
+/// `to_raw_text`, the reconstruction stops matching.
+fn reader_paragraph_texts(source : String) -> Array[String] raise {
+  let root = read_xml_string(source, namespace_map=office_namespace_map())
+  let children = match root.first("w:body") {
+    Some(body) => body.children
+    None => root.children
+  }
+  let tree = document(
+    empty_body_reader({ relationships: [] }).read_children(children),
+  )
+  let paragraphs = []
+  let buffer = StringBuilder()
+  flatten_reader_paragraphs(tree, paragraphs, buffer)
+  // Nothing may be left over. Text outside every paragraph is story text the
+  // partition does not account for, and an address cannot name it.
+  assert_eq(buffer.to_string(), "")
+  let rebuilt = StringBuilder()
+  for text in paragraphs {
+    rebuilt.write_string(text)
+    rebuilt.write_string("\n\n")
+  }
+  assert_eq(rebuilt.to_string(), tree.to_raw_text())
+  paragraphs
+}
+
+///|
+fn flatten_reader_paragraphs(
+  node : DocumentElement,
+  paragraphs : Array[String],
+  buffer : StringBuilder,
+) -> Unit {
+  match node {
+    Text(value) => buffer.write_string(value)
+    Tab => buffer.write_string("\t")
+    Field(result~, ..) => buffer.write_string(result)
+    Paragraph(children~, ..) => {
+      for child in children {
+        flatten_reader_paragraphs(child, paragraphs, buffer)
+      }
+      paragraphs.push(buffer.to_string())
+      buffer.reset()
+    }
+    Document(children~, ..)
+    | Run(children~, ..)
+    | Hyperlink(children~, ..)
+    | Table(children~, ..)
+    | TableRow(children~, ..)
+    | TableCell(children~, ..) =>
+      for child in children {
+        flatten_reader_paragraphs(child, paragraphs, buffer)
+      }
+    _ => ()
+  }
+}
+
+///|
+/// The projection agrees with the reader on both the story text and the
+/// partition of it into addressable paragraphs.
+fn assert_reader_order_matches_reader(
+  source : String,
+  projection : ReaderOrderProjection,
+) -> Unit raise {
+  assert_eq(
+    provisional_story_text(projection),
+    current_reader_story_text(source),
+  )
+  let expected = reader_paragraph_texts(source)
+  assert_eq(projection.paragraphs.length(), expected.length())
+  for index, paragraph in projection.paragraphs {
+    assert_eq(paragraph.reader_text(), expected[index])
+  }
+}
+
+///|
 fn ReaderOrderParagraph::reader_text(self : ReaderOrderParagraph) -> String {
   let output = StringBuilder()
   for contribution in self.contributions {
@@ -149,10 +238,7 @@ test "reader order projects nested runs text atoms seams and barriers" {
     "word/document.xml",
     @utf8.encode(source),
   )
-  assert_eq(
-    provisional_story_text(projection),
-    current_reader_story_text(source),
-  )
+  assert_reader_order_matches_reader(source, projection)
   assert_reader_order_identity_mapping(projection)
   assert_eq(projection.paragraphs.length(), 3)
   assert_eq(projection.paragraphs[0].sources.length(), 1)
@@ -180,10 +266,7 @@ test "reader order emits textbox paragraphs after the primary paragraph" {
     "word/document.xml",
     @utf8.encode(source),
   )
-  assert_eq(
-    provisional_story_text(projection),
-    current_reader_story_text(source),
-  )
+  assert_reader_order_matches_reader(source, projection)
   assert_reader_order_identity_mapping(projection)
   debug_inspect(
     projection.paragraphs.map(paragraph => {
@@ -201,10 +284,7 @@ test "reader order discovers textboxes inside deleted revisions" {
     "word/document.xml",
     @utf8.encode(source),
   )
-  assert_eq(
-    provisional_story_text(projection),
-    current_reader_story_text(source),
-  )
+  assert_reader_order_matches_reader(source, projection)
   assert_reader_order_identity_mapping(projection)
   debug_inspect(
     projection.paragraphs.map(paragraph => {
@@ -222,10 +302,7 @@ test "reader order discovers pict block outputs inside deleted revisions" {
     "word/document.xml",
     @utf8.encode(source),
   )
-  assert_eq(
-    provisional_story_text(projection),
-    current_reader_story_text(source),
-  )
+  assert_reader_order_matches_reader(source, projection)
   assert_reader_order_identity_mapping(projection)
   debug_inspect(
     projection.paragraphs.map(paragraph => {
@@ -257,10 +334,7 @@ test "reader order preserves vMerge cells when malformed tables fail open" {
       "word/document.xml",
       @utf8.encode(source),
     )
-    assert_eq(
-      provisional_story_text(projection),
-      current_reader_story_text(source),
-    )
+    assert_reader_order_matches_reader(source, projection)
     assert_reader_order_identity_mapping(projection)
     projected.push(
       projection.paragraphs.map(paragraph => paragraph.reader_text()),
@@ -311,10 +385,7 @@ test "reader order skips deleted rows when deciding table fail-open" {
     "word/document.xml",
     @utf8.encode(source),
   )
-  assert_eq(
-    provisional_story_text(projection),
-    current_reader_story_text(source),
-  )
+  assert_reader_order_matches_reader(source, projection)
   assert_reader_order_identity_mapping(projection)
   debug_inspect(
     projection.paragraphs.map(paragraph => paragraph.reader_text()),
@@ -339,10 +410,7 @@ test "reader order classifies conditional empty table outputs like BodyReader" {
       "word/document.xml",
       @utf8.encode(source),
     )
-    assert_eq(
-      provisional_story_text(projection),
-      current_reader_story_text(source),
-    )
+    assert_reader_order_matches_reader(source, projection)
     assert_reader_order_identity_mapping(projection)
     projected.push(
       projection.paragraphs.map(paragraph => paragraph.reader_text()),
@@ -385,10 +453,7 @@ test "reader order restores orphan merges after ignored physical origins" {
       "word/document.xml",
       @utf8.encode(source),
     )
-    assert_eq(
-      provisional_story_text(projection),
-      current_reader_story_text(source),
-    )
+    assert_reader_order_matches_reader(source, projection)
     assert_reader_order_identity_mapping(projection)
     debug_inspect(
       projection.paragraphs.map(paragraph => paragraph.reader_text()),
@@ -411,10 +476,7 @@ test "reader order hides continuations found by merge recomputation" {
       "word/document.xml",
       @utf8.encode(source),
     )
-    assert_eq(
-      provisional_story_text(projection),
-      current_reader_story_text(source),
-    )
+    assert_reader_order_matches_reader(source, projection)
     assert_reader_order_identity_mapping(projection)
     debug_inspect(
       projection.paragraphs.map(paragraph => paragraph.reader_text()),
@@ -437,10 +499,7 @@ test "reader order ignores nested row and cell property containers" {
       "word/document.xml",
       @utf8.encode(source),
     )
-    assert_eq(
-      provisional_story_text(projection),
-      current_reader_story_text(source),
-    )
+    assert_reader_order_matches_reader(source, projection)
     assert_reader_order_identity_mapping(projection)
     debug_inspect(
       projection.paragraphs.map(paragraph => paragraph.reader_text()),
@@ -465,10 +524,7 @@ test "reader order flattens inline drawing and object children" {
       "word/document.xml",
       @utf8.encode(source),
     )
-    assert_eq(
-      provisional_story_text(projection),
-      current_reader_story_text(source),
-    )
+    assert_reader_order_matches_reader(source, projection)
     assert_reader_order_identity_mapping(projection)
     projected.push(projection.paragraphs[0].reader_text())
   }
@@ -499,10 +555,7 @@ test "reader order preserves block descendants of flattened inline wrappers" {
       "word/document.xml",
       @utf8.encode(source),
     )
-    assert_eq(
-      provisional_story_text(projection),
-      current_reader_story_text(source),
-    )
+    assert_reader_order_matches_reader(source, projection)
     assert_reader_order_identity_mapping(projection)
     projected.push(
       projection.paragraphs.map(paragraph => paragraph.reader_text()),
@@ -545,10 +598,7 @@ test "reader order traverses block descendants of flow-level runs" {
       "word/document.xml",
       @utf8.encode(source),
     )
-    assert_eq(
-      provisional_story_text(projection),
-      current_reader_story_text(source),
-    )
+    assert_reader_order_matches_reader(source, projection)
     assert_reader_order_identity_mapping(projection)
     projected.push(
       projection.paragraphs.map(paragraph => paragraph.reader_text()),
@@ -568,10 +618,7 @@ test "reader order preserves block output inside runs under pict" {
     "word/document.xml",
     @utf8.encode(source),
   )
-  assert_eq(
-    provisional_story_text(projection),
-    current_reader_story_text(source),
-  )
+  assert_reader_order_matches_reader(source, projection)
   assert_reader_order_identity_mapping(projection)
   debug_inspect(
     projection.paragraphs.map(paragraph => paragraph.reader_text()),
@@ -587,10 +634,7 @@ test "reader order restores every enclosing run after an inline block" {
     "word/document.xml",
     @utf8.encode(source),
   )
-  assert_eq(
-    provisional_story_text(projection),
-    current_reader_story_text(source),
-  )
+  assert_reader_order_matches_reader(source, projection)
   assert_reader_order_identity_mapping(projection)
   debug_inspect(
     projection.paragraphs.map(paragraph => paragraph.reader_text()),
@@ -606,10 +650,7 @@ test "reader order only traverses story containers from their root context" {
     "word/document.xml",
     @utf8.encode(document_source),
   )
-  assert_eq(
-    provisional_story_text(document_projection),
-    current_reader_story_text(document_source),
-  )
+  assert_reader_order_matches_reader(document_source, document_projection)
   assert_reader_order_identity_mapping(document_projection)
   debug_inspect(
     document_projection.paragraphs.map(paragraph => paragraph.reader_text()),
@@ -693,10 +734,7 @@ test "reader order image outputs preserve malformed table fail-open behavior" {
       "word/document.xml",
       @utf8.encode(source),
     )
-    assert_eq(
-      provisional_story_text(without_image),
-      current_reader_story_text(source),
-    )
+    assert_reader_order_matches_reader(source, without_image)
     let with_image = reader_order_projection_with_all_image_outputs(source)
     assert_eq(
       provisional_story_text(with_image),
@@ -742,10 +780,7 @@ test "reader order keeps nested table merge semantics when outer table fails ope
     "word/document.xml",
     @utf8.encode(source),
   )
-  assert_eq(
-    provisional_story_text(projection),
-    current_reader_story_text(source),
-  )
+  assert_reader_order_matches_reader(source, projection)
   assert_reader_order_identity_mapping(projection)
   debug_inspect(
     projection.paragraphs.map(paragraph => paragraph.reader_text()),
@@ -761,10 +796,7 @@ test "reader order rebuilds nested merges through transparent row and cell wrapp
     "word/document.xml",
     @utf8.encode(source),
   )
-  assert_eq(
-    provisional_story_text(projection),
-    current_reader_story_text(source),
-  )
+  assert_reader_order_matches_reader(source, projection)
   assert_reader_order_identity_mapping(projection)
   debug_inspect(
     projection.paragraphs.map(paragraph => paragraph.reader_text()),
@@ -780,10 +812,7 @@ test "reader order keeps deleted paragraph-mark prefixes as physical contributor
     "word/document.xml",
     @utf8.encode(source),
   )
-  assert_eq(
-    provisional_story_text(projection),
-    current_reader_story_text(source),
-  )
+  assert_reader_order_matches_reader(source, projection)
   assert_reader_order_identity_mapping(projection)
   assert_eq(projection.paragraphs.length(), 1)
   assert_eq(projection.paragraphs[0].reader_text(), "AB")
@@ -811,10 +840,7 @@ test "reader order drops deleted paragraphs visited as paragraph children" {
     "word/document.xml",
     @utf8.encode(source),
   )
-  assert_eq(
-    provisional_story_text(projection),
-    current_reader_story_text(source),
-  )
+  assert_reader_order_matches_reader(source, projection)
   assert_reader_order_identity_mapping(projection)
   debug_inspect(
     projection.paragraphs.map(paragraph => paragraph.reader_text()),
@@ -836,14 +862,8 @@ test "reader order normalizes transitional prefixes and strict defaults" {
     "word/document.xml",
     @utf8.encode(strict),
   )
-  assert_eq(
-    provisional_story_text(transitional_projection),
-    current_reader_story_text(transitional),
-  )
-  assert_eq(
-    provisional_story_text(strict_projection),
-    current_reader_story_text(strict),
-  )
+  assert_reader_order_matches_reader(transitional, transitional_projection)
+  assert_reader_order_matches_reader(strict, strict_projection)
   debug_inspect(
     (
       transitional_projection.paragraphs.map(paragraph => {
