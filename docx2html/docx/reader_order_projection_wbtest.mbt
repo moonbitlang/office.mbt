@@ -58,9 +58,16 @@ fn reader_order_projection_with_all_image_outputs(
 /// splits the enclosing one: the outer prefix closes with the inner
 /// paragraph's content, and the outer suffix becomes a further paragraph. That
 /// is why this accumulates into one buffer instead of recursing per node -- it
-/// is the flattening the reader already performs, not one invented here. The
-/// rebuild check below is what holds it to that: if these arms ever drift from
-/// `to_raw_text`, the reconstruction stops matching.
+/// is the flattening the reader already performs, not one invented here.
+///
+/// What this is NOT. It is an ordered paragraph-text oracle, and paragraph text
+/// erases everything inside a paragraph: run boundaries (two reader runs `x`
+/// and `y` projected as one run `xy` survive this), atom kind (`Tab` against a
+/// `Text` holding a tab, which surgery treats differently), zero-width
+/// structure, and paragraph *ownership* -- two paragraphs both reading `x`
+/// could have their identities swapped and every check here would still pass
+/// while `p[0]` named the other one. Those are the gate's business, not this
+/// oracle's.
 fn reader_paragraph_texts(source : String) -> Array[String] raise {
   let root = read_xml_string(source, namespace_map=office_namespace_map())
   let children = match root.first("w:body") {
@@ -73,9 +80,23 @@ fn reader_paragraph_texts(source : String) -> Array[String] raise {
   let paragraphs = []
   let buffer = StringBuilder()
   flatten_reader_paragraphs(tree, paragraphs, buffer)
-  // Nothing may be left over. Text outside every paragraph is story text the
-  // partition does not account for, and an address cannot name it.
+  // No text after the last paragraph boundary: that would be story the
+  // partition does not account for, and an address could not name it.
+  //
+  // This says nothing about text *before* a paragraph. A body-level `w:r` --
+  // not schema-valid, but tolerated, and modelled by the projection as a
+  // flow-level run -- accumulates into the buffer the next paragraph closes,
+  // so the reader's own partition really is one paragraph reading both. That
+  // is the reader's behaviour, not a hole here, and
+  // "flow-level text before a paragraph joins it" pins it.
   assert_eq(buffer.to_string(), "")
+  // A checksum on character emission, not on the boundaries. It catches an arm
+  // that emits the wrong characters for a variant, but it cannot hold the
+  // boundary-producing arms to `to_raw_text`: splitting a `Text("a\n\nb")` in
+  // two reconstructs identically, which is the same non-injectivity that makes
+  // the story-text comparison insufficient in the first place. The arms match
+  // `to_raw_text` by inspection; this only keeps them from drifting silently in
+  // the part it can see.
   let rebuilt = StringBuilder()
   for text in paragraphs {
     rebuilt.write_string(text)
@@ -1340,6 +1361,106 @@ test "a separator inside one paragraph does not split it" {
   assert_eq(two.paragraphs.length(), 2)
   assert_reader_order_intervals_index_the_reader(joined)
   assert_reader_order_intervals_index_the_reader(split)
+}
+
+///|
+/// KNOWN DIVERGENCE: inline content directly inside a block container is read
+/// and not projected.
+///
+/// A `w:r` or `w:t` sitting where a `w:p` belongs is not schema-valid. The
+/// reader tolerates it -- `read_element` dispatches a run wherever it appears
+/// -- and emits its text. The projection drops it. This is a class, not a
+/// shape: it happens in every block container below, and in each one the
+/// reader's story carries the text while the projection's does not.
+///
+/// What survives:
+///
+///   * paragraph *count*, because flow-level content creates a paragraph on
+///     neither side, so `p[i]` still names the same paragraph on both;
+///   * whole-run surgery, checked below -- it addresses by projected paragraph
+///     and run and then edits the physical span, so the stray text is merely
+///     unaddressable rather than mis-addressed.
+///
+/// What does not: story text, and therefore every projection interval after
+/// the dropped content. `assert_reader_order_intervals_index_the_reader`
+/// reports `"x" != "y"` on the first document here. Whole-run replacement does
+/// not consume those intervals, but partial-boundary surgery (N0c2) will, so
+/// this has to close before then rather than be refused around.
+///
+/// Not fixed here, and deliberately not fixed in the projection walker: #434
+/// deletes that walker, and encoding a boundary rule into code being removed
+/// buys nothing and risks encoding it wrong. Recorded so the unified reader has
+/// to answer for it.
+test "inline content in a block container is read but not projected" {
+  let document = fn(body : String) -> String {
+    "<w:document xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\" xmlns:v=\"urn:schemas-microsoft-com:vml\"><w:body>\{body}</w:body></w:document>"
+  }
+  let cases = [
+    (
+      "body", "<w:r><w:t>x</w:t></w:r><w:p><w:r><w:t>y</w:t></w:r></w:p>", "xy\n\n",
+      "y\n\n",
+    ),
+    // A bare `w:t`, not only a bare run.
+    (
+      "bare w:t", "<w:t>x</w:t><w:p><w:r><w:t>y</w:t></w:r></w:p>", "xy\n\n", "y\n\n",
+    ),
+    // A non-text atom goes the same way.
+    (
+      "bare tab", "<w:tab/><w:p><w:r><w:t>y</w:t></w:r></w:p>", "\ty\n\n", "y\n\n",
+    ),
+    (
+      "table cell", "<w:tbl><w:tr><w:tc><w:r><w:t>x</w:t></w:r><w:p><w:r><w:t>y</w:t></w:r></w:p></w:tc></w:tr></w:tbl>",
+      "xy\n\n", "y\n\n",
+    ),
+    (
+      "sdtContent", "<w:sdt><w:sdtContent><w:r><w:t>x</w:t></w:r><w:p><w:r><w:t>y</w:t></w:r></w:p></w:sdtContent></w:sdt>",
+      "xy\n\n", "y\n\n",
+    ),
+    (
+      "txbxContent", "<w:p><w:r><w:pict><v:shape><v:textbox><w:txbxContent><w:r><w:t>x</w:t></w:r><w:p><w:r><w:t>y</w:t></w:r></w:p></w:txbxContent></v:textbox></v:shape></w:pict></w:r></w:p>",
+      "\n\nxy\n\n", "\n\ny\n\n",
+    ),
+  ]
+  for entry in cases {
+    let (label, body, reader_story, projected_story) = entry
+    let source = document(body)
+    let projection = scan_reader_order_projection(
+      "word/document.xml",
+      @utf8.encode(source),
+    )
+    assert_eq((label, current_reader_story_text(source)), (label, reader_story))
+    assert_eq(
+      (label, provisional_story_text(projection)),
+      (label, projected_story),
+    )
+    // Same number of paragraphs, which is why the addresses line up even
+    // though the text does not.
+    assert_eq(
+      (label, projection.paragraphs.length()),
+      (label, reader_paragraph_texts(source).length()),
+    )
+  }
+  // After the last paragraph there is not even a paragraph to fold the text
+  // into, and that is the one arrangement `reader_paragraph_texts` reports
+  // rather than absorbs: a partition cannot account for a suffix.
+  let trailing = document(
+    "<w:p><w:r><w:t>y</w:t></w:r></w:p><w:r><w:t>x</w:t></w:r>",
+  )
+  assert_eq(current_reader_story_text(trailing), "y\n\nx")
+  match (try? reader_paragraph_texts(trailing)) {
+    Ok(partition) =>
+      fail("expected an unaccounted suffix, got " + partition.to_string())
+    Err(_) => ()
+  }
+  // With no paragraph at all there is nothing to address, so the projection is
+  // empty rather than wrong about anything.
+  let alone = document("<w:r><w:t>x</w:t></w:r>")
+  assert_eq(current_reader_story_text(alone), "x")
+  let projected = scan_reader_order_projection(
+    "word/document.xml",
+    @utf8.encode(alone),
+  )
+  assert_eq(projected.paragraphs.length(), 0)
 }
 
 ///|

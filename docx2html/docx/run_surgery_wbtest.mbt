@@ -787,3 +787,34 @@ test "whole-run replacement accepts supplementary noncharacters" {
     expected="a\u{1FFFE}b\n\n",
   )
 }
+
+///|
+/// Addressing survives the flow-level divergence.
+///
+/// "inline content in a block container is read but not projected" records
+/// that the reader's story carries text the projection drops. That shifts every
+/// projection interval, so the question surgery has to answer is whether it
+/// also shifts an ADDRESS. It does not: `p[0]/r[0]` names the run inside the
+/// `w:p` on both sides, because flow-level content creates a paragraph on
+/// neither, and the edit is planned against the run's physical span rather than
+/// against an interval. The stray text is unaddressable, not mis-addressed.
+///
+/// This is what makes the divergence tolerable for N0c1 specifically and not a
+/// blocker; N0c2 consumes intervals and will not have that luxury.
+test "whole-run replacement is not mis-addressed by unprojected flow text" {
+  assert_whole_run_replacement(
+    "<w:r><w:t>x</w:t></w:r><w:p><w:r><w:t>y</w:t></w:r></w:p>",
+    paragraph=0,
+    run=0,
+    "EDITED",
+    expected="xEDITED\n\n",
+  )
+  // And in a container, where the reader lifts the stray run differently.
+  assert_whole_run_replacement(
+    "<w:tbl><w:tr><w:tc><w:r><w:t>x</w:t></w:r><w:p><w:r><w:t>y</w:t></w:r></w:p></w:tc></w:tr></w:tbl>",
+    paragraph=0,
+    run=0,
+    "EDITED",
+    expected="xEDITED\n\n",
+  )
+}
