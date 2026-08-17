@@ -94,6 +94,42 @@ fn assert_whole_run_replacement(
   }
   // And every byte outside the edited ranges is untouched.
   assert_untouched_bytes_survive(bytes, spliced_bytes, edits)
+  // The check above exempts exactly what the plan declared, so it cannot see a
+  // declaration that is itself too wide. What a correct plan is *allowed* to
+  // touch is derived here from the projection instead: the run's own element,
+  // and nothing else in the part.
+  assert_edits_stay_within_the_run(projection, edits, paragraph, run)
+}
+
+///|
+/// Every edit falls inside the run being addressed.
+///
+/// Derived from the projection, not from the plan: the previous check took
+/// both its exempt ranges and its offsets from the edits it was checking, so a
+/// removal widened past `bookmarkEnd` satisfied it. The run's element span is
+/// the outer bound a whole-run edit can legitimately need, and it comes from
+/// the source tree rather than from anything the planner said.
+fn assert_edits_stay_within_the_run(
+  projection : ReaderOrderProjection,
+  edits : Array[RunSurgeryEdit],
+  paragraph : Int,
+  run : Int,
+) -> Unit raise {
+  let mut identity = -1
+  for contribution in projection.paragraphs[paragraph].contributions {
+    if contribution.logical_run_index == run {
+      match contribution.run_identity {
+        Some(found) => identity = found
+        None => ()
+      }
+    }
+  }
+  assert_true(identity >= 0)
+  let element = projection.source_elements[identity]
+  for edit in edits {
+    assert_true(edit.byte_start >= element.byte_start)
+    assert_true(edit.byte_end <= element.byte_end)
+  }
 }
 
 ///|
