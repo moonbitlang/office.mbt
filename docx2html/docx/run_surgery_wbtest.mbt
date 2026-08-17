@@ -54,6 +54,12 @@ fn assert_whole_run_replacement(
   let source = "<w:document xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\" xmlns:v=\"urn:schemas-microsoft-com:vml\"><w:body>\{body}</w:body></w:document>"
   let bytes = @utf8.encode(source)
   let projection = scan_reader_order_projection("word/document.xml", bytes)
+  // An address only means anything while the two sides agree about the story,
+  // and #436 records a document where they do not and the planner silently
+  // edits the wrong run. Until that is guarded in the planner, this refuses to
+  // validate surgery on such a document at all -- otherwise a fixture could
+  // record a mis-edit as its expected result and read as evidence.
+  assert_reader_order_matches_reader(source, projection)
   let edits = plan_whole_run_replacement(
     projection, bytes, paragraph, run, text,
   )
@@ -789,32 +795,47 @@ test "whole-run replacement accepts supplementary noncharacters" {
 }
 
 ///|
-/// Addressing survives the flow-level divergence.
+/// KNOWN DEFECT: an unprojected flow-level run can shift every address.
 ///
 /// "inline content in a block container is read but not projected" records
-/// that the reader's story carries text the projection drops. That shifts every
-/// projection interval, so the question surgery has to answer is whether it
-/// also shifts an ADDRESS. It does not: `p[0]/r[0]` names the run inside the
-/// `w:p` on both sides, because flow-level content creates a paragraph on
-/// neither, and the edit is planned against the run's physical span rather than
-/// against an interval. The stray text is unaddressable, not mis-addressed.
+/// that the reader's story carries text the projection drops. The obvious
+/// reading is that the dropped text is merely unaddressable, and for a plain
+/// document that is what happens. It is wrong in general, and the counterexample
+/// is an interaction rather than a shape.
 ///
-/// This is what makes the divergence tolerable for N0c1 specifically and not a
-/// blocker; N0c2 consumes intervals and will not have that luxury.
-test "whole-run replacement is not mis-addressed by unprojected flow text" {
-  assert_whole_run_replacement(
-    "<w:r><w:t>x</w:t></w:r><w:p><w:r><w:t>y</w:t></w:r></w:p>",
-    paragraph=0,
-    run=0,
-    "EDITED",
-    expected="xEDITED\n\n",
-  )
-  // And in a container, where the reader lifts the stray run differently.
-  assert_whole_run_replacement(
-    "<w:tbl><w:tr><w:tc><w:r><w:t>x</w:t></w:r><w:p><w:r><w:t>y</w:t></w:r></w:p></w:tc></w:tr></w:tbl>",
-    paragraph=0,
-    run=0,
-    "EDITED",
-    expected="xEDITED\n\n",
-  )
+/// A checkbox control rewrites the first text its content projects. Give one a
+/// stray `<w:r><w:t>x</w:t></w:r>` before a tab-only paragraph: the reader sees
+/// `x`, spends the transform on it, and keeps the tab paragraph. The projection
+/// never sees `x`, so the tab cannot spend the transform, so the control looks
+/// textless and the paragraph is discarded. The reader reads two paragraphs and
+/// the projection describes one -- and from there `p[0]` names a different
+/// paragraph on each side.
+///
+/// The result is a silent mis-edit: asked to replace paragraph 0 run 0, which
+/// is the tab run to the reader, the planner rewrites `z` instead. The checkbox
+/// ancestry guard does not fire, because the run it wrongly selected is outside
+/// the control.
+///
+/// Pinned as the behaviour that exists, NOT as the behaviour that is wanted.
+/// The planner is private with no callers, so nothing reaches this today, and
+/// the guard it needs is a production change with a real design question behind
+/// it -- which reader configuration is authoritative for the comparison --
+/// so it is #436 rather than a rushed check here. `assert_whole_run_replacement`
+/// now refuses to validate any surgery on a document where the two disagree, so
+/// no other test can bless a mis-edit while that is open.
+test "an unprojected flow-level run shifts the address a checkbox assigns" {
+  let source =
+    #|<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main" xmlns:w14="http://schemas.microsoft.com/office/word/2010/wordml"><w:body><w:sdt><w:sdtPr><w14:checkbox/></w:sdtPr><w:sdtContent><w:r><w:t>x</w:t></w:r><w:p><w:r><w:tab/></w:r></w:p></w:sdtContent></w:sdt><w:p><w:r><w:t>z</w:t></w:r></w:p></w:body></w:document>
+  let bytes = @utf8.encode(source)
+  let projection = scan_reader_order_projection("word/document.xml", bytes)
+  // Two paragraphs to the reader, one to the projection.
+  assert_eq(current_reader_story_text(source), "\t\n\nz\n\n")
+  assert_eq(provisional_story_text(projection), "z\n\n")
+  assert_eq(reader_paragraph_texts(source).length(), 2)
+  assert_eq(projection.paragraphs.length(), 1)
+  // p[0]/r[0] is the tab run to the reader. The planner edits `z`.
+  let edits = plan_whole_run_replacement(projection, bytes, 0, 0, "EDITED")
+  let spliced = @utf8.decode(apply_run_surgery_edits(bytes, edits))
+  assert_eq(current_reader_story_text(spliced), "\t\n\nEDITED\n\n")
+  // What it should be once #436 lands: a refusal, not this.
 }

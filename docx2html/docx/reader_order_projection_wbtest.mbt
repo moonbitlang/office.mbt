@@ -1447,11 +1447,11 @@ test "inline content in a block container is read but not projected" {
     "<w:p><w:r><w:t>y</w:t></w:r></w:p><w:r><w:t>x</w:t></w:r>",
   )
   assert_eq(current_reader_story_text(trailing), "y\n\nx")
-  match (try? reader_paragraph_texts(trailing)) {
-    Ok(partition) =>
-      fail("expected an unaccounted suffix, got " + partition.to_string())
-    Err(_) => ()
+  let mut reported = false
+  try reader_paragraph_texts(trailing) |> ignore catch {
+    _ => reported = true
   }
+  assert_true(reported)
   // With no paragraph at all there is nothing to address, so the projection is
   // empty rather than wrong about anything.
   let alone = document("<w:r><w:t>x</w:t></w:r>")
