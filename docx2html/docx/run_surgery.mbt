@@ -345,6 +345,34 @@ fn run_surgery_space_declaration(
         break
       }
     }
+    // Only where an attribute name can start. The same text occurs inside
+    // another attribute's *value* -- `w:id="xml:space"` -- and matching there
+    // produced a range running from the middle of one value to the quote of
+    // the next. Replacing it wrote `w:id="xml:space="preserve"x"`, which does
+    // not parse.
+    if matched {
+      let before = source[at - 1]
+      let starts_name = at > element.byte_start &&
+        (
+          before == b' ' ||
+          before == b'\t' ||
+          before == b'\n' ||
+          before == b'\r'
+        )
+      let mut after = at + needle.length()
+      while after < stop &&
+            (
+              source[after] == b' ' ||
+              source[after] == b'\t' ||
+              source[after] == b'\n' ||
+              source[after] == b'\r'
+            ) {
+        after = after + 1
+      }
+      if !starts_name || after >= stop || source[after] != b'=' {
+        matched = false
+      }
+    }
     if matched {
       // run to the end of the quoted value
       let mut cursor = at + needle.length()

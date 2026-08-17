@@ -617,3 +617,41 @@ test "whole-run replacement validates the replacement text" {
   assert_true(spliced.contains("&#xD;"))
   assert_eq(current_reader_story_text(spliced), "a\rb\n\n")
 }
+
+///|
+/// `xml:space` is found where an attribute name can start, not anywhere.
+///
+/// The same text can sit inside another attribute's *value*. Matching there
+/// produced a range running from the middle of one value to the quote of the
+/// next, and replacing it wrote `w:id="xml:space="preserve"x"` -- which does
+/// not parse. Found by trying the shape, not by reading the scan.
+///
+/// The declaration is also written with either quote style, with spaces around
+/// the `=`, and on a self-closing element.
+test "whole-run replacement finds xml:space only as an attribute" {
+  let document = fn(body : String) -> String {
+    "<w:document xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\"><w:body>\{body}</w:body></w:document>"
+  }
+  let cases = [
+    // the name inside another attribute's value, with one following it
+    "<w:p><w:r><w:t w:id=\"xml:space\" w:rsid=\"x\">old</w:t></w:r></w:p>",
+    // and with nothing following
+     "<w:p><w:r><w:t w:id=\"xml:space\">old</w:t></w:r></w:p>",
+    // genuine declarations in every spelling
+     "<w:p><w:r><w:t xml:space=\"default\">old</w:t></w:r></w:p>", "<w:p><w:r><w:t xml:space='default'>old</w:t></w:r></w:p>",
+    "<w:p><w:r><w:t xml:space = \"default\">old</w:t></w:r></w:p>", "<w:p><w:r><w:t w:id=\"1\" xml:space=\"default\">old</w:t></w:r></w:p>",
+    "<w:p><w:r><w:t xml:space=\"default\"/></w:r></w:p>",
+  ]
+  for body in cases {
+    let source = document(body)
+    let bytes = @utf8.encode(source)
+    let projection = scan_reader_order_projection("word/document.xml", bytes)
+    let edits = plan_whole_run_replacement(projection, bytes, 0, 0, " new ")
+    let spliced = @utf8.decode(apply_run_surgery_edits(bytes, edits))
+    // it parses, reads back, and preserves the edge whitespace
+    assert_eq(current_reader_story_text(spliced), " new \n\n")
+    assert_true(spliced.contains("xml:space=\"preserve\""))
+    assert_true(!spliced.contains("xml:space=\"default\""))
+    assert_true(!spliced.contains("xml:space='default'"))
+  }
+}
