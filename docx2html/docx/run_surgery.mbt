@@ -581,7 +581,11 @@ fn run_surgery_synthesise_text(
   // wrapper that rebound it, in which case the element would carry the run's
   // spelling and somebody else's namespace -- text the reader cannot see. The
   // binding travels with the element so it means WML wherever it lands.
-  let wml = "http://schemas.openxmlformats.org/wordprocessingml/2006/main"
+  // The run's own namespace, not a constant. This project reads both the
+  // Transitional and Strict WML vocabularies, and binding the Transitional URI
+  // into a Strict document would produce a run whose text element belongs to a
+  // different vocabulary than the run around it.
+  let wml = run.uri
   let binding = if prefix == "" {
     " xmlns=\"\{wml}\""
   } else {

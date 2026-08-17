@@ -98,37 +98,80 @@ fn assert_whole_run_replacement(
   // declaration that is itself too wide. What a correct plan is *allowed* to
   // touch is derived here from the projection instead: the run's own element,
   // and nothing else in the part.
-  assert_edits_stay_within_the_run(projection, edits, paragraph, run)
+  assert_edits_touch_only_editable_bytes(projection, edits, paragraph, run)
 }
 
 ///|
-/// Every edit falls inside the run being addressed.
+/// Every edit falls on something a whole-run replacement is allowed to touch.
 ///
-/// Derived from the projection, not from the plan: the previous check took
-/// both its exempt ranges and its offsets from the edits it was checking, so a
-/// removal widened past `bookmarkEnd` satisfied it. The run's element span is
-/// the outer bound a whole-run edit can legitimately need, and it comes from
-/// the source tree rather than from anything the planner said.
-fn assert_edits_stay_within_the_run(
+/// Bounding edits by the run's outer span was too loose: replacing
+/// `<w:rPr>...</w:rPr><w:tab/>` wholesale stays inside the run, reads back
+/// correctly and re-projects correctly, while silently deleting the run's
+/// formatting.
+///
+/// The allowlist is built from the source tree -- where each atom and each
+/// `w:t` actually sits -- not from the plan. It says which bytes could
+/// legitimately be involved; which of them a correct plan chooses is what the
+/// other assertions are for. Run properties are not in it, which is what makes
+/// the wholesale replacement above fail.
+fn assert_edits_touch_only_editable_bytes(
   projection : ReaderOrderProjection,
   edits : Array[RunSurgeryEdit],
   paragraph : Int,
   run : Int,
 ) -> Unit raise {
-  let mut identity = -1
+  let allowed : Array[(Int, Int)] = []
+  let mut run_identity = -1
   for contribution in projection.paragraphs[paragraph].contributions {
-    if contribution.logical_run_index == run {
-      match contribution.run_identity {
-        Some(found) => identity = found
-        None => ()
+    if contribution.logical_run_index == run &&
+      contribution.run_identity is Some(found) {
+      run_identity = found
+      let element = projection.source_elements[contribution.source_identity]
+      match contribution.kind {
+        TransparentSeam => ()
+        TextAtom =>
+          if is_wml_uri(element.uri) && element.local_name == "t" {
+            // its text, its open tag where `xml:space` lives, and the `/>` a
+            // self-closing one turns into a body
+            if element.content_start == element.byte_end {
+              allowed.push((element.byte_end - 2, element.byte_end))
+              allowed.push((element.byte_start, element.byte_end - 2))
+            } else {
+              allowed.push((element.content_start, element.content_end))
+              allowed.push((element.byte_start, element.content_start))
+            }
+          } else {
+            allowed.push((element.byte_start, element.byte_end))
+          }
+        _ => allowed.push((element.byte_start, element.byte_end))
       }
     }
   }
-  assert_true(identity >= 0)
-  let element = projection.source_elements[identity]
+  assert_true(run_identity >= 0)
+  // a run with nothing to replace still needs somewhere to put the text
+  let run_element = projection.source_elements[run_identity]
+  allowed.push((run_element.content_start, run_element.content_start))
+  allowed.push((run_element.content_end, run_element.content_end))
+  if run_element.content_start == run_element.byte_end {
+    allowed.push((run_element.byte_end - 2, run_element.byte_end))
+  }
+  let mut child = run_element.first_child_index
+  while child >= 0 {
+    let candidate = projection.source_elements[child]
+    if is_wml_uri(candidate.uri) && candidate.local_name == "rPr" {
+      allowed.push((candidate.byte_end, candidate.byte_end))
+    }
+    child = candidate.next_sibling_index
+  }
   for edit in edits {
-    assert_true(edit.byte_start >= element.byte_start)
-    assert_true(edit.byte_end <= element.byte_end)
+    let mut inside = false
+    for span in allowed {
+      let (from, to) = span
+      if edit.byte_start >= from && edit.byte_end <= to {
+        inside = true
+      }
+    }
+    assert_true(inside)
   }
 }
 
