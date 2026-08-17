@@ -128,6 +128,23 @@ fn plan_whole_run_replacement(
       message="no run \{run_index} in paragraph \{paragraph_index}",
     )
   }
+  // A physical run that also contributes to another logical paragraph cannot
+  // be edited by naming one of them: the same bytes carry both, so the plan
+  // would be incomplete for one and a surprise for the other. No generated
+  // document produces this and the projection is asserted not to, but the
+  // check is cheap and the failure it prevents is silent.
+  let target = owned[0].run_identity
+  for index, other in projection.paragraphs {
+    if index != paragraph_index {
+      for contribution in other.contributions {
+        if contribution.run_identity == target {
+          raise Unsupported(
+            message="run \{run_index} in paragraph \{paragraph_index} also contributes to paragraph \{index}",
+          )
+        }
+      }
+    }
+  }
   let escaped = run_surgery_escape(text)
   let edits : Array[RunSurgeryEdit] = []
   let texts : Array[ScannedElement] = []
@@ -319,7 +336,7 @@ fn run_surgery_space_declaration(
 fn run_surgery_qualified_prefix(
   source : BytesView,
   element : ScannedElement,
-) -> String raise DocxError {
+) -> String {
   let stop = run_surgery_open_tag_end(element)
   let mut at = element.byte_start + 1
   let prefix : Array[Byte] = []

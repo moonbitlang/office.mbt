@@ -1352,3 +1352,48 @@ test "an atomless run is still addressable" {
   assert_eq(indices.to_array(), [0, 1, 2])
   assert_reader_order_intervals_index_the_reader(source)
 }
+
+///|
+/// A physical run does *not* always contribute to exactly one logical
+/// paragraph, which is worth stating because the opposite is the natural
+/// assumption and surgery depends on knowing better.
+///
+/// `consume_inline_block_output` re-opens the runs that were active when a
+/// nested block split the carrier paragraph, so a run whose content straddles
+/// that block appears in both halves. Found by asserting the opposite and
+/// watching it fail after 57 generated documents.
+///
+/// So `p[i]/r[j]` names a run *within a paragraph*, not a physical run
+/// uniquely, and an edit addressed that way has to refuse when the run reaches
+/// further -- which is what `plan_whole_run_replacement` does.
+test "a run whose content straddles a nested block spans two paragraphs" {
+  let source =
+    #|<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:body><w:p><w:r><w:t>before</w:t><w:tbl><w:tr><w:tc><w:p><w:r><w:t>cell</w:t></w:r></w:p></w:tc></w:tr></w:tbl><w:t>after</w:t></w:r></w:p></w:body></w:document>
+  let projection = scan_reader_order_projection(
+    "word/document.xml",
+    @utf8.encode(source),
+  )
+  let owner : Map[Int, Array[Int]] = Map([])
+  for index, paragraph in projection.paragraphs {
+    for contribution in paragraph.contributions {
+      match contribution.run_identity {
+        Some(identity) => {
+          let seen = owner.get(identity).unwrap_or([])
+          if !seen.contains(index) {
+            seen.push(index)
+          }
+          owner[identity] = seen
+        }
+        None => ()
+      }
+    }
+  }
+  let mut shared = 0
+  for pair in owner {
+    let (_, paragraphs) = pair
+    if paragraphs.length() > 1 {
+      shared = shared + 1
+    }
+  }
+  assert_true(shared >= 1)
+}

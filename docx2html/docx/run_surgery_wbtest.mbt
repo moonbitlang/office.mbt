@@ -93,46 +93,38 @@ fn assert_whole_run_replacement(
     assert_true(spliced.contains("xml:space=\"preserve\""))
   }
   // And every byte outside the edited ranges is untouched.
-  let mut cursor = 0
-  for edit in edits {
-    assert_eq(
-      spliced_prefix_matches(bytes, spliced_bytes, cursor, edit.byte_start),
-      true,
-    )
-    cursor = edit.byte_end
-  }
+  assert_untouched_bytes_survive(bytes, spliced_bytes, edits)
 }
 
 ///|
-/// Whether `[start, end)` of the original survives somewhere in the splice.
+/// Every byte the plan did not claim is still there, at the offset the plan's
+/// length changes put it.
 ///
-/// The offsets shift as earlier edits change length, so this compares the
-/// slice's content rather than its position.
-fn spliced_prefix_matches(
+/// Searching for the slice anywhere in the output was too weak: a removal
+/// spanning more than it declared could still leave a matching run of bytes
+/// somewhere else. This walks the whole part, exempting exactly the declared
+/// ranges and requiring everything else to appear at its shifted position --
+/// including the tail after the last edit, which the search version skipped.
+fn assert_untouched_bytes_survive(
   source : Bytes,
   spliced : Bytes,
-  start : Int,
-  end : Int,
-) -> Bool {
-  if end <= start {
-    return true
-  }
-  let width = end - start
-  let mut at = 0
-  while at + width <= spliced.length() {
-    let mut matched = true
-    for offset in 0..<width {
-      if spliced[at + offset] != source[start + offset] {
-        matched = false
-        break
-      }
+  edits : Array[RunSurgeryEdit],
+) -> Unit raise {
+  let mut cursor = 0
+  let mut shift = 0
+  for edit in edits {
+    for at in cursor..<edit.byte_start {
+      assert_eq(spliced[at + shift], source[at])
     }
-    if matched {
-      return true
-    }
-    at = at + 1
+    shift = shift +
+      @utf8.encode(edit.replacement).length() -
+      (edit.byte_end - edit.byte_start)
+    cursor = edit.byte_end
   }
-  false
+  for at in cursor..<source.length() {
+    assert_eq(spliced[at + shift], source[at])
+  }
+  assert_eq(spliced.length(), source.length() + shift)
 }
 
 ///|
@@ -462,4 +454,46 @@ test "whole-run synthesis is namespace-correct" {
     assert_true(spliced.contains("<x:t>"))
     assert_true(!spliced.contains("<w:t>"))
   }
+}
+
+///|
+/// A run reaching into a second logical paragraph is refused.
+///
+/// `p[i]/r[j]` names a run within a paragraph, not a physical run uniquely: a
+/// run whose content straddles a nested block is re-opened after the split and
+/// so appears in both halves. Editing it by naming one half would rewrite
+/// bytes the other half also owns -- incomplete for one, a surprise for the
+/// other.
+///
+/// This was found by asserting the opposite invariant and watching it fail
+/// after 57 generated documents, not by reasoning about the walk.
+test "whole-run replacement refuses a run that spans two paragraphs" {
+  let source =
+    #|<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:body><w:p><w:r><w:t>before</w:t><w:tbl><w:tr><w:tc><w:p><w:r><w:t>cell</w:t></w:r></w:p></w:tc></w:tr></w:tbl><w:t>after</w:t></w:r></w:p></w:body></w:document>
+  let bytes = @utf8.encode(source)
+  let projection = scan_reader_order_projection("word/document.xml", bytes)
+  let mut refused = false
+  try plan_whole_run_replacement(projection, bytes, 0, 0, "new") catch {
+    _ => refused = true
+  } noraise {
+    _ => ()
+  }
+  assert_true(refused)
+}
+
+///|
+/// A reader paragraph joined from several physical ones is still editable.
+///
+/// A deleted paragraph mark joins two physical paragraphs into one reader
+/// paragraph, so its runs come from different sources. That is not ambiguous
+/// -- each run still belongs to exactly this paragraph -- and refusing it
+/// would rule out a shape real documents contain.
+test "whole-run replacement handles a paragraph joined from two sources" {
+  assert_whole_run_replacement(
+    "<w:p><w:pPr><w:rPr><w:del/></w:rPr></w:pPr><w:r><w:t>first</w:t></w:r></w:p><w:p><w:r><w:t>second</w:t></w:r></w:p>",
+    paragraph=0,
+    run=1,
+    "changed",
+    expected="firstchanged\n\n",
+  )
 }
