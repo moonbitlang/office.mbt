@@ -48,8 +48,10 @@ fn run_surgery_escape(text : String) -> String raise DocxError {
         message="replacement text contains an unpaired surrogate U+\{code}",
       )
     }
-    // Permanently unassigned in every plane.
-    if (code & 0xFFFE) == 0xFFFE {
+    // XML 1.0 excludes `U+FFFE` and `U+FFFF` from Char. The supplementary
+    // planes' equivalents are discouraged but permitted, and refusing them
+    // would reject text a conforming parser accepts.
+    if code == 0xFFFE || code == 0xFFFF {
       raise Unsupported(
         message="replacement text contains the non-character U+\{code}",
       )
@@ -145,6 +147,24 @@ fn plan_whole_run_replacement(
       message="no run \{run_index} in paragraph \{paragraph_index}",
     )
   }
+  // A content control that declares a checkbox rewrites whatever its content
+  // projects, so no run inside one can be edited by writing bytes.
+  //
+  // Inferring this from a blanked contribution was not enough. The transform
+  // replaces the *first* text in the whole control, so editing an earlier run
+  // that had none moves the replacement onto the new text and lets the text it
+  // had been hiding through. Measured on a control holding a tab-only run and
+  // then `secret`: asked to set the first run to "MINE", the document went from
+  // showing a tab to showing "secret". The caller's text vanished and hidden
+  // text appeared, which is worse than either alone.
+  //
+  // So the whole construct is refused, by ancestry rather than by symptom.
+  let run_element = projection.source_elements[owned[0].source_identity]
+  if run_surgery_inside_checkbox_control(projection, run_element) {
+    raise Unsupported(
+      message="run \{run_index} in paragraph \{paragraph_index} sits inside a checkbox content control, whose content the reader rewrites",
+    )
+  }
   // A physical run that also contributes to another logical paragraph cannot
   // be edited by naming one of them: the same bytes carry both, so the plan
   // would be incomplete for one and a surprise for the other. No generated
@@ -195,16 +215,6 @@ fn plan_whole_run_replacement(
       TransparentSeam => ()
       TextAtom =>
         if is_wml_uri(element.uri) && element.local_name == "t" {
-          // The projection blanks a contribution the checkbox transform
-          // replaced, keeping it so its bytes stay addressable. Writing into
-          // one would be answered by that transform blanking it again: the
-          // caller would ask to set text and silently get none.
-          if contribution.value.length() == 0 &&
-            element.content_end > element.content_start {
-            raise Unsupported(
-              message="run \{run_index} in paragraph \{paragraph_index} holds text the reader replaces, so writing to it would have no effect",
-            )
-          }
           match element.text_map {
             Some(map) =>
               if map.contains_cdata {
@@ -244,6 +254,7 @@ fn plan_whole_run_replacement(
       }
       let add_space = wants_space && existing is None
       let attribute = if add_space { " xml:space=\"preserve\"" } else { "" }
+      let text_prefix = run_surgery_qualified_prefix(source, first)
       if run_surgery_is_self_closing(first) {
         // `<w:t/>` has no content range to write into -- the scanner puts it at
         // the element's end -- so the self-closing marker becomes a body. Only
@@ -251,7 +262,7 @@ fn plan_whole_run_replacement(
         edits.push({
           byte_start: first.byte_end - 2,
           byte_end: first.byte_end,
-          replacement: "\{attribute}>\{escaped}</w:t>",
+          replacement: "\{attribute}>\{escaped}</\{text_prefix}t>",
         })
       } else {
         if add_space {
@@ -288,13 +299,30 @@ fn plan_whole_run_replacement(
       // `<bookmarkStart/><tab/><bookmarkEnd/>` the tab would be deleted and the
       // replacement would land outside the bookmark -- reading the same and
       // meaning something else. It goes where the first atom it replaces was.
-      let anchor = match removals {
-        [first, ..] => first.byte_start
-        [] => run_surgery_first_content_position(source, projection, run)
+      // The first atom is *replaced* rather than removed-and-inserted-at.
+      // Two edits sharing a byte offset would have their order decided by a
+      // sort documented as unstable, and the splice requires the insertion
+      // first.
+      let (anchor, consumed) = match removals {
+        [first, ..] => (first.byte_start, first.byte_end)
+        [] => {
+          let at = run_surgery_first_content_position(source, projection, run)
+          (at, at)
+        }
       }
       edits.push(
-        run_surgery_synthesise_text(run, prefix, escaped, text, anchor~),
+        run_surgery_synthesise_text(
+          run,
+          prefix,
+          escaped,
+          text,
+          anchor~,
+          consumed~,
+        ),
       )
+      if removals.length() > 0 {
+        removals.remove(0) |> ignore
+      }
     }
   }
   for element in removals {
@@ -398,6 +426,39 @@ fn run_surgery_space_declaration(
 }
 
 ///|
+/// Whether any ancestor of this element is a content control declaring a
+/// checkbox.
+fn run_surgery_inside_checkbox_control(
+  projection : ReaderOrderProjection,
+  element : ScannedElement,
+) -> Bool {
+  let mut at = element.parent_index
+  while at >= 0 && at < projection.source_elements.length() {
+    let ancestor = projection.source_elements[at]
+    if is_wml_uri(ancestor.uri) && ancestor.local_name == "sdt" {
+      let mut child = ancestor.first_child_index
+      while child >= 0 {
+        let properties = projection.source_elements[child]
+        if is_wml_uri(properties.uri) && properties.local_name == "sdtPr" {
+          let mut declared = properties.first_child_index
+          while declared >= 0 {
+            let marker = projection.source_elements[declared]
+            if marker.uri == W14_NAMESPACE && marker.local_name == "checkbox" {
+              return true
+            }
+            declared = marker.next_sibling_index
+          }
+          break
+        }
+        child = properties.next_sibling_index
+      }
+    }
+    at = ancestor.parent_index
+  }
+  false
+}
+
+///|
 /// Where content may start inside a run that has no atoms to replace.
 ///
 /// After `w:rPr` if there is one -- run properties have to come first -- and at
@@ -437,11 +498,14 @@ fn run_surgery_qualified_prefix(
   while at < stop && at < source.length() {
     let byte = source[at]
     if byte == b':' {
-      let out = StringBuilder::new()
-      for unit in prefix {
-        out.write_char(unit.to_int().unsafe_to_char())
-      }
-      return out.to_string() + ":"
+      // Decoded, not walked byte by byte: XML permits non-ASCII prefixes, and
+      // reinterpreting each UTF-8 byte as a character would spell a different
+      // name. These bytes came from a part the scanner already accepted, so a
+      // decode failure here is not reachable; an undecodable prefix falls back
+      // to none, which the caller answers by binding the default namespace.
+      return (try? @utf8.decode(Bytes::from_array(prefix)))
+        .map(name => name + ":")
+        .unwrap_or("")
     }
     if byte == b' ' ||
       byte == b'\t' ||
@@ -502,16 +566,29 @@ fn run_surgery_synthesise_text(
   escaped : String,
   raw : String,
   anchor~ : Int,
+  consumed~ : Int,
 ) -> RunSurgeryEdit {
   let attribute = if run_surgery_needs_space_preserve(raw) {
     " xml:space=\"preserve\""
   } else {
     ""
   }
-  // The prefix comes from the run's own tag. A part that binds WML as `x`, or
-  // as the default namespace, needs `<x:t>` or `<t>` -- and a hard-coded
-  // `</w:r>` against an `<x:r/>` opening would not even be well-formed.
-  let synthesised = "<\{prefix}t\{attribute}>\{escaped}</\{prefix}t>"
+  // The prefix comes from the run's own tag: a part that binds WML as `x`, or
+  // as the default namespace, needs `<x:t>` or `<t>`, and a hard-coded
+  // `</w:r>` closing an `<x:r>` would not even be well-formed.
+  //
+  // The prefix alone is not enough, though. Synthesis can land inside a
+  // wrapper that rebound it, in which case the element would carry the run's
+  // spelling and somebody else's namespace -- text the reader cannot see. The
+  // binding travels with the element so it means WML wherever it lands.
+  let wml = "http://schemas.openxmlformats.org/wordprocessingml/2006/main"
+  let binding = if prefix == "" {
+    " xmlns=\"\{wml}\""
+  } else {
+    let name = prefix.view(end_offset=prefix.length() - 1).to_owned()
+    " xmlns:\{name}=\"\{wml}\""
+  }
+  let synthesised = "<\{prefix}t\{binding}\{attribute}>\{escaped}</\{prefix}t>"
   if run_surgery_is_self_closing(run) {
     // `<w:r/>` -> `<w:r><w:t>...</w:t></w:r>`, replacing the two bytes `/>`.
     {
@@ -520,6 +597,6 @@ fn run_surgery_synthesise_text(
       replacement: ">\{synthesised}</\{prefix}r>",
     }
   } else {
-    { byte_start: anchor, byte_end: anchor, replacement: synthesised }
+    { byte_start: anchor, byte_end: consumed, replacement: synthesised }
   }
 }

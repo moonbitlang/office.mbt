@@ -451,8 +451,11 @@ test "whole-run synthesis is namespace-correct" {
     // it parses, and the reader sees the text
     assert_eq(current_reader_story_text(spliced), "written\n\n")
     // written with the document's own prefix, not a borrowed one
-    assert_true(spliced.contains("<x:t>"))
-    assert_true(!spliced.contains("<w:t>"))
+    // the document's own prefix, and a binding that makes it mean WML wherever
+    // it landed
+    assert_true(spliced.contains("<x:t xmlns:x="))
+    assert_true(spliced.contains("</x:t>"))
+    assert_true(!spliced.contains("<w:t"))
   }
 }
 
@@ -515,9 +518,10 @@ test "whole-run synthesis lands inside the run's seams" {
   assert_eq(current_reader_story_text(spliced), "inside\n\n")
   // between the bookmark's ends, where the tab was
   let opened = spliced.contains(
-    "<w:bookmarkStart w:id=\"1\" w:name=\"b\"/><w:t>",
+    "<w:bookmarkStart w:id=\"1\" w:name=\"b\"/><w:t xmlns:w=",
   )
   assert_true(opened)
+  assert_true(spliced.contains(">inside</w:t><w:bookmarkEnd"))
 }
 
 ///|
@@ -530,7 +534,8 @@ test "whole-run synthesis goes after w:rPr" {
   let edits = plan_whole_run_replacement(projection, bytes, 0, 0, "bold")
   let spliced = @utf8.decode(apply_run_surgery_edits(bytes, edits))
   assert_eq(current_reader_story_text(spliced), "bold\n\n")
-  assert_true(spliced.contains("</w:rPr><w:t>bold</w:t>"))
+  assert_true(spliced.contains("</w:rPr><w:t xmlns:w="))
+  assert_true(spliced.contains(">bold</w:t>"))
 }
 
 ///|
@@ -654,4 +659,52 @@ test "whole-run replacement finds xml:space only as an attribute" {
     assert_true(!spliced.contains("xml:space=\"default\""))
     assert_true(!spliced.contains("xml:space='default'"))
   }
+}
+
+///|
+/// No run inside a checkbox content control can be edited.
+///
+/// The transform replaces the *first* text in the whole control, so editing an
+/// earlier run that had none moves the replacement onto the new text and lets
+/// the text it had been hiding through. Measured on a control holding a
+/// tab-only run and then `secret`: asked to set the first run to "MINE", the
+/// document went from showing a tab to showing "secret". The caller's text
+/// vanished and hidden text appeared.
+///
+/// Refusing only runs whose own text was blanked did not cover this, which is
+/// why the refusal is by ancestry.
+test "whole-run replacement refuses every run inside a checkbox control" {
+  let properties =
+    #|<w:sdtPr><w14:checkbox><w14:checked w14:val="1"/></w14:checkbox></w:sdtPr>
+  let content =
+    #|<w:p><w:r><w:tab/></w:r><w:r><w:t>secret</w:t></w:r></w:p>
+  let source = "<w:document xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\" xmlns:w14=\"http://schemas.microsoft.com/office/word/2010/wordml\"><w:body><w:sdt>\{properties}<w:sdtContent>\{content}</w:sdtContent></w:sdt></w:body></w:document>"
+  let bytes = @utf8.encode(source)
+  let projection = scan_reader_order_projection("word/document.xml", bytes)
+  // the run whose text is suppressed, and the earlier one that has none
+  for run in [0, 1] {
+    let mut refused = false
+    try plan_whole_run_replacement(projection, bytes, 0, run, "MINE") catch {
+      _ => refused = true
+    } noraise {
+      _ => ()
+    }
+    assert_true(refused)
+  }
+}
+
+///|
+/// Supplementary-plane noncharacters are permitted.
+///
+/// XML 1.0 excludes `U+FFFE` and `U+FFFF` from `Char`; the other planes'
+/// equivalents are discouraged but legal, and refusing them would reject text a
+/// conforming parser accepts.
+test "whole-run replacement accepts supplementary noncharacters" {
+  assert_whole_run_replacement(
+    "<w:p><w:r><w:t>old</w:t></w:r></w:p>",
+    paragraph=0,
+    run=0,
+    "a\u{1FFFE}b",
+    expected="a\u{1FFFE}b\n\n",
+  )
 }
