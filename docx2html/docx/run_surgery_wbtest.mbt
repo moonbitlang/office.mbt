@@ -497,3 +497,123 @@ test "whole-run replacement handles a paragraph joined from two sources" {
     expected="firstchanged\n\n",
   )
 }
+
+///|
+/// Synthesised text goes where the atom it replaces was, not at the run's end.
+///
+/// Putting it at the run's content end walks it past every seam the run
+/// contains: for `<bookmarkStart/><tab/><bookmarkEnd/>` the tab is deleted and
+/// the replacement lands *outside* the bookmark, reading the same and meaning
+/// something else.
+test "whole-run synthesis lands inside the run's seams" {
+  let source =
+    #|<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:body><w:p><w:r><w:bookmarkStart w:id="1" w:name="b"/><w:tab/><w:bookmarkEnd w:id="1"/></w:r></w:p></w:body></w:document>
+  let bytes = @utf8.encode(source)
+  let projection = scan_reader_order_projection("word/document.xml", bytes)
+  let edits = plan_whole_run_replacement(projection, bytes, 0, 0, "inside")
+  let spliced = @utf8.decode(apply_run_surgery_edits(bytes, edits))
+  assert_eq(current_reader_story_text(spliced), "inside\n\n")
+  // between the bookmark's ends, where the tab was
+  let opened = spliced.contains(
+    "<w:bookmarkStart w:id=\"1\" w:name=\"b\"/><w:t>",
+  )
+  assert_true(opened)
+}
+
+///|
+/// Run properties keep their place when a `w:t` is synthesised.
+test "whole-run synthesis goes after w:rPr" {
+  let source =
+    #|<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:body><w:p><w:r><w:rPr><w:b/></w:rPr></w:r></w:p></w:body></w:document>
+  let bytes = @utf8.encode(source)
+  let projection = scan_reader_order_projection("word/document.xml", bytes)
+  let edits = plan_whole_run_replacement(projection, bytes, 0, 0, "bold")
+  let spliced = @utf8.decode(apply_run_surgery_edits(bytes, edits))
+  assert_eq(current_reader_story_text(spliced), "bold\n\n")
+  assert_true(spliced.contains("</w:rPr><w:t>bold</w:t>"))
+}
+
+///|
+/// Field instruction text is machinery, not content.
+///
+/// Rewriting it changes what the field computes rather than what it shows. A
+/// field's cached *result* is content and stays editable -- checked rather than
+/// refused by association.
+test "whole-run replacement refuses field instructions but not results" {
+  let field =
+    #|<w:p><w:r><w:fldChar w:fldCharType="begin"/></w:r><w:r><w:instrText>PAGE</w:instrText></w:r><w:r><w:fldChar w:fldCharType="separate"/></w:r><w:r><w:t>7</w:t></w:r><w:r><w:fldChar w:fldCharType="end"/></w:r></w:p>
+  let source = "<w:document xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\"><w:body>\{field}</w:body></w:document>"
+  let bytes = @utf8.encode(source)
+  let projection = scan_reader_order_projection("word/document.xml", bytes)
+  let mut refused = false
+  try plan_whole_run_replacement(projection, bytes, 0, 1, "GONE") catch {
+    _ => refused = true
+  } noraise {
+    _ => ()
+  }
+  assert_true(refused)
+  // the result run is content
+  let edits = plan_whole_run_replacement(projection, bytes, 0, 3, "8")
+  let spliced = @utf8.decode(apply_run_surgery_edits(bytes, edits))
+  assert_eq(current_reader_story_text(spliced), "8\n\n")
+  // The case above refuses for a reason that would hold anyway: `w:instrText`
+  // is a hard barrier. This one needs the field classification -- a plain
+  // `w:t` inside the instruction region looks like ordinary content and is
+  // not, and with the region check removed it is accepted.
+  let plain =
+    #|<w:p><w:r><w:fldChar w:fldCharType="begin"/></w:r><w:r><w:t>PAGE</w:t></w:r><w:r><w:fldChar w:fldCharType="separate"/></w:r><w:r><w:t>7</w:t></w:r><w:r><w:fldChar w:fldCharType="end"/></w:r></w:p>
+  let plain_source = "<w:document xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\"><w:body>\{plain}</w:body></w:document>"
+  let plain_bytes = @utf8.encode(plain_source)
+  let plain_projection = scan_reader_order_projection(
+    "word/document.xml", plain_bytes,
+  )
+  let mut plain_refused = false
+  try
+    plan_whole_run_replacement(plain_projection, plain_bytes, 0, 1, "X")
+  catch {
+    _ => plain_refused = true
+  } noraise {
+    _ => ()
+  }
+  assert_true(plain_refused)
+}
+
+///|
+/// A run inside a text box is editable.
+///
+/// Its paragraph reaches the story through the extras pass rather than the
+/// content walk, but its runs are ordinary elements with ordinary spans, so
+/// there is nothing to refuse. Checked rather than refused by association.
+test "whole-run replacement reaches a run inside a text box" {
+  assert_whole_run_replacement(
+    "<w:p><w:r><w:pict><v:shape><v:textbox><w:txbxContent><w:p><w:r><w:t>inner</w:t></w:r></w:p></w:txbxContent></v:textbox></v:shape></w:pict></w:r></w:p>",
+    paragraph=1,
+    run=0,
+    "edited",
+    expected="\n\nedited\n\n",
+  )
+}
+
+///|
+/// Characters XML cannot carry are refused, and a carriage return is written
+/// as a reference because the parser would otherwise turn it into a newline.
+test "whole-run replacement validates the replacement text" {
+  let source =
+    #|<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:body><w:p><w:r><w:t>a</w:t></w:r></w:p></w:body></w:document>
+  let bytes = @utf8.encode(source)
+  let projection = scan_reader_order_projection("word/document.xml", bytes)
+  for bad in ["a\u{0001}b", "a\u{FFFE}b", "a\u{FFFF}b"] {
+    let mut refused = false
+    try plan_whole_run_replacement(projection, bytes, 0, 0, bad) catch {
+      _ => refused = true
+    } noraise {
+      _ => ()
+    }
+    assert_true(refused)
+  }
+  // a carriage return survives as itself rather than becoming a newline
+  let edits = plan_whole_run_replacement(projection, bytes, 0, 0, "a\rb")
+  let spliced = @utf8.decode(apply_run_surgery_edits(bytes, edits))
+  assert_true(spliced.contains("&#xD;"))
+  assert_eq(current_reader_story_text(spliced), "a\rb\n\n")
+}

@@ -41,10 +41,27 @@ fn run_surgery_escape(text : String) -> String raise DocxError {
         message="replacement text contains a control character U+\{code} that XML cannot represent",
       )
     }
+    // Surrogate code points are not characters. A lone one cannot be encoded
+    // as UTF-8 and would produce a part no parser accepts.
+    if code >= 0xD800 && code <= 0xDFFF {
+      raise Unsupported(
+        message="replacement text contains an unpaired surrogate U+\{code}",
+      )
+    }
+    // Permanently unassigned in every plane.
+    if (code & 0xFFFE) == 0xFFFE {
+      raise Unsupported(
+        message="replacement text contains the non-character U+\{code}",
+      )
+    }
     match char {
       '&' => out.write_string("&amp;")
       '<' => out.write_string("&lt;")
       '>' => out.write_string("&gt;")
+      // A literal carriage return does not survive: XML end-of-line handling
+      // turns CR and CRLF into LF when the part is read back. Writing it as a
+      // character reference is what keeps the text the caller asked for.
+      '\r' => out.write_string("&#xD;")
       _ => out.write_char(char)
     }
   }
@@ -151,6 +168,21 @@ fn plan_whole_run_replacement(
   let removals : Array[ScannedElement] = []
   for contribution in owned {
     let element = projection.source_elements[contribution.source_identity]
+    // A field's instruction text is machinery, not content: rewriting it
+    // changes what the field computes rather than what it shows. A malformed
+    // field has no reliable boundaries at all. Neither is safe to write
+    // through, and the projection already classified both.
+    match contribution.field_region {
+      FieldInstruction =>
+        raise Unsupported(
+          message="run \{run_index} in paragraph \{paragraph_index} carries field instruction text",
+        )
+      MalformedField =>
+        raise Unsupported(
+          message="run \{run_index} in paragraph \{paragraph_index} sits in a malformed field",
+        )
+      _ => ()
+    }
     match contribution.kind {
       // A barrier means the projection could not say what this contributes, so
       // it cannot say what removing it would cost either.
@@ -251,7 +283,18 @@ fn plan_whole_run_replacement(
     [] => {
       let run = projection.source_elements[owned[0].source_identity]
       let prefix = run_surgery_qualified_prefix(source, run)
-      edits.push(run_surgery_synthesise_text(run, prefix, escaped, text))
+      // Where the text goes matters. Putting it at the run's content end walks
+      // it past every seam the run contains, so for
+      // `<bookmarkStart/><tab/><bookmarkEnd/>` the tab would be deleted and the
+      // replacement would land outside the bookmark -- reading the same and
+      // meaning something else. It goes where the first atom it replaces was.
+      let anchor = match removals {
+        [first, ..] => first.byte_start
+        [] => run_surgery_first_content_position(source, projection, run)
+      }
+      edits.push(
+        run_surgery_synthesise_text(run, prefix, escaped, text, anchor~),
+      )
     }
   }
   for element in removals {
@@ -324,6 +367,29 @@ fn run_surgery_space_declaration(
     at = at + 1
   }
   None
+}
+
+///|
+/// Where content may start inside a run that has no atoms to replace.
+///
+/// After `w:rPr` if there is one -- run properties have to come first -- and at
+/// the start of the run's content otherwise.
+fn run_surgery_first_content_position(
+  source : BytesView,
+  projection : ReaderOrderProjection,
+  run : ScannedElement,
+) -> Int {
+  ignore(source)
+  let mut child = run.first_child_index
+  let mut position = run.content_start
+  while child >= 0 {
+    let element = projection.source_elements[child]
+    if is_wml_uri(element.uri) && element.local_name == "rPr" {
+      position = element.byte_end
+    }
+    child = element.next_sibling_index
+  }
+  position
 }
 
 ///|
@@ -407,6 +473,7 @@ fn run_surgery_synthesise_text(
   prefix : String,
   escaped : String,
   raw : String,
+  anchor~ : Int,
 ) -> RunSurgeryEdit {
   let attribute = if run_surgery_needs_space_preserve(raw) {
     " xml:space=\"preserve\""
@@ -425,10 +492,6 @@ fn run_surgery_synthesise_text(
       replacement: ">\{synthesised}</\{prefix}r>",
     }
   } else {
-    {
-      byte_start: run.content_end,
-      byte_end: run.content_end,
-      replacement: synthesised,
-    }
+    { byte_start: anchor, byte_end: anchor, replacement: synthesised }
   }
 }
