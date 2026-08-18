@@ -71,6 +71,8 @@ run() {
 # attributed to these two commands and not to edits the caller already had.
 dirty_before=$(git status --porcelain=v1)
 
+run "dispatch registry" python3 docx2html/tests/registry/check_dispatch_registry.py
+run "dispatch escape suite" bash docx2html/tests/registry/escape_suite.sh
 run "moon fmt" moon fmt
 run "moon info" moon info
 
