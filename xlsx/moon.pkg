@@ -22,6 +22,7 @@ import {
 }
 
 import {
+  "bobzhang/mbtexcel/testutil",
   "moonbitlang/async",
   "moonbitlang/x/time",
   "moonbitlang/core/double",

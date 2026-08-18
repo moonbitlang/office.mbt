@@ -1,8 +1,6 @@
 ///|
 fn write_bytes(buffer : Array[Byte], bytes : BytesView) -> Unit {
-  for byte in bytes {
-    buffer.push(byte)
-  }
+  @testutil.push_bytes(buffer, bytes)
 }
 
 ///|
@@ -10,24 +8,17 @@ fn write_u16_le(buffer : Array[Byte], value : Int) -> Unit raise ZipError {
   if value < 0 || value > 0xffff {
     raise UnsupportedFeature(msg="u16 overflow")
   }
-  let raw = value.reinterpret_as_uint()
-  buffer.push((raw & 0xff).to_byte())
-  buffer.push(((raw >> 8) & 0xff).to_byte())
+  @testutil.push_u16_le(buffer, value)
 }
 
 ///|
 fn write_u32_le(buffer : Array[Byte], value : UInt) -> Unit {
-  buffer.push((value & 0xff).to_byte())
-  buffer.push(((value >> 8) & 0xff).to_byte())
-  buffer.push(((value >> 16) & 0xff).to_byte())
-  buffer.push(((value >> 24) & 0xff).to_byte())
+  @testutil.push_u32_le(buffer, value)
 }
 
 ///|
 fn write_u64_le(buffer : Array[Byte], value : UInt64) -> Unit {
-  for index in 0..<8 {
-    buffer.push(((value >> (8 * index)) & 0xff).to_byte())
-  }
+  @testutil.push_u64_le(buffer, value)
 }
 
 ///|

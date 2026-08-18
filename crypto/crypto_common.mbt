@@ -19,125 +19,36 @@ fn rotr64(value : UInt64, bits : Int) -> UInt64 {
 }
 
 ///|
-pub fn u32_from_le(bytes : BytesView, offset : Int) -> UInt {
-  let b0 = bytes[offset].to_uint()
-  let b1 = bytes[offset + 1].to_uint()
-  let b2 = bytes[offset + 2].to_uint()
-  let b3 = bytes[offset + 3].to_uint()
-  b0 | (b1 << 8) | (b2 << 16) | (b3 << 24)
-}
-
-///|
-fn u32_from_be(bytes : BytesView, offset : Int) -> UInt {
-  let b0 = bytes[offset].to_uint()
-  let b1 = bytes[offset + 1].to_uint()
-  let b2 = bytes[offset + 2].to_uint()
-  let b3 = bytes[offset + 3].to_uint()
-  (b0 << 24) | (b1 << 16) | (b2 << 8) | b3
-}
-
-///|
-pub fn u64_from_le(bytes : BytesView, offset : Int) -> UInt64 {
-  let mut value : UInt64 = 0
-  for i in 0..<=7 {
-    value = value | (bytes[offset + i].to_uint64() << (8 * i))
-  }
-  value
-}
-
-///|
-fn u64_from_be(bytes : BytesView, offset : Int) -> UInt64 {
-  let mut value : UInt64 = 0
-  for i in 0..<=7 {
-    value = (value << 8) | bytes[offset + i].to_uint64()
-  }
-  value
-}
-
-///|
-pub fn push_u32_le(output : Array[Byte], value : UInt) -> Unit {
-  output.push((value & 0xff).to_uint64().to_byte())
-  output.push(((value >> 8) & 0xff).to_uint64().to_byte())
-  output.push(((value >> 16) & 0xff).to_uint64().to_byte())
-  output.push(((value >> 24) & 0xff).to_uint64().to_byte())
-}
-
-///|
-fn push_u32_be(output : Array[Byte], value : UInt) -> Unit {
-  output.push(((value >> 24) & 0xff).to_uint64().to_byte())
-  output.push(((value >> 16) & 0xff).to_uint64().to_byte())
-  output.push(((value >> 8) & 0xff).to_uint64().to_byte())
-  output.push((value & 0xff).to_uint64().to_byte())
-}
-
-///|
-fn push_u64_be(output : Array[Byte], value : UInt64) -> Unit {
-  output.push(((value >> 56) & 0xff).to_byte())
-  output.push(((value >> 48) & 0xff).to_byte())
-  output.push(((value >> 40) & 0xff).to_byte())
-  output.push(((value >> 32) & 0xff).to_byte())
-  output.push(((value >> 24) & 0xff).to_byte())
-  output.push(((value >> 16) & 0xff).to_byte())
-  output.push(((value >> 8) & 0xff).to_byte())
-  output.push((value & 0xff).to_byte())
-}
-
-///|
 fn pad_message_32(input : BytesView, little_endian_len : Bool) -> Bytes {
   let input_len = input.length()
   let final_len = (input_len + 1 + 8 + 63) / 64 * 64
-  let out : Array[Byte] = Array::new(capacity=final_len)
-  for b in input {
-    out.push(b)
-  }
+  let out = @buffer.Buffer(size_hint=final_len)
+  out.write_bytes(input)
   let bit_len = input_len.to_uint64() * 8
-  out.push(0x80)
+  out.write_byte(0x80)
   while out.length() % 64 != 56 {
-    out.push(0)
+    out.write_byte(0)
   }
   if little_endian_len {
-    let mut value = bit_len
-    for _ in 0..<=7 {
-      out.push((value & 0xff).to_byte())
-      value = value >> 8
-    }
+    out.write_uint64_le(bit_len)
   } else {
-    for i in 7>=..0 {
-      out.push(((bit_len >> (8 * i)) & 0xff).to_byte())
-    }
+    out.write_uint64_be(bit_len)
   }
-  Bytes::from_array(out)
+  out.to_bytes()
 }
 
 ///|
 fn pad_message_64(input : BytesView) -> Bytes {
   let input_len = input.length()
   let final_len = (input_len + 1 + 16 + 127) / 128 * 128
-  let out : Array[Byte] = Array::new(capacity=final_len)
-  for b in input {
-    out.push(b)
-  }
+  let out = @buffer.Buffer(size_hint=final_len)
+  out.write_bytes(input)
   let bit_len = input_len.to_uint64() * 8
-  out.push(0x80)
+  out.write_byte(0x80)
   while out.length() % 128 != 112 {
-    out.push(0)
+    out.write_byte(0)
   }
-  for _ in 0..<=7 {
-    out.push(0)
-  }
-  push_u64_be(out, bit_len)
-  Bytes::from_array(out)
-}
-
-///|
-test "crypto internal big-endian helpers" {
-  let bytes32 : Bytes = b"\x01\x02\x03\x04"
-  inspect(u32_from_be(bytes32, 0), content="16909060")
-
-  let bytes64 : Bytes = b"\x01\x02\x03\x04\x05\x06\x07\x08"
-  inspect(u64_from_be(bytes64, 0), content="72623859790382856")
-
-  let out : Array[Byte] = []
-  push_u32_be(out, 0x01020304U)
-  inspect(Bytes::from_array(out), content="b\"\\x01\\x02\\x03\\x04\"")
+  out.write_uint64_be((0 : UInt64))
+  out.write_uint64_be(bit_len)
+  out.to_bytes()
 }

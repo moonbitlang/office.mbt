@@ -55,35 +55,6 @@ fn find_eocd_offset(bytes : Array[Byte]) -> Int? {
 }
 
 ///|
-fn push_u16_le(out : Array[Byte], value : Int) -> Unit {
-  let u = (value & 0xFFFF).reinterpret_as_uint()
-  out.push((u & 0xFF).to_byte())
-  out.push(((u >> 8) & 0xFF).to_byte())
-}
-
-///|
-fn push_u32_le(out : Array[Byte], value : UInt) -> Unit {
-  out.push((value & 0xFF).to_byte())
-  out.push(((value >> 8) & 0xFF).to_byte())
-  out.push(((value >> 16) & 0xFF).to_byte())
-  out.push(((value >> 24) & 0xFF).to_byte())
-}
-
-///|
-fn push_u64_le(out : Array[Byte], value : UInt64) -> Unit {
-  for i in 0..<8 {
-    out.push(((value >> (8 * i)) & 0xff).to_byte())
-  }
-}
-
-///|
-fn push_zip_test_bytes(out : Array[Byte], bytes : BytesView) -> Unit {
-  for byte in bytes {
-    out.push(byte)
-  }
-}
-
-///|
 fn append_zip_test_local(
   out : Array[Byte],
   name : Bytes,
@@ -92,20 +63,20 @@ fn append_zip_test_local(
 ) -> Int {
   let offset = out.length()
   let crc = @zip.crc32(data)
-  push_u32_le(out, (0x04034B50 : UInt))
-  push_u16_le(out, 20)
-  push_u16_le(out, 0x0800)
-  push_u16_le(out, 0)
-  push_u16_le(out, 0)
-  push_u16_le(out, 0)
-  push_u32_le(out, crc)
-  push_u32_le(out, data.length().reinterpret_as_uint())
-  push_u32_le(out, data.length().reinterpret_as_uint())
-  push_u16_le(out, name.length())
-  push_u16_le(out, extra.length())
-  push_zip_test_bytes(out, name)
-  push_zip_test_bytes(out, extra)
-  push_zip_test_bytes(out, data)
+  @testutil.push_u32_le(out, (0x04034B50 : UInt))
+  @testutil.push_u16_le(out, 20)
+  @testutil.push_u16_le(out, 0x0800)
+  @testutil.push_u16_le(out, 0)
+  @testutil.push_u16_le(out, 0)
+  @testutil.push_u16_le(out, 0)
+  @testutil.push_u32_le(out, crc)
+  @testutil.push_u32_le(out, data.length().reinterpret_as_uint())
+  @testutil.push_u32_le(out, data.length().reinterpret_as_uint())
+  @testutil.push_u16_le(out, name.length())
+  @testutil.push_u16_le(out, extra.length())
+  @testutil.push_bytes(out, name)
+  @testutil.push_bytes(out, extra)
+  @testutil.push_bytes(out, data)
   offset
 }
 
@@ -118,25 +89,25 @@ fn append_zip_test_central(
   extra? : Bytes = b"",
 ) -> Unit {
   let crc = @zip.crc32(data)
-  push_u32_le(out, (0x02014B50 : UInt))
-  push_u16_le(out, 20)
-  push_u16_le(out, 20)
-  push_u16_le(out, 0x0800)
-  push_u16_le(out, 0)
-  push_u16_le(out, 0)
-  push_u16_le(out, 0)
-  push_u32_le(out, crc)
-  push_u32_le(out, data.length().reinterpret_as_uint())
-  push_u32_le(out, data.length().reinterpret_as_uint())
-  push_u16_le(out, name.length())
-  push_u16_le(out, extra.length())
-  push_u16_le(out, 0)
-  push_u16_le(out, 0)
-  push_u16_le(out, 0)
-  push_u32_le(out, (0 : UInt))
-  push_u32_le(out, local_offset.reinterpret_as_uint())
-  push_zip_test_bytes(out, name)
-  push_zip_test_bytes(out, extra)
+  @testutil.push_u32_le(out, (0x02014B50 : UInt))
+  @testutil.push_u16_le(out, 20)
+  @testutil.push_u16_le(out, 20)
+  @testutil.push_u16_le(out, 0x0800)
+  @testutil.push_u16_le(out, 0)
+  @testutil.push_u16_le(out, 0)
+  @testutil.push_u16_le(out, 0)
+  @testutil.push_u32_le(out, crc)
+  @testutil.push_u32_le(out, data.length().reinterpret_as_uint())
+  @testutil.push_u32_le(out, data.length().reinterpret_as_uint())
+  @testutil.push_u16_le(out, name.length())
+  @testutil.push_u16_le(out, extra.length())
+  @testutil.push_u16_le(out, 0)
+  @testutil.push_u16_le(out, 0)
+  @testutil.push_u16_le(out, 0)
+  @testutil.push_u32_le(out, (0 : UInt))
+  @testutil.push_u32_le(out, local_offset.reinterpret_as_uint())
+  @testutil.push_bytes(out, name)
+  @testutil.push_bytes(out, extra)
 }
 
 ///|
@@ -145,11 +116,11 @@ fn zip_test_unicode_path_extra(
   unicode_name : Bytes,
 ) -> Bytes {
   let out : Array[Byte] = []
-  push_u16_le(out, 0x7075)
-  push_u16_le(out, 5 + unicode_name.length())
+  @testutil.push_u16_le(out, 0x7075)
+  @testutil.push_u16_le(out, 5 + unicode_name.length())
   out.push((1).to_byte())
-  push_u32_le(out, @zip.crc32(original_name))
-  push_zip_test_bytes(out, unicode_name)
+  @testutil.push_u32_le(out, @zip.crc32(original_name))
+  @testutil.push_bytes(out, unicode_name)
   Bytes::from_array(out)
 }
 
@@ -160,14 +131,14 @@ fn append_zip_test_eocd(
   central_offset : Int,
 ) -> Unit {
   let central_size = out.length() - central_offset
-  push_u32_le(out, (0x06054B50 : UInt))
-  push_u16_le(out, 0)
-  push_u16_le(out, 0)
-  push_u16_le(out, entry_count)
-  push_u16_le(out, entry_count)
-  push_u32_le(out, central_size.reinterpret_as_uint())
-  push_u32_le(out, central_offset.reinterpret_as_uint())
-  push_u16_le(out, 0)
+  @testutil.push_u32_le(out, (0x06054B50 : UInt))
+  @testutil.push_u16_le(out, 0)
+  @testutil.push_u16_le(out, 0)
+  @testutil.push_u16_le(out, entry_count)
+  @testutil.push_u16_le(out, entry_count)
+  @testutil.push_u32_le(out, central_size.reinterpret_as_uint())
+  @testutil.push_u32_le(out, central_offset.reinterpret_as_uint())
+  @testutil.push_u16_le(out, 0)
 }
 
 ///|
@@ -311,11 +282,11 @@ test "zip read: EOCD and central directory have one exact interpretation" {
   // exact, so the archive must be rejected instead of split-view parsed.
   let decoy = raw.copy()
   overwrite_u16_le(decoy, eocd + 20, 22)
-  push_u32_le(decoy, (0x06054b50 : UInt))
+  @testutil.push_u32_le(decoy, (0x06054b50 : UInt))
   for _ in 0..<8 {
-    push_u16_le(decoy, 0)
+    @testutil.push_u16_le(decoy, 0)
   }
-  push_u16_le(decoy, 0)
+  @testutil.push_u16_le(decoy, 0)
   expect_zip_rejected(decoy)
 
   let bad_size = raw.copy()
@@ -350,28 +321,28 @@ fn wrap_classic_archive_with_zip64_eocd(
     out.push(raw[index])
   }
   let zip64_offset = out.length()
-  push_u32_le(out, (0x06064B50 : UInt))
-  push_u64_le(out, (44 : UInt64))
-  push_u16_le(out, 45)
-  push_u16_le(out, 45)
-  push_u32_le(out, (0 : UInt))
-  push_u32_le(out, (0 : UInt))
-  push_u64_le(out, (1 : UInt64))
-  push_u64_le(out, (1 : UInt64))
-  push_u64_le(out, UInt64::extend_uint(central_size))
-  push_u64_le(out, UInt64::extend_uint(central_offset))
-  push_u32_le(out, (0x07064B50 : UInt))
-  push_u32_le(out, (0 : UInt))
-  push_u64_le(out, zip64_offset.to_uint64())
-  push_u32_le(out, (1 : UInt))
-  push_u32_le(out, (0x06054B50 : UInt))
-  push_u16_le(out, 0)
-  push_u16_le(out, 0)
-  push_u16_le(out, classic_entries)
-  push_u16_le(out, classic_entries)
-  push_u32_le(out, classic_size)
-  push_u32_le(out, classic_offset)
-  push_u16_le(out, 0)
+  @testutil.push_u32_le(out, (0x06064B50 : UInt))
+  @testutil.push_u64_le(out, (44 : UInt64))
+  @testutil.push_u16_le(out, 45)
+  @testutil.push_u16_le(out, 45)
+  @testutil.push_u32_le(out, (0 : UInt))
+  @testutil.push_u32_le(out, (0 : UInt))
+  @testutil.push_u64_le(out, (1 : UInt64))
+  @testutil.push_u64_le(out, (1 : UInt64))
+  @testutil.push_u64_le(out, UInt64::extend_uint(central_size))
+  @testutil.push_u64_le(out, UInt64::extend_uint(central_offset))
+  @testutil.push_u32_le(out, (0x07064B50 : UInt))
+  @testutil.push_u32_le(out, (0 : UInt))
+  @testutil.push_u64_le(out, zip64_offset.to_uint64())
+  @testutil.push_u32_le(out, (1 : UInt))
+  @testutil.push_u32_le(out, (0x06054B50 : UInt))
+  @testutil.push_u16_le(out, 0)
+  @testutil.push_u16_le(out, 0)
+  @testutil.push_u16_le(out, classic_entries)
+  @testutil.push_u16_le(out, classic_entries)
+  @testutil.push_u32_le(out, classic_size)
+  @testutil.push_u32_le(out, classic_offset)
+  @testutil.push_u16_le(out, 0)
   Bytes::from_array(out)
 }
 
@@ -793,14 +764,14 @@ test "zip read: u32_to_int overflow hits UnsupportedFeature" {
 fn make_zip_zip64_locator_offset_negative() -> Bytes {
   let out : Array[Byte] = []
   // EOCD at offset 0 (len=22). Mark as zip64-needed, but no space for locator.
-  push_u32_le(out, (0x06054b50 : UInt))
-  push_u16_le(out, 0)
-  push_u16_le(out, 0)
-  push_u16_le(out, 0xFFFF)
-  push_u16_le(out, 0xFFFF)
-  push_u32_le(out, (0xFFFFFFFF : UInt))
-  push_u32_le(out, (0xFFFFFFFF : UInt))
-  push_u16_le(out, 0)
+  @testutil.push_u32_le(out, (0x06054b50 : UInt))
+  @testutil.push_u16_le(out, 0)
+  @testutil.push_u16_le(out, 0)
+  @testutil.push_u16_le(out, 0xFFFF)
+  @testutil.push_u16_le(out, 0xFFFF)
+  @testutil.push_u32_le(out, (0xFFFFFFFF : UInt))
+  @testutil.push_u32_le(out, (0xFFFFFFFF : UInt))
+  @testutil.push_u16_le(out, 0)
   Bytes::from_array(out)
 }
 
@@ -820,36 +791,36 @@ fn make_zip_zip64_extra_declared_too_large() -> Bytes {
   let out : Array[Byte] = []
   // Central directory @ offset 0, one entry with a malformed zip64 extra field.
   // Central header signature: 0x02014b50
-  push_u32_le(out, (0x02014b50 : UInt))
-  push_u16_le(out, 20) // version made
-  push_u16_le(out, 20) // version needed
-  push_u16_le(out, 0x0800) // UTF-8
-  push_u16_le(out, 0) // method
-  push_u16_le(out, 0)
-  push_u16_le(out, 0)
-  push_u32_le(out, (0 : UInt)) // crc32
-  push_u32_le(out, (0 : UInt)) // comp size
-  push_u32_le(out, (0xFFFFFFFF : UInt)) // uncomp size -> needs zip64
-  push_u16_le(out, 0) // name_len
-  push_u16_le(out, 4) // extra_len
-  push_u16_le(out, 0) // comment_len
-  push_u16_le(out, 0) // disk
-  push_u16_le(out, 0) // internal attrs
-  push_u32_le(out, (0 : UInt)) // external attrs
-  push_u32_le(out, (0 : UInt)) // local offset
+  @testutil.push_u32_le(out, (0x02014b50 : UInt))
+  @testutil.push_u16_le(out, 20) // version made
+  @testutil.push_u16_le(out, 20) // version needed
+  @testutil.push_u16_le(out, 0x0800) // UTF-8
+  @testutil.push_u16_le(out, 0) // method
+  @testutil.push_u16_le(out, 0)
+  @testutil.push_u16_le(out, 0)
+  @testutil.push_u32_le(out, (0 : UInt)) // crc32
+  @testutil.push_u32_le(out, (0 : UInt)) // comp size
+  @testutil.push_u32_le(out, (0xFFFFFFFF : UInt)) // uncomp size -> needs zip64
+  @testutil.push_u16_le(out, 0) // name_len
+  @testutil.push_u16_le(out, 4) // extra_len
+  @testutil.push_u16_le(out, 0) // comment_len
+  @testutil.push_u16_le(out, 0) // disk
+  @testutil.push_u16_le(out, 0) // internal attrs
+  @testutil.push_u32_le(out, (0 : UInt)) // external attrs
+  @testutil.push_u32_le(out, (0 : UInt)) // local offset
   // extra field: header_id=0x0001, data_size=10 (but only 0 bytes remain)
-  push_u16_le(out, 0x0001)
-  push_u16_le(out, 10)
+  @testutil.push_u16_le(out, 0x0001)
+  @testutil.push_u16_le(out, 10)
   let central_size = out.length()
   // EOCD @ end.
-  push_u32_le(out, (0x06054b50 : UInt))
-  push_u16_le(out, 0)
-  push_u16_le(out, 0)
-  push_u16_le(out, 1)
-  push_u16_le(out, 1)
-  push_u32_le(out, central_size.reinterpret_as_uint())
-  push_u32_le(out, (0 : UInt))
-  push_u16_le(out, 0)
+  @testutil.push_u32_le(out, (0x06054b50 : UInt))
+  @testutil.push_u16_le(out, 0)
+  @testutil.push_u16_le(out, 0)
+  @testutil.push_u16_le(out, 1)
+  @testutil.push_u16_le(out, 1)
+  @testutil.push_u32_le(out, central_size.reinterpret_as_uint())
+  @testutil.push_u32_le(out, (0 : UInt))
+  @testutil.push_u16_le(out, 0)
   Bytes::from_array(out)
 }
 
@@ -867,27 +838,27 @@ test "zip read: parse_zip64_extra hits OutOfBounds branch" {
 fn make_zip_zip64_invalid_eocd_signature() -> Bytes {
   let out : Array[Byte] = []
   // Full-size fake zip64 EOCD at offset 0 with an invalid signature.
-  push_u32_le(out, (0 : UInt))
+  @testutil.push_u32_le(out, (0 : UInt))
   for _ in 0..<52 {
     out.push((0).to_byte())
   }
   // Zip64 locator at offset 56 (20 bytes).
-  push_u32_le(out, (0x07064b50 : UInt))
-  push_u32_le(out, (0 : UInt))
+  @testutil.push_u32_le(out, (0x07064b50 : UInt))
+  @testutil.push_u32_le(out, (0 : UInt))
   // zip64_eocd_offset = 0
   for _ in 0..<=7 {
     out.push((0).to_byte())
   }
-  push_u32_le(out, (1 : UInt))
+  @testutil.push_u32_le(out, (1 : UInt))
   // Regular EOCD at offset 76.
-  push_u32_le(out, (0x06054b50 : UInt))
-  push_u16_le(out, 0)
-  push_u16_le(out, 0)
-  push_u16_le(out, 0xFFFF)
-  push_u16_le(out, 0xFFFF)
-  push_u32_le(out, (0xFFFFFFFF : UInt))
-  push_u32_le(out, (0xFFFFFFFF : UInt))
-  push_u16_le(out, 0)
+  @testutil.push_u32_le(out, (0x06054b50 : UInt))
+  @testutil.push_u16_le(out, 0)
+  @testutil.push_u16_le(out, 0)
+  @testutil.push_u16_le(out, 0xFFFF)
+  @testutil.push_u16_le(out, 0xFFFF)
+  @testutil.push_u32_le(out, (0xFFFFFFFF : UInt))
+  @testutil.push_u32_le(out, (0xFFFFFFFF : UInt))
+  @testutil.push_u16_le(out, 0)
   Bytes::from_array(out)
 }
 
@@ -905,31 +876,31 @@ test "zip read: zip64 EOCD invalid signature hits InvalidSignature branch" {
 fn make_zip_zip64_multidisk_eocd() -> Bytes {
   let out : Array[Byte] = []
   // Zip64 EOCD at offset 0.
-  push_u32_le(out, (0x06064b50 : UInt))
-  push_u64_le(out, (44 : UInt64))
-  push_u16_le(out, 45)
-  push_u16_le(out, 45)
+  @testutil.push_u32_le(out, (0x06064b50 : UInt))
+  @testutil.push_u64_le(out, (44 : UInt64))
+  @testutil.push_u16_le(out, 45)
+  @testutil.push_u16_le(out, 45)
   // disk_no != 0 triggers the multi-disk check in read_zip64_eocd.
-  push_u32_le(out, (1 : UInt))
-  push_u32_le(out, (0 : UInt))
-  push_u64_le(out, (1 : UInt64))
-  push_u64_le(out, (1 : UInt64))
-  push_u64_le(out, (0 : UInt64))
-  push_u64_le(out, (0 : UInt64))
+  @testutil.push_u32_le(out, (1 : UInt))
+  @testutil.push_u32_le(out, (0 : UInt))
+  @testutil.push_u64_le(out, (1 : UInt64))
+  @testutil.push_u64_le(out, (1 : UInt64))
+  @testutil.push_u64_le(out, (0 : UInt64))
+  @testutil.push_u64_le(out, (0 : UInt64))
   // Zip64 locator at offset 56.
-  push_u32_le(out, (0x07064b50 : UInt))
-  push_u32_le(out, (0 : UInt))
-  push_u64_le(out, (0 : UInt64))
-  push_u32_le(out, (1 : UInt))
+  @testutil.push_u32_le(out, (0x07064b50 : UInt))
+  @testutil.push_u32_le(out, (0 : UInt))
+  @testutil.push_u64_le(out, (0 : UInt64))
+  @testutil.push_u32_le(out, (1 : UInt))
   // Regular EOCD at offset 76 (marks zip64-needed).
-  push_u32_le(out, (0x06054b50 : UInt))
-  push_u16_le(out, 0)
-  push_u16_le(out, 0)
-  push_u16_le(out, 0xFFFF)
-  push_u16_le(out, 0xFFFF)
-  push_u32_le(out, (0xFFFFFFFF : UInt))
-  push_u32_le(out, (0xFFFFFFFF : UInt))
-  push_u16_le(out, 0)
+  @testutil.push_u32_le(out, (0x06054b50 : UInt))
+  @testutil.push_u16_le(out, 0)
+  @testutil.push_u16_le(out, 0)
+  @testutil.push_u16_le(out, 0xFFFF)
+  @testutil.push_u16_le(out, 0xFFFF)
+  @testutil.push_u32_le(out, (0xFFFFFFFF : UInt))
+  @testutil.push_u32_le(out, (0xFFFFFFFF : UInt))
+  @testutil.push_u16_le(out, 0)
   Bytes::from_array(out)
 }
 
@@ -970,30 +941,30 @@ test "zip read: zip64 uncompressed size missing hits zip64 size missing" {
 fn make_zip_zip64_huge_declared_entry_count() -> Bytes {
   let out : Array[Byte] = []
   // Zip64 EOCD at offset 0 declaring 2^30 entries in a tiny archive.
-  push_u32_le(out, (0x06064b50 : UInt))
-  push_u64_le(out, (44 : UInt64))
-  push_u16_le(out, 45)
-  push_u16_le(out, 45)
-  push_u32_le(out, (0 : UInt))
-  push_u32_le(out, (0 : UInt))
-  push_u64_le(out, (0x40000000 : UInt64)) // entries on disk
-  push_u64_le(out, (0x40000000 : UInt64)) // total entries
-  push_u64_le(out, (0 : UInt64)) // central size
-  push_u64_le(out, (0 : UInt64)) // central offset
+  @testutil.push_u32_le(out, (0x06064b50 : UInt))
+  @testutil.push_u64_le(out, (44 : UInt64))
+  @testutil.push_u16_le(out, 45)
+  @testutil.push_u16_le(out, 45)
+  @testutil.push_u32_le(out, (0 : UInt))
+  @testutil.push_u32_le(out, (0 : UInt))
+  @testutil.push_u64_le(out, (0x40000000 : UInt64)) // entries on disk
+  @testutil.push_u64_le(out, (0x40000000 : UInt64)) // total entries
+  @testutil.push_u64_le(out, (0 : UInt64)) // central size
+  @testutil.push_u64_le(out, (0 : UInt64)) // central offset
   // Zip64 locator at offset 56.
-  push_u32_le(out, (0x07064b50 : UInt))
-  push_u32_le(out, (0 : UInt))
-  push_u64_le(out, (0 : UInt64))
-  push_u32_le(out, (1 : UInt))
+  @testutil.push_u32_le(out, (0x07064b50 : UInt))
+  @testutil.push_u32_le(out, (0 : UInt))
+  @testutil.push_u64_le(out, (0 : UInt64))
+  @testutil.push_u32_le(out, (1 : UInt))
   // Regular EOCD at offset 76 (marks zip64-needed).
-  push_u32_le(out, (0x06054b50 : UInt))
-  push_u16_le(out, 0)
-  push_u16_le(out, 0)
-  push_u16_le(out, 0xFFFF)
-  push_u16_le(out, 0xFFFF)
-  push_u32_le(out, (0xFFFFFFFF : UInt))
-  push_u32_le(out, (0xFFFFFFFF : UInt))
-  push_u16_le(out, 0)
+  @testutil.push_u32_le(out, (0x06054b50 : UInt))
+  @testutil.push_u16_le(out, 0)
+  @testutil.push_u16_le(out, 0)
+  @testutil.push_u16_le(out, 0xFFFF)
+  @testutil.push_u16_le(out, 0xFFFF)
+  @testutil.push_u32_le(out, (0xFFFFFFFF : UInt))
+  @testutil.push_u32_le(out, (0xFFFFFFFF : UInt))
+  @testutil.push_u16_le(out, 0)
   Bytes::from_array(out)
 }
 

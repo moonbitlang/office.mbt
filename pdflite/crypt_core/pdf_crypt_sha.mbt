@@ -58,45 +58,24 @@ fn pdf_sha512_big_sigma1(value : UInt64) -> UInt64 {
 }
 
 ///|
-fn pdf_sha512_u64_from_be(data : BytesView, offset : Int) -> UInt64 {
-  let mut value : UInt64 = 0
-  for index in 0..<8 {
-    value = (value << 8) | data[offset + index].to_uint64()
-  }
-  value
-}
-
-///|
-fn pdf_sha512_write_u64_be(
-  output : Array[Byte],
-  position : Int,
-  value : UInt64,
-) -> Unit {
-  let mut offset = position
-  for shift in [56, 48, 40, 32, 24, 16, 8, 0] {
-    output[offset] = ((value >> shift) & 0xff).to_byte()
-    offset += 1
-  }
-}
-
-///|
 fn pdf_sha512_padded(data : BytesView) -> @core.PdfBytes {
   let bit_length = data.length().to_uint64() * 8
   let padded_length = (data.length() + 1 + 16 + 127) / 128 * 128
-  let output = Array::make(padded_length, b'\x00')
-  for index in 0..<data.length() {
-    output[index] = data[index]
+  let output = @buffer.Buffer(size_hint=padded_length)
+  output.write_bytes(data)
+  output.write_byte(0x80)
+  for _ in 0..<(padded_length - data.length() - 1 - 8) {
+    output.write_byte(0)
   }
-  output[data.length()] = 0x80
-  pdf_sha512_write_u64_be(output, padded_length - 8, bit_length)
-  Bytes::from_array(output)
+  output.write_uint64_be(bit_length)
+  output.to_bytes()
 }
 
 ///|
 fn pdf_sha512_process_block(block : BytesView, state : Array[UInt64]) -> Unit {
   let words : Array[UInt64] = Array::make(80, 0)
   for index in 0..<16 {
-    words[index] = pdf_sha512_u64_from_be(block, index * 8)
+    words[index] = block.unsafe_read_uint64_be(index * 8)
   }
   for index in 16..<80 {
     words[index] = pdf_sha512_small_sigma1(words[index - 2]) +
@@ -152,11 +131,11 @@ fn pdf_sha512_digest_with_state(
     pdf_sha512_process_block(padded[offset:offset + 128], state)
     offset += 128
   }
-  let output = Array::make(output_words * 8, b'\x00')
+  let output = @buffer.Buffer(size_hint=output_words * 8)
   for index in 0..<output_words {
-    pdf_sha512_write_u64_be(output, index * 8, state[index])
+    output.write_uint64_be(state[index])
   }
-  Bytes::from_array(output)
+  output.to_bytes()
 }
 
 ///|

@@ -47,7 +47,7 @@ fn sha256_hash(input : BytesView) -> Bytes {
   while offset < padded.length() {
     let w : Array[UInt] = Array::make(64, (0 : UInt))
     for i in 0..<=15 {
-      w[i] = u32_from_be(padded, offset + i * 4)
+      w[i] = padded.unsafe_read_uint32_be(offset + i * 4)
     }
     for i in 16..<=63 {
       w[i] = sha256_small_sigma1(w[i - 2]) +
@@ -87,14 +87,14 @@ fn sha256_hash(input : BytesView) -> Bytes {
     h7 = h7 + h
     offset = offset + 64
   }
-  let out : Array[Byte] = []
-  push_u32_be(out, h0)
-  push_u32_be(out, h1)
-  push_u32_be(out, h2)
-  push_u32_be(out, h3)
-  push_u32_be(out, h4)
-  push_u32_be(out, h5)
-  push_u32_be(out, h6)
-  push_u32_be(out, h7)
-  Bytes::from_array(out)
+  let out = @buffer.Buffer(size_hint=32)
+  out.write_uint_be(h0)
+  out.write_uint_be(h1)
+  out.write_uint_be(h2)
+  out.write_uint_be(h3)
+  out.write_uint_be(h4)
+  out.write_uint_be(h5)
+  out.write_uint_be(h6)
+  out.write_uint_be(h7)
+  out.to_bytes()
 }

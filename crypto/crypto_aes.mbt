@@ -107,7 +107,7 @@ fn aes_schedule(key : BytesView) -> AesSchedule raise CryptoError {
   let total_words = 4 * (rounds + 1)
   let w : Array[UInt] = Array::make(total_words, (0 : UInt))
   for i in 0..<nk {
-    w[i] = u32_from_be(key, i * 4)
+    w[i] = key.unsafe_read_uint32_be(i * 4)
   }
   let rcon = aes_rcon_cached
   for i in nk..<total_words {

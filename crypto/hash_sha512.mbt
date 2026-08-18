@@ -46,7 +46,7 @@ fn sha512_big_sigma1(x : UInt64) -> UInt64 {
 fn sha512_process_block(block : BytesView, state : Array[UInt64]) -> Unit {
   let w : Array[UInt64] = Array::make(80, (0).to_uint64())
   for i in 0..<=15 {
-    w[i] = u64_from_be(block, i * 8)
+    w[i] = block.unsafe_read_uint64_be(i * 8)
   }
   for i in 16..<=79 {
     w[i] = sha512_small_sigma1(w[i - 2]) +
@@ -99,11 +99,11 @@ fn sha512_hash(input : BytesView) -> Bytes {
     sha512_process_block(block, state)
     offset = offset + 128
   }
-  let out : Array[Byte] = []
+  let out = @buffer.Buffer(size_hint=64)
   for value in state {
-    push_u64_be(out, value)
+    out.write_uint64_be(value)
   }
-  Bytes::from_array(out)
+  out.to_bytes()
 }
 
 ///|
@@ -119,9 +119,9 @@ fn sha384_hash(input : BytesView) -> Bytes {
     sha512_process_block(block, state)
     offset = offset + 128
   }
-  let out : Array[Byte] = []
+  let out = @buffer.Buffer(size_hint=48)
   for i in 0..<=5 {
-    push_u64_be(out, state[i])
+    out.write_uint64_be(state[i])
   }
-  Bytes::from_array(out)
+  out.to_bytes()
 }

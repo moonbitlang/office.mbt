@@ -1,10 +1,4 @@
 ///|
-fn u16_to_le_bytes(value : Int) -> Array[Byte] {
-  let u = (value & 0xFFFF).reinterpret_as_uint()
-  [(u & 0xFF).to_byte(), ((u >> 8) & 0xFF).to_byte()]
-}
-
-///|
 fn gzip_overwrite_u32_le(
   bytes : Array[Byte],
   offset : Int,
@@ -32,7 +26,7 @@ test "gzip/gunzip roundtrip with optional header fields" {
     }
   }
   // FEXTRA
-  out.append(u16_to_le_bytes(3))
+  @testutil.push_u16_le(out, 3)
   out.append([(1).to_byte(), (2).to_byte(), (3).to_byte()])
   // FNAME
   for b in @encoding/utf8.encode("name") {

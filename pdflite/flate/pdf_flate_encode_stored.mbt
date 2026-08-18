@@ -1,23 +1,15 @@
 ///|
-fn pdf_flate_push_u16_le(output : Array[Byte], value : Int) -> Unit {
-  output.push((value & 0xFF).to_byte())
-  output.push(((value >> 8) & 0xFF).to_byte())
-}
-
-///|
 fn pdf_flate_push_stored_block(
-  output : Array[Byte],
+  output : @buffer.Buffer,
   data : BytesView,
   offset : Int,
   length : Int,
   final_block : Bool,
 ) -> Unit {
-  output.push(if final_block { 1 } else { 0 })
-  pdf_flate_push_u16_le(output, length)
-  pdf_flate_push_u16_le(output, 0xFFFF - length)
-  for i in 0..<length {
-    output.push(data[offset + i])
-  }
+  output.write_byte(if final_block { 1 } else { 0 })
+  output.write_uint16_le(length.to_uint16())
+  output.write_uint16_le((0xFFFF - length).to_uint16())
+  output.write_bytes(data[offset:offset + length])
 }
 
 ///|
@@ -30,10 +22,10 @@ fn pdf_flate_encode_stored_view_with_header(
   } else {
     (data.length() + 65534) / 65535
   }
-  let output = pdf_flate_output_with_header(
-    header,
-    data.length() + block_count * 5 + 4,
-  )
+  let output = @buffer.Buffer(size_hint=data.length() + block_count * 5 + 4)
+  for byte in header {
+    output.write_byte(byte)
+  }
   if data.length() == 0 {
     pdf_flate_push_stored_block(output, data, 0, 0, true)
   } else {
@@ -51,6 +43,6 @@ fn pdf_flate_encode_stored_view_with_header(
       offset += length
     }
   }
-  pdf_flate_push_adler32(output, data)
-  Bytes::from_array(output)
+  pdf_flate_push_adler32_to_buffer(output, data)
+  output.to_bytes()
 }

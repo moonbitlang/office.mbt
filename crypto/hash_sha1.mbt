@@ -10,7 +10,7 @@ fn sha1_hash(input : BytesView) -> Bytes {
   while offset < padded.length() {
     let w : Array[UInt] = Array::make(80, (0 : UInt))
     for i in 0..<=15 {
-      w[i] = u32_from_be(padded, offset + i * 4)
+      w[i] = padded.unsafe_read_uint32_be(offset + i * 4)
     }
     for i in 16..<=79 {
       w[i] = rotl32(w[i - 3] ^ w[i - 8] ^ w[i - 14] ^ w[i - 16], 1)
@@ -44,11 +44,11 @@ fn sha1_hash(input : BytesView) -> Bytes {
     h4 = (h4 + e) & mask_u32
     offset = offset + 64
   }
-  let out : Array[Byte] = []
-  push_u32_be(out, h0)
-  push_u32_be(out, h1)
-  push_u32_be(out, h2)
-  push_u32_be(out, h3)
-  push_u32_be(out, h4)
-  Bytes::from_array(out)
+  let out = @buffer.Buffer(size_hint=20)
+  out.write_uint_be(h0)
+  out.write_uint_be(h1)
+  out.write_uint_be(h2)
+  out.write_uint_be(h3)
+  out.write_uint_be(h4)
+  out.to_bytes()
 }

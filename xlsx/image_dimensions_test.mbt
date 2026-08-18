@@ -1,33 +1,11 @@
 ///|
-fn push_u16_le(out : Array[Byte], value : Int) -> Unit {
-  let u = (value & 0xFFFF).reinterpret_as_uint()
-  out.push((u & 0xFF).to_byte())
-  out.push(((u >> 8) & 0xFF).to_byte())
-}
-
-///|
-fn push_u16_be(out : Array[Byte], value : Int) -> Unit {
-  let u = (value & 0xFFFF).reinterpret_as_uint()
-  out.push(((u >> 8) & 0xFF).to_byte())
-  out.push((u & 0xFF).to_byte())
-}
-
-///|
 fn push_u32_le(out : Array[Byte], value : Int) -> Unit {
-  let u = value.reinterpret_as_uint()
-  out.push((u & 0xFF).to_byte())
-  out.push(((u >> 8) & 0xFF).to_byte())
-  out.push(((u >> 16) & 0xFF).to_byte())
-  out.push(((u >> 24) & 0xFF).to_byte())
+  @testutil.push_u32_le(out, value.reinterpret_as_uint())
 }
 
 ///|
 fn push_u32_be(out : Array[Byte], value : Int) -> Unit {
-  let u = value.reinterpret_as_uint()
-  out.push(((u >> 24) & 0xFF).to_byte())
-  out.push(((u >> 16) & 0xFF).to_byte())
-  out.push(((u >> 8) & 0xFF).to_byte())
-  out.push((u & 0xFF).to_byte())
+  @testutil.push_u32_be(out, value.reinterpret_as_uint())
 }
 
 ///|
@@ -69,8 +47,8 @@ test "image dimensions: png/gif/jpeg/bmp/ico/tiff/svg/emf/wmf/emz/wmz" {
   for b in [0x47, 0x49, 0x46, 0x38, 0x39, 0x61] {
     gif.push(b.to_byte())
   }
-  push_u16_le(gif, 5)
-  push_u16_le(gif, 6)
+  @testutil.push_u16_le(gif, 5)
+  @testutil.push_u16_le(gif, 6)
   sheet.add_image("A2", Bytes::from_array(gif), "gif", "image/gif")
   debug_inspect(
     last_image_emu(sheet),
@@ -82,10 +60,10 @@ test "image dimensions: png/gif/jpeg/bmp/ico/tiff/svg/emf/wmf/emz/wmz" {
   for b in [0xFF, 0xD8, 0xFF, 0xC0] {
     jpg.push(b.to_byte())
   }
-  push_u16_be(jpg, 17)
+  @testutil.push_u16_be(jpg, 17)
   jpg.push((8).to_byte()) // precision
-  push_u16_be(jpg, 16) // height
-  push_u16_be(jpg, 32) // width
+  @testutil.push_u16_be(jpg, 16) // height
+  @testutil.push_u16_be(jpg, 32) // width
   // padding
   for _ in 0..<10 {
     jpg.push((0).to_byte())
@@ -145,17 +123,17 @@ test "image dimensions: png/gif/jpeg/bmp/ico/tiff/svg/emf/wmf/emz/wmz" {
   let tiff_le : Array[Byte] = []
   tiff_le.push((0x49).to_byte())
   tiff_le.push((0x49).to_byte())
-  push_u16_le(tiff_le, 42)
+  @testutil.push_u16_le(tiff_le, 42)
   push_u32_le(tiff_le, 8)
-  push_u16_le(tiff_le, 2) // entry count
+  @testutil.push_u16_le(tiff_le, 2) // entry count
   // tag 256 (width), type 4, count 1, value 300
-  push_u16_le(tiff_le, 256)
-  push_u16_le(tiff_le, 4)
+  @testutil.push_u16_le(tiff_le, 256)
+  @testutil.push_u16_le(tiff_le, 4)
   push_u32_le(tiff_le, 1)
   push_u32_le(tiff_le, 300)
   // tag 257 (height), type 4, count 1, value 200
-  push_u16_le(tiff_le, 257)
-  push_u16_le(tiff_le, 4)
+  @testutil.push_u16_le(tiff_le, 257)
+  @testutil.push_u16_le(tiff_le, 4)
   push_u32_le(tiff_le, 1)
   push_u32_le(tiff_le, 200)
   push_u32_le(tiff_le, 0)
@@ -169,17 +147,17 @@ test "image dimensions: png/gif/jpeg/bmp/ico/tiff/svg/emf/wmf/emz/wmz" {
   let tiff_be : Array[Byte] = []
   tiff_be.push((0x4D).to_byte())
   tiff_be.push((0x4D).to_byte())
-  push_u16_be(tiff_be, 42)
+  @testutil.push_u16_be(tiff_be, 42)
   push_u32_be(tiff_be, 8)
-  push_u16_be(tiff_be, 2)
+  @testutil.push_u16_be(tiff_be, 2)
   // tag 256 (width), type 3, count 1, value 10
-  push_u16_be(tiff_be, 256)
-  push_u16_be(tiff_be, 3)
+  @testutil.push_u16_be(tiff_be, 256)
+  @testutil.push_u16_be(tiff_be, 3)
   push_u32_be(tiff_be, 1)
   push_u32_be(tiff_be, 10 << 16)
   // tag 257 (height), type 3, count 1, value 20
-  push_u16_be(tiff_be, 257)
-  push_u16_be(tiff_be, 3)
+  @testutil.push_u16_be(tiff_be, 257)
+  @testutil.push_u16_be(tiff_be, 3)
   push_u32_be(tiff_be, 1)
   push_u32_be(tiff_be, 20 << 16)
   push_u32_be(tiff_be, 0)
