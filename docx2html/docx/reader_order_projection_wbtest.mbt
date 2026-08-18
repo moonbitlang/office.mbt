@@ -1373,19 +1373,22 @@ test "a separator inside one paragraph does not split it" {
 /// shape: it happens in every block container below, and in each one the
 /// reader's story carries the text while the projection's does not.
 ///
-/// What survives:
+/// What breaks: story text, and therefore every projection interval after the
+/// dropped content -- `assert_reader_order_intervals_index_the_reader` reports
+/// `"x" != "y"` on the first document here. And it does not stop at the text:
+/// when the unprojected content feeds a transform, whole paragraphs can differ.
+/// A checkbox control given a stray run spends its replacement on text the
+/// projection never saw, so the reader keeps a paragraph the projection
+/// discards, `p[0]` names different paragraphs on the two sides, and
+/// `plan_whole_run_replacement` silently edits the wrong run -- pinned as "an
+/// unprojected flow-level run shifts the address a checkbox assigns" in
+/// `run_surgery_wbtest.mbt`, tracked as #436.
 ///
-///   * paragraph *count*, because flow-level content creates a paragraph on
-///     neither side, so `p[i]` still names the same paragraph on both;
-///   * whole-run surgery, checked below -- it addresses by projected paragraph
-///     and run and then edits the physical span, so the stray text is merely
-///     unaddressable rather than mis-addressed.
-///
-/// What does not: story text, and therefore every projection interval after
-/// the dropped content. `assert_reader_order_intervals_index_the_reader`
-/// reports `"x" != "y"` on the first document here. Whole-run replacement does
-/// not consume those intervals, but partial-boundary surgery (N0c2) will, so
-/// this has to close before then rather than be refused around.
+/// For the transform-free shapes in THIS test, paragraph counts happen to
+/// agree -- flow-level content creates a paragraph on neither side -- and the
+/// count assertion below records that for these fixtures. It is an observation
+/// about these documents, not a general property; the checkbox case above is
+/// the proof it does not generalise.
 ///
 /// Not fixed here, and deliberately not fixed in the projection walker: #434
 /// deletes that walker, and encoding a boundary rule into code being removed

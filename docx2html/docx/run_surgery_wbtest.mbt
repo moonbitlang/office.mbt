@@ -108,6 +108,26 @@ fn assert_whole_run_replacement(
 }
 
 ///|
+/// Plan through the agreement guard.
+///
+/// Every test that validates a SUCCESSFUL surgery plans through here, so a
+/// document where the projection and the reader disagree (#436) cannot have an
+/// edit blessed by any fixture. The refusal tests call the planner directly --
+/// they never apply the plan -- and so does the pinned-defect test, whose
+/// purpose is observing the mis-edit the disagreement causes.
+fn plan_checked_run_replacement(
+  source : String,
+  projection : ReaderOrderProjection,
+  bytes : Bytes,
+  paragraph : Int,
+  run : Int,
+  text : String,
+) -> Array[RunSurgeryEdit] raise {
+  assert_reader_order_matches_reader(source, projection)
+  plan_whole_run_replacement(projection, bytes, paragraph, run, text)
+}
+
+///|
 /// Every edit falls on something a whole-run replacement is allowed to touch.
 ///
 /// Bounding edits by the run's outer span was too loose: replacing
@@ -427,7 +447,9 @@ test "whole-run replacement does not duplicate xml:space" {
     #|<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:body><w:p><w:r><w:t xml:space="preserve"> old </w:t></w:r></w:p></w:body></w:document>
   let bytes = @utf8.encode(source)
   let projection = scan_reader_order_projection("word/document.xml", bytes)
-  let edits = plan_whole_run_replacement(projection, bytes, 0, 0, " new ")
+  let edits = plan_checked_run_replacement(
+    source, projection, bytes, 0, 0, " new ",
+  )
   let spliced = @utf8.decode(apply_run_surgery_edits(bytes, edits))
   assert_eq(current_reader_story_text(spliced), " new \n\n")
   // exactly one declaration survives
@@ -500,7 +522,9 @@ test "whole-run replacement replaces a wrong xml:space value" {
     #|<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:body><w:p><w:r><w:t xml:space="default">old</w:t></w:r></w:p></w:body></w:document>
   let bytes = @utf8.encode(source)
   let projection = scan_reader_order_projection("word/document.xml", bytes)
-  let edits = plan_whole_run_replacement(projection, bytes, 0, 0, " new ")
+  let edits = plan_checked_run_replacement(
+    source, projection, bytes, 0, 0, " new ",
+  )
   let spliced = @utf8.decode(apply_run_surgery_edits(bytes, edits))
   assert_eq(current_reader_story_text(spliced), " new \n\n")
   assert_true(spliced.contains("xml:space=\"preserve\""))
@@ -530,7 +554,9 @@ test "whole-run synthesis is namespace-correct" {
     let (source, text) = case
     let bytes = @utf8.encode(source)
     let projection = scan_reader_order_projection("word/document.xml", bytes)
-    let edits = plan_whole_run_replacement(projection, bytes, 0, 0, text)
+    let edits = plan_checked_run_replacement(
+      source, projection, bytes, 0, 0, text,
+    )
     let spliced_bytes = apply_run_surgery_edits(bytes, edits)
     let spliced = @utf8.decode(spliced_bytes)
     // it parses, and the reader sees the text
@@ -598,7 +624,9 @@ test "whole-run synthesis lands inside the run's seams" {
     #|<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:body><w:p><w:r><w:bookmarkStart w:id="1" w:name="b"/><w:tab/><w:bookmarkEnd w:id="1"/></w:r></w:p></w:body></w:document>
   let bytes = @utf8.encode(source)
   let projection = scan_reader_order_projection("word/document.xml", bytes)
-  let edits = plan_whole_run_replacement(projection, bytes, 0, 0, "inside")
+  let edits = plan_checked_run_replacement(
+    source, projection, bytes, 0, 0, "inside",
+  )
   let spliced = @utf8.decode(apply_run_surgery_edits(bytes, edits))
   assert_eq(current_reader_story_text(spliced), "inside\n\n")
   // between the bookmark's ends, where the tab was
@@ -616,7 +644,9 @@ test "whole-run synthesis goes after w:rPr" {
     #|<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:body><w:p><w:r><w:rPr><w:b/></w:rPr></w:r></w:p></w:body></w:document>
   let bytes = @utf8.encode(source)
   let projection = scan_reader_order_projection("word/document.xml", bytes)
-  let edits = plan_whole_run_replacement(projection, bytes, 0, 0, "bold")
+  let edits = plan_checked_run_replacement(
+    source, projection, bytes, 0, 0, "bold",
+  )
   let spliced = @utf8.decode(apply_run_surgery_edits(bytes, edits))
   assert_eq(current_reader_story_text(spliced), "bold\n\n")
   assert_true(spliced.contains("</w:rPr><w:t xmlns:w="))
@@ -643,7 +673,7 @@ test "whole-run replacement refuses field instructions but not results" {
   }
   assert_true(refused)
   // the result run is content
-  let edits = plan_whole_run_replacement(projection, bytes, 0, 3, "8")
+  let edits = plan_checked_run_replacement(source, projection, bytes, 0, 3, "8")
   let spliced = @utf8.decode(apply_run_surgery_edits(bytes, edits))
   assert_eq(current_reader_story_text(spliced), "8\n\n")
   // The case above refuses for a reason that would hold anyway: `w:instrText`
@@ -702,7 +732,9 @@ test "whole-run replacement validates the replacement text" {
     assert_true(refused)
   }
   // a carriage return survives as itself rather than becoming a newline
-  let edits = plan_whole_run_replacement(projection, bytes, 0, 0, "a\rb")
+  let edits = plan_checked_run_replacement(
+    source, projection, bytes, 0, 0, "a\rb",
+  )
   let spliced = @utf8.decode(apply_run_surgery_edits(bytes, edits))
   assert_true(spliced.contains("&#xD;"))
   assert_eq(current_reader_story_text(spliced), "a\rb\n\n")
@@ -736,7 +768,9 @@ test "whole-run replacement finds xml:space only as an attribute" {
     let source = document(body)
     let bytes = @utf8.encode(source)
     let projection = scan_reader_order_projection("word/document.xml", bytes)
-    let edits = plan_whole_run_replacement(projection, bytes, 0, 0, " new ")
+    let edits = plan_checked_run_replacement(
+      source, projection, bytes, 0, 0, " new ",
+    )
     let spliced = @utf8.decode(apply_run_surgery_edits(bytes, edits))
     // it parses, reads back, and preserves the edge whitespace
     assert_eq(current_reader_story_text(spliced), " new \n\n")
