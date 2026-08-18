@@ -126,6 +126,9 @@ expect E23-multiword-font "UNREGISTERED: BOOKSHELF SYMBOL 7"
 fresh; mutate docx_reader.mbt 's/^fn office_namespace_map/let toplevel_probe : String = "toplevelEscape"\n\n\/\/\/|\nfn office_namespace_map/m' toplevelEscape
 expect E24-toplevel-binding "UNREGISTERED: toplevelEscape"
 
+fresh; printf 'fn table_dispatch(tag : String) -> Bool {\n  ["custom-name"].contains(tag)\n}\n' > "$work/docx/escape_probe.mbt"
+expect E25-table-driven-new-file "UNCLASSIFIED FILE: escape_probe.mbt"
+
 fresh; expect final-baseline "names reconciled"
 
-if [ "$fail" -eq 0 ]; then echo "escape suite: 24 escapes + 2 baselines, all as expected"; else exit 1; fi
+if [ "$fail" -eq 0 ]; then echo "escape suite: 25 escapes + 2 baselines, all as expected"; else exit 1; fi

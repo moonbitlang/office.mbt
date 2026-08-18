@@ -49,7 +49,7 @@ annotation_index.mbt	hdr	annotation_story_root_local_name	name	-
 annotation_index.mbt	header	annotation_story_root_local_name,build_annotation_index,validate_section_story_references	value	-
 annotation_index.mbt	inside_end	AnnotationWarningCollector::finish	value	-
 annotation_index.mbt	inside_start	AnnotationWarningCollector::finish	value	-
-annotation_index.mbt	legacy-fallback	DocxStoryPartAuthority::name	prefix	-
+annotation_index.mbt	legacy-fallback	DocxStoryPartAuthority::name	value	-
 annotation_index.mbt	on	read_comments_extended	value	-
 annotation_index.mbt	r:id	validate_section_story_references	name	-
 annotation_index.mbt	relationship	DocxStoryPartAuthority::name	value	-
@@ -226,7 +226,7 @@ docx_reader.mbt	content-types:Override	read_content_types	name	-
 docx_reader.mbt	continuationNotice	read_note_part_at_path	value	-
 docx_reader.mbt	continuationSeparator	read_note_part_at_path	value	-
 docx_reader.mbt	continue	read_vertical_merge_continue	value	-
-docx_reader.mbt	descr	read_drawing_alt_text	value	-
+docx_reader.mbt	descr	read_drawing_alt_text	name	-
 docx_reader.mbt	end	BodyReader::read_paragraph_children	value	-
 docx_reader.mbt	endnote	BodyReader::read_element,read_notes_for_document	name	-
 docx_reader.mbt	endnotes	DocumentParts::build,annotation_story_relationship_identity,expected_annotation_content_type	name	-
@@ -260,7 +260,7 @@ docx_reader.mbt	r	office_namespace_map	prefix	-
 docx_reader.mbt	r:embed	BodyReader::read_blip	name	-
 docx_reader.mbt	r:id	BodyReader::read_drawing_hyperlink,BodyReader::read_hyperlink,BodyReader::read_vml_image_data	name	-
 docx_reader.mbt	r:link	BodyReader::read_blip	name	-
-docx_reader.mbt	relationships	office_namespace_map	value	-
+docx_reader.mbt	relationships	office_namespace_map	prefix	-
 docx_reader.mbt	relationships:Relationship	read_relationships_xml	name	-
 docx_reader.mbt	separate	BodyReader::read_paragraph_children	value	-
 docx_reader.mbt	separator	read_note_part_at_path	value	-
@@ -271,7 +271,7 @@ docx_reader.mbt	table	BodyReader::read_table_properties,style_warning_label	valu
 docx_reader.mbt	textWrapping	BodyReader::read_break	value	-
 docx_reader.mbt	tif	fallback_content_type	value	-
 docx_reader.mbt	tiff	fallback_content_type	value	-
-docx_reader.mbt	title	read_drawing_alt_text	value	-
+docx_reader.mbt	title	read_drawing_alt_text	name	-
 docx_reader.mbt	undefined	BodyReader::read_element,annotation_id_or_missing,attribute_or_js_undefined	value	-
 docx_reader.mbt	v	office_namespace_map	prefix	-
 docx_reader.mbt	v:group	BodyReader::read_element,BodyReader::read_pict_extra_elements	name	-

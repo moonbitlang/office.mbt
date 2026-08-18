@@ -70,6 +70,9 @@ FILES = {
     'write_tables.mbt': 'exempt',
     'annotate_fragments.mbt': 'exempt',
     'new_document.mbt': 'exempt',
+    # authoring surface: quotes only internal media keys today; the bare-name
+    # trigger below will demand a fresh look the moment that changes
+    'authoring.mbt': 'exempt',
 }
 # Functions in exempt files allowed to inspect element names, each with the
 # argued reason held in review. Token-level closure below means no spelling
@@ -207,13 +210,15 @@ for f in production:
     lines = open(os.path.join(DOCX, f)).read().split('\n')
     stripped = [strip_comments(l) for l in lines]
     joined = '\n'.join(stripped)
-    has_qname = any(m.group(1) not in SCHEMES for l in stripped for m in QNAME.finditer(l))
+    # ANY name-shaped quoted string triggers classification. Over-triggering
+    # costs the author one classification line; under-triggering is how
+    # table-driven dispatch ([..].contains) and every future shape escape.
     if (
-        has_qname
+        any(m.group(1) not in SCHEMES for l in stripped for m in QNAME.finditer(l))
         or LOCAL_TOKEN.search(joined)
         or NAME_TOKEN.search(joined)
         or any(FRAGMENT.search(l) for l in stripped)
-        or SMUGGLE.search(joined)
+        or any(BARE.search(l) for l in stripped)
     ):
         errors.append(f"UNCLASSIFIED FILE: {f} references XML names but is not classified in check_dispatch_registry.py")
 for f in FILES:
