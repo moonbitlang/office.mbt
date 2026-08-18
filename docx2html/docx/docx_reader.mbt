@@ -2367,9 +2367,7 @@ fn BodyReader::read_paragraph_elements_with_prefix(
     local_effects: [],
     shape: ReaderParagraph(
       sources=prefix + [element],
-      children=reader_legacy_items(
-        self.read_paragraph_children(prefix + element.element_children()),
-      ),
+      children=self.read_paragraph_children(prefix + element.element_children()),
       extras=self.read_paragraph_extra_elements(element),
       properties~,
     ),
@@ -2378,9 +2376,9 @@ fn BodyReader::read_paragraph_elements_with_prefix(
 
 ///|
 priv enum ComplexField {
-  ComplexFieldBegin(checkbox_checked~ : Bool?)
-  ComplexHyperlink(href~ : String?, anchor~ : String?)
-  ComplexCheckbox(Bool)
+  ComplexFieldBegin(checkbox_checked~ : Bool?, source~ : ReaderNode)
+  ComplexHyperlink(href~ : String?, anchor~ : String?, source~ : ReaderNode)
+  ComplexCheckbox(Bool, source~ : ReaderNode)
   ComplexFieldUnknown
 }
 
@@ -2388,8 +2386,8 @@ priv enum ComplexField {
 fn BodyReader::read_paragraph_children(
   self : BodyReader,
   children : Array[ReaderNode],
-) -> Array[DocumentElement] raise DocxError {
-  let elements : Array[DocumentElement] = []
+) -> Array[ReaderItem] raise DocxError {
+  let items : Array[ReaderItem] = []
   let stack : Array[ComplexField] = []
   let mut instruction_text = ""
   for element in children {
@@ -2399,62 +2397,133 @@ fn BodyReader::read_paragraph_children(
         stack.push(
           ComplexFieldBegin(
             checkbox_checked=read_complex_field_checkbox_checked(element),
+            source=element,
           ),
         )
         instruction_text = ""
-        elements.append(
-          reader_legacy_island_elements(self.read_element(element)),
-        )
+        items.append(self.read_element(element))
       }
       Some("separate") => {
         match stack.pop() {
-          Some(ComplexFieldBegin(checkbox_checked~)) =>
+          Some(ComplexFieldBegin(checkbox_checked~, source~)) =>
             stack.push(
               parse_complex_field_instruction(
-                instruction_text, checkbox_checked,
+                instruction_text, checkbox_checked, source,
               ),
             )
           Some(field) => stack.push(field)
           None => ()
         }
         instruction_text = ""
-        elements.append(
-          reader_legacy_island_elements(self.read_element(element)),
-        )
+        items.append(self.read_element(element))
       }
       Some("end") => {
         match stack.pop() {
-          Some(ComplexFieldBegin(checkbox_checked~)) =>
+          Some(ComplexFieldBegin(checkbox_checked~, source~)) =>
             match
               parse_complex_field_instruction(
-                instruction_text, checkbox_checked,
+                instruction_text, checkbox_checked, source,
               ) {
-              ComplexCheckbox(checked) =>
-                elements.push(run([checkbox(checked)]))
+              ComplexCheckbox(checked, source~) =>
+                items.push(reader_field_checkbox_run(checked, source))
               _ => ()
             }
-          Some(ComplexCheckbox(checked)) =>
-            elements.push(run([checkbox(checked)]))
+          Some(ComplexCheckbox(checked, source~)) =>
+            items.push(reader_field_checkbox_run(checked, source))
           Some(_) => ()
           None => ()
         }
         instruction_text = ""
-        elements.append(
-          reader_legacy_island_elements(self.read_element(element)),
-        )
+        items.append(self.read_element(element))
       }
       _ =>
         if element.name() != "w:instrText" {
-          elements.append(
-            wrap_with_current_hyperlink(
-              stack,
-              reader_legacy_island_elements(self.read_element(element)),
-            ),
+          items.append(
+            wrap_items_with_current_hyperlink(stack, self.read_element(element)),
           )
         }
     }
   }
-  elements
+  items
+}
+
+///|
+/// The run a FORMCHECKBOX field synthesises at its end marker. Its source is
+/// the field-begin node: the synthetic output has no child of its own to
+/// blame, and the begin is where the field's identity lives.
+fn reader_field_checkbox_run(checked : Bool, source : ReaderNode) -> ReaderItem {
+  New({
+    source,
+    local_effects: [],
+    shape: ReaderRun(
+      children=[
+        New({ source, local_effects: [], shape: ReaderCheckbox(checked) }),
+      ],
+      properties=RunProperties::default(),
+    ),
+  })
+}
+
+///|
+/// Wrap freshly read items in the innermost open HYPERLINK field, at the
+/// item level. A run keeps the hyperlink INSIDE it (matching the legacy
+/// shape Run(Hyperlink(children))); anything else is wrapped outside. The
+/// synthesised hyperlink's source is the field-begin node.
+fn wrap_items_with_current_hyperlink(
+  stack : Array[ComplexField],
+  items : Array[ReaderItem],
+) -> Array[ReaderItem] {
+  match current_hyperlink_field(stack) {
+    Some((href, anchor, source)) => {
+      let wrapped : Array[ReaderItem] = []
+      for item in items {
+        wrapped.push(wrap_item_with_hyperlink(item, href, anchor, source))
+      }
+      wrapped
+    }
+    None => items
+  }
+}
+
+///|
+fn wrap_item_with_hyperlink(
+  item : ReaderItem,
+  href : String?,
+  anchor : String?,
+  source : ReaderNode,
+) -> ReaderItem {
+  fn hyperlink_of(children : Array[ReaderItem]) -> ReaderItem {
+    New({
+      source,
+      local_effects: [],
+      shape: ReaderHyperlink(children~, href~, anchor~, target_frame=None),
+    })
+  }
+
+  match item {
+    New(
+      {
+        source: run_source,
+        local_effects,
+        shape: ReaderRun(children~, properties~),
+      }
+    ) =>
+      New({
+        source: run_source,
+        local_effects,
+        shape: ReaderRun(children=[hyperlink_of(children)], properties~),
+      })
+    Legacy(Run(children~, properties~)) =>
+      New({
+        source,
+        local_effects: [],
+        shape: ReaderRun(
+          children=[hyperlink_of(reader_legacy_items(children))],
+          properties~,
+        ),
+      })
+    other => hyperlink_of([other])
+  }
 }
 
 ///|
@@ -2519,11 +2588,14 @@ fn first_descendant_or_self(element : ReaderNode, name : String) -> ReaderNode? 
 fn parse_complex_field_instruction(
   instruction_text : String,
   checkbox_checked : Bool?,
+  source : ReaderNode,
 ) -> ComplexField {
-  match parse_hyperlink_field_instruction(instruction_text) {
+  match parse_hyperlink_field_instruction(instruction_text, source) {
     Some(field) => field
     None =>
-      parse_non_hyperlink_field_instruction(instruction_text, checkbox_checked)
+      parse_non_hyperlink_field_instruction(
+        instruction_text, checkbox_checked, source,
+      )
   }
 }
 
@@ -2531,9 +2603,10 @@ fn parse_complex_field_instruction(
 fn parse_non_hyperlink_field_instruction(
   instruction_text : String,
   checkbox_checked : Bool?,
+  source : ReaderNode,
 ) -> ComplexField {
   if instruction_text.contains("FORMCHECKBOX") {
-    ComplexCheckbox(checkbox_checked.unwrap_or(false))
+    ComplexCheckbox(checkbox_checked.unwrap_or(false), source~)
   } else {
     ComplexFieldUnknown
   }
@@ -2542,6 +2615,7 @@ fn parse_non_hyperlink_field_instruction(
 ///|
 fn parse_hyperlink_field_instruction(
   instruction_text : String,
+  source : ReaderNode,
 ) -> ComplexField? {
   let keyword = "HYPERLINK"
   let mut index = skip_field_whitespace(instruction_text, 0)
@@ -2566,9 +2640,9 @@ fn parse_hyperlink_field_instruction(
     match read_field_location(instruction_text, index) {
       Some(location) =>
         if is_internal_link {
-          Some(ComplexHyperlink(href=None, anchor=Some(location)))
+          Some(ComplexHyperlink(href=None, anchor=Some(location), source~))
         } else {
-          Some(ComplexHyperlink(href=Some(location), anchor=None))
+          Some(ComplexHyperlink(href=Some(location), anchor=None, source~))
         }
       None => None
     }
@@ -2631,47 +2705,17 @@ fn field_starts_with_at(value : String, index : Int, prefix : String) -> Bool {
 }
 
 ///|
-fn wrap_with_current_hyperlink(
+fn current_hyperlink_field(
   stack : Array[ComplexField],
-  elements : Array[DocumentElement],
-) -> Array[DocumentElement] {
-  match current_hyperlink_field(stack) {
-    Some((href, anchor)) => {
-      let wrapped : Array[DocumentElement] = []
-      for element in elements {
-        wrapped.push(wrap_element_with_hyperlink(element, href, anchor))
-      }
-      wrapped
-    }
-    None => elements
-  }
-}
-
-///|
-fn current_hyperlink_field(stack : Array[ComplexField]) -> (String?, String?)? {
+) -> (String?, String?, ReaderNode)? {
   for index = stack.length() - 1; index >= 0; index = index - 1 {
     match stack[index] {
-      ComplexHyperlink(href~, anchor~) => return Some((href, anchor))
+      ComplexHyperlink(href~, anchor~, source~) =>
+        return Some((href, anchor, source))
       _ => ()
     }
   }
   None
-}
-
-///|
-fn wrap_element_with_hyperlink(
-  element : DocumentElement,
-  href : String?,
-  anchor : String?,
-) -> DocumentElement {
-  match element {
-    Run(children~, properties~) =>
-      Run(
-        children=[Hyperlink(children~, href~, anchor~, target_frame=None)],
-        properties~,
-      )
-    _ => Hyperlink(children=[element], href~, anchor~, target_frame=None)
-  }
 }
 
 ///|
