@@ -53,8 +53,10 @@ Within extracted files:
 
 Closed, each verified by a live mutation: a new match arm (any prefix), a
 concatenated name, a name inside a multiline string, a helper taking the name
-as a `String` parameter, a new file joining the dispatch, and a new entry in
-any declared table. Not closed: true dataflow — a name smuggled through
+as a `String` parameter -- compared either way round or matched through a
+string-literal `match` arm -- a new file joining the dispatch (by name,
+fragment, or `local_name`), a new entry in any declared table, and an exempt
+writer gaining read-side inspection. Not closed: true dataflow — a name smuggled through
 enough indirection that no quoted fragment and no name-shaped comparison
 appears. A regex cannot follow values; the endgame for that is #434 itself,
 after which there is one dispatch surface and no parallel ledger to keep.
@@ -71,8 +73,12 @@ and the gap list is the work list.
 Run locally from anywhere:
 
 ```bash
-python3 docx2html/tests/registry/check_dispatch_registry.py          # reconcile
-python3 docx2html/tests/registry/check_dispatch_registry.py --emit   # regenerate, preserving kind/coverage
+python3 docx2html/tests/registry/check_dispatch_registry.py           # reconcile
+python3 docx2html/tests/registry/check_dispatch_registry.py --update  # rewrite rows in place, preserving kind/coverage
 ```
+
+(`--emit` prints to stdout; do NOT redirect it onto the registry itself --
+the shell truncates the file before the checker reads it, wiping every
+annotation. That happened once; `--update` exists so it cannot again.)
 
 Also part of `scripts/ci/local-gate.sh`.

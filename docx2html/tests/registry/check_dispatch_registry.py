@@ -97,6 +97,7 @@ FILES = {
             'attribute_value',
             'relationship_attribute_value',
             'validate_projection_source_namespace',
+            'decode_entities',
         },
     }}},
     'field_projection.mbt': {'extract': {'qualified': True, 'local': {
@@ -136,7 +137,10 @@ FILES = {
     # -- writers: their names construct output. They are the writing half of
     #    the round trip, not a second reading of it, and #434's gate is about
     #    the two READ implementations agreeing.
-    'write_comments.mbt': {'exempt': 'writer'},
+    'write_comments.mbt': {'exempt': 'writer', 'allowed_inspectors': {
+        # inspects its own freshly generated output, not a read document
+        'write_docx_with_annotations',
+    }},
     'write_document.mbt': {'exempt': 'writer'},
     'write_headers.mbt': {'exempt': 'writer'},
     'write_media.mbt': {'exempt': 'writer'},
@@ -159,7 +163,11 @@ SCHEMES = {'urn', 'http', 'https', 'mailto', 'data'}
 LOCAL_NAME_STR = re.compile(r'"([A-Za-z][A-Za-z0-9]*)"')
 LOCAL_DETECT = re.compile(r'\blocal_name\b')
 # an identifier compared against a name-shaped string: the smuggled-dispatch tell
-COMPARISON = re.compile(r'(?:==|\bis)\s+"[A-Za-z][A-Za-z0-9]*"|"[A-Za-z][A-Za-z0-9]*"\s*==')
+COMPARISON = re.compile(
+    r'(?:==|\bis)\s+"[A-Za-z][A-Za-z0-9]*"'
+    r'|"[A-Za-z][A-Za-z0-9]*"\s*=='
+    r'|"[A-Za-z][A-Za-z0-9]*"\s*=>'
+)
 FRAGMENT = re.compile(r'"(?::[A-Za-z][A-Za-z0-9]*|[A-Za-z][A-Za-z0-9]*:)"')
 
 def strip_comments(line):
@@ -240,8 +248,30 @@ for f in FILES:
     if f not in production:
         errors.append(f"MISSING FILE: {f} is classified but no longer exists")
 
+READ_INSPECT = re.compile(r'\w+\.name\s*(?:==|\bis\b)|match\s+\w+\.name\b')
+
 for path, spec in FILES.items():
-    if path not in production or 'extract' not in spec:
+    if path not in production:
+        continue
+    if 'exempt' in spec:
+        # The embedded_style_map lesson: an exemption is where read-side
+        # dispatch hides. A function in an exempt file that inspects element
+        # names -- rather than constructing them -- must be individually
+        # declared, so the exemption cannot silently absorb new read paths.
+        src = open(os.path.join(DOCX, path)).read()
+        lines = src.split('\n')
+        stripped_lines = [strip_comments(l) for l in lines]
+        allowed = spec.get('allowed_inspectors', set())
+        for name, sl, el in functions(lines):
+            if name in ('(file-prefix)', '(test)'):
+                continue
+            body = '\n'.join(stripped_lines[sl:el])
+            if (LOCAL_DETECT.search(body) or READ_INSPECT.search(body)) and name not in allowed:
+                errors.append(f"{path}: exempt file's function {name} inspects element names -- declare it in allowed_inspectors or reclassify the file")
+        for fn in sorted(allowed - {n for n, _, _ in functions(lines)}):
+            errors.append(f"{path}: allowed_inspectors lists {fn} which no longer exists")
+        continue
+    if 'extract' not in spec:
         continue
     src = open(os.path.join(DOCX, path)).read()
     lines = src.split('\n')
@@ -302,13 +332,26 @@ if os.path.exists(REGISTRY):
 else:
     errors.append("dispatch_registry.tsv missing")
 
-if '--emit' in sys.argv:
-    print('file\tname\tfunctions\tkind\tcoverage')
+def emitted_lines():
+    out = ['file\tname\tfunctions\tkind\tcoverage']
     for key in sorted(rows):
         extra = meta.get(key, [])
         kind = extra[0] if len(extra) > 0 else ''
         coverage = extra[1] if len(extra) > 1 else ''
-        print(f"{key[0]}\t{key[1]}\t{','.join(sorted(rows[key]))}\t{kind}\t{coverage}")
+        out.append(f"{key[0]}\t{key[1]}\t{','.join(sorted(rows[key]))}\t{kind}\t{coverage}")
+    return out
+
+if '--emit' in sys.argv:
+    # Stdout only. `--emit > dispatch_registry.tsv` would truncate the
+    # registry before this process reads it, silently wiping every kind and
+    # coverage annotation -- measured, not hypothetical. Use --update.
+    print('\n'.join(emitted_lines()))
+    sys.exit(0)
+
+if '--update' in sys.argv:
+    with open(REGISTRY, 'w') as f:
+        f.write('\n'.join(emitted_lines()) + '\n')
+    print(f"dispatch_registry.tsv rewritten: {len(rows)} rows, annotations preserved")
     sys.exit(0)
 
 for key in sorted(set(rows) - set(want)):
