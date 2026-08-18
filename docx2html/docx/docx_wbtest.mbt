@@ -2352,6 +2352,7 @@ test "docx notes reader reads bodies and ignores separators" {
       #|  <w:footnote><w:p><w:r><w:t>Missing ID</w:t></w:r></w:p></w:footnote>
       #|  <w:footnote w:id="2" w:type="separator"><w:p><w:r><w:t>Separator</w:t></w:r></w:p></w:footnote>
       #|  <w:footnote w:id="3" w:type="continuationSeparator"><w:p><w:r><w:t>Continuation</w:t></w:r></w:p></w:footnote>
+      #|  <w:footnote w:id="4" w:type="continuationNotice"><w:p><w:r><w:t>Notice</w:t></w:r></w:p></w:footnote>
       #|</w:footnotes>
     ),
   )

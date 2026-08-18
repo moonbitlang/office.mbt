@@ -334,6 +334,12 @@ _test_names_cache = {}
 def test_names(base):
     if base not in _test_names_cache:
         path = os.path.join(DOCX, base + '.mbt')
+        if not os.path.exists(path):
+            # some read-side surfaces are tested one directory up, at the
+            # docx2html package root (embedded_style_map_test and friends).
+            # Resolved against the real repo, not --docx-dir: the escape
+            # suite's scratch copy carries only the docx package.
+            path = os.path.join(ROOT, 'docx2html', base + '.mbt')
         names = set()
         if os.path.exists(path):
             for l in open(path):
@@ -351,6 +357,10 @@ for key, extra in meta.items():
         continue
     for segment in coverage.split(';'):
         segment = segment.strip()
+        if segment.startswith('(') and segment.endswith(')'):
+            # a parenthesised note: recorded context (external witnesses,
+            # unreachable branches) rather than a checkable citation
+            continue
         m = re.fullmatch(r'([A-Za-z0-9_]+):"([^"]+)"', segment)
         if m is None:
             errors.append(f"MALFORMED CITATION: {key[1]} coverage segment {segment!r} does not parse as testfile:\"test name\"")
