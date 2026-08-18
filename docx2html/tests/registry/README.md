@@ -92,11 +92,10 @@ test must still exist in the cited file (`COVERAGE ROT` otherwise). The
 argument itself — that the test genuinely pins the behaviour — lives in
 review, not in the checker.
 
-Fill state: `docx_reader.mbt`'s element dispatch (the `read_element` arms
-and the complete ignored list — all 22 names including office-word:wrap, the fixture having gained its six missing entries in the
-enumeration fixture on the way) is filled — 54 rows. The projection walker,
-scanner tables, and consumer files are the remaining work list, tracked on
-#434.
+Fill state: **all 502 rows carry either a checkable citation or a
+parenthesised note** (external witnesses, unreachable branches). The notes are
+deliberate: three `annotation_spans` rows are witnessed by the office
+package's selector suite, which this validator cannot reach across packages.
 
 Run locally from anywhere:
 

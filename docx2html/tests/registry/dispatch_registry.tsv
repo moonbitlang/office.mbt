@@ -1,73 +1,73 @@
 file	name	functions	kind	coverage
-annotate_plan.mbt	ContentType	opc_content_type_override_fragment	name	-
-annotate_plan.mbt	Id	collect_relationship_ids	name	-
-annotate_plan.mbt	Override	plan_comment_addition_zip	name	-
-annotate_plan.mbt	PartName	opc_content_type_override_fragment	name	-
-annotate_plan.mbt	Relationship	plan_comment_addition_zip	name	-
-annotate_plan.mbt	comments.xml	plan_comment_addition_zip	value	-
-annotate_plan.mbt	content-types:Types	plan_comment_addition_zip	name	-
-annotate_plan.mbt	rIdAnnotate	plan_comment_addition_zip	value	-
-annotate_plan.mbt	relationships	main_relationships_mutation_part_path	value	-
-annotate_thread.mbt	:	split_qualified	fragment	-
-annotate_thread.mbt	Ignorable	ensure_w14_on_root	name	-
-annotate_thread.mbt	Override	queue_comments_extended_edits	name	-
-annotate_thread.mbt	Relationship	queue_comments_extended_edits	name	-
-annotate_thread.mbt	commentEx	scan_comment_ex_part	name	-
-annotate_thread.mbt	commentsExtended.xml	queue_comments_extended_edits	value	-
-annotate_thread.mbt	content-types:Types	queue_comments_extended_edits	name	-
-annotate_thread.mbt	done	scan_comment_ex_part	name	-
-annotate_thread.mbt	mbtmc	ensure_w14_on_root	prefix	-
-annotate_thread.mbt	mbtw14	ensure_w14_on_root	prefix	-
-annotate_thread.mbt	mc	ensure_w14_on_root,queue_comments_extended_edits	prefix	-
-annotate_thread.mbt	mc:Ignorable	queue_comments_extended_edits	name	-
-annotate_thread.mbt	paraId	scan_comment_ex_part	name	-
-annotate_thread.mbt	rIdAnnotate	queue_comments_extended_edits	value	-
-annotate_thread.mbt	w14	ensure_w14_on_root	prefix	-
-annotate_thread.mbt	w14:paraId	collect_para_id_attributes	name	-
-annotate_thread.mbt	w15	comment_ex_fragment,queue_comments_extended_edits	prefix	-
-annotate_thread.mbt	w15:commentEx	comment_ex_fragment,queue_comments_extended_edits	name	-
-annotate_thread.mbt	w15:commentsEx	queue_comments_extended_edits	name	-
-annotate_thread.mbt	w15:done	comment_ex_fragment,queue_comments_extended_edits	name	-
-annotate_thread.mbt	w15:paraId	comment_ex_fragment,queue_comments_extended_edits	name	-
-annotate_thread.mbt	w15:paraIdParent	comment_ex_fragment,queue_comments_extended_edits	name	-
-annotate_thread.mbt	xmlns	scan_comment_ex_part	name	-
-annotate_thread.mbt	xmlns:	collect_namespace_bindings,ensure_w14_on_root,scan_comment_ex_part	fragment	-
-annotation_index.mbt	after	AnnotationBoundary::impl:output	value	-
-annotation_index.mbt	before	AnnotationBoundary::impl:output	value	-
-annotation_index.mbt	body	annotation_story_root_local_name,build_annotation_index	name	-
-annotation_index.mbt	comment	build_annotation_index	name	-
-annotation_index.mbt	comments	annotation_story_root_local_name,build_annotation_index,read_docx_annotated_zip	name	-
-annotation_index.mbt	commentsExtended	read_docx_annotated_zip	name	-
-annotation_index.mbt	document	annotation_story_root_local_name	name	-
-annotation_index.mbt	endnote	build_annotation_index	name	-
-annotation_index.mbt	endnotes	annotation_story_root_local_name,build_annotation_index,read_docx_annotated_zip	name	-
-annotation_index.mbt	footer	annotation_story_root_local_name,build_annotation_index,validate_section_story_references	value	-
-annotation_index.mbt	footnote	build_annotation_index,build_notes,read_docx_annotated_zip	name	-
-annotation_index.mbt	footnotes	annotation_story_root_local_name,build_annotation_index,read_docx_annotated_zip	name	-
-annotation_index.mbt	ftr	annotation_story_root_local_name	name	-
-annotation_index.mbt	hdr	annotation_story_root_local_name	name	-
-annotation_index.mbt	header	annotation_story_root_local_name,build_annotation_index,validate_section_story_references	value	-
-annotation_index.mbt	inside_end	AnnotationBoundary::impl:output	value	-
-annotation_index.mbt	inside_start	AnnotationBoundary::impl:output	value	-
-annotation_index.mbt	legacy-fallback	DocxStoryPartAuthority::name	value	-
-annotation_index.mbt	on	read_comments_extended	value	-
-annotation_index.mbt	r:id	validate_section_story_references	name	-
-annotation_index.mbt	relationship	DocxStoryPartAuthority::name	value	-
-annotation_index.mbt	true	read_comments_extended	value	-
-annotation_index.mbt	w14:paraId	read_comment_definitions	name	-
-annotation_index.mbt	w15:commentEx	read_comments_extended	name	-
-annotation_index.mbt	w15:commentsEx	read_comments_extended	name	-
-annotation_index.mbt	w15:done	read_comments_extended	name	-
-annotation_index.mbt	w15:paraId	read_comments_extended	name	-
-annotation_index.mbt	w15:paraIdParent	read_comments_extended	name	-
-annotation_index.mbt	w:author	read_comment_definitions	name	-
-annotation_index.mbt	w:comment	read_comment_definitions	name	-
-annotation_index.mbt	w:date	read_comment_definitions	name	-
-annotation_index.mbt	w:footerReference	validate_section_story_references	name	-
-annotation_index.mbt	w:headerReference	validate_section_story_references	name	-
-annotation_index.mbt	w:id	read_comment_definitions	name	-
-annotation_index.mbt	w:initials	read_comment_definitions	name	-
-annotation_index.mbt	w:p	read_comment_definitions	name	-
+annotate_plan.mbt	ContentType	opc_content_type_override_fragment	name	docx_wbtest:"comment addition covers a newly created Relationships part by Override"
+annotate_plan.mbt	Id	collect_relationship_ids	name	docx_wbtest:"annotation mutations separate Unicode logical paths from ZIP spelling"
+annotate_plan.mbt	Override	plan_comment_addition_zip	name	docx_wbtest:"comment addition covers a newly created Relationships part by Override"
+annotate_plan.mbt	PartName	opc_content_type_override_fragment	name	docx_wbtest:"comment addition covers a newly created Relationships part by Override"
+annotate_plan.mbt	Relationship	plan_comment_addition_zip	name	docx_wbtest:"comment addition covers a newly created Relationships part by Override"
+annotate_plan.mbt	comments.xml	plan_comment_addition_zip	value	docx_wbtest:"comment addition honors MCE-selected relocated comments relationships"
+annotate_plan.mbt	content-types:Types	plan_comment_addition_zip	name	docx_wbtest:"comment addition covers a newly created Relationships part by Override"
+annotate_plan.mbt	rIdAnnotate	plan_comment_addition_zip	value	docx_wbtest:"comment addition covers a newly created Relationships part by Override"
+annotate_plan.mbt	relationships	main_relationships_mutation_part_path	value	(diagnostic-only label, review-verified as unobserved by any success-path test)
+annotate_thread.mbt	:	split_qualified	fragment	annotation_index_test:"comment resolution chooses an unshadowed namespace and preserves prefixed OPC metadata"
+annotate_thread.mbt	Ignorable	ensure_w14_on_root	name	annotation_index_test:"comment resolution chooses an unshadowed namespace and preserves prefixed OPC metadata"
+annotate_thread.mbt	Override	queue_comments_extended_edits	name	docx_wbtest:"comment addition covers a newly created Relationships part by Override"
+annotate_thread.mbt	Relationship	queue_comments_extended_edits	name	docx_wbtest:"comment addition covers a newly created Relationships part by Override"
+annotate_thread.mbt	commentEx	scan_comment_ex_part	name	annotation_index_test:"comment resolution matches decoded ids on default-namespaced entries"
+annotate_thread.mbt	commentsExtended.xml	queue_comments_extended_edits	value	docx_wbtest:"annotation mutations separate Unicode logical paths from ZIP spelling"
+annotate_thread.mbt	content-types:Types	queue_comments_extended_edits	name	docx_wbtest:"comment addition covers a newly created Relationships part by Override"
+annotate_thread.mbt	done	scan_comment_ex_part	name	(external: killed by the office/docx annotation-batch and D1 session suites, review-verified. Cross-package citations are outside this validator)
+annotate_thread.mbt	mbtmc	ensure_w14_on_root	prefix	annotation_index_test:"comment resolution chooses an unshadowed namespace and preserves prefixed OPC metadata"
+annotate_thread.mbt	mbtw14	ensure_w14_on_root	prefix	annotation_index_test:"comment resolution chooses an unshadowed namespace and preserves prefixed OPC metadata"
+annotate_thread.mbt	mc	ensure_w14_on_root,queue_comments_extended_edits	prefix	annotation_index_test:"comment resolution chooses an unshadowed namespace and preserves prefixed OPC metadata"
+annotate_thread.mbt	mc:Ignorable	queue_comments_extended_edits	name	annotation_index_test:"comment resolution chooses an unshadowed namespace and preserves prefixed OPC metadata"
+annotate_thread.mbt	paraId	scan_comment_ex_part	name	annotation_index_test:"identity validation structurally checks paraId and commentEx keys"
+annotate_thread.mbt	rIdAnnotate	queue_comments_extended_edits	value	docx_wbtest:"comment addition covers a newly created Relationships part by Override"
+annotate_thread.mbt	w14	ensure_w14_on_root	prefix	annotation_index_test:"comment resolution chooses an unshadowed namespace and preserves prefixed OPC metadata"
+annotate_thread.mbt	w14:paraId	collect_para_id_attributes	name	annotation_index_test:"index: ranges, points, threading, and coverage on a conformance-shaped fixture"
+annotate_thread.mbt	w15	comment_ex_fragment,queue_comments_extended_edits	prefix	annotation_index_test:"identity validation structurally checks paraId and commentEx keys"
+annotate_thread.mbt	w15:commentEx	comment_ex_fragment,queue_comments_extended_edits	name	annotation_index_test:"index: ranges, points, threading, and coverage on a conformance-shaped fixture"
+annotate_thread.mbt	w15:commentsEx	queue_comments_extended_edits	name	annotation_index_test:"identity validation structurally checks paraId and commentEx keys"
+annotate_thread.mbt	w15:done	comment_ex_fragment,queue_comments_extended_edits	name	annotation_index_test:"index: ranges, points, threading, and coverage on a conformance-shaped fixture"
+annotate_thread.mbt	w15:paraId	comment_ex_fragment,queue_comments_extended_edits	name	annotation_index_test:"comment resolution matches decoded ids on default-namespaced entries"
+annotate_thread.mbt	w15:paraIdParent	comment_ex_fragment,queue_comments_extended_edits	name	annotation_index_test:"index: ranges, points, threading, and coverage on a conformance-shaped fixture"
+annotate_thread.mbt	xmlns	scan_comment_ex_part	name	annotation_index_test:"comment resolution chooses an unshadowed namespace and preserves prefixed OPC metadata"
+annotate_thread.mbt	xmlns:	collect_namespace_bindings,ensure_w14_on_root,scan_comment_ex_part	fragment	annotation_index_test:"comment resolution chooses an unshadowed namespace and preserves prefixed OPC metadata"
+annotation_index.mbt	after	AnnotationBoundary::impl:output	value	annotation_index_test:"index review round 1: multi-range FIFO, later-range interiors, cross-story rank"
+annotation_index.mbt	before	AnnotationBoundary::impl:output	value	annotation_index_test:"index review round 1: multi-range FIFO, later-range interiors, cross-story rank"
+annotation_index.mbt	body	annotation_story_root_local_name,build_annotation_index	name	annotation_index_test:"bounded annotated reads cap annotation diagnostics during production"
+annotation_index.mbt	comment	build_annotation_index	name	(diagnostic-only label, review-verified as unobserved by any success-path test)
+annotation_index.mbt	comments	annotation_story_root_local_name,build_annotation_index,read_docx_annotated_zip	name	annotation_index_test:"identity validation structurally checks paraId and commentEx keys"
+annotation_index.mbt	commentsExtended	read_docx_annotated_zip	name	annotation_index_test:"distinct commentsExtended relationship targets fail closed"
+annotation_index.mbt	document	annotation_story_root_local_name	name	annotation_index_test:"bounded annotated reads cap annotation diagnostics during production"
+annotation_index.mbt	endnote	build_annotation_index	name	annotation_index_test:"relocated Strict footnotes and endnotes are parsed and publicly scanned"
+annotation_index.mbt	endnotes	annotation_story_root_local_name,build_annotation_index,read_docx_annotated_zip	name	annotation_index_test:"relocated Strict footnotes and endnotes are parsed and publicly scanned"
+annotation_index.mbt	footer	annotation_story_root_local_name,build_annotation_index,validate_section_story_references	value	annotation_index_test:"section references resolve headers and footers across variants"
+annotation_index.mbt	footnote	build_annotation_index,build_notes,read_docx_annotated_zip	name	annotation_index_test:"relocated Strict footnotes and endnotes are parsed and publicly scanned"
+annotation_index.mbt	footnotes	annotation_story_root_local_name,build_annotation_index,read_docx_annotated_zip	name	annotation_index_test:"relocated Strict footnotes and endnotes are parsed and publicly scanned"
+annotation_index.mbt	ftr	annotation_story_root_local_name	name	annotation_index_test:"unreferenced footers participate in identity validation only"
+annotation_index.mbt	hdr	annotation_story_root_local_name	name	annotation_index_test:"tolerant annotated reads warn on broken section references while mutation reads fail"
+annotation_index.mbt	header	annotation_story_root_local_name,build_annotation_index,validate_section_story_references	value	annotation_index_test:"tolerant annotated reads warn on broken section references while mutation reads fail"
+annotation_index.mbt	inside_end	AnnotationBoundary::impl:output	value	annotation_index_test:"index review round 1: multi-range FIFO, later-range interiors, cross-story rank"
+annotation_index.mbt	inside_start	AnnotationBoundary::impl:output	value	annotation_index_test:"index review round 1: multi-range FIFO, later-range interiors, cross-story rank"
+annotation_index.mbt	legacy-fallback	DocxStoryPartAuthority::name	value	annotation_index_test:"annotated story sources distinguish relationships from legacy fallback"
+annotation_index.mbt	on	read_comments_extended	value	annotation_index_test:"index: ranges, points, threading, and coverage on a conformance-shaped fixture"
+annotation_index.mbt	r:id	validate_section_story_references	name	annotation_index_test:"tolerant annotated reads warn on broken section references while mutation reads fail"
+annotation_index.mbt	relationship	DocxStoryPartAuthority::name	value	annotation_index_test:"tolerant annotated reads warn on broken section references while mutation reads fail"
+annotation_index.mbt	true	read_comments_extended	value	annotation_index_test:"index: ranges, points, threading, and coverage on a conformance-shaped fixture"
+annotation_index.mbt	w14:paraId	read_comment_definitions	name	annotation_index_test:"index: ranges, points, threading, and coverage on a conformance-shaped fixture"
+annotation_index.mbt	w15:commentEx	read_comments_extended	name	annotation_index_test:"index: ranges, points, threading, and coverage on a conformance-shaped fixture"
+annotation_index.mbt	w15:commentsEx	read_comments_extended	name	annotation_index_test:"identity validation structurally checks paraId and commentEx keys"
+annotation_index.mbt	w15:done	read_comments_extended	name	annotation_index_test:"index: ranges, points, threading, and coverage on a conformance-shaped fixture"
+annotation_index.mbt	w15:paraId	read_comments_extended	name	annotation_index_test:"comment resolution matches decoded ids on default-namespaced entries"
+annotation_index.mbt	w15:paraIdParent	read_comments_extended	name	annotation_index_test:"index: ranges, points, threading, and coverage on a conformance-shaped fixture"
+annotation_index.mbt	w:author	read_comment_definitions	name	annotation_index_test:"index: ranges, points, threading, and coverage on a conformance-shaped fixture"
+annotation_index.mbt	w:comment	read_comment_definitions	name	annotation_index_test:"identity validation canonicalizes comment ids and raw marker spellings"
+annotation_index.mbt	w:date	read_comment_definitions	name	annotation_index_test:"index: ranges, points, threading, and coverage on a conformance-shaped fixture"
+annotation_index.mbt	w:footerReference	validate_section_story_references	name	annotation_index_test:"section references resolve headers and footers across variants"; annotation_index_test:"tolerant annotated reads warn on broken section references while mutation reads fail"
+annotation_index.mbt	w:headerReference	validate_section_story_references	name	annotation_index_test:"section references resolve headers and footers across variants"
+annotation_index.mbt	w:id	read_comment_definitions	name	annotation_index_test:"index: ranges, points, threading, and coverage on a conformance-shaped fixture"
+annotation_index.mbt	w:initials	read_comment_definitions	name	annotation_index_test:"index: ranges, points, threading, and coverage on a conformance-shaped fixture"
+annotation_index.mbt	w:p	read_comment_definitions	name	annotation_index_test:"index: ranges, points, threading, and coverage on a conformance-shaped fixture"
 annotation_scan.mbt	:	attribute_value,projection_source_is_xml_qname,relationship_attribute_value,split_qualified_name	fragment	annotation_scan:"scanner: alternate namespace prefixes and non-WML lookalikes"
 annotation_scan.mbt	:anchor	annotation_attribute_is_relevant	fragment	reader_order_projection_wbtest:"reader order classifies conditional empty table outputs like BodyReader"
 annotation_scan.mbt	:author	annotation_attribute_is_relevant	fragment	annotation_scan:"scanner: a revision without an author is reported and diagnosed"; annotation_scan:"scanner: every revision-site name records a site"
@@ -169,111 +169,111 @@ annotation_scan.mbt	val	scan_story	name	annotation_scan:"scanner review round 4:
 annotation_scan.mbt	xml	scan_story,validate_projection_source_namespace	prefix	projection_source_tree_wbtest:"projection source identity seeds the implicit xml namespace"
 annotation_scan.mbt	xmlns	annotation_attribute_is_relevant,scan_story,validate_projection_source_namespace	name	annotation_scan:"scanner: MC selection, named entities, and the default namespace"; annotation_scan:"scanner: alternate namespace prefixes and non-WML lookalikes"
 annotation_scan.mbt	xmlns:	annotation_attribute_is_relevant,scan_story	fragment	annotation_scan:"scanner: alternate namespace prefixes and non-WML lookalikes"
-annotation_spans.mbt	p	DocxAnnotatedResult::body_paragraph_span,DocxAnnotatedResult::story_paragraph_span	name	-
-annotation_spans.mbt	r	DocxAnnotatedResult::body_run_span,DocxAnnotatedResult::story_run_span	name	-
-annotation_spans.mbt	tr	DocxAnnotatedResult::story_row_span	name	-
-dingbat_to_unicode.mbt	SYMBOL	dingbat_to_unicode	value	-
-dingbat_to_unicode.mbt	WEBDINGS	dingbat_to_unicode	value	-
-dingbat_to_unicode.mbt	WINGDINGS	dingbat_to_unicode	value	-
-dingbat_to_unicode.mbt	WINGDINGS 2	dingbat_to_unicode	value	-
-dingbat_to_unicode.mbt	WINGDINGS 3	dingbat_to_unicode	value	-
-docx_package.mbt	default	HeaderFooterCollector::section	value	-
-docx_package.mbt	even	HeaderFooterCollector::section	value	-
-docx_package.mbt	first	HeaderFooterCollector::section	value	-
-docx_package.mbt	footer	HeaderFooterCollector::resolve_part	value	-
-docx_package.mbt	header	HeaderFooterCollector::resolve_part	value	-
-docx_package.mbt	r:id	HeaderFooterCollector::section	name	-
-docx_package.mbt	w:	HeaderFooterCollector::read_part_story	fragment	-
-docx_package.mbt	w:body	collect_sections	name	-
-docx_package.mbt	w:footerReference	HeaderFooterCollector::section	name	-
-docx_package.mbt	w:headerReference	HeaderFooterCollector::section	name	-
-docx_package.mbt	w:p	collect_sections	name	-
-docx_package.mbt	w:pPr	paragraph_sect_pr	name	-
-docx_package.mbt	w:sectPr	collect_sections,paragraph_sect_pr	name	-
-docx_package.mbt	w:type	HeaderFooterCollector::section	name	-
-docx_reader.mbt	:	style_lookup_key	fragment	-
-docx_reader.mbt	ContentType	read_content_types	name	-
-docx_reader.mbt	Extension	read_content_types	name	-
-docx_reader.mbt	F0	symbol_to_unicode	value	-
-docx_reader.mbt	FORMCHECKBOX	parse_non_hyperlink_field_instruction	value	-
-docx_reader.mbt	HYPERLINK	parse_hyperlink_field_instruction	value	-
-docx_reader.mbt	Id	read_relationships_xml	name	-
-docx_reader.mbt	Internal	resolve_header_footer_reference_part,resolve_reachable_annotation_story_parts,resolve_unique_internal_part,resolve_unique_wordprocessing_part	value	-
-docx_reader.mbt	Paragraph	style_warning_label	value	-
-docx_reader.mbt	PartName	read_content_types	name	-
-docx_reader.mbt	Run	style_warning_label	value	-
-docx_reader.mbt	Table	style_warning_label	value	-
-docx_reader.mbt	Target	read_relationships_xml	name	-
-docx_reader.mbt	TargetMode	read_relationships_xml	name	-
-docx_reader.mbt	Type	read_relationships_xml	name	-
-docx_reader.mbt	_GoBack	BodyReader::read_element	name	-
-docx_reader.mbt	_rels	relationships_path_for_part	value	-
-docx_reader.mbt	a	office_namespace_map	prefix	-
-docx_reader.mbt	a:blip	XmlElement::drawing_blips	name	-
-docx_reader.mbt	a:graphic	XmlElement::drawing_blips	name	-
-docx_reader.mbt	a:graphicData	XmlElement::drawing_blips	name	-
-docx_reader.mbt	a:hlinkClick	BodyReader::read_drawing_hyperlink	name	-
-docx_reader.mbt	begin	BodyReader::read_paragraph_children	value	-
-docx_reader.mbt	bmp	fallback_content_type	value	-
-docx_reader.mbt	bullet	read_numbering_level	value	-
-docx_reader.mbt	character	BodyReader::read_run_properties,style_warning_label	value	-
-docx_reader.mbt	column	BodyReader::read_break	value	-
-docx_reader.mbt	comments	DocumentParts::build,annotation_story_relationship_identity,expected_annotation_content_type,read_comments_for_document	name	-
-docx_reader.mbt	commentsExtended	DocumentParts::build,expected_annotation_content_type	name	-
-docx_reader.mbt	content-types	office_namespace_map	prefix	-
-docx_reader.mbt	content-types:Default	read_content_types	name	-
-docx_reader.mbt	content-types:Override	read_content_types	name	-
-docx_reader.mbt	continuationNotice	read_note_part_at_path	value	-
-docx_reader.mbt	continuationSeparator	read_note_part_at_path	value	-
-docx_reader.mbt	continue	read_vertical_merge_continue	value	-
-docx_reader.mbt	descr	read_drawing_alt_text	name	-
-docx_reader.mbt	end	BodyReader::read_paragraph_children	value	-
-docx_reader.mbt	endnote	BodyReader::read_element,read_notes_for_document	name	-
-docx_reader.mbt	endnotes	DocumentParts::build,annotation_story_relationship_identity,expected_annotation_content_type	name	-
-docx_reader.mbt	false	read_boolean_attribute_value,read_boolean_element,read_underline	value	-
-docx_reader.mbt	footer	annotation_story_relationship_identity,expected_annotation_content_type,resolve_header_footer_reference_part	value	-
-docx_reader.mbt	footnote	BodyReader::read_element,read_notes_for_document	name	-
-docx_reader.mbt	footnotes	DocumentParts::build,annotation_story_relationship_identity,expected_annotation_content_type	name	-
-docx_reader.mbt	gif	fallback_content_type	value	-
-docx_reader.mbt	header	annotation_story_relationship_identity,expected_annotation_content_type,resolve_header_footer_reference_part	value	-
-docx_reader.mbt	jpeg	fallback_content_type	value	-
-docx_reader.mbt	jpg	fallback_content_type	value	-
-docx_reader.mbt	localhost	local_file_uri_path	value	-
-docx_reader.mbt	mc	office_namespace_map	prefix	-
+annotation_spans.mbt	p	DocxAnnotatedResult::body_paragraph_span,DocxAnnotatedResult::story_paragraph_span	name	(external: killed by the office/docx package annotation, edit and template suites -- review-verified. The selector suite alone does not observe these, and cross-package citations are outside this validator)
+annotation_spans.mbt	r	DocxAnnotatedResult::body_run_span,DocxAnnotatedResult::story_run_span	name	(external: killed by the office/docx package annotation, edit and template suites -- review-verified. The selector suite alone does not observe these, and cross-package citations are outside this validator)
+annotation_spans.mbt	tr	DocxAnnotatedResult::story_row_span	name	(external: killed by the office/docx package annotation, edit and template suites -- review-verified. The selector suite alone does not observe these, and cross-package citations are outside this validator)
+dingbat_to_unicode.mbt	SYMBOL	dingbat_to_unicode	value	dingbat_to_unicode_wbtest:"dingbat lookup dispatches every supported font without case sensitivity"
+dingbat_to_unicode.mbt	WEBDINGS	dingbat_to_unicode	value	dingbat_to_unicode_wbtest:"dingbat lookup dispatches every supported font without case sensitivity"
+dingbat_to_unicode.mbt	WINGDINGS	dingbat_to_unicode	value	dingbat_to_unicode_wbtest:"dingbat lookup dispatches every supported font without case sensitivity"
+dingbat_to_unicode.mbt	WINGDINGS 2	dingbat_to_unicode	value	dingbat_to_unicode_wbtest:"dingbat lookup dispatches every supported font without case sensitivity"
+dingbat_to_unicode.mbt	WINGDINGS 3	dingbat_to_unicode	value	dingbat_to_unicode_wbtest:"dingbat lookup dispatches every supported font without case sensitivity"
+docx_package.mbt	default	HeaderFooterCollector::section	value	annotation_index_test:"section references resolve headers and footers across variants"
+docx_package.mbt	even	HeaderFooterCollector::section	value	annotation_index_test:"section references resolve headers and footers across variants"
+docx_package.mbt	first	HeaderFooterCollector::section	value	annotation_index_test:"section references resolve headers and footers across variants"
+docx_package.mbt	footer	HeaderFooterCollector::resolve_part	value	annotation_index_test:"section references resolve headers and footers across variants"
+docx_package.mbt	header	HeaderFooterCollector::resolve_part	value	annotation_index_test:"tolerant annotated reads warn on broken section references while mutation reads fail"
+docx_package.mbt	r:id	HeaderFooterCollector::section	name	annotation_index_test:"section references resolve headers and footers across variants"
+docx_package.mbt	w:	HeaderFooterCollector::read_part_story	fragment	annotation_index_test:"section references resolve headers and footers across variants"
+docx_package.mbt	w:body	collect_sections	name	annotation_index_test:"section references resolve headers and footers across variants"
+docx_package.mbt	w:footerReference	HeaderFooterCollector::section	name	annotation_index_test:"section references resolve headers and footers across variants"
+docx_package.mbt	w:headerReference	HeaderFooterCollector::section	name	annotation_index_test:"section references resolve headers and footers across variants"
+docx_package.mbt	w:p	collect_sections	name	annotation_index_test:"section references resolve headers and footers across variants"
+docx_package.mbt	w:pPr	paragraph_sect_pr	name	annotation_index_test:"section references resolve headers and footers across variants"
+docx_package.mbt	w:sectPr	collect_sections,paragraph_sect_pr	name	annotation_index_test:"section references resolve headers and footers across variants"
+docx_package.mbt	w:type	HeaderFooterCollector::section	name	annotation_index_test:"section references resolve headers and footers across variants"
+docx_reader.mbt	:	style_lookup_key	fragment	docx_wbtest:"xml reader follows Mammoth basic parsing semantics"
+docx_reader.mbt	ContentType	read_content_types	name	docx_wbtest:"docx content types reader handles defaults and overrides"
+docx_reader.mbt	Extension	read_content_types	name	docx_wbtest:"docx content types reader handles defaults and overrides"
+docx_reader.mbt	F0	symbol_to_unicode	value	docx_wbtest:"docx symbols warn when unsupported like Mammoth"
+docx_reader.mbt	FORMCHECKBOX	parse_non_hyperlink_field_instruction	value	docx_wbtest:"docx complex field checkboxes are read"
+docx_reader.mbt	HYPERLINK	parse_hyperlink_field_instruction	value	docx_wbtest:"docx complex field hyperlinks are read"
+docx_reader.mbt	Id	read_relationships_xml	name	docx_wbtest:"docx relationships reader finds targets by id and type"
+docx_reader.mbt	Internal	resolve_header_footer_reference_part,resolve_reachable_annotation_story_parts,resolve_unique_internal_part,resolve_unique_wordprocessing_part	value	docx_wbtest:"annotation story resolver normalizes, deduplicates, and fails closed"
+docx_reader.mbt	Paragraph	style_warning_label	value	docx_wbtest:"docx styles are keyed by type and keep first duplicate"
+docx_reader.mbt	PartName	read_content_types	name	docx_wbtest:"docx content types reader handles defaults and overrides"
+docx_reader.mbt	Run	style_warning_label	value	docx_wbtest:"docx reader reads run style id and name like Mammoth"
+docx_reader.mbt	Table	style_warning_label	value	docx_wbtest:"docx table properties include table style name"
+docx_reader.mbt	Target	read_relationships_xml	name	docx_wbtest:"docx relationships reader finds targets by id and type"
+docx_reader.mbt	TargetMode	read_relationships_xml	name	docx_wbtest:"docx relationships reader finds targets by id and type"
+docx_reader.mbt	Type	read_relationships_xml	name	docx_wbtest:"docx relationships reader finds targets by id and type"
+docx_reader.mbt	_GoBack	BodyReader::read_element	name	docx_wbtest:"docx reader reads references and bookmarks like Mammoth"
+docx_reader.mbt	_rels	relationships_path_for_part	value	docx_wbtest:"docx main document path follows package relationships and fallback"
+docx_reader.mbt	a	office_namespace_map	prefix	docx_wbtest:"docx drawing image reader follows Mammoth picture chain"
+docx_reader.mbt	a:blip	XmlElement::drawing_blips	name	docx_wbtest:"docx image reader records Mammoth-compatible warnings"
+docx_reader.mbt	a:graphic	XmlElement::drawing_blips	name	docx_wbtest:"docx image reader records Mammoth-compatible warnings"
+docx_reader.mbt	a:graphicData	XmlElement::drawing_blips	name	docx_wbtest:"docx image reader records Mammoth-compatible warnings"
+docx_reader.mbt	a:hlinkClick	BodyReader::read_drawing_hyperlink	name	docx_wbtest:"docx drawing image hyperlink wraps image"
+docx_reader.mbt	begin	BodyReader::read_paragraph_children	value	docx_wbtest:"docx complex field hyperlink scope follows field boundaries"
+docx_reader.mbt	bmp	fallback_content_type	value	docx_wbtest:"docx content types include Mammoth image fallbacks"
+docx_reader.mbt	bullet	read_numbering_level	value	docx_wbtest:"docx numbering xml ignores missing level index when explicit zero exists"
+docx_reader.mbt	character	BodyReader::read_run_properties,style_warning_label	value	docx_wbtest:"docx reader reads run style id and name like Mammoth"
+docx_reader.mbt	column	BodyReader::read_break	value	docx_wbtest:"docx reader maps break types like Mammoth"
+docx_reader.mbt	comments	DocumentParts::build,annotation_story_relationship_identity,expected_annotation_content_type,read_comments_for_document	name	docx_wbtest:"docx comments reader reads ids bodies and optional attributes"
+docx_reader.mbt	commentsExtended	DocumentParts::build,expected_annotation_content_type	name	annotation_index_test:"distinct commentsExtended relationship targets fail closed"
+docx_reader.mbt	content-types	office_namespace_map	prefix	docx_wbtest:"docx content types reader handles defaults and overrides"
+docx_reader.mbt	content-types:Default	read_content_types	name	docx_wbtest:"docx content types reader handles defaults and overrides"
+docx_reader.mbt	content-types:Override	read_content_types	name	docx_wbtest:"docx content types reader handles defaults and overrides"
+docx_reader.mbt	continuationNotice	read_note_part_at_path	value	docx_wbtest:"docx notes reader reads bodies and ignores separators"
+docx_reader.mbt	continuationSeparator	read_note_part_at_path	value	docx_wbtest:"docx notes reader reads bodies and ignores separators"
+docx_reader.mbt	continue	read_vertical_merge_continue	value	docx_wbtest:"docx table vertical merges become row spans"
+docx_reader.mbt	descr	read_drawing_alt_text	name	docx_wbtest:"docx drawing image alt text follows Mammoth precedence"
+docx_reader.mbt	end	BodyReader::read_paragraph_children	value	docx_wbtest:"docx complex field hyperlink scope follows field boundaries"
+docx_reader.mbt	endnote	BodyReader::read_element,read_notes_for_document	name	docx_wbtest:"docx reader reads references and bookmarks like Mammoth"
+docx_reader.mbt	endnotes	DocumentParts::build,annotation_story_relationship_identity,expected_annotation_content_type	name	annotation_index_test:"relocated Strict footnotes and endnotes are parsed and publicly scanned"
+docx_reader.mbt	false	read_boolean_attribute_value,read_boolean_element,read_underline	value	docx_wbtest:"docx complex field checkboxes are read"
+docx_reader.mbt	footer	annotation_story_relationship_identity,expected_annotation_content_type,resolve_header_footer_reference_part	value	annotation_index_test:"tolerant annotated reads warn on broken section references while mutation reads fail"
+docx_reader.mbt	footnote	BodyReader::read_element,read_notes_for_document	name	docx_wbtest:"docx notes reader reads bodies and ignores separators"
+docx_reader.mbt	footnotes	DocumentParts::build,annotation_story_relationship_identity,expected_annotation_content_type	name	reader_order_projection_wbtest:"reader order only traverses story containers from their root context"
+docx_reader.mbt	gif	fallback_content_type	value	docx_wbtest:"docx content types include Mammoth image fallbacks"
+docx_reader.mbt	header	annotation_story_relationship_identity,expected_annotation_content_type,resolve_header_footer_reference_part	value	annotation_index_test:"tolerant annotated reads warn on broken section references while mutation reads fail"
+docx_reader.mbt	jpeg	fallback_content_type	value	docx_wbtest:"docx content types include Mammoth image fallbacks"
+docx_reader.mbt	jpg	fallback_content_type	value	docx_wbtest:"docx content types include Mammoth image fallbacks"
+docx_reader.mbt	localhost	local_file_uri_path	value	docx_wbtest:"docx external file URI paths follow Mammoth local URI rules"
+docx_reader.mbt	mc	office_namespace_map	prefix	docx_wbtest:"docx body reader uses mc fallback content like Mammoth"
 docx_reader.mbt	mc:AlternateContent	BodyReader::read_element,BodyReader::read_paragraph_extra_elements,BodyReader::read_pict_extra_elements,BodyReader::read_text_box_elements	name	docx_wbtest:"docx body reader uses mc fallback content like Mammoth"; reader_order_property_wbtest:"the projection matches the reader on generated documents"
 docx_reader.mbt	mc:Fallback	BodyReader::read_element,BodyReader::read_pict_extra_elements,BodyReader::read_text_box_elements	name	docx_wbtest:"docx body reader uses mc fallback content like Mammoth"; docx_wbtest:"docx w:pict extra content uses alternate fallback"
-docx_reader.mbt	none	read_highlight,read_underline	value	-
-docx_reader.mbt	null	local_file_uri_path	value	-
-docx_reader.mbt	numbering	WordprocessingPartRole::label,index_numbering_style_num_ids,read_style_info	value	-
-docx_reader.mbt	o	office_namespace_map	prefix	-
-docx_reader.mbt	o:title	BodyReader::read_vml_image_data	name	-
-docx_reader.mbt	office-word	office_namespace_map	prefix	-
+docx_reader.mbt	none	read_highlight,read_underline	value	docx_wbtest:"docx reader reads underline with Mammoth special cases"; docx_wbtest:"docx reader treats empty highlight as no highlight"
+docx_reader.mbt	null	local_file_uri_path	value	docx_wbtest:"docx external file URI paths follow Mammoth local URI rules"
+docx_reader.mbt	numbering	WordprocessingPartRole::label,index_numbering_style_num_ids,read_style_info	value	docx_wbtest:"docx numbering xml handles missing references and level defaults"
+docx_reader.mbt	o	office_namespace_map	prefix	docx_wbtest:"docx vml image title becomes alt text"
+docx_reader.mbt	o:title	BodyReader::read_vml_image_data	name	docx_wbtest:"docx vml image title becomes alt text"
+docx_reader.mbt	office-word	office_namespace_map	prefix	docx_wbtest:"docx reader ignores Mammoth ignored body elements without warnings"
 docx_reader.mbt	office-word:wrap	is_ignored_body_element	name	docx_wbtest:"docx reader ignores Mammoth ignored body elements without warnings"
-docx_reader.mbt	officeDocument	find_main_document	value	-
-docx_reader.mbt	page	BodyReader::read_break	value	-
-docx_reader.mbt	paragraph	BodyReader::read_paragraph_properties,style_warning_label	value	-
-docx_reader.mbt	pic	office_namespace_map	prefix	-
-docx_reader.mbt	pic:blipFill	XmlElement::drawing_blips	name	-
-docx_reader.mbt	pic:pic	XmlElement::drawing_blips	name	-
-docx_reader.mbt	png	fallback_content_type	value	-
-docx_reader.mbt	r	office_namespace_map	prefix	-
-docx_reader.mbt	r:embed	BodyReader::read_blip	name	-
-docx_reader.mbt	r:id	BodyReader::read_drawing_hyperlink,BodyReader::read_hyperlink,BodyReader::read_vml_image_data	name	-
-docx_reader.mbt	r:link	BodyReader::read_blip	name	-
-docx_reader.mbt	relationships	office_namespace_map	prefix	-
-docx_reader.mbt	relationships:Relationship	read_relationships_xml	name	-
-docx_reader.mbt	separate	BodyReader::read_paragraph_children	value	-
-docx_reader.mbt	separator	read_note_part_at_path	value	-
-docx_reader.mbt	styles	WordprocessingPartRole::label	value	-
-docx_reader.mbt	subscript	read_vertical_alignment	value	-
-docx_reader.mbt	superscript	read_vertical_alignment	value	-
-docx_reader.mbt	table	BodyReader::read_table_properties,style_warning_label	value	-
-docx_reader.mbt	textWrapping	BodyReader::read_break	value	-
-docx_reader.mbt	tif	fallback_content_type	value	-
-docx_reader.mbt	tiff	fallback_content_type	value	-
-docx_reader.mbt	title	read_drawing_alt_text	name	-
-docx_reader.mbt	undefined	BodyReader::read_element,annotation_id_or_missing,attribute_or_js_undefined	value	-
-docx_reader.mbt	v	office_namespace_map	prefix	-
+docx_reader.mbt	officeDocument	find_main_document	value	(diagnostic-only: a label used in messages, review-verified mutation shows no success-path test observes it)
+docx_reader.mbt	page	BodyReader::read_break	value	docx_wbtest:"docx reader maps break types like Mammoth"
+docx_reader.mbt	paragraph	BodyReader::read_paragraph_properties,style_warning_label	value	docx_wbtest:"docx styles are keyed by type and keep first duplicate"
+docx_reader.mbt	pic	office_namespace_map	prefix	docx_wbtest:"docx drawing image reader follows Mammoth picture chain"
+docx_reader.mbt	pic:blipFill	XmlElement::drawing_blips	name	docx_wbtest:"docx image reader records Mammoth-compatible warnings"
+docx_reader.mbt	pic:pic	XmlElement::drawing_blips	name	docx_wbtest:"docx image reader records Mammoth-compatible warnings"
+docx_reader.mbt	png	fallback_content_type	value	docx_wbtest:"docx content types include Mammoth image fallbacks"
+docx_reader.mbt	r	office_namespace_map	prefix	docx_wbtest:"docx drawing image reader follows Mammoth picture chain"
+docx_reader.mbt	r:embed	BodyReader::read_blip	name	docx_wbtest:"docx drawing image reader follows Mammoth picture chain"
+docx_reader.mbt	r:id	BodyReader::read_drawing_hyperlink,BodyReader::read_hyperlink,BodyReader::read_vml_image_data	name	annotation_index_test:"tolerant annotated reads warn on broken section references while mutation reads fail"
+docx_reader.mbt	r:link	BodyReader::read_blip	name	docx_wbtest:"docx image reader records Mammoth-compatible warnings"
+docx_reader.mbt	relationships	office_namespace_map	prefix	(diagnostic-only: the canonical prefix spelling for package-relationships names. Parsing succeeds through Clark-name fallback, and review-verified mutation shows no test observes this map entry)
+docx_reader.mbt	relationships:Relationship	read_relationships_xml	name	docx_wbtest:"docx relationships reader finds targets by id and type"
+docx_reader.mbt	separate	BodyReader::read_paragraph_children	value	docx_wbtest:"docx complex field hyperlink scope follows field boundaries"
+docx_reader.mbt	separator	read_note_part_at_path	value	docx_wbtest:"docx notes reader reads bodies and ignores separators"
+docx_reader.mbt	styles	WordprocessingPartRole::label	value	docx_wbtest:"styles relationship target requires the role root in its dialect"
+docx_reader.mbt	subscript	read_vertical_alignment	value	docx_wbtest:"docx reader reads run font vertical alignment and highlight properties"
+docx_reader.mbt	superscript	read_vertical_alignment	value	docx_wbtest:"docx reader reads run font vertical alignment and highlight properties"
+docx_reader.mbt	table	BodyReader::read_table_properties,style_warning_label	value	docx_wbtest:"docx styles are keyed by type and keep first duplicate"
+docx_reader.mbt	textWrapping	BodyReader::read_break	value	docx_wbtest:"docx reader maps break types like Mammoth"
+docx_reader.mbt	tif	fallback_content_type	value	docx_wbtest:"docx content types include Mammoth image fallbacks"
+docx_reader.mbt	tiff	fallback_content_type	value	docx_wbtest:"docx content types include Mammoth image fallbacks"
+docx_reader.mbt	title	read_drawing_alt_text	name	docx_wbtest:"docx drawing image alt text follows Mammoth precedence"
+docx_reader.mbt	undefined	BodyReader::read_element,annotation_id_or_missing,attribute_or_js_undefined	value	docx_wbtest:"docx reader reads references and bookmarks like Mammoth"
+docx_reader.mbt	v	office_namespace_map	prefix	docx_wbtest:"docx vml image title becomes alt text"
 docx_reader.mbt	v:group	BodyReader::read_element,BodyReader::read_pict_extra_elements	name	docx_wbtest:"docx vml containers pass through children"
 docx_reader.mbt	v:imagedata	BodyReader::read_element	name	docx_wbtest:"docx vml image title becomes alt text"
 docx_reader.mbt	v:rect	BodyReader::read_element,BodyReader::read_pict_extra_elements	name	docx_wbtest:"docx vml containers pass through children"
@@ -282,146 +282,146 @@ docx_reader.mbt	v:shadow	is_ignored_body_element	name	docx_wbtest:"docx reader i
 docx_reader.mbt	v:shape	BodyReader::read_element,BodyReader::read_pict_extra_elements	name	docx_wbtest:"docx vml containers pass through children"
 docx_reader.mbt	v:shapetype	is_ignored_body_element	name	docx_wbtest:"docx reader ignores Mammoth ignored body elements without warnings"
 docx_reader.mbt	v:textbox	BodyReader::read_element,BodyReader::read_pict_extra_elements	name	docx_wbtest:"docx vml containers pass through children"
-docx_reader.mbt	w	office_namespace_map	prefix	-
-docx_reader.mbt	w-incompatible	wordprocessing_role_namespace_map	prefix	-
-docx_reader.mbt	w14	office_namespace_map	prefix	-
-docx_reader.mbt	w14:checkbox	read_structured_checkbox	name	-
-docx_reader.mbt	w14:checked	read_structured_checkbox	name	-
-docx_reader.mbt	w14:val	read_structured_checkbox	name	-
-docx_reader.mbt	w15	office_namespace_map	prefix	-
-docx_reader.mbt	w:	read_note_part_at_path,read_wordprocessing_role_xml_part	fragment	-
-docx_reader.mbt	w:abstractNum	read_abstract_numberings	name	-
-docx_reader.mbt	w:abstractNumId	read_abstract_numberings,read_numbering_instances	name	-
-docx_reader.mbt	w:anchor	BodyReader::read_hyperlink	name	-
+docx_reader.mbt	w	office_namespace_map	prefix	docx_wbtest:"docx reader reads references and bookmarks like Mammoth"
+docx_reader.mbt	w-incompatible	wordprocessing_role_namespace_map	prefix	docx_wbtest:"styles relationship target requires the role root in its dialect"
+docx_reader.mbt	w14	office_namespace_map	prefix	annotation_index_test:"comment resolution chooses an unshadowed namespace and preserves prefixed OPC metadata"
+docx_reader.mbt	w14:checkbox	read_structured_checkbox	name	docx_wbtest:"docx structured document tag checkbox replaces content character"
+docx_reader.mbt	w14:checked	read_structured_checkbox	name	docx_wbtest:"docx structured document tag checkbox replaces content character"
+docx_reader.mbt	w14:val	read_structured_checkbox	name	docx_wbtest:"docx structured document tag checkbox replaces content character"
+docx_reader.mbt	w15	office_namespace_map	prefix	annotation_index_test:"identity validation structurally checks paraId and commentEx keys"
+docx_reader.mbt	w:	read_note_part_at_path,read_wordprocessing_role_xml_part	fragment	docx_wbtest:"docx numbering xml handles missing references and level defaults"
+docx_reader.mbt	w:abstractNum	read_abstract_numberings	name	docx_wbtest:"docx numbering xml handles missing references and level defaults"
+docx_reader.mbt	w:abstractNumId	read_abstract_numberings,read_numbering_instances	name	docx_wbtest:"docx numbering xml handles missing references and level defaults"
+docx_reader.mbt	w:anchor	BodyReader::read_hyperlink	name	docx_wbtest:"docx hyperlink reader follows Mammoth target forms"
 docx_reader.mbt	w:annotationRef	is_ignored_body_element	name	docx_wbtest:"docx reader ignores Mammoth ignored body elements without warnings"
-docx_reader.mbt	w:ascii	BodyReader::read_run_properties	name	-
-docx_reader.mbt	w:author	read_comments_for_document	name	-
-docx_reader.mbt	w:b	BodyReader::read_run_properties	name	-
-docx_reader.mbt	w:body	read_document_xml_with_messages	name	-
+docx_reader.mbt	w:ascii	BodyReader::read_run_properties	name	docx_wbtest:"docx reader reads run font vertical alignment and highlight properties"
+docx_reader.mbt	w:author	read_comments_for_document	name	docx_wbtest:"docx comments reader reads ids bodies and optional attributes"
+docx_reader.mbt	w:b	BodyReader::read_run_properties	name	docx_wbtest:"docx reader reads Mammoth run boolean properties"
+docx_reader.mbt	w:body	read_document_xml_with_messages	name	docx_wbtest:"docx reader reads references and bookmarks like Mammoth"
 docx_reader.mbt	w:bookmarkEnd	is_ignored_body_element	name	docx_wbtest:"docx reader ignores Mammoth ignored body elements without warnings"
 docx_reader.mbt	w:bookmarkStart	BodyReader::read_element	name	docx_wbtest:"docx reader reads references and bookmarks like Mammoth"
 docx_reader.mbt	w:br	BodyReader::read_element	name	docx_wbtest:"docx reader maps break types like Mammoth"; docx_wbtest:"docx body reader records Mammoth-compatible warnings"
-docx_reader.mbt	w:caps	BodyReader::read_run_properties	name	-
-docx_reader.mbt	w:char	BodyReader::read_symbol	name	-
-docx_reader.mbt	w:checkBox	read_complex_field_checkbox_checked	name	-
-docx_reader.mbt	w:checked	read_complex_field_checkbox_checked	name	-
-docx_reader.mbt	w:comment	read_comments_for_document	name	-
+docx_reader.mbt	w:caps	BodyReader::read_run_properties	name	docx_wbtest:"docx reader reads Mammoth run boolean properties"
+docx_reader.mbt	w:char	BodyReader::read_symbol	name	docx_wbtest:"docx symbols warn when unsupported like Mammoth"
+docx_reader.mbt	w:checkBox	read_complex_field_checkbox_checked	name	docx_wbtest:"docx structured checkbox replacement recurses through containers"
+docx_reader.mbt	w:checked	read_complex_field_checkbox_checked	name	docx_wbtest:"docx complex field checkboxes are read"
+docx_reader.mbt	w:comment	read_comments_for_document	name	docx_wbtest:"docx comments reader reads ids bodies and optional attributes"
 docx_reader.mbt	w:commentRangeEnd	is_ignored_body_element	name	docx_wbtest:"docx reader ignores Mammoth ignored body elements without warnings"
 docx_reader.mbt	w:commentRangeStart	is_ignored_body_element	name	docx_wbtest:"docx reader ignores Mammoth ignored body elements without warnings"
 docx_reader.mbt	w:commentReference	BodyReader::read_element	name	docx_wbtest:"docx reader reads references and bookmarks like Mammoth"
-docx_reader.mbt	w:default	read_complex_field_checkbox_checked	name	-
+docx_reader.mbt	w:default	read_complex_field_checkbox_checked	name	docx_wbtest:"docx complex field checkboxes are read"
 docx_reader.mbt	w:del	BodyReader::read_table_row,is_deleted_paragraph,is_ignored_body_element	name	docx_wbtest:"docx reader ignores Mammoth ignored body elements without warnings"; docx_wbtest:"docx table deleted rows are ignored"
 docx_reader.mbt	w:drawing	BodyReader::read_element	name	docx_wbtest:"docx transparent wrappers pass through children"; reader_order_projection_wbtest:"reader order flattens inline drawing and object children"
-docx_reader.mbt	w:end	BodyReader::read_indent	name	-
+docx_reader.mbt	w:end	BodyReader::read_indent	name	docx_wbtest:"docx reader reads paragraph style alignment and indent properties"
 docx_reader.mbt	w:endnoteRef	BodyReader::read_element,is_ignored_body_element	name	docx_wbtest:"docx reader reads references and bookmarks like Mammoth"; docx_wbtest:"docx reader ignores Mammoth ignored body elements without warnings"
 docx_reader.mbt	w:endnoteReference	BodyReader::read_element	name	docx_wbtest:"docx reader reads references and bookmarks like Mammoth"
-docx_reader.mbt	w:ffData	read_complex_field_checkbox_checked	name	-
-docx_reader.mbt	w:firstLine	BodyReader::read_indent	name	-
+docx_reader.mbt	w:ffData	read_complex_field_checkbox_checked	name	docx_wbtest:"docx structured checkbox replacement recurses through containers"
+docx_reader.mbt	w:firstLine	BodyReader::read_indent	name	docx_wbtest:"docx reader reads paragraph style alignment and indent properties"
 docx_reader.mbt	w:fldChar	is_ignored_body_element,read_complex_field_checkbox_checked,read_field_char_type	name	docx_wbtest:"docx reader ignores Mammoth ignored body elements without warnings"; docx_wbtest:"docx complex field hyperlink scope follows field boundaries"
-docx_reader.mbt	w:fldCharType	read_field_char_type	name	-
-docx_reader.mbt	w:font	BodyReader::read_symbol	name	-
+docx_reader.mbt	w:fldCharType	read_field_char_type	name	field_projection_wbtest:"malformed field transitions retain deterministic refusal provenance"
+docx_reader.mbt	w:font	BodyReader::read_symbol	name	docx_wbtest:"docx symbols warn when unsupported like Mammoth"
 docx_reader.mbt	w:footnoteRef	BodyReader::read_element,is_ignored_body_element	name	docx_wbtest:"docx reader reads references and bookmarks like Mammoth"; docx_wbtest:"docx reader ignores Mammoth ignored body elements without warnings"
 docx_reader.mbt	w:footnoteReference	BodyReader::read_element	name	docx_wbtest:"docx reader reads references and bookmarks like Mammoth"
-docx_reader.mbt	w:gridSpan	BodyReader::read_table_cell	name	-
-docx_reader.mbt	w:hanging	BodyReader::read_indent	name	-
-docx_reader.mbt	w:highlight	BodyReader::read_run_properties	name	-
+docx_reader.mbt	w:gridSpan	BodyReader::read_table_cell	name	docx_wbtest:"docx table vertical merges account for column spans"
+docx_reader.mbt	w:hanging	BodyReader::read_indent	name	docx_wbtest:"docx reader reads paragraph style alignment and indent properties"
+docx_reader.mbt	w:highlight	BodyReader::read_run_properties	name	docx_wbtest:"style document matchers follow Mammoth predicate semantics"
 docx_reader.mbt	w:hyperlink	BodyReader::read_element	name	docx_wbtest:"docx hyperlink reader follows Mammoth target forms"; docx_wbtest:"docx hyperlink reader preserves children when no target is present"
-docx_reader.mbt	w:i	BodyReader::read_run_properties	name	-
-docx_reader.mbt	w:id	BodyReader::read_element,read_comments_for_document,read_note_part_at_path	name	-
-docx_reader.mbt	w:ilvl	BodyReader::read_numbering,read_abstract_numbering,read_numbering_level	name	-
-docx_reader.mbt	w:ind	BodyReader::read_paragraph_properties	name	-
-docx_reader.mbt	w:initials	read_comments_for_document	name	-
+docx_reader.mbt	w:i	BodyReader::read_run_properties	name	docx_wbtest:"docx reader reads Mammoth run boolean properties"
+docx_reader.mbt	w:id	BodyReader::read_element,read_comments_for_document,read_note_part_at_path	name	docx_wbtest:"docx reader reads references and bookmarks like Mammoth"; docx_wbtest:"docx comments reader reads ids bodies and optional attributes"
+docx_reader.mbt	w:ilvl	BodyReader::read_numbering,read_abstract_numbering,read_numbering_level	name	docx_wbtest:"docx numbering xml handles missing references and level defaults"
+docx_reader.mbt	w:ind	BodyReader::read_paragraph_properties	name	docx_wbtest:"docx reader reads paragraph style alignment and indent properties"
+docx_reader.mbt	w:initials	read_comments_for_document	name	docx_wbtest:"docx comments reader reads ids bodies and optional attributes"
 docx_reader.mbt	w:ins	BodyReader::read_element	name	docx_wbtest:"docx transparent wrappers pass through children"
 docx_reader.mbt	w:instrText	BodyReader::read_paragraph_children,collect_instruction_text,is_ignored_body_element	name	docx_wbtest:"docx reader ignores Mammoth ignored body elements without warnings"; docx_wbtest:"docx complex field hyperlink instructions can be split across runs"
-docx_reader.mbt	w:jc	BodyReader::read_paragraph_properties	name	-
+docx_reader.mbt	w:jc	BodyReader::read_paragraph_properties	name	docx_wbtest:"docx reader reads paragraph style alignment and indent properties"
 docx_reader.mbt	w:lastRenderedPageBreak	is_ignored_body_element	name	docx_wbtest:"docx reader ignores Mammoth ignored body elements without warnings"
-docx_reader.mbt	w:left	BodyReader::read_indent	name	-
-docx_reader.mbt	w:lvl	read_abstract_numbering	name	-
-docx_reader.mbt	w:name	BodyReader::read_element,read_style_info	name	-
+docx_reader.mbt	w:left	BodyReader::read_indent	name	docx_wbtest:"docx reader reads paragraph style alignment and indent properties"
+docx_reader.mbt	w:lvl	read_abstract_numbering	name	docx_wbtest:"docx numbering xml handles missing references and level defaults"
+docx_reader.mbt	w:name	BodyReader::read_element,read_style_info	name	docx_wbtest:"docx reader reads references and bookmarks like Mammoth"; docx_wbtest:"docx reader reads run style id and name like Mammoth"
 docx_reader.mbt	w:noBreakHyphen	BodyReader::read_element	name	docx_wbtest:"docx reader reads inline control elements like Mammoth"; reader_order_projection_wbtest:"reader order projects nested runs text atoms seams and barriers"
-docx_reader.mbt	w:num	read_numbering_instances	name	-
-docx_reader.mbt	w:numFmt	read_numbering_level	name	-
-docx_reader.mbt	w:numId	BodyReader::read_numbering,read_numbering_instances,read_style_info	name	-
-docx_reader.mbt	w:numPr	BodyReader::read_paragraph_properties,read_style_info	name	-
-docx_reader.mbt	w:numStyleLink	read_abstract_numbering	name	-
+docx_reader.mbt	w:num	read_numbering_instances	name	docx_wbtest:"docx numbering xml handles missing references and level defaults"
+docx_reader.mbt	w:numFmt	read_numbering_level	name	docx_wbtest:"docx numbering xml handles missing references and level defaults"
+docx_reader.mbt	w:numId	BodyReader::read_numbering,read_numbering_instances,read_style_info	name	docx_wbtest:"docx numbering xml handles missing references and level defaults"
+docx_reader.mbt	w:numPr	BodyReader::read_paragraph_properties,read_style_info	name	docx_wbtest:"docx paragraph numbering follows Mammoth fallback order"
+docx_reader.mbt	w:numStyleLink	read_abstract_numbering	name	docx_wbtest:"docx numbering xml terminates cyclic numbering style links"
 docx_reader.mbt	w:object	BodyReader::read_element	name	docx_wbtest:"docx transparent wrappers pass through children"; reader_order_projection_wbtest:"reader order flattens inline drawing and object children"
 docx_reader.mbt	w:p	BodyReader::read_children,BodyReader::read_element	name	docx_wbtest:"docx deleted paragraph read directly is ignored"; docx_wbtest:"docx reader reads paragraph style alignment and indent properties"; reader_order_projection_wbtest:"reader order projects nested runs text atoms seams and barriers"
 docx_reader.mbt	w:pPr	BodyReader::read_paragraph_elements_with_prefix,is_deleted_paragraph,is_ignored_body_element,read_style_info	name	docx_wbtest:"docx reader ignores Mammoth ignored body elements without warnings"
-docx_reader.mbt	w:pStyle	BodyReader::read_paragraph_properties,read_numbering_level	name	-
+docx_reader.mbt	w:pStyle	BodyReader::read_paragraph_properties,read_numbering_level	name	docx_wbtest:"docx paragraph numbering uses numbering xml semantics"
 docx_reader.mbt	w:pict	BodyReader::read_element,BodyReader::read_paragraph_extra_elements,BodyReader::read_pict_extra_elements	name	docx_wbtest:"docx w:pict images are appended after their containing paragraph"; docx_wbtest:"docx w:pict preserves mixed extra element order after paragraphs"
 docx_reader.mbt	w:proofErr	is_ignored_body_element	name	docx_wbtest:"docx reader ignores Mammoth ignored body elements without warnings"
 docx_reader.mbt	w:r	BodyReader::read_element	name	docx_wbtest:"docx reader does not include run properties as run children"; docx_wbtest:"docx reader reads Mammoth run boolean properties"
-docx_reader.mbt	w:rFonts	BodyReader::read_run_properties	name	-
+docx_reader.mbt	w:rFonts	BodyReader::read_run_properties	name	docx_wbtest:"docx reader reads run font vertical alignment and highlight properties"
 docx_reader.mbt	w:rPr	BodyReader::read_run,is_deleted_paragraph,is_ignored_body_element	name	docx_wbtest:"docx reader ignores Mammoth ignored body elements without warnings"
-docx_reader.mbt	w:rStyle	BodyReader::read_run_properties	name	-
-docx_reader.mbt	w:right	BodyReader::read_indent	name	-
+docx_reader.mbt	w:rStyle	BodyReader::read_run_properties	name	docx_wbtest:"docx reader treats empty style references as missing like Mammoth"
+docx_reader.mbt	w:right	BodyReader::read_indent	name	docx_wbtest:"docx reader reads paragraph style alignment and indent properties"
 docx_reader.mbt	w:sdt	BodyReader::read_element	name	docx_wbtest:"docx reader uses structured document tag content without checkbox"; docx_wbtest:"docx structured document tag checkbox replaces content character"
 docx_reader.mbt	w:sdtContent	BodyReader::read_element,BodyReader::read_structured_document_tag	name	docx_wbtest:"docx reader uses structured document tag content without checkbox"
-docx_reader.mbt	w:sdtPr	BodyReader::read_structured_document_tag	name	-
+docx_reader.mbt	w:sdtPr	BodyReader::read_structured_document_tag	name	docx_wbtest:"docx structured document tag checkbox without content is read"
 docx_reader.mbt	w:sectPr	is_ignored_body_element	name	docx_wbtest:"docx reader ignores Mammoth ignored body elements without warnings"
-docx_reader.mbt	w:smallCaps	BodyReader::read_run_properties	name	-
+docx_reader.mbt	w:smallCaps	BodyReader::read_run_properties	name	docx_wbtest:"docx reader reads Mammoth run boolean properties"
 docx_reader.mbt	w:smartTag	BodyReader::read_element	name	docx_wbtest:"docx transparent wrappers pass through children"
 docx_reader.mbt	w:softHyphen	BodyReader::read_element	name	docx_wbtest:"docx reader reads inline control elements like Mammoth"; reader_order_projection_wbtest:"reader order projects nested runs text atoms seams and barriers"
-docx_reader.mbt	w:start	BodyReader::read_indent	name	-
-docx_reader.mbt	w:strike	BodyReader::read_run_properties	name	-
-docx_reader.mbt	w:style	read_styles_xml	name	-
-docx_reader.mbt	w:styleId	read_styles_xml	name	-
+docx_reader.mbt	w:start	BodyReader::read_indent	name	docx_wbtest:"docx reader reads paragraph style alignment and indent properties"
+docx_reader.mbt	w:strike	BodyReader::read_run_properties	name	docx_wbtest:"docx reader reads Mammoth run boolean properties"
+docx_reader.mbt	w:style	read_styles_xml	name	docx_wbtest:"docx styles are keyed by type and keep first duplicate"
+docx_reader.mbt	w:styleId	read_styles_xml	name	docx_wbtest:"docx styles are keyed by type and keep first duplicate"
 docx_reader.mbt	w:sym	BodyReader::read_element	name	docx_wbtest:"docx symbols warn when unsupported like Mammoth"; reader_order_projection_wbtest:"reader order classifies conditional empty table outputs like BodyReader"
-docx_reader.mbt	w:sz	BodyReader::read_run_properties	name	-
+docx_reader.mbt	w:sz	BodyReader::read_run_properties	name	docx_wbtest:"docx reader reads run font vertical alignment and highlight properties"
 docx_reader.mbt	w:t	BodyReader::read_element	name	docx_wbtest:"docx reader uses structured document tag content without checkbox"; reader_order_projection_wbtest:"intervals index the reader's story text"
 docx_reader.mbt	w:tab	BodyReader::read_element	name	docx_wbtest:"docx reader reads inline control elements like Mammoth"; reader_order_projection_wbtest:"reader order projects nested runs text atoms seams and barriers"
 docx_reader.mbt	w:tbl	BodyReader::read_element	name	docx_wbtest:"docx table vertical merges become row spans"; docx_wbtest:"docx table properties include table style name"
 docx_reader.mbt	w:tblGrid	is_ignored_body_element	name	docx_wbtest:"docx reader ignores Mammoth ignored body elements without warnings"
-docx_reader.mbt	w:tblHeader	BodyReader::read_table_row	name	-
+docx_reader.mbt	w:tblHeader	BodyReader::read_table_row	name	docx_wbtest:"docx table row header property marks leading header rows"
 docx_reader.mbt	w:tblPr	BodyReader::read_table,is_ignored_body_element	name	docx_wbtest:"docx reader ignores Mammoth ignored body elements without warnings"
-docx_reader.mbt	w:tblStyle	BodyReader::read_table_properties	name	-
+docx_reader.mbt	w:tblStyle	BodyReader::read_table_properties	name	docx_wbtest:"docx reader treats empty style references as missing like Mammoth"
 docx_reader.mbt	w:tc	BodyReader::read_element	name	docx_wbtest:"docx table vertical merges account for column spans"
 docx_reader.mbt	w:tcPr	BodyReader::read_table_cell,is_ignored_body_element	name	docx_wbtest:"docx reader ignores Mammoth ignored body elements without warnings"
-docx_reader.mbt	w:tgtFrame	BodyReader::read_hyperlink	name	-
+docx_reader.mbt	w:tgtFrame	BodyReader::read_hyperlink	name	docx_wbtest:"docx hyperlink reader follows Mammoth target forms"
 docx_reader.mbt	w:tr	BodyReader::read_element	name	docx_wbtest:"docx table deleted rows are ignored"; docx_wbtest:"docx table row header property marks leading header rows"
 docx_reader.mbt	w:trPr	BodyReader::read_table_row,is_ignored_body_element	name	docx_wbtest:"docx reader ignores Mammoth ignored body elements without warnings"
 docx_reader.mbt	w:txbxContent	BodyReader::read_paragraph_extra_elements,BodyReader::read_pict_extra_elements,BodyReader::read_text_box_elements,is_ignored_body_element	name	docx_wbtest:"docx reader ignores Mammoth ignored body elements without warnings"; docx_wbtest:"docx w:pict images are appended after their containing paragraph"
-docx_reader.mbt	w:type	BodyReader::read_break,read_note_part_at_path,read_style_info	name	-
-docx_reader.mbt	w:u	BodyReader::read_run_properties	name	-
-docx_reader.mbt	w:vMerge	read_vertical_merge_continue	name	-
-docx_reader.mbt	w:val	BodyReader::read_numbering,BodyReader::read_paragraph_properties,BodyReader::read_run_properties,BodyReader::read_table_cell,BodyReader::read_table_properties,read_abstract_numbering,read_boolean_element,read_numbering_instances,read_numbering_level,read_style_info,read_underline,read_vertical_merge_continue	name	-
-docx_reader.mbt	w:vertAlign	BodyReader::read_run_properties	name	-
-docx_reader.mbt	win32	external_uri_to_path	value	-
-docx_reader.mbt	wp	office_namespace_map	prefix	-
+docx_reader.mbt	w:type	BodyReader::read_break,read_note_part_at_path,read_style_info	name	docx_wbtest:"docx notes reader reads bodies and ignores separators"; docx_wbtest:"docx styles are keyed by type and keep first duplicate"
+docx_reader.mbt	w:u	BodyReader::read_run_properties	name	docx_wbtest:"docx reader reads underline with Mammoth special cases"
+docx_reader.mbt	w:vMerge	read_vertical_merge_continue	name	docx_wbtest:"docx table vertical merges become row spans"
+docx_reader.mbt	w:val	BodyReader::read_numbering,BodyReader::read_paragraph_properties,BodyReader::read_run_properties,BodyReader::read_table_cell,BodyReader::read_table_properties,read_abstract_numbering,read_boolean_element,read_numbering_instances,read_numbering_level,read_style_info,read_underline,read_vertical_merge_continue	name	docx_wbtest:"docx reader reads Mammoth run boolean properties"; docx_wbtest:"docx numbering xml handles missing references and level defaults"
+docx_reader.mbt	w:vertAlign	BodyReader::read_run_properties	name	docx_wbtest:"docx reader reads run font vertical alignment and highlight properties"
+docx_reader.mbt	win32	external_uri_to_path	value	docx_wbtest:"docx external file URI paths follow Mammoth local URI rules"
+docx_reader.mbt	wp	office_namespace_map	prefix	docx_wbtest:"docx anchored drawing images are read"
 docx_reader.mbt	wp:anchor	BodyReader::read_element	name	docx_wbtest:"docx anchored drawing images are read"
-docx_reader.mbt	wp:docPr	BodyReader::read_drawing_hyperlink,read_drawing_alt_text	name	-
+docx_reader.mbt	wp:docPr	BodyReader::read_drawing_hyperlink,read_drawing_alt_text	name	docx_wbtest:"docx drawing image alt text follows Mammoth precedence"
 docx_reader.mbt	wp:inline	BodyReader::read_element	name	docx_wbtest:"docx image reader skips DrawingML and VML reads when disabled"; docx_wbtest:"docx drawing image hyperlink wraps image"
-docx_reader.mbt	{http://schemas.openxmlformats.org/package/2006/relationships}Relationship	(toplevel),read_relationships_xml	name	-
-docx_reader.mbt	{http://schemas.openxmlformats.org/package/2006/relationships}Relationships	(toplevel)	name	-
-embedded_style_map.mbt	ContentType	read_content_type_xml_entries,write_content_types_xml	name	-
-embedded_style_map.mbt	Default	write_content_types_xml	name	-
-embedded_style_map.mbt	Extension	read_content_type_xml_entries,write_content_types_xml	name	-
-embedded_style_map.mbt	Id	write_relationships_xml	name	-
-embedded_style_map.mbt	Override	write_content_types_xml	name	-
-embedded_style_map.mbt	PartName	read_content_type_xml_entries,write_content_types_xml	name	-
-embedded_style_map.mbt	Relationship	write_relationships_xml	name	-
-embedded_style_map.mbt	Relationships	write_relationships_xml	name	-
-embedded_style_map.mbt	Target	write_relationships_xml	name	-
-embedded_style_map.mbt	TargetMode	write_relationships_xml	name	-
-embedded_style_map.mbt	Type	write_relationships_xml	name	-
-embedded_style_map.mbt	Types	write_content_types_xml	name	-
-embedded_style_map.mbt	content-types:Default	read_content_type_xml_entries	name	-
-embedded_style_map.mbt	content-types:Override	read_content_type_xml_entries	name	-
-embedded_style_map.mbt	rMammothStyleMap	embedded_style_map_relationship,upsert_embedded_style_map_relationship	value	-
-field_projection.mbt	begin	classify_reader_order_carrier	value	-
-field_projection.mbt	body	reader_order_field_story_identity	name	-
-field_projection.mbt	comment	reader_order_field_story_identity	name	-
-field_projection.mbt	comments	reader_order_field_story_identity	name	-
-field_projection.mbt	document	reader_order_field_story_identity	name	-
-field_projection.mbt	end	classify_reader_order_carrier	value	-
-field_projection.mbt	endnote	reader_order_field_story_identity	name	-
-field_projection.mbt	endnotes	reader_order_field_story_identity	name	-
-field_projection.mbt	fldChar	scan_reader_order_field_carrier	name	-
-field_projection.mbt	footnote	reader_order_field_story_identity	name	-
-field_projection.mbt	footnotes	reader_order_field_story_identity	name	-
-field_projection.mbt	instrText	scan_reader_order_field_carrier	name	-
-field_projection.mbt	separate	classify_reader_order_carrier	value	-
-field_projection.mbt	txbxContent	reader_order_field_story_identity,scan_reader_order_field_carrier	name	-
+docx_reader.mbt	{http://schemas.openxmlformats.org/package/2006/relationships}Relationship	(toplevel),read_relationships_xml	name	docx_wbtest:"docx relationships reader finds targets by id and type"
+docx_reader.mbt	{http://schemas.openxmlformats.org/package/2006/relationships}Relationships	(toplevel)	name	docx_wbtest:"docx relationships reader finds targets by id and type"
+embedded_style_map.mbt	ContentType	read_content_type_xml_entries,write_content_types_xml	name	embedded_style_map_test:"embedded style map can be written and read"; embedded_style_map_test:"re-embedding style map replaces original metadata"
+embedded_style_map.mbt	Default	write_content_types_xml	name	embedded_style_map_test:"embedded style map can be written and read"; embedded_style_map_test:"re-embedding style map replaces original metadata"
+embedded_style_map.mbt	Extension	read_content_type_xml_entries,write_content_types_xml	name	embedded_style_map_test:"embedded style map can be written and read"; embedded_style_map_test:"re-embedding style map replaces original metadata"
+embedded_style_map.mbt	Id	write_relationships_xml	name	embedded_style_map_test:"embedded style map can be written and read"; embedded_style_map_test:"re-embedding style map replaces original metadata"
+embedded_style_map.mbt	Override	write_content_types_xml	name	embedded_style_map_test:"embedding style map preserves unrelated overrides"
+embedded_style_map.mbt	PartName	read_content_type_xml_entries,write_content_types_xml	name	embedded_style_map_test:"embedded style map can be written and read"; embedded_style_map_test:"re-embedding style map replaces original metadata"
+embedded_style_map.mbt	Relationship	write_relationships_xml	name	embedded_style_map_test:"embedded style map can be written and read"; embedded_style_map_test:"re-embedding style map replaces original metadata"
+embedded_style_map.mbt	Relationships	write_relationships_xml	name	embedded_style_map_test:"embedded style map can be written and read"; embedded_style_map_test:"re-embedding style map replaces original metadata"
+embedded_style_map.mbt	Target	write_relationships_xml	name	embedded_style_map_test:"embedded style map can be written and read"; embedded_style_map_test:"re-embedding style map replaces original metadata"
+embedded_style_map.mbt	TargetMode	write_relationships_xml	name	embedded_style_map_test:"embedded style map can be written and read"; embedded_style_map_test:"re-embedding style map replaces original metadata"
+embedded_style_map.mbt	Type	write_relationships_xml	name	embedded_style_map_test:"embedded style map can be written and read"; embedded_style_map_test:"re-embedding style map replaces original metadata"
+embedded_style_map.mbt	Types	write_content_types_xml	name	embedded_style_map_test:"embedded style map can be written and read"; embedded_style_map_test:"re-embedding style map replaces original metadata"
+embedded_style_map.mbt	content-types:Default	read_content_type_xml_entries	name	embedded_style_map_test:"embedded style map can be written and read"; embedded_style_map_test:"re-embedding style map replaces original metadata"
+embedded_style_map.mbt	content-types:Override	read_content_type_xml_entries	name	embedded_style_map_test:"embedding style map preserves unrelated overrides"
+embedded_style_map.mbt	rMammothStyleMap	embedded_style_map_relationship,upsert_embedded_style_map_relationship	value	embedded_style_map_test:"embedded style map can be written and read"; embedded_style_map_test:"re-embedding style map replaces original metadata"
+field_projection.mbt	begin	classify_reader_order_carrier	value	field_projection_wbtest:"field transition owns the whole direct-child carrier"
+field_projection.mbt	body	reader_order_field_story_identity	name	field_projection_wbtest:"story identity is per container for every root kind"
+field_projection.mbt	comment	reader_order_field_story_identity	name	field_projection_wbtest:"story identity is per container for every root kind"
+field_projection.mbt	comments	reader_order_field_story_identity	name	field_projection_wbtest:"story identity is per container for every root kind"
+field_projection.mbt	document	reader_order_field_story_identity	name	field_projection_wbtest:"story identity is per container for every root kind"
+field_projection.mbt	end	classify_reader_order_carrier	value	field_projection_wbtest:"field transition owns the whole direct-child carrier"
+field_projection.mbt	endnote	reader_order_field_story_identity	name	field_projection_wbtest:"story identity is per container for every root kind"
+field_projection.mbt	endnotes	reader_order_field_story_identity	name	field_projection_wbtest:"story identity is per container for every root kind"
+field_projection.mbt	fldChar	scan_reader_order_field_carrier	name	field_projection_wbtest:"field transition owns the whole direct-child carrier"
+field_projection.mbt	footnote	reader_order_field_story_identity	name	field_projection_wbtest:"field state resets between note stories"
+field_projection.mbt	footnotes	reader_order_field_story_identity	name	field_projection_wbtest:"field state resets between note stories"
+field_projection.mbt	instrText	scan_reader_order_field_carrier	name	field_projection_wbtest:"field transition owns the whole direct-child carrier"
+field_projection.mbt	separate	classify_reader_order_carrier	value	field_projection_wbtest:"field transition owns the whole direct-child carrier"
+field_projection.mbt	txbxContent	reader_order_field_story_identity,scan_reader_order_field_carrier	name	field_projection_wbtest:"textbox fields do not leak across story boundaries"
 reader_order_projection.mbt	AlternateContent	ReaderOrderWalker::walk_inline_element,ReaderOrderWalker::walk_paragraph_extras,ReaderOrderWalker::walk_pict_extras,ReaderOrderWalker::walk_structural_element,ReaderOrderWalker::walk_text_box_extras,collect_reader_order_body_outputs	name	reader_order_property_wbtest:"the generator keeps producing documents worth testing"; reader_order_property_wbtest:"the projection matches the reader on generated documents"
 reader_order_projection.mbt	Fallback	ReaderOrderWalker::walk_inline_element,ReaderOrderWalker::walk_paragraph_extras,ReaderOrderWalker::walk_pict_extras,ReaderOrderWalker::walk_structural_element,ReaderOrderWalker::walk_text_box_extras,collect_reader_order_body_outputs	name	reader_order_property_wbtest:"the generator keeps producing documents worth testing"; reader_order_property_wbtest:"the projection matches the reader on generated documents"
 reader_order_projection.mbt	_GoBack	reader_order_body_output_kind	name	reader_order_projection_wbtest:"reader order classifies conditional empty table outputs like BodyReader"
@@ -436,7 +436,7 @@ reader_order_projection.mbt	column	reader_order_body_output_kind	value	reader_or
 reader_order_projection.mbt	comment	ReaderOrderWalker::walk	name	reader_order_projection_wbtest:"each story root kind projects its paragraphs"
 reader_order_projection.mbt	commentRangeEnd	ReaderOrderWalker::walk_inline_element	name	reader_order_projection_wbtest:"seam and barrier groups classify inline oddities element by element"
 reader_order_projection.mbt	commentRangeStart	ReaderOrderWalker::walk_inline_element	name	reader_order_projection_wbtest:"seam and barrier groups classify inline oddities element by element"
-reader_order_projection.mbt	commentReference	ReaderOrderWalker::walk_inline_element,reader_order_body_output_kind	name	reader_order_projection_wbtest:"seam and barrier groups classify inline oddities element by element"
+reader_order_projection.mbt	commentReference	ReaderOrderWalker::walk_inline_element,reader_order_body_output_kind	name	reader_order_projection_wbtest:"reader order classifies conditional empty table outputs like BodyReader"; (the walker arm is behaviourally equivalent to the fallback -- both produce HardBarrier, review-verified unobservable. The explicit arm is documentation)
 reader_order_projection.mbt	comments	ReaderOrderWalker::walk	name	reader_order_projection_wbtest:"each story root kind projects its paragraphs"
 reader_order_projection.mbt	cr	ReaderOrderWalker::walk_inline_element	name	reader_order_projection_wbtest:"seam and barrier groups classify inline oddities element by element"
 reader_order_projection.mbt	del	ReaderOrderWalker::is_deleted_paragraph_mark,ReaderOrderWalker::walk_inline_element,ReaderOrderWalker::walk_paragraph_extras,reader_order_is_deleted_body_paragraph,reader_order_projection_visibility	name	reader_order_projection_wbtest:"reader order discovers textboxes inside deleted revisions"; reader_order_projection_wbtest:"reader order drops deleted paragraphs visited as paragraph children"
@@ -488,16 +488,16 @@ reader_order_projection.mbt	textWrapping	reader_order_body_output_kind	value	rea
 reader_order_projection.mbt	textbox	reader_order_is_vml_flattening_container	name	reader_order_projection_wbtest:"reader order flattens inline drawing and object children"; reader_order_projection_wbtest:"reader order emits textbox paragraphs after the primary paragraph"
 reader_order_projection.mbt	tr	ReaderOrderWalker::walk_inline_element,ReaderOrderWalker::walk_pict_extras,ReaderOrderWalker::walk_structural_element,reader_order_body_output_kind	name	reader_order_projection_wbtest:"reader order projects nested runs text atoms seams and barriers"; reader_order_projection_wbtest:"reader order preserves vMerge cells when malformed tables fail open"
 reader_order_projection.mbt	txbxContent	ReaderOrderWalker::walk_inline_element,ReaderOrderWalker::walk_paragraph_extras,ReaderOrderWalker::walk_pict_extras,ReaderOrderWalker::walk_structural_element,ReaderOrderWalker::walk_text_box_extras,reader_order_projection_visibility	name	reader_order_projection_wbtest:"reader order emits textbox paragraphs after the primary paragraph"; reader_order_projection_wbtest:"reader order discovers textboxes inside deleted revisions"
-relationship_mutation.mbt	{http://schemas.openxmlformats.org/package/2006/relationships}Relationships	read_mutation_relationships	name	-
-run_surgery.mbt	:	run_surgery_qualified_prefix	fragment	-
-run_surgery.mbt	checkbox	run_surgery_inside_checkbox_control	name	-
-run_surgery.mbt	rPr	run_surgery_first_content_position	name	-
-run_surgery.mbt	sdt	run_surgery_inside_checkbox_control	name	-
-run_surgery.mbt	sdtPr	run_surgery_inside_checkbox_control	name	-
-run_surgery.mbt	t	plan_whole_run_replacement	name	-
-run_surgery.mbt	xml:space	run_surgery_declares_space,run_surgery_space_declaration	name	-
-token_map.mbt	amp	decode_entity_token	entity	-
-token_map.mbt	apos	decode_entity_token	entity	-
-token_map.mbt	gt	decode_entity_token	entity	-
-token_map.mbt	lt	decode_entity_token	entity	-
-token_map.mbt	quot	decode_entity_token	entity	-
+relationship_mutation.mbt	{http://schemas.openxmlformats.org/package/2006/relationships}Relationships	read_mutation_relationships	name	docx_wbtest:"relationship mutation refuses consumer-dependent MCE branches"
+run_surgery.mbt	:	run_surgery_qualified_prefix	fragment	run_surgery_wbtest:"whole-run synthesis is namespace-correct"
+run_surgery.mbt	checkbox	run_surgery_inside_checkbox_control	name	run_surgery_wbtest:"whole-run replacement refuses text the reader replaces"
+run_surgery.mbt	rPr	run_surgery_first_content_position	name	run_surgery_wbtest:"whole-run synthesis goes after w:rPr"
+run_surgery.mbt	sdt	run_surgery_inside_checkbox_control	name	run_surgery_wbtest:"whole-run replacement refuses text the reader replaces"
+run_surgery.mbt	sdtPr	run_surgery_inside_checkbox_control	name	run_surgery_wbtest:"whole-run replacement refuses text the reader replaces"
+run_surgery.mbt	t	plan_whole_run_replacement	name	run_surgery_wbtest:"whole-run replacement does not duplicate xml:space"
+run_surgery.mbt	xml:space	run_surgery_declares_space,run_surgery_space_declaration	name	run_surgery_wbtest:"whole-run replacement finds xml:space only as an attribute"
+token_map.mbt	amp	decode_entity_token	entity	token_map_wbtest:"token map: XML entities and numeric characters match the reader"
+token_map.mbt	apos	decode_entity_token	entity	token_map_wbtest:"token map: XML entities and numeric characters match the reader"
+token_map.mbt	gt	decode_entity_token	entity	token_map_wbtest:"token map: XML entities and numeric characters match the reader"
+token_map.mbt	lt	decode_entity_token	entity	token_map_wbtest:"token map: XML entities and numeric characters match the reader"
+token_map.mbt	quot	decode_entity_token	entity	token_map_wbtest:"token map: XML entities and numeric characters match the reader"

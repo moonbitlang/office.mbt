@@ -161,6 +161,30 @@ test "embedded style map can be written and read" {
 }
 
 ///|
+/// A pre-existing Override survives embedding. The read-side Override arm of
+/// `read_content_type_xml_entries` was unpinned: embedding recreates the
+/// style-map Override, so dropping the arm was masked in every fixture whose
+/// only Override was the one being recreated. An unrelated Override has to
+/// come back out.
+test "embedding style map preserves unrelated overrides" {
+  let content_types = "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?><Types xmlns=\"http://schemas.openxmlformats.org/package/2006/content-types\"><Default Extension=\"png\" ContentType=\"image/png\"/><Override PartName=\"/word/styles.xml\" ContentType=\"application/vnd.openxmlformats-officedocument.wordprocessingml.styles+xml\"/></Types>"
+  let relationships = "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?><Relationships xmlns=\"http://schemas.openxmlformats.org/package/2006/relationships\"><Relationship Id=\"rId3\" Type=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships/settings\" Target=\"settings.xml\"/></Relationships>"
+  let written = @docx2html.embed_style_map(
+    style_map_embedding_docx_from_parts(relationships, content_types),
+    "p => h1",
+  )
+  let zip = @docx2html.open_zip(written)
+  let round_tripped = zip.read_text("[Content_Types].xml").unwrap()
+  assert_true(
+    round_tripped.contains(
+      "<Override PartName=\"/word/styles.xml\" ContentType=\"application/vnd.openxmlformats-officedocument.wordprocessingml.styles+xml\"/>",
+    ),
+  )
+  // and the style-map Override is there too, not instead
+  assert_true(round_tripped.contains("mammoth/style-map"))
+}
+
+///|
 test "re-embedding style map replaces original metadata" {
   let first = @docx2html.embed_style_map(
     normal_style_map_embedding_docx(),
