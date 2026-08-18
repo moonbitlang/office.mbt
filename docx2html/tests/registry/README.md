@@ -51,7 +51,7 @@ The `kind` column separates element/attribute **name**s from attribute
 
 ## The escape suite
 
-Every escape a review round demonstrated — twenty-one of them — is replayed by
+Every escape a review round demonstrated — twenty-four of them — is replayed by
 `escape_suite.sh` against a scratch copy of the sources. Each mutation is
 verified to have actually applied before its failure is required (a mutation
 that silently does not apply looks exactly like a check that does not catch),

@@ -117,6 +117,15 @@ expect E20-exempt-destructure "exempt file's function writer_destructure"
 fresh; mutate reader_order_projection.mbt 's/^fn reader_order_atom_span/fn assembled_escape(name : String) -> Bool {\n  name == "\\u{62}randNew"\n}\n\n\/\/\/|\nfn reader_order_atom_span/m' randNew
 expect E21-escape-assembled "UNREGISTERED: randNew"
 
+fresh; printf 'fn is_custom_element(tag : String) -> Bool {\n  tag == "custom-name"\n}\n' > "$work/docx/escape_probe.mbt"
+expect E22-hyphenated-new-file "UNCLASSIFIED FILE: escape_probe.mbt"
+
+fresh; mutate dingbat_to_unicode.mbt 's/"WINGDINGS 3"/"BOOKSHELF SYMBOL 7" | "WINGDINGS 3"/' 'BOOKSHELF SYMBOL 7'
+expect E23-multiword-font "UNREGISTERED: BOOKSHELF SYMBOL 7"
+
+fresh; mutate docx_reader.mbt 's/^fn office_namespace_map/let toplevel_probe : String = "toplevelEscape"\n\n\/\/\/|\nfn office_namespace_map/m' toplevelEscape
+expect E24-toplevel-binding "UNREGISTERED: toplevelEscape"
+
 fresh; expect final-baseline "names reconciled"
 
-if [ "$fail" -eq 0 ]; then echo "escape suite: 21 escapes + 2 baselines, all as expected"; else exit 1; fi
+if [ "$fail" -eq 0 ]; then echo "escape suite: 24 escapes + 2 baselines, all as expected"; else exit 1; fi

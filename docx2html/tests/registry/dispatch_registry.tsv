@@ -391,8 +391,8 @@ docx_reader.mbt	wp	office_namespace_map	prefix	-
 docx_reader.mbt	wp:anchor	BodyReader::read_element	name	-
 docx_reader.mbt	wp:docPr	BodyReader::read_drawing_hyperlink,read_drawing_alt_text	name	-
 docx_reader.mbt	wp:inline	BodyReader::read_element	name	-
-docx_reader.mbt	{http://schemas.openxmlformats.org/package/2006/relationships}Relationship	RelationshipIndex::find_unique_target_by_id	name	-
-docx_reader.mbt	{http://schemas.openxmlformats.org/package/2006/relationships}Relationships	RelationshipIndex::find_unique_target_by_id	name	-
+docx_reader.mbt	{http://schemas.openxmlformats.org/package/2006/relationships}Relationship	(toplevel)	name	-
+docx_reader.mbt	{http://schemas.openxmlformats.org/package/2006/relationships}Relationships	(toplevel)	name	-
 embedded_style_map.mbt	ContentType	read_content_type_xml_entries,write_content_types_xml	name	-
 embedded_style_map.mbt	Default	write_content_types_xml	name	-
 embedded_style_map.mbt	Extension	read_content_type_xml_entries,write_content_types_xml	name	-

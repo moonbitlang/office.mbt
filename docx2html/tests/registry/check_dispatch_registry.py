@@ -89,7 +89,7 @@ SCHEMES = {'urn', 'http', 'https', 'mailto', 'data'}
 # `document.xml`), at most one space run (`WINGDINGS 2`), bounded length so
 # sentences stay out. Noise this admits is classified kind=noise, which is
 # cheaper than a miss.
-BARE = re.compile(r'"([A-Za-z_][A-Za-z0-9_.\-]*(?: [A-Za-z0-9_.\-]+)?)"')
+BARE = re.compile(r'"([A-Za-z_][A-Za-z0-9_.\-]*(?: [A-Za-z0-9_.\-]+){0,2})"')
 BARE_MAX = 40
 # Clark names: "{uri}local", dispatched against expanded roots
 CLARK = re.compile(r'"(\{[^"{}]+\}[A-Za-z_][A-Za-z0-9_.\-]*)"')
@@ -110,9 +110,10 @@ LOCAL_TOKEN = re.compile(r'\blocal_name\b')
 # string suggests smuggled dispatch. Optional parentheses covered. This is
 # the one place a shape detector remains, and only as a classification
 # trigger, never as the trust boundary.
+_NAMEISH = r'[A-Za-z_][A-Za-z0-9_.\-]*(?: [A-Za-z0-9_.\-]+){0,2}'
 SMUGGLE = re.compile(
-    r'(?:==|!=|\bis\b)[\s(]*"[A-Za-z][A-Za-z0-9]*"'
-    r'|"[A-Za-z][A-Za-z0-9]*"[\s)]*(?:==|!=|=>)'
+    r'(?:==|!=|\bis\b)[\s(]*"' + _NAMEISH + r'"'
+    r'|"' + _NAMEISH + r'"[\s)]*(?:==|!=|=>)'
 )
 
 def strip_comments(line):
@@ -147,6 +148,12 @@ def functions(lines):
         elif l.startswith('test ') or l.startswith('test"'):
             out.append((current, start, i))
             current = '(test)'
+            start = i
+        elif re.match(r'(?:pub(?:\(all\))? )?(?:let|const)\b', l):
+            # a top-level binding is not part of the preceding function, and
+            # attributing its quoted names there misleads the ledger
+            out.append((current, start, i))
+            current = '(toplevel)'
             start = i
         elif current == '(test)' and l == '}':
             # the block ends HERE: production code after the last test in a
@@ -183,7 +190,7 @@ def extract_region(raw_lines, stripped_lines):
         # assembled strings contribute their name-shaped residue
         for m in ASSEMBLED_STRING.finditer(l):
             residue = ESCAPE_SEQ.sub('', m.group(1))
-            if residue and len(residue) <= BARE_MAX and re.fullmatch(r'[A-Za-z_][A-Za-z0-9_.\-]*(?: [A-Za-z0-9_.\-]+)?', residue):
+            if residue and len(residue) <= BARE_MAX and re.fullmatch(r'[A-Za-z_][A-Za-z0-9_.\-]*(?: [A-Za-z0-9_.\-]+){0,2}', residue):
                 found.add(residue)
     return found
 
