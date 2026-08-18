@@ -5,7 +5,7 @@
 set -euo pipefail
 here="$(cd "$(dirname "$0")" && pwd)"
 fail=0
-while IFS='|' read -r _ file url size served vendored _; do
+while IFS='|' read -r _ file url _size served vendored _; do
   file=$(echo "$file" | tr -d ' `'); url=$(echo "$url" | tr -d ' `')
   served=$(echo "$served" | tr -d ' `'); vendored=$(echo "$vendored" | tr -d ' `')
   case "$file" in docxcorp-*.docx) ;; *) continue ;; esac
