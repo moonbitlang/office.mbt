@@ -1846,8 +1846,8 @@ fn read_note_part_at_path(
       notes.push({
         note_type,
         note_id: annotation_id_or_missing(annotation_id),
-        body: reader.read_children(
-          ReaderNode::of(note_element).element_children(),
+        body: reader_items_to_elements(
+          reader.read_children(ReaderNode::of(note_element).element_children()),
         ),
       })
       annotation_ids.push(annotation_id)
@@ -1910,8 +1910,8 @@ fn read_comments_for_document(
     let annotation_id = comment_element.attributes.get("w:id")
     comments.push({
       comment_id: annotation_id_or_missing(annotation_id),
-      body: reader.read_children(
-        ReaderNode::of(comment_element).element_children(),
+      body: reader_items_to_elements(
+        reader.read_children(ReaderNode::of(comment_element).element_children()),
       ),
       author_name: read_optional_attribute(comment_element, "w:author"),
       author_initials: read_optional_attribute(comment_element, "w:initials"),
@@ -2031,7 +2031,9 @@ fn read_document_xml_with_messages(
   }
   {
     document: document(
-      reader.read_children(ReaderNode::of(body).element_children()),
+      reader_items_to_elements(
+        reader.read_children(ReaderNode::of(body).element_children()),
+      ),
       notes~,
       comments~,
     ),
@@ -2057,7 +2059,7 @@ priv struct BodyReader {
 fn BodyReader::read_children(
   self : BodyReader,
   children : Array[ReaderNode],
-) -> Array[DocumentElement] raise DocxError {
+) -> Array[ReaderItem] raise DocxError {
   let elements : Array[DocumentElement] = []
   let deleted_paragraph_contents : Array[ReaderNode] = []
   for element in children {
@@ -2075,7 +2077,7 @@ fn BodyReader::read_children(
       _ => elements.append(self.read_element(element))
     }
   }
-  elements
+  reader_legacy_items(elements)
 }
 
 ///|
@@ -2121,21 +2123,24 @@ fn BodyReader::read_element(
         Some(name) => [BookmarkStart(name)]
       }
     "w:hyperlink" => self.read_hyperlink(element)
-    "w:drawing" | "w:object" => self.read_children(element.element_children())
+    "w:drawing" | "w:object" =>
+      reader_items_to_elements(self.read_children(element.element_children()))
     "w:pict" => []
     "mc:AlternateContent" =>
-      self.read_children(
-        element.first_or_empty("mc:Fallback").element_children(),
+      reader_items_to_elements(
+        self.read_children(
+          element.first_or_empty("mc:Fallback").element_children(),
+        ),
       )
     "wp:inline" | "wp:anchor" => self.read_drawing_element(element)
     "v:roundrect" | "v:shape" | "v:textbox" | "v:group" | "v:rect" =>
-      self.read_children(element.element_children())
+      reader_items_to_elements(self.read_children(element.element_children()))
     "v:imagedata" => self.read_vml_image_data(element)
     "w:tbl" => [self.read_table(element)]
     "w:tr" => self.read_table_row(element)
     "w:tc" => [self.read_table_cell(element)]
     "w:ins" | "w:smartTag" | "w:sdtContent" =>
-      self.read_children(element.element_children())
+      reader_items_to_elements(self.read_children(element.element_children()))
     "w:sdt" => self.read_structured_document_tag(element)
     _ =>
       if is_ignored_body_element(element.name()) {
@@ -2608,7 +2613,8 @@ fn BodyReader::read_text_box_elements(
   match element.name() {
     "mc:AlternateContent" =>
       self.read_text_box_elements(element.first_or_empty("mc:Fallback"))
-    "w:txbxContent" => self.read_children(element.element_children())
+    "w:txbxContent" =>
+      reader_items_to_elements(self.read_children(element.element_children()))
     _ => {
       let elements : Array[DocumentElement] = []
       for child_element in element.element_children() {
@@ -2653,7 +2659,11 @@ fn BodyReader::read_pict_extra_elements(
           ),
         )
       "w:txbxContent" =>
-        elements.append(self.read_children(child_element.element_children()))
+        elements.append(
+          reader_items_to_elements(
+            self.read_children(child_element.element_children()),
+          ),
+        )
       "w:pict"
       | "v:roundrect"
       | "v:shape"
@@ -2672,8 +2682,10 @@ fn BodyReader::read_structured_document_tag(
   self : BodyReader,
   element : ReaderNode,
 ) -> Array[DocumentElement] raise DocxError {
-  let content = self.read_children(
-    element.first_or_empty("w:sdtContent").element_children(),
+  let content = reader_items_to_elements(
+    self.read_children(
+      element.first_or_empty("w:sdtContent").element_children(),
+    ),
   )
   match read_structured_checkbox(element.first_or_empty("w:sdtPr")) {
     Some(checked) => {
@@ -2859,7 +2871,10 @@ fn BodyReader::read_run(
   element : ReaderNode,
 ) -> DocumentElement raise DocxError {
   let properties = self.read_run_properties(element.first_or_empty("w:rPr"))
-  run(self.read_children(element.element_children()), properties~)
+  run(
+    reader_items_to_elements(self.read_children(element.element_children())),
+    properties~,
+  )
 }
 
 ///|
@@ -3048,7 +3063,9 @@ fn BodyReader::read_hyperlink(
       }
       [
         Hyperlink(
-          children=self.read_children(element.element_children()),
+          children=reader_items_to_elements(
+            self.read_children(element.element_children()),
+          ),
           href~,
           anchor=None,
           target_frame~,
@@ -3060,13 +3077,18 @@ fn BodyReader::read_hyperlink(
         Some(anchor) =>
           [
             Hyperlink(
-              children=self.read_children(element.element_children()),
+              children=reader_items_to_elements(
+                self.read_children(element.element_children()),
+              ),
               href=None,
               anchor=Some(anchor),
               target_frame~,
             ),
           ]
-        None => self.read_children(element.element_children())
+        None =>
+          reader_items_to_elements(
+            self.read_children(element.element_children()),
+          )
       }
   }
 }
@@ -3490,7 +3512,7 @@ fn BodyReader::read_table(
 ) -> DocumentElement raise DocxError {
   Table(
     children=self.calculate_table_row_spans(
-      self.read_children(element.element_children()),
+      reader_items_to_elements(self.read_children(element.element_children())),
     ),
     properties=self.read_table_properties(element.first_or_empty("w:tblPr")),
   )
@@ -3520,7 +3542,9 @@ fn BodyReader::read_table_row(
     let is_header = properties.first("w:tblHeader") is Some(_)
     [
       TableRow(
-        children=self.read_children(element.element_children()),
+        children=reader_items_to_elements(
+          self.read_children(element.element_children()),
+        ),
         is_header~,
       ),
     ]
@@ -3537,7 +3561,9 @@ fn BodyReader::read_table_cell(
     properties.first_or_empty("w:gridSpan").attribute_or("w:val", "1"),
   )
   TableCell(
-    children=self.read_children(element.element_children()),
+    children=reader_items_to_elements(
+      self.read_children(element.element_children()),
+    ),
     col_span~,
     row_span=if read_vertical_merge_continue(properties) { 0 } else { 1 },
   )
