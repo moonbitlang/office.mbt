@@ -138,6 +138,9 @@ expect E27-long-name "UNREGISTERED: OrdinaryExtension"
 fresh; mutate token_map.mbt 's/^fn token_map_error/fn const_use_probe(n : String) -> Bool {\n  n == PACKAGE_RELATIONSHIPS_ROOT\n}\n\n\/\/\/|\nfn token_map_error/m' const_use_probe
 expect E28-const-use-cross-file "UNREGISTERED: "
 
+fresh; mutate annotation_scan.mbt 's/impl Show for ScanMarkerKind with fn output\(self, logger\) \{/impl Show for ScanMarkerKind with fn output(self, logger) {\n  let _probe : String = "implProbe"/' implProbe
+expect E29-impl-attribution "UNREGISTERED: implProbe dispatched in annotation_scan.mbt (ScanMarkerKind::impl:output)"
+
 fresh; expect final-baseline "names reconciled"
 
-if [ "$fail" -eq 0 ]; then echo "escape suite: 28 escapes + 2 baselines, all as expected"; else exit 1; fi
+if [ "$fail" -eq 0 ]; then echo "escape suite: 29 escapes + 2 baselines, all as expected"; else exit 1; fi

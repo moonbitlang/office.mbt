@@ -152,6 +152,12 @@ def functions(lines):
             out.append((current, start, i))
             current = '(test)'
             start = i
+        elif (m2 := re.match(r'(?:pub(?:\(all\))? )?impl\b\s+(?:\w+\s+for\s+)?(\w+)\s+with\s+(?:fn\s+)?(\w+)', l)) is not None:
+            # a trait implementation is its own region; without this its
+            # strings attribute to whichever ordinary function precedes it
+            out.append((current, start, i))
+            current = m2.group(1) + '::impl:' + m2.group(2)
+            start = i
         elif re.match(r'(?:pub(?:\(all\))? )?(?:let|const)\b', l):
             # a top-level binding is not part of the preceding function, and
             # attributing its quoted names there misleads the ledger
