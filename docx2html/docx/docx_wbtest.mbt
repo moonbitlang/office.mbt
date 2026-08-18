@@ -1863,6 +1863,16 @@ test "docx checkbox replacement searches carrier then extras in order" {
   guard preserved is Paragraph(children=[Run(children=[Text("Y")], ..)], ..) else {
     fail("expected Y preserved")
   }
+  // the same decisions in effect order: X's projection suppressed by the
+  // replacement, the checkbox standing visible in its place, Y untouched
+  inspect(
+    effect_summaries(
+      empty_body_reader({ relationships: [] }).read_children(
+        ReaderNode::of(root).first_or_empty("w:body").element_children(),
+      ),
+    ),
+    content="boundary(w:sdt) ; suppressed(w:pict) ; suppressed(w:pict) ; suppressed(w:t) ; nontext(w:t) ; text(w:t)=Y",
+  )
 }
 
 ///|
