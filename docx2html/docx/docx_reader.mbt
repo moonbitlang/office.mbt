@@ -345,9 +345,7 @@ priv struct CommentsReadResult {
 priv struct TableRowForSpan {
   cells : Array[TableCellForSpan]
   is_header : Bool
-  // None while the `w:sdt` legacy island can still hand this pass erased
-  // rows; those rebuild as `Legacy` below
-  source : ReaderNode?
+  source : ReaderNode
 }
 
 ///|
@@ -355,7 +353,7 @@ priv struct TableCellForSpan {
   children : Array[ReaderItem]
   col_span : Int
   row_span : Int
-  source : ReaderNode?
+  source : ReaderNode
 }
 
 ///|
@@ -2515,15 +2513,6 @@ fn wrap_item_with_hyperlink(
         local_effects,
         shape: ReaderRun(children=[hyperlink_of(children)], properties~),
       })
-    Legacy(Run(children~, properties~)) =>
-      New({
-        source,
-        local_effects: [],
-        shape: ReaderRun(
-          children=[hyperlink_of(reader_legacy_items(children))],
-          properties~,
-        ),
-      })
     other => hyperlink_of([other])
   }
 }
@@ -2802,7 +2791,13 @@ fn BodyReader::read_structured_document_tag(
       } else {
         // no text to stand in for: the checkbox is synthesized at the
         // control itself
-        [New({ source: element, local_effects: [], shape: ReaderCheckbox(checked) })]
+        [
+          New({
+            source: element,
+            local_effects: [],
+            shape: ReaderCheckbox(checked),
+          }),
+        ]
       }
     }
     None => content
@@ -2858,13 +2853,10 @@ fn replace_first_text_in_item(
   match item {
     New(tree) => {
       let (shape, found) = replace_first_text_in_shape(tree.shape, checked)
-      (New({ source: tree.source, local_effects: tree.local_effects, shape }), found)
-    }
-    // legacy producers (images) never hold text; the walk below preserves
-    // the erased behaviour exactly and dies with `Legacy`
-    Legacy(element) => {
-      let (next, found) = replace_first_text_in_element(element, checked)
-      (Legacy(next), found)
+      (
+        New({ source: tree.source, local_effects: tree.local_effects, shape }),
+        found,
+      )
     }
     Trace(_) => (item, false)
   }
@@ -2942,87 +2934,6 @@ fn replace_first_text_in_shape(
       (ReaderTableCell(children=new_children, col_span~, row_span~), found)
     }
     _ => (shape, false)
-  }
-}
-
-///|
-/// Element-level twin of `replace_first_text_with_checkbox` for content the
-/// remaining legacy producers hand over; dies with `Legacy`.
-fn replace_first_text_with_checkbox_elements(
-  elements : Array[DocumentElement],
-  checked : Bool,
-) -> (Array[DocumentElement], Bool) {
-  let replaced : Array[DocumentElement] = []
-  let mut found = false
-  for element in elements {
-    if found {
-      replaced.push(element)
-    } else {
-      let (next, next_found) = replace_first_text_in_element(element, checked)
-      replaced.push(next)
-      if next_found {
-        found = true
-      }
-    }
-  }
-  (replaced, found)
-}
-
-///|
-fn replace_first_text_in_element(
-  element : DocumentElement,
-  checked : Bool,
-) -> (DocumentElement, Bool) {
-  match element {
-    Text(value) =>
-      if value.length() > 0 {
-        (checkbox(checked), true)
-      } else {
-        (element, false)
-      }
-    Document(children~, notes~, comments~) => {
-      let (new_children, found) = replace_first_text_with_checkbox_elements(
-        children, checked,
-      )
-      (Document(children=new_children, notes~, comments~), found)
-    }
-    Paragraph(children~, properties~) => {
-      let (new_children, found) = replace_first_text_with_checkbox_elements(
-        children, checked,
-      )
-      (Paragraph(children=new_children, properties~), found)
-    }
-    Run(children~, properties~) => {
-      let (new_children, found) = replace_first_text_with_checkbox_elements(
-        children, checked,
-      )
-      (Run(children=new_children, properties~), found)
-    }
-    Hyperlink(children~, href~, anchor~, target_frame~) => {
-      let (new_children, found) = replace_first_text_with_checkbox_elements(
-        children, checked,
-      )
-      (Hyperlink(children=new_children, href~, anchor~, target_frame~), found)
-    }
-    Table(children~, properties~) => {
-      let (new_children, found) = replace_first_text_with_checkbox_elements(
-        children, checked,
-      )
-      (Table(children=new_children, properties~), found)
-    }
-    TableRow(children~, is_header~) => {
-      let (new_children, found) = replace_first_text_with_checkbox_elements(
-        children, checked,
-      )
-      (TableRow(children=new_children, is_header~), found)
-    }
-    TableCell(children~, col_span~, row_span~) => {
-      let (new_children, found) = replace_first_text_with_checkbox_elements(
-        children, checked,
-      )
-      (TableCell(children=new_children, col_span~, row_span~), found)
-    }
-    _ => (element, false)
   }
 }
 
@@ -3491,7 +3402,13 @@ fn BodyReader::read_vml_image_data(
           alt_text=element.attribute("o:title"),
         ) {
         Some(image) =>
-          [New({ source: element, local_effects: [], shape: ReaderImage(image) })]
+          [
+            New({
+              source: element,
+              local_effects: [],
+              shape: ReaderImage(image),
+            }),
+          ]
         None => []
       }
     None => {
@@ -3897,16 +3814,7 @@ fn BodyReader::table_cells_for_span(
           children: cell_children,
           col_span,
           row_span,
-          source: Some(cell_source),
-        })
-      // cells the `w:sdt` legacy island erased before this pass; goes away
-      // with the island
-      Legacy(TableCell(children=cell_children, col_span~, row_span~)) =>
-        cells.push({
-          children: reader_legacy_items(cell_children),
-          col_span,
-          row_span,
-          source: None,
+          source: cell_source,
         })
       _ => {
         self.warn(
@@ -3927,34 +3835,17 @@ fn BodyReader::calculate_table_row_spans(
   let typed_rows : Array[TableRowForSpan] = []
   for item in items {
     match item {
-      New({ source, local_effects: _, shape: ReaderTableRow(children~, is_header~) }) => {
+      New(
+        {
+          source,
+          local_effects: _,
+          shape: ReaderTableRow(children~, is_header~),
+        }
+      ) => {
         guard self.table_cells_for_span(children) is Some(cells) else {
           return items
         }
-        typed_rows.push({ cells, is_header, source: Some(source) })
-      }
-      // rows the `w:sdt` legacy island erased before this pass; goes away
-      // with the island
-      Legacy(TableRow(children~, is_header~)) => {
-        let cells : Array[TableCellForSpan] = []
-        for child in children {
-          match child {
-            TableCell(children=cell_children, col_span~, row_span~) =>
-              cells.push({
-                children: reader_legacy_items(cell_children),
-                col_span,
-                row_span,
-                source: None,
-              })
-            _ => {
-              self.warn(
-                "unexpected non-cell element in table row, cell merging may be incorrect",
-              )
-              return items
-            }
-          }
-        }
-        typed_rows.push({ cells, is_header, source: None })
+        typed_rows.push({ cells, is_header, source })
       }
       _ => {
         self.warn(
@@ -4010,55 +3901,29 @@ fn BodyReader::calculate_typed_table_row_spans(
     for cell_index in 0..<elements[row_index].cells.length() {
       if !skip_cells[row_index][cell_index] {
         let cell = elements[row_index].cells[cell_index]
-        let row_span = row_spans[row_index][cell_index]
-        match cell.source {
-          Some(cell_source) =>
-            new_children.push(
-              New({
-                source: cell_source,
-                local_effects: [],
-                shape: ReaderTableCell(
-                  children=cell.children,
-                  col_span=cell.col_span,
-                  row_span~,
-                ),
-              }),
-            )
-          None =>
-            new_children.push(
-              Legacy(
-                TableCell(
-                  children=reader_items_to_elements(cell.children),
-                  col_span=cell.col_span,
-                  row_span~,
-                ),
-              ),
-            )
-        }
-      }
-    }
-    match elements[row_index].source {
-      Some(row_source) =>
-        rows.push(
+        new_children.push(
           New({
-            source: row_source,
+            source: cell.source,
             local_effects: [],
-            shape: ReaderTableRow(
-              children=new_children,
-              is_header=elements[row_index].is_header,
+            shape: ReaderTableCell(
+              children=cell.children,
+              col_span=cell.col_span,
+              row_span=row_spans[row_index][cell_index],
             ),
           }),
         )
-      None =>
-        rows.push(
-          Legacy(
-            TableRow(
-              children=reader_items_to_elements(new_children),
-              is_header=elements[row_index].is_header,
-            ),
-          ),
-        )
+      }
     }
+    rows.push(
+      New({
+        source: elements[row_index].source,
+        local_effects: [],
+        shape: ReaderTableRow(
+          children=new_children,
+          is_header=elements[row_index].is_header,
+        ),
+      }),
+    )
   }
   rows
 }

@@ -1,14 +1,10 @@
 // PR 2 of the reader unification (#434): the output carrier and the reader IR.
 //
 // The body reader's recursive component is one strongly connected component
-// through `read_children`'s return type. `ReaderItem` is the bridge across
-// the migration: 2.0 put it in the spine with everything `Legacy`, 2a moves
-// the structural producers onto `New(ReaderTree)`, 2b the atoms, 2c converts
-// the transforms and populates effects, and then `Legacy` is deleted with a
-// search guard. The four transforms that rebuild structure -- complex
-// fields, the checkbox replacement, vMerge, and the deleted-paragraph join
-// -- stay as NAMED legacy islands until 2c; their adapters carry `legacy`
-// in their names so the final search means something.
+// through `read_children`'s return type. Every producer builds `New`
+// reader-IR nodes with provenance, transforms rewrite the IR in place, and
+// erasing to `DocumentElement` happens exactly once, in
+// `reader_items_to_elements` -- the reader itself never erases.
 
 ///|
 /// Which atom a projected text value came from. The projection's
@@ -41,12 +37,9 @@ priv enum ReaderEffect {
 ///|
 /// One item of reader output while the migration is in flight.
 priv enum ReaderItem {
-  /// A fully built legacy element. Every producer starts here; the
-  /// variant's deletion is the signal that PR 2 is complete.
-  Legacy(DocumentElement)
   /// A node built through the reader IR.
   New(ReaderTree)
-  /// An effect with no surviving semantic output (2c).
+  /// An effect with no surviving semantic output.
   Trace(ReaderEffect)
 }
 
@@ -121,7 +114,6 @@ fn erase_reader_items_into(
 ) -> Unit {
   for item in items {
     match item {
-      Legacy(element) => out.push(element)
       Trace(_) => ()
       New(tree) =>
         match tree.shape {
@@ -175,22 +167,4 @@ fn erase_reader_items_into(
         }
     }
   }
-}
-
-///|
-/// Wrap legacy output while producers migrate.
-fn reader_legacy_items(elements : Array[DocumentElement]) -> Array[ReaderItem] {
-  elements.map(element => Legacy(element))
-}
-
-///|
-/// The named unwrap the four legacy islands read through while they still
-/// rebuild DocumentElement trees (complex fields, the checkbox replacement,
-/// vMerge, the deleted-paragraph join). Deleting this function is part of
-/// 2c's search guard: when no island remains, nothing may erase inside the
-/// reader.
-fn reader_legacy_island_elements(
-  items : Array[ReaderItem],
-) -> Array[DocumentElement] {
-  reader_items_to_elements(items)
 }

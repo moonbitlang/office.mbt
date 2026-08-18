@@ -3457,18 +3457,52 @@ test "docx w:pict extra content uses alternate fallback" {
 
 ///|
 test "docx structured checkbox replacement recurses through containers" {
-  let nested = document([
-    hyperlink([table([table_row([table_cell([text("placeholder")])])])]),
-  ])
-  let (replaced, found) = replace_first_text_in_element(nested, true)
+  let source = ReaderNode::of(
+    read_xml_string("<x/>", namespace_map=office_namespace_map()),
+  )
+  fn item(shape : ReaderTreeShape) -> ReaderItem {
+    New({ source, local_effects: [], shape })
+  }
+
+  let nested = item(
+    ReaderHyperlink(
+      children=[
+        item(
+          ReaderTable(
+            children=[
+              item(
+                ReaderTableRow(
+                  children=[
+                    item(
+                      ReaderTableCell(
+                        children=[item(ReaderText("placeholder"))],
+                        col_span=1,
+                        row_span=1,
+                      ),
+                    ),
+                  ],
+                  is_header=false,
+                ),
+              ),
+            ],
+            properties=@document.TableProperties::default(),
+          ),
+        ),
+      ],
+      href=None,
+      anchor=None,
+      target_frame=None,
+    ),
+  )
+  let (replaced, found) = replace_first_text_in_item(nested, true)
   inspect(found, content="true")
   inspect(
-    convert_document_to_html(replaced).value,
+    convert_document_to_html(document(reader_items_to_elements([replaced]))).value,
     content="<table><tr><td><input type=\"checkbox\" checked=\"checked\" /></td></tr></table>",
   )
-  let (unchanged, tab_found) = replace_first_text_in_element(tab(), true)
+  let (unchanged, tab_found) = replace_first_text_in_item(item(ReaderTab), true)
   inspect(tab_found, content="false")
-  debug_inspect(unchanged, content="Tab")
+  debug_inspect(reader_items_to_elements([unchanged]), content="[Tab]")
 }
 
 ///|
