@@ -1,9 +1,20 @@
 ///|
+/// A lone surrogate cannot appear in a MoonBit literal, and as of core's
+/// surrogate-escape rejection (moonbitlang/core@298b811f) it cannot come out
+/// of `@json.parse` either. Slicing an astral character splits its pair:
+/// each half, owned, is a genuine lone surrogate.
+fn lone_lead() -> String {
+  "\u{10000}".view(start_offset=0, end_offset=1).to_owned()
+}
+
+///|
+fn lone_trail() -> String {
+  "\u{10000}".view(start_offset=1, end_offset=2).to_owned()
+}
+
+///|
 test "unpaired UTF-16 surrogates are replaced and counted" {
-  // lone surrogates cannot appear in MoonBit literals; parse them in
-  guard @json.parse("\"a\\ud800b\\udc00c\"") is String(mixed) else {
-    fail("expected a JSON string with isolated surrogates")
-  }
+  let mixed = "a" + lone_lead() + "b" + lone_trail() + "c"
   let (fixed, replaced) = @xlsx2html.sanitize_utf16_lossy(mixed)
   inspect(replaced, content="2")
   inspect(fixed, content="a\u{FFFD}b\u{FFFD}c")
@@ -22,16 +33,12 @@ test "well-formed text passes through sanitization unchanged" {
 
 ///|
 test "lone surrogates at the string edges are replaced" {
-  guard @json.parse("\"\\ud800\"") is String(lone_lead) else {
-    fail("expected a lone leading surrogate")
-  }
-  let (lead_fixed, lead_count) = @xlsx2html.sanitize_utf16_lossy(lone_lead)
+  let (lead_fixed, lead_count) = @xlsx2html.sanitize_utf16_lossy(lone_lead())
   inspect(lead_count, content="1")
   inspect(lead_fixed, content="\u{FFFD}")
-  guard @json.parse("\"x\\udc00\"") is String(tail_trail) else {
-    fail("expected a trailing lone surrogate")
-  }
-  let (trail_fixed, trail_count) = @xlsx2html.sanitize_utf16_lossy(tail_trail)
+  let (trail_fixed, trail_count) = @xlsx2html.sanitize_utf16_lossy(
+    "x" + lone_trail(),
+  )
   inspect(trail_count, content="1")
   inspect(trail_fixed, content="x\u{FFFD}")
 }

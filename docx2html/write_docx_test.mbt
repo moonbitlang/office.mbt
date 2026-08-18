@@ -784,12 +784,14 @@ test "review round 2 (batch): writer fails closed on invalid run property values
 
 ///|
 test "review round 3 (batch): XML-unrepresentable characters and highlight 'none' fail closed" {
-  // A lone surrogate reaches the writer only via parsed input (MoonBit
-  // literals cannot spell one), and U+FFFF is a valid scalar but outside
-  // XML 1.0's character set.
-  guard @json.parse("\"a\\ud800b\"") is String(lone_surrogate) else {
-    fail("expected String")
-  }
+  // A lone surrogate reaches the writer only through constructed input:
+  // MoonBit literals cannot spell one, and core's surrogate-escape rejection
+  // (moonbitlang/core@298b811f) closed the @json.parse route. Slicing an
+  // astral character splits its pair; the owned lead half is a genuine lone
+  // surrogate. U+FFFF is a valid scalar but outside XML 1.0's character set.
+  let lone_surrogate = "a" +
+    "\u{10000}".view(start_offset=0, end_offset=1).to_owned() +
+    "b"
   expect_unsupported(
     [@docx2html.paragraph([@docx2html.run([@docx2html.text(lone_surrogate)])])],
     "text contains a character XML cannot represent (code 55296",
