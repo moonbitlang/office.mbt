@@ -81,12 +81,22 @@ keep.
 
 ## The coverage column
 
-Empty on purpose, for now. It will carry **argued** evidence per cell — which
-authored test, generator tag, or corpus fixture exercises that name in that
-context — as the next step of #434's PR 0. Auto-filling it with grep hits
-would manufacture exactly the plausible-but-hollow evidence this gate exists
-to prevent: a mention is not coverage. An empty cell reads as "known gap",
-and the gap list is the work list.
+Carries **argued** evidence per cell: semicolon-separated citations of the
+form `testfile:"test name"`, each placed after reading the test and
+confirming its assertions depend on this name's dispatch behaviour — a
+mention is not coverage, which is why the column is filled by hand and not
+by grep. `-` reads as "known gap", and the gap list is the work list.
+
+The checker keeps citations honest the only way a machine can: every cited
+test must still exist in the cited file (`COVERAGE ROT` otherwise). The
+argument itself — that the test genuinely pins the behaviour — lives in
+review, not in the checker.
+
+Fill state: `docx_reader.mbt`'s element dispatch (the `read_element` arms
+and the complete ignored list — all 22 names including office-word:wrap, the fixture having gained its six missing entries in the
+enumeration fixture on the way) is filled — 54 rows. The projection walker,
+scanner tables, and consumer files are the remaining work list, tracked on
+#434.
 
 Run locally from anywhere:
 

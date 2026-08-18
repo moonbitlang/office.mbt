@@ -325,6 +325,43 @@ for key in sorted(set(rows) & set(want)):
     if rows[key] != want[key]:
         errors.append(f"MOVED: {key[1]} in {key[0]}: source says {','.join(sorted(rows[key]))}, registry says {','.join(sorted(want[key]))}")
 
+# Coverage citations must not rot: each `testfile:"test name"` reference in
+# the coverage column is checked against the named file's actual test blocks.
+# The citation says a human verified that test pins this name's behaviour;
+# this only keeps the pointer alive, it cannot verify the argument.
+CITATION = re.compile(r'([A-Za-z0-9_]+):"([^"]+)"')
+_test_names_cache = {}
+def test_names(base):
+    if base not in _test_names_cache:
+        path = os.path.join(DOCX, base + '.mbt')
+        names = set()
+        if os.path.exists(path):
+            for l in open(path):
+                m = re.match(r'test "([^"]+)"', l)
+                if m:
+                    names.add(m.group(1))
+        else:
+            names = None
+        _test_names_cache[base] = names
+    return _test_names_cache[base]
+
+for key, extra in meta.items():
+    coverage = extra[1] if len(extra) > 1 else ''
+    if coverage in ('', '-'):
+        continue
+    for segment in coverage.split(';'):
+        segment = segment.strip()
+        m = re.fullmatch(r'([A-Za-z0-9_]+):"([^"]+)"', segment)
+        if m is None:
+            errors.append(f"MALFORMED CITATION: {key[1]} coverage segment {segment!r} does not parse as testfile:\"test name\"")
+            continue
+        base, test = m.group(1), m.group(2)
+        known = test_names(base)
+        if known is None:
+            errors.append(f"COVERAGE ROT: {key[1]} cites file {base}.mbt which does not exist")
+        elif test not in known:
+            errors.append(f"COVERAGE ROT: {key[1]} cites {base}:\"{test}\" but no such test exists")
+
 if errors:
     for e in errors:
         print(e, file=sys.stderr)
