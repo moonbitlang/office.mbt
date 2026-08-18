@@ -1531,7 +1531,8 @@ test "each story root kind projects its paragraphs" {
 /// The seam and barrier groups, pinned element by element.
 ///
 /// `walk_inline_element` sorts inline oddities into two buckets: transparent
-/// seams (annotation ranges, bookmark ends, editor debris like `w:proofErr`
+/// seams (annotation ranges, bookmark marks, bare property containers,
+/// editor debris like `w:proofErr`
 /// and `w:lastRenderedPageBreak`) that glue nothing and block nothing, and
 /// hard barriers (the note and comment references, `w:cr`, `w:ptab`,
 /// `w:fldSimple`, and the field machinery `w:fldChar`/`w:instrText`) for
@@ -1545,7 +1546,7 @@ test "each story root kind projects its paragraphs" {
 /// test; the generated grammar produces none of them.
 test "seam and barrier groups classify inline oddities element by element" {
   let source = "<w:document xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\"><w:body>" +
-    "<w:p><w:r><w:t>x</w:t><w:bookmarkEnd w:id=\"1\"/><w:commentRangeStart w:id=\"2\"/><w:commentRangeEnd w:id=\"2\"/><w:annotationRef/><w:lastRenderedPageBreak/><w:proofErr w:type=\"spellStart\"/><w:t>y</w:t></w:r></w:p>" +
+    "<w:p><w:r><w:t>x</w:t><w:bookmarkEnd w:id=\"1\"/><w:commentRangeStart w:id=\"2\"/><w:commentRangeEnd w:id=\"2\"/><w:annotationRef/><w:lastRenderedPageBreak/><w:proofErr w:type=\"spellStart\"/><w:bookmarkStart w:id=\"6\" w:name=\"pin\"/><w:pPr/><w:rPr/><w:t>y</w:t></w:r></w:p>" +
     "<w:p><w:r><w:footnoteReference w:id=\"3\"/><w:endnoteReference w:id=\"4\"/><w:commentReference w:id=\"5\"/><w:footnoteRef/><w:endnoteRef/><w:cr/><w:ptab w:alignment=\"left\"/><w:fldSimple w:instr=\" PAGE \"/><w:fldChar w:fldCharType=\"begin\"/><w:instrText> PAGE </w:instrText><w:fldChar w:fldCharType=\"end\"/></w:r></w:p>" +
     "</w:body></w:document>"
   let projection = scan_reader_order_projection(
@@ -1571,10 +1572,11 @@ test "seam and barrier groups classify inline oddities element by element" {
       _ => ()
     }
   }
-  // exactly the six seam elements plus the seam the walk opens for the run
+  // exactly the nine seam elements plus the seam the walk opens for the run
   // itself: an exact count, because >= let one seam arm quietly vanish behind
-  // the run's own seam
-  assert_eq(seams, 7)
+  // the run's own seam -- and review proved a bare pPr moved to the barrier
+  // bucket survived the ENTIRE suite before these three joined the fixture
+  assert_eq(seams, 10)
   // The second paragraph carries one hard barrier per barrier element, and
   // nothing else that projects.
   let mut barriers = 0
