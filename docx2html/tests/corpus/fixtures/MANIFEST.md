@@ -9,8 +9,20 @@ a **covering subset** chosen by greedy set cover from a 591-document stratified
 sample (10 document types × 15 languages, 4 documents per non-empty stratum):
 every producer family, script family, WML construct, and refusal class the
 sample exhibited is represented by at least one file. The selection labels per
-file are recorded in `../expectations.tsv` together with the pinned behaviour
-of the `docx` CLI on each.
+file are recorded in `../labels.tsv`; the pinned behaviour of the `docx` CLI on
+each is in `../expectations.tsv`.
+
+## License and provenance
+
+The docx-corpus *dataset* is offered under the
+[Open Data Commons Attribution License 1.0](https://opendatacommons.org/licenses/by/1-0/),
+and this manifest is the attribution it asks for. ODC-By licenses the database,
+not the individual collected documents (§2.4) — each document here was crawled
+from the public web and may carry its own rights, the same posture as the three
+stress fixtures vendored earlier from the same corpus. They are carried as test
+inputs with full provenance so any of them can be dropped and re-derived if a
+rights question ever arises; `verify.sh` re-checks every vendored hash against
+this manifest.
 
 ## Naming and repair
 

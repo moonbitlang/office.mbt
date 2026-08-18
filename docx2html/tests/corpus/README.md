@@ -19,19 +19,24 @@ This pins two different kinds of fact:
   `expectations.tsv`, not a silent behaviour change; a refusal changing class
   is a regression until proven otherwise.
 
+Which labels each fixture was selected to cover is committed as `labels.tsv`,
+so the set-cover claim is checkable from this directory alone.
+
 The refusal classes present, from a 591-document stratified sweep
 (counts are for the whole sweep, not just the vendored subset):
 
 | class | sweep count | meaning |
 |---|---:|---|
-| `xml-token-budget` | 39 | mutation-safety XML budget exceeded on real (mostly large) documents |
+| `xml-token-budget` | 39 | resource-limit refusals on real documents: 38 hit the XML token budget (262,144 tokens), one a zip resource limit that this harness's message mapping folds into the same class |
 | `orphan-comments-part` | 21 | `word/comments.xml` exists but no relationship wires it |
 | `opc-noncanonical-entry` | 11 | ZIP entry like `[trash]/0001.dat` refuses the whole package |
-| `ms-sidecar-parts` | 5 | Microsoft annotation sidecars we refuse to desynchronise |
 | `eocd-trailing-bytes` | 4 | garbage after the end-of-central-directory record (Word also refuses) |
+| `ms-sidecar-parts` | 4 | Microsoft annotation sidecars we refuse to desynchronise |
 | `zip64-phantom-field` | 2 | zip64 extra field present with nothing masked |
 | `wt-child-element` | 2 | markup like `<w:br/>` inside `w:t` |
-| singletons | 3 | invalid relationship IRI, missing customXml part, zip resource limit |
+| `sidecar-unknown-paraid` | 1 | a `commentsExtended` record referencing a paraId that does not exist |
+| `invalid-relationship-iri` | 1 | an external relationship target that is not a valid IRI |
+| `missing-source-part` | 1 | a relationship part describing a customXml part that is absent |
 
 Refreshing or extending the subset: the sweep and set-cover tooling lives in
 `.repos/corpus-sample` (untracked); `fixtures/MANIFEST.md` records the repair
