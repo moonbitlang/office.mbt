@@ -235,7 +235,7 @@ fn run_properties_from_xml(
     "</w:rPr></w:r>"
   let root = read_xml_string(xml, namespace_map=office_namespace_map())
   match
-    body_reader_with_numbering(styles, NumberingMap::empty()).read_element(
+    body_reader_with_numbering(styles, NumberingMap::empty()).read_element_erased(
       ReaderNode::of(root),
     )[0] {
     Run(properties~, ..) => properties
@@ -251,10 +251,8 @@ fn body_elements_from_xml(
     element_xml +
     "</w:root>"
   let root = read_xml_string(xml, namespace_map=office_namespace_map())
-  reader_items_to_elements(
-    empty_body_reader({ relationships: [] }).read_children(
-      ReaderNode::of(root).element_children(),
-    ),
+  empty_body_reader({ relationships: [] }).read_children_erased(
+    ReaderNode::of(root).element_children(),
   )
 }
 
@@ -268,7 +266,7 @@ fn paragraph_properties_from_xml(
     "</w:pPr></w:p>"
   let root = read_xml_string(xml, namespace_map=office_namespace_map())
   match
-    body_reader_with_numbering(styles, NumberingMap::empty()).read_element(
+    body_reader_with_numbering(styles, NumberingMap::empty()).read_element_erased(
       ReaderNode::of(root),
     )[0] {
     Paragraph(properties~, ..) => properties
@@ -287,7 +285,7 @@ fn paragraph_numbering_from_xml(
     "</w:pPr></w:p>"
   let root = read_xml_string(xml, namespace_map=office_namespace_map())
   match
-    body_reader_with_numbering(styles, numbering).read_element(
+    body_reader_with_numbering(styles, numbering).read_element_erased(
       ReaderNode::of(root),
     )[0] {
     Paragraph(properties~, ..) => properties.numbering
@@ -1354,7 +1352,7 @@ test "docx reader treats empty style references as missing like Mammoth" {
   let paragraph_xml =
     #|<w:p xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:pPr><w:pStyle w:val="" /></w:pPr></w:p>
   match
-    reader.read_element(
+    reader.read_element_erased(
       ReaderNode::of(
         read_xml_string(paragraph_xml, namespace_map=office_namespace_map()),
       ),
@@ -1369,7 +1367,7 @@ test "docx reader treats empty style references as missing like Mammoth" {
   let run_xml =
     #|<w:r xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:rPr><w:rStyle w:val="" /></w:rPr></w:r>
   match
-    reader.read_element(
+    reader.read_element_erased(
       ReaderNode::of(
         read_xml_string(run_xml, namespace_map=office_namespace_map()),
       ),
@@ -1384,7 +1382,7 @@ test "docx reader treats empty style references as missing like Mammoth" {
   let table_xml =
     #|<w:tbl xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:tblPr><w:tblStyle w:val="" /></w:tblPr></w:tbl>
   match
-    reader.read_element(
+    reader.read_element_erased(
       ReaderNode::of(
         read_xml_string(table_xml, namespace_map=office_namespace_map()),
       ),
@@ -1440,7 +1438,7 @@ test "docx body reader uses mc fallback content like Mammoth" {
     namespace_map=office_namespace_map(),
   )
   debug_inspect(
-    empty_body_reader({ relationships: [] }).read_element(
+    empty_body_reader({ relationships: [] }).read_element_erased(
       ReaderNode::of(with_fallback),
     ),
     content="[Text(\"Fallback\")]",
@@ -1452,7 +1450,7 @@ test "docx body reader uses mc fallback content like Mammoth" {
     namespace_map=office_namespace_map(),
   )
   debug_inspect(
-    empty_body_reader({ relationships: [] }).read_element(
+    empty_body_reader({ relationships: [] }).read_element_erased(
       ReaderNode::of(without_fallback),
     ),
     content="[]",
@@ -1515,9 +1513,7 @@ test "docx reader ignores Mammoth ignored body elements without warnings" {
   let root = read_xml_string(xml, namespace_map=office_namespace_map())
   let reader = empty_body_reader({ relationships: [] })
   debug_inspect(
-    reader_items_to_elements(
-      reader.read_children(ReaderNode::of(root).element_children()),
-    ),
+    reader.read_children_erased(ReaderNode::of(root).element_children()),
     content="[]",
   )
   debug_inspect(reader.messages, content="[]")
@@ -1629,7 +1625,9 @@ test "docx reader does not include run properties as run children" {
     #|<w:r xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:rPr><w:rStyle w:val="Heading1Char" /></w:rPr></w:r>
   let root = read_xml_string(xml, namespace_map=office_namespace_map())
   match
-    empty_body_reader({ relationships: [] }).read_element(ReaderNode::of(root))[0] {
+    empty_body_reader({ relationships: [] }).read_element_erased(
+      ReaderNode::of(root),
+    )[0] {
     Run(children~, ..) => debug_inspect(children, content="[]")
     _ => fail("expected run")
   }
@@ -1681,7 +1679,7 @@ test "docx hyperlink reader replaces external URL fragment when anchor is set" {
       },
     ],
   })
-  match without_fragment_reader.read_element(ReaderNode::of(root))[0] {
+  match without_fragment_reader.read_element_erased(ReaderNode::of(root))[0] {
     Hyperlink(href~, ..) =>
       debug_inspect(href, content="Some(\"http://example.com/#fragment\")")
     _ => fail("expected hyperlink")
@@ -1696,7 +1694,7 @@ test "docx hyperlink reader replaces external URL fragment when anchor is set" {
       },
     ],
   })
-  let elements = reader.read_element(ReaderNode::of(root))
+  let elements = reader.read_element_erased(ReaderNode::of(root))
   match elements[0] {
     Hyperlink(href~, anchor~, target_frame~, ..) => {
       debug_inspect(href, content="Some(\"http://example.com/#fragment\")")
@@ -1711,7 +1709,7 @@ test "docx hyperlink reader replaces external URL fragment when anchor is set" {
     empty_anchor_xml,
     namespace_map=office_namespace_map(),
   )
-  match reader.read_element(ReaderNode::of(empty_anchor))[0] {
+  match reader.read_element_erased(ReaderNode::of(empty_anchor))[0] {
     Hyperlink(href~, anchor~, target_frame~, ..) => {
       debug_inspect(href, content="Some(\"http://example.com/#previous\")")
       debug_inspect(anchor, content="None")
@@ -1739,7 +1737,7 @@ test "docx hyperlink reader follows Mammoth target forms" {
       },
     ],
   })
-  match reader.read_element(ReaderNode::of(external))[0] {
+  match reader.read_element_erased(ReaderNode::of(external))[0] {
     Hyperlink(href~, anchor~, target_frame~, children~) => {
       debug_inspect(href, content="Some(\"http://example.com\")")
       debug_inspect(anchor, content="None")
@@ -1758,7 +1756,7 @@ test "docx hyperlink reader follows Mammoth target forms" {
     namespace_map=office_namespace_map(),
   )
   match
-    empty_body_reader({ relationships: [] }).read_element(
+    empty_body_reader({ relationships: [] }).read_element_erased(
       ReaderNode::of(internal),
     )[0] {
     Hyperlink(href~, anchor~, target_frame~, children~) => {
@@ -1779,7 +1777,7 @@ test "docx hyperlink reader follows Mammoth target forms" {
     namespace_map=office_namespace_map(),
   )
   match
-    empty_body_reader({ relationships: [] }).read_element(
+    empty_body_reader({ relationships: [] }).read_element_erased(
       ReaderNode::of(target_frame),
     )[0] {
     Hyperlink(target_frame~, ..) =>
@@ -1793,7 +1791,7 @@ test "docx hyperlink reader follows Mammoth target forms" {
     namespace_map=office_namespace_map(),
   )
   match
-    empty_body_reader({ relationships: [] }).read_element(
+    empty_body_reader({ relationships: [] }).read_element_erased(
       ReaderNode::of(empty_target_frame),
     )[0] {
     Hyperlink(target_frame~, ..) => debug_inspect(target_frame, content="None")
@@ -1806,7 +1804,7 @@ test "docx hyperlink reader follows Mammoth target forms" {
     namespace_map=office_namespace_map(),
   )
   match
-    empty_body_reader({ relationships: [] }).read_element(
+    empty_body_reader({ relationships: [] }).read_element_erased(
       ReaderNode::of(empty_relationship_id),
     )[0] {
     Hyperlink(href~, anchor~, target_frame~, children~) => {
@@ -1827,7 +1825,7 @@ test "docx hyperlink reader follows Mammoth target forms" {
     namespace_map=office_namespace_map(),
   )
   match
-    empty_body_reader({ relationships: [] }).read_element(
+    empty_body_reader({ relationships: [] }).read_element_erased(
       ReaderNode::of(empty_anchor),
     )[0] {
     Run(..) => ()
@@ -1840,7 +1838,7 @@ test "docx hyperlink reader preserves children when no target is present" {
   let xml =
     #|<w:hyperlink xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:r><w:t>Hello</w:t></w:r></w:hyperlink>
   let root = read_xml_string(xml, namespace_map=office_namespace_map())
-  let elements = empty_body_reader({ relationships: [] }).read_element(
+  let elements = empty_body_reader({ relationships: [] }).read_element_erased(
     ReaderNode::of(root),
   )
   match elements[0] {
@@ -1855,7 +1853,7 @@ test "docx hyperlink reader preserves children when relationship target is missi
     #|<w:hyperlink xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships" r:id="missing"><w:r><w:t>Hello</w:t></w:r></w:hyperlink>
   let root = read_xml_string(xml, namespace_map=office_namespace_map())
   let reader = empty_body_reader({ relationships: [] })
-  match reader.read_element(ReaderNode::of(root))[0] {
+  match reader.read_element_erased(ReaderNode::of(root))[0] {
     Hyperlink(children~, href=None, anchor=None, target_frame=None) =>
       inspect(
         convert_document_to_html(document(children)).value,
@@ -1867,11 +1865,47 @@ test "docx hyperlink reader preserves children when relationship target is missi
 }
 
 ///|
+/// The checkbox transform's search order across the carrier paragraph and its
+/// extras -- the witness #434's design review prescribed before the paragraph
+/// producer converts to the reader IR, because the extras mechanism
+/// (descendants erased as siblings) is exactly what a wrong conversion would
+/// destroy.
+///
+/// A checkbox control whose carrier paragraph holds no ordinary text, only
+/// two textboxes X then Y: the replacement must search the carrier first and
+/// then its extras in order, replacing X, preserving Y, and keeping the
+/// (now empty) carrier paragraph itself.
+test "docx checkbox replacement searches carrier then extras in order" {
+  let source = "<w:document xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\" xmlns:v=\"urn:schemas-microsoft-com:vml\"><w:body>" +
+    "<w:sdt><w:sdtPr><w14:checkbox xmlns:w14=\"http://schemas.microsoft.com/office/word/2010/wordml\"><w14:checked w14:val=\"1\"/></w14:checkbox></w:sdtPr><w:sdtContent>" +
+    "<w:p><w:r><w:pict><v:shape><v:textbox><w:txbxContent><w:p><w:r><w:t>X</w:t></w:r></w:p></w:txbxContent></v:textbox></v:shape></w:pict>" +
+    "<w:pict><v:shape><v:textbox><w:txbxContent><w:p><w:r><w:t>Y</w:t></w:r></w:p></w:txbxContent></v:textbox></v:shape></w:pict></w:r></w:p>" +
+    "</w:sdtContent></w:sdt>" +
+    "</w:body></w:document>"
+  let root = read_xml_string(source, namespace_map=office_namespace_map())
+  let elements = empty_body_reader({ relationships: [] }).read_children_erased(
+    ReaderNode::of(root).first_or_empty("w:body").element_children(),
+  )
+  guard elements is [carrier, replaced, preserved] else {
+    fail("expected three paragraphs, got \{elements.length()}")
+  }
+  guard carrier is Paragraph(children=[Run(children=[], ..)], ..) else {
+    fail("expected the emptied carrier paragraph")
+  }
+  guard replaced is Paragraph(children=[Run(children=[Checkbox(true)], ..)], ..) else {
+    fail("expected the checkbox in X's place")
+  }
+  guard preserved is Paragraph(children=[Run(children=[Text("Y")], ..)], ..) else {
+    fail("expected Y preserved")
+  }
+}
+
+///|
 test "docx structured document tag checkbox without content is read" {
   let xml =
     #|<w:sdt xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main" xmlns:wordml="http://schemas.microsoft.com/office/word/2010/wordml"><w:sdtPr><wordml:checkbox /></w:sdtPr></w:sdt>
   let root = read_xml_string(xml, namespace_map=office_namespace_map())
-  let elements = empty_body_reader({ relationships: [] }).read_element(
+  let elements = empty_body_reader({ relationships: [] }).read_element_erased(
     ReaderNode::of(root),
   )
   debug_inspect(elements, content="[Checkbox(false)]")
@@ -1882,7 +1916,7 @@ test "docx structured document tag checkbox without content is read" {
     namespace_map=office_namespace_map(),
   )
   debug_inspect(
-    empty_body_reader({ relationships: [] }).read_element(
+    empty_body_reader({ relationships: [] }).read_element_erased(
       ReaderNode::of(unchecked),
     ),
     content="[Checkbox(false)]",
@@ -1894,7 +1928,7 @@ test "docx structured document tag checkbox without content is read" {
     namespace_map=office_namespace_map(),
   )
   debug_inspect(
-    empty_body_reader({ relationships: [] }).read_element(
+    empty_body_reader({ relationships: [] }).read_element_erased(
       ReaderNode::of(checked),
     ),
     content="[Checkbox(true)]",
@@ -1906,7 +1940,7 @@ test "docx structured document tag checkbox replaces content character" {
   let xml =
     #|<w:tbl xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main" xmlns:wordml="http://schemas.microsoft.com/office/word/2010/wordml"><w:tr><w:sdt><w:sdtPr><wordml:checkbox><wordml:checked wordml:val="1" /></wordml:checkbox></w:sdtPr><w:sdtContent><w:tc><w:p><w:r><w:t>\u{2610}</w:t></w:r></w:p></w:tc></w:sdtContent></w:sdt></w:tr></w:tbl>
   let root = read_xml_string(xml, namespace_map=office_namespace_map())
-  let elements = empty_body_reader({ relationships: [] }).read_element(
+  let elements = empty_body_reader({ relationships: [] }).read_element_erased(
     ReaderNode::of(root),
   )
   inspect(
@@ -1920,7 +1954,7 @@ test "docx structured document tag checkbox keeps trailing content" {
   let xml =
     #|<w:sdt xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main" xmlns:wordml="http://schemas.microsoft.com/office/word/2010/wordml"><w:sdtPr><wordml:checkbox><wordml:checked wordml:val="1" /></wordml:checkbox></w:sdtPr><w:sdtContent><w:p><w:r><w:t>\u{2610}</w:t></w:r></w:p><w:p><w:r><w:t>After</w:t></w:r></w:p></w:sdtContent></w:sdt>
   let root = read_xml_string(xml, namespace_map=office_namespace_map())
-  let elements = empty_body_reader({ relationships: [] }).read_element(
+  let elements = empty_body_reader({ relationships: [] }).read_element_erased(
     ReaderNode::of(root),
   )
   inspect(
@@ -1934,7 +1968,7 @@ test "docx structured document tag checkbox falls back for empty text" {
   let xml =
     #|<w:sdt xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main" xmlns:wordml="http://schemas.microsoft.com/office/word/2010/wordml"><w:sdtPr><wordml:checkbox /></w:sdtPr><w:sdtContent><w:p><w:r><w:t></w:t></w:r></w:p></w:sdtContent></w:sdt>
   let root = read_xml_string(xml, namespace_map=office_namespace_map())
-  let elements = empty_body_reader({ relationships: [] }).read_element(
+  let elements = empty_body_reader({ relationships: [] }).read_element_erased(
     ReaderNode::of(root),
   )
   inspect(
@@ -1948,7 +1982,7 @@ test "docx structured document tag checkbox ignores deleted content" {
   let xml =
     #|<w:tbl xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main" xmlns:wordml="http://schemas.microsoft.com/office/word/2010/wordml"><w:tr><w:sdt><w:sdtPr><wordml:checkbox><wordml:checked wordml:val="1" /></wordml:checkbox></w:sdtPr><w:sdtContent><w:tc><w:p><w:r><w:t>\u{2610}</w:t></w:r><w:del><w:r><w:t>\u{2610}</w:t></w:r></w:del></w:p></w:tc></w:sdtContent></w:sdt></w:tr></w:tbl>
   let root = read_xml_string(xml, namespace_map=office_namespace_map())
-  let elements = empty_body_reader({ relationships: [] }).read_element(
+  let elements = empty_body_reader({ relationships: [] }).read_element_erased(
     ReaderNode::of(root),
   )
   inspect(
@@ -1980,7 +2014,7 @@ test "docx table properties include table style name" {
     read_images: true,
   }
   debug_inspect(
-    reader.read_element(ReaderNode::of(root)),
+    reader.read_element_erased(ReaderNode::of(root)),
     content=(
       #|[
       #|  Table(
@@ -1998,7 +2032,7 @@ test "docx table style warnings match Mammoth" {
     #|<w:tbl xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:tblPr><w:tblStyle w:val="TableNormal" /></w:tblPr></w:tbl>
   let root = read_xml_string(xml, namespace_map=office_namespace_map())
   let reader = empty_body_reader({ relationships: [] })
-  match reader.read_element(ReaderNode::of(root))[0] {
+  match reader.read_element_erased(ReaderNode::of(root))[0] {
     Table(properties~, ..) => {
       debug_inspect(properties.style_id, content="Some(\"TableNormal\")")
       debug_inspect(properties.style_name, content="None")
@@ -2054,7 +2088,7 @@ test "docx styles are keyed by type and keep first duplicate" {
     styles,
     NumberingMap::empty(),
   )
-  match paragraph_reader.read_element(ReaderNode::of(paragraph))[0] {
+  match paragraph_reader.read_element_erased(ReaderNode::of(paragraph))[0] {
     Paragraph(properties~, ..) =>
       debug_inspect(properties.style_name, content="Some(\"Shared Paragraph\")")
     _ => fail("expected paragraph")
@@ -2066,7 +2100,7 @@ test "docx styles are keyed by type and keep first duplicate" {
     styles,
     NumberingMap::empty(),
   )
-  match run_reader.read_element(ReaderNode::of(run))[0] {
+  match run_reader.read_element_erased(ReaderNode::of(run))[0] {
     Run(properties~, ..) =>
       debug_inspect(properties.style_name, content="Some(\"Shared Character\")")
     _ => fail("expected run")
@@ -2081,7 +2115,7 @@ test "docx styles are keyed by type and keep first duplicate" {
     styles,
     NumberingMap::empty(),
   )
-  match no_name_reader.read_element(ReaderNode::of(no_name))[0] {
+  match no_name_reader.read_element_erased(ReaderNode::of(no_name))[0] {
     Paragraph(properties~, ..) =>
       debug_inspect(properties.style_name, content="None")
     _ => fail("expected no-name paragraph")
@@ -2190,7 +2224,7 @@ test "docx body reader records Mammoth-compatible warnings" {
     namespace_map=office_namespace_map(),
   )
   let paragraph_reader = empty_body_reader({ relationships: [] })
-  let paragraph_elements = paragraph_reader.read_element(
+  let paragraph_elements = paragraph_reader.read_element_erased(
     ReaderNode::of(paragraph),
   )
   match paragraph_elements[0] {
@@ -2210,7 +2244,7 @@ test "docx body reader records Mammoth-compatible warnings" {
     #|<w:r xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:rPr><w:rStyle w:val="Heading1Char" /></w:rPr></w:r>
   let run = read_xml_string(run_xml, namespace_map=office_namespace_map())
   let run_reader = empty_body_reader({ relationships: [] })
-  match run_reader.read_element(ReaderNode::of(run))[0] {
+  match run_reader.read_element_erased(ReaderNode::of(run))[0] {
     Run(properties~, ..) => {
       debug_inspect(properties.style_id, content="Some(\"Heading1Char\")")
       debug_inspect(properties.style_name, content="None")
@@ -2231,7 +2265,7 @@ test "docx body reader records Mammoth-compatible warnings" {
   )
   let break_reader = empty_body_reader({ relationships: [] })
   debug_inspect(
-    break_reader.read_element(ReaderNode::of(break_element)),
+    break_reader.read_element_erased(ReaderNode::of(break_element)),
     content="[]",
   )
   debug_inspect(
@@ -2248,7 +2282,7 @@ test "docx body reader records Mammoth-compatible warnings" {
   )
   let unknown_reader = empty_body_reader({ relationships: [] })
   debug_inspect(
-    unknown_reader.read_element(ReaderNode::of(unknown)),
+    unknown_reader.read_element_erased(ReaderNode::of(unknown)),
     content="[]",
   )
   debug_inspect(
@@ -2265,7 +2299,7 @@ test "docx body reader records Mammoth-compatible warnings" {
   )
   let office_word_reader = empty_body_reader({ relationships: [] })
   debug_inspect(
-    office_word_reader.read_element(ReaderNode::of(office_word_wrap)),
+    office_word_reader.read_element_erased(ReaderNode::of(office_word_wrap)),
     content="[]",
   )
   debug_inspect(office_word_reader.messages, content="[]")
@@ -2757,7 +2791,7 @@ test "docx paragraph numbering uses numbering xml semantics" {
     namespace_map=office_namespace_map(),
   )
   let explicit_reader = body_reader_with_numbering(Map([]), numbering)
-  match explicit_reader.read_element(ReaderNode::of(explicit))[0] {
+  match explicit_reader.read_element_erased(ReaderNode::of(explicit))[0] {
     Paragraph(properties~, ..) =>
       match properties.numbering {
         Some(level) => {
@@ -2796,7 +2830,7 @@ test "docx paragraph numbering uses numbering xml semantics" {
     },
     numbering,
   )
-  match style_reader.read_element(ReaderNode::of(style_paragraph))[0] {
+  match style_reader.read_element_erased(ReaderNode::of(style_paragraph))[0] {
     Paragraph(properties~, ..) =>
       match properties.numbering {
         Some(level) => {
@@ -2860,7 +2894,7 @@ test "docx table vertical merges become row spans" {
   let xml =
     #|<w:tbl xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:tr><w:tc><w:p /></w:tc></w:tr><w:tr><w:tc><w:tcPr><w:vMerge w:val="restart" /></w:tcPr><w:p /></w:tc></w:tr><w:tr><w:tc><w:tcPr><w:vMerge w:val="continue" /></w:tcPr><w:p /></w:tc></w:tr><w:tr><w:tc><w:tcPr><w:vMerge /></w:tcPr><w:p /></w:tc></w:tr><w:tr><w:tc><w:p /></w:tc></w:tr></w:tbl>
   let root = read_xml_string(xml, namespace_map=office_namespace_map())
-  let elements = empty_body_reader({ relationships: [] }).read_element(
+  let elements = empty_body_reader({ relationships: [] }).read_element_erased(
     ReaderNode::of(root),
   )
   inspect(
@@ -2874,7 +2908,7 @@ test "docx table vertical merges account for column spans" {
   let xml =
     #|<w:tbl xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:tr><w:tc><w:p /></w:tc><w:tc><w:p /></w:tc><w:tc><w:tcPr><w:vMerge w:val="restart" /></w:tcPr><w:p /></w:tc></w:tr><w:tr><w:tc><w:tcPr><w:gridSpan w:val="2" /></w:tcPr><w:p /></w:tc><w:tc><w:tcPr><w:vMerge w:val="continue" /></w:tcPr><w:p /></w:tc></w:tr><w:tr><w:tc><w:p /></w:tc><w:tc><w:p /></w:tc><w:tc><w:tcPr><w:vMerge w:val="continue" /></w:tcPr><w:p /></w:tc></w:tr><w:tr><w:tc><w:p /></w:tc><w:tc><w:p /></w:tc><w:tc><w:p /></w:tc></w:tr></w:tbl>
   let root = read_xml_string(xml, namespace_map=office_namespace_map())
-  let elements = empty_body_reader({ relationships: [] }).read_element(
+  let elements = empty_body_reader({ relationships: [] }).read_element_erased(
     ReaderNode::of(root),
   )
   inspect(
@@ -2888,7 +2922,7 @@ test "docx table vertical merges do not cross misaligned cells" {
   let xml =
     #|<w:tbl xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:tr><w:tc><w:tcPr><w:gridSpan w:val="2" /><w:vMerge w:val="restart" /></w:tcPr><w:p /></w:tc></w:tr><w:tr><w:tc><w:p /></w:tc><w:tc><w:tcPr><w:vMerge w:val="continue" /></w:tcPr><w:p /></w:tc></w:tr></w:tbl>
   let root = read_xml_string(xml, namespace_map=office_namespace_map())
-  let elements = empty_body_reader({ relationships: [] }).read_element(
+  let elements = empty_body_reader({ relationships: [] }).read_element_erased(
     ReaderNode::of(root),
   )
   inspect(
@@ -2902,7 +2936,7 @@ test "docx table row header property marks leading header rows" {
   let xml =
     #|<w:tbl xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:tr><w:trPr><w:tblHeader /></w:trPr></w:tr><w:tr /></w:tbl>
   let root = read_xml_string(xml, namespace_map=office_namespace_map())
-  let elements = empty_body_reader({ relationships: [] }).read_element(
+  let elements = empty_body_reader({ relationships: [] }).read_element_erased(
     ReaderNode::of(root),
   )
   inspect(
@@ -2922,7 +2956,7 @@ test "docx table reader warns when row span calculation is unreliable" {
   let non_row_reader = empty_body_reader({ relationships: [] })
   inspect(
     convert_document_to_html(
-      document(non_row_reader.read_element(ReaderNode::of(non_row))),
+      document(non_row_reader.read_element_erased(ReaderNode::of(non_row))),
     ).value,
     content="<table><tr><td></td></tr><p>Between</p><tr><td></td></tr></table>",
   )
@@ -2941,7 +2975,7 @@ test "docx table reader warns when row span calculation is unreliable" {
   let non_cell_reader = empty_body_reader({ relationships: [] })
   inspect(
     convert_document_to_html(
-      document(non_cell_reader.read_element(ReaderNode::of(non_cell))),
+      document(non_cell_reader.read_element_erased(ReaderNode::of(non_cell))),
     ).value,
     content="<table><tr><td></td><p>Between</p><td></td></tr></table>",
   )
@@ -2958,7 +2992,7 @@ test "docx table deleted rows are ignored" {
   let xml =
     #|<w:tbl xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:tr><w:trPr><w:del /></w:trPr><w:tc><w:p><w:r><w:t>Deleted</w:t></w:r></w:p></w:tc></w:tr><w:tr><w:tc><w:p><w:r><w:t>Kept</w:t></w:r></w:p></w:tc></w:tr></w:tbl>
   let root = read_xml_string(xml, namespace_map=office_namespace_map())
-  let elements = empty_body_reader({ relationships: [] }).read_element(
+  let elements = empty_body_reader({ relationships: [] }).read_element_erased(
     ReaderNode::of(root),
   )
   inspect(
@@ -2984,7 +3018,7 @@ test "docx table grid spans follow Mammoth parseInt behavior" {
       "\" /></w:tcPr><w:p /></w:tc>"
     let root = read_xml_string(xml, namespace_map=office_namespace_map())
     match
-      empty_body_reader({ relationships: [] }).read_element(
+      empty_body_reader({ relationships: [] }).read_element_erased(
         ReaderNode::of(root),
       )[0] {
       TableCell(col_span~, row_span~, ..) => {
@@ -3002,7 +3036,9 @@ test "docx deleted paragraph read directly is ignored" {
     #|<w:p xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:pPr><w:rPr><w:del /></w:rPr></w:pPr><w:r><w:t>Deleted</w:t></w:r></w:p>
   let root = read_xml_string(xml, namespace_map=office_namespace_map())
   debug_inspect(
-    empty_body_reader({ relationships: [] }).read_element(ReaderNode::of(root)),
+    empty_body_reader({ relationships: [] }).read_element_erased(
+      ReaderNode::of(root),
+    ),
     content="[]",
   )
 }
@@ -3012,10 +3048,8 @@ test "docx deleted paragraph content is prepended to next paragraph" {
   let xml =
     #|<w:body xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:p><w:pPr><w:rPr><w:del /></w:rPr></w:pPr><w:r><w:t>One</w:t></w:r></w:p><w:p><w:r><w:t>Two</w:t></w:r></w:p><w:p><w:r><w:t>Three</w:t></w:r></w:p></w:body>
   let root = read_xml_string(xml, namespace_map=office_namespace_map())
-  let elements = reader_items_to_elements(
-    empty_body_reader({ relationships: [] }).read_children(
-      ReaderNode::of(root).element_children(),
-    ),
+  let elements = empty_body_reader({ relationships: [] }).read_children_erased(
+    ReaderNode::of(root).element_children(),
   )
   inspect(
     convert_document_to_html(document(elements)).value,
@@ -3029,7 +3063,7 @@ fn complex_field_paragraph_html(instruction : String) -> String raise DocxError 
     instruction +
     "</w:instrText><w:r><w:fldChar w:fldCharType=\"separate\" /></w:r><w:r><w:t>Hello</w:t></w:r><w:r><w:fldChar w:fldCharType=\"end\" /></w:r></w:p>"
   let root = read_xml_string(xml, namespace_map=office_namespace_map())
-  let elements = empty_body_reader({ relationships: [] }).read_element(
+  let elements = empty_body_reader({ relationships: [] }).read_element_erased(
     ReaderNode::of(root),
   )
   convert_document_to_html(document(elements)).value
@@ -3060,7 +3094,7 @@ test "docx complex field marker elements do not warn" {
     ] {
     let element = read_xml_string(xml, namespace_map=office_namespace_map())
     let reader = empty_body_reader({ relationships: [] })
-    ignore(reader.read_element(ReaderNode::of(element)))
+    ignore(reader.read_element_erased(ReaderNode::of(element)))
     debug_inspect(reader.messages, content="[]")
   }
 }
@@ -3204,7 +3238,7 @@ test "docx complex field hyperlink instructions can be split across runs" {
   let xml =
     #|<w:p xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:r><w:fldChar w:fldCharType="begin" /></w:r><w:r><w:instrText> HYPE</w:instrText></w:r><w:r><w:instrText>RLINK "http://example.com"</w:instrText></w:r><w:r><w:fldChar w:fldCharType="separate" /></w:r><w:r><w:t>Hello</w:t></w:r><w:r><w:fldChar w:fldCharType="end" /></w:r></w:p>
   let root = read_xml_string(xml, namespace_map=office_namespace_map())
-  let elements = empty_body_reader({ relationships: [] }).read_element(
+  let elements = empty_body_reader({ relationships: [] }).read_element_erased(
     ReaderNode::of(root),
   )
   inspect(
@@ -3246,7 +3280,7 @@ test "docx text boxes read alternate content fallback" {
   let xml =
     #|<w:p xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main" xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"><mc:AlternateContent><mc:Choice Requires="wps"><w:txbxContent><w:p><w:r><w:t>Choice</w:t></w:r></w:p></w:txbxContent></mc:Choice><mc:Fallback><w:txbxContent><w:p><w:r><w:t>Fallback</w:t></w:r></w:p></w:txbxContent></mc:Fallback></mc:AlternateContent></w:p>
   let root = read_xml_string(xml, namespace_map=office_namespace_map())
-  let elements = empty_body_reader({ relationships: [] }).read_element(
+  let elements = empty_body_reader({ relationships: [] }).read_element_erased(
     ReaderNode::of(root),
   )
   inspect(
@@ -3261,8 +3295,9 @@ test "docx text box helper handles alternate content root" {
     #|<mc:AlternateContent xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><mc:Choice Requires="wps"><w:txbxContent><w:p><w:r><w:t>Choice</w:t></w:r></w:p></w:txbxContent></mc:Choice><mc:Fallback><w:txbxContent><w:p><w:r><w:t>Fallback</w:t></w:r></w:p></w:txbxContent></mc:Fallback></mc:AlternateContent>
   let root = read_xml_string(xml, namespace_map=office_namespace_map())
   let elements = empty_body_reader({ relationships: [] }).read_text_box_elements(
-    ReaderNode::of(root),
-  )
+      ReaderNode::of(root),
+    )
+    |> reader_items_to_elements
   inspect(
     convert_document_to_html(document(elements)).value,
     content="<p>Fallback</p>",
@@ -3278,7 +3313,7 @@ test "docx body reader handles unspliced alternate content nodes" {
   inspect(
     convert_document_to_html(
       document(
-        empty_body_reader({ relationships: [] }).read_element(
+        empty_body_reader({ relationships: [] }).read_element_erased(
           ReaderNode::of(direct_alternate),
         ),
       ),
@@ -3296,7 +3331,7 @@ test "docx body reader handles unspliced alternate content nodes" {
   inspect(
     convert_document_to_html(
       document(
-        empty_body_reader({ relationships: [] }).read_element(
+        empty_body_reader({ relationships: [] }).read_element_erased(
           ReaderNode::of(paragraph_alternate),
         ),
       ),
@@ -3330,7 +3365,7 @@ test "docx body reader handles unspliced alternate content nodes" {
   inspect(
     convert_document_to_html(
       document(
-        empty_body_reader({ relationships: [] }).read_element(
+        empty_body_reader({ relationships: [] }).read_element_erased(
           ReaderNode::of(pict_alternate),
         ),
       ),
@@ -3345,8 +3380,10 @@ test "docx body reader handles unspliced alternate content nodes" {
   inspect(
     convert_document_to_html(
       document(
-        empty_body_reader({ relationships: [] }).read_text_box_elements(
-          ReaderNode::of(text_box_with_raw_text),
+        reader_items_to_elements(
+          empty_body_reader({ relationships: [] }).read_text_box_elements(
+            ReaderNode::of(text_box_with_raw_text),
+          ),
         ),
       ),
     ).value,
@@ -3360,7 +3397,7 @@ test "docx w:pict images are appended after their containing paragraph" {
     #|<w:p xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main" xmlns:v="urn:schemas-microsoft-com:vml" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><w:r><w:t>Before</w:t></w:r><w:r><w:pict><v:shape><v:imagedata r:id="rImage" /></v:shape></w:pict></w:r><w:r><w:t>After</w:t></w:r></w:p>
   let root = read_xml_string(xml, namespace_map=office_namespace_map())
   let reader = drawing_image_reader()
-  let elements = reader.read_element(ReaderNode::of(root))
+  let elements = reader.read_element_erased(ReaderNode::of(root))
   inspect(
     convert_document_to_html(document(elements)).value,
     content="<p>BeforeAfter</p><img src=\"data:image/png;base64,YWJj\" />",
@@ -3379,7 +3416,9 @@ test "docx w:pict preserves mixed extra element order after paragraphs" {
   let image_first_reader = drawing_image_reader()
   inspect(
     convert_document_to_html(
-      document(image_first_reader.read_element(ReaderNode::of(image_first))),
+      document(
+        image_first_reader.read_element_erased(ReaderNode::of(image_first)),
+      ),
     ).value,
     content="<p>BeforeAfter</p><img src=\"data:image/png;base64,YWJj\" /><p>Box</p>",
   )
@@ -3393,7 +3432,9 @@ test "docx w:pict preserves mixed extra element order after paragraphs" {
   let textbox_first_reader = drawing_image_reader()
   inspect(
     convert_document_to_html(
-      document(textbox_first_reader.read_element(ReaderNode::of(textbox_first))),
+      document(
+        textbox_first_reader.read_element_erased(ReaderNode::of(textbox_first)),
+      ),
     ).value,
     content="<p>BeforeAfter</p><p>Box</p><img src=\"data:image/png;base64,YWJj\" />",
   )
@@ -3405,7 +3446,7 @@ test "docx w:pict extra content uses alternate fallback" {
   let xml =
     #|<w:p xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main" xmlns:v="urn:schemas-microsoft-com:vml" xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"><w:r><w:t>Before</w:t></w:r><w:r><w:pict>ignored<mc:AlternateContent><mc:Choice Requires="wps"><v:shape><w:txbxContent><w:p><w:r><w:t>Choice</w:t></w:r></w:p></w:txbxContent></v:shape></mc:Choice><mc:Fallback><v:shape><w:txbxContent><w:p><w:r><w:t>Fallback</w:t></w:r></w:p></w:txbxContent></v:shape></mc:Fallback></mc:AlternateContent>ignored</w:pict></w:r><w:r><w:t>After</w:t></w:r></w:p>
   let root = read_xml_string(xml, namespace_map=office_namespace_map())
-  let elements = empty_body_reader({ relationships: [] }).read_element(
+  let elements = empty_body_reader({ relationships: [] }).read_element_erased(
     ReaderNode::of(root),
   )
   inspect(
@@ -3449,7 +3490,7 @@ fn complex_field_checkbox_html(
     separate_xml +
     "<w:r><w:fldChar w:fldCharType=\"end\" /></w:r></w:p>"
   let root = read_xml_string(xml, namespace_map=office_namespace_map())
-  let elements = empty_body_reader({ relationships: [] }).read_element(
+  let elements = empty_body_reader({ relationships: [] }).read_element_erased(
     ReaderNode::of(root),
   )
   convert_document_to_html(document(elements)).value
@@ -3552,7 +3593,7 @@ fn symbol_html(font : String, char : String) -> String raise DocxError {
   let element = read_xml_string(xml, namespace_map=office_namespace_map())
   convert_document_to_html(
     document(
-      empty_body_reader({ relationships: [] }).read_element(
+      empty_body_reader({ relationships: [] }).read_element_erased(
         ReaderNode::of(element),
       ),
     ),
@@ -3697,7 +3738,10 @@ test "docx symbols warn when unsupported like Mammoth" {
     #|<w:sym xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main" w:font="Dingwings" w:char="28" />
   let element = read_xml_string(xml, namespace_map=office_namespace_map())
   let reader = empty_body_reader({ relationships: [] })
-  debug_inspect(reader.read_element(ReaderNode::of(element)), content="[]")
+  debug_inspect(
+    reader.read_element_erased(ReaderNode::of(element)),
+    content="[]",
+  )
   debug_inspect(
     reader.messages,
     content=(
@@ -3710,7 +3754,7 @@ test "docx symbols warn when unsupported like Mammoth" {
   )
   let lowercase_reader = empty_body_reader({ relationships: [] })
   debug_inspect(
-    lowercase_reader.read_element(ReaderNode::of(lowercase_private_use)),
+    lowercase_reader.read_element_erased(ReaderNode::of(lowercase_private_use)),
     content="[]",
   )
   debug_inspect(
@@ -3725,7 +3769,7 @@ test "docx symbols warn when unsupported like Mammoth" {
   )
   let invalid_hex_reader = empty_body_reader({ relationships: [] })
   debug_inspect(
-    invalid_hex_reader.read_element(ReaderNode::of(invalid_hex)),
+    invalid_hex_reader.read_element_erased(ReaderNode::of(invalid_hex)),
     content="[]",
   )
   debug_inspect(
@@ -3740,7 +3784,9 @@ test "docx symbols warn when unsupported like Mammoth" {
   )
   let invalid_private_use_reader = empty_body_reader({ relationships: [] })
   debug_inspect(
-    invalid_private_use_reader.read_element(ReaderNode::of(invalid_private_use)),
+    invalid_private_use_reader.read_element_erased(
+      ReaderNode::of(invalid_private_use),
+    ),
     content="[]",
   )
   debug_inspect(
@@ -3755,7 +3801,7 @@ test "docx symbols warn when unsupported like Mammoth" {
   )
   let missing_char_reader = empty_body_reader({ relationships: [] })
   debug_inspect(
-    missing_char_reader.read_element(ReaderNode::of(missing_char)),
+    missing_char_reader.read_element_erased(ReaderNode::of(missing_char)),
     content="[]",
   )
   debug_inspect(
@@ -3774,7 +3820,7 @@ fn read_vml_wrapper_html(tag : String) -> String raise DocxError {
     tag +
     ">"
   let root = read_xml_string(xml, namespace_map=office_namespace_map())
-  let elements = empty_body_reader({ relationships: [] }).read_element(
+  let elements = empty_body_reader({ relationships: [] }).read_element_erased(
     ReaderNode::of(root),
   )
   convert_document_to_html(document(elements)).value
@@ -3844,7 +3890,7 @@ test "docx image reader skips DrawingML and VML reads when disabled" {
   )
   let drawing_reader = drawing_image_reader_with_images(false)
   debug_inspect(
-    drawing_reader.read_element(ReaderNode::of(drawing)),
+    drawing_reader.read_element_erased(ReaderNode::of(drawing)),
     content="[]",
   )
   debug_inspect(drawing_reader.messages, content="[]")
@@ -3852,7 +3898,10 @@ test "docx image reader skips DrawingML and VML reads when disabled" {
     #|<v:imagedata xmlns:v="urn:schemas-microsoft-com:vml" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships" r:id="rImage" />
   let vml = read_xml_string(vml_xml, namespace_map=office_namespace_map())
   let vml_reader = drawing_image_reader_with_images(false)
-  debug_inspect(vml_reader.read_element(ReaderNode::of(vml)), content="[]")
+  debug_inspect(
+    vml_reader.read_element_erased(ReaderNode::of(vml)),
+    content="[]",
+  )
   debug_inspect(vml_reader.messages, content="[]")
   let direct_reader = drawing_image_reader_with_images(false)
   debug_inspect(
@@ -3874,7 +3923,7 @@ test "docx drawing image reader ignores empty drawing containers" {
   )
   let drawing_reader = empty_body_reader({ relationships: [] })
   debug_inspect(
-    drawing_reader.read_element(ReaderNode::of(empty_drawing)),
+    drawing_reader.read_element_erased(ReaderNode::of(empty_drawing)),
     content="[]",
   )
   debug_inspect(drawing_reader.messages, content="[]")
@@ -3884,7 +3933,7 @@ test "docx drawing image reader ignores empty drawing containers" {
   )
   let inline_reader = empty_body_reader({ relationships: [] })
   debug_inspect(
-    inline_reader.read_element(ReaderNode::of(empty_inline)),
+    inline_reader.read_element_erased(ReaderNode::of(empty_inline)),
     content="[]",
   )
   debug_inspect(inline_reader.messages, content="[]")
@@ -3898,7 +3947,7 @@ test "docx drawing image hyperlink wraps image" {
   let reader = drawing_image_reader()
   inspect(
     convert_document_to_html(
-      document(reader.read_element(ReaderNode::of(root))),
+      document(reader.read_element_erased(ReaderNode::of(root))),
     ).value,
     content="<a href=\"http://example.com\"><img src=\"data:image/png;base64,YWJj\" /></a>",
   )
@@ -3913,7 +3962,7 @@ test "docx strict DrawingML image namespaces are read" {
   let reader = drawing_image_reader()
   inspect(
     convert_document_to_html(
-      document(reader.read_element(ReaderNode::of(root))),
+      document(reader.read_element_erased(ReaderNode::of(root))),
     ).value,
     content="<img alt=\"Strict image\" src=\"data:image/png;base64,YWJj\" />",
   )
@@ -3951,7 +4000,7 @@ test "docx linked DrawingML images use the external loader" {
   }
   inspect(
     convert_document_to_html(
-      document(reader.read_element(ReaderNode::of(root))),
+      document(reader.read_element_erased(ReaderNode::of(root))),
     ).value,
     content="<img alt=\"It's a hat\" src=\"data:image/png;base64,YWJj\" />",
   )
@@ -3990,7 +4039,7 @@ test "docx linked DrawingML image loader tries decoded file URI paths" {
   }
   inspect(
     convert_document_to_html(
-      document(reader.read_element(ReaderNode::of(root))),
+      document(reader.read_element_erased(ReaderNode::of(root))),
     ).value,
     content="<img src=\"data:image/png;base64,YWJj\" />",
   )
@@ -4026,7 +4075,7 @@ test "docx embedded DrawingML images ignore relationship target mode" {
   }
   inspect(
     convert_document_to_html(
-      document(reader.read_element(ReaderNode::of(root))),
+      document(reader.read_element_erased(ReaderNode::of(root))),
     ).value,
     content="<img alt=\"It's a hat\" src=\"data:image/png;base64,YWJj\" />",
   )
@@ -4068,7 +4117,7 @@ test "docx DrawingML image relationship ids follow Mammoth truthiness" {
   }
   inspect(
     convert_document_to_html(
-      document(linked_reader.read_element(ReaderNode::of(blank_embed))),
+      document(linked_reader.read_element_erased(ReaderNode::of(blank_embed))),
     ).value,
     content="<img src=\"data:image/png;base64,YWJj\" />",
   )
@@ -4110,7 +4159,9 @@ test "docx DrawingML image relationship ids follow Mammoth truthiness" {
   inspect(
     convert_document_to_html(
       document(
-        blank_link_reader.read_element(ReaderNode::of(blank_drawing_link)),
+        blank_link_reader.read_element_erased(
+          ReaderNode::of(blank_drawing_link),
+        ),
       ),
     ).value,
     content="<img src=\"data:image/png;base64,YWJj\" />",
@@ -4129,7 +4180,7 @@ test "docx drawing image alt text follows Mammoth precedence" {
   let reader = drawing_image_reader()
   inspect(
     convert_document_to_html(
-      document(reader.read_element(ReaderNode::of(root))),
+      document(reader.read_element_erased(ReaderNode::of(root))),
     ).value,
     content="<img alt=\"It's a hat\" src=\"data:image/png;base64,YWJj\" />",
   )
@@ -4142,7 +4193,7 @@ test "docx drawing image alt text follows Mammoth precedence" {
   let reader = drawing_image_reader()
   inspect(
     convert_document_to_html(
-      document(reader.read_element(ReaderNode::of(root))),
+      document(reader.read_element_erased(ReaderNode::of(root))),
     ).value,
     content="<img alt=\"It's a hat\" src=\"data:image/png;base64,YWJj\" />",
   )
@@ -4152,7 +4203,7 @@ test "docx drawing image alt text follows Mammoth precedence" {
   let reader = drawing_image_reader()
   inspect(
     convert_document_to_html(
-      document(reader.read_element(ReaderNode::of(root))),
+      document(reader.read_element_erased(ReaderNode::of(root))),
     ).value,
     content="<img alt=\"It's a hat\" src=\"data:image/png;base64,YWJj\" />",
   )
@@ -4166,7 +4217,7 @@ test "docx anchored drawing images are read" {
   let reader = drawing_image_reader()
   inspect(
     convert_document_to_html(
-      document(reader.read_element(ReaderNode::of(root))),
+      document(reader.read_element_erased(ReaderNode::of(root))),
     ).value,
     content="<img alt=\"It's a hat\" src=\"data:image/png;base64,YWJj\" />",
   )
@@ -4180,7 +4231,7 @@ test "docx vml image title becomes alt text" {
   let reader = drawing_image_reader()
   inspect(
     convert_document_to_html(
-      document(reader.read_element(ReaderNode::of(root))),
+      document(reader.read_element_erased(ReaderNode::of(root))),
     ).value,
     content="<img alt=\"It's a hat\" src=\"data:image/png;base64,YWJj\" />",
   )
@@ -4196,7 +4247,7 @@ test "docx drawing image reader follows Mammoth picture chain" {
   )
   let loose_blip_reader = drawing_image_reader()
   debug_inspect(
-    loose_blip_reader.read_element(ReaderNode::of(loose_blip)),
+    loose_blip_reader.read_element_erased(ReaderNode::of(loose_blip)),
     content="[]",
   )
   debug_inspect(loose_blip_reader.messages, content="[]")
@@ -4209,7 +4260,9 @@ test "docx drawing image reader follows Mammoth picture chain" {
   let loose_link_reader = drawing_image_reader()
   inspect(
     convert_document_to_html(
-      document(loose_link_reader.read_element(ReaderNode::of(loose_link))),
+      document(
+        loose_link_reader.read_element_erased(ReaderNode::of(loose_link)),
+      ),
     ).value,
     content="<img src=\"data:image/png;base64,YWJj\" />",
   )
@@ -4223,7 +4276,7 @@ test "docx drawing image reader follows Mammoth picture chain" {
   inspect(
     convert_document_to_html(
       document(
-        missing_link_relationship_reader.read_element(
+        missing_link_relationship_reader.read_element_erased(
           ReaderNode::of(missing_link_relationship),
         ),
       ),
@@ -4240,7 +4293,9 @@ test "docx drawing image reader follows Mammoth picture chain" {
   inspect(
     convert_document_to_html(
       document(
-        link_without_id_reader.read_element(ReaderNode::of(link_without_id)),
+        link_without_id_reader.read_element_erased(
+          ReaderNode::of(link_without_id),
+        ),
       ),
     ).value,
     content="<img src=\"data:image/png;base64,YWJj\" />",
@@ -4257,7 +4312,7 @@ test "docx image reader records Mammoth-compatible warnings" {
   )
   let missing_blip_reader = empty_body_reader({ relationships: [] })
   debug_inspect(
-    missing_blip_reader.read_element(ReaderNode::of(missing_blip)),
+    missing_blip_reader.read_element_erased(ReaderNode::of(missing_blip)),
     content="[]",
   )
   debug_inspect(
@@ -4274,7 +4329,7 @@ test "docx image reader records Mammoth-compatible warnings" {
   )
   let missing_relationship_reader = empty_body_reader({ relationships: [] })
   debug_inspect(
-    missing_relationship_reader.read_element(
+    missing_relationship_reader.read_element_erased(
       ReaderNode::of(missing_relationship),
     ),
     content="[]",
@@ -4314,7 +4369,7 @@ test "docx image reader records Mammoth-compatible warnings" {
     read_images: true,
   }
   debug_inspect(
-    missing_entry_reader.read_element(ReaderNode::of(missing_entry)),
+    missing_entry_reader.read_element_erased(ReaderNode::of(missing_entry)),
     content="[]",
   )
   debug_inspect(
@@ -4330,7 +4385,10 @@ test "docx image reader records Mammoth-compatible warnings" {
     namespace_map=office_namespace_map(),
   )
   let vml_reader = empty_body_reader({ relationships: [] })
-  debug_inspect(vml_reader.read_element(ReaderNode::of(vml)), content="[]")
+  debug_inspect(
+    vml_reader.read_element_erased(ReaderNode::of(vml)),
+    content="[]",
+  )
   debug_inspect(
     vml_reader.messages,
     content=(
@@ -4345,7 +4403,7 @@ test "docx image reader records Mammoth-compatible warnings" {
   )
   let empty_vml_reader = empty_body_reader({ relationships: [] })
   debug_inspect(
-    empty_vml_reader.read_element(ReaderNode::of(empty_vml)),
+    empty_vml_reader.read_element_erased(ReaderNode::of(empty_vml)),
     content="[]",
   )
   debug_inspect(
@@ -4362,7 +4420,7 @@ test "docx image reader records Mammoth-compatible warnings" {
   )
   let missing_vml_reader = empty_body_reader({ relationships: [] })
   debug_inspect(
-    missing_vml_reader.read_element(ReaderNode::of(missing_vml)),
+    missing_vml_reader.read_element_erased(ReaderNode::of(missing_vml)),
     content="[]",
   )
   debug_inspect(missing_vml_reader.messages, content="[]")
@@ -4376,7 +4434,7 @@ test "docx image reader records Mammoth-compatible warnings" {
     relationships: [],
   })
   debug_inspect(
-    missing_linked_relationship_reader.read_element(
+    missing_linked_relationship_reader.read_element_erased(
       ReaderNode::of(missing_linked_relationship),
     ),
     content="[]",
@@ -4413,7 +4471,7 @@ test "docx image reader records Mammoth-compatible warnings" {
     read_images: true,
   }
   debug_inspect(
-    external_reader.read_element(ReaderNode::of(external_image)),
+    external_reader.read_element_erased(ReaderNode::of(external_image)),
     content="[]",
   )
   debug_inspect(
@@ -4443,7 +4501,7 @@ test "docx image reader records Mammoth-compatible warnings" {
     read_images: true,
   }
   debug_inspect(
-    bounded_external_reader.read_element(ReaderNode::of(external_image)),
+    bounded_external_reader.read_element_erased(ReaderNode::of(external_image)),
     content="[]",
   )
   debug_inspect(bounded_external_reader.messages, content="[]")
@@ -4476,7 +4534,9 @@ test "docx image reader records Mammoth-compatible warnings" {
   }
   for _ in 0..<2000 {
     ignore(
-      repeated_external_reader.read_element(ReaderNode::of(external_image)),
+      repeated_external_reader.read_element_erased(
+        ReaderNode::of(external_image),
+      ),
     )
   }
   assert_eq(repeated_diagnostics.received(), 2000)
@@ -4516,7 +4576,9 @@ test "docx image reader records Mammoth-compatible warnings" {
     read_images: true,
   }
   inspect(
-    unsupported_reader.read_element(ReaderNode::of(unsupported_type)).length(),
+    unsupported_reader
+    .read_element_erased(ReaderNode::of(unsupported_type))
+    .length(),
     content="1",
   )
   debug_inspect(
@@ -5061,4 +5123,22 @@ test "annotation mutations separate Unicode logical paths from ZIP spelling" {
     replied_types_text.contains("PartName=\"/d%C3%AFr/commentsExtended.xml\""),
   )
   assert_eq(read_docx_annotated(replied).annotations().comments().length(), 2)
+}
+
+///|
+/// The tests read erased elements; the reader now returns carrier items.
+/// One alias pair keeps ~150 call sites shape-identical during PR 2.
+fn BodyReader::read_element_erased(
+  self : BodyReader,
+  element : ReaderNode,
+) -> Array[DocumentElement] raise DocxError {
+  reader_items_to_elements(self.read_element(element))
+}
+
+///|
+fn BodyReader::read_children_erased(
+  self : BodyReader,
+  children : Array[ReaderNode],
+) -> Array[DocumentElement] raise DocxError {
+  reader_items_to_elements(self.read_children(children))
 }
