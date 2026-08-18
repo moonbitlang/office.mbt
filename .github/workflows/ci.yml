@@ -326,6 +326,13 @@ jobs:
           moon cram test "$GITHUB_WORKSPACE/pdflite/tests/cram"
           moon cram test "$GITHUB_WORKSPACE/pagelayout/tests/cram"
 
+      # Real-world corpus fixtures: producers and refusal classes the authored
+      # fixtures cannot cover, with the docx CLI's behaviour on each pinned.
+      - name: Corpus smoke (vendored docx-corpus fixtures)
+        env:
+          DOCX_CLI: ${{ github.workspace }}/_build/native/debug/build/bobzhang/docx2html/cmd/docx/docx.exe
+        run: bash docx2html/tests/corpus/run.sh
+
       # The mbtexcel library and xlsx CLI also target wasm end to end. Build the
       # CLI for wasm and drive it (filesystem read/write via the async runtime).
       - name: Wasm build + CLI smoke test
