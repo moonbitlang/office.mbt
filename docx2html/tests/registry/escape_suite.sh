@@ -56,10 +56,10 @@ fresh; expect baseline "names reconciled"
 fresh; mutate annotation_scan.mbt 's/is \("tcPr"/is ("brandNew" | "tcPr"/' brandNew
 expect E1-table-entry "UNREGISTERED: brandNew"
 
-fresh; mutate docx_reader.mbt 's/"w:pict" => \[\]/"w:pict" => []\n    "w16:brandNew" => []/' 'w16:brandNew'
+fresh; mutate docx_reader.mbt 's/"w:pict" => \[Trace\(Suppressed\(source=element\)\)\]/"w:pict" => [Trace(Suppressed(source=element))]\n    "w16:brandNew" => []/' 'w16:brandNew'
 expect E2-unlisted-prefix "UNREGISTERED: w16:brandNew"
 
-fresh; mutate docx_reader.mbt 's/"w:pict" => \[\]/"w:pict" => []\n    "wx:decoy" if element.name() == "w" + ":brandNew" => []/' ':brandNew'
+fresh; mutate docx_reader.mbt 's/"w:pict" => \[Trace\(Suppressed\(source=element\)\)\]/"w:pict" => [Trace(Suppressed(source=element))]\n    "wx:decoy" if element.name() == "w" + ":brandNew" => []/' ':brandNew'
 expect E3-concatenation "UNREGISTERED: :brandNew"
 
 fresh; mutate docx_reader.mbt 's/^fn office_namespace_map/let escape_probe : String =\n  #|w:brandNew maps here\n\n\/\/\/|\nfn office_namespace_map/m' 'w:brandNew maps here'
@@ -95,7 +95,7 @@ expect E13-not-equal-smuggle "UNREGISTERED: neEscape"
 fresh; mutate reader_order_projection.mbt 's/^fn reader_order_atom_span/fn paren_escape(name : String) -> Bool {\n  name == ("parenEscape")\n}\n\n\/\/\/|\nfn reader_order_atom_span/m' parenEscape
 expect E14-paren-comparison "UNREGISTERED: parenEscape"
 
-fresh; mutate docx_reader.mbt 's/"w:pict" => \[\]/"w:pict" => []\n    "wx:decoy2" if element.name() == "w" + ":" + "threePiece" => []/' threePiece
+fresh; mutate docx_reader.mbt 's/"w:pict" => \[Trace\(Suppressed\(source=element\)\)\]/"w:pict" => [Trace(Suppressed(source=element))]\n    "wx:decoy2" if element.name() == "w" + ":" + "threePiece" => []/' threePiece
 expect E15-three-piece-concat "UNREGISTERED: "
 
 fresh; printf 'fn bare_dispatch(name : String) -> Bool {\n  name == "bareEscape"\n}\n' > "$work/docx/escape_probe.mbt"

@@ -50,7 +50,8 @@ priv enum ReaderItem {
 /// pass their input node here -- are never touched again.
 priv struct ReaderTree {
   source : ReaderNode
-  /// Empty through 2a/2b; populated in 2c.
+  /// What this node's decision site contributed to the story, in order,
+  /// ahead of the children's own effects.
   local_effects : Array[ReaderEffect]
   shape : ReaderTreeShape
 }
