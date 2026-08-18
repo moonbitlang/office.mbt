@@ -154,6 +154,68 @@ test "field transition owns the whole direct-child carrier" {
 }
 
 ///|
+/// Story identity for every root arm of `reader_order_field_story_identity`.
+///
+/// The footnote arm is pinned by "field state resets between note stories";
+/// these are the other three. In the note and comment stories a field
+/// spanning two containers must produce two refusals with DISTINCT story
+/// identities -- one per container. The document arm is subtler: with two
+/// `w:body` elements, the refusal's story identity is the body element (1);
+/// with the arm broken the walk falls through to the root and reports 0,
+/// which review measured surviving the entire suite before this test.
+test "story identity is per container for every root kind" {
+  let cases = [
+    (
+      "endnotes",
+      (
+        #|<w:endnotes xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
+        #|<w:endnote w:id="1"><w:p><w:r><w:fldChar w:fldCharType="begin"/></w:r></w:p></w:endnote>
+        #|<w:endnote w:id="2"><w:p><w:r><w:fldChar w:fldCharType="end"/></w:r></w:p></w:endnote>
+        #|</w:endnotes>
+      ),
+      2,
+      "5,1",
+    ),
+    (
+      "comments",
+      (
+        #|<w:comments xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
+        #|<w:comment w:id="1"><w:p><w:r><w:fldChar w:fldCharType="begin"/></w:r></w:p></w:comment>
+        #|<w:comment w:id="2"><w:p><w:r><w:fldChar w:fldCharType="end"/></w:r></w:p></w:comment>
+        #|</w:comments>
+      ),
+      2,
+      "5,1",
+    ),
+    (
+      "two bodies",
+      (
+        #|<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
+        #|<w:body><w:p><w:r><w:fldChar w:fldCharType="begin"/></w:r></w:p></w:body>
+        #|<w:body><w:p><w:r><w:fldChar w:fldCharType="end"/></w:r></w:p></w:body>
+        #|</w:document>
+      ),
+      1,
+      "1",
+    ),
+  ]
+  for case in cases {
+    let (label, source, refusal_count, identities) = case
+    let projection = field_test_projection(source)
+    assert_eq((label, projection.field_index.fields.length()), (label, 1))
+    assert_eq(
+      (label, projection.field_index.refusals.length()),
+      (label, refusal_count),
+    )
+    let ids : Array[String] = []
+    for refusal in projection.field_index.refusals {
+      ids.push(refusal.story_identity.to_string())
+    }
+    assert_eq((label, ids.join(",")), (label, identities))
+  }
+}
+
+///|
 test "field state resets between note stories" {
   let source =
     #|<w:footnotes xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">

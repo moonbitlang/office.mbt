@@ -656,10 +656,98 @@ test "section story references require matching typed internal relationships" {
 }
 
 ///|
+/// Every section-reference arm, resolved: both element names, all three
+/// variant types. Review measured the footer arm and the non-default types
+/// surviving mutation -- the fixtures only ever spelled
+/// `headerReference type="default"`, and the without-r:id warning dedupes,
+/// so a count could not pin them either.
+test "section references resolve headers and footers across variants" {
+  let builder = @opc.PackageBuilder::new()
+  builder.add_default(
+    "rels", "application/vnd.openxmlformats-package.relationships+xml",
+  )
+  builder.add_default("xml", "application/xml")
+  builder.add_override(
+    "/word/document.xml", "application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml",
+  )
+  for part in ["header1", "header2"] {
+    builder.add_override(
+      "/word/\{part}.xml",
+      "application/vnd.openxmlformats-officedocument.wordprocessingml.header+xml",
+    )
+  }
+  for part in ["footer1", "footer2"] {
+    builder.add_override(
+      "/word/\{part}.xml",
+      "application/vnd.openxmlformats-officedocument.wordprocessingml.footer+xml",
+    )
+  }
+  builder.add_relationship(
+    "rIdMain", "http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument",
+    "word/document.xml",
+  )
+  for pair in [("rH1", "header1"), ("rH2", "header2")] {
+    let (id, part) = pair
+    builder.add_relationship(
+      id,
+      "http://schemas.openxmlformats.org/officeDocument/2006/relationships/header",
+      "\{part}.xml",
+      source="word/document.xml",
+    )
+  }
+  for pair in [("rF1", "footer1"), ("rF2", "footer2")] {
+    let (id, part) = pair
+    builder.add_relationship(
+      id,
+      "http://schemas.openxmlformats.org/officeDocument/2006/relationships/footer",
+      "\{part}.xml",
+      source="word/document.xml",
+    )
+  }
+  builder.add_part(
+    "word/document.xml",
+    @utf8.encode(
+      "<w:document xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\" xmlns:r=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships\"><w:body><w:p/><w:sectPr><w:headerReference w:type=\"default\" r:id=\"rH1\"/><w:headerReference w:type=\"first\" r:id=\"rH2\"/><w:footerReference w:type=\"default\" r:id=\"rF1\"/><w:footerReference w:type=\"even\" r:id=\"rF2\"/></w:sectPr></w:body></w:document>",
+    ),
+  )
+  let hdr_story = "<w:hdr xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\"><w:p><w:r><w:t>s</w:t></w:r></w:p></w:hdr>"
+  let ftr_story = "<w:ftr xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\"><w:p><w:r><w:t>s</w:t></w:r></w:p></w:ftr>"
+  builder.add_part("word/header1.xml", @utf8.encode(hdr_story))
+  builder.add_part("word/header2.xml", @utf8.encode(hdr_story))
+  builder.add_part("word/footer1.xml", @utf8.encode(ftr_story))
+  builder.add_part("word/footer2.xml", @utf8.encode(ftr_story))
+  let archive = try! @mbtzip.read(builder.build())
+  let tolerant = @docx.read_docx_annotated_archive_tolerant_limited(
+    archive,
+    @xml.xml_read_budget(
+      max_source_units=1024 * 1024,
+      max_tokens=65536,
+      max_materialized_chars=1024 * 1024,
+      max_token_chars=65536,
+    ),
+  )
+  assert_eq(tolerant.result().headers.length(), 2)
+  assert_eq(tolerant.result().footers.length(), 2)
+  let variants : Array[String] = []
+  for section in tolerant.result().sections {
+    for reference in section.headers {
+      variants.push("h:" + reference.variant)
+    }
+    for reference in section.footers {
+      variants.push("f:" + reference.variant)
+    }
+  }
+  assert_eq(variants.length(), 4)
+  for expected in ["h:default", "h:first", "f:default", "f:even"] {
+    assert_true(variants.contains(expected))
+  }
+}
+
+///|
 test "tolerant annotated reads warn on broken section references while mutation reads fail" {
   let document =
     #|<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
-    #|<w:body><w:p/><w:sectPr><w:headerReference w:type="default"/></w:sectPr></w:body>
+    #|<w:body><w:p/><w:sectPr><w:headerReference w:type="default"/><w:footerReference w:type="even"/><w:headerReference w:type="first"/><w:footerReference w:type="default"/></w:sectPr></w:body>
     #|</w:document>
   let archive = try! @mbtzip.read(fixture_docx(document))
   fn budget() -> @xml.XmlReadBudget {
