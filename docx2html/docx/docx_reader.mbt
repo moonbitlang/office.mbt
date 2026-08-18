@@ -2745,7 +2745,9 @@ fn BodyReader::read_structured_document_tag(
   self : BodyReader,
   element : ReaderNode,
 ) -> Array[DocumentElement] raise DocxError {
-  let content = reader_items_to_elements(
+  // the checkbox replacement is a named legacy island until 2c; its content
+  // erases through the island adapter so the end-of-2c search guard sees it
+  let content = reader_legacy_island_elements(
     self.read_children(
       element.first_or_empty("w:sdtContent").element_children(),
     ),
