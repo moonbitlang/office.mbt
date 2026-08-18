@@ -3102,7 +3102,7 @@ test "scanner: endnote markers, explicit continuation, deleted instructions" {
       #|<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
       #|<w:body>
       #|<w:p><w:r><w:endnoteReference w:id="9"/></w:r></w:p>
-      #|<w:p><w:del w:id="1" w:author="a"><w:r><w:delInstrText> PAGE </w:delInstrText></w:r></w:del></w:p>
+      #|<w:p><w:del w:id="1" w:author="a"><w:r><w:delText>gone</w:delText><w:delInstrText> PAGE </w:delInstrText></w:r></w:del></w:p>
       #|<w:tbl>
       #|<w:tr><w:tc><w:tcPr><w:vMerge w:val="restart"/></w:tcPr><w:p><w:r><w:t>A</w:t></w:r></w:p></w:tc></w:tr>
       #|<w:tr><w:tc><w:tcPr><w:vMerge w:val="continue"/></w:tcPr><w:p><w:r><w:t>gone</w:t></w:r></w:p></w:tc></w:tr>
@@ -3117,10 +3117,45 @@ test "scanner: endnote markers, explicit continuation, deleted instructions" {
   }
   inspect("\{endnote_marker.kind()}", content="endnoteReference")
   inspect(endnote_marker.id(), content="9")
-  // the deleted instruction carrier belongs to its deletion, under the
-  // instruction replacement name rather than its own spelling
+  // the deleted carriers belong to their deletion, each recorded under its
+  // replacement name: delInstrText edits to instrText, delText to t. This is
+  // the mapping the mutation resolver renames through, and asserting only
+  // that a deletion existed left the whole mapping deletable -- review
+  // measured the entire suite green without it.
   guard scan.revisions() is [deletion] else { fail("expected the deletion") }
   inspect("\{deletion.kind()}", content="del")
+  guard scan.revision_sites() is [del_site] else {
+    fail("expected the deletion site")
+  }
+  inspect(
+    del_site.name_edits.map(edit => edit.replacement).join(","),
+    content="t,instrText",
+  )
+  // the endnote STORY projects note nodes, distinct from the endnote marker
+  // pinned above: removing "endnote" from projection_kind loses the node.
+  // The separator and continuation plumbing notes are suppressed -- only the
+  // user endnote appears, and as note[1] -- which pins the endnote arm of
+  // the plumbing filter the footnote fixtures could not reach.
+  let endnotes = scan_text(
+    (
+      #|<w:endnotes xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
+      #|<w:endnote w:type="separator" w:id="-1"><w:p><w:r><w:t>sep</w:t></w:r></w:p></w:endnote>
+      #|<w:endnote w:type="continuationSeparator" w:id="0"><w:p><w:r><w:t>cont</w:t></w:r></w:p></w:endnote>
+      #|<w:endnote w:id="1"><w:p><w:r><w:t>E</w:t></w:r></w:p></w:endnote>
+      #|</w:endnotes>
+    ),
+  )
+  let note_kinds : Array[String] = []
+  for node in endnotes.nodes() {
+    note_kinds.push("\{node.kind} \{node.path()}")
+  }
+  note_kinds.sort()
+  debug_inspect(
+    note_kinds,
+    content=(
+      #|["note note[1]", "p note[1]/p[1]", "r note[1]/p[1]/r[1]"]
+    ),
+  )
   // the explicit continuation merges away its cell exactly like the bare
   // `<w:vMerge/>` spelling: the projection sees one paragraph reading A and
   // no paragraph reading `gone`
@@ -3136,6 +3171,97 @@ test "scanner: endnote markers, explicit continuation, deleted instructions" {
     text.write_string(contribution.value)
   }
   assert_eq(text.to_string(), "A")
+}
+
+///|
+/// Three more scanner behaviours review proved unwitnessed: the MC container
+/// tables at scanner level (the generated pair proves the reader and
+/// projection agree, not what the scanner's own tables do), the five named
+/// entities in the scanner's OWN decoder (the token map's entity tests
+/// exercise a different implementation), and retention of the exact `xmlns`
+/// default-namespace attribute (every fixture bound prefixes).
+test "scanner: MC selection, named entities, and the default namespace" {
+  // AlternateContent flattens, Choice suppresses, Fallback flattens: the
+  // fallback paragraph projects with ordinal continuity, the choice one
+  // never exists. Removing any of the three table entries breaks this.
+  let mc = scan_text(
+    (
+      #|<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main" xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006">
+      #|<w:body>
+      #|<w:p><w:r><w:t>before</w:t></w:r></w:p>
+      #|<mc:AlternateContent><mc:Choice Requires="wps"><w:p><w:r><w:t>choice</w:t></w:r></w:p></mc:Choice><mc:Fallback><w:p><w:r><w:t>fallback</w:t></w:r></w:p></mc:Fallback></mc:AlternateContent>
+      #|<w:p><w:r><w:t>after</w:t></w:r></w:p>
+      #|</w:body>
+      #|</w:document>
+    ),
+  )
+  let mc_paths : Array[String] = []
+  for node in mc.nodes() {
+    if node.kind == "p" {
+      mc_paths.push(node.path())
+    }
+  }
+  mc_paths.sort()
+  debug_inspect(
+    mc_paths,
+    content=(
+      #|["p[1]", "p[2]", "p[3]"]
+    ),
+  )
+  // object transparency with ordinal CONTINUITY: the run inside the object
+  // keeps the paragraph's run numbering, so r[2] sits between r[1] and r[3].
+  // Text equality alone could not see this table entry vanish.
+  let object_scan = scan_text(
+    (
+      #|<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
+      #|<w:body><w:p><w:r><w:t>a</w:t></w:r><w:object><w:r><w:t>b</w:t></w:r></w:object><w:r><w:t>c</w:t></w:r></w:p></w:body>
+      #|</w:document>
+    ),
+  )
+  let object_paths : Array[String] = []
+  for node in object_scan.nodes() {
+    object_paths.push("\{node.kind} \{node.path()}")
+  }
+  object_paths.sort()
+  debug_inspect(
+    object_paths,
+    content=(
+      #|["p p[1]", "r p[1]/r[1]", "r p[1]/r[2]", "r p[1]/r[3]"]
+    ),
+  )
+  // the five named entities decode in the scanner's own attribute decoder;
+  // numeric references were tested, the named arms were not
+  let entities = scan_text(
+    (
+      #|<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
+      #|<w:body><w:p><w:ins w:id="1" w:author="a&amp;b&lt;c&gt;d&quot;e&apos;f"><w:r><w:t>x</w:t></w:r></w:ins></w:p></w:body>
+      #|</w:document>
+    ),
+  )
+  guard entities.revisions() is [insertion] else {
+    fail("expected the insertion")
+  }
+  inspect(insertion.author().unwrap_or("<none>"), content="a&b<c>d\"e'f")
+  // the DEFAULT namespace: an unprefixed document relies on retention of the
+  // exact `xmlns` attribute to mean WML at all
+  let unprefixed = scan_text(
+    (
+      #|<document xmlns="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
+      #|<body><p><r><t>plain</t></r></p></body>
+      #|</document>
+    ),
+  )
+  let plain_paths : Array[String] = []
+  for node in unprefixed.nodes() {
+    plain_paths.push("\{node.kind} \{node.path()}")
+  }
+  plain_paths.sort()
+  debug_inspect(
+    plain_paths,
+    content=(
+      #|["p p[1]", "r p[1]/r[1]"]
+    ),
+  )
 }
 
 ///|
@@ -3178,7 +3304,7 @@ test "scanner: every revision-site name records a site" {
   // a different edit, so the site records as unsupported. This enumerates
   // `is_property_container` at the same time.
   let containers = [
-    ("pPr", "<w:p><w:pPr><w:rPr><w:CONTAINED/></w:rPr></w:pPr></w:p>"),
+    ("pPr", "<w:p><w:pPr><w:CONTAINED/></w:pPr></w:p>"),
     ("rPr", "<w:p><w:r><w:rPr><w:CONTAINED/></w:rPr></w:r></w:p>"),
     ("tblPr", "<w:tbl><w:tblPr><w:CONTAINED/></w:tblPr></w:tbl>"),
     ("tblGrid", "<w:tbl><w:tblGrid><w:CONTAINED/></w:tblGrid></w:tbl>"),
