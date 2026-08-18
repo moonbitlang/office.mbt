@@ -417,8 +417,9 @@ test "reader order skips deleted rows when deciding table fail-open" {
 ///|
 test "reader order classifies conditional empty table outputs like BodyReader" {
   let separators = [
-    "<w:bookmarkStart w:name=\"_GoBack\"/>", "<w:br w:type=\"unsupported\"/>", "<w:br w:type=\"page\"/>",
-    "<w:br w:type=\"column\"/>", "<w:br w:type=\"textWrapping\"/>", "<w:sym w:font=\"Arial\" w:char=\"0041\"/>",
+    "<w:bookmarkStart w:name=\"_GoBack\"/>", "<w:commentReference w:id=\"9\"/>",
+    "<w:br w:type=\"unsupported\"/>", "<w:br w:type=\"page\"/>", "<w:br w:type=\"column\"/>",
+    "<w:br w:type=\"textWrapping\"/>", "<w:sym w:font=\"Arial\" w:char=\"0041\"/>",
     "<w:hyperlink/>", "<w:p><w:pPr><w:rPr><w:del/></w:rPr></w:pPr><w:r><w:t>deleted prefix</w:t></w:r></w:p>",
     "<w:hyperlink><w:tr><w:tc><w:p><w:r><w:t>wrapped</w:t></w:r></w:p></w:tc></w:tr></w:hyperlink>",
     "<w:hyperlink w:anchor=\"x\"/>", "<w:hyperlink q:id=\"missing\"/>",
@@ -443,6 +444,7 @@ test "reader order classifies conditional empty table outputs like BodyReader" {
     content=(
       #|[
       #|  ["A"],
+      #|  ["A", "B"],
       #|  ["A"],
       #|  ["A", "B"],
       #|  ["A", "B"],

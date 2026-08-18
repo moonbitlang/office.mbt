@@ -212,7 +212,7 @@ docx_reader.mbt	a	office_namespace_map	prefix	docx_wbtest:"docx drawing image re
 docx_reader.mbt	a:blip	XmlElement::drawing_blips	name	docx_wbtest:"docx image reader records Mammoth-compatible warnings"
 docx_reader.mbt	a:graphic	XmlElement::drawing_blips	name	docx_wbtest:"docx image reader records Mammoth-compatible warnings"
 docx_reader.mbt	a:graphicData	XmlElement::drawing_blips	name	docx_wbtest:"docx image reader records Mammoth-compatible warnings"
-docx_reader.mbt	a:hlinkClick	BodyReader::read_drawing_hyperlink	name	docx_wbtest:"docx drawing image reader follows Mammoth picture chain"
+docx_reader.mbt	a:hlinkClick	BodyReader::read_drawing_hyperlink	name	docx_wbtest:"docx drawing image hyperlink wraps image"
 docx_reader.mbt	begin	BodyReader::read_paragraph_children	value	docx_wbtest:"docx complex field hyperlink scope follows field boundaries"
 docx_reader.mbt	bmp	fallback_content_type	value	docx_wbtest:"docx content types include Mammoth image fallbacks"
 docx_reader.mbt	bullet	read_numbering_level	value	docx_wbtest:"docx numbering xml ignores missing level index when explicit zero exists"
@@ -436,7 +436,7 @@ reader_order_projection.mbt	column	reader_order_body_output_kind	value	reader_or
 reader_order_projection.mbt	comment	ReaderOrderWalker::walk	name	reader_order_projection_wbtest:"each story root kind projects its paragraphs"
 reader_order_projection.mbt	commentRangeEnd	ReaderOrderWalker::walk_inline_element	name	reader_order_projection_wbtest:"seam and barrier groups classify inline oddities element by element"
 reader_order_projection.mbt	commentRangeStart	ReaderOrderWalker::walk_inline_element	name	reader_order_projection_wbtest:"seam and barrier groups classify inline oddities element by element"
-reader_order_projection.mbt	commentReference	ReaderOrderWalker::walk_inline_element,reader_order_body_output_kind	name	reader_order_projection_wbtest:"seam and barrier groups classify inline oddities element by element"
+reader_order_projection.mbt	commentReference	ReaderOrderWalker::walk_inline_element,reader_order_body_output_kind	name	reader_order_projection_wbtest:"reader order classifies conditional empty table outputs like BodyReader"; (the walker arm is behaviourally equivalent to the fallback -- both produce HardBarrier, review-verified unobservable. The explicit arm is documentation)
 reader_order_projection.mbt	comments	ReaderOrderWalker::walk	name	reader_order_projection_wbtest:"each story root kind projects its paragraphs"
 reader_order_projection.mbt	cr	ReaderOrderWalker::walk_inline_element	name	reader_order_projection_wbtest:"seam and barrier groups classify inline oddities element by element"
 reader_order_projection.mbt	del	ReaderOrderWalker::is_deleted_paragraph_mark,ReaderOrderWalker::walk_inline_element,ReaderOrderWalker::walk_paragraph_extras,reader_order_is_deleted_body_paragraph,reader_order_projection_visibility	name	reader_order_projection_wbtest:"reader order discovers textboxes inside deleted revisions"; reader_order_projection_wbtest:"reader order drops deleted paragraphs visited as paragraph children"
