@@ -173,28 +173,3 @@ fn run(
 fn text(value : String) -> DocumentElement {
   @document.text(value)
 }
-
-///|
-fn tab() -> DocumentElement {
-  @document.tab()
-}
-
-///|
-fn checkbox(checked : Bool) -> DocumentElement {
-  @document.checkbox(checked)
-}
-
-///|
-fn line_break() -> DocumentElement {
-  @document.line_break()
-}
-
-///|
-fn page_break() -> DocumentElement {
-  @document.page_break()
-}
-
-///|
-fn column_break() -> DocumentElement {
-  @document.column_break()
-}

@@ -6,41 +6,6 @@
 type DocumentMatcher = @style_map.DocumentMatcher
 
 ///|
-fn hyperlink(
-  children : Array[DocumentElement],
-  href? : String? = None,
-  anchor? : String? = None,
-  target_frame? : String? = None,
-) -> DocumentElement {
-  @document.hyperlink(children, href~, anchor~, target_frame~)
-}
-
-///|
-fn table(
-  children : Array[DocumentElement],
-  properties? : TableProperties = @document.TableProperties::default(),
-) -> DocumentElement {
-  @document.table(children, properties~)
-}
-
-///|
-fn table_row(
-  children : Array[DocumentElement],
-  is_header? : Bool = false,
-) -> DocumentElement {
-  @document.table_row(children, is_header~)
-}
-
-///|
-fn table_cell(
-  children : Array[DocumentElement],
-  col_span? : Int = 1,
-  row_span? : Int = 1,
-) -> DocumentElement {
-  @document.table_cell(children, col_span~, row_span~)
-}
-
-///|
 fn xml_text(value : String) -> XmlNode {
   @xml.xml_text(value)
 }
