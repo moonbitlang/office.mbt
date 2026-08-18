@@ -332,7 +332,7 @@ docx_reader.mbt	w:ilvl	BodyReader::read_numbering,read_abstract_numbering,read_n
 docx_reader.mbt	w:ind	BodyReader::read_paragraph_properties	name	-
 docx_reader.mbt	w:initials	read_comments_for_document	name	-
 docx_reader.mbt	w:ins	BodyReader::read_element	name	docx_wbtest:"docx transparent wrappers pass through children"
-docx_reader.mbt	w:instrText	BodyReader::read_paragraph_children,collect_instruction_text,is_ignored_body_element	name	docx_wbtest:"docx reader ignores Mammoth ignored body elements without warnings"; docx_wbtest:"docx complex field instruction text is not emitted"
+docx_reader.mbt	w:instrText	BodyReader::read_paragraph_children,collect_instruction_text,is_ignored_body_element	name	docx_wbtest:"docx reader ignores Mammoth ignored body elements without warnings"; docx_wbtest:"docx complex field hyperlink instructions can be split across runs"
 docx_reader.mbt	w:jc	BodyReader::read_paragraph_properties	name	-
 docx_reader.mbt	w:lastRenderedPageBreak	is_ignored_body_element	name	docx_wbtest:"docx reader ignores Mammoth ignored body elements without warnings"
 docx_reader.mbt	w:left	BodyReader::read_indent	name	-
