@@ -417,7 +417,8 @@ test "reader order skips deleted rows when deciding table fail-open" {
 ///|
 test "reader order classifies conditional empty table outputs like BodyReader" {
   let separators = [
-    "<w:bookmarkStart w:name=\"_GoBack\"/>", "<w:br w:type=\"unsupported\"/>", "<w:sym w:font=\"Arial\" w:char=\"0041\"/>",
+    "<w:bookmarkStart w:name=\"_GoBack\"/>", "<w:br w:type=\"unsupported\"/>", "<w:br w:type=\"page\"/>",
+    "<w:br w:type=\"column\"/>", "<w:br w:type=\"textWrapping\"/>", "<w:sym w:font=\"Arial\" w:char=\"0041\"/>",
     "<w:hyperlink/>", "<w:p><w:pPr><w:rPr><w:del/></w:rPr></w:pPr><w:r><w:t>deleted prefix</w:t></w:r></w:p>",
     "<w:hyperlink><w:tr><w:tc><w:p><w:r><w:t>wrapped</w:t></w:r></w:p></w:tc></w:tr></w:hyperlink>",
     "<w:hyperlink w:anchor=\"x\"/>", "<w:hyperlink q:id=\"missing\"/>",
@@ -443,6 +444,9 @@ test "reader order classifies conditional empty table outputs like BodyReader" {
       #|[
       #|  ["A"],
       #|  ["A"],
+      #|  ["A", "B"],
+      #|  ["A", "B"],
+      #|  ["A", "B"],
       #|  ["A"],
       #|  ["A"],
       #|  ["A"],
@@ -1464,6 +1468,127 @@ test "inline content in a block container is read but not projected" {
     @utf8.encode(alone),
   )
   assert_eq(projected.paragraphs.length(), 0)
+}
+
+///|
+/// Every story root projects from its own root context.
+///
+/// `ReaderOrderWalker::walk` dispatches on the root's local name: `document`
+/// descends into `w:body`, `body`/`hdr`/`ftr` walk their flow directly, and
+/// the note and comment collections enumerate their per-annotation containers.
+/// The body/document arms are exercised everywhere; the others had no
+/// positive witness -- the root-context test proves nested impostors do NOT
+/// project, which a deleted arm would also satisfy.
+///
+/// The note and comment roots are pinned against the projection's own output
+/// rather than `assert_reader_order_matches_reader`: that oracle reads
+/// through `w:body`, which note stories do not have -- BodyReader reads them
+/// through the notes part reader, whose agreement is pinned by the annotation
+/// index tests.
+test "each story root kind projects its paragraphs" {
+  let w = "xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\""
+  let cases = [
+    (
+      "word/header1.xml",
+      "<w:hdr \{w}><w:p><w:r><w:t>H</w:t></w:r></w:p></w:hdr>",
+      "H",
+    ),
+    (
+      "word/footer1.xml",
+      "<w:ftr \{w}><w:p><w:r><w:t>F</w:t></w:r></w:p></w:ftr>",
+      "F",
+    ),
+    (
+      "word/document.xml",
+      "<w:body \{w}><w:p><w:r><w:t>B</w:t></w:r></w:p></w:body>",
+      "B",
+    ),
+    (
+      "word/footnotes.xml",
+      "<w:footnotes \{w}><w:footnote w:id=\"1\"><w:p><w:r><w:t>N</w:t></w:r></w:p></w:footnote></w:footnotes>",
+      "N",
+    ),
+    (
+      "word/endnotes.xml",
+      "<w:endnotes \{w}><w:endnote w:id=\"1\"><w:p><w:r><w:t>E</w:t></w:r></w:p></w:endnote></w:endnotes>",
+      "E",
+    ),
+    (
+      "word/comments.xml",
+      "<w:comments \{w}><w:comment w:id=\"1\"><w:p><w:r><w:t>C</w:t></w:r></w:p></w:comment></w:comments>",
+      "C",
+    ),
+  ]
+  for case in cases {
+    let (part, source, expected) = case
+    let projection = scan_reader_order_projection(part, @utf8.encode(source))
+    assert_eq((part, projection.paragraphs.length()), (part, 1))
+    assert_eq((part, projection.paragraphs[0].reader_text()), (part, expected))
+  }
+}
+
+///|
+/// The seam and barrier groups, pinned element by element.
+///
+/// `walk_inline_element` sorts inline oddities into two buckets: transparent
+/// seams (annotation ranges, bookmark marks, bare property containers,
+/// editor debris like `w:proofErr`
+/// and `w:lastRenderedPageBreak`) that glue nothing and block nothing, and
+/// hard barriers (the note and comment references, `w:cr`, `w:ptab`,
+/// `w:fldSimple`, and the field machinery `w:fldChar`/`w:instrText`) for
+/// content the projection declines to model -- some
+/// because the reader emits a non-text node, some because the reader itself
+/// only warn-ignores them and a barrier is the fail-safe reading. The
+/// distinction is what surgery stands on: a seam is writable-through, a
+/// barrier refuses.
+///
+/// Every element here was previously dispatched but pinned by no authored
+/// test; the generated grammar produces none of them.
+test "seam and barrier groups classify inline oddities element by element" {
+  let source = "<w:document xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\"><w:body>" +
+    "<w:p><w:r><w:t>x</w:t><w:bookmarkEnd w:id=\"1\"/><w:commentRangeStart w:id=\"2\"/><w:commentRangeEnd w:id=\"2\"/><w:annotationRef/><w:lastRenderedPageBreak/><w:proofErr w:type=\"spellStart\"/><w:bookmarkStart w:id=\"6\" w:name=\"pin\"/><w:pPr/><w:rPr/><w:t>y</w:t></w:r></w:p>" +
+    "<w:p><w:r><w:footnoteReference w:id=\"3\"/><w:endnoteReference w:id=\"4\"/><w:commentReference w:id=\"5\"/><w:footnoteRef/><w:endnoteRef/><w:cr/><w:ptab w:alignment=\"left\"/><w:fldSimple w:instr=\" PAGE \"/><w:fldChar w:fldCharType=\"begin\"/><w:instrText> PAGE </w:instrText><w:fldChar w:fldCharType=\"end\"/></w:r></w:p>" +
+    "</w:body></w:document>"
+  let projection = scan_reader_order_projection(
+    "word/document.xml",
+    @utf8.encode(source),
+  )
+  // Both buckets are invisible to story text, and the projection agrees with
+  // the reader about that -- the seams because they are transparent, the
+  // barriers because the reader emits no text for any of them either.
+  assert_reader_order_matches_reader(source, projection)
+  assert_reader_order_intervals_index_the_reader(source)
+  assert_eq(projection.paragraphs.length(), 2)
+  assert_eq(projection.paragraphs[0].reader_text(), "xy")
+  assert_eq(projection.paragraphs[1].reader_text(), "")
+  // The first paragraph carries the six seam elements as transparent seams
+  // and no barrier anywhere -- a barrier here would make surgery refuse a
+  // paragraph that is perfectly writable.
+  let mut seams = 0
+  for contribution in projection.paragraphs[0].contributions {
+    match contribution.kind {
+      TransparentSeam => seams = seams + 1
+      HardBarrier => fail("seam group produced a barrier")
+      _ => ()
+    }
+  }
+  // exactly the nine seam elements plus the seam the walk opens for the run
+  // itself: an exact count, because >= let one seam arm quietly vanish behind
+  // the run's own seam -- and review proved a bare pPr moved to the barrier
+  // bucket survived the ENTIRE suite before these three joined the fixture
+  assert_eq(seams, 10)
+  // The second paragraph carries one hard barrier per barrier element, and
+  // nothing else that projects.
+  let mut barriers = 0
+  for contribution in projection.paragraphs[1].contributions {
+    match contribution.kind {
+      HardBarrier => barriers = barriers + 1
+      TextAtom | TabAtom | NoBreakHyphenAtom | SoftHyphenAtom | SymbolAtom =>
+        fail("barrier group projected text")
+      _ => ()
+    }
+  }
+  assert_eq(barriers, 11)
 }
 
 ///|
