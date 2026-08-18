@@ -3093,6 +3093,118 @@ test "scanner: a revision without an author is reported and diagnosed" {
 }
 
 ///|
+/// Three scanner behaviours no fixture reached: the endnote marker kind, the
+/// explicit `w:vMerge w:val="continue"` spelling, and the `w:delInstrText`
+/// deleted-instruction carrier.
+test "scanner: endnote markers, explicit continuation, deleted instructions" {
+  let scan = scan_text(
+    (
+      #|<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
+      #|<w:body>
+      #|<w:p><w:r><w:endnoteReference w:id="9"/></w:r></w:p>
+      #|<w:p><w:del w:id="1" w:author="a"><w:r><w:delInstrText> PAGE </w:delInstrText></w:r></w:del></w:p>
+      #|<w:tbl>
+      #|<w:tr><w:tc><w:tcPr><w:vMerge w:val="restart"/></w:tcPr><w:p><w:r><w:t>A</w:t></w:r></w:p></w:tc></w:tr>
+      #|<w:tr><w:tc><w:tcPr><w:vMerge w:val="continue"/></w:tcPr><w:p><w:r><w:t>gone</w:t></w:r></w:p></w:tc></w:tr>
+      #|</w:tbl>
+      #|</w:body>
+      #|</w:document>
+    ),
+  )
+  debug_inspect(scan.warnings().length(), content="0")
+  guard scan.markers() is [endnote_marker] else {
+    fail("expected the endnote marker")
+  }
+  inspect("\{endnote_marker.kind()}", content="endnoteReference")
+  inspect(endnote_marker.id(), content="9")
+  // the deleted instruction carrier belongs to its deletion, under the
+  // instruction replacement name rather than its own spelling
+  guard scan.revisions() is [deletion] else { fail("expected the deletion") }
+  inspect("\{deletion.kind()}", content="del")
+  // the explicit continuation merges away its cell exactly like the bare
+  // `<w:vMerge/>` spelling: the projection sees one paragraph reading A and
+  // no paragraph reading `gone`
+  let projection = scan_reader_order_projection(
+    "word/document.xml",
+    @utf8.encode(
+      "<w:document xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\"><w:body><w:tbl><w:tr><w:tc><w:tcPr><w:vMerge w:val=\"restart\"/></w:tcPr><w:p><w:r><w:t>A</w:t></w:r></w:p></w:tc></w:tr><w:tr><w:tc><w:tcPr><w:vMerge w:val=\"continue\"/></w:tcPr><w:p><w:r><w:t>gone</w:t></w:r></w:p></w:tc></w:tr></w:tbl></w:body></w:document>",
+    ),
+  )
+  assert_eq(projection.paragraphs.length(), 1)
+  let text = StringBuilder()
+  for contribution in projection.paragraphs[0].contributions {
+    text.write_string(contribution.value)
+  }
+  assert_eq(text.to_string(), "A")
+}
+
+///|
+/// The complete revision-site table, name by name.
+///
+/// `is_revision_site_name` lists twenty-eight tracked-change element names,
+/// and every one must push a site record -- the mutation resolver refuses on
+/// constructs the projection drops, so a name missing from the table is a
+/// construct "accept everything" would silently leave behind. Only content
+/// `ins`/`del` are resolvable; the other twenty-six (and ins/del inside a
+/// property container, pinned elsewhere) record as unsupported.
+test "scanner: every revision-site name records a site" {
+  let names = [
+    "cellDel", "cellIns", "cellMerge", "customXmlDelRangeEnd", "customXmlDelRangeStart",
+    "customXmlInsRangeEnd", "customXmlInsRangeStart", "customXmlMoveFromRangeEnd",
+    "customXmlMoveFromRangeStart", "customXmlMoveToRangeEnd", "customXmlMoveToRangeStart",
+    "del", "ins", "moveFrom", "moveFromRangeEnd", "moveFromRangeStart", "moveTo",
+    "moveToRangeEnd", "moveToRangeStart", "numberingChange", "pPrChange", "rPrChange",
+    "sectPrChange", "tblGridChange", "tblPrChange", "tblPrExChange", "tcPrChange",
+    "trPrChange",
+  ]
+  let body = StringBuilder()
+  for name in names {
+    body.write_string("<w:\{name} w:id=\"1\" w:author=\"a\"/>")
+  }
+  let scan = scan_text(
+    "<w:document xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\"><w:body><w:p>" +
+    body.to_string() +
+    "</w:p></w:body></w:document>",
+  )
+  let sites = scan.revision_sites()
+  assert_eq(sites.length(), names.length())
+  for index, name in names {
+    assert_eq((name, sites[index].local_name), (name, name))
+    // self-closing content ins/del still register as supported sites
+    assert_eq((name, sites[index].supported), (name, name is ("ins" | "del")))
+  }
+  // The demotion axis: the same ins/del inside ANY of the seven property
+  // containers marks an inserted or deleted paragraph mark or row, which is
+  // a different edit, so the site records as unsupported. This enumerates
+  // `is_property_container` at the same time.
+  let containers = [
+    ("pPr", "<w:p><w:pPr><w:rPr><w:CONTAINED/></w:rPr></w:pPr></w:p>"),
+    ("rPr", "<w:p><w:r><w:rPr><w:CONTAINED/></w:rPr></w:r></w:p>"),
+    ("tblPr", "<w:tbl><w:tblPr><w:CONTAINED/></w:tblPr></w:tbl>"),
+    ("tblGrid", "<w:tbl><w:tblGrid><w:CONTAINED/></w:tblGrid></w:tbl>"),
+    ("trPr", "<w:tbl><w:tr><w:trPr><w:CONTAINED/></w:trPr></w:tr></w:tbl>"),
+    (
+      "tcPr", "<w:tbl><w:tr><w:tc><w:tcPr><w:CONTAINED/></w:tcPr></w:tc></w:tr></w:tbl>",
+    ),
+    ("sectPr", "<w:sectPr><w:CONTAINED/></w:sectPr>"),
+  ]
+  for case in containers {
+    let (container, body) = case
+    for site in ["ins", "del"] {
+      let scan = scan_text(
+        "<w:document xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\"><w:body>" +
+        body.replace(old="CONTAINED", new=site) +
+        "</w:body></w:document>",
+      )
+      guard scan.revision_sites() is [demoted] else {
+        fail("\{container}/\{site}: expected one site")
+      }
+      assert_eq((container, site, demoted.supported), (container, site, false))
+    }
+  }
+}
+
+///|
 test "scanner: alternate namespace prefixes and non-WML lookalikes" {
   // The WML URI bound to prefix `x`; a DIFFERENT namespace binds `w` —
   // its commentRangeStart lookalike and its `w:id` must be ignored.
