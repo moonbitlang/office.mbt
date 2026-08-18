@@ -741,6 +741,24 @@ test "section references resolve headers and footers across variants" {
   for expected in ["h:default", "h:first", "f:default", "f:even"] {
     assert_true(variants.contains(expected))
   }
+  // paragraph-level sections: a sectPr inside w:pPr ends a section mid
+  // document, which is the w:p / w:pPr dispatch in docx_package -- review
+  // measured both arms with no killer anywhere in the workspace
+  let sectioned =
+    #|<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
+    #|<w:body><w:p><w:pPr><w:sectPr/></w:pPr></w:p><w:p/><w:sectPr/></w:body>
+    #|</w:document>
+  let sectioned_archive = try! @mbtzip.read(fixture_docx(sectioned))
+  let sectioned_read = @docx.read_docx_annotated_archive_tolerant_limited(
+    sectioned_archive,
+    @xml.xml_read_budget(
+      max_source_units=1024 * 1024,
+      max_tokens=65536,
+      max_materialized_chars=1024 * 1024,
+      max_token_chars=65536,
+    ),
+  )
+  assert_eq(sectioned_read.result().sections.length(), 2)
 }
 
 ///|
@@ -769,6 +787,25 @@ test "tolerant annotated reads warn on broken section references while mutation 
       @core.warning("A header/footer reference without r:id was ignored")
     }),
   )
+  // the FOOTER arm of the mutation-safe validation: a footer reference
+  // without r:id must fail the mutation read with the footer spelling --
+  // review measured this arm silently skippable before
+  let footer_document =
+    #|<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
+    #|<w:body><w:p/><w:sectPr><w:footerReference w:type="default"/></w:sectPr></w:body>
+    #|</w:document>
+  let footer_archive = try! @mbtzip.read(fixture_docx(footer_document))
+  let mut footer_failed = false
+  try {
+    let _ = @docx.read_docx_annotated_archive_limited(footer_archive, budget())
+  } catch {
+    Unsupported(message~) => {
+      assert_true(message.contains("footer reference has no r:id"))
+      footer_failed = true
+    }
+    _ => fail("expected the footer-reference refusal")
+  }
+  assert_true(footer_failed)
   let read_only_spec = @docx.comment_spec(author="read-only", from=0, to=0, [
     @document.paragraph([@document.run([@document.text("blocked")])]),
   ])
