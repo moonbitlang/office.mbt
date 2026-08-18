@@ -16,10 +16,13 @@ pub fn aes_key_schedule(BytesView) -> AesSchedule raise CryptoError
 
 pub fn hash_concat(String, ArrayView[BytesView]) -> Bytes
 
+#deprecated
 pub fn push_u32_le(Array[Byte], UInt) -> Unit
 
+#deprecated
 pub fn u32_from_le(BytesView, Int) -> UInt
 
+#deprecated
 pub fn u64_from_le(BytesView, Int) -> UInt64
 
 // Errors

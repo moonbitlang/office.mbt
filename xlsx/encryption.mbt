@@ -72,52 +72,6 @@ priv struct DecryptedPackage {
 }
 
 ///|
-priv struct ByteWriter {
-  buf : Array[Byte]
-}
-
-///|
-fn ByteWriter::new() -> ByteWriter {
-  { buf: [] }
-}
-
-///|
-fn ByteWriter::write_bytes(self : ByteWriter, value : BytesView) -> Unit {
-  self.buf.append(value.to_array())
-}
-
-///|
-fn ByteWriter::write_u16_le(self : ByteWriter, value : Int) -> Unit {
-  self.buf.push((value & 0xff).to_byte())
-  self.buf.push(((value >> 8) & 0xff).to_byte())
-}
-
-///|
-fn ByteWriter::write_u32_le(self : ByteWriter, value : Int) -> Unit {
-  let v = value.reinterpret_as_uint()
-  @crypto.push_u32_le(self.buf, v)
-}
-
-///|
-fn ByteWriter::write_u64_le(self : ByteWriter, value : Int) -> Unit {
-  let v = value.to_uint64()
-  for i in 0..<=7 {
-    self.buf.push(((v >> (8 * i)) & 0xff).to_byte())
-  }
-}
-
-///|
-fn ByteWriter::write_utf16le(self : ByteWriter, value : StringView) -> Unit {
-  let bytes = @encoding/utf16.encode(value, bom=false, endianness=Little)
-  self.write_bytes(bytes)
-}
-
-///|
-fn ByteWriter::to_bytes(self : ByteWriter) -> Bytes {
-  Bytes::from_array(self.buf)
-}
-
-///|
 fn normalize_hash_algorithm(name : StringView) -> String {
   let lower = name.to_lower().to_owned()
   if lower.has_prefix("sha-") {
@@ -193,18 +147,16 @@ fn byte_xor(a : Byte, b : Byte) -> Byte {
 
 ///|
 fn u32_le_bytes(value : Int) -> Bytes {
-  let out : Array[Byte] = []
-  @crypto.push_u32_le(out, value.reinterpret_as_uint())
-  Bytes::from_array(out)
+  let out = @buffer.Buffer(size_hint=4)
+  out.write_uint_le(value.reinterpret_as_uint())
+  out.to_bytes()
 }
 
 ///|
 fn u64_le_bytes(value : UInt64) -> Bytes {
-  let out : Array[Byte] = []
-  for i in 0..<=7 {
-    out.push(((value >> (8 * i)) & 0xff).to_byte())
-  }
-  Bytes::from_array(out)
+  let out = @buffer.Buffer(size_hint=8)
+  out.write_uint64_le(value)
+  out.to_bytes()
 }
 
 ///|
@@ -625,7 +577,7 @@ fn decrypt_package(
     index = index + 1
   }
   check_read_cancelled(cancelled)
-  let raw_size_u64 = @crypto.u64_from_le(input, 0)
+  let raw_size_u64 = read_u64_le(input, 0)
   if raw_size_u64 > out.length().to_uint64() {
     raise InvalidEncryptedPackage(msg="decrypted package size is invalid")
   }
@@ -766,8 +718,8 @@ fn standard_decrypt(
   }
   let header_size = header_size_u64.to_int()
   let header_block = encryption_info_buf[12:12 + header_size]
-  let alg_id = @crypto.u32_from_le(header_block, 8)
-  let key_bits_u64 = @crypto.u32_from_le(header_block, 16).to_uint64()
+  let alg_id = read_u32_le(header_block, 8)
+  let key_bits_u64 = read_u32_le(header_block, 16).to_uint64()
   if key_bits_u64 != 128UL && key_bits_u64 != 192UL && key_bits_u64 != 256UL {
     raise InvalidEncryptionInfo(msg="invalid AES key size")
   }
@@ -816,7 +768,7 @@ fn standard_decrypt(
     encrypted_package_buf[8:],
     cancelled,
   )
-  let raw_size_u64 = @crypto.u64_from_le(encrypted_package_buf, 0)
+  let raw_size_u64 = read_u64_le(encrypted_package_buf, 0)
   if raw_size_u64 > decrypted.length().to_uint64() {
     if password_verified {
       raise InvalidEncryptedPackage(msg="decrypted package size is invalid")
@@ -829,15 +781,10 @@ fn standard_decrypt(
 
 ///|
 fn is_encrypted_package(bytes : BytesView) -> Bool {
-  if bytes.length() < 8 {
-    return false
+  match bytes {
+    [0xd0, 0xcf, 0x11, 0xe0, 0xa1, 0xb1, 0x1a, 0xe1, ..] => true
+    _ => false
   }
-  for i in 0..<=7 {
-    if bytes[i] != ole_identifier[i] {
-      return false
-    }
-  }
-  true
 }
 
 ///|
@@ -967,26 +914,26 @@ fn standard_key_encryption(password : String) -> (Bytes, Bytes) raise XlsxError 
     encrypted_key_value,
     pad_zero(verifier_hash_input_key, 16),
   )
-  let writer = ByteWriter::new()
-  writer.write_u16_le(0x0003)
-  writer.write_u16_le(0x0002)
-  writer.write_u32_le(0x24)
-  writer.write_u32_le(0xa4)
-  writer.write_u32_le(0x24)
-  writer.write_u32_le(0x00)
-  writer.write_u32_le(0x660e)
-  writer.write_u32_le(0x8004)
-  writer.write_u32_le(0x80)
-  writer.write_u32_le(0x18)
-  writer.write_u64_le(0x00)
-  writer.write_utf16le(
+  let writer = @buffer.Buffer(size_hint=128)
+  writer.write_uint16_le((0x0003 : UInt16))
+  writer.write_uint16_le((0x0002 : UInt16))
+  writer.write_uint_le((0x24 : UInt))
+  writer.write_uint_le((0xa4 : UInt))
+  writer.write_uint_le((0x24 : UInt))
+  writer.write_uint_le((0x00 : UInt))
+  writer.write_uint_le((0x660e : UInt))
+  writer.write_uint_le((0x8004 : UInt))
+  writer.write_uint_le((0x80 : UInt))
+  writer.write_uint_le((0x18 : UInt))
+  writer.write_uint64_le((0x00 : UInt64))
+  writer.write_string_utf16le(
     "Microsoft Enhanced RSA and AES Cryptographic Provider (Prototype)",
   )
-  writer.write_u16_le(0x00)
-  writer.write_u32_le(0x10)
+  writer.write_uint16_le((0x00 : UInt16))
+  writer.write_uint_le((0x10 : UInt))
   writer.write_bytes(salt_value)
   writer.write_bytes(encrypted_verifier_hash_input)
-  writer.write_u32_le(0x14)
+  writer.write_uint_le((0x14 : UInt))
   writer.write_bytes(encrypted_verifier_hash_value)
   (writer.to_bytes(), encrypted_key_value)
 }
@@ -1959,36 +1906,36 @@ test "standard decryption accepts RC4-style verifier layout" {
   }
   let salt_bytes = Bytes::from_array(salt)
   // encryption info: version 3.2, flags, header size, 32-byte header
-  let info = ByteWriter::new()
-  info.write_u16_le(3) // version major
-  info.write_u16_le(2) // version minor
-  info.write_u32_le(0x0000_0024) // flags
-  info.write_u32_le(32) // header size
-  info.write_u32_le(0x0000_0024) // header flags
-  info.write_u32_le(0) // size extra
-  info.write_u32_le(0x0000_6801) // AlgID: RC4, not an AES id
-  info.write_u32_le(0x0000_8004) // AlgIDHash: SHA-1
-  info.write_u32_le(128) // key size bits
-  info.write_u32_le(1) // provider type
-  info.write_u32_le(0) // reserved1
-  info.write_u32_le(0) // reserved2
+  let info = @buffer.Buffer(size_hint=128)
+  info.write_uint16_le((3 : UInt16)) // version major
+  info.write_uint16_le((2 : UInt16)) // version minor
+  info.write_uint_le((0x0000_0024 : UInt)) // flags
+  info.write_uint_le((32 : UInt)) // header size
+  info.write_uint_le((0x0000_0024 : UInt)) // header flags
+  info.write_uint_le((0 : UInt)) // size extra
+  info.write_uint_le((0x0000_6801 : UInt)) // AlgID: RC4, not an AES id
+  info.write_uint_le((0x0000_8004 : UInt)) // AlgIDHash: SHA-1
+  info.write_uint_le((128 : UInt)) // key size bits
+  info.write_uint_le((1 : UInt)) // provider type
+  info.write_uint_le((0 : UInt)) // reserved1
+  info.write_uint_le((0 : UInt)) // reserved2
   // RC4-style verifier: salt size + salt + verifier(16) + hash size + hash(20)
-  info.write_u32_le(16)
+  info.write_uint_le((16 : UInt))
   info.write_bytes(salt_bytes)
   for _i in 0..<16 {
-    info.buf.push((0xaa).to_byte())
+    info.write_byte((0xaa).to_byte())
   }
-  info.write_u32_le(20)
+  info.write_uint_le((20 : UInt))
   for _i in 0..<20 {
-    info.buf.push((0xbb).to_byte())
+    info.write_byte((0xbb).to_byte())
   }
   let info_buf = info.to_bytes()
   // package encrypted with the key derived exactly like the reader will
   let key = standard_convert_password_to_key(128, salt_bytes, password)
   let plaintext : Bytes = b"legacy standard payload!\x00\x00\x00\x00\x00\x00\x00\x00"
   let encrypted = aes_ecb_encrypt(key, plaintext)
-  let package_writer = ByteWriter::new()
-  package_writer.write_u64_le(24) // real payload length before padding
+  let package_writer = @buffer.Buffer(size_hint=64)
+  package_writer.write_uint64_le((24 : UInt64)) // real payload length before padding
   package_writer.write_bytes(encrypted)
   let package_buf = package_writer.to_bytes()
   let decrypted = standard_decrypt(info_buf, package_buf, password)

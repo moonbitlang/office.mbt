@@ -20,20 +20,24 @@ let dif_sector = -4
 
 ///|
 fn read_u16_le(bytes : BytesView, offset : Int) -> Int raise XlsxError {
-  if offset < 0 || offset + 2 > bytes.length() {
+  if offset < 0 || offset > bytes.length() {
     raise InvalidEncryptionInfo(msg="cfb read out of bounds")
   }
-  let b0 = bytes[offset].to_int()
-  let b1 = bytes[offset + 1].to_int()
-  b0 | (b1 << 8)
+  match bytes[offset:] {
+    [u16le(v), ..] => v.reinterpret_as_int()
+    _ => raise InvalidEncryptionInfo(msg="cfb read out of bounds")
+  }
 }
 
 ///|
 fn read_u32_le(bytes : BytesView, offset : Int) -> UInt raise XlsxError {
-  if offset < 0 || offset + 4 > bytes.length() {
+  if offset < 0 || offset > bytes.length() {
     raise InvalidEncryptionInfo(msg="cfb read out of bounds")
   }
-  @crypto.u32_from_le(bytes, offset)
+  match bytes[offset:] {
+    [u32le(v), ..] => v
+    _ => raise InvalidEncryptionInfo(msg="cfb read out of bounds")
+  }
 }
 
 ///|
@@ -45,10 +49,13 @@ fn read_i32_le(bytes : BytesView, offset : Int) -> Int raise XlsxError {
 
 ///|
 fn read_u64_le(bytes : BytesView, offset : Int) -> UInt64 raise XlsxError {
-  if offset < 0 || offset + 8 > bytes.length() {
+  if offset < 0 || offset > bytes.length() {
     raise InvalidEncryptionInfo(msg="cfb read out of bounds")
   }
-  @crypto.u64_from_le(bytes, offset)
+  match bytes[offset:] {
+    [u64le(v), ..] => v
+    _ => raise InvalidEncryptionInfo(msg="cfb read out of bounds")
+  }
 }
 
 ///|
@@ -625,10 +632,9 @@ fn cfb_read(
   if bytes.length() < 512 {
     raise InvalidEncryptionInfo(msg="cfb header too short")
   }
-  for i in 0..<=7 {
-    if bytes[i] != ole_identifier[i] {
-      raise InvalidEncryptionInfo(msg="invalid cfb signature")
-    }
+  match bytes {
+    [0xd0, 0xcf, 0x11, 0xe0, 0xa1, 0xb1, 0x1a, 0xe1, ..] => ()
+    _ => raise InvalidEncryptionInfo(msg="invalid cfb signature")
   }
   let sector_shift = read_u16_le(bytes, 0x1e)
   let mini_sector_shift = read_u16_le(bytes, 0x20)

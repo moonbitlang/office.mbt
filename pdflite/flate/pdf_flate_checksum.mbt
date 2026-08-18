@@ -33,3 +33,13 @@ fn pdf_flate_push_adler32(output : Array[Byte], data : BytesView) -> Unit {
   output.push(((s1 >> 8) & 0xFF).to_byte())
   output.push((s1 & 0xFF).to_byte())
 }
+
+///|
+fn pdf_flate_push_adler32_to_buffer(
+  output : @buffer.Buffer,
+  data : BytesView,
+) -> Unit {
+  let (s1, s2) = pdf_flate_adler32(data)
+  output.write_uint16_be(s2.to_uint16())
+  output.write_uint16_be(s1.to_uint16())
+}

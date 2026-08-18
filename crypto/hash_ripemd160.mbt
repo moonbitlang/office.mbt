@@ -77,7 +77,7 @@ fn ripemd160_hash(input : BytesView) -> Bytes {
   while offset < padded.length() {
     let x : Array[UInt] = Array::make(16, (0 : UInt))
     for i in 0..<=15 {
-      x[i] = u32_from_le(padded, offset + i * 4)
+      x[i] = padded.unsafe_read_uint32_le(offset + i * 4)
     }
     let mut a1 = h0
     let mut b1 = h1
@@ -142,11 +142,11 @@ fn ripemd160_hash(input : BytesView) -> Bytes {
     h0 = t
     offset = offset + 64
   }
-  let out : Array[Byte] = []
-  push_u32_le(out, h0)
-  push_u32_le(out, h1)
-  push_u32_le(out, h2)
-  push_u32_le(out, h3)
-  push_u32_le(out, h4)
-  Bytes::from_array(out)
+  let out = @buffer.Buffer(size_hint=20)
+  out.write_uint_le(h0)
+  out.write_uint_le(h1)
+  out.write_uint_le(h2)
+  out.write_uint_le(h3)
+  out.write_uint_le(h4)
+  out.to_bytes()
 }

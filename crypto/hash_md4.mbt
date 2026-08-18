@@ -39,7 +39,7 @@ fn md4_hash(input : BytesView) -> Bytes {
   while offset < padded.length() {
     let x : Array[UInt] = Array::make(16, (0 : UInt))
     for i in 0..<=15 {
-      x[i] = u32_from_le(padded, offset + i * 4)
+      x[i] = padded.unsafe_read_uint32_le(offset + i * 4)
     }
     let mut a = a0
     let mut b = b0
@@ -99,10 +99,10 @@ fn md4_hash(input : BytesView) -> Bytes {
     d0 = d0 + d
     offset = offset + 64
   }
-  let out : Array[Byte] = []
-  push_u32_le(out, a0)
-  push_u32_le(out, b0)
-  push_u32_le(out, c0)
-  push_u32_le(out, d0)
-  Bytes::from_array(out)
+  let out = @buffer.Buffer(size_hint=16)
+  out.write_uint_le(a0)
+  out.write_uint_le(b0)
+  out.write_uint_le(c0)
+  out.write_uint_le(d0)
+  out.to_bytes()
 }

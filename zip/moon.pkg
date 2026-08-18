@@ -4,10 +4,12 @@ import {
 }
 
 import {
+  "bobzhang/mbtexcel/testutil",
   "moonbitlang/core/random",
 } for "test"
 
 import {
+  "bobzhang/mbtexcel/testutil",
   "moonbitlang/core/quickcheck",
   "moonbitlang/core/sorted_set",
 } for "wbtest"

@@ -91,22 +91,22 @@ test "aes cbc decrypt" {
 
 ## Byte Utilities
 
-Functions for converting between integers and byte arrays.
-
-### Little-Endian
+LE/BE byte serialization is provided by `moonbitlang/core/buffer`
+(`Buffer::write_uint_le/be`, `write_uint64_le/be`, ...) for appends and by byte
+patterns or `unsafe_read_*` for reads.
 
 ```mbt check
 ///|
 test "little endian" {
   // Read UInt32 from bytes
   let bytes : Bytes = b"\x01\x02\x03\x04"
-  let value = @crypto.u32_from_le(bytes, 0)
+  let value = bytes.unsafe_read_uint32_le(0)
   inspect(value, content="67305985") // 0x04030201
 
   // Write UInt32 to bytes
-  let buf : Array[Byte] = []
-  @crypto.push_u32_le(buf, 0x04030201U)
-  inspect(Bytes::from_array(buf), content="b\"\\x01\\x02\\x03\\x04\"")
+  let buf = @buffer.Buffer()
+  buf.write_uint_le(0x04030201U)
+  inspect(buf.to_bytes(), content="b\"\\x01\\x02\\x03\\x04\"")
 }
 ```
 
