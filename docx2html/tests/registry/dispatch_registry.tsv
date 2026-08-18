@@ -248,7 +248,7 @@ docx_reader.mbt	numbering	WordprocessingPartRole::label,index_numbering_style_nu
 docx_reader.mbt	o	office_namespace_map	prefix	-
 docx_reader.mbt	o:title	BodyReader::read_vml_image_data	name	-
 docx_reader.mbt	office-word	office_namespace_map	prefix	-
-docx_reader.mbt	office-word:wrap	is_ignored_body_element	name	-
+docx_reader.mbt	office-word:wrap	is_ignored_body_element	name	docx_wbtest:"docx reader ignores Mammoth ignored body elements without warnings"
 docx_reader.mbt	officeDocument	find_main_document	value	-
 docx_reader.mbt	page	BodyReader::read_break	value	-
 docx_reader.mbt	paragraph	BodyReader::read_paragraph_properties,style_warning_label	value	-
@@ -299,8 +299,8 @@ docx_reader.mbt	w:author	read_comments_for_document	name	-
 docx_reader.mbt	w:b	BodyReader::read_run_properties	name	-
 docx_reader.mbt	w:body	read_document_xml_with_messages	name	-
 docx_reader.mbt	w:bookmarkEnd	is_ignored_body_element	name	docx_wbtest:"docx reader ignores Mammoth ignored body elements without warnings"
-docx_reader.mbt	w:bookmarkStart	BodyReader::read_element	name	docx_wbtest:"docx reader reads references and bookmarks like Mammoth"; run_surgery_wbtest:"whole-run synthesis lands inside the run's seams"
-docx_reader.mbt	w:br	BodyReader::read_element	name	docx_wbtest:"docx reader maps break types like Mammoth"
+docx_reader.mbt	w:bookmarkStart	BodyReader::read_element	name	docx_wbtest:"docx reader reads references and bookmarks like Mammoth"
+docx_reader.mbt	w:br	BodyReader::read_element	name	docx_wbtest:"docx reader maps break types like Mammoth"; docx_wbtest:"docx body reader records Mammoth-compatible warnings"
 docx_reader.mbt	w:caps	BodyReader::read_run_properties	name	-
 docx_reader.mbt	w:char	BodyReader::read_symbol	name	-
 docx_reader.mbt	w:checkBox	read_complex_field_checkbox_checked	name	-
@@ -317,7 +317,7 @@ docx_reader.mbt	w:endnoteRef	BodyReader::read_element,is_ignored_body_element	na
 docx_reader.mbt	w:endnoteReference	BodyReader::read_element	name	docx_wbtest:"docx reader reads references and bookmarks like Mammoth"
 docx_reader.mbt	w:ffData	read_complex_field_checkbox_checked	name	-
 docx_reader.mbt	w:firstLine	BodyReader::read_indent	name	-
-docx_reader.mbt	w:fldChar	is_ignored_body_element,read_complex_field_checkbox_checked,read_field_char_type	name	docx_wbtest:"docx reader ignores Mammoth ignored body elements without warnings"; run_surgery_wbtest:"whole-run replacement refuses field instructions but not results"
+docx_reader.mbt	w:fldChar	is_ignored_body_element,read_complex_field_checkbox_checked,read_field_char_type	name	docx_wbtest:"docx reader ignores Mammoth ignored body elements without warnings"; docx_wbtest:"docx complex field hyperlink scope follows field boundaries"
 docx_reader.mbt	w:fldCharType	read_field_char_type	name	-
 docx_reader.mbt	w:font	BodyReader::read_symbol	name	-
 docx_reader.mbt	w:footnoteRef	BodyReader::read_element,is_ignored_body_element	name	docx_wbtest:"docx reader reads references and bookmarks like Mammoth"; docx_wbtest:"docx reader ignores Mammoth ignored body elements without warnings"
@@ -332,7 +332,7 @@ docx_reader.mbt	w:ilvl	BodyReader::read_numbering,read_abstract_numbering,read_n
 docx_reader.mbt	w:ind	BodyReader::read_paragraph_properties	name	-
 docx_reader.mbt	w:initials	read_comments_for_document	name	-
 docx_reader.mbt	w:ins	BodyReader::read_element	name	docx_wbtest:"docx transparent wrappers pass through children"
-docx_reader.mbt	w:instrText	BodyReader::read_paragraph_children,collect_instruction_text,is_ignored_body_element	name	docx_wbtest:"docx reader ignores Mammoth ignored body elements without warnings"; run_surgery_wbtest:"whole-run replacement refuses field instructions but not results"
+docx_reader.mbt	w:instrText	BodyReader::read_paragraph_children,collect_instruction_text,is_ignored_body_element	name	docx_wbtest:"docx reader ignores Mammoth ignored body elements without warnings"; docx_wbtest:"docx complex field instruction text is not emitted"
 docx_reader.mbt	w:jc	BodyReader::read_paragraph_properties	name	-
 docx_reader.mbt	w:lastRenderedPageBreak	is_ignored_body_element	name	docx_wbtest:"docx reader ignores Mammoth ignored body elements without warnings"
 docx_reader.mbt	w:left	BodyReader::read_indent	name	-
@@ -390,7 +390,7 @@ docx_reader.mbt	win32	external_uri_to_path	value	-
 docx_reader.mbt	wp	office_namespace_map	prefix	-
 docx_reader.mbt	wp:anchor	BodyReader::read_element	name	docx_wbtest:"docx anchored drawing images are read"
 docx_reader.mbt	wp:docPr	BodyReader::read_drawing_hyperlink,read_drawing_alt_text	name	-
-docx_reader.mbt	wp:inline	BodyReader::read_element	name	docx_wbtest:"docx image reader skips DrawingML and VML reads when disabled"
+docx_reader.mbt	wp:inline	BodyReader::read_element	name	docx_wbtest:"docx image reader skips DrawingML and VML reads when disabled"; docx_wbtest:"docx drawing image hyperlink wraps image"
 docx_reader.mbt	{http://schemas.openxmlformats.org/package/2006/relationships}Relationship	(toplevel),read_relationships_xml	name	-
 docx_reader.mbt	{http://schemas.openxmlformats.org/package/2006/relationships}Relationships	(toplevel)	name	-
 embedded_style_map.mbt	ContentType	read_content_type_xml_entries,write_content_types_xml	name	-

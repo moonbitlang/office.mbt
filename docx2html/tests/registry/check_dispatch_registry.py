@@ -349,7 +349,13 @@ for key, extra in meta.items():
     coverage = extra[1] if len(extra) > 1 else ''
     if coverage in ('', '-'):
         continue
-    for base, test in CITATION.findall(coverage):
+    for segment in coverage.split(';'):
+        segment = segment.strip()
+        m = re.fullmatch(r'([A-Za-z0-9_]+):"([^"]+)"', segment)
+        if m is None:
+            errors.append(f"MALFORMED CITATION: {key[1]} coverage segment {segment!r} does not parse as testfile:\"test name\"")
+            continue
+        base, test = m.group(1), m.group(2)
         known = test_names(base)
         if known is None:
             errors.append(f"COVERAGE ROT: {key[1]} cites file {base}.mbt which does not exist")
