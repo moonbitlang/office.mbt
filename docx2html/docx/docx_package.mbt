@@ -357,7 +357,7 @@ fn HeaderFooterCollector::read_part_story(
     external_files: self.parts.external_files,
     read_images: true,
   }
-  let body = reader.read_children(root.children)
+  let body = reader.read_children(ReaderNode::of(root).element_children())
   self.messages.append(reader.messages)
   body
 }

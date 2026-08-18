@@ -5,9 +5,10 @@
 ///|
 fn current_reader_story_text(source : String) -> String raise DocxError {
   let root = read_xml_string(source, namespace_map=office_namespace_map())
-  let children = match root.first("w:body") {
-    Some(body) => body.children
-    None => root.children
+  let node = ReaderNode::of(root)
+  let children = match node.first("w:body") {
+    Some(body) => body.element_children()
+    None => node.element_children()
   }
   document(empty_body_reader({ relationships: [] }).read_children(children)).to_raw_text()
 }
@@ -18,9 +19,10 @@ fn current_reader_story_text_with(
   reader : BodyReader,
 ) -> String raise DocxError {
   let root = read_xml_string(source, namespace_map=office_namespace_map())
-  let children = match root.first("w:body") {
-    Some(body) => body.children
-    None => root.children
+  let node = ReaderNode::of(root)
+  let children = match node.first("w:body") {
+    Some(body) => body.element_children()
+    None => node.element_children()
   }
   document(reader.read_children(children)).to_raw_text()
 }
@@ -70,9 +72,10 @@ fn reader_order_projection_with_all_image_outputs(
 /// oracle's.
 fn reader_paragraph_texts(source : String) -> Array[String] raise {
   let root = read_xml_string(source, namespace_map=office_namespace_map())
-  let children = match root.first("w:body") {
-    Some(body) => body.children
-    None => root.children
+  let node = ReaderNode::of(root)
+  let children = match node.first("w:body") {
+    Some(body) => body.element_children()
+    None => node.element_children()
   }
   let tree = document(
     empty_body_reader({ relationships: [] }).read_children(children),

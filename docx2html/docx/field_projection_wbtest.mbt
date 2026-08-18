@@ -29,9 +29,10 @@ fn field_projection_text(projection : ReaderOrderProjection) -> String {
 ///|
 fn field_reader_text(source : String) -> String raise DocxError {
   let root = read_xml_string(source, namespace_map=office_namespace_map())
-  let children = match root.first("w:body") {
-    Some(body) => body.children
-    None => root.children
+  let node = ReaderNode::of(root)
+  let children = match node.first("w:body") {
+    Some(body) => body.element_children()
+    None => node.element_children()
   }
   document(empty_body_reader({ relationships: [] }).read_children(children)).to_raw_text()
 }

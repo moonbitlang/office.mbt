@@ -1846,7 +1846,9 @@ fn read_note_part_at_path(
       notes.push({
         note_type,
         note_id: annotation_id_or_missing(annotation_id),
-        body: reader.read_children(note_element.children),
+        body: reader.read_children(
+          ReaderNode::of(note_element).element_children(),
+        ),
       })
       annotation_ids.push(annotation_id)
     }
@@ -1908,7 +1910,9 @@ fn read_comments_for_document(
     let annotation_id = comment_element.attributes.get("w:id")
     comments.push({
       comment_id: annotation_id_or_missing(annotation_id),
-      body: reader.read_children(comment_element.children),
+      body: reader.read_children(
+        ReaderNode::of(comment_element).element_children(),
+      ),
       author_name: read_optional_attribute(comment_element, "w:author"),
       author_initials: read_optional_attribute(comment_element, "w:initials"),
     })
@@ -2026,7 +2030,11 @@ fn read_document_xml_with_messages(
     read_images,
   }
   {
-    document: document(reader.read_children(body.children), notes~, comments~),
+    document: document(
+      reader.read_children(ReaderNode::of(body).element_children()),
+      notes~,
+      comments~,
+    ),
     messages: reader.messages,
   }
 }
@@ -2048,27 +2056,23 @@ priv struct BodyReader {
 ///|
 fn BodyReader::read_children(
   self : BodyReader,
-  children : Array[XmlNode],
+  children : Array[ReaderNode],
 ) -> Array[DocumentElement] raise DocxError {
   let elements : Array[DocumentElement] = []
-  let deleted_paragraph_contents : Array[XmlNode] = []
-  for child in children {
-    match child {
-      XmlElement(element) =>
-        match element.name {
-          "w:p" if is_deleted_paragraph(element) =>
-            deleted_paragraph_contents.append(element.children)
-          "w:p" if !deleted_paragraph_contents.is_empty() => {
-            elements.append(
-              self.read_paragraph_elements_with_prefix(
-                element, deleted_paragraph_contents,
-              ),
-            )
-            deleted_paragraph_contents.clear()
-          }
-          _ => elements.append(self.read_element(element))
-        }
-      XmlText(_) => ()
+  let deleted_paragraph_contents : Array[ReaderNode] = []
+  for element in children {
+    match element.name() {
+      "w:p" if is_deleted_paragraph(element) =>
+        deleted_paragraph_contents.append(element.element_children())
+      "w:p" if !deleted_paragraph_contents.is_empty() => {
+        elements.append(
+          self.read_paragraph_elements_with_prefix(
+            element, deleted_paragraph_contents,
+          ),
+        )
+        deleted_paragraph_contents.clear()
+      }
+      _ => elements.append(self.read_element(element))
     }
   }
   elements
@@ -2077,9 +2081,9 @@ fn BodyReader::read_children(
 ///|
 fn BodyReader::read_element(
   self : BodyReader,
-  element : XmlElement,
+  element : ReaderNode,
 ) -> Array[DocumentElement] raise DocxError {
-  match element.name {
+  match element.name() {
     "w:p" =>
       if is_deleted_paragraph(element) {
         []
@@ -2096,50 +2100,51 @@ fn BodyReader::read_element(
       [
         NoteReference(
           note_type="footnote",
-          note_id=annotation_id_or_missing(element.attributes.get("w:id")),
+          note_id=annotation_id_or_missing(element.attribute("w:id")),
         ),
       ]
     "w:endnoteReference" =>
       [
         NoteReference(
           note_type="endnote",
-          note_id=annotation_id_or_missing(element.attributes.get("w:id")),
+          note_id=annotation_id_or_missing(element.attribute("w:id")),
         ),
       ]
     "w:footnoteRef" | "w:endnoteRef" => []
     "w:commentReference" =>
-      [
-        CommentReference(
-          annotation_id_or_missing(element.attributes.get("w:id")),
-        ),
-      ]
+      [CommentReference(annotation_id_or_missing(element.attribute("w:id")))]
     "w:br" => self.read_break(element)
     "w:bookmarkStart" =>
-      match element.attributes.get("w:name") {
+      match element.attribute("w:name") {
         Some("_GoBack") => []
         None => [BookmarkStart("undefined")]
         Some(name) => [BookmarkStart(name)]
       }
     "w:hyperlink" => self.read_hyperlink(element)
-    "w:drawing" | "w:object" => self.read_children(element.children)
+    "w:drawing" | "w:object" => self.read_children(element.element_children())
     "w:pict" => []
     "mc:AlternateContent" =>
-      self.read_children(element.first_or_empty("mc:Fallback").children)
+      self.read_children(
+        element.first_or_empty("mc:Fallback").element_children(),
+      )
     "wp:inline" | "wp:anchor" => self.read_drawing_element(element)
     "v:roundrect" | "v:shape" | "v:textbox" | "v:group" | "v:rect" =>
-      self.read_children(element.children)
+      self.read_children(element.element_children())
     "v:imagedata" => self.read_vml_image_data(element)
     "w:tbl" => [self.read_table(element)]
     "w:tr" => self.read_table_row(element)
     "w:tc" => [self.read_table_cell(element)]
     "w:ins" | "w:smartTag" | "w:sdtContent" =>
-      self.read_children(element.children)
+      self.read_children(element.element_children())
     "w:sdt" => self.read_structured_document_tag(element)
     _ =>
-      if is_ignored_body_element(element.name) {
+      if is_ignored_body_element(element.name()) {
         []
       } else {
-        self.warn_parts(["An unrecognised element was ignored: ", element.name])
+        self.warn_parts([
+          "An unrecognised element was ignored: ",
+          element.name(),
+        ])
         []
       }
   }
@@ -2192,11 +2197,11 @@ fn is_ignored_body_element(name : String) -> Bool {
 ///|
 fn BodyReader::read_symbol(
   self : BodyReader,
-  element : XmlElement,
+  element : ReaderNode,
 ) -> Array[DocumentElement] {
   ignore(self)
-  let font_attribute = element.attributes.get("w:font")
-  let char_attribute = element.attributes.get("w:char")
+  let font_attribute = element.attribute("w:font")
+  let char_attribute = element.attribute("w:char")
   let font = attribute_or_empty(font_attribute)
   let char = attribute_or_empty(char_attribute)
   match symbol_to_unicode(font, char) {
@@ -2274,14 +2279,15 @@ fn parse_dingbat_hex(value : String) -> Int? {
 }
 
 ///|
-fn is_deleted_paragraph(element : XmlElement) -> Bool {
-  element.first_or_empty("w:pPr").first_or_empty("w:rPr").first("w:del") != None
+fn is_deleted_paragraph(element : ReaderNode) -> Bool {
+  element.first_or_empty("w:pPr").first_or_empty("w:rPr").first("w:del")
+  is Some(_)
 }
 
 ///|
 fn BodyReader::read_paragraph_elements(
   self : BodyReader,
-  element : XmlElement,
+  element : ReaderNode,
 ) -> Array[DocumentElement] raise DocxError {
   self.read_paragraph_elements_with_prefix(element, [])
 }
@@ -2289,15 +2295,15 @@ fn BodyReader::read_paragraph_elements(
 ///|
 fn BodyReader::read_paragraph_elements_with_prefix(
   self : BodyReader,
-  element : XmlElement,
-  prefix : Array[XmlNode],
+  element : ReaderNode,
+  prefix : Array[ReaderNode],
 ) -> Array[DocumentElement] raise DocxError {
   let properties = self.read_paragraph_properties(
     element.first_or_empty("w:pPr"),
   )
   let elements = [
     paragraph(
-      self.read_paragraph_children(prefix + element.children),
+      self.read_paragraph_children(prefix + element.element_children()),
       properties~,
     ),
   ]
@@ -2316,108 +2322,95 @@ priv enum ComplexField {
 ///|
 fn BodyReader::read_paragraph_children(
   self : BodyReader,
-  children : Array[XmlNode],
+  children : Array[ReaderNode],
 ) -> Array[DocumentElement] raise DocxError {
   let elements : Array[DocumentElement] = []
   let stack : Array[ComplexField] = []
   let mut instruction_text = ""
-  for child in children {
-    match child {
-      XmlElement(element) => {
-        instruction_text += collect_instruction_text(element)
-        match read_field_char_type(element) {
-          Some("begin") => {
+  for element in children {
+    instruction_text += collect_instruction_text(element)
+    match read_field_char_type(element) {
+      Some("begin") => {
+        stack.push(
+          ComplexFieldBegin(
+            checkbox_checked=read_complex_field_checkbox_checked(element),
+          ),
+        )
+        instruction_text = ""
+        elements.append(self.read_element(element))
+      }
+      Some("separate") => {
+        match stack.pop() {
+          Some(ComplexFieldBegin(checkbox_checked~)) =>
             stack.push(
-              ComplexFieldBegin(
-                checkbox_checked=read_complex_field_checkbox_checked(element),
+              parse_complex_field_instruction(
+                instruction_text, checkbox_checked,
               ),
             )
-            instruction_text = ""
-            elements.append(self.read_element(element))
-          }
-          Some("separate") => {
-            match stack.pop() {
-              Some(ComplexFieldBegin(checkbox_checked~)) =>
-                stack.push(
-                  parse_complex_field_instruction(
-                    instruction_text, checkbox_checked,
-                  ),
-                )
-              Some(field) => stack.push(field)
-              None => ()
-            }
-            instruction_text = ""
-            elements.append(self.read_element(element))
-          }
-          Some("end") => {
-            match stack.pop() {
-              Some(ComplexFieldBegin(checkbox_checked~)) =>
-                match
-                  parse_complex_field_instruction(
-                    instruction_text, checkbox_checked,
-                  ) {
-                  ComplexCheckbox(checked) =>
-                    elements.push(run([checkbox(checked)]))
-                  _ => ()
-                }
-              Some(ComplexCheckbox(checked)) =>
-                elements.push(run([checkbox(checked)]))
-              Some(_) => ()
-              None => ()
-            }
-            instruction_text = ""
-            elements.append(self.read_element(element))
-          }
-          _ =>
-            if element.name != "w:instrText" {
-              elements.append(
-                wrap_with_current_hyperlink(stack, self.read_element(element)),
-              )
-            }
+          Some(field) => stack.push(field)
+          None => ()
         }
+        instruction_text = ""
+        elements.append(self.read_element(element))
       }
-      XmlText(_) => ()
+      Some("end") => {
+        match stack.pop() {
+          Some(ComplexFieldBegin(checkbox_checked~)) =>
+            match
+              parse_complex_field_instruction(
+                instruction_text, checkbox_checked,
+              ) {
+              ComplexCheckbox(checked) =>
+                elements.push(run([checkbox(checked)]))
+              _ => ()
+            }
+          Some(ComplexCheckbox(checked)) =>
+            elements.push(run([checkbox(checked)]))
+          Some(_) => ()
+          None => ()
+        }
+        instruction_text = ""
+        elements.append(self.read_element(element))
+      }
+      _ =>
+        if element.name() != "w:instrText" {
+          elements.append(
+            wrap_with_current_hyperlink(stack, self.read_element(element)),
+          )
+        }
     }
   }
   elements
 }
 
 ///|
-fn collect_instruction_text(element : XmlElement) -> String raise DocxError {
+fn collect_instruction_text(element : ReaderNode) -> String raise DocxError {
   let builder = StringBuilder()
-  if element.name == "w:instrText" {
+  if element.name() == "w:instrText" {
     builder.write_string(element.text())
   }
-  for child in element.children {
-    match child {
-      XmlElement(child_element) =>
-        builder.write_string(collect_instruction_text(child_element))
-      XmlText(_) => ()
-    }
+  for child_element in element.element_children() {
+    builder.write_string(collect_instruction_text(child_element))
   }
   builder.to_string()
 }
 
 ///|
-fn read_field_char_type(element : XmlElement) -> String? {
-  if element.name == "w:fldChar" {
-    return element.attributes.get("w:fldCharType")
+fn read_field_char_type(element : ReaderNode) -> String? {
+  if element.name() == "w:fldChar" {
+    return element.attribute("w:fldCharType")
   }
-  for child in element.children {
-    match child {
-      XmlElement(child_element) =>
-        match read_field_char_type(child_element) {
-          Some(value) => return Some(value)
-          None => ()
-        }
-      XmlText(_) => ()
+  for child_element in element.element_children() {
+    match read_field_char_type(child_element) {
+      Some(value) => return Some(value)
+      None => ()
     }
   }
   None
 }
 
 ///|
-fn read_complex_field_checkbox_checked(element : XmlElement) -> Bool? {
+fn read_complex_field_checkbox_checked(element : ReaderNode) -> Bool? {
   match first_descendant_or_self(element, "w:fldChar") {
     Some(field_char) =>
       match field_char.first_or_empty("w:ffData").first("w:checkBox") {
@@ -2435,18 +2428,14 @@ fn read_complex_field_checkbox_checked(element : XmlElement) -> Bool? {
 }
 
 ///|
-fn first_descendant_or_self(element : XmlElement, name : String) -> XmlElement? {
-  if element.name == name {
+fn first_descendant_or_self(element : ReaderNode, name : String) -> ReaderNode? {
+  if element.name() == name {
     return Some(element)
   }
-  for child in element.children {
-    match child {
-      XmlElement(child_element) =>
-        match first_descendant_or_self(child_element, name) {
-          Some(result) => return Some(result)
-          None => ()
-        }
-      XmlText(_) => ()
+  for child_element in element.element_children() {
+    match first_descendant_or_self(child_element, name) {
+      Some(result) => return Some(result)
+      None => ()
     }
   }
   None
@@ -2614,20 +2603,16 @@ fn wrap_element_with_hyperlink(
 ///|
 fn BodyReader::read_text_box_elements(
   self : BodyReader,
-  element : XmlElement,
+  element : ReaderNode,
 ) -> Array[DocumentElement] raise DocxError {
-  match element.name {
+  match element.name() {
     "mc:AlternateContent" =>
       self.read_text_box_elements(element.first_or_empty("mc:Fallback"))
-    "w:txbxContent" => self.read_children(element.children)
+    "w:txbxContent" => self.read_children(element.element_children())
     _ => {
       let elements : Array[DocumentElement] = []
-      for child in element.children {
-        match child {
-          XmlElement(child_element) =>
-            elements.append(self.read_text_box_elements(child_element))
-          XmlText(_) => ()
-        }
+      for child_element in element.element_children() {
+        elements.append(self.read_text_box_elements(child_element))
       }
       elements
     }
@@ -2637,23 +2622,17 @@ fn BodyReader::read_text_box_elements(
 ///|
 fn BodyReader::read_paragraph_extra_elements(
   self : BodyReader,
-  element : XmlElement,
+  element : ReaderNode,
 ) -> Array[DocumentElement] raise DocxError {
   let elements : Array[DocumentElement] = []
-  for child in element.children {
-    match child {
-      XmlElement(child_element) =>
-        match child_element.name {
-          "w:pict" =>
-            elements.append(self.read_pict_extra_elements(child_element))
-          "mc:AlternateContent" =>
-            elements.append(self.read_text_box_elements(child_element))
-          "w:txbxContent" =>
-            elements.append(self.read_text_box_elements(child_element))
-          _ =>
-            elements.append(self.read_paragraph_extra_elements(child_element))
-        }
-      XmlText(_) => ()
+  for child_element in element.element_children() {
+    match child_element.name() {
+      "w:pict" => elements.append(self.read_pict_extra_elements(child_element))
+      "mc:AlternateContent" =>
+        elements.append(self.read_text_box_elements(child_element))
+      "w:txbxContent" =>
+        elements.append(self.read_text_box_elements(child_element))
+      _ => elements.append(self.read_paragraph_extra_elements(child_element))
     }
   }
   elements
@@ -2662,31 +2641,27 @@ fn BodyReader::read_paragraph_extra_elements(
 ///|
 fn BodyReader::read_pict_extra_elements(
   self : BodyReader,
-  element : XmlElement,
+  element : ReaderNode,
 ) -> Array[DocumentElement] raise DocxError {
   let elements : Array[DocumentElement] = []
-  for child in element.children {
-    match child {
-      XmlElement(child_element) =>
-        match child_element.name {
-          "mc:AlternateContent" =>
-            elements.append(
-              self.read_pict_extra_elements(
-                child_element.first_or_empty("mc:Fallback"),
-              ),
-            )
-          "w:txbxContent" =>
-            elements.append(self.read_children(child_element.children))
-          "w:pict"
-          | "v:roundrect"
-          | "v:shape"
-          | "v:textbox"
-          | "v:group"
-          | "v:rect" =>
-            elements.append(self.read_pict_extra_elements(child_element))
-          _ => elements.append(self.read_element(child_element))
-        }
-      XmlText(_) => ()
+  for child_element in element.element_children() {
+    match child_element.name() {
+      "mc:AlternateContent" =>
+        elements.append(
+          self.read_pict_extra_elements(
+            child_element.first_or_empty("mc:Fallback"),
+          ),
+        )
+      "w:txbxContent" =>
+        elements.append(self.read_children(child_element.element_children()))
+      "w:pict"
+      | "v:roundrect"
+      | "v:shape"
+      | "v:textbox"
+      | "v:group"
+      | "v:rect" =>
+        elements.append(self.read_pict_extra_elements(child_element))
+      _ => elements.append(self.read_element(child_element))
     }
   }
   elements
@@ -2695,10 +2670,10 @@ fn BodyReader::read_pict_extra_elements(
 ///|
 fn BodyReader::read_structured_document_tag(
   self : BodyReader,
-  element : XmlElement,
+  element : ReaderNode,
 ) -> Array[DocumentElement] raise DocxError {
   let content = self.read_children(
-    element.first_or_empty("w:sdtContent").children,
+    element.first_or_empty("w:sdtContent").element_children(),
   )
   match read_structured_checkbox(element.first_or_empty("w:sdtPr")) {
     Some(checked) => {
@@ -2714,15 +2689,13 @@ fn BodyReader::read_structured_document_tag(
 }
 
 ///|
-fn read_structured_checkbox(element : XmlElement) -> Bool? {
+fn read_structured_checkbox(element : ReaderNode) -> Bool? {
   match element.first("w14:checkbox") {
     Some(checkbox_element) =>
       match checkbox_element.first("w14:checked") {
         Some(checked_element) =>
           Some(
-            read_boolean_attribute_value(
-              checked_element.attributes.get("w14:val"),
-            ),
+            read_boolean_attribute_value(checked_element.attribute("w14:val")),
           )
         None => Some(false)
       }
@@ -2817,7 +2790,7 @@ fn replace_first_text_in_element(
 ///|
 fn BodyReader::read_paragraph_properties(
   self : BodyReader,
-  element : XmlElement,
+  element : ReaderNode,
 ) -> ParagraphProperties {
   let style_id = non_empty_attribute(
     element.first_or_empty("w:pStyle"),
@@ -2834,7 +2807,7 @@ fn BodyReader::read_paragraph_properties(
 }
 
 ///|
-fn BodyReader::read_indent(self : BodyReader, element : XmlElement) -> Indent {
+fn BodyReader::read_indent(self : BodyReader, element : ReaderNode) -> Indent {
   ignore(self)
   {
     start: first_some(
@@ -2854,10 +2827,10 @@ fn BodyReader::read_indent(self : BodyReader, element : XmlElement) -> Indent {
 fn BodyReader::read_numbering(
   self : BodyReader,
   style_id : String?,
-  element : XmlElement,
+  element : ReaderNode,
 ) -> Numbering? {
-  let level = element.first_or_empty("w:ilvl").attributes.get("w:val")
-  let num_id = element.first_or_empty("w:numId").attributes.get("w:val")
+  let level = element.first_or_empty("w:ilvl").attribute("w:val")
+  let num_id = element.first_or_empty("w:numId").attribute("w:val")
   match (level, num_id) {
     (Some(level), Some(num_id)) => self.numbering.find_level(num_id, level)
     _ =>
@@ -2883,16 +2856,16 @@ fn BodyReader::read_numbering(
 ///|
 fn BodyReader::read_run(
   self : BodyReader,
-  element : XmlElement,
+  element : ReaderNode,
 ) -> DocumentElement raise DocxError {
   let properties = self.read_run_properties(element.first_or_empty("w:rPr"))
-  run(self.read_children(element.children), properties~)
+  run(self.read_children(element.element_children()), properties~)
 }
 
 ///|
 fn BodyReader::read_run_properties(
   self : BodyReader,
-  element : XmlElement,
+  element : ReaderNode,
 ) -> RunProperties {
   let style_id = non_empty_attribute(
     element.first_or_empty("w:rStyle"),
@@ -2909,14 +2882,12 @@ fn BodyReader::read_run_properties(
     is_all_caps: read_boolean_element(element.first("w:caps")),
     is_small_caps: read_boolean_element(element.first("w:smallCaps")),
     vertical_alignment: read_vertical_alignment(
-      element.first_or_empty("w:vertAlign").attributes.get("w:val"),
+      element.first_or_empty("w:vertAlign").attribute("w:val"),
     ),
     font: non_empty_attribute(element.first_or_empty("w:rFonts"), "w:ascii"),
-    font_size: read_font_size(
-      element.first_or_empty("w:sz").attributes.get("w:val"),
-    ),
+    font_size: read_font_size(element.first_or_empty("w:sz").attribute("w:val")),
     highlight: read_highlight(
-      element.first_or_empty("w:highlight").attributes.get("w:val"),
+      element.first_or_empty("w:highlight").attribute("w:val"),
     ),
   }
 }
@@ -2965,10 +2936,10 @@ fn style_warning_label(style_type : String) -> String {
 }
 
 ///|
-fn read_boolean_element(element : XmlElement?) -> Bool {
+fn read_boolean_element(element : ReaderNode?) -> Bool {
   match element {
     Some(element) => {
-      let value = element.attributes.get("w:val")
+      let value = element.attribute("w:val")
       value != Some("false") && value != Some("0")
     }
     None => false
@@ -2976,10 +2947,10 @@ fn read_boolean_element(element : XmlElement?) -> Bool {
 }
 
 ///|
-fn read_underline(element : XmlElement?) -> Bool {
+fn read_underline(element : ReaderNode?) -> Bool {
   match element {
     Some(element) => {
-      let value = element.attributes.get("w:val")
+      let value = element.attribute("w:val")
       value != None &&
       value != Some("false") &&
       value != Some("0") &&
@@ -3045,9 +3016,9 @@ fn read_highlight(value : String?) -> String? {
 ///|
 fn BodyReader::read_break(
   self : BodyReader,
-  element : XmlElement,
+  element : ReaderNode,
 ) -> Array[DocumentElement] {
-  match element.attributes.get("w:type") {
+  match element.attribute("w:type") {
     None | Some("textWrapping") => [line_break()]
     Some("page") => [page_break()]
     Some("column") => [column_break()]
@@ -3061,7 +3032,7 @@ fn BodyReader::read_break(
 ///|
 fn BodyReader::read_hyperlink(
   self : BodyReader,
-  element : XmlElement,
+  element : ReaderNode,
 ) -> Array[DocumentElement] raise DocxError {
   let target_frame = non_empty_attribute(element, "w:tgtFrame")
   let anchor = non_empty_attribute(element, "w:anchor")
@@ -3077,7 +3048,7 @@ fn BodyReader::read_hyperlink(
       }
       [
         Hyperlink(
-          children=self.read_children(element.children),
+          children=self.read_children(element.element_children()),
           href~,
           anchor=None,
           target_frame~,
@@ -3089,13 +3060,13 @@ fn BodyReader::read_hyperlink(
         Some(anchor) =>
           [
             Hyperlink(
-              children=self.read_children(element.children),
+              children=self.read_children(element.element_children()),
               href=None,
               anchor=Some(anchor),
               target_frame~,
             ),
           ]
-        None => self.read_children(element.children)
+        None => self.read_children(element.element_children())
       }
   }
 }
@@ -3110,8 +3081,8 @@ fn replace_url_fragment(href : String, fragment : String) -> String {
 }
 
 ///|
-fn non_empty_attribute(element : XmlElement, name : String) -> String? {
-  match element.attributes.get(name) {
+fn non_empty_attribute(element : ReaderNode, name : String) -> String? {
+  match element.attribute(name) {
     Some(value) => if value == "" { None } else { Some(value) }
     None => None
   }
@@ -3120,7 +3091,7 @@ fn non_empty_attribute(element : XmlElement, name : String) -> String? {
 ///|
 fn BodyReader::read_drawing_element(
   self : BodyReader,
-  element : XmlElement,
+  element : ReaderNode,
 ) -> Array[DocumentElement] {
   let results : Array[DocumentElement] = []
   for blip in element.drawing_blips() {
@@ -3134,8 +3105,8 @@ fn BodyReader::read_drawing_element(
 }
 
 ///|
-fn XmlElement::drawing_blips(self : XmlElement) -> Array[XmlElement] {
-  let blips : Array[XmlElement] = []
+fn ReaderNode::drawing_blips(self : ReaderNode) -> Array[ReaderNode] {
+  let blips : Array[ReaderNode] = []
   for graphic in self.elements_by_tag_name("a:graphic") {
     for graphic_data in graphic.elements_by_tag_name("a:graphicData") {
       for picture in graphic_data.elements_by_tag_name("pic:pic") {
@@ -3151,7 +3122,7 @@ fn XmlElement::drawing_blips(self : XmlElement) -> Array[XmlElement] {
 ///|
 fn BodyReader::wrap_image_with_drawing_hyperlink(
   self : BodyReader,
-  drawing_element : XmlElement,
+  drawing_element : ReaderNode,
   image : Image,
 ) -> DocumentElement {
   match self.read_drawing_hyperlink(drawing_element) {
@@ -3169,7 +3140,7 @@ fn BodyReader::wrap_image_with_drawing_hyperlink(
 ///|
 fn BodyReader::read_drawing_hyperlink(
   self : BodyReader,
-  drawing_element : XmlElement,
+  drawing_element : ReaderNode,
 ) -> String? {
   for
     link in drawing_element
@@ -3190,8 +3161,8 @@ fn BodyReader::read_drawing_hyperlink(
 ///|
 fn BodyReader::read_blip(
   self : BodyReader,
-  drawing_element : XmlElement,
-  blip : XmlElement,
+  drawing_element : ReaderNode,
+  blip : ReaderNode,
 ) -> Image? {
   if !self.read_images {
     return None
@@ -3236,7 +3207,7 @@ fn BodyReader::diagnostic_count(self : BodyReader) -> Int {
 ///|
 fn BodyReader::read_vml_image_data(
   self : BodyReader,
-  element : XmlElement,
+  element : ReaderNode,
 ) -> Array[DocumentElement] {
   if !self.read_images {
     return []
@@ -3246,7 +3217,7 @@ fn BodyReader::read_vml_image_data(
       match
         self.read_image_by_relationship(
           id,
-          alt_text=element.attributes.get("o:title"),
+          alt_text=element.attribute("o:title"),
         ) {
         Some(image) => [Image(image)]
         None => []
@@ -3494,16 +3465,16 @@ fn is_supported_web_image_type(content_type : String) -> Bool {
 }
 
 ///|
-fn read_drawing_alt_text(element : XmlElement) -> String? {
+fn read_drawing_alt_text(element : ReaderNode) -> String? {
   let properties = element.first_or_empty("wp:docPr")
-  match properties.attributes.get("descr") {
+  match properties.attribute("descr") {
     Some(value) =>
       if value.trim().is_empty() {
-        properties.attributes.get("title")
+        properties.attribute("title")
       } else {
         Some(value)
       }
-    None => properties.attributes.get("title")
+    None => properties.attribute("title")
   }
 }
 
@@ -3515,11 +3486,11 @@ fn resolve_part_target(base_path : String, target : String) -> String? {
 ///|
 fn BodyReader::read_table(
   self : BodyReader,
-  element : XmlElement,
+  element : ReaderNode,
 ) -> DocumentElement raise DocxError {
   Table(
     children=self.calculate_table_row_spans(
-      self.read_children(element.children),
+      self.read_children(element.element_children()),
     ),
     properties=self.read_table_properties(element.first_or_empty("w:tblPr")),
   )
@@ -3528,7 +3499,7 @@ fn BodyReader::read_table(
 ///|
 fn BodyReader::read_table_properties(
   self : BodyReader,
-  element : XmlElement,
+  element : ReaderNode,
 ) -> TableProperties {
   let style_id = non_empty_attribute(
     element.first_or_empty("w:tblStyle"),
@@ -3540,30 +3511,33 @@ fn BodyReader::read_table_properties(
 ///|
 fn BodyReader::read_table_row(
   self : BodyReader,
-  element : XmlElement,
+  element : ReaderNode,
 ) -> Array[DocumentElement] raise DocxError {
   let properties = element.first_or_empty("w:trPr")
-  if properties.first("w:del") != None {
+  if properties.first("w:del") is Some(_) {
     []
   } else {
-    let is_header = properties.first("w:tblHeader") != None
-    [TableRow(children=self.read_children(element.children), is_header~)]
+    let is_header = properties.first("w:tblHeader") is Some(_)
+    [
+      TableRow(
+        children=self.read_children(element.element_children()),
+        is_header~,
+      ),
+    ]
   }
 }
 
 ///|
 fn BodyReader::read_table_cell(
   self : BodyReader,
-  element : XmlElement,
+  element : ReaderNode,
 ) -> DocumentElement raise DocxError {
   let properties = element.first_or_empty("w:tcPr")
   let col_span = parse_grid_span(
-    properties.first_or_empty("w:gridSpan").attributes.get_or_default(
-      "w:val", "1",
-    ),
+    properties.first_or_empty("w:gridSpan").attribute_or("w:val", "1"),
   )
   TableCell(
-    children=self.read_children(element.children),
+    children=self.read_children(element.element_children()),
     col_span~,
     row_span=if read_vertical_merge_continue(properties) { 0 } else { 1 },
   )
@@ -3609,10 +3583,10 @@ fn decimal_digit_value(char : UInt16) -> Int? {
 }
 
 ///|
-fn read_vertical_merge_continue(properties : XmlElement) -> Bool {
+fn read_vertical_merge_continue(properties : ReaderNode) -> Bool {
   match properties.first("w:vMerge") {
     Some(element) =>
-      match element.attributes.get("w:val") {
+      match element.attribute("w:val") {
         None | Some("continue") => true
         _ => false
       }

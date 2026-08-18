@@ -43,6 +43,10 @@ REGISTRY = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'dispatch_re
 # An unclassified file matching any detector fails the check.
 FILES = {
     'docx_reader.mbt': 'extract',
+    # PR 1's input seam: wraps XmlElement for the body reader. Quotes no XML
+    # names of its own; classified so the .name accessors it defines do not
+    # read as an unclassified dispatch surface.
+    'reader_input.mbt': 'extract',
     'reader_order_projection.mbt': 'extract',
     'annotation_scan.mbt': 'extract',
     'field_projection.mbt': 'extract',
