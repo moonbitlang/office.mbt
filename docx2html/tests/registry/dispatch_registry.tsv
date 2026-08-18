@@ -68,107 +68,107 @@ annotation_index.mbt	w:headerReference	validate_section_story_references	name	-
 annotation_index.mbt	w:id	read_comment_definitions	name	-
 annotation_index.mbt	w:initials	read_comment_definitions	name	-
 annotation_index.mbt	w:p	read_comment_definitions	name	-
-annotation_scan.mbt	:	attribute_value,projection_source_is_xml_qname,relationship_attribute_value,split_qualified_name	fragment	-
-annotation_scan.mbt	:anchor	annotation_attribute_is_relevant	fragment	-
-annotation_scan.mbt	:author	annotation_attribute_is_relevant	fragment	-
-annotation_scan.mbt	:char	annotation_attribute_is_relevant	fragment	-
-annotation_scan.mbt	:date	annotation_attribute_is_relevant	fragment	-
-annotation_scan.mbt	:fldCharType	annotation_attribute_is_relevant	fragment	-
-annotation_scan.mbt	:font	annotation_attribute_is_relevant	fragment	-
-annotation_scan.mbt	:id	annotation_attribute_is_relevant	fragment	-
-annotation_scan.mbt	:name	annotation_attribute_is_relevant	fragment	-
-annotation_scan.mbt	:type	annotation_attribute_is_relevant	fragment	-
-annotation_scan.mbt	:val	annotation_attribute_is_relevant	fragment	-
-annotation_scan.mbt	AlternateContent	is_transparent_container	name	-
-annotation_scan.mbt	Choice	is_suppressed_container	name	-
-annotation_scan.mbt	Fallback	is_transparent_container	name	-
-annotation_scan.mbt	amp	decode_entities	entity	-
-annotation_scan.mbt	anchor	scan_story	name	-
-annotation_scan.mbt	apos	decode_entities	entity	-
-annotation_scan.mbt	author	scan_story	name	-
-annotation_scan.mbt	bookmarkStart	scan_story	name	-
-annotation_scan.mbt	br	scan_story	name	-
-annotation_scan.mbt	cellDel	is_revision_site_name	name	-
-annotation_scan.mbt	cellIns	is_revision_site_name	name	-
-annotation_scan.mbt	cellMerge	is_revision_site_name	name	-
-annotation_scan.mbt	char	scan_story	name	-
-annotation_scan.mbt	comment	projection_kind	name	-
-annotation_scan.mbt	commentRangeEnd	ScanMarkerKind::impl:output,marker_kind	name	-
-annotation_scan.mbt	commentRangeStart	ScanMarkerKind::impl:output,marker_kind	name	-
-annotation_scan.mbt	commentReference	ScanMarkerKind::impl:output,marker_kind	name	-
-annotation_scan.mbt	continuationNotice	scan_story	value	-
-annotation_scan.mbt	continuationSeparator	scan_story	value	-
-annotation_scan.mbt	continue	scan_story	value	-
-annotation_scan.mbt	customXmlDelRangeEnd	is_revision_site_name	name	-
-annotation_scan.mbt	customXmlDelRangeStart	is_revision_site_name	name	-
-annotation_scan.mbt	customXmlInsRangeEnd	is_revision_site_name	name	-
-annotation_scan.mbt	customXmlInsRangeStart	is_revision_site_name	name	-
-annotation_scan.mbt	customXmlMoveFromRangeEnd	is_revision_site_name	name	-
-annotation_scan.mbt	customXmlMoveFromRangeStart	is_revision_site_name	name	-
-annotation_scan.mbt	customXmlMoveToRangeEnd	is_revision_site_name	name	-
-annotation_scan.mbt	customXmlMoveToRangeStart	is_revision_site_name	name	-
-annotation_scan.mbt	date	scan_story	name	-
-annotation_scan.mbt	del	ScanRevisionKind::impl:output,is_revision_site_name,is_suppressed_container,nearest_revision_site,revision_kind,scan_story	name	-
-annotation_scan.mbt	delInstrText	deleted_text_replacement	name	-
-annotation_scan.mbt	delText	deleted_text_replacement	name	-
-annotation_scan.mbt	drawing	is_transparent_container	name	-
-annotation_scan.mbt	endnote	projection_kind,scan_story	name	-
-annotation_scan.mbt	endnoteReference	ScanMarkerKind::impl:output,marker_kind	name	-
-annotation_scan.mbt	fldChar	scan_story	name	-
-annotation_scan.mbt	fldCharType	scan_story	name	-
-annotation_scan.mbt	font	scan_story	name	-
-annotation_scan.mbt	footnote	projection_kind,scan_story	name	-
-annotation_scan.mbt	footnoteReference	ScanMarkerKind::impl:output,marker_kind	name	-
-annotation_scan.mbt	gridSpan	scan_story	name	-
-annotation_scan.mbt	gt	decode_entities	entity	-
-annotation_scan.mbt	hyperlink	projection_kind,scan_story	name	-
-annotation_scan.mbt	id	scan_story	name	-
-annotation_scan.mbt	ins	ScanRevisionKind::impl:output,is_revision_site_name,is_transparent_container,revision_kind,scan_story	name	-
-annotation_scan.mbt	instrText	deleted_text_replacement,scan_story	name	-
-annotation_scan.mbt	lt	decode_entities	entity	-
-annotation_scan.mbt	moveFrom	is_revision_site_name	name	-
-annotation_scan.mbt	moveFromRangeEnd	is_revision_site_name	name	-
-annotation_scan.mbt	moveFromRangeStart	is_revision_site_name	name	-
-annotation_scan.mbt	moveTo	is_revision_site_name	name	-
-annotation_scan.mbt	moveToRangeEnd	is_revision_site_name	name	-
-annotation_scan.mbt	moveToRangeStart	is_revision_site_name	name	-
-annotation_scan.mbt	name	scan_story	name	-
-annotation_scan.mbt	note	projection_kind	value	-
-annotation_scan.mbt	numberingChange	is_revision_site_name	name	-
-annotation_scan.mbt	object	is_transparent_container	name	-
-annotation_scan.mbt	p	projection_kind,scan_story	name	-
-annotation_scan.mbt	pPr	is_property_container,scan_story	name	-
-annotation_scan.mbt	pPrChange	is_revision_site_name	name	-
-annotation_scan.mbt	quot	decode_entities	entity	-
-annotation_scan.mbt	r	projection_kind,scan_story	name	-
-annotation_scan.mbt	rPr	is_property_container,scan_story	name	-
-annotation_scan.mbt	rPrChange	is_revision_site_name	name	-
-annotation_scan.mbt	sdt	is_transparent_container	name	-
-annotation_scan.mbt	sdtContent	is_transparent_container	name	-
-annotation_scan.mbt	sectPr	is_property_container	name	-
-annotation_scan.mbt	sectPrChange	is_revision_site_name	name	-
-annotation_scan.mbt	separator	scan_story	value	-
-annotation_scan.mbt	smartTag	is_transparent_container	name	-
-annotation_scan.mbt	sym	scan_story	name	-
-annotation_scan.mbt	t	deleted_text_replacement,scan_story	name	-
-annotation_scan.mbt	tbl	projection_kind,scan_story	name	-
-annotation_scan.mbt	tblGrid	is_property_container	name	-
-annotation_scan.mbt	tblGridChange	is_revision_site_name	name	-
-annotation_scan.mbt	tblPr	is_property_container	name	-
-annotation_scan.mbt	tblPrChange	is_revision_site_name	name	-
-annotation_scan.mbt	tblPrExChange	is_revision_site_name	name	-
-annotation_scan.mbt	tc	projection_kind,retract_cell,scan_story	name	-
-annotation_scan.mbt	tcPr	is_property_container,scan_story	name	-
-annotation_scan.mbt	tcPrChange	is_revision_site_name	name	-
-annotation_scan.mbt	tr	projection_kind,retract_row,scan_story	name	-
-annotation_scan.mbt	trPr	is_property_container,scan_story	name	-
-annotation_scan.mbt	trPrChange	is_revision_site_name	name	-
-annotation_scan.mbt	type	scan_story	name	-
-annotation_scan.mbt	vMerge	scan_story	name	-
-annotation_scan.mbt	val	scan_story	name	-
-annotation_scan.mbt	xml	scan_story,validate_projection_source_namespace	prefix	-
-annotation_scan.mbt	xmlns	annotation_attribute_is_relevant,scan_story,validate_projection_source_namespace	name	-
-annotation_scan.mbt	xmlns:	annotation_attribute_is_relevant,scan_story	fragment	-
+annotation_scan.mbt	:	attribute_value,projection_source_is_xml_qname,relationship_attribute_value,split_qualified_name	fragment	annotation_scan:"scanner: alternate namespace prefixes and non-WML lookalikes"
+annotation_scan.mbt	:anchor	annotation_attribute_is_relevant	fragment	reader_order_projection_wbtest:"reader order classifies conditional empty table outputs like BodyReader"
+annotation_scan.mbt	:author	annotation_attribute_is_relevant	fragment	annotation_scan:"scanner: a revision without an author is reported and diagnosed"; annotation_scan:"scanner: every revision-site name records a site"
+annotation_scan.mbt	:char	annotation_attribute_is_relevant	fragment	projection_source_tree_wbtest:"projection source attributes follow reader precedence across WML dialects"; reader_order_projection_wbtest:"reader order classifies conditional empty table outputs like BodyReader"
+annotation_scan.mbt	:date	annotation_attribute_is_relevant	fragment	annotation_scan:"scanner: every revision-site name records a site"
+annotation_scan.mbt	:fldCharType	annotation_attribute_is_relevant	fragment	field_projection_wbtest:"field transition owns the whole direct-child carrier"; projection_source_tree_wbtest:"projection source attributes follow reader precedence across WML dialects"
+annotation_scan.mbt	:font	annotation_attribute_is_relevant	fragment	projection_source_tree_wbtest:"projection source attributes follow reader precedence across WML dialects"; reader_order_projection_wbtest:"reader order classifies conditional empty table outputs like BodyReader"
+annotation_scan.mbt	:id	annotation_attribute_is_relevant	fragment	annotation_scan:"scanner: projection paths, marker containment, and document order"
+annotation_scan.mbt	:name	annotation_attribute_is_relevant	fragment	reader_order_projection_wbtest:"reader order classifies conditional empty table outputs like BodyReader"; reader_order_projection_wbtest:"seam and barrier groups classify inline oddities element by element"
+annotation_scan.mbt	:type	annotation_attribute_is_relevant	fragment	annotation_scan:"scanner review round 1: plumbing notes are suppressed, user notes counted"
+annotation_scan.mbt	:val	annotation_attribute_is_relevant	fragment	annotation_scan:"scanner review round 4: reader-exact merge origins, spans, and row deletion"; annotation_scan:"scanner: endnote markers, explicit continuation, deleted instructions"
+annotation_scan.mbt	AlternateContent	is_transparent_container	name	annotation_scan:"scanner: MC selection, named entities, and the default namespace"
+annotation_scan.mbt	Choice	is_suppressed_container	name	annotation_scan:"scanner: MC selection, named entities, and the default namespace"
+annotation_scan.mbt	Fallback	is_transparent_container	name	annotation_scan:"scanner: MC selection, named entities, and the default namespace"
+annotation_scan.mbt	amp	decode_entities	entity	annotation_scan:"scanner: MC selection, named entities, and the default namespace"
+annotation_scan.mbt	anchor	scan_story	name	reader_order_projection_wbtest:"reader order classifies conditional empty table outputs like BodyReader"
+annotation_scan.mbt	apos	decode_entities	entity	annotation_scan:"scanner: MC selection, named entities, and the default namespace"
+annotation_scan.mbt	author	scan_story	name	annotation_scan:"scanner: a revision without an author is reported and diagnosed"; annotation_scan:"scanner: every revision-site name records a site"
+annotation_scan.mbt	bookmarkStart	scan_story	name	reader_order_projection_wbtest:"reader order classifies conditional empty table outputs like BodyReader"; reader_order_projection_wbtest:"seam and barrier groups classify inline oddities element by element"
+annotation_scan.mbt	br	scan_story	name	reader_order_projection_wbtest:"reader order classifies conditional empty table outputs like BodyReader"; token_map_wbtest:"token map: malformed or mutation-unsafe XML refuses exactly"
+annotation_scan.mbt	cellDel	is_revision_site_name	name	annotation_scan:"scanner: every revision-site name records a site"
+annotation_scan.mbt	cellIns	is_revision_site_name	name	annotation_scan:"scanner: every revision-site name records a site"
+annotation_scan.mbt	cellMerge	is_revision_site_name	name	annotation_scan:"scanner: every revision-site name records a site"
+annotation_scan.mbt	char	scan_story	name	projection_source_tree_wbtest:"projection source attributes follow reader precedence across WML dialects"; reader_order_projection_wbtest:"reader order classifies conditional empty table outputs like BodyReader"
+annotation_scan.mbt	comment	projection_kind	name	annotation_scan:"scanner: comments story counts each comment body separately"
+annotation_scan.mbt	commentRangeEnd	ScanMarkerKind::impl:output,marker_kind	name	annotation_scan:"scanner: projection paths, marker containment, and document order"
+annotation_scan.mbt	commentRangeStart	ScanMarkerKind::impl:output,marker_kind	name	annotation_scan:"scanner: projection paths, marker containment, and document order"
+annotation_scan.mbt	commentReference	ScanMarkerKind::impl:output,marker_kind	name	annotation_scan:"scanner: projection paths, marker containment, and document order"
+annotation_scan.mbt	continuationNotice	scan_story	value	annotation_scan:"scanner review round 1: plumbing notes are suppressed, user notes counted"
+annotation_scan.mbt	continuationSeparator	scan_story	value	annotation_scan:"scanner review round 1: plumbing notes are suppressed, user notes counted"
+annotation_scan.mbt	continue	scan_story	value	annotation_scan:"scanner: endnote markers, explicit continuation, deleted instructions"
+annotation_scan.mbt	customXmlDelRangeEnd	is_revision_site_name	name	annotation_scan:"scanner: every revision-site name records a site"
+annotation_scan.mbt	customXmlDelRangeStart	is_revision_site_name	name	annotation_scan:"scanner: every revision-site name records a site"
+annotation_scan.mbt	customXmlInsRangeEnd	is_revision_site_name	name	annotation_scan:"scanner: every revision-site name records a site"
+annotation_scan.mbt	customXmlInsRangeStart	is_revision_site_name	name	annotation_scan:"scanner: every revision-site name records a site"
+annotation_scan.mbt	customXmlMoveFromRangeEnd	is_revision_site_name	name	annotation_scan:"scanner: every revision-site name records a site"
+annotation_scan.mbt	customXmlMoveFromRangeStart	is_revision_site_name	name	annotation_scan:"scanner: every revision-site name records a site"
+annotation_scan.mbt	customXmlMoveToRangeEnd	is_revision_site_name	name	annotation_scan:"scanner: every revision-site name records a site"
+annotation_scan.mbt	customXmlMoveToRangeStart	is_revision_site_name	name	annotation_scan:"scanner: every revision-site name records a site"
+annotation_scan.mbt	date	scan_story	name	annotation_scan:"scanner: every revision-site name records a site"
+annotation_scan.mbt	del	ScanRevisionKind::impl:output,is_revision_site_name,is_suppressed_container,nearest_revision_site,revision_kind,scan_story	name	annotation_scan:"scanner: every revision-site name records a site"; annotation_scan:"scanner review round 1: flattening parity — sdt, ins, del, vMerge"; annotation_scan:"scanner: endnote markers, explicit continuation, deleted instructions"
+annotation_scan.mbt	delInstrText	deleted_text_replacement	name	annotation_scan:"scanner: endnote markers, explicit continuation, deleted instructions"
+annotation_scan.mbt	delText	deleted_text_replacement	name	annotation_scan:"scanner: endnote markers, explicit continuation, deleted instructions"
+annotation_scan.mbt	drawing	is_transparent_container	name	annotation_index_test:"index review round 3: drawings are opaque — run positions verified, image coverage empty"
+annotation_scan.mbt	endnote	projection_kind,scan_story	name	annotation_scan:"scanner: endnote markers, explicit continuation, deleted instructions"
+annotation_scan.mbt	endnoteReference	ScanMarkerKind::impl:output,marker_kind	name	annotation_scan:"scanner: endnote markers, explicit continuation, deleted instructions"
+annotation_scan.mbt	fldChar	scan_story	name	field_projection_wbtest:"field transition owns the whole direct-child carrier"
+annotation_scan.mbt	fldCharType	scan_story	name	field_projection_wbtest:"field transition owns the whole direct-child carrier"; projection_source_tree_wbtest:"projection source attributes follow reader precedence across WML dialects"
+annotation_scan.mbt	font	scan_story	name	projection_source_tree_wbtest:"projection source attributes follow reader precedence across WML dialects"; reader_order_projection_wbtest:"reader order classifies conditional empty table outputs like BodyReader"
+annotation_scan.mbt	footnote	projection_kind,scan_story	name	annotation_scan:"scanner review round 1: plumbing notes are suppressed, user notes counted"
+annotation_scan.mbt	footnoteReference	ScanMarkerKind::impl:output,marker_kind	name	annotation_scan:"scanner: projection paths, marker containment, and document order"
+annotation_scan.mbt	gridSpan	scan_story	name	annotation_scan:"scanner review round 4: reader-exact merge origins, spans, and row deletion"
+annotation_scan.mbt	gt	decode_entities	entity	annotation_scan:"scanner: MC selection, named entities, and the default namespace"
+annotation_scan.mbt	hyperlink	projection_kind,scan_story	name	annotation_scan:"scanner: projection paths, marker containment, and document order"
+annotation_scan.mbt	id	scan_story	name	annotation_scan:"scanner: projection paths, marker containment, and document order"
+annotation_scan.mbt	ins	ScanRevisionKind::impl:output,is_revision_site_name,is_transparent_container,revision_kind,scan_story	name	annotation_scan:"scanner: every revision-site name records a site"; annotation_scan:"scanner review round 1: flattening parity — sdt, ins, del, vMerge"; annotation_scan:"scanner: tracked-change containers survive the reader's flattening"
+annotation_scan.mbt	instrText	deleted_text_replacement,scan_story	name	field_projection_wbtest:"field transition owns the whole direct-child carrier"
+annotation_scan.mbt	lt	decode_entities	entity	annotation_scan:"scanner: MC selection, named entities, and the default namespace"
+annotation_scan.mbt	moveFrom	is_revision_site_name	name	annotation_scan:"scanner: every revision-site name records a site"; annotation_spans:"M0: unresolvable tracked-change constructs are recorded, not skipped"
+annotation_scan.mbt	moveFromRangeEnd	is_revision_site_name	name	annotation_scan:"scanner: every revision-site name records a site"
+annotation_scan.mbt	moveFromRangeStart	is_revision_site_name	name	annotation_scan:"scanner: every revision-site name records a site"
+annotation_scan.mbt	moveTo	is_revision_site_name	name	annotation_scan:"scanner: every revision-site name records a site"
+annotation_scan.mbt	moveToRangeEnd	is_revision_site_name	name	annotation_scan:"scanner: every revision-site name records a site"
+annotation_scan.mbt	moveToRangeStart	is_revision_site_name	name	annotation_scan:"scanner: every revision-site name records a site"
+annotation_scan.mbt	name	scan_story	name	reader_order_projection_wbtest:"reader order classifies conditional empty table outputs like BodyReader"; reader_order_projection_wbtest:"seam and barrier groups classify inline oddities element by element"
+annotation_scan.mbt	note	projection_kind	value	annotation_scan:"scanner review round 3: vMerge fail-open, property-container markers, projection kinds"; annotation_scan:"scanner review round 1: plumbing notes are suppressed, user notes counted"
+annotation_scan.mbt	numberingChange	is_revision_site_name	name	annotation_scan:"scanner: every revision-site name records a site"
+annotation_scan.mbt	object	is_transparent_container	name	reader_order_projection_wbtest:"reader order preserves block descendants of flattened inline wrappers"
+annotation_scan.mbt	p	projection_kind,scan_story	name	annotation_scan:"scanner: projection paths, marker containment, and document order"
+annotation_scan.mbt	pPr	is_property_container,scan_story	name	annotation_scan:"scanner: every revision-site name records a site"; annotation_scan:"scanner review round 3: vMerge fail-open, property-container markers, projection kinds"
+annotation_scan.mbt	pPrChange	is_revision_site_name	name	annotation_scan:"scanner: every revision-site name records a site"
+annotation_scan.mbt	quot	decode_entities	entity	annotation_scan:"scanner: MC selection, named entities, and the default namespace"
+annotation_scan.mbt	r	projection_kind,scan_story	name	annotation_scan:"scanner: projection paths, marker containment, and document order"
+annotation_scan.mbt	rPr	is_property_container,scan_story	name	annotation_scan:"scanner: every revision-site name records a site"; annotation_scan:"scanner review round 3: vMerge fail-open, property-container markers, projection kinds"
+annotation_scan.mbt	rPrChange	is_revision_site_name	name	annotation_scan:"scanner: every revision-site name records a site"; annotation_spans:"M0: unresolvable tracked-change constructs are recorded, not skipped"
+annotation_scan.mbt	sdt	is_transparent_container	name	annotation_scan:"scanner review round 1: flattening parity — sdt, ins, del, vMerge"
+annotation_scan.mbt	sdtContent	is_transparent_container	name	annotation_scan:"scanner review round 1: flattening parity — sdt, ins, del, vMerge"
+annotation_scan.mbt	sectPr	is_property_container	name	annotation_scan:"scanner: every revision-site name records a site"
+annotation_scan.mbt	sectPrChange	is_revision_site_name	name	annotation_scan:"scanner: every revision-site name records a site"
+annotation_scan.mbt	separator	scan_story	value	annotation_scan:"scanner review round 1: plumbing notes are suppressed, user notes counted"
+annotation_scan.mbt	smartTag	is_transparent_container	name	reader_order_projection_wbtest:"reader order preserves block descendants of flattened inline wrappers"
+annotation_scan.mbt	sym	scan_story	name	reader_order_projection_wbtest:"reader order classifies conditional empty table outputs like BodyReader"
+annotation_scan.mbt	t	deleted_text_replacement,scan_story	name	annotation_scan:"scanner: projection paths, marker containment, and document order"; token_map_wbtest:"token map: XML entities and numeric characters match the reader"
+annotation_scan.mbt	tbl	projection_kind,scan_story	name	annotation_scan:"scanner: projection paths, marker containment, and document order"
+annotation_scan.mbt	tblGrid	is_property_container	name	annotation_scan:"scanner: every revision-site name records a site"
+annotation_scan.mbt	tblGridChange	is_revision_site_name	name	annotation_scan:"scanner: every revision-site name records a site"
+annotation_scan.mbt	tblPr	is_property_container	name	annotation_scan:"scanner: every revision-site name records a site"
+annotation_scan.mbt	tblPrChange	is_revision_site_name	name	annotation_scan:"scanner: every revision-site name records a site"
+annotation_scan.mbt	tblPrExChange	is_revision_site_name	name	annotation_scan:"scanner: every revision-site name records a site"
+annotation_scan.mbt	tc	projection_kind,retract_cell,scan_story	name	annotation_scan:"scanner: projection paths, marker containment, and document order"
+annotation_scan.mbt	tcPr	is_property_container,scan_story	name	annotation_scan:"scanner: every revision-site name records a site"; annotation_scan:"scanner review round 5: span-sensitive merging, first-tcPr-only, retraction purges"
+annotation_scan.mbt	tcPrChange	is_revision_site_name	name	annotation_scan:"scanner: every revision-site name records a site"
+annotation_scan.mbt	tr	projection_kind,retract_row,scan_story	name	annotation_scan:"scanner: projection paths, marker containment, and document order"
+annotation_scan.mbt	trPr	is_property_container,scan_story	name	annotation_scan:"scanner: every revision-site name records a site"
+annotation_scan.mbt	trPrChange	is_revision_site_name	name	annotation_scan:"scanner: every revision-site name records a site"
+annotation_scan.mbt	type	scan_story	name	annotation_scan:"scanner review round 1: plumbing notes are suppressed, user notes counted"
+annotation_scan.mbt	vMerge	scan_story	name	annotation_scan:"scanner review round 4: reader-exact merge origins, spans, and row deletion"; annotation_scan:"scanner: endnote markers, explicit continuation, deleted instructions"
+annotation_scan.mbt	val	scan_story	name	annotation_scan:"scanner review round 4: reader-exact merge origins, spans, and row deletion"; annotation_scan:"scanner: endnote markers, explicit continuation, deleted instructions"
+annotation_scan.mbt	xml	scan_story,validate_projection_source_namespace	prefix	projection_source_tree_wbtest:"projection source identity seeds the implicit xml namespace"
+annotation_scan.mbt	xmlns	annotation_attribute_is_relevant,scan_story,validate_projection_source_namespace	name	annotation_scan:"scanner: MC selection, named entities, and the default namespace"; annotation_scan:"scanner: alternate namespace prefixes and non-WML lookalikes"
+annotation_scan.mbt	xmlns:	annotation_attribute_is_relevant,scan_story	fragment	annotation_scan:"scanner: alternate namespace prefixes and non-WML lookalikes"
 annotation_spans.mbt	p	DocxAnnotatedResult::body_paragraph_span,DocxAnnotatedResult::story_paragraph_span	name	-
 annotation_spans.mbt	r	DocxAnnotatedResult::body_run_span,DocxAnnotatedResult::story_run_span	name	-
 annotation_spans.mbt	tr	DocxAnnotatedResult::story_row_span	name	-
