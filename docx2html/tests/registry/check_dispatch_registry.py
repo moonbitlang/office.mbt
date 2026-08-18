@@ -28,6 +28,10 @@ import os, re, sys
 
 ROOT = os.path.normpath(os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', '..', '..'))
 DOCX = os.path.join(ROOT, 'docx2html', 'docx')
+# --docx-dir <path> points extraction at a copy; the escape suite uses it to
+# mutate sources without touching the working tree.
+if '--docx-dir' in sys.argv:
+    DOCX = sys.argv[sys.argv.index('--docx-dir') + 1]
 REGISTRY = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'dispatch_registry.tsv')
 
 # Every production .mbt file must appear here. 'extract' pulls its names into
@@ -164,8 +168,8 @@ LOCAL_NAME_STR = re.compile(r'"([A-Za-z][A-Za-z0-9]*)"')
 LOCAL_DETECT = re.compile(r'\blocal_name\b')
 # an identifier compared against a name-shaped string: the smuggled-dispatch tell
 COMPARISON = re.compile(
-    r'(?:==|\bis)\s+"[A-Za-z][A-Za-z0-9]*"'
-    r'|"[A-Za-z][A-Za-z0-9]*"\s*=='
+    r'(?:==|!=|\bis)\s+"[A-Za-z][A-Za-z0-9]*"'
+    r'|"[A-Za-z][A-Za-z0-9]*"\s*(?:==|!=)'
     r'|"[A-Za-z][A-Za-z0-9]*"\s*=>'
 )
 FRAGMENT = re.compile(r'"(?::[A-Za-z][A-Za-z0-9]*|[A-Za-z][A-Za-z0-9]*:)"')
@@ -248,7 +252,11 @@ for f in FILES:
     if f not in production:
         errors.append(f"MISSING FILE: {f} is classified but no longer exists")
 
-READ_INSPECT = re.compile(r'\w+\.name\s*(?:==|\bis\b)|match\s+\w+\.name\b')
+READ_INSPECT = re.compile(
+    r'\w+\.name\s*(?:==|!=|\bis\b)'      # element.name == / != / is ...
+    r'|(?:==|!=)\s*\w+\.name\b'           # "w:p" == element.name, reversed
+    r'|match\s+\w+\.name\b'
+)
 
 for path, spec in FILES.items():
     if path not in production:

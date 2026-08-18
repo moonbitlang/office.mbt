@@ -85,7 +85,9 @@ jobs:
       # Format check across the whole workspace, including executable package
       # manifests now that every member uses the supported `pkgtype` syntax.
       - name: Dispatch registry reconciliation (docx reader unification gate, #434)
-        run: python3 docx2html/tests/registry/check_dispatch_registry.py
+        run: |
+          python3 docx2html/tests/registry/check_dispatch_registry.py
+          bash docx2html/tests/registry/escape_suite.sh
 
       - name: Format check
         run: |

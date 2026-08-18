@@ -49,6 +49,16 @@ Within extracted files:
 `kind` distinguishes element/attribute **name**s from attribute **value**s
 (`"page"`, `"textWrapping"`) so the coverage work is not misled, and **fragment**s.
 
+## The escape suite
+
+Every escape a review round demonstrated is replayed by
+`escape_suite.sh` against a scratch copy of the sources -- thirteen
+mutations, each verified to have actually applied before its failure is
+required (a mutation that silently does not apply looks exactly like a
+check that does not catch). The suite runs in CI beside the
+reconciliation, so a checker change that reopens an old escape fails
+loudly.
+
 ## What this does and does not close
 
 Closed, each verified by a live mutation: a new match arm (any prefix), a
