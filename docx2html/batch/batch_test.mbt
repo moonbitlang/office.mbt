@@ -449,14 +449,37 @@ test "review round 3: number lexemes must be plain decimal integers" {
 
 ///|
 test "review round 3: XML-unrepresentable characters and highlight 'none' are rejected" {
-  // A lone escaped surrogate parses into the string; the text guard
-  // rejects it before the writer would abort in UTF-8 encoding.
-  expect_batch_error(
-    (
-      #|{"schema": "docx.batch/1", "ops": [{"op": "paragraph", "params": {"text": "a\ud800b"}}]}
-    ),
-    "ops[0].params.text contains a character XML cannot represent (code 55296",
-  )
+  // The text guard rejects a lone surrogate before the writer would abort
+  // in UTF-8 encoding. It can only arrive through programmatic Json now:
+  // MoonBit literals cannot spell one, and core rejects unpaired \uXXXX
+  // escapes at parse time (moonbitlang/core@298b811f) -- which is also why
+  // this case builds its script with constructors rather than JSON text.
+  let lone_surrogate = "a" +
+    "\u{10000}".view(start_offset=0, end_offset=1).to_owned() +
+    "b"
+  let surrogate_script : Json = Json::object({
+    "schema": Json::string("docx.batch/1"),
+    "ops": Json::array([
+      Json::object({
+        "op": Json::string("paragraph"),
+        "params": Json::object({ "text": Json::string(lone_surrogate) }),
+      }),
+    ]),
+  })
+  let mut surrogate_rejected = false
+  try {
+    let _ = @batch.parse_batch(surrogate_script)
+  } catch {
+    @batch.BatchError(message) => {
+      assert_true(
+        message.has_prefix(
+          "ops[0].params.text contains a character XML cannot represent (code 55296",
+        ),
+      )
+      surrogate_rejected = true
+    }
+  }
+  assert_true(surrogate_rejected)
   expect_batch_error(
     (
       #|{"schema": "docx.batch/1", "ops": [{"op": "paragraph", "params": {"text": "a\uffffb"}}]}
