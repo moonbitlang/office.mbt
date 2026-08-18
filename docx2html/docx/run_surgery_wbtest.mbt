@@ -54,6 +54,12 @@ fn assert_whole_run_replacement(
   let source = "<w:document xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\" xmlns:v=\"urn:schemas-microsoft-com:vml\"><w:body>\{body}</w:body></w:document>"
   let bytes = @utf8.encode(source)
   let projection = scan_reader_order_projection("word/document.xml", bytes)
+  // An address only means anything while the two sides agree about the story,
+  // and #436 records a document where they do not and the planner silently
+  // edits the wrong run. Until that is guarded in the planner, this refuses to
+  // validate surgery on such a document at all -- otherwise a fixture could
+  // record a mis-edit as its expected result and read as evidence.
+  assert_reader_order_matches_reader(source, projection)
   let edits = plan_whole_run_replacement(
     projection, bytes, paragraph, run, text,
   )
@@ -99,6 +105,26 @@ fn assert_whole_run_replacement(
   // touch is derived here from the projection instead: the run's own element,
   // and nothing else in the part.
   assert_edits_touch_only_editable_bytes(projection, edits, paragraph, run)
+}
+
+///|
+/// Plan through the agreement guard.
+///
+/// Every test that validates a SUCCESSFUL surgery plans through here, so a
+/// document where the projection and the reader disagree (#436) cannot have an
+/// edit blessed by any fixture. The refusal tests call the planner directly --
+/// they never apply the plan -- and so does the pinned-defect test, whose
+/// purpose is observing the mis-edit the disagreement causes.
+fn plan_checked_run_replacement(
+  source : String,
+  projection : ReaderOrderProjection,
+  bytes : Bytes,
+  paragraph : Int,
+  run : Int,
+  text : String,
+) -> Array[RunSurgeryEdit] raise {
+  assert_reader_order_matches_reader(source, projection)
+  plan_whole_run_replacement(projection, bytes, paragraph, run, text)
 }
 
 ///|
@@ -421,7 +447,9 @@ test "whole-run replacement does not duplicate xml:space" {
     #|<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:body><w:p><w:r><w:t xml:space="preserve"> old </w:t></w:r></w:p></w:body></w:document>
   let bytes = @utf8.encode(source)
   let projection = scan_reader_order_projection("word/document.xml", bytes)
-  let edits = plan_whole_run_replacement(projection, bytes, 0, 0, " new ")
+  let edits = plan_checked_run_replacement(
+    source, projection, bytes, 0, 0, " new ",
+  )
   let spliced = @utf8.decode(apply_run_surgery_edits(bytes, edits))
   assert_eq(current_reader_story_text(spliced), " new \n\n")
   // exactly one declaration survives
@@ -494,7 +522,9 @@ test "whole-run replacement replaces a wrong xml:space value" {
     #|<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:body><w:p><w:r><w:t xml:space="default">old</w:t></w:r></w:p></w:body></w:document>
   let bytes = @utf8.encode(source)
   let projection = scan_reader_order_projection("word/document.xml", bytes)
-  let edits = plan_whole_run_replacement(projection, bytes, 0, 0, " new ")
+  let edits = plan_checked_run_replacement(
+    source, projection, bytes, 0, 0, " new ",
+  )
   let spliced = @utf8.decode(apply_run_surgery_edits(bytes, edits))
   assert_eq(current_reader_story_text(spliced), " new \n\n")
   assert_true(spliced.contains("xml:space=\"preserve\""))
@@ -524,7 +554,9 @@ test "whole-run synthesis is namespace-correct" {
     let (source, text) = case
     let bytes = @utf8.encode(source)
     let projection = scan_reader_order_projection("word/document.xml", bytes)
-    let edits = plan_whole_run_replacement(projection, bytes, 0, 0, text)
+    let edits = plan_checked_run_replacement(
+      source, projection, bytes, 0, 0, text,
+    )
     let spliced_bytes = apply_run_surgery_edits(bytes, edits)
     let spliced = @utf8.decode(spliced_bytes)
     // it parses, and the reader sees the text
@@ -592,7 +624,9 @@ test "whole-run synthesis lands inside the run's seams" {
     #|<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:body><w:p><w:r><w:bookmarkStart w:id="1" w:name="b"/><w:tab/><w:bookmarkEnd w:id="1"/></w:r></w:p></w:body></w:document>
   let bytes = @utf8.encode(source)
   let projection = scan_reader_order_projection("word/document.xml", bytes)
-  let edits = plan_whole_run_replacement(projection, bytes, 0, 0, "inside")
+  let edits = plan_checked_run_replacement(
+    source, projection, bytes, 0, 0, "inside",
+  )
   let spliced = @utf8.decode(apply_run_surgery_edits(bytes, edits))
   assert_eq(current_reader_story_text(spliced), "inside\n\n")
   // between the bookmark's ends, where the tab was
@@ -610,7 +644,9 @@ test "whole-run synthesis goes after w:rPr" {
     #|<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:body><w:p><w:r><w:rPr><w:b/></w:rPr></w:r></w:p></w:body></w:document>
   let bytes = @utf8.encode(source)
   let projection = scan_reader_order_projection("word/document.xml", bytes)
-  let edits = plan_whole_run_replacement(projection, bytes, 0, 0, "bold")
+  let edits = plan_checked_run_replacement(
+    source, projection, bytes, 0, 0, "bold",
+  )
   let spliced = @utf8.decode(apply_run_surgery_edits(bytes, edits))
   assert_eq(current_reader_story_text(spliced), "bold\n\n")
   assert_true(spliced.contains("</w:rPr><w:t xmlns:w="))
@@ -637,7 +673,7 @@ test "whole-run replacement refuses field instructions but not results" {
   }
   assert_true(refused)
   // the result run is content
-  let edits = plan_whole_run_replacement(projection, bytes, 0, 3, "8")
+  let edits = plan_checked_run_replacement(source, projection, bytes, 0, 3, "8")
   let spliced = @utf8.decode(apply_run_surgery_edits(bytes, edits))
   assert_eq(current_reader_story_text(spliced), "8\n\n")
   // The case above refuses for a reason that would hold anyway: `w:instrText`
@@ -696,7 +732,9 @@ test "whole-run replacement validates the replacement text" {
     assert_true(refused)
   }
   // a carriage return survives as itself rather than becoming a newline
-  let edits = plan_whole_run_replacement(projection, bytes, 0, 0, "a\rb")
+  let edits = plan_checked_run_replacement(
+    source, projection, bytes, 0, 0, "a\rb",
+  )
   let spliced = @utf8.decode(apply_run_surgery_edits(bytes, edits))
   assert_true(spliced.contains("&#xD;"))
   assert_eq(current_reader_story_text(spliced), "a\rb\n\n")
@@ -730,7 +768,9 @@ test "whole-run replacement finds xml:space only as an attribute" {
     let source = document(body)
     let bytes = @utf8.encode(source)
     let projection = scan_reader_order_projection("word/document.xml", bytes)
-    let edits = plan_whole_run_replacement(projection, bytes, 0, 0, " new ")
+    let edits = plan_checked_run_replacement(
+      source, projection, bytes, 0, 0, " new ",
+    )
     let spliced = @utf8.decode(apply_run_surgery_edits(bytes, edits))
     // it parses, reads back, and preserves the edge whitespace
     assert_eq(current_reader_story_text(spliced), " new \n\n")
@@ -786,4 +826,50 @@ test "whole-run replacement accepts supplementary noncharacters" {
     "a\u{1FFFE}b",
     expected="a\u{1FFFE}b\n\n",
   )
+}
+
+///|
+/// KNOWN DEFECT: an unprojected flow-level run can shift every address.
+///
+/// "inline content in a block container is read but not projected" records
+/// that the reader's story carries text the projection drops. The obvious
+/// reading is that the dropped text is merely unaddressable, and for a plain
+/// document that is what happens. It is wrong in general, and the counterexample
+/// is an interaction rather than a shape.
+///
+/// A checkbox control rewrites the first text its content projects. Give one a
+/// stray `<w:r><w:t>x</w:t></w:r>` before a tab-only paragraph: the reader sees
+/// `x`, spends the transform on it, and keeps the tab paragraph. The projection
+/// never sees `x`, so the tab cannot spend the transform, so the control looks
+/// textless and the paragraph is discarded. The reader reads two paragraphs and
+/// the projection describes one -- and from there `p[0]` names a different
+/// paragraph on each side.
+///
+/// The result is a silent mis-edit: asked to replace paragraph 0 run 0, which
+/// is the tab run to the reader, the planner rewrites `z` instead. The checkbox
+/// ancestry guard does not fire, because the run it wrongly selected is outside
+/// the control.
+///
+/// Pinned as the behaviour that exists, NOT as the behaviour that is wanted.
+/// The planner is private with no callers, so nothing reaches this today, and
+/// the guard it needs is a production change with a real design question behind
+/// it -- which reader configuration is authoritative for the comparison --
+/// so it is #436 rather than a rushed check here. `assert_whole_run_replacement`
+/// now refuses to validate any surgery on a document where the two disagree, so
+/// no other test can bless a mis-edit while that is open.
+test "an unprojected flow-level run shifts the address a checkbox assigns" {
+  let source =
+    #|<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main" xmlns:w14="http://schemas.microsoft.com/office/word/2010/wordml"><w:body><w:sdt><w:sdtPr><w14:checkbox/></w:sdtPr><w:sdtContent><w:r><w:t>x</w:t></w:r><w:p><w:r><w:tab/></w:r></w:p></w:sdtContent></w:sdt><w:p><w:r><w:t>z</w:t></w:r></w:p></w:body></w:document>
+  let bytes = @utf8.encode(source)
+  let projection = scan_reader_order_projection("word/document.xml", bytes)
+  // Two paragraphs to the reader, one to the projection.
+  assert_eq(current_reader_story_text(source), "\t\n\nz\n\n")
+  assert_eq(provisional_story_text(projection), "z\n\n")
+  assert_eq(reader_paragraph_texts(source).length(), 2)
+  assert_eq(projection.paragraphs.length(), 1)
+  // p[0]/r[0] is the tab run to the reader. The planner edits `z`.
+  let edits = plan_whole_run_replacement(projection, bytes, 0, 0, "EDITED")
+  let spliced = @utf8.decode(apply_run_surgery_edits(bytes, edits))
+  assert_eq(current_reader_story_text(spliced), "\t\n\nEDITED\n\n")
+  // What it should be once #436 lands: a refusal, not this.
 }

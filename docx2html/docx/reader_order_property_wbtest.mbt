@@ -678,7 +678,8 @@ test "the projection matches the reader on generated documents" {
         "word/document.xml",
         @utf8.encode(source),
       )
-      provisional_story_text(projection) == current_reader_story_text(source)
+      assert_reader_order_matches_reader(source, projection)
+      true
     },
     count=64,
     max_size=60,
