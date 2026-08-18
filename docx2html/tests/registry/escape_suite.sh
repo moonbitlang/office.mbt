@@ -104,6 +104,19 @@ expect E16-new-file-bare-comparison "UNCLASSIFIED FILE: escape_probe.mbt"
 fresh; mutate write_comments.mbt 's/^pub fn write_docx_with_annotations/fn writer_paren_read(element : XmlElement) -> Bool {\n  (element.name) == "w:sneaky"\n}\n\n\/\/\/|\npub fn write_docx_with_annotations/m' sneaky
 expect E17-exempt-paren-read "exempt file's function writer_paren_read"
 
+fresh; printf '\nlet post_test_probe : String = "postTestEscape"\n' >> "$work/docx/annotation_scan.mbt"
+grep -q postTestEscape "$work/docx/annotation_scan.mbt" || { echo "ESCAPE SUITE FAIL: E18 mutation missing" >&2; fail=1; }
+expect E18-after-last-test "UNREGISTERED: postTestEscape"
+
+fresh; printf 'fn nested_paren(name : String) -> Bool {\n  name == (("bareEscape"))\n}\n' > "$work/docx/escape_probe.mbt"
+expect E19-nested-parens "UNCLASSIFIED FILE: escape_probe.mbt"
+
+fresh; mutate write_comments.mbt 's/^pub fn write_docx_with_annotations/fn writer_destructure(element : XmlElement) -> Bool {\n  let { name, .. } = element\n  name == "w:sneaky"\n}\n\n\/\/\/|\npub fn write_docx_with_annotations/m' sneaky
+expect E20-exempt-destructure "exempt file's function writer_destructure"
+
+fresh; mutate reader_order_projection.mbt 's/^fn reader_order_atom_span/fn assembled_escape(name : String) -> Bool {\n  name == "\\u{62}randNew"\n}\n\n\/\/\/|\nfn reader_order_atom_span/m' randNew
+expect E21-escape-assembled "UNREGISTERED: randNew"
+
 fresh; expect final-baseline "names reconciled"
 
-if [ "$fail" -eq 0 ]; then echo "escape suite: 17 escapes + 2 baselines, all as expected"; else exit 1; fi
+if [ "$fail" -eq 0 ]; then echo "escape suite: 21 escapes + 2 baselines, all as expected"; else exit 1; fi

@@ -1,485 +1,502 @@
 file	name	functions	kind	coverage
-annotate_plan.mbt	ContentType	opc_content_type_override_fragment	name	
-annotate_plan.mbt	Id	collect_relationship_ids	name	
-annotate_plan.mbt	Override	plan_comment_addition_zip	name	
-annotate_plan.mbt	PartName	opc_content_type_override_fragment	name	
-annotate_plan.mbt	Relationship	plan_comment_addition_zip	name	
-annotate_plan.mbt	content-types:Types	plan_comment_addition_zip	name	
-annotate_plan.mbt	relationships	main_relationships_mutation_part_path	value	
-annotate_thread.mbt	:	split_qualified	fragment	
-annotate_thread.mbt	Ignorable	ensure_w14_on_root	name	
-annotate_thread.mbt	Override	queue_comments_extended_edits	name	
-annotate_thread.mbt	Relationship	queue_comments_extended_edits	name	
-annotate_thread.mbt	commentEx	scan_comment_ex_part	name	
-annotate_thread.mbt	content-types:Types	queue_comments_extended_edits	name	
-annotate_thread.mbt	done	scan_comment_ex_part	name	
-annotate_thread.mbt	mbtmc	ensure_w14_on_root	prefix	
-annotate_thread.mbt	mbtw14	ensure_w14_on_root	prefix	
-annotate_thread.mbt	mc	ensure_w14_on_root,queue_comments_extended_edits	prefix	
-annotate_thread.mbt	mc:Ignorable	queue_comments_extended_edits	name	
-annotate_thread.mbt	paraId	scan_comment_ex_part	name	
-annotate_thread.mbt	w14	ensure_w14_on_root	prefix	
-annotate_thread.mbt	w14:paraId	collect_para_id_attributes	name	
-annotate_thread.mbt	w15	comment_ex_fragment,queue_comments_extended_edits	prefix	
-annotate_thread.mbt	w15:commentEx	comment_ex_fragment,queue_comments_extended_edits	name	
-annotate_thread.mbt	w15:commentsEx	queue_comments_extended_edits	name	
-annotate_thread.mbt	w15:done	comment_ex_fragment,queue_comments_extended_edits	name	
-annotate_thread.mbt	w15:paraId	comment_ex_fragment,queue_comments_extended_edits	name	
-annotate_thread.mbt	w15:paraIdParent	comment_ex_fragment,queue_comments_extended_edits	name	
-annotate_thread.mbt	xmlns	scan_comment_ex_part	name	
-annotate_thread.mbt	xmlns:	collect_namespace_bindings,ensure_w14_on_root,scan_comment_ex_part	fragment	
-annotation_index.mbt	after	AnnotationWarningCollector::finish	value	
-annotation_index.mbt	before	AnnotationWarningCollector::finish	value	
-annotation_index.mbt	body	annotation_story_root_local_name,build_annotation_index	name	
-annotation_index.mbt	comment	build_annotation_index	name	
-annotation_index.mbt	comments	annotation_story_root_local_name,build_annotation_index,read_docx_annotated_zip	name	
-annotation_index.mbt	commentsExtended	read_docx_annotated_zip	name	
-annotation_index.mbt	document	annotation_story_root_local_name	name	
-annotation_index.mbt	endnote	build_annotation_index	name	
-annotation_index.mbt	endnotes	annotation_story_root_local_name,build_annotation_index,read_docx_annotated_zip	name	
-annotation_index.mbt	footer	annotation_story_root_local_name,build_annotation_index,validate_section_story_references	value	
-annotation_index.mbt	footnote	build_annotation_index,build_notes,read_docx_annotated_zip	name	
-annotation_index.mbt	footnotes	annotation_story_root_local_name,build_annotation_index,read_docx_annotated_zip	name	
-annotation_index.mbt	ftr	annotation_story_root_local_name	name	
-annotation_index.mbt	hdr	annotation_story_root_local_name	name	
-annotation_index.mbt	header	annotation_story_root_local_name,build_annotation_index,validate_section_story_references	value	
-annotation_index.mbt	on	read_comments_extended	value	
-annotation_index.mbt	r:id	validate_section_story_references	name	
-annotation_index.mbt	relationship	DocxStoryPartAuthority::name	value	
-annotation_index.mbt	true	read_comments_extended	value	
-annotation_index.mbt	w14:paraId	read_comment_definitions	name	
-annotation_index.mbt	w15:commentEx	read_comments_extended	name	
-annotation_index.mbt	w15:commentsEx	read_comments_extended	name	
-annotation_index.mbt	w15:done	read_comments_extended	name	
-annotation_index.mbt	w15:paraId	read_comments_extended	name	
-annotation_index.mbt	w15:paraIdParent	read_comments_extended	name	
-annotation_index.mbt	w:author	read_comment_definitions	name	
-annotation_index.mbt	w:comment	read_comment_definitions	name	
-annotation_index.mbt	w:date	read_comment_definitions	name	
-annotation_index.mbt	w:footerReference	validate_section_story_references	name	
-annotation_index.mbt	w:headerReference	validate_section_story_references	name	
-annotation_index.mbt	w:id	read_comment_definitions	name	
-annotation_index.mbt	w:initials	read_comment_definitions	name	
-annotation_index.mbt	w:p	read_comment_definitions	name	
-annotation_scan.mbt	:	attribute_value,projection_source_is_xml_qname,relationship_attribute_value,split_qualified_name	fragment	
-annotation_scan.mbt	:anchor	annotation_attribute_is_relevant	fragment	
-annotation_scan.mbt	:author	annotation_attribute_is_relevant	fragment	
-annotation_scan.mbt	:char	annotation_attribute_is_relevant	fragment	
-annotation_scan.mbt	:date	annotation_attribute_is_relevant	fragment	
-annotation_scan.mbt	:fldCharType	annotation_attribute_is_relevant	fragment	
-annotation_scan.mbt	:font	annotation_attribute_is_relevant	fragment	
-annotation_scan.mbt	:id	annotation_attribute_is_relevant	fragment	
-annotation_scan.mbt	:name	annotation_attribute_is_relevant	fragment	
-annotation_scan.mbt	:type	annotation_attribute_is_relevant	fragment	
-annotation_scan.mbt	:val	annotation_attribute_is_relevant	fragment	
-annotation_scan.mbt	AlternateContent	is_transparent_container	name	
-annotation_scan.mbt	Choice	is_suppressed_container	name	
-annotation_scan.mbt	Fallback	is_transparent_container	name	
-annotation_scan.mbt	amp	decode_entities	entity	
-annotation_scan.mbt	anchor	scan_story	name	
-annotation_scan.mbt	apos	decode_entities	entity	
-annotation_scan.mbt	author	scan_story	name	
-annotation_scan.mbt	bookmarkStart	scan_story	name	
-annotation_scan.mbt	br	scan_story	name	
-annotation_scan.mbt	cellDel	is_revision_site_name	name	
-annotation_scan.mbt	cellIns	is_revision_site_name	name	
-annotation_scan.mbt	cellMerge	is_revision_site_name	name	
-annotation_scan.mbt	char	scan_story	name	
-annotation_scan.mbt	comment	projection_kind	name	
-annotation_scan.mbt	commentRangeEnd	is_wml_uri,marker_kind	name	
-annotation_scan.mbt	commentRangeStart	is_wml_uri,marker_kind	name	
-annotation_scan.mbt	commentReference	is_wml_uri,marker_kind	name	
-annotation_scan.mbt	continuationNotice	scan_story	value	
-annotation_scan.mbt	continuationSeparator	scan_story	value	
-annotation_scan.mbt	continue	scan_story	value	
-annotation_scan.mbt	customXmlDelRangeEnd	is_revision_site_name	name	
-annotation_scan.mbt	customXmlDelRangeStart	is_revision_site_name	name	
-annotation_scan.mbt	customXmlInsRangeEnd	is_revision_site_name	name	
-annotation_scan.mbt	customXmlInsRangeStart	is_revision_site_name	name	
-annotation_scan.mbt	customXmlMoveFromRangeEnd	is_revision_site_name	name	
-annotation_scan.mbt	customXmlMoveFromRangeStart	is_revision_site_name	name	
-annotation_scan.mbt	customXmlMoveToRangeEnd	is_revision_site_name	name	
-annotation_scan.mbt	customXmlMoveToRangeStart	is_revision_site_name	name	
-annotation_scan.mbt	date	scan_story	name	
-annotation_scan.mbt	del	is_revision_site_name,is_suppressed_container,is_wml_uri,nearest_revision_site,revision_kind,scan_story	name	
-annotation_scan.mbt	delInstrText	deleted_text_replacement	name	
-annotation_scan.mbt	delText	deleted_text_replacement	name	
-annotation_scan.mbt	drawing	is_transparent_container	name	
-annotation_scan.mbt	endnote	projection_kind,scan_story	name	
-annotation_scan.mbt	endnoteReference	is_wml_uri,marker_kind	name	
-annotation_scan.mbt	fldChar	scan_story	name	
-annotation_scan.mbt	fldCharType	scan_story	name	
-annotation_scan.mbt	font	scan_story	name	
-annotation_scan.mbt	footnote	projection_kind,scan_story	name	
-annotation_scan.mbt	footnoteReference	is_wml_uri,marker_kind	name	
-annotation_scan.mbt	gridSpan	scan_story	name	
-annotation_scan.mbt	gt	decode_entities	entity	
-annotation_scan.mbt	hyperlink	projection_kind,scan_story	name	
-annotation_scan.mbt	id	scan_story	name	
-annotation_scan.mbt	ins	is_revision_site_name,is_transparent_container,is_wml_uri,revision_kind,scan_story	name	
-annotation_scan.mbt	instrText	deleted_text_replacement,scan_story	name	
-annotation_scan.mbt	lt	decode_entities	entity	
-annotation_scan.mbt	moveFrom	is_revision_site_name	name	
-annotation_scan.mbt	moveFromRangeEnd	is_revision_site_name	name	
-annotation_scan.mbt	moveFromRangeStart	is_revision_site_name	name	
-annotation_scan.mbt	moveTo	is_revision_site_name	name	
-annotation_scan.mbt	moveToRangeEnd	is_revision_site_name	name	
-annotation_scan.mbt	moveToRangeStart	is_revision_site_name	name	
-annotation_scan.mbt	name	scan_story	name	
-annotation_scan.mbt	note	projection_kind	value	
-annotation_scan.mbt	numberingChange	is_revision_site_name	name	
-annotation_scan.mbt	object	is_transparent_container	name	
-annotation_scan.mbt	p	projection_kind,scan_story	name	
-annotation_scan.mbt	pPr	is_property_container,scan_story	name	
-annotation_scan.mbt	pPrChange	is_revision_site_name	name	
-annotation_scan.mbt	quot	decode_entities	entity	
-annotation_scan.mbt	r	projection_kind,scan_story	name	
-annotation_scan.mbt	rPr	is_property_container,scan_story	name	
-annotation_scan.mbt	rPrChange	is_revision_site_name	name	
-annotation_scan.mbt	sdt	is_transparent_container	name	
-annotation_scan.mbt	sdtContent	is_transparent_container	name	
-annotation_scan.mbt	sectPr	is_property_container	name	
-annotation_scan.mbt	sectPrChange	is_revision_site_name	name	
-annotation_scan.mbt	separator	scan_story	value	
-annotation_scan.mbt	smartTag	is_transparent_container	name	
-annotation_scan.mbt	sym	scan_story	name	
-annotation_scan.mbt	t	deleted_text_replacement,scan_story	name	
-annotation_scan.mbt	tbl	projection_kind,scan_story	name	
-annotation_scan.mbt	tblGrid	is_property_container	name	
-annotation_scan.mbt	tblGridChange	is_revision_site_name	name	
-annotation_scan.mbt	tblPr	is_property_container	name	
-annotation_scan.mbt	tblPrChange	is_revision_site_name	name	
-annotation_scan.mbt	tblPrExChange	is_revision_site_name	name	
-annotation_scan.mbt	tc	projection_kind,retract_cell,scan_story	name	
-annotation_scan.mbt	tcPr	is_property_container,scan_story	name	
-annotation_scan.mbt	tcPrChange	is_revision_site_name	name	
-annotation_scan.mbt	tr	projection_kind,retract_row,scan_story	name	
-annotation_scan.mbt	trPr	is_property_container,scan_story	name	
-annotation_scan.mbt	trPrChange	is_revision_site_name	name	
-annotation_scan.mbt	type	scan_story	name	
-annotation_scan.mbt	vMerge	scan_story	name	
-annotation_scan.mbt	val	scan_story	name	
-annotation_scan.mbt	xml	scan_story,validate_projection_source_namespace	name	
-annotation_scan.mbt	xmlns	annotation_attribute_is_relevant,scan_story,validate_projection_source_namespace	name	
-annotation_scan.mbt	xmlns:	annotation_attribute_is_relevant,scan_story	fragment	
-annotation_spans.mbt	p	DocxAnnotatedResult::body_paragraph_span,DocxAnnotatedResult::story_paragraph_span	name	
-annotation_spans.mbt	r	DocxAnnotatedResult::body_run_span,DocxAnnotatedResult::story_run_span	name	
-annotation_spans.mbt	tr	DocxAnnotatedResult::story_row_span	name	
-dingbat_to_unicode.mbt	SYMBOL	dingbat_to_unicode	value	
-dingbat_to_unicode.mbt	WEBDINGS	dingbat_to_unicode	value	
-dingbat_to_unicode.mbt	WINGDINGS	dingbat_to_unicode	value	
-docx_package.mbt	default	HeaderFooterCollector::section	value	
-docx_package.mbt	even	HeaderFooterCollector::section	value	
-docx_package.mbt	first	HeaderFooterCollector::section	value	
-docx_package.mbt	footer	HeaderFooterCollector::resolve_part	value	
-docx_package.mbt	header	HeaderFooterCollector::resolve_part	value	
-docx_package.mbt	r:id	HeaderFooterCollector::section	name	
-docx_package.mbt	w:	HeaderFooterCollector::read_part_story	fragment	
-docx_package.mbt	w:body	collect_sections	name	
-docx_package.mbt	w:footerReference	HeaderFooterCollector::section	name	
-docx_package.mbt	w:headerReference	HeaderFooterCollector::section	name	
-docx_package.mbt	w:p	collect_sections	name	
-docx_package.mbt	w:pPr	paragraph_sect_pr	name	
-docx_package.mbt	w:sectPr	collect_sections,paragraph_sect_pr	name	
-docx_package.mbt	w:type	HeaderFooterCollector::section	name	
-docx_reader.mbt	:	style_lookup_key	fragment	
-docx_reader.mbt	ContentType	read_content_types	name	
-docx_reader.mbt	Extension	read_content_types	name	
-docx_reader.mbt	F0	symbol_to_unicode	value	
-docx_reader.mbt	FORMCHECKBOX	parse_non_hyperlink_field_instruction	value	
-docx_reader.mbt	HYPERLINK	parse_hyperlink_field_instruction	value	
-docx_reader.mbt	Id	read_relationships_xml	name	
-docx_reader.mbt	Internal	resolve_header_footer_reference_part,resolve_reachable_annotation_story_parts,resolve_unique_internal_part,resolve_unique_wordprocessing_part	value	
-docx_reader.mbt	Paragraph	style_warning_label	name	
-docx_reader.mbt	PartName	read_content_types	name	
-docx_reader.mbt	Run	style_warning_label	name	
-docx_reader.mbt	Table	style_warning_label	name	
-docx_reader.mbt	Target	read_relationships_xml	name	
-docx_reader.mbt	TargetMode	read_relationships_xml	name	
-docx_reader.mbt	Type	read_relationships_xml	name	
-docx_reader.mbt	a	office_namespace_map	prefix	
-docx_reader.mbt	a:blip	XmlElement::drawing_blips	name	
-docx_reader.mbt	a:graphic	XmlElement::drawing_blips	name	
-docx_reader.mbt	a:graphicData	XmlElement::drawing_blips	name	
-docx_reader.mbt	a:hlinkClick	BodyReader::read_drawing_hyperlink	name	
-docx_reader.mbt	begin	BodyReader::read_paragraph_children	value	
-docx_reader.mbt	bmp	fallback_content_type	value	
-docx_reader.mbt	bullet	read_numbering_level	value	
-docx_reader.mbt	character	BodyReader::read_run_properties,style_warning_label	value	
-docx_reader.mbt	column	BodyReader::read_break	value	
-docx_reader.mbt	comments	DocumentParts::build,annotation_story_relationship_identity,expected_annotation_content_type,read_comments_for_document	name	
-docx_reader.mbt	commentsExtended	DocumentParts::build,expected_annotation_content_type	name	
-docx_reader.mbt	content-types:Default	read_content_types	name	
-docx_reader.mbt	content-types:Override	read_content_types	name	
-docx_reader.mbt	continuationNotice	read_note_part_at_path	value	
-docx_reader.mbt	continuationSeparator	read_note_part_at_path	value	
-docx_reader.mbt	continue	read_vertical_merge_continue	value	
-docx_reader.mbt	descr	read_drawing_alt_text	value	
-docx_reader.mbt	end	BodyReader::read_paragraph_children	value	
-docx_reader.mbt	endnote	BodyReader::read_element,read_notes_for_document	name	
-docx_reader.mbt	endnotes	DocumentParts::build,annotation_story_relationship_identity,expected_annotation_content_type	name	
-docx_reader.mbt	false	read_boolean_attribute_value,read_boolean_element,read_underline	value	
-docx_reader.mbt	footer	annotation_story_relationship_identity,expected_annotation_content_type,resolve_header_footer_reference_part	value	
-docx_reader.mbt	footnote	BodyReader::read_element,read_notes_for_document	name	
-docx_reader.mbt	footnotes	DocumentParts::build,annotation_story_relationship_identity,expected_annotation_content_type	name	
-docx_reader.mbt	gif	fallback_content_type	value	
-docx_reader.mbt	header	annotation_story_relationship_identity,expected_annotation_content_type,resolve_header_footer_reference_part	value	
-docx_reader.mbt	jpeg	fallback_content_type	value	
-docx_reader.mbt	jpg	fallback_content_type	value	
-docx_reader.mbt	localhost	local_file_uri_path	value	
-docx_reader.mbt	mc	office_namespace_map	prefix	
-docx_reader.mbt	mc:AlternateContent	BodyReader::read_element,BodyReader::read_paragraph_extra_elements,BodyReader::read_pict_extra_elements,BodyReader::read_text_box_elements	name	
-docx_reader.mbt	mc:Fallback	BodyReader::read_element,BodyReader::read_pict_extra_elements,BodyReader::read_text_box_elements	name	
-docx_reader.mbt	none	read_highlight,read_underline	value	
-docx_reader.mbt	null	local_file_uri_path	value	
-docx_reader.mbt	numbering	WordprocessingPartRole::label,index_numbering_style_num_ids,read_style_info	value	
-docx_reader.mbt	o	office_namespace_map	prefix	
-docx_reader.mbt	o:title	BodyReader::read_vml_image_data	name	
-docx_reader.mbt	office-word:wrap	is_ignored_body_element	name	
-docx_reader.mbt	officeDocument	find_main_document	value	
-docx_reader.mbt	page	BodyReader::read_break	value	
-docx_reader.mbt	paragraph	BodyReader::read_paragraph_properties,style_warning_label	value	
-docx_reader.mbt	pic	office_namespace_map	prefix	
-docx_reader.mbt	pic:blipFill	XmlElement::drawing_blips	name	
-docx_reader.mbt	pic:pic	XmlElement::drawing_blips	name	
-docx_reader.mbt	png	fallback_content_type	value	
-docx_reader.mbt	r	office_namespace_map	prefix	
-docx_reader.mbt	r:embed	BodyReader::read_blip	name	
-docx_reader.mbt	r:id	BodyReader::read_drawing_hyperlink,BodyReader::read_hyperlink,BodyReader::read_vml_image_data	name	
-docx_reader.mbt	r:link	BodyReader::read_blip	name	
-docx_reader.mbt	relationships	office_namespace_map	value	
-docx_reader.mbt	relationships:Relationship	read_relationships_xml	name	
-docx_reader.mbt	separate	BodyReader::read_paragraph_children	value	
-docx_reader.mbt	separator	read_note_part_at_path	value	
-docx_reader.mbt	styles	WordprocessingPartRole::label	value	
-docx_reader.mbt	subscript	read_vertical_alignment	value	
-docx_reader.mbt	superscript	read_vertical_alignment	value	
-docx_reader.mbt	table	BodyReader::read_table_properties,style_warning_label	value	
-docx_reader.mbt	textWrapping	BodyReader::read_break	value	
-docx_reader.mbt	tif	fallback_content_type	value	
-docx_reader.mbt	tiff	fallback_content_type	value	
-docx_reader.mbt	title	read_drawing_alt_text	value	
-docx_reader.mbt	undefined	BodyReader::read_element,annotation_id_or_missing,attribute_or_js_undefined	value	
-docx_reader.mbt	v	office_namespace_map	prefix	
-docx_reader.mbt	v:group	BodyReader::read_element,BodyReader::read_pict_extra_elements	name	
-docx_reader.mbt	v:imagedata	BodyReader::read_element	name	
-docx_reader.mbt	v:rect	BodyReader::read_element,BodyReader::read_pict_extra_elements	name	
-docx_reader.mbt	v:roundrect	BodyReader::read_element,BodyReader::read_pict_extra_elements	name	
-docx_reader.mbt	v:shadow	is_ignored_body_element	name	
-docx_reader.mbt	v:shape	BodyReader::read_element,BodyReader::read_pict_extra_elements	name	
-docx_reader.mbt	v:shapetype	is_ignored_body_element	name	
-docx_reader.mbt	v:textbox	BodyReader::read_element,BodyReader::read_pict_extra_elements	name	
-docx_reader.mbt	w	office_namespace_map	prefix	
-docx_reader.mbt	w14	office_namespace_map	prefix	
-docx_reader.mbt	w14:checkbox	read_structured_checkbox	name	
-docx_reader.mbt	w14:checked	read_structured_checkbox	name	
-docx_reader.mbt	w14:val	read_structured_checkbox	name	
-docx_reader.mbt	w15	office_namespace_map	prefix	
-docx_reader.mbt	w:	read_note_part_at_path,read_wordprocessing_role_xml_part	fragment	
-docx_reader.mbt	w:abstractNum	read_abstract_numberings	name	
-docx_reader.mbt	w:abstractNumId	read_abstract_numberings,read_numbering_instances	name	
-docx_reader.mbt	w:anchor	BodyReader::read_hyperlink	name	
-docx_reader.mbt	w:annotationRef	is_ignored_body_element	name	
-docx_reader.mbt	w:ascii	BodyReader::read_run_properties	name	
-docx_reader.mbt	w:author	read_comments_for_document	name	
-docx_reader.mbt	w:b	BodyReader::read_run_properties	name	
-docx_reader.mbt	w:body	read_document_xml_with_messages	name	
-docx_reader.mbt	w:bookmarkEnd	is_ignored_body_element	name	
-docx_reader.mbt	w:bookmarkStart	BodyReader::read_element	name	
-docx_reader.mbt	w:br	BodyReader::read_element	name	
-docx_reader.mbt	w:caps	BodyReader::read_run_properties	name	
-docx_reader.mbt	w:char	BodyReader::read_symbol	name	
-docx_reader.mbt	w:checkBox	read_complex_field_checkbox_checked	name	
-docx_reader.mbt	w:checked	read_complex_field_checkbox_checked	name	
-docx_reader.mbt	w:comment	read_comments_for_document	name	
-docx_reader.mbt	w:commentRangeEnd	is_ignored_body_element	name	
-docx_reader.mbt	w:commentRangeStart	is_ignored_body_element	name	
-docx_reader.mbt	w:commentReference	BodyReader::read_element	name	
-docx_reader.mbt	w:default	read_complex_field_checkbox_checked	name	
-docx_reader.mbt	w:del	BodyReader::read_table_row,is_deleted_paragraph,is_ignored_body_element	name	
-docx_reader.mbt	w:drawing	BodyReader::read_element	name	
-docx_reader.mbt	w:end	BodyReader::read_indent	name	
-docx_reader.mbt	w:endnoteRef	BodyReader::read_element,is_ignored_body_element	name	
-docx_reader.mbt	w:endnoteReference	BodyReader::read_element	name	
-docx_reader.mbt	w:ffData	read_complex_field_checkbox_checked	name	
-docx_reader.mbt	w:firstLine	BodyReader::read_indent	name	
-docx_reader.mbt	w:fldChar	is_ignored_body_element,read_complex_field_checkbox_checked,read_field_char_type	name	
-docx_reader.mbt	w:fldCharType	read_field_char_type	name	
-docx_reader.mbt	w:font	BodyReader::read_symbol	name	
-docx_reader.mbt	w:footnoteRef	BodyReader::read_element,is_ignored_body_element	name	
-docx_reader.mbt	w:footnoteReference	BodyReader::read_element	name	
-docx_reader.mbt	w:gridSpan	BodyReader::read_table_cell	name	
-docx_reader.mbt	w:hanging	BodyReader::read_indent	name	
-docx_reader.mbt	w:highlight	BodyReader::read_run_properties	name	
-docx_reader.mbt	w:hyperlink	BodyReader::read_element	name	
-docx_reader.mbt	w:i	BodyReader::read_run_properties	name	
-docx_reader.mbt	w:id	BodyReader::read_element,read_comments_for_document,read_note_part_at_path	name	
-docx_reader.mbt	w:ilvl	BodyReader::read_numbering,read_abstract_numbering,read_numbering_level	name	
-docx_reader.mbt	w:ind	BodyReader::read_paragraph_properties	name	
-docx_reader.mbt	w:initials	read_comments_for_document	name	
-docx_reader.mbt	w:ins	BodyReader::read_element	name	
-docx_reader.mbt	w:instrText	BodyReader::read_paragraph_children,collect_instruction_text,is_ignored_body_element	name	
-docx_reader.mbt	w:jc	BodyReader::read_paragraph_properties	name	
-docx_reader.mbt	w:lastRenderedPageBreak	is_ignored_body_element	name	
-docx_reader.mbt	w:left	BodyReader::read_indent	name	
-docx_reader.mbt	w:lvl	read_abstract_numbering	name	
-docx_reader.mbt	w:name	BodyReader::read_element,read_style_info	name	
-docx_reader.mbt	w:noBreakHyphen	BodyReader::read_element	name	
-docx_reader.mbt	w:num	read_numbering_instances	name	
-docx_reader.mbt	w:numFmt	read_numbering_level	name	
-docx_reader.mbt	w:numId	BodyReader::read_numbering,read_numbering_instances,read_style_info	name	
-docx_reader.mbt	w:numPr	BodyReader::read_paragraph_properties,read_style_info	name	
-docx_reader.mbt	w:numStyleLink	read_abstract_numbering	name	
-docx_reader.mbt	w:object	BodyReader::read_element	name	
-docx_reader.mbt	w:p	BodyReader::read_children,BodyReader::read_element	name	
-docx_reader.mbt	w:pPr	BodyReader::read_paragraph_elements_with_prefix,is_deleted_paragraph,is_ignored_body_element,read_style_info	name	
-docx_reader.mbt	w:pStyle	BodyReader::read_paragraph_properties,read_numbering_level	name	
-docx_reader.mbt	w:pict	BodyReader::read_element,BodyReader::read_paragraph_extra_elements,BodyReader::read_pict_extra_elements	name	
-docx_reader.mbt	w:proofErr	is_ignored_body_element	name	
-docx_reader.mbt	w:r	BodyReader::read_element	name	
-docx_reader.mbt	w:rFonts	BodyReader::read_run_properties	name	
-docx_reader.mbt	w:rPr	BodyReader::read_run,is_deleted_paragraph,is_ignored_body_element	name	
-docx_reader.mbt	w:rStyle	BodyReader::read_run_properties	name	
-docx_reader.mbt	w:right	BodyReader::read_indent	name	
-docx_reader.mbt	w:sdt	BodyReader::read_element	name	
-docx_reader.mbt	w:sdtContent	BodyReader::read_element,BodyReader::read_structured_document_tag	name	
-docx_reader.mbt	w:sdtPr	BodyReader::read_structured_document_tag	name	
-docx_reader.mbt	w:sectPr	is_ignored_body_element	name	
-docx_reader.mbt	w:smallCaps	BodyReader::read_run_properties	name	
-docx_reader.mbt	w:smartTag	BodyReader::read_element	name	
-docx_reader.mbt	w:softHyphen	BodyReader::read_element	name	
-docx_reader.mbt	w:start	BodyReader::read_indent	name	
-docx_reader.mbt	w:strike	BodyReader::read_run_properties	name	
-docx_reader.mbt	w:style	read_styles_xml	name	
-docx_reader.mbt	w:styleId	read_styles_xml	name	
-docx_reader.mbt	w:sym	BodyReader::read_element	name	
-docx_reader.mbt	w:sz	BodyReader::read_run_properties	name	
-docx_reader.mbt	w:t	BodyReader::read_element	name	
-docx_reader.mbt	w:tab	BodyReader::read_element	name	
-docx_reader.mbt	w:tbl	BodyReader::read_element	name	
-docx_reader.mbt	w:tblGrid	is_ignored_body_element	name	
-docx_reader.mbt	w:tblHeader	BodyReader::read_table_row	name	
-docx_reader.mbt	w:tblPr	BodyReader::read_table,is_ignored_body_element	name	
-docx_reader.mbt	w:tblStyle	BodyReader::read_table_properties	name	
-docx_reader.mbt	w:tc	BodyReader::read_element	name	
-docx_reader.mbt	w:tcPr	BodyReader::read_table_cell,is_ignored_body_element	name	
-docx_reader.mbt	w:tgtFrame	BodyReader::read_hyperlink	name	
-docx_reader.mbt	w:tr	BodyReader::read_element	name	
-docx_reader.mbt	w:trPr	BodyReader::read_table_row,is_ignored_body_element	name	
-docx_reader.mbt	w:txbxContent	BodyReader::read_paragraph_extra_elements,BodyReader::read_pict_extra_elements,BodyReader::read_text_box_elements,is_ignored_body_element	name	
-docx_reader.mbt	w:type	BodyReader::read_break,read_note_part_at_path,read_style_info	name	
-docx_reader.mbt	w:u	BodyReader::read_run_properties	name	
-docx_reader.mbt	w:vMerge	read_vertical_merge_continue	name	
-docx_reader.mbt	w:val	BodyReader::read_numbering,BodyReader::read_paragraph_properties,BodyReader::read_run_properties,BodyReader::read_table_cell,BodyReader::read_table_properties,read_abstract_numbering,read_boolean_element,read_numbering_instances,read_numbering_level,read_style_info,read_underline,read_vertical_merge_continue	name	
-docx_reader.mbt	w:vertAlign	BodyReader::read_run_properties	name	
-docx_reader.mbt	win32	external_uri_to_path	value	
-docx_reader.mbt	wp	office_namespace_map	prefix	
-docx_reader.mbt	wp:anchor	BodyReader::read_element	name	
-docx_reader.mbt	wp:docPr	BodyReader::read_drawing_hyperlink,read_drawing_alt_text	name	
-docx_reader.mbt	wp:inline	BodyReader::read_element	name	
-embedded_style_map.mbt	ContentType	read_content_type_xml_entries,write_content_types_xml	name	
-embedded_style_map.mbt	Default	write_content_types_xml	name	
-embedded_style_map.mbt	Extension	read_content_type_xml_entries,write_content_types_xml	name	
-embedded_style_map.mbt	Id	write_relationships_xml	name	
-embedded_style_map.mbt	Override	write_content_types_xml	name	
-embedded_style_map.mbt	PartName	read_content_type_xml_entries,write_content_types_xml	name	
-embedded_style_map.mbt	Relationship	write_relationships_xml	name	
-embedded_style_map.mbt	Relationships	write_relationships_xml	name	
-embedded_style_map.mbt	Target	write_relationships_xml	name	
-embedded_style_map.mbt	TargetMode	write_relationships_xml	name	
-embedded_style_map.mbt	Type	write_relationships_xml	name	
-embedded_style_map.mbt	Types	write_content_types_xml	name	
-embedded_style_map.mbt	content-types:Default	read_content_type_xml_entries	name	
-embedded_style_map.mbt	content-types:Override	read_content_type_xml_entries	name	
-embedded_style_map.mbt	rMammothStyleMap	embedded_style_map_relationship,upsert_embedded_style_map_relationship	name	
-field_projection.mbt	begin	classify_reader_order_carrier	value	
-field_projection.mbt	body	reader_order_field_story_identity	name	
-field_projection.mbt	comment	reader_order_field_story_identity	name	
-field_projection.mbt	comments	reader_order_field_story_identity	name	
-field_projection.mbt	document	reader_order_field_story_identity	name	
-field_projection.mbt	end	classify_reader_order_carrier	value	
-field_projection.mbt	endnote	reader_order_field_story_identity	name	
-field_projection.mbt	endnotes	reader_order_field_story_identity	name	
-field_projection.mbt	fldChar	scan_reader_order_field_carrier	name	
-field_projection.mbt	footnote	reader_order_field_story_identity	name	
-field_projection.mbt	footnotes	reader_order_field_story_identity	name	
-field_projection.mbt	instrText	scan_reader_order_field_carrier	name	
-field_projection.mbt	separate	classify_reader_order_carrier	value	
-field_projection.mbt	txbxContent	reader_order_field_story_identity,scan_reader_order_field_carrier	name	
-reader_order_projection.mbt	AlternateContent	ReaderOrderWalker::walk_inline_element,ReaderOrderWalker::walk_paragraph_extras,ReaderOrderWalker::walk_pict_extras,ReaderOrderWalker::walk_structural_element,ReaderOrderWalker::walk_text_box_extras,collect_reader_order_body_outputs	name	
-reader_order_projection.mbt	Fallback	ReaderOrderWalker::walk_inline_element,ReaderOrderWalker::walk_paragraph_extras,ReaderOrderWalker::walk_pict_extras,ReaderOrderWalker::walk_structural_element,ReaderOrderWalker::walk_text_box_extras,collect_reader_order_body_outputs	name	
-reader_order_projection.mbt	anchor	reader_order_is_image_output_element	name	
-reader_order_projection.mbt	annotationRef	ReaderOrderWalker::walk_inline_element	name	
-reader_order_projection.mbt	body	ReaderOrderWalker::walk	name	
-reader_order_projection.mbt	bookmarkEnd	ReaderOrderWalker::walk_inline_element	name	
-reader_order_projection.mbt	bookmarkStart	ReaderOrderWalker::walk_inline_element,reader_order_body_output_kind	name	
-reader_order_projection.mbt	br	ReaderOrderWalker::walk_inline_element,reader_order_body_output_kind	name	
-reader_order_projection.mbt	checkbox	ReaderOrderWalker::sdt_declares_checkbox	name	
-reader_order_projection.mbt	column	reader_order_body_output_kind	value	
-reader_order_projection.mbt	comment	ReaderOrderWalker::walk	name	
-reader_order_projection.mbt	commentRangeEnd	ReaderOrderWalker::walk_inline_element	name	
-reader_order_projection.mbt	commentRangeStart	ReaderOrderWalker::walk_inline_element	name	
-reader_order_projection.mbt	commentReference	ReaderOrderWalker::walk_inline_element,reader_order_body_output_kind	name	
-reader_order_projection.mbt	comments	ReaderOrderWalker::walk	name	
-reader_order_projection.mbt	cr	ReaderOrderWalker::walk_inline_element	name	
-reader_order_projection.mbt	del	ReaderOrderWalker::is_deleted_paragraph_mark,ReaderOrderWalker::walk_inline_element,ReaderOrderWalker::walk_paragraph_extras,reader_order_is_deleted_body_paragraph,reader_order_projection_visibility	name	
-reader_order_projection.mbt	document	ReaderOrderWalker::walk	name	
-reader_order_projection.mbt	drawing	ReaderOrderWalker::walk_inline_element,ReaderOrderWalker::walk_pict_extras,ReaderOrderWalker::walk_structural_element	name	
-reader_order_projection.mbt	endnote	ReaderOrderWalker::walk	name	
-reader_order_projection.mbt	endnoteRef	ReaderOrderWalker::walk_inline_element	name	
-reader_order_projection.mbt	endnoteReference	ReaderOrderWalker::walk_inline_element,reader_order_body_output_kind	name	
-reader_order_projection.mbt	endnotes	ReaderOrderWalker::walk	name	
-reader_order_projection.mbt	fldChar	ReaderOrderWalker::walk_inline_element	name	
-reader_order_projection.mbt	fldSimple	ReaderOrderWalker::walk_inline_element	name	
-reader_order_projection.mbt	footnote	ReaderOrderWalker::walk	name	
-reader_order_projection.mbt	footnoteRef	ReaderOrderWalker::walk_inline_element	name	
-reader_order_projection.mbt	footnoteReference	ReaderOrderWalker::walk_inline_element,reader_order_body_output_kind	name	
-reader_order_projection.mbt	footnotes	ReaderOrderWalker::walk	name	
-reader_order_projection.mbt	ftr	ReaderOrderWalker::walk	name	
-reader_order_projection.mbt	group	reader_order_is_vml_flattening_container	name	
-reader_order_projection.mbt	hdr	ReaderOrderWalker::walk	name	
-reader_order_projection.mbt	hyperlink	ReaderOrderWalker::walk_inline_element,ReaderOrderWalker::walk_pict_extras,ReaderOrderWalker::walk_structural_element,reader_order_body_output_kind,reader_order_is_body_flattening_container	name	
-reader_order_projection.mbt	imagedata	reader_order_is_image_output_element	name	
-reader_order_projection.mbt	inline	reader_order_is_image_output_element	name	
-reader_order_projection.mbt	ins	ReaderOrderWalker::walk_inline_element,ReaderOrderWalker::walk_pict_extras,ReaderOrderWalker::walk_structural_element	name	
-reader_order_projection.mbt	instrText	ReaderOrderWalker::walk_inline_element	name	
-reader_order_projection.mbt	lastRenderedPageBreak	ReaderOrderWalker::walk_inline_element	name	
-reader_order_projection.mbt	noBreakHyphen	ReaderOrderWalker::walk_inline_element,reader_order_body_output_kind	name	
-reader_order_projection.mbt	object	ReaderOrderWalker::walk_inline_element,ReaderOrderWalker::walk_pict_extras,ReaderOrderWalker::walk_structural_element	name	
-reader_order_projection.mbt	p	ReaderOrderWalker::walk_flow_children,ReaderOrderWalker::walk_inline_children,ReaderOrderWalker::walk_inline_element,ReaderOrderWalker::walk_pict_extras,ReaderOrderWalker::walk_structural_element,collect_reader_order_body_outputs,reader_order_body_output_kind	name	
-reader_order_projection.mbt	pPr	ReaderOrderWalker::is_deleted_paragraph_mark,ReaderOrderWalker::walk_inline_element,reader_order_is_deleted_body_paragraph	name	
-reader_order_projection.mbt	page	reader_order_body_output_kind	value	
-reader_order_projection.mbt	pict	ReaderOrderWalker::walk_inline_element,ReaderOrderWalker::walk_paragraph_extras,ReaderOrderWalker::walk_pict_extras,reader_order_projection_visibility	name	
-reader_order_projection.mbt	proofErr	ReaderOrderWalker::walk_inline_element	name	
-reader_order_projection.mbt	ptab	ReaderOrderWalker::walk_inline_element	name	
-reader_order_projection.mbt	r	ReaderOrderWalker::walk_inline_element,ReaderOrderWalker::walk_pict_extras,ReaderOrderWalker::walk_structural_element,reader_order_body_output_kind	name	
-reader_order_projection.mbt	rPr	ReaderOrderWalker::is_deleted_paragraph_mark,ReaderOrderWalker::walk_inline_element,reader_order_is_deleted_body_paragraph	name	
-reader_order_projection.mbt	rect	reader_order_is_vml_flattening_container	name	
-reader_order_projection.mbt	roundrect	reader_order_is_vml_flattening_container	name	
-reader_order_projection.mbt	sdt	ReaderOrderWalker::walk_inline_element,ReaderOrderWalker::walk_pict_extras,ReaderOrderWalker::walk_structural_element,collect_reader_order_body_outputs	name	
-reader_order_projection.mbt	sdtContent	ReaderOrderWalker::walk_inline_element,ReaderOrderWalker::walk_pict_extras,ReaderOrderWalker::walk_structural_element,collect_reader_order_body_outputs	name	
-reader_order_projection.mbt	sdtPr	ReaderOrderWalker::sdt_declares_checkbox	name	
-reader_order_projection.mbt	shape	reader_order_is_vml_flattening_container	name	
-reader_order_projection.mbt	smartTag	ReaderOrderWalker::walk_inline_element,ReaderOrderWalker::walk_pict_extras,ReaderOrderWalker::walk_structural_element	name	
-reader_order_projection.mbt	softHyphen	ReaderOrderWalker::walk_inline_element,reader_order_body_output_kind	name	
-reader_order_projection.mbt	sym	ReaderOrderWalker::walk_inline_element,reader_order_body_output_kind	name	
-reader_order_projection.mbt	t	ReaderOrderWalker::walk_inline_element,reader_order_atom_span,reader_order_body_output_kind	name	
-reader_order_projection.mbt	tab	ReaderOrderWalker::walk_inline_element,reader_order_body_output_kind	name	
-reader_order_projection.mbt	tbl	ReaderOrderWalker::walk_inline_element,ReaderOrderWalker::walk_pict_extras,ReaderOrderWalker::walk_structural_element,reader_order_body_output_kind,reader_order_projection_visibility	name	
-reader_order_projection.mbt	tc	ReaderOrderWalker::walk_inline_element,ReaderOrderWalker::walk_pict_extras,ReaderOrderWalker::walk_structural_element,reader_order_body_output_kind	name	
-reader_order_projection.mbt	textWrapping	reader_order_body_output_kind	value	
-reader_order_projection.mbt	textbox	reader_order_is_vml_flattening_container	name	
-reader_order_projection.mbt	tr	ReaderOrderWalker::walk_inline_element,ReaderOrderWalker::walk_pict_extras,ReaderOrderWalker::walk_structural_element,reader_order_body_output_kind	name	
-reader_order_projection.mbt	txbxContent	ReaderOrderWalker::walk_inline_element,ReaderOrderWalker::walk_paragraph_extras,ReaderOrderWalker::walk_pict_extras,ReaderOrderWalker::walk_structural_element,ReaderOrderWalker::walk_text_box_extras,reader_order_projection_visibility	name	
-run_surgery.mbt	:	run_surgery_qualified_prefix	fragment	
-run_surgery.mbt	checkbox	run_surgery_inside_checkbox_control	name	
-run_surgery.mbt	rPr	run_surgery_first_content_position	name	
-run_surgery.mbt	sdt	run_surgery_inside_checkbox_control	name	
-run_surgery.mbt	sdtPr	run_surgery_inside_checkbox_control	name	
-run_surgery.mbt	t	plan_whole_run_replacement	name	
-run_surgery.mbt	xml:space	run_surgery_declares_space,run_surgery_space_declaration	name	
-token_map.mbt	amp	decode_entity_token	entity	
-token_map.mbt	apos	decode_entity_token	entity	
-token_map.mbt	gt	decode_entity_token	entity	
-token_map.mbt	lt	decode_entity_token	entity	
-token_map.mbt	quot	decode_entity_token	entity	
+annotate_plan.mbt	ContentType	opc_content_type_override_fragment	name	-
+annotate_plan.mbt	Id	collect_relationship_ids	name	-
+annotate_plan.mbt	Override	plan_comment_addition_zip	name	-
+annotate_plan.mbt	PartName	opc_content_type_override_fragment	name	-
+annotate_plan.mbt	Relationship	plan_comment_addition_zip	name	-
+annotate_plan.mbt	comments.xml	plan_comment_addition_zip	name	-
+annotate_plan.mbt	content-types:Types	plan_comment_addition_zip	name	-
+annotate_plan.mbt	rIdAnnotate	plan_comment_addition_zip	name	-
+annotate_plan.mbt	relationships	main_relationships_mutation_part_path	value	-
+annotate_thread.mbt	:	split_qualified	fragment	-
+annotate_thread.mbt	Ignorable	ensure_w14_on_root	name	-
+annotate_thread.mbt	Override	queue_comments_extended_edits	name	-
+annotate_thread.mbt	Relationship	queue_comments_extended_edits	name	-
+annotate_thread.mbt	commentEx	scan_comment_ex_part	name	-
+annotate_thread.mbt	commentsExtended.xml	queue_comments_extended_edits	name	-
+annotate_thread.mbt	content-types:Types	queue_comments_extended_edits	name	-
+annotate_thread.mbt	done	scan_comment_ex_part	name	-
+annotate_thread.mbt	mbtmc	ensure_w14_on_root	prefix	-
+annotate_thread.mbt	mbtw14	ensure_w14_on_root	prefix	-
+annotate_thread.mbt	mc	ensure_w14_on_root,queue_comments_extended_edits	prefix	-
+annotate_thread.mbt	mc:Ignorable	queue_comments_extended_edits	name	-
+annotate_thread.mbt	paraId	scan_comment_ex_part	name	-
+annotate_thread.mbt	rIdAnnotate	queue_comments_extended_edits	name	-
+annotate_thread.mbt	w14	ensure_w14_on_root	prefix	-
+annotate_thread.mbt	w14:paraId	collect_para_id_attributes	name	-
+annotate_thread.mbt	w15	comment_ex_fragment,queue_comments_extended_edits	prefix	-
+annotate_thread.mbt	w15:commentEx	comment_ex_fragment,queue_comments_extended_edits	name	-
+annotate_thread.mbt	w15:commentsEx	queue_comments_extended_edits	name	-
+annotate_thread.mbt	w15:done	comment_ex_fragment,queue_comments_extended_edits	name	-
+annotate_thread.mbt	w15:paraId	comment_ex_fragment,queue_comments_extended_edits	name	-
+annotate_thread.mbt	w15:paraIdParent	comment_ex_fragment,queue_comments_extended_edits	name	-
+annotate_thread.mbt	xmlns	scan_comment_ex_part	name	-
+annotate_thread.mbt	xmlns:	collect_namespace_bindings,ensure_w14_on_root,scan_comment_ex_part	fragment	-
+annotation_index.mbt	after	AnnotationWarningCollector::finish	value	-
+annotation_index.mbt	before	AnnotationWarningCollector::finish	value	-
+annotation_index.mbt	body	annotation_story_root_local_name,build_annotation_index	name	-
+annotation_index.mbt	comment	build_annotation_index	name	-
+annotation_index.mbt	comments	annotation_story_root_local_name,build_annotation_index,read_docx_annotated_zip	name	-
+annotation_index.mbt	commentsExtended	read_docx_annotated_zip	name	-
+annotation_index.mbt	document	annotation_story_root_local_name	name	-
+annotation_index.mbt	endnote	build_annotation_index	name	-
+annotation_index.mbt	endnotes	annotation_story_root_local_name,build_annotation_index,read_docx_annotated_zip	name	-
+annotation_index.mbt	footer	annotation_story_root_local_name,build_annotation_index,validate_section_story_references	value	-
+annotation_index.mbt	footnote	build_annotation_index,build_notes,read_docx_annotated_zip	name	-
+annotation_index.mbt	footnotes	annotation_story_root_local_name,build_annotation_index,read_docx_annotated_zip	name	-
+annotation_index.mbt	ftr	annotation_story_root_local_name	name	-
+annotation_index.mbt	hdr	annotation_story_root_local_name	name	-
+annotation_index.mbt	header	annotation_story_root_local_name,build_annotation_index,validate_section_story_references	value	-
+annotation_index.mbt	inside_end	AnnotationWarningCollector::finish	value	-
+annotation_index.mbt	inside_start	AnnotationWarningCollector::finish	value	-
+annotation_index.mbt	legacy-fallback	DocxStoryPartAuthority::name	prefix	-
+annotation_index.mbt	on	read_comments_extended	value	-
+annotation_index.mbt	r:id	validate_section_story_references	name	-
+annotation_index.mbt	relationship	DocxStoryPartAuthority::name	value	-
+annotation_index.mbt	true	read_comments_extended	value	-
+annotation_index.mbt	w14:paraId	read_comment_definitions	name	-
+annotation_index.mbt	w15:commentEx	read_comments_extended	name	-
+annotation_index.mbt	w15:commentsEx	read_comments_extended	name	-
+annotation_index.mbt	w15:done	read_comments_extended	name	-
+annotation_index.mbt	w15:paraId	read_comments_extended	name	-
+annotation_index.mbt	w15:paraIdParent	read_comments_extended	name	-
+annotation_index.mbt	w:author	read_comment_definitions	name	-
+annotation_index.mbt	w:comment	read_comment_definitions	name	-
+annotation_index.mbt	w:date	read_comment_definitions	name	-
+annotation_index.mbt	w:footerReference	validate_section_story_references	name	-
+annotation_index.mbt	w:headerReference	validate_section_story_references	name	-
+annotation_index.mbt	w:id	read_comment_definitions	name	-
+annotation_index.mbt	w:initials	read_comment_definitions	name	-
+annotation_index.mbt	w:p	read_comment_definitions	name	-
+annotation_scan.mbt	:	attribute_value,projection_source_is_xml_qname,relationship_attribute_value,split_qualified_name	fragment	-
+annotation_scan.mbt	:anchor	annotation_attribute_is_relevant	fragment	-
+annotation_scan.mbt	:author	annotation_attribute_is_relevant	fragment	-
+annotation_scan.mbt	:char	annotation_attribute_is_relevant	fragment	-
+annotation_scan.mbt	:date	annotation_attribute_is_relevant	fragment	-
+annotation_scan.mbt	:fldCharType	annotation_attribute_is_relevant	fragment	-
+annotation_scan.mbt	:font	annotation_attribute_is_relevant	fragment	-
+annotation_scan.mbt	:id	annotation_attribute_is_relevant	fragment	-
+annotation_scan.mbt	:name	annotation_attribute_is_relevant	fragment	-
+annotation_scan.mbt	:type	annotation_attribute_is_relevant	fragment	-
+annotation_scan.mbt	:val	annotation_attribute_is_relevant	fragment	-
+annotation_scan.mbt	AlternateContent	is_transparent_container	name	-
+annotation_scan.mbt	Choice	is_suppressed_container	name	-
+annotation_scan.mbt	Fallback	is_transparent_container	name	-
+annotation_scan.mbt	amp	decode_entities	entity	-
+annotation_scan.mbt	anchor	scan_story	name	-
+annotation_scan.mbt	apos	decode_entities	entity	-
+annotation_scan.mbt	author	scan_story	name	-
+annotation_scan.mbt	bookmarkStart	scan_story	name	-
+annotation_scan.mbt	br	scan_story	name	-
+annotation_scan.mbt	cellDel	is_revision_site_name	name	-
+annotation_scan.mbt	cellIns	is_revision_site_name	name	-
+annotation_scan.mbt	cellMerge	is_revision_site_name	name	-
+annotation_scan.mbt	char	scan_story	name	-
+annotation_scan.mbt	comment	projection_kind	name	-
+annotation_scan.mbt	commentRangeEnd	is_wml_uri,marker_kind	name	-
+annotation_scan.mbt	commentRangeStart	is_wml_uri,marker_kind	name	-
+annotation_scan.mbt	commentReference	is_wml_uri,marker_kind	name	-
+annotation_scan.mbt	continuationNotice	scan_story	value	-
+annotation_scan.mbt	continuationSeparator	scan_story	value	-
+annotation_scan.mbt	continue	scan_story	value	-
+annotation_scan.mbt	customXmlDelRangeEnd	is_revision_site_name	name	-
+annotation_scan.mbt	customXmlDelRangeStart	is_revision_site_name	name	-
+annotation_scan.mbt	customXmlInsRangeEnd	is_revision_site_name	name	-
+annotation_scan.mbt	customXmlInsRangeStart	is_revision_site_name	name	-
+annotation_scan.mbt	customXmlMoveFromRangeEnd	is_revision_site_name	name	-
+annotation_scan.mbt	customXmlMoveFromRangeStart	is_revision_site_name	name	-
+annotation_scan.mbt	customXmlMoveToRangeEnd	is_revision_site_name	name	-
+annotation_scan.mbt	customXmlMoveToRangeStart	is_revision_site_name	name	-
+annotation_scan.mbt	date	scan_story	name	-
+annotation_scan.mbt	del	is_revision_site_name,is_suppressed_container,is_wml_uri,nearest_revision_site,revision_kind,scan_story	name	-
+annotation_scan.mbt	delInstrText	deleted_text_replacement	name	-
+annotation_scan.mbt	delText	deleted_text_replacement	name	-
+annotation_scan.mbt	drawing	is_transparent_container	name	-
+annotation_scan.mbt	endnote	projection_kind,scan_story	name	-
+annotation_scan.mbt	endnoteReference	is_wml_uri,marker_kind	name	-
+annotation_scan.mbt	fldChar	scan_story	name	-
+annotation_scan.mbt	fldCharType	scan_story	name	-
+annotation_scan.mbt	font	scan_story	name	-
+annotation_scan.mbt	footnote	projection_kind,scan_story	name	-
+annotation_scan.mbt	footnoteReference	is_wml_uri,marker_kind	name	-
+annotation_scan.mbt	gridSpan	scan_story	name	-
+annotation_scan.mbt	gt	decode_entities	entity	-
+annotation_scan.mbt	hyperlink	projection_kind,scan_story	name	-
+annotation_scan.mbt	id	scan_story	name	-
+annotation_scan.mbt	ins	is_revision_site_name,is_transparent_container,is_wml_uri,revision_kind,scan_story	name	-
+annotation_scan.mbt	instrText	deleted_text_replacement,scan_story	name	-
+annotation_scan.mbt	lt	decode_entities	entity	-
+annotation_scan.mbt	moveFrom	is_revision_site_name	name	-
+annotation_scan.mbt	moveFromRangeEnd	is_revision_site_name	name	-
+annotation_scan.mbt	moveFromRangeStart	is_revision_site_name	name	-
+annotation_scan.mbt	moveTo	is_revision_site_name	name	-
+annotation_scan.mbt	moveToRangeEnd	is_revision_site_name	name	-
+annotation_scan.mbt	moveToRangeStart	is_revision_site_name	name	-
+annotation_scan.mbt	name	scan_story	name	-
+annotation_scan.mbt	note	projection_kind	value	-
+annotation_scan.mbt	numberingChange	is_revision_site_name	name	-
+annotation_scan.mbt	object	is_transparent_container	name	-
+annotation_scan.mbt	p	projection_kind,scan_story	name	-
+annotation_scan.mbt	pPr	is_property_container,scan_story	name	-
+annotation_scan.mbt	pPrChange	is_revision_site_name	name	-
+annotation_scan.mbt	quot	decode_entities	entity	-
+annotation_scan.mbt	r	projection_kind,scan_story	name	-
+annotation_scan.mbt	rPr	is_property_container,scan_story	name	-
+annotation_scan.mbt	rPrChange	is_revision_site_name	name	-
+annotation_scan.mbt	sdt	is_transparent_container	name	-
+annotation_scan.mbt	sdtContent	is_transparent_container	name	-
+annotation_scan.mbt	sectPr	is_property_container	name	-
+annotation_scan.mbt	sectPrChange	is_revision_site_name	name	-
+annotation_scan.mbt	separator	scan_story	value	-
+annotation_scan.mbt	smartTag	is_transparent_container	name	-
+annotation_scan.mbt	sym	scan_story	name	-
+annotation_scan.mbt	t	deleted_text_replacement,scan_story	name	-
+annotation_scan.mbt	tbl	projection_kind,scan_story	name	-
+annotation_scan.mbt	tblGrid	is_property_container	name	-
+annotation_scan.mbt	tblGridChange	is_revision_site_name	name	-
+annotation_scan.mbt	tblPr	is_property_container	name	-
+annotation_scan.mbt	tblPrChange	is_revision_site_name	name	-
+annotation_scan.mbt	tblPrExChange	is_revision_site_name	name	-
+annotation_scan.mbt	tc	projection_kind,retract_cell,scan_story	name	-
+annotation_scan.mbt	tcPr	is_property_container,scan_story	name	-
+annotation_scan.mbt	tcPrChange	is_revision_site_name	name	-
+annotation_scan.mbt	tr	projection_kind,retract_row,scan_story	name	-
+annotation_scan.mbt	trPr	is_property_container,scan_story	name	-
+annotation_scan.mbt	trPrChange	is_revision_site_name	name	-
+annotation_scan.mbt	type	scan_story	name	-
+annotation_scan.mbt	vMerge	scan_story	name	-
+annotation_scan.mbt	val	scan_story	name	-
+annotation_scan.mbt	xml	scan_story,validate_projection_source_namespace	name	-
+annotation_scan.mbt	xmlns	annotation_attribute_is_relevant,scan_story,validate_projection_source_namespace	name	-
+annotation_scan.mbt	xmlns:	annotation_attribute_is_relevant,scan_story	fragment	-
+annotation_spans.mbt	p	DocxAnnotatedResult::body_paragraph_span,DocxAnnotatedResult::story_paragraph_span	name	-
+annotation_spans.mbt	r	DocxAnnotatedResult::body_run_span,DocxAnnotatedResult::story_run_span	name	-
+annotation_spans.mbt	tr	DocxAnnotatedResult::story_row_span	name	-
+dingbat_to_unicode.mbt	SYMBOL	dingbat_to_unicode	value	-
+dingbat_to_unicode.mbt	WEBDINGS	dingbat_to_unicode	value	-
+dingbat_to_unicode.mbt	WINGDINGS	dingbat_to_unicode	value	-
+dingbat_to_unicode.mbt	WINGDINGS 2	dingbat_to_unicode	value	-
+dingbat_to_unicode.mbt	WINGDINGS 3	dingbat_to_unicode	value	-
+docx_package.mbt	default	HeaderFooterCollector::section	value	-
+docx_package.mbt	even	HeaderFooterCollector::section	value	-
+docx_package.mbt	first	HeaderFooterCollector::section	value	-
+docx_package.mbt	footer	HeaderFooterCollector::resolve_part	value	-
+docx_package.mbt	header	HeaderFooterCollector::resolve_part	value	-
+docx_package.mbt	r:id	HeaderFooterCollector::section	name	-
+docx_package.mbt	w:	HeaderFooterCollector::read_part_story	fragment	-
+docx_package.mbt	w:body	collect_sections	name	-
+docx_package.mbt	w:footerReference	HeaderFooterCollector::section	name	-
+docx_package.mbt	w:headerReference	HeaderFooterCollector::section	name	-
+docx_package.mbt	w:p	collect_sections	name	-
+docx_package.mbt	w:pPr	paragraph_sect_pr	name	-
+docx_package.mbt	w:sectPr	collect_sections,paragraph_sect_pr	name	-
+docx_package.mbt	w:type	HeaderFooterCollector::section	name	-
+docx_reader.mbt	:	style_lookup_key	fragment	-
+docx_reader.mbt	ContentType	read_content_types	name	-
+docx_reader.mbt	Extension	read_content_types	name	-
+docx_reader.mbt	F0	symbol_to_unicode	value	-
+docx_reader.mbt	FORMCHECKBOX	parse_non_hyperlink_field_instruction	value	-
+docx_reader.mbt	HYPERLINK	parse_hyperlink_field_instruction	value	-
+docx_reader.mbt	Id	read_relationships_xml	name	-
+docx_reader.mbt	Internal	resolve_header_footer_reference_part,resolve_reachable_annotation_story_parts,resolve_unique_internal_part,resolve_unique_wordprocessing_part	value	-
+docx_reader.mbt	Paragraph	style_warning_label	name	-
+docx_reader.mbt	PartName	read_content_types	name	-
+docx_reader.mbt	Run	style_warning_label	name	-
+docx_reader.mbt	Table	style_warning_label	name	-
+docx_reader.mbt	Target	read_relationships_xml	name	-
+docx_reader.mbt	TargetMode	read_relationships_xml	name	-
+docx_reader.mbt	Type	read_relationships_xml	name	-
+docx_reader.mbt	_GoBack	BodyReader::read_element	name	-
+docx_reader.mbt	_rels	relationships_path_for_part	name	-
+docx_reader.mbt	a	office_namespace_map	prefix	-
+docx_reader.mbt	a:blip	XmlElement::drawing_blips	name	-
+docx_reader.mbt	a:graphic	XmlElement::drawing_blips	name	-
+docx_reader.mbt	a:graphicData	XmlElement::drawing_blips	name	-
+docx_reader.mbt	a:hlinkClick	BodyReader::read_drawing_hyperlink	name	-
+docx_reader.mbt	begin	BodyReader::read_paragraph_children	value	-
+docx_reader.mbt	bmp	fallback_content_type	value	-
+docx_reader.mbt	bullet	read_numbering_level	value	-
+docx_reader.mbt	character	BodyReader::read_run_properties,style_warning_label	value	-
+docx_reader.mbt	column	BodyReader::read_break	value	-
+docx_reader.mbt	comments	DocumentParts::build,annotation_story_relationship_identity,expected_annotation_content_type,read_comments_for_document	name	-
+docx_reader.mbt	commentsExtended	DocumentParts::build,expected_annotation_content_type	name	-
+docx_reader.mbt	content-types	office_namespace_map	prefix	-
+docx_reader.mbt	content-types:Default	read_content_types	name	-
+docx_reader.mbt	content-types:Override	read_content_types	name	-
+docx_reader.mbt	continuationNotice	read_note_part_at_path	value	-
+docx_reader.mbt	continuationSeparator	read_note_part_at_path	value	-
+docx_reader.mbt	continue	read_vertical_merge_continue	value	-
+docx_reader.mbt	descr	read_drawing_alt_text	value	-
+docx_reader.mbt	end	BodyReader::read_paragraph_children	value	-
+docx_reader.mbt	endnote	BodyReader::read_element,read_notes_for_document	name	-
+docx_reader.mbt	endnotes	DocumentParts::build,annotation_story_relationship_identity,expected_annotation_content_type	name	-
+docx_reader.mbt	false	read_boolean_attribute_value,read_boolean_element,read_underline	value	-
+docx_reader.mbt	footer	annotation_story_relationship_identity,expected_annotation_content_type,resolve_header_footer_reference_part	value	-
+docx_reader.mbt	footnote	BodyReader::read_element,read_notes_for_document	name	-
+docx_reader.mbt	footnotes	DocumentParts::build,annotation_story_relationship_identity,expected_annotation_content_type	name	-
+docx_reader.mbt	gif	fallback_content_type	value	-
+docx_reader.mbt	header	annotation_story_relationship_identity,expected_annotation_content_type,resolve_header_footer_reference_part	value	-
+docx_reader.mbt	jpeg	fallback_content_type	value	-
+docx_reader.mbt	jpg	fallback_content_type	value	-
+docx_reader.mbt	localhost	local_file_uri_path	value	-
+docx_reader.mbt	mc	office_namespace_map	prefix	-
+docx_reader.mbt	mc:AlternateContent	BodyReader::read_element,BodyReader::read_paragraph_extra_elements,BodyReader::read_pict_extra_elements,BodyReader::read_text_box_elements	name	-
+docx_reader.mbt	mc:Fallback	BodyReader::read_element,BodyReader::read_pict_extra_elements,BodyReader::read_text_box_elements	name	-
+docx_reader.mbt	none	read_highlight,read_underline	value	-
+docx_reader.mbt	null	local_file_uri_path	value	-
+docx_reader.mbt	numbering	WordprocessingPartRole::label,index_numbering_style_num_ids,read_style_info	value	-
+docx_reader.mbt	o	office_namespace_map	prefix	-
+docx_reader.mbt	o:title	BodyReader::read_vml_image_data	name	-
+docx_reader.mbt	office-word	office_namespace_map	prefix	-
+docx_reader.mbt	office-word:wrap	is_ignored_body_element	name	-
+docx_reader.mbt	officeDocument	find_main_document	value	-
+docx_reader.mbt	page	BodyReader::read_break	value	-
+docx_reader.mbt	paragraph	BodyReader::read_paragraph_properties,style_warning_label	value	-
+docx_reader.mbt	pic	office_namespace_map	prefix	-
+docx_reader.mbt	pic:blipFill	XmlElement::drawing_blips	name	-
+docx_reader.mbt	pic:pic	XmlElement::drawing_blips	name	-
+docx_reader.mbt	png	fallback_content_type	value	-
+docx_reader.mbt	r	office_namespace_map	prefix	-
+docx_reader.mbt	r:embed	BodyReader::read_blip	name	-
+docx_reader.mbt	r:id	BodyReader::read_drawing_hyperlink,BodyReader::read_hyperlink,BodyReader::read_vml_image_data	name	-
+docx_reader.mbt	r:link	BodyReader::read_blip	name	-
+docx_reader.mbt	relationships	office_namespace_map	value	-
+docx_reader.mbt	relationships:Relationship	read_relationships_xml	name	-
+docx_reader.mbt	separate	BodyReader::read_paragraph_children	value	-
+docx_reader.mbt	separator	read_note_part_at_path	value	-
+docx_reader.mbt	styles	WordprocessingPartRole::label	value	-
+docx_reader.mbt	subscript	read_vertical_alignment	value	-
+docx_reader.mbt	superscript	read_vertical_alignment	value	-
+docx_reader.mbt	table	BodyReader::read_table_properties,style_warning_label	value	-
+docx_reader.mbt	textWrapping	BodyReader::read_break	value	-
+docx_reader.mbt	tif	fallback_content_type	value	-
+docx_reader.mbt	tiff	fallback_content_type	value	-
+docx_reader.mbt	title	read_drawing_alt_text	value	-
+docx_reader.mbt	undefined	BodyReader::read_element,annotation_id_or_missing,attribute_or_js_undefined	value	-
+docx_reader.mbt	v	office_namespace_map	prefix	-
+docx_reader.mbt	v:group	BodyReader::read_element,BodyReader::read_pict_extra_elements	name	-
+docx_reader.mbt	v:imagedata	BodyReader::read_element	name	-
+docx_reader.mbt	v:rect	BodyReader::read_element,BodyReader::read_pict_extra_elements	name	-
+docx_reader.mbt	v:roundrect	BodyReader::read_element,BodyReader::read_pict_extra_elements	name	-
+docx_reader.mbt	v:shadow	is_ignored_body_element	name	-
+docx_reader.mbt	v:shape	BodyReader::read_element,BodyReader::read_pict_extra_elements	name	-
+docx_reader.mbt	v:shapetype	is_ignored_body_element	name	-
+docx_reader.mbt	v:textbox	BodyReader::read_element,BodyReader::read_pict_extra_elements	name	-
+docx_reader.mbt	w	office_namespace_map	prefix	-
+docx_reader.mbt	w-incompatible	wordprocessing_role_namespace_map	prefix	-
+docx_reader.mbt	w14	office_namespace_map	prefix	-
+docx_reader.mbt	w14:checkbox	read_structured_checkbox	name	-
+docx_reader.mbt	w14:checked	read_structured_checkbox	name	-
+docx_reader.mbt	w14:val	read_structured_checkbox	name	-
+docx_reader.mbt	w15	office_namespace_map	prefix	-
+docx_reader.mbt	w:	read_note_part_at_path,read_wordprocessing_role_xml_part	fragment	-
+docx_reader.mbt	w:abstractNum	read_abstract_numberings	name	-
+docx_reader.mbt	w:abstractNumId	read_abstract_numberings,read_numbering_instances	name	-
+docx_reader.mbt	w:anchor	BodyReader::read_hyperlink	name	-
+docx_reader.mbt	w:annotationRef	is_ignored_body_element	name	-
+docx_reader.mbt	w:ascii	BodyReader::read_run_properties	name	-
+docx_reader.mbt	w:author	read_comments_for_document	name	-
+docx_reader.mbt	w:b	BodyReader::read_run_properties	name	-
+docx_reader.mbt	w:body	read_document_xml_with_messages	name	-
+docx_reader.mbt	w:bookmarkEnd	is_ignored_body_element	name	-
+docx_reader.mbt	w:bookmarkStart	BodyReader::read_element	name	-
+docx_reader.mbt	w:br	BodyReader::read_element	name	-
+docx_reader.mbt	w:caps	BodyReader::read_run_properties	name	-
+docx_reader.mbt	w:char	BodyReader::read_symbol	name	-
+docx_reader.mbt	w:checkBox	read_complex_field_checkbox_checked	name	-
+docx_reader.mbt	w:checked	read_complex_field_checkbox_checked	name	-
+docx_reader.mbt	w:comment	read_comments_for_document	name	-
+docx_reader.mbt	w:commentRangeEnd	is_ignored_body_element	name	-
+docx_reader.mbt	w:commentRangeStart	is_ignored_body_element	name	-
+docx_reader.mbt	w:commentReference	BodyReader::read_element	name	-
+docx_reader.mbt	w:default	read_complex_field_checkbox_checked	name	-
+docx_reader.mbt	w:del	BodyReader::read_table_row,is_deleted_paragraph,is_ignored_body_element	name	-
+docx_reader.mbt	w:drawing	BodyReader::read_element	name	-
+docx_reader.mbt	w:end	BodyReader::read_indent	name	-
+docx_reader.mbt	w:endnoteRef	BodyReader::read_element,is_ignored_body_element	name	-
+docx_reader.mbt	w:endnoteReference	BodyReader::read_element	name	-
+docx_reader.mbt	w:ffData	read_complex_field_checkbox_checked	name	-
+docx_reader.mbt	w:firstLine	BodyReader::read_indent	name	-
+docx_reader.mbt	w:fldChar	is_ignored_body_element,read_complex_field_checkbox_checked,read_field_char_type	name	-
+docx_reader.mbt	w:fldCharType	read_field_char_type	name	-
+docx_reader.mbt	w:font	BodyReader::read_symbol	name	-
+docx_reader.mbt	w:footnoteRef	BodyReader::read_element,is_ignored_body_element	name	-
+docx_reader.mbt	w:footnoteReference	BodyReader::read_element	name	-
+docx_reader.mbt	w:gridSpan	BodyReader::read_table_cell	name	-
+docx_reader.mbt	w:hanging	BodyReader::read_indent	name	-
+docx_reader.mbt	w:highlight	BodyReader::read_run_properties	name	-
+docx_reader.mbt	w:hyperlink	BodyReader::read_element	name	-
+docx_reader.mbt	w:i	BodyReader::read_run_properties	name	-
+docx_reader.mbt	w:id	BodyReader::read_element,read_comments_for_document,read_note_part_at_path	name	-
+docx_reader.mbt	w:ilvl	BodyReader::read_numbering,read_abstract_numbering,read_numbering_level	name	-
+docx_reader.mbt	w:ind	BodyReader::read_paragraph_properties	name	-
+docx_reader.mbt	w:initials	read_comments_for_document	name	-
+docx_reader.mbt	w:ins	BodyReader::read_element	name	-
+docx_reader.mbt	w:instrText	BodyReader::read_paragraph_children,collect_instruction_text,is_ignored_body_element	name	-
+docx_reader.mbt	w:jc	BodyReader::read_paragraph_properties	name	-
+docx_reader.mbt	w:lastRenderedPageBreak	is_ignored_body_element	name	-
+docx_reader.mbt	w:left	BodyReader::read_indent	name	-
+docx_reader.mbt	w:lvl	read_abstract_numbering	name	-
+docx_reader.mbt	w:name	BodyReader::read_element,read_style_info	name	-
+docx_reader.mbt	w:noBreakHyphen	BodyReader::read_element	name	-
+docx_reader.mbt	w:num	read_numbering_instances	name	-
+docx_reader.mbt	w:numFmt	read_numbering_level	name	-
+docx_reader.mbt	w:numId	BodyReader::read_numbering,read_numbering_instances,read_style_info	name	-
+docx_reader.mbt	w:numPr	BodyReader::read_paragraph_properties,read_style_info	name	-
+docx_reader.mbt	w:numStyleLink	read_abstract_numbering	name	-
+docx_reader.mbt	w:object	BodyReader::read_element	name	-
+docx_reader.mbt	w:p	BodyReader::read_children,BodyReader::read_element	name	-
+docx_reader.mbt	w:pPr	BodyReader::read_paragraph_elements_with_prefix,is_deleted_paragraph,is_ignored_body_element,read_style_info	name	-
+docx_reader.mbt	w:pStyle	BodyReader::read_paragraph_properties,read_numbering_level	name	-
+docx_reader.mbt	w:pict	BodyReader::read_element,BodyReader::read_paragraph_extra_elements,BodyReader::read_pict_extra_elements	name	-
+docx_reader.mbt	w:proofErr	is_ignored_body_element	name	-
+docx_reader.mbt	w:r	BodyReader::read_element	name	-
+docx_reader.mbt	w:rFonts	BodyReader::read_run_properties	name	-
+docx_reader.mbt	w:rPr	BodyReader::read_run,is_deleted_paragraph,is_ignored_body_element	name	-
+docx_reader.mbt	w:rStyle	BodyReader::read_run_properties	name	-
+docx_reader.mbt	w:right	BodyReader::read_indent	name	-
+docx_reader.mbt	w:sdt	BodyReader::read_element	name	-
+docx_reader.mbt	w:sdtContent	BodyReader::read_element,BodyReader::read_structured_document_tag	name	-
+docx_reader.mbt	w:sdtPr	BodyReader::read_structured_document_tag	name	-
+docx_reader.mbt	w:sectPr	is_ignored_body_element	name	-
+docx_reader.mbt	w:smallCaps	BodyReader::read_run_properties	name	-
+docx_reader.mbt	w:smartTag	BodyReader::read_element	name	-
+docx_reader.mbt	w:softHyphen	BodyReader::read_element	name	-
+docx_reader.mbt	w:start	BodyReader::read_indent	name	-
+docx_reader.mbt	w:strike	BodyReader::read_run_properties	name	-
+docx_reader.mbt	w:style	read_styles_xml	name	-
+docx_reader.mbt	w:styleId	read_styles_xml	name	-
+docx_reader.mbt	w:sym	BodyReader::read_element	name	-
+docx_reader.mbt	w:sz	BodyReader::read_run_properties	name	-
+docx_reader.mbt	w:t	BodyReader::read_element	name	-
+docx_reader.mbt	w:tab	BodyReader::read_element	name	-
+docx_reader.mbt	w:tbl	BodyReader::read_element	name	-
+docx_reader.mbt	w:tblGrid	is_ignored_body_element	name	-
+docx_reader.mbt	w:tblHeader	BodyReader::read_table_row	name	-
+docx_reader.mbt	w:tblPr	BodyReader::read_table,is_ignored_body_element	name	-
+docx_reader.mbt	w:tblStyle	BodyReader::read_table_properties	name	-
+docx_reader.mbt	w:tc	BodyReader::read_element	name	-
+docx_reader.mbt	w:tcPr	BodyReader::read_table_cell,is_ignored_body_element	name	-
+docx_reader.mbt	w:tgtFrame	BodyReader::read_hyperlink	name	-
+docx_reader.mbt	w:tr	BodyReader::read_element	name	-
+docx_reader.mbt	w:trPr	BodyReader::read_table_row,is_ignored_body_element	name	-
+docx_reader.mbt	w:txbxContent	BodyReader::read_paragraph_extra_elements,BodyReader::read_pict_extra_elements,BodyReader::read_text_box_elements,is_ignored_body_element	name	-
+docx_reader.mbt	w:type	BodyReader::read_break,read_note_part_at_path,read_style_info	name	-
+docx_reader.mbt	w:u	BodyReader::read_run_properties	name	-
+docx_reader.mbt	w:vMerge	read_vertical_merge_continue	name	-
+docx_reader.mbt	w:val	BodyReader::read_numbering,BodyReader::read_paragraph_properties,BodyReader::read_run_properties,BodyReader::read_table_cell,BodyReader::read_table_properties,read_abstract_numbering,read_boolean_element,read_numbering_instances,read_numbering_level,read_style_info,read_underline,read_vertical_merge_continue	name	-
+docx_reader.mbt	w:vertAlign	BodyReader::read_run_properties	name	-
+docx_reader.mbt	win32	external_uri_to_path	value	-
+docx_reader.mbt	wp	office_namespace_map	prefix	-
+docx_reader.mbt	wp:anchor	BodyReader::read_element	name	-
+docx_reader.mbt	wp:docPr	BodyReader::read_drawing_hyperlink,read_drawing_alt_text	name	-
+docx_reader.mbt	wp:inline	BodyReader::read_element	name	-
+docx_reader.mbt	{http://schemas.openxmlformats.org/package/2006/relationships}Relationship	RelationshipIndex::find_unique_target_by_id	name	-
+docx_reader.mbt	{http://schemas.openxmlformats.org/package/2006/relationships}Relationships	RelationshipIndex::find_unique_target_by_id	name	-
+embedded_style_map.mbt	ContentType	read_content_type_xml_entries,write_content_types_xml	name	-
+embedded_style_map.mbt	Default	write_content_types_xml	name	-
+embedded_style_map.mbt	Extension	read_content_type_xml_entries,write_content_types_xml	name	-
+embedded_style_map.mbt	Id	write_relationships_xml	name	-
+embedded_style_map.mbt	Override	write_content_types_xml	name	-
+embedded_style_map.mbt	PartName	read_content_type_xml_entries,write_content_types_xml	name	-
+embedded_style_map.mbt	Relationship	write_relationships_xml	name	-
+embedded_style_map.mbt	Relationships	write_relationships_xml	name	-
+embedded_style_map.mbt	Target	write_relationships_xml	name	-
+embedded_style_map.mbt	TargetMode	write_relationships_xml	name	-
+embedded_style_map.mbt	Type	write_relationships_xml	name	-
+embedded_style_map.mbt	Types	write_content_types_xml	name	-
+embedded_style_map.mbt	content-types:Default	read_content_type_xml_entries	name	-
+embedded_style_map.mbt	content-types:Override	read_content_type_xml_entries	name	-
+embedded_style_map.mbt	rMammothStyleMap	embedded_style_map_relationship,upsert_embedded_style_map_relationship	name	-
+field_projection.mbt	begin	classify_reader_order_carrier	value	-
+field_projection.mbt	body	reader_order_field_story_identity	name	-
+field_projection.mbt	comment	reader_order_field_story_identity	name	-
+field_projection.mbt	comments	reader_order_field_story_identity	name	-
+field_projection.mbt	document	reader_order_field_story_identity	name	-
+field_projection.mbt	end	classify_reader_order_carrier	value	-
+field_projection.mbt	endnote	reader_order_field_story_identity	name	-
+field_projection.mbt	endnotes	reader_order_field_story_identity	name	-
+field_projection.mbt	fldChar	scan_reader_order_field_carrier	name	-
+field_projection.mbt	footnote	reader_order_field_story_identity	name	-
+field_projection.mbt	footnotes	reader_order_field_story_identity	name	-
+field_projection.mbt	instrText	scan_reader_order_field_carrier	name	-
+field_projection.mbt	separate	classify_reader_order_carrier	value	-
+field_projection.mbt	txbxContent	reader_order_field_story_identity,scan_reader_order_field_carrier	name	-
+reader_order_projection.mbt	AlternateContent	ReaderOrderWalker::walk_inline_element,ReaderOrderWalker::walk_paragraph_extras,ReaderOrderWalker::walk_pict_extras,ReaderOrderWalker::walk_structural_element,ReaderOrderWalker::walk_text_box_extras,collect_reader_order_body_outputs	name	-
+reader_order_projection.mbt	Fallback	ReaderOrderWalker::walk_inline_element,ReaderOrderWalker::walk_paragraph_extras,ReaderOrderWalker::walk_pict_extras,ReaderOrderWalker::walk_structural_element,ReaderOrderWalker::walk_text_box_extras,collect_reader_order_body_outputs	name	-
+reader_order_projection.mbt	_GoBack	reader_order_body_output_kind	name	-
+reader_order_projection.mbt	anchor	reader_order_is_image_output_element	name	-
+reader_order_projection.mbt	annotationRef	ReaderOrderWalker::walk_inline_element	name	-
+reader_order_projection.mbt	body	ReaderOrderWalker::walk	name	-
+reader_order_projection.mbt	bookmarkEnd	ReaderOrderWalker::walk_inline_element	name	-
+reader_order_projection.mbt	bookmarkStart	ReaderOrderWalker::walk_inline_element,reader_order_body_output_kind	name	-
+reader_order_projection.mbt	br	ReaderOrderWalker::walk_inline_element,reader_order_body_output_kind	name	-
+reader_order_projection.mbt	checkbox	ReaderOrderWalker::sdt_declares_checkbox	name	-
+reader_order_projection.mbt	column	reader_order_body_output_kind	value	-
+reader_order_projection.mbt	comment	ReaderOrderWalker::walk	name	-
+reader_order_projection.mbt	commentRangeEnd	ReaderOrderWalker::walk_inline_element	name	-
+reader_order_projection.mbt	commentRangeStart	ReaderOrderWalker::walk_inline_element	name	-
+reader_order_projection.mbt	commentReference	ReaderOrderWalker::walk_inline_element,reader_order_body_output_kind	name	-
+reader_order_projection.mbt	comments	ReaderOrderWalker::walk	name	-
+reader_order_projection.mbt	cr	ReaderOrderWalker::walk_inline_element	name	-
+reader_order_projection.mbt	del	ReaderOrderWalker::is_deleted_paragraph_mark,ReaderOrderWalker::walk_inline_element,ReaderOrderWalker::walk_paragraph_extras,reader_order_is_deleted_body_paragraph,reader_order_projection_visibility	name	-
+reader_order_projection.mbt	document	ReaderOrderWalker::walk	name	-
+reader_order_projection.mbt	drawing	ReaderOrderWalker::walk_inline_element,ReaderOrderWalker::walk_pict_extras,ReaderOrderWalker::walk_structural_element	name	-
+reader_order_projection.mbt	endnote	ReaderOrderWalker::walk	name	-
+reader_order_projection.mbt	endnoteRef	ReaderOrderWalker::walk_inline_element	name	-
+reader_order_projection.mbt	endnoteReference	ReaderOrderWalker::walk_inline_element,reader_order_body_output_kind	name	-
+reader_order_projection.mbt	endnotes	ReaderOrderWalker::walk	name	-
+reader_order_projection.mbt	fldChar	ReaderOrderWalker::walk_inline_element	name	-
+reader_order_projection.mbt	fldSimple	ReaderOrderWalker::walk_inline_element	name	-
+reader_order_projection.mbt	footnote	ReaderOrderWalker::walk	name	-
+reader_order_projection.mbt	footnoteRef	ReaderOrderWalker::walk_inline_element	name	-
+reader_order_projection.mbt	footnoteReference	ReaderOrderWalker::walk_inline_element,reader_order_body_output_kind	name	-
+reader_order_projection.mbt	footnotes	ReaderOrderWalker::walk	name	-
+reader_order_projection.mbt	ftr	ReaderOrderWalker::walk	name	-
+reader_order_projection.mbt	group	reader_order_is_vml_flattening_container	name	-
+reader_order_projection.mbt	hdr	ReaderOrderWalker::walk	name	-
+reader_order_projection.mbt	hyperlink	ReaderOrderWalker::walk_inline_element,ReaderOrderWalker::walk_pict_extras,ReaderOrderWalker::walk_structural_element,reader_order_body_output_kind,reader_order_is_body_flattening_container	name	-
+reader_order_projection.mbt	imagedata	reader_order_is_image_output_element	name	-
+reader_order_projection.mbt	inline	reader_order_is_image_output_element	name	-
+reader_order_projection.mbt	ins	ReaderOrderWalker::walk_inline_element,ReaderOrderWalker::walk_pict_extras,ReaderOrderWalker::walk_structural_element	name	-
+reader_order_projection.mbt	instrText	ReaderOrderWalker::walk_inline_element	name	-
+reader_order_projection.mbt	lastRenderedPageBreak	ReaderOrderWalker::walk_inline_element	name	-
+reader_order_projection.mbt	noBreakHyphen	ReaderOrderWalker::walk_inline_element,reader_order_body_output_kind	name	-
+reader_order_projection.mbt	object	ReaderOrderWalker::walk_inline_element,ReaderOrderWalker::walk_pict_extras,ReaderOrderWalker::walk_structural_element	name	-
+reader_order_projection.mbt	p	ReaderOrderWalker::walk_flow_children,ReaderOrderWalker::walk_inline_children,ReaderOrderWalker::walk_inline_element,ReaderOrderWalker::walk_pict_extras,ReaderOrderWalker::walk_structural_element,collect_reader_order_body_outputs,reader_order_body_output_kind	name	-
+reader_order_projection.mbt	pPr	ReaderOrderWalker::is_deleted_paragraph_mark,ReaderOrderWalker::walk_inline_element,reader_order_is_deleted_body_paragraph	name	-
+reader_order_projection.mbt	page	reader_order_body_output_kind	value	-
+reader_order_projection.mbt	pict	ReaderOrderWalker::walk_inline_element,ReaderOrderWalker::walk_paragraph_extras,ReaderOrderWalker::walk_pict_extras,reader_order_projection_visibility	name	-
+reader_order_projection.mbt	proofErr	ReaderOrderWalker::walk_inline_element	name	-
+reader_order_projection.mbt	ptab	ReaderOrderWalker::walk_inline_element	name	-
+reader_order_projection.mbt	r	ReaderOrderWalker::walk_inline_element,ReaderOrderWalker::walk_pict_extras,ReaderOrderWalker::walk_structural_element,reader_order_body_output_kind	name	-
+reader_order_projection.mbt	rPr	ReaderOrderWalker::is_deleted_paragraph_mark,ReaderOrderWalker::walk_inline_element,reader_order_is_deleted_body_paragraph	name	-
+reader_order_projection.mbt	rect	reader_order_is_vml_flattening_container	name	-
+reader_order_projection.mbt	roundrect	reader_order_is_vml_flattening_container	name	-
+reader_order_projection.mbt	sdt	ReaderOrderWalker::walk_inline_element,ReaderOrderWalker::walk_pict_extras,ReaderOrderWalker::walk_structural_element,collect_reader_order_body_outputs	name	-
+reader_order_projection.mbt	sdtContent	ReaderOrderWalker::walk_inline_element,ReaderOrderWalker::walk_pict_extras,ReaderOrderWalker::walk_structural_element,collect_reader_order_body_outputs	name	-
+reader_order_projection.mbt	sdtPr	ReaderOrderWalker::sdt_declares_checkbox	name	-
+reader_order_projection.mbt	shape	reader_order_is_vml_flattening_container	name	-
+reader_order_projection.mbt	smartTag	ReaderOrderWalker::walk_inline_element,ReaderOrderWalker::walk_pict_extras,ReaderOrderWalker::walk_structural_element	name	-
+reader_order_projection.mbt	softHyphen	ReaderOrderWalker::walk_inline_element,reader_order_body_output_kind	name	-
+reader_order_projection.mbt	sym	ReaderOrderWalker::walk_inline_element,reader_order_body_output_kind	name	-
+reader_order_projection.mbt	t	ReaderOrderWalker::walk_inline_element,reader_order_atom_span,reader_order_body_output_kind	name	-
+reader_order_projection.mbt	tab	ReaderOrderWalker::walk_inline_element,reader_order_body_output_kind	name	-
+reader_order_projection.mbt	tbl	ReaderOrderWalker::walk_inline_element,ReaderOrderWalker::walk_pict_extras,ReaderOrderWalker::walk_structural_element,reader_order_body_output_kind,reader_order_projection_visibility	name	-
+reader_order_projection.mbt	tc	ReaderOrderWalker::walk_inline_element,ReaderOrderWalker::walk_pict_extras,ReaderOrderWalker::walk_structural_element,reader_order_body_output_kind	name	-
+reader_order_projection.mbt	textWrapping	reader_order_body_output_kind	value	-
+reader_order_projection.mbt	textbox	reader_order_is_vml_flattening_container	name	-
+reader_order_projection.mbt	tr	ReaderOrderWalker::walk_inline_element,ReaderOrderWalker::walk_pict_extras,ReaderOrderWalker::walk_structural_element,reader_order_body_output_kind	name	-
+reader_order_projection.mbt	txbxContent	ReaderOrderWalker::walk_inline_element,ReaderOrderWalker::walk_paragraph_extras,ReaderOrderWalker::walk_pict_extras,ReaderOrderWalker::walk_structural_element,ReaderOrderWalker::walk_text_box_extras,reader_order_projection_visibility	name	-
+run_surgery.mbt	:	run_surgery_qualified_prefix	fragment	-
+run_surgery.mbt	checkbox	run_surgery_inside_checkbox_control	name	-
+run_surgery.mbt	rPr	run_surgery_first_content_position	name	-
+run_surgery.mbt	sdt	run_surgery_inside_checkbox_control	name	-
+run_surgery.mbt	sdtPr	run_surgery_inside_checkbox_control	name	-
+run_surgery.mbt	t	plan_whole_run_replacement	name	-
+run_surgery.mbt	xml:space	run_surgery_declares_space,run_surgery_space_declaration	name	-
+token_map.mbt	amp	decode_entity_token	entity	-
+token_map.mbt	apos	decode_entity_token	entity	-
+token_map.mbt	gt	decode_entity_token	entity	-
+token_map.mbt	lt	decode_entity_token	entity	-
+token_map.mbt	quot	decode_entity_token	entity	-

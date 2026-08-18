@@ -9,7 +9,7 @@ scanned-tree consumers (`field_projection.mbt`, `annotation_spans.mbt`,
 lands, agreement is enforced only by tests, so the gate's first need is a
 ledger of *what is dispatched where* that cannot drift silently.
 
-`dispatch_registry.tsv` is that ledger — 484 rows of
+`dispatch_registry.tsv` is that ledger — 501 rows of
 `file, name, functions, kind, coverage` — and
 `check_dispatch_registry.py` re-extracts from source and fails CI on drift:
 
@@ -51,7 +51,7 @@ The `kind` column separates element/attribute **name**s from attribute
 
 ## The escape suite
 
-Every escape a review round demonstrated — seventeen of them — is replayed by
+Every escape a review round demonstrated — twenty-one of them — is replayed by
 `escape_suite.sh` against a scratch copy of the sources. Each mutation is
 verified to have actually applied before its failure is required (a mutation
 that silently does not apply looks exactly like a check that does not catch),
@@ -67,10 +67,17 @@ concatenated names in two and three pieces, names in multiline strings,
 helpers taking the name as a parameter in every spelling found so far, new
 files joining the dispatch by name, fragment, bare comparison, or
 `local_name`, new entries in any declared table, and exempt writers gaining
-read-side inspection in any spelling. Not closed: a name that never appears
-quoted in these files at all — passed in from outside the package as data.
-That residue is stated rather than claimed away; #434's endgame removes the
-second dispatch surface, after which there is no parallel ledger to keep.
+read-side inspection in any spelling. Strings assembled
+with escapes or interpolation contribute their name-shaped residue, so
+`"\u{62}randNew"` registers as `randNew` while `"\u{2011}"` (a value) and
+`"_rels/\{base}.rels"` (a path) contribute nothing.
+
+Not closed, stated plainly: a name that never appears quoted in these files
+at all — passed in from outside the package as data — and, in principle,
+adversarial MoonBit written to defeat a textual extractor; this checker is a
+drift guard for ordinary development, not a parser. #434's endgame removes
+the second dispatch surface, after which there is no parallel ledger to
+keep.
 
 ## The coverage column
 

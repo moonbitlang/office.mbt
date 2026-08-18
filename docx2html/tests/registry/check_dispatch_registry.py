@@ -85,19 +85,34 @@ ALLOWED_INSPECTORS = {
 FN = re.compile(r'^(?:pub(?:\(all\))? )?(?:async )?fn(?:\[[^\]]*\])? (?:(\w+)::)?(\w+)')
 QNAME = re.compile(r'"([A-Za-z_][A-Za-z0-9_.\-]*):([A-Za-z_][A-Za-z0-9_.\-]*)"')
 SCHEMES = {'urn', 'http', 'https', 'mailto', 'data'}
-BARE = re.compile(r'"([A-Za-z][A-Za-z0-9]*)"')
+# Letter or underscore start (`_GoBack`), dots/hyphens (`brand-new`,
+# `document.xml`), at most one space run (`WINGDINGS 2`), bounded length so
+# sentences stay out. Noise this admits is classified kind=noise, which is
+# cheaper than a miss.
+BARE = re.compile(r'"([A-Za-z_][A-Za-z0-9_.\-]*(?: [A-Za-z0-9_.\-]+)?)"')
+BARE_MAX = 40
+# Clark names: "{uri}local", dispatched against expanded roots
+CLARK = re.compile(r'"(\{[^"{}]+\}[A-Za-z_][A-Za-z0-9_.\-]*)"')
 FRAGMENT = re.compile(r'"(:[A-Za-z][A-Za-z0-9]*|[A-Za-z][A-Za-z0-9]*:|:)"')
+# A string assembled with escapes or interpolation can carry a name no plain
+# extraction reads ("\\u{62}randNew", "\\{'b'}randNew"). Rather than flagging
+# -- interpolation is everywhere and legitimate -- the escape machinery is
+# stripped and any name-shaped RESIDUE registers like a literal. Pure
+# character values ("\\u{2011}") leave no residue; path builders leave
+# residue that is not name-shaped; a smuggled name leaves itself.
+ASSEMBLED_STRING = re.compile(r'"([^"]*(?:\\u\{|\\\{)[^"]*)"')
+ESCAPE_SEQ = re.compile(r'\\u\{[^}]*\}|\\\{[^}]*\}')
 # Inspection closure for exempt files and the unclassified-file detector is
 # TOKEN-level -- parentheses and operand order cannot hide a token.
-NAME_TOKEN = re.compile(r'\.name\b')
+NAME_TOKEN = re.compile(r'\.name\b|let\s*\{[^}]*\bname\b|\(\{[^}]*\bname\b')
 LOCAL_TOKEN = re.compile(r'\blocal_name\b')
 # For unclassified files only: a bare comparison/match against a name-shaped
 # string suggests smuggled dispatch. Optional parentheses covered. This is
 # the one place a shape detector remains, and only as a classification
 # trigger, never as the trust boundary.
 SMUGGLE = re.compile(
-    r'(?:==|!=|\bis\b)\s*\(?\s*"[A-Za-z][A-Za-z0-9]*"'
-    r'|"[A-Za-z][A-Za-z0-9]*"\s*\)?\s*(?:==|!=|=>)'
+    r'(?:==|!=|\bis\b)[\s(]*"[A-Za-z][A-Za-z0-9]*"'
+    r'|"[A-Za-z][A-Za-z0-9]*"[\s)]*(?:==|!=|=>)'
 )
 
 def strip_comments(line):
@@ -133,6 +148,12 @@ def functions(lines):
             out.append((current, start, i))
             current = '(test)'
             start = i
+        elif current == '(test)' and l == '}':
+            # the block ends HERE: production code after the last test in a
+            # file must not be swallowed by the test region
+            out.append((current, start, i + 1))
+            current = '(after-test)'
+            start = i + 1
     out.append((current, start, len(lines)))
     return out
 
@@ -150,12 +171,20 @@ def extract_region(raw_lines, stripped_lines):
         for m in QNAME.finditer(l):
             if m.group(1) not in SCHEMES:
                 found.add(m.group(1) + ':' + m.group(2))
+        for m in CLARK.finditer(l):
+            found.add(m.group(1))
         for m in FRAGMENT.finditer(l):
             found.add(m.group(1))
         # bare words, minus those that are part of a qualified name already
         no_qnames = QNAME.sub('""', l)
         for m in BARE.finditer(no_qnames):
-            found.add(m.group(1))
+            if len(m.group(1)) <= BARE_MAX:
+                found.add(m.group(1))
+        # assembled strings contribute their name-shaped residue
+        for m in ASSEMBLED_STRING.finditer(l):
+            residue = ESCAPE_SEQ.sub('', m.group(1))
+            if residue and len(residue) <= BARE_MAX and re.fullmatch(r'[A-Za-z_][A-Za-z0-9_.\-]*(?: [A-Za-z0-9_.\-]+)?', residue):
+                found.add(residue)
     return found
 
 errors = []
@@ -228,8 +257,8 @@ def emitted_lines():
     out = ['file\tname\tfunctions\tkind\tcoverage']
     for key in sorted(rows):
         extra = meta.get(key, [])
-        kind = extra[0] if len(extra) > 0 else ''
-        coverage = extra[1] if len(extra) > 1 else ''
+        kind = (extra[0] if len(extra) > 0 else '') or '-'
+        coverage = (extra[1] if len(extra) > 1 else '') or '-'
         out.append(f"{key[0]}\t{key[1]}\t{','.join(sorted(rows[key]))}\t{kind}\t{coverage}")
     return out
 
