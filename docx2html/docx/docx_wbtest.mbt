@@ -251,8 +251,10 @@ fn body_elements_from_xml(
     element_xml +
     "</w:root>"
   let root = read_xml_string(xml, namespace_map=office_namespace_map())
-  empty_body_reader({ relationships: [] }).read_children(
-    ReaderNode::of(root).element_children(),
+  reader_items_to_elements(
+    empty_body_reader({ relationships: [] }).read_children(
+      ReaderNode::of(root).element_children(),
+    ),
   )
 }
 
@@ -1513,7 +1515,9 @@ test "docx reader ignores Mammoth ignored body elements without warnings" {
   let root = read_xml_string(xml, namespace_map=office_namespace_map())
   let reader = empty_body_reader({ relationships: [] })
   debug_inspect(
-    reader.read_children(ReaderNode::of(root).element_children()),
+    reader_items_to_elements(
+      reader.read_children(ReaderNode::of(root).element_children()),
+    ),
     content="[]",
   )
   debug_inspect(reader.messages, content="[]")
@@ -3008,8 +3012,10 @@ test "docx deleted paragraph content is prepended to next paragraph" {
   let xml =
     #|<w:body xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:p><w:pPr><w:rPr><w:del /></w:rPr></w:pPr><w:r><w:t>One</w:t></w:r></w:p><w:p><w:r><w:t>Two</w:t></w:r></w:p><w:p><w:r><w:t>Three</w:t></w:r></w:p></w:body>
   let root = read_xml_string(xml, namespace_map=office_namespace_map())
-  let elements = empty_body_reader({ relationships: [] }).read_children(
-    ReaderNode::of(root).element_children(),
+  let elements = reader_items_to_elements(
+    empty_body_reader({ relationships: [] }).read_children(
+      ReaderNode::of(root).element_children(),
+    ),
   )
   inspect(
     convert_document_to_html(document(elements)).value,

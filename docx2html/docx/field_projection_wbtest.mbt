@@ -34,7 +34,11 @@ fn field_reader_text(source : String) -> String raise DocxError {
     Some(body) => body.element_children()
     None => node.element_children()
   }
-  document(empty_body_reader({ relationships: [] }).read_children(children)).to_raw_text()
+  document(
+    reader_items_to_elements(
+      empty_body_reader({ relationships: [] }).read_children(children),
+    ),
+  ).to_raw_text()
 }
 
 ///|

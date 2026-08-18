@@ -10,7 +10,11 @@ fn current_reader_story_text(source : String) -> String raise DocxError {
     Some(body) => body.element_children()
     None => node.element_children()
   }
-  document(empty_body_reader({ relationships: [] }).read_children(children)).to_raw_text()
+  document(
+    reader_items_to_elements(
+      empty_body_reader({ relationships: [] }).read_children(children),
+    ),
+  ).to_raw_text()
 }
 
 ///|
@@ -24,7 +28,7 @@ fn current_reader_story_text_with(
     Some(body) => body.element_children()
     None => node.element_children()
   }
-  document(reader.read_children(children)).to_raw_text()
+  document(reader_items_to_elements(reader.read_children(children))).to_raw_text()
 }
 
 ///|
@@ -78,7 +82,9 @@ fn reader_paragraph_texts(source : String) -> Array[String] raise {
     None => node.element_children()
   }
   let tree = document(
-    empty_body_reader({ relationships: [] }).read_children(children),
+    reader_items_to_elements(
+      empty_body_reader({ relationships: [] }).read_children(children),
+    ),
   )
   let paragraphs = []
   let buffer = StringBuilder()
