@@ -2060,88 +2060,139 @@ fn BodyReader::read_children(
   self : BodyReader,
   children : Array[ReaderNode],
 ) -> Array[ReaderItem] raise DocxError {
-  let elements : Array[DocumentElement] = []
+  let items : Array[ReaderItem] = []
   let deleted_paragraph_contents : Array[ReaderNode] = []
   for element in children {
     match element.name() {
       "w:p" if is_deleted_paragraph(element) =>
         deleted_paragraph_contents.append(element.element_children())
       "w:p" if !deleted_paragraph_contents.is_empty() => {
-        elements.append(
+        // deleted-paragraph join: the prefix mechanics stay a named island
+        // inside read_paragraph_children until 2c
+        items.push(
           self.read_paragraph_elements_with_prefix(
             element, deleted_paragraph_contents,
           ),
         )
         deleted_paragraph_contents.clear()
       }
-      _ => elements.append(self.read_element(element))
+      _ => items.append(self.read_element(element))
     }
   }
-  reader_legacy_items(elements)
+  items
 }
 
 ///|
 fn BodyReader::read_element(
   self : BodyReader,
   element : ReaderNode,
-) -> Array[DocumentElement] raise DocxError {
+) -> Array[ReaderItem] raise DocxError {
   match element.name() {
     "w:p" =>
       if is_deleted_paragraph(element) {
         []
       } else {
-        self.read_paragraph_elements(element)
+        [self.read_paragraph_elements(element)]
       }
     "w:r" => [self.read_run(element)]
-    "w:t" => [text(element.text())]
-    "w:tab" => [tab()]
-    "w:noBreakHyphen" => [text("\u{2011}")]
-    "w:softHyphen" => [text("\u{00AD}")]
+    "w:t" =>
+      [
+        New({
+          source: element,
+          local_effects: [],
+          shape: ReaderText(element.text()),
+        }),
+      ]
+    "w:tab" => [New({ source: element, local_effects: [], shape: ReaderTab })]
+    "w:noBreakHyphen" =>
+      [
+        New({
+          source: element,
+          local_effects: [],
+          shape: ReaderText("\u{2011}"),
+        }),
+      ]
+    "w:softHyphen" =>
+      [
+        New({
+          source: element,
+          local_effects: [],
+          shape: ReaderText("\u{00AD}"),
+        }),
+      ]
     "w:sym" => self.read_symbol(element)
     "w:footnoteReference" =>
       [
-        NoteReference(
-          note_type="footnote",
-          note_id=annotation_id_or_missing(element.attribute("w:id")),
-        ),
+        New({
+          source: element,
+          local_effects: [],
+          shape: ReaderNoteReference(
+            note_type="footnote",
+            note_id=annotation_id_or_missing(element.attribute("w:id")),
+          ),
+        }),
       ]
     "w:endnoteReference" =>
       [
-        NoteReference(
-          note_type="endnote",
-          note_id=annotation_id_or_missing(element.attribute("w:id")),
-        ),
+        New({
+          source: element,
+          local_effects: [],
+          shape: ReaderNoteReference(
+            note_type="endnote",
+            note_id=annotation_id_or_missing(element.attribute("w:id")),
+          ),
+        }),
       ]
     "w:footnoteRef" | "w:endnoteRef" => []
     "w:commentReference" =>
-      [CommentReference(annotation_id_or_missing(element.attribute("w:id")))]
+      [
+        New({
+          source: element,
+          local_effects: [],
+          shape: ReaderCommentReference(
+            annotation_id_or_missing(element.attribute("w:id")),
+          ),
+        }),
+      ]
     "w:br" => self.read_break(element)
     "w:bookmarkStart" =>
       match element.attribute("w:name") {
         Some("_GoBack") => []
-        None => [BookmarkStart("undefined")]
-        Some(name) => [BookmarkStart(name)]
+        None =>
+          [
+            New({
+              source: element,
+              local_effects: [],
+              shape: ReaderBookmarkStart("undefined"),
+            }),
+          ]
+        Some(name) =>
+          [
+            New({
+              source: element,
+              local_effects: [],
+              shape: ReaderBookmarkStart(name),
+            }),
+          ]
       }
     "w:hyperlink" => self.read_hyperlink(element)
-    "w:drawing" | "w:object" =>
-      reader_items_to_elements(self.read_children(element.element_children()))
+    "w:drawing" | "w:object" => self.read_children(element.element_children())
     "w:pict" => []
     "mc:AlternateContent" =>
-      reader_items_to_elements(
-        self.read_children(
-          element.first_or_empty("mc:Fallback").element_children(),
-        ),
+      self.read_children(
+        element.first_or_empty("mc:Fallback").element_children(),
       )
-    "wp:inline" | "wp:anchor" => self.read_drawing_element(element)
+    "wp:inline" | "wp:anchor" =>
+      reader_legacy_items(self.read_drawing_element(element))
     "v:roundrect" | "v:shape" | "v:textbox" | "v:group" | "v:rect" =>
-      reader_items_to_elements(self.read_children(element.element_children()))
-    "v:imagedata" => self.read_vml_image_data(element)
+      self.read_children(element.element_children())
+    "v:imagedata" => reader_legacy_items(self.read_vml_image_data(element))
     "w:tbl" => [self.read_table(element)]
     "w:tr" => self.read_table_row(element)
     "w:tc" => [self.read_table_cell(element)]
     "w:ins" | "w:smartTag" | "w:sdtContent" =>
-      reader_items_to_elements(self.read_children(element.element_children()))
-    "w:sdt" => self.read_structured_document_tag(element)
+      self.read_children(element.element_children())
+    "w:sdt" => reader_legacy_items(self.read_structured_document_tag(element))
     _ =>
       if is_ignored_body_element(element.name()) {
         []
@@ -2203,14 +2254,15 @@ fn is_ignored_body_element(name : String) -> Bool {
 fn BodyReader::read_symbol(
   self : BodyReader,
   element : ReaderNode,
-) -> Array[DocumentElement] {
+) -> Array[ReaderItem] {
   ignore(self)
   let font_attribute = element.attribute("w:font")
   let char_attribute = element.attribute("w:char")
   let font = attribute_or_empty(font_attribute)
   let char = attribute_or_empty(char_attribute)
   match symbol_to_unicode(font, char) {
-    Some(value) => [text(value)]
+    Some(value) =>
+      [New({ source: element, local_effects: [], shape: ReaderText(value) })]
     None => {
       self.warn_parts([
         "A w:sym element with an unsupported character was ignored: char ",
@@ -2293,7 +2345,7 @@ fn is_deleted_paragraph(element : ReaderNode) -> Bool {
 fn BodyReader::read_paragraph_elements(
   self : BodyReader,
   element : ReaderNode,
-) -> Array[DocumentElement] raise DocxError {
+) -> ReaderItem raise DocxError {
   self.read_paragraph_elements_with_prefix(element, [])
 }
 
@@ -2302,18 +2354,26 @@ fn BodyReader::read_paragraph_elements_with_prefix(
   self : BodyReader,
   element : ReaderNode,
   prefix : Array[ReaderNode],
-) -> Array[DocumentElement] raise DocxError {
+) -> ReaderItem raise DocxError {
   let properties = self.read_paragraph_properties(
     element.first_or_empty("w:pPr"),
   )
-  let elements = [
-    paragraph(
-      self.read_paragraph_children(prefix + element.element_children()),
+  // The children still route through the complex-field island; the extras
+  // are structural: owned by this paragraph, erased as its siblings. That
+  // split is the extras mechanism itself, and the erase walker -- not any
+  // caller -- is what flattens it back.
+  New({
+    source: element,
+    local_effects: [],
+    shape: ReaderParagraph(
+      sources=prefix + [element],
+      children=reader_legacy_items(
+        self.read_paragraph_children(prefix + element.element_children()),
+      ),
+      extras=self.read_paragraph_extra_elements(element),
       properties~,
     ),
-  ]
-  elements.append(self.read_paragraph_extra_elements(element))
-  elements
+  })
 }
 
 ///|
@@ -2342,7 +2402,9 @@ fn BodyReader::read_paragraph_children(
           ),
         )
         instruction_text = ""
-        elements.append(self.read_element(element))
+        elements.append(
+          reader_legacy_island_elements(self.read_element(element)),
+        )
       }
       Some("separate") => {
         match stack.pop() {
@@ -2356,7 +2418,9 @@ fn BodyReader::read_paragraph_children(
           None => ()
         }
         instruction_text = ""
-        elements.append(self.read_element(element))
+        elements.append(
+          reader_legacy_island_elements(self.read_element(element)),
+        )
       }
       Some("end") => {
         match stack.pop() {
@@ -2375,12 +2439,17 @@ fn BodyReader::read_paragraph_children(
           None => ()
         }
         instruction_text = ""
-        elements.append(self.read_element(element))
+        elements.append(
+          reader_legacy_island_elements(self.read_element(element)),
+        )
       }
       _ =>
         if element.name() != "w:instrText" {
           elements.append(
-            wrap_with_current_hyperlink(stack, self.read_element(element)),
+            wrap_with_current_hyperlink(
+              stack,
+              reader_legacy_island_elements(self.read_element(element)),
+            ),
           )
         }
     }
@@ -2609,18 +2678,17 @@ fn wrap_element_with_hyperlink(
 fn BodyReader::read_text_box_elements(
   self : BodyReader,
   element : ReaderNode,
-) -> Array[DocumentElement] raise DocxError {
+) -> Array[ReaderItem] raise DocxError {
   match element.name() {
     "mc:AlternateContent" =>
       self.read_text_box_elements(element.first_or_empty("mc:Fallback"))
-    "w:txbxContent" =>
-      reader_items_to_elements(self.read_children(element.element_children()))
+    "w:txbxContent" => self.read_children(element.element_children())
     _ => {
-      let elements : Array[DocumentElement] = []
+      let items : Array[ReaderItem] = []
       for child_element in element.element_children() {
-        elements.append(self.read_text_box_elements(child_element))
+        items.append(self.read_text_box_elements(child_element))
       }
-      elements
+      items
     }
   }
 }
@@ -2629,52 +2697,47 @@ fn BodyReader::read_text_box_elements(
 fn BodyReader::read_paragraph_extra_elements(
   self : BodyReader,
   element : ReaderNode,
-) -> Array[DocumentElement] raise DocxError {
-  let elements : Array[DocumentElement] = []
+) -> Array[ReaderItem] raise DocxError {
+  let items : Array[ReaderItem] = []
   for child_element in element.element_children() {
     match child_element.name() {
-      "w:pict" => elements.append(self.read_pict_extra_elements(child_element))
+      "w:pict" => items.append(self.read_pict_extra_elements(child_element))
       "mc:AlternateContent" =>
-        elements.append(self.read_text_box_elements(child_element))
+        items.append(self.read_text_box_elements(child_element))
       "w:txbxContent" =>
-        elements.append(self.read_text_box_elements(child_element))
-      _ => elements.append(self.read_paragraph_extra_elements(child_element))
+        items.append(self.read_text_box_elements(child_element))
+      _ => items.append(self.read_paragraph_extra_elements(child_element))
     }
   }
-  elements
+  items
 }
 
 ///|
 fn BodyReader::read_pict_extra_elements(
   self : BodyReader,
   element : ReaderNode,
-) -> Array[DocumentElement] raise DocxError {
-  let elements : Array[DocumentElement] = []
+) -> Array[ReaderItem] raise DocxError {
+  let items : Array[ReaderItem] = []
   for child_element in element.element_children() {
     match child_element.name() {
       "mc:AlternateContent" =>
-        elements.append(
+        items.append(
           self.read_pict_extra_elements(
             child_element.first_or_empty("mc:Fallback"),
           ),
         )
       "w:txbxContent" =>
-        elements.append(
-          reader_items_to_elements(
-            self.read_children(child_element.element_children()),
-          ),
-        )
+        items.append(self.read_children(child_element.element_children()))
       "w:pict"
       | "v:roundrect"
       | "v:shape"
       | "v:textbox"
       | "v:group"
-      | "v:rect" =>
-        elements.append(self.read_pict_extra_elements(child_element))
-      _ => elements.append(self.read_element(child_element))
+      | "v:rect" => items.append(self.read_pict_extra_elements(child_element))
+      _ => items.append(self.read_element(child_element))
     }
   }
-  elements
+  items
 }
 
 ///|
@@ -2869,12 +2932,16 @@ fn BodyReader::read_numbering(
 fn BodyReader::read_run(
   self : BodyReader,
   element : ReaderNode,
-) -> DocumentElement raise DocxError {
+) -> ReaderItem raise DocxError {
   let properties = self.read_run_properties(element.first_or_empty("w:rPr"))
-  run(
-    reader_items_to_elements(self.read_children(element.element_children())),
-    properties~,
-  )
+  New({
+    source: element,
+    local_effects: [],
+    shape: ReaderRun(
+      children=self.read_children(element.element_children()),
+      properties~,
+    ),
+  })
 }
 
 ///|
@@ -3032,11 +3099,14 @@ fn read_highlight(value : String?) -> String? {
 fn BodyReader::read_break(
   self : BodyReader,
   element : ReaderNode,
-) -> Array[DocumentElement] {
+) -> Array[ReaderItem] {
   match element.attribute("w:type") {
-    None | Some("textWrapping") => [line_break()]
-    Some("page") => [page_break()]
-    Some("column") => [column_break()]
+    None | Some("textWrapping") =>
+      [New({ source: element, local_effects: [], shape: ReaderBreak(Line) })]
+    Some("page") =>
+      [New({ source: element, local_effects: [], shape: ReaderBreak(Page) })]
+    Some("column") =>
+      [New({ source: element, local_effects: [], shape: ReaderBreak(Column) })]
     Some(break_type) => {
       self.warn_parts(["Unsupported break type: ", break_type])
       []
@@ -3048,7 +3118,7 @@ fn BodyReader::read_break(
 fn BodyReader::read_hyperlink(
   self : BodyReader,
   element : ReaderNode,
-) -> Array[DocumentElement] raise DocxError {
+) -> Array[ReaderItem] raise DocxError {
   let target_frame = non_empty_attribute(element, "w:tgtFrame")
   let anchor = non_empty_attribute(element, "w:anchor")
   match non_empty_attribute(element, "r:id") {
@@ -3062,33 +3132,36 @@ fn BodyReader::read_hyperlink(
         None => None
       }
       [
-        Hyperlink(
-          children=reader_items_to_elements(
-            self.read_children(element.element_children()),
+        New({
+          source: element,
+          local_effects: [],
+          shape: ReaderHyperlink(
+            children=self.read_children(element.element_children()),
+            href~,
+            anchor=None,
+            target_frame~,
           ),
-          href~,
-          anchor=None,
-          target_frame~,
-        ),
+        }),
       ]
     }
     None =>
       match anchor {
         Some(anchor) =>
           [
-            Hyperlink(
-              children=reader_items_to_elements(
-                self.read_children(element.element_children()),
+            New({
+              source: element,
+              local_effects: [],
+              shape: ReaderHyperlink(
+                children=self.read_children(element.element_children()),
+                href=None,
+                anchor=Some(anchor),
+                target_frame~,
               ),
-              href=None,
-              anchor=Some(anchor),
-              target_frame~,
-            ),
+            }),
           ]
-        None =>
-          reader_items_to_elements(
-            self.read_children(element.element_children()),
-          )
+        // untargeted and unanchored: the reader flattens, so the child
+        // items pass through untouched
+        None => self.read_children(element.element_children())
       }
   }
 }
@@ -3509,13 +3582,23 @@ fn resolve_part_target(base_path : String, target : String) -> String? {
 fn BodyReader::read_table(
   self : BodyReader,
   element : ReaderNode,
-) -> DocumentElement raise DocxError {
-  Table(
-    children=self.calculate_table_row_spans(
-      reader_items_to_elements(self.read_children(element.element_children())),
+) -> ReaderItem raise DocxError {
+  // the vMerge span rebuild is a named legacy island until 2c: rows and
+  // cells erase through it and come back as legacy children
+  New({
+    source: element,
+    local_effects: [],
+    shape: ReaderTable(
+      children=reader_legacy_items(
+        self.calculate_table_row_spans(
+          reader_legacy_island_elements(
+            self.read_children(element.element_children()),
+          ),
+        ),
+      ),
+      properties=self.read_table_properties(element.first_or_empty("w:tblPr")),
     ),
-    properties=self.read_table_properties(element.first_or_empty("w:tblPr")),
-  )
+  })
 }
 
 ///|
@@ -3534,19 +3617,21 @@ fn BodyReader::read_table_properties(
 fn BodyReader::read_table_row(
   self : BodyReader,
   element : ReaderNode,
-) -> Array[DocumentElement] raise DocxError {
+) -> Array[ReaderItem] raise DocxError {
   let properties = element.first_or_empty("w:trPr")
   if properties.first("w:del") is Some(_) {
     []
   } else {
     let is_header = properties.first("w:tblHeader") is Some(_)
     [
-      TableRow(
-        children=reader_items_to_elements(
-          self.read_children(element.element_children()),
+      New({
+        source: element,
+        local_effects: [],
+        shape: ReaderTableRow(
+          children=self.read_children(element.element_children()),
+          is_header~,
         ),
-        is_header~,
-      ),
+      }),
     ]
   }
 }
@@ -3555,18 +3640,20 @@ fn BodyReader::read_table_row(
 fn BodyReader::read_table_cell(
   self : BodyReader,
   element : ReaderNode,
-) -> DocumentElement raise DocxError {
+) -> ReaderItem raise DocxError {
   let properties = element.first_or_empty("w:tcPr")
   let col_span = parse_grid_span(
     properties.first_or_empty("w:gridSpan").attribute_or("w:val", "1"),
   )
-  TableCell(
-    children=reader_items_to_elements(
-      self.read_children(element.element_children()),
+  New({
+    source: element,
+    local_effects: [],
+    shape: ReaderTableCell(
+      children=self.read_children(element.element_children()),
+      col_span~,
+      row_span=if read_vertical_merge_continue(properties) { 0 } else { 1 },
     ),
-    col_span~,
-    row_span=if read_vertical_merge_continue(properties) { 0 } else { 1 },
-  )
+  })
 }
 
 ///|
