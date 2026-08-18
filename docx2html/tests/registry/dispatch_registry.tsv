@@ -422,72 +422,72 @@ field_projection.mbt	footnotes	reader_order_field_story_identity	name	-
 field_projection.mbt	instrText	scan_reader_order_field_carrier	name	-
 field_projection.mbt	separate	classify_reader_order_carrier	value	-
 field_projection.mbt	txbxContent	reader_order_field_story_identity,scan_reader_order_field_carrier	name	-
-reader_order_projection.mbt	AlternateContent	ReaderOrderWalker::walk_inline_element,ReaderOrderWalker::walk_paragraph_extras,ReaderOrderWalker::walk_pict_extras,ReaderOrderWalker::walk_structural_element,ReaderOrderWalker::walk_text_box_extras,collect_reader_order_body_outputs	name	-
-reader_order_projection.mbt	Fallback	ReaderOrderWalker::walk_inline_element,ReaderOrderWalker::walk_paragraph_extras,ReaderOrderWalker::walk_pict_extras,ReaderOrderWalker::walk_structural_element,ReaderOrderWalker::walk_text_box_extras,collect_reader_order_body_outputs	name	-
-reader_order_projection.mbt	_GoBack	reader_order_body_output_kind	name	-
-reader_order_projection.mbt	anchor	reader_order_is_image_output_element	name	-
-reader_order_projection.mbt	annotationRef	ReaderOrderWalker::walk_inline_element	name	-
-reader_order_projection.mbt	body	ReaderOrderWalker::walk	name	-
-reader_order_projection.mbt	bookmarkEnd	ReaderOrderWalker::walk_inline_element	name	-
-reader_order_projection.mbt	bookmarkStart	ReaderOrderWalker::walk_inline_element,reader_order_body_output_kind	name	-
-reader_order_projection.mbt	br	ReaderOrderWalker::walk_inline_element,reader_order_body_output_kind	name	-
-reader_order_projection.mbt	checkbox	ReaderOrderWalker::sdt_declares_checkbox	name	-
-reader_order_projection.mbt	column	reader_order_body_output_kind	value	-
-reader_order_projection.mbt	comment	ReaderOrderWalker::walk	name	-
-reader_order_projection.mbt	commentRangeEnd	ReaderOrderWalker::walk_inline_element	name	-
-reader_order_projection.mbt	commentRangeStart	ReaderOrderWalker::walk_inline_element	name	-
-reader_order_projection.mbt	commentReference	ReaderOrderWalker::walk_inline_element,reader_order_body_output_kind	name	-
-reader_order_projection.mbt	comments	ReaderOrderWalker::walk	name	-
-reader_order_projection.mbt	cr	ReaderOrderWalker::walk_inline_element	name	-
-reader_order_projection.mbt	del	ReaderOrderWalker::is_deleted_paragraph_mark,ReaderOrderWalker::walk_inline_element,ReaderOrderWalker::walk_paragraph_extras,reader_order_is_deleted_body_paragraph,reader_order_projection_visibility	name	-
-reader_order_projection.mbt	document	ReaderOrderWalker::walk	name	-
-reader_order_projection.mbt	drawing	ReaderOrderWalker::walk_inline_element,ReaderOrderWalker::walk_pict_extras,ReaderOrderWalker::walk_structural_element	name	-
-reader_order_projection.mbt	endnote	ReaderOrderWalker::walk	name	-
-reader_order_projection.mbt	endnoteRef	ReaderOrderWalker::walk_inline_element	name	-
-reader_order_projection.mbt	endnoteReference	ReaderOrderWalker::walk_inline_element,reader_order_body_output_kind	name	-
-reader_order_projection.mbt	endnotes	ReaderOrderWalker::walk	name	-
-reader_order_projection.mbt	fldChar	ReaderOrderWalker::walk_inline_element	name	-
-reader_order_projection.mbt	fldSimple	ReaderOrderWalker::walk_inline_element	name	-
-reader_order_projection.mbt	footnote	ReaderOrderWalker::walk	name	-
-reader_order_projection.mbt	footnoteRef	ReaderOrderWalker::walk_inline_element	name	-
-reader_order_projection.mbt	footnoteReference	ReaderOrderWalker::walk_inline_element,reader_order_body_output_kind	name	-
-reader_order_projection.mbt	footnotes	ReaderOrderWalker::walk	name	-
-reader_order_projection.mbt	ftr	ReaderOrderWalker::walk	name	-
-reader_order_projection.mbt	group	reader_order_is_vml_flattening_container	name	-
-reader_order_projection.mbt	hdr	ReaderOrderWalker::walk	name	-
-reader_order_projection.mbt	hyperlink	ReaderOrderWalker::walk_inline_element,ReaderOrderWalker::walk_pict_extras,ReaderOrderWalker::walk_structural_element,reader_order_body_output_kind,reader_order_is_body_flattening_container	name	-
-reader_order_projection.mbt	imagedata	reader_order_is_image_output_element	name	-
-reader_order_projection.mbt	inline	reader_order_is_image_output_element	name	-
-reader_order_projection.mbt	ins	ReaderOrderWalker::walk_inline_element,ReaderOrderWalker::walk_pict_extras,ReaderOrderWalker::walk_structural_element	name	-
-reader_order_projection.mbt	instrText	ReaderOrderWalker::walk_inline_element	name	-
-reader_order_projection.mbt	lastRenderedPageBreak	ReaderOrderWalker::walk_inline_element	name	-
-reader_order_projection.mbt	noBreakHyphen	ReaderOrderWalker::walk_inline_element,reader_order_body_output_kind	name	-
-reader_order_projection.mbt	object	ReaderOrderWalker::walk_inline_element,ReaderOrderWalker::walk_pict_extras,ReaderOrderWalker::walk_structural_element	name	-
-reader_order_projection.mbt	p	ReaderOrderWalker::walk_flow_children,ReaderOrderWalker::walk_inline_children,ReaderOrderWalker::walk_inline_element,ReaderOrderWalker::walk_pict_extras,ReaderOrderWalker::walk_structural_element,collect_reader_order_body_outputs,reader_order_body_output_kind	name	-
-reader_order_projection.mbt	pPr	ReaderOrderWalker::is_deleted_paragraph_mark,ReaderOrderWalker::walk_inline_element,reader_order_is_deleted_body_paragraph	name	-
-reader_order_projection.mbt	page	reader_order_body_output_kind	value	-
-reader_order_projection.mbt	pict	ReaderOrderWalker::walk_inline_element,ReaderOrderWalker::walk_paragraph_extras,ReaderOrderWalker::walk_pict_extras,reader_order_projection_visibility	name	-
-reader_order_projection.mbt	proofErr	ReaderOrderWalker::walk_inline_element	name	-
-reader_order_projection.mbt	ptab	ReaderOrderWalker::walk_inline_element	name	-
-reader_order_projection.mbt	r	ReaderOrderWalker::walk_inline_element,ReaderOrderWalker::walk_pict_extras,ReaderOrderWalker::walk_structural_element,reader_order_body_output_kind	name	-
-reader_order_projection.mbt	rPr	ReaderOrderWalker::is_deleted_paragraph_mark,ReaderOrderWalker::walk_inline_element,reader_order_is_deleted_body_paragraph	name	-
-reader_order_projection.mbt	rect	reader_order_is_vml_flattening_container	name	-
-reader_order_projection.mbt	roundrect	reader_order_is_vml_flattening_container	name	-
-reader_order_projection.mbt	sdt	ReaderOrderWalker::walk_inline_element,ReaderOrderWalker::walk_pict_extras,ReaderOrderWalker::walk_structural_element,collect_reader_order_body_outputs	name	-
-reader_order_projection.mbt	sdtContent	ReaderOrderWalker::walk_inline_element,ReaderOrderWalker::walk_pict_extras,ReaderOrderWalker::walk_structural_element,collect_reader_order_body_outputs	name	-
-reader_order_projection.mbt	sdtPr	ReaderOrderWalker::sdt_declares_checkbox	name	-
-reader_order_projection.mbt	shape	reader_order_is_vml_flattening_container	name	-
-reader_order_projection.mbt	smartTag	ReaderOrderWalker::walk_inline_element,ReaderOrderWalker::walk_pict_extras,ReaderOrderWalker::walk_structural_element	name	-
-reader_order_projection.mbt	softHyphen	ReaderOrderWalker::walk_inline_element,reader_order_body_output_kind	name	-
-reader_order_projection.mbt	sym	ReaderOrderWalker::walk_inline_element,reader_order_body_output_kind	name	-
-reader_order_projection.mbt	t	ReaderOrderWalker::walk_inline_element,reader_order_atom_span,reader_order_body_output_kind	name	-
-reader_order_projection.mbt	tab	ReaderOrderWalker::walk_inline_element,reader_order_body_output_kind	name	-
-reader_order_projection.mbt	tbl	ReaderOrderWalker::walk_inline_element,ReaderOrderWalker::walk_pict_extras,ReaderOrderWalker::walk_structural_element,reader_order_body_output_kind,reader_order_projection_visibility	name	-
-reader_order_projection.mbt	tc	ReaderOrderWalker::walk_inline_element,ReaderOrderWalker::walk_pict_extras,ReaderOrderWalker::walk_structural_element,reader_order_body_output_kind	name	-
-reader_order_projection.mbt	textWrapping	reader_order_body_output_kind	value	-
-reader_order_projection.mbt	textbox	reader_order_is_vml_flattening_container	name	-
-reader_order_projection.mbt	tr	ReaderOrderWalker::walk_inline_element,ReaderOrderWalker::walk_pict_extras,ReaderOrderWalker::walk_structural_element,reader_order_body_output_kind	name	-
-reader_order_projection.mbt	txbxContent	ReaderOrderWalker::walk_inline_element,ReaderOrderWalker::walk_paragraph_extras,ReaderOrderWalker::walk_pict_extras,ReaderOrderWalker::walk_structural_element,ReaderOrderWalker::walk_text_box_extras,reader_order_projection_visibility	name	-
+reader_order_projection.mbt	AlternateContent	ReaderOrderWalker::walk_inline_element,ReaderOrderWalker::walk_paragraph_extras,ReaderOrderWalker::walk_pict_extras,ReaderOrderWalker::walk_structural_element,ReaderOrderWalker::walk_text_box_extras,collect_reader_order_body_outputs	name	reader_order_property_wbtest:"the generator keeps producing documents worth testing"; reader_order_property_wbtest:"the projection matches the reader on generated documents"
+reader_order_projection.mbt	Fallback	ReaderOrderWalker::walk_inline_element,ReaderOrderWalker::walk_paragraph_extras,ReaderOrderWalker::walk_pict_extras,ReaderOrderWalker::walk_structural_element,ReaderOrderWalker::walk_text_box_extras,collect_reader_order_body_outputs	name	reader_order_property_wbtest:"the generator keeps producing documents worth testing"; reader_order_property_wbtest:"the projection matches the reader on generated documents"
+reader_order_projection.mbt	_GoBack	reader_order_body_output_kind	name	reader_order_projection_wbtest:"reader order classifies conditional empty table outputs like BodyReader"
+reader_order_projection.mbt	anchor	reader_order_is_image_output_element	name	reader_order_projection_wbtest:"reader order image outputs preserve malformed table fail-open behavior"; reader_order_projection_wbtest:"reader order validates image output context cardinality"
+reader_order_projection.mbt	annotationRef	ReaderOrderWalker::walk_inline_element	name	reader_order_projection_wbtest:"seam and barrier groups classify inline oddities element by element"
+reader_order_projection.mbt	body	ReaderOrderWalker::walk	name	reader_order_projection_wbtest:"reader order projects nested runs text atoms seams and barriers"; reader_order_projection_wbtest:"inline content in a block container is read but not projected"
+reader_order_projection.mbt	bookmarkEnd	ReaderOrderWalker::walk_inline_element	name	reader_order_projection_wbtest:"seam and barrier groups classify inline oddities element by element"
+reader_order_projection.mbt	bookmarkStart	ReaderOrderWalker::walk_inline_element,reader_order_body_output_kind	name	reader_order_projection_wbtest:"reader order classifies conditional empty table outputs like BodyReader"
+reader_order_projection.mbt	br	ReaderOrderWalker::walk_inline_element,reader_order_body_output_kind	name	reader_order_projection_wbtest:"reader order projects nested runs text atoms seams and barriers"; reader_order_projection_wbtest:"reader order classifies conditional empty table outputs like BodyReader"
+reader_order_projection.mbt	checkbox	ReaderOrderWalker::sdt_declares_checkbox	name	reader_order_projection_wbtest:"a checkbox content control replaces its first text"; reader_order_projection_wbtest:"checkbox controls nest, and every reader text kind is replaceable"
+reader_order_projection.mbt	column	reader_order_body_output_kind	value	reader_order_projection_wbtest:"reader order classifies conditional empty table outputs like BodyReader"
+reader_order_projection.mbt	comment	ReaderOrderWalker::walk	name	reader_order_projection_wbtest:"reader order only traverses story containers from their root context"
+reader_order_projection.mbt	commentRangeEnd	ReaderOrderWalker::walk_inline_element	name	reader_order_projection_wbtest:"seam and barrier groups classify inline oddities element by element"
+reader_order_projection.mbt	commentRangeStart	ReaderOrderWalker::walk_inline_element	name	reader_order_projection_wbtest:"seam and barrier groups classify inline oddities element by element"
+reader_order_projection.mbt	commentReference	ReaderOrderWalker::walk_inline_element,reader_order_body_output_kind	name	reader_order_projection_wbtest:"seam and barrier groups classify inline oddities element by element"
+reader_order_projection.mbt	comments	ReaderOrderWalker::walk	name	reader_order_projection_wbtest:"reader order only traverses story containers from their root context"
+reader_order_projection.mbt	cr	ReaderOrderWalker::walk_inline_element	name	reader_order_projection_wbtest:"seam and barrier groups classify inline oddities element by element"
+reader_order_projection.mbt	del	ReaderOrderWalker::is_deleted_paragraph_mark,ReaderOrderWalker::walk_inline_element,ReaderOrderWalker::walk_paragraph_extras,reader_order_is_deleted_body_paragraph,reader_order_projection_visibility	name	reader_order_projection_wbtest:"reader order discovers textboxes inside deleted revisions"; reader_order_projection_wbtest:"reader order drops deleted paragraphs visited as paragraph children"
+reader_order_projection.mbt	document	ReaderOrderWalker::walk	name	reader_order_projection_wbtest:"reader order projects nested runs text atoms seams and barriers"; reader_order_projection_wbtest:"reader order only traverses story containers from their root context"
+reader_order_projection.mbt	drawing	ReaderOrderWalker::walk_inline_element,ReaderOrderWalker::walk_pict_extras,ReaderOrderWalker::walk_structural_element	name	reader_order_projection_wbtest:"reader order flattens inline drawing and object children"; reader_order_projection_wbtest:"reader order preserves block descendants of flattened inline wrappers"
+reader_order_projection.mbt	endnote	ReaderOrderWalker::walk	name	reader_order_projection_wbtest:"reader order only traverses story containers from their root context"
+reader_order_projection.mbt	endnoteRef	ReaderOrderWalker::walk_inline_element	name	reader_order_projection_wbtest:"seam and barrier groups classify inline oddities element by element"
+reader_order_projection.mbt	endnoteReference	ReaderOrderWalker::walk_inline_element,reader_order_body_output_kind	name	reader_order_projection_wbtest:"seam and barrier groups classify inline oddities element by element"
+reader_order_projection.mbt	endnotes	ReaderOrderWalker::walk	name	reader_order_projection_wbtest:"reader order only traverses story containers from their root context"
+reader_order_projection.mbt	fldChar	ReaderOrderWalker::walk_inline_element	name	field_projection_wbtest:"field transition owns the whole direct-child carrier"; field_projection_wbtest:"malformed field transitions retain deterministic refusal provenance"
+reader_order_projection.mbt	fldSimple	ReaderOrderWalker::walk_inline_element	name	reader_order_projection_wbtest:"seam and barrier groups classify inline oddities element by element"
+reader_order_projection.mbt	footnote	ReaderOrderWalker::walk	name	reader_order_projection_wbtest:"reader order only traverses story containers from their root context"
+reader_order_projection.mbt	footnoteRef	ReaderOrderWalker::walk_inline_element	name	reader_order_projection_wbtest:"seam and barrier groups classify inline oddities element by element"
+reader_order_projection.mbt	footnoteReference	ReaderOrderWalker::walk_inline_element,reader_order_body_output_kind	name	reader_order_projection_wbtest:"seam and barrier groups classify inline oddities element by element"
+reader_order_projection.mbt	footnotes	ReaderOrderWalker::walk	name	reader_order_projection_wbtest:"reader order only traverses story containers from their root context"
+reader_order_projection.mbt	ftr	ReaderOrderWalker::walk	name	reader_order_projection_wbtest:"reader order only traverses story containers from their root context"
+reader_order_projection.mbt	group	reader_order_is_vml_flattening_container	name	reader_order_projection_wbtest:"reader order flattens inline drawing and object children"
+reader_order_projection.mbt	hdr	ReaderOrderWalker::walk	name	reader_order_projection_wbtest:"reader order only traverses story containers from their root context"
+reader_order_projection.mbt	hyperlink	ReaderOrderWalker::walk_inline_element,ReaderOrderWalker::walk_pict_extras,ReaderOrderWalker::walk_structural_element,reader_order_body_output_kind,reader_order_is_body_flattening_container	name	reader_order_projection_wbtest:"reader order classifies conditional empty table outputs like BodyReader"; reader_order_projection_wbtest:"reader order preserves block descendants of flattened inline wrappers"
+reader_order_projection.mbt	imagedata	reader_order_is_image_output_element	name	reader_order_projection_wbtest:"reader order image outputs preserve malformed table fail-open behavior"; reader_order_projection_wbtest:"reader order validates image output context cardinality"
+reader_order_projection.mbt	inline	reader_order_is_image_output_element	name	reader_order_projection_wbtest:"reader order image outputs preserve malformed table fail-open behavior"; reader_order_projection_wbtest:"reader order validates image output context cardinality"
+reader_order_projection.mbt	ins	ReaderOrderWalker::walk_inline_element,ReaderOrderWalker::walk_pict_extras,ReaderOrderWalker::walk_structural_element	name	reader_order_projection_wbtest:"reader order preserves block descendants of flattened inline wrappers"; reader_order_property_wbtest:"the generator keeps producing documents worth testing"
+reader_order_projection.mbt	instrText	ReaderOrderWalker::walk_inline_element	name	field_projection_wbtest:"field transition owns the whole direct-child carrier"; field_projection_wbtest:"malformed field transitions retain deterministic refusal provenance"
+reader_order_projection.mbt	lastRenderedPageBreak	ReaderOrderWalker::walk_inline_element	name	reader_order_projection_wbtest:"seam and barrier groups classify inline oddities element by element"
+reader_order_projection.mbt	noBreakHyphen	ReaderOrderWalker::walk_inline_element,reader_order_body_output_kind	name	reader_order_projection_wbtest:"reader order projects nested runs text atoms seams and barriers"; reader_order_projection_wbtest:"checkbox controls nest, and every reader text kind is replaceable"
+reader_order_projection.mbt	object	ReaderOrderWalker::walk_inline_element,ReaderOrderWalker::walk_pict_extras,ReaderOrderWalker::walk_structural_element	name	reader_order_projection_wbtest:"reader order flattens inline drawing and object children"; reader_order_projection_wbtest:"reader order preserves block descendants of flattened inline wrappers"
+reader_order_projection.mbt	p	ReaderOrderWalker::walk_flow_children,ReaderOrderWalker::walk_inline_children,ReaderOrderWalker::walk_inline_element,ReaderOrderWalker::walk_pict_extras,ReaderOrderWalker::walk_structural_element,collect_reader_order_body_outputs,reader_order_body_output_kind	name	reader_order_projection_wbtest:"reader order projects nested runs text atoms seams and barriers"; reader_order_projection_wbtest:"a separator inside one paragraph does not split it"
+reader_order_projection.mbt	pPr	ReaderOrderWalker::is_deleted_paragraph_mark,ReaderOrderWalker::walk_inline_element,reader_order_is_deleted_body_paragraph	name	reader_order_projection_wbtest:"reader order keeps deleted paragraph-mark prefixes as physical contributors"; reader_order_projection_wbtest:"reader order drops deleted paragraphs visited as paragraph children"
+reader_order_projection.mbt	page	reader_order_body_output_kind	value	reader_order_projection_wbtest:"reader order classifies conditional empty table outputs like BodyReader"
+reader_order_projection.mbt	pict	ReaderOrderWalker::walk_inline_element,ReaderOrderWalker::walk_paragraph_extras,ReaderOrderWalker::walk_pict_extras,reader_order_projection_visibility	name	reader_order_projection_wbtest:"reader order emits textbox paragraphs after the primary paragraph"; reader_order_projection_wbtest:"reader order discovers pict block outputs inside deleted revisions"
+reader_order_projection.mbt	proofErr	ReaderOrderWalker::walk_inline_element	name	reader_order_projection_wbtest:"seam and barrier groups classify inline oddities element by element"; reader_order_projection_wbtest:"reader order keeps deleted paragraph-mark prefixes as physical contributors"
+reader_order_projection.mbt	ptab	ReaderOrderWalker::walk_inline_element	name	reader_order_projection_wbtest:"seam and barrier groups classify inline oddities element by element"
+reader_order_projection.mbt	r	ReaderOrderWalker::walk_inline_element,ReaderOrderWalker::walk_pict_extras,ReaderOrderWalker::walk_structural_element,reader_order_body_output_kind	name	reader_order_projection_wbtest:"reader order projects nested runs text atoms seams and barriers"; reader_order_projection_wbtest:"an atomless run is still addressable"
+reader_order_projection.mbt	rPr	ReaderOrderWalker::is_deleted_paragraph_mark,ReaderOrderWalker::walk_inline_element,reader_order_is_deleted_body_paragraph	name	reader_order_projection_wbtest:"reader order keeps deleted paragraph-mark prefixes as physical contributors"; reader_order_projection_wbtest:"reader order drops deleted paragraphs visited as paragraph children"
+reader_order_projection.mbt	rect	reader_order_is_vml_flattening_container	name	reader_order_projection_wbtest:"reader order flattens inline drawing and object children"
+reader_order_projection.mbt	roundrect	reader_order_is_vml_flattening_container	name	reader_order_projection_wbtest:"reader order flattens inline drawing and object children"
+reader_order_projection.mbt	sdt	ReaderOrderWalker::walk_inline_element,ReaderOrderWalker::walk_pict_extras,ReaderOrderWalker::walk_structural_element,collect_reader_order_body_outputs	name	reader_order_projection_wbtest:"a checkbox content control replaces its first text"; reader_order_projection_wbtest:"checkbox controls nest, and every reader text kind is replaceable"; reader_order_property_wbtest:"the generator keeps producing documents worth testing"
+reader_order_projection.mbt	sdtContent	ReaderOrderWalker::walk_inline_element,ReaderOrderWalker::walk_pict_extras,ReaderOrderWalker::walk_structural_element,collect_reader_order_body_outputs	name	reader_order_projection_wbtest:"a checkbox content control replaces its first text"; reader_order_projection_wbtest:"checkbox controls nest, and every reader text kind is replaceable"; reader_order_property_wbtest:"the generator keeps producing documents worth testing"
+reader_order_projection.mbt	sdtPr	ReaderOrderWalker::sdt_declares_checkbox	name	reader_order_projection_wbtest:"a checkbox content control replaces its first text"; reader_order_projection_wbtest:"checkbox controls nest, and every reader text kind is replaceable"
+reader_order_projection.mbt	shape	reader_order_is_vml_flattening_container	name	reader_order_projection_wbtest:"reader order flattens inline drawing and object children"; reader_order_projection_wbtest:"reader order emits textbox paragraphs after the primary paragraph"
+reader_order_projection.mbt	smartTag	ReaderOrderWalker::walk_inline_element,ReaderOrderWalker::walk_pict_extras,ReaderOrderWalker::walk_structural_element	name	reader_order_projection_wbtest:"reader order preserves block descendants of flattened inline wrappers"; reader_order_projection_wbtest:"reader order rebuilds nested merges through transparent row and cell wrappers"
+reader_order_projection.mbt	softHyphen	ReaderOrderWalker::walk_inline_element,reader_order_body_output_kind	name	reader_order_projection_wbtest:"reader order projects nested runs text atoms seams and barriers"; reader_order_projection_wbtest:"checkbox controls nest, and every reader text kind is replaceable"
+reader_order_projection.mbt	sym	ReaderOrderWalker::walk_inline_element,reader_order_body_output_kind	name	reader_order_projection_wbtest:"reader order projects nested runs text atoms seams and barriers"; reader_order_projection_wbtest:"reader order classifies conditional empty table outputs like BodyReader"
+reader_order_projection.mbt	t	ReaderOrderWalker::walk_inline_element,reader_order_atom_span,reader_order_body_output_kind	name	reader_order_projection_wbtest:"reader order projects nested runs text atoms seams and barriers"; reader_order_projection_wbtest:"intervals index the reader's story text"
+reader_order_projection.mbt	tab	ReaderOrderWalker::walk_inline_element,reader_order_body_output_kind	name	reader_order_projection_wbtest:"reader order projects nested runs text atoms seams and barriers"; reader_order_projection_wbtest:"checkbox controls nest, and every reader text kind is replaceable"
+reader_order_projection.mbt	tbl	ReaderOrderWalker::walk_inline_element,ReaderOrderWalker::walk_pict_extras,ReaderOrderWalker::walk_structural_element,reader_order_body_output_kind,reader_order_projection_visibility	name	reader_order_projection_wbtest:"reader order projects nested runs text atoms seams and barriers"; reader_order_projection_wbtest:"reader order preserves vMerge cells when malformed tables fail open"
+reader_order_projection.mbt	tc	ReaderOrderWalker::walk_inline_element,ReaderOrderWalker::walk_pict_extras,ReaderOrderWalker::walk_structural_element,reader_order_body_output_kind	name	reader_order_projection_wbtest:"reader order projects nested runs text atoms seams and barriers"; reader_order_projection_wbtest:"reader order preserves vMerge cells when malformed tables fail open"
+reader_order_projection.mbt	textWrapping	reader_order_body_output_kind	value	reader_order_projection_wbtest:"reader order classifies conditional empty table outputs like BodyReader"
+reader_order_projection.mbt	textbox	reader_order_is_vml_flattening_container	name	reader_order_projection_wbtest:"reader order flattens inline drawing and object children"; reader_order_projection_wbtest:"reader order emits textbox paragraphs after the primary paragraph"
+reader_order_projection.mbt	tr	ReaderOrderWalker::walk_inline_element,ReaderOrderWalker::walk_pict_extras,ReaderOrderWalker::walk_structural_element,reader_order_body_output_kind	name	reader_order_projection_wbtest:"reader order projects nested runs text atoms seams and barriers"; reader_order_projection_wbtest:"reader order preserves vMerge cells when malformed tables fail open"
+reader_order_projection.mbt	txbxContent	ReaderOrderWalker::walk_inline_element,ReaderOrderWalker::walk_paragraph_extras,ReaderOrderWalker::walk_pict_extras,ReaderOrderWalker::walk_structural_element,ReaderOrderWalker::walk_text_box_extras,reader_order_projection_visibility	name	reader_order_projection_wbtest:"reader order emits textbox paragraphs after the primary paragraph"; reader_order_projection_wbtest:"reader order discovers pict block outputs inside deleted revisions"
 relationship_mutation.mbt	{http://schemas.openxmlformats.org/package/2006/relationships}Relationships	read_mutation_relationships	name	-
 run_surgery.mbt	:	run_surgery_qualified_prefix	fragment	-
 run_surgery.mbt	checkbox	run_surgery_inside_checkbox_control	name	-

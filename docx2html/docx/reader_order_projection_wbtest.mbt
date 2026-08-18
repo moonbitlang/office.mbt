@@ -1467,6 +1467,65 @@ test "inline content in a block container is read but not projected" {
 }
 
 ///|
+/// The seam and barrier groups, pinned element by element.
+///
+/// `walk_inline_element` sorts inline oddities into two buckets: transparent
+/// seams (annotation ranges, bookmark ends, editor debris like `w:proofErr`
+/// and `w:lastRenderedPageBreak`) that glue nothing and block nothing, and
+/// hard barriers (the note and comment references, `w:cr`, `w:ptab`,
+/// `w:fldSimple`) for content the projection declines to model -- some
+/// because the reader emits a non-text node, some because the reader itself
+/// only warn-ignores them and a barrier is the fail-safe reading. The
+/// distinction is what surgery stands on: a seam is writable-through, a
+/// barrier refuses.
+///
+/// Every element here was previously dispatched but pinned by no authored
+/// test; the generated grammar produces none of them.
+test "seam and barrier groups classify inline oddities element by element" {
+  let source = "<w:document xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\"><w:body>" +
+    "<w:p><w:r><w:t>x</w:t><w:bookmarkEnd w:id=\"1\"/><w:commentRangeStart w:id=\"2\"/><w:commentRangeEnd w:id=\"2\"/><w:annotationRef/><w:lastRenderedPageBreak/><w:proofErr w:type=\"spellStart\"/><w:t>y</w:t></w:r></w:p>" +
+    "<w:p><w:r><w:footnoteReference w:id=\"3\"/><w:endnoteReference w:id=\"4\"/><w:commentReference w:id=\"5\"/><w:footnoteRef/><w:endnoteRef/><w:cr/><w:ptab w:alignment=\"left\"/><w:fldSimple w:instr=\" PAGE \"/></w:r></w:p>" +
+    "</w:body></w:document>"
+  let projection = scan_reader_order_projection(
+    "word/document.xml",
+    @utf8.encode(source),
+  )
+  // Both buckets are invisible to story text, and the projection agrees with
+  // the reader about that -- the seams because they are transparent, the
+  // barriers because the reader emits no text for any of them either.
+  assert_reader_order_matches_reader(source, projection)
+  assert_reader_order_intervals_index_the_reader(source)
+  assert_eq(projection.paragraphs.length(), 2)
+  assert_eq(projection.paragraphs[0].reader_text(), "xy")
+  assert_eq(projection.paragraphs[1].reader_text(), "")
+  // The first paragraph carries the six seam elements as transparent seams
+  // and no barrier anywhere -- a barrier here would make surgery refuse a
+  // paragraph that is perfectly writable.
+  let mut seams = 0
+  for contribution in projection.paragraphs[0].contributions {
+    match contribution.kind {
+      TransparentSeam => seams = seams + 1
+      HardBarrier => fail("seam group produced a barrier")
+      _ => ()
+    }
+  }
+  // six seam elements, plus the seam the walk opens for the run itself
+  assert_true(seams >= 6)
+  // The second paragraph carries one hard barrier per barrier element, and
+  // nothing else that projects.
+  let mut barriers = 0
+  for contribution in projection.paragraphs[1].contributions {
+    match contribution.kind {
+      HardBarrier => barriers = barriers + 1
+      TextAtom | TabAtom | NoBreakHyphenAtom | SoftHyphenAtom | SymbolAtom =>
+        fail("barrier group projected text")
+      _ => ()
+    }
+  }
+  assert_eq(barriers, 8)
+}
+
+///|
 /// An atomless run still has an address.
 ///
 /// `<w:r/>` contributes no text, only the seam the walk opens for it. The run
