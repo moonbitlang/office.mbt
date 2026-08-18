@@ -93,7 +93,7 @@ SCHEMES = {'urn', 'http', 'https', 'mailto', 'data'}
 # sentences stay out. Noise this admits is classified kind=noise, which is
 # cheaper than a miss.
 BARE = re.compile(r'"([A-Za-z_][A-Za-z0-9_.\-]*(?: [A-Za-z0-9_.\-]+){0,2})"')
-BARE_MAX = 40
+BARE_MAX = 100
 # Clark names: "{uri}local", dispatched against expanded roots
 CLARK = re.compile(r'"(\{[^"{}]+\}[A-Za-z_][A-Za-z0-9_.\-]*)"')
 FRAGMENT = re.compile(r'"(:[A-Za-z][A-Za-z0-9]*|[A-Za-z][A-Za-z0-9]*:|:)"')
@@ -218,12 +218,19 @@ for f in production:
         or LOCAL_TOKEN.search(joined)
         or NAME_TOKEN.search(joined)
         or any(FRAGMENT.search(l) for l in stripped)
+        or any(CLARK.search(l) for l in stripped)
         or any(BARE.search(l) for l in stripped)
     ):
         errors.append(f"UNCLASSIFIED FILE: {f} references XML names but is not classified in check_dispatch_registry.py")
 for f in FILES:
     if f not in production:
         errors.append(f"MISSING FILE: {f} is classified but no longer exists")
+
+# Top-level constants holding a name, gathered across ALL extract files so a
+# constant declared in one file and dispatched in another still attributes
+# its use sites -- the ledger then says where dispatch happens, not only
+# where the name was spelled.
+GLOBAL_CONSTS = {}
 
 for path, cls in FILES.items():
     if path not in production:
@@ -237,6 +244,12 @@ for path, cls in FILES.items():
                 continue
             for found in extract_region(lines[s:e], stripped_lines[s:e]):
                 rows.setdefault((path, found), set()).add(name)
+            if name == '(toplevel)':
+                for i in range(s, e):
+                    m = re.match(r'(?:pub(?:\(all\))? )?(?:let|const)\s+(\w+)', lines[i])
+                    if m:
+                        for found in extract_region(lines[i:i+1], stripped_lines[i:i+1]):
+                            GLOBAL_CONSTS.setdefault(m.group(1), set()).add(found)
     else:  # exempt
         allowed = ALLOWED_INSPECTORS.get(path, set())
         for name, s, e in funcs:
@@ -247,6 +260,21 @@ for path, cls in FILES.items():
                 errors.append(f"{path}: exempt file's function {name} inspects element names -- declare it in ALLOWED_INSPECTORS or reclassify the file")
         for fn in sorted(allowed - {n for n, _, _ in funcs}):
             errors.append(f"{path}: ALLOWED_INSPECTORS lists {fn} which no longer exists")
+
+if GLOBAL_CONSTS:
+    ident = re.compile(r'\b(' + '|'.join(map(re.escape, GLOBAL_CONSTS)) + r')\b')
+    for path, cls in FILES.items():
+        if cls != 'extract' or path not in production:
+            continue
+        lines = open(os.path.join(DOCX, path)).read().split('\n')
+        stripped_lines = [strip_comments(l) for l in lines]
+        for name, s, e in functions(lines):
+            if name in ('(test)', '(toplevel)'):
+                continue
+            body = '\n'.join(stripped_lines[s:e])
+            for m in ident.finditer(body):
+                for found in GLOBAL_CONSTS[m.group(1)]:
+                    rows.setdefault((path, found), set()).add(name)
 
 # ---- reconcile ----
 want, meta = {}, {}

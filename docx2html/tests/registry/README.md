@@ -9,7 +9,7 @@ scanned-tree consumers (`field_projection.mbt`, `annotation_spans.mbt`,
 lands, agreement is enforced only by tests, so the gate's first need is a
 ledger of *what is dispatched where* that cannot drift silently.
 
-`dispatch_registry.tsv` is that ledger — 501 rows of
+`dispatch_registry.tsv` is that ledger — 502 rows of
 `file, name, functions, kind, coverage` — and
 `check_dispatch_registry.py` re-extracts from source and fails CI on drift:
 
@@ -51,7 +51,7 @@ The `kind` column separates element/attribute **name**s from attribute
 
 ## The escape suite
 
-Every escape a review round demonstrated — twenty-five of them — is replayed by
+Every escape a review round demonstrated — twenty-eight of them — is replayed by
 `escape_suite.sh` against a scratch copy of the sources. Each mutation is
 verified to have actually applied before its failure is required (a mutation
 that silently does not apply looks exactly like a check that does not catch),

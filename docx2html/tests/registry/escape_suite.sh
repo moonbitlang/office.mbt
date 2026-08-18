@@ -129,6 +129,15 @@ expect E24-toplevel-binding "UNREGISTERED: toplevelEscape"
 fresh; printf 'fn table_dispatch(tag : String) -> Bool {\n  ["custom-name"].contains(tag)\n}\n' > "$work/docx/escape_probe.mbt"
 expect E25-table-driven-new-file "UNCLASSIFIED FILE: escape_probe.mbt"
 
+fresh; printf 'fn clark_dispatch(n : String) -> Bool {\n  n == "{http://example.com/ns}Custom"\n}\n' > "$work/docx/escape_probe.mbt"
+expect E26-clark-new-file "UNCLASSIFIED FILE: escape_probe.mbt"
+
+fresh; mutate reader_order_projection.mbt 's/^fn reader_order_atom_span/fn long_name(name : String) -> Bool {\n  name == "OrdinaryExtensionElementNameLongerThanFortyCharacters"\n}\n\n\/\/\/|\nfn reader_order_atom_span/m' OrdinaryExtension
+expect E27-long-name "UNREGISTERED: OrdinaryExtension"
+
+fresh; mutate token_map.mbt 's/^fn token_map_error/fn const_use_probe(n : String) -> Bool {\n  n == PACKAGE_RELATIONSHIPS_ROOT\n}\n\n\/\/\/|\nfn token_map_error/m' const_use_probe
+expect E28-const-use-cross-file "UNREGISTERED: "
+
 fresh; expect final-baseline "names reconciled"
 
-if [ "$fail" -eq 0 ]; then echo "escape suite: 25 escapes + 2 baselines, all as expected"; else exit 1; fi
+if [ "$fail" -eq 0 ]; then echo "escape suite: 28 escapes + 2 baselines, all as expected"; else exit 1; fi
