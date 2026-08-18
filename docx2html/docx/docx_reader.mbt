@@ -2071,8 +2071,8 @@ fn BodyReader::read_children(
       "w:p" if is_deleted_paragraph(element) =>
         deleted_paragraph_contents.append(element.element_children())
       "w:p" if !deleted_paragraph_contents.is_empty() => {
-        // deleted-paragraph join: the prefix mechanics stay a named island
-        // inside read_paragraph_children until 2c
+        // deleted-paragraph join: the joined paragraph records every source
+        // paragraph in `sources` and reads the prefix children natively
         items.push(
           self.read_paragraph_elements_with_prefix(
             element, deleted_paragraph_contents,
@@ -2186,11 +2186,10 @@ fn BodyReader::read_element(
       self.read_children(
         element.first_or_empty("mc:Fallback").element_children(),
       )
-    "wp:inline" | "wp:anchor" =>
-      reader_legacy_items(self.read_drawing_element(element))
+    "wp:inline" | "wp:anchor" => self.read_drawing_element(element)
     "v:roundrect" | "v:shape" | "v:textbox" | "v:group" | "v:rect" =>
       self.read_children(element.element_children())
-    "v:imagedata" => reader_legacy_items(self.read_vml_image_data(element))
+    "v:imagedata" => self.read_vml_image_data(element)
     "w:tbl" => [self.read_table(element)]
     "w:tr" => self.read_table_row(element)
     "w:tc" => [self.read_table_cell(element)]
@@ -2362,10 +2361,9 @@ fn BodyReader::read_paragraph_elements_with_prefix(
   let properties = self.read_paragraph_properties(
     element.first_or_empty("w:pPr"),
   )
-  // The children still route through the complex-field island; the extras
-  // are structural: owned by this paragraph, erased as its siblings. That
-  // split is the extras mechanism itself, and the erase walker -- not any
-  // caller -- is what flattens it back.
+  // The extras are structural: owned by this paragraph, erased as its
+  // siblings. That split is the extras mechanism itself, and the erase
+  // walker -- not any caller -- is what flattens it back.
   New({
     source: element,
     local_effects: [],
@@ -3353,12 +3351,14 @@ fn non_empty_attribute(element : ReaderNode, name : String) -> String? {
 fn BodyReader::read_drawing_element(
   self : BodyReader,
   element : ReaderNode,
-) -> Array[DocumentElement] {
-  let results : Array[DocumentElement] = []
+) -> Array[ReaderItem] {
+  let results : Array[ReaderItem] = []
   for blip in element.drawing_blips() {
     match self.read_blip(element, blip) {
       Some(image) =>
-        results.push(self.wrap_image_with_drawing_hyperlink(element, image))
+        results.push(
+          self.wrap_image_with_drawing_hyperlink(element, blip, image),
+        )
       None => ()
     }
   }
@@ -3384,17 +3384,27 @@ fn ReaderNode::drawing_blips(self : ReaderNode) -> Array[ReaderNode] {
 fn BodyReader::wrap_image_with_drawing_hyperlink(
   self : BodyReader,
   drawing_element : ReaderNode,
+  blip : ReaderNode,
   image : Image,
-) -> DocumentElement {
+) -> ReaderItem {
+  let image_item = New({
+    source: blip,
+    local_effects: [],
+    shape: ReaderImage(image),
+  })
   match self.read_drawing_hyperlink(drawing_element) {
     Some(href) =>
-      Hyperlink(
-        children=[Image(image)],
-        href=Some(href),
-        anchor=None,
-        target_frame=None,
-      )
-    None => Image(image)
+      New({
+        source: drawing_element,
+        local_effects: [],
+        shape: ReaderHyperlink(
+          children=[image_item],
+          href=Some(href),
+          anchor=None,
+          target_frame=None,
+        ),
+      })
+    None => image_item
   }
 }
 
@@ -3469,7 +3479,7 @@ fn BodyReader::diagnostic_count(self : BodyReader) -> Int {
 fn BodyReader::read_vml_image_data(
   self : BodyReader,
   element : ReaderNode,
-) -> Array[DocumentElement] {
+) -> Array[ReaderItem] {
   if !self.read_images {
     return []
   }
@@ -3480,7 +3490,8 @@ fn BodyReader::read_vml_image_data(
           id,
           alt_text=element.attribute("o:title"),
         ) {
-        Some(image) => [Image(image)]
+        Some(image) =>
+          [New({ source: element, local_effects: [], shape: ReaderImage(image) })]
         None => []
       }
     None => {
