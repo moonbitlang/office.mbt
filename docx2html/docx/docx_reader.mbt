@@ -345,13 +345,17 @@ priv struct CommentsReadResult {
 priv struct TableRowForSpan {
   cells : Array[TableCellForSpan]
   is_header : Bool
+  // None while the `w:sdt` legacy island can still hand this pass erased
+  // rows; those rebuild as `Legacy` below
+  source : ReaderNode?
 }
 
 ///|
 priv struct TableCellForSpan {
-  children : Array[DocumentElement]
+  children : Array[ReaderItem]
   col_span : Int
   row_span : Int
+  source : ReaderNode?
 }
 
 ///|
@@ -3629,18 +3633,12 @@ fn BodyReader::read_table(
   self : BodyReader,
   element : ReaderNode,
 ) -> ReaderItem raise DocxError {
-  // the vMerge span rebuild is a named legacy island until 2c: rows and
-  // cells erase through it and come back as legacy children
   New({
     source: element,
     local_effects: [],
     shape: ReaderTable(
-      children=reader_legacy_items(
-        self.calculate_table_row_spans(
-          reader_legacy_island_elements(
-            self.read_children(element.element_children()),
-          ),
-        ),
+      children=self.calculate_table_row_spans(
+        self.read_children(element.element_children()),
       ),
       properties=self.read_table_properties(element.first_or_empty("w:tblPr")),
     ),
@@ -3754,39 +3752,90 @@ fn read_vertical_merge_continue(properties : ReaderNode) -> Bool {
 }
 
 ///|
+fn BodyReader::table_cells_for_span(
+  self : BodyReader,
+  children : Array[ReaderItem],
+) -> Array[TableCellForSpan]? {
+  let cells : Array[TableCellForSpan] = []
+  for child in children {
+    match child {
+      New(
+        {
+          source: cell_source,
+          local_effects: _,
+          shape: ReaderTableCell(children=cell_children, col_span~, row_span~),
+        }
+      ) =>
+        cells.push({
+          children: cell_children,
+          col_span,
+          row_span,
+          source: Some(cell_source),
+        })
+      // cells the `w:sdt` legacy island erased before this pass; goes away
+      // with the island
+      Legacy(TableCell(children=cell_children, col_span~, row_span~)) =>
+        cells.push({
+          children: reader_legacy_items(cell_children),
+          col_span,
+          row_span,
+          source: None,
+        })
+      _ => {
+        self.warn(
+          "unexpected non-cell element in table row, cell merging may be incorrect",
+        )
+        return None
+      }
+    }
+  }
+  Some(cells)
+}
+
+///|
 fn BodyReader::calculate_table_row_spans(
   self : BodyReader,
-  elements : Array[DocumentElement],
-) -> Array[DocumentElement] {
-  let rows : Array[(Array[DocumentElement], Bool)] = []
-  for element in elements {
-    match element {
-      TableRow(children~, is_header~) => rows.push((children, is_header))
+  items : Array[ReaderItem],
+) -> Array[ReaderItem] {
+  let typed_rows : Array[TableRowForSpan] = []
+  for item in items {
+    match item {
+      New({ source, local_effects: _, shape: ReaderTableRow(children~, is_header~) }) => {
+        guard self.table_cells_for_span(children) is Some(cells) else {
+          return items
+        }
+        typed_rows.push({ cells, is_header, source: Some(source) })
+      }
+      // rows the `w:sdt` legacy island erased before this pass; goes away
+      // with the island
+      Legacy(TableRow(children~, is_header~)) => {
+        let cells : Array[TableCellForSpan] = []
+        for child in children {
+          match child {
+            TableCell(children=cell_children, col_span~, row_span~) =>
+              cells.push({
+                children: reader_legacy_items(cell_children),
+                col_span,
+                row_span,
+                source: None,
+              })
+            _ => {
+              self.warn(
+                "unexpected non-cell element in table row, cell merging may be incorrect",
+              )
+              return items
+            }
+          }
+        }
+        typed_rows.push({ cells, is_header, source: None })
+      }
       _ => {
         self.warn(
           "unexpected non-row element in table, cell merging may be incorrect",
         )
-        return elements
+        return items
       }
     }
-  }
-  let typed_rows : Array[TableRowForSpan] = []
-  for row in rows {
-    let (children, is_header) = row
-    let cells : Array[TableCellForSpan] = []
-    for child in children {
-      match child {
-        TableCell(children=cell_children, col_span~, row_span~) =>
-          cells.push({ children: cell_children, col_span, row_span })
-        _ => {
-          self.warn(
-            "unexpected non-cell element in table row, cell merging may be incorrect",
-          )
-          return elements
-        }
-      }
-    }
-    typed_rows.push({ cells, is_header })
   }
   self.calculate_typed_table_row_spans(typed_rows)
 }
@@ -3795,7 +3844,7 @@ fn BodyReader::calculate_table_row_spans(
 fn BodyReader::calculate_typed_table_row_spans(
   _self : BodyReader,
   elements : Array[TableRowForSpan],
-) -> Array[DocumentElement] {
+) -> Array[ReaderItem] {
   let row_spans : Array[Array[Int]] = []
   let skip_cells : Array[Array[Bool]] = []
   for row in elements {
@@ -3828,24 +3877,61 @@ fn BodyReader::calculate_typed_table_row_spans(
       column_index = column_index + cell.col_span
     }
   }
-  let rows : Array[DocumentElement] = []
+  let rows : Array[ReaderItem] = []
   for row_index in 0..<elements.length() {
-    let new_children : Array[DocumentElement] = []
+    let new_children : Array[ReaderItem] = []
     for cell_index in 0..<elements[row_index].cells.length() {
       if !skip_cells[row_index][cell_index] {
         let cell = elements[row_index].cells[cell_index]
-        new_children.push(
-          TableCell(
-            children=cell.children,
-            col_span=cell.col_span,
-            row_span=row_spans[row_index][cell_index],
-          ),
-        )
+        let row_span = row_spans[row_index][cell_index]
+        match cell.source {
+          Some(cell_source) =>
+            new_children.push(
+              New({
+                source: cell_source,
+                local_effects: [],
+                shape: ReaderTableCell(
+                  children=cell.children,
+                  col_span=cell.col_span,
+                  row_span~,
+                ),
+              }),
+            )
+          None =>
+            new_children.push(
+              Legacy(
+                TableCell(
+                  children=reader_items_to_elements(cell.children),
+                  col_span=cell.col_span,
+                  row_span~,
+                ),
+              ),
+            )
+        }
       }
     }
-    rows.push(
-      TableRow(children=new_children, is_header=elements[row_index].is_header),
-    )
+    match elements[row_index].source {
+      Some(row_source) =>
+        rows.push(
+          New({
+            source: row_source,
+            local_effects: [],
+            shape: ReaderTableRow(
+              children=new_children,
+              is_header=elements[row_index].is_header,
+            ),
+          }),
+        )
+      None =>
+        rows.push(
+          Legacy(
+            TableRow(
+              children=reader_items_to_elements(new_children),
+              is_header=elements[row_index].is_header,
+            ),
+          ),
+        )
+    }
   }
   rows
 }
