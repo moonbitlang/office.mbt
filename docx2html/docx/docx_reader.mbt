@@ -2196,7 +2196,7 @@ fn BodyReader::read_element(
     "w:tc" => [self.read_table_cell(element)]
     "w:ins" | "w:smartTag" | "w:sdtContent" =>
       self.read_children(element.element_children())
-    "w:sdt" => reader_legacy_items(self.read_structured_document_tag(element))
+    "w:sdt" => self.read_structured_document_tag(element)
     _ =>
       if is_ignored_body_element(element.name()) {
         []
@@ -2792,13 +2792,9 @@ fn BodyReader::read_pict_extra_elements(
 fn BodyReader::read_structured_document_tag(
   self : BodyReader,
   element : ReaderNode,
-) -> Array[DocumentElement] raise DocxError {
-  // the checkbox replacement is a named legacy island until 2c; its content
-  // erases through the island adapter so the end-of-2c search guard sees it
-  let content = reader_legacy_island_elements(
-    self.read_children(
-      element.first_or_empty("w:sdtContent").element_children(),
-    ),
+) -> Array[ReaderItem] raise DocxError {
+  let content = self.read_children(
+    element.first_or_empty("w:sdtContent").element_children(),
   )
   match read_structured_checkbox(element.first_or_empty("w:sdtPr")) {
     Some(checked) => {
@@ -2806,7 +2802,9 @@ fn BodyReader::read_structured_document_tag(
       if found {
         replaced
       } else {
-        [checkbox(checked)]
+        // no text to stand in for: the checkbox is synthesized at the
+        // control itself
+        [New({ source: element, local_effects: [], shape: ReaderCheckbox(checked) })]
       }
     }
     None => content
@@ -2835,6 +2833,124 @@ fn read_boolean_attribute_value(value : String?) -> Bool {
 
 ///|
 fn replace_first_text_with_checkbox(
+  items : Array[ReaderItem],
+  checked : Bool,
+) -> (Array[ReaderItem], Bool) {
+  let replaced : Array[ReaderItem] = []
+  let mut found = false
+  for item in items {
+    if found {
+      replaced.push(item)
+    } else {
+      let (next, next_found) = replace_first_text_in_item(item, checked)
+      replaced.push(next)
+      if next_found {
+        found = true
+      }
+    }
+  }
+  (replaced, found)
+}
+
+///|
+fn replace_first_text_in_item(
+  item : ReaderItem,
+  checked : Bool,
+) -> (ReaderItem, Bool) {
+  match item {
+    New(tree) => {
+      let (shape, found) = replace_first_text_in_shape(tree.shape, checked)
+      (New({ source: tree.source, local_effects: tree.local_effects, shape }), found)
+    }
+    // legacy producers (images) never hold text; the walk below preserves
+    // the erased behaviour exactly and dies with `Legacy`
+    Legacy(element) => {
+      let (next, found) = replace_first_text_in_element(element, checked)
+      (Legacy(next), found)
+    }
+    Trace(_) => (item, false)
+  }
+}
+
+///|
+fn replace_first_text_in_shape(
+  shape : ReaderTreeShape,
+  checked : Bool,
+) -> (ReaderTreeShape, Bool) {
+  match shape {
+    ReaderText(value) =>
+      if value.length() > 0 {
+        (ReaderCheckbox(checked), true)
+      } else {
+        (shape, false)
+      }
+    ReaderParagraph(sources~, children~, extras~, properties~) => {
+      // the erased pipeline expanded extras as siblings after the
+      // paragraph, so the search visits the carrier first, then extras
+      let (new_children, found) = replace_first_text_with_checkbox(
+        children, checked,
+      )
+      if found {
+        (
+          ReaderParagraph(sources~, children=new_children, extras~, properties~),
+          true,
+        )
+      } else {
+        let (new_extras, found) = replace_first_text_with_checkbox(
+          extras, checked,
+        )
+        (
+          ReaderParagraph(
+            sources~,
+            children=new_children,
+            extras=new_extras,
+            properties~,
+          ),
+          found,
+        )
+      }
+    }
+    ReaderRun(children~, properties~) => {
+      let (new_children, found) = replace_first_text_with_checkbox(
+        children, checked,
+      )
+      (ReaderRun(children=new_children, properties~), found)
+    }
+    ReaderHyperlink(children~, href~, anchor~, target_frame~) => {
+      let (new_children, found) = replace_first_text_with_checkbox(
+        children, checked,
+      )
+      (
+        ReaderHyperlink(children=new_children, href~, anchor~, target_frame~),
+        found,
+      )
+    }
+    ReaderTable(children~, properties~) => {
+      let (new_children, found) = replace_first_text_with_checkbox(
+        children, checked,
+      )
+      (ReaderTable(children=new_children, properties~), found)
+    }
+    ReaderTableRow(children~, is_header~) => {
+      let (new_children, found) = replace_first_text_with_checkbox(
+        children, checked,
+      )
+      (ReaderTableRow(children=new_children, is_header~), found)
+    }
+    ReaderTableCell(children~, col_span~, row_span~) => {
+      let (new_children, found) = replace_first_text_with_checkbox(
+        children, checked,
+      )
+      (ReaderTableCell(children=new_children, col_span~, row_span~), found)
+    }
+    _ => (shape, false)
+  }
+}
+
+///|
+/// Element-level twin of `replace_first_text_with_checkbox` for content the
+/// remaining legacy producers hand over; dies with `Legacy`.
+fn replace_first_text_with_checkbox_elements(
   elements : Array[DocumentElement],
   checked : Bool,
 ) -> (Array[DocumentElement], Bool) {
@@ -2867,43 +2983,43 @@ fn replace_first_text_in_element(
         (element, false)
       }
     Document(children~, notes~, comments~) => {
-      let (new_children, found) = replace_first_text_with_checkbox(
+      let (new_children, found) = replace_first_text_with_checkbox_elements(
         children, checked,
       )
       (Document(children=new_children, notes~, comments~), found)
     }
     Paragraph(children~, properties~) => {
-      let (new_children, found) = replace_first_text_with_checkbox(
+      let (new_children, found) = replace_first_text_with_checkbox_elements(
         children, checked,
       )
       (Paragraph(children=new_children, properties~), found)
     }
     Run(children~, properties~) => {
-      let (new_children, found) = replace_first_text_with_checkbox(
+      let (new_children, found) = replace_first_text_with_checkbox_elements(
         children, checked,
       )
       (Run(children=new_children, properties~), found)
     }
     Hyperlink(children~, href~, anchor~, target_frame~) => {
-      let (new_children, found) = replace_first_text_with_checkbox(
+      let (new_children, found) = replace_first_text_with_checkbox_elements(
         children, checked,
       )
       (Hyperlink(children=new_children, href~, anchor~, target_frame~), found)
     }
     Table(children~, properties~) => {
-      let (new_children, found) = replace_first_text_with_checkbox(
+      let (new_children, found) = replace_first_text_with_checkbox_elements(
         children, checked,
       )
       (Table(children=new_children, properties~), found)
     }
     TableRow(children~, is_header~) => {
-      let (new_children, found) = replace_first_text_with_checkbox(
+      let (new_children, found) = replace_first_text_with_checkbox_elements(
         children, checked,
       )
       (TableRow(children=new_children, is_header~), found)
     }
     TableCell(children~, col_span~, row_span~) => {
-      let (new_children, found) = replace_first_text_with_checkbox(
+      let (new_children, found) = replace_first_text_with_checkbox_elements(
         children, checked,
       )
       (TableCell(children=new_children, col_span~, row_span~), found)
