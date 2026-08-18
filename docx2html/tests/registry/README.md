@@ -9,7 +9,7 @@ scanned-tree consumers (`field_projection.mbt`, `annotation_spans.mbt`,
 lands, agreement is enforced only by tests, so the gate's first need is a
 ledger of *what is dispatched where* that cannot drift silently.
 
-`dispatch_registry.tsv` is that ledger — 350 rows of
+`dispatch_registry.tsv` is that ledger — 484 rows of
 `file, name, functions, kind, coverage` — and
 `check_dispatch_registry.py` re-extracts from source and fails CI on drift:
 
@@ -24,52 +24,53 @@ ledger of *what is dispatched where* that cannot drift silently.
 
 ## How extraction works
 
-Every production `.mbt` that references XML names must be classified in the checker; the rest are implicitly checked to stay name-free, and gain a classification requirement the moment a name appears:
-**extracted** or **exempt with a reason** (the `write_*` files and the blank-
-document/style-map writers: their names construct output; #434's gate is
-about the two *read* implementations agreeing). An unclassified file matching
-either detector is an error, so a new file cannot join the dispatch surface
-silently.
+The design lesson from five adversarial review rounds: detecting dispatch by
+SHAPE — comparisons, match arms, and their parenthesised, reversed, and
+concatenated spellings — is an arms race the detector loses. Extraction is
+**total** instead: in read-side files, every quoted string that could be a
+name registers — bare words, qualified names (any prefix, URI schemes
+excluded), fragments, QNames in `#|` multiline strings — attributed to its
+containing function, comments stripped, inline `test` blocks excluded. A name
+smuggled through any spelling of dispatch still has to be *quoted* somewhere,
+and the quote is what registers.
 
-Within extracted files:
+Every production `.mbt` that references XML names must be classified:
+**extract** (14 files — the readers, the scanner, the scanned-tree consumers,
+and three files total extraction itself flushed out: root-name dispatch in
+`relationship_mutation.mbt`, the `w:t` token map, and the font-name dispatch
+in the symbol resolver both readers share) or **exempt** (the writers; their
+names construct output). Unclassified files matching any detector fail.
+Exempt files carry token-level closure — any function whose body contains
+`.name` or `local_name` must be individually declared in
+`ALLOWED_INSPECTORS` with its justification; a token cannot be hidden by
+parentheses or operand order.
 
-- **qualified names** (`"w:p"`, any prefix) register from anywhere in the
-  file, including `#|` multiline strings, with comments stripped; URI schemes
-  are excluded. The reader dispatches through too many shapes for anything
-  narrower to be safe.
-- **local names** register from declared dispatch functions only (bare quoted
-  words in messages would drown the ledger), and the declaration is closed
-  the other way: a function touching `local_name` — or comparing anything
-  against a name-shaped string — must be declared dispatch or non-dispatch.
-- **name fragments** (`"w:"` prefix construction, the scanner's `":val"`
-  suffix matching) register as rows with `kind=fragment`. Registering rather
-  than rejecting them means a smuggled fragment reconcile-fails exactly like
-  a whole name.
-
-`kind` distinguishes element/attribute **name**s from attribute **value**s
-(`"page"`, `"textWrapping"`) so the coverage work is not misled, and **fragment**s.
+The `kind` column separates element/attribute **name**s from attribute
+**value**s, namespace **prefix**es, XML **entity** names, and **fragment**s
+(`"w:"` prefix construction, the scanner's `":val"` suffix tables).
 
 ## The escape suite
 
-Every escape a review round demonstrated is replayed by
-`escape_suite.sh` against a scratch copy of the sources -- thirteen
-mutations, each verified to have actually applied before its failure is
-required (a mutation that silently does not apply looks exactly like a
-check that does not catch). The suite runs in CI beside the
-reconciliation, so a checker change that reopens an old escape fails
-loudly.
+Every escape a review round demonstrated — seventeen of them — is replayed by
+`escape_suite.sh` against a scratch copy of the sources. Each mutation is
+verified to have actually applied before its failure is required (a mutation
+that silently does not apply looks exactly like a check that does not catch),
+each case asserts the checker's exit status as well as its message (a checker
+that exits 0 on failure must not pass its own suite), and two clean baselines
+bracket the run. It runs in CI beside the reconciliation and in
+`scripts/ci/local-gate.sh`.
 
 ## What this does and does not close
 
-Closed, each verified by a live mutation: a new match arm (any prefix), a
-concatenated name, a name inside a multiline string, a helper taking the name
-as a `String` parameter -- compared either way round or matched through a
-string-literal `match` arm -- a new file joining the dispatch (by name,
-fragment, or `local_name`), a new entry in any declared table, and an exempt
-writer gaining read-side inspection. Not closed: true dataflow — a name smuggled through
-enough indirection that no quoted fragment and no name-shaped comparison
-appears. A regex cannot follow values; the endgame for that is #434 itself,
-after which there is one dispatch surface and no parallel ledger to keep.
+Closed, each an executable suite case: new match arms under any prefix,
+concatenated names in two and three pieces, names in multiline strings,
+helpers taking the name as a parameter in every spelling found so far, new
+files joining the dispatch by name, fragment, bare comparison, or
+`local_name`, new entries in any declared table, and exempt writers gaining
+read-side inspection in any spelling. Not closed: a name that never appears
+quoted in these files at all — passed in from outside the package as data.
+That residue is stated rather than claimed away; #434's endgame removes the
+second dispatch surface, after which there is no parallel ledger to keep.
 
 ## The coverage column
 
