@@ -19,10 +19,11 @@ priv enum ReaderProjectedTextKind {
 
 ///|
 /// What one reader decision contributed to the visible story. Emitted at the
-/// same decision sites that produce or suppress semantic nodes, AFTER
-/// transforms -- which is why the fields stay empty until 2c, when the
-/// transforms themselves become IR-aware. The projection adapter then
-/// becomes pure restructuring over this stream.
+/// same decision sites that produce or suppress semantic nodes, after every
+/// transform has run: a text atom the checkbox transform replaced carries
+/// `Suppressed` + `ProjectsVisibleNonText`, not its original `ProjectsText`.
+/// The old projection's `TransparentSeam` maps to `TransparentBoundary`; its
+/// `HardBarrier` conflated the last two kinds, which this stream separates.
 priv enum ReaderEffect {
   ProjectsText(
     source~ : ReaderNode,
@@ -165,6 +166,55 @@ fn erase_reader_items_into(
           ReaderBreak(kind) => out.push(Break(kind))
           ReaderBookmarkStart(name) => out.push(BookmarkStart(name))
         }
+    }
+  }
+}
+
+///|
+/// The effect stream in document order: a tree's own effects come before its
+/// children's (the decision happens at the node), and a paragraph's extras
+/// follow its children, matching the erase order.
+fn collect_reader_effects(items : Array[ReaderItem]) -> Array[ReaderEffect] {
+  let out : Array[ReaderEffect] = []
+  collect_reader_effects_into(items, out)
+  out
+}
+
+///|
+fn collect_reader_effects_into(
+  items : Array[ReaderItem],
+  out : Array[ReaderEffect],
+) -> Unit {
+  for item in items {
+    match item {
+      Trace(effect) => out.push(effect)
+      New(tree) => {
+        out.append(tree.local_effects)
+        match tree.shape {
+          ReaderParagraph(sources=_, children~, extras~, properties=_) => {
+            collect_reader_effects_into(children, out)
+            collect_reader_effects_into(extras, out)
+          }
+          ReaderRun(children~, properties=_) =>
+            collect_reader_effects_into(children, out)
+          ReaderHyperlink(children~, ..) =>
+            collect_reader_effects_into(children, out)
+          ReaderTable(children~, properties=_) =>
+            collect_reader_effects_into(children, out)
+          ReaderTableRow(children~, is_header=_) =>
+            collect_reader_effects_into(children, out)
+          ReaderTableCell(children~, ..) =>
+            collect_reader_effects_into(children, out)
+          ReaderText(_)
+          | ReaderTab
+          | ReaderCheckbox(_)
+          | ReaderNoteReference(..)
+          | ReaderCommentReference(_)
+          | ReaderImage(_)
+          | ReaderBreak(_)
+          | ReaderBookmarkStart(_) => ()
+        }
+      }
     }
   }
 }

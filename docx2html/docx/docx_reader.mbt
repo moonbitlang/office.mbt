@@ -344,8 +344,12 @@ priv struct CommentsReadResult {
 ///|
 priv struct TableRowForSpan {
   cells : Array[TableCellForSpan]
+  /// Trace items among the row's children after its last cell.
+  trailing : Array[ReaderItem]
   is_header : Bool
   source : ReaderNode
+  /// Trace items that preceded this row among the table's children.
+  leading : Array[ReaderItem]
 }
 
 ///|
@@ -354,6 +358,8 @@ priv struct TableCellForSpan {
   col_span : Int
   row_span : Int
   source : ReaderNode
+  /// Trace items that preceded this cell among the row's children.
+  leading : Array[ReaderItem]
 }
 
 ///|
@@ -2064,10 +2070,13 @@ fn BodyReader::read_children(
 ) -> Array[ReaderItem] raise DocxError {
   let items : Array[ReaderItem] = []
   let deleted_paragraph_contents : Array[ReaderNode] = []
+  let deleted_paragraph_nodes : Array[ReaderNode] = []
   for element in children {
     match element.name() {
-      "w:p" if is_deleted_paragraph(element) =>
+      "w:p" if is_deleted_paragraph(element) => {
         deleted_paragraph_contents.append(element.element_children())
+        deleted_paragraph_nodes.push(element)
+      }
       "w:p" if !deleted_paragraph_contents.is_empty() => {
         // deleted-paragraph join: the joined paragraph records every source
         // paragraph in `sources` and reads the prefix children natively
@@ -2077,9 +2086,14 @@ fn BodyReader::read_children(
           ),
         )
         deleted_paragraph_contents.clear()
+        deleted_paragraph_nodes.clear()
       }
       _ => items.append(self.read_element(element))
     }
+  }
+  // deleted paragraphs with no following paragraph to join never contribute
+  for node in deleted_paragraph_nodes {
+    items.push(Trace(Suppressed(source=node)))
   }
   items
 }
@@ -2092,25 +2106,42 @@ fn BodyReader::read_element(
   match element.name() {
     "w:p" =>
       if is_deleted_paragraph(element) {
-        []
+        [Trace(Suppressed(source=element))]
       } else {
         [self.read_paragraph_elements(element)]
       }
     "w:r" => [self.read_run(element)]
-    "w:t" =>
+    "w:t" => {
+      let value = element.text()
       [
         New({
           source: element,
-          local_effects: [],
-          shape: ReaderText(element.text()),
+          local_effects: [ProjectsText(source=element, kind=FromText, value~)],
+          shape: ReaderText(value),
         }),
       ]
-    "w:tab" => [New({ source: element, local_effects: [], shape: ReaderTab })]
+    }
+    "w:tab" =>
+      [
+        New({
+          source: element,
+          local_effects: [
+            ProjectsText(source=element, kind=FromTab, value="\t"),
+          ],
+          shape: ReaderTab,
+        }),
+      ]
     "w:noBreakHyphen" =>
       [
         New({
           source: element,
-          local_effects: [],
+          local_effects: [
+            ProjectsText(
+              source=element,
+              kind=FromNoBreakHyphen,
+              value="\u{2011}",
+            ),
+          ],
           shape: ReaderText("\u{2011}"),
         }),
       ]
@@ -2118,7 +2149,9 @@ fn BodyReader::read_element(
       [
         New({
           source: element,
-          local_effects: [],
+          local_effects: [
+            ProjectsText(source=element, kind=FromSoftHyphen, value="\u{00AD}"),
+          ],
           shape: ReaderText("\u{00AD}"),
         }),
       ]
@@ -2127,7 +2160,7 @@ fn BodyReader::read_element(
       [
         New({
           source: element,
-          local_effects: [],
+          local_effects: [ProjectsVisibleNonText(source=element)],
           shape: ReaderNoteReference(
             note_type="footnote",
             note_id=annotation_id_or_missing(element.attribute("w:id")),
@@ -2138,19 +2171,19 @@ fn BodyReader::read_element(
       [
         New({
           source: element,
-          local_effects: [],
+          local_effects: [ProjectsVisibleNonText(source=element)],
           shape: ReaderNoteReference(
             note_type="endnote",
             note_id=annotation_id_or_missing(element.attribute("w:id")),
           ),
         }),
       ]
-    "w:footnoteRef" | "w:endnoteRef" => []
+    "w:footnoteRef" | "w:endnoteRef" => [Trace(Suppressed(source=element))]
     "w:commentReference" =>
       [
         New({
           source: element,
-          local_effects: [],
+          local_effects: [ProjectsVisibleNonText(source=element)],
           shape: ReaderCommentReference(
             annotation_id_or_missing(element.attribute("w:id")),
           ),
@@ -2159,12 +2192,12 @@ fn BodyReader::read_element(
     "w:br" => self.read_break(element)
     "w:bookmarkStart" =>
       match element.attribute("w:name") {
-        Some("_GoBack") => []
+        Some("_GoBack") => [Trace(TransparentBoundary(source=element))]
         None =>
           [
             New({
               source: element,
-              local_effects: [],
+              local_effects: [TransparentBoundary(source=element)],
               shape: ReaderBookmarkStart("undefined"),
             }),
           ]
@@ -2172,39 +2205,75 @@ fn BodyReader::read_element(
           [
             New({
               source: element,
-              local_effects: [],
+              local_effects: [TransparentBoundary(source=element)],
               shape: ReaderBookmarkStart(name),
             }),
           ]
       }
     "w:hyperlink" => self.read_hyperlink(element)
-    "w:drawing" | "w:object" => self.read_children(element.element_children())
-    "w:pict" => []
-    "mc:AlternateContent" =>
-      self.read_children(
-        element.first_or_empty("mc:Fallback").element_children(),
+    "w:drawing" | "w:object" =>
+      reader_transparent_items(
+        element,
+        self.read_children(element.element_children()),
       )
+    "w:pict" => [Trace(Suppressed(source=element))]
+    "mc:AlternateContent" => {
+      let items : Array[ReaderItem] = [
+        Trace(TransparentBoundary(source=element)),
+      ]
+      for child in element.element_children() {
+        if child.name() == "mc:Choice" {
+          items.push(Trace(Suppressed(source=child)))
+        }
+      }
+      items.append(
+        self.read_children(
+          element.first_or_empty("mc:Fallback").element_children(),
+        ),
+      )
+      items
+    }
     "wp:inline" | "wp:anchor" => self.read_drawing_element(element)
     "v:roundrect" | "v:shape" | "v:textbox" | "v:group" | "v:rect" =>
-      self.read_children(element.element_children())
+      reader_transparent_items(
+        element,
+        self.read_children(element.element_children()),
+      )
     "v:imagedata" => self.read_vml_image_data(element)
     "w:tbl" => [self.read_table(element)]
     "w:tr" => self.read_table_row(element)
     "w:tc" => [self.read_table_cell(element)]
     "w:ins" | "w:smartTag" | "w:sdtContent" =>
-      self.read_children(element.element_children())
+      reader_transparent_items(
+        element,
+        self.read_children(element.element_children()),
+      )
     "w:sdt" => self.read_structured_document_tag(element)
     _ =>
-      if is_ignored_body_element(element.name()) {
-        []
+      if is_suppressed_body_element(element.name()) {
+        [Trace(Suppressed(source=element))]
+      } else if is_ignored_body_element(element.name()) {
+        [Trace(TransparentBoundary(source=element))]
       } else {
         self.warn_parts([
           "An unrecognised element was ignored: ",
           element.name(),
         ])
-        []
+        [Trace(Suppressed(source=element))]
       }
   }
+}
+
+///|
+/// A transparent dispatch arm: the container contributes a zero-width
+/// boundary and its children pass through.
+fn reader_transparent_items(
+  element : ReaderNode,
+  children : Array[ReaderItem],
+) -> Array[ReaderItem] {
+  let items : Array[ReaderItem] = [Trace(TransparentBoundary(source=element))]
+  items.append(children)
+  items
 }
 
 ///|
@@ -2237,18 +2306,26 @@ fn is_ignored_body_element(name : String) -> Bool {
   name == "w:lastRenderedPageBreak" ||
   name == "w:commentRangeStart" ||
   name == "w:commentRangeEnd" ||
-  name == "w:del" ||
   name == "w:fldChar" ||
-  name == "w:footnoteRef" ||
-  name == "w:endnoteRef" ||
-  name == "w:instrText" ||
-  name == "w:txbxContent" ||
   name == "w:pPr" ||
   name == "w:rPr" ||
   name == "w:tblPr" ||
   name == "w:tblGrid" ||
   name == "w:trPr" ||
   name == "w:tcPr"
+}
+
+///|
+/// Ignored elements whose CONTENT this dispatch site drops, as opposed to
+/// the zero-width markers and formatting metadata above. `Suppressed` records
+/// the decision at the site alone: a `w:txbxContent` dropped here may still
+/// be re-homed by the extras passes, whose items carry their own effects.
+fn is_suppressed_body_element(name : String) -> Bool {
+  name == "w:del" ||
+  name == "w:footnoteRef" ||
+  name == "w:endnoteRef" ||
+  name == "w:instrText" ||
+  name == "w:txbxContent"
 }
 
 ///|
@@ -2263,7 +2340,13 @@ fn BodyReader::read_symbol(
   let char = attribute_or_empty(char_attribute)
   match symbol_to_unicode(font, char) {
     Some(value) =>
-      [New({ source: element, local_effects: [], shape: ReaderText(value) })]
+      [
+        New({
+          source: element,
+          local_effects: [ProjectsText(source=element, kind=FromSymbol, value~)],
+          shape: ReaderText(value),
+        }),
+      ]
     None => {
       self.warn_parts([
         "A w:sym element with an unsupported character was ignored: char ",
@@ -2271,7 +2354,7 @@ fn BodyReader::read_symbol(
         " in font ",
         attribute_or_js_undefined(font_attribute),
       ])
-      []
+      [Trace(Suppressed(source=element))]
     }
   }
 }
@@ -2457,7 +2540,11 @@ fn reader_field_checkbox_run(checked : Bool, source : ReaderNode) -> ReaderItem 
     local_effects: [],
     shape: ReaderRun(
       children=[
-        New({ source, local_effects: [], shape: ReaderCheckbox(checked) }),
+        New({
+          source,
+          local_effects: [ProjectsVisibleNonText(source~)],
+          shape: ReaderCheckbox(checked),
+        }),
       ],
       properties=RunProperties::default(),
     ),
@@ -2495,7 +2582,7 @@ fn wrap_item_with_hyperlink(
   fn hyperlink_of(children : Array[ReaderItem]) -> ReaderItem {
     New({
       source,
-      local_effects: [],
+      local_effects: [TransparentBoundary(source~)],
       shape: ReaderHyperlink(children~, href~, anchor~, target_frame=None),
     })
   }
@@ -2780,6 +2867,8 @@ fn BodyReader::read_structured_document_tag(
   self : BodyReader,
   element : ReaderNode,
 ) -> Array[ReaderItem] raise DocxError {
+  let items : Array[ReaderItem] = [Trace(TransparentBoundary(source=element))]
+  let contents = element.elements_by_tag_name("w:sdtContent")
   let content = self.read_children(
     element.first_or_empty("w:sdtContent").element_children(),
   )
@@ -2787,21 +2876,30 @@ fn BodyReader::read_structured_document_tag(
     Some(checked) => {
       let (replaced, found) = replace_first_text_with_checkbox(content, checked)
       if found {
-        replaced
+        items.append(replaced)
       } else {
-        // no text to stand in for: the checkbox is synthesized at the
-        // control itself
-        [
+        // no text to stand in for: the content is dropped wholesale and the
+        // checkbox is synthesized at the control itself
+        if contents.length() > 0 {
+          items.push(Trace(Suppressed(source=contents[0])))
+        }
+        items.push(
           New({
             source: element,
-            local_effects: [],
+            local_effects: [ProjectsVisibleNonText(source=element)],
             shape: ReaderCheckbox(checked),
           }),
-        ]
+        )
       }
     }
-    None => content
+    None => items.append(content)
   }
+  // only the first content contributes; the rest is a selection the reader
+  // makes, recorded per rejected content
+  for index in 1..<contents.length() {
+    items.push(Trace(Suppressed(source=contents[index])))
+  }
+  items
 }
 
 ///|
@@ -2851,6 +2949,24 @@ fn replace_first_text_in_item(
   checked : Bool,
 ) -> (ReaderItem, Bool) {
   match item {
+    New({ source, local_effects: _, shape: ReaderText(value) }) =>
+      if value.length() > 0 {
+        // the text's projection is suppressed and the checkbox stands in
+        // its place
+        (
+          New({
+            source,
+            local_effects: [
+              Suppressed(source~),
+              ProjectsVisibleNonText(source~),
+            ],
+            shape: ReaderCheckbox(checked),
+          }),
+          true,
+        )
+      } else {
+        (item, false)
+      }
     New(tree) => {
       let (shape, found) = replace_first_text_in_shape(tree.shape, checked)
       (
@@ -2867,13 +2983,9 @@ fn replace_first_text_in_shape(
   shape : ReaderTreeShape,
   checked : Bool,
 ) -> (ReaderTreeShape, Bool) {
+  // `ReaderText` never reaches this walker: `replace_first_text_in_item`
+  // intercepts it so the replacement can rewrite the tree's effects too
   match shape {
-    ReaderText(value) =>
-      if value.length() > 0 {
-        (ReaderCheckbox(checked), true)
-      } else {
-        (shape, false)
-      }
     ReaderParagraph(sources~, children~, extras~, properties~) => {
       // the erased pipeline expanded extras as siblings after the
       // paragraph, so the search visits the carrier first, then extras
@@ -3177,14 +3289,32 @@ fn BodyReader::read_break(
 ) -> Array[ReaderItem] {
   match element.attribute("w:type") {
     None | Some("textWrapping") =>
-      [New({ source: element, local_effects: [], shape: ReaderBreak(Line) })]
+      [
+        New({
+          source: element,
+          local_effects: [ProjectsVisibleNonText(source=element)],
+          shape: ReaderBreak(Line),
+        }),
+      ]
     Some("page") =>
-      [New({ source: element, local_effects: [], shape: ReaderBreak(Page) })]
+      [
+        New({
+          source: element,
+          local_effects: [ProjectsVisibleNonText(source=element)],
+          shape: ReaderBreak(Page),
+        }),
+      ]
     Some("column") =>
-      [New({ source: element, local_effects: [], shape: ReaderBreak(Column) })]
+      [
+        New({
+          source: element,
+          local_effects: [ProjectsVisibleNonText(source=element)],
+          shape: ReaderBreak(Column),
+        }),
+      ]
     Some(break_type) => {
       self.warn_parts(["Unsupported break type: ", break_type])
-      []
+      [Trace(Suppressed(source=element))]
     }
   }
 }
@@ -3209,7 +3339,7 @@ fn BodyReader::read_hyperlink(
       [
         New({
           source: element,
-          local_effects: [],
+          local_effects: [TransparentBoundary(source=element)],
           shape: ReaderHyperlink(
             children=self.read_children(element.element_children()),
             href~,
@@ -3225,7 +3355,7 @@ fn BodyReader::read_hyperlink(
           [
             New({
               source: element,
-              local_effects: [],
+              local_effects: [TransparentBoundary(source=element)],
               shape: ReaderHyperlink(
                 children=self.read_children(element.element_children()),
                 href=None,
@@ -3235,8 +3365,12 @@ fn BodyReader::read_hyperlink(
             }),
           ]
         // untargeted and unanchored: the reader flattens, so the child
-        // items pass through untouched
-        None => self.read_children(element.element_children())
+        // items pass through behind a boundary
+        None =>
+          reader_transparent_items(
+            element,
+            self.read_children(element.element_children()),
+          )
       }
   }
 }
@@ -3300,14 +3434,14 @@ fn BodyReader::wrap_image_with_drawing_hyperlink(
 ) -> ReaderItem {
   let image_item = New({
     source: blip,
-    local_effects: [],
+    local_effects: [ProjectsVisibleNonText(source=blip)],
     shape: ReaderImage(image),
   })
   match self.read_drawing_hyperlink(drawing_element) {
     Some(href) =>
       New({
         source: drawing_element,
-        local_effects: [],
+        local_effects: [TransparentBoundary(source=drawing_element)],
         shape: ReaderHyperlink(
           children=[image_item],
           href=Some(href),
@@ -3405,7 +3539,7 @@ fn BodyReader::read_vml_image_data(
           [
             New({
               source: element,
-              local_effects: [],
+              local_effects: [ProjectsVisibleNonText(source=element)],
               shape: ReaderImage(image),
             }),
           ]
@@ -3413,7 +3547,7 @@ fn BodyReader::read_vml_image_data(
       }
     None => {
       self.warn("A v:imagedata element without a relationship ID was ignored")
-      []
+      [Trace(Suppressed(source=element))]
     }
   }
 }
@@ -3799,23 +3933,29 @@ fn read_vertical_merge_continue(properties : ReaderNode) -> Bool {
 fn BodyReader::table_cells_for_span(
   self : BodyReader,
   children : Array[ReaderItem],
-) -> Array[TableCellForSpan]? {
+) -> (Array[TableCellForSpan], Array[ReaderItem])? {
   let cells : Array[TableCellForSpan] = []
+  let pending : Array[ReaderItem] = []
   for child in children {
     match child {
+      // effect traces carry no structure; they ride along in place
+      Trace(_) => pending.push(child)
       New(
         {
           source: cell_source,
           local_effects: _,
           shape: ReaderTableCell(children=cell_children, col_span~, row_span~),
         }
-      ) =>
+      ) => {
         cells.push({
           children: cell_children,
           col_span,
           row_span,
           source: cell_source,
+          leading: pending.copy(),
         })
+        pending.clear()
+      }
       _ => {
         self.warn(
           "unexpected non-cell element in table row, cell merging may be incorrect",
@@ -3824,7 +3964,7 @@ fn BodyReader::table_cells_for_span(
       }
     }
   }
-  Some(cells)
+  Some((cells, pending))
 }
 
 ///|
@@ -3833,8 +3973,11 @@ fn BodyReader::calculate_table_row_spans(
   items : Array[ReaderItem],
 ) -> Array[ReaderItem] {
   let typed_rows : Array[TableRowForSpan] = []
+  let pending : Array[ReaderItem] = []
   for item in items {
     match item {
+      // effect traces carry no structure; they ride along in place
+      Trace(_) => pending.push(item)
       New(
         {
           source,
@@ -3842,10 +3985,17 @@ fn BodyReader::calculate_table_row_spans(
           shape: ReaderTableRow(children~, is_header~),
         }
       ) => {
-        guard self.table_cells_for_span(children) is Some(cells) else {
+        guard self.table_cells_for_span(children) is Some((cells, trailing)) else {
           return items
         }
-        typed_rows.push({ cells, is_header, source })
+        typed_rows.push({
+          cells,
+          trailing,
+          is_header,
+          source,
+          leading: pending.copy(),
+        })
+        pending.clear()
       }
       _ => {
         self.warn(
@@ -3855,7 +4005,9 @@ fn BodyReader::calculate_table_row_spans(
       }
     }
   }
-  self.calculate_typed_table_row_spans(typed_rows)
+  let rows = self.calculate_typed_table_row_spans(typed_rows)
+  rows.append(pending)
+  rows
 }
 
 ///|
@@ -3899,8 +4051,13 @@ fn BodyReader::calculate_typed_table_row_spans(
   for row_index in 0..<elements.length() {
     let new_children : Array[ReaderItem] = []
     for cell_index in 0..<elements[row_index].cells.length() {
-      if !skip_cells[row_index][cell_index] {
-        let cell = elements[row_index].cells[cell_index]
+      let cell = elements[row_index].cells[cell_index]
+      new_children.append(cell.leading)
+      if skip_cells[row_index][cell_index] {
+        // a vertical-merge continuation the span calculation removed; its
+        // content projects nothing
+        new_children.push(Trace(Suppressed(source=cell.source)))
+      } else {
         new_children.push(
           New({
             source: cell.source,
@@ -3914,6 +4071,8 @@ fn BodyReader::calculate_typed_table_row_spans(
         )
       }
     }
+    new_children.append(elements[row_index].trailing)
+    rows.append(elements[row_index].leading)
     rows.push(
       New({
         source: elements[row_index].source,
