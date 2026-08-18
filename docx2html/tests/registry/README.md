@@ -24,7 +24,7 @@ ledger of *what is dispatched where* that cannot drift silently.
 
 ## How extraction works
 
-Every production `.mbt` in the package is classified in the checker:
+Every production `.mbt` that references XML names must be classified in the checker; the rest are implicitly checked to stay name-free, and gain a classification requirement the moment a name appears:
 **extracted** or **exempt with a reason** (the `write_*` files and the blank-
 document/style-map writers: their names construct output; #434's gate is
 about the two *read* implementations agreeing). An unclassified file matching
@@ -47,7 +47,7 @@ Within extracted files:
   a whole name.
 
 `kind` distinguishes element/attribute **name**s from attribute **value**s
-(`"page"`, `"restart"`) so the coverage work is not misled, and **fragment**s.
+(`"page"`, `"textWrapping"`) so the coverage work is not misled, and **fragment**s.
 
 ## What this does and does not close
 

@@ -144,7 +144,10 @@ FILES = {
     'write_numbering.mbt': {'exempt': 'writer'},
     'write_tables.mbt': {'exempt': 'writer'},
     'annotate_fragments.mbt': {'exempt': 'writer'},
-    'embedded_style_map.mbt': {'exempt': 'writer'},
+    # mixed writer/reader: read_content_type_xml_entries dispatches on
+    # content-types names, so the whole file extracts; its writer names
+    # registering too is over-inclusion, which is safe
+    'embedded_style_map.mbt': {'extract': {'qualified': True, 'local': None}},
     'new_document.mbt': {'exempt': 'writer'},
 }
 
@@ -156,7 +159,7 @@ SCHEMES = {'urn', 'http', 'https', 'mailto', 'data'}
 LOCAL_NAME_STR = re.compile(r'"([A-Za-z][A-Za-z0-9]*)"')
 LOCAL_DETECT = re.compile(r'\blocal_name\b')
 # an identifier compared against a name-shaped string: the smuggled-dispatch tell
-COMPARISON = re.compile(r'(?:==|\bis)\s+"[A-Za-z][A-Za-z0-9]*"')
+COMPARISON = re.compile(r'(?:==|\bis)\s+"[A-Za-z][A-Za-z0-9]*"|"[A-Za-z][A-Za-z0-9]*"\s*==')
 FRAGMENT = re.compile(r'"(?::[A-Za-z][A-Za-z0-9]*|[A-Za-z][A-Za-z0-9]*:)"')
 
 def strip_comments(line):
@@ -227,7 +230,11 @@ for f in production:
         continue
     src = open(os.path.join(DOCX, f)).read()
     stripped = '\n'.join(strip_comments(l) for l in src.split('\n'))
-    if LOCAL_DETECT.search(stripped) or qualified_names(src.split('\n')):
+    if (
+        LOCAL_DETECT.search(stripped)
+        or qualified_names(src.split('\n'))
+        or FRAGMENT.search(stripped)
+    ):
         errors.append(f"UNCLASSIFIED FILE: {f} references XML names but is not classified in check_dispatch_registry.py")
 for f in FILES:
     if f not in production:

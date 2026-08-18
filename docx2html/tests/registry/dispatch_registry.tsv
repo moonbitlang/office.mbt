@@ -1,15 +1,15 @@
 file	name	functions	kind	coverage
 annotate_plan.mbt	content-types:Types	plan_comment_addition_zip	name	
-annotate_thread.mbt	Ignorable	ensure_w14_on_root	value	
+annotate_thread.mbt	Ignorable	ensure_w14_on_root	name	
 annotate_thread.mbt	commentEx	scan_comment_ex_part	name	
 annotate_thread.mbt	content-types:Types	queue_comments_extended_edits	name	
 annotate_thread.mbt	done	scan_comment_ex_part	name	
-annotate_thread.mbt	mbtmc	ensure_w14_on_root	value	
-annotate_thread.mbt	mbtw14	ensure_w14_on_root	value	
-annotate_thread.mbt	mc	ensure_w14_on_root	name	
+annotate_thread.mbt	mbtmc	ensure_w14_on_root	prefix	
+annotate_thread.mbt	mbtw14	ensure_w14_on_root	prefix	
+annotate_thread.mbt	mc	ensure_w14_on_root	prefix	
 annotate_thread.mbt	mc:Ignorable	queue_comments_extended_edits	name	
 annotate_thread.mbt	paraId	scan_comment_ex_part	name	
-annotate_thread.mbt	w14	ensure_w14_on_root	name	
+annotate_thread.mbt	w14	ensure_w14_on_root	prefix	
 annotate_thread.mbt	w14:paraId	collect_para_id_attributes	name	
 annotate_thread.mbt	w15:commentEx	comment_ex_fragment,queue_comments_extended_edits	name	
 annotate_thread.mbt	w15:commentsEx	queue_comments_extended_edits	name	
@@ -58,9 +58,9 @@ annotation_scan.mbt	comment	projection_kind	name
 annotation_scan.mbt	commentRangeEnd	marker_kind	name	
 annotation_scan.mbt	commentRangeStart	marker_kind	name	
 annotation_scan.mbt	commentReference	marker_kind	name	
-annotation_scan.mbt	continuationNotice	scan_story	value	
-annotation_scan.mbt	continuationSeparator	scan_story	value	
-annotation_scan.mbt	continue	scan_story	value	
+annotation_scan.mbt	continuationNotice	scan_story	name	
+annotation_scan.mbt	continuationSeparator	scan_story	name	
+annotation_scan.mbt	continue	scan_story	name	
 annotation_scan.mbt	customXmlDelRangeEnd	is_revision_site_name	name	
 annotation_scan.mbt	customXmlDelRangeStart	is_revision_site_name	name	
 annotation_scan.mbt	customXmlInsRangeEnd	is_revision_site_name	name	
@@ -93,7 +93,7 @@ annotation_scan.mbt	moveTo	is_revision_site_name	name
 annotation_scan.mbt	moveToRangeEnd	is_revision_site_name	name	
 annotation_scan.mbt	moveToRangeStart	is_revision_site_name	name	
 annotation_scan.mbt	name	scan_story	name	
-annotation_scan.mbt	note	projection_kind	value	
+annotation_scan.mbt	note	projection_kind	name	
 annotation_scan.mbt	numberingChange	is_revision_site_name	name	
 annotation_scan.mbt	object	is_transparent_container	name	
 annotation_scan.mbt	p	projection_kind,scan_story	name	
@@ -106,7 +106,7 @@ annotation_scan.mbt	sdt	is_transparent_container	name
 annotation_scan.mbt	sdtContent	is_transparent_container	name	
 annotation_scan.mbt	sectPr	is_property_container	name	
 annotation_scan.mbt	sectPrChange	is_revision_site_name	name	
-annotation_scan.mbt	separator	scan_story	value	
+annotation_scan.mbt	separator	scan_story	name	
 annotation_scan.mbt	smartTag	is_transparent_container	name	
 annotation_scan.mbt	sym	scan_story	name	
 annotation_scan.mbt	t	deleted_text_replacement,scan_story	name	
@@ -267,6 +267,8 @@ docx_reader.mbt	w:vertAlign	BodyReader::read_run_properties	name
 docx_reader.mbt	wp:anchor	BodyReader::read_element	name	
 docx_reader.mbt	wp:docPr	BodyReader::read_drawing_hyperlink,read_drawing_alt_text	name	
 docx_reader.mbt	wp:inline	BodyReader::read_element	name	
+embedded_style_map.mbt	content-types:Default	read_content_type_xml_entries	name	
+embedded_style_map.mbt	content-types:Override	read_content_type_xml_entries	name	
 field_projection.mbt	body	reader_order_field_story_identity	name	
 field_projection.mbt	comment	reader_order_field_story_identity	name	
 field_projection.mbt	comments	reader_order_field_story_identity	name	
@@ -287,7 +289,7 @@ reader_order_projection.mbt	bookmarkEnd	ReaderOrderWalker::walk_inline_element	n
 reader_order_projection.mbt	bookmarkStart	ReaderOrderWalker::walk_inline_element,reader_order_body_output_kind	name	
 reader_order_projection.mbt	br	ReaderOrderWalker::walk_inline_element,reader_order_body_output_kind	name	
 reader_order_projection.mbt	checkbox	ReaderOrderWalker::sdt_declares_checkbox	name	
-reader_order_projection.mbt	column	reader_order_body_output_kind	value	
+reader_order_projection.mbt	column	reader_order_body_output_kind	name	
 reader_order_projection.mbt	comment	ReaderOrderWalker::walk	name	
 reader_order_projection.mbt	commentRangeEnd	ReaderOrderWalker::walk_inline_element	name	
 reader_order_projection.mbt	commentRangeStart	ReaderOrderWalker::walk_inline_element	name	
@@ -320,7 +322,7 @@ reader_order_projection.mbt	noBreakHyphen	ReaderOrderWalker::walk_inline_element
 reader_order_projection.mbt	object	ReaderOrderWalker::walk_inline_element,ReaderOrderWalker::walk_pict_extras,ReaderOrderWalker::walk_structural_element	name	
 reader_order_projection.mbt	p	ReaderOrderWalker::walk_flow_children,ReaderOrderWalker::walk_inline_children,ReaderOrderWalker::walk_inline_element,ReaderOrderWalker::walk_pict_extras,ReaderOrderWalker::walk_structural_element,collect_reader_order_body_outputs,reader_order_body_output_kind	name	
 reader_order_projection.mbt	pPr	ReaderOrderWalker::is_deleted_paragraph_mark,ReaderOrderWalker::walk_inline_element	name	
-reader_order_projection.mbt	page	reader_order_body_output_kind	value	
+reader_order_projection.mbt	page	reader_order_body_output_kind	name	
 reader_order_projection.mbt	pict	ReaderOrderWalker::walk_inline_element,ReaderOrderWalker::walk_paragraph_extras,ReaderOrderWalker::walk_pict_extras,reader_order_projection_visibility	name	
 reader_order_projection.mbt	proofErr	ReaderOrderWalker::walk_inline_element	name	
 reader_order_projection.mbt	ptab	ReaderOrderWalker::walk_inline_element	name	
@@ -339,7 +341,7 @@ reader_order_projection.mbt	t	ReaderOrderWalker::walk_inline_element,reader_orde
 reader_order_projection.mbt	tab	ReaderOrderWalker::walk_inline_element,reader_order_body_output_kind	name	
 reader_order_projection.mbt	tbl	ReaderOrderWalker::walk_inline_element,ReaderOrderWalker::walk_pict_extras,ReaderOrderWalker::walk_structural_element,reader_order_body_output_kind,reader_order_projection_visibility	name	
 reader_order_projection.mbt	tc	ReaderOrderWalker::walk_inline_element,ReaderOrderWalker::walk_pict_extras,ReaderOrderWalker::walk_structural_element,reader_order_body_output_kind	name	
-reader_order_projection.mbt	textWrapping	reader_order_body_output_kind	value	
+reader_order_projection.mbt	textWrapping	reader_order_body_output_kind	name	
 reader_order_projection.mbt	textbox	reader_order_is_vml_flattening_container	name	
 reader_order_projection.mbt	tr	ReaderOrderWalker::walk_inline_element,ReaderOrderWalker::walk_pict_extras,ReaderOrderWalker::walk_structural_element,reader_order_body_output_kind	name	
 reader_order_projection.mbt	txbxContent	ReaderOrderWalker::walk_inline_element,ReaderOrderWalker::walk_paragraph_extras,ReaderOrderWalker::walk_pict_extras,ReaderOrderWalker::walk_structural_element,ReaderOrderWalker::walk_text_box_extras,reader_order_projection_visibility	name	
