@@ -52,23 +52,30 @@ fn ReaderSegmentationRefusal::describe(
 
 ///|
 /// Refusal diagnostics never carry unbounded input: an expanded XML name
-/// is clipped before it is stored in a refusal, so a hostile namespace
-/// URI cannot ride a describe() into logs or messages.
+/// is clipped to at most 64 UTF-16 units before it is stored in a
+/// refusal, so a hostile namespace URI cannot ride a describe() into
+/// logs or messages.
 const READER_SEGMENTATION_NAME_LIMIT = 64
 
 ///|
 fn reader_segmentation_clip_name(name : String) -> String {
+  if name.length() <= READER_SEGMENTATION_NAME_LIMIT {
+    return name
+  }
   let output = StringBuilder::new()
-  let mut count = 0
+  let mut units = 0
   for character in name {
-    if count == READER_SEGMENTATION_NAME_LIMIT - 1 {
-      output.write_string("\u{2026}")
-      return output.to_string()
+    // the cap is UTF-16 units, the length() currency: a non-BMP
+    // character spends two
+    let width = if character.to_int() > 0xFFFF { 2 } else { 1 }
+    if units + width > READER_SEGMENTATION_NAME_LIMIT - 1 {
+      break
     }
     output.write_char(character)
-    count += 1
+    units += width
   }
-  name
+  output.write_string("\u{2026}")
+  output.to_string()
 }
 
 ///|
@@ -133,9 +140,20 @@ fn segment_joined_reader_story(
       // else -- a foreign child, a second body -- refuses rather than
       // silently vanishing from the mutation-safe view
       let mut body : ReaderNode? = None
+      let mut background_seen = false
       for child in root.element_children() {
         match child.name() {
-          "w:background" => ()
+          "w:background" =>
+            // the schema sequence is AT MOST ONE background, BEFORE the
+            // body; a duplicate or trailing background is invalid
+            // structure that must not silently vanish
+            if background_seen || body is Some(_) {
+              return SegmentationRefused(
+                UnexpectedContainer(root="w:document", name="w:background"),
+              )
+            } else {
+              background_seen = true
+            }
           "w:body" =>
             match body {
               None => body = Some(child)

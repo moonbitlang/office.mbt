@@ -189,6 +189,23 @@ test "segmentation refuses structural surprises instead of narrowing" {
     ).describe(),
     content="unexpected direct child w:body of w:document",
   )
+  // the schema sequence is at most one background, before the body
+  inspect(
+    segmentation_refusal_of(
+      (
+        #|<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:background w:color="FF0000"/><w:background w:color="00FF00"/><w:body><w:p/></w:body></w:document>
+      ),
+    ).describe(),
+    content="unexpected direct child w:background of w:document",
+  )
+  inspect(
+    segmentation_refusal_of(
+      (
+        #|<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:body><w:p/></w:body><w:background w:color="FF0000"/></w:document>
+      ),
+    ).describe(),
+    content="unexpected direct child w:background of w:document",
+  )
 }
 
 ///|
@@ -206,6 +223,21 @@ test "refusal diagnostics clip hostile names" {
   assert_eq(described.length(), 24 + 64 + 15)
   guard described.has_suffix("\u{2026} of w:footnotes") else {
     fail("expected the clipped name to end in an ellipsis")
+  }
+  // the cap is UTF-16 units, not characters: forty non-BMP name
+  // characters are eighty units and must still clip. 31 fit (62 units)
+  // plus the ellipsis makes 63.
+  let astral_name = StringBuilder::new()
+  for _ in 0..<40 {
+    astral_name.write_char('\u{1D54F}')
+  }
+  let astral_source = "<w:footnotes xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\"><" +
+    astral_name.to_string() +
+    "/><w:footnote w:id=\"1\"><w:p/></w:footnote></w:footnotes>"
+  let astral_described = segmentation_refusal_of(astral_source).describe()
+  assert_eq(astral_described.length(), 24 + 63 + 15)
+  guard astral_described.has_suffix("\u{2026} of w:footnotes") else {
+    fail("expected the clipped astral name to end in an ellipsis")
   }
 }
 
