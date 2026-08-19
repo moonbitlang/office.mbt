@@ -7,13 +7,12 @@
 // a future change that silently closes one demands an allowlist update.
 
 ///|
-priv struct ShadowBoundaryEntry {
-  mut legacy_seams : Int
-  mut legacy_barriers : Int
-  mut ours_transparent : Int
-  mut ours_visible : Int
-  mut ours_suppressed : Int
-}
+/// One entry of either stream, viewed uniformly for the ordered match.
+priv enum ShadowKind {
+  ShadowText
+  ShadowSeam
+  ShadowBarrier
+} derive(Debug, Eq)
 
 ///|
 fn shadow_text_kind_matches(
@@ -31,14 +30,67 @@ fn shadow_text_kind_matches(
 }
 
 ///|
-/// Compares one adapted projection against one legacy projection. Returns
-/// `None` when they agree on the strict domain with only classified
-/// boundary deltas; otherwise the first difference, bounded.
+fn shadow_element_is(
+  elements : Array[ScannedElement],
+  identity : Int,
+  local_name : String,
+) -> Bool {
+  let element = elements[identity]
+  is_wml_uri(element.uri) && element.local_name == local_name
+}
+
+///|
+fn shadow_descends_from(
+  elements : Array[ScannedElement],
+  descendant : Int,
+  ancestor : Int,
+) -> Bool {
+  let mut current = descendant
+  while current >= 0 {
+    if current == ancestor {
+      return true
+    }
+    current = elements[current].parent_index
+  }
+  false
+}
+
+///|
+/// Compares one adapted projection against one legacy projection. Strict
+/// on everything consumers address: text streams (kind, value, source,
+/// span, run pairing, run index, interval, field annotations incl.
+/// refusals), paragraph sources with spans, paragraph intervals and
+/// logical indices, run records (order, identity, span, index), the
+/// carrier-event streams, and the full field indexes. Zero-width
+/// boundary entries match IN ORDER per source and kind class, with a
+/// CLOSED set of one-sided skips -- anything else is the first
+/// difference returned.
 fn compare_reader_projection_shadow(
   ours : ReaderProjection,
   legacy : ReaderOrderProjection,
 ) -> String? {
   let elements = ours.scan.elements()
+  // the carrier-event streams, exactly
+  let our_events : Array[String] = []
+  for event in ours.field_carriers {
+    our_events.push("\{event.paragraph_identity}/\{event.carrier_identity}")
+  }
+  let legacy_events : Array[String] = []
+  for event in legacy.field_carriers {
+    legacy_events.push("\{event.paragraph_identity}/\{event.carrier_identity}")
+  }
+  if our_events != legacy_events {
+    return Some(
+      "carrier events: ours [\{our_events.join(" ")}], legacy [\{legacy_events.join(" ")}]",
+    )
+  }
+  // the full field indexes, exactly
+  if describe_field_index(ours.field_index) !=
+    describe_field_index(legacy.field_index) {
+    return Some(
+      "field index: ours <\{describe_field_index(ours.field_index)}>, legacy <\{describe_field_index(legacy.field_index)}>",
+    )
+  }
   if ours.paragraphs.length() != legacy.paragraphs.length() {
     return Some(
       "paragraph count: ours \{ours.paragraphs.length()}, legacy \{legacy.paragraphs.length()}",
@@ -47,20 +99,26 @@ fn compare_reader_projection_shadow(
   for index in 0..<ours.paragraphs.length() {
     let our_paragraph = ours.paragraphs[index]
     let legacy_paragraph = legacy.paragraphs[index]
-    // physical paragraph sources
-    let our_sources : Array[Int] = []
-    for source in our_paragraph.sources {
-      let SourceElementId(identity) = source.source
-      our_sources.push(identity)
-    }
-    let legacy_sources : Array[Int] = []
-    for source in legacy_paragraph.sources {
-      legacy_sources.push(source.identity)
-    }
-    if our_sources != legacy_sources {
+    if our_paragraph.logical_index != legacy_paragraph.logical_index {
       return Some(
-        "paragraph \{index} sources: ours \{our_sources}, legacy \{legacy_sources}",
+        "paragraph \{index} logical index: ours \{our_paragraph.logical_index}, legacy \{legacy_paragraph.logical_index}",
       )
+    }
+    // physical paragraph sources, with spans
+    if our_paragraph.sources.length() != legacy_paragraph.sources.length() {
+      return Some("paragraph \{index} source count differs")
+    }
+    for position in 0..<our_paragraph.sources.length() {
+      let mine = our_paragraph.sources[position]
+      let theirs = legacy_paragraph.sources[position]
+      let SourceElementId(identity) = mine.source
+      if identity != theirs.identity ||
+        mine.source_span.byte_start != theirs.source_span.byte_start ||
+        mine.source_span.byte_end != theirs.source_span.byte_end {
+        return Some(
+          "paragraph \{index} source \{position}: ours \{identity}, legacy \{theirs.identity}",
+        )
+      }
     }
     if our_paragraph.projection_start != legacy_paragraph.projection_start ||
       our_paragraph.projection_end != legacy_paragraph.projection_end {
@@ -68,65 +126,137 @@ fn compare_reader_projection_shadow(
         "paragraph \{index} interval: ours [\{our_paragraph.projection_start},\{our_paragraph.projection_end}), legacy [\{legacy_paragraph.projection_start},\{legacy_paragraph.projection_end})",
       )
     }
-    // the text streams, strictly
-    let our_texts : Array[ReaderProjectionContribution] = []
-    for contribution in our_paragraph.contributions {
-      if contribution.kind is ProjectedText(_) {
-        our_texts.push(contribution)
+    // run records against the legacy source run lists: order, identity,
+    // span. (Legacy nests run records under each paragraph source.)
+    let legacy_runs : Array[ReaderOrderRunSource] = []
+    for source in legacy_paragraph.sources {
+      for run in source.runs {
+        legacy_runs.push(run)
       }
     }
-    // a checkbox-replaced text is a BLANKED TextAtom on the legacy side
-    // (empty value, empty interval, real source span); ours replaces the
-    // kind entirely with Suppressed + VisibleNonText at the same source.
-    // Classified delta: drop the blanked atom when our checkbox stands at
-    // its source. A genuinely empty w:t keeps its ProjectedText("") pair.
-    let checkbox_sources : Array[Int] = []
-    for contribution in our_paragraph.contributions {
-      if contribution.kind is VisibleNonText {
-        let SourceElementId(identity) = contribution.source
-        checkbox_sources.push(identity)
+    if our_paragraph.runs.length() != legacy_runs.length() {
+      let ours_list : Array[String] = []
+      for run in our_paragraph.runs {
+        let SourceElementId(identity) = run.source
+        ours_list.push("\{identity}")
       }
-    }
-    let legacy_texts : Array[ReaderOrderContribution] = []
-    for contribution in legacy_paragraph.contributions {
-      match contribution.kind {
-        TextAtom | TabAtom | NoBreakHyphenAtom | SoftHyphenAtom | SymbolAtom => {
-          let mut blanked = false
-          if contribution.value == "" {
-            for identity in checkbox_sources {
-              if identity == contribution.source_identity {
-                blanked = true
-                break
-              }
-            }
-          }
-          if !blanked {
-            legacy_texts.push(contribution)
-          }
-        }
-        _ => ()
+      let legacy_list : Array[String] = []
+      for run in legacy_runs {
+        legacy_list.push("\{run.identity}")
       }
-    }
-    if our_texts.length() != legacy_texts.length() {
       return Some(
-        "paragraph \{index} text contributions: ours \{our_texts.length()}, legacy \{legacy_texts.length()}",
+        "paragraph \{index} run records: ours [\{ours_list.join(",")}], legacy [\{legacy_list.join(",")}]",
       )
     }
-    for position in 0..<our_texts.length() {
-      let mine = our_texts[position]
-      let theirs = legacy_texts[position]
+    for position in 0..<our_paragraph.runs.length() {
+      let mine = our_paragraph.runs[position]
+      let theirs = legacy_runs[position]
+      let SourceElementId(identity) = mine.source
+      if identity != theirs.identity ||
+        mine.source_span.byte_start != theirs.source_span.byte_start ||
+        mine.source_span.byte_end != theirs.source_span.byte_end {
+        return Some(
+          "paragraph \{index} run \{position}: ours \{identity}, legacy \{theirs.identity}",
+        )
+      }
+    }
+    match
+      compare_shadow_streams(elements, our_paragraph, legacy_paragraph, index) {
+      Some(difference) => return Some(difference)
+      None => ()
+    }
+  }
+  None
+}
+
+///|
+/// Ordered two-pointer matching over one paragraph pair's FULL
+/// contribution streams. Text entries must match exactly. Zero-width
+/// entries match by source and kind class (seam~Transparent,
+/// barrier~VisibleNonText|SuppressedContent, and the documented fldChar
+/// class flip). The one-sided skips form a CLOSED set:
+///
+/// legacy-only:
+///  - a run-open SEAM at a `w:r` that stands in our run records (runs
+///    are first-class records, not seams);
+///  - a SEAM at an MC `AlternateContent` wrapper (the join cooked it);
+///  - a checkbox-BLANKED text atom (empty value) whose source carries our
+///    Suppressed + VisibleNonText replacement pair, consumed together;
+///  - an image BARRIER whose matching visible/suppressed effect sits on a
+///    descendant (our effect names the blip, legacy the container) --
+///    consumed one-for-one with that ours entry.
+///
+/// ours-only (each capped at one per source and kind):
+///  - Transparent at metadata the legacy walk never visits (`sdtPr`,
+///    `tblPr`, `tblGrid`, `trPr`, `tcPr`, `sectPr`) or at a `fldChar`
+///    (the class flip's transparent half when legacy emitted nothing);
+///  - Suppressed at rejected selections and retractions the legacy walk
+///    rolls back or never enters (`sdt`, `sdtContent`, MC `Choice` or
+///    `Fallback`, `tc`, `tr`, `p`, `del`, `instrText`, `txbxContent`).
+fn compare_shadow_streams(
+  elements : Array[ScannedElement],
+  ours : ReaderProjectionParagraph,
+  legacy : ReaderOrderParagraph,
+  paragraph_index : Int,
+) -> String? {
+  let run_sources : Array[Int] = []
+  for run in ours.runs {
+    let SourceElementId(identity) = run.source
+    run_sources.push(identity)
+  }
+  let mut i = 0
+  let mut j = 0
+  let ours_skip_seen : Map[String, Bool] = Map([])
+  while i < legacy.contributions.length() || j < ours.contributions.length() {
+    let legacy_head = if i < legacy.contributions.length() {
+      Some(legacy.contributions[i])
+    } else {
+      None
+    }
+    let our_head = if j < ours.contributions.length() {
+      Some(ours.contributions[j])
+    } else {
+      None
+    }
+    // text heads must pair exactly
+    let legacy_is_text = match legacy_head {
+      Some(contribution) =>
+        match contribution.kind {
+          TextAtom
+          | TabAtom
+          | NoBreakHyphenAtom
+          | SoftHyphenAtom
+          | SymbolAtom => true
+          _ => false
+        }
+      None => false
+    }
+    let our_is_text = match our_head {
+      Some(contribution) => contribution.kind is ProjectedText(_)
+      None => false
+    }
+    if legacy_is_text && our_is_text {
+      guard legacy_head is Some(theirs) && our_head is Some(mine) else {
+        return Some("unreachable")
+      }
       let SourceElementId(source_identity) = mine.source
       if !shadow_text_kind_matches(theirs.kind, mine.kind) ||
         mine.value != theirs.value ||
         source_identity != theirs.source_identity {
         return Some(
-          "paragraph \{index} text \{position}: ours \{mine.value}@\{source_identity}, legacy \{theirs.value}@\{theirs.source_identity}",
+          "paragraph \{paragraph_index} text: ours \{mine.value}@\{source_identity}, legacy \{theirs.value}@\{theirs.source_identity}",
+        )
+      }
+      if mine.source_span.byte_start != theirs.source_span.byte_start ||
+        mine.source_span.byte_end != theirs.source_span.byte_end {
+        return Some(
+          "paragraph \{paragraph_index} text span at \{source_identity} differs",
         )
       }
       if mine.projection_start != theirs.projection_start ||
         mine.projection_end != theirs.projection_end {
         return Some(
-          "paragraph \{index} text \{position} interval: ours [\{mine.projection_start},\{mine.projection_end}), legacy [\{theirs.projection_start},\{theirs.projection_end})",
+          "paragraph \{paragraph_index} text interval at \{source_identity}: ours [\{mine.projection_start},\{mine.projection_end}), legacy [\{theirs.projection_start},\{theirs.projection_end})",
         )
       }
       let our_run = match mine.run_source {
@@ -140,152 +270,168 @@ fn compare_reader_projection_shadow(
       if our_run != legacy_run ||
         mine.logical_run_index != theirs.logical_run_index {
         return Some(
-          "paragraph \{index} text \{position} run: ours \{our_run}/r\{mine.logical_run_index}, legacy \{legacy_run}/r\{theirs.logical_run_index}",
+          "paragraph \{paragraph_index} text run at \{source_identity}: ours \{our_run}/r\{mine.logical_run_index}, legacy \{legacy_run}/r\{theirs.logical_run_index}",
         )
       }
       if mine.field_region != theirs.field_region ||
-        mine.field_identity != theirs.field_identity {
+        mine.field_identity != theirs.field_identity ||
+        mine.field_refusal != theirs.field_refusal {
         return Some(
-          "paragraph \{index} text \{position} field: ours \{field_region_label(mine.field_region)}, legacy \{field_region_label(theirs.field_region)}",
+          "paragraph \{paragraph_index} text field at \{source_identity} differs",
         )
       }
-    }
-    match
-      compare_shadow_boundaries(
-        elements, our_paragraph, legacy_paragraph, index,
-      ) {
-      Some(difference) => return Some(difference)
-      None => ()
-    }
-  }
-  None
-}
-
-///|
-/// Reconciles the zero-width boundary entries of one paragraph pair as
-/// per-source multisets through the classified representation deltas:
-///
-/// - a seam and a Transparent at the same source match, as do a barrier
-///   and a VisibleNonText or SuppressedContent;
-/// - `fldChar` flips class (legacy barrier, ours transparent marker);
-/// - a legacy-only run-open seam is represented by our run records;
-/// - a legacy-only MC wrapper seam has no node after the join cooks it;
-/// - our-only entries whose source the legacy walk never visits (control
-///   metadata, table metadata, rejected selections, retractions, tail
-///   drops) are the effect stream's finer decision record;
-/// - a legacy image barrier may sit on the drawing container while our
-///   effect sits on the blip inside it.
-fn compare_shadow_boundaries(
-  elements : Array[ScannedElement],
-  ours : ReaderProjectionParagraph,
-  legacy : ReaderOrderParagraph,
-  paragraph_index : Int,
-) -> String? {
-  let by_source : Map[Int, ShadowBoundaryEntry] = Map([])
-  fn entry(identity : Int) -> ShadowBoundaryEntry {
-    match by_source.get(identity) {
-      Some(found) => found
-      None => {
-        let created : ShadowBoundaryEntry = {
-          legacy_seams: 0,
-          legacy_barriers: 0,
-          ours_transparent: 0,
-          ours_visible: 0,
-          ours_suppressed: 0,
-        }
-        by_source[identity] = created
-        created
-      }
-    }
-  }
-
-  for contribution in legacy.contributions {
-    match contribution.kind {
-      TransparentSeam => {
-        let counts = entry(contribution.source_identity)
-        counts.legacy_seams = counts.legacy_seams + 1
-      }
-      HardBarrier => {
-        let counts = entry(contribution.source_identity)
-        counts.legacy_barriers = counts.legacy_barriers + 1
-      }
-      _ => ()
-    }
-  }
-  for contribution in ours.contributions {
-    let SourceElementId(identity) = contribution.source
-    match contribution.kind {
-      Transparent => {
-        let counts = entry(identity)
-        counts.ours_transparent = counts.ours_transparent + 1
-      }
-      VisibleNonText => {
-        let counts = entry(identity)
-        counts.ours_visible = counts.ours_visible + 1
-      }
-      SuppressedContent => {
-        let counts = entry(identity)
-        counts.ours_suppressed = counts.ours_suppressed + 1
-      }
-      ProjectedText(_) => ()
-    }
-  }
-  let run_sources : Array[Int] = []
-  for run in ours.runs {
-    let SourceElementId(identity) = run.source
-    run_sources.push(identity)
-  }
-  for identity, counts in by_source {
-    let element = elements[identity]
-    let matched = counts.legacy_seams + counts.legacy_barriers ==
-      counts.ours_transparent + counts.ours_visible + counts.ours_suppressed
-    if matched {
+      i = i + 1
+      j = j + 1
       continue
     }
-    let legacy_only = counts.legacy_seams + counts.legacy_barriers >
-      counts.ours_transparent + counts.ours_visible + counts.ours_suppressed
-    if legacy_only {
-      // run-open seams: represented by the run records instead
-      if is_wml_uri(element.uri) && element.local_name == "r" {
-        let mut in_runs = false
-        for run_source in run_sources {
-          if run_source == identity {
-            in_runs = true
-            break
-          }
-        }
-        if in_runs {
+    // legacy blanked checkbox text: consumed with our replacement pair
+    if legacy_is_text {
+      guard legacy_head is Some(theirs) else { return Some("unreachable") }
+      if theirs.value == "" &&
+        j + 1 < ours.contributions.length() &&
+        ours.contributions[j].kind is SuppressedContent &&
+        ours.contributions[j + 1].kind is VisibleNonText {
+        let SourceElementId(first) = ours.contributions[j].source
+        let SourceElementId(second) = ours.contributions[j + 1].source
+        if first == theirs.source_identity && second == theirs.source_identity {
+          i = i + 1
+          j = j + 2
           continue
         }
       }
-      // the MC wrapper: the join cooks it away, no node remains
-      if element.uri == MC_URI {
+    }
+    // zero-width vs zero-width: source + kind class, in order
+    if !legacy_is_text && !our_is_text && legacy_head is Some(theirs) {
+      match our_head {
+        Some(mine) => {
+          let SourceElementId(our_source) = mine.source
+          let class_matches = match (theirs.kind, mine.kind) {
+            (TransparentSeam, Transparent) => true
+            (HardBarrier, VisibleNonText) => true
+            (HardBarrier, SuppressedContent) => true
+            // the documented class flip: legacy models a field marker as
+            // a barrier, ours as a transparent marker
+            (HardBarrier, Transparent) =>
+              shadow_element_is(elements, theirs.source_identity, "fldChar")
+            _ => false
+          }
+          if class_matches && our_source == theirs.source_identity {
+            i = i + 1
+            j = j + 1
+            continue
+          }
+          // image barrier on the container, our effect on a descendant
+          if theirs.kind is HardBarrier &&
+            (mine.kind is VisibleNonText || mine.kind is SuppressedContent) &&
+            shadow_descends_from(elements, our_source, theirs.source_identity) {
+            i = i + 1
+            j = j + 1
+            continue
+          }
+        }
+        None => ()
+      }
+    }
+    // legacy-only skips
+    if legacy_head is Some(theirs) && !legacy_is_text {
+      let mut skip = false
+      match theirs.kind {
+        TransparentSeam => {
+          if shadow_element_is(elements, theirs.source_identity, "r") {
+            for identity in run_sources {
+              if identity == theirs.source_identity {
+                skip = true
+                break
+              }
+            }
+          }
+          let element = elements[theirs.source_identity]
+          if element.uri == MC_URI && element.local_name == "AlternateContent" {
+            skip = true
+          }
+        }
+        _ => ()
+      }
+      if skip {
+        i = i + 1
         continue
       }
-      // an image barrier on the drawing container: our effect sits on a
-      // blip (or imagedata) inside it
-      let mut carrier_matched = false
-      for candidate, candidate_counts in by_source {
-        if candidate_counts.ours_visible + candidate_counts.ours_suppressed > 0 {
-          let mut current = candidate
-          while current >= 0 && !carrier_matched {
-            if current == identity {
-              carrier_matched = true
-            }
-            current = elements[current].parent_index
+    }
+    // ours-only skips, capped at one per source and kind
+    if our_head is Some(mine) && !our_is_text {
+      let SourceElementId(our_source) = mine.source
+      let element = elements[our_source]
+      let allowed = match mine.kind {
+        Transparent =>
+          is_wml_uri(element.uri) &&
+          element.local_name
+          is ("sdt"
+          | "sdtPr"
+          | "tblPr"
+          | "tblGrid"
+          | "trPr"
+          | "tcPr"
+          | "sectPr"
+          | "fldChar")
+        // a no-text control synthesizes its checkbox AT the control; the
+        // legacy block site drops the construct wholesale, so the visible
+        // checkbox is ours alone -- the known checkbox-family delta
+        VisibleNonText => is_wml_uri(element.uri) && element.local_name == "sdt"
+        SuppressedContent =>
+          (
+            is_wml_uri(element.uri) &&
+            element.local_name
+            is ("sdt"
+            | "sdtContent"
+            | "tc"
+            | "tr"
+            | "p"
+            | "del"
+            | "instrText"
+            | "txbxContent")
+          ) ||
+          (
+            element.uri == MC_URI &&
+            element.local_name is ("Choice" | "Fallback")
+          )
+        _ => false
+      }
+      if allowed {
+        let kind_label = match mine.kind {
+          Transparent => "b"
+          VisibleNonText => "v"
+          SuppressedContent => "s"
+          ProjectedText(_) => "t"
+        }
+        let key = "\{our_source}:\{kind_label}"
+        match ours_skip_seen.get(key) {
+          Some(_) =>
+            return Some(
+              "paragraph \{paragraph_index}: duplicated ours-only boundary at source \{our_source}",
+            )
+          None => {
+            ours_skip_seen[key] = true
+            j = j + 1
+            continue
           }
         }
       }
-      if carrier_matched {
-        continue
-      }
-      return Some(
-        "paragraph \{paragraph_index}: unmatched legacy boundary at source \{identity} (\{element.local_name})",
-      )
     }
-    // ours-only: the effect stream records decisions the legacy walk never
-    // visits -- metadata, rejected selections, retractions, tail drops
-    continue
+    // nothing matched
+    let legacy_at = match legacy_head {
+      Some(theirs) => "\{theirs.source_identity}"
+      None => "-"
+    }
+    let ours_at = match our_head {
+      Some(mine) => {
+        let SourceElementId(identity) = mine.source
+        "\{identity}"
+      }
+      None => "-"
+    }
+    return Some(
+      "paragraph \{paragraph_index}: unmatched boundary (legacy at \{legacy_at}, ours at \{ours_at})",
+    )
   }
   None
 }
@@ -363,7 +509,7 @@ test "pinned divergence: an inline no-text checkbox control" {
       ),
     ),
     content=(
-      #|paragraph count: ours 1, legacy 2
+      #|carrier events: ours [2/3 2/5], legacy [2/3 2/5 9/10]
     ),
   )
 }
@@ -377,7 +523,7 @@ test "pinned divergence: a textbox in a deleted row inside a paragraph" {
       ),
     ),
     content=(
-      #|paragraph count: ours 2, legacy 1
+      #|carrier events: ours [2/3 2/5 16/17], legacy [2/3 2/5]
     ),
   )
 }
@@ -391,7 +537,7 @@ test "pinned divergence: a no-text checkbox control wrapping a cell" {
       ),
     ),
     content=(
-      #|paragraph count: ours 1, legacy 0
+      #|carrier events: ours [17/18], legacy []
     ),
   )
 }
@@ -405,7 +551,7 @@ test "pinned divergence: field-hoisted extras are reader-native blocks" {
       ),
     ),
     content=(
-      #|paragraph 1 sources: ours [2, 15], legacy [15]
+      #|paragraph 0: unmatched boundary (legacy at 11, ours at 3)
     ),
   )
 }
