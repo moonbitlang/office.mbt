@@ -1,9 +1,10 @@
 #!/usr/bin/env python3
-"""Corpus shadow check (#434 PR 5c): every vendored fixture's main story is
-joined, read, projected, field-classified, and shadow-compared against the
-legacy walker inside a TRANSIENT generated whitebox test; the per-fixture
-outcome must equal the committed manifest, so a fixture can neither
-silently skip nor silently change class.
+"""Corpus shadow check (#434 PR 5c): every vendored fixture's story parts
+(main document, headers, footers, notes, comments) are joined, read,
+projected, field-classified, and shadow-compared against the legacy walker
+inside a TRANSIENT generated whitebox test; the per-part outcome must
+equal the committed manifest, so a part can neither silently skip nor
+silently change class.
 
 Usage:
   python3 shadow_check.py          # generate, run, clean up, verify manifest
@@ -21,8 +22,18 @@ REPO = os.path.abspath(os.path.join(HERE, "..", "..", ".."))
 FIXTURES = os.path.join(HERE, "fixtures")
 MANIFEST = os.path.join(HERE, "shadow_manifest.tsv")
 GENERATED = os.path.join(
-    REPO, "docx2html", "docx", "zz_corpus_shadow_wbtest.mbt"
+    REPO,
+    "docx2html",
+    "docx",
+    "zz_corpus_shadow_%d_wbtest.mbt" % os.getpid(),
 )
+# Story parts share the projection machinery; each present part is checked.
+STORY_PART = re.compile(
+    r"^word/(document|header\d*|footer\d*|footnotes|endnotes|comments)\.xml$"
+)
+# Recorded, never silent: giant stories exceed the embedded string-literal
+# comfort zone of the transient test. Measured in ENCODED bytes.
+OVERSIZE_BYTES = 2_000_000
 
 
 def escape(text):
@@ -47,6 +58,7 @@ def escape(text):
 
 
 def collect_cases():
+    """Returns [(label, xml_or_None, skip_reason_or_None)] in sorted order."""
     cases = []
     for name in sorted(os.listdir(FIXTURES)):
         if not name.endswith(".docx"):
@@ -54,19 +66,24 @@ def collect_cases():
         path = os.path.join(FIXTURES, name)
         try:
             with zipfile.ZipFile(path) as z:
-                if "word/document.xml" not in z.namelist():
-                    cases.append((name, None, "no-main-story"))
+                parts = sorted(p for p in z.namelist() if STORY_PART.match(p))
+                if not parts:
+                    cases.append((name + "::-", None, "no-story-parts"))
                     continue
-                data = z.read("word/document.xml")
+                for part in parts:
+                    label = name + "::" + part
+                    data = z.read(part)
+                    if len(data) > OVERSIZE_BYTES:
+                        cases.append((label, None, "skipped:oversize"))
+                        continue
+                    try:
+                        text = data.decode("utf-8")
+                    except UnicodeDecodeError:
+                        cases.append((label, None, "not-utf8"))
+                        continue
+                    cases.append((label, text, None))
         except zipfile.BadZipFile:
-            cases.append((name, None, "not-a-zip"))
-            continue
-        try:
-            text = data.decode("utf-8")
-        except UnicodeDecodeError:
-            cases.append((name, None, "not-utf8"))
-            continue
-        cases.append((name, text, None))
+            cases.append((name + "::-", None, "not-a-zip"))
     return cases
 
 
@@ -85,17 +102,34 @@ def generate(cases, expected):
     lines.append("///|")
     lines.append('test "zz corpus fixtures shadow the legacy walker" {')
     lines.append("  let cases : Array[(String, String)] = [")
-    for name, text, skip in cases:
+    for label, text, skip in cases:
         if skip is not None:
             continue
-        lines.append('    ("%s", "%s"),' % (name, escape(text)))
+        lines.append('    ("%s", "%s"),' % (escape(label), escape(text)))
     lines.append("  ]")
-    lines.append("  let outcomes : Array[String] = []")
-    for name, _, skip in cases:
+    lines.append("  let skipped : Array[String] = [")
+    for label, _, skip in cases:
         if skip is not None:
-            lines.append('  outcomes.push("%s\\t%s")' % (name, skip))
+            lines.append('    "%s\\t%s",' % (escape(label), escape(skip)))
+    lines.append("  ]")
     lines.append(
-        """  for case in cases {
+        """  fn sanitize(value : String) -> String {
+    let out = StringBuilder()
+    for ch in value {
+      if ch == '\\n' || ch == '\\t' || ch == '\\r' {
+        out.write_char(' ')
+      } else {
+        out.write_char(ch)
+      }
+    }
+    out.to_string()
+  }
+
+  let outcomes : Array[String] = []
+  for entry in skipped {
+    outcomes.push(entry)
+  }
+  for case in cases {
     let (name, source) = case
     let outcome = try {
       match join_text_story(source) {
@@ -110,13 +144,36 @@ def generate(cases, expected):
         Refused(_) => "join-refused"
         Joined(story) => {
           let node = story.root
-          let children = match node.first("w:body") {
-            Some(body) => body.element_children()
-            None => node.element_children()
+          // note and comment parts hold per-container stories: read each
+          // accepted container's children (skipping separator plumbing,
+          // as the reader does) and project the concatenated items so
+          // coordinates and carrier events stay continuous, mirroring the
+          // legacy part-wide walk
+          let items = if node.name() is ("w:footnotes" | "w:endnotes" | "w:comments") {
+            let collected : Array[ReaderItem] = []
+            for container in node.element_children() {
+              let plumbing = match container.attribute("w:type") {
+                Some("separator")
+                | Some("continuationSeparator")
+                | Some("continuationNotice") => true
+                _ => false
+              }
+              if !plumbing {
+                collected.append(
+                  empty_body_reader({ relationships: [] }).read_children(
+                    container.element_children(),
+                  ),
+                )
+              }
+            }
+            collected
+          } else {
+            let children = match node.first("w:body") {
+              Some(body) => body.element_children()
+              None => node.element_children()
+            }
+            empty_body_reader({ relationships: [] }).read_children(children)
           }
-          let items = empty_body_reader({ relationships: [] }).read_children(
-            children,
-          )
           match project_reader_items("word/document.xml", story.scan, items) {
             ProjectionRefused(refusal) =>
               "projection-refused:" + refusal.describe()
@@ -140,90 +197,92 @@ def generate(cases, expected):
       InvalidXml(message~) => "error:InvalidXml " + message
       _ => "error:other"
     }
-    outcomes.push(name + "\\t" + outcome)
+    outcomes.push(name + "\\t" + sanitize(outcome))
   }
-  outcomes.sort()
-  let expected =
-    #|%s
-  assert_eq(outcomes.join("\\n"), expected)
+  inspect(
+    outcomes.join("\\n"),
+    content=(
+      #|%s
+    ),
+  )
 }"""
-        % "\n    #|".join(expected.split("\n"))
+        % "\n      #|".join(expected.split("\n"))
     )
     with open(GENERATED, "w") as f:
         f.write("\n".join(lines) + "\n")
 
 
+def run_moon():
+    return subprocess.run(
+        [
+            "moon",
+            "test",
+            "-p",
+            "docx2html/docx",
+            "--filter",
+            "zz corpus fixtures shadow the legacy walker",
+        ],
+        cwd=os.path.join(REPO, "docx2html"),
+        capture_output=True,
+        text=True,
+    )
+
+
+def extract_actual(output):
+    actual_lines = []
+    in_diff = False
+    for line in output.splitlines():
+        if line.startswith("----"):
+            in_diff = not in_diff
+            continue
+        if in_diff and line.startswith("+"):
+            actual_lines.append(line[1:])
+    return actual_lines
+
+
 def main():
     update = "--update" in sys.argv
     cases = collect_cases()
-    expected = read_manifest()
-    generate(cases, expected)
     try:
-        run = subprocess.run(
-            [
-                "moon",
-                "test",
-                "-p",
-                "docx2html/docx",
-                "--filter",
-                "zz corpus fixtures shadow the legacy walker",
-            ],
-            cwd=os.path.join(REPO, "docx2html"),
-            capture_output=True,
-            text=True,
-        )
+        # update mode runs against an EMPTY expectation first: the inspect
+        # diff of a nearly-correct manifest shows only changed hunks, which
+        # would truncate the extracted outcomes
+        generate(cases, "" if update else read_manifest())
+        run = run_moon()
         output = run.stdout + run.stderr
-        if update:
-            match = re.search(
-                r"^\+(.*?)(?=\n(?:-|\\ No newline|-{4}))",
-                "",
-            )
-            # extract actual outcomes from the failure diff: lines starting
-            # with '+' between the ---- markers
-            actual_lines = []
-            in_diff = False
-            for line in output.splitlines():
-                if line.startswith("----"):
-                    in_diff = not in_diff
-                    continue
-                if in_diff and line.startswith("+"):
-                    actual_lines.append(line[1:])
-            if run.returncode == 0 and not actual_lines:
+        if run.returncode == 0:
+            if update:
                 print("manifest already up to date")
-                return 0
-            if actual_lines:
-                with open(MANIFEST, "w") as f:
-                    f.write("\n".join(actual_lines) + "\n")
-                print("manifest updated: %d entries" % len(actual_lines))
-                # re-run against the fresh manifest to confirm
-                generate(cases, read_manifest())
-                rerun = subprocess.run(
-                    [
-                        "moon",
-                        "test",
-                        "-p",
-                        "docx2html/docx",
-                        "--filter",
-                        "zz corpus fixtures shadow the legacy walker",
-                    ],
-                    cwd=os.path.join(REPO, "docx2html"),
-                    capture_output=True,
-                    text=True,
-                )
-                if rerun.returncode != 0:
-                    print(rerun.stdout + rerun.stderr)
-                    print("corpus shadow: FAILED after manifest update")
-                    return 1
-                print("corpus shadow: OK (%d fixtures)" % len(cases))
-                return 0
-            print(output)
-            print("corpus shadow: could not extract outcomes")
-            return 1
-        if run.returncode != 0:
-            print(output)
+            print("corpus shadow: OK (%d parts)" % len(cases))
+            return 0
+        if not update:
+            for line in output.splitlines():
+                if len(line) < 300:
+                    print(line)
             print("corpus shadow: FAILED (run --update to accept changes)")
             return 1
-        print("corpus shadow: OK (%d fixtures)" % len(cases))
+        actual_lines = extract_actual(output)
+        if not actual_lines:
+            for line in output.splitlines():
+                if len(line) < 300:
+                    print(line)
+            print("corpus shadow: could not extract outcomes")
+            return 1
+        # verify the fresh outcomes round-trip BEFORE touching the manifest
+        candidate = "\n".join(actual_lines)
+        generate(cases, candidate)
+        rerun = run_moon()
+        if rerun.returncode != 0:
+            for line in (rerun.stdout + rerun.stderr).splitlines():
+                if len(line) < 300:
+                    print(line)
+            print("corpus shadow: outcomes do not round-trip; manifest untouched")
+            return 1
+        with open(MANIFEST + ".tmp", "w") as f:
+            f.write(candidate + "\n")
+        os.replace(MANIFEST + ".tmp", MANIFEST)
+        print("manifest updated: %d entries" % len(actual_lines))
+        print("corpus shadow: OK (%d parts)" % len(cases))
         return 0
     finally:
         if os.path.exists(GENERATED):

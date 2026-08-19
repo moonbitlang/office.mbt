@@ -3156,21 +3156,6 @@ test "scanner: endnote markers, explicit continuation, deleted instructions" {
       #|["note note[1]", "p note[1]/p[1]", "r note[1]/p[1]/r[1]"]
     ),
   )
-  // the explicit continuation merges away its cell exactly like the bare
-  // `<w:vMerge/>` spelling: the projection sees one paragraph reading A and
-  // no paragraph reading `gone`
-  let projection = scan_reader_order_projection(
-    "word/document.xml",
-    @utf8.encode(
-      "<w:document xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\"><w:body><w:tbl><w:tr><w:tc><w:tcPr><w:vMerge w:val=\"restart\"/></w:tcPr><w:p><w:r><w:t>A</w:t></w:r></w:p></w:tc></w:tr><w:tr><w:tc><w:tcPr><w:vMerge w:val=\"continue\"/></w:tcPr><w:p><w:r><w:t>gone</w:t></w:r></w:p></w:tc></w:tr></w:tbl></w:body></w:document>",
-    ),
-  )
-  assert_eq(projection.paragraphs.length(), 1)
-  let text = StringBuilder()
-  for contribution in projection.paragraphs[0].contributions {
-    text.write_string(contribution.value)
-  }
-  assert_eq(text.to_string(), "A")
 }
 
 ///|

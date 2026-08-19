@@ -184,21 +184,25 @@ fn ReaderProjectionBuilder::carrier_cursor(
   self : ReaderProjectionBuilder,
   inputs : Array[ReaderParagraphInput],
 ) -> ReaderProjectionCarrierCursor raise DocxError {
+  // the events enumerate the PHYSICAL direct children of every input
+  // paragraph, from the scan: the legacy walk events every direct child
+  // it visits, including constructs the tolerant parse erased outright
+  // (a no-fallback MC block leaves no DOM child at all). The cooked item
+  // walk only times when the cursor fires.
+  let elements = self.scan.elements()
   let events : Array[ReaderOrderFieldCarrierEvent] = []
   let positions : Map[Int, Int] = Map([])
   for input in inputs {
     match input.paragraph.source_element_id {
-      Some(SourceElementId(paragraph_identity)) =>
-        for carrier in input.carriers {
+      Some(SourceElementId(paragraph_identity)) => {
+        let mut child = elements[paragraph_identity].first_child_index
+        while child != -1 {
           self.budget.charge_retained()
-          match carrier.source_element_id {
-            Some(SourceElementId(carrier_identity)) => {
-              positions[carrier_identity] = events.length()
-              events.push({ paragraph_identity, carrier_identity })
-            }
-            None => ()
-          }
+          positions[child] = events.length()
+          events.push({ paragraph_identity, carrier_identity: child })
+          child = elements[child].next_sibling_index
         }
+      }
       None => ()
     }
   }

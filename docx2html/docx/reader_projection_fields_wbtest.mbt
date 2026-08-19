@@ -68,8 +68,30 @@ fn describe_field_index(index : ReaderOrderFieldIndex) -> String {
       Some(value) => "\{value}"
       None => "-"
     }
+    fn boundary_label(boundary : ReaderOrderFieldBoundary) -> String {
+      let side = match boundary.side {
+        BeforeCarrier => "<"
+        AfterCarrier => ">"
+      }
+      "\{side}\{boundary.carrier_identity}"
+    }
+
+    let instruction_end = match field.instruction.end {
+      Some(boundary) => boundary_label(boundary)
+      None => "-"
+    }
+    let result_interval = match field.result {
+      Some(interval) => {
+        let result_end = match interval.end {
+          Some(boundary) => boundary_label(boundary)
+          None => "-"
+        }
+        boundary_label(interval.start) + ".." + result_end
+      }
+      None => "-"
+    }
     out.push(
-      "field \{field.identity} story=\{field.story_identity} parent=\{parent} begin=\{field.begin_marker_identity}/\{field.begin_carrier_identity} sep=\{separate} end=\{end} instr=\{field.instruction_text.to_string()} refusal=\{refusal}",
+      "field \{field.identity} story=\{field.story_identity} parent=\{parent} begin=\{field.begin_marker_identity}/\{field.begin_carrier_identity} sep=\{separate} end=\{end} instr=\{field.instruction_text.to_string()} iinterval=\{boundary_label(field.instruction.start)}..\{instruction_end} rinterval=\{result_interval} refusal=\{refusal}",
     )
   }
   for refusal in index.refusals {
@@ -82,7 +104,7 @@ fn describe_field_index(index : ReaderOrderFieldIndex) -> String {
       None => "-"
     }
     out.push(
-      "refusal \{refusal.identity} \{field_refusal_kind_label(refusal.kind)} story=\{refusal.story_identity} carrier=\{refusal.carrier_identity} offending=\{offending} field=\{field}",
+      "refusal \{refusal.identity} \{field_refusal_kind_label(refusal.kind)} story=\{refusal.story_identity} carrier=\{refusal.carrier_identity} offending=\{offending} field=\{field} span=[\{refusal.source_span.byte_start},\{refusal.source_span.byte_end})",
     )
   }
   out.join("\n")
@@ -99,8 +121,12 @@ fn legacy_text_annotations(projection : ReaderOrderProjection) -> String {
             Some(value) => "\{value}"
             None => "-"
           }
+          let refusal = match contribution.field_refusal {
+            Some(value) => "\{value}"
+            None => "-"
+          }
           out.push(
-            "\{contribution.source_identity}:\{field_region_label(contribution.field_region)}:\{field}",
+            "\{contribution.source_identity}:\{field_region_label(contribution.field_region)}:\{field}:\{refusal}",
           )
         }
         _ => ()
@@ -122,8 +148,12 @@ fn reader_text_annotations(projection : ReaderProjection) -> String {
             Some(value) => "\{value}"
             None => "-"
           }
+          let refusal = match contribution.field_refusal {
+            Some(value) => "\{value}"
+            None => "-"
+          }
           out.push(
-            "\{source}:\{field_region_label(contribution.field_region)}:\{field}",
+            "\{source}:\{field_region_label(contribution.field_region)}:\{field}:\{refusal}",
           )
         }
         _ => ()

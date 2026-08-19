@@ -131,7 +131,7 @@ let reader_projection_separator_units : Int = 2
 ///|
 /// Assigns logical indices, first-appearance run numbering, and UTF-16
 /// story intervals -- the exact convention of
-/// `assign_reader_order_logical_coordinates`.
+/// the legacy coordinate-assignment convention.
 fn assign_reader_projection_coordinates(projection : ReaderProjection) -> Unit {
   let mut offset = 0
   for index, paragraph in projection.paragraphs {
