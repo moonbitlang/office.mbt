@@ -161,6 +161,17 @@ fn plan_whole_run_replacement(
       )
     _ => ()
   }
+  // A refusal is not a region: truncation is discovered at story END,
+  // after regions are assigned, so a truncated field's result run keeps
+  // FieldResult and carries only the refusal. A field the classifier
+  // refused has unreliable boundaries; nothing in it is writable.
+  match target_run.field_refusal {
+    Some(_) =>
+      raise Unsupported(
+        message="run \{run_index} in paragraph \{paragraph_index} sits in a field the classifier refused",
+      )
+    None => ()
+  }
   let owned : Array[ReaderProjectionContribution] = []
   for contribution in paragraph.contributions {
     if contribution.run_source == Some(target) {

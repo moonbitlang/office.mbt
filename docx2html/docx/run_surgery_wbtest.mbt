@@ -939,6 +939,31 @@ test "whole-run replacement refuses an empty run inside a field" {
     _ => ()
   }
   assert_true(truncated_refused)
+  // Truncation is discovered at story END, after regions are assigned:
+  // an empty run in the RESULT region of a truncated field keeps
+  // FieldResult and carries only the refusal -- which must refuse all
+  // the same. So must the populated result run beside it.
+  let result_truncated =
+    #|<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:body><w:p><w:r><w:fldChar w:fldCharType="begin"/></w:r><w:r><w:fldChar w:fldCharType="separate"/></w:r><w:r><w:t>7</w:t></w:r><w:r/></w:p></w:body></w:document>
+  let result_bytes = @utf8.encode(result_truncated)
+  let result_projection = surgery_native_projection(result_truncated)
+  for run_index in [2, 3] {
+    let mut result_refused = false
+    try
+      plan_whole_run_replacement(
+        result_projection, result_bytes, 0, run_index, "X",
+      )
+    catch {
+      Unsupported(message~) => {
+        result_refused = true
+        assert_true(message.contains("field the classifier refused"))
+      }
+      _ => fail("expected an Unsupported refusal")
+    } noraise {
+      _ => ()
+    }
+    assert_true(result_refused)
+  }
 }
 
 ///|

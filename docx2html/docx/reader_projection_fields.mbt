@@ -97,7 +97,9 @@ fn classify_reader_projection_fields(
       contribution.field_region = slot.field_region
       contribution.field_refusal = slot.field_refusal
     } else {
-      run_sources[at - sources.length()].field_region = slot.field_region
+      let run = run_sources[at - sources.length()]
+      run.field_region = slot.field_region
+      run.field_refusal = slot.field_refusal
     }
   }
   projection.field_index = index

@@ -443,6 +443,7 @@ fn ReaderProjectionBuilder::register_run(
     source_span: self.element_span(id),
     logical_index: -1,
     field_region: OutsideField,
+    field_refusal: None,
   })
 }
 
