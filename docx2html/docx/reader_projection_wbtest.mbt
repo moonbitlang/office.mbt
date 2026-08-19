@@ -514,3 +514,21 @@ test "projection field-hoisted extras are reader-native block items" {
     ),
   )
 }
+
+///|
+/// A tolerated direct cell inside a paragraph arms it like any block.
+test "projection rearms for a direct inline cell" {
+  let projection = projection_of(
+    (
+      #|<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:body><w:p><w:tc><w:p><w:r><w:t>A</w:t></w:r></w:p></w:tc></w:p></w:body></w:document>
+    ),
+  )
+  // document=0 body=1 p=2 tc=3 pA=4 rA=5 tA=6
+  inspect(
+    describe_projection(projection),
+    content=(
+      #|p0(src=2,4;runs=5;[0,1))t:A@6r0[0,1)
+      #|p1(src=2;runs=;[3,3))
+    ),
+  )
+}
