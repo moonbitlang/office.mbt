@@ -894,6 +894,54 @@ test "whole-run replacement refuses a twice-projected physical element" {
 }
 
 ///|
+/// An EMPTY run inside a field is still inside the field: it has no
+/// contributions to carry the region, so the run record carries it, and
+/// synthesis into an instruction region -- which would change what the
+/// field computes -- refuses. Same for a truncated field, whose whole
+/// story is malformed.
+test "whole-run replacement refuses an empty run inside a field" {
+  let source =
+    #|<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:body><w:p><w:r><w:fldChar w:fldCharType="begin"/></w:r><w:r/><w:r><w:fldChar w:fldCharType="separate"/></w:r><w:r><w:t>7</w:t></w:r><w:r><w:fldChar w:fldCharType="end"/></w:r></w:p></w:body></w:document>
+  let bytes = @utf8.encode(source)
+  let projection = surgery_native_projection(source)
+  let mut refused = false
+  try plan_whole_run_replacement(projection, bytes, 0, 1, "X") catch {
+    Unsupported(message~) => {
+      refused = true
+      assert_true(message.contains("field instruction"))
+    }
+    _ => fail("expected an Unsupported refusal")
+  } noraise {
+    _ => ()
+  }
+  assert_true(refused)
+  // the cached result stays editable, exactly as with a populated run
+  let edits = plan_whole_run_replacement(projection, bytes, 0, 3, "8")
+  let spliced = @utf8.decode(apply_run_surgery_edits(bytes, edits))
+  assert_eq(current_reader_story_text(spliced), "8\n\n")
+  // and a TRUNCATED field's empty run still refuses: its region is the
+  // instruction region it sat in (truncation itself is recorded as the
+  // field's refusal, not as a region change)
+  let truncated =
+    #|<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:body><w:p><w:r><w:fldChar w:fldCharType="begin"/></w:r><w:r/></w:p></w:body></w:document>
+  let truncated_bytes = @utf8.encode(truncated)
+  let truncated_projection = surgery_native_projection(truncated)
+  let mut truncated_refused = false
+  try
+    plan_whole_run_replacement(truncated_projection, truncated_bytes, 0, 1, "X")
+  catch {
+    Unsupported(message~) => {
+      truncated_refused = true
+      assert_true(message.contains("field instruction"))
+    }
+    _ => fail("expected an Unsupported refusal")
+  } noraise {
+    _ => ()
+  }
+  assert_true(truncated_refused)
+}
+
+///|
 /// #436 CLOSED BY CONSTRUCTION.
 ///
 /// The legacy walker kept its own story: a stray flow-level run a
@@ -914,20 +962,31 @@ test "a checkbox-consumed flow run no longer shifts addresses" {
   // Two paragraphs to the reader, two to the projection.
   assert_eq(reader_paragraph_texts(source).length(), 2)
   assert_eq(projection.paragraphs.length(), 2)
-  // Every run of the control's paragraph refuses by checkbox ancestry --
-  // the mis-edit is structurally unreachable.
+  // Both physical runs are registered -- the transformed flow run and
+  // the tab run -- and EACH refuses by checkbox ancestry specifically.
+  // document=0 body=1 sdt=2 sdtPr=3 checkbox=4 sdtContent=5 r=6 t=7
+  // p=8 r=9 tab=10 p=11 r=12 t=13
+  let run_ids : Array[Int] = []
+  for run in projection.paragraphs[0].runs {
+    let SourceElementId(id) = run.source
+    run_ids.push(id)
+  }
+  assert_eq(run_ids, [6, 9])
   for run_index in 0..<projection.paragraphs[0].runs.length() {
     let mut refused = false
     try
       plan_whole_run_replacement(projection, bytes, 0, run_index, "EDITED")
     catch {
-      _ => refused = true
+      Unsupported(message~) => {
+        refused = true
+        assert_true(message.contains("checkbox"))
+      }
+      _ => fail("expected an Unsupported refusal")
     } noraise {
       _ => ()
     }
     assert_true(refused)
   }
-  assert_true(projection.paragraphs[0].runs.length() > 0)
   // The paragraph that used to take the mis-edit edits at its own index.
   let edits = plan_whole_run_replacement(projection, bytes, 1, 0, "EDITED")
   let spliced = @utf8.decode(apply_run_surgery_edits(bytes, edits))

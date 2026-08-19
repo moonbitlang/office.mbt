@@ -50,6 +50,12 @@ priv struct ReaderProjectionRun {
   /// r[j] a surgery address names. Atomless runs participate, exactly as
   /// the legacy walker's zero-width run-open seams made them.
   mut logical_index : Int
+  /// The run's own field region, populated by
+  /// `classify_reader_projection_fields` through a run slot: a run with
+  /// NO contributions still sits somewhere, and surgery must refuse an
+  /// instruction-region or malformed-field run even when nothing inside
+  /// it projected.
+  mut field_region : ReaderOrderFieldRegion
 }
 
 ///|

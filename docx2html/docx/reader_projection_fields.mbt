@@ -43,6 +43,10 @@ fn classify_reader_projection_fields(
   let elements = projection.scan.elements()
   let slots : Array[ReaderFieldSlot] = []
   let sources : Array[ReaderProjectionContribution] = []
+  // Run slots ride along: a run with no contributions still sits in a
+  // field region, and surgery consults the run record for exactly that
+  // case -- an empty run inside an instruction region must refuse.
+  let run_sources : Array[ReaderProjectionRun] = []
   for paragraph in projection.paragraphs {
     budget.charge_work()
     for contribution in paragraph.contributions {
@@ -60,6 +64,25 @@ fn classify_reader_projection_fields(
       sources.push(contribution)
     }
   }
+  // run slots strictly AFTER every contribution slot: the copy-back
+  // below splits the one slot array at sources.length()
+  for paragraph in projection.paragraphs {
+    budget.charge_work()
+    for run in paragraph.runs {
+      budget.charge_work()
+      let SourceElementId(source_identity) = run.source
+      slots.push({
+        source_identity,
+        paragraph_identity: reader_projection_owning_paragraph(
+          elements, source_identity, budget,
+        ),
+        field_identity: None,
+        field_region: OutsideField,
+        field_refusal: None,
+      })
+      run_sources.push(run)
+    }
+  }
   let index = classify_reader_field_slots(
     elements,
     projection.field_carriers,
@@ -68,10 +91,14 @@ fn classify_reader_projection_fields(
   )
   for at, slot in slots {
     budget.charge_work()
-    let contribution = sources[at]
-    contribution.field_identity = slot.field_identity
-    contribution.field_region = slot.field_region
-    contribution.field_refusal = slot.field_refusal
+    if at < sources.length() {
+      let contribution = sources[at]
+      contribution.field_identity = slot.field_identity
+      contribution.field_region = slot.field_region
+      contribution.field_refusal = slot.field_refusal
+    } else {
+      run_sources[at - sources.length()].field_region = slot.field_region
+    }
   }
   projection.field_index = index
 }

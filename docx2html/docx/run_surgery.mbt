@@ -143,9 +143,24 @@ fn plan_whole_run_replacement(
     )
   }
   let elements = projection.scan.elements()
-  let target = paragraph.runs[run_index].source
+  let target_run = paragraph.runs[run_index]
+  let target = target_run.source
   let SourceElementId(target_identity) = target
   let run_element = elements[target_identity]
+  // The run's OWN region guards the empty-run hole: a run with no
+  // contributions still sits somewhere, and synthesizing text into a
+  // field's instruction region would change what the field computes.
+  match target_run.field_region {
+    FieldInstruction =>
+      raise Unsupported(
+        message="run \{run_index} in paragraph \{paragraph_index} carries field instruction text",
+      )
+    MalformedField =>
+      raise Unsupported(
+        message="run \{run_index} in paragraph \{paragraph_index} sits in a malformed field",
+      )
+    _ => ()
+  }
   let owned : Array[ReaderProjectionContribution] = []
   for contribution in paragraph.contributions {
     if contribution.run_source == Some(target) {
