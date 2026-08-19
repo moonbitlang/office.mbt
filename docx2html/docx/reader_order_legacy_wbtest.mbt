@@ -1644,3 +1644,46 @@ fn reader_order_first_direct_wml_child(
   }
   None
 }
+
+///|
+/// The legacy-shaped entry: slots aligned to the projection's
+/// contributions, the machine run once, annotations copied back. Kept
+/// for the quarantined walker oracle until PR 7 deletes it.
+fn classify_reader_order_fields(
+  projection : ReaderOrderProjection,
+  budget? : ReaderOrderFieldBudget,
+) -> ReaderOrderFieldIndex raise DocxError {
+  let budget = match budget {
+    Some(value) => value
+    None => reader_order_field_budget()
+  }
+  let slots : Array[ReaderFieldSlot] = []
+  let sources : Array[ReaderOrderContribution] = []
+  for paragraph in projection.paragraphs {
+    for contribution in paragraph.contributions {
+      budget.charge_work()
+      slots.push({
+        source_identity: contribution.source_identity,
+        paragraph_identity: contribution.paragraph_identity,
+        field_identity: None,
+        field_region: OutsideField,
+        field_refusal: None,
+      })
+      sources.push(contribution)
+    }
+  }
+  let index = classify_reader_field_slots(
+    projection.source_elements,
+    projection.field_carriers,
+    slots,
+    budget,
+  )
+  for at, slot in slots {
+    budget.charge_work()
+    let contribution = sources[at]
+    contribution.field_identity = slot.field_identity
+    contribution.field_region = slot.field_region
+    contribution.field_refusal = slot.field_refusal
+  }
+  index
+}

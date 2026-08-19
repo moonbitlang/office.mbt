@@ -50,6 +50,16 @@ priv struct ReaderProjectionRun {
   /// r[j] a surgery address names. Atomless runs participate, exactly as
   /// the legacy walker's zero-width run-open seams made them.
   mut logical_index : Int
+  /// The run's own field region and refusal, populated by
+  /// `classify_reader_projection_fields` through a run slot: a run with
+  /// NO contributions still sits somewhere, and surgery must refuse an
+  /// instruction-region, malformed-field or refused-field run even when
+  /// nothing inside it projected. The refusal matters separately from
+  /// the region: truncation is discovered at story END, after regions
+  /// are assigned, so a truncated field's result run keeps FieldResult
+  /// and carries the refusal alone.
+  mut field_region : ReaderOrderFieldRegion
+  mut field_refusal : Int?
 }
 
 ///|
@@ -104,6 +114,9 @@ priv enum ReaderProjectionRefusal {
 }
 
 ///|
+// TEMPORARY (#434 PR 6b): constructed in production, consumed only by
+// tests until PR 6c wires mutation-safe reads through it.
+#warnings("-unused_constructor")
 priv enum ReaderProjectionBuildResult {
   Projected(ReaderProjection)
   ProjectionRefused(ReaderProjectionRefusal)
