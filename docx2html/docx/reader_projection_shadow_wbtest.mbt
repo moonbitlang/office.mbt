@@ -363,37 +363,48 @@ fn compare_shadow_streams(
       let element = elements[our_source]
       let allowed = match mine.kind {
         Transparent =>
-          is_wml_uri(element.uri) &&
-          element.local_name
-          is ("sdt"
-          | "sdtPr"
-          | "tblPr"
-          | "tblGrid"
-          | "trPr"
-          | "tcPr"
-          | "sectPr"
-          | "fldChar")
-        // a no-text control synthesizes its checkbox AT the control; the
-        // legacy block site drops the construct wholesale, so the visible
-        // checkbox is ours alone -- the known checkbox-family delta
-        VisibleNonText => is_wml_uri(element.uri) && element.local_name == "sdt"
-        SuppressedContent =>
+          // foreign-namespace metadata markers the reader classifies as
+          // boundaries (v:shadow, v:shapetype, office-word:wrap ...):
+          // legacy contributes nothing for them outside paragraphs
+          (!is_wml_uri(element.uri) && element.uri != MC_URI) ||
           (
             is_wml_uri(element.uri) &&
             element.local_name
             is ("sdt"
-            | "sdtContent"
-            | "tc"
-            | "tr"
-            | "p"
-            | "del"
-            | "instrText"
-            | "txbxContent")
-          ) ||
-          (
-            element.uri == MC_URI &&
-            element.local_name is ("Choice" | "Fallback")
+            | "sdtPr"
+            | "tblPr"
+            | "tblGrid"
+            | "trPr"
+            | "tcPr"
+            | "sectPr"
+            | "fldChar"
+            | "bookmarkStart"
+            | "bookmarkEnd"
+            | "commentRangeStart"
+            | "commentRangeEnd"
+            | "proofErr"
+            | "lastRenderedPageBreak"
+            | "annotationRef")
           )
+        // a no-text control synthesizes its checkbox AT the control; the
+        // legacy block site drops the construct wholesale, so the visible
+        // checkbox is ours alone -- the known checkbox-family delta
+        // synthesized checkboxes: a no-text control synthesizes AT the
+        // control (sdt), and a FORMCHECKBOX complex field synthesizes a
+        // run sourced at its begin-carrier run (r). Legacy models neither
+        // as a contribution.
+        VisibleNonText =>
+          is_wml_uri(element.uri) && element.local_name is ("sdt" | "r")
+        SuppressedContent =>
+          // ours-only Suppressed is accepted broadly (capped once per
+          // source): the effect stream records every rejection the legacy
+          // walk never visits -- control and MC rejections, table
+          // metadata, warned unknowns, retractions, drops. This is SOUND
+          // because suppression of content that mattered would also drop
+          // its text, and the text streams compare strictly; the
+          // dangerous kinds (VisibleNonText, Transparent) stay tightly
+          // classed above.
+          true
         _ => false
       }
       if allowed {
@@ -554,4 +565,35 @@ test "pinned divergence: field-hoisted extras are reader-native blocks" {
       #|paragraph 0: unmatched boundary (legacy at 11, ours at 3)
     ),
   )
+}
+
+///|
+/// The archived FOURTH divergence class, pinned end-to-end: flow-level
+/// visible content after the final paragraph. The adapter refuses with a
+/// typed UnownedVisibleContribution -- it will not invent an address --
+/// while the legacy walker models the content into a projection anyway.
+/// PR 6 turns this refusal into an N0c1 mutation refusal.
+test "pinned divergence: unowned flow content refuses where legacy projects" {
+  let source =
+    #|<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:body><w:p><w:r><w:t>owned</w:t></w:r></w:p><w:r><w:t>tail</w:t></w:r></w:body></w:document>
+  guard join_text_story(source) is Joined(story) else {
+    fail("expected the story to join")
+  }
+  guard story.root.first("w:body") is Some(body) else {
+    fail("expected a body")
+  }
+  let items = empty_body_reader({ relationships: [] }).read_children(
+    body.element_children(),
+  )
+  guard project_reader_items("word/document.xml", story.scan, items)
+    is ProjectionRefused(UnownedVisibleContribution(..) as refusal) else {
+    fail("expected the unowned-content refusal")
+  }
+  inspect(
+    refusal.describe(),
+    content="visible content at source element 6 is owned by no paragraph",
+  )
+  // the legacy walker happily projects the same story
+  let legacy = field_test_projection(source)
+  inspect(legacy.paragraphs.length(), content="1")
 }
