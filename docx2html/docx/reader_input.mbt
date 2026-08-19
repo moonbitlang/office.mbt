@@ -1,12 +1,12 @@
-// PR 1 of the reader unification (#434): the reader's INPUT abstraction.
+// The reader's INPUT abstraction (#434 PR 1, provenance-bearing since PR 4).
 //
-// BodyReader's semantic half currently reads `XmlElement` directly, which is
-// why it cannot carry provenance: the tolerant tree has no byte offsets, and
-// nothing in the read path could hold them if it did. `ReaderNode` is the
-// seam. Today it wraps `XmlElement` and nothing else -- every accessor is a
-// mechanical forward, and behaviour is identical by construction. PR 3 joins
-// this tree with the physical scan and PR 4 threads `SourceElementId`
-// through the field below; the read path itself will not change shape again.
+// `ReaderNode` is the seam between the tolerant DOM and the body reader:
+// every accessor navigates a CACHED child tree built once per root, so a
+// node's physical identity -- populated when the tree comes from the
+// DOM<->physical join, `None` on plain tolerant reads and on synthetic
+// `first_or_empty` misses -- survives every access path. Producers pass
+// their input node as `ReaderTree.source`, which is how the effect stream
+// carries provenance without any producer knowing about it.
 //
 // Scope: the body-reading recursive component only. Part readers (styles,
 // numbering, comments, relationships) parse their own parts and never flow
@@ -17,11 +17,26 @@
 /// One element as the body reader sees it.
 priv struct ReaderNode {
   element : XmlElement
+  /// The paired physical identity when this tree came through the join;
+  /// `None` on unjoined reads and on synthetic `first_or_empty` nodes.
+  source_element_id : SourceElementId?
+  /// The element children, wrapped once. Accessors navigate this cache --
+  /// reconstructing wrappers from `element` would silently drop the
+  /// identity.
+  children : Array[ReaderNode]
 }
 
 ///|
+/// Wraps an unjoined tolerant tree: no physical identities anywhere.
 fn ReaderNode::of(element : XmlElement) -> ReaderNode {
-  { element, }
+  let children : Array[ReaderNode] = []
+  for child in element.children {
+    match child {
+      XmlElement(child_element) => children.push(ReaderNode::of(child_element))
+      XmlText(_) => ()
+    }
+  }
+  { element, source_element_id: None, children }
 }
 
 ///|
@@ -41,31 +56,40 @@ fn ReaderNode::text(self : ReaderNode) -> String raise DocxError {
 }
 
 ///|
+/// The first DIRECT child element named `name`, cache-navigated so its
+/// identity survives.
 fn ReaderNode::first(self : ReaderNode, name : String) -> ReaderNode? {
-  match self.element.first(name) {
-    Some(found) => Some(ReaderNode::of(found))
-    None => None
-  }
-}
-
-///|
-fn ReaderNode::first_or_empty(self : ReaderNode, name : String) -> ReaderNode {
-  ReaderNode::of(self.element.first_or_empty(name))
-}
-
-///|
-/// The element children, in order. Raw text children are dropped here the
-/// way every read-path loop already dropped them; the one consumer of text
-/// content goes through `text()`.
-fn ReaderNode::element_children(self : ReaderNode) -> Array[ReaderNode] {
-  let out : Array[ReaderNode] = []
-  for child in self.element.children {
-    match child {
-      XmlElement(element) => out.push(ReaderNode::of(element))
-      XmlText(_) => ()
+  for child in self.children {
+    if child.element.name == name {
+      return Some(child)
     }
   }
-  out
+  None
+}
+
+///|
+/// The first direct child named `name`, or a SYNTHETIC empty node carrying
+/// no physical identity -- the metadata-miss convention every reader
+/// lookup uses.
+fn ReaderNode::first_or_empty(self : ReaderNode, name : String) -> ReaderNode {
+  match self.first(name) {
+    Some(child) => child
+    None =>
+      {
+        element: self.element.first_or_empty(name),
+        source_element_id: None,
+        children: [],
+      }
+  }
+}
+
+///|
+/// The element children, in order. Raw text children were dropped at wrap
+/// time the way every read-path loop already dropped them; the one
+/// consumer of text content goes through `text()`. Callers never mutate
+/// the returned array.
+fn ReaderNode::element_children(self : ReaderNode) -> Array[ReaderNode] {
+  self.children
 }
 
 ///|
@@ -78,11 +102,17 @@ fn ReaderNode::attribute_or(
 }
 
 ///|
-/// Every descendant-or-self element named `name`, in document order --
-/// `XmlElement::elements_by_tag_name`, wrapped.
+/// Every DIRECT child element named `name`, in document order --
+/// `XmlElement::elements_by_tag_name`, cache-navigated.
 fn ReaderNode::elements_by_tag_name(
   self : ReaderNode,
   name : String,
 ) -> Array[ReaderNode] {
-  self.element.elements_by_tag_name(name).map(ReaderNode::of)
+  let out : Array[ReaderNode] = []
+  for child in self.children {
+    if child.element.name == name {
+      out.push(child)
+    }
+  }
+  out
 }
