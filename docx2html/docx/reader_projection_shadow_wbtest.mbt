@@ -153,6 +153,7 @@ fn compare_reader_projection_shadow(
       let theirs = legacy_runs[position]
       let SourceElementId(identity) = mine.source
       if identity != theirs.identity ||
+        mine.logical_index != position ||
         mine.source_span.byte_start != theirs.source_span.byte_start ||
         mine.source_span.byte_end != theirs.source_span.byte_end {
         return Some(
@@ -284,7 +285,10 @@ fn compare_shadow_streams(
       j = j + 1
       continue
     }
-    // legacy blanked checkbox text: consumed with our replacement pair
+    // legacy blanked checkbox text: consumed with our replacement pair.
+    // The pair must be plausible as a REPLACEMENT: the source is a
+    // replaceable text atom that originally projected something (an
+    // empty w:t is never replaced), sitting under a control.
     if legacy_is_text {
       guard legacy_head is Some(theirs) else { return Some("unreachable") }
       if theirs.value == "" &&
@@ -294,9 +298,31 @@ fn compare_shadow_streams(
         let SourceElementId(first) = ours.contributions[j].source
         let SourceElementId(second) = ours.contributions[j + 1].source
         if first == theirs.source_identity && second == theirs.source_identity {
-          i = i + 1
-          j = j + 2
-          continue
+          let element = elements[theirs.source_identity]
+          let replaceable = is_wml_uri(element.uri) &&
+            (match element.local_name {
+              "t" =>
+                match element.text_map {
+                  Some(mapped) => mapped.projection.length() > 0
+                  None => false
+                }
+              "noBreakHyphen" | "softHyphen" | "sym" => true
+              _ => false
+            })
+          let mut under_control = false
+          let mut ancestor = element.parent_index
+          while ancestor >= 0 {
+            if shadow_element_is(elements, ancestor, "sdt") {
+              under_control = true
+              break
+            }
+            ancestor = elements[ancestor].parent_index
+          }
+          if replaceable && under_control {
+            i = i + 1
+            j = j + 2
+            continue
+          }
         }
       }
     }
@@ -305,10 +331,56 @@ fn compare_shadow_streams(
       match our_head {
         Some(mine) => {
           let SourceElementId(our_source) = mine.source
+          let source_element = elements[theirs.source_identity]
           let class_matches = match (theirs.kind, mine.kind) {
             (TransparentSeam, Transparent) => true
-            (HardBarrier, VisibleNonText) => true
-            (HardBarrier, SuppressedContent) => true
+            // a legacy barrier pairs with VISIBLE only where the reader
+            // actually classifies the element as visible non-text
+            (HardBarrier, VisibleNonText) =>
+              (
+                is_wml_uri(source_element.uri) &&
+                (match source_element.local_name {
+                  "br" | "cr" =>
+                    match source_element.break_type {
+                      None
+                      | Some("textWrapping")
+                      | Some("page")
+                      | Some("column") => true
+                      _ => false
+                    }
+                  "footnoteReference"
+                  | "endnoteReference"
+                  | "commentReference" => true
+                  _ => false
+                })
+              ) ||
+              !is_wml_uri(source_element.uri)
+            // ... and with SUPPRESSED only where suppression is the
+            // reader's real classification (a supported break flipped to
+            // suppressed is a bug, not a delta)
+            (HardBarrier, SuppressedContent) =>
+              (
+                is_wml_uri(source_element.uri) &&
+                (match source_element.local_name {
+                  "pict"
+                  | "del"
+                  | "instrText"
+                  | "txbxContent"
+                  | "footnoteRef"
+                  | "endnoteRef"
+                  | "sym" => true
+                  "br" | "cr" =>
+                    match source_element.break_type {
+                      None
+                      | Some("textWrapping")
+                      | Some("page")
+                      | Some("column") => false
+                      _ => true
+                    }
+                  _ => false
+                })
+              ) ||
+              !is_wml_uri(source_element.uri)
             // the documented class flip: legacy models a field marker as
             // a barrier, ours as a transparent marker
             (HardBarrier, Transparent) =>
@@ -316,6 +388,29 @@ fn compare_shadow_streams(
             _ => false
           }
           if class_matches && our_source == theirs.source_identity {
+            // positions and metadata of paired zero-width entries compare
+            // strictly too
+            if mine.projection_start != theirs.projection_start ||
+              mine.projection_end != theirs.projection_end {
+              return Some(
+                "paragraph \{paragraph_index} boundary interval at \{our_source} differs",
+              )
+            }
+            if mine.source_span.byte_start != theirs.source_span.byte_start ||
+              mine.source_span.byte_end != theirs.source_span.byte_end {
+              return Some(
+                "paragraph \{paragraph_index} boundary span at \{our_source} differs",
+              )
+            }
+            // a matched boundary consumes the surplus cap at its source
+            // and kind, so a duplicated effect cannot ride behind it
+            let kind_label = match mine.kind {
+              Transparent => "b"
+              VisibleNonText => "v"
+              SuppressedContent => "s"
+              ProjectedText(_) => "t"
+            }
+            ours_skip_seen["\{our_source}:\{kind_label}"] = true
             i = i + 1
             j = j + 1
             continue
