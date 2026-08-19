@@ -966,6 +966,62 @@ test "tolerant annotated reads warn on broken section references while mutation 
 }
 
 ///|
+/// Budget canary for the PR 6c cutover: a mutation-safe read of a
+/// header-bearing document must cost the OLD aggregate -- the shared
+/// tolerant parses plus one strict gate per story -- and specifically
+/// NOT a second tolerant parse of any header. The minimal source-unit
+/// budgets for both policies are pinned; a reintroduced double parse
+/// moves the mutation number and fails here.
+test "mutation-safe reads keep the pre-cutover budget envelope" {
+  let bytes = referenced_header_fixture(
+    "application/vnd.openxmlformats-officedocument.wordprocessingml.header+xml",
+    "<w:hdr xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\"><w:p><w:r><w:t>head</w:t></w:r></w:p></w:hdr>",
+  )
+  fn minimal_units(mutation : Bool) -> Int raise {
+    let mut low = 1
+    let mut high = 1 << 20
+    while low < high {
+      let mid = low + (high - low) / 2
+      let budget = @xml.xml_read_budget(
+        max_source_units=mid,
+        max_tokens=1 << 24,
+        max_materialized_chars=1 << 24,
+        max_token_chars=1 << 16,
+      )
+      let archive = try! @mbtzip.read(bytes)
+      let ok = try {
+        if mutation {
+          ignore(@docx.read_docx_annotated_archive_limited(archive, budget))
+        } else {
+          ignore(
+            @docx.read_docx_annotated_archive_tolerant_limited(archive, budget),
+          )
+        }
+        true
+      } catch {
+        _ => false
+      }
+      if ok {
+        high = mid
+      } else {
+        low = mid + 1
+      }
+    }
+    low
+  }
+  let tolerant_minimum = minimal_units(false)
+  let mutation_minimum = minimal_units(true)
+  // The delta (123 units) is the header part's length ONCE: the
+  // mutation-safe read adds exactly the header's strict gate to the
+  // tolerant aggregate (main's strict gate runs against a transient
+  // local budget, and the physical scan has its own). A second
+  // tolerant parse of the header would roughly double the delta.
+  inspect(tolerant_minimum, content="1540")
+  inspect(mutation_minimum, content="1663")
+  assert_true(mutation_minimum - tolerant_minimum < 200)
+}
+
+///|
 /// The PR 6c cutover semantics in one witness: mutation-safe annotated
 /// reads go through the joined pipeline with NO fallback -- a foreign
 /// direct child of a notes root, which production reading silently

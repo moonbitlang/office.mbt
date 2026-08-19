@@ -366,13 +366,19 @@ fn HeaderFooterCollector::read_part_story(
     guard self.parts.zip.read_bytes(path) is Some(bytes) else {
       raise MissingPart(message="missing DOCX part: " + path)
     }
-    let read = read_joined_story_bytes(
-      path,
-      bytes,
-      reader,
-      strict_budget?=self.parts.xml_budget,
-      tolerant_budget?=self.parts.xml_budget,
-    )
+    // The tolerant DOM above already charged the shared budget; joining
+    // from bytes would tolerant-parse a SECOND time and could refuse a
+    // document the same budget accepted before the cutover. Run the
+    // strict gate here, then join the DOM that already exists -- the
+    // aggregate cost stays exactly the pre-cutover tolerant + strict.
+    let _ = read_identity_story_xml_strict(bytes, self.parts.xml_budget) catch {
+      cause =>
+        raise reader_join_refusal_error(
+          path,
+          StageRefused(stage=StrictGate, cause~),
+        )
+    }
+    let read = read_joined_story_prepared(path, bytes, root, reader)
     self.parts.reader_projections[path] = read.projection
     guard read.output.segments is [segment] else {
       raise Unsupported(
