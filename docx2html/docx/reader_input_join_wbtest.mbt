@@ -452,3 +452,45 @@ test "reading a joined story yields effects with physical identities" {
     content="Some(SourceElementId(2))",
   )
 }
+
+///|
+/// The rebuilding transforms (vMerge, checkbox replacement) construct new
+/// trees from their inputs' sources -- physical identities must survive
+/// the rebuild, and a suppression records the identity of what it removed.
+test "joined identities survive the rebuilding transforms" {
+  let story = assert_joined(
+    (
+      #|<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main" xmlns:w14="http://schemas.microsoft.com/office/word/2010/wordml"><w:body><w:tbl><w:tr><w:tc><w:tcPr><w:vMerge w:val="restart"/></w:tcPr><w:p><w:r><w:t>top</w:t></w:r></w:p></w:tc></w:tr><w:tr><w:tc><w:tcPr><w:vMerge/></w:tcPr><w:p><w:r><w:t>under</w:t></w:r></w:p></w:tc></w:tr></w:tbl><w:p><w:r><w:sdt><w:sdtPr><w14:checkbox><w14:checked w14:val="1"/></w14:checkbox></w:sdtPr><w:sdtContent><w:t>replaced</w:t></w:sdtContent></w:sdt></w:r></w:p></w:body></w:document>
+    ),
+  )
+  guard story.root.first("w:body") is Some(body) else {
+    fail("expected a body")
+  }
+  let items = empty_body_reader({ relationships: [] }).read_children(
+    body.element_children(),
+  )
+  // document=0 body=1 tbl=2 tr=3 tc=4 tcPr=5 vMerge=6 p=7 r=8 t=9
+  // tr=10 tc=11 tcPr=12 vMerge=13 p=14 r=15 t=16
+  // p=17 r=18 sdt=19 sdtPr=20 checkbox=21 checked=22 sdtContent=23 t=24
+  let labelled : Array[String] = []
+  for effect in collect_reader_effects(items) {
+    let (kind, source) = match effect {
+      ProjectsText(source~, kind=_, value~) => ("text=" + value, source)
+      ProjectsVisibleNonText(source~) => ("nontext", source)
+      TransparentBoundary(source~) => ("boundary", source)
+      Suppressed(source~) => ("suppressed", source)
+    }
+    let id = match source.source_element_id {
+      Some(SourceElementId(index)) => "\{index}"
+      None => "-"
+    }
+    labelled.push("\{kind}@\{id}")
+  }
+  // the vMerge suppression carries the REMOVED cell's identity (11); the
+  // checkbox replacement suppresses the replaced text (24) and stands
+  // visible at the same node
+  inspect(
+    labelled.join(" ; "),
+    content="boundary@5 ; text=top@9 ; suppressed@11 ; boundary@19 ; boundary@20 ; suppressed@24 ; nontext@24",
+  )
+}
