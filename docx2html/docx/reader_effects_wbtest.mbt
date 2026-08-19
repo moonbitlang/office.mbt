@@ -386,3 +386,51 @@ test "reader effects: alternate content rejections stay in document order" {
   )
   debug_inspect(reader_items_to_elements(items), content="[Text(\"A\")]")
 }
+
+///|
+/// The pict extras pass makes its own alternate-content selection; its
+/// rejections are recorded at that site too.
+test "reader effects: pict extras record their own alternate rejections" {
+  // constructed by hand: the tolerant parser splices literal child `mc:`
+  // constructs before the reader ever sees them
+  let pict_alternate = xml_element("w:p", children=[
+    XmlElement(
+      xml_element("w:r", children=[
+        XmlElement(
+          xml_element("w:pict", children=[
+            XmlElement(
+              manual_alternate_content(
+                xml_element("v:shape", children=[
+                  XmlElement(manual_word_text_box_element("Choice")),
+                ]),
+                xml_element("v:shape", children=[
+                  XmlElement(manual_word_text_box_element("Fallback")),
+                ]),
+              ),
+            ),
+          ]),
+        ),
+      ]),
+    ),
+  ])
+  let items = empty_body_reader({ relationships: [] }).read_element(
+    ReaderNode::of(pict_alternate),
+  )
+  inspect(
+    effect_summaries(items),
+    content="suppressed(w:pict) ; boundary(mc:AlternateContent) ; suppressed(mc:Choice) ; text(w:t)=Fallback",
+  )
+}
+
+///|
+/// A drawing container with no blips materialises nothing; the decision is
+/// recorded at the container.
+test "reader effects: a drawing without blips is suppressed at its container" {
+  let xml =
+    #|<w:body xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main" xmlns:wp="http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing"><w:p><w:r><w:drawing><wp:inline/></w:drawing></w:r></w:p></w:body>
+  inspect(
+    effect_summaries(reader_effect_items(xml)),
+    content="boundary(w:drawing) ; suppressed(wp:inline)",
+  )
+  assert_effect_partition_matches_reader(xml)
+}

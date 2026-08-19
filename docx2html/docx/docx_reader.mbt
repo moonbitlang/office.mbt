@@ -2217,24 +2217,10 @@ fn BodyReader::read_element(
         self.read_children(element.element_children()),
       )
     "w:pict" => [Trace(Suppressed(source=element))]
-    "mc:AlternateContent" => {
-      // effects in document order: every child the reader passes over is a
-      // rejection recorded where it sits; only the FIRST fallback's
-      // children contribute (matching `first_or_empty` selection)
-      let items : Array[ReaderItem] = [
-        Trace(TransparentBoundary(source=element)),
-      ]
-      let mut fallback_seen = false
-      for child in element.element_children() {
-        if child.name() == "mc:Fallback" && !fallback_seen {
-          fallback_seen = true
-          items.append(self.read_children(child.element_children()))
-        } else {
-          items.push(Trace(Suppressed(source=child)))
-        }
-      }
-      items
-    }
+    "mc:AlternateContent" =>
+      self.read_alternate_content_items(element, child => {
+        self.read_children(child.element_children())
+      })
     "wp:inline" | "wp:anchor" => self.read_drawing_element(element)
     "v:roundrect" | "v:shape" | "v:textbox" | "v:group" | "v:rect" =>
       reader_transparent_items(
@@ -2264,6 +2250,32 @@ fn BodyReader::read_element(
         [Trace(Suppressed(source=element))]
       }
   }
+}
+
+///|
+/// One `mc:AlternateContent` selection with its effects in document order:
+/// every child the reader passes over is a rejection recorded where it
+/// sits, and only the FIRST fallback contributes (matching the
+/// `first_or_empty` selection every caller used). Each dispatch site that
+/// selects a fallback -- inline reading, the pict extras pass, the textbox
+/// search -- reads it its own way.
+fn BodyReader::read_alternate_content_items(
+  self : BodyReader,
+  element : ReaderNode,
+  read_fallback : (ReaderNode) -> Array[ReaderItem] raise DocxError,
+) -> Array[ReaderItem] raise DocxError {
+  ignore(self)
+  let items : Array[ReaderItem] = [Trace(TransparentBoundary(source=element))]
+  let mut fallback_seen = false
+  for child in element.element_children() {
+    if child.name() == "mc:Fallback" && !fallback_seen {
+      fallback_seen = true
+      items.append(read_fallback(child))
+    } else {
+      items.push(Trace(Suppressed(source=child)))
+    }
+  }
+  items
 }
 
 ///|
@@ -2838,7 +2850,9 @@ fn BodyReader::read_text_box_elements(
 ) -> Array[ReaderItem] raise DocxError {
   match element.name() {
     "mc:AlternateContent" =>
-      self.read_text_box_elements(element.first_or_empty("mc:Fallback"))
+      self.read_alternate_content_items(element, child => {
+        self.read_text_box_elements(child)
+      })
     "w:txbxContent" => self.read_children(element.element_children())
     _ => {
       let items : Array[ReaderItem] = []
@@ -2879,9 +2893,9 @@ fn BodyReader::read_pict_extra_elements(
     match child_element.name() {
       "mc:AlternateContent" =>
         items.append(
-          self.read_pict_extra_elements(
-            child_element.first_or_empty("mc:Fallback"),
-          ),
+          self.read_alternate_content_items(child_element, mc_child => {
+            self.read_pict_extra_elements(mc_child)
+          }),
         )
       "w:txbxContent" =>
         items.append(self.read_children(child_element.element_children()))
@@ -3442,6 +3456,10 @@ fn BodyReader::read_drawing_element(
       // the blip resolved to no image; nothing materialises for it
       None => results.push(Trace(Suppressed(source=blip)))
     }
+  }
+  if results.is_empty() {
+    // no blips at all: the drawing container itself materialised nothing
+    results.push(Trace(Suppressed(source=element)))
   }
   results
 }
