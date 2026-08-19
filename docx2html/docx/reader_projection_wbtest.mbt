@@ -384,10 +384,12 @@ test "projection budgets bound the build" {
     )
     "completed"
   } catch {
-    Unsupported(message~) => message
+    // budget exhaustion is a TYPED resource ceiling (#434 PR 6c), so
+    // the machine class survives into public error taxonomies
+    ResourceLimit(limit=DocxXmlTokens, ..) => "resource limit: DocxXmlTokens"
     _ => "other error"
   }
-  inspect(outcome, content="reader projection: item visit budget exceeded")
+  inspect(outcome, content="resource limit: DocxXmlTokens")
 }
 
 ///|

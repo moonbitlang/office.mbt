@@ -946,8 +946,13 @@ test "tolerant annotated reads warn on broken section references while mutation 
     "<w:hdr/>",
   )
   assert_tolerant_story_omission(unbound_header, "header", "word/header1.xml")
+  // The mutation-safe read now refuses at the story READ (the joined
+  // pipeline propagates instead of warn-skipping), where the root check
+  // sees an unbound prefix as a root that is not a bound
+  // WordprocessingML 'hdr' -- an earlier, equally typed refusal than the
+  // strict parser's unbound-prefix message it used to reach.
   assert_mutation_story_rejected(
-    unbound_header, "header", "unbound XML namespace prefix: w",
+    unbound_header, "header", "must have a WordprocessingML 'hdr' root",
   )
 
   let unbound_footer = referenced_footer_fixture(
@@ -956,8 +961,49 @@ test "tolerant annotated reads warn on broken section references while mutation 
   )
   assert_tolerant_story_omission(unbound_footer, "footer", "word/footer1.xml")
   assert_mutation_story_rejected(
-    unbound_footer, "footer", "unbound XML namespace prefix: w",
+    unbound_footer, "footer", "must have a WordprocessingML 'ftr' root",
   )
+}
+
+///|
+/// The PR 6c cutover semantics in one witness: mutation-safe annotated
+/// reads go through the joined pipeline with NO fallback -- a foreign
+/// direct child of a notes root, which production reading silently
+/// drops, refuses the whole mutation-safe read -- while tolerant
+/// annotated reads keep the unjoined tolerant path on the same bytes.
+test "mutation-safe reads refuse a story that tolerant reads quietly narrow" {
+  let document =
+    #|<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:body><w:p><w:r><w:t>a</w:t></w:r></w:p><w:sectPr/></w:body></w:document>
+  let footnotes =
+    #|<w:footnotes xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main" xmlns:x="urn:example"><x:bucket><w:p><w:r><w:t>hidden</w:t></w:r></w:p></x:bucket><w:footnote w:id="1"><w:p><w:r><w:t>note</w:t></w:r></w:p></w:footnote></w:footnotes>
+  let bytes = fixture_docx(document, footnotes_xml=Some(footnotes))
+  let budget = @xml.xml_read_budget(
+    max_source_units=1 << 20,
+    max_tokens=1 << 20,
+    max_materialized_chars=1 << 20,
+    max_token_chars=1 << 16,
+  )
+  let tolerant_archive = try! @mbtzip.read(bytes)
+  let tolerant = @docx.read_docx_annotated_archive_tolerant_limited(
+    tolerant_archive, budget,
+  )
+  // the tolerant read narrows: the foreign container's content simply
+  // never surfaces, and exactly one footnote remains
+  assert_eq(tolerant.footnote_bodies().length(), 1)
+  let mutation_archive = try! @mbtzip.read(bytes)
+  let mut refused = false
+  try
+    @docx.read_docx_annotated_archive_limited(mutation_archive, budget)
+  catch {
+    Unsupported(message~) => {
+      refused = true
+      assert_true(message.contains("mutation-safe segmentation refused"))
+    }
+    _ => fail("expected a typed mutation-safe refusal")
+  } noraise {
+    _ => fail("expected the mutation-safe read to refuse")
+  }
+  assert_true(refused)
 }
 
 ///|

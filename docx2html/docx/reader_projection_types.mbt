@@ -114,9 +114,6 @@ priv enum ReaderProjectionRefusal {
 }
 
 ///|
-// TEMPORARY (#434 PR 6b): constructed in production, consumed only by
-// tests until PR 6c wires mutation-safe reads through it.
-#warnings("-unused_constructor")
 priv enum ReaderProjectionBuildResult {
   Projected(ReaderProjection)
   ProjectionRefused(ReaderProjectionRefusal)
@@ -216,7 +213,7 @@ fn ReaderProjectionBudget::charge_visit(
 ) -> Unit raise DocxError {
   self.visits_left = self.visits_left - 1
   if self.visits_left < 0 {
-    raise Unsupported(message="reader projection: item visit budget exceeded")
+    raise @core.docx_xml_resource_limit_error(DocxXmlTokens)
   }
 }
 
@@ -226,7 +223,7 @@ fn ReaderProjectionBudget::charge_contribution(
 ) -> Unit raise DocxError {
   self.contributions_left = self.contributions_left - 1
   if self.contributions_left < 0 {
-    raise Unsupported(message="reader projection: contribution budget exceeded")
+    raise @core.docx_xml_resource_limit_error(DocxXmlTokens)
   }
 }
 
@@ -236,8 +233,6 @@ fn ReaderProjectionBudget::charge_retained(
 ) -> Unit raise DocxError {
   self.retained_left = self.retained_left - 1
   if self.retained_left < 0 {
-    raise Unsupported(
-      message="reader projection: retained structure budget exceeded",
-    )
+    raise @core.docx_xml_resource_limit_error(DocxXmlTokens)
   }
 }

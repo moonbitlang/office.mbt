@@ -592,6 +592,12 @@ priv struct DocumentParts {
   endnotes_part_path : String?
   external_files : ExternalFileAccess
   read_images : Bool
+  /// Which reader semantics story parts use. Only mutation-safe
+  /// annotated reads select the joined mode.
+  story_reader_mode : StoryReaderMode
+  /// The classified projection of every joined-read story part, keyed
+  /// by part path. Empty in tolerant mode.
+  reader_projections : StableStringMap[ReaderProjection]
 }
 
 ///|
@@ -603,6 +609,7 @@ fn DocumentParts::build(
   diagnostics? : ReaderDiagnosticCollector,
   expected_main_document_path? : String,
   strict_main_document? : Bool = false,
+  story_reader_mode? : StoryReaderMode = TolerantReader,
 ) -> DocumentParts raise DocxError {
   let main_document = find_main_document(
     zip,
@@ -702,6 +709,7 @@ fn DocumentParts::build(
     }
     None => NumberingMap::empty()
   }
+  let reader_projections : StableStringMap[ReaderProjection] = SortedMap([])
   let notes_result = read_notes_for_document(
     zip,
     styles,
@@ -709,6 +717,8 @@ fn DocumentParts::build(
     content_types,
     footnotes_path=footnotes_part_path.unwrap_or("word/footnotes.xml"),
     endnotes_path=endnotes_part_path.unwrap_or("word/endnotes.xml"),
+    story_reader_mode~,
+    reader_projections~,
     external_files~,
     read_images~,
     xml_budget?,
@@ -721,6 +731,8 @@ fn DocumentParts::build(
     content_types,
     relationships,
     base_path,
+    story_reader_mode~,
+    reader_projections~,
     external_files~,
     read_images~,
     xml_budget?,
@@ -756,6 +768,8 @@ fn DocumentParts::build(
     endnotes_part_path,
     external_files,
     read_images,
+    story_reader_mode,
+    reader_projections,
   }
 }
 
@@ -763,20 +777,76 @@ fn DocumentParts::build(
 fn DocumentParts::read_document(
   self : DocumentParts,
 ) -> DocxReadResult raise DocxError {
-  read_document_xml_with_messages(
+  match self.story_reader_mode {
+    TolerantReader =>
+      read_document_xml_with_messages(
+        self.root,
+        self.styles,
+        self.numbering,
+        self.zip,
+        self.relationship_index,
+        self.content_types,
+        self.base_path,
+        self.notes_result.notes,
+        self.comments_result.comments,
+        external_files=self.external_files,
+        read_images=self.read_images,
+        diagnostics?=self.diagnostics,
+      )
+    JoinedMutationReader => self.read_document_joined()
+  }
+}
+
+///|
+/// The mutation-safe main-document read: ONE authoritative joined read
+/// produces both the erased AST and the retained projection. The strict
+/// gate already ran during build and `self.root` is the tolerant DOM,
+/// so the join adds only the scan and the pairing.
+fn DocumentParts::read_document_joined(
+  self : DocumentParts,
+) -> DocxReadResult raise DocxError {
+  guard self.zip.read_bytes(self.main_document_path) is Some(bytes) else {
+    raise MissingPart(message="missing DOCX part: " + self.main_document_path)
+  }
+  let reader = self.story_body_reader()
+  let read = read_joined_story_prepared(
+    self.main_document_path,
+    bytes,
     self.root,
-    self.styles,
-    self.numbering,
-    self.zip,
-    self.relationship_index,
-    self.content_types,
-    self.base_path,
-    self.notes_result.notes,
-    self.comments_result.comments,
-    external_files=self.external_files,
-    read_images=self.read_images,
-    diagnostics?=self.diagnostics,
+    reader,
   )
+  self.reader_projections[self.main_document_path] = read.projection
+  guard read.output.segments is [segment] else {
+    raise Unsupported(
+      message="mutation-safe main-document read produced an unexpected segment count",
+    )
+  }
+  {
+    document: document(
+      reader_items_to_elements(segment.items),
+      notes=self.notes_result.notes,
+      comments=self.comments_result.comments,
+    ),
+    messages: reader.messages,
+  }
+}
+
+///|
+/// A body reader bound to the MAIN part's relationships, matching
+/// `read_document_xml_with_messages`' construction exactly.
+fn DocumentParts::story_body_reader(self : DocumentParts) -> BodyReader {
+  BodyReader::{
+    styles: self.styles,
+    zip: self.zip,
+    relationship_index: self.relationship_index,
+    content_types: self.content_types,
+    base_path: self.base_path,
+    numbering: self.numbering,
+    messages: [],
+    diagnostics: self.diagnostics,
+    external_files: self.external_files,
+    read_images: self.read_images,
+  }
 }
 
 ///|
@@ -1765,6 +1835,8 @@ fn read_notes_for_document(
   content_types : ContentTypes,
   footnotes_path~ : String,
   endnotes_path~ : String,
+  story_reader_mode~ : StoryReaderMode,
+  reader_projections~ : StableStringMap[ReaderProjection],
   external_files? : ExternalFileAccess = default_external_file_access(),
   read_images? : Bool = true,
   xml_budget? : @xml.XmlReadBudget,
@@ -1777,6 +1849,8 @@ fn read_notes_for_document(
     zip,
     note_type="footnote",
     path=footnotes_path,
+    story_reader_mode~,
+    reader_projections~,
     styles~,
     numbering~,
     content_types~,
@@ -1792,6 +1866,8 @@ fn read_notes_for_document(
     zip,
     note_type="endnote",
     path=endnotes_path,
+    story_reader_mode~,
+    reader_projections~,
     styles~,
     numbering~,
     content_types~,
@@ -1811,6 +1887,8 @@ fn read_note_part_at_path(
   zip : ZipArchive,
   note_type~ : String,
   path~ : String,
+  story_reader_mode~ : StoryReaderMode,
+  reader_projections~ : StableStringMap[ReaderProjection],
   styles~ : StableStringMap[StyleInfo],
   numbering~ : NumberingMap,
   content_types~ : ContentTypes,
@@ -1838,6 +1916,33 @@ fn read_note_part_at_path(
     diagnostics,
     external_files,
     read_images,
+  }
+  if story_reader_mode is JoinedMutationReader {
+    guard zip.read_bytes(path) is Some(bytes) else {
+      raise MissingPart(message="missing DOCX part: " + path)
+    }
+    let read = read_joined_story_bytes(
+      path,
+      bytes,
+      reader,
+      strict_budget?=xml_budget,
+      tolerant_budget?=xml_budget,
+    )
+    reader_projections[path] = read.projection
+    let notes : Array[Note] = []
+    let annotation_ids : Array[String?] = []
+    for segment in read.output.segments {
+      if segment.container.name() == "w:" + note_type {
+        let annotation_id = segment.container.element.attributes.get("w:id")
+        notes.push({
+          note_type,
+          note_id: annotation_id_or_missing(annotation_id),
+          body: reader_items_to_elements(segment.items),
+        })
+        annotation_ids.push(annotation_id)
+      }
+    }
+    return { notes, annotation_ids, messages: reader.messages }
   }
   let root = read_xml_part(zip, path, xml_budget?)
   let notes : Array[Note] = []
@@ -1872,6 +1977,8 @@ fn read_comments_for_document(
   content_types : ContentTypes,
   document_relationships : Relationships,
   base_path : String,
+  story_reader_mode~ : StoryReaderMode,
+  reader_projections~ : StableStringMap[ReaderProjection],
   external_files? : ExternalFileAccess = default_external_file_access(),
   read_images? : Bool = true,
   xml_budget? : @xml.XmlReadBudget,
@@ -1910,6 +2017,40 @@ fn read_comments_for_document(
     diagnostics,
     external_files,
     read_images,
+  }
+  if story_reader_mode is JoinedMutationReader {
+    guard zip.read_bytes(path) is Some(bytes) else {
+      raise MissingPart(message="missing DOCX part: " + path)
+    }
+    let read = read_joined_story_bytes(
+      path,
+      bytes,
+      reader,
+      strict_budget?=xml_budget,
+      tolerant_budget?=xml_budget,
+    )
+    reader_projections[path] = read.projection
+    let comments : Array[Comment] = []
+    let annotation_ids : Array[String?] = []
+    for segment in read.output.segments {
+      if segment.container.name() == "w:comment" {
+        let annotation_id = segment.container.element.attributes.get("w:id")
+        comments.push({
+          comment_id: annotation_id_or_missing(annotation_id),
+          body: reader_items_to_elements(segment.items),
+          author_name: read_optional_attribute(
+            segment.container.element,
+            "w:author",
+          ),
+          author_initials: read_optional_attribute(
+            segment.container.element,
+            "w:initials",
+          ),
+        })
+        annotation_ids.push(annotation_id)
+      }
+    }
+    return { comments, annotation_ids, messages: reader.messages }
   }
   let root = read_xml_part(zip, path, xml_budget?)
   let comments : Array[Comment] = []

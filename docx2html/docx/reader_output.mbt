@@ -32,9 +32,6 @@ priv enum ReaderSegmentationRefusal {
 } derive(Debug, Eq)
 
 ///|
-// TEMPORARY (#434 PR 6b): constructed in production, consumed only by
-// tests until PR 6c wires mutation-safe reads through it.
-#warnings("-unused_constructor")
 priv enum ReaderSegmentationResult {
   SegmentedStory(JoinedReaderOutput)
   SegmentationRefused(ReaderSegmentationRefusal)
@@ -230,4 +227,118 @@ fn project_joined_reader_output(
     segments,
     budget?,
   )
+}
+
+///|
+/// Which reader semantics a `DocumentParts` uses for story parts.
+/// Ordinary and tolerant-annotated reading keep the tolerant unjoined
+/// path; ONLY mutation-safe annotated reads go joined -- and once
+/// joined there is no fallback: a join, segmentation or projection
+/// failure refuses the whole read.
+priv enum StoryReaderMode {
+  TolerantReader
+  JoinedMutationReader
+}
+
+///|
+/// One joined story read: the bundle whose segments carry the ONE
+/// authoritative read, and its classified projection.
+priv struct JoinedStoryRead {
+  output : JoinedReaderOutput
+  projection : ReaderProjection
+}
+
+///|
+/// Maps a join refusal out of the no-fallback pipeline: stage causes
+/// keep their type (a resource ceiling stays a resource ceiling, bad
+/// XML stays bad XML), while the join's own findings become typed
+/// Unsupported with bounded diagnostics.
+fn reader_join_refusal_error(
+  part : String,
+  refusal : ReaderInputJoinRefusal,
+) -> DocxError {
+  match refusal {
+    StageRefused(stage=_, cause~) =>
+      match cause {
+        InvalidXml(message~) =>
+          InvalidXml(
+            message="mutation-safe story read of '\{part}': \{message}",
+          )
+        Unsupported(message~) =>
+          Unsupported(
+            message="mutation-safe story read of '\{part}': \{message}",
+          )
+        other => other
+      }
+    other =>
+      Unsupported(
+        message="mutation-safe reader join refused for '\{part}': \{other.describe()}",
+      )
+  }
+}
+
+///|
+/// The one authoritative mutation-safe read of a story part from its
+/// bytes: strict gate, scan, tolerant parse, join, segmentation,
+/// projection, field classification. Every failure is a typed refusal.
+fn read_joined_story_bytes(
+  part : String,
+  bytes : BytesView,
+  reader : BodyReader,
+  strict_budget? : @xml.XmlReadBudget,
+  tolerant_budget? : @xml.XmlReadBudget,
+) -> JoinedStoryRead raise DocxError {
+  match
+    join_reader_input_story_limited(bytes, strict_budget?, tolerant_budget?) {
+    Refused(refusal) => raise reader_join_refusal_error(part, refusal)
+    Joined(story) => finish_joined_story_read(part, story, reader)
+  }
+}
+
+///|
+/// The main-document form: the tolerant DOM is already parsed and the
+/// strict gate already ran beside it, so only the scan and the join are
+/// added -- nothing parses twice and budget accounting is unchanged.
+fn read_joined_story_prepared(
+  part : String,
+  bytes : BytesView,
+  root : XmlElement,
+  reader : BodyReader,
+) -> JoinedStoryRead raise DocxError {
+  let scan = scan_projection_source_tree(bytes) catch {
+    cause =>
+      raise reader_join_refusal_error(
+        part,
+        StageRefused(stage=SourceScan, cause~),
+      )
+  }
+  match join_reader_dom(root, scan) {
+    Refused(refusal) => raise reader_join_refusal_error(part, refusal)
+    Joined(story) => finish_joined_story_read(part, story, reader)
+  }
+}
+
+///|
+fn finish_joined_story_read(
+  part : String,
+  story : JoinedReaderStory,
+  reader : BodyReader,
+) -> JoinedStoryRead raise DocxError {
+  match segment_joined_reader_story(part, story, reader) {
+    SegmentationRefused(refusal) =>
+      raise Unsupported(
+        message="mutation-safe segmentation refused for '\{part}': \{refusal.describe()}",
+      )
+    SegmentedStory(output) =>
+      match project_joined_reader_output(output) {
+        ProjectionRefused(refusal) =>
+          raise Unsupported(
+            message="mutation-safe reader projection refused for '\{part}': \{refusal.describe()}",
+          )
+        Projected(projection) => {
+          classify_reader_projection_fields(projection)
+          { output, projection }
+        }
+      }
+  }
 }
