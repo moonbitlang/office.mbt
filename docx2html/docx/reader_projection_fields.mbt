@@ -1,10 +1,9 @@
-// The field-classification bridge (#434 PR 5b): the EXISTING field state
-// machine runs unchanged over the reader-native projection through a
-// minimal facade. The machine consumes only physical facts -- each
+// Field classification over the reader-native projection (#434 PR 6b):
+// the ONE field state machine runs over exactly what it consumes -- each
 // contribution's source identity and owning physical paragraph, the
-// carrier event stream, and the scan itself -- and writes the three field
-// annotations back per contribution, so the facade is index-aligned
-// throwaway structure, not a second implementation.
+// carrier event stream, and the scan itself -- through annotation slots,
+// and the three field annotations are copied back per contribution. No
+// facade: neither projection fabricates the other's contribution type.
 
 ///|
 /// The physical paragraph owning a source, for carrier resolution: the
@@ -29,11 +28,10 @@ fn reader_projection_owning_paragraph(
 }
 
 ///|
-/// Classifies complex fields over a reader-native projection by running
-/// `classify_reader_order_fields` on a facade, then copying the per-
-/// contribution annotations back and storing the index. A separate
-/// post-adapter step, exactly as the legacy pipeline separates the walk
-/// from classification.
+/// Classifies complex fields over a reader-native projection: one slot
+/// per contribution, the machine run once, annotations copied back and
+/// the index stored. A separate post-adapter step, exactly as the legacy
+/// pipeline separates the walk from classification.
 fn classify_reader_projection_fields(
   projection : ReaderProjection,
   budget? : ReaderOrderFieldBudget,
@@ -43,57 +41,37 @@ fn classify_reader_projection_fields(
     None => reader_order_field_budget()
   }
   let elements = projection.scan.elements()
-  let facade_paragraphs : Array[ReaderOrderParagraph] = []
+  let slots : Array[ReaderFieldSlot] = []
+  let sources : Array[ReaderProjectionContribution] = []
   for paragraph in projection.paragraphs {
     budget.charge_work()
-    let contributions : Array[ReaderOrderContribution] = []
     for contribution in paragraph.contributions {
       budget.charge_work()
       let SourceElementId(source_identity) = contribution.source
-      contributions.push({
-        kind: HardBarrier,
-        value: "",
+      slots.push({
         source_identity,
         paragraph_identity: reader_projection_owning_paragraph(
           elements, source_identity, budget,
         ),
-        run_identity: None,
-        source_span: contribution.source_span,
         field_identity: None,
         field_region: OutsideField,
         field_refusal: None,
-        projection_start: -1,
-        projection_end: -1,
-        logical_run_index: -1,
       })
+      sources.push(contribution)
     }
-    facade_paragraphs.push({
-      from_text_box: false,
-      sources: [],
-      contributions,
-      logical_index: -1,
-      projection_start: 0,
-      projection_end: 0,
-    })
   }
-  let facade : ReaderOrderProjection = {
-    source_part: projection.source_part,
-    source_elements: elements,
-    paragraphs: facade_paragraphs,
-    field_carriers: projection.field_carriers,
-    field_index: empty_reader_order_field_index(),
-  }
-  let index = classify_reader_order_fields(facade, budget~)
-  for paragraph_index, paragraph in projection.paragraphs {
+  let index = classify_reader_field_slots(
+    elements,
+    projection.field_carriers,
+    slots,
+    budget,
+  )
+  for at, slot in slots {
     budget.charge_work()
-    let facade_contributions = facade_paragraphs[paragraph_index].contributions
-    for contribution_index, contribution in paragraph.contributions {
-      budget.charge_work()
-      let annotated = facade_contributions[contribution_index]
-      contribution.field_identity = annotated.field_identity
-      contribution.field_region = annotated.field_region
-      contribution.field_refusal = annotated.field_refusal
-    }
+    let contribution = sources[at]
+    contribution.field_identity = slot.field_identity
+    contribution.field_region = slot.field_region
+    contribution.field_refusal = slot.field_refusal
   }
   projection.field_index = index
 }

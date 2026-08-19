@@ -331,13 +331,13 @@ fn scan_reader_order_field_carrier(
 }
 
 ///|
-fn reader_order_contribution_carrier(
+fn reader_field_slot_carrier(
   elements : Array[ScannedElement],
-  contribution : ReaderOrderContribution,
+  slot : ReaderFieldSlot,
   budget : ReaderOrderFieldBudget,
 ) -> Int? raise DocxError {
-  let paragraph_identity = contribution.paragraph_identity
-  let mut current = contribution.source_identity
+  let paragraph_identity = slot.paragraph_identity
+  let mut current = slot.source_identity
   while current >= 0 &&
         current < elements.length() &&
         current != paragraph_identity {
@@ -697,16 +697,16 @@ fn classify_reader_order_carrier(
 }
 
 ///|
-fn apply_reader_order_carrier_class(
-  contributions : Array[ReaderOrderContribution],
+fn apply_reader_field_carrier_class(
+  slots : Array[ReaderFieldSlot],
   classification : ReaderOrderCarrierClass,
   budget : ReaderOrderFieldBudget,
 ) -> Unit raise DocxError {
-  for contribution in contributions {
+  for slot in slots {
     budget.charge_work()
-    contribution.field_identity = classification.field_identity
-    contribution.field_region = classification.region
-    contribution.field_refusal = classification.refusal_identity
+    slot.field_identity = classification.field_identity
+    slot.field_region = classification.region
+    slot.field_refusal = classification.refusal_identity
   }
 }
 
@@ -738,6 +738,23 @@ fn finish_reader_order_field_story(
 }
 
 ///|
+/// One annotation target for the field machine: the physical facts it
+/// reads -- a source and its owning physical paragraph -- and the three
+/// annotations it writes back. Both the legacy projection and the
+/// reader-native one apply the machine through slots, so neither path
+/// fabricates the other's contribution type.
+priv struct ReaderFieldSlot {
+  source_identity : Int
+  paragraph_identity : Int
+  mut field_identity : Int?
+  mut field_region : ReaderOrderFieldRegion
+  mut field_refusal : Int?
+}
+
+///|
+/// The legacy-shaped entry: slots aligned to the projection's
+/// contributions, the machine run once, annotations copied back. Kept
+/// for the quarantined walker oracle until PR 7 deletes it.
 fn classify_reader_order_fields(
   projection : ReaderOrderProjection,
   budget? : ReaderOrderFieldBudget,
@@ -746,27 +763,59 @@ fn classify_reader_order_fields(
     Some(value) => value
     None => reader_order_field_budget()
   }
-  let index = empty_reader_order_field_index()
-  let contributions_by_carrier : Map[Int, Array[ReaderOrderContribution]] = Map([],
-  )
+  let slots : Array[ReaderFieldSlot] = []
+  let sources : Array[ReaderOrderContribution] = []
   for paragraph in projection.paragraphs {
     for contribution in paragraph.contributions {
       budget.charge_work()
-      match
-        reader_order_contribution_carrier(
-          projection.source_elements,
-          contribution,
-          budget,
-        ) {
-        Some(carrier_identity) => {
-          budget.charge_retained()
-          match contributions_by_carrier.get(carrier_identity) {
-            Some(items) => items.push(contribution)
-            None => contributions_by_carrier[carrier_identity] = [contribution]
-          }
+      slots.push({
+        source_identity: contribution.source_identity,
+        paragraph_identity: contribution.paragraph_identity,
+        field_identity: None,
+        field_region: OutsideField,
+        field_refusal: None,
+      })
+      sources.push(contribution)
+    }
+  }
+  let index = classify_reader_field_slots(
+    projection.source_elements,
+    projection.field_carriers,
+    slots,
+    budget,
+  )
+  for at, slot in slots {
+    budget.charge_work()
+    let contribution = sources[at]
+    contribution.field_identity = slot.field_identity
+    contribution.field_region = slot.field_region
+    contribution.field_refusal = slot.field_refusal
+  }
+  index
+}
+
+///|
+/// The machine itself, over exactly what it consumes: the scan, the
+/// carrier event stream, and the annotation slots.
+fn classify_reader_field_slots(
+  source_elements : Array[ScannedElement],
+  field_carriers : Array[ReaderOrderFieldCarrierEvent],
+  slots : Array[ReaderFieldSlot],
+  budget : ReaderOrderFieldBudget,
+) -> ReaderOrderFieldIndex raise DocxError {
+  let index = empty_reader_order_field_index()
+  let slots_by_carrier : Map[Int, Array[ReaderFieldSlot]] = Map([])
+  for slot in slots {
+    budget.charge_work()
+    match reader_field_slot_carrier(source_elements, slot, budget) {
+      Some(carrier_identity) => {
+        budget.charge_retained()
+        match slots_by_carrier.get(carrier_identity) {
+          Some(items) => items.push(slot)
+          None => slots_by_carrier[carrier_identity] = [slot]
         }
-        None => ()
       }
+      None => ()
     }
   }
   let states : Array[ReaderOrderFieldStoryState] = []
@@ -774,14 +823,14 @@ fn classify_reader_order_fields(
   let story_by_paragraph : Map[Int, Int] = Map([])
   let seen_markers : Map[Int, Int] = Map([])
   let seen_instructions : Map[Int, ReaderOrderInstructionObservation] = Map([])
-  for event in projection.field_carriers {
+  for event in field_carriers {
     let paragraph_identity = event.paragraph_identity
     let carrier = event.carrier_identity
     let story_identity = match story_by_paragraph.get(paragraph_identity) {
       Some(value) => value
       None => {
         let value = reader_order_field_story_identity(
-          projection.source_elements,
+          source_elements,
           paragraph_identity,
           budget,
         )
@@ -824,7 +873,7 @@ fn classify_reader_order_fields(
           None => None
         }
         scan_reader_order_field_carrier(
-          projection.source_elements,
+          source_elements,
           carrier,
           story_identity,
           instruction_target,
@@ -838,36 +887,29 @@ fn classify_reader_order_fields(
       state,
       summary,
       carrier,
-      projection.source_elements,
+      source_elements,
       seen_markers,
       budget,
     )
-    match contributions_by_carrier.get(carrier) {
-      Some(contributions) =>
-        apply_reader_order_carrier_class(contributions, classification, budget)
+    match slots_by_carrier.get(carrier) {
+      Some(carrier_slots) =>
+        apply_reader_field_carrier_class(carrier_slots, classification, budget)
       None => ()
     }
   }
   for state in states {
-    finish_reader_order_field_story(
-      index,
-      state,
-      projection.source_elements,
-      budget,
-    )
+    finish_reader_order_field_story(index, state, source_elements, budget)
   }
   // Refusals discovered at story completion (truncated fields) or after a
-  // later malformed carrier also apply to contributions classified earlier.
+  // later malformed carrier also apply to slots classified earlier.
   // Refresh the cached refusal id from the stable field record once every
   // story has been finalized.
-  for paragraph in projection.paragraphs {
-    for contribution in paragraph.contributions {
-      budget.charge_work()
-      match contribution.field_identity {
-        Some(field_identity) =>
-          contribution.field_refusal = index.fields[field_identity].refusal_identity
-        None => ()
-      }
+  for slot in slots {
+    budget.charge_work()
+    match slot.field_identity {
+      Some(field_identity) =>
+        slot.field_refusal = index.fields[field_identity].refusal_identity
+      None => ()
     }
   }
   index
