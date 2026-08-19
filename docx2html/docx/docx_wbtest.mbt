@@ -1871,7 +1871,7 @@ test "docx checkbox replacement searches carrier then extras in order" {
         ReaderNode::of(root).first_or_empty("w:body").element_children(),
       ),
     ),
-    content="boundary(w:sdt) ; suppressed(w:pict) ; suppressed(w:pict) ; suppressed(w:t) ; nontext(w:t) ; text(w:t)=Y",
+    content="boundary(w:sdt) ; boundary(w:sdtPr) ; suppressed(w:pict) ; suppressed(w:pict) ; suppressed(w:t) ; nontext(w:t) ; text(w:t)=Y",
   )
 }
 

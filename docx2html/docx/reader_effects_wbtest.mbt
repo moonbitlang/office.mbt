@@ -211,7 +211,7 @@ test "reader effects: checkbox replacement suppresses the text it replaces" {
     #|<w:body xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main" xmlns:w14="http://schemas.microsoft.com/office/word/2010/wordml"><w:p><w:r><w:sdt><w:sdtPr><w14:checkbox><w14:checked w14:val="1"/></w14:checkbox></w:sdtPr><w:sdtContent><w:t>replaced</w:t></w:sdtContent></w:sdt></w:r></w:p></w:body>
   inspect(
     effect_summaries(reader_effect_items(xml)),
-    content="boundary(w:sdt) ; suppressed(w:t) ; nontext(w:t)",
+    content="boundary(w:sdt) ; boundary(w:sdtPr) ; suppressed(w:t) ; nontext(w:t)",
   )
   assert_effect_partition_matches_reader(xml)
 }
@@ -222,7 +222,7 @@ test "reader effects: sdt checkbox without text synthesises at the control" {
     #|<w:body xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main" xmlns:w14="http://schemas.microsoft.com/office/word/2010/wordml"><w:p><w:r><w:sdt><w:sdtPr><w14:checkbox/></w:sdtPr><w:sdtContent><w:tab/></w:sdtContent></w:sdt></w:r></w:p></w:body>
   inspect(
     effect_summaries(reader_effect_items(xml)),
-    content="boundary(w:sdt) ; suppressed(w:sdtContent) ; nontext(w:sdt)",
+    content="boundary(w:sdt) ; boundary(w:sdtPr) ; suppressed(w:sdtContent) ; nontext(w:sdt)",
   )
   assert_effect_partition_matches_reader(xml)
 }
@@ -431,6 +431,32 @@ test "reader effects: a drawing without blips is suppressed at its container" {
   inspect(
     effect_summaries(reader_effect_items(xml)),
     content="boundary(w:drawing) ; suppressed(wp:inline)",
+  )
+  assert_effect_partition_matches_reader(xml)
+}
+
+///|
+/// A deleted paragraph that never joins a successor is suppressed AT ITS
+/// POSITION, even when non-paragraph content follows it.
+test "reader effects: unjoined deleted paragraphs suppress in document order" {
+  let xml =
+    #|<w:body xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:p><w:pPr><w:rPr><w:del/></w:rPr></w:pPr><w:r><w:t>tail</w:t></w:r></w:p><w:tbl><w:tr><w:tc><w:p><w:r><w:t>kept</w:t></w:r></w:p></w:tc></w:tr></w:tbl></w:body>
+  inspect(
+    effect_summaries(reader_effect_items(xml)),
+    content="suppressed(w:p) ; text(w:t)=kept",
+  )
+  assert_effect_partition_matches_reader(xml)
+}
+
+///|
+/// A stray non-content child of a control is rejected where it sits, the
+/// same name-blind rule alternate content follows.
+test "reader effects: sdt rejects stray non-content children in place" {
+  let xml =
+    #|<w:body xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:p><w:r><w:sdt><w:r><w:t>dropped</w:t></w:r><w:sdtContent><w:t>kept</w:t></w:sdtContent></w:sdt></w:r></w:p></w:body>
+  inspect(
+    effect_summaries(reader_effect_items(xml)),
+    content="boundary(w:sdt) ; suppressed(w:r) ; text(w:t)=kept",
   )
   assert_effect_partition_matches_reader(xml)
 }

@@ -2070,12 +2070,14 @@ fn BodyReader::read_children(
 ) -> Array[ReaderItem] raise DocxError {
   let items : Array[ReaderItem] = []
   let deleted_paragraph_contents : Array[ReaderNode] = []
-  let deleted_paragraph_nodes : Array[ReaderNode] = []
+  // each pending deleted paragraph remembers where in the output its
+  // suppression trace belongs, in case no paragraph ever joins it
+  let deleted_paragraph_pending : Array[(ReaderNode, Int)] = []
   for element in children {
     match element.name() {
       "w:p" if is_deleted_paragraph(element) => {
         deleted_paragraph_contents.append(element.element_children())
-        deleted_paragraph_nodes.push(element)
+        deleted_paragraph_pending.push((element, items.length()))
       }
       "w:p" if !deleted_paragraph_contents.is_empty() => {
         // deleted-paragraph join: the joined paragraph records every source
@@ -2086,14 +2088,19 @@ fn BodyReader::read_children(
           ),
         )
         deleted_paragraph_contents.clear()
-        deleted_paragraph_nodes.clear()
+        deleted_paragraph_pending.clear()
       }
       _ => items.append(self.read_element(element))
     }
   }
-  // deleted paragraphs with no following paragraph to join never contribute
-  for node in deleted_paragraph_nodes {
-    items.push(Trace(Suppressed(source=node)))
+  // deleted paragraphs with no following paragraph to join never
+  // contribute; their traces are inserted back at document order (largest
+  // index first so earlier positions stay valid)
+  for index = deleted_paragraph_pending.length() - 1
+      index >= 0
+      index = index - 1 {
+    let (node, at) = deleted_paragraph_pending[index]
+    items.insert(at, Trace(Suppressed(source=node)))
   }
   items
 }
@@ -2916,11 +2923,33 @@ fn BodyReader::read_structured_document_tag(
   self : BodyReader,
   element : ReaderNode,
 ) -> Array[ReaderItem] raise DocxError {
-  let items : Array[ReaderItem] = [Trace(TransparentBoundary(source=element))]
-  let contents = element.elements_by_tag_name("w:sdtContent")
-  let content = self.read_children(
-    element.first_or_empty("w:sdtContent").element_children(),
-  )
+  // selection effects in document order, name-blind like alternate
+  // content: only the FIRST `w:sdtContent` contributes, the properties are
+  // consulted metadata, and every other child is rejected where it sits
+  let prefix : Array[ReaderItem] = [Trace(TransparentBoundary(source=element))]
+  let suffix : Array[ReaderItem] = []
+  let mut content_node : ReaderNode? = None
+  let content : Array[ReaderItem] = []
+  for child in element.element_children() {
+    match child.name() {
+      "w:sdtContent" =>
+        if content_node is None {
+          content_node = Some(child)
+          content.append(self.read_children(child.element_children()))
+        } else {
+          suffix.push(Trace(Suppressed(source=child)))
+        }
+      "w:sdtPr" => {
+        let target = if content_node is None { prefix } else { suffix }
+        target.push(Trace(TransparentBoundary(source=child)))
+      }
+      _ => {
+        let target = if content_node is None { prefix } else { suffix }
+        target.push(Trace(Suppressed(source=child)))
+      }
+    }
+  }
+  let items = prefix
   match read_structured_checkbox(element.first_or_empty("w:sdtPr")) {
     Some(checked) => {
       let (replaced, found) = replace_first_text_with_checkbox(content, checked)
@@ -2929,8 +2958,9 @@ fn BodyReader::read_structured_document_tag(
       } else {
         // no text to stand in for: the content is dropped wholesale and the
         // checkbox is synthesized at the control itself
-        if contents.length() > 0 {
-          items.push(Trace(Suppressed(source=contents[0])))
+        match content_node {
+          Some(node) => items.push(Trace(Suppressed(source=node)))
+          None => ()
         }
         items.push(
           New({
@@ -2943,11 +2973,7 @@ fn BodyReader::read_structured_document_tag(
     }
     None => items.append(content)
   }
-  // only the first content contributes; the rest is a selection the reader
-  // makes, recorded per rejected content
-  for index in 1..<contents.length() {
-    items.push(Trace(Suppressed(source=contents[index])))
-  }
+  items.append(suffix)
   items
 }
 
