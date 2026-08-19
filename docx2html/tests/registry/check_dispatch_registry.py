@@ -50,6 +50,10 @@ FILES = {
     # PR 3's DOM<->physical join: dispatches on the MC construct names to
     # mirror the tolerant parser's cook rule
     'reader_input_join.mbt': 'extract',
+    # PR 5's reader-native projection: pure restructuring over reader
+    # output; quotes no XML names of its own
+    'reader_projection_types.mbt': 'extract',
+    'reader_projection_adapter.mbt': 'extract',
     'reader_order_projection.mbt': 'extract',
     'annotation_scan.mbt': 'extract',
     'field_projection.mbt': 'extract',
