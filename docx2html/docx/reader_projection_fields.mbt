@@ -45,6 +45,7 @@ fn classify_reader_projection_fields(
   let elements = projection.scan.elements()
   let facade_paragraphs : Array[ReaderOrderParagraph] = []
   for paragraph in projection.paragraphs {
+    budget.charge_work()
     let contributions : Array[ReaderOrderContribution] = []
     for contribution in paragraph.contributions {
       budget.charge_work()
@@ -84,6 +85,7 @@ fn classify_reader_projection_fields(
   }
   let index = classify_reader_order_fields(facade, budget~)
   for paragraph_index, paragraph in projection.paragraphs {
+    budget.charge_work()
     let facade_contributions = facade_paragraphs[paragraph_index].contributions
     for contribution_index, contribution in paragraph.contributions {
       budget.charge_work()

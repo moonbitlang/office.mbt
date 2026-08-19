@@ -271,3 +271,18 @@ test "field parity on the remaining refusal kinds" {
     ),
   )
 }
+
+///|
+/// The composition round 2 named: a complex HYPERLINK field whose result
+/// wraps a NESTED PARAGRAPH in a synthetic hyperlink sourced at the
+/// begin carrier. Emit-before-visit must still hold -- the outer
+/// paragraph's carrier for the nested paragraph fires before the nested
+/// group -- and the repeated-marker observations land on the same
+/// carriers as the legacy walk.
+test "field parity when the result wraps a nested paragraph" {
+  assert_field_parity(
+    (
+      #|<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:body><w:p><w:r><w:fldChar w:fldCharType="begin"/></w:r><w:r><w:instrText> HYPERLINK "https://e" </w:instrText></w:r><w:r><w:fldChar w:fldCharType="separate"/></w:r><w:p><w:r><w:fldChar w:fldCharType="begin"/></w:r><w:r><w:instrText> NESTED </w:instrText></w:r><w:r><w:fldChar w:fldCharType="end"/></w:r></w:p><w:r><w:t>after</w:t></w:r><w:r><w:fldChar w:fldCharType="end"/></w:r></w:p></w:body></w:document>
+    ),
+  )
+}
