@@ -2,7 +2,8 @@
 #
 # The cheap half of CI, runnable locally in well under a minute.
 #
-# CI's `lint` job runs exactly these checks, in this order. They are also where
+# CI's `lint` job runs these checks in this order (the corpus CLI smoke
+# additionally mirrors a `cli-smoke` step). They are also where
 # CI fails most: of the ten most recent red runs on this repository, six died
 # on `moon fmt` drift or `pkg.generated.mbti` drift — both fully reproducible
 # here, both costing a ~15-minute CI round trip when they are discovered
