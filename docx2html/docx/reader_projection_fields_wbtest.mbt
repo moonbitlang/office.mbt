@@ -280,9 +280,15 @@ test "field parity on the remaining refusal kinds" {
 /// group -- and the repeated-marker observations land on the same
 /// carriers as the legacy walk.
 test "field parity when the result wraps a nested paragraph" {
+  // the nested paragraph carries instrText but NO fldChar, so the field
+  // machine does not intercept its carrier and the synthetic hyperlink
+  // wrapper genuinely wraps it -- the composition where a wrapper source
+  // pointing at the begin carrier could invert emit-before-visit, and
+  // where the nested instrText's repeated observation must land on the
+  // same carriers as the legacy walk
   assert_field_parity(
     (
-      #|<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:body><w:p><w:r><w:fldChar w:fldCharType="begin"/></w:r><w:r><w:instrText> HYPERLINK "https://e" </w:instrText></w:r><w:r><w:fldChar w:fldCharType="separate"/></w:r><w:p><w:r><w:fldChar w:fldCharType="begin"/></w:r><w:r><w:instrText> NESTED </w:instrText></w:r><w:r><w:fldChar w:fldCharType="end"/></w:r></w:p><w:r><w:t>after</w:t></w:r><w:r><w:fldChar w:fldCharType="end"/></w:r></w:p></w:body></w:document>
+      #|<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:body><w:p><w:r><w:fldChar w:fldCharType="begin"/></w:r><w:r><w:instrText> HYPERLINK "https://e" </w:instrText></w:r><w:r><w:fldChar w:fldCharType="separate"/></w:r><w:p><w:r><w:instrText> GHOST </w:instrText><w:t>inner</w:t></w:r></w:p><w:r><w:t>after</w:t></w:r><w:r><w:fldChar w:fldCharType="end"/></w:r></w:p></w:body></w:document>
     ),
   )
 }

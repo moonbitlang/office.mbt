@@ -41,6 +41,7 @@ priv enum ReaderProjectionEnclosure {
 priv struct ReaderProjectionParagraphFrame {
   inputs : Array[ReaderParagraphInput]
   mut armed : Bool
+  cursor : ReaderProjectionCarrierCursor
 }
 
 ///|
@@ -182,13 +183,14 @@ priv struct ReaderProjectionCarrierCursor {
 fn ReaderProjectionBuilder::carrier_cursor(
   self : ReaderProjectionBuilder,
   inputs : Array[ReaderParagraphInput],
-) -> ReaderProjectionCarrierCursor {
+) -> ReaderProjectionCarrierCursor raise DocxError {
   let events : Array[ReaderOrderFieldCarrierEvent] = []
   let positions : Map[Int, Int] = Map([])
   for input in inputs {
     match input.paragraph.source_element_id {
       Some(SourceElementId(paragraph_identity)) =>
         for carrier in input.carriers {
+          self.budget.charge_retained()
           match carrier.source_element_id {
             Some(SourceElementId(carrier_identity)) => {
               positions[carrier_identity] = events.length()
@@ -217,6 +219,15 @@ fn ReaderProjectionBuilder::advance_carrier_cursor(
     is Some(SourceElementId(source_index)) else {
     return
   }
+  self.advance_carrier_cursor_by_source(cursor, source_index)
+}
+
+///|
+fn ReaderProjectionBuilder::advance_carrier_cursor_by_source(
+  self : ReaderProjectionBuilder,
+  cursor : ReaderProjectionCarrierCursor,
+  source_index : Int,
+) -> Unit raise DocxError {
   let elements = self.scan.elements()
   if source_index < 0 || source_index >= elements.length() {
     return
@@ -242,6 +253,31 @@ fn ReaderProjectionBuilder::advance_carrier_cursor(
         cursor.next = cursor.next + 1
       }
     None => ()
+  }
+}
+
+///|
+/// The legacy walk emits a carrier event BEFORE visiting the carrier. A
+/// block item reached through a synthetic wrapper (a field-synthesized
+/// hyperlink sourced at the begin carrier) must therefore advance every
+/// enclosing paragraph's cursor from its OWN physical source before its
+/// group fires -- the item-level hint saw only the wrapper's source.
+/// Scoped through inline enclosures up to the first block boundary: a
+/// nested table's cell paragraphs never advance an outer-level cursor.
+fn ReaderProjectionBuilder::advance_enclosing_cursors(
+  self : ReaderProjectionBuilder,
+  source : ReaderNode,
+) -> Unit raise DocxError {
+  guard source.source_element_id is Some(SourceElementId(source_index)) else {
+    return
+  }
+  for index = self.enclosures.length() - 1; index >= 0; index = index - 1 {
+    match self.enclosures[index] {
+      EnclosingParagraph(frame) =>
+        self.advance_carrier_cursor_by_source(frame.cursor, source_index)
+      EnclosingRun(_) => ()
+      BlockBoundary => return
+    }
   }
 }
 
@@ -392,19 +428,24 @@ fn ReaderProjectionBuilder::walk_items(
         match tree.shape {
           ReaderParagraph(inputs~, children~, extras~, properties=_) => {
             // a block item at an inline position: the enclosing frames
-            // participate in its first flush
+            // participate in its first flush, and their cursors pass the
+            // carrier containing this paragraph BEFORE its group fires
             self.arm_enclosing_frames()
-            let frame : ReaderProjectionParagraphFrame = { inputs, armed: true }
+            self.advance_enclosing_cursors(tree.source)
+            let frame : ReaderProjectionParagraphFrame = {
+              inputs,
+              armed: true,
+              cursor: self.carrier_cursor(inputs),
+            }
             self.enclosures.push(EnclosingParagraph(frame))
-            let cursor = self.carrier_cursor(inputs)
             for child in children {
               if self.refusal is Some(_) {
                 break
               }
-              self.advance_carrier_cursor(cursor, child)
+              self.advance_carrier_cursor(frame.cursor, child)
               self.walk_items([child])
             }
-            self.drain_carrier_cursor(cursor)
+            self.drain_carrier_cursor(frame.cursor)
             ignore(self.enclosures.pop())
             self.flush_paragraph(inputs)
             // extras erase as siblings AFTER the paragraph and re-home
@@ -425,6 +466,7 @@ fn ReaderProjectionBuilder::walk_items(
           ReaderHyperlink(children~, ..) => self.walk_items(children)
           ReaderTable(children~, properties=_) => {
             self.arm_enclosing_frames()
+            self.advance_enclosing_cursors(tree.source)
             self.enclosures.push(BlockBoundary)
             self.walk_items(children)
             ignore(self.enclosures.pop())
@@ -434,6 +476,7 @@ fn ReaderProjectionBuilder::walk_items(
           }
           ReaderTableRow(children~, is_header=_) => {
             self.arm_enclosing_frames()
+            self.advance_enclosing_cursors(tree.source)
             self.enclosures.push(BlockBoundary)
             self.walk_items(children)
             ignore(self.enclosures.pop())
@@ -441,6 +484,7 @@ fn ReaderProjectionBuilder::walk_items(
           }
           ReaderTableCell(children~, ..) => {
             self.arm_enclosing_frames()
+            self.advance_enclosing_cursors(tree.source)
             self.enclosures.push(BlockBoundary)
             self.walk_items(children)
             ignore(self.enclosures.pop())
