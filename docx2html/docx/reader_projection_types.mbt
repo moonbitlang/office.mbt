@@ -104,6 +104,9 @@ priv enum ReaderProjectionRefusal {
 }
 
 ///|
+// TEMPORARY (#434 PR 6b): constructed in production, consumed only by
+// tests until PR 6c wires mutation-safe reads through it.
+#warnings("-unused_constructor")
 priv enum ReaderProjectionBuildResult {
   Projected(ReaderProjection)
   ProjectionRefused(ReaderProjectionRefusal)

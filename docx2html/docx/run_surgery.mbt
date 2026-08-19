@@ -123,7 +123,7 @@ fn run_surgery_is_self_closing(element : ScannedElement) -> Bool {
 /// structure for no reason.
 #warnings("-unused_value")
 fn plan_whole_run_replacement(
-  projection : ReaderOrderProjection,
+  projection : ReaderProjection,
   source : BytesView,
   paragraph_index : Int,
   run_index : Int,
@@ -135,17 +135,22 @@ fn plan_whole_run_replacement(
     )
   }
   let paragraph = projection.paragraphs[paragraph_index]
-  let owned : Array[ReaderOrderContribution] = []
-  for contribution in paragraph.contributions {
-    if contribution.logical_run_index == run_index &&
-      contribution.run_identity is Some(_) {
-      owned.push(contribution)
-    }
-  }
-  guard owned.length() > 0 else {
+  // The address is STRUCTURAL: the run record exists whether or not the
+  // run contributed anything, so an atomless `<w:r/>` is addressable.
+  guard run_index >= 0 && run_index < paragraph.runs.length() else {
     raise Unsupported(
       message="no run \{run_index} in paragraph \{paragraph_index}",
     )
+  }
+  let elements = projection.scan.elements()
+  let target = paragraph.runs[run_index].source
+  let SourceElementId(target_identity) = target
+  let run_element = elements[target_identity]
+  let owned : Array[ReaderProjectionContribution] = []
+  for contribution in paragraph.contributions {
+    if contribution.run_source == Some(target) {
+      owned.push(contribution)
+    }
   }
   // A content control that declares a checkbox rewrites whatever its content
   // projects, so no run inside one can be edited by writing bytes.
@@ -159,8 +164,7 @@ fn plan_whole_run_replacement(
   // text appeared, which is worse than either alone.
   //
   // So the whole construct is refused, by ancestry rather than by symptom.
-  let run_element = projection.source_elements[owned[0].source_identity]
-  if run_surgery_inside_checkbox_control(projection, run_element) {
+  if run_surgery_inside_checkbox_control(elements, run_element) {
     raise Unsupported(
       message="run \{run_index} in paragraph \{paragraph_index} sits inside a checkbox content control, whose content the reader rewrites",
     )
@@ -170,11 +174,10 @@ fn plan_whole_run_replacement(
   // would be incomplete for one and a surprise for the other. No generated
   // document produces this and the projection is asserted not to, but the
   // check is cheap and the failure it prevents is silent.
-  let target = owned[0].run_identity
   for index, other in projection.paragraphs {
     if index != paragraph_index {
-      for contribution in other.contributions {
-        if contribution.run_identity == target {
+      for candidate in other.runs {
+        if candidate.source == target {
           raise Unsupported(
             message="run \{run_index} in paragraph \{paragraph_index} also contributes to paragraph \{index}",
           )
@@ -186,8 +189,12 @@ fn plan_whole_run_replacement(
   let edits : Array[RunSurgeryEdit] = []
   let texts : Array[ScannedElement] = []
   let removals : Array[ScannedElement] = []
+  // The same physical bytes must not be planned twice: two contributions
+  // sharing a source would compose two edits over one span.
+  let planned_sources : Array[Int] = []
   for contribution in owned {
-    let element = projection.source_elements[contribution.source_identity]
+    let SourceElementId(source_identity) = contribution.source
+    let element = elements[source_identity]
     // A field's instruction text is machinery, not content: rewriting it
     // changes what the field computes rather than what it shows. A malformed
     // field has no reliable boundaries at all. Neither is safe to write
@@ -204,16 +211,28 @@ fn plan_whole_run_replacement(
       _ => ()
     }
     match contribution.kind {
-      // A barrier means the projection could not say what this contributes, so
-      // it cannot say what removing it would cost either.
-      HardBarrier =>
+      // Visible non-text -- a break, a reference mark, an image, a
+      // synthesized checkbox glyph -- is reader-visible content this plan
+      // has no representation for, so it cannot say what removing it
+      // would cost.
+      VisibleNonText =>
         raise Unsupported(
-          message="run \{run_index} in paragraph \{paragraph_index} holds an unclassified element",
+          message="run \{run_index} in paragraph \{paragraph_index} holds visible non-text content",
         )
-      // Seams produce no text. They are the run's own opening marker and the
-      // wrappers the reader flattens, and they stay.
-      TransparentSeam => ()
-      TextAtom =>
+      // Boundaries produce no text: the run's own opening marker and the
+      // wrappers the reader flattens. They stay.
+      Transparent => ()
+      // Suppressed content produced no reader content AT ITS SITE -- the
+      // reader decided it contributes nothing -- so replacing the run's
+      // text neither needs nor may touch its bytes.
+      SuppressedContent => ()
+      ProjectedText(FromText) => {
+        if planned_sources.contains(source_identity) {
+          raise Unsupported(
+            message="run \{run_index} in paragraph \{paragraph_index} projects the same physical element twice",
+          )
+        }
+        planned_sources.push(source_identity)
         if is_wml_uri(element.uri) && element.local_name == "t" {
           match element.text_map {
             Some(map) =>
@@ -228,9 +247,18 @@ fn plan_whole_run_replacement(
         } else {
           removals.push(element)
         }
-      // Tabs, breaks, symbols and the two hyphens all project text of their
-      // own, so replacing the run's text means removing them.
-      _ => removals.push(element)
+      }
+      // Tabs, symbols and the two hyphens all project text of their own,
+      // so replacing the run's text means removing their atoms.
+      ProjectedText(FromTab | FromNoBreakHyphen | FromSoftHyphen | FromSymbol) => {
+        if planned_sources.contains(source_identity) {
+          raise Unsupported(
+            message="run \{run_index} in paragraph \{paragraph_index} projects the same physical element twice",
+          )
+        }
+        planned_sources.push(source_identity)
+        removals.push(element)
+      }
     }
   }
   match texts {
@@ -292,8 +320,7 @@ fn plan_whole_run_replacement(
     // No `w:t` at all: an atom-only run, an empty one, or `<w:r/>`. One has to
     // be synthesised, and the run's own element says where it goes.
     [] => {
-      let run = projection.source_elements[owned[0].source_identity]
-      let prefix = run_surgery_qualified_prefix(source, run)
+      let prefix = run_surgery_qualified_prefix(source, run_element)
       // Where the text goes matters. Putting it at the run's content end walks
       // it past every seam the run contains, so for
       // `<bookmarkStart/><tab/><bookmarkEnd/>` the tab would be deleted and the
@@ -306,13 +333,13 @@ fn plan_whole_run_replacement(
       let (anchor, consumed) = match removals {
         [first, ..] => (first.byte_start, first.byte_end)
         [] => {
-          let at = run_surgery_first_content_position(source, projection, run)
+          let at = run_surgery_first_content_position(elements, run_element)
           (at, at)
         }
       }
       edits.push(
         run_surgery_synthesise_text(
-          run,
+          run_element,
           prefix,
           escaped,
           text,
@@ -429,20 +456,20 @@ fn run_surgery_space_declaration(
 /// Whether any ancestor of this element is a content control declaring a
 /// checkbox.
 fn run_surgery_inside_checkbox_control(
-  projection : ReaderOrderProjection,
+  elements : Array[ScannedElement],
   element : ScannedElement,
 ) -> Bool {
   let mut at = element.parent_index
-  while at >= 0 && at < projection.source_elements.length() {
-    let ancestor = projection.source_elements[at]
+  while at >= 0 && at < elements.length() {
+    let ancestor = elements[at]
     if is_wml_uri(ancestor.uri) && ancestor.local_name == "sdt" {
       let mut child = ancestor.first_child_index
       while child >= 0 {
-        let properties = projection.source_elements[child]
+        let properties = elements[child]
         if is_wml_uri(properties.uri) && properties.local_name == "sdtPr" {
           let mut declared = properties.first_child_index
           while declared >= 0 {
-            let marker = projection.source_elements[declared]
+            let marker = elements[declared]
             if marker.uri == W14_NAMESPACE && marker.local_name == "checkbox" {
               return true
             }
@@ -464,15 +491,13 @@ fn run_surgery_inside_checkbox_control(
 /// After `w:rPr` if there is one -- run properties have to come first -- and at
 /// the start of the run's content otherwise.
 fn run_surgery_first_content_position(
-  source : BytesView,
-  projection : ReaderOrderProjection,
+  elements : Array[ScannedElement],
   run : ScannedElement,
 ) -> Int {
-  ignore(source)
   let mut child = run.first_child_index
   let mut position = run.content_start
   while child >= 0 {
-    let element = projection.source_elements[child]
+    let element = elements[child]
     if is_wml_uri(element.uri) && element.local_name == "rPr" {
       position = element.byte_end
     }

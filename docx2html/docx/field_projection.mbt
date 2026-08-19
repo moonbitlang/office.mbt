@@ -752,49 +752,6 @@ priv struct ReaderFieldSlot {
 }
 
 ///|
-/// The legacy-shaped entry: slots aligned to the projection's
-/// contributions, the machine run once, annotations copied back. Kept
-/// for the quarantined walker oracle until PR 7 deletes it.
-fn classify_reader_order_fields(
-  projection : ReaderOrderProjection,
-  budget? : ReaderOrderFieldBudget,
-) -> ReaderOrderFieldIndex raise DocxError {
-  let budget = match budget {
-    Some(value) => value
-    None => reader_order_field_budget()
-  }
-  let slots : Array[ReaderFieldSlot] = []
-  let sources : Array[ReaderOrderContribution] = []
-  for paragraph in projection.paragraphs {
-    for contribution in paragraph.contributions {
-      budget.charge_work()
-      slots.push({
-        source_identity: contribution.source_identity,
-        paragraph_identity: contribution.paragraph_identity,
-        field_identity: None,
-        field_region: OutsideField,
-        field_refusal: None,
-      })
-      sources.push(contribution)
-    }
-  }
-  let index = classify_reader_field_slots(
-    projection.source_elements,
-    projection.field_carriers,
-    slots,
-    budget,
-  )
-  for at, slot in slots {
-    budget.charge_work()
-    let contribution = sources[at]
-    contribution.field_identity = slot.field_identity
-    contribution.field_region = slot.field_region
-    contribution.field_refusal = slot.field_refusal
-  }
-  index
-}
-
-///|
 /// The machine itself, over exactly what it consumes: the scan, the
 /// carrier event stream, and the annotation slots.
 fn classify_reader_field_slots(
@@ -830,9 +787,7 @@ fn classify_reader_field_slots(
       Some(value) => value
       None => {
         let value = reader_order_field_story_identity(
-          source_elements,
-          paragraph_identity,
-          budget,
+          source_elements, paragraph_identity, budget,
         )
         budget.charge_retained()
         story_by_paragraph[paragraph_identity] = value
@@ -873,23 +828,13 @@ fn classify_reader_field_slots(
           None => None
         }
         scan_reader_order_field_carrier(
-          source_elements,
-          carrier,
-          story_identity,
-          instruction_target,
-          seen_instructions,
+          source_elements, carrier, story_identity, instruction_target, seen_instructions,
           budget,
         )
       }
     }
     let classification = classify_reader_order_carrier(
-      index,
-      state,
-      summary,
-      carrier,
-      source_elements,
-      seen_markers,
-      budget,
+      index, state, summary, carrier, source_elements, seen_markers, budget,
     )
     match slots_by_carrier.get(carrier) {
       Some(carrier_slots) =>
