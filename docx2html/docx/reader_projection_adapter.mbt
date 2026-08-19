@@ -20,15 +20,19 @@ priv struct ReaderProjectionBuilder {
   /// order. Registered structurally on run entry so atomless runs stay
   /// addressable.
   pending_runs : Array[ReaderProjectionRun]
-  /// The innermost-first stack of open physical runs.
-  run_stack : Array[SourceElementId]
-  /// Open enclosing paragraphs. An ARMED frame participates in the next
-  /// flush: the legacy walker keeps the outer physical paragraph in the
-  /// accumulating logical paragraph and re-ensures it after each nested
-  /// block, so the outer appears in the FIRST flush of each direct child
-  /// subtree and in its own closing flush.
-  paragraph_frames : Array[ReaderProjectionParagraphFrame]
+  /// The open enclosures, outermost first: paragraph frames, runs, and
+  /// BLOCK BOUNDARIES (table family, extras re-homing). Boundaries stop
+  /// both frame arming and run visibility, mirroring the legacy walker's
+  /// per-level inline state.
+  enclosures : Array[ReaderProjectionEnclosure]
   mut refusal : ReaderProjectionRefusal?
+}
+
+///|
+priv enum ReaderProjectionEnclosure {
+  EnclosingParagraph(ReaderProjectionParagraphFrame)
+  EnclosingRun(SourceElementId)
+  BlockBoundary
 }
 
 ///|
@@ -56,8 +60,7 @@ fn project_reader_items(
     paragraphs: [],
     pending: [],
     pending_runs: [],
-    run_stack: [],
-    paragraph_frames: [],
+    enclosures: [],
     refusal: None,
   }
   builder.walk_items(items)
@@ -86,6 +89,60 @@ fn project_reader_items(
   }
   assign_reader_projection_coordinates(projection)
   Projected(projection)
+}
+
+///|
+/// The run a contribution at the current position sits in: the enclosure
+/// stack's top, when it is a run. A paragraph frame or block boundary on
+/// top means the position is outside every run at its level, exactly as
+/// each legacy inline state starts with no current run.
+fn ReaderProjectionBuilder::current_run(
+  self : ReaderProjectionBuilder,
+) -> SourceElementId? {
+  match self.enclosures.last() {
+    Some(EnclosingRun(id)) => Some(id)
+    _ => None
+  }
+}
+
+///|
+/// Arms every enclosing paragraph frame reachable through inline
+/// containers -- stopping at the first block boundary -- so those frames
+/// participate in the first flush of the block item about to be walked.
+/// This is the legacy walker re-ensuring the outer source before each
+/// `consume_inline_block_output`.
+fn ReaderProjectionBuilder::arm_enclosing_frames(
+  self : ReaderProjectionBuilder,
+) -> Unit {
+  for index = self.enclosures.length() - 1; index >= 0; index = index - 1 {
+    match self.enclosures[index] {
+      EnclosingParagraph(frame) => frame.armed = true
+      EnclosingRun(_) => ()
+      BlockBoundary => return
+    }
+  }
+}
+
+///|
+/// Re-registers the runs of the CURRENT segment -- the enclosures above
+/// the last block boundary -- into the pending runs, outermost first: the
+/// legacy walker reopens its level's active runs after a flush or on
+/// returning from a nested block.
+fn ReaderProjectionBuilder::reopen_segment_runs(
+  self : ReaderProjectionBuilder,
+) -> Unit raise DocxError {
+  let mut segment_start = 0
+  for index, enclosure in self.enclosures {
+    if enclosure is BlockBoundary {
+      segment_start = index + 1
+    }
+  }
+  for index in segment_start..<self.enclosures.length() {
+    match self.enclosures[index] {
+      EnclosingRun(id) => self.register_run(id)
+      _ => ()
+    }
+  }
 }
 
 ///|
@@ -147,14 +204,18 @@ fn ReaderProjectionBuilder::push_effect(
     ProjectedText(_) => self.atom_span(id)
     _ => self.element_span(id)
   }
+  let run_source = self.current_run()
+  match run_source {
+    // an attributed run is always in its paragraph's run records, even
+    // when its structural registration was drained by an earlier flush
+    Some(run) => self.register_run(run)
+    None => ()
+  }
   self.pending.push({
     kind,
     value,
     source: id,
-    run_source: match self.run_stack.last() {
-      Some(run) => Some(run)
-      None => None
-    },
+    run_source,
     source_span,
     projection_start: 0,
     projection_end: 0,
@@ -215,38 +276,51 @@ fn ReaderProjectionBuilder::walk_items(
         }
         match tree.shape {
           ReaderParagraph(inputs~, children~, extras~, properties=_) => {
+            // a block item at an inline position: the enclosing frames
+            // participate in its first flush
+            self.arm_enclosing_frames()
             let frame : ReaderProjectionParagraphFrame = { inputs, armed: true }
-            self.paragraph_frames.push(frame)
-            for child in children {
-              if self.refusal is Some(_) {
-                break
-              }
-              // the enclosing paragraph participates in the FIRST flush of
-              // each direct child subtree, exactly as the legacy walker
-              // re-ensures the outer source after each nested block
-              frame.armed = true
-              self.walk_items([child])
-            }
-            ignore(self.paragraph_frames.pop())
+            self.enclosures.push(EnclosingParagraph(frame))
+            self.walk_items(children)
+            ignore(self.enclosures.pop())
             self.flush_paragraph(inputs)
-            // extras erase as siblings AFTER the paragraph: walked in the
-            // outer context so their paragraphs stand on their own
+            // extras erase as siblings AFTER the paragraph and re-home
+            // block content: walked behind a boundary so nothing leaks
+            // across in either direction
+            self.enclosures.push(BlockBoundary)
             self.walk_items(extras)
+            ignore(self.enclosures.pop())
+            self.reopen_segment_runs()
           }
           ReaderRun(children~, properties=_) => {
             guard self.identity_of(tree.source) is Some(id) else { return }
             self.register_run(id)
-            self.run_stack.push(id)
+            self.enclosures.push(EnclosingRun(id))
             self.walk_items(children)
-            ignore(self.run_stack.pop())
-            // a run whose nested block flushed mid-run was re-registered
-            // by the flush while it was still on the stack; nothing more
-            // to do here
+            ignore(self.enclosures.pop())
           }
           ReaderHyperlink(children~, ..) => self.walk_items(children)
-          ReaderTable(children~, properties=_) => self.walk_items(children)
-          ReaderTableRow(children~, is_header=_) => self.walk_items(children)
-          ReaderTableCell(children~, ..) => self.walk_items(children)
+          ReaderTable(children~, properties=_) => {
+            self.arm_enclosing_frames()
+            self.enclosures.push(BlockBoundary)
+            self.walk_items(children)
+            ignore(self.enclosures.pop())
+            // returning to this level restores its active runs, like the
+            // legacy reset after consuming a nested block's output
+            self.reopen_segment_runs()
+          }
+          ReaderTableRow(children~, is_header=_) => {
+            self.enclosures.push(BlockBoundary)
+            self.walk_items(children)
+            ignore(self.enclosures.pop())
+            self.reopen_segment_runs()
+          }
+          ReaderTableCell(children~, ..) => {
+            self.enclosures.push(BlockBoundary)
+            self.walk_items(children)
+            ignore(self.enclosures.pop())
+            self.reopen_segment_runs()
+          }
           ReaderText(_)
           | ReaderTab
           | ReaderCheckbox(_)
@@ -268,17 +342,23 @@ fn ReaderProjectionBuilder::flush_paragraph(
 ) -> Unit raise DocxError {
   self.budget.charge_retained()
   let sources : Array[ReaderProjectionParagraphSource] = []
-  for frame in self.paragraph_frames {
-    if frame.armed {
-      for input in frame.inputs {
-        guard self.identity_of(input.paragraph) is Some(id) else { return }
-        sources.push({ source: id, source_span: self.element_span(id) })
-      }
-      frame.armed = false
+  for enclosure in self.enclosures {
+    match enclosure {
+      EnclosingParagraph(frame) =>
+        if frame.armed {
+          for input in frame.inputs {
+            guard self.identity_of(input.paragraph) is Some(id) else { return }
+            self.budget.charge_retained()
+            sources.push({ source: id, source_span: self.element_span(id) })
+          }
+          frame.armed = false
+        }
+      _ => ()
     }
   }
   for input in inputs {
     guard self.identity_of(input.paragraph) is Some(id) else { return }
+    self.budget.charge_retained()
     sources.push({ source: id, source_span: self.element_span(id) })
   }
   let contributions : Array[ReaderProjectionContribution] = []
@@ -295,8 +375,7 @@ fn ReaderProjectionBuilder::flush_paragraph(
     projection_start: 0,
     projection_end: 0,
   })
-  // runs still open across the flush participate in the NEXT paragraph too
-  for id in self.run_stack {
-    self.register_run(id)
-  }
+  // runs open at THIS level participate in the next paragraph too; runs
+  // beyond a block boundary do not leak in
+  self.reopen_segment_runs()
 }

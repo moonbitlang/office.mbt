@@ -389,3 +389,47 @@ test "projection budgets bound the build" {
   }
   inspect(outcome, content="reader projection: item visit budget exceeded")
 }
+
+///|
+/// Two nested paragraphs inside ONE inline container: each is its own
+/// block element, so the enclosing physical paragraph participates in the
+/// first flush of EACH -- the legacy walker re-ensures the outer source
+/// after every consumed block.
+test "projection rearms the outer paragraph for every nested block" {
+  let projection = projection_of(
+    (
+      #|<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:body><w:p><w:hyperlink w:anchor="a"><w:p><w:r><w:t>A</w:t></w:r></w:p><w:p><w:r><w:t>B</w:t></w:r></w:p></w:hyperlink></w:p></w:body></w:document>
+    ),
+  )
+  // document=0 body=1 p=2 hyperlink=3 pA=4 rA=5 tA=6 pB=7 rB=8 tB=9
+  inspect(
+    describe_projection(projection),
+    content=(
+      #|p0(src=2,4;runs=5;[0,1))b@3r-1[0,0) t:A@6r0[0,1)
+      #|p1(src=2,7;runs=8;[3,4))t:B@9r0[3,4)
+      #|p2(src=2;runs=;[6,6))
+    ),
+  )
+}
+
+///|
+/// A table inside an open run: the outer run reaches the MERGED first
+/// paragraph (its content preceded the block) and the suffix paragraph,
+/// but never leaks into the table's later standalone paragraphs.
+test "projection scopes open runs at block boundaries" {
+  let projection = projection_of(
+    (
+      #|<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:body><w:p><w:r><w:t>pre</w:t><w:tbl><w:tr><w:tc><w:p><w:r><w:t>A</w:t></w:r></w:p><w:p><w:r><w:t>B</w:t></w:r></w:p></w:tc></w:tr></w:tbl><w:t>post</w:t></w:r></w:p></w:body></w:document>
+    ),
+  )
+  // document=0 body=1 p=2 r=3 t=4 tbl=5 tr=6 tc=7 pA=8 rA=9 tA=10
+  // pB=11 rB=12 tB=13 t(post)=14
+  inspect(
+    describe_projection(projection),
+    content=(
+      #|p0(src=2,8;runs=3,9;[0,4))t:pre@4r0[0,3) t:A@10r1[3,4)
+      #|p1(src=11;runs=12;[6,7))t:B@13r0[6,7)
+      #|p2(src=2;runs=3;[9,13))t:post@14r0[9,13)
+    ),
+  )
+}
