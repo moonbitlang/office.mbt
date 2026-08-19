@@ -319,6 +319,8 @@ fn compare_shadow_streams(
             ancestor = elements[ancestor].parent_index
           }
           if replaceable && under_control {
+            ours_skip_seen["\{first}:s"] = true
+            ours_skip_seen["\{second}:v"] = true
             i = i + 1
             j = j + 2
             continue
@@ -340,7 +342,7 @@ fn compare_shadow_streams(
               (
                 is_wml_uri(source_element.uri) &&
                 (match source_element.local_name {
-                  "br" | "cr" =>
+                  "br" =>
                     match source_element.break_type {
                       None
                       | Some("textWrapping")
@@ -358,29 +360,25 @@ fn compare_shadow_streams(
             // ... and with SUPPRESSED only where suppression is the
             // reader's real classification (a supported break flipped to
             // suppressed is a bug, not a delta)
+            // barrier~Suppressed is allowed EXCEPT where the reader's
+            // closed visible set classifies the element as visible (a
+            // supported break or a reference): the reader suppresses
+            // every unknown, so the unknown family cannot be enumerated
             (HardBarrier, SuppressedContent) =>
-              (
-                is_wml_uri(source_element.uri) &&
-                (match source_element.local_name {
-                  "pict"
-                  | "del"
-                  | "instrText"
-                  | "txbxContent"
-                  | "footnoteRef"
-                  | "endnoteRef"
-                  | "sym" => true
-                  "br" | "cr" =>
-                    match source_element.break_type {
-                      None
-                      | Some("textWrapping")
-                      | Some("page")
-                      | Some("column") => false
-                      _ => true
-                    }
-                  _ => false
-                })
-              ) ||
-              !is_wml_uri(source_element.uri)
+              !is_wml_uri(source_element.uri) ||
+              (match source_element.local_name {
+                "footnoteReference" | "endnoteReference" | "commentReference" =>
+                  false
+                "br" =>
+                  match source_element.break_type {
+                    None
+                    | Some("textWrapping")
+                    | Some("page")
+                    | Some("column") => false
+                    _ => true
+                  }
+                _ => true
+              })
             // the documented class flip: legacy models a field marker as
             // a barrier, ours as a transparent marker
             (HardBarrier, Transparent) =>
@@ -394,6 +392,27 @@ fn compare_shadow_streams(
               mine.projection_end != theirs.projection_end {
               return Some(
                 "paragraph \{paragraph_index} boundary interval at \{our_source} differs",
+              )
+            }
+            let our_run = match mine.run_source {
+              Some(SourceElementId(identity)) => identity
+              None => -1
+            }
+            let legacy_run = match theirs.run_identity {
+              Some(identity) => identity
+              None => -1
+            }
+            if our_run != legacy_run ||
+              mine.logical_run_index != theirs.logical_run_index {
+              return Some(
+                "paragraph \{paragraph_index} boundary run at \{our_source} differs",
+              )
+            }
+            if mine.field_region != theirs.field_region ||
+              mine.field_identity != theirs.field_identity ||
+              mine.field_refusal != theirs.field_refusal {
+              return Some(
+                "paragraph \{paragraph_index} boundary field at \{our_source} differs",
               )
             }
             if mine.source_span.byte_start != theirs.source_span.byte_start ||
@@ -415,10 +434,29 @@ fn compare_shadow_streams(
             j = j + 1
             continue
           }
-          // image barrier on the container, our effect on a descendant
+          // an image barrier on the CARRIER container, our effect on a
+          // STRICT descendant (the blip or imagedata inside it)
+          let legacy_is_image_carrier = !is_wml_uri(source_element.uri) &&
+            source_element.local_name
+            is ("inline" | "anchor" | "imagedata" | "pict")
           if theirs.kind is HardBarrier &&
             (mine.kind is VisibleNonText || mine.kind is SuppressedContent) &&
+            legacy_is_image_carrier &&
+            our_source != theirs.source_identity &&
             shadow_descends_from(elements, our_source, theirs.source_identity) {
+            if mine.projection_start != theirs.projection_start ||
+              mine.projection_end != theirs.projection_end {
+              return Some(
+                "paragraph \{paragraph_index} image boundary interval at \{our_source} differs",
+              )
+            }
+            let kind_label = match mine.kind {
+              Transparent => "b"
+              VisibleNonText => "v"
+              SuppressedContent => "s"
+              ProjectedText(_) => "t"
+            }
+            ours_skip_seen["\{our_source}:\{kind_label}"] = true
             i = i + 1
             j = j + 1
             continue
