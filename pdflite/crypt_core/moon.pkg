@@ -2,7 +2,6 @@ import {
   "moonbitlang/core/buffer",
   "moonbitlang/core/debug",
   "bobzhang/pdflite/core",
-  "bobzhang/mbtexcel/crypto" @aes,
   "moonbitlang/x/crypto",
 }
 

@@ -4,14 +4,12 @@ fn pdf_aes_valid_key_length(length : Int) -> Bool {
 }
 
 ///|
-/// Expand `key` into an AES schedule (the in-repo cipher shared with the
-/// xlsx encryption code), mapping the crypto error onto the PDF one. The
-/// same schedule serves both encryption and decryption.
-fn pdf_aes_key(key : BytesView) -> @aes.AesSchedule raise @core.PdfError {
+/// Validate the key length, mapping an invalid key onto the PDF error
+/// type. The official `x/crypto` AES routines raise a shared
+/// `CryptoError` for both key and data length problems, so the length
+/// checks happen here before delegating.
+fn pdf_aes_check_key(key : BytesView) -> Unit raise @core.PdfError {
   guard pdf_aes_valid_key_length(key.length()) else { raise CryptoKeyExpected }
-  @aes.aes_key_schedule(key) catch {
-    _ => raise CryptoKeyExpected
-  }
 }
 
 ///|
@@ -22,27 +20,15 @@ fn pdf_aes_block_length(data : BytesView) -> Unit raise @core.PdfError {
 }
 
 ///|
-/// Decrypt one 16-byte block with a prepared schedule. The caller guarantees
-/// the slice is exactly 16 bytes, so the cipher's own length error is mapped
-/// defensively onto the PDF error type.
-fn pdf_aes_decrypt16(
-  schedule : @aes.AesSchedule,
-  block : BytesView,
-) -> Array[Byte] raise @core.PdfError {
-  schedule.decrypt_block(block) catch {
-    _ => raise InvalidCryptoDataLength(block.length())
-  }
-}
-
-///|
-/// Encrypt a 16-byte state in place with a prepared schedule; same defensive
-/// error mapping as `pdf_aes_decrypt16`.
-fn pdf_aes_encrypt_state(
-  schedule : @aes.AesSchedule,
-  state : Array[Byte],
-) -> Unit raise @core.PdfError {
-  schedule.encrypt_block_in_place(state) catch {
-    _ => raise InvalidCryptoDataLength(state.length())
+/// Map the official AES error onto the PDF error type defensively. The
+/// caller has already checked key and block lengths, so any remaining
+/// `CryptoError` is treated as a data-length failure.
+fn pdf_aes_map_crypto_error(
+  action : () -> Bytes raise @crypto.CryptoError,
+  actual : Int,
+) -> @core.PdfBytes raise @core.PdfError {
+  action() catch {
+    _ => raise InvalidCryptoDataLength(actual)
   }
 }
 
@@ -52,12 +38,12 @@ pub fn pdf_aes_encrypt_block(
   key : BytesView,
   block : BytesView,
 ) -> @core.PdfBytes raise @core.PdfError {
-  let schedule = pdf_aes_key(key)
+  pdf_aes_check_key(key)
   pdf_aes_block_length(block)
-  let dst = schedule.encrypt_block(block) catch {
-    _ => raise InvalidCryptoDataLength(block.length())
-  }
-  Bytes::from_array(dst)
+  pdf_aes_map_crypto_error(
+    () => @crypto.aes_ecb_encrypt(key, block),
+    block.length(),
+  )
 }
 
 ///|
@@ -66,12 +52,12 @@ pub fn pdf_aes_decrypt_block(
   key : BytesView,
   block : BytesView,
 ) -> @core.PdfBytes raise @core.PdfError {
-  let schedule = pdf_aes_key(key)
+  pdf_aes_check_key(key)
   pdf_aes_block_length(block)
-  let dst = schedule.decrypt_block(block) catch {
-    _ => raise InvalidCryptoDataLength(block.length())
-  }
-  Bytes::from_array(dst)
+  pdf_aes_map_crypto_error(
+    () => @crypto.aes_ecb_decrypt(key, block),
+    block.length(),
+  )
 }
 
 ///|
@@ -102,23 +88,11 @@ pub fn pdf_aes_cbc_decrypt(
   guard data.length() % 16 == 0 else {
     raise InvalidCryptoDataLength(data.length())
   }
-  let schedule = pdf_aes_key(key)
-  let output = Array::make(data.length() - 16, b'\x00')
-  let mut previous_ciphertext = data[:16]
-  let mut position = 16
-  let mut output_position = 0
-  while position < data.length() {
-    let ciphertext = data[position:position + 16]
-    let plaintext = pdf_aes_decrypt16(schedule, ciphertext)
-    for index in 0..<16 {
-      output[output_position + index] = (plaintext[index].to_int() ^
-      previous_ciphertext[index].to_int()).to_byte()
-    }
-    previous_ciphertext = ciphertext
-    position += 16
-    output_position += 16
-  }
-  let decrypted = Bytes::from_array(output)
+  pdf_aes_check_key(key)
+  let decrypted = pdf_aes_map_crypto_error(
+    () => @crypto.aes_cbc_decrypt(key, data[:16], data[16:]),
+    data.length() - 16,
+  )
   if remove_padding {
     pdf_aes_remove_padding(decrypted)
   } else {
@@ -136,44 +110,24 @@ pub fn pdf_aes_cbc_encrypt_with_iv(
   iv : BytesView,
   data : BytesView,
 ) -> @core.PdfBytes raise @core.PdfError {
-  let schedule = pdf_aes_key(key)
+  pdf_aes_check_key(key)
   pdf_aes_block_length(iv)
-  let mut previous_ciphertext = iv.to_array()
-  let full_blocks = data.length() / 16
   let overflow = data.length() % 16
-  let output = Array::make((full_blocks + 2) * 16, b'\x00')
-  for index in 0..<16 {
-    output[index] = previous_ciphertext[index]
-  }
-  let mut output_position = 16
-  for block_index in 0..<full_blocks {
-    let block_start = block_index * 16
-    let state = Array::make(16, b'\x00')
-    for index in 0..<16 {
-      state[index] = (data[block_start + index].to_int() ^
-      previous_ciphertext[index].to_int()).to_byte()
-    }
-    pdf_aes_encrypt_state(schedule, state)
-    for index in 0..<16 {
-      output[output_position + index] = state[index]
-    }
-    output_position += 16
-    previous_ciphertext = state
-  }
   let padding = 16 - overflow
-  let final_start = full_blocks * 16
-  let state = Array::make(16, b'\x00')
-  for index in 0..<16 {
-    let value = if index < overflow {
-      data[final_start + index]
-    } else {
-      padding.to_byte()
-    }
-    state[index] = (value.to_int() ^ previous_ciphertext[index].to_int()).to_byte()
+  let padded : Array[Byte] = data.to_array()
+  for _ in 0..<padding {
+    padded.push(padding.to_byte())
   }
-  pdf_aes_encrypt_state(schedule, state)
+  let encrypted = pdf_aes_map_crypto_error(
+    () => @crypto.aes_cbc_encrypt(key, iv, Bytes::from_array(padded)),
+    data.length() + padding,
+  )
+  let output = Array::make(16 + encrypted.length(), b'\x00')
   for index in 0..<16 {
-    output[output_position + index] = state[index]
+    output[index] = iv[index]
+  }
+  for index in 0..<encrypted.length() {
+    output[16 + index] = encrypted[index]
   }
   Bytes::from_array(output)
 }
@@ -192,17 +146,11 @@ pub fn pdf_aes_ecb_decrypt(
   guard data.length() % 16 == 0 else {
     raise InvalidCryptoDataLength(data.length())
   }
-  let schedule = pdf_aes_key(key)
-  let output = Array::make(data.length(), b'\x00')
-  let mut position = 0
-  while position < data.length() {
-    let plaintext = pdf_aes_decrypt16(schedule, data[position:position + 16])
-    for index in 0..<16 {
-      output[position + index] = plaintext[index]
-    }
-    position += 16
-  }
-  let decrypted = Bytes::from_array(output)
+  pdf_aes_check_key(key)
+  let decrypted = pdf_aes_map_crypto_error(
+    () => @crypto.aes_ecb_decrypt(key, data),
+    data.length(),
+  )
   if remove_padding {
     pdf_aes_remove_padding(decrypted)
   } else {
@@ -222,16 +170,9 @@ pub fn pdf_aes_ecb_encrypt(
     raise InvalidCryptoDataLength(data.length())
   }
   guard data.length() > 0 else { return Bytes::new(0) }
-  let schedule = pdf_aes_key(key)
-  let output = Array::make(data.length(), b'\x00')
-  let mut position = 0
-  while position < data.length() {
-    let state = data[position:position + 16].to_array()
-    pdf_aes_encrypt_state(schedule, state)
-    for index in 0..<16 {
-      output[position + index] = state[index]
-    }
-    position += 16
-  }
-  Bytes::from_array(output)
+  pdf_aes_check_key(key)
+  pdf_aes_map_crypto_error(
+    () => @crypto.aes_ecb_encrypt(key, data),
+    data.length(),
+  )
 }
