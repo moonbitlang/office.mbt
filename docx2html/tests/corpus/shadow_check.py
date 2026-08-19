@@ -11,7 +11,6 @@ Usage:
 """
 
 import os
-import re
 import subprocess
 import sys
 import zipfile
@@ -65,6 +64,11 @@ def collect_cases():
             text = data.decode("utf-8")
         except UnicodeDecodeError:
             cases.append((name, None, "not-utf8"))
+            continue
+        if len(text) > 1_000_000:
+            # recorded, never silent: giant stories exceed the embedded
+            # string-literal comfort zone of the transient test
+            cases.append((name, None, "skipped:oversize"))
             continue
         cases.append((name, text, None))
     return cases
@@ -143,11 +147,14 @@ def generate(cases, expected):
     outcomes.push(name + "\\t" + outcome)
   }
   outcomes.sort()
-  let expected =
-    #|%s
-  assert_eq(outcomes.join("\\n"), expected)
+  inspect(
+    outcomes.join("\\n"),
+    content=(
+      #|%s
+    ),
+  )
 }"""
-        % "\n    #|".join(expected.split("\n"))
+        % "\n      #|".join(expected.split("\n"))
     )
     with open(GENERATED, "w") as f:
         f.write("\n".join(lines) + "\n")
@@ -174,10 +181,6 @@ def main():
         )
         output = run.stdout + run.stderr
         if update:
-            match = re.search(
-                r"^\+(.*?)(?=\n(?:-|\\ No newline|-{4}))",
-                "",
-            )
             # extract actual outcomes from the failure diff: lines starting
             # with '+' between the ---- markers
             actual_lines = []

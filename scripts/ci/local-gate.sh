@@ -73,6 +73,17 @@ dirty_before=$(git status --porcelain=v1)
 
 run "dispatch registry" python3 docx2html/tests/registry/check_dispatch_registry.py
 run "dispatch escape suite" bash docx2html/tests/registry/escape_suite.sh
+run "corpus shadow manifest" python3 docx2html/tests/corpus/shadow_check.py
+
+# The legacy projection walker is quarantined to white-box test code
+# (#434 PR 5c): no production-compiled file may name it. The wbtest move
+# is the mechanism; this guard keeps it mechanical.
+legacy_walker_leaks=$(grep -l -E 'ReaderOrderWalker|scan_reader_order_projection|project_reader_order_from_source_tree|collect_reader_order_body_outputs|reader_order_projection_visibility'   docx2html/docx/*.mbt 2>/dev/null | grep -v '_wbtest\.mbt$' | grep -v '_test\.mbt$' || true)
+if [ -n "$legacy_walker_leaks" ]; then
+  echo "legacy walker named outside test code:"
+  echo "$legacy_walker_leaks"
+  fail "legacy walker quarantine"
+fi
 run "moon fmt" moon fmt
 run "moon info" moon info
 

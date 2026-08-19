@@ -24,3 +24,4 @@ _mbtexcel_check
 .openseek/
 tools/**/bin/
 tools/**/obj/
+docx2html/docx/zz_corpus_shadow_wbtest.mbt

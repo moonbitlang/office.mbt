@@ -88,6 +88,7 @@ jobs:
         run: |
           python3 docx2html/tests/registry/check_dispatch_registry.py
           bash docx2html/tests/registry/escape_suite.sh
+          python3 docx2html/tests/corpus/shadow_check.py
 
       - name: Format check
         run: |
