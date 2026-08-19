@@ -344,14 +344,22 @@ priv struct CommentsReadResult {
 ///|
 priv struct TableRowForSpan {
   cells : Array[TableCellForSpan]
+  /// Trace items among the row's children after its last cell.
+  trailing : Array[ReaderItem]
   is_header : Bool
+  source : ReaderNode
+  /// Trace items that preceded this row among the table's children.
+  leading : Array[ReaderItem]
 }
 
 ///|
 priv struct TableCellForSpan {
-  children : Array[DocumentElement]
+  children : Array[ReaderItem]
   col_span : Int
   row_span : Int
+  source : ReaderNode
+  /// Trace items that preceded this cell among the row's children.
+  leading : Array[ReaderItem]
 }
 
 ///|
@@ -2062,22 +2070,37 @@ fn BodyReader::read_children(
 ) -> Array[ReaderItem] raise DocxError {
   let items : Array[ReaderItem] = []
   let deleted_paragraph_contents : Array[ReaderNode] = []
+  // each pending deleted paragraph remembers where in the output its
+  // suppression trace belongs, in case no paragraph ever joins it
+  let deleted_paragraph_pending : Array[(ReaderNode, Int)] = []
   for element in children {
     match element.name() {
-      "w:p" if is_deleted_paragraph(element) =>
+      "w:p" if is_deleted_paragraph(element) => {
         deleted_paragraph_contents.append(element.element_children())
+        deleted_paragraph_pending.push((element, items.length()))
+      }
       "w:p" if !deleted_paragraph_contents.is_empty() => {
-        // deleted-paragraph join: the prefix mechanics stay a named island
-        // inside read_paragraph_children until 2c
+        // deleted-paragraph join: the joined paragraph records every source
+        // paragraph in `sources` and reads the prefix children natively
         items.push(
           self.read_paragraph_elements_with_prefix(
             element, deleted_paragraph_contents,
           ),
         )
         deleted_paragraph_contents.clear()
+        deleted_paragraph_pending.clear()
       }
       _ => items.append(self.read_element(element))
     }
+  }
+  // deleted paragraphs with no following paragraph to join never
+  // contribute; their traces are inserted back at document order (largest
+  // index first so earlier positions stay valid)
+  for index = deleted_paragraph_pending.length() - 1
+      index >= 0
+      index = index - 1 {
+    let (node, at) = deleted_paragraph_pending[index]
+    items.insert(at, Trace(Suppressed(source=node)))
   }
   items
 }
@@ -2090,25 +2113,42 @@ fn BodyReader::read_element(
   match element.name() {
     "w:p" =>
       if is_deleted_paragraph(element) {
-        []
+        [Trace(Suppressed(source=element))]
       } else {
         [self.read_paragraph_elements(element)]
       }
     "w:r" => [self.read_run(element)]
-    "w:t" =>
+    "w:t" => {
+      let value = element.text()
       [
         New({
           source: element,
-          local_effects: [],
-          shape: ReaderText(element.text()),
+          local_effects: [ProjectsText(source=element, kind=FromText, value~)],
+          shape: ReaderText(value),
         }),
       ]
-    "w:tab" => [New({ source: element, local_effects: [], shape: ReaderTab })]
+    }
+    "w:tab" =>
+      [
+        New({
+          source: element,
+          local_effects: [
+            ProjectsText(source=element, kind=FromTab, value="\t"),
+          ],
+          shape: ReaderTab,
+        }),
+      ]
     "w:noBreakHyphen" =>
       [
         New({
           source: element,
-          local_effects: [],
+          local_effects: [
+            ProjectsText(
+              source=element,
+              kind=FromNoBreakHyphen,
+              value="\u{2011}",
+            ),
+          ],
           shape: ReaderText("\u{2011}"),
         }),
       ]
@@ -2116,7 +2156,9 @@ fn BodyReader::read_element(
       [
         New({
           source: element,
-          local_effects: [],
+          local_effects: [
+            ProjectsText(source=element, kind=FromSoftHyphen, value="\u{00AD}"),
+          ],
           shape: ReaderText("\u{00AD}"),
         }),
       ]
@@ -2125,7 +2167,7 @@ fn BodyReader::read_element(
       [
         New({
           source: element,
-          local_effects: [],
+          local_effects: [ProjectsVisibleNonText(source=element)],
           shape: ReaderNoteReference(
             note_type="footnote",
             note_id=annotation_id_or_missing(element.attribute("w:id")),
@@ -2136,19 +2178,19 @@ fn BodyReader::read_element(
       [
         New({
           source: element,
-          local_effects: [],
+          local_effects: [ProjectsVisibleNonText(source=element)],
           shape: ReaderNoteReference(
             note_type="endnote",
             note_id=annotation_id_or_missing(element.attribute("w:id")),
           ),
         }),
       ]
-    "w:footnoteRef" | "w:endnoteRef" => []
+    "w:footnoteRef" | "w:endnoteRef" => [Trace(Suppressed(source=element))]
     "w:commentReference" =>
       [
         New({
           source: element,
-          local_effects: [],
+          local_effects: [ProjectsVisibleNonText(source=element)],
           shape: ReaderCommentReference(
             annotation_id_or_missing(element.attribute("w:id")),
           ),
@@ -2157,12 +2199,12 @@ fn BodyReader::read_element(
     "w:br" => self.read_break(element)
     "w:bookmarkStart" =>
       match element.attribute("w:name") {
-        Some("_GoBack") => []
+        Some("_GoBack") => [Trace(TransparentBoundary(source=element))]
         None =>
           [
             New({
               source: element,
-              local_effects: [],
+              local_effects: [TransparentBoundary(source=element)],
               shape: ReaderBookmarkStart("undefined"),
             }),
           ]
@@ -2170,40 +2212,89 @@ fn BodyReader::read_element(
           [
             New({
               source: element,
-              local_effects: [],
+              local_effects: [TransparentBoundary(source=element)],
               shape: ReaderBookmarkStart(name),
             }),
           ]
       }
     "w:hyperlink" => self.read_hyperlink(element)
-    "w:drawing" | "w:object" => self.read_children(element.element_children())
-    "w:pict" => []
-    "mc:AlternateContent" =>
-      self.read_children(
-        element.first_or_empty("mc:Fallback").element_children(),
+    "w:drawing" | "w:object" =>
+      reader_transparent_items(
+        element,
+        self.read_children(element.element_children()),
       )
-    "wp:inline" | "wp:anchor" =>
-      reader_legacy_items(self.read_drawing_element(element))
+    "w:pict" => [Trace(Suppressed(source=element))]
+    "mc:AlternateContent" =>
+      self.read_alternate_content_items(element, child => {
+        self.read_children(child.element_children())
+      })
+    "wp:inline" | "wp:anchor" => self.read_drawing_element(element)
     "v:roundrect" | "v:shape" | "v:textbox" | "v:group" | "v:rect" =>
-      self.read_children(element.element_children())
-    "v:imagedata" => reader_legacy_items(self.read_vml_image_data(element))
+      reader_transparent_items(
+        element,
+        self.read_children(element.element_children()),
+      )
+    "v:imagedata" => self.read_vml_image_data(element)
     "w:tbl" => [self.read_table(element)]
     "w:tr" => self.read_table_row(element)
     "w:tc" => [self.read_table_cell(element)]
     "w:ins" | "w:smartTag" | "w:sdtContent" =>
-      self.read_children(element.element_children())
-    "w:sdt" => reader_legacy_items(self.read_structured_document_tag(element))
+      reader_transparent_items(
+        element,
+        self.read_children(element.element_children()),
+      )
+    "w:sdt" => self.read_structured_document_tag(element)
     _ =>
-      if is_ignored_body_element(element.name()) {
-        []
+      if is_suppressed_body_element(element.name()) {
+        [Trace(Suppressed(source=element))]
+      } else if is_ignored_body_element(element.name()) {
+        [Trace(TransparentBoundary(source=element))]
       } else {
         self.warn_parts([
           "An unrecognised element was ignored: ",
           element.name(),
         ])
-        []
+        [Trace(Suppressed(source=element))]
       }
   }
+}
+
+///|
+/// One `mc:AlternateContent` selection with its effects in document order:
+/// every child the reader passes over is a rejection recorded where it
+/// sits, and only the FIRST fallback contributes (matching the
+/// `first_or_empty` selection every caller used). Each dispatch site that
+/// selects a fallback -- inline reading, the pict extras pass, the textbox
+/// search -- reads it its own way.
+fn BodyReader::read_alternate_content_items(
+  self : BodyReader,
+  element : ReaderNode,
+  read_fallback : (ReaderNode) -> Array[ReaderItem] raise DocxError,
+) -> Array[ReaderItem] raise DocxError {
+  ignore(self)
+  let items : Array[ReaderItem] = [Trace(TransparentBoundary(source=element))]
+  let mut fallback_seen = false
+  for child in element.element_children() {
+    if child.name() == "mc:Fallback" && !fallback_seen {
+      fallback_seen = true
+      items.append(read_fallback(child))
+    } else {
+      items.push(Trace(Suppressed(source=child)))
+    }
+  }
+  items
+}
+
+///|
+/// A transparent dispatch arm: the container contributes a zero-width
+/// boundary and its children pass through.
+fn reader_transparent_items(
+  element : ReaderNode,
+  children : Array[ReaderItem],
+) -> Array[ReaderItem] {
+  let items : Array[ReaderItem] = [Trace(TransparentBoundary(source=element))]
+  items.append(children)
+  items
 }
 
 ///|
@@ -2236,18 +2327,26 @@ fn is_ignored_body_element(name : String) -> Bool {
   name == "w:lastRenderedPageBreak" ||
   name == "w:commentRangeStart" ||
   name == "w:commentRangeEnd" ||
-  name == "w:del" ||
   name == "w:fldChar" ||
-  name == "w:footnoteRef" ||
-  name == "w:endnoteRef" ||
-  name == "w:instrText" ||
-  name == "w:txbxContent" ||
   name == "w:pPr" ||
   name == "w:rPr" ||
   name == "w:tblPr" ||
   name == "w:tblGrid" ||
   name == "w:trPr" ||
   name == "w:tcPr"
+}
+
+///|
+/// Ignored elements whose CONTENT this dispatch site drops, as opposed to
+/// the zero-width markers and formatting metadata above. `Suppressed` records
+/// the decision at the site alone: a `w:txbxContent` dropped here may still
+/// be re-homed by the extras passes, whose items carry their own effects.
+fn is_suppressed_body_element(name : String) -> Bool {
+  name == "w:del" ||
+  name == "w:footnoteRef" ||
+  name == "w:endnoteRef" ||
+  name == "w:instrText" ||
+  name == "w:txbxContent"
 }
 
 ///|
@@ -2262,7 +2361,13 @@ fn BodyReader::read_symbol(
   let char = attribute_or_empty(char_attribute)
   match symbol_to_unicode(font, char) {
     Some(value) =>
-      [New({ source: element, local_effects: [], shape: ReaderText(value) })]
+      [
+        New({
+          source: element,
+          local_effects: [ProjectsText(source=element, kind=FromSymbol, value~)],
+          shape: ReaderText(value),
+        }),
+      ]
     None => {
       self.warn_parts([
         "A w:sym element with an unsupported character was ignored: char ",
@@ -2270,7 +2375,7 @@ fn BodyReader::read_symbol(
         " in font ",
         attribute_or_js_undefined(font_attribute),
       ])
-      []
+      [Trace(Suppressed(source=element))]
     }
   }
 }
@@ -2358,18 +2463,15 @@ fn BodyReader::read_paragraph_elements_with_prefix(
   let properties = self.read_paragraph_properties(
     element.first_or_empty("w:pPr"),
   )
-  // The children still route through the complex-field island; the extras
-  // are structural: owned by this paragraph, erased as its siblings. That
-  // split is the extras mechanism itself, and the erase walker -- not any
-  // caller -- is what flattens it back.
+  // The extras are structural: owned by this paragraph, erased as its
+  // siblings. That split is the extras mechanism itself, and the erase
+  // walker -- not any caller -- is what flattens it back.
   New({
     source: element,
     local_effects: [],
     shape: ReaderParagraph(
       sources=prefix + [element],
-      children=reader_legacy_items(
-        self.read_paragraph_children(prefix + element.element_children()),
-      ),
+      children=self.read_paragraph_children(prefix + element.element_children()),
       extras=self.read_paragraph_extra_elements(element),
       properties~,
     ),
@@ -2378,9 +2480,9 @@ fn BodyReader::read_paragraph_elements_with_prefix(
 
 ///|
 priv enum ComplexField {
-  ComplexFieldBegin(checkbox_checked~ : Bool?)
-  ComplexHyperlink(href~ : String?, anchor~ : String?)
-  ComplexCheckbox(Bool)
+  ComplexFieldBegin(checkbox_checked~ : Bool?, source~ : ReaderNode)
+  ComplexHyperlink(href~ : String?, anchor~ : String?, source~ : ReaderNode)
+  ComplexCheckbox(Bool, source~ : ReaderNode)
   ComplexFieldUnknown
 }
 
@@ -2388,8 +2490,8 @@ priv enum ComplexField {
 fn BodyReader::read_paragraph_children(
   self : BodyReader,
   children : Array[ReaderNode],
-) -> Array[DocumentElement] raise DocxError {
-  let elements : Array[DocumentElement] = []
+) -> Array[ReaderItem] raise DocxError {
+  let items : Array[ReaderItem] = []
   let stack : Array[ComplexField] = []
   let mut instruction_text = ""
   for element in children {
@@ -2399,62 +2501,161 @@ fn BodyReader::read_paragraph_children(
         stack.push(
           ComplexFieldBegin(
             checkbox_checked=read_complex_field_checkbox_checked(element),
+            source=element,
           ),
         )
         instruction_text = ""
-        elements.append(
-          reader_legacy_island_elements(self.read_element(element)),
-        )
+        items.append(self.read_element(element))
       }
       Some("separate") => {
         match stack.pop() {
-          Some(ComplexFieldBegin(checkbox_checked~)) =>
+          Some(ComplexFieldBegin(checkbox_checked~, source~)) =>
             stack.push(
               parse_complex_field_instruction(
-                instruction_text, checkbox_checked,
+                instruction_text, checkbox_checked, source,
               ),
             )
           Some(field) => stack.push(field)
           None => ()
         }
         instruction_text = ""
-        elements.append(
-          reader_legacy_island_elements(self.read_element(element)),
-        )
+        items.append(self.read_element(element))
       }
       Some("end") => {
         match stack.pop() {
-          Some(ComplexFieldBegin(checkbox_checked~)) =>
+          Some(ComplexFieldBegin(checkbox_checked~, source~)) =>
             match
               parse_complex_field_instruction(
-                instruction_text, checkbox_checked,
+                instruction_text, checkbox_checked, source,
               ) {
-              ComplexCheckbox(checked) =>
-                elements.push(run([checkbox(checked)]))
+              ComplexCheckbox(checked, source~) =>
+                items.push(reader_field_checkbox_run(checked, source))
               _ => ()
             }
-          Some(ComplexCheckbox(checked)) =>
-            elements.push(run([checkbox(checked)]))
+          Some(ComplexCheckbox(checked, source~)) =>
+            items.push(reader_field_checkbox_run(checked, source))
           Some(_) => ()
           None => ()
         }
         instruction_text = ""
-        elements.append(
-          reader_legacy_island_elements(self.read_element(element)),
-        )
+        items.append(self.read_element(element))
       }
       _ =>
-        if element.name() != "w:instrText" {
-          elements.append(
-            wrap_with_current_hyperlink(
-              stack,
-              reader_legacy_island_elements(self.read_element(element)),
-            ),
+        if element.name() == "w:instrText" {
+          // consumed as instruction text above; nothing projects here
+          items.push(Trace(Suppressed(source=element)))
+        } else {
+          items.append(
+            wrap_items_with_current_hyperlink(stack, self.read_element(element)),
           )
         }
     }
   }
-  elements
+  items
+}
+
+///|
+/// The run a FORMCHECKBOX field synthesises at its end marker. Its source is
+/// the field-begin node: the synthetic output has no child of its own to
+/// blame, and the begin is where the field's identity lives.
+fn reader_field_checkbox_run(checked : Bool, source : ReaderNode) -> ReaderItem {
+  New({
+    source,
+    local_effects: [],
+    shape: ReaderRun(
+      children=[
+        New({
+          source,
+          local_effects: [ProjectsVisibleNonText(source~)],
+          shape: ReaderCheckbox(checked),
+        }),
+      ],
+      properties=RunProperties::default(),
+    ),
+  })
+}
+
+///|
+/// Wrap freshly read items in the innermost open HYPERLINK field, at the
+/// item level, mirroring how the erased pipeline wrapped each ERASED
+/// element: a run keeps the hyperlink INSIDE it, a paragraph's extras are
+/// wrapped as independent siblings (they erase as siblings), traces pass
+/// through untouched, and anything else is wrapped outside. The synthesised
+/// hyperlink's source is the field-begin node.
+fn wrap_items_with_current_hyperlink(
+  stack : Array[ComplexField],
+  items : Array[ReaderItem],
+) -> Array[ReaderItem] {
+  match current_hyperlink_field(stack) {
+    Some((href, anchor, source)) => {
+      let wrapped : Array[ReaderItem] = []
+      for item in items {
+        wrap_item_with_hyperlink_into(item, href, anchor, source, wrapped)
+      }
+      wrapped
+    }
+    None => items
+  }
+}
+
+///|
+fn wrap_item_with_hyperlink_into(
+  item : ReaderItem,
+  href : String?,
+  anchor : String?,
+  source : ReaderNode,
+  out : Array[ReaderItem],
+) -> Unit {
+  fn hyperlink_of(children : Array[ReaderItem]) -> ReaderItem {
+    New({
+      source,
+      local_effects: [TransparentBoundary(source~)],
+      shape: ReaderHyperlink(children~, href~, anchor~, target_frame=None),
+    })
+  }
+
+  match item {
+    // effect traces are not output; wrapping one would fabricate an empty
+    // hyperlink element the reader never produced
+    Trace(_) => out.push(item)
+    New(
+      {
+        source: run_source,
+        local_effects,
+        shape: ReaderRun(children~, properties~),
+      }
+    ) =>
+      out.push(
+        New({
+          source: run_source,
+          local_effects,
+          shape: ReaderRun(children=[hyperlink_of(children)], properties~),
+        }),
+      )
+    // a paragraph erases to itself plus its extras as siblings; the erased
+    // pipeline wrapped each of those separately
+    New(
+      {
+        source: paragraph_source,
+        local_effects,
+        shape: ReaderParagraph(sources~, children~, extras~, properties~),
+      }
+    ) => {
+      out.push(
+        hyperlink_of([
+          New({
+            source: paragraph_source,
+            local_effects,
+            shape: ReaderParagraph(sources~, children~, extras=[], properties~),
+          }),
+        ]),
+      )
+      for extra in extras {
+        wrap_item_with_hyperlink_into(extra, href, anchor, source, out)
+      }
+    }
+    other => out.push(hyperlink_of([other]))
+  }
 }
 
 ///|
@@ -2519,11 +2720,14 @@ fn first_descendant_or_self(element : ReaderNode, name : String) -> ReaderNode? 
 fn parse_complex_field_instruction(
   instruction_text : String,
   checkbox_checked : Bool?,
+  source : ReaderNode,
 ) -> ComplexField {
-  match parse_hyperlink_field_instruction(instruction_text) {
+  match parse_hyperlink_field_instruction(instruction_text, source) {
     Some(field) => field
     None =>
-      parse_non_hyperlink_field_instruction(instruction_text, checkbox_checked)
+      parse_non_hyperlink_field_instruction(
+        instruction_text, checkbox_checked, source,
+      )
   }
 }
 
@@ -2531,9 +2735,10 @@ fn parse_complex_field_instruction(
 fn parse_non_hyperlink_field_instruction(
   instruction_text : String,
   checkbox_checked : Bool?,
+  source : ReaderNode,
 ) -> ComplexField {
   if instruction_text.contains("FORMCHECKBOX") {
-    ComplexCheckbox(checkbox_checked.unwrap_or(false))
+    ComplexCheckbox(checkbox_checked.unwrap_or(false), source~)
   } else {
     ComplexFieldUnknown
   }
@@ -2542,6 +2747,7 @@ fn parse_non_hyperlink_field_instruction(
 ///|
 fn parse_hyperlink_field_instruction(
   instruction_text : String,
+  source : ReaderNode,
 ) -> ComplexField? {
   let keyword = "HYPERLINK"
   let mut index = skip_field_whitespace(instruction_text, 0)
@@ -2566,9 +2772,9 @@ fn parse_hyperlink_field_instruction(
     match read_field_location(instruction_text, index) {
       Some(location) =>
         if is_internal_link {
-          Some(ComplexHyperlink(href=None, anchor=Some(location)))
+          Some(ComplexHyperlink(href=None, anchor=Some(location), source~))
         } else {
-          Some(ComplexHyperlink(href=Some(location), anchor=None))
+          Some(ComplexHyperlink(href=Some(location), anchor=None, source~))
         }
       None => None
     }
@@ -2631,47 +2837,17 @@ fn field_starts_with_at(value : String, index : Int, prefix : String) -> Bool {
 }
 
 ///|
-fn wrap_with_current_hyperlink(
+fn current_hyperlink_field(
   stack : Array[ComplexField],
-  elements : Array[DocumentElement],
-) -> Array[DocumentElement] {
-  match current_hyperlink_field(stack) {
-    Some((href, anchor)) => {
-      let wrapped : Array[DocumentElement] = []
-      for element in elements {
-        wrapped.push(wrap_element_with_hyperlink(element, href, anchor))
-      }
-      wrapped
-    }
-    None => elements
-  }
-}
-
-///|
-fn current_hyperlink_field(stack : Array[ComplexField]) -> (String?, String?)? {
+) -> (String?, String?, ReaderNode)? {
   for index = stack.length() - 1; index >= 0; index = index - 1 {
     match stack[index] {
-      ComplexHyperlink(href~, anchor~) => return Some((href, anchor))
+      ComplexHyperlink(href~, anchor~, source~) =>
+        return Some((href, anchor, source))
       _ => ()
     }
   }
   None
-}
-
-///|
-fn wrap_element_with_hyperlink(
-  element : DocumentElement,
-  href : String?,
-  anchor : String?,
-) -> DocumentElement {
-  match element {
-    Run(children~, properties~) =>
-      Run(
-        children=[Hyperlink(children~, href~, anchor~, target_frame=None)],
-        properties~,
-      )
-    _ => Hyperlink(children=[element], href~, anchor~, target_frame=None)
-  }
 }
 
 ///|
@@ -2681,7 +2857,9 @@ fn BodyReader::read_text_box_elements(
 ) -> Array[ReaderItem] raise DocxError {
   match element.name() {
     "mc:AlternateContent" =>
-      self.read_text_box_elements(element.first_or_empty("mc:Fallback"))
+      self.read_alternate_content_items(element, child => {
+        self.read_text_box_elements(child)
+      })
     "w:txbxContent" => self.read_children(element.element_children())
     _ => {
       let items : Array[ReaderItem] = []
@@ -2722,9 +2900,9 @@ fn BodyReader::read_pict_extra_elements(
     match child_element.name() {
       "mc:AlternateContent" =>
         items.append(
-          self.read_pict_extra_elements(
-            child_element.first_or_empty("mc:Fallback"),
-          ),
+          self.read_alternate_content_items(child_element, mc_child => {
+            self.read_pict_extra_elements(mc_child)
+          }),
         )
       "w:txbxContent" =>
         items.append(self.read_children(child_element.element_children()))
@@ -2744,25 +2922,59 @@ fn BodyReader::read_pict_extra_elements(
 fn BodyReader::read_structured_document_tag(
   self : BodyReader,
   element : ReaderNode,
-) -> Array[DocumentElement] raise DocxError {
-  // the checkbox replacement is a named legacy island until 2c; its content
-  // erases through the island adapter so the end-of-2c search guard sees it
-  let content = reader_legacy_island_elements(
-    self.read_children(
-      element.first_or_empty("w:sdtContent").element_children(),
-    ),
-  )
+) -> Array[ReaderItem] raise DocxError {
+  // selection effects in document order, name-blind like alternate
+  // content: only the FIRST `w:sdtContent` contributes, the properties are
+  // consulted metadata, and every other child is rejected where it sits
+  let prefix : Array[ReaderItem] = [Trace(TransparentBoundary(source=element))]
+  let suffix : Array[ReaderItem] = []
+  let mut content_node : ReaderNode? = None
+  let content : Array[ReaderItem] = []
+  for child in element.element_children() {
+    match child.name() {
+      "w:sdtContent" =>
+        if content_node is None {
+          content_node = Some(child)
+          content.append(self.read_children(child.element_children()))
+        } else {
+          suffix.push(Trace(Suppressed(source=child)))
+        }
+      "w:sdtPr" => {
+        let target = if content_node is None { prefix } else { suffix }
+        target.push(Trace(TransparentBoundary(source=child)))
+      }
+      _ => {
+        let target = if content_node is None { prefix } else { suffix }
+        target.push(Trace(Suppressed(source=child)))
+      }
+    }
+  }
+  let items = prefix
   match read_structured_checkbox(element.first_or_empty("w:sdtPr")) {
     Some(checked) => {
       let (replaced, found) = replace_first_text_with_checkbox(content, checked)
       if found {
-        replaced
+        items.append(replaced)
       } else {
-        [checkbox(checked)]
+        // no text to stand in for: the content is dropped wholesale and the
+        // checkbox is synthesized at the control itself
+        match content_node {
+          Some(node) => items.push(Trace(Suppressed(source=node)))
+          None => ()
+        }
+        items.push(
+          New({
+            source: element,
+            local_effects: [ProjectsVisibleNonText(source=element)],
+            shape: ReaderCheckbox(checked),
+          }),
+        )
       }
     }
-    None => content
+    None => items.append(content)
   }
+  items.append(suffix)
+  items
 }
 
 ///|
@@ -2787,16 +2999,16 @@ fn read_boolean_attribute_value(value : String?) -> Bool {
 
 ///|
 fn replace_first_text_with_checkbox(
-  elements : Array[DocumentElement],
+  items : Array[ReaderItem],
   checked : Bool,
-) -> (Array[DocumentElement], Bool) {
-  let replaced : Array[DocumentElement] = []
+) -> (Array[ReaderItem], Bool) {
+  let replaced : Array[ReaderItem] = []
   let mut found = false
-  for element in elements {
+  for item in items {
     if found {
-      replaced.push(element)
+      replaced.push(item)
     } else {
-      let (next, next_found) = replace_first_text_in_element(element, checked)
+      let (next, next_found) = replace_first_text_in_item(item, checked)
       replaced.push(next)
       if next_found {
         found = true
@@ -2807,60 +3019,108 @@ fn replace_first_text_with_checkbox(
 }
 
 ///|
-fn replace_first_text_in_element(
-  element : DocumentElement,
+fn replace_first_text_in_item(
+  item : ReaderItem,
   checked : Bool,
-) -> (DocumentElement, Bool) {
-  match element {
-    Text(value) =>
+) -> (ReaderItem, Bool) {
+  match item {
+    New({ source, local_effects: _, shape: ReaderText(value) }) =>
       if value.length() > 0 {
-        (checkbox(checked), true)
+        // the text's projection is suppressed and the checkbox stands in
+        // its place
+        (
+          New({
+            source,
+            local_effects: [
+              Suppressed(source~),
+              ProjectsVisibleNonText(source~),
+            ],
+            shape: ReaderCheckbox(checked),
+          }),
+          true,
+        )
       } else {
-        (element, false)
+        (item, false)
       }
-    Document(children~, notes~, comments~) => {
+    New(tree) => {
+      let (shape, found) = replace_first_text_in_shape(tree.shape, checked)
+      (
+        New({ source: tree.source, local_effects: tree.local_effects, shape }),
+        found,
+      )
+    }
+    Trace(_) => (item, false)
+  }
+}
+
+///|
+fn replace_first_text_in_shape(
+  shape : ReaderTreeShape,
+  checked : Bool,
+) -> (ReaderTreeShape, Bool) {
+  // `ReaderText` never reaches this walker: `replace_first_text_in_item`
+  // intercepts it so the replacement can rewrite the tree's effects too
+  match shape {
+    ReaderParagraph(sources~, children~, extras~, properties~) => {
+      // the erased pipeline expanded extras as siblings after the
+      // paragraph, so the search visits the carrier first, then extras
       let (new_children, found) = replace_first_text_with_checkbox(
         children, checked,
       )
-      (Document(children=new_children, notes~, comments~), found)
+      if found {
+        (
+          ReaderParagraph(sources~, children=new_children, extras~, properties~),
+          true,
+        )
+      } else {
+        let (new_extras, found) = replace_first_text_with_checkbox(
+          extras, checked,
+        )
+        (
+          ReaderParagraph(
+            sources~,
+            children=new_children,
+            extras=new_extras,
+            properties~,
+          ),
+          found,
+        )
+      }
     }
-    Paragraph(children~, properties~) => {
+    ReaderRun(children~, properties~) => {
       let (new_children, found) = replace_first_text_with_checkbox(
         children, checked,
       )
-      (Paragraph(children=new_children, properties~), found)
+      (ReaderRun(children=new_children, properties~), found)
     }
-    Run(children~, properties~) => {
+    ReaderHyperlink(children~, href~, anchor~, target_frame~) => {
       let (new_children, found) = replace_first_text_with_checkbox(
         children, checked,
       )
-      (Run(children=new_children, properties~), found)
+      (
+        ReaderHyperlink(children=new_children, href~, anchor~, target_frame~),
+        found,
+      )
     }
-    Hyperlink(children~, href~, anchor~, target_frame~) => {
+    ReaderTable(children~, properties~) => {
       let (new_children, found) = replace_first_text_with_checkbox(
         children, checked,
       )
-      (Hyperlink(children=new_children, href~, anchor~, target_frame~), found)
+      (ReaderTable(children=new_children, properties~), found)
     }
-    Table(children~, properties~) => {
+    ReaderTableRow(children~, is_header~) => {
       let (new_children, found) = replace_first_text_with_checkbox(
         children, checked,
       )
-      (Table(children=new_children, properties~), found)
+      (ReaderTableRow(children=new_children, is_header~), found)
     }
-    TableRow(children~, is_header~) => {
+    ReaderTableCell(children~, col_span~, row_span~) => {
       let (new_children, found) = replace_first_text_with_checkbox(
         children, checked,
       )
-      (TableRow(children=new_children, is_header~), found)
+      (ReaderTableCell(children=new_children, col_span~, row_span~), found)
     }
-    TableCell(children~, col_span~, row_span~) => {
-      let (new_children, found) = replace_first_text_with_checkbox(
-        children, checked,
-      )
-      (TableCell(children=new_children, col_span~, row_span~), found)
-    }
-    _ => (element, false)
+    _ => (shape, false)
   }
 }
 
@@ -3104,14 +3364,32 @@ fn BodyReader::read_break(
 ) -> Array[ReaderItem] {
   match element.attribute("w:type") {
     None | Some("textWrapping") =>
-      [New({ source: element, local_effects: [], shape: ReaderBreak(Line) })]
+      [
+        New({
+          source: element,
+          local_effects: [ProjectsVisibleNonText(source=element)],
+          shape: ReaderBreak(Line),
+        }),
+      ]
     Some("page") =>
-      [New({ source: element, local_effects: [], shape: ReaderBreak(Page) })]
+      [
+        New({
+          source: element,
+          local_effects: [ProjectsVisibleNonText(source=element)],
+          shape: ReaderBreak(Page),
+        }),
+      ]
     Some("column") =>
-      [New({ source: element, local_effects: [], shape: ReaderBreak(Column) })]
+      [
+        New({
+          source: element,
+          local_effects: [ProjectsVisibleNonText(source=element)],
+          shape: ReaderBreak(Column),
+        }),
+      ]
     Some(break_type) => {
       self.warn_parts(["Unsupported break type: ", break_type])
-      []
+      [Trace(Suppressed(source=element))]
     }
   }
 }
@@ -3136,7 +3414,7 @@ fn BodyReader::read_hyperlink(
       [
         New({
           source: element,
-          local_effects: [],
+          local_effects: [TransparentBoundary(source=element)],
           shape: ReaderHyperlink(
             children=self.read_children(element.element_children()),
             href~,
@@ -3152,7 +3430,7 @@ fn BodyReader::read_hyperlink(
           [
             New({
               source: element,
-              local_effects: [],
+              local_effects: [TransparentBoundary(source=element)],
               shape: ReaderHyperlink(
                 children=self.read_children(element.element_children()),
                 href=None,
@@ -3162,8 +3440,12 @@ fn BodyReader::read_hyperlink(
             }),
           ]
         // untargeted and unanchored: the reader flattens, so the child
-        // items pass through untouched
-        None => self.read_children(element.element_children())
+        // items pass through behind a boundary
+        None =>
+          reader_transparent_items(
+            element,
+            self.read_children(element.element_children()),
+          )
       }
   }
 }
@@ -3189,14 +3471,21 @@ fn non_empty_attribute(element : ReaderNode, name : String) -> String? {
 fn BodyReader::read_drawing_element(
   self : BodyReader,
   element : ReaderNode,
-) -> Array[DocumentElement] {
-  let results : Array[DocumentElement] = []
+) -> Array[ReaderItem] {
+  let results : Array[ReaderItem] = []
   for blip in element.drawing_blips() {
     match self.read_blip(element, blip) {
       Some(image) =>
-        results.push(self.wrap_image_with_drawing_hyperlink(element, image))
-      None => ()
+        results.push(
+          self.wrap_image_with_drawing_hyperlink(element, blip, image),
+        )
+      // the blip resolved to no image; nothing materialises for it
+      None => results.push(Trace(Suppressed(source=blip)))
     }
+  }
+  if results.is_empty() {
+    // no blips at all: the drawing container itself materialised nothing
+    results.push(Trace(Suppressed(source=element)))
   }
   results
 }
@@ -3220,17 +3509,27 @@ fn ReaderNode::drawing_blips(self : ReaderNode) -> Array[ReaderNode] {
 fn BodyReader::wrap_image_with_drawing_hyperlink(
   self : BodyReader,
   drawing_element : ReaderNode,
+  blip : ReaderNode,
   image : Image,
-) -> DocumentElement {
+) -> ReaderItem {
+  let image_item = New({
+    source: blip,
+    local_effects: [ProjectsVisibleNonText(source=blip)],
+    shape: ReaderImage(image),
+  })
   match self.read_drawing_hyperlink(drawing_element) {
     Some(href) =>
-      Hyperlink(
-        children=[Image(image)],
-        href=Some(href),
-        anchor=None,
-        target_frame=None,
-      )
-    None => Image(image)
+      New({
+        source: drawing_element,
+        local_effects: [TransparentBoundary(source=drawing_element)],
+        shape: ReaderHyperlink(
+          children=[image_item],
+          href=Some(href),
+          anchor=None,
+          target_frame=None,
+        ),
+      })
+    None => image_item
   }
 }
 
@@ -3305,9 +3604,9 @@ fn BodyReader::diagnostic_count(self : BodyReader) -> Int {
 fn BodyReader::read_vml_image_data(
   self : BodyReader,
   element : ReaderNode,
-) -> Array[DocumentElement] {
+) -> Array[ReaderItem] {
   if !self.read_images {
-    return []
+    return [Trace(Suppressed(source=element))]
   }
   match non_empty_attribute(element, "r:id") {
     Some(id) =>
@@ -3316,12 +3615,20 @@ fn BodyReader::read_vml_image_data(
           id,
           alt_text=element.attribute("o:title"),
         ) {
-        Some(image) => [Image(image)]
-        None => []
+        Some(image) =>
+          [
+            New({
+              source: element,
+              local_effects: [ProjectsVisibleNonText(source=element)],
+              shape: ReaderImage(image),
+            }),
+          ]
+        // unresolved relationship: the image never materialises
+        None => [Trace(Suppressed(source=element))]
       }
     None => {
       self.warn("A v:imagedata element without a relationship ID was ignored")
-      []
+      [Trace(Suppressed(source=element))]
     }
   }
 }
@@ -3585,18 +3892,12 @@ fn BodyReader::read_table(
   self : BodyReader,
   element : ReaderNode,
 ) -> ReaderItem raise DocxError {
-  // the vMerge span rebuild is a named legacy island until 2c: rows and
-  // cells erase through it and come back as legacy children
   New({
     source: element,
     local_effects: [],
     shape: ReaderTable(
-      children=reader_legacy_items(
-        self.calculate_table_row_spans(
-          reader_legacy_island_elements(
-            self.read_children(element.element_children()),
-          ),
-        ),
+      children=self.calculate_table_row_spans(
+        self.read_children(element.element_children()),
       ),
       properties=self.read_table_properties(element.first_or_empty("w:tblPr")),
     ),
@@ -3622,7 +3923,7 @@ fn BodyReader::read_table_row(
 ) -> Array[ReaderItem] raise DocxError {
   let properties = element.first_or_empty("w:trPr")
   if properties.first("w:del") is Some(_) {
-    []
+    [Trace(Suppressed(source=element))]
   } else {
     let is_header = properties.first("w:tblHeader") is Some(_)
     [
@@ -3710,48 +4011,94 @@ fn read_vertical_merge_continue(properties : ReaderNode) -> Bool {
 }
 
 ///|
+fn BodyReader::table_cells_for_span(
+  self : BodyReader,
+  children : Array[ReaderItem],
+) -> (Array[TableCellForSpan], Array[ReaderItem])? {
+  let cells : Array[TableCellForSpan] = []
+  let pending : Array[ReaderItem] = []
+  for child in children {
+    match child {
+      // effect traces carry no structure; they ride along in place
+      Trace(_) => pending.push(child)
+      New(
+        {
+          source: cell_source,
+          local_effects: _,
+          shape: ReaderTableCell(children=cell_children, col_span~, row_span~),
+        }
+      ) => {
+        cells.push({
+          children: cell_children,
+          col_span,
+          row_span,
+          source: cell_source,
+          leading: pending.copy(),
+        })
+        pending.clear()
+      }
+      _ => {
+        self.warn(
+          "unexpected non-cell element in table row, cell merging may be incorrect",
+        )
+        return None
+      }
+    }
+  }
+  Some((cells, pending))
+}
+
+///|
 fn BodyReader::calculate_table_row_spans(
   self : BodyReader,
-  elements : Array[DocumentElement],
-) -> Array[DocumentElement] {
-  let rows : Array[(Array[DocumentElement], Bool)] = []
-  for element in elements {
-    match element {
-      TableRow(children~, is_header~) => rows.push((children, is_header))
+  items : Array[ReaderItem],
+) -> Array[ReaderItem] {
+  // two passes, matching the erased pipeline's warning order: every table
+  // child is checked to be a row before any row's cells are examined
+  let row_shells : Array[
+    (Array[ReaderItem], Bool, ReaderNode, Array[ReaderItem]),
+  ] = []
+  let pending : Array[ReaderItem] = []
+  for item in items {
+    match item {
+      // effect traces carry no structure; they ride along in place
+      Trace(_) => pending.push(item)
+      New(
+        {
+          source,
+          local_effects: _,
+          shape: ReaderTableRow(children~, is_header~),
+        }
+      ) => {
+        row_shells.push((children, is_header, source, pending.copy()))
+        pending.clear()
+      }
       _ => {
         self.warn(
           "unexpected non-row element in table, cell merging may be incorrect",
         )
-        return elements
+        return items
       }
     }
   }
   let typed_rows : Array[TableRowForSpan] = []
-  for row in rows {
-    let (children, is_header) = row
-    let cells : Array[TableCellForSpan] = []
-    for child in children {
-      match child {
-        TableCell(children=cell_children, col_span~, row_span~) =>
-          cells.push({ children: cell_children, col_span, row_span })
-        _ => {
-          self.warn(
-            "unexpected non-cell element in table row, cell merging may be incorrect",
-          )
-          return elements
-        }
-      }
+  for shell in row_shells {
+    let (children, is_header, source, leading) = shell
+    guard self.table_cells_for_span(children) is Some((cells, trailing)) else {
+      return items
     }
-    typed_rows.push({ cells, is_header })
+    typed_rows.push({ cells, trailing, is_header, source, leading })
   }
-  self.calculate_typed_table_row_spans(typed_rows)
+  let rows = self.calculate_typed_table_row_spans(typed_rows)
+  rows.append(pending)
+  rows
 }
 
 ///|
 fn BodyReader::calculate_typed_table_row_spans(
   _self : BodyReader,
   elements : Array[TableRowForSpan],
-) -> Array[DocumentElement] {
+) -> Array[ReaderItem] {
   let row_spans : Array[Array[Int]] = []
   let skip_cells : Array[Array[Bool]] = []
   for row in elements {
@@ -3784,23 +4131,41 @@ fn BodyReader::calculate_typed_table_row_spans(
       column_index = column_index + cell.col_span
     }
   }
-  let rows : Array[DocumentElement] = []
+  let rows : Array[ReaderItem] = []
   for row_index in 0..<elements.length() {
-    let new_children : Array[DocumentElement] = []
+    let new_children : Array[ReaderItem] = []
     for cell_index in 0..<elements[row_index].cells.length() {
-      if !skip_cells[row_index][cell_index] {
-        let cell = elements[row_index].cells[cell_index]
+      let cell = elements[row_index].cells[cell_index]
+      new_children.append(cell.leading)
+      if skip_cells[row_index][cell_index] {
+        // a vertical-merge continuation the span calculation removed; its
+        // content projects nothing
+        new_children.push(Trace(Suppressed(source=cell.source)))
+      } else {
         new_children.push(
-          TableCell(
-            children=cell.children,
-            col_span=cell.col_span,
-            row_span=row_spans[row_index][cell_index],
-          ),
+          New({
+            source: cell.source,
+            local_effects: [],
+            shape: ReaderTableCell(
+              children=cell.children,
+              col_span=cell.col_span,
+              row_span=row_spans[row_index][cell_index],
+            ),
+          }),
         )
       }
     }
+    new_children.append(elements[row_index].trailing)
+    rows.append(elements[row_index].leading)
     rows.push(
-      TableRow(children=new_children, is_header=elements[row_index].is_header),
+      New({
+        source: elements[row_index].source,
+        local_effects: [],
+        shape: ReaderTableRow(
+          children=new_children,
+          is_header=elements[row_index].is_header,
+        ),
+      }),
     )
   }
   rows

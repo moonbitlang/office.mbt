@@ -1,14 +1,10 @@
 // PR 2 of the reader unification (#434): the output carrier and the reader IR.
 //
 // The body reader's recursive component is one strongly connected component
-// through `read_children`'s return type. `ReaderItem` is the bridge across
-// the migration: 2.0 put it in the spine with everything `Legacy`, 2a moves
-// the structural producers onto `New(ReaderTree)`, 2b the atoms, 2c converts
-// the transforms and populates effects, and then `Legacy` is deleted with a
-// search guard. The four transforms that rebuild structure -- complex
-// fields, the checkbox replacement, vMerge, and the deleted-paragraph join
-// -- stay as NAMED legacy islands until 2c; their adapters carry `legacy`
-// in their names so the final search means something.
+// through `read_children`'s return type. Every producer builds `New`
+// reader-IR nodes with provenance, transforms rewrite the IR in place, and
+// erasing to `DocumentElement` happens exactly once, in
+// `reader_items_to_elements` -- the reader itself never erases.
 
 ///|
 /// Which atom a projected text value came from. The projection's
@@ -23,10 +19,11 @@ priv enum ReaderProjectedTextKind {
 
 ///|
 /// What one reader decision contributed to the visible story. Emitted at the
-/// same decision sites that produce or suppress semantic nodes, AFTER
-/// transforms -- which is why the fields stay empty until 2c, when the
-/// transforms themselves become IR-aware. The projection adapter then
-/// becomes pure restructuring over this stream.
+/// same decision sites that produce or suppress semantic nodes, after every
+/// transform has run: a text atom the checkbox transform replaced carries
+/// `Suppressed` + `ProjectsVisibleNonText`, not its original `ProjectsText`.
+/// The old projection's `TransparentSeam` maps to `TransparentBoundary`; its
+/// `HardBarrier` conflated the last two kinds, which this stream separates.
 priv enum ReaderEffect {
   ProjectsText(
     source~ : ReaderNode,
@@ -41,12 +38,9 @@ priv enum ReaderEffect {
 ///|
 /// One item of reader output while the migration is in flight.
 priv enum ReaderItem {
-  /// A fully built legacy element. Every producer starts here; the
-  /// variant's deletion is the signal that PR 2 is complete.
-  Legacy(DocumentElement)
   /// A node built through the reader IR.
   New(ReaderTree)
-  /// An effect with no surviving semantic output (2c).
+  /// An effect with no surviving semantic output.
   Trace(ReaderEffect)
 }
 
@@ -56,7 +50,8 @@ priv enum ReaderItem {
 /// pass their input node here -- are never touched again.
 priv struct ReaderTree {
   source : ReaderNode
-  /// Empty through 2a/2b; populated in 2c.
+  /// What this node's decision site contributed to the story, in order,
+  /// ahead of the children's own effects.
   local_effects : Array[ReaderEffect]
   shape : ReaderTreeShape
 }
@@ -121,7 +116,6 @@ fn erase_reader_items_into(
 ) -> Unit {
   for item in items {
     match item {
-      Legacy(element) => out.push(element)
       Trace(_) => ()
       New(tree) =>
         match tree.shape {
@@ -178,19 +172,50 @@ fn erase_reader_items_into(
 }
 
 ///|
-/// Wrap legacy output while producers migrate.
-fn reader_legacy_items(elements : Array[DocumentElement]) -> Array[ReaderItem] {
-  elements.map(element => Legacy(element))
+/// The effect stream in document order: a tree's own effects come before its
+/// children's (the decision happens at the node), and a paragraph's extras
+/// follow its children, matching the erase order.
+fn collect_reader_effects(items : Array[ReaderItem]) -> Array[ReaderEffect] {
+  let out : Array[ReaderEffect] = []
+  collect_reader_effects_into(items, out)
+  out
 }
 
 ///|
-/// The named unwrap the four legacy islands read through while they still
-/// rebuild DocumentElement trees (complex fields, the checkbox replacement,
-/// vMerge, the deleted-paragraph join). Deleting this function is part of
-/// 2c's search guard: when no island remains, nothing may erase inside the
-/// reader.
-fn reader_legacy_island_elements(
+fn collect_reader_effects_into(
   items : Array[ReaderItem],
-) -> Array[DocumentElement] {
-  reader_items_to_elements(items)
+  out : Array[ReaderEffect],
+) -> Unit {
+  for item in items {
+    match item {
+      Trace(effect) => out.push(effect)
+      New(tree) => {
+        out.append(tree.local_effects)
+        match tree.shape {
+          ReaderParagraph(sources=_, children~, extras~, properties=_) => {
+            collect_reader_effects_into(children, out)
+            collect_reader_effects_into(extras, out)
+          }
+          ReaderRun(children~, properties=_) =>
+            collect_reader_effects_into(children, out)
+          ReaderHyperlink(children~, ..) =>
+            collect_reader_effects_into(children, out)
+          ReaderTable(children~, properties=_) =>
+            collect_reader_effects_into(children, out)
+          ReaderTableRow(children~, is_header=_) =>
+            collect_reader_effects_into(children, out)
+          ReaderTableCell(children~, ..) =>
+            collect_reader_effects_into(children, out)
+          ReaderText(_)
+          | ReaderTab
+          | ReaderCheckbox(_)
+          | ReaderNoteReference(..)
+          | ReaderCommentReference(_)
+          | ReaderImage(_)
+          | ReaderBreak(_)
+          | ReaderBookmarkStart(_) => ()
+        }
+      }
+    }
+  }
 }

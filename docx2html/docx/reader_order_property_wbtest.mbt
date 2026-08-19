@@ -679,6 +679,10 @@ test "the projection matches the reader on generated documents" {
         @utf8.encode(source),
       )
       assert_reader_order_matches_reader(source, projection)
+      // the effect stream's text partition is a third derivation of the
+      // same story: from reader decisions alone, neither erased tree nor
+      // byte-level projection
+      assert_effect_partition_matches_reader(source)
       true
     },
     count=64,

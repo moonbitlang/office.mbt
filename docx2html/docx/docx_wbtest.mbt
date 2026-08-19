@@ -6,41 +6,6 @@
 type DocumentMatcher = @style_map.DocumentMatcher
 
 ///|
-fn hyperlink(
-  children : Array[DocumentElement],
-  href? : String? = None,
-  anchor? : String? = None,
-  target_frame? : String? = None,
-) -> DocumentElement {
-  @document.hyperlink(children, href~, anchor~, target_frame~)
-}
-
-///|
-fn table(
-  children : Array[DocumentElement],
-  properties? : TableProperties = @document.TableProperties::default(),
-) -> DocumentElement {
-  @document.table(children, properties~)
-}
-
-///|
-fn table_row(
-  children : Array[DocumentElement],
-  is_header? : Bool = false,
-) -> DocumentElement {
-  @document.table_row(children, is_header~)
-}
-
-///|
-fn table_cell(
-  children : Array[DocumentElement],
-  col_span? : Int = 1,
-  row_span? : Int = 1,
-) -> DocumentElement {
-  @document.table_cell(children, col_span~, row_span~)
-}
-
-///|
 fn xml_text(value : String) -> XmlNode {
   @xml.xml_text(value)
 }
@@ -1898,6 +1863,16 @@ test "docx checkbox replacement searches carrier then extras in order" {
   guard preserved is Paragraph(children=[Run(children=[Text("Y")], ..)], ..) else {
     fail("expected Y preserved")
   }
+  // the same decisions in effect order: X's projection suppressed by the
+  // replacement, the checkbox standing visible in its place, Y untouched
+  inspect(
+    effect_summaries(
+      empty_body_reader({ relationships: [] }).read_children(
+        ReaderNode::of(root).first_or_empty("w:body").element_children(),
+      ),
+    ),
+    content="boundary(w:sdt) ; boundary(w:sdtPr) ; suppressed(w:pict) ; suppressed(w:pict) ; suppressed(w:t) ; nontext(w:t) ; text(w:t)=Y",
+  )
 }
 
 ///|
@@ -2985,6 +2960,23 @@ test "docx table reader warns when row span calculation is unreliable" {
       #|[Warning("unexpected non-cell element in table row, cell merging may be incorrect")]
     ),
   )
+  // both malformations together: every table child is checked to be a row
+  // BEFORE any row's cells are examined, so the non-row wins even though a
+  // bad cell appears in an earlier row
+  let combined_xml =
+    #|<w:tbl xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:tr><w:p /></w:tr><w:p /></w:tbl>
+  let combined = read_xml_string(
+    combined_xml,
+    namespace_map=office_namespace_map(),
+  )
+  let combined_reader = empty_body_reader({ relationships: [] })
+  ignore(combined_reader.read_element_erased(ReaderNode::of(combined)))
+  debug_inspect(
+    combined_reader.messages,
+    content=(
+      #|[Warning("unexpected non-row element in table, cell merging may be incorrect")]
+    ),
+  )
 }
 
 ///|
@@ -3457,18 +3449,52 @@ test "docx w:pict extra content uses alternate fallback" {
 
 ///|
 test "docx structured checkbox replacement recurses through containers" {
-  let nested = document([
-    hyperlink([table([table_row([table_cell([text("placeholder")])])])]),
-  ])
-  let (replaced, found) = replace_first_text_in_element(nested, true)
+  let source = ReaderNode::of(
+    read_xml_string("<x/>", namespace_map=office_namespace_map()),
+  )
+  fn item(shape : ReaderTreeShape) -> ReaderItem {
+    New({ source, local_effects: [], shape })
+  }
+
+  let nested = item(
+    ReaderHyperlink(
+      children=[
+        item(
+          ReaderTable(
+            children=[
+              item(
+                ReaderTableRow(
+                  children=[
+                    item(
+                      ReaderTableCell(
+                        children=[item(ReaderText("placeholder"))],
+                        col_span=1,
+                        row_span=1,
+                      ),
+                    ),
+                  ],
+                  is_header=false,
+                ),
+              ),
+            ],
+            properties=@document.TableProperties::default(),
+          ),
+        ),
+      ],
+      href=None,
+      anchor=None,
+      target_frame=None,
+    ),
+  )
+  let (replaced, found) = replace_first_text_in_item(nested, true)
   inspect(found, content="true")
   inspect(
-    convert_document_to_html(replaced).value,
+    convert_document_to_html(document(reader_items_to_elements([replaced]))).value,
     content="<table><tr><td><input type=\"checkbox\" checked=\"checked\" /></td></tr></table>",
   )
-  let (unchanged, tab_found) = replace_first_text_in_element(tab(), true)
+  let (unchanged, tab_found) = replace_first_text_in_item(item(ReaderTab), true)
   inspect(tab_found, content="false")
-  debug_inspect(unchanged, content="Tab")
+  debug_inspect(reader_items_to_elements([unchanged]), content="[Tab]")
 }
 
 ///|
