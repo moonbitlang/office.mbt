@@ -140,7 +140,7 @@ test "projection keeps a run addressable across a nested paragraph" {
   inspect(
     describe_projection(projection),
     content=(
-      #|p0(src=5;runs=3,6;[0,8))t:pre@4r0[0,3) t:inner@7r1[3,8)
+      #|p0(src=2,5;runs=3,6;[0,8))t:pre@4r0[0,3) t:inner@7r1[3,8)
       #|p1(src=2;runs=3;[10,14))t:post@8r0[10,14)
     ),
   )
@@ -175,37 +175,57 @@ test "projection measures astral characters in UTF-16 units" {
 }
 
 ///|
-/// Does the erased tree contain visible content outside every paragraph?
-/// The independent oracle for `UnownedVisibleContribution`: a checkbox or
-/// image synthesized at body level (e.g. a no-text checkbox control in an
-/// MC fallback) is visible yet addressable by no paragraph.
-fn erased_has_unowned_visible(
+/// Does the erased tree contain visible content no paragraph ever owns?
+/// Visible content OUTSIDE a paragraph is absorbed by the next paragraph
+/// close in flatten order (flow-level content joins the following
+/// paragraph); only visible content with NO later paragraph close is
+/// unowned -- the independent oracle for `UnownedVisibleContribution`.
+fn erased_walk_unowned(
   elements : Array[DocumentElement],
   inside_paragraph : Bool,
-) -> Bool {
+  state : ErasedUnownedState,
+) -> Unit {
   for element in elements {
-    let unowned = match element {
-      Paragraph(children~, ..) => erased_has_unowned_visible(children, true)
+    match element {
+      Paragraph(children~, ..) => {
+        erased_walk_unowned(children, true, state)
+        // this close absorbs every pending outside-visible before it
+        state.pending_outside = false
+      }
       Run(children~, ..)
       | Hyperlink(children~, ..)
       | Table(children~, ..)
       | TableRow(children~, ..)
       | TableCell(children~, ..) =>
-        erased_has_unowned_visible(children, inside_paragraph)
-      Text(value) => !inside_paragraph && value.length() > 0
+        erased_walk_unowned(children, inside_paragraph, state)
+      Text(value) =>
+        if !inside_paragraph && value.length() > 0 {
+          state.pending_outside = true
+        }
       Checkbox(_)
       | Image(_)
       | NoteReference(..)
       | CommentReference(_)
       | Break(_)
-      | Tab => !inside_paragraph
-      _ => false
-    }
-    if unowned {
-      return true
+      | Tab => if !inside_paragraph { state.pending_outside = true }
+      _ => ()
     }
   }
-  false
+}
+
+///|
+priv struct ErasedUnownedState {
+  mut pending_outside : Bool
+}
+
+///|
+fn erased_has_unowned_visible(
+  elements : Array[DocumentElement],
+  inside_paragraph : Bool,
+) -> Bool {
+  let state : ErasedUnownedState = { pending_outside: false }
+  erased_walk_unowned(elements, inside_paragraph, state)
+  state.pending_outside
 }
 
 ///|
@@ -251,6 +271,34 @@ test "projection partitions generated documents like the reader" {
         texts.push(text.to_string())
       }
       assert_eq(texts, reader_paragraph_texts(source))
+      // successful projections must have NO unowned visible content: the
+      // refusal oracle is two-sided
+      assert_false(
+        erased_has_unowned_visible(reader_items_to_elements(items), false),
+      )
+      // every contribution's run index agrees with its run's record, and
+      // run records number 0..n in first-appearance order
+      for paragraph in projection.paragraphs {
+        for index, run in paragraph.runs {
+          assert_eq(run.logical_index, index)
+        }
+        for contribution in paragraph.contributions {
+          match contribution.run_source {
+            Some(run_source) => {
+              let mut matched = false
+              for run in paragraph.runs {
+                if run.source == run_source {
+                  assert_eq(contribution.logical_run_index, run.logical_index)
+                  matched = true
+                  break
+                }
+              }
+              assert_true(matched)
+            }
+            None => assert_eq(contribution.logical_run_index, -1)
+          }
+        }
+      }
       // and the intervals tile the story: each paragraph's interval is
       // exactly its text length, separated by two units
       let mut offset = 0
@@ -264,4 +312,80 @@ test "projection partitions generated documents like the reader" {
     max_size=60,
     seed=0x646F_6378_70UL,
   )
+}
+
+///|
+/// An atomless run occupies its first-appearance position: the legacy
+/// walker's zero-width run-open seams made empty runs addressable, and
+/// the run records reproduce that numbering.
+test "projection numbers atomless runs into the addressing order" {
+  let projection = projection_of(
+    (
+      #|<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:body><w:p><w:r/><w:r><w:t>x</w:t></w:r></w:p></w:body></w:document>
+    ),
+  )
+  // document=0 body=1 p=2 r=3 r=4 t=5: the empty run is r0, the text run
+  // r1, and the text contribution addresses r1
+  inspect(
+    describe_projection(projection),
+    content=(
+      #|p0(src=2;runs=3,4;[0,1))t:x@5r1[0,1)
+    ),
+  )
+  inspect(projection.paragraphs[0].runs[0].logical_index, content="0")
+  inspect(projection.paragraphs[0].runs[1].logical_index, content="1")
+}
+
+///|
+/// A synthesized field-checkbox run whose carrier is not physically a
+/// `w:r` has no run-shaped address: typed refusal, never a fake run.
+test "projection refuses a non-run synthesized checkbox carrier" {
+  guard project_text_story(
+      (
+        #|<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:body><w:p><w:hyperlink w:anchor="a"><w:r><w:fldChar w:fldCharType="begin"/></w:r></w:hyperlink><w:r><w:instrText> FORMCHECKBOX </w:instrText></w:r><w:r><w:fldChar w:fldCharType="end"/></w:r></w:p></w:body></w:document>
+      ),
+    )
+    is ProjectionRefused(SourceShapeMismatch(..) as refusal) else {
+    fail("expected a shape refusal")
+  }
+  inspect(
+    refusal.describe(),
+    content="source element 3 is a hyperlink, not the w:r its role requires",
+  )
+}
+
+///|
+/// The adapter carries its own cumulative caps.
+test "projection budgets bound the build" {
+  let xml =
+    #|<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:body><w:p><w:r><w:t>a</w:t></w:r></w:p></w:body></w:document>
+  guard join_text_story(xml) is Joined(story) else {
+    fail("expected the story to join")
+  }
+  guard story.root.first("w:body") is Some(body) else {
+    fail("expected a body")
+  }
+  let items = empty_body_reader({ relationships: [] }).read_children(
+    body.element_children(),
+  )
+  let starved : ReaderProjectionBudget = {
+    visits_left: 2,
+    contributions_left: 1024,
+    retained_left: 1024,
+  }
+  let outcome = try {
+    ignore(
+      project_reader_items(
+        "word/document.xml",
+        story.scan,
+        items,
+        budget=starved,
+      ),
+    )
+    "completed"
+  } catch {
+    Unsupported(message~) => message
+    _ => "other error"
+  }
+  inspect(outcome, content="reader projection: item visit budget exceeded")
 }

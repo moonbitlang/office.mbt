@@ -42,6 +42,10 @@ priv struct ReaderProjectionContribution {
 priv struct ReaderProjectionRun {
   source : SourceElementId
   source_span : ReaderOrderSourceSpan
+  /// Position among the paragraph's runs in first-appearance order -- the
+  /// r[j] a surgery address names. Atomless runs participate, exactly as
+  /// the legacy walker's zero-width run-open seams made them.
+  mut logical_index : Int
 }
 
 ///|
@@ -76,6 +80,13 @@ priv struct ReaderProjection {
 priv enum ReaderProjectionRefusal {
   MissingSourceIdentity(node_name~ : String)
   SourceIdentityOutOfRange(SourceElementId)
+  /// A node whose physical element is not the shape its role requires --
+  /// e.g. a synthesized run whose carrier is not a `w:r`.
+  SourceShapeMismatch(
+    source~ : SourceElementId,
+    expected~ : String,
+    actual~ : String
+  )
   /// Visible content that no logical paragraph ever owns (flow-level
   /// content after the final paragraph). Zero-width markers in the same
   /// position are dropped instead: nothing addresses them.
@@ -95,6 +106,8 @@ fn ReaderProjectionRefusal::describe(self : ReaderProjectionRefusal) -> String {
       "a \{node_name} node carries no physical identity"
     SourceIdentityOutOfRange(SourceElementId(index)) =>
       "source identity \{index} is outside the scan"
+    SourceShapeMismatch(source=SourceElementId(index), expected~, actual~) =>
+      "source element \{index} is a \{actual}, not the \{expected} its role requires"
     UnownedVisibleContribution(source=SourceElementId(index)) =>
       "visible content at source element \{index} is owned by no paragraph"
   }
@@ -114,7 +127,14 @@ fn assign_reader_projection_coordinates(projection : ReaderProjection) -> Unit {
   for index, paragraph in projection.paragraphs {
     paragraph.logical_index = index
     paragraph.projection_start = offset
+    // seed the numbering from the runs list: an atomless run occupies its
+    // first-appearance position even though no contribution names it
     let run_indices : Map[Int, Int] = Map([])
+    for run in paragraph.runs {
+      let SourceElementId(identity) = run.source
+      run.logical_index = run_indices.length()
+      run_indices[identity] = run.logical_index
+    }
     for contribution in paragraph.contributions {
       contribution.logical_run_index = match contribution.run_source {
         Some(SourceElementId(identity)) =>
@@ -134,5 +154,67 @@ fn assign_reader_projection_coordinates(projection : ReaderProjection) -> Unit {
     }
     paragraph.projection_end = offset
     offset = offset + reader_projection_separator_units
+  }
+}
+
+///|
+/// Caller-owned cumulative limits for one projection build. Extras and
+/// transformed subtrees can multiply occurrences, so the adapter carries
+/// its own caps rather than inheriting the reader's.
+priv struct ReaderProjectionBudget {
+  mut visits_left : Int
+  mut contributions_left : Int
+  mut retained_left : Int
+}
+
+///|
+/// Input-linear defaults: generous multiples of the physical element
+/// count, far above any real document's fan-out.
+fn reader_projection_budget(scan : StoryScan) -> ReaderProjectionBudget {
+  let elements = scan.elements().length()
+  let scaled = fn(factor : Int) -> Int {
+    let value = elements * factor + 1024
+    if value < 0 {
+      2147483647
+    } else {
+      value
+    }
+  }
+  {
+    visits_left: scaled(64),
+    contributions_left: scaled(16),
+    retained_left: scaled(16),
+  }
+}
+
+///|
+fn ReaderProjectionBudget::charge_visit(
+  self : ReaderProjectionBudget,
+) -> Unit raise DocxError {
+  self.visits_left = self.visits_left - 1
+  if self.visits_left < 0 {
+    raise Unsupported(message="reader projection: item visit budget exceeded")
+  }
+}
+
+///|
+fn ReaderProjectionBudget::charge_contribution(
+  self : ReaderProjectionBudget,
+) -> Unit raise DocxError {
+  self.contributions_left = self.contributions_left - 1
+  if self.contributions_left < 0 {
+    raise Unsupported(message="reader projection: contribution budget exceeded")
+  }
+}
+
+///|
+fn ReaderProjectionBudget::charge_retained(
+  self : ReaderProjectionBudget,
+) -> Unit raise DocxError {
+  self.retained_left = self.retained_left - 1
+  if self.retained_left < 0 {
+    raise Unsupported(
+      message="reader projection: retained structure budget exceeded",
+    )
   }
 }

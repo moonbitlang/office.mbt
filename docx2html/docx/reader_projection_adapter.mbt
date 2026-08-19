@@ -12,6 +12,7 @@
 ///|
 priv struct ReaderProjectionBuilder {
   scan : StoryScan
+  budget : ReaderProjectionBudget
   paragraphs : Array[ReaderProjectionParagraph]
   /// Contributions accumulated toward the next paragraph flush.
   pending : Array[ReaderProjectionContribution]
@@ -21,7 +22,19 @@ priv struct ReaderProjectionBuilder {
   pending_runs : Array[ReaderProjectionRun]
   /// The innermost-first stack of open physical runs.
   run_stack : Array[SourceElementId]
+  /// Open enclosing paragraphs. An ARMED frame participates in the next
+  /// flush: the legacy walker keeps the outer physical paragraph in the
+  /// accumulating logical paragraph and re-ensures it after each nested
+  /// block, so the outer appears in the FIRST flush of each direct child
+  /// subtree and in its own closing flush.
+  paragraph_frames : Array[ReaderProjectionParagraphFrame]
   mut refusal : ReaderProjectionRefusal?
+}
+
+///|
+priv struct ReaderProjectionParagraphFrame {
+  inputs : Array[ReaderParagraphInput]
+  mut armed : Bool
 }
 
 ///|
@@ -31,13 +44,20 @@ fn project_reader_items(
   source_part : String,
   scan : StoryScan,
   items : Array[ReaderItem],
-) -> ReaderProjectionBuildResult {
+  budget? : ReaderProjectionBudget,
+) -> ReaderProjectionBuildResult raise DocxError {
+  let budget = match budget {
+    Some(value) => value
+    None => reader_projection_budget(scan)
+  }
   let builder : ReaderProjectionBuilder = {
     scan,
+    budget,
     paragraphs: [],
     pending: [],
     pending_runs: [],
     run_stack: [],
+    paragraph_frames: [],
     refusal: None,
   }
   builder.walk_items(items)
@@ -114,7 +134,8 @@ fn ReaderProjectionBuilder::element_span(
 fn ReaderProjectionBuilder::push_effect(
   self : ReaderProjectionBuilder,
   effect : ReaderEffect,
-) -> Unit {
+) -> Unit raise DocxError {
+  self.budget.charge_contribution()
   let (kind, value, source_node) = match effect {
     ProjectsText(source~, kind~, value~) => (ProjectedText(kind), value, source)
     ProjectsVisibleNonText(source~) => (VisibleNonText, "", source)
@@ -145,24 +166,47 @@ fn ReaderProjectionBuilder::push_effect(
 fn ReaderProjectionBuilder::register_run(
   self : ReaderProjectionBuilder,
   id : SourceElementId,
-) -> Unit {
+) -> Unit raise DocxError {
+  // a physical run must BE a run element: a synthesized field-checkbox
+  // run whose carrier is a tolerated non-run container (a hyperlink or a
+  // control holding the begin marker) has no run-shaped address
+  let SourceElementId(index) = id
+  let element = self.scan.elements()[index]
+  if !(is_wml_uri(element.uri) && element.local_name == "r") {
+    if self.refusal is None {
+      self.refusal = Some(
+        SourceShapeMismatch(
+          source=id,
+          expected="w:r",
+          actual=element.local_name,
+        ),
+      )
+    }
+    return
+  }
   for run in self.pending_runs {
     if run.source == id {
       return
     }
   }
-  self.pending_runs.push({ source: id, source_span: self.element_span(id) })
+  self.budget.charge_retained()
+  self.pending_runs.push({
+    source: id,
+    source_span: self.element_span(id),
+    logical_index: -1,
+  })
 }
 
 ///|
 fn ReaderProjectionBuilder::walk_items(
   self : ReaderProjectionBuilder,
   items : Array[ReaderItem],
-) -> Unit {
+) -> Unit raise DocxError {
   for item in items {
     if self.refusal is Some(_) {
       return
     }
+    self.budget.charge_visit()
     match item {
       Trace(effect) => self.push_effect(effect)
       New(tree) => {
@@ -171,7 +215,19 @@ fn ReaderProjectionBuilder::walk_items(
         }
         match tree.shape {
           ReaderParagraph(inputs~, children~, extras~, properties=_) => {
-            self.walk_items(children)
+            let frame : ReaderProjectionParagraphFrame = { inputs, armed: true }
+            self.paragraph_frames.push(frame)
+            for child in children {
+              if self.refusal is Some(_) {
+                break
+              }
+              // the enclosing paragraph participates in the FIRST flush of
+              // each direct child subtree, exactly as the legacy walker
+              // re-ensures the outer source after each nested block
+              frame.armed = true
+              self.walk_items([child])
+            }
+            ignore(self.paragraph_frames.pop())
             self.flush_paragraph(inputs)
             // extras erase as siblings AFTER the paragraph: walked in the
             // outer context so their paragraphs stand on their own
@@ -209,8 +265,18 @@ fn ReaderProjectionBuilder::walk_items(
 fn ReaderProjectionBuilder::flush_paragraph(
   self : ReaderProjectionBuilder,
   inputs : Array[ReaderParagraphInput],
-) -> Unit {
+) -> Unit raise DocxError {
+  self.budget.charge_retained()
   let sources : Array[ReaderProjectionParagraphSource] = []
+  for frame in self.paragraph_frames {
+    if frame.armed {
+      for input in frame.inputs {
+        guard self.identity_of(input.paragraph) is Some(id) else { return }
+        sources.push({ source: id, source_span: self.element_span(id) })
+      }
+      frame.armed = false
+    }
+  }
   for input in inputs {
     guard self.identity_of(input.paragraph) is Some(id) else { return }
     sources.push({ source: id, source_span: self.element_span(id) })
