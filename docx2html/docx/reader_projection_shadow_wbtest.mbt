@@ -356,7 +356,16 @@ fn compare_shadow_streams(
                   _ => false
                 })
               ) ||
-              !is_wml_uri(source_element.uri)
+              (
+              // foreign visibility only where the reader CAN emit it:
+              // image-capable shapes, whose visible-vs-suppressed split is
+              // resolution-dependent and statically unobservable here (the
+              // emission kinds themselves are pinned by the effect
+              // witnesses). Any other foreign element is never visible.
+                !is_wml_uri(source_element.uri) &&
+                source_element.local_name
+                is ("imagedata" | "inline" | "anchor" | "blip")
+              )
             // ... and with SUPPRESSED only where suppression is the
             // reader's real classification (a supported break flipped to
             // suppressed is a bug, not a delta)
