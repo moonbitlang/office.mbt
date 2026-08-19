@@ -812,6 +812,88 @@ test "whole-run replacement accepts supplementary noncharacters" {
 }
 
 ///|
+/// Visible non-text -- a break here -- is reader-visible content the
+/// plan has no representation for: replacing "the run's text" cannot
+/// say what removing the break would cost, so it refuses.
+test "whole-run replacement refuses visible non-text content" {
+  let source =
+    #|<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:body><w:p><w:r><w:t>a</w:t><w:br/></w:r></w:p></w:body></w:document>
+  let bytes = @utf8.encode(source)
+  let projection = surgery_native_projection(source)
+  let mut refused = false
+  try plan_whole_run_replacement(projection, bytes, 0, 0, "x") catch {
+    Unsupported(message~) => {
+      refused = true
+      assert_true(message.contains("visible non-text"))
+    }
+    _ => fail("expected an Unsupported refusal")
+  } noraise {
+    _ => ()
+  }
+  assert_true(refused)
+}
+
+///|
+/// A suppressed site is a classified nothing, not a barrier: the reader
+/// decided it contributes no content, so replacing the run's text
+/// neither needs nor may touch its bytes.
+test "whole-run replacement preserves suppressed content in the run" {
+  let source =
+    #|<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:body><w:p><w:r><w:footnoteRef/><w:t>old</w:t></w:r></w:p></w:body></w:document>
+  let bytes = @utf8.encode(source)
+  let projection = surgery_native_projection(source)
+  // precondition: the marker really is a suppressed contribution owned
+  // by this run -- otherwise this test witnesses nothing
+  let target = projection.paragraphs[0].runs[0].source
+  let mut suppressed_owned = false
+  for contribution in projection.paragraphs[0].contributions {
+    if contribution.run_source == Some(target) &&
+      contribution.kind is SuppressedContent {
+      suppressed_owned = true
+    }
+  }
+  assert_true(suppressed_owned)
+  let edits = plan_whole_run_replacement(projection, bytes, 0, 0, "new")
+  let spliced = @utf8.decode(apply_run_surgery_edits(bytes, edits))
+  assert_eq(current_reader_story_text(spliced), "new\n\n")
+  assert_true(spliced.contains("<w:footnoteRef/>"))
+  assert_untouched_bytes_survive(bytes, @utf8.encode(spliced), edits)
+  assert_edits_touch_only_editable_bytes(projection, edits, 0, 0)
+}
+
+///|
+/// Two contributions sharing one physical source would compose two
+/// edits over one span; the planner refuses rather than composing.
+test "whole-run replacement refuses a twice-projected physical element" {
+  let source =
+    #|<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:body><w:p><w:r><w:t>a</w:t></w:r></w:p></w:body></w:document>
+  let bytes = @utf8.encode(source)
+  let projection = surgery_native_projection(source)
+  // force the defect the guard exists for: the same text contribution
+  // observed twice
+  let paragraph = projection.paragraphs[0]
+  let mut duplicated = false
+  for contribution in paragraph.contributions {
+    if contribution.kind is ProjectedText(FromText) && !duplicated {
+      paragraph.contributions.push(contribution)
+      duplicated = true
+    }
+  }
+  assert_true(duplicated)
+  let mut refused = false
+  try plan_whole_run_replacement(projection, bytes, 0, 0, "x") catch {
+    Unsupported(message~) => {
+      refused = true
+      assert_true(message.contains("twice"))
+    }
+    _ => fail("expected an Unsupported refusal")
+  } noraise {
+    _ => ()
+  }
+  assert_true(refused)
+}
+
+///|
 /// #436 CLOSED BY CONSTRUCTION.
 ///
 /// The legacy walker kept its own story: a stray flow-level run a
