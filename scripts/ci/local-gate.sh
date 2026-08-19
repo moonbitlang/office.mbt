@@ -79,14 +79,14 @@ run "corpus projection manifest" python3 docx2html/tests/corpus/projection_check
 # message change slipped past the gate to CI once (#458 round 3).
 run "corpus CLI smoke" bash docx2html/tests/corpus/run.sh
 
-# The legacy projection walker is quarantined to white-box test code
-# (#434 PR 5c): no production-compiled file may name it. The wbtest move
-# is the mechanism; this guard keeps it mechanical.
-legacy_walker_leaks=$(grep -l -E 'ReaderOrderWalker|scan_reader_order_projection|project_reader_order_from_source_tree|collect_reader_order_body_outputs|reader_order_projection_visibility|ReaderOrderInlineState|ReaderOrderBudget|PendingDeletedParagraph|ReaderOrderBodyOutputKind|assign_reader_order_logical_coordinates|restore_reader_projection_subtree|ReaderOrderProjection|ReaderOrderContribution|ProvisionalContributionKind|ReaderOrderParagraph|ReaderOrderParagraphSource|ReaderOrderRunSource|classify_reader_order_fields'   docx2html/docx/*.mbt 2>/dev/null | grep -v '_wbtest\.mbt$' | grep -v '_test\.mbt$' || true)
-if [ -n "$legacy_walker_leaks" ]; then
-  echo "legacy walker named outside test code:"
-  echo "$legacy_walker_leaks"
-  fail "legacy walker quarantine"
+# The legacy reader vocabulary is DELETED (#434 PR 7): no docx source,
+# tests included, may resurrect it. This is a tombstone, not an
+# allowlist -- after PR 7 there is no legitimate occurrence.
+legacy_reader_tombstone=$(grep -l -E 'ReaderOrder|reader_order|ProvisionalContributionKind|PendingDeletedParagraph|compare_reader_projection_shadow|shadow_difference_of'   docx2html/docx/*.mbt 2>/dev/null || true)
+if [ -n "$legacy_reader_tombstone" ]; then
+  echo "legacy reader vocabulary resurrected:"
+  echo "$legacy_reader_tombstone"
+  fail "legacy reader tombstone"
 fi
 run "moon fmt" moon fmt
 run "moon info" moon info

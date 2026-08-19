@@ -4,8 +4,19 @@
 // copying a potentially deep stack onto every projected atom.
 
 ///|
+/// One direct physical paragraph child observed at the same point where
+/// BodyReader begins interpreting that carrier. Keeping this event stream on
+/// the N0b2 walk preserves recursive block order for N0b3 without reconstructing
+/// it from the completed paragraph segments. Each event follows a charged N0b2
+/// node visit, so the reader-order visit budget also bounds retained events.
+priv struct ReaderFieldCarrierEvent {
+  paragraph_identity : Int
+  carrier_identity : Int
+}
+
+///|
 #warnings("-unused_value")
-priv enum ReaderOrderFieldRegion {
+priv enum ReaderFieldRegion {
   OutsideField
   FieldInstruction
   FieldResult
@@ -14,37 +25,37 @@ priv enum ReaderOrderFieldRegion {
 
 ///|
 #warnings("-unused_value")
-priv enum ReaderOrderFieldBoundarySide {
+priv enum ReaderFieldBoundarySide {
   BeforeCarrier
   AfterCarrier
 } derive(Debug, Eq)
 
 ///|
 #warnings("-unused_field")
-priv struct ReaderOrderFieldBoundary {
+priv struct ReaderFieldBoundary {
   carrier_identity : Int
-  side : ReaderOrderFieldBoundarySide
+  side : ReaderFieldBoundarySide
 }
 
 ///|
 #warnings("-unused_field")
-priv struct ReaderOrderFieldInterval {
-  start : ReaderOrderFieldBoundary
-  mut end : ReaderOrderFieldBoundary?
+priv struct ReaderFieldInterval {
+  start : ReaderFieldBoundary
+  mut end : ReaderFieldBoundary?
 }
 
 ///|
 #warnings("-unused_field")
-priv struct ReaderOrderField {
+priv struct ReaderField {
   identity : Int
   story_identity : Int
   parent_identity : Int?
   begin_marker_identity : Int
   begin_carrier_identity : Int
-  instruction : ReaderOrderFieldInterval
+  instruction : ReaderFieldInterval
   mut separate_marker_identity : Int?
   mut separate_carrier_identity : Int?
-  mut result : ReaderOrderFieldInterval?
+  mut result : ReaderFieldInterval?
   mut end_marker_identity : Int?
   mut end_carrier_identity : Int?
   instruction_text : StringBuilder
@@ -53,7 +64,7 @@ priv struct ReaderOrderField {
 
 ///|
 #warnings("-unused_value")
-priv enum ReaderOrderFieldRefusalKind {
+priv enum ReaderFieldRefusalKind {
   AmbiguousCarrier
   UnknownTransition
   UnmatchedSeparate
@@ -66,30 +77,30 @@ priv enum ReaderOrderFieldRefusalKind {
 
 ///|
 #warnings("-unused_field")
-priv struct ReaderOrderFieldRefusal {
+priv struct ReaderFieldRefusal {
   identity : Int
-  kind : ReaderOrderFieldRefusalKind
+  kind : ReaderFieldRefusalKind
   story_identity : Int
   carrier_identity : Int
   offending_identity : Int?
   field_identity : Int?
-  source_span : ReaderOrderSourceSpan
+  source_span : ReaderSourceSpan
 }
 
 ///|
 #warnings("-unused_field")
-priv struct ReaderOrderFieldIndex {
-  fields : Array[ReaderOrderField]
-  refusals : Array[ReaderOrderFieldRefusal]
+priv struct ReaderFieldIndex {
+  fields : Array[ReaderField]
+  refusals : Array[ReaderFieldRefusal]
 }
 
 ///|
-fn empty_reader_order_field_index() -> ReaderOrderFieldIndex {
+fn empty_reader_field_index() -> ReaderFieldIndex {
   { fields: [], refusals: [] }
 }
 
 ///|
-priv struct ReaderOrderFieldBudget {
+priv struct ReaderFieldBudget {
   mut work_left : Int
   mut transitions_left : Int
   mut retained_state_left : Int
@@ -98,28 +109,28 @@ priv struct ReaderOrderFieldBudget {
 }
 
 ///|
-let max_reader_order_field_work : Int = 16_000_000
+let max_reader_field_work : Int = 16_000_000
 
 ///|
-let max_reader_order_field_transitions : Int = 1_000_000
+let max_reader_field_transitions : Int = 1_000_000
 
 ///|
-let max_reader_order_field_retained_state : Int = 8_000_000
+let max_reader_field_retained_state : Int = 8_000_000
 
 ///|
-let max_reader_order_field_instruction_chars : Int = 64 * 1024 * 1024
+let max_reader_field_instruction_chars : Int = 64 * 1024 * 1024
 
 ///|
-let max_reader_order_field_depth : Int = 256
+let max_reader_field_depth : Int = 256
 
 ///|
-fn reader_order_field_budget(
-  max_work? : Int = max_reader_order_field_work,
-  max_transitions? : Int = max_reader_order_field_transitions,
-  max_retained_state? : Int = max_reader_order_field_retained_state,
-  max_instruction_chars? : Int = max_reader_order_field_instruction_chars,
-  max_field_depth? : Int = max_reader_order_field_depth,
-) -> ReaderOrderFieldBudget raise DocxError {
+fn reader_field_budget(
+  max_work? : Int = max_reader_field_work,
+  max_transitions? : Int = max_reader_field_transitions,
+  max_retained_state? : Int = max_reader_field_retained_state,
+  max_instruction_chars? : Int = max_reader_field_instruction_chars,
+  max_field_depth? : Int = max_reader_field_depth,
+) -> ReaderFieldBudget raise DocxError {
   guard max_work >= 0 &&
     max_transitions >= 0 &&
     max_retained_state >= 0 &&
@@ -139,8 +150,8 @@ fn reader_order_field_budget(
 }
 
 ///|
-fn ReaderOrderFieldBudget::charge_work(
-  self : ReaderOrderFieldBudget,
+fn ReaderFieldBudget::charge_work(
+  self : ReaderFieldBudget,
 ) -> Unit raise DocxError {
   guard self.work_left > 0 else {
     raise @core.docx_xml_resource_limit_error(DocxXmlTokens)
@@ -149,8 +160,8 @@ fn ReaderOrderFieldBudget::charge_work(
 }
 
 ///|
-fn ReaderOrderFieldBudget::charge_transition(
-  self : ReaderOrderFieldBudget,
+fn ReaderFieldBudget::charge_transition(
+  self : ReaderFieldBudget,
 ) -> Unit raise DocxError {
   guard self.transitions_left > 0 else {
     raise @core.docx_xml_resource_limit_error(DocxXmlTokens)
@@ -159,8 +170,8 @@ fn ReaderOrderFieldBudget::charge_transition(
 }
 
 ///|
-fn ReaderOrderFieldBudget::charge_retained(
-  self : ReaderOrderFieldBudget,
+fn ReaderFieldBudget::charge_retained(
+  self : ReaderFieldBudget,
 ) -> Unit raise DocxError {
   guard self.retained_state_left > 0 else {
     raise @core.docx_xml_resource_limit_error(DocxXmlTokens)
@@ -169,8 +180,8 @@ fn ReaderOrderFieldBudget::charge_retained(
 }
 
 ///|
-fn ReaderOrderFieldBudget::charge_instruction(
-  self : ReaderOrderFieldBudget,
+fn ReaderFieldBudget::charge_instruction(
+  self : ReaderFieldBudget,
   chars : Int,
 ) -> Unit raise DocxError {
   guard chars >= 0 && chars <= self.instruction_chars_left else {
@@ -180,8 +191,8 @@ fn ReaderOrderFieldBudget::charge_instruction(
 }
 
 ///|
-fn ReaderOrderFieldBudget::check_field_depth(
-  self : ReaderOrderFieldBudget,
+fn ReaderFieldBudget::check_field_depth(
+  self : ReaderFieldBudget,
   depth : Int,
 ) -> Unit raise DocxError {
   guard depth > 0 && depth <= self.max_field_depth else {
@@ -190,48 +201,48 @@ fn ReaderOrderFieldBudget::check_field_depth(
 }
 
 ///|
-priv struct ReaderOrderCarrierSummary {
+priv struct ReaderCarrierSummary {
   marker_identity : Int?
   marker_count : Int
-  repeated_instruction : ReaderOrderRepeatedInstruction?
+  repeated_instruction : ReaderRepeatedInstruction?
 }
 
 ///|
-priv struct ReaderOrderInstructionTarget {
+priv struct ReaderInstructionTarget {
   field_identity : Int
   instruction : StringBuilder
 }
 
 ///|
-priv struct ReaderOrderRepeatedInstruction {
+priv struct ReaderRepeatedInstruction {
   instruction_identity : Int
   owner_field_identity : Int?
 }
 
 ///|
-priv struct ReaderOrderInstructionObservation {
+priv struct ReaderInstructionObservation {
   owner_field_identity : Int?
 }
 
 ///|
-priv struct ReaderOrderCarrierClass {
+priv struct ReaderCarrierClass {
   field_identity : Int?
-  region : ReaderOrderFieldRegion
+  region : ReaderFieldRegion
   refusal_identity : Int?
 }
 
 ///|
-priv struct ReaderOrderFieldStoryState {
+priv struct ReaderFieldStoryState {
   identity : Int
   stack : Array[Int]
   mut failed_refusal : Int?
 }
 
 ///|
-fn reader_order_field_story_identity(
+fn reader_field_story_identity(
   elements : Array[ScannedElement],
   paragraph_identity : Int,
-  budget : ReaderOrderFieldBudget,
+  budget : ReaderFieldBudget,
 ) -> Int raise DocxError {
   if elements.is_empty() {
     return 0
@@ -265,17 +276,17 @@ fn reader_order_field_story_identity(
 }
 
 ///|
-fn scan_reader_order_field_carrier(
+fn scan_reader_field_carrier(
   elements : Array[ScannedElement],
   identity : Int,
   story_identity : Int,
-  instruction_target : ReaderOrderInstructionTarget?,
-  seen_instructions : Map[Int, ReaderOrderInstructionObservation],
-  budget : ReaderOrderFieldBudget,
-) -> ReaderOrderCarrierSummary raise DocxError {
+  instruction_target : ReaderInstructionTarget?,
+  seen_instructions : Map[Int, ReaderInstructionObservation],
+  budget : ReaderFieldBudget,
+) -> ReaderCarrierSummary raise DocxError {
   let mut marker_identity : Int? = None
   let mut marker_count = 0
-  let mut repeated_instruction : ReaderOrderRepeatedInstruction? = None
+  let mut repeated_instruction : ReaderRepeatedInstruction? = None
   fn visit(current : Int) -> Unit raise DocxError {
     budget.charge_work()
     let element = elements[current]
@@ -334,7 +345,7 @@ fn scan_reader_order_field_carrier(
 fn reader_field_slot_carrier(
   elements : Array[ScannedElement],
   slot : ReaderFieldSlot,
-  budget : ReaderOrderFieldBudget,
+  budget : ReaderFieldBudget,
 ) -> Int? raise DocxError {
   let paragraph_identity = slot.paragraph_identity
   let mut current = slot.source_identity
@@ -352,27 +363,27 @@ fn reader_field_slot_carrier(
 }
 
 ///|
-fn reader_order_field_refusal_span(
+fn reader_field_refusal_span(
   elements : Array[ScannedElement],
   offending_identity : Int?,
   carrier_identity : Int,
-) -> ReaderOrderSourceSpan {
+) -> ReaderSourceSpan {
   match offending_identity {
-    Some(identity) => reader_order_element_span(elements[identity])
-    None => reader_order_element_span(elements[carrier_identity])
+    Some(identity) => reader_element_span(elements[identity])
+    None => reader_element_span(elements[carrier_identity])
   }
 }
 
 ///|
-fn add_reader_order_field_refusal(
-  index : ReaderOrderFieldIndex,
-  state : ReaderOrderFieldStoryState,
-  kind : ReaderOrderFieldRefusalKind,
+fn add_reader_field_refusal(
+  index : ReaderFieldIndex,
+  state : ReaderFieldStoryState,
+  kind : ReaderFieldRefusalKind,
   carrier_identity : Int,
   offending_identity : Int?,
   field_identity : Int?,
   elements : Array[ScannedElement],
-  budget : ReaderOrderFieldBudget,
+  budget : ReaderFieldBudget,
 ) -> Int raise DocxError {
   budget.charge_retained()
   let identity = index.refusals.length()
@@ -384,19 +395,17 @@ fn add_reader_order_field_refusal(
     offending_identity,
     field_identity,
     source_span: if kind is AmbiguousCarrier {
-      reader_order_element_span(elements[carrier_identity])
+      reader_element_span(elements[carrier_identity])
     } else {
-      reader_order_field_refusal_span(
-        elements, offending_identity, carrier_identity,
-      )
+      reader_field_refusal_span(elements, offending_identity, carrier_identity)
     },
   })
   identity
 }
 
 ///|
-fn mark_reader_order_field_failed(
-  index : ReaderOrderFieldIndex,
+fn mark_reader_field_failed(
+  index : ReaderFieldIndex,
   field_identity : Int,
   refusal_identity : Int,
 ) -> Unit {
@@ -409,28 +418,28 @@ fn mark_reader_order_field_failed(
 }
 
 ///|
-fn mark_reader_order_story_failed(
-  index : ReaderOrderFieldIndex,
-  state : ReaderOrderFieldStoryState,
+fn mark_reader_story_failed(
+  index : ReaderFieldIndex,
+  state : ReaderFieldStoryState,
   implicated_field_identity : Int?,
   refusal_identity : Int,
 ) -> Unit {
   match implicated_field_identity {
     Some(field_identity) =>
-      mark_reader_order_field_failed(index, field_identity, refusal_identity)
+      mark_reader_field_failed(index, field_identity, refusal_identity)
     None => ()
   }
   for field_identity in state.stack {
-    mark_reader_order_field_failed(index, field_identity, refusal_identity)
+    mark_reader_field_failed(index, field_identity, refusal_identity)
   }
   state.stack.clear()
   state.failed_refusal = Some(refusal_identity)
 }
 
 ///|
-fn reader_order_field_class_for_failed_story(
-  state : ReaderOrderFieldStoryState,
-) -> ReaderOrderCarrierClass {
+fn reader_field_class_for_failed_story(
+  state : ReaderFieldStoryState,
+) -> ReaderCarrierClass {
   {
     field_identity: None,
     region: MalformedField,
@@ -439,10 +448,10 @@ fn reader_order_field_class_for_failed_story(
 }
 
 ///|
-fn reader_order_current_field_class(
-  index : ReaderOrderFieldIndex,
-  state : ReaderOrderFieldStoryState,
-) -> ReaderOrderCarrierClass {
+fn reader_current_field_class(
+  index : ReaderFieldIndex,
+  state : ReaderFieldStoryState,
+) -> ReaderCarrierClass {
   match state.stack.last() {
     Some(field_identity) => {
       let field = index.fields[field_identity]
@@ -462,23 +471,21 @@ fn reader_order_current_field_class(
 }
 
 ///|
-fn fail_reader_order_field_story(
-  index : ReaderOrderFieldIndex,
-  state : ReaderOrderFieldStoryState,
-  kind : ReaderOrderFieldRefusalKind,
+fn fail_reader_field_story(
+  index : ReaderFieldIndex,
+  state : ReaderFieldStoryState,
+  kind : ReaderFieldRefusalKind,
   carrier_identity : Int,
   offending_identity : Int?,
   implicated_field_identity : Int?,
   elements : Array[ScannedElement],
-  budget : ReaderOrderFieldBudget,
-) -> ReaderOrderCarrierClass raise DocxError {
-  let refusal = add_reader_order_field_refusal(
+  budget : ReaderFieldBudget,
+) -> ReaderCarrierClass raise DocxError {
+  let refusal = add_reader_field_refusal(
     index, state, kind, carrier_identity, offending_identity, implicated_field_identity,
     elements, budget,
   )
-  mark_reader_order_story_failed(
-    index, state, implicated_field_identity, refusal,
-  )
+  mark_reader_story_failed(index, state, implicated_field_identity, refusal)
   {
     field_identity: implicated_field_identity,
     region: MalformedField,
@@ -487,23 +494,23 @@ fn fail_reader_order_field_story(
 }
 
 ///|
-fn classify_reader_order_carrier(
-  index : ReaderOrderFieldIndex,
-  state : ReaderOrderFieldStoryState,
-  summary : ReaderOrderCarrierSummary,
+fn classify_reader_carrier(
+  index : ReaderFieldIndex,
+  state : ReaderFieldStoryState,
+  summary : ReaderCarrierSummary,
   carrier_identity : Int,
   elements : Array[ScannedElement],
   seen_markers : Map[Int, Int],
-  budget : ReaderOrderFieldBudget,
-) -> ReaderOrderCarrierClass raise DocxError {
+  budget : ReaderFieldBudget,
+) -> ReaderCarrierClass raise DocxError {
   match state.failed_refusal {
-    Some(_) => return reader_order_field_class_for_failed_story(state)
+    Some(_) => return reader_field_class_for_failed_story(state)
     None => ()
   }
   if summary.marker_count == 0 {
     match summary.repeated_instruction {
       Some(repeated) =>
-        return fail_reader_order_field_story(
+        return fail_reader_field_story(
           index,
           state,
           RepeatedInstruction,
@@ -513,13 +520,13 @@ fn classify_reader_order_carrier(
           elements,
           budget,
         )
-      None => return reader_order_current_field_class(index, state)
+      None => return reader_current_field_class(index, state)
     }
   }
   budget.charge_transition()
   let marker_identity = summary.marker_identity.unwrap_or(carrier_identity)
   if summary.marker_count > 1 {
-    return fail_reader_order_field_story(
+    return fail_reader_field_story(
       index,
       state,
       AmbiguousCarrier,
@@ -532,7 +539,7 @@ fn classify_reader_order_carrier(
   }
   match seen_markers.get(marker_identity) {
     Some(owner_field_identity) =>
-      return fail_reader_order_field_story(
+      return fail_reader_field_story(
         index,
         state,
         RepeatedMarker,
@@ -545,7 +552,7 @@ fn classify_reader_order_carrier(
     None =>
       match summary.repeated_instruction {
         Some(repeated) =>
-          return fail_reader_order_field_story(
+          return fail_reader_field_story(
             index,
             state,
             RepeatedInstruction,
@@ -595,7 +602,7 @@ fn classify_reader_order_carrier(
         Some(field_identity) => {
           let field = index.fields[field_identity]
           if field.result is Some(_) {
-            fail_reader_order_field_story(
+            fail_reader_field_story(
               index,
               state,
               DuplicateSeparate,
@@ -624,7 +631,7 @@ fn classify_reader_order_carrier(
           }
         }
         None =>
-          fail_reader_order_field_story(
+          fail_reader_field_story(
             index,
             state,
             UnmatchedSeparate,
@@ -661,7 +668,7 @@ fn classify_reader_order_carrier(
           }
         }
         None =>
-          fail_reader_order_field_story(
+          fail_reader_field_story(
             index,
             state,
             UnmatchedEnd,
@@ -673,7 +680,7 @@ fn classify_reader_order_carrier(
           )
       }
     _ =>
-      fail_reader_order_field_story(
+      fail_reader_field_story(
         index,
         state,
         UnknownTransition,
@@ -699,8 +706,8 @@ fn classify_reader_order_carrier(
 ///|
 fn apply_reader_field_carrier_class(
   slots : Array[ReaderFieldSlot],
-  classification : ReaderOrderCarrierClass,
-  budget : ReaderOrderFieldBudget,
+  classification : ReaderCarrierClass,
+  budget : ReaderFieldBudget,
 ) -> Unit raise DocxError {
   for slot in slots {
     budget.charge_work()
@@ -711,18 +718,18 @@ fn apply_reader_field_carrier_class(
 }
 
 ///|
-fn finish_reader_order_field_story(
-  index : ReaderOrderFieldIndex,
-  state : ReaderOrderFieldStoryState,
+fn finish_reader_field_story(
+  index : ReaderFieldIndex,
+  state : ReaderFieldStoryState,
   elements : Array[ScannedElement],
-  budget : ReaderOrderFieldBudget,
+  budget : ReaderFieldBudget,
 ) -> Unit raise DocxError {
   if state.failed_refusal is Some(_) {
     return
   }
   for field_identity in state.stack {
     let field = index.fields[field_identity]
-    let refusal = add_reader_order_field_refusal(
+    let refusal = add_reader_field_refusal(
       index,
       state,
       TruncatedField,
@@ -747,7 +754,7 @@ priv struct ReaderFieldSlot {
   source_identity : Int
   paragraph_identity : Int
   mut field_identity : Int?
-  mut field_region : ReaderOrderFieldRegion
+  mut field_region : ReaderFieldRegion
   mut field_refusal : Int?
 }
 
@@ -756,11 +763,11 @@ priv struct ReaderFieldSlot {
 /// carrier event stream, and the annotation slots.
 fn classify_reader_field_slots(
   source_elements : Array[ScannedElement],
-  field_carriers : Array[ReaderOrderFieldCarrierEvent],
+  field_carriers : Array[ReaderFieldCarrierEvent],
   slots : Array[ReaderFieldSlot],
-  budget : ReaderOrderFieldBudget,
-) -> ReaderOrderFieldIndex raise DocxError {
-  let index = empty_reader_order_field_index()
+  budget : ReaderFieldBudget,
+) -> ReaderFieldIndex raise DocxError {
+  let index = empty_reader_field_index()
   let slots_by_carrier : Map[Int, Array[ReaderFieldSlot]] = Map([])
   for slot in slots {
     budget.charge_work()
@@ -775,18 +782,18 @@ fn classify_reader_field_slots(
       None => ()
     }
   }
-  let states : Array[ReaderOrderFieldStoryState] = []
-  let state_by_story : Map[Int, ReaderOrderFieldStoryState] = Map([])
+  let states : Array[ReaderFieldStoryState] = []
+  let state_by_story : Map[Int, ReaderFieldStoryState] = Map([])
   let story_by_paragraph : Map[Int, Int] = Map([])
   let seen_markers : Map[Int, Int] = Map([])
-  let seen_instructions : Map[Int, ReaderOrderInstructionObservation] = Map([])
+  let seen_instructions : Map[Int, ReaderInstructionObservation] = Map([])
   for event in field_carriers {
     let paragraph_identity = event.paragraph_identity
     let carrier = event.carrier_identity
     let story_identity = match story_by_paragraph.get(paragraph_identity) {
       Some(value) => value
       None => {
-        let value = reader_order_field_story_identity(
+        let value = reader_field_story_identity(
           source_elements, paragraph_identity, budget,
         )
         budget.charge_retained()
@@ -798,7 +805,7 @@ fn classify_reader_field_slots(
       Some(value) => value
       None => {
         budget.charge_retained()
-        let value = ReaderOrderFieldStoryState::{
+        let value = ReaderFieldStoryState::{
           identity: story_identity,
           stack: [],
           failed_refusal: None,
@@ -814,7 +821,7 @@ fn classify_reader_field_slots(
       None => {
         // BodyReader collects all instruction text in the carrier before
         // it interprets the carrier's first descendant field marker.
-        let instruction_target : ReaderOrderInstructionTarget? = match
+        let instruction_target : ReaderInstructionTarget? = match
           state.stack.last() {
           Some(field_identity) =>
             if index.fields[field_identity].result is None {
@@ -827,13 +834,13 @@ fn classify_reader_field_slots(
             }
           None => None
         }
-        scan_reader_order_field_carrier(
+        scan_reader_field_carrier(
           source_elements, carrier, story_identity, instruction_target, seen_instructions,
           budget,
         )
       }
     }
-    let classification = classify_reader_order_carrier(
+    let classification = classify_reader_carrier(
       index, state, summary, carrier, source_elements, seen_markers, budget,
     )
     match slots_by_carrier.get(carrier) {
@@ -843,7 +850,7 @@ fn classify_reader_field_slots(
     }
   }
   for state in states {
-    finish_reader_order_field_story(index, state, source_elements, budget)
+    finish_reader_field_story(index, state, source_elements, budget)
   }
   // Refusals discovered at story completion (truncated fields) or after a
   // later malformed carrier also apply to slots classified earlier.

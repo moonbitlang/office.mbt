@@ -26,7 +26,7 @@ priv struct ReaderProjectionBuilder {
   /// per-level inline state.
   enclosures : Array[ReaderProjectionEnclosure]
   /// The field-carrier event stream, in walk order.
-  field_carriers : Array[ReaderOrderFieldCarrierEvent]
+  field_carriers : Array[ReaderFieldCarrierEvent]
   mut refusal : ReaderProjectionRefusal?
 }
 
@@ -98,7 +98,7 @@ fn project_reader_item_segments(
     scan,
     paragraphs: builder.paragraphs,
     field_carriers: builder.field_carriers,
-    field_index: empty_reader_order_field_index(),
+    field_index: empty_reader_field_index(),
   }
   assign_reader_projection_coordinates(projection)
   Projected(projection)
@@ -206,7 +206,7 @@ fn reader_item_source(item : ReaderItem) -> ReaderNode {
 /// carrier's position); item sources never decide the SET or ORDER,
 /// because field synthesis re-sources items at the field-begin carrier.
 priv struct ReaderProjectionCarrierCursor {
-  events : Array[ReaderOrderFieldCarrierEvent]
+  events : Array[ReaderFieldCarrierEvent]
   positions : Map[Int, Int]
   mut next : Int
 }
@@ -222,7 +222,7 @@ fn ReaderProjectionBuilder::carrier_cursor(
   // (a no-fallback MC block leaves no DOM child at all). The cooked item
   // walk only times when the cursor fires.
   let elements = self.scan.elements()
-  let events : Array[ReaderOrderFieldCarrierEvent] = []
+  let events : Array[ReaderFieldCarrierEvent] = []
   let positions : Map[Int, Int] = Map([])
   for input in inputs {
     match input.paragraph.source_element_id {
@@ -357,18 +357,18 @@ fn ReaderProjectionBuilder::identity_of(
 fn ReaderProjectionBuilder::atom_span(
   self : ReaderProjectionBuilder,
   id : SourceElementId,
-) -> ReaderOrderSourceSpan {
+) -> ReaderSourceSpan {
   let SourceElementId(index) = id
-  reader_order_atom_span(self.scan.elements()[index])
+  reader_atom_span(self.scan.elements()[index])
 }
 
 ///|
 fn ReaderProjectionBuilder::element_span(
   self : ReaderProjectionBuilder,
   id : SourceElementId,
-) -> ReaderOrderSourceSpan {
+) -> ReaderSourceSpan {
   let SourceElementId(index) = id
-  reader_order_element_span(self.scan.elements()[index])
+  reader_element_span(self.scan.elements()[index])
 }
 
 ///|

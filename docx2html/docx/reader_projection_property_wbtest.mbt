@@ -179,7 +179,7 @@ fn hostile_textbox(choices : HostileChoices, depth : Int) -> String {
 /// discarding the content when there is none.
 ///
 /// Two shapes are known to diverge and are pinned by name in
-/// `reader_order_projection_wbtest.mbt`: an *inline* control whose content
+/// `reader_projection_wbtest.mbt`: an *inline* control whose content
 /// yields no text, and one wrapping a table cell. Generating either here would
 /// re-assert a tracked divergence rather than find a new one. That list is
 /// what has been measured, not a proof that nothing else diverges.
@@ -270,7 +270,7 @@ fn hostile_sdt(
   // predates this work and is unrelated to content controls -- the reader
   // finds a textbox in a deleted row through the enclosing paragraph's
   // physical extras pass and this projection does not. It is pinned by name in
-  // `reader_order_projection_wbtest.mbt`; generating it here would only
+  // `reader_projection_wbtest.mbt`; generating it here would only
   // re-assert a divergence that is already tracked.
   let nested = fn() -> String {
     if site == "paragraph" {
@@ -306,7 +306,7 @@ fn hostile_sdt(
 /// A content control wrapping table rows, which is where the *prepass* has to
 /// agree with the reader rather than just the walk.
 ///
-/// `collect_reader_order_body_outputs` decides which rows and cells the reader
+/// `collect_reader_body_outputs` decides which rows and cells the reader
 /// emits, and vertical-merge resolution runs on that decision. A control whose
 /// suppressed second content holds a row would, if the prepass flattened both
 /// contents, make the table fail open and restore continuation cells the

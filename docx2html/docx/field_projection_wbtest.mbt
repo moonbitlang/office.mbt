@@ -5,7 +5,7 @@
 ///|
 fn field_test_projection(
   source : String,
-  field_budget? : ReaderOrderFieldBudget,
+  field_budget? : ReaderFieldBudget,
 ) -> ReaderProjection raise DocxError {
   guard join_text_story(source) is Joined(story) else {
     raise Unsupported(message="field test: the story did not join")
@@ -70,7 +70,7 @@ fn field_contribution(
 ///|
 fn assert_field_limit(
   source : String,
-  budget : ReaderOrderFieldBudget,
+  budget : ReaderFieldBudget,
   expected : String,
 ) -> Unit raise {
   try field_test_projection(source, field_budget=budget) |> ignore catch {
@@ -170,7 +170,7 @@ test "field transition owns the whole direct-child carrier" {
 }
 
 ///|
-/// Story identity for every root arm of `reader_order_field_story_identity`.
+/// Story identity for every root arm of `reader_field_story_identity`.
 ///
 /// The footnote arm is pinned by "field state resets between note stories";
 /// these are the other three. In the note and comment stories a field
@@ -288,7 +288,7 @@ test "textbox fields do not leak across story boundaries" {
 
 ///|
 test "malformed field transitions retain deterministic refusal provenance" {
-  let cases : Array[(String, ReaderOrderFieldRefusalKind)] = [
+  let cases : Array[(String, ReaderFieldRefusalKind)] = [
     (
       (
         #|<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:body><w:p><w:r><w:fldChar w:fldCharType="separate"/></w:r></w:p></w:body></w:document>
@@ -565,17 +565,17 @@ test "field classification limits cover depth text work and retained state" {
     #|</w:p></w:body></w:document>
   let exact_depth = field_test_projection(
     nested,
-    field_budget=reader_order_field_budget(max_transitions=4, max_field_depth=2),
+    field_budget=reader_field_budget(max_transitions=4, max_field_depth=2),
   )
   assert_eq(exact_depth.field_index.fields.length(), 2)
   assert_field_limit(
     nested,
-    reader_order_field_budget(max_transitions=3),
+    reader_field_budget(max_transitions=3),
     "DocxXmlTokens",
   )
   assert_field_limit(
     nested,
-    reader_order_field_budget(max_field_depth=1),
+    reader_field_budget(max_field_depth=1),
     "DocxXmlNestingDepth",
   )
 
@@ -585,7 +585,7 @@ test "field classification limits cover depth text work and retained state" {
     #|</w:p></w:body></w:document>
   let exact_text = field_test_projection(
     instruction,
-    field_budget=reader_order_field_budget(max_instruction_chars=4),
+    field_budget=reader_field_budget(max_instruction_chars=4),
   )
   assert_eq(
     exact_text.field_index.fields[0].instruction_text.to_string(),
@@ -593,17 +593,17 @@ test "field classification limits cover depth text work and retained state" {
   )
   assert_field_limit(
     instruction,
-    reader_order_field_budget(max_instruction_chars=3),
+    reader_field_budget(max_instruction_chars=3),
     "DocxXmlMaterializedCharacters",
   )
   assert_field_limit(
     instruction,
-    reader_order_field_budget(max_work=0),
+    reader_field_budget(max_work=0),
     "DocxXmlTokens",
   )
   assert_field_limit(
     instruction,
-    reader_order_field_budget(max_retained_state=0),
+    reader_field_budget(max_retained_state=0),
     "DocxXmlTokens",
   )
 }

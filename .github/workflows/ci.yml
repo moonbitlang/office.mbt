@@ -89,10 +89,11 @@ jobs:
           python3 docx2html/tests/registry/check_dispatch_registry.py
           bash docx2html/tests/registry/escape_suite.sh
           python3 docx2html/tests/corpus/projection_check.py
-          # legacy walker quarantine: no production file may name it
-          if grep -l -E 'ReaderOrderWalker|scan_reader_order_projection|project_reader_order_from_source_tree|collect_reader_order_body_outputs|reader_order_projection_visibility|ReaderOrderInlineState|ReaderOrderBudget|PendingDeletedParagraph|ReaderOrderBodyOutputKind|assign_reader_order_logical_coordinates|restore_reader_projection_subtree|ReaderOrderProjection|ReaderOrderContribution|ProvisionalContributionKind|ReaderOrderParagraph|ReaderOrderParagraphSource|ReaderOrderRunSource|classify_reader_order_fields' \
-            docx2html/docx/*.mbt 2>/dev/null | grep -v '_wbtest\.mbt$' | grep -v '_test\.mbt$'; then
-            echo "legacy walker named outside test code"; exit 1
+          # legacy reader tombstone (#434 PR 7): the vocabulary is DELETED;
+          # no docx source, tests included, may resurrect it
+          if grep -l -E 'ReaderOrder|reader_order|ProvisionalContributionKind|PendingDeletedParagraph|compare_reader_projection_shadow|shadow_difference_of' \
+            docx2html/docx/*.mbt 2>/dev/null; then
+            echo "legacy reader vocabulary resurrected"; exit 1
           fi
 
       - name: Format check
