@@ -5,17 +5,28 @@
 ///|
 fn field_test_projection(
   source : String,
-  field_budget? : ReaderOrderFieldBudget,
-) -> ReaderOrderProjection raise DocxError {
-  scan_reader_order_projection(
-    "word/document.xml",
-    @utf8.encode(source),
-    field_budget?,
-  )
+  field_budget? : ReaderFieldBudget,
+) -> ReaderProjection raise DocxError {
+  guard join_text_story(source) is Joined(story) else {
+    raise Unsupported(message="field test: the story did not join")
+  }
+  guard segment_joined_reader_story(
+      "word/document.xml",
+      story,
+      empty_body_reader({ relationships: [] }),
+    )
+    is SegmentedStory(output) else {
+    raise Unsupported(message="field test: the story did not segment")
+  }
+  guard project_joined_reader_output(output) is Projected(projection) else {
+    raise Unsupported(message="field test: the story did not project")
+  }
+  classify_reader_projection_fields(projection, budget?=field_budget)
+  projection
 }
 
 ///|
-fn field_projection_text(projection : ReaderOrderProjection) -> String {
+fn field_projection_text(projection : ReaderProjection) -> String {
   let output = StringBuilder()
   for paragraph in projection.paragraphs {
     for contribution in paragraph.contributions {
@@ -43,9 +54,9 @@ fn field_reader_text(source : String) -> String raise DocxError {
 
 ///|
 fn field_contribution(
-  projection : ReaderOrderProjection,
+  projection : ReaderProjection,
   value : String,
-) -> ReaderOrderContribution raise {
+) -> ReaderProjectionContribution raise {
   for paragraph in projection.paragraphs {
     for contribution in paragraph.contributions {
       if contribution.value == value {
@@ -59,7 +70,7 @@ fn field_contribution(
 ///|
 fn assert_field_limit(
   source : String,
-  budget : ReaderOrderFieldBudget,
+  budget : ReaderFieldBudget,
   expected : String,
 ) -> Unit raise {
   try field_test_projection(source, field_budget=budget) |> ignore catch {
@@ -154,12 +165,12 @@ test "field transition owns the whole direct-child carrier" {
   // reader's carrier-boundary observation.
   assert_true(
     before.source_span.byte_start <
-    projection.source_elements[field.begin_marker_identity].byte_start,
+    projection.scan.elements()[field.begin_marker_identity].byte_start,
   )
 }
 
 ///|
-/// Story identity for every root arm of `reader_order_field_story_identity`.
+/// Story identity for every root arm of `reader_field_story_identity`.
 ///
 /// The footnote arm is pinned by "field state resets between note stories";
 /// these are the other three. In the note and comment stories a field
@@ -192,18 +203,10 @@ test "story identity is per container for every root kind" {
       2,
       "5,1",
     ),
-    (
-      "two bodies",
-      (
-        #|<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
-        #|<w:body><w:p><w:r><w:fldChar w:fldCharType="begin"/></w:r></w:p></w:body>
-        #|<w:body><w:p><w:r><w:fldChar w:fldCharType="end"/></w:r></w:p></w:body>
-        #|</w:document>
-      ),
-      1,
-      "1",
-    ),
   ]
+  // The malformed two-body arm the legacy walker tolerated is gone:
+  // native segmentation deliberately refuses a duplicate body, pinned by
+  // "segmentation refuses structural surprises instead of narrowing".
   for case in cases {
     let (label, source, refusal_count, identities) = case
     let projection = field_test_projection(source)
@@ -285,7 +288,7 @@ test "textbox fields do not leak across story boundaries" {
 
 ///|
 test "malformed field transitions retain deterministic refusal provenance" {
-  let cases : Array[(String, ReaderOrderFieldRefusalKind)] = [
+  let cases : Array[(String, ReaderFieldRefusalKind)] = [
     (
       (
         #|<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:body><w:p><w:r><w:fldChar w:fldCharType="separate"/></w:r></w:p></w:body></w:document>
@@ -393,7 +396,7 @@ test "an instruction observed through two reader carriers fails closed" {
   assert_eq(field.instruction_text.to_string(), " CODE ")
   assert_eq(field.refusal_identity, Some(refusal.identity))
   let offending = refusal.offending_identity.unwrap()
-  assert_eq(projection.source_elements[offending].local_name, "instrText")
+  assert_eq(projection.scan.elements()[offending].local_name, "instrText")
   for value in ["nested", "after"] {
     let contribution = field_contribution(projection, value)
     assert_true(contribution.field_region is MalformedField)
@@ -423,7 +426,7 @@ test "a repeated child instruction refuses its closed owner and open parent" {
   assert_eq(parent.instruction_text.to_string(), "")
   assert_eq(child.instruction_text.to_string(), " CHILD ")
   let offending = refusal.offending_identity.unwrap()
-  assert_eq(projection.source_elements[offending].local_name, "instrText")
+  assert_eq(projection.scan.elements()[offending].local_name, "instrText")
   for value in ["nested", "after"] {
     let contribution = field_contribution(projection, value)
     assert_true(contribution.field_region is MalformedField)
@@ -449,7 +452,7 @@ test "a repeated instruction refuses its only field after it closes" {
   assert_eq(field.refusal_identity, Some(refusal.identity))
   assert_eq(field.instruction_text.to_string(), " CODE ")
   let offending = refusal.offending_identity.unwrap()
-  assert_eq(projection.source_elements[offending].local_name, "instrText")
+  assert_eq(projection.scan.elements()[offending].local_name, "instrText")
   for value in ["nested", "after"] {
     let contribution = field_contribution(projection, value)
     assert_true(contribution.field_region is MalformedField)
@@ -480,7 +483,7 @@ test "a repeated child instruction refuses a result-region parent" {
   assert_eq(parent.instruction_text.to_string(), "")
   assert_eq(child.instruction_text.to_string(), " CHILD ")
   let offending = refusal.offending_identity.unwrap()
-  assert_eq(projection.source_elements[offending].local_name, "instrText")
+  assert_eq(projection.scan.elements()[offending].local_name, "instrText")
   for value in ["nested", "after"] {
     let contribution = field_contribution(projection, value)
     assert_true(contribution.field_region is MalformedField)
@@ -505,7 +508,7 @@ test "an initially untargeted repeated instruction refuses the later field" {
   assert_eq(field.refusal_identity, Some(refusal.identity))
   assert_eq(field.instruction_text.to_string(), "")
   let offending = refusal.offending_identity.unwrap()
-  assert_eq(projection.source_elements[offending].local_name, "instrText")
+  assert_eq(projection.scan.elements()[offending].local_name, "instrText")
   for value in ["nested", "after"] {
     let contribution = field_contribution(projection, value)
     assert_true(contribution.field_region is MalformedField)
@@ -531,7 +534,7 @@ test "a repeated self-closing instruction refuses its field" {
   assert_eq(field.refusal_identity, Some(refusal.identity))
   assert_eq(field.instruction_text.to_string(), "")
   let offending = refusal.offending_identity.unwrap()
-  assert_eq(projection.source_elements[offending].local_name, "instrText")
+  assert_eq(projection.scan.elements()[offending].local_name, "instrText")
   for value in ["nested", "after"] {
     let contribution = field_contribution(projection, value)
     assert_true(contribution.field_region is MalformedField)
@@ -562,17 +565,17 @@ test "field classification limits cover depth text work and retained state" {
     #|</w:p></w:body></w:document>
   let exact_depth = field_test_projection(
     nested,
-    field_budget=reader_order_field_budget(max_transitions=4, max_field_depth=2),
+    field_budget=reader_field_budget(max_transitions=4, max_field_depth=2),
   )
   assert_eq(exact_depth.field_index.fields.length(), 2)
   assert_field_limit(
     nested,
-    reader_order_field_budget(max_transitions=3),
+    reader_field_budget(max_transitions=3),
     "DocxXmlTokens",
   )
   assert_field_limit(
     nested,
-    reader_order_field_budget(max_field_depth=1),
+    reader_field_budget(max_field_depth=1),
     "DocxXmlNestingDepth",
   )
 
@@ -582,7 +585,7 @@ test "field classification limits cover depth text work and retained state" {
     #|</w:p></w:body></w:document>
   let exact_text = field_test_projection(
     instruction,
-    field_budget=reader_order_field_budget(max_instruction_chars=4),
+    field_budget=reader_field_budget(max_instruction_chars=4),
   )
   assert_eq(
     exact_text.field_index.fields[0].instruction_text.to_string(),
@@ -590,17 +593,113 @@ test "field classification limits cover depth text work and retained state" {
   )
   assert_field_limit(
     instruction,
-    reader_order_field_budget(max_instruction_chars=3),
+    reader_field_budget(max_instruction_chars=3),
     "DocxXmlMaterializedCharacters",
   )
   assert_field_limit(
     instruction,
-    reader_order_field_budget(max_work=0),
+    reader_field_budget(max_work=0),
     "DocxXmlTokens",
   )
   assert_field_limit(
     instruction,
-    reader_order_field_budget(max_retained_state=0),
+    reader_field_budget(max_retained_state=0),
     "DocxXmlTokens",
+  )
+}
+
+///|
+/// Renders the composition contracts DIRECTLY: every non-empty
+/// contribution as value@region[field], then the carrier-event stream
+/// as paragraph/carrier identity pairs. What the deleted parity suite
+/// held against the legacy walk, these pins hold against drift.
+fn describe_field_composition(projection : ReaderProjection) -> String {
+  let out = StringBuilder()
+  for index, paragraph in projection.paragraphs {
+    out.write_string("p\{index}:")
+    for contribution in paragraph.contributions {
+      if contribution.value.length() > 0 {
+        let region = match contribution.field_region {
+          OutsideField => "-"
+          FieldInstruction => "I"
+          FieldResult => "R"
+          MalformedField => "M"
+        }
+        let field = match contribution.field_identity {
+          Some(identity) => "[\{identity}]"
+          None => ""
+        }
+        out.write_string(" \{contribution.value}@\{region}\{field}")
+      }
+    }
+    out.write_string("\n")
+  }
+  out.write_string("carriers:")
+  for event in projection.field_carriers {
+    out.write_string(" \{event.paragraph_identity}/\{event.carrier_identity}")
+  }
+  out.to_string()
+}
+
+///|
+/// The carriers list is authoritative: a complex HYPERLINK field wraps
+/// its result items in synthetic hyperlinks sourced at the field-begin
+/// carrier, so item sources cannot decide the event set -- a physical
+/// hyperlink carrier inside the result must still emit, and its text
+/// must classify as FieldResult.
+test "a physical hyperlink carrier in the result classifies as FieldResult" {
+  let projection = field_test_projection(
+    (
+      #|<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:body><w:p><w:r><w:fldChar w:fldCharType="begin"/></w:r><w:r><w:instrText> HYPERLINK "https://e" </w:instrText></w:r><w:r><w:fldChar w:fldCharType="separate"/></w:r><w:hyperlink w:anchor="x"><w:r><w:t>L</w:t></w:r></w:hyperlink><w:r><w:fldChar w:fldCharType="end"/></w:r></w:p></w:body></w:document>
+    ),
+  )
+  inspect(
+    describe_field_composition(projection),
+    content=(
+      #|p0: L@R[0]
+      #|carriers: 2/3 2/5 2/7 2/9 2/12
+    ),
+  )
+}
+
+///|
+/// A field beginning in a deleted paragraph continues in the terminal
+/// one: carriers of BOTH physical paragraphs observe in order, and the
+/// joined result text classifies inside the field.
+test "a field spanning a deleted-paragraph join keeps its carriers in order" {
+  let projection = field_test_projection(
+    (
+      #|<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:body><w:p><w:pPr><w:rPr><w:del/></w:rPr></w:pPr><w:r><w:fldChar w:fldCharType="begin"/></w:r><w:r><w:instrText> X </w:instrText></w:r></w:p><w:p><w:r><w:fldChar w:fldCharType="separate"/></w:r><w:r><w:t>joined</w:t></w:r><w:r><w:fldChar w:fldCharType="end"/></w:r></w:p></w:body></w:document>
+    ),
+  )
+  inspect(
+    describe_field_composition(projection),
+    content=(
+      #|p0: joined@R[0]
+      #|carriers: 2/3 2/6 2/8 10/11 10/13 10/15
+    ),
+  )
+}
+
+///|
+/// The hardest composition: a complex HYPERLINK field whose result wraps
+/// a NESTED PARAGRAPH in a synthetic hyperlink sourced at the begin
+/// carrier. Emit-before-visit must hold -- the outer paragraph's carrier
+/// for the nested paragraph fires before the nested group -- and the
+/// nested instrText's repeated observation lands as the machine
+/// classified it.
+test "a hyperlink result wrapping a nested paragraph keeps carrier order" {
+  let projection = field_test_projection(
+    (
+      #|<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:body><w:p><w:r><w:fldChar w:fldCharType="begin"/></w:r><w:r><w:instrText> HYPERLINK "https://e" </w:instrText></w:r><w:r><w:fldChar w:fldCharType="separate"/></w:r><w:p><w:r><w:instrText> GHOST </w:instrText><w:t>inner</w:t></w:r></w:p><w:r><w:t>after</w:t></w:r><w:r><w:fldChar w:fldCharType="end"/></w:r></w:p></w:body></w:document>
+    ),
+  )
+  inspect(
+    describe_field_composition(projection),
+    content=(
+      #|p0: inner@M
+      #|p1: after@M
+      #|carriers: 2/3 2/5 2/7 2/9 9/10 2/13 2/15
+    ),
   )
 }

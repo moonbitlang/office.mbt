@@ -1,7 +1,30 @@
-// The reader-native projection (#434 PR 5): what the reader actually did,
+// The reader-native projection (#434): what the reader actually did,
 // with physical provenance attached. Built by `reader_projection_adapter.mbt`
-// from one joined read; the legacy byte-level walker survives only as a
-// white-box oracle over the shared valid domain.
+// from one joined read. Since PR 7 this is the ONLY projection semantics;
+// the legacy byte-level walker is deleted.
+
+///|
+#warnings("-unused_field")
+priv struct ReaderSourceSpan {
+  byte_start : Int
+  byte_end : Int
+}
+
+///|
+fn reader_element_span(element : ScannedElement) -> ReaderSourceSpan {
+  { byte_start: element.byte_start, byte_end: element.byte_end }
+}
+
+///|
+fn reader_atom_span(element : ScannedElement) -> ReaderSourceSpan {
+  if is_wml_uri(element.uri) &&
+    element.local_name == "t" &&
+    element.text_map is Some(_) {
+    { byte_start: element.content_start, byte_end: element.content_end }
+  } else {
+    reader_element_span(element)
+  }
+}
 
 ///|
 /// The four-way contribution kind, one level finer than the legacy
@@ -25,7 +48,7 @@ priv struct ReaderProjectionContribution {
   source : SourceElementId
   /// The innermost physical run this contribution sits in, when any.
   run_source : SourceElementId?
-  source_span : ReaderOrderSourceSpan
+  source_span : ReaderSourceSpan
   /// Half-open UTF-16 interval in the reader's story text; zero-width
   /// contributions get an empty interval at the position they sit.
   mut projection_start : Int
@@ -35,7 +58,7 @@ priv struct ReaderProjectionContribution {
   mut logical_run_index : Int
   /// Field annotations, populated by `classify_reader_projection_fields`.
   mut field_identity : Int?
-  mut field_region : ReaderOrderFieldRegion
+  mut field_region : ReaderFieldRegion
   mut field_refusal : Int?
 }
 
@@ -45,7 +68,7 @@ priv struct ReaderProjectionContribution {
 /// run stays addressable without any effect.
 priv struct ReaderProjectionRun {
   source : SourceElementId
-  source_span : ReaderOrderSourceSpan
+  source_span : ReaderSourceSpan
   /// Position among the paragraph's runs in first-appearance order -- the
   /// r[j] a surgery address names. Atomless runs participate, exactly as
   /// the legacy walker's zero-width run-open seams made them.
@@ -58,7 +81,7 @@ priv struct ReaderProjectionRun {
   /// the region: truncation is discovered at story END, after regions
   /// are assigned, so a truncated field's result run keeps FieldResult
   /// and carries the refusal alone.
-  mut field_region : ReaderOrderFieldRegion
+  mut field_region : ReaderFieldRegion
   mut field_refusal : Int?
 }
 
@@ -68,7 +91,7 @@ priv struct ReaderProjectionRun {
 /// joined the terminal paragraph.
 priv struct ReaderProjectionParagraphSource {
   source : SourceElementId
-  source_span : ReaderOrderSourceSpan
+  source_span : ReaderSourceSpan
 }
 
 ///|
@@ -89,9 +112,9 @@ priv struct ReaderProjection {
   /// One event per direct physical child of each visited paragraph, in
   /// the walk's document order (nested paragraphs' groups interleave at
   /// their positions) -- the stream the field classification consumes.
-  field_carriers : Array[ReaderOrderFieldCarrierEvent]
+  field_carriers : Array[ReaderFieldCarrierEvent]
   /// Populated by `classify_reader_projection_fields`.
-  mut field_index : ReaderOrderFieldIndex
+  mut field_index : ReaderFieldIndex
 }
 
 ///|

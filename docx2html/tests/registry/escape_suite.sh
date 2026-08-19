@@ -65,19 +65,19 @@ expect E3-concatenation "UNREGISTERED: :brandNew"
 fresh; mutate docx_reader.mbt 's/^fn office_namespace_map/let escape_probe : String =\n  #|w:brandNew maps here\n\n\/\/\/|\nfn office_namespace_map/m' 'w:brandNew maps here'
 expect E4-multiline "UNREGISTERED: w:brandNew"
 
-fresh; mutate reader_order_projection.mbt 's/^fn reader_order_atom_span/fn name_escape(name : String) -> Bool {\n  name == "seventhEscape"\n}\n\n\/\/\/|\nfn reader_order_atom_span/m' seventhEscape
+fresh; mutate reader_projection_fields.mbt 's/^fn reader_projection_owning_paragraph/fn name_escape(name : String) -> Bool {\n  name == "seventhEscape"\n}\n\n\/\/\/|\nfn reader_projection_owning_paragraph/m' seventhEscape
 expect E5-param-smuggle "UNREGISTERED: seventhEscape"
 
 fresh; printf 'fn new_dispatch(local_name : String) -> Bool {\n  local_name == "brandNew"\n}\n' > "$work/docx/escape_probe.mbt"
 expect E6-new-file "UNCLASSIFIED FILE: escape_probe.mbt"
 
-fresh; mutate reader_order_projection.mbt 's/^fn reader_order_atom_span/fn name_escape(name : String) -> Bool {\n  "seventhEscape" == name\n}\n\n\/\/\/|\nfn reader_order_atom_span/m' seventhEscape
+fresh; mutate reader_projection_fields.mbt 's/^fn reader_projection_owning_paragraph/fn name_escape(name : String) -> Bool {\n  "seventhEscape" == name\n}\n\n\/\/\/|\nfn reader_projection_owning_paragraph/m' seventhEscape
 expect E7-reversed-comparison "UNREGISTERED: seventhEscape"
 
 fresh; printf 'fn frag_dispatch(n : String) -> Bool {\n  n == "w:" + "seventhEscape"\n}\n' > "$work/docx/escape_probe.mbt"
 expect E8-new-file-fragment "UNCLASSIFIED FILE: escape_probe.mbt"
 
-fresh; mutate reader_order_projection.mbt 's/^fn reader_order_atom_span/fn match_escape(name : String) -> Bool {\n  match name {\n    "eighthEscape" => true\n    _ => false\n  }\n}\n\n\/\/\/|\nfn reader_order_atom_span/m' eighthEscape
+fresh; mutate reader_projection_fields.mbt 's/^fn reader_projection_owning_paragraph/fn match_escape(name : String) -> Bool {\n  match name {\n    "eighthEscape" => true\n    _ => false\n  }\n}\n\n\/\/\/|\nfn reader_projection_owning_paragraph/m' eighthEscape
 expect E9-match-arm "UNREGISTERED: eighthEscape"
 
 fresh; mutate write_comments.mbt 's/^pub fn write_docx_with_annotations/fn writer_sneaks_a_read(element : XmlElement) -> Bool {\n  element.name == "w:sneaky"\n}\n\n\/\/\/|\npub fn write_docx_with_annotations/m' sneaky
@@ -89,10 +89,10 @@ expect E11-exempt-reversed "exempt file's function writer_sneaks_reversed"
 fresh; mutate write_comments.mbt 's/^pub fn write_docx_with_annotations/fn writer_sneaks_ne(element : XmlElement) -> Bool {\n  element.name != "w:sneaky"\n}\n\n\/\/\/|\npub fn write_docx_with_annotations/m' sneaky
 expect E12-exempt-not-equal "exempt file's function writer_sneaks_ne"
 
-fresh; mutate reader_order_projection.mbt 's/^fn reader_order_atom_span/fn ne_escape(name : String) -> Bool {\n  name != "neEscape"\n}\n\n\/\/\/|\nfn reader_order_atom_span/m' neEscape
+fresh; mutate reader_projection_fields.mbt 's/^fn reader_projection_owning_paragraph/fn ne_escape(name : String) -> Bool {\n  name != "neEscape"\n}\n\n\/\/\/|\nfn reader_projection_owning_paragraph/m' neEscape
 expect E13-not-equal-smuggle "UNREGISTERED: neEscape"
 
-fresh; mutate reader_order_projection.mbt 's/^fn reader_order_atom_span/fn paren_escape(name : String) -> Bool {\n  name == ("parenEscape")\n}\n\n\/\/\/|\nfn reader_order_atom_span/m' parenEscape
+fresh; mutate reader_projection_fields.mbt 's/^fn reader_projection_owning_paragraph/fn paren_escape(name : String) -> Bool {\n  name == ("parenEscape")\n}\n\n\/\/\/|\nfn reader_projection_owning_paragraph/m' parenEscape
 expect E14-paren-comparison "UNREGISTERED: parenEscape"
 
 fresh; mutate docx_reader.mbt 's/"w:pict" => \[Trace\(Suppressed\(source=element\)\)\]/"w:pict" => [Trace(Suppressed(source=element))]\n    "wx:decoy2" if element.name() == "w" + ":" + "threePiece" => []/' threePiece
@@ -114,7 +114,7 @@ expect E19-nested-parens "UNCLASSIFIED FILE: escape_probe.mbt"
 fresh; mutate write_comments.mbt 's/^pub fn write_docx_with_annotations/fn writer_destructure(element : XmlElement) -> Bool {\n  let { name, .. } = element\n  name == "w:sneaky"\n}\n\n\/\/\/|\npub fn write_docx_with_annotations/m' sneaky
 expect E20-exempt-destructure "exempt file's function writer_destructure"
 
-fresh; mutate reader_order_projection.mbt 's/^fn reader_order_atom_span/fn assembled_escape(name : String) -> Bool {\n  name == "\\u{62}randNew"\n}\n\n\/\/\/|\nfn reader_order_atom_span/m' randNew
+fresh; mutate reader_projection_fields.mbt 's/^fn reader_projection_owning_paragraph/fn assembled_escape(name : String) -> Bool {\n  name == "\\u{62}randNew"\n}\n\n\/\/\/|\nfn reader_projection_owning_paragraph/m' randNew
 expect E21-escape-assembled "UNREGISTERED: randNew"
 
 fresh; printf 'fn is_custom_element(tag : String) -> Bool {\n  tag == "custom-name"\n}\n' > "$work/docx/escape_probe.mbt"
@@ -132,7 +132,7 @@ expect E25-table-driven-new-file "UNCLASSIFIED FILE: escape_probe.mbt"
 fresh; printf 'fn clark_dispatch(n : String) -> Bool {\n  n == "{http://example.com/ns}Custom"\n}\n' > "$work/docx/escape_probe.mbt"
 expect E26-clark-new-file "UNCLASSIFIED FILE: escape_probe.mbt"
 
-fresh; mutate reader_order_projection.mbt 's/^fn reader_order_atom_span/fn long_name(name : String) -> Bool {\n  name == "OrdinaryExtensionElementNameLongerThanFortyCharacters"\n}\n\n\/\/\/|\nfn reader_order_atom_span/m' OrdinaryExtension
+fresh; mutate reader_projection_fields.mbt 's/^fn reader_projection_owning_paragraph/fn long_name(name : String) -> Bool {\n  name == "OrdinaryExtensionElementNameLongerThanFortyCharacters"\n}\n\n\/\/\/|\nfn reader_projection_owning_paragraph/m' OrdinaryExtension
 expect E27-long-name "UNREGISTERED: OrdinaryExtension"
 
 fresh; mutate token_map.mbt 's/^fn token_map_error/fn const_use_probe(n : String) -> Bool {\n  n == PACKAGE_RELATIONSHIPS_ROOT\n}\n\n\/\/\/|\nfn token_map_error/m' const_use_probe

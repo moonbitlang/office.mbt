@@ -249,12 +249,6 @@ priv struct ScannedElement {
   local_name : String
   same_name_ordinal : Int
   field_char_type : String?
-  symbol_font : String?
-  symbol_char : String?
-  break_type : String?
-  bookmark_name : String?
-  hyperlink_relationship_id : String?
-  hyperlink_anchor : String?
   parent_index : Int
   mut first_child_index : Int
   mut next_sibling_index : Int
@@ -266,17 +260,6 @@ priv struct ScannedElement {
   // `w:instrText` content. Both element kinds draw from the same cumulative
   // lexical budget.
   mut text_map : WtContentMap?
-  // Source-retaining consumers need to distinguish reader-semantic
-  // retractions from elements that were never projection nodes. In
-  // particular, BodyReader fails open and keeps every cell when a table has
-  // an unexpected row/cell shape.
-  mut retracted_by_vmerge : Bool
-  mut deleted_table_row : Bool
-  // Retain the reader's first-tcPr cell properties even when an ancestor was
-  // already suppressed. N0b2 needs them to rebuild merge visibility inside a
-  // continuation cell that a malformed outer table makes visible again.
-  mut table_cell_vmerge_continue : Bool
-  mut table_cell_grid_span : Int
 }
 
 ///|
@@ -799,12 +782,6 @@ fn is_transparent_container(uri : String, local_name : String) -> Bool {
 
 ///|
 const MC_URI : String = "http://schemas.openxmlformats.org/markup-compatibility/2006"
-
-///|
-const TRANSITIONAL_OFFICE_RELATIONSHIPS_URI : String = "http://schemas.openxmlformats.org/officeDocument/2006/relationships"
-
-///|
-const STRICT_OFFICE_RELATIONSHIPS_URI : String = "http://purl.oclc.org/ooxml/officeDocument/relationships"
 
 ///|
 /// XML Namespaces binds this prefix implicitly in every document. Keeping it
@@ -1351,11 +1328,6 @@ fn scan_story(
           // by the span (the reader's parse can yield zero or negative
           // spans, mirrored verbatim).
           if frame.is_wml && frame.local_name == "tc" {
-            if frame.element_index >= 0 &&
-              frame.element_index < elements.length() {
-              elements[frame.element_index].table_cell_vmerge_continue = frame.vmerge_continue
-              elements[frame.element_index].table_cell_grid_span = frame.grid_span
-            }
             match
               (
                 nearest_frame_by_kind(frames, "tr"),
@@ -1533,67 +1505,6 @@ fn scan_story(
           } else {
             None
           },
-          symbol_font: if is_wml_uri(uri) && local_name == "sym" {
-            attribute_value(
-              attributes,
-              "font",
-              namespaces,
-              prefer_last=source_budget is Some(_),
-            )
-          } else {
-            None
-          },
-          symbol_char: if is_wml_uri(uri) && local_name == "sym" {
-            attribute_value(
-              attributes,
-              "char",
-              namespaces,
-              prefer_last=source_budget is Some(_),
-            )
-          } else {
-            None
-          },
-          break_type: if is_wml_uri(uri) && local_name == "br" {
-            attribute_value(
-              attributes,
-              "type",
-              namespaces,
-              prefer_last=source_budget is Some(_),
-            )
-          } else {
-            None
-          },
-          bookmark_name: if is_wml_uri(uri) && local_name == "bookmarkStart" {
-            attribute_value(
-              attributes,
-              "name",
-              namespaces,
-              prefer_last=source_budget is Some(_),
-            )
-          } else {
-            None
-          },
-          hyperlink_relationship_id: if is_wml_uri(uri) &&
-            local_name == "hyperlink" {
-            relationship_attribute_value(
-              attributes,
-              "id",
-              namespaces,
-              prefer_last=source_budget is Some(_),
-            )
-          } else {
-            None
-          },
-          hyperlink_anchor: if is_wml_uri(uri) && local_name == "hyperlink" {
-            attribute_value(
-              attributes,
-              "anchor",
-              namespaces,
-              prefer_last=source_budget is Some(_),
-            )
-          } else {
-            None
-          },
           parent_index,
           first_child_index: -1,
           next_sibling_index: -1,
@@ -1610,10 +1521,6 @@ fn scan_story(
             -1
           },
           text_map: None,
-          retracted_by_vmerge: false,
-          deleted_table_row: false,
-          table_cell_vmerge_continue: false,
-          table_cell_grid_span: 1,
         })
         match frames.last() {
           Some(parent) => {
@@ -2284,9 +2191,6 @@ fn retract_row(
   revisions : Array[ScannedRevision],
   work : AnnotationScanWork,
 ) -> Unit {
-  if row.element_index >= 0 && row.element_index < elements.length() {
-    elements[row.element_index].deleted_table_row = true
-  }
   match (row.projection_path, row.counter_owner) {
     (Some(_), Some(counters)) => {
       let current = counters.get_or_default("tr", 0)
@@ -2332,9 +2236,6 @@ fn retract_cell(
       cell.projection_path = None
       cell.counter_owner = None
       cell.suppressed = true
-      if cell.element_index >= 0 && cell.element_index < elements.length() {
-        elements[cell.element_index].retracted_by_vmerge = true
-      }
       purge_subtree(cell, nodes, markers, revisions, work)
     }
     _ => ()
@@ -2642,13 +2543,7 @@ fn annotation_attribute_is_relevant(
   bytes_range_has_ascii_suffix(part, start, end, ":date") ||
   (
     retain_projection_attributes &&
-    (
-      bytes_range_has_ascii_suffix(part, start, end, ":fldCharType") ||
-      bytes_range_has_ascii_suffix(part, start, end, ":font") ||
-      bytes_range_has_ascii_suffix(part, start, end, ":char") ||
-      bytes_range_has_ascii_suffix(part, start, end, ":name") ||
-      bytes_range_has_ascii_suffix(part, start, end, ":anchor")
-    )
+    bytes_range_has_ascii_suffix(part, start, end, ":fldCharType")
   )
 }
 
@@ -2711,42 +2606,6 @@ fn attribute_value(
       }
       // Unprefixed attributes are in NO namespace (default xmlns does not
       // apply to attributes) — they never match a w: attribute.
-      None => ()
-    }
-  }
-  matched
-}
-
-///|
-fn relationship_attribute_value(
-  attributes : Array[(String, String)],
-  local_name : String,
-  namespaces : StableStringMap[Array[String]],
-  prefer_last? : Bool = false,
-) -> String? {
-  let mut matched : String? = None
-  for pair in attributes {
-    let (name, value) = pair
-    match name.find(":") {
-      Some(colon) => {
-        let prefix = name[0:colon].to_owned()
-        let attr_local = name[colon + 1:].to_owned()
-        if attr_local == local_name {
-          match namespaces.get(prefix) {
-            Some(stack) if stack.length() > 0 => {
-              let uri = stack[stack.length() - 1]
-              if uri == TRANSITIONAL_OFFICE_RELATIONSHIPS_URI ||
-                uri == STRICT_OFFICE_RELATIONSHIPS_URI {
-                if !prefer_last {
-                  return Some(value)
-                }
-                matched = Some(value)
-              }
-            }
-            _ => ()
-          }
-        }
-      }
       None => ()
     }
   }
@@ -3193,13 +3052,14 @@ test "scanner: MC selection, named entities, and the default namespace" {
       #|["p[1]", "p[2]", "p[3]"]
     ),
   )
-  // object transparency with ordinal CONTINUITY: the run inside the object
-  // keeps the paragraph's run numbering, so r[2] sits between r[1] and r[3].
-  // Text equality alone could not see this table entry vanish.
+  // object and smartTag transparency with ordinal CONTINUITY: the runs
+  // inside both wrappers keep the paragraph's run numbering, so r[2] and
+  // r[3] follow r[1]. Text equality alone could not see either table
+  // entry vanish.
   let object_scan = scan_text(
     (
       #|<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
-      #|<w:body><w:p><w:r><w:t>a</w:t></w:r><w:object><w:r><w:t>b</w:t></w:r></w:object><w:r><w:t>c</w:t></w:r></w:p></w:body>
+      #|<w:body><w:p><w:r><w:t>a</w:t></w:r><w:object><w:r><w:t>b</w:t></w:r></w:object><w:smartTag><w:r><w:t>c</w:t></w:r></w:smartTag></w:p></w:body>
       #|</w:document>
     ),
   )

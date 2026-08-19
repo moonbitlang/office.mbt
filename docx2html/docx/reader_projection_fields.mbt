@@ -13,7 +13,7 @@
 fn reader_projection_owning_paragraph(
   elements : Array[ScannedElement],
   source_identity : Int,
-  budget : ReaderOrderFieldBudget,
+  budget : ReaderFieldBudget,
 ) -> Int raise DocxError {
   let mut current = elements[source_identity].parent_index
   while current >= 0 {
@@ -34,11 +34,11 @@ fn reader_projection_owning_paragraph(
 /// pipeline separates the walk from classification.
 fn classify_reader_projection_fields(
   projection : ReaderProjection,
-  budget? : ReaderOrderFieldBudget,
+  budget? : ReaderFieldBudget,
 ) -> Unit raise DocxError {
   let budget = match budget {
     Some(value) => value
-    None => reader_order_field_budget()
+    None => reader_field_budget()
   }
   let elements = projection.scan.elements()
   let slots : Array[ReaderFieldSlot] = []

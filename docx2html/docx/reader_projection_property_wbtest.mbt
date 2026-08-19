@@ -179,7 +179,7 @@ fn hostile_textbox(choices : HostileChoices, depth : Int) -> String {
 /// discarding the content when there is none.
 ///
 /// Two shapes are known to diverge and are pinned by name in
-/// `reader_order_projection_wbtest.mbt`: an *inline* control whose content
+/// `reader_projection_wbtest.mbt`: an *inline* control whose content
 /// yields no text, and one wrapping a table cell. Generating either here would
 /// re-assert a tracked divergence rather than find a new one. That list is
 /// what has been measured, not a proof that nothing else diverges.
@@ -270,7 +270,7 @@ fn hostile_sdt(
   // predates this work and is unrelated to content controls -- the reader
   // finds a textbox in a deleted row through the enclosing paragraph's
   // physical extras pass and this projection does not. It is pinned by name in
-  // `reader_order_projection_wbtest.mbt`; generating it here would only
+  // `reader_projection_wbtest.mbt`; generating it here would only
   // re-assert a divergence that is already tracked.
   let nested = fn() -> String {
     if site == "paragraph" {
@@ -306,7 +306,7 @@ fn hostile_sdt(
 /// A content control wrapping table rows, which is where the *prepass* has to
 /// agree with the reader rather than just the walk.
 ///
-/// `collect_reader_order_body_outputs` decides which rows and cells the reader
+/// `collect_reader_body_outputs` decides which rows and cells the reader
 /// emits, and vertical-merge resolution runs on that decision. A control whose
 /// suppressed second content holds a row would, if the prepass flattened both
 /// contents, make the table fail open and restore continuation cells the
@@ -664,25 +664,38 @@ test "the generator keeps producing documents worth testing" {
 }
 
 ///|
-/// The claim the projection makes, over documents nobody wrote by hand.
-///
-/// A failure reports the seed array that produced it, which re-runs exactly.
-/// It is not a minimal document -- see `HostileChoices::next` for why
-/// shrinking cannot simplify one here -- so reading a counterexample means
-/// printing the generated XML from that seed.
-test "the projection matches the reader on generated documents" {
+/// The native projection of a generated document, or None when it
+/// refuses with the typed unowned-content refusal (the two-sidedness of
+/// that refusal is the partition property's business, next door in
+/// `reader_projection_wbtest.mbt`).
+fn hostile_native_projection(source : String) -> ReaderProjection? raise {
+  guard join_text_story(source) is Joined(story) else {
+    fail("expected the story to join")
+  }
+  guard segment_joined_reader_story(
+      "word/document.xml",
+      story,
+      empty_body_reader({ relationships: [] }),
+    )
+    is SegmentedStory(output) else {
+    fail("expected the story to segment")
+  }
+  match project_joined_reader_output(output) {
+    Projected(projection) => Some(projection)
+    ProjectionRefused(UnownedVisibleContribution(..)) => None
+    ProjectionRefused(refusal) => fail("refused: " + refusal.describe())
+  }
+}
+
+///|
+/// The effect stream's text partition is an independent derivation of
+/// the same story -- from reader decisions alone, neither erased tree
+/// nor byte-level projection -- held to the reader over documents nobody
+/// wrote by hand.
+test "generated documents keep the effect partition matching the reader" {
   @quickcheck.check(
     (seeds : Array[Int]) => {
-      let source = hostile_document(seeds)
-      let projection = scan_reader_order_projection(
-        "word/document.xml",
-        @utf8.encode(source),
-      )
-      assert_reader_order_matches_reader(source, projection)
-      // the effect stream's text partition is a third derivation of the
-      // same story: from reader decisions alone, neither erased tree nor
-      // byte-level projection
-      assert_effect_partition_matches_reader(source)
+      assert_effect_partition_matches_reader(hostile_document(seeds))
       true
     },
     count=64,
@@ -692,19 +705,32 @@ test "the projection matches the reader on generated documents" {
 }
 
 ///|
-/// Every contribution has to sit inside the element it names, and name a
-/// paragraph and run the projection declared. Surgery will address bytes
-/// through these, so an interval that points outside its element is not a
-/// cosmetic defect -- it is an edit landing in the wrong place.
+/// Every contribution has to sit inside the element it names. Surgery
+/// addresses bytes through these spans, so a span outside its element is
+/// not a cosmetic defect -- it is an edit landing in the wrong place.
 test "generated documents keep every contribution inside its source element" {
   @quickcheck.check(
     (seeds : Array[Int]) => {
       let source = hostile_document(seeds)
-      let projection = scan_reader_order_projection(
-        "word/document.xml",
-        @utf8.encode(source),
-      )
-      assert_reader_order_identity_mapping(projection)
+      guard hostile_native_projection(source) is Some(projection) else {
+        return true
+      }
+      let elements = projection.scan.elements()
+      for paragraph in projection.paragraphs {
+        for contribution in paragraph.contributions {
+          let SourceElementId(identity) = contribution.source
+          guard identity >= 0 && identity < elements.length() else {
+            return false
+          }
+          let element = elements[identity]
+          let span = contribution.source_span
+          guard span.byte_start >= element.byte_start &&
+            span.byte_end <= element.byte_end &&
+            span.byte_start <= span.byte_end else {
+            return false
+          }
+        }
+      }
       true
     },
     count=64,
@@ -714,24 +740,17 @@ test "generated documents keep every contribution inside its source element" {
 }
 
 ///|
-/// Source spans have to be real slices of the input, not merely in range.
-///
-/// The identity check above proves a contribution's interval lies within its
-/// element's interval. This proves the element's own interval is where the
-/// element actually is, by cutting the bytes out and looking at both ends.
-///
-/// Both ends, deliberately. An earlier version matched only the four bytes
-/// `<w:p` at the start, which `<w:pict>` and `<w:pPr>` also satisfy, and never
-/// looked at `byte_end` at all -- so the off-by-one this test exists to catch
-/// would have passed it. The start must be a `w:p` element and not merely a
-/// tag whose name begins that way, and the span must end where that element
-/// closes.
+/// Every physical source paragraph's span reaches from its own open tag
+/// to its own close, which is what makes byte_end load-bearing rather
+/// than merely well-ordered.
 test "generated documents keep element spans addressable in the source" {
   @quickcheck.check(
     (seeds : Array[Int]) => {
       let source = hostile_document(seeds)
       let bytes = @utf8.encode(source)
-      let projection = scan_reader_order_projection("word/document.xml", bytes)
+      guard hostile_native_projection(source) is Some(projection) else {
+        return true
+      }
       for paragraph in projection.paragraphs {
         for element in paragraph.sources {
           let span = element.source_span
@@ -748,8 +767,6 @@ test "generated documents keep element spans addressable in the source" {
           guard after == b'>' || after == b' ' || after == b'/' else {
             return false
           }
-          // and the span has to reach that element's own close, which is what
-          // makes byte_end load-bearing rather than merely well-ordered
           guard span.byte_end >= span.byte_start + 6 else { return false }
           guard bytes[span.byte_end - 6:span.byte_end] == b"</w:p>" else {
             return false
@@ -765,17 +782,48 @@ test "generated documents keep element spans addressable in the source" {
 }
 
 ///|
-/// The interval claim, over generated documents.
-///
-/// The hand-written cases next door cover the shapes somebody thought of. This
-/// drives the same check over the ones nobody did, and it is the claim that
-/// matters most for surgery: an edit addressed by a projection interval lands
-/// on the bytes that produced that text, or it lands somewhere else.
-test "generated documents keep every interval indexing the reader" {
+/// The coordinate claim that matters most for surgery: contribution
+/// intervals tile each paragraph exactly (only projected text has
+/// width), paragraphs are separated by the two-unit convention, and the
+/// story starts at zero -- so an edit addressed by an interval lands on
+/// the text that produced it, or nowhere.
+test "generated documents keep projection intervals consistent for surgery" {
   @quickcheck.check(
     (seeds : Array[Int]) => {
       let source = hostile_document(seeds)
-      assert_reader_order_intervals_index_the_reader(source)
+      guard hostile_native_projection(source) is Some(projection) else {
+        return true
+      }
+      // the tiling below is only meaningful against the READER'S OWN
+      // story: paragraph-text equality on THIS document stream plus the
+      // two-unit tiling jointly imply the deleted substring oracle
+      let texts : Array[String] = []
+      for paragraph in projection.paragraphs {
+        let text = StringBuilder()
+        for contribution in paragraph.contributions {
+          text.write_string(contribution.value)
+        }
+        texts.push(text.to_string())
+      }
+      assert_eq(texts, reader_paragraph_texts(source))
+      let mut cursor = 0
+      for index, paragraph in projection.paragraphs {
+        guard paragraph.logical_index == index else { return false }
+        let expected_start = if index == 0 { 0 } else { cursor + 2 }
+        guard paragraph.projection_start == expected_start else { return false }
+        let mut at = paragraph.projection_start
+        for contribution in paragraph.contributions {
+          guard contribution.projection_start == at else { return false }
+          let width = match contribution.kind {
+            ProjectedText(_) => contribution.value.length()
+            VisibleNonText | Transparent | SuppressedContent => 0
+          }
+          guard contribution.projection_end == at + width else { return false }
+          at = contribution.projection_end
+        }
+        guard paragraph.projection_end == at else { return false }
+        cursor = paragraph.projection_end
+      }
       true
     },
     count=64,
