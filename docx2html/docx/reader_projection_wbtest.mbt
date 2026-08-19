@@ -229,6 +229,41 @@ fn erased_has_unowned_visible(
 }
 
 ///|
+/// The `w:t` special case in the span table is load-bearing: a text
+/// contribution's source span is the CONTENT range (what replacement
+/// rewrites), while an atom like a tab spans its whole element. Without
+/// the special case both would fall back to element spans and every
+/// containment check would still pass.
+test "text contributions span their content, atoms their element" {
+  let source =
+    #|<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:body><w:p><w:r><w:t>ab</w:t><w:tab/></w:r></w:p></w:body></w:document>
+  let projection = projection_of(source)
+  let elements = projection.scan.elements()
+  let mut checked_text = false
+  let mut checked_tab = false
+  for contribution in projection.paragraphs[0].contributions {
+    let SourceElementId(identity) = contribution.source
+    let element = elements[identity]
+    match contribution.kind {
+      ProjectedText(FromText) => {
+        assert_eq(contribution.source_span.byte_start, element.content_start)
+        assert_eq(contribution.source_span.byte_end, element.content_end)
+        assert_true(element.content_start > element.byte_start)
+        checked_text = true
+      }
+      ProjectedText(FromTab) => {
+        assert_eq(contribution.source_span.byte_start, element.byte_start)
+        assert_eq(contribution.source_span.byte_end, element.byte_end)
+        checked_tab = true
+      }
+      _ => ()
+    }
+  }
+  assert_true(checked_text)
+  assert_true(checked_tab)
+}
+
+///|
 /// A paragraph whose own text contains the separator must not be split.
 ///
 /// `"a\n\nb"` in a single `w:t` serialises exactly like two paragraphs

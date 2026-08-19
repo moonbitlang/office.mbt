@@ -1,7 +1,7 @@
-// The reader-native projection (#434 PR 5): what the reader actually did,
+// The reader-native projection (#434): what the reader actually did,
 // with physical provenance attached. Built by `reader_projection_adapter.mbt`
-// from one joined read; the legacy byte-level walker survives only as a
-// white-box oracle over the shared valid domain.
+// from one joined read. Since PR 7 this is the ONLY projection semantics;
+// the legacy byte-level walker is deleted.
 
 ///|
 #warnings("-unused_field")

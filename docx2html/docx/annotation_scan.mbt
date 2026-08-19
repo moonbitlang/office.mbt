@@ -784,12 +784,6 @@ fn is_transparent_container(uri : String, local_name : String) -> Bool {
 const MC_URI : String = "http://schemas.openxmlformats.org/markup-compatibility/2006"
 
 ///|
-const TRANSITIONAL_OFFICE_RELATIONSHIPS_URI : String = "http://schemas.openxmlformats.org/officeDocument/2006/relationships"
-
-///|
-const STRICT_OFFICE_RELATIONSHIPS_URI : String = "http://purl.oclc.org/ooxml/officeDocument/relationships"
-
-///|
 /// XML Namespaces binds this prefix implicitly in every document. Keeping it
 /// in the physical-identity table prevents `xml:x` from aliasing unqualified
 /// `x` even when the source correctly omits an explicit declaration.
@@ -1334,10 +1328,6 @@ fn scan_story(
           // by the span (the reader's parse can yield zero or negative
           // spans, mirrored verbatim).
           if frame.is_wml && frame.local_name == "tc" {
-            if frame.element_index >= 0 &&
-              frame.element_index < elements.length() {
-
-            }
             match
               (
                 nearest_frame_by_kind(frames, "tr"),
@@ -2201,9 +2191,6 @@ fn retract_row(
   revisions : Array[ScannedRevision],
   work : AnnotationScanWork,
 ) -> Unit {
-  if row.element_index >= 0 && row.element_index < elements.length() {
-
-  }
   match (row.projection_path, row.counter_owner) {
     (Some(_), Some(counters)) => {
       let current = counters.get_or_default("tr", 0)
@@ -2249,9 +2236,6 @@ fn retract_cell(
       cell.projection_path = None
       cell.counter_owner = None
       cell.suppressed = true
-      if cell.element_index >= 0 && cell.element_index < elements.length() {
-
-      }
       purge_subtree(cell, nodes, markers, revisions, work)
     }
     _ => ()

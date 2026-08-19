@@ -794,6 +794,18 @@ test "generated documents keep projection intervals consistent for surgery" {
       guard hostile_native_projection(source) is Some(projection) else {
         return true
       }
+      // the tiling below is only meaningful against the READER'S OWN
+      // story: paragraph-text equality on THIS document stream plus the
+      // two-unit tiling jointly imply the deleted substring oracle
+      let texts : Array[String] = []
+      for paragraph in projection.paragraphs {
+        let text = StringBuilder()
+        for contribution in paragraph.contributions {
+          text.write_string(contribution.value)
+        }
+        texts.push(text.to_string())
+      }
+      assert_eq(texts, reader_paragraph_texts(source))
       let mut cursor = 0
       for index, paragraph in projection.paragraphs {
         guard paragraph.logical_index == index else { return false }

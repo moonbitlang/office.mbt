@@ -418,7 +418,7 @@ reader_input_join.mbt	source-scan	ReaderInputJoinRefusal::describe	value	reader_
 reader_input_join.mbt	strict-gate	ReaderInputJoinRefusal::describe	value	reader_input_join_wbtest:"join refuses at the strict gate what tolerant parsing recovers"
 reader_input_join.mbt	tolerant-dom	ReaderInputJoinRefusal::describe	value	reader_output_wbtest:"the budget-threaded join refuses on each stage's own budget"
 reader_input_join.mbt	xml:	reader_join_dom_name_matches	fragment	reader_input_join_wbtest:"join accepts implicit xml prefixes and explicit empty namespaces"
-reader_projection_types.mbt	t	reader_atom_span	name	reader_projection_property_wbtest:"generated documents keep every contribution inside its source element"
+reader_projection_types.mbt	t	reader_atom_span	name	reader_projection_wbtest:"text contributions span their content, atoms their element"
 reader_output.mbt	continuationNotice	reader_note_container_is_plumbing	value	reader_output_wbtest:"note segments do not leak pending runs across containers"
 reader_output.mbt	continuationSeparator	reader_note_container_is_plumbing	value	reader_output_wbtest:"note segments do not leak pending runs across containers"
 reader_output.mbt	separator	reader_note_container_is_plumbing	value	reader_output_wbtest:"note segments do not leak pending runs across containers"; reader_output_wbtest:"note segments isolate ownership: trailing flow text refuses"

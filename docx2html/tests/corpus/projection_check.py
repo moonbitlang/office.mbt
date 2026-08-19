@@ -183,7 +183,9 @@ def generate(cases, expected):
                   let mut nontext = 0
                   let mut transparent = 0
                   let mut suppressed = 0
-                  let mut field_refusals = 0
+                  let mut instruction = 0
+                  let mut result = 0
+                  let mut malformed = 0
                   let mut units = 0
                   for paragraph in projection.paragraphs {
                     runs = runs + paragraph.runs.length()
@@ -195,12 +197,15 @@ def generate(cases, expected):
                         Transparent => transparent = transparent + 1
                         SuppressedContent => suppressed = suppressed + 1
                       }
-                      if contribution.field_refusal is Some(_) {
-                        field_refusals = field_refusals + 1
+                      match contribution.field_region {
+                        OutsideField => ()
+                        FieldInstruction => instruction = instruction + 1
+                        FieldResult => result = result + 1
+                        MalformedField => malformed = malformed + 1
                       }
                     }
                   }
-                  "segments=\{output.segments.length()};paragraphs=\{projection.paragraphs.length()};runs=\{runs};text=\{text};nontext=\{nontext};transparent=\{transparent};suppressed=\{suppressed};units=\{units};carriers=\{projection.field_carriers.length()};fields=\{projection.field_index.fields.length()};field_refusals=\{field_refusals}"
+                  "segments=\{output.segments.length()};paragraphs=\{projection.paragraphs.length()};runs=\{runs};text=\{text};nontext=\{nontext};transparent=\{transparent};suppressed=\{suppressed};units=\{units};carriers=\{projection.field_carriers.length()};fields=\{projection.field_index.fields.length()};regions=\{instruction}/\{result}/\{malformed};refusal_records=\{projection.field_index.refusals.length()}"
                 }
               }
           }

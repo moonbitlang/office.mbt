@@ -607,3 +607,99 @@ test "field classification limits cover depth text work and retained state" {
     "DocxXmlTokens",
   )
 }
+
+///|
+/// Renders the composition contracts DIRECTLY: every non-empty
+/// contribution as value@region[field], then the carrier-event stream
+/// as paragraph/carrier identity pairs. What the deleted parity suite
+/// held against the legacy walk, these pins hold against drift.
+fn describe_field_composition(projection : ReaderProjection) -> String {
+  let out = StringBuilder()
+  for index, paragraph in projection.paragraphs {
+    out.write_string("p\{index}:")
+    for contribution in paragraph.contributions {
+      if contribution.value.length() > 0 {
+        let region = match contribution.field_region {
+          OutsideField => "-"
+          FieldInstruction => "I"
+          FieldResult => "R"
+          MalformedField => "M"
+        }
+        let field = match contribution.field_identity {
+          Some(identity) => "[\{identity}]"
+          None => ""
+        }
+        out.write_string(" \{contribution.value}@\{region}\{field}")
+      }
+    }
+    out.write_string("\n")
+  }
+  out.write_string("carriers:")
+  for event in projection.field_carriers {
+    out.write_string(" \{event.paragraph_identity}/\{event.carrier_identity}")
+  }
+  out.to_string()
+}
+
+///|
+/// The carriers list is authoritative: a complex HYPERLINK field wraps
+/// its result items in synthetic hyperlinks sourced at the field-begin
+/// carrier, so item sources cannot decide the event set -- a physical
+/// hyperlink carrier inside the result must still emit, and its text
+/// must classify as FieldResult.
+test "a physical hyperlink carrier in the result classifies as FieldResult" {
+  let projection = field_test_projection(
+    (
+      #|<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:body><w:p><w:r><w:fldChar w:fldCharType="begin"/></w:r><w:r><w:instrText> HYPERLINK "https://e" </w:instrText></w:r><w:r><w:fldChar w:fldCharType="separate"/></w:r><w:hyperlink w:anchor="x"><w:r><w:t>L</w:t></w:r></w:hyperlink><w:r><w:fldChar w:fldCharType="end"/></w:r></w:p></w:body></w:document>
+    ),
+  )
+  inspect(
+    describe_field_composition(projection),
+    content=(
+      #|p0: L@R[0]
+      #|carriers: 2/3 2/5 2/7 2/9 2/12
+    ),
+  )
+}
+
+///|
+/// A field beginning in a deleted paragraph continues in the terminal
+/// one: carriers of BOTH physical paragraphs observe in order, and the
+/// joined result text classifies inside the field.
+test "a field spanning a deleted-paragraph join keeps its carriers in order" {
+  let projection = field_test_projection(
+    (
+      #|<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:body><w:p><w:pPr><w:rPr><w:del/></w:rPr></w:pPr><w:r><w:fldChar w:fldCharType="begin"/></w:r><w:r><w:instrText> X </w:instrText></w:r></w:p><w:p><w:r><w:fldChar w:fldCharType="separate"/></w:r><w:r><w:t>joined</w:t></w:r><w:r><w:fldChar w:fldCharType="end"/></w:r></w:p></w:body></w:document>
+    ),
+  )
+  inspect(
+    describe_field_composition(projection),
+    content=(
+      #|p0: joined@R[0]
+      #|carriers: 2/3 2/6 2/8 10/11 10/13 10/15
+    ),
+  )
+}
+
+///|
+/// The hardest composition: a complex HYPERLINK field whose result wraps
+/// a NESTED PARAGRAPH in a synthetic hyperlink sourced at the begin
+/// carrier. Emit-before-visit must hold -- the outer paragraph's carrier
+/// for the nested paragraph fires before the nested group -- and the
+/// nested instrText's repeated observation lands as the machine
+/// classified it.
+test "a hyperlink result wrapping a nested paragraph keeps carrier order" {
+  let projection = field_test_projection(
+    (
+      #|<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:body><w:p><w:r><w:fldChar w:fldCharType="begin"/></w:r><w:r><w:instrText> HYPERLINK "https://e" </w:instrText></w:r><w:r><w:fldChar w:fldCharType="separate"/></w:r><w:p><w:r><w:instrText> GHOST </w:instrText><w:t>inner</w:t></w:r></w:p><w:r><w:t>after</w:t></w:r><w:r><w:fldChar w:fldCharType="end"/></w:r></w:p></w:body></w:document>
+    ),
+  )
+  inspect(
+    describe_field_composition(projection),
+    content=(
+      #|p0: inner@M
+      #|p1: after@M
+      #|carriers: 2/3 2/5 2/7 2/9 9/10 2/13 2/15
+    ),
+  )
+}
