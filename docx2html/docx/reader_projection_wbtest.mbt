@@ -433,3 +433,84 @@ test "projection scopes open runs at block boundaries" {
     ),
   )
 }
+
+///|
+/// A textbox extra of a paragraph nested inside an open run gets ONLY its
+/// own run: the outer run reopens after the paragraph's whole output --
+/// extras included -- has been consumed. (The textbox appears twice: the
+/// nested paragraph's extras pass re-homes it, and the OUTER paragraph's
+/// own extras pass re-homes it once more -- the reader's verified erased
+/// behaviour.)
+test "projection extras do not inherit the enclosing run" {
+  let projection = projection_of(
+    (
+      #|<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main" xmlns:v="urn:schemas-microsoft-com:vml"><w:body><w:p><w:r><w:t>pre</w:t><w:p><w:r><w:pict><v:shape><v:textbox><w:txbxContent><w:p><w:r><w:t>boxed</w:t></w:r></w:p></w:txbxContent></v:textbox></v:shape></w:pict></w:r></w:p><w:t>post</w:t></w:r></w:p></w:body></w:document>
+    ),
+  )
+  // document=0 body=1 p=2 r=3 t(pre)=4 nested-p=5 r=6 pict=7 shape=8
+  // textbox=9 txbx=10 boxed-p=11 r=12 t=13 t(post)=14
+  inspect(
+    describe_projection(projection),
+    content=(
+      #|p0(src=2,5;runs=3,6;[0,3))t:pre@4r0[0,3) s@7r1[3,3)
+      #|p1(src=11;runs=12;[5,10))t:boxed@13r0[5,10)
+      #|p2(src=2;runs=3;[12,16))t:post@14r0[12,16)
+      #|p3(src=11;runs=12;[18,23))t:boxed@13r0[18,23)
+    ),
+  )
+}
+
+///|
+/// Two tolerated direct rows inside one paragraph: each is its own block
+/// element, so the outer paragraph participates in both first flushes.
+test "projection rearms for direct inline rows" {
+  let projection = projection_of(
+    (
+      #|<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:body><w:p><w:tr><w:tc><w:p><w:r><w:t>A</w:t></w:r></w:p></w:tc></w:tr><w:tr><w:tc><w:p><w:r><w:t>B</w:t></w:r></w:p></w:tc></w:tr></w:p></w:body></w:document>
+    ),
+  )
+  // document=0 body=1 p=2 tr=3 tc=4 pA=5 rA=6 tA=7 tr=8 tc=9 pB=10 rB=11 tB=12
+  inspect(
+    describe_projection(projection),
+    content=(
+      #|p0(src=2,5;runs=6;[0,1))t:A@7r0[0,1)
+      #|p1(src=2,10;runs=11;[3,4))t:B@12r0[3,4)
+      #|p2(src=2;runs=;[6,6))
+    ),
+  )
+}
+
+///|
+/// READER-NATIVE DIVERGENCE, pinned deliberately: an open HYPERLINK field
+/// hoists a nested paragraph's extras into independent sibling hyperlink
+/// items (the erase-grouping the reader itself performs), so the adapter
+/// treats each as its own block element and the outer paragraph
+/// participates in the hoisted extra's flush. The legacy walker, which
+/// models the PHYSICAL shape, keeps that extra standalone. The reader-
+/// native projection records what the reader did; the shadow comparator
+/// carries this shape on its allowlist.
+test "projection field-hoisted extras are reader-native block items" {
+  let projection = projection_of(
+    (
+      #|<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main" xmlns:v="urn:schemas-microsoft-com:vml"><w:body><w:p><w:r><w:fldChar w:fldCharType="begin"/></w:r><w:r><w:instrText> HYPERLINK "https://e" </w:instrText></w:r><w:r><w:fldChar w:fldCharType="separate"/></w:r><w:p><w:r><w:pict><v:shape><v:textbox><w:txbxContent><w:p><w:r><w:t>X</w:t></w:r></w:p></w:txbxContent></v:textbox></v:shape></w:pict></w:r></w:p><w:r><w:fldChar w:fldCharType="end"/></w:r></w:p></w:body></w:document>
+    ),
+  )
+  let described : Array[String] = []
+  for paragraph in projection.paragraphs {
+    let sources : Array[String] = []
+    for source in paragraph.sources {
+      let SourceElementId(index) = source.source
+      sources.push("\{index}")
+    }
+    described.push(sources.join(","))
+  }
+  // document=0 body=1 p=2 r(begin)=3..; nested p=9; boxed p=15
+  // the hoisted textbox extra (physical paragraph 15) carries the outer
+  // source 2 here, where the legacy walker keeps it standalone
+  inspect(
+    described.join(" ; "),
+    content=(
+      #|2,9 ; 2,15 ; 2 ; 15
+    ),
+  )
+}

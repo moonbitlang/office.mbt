@@ -310,12 +310,14 @@ fn ReaderProjectionBuilder::walk_items(
             self.reopen_segment_runs()
           }
           ReaderTableRow(children~, is_header=_) => {
+            self.arm_enclosing_frames()
             self.enclosures.push(BlockBoundary)
             self.walk_items(children)
             ignore(self.enclosures.pop())
             self.reopen_segment_runs()
           }
           ReaderTableCell(children~, ..) => {
+            self.arm_enclosing_frames()
             self.enclosures.push(BlockBoundary)
             self.walk_items(children)
             ignore(self.enclosures.pop())
@@ -375,7 +377,8 @@ fn ReaderProjectionBuilder::flush_paragraph(
     projection_start: 0,
     projection_end: 0,
   })
-  // runs open at THIS level participate in the next paragraph too; runs
-  // beyond a block boundary do not leak in
-  self.reopen_segment_runs()
+  // runs are reopened by the CALLER once the paragraph's entire output --
+  // extras included -- has been consumed, matching the legacy walker's
+  // reopen-after-consume; reopening here would leak an outer run into the
+  // extras' own paragraphs
 }
