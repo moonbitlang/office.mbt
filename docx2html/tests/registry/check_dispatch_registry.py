@@ -47,6 +47,9 @@ FILES = {
     # names of its own; classified so the .name accessors it defines do not
     # read as an unclassified dispatch surface.
     'reader_input.mbt': 'extract',
+    # PR 3's DOM<->physical join: dispatches on the MC construct names to
+    # mirror the tolerant parser's cook rule
+    'reader_input_join.mbt': 'extract',
     'reader_order_projection.mbt': 'extract',
     'annotation_scan.mbt': 'extract',
     'field_projection.mbt': 'extract',
