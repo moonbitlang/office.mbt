@@ -99,11 +99,11 @@ fn gen_iso_password_hash(
     bom=false,
     endianness=Little,
   )
-  let initial = @crypto.hash_concat(algorithm, [salt_value, password_bytes])
+  let initial = hash_concat(algorithm, [salt_value, password_bytes])
   let mut key = initial
   for i in 0..<spin_count {
     let iter = u32_le_bytes(i)
-    key = @crypto.hash_concat(algorithm, [key, iter])
+    key = hash_concat(algorithm, [key, iter])
   }
   let hash_value = base64_encode(key)
   let salt_text = base64_encode(salt_value)

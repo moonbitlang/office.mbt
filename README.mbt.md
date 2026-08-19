@@ -511,7 +511,6 @@ bobzhang/mbtexcel              # Facade package (this package)
   -> bobzhang/mbtexcel/xlsx    # Core implementation
        -> bobzhang/mbtexcel/ooxml  # OOXML metadata helpers
        -> bobzhang/mbtexcel/zip    # ZIP archive handling
-       -> bobzhang/mbtexcel/crypto # Cryptographic operations
 ```
 
 ## License
