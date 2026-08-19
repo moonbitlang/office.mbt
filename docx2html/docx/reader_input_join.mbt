@@ -118,13 +118,26 @@ fn ReaderInputJoinRefusal::describe(self : ReaderInputJoinRefusal) -> String {
 /// bare local name, a mapped URI becomes `prefix:local` (an empty canonical
 /// prefix falls back to the braced form), and an unmapped URI becomes
 /// `{uri}local`.
-fn reader_join_dom_name(uri : String, local_name : String) -> String {
+fn reader_join_dom_name_matches(
+  uri : String,
+  local_name : String,
+  dom_name : String,
+) -> Bool {
   if uri == "" {
-    local_name
+    // no namespace: an undeclared default keeps the bare name, while an
+    // EXPLICIT xmlns="" routes through the tolerant mapper and comes out
+    // braced-empty; the scanner records "" for both and the strict gate
+    // accepts both
+    dom_name == local_name || dom_name == "{}" + local_name
+  } else if uri == XML_NAMESPACE_URI {
+    // the strict gate and the scanner install the implicit `xml` binding;
+    // tolerant parsing keeps the raw `xml:` name unless the source declares
+    // it, in which case the unmapped URI comes out braced
+    dom_name == "xml:" + local_name || dom_name == "{" + uri + "}" + local_name
   } else {
     match office_namespace_map().get(uri) {
-      Some("") | None => "{" + uri + "}" + local_name
-      Some(prefix) => prefix + ":" + local_name
+      Some("") | None => dom_name == "{" + uri + "}" + local_name
+      Some(prefix) => dom_name == prefix + ":" + local_name
     }
   }
 }
@@ -143,19 +156,9 @@ fn validate_scanned_element_table(scan : StoryScan) -> String? {
     if element.identity != index {
       return Some("element \{index} carries identity \{element.identity}")
     }
-    if index == 0 {
-      if element.parent_index != -1 {
-        return Some("root element has parent \{element.parent_index}")
-      }
-    } else if element.parent_index < 0 ||
-      element.parent_index >= elements.length() {
-      return Some(
-        "element \{index} has out-of-range parent \{element.parent_index}",
-      )
-    }
     if element.first_child_index != -1 &&
       (
-        element.first_child_index <= index ||
+        element.first_child_index < 0 ||
         element.first_child_index >= elements.length()
       ) {
       return Some(
@@ -164,7 +167,7 @@ fn validate_scanned_element_table(scan : StoryScan) -> String? {
     }
     if element.next_sibling_index != -1 &&
       (
-        element.next_sibling_index <= index ||
+        element.next_sibling_index < 0 ||
         element.next_sibling_index >= elements.length()
       ) {
       return Some(
@@ -172,29 +175,51 @@ fn validate_scanned_element_table(scan : StoryScan) -> String? {
       )
     }
   }
-  // every non-root element must be reached exactly once by child/sibling
-  // links, and links must agree with the stored parent
-  let reached : Array[Bool] = Array::make(elements.length(), false)
-  reached[0] = true
-  for index in 0..<elements.length() {
-    let mut child = elements[index].first_child_index
-    while child != -1 {
-      if reached[child] {
-        return Some("element \{child} is linked more than once")
+  if elements[0].parent_index != -1 {
+    return Some("root element has parent \{elements[0].parent_index}")
+  }
+  if elements[0].next_sibling_index != -1 {
+    return Some("root element has a sibling \{elements[0].next_sibling_index}")
+  }
+  // opening-tag preorder is the identity contract: an explicit DFS over the
+  // links must visit element k as the k-th node, with parents agreeing.
+  // (An iterative stack: synthetic tables are not bounded by the scanner's
+  // depth cap.)
+  let mut visited = 0
+  let stack : Array[Int] = [0]
+  while stack.length() > 0 {
+    let index = stack.unsafe_pop()
+    if index != visited {
+      return Some(
+        "element \{index} sits at preorder position \{visited}; the table is not in opening-tag order",
+      )
+    }
+    visited = visited + 1
+    if elements[index].next_sibling_index != -1 {
+      if index == 0 {
+        return Some("root element has a sibling")
       }
-      if elements[child].parent_index != index {
+      if elements[elements[index].next_sibling_index].parent_index !=
+        elements[index].parent_index {
         return Some(
-          "element \{child} is linked under \{index} but records parent \{elements[child].parent_index}",
+          "siblings \{index} and \{elements[index].next_sibling_index} record different parents",
         )
       }
-      reached[child] = true
-      child = elements[child].next_sibling_index
+      stack.push(elements[index].next_sibling_index)
+    }
+    if elements[index].first_child_index != -1 {
+      if elements[elements[index].first_child_index].parent_index != index {
+        return Some(
+          "element \{elements[index].first_child_index} is linked under \{index} but records parent \{elements[elements[index].first_child_index].parent_index}",
+        )
+      }
+      stack.push(elements[index].first_child_index)
     }
   }
-  for index in 0..<elements.length() {
-    if !reached[index] {
-      return Some("element \{index} is unreachable from the root")
-    }
+  if visited != elements.length() {
+    return Some(
+      "only \{visited} of \{elements.length()} elements are reachable from the root",
+    )
   }
   None
 }
@@ -212,26 +237,33 @@ fn cooked_scanned_children(scan : StoryScan, parent_index : Int) -> Array[Int] {
   while child != -1 {
     let element = elements[child]
     if element.uri == MC_URI && element.local_name == "AlternateContent" {
-      let mut candidate = element.first_child_index
-      let mut fallback = -1
-      while candidate != -1 {
-        let candidate_element = elements[candidate]
-        if candidate_element.uri == MC_URI &&
-          candidate_element.local_name == "Fallback" {
-          fallback = candidate
-          break
-        }
-        candidate = candidate_element.next_sibling_index
-      }
-      if fallback != -1 {
-        cooked.append(cooked_scanned_children(scan, fallback))
-      }
+      cooked.append(cooked_alternate_content_selection(scan, child))
     } else {
       cooked.push(child)
     }
     child = elements[child].next_sibling_index
   }
   cooked
+}
+
+///|
+/// What one MC `AlternateContent` contributes: the parser parses (and
+/// thereby cooks) the construct's children FIRST and only then searches
+/// them for the first `mc:Fallback` -- so a fallback PROMOTED out of a
+/// nested `AlternateContent` can be the one selected. The selection is the
+/// chosen fallback's own cooked children, or nothing.
+fn cooked_alternate_content_selection(
+  scan : StoryScan,
+  alternate_index : Int,
+) -> Array[Int] {
+  let elements = scan.elements()
+  for candidate in cooked_scanned_children(scan, alternate_index) {
+    let element = elements[candidate]
+    if element.uri == MC_URI && element.local_name == "Fallback" {
+      return cooked_scanned_children(scan, candidate)
+    }
+  }
+  []
 }
 
 ///|
@@ -257,8 +289,7 @@ fn join_reader_element(
   scan : StoryScan,
 ) -> ReaderInputJoinResult {
   let source = scan.elements()[source_index]
-  let expected_name = reader_join_dom_name(source.uri, source.local_name)
-  if element.name != expected_name {
+  if !reader_join_dom_name_matches(source.uri, source.local_name, element.name) {
     return Refused(
       NameMismatch(
         source=SourceElementId(source_index),

@@ -44,9 +44,12 @@ fn assert_join_invariants(story : JoinedReaderStory) -> Unit raise {
   fn check(node : JoinedReaderNode) -> Unit raise {
     let SourceElementId(index) = node.source_element_id
     let source = story.scan.elements()[index]
-    assert_eq(
-      node.element.name,
-      reader_join_dom_name(source.uri, source.local_name),
+    assert_true(
+      reader_join_dom_name_matches(
+        source.uri,
+        source.local_name,
+        node.element.name,
+      ),
     )
     for child in node.children {
       let SourceElementId(child_index) = child.source_element_id
@@ -111,12 +114,12 @@ test "join pairs plain stories across namespace spellings" {
 test "join ignores comments, PIs, text, CDATA, and entities between elements" {
   let story = assert_joined(
     (
-      #|<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:body><!-- note --><w:p>stray<w:r><w:t>a&amp;b</w:t></w:r></w:p></w:body></w:document>
+      #|<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:body><!-- note --><?pi data?><w:p>stray<w:r><w:t><![CDATA[a]]></w:t><w:t>a&amp;b</w:t></w:r></w:p></w:body></w:document>
     ),
   )
   let ids : Array[Int] = []
   joined_preorder_ids(story.root, ids)
-  debug_inspect(ids, content="[0, 1, 2, 3, 4]")
+  debug_inspect(ids, content="[0, 1, 2, 3, 4, 5]")
 }
 
 ///|
@@ -264,17 +267,106 @@ test "join generated documents and hold every invariant" {
       let source = hostile_document(seeds)
       match join_text_story(source) {
         Joined(story) => assert_join_invariants(story)
-        // hostile documents are tolerant-first by construction; a stage
-        // refusal (strict gate or scanner) is a legitimate outcome, but a
-        // JOIN mismatch on scanner-accepted input is exactly the bug class
-        // this property exists to catch
-        Refused(StageRefused(..)) => ()
-        Refused(refusal) => fail("join mismatch: " + refusal.describe())
+        // the generator emits strict-valid, scanner-supported documents:
+        // every one must join, so a stage regression cannot quietly turn
+        // this property vacuous
+        Refused(refusal) => fail("refused: " + refusal.describe())
       }
       true
     },
     count=64,
     max_size=60,
     seed=0x646F_6378_70UL,
+  )
+}
+
+///|
+/// The parser cooks an AlternateContent's children BEFORE searching them
+/// for the fallback, so a fallback PROMOTED out of a nested construct wins
+/// over a physically-direct one that appears later. Pairing against the
+/// direct child alone would silently bind the DOM element to the wrong
+/// physical identity (both are named x here).
+test "join selects the promoted fallback like the parser" {
+  let story = assert_joined(
+    (
+      #|<r xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"><mc:AlternateContent><mc:AlternateContent><mc:Fallback><mc:Fallback><x id="inner"/></mc:Fallback></mc:Fallback></mc:AlternateContent><mc:Fallback><x id="outer"/></mc:Fallback></mc:AlternateContent></r>
+    ),
+  )
+  // r=0, outer AC=1, inner AC=2, Fallback=3, Fallback=4, inner x=5,
+  // outer Fallback=6, outer x=7. The inner AC cooks to [Fallback@4], which
+  // becomes the outer construct's FIRST fallback; its child x@5 is the one
+  // the DOM contains.
+  let ids : Array[Int] = []
+  joined_preorder_ids(story.root, ids)
+  debug_inspect(ids, content="[0, 5]")
+  guard story.root.children[0].element.attributes.get("id") is Some("inner") else {
+    fail("expected the inner x to be the selected one")
+  }
+}
+
+///|
+/// Two name shapes the strict gate accepts whose tolerant spelling differs
+/// from the mapped canonical form: the implicit `xml:` binding (tolerant
+/// keeps the raw name) and an explicit empty default namespace (tolerant
+/// cooks the braced-empty form).
+test "join accepts implicit xml prefixes and explicit empty namespaces" {
+  // inside a normal-sized story: the join's input-linear strict budget is
+  // deliberately tight, and implicit-namespace expansion of a bare
+  // three-element document exceeds it before the name rule is ever reached
+  let implicit_xml = assert_joined(
+    (
+      #|<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:body><w:p><xml:r><xml:c/></xml:r></w:p></w:body></w:document>
+    ),
+  )
+  inspect(
+    implicit_xml.root.children[0].children[0].children[0].element.name,
+    content="xml:r",
+  )
+  let empty_default = assert_joined(
+    (
+      #|<r xmlns=""><c/></r>
+    ),
+  )
+  let ids : Array[Int] = []
+  joined_preorder_ids(empty_default.root, ids)
+  debug_inspect(ids, content="[0, 1]")
+}
+
+///|
+/// A corrupted physical table refuses instead of joining: fail-closed on
+/// shapes no real scan emits. Links are mutable, so a real scan's table is
+/// corrupted in place.
+test "join refuses corrupted physical tables" {
+  let source =
+    #|<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:body><w:p/><w:tbl/></w:body></w:document>
+  let dom = read_xml_string(source, namespace_map=office_namespace_map())
+  fn corrupted(mutate : (Array[ScannedElement]) -> Unit) -> String raise {
+    let scan = scan_projection_source_tree(@utf8.encode(source))
+    mutate(scan.elements())
+    guard join_reader_dom(dom, scan)
+      is Refused(StructureMismatch(..) as refusal) else {
+      fail("expected a structure refusal")
+    }
+    refusal.describe()
+  }
+
+  // document=0 body=1 p=2 tbl=3
+  inspect(
+    corrupted(elements => elements[1].first_child_index = -1),
+    content="structure mismatch: only 2 of 4 elements are reachable from the root",
+  )
+  inspect(
+    corrupted(elements => elements[0].next_sibling_index = 1),
+    content="structure mismatch: root element has a sibling 1",
+  )
+  // swap the sibling order under body: parents still agree, but the table
+  // is no longer in opening-tag preorder
+  inspect(
+    corrupted(elements => {
+      elements[1].first_child_index = 3
+      elements[3].next_sibling_index = 2
+      elements[2].next_sibling_index = -1
+    }),
+    content="structure mismatch: element 3 sits at preorder position 2; the table is not in opening-tag order",
   )
 }
