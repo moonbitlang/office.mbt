@@ -65,6 +65,7 @@ while IFS=$'\t' read -r file want_v want_t want_c want_a class; do
     *MissingEndOfCentral*)    got_class=eocd-trailing-bytes ;;
     *"zip64 extra"*)          got_class=zip64-phantom-field ;;
     *"simple text"*)          got_class=wt-child-element ;;
+    *"in w:t content"*)       got_class=wt-child-element ;;
     *"token budget"*)         got_class=xml-token-budget ;;
     *orphan*)                 got_class=orphan-comments-part ;;
     *sidecar*)                got_class=ms-sidecar-parts ;;
