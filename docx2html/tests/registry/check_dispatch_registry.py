@@ -54,6 +54,8 @@ FILES = {
     # output; quotes no XML names of its own
     'reader_projection_types.mbt': 'extract',
     'reader_projection_adapter.mbt': 'extract',
+    # PR 5b's field bridge: resolves owning paragraphs by name
+    'reader_projection_fields.mbt': 'extract',
     'reader_order_projection.mbt': 'extract',
     'annotation_scan.mbt': 'extract',
     'field_projection.mbt': 'extract',

@@ -33,6 +33,10 @@ priv struct ReaderProjectionContribution {
   /// Index of this contribution's run within its paragraph by order of
   /// first appearance, or -1 when it belongs to no run.
   mut logical_run_index : Int
+  /// Field annotations, populated by `classify_reader_projection_fields`.
+  mut field_identity : Int?
+  mut field_region : ReaderOrderFieldRegion
+  mut field_refusal : Int?
 }
 
 ///|
@@ -72,6 +76,12 @@ priv struct ReaderProjection {
   source_part : String
   scan : StoryScan
   paragraphs : Array[ReaderProjectionParagraph]
+  /// One event per direct physical child of each visited paragraph, in
+  /// the walk's document order (nested paragraphs' groups interleave at
+  /// their positions) -- the stream the field classification consumes.
+  field_carriers : Array[ReaderOrderFieldCarrierEvent]
+  /// Populated by `classify_reader_projection_fields`.
+  mut field_index : ReaderOrderFieldIndex
 }
 
 ///|
