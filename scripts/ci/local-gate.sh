@@ -74,7 +74,7 @@ dirty_before=$(git status --porcelain=v1)
 
 run "dispatch registry" python3 docx2html/tests/registry/check_dispatch_registry.py
 run "dispatch escape suite" bash docx2html/tests/registry/escape_suite.sh
-run "corpus shadow manifest" python3 docx2html/tests/corpus/shadow_check.py
+run "corpus projection manifest" python3 docx2html/tests/corpus/projection_check.py
 # The CLI-level corpus smoke pins refusal CLASSES too -- a mutation-read
 # message change slipped past the gate to CI once (#458 round 3).
 run "corpus CLI smoke" bash docx2html/tests/corpus/run.sh

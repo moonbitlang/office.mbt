@@ -6,16 +6,27 @@
 fn field_test_projection(
   source : String,
   field_budget? : ReaderOrderFieldBudget,
-) -> ReaderOrderProjection raise DocxError {
-  scan_reader_order_projection(
-    "word/document.xml",
-    @utf8.encode(source),
-    field_budget?,
-  )
+) -> ReaderProjection raise DocxError {
+  guard join_text_story(source) is Joined(story) else {
+    raise Unsupported(message="field test: the story did not join")
+  }
+  guard segment_joined_reader_story(
+      "word/document.xml",
+      story,
+      empty_body_reader({ relationships: [] }),
+    )
+    is SegmentedStory(output) else {
+    raise Unsupported(message="field test: the story did not segment")
+  }
+  guard project_joined_reader_output(output) is Projected(projection) else {
+    raise Unsupported(message="field test: the story did not project")
+  }
+  classify_reader_projection_fields(projection, budget?=field_budget)
+  projection
 }
 
 ///|
-fn field_projection_text(projection : ReaderOrderProjection) -> String {
+fn field_projection_text(projection : ReaderProjection) -> String {
   let output = StringBuilder()
   for paragraph in projection.paragraphs {
     for contribution in paragraph.contributions {
@@ -43,9 +54,9 @@ fn field_reader_text(source : String) -> String raise DocxError {
 
 ///|
 fn field_contribution(
-  projection : ReaderOrderProjection,
+  projection : ReaderProjection,
   value : String,
-) -> ReaderOrderContribution raise {
+) -> ReaderProjectionContribution raise {
   for paragraph in projection.paragraphs {
     for contribution in paragraph.contributions {
       if contribution.value == value {
@@ -154,7 +165,7 @@ test "field transition owns the whole direct-child carrier" {
   // reader's carrier-boundary observation.
   assert_true(
     before.source_span.byte_start <
-    projection.source_elements[field.begin_marker_identity].byte_start,
+    projection.scan.elements()[field.begin_marker_identity].byte_start,
   )
 }
 
@@ -192,18 +203,10 @@ test "story identity is per container for every root kind" {
       2,
       "5,1",
     ),
-    (
-      "two bodies",
-      (
-        #|<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
-        #|<w:body><w:p><w:r><w:fldChar w:fldCharType="begin"/></w:r></w:p></w:body>
-        #|<w:body><w:p><w:r><w:fldChar w:fldCharType="end"/></w:r></w:p></w:body>
-        #|</w:document>
-      ),
-      1,
-      "1",
-    ),
   ]
+  // The malformed two-body arm the legacy walker tolerated is gone:
+  // native segmentation deliberately refuses a duplicate body, pinned by
+  // "segmentation refuses structural surprises instead of narrowing".
   for case in cases {
     let (label, source, refusal_count, identities) = case
     let projection = field_test_projection(source)
@@ -393,7 +396,7 @@ test "an instruction observed through two reader carriers fails closed" {
   assert_eq(field.instruction_text.to_string(), " CODE ")
   assert_eq(field.refusal_identity, Some(refusal.identity))
   let offending = refusal.offending_identity.unwrap()
-  assert_eq(projection.source_elements[offending].local_name, "instrText")
+  assert_eq(projection.scan.elements()[offending].local_name, "instrText")
   for value in ["nested", "after"] {
     let contribution = field_contribution(projection, value)
     assert_true(contribution.field_region is MalformedField)
@@ -423,7 +426,7 @@ test "a repeated child instruction refuses its closed owner and open parent" {
   assert_eq(parent.instruction_text.to_string(), "")
   assert_eq(child.instruction_text.to_string(), " CHILD ")
   let offending = refusal.offending_identity.unwrap()
-  assert_eq(projection.source_elements[offending].local_name, "instrText")
+  assert_eq(projection.scan.elements()[offending].local_name, "instrText")
   for value in ["nested", "after"] {
     let contribution = field_contribution(projection, value)
     assert_true(contribution.field_region is MalformedField)
@@ -449,7 +452,7 @@ test "a repeated instruction refuses its only field after it closes" {
   assert_eq(field.refusal_identity, Some(refusal.identity))
   assert_eq(field.instruction_text.to_string(), " CODE ")
   let offending = refusal.offending_identity.unwrap()
-  assert_eq(projection.source_elements[offending].local_name, "instrText")
+  assert_eq(projection.scan.elements()[offending].local_name, "instrText")
   for value in ["nested", "after"] {
     let contribution = field_contribution(projection, value)
     assert_true(contribution.field_region is MalformedField)
@@ -480,7 +483,7 @@ test "a repeated child instruction refuses a result-region parent" {
   assert_eq(parent.instruction_text.to_string(), "")
   assert_eq(child.instruction_text.to_string(), " CHILD ")
   let offending = refusal.offending_identity.unwrap()
-  assert_eq(projection.source_elements[offending].local_name, "instrText")
+  assert_eq(projection.scan.elements()[offending].local_name, "instrText")
   for value in ["nested", "after"] {
     let contribution = field_contribution(projection, value)
     assert_true(contribution.field_region is MalformedField)
@@ -505,7 +508,7 @@ test "an initially untargeted repeated instruction refuses the later field" {
   assert_eq(field.refusal_identity, Some(refusal.identity))
   assert_eq(field.instruction_text.to_string(), "")
   let offending = refusal.offending_identity.unwrap()
-  assert_eq(projection.source_elements[offending].local_name, "instrText")
+  assert_eq(projection.scan.elements()[offending].local_name, "instrText")
   for value in ["nested", "after"] {
     let contribution = field_contribution(projection, value)
     assert_true(contribution.field_region is MalformedField)
@@ -531,7 +534,7 @@ test "a repeated self-closing instruction refuses its field" {
   assert_eq(field.refusal_identity, Some(refusal.identity))
   assert_eq(field.instruction_text.to_string(), "")
   let offending = refusal.offending_identity.unwrap()
-  assert_eq(projection.source_elements[offending].local_name, "instrText")
+  assert_eq(projection.scan.elements()[offending].local_name, "instrText")
   for value in ["nested", "after"] {
     let contribution = field_contribution(projection, value)
     assert_true(contribution.field_region is MalformedField)

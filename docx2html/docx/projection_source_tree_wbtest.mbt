@@ -105,11 +105,7 @@ test "projection source tree retains identity links spans and lexical maps" {
   assert_true(texts[1].text_map is None)
 
   let fields = retained_wml_elements(scan, "fldChar")
-  let symbols = retained_wml_elements(scan, "sym")
-  debug_inspect(
-    (fields[0].field_char_type, symbols[0].symbol_font, symbols[0].symbol_char),
-    content="(Some(\"begin\"), Some(\"Wingdings\"), Some(\"F0FC\"))",
-  )
+  debug_inspect(fields[0].field_char_type, content="Some(\"begin\")")
 }
 
 ///|
@@ -124,11 +120,7 @@ test "projection source identity normalizes strict default namespaces" {
     content="\"/w:document[1]/w:body[1]/w:p[1]/w:r[1]\"",
   )
   let field = retained_wml_elements(scan, "fldChar")[0]
-  let symbol = retained_wml_elements(scan, "sym")[0]
-  debug_inspect(
-    (field.field_char_type, symbol.symbol_font, symbol.symbol_char),
-    content="(Some(\"begin\"), Some(\"Symbol\"), Some(\"F041\"))",
-  )
+  debug_inspect(field.field_char_type, content="Some(\"begin\")")
 }
 
 ///|
@@ -166,7 +158,6 @@ test "projection source attributes follow reader precedence across WML dialects"
     #|<root xmlns:t="http://schemas.openxmlformats.org/wordprocessingml/2006/main" xmlns:s="http://purl.oclc.org/ooxml/wordprocessingml/main"><t:fldChar t:fldCharType="begin" s:fldCharType="end"/><s:fldChar s:fldCharType="end" t:fldCharType="begin"/><t:sym t:font="Transitional" s:font="Strict" t:char="F041" s:char="F042"/><s:sym s:font="Strict" t:font="Transitional" s:char="F042" t:char="F041"/></root>
   let scan = scan_projection_source_tree(@utf8.encode(source))
   let fields = retained_wml_elements(scan, "fldChar")
-  let symbols = retained_wml_elements(scan, "sym")
   let reader = @xml.read_xml_string_strict(
     source,
     namespace_map=office_namespace_map(),
@@ -176,7 +167,6 @@ test "projection source attributes follow reader precedence across WML dialects"
   debug_inspect(
     (
       fields.map(field => field.field_char_type),
-      symbols.map(symbol => (symbol.symbol_font, symbol.symbol_char)),
       reader_fields.map(field => field.attributes.get("w:fldCharType")),
       reader_symbols.map(symbol => {
         (symbol.attributes.get("w:font"), symbol.attributes.get("w:char"))
@@ -185,7 +175,6 @@ test "projection source attributes follow reader precedence across WML dialects"
     content=(
       #|(
       #|  [Some("end"), Some("begin")],
-      #|  [(Some("Strict"), Some("F042")), (Some("Transitional"), Some("F041"))],
       #|  [Some("end"), Some("begin")],
       #|  [(Some("Strict"), Some("F042")), (Some("Transitional"), Some("F041"))],
       #|)

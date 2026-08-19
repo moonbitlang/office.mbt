@@ -229,6 +229,30 @@ fn erased_has_unowned_visible(
 }
 
 ///|
+/// A paragraph whose own text contains the separator must not be split.
+///
+/// `"a\n\nb"` in a single `w:t` serialises exactly like two paragraphs
+/// holding `"a"` and `"b"`, so flat story equality cannot tell them
+/// apart. A projection that split the first would invent a `p[1]` that
+/// surgery could address and the reader has never heard of. The expected
+/// counts come from the source, not from either side's output.
+test "a separator inside one paragraph does not split it" {
+  let document = fn(body : String) -> String {
+    "<w:document xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\"><w:body>\{body}</w:body></w:document>"
+  }
+  let joined = document("<w:p><w:r><w:t>a&#10;&#10;b</w:t></w:r></w:p>")
+  let split = document(
+    "<w:p><w:r><w:t>a</w:t></w:r></w:p><w:p><w:r><w:t>b</w:t></w:r></w:p>",
+  )
+  // identical stories
+  assert_eq(current_reader_story_text(joined), "a\n\nb\n\n")
+  assert_eq(current_reader_story_text(split), "a\n\nb\n\n")
+  // and distinguishable structures
+  assert_eq(projection_of(joined).paragraphs.length(), 1)
+  assert_eq(projection_of(split).paragraphs.length(), 2)
+}
+
+///|
 /// The adapter's text partition equals the erased reader's own paragraph
 /// partition on every joinable generated document -- the same oracle the
 /// effect stream satisfies, now through grouping, coordinates, and
