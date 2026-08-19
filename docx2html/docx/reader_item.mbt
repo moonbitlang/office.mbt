@@ -61,10 +61,21 @@ priv struct ReaderTree {
 /// reader states unrepresentable: no `ReaderDocument` (assembly stays the
 /// erase boundary) and no `ReaderField` (authoring-only; this reader never
 /// produces it).
+priv struct ReaderParagraphInput {
+  /// The physical `w:p` element itself -- a deleted prefix or the
+  /// surviving terminal paragraph.
+  paragraph : ReaderNode
+  /// Its DIRECT child elements in order: the field-carrier sequence the
+  /// projection's field classification observes per physical paragraph.
+  carriers : Array[ReaderNode]
+}
+
+///|
 priv enum ReaderTreeShape {
-  /// Deleted paragraph-mark prefixes first, terminal paragraph last.
+  /// Deleted paragraph-mark prefixes first, terminal paragraph last, each
+  /// with its own ordered carriers.
   ReaderParagraph(
-    sources~ : Array[ReaderNode],
+    inputs~ : Array[ReaderParagraphInput],
     children~ : Array[ReaderItem],
     /// Semantically owned by this physical paragraph, erased as SIBLINGS
     /// after it -- the descendants-become-siblings behaviour the extras
@@ -119,7 +130,7 @@ fn erase_reader_items_into(
       Trace(_) => ()
       New(tree) =>
         match tree.shape {
-          ReaderParagraph(sources=_, children~, extras~, properties~) => {
+          ReaderParagraph(inputs=_, children~, extras~, properties~) => {
             out.push(
               Paragraph(
                 children=reader_items_to_elements(children),
@@ -192,7 +203,7 @@ fn collect_reader_effects_into(
       New(tree) => {
         out.append(tree.local_effects)
         match tree.shape {
-          ReaderParagraph(sources=_, children~, extras~, properties=_) => {
+          ReaderParagraph(inputs=_, children~, extras~, properties=_) => {
             collect_reader_effects_into(children, out)
             collect_reader_effects_into(extras, out)
           }

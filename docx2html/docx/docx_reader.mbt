@@ -2069,25 +2069,27 @@ fn BodyReader::read_children(
   children : Array[ReaderNode],
 ) -> Array[ReaderItem] raise DocxError {
   let items : Array[ReaderItem] = []
-  let deleted_paragraph_contents : Array[ReaderNode] = []
+  let deleted_paragraphs : Array[ReaderNode] = []
   // each pending deleted paragraph remembers where in the output its
   // suppression trace belongs, in case no paragraph ever joins it
   let deleted_paragraph_pending : Array[(ReaderNode, Int)] = []
   for element in children {
     match element.name() {
       "w:p" if is_deleted_paragraph(element) => {
-        deleted_paragraph_contents.append(element.element_children())
+        deleted_paragraphs.push(element)
         deleted_paragraph_pending.push((element, items.length()))
       }
-      "w:p" if !deleted_paragraph_contents.is_empty() => {
+      "w:p" if !deleted_paragraphs.is_empty() => {
         // deleted-paragraph join: the joined paragraph records every source
-        // paragraph in `sources` and reads the prefix children natively
+        // paragraph with its own carriers and reads the prefix children
+        // natively
         items.push(
           self.read_paragraph_elements_with_prefix(
-            element, deleted_paragraph_contents,
+            element,
+            deleted_paragraphs.copy(),
           ),
         )
-        deleted_paragraph_contents.clear()
+        deleted_paragraphs.clear()
         deleted_paragraph_pending.clear()
       }
       _ => items.append(self.read_element(element))
@@ -2458,11 +2460,24 @@ fn BodyReader::read_paragraph_elements(
 fn BodyReader::read_paragraph_elements_with_prefix(
   self : BodyReader,
   element : ReaderNode,
-  prefix : Array[ReaderNode],
+  deleted_prefix : Array[ReaderNode],
 ) -> ReaderItem raise DocxError {
   let properties = self.read_paragraph_properties(
     element.first_or_empty("w:pPr"),
   )
+  // Every physical source paragraph records its own ordered carriers: the
+  // structure the projection's per-paragraph field classification
+  // observes. The children stream still reads the concatenation.
+  let inputs : Array[ReaderParagraphInput] = []
+  let carrier_stream : Array[ReaderNode] = []
+  for deleted in deleted_prefix {
+    let carriers = deleted.element_children()
+    inputs.push({ paragraph: deleted, carriers })
+    carrier_stream.append(carriers)
+  }
+  let carriers = element.element_children()
+  inputs.push({ paragraph: element, carriers })
+  carrier_stream.append(carriers)
   // The extras are structural: owned by this paragraph, erased as its
   // siblings. That split is the extras mechanism itself, and the erase
   // walker -- not any caller -- is what flattens it back.
@@ -2470,8 +2485,8 @@ fn BodyReader::read_paragraph_elements_with_prefix(
     source: element,
     local_effects: [],
     shape: ReaderParagraph(
-      sources=prefix + [element],
-      children=self.read_paragraph_children(prefix + element.element_children()),
+      inputs~,
+      children=self.read_paragraph_children(carrier_stream),
       extras=self.read_paragraph_extra_elements(element),
       properties~,
     ),
@@ -2638,7 +2653,7 @@ fn wrap_item_with_hyperlink_into(
       {
         source: paragraph_source,
         local_effects,
-        shape: ReaderParagraph(sources~, children~, extras~, properties~),
+        shape: ReaderParagraph(inputs~, children~, extras~, properties~),
       }
     ) => {
       out.push(
@@ -2646,7 +2661,7 @@ fn wrap_item_with_hyperlink_into(
           New({
             source: paragraph_source,
             local_effects,
-            shape: ReaderParagraph(sources~, children~, extras=[], properties~),
+            shape: ReaderParagraph(inputs~, children~, extras=[], properties~),
           }),
         ]),
       )
@@ -3061,7 +3076,7 @@ fn replace_first_text_in_shape(
   // `ReaderText` never reaches this walker: `replace_first_text_in_item`
   // intercepts it so the replacement can rewrite the tree's effects too
   match shape {
-    ReaderParagraph(sources~, children~, extras~, properties~) => {
+    ReaderParagraph(inputs~, children~, extras~, properties~) => {
       // the erased pipeline expanded extras as siblings after the
       // paragraph, so the search visits the carrier first, then extras
       let (new_children, found) = replace_first_text_with_checkbox(
@@ -3069,7 +3084,7 @@ fn replace_first_text_in_shape(
       )
       if found {
         (
-          ReaderParagraph(sources~, children=new_children, extras~, properties~),
+          ReaderParagraph(inputs~, children=new_children, extras~, properties~),
           true,
         )
       } else {
@@ -3078,7 +3093,7 @@ fn replace_first_text_in_shape(
         )
         (
           ReaderParagraph(
-            sources~,
+            inputs~,
             children=new_children,
             extras=new_extras,
             properties~,

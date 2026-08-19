@@ -494,3 +494,58 @@ test "joined identities survive the rebuilding transforms" {
     content="boundary@5 ; text=top@9 ; suppressed@11 ; boundary@19 ; boundary@20 ; suppressed@24 ; nontext@24",
   )
 }
+
+///|
+/// A deleted-paragraph join records every physical source paragraph WITH
+/// its own ordered carriers -- the structure per-paragraph field
+/// classification observes -- while the children stream still reads the
+/// concatenation.
+test "joined paragraph inputs record the deleted prefix paragraphs" {
+  let story = assert_joined(
+    (
+      #|<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:body><w:p><w:pPr><w:rPr><w:del/></w:rPr></w:pPr><w:r><w:t>joined </w:t></w:r></w:p><w:p><w:r><w:t>tail</w:t></w:r></w:p></w:body></w:document>
+    ),
+  )
+  // document=0 body=1 p=2 pPr=3 rPr=4 del=5 r=6 t=7 p=8 r=9 t=10
+  guard story.root.first("w:body") is Some(body) else {
+    fail("expected a body")
+  }
+  let items = empty_body_reader({ relationships: [] }).read_children(
+    body.element_children(),
+  )
+  guard items[0]
+    is New(
+      {
+        source: _,
+        local_effects: _,
+        shape: ReaderParagraph(inputs~, children~, extras=_, properties=_),
+      }
+    ) else {
+    fail("expected the joined paragraph")
+  }
+  let described : Array[String] = []
+  for input in inputs {
+    let paragraph_id = match input.paragraph.source_element_id {
+      Some(SourceElementId(index)) => "\{index}"
+      None => "-"
+    }
+    let carrier_ids : Array[String] = []
+    for carrier in input.carriers {
+      carrier_ids.push(
+        match carrier.source_element_id {
+          Some(SourceElementId(index)) => "\{index}"
+          None => "-"
+        },
+      )
+    }
+    described.push("p@\{paragraph_id}[\{carrier_ids.join(",")}]")
+  }
+  // the deleted paragraph (2) owns pPr(3) and r(6); the terminal (8) owns
+  // r(9)
+  inspect(described.join(" ; "), content="p@2[3,6] ; p@8[9]")
+  // and the joined children stream still erases to the concatenated text
+  inspect(
+    convert_document_to_html(document(reader_items_to_elements(items))).value,
+    content="<p>joined tail</p>",
+  )
+}

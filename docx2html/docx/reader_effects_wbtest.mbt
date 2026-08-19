@@ -69,7 +69,7 @@ fn flatten_effect_paragraphs(
           }
         }
         match tree.shape {
-          ReaderParagraph(sources=_, children~, extras~, properties=_) => {
+          ReaderParagraph(inputs=_, children~, extras~, properties=_) => {
             flatten_effect_paragraphs(children, paragraphs, buffer)
             paragraphs.push(buffer.to_string())
             buffer.reset()
