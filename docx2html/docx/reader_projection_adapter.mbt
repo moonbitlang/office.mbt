@@ -53,6 +53,20 @@ fn project_reader_items(
   items : Array[ReaderItem],
   budget? : ReaderProjectionBudget,
 ) -> ReaderProjectionBuildResult raise DocxError {
+  project_reader_item_segments(source_part, scan, [items], budget?)
+}
+
+///|
+/// The multi-segment core: every segment's items walk through ONE shared
+/// builder with a segment boundary between them, so ownership is checked
+/// per segment while coordinates and carrier events stay continuous
+/// across the whole part.
+fn project_reader_item_segments(
+  source_part : String,
+  scan : StoryScan,
+  segments : Array[Array[ReaderItem]],
+  budget? : ReaderProjectionBudget,
+) -> ReaderProjectionBuildResult raise DocxError {
   let budget = match budget {
     Some(value) => value
     None => reader_projection_budget(scan)
@@ -67,23 +81,16 @@ fn project_reader_items(
     field_carriers: [],
     refusal: None,
   }
-  builder.walk_items(items)
-  match builder.refusal {
-    Some(refusal) => return ProjectionRefused(refusal)
-    None => ()
-  }
-  // whatever remains pending was never owned by a paragraph: zero-width
-  // markers vanish unaddressed, visible content is a refusal
-  for contribution in builder.pending {
-    let visible = match contribution.kind {
-      ProjectedText(_) => contribution.value.length() > 0
-      VisibleNonText => true
-      Transparent | SuppressedContent => false
+  for items in segments {
+    builder.walk_items(items)
+    match builder.refusal {
+      Some(refusal) => return ProjectionRefused(refusal)
+      None => ()
     }
-    if visible {
-      return ProjectionRefused(
-        UnownedVisibleContribution(source=contribution.source),
-      )
+    builder.finish_segment()
+    match builder.refusal {
+      Some(refusal) => return ProjectionRefused(refusal)
+      None => ()
     }
   }
   let projection : ReaderProjection = {
@@ -95,6 +102,31 @@ fn project_reader_items(
   }
   assign_reader_projection_coordinates(projection)
   Projected(projection)
+}
+
+///|
+/// The segment boundary: whatever remains pending was never owned by a
+/// paragraph in THIS segment. Zero-width markers vanish unaddressed,
+/// visible content is a refusal, and observed-but-unflushed runs must
+/// not leak into the next segment's first paragraph.
+fn ReaderProjectionBuilder::finish_segment(
+  self : ReaderProjectionBuilder,
+) -> Unit {
+  for contribution in self.pending {
+    let visible = match contribution.kind {
+      ProjectedText(_) => contribution.value.length() > 0
+      VisibleNonText => true
+      Transparent | SuppressedContent => false
+    }
+    if visible {
+      self.refusal = Some(
+        UnownedVisibleContribution(source=contribution.source),
+      )
+      return
+    }
+  }
+  self.pending.clear()
+  self.pending_runs.clear()
 }
 
 ///|

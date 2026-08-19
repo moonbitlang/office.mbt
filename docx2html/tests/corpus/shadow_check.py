@@ -143,38 +143,18 @@ def generate(cases, expected):
         }
         Refused(_) => "join-refused"
         Joined(story) => {
-          let node = story.root
-          // note and comment parts hold per-container stories: read each
-          // accepted container's children (skipping separator plumbing,
-          // as the reader does) and project the concatenated items so
-          // coordinates and carrier events stay continuous, mirroring the
-          // legacy part-wide walk
-          let items = if node.name() is ("w:footnotes" | "w:endnotes" | "w:comments") {
-            let collected : Array[ReaderItem] = []
-            for container in node.element_children() {
-              let plumbing = match container.attribute("w:type") {
-                Some("separator")
-                | Some("continuationSeparator")
-                | Some("continuationNotice") => true
-                _ => false
-              }
-              if !plumbing {
-                collected.append(
-                  empty_body_reader({ relationships: [] }).read_children(
-                    container.element_children(),
-                  ),
-                )
-              }
-            }
-            collected
-          } else {
-            let children = match node.first("w:body") {
-              Some(body) => body.element_children()
-              None => node.element_children()
-            }
-            empty_body_reader({ relationships: [] }).read_children(children)
-          }
-          match project_reader_items("word/document.xml", story.scan, items) {
+          // the production segmentation: the document body as one
+          // segment, each accepted note or comment container as its own,
+          // with part-wide continuous coordinates across segments
+          match segment_joined_reader_story(
+            "word/document.xml",
+            story,
+            empty_body_reader({ relationships: [] }),
+          ) {
+            SegmentationRefused(refusal) =>
+              "segmentation-refused:" + refusal.describe()
+            SegmentedStory(output) =>
+              match project_joined_reader_output(output) {
             ProjectionRefused(refusal) =>
               "projection-refused:" + refusal.describe()
             Projected(projection) => {
@@ -188,6 +168,7 @@ def generate(cases, expected):
                 None => "shadowed"
               }
             }
+          }
           }
         }
       }

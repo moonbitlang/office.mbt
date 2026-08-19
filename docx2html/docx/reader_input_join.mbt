@@ -347,15 +347,34 @@ fn join_reader_element(
 /// deliberately NO fallback to an unjoined read -- a caller that wants the
 /// plain tolerant DOM simply does not call this.
 fn join_reader_input_story(bytes : BytesView) -> ReaderInputJoinResult {
-  let _ = read_identity_story_xml_strict(bytes, None) catch {
+  join_reader_input_story_limited(bytes)
+}
+
+///|
+/// The budget-threaded form for production callers: the strict gate and
+/// the tolerant DOM keep SEPARATE budgets because their callers account
+/// differently -- main-document strict validation runs against a local
+/// transient budget while its tolerant DOM charges the caller's
+/// cumulative one. Omitted budgets fall back to the part-local linear
+/// allowance, exactly as the unbudgeted wrapper always has.
+fn join_reader_input_story_limited(
+  bytes : BytesView,
+  strict_budget? : @xml.XmlReadBudget,
+  tolerant_budget? : @xml.XmlReadBudget,
+) -> ReaderInputJoinResult {
+  let _ = read_identity_story_xml_strict(bytes, strict_budget) catch {
     cause => return Refused(StageRefused(stage=StrictGate, cause~))
   }
   let scan = scan_projection_source_tree(bytes) catch {
     cause => return Refused(StageRefused(stage=SourceScan, cause~))
   }
+  let tolerant = match tolerant_budget {
+    Some(value) => value
+    None => local_input_linear_xml_budget(bytes)
+  }
   let root = @xml.read_xml_bytes_limited(
     bytes,
-    local_input_linear_xml_budget(bytes),
+    tolerant,
     namespace_map=office_namespace_map(),
   ) catch {
     cause => return Refused(StageRefused(stage=TolerantDom, cause~))
