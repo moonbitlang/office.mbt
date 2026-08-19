@@ -2588,6 +2588,9 @@ fn wrap_item_with_hyperlink(
   }
 
   match item {
+    // effect traces are not output; wrapping one would fabricate an empty
+    // hyperlink element the reader never produced
+    Trace(_) => item
     New(
       {
         source: run_source,

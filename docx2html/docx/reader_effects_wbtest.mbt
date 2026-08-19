@@ -236,3 +236,28 @@ test "reader effects: complex field checkbox and hyperlink synthesis" {
   )
   assert_effect_partition_matches_reader(hyperlink_xml)
 }
+
+///|
+/// A marker inside an open HYPERLINK field returns only a trace; wrapping it
+/// would fabricate an empty hyperlink element the erased reader never
+/// produced. The trace passes through unwrapped, in place.
+test "reader effects: traces inside an open hyperlink field are not wrapped" {
+  let xml =
+    #|<w:body xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:p><w:r><w:fldChar w:fldCharType="begin"/></w:r><w:r><w:instrText> HYPERLINK "https://example.com" </w:instrText></w:r><w:r><w:fldChar w:fldCharType="separate"/></w:r><w:bookmarkEnd w:id="0"/><w:r><w:t>link</w:t></w:r><w:r><w:fldChar w:fldCharType="end"/></w:r></w:p></w:body>
+  let items = reader_effect_items(xml)
+  for element in reader_items_to_elements(items) {
+    guard element is Paragraph(children~, ..) else {
+      fail("expected a paragraph")
+    }
+    for child in children {
+      if child is Hyperlink(children=[], ..) {
+        fail("an empty hyperlink was fabricated around a trace")
+      }
+    }
+  }
+  inspect(
+    effect_summaries(items),
+    content="boundary(w:fldChar) ; suppressed(w:instrText) ; boundary(w:fldChar) ; boundary(w:bookmarkEnd) ; boundary(w:r) ; text(w:t)=link ; boundary(w:fldChar)",
+  )
+  assert_effect_partition_matches_reader(xml)
+}
