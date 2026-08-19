@@ -151,11 +151,12 @@ test "segmentation refuses structural surprises instead of narrowing" {
     content="unexpected direct child {urn:example}bucket of w:footnotes",
   )
   // a document story without a body: production raises InvalidXml on
-  // the same shape
+  // the same shape (only allow-listed children, so the missing body is
+  // the refusal that fires)
   inspect(
     segmentation_refusal_of(
       (
-        #|<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:p><w:r><w:t>a</w:t></w:r></w:p></w:document>
+        #|<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:background w:color="FF0000"/></w:document>
       ),
     ).describe(),
     content="the document story has no body",
@@ -169,12 +170,50 @@ test "segmentation refuses structural surprises instead of narrowing" {
     ).describe(),
     content="unexpected story root w:glossaryDocument",
   )
+  // a foreign direct child of the document: same narrowing hazard as a
+  // foreign note container
+  inspect(
+    segmentation_refusal_of(
+      (
+        #|<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main" xmlns:x="urn:example"><x:bucket><w:p><w:r><w:t>hidden</w:t></w:r></w:p></x:bucket><w:body><w:p><w:r><w:t>visible</w:t></w:r></w:p></w:body></w:document>
+      ),
+    ).describe(),
+    content="unexpected direct child {urn:example}bucket of w:document",
+  )
+  // a second body would make "the" body ambiguous
+  inspect(
+    segmentation_refusal_of(
+      (
+        #|<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:body><w:p/></w:body><w:body><w:p/></w:body></w:document>
+      ),
+    ).describe(),
+    content="unexpected direct child w:body of w:document",
+  )
 }
 
 ///|
-test "document segmentation reads only the first body" {
-  // a direct w:background is not story content and is not read --
-  // exactly as production main-document reading consumes only the body
+test "refusal diagnostics clip hostile names" {
+  let long_uri = StringBuilder::new()
+  long_uri.write_string("urn:")
+  for _ in 0..<200 {
+    long_uri.write_char('x')
+  }
+  let source = "<w:footnotes xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\" xmlns:x=\"" +
+    long_uri.to_string() +
+    "\"><x:bucket/><w:footnote w:id=\"1\"><w:p/></w:footnote></w:footnotes>"
+  let described = segmentation_refusal_of(source).describe()
+  // "unexpected direct child " + 64 clipped units + " of w:footnotes"
+  assert_eq(described.length(), 24 + 64 + 15)
+  guard described.has_suffix("\u{2026} of w:footnotes") else {
+    fail("expected the clipped name to end in an ellipsis")
+  }
+}
+
+///|
+test "document segmentation reads the body and tolerates a background" {
+  // a direct w:background is presentation, not story content: allowed
+  // but never read, exactly as production main-document reading
+  // consumes only the body
   let source =
     #|<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:background w:color="FF0000"/><w:body><w:p><w:r><w:t>a</w:t></w:r></w:p></w:body></w:document>
   // document=0 background=1 body=2 p=3 r=4 t=5

@@ -51,6 +51,27 @@ fn ReaderSegmentationRefusal::describe(
 }
 
 ///|
+/// Refusal diagnostics never carry unbounded input: an expanded XML name
+/// is clipped before it is stored in a refusal, so a hostile namespace
+/// URI cannot ride a describe() into logs or messages.
+const READER_SEGMENTATION_NAME_LIMIT = 64
+
+///|
+fn reader_segmentation_clip_name(name : String) -> String {
+  let output = StringBuilder::new()
+  let mut count = 0
+  for character in name {
+    if count == READER_SEGMENTATION_NAME_LIMIT - 1 {
+      output.write_string("\u{2026}")
+      return output.to_string()
+    }
+    output.write_char(character)
+    count += 1
+  }
+  name
+}
+
+///|
 /// Word's plumbing notes -- separator rules and continuation notices --
 /// which production note reading skips rather than surfacing as content.
 /// Comments carry no such convention: production reads every comment
@@ -67,12 +88,12 @@ fn reader_note_container_is_plumbing(container : ReaderNode) -> Bool {
 ///|
 /// Segments one joined story and performs the one authoritative read of
 /// each segment's children, mirroring production consumption exactly:
-/// the document's FIRST body (other direct document children, like a
-/// `w:background`, are not story content and are not read), a header or
-/// footer root's own children, and each name-matching note or comment
-/// container. Container elements themselves are never read. Where
-/// production reading would silently drop a container -- a foreign
-/// direct child of a notes or comments root, a bodyless document, an
+/// the document's body (a `w:background` sibling is presentation, not
+/// story content, and is not read), a header or footer root's own
+/// children, and each name-matching note or comment container. Container
+/// elements themselves are never read. Where production reading would
+/// silently drop content -- a foreign direct child of the document or of
+/// a notes or comments root, a second body, a bodyless document, an
 /// unknown root -- segmentation refuses instead: a mutation-safe view
 /// must not quietly narrow the story.
 fn segment_joined_reader_story(
@@ -89,7 +110,10 @@ fn segment_joined_reader_story(
     for container in root.element_children() {
       if container.name() != container_name {
         return Some(
-          UnexpectedContainer(root=root.name(), name=container.name()),
+          UnexpectedContainer(
+            root=root.name(),
+            name=reader_segmentation_clip_name(container.name()),
+          ),
         )
       }
       if filter_plumbing && reader_note_container_is_plumbing(container) {
@@ -104,8 +128,32 @@ fn segment_joined_reader_story(
   }
 
   match root.name() {
-    "w:document" =>
-      match root.first("w:body") {
+    "w:document" => {
+      // the document child model is w:background then w:body; anything
+      // else -- a foreign child, a second body -- refuses rather than
+      // silently vanishing from the mutation-safe view
+      let mut body : ReaderNode? = None
+      for child in root.element_children() {
+        match child.name() {
+          "w:background" => ()
+          "w:body" =>
+            match body {
+              None => body = Some(child)
+              Some(_) =>
+                return SegmentationRefused(
+                  UnexpectedContainer(root="w:document", name="w:body"),
+                )
+            }
+          name =>
+            return SegmentationRefused(
+              UnexpectedContainer(
+                root="w:document",
+                name=reader_segmentation_clip_name(name),
+              ),
+            )
+        }
+      }
+      match body {
         Some(body) =>
           segments.push({
             container: body,
@@ -113,6 +161,7 @@ fn segment_joined_reader_story(
           })
         None => return SegmentationRefused(MissingDocumentBody)
       }
+    }
     "w:hdr" | "w:ftr" =>
       segments.push({
         container: root,
@@ -133,7 +182,10 @@ fn segment_joined_reader_story(
         Some(refusal) => return SegmentationRefused(refusal)
         None => ()
       }
-    name => return SegmentationRefused(UnexpectedStoryRoot(name~))
+    name =>
+      return SegmentationRefused(
+        UnexpectedStoryRoot(name=reader_segmentation_clip_name(name)),
+      )
   }
   SegmentedStory({ source_part, story, segments })
 }
