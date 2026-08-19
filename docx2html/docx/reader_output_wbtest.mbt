@@ -362,3 +362,83 @@ test "the budget-threaded join refuses on each stage's own budget" {
     fail("expected the unbudgeted join to succeed")
   }
 }
+
+///|
+/// The PR 6c retention contract: a mutation-safe read keeps the
+/// classified projection of every joined story part, keyed by part
+/// path, while the AST comes from the SAME read.
+test "a mutation-safe read retains a projection for every joined story part" {
+  let builder = @opc.PackageBuilder::new()
+  builder.add_default(
+    "rels", "application/vnd.openxmlformats-package.relationships+xml",
+  )
+  builder.add_default("xml", "application/xml")
+  builder.add_override(
+    "/word/document.xml", "application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml",
+  )
+  builder.add_override(
+    "/word/footnotes.xml", "application/vnd.openxmlformats-officedocument.wordprocessingml.footnotes+xml",
+  )
+  builder.add_override(
+    "/word/comments.xml", "application/vnd.openxmlformats-officedocument.wordprocessingml.comments+xml",
+  )
+  builder.add_relationship(
+    "rId1", "http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument",
+    "word/document.xml",
+  )
+  builder.add_relationship(
+    "rId2",
+    "http://schemas.openxmlformats.org/officeDocument/2006/relationships/footnotes",
+    "footnotes.xml",
+    source="word/document.xml",
+  )
+  builder.add_relationship(
+    "rId3",
+    "http://schemas.openxmlformats.org/officeDocument/2006/relationships/comments",
+    "comments.xml",
+    source="word/document.xml",
+  )
+  builder.add_part(
+    "word/document.xml",
+    @utf8.encode(
+      (
+        #|<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:body><w:p><w:r><w:t>Body</w:t></w:r></w:p><w:sectPr/></w:body></w:document>
+      ),
+    ),
+  )
+  builder.add_part(
+    "word/footnotes.xml",
+    @utf8.encode(
+      (
+        #|<w:footnotes xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:footnote w:id="1"><w:p><w:r><w:t>note</w:t></w:r></w:p></w:footnote></w:footnotes>
+      ),
+    ),
+  )
+  builder.add_part(
+    "word/comments.xml",
+    @utf8.encode(
+      (
+        #|<w:comments xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:comment w:id="1" w:author="A"><w:p><w:r><w:t>c</w:t></w:r></w:p></w:comment></w:comments>
+      ),
+    ),
+  )
+  let annotated = read_docx_annotated(builder.build())
+  let retained : Array[String] = []
+  for path, _ in annotated.reader_projections {
+    retained.push(path)
+  }
+  assert_eq(retained, [
+    "word/comments.xml", "word/document.xml", "word/footnotes.xml",
+  ])
+  guard annotated.reader_projections.get("word/document.xml") is Some(main) else {
+    fail("expected the main projection")
+  }
+  assert_eq(main.paragraphs.length(), 1)
+  guard annotated.reader_projections.get("word/footnotes.xml") is Some(notes) else {
+    fail("expected the footnotes projection")
+  }
+  assert_eq(notes.paragraphs.length(), 1)
+  // and the notes/comments ASTs came through the same joined read
+  assert_eq(annotated.footnote_bodies().length(), 1)
+  assert_eq(annotated.comment_bodies().length(), 1)
+}

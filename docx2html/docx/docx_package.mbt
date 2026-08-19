@@ -297,7 +297,12 @@ fn HeaderFooterCollector::resolve_part(
       // preserving hard resource ceilings as typed failures.
       let body = self.read_part_story(path, kind) catch {
         ResourceLimit(..) as error => raise error
-        _ => {
+        error => {
+          // A mutation-safe read has no warn-and-skip: a story that
+          // cannot be joined refuses the whole read, typed.
+          if self.parts.story_reader_mode is JoinedMutationReader {
+            raise error
+          }
           push_reader_warning_parts(self.messages, self.parts.diagnostics, [
             "A ", kind, " part could not be read and was ignored: ", path,
           ])
@@ -356,6 +361,33 @@ fn HeaderFooterCollector::read_part_story(
     diagnostics: self.parts.diagnostics,
     external_files: self.parts.external_files,
     read_images: true,
+  }
+  if self.parts.story_reader_mode is JoinedMutationReader {
+    guard self.parts.zip.read_bytes(path) is Some(bytes) else {
+      raise MissingPart(message="missing DOCX part: " + path)
+    }
+    // The tolerant DOM above already charged the shared budget; joining
+    // from bytes would tolerant-parse a SECOND time and could refuse a
+    // document the same budget accepted before the cutover. Run the
+    // strict gate here, then join the DOM that already exists -- the
+    // aggregate cost stays exactly the pre-cutover tolerant + strict.
+    let _ = read_identity_story_xml_strict(bytes, self.parts.xml_budget) catch {
+      cause =>
+        raise reader_join_refusal_error(
+          path,
+          StageRefused(stage=StrictGate, cause~),
+        )
+    }
+    let read = read_joined_story_prepared(path, bytes, root, reader)
+    self.parts.reader_projections[path] = read.projection
+    guard read.output.segments is [segment] else {
+      raise Unsupported(
+        message="mutation-safe \{kind} read produced an unexpected segment count",
+      )
+    }
+    let body = reader_items_to_elements(segment.items)
+    self.messages.append(reader.messages)
+    return body
   }
   let body = reader_items_to_elements(
     reader.read_children(ReaderNode::of(root).element_children()),

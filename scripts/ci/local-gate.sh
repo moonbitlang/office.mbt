@@ -2,7 +2,8 @@
 #
 # The cheap half of CI, runnable locally in well under a minute.
 #
-# CI's `lint` job runs exactly these checks, in this order. They are also where
+# CI's `lint` job runs these checks in this order (the corpus CLI smoke
+# additionally mirrors a `cli-smoke` step). They are also where
 # CI fails most: of the ten most recent red runs on this repository, six died
 # on `moon fmt` drift or `pkg.generated.mbti` drift — both fully reproducible
 # here, both costing a ~15-minute CI round trip when they are discovered
@@ -74,6 +75,9 @@ dirty_before=$(git status --porcelain=v1)
 run "dispatch registry" python3 docx2html/tests/registry/check_dispatch_registry.py
 run "dispatch escape suite" bash docx2html/tests/registry/escape_suite.sh
 run "corpus shadow manifest" python3 docx2html/tests/corpus/shadow_check.py
+# The CLI-level corpus smoke pins refusal CLASSES too -- a mutation-read
+# message change slipped past the gate to CI once (#458 round 3).
+run "corpus CLI smoke" bash docx2html/tests/corpus/run.sh
 
 # The legacy projection walker is quarantined to white-box test code
 # (#434 PR 5c): no production-compiled file may name it. The wbtest move

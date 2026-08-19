@@ -645,6 +645,10 @@ pub struct DocxAnnotatedResult {
   // stories and broken section references. They are useful for inspection but
   // can never be a sound source for an annotation mutation plan.
   priv read_policy : AnnotationReadPolicy
+  // The classified reader-native projection of every joined-read story
+  // part, keyed by part path (#434 PR 6c). Populated only for
+  // mutation-safe reads; the N0c1 surgery surface consumes these.
+  priv reader_projections : StableStringMap[ReaderProjection]
 }
 
 ///|
@@ -958,6 +962,10 @@ fn read_docx_annotated_zip(
     diagnostics?,
     expected_main_document_path?,
     strict_main_document=policy is MutationSafe,
+    story_reader_mode=match policy {
+      MutationSafe => JoinedMutationReader
+      TolerantProjection => TolerantReader
+    },
   )
   let document_result = parts.read_document()
   let collector = HeaderFooterCollector::new(parts)
@@ -1160,6 +1168,7 @@ fn read_docx_annotated_zip(
     comments_wordprocessing_dialect,
     main_relationship_dialect: parts.main_relationship_dialect,
     read_policy: policy,
+    reader_projections: parts.reader_projections,
     footnote_bodies: footnote_pairs,
     endnote_bodies: endnote_pairs,
     comment_bodies: comment_pairs,
@@ -1493,7 +1502,12 @@ fn build_annotation_index(
         // well-formed XML. The package reader is intentionally tolerant, so
         // establish strict well-formedness under the same cumulative budget
         // before the raw span scanner is allowed to derive edit locations.
-        if policy is MutationSafe && path != parts.main_document_path {
+        // A part the joined pipeline already read passed its strict gate
+        // during the read; validating it again would double-charge the
+        // shared budget for nothing.
+        if policy is MutationSafe &&
+          path != parts.main_document_path &&
+          !parts.reader_projections.contains(path) {
           read_identity_story_xml_strict(bytes, parts.xml_budget) |> ignore
         }
         let scan = scan_story(bytes, path_budget~, warning_collector=warnings) catch {

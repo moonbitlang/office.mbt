@@ -261,6 +261,8 @@ fn paragraph_numbering_from_xml(
 ///|
 fn footnotes_from_xml(xml : String) -> NotesReadResult raise DocxError {
   read_note_part_at_path(
+    story_reader_mode=TolerantReader,
+    reader_projections=SortedMap([]),
     zip_with_text("word/footnotes.xml", xml),
     note_type="footnote",
     path="word/footnotes.xml",
@@ -273,6 +275,8 @@ fn footnotes_from_xml(xml : String) -> NotesReadResult raise DocxError {
 ///|
 fn comments_from_xml(xml : String) -> CommentsReadResult raise DocxError {
   read_comments_for_document(
+    story_reader_mode=TolerantReader,
+    reader_projections=SortedMap([]),
     zip_with_text("word/comments.xml", xml),
     SortedMap([]),
     NumberingMap::empty(),
@@ -2293,6 +2297,8 @@ test "docx note and comment reader warnings are preserved" {
   let document_relationships = Relationships::{ relationships: [] }
   let base_path = "word"
   let footnotes = read_note_part_at_path(
+    story_reader_mode=TolerantReader,
+    reader_projections=SortedMap([]),
     zip_with_text("word/footnotes.xml", footnotes_xml),
     note_type="footnote",
     path="word/footnotes.xml",
@@ -2310,6 +2316,8 @@ test "docx note and comment reader warnings are preserved" {
   let comments_xml =
     #|<w:comments xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:comment w:id="0"><w:not-an-element /></w:comment></w:comments>
   let comments = read_comments_for_document(
+    story_reader_mode=TolerantReader,
+    reader_projections=SortedMap([]),
     zip_with_text("word/comments.xml", comments_xml),
     styles,
     numbering,
