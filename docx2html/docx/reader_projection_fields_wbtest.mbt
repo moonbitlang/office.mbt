@@ -134,9 +134,25 @@ fn reader_text_annotations(projection : ReaderProjection) -> String {
 }
 
 ///|
+fn describe_carrier_events(
+  events : Array[ReaderOrderFieldCarrierEvent],
+) -> String {
+  let out : Array[String] = []
+  for event in events {
+    out.push("\{event.paragraph_identity}/\{event.carrier_identity}")
+  }
+  out.join(" ")
+}
+
+///|
 fn assert_field_parity(source : String) -> Unit raise {
   let legacy = field_test_projection(source)
   let ours = projection_with_fields(source)
+  // the carrier-event stream itself, exactly: set, order, and ownership
+  assert_eq(
+    describe_carrier_events(ours.field_carriers),
+    describe_carrier_events(legacy.field_carriers),
+  )
   assert_eq(
     describe_field_index(ours.field_index),
     describe_field_index(legacy.field_index),
@@ -211,6 +227,47 @@ test "field parity isolates textbox stories" {
   assert_field_parity(
     (
       #|<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main" xmlns:v="urn:schemas-microsoft-com:vml"><w:body><w:p><w:r><w:fldChar w:fldCharType="begin"/></w:r><w:r><w:instrText> X </w:instrText></w:r><w:r><w:fldChar w:fldCharType="separate"/></w:r><w:r><w:pict><v:shape><v:textbox><w:txbxContent><w:p><w:r><w:fldChar w:fldCharType="begin"/></w:r><w:r><w:t>boxed</w:t></w:r></w:p></w:txbxContent></v:textbox></v:shape></w:pict></w:r><w:r><w:t>A</w:t></w:r><w:r><w:fldChar w:fldCharType="end"/></w:r></w:p></w:body></w:document>
+    ),
+  )
+}
+
+///|
+/// The carriers list is authoritative: a complex HYPERLINK field wraps
+/// its result items in synthetic hyperlinks sourced at the field-begin
+/// carrier, so item sources cannot decide the event set -- a physical
+/// hyperlink carrier inside the result must still emit, and its text must
+/// classify as FieldResult.
+test "field parity when the result holds a physical hyperlink carrier" {
+  assert_field_parity(
+    (
+      #|<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:body><w:p><w:r><w:fldChar w:fldCharType="begin"/></w:r><w:r><w:instrText> HYPERLINK "https://e" </w:instrText></w:r><w:r><w:fldChar w:fldCharType="separate"/></w:r><w:hyperlink w:anchor="x"><w:r><w:t>L</w:t></w:r></w:hyperlink><w:r><w:fldChar w:fldCharType="end"/></w:r></w:p></w:body></w:document>
+    ),
+  )
+}
+
+///|
+/// The remaining refusal kinds: an unmatched separate, an unknown marker
+/// transition, and the repeated observations a nested paragraph's double
+/// carrier scan produces.
+test "field parity on the remaining refusal kinds" {
+  // unmatched separate
+  assert_field_parity(
+    (
+      #|<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:body><w:p><w:r><w:fldChar w:fldCharType="separate"/></w:r><w:r><w:t>A</w:t></w:r></w:p></w:body></w:document>
+    ),
+  )
+  // unknown transition
+  assert_field_parity(
+    (
+      #|<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:body><w:p><w:r><w:fldChar w:fldCharType="bogus"/></w:r><w:r><w:t>A</w:t></w:r></w:p></w:body></w:document>
+    ),
+  )
+  // repeated marker and instruction: a nested paragraph's markers are
+  // scanned once by the outer paragraph's carrier event (the nested p
+  // itself) and once by the nested paragraph's own carriers
+  assert_field_parity(
+    (
+      #|<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:body><w:p><w:r><w:t>x</w:t></w:r><w:p><w:r><w:fldChar w:fldCharType="begin"/></w:r><w:r><w:instrText> X </w:instrText></w:r><w:r><w:fldChar w:fldCharType="end"/></w:r></w:p></w:p></w:body></w:document>
     ),
   )
 }

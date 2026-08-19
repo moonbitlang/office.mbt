@@ -165,15 +165,52 @@ fn reader_item_source(item : ReaderItem) -> ReaderNode {
 }
 
 ///|
-/// Emits the field-carrier event for the direct physical child owning
-/// this top-level item, once per carrier per paragraph: the same stream
-/// the legacy walker records at each carrier visit. Effect totality makes
-/// this complete -- every carrier the reader visits yields at least one
-/// item whose source sits inside it.
-fn ReaderProjectionBuilder::emit_carrier_event(
+/// The authoritative ordered carrier events of one paragraph: every
+/// direct physical child of every input, in document order -- exactly
+/// what the legacy walker emits before visiting each carrier. The item
+/// walk only decides WHEN each event fires (a cursor advances on item
+/// position hints, so a nested paragraph's group interleaves at its
+/// carrier's position); item sources never decide the SET or ORDER,
+/// because field synthesis re-sources items at the field-begin carrier.
+priv struct ReaderProjectionCarrierCursor {
+  events : Array[ReaderOrderFieldCarrierEvent]
+  positions : Map[Int, Int]
+  mut next : Int
+}
+
+///|
+fn ReaderProjectionBuilder::carrier_cursor(
   self : ReaderProjectionBuilder,
   inputs : Array[ReaderParagraphInput],
-  seen_carriers : Array[Int],
+) -> ReaderProjectionCarrierCursor {
+  let events : Array[ReaderOrderFieldCarrierEvent] = []
+  let positions : Map[Int, Int] = Map([])
+  for input in inputs {
+    match input.paragraph.source_element_id {
+      Some(SourceElementId(paragraph_identity)) =>
+        for carrier in input.carriers {
+          match carrier.source_element_id {
+            Some(SourceElementId(carrier_identity)) => {
+              positions[carrier_identity] = events.length()
+              events.push({ paragraph_identity, carrier_identity })
+            }
+            None => ()
+          }
+        }
+      None => ()
+    }
+  }
+  { events, positions, next: 0 }
+}
+
+///|
+/// Fires every event up to and including the carrier this item's source
+/// sits under, when that carrier lies ahead of the cursor. A synthetic
+/// source pointing at an earlier carrier advances nothing; the close
+/// flush drains whatever remains.
+fn ReaderProjectionBuilder::advance_carrier_cursor(
+  self : ReaderProjectionBuilder,
+  cursor : ReaderProjectionCarrierCursor,
   item : ReaderItem,
 ) -> Unit raise DocxError {
   guard reader_item_source(item).source_element_id
@@ -185,31 +222,38 @@ fn ReaderProjectionBuilder::emit_carrier_event(
     return
   }
   let mut current = source_index
+  let mut target : Int? = None
   while current >= 0 {
-    let parent = elements[current].parent_index
-    if parent >= 0 {
-      for input in inputs {
-        match input.paragraph.source_element_id {
-          Some(SourceElementId(paragraph_index)) =>
-            if parent == paragraph_index {
-              for seen in seen_carriers {
-                if seen == current {
-                  return
-                }
-              }
-              self.budget.charge_retained()
-              seen_carriers.push(current)
-              self.field_carriers.push({
-                paragraph_identity: paragraph_index,
-                carrier_identity: current,
-              })
-              return
-            }
-          None => ()
-        }
+    self.budget.charge_visit()
+    match cursor.positions.get(current) {
+      Some(position) => {
+        target = Some(position)
+        break
       }
+      None => ()
     }
-    current = parent
+    current = elements[current].parent_index
+  }
+  match target {
+    Some(position) =>
+      while cursor.next <= position {
+        self.budget.charge_retained()
+        self.field_carriers.push(cursor.events[cursor.next])
+        cursor.next = cursor.next + 1
+      }
+    None => ()
+  }
+}
+
+///|
+fn ReaderProjectionBuilder::drain_carrier_cursor(
+  self : ReaderProjectionBuilder,
+  cursor : ReaderProjectionCarrierCursor,
+) -> Unit raise DocxError {
+  while cursor.next < cursor.events.length() {
+    self.budget.charge_retained()
+    self.field_carriers.push(cursor.events[cursor.next])
+    cursor.next = cursor.next + 1
   }
 }
 
@@ -352,14 +396,15 @@ fn ReaderProjectionBuilder::walk_items(
             self.arm_enclosing_frames()
             let frame : ReaderProjectionParagraphFrame = { inputs, armed: true }
             self.enclosures.push(EnclosingParagraph(frame))
-            let seen_carriers : Array[Int] = []
+            let cursor = self.carrier_cursor(inputs)
             for child in children {
               if self.refusal is Some(_) {
                 break
               }
-              self.emit_carrier_event(inputs, seen_carriers, child)
+              self.advance_carrier_cursor(cursor, child)
               self.walk_items([child])
             }
+            self.drain_carrier_cursor(cursor)
             ignore(self.enclosures.pop())
             self.flush_paragraph(inputs)
             // extras erase as siblings AFTER the paragraph and re-home

@@ -14,9 +14,11 @@
 fn reader_projection_owning_paragraph(
   elements : Array[ScannedElement],
   source_identity : Int,
-) -> Int {
+  budget : ReaderOrderFieldBudget,
+) -> Int raise DocxError {
   let mut current = elements[source_identity].parent_index
   while current >= 0 {
+    budget.charge_work()
     let element = elements[current]
     if is_wml_uri(element.uri) && element.local_name == "p" {
       return current
@@ -36,18 +38,23 @@ fn classify_reader_projection_fields(
   projection : ReaderProjection,
   budget? : ReaderOrderFieldBudget,
 ) -> Unit raise DocxError {
+  let budget = match budget {
+    Some(value) => value
+    None => reader_order_field_budget()
+  }
   let elements = projection.scan.elements()
   let facade_paragraphs : Array[ReaderOrderParagraph] = []
   for paragraph in projection.paragraphs {
     let contributions : Array[ReaderOrderContribution] = []
     for contribution in paragraph.contributions {
+      budget.charge_work()
       let SourceElementId(source_identity) = contribution.source
       contributions.push({
         kind: HardBarrier,
         value: "",
         source_identity,
         paragraph_identity: reader_projection_owning_paragraph(
-          elements, source_identity,
+          elements, source_identity, budget,
         ),
         run_identity: None,
         source_span: contribution.source_span,
@@ -75,10 +82,11 @@ fn classify_reader_projection_fields(
     field_carriers: projection.field_carriers,
     field_index: empty_reader_order_field_index(),
   }
-  let index = classify_reader_order_fields(facade, budget?)
+  let index = classify_reader_order_fields(facade, budget~)
   for paragraph_index, paragraph in projection.paragraphs {
     let facade_contributions = facade_paragraphs[paragraph_index].contributions
     for contribution_index, contribution in paragraph.contributions {
+      budget.charge_work()
       let annotated = facade_contributions[contribution_index]
       contribution.field_identity = annotated.field_identity
       contribution.field_region = annotated.field_region
