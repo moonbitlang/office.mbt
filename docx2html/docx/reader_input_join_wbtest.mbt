@@ -46,6 +46,7 @@ fn assert_join_invariants(story : JoinedReaderStory) -> Unit raise {
     let source = story.scan.elements()[index]
     assert_true(
       reader_join_dom_name_matches(
+        office_namespace_map(),
         source.uri,
         source.local_name,
         node.element.name,

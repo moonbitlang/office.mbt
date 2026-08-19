@@ -119,6 +119,7 @@ fn ReaderInputJoinRefusal::describe(self : ReaderInputJoinRefusal) -> String {
 /// prefix falls back to the braced form), and an unmapped URI becomes
 /// `{uri}local`.
 fn reader_join_dom_name_matches(
+  namespace_map : Map[String, String],
   uri : String,
   local_name : String,
   dom_name : String,
@@ -135,7 +136,7 @@ fn reader_join_dom_name_matches(
     // it, in which case the unmapped URI comes out braced
     dom_name == "xml:" + local_name || dom_name == "{" + uri + "}" + local_name
   } else {
-    match office_namespace_map().get(uri) {
+    match namespace_map.get(uri) {
       Some("") | None => dom_name == "{" + uri + "}" + local_name
       Some(prefix) => dom_name == prefix + ":" + local_name
     }
@@ -279,7 +280,7 @@ fn join_reader_dom(
     Some(detail) => return Refused(StructureMismatch(detail~))
     None => ()
   }
-  join_reader_element(root, 0, scan)
+  join_reader_element(root, 0, scan, office_namespace_map())
 }
 
 ///|
@@ -287,9 +288,15 @@ fn join_reader_element(
   element : XmlElement,
   source_index : Int,
   scan : StoryScan,
+  namespace_map : Map[String, String],
 ) -> ReaderInputJoinResult {
   let source = scan.elements()[source_index]
-  if !reader_join_dom_name_matches(source.uri, source.local_name, element.name) {
+  if !reader_join_dom_name_matches(
+      namespace_map,
+      source.uri,
+      source.local_name,
+      element.name,
+    ) {
     return Refused(
       NameMismatch(
         source=SourceElementId(source_index),
@@ -318,7 +325,13 @@ fn join_reader_element(
   }
   let joined_children : Array[JoinedReaderNode] = []
   for index in 0..<dom_children.length() {
-    match join_reader_element(dom_children[index], cooked[index], scan) {
+    match
+      join_reader_element(
+        dom_children[index],
+        cooked[index],
+        scan,
+        namespace_map,
+      ) {
       Joined(story) => joined_children.push(story.root)
       Refused(_) as refused => return refused
     }
