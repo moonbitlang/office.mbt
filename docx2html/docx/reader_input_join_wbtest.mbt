@@ -9,8 +9,10 @@ fn join_text_story(source : String) -> ReaderInputJoinResult {
 }
 
 ///|
-fn joined_preorder_ids(node : JoinedReaderNode, out : Array[Int]) -> Unit {
-  let SourceElementId(index) = node.source_element_id
+fn joined_preorder_ids(node : ReaderNode, out : Array[Int]) -> Unit raise {
+  guard node.source_element_id is Some(SourceElementId(index)) else {
+    fail("a joined node carries no physical identity")
+  }
   out.push(index)
   for child in node.children {
     joined_preorder_ids(child, out)
@@ -41,8 +43,10 @@ fn assert_join_invariants(story : JoinedReaderStory) -> Unit raise {
   for index in 1..<ids.length() {
     assert_true(ids[index] > ids[index - 1])
   }
-  fn check(node : JoinedReaderNode) -> Unit raise {
-    let SourceElementId(index) = node.source_element_id
+  fn check(node : ReaderNode) -> Unit raise {
+    guard node.source_element_id is Some(SourceElementId(index)) else {
+      fail("a joined node carries no physical identity")
+    }
     let source = story.scan.elements()[index]
     assert_true(
       reader_join_dom_name_matches(
@@ -53,7 +57,9 @@ fn assert_join_invariants(story : JoinedReaderStory) -> Unit raise {
       ),
     )
     for child in node.children {
-      let SourceElementId(child_index) = child.source_element_id
+      guard child.source_element_id is Some(SourceElementId(child_index)) else {
+        fail("a joined node carries no physical identity")
+      }
       let child_source = story.scan.elements()[child_index]
       assert_true(child_source.byte_start >= source.byte_start)
       assert_true(child_source.byte_end <= source.byte_end)
@@ -369,5 +375,122 @@ test "join refuses corrupted physical tables" {
       elements[2].next_sibling_index = -1
     }),
     content="structure mismatch: element 3 sits at preorder position 2; the table is not in opening-tag order",
+  )
+}
+
+///|
+/// The accessors navigate the cached tree, so identities survive every
+/// access path; a synthetic `first_or_empty` miss carries none.
+test "joined identities survive the reader accessors" {
+  let story = assert_joined(
+    (
+      #|<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:body><w:p><w:pPr><w:jc w:val="center"/></w:pPr><w:r><w:t>a</w:t></w:r></w:p></w:body></w:document>
+    ),
+  )
+  // document=0 body=1 p=2 pPr=3 jc=4 r=5 t=6
+  guard story.root.first("w:body") is Some(body) else {
+    fail("expected a body")
+  }
+  debug_inspect(body.source_element_id, content="Some(SourceElementId(1))")
+  let paragraph = body.element_children()[0]
+  debug_inspect(paragraph.source_element_id, content="Some(SourceElementId(2))")
+  debug_inspect(
+    paragraph.first_or_empty("w:pPr").source_element_id,
+    content="Some(SourceElementId(3))",
+  )
+  debug_inspect(
+    paragraph.elements_by_tag_name("w:r")[0].source_element_id,
+    content="Some(SourceElementId(5))",
+  )
+  // a metadata miss synthesizes a node with no identity
+  debug_inspect(
+    paragraph.first_or_empty("w:sectPr").source_element_id,
+    content="None",
+  )
+}
+
+///|
+/// The payoff: a joined story read by the ACTUAL BodyReader produces an
+/// effect stream whose source nodes carry physical identities -- the
+/// provenance the projection re-derived from bytes now falls out of the
+/// read itself.
+test "reading a joined story yields effects with physical identities" {
+  let story = assert_joined(
+    (
+      #|<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:body><w:p><w:r><w:t>a</w:t><w:tab/></w:r></w:p><w:p><w:r><w:t>b</w:t></w:r></w:p></w:body></w:document>
+    ),
+  )
+  // document=0 body=1 p=2 r=3 t=4 tab=5 p=6 r=7 t=8
+  guard story.root.first("w:body") is Some(body) else {
+    fail("expected a body")
+  }
+  let items = empty_body_reader({ relationships: [] }).read_children(
+    body.element_children(),
+  )
+  let labelled : Array[String] = []
+  for effect in collect_reader_effects(items) {
+    let (kind, source) = match effect {
+      ProjectsText(source~, kind=_, value~) => ("text=" + value, source)
+      ProjectsVisibleNonText(source~) => ("nontext", source)
+      TransparentBoundary(source~) => ("boundary", source)
+      Suppressed(source~) => ("suppressed", source)
+    }
+    let id = match source.source_element_id {
+      Some(SourceElementId(index)) => "\{index}"
+      None => "-"
+    }
+    labelled.push("\{kind}@\{id}")
+  }
+  inspect(labelled.join(" ; "), content="text=a@4 ; text=\t@5 ; text=b@8")
+  // and the produced trees' own sources carry identities too
+  guard items[0]
+    is New({ source: paragraph_source, local_effects: _, shape: _ }) else {
+    fail("expected a paragraph tree")
+  }
+  debug_inspect(
+    paragraph_source.source_element_id,
+    content="Some(SourceElementId(2))",
+  )
+}
+
+///|
+/// The rebuilding transforms (vMerge, checkbox replacement) construct new
+/// trees from their inputs' sources -- physical identities must survive
+/// the rebuild, and a suppression records the identity of what it removed.
+test "joined identities survive the rebuilding transforms" {
+  let story = assert_joined(
+    (
+      #|<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main" xmlns:w14="http://schemas.microsoft.com/office/word/2010/wordml"><w:body><w:tbl><w:tr><w:tc><w:tcPr><w:vMerge w:val="restart"/></w:tcPr><w:p><w:r><w:t>top</w:t></w:r></w:p></w:tc></w:tr><w:tr><w:tc><w:tcPr><w:vMerge/></w:tcPr><w:p><w:r><w:t>under</w:t></w:r></w:p></w:tc></w:tr></w:tbl><w:p><w:r><w:sdt><w:sdtPr><w14:checkbox><w14:checked w14:val="1"/></w14:checkbox></w:sdtPr><w:sdtContent><w:t>replaced</w:t></w:sdtContent></w:sdt></w:r></w:p></w:body></w:document>
+    ),
+  )
+  guard story.root.first("w:body") is Some(body) else {
+    fail("expected a body")
+  }
+  let items = empty_body_reader({ relationships: [] }).read_children(
+    body.element_children(),
+  )
+  // document=0 body=1 tbl=2 tr=3 tc=4 tcPr=5 vMerge=6 p=7 r=8 t=9
+  // tr=10 tc=11 tcPr=12 vMerge=13 p=14 r=15 t=16
+  // p=17 r=18 sdt=19 sdtPr=20 checkbox=21 checked=22 sdtContent=23 t=24
+  let labelled : Array[String] = []
+  for effect in collect_reader_effects(items) {
+    let (kind, source) = match effect {
+      ProjectsText(source~, kind=_, value~) => ("text=" + value, source)
+      ProjectsVisibleNonText(source~) => ("nontext", source)
+      TransparentBoundary(source~) => ("boundary", source)
+      Suppressed(source~) => ("suppressed", source)
+    }
+    let id = match source.source_element_id {
+      Some(SourceElementId(index)) => "\{index}"
+      None => "-"
+    }
+    labelled.push("\{kind}@\{id}")
+  }
+  // the vMerge suppression carries the REMOVED cell's identity (11); the
+  // checkbox replacement suppresses the replaced text (24) and stands
+  // visible at the same node
+  inspect(
+    labelled.join(" ; "),
+    content="boundary@5 ; text=top@9 ; suppressed@11 ; boundary@19 ; boundary@20 ; suppressed@24 ; nontext@24",
   )
 }

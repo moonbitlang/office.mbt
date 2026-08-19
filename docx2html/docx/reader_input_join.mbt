@@ -26,19 +26,14 @@
 priv struct SourceElementId(Int) derive(Debug, Eq)
 
 ///|
-/// One DOM element paired with its physical identity. The join builds this
-/// tree rather than a side table: `XmlElement` has no stable identity to
-/// key on (synthetic `first_or_empty` nodes and fresh wrapper construction
-/// make reference identity an aliasing accident).
-priv struct JoinedReaderNode {
-  element : XmlElement
-  source_element_id : SourceElementId
-  children : Array[JoinedReaderNode]
-}
-
-///|
+/// A joined story: the reader-input tree whose every node carries its
+/// physical identity, plus the scan those identities index. The join
+/// builds the `ReaderNode` tree directly rather than a side table:
+/// `XmlElement` has no stable identity to key on (synthetic
+/// `first_or_empty` nodes and fresh wrapper construction make reference
+/// identity an aliasing accident).
 priv struct JoinedReaderStory {
-  root : JoinedReaderNode
+  root : ReaderNode
   scan : StoryScan
 }
 
@@ -323,7 +318,7 @@ fn join_reader_element(
       ),
     )
   }
-  let joined_children : Array[JoinedReaderNode] = []
+  let joined_children : Array[ReaderNode] = []
   for index in 0..<dom_children.length() {
     match
       join_reader_element(
@@ -339,7 +334,7 @@ fn join_reader_element(
   Joined({
     root: {
       element,
-      source_element_id: SourceElementId(source_index),
+      source_element_id: Some(SourceElementId(source_index)),
       children: joined_children,
     },
     scan,
