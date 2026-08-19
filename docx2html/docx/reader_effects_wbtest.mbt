@@ -460,3 +460,18 @@ test "reader effects: sdt rejects stray non-content children in place" {
   )
   assert_effect_partition_matches_reader(xml)
 }
+
+///|
+/// A RESOLVED image is visible at the blip that carried it -- pinning the
+/// visible half of the resolution-dependent split whose suppressed half
+/// "unresolved images leave suppression traces" already pins.
+test "reader effects: a resolved image is visible at its blip" {
+  let drawing_xml =
+    #|<wp:inline xmlns:wp="http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" xmlns:pic="http://schemas.openxmlformats.org/drawingml/2006/picture" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><a:graphic><a:graphicData><pic:pic><pic:blipFill><a:blip r:embed="rImage" /></pic:blipFill></pic:pic></a:graphicData></a:graphic></wp:inline>
+  let drawing = read_xml_string(
+    drawing_xml,
+    namespace_map=office_namespace_map(),
+  )
+  let items = drawing_image_reader().read_element(ReaderNode::of(drawing))
+  inspect(effect_summaries(items), content="nontext(a:blip)")
+}

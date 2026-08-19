@@ -30,6 +30,27 @@ fn shadow_text_kind_matches(
 }
 
 ///|
+/// Namespace-qualified image shapes: the only foreign elements the reader
+/// can classify as visible, and their visible-vs-suppressed split is
+/// resolution-dependent (statically unobservable here; the emission kinds
+/// are pinned by the effect witnesses).
+fn shadow_is_image_element(element : ScannedElement) -> Bool {
+  match element.local_name {
+    "imagedata" => element.uri == "urn:schemas-microsoft-com:vml"
+    "inline" | "anchor" =>
+      element.uri ==
+      "http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing" ||
+      element.uri ==
+      "http://purl.oclc.org/ooxml/drawingml/wordprocessingDrawing"
+    "blip" =>
+      element.uri == "http://schemas.openxmlformats.org/drawingml/2006/main" ||
+      element.uri == "http://purl.oclc.org/ooxml/drawingml/main"
+    "pict" => is_wml_uri(element.uri)
+    _ => false
+  }
+}
+
+///|
 fn shadow_element_is(
   elements : Array[ScannedElement],
   identity : Int,
@@ -319,6 +340,28 @@ fn compare_shadow_streams(
             ancestor = elements[ancestor].parent_index
           }
           if replaceable && under_control {
+            for offset in 0..<2 {
+              let mine = ours.contributions[j + offset]
+              let our_run = match mine.run_source {
+                Some(SourceElementId(identity)) => identity
+                None => -1
+              }
+              let legacy_run = match theirs.run_identity {
+                Some(identity) => identity
+                None => -1
+              }
+              if mine.projection_start != theirs.projection_start ||
+                mine.projection_end != theirs.projection_end ||
+                our_run != legacy_run ||
+                mine.logical_run_index != theirs.logical_run_index ||
+                mine.field_region != theirs.field_region ||
+                mine.field_identity != theirs.field_identity ||
+                mine.field_refusal != theirs.field_refusal {
+                return Some(
+                  "paragraph \{paragraph_index} checkbox pair metadata at \{first} differs",
+                )
+              }
+            }
             ours_skip_seen["\{first}:s"] = true
             ours_skip_seen["\{second}:v"] = true
             i = i + 1
@@ -356,16 +399,12 @@ fn compare_shadow_streams(
                   _ => false
                 })
               ) ||
-              (
               // foreign visibility only where the reader CAN emit it:
               // image-capable shapes, whose visible-vs-suppressed split is
               // resolution-dependent and statically unobservable here (the
               // emission kinds themselves are pinned by the effect
               // witnesses). Any other foreign element is never visible.
-                !is_wml_uri(source_element.uri) &&
-                source_element.local_name
-                is ("imagedata" | "inline" | "anchor" | "blip")
-              )
+              shadow_is_image_element(source_element)
             // ... and with SUPPRESSED only where suppression is the
             // reader's real classification (a supported break flipped to
             // suppressed is a bug, not a delta)
@@ -445,9 +484,7 @@ fn compare_shadow_streams(
           }
           // an image barrier on the CARRIER container, our effect on a
           // STRICT descendant (the blip or imagedata inside it)
-          let legacy_is_image_carrier = !is_wml_uri(source_element.uri) &&
-            source_element.local_name
-            is ("inline" | "anchor" | "imagedata" | "pict")
+          let legacy_is_image_carrier = shadow_is_image_element(source_element)
           if theirs.kind is HardBarrier &&
             (mine.kind is VisibleNonText || mine.kind is SuppressedContent) &&
             legacy_is_image_carrier &&
@@ -457,6 +494,23 @@ fn compare_shadow_streams(
               mine.projection_end != theirs.projection_end {
               return Some(
                 "paragraph \{paragraph_index} image boundary interval at \{our_source} differs",
+              )
+            }
+            let our_run = match mine.run_source {
+              Some(SourceElementId(identity)) => identity
+              None => -1
+            }
+            let legacy_run = match theirs.run_identity {
+              Some(identity) => identity
+              None => -1
+            }
+            if our_run != legacy_run ||
+              mine.logical_run_index != theirs.logical_run_index ||
+              mine.field_region != theirs.field_region ||
+              mine.field_identity != theirs.field_identity ||
+              mine.field_refusal != theirs.field_refusal {
+              return Some(
+                "paragraph \{paragraph_index} image boundary metadata at \{our_source} differs",
               )
             }
             let kind_label = match mine.kind {
@@ -540,12 +594,14 @@ fn compare_shadow_streams(
         SuppressedContent =>
           // ours-only Suppressed is accepted broadly (capped once per
           // source): the effect stream records every rejection the legacy
-          // walk never visits -- control and MC rejections, table
-          // metadata, warned unknowns, retractions, drops. This is SOUND
-          // because suppression of content that mattered would also drop
-          // its text, and the text streams compare strictly; the
-          // dangerous kinds (VisibleNonText, Transparent) stay tightly
-          // classed above.
+          // walk never visits. Text-bearing suppression is anchored by
+          // the strict text comparison. THE ZERO-WIDTH RESIDUAL: a
+          // synthesized checkbox flipped from VisibleNonText to
+          // Suppressed would slip this net; it is backstopped by the
+          // effect-kind witnesses that pin the synthesis kinds exactly
+          // ("reader effects: sdt checkbox without text synthesises at
+          // the control", "reader effects: complex field checkbox and
+          // hyperlink synthesis").
           true
         _ => false
       }
