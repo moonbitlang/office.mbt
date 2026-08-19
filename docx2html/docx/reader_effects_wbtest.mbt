@@ -104,14 +104,29 @@ fn flatten_effect_paragraphs(
 /// paragraph partition (which `reader_paragraph_texts` itself checks against
 /// `to_raw_text`).
 fn assert_effect_partition_matches_reader(source : String) -> Unit raise {
-  let (paragraphs, trailing) = effect_paragraph_texts(
-    reader_effect_items(source),
-  )
+  let items = reader_effect_items(source)
+  let (paragraphs, trailing) = effect_paragraph_texts(items)
   assert_eq(paragraphs, reader_paragraph_texts(source))
   // `reader_paragraph_texts` asserts the erased side leaves no text after
   // the last paragraph; a phantom trailing contribution on the effect side
   // would otherwise vanish here unchecked
   assert_eq(trailing, "")
+  // the production collector must carry the same text in the same order as
+  // the tree walk above -- a dropped or reordered `ProjectsText` in
+  // `collect_reader_effects` would otherwise stay invisible here. (Non-text
+  // kinds are pinned per decision site by the witnesses in this file.)
+  let collected = StringBuilder()
+  for effect in collect_reader_effects(items) {
+    if effect is ProjectsText(source=_, kind=_, value~) {
+      collected.write_string(value)
+    }
+  }
+  let walked = StringBuilder()
+  for text in paragraphs {
+    walked.write_string(text)
+  }
+  walked.write_string(trailing)
+  assert_eq(collected.to_string(), walked.to_string())
 }
 
 ///|
@@ -262,6 +277,70 @@ test "reader effects: traces inside an open hyperlink field are not wrapped" {
   inspect(
     effect_summaries(items),
     content="boundary(w:fldChar) ; suppressed(w:instrText) ; boundary(w:fldChar) ; boundary(w:bookmarkEnd) ; boundary(w:r) ; text(w:t)=link ; boundary(w:fldChar)",
+  )
+  assert_effect_partition_matches_reader(xml)
+}
+
+///|
+/// The erased pipeline wrapped each ERASED element in the open field's
+/// hyperlink, so a tolerated nested paragraph -- one item, but paragraph
+/// plus extras when erased -- becomes one hyperlink per erased sibling,
+/// never one hyperlink swallowing them all.
+test "reader effects: open field wraps a paragraph's extras as separate hyperlinks" {
+  let xml =
+    #|<w:body xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main" xmlns:v="urn:schemas-microsoft-com:vml"><w:p><w:r><w:fldChar w:fldCharType="begin"/></w:r><w:r><w:instrText> HYPERLINK "https://e" </w:instrText></w:r><w:r><w:fldChar w:fldCharType="separate"/></w:r><w:p><w:r><w:pict><v:shape><v:textbox><w:txbxContent><w:p><w:r><w:t>X</w:t></w:r></w:p></w:txbxContent></v:textbox></v:shape></w:pict></w:r></w:p><w:r><w:fldChar w:fldCharType="end"/></w:r></w:p></w:body>
+  let items = reader_effect_items(xml)
+  // outer paragraph: three field-marker runs, the wrapped empty carrier,
+  // the wrapped textbox extra, the end run; then the OUTER paragraph's own
+  // extras pass re-homes the textbox once more, unwrapped -- exactly the
+  // erased pipeline's shape
+  guard reader_items_to_elements(items)
+    is [
+      Paragraph(
+        children=[
+          Run(children=[], ..),
+          Run(children=[], ..),
+          Run(children=[], ..),
+          Hyperlink(
+            children=[Paragraph(children=[Run(children=[], ..)], ..)],
+            ..
+          ),
+          Hyperlink(
+            children=[Paragraph(children=[Run(children=[Text("X")], ..)], ..)],
+            ..
+          ),
+          Run(children=[], ..),
+        ],
+        ..
+      ),
+      Paragraph(children=[Run(children=[Text("X")], ..)], ..),
+    ] else {
+    fail("expected one hyperlink per erased sibling")
+  }
+  assert_effect_partition_matches_reader(xml)
+}
+
+///|
+/// A row deleted through `w:trPr/w:del` is a suppression decision.
+test "reader effects: deleted table rows leave a suppression trace" {
+  let xml =
+    #|<w:body xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:tbl><w:tr><w:trPr><w:del/></w:trPr><w:tc><w:p><w:r><w:t>gone</w:t></w:r></w:p></w:tc></w:tr><w:tr><w:tc><w:p><w:r><w:t>kept</w:t></w:r></w:p></w:tc></w:tr></w:tbl></w:body>
+  inspect(
+    effect_summaries(reader_effect_items(xml)),
+    content="suppressed(w:tr) ; text(w:t)=kept",
+  )
+  assert_effect_partition_matches_reader(xml)
+}
+
+///|
+/// An `w:instrText` sitting directly under the paragraph is consumed as
+/// instruction text; the skip is recorded.
+test "reader effects: a direct paragraph-level instrText is suppressed" {
+  let xml =
+    #|<w:body xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:p><w:instrText> PAGE </w:instrText><w:r><w:t>A</w:t></w:r></w:p></w:body>
+  inspect(
+    effect_summaries(reader_effect_items(xml)),
+    content="suppressed(w:instrText) ; text(w:t)=A",
   )
   assert_effect_partition_matches_reader(xml)
 }

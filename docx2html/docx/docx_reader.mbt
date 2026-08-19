@@ -2520,7 +2520,10 @@ fn BodyReader::read_paragraph_children(
         items.append(self.read_element(element))
       }
       _ =>
-        if element.name() != "w:instrText" {
+        if element.name() == "w:instrText" {
+          // consumed as instruction text above; nothing projects here
+          items.push(Trace(Suppressed(source=element)))
+        } else {
           items.append(
             wrap_items_with_current_hyperlink(stack, self.read_element(element)),
           )
@@ -2553,9 +2556,11 @@ fn reader_field_checkbox_run(checked : Bool, source : ReaderNode) -> ReaderItem 
 
 ///|
 /// Wrap freshly read items in the innermost open HYPERLINK field, at the
-/// item level. A run keeps the hyperlink INSIDE it (matching the legacy
-/// shape Run(Hyperlink(children))); anything else is wrapped outside. The
-/// synthesised hyperlink's source is the field-begin node.
+/// item level, mirroring how the erased pipeline wrapped each ERASED
+/// element: a run keeps the hyperlink INSIDE it, a paragraph's extras are
+/// wrapped as independent siblings (they erase as siblings), traces pass
+/// through untouched, and anything else is wrapped outside. The synthesised
+/// hyperlink's source is the field-begin node.
 fn wrap_items_with_current_hyperlink(
   stack : Array[ComplexField],
   items : Array[ReaderItem],
@@ -2564,7 +2569,7 @@ fn wrap_items_with_current_hyperlink(
     Some((href, anchor, source)) => {
       let wrapped : Array[ReaderItem] = []
       for item in items {
-        wrapped.push(wrap_item_with_hyperlink(item, href, anchor, source))
+        wrap_item_with_hyperlink_into(item, href, anchor, source, wrapped)
       }
       wrapped
     }
@@ -2573,12 +2578,13 @@ fn wrap_items_with_current_hyperlink(
 }
 
 ///|
-fn wrap_item_with_hyperlink(
+fn wrap_item_with_hyperlink_into(
   item : ReaderItem,
   href : String?,
   anchor : String?,
   source : ReaderNode,
-) -> ReaderItem {
+  out : Array[ReaderItem],
+) -> Unit {
   fn hyperlink_of(children : Array[ReaderItem]) -> ReaderItem {
     New({
       source,
@@ -2590,7 +2596,7 @@ fn wrap_item_with_hyperlink(
   match item {
     // effect traces are not output; wrapping one would fabricate an empty
     // hyperlink element the reader never produced
-    Trace(_) => item
+    Trace(_) => out.push(item)
     New(
       {
         source: run_source,
@@ -2598,12 +2604,36 @@ fn wrap_item_with_hyperlink(
         shape: ReaderRun(children~, properties~),
       }
     ) =>
-      New({
-        source: run_source,
+      out.push(
+        New({
+          source: run_source,
+          local_effects,
+          shape: ReaderRun(children=[hyperlink_of(children)], properties~),
+        }),
+      )
+    // a paragraph erases to itself plus its extras as siblings; the erased
+    // pipeline wrapped each of those separately
+    New(
+      {
+        source: paragraph_source,
         local_effects,
-        shape: ReaderRun(children=[hyperlink_of(children)], properties~),
-      })
-    other => hyperlink_of([other])
+        shape: ReaderParagraph(sources~, children~, extras~, properties~),
+      }
+    ) => {
+      out.push(
+        hyperlink_of([
+          New({
+            source: paragraph_source,
+            local_effects,
+            shape: ReaderParagraph(sources~, children~, extras=[], properties~),
+          }),
+        ]),
+      )
+      for extra in extras {
+        wrap_item_with_hyperlink_into(extra, href, anchor, source, out)
+      }
+    }
+    other => out.push(hyperlink_of([other]))
   }
 }
 
@@ -3845,7 +3875,7 @@ fn BodyReader::read_table_row(
 ) -> Array[ReaderItem] raise DocxError {
   let properties = element.first_or_empty("w:trPr")
   if properties.first("w:del") is Some(_) {
-    []
+    [Trace(Suppressed(source=element))]
   } else {
     let is_header = properties.first("w:tblHeader") is Some(_)
     [
@@ -3975,7 +4005,11 @@ fn BodyReader::calculate_table_row_spans(
   self : BodyReader,
   items : Array[ReaderItem],
 ) -> Array[ReaderItem] {
-  let typed_rows : Array[TableRowForSpan] = []
+  // two passes, matching the erased pipeline's warning order: every table
+  // child is checked to be a row before any row's cells are examined
+  let row_shells : Array[
+    (Array[ReaderItem], Bool, ReaderNode, Array[ReaderItem]),
+  ] = []
   let pending : Array[ReaderItem] = []
   for item in items {
     match item {
@@ -3988,16 +4022,7 @@ fn BodyReader::calculate_table_row_spans(
           shape: ReaderTableRow(children~, is_header~),
         }
       ) => {
-        guard self.table_cells_for_span(children) is Some((cells, trailing)) else {
-          return items
-        }
-        typed_rows.push({
-          cells,
-          trailing,
-          is_header,
-          source,
-          leading: pending.copy(),
-        })
+        row_shells.push((children, is_header, source, pending.copy()))
         pending.clear()
       }
       _ => {
@@ -4007,6 +4032,14 @@ fn BodyReader::calculate_table_row_spans(
         return items
       }
     }
+  }
+  let typed_rows : Array[TableRowForSpan] = []
+  for shell in row_shells {
+    let (children, is_header, source, leading) = shell
+    guard self.table_cells_for_span(children) is Some((cells, trailing)) else {
+      return items
+    }
+    typed_rows.push({ cells, trailing, is_header, source, leading })
   }
   let rows = self.calculate_typed_table_row_spans(typed_rows)
   rows.append(pending)

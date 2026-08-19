@@ -2960,6 +2960,23 @@ test "docx table reader warns when row span calculation is unreliable" {
       #|[Warning("unexpected non-cell element in table row, cell merging may be incorrect")]
     ),
   )
+  // both malformations together: every table child is checked to be a row
+  // BEFORE any row's cells are examined, so the non-row wins even though a
+  // bad cell appears in an earlier row
+  let combined_xml =
+    #|<w:tbl xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:tr><w:p /></w:tr><w:p /></w:tbl>
+  let combined = read_xml_string(
+    combined_xml,
+    namespace_map=office_namespace_map(),
+  )
+  let combined_reader = empty_body_reader({ relationships: [] })
+  ignore(combined_reader.read_element_erased(ReaderNode::of(combined)))
+  debug_inspect(
+    combined_reader.messages,
+    content=(
+      #|[Warning("unexpected non-row element in table, cell merging may be incorrect")]
+    ),
+  )
 }
 
 ///|
