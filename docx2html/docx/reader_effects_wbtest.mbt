@@ -45,11 +45,11 @@ fn effect_summaries(items : Array[ReaderItem]) -> String {
 /// mirroring `flatten_reader_paragraphs` over the carrier -- a shared buffer
 /// that each `ReaderParagraph` closes, extras walked as the siblings they
 /// erase into.
-fn effect_paragraph_texts(items : Array[ReaderItem]) -> Array[String] {
+fn effect_paragraph_texts(items : Array[ReaderItem]) -> (Array[String], String) {
   let paragraphs : Array[String] = []
   let buffer = StringBuilder()
   flatten_effect_paragraphs(items, paragraphs, buffer)
-  paragraphs
+  (paragraphs, buffer.to_string())
 }
 
 ///|
@@ -104,10 +104,14 @@ fn flatten_effect_paragraphs(
 /// paragraph partition (which `reader_paragraph_texts` itself checks against
 /// `to_raw_text`).
 fn assert_effect_partition_matches_reader(source : String) -> Unit raise {
-  assert_eq(
-    effect_paragraph_texts(reader_effect_items(source)),
-    reader_paragraph_texts(source),
+  let (paragraphs, trailing) = effect_paragraph_texts(
+    reader_effect_items(source),
   )
+  assert_eq(paragraphs, reader_paragraph_texts(source))
+  // `reader_paragraph_texts` asserts the erased side leaves no text after
+  // the last paragraph; a phantom trailing contribution on the effect side
+  // would otherwise vanish here unchecked
+  assert_eq(trailing, "")
 }
 
 ///|
