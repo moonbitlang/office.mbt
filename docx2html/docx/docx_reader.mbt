@@ -2218,19 +2218,21 @@ fn BodyReader::read_element(
       )
     "w:pict" => [Trace(Suppressed(source=element))]
     "mc:AlternateContent" => {
+      // effects in document order: every child the reader passes over is a
+      // rejection recorded where it sits; only the FIRST fallback's
+      // children contribute (matching `first_or_empty` selection)
       let items : Array[ReaderItem] = [
         Trace(TransparentBoundary(source=element)),
       ]
+      let mut fallback_seen = false
       for child in element.element_children() {
-        if child.name() == "mc:Choice" {
+        if child.name() == "mc:Fallback" && !fallback_seen {
+          fallback_seen = true
+          items.append(self.read_children(child.element_children()))
+        } else {
           items.push(Trace(Suppressed(source=child)))
         }
       }
-      items.append(
-        self.read_children(
-          element.first_or_empty("mc:Fallback").element_children(),
-        ),
-      )
       items
     }
     "wp:inline" | "wp:anchor" => self.read_drawing_element(element)
@@ -3437,7 +3439,8 @@ fn BodyReader::read_drawing_element(
         results.push(
           self.wrap_image_with_drawing_hyperlink(element, blip, image),
         )
-      None => ()
+      // the blip resolved to no image; nothing materialises for it
+      None => results.push(Trace(Suppressed(source=blip)))
     }
   }
   results
@@ -3559,7 +3562,7 @@ fn BodyReader::read_vml_image_data(
   element : ReaderNode,
 ) -> Array[ReaderItem] {
   if !self.read_images {
-    return []
+    return [Trace(Suppressed(source=element))]
   }
   match non_empty_attribute(element, "r:id") {
     Some(id) =>
@@ -3576,7 +3579,8 @@ fn BodyReader::read_vml_image_data(
               shape: ReaderImage(image),
             }),
           ]
-        None => []
+        // unresolved relationship: the image never materialises
+        None => [Trace(Suppressed(source=element))]
       }
     None => {
       self.warn("A v:imagedata element without a relationship ID was ignored")

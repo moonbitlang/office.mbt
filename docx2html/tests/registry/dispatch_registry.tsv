@@ -241,7 +241,6 @@ docx_reader.mbt	jpg	fallback_content_type	value	docx_wbtest:"docx content types 
 docx_reader.mbt	localhost	local_file_uri_path	value	docx_wbtest:"docx external file URI paths follow Mammoth local URI rules"
 docx_reader.mbt	mc	office_namespace_map	prefix	docx_wbtest:"docx body reader uses mc fallback content like Mammoth"
 docx_reader.mbt	mc:AlternateContent	BodyReader::read_element,BodyReader::read_paragraph_extra_elements,BodyReader::read_pict_extra_elements,BodyReader::read_text_box_elements	name	docx_wbtest:"docx body reader uses mc fallback content like Mammoth"; reader_order_property_wbtest:"the projection matches the reader on generated documents"
-docx_reader.mbt	mc:Choice	BodyReader::read_element	name	reader_effects_wbtest:"reader effects select the alternate fallback and suppress choices"
 docx_reader.mbt	mc:Fallback	BodyReader::read_element,BodyReader::read_pict_extra_elements,BodyReader::read_text_box_elements	name	docx_wbtest:"docx body reader uses mc fallback content like Mammoth"; docx_wbtest:"docx w:pict extra content uses alternate fallback"
 docx_reader.mbt	none	read_highlight,read_underline	value	docx_wbtest:"docx reader reads underline with Mammoth special cases"; docx_wbtest:"docx reader treats empty highlight as no highlight"
 docx_reader.mbt	null	local_file_uri_path	value	docx_wbtest:"docx external file URI paths follow Mammoth local URI rules"

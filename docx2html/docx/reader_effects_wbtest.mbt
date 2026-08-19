@@ -344,3 +344,45 @@ test "reader effects: a direct paragraph-level instrText is suppressed" {
   )
   assert_effect_partition_matches_reader(xml)
 }
+
+///|
+/// An image element that resolves to no image is a suppression at that
+/// site: an unresolved relationship, and a blip the drawing reader cannot
+/// read.
+test "reader effects: unresolved images leave suppression traces" {
+  let vml_xml =
+    #|<w:body xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main" xmlns:v="urn:schemas-microsoft-com:vml" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><w:p><w:r><w:pict><v:shape><v:imagedata r:id="rIdMissing"/></v:shape></w:pict></w:r></w:p></w:body>
+  inspect(
+    effect_summaries(reader_effect_items(vml_xml)),
+    // the pict body is suppressed at its arm; the paragraph-level pict
+    // extras pass then reaches the imagedata, whose unresolved relationship
+    // suppresses again at that site
+    content="suppressed(w:pict) ; suppressed(v:imagedata)",
+  )
+  let drawing_xml =
+    #|<w:body xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main" xmlns:wp="http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" xmlns:pic="http://schemas.openxmlformats.org/drawingml/2006/picture" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><w:p><w:r><w:drawing><wp:inline><a:graphic><a:graphicData><pic:pic><pic:blipFill><a:blip r:embed="rIdMissing"/></pic:blipFill></pic:pic></a:graphicData></a:graphic></wp:inline></w:drawing></w:r></w:p></w:body>
+  inspect(
+    effect_summaries(reader_effect_items(drawing_xml)),
+    content="boundary(w:drawing) ; suppressed(a:blip)",
+  )
+  assert_effect_partition_matches_reader(vml_xml)
+  assert_effect_partition_matches_reader(drawing_xml)
+}
+
+///|
+/// Rejections are recorded where they sit: with tolerated child order
+/// `Fallback(A), Choice(B), Fallback(C)`, only the first fallback
+/// contributes and everything else is suppressed in place.
+test "reader effects: alternate content rejections stay in document order" {
+  let xml =
+    #|<mc:AlternateContent xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><mc:Fallback><w:t>A</w:t></mc:Fallback><mc:Choice Requires="wps"><w:t>B</w:t></mc:Choice><mc:Fallback><w:t>C</w:t></mc:Fallback></mc:AlternateContent>
+  let root = read_xml_string(xml, namespace_map=office_namespace_map())
+  let items = empty_body_reader({ relationships: [] }).read_element(
+    ReaderNode::of(root),
+  )
+  inspect(
+    effect_summaries(items),
+    content="boundary(mc:AlternateContent) ; text(w:t)=A ; suppressed(mc:Choice) ; suppressed(mc:Fallback)",
+  )
+  debug_inspect(reader_items_to_elements(items), content="[Text(\"A\")]")
+}
