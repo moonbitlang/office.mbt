@@ -25,6 +25,8 @@ priv struct ReaderProjectionBuilder {
   /// both frame arming and run visibility, mirroring the legacy walker's
   /// per-level inline state.
   enclosures : Array[ReaderProjectionEnclosure]
+  /// The field-carrier event stream, in walk order.
+  field_carriers : Array[ReaderOrderFieldCarrierEvent]
   mut refusal : ReaderProjectionRefusal?
 }
 
@@ -61,6 +63,7 @@ fn project_reader_items(
     pending: [],
     pending_runs: [],
     enclosures: [],
+    field_carriers: [],
     refusal: None,
   }
   builder.walk_items(items)
@@ -86,6 +89,8 @@ fn project_reader_items(
     source_part,
     scan,
     paragraphs: builder.paragraphs,
+    field_carriers: builder.field_carriers,
+    field_index: empty_reader_order_field_index(),
   }
   assign_reader_projection_coordinates(projection)
   Projected(projection)
@@ -142,6 +147,69 @@ fn ReaderProjectionBuilder::reopen_segment_runs(
       EnclosingRun(id) => self.register_run(id)
       _ => ()
     }
+  }
+}
+
+///|
+fn reader_item_source(item : ReaderItem) -> ReaderNode {
+  match item {
+    New(tree) => tree.source
+    Trace(effect) =>
+      match effect {
+        ProjectsText(source~, ..) => source
+        ProjectsVisibleNonText(source~) => source
+        TransparentBoundary(source~) => source
+        Suppressed(source~) => source
+      }
+  }
+}
+
+///|
+/// Emits the field-carrier event for the direct physical child owning
+/// this top-level item, once per carrier per paragraph: the same stream
+/// the legacy walker records at each carrier visit. Effect totality makes
+/// this complete -- every carrier the reader visits yields at least one
+/// item whose source sits inside it.
+fn ReaderProjectionBuilder::emit_carrier_event(
+  self : ReaderProjectionBuilder,
+  inputs : Array[ReaderParagraphInput],
+  seen_carriers : Array[Int],
+  item : ReaderItem,
+) -> Unit raise DocxError {
+  guard reader_item_source(item).source_element_id
+    is Some(SourceElementId(source_index)) else {
+    return
+  }
+  let elements = self.scan.elements()
+  if source_index < 0 || source_index >= elements.length() {
+    return
+  }
+  let mut current = source_index
+  while current >= 0 {
+    let parent = elements[current].parent_index
+    if parent >= 0 {
+      for input in inputs {
+        match input.paragraph.source_element_id {
+          Some(SourceElementId(paragraph_index)) =>
+            if parent == paragraph_index {
+              for seen in seen_carriers {
+                if seen == current {
+                  return
+                }
+              }
+              self.budget.charge_retained()
+              seen_carriers.push(current)
+              self.field_carriers.push({
+                paragraph_identity: paragraph_index,
+                carrier_identity: current,
+              })
+              return
+            }
+          None => ()
+        }
+      }
+    }
+    current = parent
   }
 }
 
@@ -220,6 +288,9 @@ fn ReaderProjectionBuilder::push_effect(
     projection_start: 0,
     projection_end: 0,
     logical_run_index: -1,
+    field_identity: None,
+    field_region: OutsideField,
+    field_refusal: None,
   })
 }
 
@@ -281,7 +352,14 @@ fn ReaderProjectionBuilder::walk_items(
             self.arm_enclosing_frames()
             let frame : ReaderProjectionParagraphFrame = { inputs, armed: true }
             self.enclosures.push(EnclosingParagraph(frame))
-            self.walk_items(children)
+            let seen_carriers : Array[Int] = []
+            for child in children {
+              if self.refusal is Some(_) {
+                break
+              }
+              self.emit_carrier_event(inputs, seen_carriers, child)
+              self.walk_items([child])
+            }
             ignore(self.enclosures.pop())
             self.flush_paragraph(inputs)
             // extras erase as siblings AFTER the paragraph and re-home
