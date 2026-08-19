@@ -143,15 +143,18 @@ def generate(cases, expected):
         }
         Refused(_) => "join-refused"
         Joined(story) => {
-          // the production segmentation: the body (or bare root) as one
+          // the production segmentation: the document body as one
           // segment, each accepted note or comment container as its own,
           // with part-wide continuous coordinates across segments
-          let output = segment_joined_reader_story(
+          match segment_joined_reader_story(
             "word/document.xml",
             story,
             empty_body_reader({ relationships: [] }),
-          )
-          match project_joined_reader_output(output) {
+          ) {
+            SegmentationRefused(refusal) =>
+              "segmentation-refused:" + refusal.describe()
+            SegmentedStory(output) =>
+              match project_joined_reader_output(output) {
             ProjectionRefused(refusal) =>
               "projection-refused:" + refusal.describe()
             Projected(projection) => {
@@ -165,6 +168,7 @@ def generate(cases, expected):
                 None => "shadowed"
               }
             }
+          }
           }
         }
       }

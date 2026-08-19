@@ -10,12 +10,31 @@ fn project_segmented_story(
   guard join_text_story(source) is Joined(story) else {
     fail("expected the story to join")
   }
-  let output = segment_joined_reader_story(
-    "word/document.xml",
-    story,
-    empty_body_reader({ relationships: [] }),
-  )
+  guard segment_joined_reader_story(
+      "word/document.xml",
+      story,
+      empty_body_reader({ relationships: [] }),
+    )
+    is SegmentedStory(output) else {
+    fail("expected the story to segment")
+  }
   project_joined_reader_output(output)
+}
+
+///|
+fn segmentation_refusal_of(source : String) -> ReaderSegmentationRefusal raise {
+  guard join_text_story(source) is Joined(story) else {
+    fail("expected the story to join")
+  }
+  guard segment_joined_reader_story(
+      "word/document.xml",
+      story,
+      empty_body_reader({ relationships: [] }),
+    )
+    is SegmentationRefused(refusal) else {
+    fail("expected segmentation to refuse")
+  }
+  refusal
 }
 
 ///|
@@ -55,7 +74,7 @@ test "segmented document projection matches the single-segment adapter" {
 }
 
 ///|
-test "a headerlike root without a body is one segment of its own children" {
+test "a header root reads its own children, never a nested body" {
   let source =
     #|<w:hdr xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:p><w:r><w:t>head</w:t></w:r></w:p></w:hdr>
   guard project_segmented_story(source) is Projected(projection) else {
@@ -66,6 +85,106 @@ test "a headerlike root without a body is one segment of its own children" {
     describe_projection(projection),
     content=(
       #|p0(src=1;runs=2;[0,4))t:head@3r0[0,4)
+    ),
+  )
+  // a nested w:body is NOT selected: production passes the root's own
+  // children, so the body reads as an unknown (suppressed) element and
+  // the trailing paragraph is the story
+  let nested =
+    #|<w:hdr xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:body><w:p><w:r><w:t>X</w:t></w:r></w:p></w:body><w:p><w:r><w:t>Y</w:t></w:r></w:p></w:hdr>
+  // hdr=0 body=1 p=2 r=3 t=4 p=5 r=6 t=7
+  guard project_segmented_story(nested) is Projected(faithful) else {
+    fail("expected the nested-body header projection")
+  }
+  inspect(
+    describe_projection(faithful),
+    content=(
+      #|p0(src=5;runs=6;[0,1))s@1r-1[0,0) t:Y@7r0[0,1)
+    ),
+  )
+}
+
+///|
+test "a footer root reads its own children" {
+  let source =
+    #|<w:ftr xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:p><w:r><w:t>foot</w:t></w:r></w:p></w:ftr>
+  guard project_segmented_story(source) is Projected(projection) else {
+    fail("expected the footer projection")
+  }
+  // ftr=0 p=1 r=2 t=3
+  inspect(
+    describe_projection(projection),
+    content=(
+      #|p0(src=1;runs=2;[0,4))t:foot@3r0[0,4)
+    ),
+  )
+}
+
+///|
+test "a plumbing-typed comment still reads as content" {
+  // comments carry no plumbing convention: production reads every
+  // comment whatever its w:type says
+  let source =
+    #|<w:comments xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:comment w:type="separator" w:id="1"><w:p><w:r><w:t>c</w:t></w:r></w:p></w:comment></w:comments>
+  // comments=0 c=1 p=2 r=3 t=4
+  guard project_segmented_story(source) is Projected(projection) else {
+    fail("expected the comment projection")
+  }
+  inspect(
+    describe_projection(projection),
+    content=(
+      #|p0(src=2;runs=3;[0,1))t:c@4r0[0,1)
+    ),
+  )
+}
+
+///|
+test "segmentation refuses structural surprises instead of narrowing" {
+  // a foreign direct child of a notes root: production silently drops
+  // it; the mutation-safe view refuses
+  inspect(
+    segmentation_refusal_of(
+      (
+        #|<w:footnotes xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main" xmlns:x="urn:example"><x:bucket><w:p><w:r><w:t>X</w:t></w:r></w:p></x:bucket><w:footnote w:id="1"><w:p><w:r><w:t>one</w:t></w:r></w:p></w:footnote></w:footnotes>
+      ),
+    ).describe(),
+    content="unexpected direct child {urn:example}bucket of w:footnotes",
+  )
+  // a document story without a body: production raises InvalidXml on
+  // the same shape
+  inspect(
+    segmentation_refusal_of(
+      (
+        #|<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:p><w:r><w:t>a</w:t></w:r></w:p></w:document>
+      ),
+    ).describe(),
+    content="the document story has no body",
+  )
+  // an unknown story root
+  inspect(
+    segmentation_refusal_of(
+      (
+        #|<w:glossaryDocument xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:body><w:p/></w:body></w:glossaryDocument>
+      ),
+    ).describe(),
+    content="unexpected story root w:glossaryDocument",
+  )
+}
+
+///|
+test "document segmentation reads only the first body" {
+  // a direct w:background is not story content and is not read --
+  // exactly as production main-document reading consumes only the body
+  let source =
+    #|<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:background w:color="FF0000"/><w:body><w:p><w:r><w:t>a</w:t></w:r></w:p></w:body></w:document>
+  // document=0 background=1 body=2 p=3 r=4 t=5
+  guard project_segmented_story(source) is Projected(projection) else {
+    fail("expected the document projection")
+  }
+  inspect(
+    describe_projection(projection),
+    content=(
+      #|p0(src=3;runs=4;[0,1))t:a@5r0[0,1)
     ),
   )
 }
