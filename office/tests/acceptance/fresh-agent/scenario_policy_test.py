@@ -627,6 +627,11 @@ def main(argv):
     table_edit = edit_script(policy)
     table_edit["ops"][0]["params"]["at"] = "tbl[1]/tr[1]/tc[1]/r[1]"
     expect_rejected(policy, lambda: policy.validate_edit_script(table_edit))
+    marker_bearing_edit = edit_script(policy)
+    marker_bearing_edit["ops"][0]["params"]["text"] = (
+        policy.TEMPLATE_MARKERS["docx"] + "-EDITED"
+    )
+    expect_rejected(policy, lambda: policy.validate_edit_script(marker_bearing_edit))
     unbound_edit_result = edit_result(policy)
     unbound_edit_result["data"]["results"][0]["text"] = "F1B-DOCX-OTHER-V1"
     expect_rejected(

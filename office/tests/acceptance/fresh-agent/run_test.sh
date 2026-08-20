@@ -283,6 +283,7 @@ make_candidate() {
     '  /bin/mkdir -p "$(/usr/bin/dirname -- "$package_path")"' \
     '  case "${package_path##*/}" in batched.xlsx|authored.docx) stage_text="{{agent_name}}" ;; edited.docx) stage_text=F1B-DOCX-EDITED-V1 ;; *.xlsx) stage_text=F1B-XLSX-TEMPLATE-V1 ;; *) stage_text=F1B-DOCX-TEMPLATE-V1 ;; esac' \
     '  if [ "${OFFICE_F1B_UNEDITED_EDIT:-}" = 1 ] && [ "${package_path##*/}" = edited.docx ]; then stage_text=F1B-DOCX-TEMPLATE-V1; fi' \
+    '  if [ "${OFFICE_F1B_PRE_EDITED_INPUT:-}" = 1 ] && [ "${package_path##*/}" = annotated.docx ]; then stage_text=F1B-DOCX-EDITED-V1; fi' \
     '  content_marker=F1B-XLSX-REPRESENTATIVE-V1' \
     '  if [ "${OFFICE_F1B_EMPTY_SEMANTICS:-}" = 1 ]; then content_marker=EMPTY; stage_text=EMPTY; fi' \
     '  package_tmp="$TMPDIR/fake-office-package-$$"' \
@@ -313,7 +314,13 @@ make_candidate() {
     '    anchor_end="<w:commentRangeEnd w:id=\"0\"/><w:r><w:commentReference w:id=\"0\"/></w:r>"' \
     '    heading_anchor_start=; heading_anchor_end=; template_anchor_start=$anchor_start; template_anchor_end=$anchor_end' \
     '    if [ "${OFFICE_F1B_WRONG_ANNOTATION_ANCHOR:-}" = 1 ]; then heading_anchor_start=$anchor_start; heading_anchor_end=$anchor_end; template_anchor_start=; template_anchor_end=; fi' \
-    '    printf "%s\n" "<w:document xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\" xmlns:r=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships\"><w:body><w:p><w:pPr><w:pStyle w:val=\"Heading1\"/></w:pPr>$heading_anchor_start<w:r><w:t>F1B-DOCX-HEADING-V1</w:t></w:r>$heading_anchor_end</w:p><w:p>$template_anchor_start<w:r><w:t>$stage_text</w:t></w:r>$template_anchor_end</w:p><w:p><w:pPr><w:numPr><w:ilvl w:val=\"0\"/></w:numPr></w:pPr><w:r><w:t>F1B-DOCX-LIST-V1</w:t></w:r></w:p><w:tbl><w:tr><w:tc><w:p><w:r><w:t>F1B-DOCX-TABLE-V1</w:t></w:r></w:p></w:tc></w:tr></w:tbl><w:p><w:hyperlink r:id=\"rIdLink\"><w:r><w:t>F1B link</w:t></w:r></w:hyperlink></w:p></w:body></w:document>" > "$package_tmp/word/document.xml"' \
+    '    docx_list_paragraph="<w:p><w:pPr><w:numPr><w:ilvl w:val=\"0\"/></w:numPr></w:pPr><w:r><w:t>F1B-DOCX-LIST-V1</w:t></w:r></w:p>"' \
+    '    docx_table_block="<w:tbl><w:tr><w:tc><w:p><w:r><w:t>F1B-DOCX-TABLE-V1</w:t></w:r></w:p></w:tc></w:tr></w:tbl>"' \
+    '    docx_link_paragraph="<w:p><w:hyperlink r:id=\"rIdLink\"><w:r><w:t>F1B link</w:t></w:r></w:hyperlink></w:p>"' \
+    '    extra_docx_paragraph=' \
+    '    if [ "${OFFICE_F1B_STRIPPED_EDIT:-}" = 1 ] && [ "${package_path##*/}" = edited.docx ]; then docx_list_paragraph=; docx_table_block=; docx_link_paragraph=; fi' \
+    '    if [ "${OFFICE_F1B_PRE_EDITED_INPUT:-}" = 1 ] && [ "${package_path##*/}" = annotated.docx ]; then extra_docx_paragraph="<w:p><w:r><w:t>F1B-DOCX-TEMPLATE-V1</w:t></w:r></w:p>"; fi' \
+    '    printf "%s\n" "<w:document xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\" xmlns:r=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships\"><w:body><w:p><w:pPr><w:pStyle w:val=\"Heading1\"/></w:pPr>$heading_anchor_start<w:r><w:t>F1B-DOCX-HEADING-V1</w:t></w:r>$heading_anchor_end</w:p><w:p>$template_anchor_start<w:r><w:t>$stage_text</w:t></w:r>$template_anchor_end</w:p>$docx_list_paragraph$docx_table_block$docx_link_paragraph$extra_docx_paragraph</w:body></w:document>" > "$package_tmp/word/document.xml"' \
     '    printf "%s\n" '\''<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rIdLink" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/hyperlink" Target="https://example.invalid/f1b" TargetMode="External"/><Relationship Id="rIdComments" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/comments" Target="comments.xml"/><Relationship Id="rIdCommentsEx" Type="http://schemas.microsoft.com/office/2011/relationships/commentsExtended" Target="commentsExtended.xml"/></Relationships>'\'' > "$package_tmp/word/_rels/document.xml.rels"' \
     '    printf "%s\n" '\''<w:comments xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main" xmlns:w14="http://schemas.microsoft.com/office/word/2010/wordml"><w:comment w:id="0"><w:p w14:paraId="00000001"><w:r><w:t>F1B-DOCX-COMMENT-V1</w:t></w:r></w:p></w:comment><w:comment w:id="1"><w:p w14:paraId="00000002"><w:r><w:t>F1B-DOCX-REPLY-V1</w:t></w:r></w:p></w:comment></w:comments>'\'' > "$package_tmp/word/comments.xml"' \
     '    printf "%s\n" '\''<w15:commentsEx xmlns:w15="http://schemas.microsoft.com/office/word/2012/wordml"><w15:commentEx w15:paraId="00000001" w15:done="1"/><w15:commentEx w15:paraId="00000002" w15:paraIdParent="00000001" w15:done="0"/></w15:commentsEx>'\'' > "$package_tmp/word/commentsExtended.xml"' \
@@ -1085,6 +1092,10 @@ chmod 0600 "$codex_bin_dir/mode"
     '            OFFICE_F1B_WRONG_ANNOTATION_ANCHOR=1 "office-$runtime" "$verb" $run_args --json --attest-result "$result" > "$result.attestation" 2> "$result.stderr"' \
     '          elif [ "$mode" = "unedited-edit-artifact" ] && [ "$runtime/$format/$verb" = "native/docx/edit" ]; then' \
     '            OFFICE_F1B_UNEDITED_EDIT=1 "office-$runtime" "$verb" $run_args --json --attest-result "$result" > "$result.attestation" 2> "$result.stderr"' \
+    '          elif [ "$mode" = "pre-edited-input" ] && [ "$runtime/$format/$verb" = "native/docx/annotate" ]; then' \
+    '            OFFICE_F1B_PRE_EDITED_INPUT=1 "office-$runtime" "$verb" $run_args --json --attest-result "$result" > "$result.attestation" 2> "$result.stderr"' \
+    '          elif [ "$mode" = "corrupted-edit-artifact" ] && [ "$runtime/$format/$verb" = "native/docx/edit" ]; then' \
+    '            OFFICE_F1B_STRIPPED_EDIT=1 "office-$runtime" "$verb" $run_args --json --attest-result "$result" > "$result.attestation" 2> "$result.stderr"' \
     '          elif [ "$mode" = "canned-get" ] && [ "$runtime/$format/$verb" = "native/xlsx/get" ]; then' \
     '            OFFICE_F1B_CANNED_GET=1 "office-$runtime" "$verb" $run_args --json --attest-result "$result" > "$result.attestation" 2> "$result.stderr"' \
     '          elif [ "$mode" = "canned-raw" ] && [ "$runtime/$format/$verb" = "native/xlsx/raw" ]; then' \
@@ -1910,6 +1921,22 @@ expect_failure unedited-edit-artifact 1 \
   "$runner" "$head" "$candidate_sha" \
   "$case_root/unedited-edit-artifact-probe" \
   "$case_root/unedited-edit-artifact-evidence" \
+  "$case_root/auth.json" "$codex_bin_dir/codex" "$codex_sha"
+
+printf 'pre-edited-input\n' > "$codex_bin_dir/mode"
+expect_failure pre-edited-input 1 \
+  'does not carry the expected run text' \
+  "$runner" "$head" "$candidate_sha" \
+  "$case_root/pre-edited-input-probe" \
+  "$case_root/pre-edited-input-evidence" \
+  "$case_root/auth.json" "$codex_bin_dir/codex" "$codex_sha"
+
+printf 'corrupted-edit-artifact\n' > "$codex_bin_dir/mode"
+expect_failure corrupted-edit-artifact 1 \
+  'edited package lacks representative DOCX structure' \
+  "$runner" "$head" "$candidate_sha" \
+  "$case_root/corrupted-edit-artifact-probe" \
+  "$case_root/corrupted-edit-artifact-evidence" \
   "$case_root/auth.json" "$codex_bin_dir/codex" "$codex_sha"
 
 printf 'empty-semantic-package\n' > "$codex_bin_dir/mode"

@@ -714,6 +714,7 @@ def inspect_docx_semantics(
     label,
     final,
     expected_annotation_ids=None,
+    template_text=None,
 ):
     with open_semantic_package(root, record, label) as archive:
         document = package_xml(archive, "word/document.xml", label)
@@ -756,8 +757,12 @@ def inspect_docx_semantics(
         document_text = "\n".join(paragraph_texts)
         expected = TEMPLATE_MARKERS["docx"] if final else "{{%s}}" % TEMPLATE_KEY
         forbidden = "{{%s}}" % TEMPLATE_KEY if final else TEMPLATE_MARKERS["docx"]
+        if template_text is not None:
+            expected = template_text
         if not all((heading, listed, table, hyperlink)) or expected not in document_text or forbidden in document_text:
             fail("%s lacks representative DOCX structure or template state" % label)
+        if template_text is not None and TEMPLATE_MARKERS["docx"] in document_text:
+            fail("%s still carries the pre-edit template marker" % label)
         result = {
             "external_hyperlink": True,
             "heading": True,
@@ -1123,7 +1128,12 @@ def validate_edit_script(value):
         fail("DOCX edit set_run_text needs one canonical run address")
     if params["expect"] != TEMPLATE_MARKERS["docx"]:
         fail("DOCX edit set_run_text must expect the merged template-marker run")
-    if not isinstance(text, str) or not 1 <= len(text) <= 160 or text == params["expect"]:
+    if (
+        not isinstance(text, str)
+        or not 1 <= len(text) <= 160
+        or text == params["expect"]
+        or TEMPLATE_MARKERS["docx"] in text
+    ):
         fail("DOCX edit set_run_text must state a bounded real replacement")
     relative = at[len("/docx/body/"):] if at.startswith("/docx/body/") else at
     return {
@@ -1134,8 +1144,8 @@ def validate_edit_script(value):
     }
 
 
-def inspect_docx_edit_artifact(root, record, contract, label):
-    match = re.fullmatch(r"p\[([1-9][0-9]*)\]/r\[([1-9][0-9]*)\]", contract["at"])
+def inspect_docx_run_text(root, record, at, required_text, description, label):
+    match = re.fullmatch(r"p\[([1-9][0-9]*)\]/r\[([1-9][0-9]*)\]", at)
     if match is None:
         fail("%s has an unwalkable edit address" % label)
     paragraph_ordinal = int(match.group(1))
@@ -1155,10 +1165,10 @@ def inspect_docx_edit_artifact(root, record, contract, label):
         ]
         if len(runs) < run_ordinal:
             fail("%s does not reach the retained edit address" % label)
-        if element_text(runs[run_ordinal - 1], WORD_NS) != contract["text"]:
+        if element_text(runs[run_ordinal - 1], WORD_NS) != required_text:
             fail(
-                "%s does not carry the replacement run text at the retained address"
-                % label
+                "%s does not carry the %s run text at the retained address"
+                % (label, description)
             )
 
 
@@ -2086,10 +2096,20 @@ def validate_scenario(
             edit_contract,
             "%s DOCX edit result" % runtime,
         )
-        inspect_docx_edit_artifact(
+        inspect_docx_run_text(
+            root,
+            canonical["annotate"]["artifact"],
+            edit_contract["at"],
+            edit_contract["expect"],
+            "expected",
+            "%s DOCX edit input package" % runtime,
+        )
+        inspect_docx_run_text(
             root,
             canonical["edit"]["artifact"],
-            edit_contract,
+            edit_contract["at"],
+            edit_contract["text"],
+            "replacement",
             "%s DOCX edited package" % runtime,
         )
     final = final_event["artifact"]
@@ -2113,6 +2133,16 @@ def validate_scenario(
             final=True,
             expected_annotation_ids=annotation_ids,
         )
+        edited_semantics = inspect_docx_semantics(
+            root,
+            canonical["edit"]["artifact"],
+            "%s DOCX edited package" % runtime,
+            final=True,
+            expected_annotation_ids=annotation_ids,
+            template_text=edit_contract["text"],
+        )
+        if edited_semantics != final_semantics:
+            fail("%s DOCX edited package changes representative semantics" % runtime)
     for operation in FINAL_CONSUMERS:
         lineage.append(
             require_lineage(
