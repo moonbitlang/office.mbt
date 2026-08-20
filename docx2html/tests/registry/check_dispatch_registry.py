@@ -54,6 +54,7 @@ FILES = {
     # PR 5's reader-native projection: pure restructuring over reader
     # output; quotes no XML names of its own
     'reader_projection_types.mbt': 'extract',
+    'run_surgery_api.mbt': 'extract',
     'reader_projection_adapter.mbt': 'extract',
     # PR 5b's field bridge: resolves owning paragraphs by name
     'reader_projection_fields.mbt': 'extract',
