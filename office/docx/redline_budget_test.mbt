@@ -106,7 +106,7 @@ async test "annotate still refuses a package past the XML budget (#338)" {
     group.add_defer() <| () => {
       @async.protect_from_cancel(() => @afs.rmdir(directory, recursive=true))
     }
-    let input = edit_fixture(directory, "huge.docx", redline_runs(12000))
+    let input = edit_fixture(directory, "huge.docx", redline_runs(30000))
     let output = directory + "/never.docx"
     let options = @transaction.transaction_options(input, output_path=output)
     let batch = single_comment_batch()

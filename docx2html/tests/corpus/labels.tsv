@@ -13,7 +13,7 @@ docxcorp-forms-ja-3186dce1c998.docx	construct:ruby script:jpn
 docxcorp-legal-en-b27159649b19.docx	construct:fldSimple construct:noBreakHyphen
 docxcorp-policies-de-86f43e58d8a6.docx	refuse:annotate:sidecar-unknown-paraid
 docxcorp-policies-ru-c417943be184.docx	construct:softHyphen script:cyrillic
-docxcorp-policies-th-2f3af94f8afa.docx	construct:drawing construct:fldChar construct:mce construct:numPr construct:object construct:pict construct:sdt construct:sectPr_multi construct:sym construct:tbl construct:txbx construct:vmerge producer:word refuse:annotate:xml-token-budget script:thai
+docxcorp-policies-th-2f3af94f8afa.docx	construct:drawing construct:fldChar construct:mce construct:numPr construct:object construct:pict construct:sdt construct:sectPr_multi construct:sym construct:tbl construct:txbx construct:vmerge producer:word script:thai
 docxcorp-policies-zh-2d2bef8d23da.docx	producer:wps
 docxcorp-reference-ar-2dc29c0624a4.docx	construct:bidi construct:hyperlink construct:rtl refuse:annotate:ms-sidecar-parts script:rtl
 docxcorp-reference-pl-012c3de280d2.docx	construct:footnote_ref fail:trailing-bytes refuse:read:eocd-trailing script:latin

@@ -22,9 +22,11 @@ priv struct CommentExEntry {
 ///|
 fn default_annotation_planner_xml_budget() -> @xml.XmlReadBudget {
   @xml.xml_read_budget(
+    // Same calibration as the OPC validator defaults (#438): one token per
+    // four source units, materialization capped at the source allowance.
     max_source_units=16 * 1024 * 1024,
-    max_tokens=262_144,
-    max_materialized_chars=8 * 1024 * 1024,
+    max_tokens=4 * 1024 * 1024,
+    max_materialized_chars=16 * 1024 * 1024,
     max_token_chars=4 * 1024 * 1024,
   )
 }

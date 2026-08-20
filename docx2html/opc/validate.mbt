@@ -69,10 +69,19 @@ const DEFAULT_MAX_FINDING_CHARS : Int = 2048
 const DEFAULT_MAX_XML_SOURCE_UNITS : Int = 16 * 1024 * 1024
 
 ///|
-const DEFAULT_MAX_XML_TOKENS : Int = 262_144
+/// One markup token per four source units. Post name-interning the corpus
+/// measures 6.8-7.4 source units per charged token on real DOCX main parts
+/// (docx2html/tests/corpus, #438), so this guard never binds before the
+/// source ceiling on real documents while still capping allocation count for
+/// pathological short-name markup.
+const DEFAULT_MAX_XML_TOKENS : Int = DEFAULT_MAX_XML_SOURCE_UNITS / 4
 
 ///|
-const DEFAULT_MAX_XML_MATERIALIZED_CHARS : Int = 8 * 1024 * 1024
+/// Materialization is capped at the source allowance itself: with resolved
+/// names interned per parse, the corpus measures at most 0.85 materialized
+/// chars per source unit (#438), so real documents sit under this with
+/// headroom while amplified unique-name markup is still refused.
+const DEFAULT_MAX_XML_MATERIALIZED_CHARS : Int = DEFAULT_MAX_XML_SOURCE_UNITS
 
 ///|
 const DEFAULT_MAX_XML_TOKEN_CHARS : Int = 4 * 1024 * 1024

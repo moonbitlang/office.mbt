@@ -495,6 +495,10 @@ fn read_xml_string_with_mode_and_root_namespace_uri(
     } else {
       SortedMap([])
     },
+    expanded_element_names: Map([]),
+    expanded_attribute_names: Map([]),
+    mapped_element_names: Map([]),
+    mapped_attribute_names: Map([]),
   }
   parser.skip_misc(document_start=true)
   match source_encoding {
@@ -1324,6 +1328,15 @@ priv struct XmlParser {
   mut root_namespace_uri : String?
   namespace_map : NamespaceLookup
   namespaces : @sorted_map.SortedMap[String, String]
+  // Per-parse interning of resolved names, keyed by the raw source token.
+  // A cache hit allocates nothing and charges nothing: the shared string was
+  // charged once at its first materialization. Bindings changing (namespace
+  // declaration or scope restore) clear all four maps, so entries can never
+  // outlive the binding set they were resolved under.
+  expanded_element_names : Map[String, String]
+  expanded_attribute_names : Map[String, String]
+  mapped_element_names : Map[String, String]
+  mapped_attribute_names : Map[String, String]
 }
 
 ///|
@@ -1402,6 +1415,15 @@ fn XmlParser::record_namespace_binding(
   }
   changes.push({ prefix, previous: self.namespaces.get(prefix) })
   self.namespaces[prefix] = namespace_uri
+  self.invalidate_name_caches()
+}
+
+///|
+fn XmlParser::invalidate_name_caches(self : XmlParser) -> Unit {
+  self.expanded_element_names.clear()
+  self.expanded_attribute_names.clear()
+  self.mapped_element_names.clear()
+  self.mapped_attribute_names.clear()
 }
 
 ///|
@@ -1415,6 +1437,9 @@ fn XmlParser::restore_namespace_bindings(
       Some(previous) => self.namespaces[change.prefix] = previous
       None => self.namespaces.remove(change.prefix)
     }
+  }
+  if changes.length() > 0 {
+    self.invalidate_name_caches()
   }
 }
 
@@ -1647,6 +1672,32 @@ fn XmlParser::map_name(
   raw_name : String,
   is_attribute~ : Bool,
 ) -> String raise DocxError {
+  // The root element's resolution also records root_namespace_uri, so it is
+  // never served from (or into) the cache.
+  if !is_attribute && self.depth == 1 {
+    return self.resolve_map_name(raw_name, is_attribute~)
+  }
+  let cache = if is_attribute {
+    self.mapped_attribute_names
+  } else {
+    self.mapped_element_names
+  }
+  match cache.get(raw_name) {
+    Some(mapped) => mapped
+    None => {
+      let mapped = self.resolve_map_name(raw_name, is_attribute~)
+      cache[raw_name] = mapped
+      mapped
+    }
+  }
+}
+
+///|
+fn XmlParser::resolve_map_name(
+  self : XmlParser,
+  raw_name : String,
+  is_attribute~ : Bool,
+) -> String raise DocxError {
   match raw_name.find(":") {
     Some(index) => {
       self.charge_derived_name(index)
@@ -1701,6 +1752,27 @@ fn nonempty_namespace_uri(namespace_uri : String?) -> String? {
 
 ///|
 fn XmlParser::expanded_name(
+  self : XmlParser,
+  raw_name : String,
+  is_attribute~ : Bool,
+) -> String raise DocxError {
+  let cache = if is_attribute {
+    self.expanded_attribute_names
+  } else {
+    self.expanded_element_names
+  }
+  match cache.get(raw_name) {
+    Some(expanded) => expanded
+    None => {
+      let expanded = self.resolve_expanded_name(raw_name, is_attribute~)
+      cache[raw_name] = expanded
+      expanded
+    }
+  }
+}
+
+///|
+fn XmlParser::resolve_expanded_name(
   self : XmlParser,
   raw_name : String,
   is_attribute~ : Bool,

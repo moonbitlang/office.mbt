@@ -2,10 +2,14 @@
 let docx_cli_max_xml_source_units : Int = 64 * 1024 * 1024
 
 ///|
-let docx_cli_max_xml_tokens : Int = 1024 * 1024
+/// One markup token per four source units (#438 corpus calibration: real
+/// DOCX main parts measure 6.8-7.4 units per token with interned names).
+let docx_cli_max_xml_tokens : Int = docx_cli_max_xml_source_units / 4
 
 ///|
-let docx_cli_max_xml_materialized_chars : Int = 32 * 1024 * 1024
+/// The source allowance itself: interned-name materialization measures at
+/// most 0.85 chars per source unit on the corpus (#438).
+let docx_cli_max_xml_materialized_chars : Int = docx_cli_max_xml_source_units
 
 ///|
 let docx_cli_max_xml_token_chars : Int = 1024 * 1024
