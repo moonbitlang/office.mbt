@@ -181,8 +181,22 @@ fn assert_scan_modes_agree(label : String, source : String) -> Unit raise {
   match (annotation.root(), retained.root()) {
     (Some(a), Some(r)) =>
       assert_eq(
-        (a.path, a.kind, a.byte_start, a.byte_end),
-        (r.path, r.kind, r.byte_start, r.byte_end),
+        (
+          a.path,
+          a.kind,
+          a.byte_start,
+          a.byte_end,
+          a.content_start,
+          a.close_tag_start,
+        ),
+        (
+          r.path,
+          r.kind,
+          r.byte_start,
+          r.byte_end,
+          r.content_start,
+          r.close_tag_start,
+        ),
         msg="\{label}: root",
       )
     (None, None) => ()
