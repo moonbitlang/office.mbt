@@ -91,7 +91,7 @@ fn AnnotationWarningCollector::full(self : AnnotationWarningCollector) -> Bool {
 /// the bounded-cap omission notice. Lossless because a source-retaining
 /// scan's nonfatal warning vocabulary is small and never saturates its own
 /// per-scan collector — pinned by the saturation witness in
-/// projection_source_tree_wbtest.mbt; re-establish that argument before
+/// scan_mode_parity_wbtest.mbt; re-establish that argument before
 /// widening the scanner's warning vocabulary.
 fn AnnotationWarningCollector::replay_scan_warnings(
   self : AnnotationWarningCollector,

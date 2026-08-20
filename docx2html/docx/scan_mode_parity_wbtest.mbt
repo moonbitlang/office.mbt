@@ -86,6 +86,11 @@ fn assert_scan_modes_agree(label : String, source : String) -> Unit raise {
       ),
       msg="\{label}: node \{index}",
     )
+    assert_eq(
+      (a.open_order, a.open_seq, a.close_seq),
+      (r.open_order, r.open_seq, r.close_seq),
+      msg="\{label}: node sequence \{index}",
+    )
   }
   let annotation_markers = annotation.markers()
   let retained_markers = retained.markers()
@@ -141,6 +146,66 @@ fn assert_scan_modes_agree(label : String, source : String) -> Unit raise {
       (r.byte_start, r.content_start, r.close_tag_start, r.byte_end),
       msg="\{label}: revision site span \{index}",
     )
+    assert_eq(
+      a.declares_namespaces,
+      r.declares_namespaces,
+      msg="\{label}: revision site namespace flag \{index}",
+    )
+    assert_eq(
+      a.name_edits.length(),
+      r.name_edits.length(),
+      msg="\{label}: revision site name edits \{index}",
+    )
+    for edit_index in 0..<a.name_edits.length() {
+      let ae = a.name_edits[edit_index]
+      let re = r.name_edits[edit_index]
+      assert_eq(
+        (
+          ae.open_start,
+          ae.open_end,
+          ae.close_start,
+          ae.close_end,
+          ae.replacement,
+        ),
+        (
+          re.open_start,
+          re.open_end,
+          re.close_start,
+          re.close_end,
+          re.replacement,
+        ),
+        msg="\{label}: revision site \{index} name edit \{edit_index}",
+      )
+    }
+  }
+  match (annotation.root(), retained.root()) {
+    (Some(a), Some(r)) =>
+      assert_eq(
+        (a.path, a.kind, a.byte_start, a.byte_end),
+        (r.path, r.kind, r.byte_start, r.byte_end),
+        msg="\{label}: root",
+      )
+    (None, None) => ()
+    _ => fail("\{label}: root presence differs between scan modes")
+  }
+  let annotation_positions = annotation.story_level_positions
+  let retained_positions = retained.story_level_positions
+  assert_eq(
+    annotation_positions.size(),
+    retained_positions.size(),
+    msg="\{label}: story-level position count",
+  )
+  for seq, position in annotation_positions {
+    match retained_positions.get(seq) {
+      Some(other) =>
+        assert_eq(
+          (position.path, position.node_is_after),
+          (other.path, other.node_is_after),
+          msg="\{label}: story-level position \{seq}",
+        )
+      None =>
+        fail("\{label}: story-level position \{seq} missing in source mode")
+    }
   }
 }
 
@@ -157,6 +222,18 @@ test "annotation and source scans agree on every public projection" {
     "containers",
     (
       #|<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main" xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"><w:body><w:sdt><w:sdtContent><w:p><w:hyperlink><w:r><w:t>link</w:t></w:r></w:hyperlink><w:ins w:id="1" w:author="Ada" w:date="2001-01-01T00:00:00Z"><w:r><w:t>new</w:t></w:r></w:ins></w:p></w:sdtContent></w:sdt><mc:AlternateContent><mc:Choice><w:p><w:r><w:t>hidden</w:t></w:r></w:p></mc:Choice><mc:Fallback><w:p><w:r><w:t>shown</w:t></w:r></w:p></mc:Fallback></mc:AlternateContent><w:p><w:del w:id="2" w:author="Bob"><w:r><w:delText>old</w:delText></w:r></w:del></w:p></w:body></w:document>
+    ),
+  )
+  assert_scan_modes_agree(
+    "story-level markers",
+    (
+      #|<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:body><w:commentRangeStart w:id="3"/><w:p><w:r><w:t>a</w:t></w:r></w:p><w:commentRangeEnd w:id="3"/><w:p><w:r><w:commentReference w:id="3"/></w:r></w:p></w:body></w:document>
+    ),
+  )
+  assert_scan_modes_agree(
+    "namespace-declaring revision with name edits",
+    (
+      #|<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:body><w:p><w:del w:id="9" w:author="Eve" xmlns:x="urn:extra"><w:r><w:delText>gone</w:delText><w:delInstrText>PAGE</w:delInstrText></w:r></w:del></w:p></w:body></w:document>
     ),
   )
   assert_scan_modes_agree(
