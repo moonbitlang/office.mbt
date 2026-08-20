@@ -1335,8 +1335,10 @@ priv struct XmlParser {
   // never outlive the binding set they were resolved under. Sorted maps keep
   // lookups collision-independent (raw QNames are attacker-controlled, and
   // the fixed-seed string hash would admit flooding), matching `namespaces`;
-  // invalidation replaces the instances, which is O(1) regardless of how
-  // large a cache the previous binding scope grew.
+  // invalidation replaces the instances, handing the old one to reclamation,
+  // which visits each retained entry exactly once — so total teardown work
+  // stays linear in what was ever inserted, where a per-change `clear()` of
+  // a warmed table's retained capacity would be quadratic.
   mut expanded_element_names : @sorted_map.SortedMap[String, String]
   mut expanded_attribute_names : @sorted_map.SortedMap[String, String]
   mut mapped_element_names : @sorted_map.SortedMap[String, String]
