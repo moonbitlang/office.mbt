@@ -378,7 +378,13 @@ fn HeaderFooterCollector::read_part_story(
           StageRefused(stage=StrictGate, cause~),
         )
     }
-    let read = read_joined_story_prepared(path, bytes, root, reader)
+    let read = read_joined_story_prepared(
+      path,
+      bytes,
+      root,
+      reader,
+      path_budget?=self.parts.annotation_path_budget,
+    )
     self.parts.reader_projections[path] = read.projection
     self.parts.reader_projection_sources[path] = bytes
     guard read.output.segments is [segment] else {
