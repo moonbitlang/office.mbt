@@ -14,6 +14,7 @@ pub struct RunTextReceipt {
   priv story_part : String
   priv at_relative : String
   priv replaced_text : String
+  priv result_text : String
   priv edit_count : Int
 }
 
@@ -33,6 +34,11 @@ pub fn RunTextReceipt::replaced_text(self : RunTextReceipt) -> String {
 }
 
 ///|
+pub fn RunTextReceipt::result_text(self : RunTextReceipt) -> String {
+  self.result_text
+}
+
+///|
 pub fn RunTextReceipt::edit_count(self : RunTextReceipt) -> Int {
   self.edit_count
 }
@@ -49,30 +55,13 @@ pub fn RunTextReceipt::edit_count(self : RunTextReceipt) -> Int {
 /// snapshot-relative, and a stale expectation refuses rather than
 /// editing whatever now sits at the path.
 ///
-/// Every failure is a typed refusal; nothing falls back. The returned
-/// plan is pinned to the exact source bytes it was computed against.
-pub fn plan_run_text_replacement_archive(
+/// Every failure is a typed refusal; nothing falls back. The planner
+/// takes NO archive: it plans against the exact source bytes the
+/// annotated read retained beside the projection, so a mismatched
+/// archive cannot be smuggled in -- and the returned plan is pinned to
+/// those same bytes, so applying it to anything else refuses as stale.
+pub fn plan_run_text_replacement(
   annotated : DocxAnnotatedResult,
-  archive : @mbtzip.Archive,
-  story : DocxStoryPartSource,
-  at_relative~ : String,
-  expect~ : String,
-  text~ : String,
-) -> (@splice.SplicePlan, RunTextReceipt) raise DocxError {
-  plan_run_text_replacement_zip(
-    annotated,
-    open_zip_archive(archive),
-    story,
-    at_relative~,
-    expect~,
-    text~,
-  )
-}
-
-///|
-fn plan_run_text_replacement_zip(
-  annotated : DocxAnnotatedResult,
-  zip : ZipArchive,
   story : DocxStoryPartSource,
   at_relative~ : String,
   expect~ : String,
@@ -145,8 +134,10 @@ fn plan_run_text_replacement_zip(
       message="the run at '\{at_relative}' in '\{part}' does not carry the expected text; re-read the document and retry with a fresh address",
     )
   }
-  guard zip.read_bytes(part) is Some(bytes) else {
-    raise MissingPart(message="missing DOCX part: " + part)
+  guard annotated.reader_projection_sources.get(part) is Some(bytes) else {
+    raise Unsupported(
+      message="the mutation-safe read retained no source bytes for '\{part}'",
+    )
   }
   let edits = plan_whole_run_replacement(
     projection, bytes, paragraph_index, run_index, text,
@@ -169,6 +160,7 @@ fn plan_run_text_replacement_zip(
       story_part: part,
       at_relative,
       replaced_text: expect,
+      result_text: text,
       edit_count: edits.length(),
     },
   )

@@ -380,6 +380,7 @@ fn HeaderFooterCollector::read_part_story(
     }
     let read = read_joined_story_prepared(path, bytes, root, reader)
     self.parts.reader_projections[path] = read.projection
+    self.parts.reader_projection_sources[path] = bytes
     guard read.output.segments is [segment] else {
       raise Unsupported(
         message="mutation-safe \{kind} read produced an unexpected segment count",

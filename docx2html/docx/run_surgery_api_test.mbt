@@ -16,9 +16,8 @@ test "an addressed run replacement plans, applies, and preserves" {
   let bytes = run_text_fixture()
   let archive = try! @mbtzip.read(bytes)
   let annotated = @docx.read_docx_annotated_archive(archive)
-  let (plan, receipt) = @docx.plan_run_text_replacement_archive(
+  let (plan, receipt) = @docx.plan_run_text_replacement(
     annotated,
-    archive,
     annotated.main_story_source(),
     at_relative="p[1]/r[2]",
     expect="beta",
@@ -56,13 +55,12 @@ test "an addressed run replacement plans, applies, and preserves" {
   )
   // and the edited package still reads mutation-safe with a fresh
   // projection: the address is re-usable on the NEW snapshot
-  let (_, again) = @docx.plan_run_text_replacement_archive(
+  let (_, again) = @docx.plan_run_text_replacement(
     reread,
-    try! @mbtzip.read(spliced),
     reread.main_story_source(),
-    at_relative="p[1]/r[2]",
-    expect="BETA",
-    text="beta",
+    at_relative=receipt.at_relative(),
+    expect=receipt.result_text(),
+    text=receipt.replaced_text(),
   )
   inspect(again.replaced_text(), content="BETA")
 }
@@ -74,9 +72,8 @@ test "an addressed run replacement refuses every wrong premise typed" {
   let annotated = @docx.read_docx_annotated_archive(archive)
   fn refusal(at : String, expect : String) -> String raise {
     try {
-      let _ = @docx.plan_run_text_replacement_archive(
+      let _ = @docx.plan_run_text_replacement(
         annotated,
-        archive,
         annotated.main_story_source(),
         at_relative=at,
         expect~,
@@ -111,9 +108,8 @@ test "an addressed run replacement refuses every wrong premise typed" {
   )
   let mut tolerant_refused = false
   try {
-    let _ = @docx.plan_run_text_replacement_archive(
+    let _ = @docx.plan_run_text_replacement(
       tolerant,
-      archive,
       tolerant.main_story_source(),
       at_relative="p[1]/r[1]",
       expect="alpha",
@@ -140,9 +136,8 @@ test "an addressed run inside a field instruction refuses through the boundary" 
   let annotated = @docx.read_docx_annotated_archive(archive)
   let mut refused = false
   try {
-    let _ = @docx.plan_run_text_replacement_archive(
+    let _ = @docx.plan_run_text_replacement(
       annotated,
-      archive,
       annotated.main_story_source(),
       at_relative="p[1]/r[2]",
       expect="",
@@ -157,13 +152,49 @@ test "an addressed run inside a field instruction refuses through the boundary" 
   }
   assert_true(refused)
   // the cached result stays plannable
-  let (_, receipt) = @docx.plan_run_text_replacement_archive(
+  let (_, receipt) = @docx.plan_run_text_replacement(
     annotated,
-    archive,
     annotated.main_story_source(),
     at_relative="p[1]/r[4]",
     expect="7",
     text="8",
   )
   inspect(receipt.edit_count(), content="1")
+}
+
+///|
+/// The plan is bound to the snapshot it was computed from: it pins the
+/// RETAINED source bytes, so applying it to a same-shaped archive whose
+/// part differs refuses as stale instead of editing the wrong bytes.
+test "a plan from one snapshot refuses to apply to another" {
+  let bytes = run_text_fixture()
+  let annotated = @docx.read_docx_annotated(bytes)
+  let (plan, _) = @docx.plan_run_text_replacement(
+    annotated,
+    annotated.main_story_source(),
+    at_relative="p[1]/r[2]",
+    expect="beta",
+    text="BETA",
+  )
+  // a different snapshot with the same layout: beta -> zeta
+  let other = fixture_docx(
+    (
+      #|<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:body><w:p><w:r><w:t>alpha</w:t></w:r><w:r><w:t>zeta</w:t></w:r></w:p><w:p><w:r><w:t>gamma</w:t></w:r></w:p><w:sectPr/></w:body></w:document>
+    ),
+  )
+  let mut stale = false
+  try {
+    let _ = @splice.splice_docx_archive(
+      try! @mbtzip.read(other),
+      plan,
+      max_output_bytes=1 << 22,
+    )
+  } catch {
+    Unsupported(message~) => {
+      stale = true
+      assert_true(message.contains("stale"))
+    }
+    _ => fail("expected the stale-plan refusal")
+  }
+  assert_true(stale)
 }
