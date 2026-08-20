@@ -143,8 +143,10 @@ pub fn plan_run_text_replacement(
   // change bytes (entities re-escape), so the only honest no-op is an
   // empty plan -- after the address and expectation validated above.
   if text == expect {
+    let noop = @splice.SplicePlan::new()
+    noop.pin_part(part, bytes)
     return (
-      @splice.SplicePlan::new(),
+      noop,
       {
         story_part: part,
         at_relative,

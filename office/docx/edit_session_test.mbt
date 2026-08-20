@@ -1891,10 +1891,23 @@ async test "A2 session queues an addressed run replacement and commits it" {
     guard result.get("word/document.xml") is Some(actual) else {
       fail("the output lost its main part")
     }
-    assert_true(actual.find(b">BETA<") is Some(_))
-    assert_true(actual.find(b">beta<") is None)
-    assert_true(actual.find(b">alpha<") is Some(_))
-    assert_true(actual.find(b">gamma<") is Some(_))
+    // byte-exact: the output part IS the input part with the one run's
+    // content swapped -- every surrounding byte position is compared
+    guard @zip.read(run_text_session_fixture()).get("word/document.xml")
+      is Some(original) else {
+      fail("the fixture lost its main part")
+    }
+    guard original.find(b">beta<") is Some(at) else {
+      fail("the fixture lost its target run")
+    }
+    let expected : Array[Byte] = []
+    for index in 0..<original.length() {
+      expected.push(original[index])
+    }
+    for offset, byte in b">BETA<" {
+      expected[at + offset] = byte
+    }
+    assert_eq(actual, Bytes::from_array(expected))
   })
 }
 
