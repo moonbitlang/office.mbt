@@ -183,14 +183,19 @@ test "projection source attributes follow reader precedence across WML dialects"
 }
 
 ///|
-test "source precedence does not change legacy annotation scanning" {
+test "duplicate-WML-attribute precedence is identical in every scan mode" {
+  // #462 phase C: last-wins everywhere (the XML reader's canonical-map
+  // overwrite precedence). Before unification the legacy annotation scan
+  // took the first match, so the same document resolved different marker
+  // identities depending on which scan produced them — unacceptable once
+  // the index adopts retained projection scans.
   let source =
     #|<root xmlns:t="http://schemas.openxmlformats.org/wordprocessingml/2006/main" xmlns:s="http://purl.oclc.org/ooxml/wordprocessingml/main"><t:commentRangeStart t:id="first" s:id="last"/></root>
   let legacy = scan_story(@utf8.encode(source))
   let retained = scan_projection_source_tree(@utf8.encode(source))
   debug_inspect(
     (legacy.markers()[0].id(), retained.markers()[0].id()),
-    content="(\"first\", \"last\")",
+    content="(\"last\", \"last\")",
   )
 }
 
