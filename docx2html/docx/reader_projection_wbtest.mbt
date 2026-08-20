@@ -264,6 +264,28 @@ test "text contributions span their content, atoms their element" {
 }
 
 ///|
+/// #427 CLOSED BY CONSTRUCTION: the legacy walker suppressed a deleted
+/// row's content while the reader's paragraph-extras pass recursed
+/// physically and still emitted its textbox, so the two stories
+/// diverged. The native projection derives from the reader's OWN read,
+/// so whatever the reader does with this shape, the projection carries.
+test "a textbox in a deleted row inside a paragraph projects like the reader" {
+  let source =
+    #|<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main" xmlns:v="urn:schemas-microsoft-com:vml"><w:body><w:p><w:r><w:t>x</w:t></w:r><w:tbl><w:tr><w:trPr><w:del/></w:trPr><w:tc><w:p><w:r><w:pict><v:shape><v:textbox><w:txbxContent><w:p><w:r><w:t>A</w:t></w:r></w:p></w:txbxContent></v:textbox></v:shape></w:pict><w:t>B</w:t></w:r></w:p></w:tc></w:tr></w:tbl></w:p></w:body></w:document>
+  let projection = projection_of(source)
+  let texts : Array[String] = []
+  for paragraph in projection.paragraphs {
+    let text = StringBuilder()
+    for contribution in paragraph.contributions {
+      text.write_string(contribution.value)
+    }
+    texts.push(text.to_string())
+  }
+  assert_eq(texts, reader_paragraph_texts(source))
+  inspect(texts, content="[x, A]")
+}
+
+///|
 /// A paragraph whose own text contains the separator must not be split.
 ///
 /// `"a\n\nb"` in a single `w:t` serialises exactly like two paragraphs
