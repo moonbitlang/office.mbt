@@ -65,12 +65,14 @@ test "every span surface reads the adopted scan's records" {
         root_span.byte_end(),
         root_span.content_start(),
         root_span.close_tag_start(),
+        root_span.self_closing(),
       ),
       (
         root.byte_start,
         root.byte_end,
         optional_offset(root.content_start),
         optional_offset(root.close_tag_start),
+        root.content_start < 0,
       ),
       msg="\{story} root span",
     )
@@ -93,12 +95,36 @@ test "every span surface reads the adopted scan's records" {
     fail("body run and paragraph must resolve through both surfaces")
   }
   assert_eq(
-    (run_short.byte_start(), run_short.byte_end()),
-    (run_story.byte_start(), run_story.byte_end()),
+    (
+      run_short.byte_start(),
+      run_short.byte_end(),
+      run_short.content_start(),
+      run_short.close_tag_start(),
+      run_short.self_closing(),
+    ),
+    (
+      run_story.byte_start(),
+      run_story.byte_end(),
+      run_story.content_start(),
+      run_story.close_tag_start(),
+      run_story.self_closing(),
+    ),
   )
   assert_eq(
-    (paragraph_short.byte_start(), paragraph_short.byte_end()),
-    (paragraph_story.byte_start(), paragraph_story.byte_end()),
+    (
+      paragraph_short.byte_start(),
+      paragraph_short.byte_end(),
+      paragraph_short.content_start(),
+      paragraph_short.close_tag_start(),
+      paragraph_short.self_closing(),
+    ),
+    (
+      paragraph_story.byte_start(),
+      paragraph_story.byte_end(),
+      paragraph_story.content_start(),
+      paragraph_story.close_tag_start(),
+      paragraph_story.self_closing(),
+    ),
   )
 }
 
@@ -214,6 +240,43 @@ test "the resolver's splice touches exactly the span the surface reports" {
     }
   }
   assert_true(differs, msg="the addressed window must carry the change")
+  // Identity: the resolver consumes the SHARED scan, not a rescan. A
+  // fabricated path aliasing the real run's byte_start plans successfully;
+  // a resolver-owned rescan could never find "p[66]/r[66]" and would
+  // refuse.
+  guard annotated.reader_projections.get("word/document.xml")
+    is Some(projection) else {
+    fail("expected the main projection")
+  }
+  let mut real_byte_start = -1
+  for node in projection.scan.nodes() {
+    if node.kind == "r" && node.path == "p[1]/r[1]" {
+      real_byte_start = node.byte_start
+    }
+  }
+  assert_true(real_byte_start >= 0)
+  projection.scan
+  .nodes()
+  .push(ScannedNode::{
+    path: "p[66]/r[66]",
+    kind: "r",
+    open_order: 9_997,
+    open_seq: 999_980,
+    close_seq: 999_981,
+    byte_start: real_byte_start,
+    byte_end: span.byte_end(),
+    content_start: -1,
+    close_tag_start: -1,
+  })
+  let (_, through_sentinel) = plan_run_text_replacement(
+    annotated,
+    annotated.main_story_source(),
+    at_relative="p[66]/r[66]",
+    expect="Body",
+    text="Edited",
+  )
+  assert_eq(through_sentinel.replaced_text(), "Body")
+  assert_eq(through_sentinel.at_relative(), "p[66]/r[66]")
   // Where the span surface reports no node, the resolver must refuse.
   assert_true(annotated.story_run_span("/body", "p[9]/r[1]") is None)
   try
