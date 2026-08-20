@@ -623,6 +623,12 @@ fn optional_annotation_story_source(
 /// The package read plus its annotation index. Opaque. Carries the
 /// annotation BODIES as (id, body) pairs in reader order — exactly the
 /// shape `@paths.resolve_annotation_path` consumes (J2's read surface).
+///
+/// A returned result is a source-pinned IMMUTABLE snapshot: in mutation-safe
+/// mode its index scans ARE the retained reader-projection scans (one scan
+/// per story part, shared by every consumer). Applying surgery never patches
+/// a retained scan in place — the plan writes a new archive, and reading
+/// that archive is the only way to observe the mutation.
 pub struct DocxAnnotatedResult {
   priv package_result : DocxPackageResult
   priv index : AnnotationIndex
