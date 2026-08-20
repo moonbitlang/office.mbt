@@ -2710,12 +2710,13 @@ fn parse_char_reference(digits : String, base : Int) -> Char? {
 fn scan_projection_source_tree(
   part : BytesView,
   budget? : ProjectionSourceBudget,
+  path_budget? : AnnotationPathBudget,
 ) -> StoryScan raise DocxError {
   let budget = match budget {
     Some(value) => value
     None => projection_source_budget()
   }
-  scan_story(part, source_budget=budget)
+  scan_story(part, path_budget?, source_budget=budget)
 }
 
 ///|

@@ -86,6 +86,23 @@ fn AnnotationWarningCollector::full(self : AnnotationWarningCollector) -> Bool {
 }
 
 ///|
+/// Replays the warnings retained on an adopted story scan through the
+/// shared collector, preserving global dedupe, per-message clamping, and
+/// the bounded-cap omission notice. Lossless because a source-retaining
+/// scan's nonfatal warning vocabulary is small and never saturates its own
+/// per-scan collector — pinned by the saturation witness in
+/// scan_mode_parity_wbtest.mbt; re-establish that argument before
+/// widening the scanner's warning vocabulary.
+fn AnnotationWarningCollector::replay_scan_warnings(
+  self : AnnotationWarningCollector,
+  scan : StoryScan,
+) -> Unit {
+  for warning in scan.warnings() {
+    self.add(warning)
+  }
+}
+
+///|
 fn AnnotationWarningCollector::add(
   self : AnnotationWarningCollector,
   message : String,
