@@ -495,10 +495,10 @@ fn read_xml_string_with_mode_and_root_namespace_uri(
     } else {
       SortedMap([])
     },
-    expanded_element_names: Map([]),
-    expanded_attribute_names: Map([]),
-    mapped_element_names: Map([]),
-    mapped_attribute_names: Map([]),
+    expanded_element_names: SortedMap([]),
+    expanded_attribute_names: SortedMap([]),
+    mapped_element_names: SortedMap([]),
+    mapped_attribute_names: SortedMap([]),
   }
   parser.skip_misc(document_start=true)
   match source_encoding {
@@ -1331,12 +1331,16 @@ priv struct XmlParser {
   // Per-parse interning of resolved names, keyed by the raw source token.
   // A cache hit allocates nothing and charges nothing: the shared string was
   // charged once at its first materialization. Bindings changing (namespace
-  // declaration or scope restore) clear all four maps, so entries can never
-  // outlive the binding set they were resolved under.
-  expanded_element_names : Map[String, String]
-  expanded_attribute_names : Map[String, String]
-  mapped_element_names : Map[String, String]
-  mapped_attribute_names : Map[String, String]
+  // declaration or scope restore) invalidate all four caches, so entries can
+  // never outlive the binding set they were resolved under. Sorted maps keep
+  // lookups collision-independent (raw QNames are attacker-controlled, and
+  // the fixed-seed string hash would admit flooding), matching `namespaces`;
+  // invalidation replaces the instances, which is O(1) regardless of how
+  // large a cache the previous binding scope grew.
+  mut expanded_element_names : @sorted_map.SortedMap[String, String]
+  mut expanded_attribute_names : @sorted_map.SortedMap[String, String]
+  mut mapped_element_names : @sorted_map.SortedMap[String, String]
+  mut mapped_attribute_names : @sorted_map.SortedMap[String, String]
 }
 
 ///|
@@ -1420,10 +1424,10 @@ fn XmlParser::record_namespace_binding(
 
 ///|
 fn XmlParser::invalidate_name_caches(self : XmlParser) -> Unit {
-  self.expanded_element_names.clear()
-  self.expanded_attribute_names.clear()
-  self.mapped_element_names.clear()
-  self.mapped_attribute_names.clear()
+  self.expanded_element_names = SortedMap([])
+  self.expanded_attribute_names = SortedMap([])
+  self.mapped_element_names = SortedMap([])
+  self.mapped_attribute_names = SortedMap([])
 }
 
 ///|

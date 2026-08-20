@@ -619,6 +619,52 @@ test "interned names track namespace rebinding across scopes" {
 }
 
 ///|
+test "name cache invalidation stays constant per binding change" {
+  // Warm the interner with 512 distinct resolved names, then rebind the
+  // same prefix on 512 successive siblings, resolving a name under each
+  // fresh binding. Invalidation replaces the cache instances, so the whole
+  // document parses in work linear in the declarations; an invalidation
+  // that rescanned the warmed cache's capacity per binding change would be
+  // quadratic in this shape without charging anything for it.
+  let builder = StringBuilder()
+  builder.write_string("<root xmlns:n=\"urn:base\">")
+  for index in 0..<512 {
+    builder.write_string("<n:u\{index}/>")
+  }
+  for index in 0..<512 {
+    builder.write_string("<sib xmlns:n=\"urn:r\{index}\"><n:x/></sib>")
+  }
+  builder.write_string("</root>")
+  let budget = @xml.xml_read_budget(
+    max_source_units=64 * 1024,
+    max_tokens=16_384,
+    max_materialized_chars=128 * 1024,
+    max_token_chars=8 * 1024,
+  )
+  let root = @xml.read_xml_bytes_strict_limited(
+    @utf8.encode(builder.to_string()),
+    budget,
+  )
+  assert_eq(root.children.length(), 1024)
+  guard root.children[0] is XmlElement(warmed) else { fail("expected element") }
+  inspect(warmed.name, content="{urn:base}u0")
+  guard root.children[512] is XmlElement(first_sibling) else {
+    fail("expected element")
+  }
+  guard first_sibling.children[0] is XmlElement(first_rebound) else {
+    fail("expected element")
+  }
+  inspect(first_rebound.name, content="{urn:r0}x")
+  guard root.children[1023] is XmlElement(last_sibling) else {
+    fail("expected element")
+  }
+  guard last_sibling.children[0] is XmlElement(last_rebound) else {
+    fail("expected element")
+  }
+  inspect(last_rebound.name, content="{urn:r511}x")
+}
+
+///|
 test "namespace scope deltas stay linear after a large child scope" {
   let source = @utf8.encode(popped_namespace_scope_source(256, 2_000))
   let budget = @xml.xml_read_budget(
