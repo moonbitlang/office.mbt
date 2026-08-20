@@ -361,11 +361,12 @@ fn join_reader_input_story_limited(
   bytes : BytesView,
   strict_budget? : @xml.XmlReadBudget,
   tolerant_budget? : @xml.XmlReadBudget,
+  path_budget? : AnnotationPathBudget,
 ) -> ReaderInputJoinResult {
   let _ = read_identity_story_xml_strict(bytes, strict_budget) catch {
     cause => return Refused(StageRefused(stage=StrictGate, cause~))
   }
-  let scan = scan_projection_source_tree(bytes) catch {
+  let scan = scan_projection_source_tree(bytes, path_budget?) catch {
     cause => return Refused(StageRefused(stage=SourceScan, cause~))
   }
   let tolerant = match tolerant_budget {

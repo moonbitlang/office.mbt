@@ -287,9 +287,15 @@ fn read_joined_story_bytes(
   reader : BodyReader,
   strict_budget? : @xml.XmlReadBudget,
   tolerant_budget? : @xml.XmlReadBudget,
+  path_budget? : AnnotationPathBudget,
 ) -> JoinedStoryRead raise DocxError {
   match
-    join_reader_input_story_limited(bytes, strict_budget?, tolerant_budget?) {
+    join_reader_input_story_limited(
+      bytes,
+      strict_budget?,
+      tolerant_budget?,
+      path_budget?,
+    ) {
     Refused(refusal) => raise reader_join_refusal_error(part, refusal)
     Joined(story) => finish_joined_story_read(part, story, reader)
   }
@@ -304,8 +310,9 @@ fn read_joined_story_prepared(
   bytes : BytesView,
   root : XmlElement,
   reader : BodyReader,
+  path_budget? : AnnotationPathBudget,
 ) -> JoinedStoryRead raise DocxError {
-  let scan = scan_projection_source_tree(bytes) catch {
+  let scan = scan_projection_source_tree(bytes, path_budget?) catch {
     cause =>
       raise reader_join_refusal_error(
         part,
