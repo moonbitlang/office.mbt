@@ -1841,3 +1841,128 @@ async test "D1 session rejects unsafe plans and keeps failed adoption atomic" {
     assert_eq(@afs.read_file(input).binary(), original)
   })
 }
+
+///|
+fn run_text_session_fixture() -> Bytes raise {
+  let builder = @opc.PackageBuilder::new()
+  builder.add_default(
+    "rels", "application/vnd.openxmlformats-package.relationships+xml",
+  )
+  builder.add_default("xml", "application/xml")
+  builder.add_override(
+    "/word/document.xml", "application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml",
+  )
+  builder.add_relationship(
+    "rId1", "http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument",
+    "word/document.xml",
+  )
+  builder.add_part(
+    "word/document.xml",
+    @utf8.encode(
+      (
+        #|<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:body><w:p><w:r><w:t>alpha</w:t></w:r><w:r><w:t>beta</w:t></w:r></w:p><w:p><w:r><w:t>gamma</w:t></w:r></w:p><w:sectPr/></w:body></w:document>
+      ),
+    ),
+  )
+  builder.build()
+}
+
+///|
+async test "A2 session queues an addressed run replacement and commits it" {
+  with_docx_session_test_dir(directory => {
+    let input = "\{directory}/runtext.docx"
+    let output = "\{directory}/runtext-output.docx"
+    write_docx_session_file(input, run_text_session_fixture())
+    let report = @docx.transact_docx(
+      @transaction.transaction_options(input, output_path=output),
+      session => {
+        let receipt = session.queue_run_text_replacement(
+          at_relative="p[1]/r[2]",
+          expect="beta",
+          text="BETA",
+        )
+        assert_eq(receipt.edit_count(), 1)
+        assert_eq(receipt.result_text(), "BETA")
+        assert_eq(receipt.story_part(), "word/document.xml")
+      },
+    )
+    assert_true(report.committed)
+    let result = @zip.read(@afs.read_file(output).binary())
+    guard result.get("word/document.xml") is Some(actual) else {
+      fail("the output lost its main part")
+    }
+    assert_true(actual.find(b">BETA<") is Some(_))
+    assert_true(actual.find(b">beta<") is None)
+    assert_true(actual.find(b">alpha<") is Some(_))
+    assert_true(actual.find(b">gamma<") is Some(_))
+  })
+}
+
+///|
+async test "A2 replacing text with itself queues nothing and preserves bytes" {
+  with_docx_session_test_dir(directory => {
+    let input = "\{directory}/runtext-noop.docx"
+    let original = run_text_session_fixture()
+    write_docx_session_file(input, original)
+    let report = @docx.transact_docx(@transaction.transaction_options(input), session => {
+      let receipt = session.queue_run_text_replacement(
+        at_relative="p[1]/r[2]",
+        expect="beta",
+        text="beta",
+      )
+      assert_eq(receipt.edit_count(), 0)
+      assert_true(session.is_noop())
+    })
+    assert_false(report.changed)
+    assert_false(report.committed)
+    assert_true(report.preservation.whole_file_identical)
+    assert_eq(@afs.read_file(input).binary(), original)
+  })
+}
+
+///|
+async test "A2 a stale expectation refuses before any state changes" {
+  with_docx_session_test_dir(directory => {
+    let input = "\{directory}/runtext-stale.docx"
+    let original = run_text_session_fixture()
+    write_docx_session_file(input, original)
+    let code = docx_session_error_code(() => {
+      @docx.transact_docx(@transaction.transaction_options(input), session => {
+        let _ = session.queue_run_text_replacement(
+          at_relative="p[1]/r[2]",
+          expect="stale",
+          text="BETA",
+        )
+      })
+    })
+    inspect(code, content="office.docx.invalid_plan")
+    assert_eq(@afs.read_file(input).binary(), original)
+  })
+}
+
+///|
+async test "A2 run replacement refuses after a semantic comment operation" {
+  with_docx_session_test_dir(directory => {
+    let input = "\{directory}/runtext-mode.docx"
+    write_docx_session_file(input, run_text_session_fixture())
+    let code = docx_session_error_code(() => {
+      @docx.transact_docx(@transaction.transaction_options(input), session => {
+        let _ = session.queue_comment_addition(
+          at_relative="p[1]",
+          to_relative="p[1]",
+          @word_fixture.comment_spec(author="A", from=0, to=1, [
+            @word_fixture.paragraph([
+              @word_fixture.run([@word_fixture.text("note")]),
+            ]),
+          ]),
+        )
+        let _ = session.queue_run_text_replacement(
+          at_relative="p[1]/r[2]",
+          expect="beta",
+          text="BETA",
+        )
+      })
+    })
+    inspect(code, content="office.docx.stale_semantic_state")
+  })
+}

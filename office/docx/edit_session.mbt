@@ -350,6 +350,34 @@ pub fn DocxEditSession::annotated(
 }
 
 ///|
+/// Plans and atomically queues one addressed whole-run text replacement
+/// in the BODY story (#462 A2). `at_relative` is the body-relative run
+/// path (`p[3]/r[2]`); `expect` is required -- addresses are
+/// snapshot-relative -- and must equal the run's reader-visible text.
+/// Replacing text with itself validates the address and queues nothing,
+/// so the output stays byte-identical by construction. The planner
+/// resolves purely against the mutation projection this session's read
+/// retained; every refusal arrives typed before any state changes.
+pub fn DocxEditSession::queue_run_text_replacement(
+  self : DocxEditSession,
+  at_relative~ : String,
+  expect~ : String,
+  text~ : String,
+) -> @word.RunTextReceipt raise @transaction.TransactionError {
+  let (plan, receipt) = @word.plan_run_text_replacement(
+    self.annotated,
+    self.annotated.main_story_source(),
+    at_relative~,
+    expect~,
+    text~,
+  ) catch {
+    error => raise mapped_plan_failure(error)
+  }
+  self.queue_plan(plan)
+  receipt
+}
+
+///|
 /// Plans and atomically queues one comment addition against the session's
 /// already materialized archive. No package bytes are exposed or reinflated.
 pub fn DocxEditSession::queue_comment_addition(
