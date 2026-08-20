@@ -139,6 +139,23 @@ pub fn plan_run_text_replacement(
       message="the mutation-safe read retained no source bytes for '\{part}'",
     )
   }
+  // Replacing text with itself plans NOTHING: re-encoding could still
+  // change bytes (entities re-escape), so the only honest no-op is an
+  // empty plan -- after the address and expectation validated above.
+  if text == expect {
+    let noop = @splice.SplicePlan::new()
+    noop.pin_part(part, bytes)
+    return (
+      noop,
+      {
+        story_part: part,
+        at_relative,
+        replaced_text: expect,
+        result_text: text,
+        edit_count: 0,
+      },
+    )
+  }
   let edits = plan_whole_run_replacement(
     projection, bytes, paragraph_index, run_index, text,
   )

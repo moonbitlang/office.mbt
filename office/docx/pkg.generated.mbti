@@ -222,6 +222,7 @@ pub fn DocxEditSession::queue_comment_addition(Self, at_relative~ : String, to_r
 pub fn DocxEditSession::queue_comment_reply(Self, parent_id~ : String, @bobzhang/docx2html/docx.CommentSpec) -> String raise @transaction.TransactionError
 pub fn DocxEditSession::queue_comment_resolution(Self, comment_id~ : String, done~ : Bool) -> Unit raise @transaction.TransactionError
 pub fn DocxEditSession::queue_plan(Self, @splice.SplicePlan) -> Unit raise @transaction.TransactionError
+pub fn DocxEditSession::queue_run_text_replacement(Self, at_relative~ : String, expect~ : String, text~ : String) -> @bobzhang/docx2html/docx.RunTextReceipt raise @transaction.TransactionError
 pub fn DocxEditSession::queue_span_edit(Self, String, start~ : Int, end~ : Int, Bytes) -> Unit raise @transaction.TransactionError
 pub fn DocxEditSession::source_part_fingerprints(Self) -> Array[DocxPartFingerprint]
 

@@ -198,3 +198,41 @@ test "a plan from one snapshot refuses to apply to another" {
   }
   assert_true(stale)
 }
+
+///|
+/// The no-op plan keeps the snapshot pin: replacing text with itself
+/// plans no edits, but the returned plan still refuses to apply to a
+/// different snapshot -- the public every-plan-is-pinned contract has
+/// no empty-plan exception.
+test "a self-replacement plan still refuses a foreign snapshot" {
+  let bytes = run_text_fixture()
+  let annotated = @docx.read_docx_annotated(bytes)
+  let (plan, receipt) = @docx.plan_run_text_replacement(
+    annotated,
+    annotated.main_story_source(),
+    at_relative="p[1]/r[2]",
+    expect="beta",
+    text="beta",
+  )
+  inspect(receipt.edit_count(), content="0")
+  let other = fixture_docx(
+    (
+      #|<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:body><w:p><w:r><w:t>alpha</w:t></w:r><w:r><w:t>zeta</w:t></w:r></w:p><w:p><w:r><w:t>gamma</w:t></w:r></w:p><w:sectPr/></w:body></w:document>
+    ),
+  )
+  let mut stale = false
+  try {
+    let _ = @splice.splice_docx_archive(
+      try! @mbtzip.read(other),
+      plan,
+      max_output_bytes=1 << 22,
+    )
+  } catch {
+    Unsupported(message~) => {
+      stale = true
+      assert_true(message.contains("stale"))
+    }
+    _ => fail("expected the stale-plan refusal")
+  }
+  assert_true(stale)
+}
