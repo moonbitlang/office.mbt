@@ -238,7 +238,7 @@ def validate_artifact_role(event, operation, label):
             artifact["role"] == "package"
             and artifact["access"] == "input-output"
         )
-    elif operation in ("create", "template", "replay", "annotate"):
+    elif operation in ("create", "template", "replay", "annotate", "edit"):
         accepted = (
             artifact["role"] == "package-output"
             and artifact["access"] == "output"

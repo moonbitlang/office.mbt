@@ -1795,6 +1795,11 @@ validate_workflow_event() {
         (.data.output | type) == "string" and
         (.data.ops_applied | type) == "number" and .data.ops_applied > 0 and
         .data.transaction.committed == true
+      elif $verb == "edit" then
+        successful_envelope and
+        (.data.output | type) == "string" and
+        (.data.replacements | type) == "number" and .data.replacements > 0 and
+        .data.transaction.committed == true
       else
         successful_envelope
       end
@@ -1809,7 +1814,7 @@ validate_workflow_event() {
     identify | outline | get | text | query | validate | issues | preview)
       artifact_relative="$(/usr/bin/jq -er '.data.file' "$result_file")"
       ;;
-    template | replay | annotate)
+    template | replay | annotate | edit)
       artifact_relative="$(/usr/bin/jq -er '.data.output' "$result_file")"
       ;;
     dump)
@@ -1839,7 +1844,7 @@ validate_workflow_event() {
       (.role == "package-output" and .access == "output") or
       (.role == "package" and .access == "input-output")
     elif $verb == "create" or $verb == "template" or
-         $verb == "replay" or $verb == "annotate" then
+         $verb == "replay" or $verb == "annotate" or $verb == "edit" then
       .role == "package-output" and .access == "output"
     else
       .role == "package" and .access == "input"
