@@ -146,36 +146,48 @@ test "adopted scan warnings surface through the index collector" {
 
 ///|
 test "read-time path-budget exhaustion keeps resource classification" {
+  let source =
+    #|<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:body><w:p><w:r><w:t>x</w:t></w:r></w:p></w:body></w:document>
+  let bytes = @utf8.encode(source)
   // Scan level: the C1b plumbing genuinely charges a supplied budget.
   let tiny : AnnotationPathBudget = {
     shared_xml_budget: None,
     remaining_chars: 4,
   }
-  let source =
-    #|<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:body><w:p><w:r><w:t>x</w:t></w:r></w:p></w:body></w:document>
-  try
-    scan_projection_source_tree(@utf8.encode(source), path_budget=tiny)
-    |> ignore
-  catch {
+  try scan_projection_source_tree(bytes[:], path_budget=tiny) |> ignore catch {
     ResourceLimit(..) => ()
     _ => fail("expected a ResourceLimit refusal")
   } noraise {
     _ => fail("expected the tiny path budget to refuse")
   }
-  // End to end: exhaustion inside the joined read surfaces as ResourceLimit
-  // (reader_join_refusal_error passes resource causes through unwrapped),
-  // exactly the classification the pre-adoption index raise produced.
-  let archive = @mbtzip.read(adoption_fixture())
-  let starving = @xml.xml_read_budget(
-    max_source_units=1024 * 1024,
-    max_tokens=1024 * 1024,
-    max_materialized_chars=700,
-    max_token_chars=4096,
-  )
-  try read_docx_annotated_archive_limited(archive, starving) |> ignore catch {
-    ResourceLimit(..) => ()
-    _ => fail("expected a ResourceLimit refusal")
-  } noraise {
-    _ => fail("expected the starving budget to refuse")
+  // Joined-read ingress with ONLY the path budget varying, so the path
+  // charge is provably what decides: identical bytes and default XML
+  // budgets refuse under a tiny path budget at the SourceScan stage with a
+  // ResourceLimit cause, and the join wrapper passes that cause through
+  // unwrapped — the classification the pre-adoption index raise produced —
+  // while an ample path budget admits the same bytes.
+  let starved : AnnotationPathBudget = {
+    shared_xml_budget: None,
+    remaining_chars: 4,
+  }
+  match join_reader_input_story_limited(bytes[:], path_budget=starved) {
+    Refused(StageRefused(stage=SourceScan, cause~) as refusal) => {
+      guard cause is ResourceLimit(..) else {
+        fail("expected a ResourceLimit source-scan cause")
+      }
+      guard reader_join_refusal_error("word/document.xml", refusal)
+        is ResourceLimit(..) else {
+        fail("expected ResourceLimit to pass through the join wrapper")
+      }
+    }
+    _ => fail("expected the tiny path budget to refuse the source scan")
+  }
+  let ample : AnnotationPathBudget = {
+    shared_xml_budget: None,
+    remaining_chars: 65536,
+  }
+  guard join_reader_input_story_limited(bytes[:], path_budget=ample)
+    is Joined(_) else {
+    fail("expected the ample path budget to admit the same bytes")
   }
 }
