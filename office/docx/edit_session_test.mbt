@@ -748,7 +748,7 @@ async test "D1 session rejects sibling-dense XML before indexing" {
     document.write_string(
       "<w:document xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\"><w:body>",
     )
-    for _ in 0..<70_000 {
+    for _ in 0..<1_200_000 {
       document.write_string("<w:p/>")
     }
     document.write_string("</w:body></w:document>")
@@ -771,20 +771,22 @@ async test "D1 session rejects sibling-dense XML before indexing" {
 }
 
 ///|
-async test "D1 bounded identifier rejects relationship-dense candidates before portable parsing" {
+async test "D1 bounded identifier rejects token-dense candidate parts before portable parsing" {
   with_docx_session_test_dir(directory => {
     let input = "\{directory}/input.docx"
     let output = "\{directory}/output.docx"
     let original = @word_fixture.new_blank_docx()
     write_docx_session_file(input, original)
+    // Real relationship markup measures ~11 source units per token, so a
+    // rels part under the byte ceilings can no longer exceed the calibrated
+    // token guard (#438); short-name-dense content inside the part still
+    // proves the queued-part ingress refuses on XML work, not byte size.
     let relationships = StringBuilder()
     relationships.write_string(
       "<Relationships xmlns=\"http://schemas.openxmlformats.org/package/2006/relationships\">",
     )
-    for index in 0..<30_000 {
-      relationships.write_string(
-        "<Relationship Id=\"rId\{index}\" Type=\"urn:office-d1:test\" Target=\"https://example.invalid/\{index}\" TargetMode=\"External\"/>",
-      )
+    for _ in 0..<1_300_000 {
+      relationships.write_string("<a/>")
     }
     relationships.write_string("</Relationships>")
     let candidate_part = @utf8.encode(relationships.to_string())
@@ -858,7 +860,7 @@ async test "D1 semantic planners bound unreferenced relationship stories" {
     header.write_string(
       "<w:hdr xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\">",
     )
-    for _ in 0..<70_000 {
+    for _ in 0..<1_200_000 {
       header.write_string("<w:p/>")
     }
     header.write_string("</w:hdr>")

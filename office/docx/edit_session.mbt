@@ -55,36 +55,29 @@ let candidate_xml_source_units : Int = 8 * 1024 * 1024
 
 ///|
 /// Markup-token ceiling shared by the bounded package identifier, the package
-/// validator, and every candidate parse: one token per 8 bytes of the source
+/// validator, and every candidate parse: one token per 4 bytes of the source
 /// allowance above.
 ///
-/// The ratio is the whole point. It used to be one token per 64 source bytes,
-/// which assumes markup far sparser than OOXML actually is. Measured against
-/// tracked-change body markup — the densest real DOCX content, where every
-/// `w:ins`/`w:del` carries `w:id`, `w:author`, and `w:date` — the strict
-/// parser charges one token per ~2.8 source bytes. At 64 bytes per token the
-/// guard therefore fired at ~4% of `candidate_xml_source_units`, refusing
-/// ~1,100 redlined paragraphs (~360 KB of `word/document.xml`) while all three
-/// ceilings it accompanies still had over 90% of their allowance left (#338).
-/// That also broke parity: `outline`, `text`, and `dump` read such a document
-/// happily under the CLI's own 1 Mi-token ceiling, but `annotate`, `edit`, and
-/// `validate` refused it, and the refusal was rendered as malformed XML.
+/// The ratio is calibration data, twice over. It was first one token per 64
+/// source bytes, which refused ~1,100 redlined paragraphs while every other
+/// ceiling had over 90% of its allowance left (#338), so it became one per 8.
+/// Then the parser learned to intern resolved names per parse (#438): a cache
+/// hit allocates nothing and charges nothing, so token consumption on real
+/// documents fell roughly threefold — the docx-corpus sweep now measures
+/// 6.8-7.4 source units per charged token on real DOCX main parts, and the
+/// densest corpus document (a 5.4 MB Thai policy manual that the old ceilings
+/// refused) needs 771,661 tokens. One token per 4 source units means the
+/// token guard never binds before the source ceiling on any document with
+/// real-markup density while still capping allocation count for pathological
+/// short-name markup: a candidate made of 1.5 M unprefixed `<a/>` elements is
+/// still refused, and refused by this guard.
 ///
-/// At one token per 8 source bytes the token guard alone would admit ~2.9 MB
-/// of that dense markup, and it matches the read commands token for token. It
-/// is no longer what decides: `candidate_xml_materialized_chars` now binds
-/// first, at ~2,860 fully redlined paragraphs (~965 KB of `word/document.xml`,
-/// which materializes 8 MiB of expanded names, attribute values, and text).
-/// That ceiling is left alone on purpose. It is the honest memory guard of the
-/// three, and an edit transaction holds strictly more live state than a read —
-/// source archive, source index, splice plan, and candidate package at once —
-/// so it legitimately parses under a tighter envelope than `dump` does.
-///
-/// The token guard stays real rather than becoming a formality. Markup with
-/// short expanded names materializes almost nothing per element, so allocation
-/// count, not characters, is what has to be bounded there: 1.5 M unprefixed
-/// `<a/>` elements are still refused, and refused by this guard.
-let candidate_xml_tokens : Int = candidate_xml_source_units / 8
+/// `candidate_xml_materialized_chars` stays at the source allowance. With
+/// interned names the corpus measures at most 0.85 materialized chars per
+/// source unit, so it is once again the honest memory guard: real documents
+/// sit under it with headroom, and unique-name amplification — the shape
+/// interning cannot deduplicate — is what it refuses.
+let candidate_xml_tokens : Int = candidate_xml_source_units / 4
 
 ///|
 let candidate_xml_materialized_chars : Int = 8 * 1024 * 1024

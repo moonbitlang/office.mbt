@@ -35,6 +35,19 @@ fn reused_namespace_splice_source(uri_chars : Int, child_count : Int) -> String 
 }
 
 ///|
+fn unique_namespace_splice_source(uri_chars : Int, child_count : Int) -> String {
+  let source = StringBuilder()
+  source.write_string("<root xmlns:n=\"")
+  source.write_string("u".repeat(uri_chars))
+  source.write_string("\">")
+  for index in 0..<child_count {
+    source.write_string("<n:x\{index}/>")
+  }
+  source.write_string("</root>")
+  source.to_string()
+}
+
+///|
 fn[T] expect_splice_failure(
   action : () -> T raise @core.DocxError,
   expected_prefix : String,
@@ -225,8 +238,29 @@ test "D1: bounded preflight rejects compressible payloads and oversized manifest
 }
 
 ///|
-test "D1: splice XML validation charges reused namespace-derived names" {
+test "D1: splice XML validation interns reused namespace-derived names" {
+  // The reused `n:x` expansion materializes once (#438); this exact source
+  // and limits were refused before per-parse name interning existed.
   let source = reused_namespace_splice_source(4_096, 32)
+  let archive = @mbtzip.Archive::new()
+  archive.add("dense.xml", @utf8.encode(source))
+  let plan = @splice.SplicePlan::new()
+  plan.edit_part("dense.xml", @splice.span_edit(start=0, end=0, b""))
+  let limits = @splice.splice_limits(
+    max_archive_entries=16,
+    max_changed_parts=4,
+    max_part_name_chars=64,
+    max_entry_uncompressed_bytes=16_384,
+    max_total_uncompressed_bytes=32_768,
+    max_materialized_bytes=16_384,
+    max_xml_tokens=10_000,
+  )
+  plan.check_against(archive, limits~)
+}
+
+///|
+test "D1: splice XML validation charges distinct namespace-derived names" {
+  let source = unique_namespace_splice_source(4_096, 32)
   let archive = @mbtzip.Archive::new()
   archive.add("dense.xml", @utf8.encode(source))
   let plan = @splice.SplicePlan::new()

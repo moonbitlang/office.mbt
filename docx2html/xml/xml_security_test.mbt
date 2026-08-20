@@ -39,6 +39,19 @@ fn reused_long_namespace_source(uri_chars : Int, child_count : Int) -> String {
 }
 
 ///|
+fn unique_long_namespace_source(uri_chars : Int, child_count : Int) -> String {
+  let builder = StringBuilder()
+  builder.write_string("<root xmlns:n=\"")
+  builder.write_string("u".repeat(uri_chars))
+  builder.write_string("\">")
+  for index in 0..<child_count {
+    builder.write_string("<n:x\{index}/>")
+  }
+  builder.write_string("</root>")
+  builder.to_string()
+}
+
+///|
 fn popped_namespace_scope_source(
   binding_count : Int,
   sibling_count : Int,
@@ -545,8 +558,29 @@ test "limited XML parser charges namespace scope delta work" {
 }
 
 ///|
-test "limited XML parser charges names derived from reused namespace URIs" {
+test "limited XML parser interns names resolved from reused namespace URIs" {
+  // 64 reused `n:x` occurrences materialize the ~4,100-char braced name
+  // once; this exact source and budget were refused before per-parse name
+  // interning existed (#438).
   let source = @utf8.encode(reused_long_namespace_source(4_096, 64))
+  let budget = @xml.xml_read_budget(
+    max_source_units=64 * 1024,
+    max_tokens=10_000,
+    max_materialized_chars=64 * 1024,
+    max_token_chars=8 * 1024,
+  )
+  inspect(
+    @xml.read_xml_bytes_strict_limited(source, budget).name,
+    content="root",
+  )
+}
+
+///|
+test "limited XML parser charges every distinct namespace-derived name" {
+  // Interning cannot deduplicate distinct locals: each `n:xN` materializes
+  // its own ~4,100-char braced name, so the amplification guard still
+  // refuses exactly as it did before interning.
+  let source = @utf8.encode(unique_long_namespace_source(4_096, 64))
   let budget = @xml.xml_read_budget(
     max_source_units=64 * 1024,
     max_tokens=10_000,
@@ -557,6 +591,77 @@ test "limited XML parser charges names derived from reused namespace URIs" {
     limited_xml_resource_error(source, budget),
     content="XML materialized character budget exceeded",
   )
+}
+
+///|
+test "interned names track namespace rebinding across scopes" {
+  let source = @utf8.encode(
+    "<root xmlns:n=\"urn:a\"><n:x/><child xmlns:n=\"urn:b\"><n:x/></child><n:x/></root>",
+  )
+  let budget = @xml.xml_read_budget(
+    max_source_units=64 * 1024,
+    max_tokens=10_000,
+    max_materialized_chars=64 * 1024,
+    max_token_chars=8 * 1024,
+  )
+  let root = @xml.read_xml_bytes_strict_limited(source, budget)
+  guard root.children[0] is XmlElement(first) else { fail("expected element") }
+  guard root.children[1] is XmlElement(child) else { fail("expected element") }
+  guard child.children[0] is XmlElement(rebound) else {
+    fail("expected element")
+  }
+  guard root.children[2] is XmlElement(restored) else {
+    fail("expected element")
+  }
+  inspect(first.name, content="{urn:a}x")
+  inspect(rebound.name, content="{urn:b}x")
+  inspect(restored.name, content="{urn:a}x")
+}
+
+///|
+test "name cache invalidation stays constant per binding change" {
+  // Warm the interner with 512 distinct resolved names, then rebind the
+  // same prefix on 512 successive siblings, resolving a name under each
+  // fresh binding. Invalidation replaces the cache instances, so the whole
+  // document parses in work linear in the declarations; an invalidation
+  // that rescanned the warmed cache's capacity per binding change would be
+  // quadratic in this shape without charging anything for it.
+  let builder = StringBuilder()
+  builder.write_string("<root xmlns:n=\"urn:base\">")
+  for index in 0..<512 {
+    builder.write_string("<n:u\{index}/>")
+  }
+  for index in 0..<512 {
+    builder.write_string("<sib xmlns:n=\"urn:r\{index}\"><n:x/></sib>")
+  }
+  builder.write_string("</root>")
+  let budget = @xml.xml_read_budget(
+    max_source_units=64 * 1024,
+    max_tokens=16_384,
+    max_materialized_chars=128 * 1024,
+    max_token_chars=8 * 1024,
+  )
+  let root = @xml.read_xml_bytes_strict_limited(
+    @utf8.encode(builder.to_string()),
+    budget,
+  )
+  assert_eq(root.children.length(), 1024)
+  guard root.children[0] is XmlElement(warmed) else { fail("expected element") }
+  inspect(warmed.name, content="{urn:base}u0")
+  guard root.children[512] is XmlElement(first_sibling) else {
+    fail("expected element")
+  }
+  guard first_sibling.children[0] is XmlElement(first_rebound) else {
+    fail("expected element")
+  }
+  inspect(first_rebound.name, content="{urn:r0}x")
+  guard root.children[1023] is XmlElement(last_sibling) else {
+    fail("expected element")
+  }
+  guard last_sibling.children[0] is XmlElement(last_rebound) else {
+    fail("expected element")
+  }
+  inspect(last_rebound.name, content="{urn:r511}x")
 }
 
 ///|

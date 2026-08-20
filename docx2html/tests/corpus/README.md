@@ -27,7 +27,7 @@ The refusal classes present, from a 591-document stratified sweep
 
 | class | sweep count | meaning |
 |---|---:|---|
-| `xml-token-budget` | 39 | resource-limit refusals on real documents: 38 hit the XML token budget (262,144 tokens), one a zip resource limit that this harness's message mapping folds into the same class |
+| `xml-token-budget` | 39 | resource-limit refusals on real documents: 38 hit the XML token budget (262,144 tokens), one a zip resource limit that this harness's message mapping folds into the same class. Recalibrated for #438: with per-parse name interning and the token ceiling at one per four source units, every vendored fixture of this class now passes, and the rows here pin the acceptance |
 | `orphan-comments-part` | 21 | `word/comments.xml` exists but no relationship wires it |
 | `opc-noncanonical-entry` | 11 | ZIP entry like `[trash]/0001.dat` refuses the whole package |
 | `eocd-trailing-bytes` | 4 | garbage after the end-of-central-directory record (Word also refuses) |
