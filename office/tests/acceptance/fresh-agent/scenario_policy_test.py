@@ -72,6 +72,46 @@ def docx_batch(policy):
     }
 
 
+def edit_script(policy):
+    return {
+        "schema": "docx.edit/2",
+        "ops": [
+            {
+                "op": "set_run_text",
+                "params": {
+                    "at": "/docx/body/p[2]/r[1]",
+                    "expect": policy.TEMPLATE_MARKERS["docx"],
+                    "text": "F1B-DOCX-EDITED-V1",
+                },
+            }
+        ],
+    }
+
+
+def edit_result(policy):
+    return {
+        "schema": "office.output/1",
+        "success": True,
+        "data": {
+            "schema": "office.docx.edit/2",
+            "ops_applied": 1,
+            "replacements": 1,
+            "results": [
+                {
+                    "op": "set_run_text",
+                    "at": "p[2]/r[1]",
+                    "expect": policy.TEMPLATE_MARKERS["docx"],
+                    "text": "F1B-DOCX-EDITED-V1",
+                    "find": None,
+                    "matched": 1,
+                    "replacements": 1,
+                }
+            ],
+            "transaction": {"committed": True},
+        },
+    }
+
+
 def annotation_script(policy):
     return {
         "schema": "docx.annotation-batch/1",
@@ -335,6 +375,11 @@ def main(argv):
         "reply_comment_id": "1",
         "root_anchor": "/docx/body/p[1]",
     }
+    edit_contract = policy.validate_edit_script(edit_script(policy))
+    assert edit_contract["at"] == "p[2]/r[1]"
+    assert edit_contract["expect"] == policy.TEMPLATE_MARKERS["docx"]
+    assert len(edit_contract["sha256"]) == 64
+    policy.validate_edit_result(edit_result(policy), edit_contract, "test edit result")
     assert len(
         policy.validate_docx_refusal_script(
             {
@@ -569,6 +614,35 @@ def main(argv):
     expect_rejected(
         policy,
         lambda: policy.validate_annotation_script(wrong_target_annotation),
+    )
+    wrong_op_edit = edit_script(policy)
+    wrong_op_edit["ops"][0]["op"] = "replace_text"
+    expect_rejected(policy, lambda: policy.validate_edit_script(wrong_op_edit))
+    noop_edit = edit_script(policy)
+    noop_edit["ops"][0]["params"]["text"] = policy.TEMPLATE_MARKERS["docx"]
+    expect_rejected(policy, lambda: policy.validate_edit_script(noop_edit))
+    unexpected_edit = edit_script(policy)
+    unexpected_edit["ops"][0]["params"]["expect"] = "not-the-marker"
+    expect_rejected(policy, lambda: policy.validate_edit_script(unexpected_edit))
+    unbound_edit_result = edit_result(policy)
+    unbound_edit_result["data"]["results"][0]["text"] = "F1B-DOCX-OTHER-V1"
+    expect_rejected(
+        policy,
+        lambda: policy.validate_edit_result(
+            unbound_edit_result,
+            edit_contract,
+            "test edit result",
+        ),
+    )
+    uncommitted_edit_result = edit_result(policy)
+    uncommitted_edit_result["data"]["transaction"]["committed"] = False
+    expect_rejected(
+        policy,
+        lambda: policy.validate_edit_result(
+            uncommitted_edit_result,
+            edit_contract,
+            "test edit result",
+        ),
     )
     wrong_target_result = annotation_result()
     wrong_target_result["data"]["results"][2]["comment_id"] = "1"

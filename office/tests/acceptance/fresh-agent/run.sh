@@ -1798,7 +1798,18 @@ validate_workflow_event() {
       elif $verb == "edit" then
         successful_envelope and
         (.data.output | type) == "string" and
+        .data.ops_applied == 1 and
         (.data.replacements | type) == "number" and .data.replacements > 0 and
+        (.data.results | type) == "array" and (.data.results | length) == 1 and
+        (.data.results[0] |
+          .op == "set_run_text" and
+          (.at | type) == "string" and
+          (.expect | type) == "string" and
+          (.text | type) == "string" and
+          .expect != .text and
+          .find == null and
+          .matched == 1 and
+          .replacements == 1) and
         .data.transaction.committed == true
       else
         successful_envelope
@@ -2059,9 +2070,9 @@ extract_isolated_help() {
     (.data.fingerprint | type) == "string" and (.data.fingerprint | length) > 0 and
     (.data.records | type) == "array" and (.data.records | length) >= 18 and
     ([.data.records[] | select(.kind == "format") | .name] | sort) == ["docx", "xlsx"] and
-    (["annotate", "batch", "create", "dump", "get", "help", "identify",
-      "issues", "outline", "preview", "query", "raw", "replay", "template",
-      "text", "validate"] - $commands | length) == 0 and
+    (["annotate", "batch", "create", "dump", "edit", "get", "help",
+      "identify", "issues", "outline", "preview", "query", "raw", "replay",
+      "template", "text", "validate"] - $commands | length) == 0 and
     (.data.records | all(
       .schema == "office.capability/2" and
       .fingerprint == $fingerprint

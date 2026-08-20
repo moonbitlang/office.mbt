@@ -1095,6 +1095,81 @@ def validate_annotation_result(value, contract, label):
     }
 
 
+def validate_edit_script(value):
+    value = require_object(value, "DOCX edit script")
+    if set(value) != {"schema", "ops"} or value.get("schema") != "docx.edit/2":
+        fail("DOCX edit script has the wrong shape or schema")
+    operations = value.get("ops")
+    if not isinstance(operations, list) or len(operations) != 1:
+        fail("DOCX edit script needs exactly one operation")
+    entry = operations[0]
+    if not isinstance(entry, dict) or set(entry) != {"op", "params"}:
+        fail("DOCX edit script needs exactly one structured operation")
+    if entry.get("op") != "set_run_text":
+        fail("DOCX edit script must contain exactly one set_run_text operation")
+    params = entry.get("params")
+    if not isinstance(params, dict) or set(params) != {"at", "expect", "text"}:
+        fail("DOCX edit set_run_text needs exact at, expect, and text parameters")
+    at = params["at"]
+    text = params["text"]
+    if (
+        not isinstance(at, str)
+        or not 1 <= len(at) <= 160
+        or re.fullmatch(
+            r"(?:/docx/body/)?(?:(?:p|tbl|tr|tc)\[[1-9][0-9]*\]/)*r\[[1-9][0-9]*\]",
+            at,
+        )
+        is None
+    ):
+        fail("DOCX edit set_run_text needs one canonical run address")
+    if params["expect"] != TEMPLATE_MARKERS["docx"]:
+        fail("DOCX edit set_run_text must expect the merged template-marker run")
+    if not isinstance(text, str) or not 1 <= len(text) <= 160 or text == params["expect"]:
+        fail("DOCX edit set_run_text must state a bounded real replacement")
+    relative = at[len("/docx/body/"):] if at.startswith("/docx/body/") else at
+    return {
+        "at": relative,
+        "expect": params["expect"],
+        "text": text,
+        "sha256": value_sha256(value),
+    }
+
+
+def validate_edit_result(value, contract, label):
+    if (
+        not isinstance(value, dict)
+        or value.get("schema") != "office.output/1"
+        or value.get("success") is not True
+        or not isinstance(value.get("data"), dict)
+    ):
+        fail("%s is not a successful edit result" % label)
+    data = value["data"]
+    results = data.get("results")
+    if (
+        data.get("schema") != "office.docx.edit/2"
+        or data.get("ops_applied") != 1
+        or data.get("replacements") != 1
+        or not isinstance(results, list)
+        or len(results) != 1
+        or not isinstance(results[0], dict)
+    ):
+        fail("%s does not report the exact single-run edit workflow" % label)
+    entry = results[0]
+    if (
+        entry.get("op") != "set_run_text"
+        or entry.get("at") != contract["at"]
+        or entry.get("expect") != contract["expect"]
+        or entry.get("text") != contract["text"]
+        or entry.get("find") is not None
+        or entry.get("matched") != 1
+        or entry.get("replacements") != 1
+    ):
+        fail("%s does not bind the edit result to the retained edit script" % label)
+    transaction = data.get("transaction")
+    if not isinstance(transaction, dict) or transaction.get("committed") is not True:
+        fail("%s did not commit its edit transaction" % label)
+
+
 def dump_projection(value, format_name, expected_ops=None):
     value = require_object(value, "%s dump" % format_name)
     if value.get("schema") != "office.dump/1" or value.get("format") != format_name:
@@ -1936,6 +2011,7 @@ def validate_scenario(
     final_event = canonical["template"]
     annotation_digest = None
     annotation_ids = None
+    edit_digest = None
     if format_name == "docx":
         lineage.append(
             require_lineage(
@@ -1963,6 +2039,26 @@ def validate_scenario(
             "%s DOCX annotation result" % runtime,
         )
         final_event = canonical["annotate"]
+        lineage.append(
+            require_lineage(
+                canonical["annotate"]["artifact"],
+                input_record(canonical["edit"], "package"),
+                "%s DOCX annotate-to-edit" % runtime,
+            )
+        )
+        edit_script = read_record(
+            root,
+            input_record(canonical["edit"], "edit-script")["snapshot"],
+            "%s DOCX edit input" % runtime,
+            parse_json=True,
+        )
+        edit_contract = validate_edit_script(edit_script)
+        edit_digest = edit_contract["sha256"]
+        validate_edit_result(
+            result_json(root, canonical["edit"], "%s DOCX edit result" % runtime),
+            edit_contract,
+            "%s DOCX edit result" % runtime,
+        )
     final = final_event["artifact"]
     if format_name == "xlsx":
         final_expected = expected_xlsx_projection(batch_script, final=True)
@@ -2178,6 +2274,7 @@ def validate_scenario(
         "batch_script_sha256": batch_digest,
         "diagnostic_inventory": diagnostic_inventory,
         "dump_fixpoint_sha256": value_sha256(dump_1_projection),
+        "edit_script_sha256": edit_digest,
         "final_artifact": final,
         "format": format_name,
         "lineage": lineage,
@@ -2242,6 +2339,7 @@ def build_document(
             "annotation_script_sha256",
             "batch_script_sha256",
             "dump_fixpoint_sha256",
+            "edit_script_sha256",
             "template_data_sha256",
         ):
             if native[field] != wasm[field]:

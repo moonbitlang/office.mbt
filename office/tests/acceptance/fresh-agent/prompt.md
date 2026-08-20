@@ -42,7 +42,11 @@ Rules:
   `template`, `dump`, `replay`, `raw`, `edit`, and `annotate` successfully. The
   `edit` matrix command must run a `docx.edit/2` script whose single operation
   is `set_run_text` (discover the contract with `office help schema
-  docx.edit/2 --json`), so its result schema is `office.docx.edit/2`. Each must
+  docx.edit/2 --json`), so its result schema is `office.docx.edit/2`. Run
+  `edit` against the annotated DOCX output: its one operation must replace the
+  run holding the merged template marker (`expect` is that run's exact text)
+  with different bounded text, and both runtimes must use the same edit
+  script. Each must
   have exactly one successful canonical matrix command. Its wrapper result path
   must be `matrix-RUNTIME-FORMAT-OPERATION.json`, substituting `native` or
   `wasm` and `xlsx` or `docx`; help remains un-attested. It must be standalone: the
