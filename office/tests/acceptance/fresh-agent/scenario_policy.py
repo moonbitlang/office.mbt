@@ -1116,8 +1116,7 @@ def validate_edit_script(value):
         not isinstance(at, str)
         or not 1 <= len(at) <= 160
         or re.fullmatch(
-            r"(?:/docx/body/)?(?:(?:p|tbl|tr|tc)\[[1-9][0-9]*\]/)*r\[[1-9][0-9]*\]",
-            at,
+            r"(?:/docx/body/)?p\[[1-9][0-9]*\]/r\[[1-9][0-9]*\]", at
         )
         is None
     ):
@@ -1133,6 +1132,34 @@ def validate_edit_script(value):
         "text": text,
         "sha256": value_sha256(value),
     }
+
+
+def inspect_docx_edit_artifact(root, record, contract, label):
+    match = re.fullmatch(r"p\[([1-9][0-9]*)\]/r\[([1-9][0-9]*)\]", contract["at"])
+    if match is None:
+        fail("%s has an unwalkable edit address" % label)
+    paragraph_ordinal = int(match.group(1))
+    run_ordinal = int(match.group(2))
+    with open_semantic_package(root, record, label) as archive:
+        document = package_xml(archive, "word/document.xml", label)
+        body = document.find("{%s}body" % WORD_NS)
+        if body is None:
+            fail("%s lacks a document body" % label)
+        paragraphs = [child for child in body if child.tag == "{%s}p" % WORD_NS]
+        if len(paragraphs) < paragraph_ordinal:
+            fail("%s does not reach the retained edit address" % label)
+        runs = [
+            child
+            for child in paragraphs[paragraph_ordinal - 1]
+            if child.tag == "{%s}r" % WORD_NS
+        ]
+        if len(runs) < run_ordinal:
+            fail("%s does not reach the retained edit address" % label)
+        if element_text(runs[run_ordinal - 1], WORD_NS) != contract["text"]:
+            fail(
+                "%s does not carry the replacement run text at the retained address"
+                % label
+            )
 
 
 def validate_edit_result(value, contract, label):
@@ -2058,6 +2085,12 @@ def validate_scenario(
             result_json(root, canonical["edit"], "%s DOCX edit result" % runtime),
             edit_contract,
             "%s DOCX edit result" % runtime,
+        )
+        inspect_docx_edit_artifact(
+            root,
+            canonical["edit"]["artifact"],
+            edit_contract,
+            "%s DOCX edited package" % runtime,
         )
     final = final_event["artifact"]
     if format_name == "xlsx":

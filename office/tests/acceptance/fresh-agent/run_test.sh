@@ -281,7 +281,8 @@ make_candidate() {
     '  package=$1' \
     '  case "$package" in /*) package_path=$package ;; *) package_path=$PWD/$package ;; esac' \
     '  /bin/mkdir -p "$(/usr/bin/dirname -- "$package_path")"' \
-    '  case "${package_path##*/}" in batched.xlsx|authored.docx) stage_text="{{agent_name}}" ;; *.xlsx) stage_text=F1B-XLSX-TEMPLATE-V1 ;; *) stage_text=F1B-DOCX-TEMPLATE-V1 ;; esac' \
+    '  case "${package_path##*/}" in batched.xlsx|authored.docx) stage_text="{{agent_name}}" ;; edited.docx) stage_text=F1B-DOCX-EDITED-V1 ;; *.xlsx) stage_text=F1B-XLSX-TEMPLATE-V1 ;; *) stage_text=F1B-DOCX-TEMPLATE-V1 ;; esac' \
+    '  if [ "${OFFICE_F1B_UNEDITED_EDIT:-}" = 1 ] && [ "${package_path##*/}" = edited.docx ]; then stage_text=F1B-DOCX-TEMPLATE-V1; fi' \
     '  content_marker=F1B-XLSX-REPRESENTATIVE-V1' \
     '  if [ "${OFFICE_F1B_EMPTY_SEMANTICS:-}" = 1 ]; then content_marker=EMPTY; stage_text=EMPTY; fi' \
     '  package_tmp="$TMPDIR/fake-office-package-$$"' \
@@ -1082,6 +1083,8 @@ chmod 0600 "$codex_bin_dir/mode"
     '            OFFICE_F1B_INCONSISTENT_SEMANTICS=1 "office-$runtime" "$verb" $run_args --json --attest-result "$result" > "$result.attestation" 2> "$result.stderr"' \
     '          elif [ "$mode" = "wrong-annotation-anchor" ] && [ "$runtime/$format/$verb" = "native/docx/annotate" ]; then' \
     '            OFFICE_F1B_WRONG_ANNOTATION_ANCHOR=1 "office-$runtime" "$verb" $run_args --json --attest-result "$result" > "$result.attestation" 2> "$result.stderr"' \
+    '          elif [ "$mode" = "unedited-edit-artifact" ] && [ "$runtime/$format/$verb" = "native/docx/edit" ]; then' \
+    '            OFFICE_F1B_UNEDITED_EDIT=1 "office-$runtime" "$verb" $run_args --json --attest-result "$result" > "$result.attestation" 2> "$result.stderr"' \
     '          elif [ "$mode" = "canned-get" ] && [ "$runtime/$format/$verb" = "native/xlsx/get" ]; then' \
     '            OFFICE_F1B_CANNED_GET=1 "office-$runtime" "$verb" $run_args --json --attest-result "$result" > "$result.attestation" 2> "$result.stderr"' \
     '          elif [ "$mode" = "canned-raw" ] && [ "$runtime/$format/$verb" = "native/xlsx/raw" ]; then' \
@@ -1899,6 +1902,14 @@ expect_failure wrong-edit-op 1 \
   "$runner" "$head" "$candidate_sha" \
   "$case_root/wrong-edit-op-probe" \
   "$case_root/wrong-edit-op-evidence" \
+  "$case_root/auth.json" "$codex_bin_dir/codex" "$codex_sha"
+
+printf 'unedited-edit-artifact\n' > "$codex_bin_dir/mode"
+expect_failure unedited-edit-artifact 1 \
+  'does not carry the replacement run text' \
+  "$runner" "$head" "$candidate_sha" \
+  "$case_root/unedited-edit-artifact-probe" \
+  "$case_root/unedited-edit-artifact-evidence" \
   "$case_root/auth.json" "$codex_bin_dir/codex" "$codex_sha"
 
 printf 'empty-semantic-package\n' > "$codex_bin_dir/mode"
