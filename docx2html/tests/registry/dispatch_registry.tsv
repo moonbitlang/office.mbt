@@ -445,7 +445,7 @@ run_surgery.mbt	sdt	run_surgery_inside_checkbox_control	name	run_surgery_wbtest:
 run_surgery.mbt	sdtPr	run_surgery_inside_checkbox_control	name	run_surgery_wbtest:"whole-run replacement refuses text the reader replaces"
 run_surgery.mbt	t	plan_whole_run_replacement	name	run_surgery_wbtest:"whole-run replacement does not duplicate xml:space"
 run_surgery.mbt	xml:space	run_surgery_declares_space,run_surgery_space_declaration	name	run_surgery_wbtest:"whole-run replacement finds xml:space only as an attribute"
-run_surgery_api.mbt	r	plan_run_text_replacement_zip	name	run_surgery_api_test:"an addressed run replacement plans, applies, and preserves"; run_surgery_api_test:"an addressed run replacement refuses every wrong premise typed"
+run_surgery_api.mbt	r	plan_run_text_replacement	name	run_surgery_api_test:"an addressed run replacement plans, applies, and preserves"; run_surgery_api_test:"an addressed run replacement refuses every wrong premise typed"
 token_map.mbt	amp	decode_entity_token	entity	token_map_wbtest:"token map: XML entities and numeric characters match the reader"
 token_map.mbt	apos	decode_entity_token	entity	token_map_wbtest:"token map: XML entities and numeric characters match the reader"
 token_map.mbt	gt	decode_entity_token	entity	token_map_wbtest:"token map: XML entities and numeric characters match the reader"
