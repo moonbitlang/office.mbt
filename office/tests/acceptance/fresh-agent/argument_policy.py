@@ -185,6 +185,12 @@ def classify_office_paths(arguments):
         add_option_references(
             references, arguments, "--out", "package-output", "output"
         )
+    elif operation == "edit":
+        add_reference(references, arguments, 1, "package", "input")
+        add_reference(references, arguments, 2, "edit-script", "input")
+        add_option_references(
+            references, arguments, "--out", "package-output", "output"
+        )
     elif operation == "batch":
         classify_batch(arguments, references)
     elif operation == "raw":

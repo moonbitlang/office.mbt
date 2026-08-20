@@ -416,9 +416,9 @@ jobs:
           moon run --target wasm office-cli -- help schemas 2>office-wasm.err \
             | grep -q '^Consumed input contracts$'
           hs=$(moon run --target wasm office-cli -- help schemas --json 2>office-wasm.err)
-          echo "$hs" | jq -e '.success == true and .data.schema == "office.input-contracts/1" and (.data.contracts | length) == 5'
+          echo "$hs" | jq -e '.success == true and .data.schema == "office.input-contracts/1" and (.data.contracts | length) == 6'
           moon run --target wasm office-cli -- help schemas --jsonl 2>office-wasm.err \
-            | jq -e '.schema == "office.input-contracts/1" and (.contracts | length) == 5'
+            | jq -e '.schema == "office.input-contracts/1" and (.contracts | length) == 6'
           moon run --target wasm office-cli -- help schema docx.batch/2 2>office-wasm.err \
             | jq -e '.schema == "office.input-contract/1" and .id == "docx.batch/2"'
           hc=$(moon run --target wasm office-cli -- help schema docx.batch/2 --json 2>office-wasm.err)

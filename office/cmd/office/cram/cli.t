@@ -17,7 +17,7 @@ and JSONL inventories without deferred PowerPoint or MCP entries.
   $ office.exe help | sed -n '1,8p'
   Office capability registry
     Schema: office.capabilities/2
-    Fingerprint: crc32:e7c322ee
+    Fingerprint: crc32:cf08925d
   Formats:
     docx (aliases: word) — WordprocessingML documents
     xlsx (aliases: excel) — SpreadsheetML workbooks
@@ -40,10 +40,10 @@ and JSONL inventories without deferred PowerPoint or MCP entries.
   {"formats":["xlsx"],"variants":[{"name":"xlsx","result_schema":"office.xlsx.query/1","constraints":["format=xlsx"]}]}
 
   $ office.exe help all --json | jq -c '{schema,success,capability_schema:.data.schema,fingerprint:.data.fingerprint,names:[.data.records[].name]}'
-  {"schema":"office.output/1","success":true,"capability_schema":"office.capabilities/2","fingerprint":"crc32:e7c322ee","names":["docx","xlsx","help","identify","outline","get","text","query","validate","dump","replay","issues","preview","render","create","template","edit","annotate","batch","raw"]}
+  {"schema":"office.output/1","success":true,"capability_schema":"office.capabilities/2","fingerprint":"crc32:cf08925d","names":["docx","xlsx","help","identify","outline","get","text","query","validate","dump","replay","issues","preview","render","create","template","edit","annotate","batch","raw"]}
 
   $ office.exe help all --jsonl | jq -s -c 'map({schema,fingerprint,kind,name})'
-  [{"schema":"office.capability/2","fingerprint":"crc32:e7c322ee","kind":"format","name":"docx"},{"schema":"office.capability/2","fingerprint":"crc32:e7c322ee","kind":"format","name":"xlsx"},{"schema":"office.capability/2","fingerprint":"crc32:e7c322ee","kind":"command","name":"help"},{"schema":"office.capability/2","fingerprint":"crc32:e7c322ee","kind":"command","name":"identify"},{"schema":"office.capability/2","fingerprint":"crc32:e7c322ee","kind":"command","name":"outline"},{"schema":"office.capability/2","fingerprint":"crc32:e7c322ee","kind":"command","name":"get"},{"schema":"office.capability/2","fingerprint":"crc32:e7c322ee","kind":"command","name":"text"},{"schema":"office.capability/2","fingerprint":"crc32:e7c322ee","kind":"command","name":"query"},{"schema":"office.capability/2","fingerprint":"crc32:e7c322ee","kind":"command","name":"validate"},{"schema":"office.capability/2","fingerprint":"crc32:e7c322ee","kind":"command","name":"dump"},{"schema":"office.capability/2","fingerprint":"crc32:e7c322ee","kind":"command","name":"replay"},{"schema":"office.capability/2","fingerprint":"crc32:e7c322ee","kind":"command","name":"issues"},{"schema":"office.capability/2","fingerprint":"crc32:e7c322ee","kind":"command","name":"preview"},{"schema":"office.capability/2","fingerprint":"crc32:e7c322ee","kind":"command","name":"render"},{"schema":"office.capability/2","fingerprint":"crc32:e7c322ee","kind":"command","name":"create"},{"schema":"office.capability/2","fingerprint":"crc32:e7c322ee","kind":"command","name":"template"},{"schema":"office.capability/2","fingerprint":"crc32:e7c322ee","kind":"command","name":"edit"},{"schema":"office.capability/2","fingerprint":"crc32:e7c322ee","kind":"command","name":"annotate"},{"schema":"office.capability/2","fingerprint":"crc32:e7c322ee","kind":"command","name":"batch"},{"schema":"office.capability/2","fingerprint":"crc32:e7c322ee","kind":"command","name":"raw"}]
+  [{"schema":"office.capability/2","fingerprint":"crc32:cf08925d","kind":"format","name":"docx"},{"schema":"office.capability/2","fingerprint":"crc32:cf08925d","kind":"format","name":"xlsx"},{"schema":"office.capability/2","fingerprint":"crc32:cf08925d","kind":"command","name":"help"},{"schema":"office.capability/2","fingerprint":"crc32:cf08925d","kind":"command","name":"identify"},{"schema":"office.capability/2","fingerprint":"crc32:cf08925d","kind":"command","name":"outline"},{"schema":"office.capability/2","fingerprint":"crc32:cf08925d","kind":"command","name":"get"},{"schema":"office.capability/2","fingerprint":"crc32:cf08925d","kind":"command","name":"text"},{"schema":"office.capability/2","fingerprint":"crc32:cf08925d","kind":"command","name":"query"},{"schema":"office.capability/2","fingerprint":"crc32:cf08925d","kind":"command","name":"validate"},{"schema":"office.capability/2","fingerprint":"crc32:cf08925d","kind":"command","name":"dump"},{"schema":"office.capability/2","fingerprint":"crc32:cf08925d","kind":"command","name":"replay"},{"schema":"office.capability/2","fingerprint":"crc32:cf08925d","kind":"command","name":"issues"},{"schema":"office.capability/2","fingerprint":"crc32:cf08925d","kind":"command","name":"preview"},{"schema":"office.capability/2","fingerprint":"crc32:cf08925d","kind":"command","name":"render"},{"schema":"office.capability/2","fingerprint":"crc32:cf08925d","kind":"command","name":"create"},{"schema":"office.capability/2","fingerprint":"crc32:cf08925d","kind":"command","name":"template"},{"schema":"office.capability/2","fingerprint":"crc32:cf08925d","kind":"command","name":"edit"},{"schema":"office.capability/2","fingerprint":"crc32:cf08925d","kind":"command","name":"annotate"},{"schema":"office.capability/2","fingerprint":"crc32:cf08925d","kind":"command","name":"batch"},{"schema":"office.capability/2","fingerprint":"crc32:cf08925d","kind":"command","name":"raw"}]
 
 Installed help exposes every consumed JSON input contract without requiring
 repository-only documentation. Inventory and individual records are versioned;
@@ -56,14 +56,15 @@ an unknown ID fails nonzero with a bounded typed suggestion.
     docx.batch/2 — Strict fresh-DOCX authoring script with comments, notes, header/footer stories, and page fields
     office.template.data/1 — Strict non-executable scalar and repeating-region template data
     docx.edit/1 — Strict preservation-safe literal find & replace, or tracked-change accept/reject, script for an existing DOCX
+    docx.edit/2 — Everything docx.edit/1 accepts plus the addressed set_run_text whole-run replacement
     docx.annotation-batch/1 — Strict preservation-safe comment mutation script for an existing DOCX
   Use 'office help schema <id> --json' for the exact contract.
 
   $ office.exe help schemas --json | jq -c '{schema,success,data:{schema:.data.schema,ids:[.data.contracts[].id],fingerprints_valid:all(.data.contracts[];.fingerprint|test("^sha256:[0-9a-f]{64}$"))}}'
-  {"schema":"office.output/1","success":true,"data":{"schema":"office.input-contracts/1","ids":["xlsx.batch/2","docx.batch/2","office.template.data/1","docx.edit/1","docx.annotation-batch/1"],"fingerprints_valid":true}}
+  {"schema":"office.output/1","success":true,"data":{"schema":"office.input-contracts/1","ids":["xlsx.batch/2","docx.batch/2","office.template.data/1","docx.edit/1","docx.edit/2","docx.annotation-batch/1"],"fingerprints_valid":true}}
 
   $ office.exe help schemas --jsonl | jq -c '{schema,contracts:[.contracts[].id]}'
-  {"schema":"office.input-contracts/1","contracts":["xlsx.batch/2","docx.batch/2","office.template.data/1","docx.edit/1","docx.annotation-batch/1"]}
+  {"schema":"office.input-contracts/1","contracts":["xlsx.batch/2","docx.batch/2","office.template.data/1","docx.edit/1","docx.edit/2","docx.annotation-batch/1"]}
 
   $ office.exe help schema docx.batch/2 | jq -c '{schema,id,definitions:(.definitions|length)}'
   {"schema":"office.input-contract/1","id":"docx.batch/2","definitions":15}
@@ -1042,6 +1043,36 @@ leaves the input byte-identical.
   not published
   $ cmp -s edit-base.docx edit-before.docx && echo input unchanged
   input unchanged
+
+An addressed replacement (docx.edit/2) names one run by its query path
+and sets its WHOLE text. The expectation is required: addresses are
+snapshot-relative, and a stale one refuses without publishing.
+
+  $ cat > setrun-script.json <<'SCRIPT'
+  > {"schema":"docx.edit/2","ops":[
+  >  {"op":"set_run_text","params":{"at":"p[2]/r[1]","expect":"Q3 then Q3 then Q3","text":"Quarterly"}}
+  > ]}
+  > SCRIPT
+  $ office.exe edit edit-base.docx setrun-script.json --out setrun-out.docx
+  edit: 1 replacement(s) across 1 op(s) -> setrun-out.docx
+  $ office.exe text setrun-out.docx
+  /docx/body/p[1]\tThe draft report is a draft (esc)
+  /docx/body/p[2]\tQuarterly (esc)
+  $ office.exe validate setrun-out.docx
+  valid docx
+  $ office.exe edit edit-base.docx setrun-script.json --out setrun-json.docx --json | jq -c '{success,data:{schema:.data.schema,results:[.data.results[]|{op,at,expect,text,find,matched,replacements}],changed:.data.transaction.preservation.changed}}'
+  {"success":true,"data":{"schema":"office.docx.edit/2","results":[{"op":"set_run_text","at":"p[2]/r[1]","expect":"Q3 then Q3 then Q3","text":"Quarterly","find":null,"matched":1,"replacements":1}],"changed":["word/document.xml"]}}
+
+  $ cat > setrun-stale.json <<'SCRIPT'
+  > {"schema":"docx.edit/2","ops":[
+  >  {"op":"set_run_text","params":{"at":"p[2]/r[1]","expect":"something else","text":"X"}}
+  > ]}
+  > SCRIPT
+  $ office.exe edit edit-base.docx setrun-stale.json --out setrun-stale.docx
+  office: the run at 'p[2]/r[1]' in 'word/document.xml' does not carry the expected text; re-read the document and retry with a fresh address
+  [1]
+  $ test -f setrun-stale.docx || echo not published
+  not published
 
 A needle that matches nothing refuses by default with a typed code and
 publishes nothing, so a typo can never masquerade as a finished edit.

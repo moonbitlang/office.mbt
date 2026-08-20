@@ -462,7 +462,7 @@ test "docx edit script parser is strict" {
       ("{", "edit script is not valid JSON"),
       ("[]", "edit script must be a JSON object"),
       (
-        "{\"schema\":\"docx.edit/2\",\"ops\":[]}", "unsupported edit schema \"docx.edit/2\"",
+        "{\"schema\":\"docx.edit/3\",\"ops\":[]}", "unsupported edit schema \"docx.edit/3\"",
       ),
       (
         "{\"schema\":\"docx.edit/1\",\"ops\":[],\"extra\":1}", "the edit script has unknown member \"extra\"",
@@ -501,5 +501,143 @@ test "docx edit script parser is strict" {
     } noraise {
       _ => fail("expected a parse refusal for: " + script)
     }
+  }
+}
+
+///|
+fn set_run_text_op(at : String, expect : String, text : String) -> Json {
+  Json::object({
+    "op": Json::string("set_run_text"),
+    "params": Json::object({
+      "at": Json::string(at),
+      "expect": Json::string(expect),
+      "text": Json::string(text),
+    }),
+  })
+}
+
+///|
+fn edit_script_v2(ops : Array[Json]) -> @docx.DocxEditScript raise {
+  @docx.parse_docx_edit_script(
+    Json::object({
+      "schema": Json::string(@docx.SCHEMA_DOCX_EDIT_V2),
+      "ops": Json::array(ops),
+    }).stringify(),
+  )
+}
+
+///|
+test "docx.edit/2 parses set_run_text and stays homogeneous" {
+  let script = edit_script_v2([set_run_text_op("p[1]/r[1]", "old", "new")])
+  assert_eq(script.length(), 1)
+  assert_eq(script.schema(), @docx.SCHEMA_DOCX_EDIT_V2)
+  // /1 rejects the op with a schema pointer
+  let cases = [
+    (
+      "{\"schema\":\"docx.edit/1\",\"ops\":[{\"op\":\"set_run_text\",\"params\":{\"at\":\"p[1]/r[1]\",\"expect\":\"a\",\"text\":\"b\"}}]}",
+      "op \"set_run_text\" needs \"schema\": \"docx.edit/2\"",
+    ),
+    (
+      "{\"schema\":\"docx.edit/2\",\"ops\":[{\"op\":\"set_run_text\",\"params\":{\"at\":\"p[1]/r[1]\",\"expect\":\"a\",\"text\":\"b\"}},{\"op\":\"replace_text\",\"params\":{\"find\":\"x\",\"replace\":\"y\"}}]}",
+      "ops[1] mixes \"replace_text\" with set_run_text; a script stays homogeneous",
+    ),
+    (
+      "{\"schema\":\"docx.edit/2\",\"ops\":[{\"op\":\"replace_text\",\"params\":{\"find\":\"x\",\"replace\":\"y\"}},{\"op\":\"set_run_text\",\"params\":{\"at\":\"p[1]/r[1]\",\"expect\":\"a\",\"text\":\"b\"}}]}",
+      "ops[1] mixes set_run_text with another operation family; a script stays homogeneous",
+    ),
+    (
+      "{\"schema\":\"docx.edit/2\",\"ops\":[{\"op\":\"set_run_text\",\"params\":{\"at\":\"p[1]/r[1]\",\"expect\":\"a\",\"text\":\"b\\tc\"}}]}",
+      "set_run_text \"text\" carries characters the run serializer cannot match or emit (control characters, line breaks, unpaired surrogates, or XML non-characters)",
+    ),
+  ]
+  for case in cases {
+    let (script_text, expected) = case
+    try @docx.parse_docx_edit_script(script_text) |> ignore catch {
+      DocxEditParseError(reason) => assert_eq(reason, expected)
+    } noraise {
+      _ => fail("expected a parse refusal for: " + script_text)
+    }
+  }
+  // /1 scripts still parse and report their schema
+  let v1 = edit_script([replace_op("a", "b")])
+  assert_eq(v1.schema(), @docx.SCHEMA_DOCX_EDIT)
+}
+
+///|
+/// The shipped end-to-end path: an addressed run replacement through
+/// `transact_docx_edit`, published atomically, with the /2 report shape.
+async test "docx.edit/2 sets a run's text end to end" {
+  @async.with_task_group() <| group => {
+    let directory = @afs.tmpdir(prefix="office-docx-setrun-")
+    group.add_defer() <| () => {
+      @async.protect_from_cancel(() => @afs.rmdir(directory, recursive=true))
+    }
+    let input = edit_fixture(
+      directory, "in.docx", "<w:r><w:t>alpha</w:t></w:r><w:r><w:t>beta</w:t></w:r>",
+    )
+    let output = directory + "/out.docx"
+    let result = @docx.transact_docx_edit(
+      @transaction.transaction_options(input, output_path=output),
+      edit_script_v2([set_run_text_op("p[1]/r[2]", "beta", "BETA")]),
+      allow_unmatched=false,
+    )
+    assert_eq(result.report.ops_applied, 1)
+    assert_eq(result.report.replacements, 1)
+    assert_eq(result.report.results[0].op, "set_run_text")
+    assert_eq(result.report.results[0].at, Some("p[1]/r[2]"))
+    assert_eq(result.report.results[0].matched, 1)
+    assert_true(result.report.changed)
+    assert_true(result.transaction.committed)
+    let published = published_document(output)
+    assert_true(published.contains(">alpha<"))
+    assert_true(published.contains(">BETA<"))
+    assert_false(published.contains(">beta<"))
+  }
+}
+
+///|
+/// Refusals: a stale expectation aborts the transaction typed, and a
+/// self-replacement publishes nothing.
+async test "docx.edit/2 refuses stale expectations and no-ops cleanly" {
+  @async.with_task_group() <| group => {
+    let directory = @afs.tmpdir(prefix="office-docx-setrun-refuse-")
+    group.add_defer() <| () => {
+      @async.protect_from_cancel(() => @afs.rmdir(directory, recursive=true))
+    }
+    let input = edit_fixture(
+      directory, "in.docx", "<w:r><w:t>alpha</w:t></w:r><w:r><w:t>beta</w:t></w:r>",
+    )
+    let output = directory + "/out.docx"
+    let mut refused = false
+    try
+      @docx.transact_docx_edit(
+        @transaction.transaction_options(input, output_path=output),
+        edit_script_v2([set_run_text_op("p[1]/r[2]", "stale", "BETA")]),
+        allow_unmatched=false,
+      )
+      |> ignore
+    catch {
+      @transaction.TransactionError(code~, ..) => {
+        refused = true
+        assert_eq(code, "office.docx.invalid_plan")
+      }
+      _ => fail("expected a typed transaction refusal")
+    } noraise {
+      _ => ()
+    }
+    assert_true(refused)
+    assert_false(@afs.exists(output))
+    // self-replacement: validated, nothing queued, nothing published
+    let result = @docx.transact_docx_edit(
+      @transaction.transaction_options(input, output_path=output),
+      edit_script_v2([set_run_text_op("p[1]/r[2]", "beta", "beta")]),
+      allow_unmatched=false,
+    )
+    assert_eq(result.report.replacements, 0)
+    assert_false(result.report.changed)
+    // a no-op WITH an output path still publishes: the exact source
+    // bytes, reused verbatim
+    assert_true(result.transaction.preservation.whole_file_identical)
+    assert_eq(@afs.read_file(output).binary(), @afs.read_file(input).binary())
   }
 }

@@ -19,8 +19,24 @@
 pub const SCHEMA_DOCX_EDIT : String = "docx.edit/1"
 
 ///|
+/// The extended script schema: everything `docx.edit/1` accepts, plus
+/// the addressed `set_run_text` operation (#462 A3). Programs stay
+/// homogeneous -- one script replaces text, resolves revisions, or sets
+/// run text, never a mixture.
+pub const SCHEMA_DOCX_EDIT_V2 : String = "docx.edit/2"
+
+///|
+/// Largest `at` run path, in UTF-16 code units.
+pub const MAX_EDIT_RUN_PATH_UNITS : Int = 4096
+
+///|
 /// The versioned result schema emitted by `office edit`.
 pub const SCHEMA_DOCX_EDIT_RESULT : String = "office.docx.edit/1"
+
+///|
+/// The result schema for `docx.edit/2` scripts: the same envelope with
+/// per-entry `at`/`expect`/`text` keys (null when inapplicable).
+pub const SCHEMA_DOCX_EDIT_RESULT_V2 : String = "office.docx.edit/2"
 
 ///|
 /// Largest number of edit operations in one script. The scan cost is
@@ -56,7 +72,7 @@ pub const MAX_REVISION_SELECTOR_UNITS : Int = 4096
 ///|
 /// The parser-owned operation vocabulary, in stable order.
 let docx_edit_operation_names : Array[String] = [
-  "replace_text", "accept_revision", "reject_revision",
+  "replace_text", "accept_revision", "reject_revision", "set_run_text",
 ]
 
 ///|
@@ -107,12 +123,30 @@ priv struct DocxRevisionOp {
 priv enum DocxEditProgram {
   ReplaceProgram(Array[DocxReplaceOp])
   RevisionProgram(Array[DocxRevisionOp])
+  SetRunTextProgram(Array[DocxSetRunTextOp])
 }
 
 ///|
-/// A parsed, validated `docx.edit/1` script.
+/// One addressed whole-run replacement: the body-relative run path, the
+/// run's expected reader-visible text, and the replacement.
+priv struct DocxSetRunTextOp {
+  at : String
+  expect : String
+  text : String
+}
+
+///|
+/// A parsed, validated `docx.edit/1` or `docx.edit/2` script.
 pub struct DocxEditScript {
   priv program : DocxEditProgram
+  priv schema : String
+}
+
+///|
+/// The schema the script declared (`docx.edit/1` or `docx.edit/2`), so
+/// the surface can emit the matching versioned result schema.
+pub fn DocxEditScript::schema(self : DocxEditScript) -> String {
+  self.schema
 }
 
 ///|
@@ -121,6 +155,7 @@ pub fn DocxEditScript::length(self : DocxEditScript) -> Int {
   match self.program {
     ReplaceProgram(ops) => ops.length()
     RevisionProgram(ops) => ops.length()
+    SetRunTextProgram(ops) => ops.length()
   }
 }
 
@@ -133,6 +168,11 @@ pub(all) struct DocxEditOpResult {
   find : String
   replace : String
   occurrence : Int?
+  // set_run_text only; all three absent for other ops. `find`/`replace`
+  // stay empty for set_run_text -- the /1 fields are never overloaded.
+  at : String?
+  expect : String?
+  text : String?
   // revision selector, as spelled; `selector_all` is the explicit no-filter
   // form. All absent/false for replace_text.
   selector_id : String?
@@ -232,25 +272,23 @@ fn docx_edit_text_field(
   key : String,
   limit : Int,
   required_nonempty~ : Bool,
+  op? : String = "replace_text",
 ) -> String raise DocxEditParseError {
   guard params.get(key) is Some(String(value)) else {
-    raise docx_edit_parse_error(
-      "replace_text params needs a string \"" + key + "\"",
-    )
+    raise docx_edit_parse_error(op + " params needs a string \"" + key + "\"")
   }
   if required_nonempty && value.length() == 0 {
-    raise docx_edit_parse_error(
-      "replace_text \"" + key + "\" must not be empty",
-    )
+    raise docx_edit_parse_error(op + " \"" + key + "\" must not be empty")
   }
   if value.length() > limit {
     raise docx_edit_parse_error(
-      "replace_text \"\{key}\" is \{value.length()} units; the limit is \{limit}",
+      "\{op} \"\{key}\" is \{value.length()} units; the limit is \{limit}",
     )
   }
   if !docx_edit_text_ok(value) {
     raise docx_edit_parse_error(
-      "replace_text \"" +
+      op +
+      " \"" +
       key +
       "\" carries characters the run serializer cannot match or emit (control characters, line breaks, unpaired surrogates, or XML non-characters)",
     )
@@ -275,7 +313,7 @@ pub fn parse_docx_edit_script(
       "edit script needs \"schema\": \"" + SCHEMA_DOCX_EDIT + "\"",
     )
   }
-  guard schema == SCHEMA_DOCX_EDIT else {
+  guard schema == SCHEMA_DOCX_EDIT || schema == SCHEMA_DOCX_EDIT_V2 else {
     raise docx_edit_parse_error("unsupported edit schema \"" + schema + "\"")
   }
   guard fields.get("ops") is Some(Array(items)) else {
@@ -291,6 +329,7 @@ pub fn parse_docx_edit_script(
   }
   let replacements : Array[DocxReplaceOp] = []
   let revisions : Array[DocxRevisionOp] = []
+  let run_texts : Array[DocxSetRunTextOp] = []
   for index, item in items {
     guard item is Object(entry) else {
       raise docx_edit_parse_error("ops[\{index}] must be an object")
@@ -306,6 +345,58 @@ pub fn parse_docx_edit_script(
     }
     guard entry.get("params") is Some(Object(params)) else {
       raise docx_edit_parse_error("ops[\{index}] needs a \"params\" object")
+    }
+    if kind == "set_run_text" {
+      guard schema == SCHEMA_DOCX_EDIT_V2 else {
+        raise docx_edit_parse_error(
+          "op \"set_run_text\" needs \"schema\": \"" +
+          SCHEMA_DOCX_EDIT_V2 +
+          "\"",
+        )
+      }
+      guard replacements.is_empty() && revisions.is_empty() else {
+        raise docx_edit_parse_error(
+          "ops[\{index}] mixes set_run_text with another operation family; a script stays homogeneous",
+        )
+      }
+      docx_edit_reject_unknown(
+        params,
+        ["at", "expect", "text"],
+        "ops[\{index}].params",
+      )
+      let at = parse_docx_run_address(
+        docx_edit_text_field(
+          params,
+          "at",
+          MAX_EDIT_RUN_PATH_UNITS,
+          required_nonempty=true,
+          op="set_run_text",
+        ),
+        index,
+      )
+      let expect = docx_edit_text_field(
+        params,
+        "expect",
+        MAX_EDIT_REPLACE_UNITS,
+        required_nonempty=false,
+        op="set_run_text",
+      )
+      let text = docx_edit_text_field(
+        params,
+        "text",
+        MAX_EDIT_REPLACE_UNITS,
+        required_nonempty=false,
+        op="set_run_text",
+      )
+      run_texts.push({ at, expect, text })
+      continue
+    }
+    guard run_texts.is_empty() else {
+      raise docx_edit_parse_error(
+        "ops[\{index}] mixes \"" +
+        kind +
+        "\" with set_run_text; a script stays homogeneous",
+      )
     }
     if kind is ("accept_revision" | "reject_revision") {
       guard replacements.is_empty() else {
@@ -365,11 +456,78 @@ pub fn parse_docx_edit_script(
     }
     replacements.push({ find, replace, occurrence })
   }
-  if revisions.is_empty() {
-    { program: ReplaceProgram(replacements) }
+  if !run_texts.is_empty() {
+    { program: SetRunTextProgram(run_texts), schema }
+  } else if revisions.is_empty() {
+    { program: ReplaceProgram(replacements), schema }
   } else {
-    { program: RevisionProgram(revisions) }
+    { program: RevisionProgram(revisions), schema }
   }
+}
+
+///|
+/// Validates and normalizes one `set_run_text` address. Accepted forms:
+/// the canonical query selector (`/docx/body/p[1]/r[2]`) and its
+/// body-relative form (`p[1]/r[2]`). Segments are `kind[ordinal]` with
+/// kind in {p, r, tbl, tr, tc} and ordinal >= 1; the path must end in a
+/// run segment. The normalized body-relative form is returned, so
+/// agents can paste `office query` paths directly.
+fn parse_docx_run_address(
+  value : String,
+  index : Int,
+) -> String raise DocxEditParseError {
+  let canonical_prefix = "/docx/body/"
+  let relative = if value.has_prefix(canonical_prefix) {
+    value.substring(start=canonical_prefix.length()).to_string()
+  } else {
+    value
+  }
+  fn refuse(reason : String) -> DocxEditParseError {
+    docx_edit_parse_error(
+      "ops[\{index}].params.at " +
+      reason +
+      "; expected a run path like \"p[3]/r[2]\" or \"/docx/body/p[3]/r[2]\"",
+    )
+  }
+  if relative.length() == 0 {
+    raise refuse("is empty")
+  }
+  let segments = relative.split("/").collect()
+  let mut last_kind = ""
+  for segment_view in segments {
+    let segment = segment_view.to_string()
+    guard segment.find("[") is Some(open_at) && segment.has_suffix("]") else {
+      raise refuse("carries a segment without an ordinal (\"\{segment}\")")
+    }
+    let kind = segment.substring(start=0, end=open_at).to_string()
+    guard kind is ("p" | "r" | "tbl" | "tr" | "tc") else {
+      raise refuse("carries an unsupported segment kind (\"\{kind}\")")
+    }
+    let ordinal_text = segment
+      .substring(start=open_at + 1, end=segment.length() - 1)
+      .to_string()
+    if ordinal_text.length() == 0 {
+      raise refuse("carries an empty ordinal (\"\{segment}\")")
+    }
+    let mut ordinal = 0
+    for character in ordinal_text {
+      guard character >= '0' && character <= '9' else {
+        raise refuse("carries a non-numeric ordinal (\"\{segment}\")")
+      }
+      ordinal = ordinal * 10 + (character.to_int() - '0'.to_int())
+      if ordinal > MAX_EDIT_OCCURRENCE {
+        raise refuse("carries an ordinal past \{MAX_EDIT_OCCURRENCE}")
+      }
+    }
+    if ordinal < 1 {
+      raise refuse("carries ordinal 0; ordinals start at 1")
+    }
+    last_kind = kind
+  }
+  if last_kind != "r" {
+    raise refuse("must end in a run segment")
+  }
+  relative
 }
 
 ///|
@@ -636,7 +794,76 @@ pub async fn transact_docx_edit(
     ReplaceProgram(ops) => transact_docx_replace(options, ops, allow_unmatched~)
     RevisionProgram(ops) =>
       transact_docx_revisions(options, ops, allow_unmatched~)
+    // Addressed ops have no unmatched-tolerance: an address that does
+    // not resolve refuses the whole transaction, always.
+    SetRunTextProgram(ops) => transact_docx_set_run_text(options, ops)
   }
+}
+
+///|
+/// The addressed run-replacement half of `transact_docx_edit` (#462 A3):
+/// each op queues one whole-run replacement through the session, in
+/// script order against the SAME immutable snapshot. The first refusal
+/// aborts the transaction typed; nothing is published on any refusal.
+async fn transact_docx_set_run_text(
+  options : @transaction.TransactionOptions,
+  ops : Array[DocxSetRunTextOp],
+) -> DocxEditResult {
+  let collected : Ref[DocxEditReport?] = Ref(None)
+  let transaction = transact_docx(options, session => {
+    let results = ops.map(op => {
+      (
+        {
+          op: "set_run_text",
+          find: "",
+          replace: "",
+          occurrence: None,
+          at: Some(op.at),
+          expect: Some(op.expect),
+          text: Some(op.text),
+          selector_id: None,
+          selector_author: None,
+          selector_type: None,
+          selector_all: false,
+          matched: 0,
+          replacements: 0,
+          resolved: 0,
+        } : DocxEditOpResult)
+    })
+    let mut replacements = 0
+    for index, op in ops {
+      let receipt = session.queue_run_text_replacement(
+        at_relative=op.at,
+        expect=op.expect,
+        text=op.text,
+      )
+      results[index].matched = 1
+      results[index].replacements = receipt.edit_count()
+      replacements += receipt.edit_count()
+    }
+    collected.val = Some({
+      ops_applied: ops.length(),
+      replacements,
+      revisions_resolved: 0,
+      results,
+      unmatched: [],
+      unmatched_total: 0,
+      unsupported: [],
+      unsupported_total: 0,
+      conflicts: [],
+      conflicts_total: 0,
+      locations: [],
+      locations_truncated: false,
+      stories_scanned: ["/body"],
+      changed: replacements > 0,
+    })
+  })
+  guard collected.val is Some(report) else {
+    raise docx_failure(
+      "office.docx.edit_internal", "the edit transaction returned no report",
+    )
+  }
+  { report, transaction }
 }
 
 ///|
@@ -655,6 +882,9 @@ async fn transact_docx_replace(
           find: op.find,
           replace: op.replace,
           occurrence: op.occurrence,
+          at: None,
+          expect: None,
+          text: None,
           selector_id: None,
           selector_author: None,
           selector_type: None,

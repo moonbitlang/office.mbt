@@ -1657,6 +1657,7 @@ expected_workflow_schema() {
     docx/outline) printf '%s\n' office.docx.outline/1 ;;
     xlsx/get) printf '%s\n' office.xlsx.element/1 ;;
     docx/get) printf '%s\n' office.docx.element/1 ;;
+    docx/edit) printf '%s\n' office.docx.edit/2 ;;
     xlsx/text) printf '%s\n' office.xlsx.text/1 ;;
     docx/text) printf '%s\n' office.docx.text/1 ;;
     xlsx/query) printf '%s\n' office.xlsx.query/1 ;;
@@ -1794,6 +1795,22 @@ validate_workflow_event() {
         (.data.output | type) == "string" and
         (.data.ops_applied | type) == "number" and .data.ops_applied > 0 and
         .data.transaction.committed == true
+      elif $verb == "edit" then
+        successful_envelope and
+        (.data.output | type) == "string" and
+        .data.ops_applied == 1 and
+        (.data.replacements | type) == "number" and .data.replacements > 0 and
+        (.data.results | type) == "array" and (.data.results | length) == 1 and
+        (.data.results[0] |
+          .op == "set_run_text" and
+          (.at | type) == "string" and
+          (.expect | type) == "string" and
+          (.text | type) == "string" and
+          .expect != .text and
+          .find == null and
+          .matched == 1 and
+          .replacements == 1) and
+        .data.transaction.committed == true
       else
         successful_envelope
       end
@@ -1808,7 +1825,7 @@ validate_workflow_event() {
     identify | outline | get | text | query | validate | issues | preview)
       artifact_relative="$(/usr/bin/jq -er '.data.file' "$result_file")"
       ;;
-    template | replay | annotate)
+    template | replay | annotate | edit)
       artifact_relative="$(/usr/bin/jq -er '.data.output' "$result_file")"
       ;;
     dump)
@@ -1838,7 +1855,7 @@ validate_workflow_event() {
       (.role == "package-output" and .access == "output") or
       (.role == "package" and .access == "input-output")
     elif $verb == "create" or $verb == "template" or
-         $verb == "replay" or $verb == "annotate" then
+         $verb == "replay" or $verb == "annotate" or $verb == "edit" then
       .role == "package-output" and .access == "output"
     else
       .role == "package" and .access == "input"
@@ -2053,9 +2070,9 @@ extract_isolated_help() {
     (.data.fingerprint | type) == "string" and (.data.fingerprint | length) > 0 and
     (.data.records | type) == "array" and (.data.records | length) >= 18 and
     ([.data.records[] | select(.kind == "format") | .name] | sort) == ["docx", "xlsx"] and
-    (["annotate", "batch", "create", "dump", "get", "help", "identify",
-      "issues", "outline", "preview", "query", "raw", "replay", "template",
-      "text", "validate"] - $commands | length) == 0 and
+    (["annotate", "batch", "create", "dump", "edit", "get", "help",
+      "identify", "issues", "outline", "preview", "query", "raw", "replay",
+      "template", "text", "validate"] - $commands | length) == 0 and
     (.data.records | all(
       .schema == "office.capability/2" and
       .fingerprint == $fingerprint
@@ -2098,11 +2115,12 @@ extract_isolated_contracts() {
     (.data | keys) == ["contracts", "fingerprint", "schema"] and
     .data.schema == "office.input-contracts/1" and
     (.data.fingerprint | test("^sha256:[0-9a-f]{64}$")) and
-    (.data.contracts | type) == "array" and (.data.contracts | length) == 5 and
+    (.data.contracts | type) == "array" and (.data.contracts | length) == 6 and
     ([.data.contracts[].id] | sort) == [
       "docx.annotation-batch/1",
       "docx.batch/2",
       "docx.edit/1",
+      "docx.edit/2",
       "office.template.data/1",
       "xlsx.batch/2"
     ] and
@@ -3410,7 +3428,7 @@ for runtime in native wasm; do
   for verb in create batch identify outline get text query validate issues preview template dump replay raw; do
     record_workflow_evidence "$runtime" xlsx "$verb"
   done
-  for verb in batch identify outline get text query validate issues preview template dump replay raw annotate; do
+  for verb in batch identify outline get text query validate issues preview template dump replay raw edit annotate; do
     record_workflow_evidence "$runtime" docx "$verb"
   done
 done
@@ -3424,9 +3442,9 @@ done
 /usr/bin/jq -e '
   keys == ["required_count", "schema", "workflows"] and
   .schema == "office.fresh-agent.workflows/5" and
-  .required_count == 58 and
-  (.workflows | length) == 58 and
-  (.workflows | unique_by([.runtime, .format, .operation]) | length) == 58 and
+  .required_count == 60 and
+  (.workflows | length) == 60 and
+  (.workflows | unique_by([.runtime, .format, .operation]) | length) == 60 and
   ([.workflows[].events[].event_id] as $ids |
     ($ids | length) == ($ids | unique | length)) and
   ([.workflows[].events[].result.path | select(. != null)] as $paths |

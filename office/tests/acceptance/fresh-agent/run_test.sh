@@ -255,9 +255,9 @@ make_candidate() {
     'raw_action=${1:-}' \
     'if [ "$verb" = help ]; then' \
     '  if [ "$raw_action" = schemas ]; then' \
-    '    printf '\''{"schema":"office.output/1","success":true,"data":{"schema":"office.input-contracts/1","fingerprint":"sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa","contracts":[{"id":"xlsx.batch/2","fingerprint":"sha256:1111111111111111111111111111111111111111111111111111111111111111","summary":"xlsx batch","consumed_by":["office batch"]},{"id":"docx.batch/2","fingerprint":"sha256:2222222222222222222222222222222222222222222222222222222222222222","summary":"docx batch","consumed_by":["office batch"]},{"id":"office.template.data/1","fingerprint":"sha256:3333333333333333333333333333333333333333333333333333333333333333","summary":"template data","consumed_by":["office template"]},{"id":"docx.edit/1","fingerprint":"sha256:5555555555555555555555555555555555555555555555555555555555555555","summary":"literal edit","consumed_by":["office edit"]},{"id":"docx.annotation-batch/1","fingerprint":"sha256:4444444444444444444444444444444444444444444444444444444444444444","summary":"annotations","consumed_by":["office annotate"]}]}}\n'\''' \
+    '    printf '\''{"schema":"office.output/1","success":true,"data":{"schema":"office.input-contracts/1","fingerprint":"sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa","contracts":[{"id":"xlsx.batch/2","fingerprint":"sha256:1111111111111111111111111111111111111111111111111111111111111111","summary":"xlsx batch","consumed_by":["office batch"]},{"id":"docx.batch/2","fingerprint":"sha256:2222222222222222222222222222222222222222222222222222222222222222","summary":"docx batch","consumed_by":["office batch"]},{"id":"office.template.data/1","fingerprint":"sha256:3333333333333333333333333333333333333333333333333333333333333333","summary":"template data","consumed_by":["office template"]},{"id":"docx.edit/1","fingerprint":"sha256:5555555555555555555555555555555555555555555555555555555555555555","summary":"literal edit","consumed_by":["office edit"]},{"id":"docx.edit/2","fingerprint":"sha256:6666666666666666666666666666666666666666666666666666666666666666","summary":"addressed run edit","consumed_by":["office edit"]},{"id":"docx.annotation-batch/1","fingerprint":"sha256:4444444444444444444444444444444444444444444444444444444444444444","summary":"annotations","consumed_by":["office annotate"]}]}}\n'\''' \
     '  else' \
-    '    printf '\''{"schema":"office.output/1","success":true,"data":{"schema":"office.capabilities/2","fingerprint":"test:fingerprint","records":[{"schema":"office.capability/2","fingerprint":"test:fingerprint","kind":"format","name":"docx"},{"schema":"office.capability/2","fingerprint":"test:fingerprint","kind":"format","name":"xlsx"},{"schema":"office.capability/2","fingerprint":"test:fingerprint","kind":"command","name":"help"},{"schema":"office.capability/2","fingerprint":"test:fingerprint","kind":"command","name":"identify"},{"schema":"office.capability/2","fingerprint":"test:fingerprint","kind":"command","name":"outline"},{"schema":"office.capability/2","fingerprint":"test:fingerprint","kind":"command","name":"get"},{"schema":"office.capability/2","fingerprint":"test:fingerprint","kind":"command","name":"text"},{"schema":"office.capability/2","fingerprint":"test:fingerprint","kind":"command","name":"query"},{"schema":"office.capability/2","fingerprint":"test:fingerprint","kind":"command","name":"validate"},{"schema":"office.capability/2","fingerprint":"test:fingerprint","kind":"command","name":"dump"},{"schema":"office.capability/2","fingerprint":"test:fingerprint","kind":"command","name":"replay"},{"schema":"office.capability/2","fingerprint":"test:fingerprint","kind":"command","name":"issues"},{"schema":"office.capability/2","fingerprint":"test:fingerprint","kind":"command","name":"preview"},{"schema":"office.capability/2","fingerprint":"test:fingerprint","kind":"command","name":"create"},{"schema":"office.capability/2","fingerprint":"test:fingerprint","kind":"command","name":"template"},{"schema":"office.capability/2","fingerprint":"test:fingerprint","kind":"command","name":"annotate"},{"schema":"office.capability/2","fingerprint":"test:fingerprint","kind":"command","name":"batch"},{"schema":"office.capability/2","fingerprint":"test:fingerprint","kind":"command","name":"raw"}]}}\n'\''' \
+    '    printf '\''{"schema":"office.output/1","success":true,"data":{"schema":"office.capabilities/2","fingerprint":"test:fingerprint","records":[{"schema":"office.capability/2","fingerprint":"test:fingerprint","kind":"format","name":"docx"},{"schema":"office.capability/2","fingerprint":"test:fingerprint","kind":"format","name":"xlsx"},{"schema":"office.capability/2","fingerprint":"test:fingerprint","kind":"command","name":"help"},{"schema":"office.capability/2","fingerprint":"test:fingerprint","kind":"command","name":"identify"},{"schema":"office.capability/2","fingerprint":"test:fingerprint","kind":"command","name":"outline"},{"schema":"office.capability/2","fingerprint":"test:fingerprint","kind":"command","name":"get"},{"schema":"office.capability/2","fingerprint":"test:fingerprint","kind":"command","name":"text"},{"schema":"office.capability/2","fingerprint":"test:fingerprint","kind":"command","name":"query"},{"schema":"office.capability/2","fingerprint":"test:fingerprint","kind":"command","name":"validate"},{"schema":"office.capability/2","fingerprint":"test:fingerprint","kind":"command","name":"dump"},{"schema":"office.capability/2","fingerprint":"test:fingerprint","kind":"command","name":"replay"},{"schema":"office.capability/2","fingerprint":"test:fingerprint","kind":"command","name":"issues"},{"schema":"office.capability/2","fingerprint":"test:fingerprint","kind":"command","name":"preview"},{"schema":"office.capability/2","fingerprint":"test:fingerprint","kind":"command","name":"create"},{"schema":"office.capability/2","fingerprint":"test:fingerprint","kind":"command","name":"template"},{"schema":"office.capability/2","fingerprint":"test:fingerprint","kind":"command","name":"annotate"},{"schema":"office.capability/2","fingerprint":"test:fingerprint","kind":"command","name":"edit"},{"schema":"office.capability/2","fingerprint":"test:fingerprint","kind":"command","name":"batch"},{"schema":"office.capability/2","fingerprint":"test:fingerprint","kind":"command","name":"raw"}]}}\n'\''' \
     '  fi' \
     '  exit 0' \
     'fi' \
@@ -281,7 +281,9 @@ make_candidate() {
     '  package=$1' \
     '  case "$package" in /*) package_path=$package ;; *) package_path=$PWD/$package ;; esac' \
     '  /bin/mkdir -p "$(/usr/bin/dirname -- "$package_path")"' \
-    '  case "${package_path##*/}" in batched.xlsx|authored.docx) stage_text="{{agent_name}}" ;; *.xlsx) stage_text=F1B-XLSX-TEMPLATE-V1 ;; *) stage_text=F1B-DOCX-TEMPLATE-V1 ;; esac' \
+    '  case "${package_path##*/}" in batched.xlsx|authored.docx) stage_text="{{agent_name}}" ;; edited.docx) stage_text=F1B-DOCX-EDITED-V1 ;; *.xlsx) stage_text=F1B-XLSX-TEMPLATE-V1 ;; *) stage_text=F1B-DOCX-TEMPLATE-V1 ;; esac' \
+    '  if [ "${OFFICE_F1B_UNEDITED_EDIT:-}" = 1 ] && [ "${package_path##*/}" = edited.docx ]; then stage_text=F1B-DOCX-TEMPLATE-V1; fi' \
+    '  if [ "${OFFICE_F1B_PRE_EDITED_INPUT:-}" = 1 ] && [ "${package_path##*/}" = annotated.docx ]; then stage_text=F1B-DOCX-EDITED-V1; fi' \
     '  content_marker=F1B-XLSX-REPRESENTATIVE-V1' \
     '  if [ "${OFFICE_F1B_EMPTY_SEMANTICS:-}" = 1 ]; then content_marker=EMPTY; stage_text=EMPTY; fi' \
     '  package_tmp="$TMPDIR/fake-office-package-$$"' \
@@ -312,7 +314,13 @@ make_candidate() {
     '    anchor_end="<w:commentRangeEnd w:id=\"0\"/><w:r><w:commentReference w:id=\"0\"/></w:r>"' \
     '    heading_anchor_start=; heading_anchor_end=; template_anchor_start=$anchor_start; template_anchor_end=$anchor_end' \
     '    if [ "${OFFICE_F1B_WRONG_ANNOTATION_ANCHOR:-}" = 1 ]; then heading_anchor_start=$anchor_start; heading_anchor_end=$anchor_end; template_anchor_start=; template_anchor_end=; fi' \
-    '    printf "%s\n" "<w:document xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\" xmlns:r=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships\"><w:body><w:p><w:pPr><w:pStyle w:val=\"Heading1\"/></w:pPr>$heading_anchor_start<w:r><w:t>F1B-DOCX-HEADING-V1</w:t></w:r>$heading_anchor_end</w:p><w:p>$template_anchor_start<w:r><w:t>$stage_text</w:t></w:r>$template_anchor_end</w:p><w:p><w:pPr><w:numPr><w:ilvl w:val=\"0\"/></w:numPr></w:pPr><w:r><w:t>F1B-DOCX-LIST-V1</w:t></w:r></w:p><w:tbl><w:tr><w:tc><w:p><w:r><w:t>F1B-DOCX-TABLE-V1</w:t></w:r></w:p></w:tc></w:tr></w:tbl><w:p><w:hyperlink r:id=\"rIdLink\"><w:r><w:t>F1B link</w:t></w:r></w:hyperlink></w:p></w:body></w:document>" > "$package_tmp/word/document.xml"' \
+    '    docx_list_paragraph="<w:p><w:pPr><w:numPr><w:ilvl w:val=\"0\"/></w:numPr></w:pPr><w:r><w:t>F1B-DOCX-LIST-V1</w:t></w:r></w:p>"' \
+    '    docx_table_block="<w:tbl><w:tr><w:tc><w:p><w:r><w:t>F1B-DOCX-TABLE-V1</w:t></w:r></w:p></w:tc></w:tr></w:tbl>"' \
+    '    docx_link_paragraph="<w:p><w:hyperlink r:id=\"rIdLink\"><w:r><w:t>F1B link</w:t></w:r></w:hyperlink></w:p>"' \
+    '    extra_docx_paragraph=' \
+    '    if [ "${OFFICE_F1B_STRIPPED_EDIT:-}" = 1 ] && [ "${package_path##*/}" = edited.docx ]; then docx_list_paragraph=; docx_table_block=; docx_link_paragraph=; fi' \
+    '    if [ "${OFFICE_F1B_PRE_EDITED_INPUT:-}" = 1 ] && [ "${package_path##*/}" = annotated.docx ]; then extra_docx_paragraph="<w:p><w:r><w:t>F1B-DOCX-TEMPLATE-V1</w:t></w:r></w:p>"; fi' \
+    '    printf "%s\n" "<w:document xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\" xmlns:r=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships\"><w:body><w:p><w:pPr><w:pStyle w:val=\"Heading1\"/></w:pPr>$heading_anchor_start<w:r><w:t>F1B-DOCX-HEADING-V1</w:t></w:r>$heading_anchor_end</w:p><w:p>$template_anchor_start<w:r><w:t>$stage_text</w:t></w:r>$template_anchor_end</w:p>$docx_list_paragraph$docx_table_block$docx_link_paragraph$extra_docx_paragraph</w:body></w:document>" > "$package_tmp/word/document.xml"' \
     '    printf "%s\n" '\''<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rIdLink" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/hyperlink" Target="https://example.invalid/f1b" TargetMode="External"/><Relationship Id="rIdComments" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/comments" Target="comments.xml"/><Relationship Id="rIdCommentsEx" Type="http://schemas.microsoft.com/office/2011/relationships/commentsExtended" Target="commentsExtended.xml"/></Relationships>'\'' > "$package_tmp/word/_rels/document.xml.rels"' \
     '    printf "%s\n" '\''<w:comments xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main" xmlns:w14="http://schemas.microsoft.com/office/word/2010/wordml"><w:comment w:id="0"><w:p w14:paraId="00000001"><w:r><w:t>F1B-DOCX-COMMENT-V1</w:t></w:r></w:p></w:comment><w:comment w:id="1"><w:p w14:paraId="00000002"><w:r><w:t>F1B-DOCX-REPLY-V1</w:t></w:r></w:p></w:comment></w:comments>'\'' > "$package_tmp/word/comments.xml"' \
     '    printf "%s\n" '\''<w15:commentsEx xmlns:w15="http://schemas.microsoft.com/office/word/2012/wordml"><w15:commentEx w15:paraId="00000001" w15:done="1"/><w15:commentEx w15:paraId="00000002" w15:paraIdParent="00000001" w15:done="0"/></w15:commentsEx>'\'' > "$package_tmp/word/commentsExtended.xml"' \
@@ -343,7 +351,7 @@ make_candidate() {
     '    if [ -n "$output_file" ]; then make_package "$output_file"; artifact=$output_file; fi' \
     '    if [ "${OFFICE_F1B_WRONG_OUTPUT_ROLE:-}" = 1 ]; then artifact=$source_file; fi' \
     '    ;;' \
-    '  template|replay|annotate)' \
+    '  template|replay|annotate|edit)' \
     '    [ -n "$output_file" ] || output_file="produced-$verb.$format"' \
     '    make_package "$output_file"' \
     '    artifact=$output_file' \
@@ -380,6 +388,7 @@ make_candidate() {
     '  replay/*) result_schema=office.replay/1 ;;' \
     '  raw/xlsx) result_schema=office.raw.inventory/1 ;;' \
     '  raw/docx) if [ "$raw_action" = list ]; then result_schema=office.raw.inventory/1; else result_schema=office.raw.part/1; fi ;;' \
+    '  edit/docx) result_schema=office.docx.edit/2 ;;' \
     '  annotate/docx) result_schema=office.docx.annotation-batch/1 ;;' \
     '  *) exit 72 ;;' \
     'esac' \
@@ -391,7 +400,7 @@ make_candidate() {
     '  /usr/bin/jq -cn --arg source "$source_file" --arg canned "${OFFICE_F1B_CANNED_GET:-0}" --arg unknown_warning "${OFFICE_F1B_UNKNOWN_WARNING:-0}" '\''({schema:"office.output/1",success:true,data:{schema:"office.xlsx.element/1",file:$source,format:"xlsx",path:"/xlsx/sheet[name=\"Data\"]/range[A1:B5]",kind:"range",stability:"snapshot-relative",parent:"/xlsx/sheet[name=\"Data\"]",reference:"A1:B5",cells:[{path:"/xlsx/sheet[name=\"Data\"]/cell[A1]",reference:"A1",row:1,column:1,value:"F1B-XLSX-REPRESENTATIVE-V1",raw:{type:"string",value:"F1B-XLSX-REPRESENTATIVE-V1"}},{path:"/xlsx/sheet[name=\"Data\"]/cell[B2]",reference:"B2",row:2,column:2,value:(if $canned == "1" then "31" else "30" end),raw:{type:"number",value:(if $canned == "1" then 31 else 30 end)}},{path:"/xlsx/sheet[name=\"Data\"]/cell[B3]",reference:"B3",row:3,column:2,value:"70",raw:{type:"number",value:70}},{path:"/xlsx/sheet[name=\"Data\"]/cell[B4]",reference:"B4",row:4,column:2,formula:"SUM(B2:B3)"},{path:"/xlsx/sheet[name=\"Data\"]/cell[A5]",reference:"A5",row:5,column:1,value:"F1B-XLSX-TEMPLATE-V1",raw:{type:"string",value:"F1B-XLSX-TEMPLATE-V1"}}],styles:{},scanned_cells:10,returned:5}}) + (if $unknown_warning == "1" then {warnings:[{code:"office.fixture.unclassified_target_warning",message:"unclassified target warning"}]} else {} end)'\''' \
     '  exit 0' \
     'fi' \
-    '/usr/bin/jq -cn --arg verb "$verb" --arg format "$format" --arg schema "$result_schema" --arg source "$source_file" --arg output "$artifact" --arg produced "$output_file" --arg runtime "$runtime" --arg canned_get "${OFFICE_F1B_CANNED_GET:-0}" --arg canned_raw "${OFFICE_F1B_CANNED_RAW:-0}" --arg canned_dump "${OFFICE_F1B_CANNED_DUMP:-0}" --arg unknown_warning "${OFFICE_F1B_UNKNOWN_WARNING:-0}" '\''def commit_warnings: [{code:"office.transaction.path_based_commit_semantics",message:"publication uses moonbitlang/async path APIs; atomic rename is guaranteed, but hostile concurrent directory-entry replacement is outside the portable contract"}] + (if $runtime == "wasm" then [{code:"office.transaction.wasm_commit_semantics",message:"Wasm uses normalized paths and a same-directory rename, but host-independent realpath, symlink identity, and parent-directory durability are unavailable"}] else [] end); def envelope($data): {schema:"office.output/1",success:true,data:$data} + (if $unknown_warning == "1" then {warnings:[{code:"office.fixture.unclassified_target_warning",message:"unclassified target warning"}]} elif $verb == "create" or $verb == "batch" or $verb == "template" or $verb == "replay" or $verb == "annotate" then {warnings:commit_warnings} else {} end); if $verb == "dump" then (if $canned_dump == "1" then [{op:"fixture",params:{format:$format}}] elif $format == "xlsx" then [{op:"set",params:{sheet:"Data",cell:"A1",value:"F1B-XLSX-REPRESENTATIVE-V1"}},{op:"set",params:{sheet:"Data",cell:"A5",value:"F1B-XLSX-TEMPLATE-V1"}},{op:"set",params:{sheet:"Data",cell:"B2",value:30}},{op:"formula",params:{sheet:"Data",cell:"B4",formula:"SUM(B2:B3)"}},{op:"chart",params:{sheet:"Data",anchor:"D2",categories:"A2:A3",values:"B2:B3"}}] else [{op:"paragraph",params:{text:"F1B-DOCX-HEADING-V1",style:"Heading1"}},{op:"paragraph",params:{text:"F1B-DOCX-TEMPLATE-V1"}},{op:"paragraph",params:{text:"F1B-DOCX-LIST-V1",list:{ordered:true}}},{op:"table",params:{rows:[["F1B-DOCX-TABLE-V1"]]}},{op:"paragraph",params:{runs:[{link:{href:"https://example.invalid/f1b",text:"F1B link"}}]}},{op:"comment",params:{body:"F1B-DOCX-COMMENT-V1"}},{op:"comment",params:{body:"F1B-DOCX-REPLY-V1",reply_to:5}}] end) as $ops | {schema:$schema,format:$format,source:{file:$source,bytes:1,sha256:("a"*64)},replay:{batch_schema:(if $format == "xlsx" then "xlsx.batch/2" else "docx.batch/2" end),create:{},limits:{}},ops:$ops,assets:{},residual:[],warnings:[],stats:{ops:($ops|length),assets:0,residual:0,warnings:0}} else envelope({schema:$schema,format:$format} + if $verb == "create" or $verb == "batch" then {transaction:{format:$format,output:$output,committed:true,dry_run:false,changed:true}} elif $verb == "identify" then {file:$source} elif $verb == "outline" and $format == "docx" then {file:$source,path:"/",counts:{comments:2}} elif $verb == "outline" then {file:$source,path:"/"} elif $verb == "get" and $canned_get == "1" then {file:$source,path:"/"} elif $verb == "get" and $format == "xlsx" then {file:$source,path:"/xlsx/sheet[name=Data]/range[A1:A5]",cells:[{raw:{value:"F1B-XLSX-REPRESENTATIVE-V1"}},{raw:{value:"F1B-XLSX-TEMPLATE-V1"}}]} elif $verb == "get" then {file:$source,path:"/docx/body/p[1]",text:"F1B-DOCX-HEADING-V1"} elif $verb == "text" then {file:$source,returned:1,entries:[{text:(if $format == "xlsx" then "F1B-XLSX-TEMPLATE-V1" else "F1B-DOCX-TEMPLATE-V1" end)}]} elif $verb == "query" then {file:$source,returned:1,matches:[{preview:(if $format == "xlsx" then "F1B-XLSX-TEMPLATE-V1" else "F1B-DOCX-TEMPLATE-V1" end)}]} elif $verb == "validate" or $verb == "issues" then {file:$source,valid:true,error_count:0} elif $verb == "preview" then {file:$source,output:$produced,bytes_written:50,charts_rendered:(if $format == "xlsx" then 1 else 0 end),charts_placeholder:0,images_embedded:0,truncation:{max_rows:1000,max_cols:256,truncated_sheets:[],images_omitted:0}} elif $verb == "template" then {output:$output,replaced:1,transaction:{committed:true}} elif $verb == "replay" then {output:$output,bytes_written:1,ops_applied:1} elif $verb == "raw" and $schema == "office.raw.inventory/1" and $canned_raw == "1" then {part_count:1,parts:[]} elif $verb == "raw" and $schema == "office.raw.inventory/1" then {part_count:3,parts:[{name:"xl/workbook.xml"},{name:"xl/worksheets/sheet1.xml"},{name:"xl/charts/chart1.xml"}]} elif $verb == "raw" and $format == "docx" and $canned_raw == "1" then {content:"<document/>"} elif $verb == "raw" and $format == "docx" then {content:"<document>F1B-DOCX-HEADING-V1 F1B-DOCX-TEMPLATE-V1 F1B-DOCX-LIST-V1 F1B-DOCX-TABLE-V1</document>"} elif $verb == "annotate" then {output:$output,ops_applied:3,results:[{op:"comment_add",comment_id:"0",done:null,anchor:"/docx/body/p[2]"},{op:"comment_reply",comment_id:"1",done:null,target:"0"},{op:"comment_resolve",comment_id:"0",done:true,target:"0"}],labels:[{label:"root",comment_id:"0"},{label:"answer",comment_id:"1"}],transaction:{committed:true}} else {} end) end'\''' \
+    '/usr/bin/jq -cn --arg verb "$verb" --arg format "$format" --arg schema "$result_schema" --arg source "$source_file" --arg output "$artifact" --arg produced "$output_file" --arg runtime "$runtime" --arg canned_get "${OFFICE_F1B_CANNED_GET:-0}" --arg canned_raw "${OFFICE_F1B_CANNED_RAW:-0}" --arg canned_dump "${OFFICE_F1B_CANNED_DUMP:-0}" --arg unknown_warning "${OFFICE_F1B_UNKNOWN_WARNING:-0}" '\''def commit_warnings: [{code:"office.transaction.path_based_commit_semantics",message:"publication uses moonbitlang/async path APIs; atomic rename is guaranteed, but hostile concurrent directory-entry replacement is outside the portable contract"}] + (if $runtime == "wasm" then [{code:"office.transaction.wasm_commit_semantics",message:"Wasm uses normalized paths and a same-directory rename, but host-independent realpath, symlink identity, and parent-directory durability are unavailable"}] else [] end); def envelope($data): {schema:"office.output/1",success:true,data:$data} + (if $unknown_warning == "1" then {warnings:[{code:"office.fixture.unclassified_target_warning",message:"unclassified target warning"}]} elif $verb == "create" or $verb == "batch" or $verb == "template" or $verb == "replay" or $verb == "annotate" or $verb == "edit" then {warnings:commit_warnings} else {} end); if $verb == "dump" then (if $canned_dump == "1" then [{op:"fixture",params:{format:$format}}] elif $format == "xlsx" then [{op:"set",params:{sheet:"Data",cell:"A1",value:"F1B-XLSX-REPRESENTATIVE-V1"}},{op:"set",params:{sheet:"Data",cell:"A5",value:"F1B-XLSX-TEMPLATE-V1"}},{op:"set",params:{sheet:"Data",cell:"B2",value:30}},{op:"formula",params:{sheet:"Data",cell:"B4",formula:"SUM(B2:B3)"}},{op:"chart",params:{sheet:"Data",anchor:"D2",categories:"A2:A3",values:"B2:B3"}}] else [{op:"paragraph",params:{text:"F1B-DOCX-HEADING-V1",style:"Heading1"}},{op:"paragraph",params:{text:"F1B-DOCX-TEMPLATE-V1"}},{op:"paragraph",params:{text:"F1B-DOCX-LIST-V1",list:{ordered:true}}},{op:"table",params:{rows:[["F1B-DOCX-TABLE-V1"]]}},{op:"paragraph",params:{runs:[{link:{href:"https://example.invalid/f1b",text:"F1B link"}}]}},{op:"comment",params:{body:"F1B-DOCX-COMMENT-V1"}},{op:"comment",params:{body:"F1B-DOCX-REPLY-V1",reply_to:5}}] end) as $ops | {schema:$schema,format:$format,source:{file:$source,bytes:1,sha256:("a"*64)},replay:{batch_schema:(if $format == "xlsx" then "xlsx.batch/2" else "docx.batch/2" end),create:{},limits:{}},ops:$ops,assets:{},residual:[],warnings:[],stats:{ops:($ops|length),assets:0,residual:0,warnings:0}} else envelope({schema:$schema,format:$format} + if $verb == "create" or $verb == "batch" then {transaction:{format:$format,output:$output,committed:true,dry_run:false,changed:true}} elif $verb == "identify" then {file:$source} elif $verb == "outline" and $format == "docx" then {file:$source,path:"/",counts:{comments:2}} elif $verb == "outline" then {file:$source,path:"/"} elif $verb == "get" and $canned_get == "1" then {file:$source,path:"/"} elif $verb == "get" and $format == "xlsx" then {file:$source,path:"/xlsx/sheet[name=Data]/range[A1:A5]",cells:[{raw:{value:"F1B-XLSX-REPRESENTATIVE-V1"}},{raw:{value:"F1B-XLSX-TEMPLATE-V1"}}]} elif $verb == "get" then {file:$source,path:"/docx/body/p[1]",text:"F1B-DOCX-HEADING-V1"} elif $verb == "text" then {file:$source,returned:1,entries:[{text:(if $format == "xlsx" then "F1B-XLSX-TEMPLATE-V1" else "F1B-DOCX-TEMPLATE-V1" end)}]} elif $verb == "query" then {file:$source,returned:1,matches:[{preview:(if $format == "xlsx" then "F1B-XLSX-TEMPLATE-V1" else "F1B-DOCX-TEMPLATE-V1" end)}]} elif $verb == "validate" or $verb == "issues" then {file:$source,valid:true,error_count:0} elif $verb == "preview" then {file:$source,output:$produced,bytes_written:50,charts_rendered:(if $format == "xlsx" then 1 else 0 end),charts_placeholder:0,images_embedded:0,truncation:{max_rows:1000,max_cols:256,truncated_sheets:[],images_omitted:0}} elif $verb == "template" then {output:$output,replaced:1,transaction:{committed:true}} elif $verb == "edit" then {output:$output,ops_applied:1,replacements:1,results:[{op:"set_run_text",at:"p[2]/r[1]",expect:"F1B-DOCX-TEMPLATE-V1",text:"F1B-DOCX-EDITED-V1",find:null,matched:1,replacements:1}],transaction:{committed:true}} elif $verb == "replay" then {output:$output,bytes_written:1,ops_applied:1} elif $verb == "raw" and $schema == "office.raw.inventory/1" and $canned_raw == "1" then {part_count:1,parts:[]} elif $verb == "raw" and $schema == "office.raw.inventory/1" then {part_count:3,parts:[{name:"xl/workbook.xml"},{name:"xl/worksheets/sheet1.xml"},{name:"xl/charts/chart1.xml"}]} elif $verb == "raw" and $format == "docx" and $canned_raw == "1" then {content:"<document/>"} elif $verb == "raw" and $format == "docx" then {content:"<document>F1B-DOCX-HEADING-V1 F1B-DOCX-TEMPLATE-V1 F1B-DOCX-LIST-V1 F1B-DOCX-TABLE-V1</document>"} elif $verb == "annotate" then {output:$output,ops_applied:3,results:[{op:"comment_add",comment_id:"0",done:null,anchor:"/docx/body/p[2]"},{op:"comment_reply",comment_id:"1",done:null,target:"0"},{op:"comment_resolve",comment_id:"0",done:true,target:"0"}],labels:[{label:"root",comment_id:"0"},{label:"answer",comment_id:"1"}],transaction:{committed:true}} else {} end) end'\''' \
     > "$install_root/bin/office-native"
   /usr/bin/install -m 0500 "$script_dir/office-wasm" \
     "$install_root/bin/office-wasm"
@@ -972,11 +981,16 @@ chmod 0600 "$codex_bin_dir/mode"
     '  /usr/bin/printf "%s\\n" '\''{"schema":"docx.batch/2","ops":[{"op":"paragraph","params":{"text":"F1B-DOCX-HEADING-V1","style":"Heading1"}},{"op":"paragraph","params":{"text":"{{agent_name}}"}},{"op":"paragraph","params":{"text":"F1B-DOCX-LIST-V1","list":{"ordered":true}}},{"op":"table","params":{"header_rows":1,"rows":[[{"text":"kind"},{"text":"value"}],[{"text":"marker"},{"text":"F1B-DOCX-TABLE-V1"}]]}},{"op":"paragraph","params":{"runs":[{"link":{"href":"https://example.invalid/f1b","text":"F1B link"}}]}}]}'\'' > "$runtime/docx/batch.json"' \
     '  /usr/bin/printf "%s\\n" '\''{"schema":"office.template.data/1","values":{"agent_name":"F1B-DOCX-TEMPLATE-V1"}}'\'' > "$runtime/docx/template.json"' \
     '  /usr/bin/printf "%s\\n" '\''{"schema":"docx.annotation-batch/1","ops":[{"op":"comment_add","anchor":{"at":"/docx/body/p[2]"},"author":"Reviewer","body":["F1B-DOCX-COMMENT-V1"],"label":"root"},{"op":"comment_reply","parent":{"label":"root"},"author":"Author","body":["F1B-DOCX-REPLY-V1"],"label":"answer"},{"op":"comment_resolve","target":{"label":"root"}}]}'\'' > "$runtime/docx/annotation.json"' \
+    '  /usr/bin/printf "%s\\n" '\''{"schema":"docx.edit/2","ops":[{"op":"set_run_text","params":{"at":"p[2]/r[1]","expect":"F1B-DOCX-TEMPLATE-V1","text":"F1B-DOCX-EDITED-V1"}}]}'\'' > "$runtime/docx/edit.json"' \
     '  if [ "$mode" = "wrong-annotation-target" ] && [ "$runtime" = native ]; then' \
     '    /usr/bin/jq '\''.ops[2].target.label = "answer"'\'' "$runtime/docx/annotation.json" > "$runtime/docx/annotation.json.tmp"' \
     '    /bin/mv "$runtime/docx/annotation.json.tmp" "$runtime/docx/annotation.json"' \
     '  fi' \
-    '  chmod 0600 "$runtime/xlsx/batch.json" "$runtime/xlsx/template.json" "$runtime/docx/batch.json" "$runtime/docx/template.json" "$runtime/docx/annotation.json"' \
+    '  if [ "$mode" = "wrong-edit-op" ] && [ "$runtime" = native ]; then' \
+    '    /usr/bin/jq '\''.ops[0] = {op:"replace_text",params:{find:"F1B-DOCX-TEMPLATE-V1",replace:"F1B-DOCX-EDITED-V1"}}'\'' "$runtime/docx/edit.json" > "$runtime/docx/edit.json.tmp"' \
+    '    /bin/mv "$runtime/docx/edit.json.tmp" "$runtime/docx/edit.json"' \
+    '  fi' \
+    '  chmod 0600 "$runtime/xlsx/batch.json" "$runtime/xlsx/template.json" "$runtime/docx/batch.json" "$runtime/docx/template.json" "$runtime/docx/annotation.json" "$runtime/docx/edit.json"' \
     'done' \
     'if [ "$mode" != "no-office" ]; then' \
     '  index=0' \
@@ -1007,7 +1021,7 @@ chmod 0600 "$codex_bin_dir/mode"
     '        templated="$directory/templated.docx"' \
     '        final="$directory/annotated.docx"' \
     '        replayed="$directory/replayed.docx"' \
-    '        verbs="batch template annotate identify outline get text query validate issues preview dump replay raw"' \
+    '        verbs="batch template annotate identify outline get text query validate issues preview dump replay raw edit"' \
     '      fi' \
     '      for verb in $verbs; do' \
     '        if [ "$mode" = "missing-create" ] && [ "$runtime/$format/$verb" = "native/xlsx/create" ]; then continue; fi' \
@@ -1020,6 +1034,7 @@ chmod 0600 "$codex_bin_dir/mode"
     '          batch/docx) package="$authored"; run_args="--format docx $authored $directory/batch.json" ;;' \
     '          template/docx) package="$templated"; run_args="$authored $directory/template.json --out $templated" ;;' \
     '          annotate/docx) package="$final"; run_args="$templated $directory/annotation.json --out $final" ;;' \
+    '          edit/docx) package="$directory/edited.docx"; run_args="$final $directory/edit.json --out $directory/edited.docx" ;;' \
     '          get/xlsx) run_args="$final '\''/xlsx/sheet[name=\"Data\"]/range[A1:B5]'\''" ;;' \
     '          get/docx) run_args="$final '\''/docx/body/p[1]'\''" ;;' \
     '          preview/*) run_args="$final --output $directory/preview-1.html" ;;' \
@@ -1075,6 +1090,12 @@ chmod 0600 "$codex_bin_dir/mode"
     '            OFFICE_F1B_INCONSISTENT_SEMANTICS=1 "office-$runtime" "$verb" $run_args --json --attest-result "$result" > "$result.attestation" 2> "$result.stderr"' \
     '          elif [ "$mode" = "wrong-annotation-anchor" ] && [ "$runtime/$format/$verb" = "native/docx/annotate" ]; then' \
     '            OFFICE_F1B_WRONG_ANNOTATION_ANCHOR=1 "office-$runtime" "$verb" $run_args --json --attest-result "$result" > "$result.attestation" 2> "$result.stderr"' \
+    '          elif [ "$mode" = "unedited-edit-artifact" ] && [ "$runtime/$format/$verb" = "native/docx/edit" ]; then' \
+    '            OFFICE_F1B_UNEDITED_EDIT=1 "office-$runtime" "$verb" $run_args --json --attest-result "$result" > "$result.attestation" 2> "$result.stderr"' \
+    '          elif [ "$mode" = "pre-edited-input" ] && [ "$runtime/$format/$verb" = "native/docx/annotate" ]; then' \
+    '            OFFICE_F1B_PRE_EDITED_INPUT=1 "office-$runtime" "$verb" $run_args --json --attest-result "$result" > "$result.attestation" 2> "$result.stderr"' \
+    '          elif [ "$mode" = "corrupted-edit-artifact" ] && [ "$runtime/$format/$verb" = "native/docx/edit" ]; then' \
+    '            OFFICE_F1B_STRIPPED_EDIT=1 "office-$runtime" "$verb" $run_args --json --attest-result "$result" > "$result.attestation" 2> "$result.stderr"' \
     '          elif [ "$mode" = "canned-get" ] && [ "$runtime/$format/$verb" = "native/xlsx/get" ]; then' \
     '            OFFICE_F1B_CANNED_GET=1 "office-$runtime" "$verb" $run_args --json --attest-result "$result" > "$result.attestation" 2> "$result.stderr"' \
     '          elif [ "$mode" = "canned-raw" ] && [ "$runtime/$format/$verb" = "native/xlsx/raw" ]; then' \
@@ -1259,17 +1280,17 @@ evidence="$case_root/evidence"
     --manifest "$evidence/EVIDENCE.json" \
     --timeout-seconds 30 ||
   fail "independent evidence manifest verification"
-[ "$(/usr/bin/jq 'length' "$evidence/COMMANDS.json")" -eq 71 ] ||
+[ "$(/usr/bin/jq 'length' "$evidence/COMMANDS.json")" -eq 73 ] ||
   fail "host-derived command inventory"
 /usr/bin/jq -e '
   .schema == "office.fresh-agent.workflows/5" and
-  .required_count == 58 and
-  (.workflows | length) == 58 and
+  .required_count == 60 and
+  (.workflows | length) == 60 and
   (.workflows | all((.events | length) == 1)) and
   ([.workflows[].events[].event_id] as $ids |
-    ($ids | length) == 58 and ($ids | unique | length) == 58) and
+    ($ids | length) == 60 and ($ids | unique | length) == 60) and
   ([.workflows[].events[].result.path | select(. != null)] as $paths |
-    ($paths | length) == 56 and ($paths | unique | length) == 56) and
+    ($paths | length) == 58 and ($paths | unique | length) == 58) and
   (.workflows | all(
     if .format == "all" then
       (.events | all(.artifact == null and .inputs == [] and .result.path == null))
@@ -1334,10 +1355,12 @@ evidence="$case_root/evidence"
     (.runtime == "native" or .runtime == "wasm") and
     (.format == "xlsx" or .format == "docx") and
     (.final_artifact.sha256 | test("^[0-9a-f]{64}$")) and
-    (.lineage | length) == 15 and
+    (.lineage | length) == (if .format == "docx" then 16 else 15 end) and
     (.preview.sha256 | test("^[0-9a-f]{64}$")) and
     (.preview.semantic_sha256 | test("^[0-9a-f]{64}$")) and
     (.dump_fixpoint_sha256 | test("^[0-9a-f]{64}$")) and
+    (if .format == "docx" then (.edit_script_sha256 | test("^[0-9a-f]{64}$"))
+     else .edit_script_sha256 == null end) and
     (.diagnostic_inventory | type) == "array" and
     .package_semantics.authored.template_state == "placeholder" and
     .package_semantics.final.template_state == "merged" and
@@ -1380,7 +1403,7 @@ evidence="$case_root/evidence"
   fail "host-derived semantic scenarios"
 [ ! -e "$probe/probe-transcript.md" ] ||
   fail "agent unexpectedly authored the command transcript"
-[ "$(/usr/bin/grep -c '^## Event ' "$evidence/probe-transcript.md")" -eq 71 ] ||
+[ "$(/usr/bin/grep -c '^## Event ' "$evidence/probe-transcript.md")" -eq 73 ] ||
   fail "host transcript event count"
 ledger_sha="$(sha256_file "$evidence/COMMANDS.json")"
 raw_sha="$(sha256_file "$evidence/codex-transcript.jsonl")"
@@ -1882,6 +1905,38 @@ expect_failure wrong-annotation-anchor 1 \
   "$runner" "$head" "$candidate_sha" \
   "$case_root/wrong-annotation-anchor-probe" \
   "$case_root/wrong-annotation-anchor-evidence" \
+  "$case_root/auth.json" "$codex_bin_dir/codex" "$codex_sha"
+
+printf 'wrong-edit-op\n' > "$codex_bin_dir/mode"
+expect_failure wrong-edit-op 1 \
+  'DOCX edit script must contain exactly one set_run_text operation' \
+  "$runner" "$head" "$candidate_sha" \
+  "$case_root/wrong-edit-op-probe" \
+  "$case_root/wrong-edit-op-evidence" \
+  "$case_root/auth.json" "$codex_bin_dir/codex" "$codex_sha"
+
+printf 'unedited-edit-artifact\n' > "$codex_bin_dir/mode"
+expect_failure unedited-edit-artifact 1 \
+  'does not carry the replacement run text' \
+  "$runner" "$head" "$candidate_sha" \
+  "$case_root/unedited-edit-artifact-probe" \
+  "$case_root/unedited-edit-artifact-evidence" \
+  "$case_root/auth.json" "$codex_bin_dir/codex" "$codex_sha"
+
+printf 'pre-edited-input\n' > "$codex_bin_dir/mode"
+expect_failure pre-edited-input 1 \
+  'does not carry the expected run text' \
+  "$runner" "$head" "$candidate_sha" \
+  "$case_root/pre-edited-input-probe" \
+  "$case_root/pre-edited-input-evidence" \
+  "$case_root/auth.json" "$codex_bin_dir/codex" "$codex_sha"
+
+printf 'corrupted-edit-artifact\n' > "$codex_bin_dir/mode"
+expect_failure corrupted-edit-artifact 1 \
+  'edited package lacks representative DOCX structure' \
+  "$runner" "$head" "$candidate_sha" \
+  "$case_root/corrupted-edit-artifact-probe" \
+  "$case_root/corrupted-edit-artifact-evidence" \
   "$case_root/auth.json" "$codex_bin_dir/codex" "$codex_sha"
 
 printf 'empty-semantic-package\n' > "$codex_bin_dir/mode"

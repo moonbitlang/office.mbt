@@ -317,7 +317,7 @@ or failed connection aborts the run.
 
 Successful full completion requires a zero Codex status, valid JSONL on stdout
 with stderr retained separately, the exact live canary as the first command,
-host-bound events for all 58 required runtime/format/operation workflows, a
+host-bound events for all 60 required runtime/format/operation workflows, a
 strict per-target final object, and the exact nine-line machine-readable summary
 in `probe-result.md`. Each non-help workflow must end in one unique JSON result
 written through the wrapper-only `--attest-result` protocol. The wrapper invokes

@@ -238,7 +238,7 @@ def validate_artifact_role(event, operation, label):
             artifact["role"] == "package"
             and artifact["access"] == "input-output"
         )
-    elif operation in ("create", "template", "replay", "annotate"):
+    elif operation in ("create", "template", "replay", "annotate", "edit"):
         accepted = (
             artifact["role"] == "package-output"
             and artifact["access"] == "output"
@@ -714,6 +714,7 @@ def inspect_docx_semantics(
     label,
     final,
     expected_annotation_ids=None,
+    template_text=None,
 ):
     with open_semantic_package(root, record, label) as archive:
         document = package_xml(archive, "word/document.xml", label)
@@ -756,8 +757,12 @@ def inspect_docx_semantics(
         document_text = "\n".join(paragraph_texts)
         expected = TEMPLATE_MARKERS["docx"] if final else "{{%s}}" % TEMPLATE_KEY
         forbidden = "{{%s}}" % TEMPLATE_KEY if final else TEMPLATE_MARKERS["docx"]
+        if template_text is not None:
+            expected = template_text
         if not all((heading, listed, table, hyperlink)) or expected not in document_text or forbidden in document_text:
             fail("%s lacks representative DOCX structure or template state" % label)
+        if template_text is not None and TEMPLATE_MARKERS["docx"] in document_text:
+            fail("%s still carries the pre-edit template marker" % label)
         result = {
             "external_hyperlink": True,
             "heading": True,
@@ -1093,6 +1098,113 @@ def validate_annotation_result(value, contract, label):
         "root_anchor": contract["root_anchor"],
         "root_comment_id": root_id,
     }
+
+
+def validate_edit_script(value):
+    value = require_object(value, "DOCX edit script")
+    if set(value) != {"schema", "ops"} or value.get("schema") != "docx.edit/2":
+        fail("DOCX edit script has the wrong shape or schema")
+    operations = value.get("ops")
+    if not isinstance(operations, list) or len(operations) != 1:
+        fail("DOCX edit script needs exactly one operation")
+    entry = operations[0]
+    if not isinstance(entry, dict) or set(entry) != {"op", "params"}:
+        fail("DOCX edit script needs exactly one structured operation")
+    if entry.get("op") != "set_run_text":
+        fail("DOCX edit script must contain exactly one set_run_text operation")
+    params = entry.get("params")
+    if not isinstance(params, dict) or set(params) != {"at", "expect", "text"}:
+        fail("DOCX edit set_run_text needs exact at, expect, and text parameters")
+    at = params["at"]
+    text = params["text"]
+    if (
+        not isinstance(at, str)
+        or not 1 <= len(at) <= 160
+        or re.fullmatch(
+            r"(?:/docx/body/)?p\[[1-9][0-9]*\]/r\[[1-9][0-9]*\]", at
+        )
+        is None
+    ):
+        fail("DOCX edit set_run_text needs one canonical run address")
+    if params["expect"] != TEMPLATE_MARKERS["docx"]:
+        fail("DOCX edit set_run_text must expect the merged template-marker run")
+    if (
+        not isinstance(text, str)
+        or not 1 <= len(text) <= 160
+        or text == params["expect"]
+        or TEMPLATE_MARKERS["docx"] in text
+    ):
+        fail("DOCX edit set_run_text must state a bounded real replacement")
+    relative = at[len("/docx/body/"):] if at.startswith("/docx/body/") else at
+    return {
+        "at": relative,
+        "expect": params["expect"],
+        "text": text,
+        "sha256": value_sha256(value),
+    }
+
+
+def inspect_docx_run_text(root, record, at, required_text, description, label):
+    match = re.fullmatch(r"p\[([1-9][0-9]*)\]/r\[([1-9][0-9]*)\]", at)
+    if match is None:
+        fail("%s has an unwalkable edit address" % label)
+    paragraph_ordinal = int(match.group(1))
+    run_ordinal = int(match.group(2))
+    with open_semantic_package(root, record, label) as archive:
+        document = package_xml(archive, "word/document.xml", label)
+        body = document.find("{%s}body" % WORD_NS)
+        if body is None:
+            fail("%s lacks a document body" % label)
+        paragraphs = [child for child in body if child.tag == "{%s}p" % WORD_NS]
+        if len(paragraphs) < paragraph_ordinal:
+            fail("%s does not reach the retained edit address" % label)
+        runs = [
+            child
+            for child in paragraphs[paragraph_ordinal - 1]
+            if child.tag == "{%s}r" % WORD_NS
+        ]
+        if len(runs) < run_ordinal:
+            fail("%s does not reach the retained edit address" % label)
+        if element_text(runs[run_ordinal - 1], WORD_NS) != required_text:
+            fail(
+                "%s does not carry the %s run text at the retained address"
+                % (label, description)
+            )
+
+
+def validate_edit_result(value, contract, label):
+    if (
+        not isinstance(value, dict)
+        or value.get("schema") != "office.output/1"
+        or value.get("success") is not True
+        or not isinstance(value.get("data"), dict)
+    ):
+        fail("%s is not a successful edit result" % label)
+    data = value["data"]
+    results = data.get("results")
+    if (
+        data.get("schema") != "office.docx.edit/2"
+        or data.get("ops_applied") != 1
+        or data.get("replacements") != 1
+        or not isinstance(results, list)
+        or len(results) != 1
+        or not isinstance(results[0], dict)
+    ):
+        fail("%s does not report the exact single-run edit workflow" % label)
+    entry = results[0]
+    if (
+        entry.get("op") != "set_run_text"
+        or entry.get("at") != contract["at"]
+        or entry.get("expect") != contract["expect"]
+        or entry.get("text") != contract["text"]
+        or entry.get("find") is not None
+        or entry.get("matched") != 1
+        or entry.get("replacements") != 1
+    ):
+        fail("%s does not bind the edit result to the retained edit script" % label)
+    transaction = data.get("transaction")
+    if not isinstance(transaction, dict) or transaction.get("committed") is not True:
+        fail("%s did not commit its edit transaction" % label)
 
 
 def dump_projection(value, format_name, expected_ops=None):
@@ -1880,7 +1992,7 @@ def validate_scenario(
             "replay",
             "raw",
         )
-        + (("annotate",) if format_name == "docx" else ())
+        + (("edit", "annotate") if format_name == "docx" else ())
     }
     lineage = []
     batch_script = read_record(
@@ -1936,6 +2048,7 @@ def validate_scenario(
     final_event = canonical["template"]
     annotation_digest = None
     annotation_ids = None
+    edit_digest = None
     if format_name == "docx":
         lineage.append(
             require_lineage(
@@ -1963,6 +2076,42 @@ def validate_scenario(
             "%s DOCX annotation result" % runtime,
         )
         final_event = canonical["annotate"]
+        lineage.append(
+            require_lineage(
+                canonical["annotate"]["artifact"],
+                input_record(canonical["edit"], "package"),
+                "%s DOCX annotate-to-edit" % runtime,
+            )
+        )
+        edit_script = read_record(
+            root,
+            input_record(canonical["edit"], "edit-script")["snapshot"],
+            "%s DOCX edit input" % runtime,
+            parse_json=True,
+        )
+        edit_contract = validate_edit_script(edit_script)
+        edit_digest = edit_contract["sha256"]
+        validate_edit_result(
+            result_json(root, canonical["edit"], "%s DOCX edit result" % runtime),
+            edit_contract,
+            "%s DOCX edit result" % runtime,
+        )
+        inspect_docx_run_text(
+            root,
+            canonical["annotate"]["artifact"],
+            edit_contract["at"],
+            edit_contract["expect"],
+            "expected",
+            "%s DOCX edit input package" % runtime,
+        )
+        inspect_docx_run_text(
+            root,
+            canonical["edit"]["artifact"],
+            edit_contract["at"],
+            edit_contract["text"],
+            "replacement",
+            "%s DOCX edited package" % runtime,
+        )
     final = final_event["artifact"]
     if format_name == "xlsx":
         final_expected = expected_xlsx_projection(batch_script, final=True)
@@ -1984,6 +2133,16 @@ def validate_scenario(
             final=True,
             expected_annotation_ids=annotation_ids,
         )
+        edited_semantics = inspect_docx_semantics(
+            root,
+            canonical["edit"]["artifact"],
+            "%s DOCX edited package" % runtime,
+            final=True,
+            expected_annotation_ids=annotation_ids,
+            template_text=edit_contract["text"],
+        )
+        if edited_semantics != final_semantics:
+            fail("%s DOCX edited package changes representative semantics" % runtime)
     for operation in FINAL_CONSUMERS:
         lineage.append(
             require_lineage(
@@ -2178,6 +2337,7 @@ def validate_scenario(
         "batch_script_sha256": batch_digest,
         "diagnostic_inventory": diagnostic_inventory,
         "dump_fixpoint_sha256": value_sha256(dump_1_projection),
+        "edit_script_sha256": edit_digest,
         "final_artifact": final,
         "format": format_name,
         "lineage": lineage,
@@ -2242,6 +2402,7 @@ def build_document(
             "annotation_script_sha256",
             "batch_script_sha256",
             "dump_fixpoint_sha256",
+            "edit_script_sha256",
             "template_data_sha256",
         ):
             if native[field] != wasm[field]:

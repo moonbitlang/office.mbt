@@ -33,8 +33,10 @@ fn edit_report_json(
   script_file : String,
   output : String,
   report : @office_docx.DocxEditReport,
+  schema~ : String,
   transaction? : Json,
 ) -> Json {
+  let v2 = schema == @office_docx.SCHEMA_DOCX_EDIT_V2
   let optional_text = (value : String?) => {
     match value {
       Some(text) => Json::string(bounded_text(text, 160))
@@ -46,18 +48,19 @@ fn edit_report_json(
     // each entry carries the whole key set with the inapplicable half null.
     // A fixed shape is what lets an agent read `results[]` without first
     // branching on `op`.
-    let revision = entry.op != "replace_text"
+    let set_run = entry.op == "set_run_text"
+    let revision = entry.op != "replace_text" && !set_run
     let fields : Map[String, Json] = {
       "op": Json::string(entry.op),
-      "find": if revision {
-        Json::null()
-      } else {
+      "find": if entry.op == "replace_text" {
         Json::string(bounded_text(entry.find, 160))
-      },
-      "replace": if revision {
-        Json::null()
       } else {
+        Json::null()
+      },
+      "replace": if entry.op == "replace_text" {
         Json::string(bounded_text(entry.replace, 160))
+      } else {
+        Json::null()
       },
       "selector": if revision {
         Json::object({
@@ -77,10 +80,24 @@ fn edit_report_json(
       Some(ordinal) => Json::number(ordinal.to_double())
       None => Json::null()
     }
+    if v2 {
+      // the /2 result shape carries the addressed-op keys on EVERY
+      // entry, null when inapplicable, so agents never branch on `op`
+      // to learn the key set
+      fields["at"] = optional_text(entry.at)
+      fields["expect"] = optional_text(entry.expect)
+      fields["text"] = optional_text(entry.text)
+    }
     Json::object(fields)
   })
   let fields : Map[String, Json] = {
-    "schema": Json::string(@office_docx.SCHEMA_DOCX_EDIT_RESULT),
+    "schema": Json::string(
+      if v2 {
+        @office_docx.SCHEMA_DOCX_EDIT_RESULT_V2
+      } else {
+        @office_docx.SCHEMA_DOCX_EDIT_RESULT
+      },
+    ),
     "file": Json::string(bounded_text(file, 160)),
     "format": Json::string("docx"),
     "script_file": Json::string(bounded_text(script_file, 160)),
@@ -207,7 +224,13 @@ async fn run_edit(matches : @argparse.Matches) -> Unit {
         @lib.protocol_error(
           code,
           message,
-          details=edit_report_json(file, script_file, output, report),
+          details=edit_report_json(
+            file,
+            script_file,
+            output,
+            report,
+            schema=script.schema(),
+          ),
         ),
       )
     }
@@ -220,6 +243,7 @@ async fn run_edit(matches : @argparse.Matches) -> Unit {
       )
   }
   let record = edit_report_json(
+    schema=script.schema(),
     file,
     script_file,
     output,
@@ -233,7 +257,7 @@ async fn run_edit(matches : @argparse.Matches) -> Unit {
       // A script is entirely one op family, so the line reports the unit that
       // family actually produces rather than always printing both.
       let revisions = result.report.results.search_by(entry => {
-          entry.op != "replace_text"
+          entry.op is ("accept_revision" | "reject_revision")
         })
         is Some(_)
       let done = if revisions {

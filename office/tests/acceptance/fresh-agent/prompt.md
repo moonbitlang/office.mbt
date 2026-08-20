@@ -17,7 +17,7 @@ Rules:
   `office-native help all --json` and `office-wasm help all --json` as separate,
   direct commands without redirection. Then run `office-native help schemas
   --json` and `office-wasm help schemas --json` the same way and use that complete
-  four-contract inventory to discover the consumed JSON contracts; do not guess
+  six-contract inventory to discover the consumed JSON contracts; do not guess
   them from prior knowledge.
 - Shell utilities such as `jq`, `shasum`, `cmp`, and ZIP inspectors are allowed
   for assertions, but all Office creation, reading, mutation, validation,
@@ -39,7 +39,14 @@ Rules:
   `query`, `validate`, `issues`, `preview`, `template`, `dump`, `replay`, and
   `raw` successfully. For both DOCX runtimes, run `batch`, `identify`,
   `outline`, `get`, `text`, `query`, `validate`, `issues`, `preview`,
-  `template`, `dump`, `replay`, `raw`, and `annotate` successfully. Each must
+  `template`, `dump`, `replay`, `raw`, `edit`, and `annotate` successfully. The
+  `edit` matrix command must run a `docx.edit/2` script whose single operation
+  is `set_run_text` (discover the contract with `office help schema
+  docx.edit/2 --json`), so its result schema is `office.docx.edit/2`. Run
+  `edit` against the annotated DOCX output: its one operation must replace the
+  run holding the merged template marker (`expect` is that run's exact text)
+  with different bounded text, and both runtimes must use the same edit
+  script. Each must
   have exactly one successful canonical matrix command. Its wrapper result path
   must be `matrix-RUNTIME-FORMAT-OPERATION.json`, substituting `native` or
   `wasm` and `xlsx` or `docx`; help remains un-attested. It must be standalone: the
