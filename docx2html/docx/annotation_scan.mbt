@@ -1496,12 +1496,7 @@ fn scan_story(
           local_name,
           same_name_ordinal,
           field_char_type: if is_wml_uri(uri) && local_name == "fldChar" {
-            attribute_value(
-              attributes,
-              "fldCharType",
-              namespaces,
-              prefer_last=source_budget is Some(_),
-            )
+            attribute_value(attributes, "fldCharType", namespaces)
           } else {
             None
           },
@@ -1555,12 +1550,7 @@ fn scan_story(
     }
     let plumbing_note = is_wml_uri(uri) &&
       local_name is ("footnote" | "endnote") &&
-      attribute_value(
-        attributes,
-        "type",
-        namespaces,
-        prefer_last=source_budget is Some(_),
-      )
+      attribute_value(attributes, "type", namespaces)
       is (Some("separator")
       | Some("continuationSeparator")
       | Some("continuationNotice"))
@@ -1581,12 +1571,7 @@ fn scan_story(
           // Recorded whether self-closing or not (Word emits them
           // self-closing; a non-empty form still marks its position).
           seq += 1
-          let id = attribute_value(
-            attributes,
-            "id",
-            namespaces,
-            prefer_last=source_budget is Some(_),
-          )
+          let id = attribute_value(attributes, "id", namespaces)
           let (container_path, after_child) = match current_projection() {
             Some(frame) => (frame.projection_path, frame.last_closed_child)
             None => (None, None)
@@ -1624,24 +1609,9 @@ fn scan_story(
     if !inherited_suppression && !inside_properties {
       match revision_kind(uri, local_name) {
         Some(kind) => {
-          let id = attribute_value(
-            attributes,
-            "id",
-            namespaces,
-            prefer_last=source_budget is Some(_),
-          )
-          let author = attribute_value(
-            attributes,
-            "author",
-            namespaces,
-            prefer_last=source_budget is Some(_),
-          )
-          let date = attribute_value(
-            attributes,
-            "date",
-            namespaces,
-            prefer_last=source_budget is Some(_),
-          )
+          let id = attribute_value(attributes, "id", namespaces)
+          let author = attribute_value(attributes, "author", namespaces)
+          let date = attribute_value(attributes, "date", namespaces)
           // Charge the retained metadata before it is stored, so a story
           // padded with revision attributes cannot outgrow the scanner's
           // cumulative retention allowance.
@@ -1670,24 +1640,9 @@ fn scan_story(
     // must be able to see (and refuse on) constructs the reader's projection
     // drops, or "accept everything" would quietly leave them behind.
     let revision_site_index = if is_revision_site_name(uri, local_name) {
-      let id = attribute_value(
-        attributes,
-        "id",
-        namespaces,
-        prefer_last=source_budget is Some(_),
-      )
-      let author = attribute_value(
-        attributes,
-        "author",
-        namespaces,
-        prefer_last=source_budget is Some(_),
-      )
-      let date = attribute_value(
-        attributes,
-        "date",
-        namespaces,
-        prefer_last=source_budget is Some(_),
-      )
+      let id = attribute_value(attributes, "id", namespaces)
+      let author = attribute_value(attributes, "author", namespaces)
+      let date = attribute_value(attributes, "date", namespaces)
       path_budget.charge(
         local_name.length() +
         id.map(String::length).unwrap_or(0) +
@@ -1800,10 +1755,7 @@ fn scan_story(
           if !cell.vmerge_seen {
             cell.vmerge_seen = true
             cell.vmerge_continue = attribute_value(
-                attributes,
-                "val",
-                namespaces,
-                prefer_last=source_budget is Some(_),
+                attributes, "val", namespaces,
               )
               is (None | Some("continue"))
           }
@@ -1817,12 +1769,7 @@ fn scan_story(
           if !cell.grid_span_seen {
             cell.grid_span_seen = true
             cell.grid_span = parse_grid_span(
-              attribute_value(
-                attributes,
-                "val",
-                namespaces,
-                prefer_last=source_budget is Some(_),
-              ).unwrap_or("1"),
+              attribute_value(attributes, "val", namespaces).unwrap_or("1"),
             )
           }
         None => ()
@@ -2574,15 +2521,16 @@ fn utf8_slice(
 ///|
 /// The marker's id attribute is namespace-qualified (`w:id`): any prefix
 /// bound to a WML URI matches; unprefixed attributes never do (default
-/// namespaces do not apply to attributes). Legacy scans preserve their
-/// historical first-match rule; source-retaining scans request the last
-/// physical match so mixed Strict/Transitional input follows the XML reader's
-/// canonical-map overwrite precedence.
+/// namespaces do not apply to attributes). When mixed Strict/Transitional
+/// prefixes both qualify, the LAST physical match wins in every scan mode —
+/// the XML reader's canonical-map overwrite precedence. Legacy annotation
+/// scans historically took the first match; #462 phase C unified them so a
+/// document resolves identical marker/revision identities whether its scan
+/// is rebuilt or adopted from the retained reader projection.
 fn attribute_value(
   attributes : Array[(String, String)],
   local_name : String,
   namespaces : StableStringMap[Array[String]],
-  prefer_last? : Bool = false,
 ) -> String? {
   let mut matched : String? = None
   for pair in attributes {
@@ -2594,12 +2542,7 @@ fn attribute_value(
         if attr_local == local_name {
           match namespaces.get(prefix) {
             Some(stack) if stack.length() > 0 &&
-              is_wml_uri(stack[stack.length() - 1]) => {
-              if !prefer_last {
-                return Some(value)
-              }
-              matched = Some(value)
-            }
+              is_wml_uri(stack[stack.length() - 1]) => matched = Some(value)
             _ => ()
           }
         }
