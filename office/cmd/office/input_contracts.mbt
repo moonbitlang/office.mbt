@@ -654,31 +654,46 @@ fn edit_input_contract_versioned(version : Int) -> InputContractCore {
       "a selected revision that contains another revision refuses; resolve the inner one first",
       "accept_revision and reject_revision selecting the same revision refuses",
     ],
-    limits: Json::object({
-      "max_script_bytes": Json::number(office_edit_max_script_bytes.to_double()),
-      "max_ops": Json::number(@office_docx.MAX_EDIT_OPS.to_double()),
-      "max_find_utf16_units": Json::number(
-        @office_docx.MAX_EDIT_FIND_UNITS.to_double(),
-      ),
-      "max_replace_utf16_units": Json::number(
-        @office_docx.MAX_EDIT_REPLACE_UNITS.to_double(),
-      ),
-      "max_occurrence": Json::number(
-        @office_docx.MAX_EDIT_OCCURRENCE.to_double(),
-      ),
-      "max_scan_units": Json::number(
-        @office_docx.MAX_EDIT_SCAN_UNITS.to_double(),
-      ),
-      "max_revision_selector_utf16_units": Json::number(
-        @office_docx.MAX_REVISION_SELECTOR_UNITS.to_double(),
-      ),
-      "max_run_path_utf16_units": Json::number(
-        @office_docx.MAX_EDIT_RUN_PATH_UNITS.to_double(),
-      ),
-    }),
+    limits: Json::object(
+      {
+        "max_script_bytes": Json::number(
+          office_edit_max_script_bytes.to_double(),
+        ),
+        "max_ops": Json::number(@office_docx.MAX_EDIT_OPS.to_double()),
+        "max_find_utf16_units": Json::number(
+          @office_docx.MAX_EDIT_FIND_UNITS.to_double(),
+        ),
+        "max_replace_utf16_units": Json::number(
+          @office_docx.MAX_EDIT_REPLACE_UNITS.to_double(),
+        ),
+        "max_occurrence": Json::number(
+          @office_docx.MAX_EDIT_OCCURRENCE.to_double(),
+        ),
+        "max_scan_units": Json::number(
+          @office_docx.MAX_EDIT_SCAN_UNITS.to_double(),
+        ),
+        "max_revision_selector_utf16_units": Json::number(
+          @office_docx.MAX_REVISION_SELECTOR_UNITS.to_double(),
+        ),
+      }
+      |> limits => {
+        if version != 1 {
+          limits["max_run_path_utf16_units"] = Json::number(
+            @office_docx.MAX_EDIT_RUN_PATH_UNITS.to_double(),
+          )
+        }
+        limits
+      },
+    ),
     examples: [
       Json::object({
-        "schema": Json::string(@office_docx.SCHEMA_DOCX_EDIT),
+        "schema": Json::string(
+          if version == 1 {
+            @office_docx.SCHEMA_DOCX_EDIT
+          } else {
+            @office_docx.SCHEMA_DOCX_EDIT_V2
+          },
+        ),
         "ops": Json::array([
           Json::object({
             "op": Json::string("replace_text"),
@@ -700,7 +715,13 @@ fn edit_input_contract_versioned(version : Int) -> InputContractCore {
       // Accept everything one reviewer proposed. `office outline` lists the
       // ids and authors this selector matches.
       Json::object({
-        "schema": Json::string(@office_docx.SCHEMA_DOCX_EDIT),
+        "schema": Json::string(
+          if version == 1 {
+            @office_docx.SCHEMA_DOCX_EDIT
+          } else {
+            @office_docx.SCHEMA_DOCX_EDIT_V2
+          },
+        ),
         "ops": Json::array([
           Json::object({
             "op": Json::string("accept_revision"),
@@ -710,7 +731,13 @@ fn edit_input_contract_versioned(version : Int) -> InputContractCore {
       }),
       // Reject one specific tracked change by its stable w:id.
       Json::object({
-        "schema": Json::string(@office_docx.SCHEMA_DOCX_EDIT),
+        "schema": Json::string(
+          if version == 1 {
+            @office_docx.SCHEMA_DOCX_EDIT
+          } else {
+            @office_docx.SCHEMA_DOCX_EDIT_V2
+          },
+        ),
         "ops": Json::array([
           Json::object({
             "op": Json::string("reject_revision"),
@@ -720,7 +747,13 @@ fn edit_input_contract_versioned(version : Int) -> InputContractCore {
       }),
       // Accept every tracked change in the document.
       Json::object({
-        "schema": Json::string(@office_docx.SCHEMA_DOCX_EDIT),
+        "schema": Json::string(
+          if version == 1 {
+            @office_docx.SCHEMA_DOCX_EDIT
+          } else {
+            @office_docx.SCHEMA_DOCX_EDIT_V2
+          },
+        ),
         "ops": Json::array([
           Json::object({
             "op": Json::string("accept_revision"),

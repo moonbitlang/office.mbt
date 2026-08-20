@@ -1880,7 +1880,7 @@ def validate_scenario(
             "replay",
             "raw",
         )
-        + (("annotate",) if format_name == "docx" else ())
+        + (("edit", "annotate") if format_name == "docx" else ())
     }
     lineage = []
     batch_script = read_record(
