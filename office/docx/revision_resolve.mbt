@@ -177,6 +177,8 @@ async fn transact_docx_revisions(
           replace: "",
           occurrence: None,
           at: None,
+          expect: None,
+          text: None,
           selector_id: op.id,
           selector_author: op.author,
           selector_type: op.kind,

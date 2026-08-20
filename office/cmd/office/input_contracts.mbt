@@ -534,6 +534,21 @@ fn edit_operation(name : String) -> Json {
           },
         ],
       )
+    "set_run_text" =>
+      (
+        [
+          ("at", "run_path"),
+          ("expect", "literal_text_or_empty"),
+          ("text", "literal_text_or_empty"),
+        ],
+        ["at", "expect", "text"],
+        [
+          "requires \"schema\": \"docx.edit/2\"", "at names ONE run: the office query path (/docx/body/p[3]/r[2]) or its body-relative form (p[3]/r[2])",
+          "expect must equal the run's CURRENT full reader-visible text; addresses are snapshot-relative, so a stale expectation refuses without publishing",
+          "text replaces the run's WHOLE text; text equal to expect validates the address and changes nothing",
+          "--allow-unmatched has no effect: an unresolved address always refuses",
+        ],
+      )
     _ => ([], [], ["unknown parser operation"])
   }
   Json::object({
@@ -549,17 +564,45 @@ fn edit_operation(name : String) -> Json {
 
 ///|
 fn edit_input_contract() -> InputContractCore {
+  edit_input_contract_versioned(2)
+}
+
+///|
+fn edit_v1_input_contract() -> InputContractCore {
+  edit_input_contract_versioned(1)
+}
+
+///|
+fn edit_input_contract_versioned(version : Int) -> InputContractCore {
   let operations : Array[Json] = []
   for name in @office_docx.docx_edit_operation_names_list() {
+    if version == 1 && name == "set_run_text" {
+      continue
+    }
     operations.push(edit_operation(name))
   }
   {
-    id: @office_docx.SCHEMA_DOCX_EDIT,
-    summary: "Strict preservation-safe literal find & replace, tracked-change accept/reject, or (docx.edit/2) addressed set_run_text script for an existing DOCX",
+    id: if version == 1 {
+      @office_docx.SCHEMA_DOCX_EDIT
+    } else {
+      @office_docx.SCHEMA_DOCX_EDIT_V2
+    },
+    summary: if version == 1 {
+      "Strict preservation-safe literal find & replace, or tracked-change accept/reject, script for an existing DOCX"
+    } else {
+      "Everything docx.edit/1 accepts plus the addressed set_run_text whole-run replacement"
+    },
     consumed_by: ["office edit INPUT.docx SCRIPT.json --out OUTPUT.docx"],
     envelope: contract_envelope(
       [
-        ("schema", "literal(docx.edit/1) | literal(docx.edit/2)"),
+        (
+          "schema",
+          if version == 1 {
+            "literal(docx.edit/1)"
+          } else {
+            "literal(docx.edit/2)"
+          },
+        ),
         ("ops", "nonempty-array(edit_operation)"),
       ],
       ["schema", "ops"],
@@ -581,10 +624,26 @@ fn edit_input_contract() -> InputContractCore {
         "compared verbatim against the attribute the source spelled; never a pattern",
         "a revision whose attribute is absent is never selected by that field",
       ]),
-    ],
+    ] +
+    (if version == 1 {
+      []
+    } else {
+      [
+        contract_type("run_path", "nonempty-string", constraints=[
+          "the office query path (/docx/body/p[3]/r[2]) or its body-relative form (p[3]/r[2])",
+          "segments are kind[ordinal] with kind in {p, r, tbl, tr, tc} and 1-based ordinals; the path ends in a run segment",
+          "validated at parse time; a well-formed path that names nothing refuses at plan time with the addressable-run count",
+        ]),
+      ]
+    }),
     operations,
     constraints: [
-      "unknown envelope members, operations, and params are rejected", "one script is entirely replace_text or entirely accept_revision/reject_revision; mixing the two families is rejected",
+      "unknown envelope members, operations, and params are rejected",
+      if version == 1 {
+        "one script is entirely replace_text or entirely accept_revision/reject_revision; mixing the two families is rejected"
+      } else {
+        "one script is entirely replace_text, entirely accept_revision/reject_revision, or entirely set_run_text; mixing families is rejected"
+      },
       "every operation matches the ORIGINAL document snapshot; operations never see each other's output",
       "two operations whose matches overlap refuse; matches that merely touch both apply",
       "the body, header, and footer stories are edited; a needle or tracked change found in a footnote, endnote, or comment story refuses",
@@ -612,6 +671,9 @@ fn edit_input_contract() -> InputContractCore {
       ),
       "max_revision_selector_utf16_units": Json::number(
         @office_docx.MAX_REVISION_SELECTOR_UNITS.to_double(),
+      ),
+      "max_run_path_utf16_units": Json::number(
+        @office_docx.MAX_EDIT_RUN_PATH_UNITS.to_double(),
       ),
     }),
     examples: [
@@ -666,7 +728,27 @@ fn edit_input_contract() -> InputContractCore {
           }),
         ]),
       }),
-    ],
+    ] +
+    (if version == 1 {
+      []
+    } else {
+      // Set one addressed run's whole text, guarded by its current text.
+      [
+        Json::object({
+          "schema": Json::string(@office_docx.SCHEMA_DOCX_EDIT_V2),
+          "ops": Json::array([
+            Json::object({
+              "op": Json::string("set_run_text"),
+              "params": Json::object({
+                "at": Json::string("p[3]/r[2]"),
+                "expect": Json::string("Q3 revenue"),
+                "text": Json::string("Q4 revenue"),
+              }),
+            }),
+          ]),
+        }),
+      ]
+    }),
   }
 }
 
@@ -817,6 +899,7 @@ fn input_contract_cores() -> Array[InputContractCore] {
     xlsx_input_contract(),
     docx_input_contract(),
     template_input_contract(),
+    edit_v1_input_contract(),
     edit_input_contract(),
     annotation_input_contract(),
   ]

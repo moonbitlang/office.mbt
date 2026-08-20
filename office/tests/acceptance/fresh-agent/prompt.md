@@ -39,7 +39,7 @@ Rules:
   `query`, `validate`, `issues`, `preview`, `template`, `dump`, `replay`, and
   `raw` successfully. For both DOCX runtimes, run `batch`, `identify`,
   `outline`, `get`, `text`, `query`, `validate`, `issues`, `preview`,
-  `template`, `dump`, `replay`, `raw`, and `annotate` successfully. Each must
+  `template`, `dump`, `replay`, `raw`, `edit`, and `annotate` successfully. Each must
   have exactly one successful canonical matrix command. Its wrapper result path
   must be `matrix-RUNTIME-FORMAT-OPERATION.json`, substituting `native` or
   `wasm` and `xlsx` or `docx`; help remains un-attested. It must be standalone: the

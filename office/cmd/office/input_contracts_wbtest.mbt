@@ -23,7 +23,7 @@ test "input contract inventory is stable, ordered, and versioned" {
     fields.get("fingerprint"),
     Some(
       Json::string(
-        "sha256:94668a710a35199c2e3cf68cdc75162e05444dd597441b8b9c3efe6d87e1ca54",
+        "sha256:8070802fba1b5524c17491f54c0faf506815f1dc815980c76174a8a95670b14b",
       ),
     ),
   )
@@ -42,7 +42,8 @@ test "input contract inventory is stable, ordered, and versioned" {
     assert_eq(fingerprint.length(), 71)
   }
   assert_eq(ids, [
-    "xlsx.batch/2", "docx.batch/2", "office.template.data/1", "docx.edit/1", "docx.annotation-batch/1",
+    "xlsx.batch/2", "docx.batch/2", "office.template.data/1", "docx.edit/1", "docx.edit/2",
+    "docx.annotation-batch/1",
   ])
 }
 

@@ -246,6 +246,41 @@ expect_failure "$work/docx-edit-link-result.json" edit "$work/docx-filled.docx" 
 jq -e '.error.code == "office.edit.unsupported_context" and (.error.details.unsupported[0].detail | test("hyperlink"))' "$work/docx-edit-link-result.json" >/dev/null || fail "docx edit hyperlink refusal"
 [ ! -e "$work/docx-edit-link.docx" ] || fail "docx edit hyperlink refusal wrote output"
 
+# Addressed whole-run replacement (docx.edit/2): the canonical query path
+# normalizes, the /2 result shape carries at/expect/text on every entry, a
+# stale expectation refuses without publishing, and a self-replacement
+# publishes the exact source bytes.
+json office.raw.result/1 raw edit "$work/docx-filled.docx" /document \
+  --path '/w:document/w:body/w:p[1]' --action replace \
+  --xml '<w:p xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:r><w:t>alpha</w:t></w:r><w:r><w:t>beta</w:t></w:r></w:p>' \
+  --out "$work/docx-setrun-base.docx" --json >/dev/null
+printf '%s\n' \
+  '{"schema":"docx.edit/2","ops":[{"op":"set_run_text","params":{"at":"/docx/body/p[1]/r[2]","expect":"beta","text":"BETA"}}]}' \
+  >"$work/docx-setrun.json"
+docx_setrun="$(json office.docx.edit/2 edit "$work/docx-setrun-base.docx" "$work/docx-setrun.json" --out "$work/docx-setrun-out.docx" --json)"
+jq -e '.success == true and .data.replacements == 1 and (.data.results[0] | .op == "set_run_text" and .at == "p[1]/r[2]" and .expect == "beta" and .text == "BETA" and .find == null and .selector == null) and .data.transaction.preservation.changed == ["word/document.xml"]' >/dev/null <<<"$docx_setrun" || fail "docx set_run_text"
+jq -e '.data.text == "alphaBETA"' >/dev/null <<<"$(json office.docx.element/1 get "$work/docx-setrun-out.docx" '/docx/body/p[1]' --json)" || fail "docx set_run_text readback"
+
+printf '%s\n' \
+  '{"schema":"docx.edit/2","ops":[{"op":"replace_text","params":{"find":"BETA","replace":"beta"}}]}' \
+  >"$work/docx-setrun-mixed.json"
+docx_v2_replace="$(json office.docx.edit/2 edit "$work/docx-setrun-out.docx" "$work/docx-setrun-mixed.json" --out "$work/docx-setrun-back.docx" --json)"
+jq -e '.data.results[0] | .op == "replace_text" and .at == null and .expect == null and .text == null and .find == "BETA"' >/dev/null <<<"$docx_v2_replace" || fail "docx /2 replace entry shape"
+
+printf '%s\n' \
+  '{"schema":"docx.edit/2","ops":[{"op":"set_run_text","params":{"at":"p[1]/r[2]","expect":"stale","text":"X"}}]}' \
+  >"$work/docx-setrun-stale.json"
+expect_failure "$work/docx-setrun-stale-result.json" edit "$work/docx-setrun-base.docx" \
+  "$work/docx-setrun-stale.json" --out "$work/docx-setrun-never.docx" --json
+jq -e '.error.code == "office.docx.invalid_plan"' "$work/docx-setrun-stale-result.json" >/dev/null || fail "docx set_run_text stale code"
+[ ! -e "$work/docx-setrun-never.docx" ] || fail "docx set_run_text stale wrote output"
+
+printf '%s\n' \
+  '{"schema":"docx.edit/2","ops":[{"op":"set_run_text","params":{"at":"p[1]/r[2]","expect":"beta","text":"beta"}}]}' \
+  >"$work/docx-setrun-noop.json"
+json office.docx.edit/2 edit "$work/docx-setrun-base.docx" "$work/docx-setrun-noop.json" --out "$work/docx-setrun-noop.docx" --json >/dev/null
+cmp -s "$work/docx-setrun-base.docx" "$work/docx-setrun-noop.docx" || fail "docx set_run_text no-op bytes"
+
 # Tracked-change resolution on the same command: accepting everything keeps the
 # insertion and drops the deletion, rejecting everything does the reverse (which
 # means restoring w:delText as w:t), and outline reports nothing pending after

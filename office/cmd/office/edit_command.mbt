@@ -85,16 +85,8 @@ fn edit_report_json(
       // entry, null when inapplicable, so agents never branch on `op`
       // to learn the key set
       fields["at"] = optional_text(entry.at)
-      fields["expect"] = if set_run {
-        Json::string(bounded_text(entry.find, 160))
-      } else {
-        Json::null()
-      }
-      fields["text"] = if set_run {
-        Json::string(bounded_text(entry.replace, 160))
-      } else {
-        Json::null()
-      }
+      fields["expect"] = optional_text(entry.expect)
+      fields["text"] = optional_text(entry.text)
     }
     Json::object(fields)
   })
@@ -191,8 +183,6 @@ async fn run_edit(matches : @argparse.Matches) -> Unit {
     script,
     allow_unmatched~,
   ) catch {
-    @transaction.TransactionError(..) as error =>
-      raise transaction_failure(error)
     @office_docx.DocxEditRefused(report) => {
       // strict findings: precedence unsupported > conflicts > unmatched.
       // A script is entirely replace_text or entirely revision ops, so the

@@ -170,6 +170,8 @@ pub(all) struct DocxEditOpResult {
   replace : String
   occurrence : Int?
   at : String?
+  expect : String?
+  text : String?
   selector_id : String?
   selector_author : String?
   selector_type : String?

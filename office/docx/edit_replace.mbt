@@ -168,8 +168,11 @@ pub(all) struct DocxEditOpResult {
   find : String
   replace : String
   occurrence : Int?
-  // set_run_text: the body-relative run path. Absent for other ops.
+  // set_run_text only; all three absent for other ops. `find`/`replace`
+  // stay empty for set_run_text -- the /1 fields are never overloaded.
   at : String?
+  expect : String?
+  text : String?
   // revision selector, as spelled; `selector_all` is the explicit no-filter
   // form. All absent/false for replace_text.
   selector_id : String?
@@ -361,12 +364,15 @@ pub fn parse_docx_edit_script(
         ["at", "expect", "text"],
         "ops[\{index}].params",
       )
-      let at = docx_edit_text_field(
-        params,
-        "at",
-        MAX_EDIT_RUN_PATH_UNITS,
-        required_nonempty=true,
-        op="set_run_text",
+      let at = parse_docx_run_address(
+        docx_edit_text_field(
+          params,
+          "at",
+          MAX_EDIT_RUN_PATH_UNITS,
+          required_nonempty=true,
+          op="set_run_text",
+        ),
+        index,
       )
       let expect = docx_edit_text_field(
         params,
@@ -457,6 +463,71 @@ pub fn parse_docx_edit_script(
   } else {
     { program: RevisionProgram(revisions), schema }
   }
+}
+
+///|
+/// Validates and normalizes one `set_run_text` address. Accepted forms:
+/// the canonical query selector (`/docx/body/p[1]/r[2]`) and its
+/// body-relative form (`p[1]/r[2]`). Segments are `kind[ordinal]` with
+/// kind in {p, r, tbl, tr, tc} and ordinal >= 1; the path must end in a
+/// run segment. The normalized body-relative form is returned, so
+/// agents can paste `office query` paths directly.
+fn parse_docx_run_address(
+  value : String,
+  index : Int,
+) -> String raise DocxEditParseError {
+  let canonical_prefix = "/docx/body/"
+  let relative = if value.has_prefix(canonical_prefix) {
+    value.substring(start=canonical_prefix.length()).to_string()
+  } else {
+    value
+  }
+  fn refuse(reason : String) -> DocxEditParseError {
+    docx_edit_parse_error(
+      "ops[\{index}].params.at " +
+      reason +
+      "; expected a run path like \"p[3]/r[2]\" or \"/docx/body/p[3]/r[2]\"",
+    )
+  }
+  if relative.length() == 0 {
+    raise refuse("is empty")
+  }
+  let segments = relative.split("/").collect()
+  let mut last_kind = ""
+  for segment_view in segments {
+    let segment = segment_view.to_string()
+    guard segment.find("[") is Some(open_at) && segment.has_suffix("]") else {
+      raise refuse("carries a segment without an ordinal (\"\{segment}\")")
+    }
+    let kind = segment.substring(start=0, end=open_at).to_string()
+    guard kind is ("p" | "r" | "tbl" | "tr" | "tc") else {
+      raise refuse("carries an unsupported segment kind (\"\{kind}\")")
+    }
+    let ordinal_text = segment
+      .substring(start=open_at + 1, end=segment.length() - 1)
+      .to_string()
+    if ordinal_text.length() == 0 {
+      raise refuse("carries an empty ordinal (\"\{segment}\")")
+    }
+    let mut ordinal = 0
+    for character in ordinal_text {
+      guard character >= '0' && character <= '9' else {
+        raise refuse("carries a non-numeric ordinal (\"\{segment}\")")
+      }
+      ordinal = ordinal * 10 + (character.to_int() - '0'.to_int())
+      if ordinal > MAX_EDIT_OCCURRENCE {
+        raise refuse("carries an ordinal past \{MAX_EDIT_OCCURRENCE}")
+      }
+    }
+    if ordinal < 1 {
+      raise refuse("carries ordinal 0; ordinals start at 1")
+    }
+    last_kind = kind
+  }
+  if last_kind != "r" {
+    raise refuse("must end in a run segment")
+  }
+  relative
 }
 
 ///|
@@ -744,10 +815,12 @@ async fn transact_docx_set_run_text(
       (
         {
           op: "set_run_text",
-          find: op.expect,
-          replace: op.text,
+          find: "",
+          replace: "",
           occurrence: None,
           at: Some(op.at),
+          expect: Some(op.expect),
+          text: Some(op.text),
           selector_id: None,
           selector_author: None,
           selector_type: None,
@@ -810,6 +883,8 @@ async fn transact_docx_replace(
           replace: op.replace,
           occurrence: op.occurrence,
           at: None,
+          expect: None,
+          text: None,
           selector_id: None,
           selector_author: None,
           selector_type: None,
