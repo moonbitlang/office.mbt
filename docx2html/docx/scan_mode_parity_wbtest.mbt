@@ -57,8 +57,19 @@ test "replaying adopted scan warnings preserves collector semantics" {
 
 ///|
 fn assert_scan_modes_agree(label : String, source : String) -> Unit raise {
-  let annotation = scan_story(@utf8.encode(source))
-  let retained = scan_projection_source_tree(@utf8.encode(source))
+  assert_scans_agree(
+    label,
+    scan_story(@utf8.encode(source)),
+    scan_projection_source_tree(@utf8.encode(source)),
+  )
+}
+
+///|
+fn assert_scans_agree(
+  label : String,
+  annotation : StoryScan,
+  retained : StoryScan,
+) -> Unit raise {
   assert_eq(annotation.root_namespace_uri(), retained.root_namespace_uri())
   assert_eq(annotation.warnings(), retained.warnings())
   let annotation_nodes = annotation.nodes()
@@ -205,8 +216,8 @@ fn assert_scan_modes_agree(label : String, source : String) -> Unit raise {
   let annotation_positions = annotation.story_level_positions
   let retained_positions = retained.story_level_positions
   assert_eq(
-    annotation_positions.size(),
-    retained_positions.size(),
+    annotation_positions.length(),
+    retained_positions.length(),
     msg="\{label}: story-level position count",
   )
   for seq, position in annotation_positions {

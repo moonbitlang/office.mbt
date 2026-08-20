@@ -1037,7 +1037,15 @@ fn read_docx_annotated_zip(
     comment_bodies.push(comment.body)
     comment_pairs.push((id, comment.body))
   }
-  let path_budget = AnnotationPathBudget::new(parts.xml_budget)
+  // Joined mode created the cumulative path budget before the story reads
+  // (the adopted scans charged it there); the index continues on the SAME
+  // counter for its verification copies and identity-only scans, keeping
+  // the pre-adoption cumulative envelope. Tolerant mode still owns the
+  // whole budget here.
+  let path_budget = match parts.annotation_path_budget {
+    Some(budget) => budget
+    None => AnnotationPathBudget::new(parts.xml_budget)
+  }
   let verify_ctx = build_verify_context(
     document_result.document,
     collector.headers,
@@ -1517,37 +1525,43 @@ fn build_annotation_index(
     )
     match zip.read_bytes(path) {
       Some(bytes) => {
-        // Every byte offset a mutation-safe result exposes must come from
-        // well-formed XML. The package reader is intentionally tolerant, so
-        // establish strict well-formedness under the same cumulative budget
-        // before the raw span scanner is allowed to derive edit locations.
-        // A part the joined pipeline already read passed its strict gate
-        // during the read; validating it again would double-charge the
-        // shared budget for nothing.
-        if policy is MutationSafe &&
-          path != parts.main_document_path &&
-          !parts.reader_projections.contains(path) {
-          read_identity_story_xml_strict(bytes, parts.xml_budget) |> ignore
-        }
-        let scan = scan_story(bytes, path_budget~, warning_collector=warnings) catch {
-          ResourceLimit(..) as error => raise error
-          InvalidXml(_) => {
-            identity_source_complete = false
-            warnings.add("annotation index: could not scan \{story_key}")
-            continue
+        // Mutation-safe public stories ADOPT the retained joined-read scan:
+        // the read already ran the strict gate and the one authoritative
+        // scan under the shared cumulative budget, and the scan-parity
+        // oracle (scan_mode_parity_wbtest.mbt) holds the two modes to
+        // identical output. A missing projection is a joined-reader
+        // regression and must refuse loudly — a silent rescan here would
+        // hide it and quietly fork the mutation truth source.
+        let scan = match (policy, parts.reader_projections.get(path)) {
+          (MutationSafe, Some(projection)) => {
+            warnings.replay_scan_warnings(projection.scan)
+            projection.scan
           }
-          Unsupported(message~) => {
-            identity_source_complete = false
-            warnings.add(
-              "annotation index: could not scan \{story_key} (\{warnings.text(message)})",
+          (MutationSafe, None) =>
+            raise Unsupported(
+              message="annotation index expected a retained reader projection for '\{path}'",
             )
-            continue
-          }
-          _ => {
-            identity_source_complete = false
-            warnings.add("annotation index: could not scan \{story_key}")
-            continue
-          }
+          _ =>
+            scan_story(bytes, path_budget~, warning_collector=warnings) catch {
+              ResourceLimit(..) as error => raise error
+              InvalidXml(_) => {
+                identity_source_complete = false
+                warnings.add("annotation index: could not scan \{story_key}")
+                continue
+              }
+              Unsupported(message~) => {
+                identity_source_complete = false
+                warnings.add(
+                  "annotation index: could not scan \{story_key} (\{warnings.text(message)})",
+                )
+                continue
+              }
+              _ => {
+                identity_source_complete = false
+                warnings.add("annotation index: could not scan \{story_key}")
+                continue
+              }
+            }
         }
         validate_scanned_marker_ids(scan, policy)
         let root_dialect = validate_annotation_story_root(

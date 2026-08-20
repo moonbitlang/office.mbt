@@ -601,6 +601,12 @@ priv struct DocumentParts {
   /// archive at planning time. Both empty in tolerant mode.
   reader_projections : StableStringMap[ReaderProjection]
   reader_projection_sources : StableStringMap[BytesView]
+  /// The cumulative annotation path budget, created BEFORE the joined
+  /// reads so every story part charges the shared allowance exactly once
+  /// (at scan time); the annotation index adopts the retained scans and
+  /// charges only its verification copies into the same counter. None in
+  /// tolerant mode, where the index still runs its own scans.
+  annotation_path_budget : AnnotationPathBudget?
 }
 
 ///|
@@ -714,6 +720,11 @@ fn DocumentParts::build(
   }
   let reader_projections : StableStringMap[ReaderProjection] = SortedMap([])
   let reader_projection_sources : StableStringMap[BytesView] = SortedMap([])
+  let annotation_path_budget = if story_reader_mode is JoinedMutationReader {
+    Some(AnnotationPathBudget::new(xml_budget))
+  } else {
+    None
+  }
   let notes_result = read_notes_for_document(
     zip,
     styles,
@@ -727,6 +738,7 @@ fn DocumentParts::build(
     external_files~,
     read_images~,
     xml_budget?,
+    annotation_path_budget?,
     diagnostics?,
   )
   let comments_result = read_comments_for_document(
@@ -742,6 +754,7 @@ fn DocumentParts::build(
     external_files~,
     read_images~,
     xml_budget?,
+    annotation_path_budget?,
     comments_part_path?,
     diagnostics?,
   )
@@ -757,6 +770,7 @@ fn DocumentParts::build(
     zip,
     xml_budget,
     diagnostics,
+    annotation_path_budget,
     main_document_path,
     main_relationship_dialect: main_document.relationship_dialect,
     root,
@@ -821,6 +835,7 @@ fn DocumentParts::read_document_joined(
     bytes,
     self.root,
     reader,
+    path_budget?=self.annotation_path_budget,
   )
   self.reader_projections[self.main_document_path] = read.projection
   self.reader_projection_sources[self.main_document_path] = bytes
@@ -1849,6 +1864,7 @@ fn read_notes_for_document(
   external_files? : ExternalFileAccess = default_external_file_access(),
   read_images? : Bool = true,
   xml_budget? : @xml.XmlReadBudget,
+  annotation_path_budget? : AnnotationPathBudget,
   diagnostics? : ReaderDiagnosticCollector,
 ) -> NotesReadResult raise DocxError {
   let notes : Array[Note] = []
@@ -1867,6 +1883,7 @@ fn read_notes_for_document(
     external_files~,
     read_images~,
     xml_budget?,
+    annotation_path_budget?,
     diagnostics?,
   )
   notes.append(footnotes.notes)
@@ -1885,6 +1902,7 @@ fn read_notes_for_document(
     external_files~,
     read_images~,
     xml_budget?,
+    annotation_path_budget?,
     diagnostics?,
   )
   notes.append(endnotes.notes)
@@ -1907,6 +1925,7 @@ fn read_note_part_at_path(
   external_files? : ExternalFileAccess = default_external_file_access(),
   read_images? : Bool = true,
   xml_budget? : @xml.XmlReadBudget,
+  annotation_path_budget? : AnnotationPathBudget,
   diagnostics? : ReaderDiagnosticCollector,
 ) -> NotesReadResult raise DocxError {
   if !zip.exists(path) {
@@ -1939,6 +1958,7 @@ fn read_note_part_at_path(
       reader,
       strict_budget?=xml_budget,
       tolerant_budget?=xml_budget,
+      path_budget?=annotation_path_budget,
     )
     reader_projections[path] = read.projection
     reader_projection_sources[path] = bytes
@@ -1996,6 +2016,7 @@ fn read_comments_for_document(
   external_files? : ExternalFileAccess = default_external_file_access(),
   read_images? : Bool = true,
   xml_budget? : @xml.XmlReadBudget,
+  annotation_path_budget? : AnnotationPathBudget,
   comments_part_path? : String,
   diagnostics? : ReaderDiagnosticCollector,
 ) -> CommentsReadResult raise DocxError {
@@ -2042,6 +2063,7 @@ fn read_comments_for_document(
       reader,
       strict_budget?=xml_budget,
       tolerant_budget?=xml_budget,
+      path_budget?=annotation_path_budget,
     )
     reader_projections[path] = read.projection
     reader_projection_sources[path] = bytes
