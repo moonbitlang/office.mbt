@@ -1271,7 +1271,7 @@ pub fn capability_commands() -> Array[CapabilityCommand] {
           "file", "path", true, "existing .docx package (never modified in place)",
         ),
         capability_field(
-          "script", "docx.edit/1-file", true, "strict replace_text OR accept_revision/reject_revision script; one script never mixes the two families. replace_text: `find` is LITERAL text — never a regular expression or wildcard — matched across run boundaries; `replace` may be empty to delete the matched text; `occurrence` omitted replaces every occurrence in document order, `occurrence: N` replaces only the Nth. accept_revision/reject_revision select tracked changes by `id` (the stable w:id handle), `author`, `type` (ins|del), or `all: true`; spelled selector fields are conjunctive",
+          "script", "docx.edit/1-file", true, "strict replace_text OR accept_revision/reject_revision OR (schema docx.edit/2) set_run_text script; a script never mixes operation families. set_run_text: `at` is the body-relative run path from `office query` (`p[3]/r[2]`), `expect` must equal the run's current full text (stale expectations refuse; addresses are snapshot-relative), `text` replaces the run's whole text; setting a run's text to itself validates and changes nothing. replace_text: `find` is LITERAL text — never a regular expression or wildcard — matched across run boundaries; `replace` may be empty to delete the matched text; `occurrence` omitted replaces every occurrence in document order, `occurrence: N` replaces only the Nth. accept_revision/reject_revision select tracked changes by `id` (the stable w:id handle), `author`, `type` (ins|del), or `all: true`; spelled selector fields are conjunctive",
         ),
         capability_field(
           "out", "path", true, "destination .docx; created atomically, refused when present unless --overwrite",
@@ -1294,7 +1294,8 @@ pub fn capability_commands() -> Array[CapabilityCommand] {
       ],
       outputs: [
         capability_field(
-          "schema", "literal(office.docx.edit/1)", true, "versioned literal-edit result schema",
+          "schema", "literal(office.docx.edit/1) | literal(office.docx.edit/2)",
+          true, "versioned edit result schema, matching the script's schema version",
         ),
         capability_field("file", "string", true, "the edited source path"),
         capability_field(

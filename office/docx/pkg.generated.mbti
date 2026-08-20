@@ -26,6 +26,8 @@ pub const MAX_EDIT_OPS : Int = 64
 
 pub const MAX_EDIT_REPLACE_UNITS : Int = 65536
 
+pub const MAX_EDIT_RUN_PATH_UNITS : Int = 4096
+
 pub const MAX_EDIT_SCAN_UNITS : Int = 67108864
 
 pub const MAX_REVISION_SELECTOR_UNITS : Int = 4096
@@ -37,6 +39,10 @@ pub const SCHEMA_ANNOTATION_RESULT : String = "office.docx.annotation-batch/1"
 pub const SCHEMA_DOCX_EDIT : String = "docx.edit/1"
 
 pub const SCHEMA_DOCX_EDIT_RESULT : String = "office.docx.edit/1"
+
+pub const SCHEMA_DOCX_EDIT_RESULT_V2 : String = "office.docx.edit/2"
+
+pub const SCHEMA_DOCX_EDIT_V2 : String = "docx.edit/2"
 
 pub fn annotation_batch_operation_names() -> Array[String]
 
@@ -163,6 +169,7 @@ pub(all) struct DocxEditOpResult {
   find : String
   replace : String
   occurrence : Int?
+  at : String?
   selector_id : String?
   selector_author : String?
   selector_type : String?
@@ -210,6 +217,7 @@ pub struct DocxEditScript {
   // private fields
 }
 pub fn DocxEditScript::length(Self) -> Int
+pub fn DocxEditScript::schema(Self) -> String
 
 pub struct DocxEditSession {
   // private fields

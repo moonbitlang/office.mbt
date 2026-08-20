@@ -10,6 +10,7 @@ fn edit_sample_report() -> @office_docx.DocxEditReport {
         find: "draft",
         replace: "final",
         occurrence: None,
+        at: None,
         selector_id: None,
         selector_author: None,
         selector_type: None,
@@ -41,6 +42,7 @@ test "edit result record declares every field it emits" {
   }
   let declared = command.outputs.map(field => field.name)
   let record = edit_report_json(
+    schema="docx.edit/1",
     "in.docx",
     "script.json",
     "out.docx",
@@ -92,6 +94,7 @@ test "revision result entries publish a selector and null the needle" {
         find: "",
         replace: "",
         occurrence: None,
+        at: None,
         selector_id: None,
         selector_author: Some("Reviewer"),
         selector_type: Some("ins"),
@@ -115,6 +118,7 @@ test "revision result entries publish a selector and null the needle" {
     changed: true,
   }
   let record = edit_report_json(
+    schema="docx.edit/1",
     "in.docx",
     "script.json",
     "out.docx",

@@ -555,11 +555,11 @@ fn edit_input_contract() -> InputContractCore {
   }
   {
     id: @office_docx.SCHEMA_DOCX_EDIT,
-    summary: "Strict preservation-safe literal find & replace, or tracked-change accept/reject, script for an existing DOCX",
+    summary: "Strict preservation-safe literal find & replace, tracked-change accept/reject, or (docx.edit/2) addressed set_run_text script for an existing DOCX",
     consumed_by: ["office edit INPUT.docx SCRIPT.json --out OUTPUT.docx"],
     envelope: contract_envelope(
       [
-        ("schema", "literal(docx.edit/1)"),
+        ("schema", "literal(docx.edit/1) | literal(docx.edit/2)"),
         ("ops", "nonempty-array(edit_operation)"),
       ],
       ["schema", "ops"],
