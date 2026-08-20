@@ -467,6 +467,13 @@ fn ScannedElement::physical_path(
 /// Scanner output for one story part: nodes in CLOSE order (a node is
 /// complete only at its close tag), markers in
 /// document order, and non-fatal diagnostics.
+///
+/// FROZEN after `scan_story` returns. Since #462 phase C the annotation
+/// index adopts the retained reader-projection scans, so one instance is
+/// read by the span surfaces, `covering_comment_ids`, and the mutation
+/// resolver at once. Nothing may mutate a returned scan — surgery produces
+/// a NEW archive that callers re-read; the old annotated result stays a
+/// stale source-pinned snapshot.
 priv struct StoryScan {
   nodes : Array[ScannedNode]
   elements : Array[ScannedElement]
