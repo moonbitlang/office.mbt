@@ -649,6 +649,7 @@ pub struct DocxAnnotatedResult {
   // part, keyed by part path (#434 PR 6c). Populated only for
   // mutation-safe reads; the N0c1 surgery surface consumes these.
   priv reader_projections : StableStringMap[ReaderProjection]
+  priv reader_projection_sources : StableStringMap[BytesView]
 }
 
 ///|
@@ -1169,6 +1170,7 @@ fn read_docx_annotated_zip(
     main_relationship_dialect: parts.main_relationship_dialect,
     read_policy: policy,
     reader_projections: parts.reader_projections,
+    reader_projection_sources: parts.reader_projection_sources,
     footnote_bodies: footnote_pairs,
     endnote_bodies: endnote_pairs,
     comment_bodies: comment_pairs,

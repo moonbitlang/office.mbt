@@ -596,8 +596,11 @@ priv struct DocumentParts {
   /// annotated reads select the joined mode.
   story_reader_mode : StoryReaderMode
   /// The classified projection of every joined-read story part, keyed
-  /// by part path. Empty in tolerant mode.
+  /// by part path, and the EXACT source bytes each projection was built
+  /// from -- the binding that lets a planner refuse a mismatched
+  /// archive at planning time. Both empty in tolerant mode.
   reader_projections : StableStringMap[ReaderProjection]
+  reader_projection_sources : StableStringMap[BytesView]
 }
 
 ///|
@@ -710,6 +713,7 @@ fn DocumentParts::build(
     None => NumberingMap::empty()
   }
   let reader_projections : StableStringMap[ReaderProjection] = SortedMap([])
+  let reader_projection_sources : StableStringMap[BytesView] = SortedMap([])
   let notes_result = read_notes_for_document(
     zip,
     styles,
@@ -719,6 +723,7 @@ fn DocumentParts::build(
     endnotes_path=endnotes_part_path.unwrap_or("word/endnotes.xml"),
     story_reader_mode~,
     reader_projections~,
+    reader_projection_sources~,
     external_files~,
     read_images~,
     xml_budget?,
@@ -733,6 +738,7 @@ fn DocumentParts::build(
     base_path,
     story_reader_mode~,
     reader_projections~,
+    reader_projection_sources~,
     external_files~,
     read_images~,
     xml_budget?,
@@ -770,6 +776,7 @@ fn DocumentParts::build(
     read_images,
     story_reader_mode,
     reader_projections,
+    reader_projection_sources,
   }
 }
 
@@ -816,6 +823,7 @@ fn DocumentParts::read_document_joined(
     reader,
   )
   self.reader_projections[self.main_document_path] = read.projection
+  self.reader_projection_sources[self.main_document_path] = bytes
   guard read.output.segments is [segment] else {
     raise Unsupported(
       message="mutation-safe main-document read produced an unexpected segment count",
@@ -1837,6 +1845,7 @@ fn read_notes_for_document(
   endnotes_path~ : String,
   story_reader_mode~ : StoryReaderMode,
   reader_projections~ : StableStringMap[ReaderProjection],
+  reader_projection_sources~ : StableStringMap[BytesView],
   external_files? : ExternalFileAccess = default_external_file_access(),
   read_images? : Bool = true,
   xml_budget? : @xml.XmlReadBudget,
@@ -1851,6 +1860,7 @@ fn read_notes_for_document(
     path=footnotes_path,
     story_reader_mode~,
     reader_projections~,
+    reader_projection_sources~,
     styles~,
     numbering~,
     content_types~,
@@ -1868,6 +1878,7 @@ fn read_notes_for_document(
     path=endnotes_path,
     story_reader_mode~,
     reader_projections~,
+    reader_projection_sources~,
     styles~,
     numbering~,
     content_types~,
@@ -1889,6 +1900,7 @@ fn read_note_part_at_path(
   path~ : String,
   story_reader_mode~ : StoryReaderMode,
   reader_projections~ : StableStringMap[ReaderProjection],
+  reader_projection_sources~ : StableStringMap[BytesView],
   styles~ : StableStringMap[StyleInfo],
   numbering~ : NumberingMap,
   content_types~ : ContentTypes,
@@ -1929,6 +1941,7 @@ fn read_note_part_at_path(
       tolerant_budget?=xml_budget,
     )
     reader_projections[path] = read.projection
+    reader_projection_sources[path] = bytes
     let notes : Array[Note] = []
     let annotation_ids : Array[String?] = []
     for segment in read.output.segments {
@@ -1979,6 +1992,7 @@ fn read_comments_for_document(
   base_path : String,
   story_reader_mode~ : StoryReaderMode,
   reader_projections~ : StableStringMap[ReaderProjection],
+  reader_projection_sources~ : StableStringMap[BytesView],
   external_files? : ExternalFileAccess = default_external_file_access(),
   read_images? : Bool = true,
   xml_budget? : @xml.XmlReadBudget,
@@ -2030,6 +2044,7 @@ fn read_comments_for_document(
       tolerant_budget?=xml_budget,
     )
     reader_projections[path] = read.projection
+    reader_projection_sources[path] = bytes
     let comments : Array[Comment] = []
     let annotation_ids : Array[String?] = []
     for segment in read.output.segments {

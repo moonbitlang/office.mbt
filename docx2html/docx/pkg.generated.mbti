@@ -58,6 +58,8 @@ pub fn plan_comment_resolution(DocxAnnotatedResult, BytesView, comment_id~ : Str
 
 pub fn plan_comment_resolution_archive(DocxAnnotatedResult, @zip.Archive, comment_id~ : String, done~ : Bool, xml_budget? : @xml.XmlReadBudget) -> @splice.SplicePlan raise @core.DocxError
 
+pub fn plan_run_text_replacement(DocxAnnotatedResult, DocxStoryPartSource, at_relative~ : String, expect~ : String, text~ : String) -> (@splice.SplicePlan, RunTextReceipt) raise @core.DocxError
+
 pub fn read_docx(BytesView, external_file_access? : Bool, read_external_file? : (String) -> Bytes?) -> @document.DocumentElement raise @core.DocxError
 
 pub fn read_docx_annotated(BytesView, external_file_access? : Bool, read_external_file? : (String) -> Bytes?) -> DocxAnnotatedResult raise @core.DocxError
@@ -255,6 +257,15 @@ pub fn RevisionSpan::kind(Self) -> String
 pub fn RevisionSpan::name_edits(Self) -> Array[RevisionNameEdit]
 pub fn RevisionSpan::story(Self) -> String
 pub fn RevisionSpan::supported(Self) -> Bool
+
+pub struct RunTextReceipt {
+  // private fields
+}
+pub fn RunTextReceipt::at_relative(Self) -> String
+pub fn RunTextReceipt::edit_count(Self) -> Int
+pub fn RunTextReceipt::replaced_text(Self) -> String
+pub fn RunTextReceipt::result_text(Self) -> String
+pub fn RunTextReceipt::story_part(Self) -> String
 
 // Type aliases
 
