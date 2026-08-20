@@ -130,17 +130,20 @@ priv struct PartialSurgeryHost {
 ///|
 /// Plan a batch of partial text edits inside one physical paragraph.
 ///
-/// Refusal precedence is deterministic: request shape/order/overlap, then
-/// paragraph ownership, then structural restrictions on each host, then
-/// endpoint resolution, then interval barriers, then replacement validity,
-/// then internal byte-plan validation. On refusal nothing is returned.
+/// Refusal precedence is deterministic and BATCH-WIDE: every phase runs to
+/// completion over the whole request before the next phase begins, so a
+/// later edit's earlier-phase defect always wins over an earlier edit's
+/// later-phase defect. Phases: request shape (ranges, then ordering, then
+/// overlap), paragraph ownership, structural restrictions per host,
+/// endpoint resolution, replacement validity, then internal byte-plan
+/// validation. On refusal nothing is returned.
 fn plan_paragraph_text_edits(
   projection : ReaderProjection,
   source : BytesView,
   paragraph_index : Int,
   requested : Array[ParagraphTextEdit],
 ) -> (Array[RunSurgeryEdit], PartialSurgeryReceipt) raise DocxError {
-  // 1. Request shape.
+  // Phase 1a: every range is valid.
   guard paragraph_index >= 0 && paragraph_index < projection.paragraphs.length() else {
     raise partial_surgery_refuse(
       InvalidParagraph,
@@ -149,8 +152,6 @@ fn plan_paragraph_text_edits(
   }
   let paragraph = projection.paragraphs[paragraph_index]
   let width = paragraph.projection_end - paragraph.projection_start
-  let mut previous_end = 0
-  let mut previous_start = -1
   for ordinal, edit in requested {
     guard edit.start >= 0 && edit.start <= edit.end && edit.end <= width else {
       raise partial_surgery_refuse(
@@ -158,28 +159,27 @@ fn plan_paragraph_text_edits(
         "edit \{ordinal} in paragraph \{paragraph_index}",
       )
     }
-    guard edit.start >= previous_start &&
-      (
-        edit.start > previous_start ||
-        ordinal == 0 ||
-        edit.start == previous_end
-      ) else {
+  }
+  // Phase 1b: the batch is ordered by ascending start.
+  for ordinal, edit in requested {
+    if ordinal > 0 && edit.start < requested[ordinal - 1].start {
       raise partial_surgery_refuse(
         UnorderedEdits,
         "edit \{ordinal} in paragraph \{paragraph_index}",
       )
     }
-    if ordinal > 0 && edit.start < previous_end {
+  }
+  // Phase 1c: ranges do not overlap (abutting is legal; an insertion at a
+  // preceding consuming edit's start must be requested FIRST).
+  for ordinal, edit in requested {
+    if ordinal > 0 && edit.start < requested[ordinal - 1].end {
       raise partial_surgery_refuse(
         LogicalOverlap,
         "edit \{ordinal} in paragraph \{paragraph_index}",
       )
     }
-    previous_start = edit.start
-    previous_end = edit.end
   }
-  // 2. Paragraph ownership: one physical source, and no host run shared with
-  // another logical paragraph (checked per host below).
+  // Phase 2: paragraph ownership — one physical source.
   guard paragraph.sources.length() == 1 else {
     raise partial_surgery_refuse(
       MultiPhysicalParagraph,
@@ -187,44 +187,34 @@ fn plan_paragraph_text_edits(
     )
   }
   let elements = projection.scan.elements()
-  // Locate each edit's host contribution and validate its structure. Hosts
-  // are keyed by source identity so several edits in one `w:t` share one
-  // post-batch xml:space decision.
-  let hosts : Array[PartialSurgeryHost] = []
-  let logical_edits : Array[PartialSurgeryLogicalEdit] = []
+  // Phase 3: structural restrictions, batch-wide. Hosts are resolved and
+  // every structural gate runs for EVERY edit before any endpoint is
+  // resolved. In this increment a range must lie inside ONE mapped
+  // ordinary `w:t`; a range no single text contribution contains — whether
+  // it crosses another `w:t`, an atom, a break, or suppressed content — is
+  // the cross-contribution seam of a later increment.
+  let resolved : Array[
+    (Int, ParagraphTextEdit, ReaderProjectionContribution, Int, Int, Int),
+  ] = []
   for ordinal, edit in requested {
     let mut host_contribution : ReaderProjectionContribution? = None
     let mut host_candidates = 0
+    let mut distinct_candidate_sources = 0
     for contribution in paragraph.contributions {
+      guard contribution.kind is ProjectedText(FromText) else { continue }
       let c_start = contribution.projection_start - paragraph.projection_start
       let c_end = contribution.projection_end - paragraph.projection_start
-      guard contribution.kind is ProjectedText(FromText) else {
-        // 5. Interval barriers. Inside one mapped `w:t` no other
-        // contribution can sit STRICTLY inside the range (coordinates are
-        // assigned by accumulation), so any hit here is crossing.
-        if contribution.projection_start == contribution.projection_end &&
-          c_start > edit.start &&
-          c_start < edit.end {
-          match contribution.kind {
-            VisibleNonText =>
-              raise partial_surgery_refuse(
-                VisibleBarrier,
-                "edit \{ordinal} in paragraph \{paragraph_index}",
-              )
-            SuppressedContent =>
-              raise partial_surgery_refuse(
-                SuppressedRegion,
-                "edit \{ordinal} in paragraph \{paragraph_index}",
-              )
-            _ => ()
-          }
-        }
-        continue
-      }
       if c_start <= edit.start && edit.end <= c_end {
         host_candidates += 1
-        if host_contribution is None {
-          host_contribution = Some(contribution)
+        match host_contribution {
+          None => {
+            host_contribution = Some(contribution)
+            distinct_candidate_sources = 1
+          }
+          Some(first) =>
+            if contribution.source != first.source {
+              distinct_candidate_sources += 1
+            }
         }
       }
     }
@@ -235,14 +225,22 @@ fn plan_paragraph_text_edits(
       )
     }
     if host_candidates > 1 {
-      // Only zero-width edits at a boundary shared by two text hosts can
-      // reach this: refuse rather than pick.
+      if distinct_candidate_sources == 1 {
+        // Every candidate is the SAME physical element projected more than
+        // once: that is the duplicate-projection defect, not an ambiguous
+        // boundary.
+        raise partial_surgery_refuse(
+          DuplicateSource,
+          "edit \{ordinal} in paragraph \{paragraph_index}",
+        )
+      }
+      // Zero-width edits at a boundary shared by two text hosts: refuse
+      // rather than pick.
       raise partial_surgery_refuse(
         AmbiguousBoundary,
         "edit \{ordinal} in paragraph \{paragraph_index}",
       )
     }
-    // 3. Structural restrictions on the host.
     match host.field_region {
       FieldInstruction =>
         raise partial_surgery_refuse(
@@ -354,7 +352,17 @@ fn plan_paragraph_text_edits(
       (host.projection_start - paragraph.projection_start)
     let host_local_end = edit.end -
       (host.projection_start - paragraph.projection_start)
-    // 4. Endpoint resolution through the token map.
+    resolved.push(
+      (ordinal, edit, host, host_identity, host_local_start, host_local_end),
+    )
+  }
+  // Phase 4: endpoint resolution, batch-wide.
+  for entry in resolved {
+    let (ordinal, _, host, host_identity, host_local_start, host_local_end) = entry
+    let _ = host
+    guard elements[host_identity].text_map is Some(map) else {
+      raise partial_surgery_refuse(InternalPlanConflict, "host lost its map")
+    }
     guard map.byte_offset_at(host_local_start) is Some(_) &&
       map.byte_offset_at(host_local_end) is Some(_) else {
       raise partial_surgery_refuse(
@@ -362,9 +370,15 @@ fn plan_paragraph_text_edits(
         "edit \{ordinal} in paragraph \{paragraph_index}",
       )
     }
-    // Logical no-ops are decided on the PROJECTION, before any lexical
-    // rewriting, so replacing a reference-spelled character with itself
-    // never canonicalizes its spelling.
+  }
+  // Phase 5: no-op determination (on the PROJECTION, before any lexical
+  // rewriting, so a reference-spelled character replaced with itself never
+  // canonicalizes) and replacement validity, batch-wide.
+  let logical_edits : Array[PartialSurgeryLogicalEdit] = []
+  let hosts : Array[PartialSurgeryHost] = []
+  let escaped_by_ordinal : Array[String?] = []
+  for entry in resolved {
+    let (ordinal, edit, host, host_identity, host_local_start, host_local_end) = entry
     let replaced = host.value
       .view(start_offset=host_local_start, end_offset=host_local_end)
       .to_owned()
@@ -376,8 +390,15 @@ fn plan_paragraph_text_edits(
         replacement: edit.replacement,
         placement: LogicalNoOp,
       })
+      escaped_by_ordinal.push(None)
       continue
     }
+    let escaped = run_surgery_escape(edit.replacement) catch {
+      Unsupported(message~) =>
+        raise partial_surgery_refuse(InvalidReplacement, message)
+      error => raise error
+    }
+    escaped_by_ordinal.push(Some(escaped))
     logical_edits.push({
       ordinal,
       start: edit.start,
@@ -404,10 +425,9 @@ fn plan_paragraph_text_edits(
         })
     }
   }
-  // 6. Replacement validity, byte planning per host.
+  // Phase 6: byte planning per host.
   let edits : Array[RunSurgeryEdit] = []
   for host in hosts {
-    let SourceElementId(_) = SourceElementId(host.source_identity)
     let element = elements[host.source_identity]
     guard element.text_map is Some(map) else {
       raise partial_surgery_refuse(InternalPlanConflict, "host lost its map")
@@ -452,10 +472,9 @@ fn plan_paragraph_text_edits(
           })
         }
     }
-    // Content splices. Equal-offset pure insertions were concatenated by
-    // construction (ordered, non-overlapping logical edits become ordered
-    // wt-local edits); the splice layer's (start, consuming) tiebreak
-    // handles an insertion abutting a consuming edit deterministically.
+    // Content splices. Equal-offset pure insertions are concatenated in
+    // request order rather than relying on any downstream ordering of
+    // identical keys.
     let mut pending_insertion_at = -1
     let mut pending_insertion = ""
     for local in host.local_edits {
@@ -464,17 +483,17 @@ fn plan_paragraph_text_edits(
         map.byte_offset_at(local_end) is Some(byte_to) else {
         raise partial_surgery_refuse(
           InternalPlanConflict,
-          "endpoint resolution changed between passes",
+          "endpoint resolution changed between phases",
         )
       }
       let escaped = run_surgery_escape(replacement) catch {
-        Unsupported(message~) =>
-          raise partial_surgery_refuse(InvalidReplacement, message)
-        error => raise error
+        _ =>
+          raise partial_surgery_refuse(
+            InternalPlanConflict,
+            "replacement validity changed between phases",
+          )
       }
       if byte_from == byte_to {
-        // Concatenate same-offset pure insertions in request order rather
-        // than relying on any downstream ordering of identical keys.
         if pending_insertion_at == byte_from {
           pending_insertion = pending_insertion + escaped
           continue
@@ -513,25 +532,24 @@ fn plan_paragraph_text_edits(
       })
     }
   }
-  edits.sort_by_key(edit => edit.byte_start)
-  // 7. Internal validation: our own byte plan must be non-overlapping.
+  // A zero-width edit at a consuming edit's start must splice FIRST; the
+  // sort key says so explicitly instead of leaning on an unstable sort's
+  // accidental order (the trap run_surgery.mbt documents).
+  edits.sort_by_key(edit => {
+    (edit.byte_start, if edit.byte_end > edit.byte_start { 1 } else { 0 })
+  })
+  // Phase 7: internal validation — the byte plan must be non-overlapping.
   let mut last_end = -1
-  let mut last_start = -1
   for edit in edits {
-    if edit.byte_start < last_end ||
-      (
-        edit.byte_start == last_start &&
-        edit.byte_end > edit.byte_start &&
-        last_end > last_start
-      ) {
+    if edit.byte_start < last_end {
       raise partial_surgery_refuse(
         InternalPlanConflict,
         "byte edits overlap in paragraph \{paragraph_index}",
       )
     }
-    last_start = edit.byte_start
     last_end = edit.byte_end
   }
+  let _ = escaped_by_ordinal
   // Receipt: the exact post-batch paragraph projection.
   let before = StringBuilder::new()
   for contribution in paragraph.contributions {

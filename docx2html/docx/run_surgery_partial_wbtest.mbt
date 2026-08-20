@@ -427,3 +427,128 @@ test "partial: non-ASCII source offsets resolve through UTF-8 correctly" {
     expected="héllo mönde",
   )
 }
+
+///|
+test "partial: precedence is batch-wide by phase, not per edit" {
+  let body = "<w:p><w:r><w:t>abcdef</w:t></w:r></w:p>"
+  // A later edit's invalid range beats an earlier pair's misordering.
+  assert_partial_refusal(
+    body,
+    paragraph=0,
+    [partial_edit(3, 4, "x"), partial_edit(1, 2, "y"), partial_edit(4, 9, "z")],
+    refusal="InvalidRange",
+  )
+  // A later edit's structural defect beats an earlier edit's non-scalar
+  // endpoint: the astral pair sits at offsets 1-3, the field text after it.
+  assert_partial_refusal(
+    "<w:p><w:r><w:t>a😀b</w:t></w:r><w:r><w:fldChar w:fldCharType=\"begin\"/></w:r><w:r><w:t>PAGE</w:t></w:r><w:r><w:fldChar w:fldCharType=\"end\"/></w:r></w:p>",
+    paragraph=0,
+    [partial_edit(2, 3, "x"), partial_edit(5, 6, "y")],
+    refusal="PartialFieldInstruction",
+  )
+}
+
+///|
+test "partial: ranges crossing visible or suppressed content refuse as unhosted" {
+  // `ab<w:br/>cd` projects "abcd" with a zero-width visible barrier between
+  // offsets 2 and 2 of the second w:t... between the two texts. No single
+  // text contribution contains [1,3), so this increment refuses it as an
+  // unhosted range — the cross-contribution seam B2a will open.
+  assert_partial_refusal(
+    "<w:p><w:r><w:t>ab</w:t><w:br/><w:t>cd</w:t></w:r></w:p>",
+    paragraph=0,
+    [partial_edit(1, 3, "x")],
+    refusal="UnsupportedTextSource",
+  )
+}
+
+///|
+test "partial: a joined paragraph refuses as multi-physical" {
+  assert_partial_refusal(
+    "<w:p><w:pPr><w:rPr><w:del/></w:rPr></w:pPr><w:r><w:t>first</w:t></w:r></w:p><w:p><w:r><w:t>second</w:t></w:r></w:p>",
+    paragraph=0,
+    [partial_edit(0, 1, "x")],
+    refusal="MultiPhysicalParagraph",
+  )
+}
+
+///|
+test "partial: a malformed field refuses" {
+  // Text after an unmatched begin is still INSTRUCTION region (truncation
+  // is discovered at story end); a `separate` with no begin is the shape
+  // the classifier marks malformed outright.
+  assert_partial_refusal(
+    "<w:p><w:r><w:fldChar w:fldCharType=\"separate\"/></w:r><w:r><w:t>text</w:t></w:r></w:p>",
+    paragraph=0,
+    [partial_edit(0, 1, "x")],
+    refusal="PartialMalformedField",
+  )
+}
+
+///|
+test "partial: a truncated field's result refuses as classifier-refused" {
+  // begin + separate + result but no end at story end: the result run keeps
+  // FieldResult and carries the truncation refusal.
+  assert_partial_refusal(
+    "<w:p><w:r><w:fldChar w:fldCharType=\"begin\"/></w:r><w:r><w:instrText>PAGE</w:instrText></w:r><w:r><w:fldChar w:fldCharType=\"separate\"/></w:r><w:r><w:t>7</w:t></w:r></w:p>",
+    paragraph=0,
+    [partial_edit(0, 1, "x")],
+    refusal="RefusedField",
+  )
+}
+
+///|
+test "partial: a self-closing text host refuses in this increment" {
+  assert_partial_refusal(
+    "<w:p><w:r><w:t/></w:r></w:p>",
+    paragraph=0,
+    [partial_edit(0, 0, "x")],
+    refusal="UnsupportedTextSource",
+  )
+}
+
+///|
+test "partial: a twice-projected host refuses as duplicate source" {
+  let source = "<w:document xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\"><w:body><w:p><w:r><w:t>a</w:t></w:r></w:p></w:body></w:document>"
+  let bytes = @utf8.encode(source)
+  let projection = surgery_native_projection(source)
+  // Force the defect the guard exists for, exactly as the N0c1 oracle does.
+  let paragraph = projection.paragraphs[0]
+  let mut duplicated = false
+  for contribution in paragraph.contributions {
+    if contribution.kind is ProjectedText(FromText) && !duplicated {
+      paragraph.contributions.push(contribution)
+      duplicated = true
+    }
+  }
+  assert_true(duplicated)
+  try
+    plan_paragraph_text_edits(projection, bytes[:], 0, [partial_edit(0, 1, "x")])
+    |> ignore
+  catch {
+    Unsupported(message~) =>
+      assert_true(message.contains("[DuplicateSource]"), msg=message)
+    _ => fail("expected a typed refusal")
+  } noraise {
+    _ => fail("expected refusal [DuplicateSource]")
+  }
+}
+
+///|
+test "partial: a run reused by another paragraph refuses" {
+  let source = "<w:document xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\"><w:body><w:p><w:r><w:t>one</w:t></w:r></w:p><w:p><w:r><w:t>two</w:t></w:r></w:p></w:body></w:document>"
+  let bytes = @utf8.encode(source)
+  let projection = surgery_native_projection(source)
+  // Force the defect: paragraph 1 also claims paragraph 0's run.
+  projection.paragraphs[1].runs.push(projection.paragraphs[0].runs[0])
+  try
+    plan_paragraph_text_edits(projection, bytes[:], 0, [partial_edit(0, 1, "x")])
+    |> ignore
+  catch {
+    Unsupported(message~) =>
+      assert_true(message.contains("[CrossParagraphSourceReuse]"), msg=message)
+    _ => fail("expected a typed refusal")
+  } noraise {
+    _ => fail("expected refusal [CrossParagraphSourceReuse]")
+  }
+}
