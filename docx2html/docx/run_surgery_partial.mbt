@@ -133,7 +133,10 @@ priv struct PartialSurgeryReceipt {
 priv struct PartialSurgeryHost {
   source_identity : Int
   contribution_value : String
-  local_edits : Array[(Int, Int, String)]
+  // (local_start, local_end, replacement, request_sequence): the sequence
+  // makes every sort stable in request order — Array::sort_by_key is
+  // documented unstable, so ties must never depend on it.
+  local_edits : Array[(Int, Int, String, Int)]
 }
 
 ///|
@@ -227,15 +230,21 @@ fn plan_paragraph_text_edits(
   // seams pass and are never touched.
   let touched : Array[PartialSurgeryHost] = []
   let atom_deletions : Array[Int] = []
-  let syntheses : Array[(Int, Int, Int, String, Int)] = []
+  // (run identity, anchor, consumed, replacement, request ordinal,
+  //  anchor atom identity)
+  let syntheses : Array[(Int, Int, Int, String, Int, Int)] = []
   let logical_edits : Array[PartialSurgeryLogicalEdit] = []
   let involved_elements : Array[Int] = []
+  // (element identity, wt-local offset): no-op endpoints that phase 4 must
+  // still resolve through the token map.
+  let noop_endpoint_checks : Array[(Int, Int)] = []
   fn touch_wt(
     identity : Int,
     value : String,
     local_from : Int,
     local_to : Int,
     replacement : String,
+    sequence : Int,
   ) -> Unit {
     let mut record : PartialSurgeryHost? = None
     for host in touched {
@@ -244,12 +253,13 @@ fn plan_paragraph_text_edits(
       }
     }
     match record {
-      Some(host) => host.local_edits.push((local_from, local_to, replacement))
+      Some(host) =>
+        host.local_edits.push((local_from, local_to, replacement, sequence))
       None =>
         touched.push({
           source_identity: identity,
           contribution_value: value,
-          local_edits: [(local_from, local_to, replacement)],
+          local_edits: [(local_from, local_to, replacement, sequence)],
         })
     }
   }
@@ -295,6 +305,24 @@ fn plan_paragraph_text_edits(
           "edit \{ordinal} in paragraph \{paragraph_index}",
         )
       _ => ()
+    }
+  }
+
+  fn require_singly_projected(
+    contribution : ReaderProjectionContribution,
+    ordinal : Int,
+  ) -> Unit raise DocxError {
+    let mut count = 0
+    for part in parts {
+      if part.contribution.source == contribution.source {
+        count += 1
+      }
+    }
+    if count > 1 {
+      raise partial_surgery_refuse(
+        DuplicateSource,
+        "edit \{ordinal} in paragraph \{paragraph_index}",
+      )
     }
   }
 
@@ -392,17 +420,9 @@ fn plan_paragraph_text_edits(
     }
     if edit.start == edit.end {
       // Pure insertion. An interior position of a mapped `w:t` is its own
-      // unique carrier; a shared boundary needs exactly one candidate.
-      if edit.replacement == "" {
-        logical_edits.push({
-          ordinal,
-          start: edit.start,
-          end: edit.end,
-          replacement: edit.replacement,
-          placement: LogicalNoOp,
-        })
-        continue
-      }
+      // unique carrier; a shared boundary needs exactly one candidate. An
+      // EMPTY insertion is a validated no-op: the carrier resolves and
+      // every structural gate runs before byte planning is suppressed.
       let mut interior : PartialProjectingPart? = None
       for part in parts {
         if part.local_start < edit.start && edit.start < part.local_end {
@@ -422,6 +442,7 @@ fn plan_paragraph_text_edits(
           let run = resolve_run(part.contribution.run_source, ordinal)
           require_supported_run(run, ordinal)
           require_supported_contribution(part.contribution, ordinal)
+          require_singly_projected(part.contribution, ordinal)
           let SourceElementId(identity) = part.contribution.source
           require_host_element(identity, ordinal)
           let element = elements[identity]
@@ -444,12 +465,24 @@ fn plan_paragraph_text_edits(
             )
           }
           involved_elements.push(identity)
+          if edit.replacement == "" {
+            noop_endpoint_checks.push((identity, edit.start - part.local_start))
+            logical_edits.push({
+              ordinal,
+              start: edit.start,
+              end: edit.end,
+              replacement: edit.replacement,
+              placement: LogicalNoOp,
+            })
+            continue
+          }
           touch_wt(
             identity,
             part.contribution.value,
             edit.start - part.local_start,
             edit.start - part.local_start,
             edit.replacement,
+            ordinal,
           )
           logical_edits.push({
             ordinal,
@@ -484,6 +517,31 @@ fn plan_paragraph_text_edits(
             )
           }
           if total > 1 {
+            // Candidates that are all the SAME physical element (projected
+            // more than once) are the duplicate-projection defect, not an
+            // ambiguous boundary.
+            let mut distinct = 0
+            let mut previous : SourceElementId? = None
+            for candidate in text_candidates {
+              if previous is None ||
+                previous != Some(candidate.contribution.source) {
+                distinct += 1
+              }
+              previous = Some(candidate.contribution.source)
+            }
+            for candidate in atom_candidates {
+              if previous is None ||
+                previous != Some(candidate.0.contribution.source) {
+                distinct += 1
+              }
+              previous = Some(candidate.0.contribution.source)
+            }
+            if distinct == 1 {
+              raise partial_surgery_refuse(
+                DuplicateSource,
+                "edit \{ordinal} in paragraph \{paragraph_index}",
+              )
+            }
             raise partial_surgery_refuse(
               AmbiguousBoundary,
               "edit \{ordinal} in paragraph \{paragraph_index}",
@@ -500,6 +558,7 @@ fn plan_paragraph_text_edits(
               let run = resolve_run(part.contribution.run_source, ordinal)
               require_supported_run(run, ordinal)
               require_supported_contribution(part.contribution, ordinal)
+              require_singly_projected(part.contribution, ordinal)
               let SourceElementId(identity) = part.contribution.source
               require_host_element(identity, ordinal)
               let element = elements[identity]
@@ -522,12 +581,26 @@ fn plan_paragraph_text_edits(
                 )
               }
               involved_elements.push(identity)
+              if edit.replacement == "" {
+                noop_endpoint_checks.push(
+                  (identity, edit.start - part.local_start),
+                )
+                logical_edits.push({
+                  ordinal,
+                  start: edit.start,
+                  end: edit.end,
+                  replacement: edit.replacement,
+                  placement: LogicalNoOp,
+                })
+                continue
+              }
               touch_wt(
                 identity,
                 part.contribution.value,
                 edit.start - part.local_start,
                 edit.start - part.local_start,
                 edit.replacement,
+                ordinal,
               )
               logical_edits.push({
                 ordinal,
@@ -543,6 +616,7 @@ fn plan_paragraph_text_edits(
                   let run = resolve_run(part.contribution.run_source, ordinal)
                   require_supported_run(run, ordinal)
                   require_supported_contribution(part.contribution, ordinal)
+                  require_singly_projected(part.contribution, ordinal)
                   let SourceElementId(identity) = part.contribution.source
                   require_host_element(identity, ordinal)
                   let atom_element = elements[identity]
@@ -553,8 +627,20 @@ fn plan_paragraph_text_edits(
                     atom_element.byte_end
                   }
                   involved_elements.push(identity)
+                  if edit.replacement == "" {
+                    // An empty insertion beside an atom validates its
+                    // carrier and synthesizes nothing.
+                    logical_edits.push({
+                      ordinal,
+                      start: edit.start,
+                      end: edit.end,
+                      replacement: edit.replacement,
+                      placement: LogicalNoOp,
+                    })
+                    continue
+                  }
                   syntheses.push(
-                    (run_identity, at, at, edit.replacement, ordinal),
+                    (run_identity, at, at, edit.replacement, ordinal, identity),
                   )
                   logical_edits.push({
                     ordinal,
@@ -611,21 +697,10 @@ fn plan_paragraph_text_edits(
         )
       }
     }
-    // Logical no-op, decided on the projection before any lexical work.
-    let replaced = before_projection
-      .view(start_offset=edit.start, end_offset=edit.end)
-      .to_owned()
-    if replaced == edit.replacement {
-      logical_edits.push({
-        ordinal,
-        start: edit.start,
-        end: edit.end,
-        replacement: edit.replacement,
-        placement: LogicalNoOp,
-      })
-      continue
-    }
-    // Validate every consumed element's structure, then place.
+    // Validate every consumed element's structure FIRST: a logical no-op
+    // suppresses byte planning, never validation (replacing CDATA text
+    // with itself is still a CDATA refusal, and B1's phase precedence
+    // demands structural defects surface before anything is skipped).
     for part in intersecting {
       let SourceElementId(identity) = part.contribution.source
       require_host_element(identity, ordinal)
@@ -652,6 +727,31 @@ fn plan_paragraph_text_edits(
       }
       involved_elements.push(identity)
     }
+    // Logical no-op, decided on the projection before any lexical work —
+    // but its endpoints must still resolve, so they join phase 4.
+    let replaced = before_projection
+      .view(start_offset=edit.start, end_offset=edit.end)
+      .to_owned()
+    if replaced == edit.replacement {
+      let head = intersecting[0]
+      if head.is_text {
+        let SourceElementId(identity) = head.contribution.source
+        noop_endpoint_checks.push((identity, edit.start - head.local_start))
+      }
+      let tail = intersecting[intersecting.length() - 1]
+      if tail.is_text {
+        let SourceElementId(identity) = tail.contribution.source
+        noop_endpoint_checks.push((identity, edit.end - tail.local_start))
+      }
+      logical_edits.push({
+        ordinal,
+        start: edit.start,
+        end: edit.end,
+        replacement: edit.replacement,
+        placement: LogicalNoOp,
+      })
+      continue
+    }
     let first = intersecting[0]
     let last = intersecting[intersecting.length() - 1]
     if first.is_text {
@@ -666,7 +766,14 @@ fn plan_paragraph_text_edits(
       } else {
         first.local_end - first.local_start
       }
-      touch_wt(identity, first.contribution.value, from, to, edit.replacement)
+      touch_wt(
+        identity,
+        first.contribution.value,
+        from,
+        to,
+        edit.replacement,
+        ordinal,
+      )
       logical_edits.push({
         ordinal,
         start: edit.start,
@@ -698,6 +805,7 @@ fn plan_paragraph_text_edits(
             atom_element.byte_end,
             edit.replacement,
             ordinal,
+            identity,
           ),
         )
         logical_edits.push({
@@ -722,7 +830,7 @@ fn plan_paragraph_text_edits(
         } else {
           edit.end - part.local_start
         }
-        touch_wt(identity, part.contribution.value, 0, to, "")
+        touch_wt(identity, part.contribution.value, 0, to, "", ordinal)
       } else {
         // Partial atom coverage was refused above; the last atom is whole.
         let _ = last
@@ -731,13 +839,26 @@ fn plan_paragraph_text_edits(
     }
   }
   // Phase 4: endpoint resolution, batch-wide — every wt-local offset any
-  // edit produced must resolve through its host's token map.
+  // edit produced must resolve through its host's token map, including the
+  // endpoints of validated no-ops.
+  for check in noop_endpoint_checks {
+    let (identity, local_offset) = check
+    guard elements[identity].text_map is Some(map) else {
+      raise partial_surgery_refuse(InternalPlanConflict, "host lost its map")
+    }
+    guard map.byte_offset_at(local_offset) is Some(_) else {
+      raise partial_surgery_refuse(
+        NonScalarBoundary,
+        "paragraph \{paragraph_index}",
+      )
+    }
+  }
   for host in touched {
     guard elements[host.source_identity].text_map is Some(map) else {
       raise partial_surgery_refuse(InternalPlanConflict, "host lost its map")
     }
     for local in host.local_edits {
-      let (local_start, local_end, _) = local
+      let (local_start, local_end, _, _) = local
       guard map.byte_offset_at(local_start) is Some(_) &&
         map.byte_offset_at(local_end) is Some(_) else {
         raise partial_surgery_refuse(
@@ -750,7 +871,7 @@ fn plan_paragraph_text_edits(
   // Phase 5: replacement validity, batch-wide.
   for host in touched {
     for local in host.local_edits {
-      let (_, _, replacement) = local
+      let (_, _, replacement, _) = local
       (run_surgery_escape(replacement) |> ignore) catch {
         Unsupported(message~) =>
           raise partial_surgery_refuse(InvalidReplacement, message)
@@ -759,7 +880,7 @@ fn plan_paragraph_text_edits(
     }
   }
   for synthesis in syntheses {
-    let (_, _, _, replacement, _) = synthesis
+    let (_, _, _, replacement, _, _) = synthesis
     (run_surgery_escape(replacement) |> ignore) catch {
       Unsupported(message~) =>
         raise partial_surgery_refuse(InvalidReplacement, message)
@@ -773,12 +894,14 @@ fn plan_paragraph_text_edits(
     guard element.text_map is Some(map) else {
       raise partial_surgery_refuse(InternalPlanConflict, "host lost its map")
     }
-    host.local_edits.sort_by_key(local => local.0)
+    host.local_edits.sort_by_key(local => {
+      (local.0, if local.1 > local.0 { 1 } else { 0 }, local.3)
+    })
     // The post-batch content of this `w:t` decides xml:space once.
     let after = StringBuilder::new()
     let mut cursor = 0
     for local in host.local_edits {
-      let (local_start, local_end, replacement) = local
+      let (local_start, local_end, replacement, _) = local
       after.write_string(
         host.contribution_value
         .view(start_offset=cursor, end_offset=local_start)
@@ -820,7 +943,7 @@ fn plan_paragraph_text_edits(
     let mut pending_insertion_at = -1
     let mut pending_insertion = ""
     for local in host.local_edits {
-      let (local_start, local_end, replacement) = local
+      let (local_start, local_end, replacement, _) = local
       guard map.byte_offset_at(local_start) is Some(byte_from) &&
         map.byte_offset_at(local_end) is Some(byte_to) else {
         raise partial_surgery_refuse(
@@ -883,7 +1006,7 @@ fn plan_paragraph_text_edits(
     })
   }
   for synthesis in syntheses {
-    let (run_identity, anchor, consumed, replacement, _) = synthesis
+    let (run_identity, anchor, consumed, replacement, _, _) = synthesis
     let run_element = elements[run_identity]
     let prefix = run_surgery_qualified_prefix(source, run_element)
     let escaped = run_surgery_escape(replacement) catch {
@@ -907,9 +1030,25 @@ fn plan_paragraph_text_edits(
   // A zero-width edit at a consuming edit's start must splice FIRST; the
   // sort key says so explicitly instead of leaning on an unstable sort's
   // accidental order (the trap run_surgery.mbt documents).
-  edits.sort_by_key(edit => {
-    (edit.byte_start, if edit.byte_end > edit.byte_start { 1 } else { 0 })
+  let ordered : Array[(RunSurgeryEdit, Int)] = []
+  for index, edit in edits {
+    ordered.push((edit, index))
+  }
+  ordered.sort_by_key(entry => {
+    (
+      entry.0.byte_start,
+      if entry.0.byte_end > entry.0.byte_start {
+        1
+      } else {
+        0
+      },
+      entry.1,
+    )
   })
+  edits.clear()
+  for entry in ordered {
+    edits.push(entry.0)
+  }
   // Phase 7: internal validation — the byte plan must be non-overlapping.
   let mut last_end = -1
   for edit in edits {
@@ -941,9 +1080,37 @@ fn plan_paragraph_text_edits(
     expected_projection: expected.to_string(),
     logical_edits,
     byte_edit_count: edits.length(),
-    touched_source_count: touched.length() +
-    atom_deletions.length() +
-    syntheses.length(),
+    touched_source_count: distinct_touched_sources(
+      touched, atom_deletions, syntheses,
+    ),
   }
   (edits, receipt)
+}
+
+///|
+/// The number of DISTINCT source elements the plan touches: `w:t` hosts,
+/// deleted atoms, and the atoms synthesis consumed or anchored beside —
+/// counted once each regardless of how many logical edits involved them.
+fn distinct_touched_sources(
+  touched : Array[PartialSurgeryHost],
+  atom_deletions : Array[Int],
+  syntheses : Array[(Int, Int, Int, String, Int, Int)],
+) -> Int {
+  let seen : Array[Int] = []
+  fn note(identity : Int) -> Unit {
+    if !seen.contains(identity) {
+      seen.push(identity)
+    }
+  }
+
+  for host in touched {
+    note(host.source_identity)
+  }
+  for identity in atom_deletions {
+    note(identity)
+  }
+  for synthesis in syntheses {
+    note(synthesis.5)
+  }
+  seen.length()
 }
