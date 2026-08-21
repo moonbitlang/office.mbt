@@ -297,18 +297,24 @@ fn partial_allowed_spans(
       VisibleNonText => ()
     }
   }
-  // A paragraph that projects nothing has exactly one synthesis carrier.
+  // Run anchors are licensed ONLY where synthesis can actually happen:
+  // a paragraph that projects nothing, whose single run is the carrier.
+  // Synthesis at an atom lands inside that atom's own element span, which
+  // is licensed above — so licensing run anchors for every involved run
+  // would let a plan also drop a stray `<w:t/>` at some run's content
+  // end, which reprojects identically and passes byte accounting.
   let mut projecting = 0
   for contribution in paragraph.contributions {
     if contribution.kind is ProjectedText(_) {
       projecting += 1
     }
   }
+  let synthesis_runs : Array[SourceElementId] = []
   if projecting == 0 && paragraph.runs.length() == 1 {
-    note_run(Some(paragraph.runs[0].source))
+    synthesis_runs.push(paragraph.runs[0].source)
   }
   for run in paragraph.runs {
-    if !carrier_runs.contains(run.source) {
+    if !synthesis_runs.contains(run.source) {
       continue
     }
     let SourceElementId(run_identity) = run.source
@@ -353,7 +359,7 @@ fn assert_partial_batch(
   source : String,
   projection : ReaderProjection,
   batch : PartialBatchPlan,
-) -> (Array[String], String) raise {
+) -> (Array[String], String, Int) raise {
   let bytes = @utf8.encode(source)
   let elements = projection.scan.elements()
   let paragraph = projection.paragraphs[batch.paragraph_index]
@@ -399,7 +405,7 @@ fn assert_partial_batch(
         }
       }
       assert_true(named != "", msg="unknown refusal class: \{message}")
-      return ([], named)
+      return ([], named, 0)
     }
     // A resource limit is not a partial-surgery refusal class: it
     // propagates rather than counting toward refusal diversity.
@@ -437,7 +443,7 @@ fn assert_partial_batch(
   assert_eq(receipt.expected_projection, expected, msg="receipt projection")
   // Claim 3: every byte outside the declared union survives.
   assert_untouched_bytes_survive(bytes, spliced_bytes, byte_edits)
-  (batch.pairs, "")
+  (batch.pairs, "", receipt.touched_source_count)
 }
 
 ///|
@@ -458,7 +464,7 @@ test "generated documents compose partial edits over every boundary pair" {
         // shared projection would let one batch's receipt describe
         // another's document.
         let fresh = surgery_native_projection(source)
-        let (planned_pairs, refusal) = assert_partial_batch(
+        let (planned_pairs, refusal, carriers) = assert_partial_batch(
           source, fresh, batch,
         )
         if refusal != "" {
@@ -547,6 +553,11 @@ let partial_lexical_bodies : Array[(String, String)] = [
   // depends on the paragraph's WIDTH (the geometries are computed from
   // it), so a single arrangement reaches some cross-category keys and
   // not others.
+  // atom-start>entity needs an ATOM boundary on the left and an entity
+  // edge on the right, which only this arrangement produces.
+  (
+    "atom-then-entity", "<w:p><w:r><w:t>&amp;</w:t><w:tab/><w:noBreakHyphen/><w:t>&amp;</w:t></w:r></w:p>",
+  ),
   (
     "mixed-references", "<w:p><w:r><w:t>&amp;&#38;</w:t><w:tab/><w:t>&#60;&gt;</w:t><w:noBreakHyphen/><w:t>&amp;z</w:t></w:r></w:p>",
   ),
@@ -557,6 +568,7 @@ test "the lexical matrix the grammar does not reach is proved the same way" {
   let pairs : Map[String, Int] = Map([])
   let refusals : Map[String, Int] = Map([])
   let mut planned = 0
+  let mut multi_carrier = 0
   for entry in partial_lexical_bodies {
     let (label, body) = entry
     let source = "<w:document xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\" xmlns:v=\"urn:schemas-microsoft-com:vml\"><w:body>\{body}</w:body></w:document>"
@@ -565,13 +577,16 @@ test "the lexical matrix the grammar does not reach is proved the same way" {
     for paragraph_index in 0..<projection.paragraphs.length() {
       for batch in partial_batches_for(projection, elements, paragraph_index) {
         let fresh = surgery_native_projection(source)
-        let (planned_pairs, refusal) = assert_partial_batch(
+        let (planned_pairs, refusal, carriers) = assert_partial_batch(
           source, fresh, batch,
         )
         if refusal != "" {
           refusals[refusal] = refusals.get(refusal).unwrap_or(0) + 1
         } else {
           planned += 1
+          if batch.edits.length() > 1 && carriers > 1 {
+            multi_carrier += 1
+          }
           for pair in planned_pairs {
             pairs[pair] = pairs.get(pair).unwrap_or(0) + 1
           }
@@ -582,15 +597,16 @@ test "the lexical matrix the grammar does not reach is proved the same way" {
   }
   let seen = (pair : String) => pairs.get(pair).unwrap_or(0)
   let refused = (name : String) => refusals.get(name).unwrap_or(0)
-  // Measured: 105 batches planned over 26 distinct ordered pairs, with
-  // refusals CDataContext 16, AmbiguousBoundary 8, NonScalarBoundary 7,
-  // VisibleBarrier 2, SuppressedRegion 2.
-  assert_true(planned >= 60, msg="only \{planned} lexical batches planned")
+  // Measured at this commit: 149 batches planned over 33 distinct
+  // ordered pairs, 12 of them multi-edit across multiple carriers. The
+  // distinct-pair floor is pinned AT the measured identity set, so
+  // losing a pair fails rather than passing under a loose bound.
+  assert_true(planned >= 140, msg="only \{planned} lexical batches planned")
   // Entity and numeric-reference boundaries plan in BOTH orders; their
   // interiors are unresolvable and refuse below.
   let lexical_pairs = pairs.size()
   assert_true(
-    lexical_pairs >= 26,
+    lexical_pairs >= 33,
     msg="only \{lexical_pairs} distinct ordered pairs in the lexical family",
   )
   // BOTH orders of every mixed pair: a planner refusing only the
@@ -620,6 +636,15 @@ test "the lexical matrix the grammar does not reach is proved the same way" {
   assert_true(seen("replace:entity-edge>atom-start-edge") >= 1)
   assert_true(seen("replace:numref-edge>atom-start-edge") >= 1)
   assert_true(seen("replace:atom-start-edge>numref-edge") >= 1)
+  assert_true(seen("replace:atom-start-edge>entity-edge") >= 1)
+  // Multi-edit batches spanning MORE THAN ONE carrier must actually
+  // PLAN. Without this the suite accepts a regression that refuses every
+  // general composition with InternalPlanConflict: each refusal is typed,
+  // so nothing else notices.
+  assert_true(
+    multi_carrier >= 10,
+    msg="only \{multi_carrier} multi-carrier batches planned",
+  )
   // The atomless-run synthesis path plans.
   assert_true(seen("insert:bare>bare") >= 1)
   // And every refusal the lexical matrix must produce.
@@ -691,4 +716,92 @@ test "the source allowlist rejects a plan that widens beyond the request" {
     }
   }
   assert_true(request_licensed)
+}
+
+///|
+test "the allowlist pins the half-open rule and the synthesis anchors" {
+  // Two discrimination checks the property suite cannot make, because
+  // both defects reproject identically and pass byte accounting.
+  //
+  // (1) HALF-OPEN. `<w:t>ab</w:t><w:t>cd</w:t>` with [0,1) and [2,3):
+  // the second edit only ABUTS the first host, so nothing inside the
+  // first host beyond its own requested range may be licensed. Under a
+  // closed intersection the first host's content END would be, and a
+  // widened plan could insert an empty CDATA there — well-formed,
+  // identical projection, and it poisons that host's token map forever.
+  let abutting = "<w:document xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\"><w:body><w:p><w:r><w:t>ab</w:t><w:t>cd</w:t></w:r></w:p></w:body></w:document>"
+  let projection = surgery_native_projection(abutting)
+  let elements = projection.scan.elements()
+  let paragraph = projection.paragraphs[0]
+  let allowed = partial_allowed_spans(paragraph, elements, [
+    { start: 0, end: 1, replacement: "A" },
+    { start: 2, end: 3, replacement: "C" },
+  ])
+  let mut first_host : ScannedElement? = None
+  for contribution in paragraph.contributions {
+    if contribution.kind is ProjectedText(FromText) && first_host is None {
+      let SourceElementId(identity) = contribution.source
+      first_host = Some(elements[identity])
+    }
+  }
+  guard first_host is Some(host) else { fail("expected a first text host") }
+  let mut licensed_tail = false
+  for span in allowed {
+    let (from, to) = span
+    if host.content_end >= from &&
+      host.content_end <= to &&
+      from >= host.content_start {
+      licensed_tail = true
+    }
+  }
+  assert_false(
+    licensed_tail,
+    msg="an abutting edit must not license the neighbour's content end",
+  )
+  // (2) SYNTHESIS ANCHORS. A paragraph that projects text needs no run
+  // anchor at all: licensing one would let a plan drop a stray `<w:t/>`
+  // at the run's content end, which reprojects identically.
+  let simple = "<w:document xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\"><w:body><w:p><w:r><w:t>ab</w:t></w:r></w:p></w:body></w:document>"
+  let simple_projection = surgery_native_projection(simple)
+  let simple_elements = simple_projection.scan.elements()
+  let simple_paragraph = simple_projection.paragraphs[0]
+  let simple_allowed = partial_allowed_spans(
+    simple_paragraph,
+    simple_elements,
+    [{ start: 0, end: 1, replacement: "A" }],
+  )
+  let SourceElementId(run_identity) = simple_paragraph.runs[0].source
+  let run_element = simple_elements[run_identity]
+  let mut licensed_anchor = false
+  for span in simple_allowed {
+    let (from, to) = span
+    if run_element.content_end >= from &&
+      run_element.content_end <= to &&
+      from > run_element.content_start {
+      licensed_anchor = true
+    }
+  }
+  assert_false(
+    licensed_anchor,
+    msg="a text-projecting paragraph must license no run synthesis anchor",
+  )
+}
+
+///|
+test "partial: a multi-edit batch across two runs plans" {
+  // The general composition shape the property floors now require and
+  // this test pins exactly: two edits, two carriers, two runs.
+  assert_partial_edits(
+    "<w:p><w:r><w:t>ab</w:t></w:r><w:r><w:t>cd</w:t></w:r></w:p>",
+    paragraph=0,
+    [partial_edit(0, 2, "head"), partial_edit(2, 4, "")],
+    expected="head",
+  )
+  // And across two hosts inside ONE run.
+  assert_partial_edits(
+    "<w:p><w:r><w:t>ab</w:t><w:t>cd</w:t></w:r></w:p>",
+    paragraph=0,
+    [partial_edit(0, 1, "A"), partial_edit(2, 3, "C")],
+    expected="AbCd",
+  )
 }
