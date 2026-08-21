@@ -339,6 +339,76 @@ fn partial_escape(text : String) -> String {
 }
 
 ///|
+fn partial_paragraph_projection(
+  paragraph : ReaderProjectionParagraph,
+) -> String {
+  let out = StringBuilder()
+  for contribution in paragraph.contributions {
+    out.write_string(contribution.value)
+  }
+  out.to_string()
+}
+
+///|
+/// The qualified prefix a run is written with, read from the source the
+/// way a synthesized element must reproduce it.
+fn partial_run_prefix(source : BytesView, element : ScannedElement) -> String {
+  let out = StringBuilder()
+  let mut at = element.byte_start + 1
+  while at < element.content_start {
+    let code = source[at].to_int()
+    if code == 0x3A {
+      out.write_char(':')
+      return out.to_string()
+    }
+    if code == 0x20 || code == 0x2F || code == 0x3E {
+      return ""
+    }
+    out.write_char(Int::unsafe_to_char(code))
+    at = at + 1
+  }
+  ""
+}
+
+///|
+/// The EXACT element synthesis writes, modelled here so the license can
+/// demand it verbatim rather than by substring — a content check would
+/// accept an empty write into one host and a doubled write into another.
+fn partial_synthesised_element(
+  source : BytesView,
+  run_element : ScannedElement,
+  text : String,
+) -> String {
+  let prefix = partial_run_prefix(source, run_element)
+  let binding = if prefix == "" {
+    " xmlns=\"" + run_element.uri + "\""
+  } else {
+    let name = prefix.view(end_offset=prefix.length() - 1).to_owned()
+    " xmlns:" + name + "=\"" + run_element.uri + "\""
+  }
+  let attribute = if partial_needs_space(text) {
+    " xml:space=\"preserve\""
+  } else {
+    ""
+  }
+  let element = "<" +
+    prefix +
+    "t" +
+    binding +
+    attribute +
+    ">" +
+    partial_escape(text) +
+    "</" +
+    prefix +
+    "t>"
+  if run_element.content_start == run_element.byte_end {
+    ">" + element + "</" + prefix + "r>"
+  } else {
+    element
+  }
+}
+
+///|
 fn partial_needs_space(text : String) -> Bool {
   if text.length() == 0 {
     return false
@@ -384,18 +454,23 @@ fn partial_expected_licenses(
   // production emits there.
   let insertion_sites : Array[Int] = []
   let insertion_license_at : Array[Int] = []
-  fn note_insertion(site : Int, text : String) -> Unit {
+  // Sites accumulate the RAW text of every request that lands there, and
+  // the payload is composed once at the end: production coalesces the
+  // requests and then escapes (or synthesizes) the combined text, so
+  // concatenating already-composed payloads would predict the wrong
+  // bytes.
+  let insertion_raw : Array[String] = []
+  let insertion_synth : Array[Int] = []
+  fn note_insertion(site : Int, text : String, synth_run : Int) -> Unit {
     for index, existing in insertion_sites {
       if existing == site {
-        let slot = insertion_license_at[index]
-        let (from, to, exact, payload) = licenses[slot]
-        licenses[slot] = (from, to, exact, payload + text)
+        insertion_raw[index] = insertion_raw[index] + text
         return
       }
     }
     insertion_sites.push(site)
-    insertion_license_at.push(licenses.length())
-    licenses.push((site, site, true, text))
+    insertion_raw.push(text)
+    insertion_synth.push(synth_run)
   }
 
   // Ordered projecting contributions, so "first consumed" is well defined.
@@ -411,6 +486,13 @@ fn partial_expected_licenses(
       )
     }
   }
+  fn run_of(contribution : ReaderProjectionContribution) -> SourceElementId {
+    match contribution.run_source {
+      Some(source_id) => source_id
+      None => contribution.source
+    }
+  }
+
   fn first_consumed(edit : ParagraphTextEdit) -> SourceElementId? {
     for entry in projecting {
       let (contribution, start, end) = entry
@@ -448,9 +530,17 @@ fn partial_expected_licenses(
           if !touches {
             continue
           }
-          // An empty insertion is a validated no-op: production plans
-          // nothing, so nothing may be spent.
+          // Logical no-ops emit nothing at all, so they earn nothing:
+          // an empty insertion, and a consuming range whose current
+          // projected slice already equals its replacement.
           if edit.start == edit.end && edit.replacement == "" {
+            continue
+          }
+          if edit.start != edit.end &&
+            partial_paragraph_projection(paragraph)
+            .view(start_offset=edit.start, end_offset=edit.end)
+            .to_owned() ==
+            edit.replacement {
             continue
           }
           touched = true
@@ -472,7 +562,7 @@ fn partial_expected_licenses(
               if from == to {
                 // Equal-offset insertions COALESCE into one edit, so one
                 // site earns one license however many requests share it.
-                note_insertion(from, partial_escape(written))
+                note_insertion(from, written, -1)
               } else {
                 licenses.push((from, to, true, partial_escape(written)))
               }
@@ -517,29 +607,39 @@ fn partial_expected_licenses(
             // composes the run's own prefix and namespace binding.
             let carries = first_consumed(edit) == Some(contribution.source)
             let payload = if carries && edit.replacement != "" {
-              "?" + partial_escape(edit.replacement)
+              let SourceElementId(owner) = run_of(contribution)
+              partial_synthesised_element(
+                source,
+                elements[owner],
+                edit.replacement,
+              )
             } else {
               ""
             }
             licenses.push((element.byte_start, element.byte_end, true, payload))
           }
           if edit.start == edit.end && edit.replacement != "" {
+            let SourceElementId(owner) = run_of(contribution)
             if edit.start == start {
-              note_insertion(
-                element.byte_start,
-                "?" + partial_escape(edit.replacement),
-              )
+              note_insertion(element.byte_start, edit.replacement, owner)
             }
             if edit.start == end {
-              note_insertion(
-                element.byte_end,
-                "?" + partial_escape(edit.replacement),
-              )
+              note_insertion(element.byte_end, edit.replacement, owner)
             }
           }
         }
       _ => ()
     }
+  }
+  for index, site in insertion_sites {
+    let text = insertion_raw[index]
+    let synth_run = insertion_synth[index]
+    let payload = if synth_run >= 0 {
+      partial_synthesised_element(source, elements[synth_run], text)
+    } else {
+      partial_escape(text)
+    }
+    licenses.push((site, site, true, payload))
   }
   // A paragraph that projects nothing: ONE synthesis license, however
   // many non-empty insertions ask for it — production coalesces them.
@@ -565,7 +665,7 @@ fn partial_expected_licenses(
             run_element.byte_end - 2,
             run_element.byte_end,
             true,
-            "?" + partial_escape(synthesis_text),
+            partial_synthesised_element(source, run_element, synthesis_text),
           ),
         )
       } else {
@@ -579,7 +679,12 @@ fn partial_expected_licenses(
           child = candidate.next_sibling_index
         }
         licenses.push(
-          (anchor, anchor, true, "?" + partial_escape(synthesis_text)),
+          (
+            anchor,
+            anchor,
+            true,
+            partial_synthesised_element(source, run_element, synthesis_text),
+          ),
         )
       }
     }
@@ -685,11 +790,7 @@ fn assert_partial_batch(
       }
       // The payload has to match too: identical spans with swapped text
       // reproject identically while violating placement.
-      let payload_ok = if payload.has_prefix("?") {
-        edit.replacement.contains(payload.view(start_offset=1).to_owned())
-      } else {
-        edit.replacement == payload
-      }
+      let payload_ok = edit.replacement == payload
       if span_ok && payload_ok {
         spent[index] = true
         paid = true
@@ -1248,3 +1349,69 @@ let partial_expected_pair_counts : Array[(String, Int)] = [
   ("delete:atom-start-edge>atom-start-edge", 1),
   ("replace:atom-start-edge>atom-start-edge", 2),
 ]
+
+///|
+test "payload licenses are exercised by escaping and whitespace" {
+  // The composition corpus replaces with alphanumerics only, so the
+  // escaper's markup branches and the xml:space licenses would never be
+  // exercised by it — a payload prediction nothing tests is not a proof.
+  // These batches drive the SAME oracle with replacements that force
+  // escaping, carriage returns, and preservation on and off, including
+  // over hosts whose declaration uses each spelling the scanner must
+  // tolerate.
+  let bodies : Array[(String, Array[ParagraphTextEdit])] = [
+    (
+      "<w:p><w:r><w:t>abc</w:t></w:r></w:p>",
+      [{ start: 1, end: 2, replacement: "&<>" }],
+    ),
+    (
+      "<w:p><w:r><w:t>abc</w:t></w:r></w:p>",
+      [{ start: 0, end: 3, replacement: "x\ry" }],
+    ),
+    (
+      "<w:p><w:r><w:t>abc</w:t></w:r></w:p>",
+      [{ start: 0, end: 1, replacement: " lead" }],
+    ),
+    (
+      "<w:p><w:r><w:t>abc</w:t></w:r></w:p>",
+      [{ start: 2, end: 3, replacement: "trail " }],
+    ),
+    (
+      "<w:p><w:r><w:t xml:space='preserve'> ab </w:t></w:r></w:p>",
+      [{ start: 1, end: 2, replacement: "&" }],
+    ),
+    (
+      "<w:p><w:r><w:t xml:space = \"default\">ab</w:t></w:r></w:p>",
+      [{ start: 0, end: 1, replacement: " s" }],
+    ),
+    (
+      "<w:p><w:r><w:t notxml:space='default' xmlns:notxml='urn:decoy'>ab</w:t></w:r></w:p>",
+      [{ start: 0, end: 1, replacement: " s" }],
+    ),
+    (
+      "<w:p><w:r><w:tab/><w:t>ab</w:t></w:r></w:p>",
+      [{ start: 0, end: 1, replacement: "&x" }],
+    ),
+    ("<w:p><w:r/></w:p>", [{ start: 0, end: 0, replacement: " &z " }]),
+  ]
+  for entry in bodies {
+    let (body, edits) = entry
+    let source = "<w:document xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\" xmlns:v=\"urn:schemas-microsoft-com:vml\"><w:body>\{body}</w:body></w:document>"
+    let projection = surgery_native_projection(source)
+    let elements = projection.scan.elements()
+    let pairs : Array[String] = []
+    for edit in edits {
+      let start_class = partial_primary_class(
+        partial_offset_classes(projection.paragraphs[0], elements, edit.start),
+      )
+      let end_class = partial_primary_class(
+        partial_offset_classes(projection.paragraphs[0], elements, edit.end),
+      )
+      pairs.push("escape:\{start_class}>\{end_class}")
+    }
+    let batch : PartialBatchPlan = { paragraph_index: 0, edits, pairs }
+    let fresh = surgery_native_projection(source)
+    let (_, refusal, _) = assert_partial_batch(source, fresh, batch)
+    assert_eq(refusal, "", msg="escaping batch refused for \{body}")
+  }
+}
