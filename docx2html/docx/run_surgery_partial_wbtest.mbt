@@ -943,3 +943,155 @@ test "partial: an empty insertion is a validated no-op" {
     refusal="CDataContext",
   )
 }
+
+///|
+test "partial: a field-poisoned atomless run between endpoints refuses" {
+  // The middle run is a bare <w:r/> inside a field's instruction phase: it
+  // produces no contribution at all, so only STRUCTURAL run derivation can
+  // see it. (The begin/end markers around it are suppressed zero-width and
+  // would refuse as SuppressedRegion; the run gate must fire first, on the
+  // run's own field state.)
+  assert_partial_refusal(
+    "<w:p><w:r><w:t>ab</w:t></w:r><w:r><w:fldChar w:fldCharType=\"begin\"/></w:r><w:r/><w:r><w:fldChar w:fldCharType=\"end\"/></w:r><w:r><w:t>cd</w:t></w:r></w:p>",
+    paragraph=0,
+    [partial_edit(1, 3, "x")],
+    refusal="PartialFieldInstruction",
+  )
+}
+
+///|
+test "partial: a runless direct w:t refuses as unsupported" {
+  // The tolerant reader admits a w:t sitting directly in the paragraph;
+  // with no run shell it has no formatting or field state to gate, so it
+  // is not a host.
+  assert_partial_refusal(
+    "<w:p><w:r><w:t>ab</w:t></w:r><w:t>cd</w:t></w:p>",
+    paragraph=0,
+    [partial_edit(1, 3, "x")],
+    refusal="UnsupportedTextSource",
+  )
+}
+
+///|
+test "partial: a start at run 1's exact end makes run 2 the carrier" {
+  let body = "<w:p><w:r><w:rPr><w:b/></w:rPr><w:t>ab</w:t></w:r><w:r><w:rPr><w:i/></w:rPr><w:t>cd</w:t></w:r></w:p>"
+  assert_partial_edits(
+    body,
+    paragraph=0,
+    [partial_edit(2, 3, "X")],
+    expected="abXd",
+  )
+  let source = "<w:document xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\" xmlns:v=\"urn:schemas-microsoft-com:vml\"><w:body>\{body}</w:body></w:document>"
+  let bytes = @utf8.encode(source)
+  let projection = surgery_native_projection(source)
+  let (byte_edits, _) = plan_paragraph_text_edits(projection, bytes[:], 0, [
+    partial_edit(2, 3, "X"),
+  ])
+  let spliced = @utf8.decode(apply_run_surgery_edits(bytes, byte_edits))
+  // Run 1 is untouched; run 2 carries the replacement under ITS rPr.
+  assert_true(
+    spliced.contains(
+      "<w:r><w:rPr><w:b/></w:rPr><w:t>ab</w:t></w:r><w:r><w:rPr><w:i/></w:rPr><w:t>Xd</w:t></w:r>",
+    ),
+  )
+}
+
+///|
+test "partial: cross-run xml:space lands only on the start host" {
+  let body = "<w:p><w:r><w:t>ab</w:t></w:r><w:r><w:t>cd</w:t></w:r></w:p>"
+  let source = "<w:document xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\" xmlns:v=\"urn:schemas-microsoft-com:vml\"><w:body>\{body}</w:body></w:document>"
+  let bytes = @utf8.encode(source)
+  let projection = surgery_native_projection(source)
+  let (byte_edits, receipt) = plan_paragraph_text_edits(
+    projection,
+    bytes[:],
+    0,
+    [partial_edit(1, 3, " ")],
+  )
+  assert_eq(receipt.expected_projection, "a d")
+  let spliced = @utf8.decode(apply_run_surgery_edits(bytes, byte_edits))
+  let mut declarations = 0
+  for _piece in spliced.split("xml:space") {
+    declarations += 1
+  }
+  assert_eq(declarations - 1, 1)
+  assert_true(
+    spliced.contains(
+      "<w:t xml:space=\"preserve\">a </w:t></w:r><w:r><w:t>d</w:t>",
+    ),
+  )
+  let reprojected = surgery_native_projection(spliced)
+  let after = StringBuilder::new()
+  for contribution in reprojected.paragraphs[0].contributions {
+    after.write_string(contribution.value)
+  }
+  assert_eq(after.to_string(), "a d")
+}
+
+///|
+test "partial: crossing into a hyperlink preserves the wrapper" {
+  // The hyperlink is a flattened transparent wrapper: a range crossing
+  // into it trims its run's text while the wrapper element, its
+  // attributes, and its run shell survive byte-identical.
+  let body = "<w:p><w:r><w:t>ab</w:t></w:r><w:hyperlink r:id=\"rId9\" xmlns:r=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships\"><w:r><w:t>cd</w:t></w:r></w:hyperlink></w:p>"
+  assert_partial_edits(
+    body,
+    paragraph=0,
+    [partial_edit(1, 3, "X")],
+    expected="aXd",
+  )
+  let source = "<w:document xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\" xmlns:v=\"urn:schemas-microsoft-com:vml\"><w:body>\{body}</w:body></w:document>"
+  let bytes = @utf8.encode(source)
+  let projection = surgery_native_projection(source)
+  let (byte_edits, _) = plan_paragraph_text_edits(projection, bytes[:], 0, [
+    partial_edit(1, 3, "X"),
+  ])
+  let spliced = @utf8.decode(apply_run_surgery_edits(bytes, byte_edits))
+  assert_true(
+    spliced.contains(
+      "<w:t>aX</w:t></w:r><w:hyperlink r:id=\"rId9\" xmlns:r=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships\"><w:r><w:t>d</w:t></w:r></w:hyperlink>",
+    ),
+  )
+}
+
+///|
+test "partial: crossing into a tracked insertion preserves the wrapper" {
+  let body = "<w:p><w:r><w:t>ab</w:t></w:r><w:ins w:id=\"9\" w:author=\"Ada\" w:date=\"2001-01-01T00:00:00Z\"><w:r><w:t>cd</w:t></w:r></w:ins></w:p>"
+  assert_partial_edits(
+    body,
+    paragraph=0,
+    [partial_edit(1, 3, "X")],
+    expected="aXd",
+  )
+  let source = "<w:document xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\" xmlns:v=\"urn:schemas-microsoft-com:vml\"><w:body>\{body}</w:body></w:document>"
+  let bytes = @utf8.encode(source)
+  let projection = surgery_native_projection(source)
+  let (byte_edits, _) = plan_paragraph_text_edits(projection, bytes[:], 0, [
+    partial_edit(1, 3, "X"),
+  ])
+  let spliced = @utf8.decode(apply_run_surgery_edits(bytes, byte_edits))
+  assert_true(
+    spliced.contains(
+      "<w:t>aX</w:t></w:r><w:ins w:id=\"9\" w:author=\"Ada\" w:date=\"2001-01-01T00:00:00Z\"><w:r><w:t>d</w:t></w:r></w:ins>",
+    ),
+  )
+}
+
+///|
+test "partial: a later run reused by another paragraph refuses" {
+  let source = "<w:document xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\"><w:body><w:p><w:r><w:t>ab</w:t></w:r><w:r><w:t>cd</w:t></w:r></w:p><w:p><w:r><w:t>two</w:t></w:r></w:p></w:body></w:document>"
+  let bytes = @utf8.encode(source)
+  let projection = surgery_native_projection(source)
+  // Force the defect on the SECOND run of paragraph 0.
+  projection.paragraphs[1].runs.push(projection.paragraphs[0].runs[1])
+  try
+    plan_paragraph_text_edits(projection, bytes[:], 0, [partial_edit(1, 3, "x")])
+    |> ignore
+  catch {
+    Unsupported(message~) =>
+      assert_true(message.contains("[CrossParagraphSourceReuse]"), msg=message)
+    _ => fail("expected a typed refusal")
+  } noraise {
+    _ => fail("expected refusal [CrossParagraphSourceReuse]")
+  }
+}

@@ -677,38 +677,45 @@ fn plan_paragraph_text_edits(
         "edit \{ordinal} in paragraph \{paragraph_index} covers no projecting content",
       )
     }
-    // Gate EVERY run the interval involves: the runs of the intersecting
-    // projecting contributions, plus any run whose zero-width run-open
-    // contribution sits strictly inside the interval (an atomless or
-    // empty run between the endpoints has field state of its own even
-    // though nothing projects from it).
-    let involved_run_sources : Array[SourceElementId] = []
+    // Every intersecting projecting contribution must have an owning run:
+    // a direct paragraph-child `w:t` the tolerant reader admits has no run
+    // shell to carry formatting or field state, so it is not a partial-
+    // surgery host.
     for part in intersecting {
-      match part.contribution.run_source {
-        Some(source_id) =>
-          if !involved_run_sources.contains(source_id) {
-            involved_run_sources.push(source_id)
-          }
-        None => ()
+      if part.contribution.run_source is None {
+        raise partial_surgery_refuse(
+          UnsupportedTextSource,
+          "edit \{ordinal} in paragraph \{paragraph_index} draws from content outside any run",
+        )
       }
     }
-    for contribution in paragraph.contributions {
-      let position = contribution.projection_start - paragraph.projection_start
-      if contribution.projection_start == contribution.projection_end &&
-        position > edit.start &&
-        position < edit.end {
-        match contribution.run_source {
-          Some(source_id) =>
-            if !involved_run_sources.contains(source_id) {
-              involved_run_sources.push(source_id)
-            }
-          None => ()
+    // Gate EVERY run the interval involves, derived STRUCTURALLY: runs
+    // register in document order on entry, so every run between the first
+    // and last intersecting contribution's runs — inclusive — is inside
+    // the interval, including a true `<w:r/>` that produced no
+    // contribution at all (it still carries field state of its own).
+    let mut first_run_index = -1
+    let mut last_run_index = -1
+    for part in intersecting {
+      for index, candidate in paragraph.runs {
+        if Some(candidate.source) == part.contribution.run_source {
+          if first_run_index < 0 || index < first_run_index {
+            first_run_index = index
+          }
+          if index > last_run_index {
+            last_run_index = index
+          }
         }
       }
     }
-    for source_id in involved_run_sources {
-      let involved_run = resolve_run(Some(source_id), ordinal)
-      require_supported_run(involved_run, ordinal)
+    guard first_run_index >= 0 else {
+      raise partial_surgery_refuse(
+        InternalPlanConflict,
+        "edit \{ordinal} in paragraph \{paragraph_index}",
+      )
+    }
+    for index in first_run_index..<=last_run_index {
+      require_supported_run(paragraph.runs[index], ordinal)
     }
     let run = resolve_run(intersecting[0].contribution.run_source, ordinal)
     // Atoms and non-text sources may only be wholly covered.
