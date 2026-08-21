@@ -38,13 +38,12 @@ priv enum PartialSurgeryRefusal {
   CDataContext
   VisibleBarrier
   SuppressedRegion
-  // Reserved for the MATCH/verb layer, not raised by this primitive: the
-  // Phase-3-wide five-class inventory makes projecting-restricted regions
-  // (complex-field results, boundary-crossing hyperlink interiors, w:ins,
-  // non-checkbox w:sdt, mc:Fallback, textbox paragraphs) matchable but
-  // unmutable, which is a policy about which HITS a verb may act on. This
-  // primitive is addressed and has no notion of a match, and N0c1 already
-  // ships field-RESULT editing. See the N0 verdict's handoff obligation.
+  // Declared and rendered, NOT yet raised. The N0 gate's criterion (d)
+  // requires projecting-restricted regions (complex-field results,
+  // boundary-crossing hyperlink interiors, w:ins, non-checkbox w:sdt,
+  // mc:Fallback, textbox paragraphs) to fail closed here, and closing it
+  // is the gate's outstanding work — recorded in the roadmap's N0 gate
+  // status, together with the N0c1 gaps it has to close alongside.
   RestrictedRegion
   PartialFieldInstruction
   PartialMalformedField

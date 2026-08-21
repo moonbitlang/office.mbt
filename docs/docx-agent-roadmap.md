@@ -1102,13 +1102,28 @@ the generated boundary-pair proof (PR #474). Criteria disposition:
   `.mbti` surface is unchanged across all four rungs.
 - **backends**: GO — native, Wasm, and JS suites all green on the gate
   commit, as the phase requires.
-- **landing sequence and review gate**: GO — #222 landed first (N0c1) and
-  #236 lands with PR #474; every rung took a fresh ephemeral reviewer at
-  `xhigh` or higher (this final rung at `ultra`, since it records the
-  gate) to APPROVE, with all required checks green on the same pushed
-  commit.
+- **landing sequence**: #222 landed first (N0c1); #236's rungs land as
+  PRs #471-#474, each through a fresh ephemeral reviewer at `xhigh` or
+  higher (the composition rung at `ultra`) with required checks green on
+  the same pushed commit. The gate verdict itself is NOT recorded by
+  those approvals — it waits for criterion (d).
 
-**Outstanding for GO — restricted-region refusal trials (criterion d).**
+**Outstanding for GO — criterion (d) refusal trials.** Criterion (d)
+names THREE families the primitives do not yet fail closed on:
+restricted regions, suppressed regions, and multi-physical logical
+paragraphs. N0c2 refuses suppressed crossings and multi-physical
+paragraphs already; N0c1 does not, and it is the one the public surface
+reaches.
+
+1. *Multi-physical logical paragraphs.* The locked rule above says every
+   mutation over a logical paragraph spanning several physical `w:p`
+   nodes must refuse. `plan_whole_run_replacement` accepts one, and its
+   oracle pins the acceptance (`whole-run replacement handles a
+   paragraph joined from two sources`). That pin has to invert.
+2. *Suppressed regions.* N0c1 blanket-ignores owned `SuppressedContent`
+   rather than refusing over it, so a whole-run replacement can span
+   genuine suppressed shapes (`w:del` among them).
+3. *Restricted regions.* Detailed below.
 The Phase-3-wide five-class inventory classifies complex-field cached
 results, boundary-crossing hyperlink interiors, `w:ins` content,
 non-checkbox `w:sdt` content, `mc:Fallback` content, and textbox

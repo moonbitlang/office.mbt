@@ -248,7 +248,19 @@ fn partial_allowed_spans(
             match element.text_map {
               Some(map) =>
                 for edit in requested {
-                  if edit.start > end || edit.end < start {
+                  // HALF-OPEN for consuming ranges: an edit that merely
+                  // ABUTS this host does not reach into it, and treating
+                  // the range as closed would license a zero-width span
+                  // just inside the neighbour's close tag — enough for a
+                  // widened plan to insert an empty CDATA there, keep the
+                  // projection identical, and poison the host's map for
+                  // all later surgery.
+                  let touches = if edit.start == edit.end {
+                    start <= edit.start && edit.start <= end
+                  } else {
+                    edit.start < end && edit.end > start
+                  }
+                  if !touches {
                     continue
                   }
                   let clipped_start = if edit.start > start {
@@ -524,6 +536,20 @@ let partial_lexical_bodies : Array[(String, String)] = [
   ),
   ("empty-text", "<w:p><w:r><w:t></w:t><w:t>ab</w:t></w:r></w:p>"),
   ("runless-text", "<w:p><w:r><w:t>ab</w:t></w:r><w:t>cd</w:t></w:p>"),
+  // Isolated fixtures give only category-vs-raw pairs. This one puts an
+  // entity, a numeric reference and atoms adjacent to each other so the
+  // CROSS-category ordered pairs (entity>numref, numref>atom, ...) enter
+  // the corpus at all.
+  (
+    "mixed-categories", "<w:p><w:r><w:t>&amp;&#38;</w:t><w:tab/><w:noBreakHyphen/><w:t>&#60;z</w:t></w:r></w:p>",
+  ),
+  // Two mixed fixtures, not one: which ordered pairs a sweep can express
+  // depends on the paragraph's WIDTH (the geometries are computed from
+  // it), so a single arrangement reaches some cross-category keys and
+  // not others.
+  (
+    "mixed-references", "<w:p><w:r><w:t>&amp;&#38;</w:t><w:tab/><w:t>&#60;&gt;</w:t><w:noBreakHyphen/><w:t>&amp;z</w:t></w:r></w:p>",
+  ),
 ]
 
 ///|
@@ -583,6 +609,17 @@ test "the lexical matrix the grammar does not reach is proved the same way" {
   assert_true(seen("replace:raw-edge>atom-start-edge") >= 1)
   assert_true(seen("replace:atom-end-edge>raw-interior") >= 1)
   assert_true(seen("replace:raw-interior>atom-start-edge") >= 1)
+  // CROSS-category pairs: isolated fixtures only ever produce
+  // category-vs-raw keys, so a planner could reject entity>numref or
+  // numref>atom while every other floor stayed green. The
+  // mixed-categories fixture puts an entity, a numeric reference and two
+  // ADJACENT atoms side by side — adjacency matters, because at a
+  // coincident boundary the finer text-token class masks the atom.
+  assert_true(seen("replace:entity-edge>numref-edge") >= 1)
+  assert_true(seen("replace:numref-edge>entity-edge") >= 1)
+  assert_true(seen("replace:entity-edge>atom-start-edge") >= 1)
+  assert_true(seen("replace:numref-edge>atom-start-edge") >= 1)
+  assert_true(seen("replace:atom-start-edge>numref-edge") >= 1)
   // The atomless-run synthesis path plans.
   assert_true(seen("insert:bare>bare") >= 1)
   // And every refusal the lexical matrix must produce.

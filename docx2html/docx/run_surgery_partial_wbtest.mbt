@@ -1140,3 +1140,50 @@ test "partial: a nested run between an outer run's texts is gated" {
     _ => fail("expected refusal [PartialFieldInstruction]")
   }
 }
+
+///|
+test "partial: two insertions into an atomless run compose into one element" {
+  // The exact regression the coalescer exists for: both insertions target
+  // the run's single synthesis anchor, and a self-closing `<w:r/>` makes
+  // that anchor the `/>` bytes themselves — emitting them separately
+  // collides instead of composing. The generated suite cannot pin this
+  // alone: it accepts any typed refusal, and the old defect refused with
+  // InternalPlanConflict.
+  let body = "<w:p><w:r/></w:p>"
+  let source = "<w:document xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\" xmlns:v=\"urn:schemas-microsoft-com:vml\"><w:body>\{body}</w:body></w:document>"
+  let bytes = @utf8.encode(source)
+  let projection = surgery_native_projection(source)
+  let (byte_edits, receipt) = plan_paragraph_text_edits(
+    projection,
+    bytes[:],
+    0,
+    [partial_edit(0, 0, "X"), partial_edit(0, 0, "Y")],
+  )
+  assert_eq(byte_edits.length(), 1)
+  assert_eq(receipt.expected_projection, "XY")
+  guard receipt.logical_edits[0].placement is RunSynthesis else {
+    fail("expected run synthesis")
+  }
+  let spliced = @utf8.decode(apply_run_surgery_edits(bytes, byte_edits))
+  assert_true(spliced.contains(">XY</w:t></w:r>"))
+  let reprojected = surgery_native_projection(spliced)
+  let after = StringBuilder::new()
+  for contribution in reprojected.paragraphs[0].contributions {
+    after.write_string(contribution.value)
+  }
+  assert_eq(after.to_string(), "XY")
+}
+
+///|
+test "partial: an insertion and a consuming edit at one atom anchor compose" {
+  // The other mixed shape at a single anchor: a zero-width synthesis
+  // before the atom and a consuming replacement of it must both land,
+  // insertion first, without colliding.
+  let body = "<w:p><w:r><w:tab/><w:t>ab</w:t></w:r></w:p>"
+  assert_partial_edits(
+    body,
+    paragraph=0,
+    [partial_edit(0, 0, "X"), partial_edit(0, 1, "Y")],
+    expected="XYab",
+  )
+}
