@@ -246,8 +246,16 @@ fn plan_whole_run_replacement(
           message="run \{run_index} in paragraph \{paragraph_index} holds visible non-text content",
         )
       // Boundaries produce no text: the run's own opening marker and the
-      // wrappers the reader flattens. They stay.
-      Transparent => ()
+      // wrappers the reader flattens. They stay -- unless the boundary is
+      // an empty drawing or embedded object, which the inventory calls a
+      // hard barrier and this plan has no more representation for than it
+      // does for a visible atom.
+      Transparent =>
+        if run_surgery_is_hard_barrier_container(element) {
+          raise Unsupported(
+            message="run \{run_index} in paragraph \{paragraph_index} holds visible non-text content",
+          )
+        }
       // Suppressed content produced no reader content AT ITS SITE -- the
       // reader decided it contributes nothing -- so replacing the run's
       // text neither needs nor may touch its bytes.
@@ -298,11 +306,20 @@ fn plan_whole_run_replacement(
       match existing {
         Some((from, to)) =>
           if wants_space {
-            edits.push({
-              byte_start: from,
-              byte_end: to,
-              replacement: "xml:space=\"preserve\"",
-            })
+            match
+              run_surgery_space_declaration_is_preserve(source, (from, to)) {
+              Some(true) => ()
+              Some(false) =>
+                edits.push({
+                  byte_start: from,
+                  byte_end: to,
+                  replacement: "xml:space=\"preserve\"",
+                })
+              None =>
+                raise Unsupported(
+                  message="run \{run_index} in paragraph \{paragraph_index} carries an xml:space declaration whose value cannot be decoded",
+                )
+            }
           }
         None => ()
       }
@@ -390,6 +407,112 @@ fn plan_whole_run_replacement(
 }
 
 ///|
+/// Whether an existing declaration's value is already `preserve`.
+///
+/// The locked rule ensures `xml:space="preserve"` by ADDING it, or by
+/// replacing a `default` value-span — an existing `preserve` is left
+/// byte-identical. Rewriting it anyway would change quote style or
+/// spacing for no reason and put bytes the caller never asked about
+/// inside the declared footprint.
+///
+/// The comparison is against the NORMALIZED value, not the raw bytes.
+/// XML resolves references inside an attribute value before the value
+/// means anything, so `xml:space="pre&#x73;erve"` already says
+/// `preserve` and must be left alone. `None` means the value could not
+/// be decoded at all; the caller refuses rather than guessing, because
+/// the alternative is rewriting bytes whose meaning is unknown.
+///
+/// Normalization also folds literal whitespace to spaces, which this
+/// does not do. It cannot change the answer: `preserve` holds no
+/// whitespace, so a value carrying any differs from it either way.
+fn run_surgery_space_declaration_is_preserve(
+  source : BytesView,
+  span : (Int, Int),
+) -> Bool? {
+  let (from, to) = span
+  let mut at = from
+  while at < to && source[at] != b'"' && source[at] != b'\'' {
+    at = at + 1
+  }
+  if at >= to {
+    return None
+  }
+  let quote = source[at]
+  let start = at + 1
+  let mut end = start
+  while end < to && source[end] != quote {
+    end = end + 1
+  }
+  if end >= to {
+    return None
+  }
+  let decoded = StringBuilder()
+  let mut cursor = start
+  while cursor < end {
+    if source[cursor] == b'&' {
+      // The reader's own decoder, which admits the five predefined
+      // entities and strict numeric references — the same set the
+      // scanner documents for attribute values. Nothing wider can
+      // arrive: the strict gate rejects any DOCTYPE, so a document
+      // declaring its own entities never reaches a surgery.
+      let decoded_reference = decode_entity_token(source, cursor, end) catch {
+        _ => return None
+      }
+      let (character, _, next) = decoded_reference
+      // The scan must make progress on every iteration. The decoder
+      // always returns a position past the `;`, but this walks
+      // attacker-controlled bytes, and a decoder that ever failed to
+      // advance would hang the surgery rather than refuse it.
+      if next <= cursor {
+        return None
+      }
+      decoded.write_char(character)
+      cursor = next
+    } else {
+      // Everything outside a reference is literal, so the raw byte run
+      // up to the next `&` decodes as UTF-8 exactly once.
+      let mut run_end = cursor
+      while run_end < end && source[run_end] != b'&' {
+        run_end = run_end + 1
+      }
+      let text = @utf8.decode(source[cursor:run_end]) catch { _ => return None }
+      decoded.write_string(text)
+      cursor = run_end
+    }
+  }
+  Some(decoded.to_string() == "preserve")
+}
+
+///|
+/// Whether a Transparent contribution is really a HARD BARRIER wearing a
+/// seam's clothes.
+///
+/// The reader routes `w:drawing` and `w:object` through the
+/// transparent-boundary path, so an EMPTY one projects a single
+/// Transparent contribution — indistinguishable, by kind alone, from a
+/// bookmark or a run boundary. The five-class inventory calls drawings
+/// and embedded objects hard barriers, and both surgeries already refuse
+/// visible non-text; they simply could not recognise this shape.
+fn run_surgery_is_hard_barrier_container(element : ScannedElement) -> Bool {
+  // WML `drawing` and `object`, and every VML container the reader
+  // dispatches through the same transparent path. `w:pict` is NOT here:
+  // the reader emits it as Suppressed, so it never reaches a Transparent
+  // branch, and the suppressed-content hole is recorded N0 debt rather
+  // than something this predicate can close.
+  if is_wml_uri(element.uri) {
+    return element.local_name == "drawing" || element.local_name == "object"
+  }
+  element.uri == "urn:schemas-microsoft-com:vml" &&
+  (
+    element.local_name == "shape" ||
+    element.local_name == "rect" ||
+    element.local_name == "roundrect" ||
+    element.local_name == "textbox" ||
+    element.local_name == "group"
+  )
+}
+
+///|
 /// Where an element's open tag ends: just before its content, or before the
 /// `/>` when it is self-closing.
 fn run_surgery_open_tag_end(element : ScannedElement) -> Int {
@@ -418,7 +541,25 @@ fn run_surgery_space_declaration(
   }
   let needle = b"xml:space"
   let mut at = element.byte_start
+  // Quote state, so a match is only ever considered where an attribute
+  // NAME can appear. Another attribute's VALUE can carry the whole shape
+  // -- `data='x xml:space = "bogus"'` satisfies both the name-start and
+  // `=` checks below -- and rewriting there corrupts that attribute while
+  // leaving the element with no real declaration at all.
+  let mut quote = b'\x00'
   while at + needle.length() <= stop {
+    if quote != b'\x00' {
+      if source[at] == quote {
+        quote = b'\x00'
+      }
+      at = at + 1
+      continue
+    }
+    if source[at] == b'"' || source[at] == b'\'' {
+      quote = source[at]
+      at = at + 1
+      continue
+    }
     let mut matched = true
     for offset in 0..<needle.length() {
       if source[at + offset] != needle[offset] {
@@ -570,38 +711,6 @@ fn run_surgery_qualified_prefix(
     at = at + 1
   }
   ""
-}
-
-///|
-/// Whether this element's open tag already declares `xml:space`.
-fn run_surgery_declares_space(
-  source : BytesView,
-  element : ScannedElement,
-) -> Bool {
-  let stop = if run_surgery_is_self_closing(element) {
-    element.byte_end - 2
-  } else {
-    element.content_start
-  }
-  if stop <= element.byte_start || stop > source.length() {
-    return false
-  }
-  let needle = b"xml:space"
-  let mut at = element.byte_start
-  while at + needle.length() <= stop {
-    let mut matched = true
-    for offset in 0..<needle.length() {
-      if source[at + offset] != needle[offset] {
-        matched = false
-        break
-      }
-    }
-    if matched {
-      return true
-    }
-    at = at + 1
-  }
-  false
 }
 
 ///|

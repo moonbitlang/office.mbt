@@ -1015,6 +1015,167 @@ L0: pub surface only what N1/N2 need.
   atomically without rewriting either slice or the content between them, and
   the receipt reports both before/after paths.
 
+### N0 gate status (2026-08-21): **NOT YET GO** — criterion (d) outstanding
+
+Criteria (a)-(c) are met and dispositioned below. Criterion (d) is NOT:
+its refusal trials name **restricted regions**, and the surgery
+primitives do not refuse them. Recording GO now would bless a gap, so
+the verdict waits for the rung that closes it (see the outstanding item
+after the dispositions).
+
+N0 landed as the exact lexical map (N0a, PR #224), the bounded physical
+source-tree identity (N0b1, PR #235), the projection index and its logical
+UTF-16 intervals (N0b2-N0b4), whole-run surgery (N0c1, #222), and partial
+token-boundary surgery (N0c2, #236) across four rungs: B1 intra-`w:t`
+batches (PR #471), B2a same-run cross-contribution (PR #472), B2b cross-run
+within one physical paragraph (PR #473), and B3 general composition with
+the generated boundary-pair proof (PR #474). Criteria disposition:
+
+- **every permitted start-kind/end-kind boundary pair**: GO — the accepted
+  endpoint kinds form a permissive product, and refusals come from endpoint
+  RESOLVABILITY (`WtContentMap::byte_offset_at` returning None: mid-entity,
+  mid-numeric-reference, mid-CDATA, surrogate half, empty-token ambiguity)
+  and from the ordered interval's CONTEXT, not from the pair itself.
+  Accounting is by ORDERED `(shape, start-kind, end-kind)` key with text
+  endpoints resolved to TOKEN granularity — a marginal endpoint histogram
+  would let a planner reject one ordered pair while every total stayed
+  green. Two families share one oracle: batches derived from the hostile
+  grammar's documents (971 planned over 16 ordered pairs), and a local
+  family for the lexical matrix that grammar does not reach — entities,
+  numeric references, astral characters, CDATA, `w:cr`/`w:ptab`, atomless
+  runs, runless text, and mixed arrangements placing entities, numeric
+  references and ADJACENT atoms side by side in both orders. That family
+  enumerates EXHAUSTIVELY — every (i, j) range over every fixture, as
+  replacement and as deletion — so its 71 ordered pairs are the permitted
+  set over those bodies rather than a sample of it (1087 batches planned, including the identity replacement over every range so the no-op paths are exercised),
+  and each key's EXACT COUNT is pinned in both directions: a pair that
+  stops being planned fails by name, an unlisted pair being accepted
+  fails, and a single range being refused behind a shared key fails too,
+  which presence alone could not see. Above the counts sits the
+  PER-CASE disposition table: all 1278 generated cases, each named by
+  fixture, paragraph, range and variant, each pinned to `ok` or to the
+  refusal class it raised. Counts can cancel — two cases sharing a key
+  can swap outcomes and leave every total unchanged — and counts cannot
+  name the case that moved; the table does both, and its keys are
+  asserted injective so a future fixture cannot silently weaken it.
+- **partial intra-run, cross-`w:t`, and cross-run edits**: GO — the
+  replacement lands at the FIRST CONSUMED projecting contribution, so a
+  cross-run replacement carries the first consumed run's formatting by
+  construction; middles are emptied in place, the end keeps its tail, and
+  run shells, `rPr`, wrappers (hyperlink, `w:ins`), and transparent seams
+  between the endpoints stay byte-identical.
+- **atom-only and atomless-run synthesis**: GO, with a stated boundary. A
+  nonempty replacement whose first consumed contribution is an atom
+  synthesizes a `w:t` in that atom's run, consuming the atom in the same
+  edit; an insertion beside an atom synthesizes without consuming it; and a
+  paragraph that projects NOTHING synthesizes into its single run after any
+  `rPr` (N0c1's placement). An atomless run in a paragraph that projects
+  something else has no coordinates of its own, so no offset can name it:
+  that refuses `NoSynthesisCarrier` rather than guessing. Naming such a run
+  needs a structural anchor variant, which N1 may add.
+- **multiple ordered non-overlapping edits**: GO — logical overlap refuses
+  BEFORE byte planning, so a byte-level overlap can never surface as a
+  splice error; equal-offset insertions concatenate in REQUEST order and
+  every sort carries an explicit tiebreak, because `Array::sort_by_key` is
+  documented unstable.
+- **`w:t` split/synthesis**: GO, resolved as LEXICAL splitting plus
+  synthesis. No permitted case requires splitting the ELEMENT: content
+  splicing covers partial replacement, insertion, retained heads and tails,
+  and several edits in one content range, while synthesis covers the
+  absence of a usable text host. Structural splitting would enlarge the
+  footprint and add no projection capability; it is deliberately NOT
+  implemented.
+- **escaping and `xml:space` only inside the union**: GO — `xml:space` is
+  decided once per TOUCHED `w:t` from its post-batch full content
+  (replace-wholesale when preservation is needed, never touched when it is
+  not); an untouched `w:t` never gains, loses, or changes the attribute.
+  Logical no-ops are decided on the PROJECTION before any lexical
+  rewriting, so replacing a reference-spelled character with itself
+  produces zero byte edits and never canonicalizes `&#38;` into `&amp;`.
+- **refusal classes, typed and output-free**: GO — a stable private
+  taxonomy (22 classes) with one renderer; no class echoes document or
+  replacement content, and a refusal returns neither plan nor receipt.
+  Precedence is batch-wide BY PHASE (request shape, ownership, structural,
+  endpoint resolution, replacement validity, byte planning, internal
+  validation), so a later edit's earlier-phase defect always wins. A no-op
+  suppresses byte planning, never validation. The generated oracle requires
+  every refusal to name a class from the taxonomy, and holds floors on the
+  classes actually reached.
+- **bytes outside the declared union**: GO — two independent witnesses.
+  Every edit must CONSUME a license derived from the REQUEST and the
+  source tree (the mapped byte range of each requested range, an
+  `xml:space` license only when the post-batch content needs it, an
+  atom's element only when a range covers it, one form-determined
+  synthesis site), each carrying the PAYLOAD that license entitles and
+  spent when used — so a plan can neither touch what no request reaches,
+  nor pay for two edits with one permission, nor spend the right
+  permissions on the wrong writes (deleting one host and writing the
+  replacement into the next consumes identical spans and reprojects
+  identically). Every license must also be spent, so predicted work
+  cannot be silently omitted. The
+  shift-accounting walk then requires every unclaimed byte to survive at
+  its shifted offset. Both are mutation-proven: a stray empty CDATA at a
+  content boundary and a duplicated edit each fail with an unspent-license
+  error, though both reproject identically and preserve untouched bytes.
+- **exact precomputed projection**: GO — the oracle computes the expected
+  projection ITSELF from the paragraph's own projection and the requested
+  ranges, then requires both the RE-READ document (real reader, parsed from
+  scratch) and the plan's receipt to equal that independent string.
+- **no public API**: GO — everything is private with white-box tests; the
+  `.mbti` surface is unchanged across all four rungs.
+- **backends**: GO — native, Wasm, and JS suites all green on the gate
+  commit, as the phase requires.
+- **landing sequence**: #222 landed first (N0c1); #236's rungs land as
+  PRs #471-#474, each through a fresh ephemeral reviewer at `xhigh` or
+  higher (the composition rung at `ultra`) with required checks green on
+  the same pushed commit. The gate verdict itself is NOT recorded by
+  those approvals — it waits for criterion (d).
+
+**Outstanding for GO — criterion (d) refusal trials.** Criterion (d)
+names THREE families the primitives do not yet fail closed on:
+restricted regions, suppressed regions, and multi-physical logical
+paragraphs. N0c2 refuses suppressed crossings and multi-physical
+paragraphs already; N0c1 does not, and it is the one the public surface
+reaches.
+
+1. *Multi-physical logical paragraphs.* The locked rule above says every
+   mutation over a logical paragraph spanning several physical `w:p`
+   nodes must refuse. `plan_whole_run_replacement` accepts one, and its
+   oracle pins the acceptance (`whole-run replacement handles a
+   paragraph joined from two sources`). That pin has to invert.
+2. *Suppressed regions.* N0c1 blanket-ignores owned `SuppressedContent`
+   rather than refusing over it, so a whole-run replacement can span
+   genuine suppressed shapes (`w:del` among them).
+3. *Restricted regions.* Detailed below.
+The Phase-3-wide five-class inventory classifies complex-field cached
+results, boundary-crossing hyperlink interiors, `w:ins` content,
+non-checkbox `w:sdt` content, `mc:Fallback` content, and textbox
+paragraphs as *projecting-restricted*: text that can MATCH but must not
+be MUTATED. Criterion (d) requires each to fail closed with its declared
+error. Today neither primitive refuses them, and the gap is already
+PUBLIC: `plan_run_text_replacement` (N0c1) permits editing a cached
+field result, and `office edit set_run_text` ships that surface. So this
+cannot be deferred to N2b as a match-layer policy — a public consumer
+exists now.
+
+Closing it means classifying restricted ancestry in the surgery
+primitives (both N0c1 and N0c2, since criterion (d) governs the whole
+N0 matrix), raising `RestrictedRegion` — reserved and unraised in the
+taxonomy today — and accepting that edits which currently succeed
+through `office edit set_run_text` will begin to refuse. That is a
+deliberate behaviour change to a shipped surface, which is why it is
+recorded here as the gate's remaining work rather than made silently
+alongside the composition proof.
+
+Locked decisions carried forward: `w:instrText` gets a token map but is
+never a partial-surgery host (require an ordinary WML `t`); any CDATA in a
+map refuses the whole `w:t`; a self-closing `<w:t/>` has no interior and is
+addressable only through the `/>` conversion N0c1 owns; involved-run gating
+is derived from PHYSICAL SPANS, since registration indices follow first
+appearance and the reader tolerates nested runs; a returned annotated result
+is a source-pinned immutable snapshot — surgery writes a NEW archive and
+re-reading it is the only way to observe the mutation.
+
 ## N4 — capstone (M-pattern, consolidation only)
 
 - A typo-fix + review-edit recipe in docs/agent-json-schemas.md (find →

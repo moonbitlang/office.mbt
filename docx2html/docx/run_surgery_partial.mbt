@@ -38,6 +38,12 @@ priv enum PartialSurgeryRefusal {
   CDataContext
   VisibleBarrier
   SuppressedRegion
+  // Declared and rendered, NOT yet raised. The N0 gate's criterion (d)
+  // requires projecting-restricted regions (complex-field results,
+  // boundary-crossing hyperlink interiors, w:ins, non-checkbox w:sdt,
+  // mc:Fallback, textbox paragraphs) to fail closed here, and closing it
+  // is the gate's outstanding work — recorded in the roadmap's N0 gate
+  // status, together with the N0c1 gaps it has to close alongside.
   RestrictedRegion
   PartialFieldInstruction
   PartialMalformedField
@@ -400,6 +406,18 @@ fn plan_paragraph_text_edits(
               SuppressedRegion,
               "edit \{ordinal} in paragraph \{paragraph_index}",
             )
+          // An empty drawing or embedded object reaches the projection as
+          // a Transparent boundary, but the inventory calls it a hard
+          // barrier: a range may not span one.
+          Transparent => {
+            let SourceElementId(seam_identity) = contribution.source
+            if run_surgery_is_hard_barrier_container(elements[seam_identity]) {
+              raise partial_surgery_refuse(
+                VisibleBarrier,
+                "edit \{ordinal} in paragraph \{paragraph_index}",
+              )
+            }
+          }
           _ => ()
         }
       }
@@ -514,10 +532,98 @@ fn plan_paragraph_text_edits(
           }
           let total = text_candidates.length() + atom_candidates.length()
           if total == 0 {
-            raise partial_surgery_refuse(
-              NoSynthesisCarrier,
-              "edit \{ordinal} in paragraph \{paragraph_index}",
+            // No projecting carrier at this boundary. A paragraph that
+            // projects NOTHING has exactly one unambiguous insertion
+            // position, so a single atomless run there is a unique
+            // carrier: synthesize into it after any `rPr`, the placement
+            // N0c1 established. With projecting content elsewhere an
+            // atomless run has no coordinates of its own, so no offset can
+            // name it and the refusal stands.
+            // `parts` holds PROJECTING content only, so a run carrying
+            // just a break or another visible non-text atom would
+            // otherwise look like an empty paragraph and take synthesized
+            // text — but the offset cannot say whether the text belongs
+            // before or after that zero-width barrier, and whole-run
+            // surgery refuses VisibleNonText outright.
+            let mut occupied = false
+            for contribution in paragraph.contributions {
+              match contribution.kind {
+                VisibleNonText | SuppressedContent => occupied = true
+                Transparent => {
+                  let SourceElementId(seam_identity) = contribution.source
+                  if run_surgery_is_hard_barrier_container(
+                      elements[seam_identity],
+                    ) {
+                    occupied = true
+                  }
+                }
+                _ => ()
+              }
+            }
+            guard parts.length() == 0 &&
+              !occupied &&
+              paragraph.runs.length() == 1 else {
+              raise partial_surgery_refuse(
+                NoSynthesisCarrier,
+                "edit \{ordinal} in paragraph \{paragraph_index}",
+              )
+            }
+            let carrier = paragraph.runs[0]
+            require_supported_run(carrier, ordinal)
+            // require_host_element detects cross-paragraph reuse through
+            // the projecting parts, and this path HAS none — so the check
+            // has to be made directly against the carrier. The reader
+            // tolerates a nested `w:p`, whose two logical paragraphs share
+            // the outer run: synthesizing into the empty one would write
+            // into the other paragraph's text while the receipt described
+            // this one.
+            for index, other in projection.paragraphs {
+              if index != paragraph_index {
+                for candidate in other.runs {
+                  if candidate.source == carrier.source {
+                    raise partial_surgery_refuse(
+                      CrossParagraphSourceReuse,
+                      "edit \{ordinal} in paragraph \{paragraph_index} would synthesize into a run of paragraph \{index}",
+                    )
+                  }
+                }
+              }
+            }
+            let SourceElementId(carrier_identity) = carrier.source
+            require_host_element(carrier_identity, ordinal)
+            if edit.replacement == "" {
+              logical_edits.push({
+                ordinal,
+                start: edit.start,
+                end: edit.end,
+                replacement: edit.replacement,
+                placement: LogicalNoOp,
+              })
+              continue
+            }
+            let carrier_element = elements[carrier_identity]
+            let at = run_surgery_first_content_position(
+              elements, carrier_element,
             )
+            involved_elements.push(carrier_identity)
+            syntheses.push(
+              (
+                carrier_identity,
+                at,
+                at,
+                edit.replacement,
+                ordinal,
+                carrier_identity,
+              ),
+            )
+            logical_edits.push({
+              ordinal,
+              start: edit.start,
+              end: edit.end,
+              replacement: edit.replacement,
+              placement: RunSynthesis,
+            })
+            continue
           }
           if total > 1 {
             // Candidates that are all the SAME physical element (projected
@@ -765,7 +871,9 @@ fn plan_paragraph_text_edits(
       involved_elements.push(identity)
     }
     // Logical no-op, decided on the projection before any lexical work —
-    // but its endpoints must still resolve, so they join phase 4.
+    // but its endpoints must still resolve, so they join phase 4. This
+    // covers atom-only ranges too: replacing a tab with a tab is as much
+    // a no-op as replacing text with itself.
     let replaced = before_projection
       .view(start_offset=edit.start, end_offset=edit.end)
       .to_owned()
@@ -958,12 +1066,25 @@ fn plan_paragraph_text_edits(
     // when preservation is not needed; never edit an untouched `w:t`.
     match existing {
       Some((from, to)) =>
+        // An existing `preserve` is left byte-identical; only a `default`
+        // (or any other value) is replaced. A value that cannot be
+        // decoded refuses: rewriting bytes whose meaning is unknown is
+        // exactly what this surgery must not do.
         if wants_space {
-          edits.push({
-            byte_start: from,
-            byte_end: to,
-            replacement: "xml:space=\"preserve\"",
-          })
+          match run_surgery_space_declaration_is_preserve(source, (from, to)) {
+            Some(true) => ()
+            Some(false) =>
+              edits.push({
+                byte_start: from,
+                byte_end: to,
+                replacement: "xml:space=\"preserve\"",
+              })
+            None =>
+              raise partial_surgery_refuse(
+                UnsupportedTextSource,
+                "paragraph \{paragraph_index}",
+              )
+          }
         }
       None =>
         if wants_space {
@@ -1042,7 +1163,46 @@ fn plan_paragraph_text_edits(
       replacement: "",
     })
   }
+  // Syntheses sharing one carrier AND one anchor are ONE element: two
+  // insertions at the same position both rewrite the same `/>` or land at
+  // the same offset, so emitting them separately would collide in phase 7
+  // instead of composing. Replacements concatenate in request order, the
+  // same rule equal-offset insertions into a `w:t` follow.
+  let coalesced : Array[(Int, Int, Int, String, Int, Int)] = []
   for synthesis in syntheses {
+    let (run_identity, anchor, consumed, replacement, ordinal, carrier) = synthesis
+    let mut merged = false
+    for index, existing in coalesced {
+      let (
+        other_run,
+        other_anchor,
+        other_consumed,
+        other_text,
+        other_ordinal,
+        other_carrier,
+      ) = existing
+      if other_run == run_identity &&
+        other_anchor == anchor &&
+        other_consumed == consumed {
+        coalesced[index] = (
+          other_run,
+          other_anchor,
+          other_consumed,
+          other_text + replacement,
+          other_ordinal,
+          other_carrier,
+        )
+        merged = true
+        break
+      }
+    }
+    if !merged {
+      coalesced.push(
+        (run_identity, anchor, consumed, replacement, ordinal, carrier),
+      )
+    }
+  }
+  for synthesis in coalesced {
     let (run_identity, anchor, consumed, replacement, _, _) = synthesis
     let run_element = elements[run_identity]
     let prefix = run_surgery_qualified_prefix(source, run_element)

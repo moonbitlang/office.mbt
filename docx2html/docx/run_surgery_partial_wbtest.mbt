@@ -773,8 +773,12 @@ test "partial: two insertions before one atom keep request order" {
   // One distinct carrier atom, two synthesis operations.
   assert_eq(receipt.touched_source_count, 1)
   let spliced = @utf8.decode(apply_run_surgery_edits(bytes, byte_edits))
-  assert_true(spliced.contains(">X</w:t>"))
-  assert_true(spliced.contains(">Y</w:t><w:tab/>"))
+  // Both insertions share one carrier and one anchor, so they compose into
+  // ONE synthesized element with the replacements concatenated in request
+  // order — the same rule equal-offset insertions into a `w:t` follow, and
+  // the only shape that cannot collide when the carrier is a self-closing
+  // run whose `/>` each synthesis would rewrite.
+  assert_true(spliced.contains(">XY</w:t><w:tab/>"))
 }
 
 ///|
@@ -1135,4 +1139,353 @@ test "partial: a nested run between an outer run's texts is gated" {
   } noraise {
     _ => fail("expected refusal [PartialFieldInstruction]")
   }
+}
+
+///|
+test "partial: two insertions into an atomless run compose into one element" {
+  // The exact regression the coalescer exists for: both insertions target
+  // the run's single synthesis anchor, and a self-closing `<w:r/>` makes
+  // that anchor the `/>` bytes themselves — emitting them separately
+  // collides instead of composing. The generated suite cannot pin this
+  // alone: it accepts any typed refusal, and the old defect refused with
+  // InternalPlanConflict.
+  let body = "<w:p><w:r/></w:p>"
+  let source = "<w:document xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\" xmlns:v=\"urn:schemas-microsoft-com:vml\"><w:body>\{body}</w:body></w:document>"
+  let bytes = @utf8.encode(source)
+  let projection = surgery_native_projection(source)
+  let (byte_edits, receipt) = plan_paragraph_text_edits(
+    projection,
+    bytes[:],
+    0,
+    [partial_edit(0, 0, "X"), partial_edit(0, 0, "Y")],
+  )
+  assert_eq(byte_edits.length(), 1)
+  assert_eq(receipt.expected_projection, "XY")
+  guard receipt.logical_edits[0].placement is RunSynthesis else {
+    fail("expected run synthesis")
+  }
+  let spliced = @utf8.decode(apply_run_surgery_edits(bytes, byte_edits))
+  assert_true(spliced.contains(">XY</w:t></w:r>"))
+  let reprojected = surgery_native_projection(spliced)
+  let after = StringBuilder::new()
+  for contribution in reprojected.paragraphs[0].contributions {
+    after.write_string(contribution.value)
+  }
+  assert_eq(after.to_string(), "XY")
+}
+
+///|
+test "partial: an insertion and a consuming edit at one atom anchor compose" {
+  // The other mixed shape at a single anchor: a zero-width synthesis
+  // before the atom and a consuming replacement of it must both land,
+  // insertion first, without colliding.
+  let body = "<w:p><w:r><w:tab/><w:t>ab</w:t></w:r></w:p>"
+  assert_partial_edits(
+    body,
+    paragraph=0,
+    [partial_edit(0, 0, "X"), partial_edit(0, 1, "Y")],
+    expected="XYab",
+  )
+}
+
+///|
+test "partial: atomless synthesis refuses a run shared with another paragraph" {
+  // The reader tolerates a nested `w:p`; its two logical paragraphs share
+  // the OUTER run. Synthesizing into the empty one would write into the
+  // other paragraph's text while the receipt described this one — the
+  // projecting paths catch this through their contributions, but the
+  // atomless path has none, so it needs its own check.
+  let source = "<w:document xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\"><w:body><w:p><w:r><w:p><w:r><w:t>inner</w:t></w:r></w:p></w:r></w:p></w:body></w:document>"
+  let bytes = @utf8.encode(source)
+  let projection = surgery_native_projection(source)
+  let mut empty_index = -1
+  for index, paragraph in projection.paragraphs {
+    if paragraph.projection_end == paragraph.projection_start {
+      empty_index = index
+    }
+  }
+  guard empty_index >= 0 else { fail("expected an empty logical paragraph") }
+  try
+    plan_paragraph_text_edits(projection, bytes[:], empty_index, [
+      partial_edit(0, 0, "X"),
+    ])
+    |> ignore
+  catch {
+    Unsupported(message~) =>
+      assert_true(message.contains("[CrossParagraphSourceReuse]"), msg=message)
+    _ => fail("expected a typed refusal")
+  } noraise {
+    _ => fail("expected refusal [CrossParagraphSourceReuse]")
+  }
+}
+
+///|
+test "partial: a quoted attribute value is not mistaken for xml:space" {
+  // `data='x xml:space = \"bogus\"'` satisfies the name-start and `=`
+  // checks a naive scan makes, so a scan without quote state rewrites
+  // INSIDE that value — corrupting an unrelated attribute and leaving
+  // the element with no real declaration. The edit needs preservation,
+  // so a correct plan must add a genuine attribute instead.
+  let body = "<w:p><w:r><w:t data='x xml:space = \"bogus\"'>ab</w:t></w:r></w:p>"
+  let source = "<w:document xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\" xmlns:v=\"urn:schemas-microsoft-com:vml\"><w:body>\{body}</w:body></w:document>"
+  let bytes = @utf8.encode(source)
+  let projection = surgery_native_projection(source)
+  let (byte_edits, _) = plan_paragraph_text_edits(projection, bytes[:], 0, [
+    partial_edit(0, 1, " s"),
+  ])
+  let spliced = @utf8.decode(apply_run_surgery_edits(bytes, byte_edits))
+  // The decoy value survives byte-identical...
+  assert_true(spliced.contains("data='x xml:space = \"bogus\"'"))
+  // ...and a REAL declaration is added to the element.
+  assert_true(spliced.contains("xml:space=\"preserve\""))
+  let reprojected = surgery_native_projection(spliced)
+  let after = StringBuilder::new()
+  for contribution in reprojected.paragraphs[0].contributions {
+    after.write_string(contribution.value)
+  }
+  assert_eq(after.to_string(), " sb")
+}
+
+///|
+test "partial: a run holding only visible non-text is not a synthesis carrier" {
+  // The projecting-parts test alone would call this paragraph empty and
+  // synthesize into it, but an offset cannot say whether the text belongs
+  // before or after a zero-width break, and whole-run surgery refuses
+  // VisibleNonText outright.
+  assert_partial_refusal(
+    "<w:p><w:r><w:br/></w:r></w:p>",
+    paragraph=0,
+    [partial_edit(0, 0, "X")],
+    refusal="NoSynthesisCarrier",
+  )
+}
+
+///|
+test "partial: an atom-only no-op plans nothing" {
+  let body = "<w:p><w:r><w:tab/></w:r></w:p>"
+  let source = "<w:document xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\" xmlns:v=\"urn:schemas-microsoft-com:vml\"><w:body>\{body}</w:body></w:document>"
+  let bytes = @utf8.encode(source)
+  let projection = surgery_native_projection(source)
+  let (byte_edits, receipt) = plan_paragraph_text_edits(
+    projection,
+    bytes[:],
+    0,
+    [partial_edit(0, 1, "\t")],
+  )
+  assert_eq(byte_edits.length(), 0)
+  guard receipt.logical_edits[0].placement is LogicalNoOp else {
+    fail("expected a logical no-op")
+  }
+}
+
+///|
+test "partial: synthesis reproduces a default-namespace run's spelling" {
+  // Every composition fixture binds WML as `w:`; an unprefixed run must
+  // synthesize `<t xmlns="...">`, not `<w:t>`.
+  let body = "<p><r><tab/></r></p>"
+  let source = "<document xmlns=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\"><body>\{body}</body></document>"
+  let bytes = @utf8.encode(source)
+  let projection = surgery_native_projection(source)
+  let (byte_edits, _) = plan_paragraph_text_edits(projection, bytes[:], 0, [
+    partial_edit(0, 1, "X"),
+  ])
+  let spliced = @utf8.decode(apply_run_surgery_edits(bytes, byte_edits))
+  assert_true(
+    spliced.contains(
+      "<t xmlns=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\">X</t>",
+    ),
+  )
+}
+
+///|
+test "partial: an empty drawing is a hard barrier, not a seam" {
+  // The reader routes w:drawing through the transparent-boundary path,
+  // so an EMPTY one projects a single Transparent contribution — by kind
+  // alone indistinguishable from a bookmark. The inventory calls it a
+  // hard barrier, so a range may not span it, and a paragraph holding
+  // one is not an empty synthesis carrier.
+  assert_partial_refusal(
+    "<w:p><w:r><w:t>ab</w:t><w:drawing/><w:t>cd</w:t></w:r></w:p>",
+    paragraph=0,
+    [partial_edit(1, 3, "x")],
+    refusal="VisibleBarrier",
+  )
+  assert_partial_refusal(
+    "<w:p><w:r><w:drawing/></w:r></w:p>",
+    paragraph=0,
+    [partial_edit(0, 0, "X")],
+    refusal="NoSynthesisCarrier",
+  )
+  // The same holds for an embedded object.
+  assert_partial_refusal(
+    "<w:p><w:r><w:t>ab</w:t><w:object/><w:t>cd</w:t></w:r></w:p>",
+    paragraph=0,
+    [partial_edit(1, 3, "x")],
+    refusal="VisibleBarrier",
+  )
+}
+
+///|
+test "partial: every VML drawing container is a hard barrier too" {
+  // The reader dispatches five VML containers through the same
+  // transparent path as w:drawing, so a WML-only predicate left them
+  // looking like seams: a range could span one, and a run holding only
+  // one could take synthesized text.
+  for name in ["shape", "rect", "roundrect", "textbox", "group"] {
+    let container = "<v:\{name}/>"
+    assert_partial_refusal(
+      "<w:p><w:r><w:t>ab</w:t>\{container}<w:t>cd</w:t></w:r></w:p>",
+      paragraph=0,
+      [partial_edit(1, 3, "x")],
+      refusal="VisibleBarrier",
+    )
+    assert_partial_refusal(
+      "<w:p><w:r>\{container}</w:r></w:p>",
+      paragraph=0,
+      [partial_edit(0, 0, "X")],
+      refusal="NoSynthesisCarrier",
+    )
+    // And whole-run replacement refuses the run outright.
+    let source = "<w:document xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\" xmlns:v=\"urn:schemas-microsoft-com:vml\"><w:body><w:p><w:r><w:t>a</w:t>\{container}</w:r></w:p></w:body></w:document>"
+    let bytes = @utf8.encode(source)
+    let projection = surgery_native_projection(source)
+    try
+      plan_whole_run_replacement(projection, bytes[:], 0, 0, "x") |> ignore
+    catch {
+      Unsupported(message~) =>
+        assert_true(message.contains("visible non-text"), msg=message)
+      _ => fail("expected an Unsupported refusal")
+    } noraise {
+      _ => fail("expected v:\{name} to refuse")
+    }
+  }
+}
+
+///|
+test "whole-run replacement refuses a run holding an empty drawing" {
+  // The same classification hole in N0c1: it ignores every Transparent
+  // contribution, so a run whose only non-text content is an empty
+  // drawing was replaced without accounting for the drawing at all.
+  let source =
+    #|<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:body><w:p><w:r><w:t>a</w:t><w:drawing/></w:r></w:p></w:body></w:document>
+  let bytes = @utf8.encode(source)
+  let projection = surgery_native_projection(source)
+  try
+    plan_whole_run_replacement(projection, bytes[:], 0, 0, "x") |> ignore
+  catch {
+    Unsupported(message~) =>
+      assert_true(message.contains("visible non-text"), msg=message)
+    _ => fail("expected an Unsupported refusal")
+  } noraise {
+    _ => fail("expected the empty drawing to refuse")
+  }
+}
+
+///|
+test "partial: an existing preserve declaration is left byte-identical" {
+  // The locked rule ensures preservation by ADDING the attribute or by
+  // replacing a `default` value — an existing `preserve` is untouched,
+  // whatever quote style it uses. Rewriting it would put bytes the
+  // caller never asked about inside the declared footprint.
+  let body = "<w:p><w:r><w:t xml:space='preserve'> ab </w:t></w:r></w:p>"
+  let source = "<w:document xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\" xmlns:v=\"urn:schemas-microsoft-com:vml\"><w:body>\{body}</w:body></w:document>"
+  let bytes = @utf8.encode(source)
+  let projection = surgery_native_projection(source)
+  let (byte_edits, _) = plan_paragraph_text_edits(projection, bytes[:], 0, [
+    partial_edit(1, 2, "X"),
+  ])
+  let spliced = @utf8.decode(apply_run_surgery_edits(bytes, byte_edits))
+  assert_true(spliced.contains("xml:space='preserve'"))
+  assert_false(spliced.contains("xml:space=\"preserve\""))
+  // A `default` declaration IS replaced, since the content needs
+  // preservation and `default` would strip it.
+  let default_body = "<w:p><w:r><w:t xml:space='default'>ab</w:t></w:r></w:p>"
+  let default_source = "<w:document xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\" xmlns:v=\"urn:schemas-microsoft-com:vml\"><w:body>\{default_body}</w:body></w:document>"
+  let default_bytes = @utf8.encode(default_source)
+  let default_projection = surgery_native_projection(default_source)
+  let (default_edits, _) = plan_paragraph_text_edits(
+    default_projection,
+    default_bytes[:],
+    0,
+    [partial_edit(0, 1, " s")],
+  )
+  let default_spliced = @utf8.decode(
+    apply_run_surgery_edits(default_bytes, default_edits),
+  )
+  assert_true(default_spliced.contains("xml:space=\"preserve\""))
+  assert_false(default_spliced.contains("xml:space='default'"))
+}
+
+///|
+test "whole-run replacement leaves an existing preserve byte-identical" {
+  let source =
+    #|<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:body><w:p><w:r><w:t xml:space='preserve'> a </w:t></w:r></w:p></w:body></w:document>
+  let bytes = @utf8.encode(source)
+  let projection = surgery_native_projection(source)
+  let edits = plan_whole_run_replacement(projection, bytes[:], 0, 0, " b ")
+  let spliced = @utf8.decode(apply_run_surgery_edits(bytes, edits))
+  assert_true(spliced.contains("xml:space='preserve'"))
+  assert_false(spliced.contains("xml:space=\"preserve\""))
+}
+
+///|
+test "partial: a reference-spelled preserve is left byte-identical" {
+  // XML resolves references inside an attribute value before the value
+  // means anything, so `pre&#x73;erve` already SAYS preserve. Comparing
+  // raw bytes would call it something else and rewrite the declaration,
+  // which the locked rule forbids.
+  let body =
+    #|<w:p><w:r><w:t xml:space="pre&#x73;erve"> ab </w:t></w:r></w:p>
+  let source = "<w:document xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\" xmlns:v=\"urn:schemas-microsoft-com:vml\"><w:body>\{body}</w:body></w:document>"
+  let bytes = @utf8.encode(source)
+  let projection = surgery_native_projection(source)
+  let (byte_edits, _) = plan_paragraph_text_edits(projection, bytes[:], 0, [
+    partial_edit(1, 2, "X"),
+  ])
+  let spliced = @utf8.decode(apply_run_surgery_edits(bytes, byte_edits))
+  assert_true(spliced.contains("xml:space=\"pre&#x73;erve\""))
+  assert_false(spliced.contains("xml:space=\"preserve\""))
+  // The decimal spelling of the same character, and a decimal reference
+  // in a value that does NOT say preserve, which IS replaced.
+  let decimal =
+    #|<w:p><w:r><w:t xml:space="pre&#115;erve"> ab </w:t></w:r></w:p>
+  let decimal_source = "<w:document xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\" xmlns:v=\"urn:schemas-microsoft-com:vml\"><w:body>\{decimal}</w:body></w:document>"
+  let decimal_bytes = @utf8.encode(decimal_source)
+  let (decimal_edits, _) = plan_paragraph_text_edits(
+    surgery_native_projection(decimal_source),
+    decimal_bytes[:],
+    0,
+    [partial_edit(1, 2, "X")],
+  )
+  let decimal_spliced = @utf8.decode(
+    apply_run_surgery_edits(decimal_bytes, decimal_edits),
+  )
+  assert_true(decimal_spliced.contains("xml:space=\"pre&#115;erve\""))
+  let other =
+    #|<w:p><w:r><w:t xml:space="&#100;efault">ab</w:t></w:r></w:p>
+  let other_source = "<w:document xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\" xmlns:v=\"urn:schemas-microsoft-com:vml\"><w:body>\{other}</w:body></w:document>"
+  let other_bytes = @utf8.encode(other_source)
+  let (other_edits, _) = plan_paragraph_text_edits(
+    surgery_native_projection(other_source),
+    other_bytes[:],
+    0,
+    [partial_edit(0, 1, " s")],
+  )
+  let other_spliced = @utf8.decode(
+    apply_run_surgery_edits(other_bytes, other_edits),
+  )
+  assert_true(other_spliced.contains("xml:space=\"preserve\""))
+  assert_false(other_spliced.contains("&#100;efault"))
+}
+
+///|
+test "whole-run replacement leaves a reference-spelled preserve alone" {
+  let source =
+    #|<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:body><w:p><w:r><w:t xml:space="pre&#x73;erve"> a </w:t></w:r></w:p></w:body></w:document>
+  let bytes = @utf8.encode(source)
+  let projection = surgery_native_projection(source)
+  let edits = plan_whole_run_replacement(projection, bytes[:], 0, 0, " b ")
+  let spliced = @utf8.decode(apply_run_surgery_edits(bytes, edits))
+  assert_true(spliced.contains("xml:space=\"pre&#x73;erve\""))
+  assert_false(spliced.contains("xml:space=\"preserve\""))
 }
