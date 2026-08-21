@@ -535,6 +535,25 @@ fn plan_paragraph_text_edits(
             }
             let carrier = paragraph.runs[0]
             require_supported_run(carrier, ordinal)
+            // require_host_element detects cross-paragraph reuse through
+            // the projecting parts, and this path HAS none — so the check
+            // has to be made directly against the carrier. The reader
+            // tolerates a nested `w:p`, whose two logical paragraphs share
+            // the outer run: synthesizing into the empty one would write
+            // into the other paragraph's text while the receipt described
+            // this one.
+            for index, other in projection.paragraphs {
+              if index != paragraph_index {
+                for candidate in other.runs {
+                  if candidate.source == carrier.source {
+                    raise partial_surgery_refuse(
+                      CrossParagraphSourceReuse,
+                      "edit \{ordinal} in paragraph \{paragraph_index} would synthesize into a run of paragraph \{index}",
+                    )
+                  }
+                }
+              }
+            }
             let SourceElementId(carrier_identity) = carrier.source
             require_host_element(carrier_identity, ordinal)
             if edit.replacement == "" {

@@ -125,6 +125,63 @@ fn partial_primary_class(classes : Array[String]) -> String {
 /// Derive a batch from a paragraph's own projection. Every geometry runs on
 /// every paragraph: selecting one by document index would leave whole
 /// geometries unexercised on documents whose shapes only they reach.
+/// EXHAUSTIVE single-range batches over one paragraph: every (i, j) with
+/// i <= j, as a replacement and — when non-empty — as a deletion. Sampled
+/// geometries can only demonstrate the pairs they happen to hit, which is
+/// why the identity set they produced was not the permitted set.
+fn partial_exhaustive_batches_for(
+  projection : ReaderProjection,
+  elements : Array[ScannedElement],
+  paragraph_index : Int,
+) -> Array[PartialBatchPlan] {
+  let paragraph = projection.paragraphs[paragraph_index]
+  let width = paragraph.projection_end - paragraph.projection_start
+  let batches : Array[PartialBatchPlan] = []
+  fn build(requested : Array[(Int, Int, String)]) -> Unit {
+    let edits : Array[ParagraphTextEdit] = []
+    let pairs : Array[String] = []
+    for entry in requested {
+      let (start, end, replacement) = entry
+      edits.push({ start, end, replacement })
+      let start_class = partial_primary_class(
+        partial_offset_classes(paragraph, elements, start),
+      )
+      let end_class = partial_primary_class(
+        partial_offset_classes(paragraph, elements, end),
+      )
+      let shape = if start == end {
+        "insert"
+      } else if replacement == "" {
+        "delete"
+      } else {
+        "replace"
+      }
+      pairs.push("\{shape}:\{start_class}>\{end_class}")
+    }
+    if edits.length() > 0 {
+      batches.push({ paragraph_index, edits, pairs })
+    }
+  }
+
+  for i in 0..<=width {
+    for j in i..<=width {
+      if i == j {
+        build([(i, j, "X")])
+      } else {
+        build([(i, j, "X")])
+        build([(i, j, "")])
+      }
+    }
+  }
+  // Composition shapes the single-range sweep cannot express.
+  if width >= 3 {
+    build([(0, 1, "A"), (2, 3, "C")])
+    build([(0, 0, "P"), (1, width - 1, "M"), (width, width, "S")])
+  }
+  batches
+}
+
+///|
 fn partial_batches_for(
   projection : ReaderProjection,
   elements : Array[ScannedElement],
@@ -193,8 +250,13 @@ fn partial_allowed_spans(
   paragraph : ReaderProjectionParagraph,
   elements : Array[ScannedElement],
   requested : Array[ParagraphTextEdit],
-) -> Array[(Int, Int)] {
-  let allowed : Array[(Int, Int)] = []
+) -> Array[(Int, Int, Bool)] {
+  // (from, to, exact): `exact` means the plan's edit must BE this span,
+  // not merely sit inside it. Production has exactly one choice at those
+  // places, and containment there licenses extra work — a zero-width
+  // edit at a self-closing marker's end, or a rewrite of an atom a pure
+  // insertion is only supposed to sit beside.
+  let allowed : Array[(Int, Int, Bool)] = []
   let carrier_runs : Array[SourceElementId] = []
   fn note_run(run_source : SourceElementId?) -> Unit {
     match run_source {
@@ -237,7 +299,7 @@ fn partial_allowed_spans(
         note_run(contribution.run_source)
         if is_wml_uri(element.uri) && element.local_name == "t" {
           if element.content_start == element.byte_end {
-            allowed.push((element.byte_end - 2, element.byte_end))
+            allowed.push((element.byte_end - 2, element.byte_end, true))
           } else {
             // OFFSET-specific, not merely carrier-specific: only the byte
             // ranges the requested logical ranges map to. Allowing the
@@ -276,23 +338,36 @@ fn partial_allowed_spans(
                       map.byte_offset_at(range_start),
                       map.byte_offset_at(range_end),
                     ) {
-                    (Some(from), Some(to)) => allowed.push((from, to))
+                    (Some(from), Some(to)) => allowed.push((from, to, false))
                     _ => ()
                   }
                 }
               None => ()
             }
             // The open tag, where `xml:space` lives.
-            allowed.push((element.byte_start, element.content_start))
+            allowed.push((element.byte_start, element.content_start, false))
           }
         } else {
-          allowed.push((element.byte_start, element.byte_end))
+          allowed.push((element.byte_start, element.byte_end, false))
         }
       }
-      // Atoms are consumed whole, by synthesis or by deletion.
+      // An atom is consumed WHOLE (synthesis replacing it, or deletion),
+      // or merely sat beside by a pure insertion — which must not rewrite
+      // it. So its element span is exact, and the adjacent insertion
+      // points are separate zero-width sites.
       ProjectedText(_) => {
         note_run(contribution.run_source)
-        allowed.push((element.byte_start, element.byte_end))
+        let mut covered = false
+        for edit in requested {
+          if edit.start != edit.end && edit.start <= start && end <= edit.end {
+            covered = true
+          }
+        }
+        if covered {
+          allowed.push((element.byte_start, element.byte_end, true))
+        }
+        allowed.push((element.byte_start, element.byte_start, true))
+        allowed.push((element.byte_end, element.byte_end, true))
       }
       VisibleNonText => ()
     }
@@ -326,7 +401,7 @@ fn partial_allowed_spans(
     // together (or the run's content end, which synthesis never uses)
     // would accept an extra empty element that reprojects identically.
     if run_element.content_start == run_element.byte_end {
-      allowed.push((run_element.byte_end - 2, run_element.byte_end))
+      allowed.push((run_element.byte_end - 2, run_element.byte_end, true))
     } else {
       let mut anchor = run_element.content_start
       let mut child = run_element.first_child_index
@@ -337,7 +412,7 @@ fn partial_allowed_spans(
         }
         child = candidate.next_sibling_index
       }
-      allowed.push((anchor, anchor))
+      allowed.push((anchor, anchor, true))
     }
   }
   allowed
@@ -419,8 +494,13 @@ fn assert_partial_batch(
   for edit in byte_edits {
     let mut inside = false
     for span in allowed {
-      let (from, to) = span
-      if edit.byte_start >= from && edit.byte_end <= to {
+      let (from, to, exact) = span
+      let licensed = if exact {
+        edit.byte_start == from && edit.byte_end == to
+      } else {
+        edit.byte_start >= from && edit.byte_end <= to
+      }
+      if licensed {
         inside = true
       }
     }
@@ -581,7 +661,10 @@ test "the lexical matrix the grammar does not reach is proved the same way" {
     let projection = surgery_native_projection(source)
     let elements = projection.scan.elements()
     for paragraph_index in 0..<projection.paragraphs.length() {
-      for batch in partial_batches_for(projection, elements, paragraph_index) {
+      for
+        batch in partial_exhaustive_batches_for(
+          projection, elements, paragraph_index,
+        ) {
         let fresh = surgery_native_projection(source)
         let (planned_pairs, refusal, carriers) = assert_partial_batch(
           source, fresh, batch,
@@ -603,10 +686,10 @@ test "the lexical matrix the grammar does not reach is proved the same way" {
   }
   let seen = (pair : String) => pairs.get(pair).unwrap_or(0)
   let refused = (name : String) => refusals.get(name).unwrap_or(0)
-  // Measured at this commit: 173 batches planned over 37 distinct
-  // ordered pairs, 12+ of them multi-edit across multiple carriers. The
-  // identity set above is the real pin; these are volume floors.
-  assert_true(planned >= 160, msg="only \{planned} lexical batches planned")
+  // Measured at this commit: 493 batches planned over 62 distinct
+  // ordered pairs, 14 of them multi-edit across multiple carriers. The
+  // identity set is the real pin; these are volume floors.
+  assert_true(planned >= 450, msg="only \{planned} lexical batches planned")
   // Entity and numeric-reference boundaries plan in BOTH orders; their
   // interiors are unresolvable and refuse below.
   // The IDENTITY SET, not merely its cardinality: a count floor lets one
@@ -621,7 +704,7 @@ test "the lexical matrix the grammar does not reach is proved the same way" {
   }
   let lexical_pairs = pairs.size()
   assert_true(
-    lexical_pairs >= 37,
+    lexical_pairs >= 62,
     msg="only \{lexical_pairs} distinct ordered pairs in the lexical family",
   )
   // BOTH orders of every mixed pair: a planner refusing only the
@@ -710,7 +793,7 @@ test "the source allowlist rejects a plan that widens beyond the request" {
   }
   let mut licensed = false
   for span in allowed {
-    let (span_from, span_to) = span
+    let (span_from, span_to, _) = span
     if from >= span_from && to <= span_to {
       licensed = true
     }
@@ -725,7 +808,7 @@ test "the source allowlist rejects a plan that widens beyond the request" {
   guard map.byte_offset_at(1) is Some(request_to) else { fail("offset 1") }
   let mut request_licensed = false
   for span in allowed {
-    let (span_from, span_to) = span
+    let (span_from, span_to, _) = span
     if request_from >= span_from && request_to <= span_to {
       request_licensed = true
     }
@@ -762,7 +845,7 @@ test "the allowlist pins the half-open rule and the synthesis anchors" {
   guard first_host is Some(host) else { fail("expected a first text host") }
   let mut licensed_tail = false
   for span in allowed {
-    let (from, to) = span
+    let (from, to, _) = span
     if host.content_end >= from &&
       host.content_end <= to &&
       from >= host.content_start {
@@ -803,7 +886,7 @@ test "the allowlist pins the half-open rule and the synthesis anchors" {
   assert_true(anchor > run_element.content_start)
   let mut licensed_anchor = false
   for span in simple_allowed {
-    let (from, to) = span
+    let (from, to, _) = span
     if anchor >= from && anchor <= to {
       licensed_anchor = true
     }
@@ -815,7 +898,7 @@ test "the allowlist pins the half-open rule and the synthesis anchors" {
   // And the run's content end is never a synthesis location either.
   let mut licensed_end = false
   for span in simple_allowed {
-    let (from, to) = span
+    let (from, to, _) = span
     if run_element.content_end >= from &&
       run_element.content_end <= to &&
       from > run_element.content_start {
@@ -846,20 +929,31 @@ test "partial: a multi-edit batch across two runs plans" {
 
 ///|
 /// Every ordered (shape, start-kind, end-kind) key the lexical family
-/// plans, measured at this commit. Held as an identity set by the test
-/// above.
+/// plans. The family enumerates EXHAUSTIVELY — every (i, j) range over
+/// every fixture — so this is the permitted set over those bodies, not a
+/// sample of it, and it is held as an identity set: a planner that starts
+/// refusing any single pair fails with that pair's key.
 let partial_expected_pairs : Array[String] = [
   "insert:bare>bare", "delete:raw-edge>raw-edge", "insert:raw-edge>raw-edge", "replace:raw-edge>raw-edge",
   "insert:seam-edge>seam-edge", "delete:entity-edge>raw-edge", "delete:numref-edge>raw-edge",
+  "delete:raw-edge>entity-edge", "delete:raw-edge>numref-edge", "delete:raw-edge>raw-interior",
   "delete:raw-interior>raw-edge", "replace:entity-edge>raw-edge", "replace:numref-edge>raw-edge",
   "replace:raw-edge>entity-edge", "replace:raw-edge>numref-edge", "delete:atom-end-edge>raw-edge",
-  "replace:raw-edge>raw-interior", "replace:raw-interior>raw-edge", "insert:entity-edge>entity-edge",
-  "insert:numref-edge>numref-edge", "delete:atom-start-edge>raw-edge", "replace:entity-edge>entity-edge",
+  "delete:raw-edge>atom-end-edge", "replace:raw-edge>raw-interior", "replace:raw-interior>raw-edge",
+  "delete:entity-edge>entity-edge", "delete:entity-edge>numref-edge", "delete:numref-edge>entity-edge",
+  "delete:numref-edge>numref-edge", "insert:entity-edge>entity-edge", "insert:numref-edge>numref-edge",
+  "replace:atom-end-edge>raw-edge", "replace:raw-edge>atom-end-edge", "delete:atom-start-edge>raw-edge",
+  "delete:entity-edge>raw-interior", "delete:raw-edge>atom-start-edge", "replace:entity-edge>entity-edge",
   "replace:entity-edge>numref-edge", "replace:numref-edge>entity-edge", "replace:numref-edge>numref-edge",
-  "insert:raw-interior>raw-interior", "replace:entity-edge>raw-interior", "replace:raw-edge>atom-start-edge",
-  "replace:entity-edge>atom-end-edge", "replace:raw-interior>raw-interior", "delete:atom-start-edge>entity-edge",
-  "replace:atom-end-edge>raw-interior", "replace:atom-start-edge>entity-edge", "replace:atom-start-edge>numref-edge",
-  "replace:entity-edge>atom-start-edge", "replace:numref-edge>atom-start-edge", "replace:atom-start-edge>raw-interior",
-  "replace:raw-interior>atom-start-edge", "replace:atom-start-edge>atom-end-edge",
+  "delete:entity-edge>atom-end-edge", "delete:raw-interior>raw-interior", "insert:raw-interior>raw-interior",
+  "replace:atom-start-edge>raw-edge", "replace:entity-edge>raw-interior", "replace:raw-edge>atom-start-edge",
+  "delete:atom-end-edge>raw-interior", "delete:raw-interior>atom-end-edge", "replace:entity-edge>atom-end-edge",
+  "replace:raw-interior>raw-interior", "delete:atom-start-edge>entity-edge", "delete:atom-start-edge>numref-edge",
+  "delete:entity-edge>atom-start-edge", "delete:numref-edge>atom-start-edge", "replace:atom-end-edge>raw-interior",
+  "replace:raw-interior>atom-end-edge", "delete:atom-start-edge>raw-interior", "delete:raw-interior>atom-start-edge",
+  "replace:atom-start-edge>entity-edge", "replace:atom-start-edge>numref-edge", "replace:entity-edge>atom-start-edge",
+  "replace:numref-edge>atom-start-edge", "delete:atom-start-edge>atom-end-edge",
+  "replace:atom-start-edge>raw-interior", "replace:raw-interior>atom-start-edge",
+  "replace:atom-start-edge>atom-end-edge", "delete:atom-start-edge>atom-start-edge",
   "replace:atom-start-edge>atom-start-edge",
 ]

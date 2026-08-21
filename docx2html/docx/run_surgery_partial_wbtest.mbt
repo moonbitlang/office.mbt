@@ -1187,3 +1187,34 @@ test "partial: an insertion and a consuming edit at one atom anchor compose" {
     expected="XYab",
   )
 }
+
+///|
+test "partial: atomless synthesis refuses a run shared with another paragraph" {
+  // The reader tolerates a nested `w:p`; its two logical paragraphs share
+  // the OUTER run. Synthesizing into the empty one would write into the
+  // other paragraph's text while the receipt described this one — the
+  // projecting paths catch this through their contributions, but the
+  // atomless path has none, so it needs its own check.
+  let source = "<w:document xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\"><w:body><w:p><w:r><w:p><w:r><w:t>inner</w:t></w:r></w:p></w:r></w:p></w:body></w:document>"
+  let bytes = @utf8.encode(source)
+  let projection = surgery_native_projection(source)
+  let mut empty_index = -1
+  for index, paragraph in projection.paragraphs {
+    if paragraph.projection_end == paragraph.projection_start {
+      empty_index = index
+    }
+  }
+  guard empty_index >= 0 else { fail("expected an empty logical paragraph") }
+  try
+    plan_paragraph_text_edits(projection, bytes[:], empty_index, [
+      partial_edit(0, 0, "X"),
+    ])
+    |> ignore
+  catch {
+    Unsupported(message~) =>
+      assert_true(message.contains("[CrossParagraphSourceReuse]"), msg=message)
+    _ => fail("expected a typed refusal")
+  } noraise {
+    _ => fail("expected refusal [CrossParagraphSourceReuse]")
+  }
+}
