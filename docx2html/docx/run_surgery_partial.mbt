@@ -38,6 +38,13 @@ priv enum PartialSurgeryRefusal {
   CDataContext
   VisibleBarrier
   SuppressedRegion
+  // Reserved for the MATCH/verb layer, not raised by this primitive: the
+  // Phase-3-wide five-class inventory makes projecting-restricted regions
+  // (complex-field results, boundary-crossing hyperlink interiors, w:ins,
+  // non-checkbox w:sdt, mc:Fallback, textbox paragraphs) matchable but
+  // unmutable, which is a policy about which HITS a verb may act on. This
+  // primitive is addressed and has no notion of a match, and N0c1 already
+  // ships field-RESULT editing. See the N0 verdict's handoff obligation.
   RestrictedRegion
   PartialFieldInstruction
   PartialMalformedField
@@ -514,10 +521,56 @@ fn plan_paragraph_text_edits(
           }
           let total = text_candidates.length() + atom_candidates.length()
           if total == 0 {
-            raise partial_surgery_refuse(
-              NoSynthesisCarrier,
-              "edit \{ordinal} in paragraph \{paragraph_index}",
+            // No projecting carrier at this boundary. A paragraph that
+            // projects NOTHING has exactly one unambiguous insertion
+            // position, so a single atomless run there is a unique
+            // carrier: synthesize into it after any `rPr`, the placement
+            // N0c1 established. With projecting content elsewhere an
+            // atomless run has no coordinates of its own, so no offset can
+            // name it and the refusal stands.
+            guard parts.length() == 0 && paragraph.runs.length() == 1 else {
+              raise partial_surgery_refuse(
+                NoSynthesisCarrier,
+                "edit \{ordinal} in paragraph \{paragraph_index}",
+              )
+            }
+            let carrier = paragraph.runs[0]
+            require_supported_run(carrier, ordinal)
+            let SourceElementId(carrier_identity) = carrier.source
+            require_host_element(carrier_identity, ordinal)
+            if edit.replacement == "" {
+              logical_edits.push({
+                ordinal,
+                start: edit.start,
+                end: edit.end,
+                replacement: edit.replacement,
+                placement: LogicalNoOp,
+              })
+              continue
+            }
+            let carrier_element = elements[carrier_identity]
+            let at = run_surgery_first_content_position(
+              elements, carrier_element,
             )
+            involved_elements.push(carrier_identity)
+            syntheses.push(
+              (
+                carrier_identity,
+                at,
+                at,
+                edit.replacement,
+                ordinal,
+                carrier_identity,
+              ),
+            )
+            logical_edits.push({
+              ordinal,
+              start: edit.start,
+              end: edit.end,
+              replacement: edit.replacement,
+              placement: RunSynthesis,
+            })
+            continue
           }
           if total > 1 {
             // Candidates that are all the SAME physical element (projected

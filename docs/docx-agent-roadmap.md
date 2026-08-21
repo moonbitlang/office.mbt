@@ -1022,26 +1022,38 @@ source-tree identity (N0b1, PR #235), the projection index and its logical
 UTF-16 intervals (N0b2-N0b4), whole-run surgery (N0c1, #222), and partial
 token-boundary surgery (N0c2, #236) across four rungs: B1 intra-`w:t`
 batches (PR #471), B2a same-run cross-contribution (PR #472), B2b cross-run
-within one physical paragraph (PR #473), and B3 general composition with the
-generated boundary-pair proof. Criteria disposition:
+within one physical paragraph (PR #473), and B3 general composition with
+the generated boundary-pair proof (PR #474). Criteria disposition:
 
 - **every permitted start-kind/end-kind boundary pair**: GO — the accepted
   endpoint kinds form a permissive product, and refusals come from endpoint
-  RESOLVABILITY (`WtContentMap::byte_offset_at` returning None is the
-  non-scalar refusal: mid-entity, mid-numeric-reference, mid-CDATA,
-  surrogate half, empty-token ambiguity) and from the ordered interval's
-  CONTEXT, not from the pair itself. Proved over generated documents rather
-  than hand-listed fixtures: the property suite derives batches from each
-  document's own projection and its coverage guard requires text interiors,
-  text edges, atom edges, barrier edges, seam edges, and suppressed edges
-  all to appear in PLANNED batches (measured margins: 243 batches planned,
-  text edges 651, seams 196, suppressed 132, atom edges 105, barriers 19).
+  RESOLVABILITY (`WtContentMap::byte_offset_at` returning None: mid-entity,
+  mid-numeric-reference, mid-CDATA, surrogate half, empty-token ambiguity)
+  and from the ordered interval's CONTEXT, not from the pair itself.
+  Accounting is by ORDERED `(shape, start-kind, end-kind)` key with text
+  endpoints resolved to TOKEN granularity — a marginal endpoint histogram
+  would let a planner reject one ordered pair while every total stayed
+  green. Two families share one oracle: batches derived from the hostile
+  grammar's documents (971 planned over 16 ordered pairs), and a local
+  family for the lexical matrix that grammar does not reach — entities,
+  numeric references, astral characters, CDATA, `w:cr`/`w:ptab`, atomless
+  runs, runless text (105 planned over 26 ordered pairs, including entity
+  and numeric-reference edges in BOTH orders).
 - **partial intra-run, cross-`w:t`, and cross-run edits**: GO — the
   replacement lands at the FIRST CONSUMED projecting contribution, so a
   cross-run replacement carries the first consumed run's formatting by
   construction; middles are emptied in place, the end keeps its tail, and
   run shells, `rPr`, wrappers (hyperlink, `w:ins`), and transparent seams
   between the endpoints stay byte-identical.
+- **atom-only and atomless-run synthesis**: GO, with a stated boundary. A
+  nonempty replacement whose first consumed contribution is an atom
+  synthesizes a `w:t` in that atom's run, consuming the atom in the same
+  edit; an insertion beside an atom synthesizes without consuming it; and a
+  paragraph that projects NOTHING synthesizes into its single run after any
+  `rPr` (N0c1's placement). An atomless run in a paragraph that projects
+  something else has no coordinates of its own, so no offset can name it:
+  that refuses `NoSynthesisCarrier` rather than guessing. Naming such a run
+  needs a structural anchor variant, which N1 may add.
 - **multiple ordered non-overlapping edits**: GO — logical overlap refuses
   BEFORE byte planning, so a byte-level overlap can never surface as a
   splice error; equal-offset insertions concatenate in REQUEST order and
@@ -1050,11 +1062,10 @@ generated boundary-pair proof. Criteria disposition:
 - **`w:t` split/synthesis**: GO, resolved as LEXICAL splitting plus
   synthesis. No permitted case requires splitting the ELEMENT: content
   splicing covers partial replacement, insertion, retained heads and tails,
-  and several edits in one content range, while synthesis (namespace binding
-  travelling with the element) covers the absence of a usable text host —
-  an atom-start replacement, an insertion beside an atom, and an atomless
-  run. Structural splitting would enlarge the footprint and add no
-  projection capability; it is deliberately NOT implemented.
+  and several edits in one content range, while synthesis covers the
+  absence of a usable text host. Structural splitting would enlarge the
+  footprint and add no projection capability; it is deliberately NOT
+  implemented.
 - **escaping and `xml:space` only inside the union**: GO — `xml:space` is
   decided once per TOUCHED `w:t` from its post-batch full content
   (replace-wholesale when preservation is needed, never touched when it is
@@ -1062,21 +1073,56 @@ generated boundary-pair proof. Criteria disposition:
   Logical no-ops are decided on the PROJECTION before any lexical
   rewriting, so replacing a reference-spelled character with itself
   produces zero byte edits and never canonicalizes `&#38;` into `&amp;`.
-- **refusal classes**: GO — a stable private taxonomy (22 classes) with one
-  renderer; no class echoes document or replacement content. Precedence is
-  batch-wide BY PHASE (request shape, ownership, structural, endpoint
-  resolution, replacement validity, byte planning, internal validation), so
-  a later edit's earlier-phase defect always wins. A no-op suppresses byte
-  planning, never validation.
-- **bytes outside the declared union**: GO — every oracle ends with the
-  shift-accounting walk, and the property suite applies it to every planned
-  batch over generated documents.
-- **exact precomputed projection**: GO — each plan carries a receipt whose
-  `expected_projection` is computed from the request, and the oracle holds
-  the RE-READ document (real reader, parsed from scratch) to that exact
-  string.
+- **refusal classes, typed and output-free**: GO — a stable private
+  taxonomy (22 classes) with one renderer; no class echoes document or
+  replacement content, and a refusal returns neither plan nor receipt.
+  Precedence is batch-wide BY PHASE (request shape, ownership, structural,
+  endpoint resolution, replacement validity, byte planning, internal
+  validation), so a later edit's earlier-phase defect always wins. A no-op
+  suppresses byte planning, never validation. The generated oracle requires
+  every refusal to name a class from the taxonomy, and holds floors on the
+  classes actually reached.
+- **bytes outside the declared union**: GO — two independent witnesses.
+  Every edit must fall inside a span derived from the SOURCE TREE (each
+  mapped `w:t`'s content range and open tag, each atom's whole element,
+  each run's synthesis anchors), which is what catches a plan that widened
+  its own union over `rPr` or a wrapper; and the shift-accounting walk then
+  requires every unclaimed byte to survive at its shifted offset.
+- **exact precomputed projection**: GO — the oracle computes the expected
+  projection ITSELF from the paragraph's own projection and the requested
+  ranges, then requires both the RE-READ document (real reader, parsed from
+  scratch) and the plan's receipt to equal that independent string.
 - **no public API**: GO — everything is private with white-box tests; the
   `.mbti` surface is unchanged across all four rungs.
+- **backends**: GO — native, Wasm, and JS suites all green on the gate
+  commit, as the phase requires.
+- **landing sequence and review gate**: GO — #222 landed first (N0c1) and
+  #236 lands with PR #474; every rung took a fresh ephemeral reviewer at
+  `xhigh` or higher (this final rung at `ultra`, since it records the
+  gate) to APPROVE, with all required checks green on the same pushed
+  commit.
+
+**Restricted regions are explicitly NOT dispositioned GO by this gate, and
+are not in scope for it.** The Phase-3-wide five-class inventory above
+classifies complex-field cached results, boundary-crossing hyperlink
+interiors, `w:ins` content, non-checkbox `w:sdt` content, `mc:Fallback`
+content, and textbox paragraphs as *projecting-restricted*: text that can
+MATCH but must not be MUTATED, with hits reported for a structured reason.
+That is a property of the MATCH/verb layer — it decides which hits a verb
+may act on — and #236 names match-selection policy as a non-goal. The N0c2
+primitive deliberately does not enforce it: it is addressed, private, and
+has no notion of a match; enforcing there would also contradict N0c1, which
+ships and pins field-RESULT editing (instruction and malformed-field text
+refuse). `RestrictedRegion` is therefore reserved in the taxonomy, unraised
+by the primitive.
+
+**Handoff obligation (binding on N2a/N2b, and on any public verb built over
+these primitives):** no public surface may reach a projecting-restricted
+region without first classifying it and refusing or reporting per the
+five-class inventory. The primitive will happily plan such an edit; the
+layer above is what must not ask. N2b's guarded `replace` is the first
+consumer that has to discharge this, and it should pin the refusal with the
+same oracle used here.
 
 Locked decisions carried forward: `w:instrText` gets a token map but is
 never a partial-surgery host (require an ordinary WML `t`); any CDATA in a
