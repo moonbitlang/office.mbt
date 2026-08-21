@@ -1218,3 +1218,81 @@ test "partial: atomless synthesis refuses a run shared with another paragraph" {
     _ => fail("expected refusal [CrossParagraphSourceReuse]")
   }
 }
+
+///|
+test "partial: a quoted attribute value is not mistaken for xml:space" {
+  // `data='x xml:space = \"bogus\"'` satisfies the name-start and `=`
+  // checks a naive scan makes, so a scan without quote state rewrites
+  // INSIDE that value — corrupting an unrelated attribute and leaving
+  // the element with no real declaration. The edit needs preservation,
+  // so a correct plan must add a genuine attribute instead.
+  let body = "<w:p><w:r><w:t data='x xml:space = \"bogus\"'>ab</w:t></w:r></w:p>"
+  let source = "<w:document xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\" xmlns:v=\"urn:schemas-microsoft-com:vml\"><w:body>\{body}</w:body></w:document>"
+  let bytes = @utf8.encode(source)
+  let projection = surgery_native_projection(source)
+  let (byte_edits, _) = plan_paragraph_text_edits(projection, bytes[:], 0, [
+    partial_edit(0, 1, " s"),
+  ])
+  let spliced = @utf8.decode(apply_run_surgery_edits(bytes, byte_edits))
+  // The decoy value survives byte-identical...
+  assert_true(spliced.contains("data='x xml:space = \"bogus\"'"))
+  // ...and a REAL declaration is added to the element.
+  assert_true(spliced.contains("xml:space=\"preserve\""))
+  let reprojected = surgery_native_projection(spliced)
+  let after = StringBuilder::new()
+  for contribution in reprojected.paragraphs[0].contributions {
+    after.write_string(contribution.value)
+  }
+  assert_eq(after.to_string(), " sb")
+}
+
+///|
+test "partial: a run holding only visible non-text is not a synthesis carrier" {
+  // The projecting-parts test alone would call this paragraph empty and
+  // synthesize into it, but an offset cannot say whether the text belongs
+  // before or after a zero-width break, and whole-run surgery refuses
+  // VisibleNonText outright.
+  assert_partial_refusal(
+    "<w:p><w:r><w:br/></w:r></w:p>",
+    paragraph=0,
+    [partial_edit(0, 0, "X")],
+    refusal="NoSynthesisCarrier",
+  )
+}
+
+///|
+test "partial: an atom-only no-op plans nothing" {
+  let body = "<w:p><w:r><w:tab/></w:r></w:p>"
+  let source = "<w:document xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\" xmlns:v=\"urn:schemas-microsoft-com:vml\"><w:body>\{body}</w:body></w:document>"
+  let bytes = @utf8.encode(source)
+  let projection = surgery_native_projection(source)
+  let (byte_edits, receipt) = plan_paragraph_text_edits(
+    projection,
+    bytes[:],
+    0,
+    [partial_edit(0, 1, "\t")],
+  )
+  assert_eq(byte_edits.length(), 0)
+  guard receipt.logical_edits[0].placement is LogicalNoOp else {
+    fail("expected a logical no-op")
+  }
+}
+
+///|
+test "partial: synthesis reproduces a default-namespace run's spelling" {
+  // Every composition fixture binds WML as `w:`; an unprefixed run must
+  // synthesize `<t xmlns="...">`, not `<w:t>`.
+  let body = "<p><r><tab/></r></p>"
+  let source = "<document xmlns=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\"><body>\{body}</body></document>"
+  let bytes = @utf8.encode(source)
+  let projection = surgery_native_projection(source)
+  let (byte_edits, _) = plan_paragraph_text_edits(projection, bytes[:], 0, [
+    partial_edit(0, 1, "X"),
+  ])
+  let spliced = @utf8.decode(apply_run_surgery_edits(bytes, byte_edits))
+  assert_true(
+    spliced.contains(
+      "<t xmlns=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\">X</t>",
+    ),
+  )
+}

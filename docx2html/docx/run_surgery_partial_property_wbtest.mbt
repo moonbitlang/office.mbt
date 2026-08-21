@@ -257,7 +257,21 @@ fn partial_space_declaration_span(
   let name = "xml:space"
   let limit = element.content_start
   let mut at = element.byte_start
+  // Quote state: another attribute's VALUE can contain the whole shape.
+  let mut quote = 0
   while at + name.length() <= limit {
+    if quote != 0 {
+      if source[at].to_int() == quote {
+        quote = 0
+      }
+      at = at + 1
+      continue
+    }
+    if source[at].to_int() == 0x22 || source[at].to_int() == 0x27 {
+      quote = source[at].to_int()
+      at = at + 1
+      continue
+    }
     let mut matched = true
     for offset in 0..<name.length() {
       if source[at + offset].to_int() != name[offset].to_int() {
@@ -352,22 +366,32 @@ fn partial_paragraph_projection(
 ///|
 /// The qualified prefix a run is written with, read from the source the
 /// way a synthesized element must reproduce it.
-fn partial_run_prefix(source : BytesView, element : ScannedElement) -> String {
-  let out = StringBuilder()
-  let mut at = element.byte_start + 1
-  while at < element.content_start {
-    let code = source[at].to_int()
-    if code == 0x3A {
-      out.write_char(':')
-      return out.to_string()
+fn partial_run_prefix(
+  source : BytesView,
+  element : ScannedElement,
+) -> String raise {
+  // The element NAME only: stop at any XML whitespace, `/` or `>`, and
+  // decode the name as UTF-8 rather than byte-by-byte, so a non-ASCII
+  // prefix is reproduced rather than mangled. Stopping late would let an
+  // ATTRIBUTE's colon be mistaken for the element's prefix.
+  let mut end = element.byte_start + 1
+  while end < element.content_start {
+    let code = source[end].to_int()
+    if code == 0x20 ||
+      code == 0x09 ||
+      code == 0x0A ||
+      code == 0x0D ||
+      code == 0x2F ||
+      code == 0x3E {
+      break
     }
-    if code == 0x20 || code == 0x2F || code == 0x3E {
-      return ""
-    }
-    out.write_char(Int::unsafe_to_char(code))
-    at = at + 1
+    end = end + 1
   }
-  ""
+  let name = @utf8.decode(source[element.byte_start + 1:end].to_bytes())
+  match name.find(":") {
+    Some(index) => name.view(end_offset=index + 1).to_owned()
+    None => ""
+  }
 }
 
 ///|
@@ -378,7 +402,7 @@ fn partial_synthesised_element(
   source : BytesView,
   run_element : ScannedElement,
   text : String,
-) -> String {
+) -> String raise {
   let prefix = partial_run_prefix(source, run_element)
   let binding = if prefix == "" {
     " xmlns=\"" + run_element.uri + "\""
@@ -440,7 +464,7 @@ fn partial_expected_licenses(
   paragraph : ReaderProjectionParagraph,
   elements : Array[ScannedElement],
   requested : Array[ParagraphTextEdit],
-) -> Array[(Int, Int, Bool, String)] {
+) -> Array[(Int, Int, Bool, String)] raise {
   // (from, to, exact, payload). Binding the PAYLOAD is what stops a plan
   // from spending the right permissions on the wrong writes: deleting one
   // host and writing the replacement into the next consumes exactly the
@@ -600,6 +624,15 @@ fn partial_expected_licenses(
       }
       ProjectedText(_) =>
         for edit in requested {
+          // A no-op over an atom (replacing a tab with a tab) plans
+          // nothing, exactly as over text.
+          if edit.start != edit.end &&
+            partial_paragraph_projection(paragraph)
+            .view(start_offset=edit.start, end_offset=edit.end)
+            .to_owned() ==
+            edit.replacement {
+            continue
+          }
           if edit.start != edit.end && edit.start <= start && end <= edit.end {
             // Consumed whole: deleted, or replaced by a synthesized
             // element carrying the text. A leading `?` marks a payload
@@ -643,7 +676,14 @@ fn partial_expected_licenses(
   }
   // A paragraph that projects nothing: ONE synthesis license, however
   // many non-empty insertions ask for it — production coalesces them.
-  if projecting.length() == 0 && paragraph.runs.length() == 1 {
+  let mut occupied = false
+  for contribution in paragraph.contributions {
+    match contribution.kind {
+      VisibleNonText | SuppressedContent => occupied = true
+      _ => ()
+    }
+  }
+  if projecting.length() == 0 && !occupied && paragraph.runs.length() == 1 {
     let SourceElementId(run_identity) = paragraph.runs[0].source
     let run_element = elements[run_identity]
     let mut wanted = false

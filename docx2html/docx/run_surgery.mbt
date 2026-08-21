@@ -418,7 +418,25 @@ fn run_surgery_space_declaration(
   }
   let needle = b"xml:space"
   let mut at = element.byte_start
+  // Quote state, so a match is only ever considered where an attribute
+  // NAME can appear. Another attribute's VALUE can carry the whole shape
+  // -- `data='x xml:space = "bogus"'` satisfies both the name-start and
+  // `=` checks below -- and rewriting there corrupts that attribute while
+  // leaving the element with no real declaration at all.
+  let mut quote = b'\x00'
   while at + needle.length() <= stop {
+    if quote != b'\x00' {
+      if source[at] == quote {
+        quote = b'\x00'
+      }
+      at = at + 1
+      continue
+    }
+    if source[at] == b'"' || source[at] == b'\'' {
+      quote = source[at]
+      at = at + 1
+      continue
+    }
     let mut matched = true
     for offset in 0..<needle.length() {
       if source[at + offset] != needle[offset] {

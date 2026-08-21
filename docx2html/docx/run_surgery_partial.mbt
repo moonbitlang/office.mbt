@@ -527,7 +527,22 @@ fn plan_paragraph_text_edits(
             // N0c1 established. With projecting content elsewhere an
             // atomless run has no coordinates of its own, so no offset can
             // name it and the refusal stands.
-            guard parts.length() == 0 && paragraph.runs.length() == 1 else {
+            // `parts` holds PROJECTING content only, so a run carrying
+            // just a break or another visible non-text atom would
+            // otherwise look like an empty paragraph and take synthesized
+            // text — but the offset cannot say whether the text belongs
+            // before or after that zero-width barrier, and whole-run
+            // surgery refuses VisibleNonText outright.
+            let mut occupied = false
+            for contribution in paragraph.contributions {
+              match contribution.kind {
+                VisibleNonText | SuppressedContent => occupied = true
+                _ => ()
+              }
+            }
+            guard parts.length() == 0 &&
+              !occupied &&
+              paragraph.runs.length() == 1 else {
               raise partial_surgery_refuse(
                 NoSynthesisCarrier,
                 "edit \{ordinal} in paragraph \{paragraph_index}",
@@ -836,7 +851,9 @@ fn plan_paragraph_text_edits(
       involved_elements.push(identity)
     }
     // Logical no-op, decided on the projection before any lexical work —
-    // but its endpoints must still resolve, so they join phase 4.
+    // but its endpoints must still resolve, so they join phase 4. This
+    // covers atom-only ranges too: replacing a tab with a tab is as much
+    // a no-op as replacing text with itself.
     let replaced = before_projection
       .view(start_offset=edit.start, end_offset=edit.end)
       .to_owned()
