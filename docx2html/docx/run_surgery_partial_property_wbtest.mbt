@@ -250,22 +250,43 @@ fn partial_space_declaration_span(
   source : BytesView,
   element : ScannedElement,
 ) -> (Int, Int)? {
-  // The `xml:space="..."` attribute inside an open tag, located by the
-  // test rather than borrowed from production.
-  let needle = "xml:space=\""
+  // `xml:space = '...'` inside an open tag, located by the test. Quote
+  // style and spacing around `=` both vary in real documents, and a scan
+  // that only knew one spelling would reject correct plans over the
+  // others.
+  let name = "xml:space"
   let limit = element.content_start
   let mut at = element.byte_start
-  while at + needle.length() <= limit {
+  while at + name.length() <= limit {
     let mut matched = true
-    for offset in 0..<needle.length() {
-      if source[at + offset].to_int() != needle[offset].to_int() {
+    for offset in 0..<name.length() {
+      if source[at + offset].to_int() != name[offset].to_int() {
         matched = false
         break
       }
     }
     if matched {
-      let mut close = at + needle.length()
-      while close < limit && source[close].to_int() != 0x22 {
+      let mut cursor = at + name.length()
+      while cursor < limit && is_partial_space_byte(source[cursor]) {
+        cursor = cursor + 1
+      }
+      if cursor >= limit || source[cursor].to_int() != 0x3D {
+        at = at + 1
+        continue
+      }
+      cursor = cursor + 1
+      while cursor < limit && is_partial_space_byte(source[cursor]) {
+        cursor = cursor + 1
+      }
+      if cursor >= limit {
+        return None
+      }
+      let quote = source[cursor].to_int()
+      if quote != 0x22 && quote != 0x27 {
+        return None
+      }
+      let mut close = cursor + 1
+      while close < limit && source[close].to_int() != quote {
         close = close + 1
       }
       if close < limit {
@@ -279,11 +300,38 @@ fn partial_space_declaration_span(
 }
 
 ///|
-/// The licenses a correct plan may consume for THIS request: derived from
-/// the source tree and the requested ranges, with multiplicity. Every
-/// plan edit must consume one, so an extra edit — even one that
-/// reprojects identically, like an empty CDATA at a content boundary —
-/// has nothing to spend and fails.
+fn is_partial_space_byte(value : Byte) -> Bool {
+  let code = value.to_int()
+  code == 0x20 || code == 0x09 || code == 0x0A || code == 0x0D
+}
+
+///|
+fn partial_needs_space(text : String) -> Bool {
+  if text.length() == 0 {
+    return false
+  }
+  fn edge(one : String) -> Bool {
+    let mut code = 0
+    for char in one {
+      code = char.to_int()
+    }
+    code == 0x20 || code == 0x09 || code == 0x0A || code == 0x0D
+  }
+
+  edge(text.view(start_offset=0, end_offset=1).to_owned()) ||
+  edge(text.view(start_offset=text.length() - 1).to_owned())
+}
+
+///|
+/// The licenses a correct plan may consume for THIS request, derived from
+/// the source tree and the requested ranges with exact multiplicity.
+///
+/// Placement is modelled the way production places: the FIRST projecting
+/// contribution a range consumes carries the replacement, and every later
+/// one it reaches is trimmed or emptied. Modelling the replacement into
+/// every intersected host instead would compute the wrong post-batch
+/// content, and so grant `xml:space` licenses where production needs none
+/// and withhold them where it does.
 fn partial_expected_licenses(
   source : BytesView,
   paragraph : ReaderProjectionParagraph,
@@ -291,29 +339,45 @@ fn partial_expected_licenses(
   requested : Array[ParagraphTextEdit],
 ) -> Array[(Int, Int, Bool)] {
   let licenses : Array[(Int, Int, Bool)] = []
+  let insertion_sites : Array[Int] = []
+  // Ordered projecting contributions, so "first consumed" is well defined.
+  let projecting : Array[(ReaderProjectionContribution, Int, Int)] = []
   for contribution in paragraph.contributions {
-    let start = contribution.projection_start - paragraph.projection_start
-    let end = contribution.projection_end - paragraph.projection_start
+    if contribution.kind is ProjectedText(_) {
+      projecting.push(
+        (
+          contribution,
+          contribution.projection_start - paragraph.projection_start,
+          contribution.projection_end - paragraph.projection_start,
+        ),
+      )
+    }
+  }
+  fn first_consumed(edit : ParagraphTextEdit) -> SourceElementId? {
+    for entry in projecting {
+      let (contribution, start, end) = entry
+      if edit.start < end && edit.end > start {
+        return Some(contribution.source)
+      }
+    }
+    None
+  }
+
+  for entry in projecting {
+    let (contribution, start, end) = entry
     let SourceElementId(identity) = contribution.source
     let element = elements[identity]
     match contribution.kind {
-      Transparent | SuppressedContent | VisibleNonText => ()
       ProjectedText(FromText) => {
         guard is_wml_uri(element.uri) && element.local_name == "t" else {
-          licenses.push((element.byte_start, element.byte_end, false))
           continue
         }
+        // A self-closing `<w:t/>` is refused outright by partial surgery,
+        // so no plan exists and no license is owed.
         if element.content_start == element.byte_end {
-          // Self-closing: only its marker, and only if something asks.
-          for edit in requested {
-            if start <= edit.start && edit.start <= end {
-              licenses.push((element.byte_end - 2, element.byte_end, true))
-            }
-          }
           continue
         }
         guard element.text_map is Some(map) else { continue }
-        // One license per requested range that reaches into this host.
         let after = StringBuilder()
         let mut cursor = 0
         let mut touched = false
@@ -326,6 +390,11 @@ fn partial_expected_licenses(
           if !touches {
             continue
           }
+          // An empty insertion is a validated no-op: production plans
+          // nothing, so nothing may be spent.
+          if edit.start == edit.end && edit.replacement == "" {
+            continue
+          }
           touched = true
           let clipped_start = if edit.start > start {
             edit.start
@@ -335,9 +404,23 @@ fn partial_expected_licenses(
           let clipped_end = if edit.end < end { edit.end } else { end }
           let range_start = clipped_start - start
           let range_end = clipped_end - start
+          // Only the FIRST consumed contribution carries the text.
+          let carries = edit.start == edit.end ||
+            first_consumed(edit) == Some(contribution.source)
+          let written = if carries { edit.replacement } else { "" }
           match
             (map.byte_offset_at(range_start), map.byte_offset_at(range_end)) {
-            (Some(from), Some(to)) => licenses.push((from, to, true))
+            (Some(from), Some(to)) =>
+              if from == to {
+                // Equal-offset insertions COALESCE into one edit, so one
+                // site earns one license however many requests share it.
+                if !insertion_sites.contains(from) {
+                  insertion_sites.push(from)
+                  licenses.push((from, to, true))
+                }
+              } else {
+                licenses.push((from, to, true))
+              }
             _ => ()
           }
           after.write_string(
@@ -345,7 +428,7 @@ fn partial_expected_licenses(
             .view(start_offset=cursor, end_offset=range_start)
             .to_owned(),
           )
-          after.write_string(edit.replacement)
+          after.write_string(written)
           cursor = range_end
         }
         if !touched {
@@ -354,27 +437,7 @@ fn partial_expected_licenses(
         after.write_string(
           contribution.value.view(start_offset=cursor).to_owned(),
         )
-        // The xml:space license exists only when the POST-BATCH content
-        // needs preservation — computed here, not asked of the planner.
-        let final_content = after.to_string()
-        let needs = if final_content.length() == 0 {
-          false
-        } else {
-          let head = final_content.view(start_offset=0, end_offset=1).to_owned()
-          let tail = final_content
-            .view(start_offset=final_content.length() - 1)
-            .to_owned()
-          fn edge(one : String) -> Bool {
-            let mut code = 0
-            for char in one {
-              code = char.to_int()
-            }
-            code == 0x20 || code == 0x09 || code == 0x0A || code == 0x0D
-          }
-
-          edge(head) || edge(tail)
-        }
-        if needs {
+        if partial_needs_space(after.to_string()) {
           match partial_space_declaration_span(source, element) {
             Some((from, to)) => licenses.push((from, to, true))
             None =>
@@ -385,48 +448,50 @@ fn partial_expected_licenses(
         }
       }
       ProjectedText(_) =>
-        // An atom is consumed WHOLE by a covering range, or sat beside by
-        // an insertion at exactly one of its two projection boundaries.
         for edit in requested {
           if edit.start != edit.end && edit.start <= start && end <= edit.end {
             licenses.push((element.byte_start, element.byte_end, true))
           }
-          if edit.start == edit.end && edit.start == start {
-            licenses.push((element.byte_start, element.byte_start, true))
-          }
-          if edit.start == edit.end && edit.start == end {
-            licenses.push((element.byte_end, element.byte_end, true))
+          if edit.start == edit.end && edit.replacement != "" {
+            if edit.start == start &&
+              !insertion_sites.contains(element.byte_start) {
+              insertion_sites.push(element.byte_start)
+              licenses.push((element.byte_start, element.byte_start, true))
+            }
+            if edit.start == end && !insertion_sites.contains(element.byte_end) {
+              insertion_sites.push(element.byte_end)
+              licenses.push((element.byte_end, element.byte_end, true))
+            }
           }
         }
+      _ => ()
     }
   }
-  // A paragraph that projects nothing: one synthesis license per
-  // non-empty insertion requested, at the single form-determined site.
-  let mut projecting = 0
-  for contribution in paragraph.contributions {
-    if contribution.kind is ProjectedText(_) {
-      projecting += 1
-    }
-  }
-  if projecting == 0 && paragraph.runs.length() == 1 {
+  // A paragraph that projects nothing: ONE synthesis license, however
+  // many non-empty insertions ask for it — production coalesces them.
+  if projecting.length() == 0 && paragraph.runs.length() == 1 {
     let SourceElementId(run_identity) = paragraph.runs[0].source
     let run_element = elements[run_identity]
+    let mut wanted = false
     for edit in requested {
       if edit.start == edit.end && edit.replacement != "" {
-        if run_element.content_start == run_element.byte_end {
-          licenses.push((run_element.byte_end - 2, run_element.byte_end, true))
-        } else {
-          let mut anchor = run_element.content_start
-          let mut child = run_element.first_child_index
-          while child >= 0 {
-            let candidate = elements[child]
-            if is_wml_uri(candidate.uri) && candidate.local_name == "rPr" {
-              anchor = candidate.byte_end
-            }
-            child = candidate.next_sibling_index
+        wanted = true
+      }
+    }
+    if wanted {
+      if run_element.content_start == run_element.byte_end {
+        licenses.push((run_element.byte_end - 2, run_element.byte_end, true))
+      } else {
+        let mut anchor = run_element.content_start
+        let mut child = run_element.first_child_index
+        while child >= 0 {
+          let candidate = elements[child]
+          if is_wml_uri(candidate.uri) && candidate.local_name == "rPr" {
+            anchor = candidate.byte_end
           }
-          licenses.push((anchor, anchor, true))
+          child = candidate.next_sibling_index
         }
+        licenses.push((anchor, anchor, true))
       }
     }
   }
@@ -678,6 +743,7 @@ let partial_lexical_bodies : Array[(String, String)] = [
   // Reference-adjacent-to-raw in BOTH orders, and a numeric reference
   // beside atoms: combinations the isolated fixtures cannot express.
   ("numref-then-raw", "<w:p><w:r><w:t>&#38;abc</w:t></w:r></w:p>"),
+  ("raw-then-entity", "<w:p><w:r><w:t>abc&amp;</w:t></w:r></w:p>"),
   ("raw-then-numref", "<w:p><w:r><w:t>abc&#38;</w:t></w:r></w:p>"),
   ("entity-then-raw", "<w:p><w:r><w:t>&amp;abc</w:t></w:r></w:p>"),
   (
@@ -725,31 +791,40 @@ test "the lexical matrix the grammar does not reach is proved the same way" {
   }
   let seen = (pair : String) => pairs.get(pair).unwrap_or(0)
   let refused = (name : String) => refusals.get(name).unwrap_or(0)
-  // Measured at this commit: 598 batches planned over 66 distinct
-  // ordered pairs, 16 of them multi-edit across multiple carriers. The
-  // EXACT identity set is the real pin; these are volume floors.
-  assert_true(planned >= 550, msg="only \{planned} lexical batches planned")
+  // Measured at this commit: 625 batches planned over 68 ordered pairs,
+  // 16 of them multi-edit across multiple carriers. The EXACT per-key
+  // counts above are the real pin; this is a volume floor.
+  assert_true(planned == 625, msg="\{planned} lexical batches planned")
   // Entity and numeric-reference boundaries plan in BOTH orders; their
   // interiors are unresolvable and refuse below.
   // EXACT identity set, both directions. Inclusion alone would let a
   // pair vanish unnoticed if another appeared, and — worse — would stay
   // green when the planner starts ACCEPTING something it should refuse,
   // since a new key is an unexpected acceptance.
-  for key in partial_expected_pairs {
-    assert_true(
-      pairs.get(key).unwrap_or(0) >= 1,
-      msg="ordered pair no longer planned: " + key,
+  // EXACT per-key COUNTS, both directions. Presence alone cannot see a
+  // single range being refused when other ranges share its key, nor a
+  // single unsafe acceptance whose key is already listed — the counts
+  // move in both cases.
+  for entry in partial_expected_pair_counts {
+    let (key, count) = entry
+    assert_eq(
+      pairs.get(key).unwrap_or(0),
+      count,
+      msg="ordered pair count changed: " + key,
     )
   }
   for key, _ in pairs {
-    assert_true(
-      partial_expected_pairs.contains(key),
-      msg="unexpected ordered pair accepted: " + key,
-    )
+    let mut listed = false
+    for entry in partial_expected_pair_counts {
+      if entry.0 == key {
+        listed = true
+      }
+    }
+    assert_true(listed, msg="unexpected ordered pair accepted: " + key)
   }
   let lexical_pairs = pairs.size()
   assert_true(
-    lexical_pairs >= 66,
+    lexical_pairs == 68,
     msg="only \{lexical_pairs} distinct ordered pairs in the lexical family",
   )
   // BOTH orders of every mixed pair: a planner refusing only the
@@ -989,28 +1064,73 @@ test "partial: a multi-edit batch across two runs plans" {
 /// every fixture — so this is the permitted set over those bodies, not a
 /// sample of it, and it is held as an identity set: a planner that starts
 /// refusing any single pair fails with that pair's key.
-let partial_expected_pairs : Array[String] = [
-  "insert:bare>bare", "delete:raw-edge>raw-edge", "insert:raw-edge>raw-edge", "replace:raw-edge>raw-edge",
-  "insert:seam-edge>seam-edge", "delete:entity-edge>raw-edge", "delete:numref-edge>raw-edge",
-  "delete:raw-edge>entity-edge", "delete:raw-edge>numref-edge", "delete:raw-edge>raw-interior",
-  "delete:raw-interior>raw-edge", "replace:entity-edge>raw-edge", "replace:numref-edge>raw-edge",
-  "replace:raw-edge>entity-edge", "replace:raw-edge>numref-edge", "delete:atom-end-edge>raw-edge",
-  "delete:raw-edge>atom-end-edge", "replace:raw-edge>raw-interior", "replace:raw-interior>raw-edge",
-  "delete:entity-edge>entity-edge", "delete:entity-edge>numref-edge", "delete:numref-edge>entity-edge",
-  "delete:numref-edge>numref-edge", "insert:entity-edge>entity-edge", "insert:numref-edge>numref-edge",
-  "replace:atom-end-edge>raw-edge", "replace:raw-edge>atom-end-edge", "delete:atom-start-edge>raw-edge",
-  "delete:entity-edge>raw-interior", "delete:numref-edge>raw-interior", "delete:raw-edge>atom-start-edge",
-  "delete:raw-interior>numref-edge", "replace:entity-edge>entity-edge", "replace:entity-edge>numref-edge",
-  "replace:numref-edge>entity-edge", "replace:numref-edge>numref-edge", "delete:entity-edge>atom-end-edge",
-  "delete:raw-interior>raw-interior", "insert:raw-interior>raw-interior", "replace:atom-start-edge>raw-edge",
-  "replace:entity-edge>raw-interior", "replace:numref-edge>raw-interior", "replace:raw-edge>atom-start-edge",
-  "replace:raw-interior>numref-edge", "delete:atom-end-edge>raw-interior", "delete:raw-interior>atom-end-edge",
-  "replace:entity-edge>atom-end-edge", "replace:raw-interior>raw-interior", "delete:atom-start-edge>entity-edge",
-  "delete:atom-start-edge>numref-edge", "delete:entity-edge>atom-start-edge", "delete:numref-edge>atom-start-edge",
-  "replace:atom-end-edge>raw-interior", "replace:raw-interior>atom-end-edge", "delete:atom-start-edge>raw-interior",
-  "delete:raw-interior>atom-start-edge", "replace:atom-start-edge>entity-edge", "replace:atom-start-edge>numref-edge",
-  "replace:entity-edge>atom-start-edge", "replace:numref-edge>atom-start-edge", "delete:atom-start-edge>atom-end-edge",
-  "replace:atom-start-edge>raw-interior", "replace:raw-interior>atom-start-edge",
-  "replace:atom-start-edge>atom-end-edge", "delete:atom-start-edge>atom-start-edge",
-  "replace:atom-start-edge>atom-start-edge",
+let partial_expected_pair_counts : Array[(String, Int)] = [
+  ("insert:bare>bare", 1),
+  ("delete:raw-edge>raw-edge", 14),
+  ("insert:raw-edge>raw-edge", 44),
+  ("insert:seam-edge>seam-edge", 1),
+  ("replace:raw-edge>raw-edge", 14),
+  ("delete:raw-edge>entity-edge", 8),
+  ("delete:raw-edge>numref-edge", 6),
+  ("delete:entity-edge>raw-edge", 18),
+  ("delete:numref-edge>raw-edge", 11),
+  ("replace:raw-edge>entity-edge", 9),
+  ("replace:raw-edge>numref-edge", 7),
+  ("delete:atom-end-edge>raw-edge", 2),
+  ("delete:raw-edge>atom-end-edge", 1),
+  ("delete:raw-edge>raw-interior", 22),
+  ("delete:raw-interior>raw-edge", 24),
+  ("replace:entity-edge>raw-edge", 18),
+  ("replace:numref-edge>raw-edge", 11),
+  ("delete:numref-edge>entity-edge", 8),
+  ("replace:atom-end-edge>raw-edge", 2),
+  ("replace:raw-edge>atom-end-edge", 1),
+  ("replace:raw-edge>raw-interior", 32),
+  ("replace:raw-interior>raw-edge", 24),
+  ("delete:atom-start-edge>raw-edge", 4),
+  ("delete:entity-edge>entity-edge", 40),
+  ("delete:entity-edge>numref-edge", 10),
+  ("delete:entity-edge>raw-interior", 8),
+  ("delete:numref-edge>numref-edge", 18),
+  ("delete:numref-edge>raw-interior", 4),
+  ("delete:raw-edge>atom-start-edge", 2),
+  ("delete:raw-interior>entity-edge", 4),
+  ("delete:raw-interior>numref-edge", 4),
+  ("insert:entity-edge>entity-edge", 26),
+  ("insert:numref-edge>numref-edge", 15),
+  ("replace:numref-edge>entity-edge", 8),
+  ("delete:entity-edge>atom-end-edge", 2),
+  ("replace:atom-start-edge>raw-edge", 4),
+  ("replace:entity-edge>entity-edge", 49),
+  ("replace:entity-edge>numref-edge", 11),
+  ("replace:numref-edge>numref-edge", 24),
+  ("replace:numref-edge>raw-interior", 5),
+  ("replace:raw-edge>atom-start-edge", 2),
+  ("replace:raw-interior>entity-edge", 6),
+  ("replace:raw-interior>numref-edge", 6),
+  ("delete:atom-end-edge>raw-interior", 3),
+  ("delete:raw-interior>atom-end-edge", 1),
+  ("delete:raw-interior>raw-interior", 16),
+  ("insert:raw-interior>raw-interior", 27),
+  ("replace:entity-edge>atom-end-edge", 2),
+  ("replace:entity-edge>raw-interior", 10),
+  ("delete:atom-start-edge>entity-edge", 2),
+  ("delete:atom-start-edge>numref-edge", 4),
+  ("delete:entity-edge>atom-start-edge", 6),
+  ("delete:numref-edge>atom-start-edge", 3),
+  ("replace:atom-end-edge>raw-interior", 3),
+  ("replace:raw-interior>atom-end-edge", 1),
+  ("replace:raw-interior>raw-interior", 23),
+  ("delete:atom-start-edge>raw-interior", 4),
+  ("delete:raw-interior>atom-start-edge", 2),
+  ("replace:atom-start-edge>entity-edge", 3),
+  ("replace:atom-start-edge>numref-edge", 5),
+  ("replace:entity-edge>atom-start-edge", 6),
+  ("replace:numref-edge>atom-start-edge", 4),
+  ("delete:atom-start-edge>atom-end-edge", 3),
+  ("replace:atom-start-edge>raw-interior", 4),
+  ("replace:raw-interior>atom-start-edge", 2),
+  ("replace:atom-start-edge>atom-end-edge", 4),
+  ("delete:atom-start-edge>atom-start-edge", 1),
+  ("replace:atom-start-edge>atom-start-edge", 2),
 ]
