@@ -450,6 +450,11 @@ fn run_surgery_space_declaration_is_preserve(
   let mut cursor = start
   while cursor < end {
     if source[cursor] == b'&' {
+      // The reader's own decoder, which admits the five predefined
+      // entities and strict numeric references — the same set the
+      // scanner documents for attribute values. Nothing wider can
+      // arrive: the strict gate rejects any DOCTYPE, so a document
+      // declaring its own entities never reaches a surgery.
       let decoded_reference = decode_entity_token(source, cursor, end) catch {
         _ => return None
       }
@@ -482,7 +487,7 @@ fn run_surgery_space_declaration_is_preserve(
 /// Whether a Transparent contribution is really a HARD BARRIER wearing a
 /// seam's clothes.
 ///
-/// The reader routes `w:drawing`, `w:object` and `w:pict` through the
+/// The reader routes `w:drawing` and `w:object` through the
 /// transparent-boundary path, so an EMPTY one projects a single
 /// Transparent contribution — indistinguishable, by kind alone, from a
 /// bookmark or a run boundary. The five-class inventory calls drawings
@@ -706,38 +711,6 @@ fn run_surgery_qualified_prefix(
     at = at + 1
   }
   ""
-}
-
-///|
-/// Whether this element's open tag already declares `xml:space`.
-fn run_surgery_declares_space(
-  source : BytesView,
-  element : ScannedElement,
-) -> Bool {
-  let stop = if run_surgery_is_self_closing(element) {
-    element.byte_end - 2
-  } else {
-    element.content_start
-  }
-  if stop <= element.byte_start || stop > source.length() {
-    return false
-  }
-  let needle = b"xml:space"
-  let mut at = element.byte_start
-  while at + needle.length() <= stop {
-    let mut matched = true
-    for offset in 0..<needle.length() {
-      if source[at + offset] != needle[offset] {
-        matched = false
-        break
-      }
-    }
-    if matched {
-      return true
-    }
-    at = at + 1
-  }
-  false
 }
 
 ///|

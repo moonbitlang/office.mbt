@@ -1445,7 +1445,7 @@ test "partial: a reference-spelled preserve is left byte-identical" {
   let spliced = @utf8.decode(apply_run_surgery_edits(bytes, byte_edits))
   assert_true(spliced.contains("xml:space=\"pre&#x73;erve\""))
   assert_false(spliced.contains("xml:space=\"preserve\""))
-  // The decimal spelling of the same character, and a named reference
+  // The decimal spelling of the same character, and a decimal reference
   // in a value that does NOT say preserve, which IS replaced.
   let decimal =
     #|<w:p><w:r><w:t xml:space="pre&#115;erve"> ab </w:t></w:r></w:p>
