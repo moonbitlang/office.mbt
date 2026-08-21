@@ -161,8 +161,10 @@ fn partial_batches_for(
 
   if width == 0 {
     // A paragraph that projects nothing still has one insertion position:
-    // the atomless-run synthesis path.
+    // the atomless-run synthesis path — singly, and composed, since two
+    // insertions there share one carrier and one anchor.
     build([(0, 0, "N0c2")])
+    build([(0, 0, "X"), (0, 0, "Y")])
     return batches
   }
   build([(width / 3, width - width / 3, "N0c2")])
@@ -190,45 +192,131 @@ fn partial_batches_for(
 fn partial_allowed_spans(
   paragraph : ReaderProjectionParagraph,
   elements : Array[ScannedElement],
+  requested : Array[ParagraphTextEdit],
 ) -> Array[(Int, Int)] {
   let allowed : Array[(Int, Int)] = []
+  let carrier_runs : Array[SourceElementId] = []
+  fn note_run(run_source : SourceElementId?) -> Unit {
+    match run_source {
+      Some(source_id) =>
+        if !carrier_runs.contains(source_id) {
+          carrier_runs.push(source_id)
+        }
+      None => ()
+    }
+  }
+
   for contribution in paragraph.contributions {
+    let start = contribution.projection_start - paragraph.projection_start
+    let end = contribution.projection_end - paragraph.projection_start
+    // ONLY the carriers this REQUEST can legitimately reach: a consuming
+    // range's intersecting contributions, or an insertion's adjacent
+    // ones. A paragraph-wide allowlist would let a plan rewrite an
+    // untouched later `w:t` — the projection would not change, and the
+    // untouched-byte walk trusts the plan's own union, so nothing else
+    // would catch it.
+    let mut involved = false
+    for edit in requested {
+      if edit.start == edit.end {
+        if start <= edit.start && edit.start <= end {
+          involved = true
+        }
+      } else if start < edit.end && end > edit.start {
+        involved = true
+      }
+    }
+    if !involved {
+      continue
+    }
     let SourceElementId(identity) = contribution.source
     let element = elements[identity]
     match contribution.kind {
       // Seams and suppressed content are preserved, never touched.
       Transparent | SuppressedContent => ()
-      ProjectedText(FromText) =>
+      ProjectedText(FromText) => {
+        note_run(contribution.run_source)
         if is_wml_uri(element.uri) && element.local_name == "t" {
           if element.content_start == element.byte_end {
             allowed.push((element.byte_end - 2, element.byte_end))
           } else {
-            allowed.push((element.content_start, element.content_end))
+            // OFFSET-specific, not merely carrier-specific: only the byte
+            // ranges the requested logical ranges map to. Allowing the
+            // whole content would let a plan also rewrite an untouched
+            // later stretch of the SAME `w:t` — re-spelling `&lt;` as
+            // `&#60;` leaves the projection identical, and the
+            // untouched-byte walk trusts the plan's own union.
+            match element.text_map {
+              Some(map) =>
+                for edit in requested {
+                  if edit.start > end || edit.end < start {
+                    continue
+                  }
+                  let clipped_start = if edit.start > start {
+                    edit.start
+                  } else {
+                    start
+                  }
+                  let clipped_end = if edit.end < end { edit.end } else { end }
+                  let range_start = clipped_start - start
+                  let range_end = clipped_end - start
+                  match
+                    (
+                      map.byte_offset_at(range_start),
+                      map.byte_offset_at(range_end),
+                    ) {
+                    (Some(from), Some(to)) => allowed.push((from, to))
+                    _ => ()
+                  }
+                }
+              None => ()
+            }
+            // The open tag, where `xml:space` lives.
             allowed.push((element.byte_start, element.content_start))
           }
         } else {
           allowed.push((element.byte_start, element.byte_end))
         }
+      }
       // Atoms are consumed whole, by synthesis or by deletion.
-      ProjectedText(_) => allowed.push((element.byte_start, element.byte_end))
+      ProjectedText(_) => {
+        note_run(contribution.run_source)
+        allowed.push((element.byte_start, element.byte_end))
+      }
       VisibleNonText => ()
     }
   }
+  // A paragraph that projects nothing has exactly one synthesis carrier.
+  let mut projecting = 0
+  for contribution in paragraph.contributions {
+    if contribution.kind is ProjectedText(_) {
+      projecting += 1
+    }
+  }
+  if projecting == 0 && paragraph.runs.length() == 1 {
+    note_run(Some(paragraph.runs[0].source))
+  }
   for run in paragraph.runs {
+    if !carrier_runs.contains(run.source) {
+      continue
+    }
     let SourceElementId(run_identity) = run.source
     let run_element = elements[run_identity]
-    allowed.push((run_element.content_start, run_element.content_start))
-    allowed.push((run_element.content_end, run_element.content_end))
-    if run_element.content_start == run_element.byte_end {
-      allowed.push((run_element.byte_end - 2, run_element.byte_end))
-    }
+    // Exactly ONE interior anchor: after a leading `rPr` when there is
+    // one, otherwise the run's content start. Allowing both would accept
+    // a synthesis landing before the run's own formatting.
+    let mut anchor = run_element.content_start
     let mut child = run_element.first_child_index
     while child >= 0 {
       let candidate = elements[child]
       if is_wml_uri(candidate.uri) && candidate.local_name == "rPr" {
-        allowed.push((candidate.byte_end, candidate.byte_end))
+        anchor = candidate.byte_end
       }
       child = candidate.next_sibling_index
+    }
+    allowed.push((anchor, anchor))
+    allowed.push((run_element.content_end, run_element.content_end))
+    if run_element.content_start == run_element.byte_end {
+      allowed.push((run_element.byte_end - 2, run_element.byte_end))
     }
   }
   allowed
@@ -279,7 +367,7 @@ fn assert_partial_batch(
     before_projection.view(start_offset=cursor).to_owned(),
   )
   let expected = independent.to_string()
-  let allowed = partial_allowed_spans(paragraph, elements)
+  let allowed = partial_allowed_spans(paragraph, elements, batch.edits)
   let planned = plan_paragraph_text_edits(
     projection,
     bytes[:],
@@ -301,7 +389,8 @@ fn assert_partial_batch(
       assert_true(named != "", msg="unknown refusal class: \{message}")
       return ([], named)
     }
-    ResourceLimit(..) => return ([], "ResourceLimit")
+    // A resource limit is not a partial-surgery refusal class: it
+    // propagates rather than counting toward refusal diversity.
     error => raise error
   }
   let (byte_edits, receipt) = planned
@@ -385,7 +474,7 @@ test "generated documents compose partial edits over every boundary pair" {
   // everything refuses — fails here.
   assert_true(planned >= 300, msg="only \{planned} batches planned")
   assert_true(
-    planned_pairs >= 12,
+    planned_pairs >= 16,
     msg="only \{planned_pairs} distinct ordered pairs planned",
   )
   assert_true(
@@ -473,13 +562,27 @@ test "the lexical matrix the grammar does not reach is proved the same way" {
   assert_true(planned >= 60, msg="only \{planned} lexical batches planned")
   // Entity and numeric-reference boundaries plan in BOTH orders; their
   // interiors are unresolvable and refuse below.
+  let lexical_pairs = pairs.size()
+  assert_true(
+    lexical_pairs >= 26,
+    msg="only \{lexical_pairs} distinct ordered pairs in the lexical family",
+  )
+  // BOTH orders of every mixed pair: a planner refusing only the
+  // unasserted order would otherwise lose a handful of plans while every
+  // floor stayed green.
   assert_true(seen("replace:entity-edge>entity-edge") >= 3)
   assert_true(seen("replace:raw-edge>entity-edge") >= 1)
   assert_true(seen("replace:entity-edge>raw-edge") >= 1)
+  assert_true(seen("delete:entity-edge>raw-edge") >= 1)
   assert_true(seen("insert:entity-edge>entity-edge") >= 3)
   assert_true(seen("replace:numref-edge>numref-edge") >= 2)
+  assert_true(seen("replace:raw-edge>numref-edge") >= 1)
   assert_true(seen("replace:numref-edge>raw-edge") >= 1)
+  assert_true(seen("delete:numref-edge>raw-edge") >= 1)
   assert_true(seen("insert:numref-edge>numref-edge") >= 2)
+  assert_true(seen("replace:raw-edge>atom-start-edge") >= 1)
+  assert_true(seen("replace:atom-end-edge>raw-interior") >= 1)
+  assert_true(seen("replace:raw-interior>atom-start-edge") >= 1)
   // The atomless-run synthesis path plans.
   assert_true(seen("insert:bare>bare") >= 1)
   // And every refusal the lexical matrix must produce.
@@ -492,4 +595,63 @@ test "the lexical matrix the grammar does not reach is proved the same way" {
   assert_true(refused("SuppressedRegion") >= 1)
   assert_true(refused("AmbiguousBoundary") >= 2)
   assert_true(refused("UnsupportedTextSource") >= 1)
+}
+
+///|
+test "the source allowlist rejects a plan that widens beyond the request" {
+  // The oracle's own discrimination check. Editing the first unit of
+  // `a&amp;b&lt;c&gt;d` must not license rewriting the untouched later
+  // `&lt;`: the projection would be unchanged and the untouched-byte walk
+  // exempts whatever the plan declares, so the allowlist is the only
+  // witness that can catch it.
+  let source = "<w:document xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\"><w:body><w:p><w:r><w:t>a&amp;b&lt;c&gt;d</w:t></w:r></w:p></w:body></w:document>"
+  let projection = surgery_native_projection(source)
+  let elements = projection.scan.elements()
+  let paragraph = projection.paragraphs[0]
+  let requested : Array[ParagraphTextEdit] = [
+    { start: 0, end: 1, replacement: "A" },
+  ]
+  let allowed = partial_allowed_spans(paragraph, elements, requested)
+  // Locate the `&lt;` entity's bytes through the host's token map.
+  let mut host : ScannedElement? = None
+  for contribution in paragraph.contributions {
+    if contribution.kind is ProjectedText(FromText) {
+      let SourceElementId(identity) = contribution.source
+      host = Some(elements[identity])
+    }
+  }
+  guard host is Some(element) else { fail("expected a text host") }
+  guard element.text_map is Some(map) else { fail("expected a token map") }
+  let mut entity_span : (Int, Int)? = None
+  for token in map.tokens {
+    if token.kind is EntityRef && token.projection_start == 3 {
+      entity_span = Some((token.byte_start, token.byte_end))
+    }
+  }
+  guard entity_span is Some((from, to)) else {
+    fail("expected the second entity token")
+  }
+  let mut licensed = false
+  for span in allowed {
+    let (span_from, span_to) = span
+    if from >= span_from && to <= span_to {
+      licensed = true
+    }
+  }
+  assert_false(
+    licensed,
+    msg="the allowlist must not license an untouched later entity",
+  )
+  // And the requested range itself IS licensed, so the check is not
+  // vacuously rejecting everything.
+  guard map.byte_offset_at(0) is Some(request_from) else { fail("offset 0") }
+  guard map.byte_offset_at(1) is Some(request_to) else { fail("offset 1") }
+  let mut request_licensed = false
+  for span in allowed {
+    let (span_from, span_to) = span
+    if request_from >= span_from && request_to <= span_to {
+      request_licensed = true
+    }
+  }
+  assert_true(request_licensed)
 }

@@ -773,8 +773,12 @@ test "partial: two insertions before one atom keep request order" {
   // One distinct carrier atom, two synthesis operations.
   assert_eq(receipt.touched_source_count, 1)
   let spliced = @utf8.decode(apply_run_surgery_edits(bytes, byte_edits))
-  assert_true(spliced.contains(">X</w:t>"))
-  assert_true(spliced.contains(">Y</w:t><w:tab/>"))
+  // Both insertions share one carrier and one anchor, so they compose into
+  // ONE synthesized element with the replacements concatenated in request
+  // order — the same rule equal-offset insertions into a `w:t` follow, and
+  // the only shape that cannot collide when the carrier is a self-closing
+  // run whose `/>` each synthesis would rewrite.
+  assert_true(spliced.contains(">XY</w:t><w:tab/>"))
 }
 
 ///|

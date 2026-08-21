@@ -1015,7 +1015,13 @@ L0: pub surface only what N1/N2 need.
   atomically without rewriting either slice or the content between them, and
   the receipt reports both before/after paths.
 
-### N0 verdict (2026-08-21): **GO**
+### N0 gate status (2026-08-21): **NOT YET GO** — criterion (d) outstanding
+
+Criteria (a)-(c) are met and dispositioned below. Criterion (d) is NOT:
+its refusal trials name **restricted regions**, and the surgery
+primitives do not refuse them. Recording GO now would bless a gap, so
+the verdict waits for the rung that closes it (see the outstanding item
+after the dispositions).
 
 N0 landed as the exact lexical map (N0a, PR #224), the bounded physical
 source-tree identity (N0b1, PR #235), the projection index and its logical
@@ -1102,27 +1108,26 @@ the generated boundary-pair proof (PR #474). Criteria disposition:
   gate) to APPROVE, with all required checks green on the same pushed
   commit.
 
-**Restricted regions are explicitly NOT dispositioned GO by this gate, and
-are not in scope for it.** The Phase-3-wide five-class inventory above
-classifies complex-field cached results, boundary-crossing hyperlink
-interiors, `w:ins` content, non-checkbox `w:sdt` content, `mc:Fallback`
-content, and textbox paragraphs as *projecting-restricted*: text that can
-MATCH but must not be MUTATED, with hits reported for a structured reason.
-That is a property of the MATCH/verb layer — it decides which hits a verb
-may act on — and #236 names match-selection policy as a non-goal. The N0c2
-primitive deliberately does not enforce it: it is addressed, private, and
-has no notion of a match; enforcing there would also contradict N0c1, which
-ships and pins field-RESULT editing (instruction and malformed-field text
-refuse). `RestrictedRegion` is therefore reserved in the taxonomy, unraised
-by the primitive.
+**Outstanding for GO — restricted-region refusal trials (criterion d).**
+The Phase-3-wide five-class inventory classifies complex-field cached
+results, boundary-crossing hyperlink interiors, `w:ins` content,
+non-checkbox `w:sdt` content, `mc:Fallback` content, and textbox
+paragraphs as *projecting-restricted*: text that can MATCH but must not
+be MUTATED. Criterion (d) requires each to fail closed with its declared
+error. Today neither primitive refuses them, and the gap is already
+PUBLIC: `plan_run_text_replacement` (N0c1) permits editing a cached
+field result, and `office edit set_run_text` ships that surface. So this
+cannot be deferred to N2b as a match-layer policy — a public consumer
+exists now.
 
-**Handoff obligation (binding on N2a/N2b, and on any public verb built over
-these primitives):** no public surface may reach a projecting-restricted
-region without first classifying it and refusing or reporting per the
-five-class inventory. The primitive will happily plan such an edit; the
-layer above is what must not ask. N2b's guarded `replace` is the first
-consumer that has to discharge this, and it should pin the refusal with the
-same oracle used here.
+Closing it means classifying restricted ancestry in the surgery
+primitives (both N0c1 and N0c2, since criterion (d) governs the whole
+N0 matrix), raising `RestrictedRegion` — reserved and unraised in the
+taxonomy today — and accepting that edits which currently succeed
+through `office edit set_run_text` will begin to refuse. That is a
+deliberate behaviour change to a shipped surface, which is why it is
+recorded here as the gate's remaining work rather than made silently
+alongside the composition proof.
 
 Locked decisions carried forward: `w:instrText` gets a token map but is
 never a partial-surgery host (require an ordinary WML `t`); any CDATA in a

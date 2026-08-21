@@ -1095,7 +1095,46 @@ fn plan_paragraph_text_edits(
       replacement: "",
     })
   }
+  // Syntheses sharing one carrier AND one anchor are ONE element: two
+  // insertions at the same position both rewrite the same `/>` or land at
+  // the same offset, so emitting them separately would collide in phase 7
+  // instead of composing. Replacements concatenate in request order, the
+  // same rule equal-offset insertions into a `w:t` follow.
+  let coalesced : Array[(Int, Int, Int, String, Int, Int)] = []
   for synthesis in syntheses {
+    let (run_identity, anchor, consumed, replacement, ordinal, carrier) = synthesis
+    let mut merged = false
+    for index, existing in coalesced {
+      let (
+        other_run,
+        other_anchor,
+        other_consumed,
+        other_text,
+        other_ordinal,
+        other_carrier,
+      ) = existing
+      if other_run == run_identity &&
+        other_anchor == anchor &&
+        other_consumed == consumed {
+        coalesced[index] = (
+          other_run,
+          other_anchor,
+          other_consumed,
+          other_text + replacement,
+          other_ordinal,
+          other_carrier,
+        )
+        merged = true
+        break
+      }
+    }
+    if !merged {
+      coalesced.push(
+        (run_identity, anchor, consumed, replacement, ordinal, carrier),
+      )
+    }
+  }
+  for synthesis in coalesced {
     let (run_identity, anchor, consumed, replacement, _, _) = synthesis
     let run_element = elements[run_identity]
     let prefix = run_surgery_qualified_prefix(source, run_element)
