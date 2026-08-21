@@ -1,19 +1,22 @@
 ///|
-/// N0c2 partial token-boundary surgery, increments B1+B2a: batch-shaped
+/// N0c2 partial token-boundary surgery, increments B1+B2a+B2b: batch-shaped
 /// edits in paragraph-local UTF-16 projection coordinates, resolved to
 /// source bytes through the token map so bytes outside the declared edit
 /// union are never rewritten and entity spellings outside the union are
 /// never canonicalized. B2a admits ranges crossing `w:t` and editable-atom
-/// boundaries WITHIN ONE RUN: the replacement lands at the first consumed
-/// projecting contribution (a mapped `w:t`, or a synthesized `w:t`
-/// replacing the first consumed atom), fully-covered middle `w:t` elements
-/// are emptied in place, fully-covered atoms are deleted whole, the end
-/// `w:t` keeps its tail, and transparent seams between them survive
-/// untouched.
+/// boundaries; B2b extends them ACROSS RUNS within one physical paragraph:
+/// the replacement lands at the first consumed projecting contribution (a
+/// mapped `w:t`, or a synthesized `w:t` replacing the first consumed atom,
+/// carrying the first consumed run's formatting by construction),
+/// fully-covered middle `w:t` elements are emptied in place, fully-covered
+/// atoms are deleted whole, the end `w:t` keeps its tail, and every run
+/// shell, `rPr`, wrapper, and transparent seam in between survives
+/// byte-identical. Every run the interval involves — including atomless
+/// runs visible only through their zero-width run-open contributions — is
+/// gated for field state before any placement.
 ///
-/// B2b extends the same shape across runs; B3 generalizes composition. The
-/// refusal vocabulary below is the stable N0c2 taxonomy; these increments
-/// raise the subset they can reach.
+/// B3 generalizes composition. The refusal vocabulary below is the stable
+/// N0c2 taxonomy; these increments raise the subset they can reach.
 priv struct ParagraphTextEdit {
   start : Int
   end : Int
@@ -674,18 +677,52 @@ fn plan_paragraph_text_edits(
         "edit \{ordinal} in paragraph \{paragraph_index} covers no projecting content",
       )
     }
-    // One run carries every consumed contribution in this increment.
-    let first_run_source = intersecting[0].contribution.run_source
+    // Every intersecting projecting contribution must have an owning run:
+    // a direct paragraph-child `w:t` the tolerant reader admits has no run
+    // shell to carry formatting or field state, so it is not a partial-
+    // surgery host.
     for part in intersecting {
-      if part.contribution.run_source != first_run_source {
+      if part.contribution.run_source is None {
         raise partial_surgery_refuse(
           UnsupportedTextSource,
-          "edit \{ordinal} in paragraph \{paragraph_index} crosses runs (cross-run ranges are a later increment)",
+          "edit \{ordinal} in paragraph \{paragraph_index} draws from content outside any run",
         )
       }
     }
-    let run = resolve_run(first_run_source, ordinal)
-    require_supported_run(run, ordinal)
+    // Gate EVERY run the interval involves, derived from PHYSICAL SPANS:
+    // registration indices follow first appearance, and the reader
+    // tolerates nested runs, so a nested `<w:r/>` sitting between two of
+    // an outer run's texts registers AFTER the outer run — an index range
+    // cannot see it. The physical byte window spanned by the intersecting
+    // contributions can: every run whose element span overlaps it is
+    // structurally involved, contribution or not, and carries field state
+    // of its own.
+    let mut window_start = -1
+    let mut window_end = -1
+    for part in intersecting {
+      let span = part.contribution.source_span
+      if window_start < 0 || span.byte_start < window_start {
+        window_start = span.byte_start
+      }
+      if span.byte_end > window_end {
+        window_end = span.byte_end
+      }
+    }
+    guard window_start >= 0 else {
+      raise partial_surgery_refuse(
+        InternalPlanConflict,
+        "edit \{ordinal} in paragraph \{paragraph_index}",
+      )
+    }
+    for candidate in paragraph.runs {
+      let SourceElementId(candidate_identity) = candidate.source
+      let candidate_element = elements[candidate_identity]
+      if candidate_element.byte_start < window_end &&
+        candidate_element.byte_end > window_start {
+        require_supported_run(candidate, ordinal)
+      }
+    }
+    let run = resolve_run(intersecting[0].contribution.run_source, ordinal)
     // Atoms and non-text sources may only be wholly covered.
     for part in intersecting {
       require_supported_contribution(part.contribution, ordinal)
