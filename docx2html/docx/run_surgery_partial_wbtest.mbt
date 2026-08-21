@@ -380,13 +380,87 @@ test "partial: a transparent seam inside the range survives untouched" {
 }
 
 ///|
-test "partial: a cross-run range refuses in this increment" {
-  assert_partial_refusal(
-    "<w:p><w:r><w:t>ab</w:t></w:r><w:r><w:t>cd</w:t></w:r></w:p>",
+test "partial: a cross-run range plans, preserving both run shells" {
+  let body = "<w:p><w:r><w:rPr><w:b/></w:rPr><w:t>ab</w:t></w:r><w:r><w:rPr><w:i/></w:rPr><w:t>cd</w:t></w:r></w:p>"
+  assert_partial_edits(
+    body,
     paragraph=0,
-    [partial_edit(1, 3, "x")],
-    refusal="UnsupportedTextSource",
+    [partial_edit(1, 3, "X")],
+    expected="aXd",
   )
+  // The replacement carries the FIRST run's formatting by construction
+  // (it lands in that run's w:t); the second run keeps its shell, rPr,
+  // and trimmed text.
+  let source = "<w:document xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\" xmlns:v=\"urn:schemas-microsoft-com:vml\"><w:body>\{body}</w:body></w:document>"
+  let bytes = @utf8.encode(source)
+  let projection = surgery_native_projection(source)
+  let (byte_edits, _) = plan_paragraph_text_edits(projection, bytes[:], 0, [
+    partial_edit(1, 3, "X"),
+  ])
+  let spliced = @utf8.decode(apply_run_surgery_edits(bytes, byte_edits))
+  assert_true(
+    spliced.contains(
+      "<w:r><w:rPr><w:b/></w:rPr><w:t>aX</w:t></w:r><w:r><w:rPr><w:i/></w:rPr><w:t>d</w:t></w:r>",
+    ),
+  )
+}
+
+///|
+test "partial: a cross-run range spanning an empty middle run plans" {
+  // The empty run between the endpoints contributes nothing but is still
+  // gated and its shell survives byte-identical.
+  let body = "<w:p><w:r><w:t>ab</w:t></w:r><w:r><w:rPr><w:b/></w:rPr></w:r><w:r><w:t>cd</w:t></w:r></w:p>"
+  assert_partial_edits(
+    body,
+    paragraph=0,
+    [partial_edit(1, 3, "Y")],
+    expected="aYd",
+  )
+  let source = "<w:document xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\" xmlns:v=\"urn:schemas-microsoft-com:vml\"><w:body>\{body}</w:body></w:document>"
+  let bytes = @utf8.encode(source)
+  let projection = surgery_native_projection(source)
+  let (byte_edits, _) = plan_paragraph_text_edits(projection, bytes[:], 0, [
+    partial_edit(1, 3, "Y"),
+  ])
+  let spliced = @utf8.decode(apply_run_surgery_edits(bytes, byte_edits))
+  assert_true(
+    spliced.contains(
+      "<w:t>aY</w:t></w:r><w:r><w:rPr><w:b/></w:rPr></w:r><w:r><w:t>d</w:t>",
+    ),
+  )
+}
+
+///|
+test "partial: a cross-run range whose middle run sits in a field refuses" {
+  // The interval reaches instruction-phase text: the field gate on the
+  // involved contributions refuses before any placement — the strongest
+  // available refusal for the shape.
+  assert_partial_refusal(
+    "<w:p><w:r><w:t>ab</w:t></w:r><w:r><w:fldChar w:fldCharType=\"begin\"/></w:r><w:r><w:t>PAGE</w:t></w:r><w:r><w:fldChar w:fldCharType=\"end\"/></w:r></w:p>",
+    paragraph=0,
+    [partial_edit(1, 5, "x")],
+    refusal="PartialFieldInstruction",
+  )
+}
+
+///|
+test "partial: a cross-run edit ending at an atom consumes it whole" {
+  let body = "<w:p><w:r><w:t>ab</w:t></w:r><w:r><w:tab/><w:t>cd</w:t></w:r></w:p>"
+  assert_partial_edits(
+    body,
+    paragraph=0,
+    [partial_edit(1, 3, "Z")],
+    expected="aZcd",
+  )
+  let source = "<w:document xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\" xmlns:v=\"urn:schemas-microsoft-com:vml\"><w:body>\{body}</w:body></w:document>"
+  let bytes = @utf8.encode(source)
+  let projection = surgery_native_projection(source)
+  let (byte_edits, _) = plan_paragraph_text_edits(projection, bytes[:], 0, [
+    partial_edit(1, 3, "Z"),
+  ])
+  let spliced = @utf8.decode(apply_run_surgery_edits(bytes, byte_edits))
+  // The second run keeps its shell and text; only the tab is gone.
+  assert_true(spliced.contains("<w:t>aZ</w:t></w:r><w:r><w:t>cd</w:t></w:r>"))
 }
 
 ///|

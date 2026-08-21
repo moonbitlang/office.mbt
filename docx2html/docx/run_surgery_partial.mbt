@@ -1,19 +1,22 @@
 ///|
-/// N0c2 partial token-boundary surgery, increments B1+B2a: batch-shaped
+/// N0c2 partial token-boundary surgery, increments B1+B2a+B2b: batch-shaped
 /// edits in paragraph-local UTF-16 projection coordinates, resolved to
 /// source bytes through the token map so bytes outside the declared edit
 /// union are never rewritten and entity spellings outside the union are
 /// never canonicalized. B2a admits ranges crossing `w:t` and editable-atom
-/// boundaries WITHIN ONE RUN: the replacement lands at the first consumed
-/// projecting contribution (a mapped `w:t`, or a synthesized `w:t`
-/// replacing the first consumed atom), fully-covered middle `w:t` elements
-/// are emptied in place, fully-covered atoms are deleted whole, the end
-/// `w:t` keeps its tail, and transparent seams between them survive
-/// untouched.
+/// boundaries; B2b extends them ACROSS RUNS within one physical paragraph:
+/// the replacement lands at the first consumed projecting contribution (a
+/// mapped `w:t`, or a synthesized `w:t` replacing the first consumed atom,
+/// carrying the first consumed run's formatting by construction),
+/// fully-covered middle `w:t` elements are emptied in place, fully-covered
+/// atoms are deleted whole, the end `w:t` keeps its tail, and every run
+/// shell, `rPr`, wrapper, and transparent seam in between survives
+/// byte-identical. Every run the interval involves — including atomless
+/// runs visible only through their zero-width run-open contributions — is
+/// gated for field state before any placement.
 ///
-/// B2b extends the same shape across runs; B3 generalizes composition. The
-/// refusal vocabulary below is the stable N0c2 taxonomy; these increments
-/// raise the subset they can reach.
+/// B3 generalizes composition. The refusal vocabulary below is the stable
+/// N0c2 taxonomy; these increments raise the subset they can reach.
 priv struct ParagraphTextEdit {
   start : Int
   end : Int
@@ -674,18 +677,40 @@ fn plan_paragraph_text_edits(
         "edit \{ordinal} in paragraph \{paragraph_index} covers no projecting content",
       )
     }
-    // One run carries every consumed contribution in this increment.
-    let first_run_source = intersecting[0].contribution.run_source
+    // Gate EVERY run the interval involves: the runs of the intersecting
+    // projecting contributions, plus any run whose zero-width run-open
+    // contribution sits strictly inside the interval (an atomless or
+    // empty run between the endpoints has field state of its own even
+    // though nothing projects from it).
+    let involved_run_sources : Array[SourceElementId] = []
     for part in intersecting {
-      if part.contribution.run_source != first_run_source {
-        raise partial_surgery_refuse(
-          UnsupportedTextSource,
-          "edit \{ordinal} in paragraph \{paragraph_index} crosses runs (cross-run ranges are a later increment)",
-        )
+      match part.contribution.run_source {
+        Some(source_id) =>
+          if !involved_run_sources.contains(source_id) {
+            involved_run_sources.push(source_id)
+          }
+        None => ()
       }
     }
-    let run = resolve_run(first_run_source, ordinal)
-    require_supported_run(run, ordinal)
+    for contribution in paragraph.contributions {
+      let position = contribution.projection_start - paragraph.projection_start
+      if contribution.projection_start == contribution.projection_end &&
+        position > edit.start &&
+        position < edit.end {
+        match contribution.run_source {
+          Some(source_id) =>
+            if !involved_run_sources.contains(source_id) {
+              involved_run_sources.push(source_id)
+            }
+          None => ()
+        }
+      }
+    }
+    for source_id in involved_run_sources {
+      let involved_run = resolve_run(Some(source_id), ordinal)
+      require_supported_run(involved_run, ordinal)
+    }
+    let run = resolve_run(intersecting[0].contribution.run_source, ordinal)
     // Atoms and non-text sources may only be wholly covered.
     for part in intersecting {
       require_supported_contribution(part.contribution, ordinal)
