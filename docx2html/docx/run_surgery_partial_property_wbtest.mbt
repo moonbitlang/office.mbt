@@ -246,176 +246,191 @@ fn partial_batches_for(
 /// TREE rather than from the plan: each mapped `w:t`'s content range and
 /// its open tag (where `xml:space` lives), each atom's whole element, and
 /// each run's synthesis anchors.
-fn partial_allowed_spans(
+fn partial_space_declaration_span(
+  source : BytesView,
+  element : ScannedElement,
+) -> (Int, Int)? {
+  // The `xml:space="..."` attribute inside an open tag, located by the
+  // test rather than borrowed from production.
+  let needle = "xml:space=\""
+  let limit = element.content_start
+  let mut at = element.byte_start
+  while at + needle.length() <= limit {
+    let mut matched = true
+    for offset in 0..<needle.length() {
+      if source[at + offset].to_int() != needle[offset].to_int() {
+        matched = false
+        break
+      }
+    }
+    if matched {
+      let mut close = at + needle.length()
+      while close < limit && source[close].to_int() != 0x22 {
+        close = close + 1
+      }
+      if close < limit {
+        return Some((at, close + 1))
+      }
+      return None
+    }
+    at = at + 1
+  }
+  None
+}
+
+///|
+/// The licenses a correct plan may consume for THIS request: derived from
+/// the source tree and the requested ranges, with multiplicity. Every
+/// plan edit must consume one, so an extra edit — even one that
+/// reprojects identically, like an empty CDATA at a content boundary —
+/// has nothing to spend and fails.
+fn partial_expected_licenses(
+  source : BytesView,
   paragraph : ReaderProjectionParagraph,
   elements : Array[ScannedElement],
   requested : Array[ParagraphTextEdit],
 ) -> Array[(Int, Int, Bool)] {
-  // (from, to, exact): `exact` means the plan's edit must BE this span,
-  // not merely sit inside it. Production has exactly one choice at those
-  // places, and containment there licenses extra work — a zero-width
-  // edit at a self-closing marker's end, or a rewrite of an atom a pure
-  // insertion is only supposed to sit beside.
-  let allowed : Array[(Int, Int, Bool)] = []
-  let carrier_runs : Array[SourceElementId] = []
-  fn note_run(run_source : SourceElementId?) -> Unit {
-    match run_source {
-      Some(source_id) =>
-        if !carrier_runs.contains(source_id) {
-          carrier_runs.push(source_id)
-        }
-      None => ()
-    }
-  }
-
+  let licenses : Array[(Int, Int, Bool)] = []
   for contribution in paragraph.contributions {
     let start = contribution.projection_start - paragraph.projection_start
     let end = contribution.projection_end - paragraph.projection_start
-    // ONLY the carriers this REQUEST can legitimately reach: a consuming
-    // range's intersecting contributions, or an insertion's adjacent
-    // ones. A paragraph-wide allowlist would let a plan rewrite an
-    // untouched later `w:t` — the projection would not change, and the
-    // untouched-byte walk trusts the plan's own union, so nothing else
-    // would catch it.
-    let mut involved = false
-    for edit in requested {
-      if edit.start == edit.end {
-        if start <= edit.start && edit.start <= end {
-          involved = true
-        }
-      } else if start < edit.end && end > edit.start {
-        involved = true
-      }
-    }
-    if !involved {
-      continue
-    }
     let SourceElementId(identity) = contribution.source
     let element = elements[identity]
     match contribution.kind {
-      // Seams and suppressed content are preserved, never touched.
-      Transparent | SuppressedContent => ()
+      Transparent | SuppressedContent | VisibleNonText => ()
       ProjectedText(FromText) => {
-        note_run(contribution.run_source)
-        if is_wml_uri(element.uri) && element.local_name == "t" {
-          if element.content_start == element.byte_end {
-            allowed.push((element.byte_end - 2, element.byte_end, true))
-          } else {
-            // OFFSET-specific, not merely carrier-specific: only the byte
-            // ranges the requested logical ranges map to. Allowing the
-            // whole content would let a plan also rewrite an untouched
-            // later stretch of the SAME `w:t` — re-spelling `&lt;` as
-            // `&#60;` leaves the projection identical, and the
-            // untouched-byte walk trusts the plan's own union.
-            match element.text_map {
-              Some(map) =>
-                for edit in requested {
-                  // HALF-OPEN for consuming ranges: an edit that merely
-                  // ABUTS this host does not reach into it, and treating
-                  // the range as closed would license a zero-width span
-                  // just inside the neighbour's close tag — enough for a
-                  // widened plan to insert an empty CDATA there, keep the
-                  // projection identical, and poison the host's map for
-                  // all later surgery.
-                  let touches = if edit.start == edit.end {
-                    start <= edit.start && edit.start <= end
-                  } else {
-                    edit.start < end && edit.end > start
-                  }
-                  if !touches {
-                    continue
-                  }
-                  let clipped_start = if edit.start > start {
-                    edit.start
-                  } else {
-                    start
-                  }
-                  let clipped_end = if edit.end < end { edit.end } else { end }
-                  let range_start = clipped_start - start
-                  let range_end = clipped_end - start
-                  match
-                    (
-                      map.byte_offset_at(range_start),
-                      map.byte_offset_at(range_end),
-                    ) {
-                    (Some(from), Some(to)) => allowed.push((from, to, false))
-                    _ => ()
-                  }
-                }
-              None => ()
+        guard is_wml_uri(element.uri) && element.local_name == "t" else {
+          licenses.push((element.byte_start, element.byte_end, false))
+          continue
+        }
+        if element.content_start == element.byte_end {
+          // Self-closing: only its marker, and only if something asks.
+          for edit in requested {
+            if start <= edit.start && edit.start <= end {
+              licenses.push((element.byte_end - 2, element.byte_end, true))
             }
-            // The open tag, where `xml:space` lives.
-            allowed.push((element.byte_start, element.content_start, false))
           }
+          continue
+        }
+        guard element.text_map is Some(map) else { continue }
+        // One license per requested range that reaches into this host.
+        let after = StringBuilder()
+        let mut cursor = 0
+        let mut touched = false
+        for edit in requested {
+          let touches = if edit.start == edit.end {
+            start <= edit.start && edit.start <= end
+          } else {
+            edit.start < end && edit.end > start
+          }
+          if !touches {
+            continue
+          }
+          touched = true
+          let clipped_start = if edit.start > start {
+            edit.start
+          } else {
+            start
+          }
+          let clipped_end = if edit.end < end { edit.end } else { end }
+          let range_start = clipped_start - start
+          let range_end = clipped_end - start
+          match
+            (map.byte_offset_at(range_start), map.byte_offset_at(range_end)) {
+            (Some(from), Some(to)) => licenses.push((from, to, true))
+            _ => ()
+          }
+          after.write_string(
+            contribution.value
+            .view(start_offset=cursor, end_offset=range_start)
+            .to_owned(),
+          )
+          after.write_string(edit.replacement)
+          cursor = range_end
+        }
+        if !touched {
+          continue
+        }
+        after.write_string(
+          contribution.value.view(start_offset=cursor).to_owned(),
+        )
+        // The xml:space license exists only when the POST-BATCH content
+        // needs preservation — computed here, not asked of the planner.
+        let final_content = after.to_string()
+        let needs = if final_content.length() == 0 {
+          false
         } else {
-          allowed.push((element.byte_start, element.byte_end, false))
+          let head = final_content.view(start_offset=0, end_offset=1).to_owned()
+          let tail = final_content
+            .view(start_offset=final_content.length() - 1)
+            .to_owned()
+          fn edge(one : String) -> Bool {
+            let mut code = 0
+            for char in one {
+              code = char.to_int()
+            }
+            code == 0x20 || code == 0x09 || code == 0x0A || code == 0x0D
+          }
+
+          edge(head) || edge(tail)
+        }
+        if needs {
+          match partial_space_declaration_span(source, element) {
+            Some((from, to)) => licenses.push((from, to, true))
+            None =>
+              licenses.push(
+                (element.content_start - 1, element.content_start - 1, true),
+              )
+          }
         }
       }
-      // An atom is consumed WHOLE (synthesis replacing it, or deletion),
-      // or merely sat beside by a pure insertion — which must not rewrite
-      // it. So its element span is exact, and the adjacent insertion
-      // points are separate zero-width sites.
-      ProjectedText(_) => {
-        note_run(contribution.run_source)
-        let mut covered = false
+      ProjectedText(_) =>
+        // An atom is consumed WHOLE by a covering range, or sat beside by
+        // an insertion at exactly one of its two projection boundaries.
         for edit in requested {
           if edit.start != edit.end && edit.start <= start && end <= edit.end {
-            covered = true
+            licenses.push((element.byte_start, element.byte_end, true))
+          }
+          if edit.start == edit.end && edit.start == start {
+            licenses.push((element.byte_start, element.byte_start, true))
+          }
+          if edit.start == edit.end && edit.start == end {
+            licenses.push((element.byte_end, element.byte_end, true))
           }
         }
-        if covered {
-          allowed.push((element.byte_start, element.byte_end, true))
-        }
-        allowed.push((element.byte_start, element.byte_start, true))
-        allowed.push((element.byte_end, element.byte_end, true))
-      }
-      VisibleNonText => ()
     }
   }
-  // Run anchors are licensed ONLY where synthesis can actually happen:
-  // a paragraph that projects nothing, whose single run is the carrier.
-  // Synthesis at an atom lands inside that atom's own element span, which
-  // is licensed above — so licensing run anchors for every involved run
-  // would let a plan also drop a stray `<w:t/>` at some run's content
-  // end, which reprojects identically and passes byte accounting.
+  // A paragraph that projects nothing: one synthesis license per
+  // non-empty insertion requested, at the single form-determined site.
   let mut projecting = 0
   for contribution in paragraph.contributions {
     if contribution.kind is ProjectedText(_) {
       projecting += 1
     }
   }
-  let synthesis_runs : Array[SourceElementId] = []
   if projecting == 0 && paragraph.runs.length() == 1 {
-    synthesis_runs.push(paragraph.runs[0].source)
-  }
-  for run in paragraph.runs {
-    if !synthesis_runs.contains(run.source) {
-      continue
-    }
-    let SourceElementId(run_identity) = run.source
+    let SourceElementId(run_identity) = paragraph.runs[0].source
     let run_element = elements[run_identity]
-    // Exactly ONE location, chosen by the run's FORM — the same choice
-    // production makes. A self-closing run is rewritten through its `/>`
-    // and has no interior; a paired run takes its single interior anchor,
-    // after a leading `rPr` when there is one. Licensing the alternatives
-    // together (or the run's content end, which synthesis never uses)
-    // would accept an extra empty element that reprojects identically.
-    if run_element.content_start == run_element.byte_end {
-      allowed.push((run_element.byte_end - 2, run_element.byte_end, true))
-    } else {
-      let mut anchor = run_element.content_start
-      let mut child = run_element.first_child_index
-      while child >= 0 {
-        let candidate = elements[child]
-        if is_wml_uri(candidate.uri) && candidate.local_name == "rPr" {
-          anchor = candidate.byte_end
+    for edit in requested {
+      if edit.start == edit.end && edit.replacement != "" {
+        if run_element.content_start == run_element.byte_end {
+          licenses.push((run_element.byte_end - 2, run_element.byte_end, true))
+        } else {
+          let mut anchor = run_element.content_start
+          let mut child = run_element.first_child_index
+          while child >= 0 {
+            let candidate = elements[child]
+            if is_wml_uri(candidate.uri) && candidate.local_name == "rPr" {
+              anchor = candidate.byte_end
+            }
+            child = candidate.next_sibling_index
+          }
+          licenses.push((anchor, anchor, true))
         }
-        child = candidate.next_sibling_index
       }
-      allowed.push((anchor, anchor, true))
     }
   }
-  allowed
+  licenses
 }
 
 ///|
@@ -463,7 +478,12 @@ fn assert_partial_batch(
     before_projection.view(start_offset=cursor).to_owned(),
   )
   let expected = independent.to_string()
-  let allowed = partial_allowed_spans(paragraph, elements, batch.edits)
+  let licenses = partial_expected_licenses(
+    bytes[:],
+    paragraph,
+    elements,
+    batch.edits,
+  )
   let planned = plan_paragraph_text_edits(
     projection,
     bytes[:],
@@ -490,23 +510,34 @@ fn assert_partial_batch(
     error => raise error
   }
   let (byte_edits, receipt) = planned
-  // Claim 2: every edit lies inside a span the source tree permits.
+  // Claim 2: every edit CONSUMES a license derived from the request. A
+  // license is spent when it is used, so a plan cannot pay for two edits
+  // with one permission — the multiplicity matters as much as the spans.
+  let spent : Array[Bool] = []
+  for _ in licenses {
+    spent.push(false)
+  }
   for edit in byte_edits {
-    let mut inside = false
-    for span in allowed {
-      let (from, to, exact) = span
-      let licensed = if exact {
+    let mut paid = false
+    for index, license in licenses {
+      if spent[index] {
+        continue
+      }
+      let (from, to, exact) = license
+      let matches = if exact {
         edit.byte_start == from && edit.byte_end == to
       } else {
         edit.byte_start >= from && edit.byte_end <= to
       }
-      if licensed {
-        inside = true
+      if matches {
+        spent[index] = true
+        paid = true
+        break
       }
     }
     assert_true(
-      inside,
-      msg="edit [\{edit.byte_start},\{edit.byte_end}) outside the source-derived allowlist",
+      paid,
+      msg="edit [\{edit.byte_start},\{edit.byte_end}) has no unspent license",
     )
   }
   let spliced_bytes = apply_run_surgery_edits(bytes, byte_edits)
@@ -644,6 +675,14 @@ let partial_lexical_bodies : Array[(String, String)] = [
   (
     "entity-atoms-raw", "<w:p><w:r><w:t>&amp;</w:t><w:tab/><w:noBreakHyphen/><w:t>abc</w:t></w:r></w:p>",
   ),
+  // Reference-adjacent-to-raw in BOTH orders, and a numeric reference
+  // beside atoms: combinations the isolated fixtures cannot express.
+  ("numref-then-raw", "<w:p><w:r><w:t>&#38;abc</w:t></w:r></w:p>"),
+  ("raw-then-numref", "<w:p><w:r><w:t>abc&#38;</w:t></w:r></w:p>"),
+  ("entity-then-raw", "<w:p><w:r><w:t>&amp;abc</w:t></w:r></w:p>"),
+  (
+    "atom-then-numref", "<w:p><w:r><w:t>&#38;</w:t><w:tab/><w:noBreakHyphen/><w:t>&#38;</w:t></w:r></w:p>",
+  ),
   (
     "mixed-references", "<w:p><w:r><w:t>&amp;&#38;</w:t><w:tab/><w:t>&#60;&gt;</w:t><w:noBreakHyphen/><w:t>&amp;z</w:t></w:r></w:p>",
   ),
@@ -686,25 +725,31 @@ test "the lexical matrix the grammar does not reach is proved the same way" {
   }
   let seen = (pair : String) => pairs.get(pair).unwrap_or(0)
   let refused = (name : String) => refusals.get(name).unwrap_or(0)
-  // Measured at this commit: 493 batches planned over 62 distinct
-  // ordered pairs, 14 of them multi-edit across multiple carriers. The
-  // identity set is the real pin; these are volume floors.
-  assert_true(planned >= 450, msg="only \{planned} lexical batches planned")
+  // Measured at this commit: 598 batches planned over 66 distinct
+  // ordered pairs, 16 of them multi-edit across multiple carriers. The
+  // EXACT identity set is the real pin; these are volume floors.
+  assert_true(planned >= 550, msg="only \{planned} lexical batches planned")
   // Entity and numeric-reference boundaries plan in BOTH orders; their
   // interiors are unresolvable and refuse below.
-  // The IDENTITY SET, not merely its cardinality: a count floor lets one
-  // pair vanish while another appears. Every key below was measured at
-  // this commit and must still be planned; a planner that starts
-  // refusing any single ordered pair fails here by name.
+  // EXACT identity set, both directions. Inclusion alone would let a
+  // pair vanish unnoticed if another appeared, and — worse — would stay
+  // green when the planner starts ACCEPTING something it should refuse,
+  // since a new key is an unexpected acceptance.
   for key in partial_expected_pairs {
     assert_true(
       pairs.get(key).unwrap_or(0) >= 1,
       msg="ordered pair no longer planned: " + key,
     )
   }
+  for key, _ in pairs {
+    assert_true(
+      partial_expected_pairs.contains(key),
+      msg="unexpected ordered pair accepted: " + key,
+    )
+  }
   let lexical_pairs = pairs.size()
   assert_true(
-    lexical_pairs >= 62,
+    lexical_pairs >= 66,
     msg="only \{lexical_pairs} distinct ordered pairs in the lexical family",
   )
   // BOTH orders of every mixed pair: a planner refusing only the
@@ -771,7 +816,12 @@ test "the source allowlist rejects a plan that widens beyond the request" {
   let requested : Array[ParagraphTextEdit] = [
     { start: 0, end: 1, replacement: "A" },
   ]
-  let allowed = partial_allowed_spans(paragraph, elements, requested)
+  let allowed = partial_expected_licenses(
+    @utf8.encode(source)[:],
+    paragraph,
+    elements,
+    requested,
+  )
   // Locate the `&lt;` entity's bytes through the host's token map.
   let mut host : ScannedElement? = None
   for contribution in paragraph.contributions {
@@ -831,10 +881,15 @@ test "the allowlist pins the half-open rule and the synthesis anchors" {
   let projection = surgery_native_projection(abutting)
   let elements = projection.scan.elements()
   let paragraph = projection.paragraphs[0]
-  let allowed = partial_allowed_spans(paragraph, elements, [
-    { start: 0, end: 1, replacement: "A" },
-    { start: 2, end: 3, replacement: "C" },
-  ])
+  let allowed = partial_expected_licenses(
+    @utf8.encode(abutting)[:],
+    paragraph,
+    elements,
+    [
+      ({ start: 0, end: 1, replacement: "A" } : ParagraphTextEdit),
+      { start: 2, end: 3, replacement: "C" },
+    ],
+  )
   let mut first_host : ScannedElement? = None
   for contribution in paragraph.contributions {
     if contribution.kind is ProjectedText(FromText) && first_host is None {
@@ -866,10 +921,11 @@ test "the allowlist pins the half-open rule and the synthesis anchors" {
   let simple_elements = simple_projection.scan.elements()
   let simple_paragraph = simple_projection.paragraphs[0]
   // Edit only inside the text, leaving the tab untouched.
-  let simple_allowed = partial_allowed_spans(
+  let simple_allowed = partial_expected_licenses(
+    @utf8.encode(simple)[:],
     simple_paragraph,
     simple_elements,
-    [{ start: 1, end: 2, replacement: "A" }],
+    [({ start: 1, end: 2, replacement: "A" } : ParagraphTextEdit)],
   )
   let SourceElementId(run_identity) = simple_paragraph.runs[0].source
   let run_element = simple_elements[run_identity]
@@ -943,16 +999,17 @@ let partial_expected_pairs : Array[String] = [
   "delete:entity-edge>entity-edge", "delete:entity-edge>numref-edge", "delete:numref-edge>entity-edge",
   "delete:numref-edge>numref-edge", "insert:entity-edge>entity-edge", "insert:numref-edge>numref-edge",
   "replace:atom-end-edge>raw-edge", "replace:raw-edge>atom-end-edge", "delete:atom-start-edge>raw-edge",
-  "delete:entity-edge>raw-interior", "delete:raw-edge>atom-start-edge", "replace:entity-edge>entity-edge",
-  "replace:entity-edge>numref-edge", "replace:numref-edge>entity-edge", "replace:numref-edge>numref-edge",
-  "delete:entity-edge>atom-end-edge", "delete:raw-interior>raw-interior", "insert:raw-interior>raw-interior",
-  "replace:atom-start-edge>raw-edge", "replace:entity-edge>raw-interior", "replace:raw-edge>atom-start-edge",
-  "delete:atom-end-edge>raw-interior", "delete:raw-interior>atom-end-edge", "replace:entity-edge>atom-end-edge",
-  "replace:raw-interior>raw-interior", "delete:atom-start-edge>entity-edge", "delete:atom-start-edge>numref-edge",
-  "delete:entity-edge>atom-start-edge", "delete:numref-edge>atom-start-edge", "replace:atom-end-edge>raw-interior",
-  "replace:raw-interior>atom-end-edge", "delete:atom-start-edge>raw-interior", "delete:raw-interior>atom-start-edge",
-  "replace:atom-start-edge>entity-edge", "replace:atom-start-edge>numref-edge", "replace:entity-edge>atom-start-edge",
-  "replace:numref-edge>atom-start-edge", "delete:atom-start-edge>atom-end-edge",
+  "delete:entity-edge>raw-interior", "delete:numref-edge>raw-interior", "delete:raw-edge>atom-start-edge",
+  "delete:raw-interior>numref-edge", "replace:entity-edge>entity-edge", "replace:entity-edge>numref-edge",
+  "replace:numref-edge>entity-edge", "replace:numref-edge>numref-edge", "delete:entity-edge>atom-end-edge",
+  "delete:raw-interior>raw-interior", "insert:raw-interior>raw-interior", "replace:atom-start-edge>raw-edge",
+  "replace:entity-edge>raw-interior", "replace:numref-edge>raw-interior", "replace:raw-edge>atom-start-edge",
+  "replace:raw-interior>numref-edge", "delete:atom-end-edge>raw-interior", "delete:raw-interior>atom-end-edge",
+  "replace:entity-edge>atom-end-edge", "replace:raw-interior>raw-interior", "delete:atom-start-edge>entity-edge",
+  "delete:atom-start-edge>numref-edge", "delete:entity-edge>atom-start-edge", "delete:numref-edge>atom-start-edge",
+  "replace:atom-end-edge>raw-interior", "replace:raw-interior>atom-end-edge", "delete:atom-start-edge>raw-interior",
+  "delete:raw-interior>atom-start-edge", "replace:atom-start-edge>entity-edge", "replace:atom-start-edge>numref-edge",
+  "replace:entity-edge>atom-start-edge", "replace:numref-edge>atom-start-edge", "delete:atom-start-edge>atom-end-edge",
   "replace:atom-start-edge>raw-interior", "replace:raw-interior>atom-start-edge",
   "replace:atom-start-edge>atom-end-edge", "delete:atom-start-edge>atom-start-edge",
   "replace:atom-start-edge>atom-start-edge",

@@ -1044,12 +1044,13 @@ the generated boundary-pair proof (PR #474). Criteria disposition:
   family for the lexical matrix that grammar does not reach — entities,
   numeric references, astral characters, CDATA, `w:cr`/`w:ptab`, atomless
   runs, runless text, and mixed arrangements placing entities, numeric
-  references and ADJACENT atoms side by side. That family enumerates
-  EXHAUSTIVELY — every (i, j) range over every fixture, as replacement
-  and as deletion — so its 62 ordered pairs are the permitted set over
-  those bodies rather than a sample of it (493 batches planned), and the
-  62 keys are pinned as an IDENTITY SET rather than a count: a planner
-  that starts refusing any single ordered pair fails with that key.
+  references and ADJACENT atoms side by side in both orders. That family
+  enumerates EXHAUSTIVELY — every (i, j) range over every fixture, as
+  replacement and as deletion — so its 66 ordered pairs are the permitted
+  set over those bodies rather than a sample of it (598 batches planned),
+  and the 66 keys are pinned as an EXACT identity set in both directions:
+  a planner that stops planning a pair fails with that key, and one that
+  starts ACCEPTING an unlisted pair fails too.
 - **partial intra-run, cross-`w:t`, and cross-run edits**: GO — the
   replacement lands at the FIRST CONSUMED projecting contribution, so a
   cross-run replacement carries the first consumed run's formatting by
@@ -1094,11 +1095,16 @@ the generated boundary-pair proof (PR #474). Criteria disposition:
   every refusal to name a class from the taxonomy, and holds floors on the
   classes actually reached.
 - **bytes outside the declared union**: GO — two independent witnesses.
-  Every edit must fall inside a span derived from the SOURCE TREE (each
-  mapped `w:t`'s content range and open tag, each atom's whole element,
-  each run's synthesis anchors), which is what catches a plan that widened
-  its own union over `rPr` or a wrapper; and the shift-accounting walk then
-  requires every unclaimed byte to survive at its shifted offset.
+  Every edit must CONSUME a license derived from the REQUEST and the
+  source tree (the mapped byte range of each requested range, an
+  `xml:space` license only when the post-batch content needs it, an
+  atom's element only when a range covers it, one form-determined
+  synthesis site), spent when used — so a plan can neither touch what no
+  request reaches nor pay for two edits with one permission. The
+  shift-accounting walk then requires every unclaimed byte to survive at
+  its shifted offset. Both are mutation-proven: a stray empty CDATA at a
+  content boundary and a duplicated edit each fail with an unspent-license
+  error, though both reproject identically and preserve untouched bytes.
 - **exact precomputed projection**: GO — the oracle computes the expected
   projection ITSELF from the paragraph's own projection and the requested
   ranges, then requires both the RE-READ document (real reader, parsed from
