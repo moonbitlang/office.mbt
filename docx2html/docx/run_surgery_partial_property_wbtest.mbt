@@ -265,6 +265,22 @@ fn partial_space_declaration_span(
         break
       }
     }
+    // `xml:space` must be a whole attribute NAME, not the tail of one:
+    // `notxml:space='default'` is a different attribute entirely.
+    if matched && at > element.byte_start {
+      let previous = source[at - 1].to_int()
+      let name_char = (previous >= 0x41 && previous <= 0x5A) ||
+        (previous >= 0x61 && previous <= 0x7A) ||
+        (previous >= 0x30 && previous <= 0x39) ||
+        previous == 0x2D ||
+        previous == 0x2E ||
+        previous == 0x5F ||
+        previous == 0x3A
+      if name_char {
+        at = at + 1
+        continue
+      }
+    }
     if matched {
       let mut cursor = at + name.length()
       while cursor < limit && is_partial_space_byte(source[cursor]) {
@@ -306,6 +322,23 @@ fn is_partial_space_byte(value : Byte) -> Bool {
 }
 
 ///|
+/// The escaping a correct plan applies, reimplemented here so the oracle
+/// can predict payloads without borrowing production's escaper.
+fn partial_escape(text : String) -> String {
+  let out = StringBuilder()
+  for char in text {
+    match char {
+      '&' => out.write_string("&amp;")
+      '<' => out.write_string("&lt;")
+      '>' => out.write_string("&gt;")
+      '\r' => out.write_string("&#xD;")
+      _ => out.write_char(char)
+    }
+  }
+  out.to_string()
+}
+
+///|
 fn partial_needs_space(text : String) -> Bool {
   if text.length() == 0 {
     return false
@@ -337,9 +370,34 @@ fn partial_expected_licenses(
   paragraph : ReaderProjectionParagraph,
   elements : Array[ScannedElement],
   requested : Array[ParagraphTextEdit],
-) -> Array[(Int, Int, Bool)] {
-  let licenses : Array[(Int, Int, Bool)] = []
+) -> Array[(Int, Int, Bool, String)] {
+  // (from, to, exact, payload). Binding the PAYLOAD is what stops a plan
+  // from spending the right permissions on the wrong writes: deleting one
+  // host and writing the replacement into the next consumes exactly the
+  // same spans, reprojects identically and keeps every count, yet
+  // violates first-consumed placement and changes which run's formatting
+  // the text inherits. A leading `?` marks a payload matched by CONTENT,
+  // used where synthesis composes the run's own prefix and namespace.
+  let licenses : Array[(Int, Int, Bool, String)] = []
+  // Insertion sites, and where each one's license sits, so several
+  // requests at one site accumulate into the single coalesced payload
+  // production emits there.
   let insertion_sites : Array[Int] = []
+  let insertion_license_at : Array[Int] = []
+  fn note_insertion(site : Int, text : String) -> Unit {
+    for index, existing in insertion_sites {
+      if existing == site {
+        let slot = insertion_license_at[index]
+        let (from, to, exact, payload) = licenses[slot]
+        licenses[slot] = (from, to, exact, payload + text)
+        return
+      }
+    }
+    insertion_sites.push(site)
+    insertion_license_at.push(licenses.length())
+    licenses.push((site, site, true, text))
+  }
+
   // Ordered projecting contributions, so "first consumed" is well defined.
   let projecting : Array[(ReaderProjectionContribution, Int, Int)] = []
   for contribution in paragraph.contributions {
@@ -414,12 +472,9 @@ fn partial_expected_licenses(
               if from == to {
                 // Equal-offset insertions COALESCE into one edit, so one
                 // site earns one license however many requests share it.
-                if !insertion_sites.contains(from) {
-                  insertion_sites.push(from)
-                  licenses.push((from, to, true))
-                }
+                note_insertion(from, partial_escape(written))
               } else {
-                licenses.push((from, to, true))
+                licenses.push((from, to, true, partial_escape(written)))
               }
             _ => ()
           }
@@ -439,10 +494,16 @@ fn partial_expected_licenses(
         )
         if partial_needs_space(after.to_string()) {
           match partial_space_declaration_span(source, element) {
-            Some((from, to)) => licenses.push((from, to, true))
+            Some((from, to)) =>
+              licenses.push((from, to, true, "xml:space=\"preserve\""))
             None =>
               licenses.push(
-                (element.content_start - 1, element.content_start - 1, true),
+                (
+                  element.content_start - 1,
+                  element.content_start - 1,
+                  true,
+                  " xml:space=\"preserve\"",
+                ),
               )
           }
         }
@@ -450,17 +511,30 @@ fn partial_expected_licenses(
       ProjectedText(_) =>
         for edit in requested {
           if edit.start != edit.end && edit.start <= start && end <= edit.end {
-            licenses.push((element.byte_start, element.byte_end, true))
+            // Consumed whole: deleted, or replaced by a synthesized
+            // element carrying the text. A leading `?` marks a payload
+            // checked by CONTENT rather than equality, since synthesis
+            // composes the run's own prefix and namespace binding.
+            let carries = first_consumed(edit) == Some(contribution.source)
+            let payload = if carries && edit.replacement != "" {
+              "?" + partial_escape(edit.replacement)
+            } else {
+              ""
+            }
+            licenses.push((element.byte_start, element.byte_end, true, payload))
           }
           if edit.start == edit.end && edit.replacement != "" {
-            if edit.start == start &&
-              !insertion_sites.contains(element.byte_start) {
-              insertion_sites.push(element.byte_start)
-              licenses.push((element.byte_start, element.byte_start, true))
+            if edit.start == start {
+              note_insertion(
+                element.byte_start,
+                "?" + partial_escape(edit.replacement),
+              )
             }
-            if edit.start == end && !insertion_sites.contains(element.byte_end) {
-              insertion_sites.push(element.byte_end)
-              licenses.push((element.byte_end, element.byte_end, true))
+            if edit.start == end {
+              note_insertion(
+                element.byte_end,
+                "?" + partial_escape(edit.replacement),
+              )
             }
           }
         }
@@ -478,9 +552,22 @@ fn partial_expected_licenses(
         wanted = true
       }
     }
+    let mut synthesis_text = ""
+    for edit in requested {
+      if edit.start == edit.end && edit.replacement != "" {
+        synthesis_text = synthesis_text + edit.replacement
+      }
+    }
     if wanted {
       if run_element.content_start == run_element.byte_end {
-        licenses.push((run_element.byte_end - 2, run_element.byte_end, true))
+        licenses.push(
+          (
+            run_element.byte_end - 2,
+            run_element.byte_end,
+            true,
+            "?" + partial_escape(synthesis_text),
+          ),
+        )
       } else {
         let mut anchor = run_element.content_start
         let mut child = run_element.first_child_index
@@ -491,7 +578,9 @@ fn partial_expected_licenses(
           }
           child = candidate.next_sibling_index
         }
-        licenses.push((anchor, anchor, true))
+        licenses.push(
+          (anchor, anchor, true, "?" + partial_escape(synthesis_text)),
+        )
       }
     }
   }
@@ -588,13 +677,20 @@ fn assert_partial_batch(
       if spent[index] {
         continue
       }
-      let (from, to, exact) = license
-      let matches = if exact {
+      let (from, to, exact, payload) = license
+      let span_ok = if exact {
         edit.byte_start == from && edit.byte_end == to
       } else {
         edit.byte_start >= from && edit.byte_end <= to
       }
-      if matches {
+      // The payload has to match too: identical spans with swapped text
+      // reproject identically while violating placement.
+      let payload_ok = if payload.has_prefix("?") {
+        edit.replacement.contains(payload.view(start_offset=1).to_owned())
+      } else {
+        edit.replacement == payload
+      }
+      if span_ok && payload_ok {
         spent[index] = true
         paid = true
         break
@@ -604,6 +700,12 @@ fn assert_partial_batch(
       paid,
       msg="edit [\{edit.byte_start},\{edit.byte_end}) has no unspent license",
     )
+  }
+  // And no license may go UNSPENT: a permission the plan never used is
+  // work the oracle predicted and the plan omitted.
+  for index, license in licenses {
+    let (from, to, _, _) = license
+    assert_true(spent[index], msg="license [\{from},\{to}) was never spent")
   }
   let spliced_bytes = apply_run_surgery_edits(bytes, byte_edits)
   let spliced = @utf8.decode(spliced_bytes)
@@ -721,6 +823,18 @@ let partial_lexical_bodies : Array[(String, String)] = [
   ),
   ("empty-text", "<w:p><w:r><w:t></w:t><w:t>ab</w:t></w:r></w:p>"),
   ("runless-text", "<w:p><w:r><w:t>ab</w:t></w:r><w:t>cd</w:t></w:p>"),
+  // The xml:space spellings a document may actually carry: single
+  // quotes, and space around `=`. Without these the scanner's tolerance
+  // is unpinned and could regress to the one spelling it first knew.
+  (
+    "space-single-quoted", "<w:p><w:r><w:t xml:space='preserve'> ab </w:t></w:r></w:p>",
+  ),
+  (
+    "space-spaced-equals", "<w:p><w:r><w:t xml:space = \"default\">ab</w:t></w:r></w:p>",
+  ),
+  (
+    "space-lookalike-attribute", "<w:p><w:r><w:t notxml:space='default' xmlns:notxml='urn:decoy'>ab</w:t></w:r></w:p>",
+  ),
   // Isolated fixtures give only category-vs-raw pairs. This one puts an
   // entity, a numeric reference and atoms adjacent to each other so the
   // CROSS-category ordered pairs (entity>numref, numref>atom, ...) enter
@@ -791,10 +905,10 @@ test "the lexical matrix the grammar does not reach is proved the same way" {
   }
   let seen = (pair : String) => pairs.get(pair).unwrap_or(0)
   let refused = (name : String) => refusals.get(name).unwrap_or(0)
-  // Measured at this commit: 625 batches planned over 68 ordered pairs,
+  // Measured at this commit: 670 batches planned over 68 ordered pairs,
   // 16 of them multi-edit across multiple carriers. The EXACT per-key
-  // counts above are the real pin; this is a volume floor.
-  assert_true(planned == 625, msg="\{planned} lexical batches planned")
+  // counts above are the real pin; this is a volume total.
+  assert_true(planned == 670, msg="\{planned} lexical batches planned")
   // Entity and numeric-reference boundaries plan in BOTH orders; their
   // interiors are unresolvable and refuse below.
   // EXACT identity set, both directions. Inclusion alone would let a
@@ -918,7 +1032,7 @@ test "the source allowlist rejects a plan that widens beyond the request" {
   }
   let mut licensed = false
   for span in allowed {
-    let (span_from, span_to, _) = span
+    let (span_from, span_to, _, _) = span
     if from >= span_from && to <= span_to {
       licensed = true
     }
@@ -933,7 +1047,7 @@ test "the source allowlist rejects a plan that widens beyond the request" {
   guard map.byte_offset_at(1) is Some(request_to) else { fail("offset 1") }
   let mut request_licensed = false
   for span in allowed {
-    let (span_from, span_to, _) = span
+    let (span_from, span_to, _, _) = span
     if request_from >= span_from && request_to <= span_to {
       request_licensed = true
     }
@@ -975,7 +1089,7 @@ test "the allowlist pins the half-open rule and the synthesis anchors" {
   guard first_host is Some(host) else { fail("expected a first text host") }
   let mut licensed_tail = false
   for span in allowed {
-    let (from, to, _) = span
+    let (from, to, _, _) = span
     if host.content_end >= from &&
       host.content_end <= to &&
       from >= host.content_start {
@@ -1017,7 +1131,7 @@ test "the allowlist pins the half-open rule and the synthesis anchors" {
   assert_true(anchor > run_element.content_start)
   let mut licensed_anchor = false
   for span in simple_allowed {
-    let (from, to, _) = span
+    let (from, to, _, _) = span
     if anchor >= from && anchor <= to {
       licensed_anchor = true
     }
@@ -1029,7 +1143,7 @@ test "the allowlist pins the half-open rule and the synthesis anchors" {
   // And the run's content end is never a synthesis location either.
   let mut licensed_end = false
   for span in simple_allowed {
-    let (from, to, _) = span
+    let (from, to, _, _) = span
     if run_element.content_end >= from &&
       run_element.content_end <= to &&
       from > run_element.content_start {
@@ -1066,10 +1180,10 @@ test "partial: a multi-edit batch across two runs plans" {
 /// refusing any single pair fails with that pair's key.
 let partial_expected_pair_counts : Array[(String, Int)] = [
   ("insert:bare>bare", 1),
-  ("delete:raw-edge>raw-edge", 14),
-  ("insert:raw-edge>raw-edge", 44),
+  ("delete:raw-edge>raw-edge", 17),
+  ("insert:raw-edge>raw-edge", 52),
   ("insert:seam-edge>seam-edge", 1),
-  ("replace:raw-edge>raw-edge", 14),
+  ("replace:raw-edge>raw-edge", 17),
   ("delete:raw-edge>entity-edge", 8),
   ("delete:raw-edge>numref-edge", 6),
   ("delete:entity-edge>raw-edge", 18),
@@ -1078,15 +1192,15 @@ let partial_expected_pair_counts : Array[(String, Int)] = [
   ("replace:raw-edge>numref-edge", 7),
   ("delete:atom-end-edge>raw-edge", 2),
   ("delete:raw-edge>atom-end-edge", 1),
-  ("delete:raw-edge>raw-interior", 22),
-  ("delete:raw-interior>raw-edge", 24),
+  ("delete:raw-edge>raw-interior", 27),
+  ("delete:raw-interior>raw-edge", 29),
   ("replace:entity-edge>raw-edge", 18),
   ("replace:numref-edge>raw-edge", 11),
   ("delete:numref-edge>entity-edge", 8),
   ("replace:atom-end-edge>raw-edge", 2),
   ("replace:raw-edge>atom-end-edge", 1),
-  ("replace:raw-edge>raw-interior", 32),
-  ("replace:raw-interior>raw-edge", 24),
+  ("replace:raw-edge>raw-interior", 38),
+  ("replace:raw-interior>raw-edge", 29),
   ("delete:atom-start-edge>raw-edge", 4),
   ("delete:entity-edge>entity-edge", 40),
   ("delete:entity-edge>numref-edge", 10),
@@ -1110,8 +1224,8 @@ let partial_expected_pair_counts : Array[(String, Int)] = [
   ("replace:raw-interior>numref-edge", 6),
   ("delete:atom-end-edge>raw-interior", 3),
   ("delete:raw-interior>atom-end-edge", 1),
-  ("delete:raw-interior>raw-interior", 16),
-  ("insert:raw-interior>raw-interior", 27),
+  ("delete:raw-interior>raw-interior", 19),
+  ("insert:raw-interior>raw-interior", 32),
   ("replace:entity-edge>atom-end-edge", 2),
   ("replace:entity-edge>raw-interior", 10),
   ("delete:atom-start-edge>entity-edge", 2),
@@ -1120,7 +1234,7 @@ let partial_expected_pair_counts : Array[(String, Int)] = [
   ("delete:numref-edge>atom-start-edge", 3),
   ("replace:atom-end-edge>raw-interior", 3),
   ("replace:raw-interior>atom-end-edge", 1),
-  ("replace:raw-interior>raw-interior", 23),
+  ("replace:raw-interior>raw-interior", 28),
   ("delete:atom-start-edge>raw-interior", 4),
   ("delete:raw-interior>atom-start-edge", 2),
   ("replace:atom-start-edge>entity-edge", 3),

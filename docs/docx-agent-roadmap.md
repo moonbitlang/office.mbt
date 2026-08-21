@@ -1046,11 +1046,12 @@ the generated boundary-pair proof (PR #474). Criteria disposition:
   runs, runless text, and mixed arrangements placing entities, numeric
   references and ADJACENT atoms side by side in both orders. That family
   enumerates EXHAUSTIVELY — every (i, j) range over every fixture, as
-  replacement and as deletion — so its 66 ordered pairs are the permitted
-  set over those bodies rather than a sample of it (598 batches planned),
-  and the 66 keys are pinned as an EXACT identity set in both directions:
-  a planner that stops planning a pair fails with that key, and one that
-  starts ACCEPTING an unlisted pair fails too.
+  replacement and as deletion — so its 68 ordered pairs are the permitted
+  set over those bodies rather than a sample of it (670 batches planned),
+  and each key's EXACT COUNT is pinned in both directions: a pair that
+  stops being planned fails by name, an unlisted pair being accepted
+  fails, and a single range being refused behind a shared key fails too,
+  which presence alone could not see.
 - **partial intra-run, cross-`w:t`, and cross-run edits**: GO — the
   replacement lands at the FIRST CONSUMED projecting contribution, so a
   cross-run replacement carries the first consumed run's formatting by
@@ -1099,8 +1100,13 @@ the generated boundary-pair proof (PR #474). Criteria disposition:
   source tree (the mapped byte range of each requested range, an
   `xml:space` license only when the post-batch content needs it, an
   atom's element only when a range covers it, one form-determined
-  synthesis site), spent when used — so a plan can neither touch what no
-  request reaches nor pay for two edits with one permission. The
+  synthesis site), each carrying the PAYLOAD that license entitles and
+  spent when used — so a plan can neither touch what no request reaches,
+  nor pay for two edits with one permission, nor spend the right
+  permissions on the wrong writes (deleting one host and writing the
+  replacement into the next consumes identical spans and reprojects
+  identically). Every license must also be spent, so predicted work
+  cannot be silently omitted. The
   shift-accounting walk then requires every unclaimed byte to survive at
   its shifted offset. Both are mutation-proven: a stray empty CDATA at a
   content boundary and a duplicated edit each fail with an unspent-license
