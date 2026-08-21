@@ -257,9 +257,132 @@ test "partial: request-shape refusals" {
 }
 
 ///|
-test "partial: cross-contribution range refuses in this increment" {
+test "partial: a cross-w:t range plans with the start host and a trimmed end" {
+  let body = "<w:p><w:r><w:t>ab</w:t><w:t>cd</w:t></w:r></w:p>"
+  assert_partial_edits(
+    body,
+    paragraph=0,
+    [partial_edit(1, 3, "X")],
+    expected="aXd",
+  )
+  // The replacement lands in the START host; the end w:t keeps its tail.
+  let source = "<w:document xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\" xmlns:v=\"urn:schemas-microsoft-com:vml\"><w:body>\{body}</w:body></w:document>"
+  let bytes = @utf8.encode(source)
+  let projection = surgery_native_projection(source)
+  let (byte_edits, _) = plan_paragraph_text_edits(projection, bytes[:], 0, [
+    partial_edit(1, 3, "X"),
+  ])
+  let spliced = @utf8.decode(apply_run_surgery_edits(bytes, byte_edits))
+  assert_true(spliced.contains("<w:t>aX</w:t><w:t>d</w:t>"))
+}
+
+///|
+test "partial: a fully covered middle w:t is emptied in place" {
+  let body = "<w:p><w:r><w:t>ab</w:t><w:t>mid</w:t><w:t>cd</w:t></w:r></w:p>"
+  assert_partial_edits(
+    body,
+    paragraph=0,
+    [partial_edit(1, 6, "Z")],
+    expected="aZd",
+  )
+  let source = "<w:document xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\" xmlns:v=\"urn:schemas-microsoft-com:vml\"><w:body>\{body}</w:body></w:document>"
+  let bytes = @utf8.encode(source)
+  let projection = surgery_native_projection(source)
+  let (byte_edits, _) = plan_paragraph_text_edits(projection, bytes[:], 0, [
+    partial_edit(1, 6, "Z"),
+  ])
+  let spliced = @utf8.decode(apply_run_surgery_edits(bytes, byte_edits))
+  assert_true(spliced.contains("<w:t>aZ</w:t><w:t></w:t><w:t>d</w:t>"))
+}
+
+///|
+test "partial: a whole atom deletes via a covering range" {
+  let body = "<w:p><w:r><w:t>ab</w:t><w:tab/><w:t>cd</w:t></w:r></w:p>"
+  assert_partial_edits(
+    body,
+    paragraph=0,
+    [partial_edit(2, 3, "")],
+    expected="abcd",
+  )
+  let source = "<w:document xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\" xmlns:v=\"urn:schemas-microsoft-com:vml\"><w:body>\{body}</w:body></w:document>"
+  let bytes = @utf8.encode(source)
+  let projection = surgery_native_projection(source)
+  let (byte_edits, _) = plan_paragraph_text_edits(projection, bytes[:], 0, [
+    partial_edit(2, 3, ""),
+  ])
+  let spliced = @utf8.decode(apply_run_surgery_edits(bytes, byte_edits))
+  assert_true(spliced.contains("<w:t>ab</w:t><w:t>cd</w:t>"))
+}
+
+///|
+test "partial: an atom-start range synthesizes at the atom, inside seams" {
+  // Replacement starting AT the atom consumes it and synthesizes a w:t in
+  // its place — never appended to the preceding text host.
+  let body = "<w:p><w:r><w:t>ab</w:t><w:tab/><w:t>cd</w:t></w:r></w:p>"
+  assert_partial_edits(
+    body,
+    paragraph=0,
+    [partial_edit(2, 4, "X")],
+    expected="abXd",
+  )
+  let source = "<w:document xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\" xmlns:v=\"urn:schemas-microsoft-com:vml\"><w:body>\{body}</w:body></w:document>"
+  let bytes = @utf8.encode(source)
+  let projection = surgery_native_projection(source)
+  let (byte_edits, receipt) = plan_paragraph_text_edits(
+    projection,
+    bytes[:],
+    0,
+    [partial_edit(2, 4, "X")],
+  )
+  guard receipt.logical_edits[0].placement is AtomSynthesis else {
+    fail("expected atom synthesis placement")
+  }
+  let spliced = @utf8.decode(apply_run_surgery_edits(bytes, byte_edits))
+  assert_true(spliced.contains("<w:t>ab</w:t><w:t xmlns:w="))
+  assert_true(spliced.contains(">X</w:t><w:t>d</w:t>"))
+}
+
+///|
+test "partial: splitting an atom refuses as non-scalar" {
+  // Webdings 0x64 projects U+1F6E1 — an astral character occupying TWO
+  // UTF-16 units — so a range covering only its first unit splits the atom.
   assert_partial_refusal(
-    "<w:p><w:r><w:t>ab</w:t><w:t>cd</w:t></w:r></w:p>",
+    "<w:p><w:r><w:t>ab</w:t><w:sym w:font=\"Webdings\" w:char=\"0064\"/><w:t>cd</w:t></w:r></w:p>",
+    paragraph=0,
+    [partial_edit(2, 3, "x")],
+    refusal="NonScalarBoundary",
+  )
+}
+
+///|
+test "partial: a transparent seam inside the range survives untouched" {
+  // A bookmark between the two texts is a transparent seam: the range
+  // crosses it, the plan must leave its bytes alone.
+  let body = "<w:p><w:r><w:t>ab</w:t><w:bookmarkStart w:id=\"1\" w:name=\"b\"/><w:bookmarkEnd w:id=\"1\"/><w:t>cd</w:t></w:r></w:p>"
+  assert_partial_edits(
+    body,
+    paragraph=0,
+    [partial_edit(1, 3, "Y")],
+    expected="aYd",
+  )
+  let source = "<w:document xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\" xmlns:v=\"urn:schemas-microsoft-com:vml\"><w:body>\{body}</w:body></w:document>"
+  let bytes = @utf8.encode(source)
+  let projection = surgery_native_projection(source)
+  let (byte_edits, _) = plan_paragraph_text_edits(projection, bytes[:], 0, [
+    partial_edit(1, 3, "Y"),
+  ])
+  let spliced = @utf8.decode(apply_run_surgery_edits(bytes, byte_edits))
+  assert_true(
+    spliced.contains(
+      "<w:t>aY</w:t><w:bookmarkStart w:id=\"1\" w:name=\"b\"/><w:bookmarkEnd w:id=\"1\"/><w:t>d</w:t>",
+    ),
+  )
+}
+
+///|
+test "partial: a cross-run range refuses in this increment" {
+  assert_partial_refusal(
+    "<w:p><w:r><w:t>ab</w:t></w:r><w:r><w:t>cd</w:t></w:r></w:p>",
     paragraph=0,
     [partial_edit(1, 3, "x")],
     refusal="UnsupportedTextSource",
@@ -449,16 +572,15 @@ test "partial: precedence is batch-wide by phase, not per edit" {
 }
 
 ///|
-test "partial: ranges crossing visible or suppressed content refuse as unhosted" {
-  // `ab<w:br/>cd` projects "abcd" with a zero-width visible barrier between
-  // offsets 2 and 2 of the second w:t... between the two texts. No single
-  // text contribution contains [1,3), so this increment refuses it as an
-  // unhosted range — the cross-contribution seam B2a will open.
+test "partial: crossing a visible barrier refuses as such" {
+  // `ab<w:br/>cd` projects "abcd" with the break as a zero-width visible
+  // barrier strictly inside [1,3): the plan has no representation for its
+  // cost, so it refuses by name.
   assert_partial_refusal(
     "<w:p><w:r><w:t>ab</w:t><w:br/><w:t>cd</w:t></w:r></w:p>",
     paragraph=0,
     [partial_edit(1, 3, "x")],
-    refusal="UnsupportedTextSource",
+    refusal="VisibleBarrier",
   )
 }
 
