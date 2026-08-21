@@ -1187,23 +1187,23 @@ test "the lexical matrix the grammar does not reach is proved the same way" {
     }
     ignore(label)
   }
-  let seen = (pair : String) => pairs.get(pair).unwrap_or(0)
-  let refused = (name : String) => refusals.get(name).unwrap_or(0)
-  // Measured at this commit: 1013 batches planned over 71 ordered pairs,
-  // 18 of them multi-edit across multiple carriers. The EXACT per-key
-  // counts above are the real pin; this is a volume total.
-  assert_true(planned == 1013, msg="\{planned} lexical batches planned")
-  // Entity and numeric-reference boundaries plan in BOTH orders; their
-  // interiors are unresolvable and refuse below.
-  // EXACT identity set, both directions. Inclusion alone would let a
-  // pair vanish unnoticed if another appeared, and — worse — would stay
-  // green when the planner starts ACCEPTING something it should refuse,
-  // since a new key is an unexpected acceptance.
-  // PER-CASE dispositions, pinned exactly. Aggregate keys can cancel: a
-  // newly accepted range and a newly refused one under the same key
-  // leave every count unchanged. Each case's identity and outcome
-  // cannot, so this table is the strongest statement the corpus can
-  // make -- and it names the offending case when it moves.
+  // PER-CASE dispositions, pinned exactly, and checked BEFORE the
+  // aggregates so the most specific statement is the one that reports.
+  //
+  // Aggregates count; they do not name. Two cases can share a class key,
+  // so a newly accepted range and a newly refused one cancel in every
+  // count while behaviour changed. A case's identity and outcome cannot
+  // cancel, and this table implies each count below, so it is the
+  // strongest statement the corpus makes.
+  //
+  // Measured by mutating the barrier window in
+  // `plan_paragraph_text_edits` to `position + 1 < edit.end`, which
+  // accepts ranges ending one unit past a visible barrier. The
+  // per-batch equality oracle stays GREEN — those edits are byte-correct
+  // and only the refusal POLICY was violated — and the aggregates report
+  // no more than `1027 lexical batches planned` and a moved
+  // `delete:raw-edge>raw-edge` count. This table reports
+  // `barrier|0|0,3,rep: expected VisibleBarrier, got ok`.
   // Pinned in GENERATION order, not sorted: the fixture list and the
   // batch enumeration are both deterministic, and sorting would bind
   // the table to the runtime's string collation instead of to the
@@ -1217,9 +1217,24 @@ test "the lexical matrix the grammar does not reach is proved the same way" {
     assert_eq(
       entry,
       partial_expected_dispositions[index],
-      msg="case disposition changed",
+      msg="case disposition changed: expected " +
+        partial_expected_dispositions[index] +
+        ", got " +
+        entry,
     )
   }
+  let seen = (pair : String) => pairs.get(pair).unwrap_or(0)
+  let refused = (name : String) => refusals.get(name).unwrap_or(0)
+  // Measured at this commit: 1013 batches planned over 71 ordered pairs,
+  // 18 of them multi-edit across multiple carriers. The EXACT per-key
+  // counts above are the real pin; this is a volume total.
+  assert_true(planned == 1013, msg="\{planned} lexical batches planned")
+  // Entity and numeric-reference boundaries plan in BOTH orders; their
+  // interiors are unresolvable and refuse below.
+  // EXACT identity set, both directions. Inclusion alone would let a
+  // pair vanish unnoticed if another appeared, and — worse — would stay
+  // green when the planner starts ACCEPTING something it should refuse,
+  // since a new key is an unexpected acceptance.
   // EXACT per-key COUNTS, both directions. Presence alone cannot see a
   // single range being refused when other ranges share its key, nor a
   // single unsafe acceptance whose key is already listed — the counts
