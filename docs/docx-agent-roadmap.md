@@ -1015,6 +1015,78 @@ L0: pub surface only what N1/N2 need.
   atomically without rewriting either slice or the content between them, and
   the receipt reports both before/after paths.
 
+### N0 verdict (2026-08-21): **GO**
+
+N0 landed as the exact lexical map (N0a, PR #224), the bounded physical
+source-tree identity (N0b1, PR #235), the projection index and its logical
+UTF-16 intervals (N0b2-N0b4), whole-run surgery (N0c1, #222), and partial
+token-boundary surgery (N0c2, #236) across four rungs: B1 intra-`w:t`
+batches (PR #471), B2a same-run cross-contribution (PR #472), B2b cross-run
+within one physical paragraph (PR #473), and B3 general composition with the
+generated boundary-pair proof. Criteria disposition:
+
+- **every permitted start-kind/end-kind boundary pair**: GO — the accepted
+  endpoint kinds form a permissive product, and refusals come from endpoint
+  RESOLVABILITY (`WtContentMap::byte_offset_at` returning None is the
+  non-scalar refusal: mid-entity, mid-numeric-reference, mid-CDATA,
+  surrogate half, empty-token ambiguity) and from the ordered interval's
+  CONTEXT, not from the pair itself. Proved over generated documents rather
+  than hand-listed fixtures: the property suite derives batches from each
+  document's own projection and its coverage guard requires text interiors,
+  text edges, atom edges, barrier edges, seam edges, and suppressed edges
+  all to appear in PLANNED batches (measured margins: 243 batches planned,
+  text edges 651, seams 196, suppressed 132, atom edges 105, barriers 19).
+- **partial intra-run, cross-`w:t`, and cross-run edits**: GO — the
+  replacement lands at the FIRST CONSUMED projecting contribution, so a
+  cross-run replacement carries the first consumed run's formatting by
+  construction; middles are emptied in place, the end keeps its tail, and
+  run shells, `rPr`, wrappers (hyperlink, `w:ins`), and transparent seams
+  between the endpoints stay byte-identical.
+- **multiple ordered non-overlapping edits**: GO — logical overlap refuses
+  BEFORE byte planning, so a byte-level overlap can never surface as a
+  splice error; equal-offset insertions concatenate in REQUEST order and
+  every sort carries an explicit tiebreak, because `Array::sort_by_key` is
+  documented unstable.
+- **`w:t` split/synthesis**: GO, resolved as LEXICAL splitting plus
+  synthesis. No permitted case requires splitting the ELEMENT: content
+  splicing covers partial replacement, insertion, retained heads and tails,
+  and several edits in one content range, while synthesis (namespace binding
+  travelling with the element) covers the absence of a usable text host —
+  an atom-start replacement, an insertion beside an atom, and an atomless
+  run. Structural splitting would enlarge the footprint and add no
+  projection capability; it is deliberately NOT implemented.
+- **escaping and `xml:space` only inside the union**: GO — `xml:space` is
+  decided once per TOUCHED `w:t` from its post-batch full content
+  (replace-wholesale when preservation is needed, never touched when it is
+  not); an untouched `w:t` never gains, loses, or changes the attribute.
+  Logical no-ops are decided on the PROJECTION before any lexical
+  rewriting, so replacing a reference-spelled character with itself
+  produces zero byte edits and never canonicalizes `&#38;` into `&amp;`.
+- **refusal classes**: GO — a stable private taxonomy (22 classes) with one
+  renderer; no class echoes document or replacement content. Precedence is
+  batch-wide BY PHASE (request shape, ownership, structural, endpoint
+  resolution, replacement validity, byte planning, internal validation), so
+  a later edit's earlier-phase defect always wins. A no-op suppresses byte
+  planning, never validation.
+- **bytes outside the declared union**: GO — every oracle ends with the
+  shift-accounting walk, and the property suite applies it to every planned
+  batch over generated documents.
+- **exact precomputed projection**: GO — each plan carries a receipt whose
+  `expected_projection` is computed from the request, and the oracle holds
+  the RE-READ document (real reader, parsed from scratch) to that exact
+  string.
+- **no public API**: GO — everything is private with white-box tests; the
+  `.mbti` surface is unchanged across all four rungs.
+
+Locked decisions carried forward: `w:instrText` gets a token map but is
+never a partial-surgery host (require an ordinary WML `t`); any CDATA in a
+map refuses the whole `w:t`; a self-closing `<w:t/>` has no interior and is
+addressable only through the `/>` conversion N0c1 owns; involved-run gating
+is derived from PHYSICAL SPANS, since registration indices follow first
+appearance and the reader tolerates nested runs; a returned annotated result
+is a source-pinned immutable snapshot — surgery writes a NEW archive and
+re-reading it is the only way to observe the mutation.
+
 ## N4 — capstone (M-pattern, consolidation only)
 
 - A typo-fix + review-edit recipe in docs/agent-json-schemas.md (find →
