@@ -1296,3 +1296,51 @@ test "partial: synthesis reproduces a default-namespace run's spelling" {
     ),
   )
 }
+
+///|
+test "partial: an empty drawing is a hard barrier, not a seam" {
+  // The reader routes w:drawing through the transparent-boundary path,
+  // so an EMPTY one projects a single Transparent contribution — by kind
+  // alone indistinguishable from a bookmark. The inventory calls it a
+  // hard barrier, so a range may not span it, and a paragraph holding
+  // one is not an empty synthesis carrier.
+  assert_partial_refusal(
+    "<w:p><w:r><w:t>ab</w:t><w:drawing/><w:t>cd</w:t></w:r></w:p>",
+    paragraph=0,
+    [partial_edit(1, 3, "x")],
+    refusal="VisibleBarrier",
+  )
+  assert_partial_refusal(
+    "<w:p><w:r><w:drawing/></w:r></w:p>",
+    paragraph=0,
+    [partial_edit(0, 0, "X")],
+    refusal="NoSynthesisCarrier",
+  )
+  // The same holds for an embedded object.
+  assert_partial_refusal(
+    "<w:p><w:r><w:t>ab</w:t><w:object/><w:t>cd</w:t></w:r></w:p>",
+    paragraph=0,
+    [partial_edit(1, 3, "x")],
+    refusal="VisibleBarrier",
+  )
+}
+
+///|
+test "whole-run replacement refuses a run holding an empty drawing" {
+  // The same classification hole in N0c1: it ignores every Transparent
+  // contribution, so a run whose only non-text content is an empty
+  // drawing was replaced without accounting for the drawing at all.
+  let source =
+    #|<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:body><w:p><w:r><w:t>a</w:t><w:drawing/></w:r></w:p></w:body></w:document>
+  let bytes = @utf8.encode(source)
+  let projection = surgery_native_projection(source)
+  try
+    plan_whole_run_replacement(projection, bytes[:], 0, 0, "x") |> ignore
+  catch {
+    Unsupported(message~) =>
+      assert_true(message.contains("visible non-text"), msg=message)
+    _ => fail("expected an Unsupported refusal")
+  } noraise {
+    _ => fail("expected the empty drawing to refuse")
+  }
+}

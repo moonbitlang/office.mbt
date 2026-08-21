@@ -246,8 +246,16 @@ fn plan_whole_run_replacement(
           message="run \{run_index} in paragraph \{paragraph_index} holds visible non-text content",
         )
       // Boundaries produce no text: the run's own opening marker and the
-      // wrappers the reader flattens. They stay.
-      Transparent => ()
+      // wrappers the reader flattens. They stay -- unless the boundary is
+      // an empty drawing or embedded object, which the inventory calls a
+      // hard barrier and this plan has no more representation for than it
+      // does for a visible atom.
+      Transparent =>
+        if run_surgery_is_hard_barrier_container(element) {
+          raise Unsupported(
+            message="run \{run_index} in paragraph \{paragraph_index} holds visible non-text content",
+          )
+        }
       // Suppressed content produced no reader content AT ITS SITE -- the
       // reader decided it contributes nothing -- so replacing the run's
       // text neither needs nor may touch its bytes.
@@ -387,6 +395,25 @@ fn plan_whole_run_replacement(
   }
   edits.sort_by_key(edit => edit.byte_start)
   edits
+}
+
+///|
+/// Whether a Transparent contribution is really a HARD BARRIER wearing a
+/// seam's clothes.
+///
+/// The reader routes `w:drawing`, `w:object` and `w:pict` through the
+/// transparent-boundary path, so an EMPTY one projects a single
+/// Transparent contribution — indistinguishable, by kind alone, from a
+/// bookmark or a run boundary. The five-class inventory calls drawings
+/// and embedded objects hard barriers, and both surgeries already refuse
+/// visible non-text; they simply could not recognise this shape.
+fn run_surgery_is_hard_barrier_container(element : ScannedElement) -> Bool {
+  is_wml_uri(element.uri) &&
+  (
+    element.local_name == "drawing" ||
+    element.local_name == "object" ||
+    element.local_name == "pict"
+  )
 }
 
 ///|

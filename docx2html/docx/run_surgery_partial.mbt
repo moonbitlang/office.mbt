@@ -406,6 +406,18 @@ fn plan_paragraph_text_edits(
               SuppressedRegion,
               "edit \{ordinal} in paragraph \{paragraph_index}",
             )
+          // An empty drawing or embedded object reaches the projection as
+          // a Transparent boundary, but the inventory calls it a hard
+          // barrier: a range may not span one.
+          Transparent => {
+            let SourceElementId(seam_identity) = contribution.source
+            if run_surgery_is_hard_barrier_container(elements[seam_identity]) {
+              raise partial_surgery_refuse(
+                VisibleBarrier,
+                "edit \{ordinal} in paragraph \{paragraph_index}",
+              )
+            }
+          }
           _ => ()
         }
       }
@@ -537,6 +549,14 @@ fn plan_paragraph_text_edits(
             for contribution in paragraph.contributions {
               match contribution.kind {
                 VisibleNonText | SuppressedContent => occupied = true
+                Transparent => {
+                  let SourceElementId(seam_identity) = contribution.source
+                  if run_surgery_is_hard_barrier_container(
+                      elements[seam_identity],
+                    ) {
+                    occupied = true
+                  }
+                }
                 _ => ()
               }
             }
