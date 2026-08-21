@@ -1047,11 +1047,17 @@ the generated boundary-pair proof (PR #474). Criteria disposition:
   references and ADJACENT atoms side by side in both orders. That family
   enumerates EXHAUSTIVELY — every (i, j) range over every fixture, as
   replacement and as deletion — so its 71 ordered pairs are the permitted
-  set over those bodies rather than a sample of it (1013 batches planned, including the identity replacement over every range so the no-op paths are exercised),
+  set over those bodies rather than a sample of it (1087 batches planned, including the identity replacement over every range so the no-op paths are exercised),
   and each key's EXACT COUNT is pinned in both directions: a pair that
   stops being planned fails by name, an unlisted pair being accepted
   fails, and a single range being refused behind a shared key fails too,
-  which presence alone could not see.
+  which presence alone could not see. Above the counts sits the
+  PER-CASE disposition table: all 1278 generated cases, each named by
+  fixture, paragraph, range and variant, each pinned to `ok` or to the
+  refusal class it raised. Counts can cancel — two cases sharing a key
+  can swap outcomes and leave every total unchanged — and counts cannot
+  name the case that moved; the table does both, and its keys are
+  asserted injective so a future fixture cannot silently weaken it.
 - **partial intra-run, cross-`w:t`, and cross-run edits**: GO — the
   replacement lands at the FIRST CONSUMED projecting contribution, so a
   cross-run replacement carries the first consumed run's formatting by
