@@ -305,7 +305,8 @@ fn plan_whole_run_replacement(
       // `default`, which is the opposite of what edge whitespace needs.
       match existing {
         Some((from, to)) =>
-          if wants_space {
+          if wants_space &&
+            !run_surgery_space_declaration_is_preserve(source, (from, to)) {
             edits.push({
               byte_start: from,
               byte_end: to,
@@ -395,6 +396,44 @@ fn plan_whole_run_replacement(
   }
   edits.sort_by_key(edit => edit.byte_start)
   edits
+}
+
+///|
+/// Whether an existing declaration's value is already `preserve`.
+///
+/// The locked rule ensures `xml:space="preserve"` by ADDING it, or by
+/// replacing a `default` value-span — an existing `preserve` is left
+/// byte-identical. Rewriting it anyway would change quote style or
+/// spacing for no reason and put bytes the caller never asked about
+/// inside the declared footprint.
+fn run_surgery_space_declaration_is_preserve(
+  source : BytesView,
+  span : (Int, Int),
+) -> Bool {
+  let (from, to) = span
+  let mut at = from
+  while at < to && source[at] != b'"' && source[at] != b'\'' {
+    at = at + 1
+  }
+  if at >= to {
+    return false
+  }
+  let quote = source[at]
+  let start = at + 1
+  let mut end = start
+  while end < to && source[end] != quote {
+    end = end + 1
+  }
+  let value = b"preserve"
+  if end - start != value.length() {
+    return false
+  }
+  for offset in 0..<value.length() {
+    if source[start + offset] != value[offset] {
+      return false
+    }
+  }
+  true
 }
 
 ///|

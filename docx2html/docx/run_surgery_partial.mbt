@@ -1066,7 +1066,10 @@ fn plan_paragraph_text_edits(
     // when preservation is not needed; never edit an untouched `w:t`.
     match existing {
       Some((from, to)) =>
-        if wants_space {
+        // An existing `preserve` is left byte-identical; only a `default`
+        // (or any other value) is replaced.
+        if wants_space &&
+          !run_surgery_space_declaration_is_preserve(source, (from, to)) {
           edits.push({
             byte_start: from,
             byte_end: to,

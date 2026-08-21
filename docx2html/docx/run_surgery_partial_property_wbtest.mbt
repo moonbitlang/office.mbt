@@ -476,6 +476,39 @@ fn partial_synthesised_element(
 }
 
 ///|
+/// Whether an existing declaration already says `preserve`, decided by
+/// the test rather than borrowed from production.
+fn partial_space_value_is_preserve(
+  source : BytesView,
+  span : (Int, Int),
+) -> Bool {
+  let (from, to) = span
+  let mut at = from
+  while at < to && source[at].to_int() != 0x22 && source[at].to_int() != 0x27 {
+    at = at + 1
+  }
+  if at >= to {
+    return false
+  }
+  let quote = source[at].to_int()
+  let start = at + 1
+  let mut end = start
+  while end < to && source[end].to_int() != quote {
+    end = end + 1
+  }
+  let value = "preserve"
+  if end - start != value.length() {
+    return false
+  }
+  for offset in 0..<value.length() {
+    if source[start + offset].to_int() != value[offset].to_int() {
+      return false
+    }
+  }
+  true
+}
+
+///|
 fn partial_needs_space(text : String) -> Bool {
   if text.length() == 0 {
     return false
@@ -651,8 +684,13 @@ fn partial_expected_licenses(
         )
         if partial_needs_space(after.to_string()) {
           match partial_space_declaration_span(source, element) {
+            // An existing `preserve` earns NO license: the locked rule
+            // leaves it byte-identical, so a plan that rewrote it would
+            // be spending permission the request never granted.
             Some((from, to)) =>
-              licenses.push((from, to, true, "xml:space=\"preserve\""))
+              if !partial_space_value_is_preserve(source, (from, to)) {
+                licenses.push((from, to, true, "xml:space=\"preserve\""))
+              }
             None =>
               licenses.push(
                 (
@@ -1079,6 +1117,7 @@ test "the lexical matrix the grammar does not reach is proved the same way" {
   let refusals : Map[String, Int] = Map([])
   let mut planned = 0
   let mut multi_carrier = 0
+  let dispositions : Array[String] = []
   for entry in partial_lexical_bodies {
     let (label, body) = entry
     let source = "<w:document xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\" xmlns:v=\"urn:schemas-microsoft-com:vml\"><w:body>\{body}</w:body></w:document>"
@@ -1092,6 +1131,46 @@ test "the lexical matrix the grammar does not reach is proved the same way" {
         let fresh = surgery_native_projection(source)
         let (planned_pairs, refusal, carriers) = assert_partial_batch(
           source, fresh, batch,
+        )
+        // The key names the case, never quotes it: replacements include
+        // tabs and astral characters, and embedding them would make the
+        // table itself unprintable. Coordinates plus the variant are
+        // enough to identify every case the generator emits.
+        let case_key = StringBuilder()
+        case_key.write_string(label + "|" + batch.paragraph_index.to_string())
+        let current = partial_paragraph_projection(
+          projection.paragraphs[paragraph_index],
+        )
+        for edit in batch.edits {
+          let variant = if edit.start == edit.end {
+            if edit.replacement == "" {
+              "nop"
+            } else {
+              "ins"
+            }
+          } else if edit.replacement == "" {
+            "del"
+          } else if current
+            .view(start_offset=edit.start, end_offset=edit.end)
+            .to_owned() ==
+            edit.replacement {
+            "same"
+          } else {
+            "rep"
+          }
+          case_key.write_string(
+            "|" +
+            edit.start.to_string() +
+            "," +
+            edit.end.to_string() +
+            "," +
+            variant,
+          )
+        }
+        dispositions.push(
+          case_key.to_string() +
+          "=" +
+          (if refusal == "" { "ok" } else { refusal }),
         )
         if refusal != "" {
           refusals[refusal] = refusals.get(refusal).unwrap_or(0) + 1
@@ -1120,6 +1199,27 @@ test "the lexical matrix the grammar does not reach is proved the same way" {
   // pair vanish unnoticed if another appeared, and — worse — would stay
   // green when the planner starts ACCEPTING something it should refuse,
   // since a new key is an unexpected acceptance.
+  // PER-CASE dispositions, pinned exactly. Aggregate keys can cancel: a
+  // newly accepted range and a newly refused one under the same key
+  // leave every count unchanged. Each case's identity and outcome
+  // cannot, so this table is the strongest statement the corpus can
+  // make -- and it names the offending case when it moves.
+  // Pinned in GENERATION order, not sorted: the fixture list and the
+  // batch enumeration are both deterministic, and sorting would bind
+  // the table to the runtime's string collation instead of to the
+  // corpus.
+  assert_eq(
+    dispositions.length(),
+    partial_expected_dispositions.length(),
+    msg="case count changed",
+  )
+  for index, entry in dispositions {
+    assert_eq(
+      entry,
+      partial_expected_dispositions[index],
+      msg="case disposition changed",
+    )
+  }
   // EXACT per-key COUNTS, both directions. Presence alone cannot see a
   // single range being refused when other ranges share its key, nor a
   // single unsafe acceptance whose key is already listed — the counts
@@ -1522,3 +1622,410 @@ test "payload licenses are exercised by escaping and whitespace" {
     assert_eq(refusal, "", msg="escaping batch refused for \{body}")
   }
 }
+
+///|
+/// Every lexical case and what it did, pinned exactly.
+let partial_expected_dispositions : Array[String] = [
+  "entities|0|0,0,ins=ok", "entities|0|0,1,rep=ok", "entities|0|0,1,del=ok", "entities|0|0,1,same=ok",
+  "entities|0|0,2,rep=ok", "entities|0|0,2,del=ok", "entities|0|0,2,same=ok", "entities|0|0,3,rep=ok",
+  "entities|0|0,3,del=ok", "entities|0|0,3,same=ok", "entities|0|0,4,rep=ok", "entities|0|0,4,del=ok",
+  "entities|0|0,4,same=ok", "entities|0|0,5,rep=ok", "entities|0|0,5,del=ok", "entities|0|0,5,same=ok",
+  "entities|0|0,6,rep=ok", "entities|0|0,6,del=ok", "entities|0|0,6,same=ok", "entities|0|0,7,rep=ok",
+  "entities|0|0,7,del=ok", "entities|0|0,7,same=ok", "entities|0|1,1,ins=ok", "entities|0|1,2,rep=ok",
+  "entities|0|1,2,del=ok", "entities|0|1,2,same=ok", "entities|0|1,3,rep=ok", "entities|0|1,3,del=ok",
+  "entities|0|1,3,same=ok", "entities|0|1,4,rep=ok", "entities|0|1,4,del=ok", "entities|0|1,4,same=ok",
+  "entities|0|1,5,rep=ok", "entities|0|1,5,del=ok", "entities|0|1,5,same=ok", "entities|0|1,6,rep=ok",
+  "entities|0|1,6,del=ok", "entities|0|1,6,same=ok", "entities|0|1,7,rep=ok", "entities|0|1,7,del=ok",
+  "entities|0|1,7,same=ok", "entities|0|2,2,ins=ok", "entities|0|2,3,rep=ok", "entities|0|2,3,del=ok",
+  "entities|0|2,3,same=ok", "entities|0|2,4,rep=ok", "entities|0|2,4,del=ok", "entities|0|2,4,same=ok",
+  "entities|0|2,5,rep=ok", "entities|0|2,5,del=ok", "entities|0|2,5,same=ok", "entities|0|2,6,rep=ok",
+  "entities|0|2,6,del=ok", "entities|0|2,6,same=ok", "entities|0|2,7,rep=ok", "entities|0|2,7,del=ok",
+  "entities|0|2,7,same=ok", "entities|0|3,3,ins=ok", "entities|0|3,4,rep=ok", "entities|0|3,4,del=ok",
+  "entities|0|3,4,same=ok", "entities|0|3,5,rep=ok", "entities|0|3,5,del=ok", "entities|0|3,5,same=ok",
+  "entities|0|3,6,rep=ok", "entities|0|3,6,del=ok", "entities|0|3,6,same=ok", "entities|0|3,7,rep=ok",
+  "entities|0|3,7,del=ok", "entities|0|3,7,same=ok", "entities|0|4,4,ins=ok", "entities|0|4,5,rep=ok",
+  "entities|0|4,5,del=ok", "entities|0|4,5,same=ok", "entities|0|4,6,rep=ok", "entities|0|4,6,del=ok",
+  "entities|0|4,6,same=ok", "entities|0|4,7,rep=ok", "entities|0|4,7,del=ok", "entities|0|4,7,same=ok",
+  "entities|0|5,5,ins=ok", "entities|0|5,6,rep=ok", "entities|0|5,6,del=ok", "entities|0|5,6,same=ok",
+  "entities|0|5,7,rep=ok", "entities|0|5,7,del=ok", "entities|0|5,7,same=ok", "entities|0|6,6,ins=ok",
+  "entities|0|6,7,rep=ok", "entities|0|6,7,del=ok", "entities|0|6,7,same=ok", "entities|0|7,7,ins=ok",
+  "entities|0|0,1,rep|2,3,rep=ok", "entities|0|0,0,ins|1,6,rep|7,7,ins=ok", "numeric-refs|0|0,0,ins=ok",
+  "numeric-refs|0|0,1,rep=ok", "numeric-refs|0|0,1,del=ok", "numeric-refs|0|0,1,same=ok",
+  "numeric-refs|0|0,2,rep=ok", "numeric-refs|0|0,2,del=ok", "numeric-refs|0|0,2,same=ok",
+  "numeric-refs|0|0,3,rep=ok", "numeric-refs|0|0,3,del=ok", "numeric-refs|0|0,3,same=ok",
+  "numeric-refs|0|0,4,rep=ok", "numeric-refs|0|0,4,del=ok", "numeric-refs|0|0,4,same=ok",
+  "numeric-refs|0|0,5,rep=ok", "numeric-refs|0|0,5,del=ok", "numeric-refs|0|0,5,same=ok",
+  "numeric-refs|0|1,1,ins=ok", "numeric-refs|0|1,2,rep=ok", "numeric-refs|0|1,2,del=ok",
+  "numeric-refs|0|1,2,same=ok", "numeric-refs|0|1,3,rep=ok", "numeric-refs|0|1,3,del=ok",
+  "numeric-refs|0|1,3,same=ok", "numeric-refs|0|1,4,rep=ok", "numeric-refs|0|1,4,del=ok",
+  "numeric-refs|0|1,4,same=ok", "numeric-refs|0|1,5,rep=ok", "numeric-refs|0|1,5,del=ok",
+  "numeric-refs|0|1,5,same=ok", "numeric-refs|0|2,2,ins=ok", "numeric-refs|0|2,3,rep=ok",
+  "numeric-refs|0|2,3,del=ok", "numeric-refs|0|2,3,same=ok", "numeric-refs|0|2,4,rep=ok",
+  "numeric-refs|0|2,4,del=ok", "numeric-refs|0|2,4,same=ok", "numeric-refs|0|2,5,rep=ok",
+  "numeric-refs|0|2,5,del=ok", "numeric-refs|0|2,5,same=ok", "numeric-refs|0|3,3,ins=ok",
+  "numeric-refs|0|3,4,rep=ok", "numeric-refs|0|3,4,del=ok", "numeric-refs|0|3,4,same=ok",
+  "numeric-refs|0|3,5,rep=ok", "numeric-refs|0|3,5,del=ok", "numeric-refs|0|3,5,same=ok",
+  "numeric-refs|0|4,4,ins=ok", "numeric-refs|0|4,5,rep=ok", "numeric-refs|0|4,5,del=ok",
+  "numeric-refs|0|4,5,same=ok", "numeric-refs|0|5,5,ins=ok", "numeric-refs|0|0,1,rep|2,3,rep=ok",
+  "numeric-refs|0|0,0,ins|1,4,rep|5,5,ins=ok", "astral|0|0,0,ins=ok", "astral|0|0,1,rep=ok",
+  "astral|0|0,1,del=ok", "astral|0|0,1,same=ok", "astral|0|0,2,rep=NonScalarBoundary",
+  "astral|0|0,2,del=NonScalarBoundary", "astral|0|0,2,same=NonScalarBoundary", "astral|0|0,3,rep=ok",
+  "astral|0|0,3,del=ok", "astral|0|0,3,same=ok", "astral|0|0,4,rep=ok", "astral|0|0,4,del=ok",
+  "astral|0|0,4,same=ok", "astral|0|0,5,rep=NonScalarBoundary", "astral|0|0,5,del=NonScalarBoundary",
+  "astral|0|0,5,same=NonScalarBoundary", "astral|0|0,6,rep=ok", "astral|0|0,6,del=ok",
+  "astral|0|0,6,same=ok", "astral|0|0,7,rep=ok", "astral|0|0,7,del=ok", "astral|0|0,7,same=ok",
+  "astral|0|1,1,ins=ok", "astral|0|1,2,rep=NonScalarBoundary", "astral|0|1,2,del=NonScalarBoundary",
+  "astral|0|1,2,same=NonScalarBoundary", "astral|0|1,3,rep=ok", "astral|0|1,3,del=ok",
+  "astral|0|1,3,same=ok", "astral|0|1,4,rep=ok", "astral|0|1,4,del=ok", "astral|0|1,4,same=ok",
+  "astral|0|1,5,rep=NonScalarBoundary", "astral|0|1,5,del=NonScalarBoundary", "astral|0|1,5,same=NonScalarBoundary",
+  "astral|0|1,6,rep=ok", "astral|0|1,6,del=ok", "astral|0|1,6,same=ok", "astral|0|1,7,rep=ok",
+  "astral|0|1,7,del=ok", "astral|0|1,7,same=ok", "astral|0|2,2,ins=NonScalarBoundary",
+  "astral|0|2,3,rep=NonScalarBoundary", "astral|0|2,3,del=NonScalarBoundary", "astral|0|2,3,same=NonScalarBoundary",
+  "astral|0|2,4,rep=NonScalarBoundary", "astral|0|2,4,del=NonScalarBoundary", "astral|0|2,4,same=NonScalarBoundary",
+  "astral|0|2,5,rep=NonScalarBoundary", "astral|0|2,5,del=NonScalarBoundary", "astral|0|2,5,same=NonScalarBoundary",
+  "astral|0|2,6,rep=NonScalarBoundary", "astral|0|2,6,del=NonScalarBoundary", "astral|0|2,6,same=NonScalarBoundary",
+  "astral|0|2,7,rep=NonScalarBoundary", "astral|0|2,7,del=NonScalarBoundary", "astral|0|2,7,same=NonScalarBoundary",
+  "astral|0|3,3,ins=ok", "astral|0|3,4,rep=ok", "astral|0|3,4,del=ok", "astral|0|3,4,same=ok",
+  "astral|0|3,5,rep=NonScalarBoundary", "astral|0|3,5,del=NonScalarBoundary", "astral|0|3,5,same=NonScalarBoundary",
+  "astral|0|3,6,rep=ok", "astral|0|3,6,del=ok", "astral|0|3,6,same=ok", "astral|0|3,7,rep=ok",
+  "astral|0|3,7,del=ok", "astral|0|3,7,same=ok", "astral|0|4,4,ins=ok", "astral|0|4,5,rep=NonScalarBoundary",
+  "astral|0|4,5,del=NonScalarBoundary", "astral|0|4,5,same=NonScalarBoundary", "astral|0|4,6,rep=ok",
+  "astral|0|4,6,del=ok", "astral|0|4,6,same=ok", "astral|0|4,7,rep=ok", "astral|0|4,7,del=ok",
+  "astral|0|4,7,same=ok", "astral|0|5,5,ins=NonScalarBoundary", "astral|0|5,6,rep=NonScalarBoundary",
+  "astral|0|5,6,del=NonScalarBoundary", "astral|0|5,6,same=NonScalarBoundary", "astral|0|5,7,rep=NonScalarBoundary",
+  "astral|0|5,7,del=NonScalarBoundary", "astral|0|5,7,same=NonScalarBoundary", "astral|0|6,6,ins=ok",
+  "astral|0|6,7,rep=ok", "astral|0|6,7,del=ok", "astral|0|6,7,same=ok", "astral|0|7,7,ins=ok",
+  "astral|0|0,1,rep|2,3,rep=NonScalarBoundary", "astral|0|0,0,ins|1,6,rep|7,7,ins=ok",
+  "cdata|0|0,0,ins=CDataContext", "cdata|0|0,1,rep=CDataContext", "cdata|0|0,1,del=CDataContext",
+  "cdata|0|0,1,same=CDataContext", "cdata|0|0,2,rep=CDataContext", "cdata|0|0,2,del=CDataContext",
+  "cdata|0|0,2,same=CDataContext", "cdata|0|0,3,rep=CDataContext", "cdata|0|0,3,del=CDataContext",
+  "cdata|0|0,3,same=CDataContext", "cdata|0|0,4,rep=CDataContext", "cdata|0|0,4,del=CDataContext",
+  "cdata|0|0,4,same=CDataContext", "cdata|0|0,5,rep=CDataContext", "cdata|0|0,5,del=CDataContext",
+  "cdata|0|0,5,same=CDataContext", "cdata|0|0,6,rep=CDataContext", "cdata|0|0,6,del=CDataContext",
+  "cdata|0|0,6,same=CDataContext", "cdata|0|1,1,ins=CDataContext", "cdata|0|1,2,rep=CDataContext",
+  "cdata|0|1,2,del=CDataContext", "cdata|0|1,2,same=CDataContext", "cdata|0|1,3,rep=CDataContext",
+  "cdata|0|1,3,del=CDataContext", "cdata|0|1,3,same=CDataContext", "cdata|0|1,4,rep=CDataContext",
+  "cdata|0|1,4,del=CDataContext", "cdata|0|1,4,same=CDataContext", "cdata|0|1,5,rep=CDataContext",
+  "cdata|0|1,5,del=CDataContext", "cdata|0|1,5,same=CDataContext", "cdata|0|1,6,rep=CDataContext",
+  "cdata|0|1,6,del=CDataContext", "cdata|0|1,6,same=CDataContext", "cdata|0|2,2,ins=CDataContext",
+  "cdata|0|2,3,rep=CDataContext", "cdata|0|2,3,del=CDataContext", "cdata|0|2,3,same=CDataContext",
+  "cdata|0|2,4,rep=CDataContext", "cdata|0|2,4,del=CDataContext", "cdata|0|2,4,same=CDataContext",
+  "cdata|0|2,5,rep=CDataContext", "cdata|0|2,5,del=CDataContext", "cdata|0|2,5,same=CDataContext",
+  "cdata|0|2,6,rep=CDataContext", "cdata|0|2,6,del=CDataContext", "cdata|0|2,6,same=CDataContext",
+  "cdata|0|3,3,ins=CDataContext", "cdata|0|3,4,rep=CDataContext", "cdata|0|3,4,del=CDataContext",
+  "cdata|0|3,4,same=CDataContext", "cdata|0|3,5,rep=CDataContext", "cdata|0|3,5,del=CDataContext",
+  "cdata|0|3,5,same=CDataContext", "cdata|0|3,6,rep=CDataContext", "cdata|0|3,6,del=CDataContext",
+  "cdata|0|3,6,same=CDataContext", "cdata|0|4,4,ins=CDataContext", "cdata|0|4,5,rep=CDataContext",
+  "cdata|0|4,5,del=CDataContext", "cdata|0|4,5,same=CDataContext", "cdata|0|4,6,rep=CDataContext",
+  "cdata|0|4,6,del=CDataContext", "cdata|0|4,6,same=CDataContext", "cdata|0|5,5,ins=CDataContext",
+  "cdata|0|5,6,rep=CDataContext", "cdata|0|5,6,del=CDataContext", "cdata|0|5,6,same=CDataContext",
+  "cdata|0|6,6,ins=CDataContext", "cdata|0|0,1,rep|2,3,rep=CDataContext", "cdata|0|0,0,ins|1,5,rep|6,6,ins=CDataContext",
+  "mixed-atoms|0|0,0,ins=ok", "mixed-atoms|0|0,1,rep=ok", "mixed-atoms|0|0,1,del=ok",
+  "mixed-atoms|0|0,1,same=ok", "mixed-atoms|0|0,2,rep=ok", "mixed-atoms|0|0,2,del=ok",
+  "mixed-atoms|0|0,2,same=ok", "mixed-atoms|0|0,3,rep=ok", "mixed-atoms|0|0,3,del=ok",
+  "mixed-atoms|0|0,3,same=ok", "mixed-atoms|0|0,4,rep=ok", "mixed-atoms|0|0,4,del=ok",
+  "mixed-atoms|0|0,4,same=ok", "mixed-atoms|0|0,5,rep=ok", "mixed-atoms|0|0,5,del=ok",
+  "mixed-atoms|0|0,5,same=ok", "mixed-atoms|0|0,6,rep=ok", "mixed-atoms|0|0,6,del=ok",
+  "mixed-atoms|0|0,6,same=ok", "mixed-atoms|0|1,1,ins=ok", "mixed-atoms|0|1,2,rep=ok",
+  "mixed-atoms|0|1,2,del=ok", "mixed-atoms|0|1,2,same=ok", "mixed-atoms|0|1,3,rep=ok",
+  "mixed-atoms|0|1,3,del=ok", "mixed-atoms|0|1,3,same=ok", "mixed-atoms|0|1,4,rep=ok",
+  "mixed-atoms|0|1,4,del=ok", "mixed-atoms|0|1,4,same=ok", "mixed-atoms|0|1,5,rep=ok",
+  "mixed-atoms|0|1,5,del=ok", "mixed-atoms|0|1,5,same=ok", "mixed-atoms|0|1,6,rep=ok",
+  "mixed-atoms|0|1,6,del=ok", "mixed-atoms|0|1,6,same=ok", "mixed-atoms|0|2,2,ins=AmbiguousBoundary",
+  "mixed-atoms|0|2,3,rep=ok", "mixed-atoms|0|2,3,del=ok", "mixed-atoms|0|2,3,same=ok",
+  "mixed-atoms|0|2,4,rep=ok", "mixed-atoms|0|2,4,del=ok", "mixed-atoms|0|2,4,same=ok",
+  "mixed-atoms|0|2,5,rep=ok", "mixed-atoms|0|2,5,del=ok", "mixed-atoms|0|2,5,same=ok",
+  "mixed-atoms|0|2,6,rep=ok", "mixed-atoms|0|2,6,del=ok", "mixed-atoms|0|2,6,same=ok",
+  "mixed-atoms|0|3,3,ins=AmbiguousBoundary", "mixed-atoms|0|3,4,rep=ok", "mixed-atoms|0|3,4,del=ok",
+  "mixed-atoms|0|3,4,same=ok", "mixed-atoms|0|3,5,rep=ok", "mixed-atoms|0|3,5,del=ok",
+  "mixed-atoms|0|3,5,same=ok", "mixed-atoms|0|3,6,rep=ok", "mixed-atoms|0|3,6,del=ok",
+  "mixed-atoms|0|3,6,same=ok", "mixed-atoms|0|4,4,ins=AmbiguousBoundary", "mixed-atoms|0|4,5,rep=ok",
+  "mixed-atoms|0|4,5,del=ok", "mixed-atoms|0|4,5,same=ok", "mixed-atoms|0|4,6,rep=ok",
+  "mixed-atoms|0|4,6,del=ok", "mixed-atoms|0|4,6,same=ok", "mixed-atoms|0|5,5,ins=ok",
+  "mixed-atoms|0|5,6,rep=ok", "mixed-atoms|0|5,6,del=ok", "mixed-atoms|0|5,6,same=ok",
+  "mixed-atoms|0|6,6,ins=ok", "mixed-atoms|0|0,1,rep|2,3,rep=ok", "mixed-atoms|0|0,0,ins|1,5,rep|6,6,ins=ok",
+  "barrier|0|0,0,ins=ok", "barrier|0|0,1,rep=ok", "barrier|0|0,1,del=ok", "barrier|0|0,1,same=ok",
+  "barrier|0|0,2,rep=ok", "barrier|0|0,2,del=ok", "barrier|0|0,2,same=ok", "barrier|0|0,3,rep=VisibleBarrier",
+  "barrier|0|0,3,del=VisibleBarrier", "barrier|0|0,3,same=VisibleBarrier", "barrier|0|0,4,rep=VisibleBarrier",
+  "barrier|0|0,4,del=VisibleBarrier", "barrier|0|0,4,same=VisibleBarrier", "barrier|0|1,1,ins=ok",
+  "barrier|0|1,2,rep=ok", "barrier|0|1,2,del=ok", "barrier|0|1,2,same=ok", "barrier|0|1,3,rep=VisibleBarrier",
+  "barrier|0|1,3,del=VisibleBarrier", "barrier|0|1,3,same=VisibleBarrier", "barrier|0|1,4,rep=VisibleBarrier",
+  "barrier|0|1,4,del=VisibleBarrier", "barrier|0|1,4,same=VisibleBarrier", "barrier|0|2,2,ins=AmbiguousBoundary",
+  "barrier|0|2,3,rep=ok", "barrier|0|2,3,del=ok", "barrier|0|2,3,same=ok", "barrier|0|2,4,rep=ok",
+  "barrier|0|2,4,del=ok", "barrier|0|2,4,same=ok", "barrier|0|3,3,ins=ok", "barrier|0|3,4,rep=ok",
+  "barrier|0|3,4,del=ok", "barrier|0|3,4,same=ok", "barrier|0|4,4,ins=ok", "barrier|0|0,1,rep|2,3,rep=ok",
+  "barrier|0|0,0,ins|1,3,rep|4,4,ins=VisibleBarrier", "cr-and-ptab|0|0,0,ins=ok",
+  "cr-and-ptab|0|0,1,rep=ok", "cr-and-ptab|0|0,1,del=ok", "cr-and-ptab|0|0,1,same=ok",
+  "cr-and-ptab|0|0,2,rep=ok", "cr-and-ptab|0|0,2,del=ok", "cr-and-ptab|0|0,2,same=ok",
+  "cr-and-ptab|0|0,3,rep=SuppressedRegion", "cr-and-ptab|0|0,3,del=SuppressedRegion",
+  "cr-and-ptab|0|0,3,same=SuppressedRegion", "cr-and-ptab|0|0,4,rep=SuppressedRegion",
+  "cr-and-ptab|0|0,4,del=SuppressedRegion", "cr-and-ptab|0|0,4,same=SuppressedRegion",
+  "cr-and-ptab|0|1,1,ins=ok", "cr-and-ptab|0|1,2,rep=ok", "cr-and-ptab|0|1,2,del=ok",
+  "cr-and-ptab|0|1,2,same=ok", "cr-and-ptab|0|1,3,rep=SuppressedRegion", "cr-and-ptab|0|1,3,del=SuppressedRegion",
+  "cr-and-ptab|0|1,3,same=SuppressedRegion", "cr-and-ptab|0|1,4,rep=SuppressedRegion",
+  "cr-and-ptab|0|1,4,del=SuppressedRegion", "cr-and-ptab|0|1,4,same=SuppressedRegion",
+  "cr-and-ptab|0|2,2,ins=AmbiguousBoundary", "cr-and-ptab|0|2,3,rep=ok", "cr-and-ptab|0|2,3,del=ok",
+  "cr-and-ptab|0|2,3,same=ok", "cr-and-ptab|0|2,4,rep=ok", "cr-and-ptab|0|2,4,del=ok",
+  "cr-and-ptab|0|2,4,same=ok", "cr-and-ptab|0|3,3,ins=ok", "cr-and-ptab|0|3,4,rep=ok",
+  "cr-and-ptab|0|3,4,del=ok", "cr-and-ptab|0|3,4,same=ok", "cr-and-ptab|0|4,4,ins=ok",
+  "cr-and-ptab|0|0,1,rep|2,3,rep=ok", "cr-and-ptab|0|0,0,ins|1,3,rep|4,4,ins=SuppressedRegion",
+  "atomless-run|0|0,0,ins=ok", "rpr-only-run|0|0,0,ins=ok", "cross-run|0|0,0,ins=ok",
+  "cross-run|0|0,1,rep=ok", "cross-run|0|0,1,del=ok", "cross-run|0|0,1,same=ok",
+  "cross-run|0|0,2,rep=ok", "cross-run|0|0,2,del=ok", "cross-run|0|0,2,same=ok",
+  "cross-run|0|0,3,rep=ok", "cross-run|0|0,3,del=ok", "cross-run|0|0,3,same=ok",
+  "cross-run|0|0,4,rep=ok", "cross-run|0|0,4,del=ok", "cross-run|0|0,4,same=ok",
+  "cross-run|0|1,1,ins=ok", "cross-run|0|1,2,rep=ok", "cross-run|0|1,2,del=ok", "cross-run|0|1,2,same=ok",
+  "cross-run|0|1,3,rep=ok", "cross-run|0|1,3,del=ok", "cross-run|0|1,3,same=ok",
+  "cross-run|0|1,4,rep=ok", "cross-run|0|1,4,del=ok", "cross-run|0|1,4,same=ok",
+  "cross-run|0|2,2,ins=AmbiguousBoundary", "cross-run|0|2,3,rep=ok", "cross-run|0|2,3,del=ok",
+  "cross-run|0|2,3,same=ok", "cross-run|0|2,4,rep=ok", "cross-run|0|2,4,del=ok",
+  "cross-run|0|2,4,same=ok", "cross-run|0|3,3,ins=ok", "cross-run|0|3,4,rep=ok",
+  "cross-run|0|3,4,del=ok", "cross-run|0|3,4,same=ok", "cross-run|0|4,4,ins=ok",
+  "cross-run|0|0,1,rep|2,3,rep=ok", "cross-run|0|0,0,ins|1,3,rep|4,4,ins=ok", "space-preserve|0|0,0,ins=ok",
+  "space-preserve|0|0,1,rep=ok", "space-preserve|0|0,1,del=ok", "space-preserve|0|0,1,same=ok",
+  "space-preserve|0|0,2,rep=ok", "space-preserve|0|0,2,del=ok", "space-preserve|0|0,2,same=ok",
+  "space-preserve|0|0,3,rep=ok", "space-preserve|0|0,3,del=ok", "space-preserve|0|0,3,same=ok",
+  "space-preserve|0|0,4,rep=ok", "space-preserve|0|0,4,del=ok", "space-preserve|0|0,4,same=ok",
+  "space-preserve|0|1,1,ins=ok", "space-preserve|0|1,2,rep=ok", "space-preserve|0|1,2,del=ok",
+  "space-preserve|0|1,2,same=ok", "space-preserve|0|1,3,rep=ok", "space-preserve|0|1,3,del=ok",
+  "space-preserve|0|1,3,same=ok", "space-preserve|0|1,4,rep=ok", "space-preserve|0|1,4,del=ok",
+  "space-preserve|0|1,4,same=ok", "space-preserve|0|2,2,ins=ok", "space-preserve|0|2,3,rep=ok",
+  "space-preserve|0|2,3,del=ok", "space-preserve|0|2,3,same=ok", "space-preserve|0|2,4,rep=ok",
+  "space-preserve|0|2,4,del=ok", "space-preserve|0|2,4,same=ok", "space-preserve|0|3,3,ins=ok",
+  "space-preserve|0|3,4,rep=ok", "space-preserve|0|3,4,del=ok", "space-preserve|0|3,4,same=ok",
+  "space-preserve|0|4,4,ins=ok", "space-preserve|0|0,1,rep|2,3,rep=ok", "space-preserve|0|0,0,ins|1,3,rep|4,4,ins=ok",
+  "empty-text|0|0,0,ins=AmbiguousBoundary", "empty-text|0|0,1,rep=ok", "empty-text|0|0,1,del=ok",
+  "empty-text|0|0,1,same=ok", "empty-text|0|0,2,rep=ok", "empty-text|0|0,2,del=ok",
+  "empty-text|0|0,2,same=ok", "empty-text|0|1,1,ins=ok", "empty-text|0|1,2,rep=ok",
+  "empty-text|0|1,2,del=ok", "empty-text|0|1,2,same=ok", "empty-text|0|2,2,ins=ok",
+  "runless-text|0|0,0,ins=ok", "runless-text|0|0,1,rep=ok", "runless-text|0|0,1,del=ok",
+  "runless-text|0|0,1,same=ok", "runless-text|0|0,2,rep=ok", "runless-text|0|0,2,del=ok",
+  "runless-text|0|0,2,same=ok", "runless-text|0|0,3,rep=UnsupportedTextSource", "runless-text|0|0,3,del=UnsupportedTextSource",
+  "runless-text|0|0,3,same=UnsupportedTextSource", "runless-text|0|0,4,rep=UnsupportedTextSource",
+  "runless-text|0|0,4,del=UnsupportedTextSource", "runless-text|0|0,4,same=UnsupportedTextSource",
+  "runless-text|0|1,1,ins=ok", "runless-text|0|1,2,rep=ok", "runless-text|0|1,2,del=ok",
+  "runless-text|0|1,2,same=ok", "runless-text|0|1,3,rep=UnsupportedTextSource", "runless-text|0|1,3,del=UnsupportedTextSource",
+  "runless-text|0|1,3,same=UnsupportedTextSource", "runless-text|0|1,4,rep=UnsupportedTextSource",
+  "runless-text|0|1,4,del=UnsupportedTextSource", "runless-text|0|1,4,same=UnsupportedTextSource",
+  "runless-text|0|2,2,ins=AmbiguousBoundary", "runless-text|0|2,3,rep=UnsupportedTextSource",
+  "runless-text|0|2,3,del=UnsupportedTextSource", "runless-text|0|2,3,same=UnsupportedTextSource",
+  "runless-text|0|2,4,rep=UnsupportedTextSource", "runless-text|0|2,4,del=UnsupportedTextSource",
+  "runless-text|0|2,4,same=UnsupportedTextSource", "runless-text|0|3,3,ins=UnsupportedTextSource",
+  "runless-text|0|3,4,rep=UnsupportedTextSource", "runless-text|0|3,4,del=UnsupportedTextSource",
+  "runless-text|0|3,4,same=UnsupportedTextSource", "runless-text|0|4,4,ins=UnsupportedTextSource",
+  "runless-text|0|0,1,rep|2,3,rep=UnsupportedTextSource", "runless-text|0|0,0,ins|1,3,rep|4,4,ins=UnsupportedTextSource",
+  "empty-text-alone|0|0,0,ins=ok", "quoted-decoy|0|0,0,ins=ok", "quoted-decoy|0|0,1,rep=ok",
+  "quoted-decoy|0|0,1,del=ok", "quoted-decoy|0|0,1,same=ok", "quoted-decoy|0|0,2,rep=ok",
+  "quoted-decoy|0|0,2,del=ok", "quoted-decoy|0|0,2,same=ok", "quoted-decoy|0|0,3,rep=ok",
+  "quoted-decoy|0|0,3,del=ok", "quoted-decoy|0|0,3,same=ok", "quoted-decoy|0|0,4,rep=ok",
+  "quoted-decoy|0|0,4,del=ok", "quoted-decoy|0|0,4,same=ok", "quoted-decoy|0|1,1,ins=ok",
+  "quoted-decoy|0|1,2,rep=ok", "quoted-decoy|0|1,2,del=ok", "quoted-decoy|0|1,2,same=ok",
+  "quoted-decoy|0|1,3,rep=ok", "quoted-decoy|0|1,3,del=ok", "quoted-decoy|0|1,3,same=ok",
+  "quoted-decoy|0|1,4,rep=ok", "quoted-decoy|0|1,4,del=ok", "quoted-decoy|0|1,4,same=ok",
+  "quoted-decoy|0|2,2,ins=ok", "quoted-decoy|0|2,3,rep=ok", "quoted-decoy|0|2,3,del=ok",
+  "quoted-decoy|0|2,3,same=ok", "quoted-decoy|0|2,4,rep=ok", "quoted-decoy|0|2,4,del=ok",
+  "quoted-decoy|0|2,4,same=ok", "quoted-decoy|0|3,3,ins=ok", "quoted-decoy|0|3,4,rep=ok",
+  "quoted-decoy|0|3,4,del=ok", "quoted-decoy|0|3,4,same=ok", "quoted-decoy|0|4,4,ins=ok",
+  "quoted-decoy|0|0,1,rep|2,3,rep=ok", "quoted-decoy|0|0,0,ins|1,3,rep|4,4,ins=ok",
+  "atom-only|0|0,0,ins=ok", "atom-only|0|0,1,rep=ok", "atom-only|0|0,1,del=ok", "atom-only|0|0,1,same=ok",
+  "atom-only|0|0,2,rep=ok", "atom-only|0|0,2,del=ok", "atom-only|0|0,2,same=ok",
+  "atom-only|0|1,1,ins=AmbiguousBoundary", "atom-only|0|1,2,rep=ok", "atom-only|0|1,2,del=ok",
+  "atom-only|0|1,2,same=ok", "atom-only|0|2,2,ins=ok", "alternate-prefix|0|0,0,ins=ok",
+  "alternate-prefix|0|0,1,rep=ok", "alternate-prefix|0|0,1,del=ok", "alternate-prefix|0|0,1,same=ok",
+  "alternate-prefix|0|0,2,rep=ok", "alternate-prefix|0|0,2,del=ok", "alternate-prefix|0|0,2,same=ok",
+  "alternate-prefix|0|0,3,rep=ok", "alternate-prefix|0|0,3,del=ok", "alternate-prefix|0|0,3,same=ok",
+  "alternate-prefix|0|1,1,ins=AmbiguousBoundary", "alternate-prefix|0|1,2,rep=ok",
+  "alternate-prefix|0|1,2,del=ok", "alternate-prefix|0|1,2,same=ok", "alternate-prefix|0|1,3,rep=ok",
+  "alternate-prefix|0|1,3,del=ok", "alternate-prefix|0|1,3,same=ok", "alternate-prefix|0|2,2,ins=ok",
+  "alternate-prefix|0|2,3,rep=ok", "alternate-prefix|0|2,3,del=ok", "alternate-prefix|0|2,3,same=ok",
+  "alternate-prefix|0|3,3,ins=ok", "alternate-prefix|0|0,1,rep|2,3,rep=ok", "alternate-prefix|0|0,0,ins|1,2,rep|3,3,ins=ok",
+  "space-single-quoted|0|0,0,ins=ok", "space-single-quoted|0|0,1,rep=ok", "space-single-quoted|0|0,1,del=ok",
+  "space-single-quoted|0|0,1,same=ok", "space-single-quoted|0|0,2,rep=ok", "space-single-quoted|0|0,2,del=ok",
+  "space-single-quoted|0|0,2,same=ok", "space-single-quoted|0|0,3,rep=ok", "space-single-quoted|0|0,3,del=ok",
+  "space-single-quoted|0|0,3,same=ok", "space-single-quoted|0|0,4,rep=ok", "space-single-quoted|0|0,4,del=ok",
+  "space-single-quoted|0|0,4,same=ok", "space-single-quoted|0|1,1,ins=ok", "space-single-quoted|0|1,2,rep=ok",
+  "space-single-quoted|0|1,2,del=ok", "space-single-quoted|0|1,2,same=ok", "space-single-quoted|0|1,3,rep=ok",
+  "space-single-quoted|0|1,3,del=ok", "space-single-quoted|0|1,3,same=ok", "space-single-quoted|0|1,4,rep=ok",
+  "space-single-quoted|0|1,4,del=ok", "space-single-quoted|0|1,4,same=ok", "space-single-quoted|0|2,2,ins=ok",
+  "space-single-quoted|0|2,3,rep=ok", "space-single-quoted|0|2,3,del=ok", "space-single-quoted|0|2,3,same=ok",
+  "space-single-quoted|0|2,4,rep=ok", "space-single-quoted|0|2,4,del=ok", "space-single-quoted|0|2,4,same=ok",
+  "space-single-quoted|0|3,3,ins=ok", "space-single-quoted|0|3,4,rep=ok", "space-single-quoted|0|3,4,del=ok",
+  "space-single-quoted|0|3,4,same=ok", "space-single-quoted|0|4,4,ins=ok", "space-single-quoted|0|0,1,rep|2,3,rep=ok",
+  "space-single-quoted|0|0,0,ins|1,3,rep|4,4,ins=ok", "space-spaced-equals|0|0,0,ins=ok",
+  "space-spaced-equals|0|0,1,rep=ok", "space-spaced-equals|0|0,1,del=ok", "space-spaced-equals|0|0,1,same=ok",
+  "space-spaced-equals|0|0,2,rep=ok", "space-spaced-equals|0|0,2,del=ok", "space-spaced-equals|0|0,2,same=ok",
+  "space-spaced-equals|0|1,1,ins=ok", "space-spaced-equals|0|1,2,rep=ok", "space-spaced-equals|0|1,2,del=ok",
+  "space-spaced-equals|0|1,2,same=ok", "space-spaced-equals|0|2,2,ins=ok", "space-lookalike-attribute|0|0,0,ins=ok",
+  "space-lookalike-attribute|0|0,1,rep=ok", "space-lookalike-attribute|0|0,1,del=ok",
+  "space-lookalike-attribute|0|0,1,same=ok", "space-lookalike-attribute|0|0,2,rep=ok",
+  "space-lookalike-attribute|0|0,2,del=ok", "space-lookalike-attribute|0|0,2,same=ok",
+  "space-lookalike-attribute|0|1,1,ins=ok", "space-lookalike-attribute|0|1,2,rep=ok",
+  "space-lookalike-attribute|0|1,2,del=ok", "space-lookalike-attribute|0|1,2,same=ok",
+  "space-lookalike-attribute|0|2,2,ins=ok", "mixed-categories|0|0,0,ins=ok", "mixed-categories|0|0,1,rep=ok",
+  "mixed-categories|0|0,1,del=ok", "mixed-categories|0|0,1,same=ok", "mixed-categories|0|0,2,rep=ok",
+  "mixed-categories|0|0,2,del=ok", "mixed-categories|0|0,2,same=ok", "mixed-categories|0|0,3,rep=ok",
+  "mixed-categories|0|0,3,del=ok", "mixed-categories|0|0,3,same=ok", "mixed-categories|0|0,4,rep=ok",
+  "mixed-categories|0|0,4,del=ok", "mixed-categories|0|0,4,same=ok", "mixed-categories|0|0,5,rep=ok",
+  "mixed-categories|0|0,5,del=ok", "mixed-categories|0|0,5,same=ok", "mixed-categories|0|0,6,rep=ok",
+  "mixed-categories|0|0,6,del=ok", "mixed-categories|0|0,6,same=ok", "mixed-categories|0|1,1,ins=ok",
+  "mixed-categories|0|1,2,rep=ok", "mixed-categories|0|1,2,del=ok", "mixed-categories|0|1,2,same=ok",
+  "mixed-categories|0|1,3,rep=ok", "mixed-categories|0|1,3,del=ok", "mixed-categories|0|1,3,same=ok",
+  "mixed-categories|0|1,4,rep=ok", "mixed-categories|0|1,4,del=ok", "mixed-categories|0|1,4,same=ok",
+  "mixed-categories|0|1,5,rep=ok", "mixed-categories|0|1,5,del=ok", "mixed-categories|0|1,5,same=ok",
+  "mixed-categories|0|1,6,rep=ok", "mixed-categories|0|1,6,del=ok", "mixed-categories|0|1,6,same=ok",
+  "mixed-categories|0|2,2,ins=AmbiguousBoundary", "mixed-categories|0|2,3,rep=ok",
+  "mixed-categories|0|2,3,del=ok", "mixed-categories|0|2,3,same=ok", "mixed-categories|0|2,4,rep=ok",
+  "mixed-categories|0|2,4,del=ok", "mixed-categories|0|2,4,same=ok", "mixed-categories|0|2,5,rep=ok",
+  "mixed-categories|0|2,5,del=ok", "mixed-categories|0|2,5,same=ok", "mixed-categories|0|2,6,rep=ok",
+  "mixed-categories|0|2,6,del=ok", "mixed-categories|0|2,6,same=ok", "mixed-categories|0|3,3,ins=AmbiguousBoundary",
+  "mixed-categories|0|3,4,rep=ok", "mixed-categories|0|3,4,del=ok", "mixed-categories|0|3,4,same=ok",
+  "mixed-categories|0|3,5,rep=ok", "mixed-categories|0|3,5,del=ok", "mixed-categories|0|3,5,same=ok",
+  "mixed-categories|0|3,6,rep=ok", "mixed-categories|0|3,6,del=ok", "mixed-categories|0|3,6,same=ok",
+  "mixed-categories|0|4,4,ins=AmbiguousBoundary", "mixed-categories|0|4,5,rep=ok",
+  "mixed-categories|0|4,5,del=ok", "mixed-categories|0|4,5,same=ok", "mixed-categories|0|4,6,rep=ok",
+  "mixed-categories|0|4,6,del=ok", "mixed-categories|0|4,6,same=ok", "mixed-categories|0|5,5,ins=ok",
+  "mixed-categories|0|5,6,rep=ok", "mixed-categories|0|5,6,del=ok", "mixed-categories|0|5,6,same=ok",
+  "mixed-categories|0|6,6,ins=ok", "mixed-categories|0|0,1,rep|2,3,rep=ok", "mixed-categories|0|0,0,ins|1,5,rep|6,6,ins=ok",
+  "atom-then-entity|0|0,0,ins=ok", "atom-then-entity|0|0,1,rep=ok", "atom-then-entity|0|0,1,del=ok",
+  "atom-then-entity|0|0,1,same=ok", "atom-then-entity|0|0,2,rep=ok", "atom-then-entity|0|0,2,del=ok",
+  "atom-then-entity|0|0,2,same=ok", "atom-then-entity|0|0,3,rep=ok", "atom-then-entity|0|0,3,del=ok",
+  "atom-then-entity|0|0,3,same=ok", "atom-then-entity|0|0,4,rep=ok", "atom-then-entity|0|0,4,del=ok",
+  "atom-then-entity|0|0,4,same=ok", "atom-then-entity|0|1,1,ins=AmbiguousBoundary",
+  "atom-then-entity|0|1,2,rep=ok", "atom-then-entity|0|1,2,del=ok", "atom-then-entity|0|1,2,same=ok",
+  "atom-then-entity|0|1,3,rep=ok", "atom-then-entity|0|1,3,del=ok", "atom-then-entity|0|1,3,same=ok",
+  "atom-then-entity|0|1,4,rep=ok", "atom-then-entity|0|1,4,del=ok", "atom-then-entity|0|1,4,same=ok",
+  "atom-then-entity|0|2,2,ins=AmbiguousBoundary", "atom-then-entity|0|2,3,rep=ok",
+  "atom-then-entity|0|2,3,del=ok", "atom-then-entity|0|2,3,same=ok", "atom-then-entity|0|2,4,rep=ok",
+  "atom-then-entity|0|2,4,del=ok", "atom-then-entity|0|2,4,same=ok", "atom-then-entity|0|3,3,ins=AmbiguousBoundary",
+  "atom-then-entity|0|3,4,rep=ok", "atom-then-entity|0|3,4,del=ok", "atom-then-entity|0|3,4,same=ok",
+  "atom-then-entity|0|4,4,ins=ok", "atom-then-entity|0|0,1,rep|2,3,rep=ok", "atom-then-entity|0|0,0,ins|1,3,rep|4,4,ins=ok",
+  "entity-atoms-raw|0|0,0,ins=ok", "entity-atoms-raw|0|0,1,rep=ok", "entity-atoms-raw|0|0,1,del=ok",
+  "entity-atoms-raw|0|0,1,same=ok", "entity-atoms-raw|0|0,2,rep=ok", "entity-atoms-raw|0|0,2,del=ok",
+  "entity-atoms-raw|0|0,2,same=ok", "entity-atoms-raw|0|0,3,rep=ok", "entity-atoms-raw|0|0,3,del=ok",
+  "entity-atoms-raw|0|0,3,same=ok", "entity-atoms-raw|0|0,4,rep=ok", "entity-atoms-raw|0|0,4,del=ok",
+  "entity-atoms-raw|0|0,4,same=ok", "entity-atoms-raw|0|0,5,rep=ok", "entity-atoms-raw|0|0,5,del=ok",
+  "entity-atoms-raw|0|0,5,same=ok", "entity-atoms-raw|0|0,6,rep=ok", "entity-atoms-raw|0|0,6,del=ok",
+  "entity-atoms-raw|0|0,6,same=ok", "entity-atoms-raw|0|1,1,ins=AmbiguousBoundary",
+  "entity-atoms-raw|0|1,2,rep=ok", "entity-atoms-raw|0|1,2,del=ok", "entity-atoms-raw|0|1,2,same=ok",
+  "entity-atoms-raw|0|1,3,rep=ok", "entity-atoms-raw|0|1,3,del=ok", "entity-atoms-raw|0|1,3,same=ok",
+  "entity-atoms-raw|0|1,4,rep=ok", "entity-atoms-raw|0|1,4,del=ok", "entity-atoms-raw|0|1,4,same=ok",
+  "entity-atoms-raw|0|1,5,rep=ok", "entity-atoms-raw|0|1,5,del=ok", "entity-atoms-raw|0|1,5,same=ok",
+  "entity-atoms-raw|0|1,6,rep=ok", "entity-atoms-raw|0|1,6,del=ok", "entity-atoms-raw|0|1,6,same=ok",
+  "entity-atoms-raw|0|2,2,ins=AmbiguousBoundary", "entity-atoms-raw|0|2,3,rep=ok",
+  "entity-atoms-raw|0|2,3,del=ok", "entity-atoms-raw|0|2,3,same=ok", "entity-atoms-raw|0|2,4,rep=ok",
+  "entity-atoms-raw|0|2,4,del=ok", "entity-atoms-raw|0|2,4,same=ok", "entity-atoms-raw|0|2,5,rep=ok",
+  "entity-atoms-raw|0|2,5,del=ok", "entity-atoms-raw|0|2,5,same=ok", "entity-atoms-raw|0|2,6,rep=ok",
+  "entity-atoms-raw|0|2,6,del=ok", "entity-atoms-raw|0|2,6,same=ok", "entity-atoms-raw|0|3,3,ins=AmbiguousBoundary",
+  "entity-atoms-raw|0|3,4,rep=ok", "entity-atoms-raw|0|3,4,del=ok", "entity-atoms-raw|0|3,4,same=ok",
+  "entity-atoms-raw|0|3,5,rep=ok", "entity-atoms-raw|0|3,5,del=ok", "entity-atoms-raw|0|3,5,same=ok",
+  "entity-atoms-raw|0|3,6,rep=ok", "entity-atoms-raw|0|3,6,del=ok", "entity-atoms-raw|0|3,6,same=ok",
+  "entity-atoms-raw|0|4,4,ins=ok", "entity-atoms-raw|0|4,5,rep=ok", "entity-atoms-raw|0|4,5,del=ok",
+  "entity-atoms-raw|0|4,5,same=ok", "entity-atoms-raw|0|4,6,rep=ok", "entity-atoms-raw|0|4,6,del=ok",
+  "entity-atoms-raw|0|4,6,same=ok", "entity-atoms-raw|0|5,5,ins=ok", "entity-atoms-raw|0|5,6,rep=ok",
+  "entity-atoms-raw|0|5,6,del=ok", "entity-atoms-raw|0|5,6,same=ok", "entity-atoms-raw|0|6,6,ins=ok",
+  "entity-atoms-raw|0|0,1,rep|2,3,rep=ok", "entity-atoms-raw|0|0,0,ins|1,5,rep|6,6,ins=ok",
+  "numref-then-raw|0|0,0,ins=ok", "numref-then-raw|0|0,1,rep=ok", "numref-then-raw|0|0,1,del=ok",
+  "numref-then-raw|0|0,1,same=ok", "numref-then-raw|0|0,2,rep=ok", "numref-then-raw|0|0,2,del=ok",
+  "numref-then-raw|0|0,2,same=ok", "numref-then-raw|0|0,3,rep=ok", "numref-then-raw|0|0,3,del=ok",
+  "numref-then-raw|0|0,3,same=ok", "numref-then-raw|0|0,4,rep=ok", "numref-then-raw|0|0,4,del=ok",
+  "numref-then-raw|0|0,4,same=ok", "numref-then-raw|0|1,1,ins=ok", "numref-then-raw|0|1,2,rep=ok",
+  "numref-then-raw|0|1,2,del=ok", "numref-then-raw|0|1,2,same=ok", "numref-then-raw|0|1,3,rep=ok",
+  "numref-then-raw|0|1,3,del=ok", "numref-then-raw|0|1,3,same=ok", "numref-then-raw|0|1,4,rep=ok",
+  "numref-then-raw|0|1,4,del=ok", "numref-then-raw|0|1,4,same=ok", "numref-then-raw|0|2,2,ins=ok",
+  "numref-then-raw|0|2,3,rep=ok", "numref-then-raw|0|2,3,del=ok", "numref-then-raw|0|2,3,same=ok",
+  "numref-then-raw|0|2,4,rep=ok", "numref-then-raw|0|2,4,del=ok", "numref-then-raw|0|2,4,same=ok",
+  "numref-then-raw|0|3,3,ins=ok", "numref-then-raw|0|3,4,rep=ok", "numref-then-raw|0|3,4,del=ok",
+  "numref-then-raw|0|3,4,same=ok", "numref-then-raw|0|4,4,ins=ok", "numref-then-raw|0|0,1,rep|2,3,rep=ok",
+  "numref-then-raw|0|0,0,ins|1,3,rep|4,4,ins=ok", "raw-then-entity|0|0,0,ins=ok",
+  "raw-then-entity|0|0,1,rep=ok", "raw-then-entity|0|0,1,del=ok", "raw-then-entity|0|0,1,same=ok",
+  "raw-then-entity|0|0,2,rep=ok", "raw-then-entity|0|0,2,del=ok", "raw-then-entity|0|0,2,same=ok",
+  "raw-then-entity|0|0,3,rep=ok", "raw-then-entity|0|0,3,del=ok", "raw-then-entity|0|0,3,same=ok",
+  "raw-then-entity|0|0,4,rep=ok", "raw-then-entity|0|0,4,del=ok", "raw-then-entity|0|0,4,same=ok",
+  "raw-then-entity|0|1,1,ins=ok", "raw-then-entity|0|1,2,rep=ok", "raw-then-entity|0|1,2,del=ok",
+  "raw-then-entity|0|1,2,same=ok", "raw-then-entity|0|1,3,rep=ok", "raw-then-entity|0|1,3,del=ok",
+  "raw-then-entity|0|1,3,same=ok", "raw-then-entity|0|1,4,rep=ok", "raw-then-entity|0|1,4,del=ok",
+  "raw-then-entity|0|1,4,same=ok", "raw-then-entity|0|2,2,ins=ok", "raw-then-entity|0|2,3,rep=ok",
+  "raw-then-entity|0|2,3,del=ok", "raw-then-entity|0|2,3,same=ok", "raw-then-entity|0|2,4,rep=ok",
+  "raw-then-entity|0|2,4,del=ok", "raw-then-entity|0|2,4,same=ok", "raw-then-entity|0|3,3,ins=ok",
+  "raw-then-entity|0|3,4,rep=ok", "raw-then-entity|0|3,4,del=ok", "raw-then-entity|0|3,4,same=ok",
+  "raw-then-entity|0|4,4,ins=ok", "raw-then-entity|0|0,1,rep|2,3,rep=ok", "raw-then-entity|0|0,0,ins|1,3,rep|4,4,ins=ok",
+  "raw-then-numref|0|0,0,ins=ok", "raw-then-numref|0|0,1,rep=ok", "raw-then-numref|0|0,1,del=ok",
+  "raw-then-numref|0|0,1,same=ok", "raw-then-numref|0|0,2,rep=ok", "raw-then-numref|0|0,2,del=ok",
+  "raw-then-numref|0|0,2,same=ok", "raw-then-numref|0|0,3,rep=ok", "raw-then-numref|0|0,3,del=ok",
+  "raw-then-numref|0|0,3,same=ok", "raw-then-numref|0|0,4,rep=ok", "raw-then-numref|0|0,4,del=ok",
+  "raw-then-numref|0|0,4,same=ok", "raw-then-numref|0|1,1,ins=ok", "raw-then-numref|0|1,2,rep=ok",
+  "raw-then-numref|0|1,2,del=ok", "raw-then-numref|0|1,2,same=ok", "raw-then-numref|0|1,3,rep=ok",
+  "raw-then-numref|0|1,3,del=ok", "raw-then-numref|0|1,3,same=ok", "raw-then-numref|0|1,4,rep=ok",
+  "raw-then-numref|0|1,4,del=ok", "raw-then-numref|0|1,4,same=ok", "raw-then-numref|0|2,2,ins=ok",
+  "raw-then-numref|0|2,3,rep=ok", "raw-then-numref|0|2,3,del=ok", "raw-then-numref|0|2,3,same=ok",
+  "raw-then-numref|0|2,4,rep=ok", "raw-then-numref|0|2,4,del=ok", "raw-then-numref|0|2,4,same=ok",
+  "raw-then-numref|0|3,3,ins=ok", "raw-then-numref|0|3,4,rep=ok", "raw-then-numref|0|3,4,del=ok",
+  "raw-then-numref|0|3,4,same=ok", "raw-then-numref|0|4,4,ins=ok", "raw-then-numref|0|0,1,rep|2,3,rep=ok",
+  "raw-then-numref|0|0,0,ins|1,3,rep|4,4,ins=ok", "entity-then-raw|0|0,0,ins=ok",
+  "entity-then-raw|0|0,1,rep=ok", "entity-then-raw|0|0,1,del=ok", "entity-then-raw|0|0,1,same=ok",
+  "entity-then-raw|0|0,2,rep=ok", "entity-then-raw|0|0,2,del=ok", "entity-then-raw|0|0,2,same=ok",
+  "entity-then-raw|0|0,3,rep=ok", "entity-then-raw|0|0,3,del=ok", "entity-then-raw|0|0,3,same=ok",
+  "entity-then-raw|0|0,4,rep=ok", "entity-then-raw|0|0,4,del=ok", "entity-then-raw|0|0,4,same=ok",
+  "entity-then-raw|0|1,1,ins=ok", "entity-then-raw|0|1,2,rep=ok", "entity-then-raw|0|1,2,del=ok",
+  "entity-then-raw|0|1,2,same=ok", "entity-then-raw|0|1,3,rep=ok", "entity-then-raw|0|1,3,del=ok",
+  "entity-then-raw|0|1,3,same=ok", "entity-then-raw|0|1,4,rep=ok", "entity-then-raw|0|1,4,del=ok",
+  "entity-then-raw|0|1,4,same=ok", "entity-then-raw|0|2,2,ins=ok", "entity-then-raw|0|2,3,rep=ok",
+  "entity-then-raw|0|2,3,del=ok", "entity-then-raw|0|2,3,same=ok", "entity-then-raw|0|2,4,rep=ok",
+  "entity-then-raw|0|2,4,del=ok", "entity-then-raw|0|2,4,same=ok", "entity-then-raw|0|3,3,ins=ok",
+  "entity-then-raw|0|3,4,rep=ok", "entity-then-raw|0|3,4,del=ok", "entity-then-raw|0|3,4,same=ok",
+  "entity-then-raw|0|4,4,ins=ok", "entity-then-raw|0|0,1,rep|2,3,rep=ok", "entity-then-raw|0|0,0,ins|1,3,rep|4,4,ins=ok",
+  "atom-then-numref|0|0,0,ins=ok", "atom-then-numref|0|0,1,rep=ok", "atom-then-numref|0|0,1,del=ok",
+  "atom-then-numref|0|0,1,same=ok", "atom-then-numref|0|0,2,rep=ok", "atom-then-numref|0|0,2,del=ok",
+  "atom-then-numref|0|0,2,same=ok", "atom-then-numref|0|0,3,rep=ok", "atom-then-numref|0|0,3,del=ok",
+  "atom-then-numref|0|0,3,same=ok", "atom-then-numref|0|0,4,rep=ok", "atom-then-numref|0|0,4,del=ok",
+  "atom-then-numref|0|0,4,same=ok", "atom-then-numref|0|1,1,ins=AmbiguousBoundary",
+  "atom-then-numref|0|1,2,rep=ok", "atom-then-numref|0|1,2,del=ok", "atom-then-numref|0|1,2,same=ok",
+  "atom-then-numref|0|1,3,rep=ok", "atom-then-numref|0|1,3,del=ok", "atom-then-numref|0|1,3,same=ok",
+  "atom-then-numref|0|1,4,rep=ok", "atom-then-numref|0|1,4,del=ok", "atom-then-numref|0|1,4,same=ok",
+  "atom-then-numref|0|2,2,ins=AmbiguousBoundary", "atom-then-numref|0|2,3,rep=ok",
+  "atom-then-numref|0|2,3,del=ok", "atom-then-numref|0|2,3,same=ok", "atom-then-numref|0|2,4,rep=ok",
+  "atom-then-numref|0|2,4,del=ok", "atom-then-numref|0|2,4,same=ok", "atom-then-numref|0|3,3,ins=AmbiguousBoundary",
+  "atom-then-numref|0|3,4,rep=ok", "atom-then-numref|0|3,4,del=ok", "atom-then-numref|0|3,4,same=ok",
+  "atom-then-numref|0|4,4,ins=ok", "atom-then-numref|0|0,1,rep|2,3,rep=ok", "atom-then-numref|0|0,0,ins|1,3,rep|4,4,ins=ok",
+  "mixed-references|0|0,0,ins=ok", "mixed-references|0|0,1,rep=ok", "mixed-references|0|0,1,del=ok",
+  "mixed-references|0|0,1,same=ok", "mixed-references|0|0,2,rep=ok", "mixed-references|0|0,2,del=ok",
+  "mixed-references|0|0,2,same=ok", "mixed-references|0|0,3,rep=ok", "mixed-references|0|0,3,del=ok",
+  "mixed-references|0|0,3,same=ok", "mixed-references|0|0,4,rep=ok", "mixed-references|0|0,4,del=ok",
+  "mixed-references|0|0,4,same=ok", "mixed-references|0|0,5,rep=ok", "mixed-references|0|0,5,del=ok",
+  "mixed-references|0|0,5,same=ok", "mixed-references|0|0,6,rep=ok", "mixed-references|0|0,6,del=ok",
+  "mixed-references|0|0,6,same=ok", "mixed-references|0|0,7,rep=ok", "mixed-references|0|0,7,del=ok",
+  "mixed-references|0|0,7,same=ok", "mixed-references|0|0,8,rep=ok", "mixed-references|0|0,8,del=ok",
+  "mixed-references|0|0,8,same=ok", "mixed-references|0|1,1,ins=ok", "mixed-references|0|1,2,rep=ok",
+  "mixed-references|0|1,2,del=ok", "mixed-references|0|1,2,same=ok", "mixed-references|0|1,3,rep=ok",
+  "mixed-references|0|1,3,del=ok", "mixed-references|0|1,3,same=ok", "mixed-references|0|1,4,rep=ok",
+  "mixed-references|0|1,4,del=ok", "mixed-references|0|1,4,same=ok", "mixed-references|0|1,5,rep=ok",
+  "mixed-references|0|1,5,del=ok", "mixed-references|0|1,5,same=ok", "mixed-references|0|1,6,rep=ok",
+  "mixed-references|0|1,6,del=ok", "mixed-references|0|1,6,same=ok", "mixed-references|0|1,7,rep=ok",
+  "mixed-references|0|1,7,del=ok", "mixed-references|0|1,7,same=ok", "mixed-references|0|1,8,rep=ok",
+  "mixed-references|0|1,8,del=ok", "mixed-references|0|1,8,same=ok", "mixed-references|0|2,2,ins=AmbiguousBoundary",
+  "mixed-references|0|2,3,rep=ok", "mixed-references|0|2,3,del=ok", "mixed-references|0|2,3,same=ok",
+  "mixed-references|0|2,4,rep=ok", "mixed-references|0|2,4,del=ok", "mixed-references|0|2,4,same=ok",
+  "mixed-references|0|2,5,rep=ok", "mixed-references|0|2,5,del=ok", "mixed-references|0|2,5,same=ok",
+  "mixed-references|0|2,6,rep=ok", "mixed-references|0|2,6,del=ok", "mixed-references|0|2,6,same=ok",
+  "mixed-references|0|2,7,rep=ok", "mixed-references|0|2,7,del=ok", "mixed-references|0|2,7,same=ok",
+  "mixed-references|0|2,8,rep=ok", "mixed-references|0|2,8,del=ok", "mixed-references|0|2,8,same=ok",
+  "mixed-references|0|3,3,ins=AmbiguousBoundary", "mixed-references|0|3,4,rep=ok",
+  "mixed-references|0|3,4,del=ok", "mixed-references|0|3,4,same=ok", "mixed-references|0|3,5,rep=ok",
+  "mixed-references|0|3,5,del=ok", "mixed-references|0|3,5,same=ok", "mixed-references|0|3,6,rep=ok",
+  "mixed-references|0|3,6,del=ok", "mixed-references|0|3,6,same=ok", "mixed-references|0|3,7,rep=ok",
+  "mixed-references|0|3,7,del=ok", "mixed-references|0|3,7,same=ok", "mixed-references|0|3,8,rep=ok",
+  "mixed-references|0|3,8,del=ok", "mixed-references|0|3,8,same=ok", "mixed-references|0|4,4,ins=ok",
+  "mixed-references|0|4,5,rep=ok", "mixed-references|0|4,5,del=ok", "mixed-references|0|4,5,same=ok",
+  "mixed-references|0|4,6,rep=ok", "mixed-references|0|4,6,del=ok", "mixed-references|0|4,6,same=ok",
+  "mixed-references|0|4,7,rep=ok", "mixed-references|0|4,7,del=ok", "mixed-references|0|4,7,same=ok",
+  "mixed-references|0|4,8,rep=ok", "mixed-references|0|4,8,del=ok", "mixed-references|0|4,8,same=ok",
+  "mixed-references|0|5,5,ins=AmbiguousBoundary", "mixed-references|0|5,6,rep=ok",
+  "mixed-references|0|5,6,del=ok", "mixed-references|0|5,6,same=ok", "mixed-references|0|5,7,rep=ok",
+  "mixed-references|0|5,7,del=ok", "mixed-references|0|5,7,same=ok", "mixed-references|0|5,8,rep=ok",
+  "mixed-references|0|5,8,del=ok", "mixed-references|0|5,8,same=ok", "mixed-references|0|6,6,ins=AmbiguousBoundary",
+  "mixed-references|0|6,7,rep=ok", "mixed-references|0|6,7,del=ok", "mixed-references|0|6,7,same=ok",
+  "mixed-references|0|6,8,rep=ok", "mixed-references|0|6,8,del=ok", "mixed-references|0|6,8,same=ok",
+  "mixed-references|0|7,7,ins=ok", "mixed-references|0|7,8,rep=ok", "mixed-references|0|7,8,del=ok",
+  "mixed-references|0|7,8,same=ok", "mixed-references|0|8,8,ins=ok", "mixed-references|0|0,1,rep|2,3,rep=ok",
+  "mixed-references|0|0,0,ins|1,7,rep|8,8,ins=ok",
+]

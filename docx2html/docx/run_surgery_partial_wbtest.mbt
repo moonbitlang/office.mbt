@@ -1380,3 +1380,50 @@ test "whole-run replacement refuses a run holding an empty drawing" {
     _ => fail("expected the empty drawing to refuse")
   }
 }
+
+///|
+test "partial: an existing preserve declaration is left byte-identical" {
+  // The locked rule ensures preservation by ADDING the attribute or by
+  // replacing a `default` value — an existing `preserve` is untouched,
+  // whatever quote style it uses. Rewriting it would put bytes the
+  // caller never asked about inside the declared footprint.
+  let body = "<w:p><w:r><w:t xml:space='preserve'> ab </w:t></w:r></w:p>"
+  let source = "<w:document xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\" xmlns:v=\"urn:schemas-microsoft-com:vml\"><w:body>\{body}</w:body></w:document>"
+  let bytes = @utf8.encode(source)
+  let projection = surgery_native_projection(source)
+  let (byte_edits, _) = plan_paragraph_text_edits(projection, bytes[:], 0, [
+    partial_edit(1, 2, "X"),
+  ])
+  let spliced = @utf8.decode(apply_run_surgery_edits(bytes, byte_edits))
+  assert_true(spliced.contains("xml:space='preserve'"))
+  assert_false(spliced.contains("xml:space=\"preserve\""))
+  // A `default` declaration IS replaced, since the content needs
+  // preservation and `default` would strip it.
+  let default_body = "<w:p><w:r><w:t xml:space='default'>ab</w:t></w:r></w:p>"
+  let default_source = "<w:document xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\" xmlns:v=\"urn:schemas-microsoft-com:vml\"><w:body>\{default_body}</w:body></w:document>"
+  let default_bytes = @utf8.encode(default_source)
+  let default_projection = surgery_native_projection(default_source)
+  let (default_edits, _) = plan_paragraph_text_edits(
+    default_projection,
+    default_bytes[:],
+    0,
+    [partial_edit(0, 1, " s")],
+  )
+  let default_spliced = @utf8.decode(
+    apply_run_surgery_edits(default_bytes, default_edits),
+  )
+  assert_true(default_spliced.contains("xml:space=\"preserve\""))
+  assert_false(default_spliced.contains("xml:space='default'"))
+}
+
+///|
+test "whole-run replacement leaves an existing preserve byte-identical" {
+  let source =
+    #|<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:body><w:p><w:r><w:t xml:space='preserve'> a </w:t></w:r></w:p></w:body></w:document>
+  let bytes = @utf8.encode(source)
+  let projection = surgery_native_projection(source)
+  let edits = plan_whole_run_replacement(projection, bytes[:], 0, 0, " b ")
+  let spliced = @utf8.decode(apply_run_surgery_edits(bytes, edits))
+  assert_true(spliced.contains("xml:space='preserve'"))
+  assert_false(spliced.contains("xml:space=\"preserve\""))
+}
