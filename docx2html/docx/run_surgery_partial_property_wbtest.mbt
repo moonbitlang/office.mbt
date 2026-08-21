@@ -319,22 +319,25 @@ fn partial_allowed_spans(
     }
     let SourceElementId(run_identity) = run.source
     let run_element = elements[run_identity]
-    // Exactly ONE interior anchor: after a leading `rPr` when there is
-    // one, otherwise the run's content start. Allowing both would accept
-    // a synthesis landing before the run's own formatting.
-    let mut anchor = run_element.content_start
-    let mut child = run_element.first_child_index
-    while child >= 0 {
-      let candidate = elements[child]
-      if is_wml_uri(candidate.uri) && candidate.local_name == "rPr" {
-        anchor = candidate.byte_end
-      }
-      child = candidate.next_sibling_index
-    }
-    allowed.push((anchor, anchor))
-    allowed.push((run_element.content_end, run_element.content_end))
+    // Exactly ONE location, chosen by the run's FORM — the same choice
+    // production makes. A self-closing run is rewritten through its `/>`
+    // and has no interior; a paired run takes its single interior anchor,
+    // after a leading `rPr` when there is one. Licensing the alternatives
+    // together (or the run's content end, which synthesis never uses)
+    // would accept an extra empty element that reprojects identically.
     if run_element.content_start == run_element.byte_end {
       allowed.push((run_element.byte_end - 2, run_element.byte_end))
+    } else {
+      let mut anchor = run_element.content_start
+      let mut child = run_element.first_child_index
+      while child >= 0 {
+        let candidate = elements[child]
+        if is_wml_uri(candidate.uri) && candidate.local_name == "rPr" {
+          anchor = candidate.byte_end
+        }
+        child = candidate.next_sibling_index
+      }
+      allowed.push((anchor, anchor))
     }
   }
   allowed
@@ -559,6 +562,9 @@ let partial_lexical_bodies : Array[(String, String)] = [
     "atom-then-entity", "<w:p><w:r><w:t>&amp;</w:t><w:tab/><w:noBreakHyphen/><w:t>&amp;</w:t></w:r></w:p>",
   ),
   (
+    "entity-atoms-raw", "<w:p><w:r><w:t>&amp;</w:t><w:tab/><w:noBreakHyphen/><w:t>abc</w:t></w:r></w:p>",
+  ),
+  (
     "mixed-references", "<w:p><w:r><w:t>&amp;&#38;</w:t><w:tab/><w:t>&#60;&gt;</w:t><w:noBreakHyphen/><w:t>&amp;z</w:t></w:r></w:p>",
   ),
 ]
@@ -597,16 +603,25 @@ test "the lexical matrix the grammar does not reach is proved the same way" {
   }
   let seen = (pair : String) => pairs.get(pair).unwrap_or(0)
   let refused = (name : String) => refusals.get(name).unwrap_or(0)
-  // Measured at this commit: 149 batches planned over 33 distinct
-  // ordered pairs, 12 of them multi-edit across multiple carriers. The
-  // distinct-pair floor is pinned AT the measured identity set, so
-  // losing a pair fails rather than passing under a loose bound.
-  assert_true(planned >= 140, msg="only \{planned} lexical batches planned")
+  // Measured at this commit: 173 batches planned over 37 distinct
+  // ordered pairs, 12+ of them multi-edit across multiple carriers. The
+  // identity set above is the real pin; these are volume floors.
+  assert_true(planned >= 160, msg="only \{planned} lexical batches planned")
   // Entity and numeric-reference boundaries plan in BOTH orders; their
   // interiors are unresolvable and refuse below.
+  // The IDENTITY SET, not merely its cardinality: a count floor lets one
+  // pair vanish while another appears. Every key below was measured at
+  // this commit and must still be planned; a planner that starts
+  // refusing any single ordered pair fails here by name.
+  for key in partial_expected_pairs {
+    assert_true(
+      pairs.get(key).unwrap_or(0) >= 1,
+      msg="ordered pair no longer planned: " + key,
+    )
+  }
   let lexical_pairs = pairs.size()
   assert_true(
-    lexical_pairs >= 33,
+    lexical_pairs >= 37,
     msg="only \{lexical_pairs} distinct ordered pairs in the lexical family",
   )
   // BOTH orders of every mixed pair: a planner refusing only the
@@ -759,25 +774,37 @@ test "the allowlist pins the half-open rule and the synthesis anchors" {
     msg="an abutting edit must not license the neighbour's content end",
   )
   // (2) SYNTHESIS ANCHORS. A paragraph that projects text needs no run
-  // anchor at all: licensing one would let a plan drop a stray `<w:t/>`
-  // at the run's content end, which reprojects identically.
-  let simple = "<w:document xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\"><w:body><w:p><w:r><w:t>ab</w:t></w:r></w:p></w:body></w:document>"
+  // anchor at all. The run carries an `rPr` so its post-rPr anchor sits
+  // OUTSIDE every `w:t` open tag — otherwise the touched host's open-tag
+  // span would already license that coordinate and the check would pass
+  // whether or not the anchor rule held.
+  let simple = "<w:document xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\"><w:body><w:p><w:r><w:rPr><w:b/></w:rPr><w:tab/><w:t>ab</w:t></w:r></w:p></w:body></w:document>"
   let simple_projection = surgery_native_projection(simple)
   let simple_elements = simple_projection.scan.elements()
   let simple_paragraph = simple_projection.paragraphs[0]
+  // Edit only inside the text, leaving the tab untouched.
   let simple_allowed = partial_allowed_spans(
     simple_paragraph,
     simple_elements,
-    [{ start: 0, end: 1, replacement: "A" }],
+    [{ start: 1, end: 2, replacement: "A" }],
   )
   let SourceElementId(run_identity) = simple_paragraph.runs[0].source
   let run_element = simple_elements[run_identity]
+  // The post-rPr anchor coordinate itself.
+  let mut anchor = run_element.content_start
+  let mut child = run_element.first_child_index
+  while child >= 0 {
+    let candidate = simple_elements[child]
+    if is_wml_uri(candidate.uri) && candidate.local_name == "rPr" {
+      anchor = candidate.byte_end
+    }
+    child = candidate.next_sibling_index
+  }
+  assert_true(anchor > run_element.content_start)
   let mut licensed_anchor = false
   for span in simple_allowed {
     let (from, to) = span
-    if run_element.content_end >= from &&
-      run_element.content_end <= to &&
-      from > run_element.content_start {
+    if anchor >= from && anchor <= to {
       licensed_anchor = true
     }
   }
@@ -785,6 +812,17 @@ test "the allowlist pins the half-open rule and the synthesis anchors" {
     licensed_anchor,
     msg="a text-projecting paragraph must license no run synthesis anchor",
   )
+  // And the run's content end is never a synthesis location either.
+  let mut licensed_end = false
+  for span in simple_allowed {
+    let (from, to) = span
+    if run_element.content_end >= from &&
+      run_element.content_end <= to &&
+      from > run_element.content_start {
+      licensed_end = true
+    }
+  }
+  assert_false(licensed_end, msg="run content end is never a synthesis site")
 }
 
 ///|
@@ -805,3 +843,23 @@ test "partial: a multi-edit batch across two runs plans" {
     expected="AbCd",
   )
 }
+
+///|
+/// Every ordered (shape, start-kind, end-kind) key the lexical family
+/// plans, measured at this commit. Held as an identity set by the test
+/// above.
+let partial_expected_pairs : Array[String] = [
+  "insert:bare>bare", "delete:raw-edge>raw-edge", "insert:raw-edge>raw-edge", "replace:raw-edge>raw-edge",
+  "insert:seam-edge>seam-edge", "delete:entity-edge>raw-edge", "delete:numref-edge>raw-edge",
+  "delete:raw-interior>raw-edge", "replace:entity-edge>raw-edge", "replace:numref-edge>raw-edge",
+  "replace:raw-edge>entity-edge", "replace:raw-edge>numref-edge", "delete:atom-end-edge>raw-edge",
+  "replace:raw-edge>raw-interior", "replace:raw-interior>raw-edge", "insert:entity-edge>entity-edge",
+  "insert:numref-edge>numref-edge", "delete:atom-start-edge>raw-edge", "replace:entity-edge>entity-edge",
+  "replace:entity-edge>numref-edge", "replace:numref-edge>entity-edge", "replace:numref-edge>numref-edge",
+  "insert:raw-interior>raw-interior", "replace:entity-edge>raw-interior", "replace:raw-edge>atom-start-edge",
+  "replace:entity-edge>atom-end-edge", "replace:raw-interior>raw-interior", "delete:atom-start-edge>entity-edge",
+  "replace:atom-end-edge>raw-interior", "replace:atom-start-edge>entity-edge", "replace:atom-start-edge>numref-edge",
+  "replace:entity-edge>atom-start-edge", "replace:numref-edge>atom-start-edge", "replace:atom-start-edge>raw-interior",
+  "replace:raw-interior>atom-start-edge", "replace:atom-start-edge>atom-end-edge",
+  "replace:atom-start-edge>atom-start-edge",
+]

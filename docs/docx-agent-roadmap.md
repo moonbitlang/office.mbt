@@ -1043,8 +1043,11 @@ the generated boundary-pair proof (PR #474). Criteria disposition:
   grammar's documents (971 planned over 16 ordered pairs), and a local
   family for the lexical matrix that grammar does not reach — entities,
   numeric references, astral characters, CDATA, `w:cr`/`w:ptab`, atomless
-  runs, runless text (105 planned over 26 ordered pairs, including entity
-  and numeric-reference edges in BOTH orders).
+  runs, runless text, and mixed arrangements placing entities, numeric
+  references and ADJACENT atoms side by side. The lexical family plans
+  173 batches over 37 ordered pairs, and those 37 keys are pinned as an
+  IDENTITY SET rather than a count, so a planner that starts refusing
+  any single ordered pair fails by name.
 - **partial intra-run, cross-`w:t`, and cross-run edits**: GO — the
   replacement lands at the FIRST CONSUMED projecting contribution, so a
   cross-run replacement carries the first consumed run's formatting by
