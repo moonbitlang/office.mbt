@@ -689,33 +689,38 @@ fn plan_paragraph_text_edits(
         )
       }
     }
-    // Gate EVERY run the interval involves, derived STRUCTURALLY: runs
-    // register in document order on entry, so every run between the first
-    // and last intersecting contribution's runs — inclusive — is inside
-    // the interval, including a true `<w:r/>` that produced no
-    // contribution at all (it still carries field state of its own).
-    let mut first_run_index = -1
-    let mut last_run_index = -1
+    // Gate EVERY run the interval involves, derived from PHYSICAL SPANS:
+    // registration indices follow first appearance, and the reader
+    // tolerates nested runs, so a nested `<w:r/>` sitting between two of
+    // an outer run's texts registers AFTER the outer run — an index range
+    // cannot see it. The physical byte window spanned by the intersecting
+    // contributions can: every run whose element span overlaps it is
+    // structurally involved, contribution or not, and carries field state
+    // of its own.
+    let mut window_start = -1
+    let mut window_end = -1
     for part in intersecting {
-      for index, candidate in paragraph.runs {
-        if Some(candidate.source) == part.contribution.run_source {
-          if first_run_index < 0 || index < first_run_index {
-            first_run_index = index
-          }
-          if index > last_run_index {
-            last_run_index = index
-          }
-        }
+      let span = part.contribution.source_span
+      if window_start < 0 || span.byte_start < window_start {
+        window_start = span.byte_start
+      }
+      if span.byte_end > window_end {
+        window_end = span.byte_end
       }
     }
-    guard first_run_index >= 0 else {
+    guard window_start >= 0 else {
       raise partial_surgery_refuse(
         InternalPlanConflict,
         "edit \{ordinal} in paragraph \{paragraph_index}",
       )
     }
-    for index in first_run_index..<=last_run_index {
-      require_supported_run(paragraph.runs[index], ordinal)
+    for candidate in paragraph.runs {
+      let SourceElementId(candidate_identity) = candidate.source
+      let candidate_element = elements[candidate_identity]
+      if candidate_element.byte_start < window_end &&
+        candidate_element.byte_end > window_start {
+        require_supported_run(candidate, ordinal)
+      }
     }
     let run = resolve_run(intersecting[0].contribution.run_source, ordinal)
     // Atoms and non-text sources may only be wholly covered.

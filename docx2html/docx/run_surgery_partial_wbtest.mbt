@@ -1095,3 +1095,44 @@ test "partial: a later run reused by another paragraph refuses" {
     _ => fail("expected refusal [CrossParagraphSourceReuse]")
   }
 }
+
+///|
+test "partial: a nested run between an outer run's texts is gated" {
+  // The reader tolerates nested runs; a nested <w:r/> between the outer
+  // run's two texts registers AFTER the outer run, so only physical-span
+  // derivation can see it inside the interval. A clean crossing plans —
+  // the nested shell survives byte-identical — and a field-poisoned
+  // nested run refuses through the run gate.
+  let body = "<w:p><w:r><w:t>ab</w:t><w:r/><w:t>cd</w:t></w:r></w:p>"
+  assert_partial_edits(
+    body,
+    paragraph=0,
+    [partial_edit(1, 3, "X")],
+    expected="aXd",
+  )
+  let source = "<w:document xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\" xmlns:v=\"urn:schemas-microsoft-com:vml\"><w:body>\{body}</w:body></w:document>"
+  let bytes = @utf8.encode(source)
+  let projection = surgery_native_projection(source)
+  let (byte_edits, _) = plan_paragraph_text_edits(projection, bytes[:], 0, [
+    partial_edit(1, 3, "X"),
+  ])
+  let spliced = @utf8.decode(apply_run_surgery_edits(bytes, byte_edits))
+  assert_true(spliced.contains("<w:t>aX</w:t><w:r/><w:t>d</w:t>"))
+  // Poison the NESTED run's field state (the force-the-defect technique):
+  // the byte-span gate must reach it even though no index range and no
+  // contribution walk can.
+  let poisoned = surgery_native_projection(source)
+  let paragraph = poisoned.paragraphs[0]
+  assert_eq(paragraph.runs.length(), 2)
+  paragraph.runs[1].field_region = FieldInstruction
+  try
+    plan_paragraph_text_edits(poisoned, bytes[:], 0, [partial_edit(1, 3, "X")])
+    |> ignore
+  catch {
+    Unsupported(message~) =>
+      assert_true(message.contains("[PartialFieldInstruction]"), msg=message)
+    _ => fail("expected a typed refusal")
+  } noraise {
+    _ => fail("expected refusal [PartialFieldInstruction]")
+  }
+}
