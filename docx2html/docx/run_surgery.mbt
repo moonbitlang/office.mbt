@@ -408,11 +408,21 @@ fn plan_whole_run_replacement(
 /// and embedded objects hard barriers, and both surgeries already refuse
 /// visible non-text; they simply could not recognise this shape.
 fn run_surgery_is_hard_barrier_container(element : ScannedElement) -> Bool {
-  is_wml_uri(element.uri) &&
+  // WML `drawing` and `object`, and every VML container the reader
+  // dispatches through the same transparent path. `w:pict` is NOT here:
+  // the reader emits it as Suppressed, so it never reaches a Transparent
+  // branch, and the suppressed-content hole is recorded N0 debt rather
+  // than something this predicate can close.
+  if is_wml_uri(element.uri) {
+    return element.local_name == "drawing" || element.local_name == "object"
+  }
+  element.uri == "urn:schemas-microsoft-com:vml" &&
   (
-    element.local_name == "drawing" ||
-    element.local_name == "object" ||
-    element.local_name == "pict"
+    element.local_name == "shape" ||
+    element.local_name == "rect" ||
+    element.local_name == "roundrect" ||
+    element.local_name == "textbox" ||
+    element.local_name == "group"
   )
 }
 

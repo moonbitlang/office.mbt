@@ -1326,6 +1326,42 @@ test "partial: an empty drawing is a hard barrier, not a seam" {
 }
 
 ///|
+test "partial: every VML drawing container is a hard barrier too" {
+  // The reader dispatches five VML containers through the same
+  // transparent path as w:drawing, so a WML-only predicate left them
+  // looking like seams: a range could span one, and a run holding only
+  // one could take synthesized text.
+  for name in ["shape", "rect", "roundrect", "textbox", "group"] {
+    let container = "<v:\{name}/>"
+    assert_partial_refusal(
+      "<w:p><w:r><w:t>ab</w:t>\{container}<w:t>cd</w:t></w:r></w:p>",
+      paragraph=0,
+      [partial_edit(1, 3, "x")],
+      refusal="VisibleBarrier",
+    )
+    assert_partial_refusal(
+      "<w:p><w:r>\{container}</w:r></w:p>",
+      paragraph=0,
+      [partial_edit(0, 0, "X")],
+      refusal="NoSynthesisCarrier",
+    )
+    // And whole-run replacement refuses the run outright.
+    let source = "<w:document xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\" xmlns:v=\"urn:schemas-microsoft-com:vml\"><w:body><w:p><w:r><w:t>a</w:t>\{container}</w:r></w:p></w:body></w:document>"
+    let bytes = @utf8.encode(source)
+    let projection = surgery_native_projection(source)
+    try
+      plan_whole_run_replacement(projection, bytes[:], 0, 0, "x") |> ignore
+    catch {
+      Unsupported(message~) =>
+        assert_true(message.contains("visible non-text"), msg=message)
+      _ => fail("expected an Unsupported refusal")
+    } noraise {
+      _ => fail("expected v:\{name} to refuse")
+    }
+  }
+}
+
+///|
 test "whole-run replacement refuses a run holding an empty drawing" {
   // The same classification hole in N0c1: it ignores every Transparent
   // contribution, so a run whose only non-text content is an empty

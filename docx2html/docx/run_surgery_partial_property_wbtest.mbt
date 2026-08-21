@@ -90,7 +90,16 @@ fn partial_offset_classes(
           classes.push("atom-interior")
         }
       VisibleNonText => if offset == start { classes.push("barrier-edge") }
-      Transparent => if offset == start { classes.push("seam-edge") }
+      Transparent => {
+        let SourceElementId(seam_identity) = contribution.source
+        if offset == start {
+          if partial_oracle_is_barrier_container(elements[seam_identity]) {
+            classes.push("barrier-edge")
+          } else {
+            classes.push("seam-edge")
+          }
+        }
+      }
       SuppressedContent =>
         if offset == start {
           classes.push("suppressed-edge")
@@ -170,6 +179,18 @@ fn partial_exhaustive_batches_for(
       } else {
         build([(i, j, "X")])
         build([(i, j, "")])
+        // The IDENTITY replacement: a no-op over whatever this range
+        // currently projects, the only way the census enters the no-op
+        // branches -- for text and for atoms alike.
+        build([
+          (
+            i,
+            j,
+            partial_paragraph_projection(paragraph)
+            .view(start_offset=i, end_offset=j)
+            .to_owned(),
+          ),
+        ])
       }
     }
   }
@@ -353,6 +374,28 @@ fn partial_escape(text : String) -> String {
 }
 
 ///|
+/// The oracle's OWN inventory of drawing containers the reader routes
+/// through the transparent path. Deliberately not production's
+/// predicate: sharing it would let a container missing from BOTH
+/// self-confirm. Keep it in step with the reader's dispatch, which is
+/// where these names are decided.
+fn partial_oracle_is_barrier_container(element : ScannedElement) -> Bool {
+  let wml = is_wml_uri(element.uri)
+  let vml = element.uri == "urn:schemas-microsoft-com:vml"
+  (wml && (element.local_name == "drawing" || element.local_name == "object")) ||
+  (
+    vml &&
+    (
+      element.local_name == "shape" ||
+      element.local_name == "rect" ||
+      element.local_name == "roundrect" ||
+      element.local_name == "textbox" ||
+      element.local_name == "group"
+    )
+  )
+}
+
+///|
 fn partial_paragraph_projection(
   paragraph : ReaderProjectionParagraph,
 ) -> String {
@@ -470,8 +513,8 @@ fn partial_expected_licenses(
   // host and writing the replacement into the next consumes exactly the
   // same spans, reprojects identically and keeps every count, yet
   // violates first-consumed placement and changes which run's formatting
-  // the text inherits. A leading `?` marks a payload matched by CONTENT,
-  // used where synthesis composes the run's own prefix and namespace.
+  // the text inherits. Synthesis payloads are the EXACT element the plan
+  // must write, modelled below from the run's own prefix and namespace.
   let licenses : Array[(Int, Int, Bool, String)] = []
   // Insertion sites, and where each one's license sits, so several
   // requests at one site accumulate into the single coalesced payload
@@ -681,7 +724,7 @@ fn partial_expected_licenses(
       VisibleNonText | SuppressedContent => occupied = true
       Transparent => {
         let SourceElementId(seam_identity) = contribution.source
-        if run_surgery_is_hard_barrier_container(elements[seam_identity]) {
+        if partial_oracle_is_barrier_container(elements[seam_identity]) {
           occupied = true
         }
       }
@@ -977,7 +1020,9 @@ let partial_lexical_bodies : Array[(String, String)] = [
   // atom-only paragraph whose no-ops must plan nothing, and a run with a
   // non-'w:' prefix so the synthesis prefix model is exercised.
   (
-    "quoted-decoy", "<w:p><w:r><w:t data='x xml:space = \"bogus\"'>ab</w:t></w:r></w:p>",
+    // Edge whitespace, so the decoy host actually NEEDS preservation and
+    // the quote-aware scan decides the plan rather than being irrelevant.
+    "quoted-decoy", "<w:p><w:r><w:t data='x xml:space = \"bogus\"'> ab </w:t></w:r></w:p>",
   ),
   ("atom-only", "<w:p><w:r><w:tab/><w:noBreakHyphen/></w:r></w:p>"),
   (
@@ -1065,10 +1110,10 @@ test "the lexical matrix the grammar does not reach is proved the same way" {
   }
   let seen = (pair : String) => pairs.get(pair).unwrap_or(0)
   let refused = (name : String) => refusals.get(name).unwrap_or(0)
-  // Measured at this commit: 705 batches planned over 71 ordered pairs,
+  // Measured at this commit: 1013 batches planned over 71 ordered pairs,
   // 18 of them multi-edit across multiple carriers. The EXACT per-key
   // counts above are the real pin; this is a volume total.
-  assert_true(planned == 705, msg="\{planned} lexical batches planned")
+  assert_true(planned == 1013, msg="\{planned} lexical batches planned")
   // Entity and numeric-reference boundaries plan in BOTH orders; their
   // interiors are unresolvable and refuse below.
   // EXACT identity set, both directions. Inclusion alone would let a
@@ -1341,27 +1386,27 @@ test "partial: a multi-edit batch across two runs plans" {
 let partial_expected_pair_counts : Array[(String, Int)] = [
   ("insert:bare>bare", 1),
   ("delete:raw-edge>raw-edge", 18),
-  ("insert:raw-edge>raw-edge", 56),
+  ("insert:raw-edge>raw-edge", 58),
   ("insert:seam-edge>seam-edge", 1),
-  ("replace:raw-edge>raw-edge", 18),
+  ("replace:raw-edge>raw-edge", 36),
   ("delete:raw-edge>entity-edge", 8),
   ("delete:raw-edge>numref-edge", 6),
   ("delete:entity-edge>raw-edge", 18),
   ("delete:numref-edge>raw-edge", 11),
   ("insert:empty-text>empty-text", 1),
-  ("replace:raw-edge>entity-edge", 9),
-  ("replace:raw-edge>numref-edge", 7),
   ("delete:atom-end-edge>raw-edge", 3),
   ("delete:raw-edge>atom-end-edge", 1),
-  ("delete:raw-edge>raw-interior", 28),
-  ("delete:raw-interior>raw-edge", 31),
-  ("replace:entity-edge>raw-edge", 18),
-  ("replace:numref-edge>raw-edge", 11),
+  ("delete:raw-edge>raw-interior", 30),
+  ("delete:raw-interior>raw-edge", 33),
+  ("replace:entity-edge>raw-edge", 36),
+  ("replace:numref-edge>raw-edge", 22),
+  ("replace:raw-edge>entity-edge", 17),
+  ("replace:raw-edge>numref-edge", 13),
   ("delete:numref-edge>entity-edge", 8),
-  ("replace:atom-end-edge>raw-edge", 3),
-  ("replace:raw-edge>atom-end-edge", 1),
-  ("replace:raw-edge>raw-interior", 39),
-  ("replace:raw-interior>raw-edge", 32),
+  ("replace:atom-end-edge>raw-edge", 6),
+  ("replace:raw-edge>atom-end-edge", 2),
+  ("replace:raw-edge>raw-interior", 72),
+  ("replace:raw-interior>raw-edge", 67),
   ("delete:atom-start-edge>raw-edge", 5),
   ("delete:entity-edge>entity-edge", 40),
   ("delete:entity-edge>numref-edge", 10),
@@ -1373,43 +1418,43 @@ let partial_expected_pair_counts : Array[(String, Int)] = [
   ("delete:raw-interior>numref-edge", 4),
   ("insert:entity-edge>entity-edge", 26),
   ("insert:numref-edge>numref-edge", 15),
-  ("replace:numref-edge>entity-edge", 8),
   ("delete:entity-edge>atom-end-edge", 2),
-  ("replace:atom-start-edge>raw-edge", 5),
-  ("replace:entity-edge>entity-edge", 49),
-  ("replace:entity-edge>numref-edge", 11),
-  ("replace:numref-edge>numref-edge", 24),
-  ("replace:numref-edge>raw-interior", 5),
-  ("replace:raw-edge>atom-start-edge", 2),
-  ("replace:raw-interior>entity-edge", 6),
-  ("replace:raw-interior>numref-edge", 6),
+  ("replace:entity-edge>entity-edge", 89),
+  ("replace:entity-edge>numref-edge", 21),
+  ("replace:numref-edge>entity-edge", 16),
+  ("replace:numref-edge>numref-edge", 42),
+  ("replace:numref-edge>raw-interior", 9),
+  ("replace:raw-edge>atom-start-edge", 4),
   ("delete:atom-end-edge>raw-interior", 4),
   ("delete:raw-interior>atom-end-edge", 1),
-  ("delete:raw-interior>raw-interior", 19),
-  ("insert:raw-interior>raw-interior", 34),
-  ("replace:entity-edge>atom-end-edge", 2),
-  ("replace:entity-edge>raw-interior", 10),
+  ("delete:raw-interior>raw-interior", 22),
+  ("insert:raw-interior>raw-interior", 36),
+  ("replace:atom-start-edge>raw-edge", 10),
+  ("replace:entity-edge>atom-end-edge", 4),
+  ("replace:entity-edge>raw-interior", 18),
+  ("replace:raw-interior>entity-edge", 10),
+  ("replace:raw-interior>numref-edge", 10),
   ("delete:atom-start-edge>entity-edge", 2),
   ("delete:atom-start-edge>numref-edge", 4),
   ("delete:entity-edge>atom-start-edge", 6),
   ("delete:numref-edge>atom-start-edge", 3),
   ("insert:atom-end-edge>atom-end-edge", 1),
-  ("replace:atom-end-edge>raw-interior", 5),
-  ("replace:raw-interior>atom-end-edge", 1),
-  ("replace:raw-interior>raw-interior", 28),
+  ("replace:atom-end-edge>raw-interior", 9),
+  ("replace:raw-interior>atom-end-edge", 2),
+  ("replace:raw-interior>raw-interior", 55),
   ("delete:atom-start-edge>raw-interior", 5),
   ("delete:raw-interior>atom-start-edge", 2),
-  ("replace:atom-start-edge>entity-edge", 3),
-  ("replace:atom-start-edge>numref-edge", 5),
-  ("replace:entity-edge>atom-start-edge", 6),
-  ("replace:numref-edge>atom-start-edge", 4),
+  ("replace:atom-start-edge>entity-edge", 5),
+  ("replace:atom-start-edge>numref-edge", 9),
+  ("replace:numref-edge>atom-start-edge", 7),
   ("delete:atom-start-edge>atom-end-edge", 6),
-  ("replace:atom-start-edge>raw-interior", 5),
-  ("replace:raw-interior>atom-start-edge", 2),
-  ("replace:atom-start-edge>atom-end-edge", 8),
+  ("replace:entity-edge>atom-start-edge", 12),
+  ("replace:raw-interior>atom-start-edge", 4),
+  ("replace:atom-start-edge>raw-interior", 10),
   ("delete:atom-start-edge>atom-start-edge", 2),
   ("insert:atom-start-edge>atom-start-edge", 3),
-  ("replace:atom-start-edge>atom-start-edge", 3),
+  ("replace:atom-start-edge>atom-end-edge", 14),
+  ("replace:atom-start-edge>atom-start-edge", 5),
 ]
 
 ///|

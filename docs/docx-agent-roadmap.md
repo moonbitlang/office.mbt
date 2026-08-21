@@ -1046,8 +1046,8 @@ the generated boundary-pair proof (PR #474). Criteria disposition:
   runs, runless text, and mixed arrangements placing entities, numeric
   references and ADJACENT atoms side by side in both orders. That family
   enumerates EXHAUSTIVELY — every (i, j) range over every fixture, as
-  replacement and as deletion — so its 68 ordered pairs are the permitted
-  set over those bodies rather than a sample of it (670 batches planned),
+  replacement and as deletion — so its 71 ordered pairs are the permitted
+  set over those bodies rather than a sample of it (1013 batches planned, including the identity replacement over every range so the no-op paths are exercised),
   and each key's EXACT COUNT is pinned in both directions: a pair that
   stops being planned fails by name, an unlisted pair being accepted
   fails, and a single range being refused behind a shared key fails too,
