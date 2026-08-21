@@ -1067,14 +1067,24 @@ fn plan_paragraph_text_edits(
     match existing {
       Some((from, to)) =>
         // An existing `preserve` is left byte-identical; only a `default`
-        // (or any other value) is replaced.
-        if wants_space &&
-          !run_surgery_space_declaration_is_preserve(source, (from, to)) {
-          edits.push({
-            byte_start: from,
-            byte_end: to,
-            replacement: "xml:space=\"preserve\"",
-          })
+        // (or any other value) is replaced. A value that cannot be
+        // decoded refuses: rewriting bytes whose meaning is unknown is
+        // exactly what this surgery must not do.
+        if wants_space {
+          match run_surgery_space_declaration_is_preserve(source, (from, to)) {
+            Some(true) => ()
+            Some(false) =>
+              edits.push({
+                byte_start: from,
+                byte_end: to,
+                replacement: "xml:space=\"preserve\"",
+              })
+            None =>
+              raise partial_surgery_refuse(
+                UnsupportedTextSource,
+                "paragraph \{paragraph_index}",
+              )
+          }
         }
       None =>
         if wants_space {

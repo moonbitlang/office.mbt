@@ -305,13 +305,21 @@ fn plan_whole_run_replacement(
       // `default`, which is the opposite of what edge whitespace needs.
       match existing {
         Some((from, to)) =>
-          if wants_space &&
-            !run_surgery_space_declaration_is_preserve(source, (from, to)) {
-            edits.push({
-              byte_start: from,
-              byte_end: to,
-              replacement: "xml:space=\"preserve\"",
-            })
+          if wants_space {
+            match
+              run_surgery_space_declaration_is_preserve(source, (from, to)) {
+              Some(true) => ()
+              Some(false) =>
+                edits.push({
+                  byte_start: from,
+                  byte_end: to,
+                  replacement: "xml:space=\"preserve\"",
+                })
+              None =>
+                raise Unsupported(
+                  message="run \{run_index} in paragraph \{paragraph_index} carries an xml:space declaration whose value cannot be decoded",
+                )
+            }
           }
         None => ()
       }
@@ -406,17 +414,28 @@ fn plan_whole_run_replacement(
 /// byte-identical. Rewriting it anyway would change quote style or
 /// spacing for no reason and put bytes the caller never asked about
 /// inside the declared footprint.
+///
+/// The comparison is against the NORMALIZED value, not the raw bytes.
+/// XML resolves references inside an attribute value before the value
+/// means anything, so `xml:space="pre&#x73;erve"` already says
+/// `preserve` and must be left alone. `None` means the value could not
+/// be decoded at all; the caller refuses rather than guessing, because
+/// the alternative is rewriting bytes whose meaning is unknown.
+///
+/// Normalization also folds literal whitespace to spaces, which this
+/// does not do. It cannot change the answer: `preserve` holds no
+/// whitespace, so a value carrying any differs from it either way.
 fn run_surgery_space_declaration_is_preserve(
   source : BytesView,
   span : (Int, Int),
-) -> Bool {
+) -> Bool? {
   let (from, to) = span
   let mut at = from
   while at < to && source[at] != b'"' && source[at] != b'\'' {
     at = at + 1
   }
   if at >= to {
-    return false
+    return None
   }
   let quote = source[at]
   let start = at + 1
@@ -424,16 +443,39 @@ fn run_surgery_space_declaration_is_preserve(
   while end < to && source[end] != quote {
     end = end + 1
   }
-  let value = b"preserve"
-  if end - start != value.length() {
-    return false
+  if end >= to {
+    return None
   }
-  for offset in 0..<value.length() {
-    if source[start + offset] != value[offset] {
-      return false
+  let decoded = StringBuilder()
+  let mut cursor = start
+  while cursor < end {
+    if source[cursor] == b'&' {
+      let decoded_reference = decode_entity_token(source, cursor, end) catch {
+        _ => return None
+      }
+      let (character, _, next) = decoded_reference
+      // The scan must make progress on every iteration. The decoder
+      // always returns a position past the `;`, but this walks
+      // attacker-controlled bytes, and a decoder that ever failed to
+      // advance would hang the surgery rather than refuse it.
+      if next <= cursor {
+        return None
+      }
+      decoded.write_char(character)
+      cursor = next
+    } else {
+      // Everything outside a reference is literal, so the raw byte run
+      // up to the next `&` decodes as UTF-8 exactly once.
+      let mut run_end = cursor
+      while run_end < end && source[run_end] != b'&' {
+        run_end = run_end + 1
+      }
+      let text = @utf8.decode(source[cursor:run_end]) catch { _ => return None }
+      decoded.write_string(text)
+      cursor = run_end
     }
   }
-  true
+  Some(decoded.to_string() == "preserve")
 }
 
 ///|

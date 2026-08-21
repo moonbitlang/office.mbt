@@ -1427,3 +1427,65 @@ test "whole-run replacement leaves an existing preserve byte-identical" {
   assert_true(spliced.contains("xml:space='preserve'"))
   assert_false(spliced.contains("xml:space=\"preserve\""))
 }
+
+///|
+test "partial: a reference-spelled preserve is left byte-identical" {
+  // XML resolves references inside an attribute value before the value
+  // means anything, so `pre&#x73;erve` already SAYS preserve. Comparing
+  // raw bytes would call it something else and rewrite the declaration,
+  // which the locked rule forbids.
+  let body =
+    #|<w:p><w:r><w:t xml:space="pre&#x73;erve"> ab </w:t></w:r></w:p>
+  let source = "<w:document xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\" xmlns:v=\"urn:schemas-microsoft-com:vml\"><w:body>\{body}</w:body></w:document>"
+  let bytes = @utf8.encode(source)
+  let projection = surgery_native_projection(source)
+  let (byte_edits, _) = plan_paragraph_text_edits(projection, bytes[:], 0, [
+    partial_edit(1, 2, "X"),
+  ])
+  let spliced = @utf8.decode(apply_run_surgery_edits(bytes, byte_edits))
+  assert_true(spliced.contains("xml:space=\"pre&#x73;erve\""))
+  assert_false(spliced.contains("xml:space=\"preserve\""))
+  // The decimal spelling of the same character, and a named reference
+  // in a value that does NOT say preserve, which IS replaced.
+  let decimal =
+    #|<w:p><w:r><w:t xml:space="pre&#115;erve"> ab </w:t></w:r></w:p>
+  let decimal_source = "<w:document xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\" xmlns:v=\"urn:schemas-microsoft-com:vml\"><w:body>\{decimal}</w:body></w:document>"
+  let decimal_bytes = @utf8.encode(decimal_source)
+  let (decimal_edits, _) = plan_paragraph_text_edits(
+    surgery_native_projection(decimal_source),
+    decimal_bytes[:],
+    0,
+    [partial_edit(1, 2, "X")],
+  )
+  let decimal_spliced = @utf8.decode(
+    apply_run_surgery_edits(decimal_bytes, decimal_edits),
+  )
+  assert_true(decimal_spliced.contains("xml:space=\"pre&#115;erve\""))
+  let other =
+    #|<w:p><w:r><w:t xml:space="&#100;efault">ab</w:t></w:r></w:p>
+  let other_source = "<w:document xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\" xmlns:v=\"urn:schemas-microsoft-com:vml\"><w:body>\{other}</w:body></w:document>"
+  let other_bytes = @utf8.encode(other_source)
+  let (other_edits, _) = plan_paragraph_text_edits(
+    surgery_native_projection(other_source),
+    other_bytes[:],
+    0,
+    [partial_edit(0, 1, " s")],
+  )
+  let other_spliced = @utf8.decode(
+    apply_run_surgery_edits(other_bytes, other_edits),
+  )
+  assert_true(other_spliced.contains("xml:space=\"preserve\""))
+  assert_false(other_spliced.contains("&#100;efault"))
+}
+
+///|
+test "whole-run replacement leaves a reference-spelled preserve alone" {
+  let source =
+    #|<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:body><w:p><w:r><w:t xml:space="pre&#x73;erve"> a </w:t></w:r></w:p></w:body></w:document>
+  let bytes = @utf8.encode(source)
+  let projection = surgery_native_projection(source)
+  let edits = plan_whole_run_replacement(projection, bytes[:], 0, 0, " b ")
+  let spliced = @utf8.decode(apply_run_surgery_edits(bytes, edits))
+  assert_true(spliced.contains("xml:space=\"pre&#x73;erve\""))
+  assert_false(spliced.contains("xml:space=\"preserve\""))
+}

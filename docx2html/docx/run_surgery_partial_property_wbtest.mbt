@@ -496,16 +496,81 @@ fn partial_space_value_is_preserve(
   while end < to && source[end].to_int() != quote {
     end = end + 1
   }
-  let value = "preserve"
-  if end - start != value.length() {
+  if end >= to {
     return false
   }
-  for offset in 0..<value.length() {
-    if source[start + offset].to_int() != value[offset].to_int() {
+  // Decoded here, by the test's own reference reader, because XML
+  // resolves references inside an attribute value before the value means
+  // anything. Sharing production's decoder would let one bug agree with
+  // itself.
+  let decoded = StringBuilder()
+  let mut cursor = start
+  while cursor < end {
+    if source[cursor].to_int() != 0x26 {
+      decoded.write_char(source[cursor].to_int().unsafe_to_char())
+      cursor = cursor + 1
+      continue
+    }
+    let mut semicolon = cursor + 1
+    while semicolon < end && source[semicolon].to_int() != 0x3B {
+      semicolon = semicolon + 1
+    }
+    if semicolon >= end {
       return false
     }
+    let mut body = ""
+    let body_start = cursor + 1
+    for index in body_start..<semicolon {
+      body = body + source[index].to_int().unsafe_to_char().to_string()
+    }
+    let character = if body.has_prefix("#x") {
+      partial_reference_code(body[2:].to_string(), 16)
+    } else if body.has_prefix("#") {
+      partial_reference_code(body[1:].to_string(), 10)
+    } else {
+      match body {
+        "amp" => Some('&')
+        "lt" => Some('<')
+        "gt" => Some('>')
+        "quot" => Some('"')
+        "apos" => Some('\'')
+        _ => None
+      }
+    }
+    match character {
+      Some(resolved) => decoded.write_char(resolved)
+      None => return false
+    }
+    cursor = semicolon + 1
   }
-  true
+  decoded.to_string() == "preserve"
+}
+
+///|
+/// A numeric character reference's value, or `None` if any digit is not
+/// one the base admits.
+fn partial_reference_code(digits : String, base : Int) -> Char? {
+  if digits.length() == 0 {
+    return None
+  }
+  let mut value = 0
+  for character in digits {
+    let code = character.to_int()
+    let digit = if code >= '0'.to_int() && code <= '9'.to_int() {
+      code - '0'.to_int()
+    } else if base == 16 && code >= 'a'.to_int() && code <= 'f'.to_int() {
+      code - 'a'.to_int() + 10
+    } else if base == 16 && code >= 'A'.to_int() && code <= 'F'.to_int() {
+      code - 'A'.to_int() + 10
+    } else {
+      return None
+    }
+    if value > (0x10FFFF - digit) / base {
+      return None
+    }
+    value = value * base + digit
+  }
+  value.to_char()
 }
 
 ///|
@@ -1048,6 +1113,19 @@ let partial_lexical_bodies : Array[(String, String)] = [
   (
     "space-preserve", "<w:p><w:r><w:t xml:space=\"preserve\"> ab </w:t></w:r></w:p>",
   ),
+  // The same declaration spelled through a character reference. XML
+  // resolves it before the value means anything, so this already SAYS
+  // preserve and the corpus must find it left byte-identical -- a
+  // comparison against raw bytes would call it something else and
+  // rewrite it.
+  (
+    "space-preserve-ref", "<w:p><w:r><w:t xml:space=\"pre&#x73;erve\"> ab </w:t></w:r></w:p>",
+  ),
+  // A declaration that only LOOKS like a reference-spelled preserve;
+  // it decodes to `default`, so it is replaced like any other value.
+  (
+    "space-default-ref", "<w:p><w:r><w:t xml:space=\"&#100;efault\"> ab </w:t></w:r></w:p>",
+  ),
   ("empty-text", "<w:p><w:r><w:t></w:t><w:t>ab</w:t></w:r></w:p>"),
   ("runless-text", "<w:p><w:r><w:t>ab</w:t></w:r><w:t>cd</w:t></w:p>"),
   // An isolated empty host: with a raw host beside it the raw edge masks
@@ -1118,6 +1196,7 @@ test "the lexical matrix the grammar does not reach is proved the same way" {
   let mut planned = 0
   let mut multi_carrier = 0
   let dispositions : Array[String] = []
+  let case_keys : Map[String, Int] = Map([])
   for entry in partial_lexical_bodies {
     let (label, body) = entry
     let source = "<w:document xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\" xmlns:v=\"urn:schemas-microsoft-com:vml\"><w:body>\{body}</w:body></w:document>"
@@ -1167,10 +1246,10 @@ test "the lexical matrix the grammar does not reach is proved the same way" {
             variant,
           )
         }
+        let case_name = case_key.to_string()
+        case_keys[case_name] = case_keys.get(case_name).unwrap_or(0) + 1
         dispositions.push(
-          case_key.to_string() +
-          "=" +
-          (if refusal == "" { "ok" } else { refusal }),
+          case_name + "=" + (if refusal == "" { "ok" } else { refusal }),
         )
         if refusal != "" {
           refusals[refusal] = refusals.get(refusal).unwrap_or(0) + 1
@@ -1213,6 +1292,15 @@ test "the lexical matrix the grammar does not reach is proved the same way" {
     partial_expected_dispositions.length(),
     msg="case count changed",
   )
+  // The key must be INJECTIVE over the generated cases, or the table
+  // proves less than it reads as. It names coordinates and a variant
+  // rather than the replacement text, so two cases whose payloads differ
+  // but whose ranges and variants agree would collide and one outcome
+  // would go unpinned. Nothing about the generator guarantees that, so
+  // it is checked rather than assumed.
+  for key, count in case_keys {
+    assert_eq(count, 1, msg="case key is not injective: " + key)
+  }
   for index, entry in dispositions {
     assert_eq(
       entry,
@@ -1225,10 +1313,10 @@ test "the lexical matrix the grammar does not reach is proved the same way" {
   }
   let seen = (pair : String) => pairs.get(pair).unwrap_or(0)
   let refused = (name : String) => refusals.get(name).unwrap_or(0)
-  // Measured at this commit: 1013 batches planned over 71 ordered pairs,
+  // Measured at this commit: 1087 batches planned over 71 ordered pairs,
   // 18 of them multi-edit across multiple carriers. The EXACT per-key
   // counts above are the real pin; this is a volume total.
-  assert_true(planned == 1013, msg="\{planned} lexical batches planned")
+  assert_true(planned == 1087, msg="\{planned} lexical batches planned")
   // Entity and numeric-reference boundaries plan in BOTH orders; their
   // interiors are unresolvable and refuse below.
   // EXACT identity set, both directions. Inclusion alone would let a
@@ -1499,77 +1587,77 @@ test "partial: a multi-edit batch across two runs plans" {
 /// sample of it, and it is held as an identity set: a planner that starts
 /// refusing any single pair fails with that pair's key.
 let partial_expected_pair_counts : Array[(String, Int)] = [
-  ("insert:bare>bare", 1),
-  ("delete:raw-edge>raw-edge", 18),
-  ("insert:raw-edge>raw-edge", 58),
-  ("insert:seam-edge>seam-edge", 1),
-  ("replace:raw-edge>raw-edge", 36),
-  ("delete:raw-edge>entity-edge", 8),
-  ("delete:raw-edge>numref-edge", 6),
-  ("delete:entity-edge>raw-edge", 18),
-  ("delete:numref-edge>raw-edge", 11),
-  ("insert:empty-text>empty-text", 1),
   ("delete:atom-end-edge>raw-edge", 3),
-  ("delete:raw-edge>atom-end-edge", 1),
-  ("delete:raw-edge>raw-interior", 30),
-  ("delete:raw-interior>raw-edge", 33),
-  ("replace:entity-edge>raw-edge", 36),
-  ("replace:numref-edge>raw-edge", 22),
-  ("replace:raw-edge>entity-edge", 17),
-  ("replace:raw-edge>numref-edge", 13),
-  ("delete:numref-edge>entity-edge", 8),
-  ("replace:atom-end-edge>raw-edge", 6),
-  ("replace:raw-edge>atom-end-edge", 2),
-  ("replace:raw-edge>raw-interior", 72),
-  ("replace:raw-interior>raw-edge", 67),
-  ("delete:atom-start-edge>raw-edge", 5),
-  ("delete:entity-edge>entity-edge", 40),
-  ("delete:entity-edge>numref-edge", 10),
-  ("delete:entity-edge>raw-interior", 8),
-  ("delete:numref-edge>numref-edge", 18),
-  ("delete:numref-edge>raw-interior", 4),
-  ("delete:raw-edge>atom-start-edge", 2),
-  ("delete:raw-interior>entity-edge", 4),
-  ("delete:raw-interior>numref-edge", 4),
-  ("insert:entity-edge>entity-edge", 26),
-  ("insert:numref-edge>numref-edge", 15),
-  ("delete:entity-edge>atom-end-edge", 2),
-  ("replace:entity-edge>entity-edge", 89),
-  ("replace:entity-edge>numref-edge", 21),
-  ("replace:numref-edge>entity-edge", 16),
-  ("replace:numref-edge>numref-edge", 42),
-  ("replace:numref-edge>raw-interior", 9),
-  ("replace:raw-edge>atom-start-edge", 4),
   ("delete:atom-end-edge>raw-interior", 4),
-  ("delete:raw-interior>atom-end-edge", 1),
-  ("delete:raw-interior>raw-interior", 22),
-  ("insert:raw-interior>raw-interior", 36),
-  ("replace:atom-start-edge>raw-edge", 10),
-  ("replace:entity-edge>atom-end-edge", 4),
-  ("replace:entity-edge>raw-interior", 18),
-  ("replace:raw-interior>entity-edge", 10),
-  ("replace:raw-interior>numref-edge", 10),
+  ("delete:atom-start-edge>atom-end-edge", 6),
+  ("delete:atom-start-edge>atom-start-edge", 2),
   ("delete:atom-start-edge>entity-edge", 2),
   ("delete:atom-start-edge>numref-edge", 4),
-  ("delete:entity-edge>atom-start-edge", 6),
-  ("delete:numref-edge>atom-start-edge", 3),
-  ("insert:atom-end-edge>atom-end-edge", 1),
-  ("replace:atom-end-edge>raw-interior", 9),
-  ("replace:raw-interior>atom-end-edge", 2),
-  ("replace:raw-interior>raw-interior", 55),
+  ("delete:atom-start-edge>raw-edge", 5),
   ("delete:atom-start-edge>raw-interior", 5),
+  ("delete:entity-edge>atom-end-edge", 2),
+  ("delete:entity-edge>atom-start-edge", 6),
+  ("delete:entity-edge>entity-edge", 40),
+  ("delete:entity-edge>numref-edge", 10),
+  ("delete:entity-edge>raw-edge", 18),
+  ("delete:entity-edge>raw-interior", 8),
+  ("delete:numref-edge>atom-start-edge", 3),
+  ("delete:numref-edge>entity-edge", 8),
+  ("delete:numref-edge>numref-edge", 18),
+  ("delete:numref-edge>raw-edge", 11),
+  ("delete:numref-edge>raw-interior", 4),
+  ("delete:raw-edge>atom-end-edge", 1),
+  ("delete:raw-edge>atom-start-edge", 2),
+  ("delete:raw-edge>entity-edge", 8),
+  ("delete:raw-edge>numref-edge", 6),
+  ("delete:raw-edge>raw-edge", 20),
+  ("delete:raw-edge>raw-interior", 36),
+  ("delete:raw-interior>atom-end-edge", 1),
   ("delete:raw-interior>atom-start-edge", 2),
-  ("replace:atom-start-edge>entity-edge", 5),
-  ("replace:atom-start-edge>numref-edge", 9),
-  ("replace:numref-edge>atom-start-edge", 7),
-  ("delete:atom-start-edge>atom-end-edge", 6),
-  ("replace:entity-edge>atom-start-edge", 12),
-  ("replace:raw-interior>atom-start-edge", 4),
-  ("replace:atom-start-edge>raw-interior", 10),
-  ("delete:atom-start-edge>atom-start-edge", 2),
+  ("delete:raw-interior>entity-edge", 4),
+  ("delete:raw-interior>numref-edge", 4),
+  ("delete:raw-interior>raw-edge", 39),
+  ("delete:raw-interior>raw-interior", 28),
+  ("insert:atom-end-edge>atom-end-edge", 1),
   ("insert:atom-start-edge>atom-start-edge", 3),
+  ("insert:bare>bare", 1),
+  ("insert:empty-text>empty-text", 1),
+  ("insert:entity-edge>entity-edge", 26),
+  ("insert:numref-edge>numref-edge", 15),
+  ("insert:raw-edge>raw-edge", 66),
+  ("insert:raw-interior>raw-interior", 42),
+  ("insert:seam-edge>seam-edge", 1),
+  ("replace:atom-end-edge>raw-edge", 6),
+  ("replace:atom-end-edge>raw-interior", 9),
   ("replace:atom-start-edge>atom-end-edge", 14),
   ("replace:atom-start-edge>atom-start-edge", 5),
+  ("replace:atom-start-edge>entity-edge", 5),
+  ("replace:atom-start-edge>numref-edge", 9),
+  ("replace:atom-start-edge>raw-edge", 10),
+  ("replace:atom-start-edge>raw-interior", 10),
+  ("replace:entity-edge>atom-end-edge", 4),
+  ("replace:entity-edge>atom-start-edge", 12),
+  ("replace:entity-edge>entity-edge", 89),
+  ("replace:entity-edge>numref-edge", 21),
+  ("replace:entity-edge>raw-edge", 36),
+  ("replace:entity-edge>raw-interior", 18),
+  ("replace:numref-edge>atom-start-edge", 7),
+  ("replace:numref-edge>entity-edge", 16),
+  ("replace:numref-edge>numref-edge", 42),
+  ("replace:numref-edge>raw-edge", 22),
+  ("replace:numref-edge>raw-interior", 9),
+  ("replace:raw-edge>atom-end-edge", 2),
+  ("replace:raw-edge>atom-start-edge", 4),
+  ("replace:raw-edge>entity-edge", 17),
+  ("replace:raw-edge>numref-edge", 13),
+  ("replace:raw-edge>raw-edge", 40),
+  ("replace:raw-edge>raw-interior", 86),
+  ("replace:raw-interior>atom-end-edge", 2),
+  ("replace:raw-interior>atom-start-edge", 4),
+  ("replace:raw-interior>entity-edge", 10),
+  ("replace:raw-interior>numref-edge", 10),
+  ("replace:raw-interior>raw-edge", 79),
+  ("replace:raw-interior>raw-interior", 71),
 ]
 
 ///|
@@ -1809,6 +1897,31 @@ let partial_expected_dispositions : Array[String] = [
   "space-preserve|0|2,4,del=ok", "space-preserve|0|2,4,same=ok", "space-preserve|0|3,3,ins=ok",
   "space-preserve|0|3,4,rep=ok", "space-preserve|0|3,4,del=ok", "space-preserve|0|3,4,same=ok",
   "space-preserve|0|4,4,ins=ok", "space-preserve|0|0,1,rep|2,3,rep=ok", "space-preserve|0|0,0,ins|1,3,rep|4,4,ins=ok",
+  "space-preserve-ref|0|0,0,ins=ok", "space-preserve-ref|0|0,1,rep=ok", "space-preserve-ref|0|0,1,del=ok",
+  "space-preserve-ref|0|0,1,same=ok", "space-preserve-ref|0|0,2,rep=ok", "space-preserve-ref|0|0,2,del=ok",
+  "space-preserve-ref|0|0,2,same=ok", "space-preserve-ref|0|0,3,rep=ok", "space-preserve-ref|0|0,3,del=ok",
+  "space-preserve-ref|0|0,3,same=ok", "space-preserve-ref|0|0,4,rep=ok", "space-preserve-ref|0|0,4,del=ok",
+  "space-preserve-ref|0|0,4,same=ok", "space-preserve-ref|0|1,1,ins=ok", "space-preserve-ref|0|1,2,rep=ok",
+  "space-preserve-ref|0|1,2,del=ok", "space-preserve-ref|0|1,2,same=ok", "space-preserve-ref|0|1,3,rep=ok",
+  "space-preserve-ref|0|1,3,del=ok", "space-preserve-ref|0|1,3,same=ok", "space-preserve-ref|0|1,4,rep=ok",
+  "space-preserve-ref|0|1,4,del=ok", "space-preserve-ref|0|1,4,same=ok", "space-preserve-ref|0|2,2,ins=ok",
+  "space-preserve-ref|0|2,3,rep=ok", "space-preserve-ref|0|2,3,del=ok", "space-preserve-ref|0|2,3,same=ok",
+  "space-preserve-ref|0|2,4,rep=ok", "space-preserve-ref|0|2,4,del=ok", "space-preserve-ref|0|2,4,same=ok",
+  "space-preserve-ref|0|3,3,ins=ok", "space-preserve-ref|0|3,4,rep=ok", "space-preserve-ref|0|3,4,del=ok",
+  "space-preserve-ref|0|3,4,same=ok", "space-preserve-ref|0|4,4,ins=ok", "space-preserve-ref|0|0,1,rep|2,3,rep=ok",
+  "space-preserve-ref|0|0,0,ins|1,3,rep|4,4,ins=ok", "space-default-ref|0|0,0,ins=ok",
+  "space-default-ref|0|0,1,rep=ok", "space-default-ref|0|0,1,del=ok", "space-default-ref|0|0,1,same=ok",
+  "space-default-ref|0|0,2,rep=ok", "space-default-ref|0|0,2,del=ok", "space-default-ref|0|0,2,same=ok",
+  "space-default-ref|0|0,3,rep=ok", "space-default-ref|0|0,3,del=ok", "space-default-ref|0|0,3,same=ok",
+  "space-default-ref|0|0,4,rep=ok", "space-default-ref|0|0,4,del=ok", "space-default-ref|0|0,4,same=ok",
+  "space-default-ref|0|1,1,ins=ok", "space-default-ref|0|1,2,rep=ok", "space-default-ref|0|1,2,del=ok",
+  "space-default-ref|0|1,2,same=ok", "space-default-ref|0|1,3,rep=ok", "space-default-ref|0|1,3,del=ok",
+  "space-default-ref|0|1,3,same=ok", "space-default-ref|0|1,4,rep=ok", "space-default-ref|0|1,4,del=ok",
+  "space-default-ref|0|1,4,same=ok", "space-default-ref|0|2,2,ins=ok", "space-default-ref|0|2,3,rep=ok",
+  "space-default-ref|0|2,3,del=ok", "space-default-ref|0|2,3,same=ok", "space-default-ref|0|2,4,rep=ok",
+  "space-default-ref|0|2,4,del=ok", "space-default-ref|0|2,4,same=ok", "space-default-ref|0|3,3,ins=ok",
+  "space-default-ref|0|3,4,rep=ok", "space-default-ref|0|3,4,del=ok", "space-default-ref|0|3,4,same=ok",
+  "space-default-ref|0|4,4,ins=ok", "space-default-ref|0|0,1,rep|2,3,rep=ok", "space-default-ref|0|0,0,ins|1,3,rep|4,4,ins=ok",
   "empty-text|0|0,0,ins=AmbiguousBoundary", "empty-text|0|0,1,rep=ok", "empty-text|0|0,1,del=ok",
   "empty-text|0|0,1,same=ok", "empty-text|0|0,2,rep=ok", "empty-text|0|0,2,del=ok",
   "empty-text|0|0,2,same=ok", "empty-text|0|1,1,ins=ok", "empty-text|0|1,2,rep=ok",
