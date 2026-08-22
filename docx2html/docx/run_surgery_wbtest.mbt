@@ -1082,11 +1082,13 @@ test "a checkbox-consumed flow run no longer shifts addresses" {
 /// if it also withheld a refusal, and worse than worthless if it were a
 /// second, differently-worded copy of the refusal rules.
 ///
-/// What this pins is the OBSERVABLE contract: no edits out, every
-/// refusal still raised. That the edits are never CONSTRUCTED is
-/// structural rather than tested -- `emit` takes a thunk, so a strict
-/// language cannot build the record before the flag is read -- because
-/// an allocation this code does not make is not observable from here.
+/// What this pins is the OBSERVABLE contract: no edits out, and the
+/// refusals this rung adds -- owned suppression and multi-physical
+/// paragraphs -- plus the replacement-text refusals, all still raised.
+/// That the edit RECORDS are never constructed is structural rather
+/// than tested: `emit` takes a thunk, so a strict language cannot build
+/// one before the flag is read, and an allocation this code does not
+/// make is not observable from a test in this package.
 test "validate-only withholds edits without withholding refusals" {
   let writable =
     #|<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:body><w:p><w:r><w:t>ab</w:t></w:r></w:p></w:body></w:document>
@@ -1146,4 +1148,31 @@ test "validate-only withholds edits without withholding refusals" {
         "'",
     )
   }
+  // Escaping is the one construction the mode deliberately does NOT
+  // skip, because it is where the replacement's own validity is decided.
+  // Deferring it would trade a refusal for an allocation.
+  let mut escaped_refusal = ""
+  try
+    ignore(
+      plan_whole_run_replacement(
+        writable_projection,
+        writable_bytes,
+        0,
+        0,
+        "a\u{0001}b",
+        validate_only=true,
+      ),
+    )
+  catch {
+    Unsupported(message~) => escaped_refusal = message
+    _ => ()
+  } noraise {
+    _ => ()
+  }
+  assert_true(
+    escaped_refusal.contains("control character"),
+    msg="validate-only skipped the replacement-text check, got '" +
+      escaped_refusal +
+      "'",
+  )
 }

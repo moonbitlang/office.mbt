@@ -146,8 +146,9 @@ pub fn plan_run_text_replacement(
   // writing what it already said.
   //
   // The surgery runs in VALIDATE-ONLY mode for a self-replacement: the
-  // same walk and the same refusals, with each edit's construction
-  // skipped and no sort. That keeps the refusal rules in ONE copy -- a
+  // same walk and the same refusals, with the edit records and any
+  // synthesised run body left unbuilt and no sort. The replacement is
+  // still escaped, because that is where its own validity is decided. That keeps the refusal rules in ONE copy -- a
   // second, validation-shaped copy of them would drift, and a drifting
   // refusal rule is how a surgery starts accepting what it documents as
   // refused.

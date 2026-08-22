@@ -1162,10 +1162,12 @@ soon as `text == expect`, BEFORE calling the surgery, so a caller who
 wrote a run's own text back received a success receipt for a run the
 surgery would have refused. The surgery now runs first, in a
 VALIDATE-ONLY mode for a self-replacement: the same walk and the same
-refusals, with each edit's construction skipped and no sort. The mode's
-sink takes a THUNK rather than an edit — in a strict language, passing
-the edit would build it before the flag was read, which is most of the
-work the mode exists to avoid. The refusal rules
+refusals, with the edit records and any synthesised run body left
+unbuilt and no sort. The mode's sink takes a THUNK rather than an edit —
+in a strict language, passing the edit would build it before the flag
+was read. Escaping the replacement is deliberately NOT deferred: it is
+where a control character, an unpaired surrogate and a non-character are
+refused, and a mode that skipped it would lose validation. The refusal rules
 stay in one copy, which a separate validation-shaped preflight would not
 have managed -- and a drifting refusal rule is how a surgery starts
 accepting what it documents as refused.

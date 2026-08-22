@@ -128,11 +128,16 @@ fn plan_whole_run_replacement(
   paragraph_index : Int,
   run_index : Int,
   text : String,
-  // Every refusal below still runs; only the BYTE EDITS are withheld.
-  // A caller replacing a run's text with itself needs the run's
-  // writability established and the plan discarded, and building a plan
-  // to throw away costs the edit array and its sort. The refusal rules
-  // stay in one copy because this is the same walk, not a second one.
+  // Every refusal below still runs; the EDIT RECORDS and the synthesised
+  // run body are what is withheld. A caller replacing a run's text with
+  // itself needs the run's writability established and the plan
+  // discarded, and the refusal rules stay in one copy because this is
+  // the same walk, not a second one.
+  //
+  // Escaping is NOT withheld, and must not be: it is where a control
+  // character, an unpaired surrogate and a non-character are refused, so
+  // deferring it would make the mode lose validation, which is the one
+  // thing it may never do.
   validate_only? : Bool = false,
 ) -> Array[RunSurgeryEdit] raise DocxError {
   guard paragraph_index >= 0 && paragraph_index < projection.paragraphs.length() else {
@@ -232,8 +237,7 @@ fn plan_whole_run_replacement(
   let edits : Array[RunSurgeryEdit] = []
   // The one place the mode is observed. It takes a THUNK, not an edit:
   // MoonBit is strict, so passing the edit itself would build the record
-  // and escape its replacement text before the flag was ever consulted,
-  // which is most of the work the mode exists to skip.
+  // and the synthesised run body before the flag was ever consulted.
   //
   // Refusals are raised by the walk itself, so withholding an edit
   // cannot withhold a refusal.
