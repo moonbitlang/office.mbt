@@ -236,3 +236,56 @@ test "a self-replacement plan still refuses a foreign snapshot" {
   }
   assert_true(stale)
 }
+
+///|
+/// Criterion (d): a no-op suppresses byte PLANNING, never VALIDATION.
+///
+/// The public entry used to return an empty pinned plan as soon as
+/// `text == expect`, before the surgery ever ran, so a caller received a
+/// SUCCESS receipt for a run the surgery would have refused and could
+/// not learn the run was unwritable by writing what it already said.
+///
+/// The fixture matters: the addressed run must PROJECT the expected
+/// text and still be unwritable, or the expectation check refuses first
+/// and the trial witnesses nothing. This run projects "old" and owns a
+/// suppressed `w:footnoteRef`.
+test "a self-replacement is validated, not waved through" {
+  let owning =
+    #|<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:body><w:p><w:r><w:footnoteRef/><w:t>old</w:t></w:r></w:p><w:sectPr/></w:body></w:document>
+  let annotated = @docx.read_docx_annotated(fixture_docx(owning))
+  for text in ["old", "new"] {
+    let mut refusal = ""
+    try {
+      let _ = @docx.plan_run_text_replacement(
+        annotated,
+        annotated.main_story_source(),
+        at_relative="p[1]/r[1]",
+        expect="old",
+        text~,
+      )
+    } catch {
+      Unsupported(message~) => refusal = message
+      _ => fail("expected the surgery's own refusal")
+    }
+    // Named, so a refusal from the EXPECTATION check cannot stand in
+    // for the one this trial is about.
+    assert_true(
+      refusal.contains("suppressed content"),
+      msg="setting the run to '" +
+        text +
+        "' should raise the suppressed-content refusal, got '" +
+        refusal +
+        "'",
+    )
+  }
+  // A writable run still no-ops exactly as before: zero edits.
+  let plain = @docx.read_docx_annotated(run_text_fixture())
+  let (_, receipt) = @docx.plan_run_text_replacement(
+    plain,
+    plain.main_story_source(),
+    at_relative="p[1]/r[2]",
+    expect="beta",
+    text="beta",
+  )
+  inspect(receipt.edit_count(), content="0")
+}

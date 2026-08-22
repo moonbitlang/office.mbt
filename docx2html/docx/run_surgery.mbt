@@ -135,6 +135,17 @@ fn plan_whole_run_replacement(
     )
   }
   let paragraph = projection.paragraphs[paragraph_index]
+  // A logical paragraph joined from several physical `w:p` nodes cannot
+  // be mutated: the locked rule in the roadmap says so, and the reason
+  // is that the address names ONE paragraph while the bytes belong to
+  // several, so a plan is complete for none of them. N0c2 has always
+  // refused this; N0c1 accepted it, and N0c1 is the one the public
+  // surface reaches.
+  guard paragraph.sources.length() == 1 else {
+    raise Unsupported(
+      message="paragraph \{paragraph_index} joins \{paragraph.sources.length()} physical paragraphs, which cannot be edited as one",
+    )
+  }
   // The address is STRUCTURAL: the run record exists whether or not the
   // run contributed anything, so an atomless `<w:r/>` is addressable.
   guard run_index >= 0 && run_index < paragraph.runs.length() else {
@@ -256,10 +267,25 @@ fn plan_whole_run_replacement(
             message="run \{run_index} in paragraph \{paragraph_index} holds visible non-text content",
           )
         }
-      // Suppressed content produced no reader content AT ITS SITE -- the
-      // reader decided it contributes nothing -- so replacing the run's
-      // text neither needs nor may touch its bytes.
-      SuppressedContent => ()
+      // Suppressed content projects no TEXT, which is not the same as
+      // being no CONTENT. The run-level suppressed set is dominated by
+      // things a reader of the document can still see or that this
+      // reader could not model: `w:pict`, a `w:sym` whose character it
+      // could not map, `w:footnoteRef`/`w:endnoteRef`, `w:txbxContent`,
+      // `w:del`, and -- widest of all -- any element it did not
+      // recognise, which it suppresses with a warning.
+      //
+      // Replacing the run's text while leaving those bytes puts the
+      // caller's text next to content they never saw. That is the same
+      // failure the checkbox-control refusal above documents: the
+      // caller's text appears AND hidden content survives, which is
+      // worse than either alone. `VisibleNonText` is already refused for
+      // exactly this reason; suppression is not a weaker case, only a
+      // less legible one.
+      SuppressedContent =>
+        raise Unsupported(
+          message="run \{run_index} in paragraph \{paragraph_index} holds suppressed content the reader could not model",
+        )
       ProjectedText(FromText) => {
         if planned_sources.contains(source_identity) {
           raise Unsupported(

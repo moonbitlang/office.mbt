@@ -595,13 +595,30 @@ test "whole-run replacement refuses a run that spans two paragraphs" {
 /// paragraph, so its runs come from different sources. That is not ambiguous
 /// -- each run still belongs to exactly this paragraph -- and refusing it
 /// would rule out a shape real documents contain.
-test "whole-run replacement handles a paragraph joined from two sources" {
-  assert_whole_run_replacement(
-    "<w:p><w:pPr><w:rPr><w:del/></w:rPr></w:pPr><w:r><w:t>first</w:t></w:r></w:p><w:p><w:r><w:t>second</w:t></w:r></w:p>",
-    paragraph=0,
-    run=1,
-    "changed",
-    expected="firstchanged\n\n",
+/// Criterion (d): a logical paragraph joined from several physical
+/// `w:p` nodes refuses. The address names ONE paragraph while the bytes
+/// belong to several, so a plan is complete for none of them. N0c2 has
+/// always refused this; N0c1 accepted it until this rung, and N0c1 is
+/// what `office edit set_run_text` reaches.
+test "whole-run replacement refuses a paragraph joined from two sources" {
+  let body =
+    #|<w:p><w:pPr><w:rPr><w:del/></w:rPr></w:pPr><w:r><w:t>first</w:t></w:r></w:p><w:p><w:r><w:t>second</w:t></w:r></w:p>
+  let source = "<w:document xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\"><w:body>\{body}</w:body></w:document>"
+  let bytes = @utf8.encode(source)
+  let projection = surgery_native_projection(source)
+  // precondition: the join really happened, so this witnesses the guard
+  // rather than an unrelated refusal.
+  assert_eq(projection.paragraphs[0].sources.length(), 2)
+  let mut refused = ""
+  try plan_whole_run_replacement(projection, bytes, 0, 1, "changed") catch {
+    Unsupported(message~) => refused = message
+    _ => ()
+  } noraise {
+    _ => ()
+  }
+  assert_true(
+    refused.contains("physical paragraphs"),
+    msg="expected a multi-physical refusal, got '" + refused + "'",
   )
 }
 
@@ -837,7 +854,15 @@ test "whole-run replacement refuses visible non-text content" {
 /// A suppressed site is a classified nothing, not a barrier: the reader
 /// decided it contributes no content, so replacing the run's text
 /// neither needs nor may touch its bytes.
-test "whole-run replacement preserves suppressed content in the run" {
+/// Criterion (d): a run OWNING suppressed content refuses.
+///
+/// Suppressed means "projects no text", not "is not content". This run
+/// holds a `w:footnoteRef`, and the run-level suppressed set also covers
+/// `w:pict`, an unmappable `w:sym`, `w:txbxContent`, `w:del`, and every
+/// element the reader did not recognise. Writing the run's text while
+/// leaving those bytes puts the caller's text beside content they never
+/// saw -- the failure the checkbox-control refusal already documents.
+test "whole-run replacement refuses a run owning suppressed content" {
   let source =
     #|<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:body><w:p><w:r><w:footnoteRef/><w:t>old</w:t></w:r></w:p></w:body></w:document>
   let bytes = @utf8.encode(source)
@@ -853,12 +878,52 @@ test "whole-run replacement preserves suppressed content in the run" {
     }
   }
   assert_true(suppressed_owned)
-  let edits = plan_whole_run_replacement(projection, bytes, 0, 0, "new")
-  let spliced = @utf8.decode(apply_run_surgery_edits(bytes, edits))
-  assert_eq(current_reader_story_text(spliced), "new\n\n")
-  assert_true(spliced.contains("<w:footnoteRef/>"))
-  assert_untouched_bytes_survive(bytes, @utf8.encode(spliced), edits)
-  assert_edits_touch_only_editable_bytes(projection, edits, 0, 0)
+  let mut refused = ""
+  try plan_whole_run_replacement(projection, bytes, 0, 0, "new") catch {
+    Unsupported(message~) => refused = message
+    _ => ()
+  } noraise {
+    _ => ()
+  }
+  assert_true(
+    refused.contains("suppressed content"),
+    msg="expected a suppressed-content refusal, got '" + refused + "'",
+  )
+}
+
+///|
+/// The complement, so the refusal above is not merely broad: a `w:del`
+/// SIBLING of the addressed run is not owned by it, and the run stays
+/// editable. Refusing here would reject every run in a paragraph with a
+/// tracked deletion anywhere in it.
+///
+/// The scoping is stronger than it looks. A whole `w:del` is suppressed
+/// before the walk reaches the run inside it, so that run is never
+/// REGISTERED -- this paragraph has one addressable run, not two -- and
+/// the suppressed contribution carries no `run_source` at all. Ownership
+/// therefore excludes it by construction rather than by a name check.
+test "whole-run replacement still edits a run beside a deleted sibling" {
+  let body =
+    #|<w:p><w:del w:id="3" w:author="A" w:date="2026-01-01T00:00:00Z"><w:r><w:delText>gone</w:delText></w:r></w:del><w:r><w:t>kept</w:t></w:r></w:p>
+  let source = "<w:document xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\"><w:body>\{body}</w:body></w:document>"
+  let projection = surgery_native_projection(source)
+  // The precondition the comment above claims: one registered run, and
+  // the suppressed contribution owned by nothing.
+  assert_eq(projection.paragraphs[0].runs.length(), 1)
+  let mut unowned_suppressed = false
+  for contribution in projection.paragraphs[0].contributions {
+    if contribution.kind is SuppressedContent && contribution.run_source is None {
+      unowned_suppressed = true
+    }
+  }
+  assert_true(unowned_suppressed)
+  assert_whole_run_replacement(
+    body,
+    paragraph=0,
+    run=0,
+    "changed",
+    expected="changed\n\n",
+  )
 }
 
 ///|

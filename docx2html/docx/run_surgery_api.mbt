@@ -139,9 +139,19 @@ pub fn plan_run_text_replacement(
       message="the mutation-safe read retained no source bytes for '\{part}'",
     )
   }
+  // Planning runs FIRST, even when the text is unchanged: a no-op
+  // suppresses byte PLANNING, never VALIDATION. Returning early on
+  // `text == expect` reported success for runs the surgery would have
+  // refused, so a caller could not learn a run was unwritable by
+  // writing what it already said. N0c2 states the rule explicitly;
+  // N0c1's public entry contradicted it.
+  let edits = plan_whole_run_replacement(
+    projection, bytes, paragraph_index, run_index, text,
+  )
   // Replacing text with itself plans NOTHING: re-encoding could still
   // change bytes (entities re-escape), so the only honest no-op is an
-  // empty plan -- after the address and expectation validated above.
+  // empty plan -- after the address, the expectation, and the run's own
+  // writability have all been established.
   if text == expect {
     let noop = @splice.SplicePlan::new()
     noop.pin_part(part, bytes)
@@ -156,9 +166,6 @@ pub fn plan_run_text_replacement(
       },
     )
   }
-  let edits = plan_whole_run_replacement(
-    projection, bytes, paragraph_index, run_index, text,
-  )
   let plan = @splice.SplicePlan::new()
   plan.pin_part(part, bytes)
   for edit in edits {
