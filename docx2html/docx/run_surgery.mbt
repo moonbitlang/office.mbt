@@ -128,6 +128,17 @@ fn plan_whole_run_replacement(
   paragraph_index : Int,
   run_index : Int,
   text : String,
+  // Every refusal below still runs; the EDIT RECORDS and the synthesised
+  // run body are what is withheld. A caller replacing a run's text with
+  // itself needs the run's writability established and the plan
+  // discarded, and the refusal rules stay in one copy because this is
+  // the same walk, not a second one.
+  //
+  // Escaping is NOT withheld, and must not be: it is where a control
+  // character, an unpaired surrogate and a non-character are refused, so
+  // deferring it would make the mode lose validation, which is the one
+  // thing it may never do.
+  validate_only? : Bool = false,
 ) -> Array[RunSurgeryEdit] raise DocxError {
   guard paragraph_index >= 0 && paragraph_index < projection.paragraphs.length() else {
     raise Unsupported(
@@ -135,6 +146,17 @@ fn plan_whole_run_replacement(
     )
   }
   let paragraph = projection.paragraphs[paragraph_index]
+  // A logical paragraph joined from several physical `w:p` nodes cannot
+  // be mutated: the locked rule in the roadmap says so, and the reason
+  // is that the address names ONE paragraph while the bytes belong to
+  // several, so a plan is complete for none of them. N0c2 has always
+  // refused this; N0c1 accepted it, and N0c1 is the one the public
+  // surface reaches.
+  guard paragraph.sources.length() == 1 else {
+    raise Unsupported(
+      message="paragraph \{paragraph_index} joins \{paragraph.sources.length()} physical paragraphs, which cannot be edited as one",
+    )
+  }
   // The address is STRUCTURAL: the run record exists whether or not the
   // run contributed anything, so an atomless `<w:r/>` is addressable.
   guard run_index >= 0 && run_index < paragraph.runs.length() else {
@@ -213,6 +235,13 @@ fn plan_whole_run_replacement(
   }
   let escaped = run_surgery_escape(text)
   let edits : Array[RunSurgeryEdit] = []
+  // The one place the mode is observed. It takes a THUNK, not an edit:
+  // MoonBit is strict, so passing the edit itself would build the record
+  // and the synthesised run body before the flag was ever consulted.
+  //
+  // Refusals are raised by the walk itself, so withholding an edit
+  // cannot withhold a refusal.
+  let emit = build => if !validate_only { edits.push(build()) }
   let texts : Array[ScannedElement] = []
   let removals : Array[ScannedElement] = []
   // The same physical bytes must not be planned twice: two contributions
@@ -256,10 +285,25 @@ fn plan_whole_run_replacement(
             message="run \{run_index} in paragraph \{paragraph_index} holds visible non-text content",
           )
         }
-      // Suppressed content produced no reader content AT ITS SITE -- the
-      // reader decided it contributes nothing -- so replacing the run's
-      // text neither needs nor may touch its bytes.
-      SuppressedContent => ()
+      // Suppressed content projects no TEXT, which is not the same as
+      // being no CONTENT. The run-level suppressed set is dominated by
+      // things a reader of the document can still see or that this
+      // reader could not model: `w:pict`, a `w:sym` whose character it
+      // could not map, `w:footnoteRef`/`w:endnoteRef`, `w:txbxContent`,
+      // `w:del`, and -- widest of all -- any element it did not
+      // recognise, which it suppresses with a warning.
+      //
+      // Replacing the run's text while leaving those bytes puts the
+      // caller's text next to content they never saw. That is the same
+      // failure the checkbox-control refusal above documents: the
+      // caller's text appears AND hidden content survives, which is
+      // worse than either alone. `VisibleNonText` is already refused for
+      // exactly this reason; suppression is not a weaker case, only a
+      // less legible one.
+      SuppressedContent =>
+        raise Unsupported(
+          message="run \{run_index} in paragraph \{paragraph_index} holds suppressed content the reader could not model",
+        )
       ProjectedText(FromText) => {
         if planned_sources.contains(source_identity) {
           raise Unsupported(
@@ -310,7 +354,7 @@ fn plan_whole_run_replacement(
               run_surgery_space_declaration_is_preserve(source, (from, to)) {
               Some(true) => ()
               Some(false) =>
-                edits.push({
+                emit(() => {
                   byte_start: from,
                   byte_end: to,
                   replacement: "xml:space=\"preserve\"",
@@ -330,20 +374,20 @@ fn plan_whole_run_replacement(
         // `<w:t/>` has no content range to write into -- the scanner puts it at
         // the element's end -- so the self-closing marker becomes a body. Only
         // the `/>` is rewritten, which keeps any attributes already there.
-        edits.push({
+        emit(() => {
           byte_start: first.byte_end - 2,
           byte_end: first.byte_end,
           replacement: "\{attribute}>\{escaped}</\{text_prefix}t>",
         })
       } else {
         if add_space {
-          edits.push({
+          emit(() => {
             byte_start: first.content_start - 1,
             byte_end: first.content_start - 1,
             replacement: attribute,
           })
         }
-        edits.push({
+        emit(() => {
           byte_start: first.content_start,
           byte_end: first.content_end,
           replacement: escaped,
@@ -352,7 +396,7 @@ fn plan_whole_run_replacement(
       for later in rest {
         // A self-closing `w:t` already contributes nothing.
         if !run_surgery_is_self_closing(later) {
-          edits.push({
+          emit(() => {
             byte_start: later.content_start,
             byte_end: later.content_end,
             replacement: "",
@@ -380,7 +424,7 @@ fn plan_whole_run_replacement(
           (at, at)
         }
       }
-      edits.push(
+      emit(() => {
         run_surgery_synthesise_text(
           run_element,
           prefix,
@@ -388,21 +432,23 @@ fn plan_whole_run_replacement(
           text,
           anchor~,
           consumed~,
-        ),
-      )
+        )
+      })
       if removals.length() > 0 {
         removals.remove(0) |> ignore
       }
     }
   }
   for element in removals {
-    edits.push({
+    emit(() => {
       byte_start: element.byte_start,
       byte_end: element.byte_end,
       replacement: "",
     })
   }
-  edits.sort_by_key(edit => edit.byte_start)
+  if !validate_only {
+    edits.sort_by_key(edit => edit.byte_start)
+  }
   edits
 }
 

@@ -139,10 +139,33 @@ pub fn plan_run_text_replacement(
       message="the mutation-safe read retained no source bytes for '\{part}'",
     )
   }
-  // Replacing text with itself plans NOTHING: re-encoding could still
+  // The surgery runs FIRST, even when the text is unchanged: a no-op
+  // suppresses byte EDITING, never VALIDATION. Returning early on
+  // `text == expect` reported success for runs the surgery would have
+  // refused, so a caller could not learn a run was unwritable by
+  // writing what it already said.
+  //
+  // The surgery runs in VALIDATE-ONLY mode for a self-replacement: the
+  // same walk and the same refusals, with the edit records and any
+  // synthesised run body left unbuilt and no sort. The replacement is
+  // still escaped, because that is where its own validity is decided. That keeps the refusal rules in ONE copy -- a
+  // second, validation-shaped copy of them would drift, and a drifting
+  // refusal rule is how a surgery starts accepting what it documents as
+  // refused.
+  let self_replacement = text == expect
+  let edits = plan_whole_run_replacement(
+    projection,
+    bytes,
+    paragraph_index,
+    run_index,
+    text,
+    validate_only=self_replacement,
+  )
+  // Replacing text with itself EDITS nothing: re-encoding could still
   // change bytes (entities re-escape), so the only honest no-op is an
-  // empty plan -- after the address and expectation validated above.
-  if text == expect {
+  // empty plan -- after the address, the expectation, and the run's own
+  // writability have all been established.
+  if self_replacement {
     let noop = @splice.SplicePlan::new()
     noop.pin_part(part, bytes)
     return (
@@ -156,9 +179,6 @@ pub fn plan_run_text_replacement(
       },
     )
   }
-  let edits = plan_whole_run_replacement(
-    projection, bytes, paragraph_index, run_index, text,
-  )
   let plan = @splice.SplicePlan::new()
   plan.pin_part(part, bytes)
   for edit in edits {
