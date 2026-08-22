@@ -146,10 +146,11 @@ pub fn plan_run_text_replacement(
   // writing what it already said.
   //
   // The surgery runs in VALIDATE-ONLY mode for a self-replacement: the
-  // same walk, the same refusals, no byte edits built and no sort. That
-  // keeps the refusal rules in ONE copy -- a second, validation-shaped
-  // copy of them would drift, and a drifting refusal rule is how a
-  // surgery starts accepting what it documents as refused.
+  // same walk and the same refusals, with each edit's construction
+  // skipped and no sort. That keeps the refusal rules in ONE copy -- a
+  // second, validation-shaped copy of them would drift, and a drifting
+  // refusal rule is how a surgery starts accepting what it documents as
+  // refused.
   let self_replacement = text == expect
   let edits = plan_whole_run_replacement(
     projection,

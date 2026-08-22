@@ -1081,6 +1081,12 @@ test "a checkbox-consumed flow run no longer shifts addresses" {
 /// writability without building a plan to discard. It would be worthless
 /// if it also withheld a refusal, and worse than worthless if it were a
 /// second, differently-worded copy of the refusal rules.
+///
+/// What this pins is the OBSERVABLE contract: no edits out, every
+/// refusal still raised. That the edits are never CONSTRUCTED is
+/// structural rather than tested -- `emit` takes a thunk, so a strict
+/// language cannot build the record before the flag is read -- because
+/// an allocation this code does not make is not observable from here.
 test "validate-only withholds edits without withholding refusals" {
   let writable =
     #|<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:body><w:p><w:r><w:t>ab</w:t></w:r></w:p></w:body></w:document>
