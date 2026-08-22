@@ -151,15 +151,27 @@ test "an addressed run inside a field instruction refuses through the boundary" 
     _ => fail("expected the field refusal")
   }
   assert_true(refused)
-  // the cached result stays plannable
-  let (_, receipt) = @docx.plan_run_text_replacement(
-    annotated,
-    annotated.main_story_source(),
-    at_relative="p[1]/r[4]",
-    expect="7",
-    text="8",
+  // Criterion (d): the cached RESULT refuses too, and says why. The
+  // reader projects the cached value, so a caller's read-back would
+  // confirm an edit that the next recalculation discards -- the one
+  // failure mode nothing in this repository can detect after the fact.
+  let mut result_refusal = ""
+  try {
+    let _ = @docx.plan_run_text_replacement(
+      annotated,
+      annotated.main_story_source(),
+      at_relative="p[1]/r[4]",
+      expect="7",
+      text="8",
+    )
+  } catch {
+    Unsupported(message~) => result_refusal = message
+    _ => fail("expected the cached-result refusal")
+  }
+  assert_true(
+    result_refusal.contains("cached result"),
+    msg="expected a cached-result refusal, got '" + result_refusal + "'",
   )
-  inspect(receipt.edit_count(), content="1")
 }
 
 ///|

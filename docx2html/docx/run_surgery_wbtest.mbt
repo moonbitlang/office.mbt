@@ -659,7 +659,7 @@ test "whole-run synthesis goes after w:rPr" {
 /// Rewriting it changes what the field computes rather than what it shows. A
 /// field's cached *result* is content and stays editable -- checked rather than
 /// refused by association.
-test "whole-run replacement refuses field instructions but not results" {
+test "whole-run replacement refuses both field instructions and results" {
   let field =
     #|<w:p><w:r><w:fldChar w:fldCharType="begin"/></w:r><w:r><w:instrText>PAGE</w:instrText></w:r><w:r><w:fldChar w:fldCharType="separate"/></w:r><w:r><w:t>7</w:t></w:r><w:r><w:fldChar w:fldCharType="end"/></w:r></w:p>
   let source = "<w:document xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\"><w:body>\{field}</w:body></w:document>"
@@ -672,11 +672,24 @@ test "whole-run replacement refuses field instructions but not results" {
     _ => ()
   }
   assert_true(refused)
-  // the result run is content
-  let edits = plan_whole_run_replacement(projection, bytes, 0, 3, "8")
-  let spliced = @utf8.decode(apply_run_surgery_edits(bytes, edits))
-  assert_eq(current_reader_story_text(spliced), "8\n\n")
-  // The case above refuses for a reason that would hold anyway: `w:instrText`
+  // Criterion (d): the RESULT run refuses too, by its own class. Word
+  // recomputes a field's cached result on the next recalculation and
+  // discards whatever was written into it, and this reader projects that
+  // cached value -- so a caller's read-back confirms an edit that will
+  // not survive, which is the one failure nothing here can detect after
+  // the fact.
+  let mut result_refusal = ""
+  try ignore(plan_whole_run_replacement(projection, bytes, 0, 3, "8")) catch {
+    Unsupported(message~) => result_refusal = message
+    _ => ()
+  } noraise {
+    _ => ()
+  }
+  assert_true(
+    result_refusal.contains("cached result"),
+    msg="expected a cached-result refusal, got '" + result_refusal + "'",
+  )
+  // The instruction case above refuses for a reason that would hold anyway: `w:instrText`
   // is a hard barrier. This one needs the field classification -- a plain
   // `w:t` inside the instruction region looks like ordinary content and is
   // not, and with the region check removed it is accepted.
@@ -697,18 +710,38 @@ test "whole-run replacement refuses field instructions but not results" {
 }
 
 ///|
-/// A run inside a text box is editable.
 ///
 /// Its paragraph reaches the story through the extras pass rather than the
 /// content walk, but its runs are ordinary elements with ordinary spans, so
 /// there is nothing to refuse. Checked rather than refused by association.
-test "whole-run replacement reaches a run inside a text box" {
-  assert_whole_run_replacement(
-    "<w:p><w:r><w:pict><v:shape><v:textbox><w:txbxContent><w:p><w:r><w:t>inner</w:t></w:r></w:p></w:txbxContent></v:textbox></v:shape></w:pict></w:r></w:p>",
-    paragraph=1,
-    run=0,
-    "edited",
-    expected="\n\nedited\n\n",
+/// Criterion (d): a run inside a text box refuses.
+///
+/// The reader REACHES it -- the paragraph is addressable and its text
+/// matches -- which is exactly what makes the region restricted rather
+/// than invisible. A textbox is commonly carried twice, once per
+/// AlternateContent branch, so editing the projected copy leaves the
+/// other saying something else.
+test "whole-run replacement refuses a run inside a text box" {
+  let body =
+    #|<w:p><w:r><w:pict><v:shape><v:textbox><w:txbxContent><w:p><w:r><w:t>inner</w:t></w:r></w:p></w:txbxContent></v:textbox></v:shape></w:pict></w:r></w:p>
+  let source = "<w:document xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\" xmlns:v=\"urn:schemas-microsoft-com:vml\"><w:body>\{body}</w:body></w:document>"
+  let bytes = @utf8.encode(source)
+  let projection = surgery_native_projection(source)
+  // precondition: the inner paragraph really is addressable, so this
+  // witnesses the refusal rather than an unreachable address.
+  assert_true(projection.paragraphs.length() > 1)
+  let mut refusal = ""
+  try
+    ignore(plan_whole_run_replacement(projection, bytes, 1, 0, "edited"))
+  catch {
+    Unsupported(message~) => refusal = message
+    _ => ()
+  } noraise {
+    _ => ()
+  }
+  assert_true(
+    refusal.contains("textbox content (w:txbxContent)"),
+    msg="expected a textbox refusal, got '" + refusal + "'",
   )
 }
 
@@ -971,10 +1004,19 @@ test "whole-run replacement refuses an empty run inside a field" {
     _ => ()
   }
   assert_true(refused)
-  // the cached result stays editable, exactly as with a populated run
-  let edits = plan_whole_run_replacement(projection, bytes, 0, 3, "8")
-  let spliced = @utf8.decode(apply_run_surgery_edits(bytes, edits))
-  assert_eq(current_reader_story_text(spliced), "8\n\n")
+  // Criterion (d): the cached result refuses too, and by its own class
+  // rather than inheriting the instruction refusal.
+  let mut result_refusal = ""
+  try ignore(plan_whole_run_replacement(projection, bytes, 0, 3, "8")) catch {
+    Unsupported(message~) => result_refusal = message
+    _ => ()
+  } noraise {
+    _ => ()
+  }
+  assert_true(
+    result_refusal.contains("cached result"),
+    msg="expected a cached-result refusal, got '" + result_refusal + "'",
+  )
   // and a TRUNCATED field's empty run still refuses: its region is the
   // instruction region it sat in (truncation itself is recorded as the
   // field's refusal, not as a region change)
@@ -1177,5 +1219,217 @@ test "validate-only withholds edits without withholding refusals" {
     msg="validate-only skipped the replacement-text check, got '" +
       escaped_refusal +
       "'",
+  )
+}
+
+///|
+/// The whole restricted inventory through whole-run surgery, one shape
+/// per construct, each naming the construct it refuses for.
+///
+/// N0c1 names the construct rather than reporting a shared "restricted",
+/// so a caller learns what they hit -- and a message that stopped
+/// distinguishing them would fail here.
+test "whole-run replacement refuses every restricted construct" {
+  let mc = "xmlns:mc=\"http://schemas.openxmlformats.org/markup-compatibility/2006\""
+  for
+    probe in [
+      (
+        "a content control (w:sdt)", "<w:p><w:sdt><w:sdtPr><w:alias w:val=\"Client\"/></w:sdtPr><w:sdtContent><w:r><w:t>ab</w:t></w:r></w:sdtContent></w:sdt></w:p>",
+      ),
+      (
+        "a tracked insertion (w:ins)", "<w:p><w:ins w:id=\"9\" w:author=\"Ada\" w:date=\"2001-01-01T00:00:00Z\"><w:r><w:t>ab</w:t></w:r></w:ins></w:p>",
+      ),
+      (
+        "fallback content (mc:Fallback)",
+        "<w:p><mc:AlternateContent \{mc}><mc:Choice Requires=\"wps\"><w:r><w:t>zz</w:t></w:r></mc:Choice><mc:Fallback><w:r><w:t>ab</w:t></w:r></mc:Fallback></mc:AlternateContent></w:p>",
+      ),
+    ] {
+    let (construct, body) = probe
+    let source = "<w:document xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\" xmlns:v=\"urn:schemas-microsoft-com:vml\"><w:body>\{body}</w:body></w:document>"
+    let bytes = @utf8.encode(source)
+    let projection = surgery_native_projection(source)
+    let paragraph_index = projection.paragraphs.length() - 1
+    // Reachable first: a construct that stopped projecting would make
+    // its refusal below prove nothing. Checking only that a run EXISTS
+    // was too weak -- an atomless structural run would satisfy it -- so
+    // the addressed run must actually project the text.
+    let projected = StringBuilder()
+    let target = projection.paragraphs[paragraph_index].runs[0].source
+    for contribution in projection.paragraphs[paragraph_index].contributions {
+      if contribution.run_source == Some(target) {
+        projected.write_string(contribution.value)
+      }
+    }
+    assert_eq(
+      projected.to_string(),
+      "ab",
+      msg=construct + " no longer projects its text through the addressed run",
+    )
+    let mut refusal = ""
+    try
+      ignore(
+        plan_whole_run_replacement(projection, bytes, paragraph_index, 0, "X"),
+      )
+    catch {
+      Unsupported(message~) => refusal = message
+      _ => ()
+    } noraise {
+      _ => ()
+    }
+    assert_true(
+      refusal.contains(construct),
+      msg="expected a refusal naming '" + construct + "', got '" + refusal + "'",
+    )
+  }
+  // A run wholly INSIDE a hyperlink stays editable -- the common and
+  // legitimate shape, and the reason `w:hyperlink` is not in the
+  // ancestry list.
+  assert_whole_run_replacement(
+    "<w:p><w:hyperlink r:id=\"rId9\" xmlns:r=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships\"><w:r><w:t>ab</w:t></w:r></w:hyperlink></w:p>",
+    paragraph=0,
+    run=0,
+    "linked",
+    expected="linked\n\n",
+  )
+  // But a hyperlink NESTED INSIDE the run does span an edge. I had
+  // argued whole-run surgery could not reach this, since it replaces
+  // one run; review produced the counterexample. It is not
+  // schema-normal WML, but it is well-formed, this reader projects it
+  // as ONE run reading `abcd`, and it reaches surgery -- so replacing
+  // the run emptied the link instead of refusing.
+  let nested = "<w:p><w:r><w:t>ab</w:t><w:hyperlink r:id=\"rId9\" xmlns:r=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships\"><w:t>cd</w:t></w:hyperlink></w:r></w:p>"
+  let nested_source = "<w:document xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\" xmlns:v=\"urn:schemas-microsoft-com:vml\"><w:body>\{nested}</w:body></w:document>"
+  let nested_bytes = @utf8.encode(nested_source)
+  let nested_projection = surgery_native_projection(nested_source)
+  // The premise the counterexample rests on: one run, projecting BOTH
+  // sides of the link's edge.
+  assert_eq(nested_projection.paragraphs[0].runs.length(), 1)
+  let mut projected = ""
+  for contribution in nested_projection.paragraphs[0].contributions {
+    projected = projected + contribution.value
+  }
+  assert_eq(projected, "abcd")
+  let mut nested_refusal = ""
+  try
+    ignore(
+      plan_whole_run_replacement(nested_projection, nested_bytes, 0, 0, "X"),
+    )
+  catch {
+    Unsupported(message~) => nested_refusal = message
+    _ => ()
+  } noraise {
+    _ => ()
+  }
+  assert_true(
+    nested_refusal.contains("spans a hyperlink boundary"),
+    msg="expected a hyperlink-boundary refusal, got '" + nested_refusal + "'",
+  )
+}
+
+///|
+/// Restricted content NESTED INSIDE a consumed atom.
+///
+/// This is the shape both ancestor checks are blind to, and the third
+/// time an assumption of mine about what can reach a surgery turned out
+/// false. The reader recognises `w:tab` WITHOUT walking its children, so
+///
+///   <w:r><w:tab><w:ins><w:r><w:t>cd</w:t></w:r></w:ins></w:tab></w:r>
+///
+/// joins as one run projecting only a tab. The single contribution is
+/// sourced at the outer `w:tab`, so no ancestor walk sees the `w:ins` --
+/// it is a DESCENDANT of the consumed element. Replacing the run
+/// removes the atom by its whole span and deletes the insertion.
+///
+/// The guard does not look for restricted NAMES inside the atom. Every
+/// name enumeration written for this gate has missed a shape; this one
+/// asks whether the element is the leaf the reader modelled, and refuses
+/// when the model and the bytes disagree.
+test "whole-run replacement refuses an atom carrying nested markup" {
+  let nested = "<w:p><w:r><w:tab><w:ins w:id=\"9\" w:author=\"Ada\" w:date=\"2001-01-01T00:00:00Z\"><w:r><w:t>cd</w:t></w:r></w:ins></w:tab><w:t>ab</w:t></w:r></w:p>"
+  let source = "<w:document xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\" xmlns:v=\"urn:schemas-microsoft-com:vml\"><w:body>\{nested}</w:body></w:document>"
+  let bytes = @utf8.encode(source)
+  let projection = surgery_native_projection(source)
+  // The premise: ONE run, and the nested insertion projects nothing --
+  // so nothing in the projection could have reported it.
+  assert_eq(projection.paragraphs[0].runs.length(), 1)
+  let mut projected = ""
+  for contribution in projection.paragraphs[0].contributions {
+    projected = projected + contribution.value
+  }
+  assert_false(projected.contains("cd"))
+  let mut refusal = ""
+  try ignore(plan_whole_run_replacement(projection, bytes, 0, 0, "X")) catch {
+    Unsupported(message~) => refusal = message
+    _ => ()
+  } noraise {
+    _ => ()
+  }
+  assert_true(
+    refusal.contains("nested markup"),
+    msg="expected a nested-markup refusal, got '" + refusal + "'",
+  )
+  // The ATOM-ONLY run, which the first version of this trial missed.
+  // With no `w:t` beside it the atom becomes the synthesis anchor and is
+  // taken OUT of the removals list, so a guard that ran when removals
+  // were drained never saw it. The guard now runs where the element is
+  // COLLECTED, before any branch claims it.
+  let alone = "<w:p><w:r><w:tab><w:ins w:id=\"9\" w:author=\"Ada\" w:date=\"2001-01-01T00:00:00Z\"><w:r><w:t>cd</w:t></w:r></w:ins></w:tab></w:r></w:p>"
+  let alone_source = "<w:document xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\" xmlns:v=\"urn:schemas-microsoft-com:vml\"><w:body>\{alone}</w:body></w:document>"
+  let alone_bytes = @utf8.encode(alone_source)
+  let alone_projection = surgery_native_projection(alone_source)
+  let mut alone_refusal = ""
+  try
+    ignore(plan_whole_run_replacement(alone_projection, alone_bytes, 0, 0, "X"))
+  catch {
+    Unsupported(message~) => alone_refusal = message
+    _ => ()
+  } noraise {
+    _ => ()
+  }
+  assert_true(
+    alone_refusal.contains("nested markup"),
+    msg="atom-only run was not guarded, got '" + alone_refusal + "'",
+  )
+  // And in VALIDATE-ONLY mode, since a self-replacement must be
+  // validated rather than waved through.
+  let mut noop_refusal = ""
+  try
+    ignore(
+      plan_whole_run_replacement(
+        alone_projection,
+        alone_bytes,
+        0,
+        0,
+        "\t",
+        validate_only=true,
+      ),
+    )
+  catch {
+    Unsupported(message~) => noop_refusal = message
+    _ => ()
+  } noraise {
+    _ => ()
+  }
+  assert_true(
+    noop_refusal.contains("nested markup"),
+    msg="validate-only skipped the nested-markup guard, got '" +
+      noop_refusal +
+      "'",
+  )
+  // An ordinary EMPTY atom is untouched by the guard, so it has not
+  // simply refused every run holding a tab -- alone or beside text.
+  assert_whole_run_replacement(
+    "<w:p><w:r><w:tab/><w:t>ab</w:t></w:r></w:p>",
+    paragraph=0,
+    run=0,
+    "X",
+    expected="X\n\n",
+  )
+  assert_whole_run_replacement(
+    "<w:p><w:r><w:tab/></w:r></w:p>",
+    paragraph=0,
+    run=0,
+    "X",
+    expected="X\n\n",
   )
 }

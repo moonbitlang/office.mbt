@@ -194,6 +194,34 @@ fn plan_whole_run_replacement(
       )
     None => ()
   }
+  // The cached-result region is checked AFTER the classifier's refusal,
+  // not inside the region match above. A refused field's boundaries are
+  // unreliable, so NOTHING in it is writable for a stronger reason than
+  // "the next recalculation discards this" -- and a truncated field's
+  // result run carries FieldResult and the refusal together, so region
+  // order alone would report the weaker reason.
+  //
+  // The run slot carries this separately from the contributions because
+  // an atomless run inside a field result is addressable, and
+  // synthesising into one writes text the recalculation discards.
+  if target_run.field_region is FieldResult {
+    raise Unsupported(
+      message="run \{run_index} in paragraph \{paragraph_index} holds a field's cached result, which the next recalculation discards",
+    )
+  }
+  // Every element that will be consumed by its WHOLE span passes
+  // through here, before any branch decides whether it becomes a
+  // removal, a synthesis anchor, or both. Guarding the branches instead
+  // is how two review rounds missed a shape: the atom-only run takes its
+  // anchor OUT of the removals list, so a drain-time check never saw it.
+  fn require_consumable(element : ScannedElement) -> Unit raise DocxError {
+    if run_surgery_consumed_span_has_children(elements, element) {
+      raise Unsupported(
+        message="run \{run_index} in paragraph \{paragraph_index} contains a \{element.local_name} carrying nested markup the reader does not model",
+      )
+    }
+  }
+
   let owned : Array[ReaderProjectionContribution] = []
   for contribution in paragraph.contributions {
     if contribution.run_source == Some(target) {
@@ -217,6 +245,17 @@ fn plan_whole_run_replacement(
       message="run \{run_index} in paragraph \{paragraph_index} sits inside a checkbox content control, whose content the reader rewrites",
     )
   }
+  // Restricted ancestry, checked AFTER the checkbox case so the more
+  // specific refusal keeps precedence over the general one. The run slot
+  // carries this on its own because an atomless run is addressable and
+  // synthesising into a restricted region is the same mistake as writing
+  // over one.
+  if run_surgery_restricted_ancestor(elements, run_element) is Some(construct) {
+    let named = run_surgery_restricted_name(construct)
+    raise Unsupported(
+      message="run \{run_index} in paragraph \{paragraph_index} sits in \{named}, which the reader may match but must not rewrite",
+    )
+  }
   // A physical run that also contributes to another logical paragraph cannot
   // be edited by naming one of them: the same bytes carry both, so the plan
   // would be incomplete for one and a surprise for the other. No generated
@@ -230,6 +269,35 @@ fn plan_whole_run_replacement(
             message="run \{run_index} in paragraph \{paragraph_index} also contributes to paragraph \{index}",
           )
         }
+      }
+    }
+  }
+  // A hyperlink NESTED INSIDE the run. Whole-run surgery replaces one
+  // run's text, which looked like it could never span a link's edge --
+  // but `<w:r><w:t>ab</w:t><w:hyperlink><w:t>cd</w:t></w:hyperlink></w:r>`
+  // is well-formed, this reader projects it as one run reading `abcd`,
+  // and replacing that run would empty the link rather than refuse.
+  //
+  // The rule is N0c2's: compare the nearest enclosing link IDENTITY
+  // across the run's own projecting contributions and refuse on any
+  // difference, `None` against `Some` included. A run wholly inside one
+  // link still edits, which is the common and legitimate shape.
+  let mut link_anchor : Int?? = None
+  for contribution in owned {
+    if contribution.kind is ProjectedText(_) {
+      let SourceElementId(source_identity) = contribution.source
+      let link = run_surgery_hyperlink_ancestor(
+        elements,
+        elements[source_identity],
+      )
+      match link_anchor {
+        None => link_anchor = Some(link)
+        Some(first) =>
+          if first != link {
+            raise Unsupported(
+              message="run \{run_index} in paragraph \{paragraph_index} spans a hyperlink boundary, so replacing it would change what the link covers",
+            )
+          }
       }
     }
   }
@@ -263,7 +331,25 @@ fn plan_whole_run_replacement(
         raise Unsupported(
           message="run \{run_index} in paragraph \{paragraph_index} sits in a malformed field",
         )
+      // A field's CACHED RESULT reads like ordinary content and is not:
+      // the next recalculation recomputes it and discards whatever was
+      // written here. Nothing in this repository can detect that loss --
+      // the reader projects the cached result, so a caller's read-back
+      // confirms an edit that will not survive.
+      FieldResult =>
+        raise Unsupported(
+          message="run \{run_index} in paragraph \{paragraph_index} holds a field's cached result, which the next recalculation discards",
+        )
       _ => ()
+    }
+    // A restricted container may enclose one contribution of an
+    // otherwise ordinary run, so the run slot's own check above is not
+    // sufficient.
+    if run_surgery_restricted_ancestor(elements, element) is Some(construct) {
+      let named = run_surgery_restricted_name(construct)
+      raise Unsupported(
+        message="run \{run_index} in paragraph \{paragraph_index} draws text from \{named}, which the reader may match but must not rewrite",
+      )
     }
     match contribution.kind {
       // Visible non-text -- a break, a reference mark, an image, a
@@ -323,6 +409,7 @@ fn plan_whole_run_replacement(
           }
           texts.push(element)
         } else {
+          require_consumable(element)
           removals.push(element)
         }
       }
@@ -335,6 +422,7 @@ fn plan_whole_run_replacement(
           )
         }
         planned_sources.push(source_identity)
+        require_consumable(element)
         removals.push(element)
       }
     }
@@ -661,6 +749,139 @@ fn run_surgery_space_declaration(
       return Some((at, cursor + 1))
     }
     at = at + 1
+  }
+  None
+}
+
+///|
+/// Whether an element the reader modelled as a LEAF actually has element
+/// children.
+///
+/// Both surgeries consume some elements by their whole span: an atom
+/// being replaced, a `w:t` being emptied, a removal. The reader reaches
+/// `w:tab` and its siblings WITHOUT walking their children, so a
+/// well-formed
+/// `<w:tab><w:ins><w:r><w:t>cd</w:t></w:r></w:ins></w:tab>`
+/// projects a single `\t` and nothing reports the insertion inside it.
+/// An ancestor walk cannot see it either -- it is a DESCENDANT of the
+/// consumed element, not an ancestor of it.
+///
+/// So the check is not "does this contain a restricted name". Every
+/// enumeration of names I have written for this gate has turned out to
+/// miss a shape. The reader modelled this element as having no element
+/// children; if it has some, the model and the bytes disagree and the
+/// surgery cannot say what removing them costs.
+fn run_surgery_consumed_span_has_children(
+  elements : Array[ScannedElement],
+  element : ScannedElement,
+) -> Bool {
+  element.first_child_index >= 0 &&
+  element.first_child_index < elements.length()
+}
+
+///|
+/// The identity of the nearest enclosing `w:hyperlink`, if any.
+///
+/// A hyperlink is restricted only at its BOUNDARY. Text inside one is
+/// ordinary editable text, and text outside one is too; what must refuse
+/// is an edit that spans the edge, because the replacement lands at a
+/// single carrier and would either drag unlinked text inside the link or
+/// leave linked text outside it.
+///
+/// Comparing nearest-ancestor identities across an edit's contributions
+/// decides that, and does so in both directions. Looking for a
+/// zero-width hyperlink contribution instead would not: the reader emits
+/// an opening boundary but no closing one, so entry crossings would be
+/// caught and exit crossings missed.
+fn run_surgery_hyperlink_ancestor(
+  elements : Array[ScannedElement],
+  element : ScannedElement,
+) -> Int? {
+  let mut at = element.identity
+  while at >= 0 && at < elements.length() {
+    let ancestor = elements[at]
+    if is_wml_uri(ancestor.uri) && ancestor.local_name == "hyperlink" {
+      return Some(at)
+    }
+    at = ancestor.parent_index
+  }
+  None
+}
+
+///|
+/// A projecting-restricted construct: text that MATCHES but must not be
+/// MUTATED. Kept as a type rather than a message so the predicate
+/// dispatches on XML names only, and the prose lives with the renderer.
+priv enum RestrictedConstruct {
+  TrackedInsertion
+  ContentControl
+  TextBoxContent
+  FallbackContent
+} derive(Show)
+
+///|
+/// The user-facing name of a restricted construct.
+///
+/// One renderer, so a construct is named the same way wherever it IS
+/// named. The two surgeries do not report alike: N0c1 names the
+/// construct in its message, while N0c2 reports its stable class,
+/// `RestrictedRegion`, because that taxonomy is what its callers match
+/// on.
+fn run_surgery_restricted_name(construct : RestrictedConstruct) -> String {
+  // Each names the ELEMENT alongside the English, so a caller can go
+  // look at the markup rather than guess which construct was meant.
+  match construct {
+    TrackedInsertion => "a tracked insertion (w:ins)"
+    ContentControl => "a content control (w:sdt)"
+    TextBoxContent => "textbox content (w:txbxContent)"
+    FallbackContent => "fallback content (mc:Fallback)"
+  }
+}
+
+///|
+/// Which restricted construct encloses this element, if any.
+///
+/// Each fails for its own reason, and the surgeries name the construct
+/// rather than reporting a shared "restricted", so a caller learns what
+/// they hit.
+///
+/// Ancestry is walked over the PHYSICAL scan, not the projection. The
+/// reader splices `mc:Fallback` and drops `mc:Choice`, so by projection
+/// time the distinction is gone; the scan still carries the real parent
+/// chain. The walk is INCLUSIVE -- an owned contribution can be sourced
+/// at the container itself, not only beneath it.
+fn run_surgery_restricted_ancestor(
+  elements : Array[ScannedElement],
+  element : ScannedElement,
+) -> RestrictedConstruct? {
+  let mut at = element.identity
+  while at >= 0 && at < elements.length() {
+    let ancestor = elements[at]
+    if is_wml_uri(ancestor.uri) {
+      match ancestor.local_name {
+        // Writing here does not lose the text; it REATTRIBUTES it, so
+        // the document records that the insertion's named author wrote
+        // words they never wrote.
+        "ins" => return Some(TrackedInsertion)
+        // A data-bound control is repopulated from the custom XML part
+        // when the document opens, discarding the edit silently -- and
+        // this reader cannot tell a bound one from a plain one, so the
+        // whole construct is refused.
+        "sdt" => return Some(ContentControl)
+        // The same text is commonly carried twice, once per
+        // AlternateContent branch, so editing the projected copy leaves
+        // the other saying something else.
+        "txbxContent" => return Some(TextBoxContent)
+        _ => ()
+      }
+    }
+    // The branch this reader projects is the one a consumer that
+    // UNDERSTANDS the Choice will ignore, so an edit here is invisible
+    // to modern Word and visible to older consumers.
+    if ancestor.uri == MC_NAMESPACE && ancestor.local_name == "Fallback" {
+      return Some(FallbackContent)
+    }
+    at = ancestor.parent_index
   }
   None
 }

@@ -486,13 +486,15 @@ test "partial: field instruction refuses, field result is editable" {
     [partial_edit(0, 1, "x")],
     refusal="PartialFieldInstruction",
   )
-  // The result run's text (`7`, projected after the instruction) is fair
-  // game, exactly as in whole-run surgery.
-  assert_partial_edits(
+  // Criterion (d): the result run's text (`7`, projected after the
+  // instruction) refuses too. The reader projects the CACHED value, so a
+  // caller's read-back would confirm an edit that the next
+  // recalculation discards.
+  assert_partial_refusal(
     instruction_body,
     paragraph=0,
     [partial_edit(4, 5, "9")],
-    expected="PAGE9",
+    refusal="RestrictedRegion",
   )
 }
 
@@ -1033,51 +1035,87 @@ test "partial: cross-run xml:space lands only on the start host" {
 }
 
 ///|
-test "partial: crossing into a hyperlink preserves the wrapper" {
-  // The hyperlink is a flattened transparent wrapper: a range crossing
-  // into it trims its run's text while the wrapper element, its
-  // attributes, and its run shell survive byte-identical.
+test "partial: an edit crossing a hyperlink boundary refuses" {
+  // Unlike a tracked insertion or a content control, a hyperlink is
+  // restricted only at its EDGE. Text inside one is ordinary editable
+  // text, and so is text outside; what cannot work is a range spanning
+  // the edge, because the replacement lands at a single carrier and
+  // would drag unlinked text into the link or leave linked text out.
   let body = "<w:p><w:r><w:t>ab</w:t></w:r><w:hyperlink r:id=\"rId9\" xmlns:r=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships\"><w:r><w:t>cd</w:t></w:r></w:hyperlink></w:p>"
-  assert_partial_edits(
+  // Outside -> inside.
+  assert_partial_refusal(
     body,
     paragraph=0,
     [partial_edit(1, 3, "X")],
-    expected="aXd",
+    refusal="RestrictedRegion",
   )
-  let source = "<w:document xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\" xmlns:v=\"urn:schemas-microsoft-com:vml\"><w:body>\{body}</w:body></w:document>"
-  let bytes = @utf8.encode(source)
-  let projection = surgery_native_projection(source)
-  let (byte_edits, _) = plan_paragraph_text_edits(projection, bytes[:], 0, [
-    partial_edit(1, 3, "X"),
-  ])
-  let spliced = @utf8.decode(apply_run_surgery_edits(bytes, byte_edits))
-  assert_true(
-    spliced.contains(
-      "<w:t>aX</w:t></w:r><w:hyperlink r:id=\"rId9\" xmlns:r=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships\"><w:r><w:t>d</w:t></w:r></w:hyperlink>",
-    ),
+  // Wholly INSIDE the link still edits. A name check on the ancestry
+  // would have refused this, which is why the rule compares identities.
+  assert_partial_edits(
+    body,
+    paragraph=0,
+    [partial_edit(2, 4, "X")],
+    expected="abX",
+  )
+  // Wholly OUTSIDE still edits too.
+  assert_partial_edits(
+    body,
+    paragraph=0,
+    [partial_edit(0, 2, "Y")],
+    expected="Ycd",
+  )
+  // Inside -> outside, the direction a zero-width-contribution check
+  // would miss: the reader emits a hyperlink's opening boundary but no
+  // closing one, so only an exit crossing exposes that mistake.
+  let trailing = "<w:p><w:hyperlink r:id=\"rId9\" xmlns:r=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships\"><w:r><w:t>ab</w:t></w:r></w:hyperlink><w:r><w:t>cd</w:t></w:r></w:p>"
+  assert_partial_refusal(
+    trailing,
+    paragraph=0,
+    [partial_edit(1, 3, "X")],
+    refusal="RestrictedRegion",
+  )
+  // And link -> DIFFERENT link, which shares "inside a hyperlink" on
+  // both endpoints and still must refuse.
+  let two = "<w:p><w:hyperlink r:id=\"rId9\" xmlns:r=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships\"><w:r><w:t>ab</w:t></w:r></w:hyperlink><w:hyperlink r:id=\"rId8\" xmlns:r=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships\"><w:r><w:t>cd</w:t></w:r></w:hyperlink></w:p>"
+  assert_partial_refusal(
+    two,
+    paragraph=0,
+    [partial_edit(1, 3, "X")],
+    refusal="RestrictedRegion",
   )
 }
 
 ///|
-test "partial: crossing into a tracked insertion preserves the wrapper" {
+test "partial: an edit reaching a tracked insertion refuses" {
+  // The old behaviour edited THROUGH the wrapper, preserving it. That
+  // preserved the markup and falsified the record: the document would
+  // then say Ada inserted words Ada never wrote, and accepting the
+  // revision later bakes that in. This is not lost text or divergent
+  // text -- it is misattributed text, which is why it refuses rather
+  // than being handled more carefully.
   let body = "<w:p><w:r><w:t>ab</w:t></w:r><w:ins w:id=\"9\" w:author=\"Ada\" w:date=\"2001-01-01T00:00:00Z\"><w:r><w:t>cd</w:t></w:r></w:ins></w:p>"
-  assert_partial_edits(
+  // Crossing in from outside...
+  assert_partial_refusal(
     body,
     paragraph=0,
     [partial_edit(1, 3, "X")],
-    expected="aXd",
+    refusal="RestrictedRegion",
   )
-  let source = "<w:document xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\" xmlns:v=\"urn:schemas-microsoft-com:vml\"><w:body>\{body}</w:body></w:document>"
-  let bytes = @utf8.encode(source)
-  let projection = surgery_native_projection(source)
-  let (byte_edits, _) = plan_paragraph_text_edits(projection, bytes[:], 0, [
-    partial_edit(1, 3, "X"),
-  ])
-  let spliced = @utf8.decode(apply_run_surgery_edits(bytes, byte_edits))
-  assert_true(
-    spliced.contains(
-      "<w:t>aX</w:t></w:r><w:ins w:id=\"9\" w:author=\"Ada\" w:date=\"2001-01-01T00:00:00Z\"><w:r><w:t>d</w:t></w:r></w:ins>",
-    ),
+  // ...and wholly inside, which is why the class reads "touches" rather
+  // than "crosses".
+  assert_partial_refusal(
+    body,
+    paragraph=0,
+    [partial_edit(2, 4, "X")],
+    refusal="RestrictedRegion",
+  )
+  // The same paragraph WITHOUT the insertion still edits, so the refusal
+  // is the wrapper's doing and not the geometry's.
+  assert_partial_edits(
+    "<w:p><w:r><w:t>ab</w:t></w:r><w:r><w:t>cd</w:t></w:r></w:p>",
+    paragraph=0,
+    [partial_edit(1, 3, "X")],
+    expected="aXd",
   )
 }
 
@@ -1488,4 +1526,136 @@ test "whole-run replacement leaves a reference-spelled preserve alone" {
   let spliced = @utf8.decode(apply_run_surgery_edits(bytes, edits))
   assert_true(spliced.contains("xml:space=\"pre&#x73;erve\""))
   assert_false(spliced.contains("xml:space=\"preserve\""))
+}
+
+///|
+/// The whole restricted inventory, one paragraph shape per construct.
+///
+/// Each entry is addressable and projects the text named in the comment
+/// -- that is what makes these regions RESTRICTED rather than invisible.
+/// A construct that stopped being reachable would fail the paired
+/// "reaches it" assertion rather than passing quietly as a refusal.
+test "partial: every restricted construct refuses" {
+  let mc = "xmlns:mc=\"http://schemas.openxmlformats.org/markup-compatibility/2006\""
+  for
+    probe in [
+      // A content control that declares no checkbox: the general case,
+      // which the checkbox refusal never covered.
+      (
+        "sdt", "<w:p><w:sdt><w:sdtPr><w:alias w:val=\"Client\"/></w:sdtPr><w:sdtContent><w:r><w:t>ab</w:t></w:r></w:sdtContent></w:sdt></w:p>",
+      ),
+      // Tracked insertion.
+      (
+        "ins", "<w:p><w:ins w:id=\"9\" w:author=\"Ada\" w:date=\"2001-01-01T00:00:00Z\"><w:r><w:t>ab</w:t></w:r></w:ins></w:p>",
+      ),
+      // The branch this reader projects is the one a consumer that
+      // understands the Choice ignores.
+      (
+        "mc:Fallback",
+        "<w:p><mc:AlternateContent \{mc}><mc:Choice Requires=\"wps\"><w:r><w:t>zz</w:t></w:r></mc:Choice><mc:Fallback><w:r><w:t>ab</w:t></w:r></mc:Fallback></mc:AlternateContent></w:p>",
+      ),
+      // Textbox content, which the first version of this list omitted --
+      // an aggregate corpus threshold cannot show that each construct
+      // individually reached the refusal, so each belongs here by name.
+      (
+        "txbxContent", "<w:p><w:r><w:pict><v:shape><v:textbox><w:txbxContent><w:p><w:r><w:t>ab</w:t></w:r></w:p></w:txbxContent></v:textbox></v:shape></w:pict></w:r></w:p>",
+      ),
+    ] {
+    let (name, body) = probe
+    // It projects the text -- otherwise the refusal below proves nothing.
+    let source = "<w:document xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\" xmlns:v=\"urn:schemas-microsoft-com:vml\"><w:body>\{body}</w:body></w:document>"
+    let projection = surgery_native_projection(source)
+    let mut projected = ""
+    for paragraph in projection.paragraphs {
+      for contribution in paragraph.contributions {
+        projected = projected + contribution.value
+      }
+    }
+    assert_true(
+      projected.contains("ab"),
+      msg=name + " no longer projects its text, so its refusal proves nothing",
+    )
+    assert_partial_refusal(
+      body,
+      paragraph=projection.paragraphs.length() - 1,
+      [partial_edit(0, 1, "X")],
+      refusal="RestrictedRegion",
+    )
+  }
+  // The same shape without any restricted wrapper still edits, so these
+  // refusals are the wrappers' doing and not the geometry's.
+  assert_partial_edits(
+    "<w:p><w:r><w:t>ab</w:t></w:r></w:p>",
+    paragraph=0,
+    [partial_edit(0, 1, "X")],
+    expected="Xb",
+  )
+}
+
+///|
+/// The partial half of the nested-atom blind spot.
+///
+/// Replacing the atom's projection replaces its WHOLE element span, so
+/// the same nested insertion disappears. The ancestor checks cannot see
+/// it: it is a descendant of the consumed element, not an ancestor.
+test "partial: an atom carrying nested markup refuses" {
+  let nested = "<w:p><w:r><w:tab><w:ins w:id=\"9\" w:author=\"Ada\" w:date=\"2001-01-01T00:00:00Z\"><w:r><w:t>cd</w:t></w:r></w:ins></w:tab><w:t>ab</w:t></w:r></w:p>"
+  let source = "<w:document xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\" xmlns:v=\"urn:schemas-microsoft-com:vml\"><w:body>\{nested}</w:body></w:document>"
+  let projection = surgery_native_projection(source)
+  // The premise: the nested insertion projects nothing, so nothing in
+  // the projection could have reported it.
+  let mut projected = ""
+  for contribution in projection.paragraphs[0].contributions {
+    projected = projected + contribution.value
+  }
+  assert_false(projected.contains("cd"))
+  // Replacing the atom's own position consumes its whole span.
+  assert_partial_refusal(
+    nested,
+    paragraph=0,
+    [partial_edit(0, 1, "X")],
+    refusal="UnsupportedTextSource",
+  )
+  // The branches the first version of this trial missed. Guarding the
+  // consuming branches one at a time is what let these through; the
+  // guard now sits in the single validation loop every consumed element
+  // passes, which runs BEFORE the no-op exit.
+  //
+  // Deletion, which took a different path from replacement:
+  assert_partial_refusal(
+    nested,
+    paragraph=0,
+    [partial_edit(0, 1, "")],
+    refusal="UnsupportedTextSource",
+  )
+  // A LATER consumed atom, reached after a leading text part:
+  let trailing = "<w:p><w:r><w:t>ab</w:t><w:tab><w:ins w:id=\"9\" w:author=\"Ada\" w:date=\"2001-01-01T00:00:00Z\"><w:r><w:t>cd</w:t></w:r></w:ins></w:tab></w:r></w:p>"
+  assert_partial_refusal(
+    trailing,
+    paragraph=0,
+    [partial_edit(1, 3, "X")],
+    refusal="UnsupportedTextSource",
+  )
+  // And the identity replacement, which exits as a logical no-op: a
+  // no-op suppresses byte planning, never validation.
+  assert_partial_refusal(
+    nested,
+    paragraph=0,
+    [partial_edit(0, 1, "\t")],
+    refusal="UnsupportedTextSource",
+  )
+  // An ordinary EMPTY atom still replaces, deletes and no-ops, so the
+  // guard has not simply refused every edit over a tab.
+  assert_partial_edits(
+    "<w:p><w:r><w:tab/><w:t>ab</w:t></w:r></w:p>",
+    paragraph=0,
+    [partial_edit(0, 1, "X")],
+    expected="Xab",
+  )
+  assert_partial_edits(
+    "<w:p><w:r><w:tab/><w:t>ab</w:t></w:r></w:p>",
+    paragraph=0,
+    [partial_edit(0, 1, "")],
+    expected="ab",
+  )
 }

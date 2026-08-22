@@ -1015,15 +1015,33 @@ L0: pub surface only what N1/N2 need.
   atomically without rewriting either slice or the content between them, and
   the receipt reports both before/after paths.
 
-### N0 gate status (2026-08-21): **NOT YET GO** — criterion (d) outstanding
+### N0 gate status (2026-08-22): **GO**
 
-Criteria (a)-(c) are met and dispositioned below. Criterion (d) is NOT:
-its refusal trials name **restricted regions**, and the surgery
-primitives do not refuse them. Its other two families — multi-physical
-logical paragraphs and suppressed regions — are now closed in both
-primitives. Recording GO now would still bless a gap, so the verdict
-waits for the rung that closes restricted regions (see the outstanding
-item after the dispositions).
+All four criteria are met and dispositioned below. Criterion (d) names
+six families; the three that remained open into the closing rungs —
+restricted regions, suppressed regions, and multi-physical logical
+paragraphs — now fail closed in BOTH primitives, and the verdict that
+was withheld while they were open is recorded here.
+
+The gate cost a deliberate change to a shipped surface: edits that used
+to succeed through `office edit set_run_text` now refuse. Editing a
+complex field's cached result, a tracked insertion, a content control,
+a fallback branch, textbox content, a run owning suppressed content, or
+a run in a joined paragraph all refuse, as does a partial edit that
+spans a hyperlink's edge. That was the point rather than a side effect:
+each of those either loses the edit silently, makes the document say
+two different things to two consumers, or misattributes the text — and
+NONE of them can be detected afterwards by re-reading, because the
+reader projects exactly the value that will be discarded.
+
+Policy decided with the repository owner and recorded here so it is not
+relitigated: refuse the inventory WHOLESALE, with no opt-in escape for
+callers who believe a field will not be recalculated. Refusing more than
+strictly necessary is recoverable and relaxing later is additive; the
+opposite ships a trap. Two known over-refusals are accepted for now and
+are relaxation candidates, not oversights: a plain-text (non-databound)
+content control is safe to edit and refuses anyway, because this reader
+cannot tell it from a databound one.
 
 N0 landed as the exact lexical map (N0a, PR #224), the bounded physical
 source-tree identity (N0b1, PR #235), the projection index and its logical
@@ -1042,7 +1060,8 @@ the generated boundary-pair proof (PR #474). Criteria disposition:
   endpoints resolved to TOKEN granularity — a marginal endpoint histogram
   would let a planner reject one ordered pair while every total stayed
   green. Two families share one oracle: batches derived from the hostile
-  grammar's documents (971 planned over 16 ordered pairs), and a local
+  grammar's documents (695 planned over 16 ordered pairs, down from 973
+  before criterion (d) closed), and a local
   family for the lexical matrix that grammar does not reach — entities,
   numeric references, astral characters, CDATA, `w:cr`/`w:ptab`, atomless
   runs, runless text, and mixed arrangements placing entities, numeric
@@ -1133,11 +1152,14 @@ the generated boundary-pair proof (PR #474). Criteria disposition:
   the same pushed commit. The gate verdict itself is NOT recorded by
   those approvals — it waits for criterion (d).
 
-**Outstanding for GO — criterion (d) refusal trials.** Criterion (d)
-names THREE families the primitives must fail closed on: restricted
-regions, suppressed regions, and multi-physical logical paragraphs. Two
-are now closed in BOTH primitives; restricted regions remain, and the
-public surface reaches them through N0c1.
+**Criterion (d) refusal trials — CLOSED.** The criterion names six
+families: CDATA contexts, non-scalar boundaries, barrier-spanning
+candidates, restricted and suppressed regions, multi-physical `w:p`
+logical paragraphs, and malformed field states. The first three and the
+last were closed by earlier rungs and have had refusal trials since;
+the three that remained open into this rung — restricted regions,
+suppressed regions, and multi-physical paragraphs — are now closed in
+BOTH primitives, which is what allows the GO above.
 
 1. *Multi-physical logical paragraphs.* CLOSED. `plan_whole_run_replacement`
    now refuses a logical paragraph whose `sources` number more than one,
@@ -1154,7 +1176,30 @@ public surface reaches them through N0c1.
    suppressed before the walk reaches the run inside it, so that run is
    never registered and its contribution carries no `run_source`, which
    keeps a run beside a deleted sibling editable.
-3. *Restricted regions.* OUTSTANDING. Detailed below.
+3. *Restricted regions.* CLOSED. `run_surgery_restricted_ancestor`
+   walks the PHYSICAL scan inclusively — the reader splices
+   `mc:Fallback` and drops `mc:Choice`, so by projection time the
+   distinction is gone while the scan still carries the real parent
+   chain — and returns a typed construct that one renderer names, so a
+   construct is described the same way wherever it is named. N0c1 names
+   it in the refusal; N0c2 reports its stable class, `RestrictedRegion`,
+   because its taxonomy is what its callers match on. `w:ins`,
+   `w:sdt`, `w:txbxContent` and `mc:Fallback` refuse by ancestry;
+   complex-field cached results refuse by region, AFTER the classifier's
+   own field refusal, since a refused field's boundaries are unreliable
+   for a stronger reason than recalculation. N0c2 raises
+   `RestrictedRegion`, reserved and unraised since the class was
+   introduced, and its renderer says the range TOUCHES a restricted
+   region rather than crossing one, because a wholly interior edit
+   refuses too.
+
+   `w:hyperlink` is the exception in kind: restricted only at its EDGE.
+   The rule compares the nearest enclosing hyperlink IDENTITY across an
+   edit's intersecting contributions and refuses when they differ,
+   including None versus Some and two different links. A zero-width
+   hyperlink contribution would NOT serve — the reader emits an opening
+   boundary but no closing one, so exit crossings would be missed. A run
+   wholly inside a link stays editable in both primitives.
 
 Closed alongside them, because a refusal that a no-op can bypass is not
 a refusal: `plan_run_text_replacement` returned an empty pinned plan as
@@ -1175,21 +1220,20 @@ The Phase-3-wide five-class inventory classifies complex-field cached
 results, boundary-crossing hyperlink interiors, `w:ins` content,
 non-checkbox `w:sdt` content, `mc:Fallback` content, and textbox
 paragraphs as *projecting-restricted*: text that can MATCH but must not
-be MUTATED. Criterion (d) requires each to fail closed with its declared
-error. Today neither primitive refuses them, and the gap is already
-PUBLIC: `plan_run_text_replacement` (N0c1) permits editing a cached
-field result, and `office edit set_run_text` ships that surface. So this
-cannot be deferred to N2b as a match-layer policy — a public consumer
-exists now.
+be MUTATED. Criterion (d) required each to fail closed with its declared
+error, and each now does, in both primitives. This could never have been
+deferred to N2b as match-layer policy: the gap was already PUBLIC, since
+`plan_run_text_replacement` permitted editing a cached field result and
+`office edit set_run_text` ships that surface.
 
-Closing it means classifying restricted ancestry in the surgery
-primitives (both N0c1 and N0c2, since criterion (d) governs the whole
-N0 matrix), raising `RestrictedRegion` — reserved and unraised in the
-taxonomy today — and accepting that edits which currently succeed
-through `office edit set_run_text` will begin to refuse. That is a
-deliberate behaviour change to a shipped surface, which is why it is
-recorded here as the gate's remaining work rather than made silently
-alongside the composition proof.
+What it cost the generated corpus is recorded with the proof rather than
+smoothed over. Planning fell 973 → 695 because the grammar builds
+`w:sdt` and `mc:AlternateContent` documents and every batch inside one
+now refuses; `RestrictedRegion` is the largest refusal class at 280. The
+count of DISTINCT ordered pairs did not move, so what was lost is volume
+rather than reach, and the two mixed-pair floors that fell are pinned
+far more strongly by the exhaustive lexical corpus (86 and 79, exact,
+both directions) whose fixtures contain no restricted constructs.
 
 Locked decisions carried forward: `w:instrText` gets a token map but is
 never a partial-surgery host (require an ordinary WML `t`); any CDATA in a
