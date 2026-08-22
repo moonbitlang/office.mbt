@@ -1060,7 +1060,8 @@ the generated boundary-pair proof (PR #474). Criteria disposition:
   endpoints resolved to TOKEN granularity — a marginal endpoint histogram
   would let a planner reject one ordered pair while every total stayed
   green. Two families share one oracle: batches derived from the hostile
-  grammar's documents (971 planned over 16 ordered pairs), and a local
+  grammar's documents (695 planned over 16 ordered pairs, down from 973
+  before criterion (d) closed), and a local
   family for the lexical matrix that grammar does not reach — entities,
   numeric references, astral characters, CDATA, `w:cr`/`w:ptab`, atomless
   runs, runless text, and mixed arrangements placing entities, numeric
@@ -1175,8 +1176,10 @@ are now closed in BOTH primitives, which is what allows the GO above.
    walks the PHYSICAL scan inclusively — the reader splices
    `mc:Fallback` and drops `mc:Choice`, so by projection time the
    distinction is gone while the scan still carries the real parent
-   chain — and returns a typed construct that one renderer names, so
-   both primitives describe the same construct identically. `w:ins`,
+   chain — and returns a typed construct that one renderer names, so a
+   construct is described the same way wherever it is named. N0c1 names
+   it in the refusal; N0c2 reports its stable class, `RestrictedRegion`,
+   because its taxonomy is what its callers match on. `w:ins`,
    `w:sdt`, `w:txbxContent` and `mc:Fallback` refuse by ancestry;
    complex-field cached results refuse by region, AFTER the classifier's
    own field refusal, since a refused field's boundaries are unreliable
@@ -1220,7 +1223,7 @@ deferred to N2b as match-layer policy: the gap was already PUBLIC, since
 `office edit set_run_text` ships that surface.
 
 What it cost the generated corpus is recorded with the proof rather than
-smoothed over. Planning fell 971 → 695 because the grammar builds
+smoothed over. Planning fell 973 → 695 because the grammar builds
 `w:sdt` and `mc:AlternateContent` documents and every batch inside one
 now refuses; `RestrictedRegion` is the largest refusal class at 280. The
 count of DISTINCT ordered pairs did not move, so what was lost is volume

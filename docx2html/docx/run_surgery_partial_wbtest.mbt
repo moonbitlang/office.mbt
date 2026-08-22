@@ -1536,7 +1536,6 @@ test "whole-run replacement leaves a reference-spelled preserve alone" {
 /// A construct that stopped being reachable would fail the paired
 /// "reaches it" assertion rather than passing quietly as a refusal.
 test "partial: every restricted construct refuses" {
-  let link = "xmlns:r=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships\""
   let mc = "xmlns:mc=\"http://schemas.openxmlformats.org/markup-compatibility/2006\""
   for
     probe in [
@@ -1554,6 +1553,12 @@ test "partial: every restricted construct refuses" {
       (
         "mc:Fallback",
         "<w:p><mc:AlternateContent \{mc}><mc:Choice Requires=\"wps\"><w:r><w:t>zz</w:t></w:r></mc:Choice><mc:Fallback><w:r><w:t>ab</w:t></w:r></mc:Fallback></mc:AlternateContent></w:p>",
+      ),
+      // Textbox content, which the first version of this list omitted --
+      // an aggregate corpus threshold cannot show that each construct
+      // individually reached the refusal, so each belongs here by name.
+      (
+        "txbxContent", "<w:p><w:r><w:pict><v:shape><v:textbox><w:txbxContent><w:p><w:r><w:t>ab</w:t></w:r></w:p></w:txbxContent></v:textbox></v:shape></w:pict></w:r></w:p>",
       ),
     ] {
     let (name, body) = probe
@@ -1585,5 +1590,4 @@ test "partial: every restricted construct refuses" {
     [partial_edit(0, 1, "X")],
     expected="Xb",
   )
-  ignore(link)
 }

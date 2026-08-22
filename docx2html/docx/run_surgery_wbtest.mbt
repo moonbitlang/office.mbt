@@ -1250,10 +1250,20 @@ test "whole-run replacement refuses every restricted construct" {
     let projection = surgery_native_projection(source)
     let paragraph_index = projection.paragraphs.length() - 1
     // Reachable first: a construct that stopped projecting would make
-    // its refusal below prove nothing.
-    assert_true(
-      projection.paragraphs[paragraph_index].runs.length() > 0,
-      msg=construct + " no longer registers a run",
+    // its refusal below prove nothing. Checking only that a run EXISTS
+    // was too weak -- an atomless structural run would satisfy it -- so
+    // the addressed run must actually project the text.
+    let projected = StringBuilder()
+    let target = projection.paragraphs[paragraph_index].runs[0].source
+    for contribution in projection.paragraphs[paragraph_index].contributions {
+      if contribution.run_source == Some(target) {
+        projected.write_string(contribution.value)
+      }
+    }
+    assert_eq(
+      projected.to_string(),
+      "ab",
+      msg=construct + " no longer projects its text through the addressed run",
     )
     let mut refusal = ""
     try
@@ -1271,14 +1281,47 @@ test "whole-run replacement refuses every restricted construct" {
       msg="expected a refusal naming '" + construct + "', got '" + refusal + "'",
     )
   }
-  // A run wholly INSIDE a hyperlink stays editable: whole-run surgery
-  // replaces one run's text, so it cannot span a link's edge, and the
-  // restricted list deliberately does not include `w:hyperlink`.
+  // A run wholly INSIDE a hyperlink stays editable -- the common and
+  // legitimate shape, and the reason `w:hyperlink` is not in the
+  // ancestry list.
   assert_whole_run_replacement(
     "<w:p><w:hyperlink r:id=\"rId9\" xmlns:r=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships\"><w:r><w:t>ab</w:t></w:r></w:hyperlink></w:p>",
     paragraph=0,
     run=0,
     "linked",
     expected="linked\n\n",
+  )
+  // But a hyperlink NESTED INSIDE the run does span an edge. I had
+  // argued whole-run surgery could not reach this, since it replaces
+  // one run; review produced the counterexample. It is not
+  // schema-normal WML, but it is well-formed, this reader projects it
+  // as ONE run reading `abcd`, and it reaches surgery -- so replacing
+  // the run emptied the link instead of refusing.
+  let nested = "<w:p><w:r><w:t>ab</w:t><w:hyperlink r:id=\"rId9\" xmlns:r=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships\"><w:t>cd</w:t></w:hyperlink></w:r></w:p>"
+  let nested_source = "<w:document xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\" xmlns:v=\"urn:schemas-microsoft-com:vml\"><w:body>\{nested}</w:body></w:document>"
+  let nested_bytes = @utf8.encode(nested_source)
+  let nested_projection = surgery_native_projection(nested_source)
+  // The premise the counterexample rests on: one run, projecting BOTH
+  // sides of the link's edge.
+  assert_eq(nested_projection.paragraphs[0].runs.length(), 1)
+  let mut projected = ""
+  for contribution in nested_projection.paragraphs[0].contributions {
+    projected = projected + contribution.value
+  }
+  assert_eq(projected, "abcd")
+  let mut nested_refusal = ""
+  try
+    ignore(
+      plan_whole_run_replacement(nested_projection, nested_bytes, 0, 0, "X"),
+    )
+  catch {
+    Unsupported(message~) => nested_refusal = message
+    _ => ()
+  } noraise {
+    _ => ()
+  }
+  assert_true(
+    nested_refusal.contains("spans a hyperlink boundary"),
+    msg="expected a hyperlink-boundary refusal, got '" + nested_refusal + "'",
   )
 }

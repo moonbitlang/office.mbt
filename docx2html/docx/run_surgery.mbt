@@ -259,6 +259,35 @@ fn plan_whole_run_replacement(
       }
     }
   }
+  // A hyperlink NESTED INSIDE the run. Whole-run surgery replaces one
+  // run's text, which looked like it could never span a link's edge --
+  // but `<w:r><w:t>ab</w:t><w:hyperlink><w:t>cd</w:t></w:hyperlink></w:r>`
+  // is well-formed, this reader projects it as one run reading `abcd`,
+  // and replacing that run would empty the link rather than refuse.
+  //
+  // The rule is N0c2's: compare the nearest enclosing link IDENTITY
+  // across the run's own projecting contributions and refuse on any
+  // difference, `None` against `Some` included. A run wholly inside one
+  // link still edits, which is the common and legitimate shape.
+  let mut link_anchor : Int?? = None
+  for contribution in owned {
+    if contribution.kind is ProjectedText(_) {
+      let SourceElementId(source_identity) = contribution.source
+      let link = run_surgery_hyperlink_ancestor(
+        elements,
+        elements[source_identity],
+      )
+      match link_anchor {
+        None => link_anchor = Some(link)
+        Some(first) =>
+          if first != link {
+            raise Unsupported(
+              message="run \{run_index} in paragraph \{paragraph_index} spans a hyperlink boundary, so replacing it would change what the link covers",
+            )
+          }
+      }
+    }
+  }
   let escaped = run_surgery_escape(text)
   let edits : Array[RunSurgeryEdit] = []
   // The one place the mode is observed. It takes a THUNK, not an edit:

@@ -1064,10 +1064,15 @@ test "generated documents compose partial edits over every boundary pair" {
   // not break the build, while a collapse to trivial batches — or to a
   // corpus where everything refuses — fails here.
   //
-  // Planning fell from 971 when criterion (d) closed: the grammar builds
+  // Planning fell from 973 when criterion (d) closed: the grammar builds
   // `w:sdt` and `mc:AlternateContent` documents, and every batch inside
   // one is now a RestrictedRegion refusal. The count of DISTINCT ordered
   // pairs did not move, so what was lost is volume, not reach.
+  //
+  // 973 - 695 is 278, while RestrictedRegion counts 280: two of those
+  // batches were already refusing for another reason and merely changed
+  // class. The arithmetic is stated because it does not balance, and a
+  // reader who checks deserves the explanation rather than a discrepancy.
   assert_true(planned >= 300, msg="only \{planned} batches planned")
   assert_true(
     planned_pairs >= 16,
