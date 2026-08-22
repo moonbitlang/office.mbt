@@ -194,6 +194,21 @@ fn plan_whole_run_replacement(
       )
     None => ()
   }
+  // The cached-result region is checked AFTER the classifier's refusal,
+  // not inside the region match above. A refused field's boundaries are
+  // unreliable, so NOTHING in it is writable for a stronger reason than
+  // "the next recalculation discards this" -- and a truncated field's
+  // result run carries FieldResult and the refusal together, so region
+  // order alone would report the weaker reason.
+  //
+  // The run slot carries this separately from the contributions because
+  // an atomless run inside a field result is addressable, and
+  // synthesising into one writes text the recalculation discards.
+  if target_run.field_region is FieldResult {
+    raise Unsupported(
+      message="run \{run_index} in paragraph \{paragraph_index} holds a field's cached result, which the next recalculation discards",
+    )
+  }
   let owned : Array[ReaderProjectionContribution] = []
   for contribution in paragraph.contributions {
     if contribution.run_source == Some(target) {
@@ -215,6 +230,16 @@ fn plan_whole_run_replacement(
   if run_surgery_inside_checkbox_control(elements, run_element) {
     raise Unsupported(
       message="run \{run_index} in paragraph \{paragraph_index} sits inside a checkbox content control, whose content the reader rewrites",
+    )
+  }
+  // Restricted ancestry, checked AFTER the checkbox case so the more
+  // specific refusal keeps precedence over the general one. The run slot
+  // carries this on its own because an atomless run is addressable and
+  // synthesising into a restricted region is the same mistake as writing
+  // over one.
+  if run_surgery_restricted_ancestor(elements, run_element) is Some(construct) {
+    raise Unsupported(
+      message="run \{run_index} in paragraph \{paragraph_index} sits in \{construct}, which the reader may match but must not rewrite",
     )
   }
   // A physical run that also contributes to another logical paragraph cannot
@@ -263,7 +288,24 @@ fn plan_whole_run_replacement(
         raise Unsupported(
           message="run \{run_index} in paragraph \{paragraph_index} sits in a malformed field",
         )
+      // A field's CACHED RESULT reads like ordinary content and is not:
+      // the next recalculation recomputes it and discards whatever was
+      // written here. Nothing in this repository can detect that loss --
+      // the reader projects the cached result, so a caller's read-back
+      // confirms an edit that will not survive.
+      FieldResult =>
+        raise Unsupported(
+          message="run \{run_index} in paragraph \{paragraph_index} holds a field's cached result, which the next recalculation discards",
+        )
       _ => ()
+    }
+    // A restricted container may enclose one contribution of an
+    // otherwise ordinary run, so the run slot's own check above is not
+    // sufficient.
+    if run_surgery_restricted_ancestor(elements, element) is Some(construct) {
+      raise Unsupported(
+        message="run \{run_index} in paragraph \{paragraph_index} draws text from \{construct}, which the reader may match but must not rewrite",
+      )
     }
     match contribution.kind {
       // Visible non-text -- a break, a reference mark, an image, a
@@ -661,6 +703,55 @@ fn run_surgery_space_declaration(
       return Some((at, cursor + 1))
     }
     at = at + 1
+  }
+  None
+}
+
+///|
+/// Which restricted construct encloses this element, if any.
+///
+/// The Phase-3 inventory calls these regions PROJECTING-RESTRICTED: their
+/// text MATCHES, so an agent can find it, but it must not be MUTATED.
+/// Each fails for its own reason, and the surgeries name the construct
+/// rather than a shared "restricted" so a caller learns what they hit.
+///
+/// Ancestry is walked over the PHYSICAL scan, not the projection. The
+/// reader splices `mc:Fallback` and drops `mc:Choice`, so by projection
+/// time the distinction is gone; the scan still carries the real parent
+/// chain. The walk is INCLUSIVE -- an owned contribution can be sourced
+/// at the container itself, not only beneath it.
+fn run_surgery_restricted_ancestor(
+  elements : Array[ScannedElement],
+  element : ScannedElement,
+) -> String? {
+  let mut at = element.identity
+  while at >= 0 && at < elements.length() {
+    let ancestor = elements[at]
+    if is_wml_uri(ancestor.uri) {
+      match ancestor.local_name {
+        // Tracked insertion. Writing here does not lose the text; it
+        // reattributes it, so the document records that the insertion's
+        // named author wrote words they never wrote.
+        "ins" => return Some("a tracked insertion")
+        // A content control. A data-bound one is repopulated from the
+        // custom XML part when the document opens, discarding the edit
+        // silently -- and this reader cannot tell a bound one from a
+        // plain one, so the whole construct is refused.
+        "sdt" => return Some("a content control")
+        // Textbox content. The same text is commonly carried twice, once
+        // per AlternateContent branch, so editing the projected copy
+        // leaves the other saying something else.
+        "txbxContent" => return Some("textbox content")
+        _ => ()
+      }
+    }
+    // The branch this reader projects is the one a consumer that
+    // UNDERSTANDS the Choice will ignore, so an edit here is invisible
+    // to modern Word and visible to older consumers.
+    if ancestor.uri == MC_NAMESPACE && ancestor.local_name == "Fallback" {
+      return Some("markup-compatibility fallback content")
+    }
+    at = ancestor.parent_index
   }
   None
 }

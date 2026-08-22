@@ -659,7 +659,7 @@ test "whole-run synthesis goes after w:rPr" {
 /// Rewriting it changes what the field computes rather than what it shows. A
 /// field's cached *result* is content and stays editable -- checked rather than
 /// refused by association.
-test "whole-run replacement refuses field instructions but not results" {
+test "whole-run replacement refuses both field instructions and results" {
   let field =
     #|<w:p><w:r><w:fldChar w:fldCharType="begin"/></w:r><w:r><w:instrText>PAGE</w:instrText></w:r><w:r><w:fldChar w:fldCharType="separate"/></w:r><w:r><w:t>7</w:t></w:r><w:r><w:fldChar w:fldCharType="end"/></w:r></w:p>
   let source = "<w:document xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\"><w:body>\{field}</w:body></w:document>"
@@ -672,11 +672,24 @@ test "whole-run replacement refuses field instructions but not results" {
     _ => ()
   }
   assert_true(refused)
-  // the result run is content
-  let edits = plan_whole_run_replacement(projection, bytes, 0, 3, "8")
-  let spliced = @utf8.decode(apply_run_surgery_edits(bytes, edits))
-  assert_eq(current_reader_story_text(spliced), "8\n\n")
-  // The case above refuses for a reason that would hold anyway: `w:instrText`
+  // Criterion (d): the RESULT run refuses too, by its own class. Word
+  // recomputes a field's cached result on the next recalculation and
+  // discards whatever was written into it, and this reader projects that
+  // cached value -- so a caller's read-back confirms an edit that will
+  // not survive, which is the one failure nothing here can detect after
+  // the fact.
+  let mut result_refusal = ""
+  try ignore(plan_whole_run_replacement(projection, bytes, 0, 3, "8")) catch {
+    Unsupported(message~) => result_refusal = message
+    _ => ()
+  } noraise {
+    _ => ()
+  }
+  assert_true(
+    result_refusal.contains("cached result"),
+    msg="expected a cached-result refusal, got '" + result_refusal + "'",
+  )
+  // The instruction case above refuses for a reason that would hold anyway: `w:instrText`
   // is a hard barrier. This one needs the field classification -- a plain
   // `w:t` inside the instruction region looks like ordinary content and is
   // not, and with the region check removed it is accepted.
@@ -697,18 +710,38 @@ test "whole-run replacement refuses field instructions but not results" {
 }
 
 ///|
-/// A run inside a text box is editable.
 ///
 /// Its paragraph reaches the story through the extras pass rather than the
 /// content walk, but its runs are ordinary elements with ordinary spans, so
 /// there is nothing to refuse. Checked rather than refused by association.
-test "whole-run replacement reaches a run inside a text box" {
-  assert_whole_run_replacement(
-    "<w:p><w:r><w:pict><v:shape><v:textbox><w:txbxContent><w:p><w:r><w:t>inner</w:t></w:r></w:p></w:txbxContent></v:textbox></v:shape></w:pict></w:r></w:p>",
-    paragraph=1,
-    run=0,
-    "edited",
-    expected="\n\nedited\n\n",
+/// Criterion (d): a run inside a text box refuses.
+///
+/// The reader REACHES it -- the paragraph is addressable and its text
+/// matches -- which is exactly what makes the region restricted rather
+/// than invisible. A textbox is commonly carried twice, once per
+/// AlternateContent branch, so editing the projected copy leaves the
+/// other saying something else.
+test "whole-run replacement refuses a run inside a text box" {
+  let body =
+    #|<w:p><w:r><w:pict><v:shape><v:textbox><w:txbxContent><w:p><w:r><w:t>inner</w:t></w:r></w:p></w:txbxContent></v:textbox></v:shape></w:pict></w:r></w:p>
+  let source = "<w:document xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\" xmlns:v=\"urn:schemas-microsoft-com:vml\"><w:body>\{body}</w:body></w:document>"
+  let bytes = @utf8.encode(source)
+  let projection = surgery_native_projection(source)
+  // precondition: the inner paragraph really is addressable, so this
+  // witnesses the refusal rather than an unreachable address.
+  assert_true(projection.paragraphs.length() > 1)
+  let mut refusal = ""
+  try
+    ignore(plan_whole_run_replacement(projection, bytes, 1, 0, "edited"))
+  catch {
+    Unsupported(message~) => refusal = message
+    _ => ()
+  } noraise {
+    _ => ()
+  }
+  assert_true(
+    refusal.contains("textbox content"),
+    msg="expected a textbox refusal, got '" + refusal + "'",
   )
 }
 
@@ -971,10 +1004,19 @@ test "whole-run replacement refuses an empty run inside a field" {
     _ => ()
   }
   assert_true(refused)
-  // the cached result stays editable, exactly as with a populated run
-  let edits = plan_whole_run_replacement(projection, bytes, 0, 3, "8")
-  let spliced = @utf8.decode(apply_run_surgery_edits(bytes, edits))
-  assert_eq(current_reader_story_text(spliced), "8\n\n")
+  // Criterion (d): the cached result refuses too, and by its own class
+  // rather than inheriting the instruction refusal.
+  let mut result_refusal = ""
+  try ignore(plan_whole_run_replacement(projection, bytes, 0, 3, "8")) catch {
+    Unsupported(message~) => result_refusal = message
+    _ => ()
+  } noraise {
+    _ => ()
+  }
+  assert_true(
+    result_refusal.contains("cached result"),
+    msg="expected a cached-result refusal, got '" + result_refusal + "'",
+  )
   // and a TRUNCATED field's empty run still refuses: its region is the
   // instruction region it sat in (truncation itself is recorded as the
   // field's refusal, not as a region change)
