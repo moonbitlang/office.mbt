@@ -238,7 +238,7 @@ test "a self-replacement plan still refuses a foreign snapshot" {
 }
 
 ///|
-/// Criterion (d): a no-op suppresses byte PLANNING, never VALIDATION.
+/// Criterion (d): a no-op suppresses byte EDITING, never VALIDATION.
 ///
 /// The public entry used to return an empty pinned plan as soon as
 /// `text == expect`, before the surgery ever ran, so a caller received a

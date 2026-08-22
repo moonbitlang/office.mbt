@@ -145,21 +145,25 @@ pub fn plan_run_text_replacement(
   // refused, so a caller could not learn a run was unwritable by
   // writing what it already said.
   //
-  // Validation happens BY planning, and the plan is then discarded. The
-  // alternative -- a validate-only preflight -- would need a second copy
-  // of the refusal logic, because the owned-contribution walk decides
-  // refusals and builds edits in the same pass. Two copies of a refusal
-  // rule drift, and a rule that drifts is how a surgery starts accepting
-  // what it documents as refused. The cost bought here is one run's
-  // contributions, not the document's.
+  // The surgery runs in VALIDATE-ONLY mode for a self-replacement: the
+  // same walk, the same refusals, no byte edits built and no sort. That
+  // keeps the refusal rules in ONE copy -- a second, validation-shaped
+  // copy of them would drift, and a drifting refusal rule is how a
+  // surgery starts accepting what it documents as refused.
+  let self_replacement = text == expect
   let edits = plan_whole_run_replacement(
-    projection, bytes, paragraph_index, run_index, text,
+    projection,
+    bytes,
+    paragraph_index,
+    run_index,
+    text,
+    validate_only=self_replacement,
   )
-  // Replacing text with itself plans NOTHING: re-encoding could still
+  // Replacing text with itself EDITS nothing: re-encoding could still
   // change bytes (entities re-escape), so the only honest no-op is an
   // empty plan -- after the address, the expectation, and the run's own
   // writability have all been established.
-  if text == expect {
+  if self_replacement {
     let noop = @splice.SplicePlan::new()
     noop.pin_part(part, bytes)
     return (

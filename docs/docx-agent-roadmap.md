@@ -1160,11 +1160,12 @@ Closed alongside them, because a refusal that a no-op can bypass is not
 a refusal: `plan_run_text_replacement` returned an empty pinned plan as
 soon as `text == expect`, BEFORE calling the surgery, so a caller who
 wrote a run's own text back received a success receipt for a run the
-surgery would have refused. The surgery now runs first and its plan is
-discarded on a no-op: N0c2 suppresses byte planning by PHASE, while N0c1
-validates BY planning, because its owned-contribution walk decides
-refusals and builds edits in one pass. A validate-only preflight would
-need a second copy of the refusal logic, and two copies drift.
+surgery would have refused. The surgery now runs first, in a
+VALIDATE-ONLY mode for a self-replacement: the same walk and the same
+refusals, with the byte edits withheld and no sort. The refusal rules
+stay in one copy, which a separate validation-shaped preflight would not
+have managed -- and a drifting refusal rule is how a surgery starts
+accepting what it documents as refused.
 The Phase-3-wide five-class inventory classifies complex-field cached
 results, boundary-crossing hyperlink interiors, `w:ins` content,
 non-checkbox `w:sdt` content, `mc:Fallback` content, and textbox

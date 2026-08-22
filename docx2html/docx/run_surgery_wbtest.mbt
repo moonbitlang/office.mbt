@@ -845,9 +845,6 @@ test "whole-run replacement refuses visible non-text content" {
 }
 
 ///|
-/// A suppressed site is a classified nothing, not a barrier: the reader
-/// decided it contributes no content, so replacing the run's text
-/// neither needs nor may touch its bytes.
 /// Criterion (d): a run OWNING suppressed content refuses.
 ///
 /// Suppressed means "projects no text", not "is not content". This run
@@ -1075,4 +1072,72 @@ test "a checkbox-consumed flow run no longer shifts addresses" {
   let edits = plan_whole_run_replacement(projection, bytes, 1, 0, "EDITED")
   let spliced = @utf8.decode(apply_run_surgery_edits(bytes, edits))
   assert_eq(current_reader_story_text(spliced), "\t\n\nEDITED\n\n")
+}
+
+///|
+/// Validate-only is the SAME walk with the byte edits withheld.
+///
+/// The mode exists so a self-replacement can establish a run's
+/// writability without building a plan to discard. It would be worthless
+/// if it also withheld a refusal, and worse than worthless if it were a
+/// second, differently-worded copy of the refusal rules.
+test "validate-only withholds edits without withholding refusals" {
+  let writable =
+    #|<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:body><w:p><w:r><w:t>ab</w:t></w:r></w:p></w:body></w:document>
+  let writable_bytes = @utf8.encode(writable)
+  let writable_projection = surgery_native_projection(writable)
+  // The same run, both ways: planning emits, validating does not.
+  let planned = plan_whole_run_replacement(
+    writable_projection, writable_bytes, 0, 0, "cd",
+  )
+  assert_true(planned.length() > 0)
+  let validated = plan_whole_run_replacement(
+    writable_projection,
+    writable_bytes,
+    0,
+    0,
+    "cd",
+    validate_only=true,
+  )
+  assert_eq(validated.length(), 0)
+  // Every refusal this rung adds still fires in validate-only mode.
+  let suppressed =
+    #|<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:body><w:p><w:r><w:footnoteRef/><w:t>old</w:t></w:r></w:p></w:body></w:document>
+  let joined =
+    #|<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:body><w:p><w:pPr><w:rPr><w:del/></w:rPr></w:pPr><w:r><w:t>first</w:t></w:r></w:p><w:p><w:r><w:t>second</w:t></w:r></w:p></w:body></w:document>
+  for
+    probe in [
+      (suppressed, 0, "suppressed content"),
+      (joined, 1, "physical paragraphs"),
+    ] {
+    let (document, run, expected) = probe
+    let bytes = @utf8.encode(document)
+    let projection = surgery_native_projection(document)
+    let mut refusal = ""
+    try
+      ignore(
+        plan_whole_run_replacement(
+          projection,
+          bytes,
+          0,
+          run,
+          "new",
+          validate_only=true,
+        ),
+      )
+    catch {
+      Unsupported(message~) => refusal = message
+      _ => ()
+    } noraise {
+      _ => ()
+    }
+    assert_true(
+      refusal.contains(expected),
+      msg="validate-only lost the '" +
+        expected +
+        "' refusal, got '" +
+        refusal +
+        "'",
+    )
+  }
 }

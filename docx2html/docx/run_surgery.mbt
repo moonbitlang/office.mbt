@@ -128,6 +128,12 @@ fn plan_whole_run_replacement(
   paragraph_index : Int,
   run_index : Int,
   text : String,
+  // Every refusal below still runs; only the BYTE EDITS are withheld.
+  // A caller replacing a run's text with itself needs the run's
+  // writability established and the plan discarded, and building a plan
+  // to throw away costs the edit array and its sort. The refusal rules
+  // stay in one copy because this is the same walk, not a second one.
+  validate_only? : Bool = false,
 ) -> Array[RunSurgeryEdit] raise DocxError {
   guard paragraph_index >= 0 && paragraph_index < projection.paragraphs.length() else {
     raise Unsupported(
@@ -224,6 +230,9 @@ fn plan_whole_run_replacement(
   }
   let escaped = run_surgery_escape(text)
   let edits : Array[RunSurgeryEdit] = []
+  // The one place the mode is observed. Refusals are raised by the walk
+  // itself, so withholding an edit cannot withhold a refusal.
+  let emit = edit => if !validate_only { edits.push(edit) }
   let texts : Array[ScannedElement] = []
   let removals : Array[ScannedElement] = []
   // The same physical bytes must not be planned twice: two contributions
@@ -336,7 +345,7 @@ fn plan_whole_run_replacement(
               run_surgery_space_declaration_is_preserve(source, (from, to)) {
               Some(true) => ()
               Some(false) =>
-                edits.push({
+                emit({
                   byte_start: from,
                   byte_end: to,
                   replacement: "xml:space=\"preserve\"",
@@ -356,20 +365,20 @@ fn plan_whole_run_replacement(
         // `<w:t/>` has no content range to write into -- the scanner puts it at
         // the element's end -- so the self-closing marker becomes a body. Only
         // the `/>` is rewritten, which keeps any attributes already there.
-        edits.push({
+        emit({
           byte_start: first.byte_end - 2,
           byte_end: first.byte_end,
           replacement: "\{attribute}>\{escaped}</\{text_prefix}t>",
         })
       } else {
         if add_space {
-          edits.push({
+          emit({
             byte_start: first.content_start - 1,
             byte_end: first.content_start - 1,
             replacement: attribute,
           })
         }
-        edits.push({
+        emit({
           byte_start: first.content_start,
           byte_end: first.content_end,
           replacement: escaped,
@@ -378,7 +387,7 @@ fn plan_whole_run_replacement(
       for later in rest {
         // A self-closing `w:t` already contributes nothing.
         if !run_surgery_is_self_closing(later) {
-          edits.push({
+          emit({
             byte_start: later.content_start,
             byte_end: later.content_end,
             replacement: "",
@@ -406,7 +415,7 @@ fn plan_whole_run_replacement(
           (at, at)
         }
       }
-      edits.push(
+      emit(
         run_surgery_synthesise_text(
           run_element,
           prefix,
@@ -422,13 +431,15 @@ fn plan_whole_run_replacement(
     }
   }
   for element in removals {
-    edits.push({
+    emit({
       byte_start: element.byte_start,
       byte_end: element.byte_end,
       replacement: "",
     })
   }
-  edits.sort_by_key(edit => edit.byte_start)
+  if !validate_only {
+    edits.sort_by_key(edit => edit.byte_start)
+  }
   edits
 }
 
