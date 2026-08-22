@@ -1082,9 +1082,9 @@ test "a checkbox-consumed flow run no longer shifts addresses" {
 /// if it also withheld a refusal, and worse than worthless if it were a
 /// second, differently-worded copy of the refusal rules.
 ///
-/// What this pins is the OBSERVABLE contract: no edits out, and the
-/// refusals this rung adds -- owned suppression and multi-physical
-/// paragraphs -- plus the replacement-text refusals, all still raised.
+/// What this pins is the OBSERVABLE contract: no edits out, and three
+/// refusals still raised -- owned suppression, multi-physical
+/// paragraphs, and the control-character check on the replacement.
 /// That the edit RECORDS are never constructed is structural rather
 /// than tested: `emit` takes a thunk, so a strict language cannot build
 /// one before the flag is read, and an allocation this code does not
@@ -1148,9 +1148,12 @@ test "validate-only withholds edits without withholding refusals" {
         "'",
     )
   }
-  // Escaping is the one construction the mode deliberately does NOT
-  // skip, because it is where the replacement's own validity is decided.
-  // Deferring it would trade a refusal for an allocation.
+  // Escaping is deliberately NOT skipped, because it is where the
+  // replacement's own validity is decided: deferring it would trade a
+  // refusal for an allocation. Other cheap preparation -- a run's
+  // qualified prefix, a synthesis anchor -- also stays eager, but only
+  // because moving it would buy little; neither raises, so either could
+  // be deferred without losing a refusal.
   let mut escaped_refusal = ""
   try
     ignore(
