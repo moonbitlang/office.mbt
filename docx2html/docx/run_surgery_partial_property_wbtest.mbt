@@ -1057,20 +1057,32 @@ test "generated documents compose partial edits over every boundary pair" {
   // them (see the probe recorded in the PR); a collapse fails here.
   let planned_pairs = pairs.size()
   let refusal_classes = refusals.size()
-  // Measured on this corpus: 971 batches planned across 16 distinct
-  // ordered pairs, with refusal classes MultiPhysicalParagraph 264,
-  // AmbiguousBoundary 17, NoSynthesisCarrier 11, PartialCheckboxControl
-  // 10. Floors sit under those so generator drift does not break the
-  // build, while a collapse to trivial batches — or to a corpus where
-  // everything refuses — fails here.
+  // Measured on this corpus: 695 batches planned across 16 distinct
+  // ordered pairs, with refusal classes RestrictedRegion 280,
+  // MultiPhysicalParagraph 264, NoSynthesisCarrier 42,
+  // AmbiguousBoundary 15. Floors sit under those so generator drift does
+  // not break the build, while a collapse to trivial batches — or to a
+  // corpus where everything refuses — fails here.
+  //
+  // Planning fell from 971 when criterion (d) closed: the grammar builds
+  // `w:sdt` and `mc:AlternateContent` documents, and every batch inside
+  // one is now a RestrictedRegion refusal. The count of DISTINCT ordered
+  // pairs did not move, so what was lost is volume, not reach.
   assert_true(planned >= 300, msg="only \{planned} batches planned")
   assert_true(
     planned_pairs >= 16,
     msg="only \{planned_pairs} distinct ordered pairs planned",
   )
   assert_true(
-    refusal_classes >= 3,
+    refusal_classes >= 4,
     msg="only \{refusal_classes} refusal classes exercised",
+  )
+  // Criterion (d)'s own evidence in this family: the grammar's `w:sdt`
+  // and `mc:AlternateContent` documents must actually REACH the
+  // restricted refusal, not merely fail to plan for some other reason.
+  assert_true(
+    refusals.get("RestrictedRegion").unwrap_or(0) >= 100,
+    msg="only \{refusals.get("RestrictedRegion").unwrap_or(0)} restricted refusals",
   )
   let seen = (pair : String) => pairs.get(pair).unwrap_or(0)
   // Ordered pairs a marginal endpoint histogram cannot distinguish: the
@@ -1080,8 +1092,18 @@ test "generated documents compose partial edits over every boundary pair" {
   assert_true(seen("replace:raw-edge>raw-edge") >= 50)
   assert_true(seen("insert:raw-edge>raw-edge") >= 100)
   assert_true(seen("delete:raw-edge>raw-edge") >= 20)
-  assert_true(seen("replace:raw-edge>raw-interior") >= 8)
-  assert_true(seen("replace:raw-interior>raw-edge") >= 5)
+  // The MIXED pairs are the rarest here, and criterion (d) took most of
+  // them: the documents that used to supply them were `w:sdt` and
+  // `mc:AlternateContent` shapes that now refuse. 6 and 4 remain, so the
+  // grammar still reaches them, and the floors sit under that.
+  //
+  // The proof of these two pairs no longer rests on this family. The
+  // lexical corpus enumerates EXHAUSTIVELY and pins the same keys at
+  // exactly 86 and 79 in `partial_expected_pair_counts`, in both
+  // directions — a stronger statement than any floor, and one no
+  // restricted region can erode, because those fixtures have none.
+  assert_true(seen("replace:raw-edge>raw-interior") >= 4)
+  assert_true(seen("replace:raw-interior>raw-edge") >= 3)
   assert_true(seen("replace:atom-start-edge>atom-end-edge") >= 5)
   assert_true(seen("delete:atom-start-edge>atom-end-edge") >= 3)
   assert_true(seen("insert:atom-start-edge>atom-start-edge") >= 5)

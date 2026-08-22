@@ -38,12 +38,10 @@ priv enum PartialSurgeryRefusal {
   CDataContext
   VisibleBarrier
   SuppressedRegion
-  // Declared and rendered, NOT yet raised. The N0 gate's criterion (d)
-  // requires projecting-restricted regions (complex-field results,
-  // boundary-crossing hyperlink interiors, w:ins, non-checkbox w:sdt,
-  // mc:Fallback, textbox paragraphs) to fail closed here, and closing it
-  // is the gate's outstanding work — recorded in the roadmap's N0 gate
-  // status, together with the N0c1 gaps it has to close alongside.
+  // Projecting-restricted regions: text that MATCHES but must not be
+  // MUTATED. Complex-field cached results, `w:ins`, `w:sdt`,
+  // `mc:Fallback` and textbox content refuse by ancestry or region;
+  // hyperlinks refuse only when an edit CROSSES a boundary.
   RestrictedRegion
   PartialFieldInstruction
   PartialMalformedField
@@ -73,7 +71,10 @@ fn partial_surgery_refusal_reason(kind : PartialSurgeryRefusal) -> String {
     CDataContext => "the addressed text draws from a CDATA section"
     VisibleBarrier => "the edit range crosses visible non-text content"
     SuppressedRegion => "the edit range crosses suppressed content"
-    RestrictedRegion => "the edit range crosses a restricted region"
+    // "touches", not "crosses": a wholly INTERIOR edit in a tracked
+    // insertion, a content control, a fallback branch or a textbox
+    // refuses just as an edge-crossing one does.
+    RestrictedRegion => "the edit range touches a restricted region"
     PartialFieldInstruction =>
       "the addressed text carries field instruction machinery"
     PartialMalformedField => "the addressed text sits in a malformed field"
@@ -296,6 +297,15 @@ fn plan_paragraph_text_edits(
         "edit \{ordinal} in paragraph \{paragraph_index}",
       )
     }
+    // AFTER the classifier's refusal, matching N0c1: a refused field's
+    // boundaries are unreliable, which outranks "the next recalculation
+    // discards this", and a truncated field's result run carries both.
+    if run.field_region is FieldResult {
+      raise partial_surgery_refuse(
+        RestrictedRegion,
+        "edit \{ordinal} in paragraph \{paragraph_index}",
+      )
+    }
   }
 
   fn require_supported_contribution(
@@ -311,6 +321,11 @@ fn plan_paragraph_text_edits(
       MalformedField =>
         raise partial_surgery_refuse(
           PartialMalformedField,
+          "edit \{ordinal} in paragraph \{paragraph_index}",
+        )
+      FieldResult =>
+        raise partial_surgery_refuse(
+          RestrictedRegion,
           "edit \{ordinal} in paragraph \{paragraph_index}",
         )
       _ => ()
@@ -368,6 +383,16 @@ fn plan_paragraph_text_edits(
     if run_surgery_inside_checkbox_control(elements, element) {
       raise partial_surgery_refuse(
         PartialCheckboxControl,
+        "edit \{ordinal} in paragraph \{paragraph_index}",
+      )
+    }
+    // After the checkbox case, so the more specific refusal keeps
+    // precedence over the general one. This covers text hosts, atoms,
+    // validated no-ops and atomless-run synthesis alike, because every
+    // one of them arrives here by identity.
+    if run_surgery_restricted_ancestor(elements, element) is Some(_) {
+      raise partial_surgery_refuse(
+        RestrictedRegion,
         "edit \{ordinal} in paragraph \{paragraph_index}",
       )
     }

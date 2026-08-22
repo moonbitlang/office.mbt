@@ -486,13 +486,15 @@ test "partial: field instruction refuses, field result is editable" {
     [partial_edit(0, 1, "x")],
     refusal="PartialFieldInstruction",
   )
-  // The result run's text (`7`, projected after the instruction) is fair
-  // game, exactly as in whole-run surgery.
-  assert_partial_edits(
+  // Criterion (d): the result run's text (`7`, projected after the
+  // instruction) refuses too. The reader projects the CACHED value, so a
+  // caller's read-back would confirm an edit that the next
+  // recalculation discards.
+  assert_partial_refusal(
     instruction_body,
     paragraph=0,
     [partial_edit(4, 5, "9")],
-    expected="PAGE9",
+    refusal="RestrictedRegion",
   )
 }
 
@@ -1059,25 +1061,36 @@ test "partial: crossing into a hyperlink preserves the wrapper" {
 }
 
 ///|
-test "partial: crossing into a tracked insertion preserves the wrapper" {
+test "partial: an edit reaching a tracked insertion refuses" {
+  // The old behaviour edited THROUGH the wrapper, preserving it. That
+  // preserved the markup and falsified the record: the document would
+  // then say Ada inserted words Ada never wrote, and accepting the
+  // revision later bakes that in. This is not lost text or divergent
+  // text -- it is misattributed text, which is why it refuses rather
+  // than being handled more carefully.
   let body = "<w:p><w:r><w:t>ab</w:t></w:r><w:ins w:id=\"9\" w:author=\"Ada\" w:date=\"2001-01-01T00:00:00Z\"><w:r><w:t>cd</w:t></w:r></w:ins></w:p>"
-  assert_partial_edits(
+  // Crossing in from outside...
+  assert_partial_refusal(
     body,
     paragraph=0,
     [partial_edit(1, 3, "X")],
-    expected="aXd",
+    refusal="RestrictedRegion",
   )
-  let source = "<w:document xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\" xmlns:v=\"urn:schemas-microsoft-com:vml\"><w:body>\{body}</w:body></w:document>"
-  let bytes = @utf8.encode(source)
-  let projection = surgery_native_projection(source)
-  let (byte_edits, _) = plan_paragraph_text_edits(projection, bytes[:], 0, [
-    partial_edit(1, 3, "X"),
-  ])
-  let spliced = @utf8.decode(apply_run_surgery_edits(bytes, byte_edits))
-  assert_true(
-    spliced.contains(
-      "<w:t>aX</w:t></w:r><w:ins w:id=\"9\" w:author=\"Ada\" w:date=\"2001-01-01T00:00:00Z\"><w:r><w:t>d</w:t></w:r></w:ins>",
-    ),
+  // ...and wholly inside, which is why the class reads "touches" rather
+  // than "crosses".
+  assert_partial_refusal(
+    body,
+    paragraph=0,
+    [partial_edit(2, 4, "X")],
+    refusal="RestrictedRegion",
+  )
+  // The same paragraph WITHOUT the insertion still edits, so the refusal
+  // is the wrapper's doing and not the geometry's.
+  assert_partial_edits(
+    "<w:p><w:r><w:t>ab</w:t></w:r><w:r><w:t>cd</w:t></w:r></w:p>",
+    paragraph=0,
+    [partial_edit(1, 3, "X")],
+    expected="aXd",
   )
 }
 
