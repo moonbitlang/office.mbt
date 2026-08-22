@@ -1019,9 +1019,11 @@ L0: pub surface only what N1/N2 need.
 
 Criteria (a)-(c) are met and dispositioned below. Criterion (d) is NOT:
 its refusal trials name **restricted regions**, and the surgery
-primitives do not refuse them. Recording GO now would bless a gap, so
-the verdict waits for the rung that closes it (see the outstanding item
-after the dispositions).
+primitives do not refuse them. Its other two families — multi-physical
+logical paragraphs and suppressed regions — are now closed in both
+primitives. Recording GO now would still bless a gap, so the verdict
+waits for the rung that closes restricted regions (see the outstanding
+item after the dispositions).
 
 N0 landed as the exact lexical map (N0a, PR #224), the bounded physical
 source-tree identity (N0b1, PR #235), the projection index and its logical
@@ -1138,15 +1140,29 @@ paragraphs. N0c2 refuses suppressed crossings and multi-physical
 paragraphs already; N0c1 does not, and it is the one the public surface
 reaches.
 
-1. *Multi-physical logical paragraphs.* The locked rule above says every
-   mutation over a logical paragraph spanning several physical `w:p`
-   nodes must refuse. `plan_whole_run_replacement` accepts one, and its
-   oracle pins the acceptance (`whole-run replacement handles a
-   paragraph joined from two sources`). That pin has to invert.
-2. *Suppressed regions.* N0c1 blanket-ignores owned `SuppressedContent`
-   rather than refusing over it, so a whole-run replacement can span
-   genuine suppressed shapes (`w:del` among them).
-3. *Restricted regions.* Detailed below.
+1. *Multi-physical logical paragraphs.* CLOSED. `plan_whole_run_replacement`
+   now refuses a logical paragraph whose `sources` number more than one,
+   and the acceptance pin has inverted into a refusal trial.
+2. *Suppressed regions.* CLOSED. A run OWNING a `SuppressedContent`
+   contribution now refuses. The run-level suppressed set is wider than
+   `w:del`: `w:pict`, a `w:sym` whose character the reader could not
+   map, `w:footnoteRef`/`w:endnoteRef`, `w:txbxContent`, and every
+   element the reader did not recognise (which it suppresses with a
+   warning). Suppressed means *projects no text*, not *is not content*,
+   and writing the run's text while leaving those bytes reproduces the
+   checkbox-control failure: the caller's text appears AND content they
+   never saw survives. Ownership scopes it — a whole `w:del` is
+   suppressed before the walk reaches the run inside it, so that run is
+   never registered and its contribution carries no `run_source`, which
+   keeps a run beside a deleted sibling editable.
+3. *Restricted regions.* OUTSTANDING. Detailed below.
+
+Closed alongside them, because a refusal that a no-op can bypass is not
+a refusal: `plan_run_text_replacement` returned an empty pinned plan as
+soon as `text == expect`, BEFORE calling the surgery, so a caller who
+wrote a run's own text back received a success receipt for a run the
+surgery would have refused. Planning now runs first — a no-op suppresses
+byte PLANNING, never VALIDATION, which is the rule N0c2 already states.
 The Phase-3-wide five-class inventory classifies complex-field cached
 results, boundary-crossing hyperlink interiors, `w:ins` content,
 non-checkbox `w:sdt` content, `mc:Fallback` content, and textbox
