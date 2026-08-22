@@ -1000,6 +1000,17 @@ fn plan_paragraph_text_edits(
           placement: InsideText,
         })
       } else {
+        // The atom's WHOLE span is replaced, children and all. The
+        // reader reached it without walking inside, so a nested
+        // construct is invisible to both the projection and the
+        // ancestor checks -- and replacing the span would delete it
+        // silently.
+        if run_surgery_consumed_span_has_children(elements, atom_element) {
+          raise partial_surgery_refuse(
+            UnsupportedTextSource,
+            "edit \{ordinal} in paragraph \{paragraph_index}",
+          )
+        }
         syntheses.push(
           (
             run_identity,

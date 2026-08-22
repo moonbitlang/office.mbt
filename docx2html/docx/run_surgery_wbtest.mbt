@@ -1325,3 +1325,56 @@ test "whole-run replacement refuses every restricted construct" {
     msg="expected a hyperlink-boundary refusal, got '" + nested_refusal + "'",
   )
 }
+
+///|
+/// Restricted content NESTED INSIDE a consumed atom.
+///
+/// This is the shape both ancestor checks are blind to, and the third
+/// time an assumption of mine about what can reach a surgery turned out
+/// false. The reader recognises `w:tab` WITHOUT walking its children, so
+///
+///   <w:r><w:tab><w:ins><w:r><w:t>cd</w:t></w:r></w:ins></w:tab></w:r>
+///
+/// joins as one run projecting only a tab. The single contribution is
+/// sourced at the outer `w:tab`, so no ancestor walk sees the `w:ins` --
+/// it is a DESCENDANT of the consumed element. Replacing the run
+/// removes the atom by its whole span and deletes the insertion.
+///
+/// The guard does not look for restricted NAMES inside the atom. Every
+/// name enumeration written for this gate has missed a shape; this one
+/// asks whether the element is the leaf the reader modelled, and refuses
+/// when the model and the bytes disagree.
+test "whole-run replacement refuses an atom carrying nested markup" {
+  let nested = "<w:p><w:r><w:tab><w:ins w:id=\"9\" w:author=\"Ada\" w:date=\"2001-01-01T00:00:00Z\"><w:r><w:t>cd</w:t></w:r></w:ins></w:tab><w:t>ab</w:t></w:r></w:p>"
+  let source = "<w:document xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\" xmlns:v=\"urn:schemas-microsoft-com:vml\"><w:body>\{nested}</w:body></w:document>"
+  let bytes = @utf8.encode(source)
+  let projection = surgery_native_projection(source)
+  // The premise: ONE run, and the nested insertion projects nothing --
+  // so nothing in the projection could have reported it.
+  assert_eq(projection.paragraphs[0].runs.length(), 1)
+  let mut projected = ""
+  for contribution in projection.paragraphs[0].contributions {
+    projected = projected + contribution.value
+  }
+  assert_false(projected.contains("cd"))
+  let mut refusal = ""
+  try ignore(plan_whole_run_replacement(projection, bytes, 0, 0, "X")) catch {
+    Unsupported(message~) => refusal = message
+    _ => ()
+  } noraise {
+    _ => ()
+  }
+  assert_true(
+    refusal.contains("nested markup"),
+    msg="expected a nested-markup refusal, got '" + refusal + "'",
+  )
+  // An ordinary EMPTY atom is untouched by the guard, so it has not
+  // simply refused every run holding a tab.
+  assert_whole_run_replacement(
+    "<w:p><w:r><w:tab/><w:t>ab</w:t></w:r></w:p>",
+    paragraph=0,
+    run=0,
+    "X",
+    expected="X\n\n",
+  )
+}

@@ -1591,3 +1591,37 @@ test "partial: every restricted construct refuses" {
     expected="Xb",
   )
 }
+
+///|
+/// The partial half of the nested-atom blind spot.
+///
+/// Replacing the atom's projection replaces its WHOLE element span, so
+/// the same nested insertion disappears. The ancestor checks cannot see
+/// it: it is a descendant of the consumed element, not an ancestor.
+test "partial: an atom carrying nested markup refuses" {
+  let nested = "<w:p><w:r><w:tab><w:ins w:id=\"9\" w:author=\"Ada\" w:date=\"2001-01-01T00:00:00Z\"><w:r><w:t>cd</w:t></w:r></w:ins></w:tab><w:t>ab</w:t></w:r></w:p>"
+  let source = "<w:document xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\" xmlns:v=\"urn:schemas-microsoft-com:vml\"><w:body>\{nested}</w:body></w:document>"
+  let projection = surgery_native_projection(source)
+  // The premise: the nested insertion projects nothing, so nothing in
+  // the projection could have reported it.
+  let mut projected = ""
+  for contribution in projection.paragraphs[0].contributions {
+    projected = projected + contribution.value
+  }
+  assert_false(projected.contains("cd"))
+  // Replacing the atom's own position consumes its whole span.
+  assert_partial_refusal(
+    nested,
+    paragraph=0,
+    [partial_edit(0, 1, "X")],
+    refusal="UnsupportedTextSource",
+  )
+  // An ordinary EMPTY atom still replaces, so the guard has not simply
+  // refused every edit over a tab.
+  assert_partial_edits(
+    "<w:p><w:r><w:tab/><w:t>ab</w:t></w:r></w:p>",
+    paragraph=0,
+    [partial_edit(0, 1, "X")],
+    expected="Xab",
+  )
+}

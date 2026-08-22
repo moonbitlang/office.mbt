@@ -513,6 +513,14 @@ fn plan_whole_run_replacement(
     }
   }
   for element in removals {
+    // The whole span goes, children and all. The reader modelled these
+    // as leaves; if one is not, removing it deletes content nothing
+    // reported and the caller never saw.
+    if run_surgery_consumed_span_has_children(elements, element) {
+      raise Unsupported(
+        message="run \{run_index} in paragraph \{paragraph_index} contains a \{element.local_name} carrying nested markup the reader does not model",
+      )
+    }
     emit(() => {
       byte_start: element.byte_start,
       byte_end: element.byte_end,
@@ -739,6 +747,32 @@ fn run_surgery_space_declaration(
 }
 
 ///|
+/// Whether an element the reader modelled as a LEAF actually has element
+/// children.
+///
+/// Both surgeries consume some elements by their whole span: an atom
+/// being replaced, a `w:t` being emptied, a removal. The reader reaches
+/// `w:tab` and its siblings WITHOUT walking their children, so a
+/// well-formed
+/// `<w:tab><w:ins><w:r><w:t>cd</w:t></w:r></w:ins></w:tab>`
+/// projects a single `\t` and nothing reports the insertion inside it.
+/// An ancestor walk cannot see it either -- it is a DESCENDANT of the
+/// consumed element, not an ancestor of it.
+///
+/// So the check is not "does this contain a restricted name". Every
+/// enumeration of names I have written for this gate has turned out to
+/// miss a shape. The reader modelled this element as having no element
+/// children; if it has some, the model and the bytes disagree and the
+/// surgery cannot say what removing them costs.
+fn run_surgery_consumed_span_has_children(
+  elements : Array[ScannedElement],
+  element : ScannedElement,
+) -> Bool {
+  element.first_child_index >= 0 &&
+  element.first_child_index < elements.length()
+}
+
+///|
 /// The identity of the nearest enclosing `w:hyperlink`, if any.
 ///
 /// A hyperlink is restricted only at its BOUNDARY. Text inside one is
@@ -779,8 +813,13 @@ priv enum RestrictedConstruct {
 } derive(Show)
 
 ///|
-/// The user-facing name of a restricted construct. One renderer, so the
-/// two surgeries cannot describe the same construct differently.
+/// The user-facing name of a restricted construct.
+///
+/// One renderer, so a construct is named the same way wherever it IS
+/// named. The two surgeries do not report alike: N0c1 names the
+/// construct in its message, while N0c2 reports its stable class,
+/// `RestrictedRegion`, because that taxonomy is what its callers match
+/// on.
 fn run_surgery_restricted_name(construct : RestrictedConstruct) -> String {
   // Each names the ELEMENT alongside the English, so a caller can go
   // look at the markup rather than guess which construct was meant.

@@ -1152,10 +1152,14 @@ the generated boundary-pair proof (PR #474). Criteria disposition:
   the same pushed commit. The gate verdict itself is NOT recorded by
   those approvals — it waits for criterion (d).
 
-**Criterion (d) refusal trials — CLOSED.** Criterion (d) names THREE
-families the primitives must fail closed on: restricted regions,
-suppressed regions, and multi-physical logical paragraphs. All three
-are now closed in BOTH primitives, which is what allows the GO above.
+**Criterion (d) refusal trials — CLOSED.** The criterion names six
+families: CDATA contexts, non-scalar boundaries, barrier-spanning
+candidates, restricted and suppressed regions, multi-physical `w:p`
+logical paragraphs, and malformed field states. The first three and the
+last were closed by earlier rungs and have had refusal trials since;
+the three that remained open into this rung — restricted regions,
+suppressed regions, and multi-physical paragraphs — are now closed in
+BOTH primitives, which is what allows the GO above.
 
 1. *Multi-physical logical paragraphs.* CLOSED. `plan_whole_run_replacement`
    now refuses a logical paragraph whose `sources` number more than one,
