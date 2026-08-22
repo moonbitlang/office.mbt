@@ -447,6 +447,38 @@ fn plan_paragraph_text_edits(
         }
       }
     }
+    // Hyperlink boundaries. A CONSUMING edit must sit entirely inside
+    // one hyperlink or entirely outside every hyperlink; spanning the
+    // edge would drag unlinked text into the link or leave linked text
+    // outside it, because the replacement lands at a single carrier.
+    //
+    // Checked AFTER the barrier pass above, so a range that crosses
+    // suppressed or visible content still reports THAT rather than this.
+    // An insertion has one position and cannot span an edge, so it is
+    // not considered here; its carrier resolution already decides where
+    // a boundary position belongs.
+    if edit.start < edit.end {
+      let mut anchor : Int?? = None
+      for part in parts {
+        if part.local_start < edit.end && part.local_end > edit.start {
+          let SourceElementId(identity) = part.contribution.source
+          let link = run_surgery_hyperlink_ancestor(
+            elements,
+            elements[identity],
+          )
+          match anchor {
+            None => anchor = Some(link)
+            Some(first) =>
+              if first != link {
+                raise partial_surgery_refuse(
+                  RestrictedRegion,
+                  "edit \{ordinal} in paragraph \{paragraph_index}",
+                )
+              }
+          }
+        }
+      }
+    }
     // Duplicate projection: any element projected twice cannot be edited.
     for part in parts {
       if part.local_start < edit.end && part.local_end > edit.start {

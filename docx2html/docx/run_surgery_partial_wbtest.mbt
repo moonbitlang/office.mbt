@@ -1035,28 +1035,53 @@ test "partial: cross-run xml:space lands only on the start host" {
 }
 
 ///|
-test "partial: crossing into a hyperlink preserves the wrapper" {
-  // The hyperlink is a flattened transparent wrapper: a range crossing
-  // into it trims its run's text while the wrapper element, its
-  // attributes, and its run shell survive byte-identical.
+test "partial: an edit crossing a hyperlink boundary refuses" {
+  // Unlike a tracked insertion or a content control, a hyperlink is
+  // restricted only at its EDGE. Text inside one is ordinary editable
+  // text, and so is text outside; what cannot work is a range spanning
+  // the edge, because the replacement lands at a single carrier and
+  // would drag unlinked text into the link or leave linked text out.
   let body = "<w:p><w:r><w:t>ab</w:t></w:r><w:hyperlink r:id=\"rId9\" xmlns:r=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships\"><w:r><w:t>cd</w:t></w:r></w:hyperlink></w:p>"
-  assert_partial_edits(
+  // Outside -> inside.
+  assert_partial_refusal(
     body,
     paragraph=0,
     [partial_edit(1, 3, "X")],
-    expected="aXd",
+    refusal="RestrictedRegion",
   )
-  let source = "<w:document xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\" xmlns:v=\"urn:schemas-microsoft-com:vml\"><w:body>\{body}</w:body></w:document>"
-  let bytes = @utf8.encode(source)
-  let projection = surgery_native_projection(source)
-  let (byte_edits, _) = plan_paragraph_text_edits(projection, bytes[:], 0, [
-    partial_edit(1, 3, "X"),
-  ])
-  let spliced = @utf8.decode(apply_run_surgery_edits(bytes, byte_edits))
-  assert_true(
-    spliced.contains(
-      "<w:t>aX</w:t></w:r><w:hyperlink r:id=\"rId9\" xmlns:r=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships\"><w:r><w:t>d</w:t></w:r></w:hyperlink>",
-    ),
+  // Wholly INSIDE the link still edits. A name check on the ancestry
+  // would have refused this, which is why the rule compares identities.
+  assert_partial_edits(
+    body,
+    paragraph=0,
+    [partial_edit(2, 4, "X")],
+    expected="abX",
+  )
+  // Wholly OUTSIDE still edits too.
+  assert_partial_edits(
+    body,
+    paragraph=0,
+    [partial_edit(0, 2, "Y")],
+    expected="Ycd",
+  )
+  // Inside -> outside, the direction a zero-width-contribution check
+  // would miss: the reader emits a hyperlink's opening boundary but no
+  // closing one, so only an exit crossing exposes that mistake.
+  let trailing = "<w:p><w:hyperlink r:id=\"rId9\" xmlns:r=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships\"><w:r><w:t>ab</w:t></w:r></w:hyperlink><w:r><w:t>cd</w:t></w:r></w:p>"
+  assert_partial_refusal(
+    trailing,
+    paragraph=0,
+    [partial_edit(1, 3, "X")],
+    refusal="RestrictedRegion",
+  )
+  // And link -> DIFFERENT link, which shares "inside a hyperlink" on
+  // both endpoints and still must refuse.
+  let two = "<w:p><w:hyperlink r:id=\"rId9\" xmlns:r=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships\"><w:r><w:t>ab</w:t></w:r></w:hyperlink><w:hyperlink r:id=\"rId8\" xmlns:r=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships\"><w:r><w:t>cd</w:t></w:r></w:hyperlink></w:p>"
+  assert_partial_refusal(
+    two,
+    paragraph=0,
+    [partial_edit(1, 3, "X")],
+    refusal="RestrictedRegion",
   )
 }
 
@@ -1501,4 +1526,64 @@ test "whole-run replacement leaves a reference-spelled preserve alone" {
   let spliced = @utf8.decode(apply_run_surgery_edits(bytes, edits))
   assert_true(spliced.contains("xml:space=\"pre&#x73;erve\""))
   assert_false(spliced.contains("xml:space=\"preserve\""))
+}
+
+///|
+/// The whole restricted inventory, one paragraph shape per construct.
+///
+/// Each entry is addressable and projects the text named in the comment
+/// -- that is what makes these regions RESTRICTED rather than invisible.
+/// A construct that stopped being reachable would fail the paired
+/// "reaches it" assertion rather than passing quietly as a refusal.
+test "partial: every restricted construct refuses" {
+  let link = "xmlns:r=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships\""
+  let mc = "xmlns:mc=\"http://schemas.openxmlformats.org/markup-compatibility/2006\""
+  for
+    probe in [
+      // A content control that declares no checkbox: the general case,
+      // which the checkbox refusal never covered.
+      (
+        "sdt", "<w:p><w:sdt><w:sdtPr><w:alias w:val=\"Client\"/></w:sdtPr><w:sdtContent><w:r><w:t>ab</w:t></w:r></w:sdtContent></w:sdt></w:p>",
+      ),
+      // Tracked insertion.
+      (
+        "ins", "<w:p><w:ins w:id=\"9\" w:author=\"Ada\" w:date=\"2001-01-01T00:00:00Z\"><w:r><w:t>ab</w:t></w:r></w:ins></w:p>",
+      ),
+      // The branch this reader projects is the one a consumer that
+      // understands the Choice ignores.
+      (
+        "mc:Fallback",
+        "<w:p><mc:AlternateContent \{mc}><mc:Choice Requires=\"wps\"><w:r><w:t>zz</w:t></w:r></mc:Choice><mc:Fallback><w:r><w:t>ab</w:t></w:r></mc:Fallback></mc:AlternateContent></w:p>",
+      ),
+    ] {
+    let (name, body) = probe
+    // It projects the text -- otherwise the refusal below proves nothing.
+    let source = "<w:document xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\" xmlns:v=\"urn:schemas-microsoft-com:vml\"><w:body>\{body}</w:body></w:document>"
+    let projection = surgery_native_projection(source)
+    let mut projected = ""
+    for paragraph in projection.paragraphs {
+      for contribution in paragraph.contributions {
+        projected = projected + contribution.value
+      }
+    }
+    assert_true(
+      projected.contains("ab"),
+      msg=name + " no longer projects its text, so its refusal proves nothing",
+    )
+    assert_partial_refusal(
+      body,
+      paragraph=projection.paragraphs.length() - 1,
+      [partial_edit(0, 1, "X")],
+      refusal="RestrictedRegion",
+    )
+  }
+  // The same shape without any restricted wrapper still edits, so these
+  // refusals are the wrappers' doing and not the geometry's.
+  assert_partial_edits(
+    "<w:p><w:r><w:t>ab</w:t></w:r></w:p>",
+    paragraph=0,
+    [partial_edit(0, 1, "X")],
+    expected="Xb",
+  )
+  ignore(link)
 }

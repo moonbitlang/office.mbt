@@ -238,8 +238,9 @@ fn plan_whole_run_replacement(
   // synthesising into a restricted region is the same mistake as writing
   // over one.
   if run_surgery_restricted_ancestor(elements, run_element) is Some(construct) {
+    let named = run_surgery_restricted_name(construct)
     raise Unsupported(
-      message="run \{run_index} in paragraph \{paragraph_index} sits in \{construct}, which the reader may match but must not rewrite",
+      message="run \{run_index} in paragraph \{paragraph_index} sits in \{named}, which the reader may match but must not rewrite",
     )
   }
   // A physical run that also contributes to another logical paragraph cannot
@@ -303,8 +304,9 @@ fn plan_whole_run_replacement(
     // otherwise ordinary run, so the run slot's own check above is not
     // sufficient.
     if run_surgery_restricted_ancestor(elements, element) is Some(construct) {
+      let named = run_surgery_restricted_name(construct)
       raise Unsupported(
-        message="run \{run_index} in paragraph \{paragraph_index} draws text from \{construct}, which the reader may match but must not rewrite",
+        message="run \{run_index} in paragraph \{paragraph_index} draws text from \{named}, which the reader may match but must not rewrite",
       )
     }
     match contribution.kind {
@@ -708,12 +710,65 @@ fn run_surgery_space_declaration(
 }
 
 ///|
+/// The identity of the nearest enclosing `w:hyperlink`, if any.
+///
+/// A hyperlink is restricted only at its BOUNDARY. Text inside one is
+/// ordinary editable text, and text outside one is too; what must refuse
+/// is an edit that spans the edge, because the replacement lands at a
+/// single carrier and would either drag unlinked text inside the link or
+/// leave linked text outside it.
+///
+/// Comparing nearest-ancestor identities across an edit's contributions
+/// decides that, and does so in both directions. Looking for a
+/// zero-width hyperlink contribution instead would not: the reader emits
+/// an opening boundary but no closing one, so entry crossings would be
+/// caught and exit crossings missed.
+fn run_surgery_hyperlink_ancestor(
+  elements : Array[ScannedElement],
+  element : ScannedElement,
+) -> Int? {
+  let mut at = element.identity
+  while at >= 0 && at < elements.length() {
+    let ancestor = elements[at]
+    if is_wml_uri(ancestor.uri) && ancestor.local_name == "hyperlink" {
+      return Some(at)
+    }
+    at = ancestor.parent_index
+  }
+  None
+}
+
+///|
+/// A projecting-restricted construct: text that MATCHES but must not be
+/// MUTATED. Kept as a type rather than a message so the predicate
+/// dispatches on XML names only, and the prose lives with the renderer.
+priv enum RestrictedConstruct {
+  TrackedInsertion
+  ContentControl
+  TextBoxContent
+  FallbackContent
+} derive(Show)
+
+///|
+/// The user-facing name of a restricted construct. One renderer, so the
+/// two surgeries cannot describe the same construct differently.
+fn run_surgery_restricted_name(construct : RestrictedConstruct) -> String {
+  // Each names the ELEMENT alongside the English, so a caller can go
+  // look at the markup rather than guess which construct was meant.
+  match construct {
+    TrackedInsertion => "a tracked insertion (w:ins)"
+    ContentControl => "a content control (w:sdt)"
+    TextBoxContent => "textbox content (w:txbxContent)"
+    FallbackContent => "fallback content (mc:Fallback)"
+  }
+}
+
+///|
 /// Which restricted construct encloses this element, if any.
 ///
-/// The Phase-3 inventory calls these regions PROJECTING-RESTRICTED: their
-/// text MATCHES, so an agent can find it, but it must not be MUTATED.
 /// Each fails for its own reason, and the surgeries name the construct
-/// rather than a shared "restricted" so a caller learns what they hit.
+/// rather than reporting a shared "restricted", so a caller learns what
+/// they hit.
 ///
 /// Ancestry is walked over the PHYSICAL scan, not the projection. The
 /// reader splices `mc:Fallback` and drops `mc:Choice`, so by projection
@@ -723,25 +778,25 @@ fn run_surgery_space_declaration(
 fn run_surgery_restricted_ancestor(
   elements : Array[ScannedElement],
   element : ScannedElement,
-) -> String? {
+) -> RestrictedConstruct? {
   let mut at = element.identity
   while at >= 0 && at < elements.length() {
     let ancestor = elements[at]
     if is_wml_uri(ancestor.uri) {
       match ancestor.local_name {
-        // Tracked insertion. Writing here does not lose the text; it
-        // reattributes it, so the document records that the insertion's
-        // named author wrote words they never wrote.
-        "ins" => return Some("a tracked insertion")
-        // A content control. A data-bound one is repopulated from the
-        // custom XML part when the document opens, discarding the edit
-        // silently -- and this reader cannot tell a bound one from a
-        // plain one, so the whole construct is refused.
-        "sdt" => return Some("a content control")
-        // Textbox content. The same text is commonly carried twice, once
-        // per AlternateContent branch, so editing the projected copy
-        // leaves the other saying something else.
-        "txbxContent" => return Some("textbox content")
+        // Writing here does not lose the text; it REATTRIBUTES it, so
+        // the document records that the insertion's named author wrote
+        // words they never wrote.
+        "ins" => return Some(TrackedInsertion)
+        // A data-bound control is repopulated from the custom XML part
+        // when the document opens, discarding the edit silently -- and
+        // this reader cannot tell a bound one from a plain one, so the
+        // whole construct is refused.
+        "sdt" => return Some(ContentControl)
+        // The same text is commonly carried twice, once per
+        // AlternateContent branch, so editing the projected copy leaves
+        // the other saying something else.
+        "txbxContent" => return Some(TextBoxContent)
         _ => ()
       }
     }
@@ -749,7 +804,7 @@ fn run_surgery_restricted_ancestor(
     // UNDERSTANDS the Choice will ignore, so an edit here is invisible
     // to modern Word and visible to older consumers.
     if ancestor.uri == MC_NAMESPACE && ancestor.local_name == "Fallback" {
-      return Some("markup-compatibility fallback content")
+      return Some(FallbackContent)
     }
     at = ancestor.parent_index
   }

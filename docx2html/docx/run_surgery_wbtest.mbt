@@ -740,7 +740,7 @@ test "whole-run replacement refuses a run inside a text box" {
     _ => ()
   }
   assert_true(
-    refusal.contains("textbox content"),
+    refusal.contains("textbox content (w:txbxContent)"),
     msg="expected a textbox refusal, got '" + refusal + "'",
   )
 }
@@ -1219,5 +1219,66 @@ test "validate-only withholds edits without withholding refusals" {
     msg="validate-only skipped the replacement-text check, got '" +
       escaped_refusal +
       "'",
+  )
+}
+
+///|
+/// The whole restricted inventory through whole-run surgery, one shape
+/// per construct, each naming the construct it refuses for.
+///
+/// N0c1 names the construct rather than reporting a shared "restricted",
+/// so a caller learns what they hit -- and a message that stopped
+/// distinguishing them would fail here.
+test "whole-run replacement refuses every restricted construct" {
+  let mc = "xmlns:mc=\"http://schemas.openxmlformats.org/markup-compatibility/2006\""
+  for
+    probe in [
+      (
+        "a content control (w:sdt)", "<w:p><w:sdt><w:sdtPr><w:alias w:val=\"Client\"/></w:sdtPr><w:sdtContent><w:r><w:t>ab</w:t></w:r></w:sdtContent></w:sdt></w:p>",
+      ),
+      (
+        "a tracked insertion (w:ins)", "<w:p><w:ins w:id=\"9\" w:author=\"Ada\" w:date=\"2001-01-01T00:00:00Z\"><w:r><w:t>ab</w:t></w:r></w:ins></w:p>",
+      ),
+      (
+        "fallback content (mc:Fallback)",
+        "<w:p><mc:AlternateContent \{mc}><mc:Choice Requires=\"wps\"><w:r><w:t>zz</w:t></w:r></mc:Choice><mc:Fallback><w:r><w:t>ab</w:t></w:r></mc:Fallback></mc:AlternateContent></w:p>",
+      ),
+    ] {
+    let (construct, body) = probe
+    let source = "<w:document xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\" xmlns:v=\"urn:schemas-microsoft-com:vml\"><w:body>\{body}</w:body></w:document>"
+    let bytes = @utf8.encode(source)
+    let projection = surgery_native_projection(source)
+    let paragraph_index = projection.paragraphs.length() - 1
+    // Reachable first: a construct that stopped projecting would make
+    // its refusal below prove nothing.
+    assert_true(
+      projection.paragraphs[paragraph_index].runs.length() > 0,
+      msg=construct + " no longer registers a run",
+    )
+    let mut refusal = ""
+    try
+      ignore(
+        plan_whole_run_replacement(projection, bytes, paragraph_index, 0, "X"),
+      )
+    catch {
+      Unsupported(message~) => refusal = message
+      _ => ()
+    } noraise {
+      _ => ()
+    }
+    assert_true(
+      refusal.contains(construct),
+      msg="expected a refusal naming '" + construct + "', got '" + refusal + "'",
+    )
+  }
+  // A run wholly INSIDE a hyperlink stays editable: whole-run surgery
+  // replaces one run's text, so it cannot span a link's edge, and the
+  // restricted list deliberately does not include `w:hyperlink`.
+  assert_whole_run_replacement(
+    "<w:p><w:hyperlink r:id=\"rId9\" xmlns:r=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships\"><w:r><w:t>ab</w:t></w:r></w:hyperlink></w:p>",
+    paragraph=0,
+    run=0,
+    "linked",
+    expected="linked\n\n",
   )
 }
