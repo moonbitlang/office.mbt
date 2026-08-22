@@ -589,12 +589,6 @@ test "whole-run replacement refuses a run that spans two paragraphs" {
 }
 
 ///|
-/// A reader paragraph joined from several physical ones is still editable.
-///
-/// A deleted paragraph mark joins two physical paragraphs into one reader
-/// paragraph, so its runs come from different sources. That is not ambiguous
-/// -- each run still belongs to exactly this paragraph -- and refusing it
-/// would rule out a shape real documents contain.
 /// Criterion (d): a logical paragraph joined from several physical
 /// `w:p` nodes refuses. The address names ONE paragraph while the bytes
 /// belong to several, so a plan is complete for none of them. N0c2 has

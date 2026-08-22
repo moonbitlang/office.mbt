@@ -1134,11 +1134,10 @@ the generated boundary-pair proof (PR #474). Criteria disposition:
   those approvals — it waits for criterion (d).
 
 **Outstanding for GO — criterion (d) refusal trials.** Criterion (d)
-names THREE families the primitives do not yet fail closed on:
-restricted regions, suppressed regions, and multi-physical logical
-paragraphs. N0c2 refuses suppressed crossings and multi-physical
-paragraphs already; N0c1 does not, and it is the one the public surface
-reaches.
+names THREE families the primitives must fail closed on: restricted
+regions, suppressed regions, and multi-physical logical paragraphs. Two
+are now closed in BOTH primitives; restricted regions remain, and the
+public surface reaches them through N0c1.
 
 1. *Multi-physical logical paragraphs.* CLOSED. `plan_whole_run_replacement`
    now refuses a logical paragraph whose `sources` number more than one,
@@ -1161,8 +1160,11 @@ Closed alongside them, because a refusal that a no-op can bypass is not
 a refusal: `plan_run_text_replacement` returned an empty pinned plan as
 soon as `text == expect`, BEFORE calling the surgery, so a caller who
 wrote a run's own text back received a success receipt for a run the
-surgery would have refused. Planning now runs first — a no-op suppresses
-byte PLANNING, never VALIDATION, which is the rule N0c2 already states.
+surgery would have refused. The surgery now runs first and its plan is
+discarded on a no-op: N0c2 suppresses byte planning by PHASE, while N0c1
+validates BY planning, because its owned-contribution walk decides
+refusals and builds edits in one pass. A validate-only preflight would
+need a second copy of the refusal logic, and two copies drift.
 The Phase-3-wide five-class inventory classifies complex-field cached
 results, boundary-crossing hyperlink interiors, `w:ins` content,
 non-checkbox `w:sdt` content, `mc:Fallback` content, and textbox
