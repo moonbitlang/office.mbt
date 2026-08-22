@@ -905,6 +905,23 @@ fn plan_paragraph_text_edits(
       let SourceElementId(identity) = part.contribution.source
       require_host_element(identity, ordinal)
       let element = elements[identity]
+      // A non-text part is consumed by its WHOLE element span, in every
+      // branch below: replaced, deleted, or synthesised over. The reader
+      // reached it without walking inside, so a nested subtree is
+      // invisible to the projection and to the ancestry checks alike.
+      //
+      // The guard sits HERE rather than at each consuming branch,
+      // because guarding branches is how the last two rounds missed a
+      // shape: this loop is the one place every consumed element passes
+      // through, and it runs before the no-op exit, so a self-replacement
+      // is validated too.
+      if !part.is_text &&
+        run_surgery_consumed_span_has_children(elements, element) {
+        raise partial_surgery_refuse(
+          UnsupportedTextSource,
+          "edit \{ordinal} in paragraph \{paragraph_index}",
+        )
+      }
       if part.is_text {
         guard is_wml_uri(element.uri) && element.local_name == "t" else {
           raise partial_surgery_refuse(
@@ -1000,17 +1017,6 @@ fn plan_paragraph_text_edits(
           placement: InsideText,
         })
       } else {
-        // The atom's WHOLE span is replaced, children and all. The
-        // reader reached it without walking inside, so a nested
-        // construct is invisible to both the projection and the
-        // ancestor checks -- and replacing the span would delete it
-        // silently.
-        if run_surgery_consumed_span_has_children(elements, atom_element) {
-          raise partial_surgery_refuse(
-            UnsupportedTextSource,
-            "edit \{ordinal} in paragraph \{paragraph_index}",
-          )
-        }
         syntheses.push(
           (
             run_identity,

@@ -1368,10 +1368,65 @@ test "whole-run replacement refuses an atom carrying nested markup" {
     refusal.contains("nested markup"),
     msg="expected a nested-markup refusal, got '" + refusal + "'",
   )
+  // The ATOM-ONLY run, which the first version of this trial missed.
+  // With no `w:t` beside it the atom becomes the synthesis anchor and is
+  // taken OUT of the removals list, so a guard that ran when removals
+  // were drained never saw it. The guard now runs where the element is
+  // COLLECTED, before any branch claims it.
+  let alone = "<w:p><w:r><w:tab><w:ins w:id=\"9\" w:author=\"Ada\" w:date=\"2001-01-01T00:00:00Z\"><w:r><w:t>cd</w:t></w:r></w:ins></w:tab></w:r></w:p>"
+  let alone_source = "<w:document xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\" xmlns:v=\"urn:schemas-microsoft-com:vml\"><w:body>\{alone}</w:body></w:document>"
+  let alone_bytes = @utf8.encode(alone_source)
+  let alone_projection = surgery_native_projection(alone_source)
+  let mut alone_refusal = ""
+  try
+    ignore(plan_whole_run_replacement(alone_projection, alone_bytes, 0, 0, "X"))
+  catch {
+    Unsupported(message~) => alone_refusal = message
+    _ => ()
+  } noraise {
+    _ => ()
+  }
+  assert_true(
+    alone_refusal.contains("nested markup"),
+    msg="atom-only run was not guarded, got '" + alone_refusal + "'",
+  )
+  // And in VALIDATE-ONLY mode, since a self-replacement must be
+  // validated rather than waved through.
+  let mut noop_refusal = ""
+  try
+    ignore(
+      plan_whole_run_replacement(
+        alone_projection,
+        alone_bytes,
+        0,
+        0,
+        "\t",
+        validate_only=true,
+      ),
+    )
+  catch {
+    Unsupported(message~) => noop_refusal = message
+    _ => ()
+  } noraise {
+    _ => ()
+  }
+  assert_true(
+    noop_refusal.contains("nested markup"),
+    msg="validate-only skipped the nested-markup guard, got '" +
+      noop_refusal +
+      "'",
+  )
   // An ordinary EMPTY atom is untouched by the guard, so it has not
-  // simply refused every run holding a tab.
+  // simply refused every run holding a tab -- alone or beside text.
   assert_whole_run_replacement(
     "<w:p><w:r><w:tab/><w:t>ab</w:t></w:r></w:p>",
+    paragraph=0,
+    run=0,
+    "X",
+    expected="X\n\n",
+  )
+  assert_whole_run_replacement(
+    "<w:p><w:r><w:tab/></w:r></w:p>",
     paragraph=0,
     run=0,
     "X",

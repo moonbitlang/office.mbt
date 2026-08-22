@@ -209,6 +209,19 @@ fn plan_whole_run_replacement(
       message="run \{run_index} in paragraph \{paragraph_index} holds a field's cached result, which the next recalculation discards",
     )
   }
+  // Every element that will be consumed by its WHOLE span passes
+  // through here, before any branch decides whether it becomes a
+  // removal, a synthesis anchor, or both. Guarding the branches instead
+  // is how two review rounds missed a shape: the atom-only run takes its
+  // anchor OUT of the removals list, so a drain-time check never saw it.
+  fn require_consumable(element : ScannedElement) -> Unit raise DocxError {
+    if run_surgery_consumed_span_has_children(elements, element) {
+      raise Unsupported(
+        message="run \{run_index} in paragraph \{paragraph_index} contains a \{element.local_name} carrying nested markup the reader does not model",
+      )
+    }
+  }
+
   let owned : Array[ReaderProjectionContribution] = []
   for contribution in paragraph.contributions {
     if contribution.run_source == Some(target) {
@@ -396,6 +409,7 @@ fn plan_whole_run_replacement(
           }
           texts.push(element)
         } else {
+          require_consumable(element)
           removals.push(element)
         }
       }
@@ -408,6 +422,7 @@ fn plan_whole_run_replacement(
           )
         }
         planned_sources.push(source_identity)
+        require_consumable(element)
         removals.push(element)
       }
     }
@@ -513,14 +528,6 @@ fn plan_whole_run_replacement(
     }
   }
   for element in removals {
-    // The whole span goes, children and all. The reader modelled these
-    // as leaves; if one is not, removing it deletes content nothing
-    // reported and the caller never saw.
-    if run_surgery_consumed_span_has_children(elements, element) {
-      raise Unsupported(
-        message="run \{run_index} in paragraph \{paragraph_index} contains a \{element.local_name} carrying nested markup the reader does not model",
-      )
-    }
     emit(() => {
       byte_start: element.byte_start,
       byte_end: element.byte_end,

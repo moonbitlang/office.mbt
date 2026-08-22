@@ -1017,11 +1017,11 @@ L0: pub surface only what N1/N2 need.
 
 ### N0 gate status (2026-08-22): **GO**
 
-All four criteria are met and dispositioned below. Criterion (d)'s three
-families — restricted regions, suppressed regions, and multi-physical
-logical paragraphs — now fail closed in BOTH primitives, and the
-verdict that was withheld while restricted regions were open is
-recorded here.
+All four criteria are met and dispositioned below. Criterion (d) names
+six families; the three that remained open into the closing rungs —
+restricted regions, suppressed regions, and multi-physical logical
+paragraphs — now fail closed in BOTH primitives, and the verdict that
+was withheld while they were open is recorded here.
 
 The gate cost a deliberate change to a shipped surface: edits that used
 to succeed through `office edit set_run_text` now refuse. Editing a

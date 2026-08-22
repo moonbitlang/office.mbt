@@ -1616,12 +1616,46 @@ test "partial: an atom carrying nested markup refuses" {
     [partial_edit(0, 1, "X")],
     refusal="UnsupportedTextSource",
   )
-  // An ordinary EMPTY atom still replaces, so the guard has not simply
-  // refused every edit over a tab.
+  // The branches the first version of this trial missed. Guarding the
+  // consuming branches one at a time is what let these through; the
+  // guard now sits in the single validation loop every consumed element
+  // passes, which runs BEFORE the no-op exit.
+  //
+  // Deletion, which took a different path from replacement:
+  assert_partial_refusal(
+    nested,
+    paragraph=0,
+    [partial_edit(0, 1, "")],
+    refusal="UnsupportedTextSource",
+  )
+  // A LATER consumed atom, reached after a leading text part:
+  let trailing = "<w:p><w:r><w:t>ab</w:t><w:tab><w:ins w:id=\"9\" w:author=\"Ada\" w:date=\"2001-01-01T00:00:00Z\"><w:r><w:t>cd</w:t></w:r></w:ins></w:tab></w:r></w:p>"
+  assert_partial_refusal(
+    trailing,
+    paragraph=0,
+    [partial_edit(1, 3, "X")],
+    refusal="UnsupportedTextSource",
+  )
+  // And the identity replacement, which exits as a logical no-op: a
+  // no-op suppresses byte planning, never validation.
+  assert_partial_refusal(
+    nested,
+    paragraph=0,
+    [partial_edit(0, 1, "\t")],
+    refusal="UnsupportedTextSource",
+  )
+  // An ordinary EMPTY atom still replaces, deletes and no-ops, so the
+  // guard has not simply refused every edit over a tab.
   assert_partial_edits(
     "<w:p><w:r><w:tab/><w:t>ab</w:t></w:r></w:p>",
     paragraph=0,
     [partial_edit(0, 1, "X")],
     expected="Xab",
+  )
+  assert_partial_edits(
+    "<w:p><w:r><w:tab/><w:t>ab</w:t></w:r></w:p>",
+    paragraph=0,
+    [partial_edit(0, 1, "")],
+    expected="ab",
   )
 }
