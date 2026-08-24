@@ -38,7 +38,7 @@ pub fn embed_style_map(BytesView, String) -> Bytes raise @core.DocxError
 
 pub fn extract_raw_text(BytesView, external_file_access? : Bool, read_external_file? : (String) -> Bytes?) -> @core.ConversionResult raise @core.DocxError
 
-pub fn find_docx_matches(DocxAnnotatedResult, DocxStoryPartSource, needle~ : String, within? : String, context? : Int, limit? : Int) -> Array[DocxMatch] raise @core.DocxError
+pub fn find_docx_matches(DocxAnnotatedResult, DocxStoryPartSource, needle~ : String, within? : String, context? : Int, limit? : Int) -> DocxMatchList raise @core.DocxError
 
 pub fn header_footer_spec(variant~ : String, Array[@document.DocumentElement]) -> HeaderFooterSpec raise @core.DocxError
 
@@ -193,6 +193,14 @@ pub fn DocxMatch::runs(Self) -> Array[String]
 pub fn DocxMatch::start(Self) -> Int
 pub fn DocxMatch::story(Self) -> String
 pub fn DocxMatch::text(Self) -> String
+
+pub struct DocxMatchList {
+  matches : Array[DocxMatch]
+  total : Int
+}
+pub fn DocxMatchList::matches(Self) -> Array[DocxMatch]
+pub fn DocxMatchList::total(Self) -> Int
+pub fn DocxMatchList::truncated(Self) -> Bool
 
 pub(all) struct DocxPackageResult {
   document : @document.DocumentElement

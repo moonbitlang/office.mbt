@@ -81,13 +81,12 @@ fn docx_find_payload(
   file : String,
   needle : String,
   within : String?,
-  hits : Array[@docx.DocxMatch],
-  limit : Int,
+  found : @docx.DocxMatchList,
 ) -> BoundedOfficePayload raise CliFailure {
-  let shown = if hits.length() > limit { limit } else { hits.length() }
+  let hits = found.matches()
   let entries : Array[Json] = []
-  for index in 0..<shown {
-    entries.push(docx_find_entry_json(hits[index]))
+  for hit in hits {
+    entries.push(docx_find_entry_json(hit))
   }
   let mut actionable = 0
   for hit in hits {
@@ -106,12 +105,16 @@ fn docx_find_payload(
     },
     "stories_scanned": Json::array([Json::string("/body")]),
     "matches": Json::array(entries),
-    // Totals are of ALL candidates, not of the returned page, so a
-    // truncated read still reports the true shape of the document.
-    "matches_total": Json::number(hits.length().to_double()),
-    "actionable_total": Json::number(actionable.to_double()),
-    "unactionable_total": Json::number((hits.length() - actionable).to_double()),
-    "truncated": Json::boolean(hits.length() > shown),
+    // `matches_total` counts every candidate in the document. The
+    // verdict totals describe the RETURNED entries only, and are named
+    // so: a candidate past --limit is counted but never offered to the
+    // planner, so it HAS no verdict to be totalled.
+    "matches_total": Json::number(found.total().to_double()),
+    "actionable_returned": Json::number(actionable.to_double()),
+    "unactionable_returned": Json::number(
+      (hits.length() - actionable).to_double(),
+    ),
+    "truncated": Json::boolean(found.truncated()),
   })
   bounded_docx_payload(data, [], docx_cli_default_max_output_chars)
 }
@@ -119,21 +122,16 @@ fn docx_find_payload(
 ///|
 /// Human output. One line per candidate, refusals marked, because the
 /// first thing a person wants is which hits they cannot act on.
-fn docx_find_human(
-  needle : String,
-  hits : Array[@docx.DocxMatch],
-  limit : Int,
-) -> String {
+fn docx_find_human(needle : String, found : @docx.DocxMatchList) -> String {
   // Lines are JOINED rather than each terminated: the success emitter
   // supplies the final newline, and terminating here too prints a blank
   // line that the other read commands do not.
+  let hits = found.matches()
   let lines : Array[String] = []
   if hits.length() == 0 {
     lines.push("no candidates for '\{needle}'")
   } else {
-    let shown = if hits.length() > limit { limit } else { hits.length() }
-    for index in 0..<shown {
-      let hit = hits[index]
+    for hit in hits {
       let head = "\{hit.ordinal()}. \{hit.path()} [\{hit.start()},\{hit.end()}) \{hit.text()}"
       lines.push(
         if hit.actionable() {
@@ -143,9 +141,9 @@ fn docx_find_human(
         },
       )
     }
-    if hits.length() > shown {
+    if found.truncated() {
       lines.push(
-        "... \{hits.length() - shown} more (raise --limit to see them)",
+        "... \{found.total() - hits.length()} more (raise --limit to see them)",
       )
     }
   }
@@ -199,7 +197,7 @@ async fn run_docx_find(matches : @argparse.Matches) -> Unit {
         source.archive,
         cancelled=office_async_cancelled,
       )
-      let hits = @docx.find_docx_matches(
+      let found = @docx.find_docx_matches(
         annotated,
         annotated.main_story_source(),
         needle~,
@@ -212,13 +210,13 @@ async fn run_docx_find(matches : @argparse.Matches) -> Unit {
       if matches.flags.get_or_default("json", false) {
         emit_docx_success(
           checked_docx_json_output(
-            docx_find_payload(file, needle, within, hits, limit),
+            docx_find_payload(file, needle, within, found),
           ),
         )
       } else {
         emit_docx_success(
           checked_docx_human_output(
-            docx_find_human(needle, hits, limit),
+            docx_find_human(needle, found),
             docx_cli_default_max_output_chars,
           ),
         )

@@ -18,7 +18,7 @@ fn find_all(
     annotated.main_story_source(),
     needle~,
     within?,
-  )
+  ).matches()
 }
 
 ///|
@@ -238,4 +238,55 @@ test "find never returns a context window split across a surrogate pair" {
     before.length() >= 20,
     msg="context window collapsed to " + before.length().to_string(),
   )
+}
+
+///|
+/// Totals must describe the DOCUMENT, not the page that was returned.
+///
+/// The first version of the limit computed `matches_total` from the
+/// retained array, so `truncated` could never be true and a bounded read
+/// silently claimed the document held exactly what it had shown. That is
+/// worse than a slow read: an agent would conclude it had seen
+/// everything.
+test "find's totals describe the document, not the returned page" {
+  let annotated = find_fixture(
+    "<w:p><w:r><w:t>iiii</w:t></w:r></w:p><w:p><w:r><w:t>ii</w:t></w:r></w:p>",
+  )
+  let all = @docx.find_docx_matches(
+    annotated,
+    annotated.main_story_source(),
+    needle="i",
+  )
+  assert_eq(all.total(), 6)
+  assert_eq(all.matches().length(), 6)
+  assert_false(all.truncated())
+  let capped = @docx.find_docx_matches(
+    annotated,
+    annotated.main_story_source(),
+    needle="i",
+    limit=2,
+  )
+  // Two examined, but the document's true count is still reported.
+  assert_eq(capped.matches().length(), 2)
+  assert_eq(capped.total(), 6)
+  assert_true(capped.truncated())
+  // Ordinals stay GLOBAL, so the second entry is candidate 2 of 6
+  // rather than 2 of 2.
+  assert_eq(capped.matches()[1].ordinal(), 2)
+}
+
+///|
+/// A context window larger than the text must clamp rather than overflow
+/// into a negative slice bound.
+test "find clamps an oversized context window" {
+  let annotated = find_fixture("<w:p><w:r><w:t>abc</w:t></w:r></w:p>")
+  let hits = @docx.find_docx_matches(
+    annotated,
+    annotated.main_story_source(),
+    needle="b",
+    context=2147483647,
+  ).matches()
+  assert_eq(hits.length(), 1)
+  assert_eq(hits[0].context_before(), "a")
+  assert_eq(hits[0].context_after(), "c")
 }

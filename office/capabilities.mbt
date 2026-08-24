@@ -878,13 +878,13 @@ pub fn capability_commands() -> Array[CapabilityCommand] {
           "matches", "array(object)", true, "per candidate: ordinal, story, path, range {start, end, unit=utf16} paragraph-relative over the PROJECTION, text, context_before, context_after, runs (affected run paths), source_kinds (text|tab|no-break-hyphen|soft-hyphen|symbol), actionable, and reason (null when actionable). `actionable` reports whether the RANGE is structurally editable — regions, ancestry, boundaries, carriers — NOT that any given replacement will be accepted; validity of the new text belongs to the write, so a replacement carrying a control character is still refused over an actionable range",
         ),
         capability_field(
-          "matches_total", "integer", true, "candidates found before --limit truncation",
+          "matches_total", "integer", true, "candidates that EXIST in the searched stories, counted whether or not --limit examined them",
         ),
         capability_field(
-          "actionable_total", "integer", true, "candidates a partial edit would be permitted over",
+          "actionable_returned", "integer", true, "of the RETURNED entries, how many a partial edit would be permitted over. Counted over the returned page rather than the document, because a candidate past --limit is never offered to the planner and so has no verdict",
         ),
         capability_field(
-          "unactionable_total", "integer", true, "candidates that exist but must not be rewritten",
+          "unactionable_returned", "integer", true, "of the RETURNED entries, how many exist but must not be rewritten",
         ),
         capability_field(
           "truncated", "boolean", true, "whether --limit omitted later candidates",

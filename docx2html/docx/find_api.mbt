@@ -129,6 +129,37 @@ pub fn DocxMatch::reason(self : DocxMatch) -> String {
 }
 
 ///|
+/// What a search found: the examined candidates, and how many exist.
+///
+/// The two are separated because they cost differently. Counting a
+/// candidate is a scan step; EXAMINING one runs the planner. So a search
+/// counts everything and examines at most `limit`, and the caller is
+/// told both numbers rather than being left to infer the total from a
+/// list that was deliberately cut short.
+pub struct DocxMatchList {
+  matches : Array[DocxMatch]
+  total : Int
+}
+
+///|
+/// The examined candidates, in document order, at most `limit` of them.
+pub fn DocxMatchList::matches(self : DocxMatchList) -> Array[DocxMatch] {
+  self.matches
+}
+
+///|
+/// How many candidates EXIST, which may exceed the examined list.
+pub fn DocxMatchList::total(self : DocxMatchList) -> Int {
+  self.total
+}
+
+///|
+/// Whether candidates exist that were counted but not examined.
+pub fn DocxMatchList::truncated(self : DocxMatchList) -> Bool {
+  self.total > self.matches.length()
+}
+
+///|
 /// The projection text of one paragraph, which is the coordinate space
 /// every offset in a `DocxMatch` is expressed in.
 ///
@@ -150,22 +181,29 @@ fn find_paragraph_projection(paragraph : ReaderProjectionParagraph) -> String {
 }
 
 ///|
-/// Whether `needle` occurs at code-unit position `at`, WITHOUT
-/// allocating.
+/// The KMP failure function over the needle's code units.
 ///
-/// The obvious spelling — slice the remaining suffix and test its prefix
-/// — allocates the whole tail at every position, so scanning one large
-/// `w:t` for an absent needle costs O(n^2) bytes of churn. On a
-/// permitted 1 MiB text that is on the order of a terabyte of
-/// allocation, which is an availability problem on a document the reader
-/// otherwise accepts.
-fn find_occurs_at(text : StringView, needle : StringView, at : Int) -> Bool {
-  for offset in 0..<needle.length() {
-    if text.unsafe_charcode_at(at + offset) != needle.unsafe_charcode_at(offset) {
-      return false
+/// The naive scan is linear in ALLOCATION once suffixes are not copied,
+/// but still quadratic in COMPARISONS: for text `a^n` and needle
+/// `a^(n/2)b`, every position re-compares almost the whole needle, which
+/// on a permitted 1 MiB paragraph is on the order of 10^11 comparisons.
+/// `--limit` cannot help, because the cost is paid before a match is
+/// ever found. This table makes the scan O(n + m) instead.
+fn find_failure_table(needle : StringView) -> Array[Int] {
+  let table = Array::make(needle.length(), 0)
+  let mut prefix = 0
+  for index in 1..<needle.length() {
+    while prefix > 0 &&
+          needle.unsafe_get(index).to_int() !=
+          needle.unsafe_get(prefix).to_int() {
+      prefix = table[prefix - 1]
     }
+    if needle.unsafe_get(index).to_int() == needle.unsafe_get(prefix).to_int() {
+      prefix = prefix + 1
+    }
+    table[index] = prefix
   }
-  true
+  table
 }
 
 ///|
@@ -336,7 +374,7 @@ pub fn find_docx_matches(
   // `ordinal`, so the caller learns they exist without paying for a
   // verdict it asked not to receive.
   limit? : Int = 1000,
-) -> Array[DocxMatch] raise DocxError {
+) -> DocxMatchList raise DocxError {
   guard needle != "" else {
     raise Unsupported(
       message="find needs a non-empty needle; an empty one matches every position",
@@ -378,19 +416,33 @@ pub fn find_docx_matches(
     let text = find_paragraph_projection(paragraph)
     let view = text[:]
     let needle_view = needle[:]
-    // Non-overlapping, left to right, so two candidates never claim the
-    // same character and an agent can act on them independently.
+    let failure = find_failure_table(needle_view)
+    // KMP, left to right, non-overlapping: two candidates never claim
+    // the same character, so an agent can act on them independently.
+    // `matched` is how much of the needle the scan currently holds.
     let mut cursor = 0
-    while cursor <= text.length() - needle.length() {
-      guard find_occurs_at(view, needle_view, cursor) else {
-        cursor = cursor + 1
+    let mut matched = 0
+    while cursor < text.length() {
+      while matched > 0 &&
+            view.unsafe_get(cursor).to_int() !=
+            needle_view.unsafe_get(matched).to_int() {
+        matched = failure[matched - 1]
+      }
+      if view.unsafe_get(cursor).to_int() ==
+        needle_view.unsafe_get(matched).to_int() {
+        matched = matched + 1
+      }
+      cursor = cursor + 1
+      if matched < needle.length() {
         continue
       }
-      let start = cursor
-      let end = cursor + needle.length()
+      let end = cursor
+      let start = end - needle.length()
+      // Non-overlapping: the next search starts after this candidate
+      // rather than resuming inside it.
+      matched = 0
       ordinal = ordinal + 1
       if matches.length() >= limit {
-        cursor = end
         continue
       }
       // The planner's OWN verdict: an identity replacement validates
@@ -446,7 +498,18 @@ pub fn find_docx_matches(
       }
       // Context is clamped non-negative (a negative window would invert
       // the slice bounds) and snapped off surrogate halves.
-      let window = if context > 0 { context } else { 0 }
+      // Clamped at BOTH ends. A negative window would invert the slice
+      // bounds; a huge one overflows `end + window` back to negative and
+      // reaches `substring` as a wrapped index, which panics instead of
+      // raising. The text's own length is the largest window that can
+      // mean anything, so it is the ceiling.
+      let window = if context < 0 {
+        0
+      } else if context > text.length() {
+        text.length()
+      } else {
+        context
+      }
       let before_from = find_snap_start(
         view,
         if start > window {
@@ -477,8 +540,7 @@ pub fn find_docx_matches(
         actionable,
         reason,
       })
-      cursor = end
     }
   }
-  matches
+  { matches, total: ordinal }
 }
