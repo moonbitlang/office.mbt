@@ -126,6 +126,7 @@ priv enum PartialSurgeryPlacement {
 } derive(Debug)
 
 ///|
+#warnings("-unused_field")
 priv struct PartialSurgeryLogicalEdit {
   ordinal : Int
   start : Int
@@ -139,6 +140,7 @@ priv struct PartialSurgeryLogicalEdit {
 /// paragraph's projection after the batch — the exact string the oracle holds
 /// the re-read document to. No per-edit byte-edit count is promised: several
 /// logical edits can share one `xml:space` edit.
+#warnings("-unused_field")
 priv struct PartialSurgeryReceipt {
   paragraph_index : Int
   before_projection : String
