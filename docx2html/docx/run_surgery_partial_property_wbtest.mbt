@@ -618,7 +618,6 @@ fn partial_expected_licenses(
   // requests at one site accumulate into the single coalesced payload
   // production emits there.
   let insertion_sites : Array[Int] = []
-  let insertion_license_at : Array[Int] = []
   // Sites accumulate the RAW text of every request that lands there, and
   // the payload is composed once at the end: production coalesces the
   // requests and then escapes (or synthesizes) the combined text, so
@@ -1037,7 +1036,7 @@ test "generated documents compose partial edits over every boundary pair" {
         // shared projection would let one batch's receipt describe
         // another's document.
         let fresh = surgery_native_projection(source)
-        let (planned_pairs, refusal, carriers) = assert_partial_batch(
+        let (planned_pairs, refusal, _) = assert_partial_batch(
           source, fresh, batch,
         )
         if refusal != "" {

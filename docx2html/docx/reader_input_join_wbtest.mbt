@@ -518,7 +518,7 @@ test "joined paragraph inputs record the deleted prefix paragraphs" {
       {
         source: _,
         local_effects: _,
-        shape: ReaderParagraph(inputs~, children~, extras=_, properties=_),
+        shape: ReaderParagraph(inputs~, children=_, extras=_, properties=_),
       }
     ) else {
     fail("expected the joined paragraph")
