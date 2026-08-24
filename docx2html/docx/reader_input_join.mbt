@@ -23,6 +23,7 @@
 ///|
 /// A physical element identity: the index into the story scan's element
 /// table, assigned in opening-tag order.
+#warnings("-unused_value")
 priv struct SourceElementId(Int) derive(Debug, Eq)
 
 ///|
@@ -39,6 +40,7 @@ priv struct JoinedReaderStory {
 
 ///|
 /// Which stage of the end-to-end preparation refused.
+#warnings("-unused_value")
 priv enum ReaderInputJoinStage {
   StrictGate
   SourceScan
@@ -346,6 +348,7 @@ fn join_reader_element(
 /// scan, tolerant parse, join. Each stage's refusal is preserved; there is
 /// deliberately NO fallback to an unjoined read -- a caller that wants the
 /// plain tolerant DOM simply does not call this.
+#warnings("-unused_value")
 fn join_reader_input_story(bytes : BytesView) -> ReaderInputJoinResult {
   join_reader_input_story_limited(bytes)
 }

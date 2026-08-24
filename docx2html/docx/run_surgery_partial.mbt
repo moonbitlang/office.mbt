@@ -118,6 +118,7 @@ fn partial_surgery_refuse(
 
 ///|
 /// How one logical edit was realized.
+#warnings("-unused_value")
 priv enum PartialSurgeryPlacement {
   InsideText
   AtomSynthesis
@@ -177,6 +178,7 @@ priv struct PartialProjectingPart {
 /// overlap), paragraph ownership, structural restrictions (interval walk,
 /// run gates, host gates), endpoint resolution, replacement validity, then
 /// internal byte-plan validation. On refusal nothing is returned.
+#warnings("-unused_value")
 fn plan_paragraph_text_edits(
   projection : ReaderProjection,
   source : BytesView,
