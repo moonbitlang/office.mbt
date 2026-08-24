@@ -977,7 +977,7 @@ test "mutation-safe reads keep the pre-cutover budget envelope" {
     "application/vnd.openxmlformats-officedocument.wordprocessingml.header+xml",
     "<w:hdr xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\"><w:p><w:r><w:t>head</w:t></w:r></w:p></w:hdr>",
   )
-  fn minimal_units(mutation : Bool) -> Int raise {
+  fn minimal_units(mutation : Bool) -> Int {
     let mut low = 1
     let mut high = 1 << 20
     while low < high {
