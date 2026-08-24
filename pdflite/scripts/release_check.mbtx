@@ -20,16 +20,16 @@ let release_check_warn_list = "+a-39@65@73@74@75"
 
 ///|
 fn release_check_command() -> @argparse.Command {
-  @argparse.Command(
+  Command(
     "release_check",
     about="Run pdflite release verification commands.",
     disable_help_subcommand=true,
     flags=[
-      @argparse.FlagArg(
+      FlagArg(
         "full-native-tests",
         about="Run the full native test suite in addition to focused release checks.",
       ),
-      @argparse.FlagArg(
+      FlagArg(
         "publish-dry-run",
         about="Run moon publish --dry-run after packaging.",
       ),
