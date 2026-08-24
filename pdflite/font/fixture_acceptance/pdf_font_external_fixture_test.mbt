@@ -522,9 +522,9 @@ fn font_external_assert_pdfium_resource_fixture_for_test(
   let extractor = font.text_extractor()
   let texts = font_external_tj_texts_for_test(document)
   @test.assert_eq(texts.length(), 3)
-  @test.assert_eq(extractor.codepoints_of_text(texts[0][:]), [0xE022])
-  @test.assert_eq(extractor.codepoints_of_text(texts[1][:]), [0xE023])
-  @test.assert_eq(extractor.codepoints_of_text(texts[2][:]), [0xE022])
+  @test.assert_eq(extractor.codepoints_of_text(texts[0]), [0xE022])
+  @test.assert_eq(extractor.codepoints_of_text(texts[1]), [0xE023])
+  @test.assert_eq(extractor.codepoints_of_text(texts[2]), [0xE022])
   @test.assert_eq(
     document.parse_content_ops_with_resources(type3_data.resources, [
       document.direct(type3_data.charprocs[0].1),
@@ -625,14 +625,12 @@ fn font_external_assert_itext_logo_fixture_for_test(
   let extractor = font.text_extractor()
   let texts = font_external_tj_texts_for_test(document)
   @test.assert_eq(texts.length(), 6)
-  @test.assert_eq(extractor.codepoints_of_text(texts[0][:]), [
-    73, 84, 69, 88, 84,
-  ])
-  @test.assert_eq(extractor.codepoints_of_text(texts[1][:]), [73])
-  @test.assert_eq(extractor.codepoints_of_text(texts[2][:]), [84])
-  @test.assert_eq(extractor.codepoints_of_text(texts[3][:]), [69])
-  @test.assert_eq(extractor.codepoints_of_text(texts[4][:]), [88])
-  @test.assert_eq(extractor.codepoints_of_text(texts[5][:]), [84])
+  @test.assert_eq(extractor.codepoints_of_text(texts[0]), [73, 84, 69, 88, 84])
+  @test.assert_eq(extractor.codepoints_of_text(texts[1]), [73])
+  @test.assert_eq(extractor.codepoints_of_text(texts[2]), [84])
+  @test.assert_eq(extractor.codepoints_of_text(texts[3]), [69])
+  @test.assert_eq(extractor.codepoints_of_text(texts[4]), [88])
+  @test.assert_eq(extractor.codepoints_of_text(texts[5]), [84])
 }
 
 ///|

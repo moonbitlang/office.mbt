@@ -124,8 +124,8 @@ test "build document model with helpers" {
 ```
 
 Embedded style maps can be inspected or rewritten without a JavaScript-style
-mutable ZIP object. Use `read_embedded_style_map(docx[:])` to read the raw
-`mammoth/style-map` part, and `embed_style_map(docx[:], "p => h1")` to return a
+mutable ZIP object. Use `read_embedded_style_map(docx)` to read the raw
+`mammoth/style-map` part, and `embed_style_map(docx, "p => h1")` to return a
 new DOCX archive with the style map, relationship entry, and content-type
 override updated.
 

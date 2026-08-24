@@ -41,8 +41,8 @@ test "gzip/gunzip roundtrip with optional header fields" {
   // FHCRC (ignored)
   out.push((0).to_byte())
   out.push((0).to_byte())
-  out.append(compressed[:])
-  out.append(trailer[:])
+  out.append(compressed)
+  out.append(trailer)
   let roundtrip = @zip.gunzip(Bytes::from_array(out))
   inspect(roundtrip, content="b\"hello gzip\"")
 }
