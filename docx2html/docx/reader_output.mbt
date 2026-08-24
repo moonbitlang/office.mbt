@@ -15,7 +15,6 @@ priv struct ReaderOutputSegment {
 
 ///|
 priv struct JoinedReaderOutput {
-  source_part : String
   story : JoinedReaderStory
   segments : Array[ReaderOutputSegment]
 }
@@ -104,7 +103,6 @@ fn reader_note_container_is_plumbing(container : ReaderNode) -> Bool {
 /// unknown root -- segmentation refuses instead: a mutation-safe view
 /// must not quietly narrow the story.
 fn segment_joined_reader_story(
-  source_part : String,
   story : JoinedReaderStory,
   reader : BodyReader,
 ) -> ReaderSegmentationResult raise DocxError {
@@ -205,7 +203,7 @@ fn segment_joined_reader_story(
         UnexpectedStoryRoot(name=reader_segmentation_clip_name(name)),
       )
   }
-  SegmentedStory({ source_part, story, segments })
+  SegmentedStory({ story, segments })
 }
 
 ///|
@@ -221,12 +219,7 @@ fn project_joined_reader_output(
   for segment in output.segments {
     segments.push(segment.items)
   }
-  project_reader_item_segments(
-    output.source_part,
-    output.story.scan,
-    segments,
-    budget?,
-  )
+  project_reader_item_segments(output.story.scan, segments, budget?)
 }
 
 ///|
@@ -331,7 +324,7 @@ fn finish_joined_story_read(
   story : JoinedReaderStory,
   reader : BodyReader,
 ) -> JoinedStoryRead raise DocxError {
-  match segment_joined_reader_story(part, story, reader) {
+  match segment_joined_reader_story(story, reader) {
     SegmentationRefused(refusal) =>
       raise Unsupported(
         message="mutation-safe segmentation refused for '\{part}': \{refusal.describe()}",

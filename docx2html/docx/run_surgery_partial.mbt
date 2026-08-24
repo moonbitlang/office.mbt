@@ -128,10 +128,6 @@ priv enum PartialSurgeryPlacement {
 ///|
 #warnings("-unused_field")
 priv struct PartialSurgeryLogicalEdit {
-  ordinal : Int
-  start : Int
-  end : Int
-  replacement : String
   placement : PartialSurgeryPlacement
 }
 
@@ -143,10 +139,8 @@ priv struct PartialSurgeryLogicalEdit {
 #warnings("-unused_field")
 priv struct PartialSurgeryReceipt {
   paragraph_index : Int
-  before_projection : String
   expected_projection : String
   logical_edits : Array[PartialSurgeryLogicalEdit]
-  byte_edit_count : Int
   touched_source_count : Int
 }
 
@@ -560,13 +554,7 @@ fn plan_paragraph_text_edits(
           involved_elements.push(identity)
           if edit.replacement == "" {
             noop_endpoint_checks.push((identity, edit.start - part.local_start))
-            logical_edits.push({
-              ordinal,
-              start: edit.start,
-              end: edit.end,
-              replacement: edit.replacement,
-              placement: LogicalNoOp,
-            })
+            logical_edits.push({ placement: LogicalNoOp })
             continue
           }
           touch_wt(
@@ -577,13 +565,7 @@ fn plan_paragraph_text_edits(
             edit.replacement,
             ordinal,
           )
-          logical_edits.push({
-            ordinal,
-            start: edit.start,
-            end: edit.end,
-            replacement: edit.replacement,
-            placement: InsideText,
-          })
+          logical_edits.push({ placement: InsideText })
         }
         None => {
           // Boundary candidates: text edges, atom edges, and — when the
@@ -664,13 +646,7 @@ fn plan_paragraph_text_edits(
             let SourceElementId(carrier_identity) = carrier.source
             require_host_element(carrier_identity, ordinal)
             if edit.replacement == "" {
-              logical_edits.push({
-                ordinal,
-                start: edit.start,
-                end: edit.end,
-                replacement: edit.replacement,
-                placement: LogicalNoOp,
-              })
+              logical_edits.push({ placement: LogicalNoOp })
               continue
             }
             let carrier_element = elements[carrier_identity]
@@ -688,13 +664,7 @@ fn plan_paragraph_text_edits(
                 carrier_identity,
               ),
             )
-            logical_edits.push({
-              ordinal,
-              start: edit.start,
-              end: edit.end,
-              replacement: edit.replacement,
-              placement: RunSynthesis,
-            })
+            logical_edits.push({ placement: RunSynthesis })
             continue
           }
           if total > 1 {
@@ -766,13 +736,7 @@ fn plan_paragraph_text_edits(
                 noop_endpoint_checks.push(
                   (identity, edit.start - part.local_start),
                 )
-                logical_edits.push({
-                  ordinal,
-                  start: edit.start,
-                  end: edit.end,
-                  replacement: edit.replacement,
-                  placement: LogicalNoOp,
-                })
+                logical_edits.push({ placement: LogicalNoOp })
                 continue
               }
               touch_wt(
@@ -783,13 +747,7 @@ fn plan_paragraph_text_edits(
                 edit.replacement,
                 ordinal,
               )
-              logical_edits.push({
-                ordinal,
-                start: edit.start,
-                end: edit.end,
-                replacement: edit.replacement,
-                placement: InsideText,
-              })
+              logical_edits.push({ placement: InsideText })
             }
             _ =>
               match atom_candidates {
@@ -811,25 +769,13 @@ fn plan_paragraph_text_edits(
                   if edit.replacement == "" {
                     // An empty insertion beside an atom validates its
                     // carrier and synthesizes nothing.
-                    logical_edits.push({
-                      ordinal,
-                      start: edit.start,
-                      end: edit.end,
-                      replacement: edit.replacement,
-                      placement: LogicalNoOp,
-                    })
+                    logical_edits.push({ placement: LogicalNoOp })
                     continue
                   }
                   syntheses.push(
                     (run_identity, at, at, edit.replacement, ordinal, identity),
                   )
-                  logical_edits.push({
-                    ordinal,
-                    start: edit.start,
-                    end: edit.end,
-                    replacement: edit.replacement,
-                    placement: AtomSynthesis,
-                  })
+                  logical_edits.push({ placement: AtomSynthesis })
                 }
                 _ =>
                   raise partial_surgery_refuse(
@@ -977,13 +923,7 @@ fn plan_paragraph_text_edits(
         let SourceElementId(identity) = tail.contribution.source
         noop_endpoint_checks.push((identity, edit.end - tail.local_start))
       }
-      logical_edits.push({
-        ordinal,
-        start: edit.start,
-        end: edit.end,
-        replacement: edit.replacement,
-        placement: LogicalNoOp,
-      })
+      logical_edits.push({ placement: LogicalNoOp })
       continue
     }
     let first = intersecting[0]
@@ -1008,13 +948,7 @@ fn plan_paragraph_text_edits(
         edit.replacement,
         ordinal,
       )
-      logical_edits.push({
-        ordinal,
-        start: edit.start,
-        end: edit.end,
-        replacement: edit.replacement,
-        placement: InsideText,
-      })
+      logical_edits.push({ placement: InsideText })
     } else {
       // The first consumed content is an atom: synthesize in its run,
       // replacing the atom in the same edit — unless the replacement is
@@ -1024,13 +958,7 @@ fn plan_paragraph_text_edits(
       let SourceElementId(run_identity) = run.source
       if edit.replacement == "" {
         atom_deletions.push(identity)
-        logical_edits.push({
-          ordinal,
-          start: edit.start,
-          end: edit.end,
-          replacement: edit.replacement,
-          placement: InsideText,
-        })
+        logical_edits.push({ placement: InsideText })
       } else {
         syntheses.push(
           (
@@ -1042,13 +970,7 @@ fn plan_paragraph_text_edits(
             identity,
           ),
         )
-        logical_edits.push({
-          ordinal,
-          start: edit.start,
-          end: edit.end,
-          replacement: edit.replacement,
-          placement: AtomSynthesis,
-        })
+        logical_edits.push({ placement: AtomSynthesis })
       }
     }
     // Middle and end contributions: emptied, deleted, or trimmed.
@@ -1370,10 +1292,8 @@ fn plan_paragraph_text_edits(
   expected.write_string(before_projection.view(start_offset=cursor).to_owned())
   let receipt = PartialSurgeryReceipt::{
     paragraph_index,
-    before_projection,
     expected_projection: expected.to_string(),
     logical_edits,
-    byte_edit_count: edits.length(),
     touched_source_count: distinct_touched_sources(
       touched, atom_deletions, syntheses,
     ),

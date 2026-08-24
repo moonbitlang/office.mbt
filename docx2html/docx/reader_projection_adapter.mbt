@@ -48,12 +48,11 @@ priv struct ReaderProjectionParagraphFrame {
 /// Projects one read's items over its story scan. `items` must come from
 /// reading a JOINED story: any node without a physical identity refuses.
 fn project_reader_items(
-  source_part : String,
   scan : StoryScan,
   items : Array[ReaderItem],
   budget? : ReaderProjectionBudget,
 ) -> ReaderProjectionBuildResult raise DocxError {
-  project_reader_item_segments(source_part, scan, [items], budget?)
+  project_reader_item_segments(scan, [items], budget?)
 }
 
 ///|
@@ -62,7 +61,6 @@ fn project_reader_items(
 /// per segment while coordinates and carrier events stay continuous
 /// across the whole part.
 fn project_reader_item_segments(
-  source_part : String,
   scan : StoryScan,
   segments : Array[Array[ReaderItem]],
   budget? : ReaderProjectionBudget,
@@ -94,7 +92,6 @@ fn project_reader_item_segments(
     }
   }
   let projection = ReaderProjection::{
-    source_part,
     scan,
     paragraphs: builder.paragraphs,
     field_carriers: builder.field_carriers,
@@ -440,7 +437,6 @@ fn ReaderProjectionBuilder::register_run(
   self.budget.charge_retained()
   self.pending_runs.push({
     source: id,
-    source_span: self.element_span(id),
     logical_index: -1,
     field_region: OutsideField,
     field_refusal: None,

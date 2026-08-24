@@ -156,7 +156,6 @@ def generate(cases, expected):
           // segment, each accepted note or comment container as its own,
           // with part-wide continuous coordinates across segments
           match segment_joined_reader_story(
-            "word/document.xml",
             story,
             empty_body_reader({ relationships: [] }),
           ) {

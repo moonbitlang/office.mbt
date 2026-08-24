@@ -11,7 +11,6 @@ fn project_segmented_story(
     fail("expected the story to join")
   }
   guard segment_joined_reader_story(
-      "word/document.xml",
       story,
       empty_body_reader({ relationships: [] }),
     )
@@ -27,7 +26,6 @@ fn segmentation_refusal_of(source : String) -> ReaderSegmentationRefusal raise {
     fail("expected the story to join")
   }
   guard segment_joined_reader_story(
-      "word/document.xml",
       story,
       empty_body_reader({ relationships: [] }),
     )
@@ -57,7 +55,7 @@ fn project_flattened_notes(
       )
     }
   }
-  project_reader_items("word/document.xml", story.scan, collected)
+  project_reader_items(story.scan, collected)
 }
 
 ///|

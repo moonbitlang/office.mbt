@@ -11,7 +11,6 @@ fn field_test_projection(
     raise Unsupported(message="field test: the story did not join")
   }
   guard segment_joined_reader_story(
-      "word/document.xml",
       story,
       empty_body_reader({ relationships: [] }),
     )
