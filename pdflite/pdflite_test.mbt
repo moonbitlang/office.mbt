@@ -44,7 +44,7 @@ test "@core.PdfBytes concatenate read-only byte views at ownership boundary" {
 ///|
 test "@core.PdfBytes make immutable filled byte data" {
   @test.assert_eq(
-    @core.pdf_int_array_of_bytes(try! @core.pdf_bytes_make(4, value=0x7E)[:]),
+    @core.pdf_int_array_of_bytes(try! @core.pdf_bytes_make(4, value=0x7E)),
     [0x7E, 0x7E, 0x7E, 0x7E],
   )
   @test.assert_eq(try! @core.pdf_bytes_make(0), Bytes::new(0))

@@ -32,7 +32,7 @@ test "private flate bit reader and huffman guards reject malformed inputs" {
     fail("expected @core.PdfError::InvalidFlateData")
   }
   let peek_reader = FlateBitReader::new(
-    try! @core.pdf_bytes_of_int_array([0xAC, 0x03])[:],
+    try! @core.pdf_bytes_of_int_array([0xAC, 0x03]),
   )
   @test.assert_eq(peek_reader.peek_bits(-1), None)
   @test.assert_eq(peek_reader.peek_bits(4), Some(12))
@@ -191,7 +191,7 @@ test "private flate bit reader and huffman guards reject malformed inputs" {
     (Bytes::new(0), 0),
   )
   let short_prefix : Result[(Bytes, Int), Error] = try
-    pdf_flate_decode_view_prefix(try! @core.pdf_bytes_of_int_array([0x78])[:])
+    pdf_flate_decode_view_prefix(try! @core.pdf_bytes_of_int_array([0x78]))
   catch {
     err => Err(err)
   } noraise {
@@ -202,7 +202,7 @@ test "private flate bit reader and huffman guards reject malformed inputs" {
   }
   let bad_prefix_header : Result[(Bytes, Int), Error] = try
     pdf_flate_decode_view_prefix(
-      try! @core.pdf_bytes_of_int_array([0, 0, 0, 0, 0, 0])[:],
+      try! @core.pdf_bytes_of_int_array([0, 0, 0, 0, 0, 0]),
     )
   catch {
     err => Err(err)
@@ -214,7 +214,7 @@ test "private flate bit reader and huffman guards reject malformed inputs" {
   }
   let truncated_prefix_adler : Result[(Bytes, Int), Error] = try
     pdf_flate_decode_view_prefix(
-      try! @core.pdf_bytes_of_int_array([0x78, 0x01, 0x01, 0, 0, 0xFF, 0xFF])[:],
+      try! @core.pdf_bytes_of_int_array([0x78, 0x01, 0x01, 0, 0, 0xFF, 0xFF]),
     )
   catch {
     err => Err(err)
