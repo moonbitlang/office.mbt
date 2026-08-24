@@ -812,13 +812,12 @@ fn run_surgery_hyperlink_ancestor(
 /// A projecting-restricted construct: text that MATCHES but must not be
 /// MUTATED. Kept as a type rather than a message so the predicate
 /// dispatches on XML names only, and the prose lives with the renderer.
-#warnings("-unused_value")
 priv enum RestrictedConstruct {
   TrackedInsertion
   ContentControl
   TextBoxContent
   FallbackContent
-} derive(Debug)
+}
 
 ///|
 /// The user-facing name of a restricted construct.

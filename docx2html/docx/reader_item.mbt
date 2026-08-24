@@ -15,7 +15,7 @@ priv enum ReaderProjectedTextKind {
   FromNoBreakHyphen
   FromSoftHyphen
   FromSymbol
-} derive(Debug, Eq)
+}
 
 ///|
 /// What one reader decision contributed to the visible story. Emitted at the
