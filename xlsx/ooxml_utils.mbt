@@ -239,7 +239,7 @@ fn replace_attr_value_in_open_tag(
   if value_start < 0 {
     return None
   }
-  let sb = StringBuilder::new()
+  let sb = StringBuilder()
   sb.write_view(text[:value_start])
   sb.write_view(escape_xml_attr(value))
   sb.write_view(text[value_end:])

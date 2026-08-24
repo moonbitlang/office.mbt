@@ -675,7 +675,7 @@ test "typed OPC resource status cannot be forged by a part name" {
 
 ///|
 test "typed OPC resource status includes the XML nesting guard" {
-  let document = StringBuilder::new()
+  let document = StringBuilder()
   document.write_string(
     "<w:document xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\"><w:body>",
   )

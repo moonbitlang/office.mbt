@@ -93,7 +93,7 @@ fn pdf_metadata_extract_xmp_attribute(
 
 ///|
 fn pdf_metadata_combine_list_items(values : ArrayView[String]) -> String {
-  let output = StringBuilder::new()
+  let output = StringBuilder()
   for value in values {
     if !output.is_empty() {
       output.write_string(", ")

@@ -45,7 +45,7 @@ test "issue 264 cache ids for two pivots over two sources" {
     }
   }
 
-  let report = StringBuilder::new()
+  let report = StringBuilder()
   for i in 1..<=2 {
     let table_xml = part("xl/pivotTables/pivotTable\{i}.xml")
     let rels_xml = part("xl/pivotTables/_rels/pivotTable\{i}.xml.rels")

@@ -331,33 +331,33 @@ test "chart options wb: helper mappings" {
 
 ///|
 test "chart options wb: rich text and title writers" {
-  let sb = StringBuilder::new()
+  let sb = StringBuilder()
   write_drawingml_r_pr(sb, "  ", Some(wb_rich_font(italic=true, strike=true)))
   let xml = sb.to_string()
   inspect(xml.contains(" i=\"1\""), content="true")
   inspect(xml.contains("strike=\"sngStrike\""), content="true")
   inspect(xml.contains(" u=\""), content="false")
 
-  let sb_none = StringBuilder::new()
+  let sb_none = StringBuilder()
   write_drawingml_r_pr(sb_none, "  ", None)
   inspect(
     sb_none.to_string().contains("<a:rPr lang=\"en-US\"/>"),
     content="true",
   )
 
-  let title_empty_runs = StringBuilder::new()
+  let title_empty_runs = StringBuilder()
   write_chart_title(title_empty_runs, "", Some([]))
   inspect(title_empty_runs.to_string(), content="")
 
-  let axis_title_empty_runs = StringBuilder::new()
+  let axis_title_empty_runs = StringBuilder()
   write_axis_title(axis_title_empty_runs, "", Some([]))
   inspect(axis_title_empty_runs.to_string(), content="")
 
-  let def_none_sb = StringBuilder::new()
+  let def_none_sb = StringBuilder()
   write_drawingml_def_r_pr_from_font(def_none_sb, "", Font::new())
   inspect(def_none_sb.to_string().contains("<a:defRPr>"), content="true")
 
-  let def_some_sb = StringBuilder::new()
+  let def_some_sb = StringBuilder()
   let decorated_font = Font::with_values(
     italic=true,
     strike=true,
@@ -371,7 +371,7 @@ test "chart options wb: rich text and title writers" {
   )
   inspect(def_some_sb.to_string().contains(" u=\""), content="false")
 
-  let tx_pr_align_sb = StringBuilder::new()
+  let tx_pr_align_sb = StringBuilder()
   let tx_alignment = Alignment::with_values(vertical="vert")
   write_drawingml_tx_pr_with_font_and_alignment(
     tx_pr_align_sb,
@@ -381,7 +381,7 @@ test "chart options wb: rich text and title writers" {
   )
   inspect(tx_pr_align_sb.to_string().contains("vert=\"vert\""), content="true")
 
-  let tx_pr_align_unknown_sb = StringBuilder::new()
+  let tx_pr_align_unknown_sb = StringBuilder()
   let tx_alignment_unknown = Alignment::with_values(vertical="unknown")
   write_drawingml_tx_pr_with_font_and_alignment(
     tx_pr_align_unknown_sb,
@@ -401,7 +401,7 @@ test "chart options wb: series shape and data label writers" {
   sppr_no_line.fill_color = "#112233"
   sppr_no_line.fill_transparency = -1
   sppr_no_line.line.typ = NoLine
-  let no_line_sb = StringBuilder::new()
+  let no_line_sb = StringBuilder()
   write_chart_series_sppr(no_line_sb, sppr_no_line, 0)
   inspect(no_line_sb.to_string().contains("<a:noFill/>"), content="true")
   inspect(no_line_sb.to_string().contains("<a:alpha"), content="false")
@@ -410,7 +410,7 @@ test "chart options wb: series shape and data label writers" {
   sppr_line.line.color = "#445566"
   sppr_line.line.transparency = 200
   sppr_line.line.dash = Dot
-  let line_sb = StringBuilder::new()
+  let line_sb = StringBuilder()
   write_chart_series_sppr(line_sb, sppr_line, 0)
   inspect(line_sb.to_string().contains("alpha val=\"0\""), content="true")
   inspect(line_sb.to_string().contains("prstDash val=\"dot\""), content="true")
@@ -419,7 +419,7 @@ test "chart options wb: series shape and data label writers" {
   marker_no_line.fill_color = "#112233"
   marker_no_line.fill_transparency = -1
   marker_no_line.border.typ = NoLine
-  let marker_no_line_sb = StringBuilder::new()
+  let marker_no_line_sb = StringBuilder()
   write_chart_series_marker(marker_no_line_sb, marker_no_line)
   inspect(marker_no_line_sb.to_string().contains("<a:noFill/>"), content="true")
   inspect(marker_no_line_sb.to_string().contains("<a:alpha"), content="false")
@@ -427,7 +427,7 @@ test "chart options wb: series shape and data label writers" {
   let marker_open_ln = ChartMarker::new(symbol="triangle", size=5)
   marker_open_ln.border.typ = Unset
   marker_open_ln.border.width = 1.0
-  let marker_open_ln_sb = StringBuilder::new()
+  let marker_open_ln_sb = StringBuilder()
   write_chart_series_marker(marker_open_ln_sb, marker_open_ln)
   inspect(
     marker_open_ln_sb.to_string().contains("<a:ln w=\"12700\"/>"),
@@ -438,7 +438,7 @@ test "chart options wb: series shape and data label writers" {
   marker_color_ln.border.typ = Unset
   marker_color_ln.border.color = "#778899"
   marker_color_ln.border.transparency = 200
-  let marker_color_ln_sb = StringBuilder::new()
+  let marker_color_ln_sb = StringBuilder()
   write_chart_series_marker(marker_color_ln_sb, marker_color_ln)
   inspect(
     marker_color_ln_sb
@@ -450,7 +450,7 @@ test "chart options wb: series shape and data label writers" {
   let dlbl_series = wb_series(name="DataLabel")
   dlbl_series.data_label.fill_color = "#AABBCC"
   dlbl_series.data_label.fill_transparency = -1
-  let dlbl_sb = StringBuilder::new()
+  let dlbl_sb = StringBuilder()
   write_chart_series_dlbls(dlbl_sb, dlbl_series)
   inspect(
     dlbl_sb.to_string().contains("<a:srgbClr val=\"AABBCC\"/>"),
@@ -458,14 +458,14 @@ test "chart options wb: series shape and data label writers" {
   )
   inspect(dlbl_sb.to_string().contains("<a:alpha"), content="false")
 
-  let dpt_empty_sb = StringBuilder::new()
+  let dpt_empty_sb = StringBuilder()
   write_chart_series_dpt(dpt_empty_sb, ChartDataPoint::new(0))
   inspect(dpt_empty_sb.to_string(), content="")
 
   let scatter = wb_series(name="Scatter")
   scatter.line.smooth = true
   scatter.data_point.push(ChartDataPoint::new(0, fill_color="#00FF00"))
-  let scatter_sb = StringBuilder::new()
+  let scatter_sb = StringBuilder()
   write_chart_series_for_plot(scatter_sb, "scatterChart", scatter, 0, 0)
   inspect(
     scatter_sb.to_string().contains("<c:smooth val=\"1\"/>"),
@@ -477,7 +477,7 @@ test "chart options wb: series shape and data label writers" {
   bubble.line.smooth = true
   bubble.data_point.push(ChartDataPoint::new(1, fill_color="#FF0000"))
   try! bubble.set_bubble_size("Sheet1!$C$2:$C$4")
-  let bubble_sb = StringBuilder::new()
+  let bubble_sb = StringBuilder()
   write_chart_series_for_plot(bubble_sb, "bubbleChart", bubble, 0, 0)
   inspect(
     bubble_sb.to_string().contains("<c:smooth val=\"1\"/>"),
@@ -497,7 +497,7 @@ test "chart options wb: axis and plot area writer branches" {
   axis.alignment = Alignment::with_values(vertical="unknown")
   inspect(axis_id_or_default(axis, 1), content="7")
 
-  let cat_axis_sb = StringBuilder::new()
+  let cat_axis_sb = StringBuilder()
   write_axis(cat_axis_sb, "catAx", axis, 7, 8, "b", Col)
   inspect(
     cat_axis_sb.to_string().contains("<c:logBase val=\"10"),
@@ -513,7 +513,7 @@ test "chart options wb: axis and plot area writer branches" {
 
   let val_axis = ChartAxis::new()
   val_axis.major_unit = 2.5
-  let val_axis_sb = StringBuilder::new()
+  let val_axis_sb = StringBuilder()
   write_axis(val_axis_sb, "valAx", val_axis, 2, 1, "l", Col)
   inspect(
     val_axis_sb.to_string().contains("<c:majorUnit val=\"2.5\"/>"),
@@ -522,14 +522,14 @@ test "chart options wb: axis and plot area writer branches" {
 
   let axis_tx_none_vertical = ChartAxis::new()
   axis_tx_none_vertical.alignment = Alignment::with_values(text_rotation=10)
-  let axis_tx_none_vertical_sb = StringBuilder::new()
+  let axis_tx_none_vertical_sb = StringBuilder()
   write_axis_tx_pr(axis_tx_none_vertical_sb, axis_tx_none_vertical)
   inspect(
     axis_tx_none_vertical_sb.to_string().contains("rot=\"600000\""),
     content="true",
   )
 
-  let axis_num_fmt_sb = StringBuilder::new()
+  let axis_num_fmt_sb = StringBuilder()
   write_axis_num_fmt(axis_num_fmt_sb, ChartNumFmt::new(source_linked=false))
   inspect(
     axis_num_fmt_sb
@@ -540,7 +540,7 @@ test "chart options wb: axis and plot area writer branches" {
 
   let dlbl_plot = ChartPlotArea::new()
   dlbl_plot.num_fmt = ChartNumFmt::new(source_linked=false)
-  let dlbl_plot_sb = StringBuilder::new()
+  let dlbl_plot_sb = StringBuilder()
   write_chart_dlbls(dlbl_plot_sb, "pieChart", false, dlbl_plot)
   inspect(
     dlbl_plot_sb
@@ -552,7 +552,7 @@ test "chart options wb: axis and plot area writer branches" {
   let plot_opts = ChartOptions::new(Col)
   plot_opts.plot_area.fill_color = "#112233"
   plot_opts.plot_area.fill_transparency = -1
-  let plot_sppr_sb = StringBuilder::new()
+  let plot_sppr_sb = StringBuilder()
   write_plot_area_sppr(plot_sppr_sb, plot_opts)
   inspect(
     plot_sppr_sb.to_string().contains("<a:srgbClr val=\"112233\"/>"),
@@ -562,10 +562,10 @@ test "chart options wb: axis and plot area writer branches" {
 
   let dtable_opts = ChartOptions::new(Col)
   dtable_opts.plot_area.show_data_table = true
-  let dtable_skip_sb = StringBuilder::new()
+  let dtable_skip_sb = StringBuilder()
   write_plot_area_d_table(dtable_skip_sb, "scatterChart", dtable_opts)
   inspect(dtable_skip_sb.to_string(), content="")
-  let dtable_emit_sb = StringBuilder::new()
+  let dtable_emit_sb = StringBuilder()
   write_plot_area_d_table(dtable_emit_sb, "barChart", dtable_opts)
   inspect(
     dtable_emit_sb.to_string().contains("showKeys val=\"0\""),
@@ -576,7 +576,7 @@ test "chart options wb: axis and plot area writer branches" {
   root_no_line.fill_color = "#112233"
   root_no_line.fill_transparency = -1
   root_no_line.border.typ = NoLine
-  let root_no_line_sb = StringBuilder::new()
+  let root_no_line_sb = StringBuilder()
   write_chart_sppr_root(root_no_line_sb, root_no_line)
   inspect(root_no_line_sb.to_string().contains("<a:noFill/>"), content="true")
   inspect(root_no_line_sb.to_string().contains("<a:alpha"), content="false")
@@ -584,7 +584,7 @@ test "chart options wb: axis and plot area writer branches" {
   let root_open_ln = ChartOptions::new(Col)
   root_open_ln.border.typ = Unset
   root_open_ln.border.width = 1.0
-  let root_open_ln_sb = StringBuilder::new()
+  let root_open_ln_sb = StringBuilder()
   write_chart_sppr_root(root_open_ln_sb, root_open_ln)
   inspect(
     root_open_ln_sb.to_string().contains("<a:ln w=\"12700\"/>"),
@@ -595,7 +595,7 @@ test "chart options wb: axis and plot area writer branches" {
   root_color_ln.border.typ = Unset
   root_color_ln.border.color = "#334455"
   root_color_ln.border.transparency = 200
-  let root_color_ln_sb = StringBuilder::new()
+  let root_color_ln_sb = StringBuilder()
   write_chart_sppr_root(root_color_ln_sb, root_color_ln)
   inspect(
     root_color_ln_sb.to_string().contains("alpha val=\"0\""),
@@ -606,7 +606,7 @@ test "chart options wb: axis and plot area writer branches" {
   root_color_ln_zero.border.typ = Unset
   root_color_ln_zero.border.color = "#556677"
   root_color_ln_zero.border.transparency = 0
-  let root_color_ln_zero_sb = StringBuilder::new()
+  let root_color_ln_zero_sb = StringBuilder()
   write_chart_sppr_root(root_color_ln_zero_sb, root_color_ln_zero)
   inspect(
     root_color_ln_zero_sb
@@ -615,20 +615,20 @@ test "chart options wb: axis and plot area writer branches" {
     content="true",
   )
 
-  let sppr_return_sb = StringBuilder::new()
+  let sppr_return_sb = StringBuilder()
   write_chart_sppr(sppr_return_sb, "", ChartLine::new())
   inspect(sppr_return_sb.to_string(), content="")
 
   let sppr_no_line_border = ChartLine::new()
   sppr_no_line_border.typ = NoLine
-  let sppr_no_line_sb = StringBuilder::new()
+  let sppr_no_line_sb = StringBuilder()
   write_chart_sppr(sppr_no_line_sb, "", sppr_no_line_border)
   inspect(sppr_no_line_sb.to_string().contains("<a:noFill/>"), content="true")
 
   let sppr_open_border = ChartLine::new()
   sppr_open_border.typ = Unset
   sppr_open_border.width = 1.0
-  let sppr_open_sb = StringBuilder::new()
+  let sppr_open_sb = StringBuilder()
   write_chart_sppr(sppr_open_sb, "", sppr_open_border)
   inspect(
     sppr_open_sb.to_string().contains("<a:ln w=\"12700\"/>"),
@@ -639,7 +639,7 @@ test "chart options wb: axis and plot area writer branches" {
   sppr_color_alpha.typ = Unset
   sppr_color_alpha.color = "#99AABB"
   sppr_color_alpha.transparency = 50
-  let sppr_color_alpha_sb = StringBuilder::new()
+  let sppr_color_alpha_sb = StringBuilder()
   write_chart_sppr(sppr_color_alpha_sb, "", sppr_color_alpha)
   inspect(
     sppr_color_alpha_sb.to_string().contains("alpha val=\"50000\""),
@@ -650,7 +650,7 @@ test "chart options wb: axis and plot area writer branches" {
   sppr_color_zero.typ = Unset
   sppr_color_zero.color = "#112244"
   sppr_color_zero.transparency = 0
-  let sppr_color_zero_sb = StringBuilder::new()
+  let sppr_color_zero_sb = StringBuilder()
   write_chart_sppr(sppr_color_zero_sb, "", sppr_color_zero)
   inspect(
     sppr_color_zero_sb
@@ -664,7 +664,7 @@ test "chart options wb: axis and plot area writer branches" {
   sppr_dash.color = "#CC8844"
   sppr_dash.transparency = 10
   sppr_dash.dash = Dash
-  let sppr_dash_sb = StringBuilder::new()
+  let sppr_dash_sb = StringBuilder()
   write_chart_sppr(sppr_dash_sb, "", sppr_dash)
   inspect(
     sppr_dash_sb.to_string().contains("alpha val=\"90000\""),
@@ -679,7 +679,7 @@ test "chart options wb: axis and plot area writer branches" {
   sppr_neg.typ = Unset
   sppr_neg.color = "#114488"
   sppr_neg.transparency = -1
-  let sppr_neg_sb = StringBuilder::new()
+  let sppr_neg_sb = StringBuilder()
   write_chart_sppr(sppr_neg_sb, "", sppr_neg)
   inspect(
     sppr_neg_sb.to_string().contains("<a:solidFill><a:srgbClr val=\"114488\"/>"),
@@ -691,7 +691,7 @@ test "chart options wb: axis and plot area writer branches" {
   sppr_gt.color = "#228844"
   sppr_gt.transparency = 200
   sppr_gt.dash = Dot
-  let sppr_gt_sb = StringBuilder::new()
+  let sppr_gt_sb = StringBuilder()
   write_chart_sppr(sppr_gt_sb, "", sppr_gt)
   inspect(sppr_gt_sb.to_string().contains("alpha val=\"0\""), content="true")
   inspect(

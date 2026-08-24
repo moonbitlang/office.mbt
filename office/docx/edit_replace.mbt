@@ -478,7 +478,7 @@ fn parse_docx_run_address(
 ) -> String raise DocxEditParseError {
   let canonical_prefix = "/docx/body/"
   let relative = if value.has_prefix(canonical_prefix) {
-    value.substring(start=canonical_prefix.length()).to_string()
+    value[canonical_prefix.length():].to_owned()
   } else {
     value
   }
@@ -495,17 +495,15 @@ fn parse_docx_run_address(
   let segments = relative.split("/").collect()
   let mut last_kind = ""
   for segment_view in segments {
-    let segment = segment_view.to_string()
+    let segment = segment_view.to_owned()
     guard segment.find("[") is Some(open_at) && segment.has_suffix("]") else {
       raise refuse("carries a segment without an ordinal (\"\{segment}\")")
     }
-    let kind = segment.substring(start=0, end=open_at).to_string()
+    let kind = segment[:open_at].to_owned()
     guard kind is ("p" | "r" | "tbl" | "tr" | "tc") else {
       raise refuse("carries an unsupported segment kind (\"\{kind}\")")
     }
-    let ordinal_text = segment
-      .substring(start=open_at + 1, end=segment.length() - 1)
-      .to_string()
+    let ordinal_text = segment[open_at + 1:segment.length() - 1].to_owned()
     if ordinal_text.length() == 0 {
       raise refuse("carries an empty ordinal (\"\{segment}\")")
     }

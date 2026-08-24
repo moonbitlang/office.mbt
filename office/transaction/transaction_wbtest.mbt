@@ -25,7 +25,7 @@ fn wb_rewrite_content_types(
 
 ///|
 fn wb_large_candidate(data : BytesView) -> Bytes raise {
-  let marker = StringBuilder::new()
+  let marker = StringBuilder()
   for _ in 0..<(2 * 1024 * 1024) {
     marker.write_char('x')
   }

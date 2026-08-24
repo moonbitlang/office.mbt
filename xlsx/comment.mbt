@@ -110,7 +110,7 @@ fn normalize_comment(comment : Comment) -> Comment raise XlsxError {
   }
   ignore(validate_comment_content_units(comment.text, "comment text", 0))
   let paragraph : Array[RichTextRun] = []
-  let rich_text_builder = StringBuilder::new()
+  let rich_text_builder = StringBuilder()
   let mut rich_text_units = 0
   for run in comment.paragraph {
     rich_text_units = validate_comment_content_units(

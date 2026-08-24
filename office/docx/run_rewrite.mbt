@@ -105,7 +105,7 @@ fn docx_paragraph_pieces(
       }
     }
     if pure {
-      let text = StringBuilder::new()
+      let text = StringBuilder()
       for child in run_children {
         if child is Text(value) {
           text.write_string(value)
@@ -320,7 +320,7 @@ fn docx_plan_span_rewrites(
       continue
     }
     piece_edits.sort_by((a, b) => a.0 - b.0)
-    let builder = StringBuilder::new()
+    let builder = StringBuilder()
     let mut cursor = 0
     for edit in piece_edits {
       let (local_start, local_end, replacement) = edit
@@ -349,7 +349,7 @@ fn docx_plan_span_rewrites(
 /// Paragraph boundaries and opaque children insert separators, so a
 /// match can never straddle them.
 fn docx_story_joined_text(body : Array[@document.DocumentElement]) -> String {
-  let joined = StringBuilder::new()
+  let joined = StringBuilder()
   fn walk(element : @document.DocumentElement) -> Unit {
     match element {
       Text(value) => joined.write_string(value)

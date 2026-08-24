@@ -2979,7 +2979,7 @@ fn eval_function(
             if end > len {
               end = len
             }
-            let sb = StringBuilder::new()
+            let sb = StringBuilder()
             sb.write_view(text.unsafe_substring(start=0, end=start))
             sb.write_view(new_text)
             sb.write_view(text.unsafe_substring(start=end, end=len))
@@ -3022,7 +3022,7 @@ fn eval_function(
             } else {
               len + 1
             }
-            let sb = StringBuilder::new()
+            let sb = StringBuilder()
             sb.write_view(dbcs_byte_range(text, 1, prefix_count))
             sb.write_view(new_text)
             // suffix runs from just past the replaced range to end of string
@@ -3066,7 +3066,7 @@ fn eval_function(
                   Some(found) => {
                     count = count + 1
                     if count == instance {
-                      let sb = StringBuilder::new()
+                      let sb = StringBuilder()
                       sb.write_view(text.unsafe_substring(start=0, end=found))
                       sb.write_view(new_text)
                       let tail_start = found + pattern_len
@@ -3086,7 +3086,7 @@ fn eval_function(
             let mut index = 0
             let len = text.length()
             let pattern_len = old_text.length()
-            let sb = StringBuilder::new()
+            let sb = StringBuilder()
             while true {
               match find_substring_from(text, old_text, index) {
                 Some(found) => {
@@ -5330,7 +5330,7 @@ let roman_table : Array[Array[RomanNumeral]] = [
 ///|
 fn roman_string(value : Double, form : Int) -> String {
   let table = roman_table[form]
-  let sb = StringBuilder::new()
+  let sb = StringBuilder()
   let mut remaining = trunc_double(value)
   for numeral in table {
     while remaining >= numeral.n {
@@ -5555,7 +5555,7 @@ fn dec2x_values(
   if decimal < 0.0 && digits.length() > 10 {
     let chars = digits.to_array()
     let start = chars.length() - 10
-    let sb = StringBuilder::new()
+    let sb = StringBuilder()
     for i in start..<chars.length() {
       sb.write_char(chars[i])
     }

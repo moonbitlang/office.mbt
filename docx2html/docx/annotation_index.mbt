@@ -54,7 +54,7 @@ fn AnnotationWarningCollector::text(
   if self.max_chars <= 0 {
     return ""
   }
-  let output = StringBuilder::new()
+  let output = StringBuilder()
   let mut count = 0
   let content_limit = if self.max_chars > 1 { self.max_chars - 1 } else { 0 }
   for character in value {

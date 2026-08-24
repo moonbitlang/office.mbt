@@ -117,7 +117,7 @@ fn hf_package(
   extra? : Array[(String, String)] = [],
 ) -> Bytes {
   let archive = @mbtzip.Archive::new()
-  let content_types = StringBuilder::new()
+  let content_types = StringBuilder()
   content_types.write_string(
     (
       #|<?xml version="1.0"?>
@@ -228,7 +228,7 @@ test "later sections inherit header variants they do not override" {
 
 ///|
 test "section references reject unbounded and duplicate variant domains" {
-  let invalid_references = StringBuilder::new()
+  let invalid_references = StringBuilder()
   for i in 0..<4_096 {
     invalid_references.write_string(
       "<w:headerReference w:type=\"variant-\{i}\" r:id=\"rId1\"/>",

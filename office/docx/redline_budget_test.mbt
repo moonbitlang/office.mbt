@@ -24,7 +24,7 @@ fn redline_paragraph(index : Int) -> String {
 /// Body markup for `count` redlined paragraphs, spliced into the one-paragraph
 /// fixture by closing and reopening `w:p` between blocks.
 fn redline_runs(count : Int) -> String {
-  let markup = StringBuilder::new()
+  let markup = StringBuilder()
   for index in 0..<count {
     if index > 0 {
       markup.write_string("</w:p><w:p>")

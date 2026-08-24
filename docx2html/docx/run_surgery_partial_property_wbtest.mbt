@@ -430,7 +430,7 @@ fn partial_run_prefix(
     }
     end = end + 1
   }
-  let name = @utf8.decode(source[element.byte_start + 1:end].to_bytes())
+  let name = @utf8.decode(source[element.byte_start + 1:end].to_owned())
   match name.find(":") {
     Some(index) => name.view(end_offset=index + 1).to_owned()
     None => ""
@@ -524,9 +524,9 @@ fn partial_space_value_is_preserve(
       body = body + source[index].to_int().unsafe_to_char().to_string()
     }
     let character = if body.has_prefix("#x") {
-      partial_reference_code(body[2:].to_string(), 16)
+      partial_reference_code(body[2:].to_owned(), 16)
     } else if body.has_prefix("#") {
-      partial_reference_code(body[1:].to_string(), 10)
+      partial_reference_code(body[1:].to_owned(), 10)
     } else {
       match body {
         "amp" => Some('&')
@@ -1055,8 +1055,8 @@ test "generated documents compose partial edits over every boundary pair" {
   // would pass just as happily on a corpus where every batch refused, or
   // where only one geometry ever planned. Measured margins are far above
   // them (see the probe recorded in the PR); a collapse fails here.
-  let planned_pairs = pairs.size()
-  let refusal_classes = refusals.size()
+  let planned_pairs = pairs.length()
+  let refusal_classes = refusals.length()
   // Measured on this corpus: 695 batches planned across 16 distinct
   // ordered pairs, with refusal classes RestrictedRegion 280,
   // MultiPhysicalParagraph 264, NoSynthesisCarrier 42,
@@ -1371,7 +1371,7 @@ test "the lexical matrix the grammar does not reach is proved the same way" {
     }
     assert_true(listed, msg="unexpected ordered pair accepted: " + key)
   }
-  let lexical_pairs = pairs.size()
+  let lexical_pairs = pairs.length()
   assert_true(
     lexical_pairs == 71,
     msg="only \{lexical_pairs} distinct ordered pairs in the lexical family",

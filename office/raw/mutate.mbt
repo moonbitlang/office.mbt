@@ -97,7 +97,7 @@ fn checked_document_bytes(xml : String) -> Bytes raise RawError {
 
 ///|
 fn raw_escape_attribute(value : String) -> String {
-  let output = StringBuilder::new()
+  let output = StringBuilder()
   for character in value {
     match character {
       '&' => output.write_string("&amp;") |> ignore

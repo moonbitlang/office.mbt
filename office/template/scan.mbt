@@ -264,7 +264,7 @@ pub fn scan_placeholders(
       cursor.unit_at(position + 1) == '{'.to_int() {
       let open = position
       let mut probe = position + 2
-      let key = StringBuilder::new()
+      let key = StringBuilder()
       let mut reason = ""
       // first key unit
       if probe >= total {

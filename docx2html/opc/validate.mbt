@@ -488,7 +488,7 @@ fn bounded_finding_text(text : String, limit : Int) -> String {
   if !valid_finding_text(text, 0x7fffffff) {
     return bounded_finding_text("<invalid UTF-16>", limit)
   }
-  let output = StringBuilder::new()
+  let output = StringBuilder()
   let mut count = 0
   let content_limit = if limit > 1 { limit - 1 } else { 0 }
   for character in text {

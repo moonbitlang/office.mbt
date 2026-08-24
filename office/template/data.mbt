@@ -108,7 +108,7 @@ fn check_duplicate_keys(
       // key grammar has no escapable characters, so verbatim identity is
       // exact for well-formed data. Values with arbitrary unicode are
       // skipped without materializing characters.
-      let identity = StringBuilder::new()
+      let identity = StringBuilder()
       let mut escaped = false
       index += 1
       let string_start = index

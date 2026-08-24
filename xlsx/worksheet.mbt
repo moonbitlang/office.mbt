@@ -4206,7 +4206,7 @@ fn format_cell_ref_with_abs(
     raise InvalidCellRef(value="\{col}:\{row}")
   }
   let row_text = row.to_string()
-  let sb = StringBuilder::new()
+  let sb = StringBuilder()
   if abs_col {
     sb.write_char('$')
   }
@@ -4220,8 +4220,8 @@ fn format_cell_ref_with_abs(
 
 ///|
 fn split_sqref_range(text : StringView) -> (String, String) {
-  let left = StringBuilder::new()
-  let right = StringBuilder::new()
+  let left = StringBuilder()
+  let right = StringBuilder()
   let mut seen_sep = false
   for ch in text {
     if !seen_sep && ch == ':' {
@@ -4474,7 +4474,7 @@ fn remap_duplicated_x14_ids(
     return (xml.to_owned(), Map([]), start_counter)
   }
   let additions : Map[String, X14DataBarProps] = Map([])
-  let builder = StringBuilder::new()
+  let builder = StringBuilder()
   builder.write_view(chunks[0])
   let mut counter = start_counter
   for index in 1..<chunks.length() {

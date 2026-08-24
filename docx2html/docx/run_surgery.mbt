@@ -31,7 +31,7 @@ priv struct RunSurgeryEdit {
 /// unconditionally is what every writer here already does and keeps the output
 /// stable under later re-reads.
 fn run_surgery_escape(text : String) -> String raise DocxError {
-  let out = StringBuilder::new()
+  let out = StringBuilder()
   for char in text {
     let code = char.to_int()
     // XML 1.0 forbids most C0 controls outright. Tab, newline and carriage
@@ -962,9 +962,9 @@ fn run_surgery_qualified_prefix(
       // name. These bytes came from a part the scanner already accepted, so a
       // decode failure here is not reachable; an undecodable prefix falls back
       // to none, which the caller answers by binding the default namespace.
-      return (try? @utf8.decode(Bytes::from_array(prefix)))
-        .map(name => name + ":")
-        .unwrap_or("")
+      return try @utf8.decode(Bytes::from_array(prefix)) + ":" catch {
+        _ => ""
+      }
     }
     if byte == b' ' ||
       byte == b'\t' ||

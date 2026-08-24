@@ -44,7 +44,7 @@ fn truncate_utf16_units(text : StringView, limit : Int) -> String {
   if limit <= 0 {
     return ""
   }
-  let sb = StringBuilder::new()
+  let sb = StringBuilder()
   let mut count = 0
   for c in text {
     let units = if c.to_int() > 0xffff { 2 } else { 1 }
@@ -59,7 +59,7 @@ fn truncate_utf16_units(text : StringView, limit : Int) -> String {
 
 ///|
 fn rich_text_plain_text(runs : ArrayView[RichTextRun]) -> String {
-  let sb = StringBuilder::new()
+  let sb = StringBuilder()
   for run in runs {
     sb.write_view(run.text)
   }

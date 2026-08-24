@@ -63,7 +63,7 @@ pub fn PdfDrawOp::debug_name(self : PdfDrawOp) -> String {
 ///|
 /// Return cpdf's space-prefixed diagnostic string for a list of draw ops.
 pub fn pdf_string_of_drawops(ops : ArrayView[PdfDrawOp]) -> String {
-  let output = StringBuilder::new()
+  let output = StringBuilder()
   for op in ops {
     output.write_string(" ")
     output.write_string(op.debug_name())

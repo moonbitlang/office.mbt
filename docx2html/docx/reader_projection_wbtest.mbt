@@ -282,7 +282,12 @@ test "a textbox in a deleted row inside a paragraph projects like the reader" {
     texts.push(text.to_string())
   }
   assert_eq(texts, reader_paragraph_texts(source))
-  inspect(texts, content="[x, A]")
+  @debug.debug_inspect(
+    texts,
+    content=(
+      #|["x", "A"]
+    ),
+  )
 }
 
 ///|

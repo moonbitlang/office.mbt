@@ -557,7 +557,7 @@ test "raw mutation rejects unsafe grammar fragments and validation regressions" 
 ///|
 test "raw all selection is capped before edits are materialized" {
   let original = @word.new_blank_docx()
-  let document = StringBuilder::new()
+  let document = StringBuilder()
   ignore(
     document.write_string("<w:document xmlns:w=\"\{word_namespace}\"><w:body>"),
   )
@@ -587,7 +587,7 @@ test "raw all selection is capped before edits are materialized" {
 ///|
 test "raw edit rejects aggregate output amplification before splicing" {
   let original = @word.new_blank_docx()
-  let document = StringBuilder::new()
+  let document = StringBuilder()
   document.write_string("<w:document xmlns:w=\"\{word_namespace}\"><w:body>")
   |> ignore
   for _ in 0..<256 {

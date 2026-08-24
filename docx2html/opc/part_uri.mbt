@@ -185,7 +185,7 @@ pub fn is_valid_part_segment(segment : StringView) -> Bool {
 /// Returns the OPC logical-identity key. Part and logical-item equivalence is
 /// ASCII-case-insensitive only; non-ASCII scalars remain case-sensitive.
 pub fn part_name_key(name : StringView) -> String {
-  let output = StringBuilder::new(size_hint=name.length())
+  let output = StringBuilder(size_hint=name.length())
   for character in name {
     output.write_char(character.to_ascii_lowercase())
   }
@@ -329,7 +329,7 @@ pub fn relationship_source_part_name(name : String) -> String? {
     return None
   }
   let source_name = filename[:filename.length() - ".rels".length()].to_owned()
-  let output = StringBuilder::new(size_hint=name.length())
+  let output = StringBuilder(size_hint=name.length())
   for index in 0..<(segments.length() - 2) {
     if index > 0 {
       output.write_char('/') |> ignore
@@ -354,7 +354,7 @@ pub fn logical_part_name_from_zip_item_name(name : StringView) -> String? {
     return None
   }
   let characters = name.to_array()
-  let output = StringBuilder::new(size_hint=name.length())
+  let output = StringBuilder(size_hint=name.length())
   let mut index = 0
   while index < characters.length() {
     let character = characters[index]
@@ -420,7 +420,7 @@ pub fn zip_item_name_from_logical_part_name(name : StringView) -> String? {
     }
   }
   let digits = "0123456789ABCDEF".to_array()
-  let output = StringBuilder::new(size_hint=name.length())
+  let output = StringBuilder(size_hint=name.length())
   for character in name {
     if character.is_ascii() {
       output.write_char(character)

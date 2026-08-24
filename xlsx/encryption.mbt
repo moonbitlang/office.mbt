@@ -973,7 +973,7 @@ pub fn decrypt(
 ///|
 fn bytes_to_hex(bytes : BytesView) -> String {
   let digits = "0123456789abcdef"
-  let sb = StringBuilder::new()
+  let sb = StringBuilder()
   for b in bytes {
     let v = b.to_int()
     let hi = (v >> 4) & 0xf

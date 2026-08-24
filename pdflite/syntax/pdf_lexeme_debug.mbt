@@ -48,7 +48,7 @@ pub fn pdf_string_of_lexeme(lexeme : PdfLexeme) -> String {
 ///
 /// Each lexeme is placed on its own line with a leading space.
 pub fn pdf_string_of_lexemes(lexemes : ArrayView[PdfLexeme]) -> String {
-  let text = StringBuilder::new()
+  let text = StringBuilder()
   for lexeme in lexemes {
     text.write_string("\n ")
     text.write_string(pdf_string_of_lexeme(lexeme))

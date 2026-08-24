@@ -224,7 +224,7 @@ fn office_render_font_count(selected : @pagelayout.PageModel) -> Int {
       }
     }
   }
-  seen.size()
+  seen.length()
 }
 
 ///|

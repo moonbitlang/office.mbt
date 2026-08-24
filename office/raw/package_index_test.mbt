@@ -573,8 +573,8 @@ fn sheet_ordinal_gap_fixture() -> Bytes raise {
 
 ///|
 fn alias_budget_xlsx_fixture() -> Bytes raise {
-  let sheets = StringBuilder::new()
-  let relationships = StringBuilder::new()
+  let sheets = StringBuilder()
+  let relationships = StringBuilder()
   for index in 1..<=2049 {
     sheets.write_string(
       "<sheet name=\"Sheet\{index}\" sheetId=\"\{index}\" r:id=\"r\{index}\"/>",
@@ -1648,7 +1648,7 @@ test "raw metadata preflight bounds namespace expansion and scope work" {
   assert_true(uri_details.contains("xml_namespace_uri_bytes"))
 
   let bounded_uri = "urn:" + "x".repeat(2044)
-  let expanded = StringBuilder::new()
+  let expanded = StringBuilder()
   expanded.write_string("\{types_open} xmlns:q=\"\{bounded_uri}\">") |> ignore
   for _ in 0..<2100 {
     expanded.write_string("<q:x/>") |> ignore
@@ -1663,7 +1663,7 @@ test "raw metadata preflight bounds namespace expansion and scope work" {
   assert_eq(expanded_code, "office.raw.resource_limit")
   assert_true(expanded_details.contains("xml_expanded_name_bytes"))
 
-  let scoped = StringBuilder::new()
+  let scoped = StringBuilder()
   scoped.write_string(types_open) |> ignore
   for index in 0..<200 {
     scoped.write_string(" xmlns:p\{index}=\"urn:p\{index}\"") |> ignore
@@ -1685,7 +1685,7 @@ test "raw metadata preflight bounds namespace expansion and scope work" {
 
 ///|
 fn raw_large_document_docx(paragraphs : Int) -> Bytes raise {
-  let document = StringBuilder::new()
+  let document = StringBuilder()
   document.write_string("<w:document xmlns:w=\"\{word_namespace}\"><w:body>")
   |> ignore
   for index in 0..<paragraphs {
@@ -1755,7 +1755,7 @@ test "raw verbs read a main part past the metadata element budget" {
 /// The root probe replaces a whole-part budget with one that fits what it
 /// actually reads, so that budget still has to refuse a hostile part.
 test "raw root probe bounds the prologue and the document start tag" {
-  let buried = StringBuilder::new()
+  let buried = StringBuilder()
   buried.write_string("<!--") |> ignore
   buried.write_string("c".repeat(70_000)) |> ignore
   buried.write_string("--><w:document xmlns:w=\"\{word_namespace}\"/>")
@@ -1771,7 +1771,7 @@ test "raw root probe bounds the prologue and the document start tag" {
       #|{"part":"/word/document.xml","kind":"xml_root_probe_bytes","limit":65536,"actual":70007}
     ),
   )
-  let padded = StringBuilder::new()
+  let padded = StringBuilder()
   padded.write_string("<w:document xmlns:w=\"\{word_namespace}\"") |> ignore
   for index in 0..<2000 {
     padded.write_string(" w:pad\{index}=\"\{"p".repeat(30)}\"") |> ignore
@@ -1821,7 +1821,7 @@ test "raw root probe reports malformed main parts as malformed" {
     assert_eq(code, "office.raw.invalid_xml")
     assert_true(message.contains(entry.1))
   }
-  let large = StringBuilder::new()
+  let large = StringBuilder()
   large.write_string(
     "<w:document xmlns:w=\"\{word_namespace}\" broken><w:body>",
   )
@@ -1840,7 +1840,7 @@ test "raw root probe reports malformed main parts as malformed" {
 
 ///|
 fn raw_large_workbook_xlsx(defined_names : Int, compact : Bool) -> Bytes raise {
-  let workbook = StringBuilder::new()
+  let workbook = StringBuilder()
   workbook.write_string(
     "<workbook xmlns=\"http://schemas.openxmlformats.org/spreadsheetml/2006/main\" xmlns:r=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships\"><sheets><sheet name=\"Moved\" sheetId=\"1\" r:id=\"rId1\"/></sheets><definedNames>",
   )

@@ -123,7 +123,7 @@ pub fn plan_run_text_replacement(
   // the caller believes it is. Neither side's content is echoed into
   // the error -- refusal reasons must not leak document text into logs.
   let target = projection.paragraphs[paragraph_index].runs[run_index].source
-  let visible = StringBuilder::new()
+  let visible = StringBuilder()
   for contribution in projection.paragraphs[paragraph_index].contributions {
     if contribution.run_source == Some(target) {
       visible.write_string(contribution.value)

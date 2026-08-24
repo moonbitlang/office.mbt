@@ -965,7 +965,7 @@ fn drawing_chart_frame_is_canonical(
   // classification) and the exact-attribute pass. Attribute values are
   // extracted during that exact pass, so there are no hidden rescans.
   charge_drawing_work(budget, wrapped_length)
-  let wrapper = StringBuilder::new(size_hint=wrapped_length)
+  let wrapper = StringBuilder(size_hint=wrapped_length)
   wrapper.write_string(wrapper_prefix)
   wrapper.write_view(anchor_xml)
   wrapper.write_string(wrapper_suffix)

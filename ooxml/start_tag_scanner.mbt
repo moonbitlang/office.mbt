@@ -758,7 +758,7 @@ pub fn decode_xml_attribute(
   if !needs_decode {
     return value.to_owned()
   }
-  let output = StringBuilder::new()
+  let output = StringBuilder()
   let mut index = 0
   let mut literal_start = 0
   let mut next_checkpoint = 0
@@ -1180,7 +1180,7 @@ fn XmlStartTagScanner::escaped_character_data(
     self.rewrite_output_chars -
     unchanged
   let value = self.xml[value_start:end]
-  let output = StringBuilder::new(size_hint=value.length().min(available))
+  let output = StringBuilder(size_hint=value.length().min(available))
   let mut used = 0
   for index, unit in value {
     if (index & 4095) == 0 {
@@ -1261,7 +1261,7 @@ fn xml_start_tag_scanner_with_rewrites(
     reserved_element_prefixes,
     rewrite_attribute_prefixes: attribute_prefixes,
     reserved_attribute_prefixes,
-    rewrite_output: StringBuilder::new(),
+    rewrite_output: StringBuilder(),
     canonicalize_markup,
     rewrite_output_limit,
     rewrite_output_chars: 0,
@@ -2485,7 +2485,7 @@ test "start tag scanner rejects a misplaced self-closing slash" {
 
 ///|
 test "namespace duplicate checks retain namespace identities once" {
-  let attributes = StringBuilder::new()
+  let attributes = StringBuilder()
   for index in 0..<4095 {
     attributes.write_string(" p:a\{index}='v'")
   }
@@ -2556,7 +2556,7 @@ test "CDATA whitespace classification polls cancellation" {
 
 ///|
 test "namespace lookup stays bounded with many bindings and prefixed elements" {
-  let xml = StringBuilder::new()
+  let xml = StringBuilder()
   xml.write_string("<root xmlns:p0='urn:sheet'")
   for index in 1..<4095 {
     xml.write_string(" xmlns:p\{index}='urn:unused:\{index}'")

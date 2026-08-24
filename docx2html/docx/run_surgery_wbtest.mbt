@@ -102,7 +102,7 @@ fn assert_whole_run_replacement(
   let edited = reprojected.paragraphs[paragraph]
   assert_true(run < edited.runs.length())
   let target = edited.runs[run].source
-  let seen = StringBuilder::new()
+  let seen = StringBuilder()
   let mut found = false
   for contribution in edited.contributions {
     if contribution.run_source == Some(target) {

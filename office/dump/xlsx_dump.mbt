@@ -263,7 +263,7 @@ fn dump_sheet_cells(
       None => {
         if cell.rich_text is Some(runs) {
           // flatten to plain text, and say so
-          let flattened = StringBuilder::new()
+          let flattened = StringBuilder()
           for run in runs {
             flattened.write_string(run.text)
           }

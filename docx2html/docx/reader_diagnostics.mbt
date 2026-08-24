@@ -66,7 +66,7 @@ fn bounded_reader_diagnostic_parts(
       retained.push(character)
     }
   }
-  let output = StringBuilder::new()
+  let output = StringBuilder()
   let content_length = if truncated { maximum - 1 } else { retained.length() }
   for index in 0..<content_length {
     output.write_char(retained[index]) |> ignore
@@ -79,7 +79,7 @@ fn bounded_reader_diagnostic_parts(
 
 ///|
 fn reader_diagnostic_text(parts : ArrayView[String]) -> String {
-  let output = StringBuilder::new()
+  let output = StringBuilder()
   for part in parts {
     output.write_string(part) |> ignore
   }

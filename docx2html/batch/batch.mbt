@@ -1405,7 +1405,7 @@ priv struct ScanFrame {
 /// Renders the innermost frame's JSON path plus an optional leaf key —
 /// "ops[3].params", "ops[3].params.rows[0][1].col_span".
 fn render_scan_path(frames : Array[ScanFrame], leaf : String?) -> String {
-  let builder = StringBuilder::new()
+  let builder = StringBuilder()
   for frame in frames {
     if frame.entry == "" {
       continue
@@ -1436,7 +1436,7 @@ fn render_scan_path(frames : Array[ScanFrame], leaf : String?) -> String {
 /// surrogates in diagnostics).
 fn render_unit_escape(code : Int) -> String {
   let digits = "0123456789ABCDEF"
-  let builder = StringBuilder::new()
+  let builder = StringBuilder()
   builder.write_string("\\u")
   for shift in [12, 8, 4, 0] {
     let nibble = (code >> shift) & 0xF
@@ -1532,8 +1532,8 @@ fn lex_json_string(
   match closed_after {
     None => ("", "", None)
     Some(next) => {
-      let canonical = StringBuilder::new()
-      let display = StringBuilder::new()
+      let canonical = StringBuilder()
+      let display = StringBuilder()
       let mut at = 0
       while at < decoded.length() {
         let code = decoded[at]
@@ -1668,7 +1668,7 @@ pub fn check_script_text(text : String) -> Unit raise BatchError {
           }
         }
         if !plain_integer {
-          let lexeme_builder = StringBuilder::new()
+          let lexeme_builder = StringBuilder()
           for at in start..<cursor {
             match units[at].to_int().to_char() {
               Some(ch) => lexeme_builder.write_char(ch)

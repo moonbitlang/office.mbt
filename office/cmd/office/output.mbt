@@ -100,7 +100,7 @@ fn output_mode_from_args(args : Array[String]) -> OutputMode {
 
 ///|
 fn bounded_text(value : String, maximum_chars : Int) -> String {
-  let output = StringBuilder::new()
+  let output = StringBuilder()
   let mut count = 0
   let mut truncated = false
   for char in value {
@@ -119,7 +119,7 @@ fn bounded_text(value : String, maximum_chars : Int) -> String {
 
 ///|
 fn terminal_safe_text(value : String) -> String {
-  let output = StringBuilder::new()
+  let output = StringBuilder()
   for character in value {
     match character {
       '\n' => output.write_string("\\n") |> ignore

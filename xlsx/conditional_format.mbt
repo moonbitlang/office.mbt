@@ -536,7 +536,7 @@ fn build_cell_rule(
   priority : Int,
   operator : StringView,
 ) -> String raise XlsxError {
-  let sb = StringBuilder::new()
+  let sb = StringBuilder()
   sb.write_view("<cfRule type=\"cellIs\"")
   sb.write_view(" priority=\"\{priority}\"")
   write_stop_if_true(sb, opt)
@@ -572,7 +572,7 @@ fn build_time_period_rule(
     Some(value) => value
     None => raise InvalidConditionalFormat(msg="time period invalid")
   }
-  let sb = StringBuilder::new()
+  let sb = StringBuilder()
   sb.write_view("<cfRule type=\"timePeriod\"")
   sb.write_view(" priority=\"\{priority}\"")
   write_stop_if_true(sb, opt)
@@ -604,7 +604,7 @@ fn build_text_rule(
     Some(value) => value
     None => raise InvalidConditionalFormat(msg="text formula invalid")
   }
-  let sb = StringBuilder::new()
+  let sb = StringBuilder()
   sb.write_view("<cfRule type=\"\{rule_type}\"")
   sb.write_view(" priority=\"\{priority}\"")
   sb.write_view(" operator=\"\{escape_xml_attr(criteria)}\"")
@@ -627,7 +627,7 @@ fn build_top10_rule(
   if opt.value != "" {
     rank = @string.parse_int(opt.value, base=10) catch { _ => rank }
   }
-  let sb = StringBuilder::new()
+  let sb = StringBuilder()
   sb.write_view("<cfRule type=\"top10\"")
   sb.write_view(" priority=\"\{priority}\"")
   if bottom {
@@ -649,7 +649,7 @@ fn build_above_average_rule(
   priority : Int,
 ) -> String {
   let above = if opt.above_average { "1" } else { "0" }
-  let sb = StringBuilder::new()
+  let sb = StringBuilder()
   sb.write_view("<cfRule type=\"aboveAverage\"")
   sb.write_view(" priority=\"\{priority}\"")
   sb.write_view(" aboveAverage=\"\{above}\"")
@@ -666,7 +666,7 @@ fn build_simple_rule(
   priority : Int,
   formula? : String,
 ) -> String {
-  let sb = StringBuilder::new()
+  let sb = StringBuilder()
   sb.write_view("<cfRule type=\"\{rule_type.to_owned()}\"")
   sb.write_view(" priority=\"\{priority}\"")
   write_stop_if_true(sb, opt)
@@ -694,7 +694,7 @@ fn build_color_scale_rule(
   let min_value = if opt.min_value == "" { "0" } else { opt.min_value }
   let max_value = if opt.max_value == "" { "0" } else { opt.max_value }
   let mid_value = if opt.mid_value == "" { "50" } else { opt.mid_value }
-  let sb = StringBuilder::new()
+  let sb = StringBuilder()
   sb.write_view("<cfRule type=\"colorScale\"")
   sb.write_view(" priority=\"\{priority}\"")
   write_stop_if_true(sb, opt)
@@ -730,7 +730,7 @@ fn build_data_bar_rule(
   let max_type = if opt.max_type == "" { "max" } else { opt.max_type }
   let min_value = if opt.min_value == "" { "0" } else { opt.min_value }
   let max_value = if opt.max_value == "" { "0" } else { opt.max_value }
-  let sb = StringBuilder::new()
+  let sb = StringBuilder()
   sb.write_view("<cfRule type=\"dataBar\"")
   sb.write_view(" priority=\"\{priority}\"")
   write_stop_if_true(sb, opt)
@@ -763,7 +763,7 @@ fn build_icon_set_rule(
     Some(value) => value
     None => raise InvalidConditionalFormat(msg="icon set style invalid")
   }
-  let sb = StringBuilder::new()
+  let sb = StringBuilder()
   sb.write_view("<cfRule type=\"iconSet\"")
   sb.write_view(" priority=\"\{priority}\"")
   write_stop_if_true(sb, opt)
@@ -877,7 +877,7 @@ fn conditional_format_xml(
   sqref : StringView,
   rules : ArrayView[String],
 ) -> String {
-  let sb = StringBuilder::new()
+  let sb = StringBuilder()
   sb.write_view("<conditionalFormatting sqref=\"")
   sb.write_view(escape_xml_attr(sqref))
   sb.write_view("\">")

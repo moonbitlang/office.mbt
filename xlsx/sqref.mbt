@@ -1,13 +1,13 @@
 ///|
 fn xml_whitespace_tokens(value : StringView) -> Array[String] {
   let tokens : Array[String] = []
-  let mut current = StringBuilder::new()
+  let mut current = StringBuilder()
   let mut has_chars = false
   for ch in value {
     if is_attr_space(ch) {
       if has_chars {
         tokens.push(current.to_string())
-        current = StringBuilder::new()
+        current = StringBuilder()
         has_chars = false
       }
     } else {
@@ -33,7 +33,7 @@ fn xml_whitespace_tokens_cancellable(
   cancelled? : () -> Bool = () => false,
 ) -> Array[String] raise XlsxError {
   let tokens : Array[String] = []
-  let mut current = StringBuilder::new()
+  let mut current = StringBuilder()
   let mut has_chars = false
   let mut current_chars = 0
   for index, ch in value {
@@ -50,7 +50,7 @@ fn xml_whitespace_tokens_cancellable(
           )
         }
         tokens.push(current.to_string())
-        current = StringBuilder::new()
+        current = StringBuilder()
         has_chars = false
         current_chars = 0
       }
@@ -118,7 +118,7 @@ fn normalize_sqref_for_read(
   field : StringView,
   budget? : ReadBudget,
 ) -> String raise XlsxError {
-  let normalized = StringBuilder::new()
+  let normalized = StringBuilder()
   let mut token_start = -1
   let mut token_count = 0
   for index in 0..<=value.length() {

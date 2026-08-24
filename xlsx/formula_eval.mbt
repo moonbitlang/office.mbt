@@ -1173,7 +1173,7 @@ fn unique_row_key(
   range : RangeValues,
   row : Int,
 ) -> Result[String, FormulaValue] {
-  let sb = StringBuilder::new()
+  let sb = StringBuilder()
   let start = row * range.cols
   for col in 0..<range.cols {
     let value = range.values[start + col]
@@ -3433,7 +3433,7 @@ fn format_number(value : Double) -> String {
   if end > 0 && chars[end - 1] == '.' {
     end = end - 1
   }
-  let sb = StringBuilder::new()
+  let sb = StringBuilder()
   for i in 0..<end {
     sb.write_char(chars[i])
   }
@@ -3501,7 +3501,7 @@ fn clean_text_value(value : FormulaValue) -> FormulaValue {
     Ok(value) => value
     Err(err) => return err
   }
-  let sb = StringBuilder::new()
+  let sb = StringBuilder()
   for ch in text {
     if ch.to_int() > 31 {
       sb.write_char(ch)
@@ -3538,7 +3538,7 @@ fn encode_url_value(value : FormulaValue) -> FormulaValue {
     Err(err) => return err
   }
   let bytes = @encoding/utf8.encode(text)
-  let sb = StringBuilder::new()
+  let sb = StringBuilder()
   for byte in bytes {
     encode_url_byte(sb, byte)
   }
@@ -4002,7 +4002,7 @@ fn dbcs_byte_range(text : String, start_num : Int, count : Int) -> String {
   if count <= 0 {
     return ""
   }
-  let sb = StringBuilder::new()
+  let sb = StringBuilder()
   let mut offset = 0
   let mut taken = 0
   for ch in text {
@@ -4056,7 +4056,7 @@ fn dbcs_enabled(workbook : Workbook) -> Bool {
 
 ///|
 fn dbcs_convert(text : String) -> String {
-  let sb = StringBuilder::new()
+  let sb = StringBuilder()
   for ch in text {
     let r = ch.to_int()
     let code = if r == 32 { 12288 } else { r + 65248 }
@@ -4241,7 +4241,7 @@ fn find_dbcs(
 
 ///|
 fn concat_values(values : ArrayView[FormulaValue]) -> FormulaValue {
-  let sb = StringBuilder::new()
+  let sb = StringBuilder()
   for value in flatten_values(values) {
     match normalize_scalar(value) {
       Error(err) => return Error(err)
@@ -4253,7 +4253,7 @@ fn concat_values(values : ArrayView[FormulaValue]) -> FormulaValue {
 
 ///|
 fn proper_case(text : String) -> String {
-  let sb = StringBuilder::new()
+  let sb = StringBuilder()
   let mut prev_letter = false
   for ch in text {
     let is_letter = ch.is_ascii_alphabetic()
@@ -4890,7 +4890,7 @@ fn parse_value_number(text : String) -> Double? {
     percent = true
     body = body[:body.length() - 1].to_owned()
   }
-  let sb = StringBuilder::new()
+  let sb = StringBuilder()
   for ch in body {
     if ch != ',' {
       sb.write_char(ch)
@@ -5044,7 +5044,7 @@ fn complex_suffix_from_text(text : String) -> String {
   }
   let chars = trimmed.to_array()
   let last = chars[chars.length() - 1]
-  let sb = StringBuilder::new()
+  let sb = StringBuilder()
   sb.write_char(last)
   sb.to_string()
 }
@@ -5161,7 +5161,7 @@ fn parse_date_parts(text : String) -> (Int, Int, Int)? {
     return None
   }
   let parts : Array[String] = []
-  let mut current = StringBuilder::new()
+  let mut current = StringBuilder()
   for ch in trimmed {
     if ch.is_ascii_digit() {
       current.write_char(ch)
@@ -5171,7 +5171,7 @@ fn parse_date_parts(text : String) -> (Int, Int, Int)? {
         return None
       }
       parts.push(part)
-      current = StringBuilder::new()
+      current = StringBuilder()
     } else if ch.is_ascii_whitespace() {
       continue
     } else {
@@ -5220,7 +5220,7 @@ fn parse_time_parts(text : String) -> (Int, Int, Int)? {
     core = core[:core.length() - 2].trim().to_owned()
   }
   let parts : Array[String] = []
-  let mut current = StringBuilder::new()
+  let mut current = StringBuilder()
   for ch in core {
     if ch.is_ascii_digit() {
       current.write_char(ch)
@@ -5230,7 +5230,7 @@ fn parse_time_parts(text : String) -> (Int, Int, Int)? {
         return None
       }
       parts.push(part)
-      current = StringBuilder::new()
+      current = StringBuilder()
     } else if ch.is_ascii_whitespace() {
       continue
     } else {
@@ -5340,7 +5340,7 @@ fn parse_criteria_number(text : StringView) -> Double? {
 ///|
 fn build_criteria_pattern(text : StringView) -> String {
   let chars = text.to_array()
-  let sb = StringBuilder::new()
+  let sb = StringBuilder()
   let mut idx = 0
   while idx < chars.length() {
     let ch = chars[idx]
@@ -7687,7 +7687,7 @@ fn round_up_with_digits(value : Double, digits : Int) -> Double {
 
 ///|
 fn trim_excel_text(text : StringView) -> String {
-  let sb = StringBuilder::new()
+  let sb = StringBuilder()
   let mut seen_text = false
   let mut pending_space = false
   for ch in text {

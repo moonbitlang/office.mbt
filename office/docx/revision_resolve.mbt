@@ -53,7 +53,7 @@ fn docx_revision_location(span : @word.RevisionSpan) -> String {
 ///|
 /// A one-line description of a revision, for findings an agent reads.
 fn docx_revision_detail(span : @word.RevisionSpan) -> String {
-  let out = StringBuilder::new()
+  let out = StringBuilder()
   out.write_string("w:" + span.kind())
   match span.id() {
     Some(id) => out.write_string(" id=\"" + id + "\"")

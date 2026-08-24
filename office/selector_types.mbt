@@ -137,7 +137,7 @@ fn selector_column_name(column : Int) -> String {
     reversed.push(alphabet[offset])
     value = (value - 1) / 26
   }
-  let output = StringBuilder::new()
+  let output = StringBuilder()
   let mut index = reversed.length()
   while index > 0 {
     index = index - 1
@@ -175,7 +175,7 @@ fn render_segment_selection(selection : SegmentSelection) -> String {
 ///|
 /// Renders this selector in its unique canonical form.
 pub fn OfficeSelector::render(self : OfficeSelector) -> String {
-  let output = StringBuilder::new()
+  let output = StringBuilder()
   output.write_string("/") |> ignore
   output.write_string(self.format.name()) |> ignore
   for segment in self.segments {

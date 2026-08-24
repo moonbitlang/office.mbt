@@ -52,7 +52,7 @@ fn format_hex_upper(value : Int64) -> String {
     }
     idx = idx - 1
   }
-  let sb = StringBuilder::new()
+  let sb = StringBuilder()
   for c in out {
     sb.write_char(c)
   }

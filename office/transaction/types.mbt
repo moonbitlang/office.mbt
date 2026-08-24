@@ -72,7 +72,7 @@ fn bounded_text(text : String, limit : Int) -> String {
   if scan_text(text, transaction_max_message_length * 4) is Invalid {
     return "<invalid UTF-16>"
   }
-  let output = StringBuilder::new()
+  let output = StringBuilder()
   let mut count = 0
   for character in text {
     if count == limit {

@@ -69,7 +69,7 @@ fn DocxTextCollector::new_reported(
     reported_offset,
     fail_on_limit,
     resource,
-    output: StringBuilder::new(),
+    output: StringBuilder(),
     used: 0,
     scanned: 0,
     pending_newlines: 0,

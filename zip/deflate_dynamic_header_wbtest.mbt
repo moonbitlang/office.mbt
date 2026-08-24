@@ -228,7 +228,7 @@ fn bytes_hex(bytes : Bytes) -> String {
   let digits : ReadOnlyArray[Char] = [
     '0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'a', 'b', 'c', 'd', 'e', 'f',
   ]
-  let text = StringBuilder::new()
+  let text = StringBuilder()
   for byte in bytes {
     let value = byte.to_int()
     text.write_char(digits[value >> 4])
@@ -425,7 +425,7 @@ test "the decoder reproduces generated payloads" {
   @quickcheck.check(
     (raw : Array[Int]) => {
       let choices = raw.map(value => value % 2 != 0)
-      let shape = StringBuilder::new()
+      let shape = StringBuilder()
       let mut ones = 0
       for choice in choices {
         if choice {

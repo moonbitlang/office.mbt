@@ -171,7 +171,7 @@ fn write_pivot_cache_definition_xml(
   data_ref : String,
   fields : ArrayView[String],
 ) -> String {
-  let sb = StringBuilder::new()
+  let sb = StringBuilder()
   sb.write_view("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n")
   sb.write_view(
     "<pivotCacheDefinition xmlns=\"http://schemas.openxmlformats.org/spreadsheetml/2006/main\" refreshOnLoad=\"1\" saveData=\"0\">\n",
@@ -314,7 +314,7 @@ fn write_pivot_table_definition_xml(
   data_fields : ArrayView[(Int, PivotTableField)],
   opts : PivotTableOptions,
 ) -> String {
-  let sb = StringBuilder::new()
+  let sb = StringBuilder()
   sb.write_view("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n")
   sb.write_view(
     "<pivotTableDefinition xmlns=\"http://schemas.openxmlformats.org/spreadsheetml/2006/main\" name=\"",

@@ -217,7 +217,7 @@ pub fn logical_opc_part_name_from_zip_item_name_cancellable(
   if cancelled() {
     raise ReadCancelled
   }
-  let output = StringBuilder::new(size_hint=name.length())
+  let output = StringBuilder(size_hint=name.length())
   let mut index = 0
   let mut next_checkpoint = 0
   while index < name.length() {
@@ -281,7 +281,7 @@ fn opc_part_name_identity_chunk(
   final_chunk : Bool,
   cancelled : () -> Bool,
 ) -> String raise ParseXmlError {
-  let output = StringBuilder::new(size_hint=chunk.length() + 1)
+  let output = StringBuilder(size_hint=chunk.length() + 1)
   output.write_char(if final_chunk { '1' } else { '0' })
   let mut offset = 0
   for character in chunk {

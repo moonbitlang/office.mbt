@@ -149,7 +149,7 @@ fn substitute_cell_text(
       }
     }
   }
-  let builder = StringBuilder::new()
+  let builder = StringBuilder()
   let mut cursor = 0
   let mut rewrote = false
   let mut match_index = 0

@@ -249,7 +249,7 @@ test "ooxml read_parse: nested Ignorable resets and restores ProcessContent" {
 
 ///|
 test "ooxml read_parse: MCE names retain one copy of a long namespace URI" {
-  let names = StringBuilder::new()
+  let names = StringBuilder()
   for index in 0..<4096 {
     if index > 0 {
       names.write_char(' ')
@@ -601,7 +601,7 @@ test "ooxml read_parse: malformed relationship IRIs fail closed" {
 
 ///|
 test "ooxml read_parse: relationship limits accept writer boundaries" {
-  let xml = StringBuilder::new()
+  let xml = StringBuilder()
   xml.write_string(
     "<Relationships xmlns=\"http://schemas.openxmlformats.org/package/2006/relationships\">",
   )
@@ -624,7 +624,7 @@ test "ooxml read_parse: relationship limits accept writer boundaries" {
 
 ///|
 test "ooxml read_parse: relationship scans poll cancellation internally" {
-  let xml = StringBuilder::new()
+  let xml = StringBuilder()
   xml.write_string(
     "<Relationships xmlns=\"http://schemas.openxmlformats.org/package/2006/relationships\">",
   )
@@ -738,7 +738,7 @@ test "ooxml read_parse: content type lexical grammar is preserved" {
 
 ///|
 test "ooxml read_parse: content type scans poll cancellation internally" {
-  let xml = StringBuilder::new()
+  let xml = StringBuilder()
   xml.write_string(
     "<Types xmlns=\"http://schemas.openxmlformats.org/package/2006/content-types\">",
   )

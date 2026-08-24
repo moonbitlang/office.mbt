@@ -1998,7 +1998,7 @@ fn chart_options_to_xml(opts : ChartOptions) -> String raise XlsxError {
       }
     }
   }
-  let sb = StringBuilder::new()
+  let sb = StringBuilder()
   sb.write_view("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n")
   sb.write_view(
     "<c:chartSpace xmlns:c=\"http://schemas.openxmlformats.org/drawingml/2006/chart\" xmlns:a=\"http://schemas.openxmlformats.org/drawingml/2006/main\" xmlns:r=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships\">\n",

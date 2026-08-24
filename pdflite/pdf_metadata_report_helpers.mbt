@@ -9,7 +9,7 @@ fn pdf_metadata_json_string_array(values : ArrayView[String]) -> Json {
 
 ///|
 fn pdf_metadata_combine_with_commas(values : ArrayView[String]) -> String {
-  let output = StringBuilder::new()
+  let output = StringBuilder()
   for value in values {
     if !output.is_empty() {
       output.write_string(", ")

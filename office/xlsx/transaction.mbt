@@ -18,7 +18,7 @@ let xlsx_transaction_max_message_chars = 480
 
 ///|
 fn bounded_xlsx_message(text : String, limit : Int) -> String {
-  let output = StringBuilder::new()
+  let output = StringBuilder()
   let mut count = 0
   for character in text {
     if count == limit {
