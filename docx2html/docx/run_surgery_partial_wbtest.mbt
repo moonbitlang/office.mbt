@@ -80,6 +80,27 @@ test "partial: mid-text replacement inside one w:t" {
 }
 
 ///|
+test "partial: a mid-text replacement is placed inside the w:t" {
+  // The ordinary path, pinned for the same reason the three synthesis and
+  // no-op placements are: `InsideText` is what "the text went where the text
+  // already was" means, and nothing else in the suite says so.
+  let body = "<w:p><w:r><w:t>alpha beta gamma</w:t></w:r></w:p>"
+  let source = "<w:document xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\" xmlns:v=\"urn:schemas-microsoft-com:vml\"><w:body>\{body}</w:body></w:document>"
+  let bytes = @utf8.encode(source)
+  let projection = surgery_native_projection(source)
+  let (byte_edits, receipt) = plan_paragraph_text_edits(projection, bytes, 0, [
+    partial_edit(6, 10, "BETA"),
+  ])
+  assert_eq(receipt.logical_edits.length(), 1)
+  guard receipt.logical_edits[0].placement is InsideText else {
+    fail("expected an inside-text placement")
+  }
+  assert_eq(receipt.expected_projection, "alpha BETA gamma")
+  let spliced = @utf8.decode(apply_run_surgery_edits(bytes, byte_edits))
+  assert_true(spliced.contains("<w:t>alpha BETA gamma</w:t>"))
+}
+
+///|
 test "partial: several edits in one w:t, adjacent and separated" {
   assert_partial_edits(
     "<w:p><w:r><w:t>one two three</w:t></w:r></w:p>",
