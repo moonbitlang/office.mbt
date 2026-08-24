@@ -1303,7 +1303,7 @@ fn scan_story(
                   cell.local_name == "tc" &&
                   cell.vmerge_continue &&
                   table.origin_columns.contains(cell.grid_column) {
-                  retract_cell(cell, elements, nodes, markers, revisions, work)
+                  retract_cell(cell, nodes, markers, revisions, work)
                 }
               _ => ()
             }
@@ -1318,7 +1318,6 @@ fn scan_story(
                   retract_row(
                     row,
                     nearest_frame_by_kind(frames, "tbl"),
-                    elements,
                     nodes,
                     markers,
                     revisions,
@@ -2139,7 +2138,6 @@ fn purge_subtree(
 fn retract_row(
   row : ScanFrame,
   table : ScanFrame?,
-  elements : Array[ScannedElement],
   nodes : Array[ScannedNode],
   markers : Array[ScannedMarker],
   revisions : Array[ScannedRevision],
@@ -2175,7 +2173,6 @@ fn retract_row(
 /// ordinal and suppresses the whole subtree.
 fn retract_cell(
   cell : ScanFrame,
-  elements : Array[ScannedElement],
   nodes : Array[ScannedNode],
   markers : Array[ScannedMarker],
   revisions : Array[ScannedRevision],
