@@ -20,8 +20,9 @@ pub struct RunTextReceipt {
 
 ///|
 /// The story part the addressed run lives in, spelled exactly as the
-/// annotated read exposed it (for example `word/document.xml`). This is
-/// the part the returned plan edits, and no other.
+/// annotated read exposed it (for example `word/document.xml`). It is the
+/// only part the returned plan targets: the plan pins it, and any edit the
+/// plan carries is an edit to it. A self-replacement carries none.
 pub fn RunTextReceipt::story_part(self : RunTextReceipt) -> String {
   self.story_part
 }
@@ -29,8 +30,11 @@ pub fn RunTextReceipt::story_part(self : RunTextReceipt) -> String {
 ///|
 /// The story-relative ordinal run path that named the run (for example
 /// `p[1]/r[2]`), echoed back once it has resolved to exactly one run in
-/// this story. Addresses are snapshot-relative, so this is re-usable only
-/// against a fresh mutation-safe read of the package the plan produced.
+/// this story -- unique among the scan's run nodes AND among the projected
+/// runs. Against this same snapshot it stays valid, so a caller may re-plan
+/// with `expect=replaced_text()`. Once the plan is APPLIED the address is
+/// only meaningful again after a fresh mutation-safe read, since ordinals
+/// are snapshot-relative.
 pub fn RunTextReceipt::at_relative(self : RunTextReceipt) -> String {
   self.at_relative
 }
@@ -45,10 +49,12 @@ pub fn RunTextReceipt::replaced_text(self : RunTextReceipt) -> String {
 }
 
 ///|
-/// The `text` the addressed run holds once the plan is applied: reading
-/// the spliced package back through the reader reproduces exactly this
-/// for that run. When it equals `replaced_text` the run already holds it
-/// and the plan is empty.
+/// The `text` the addressed run holds once this plan is applied to the
+/// package it was built from: reading that result back through the reader
+/// reproduces exactly this for that run. The plan pins only the story
+/// part, so applying it to a different archive that happens to carry the
+/// same story bytes is not covered by that claim. When `result_text`
+/// equals `replaced_text` the run already holds it and the plan is empty.
 pub fn RunTextReceipt::result_text(self : RunTextReceipt) -> String {
   self.result_text
 }
