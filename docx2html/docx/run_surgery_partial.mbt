@@ -33,6 +33,13 @@ priv struct ParagraphTextEdit {
 /// Stable refusal classes for partial surgery. One renderer produces the
 /// user-facing message so every class keeps a stable reason and no class
 /// ever echoes document or replacement content.
+///
+/// The taxonomy is deliberately wider than what the current increments can
+/// reach -- that is what "stable" means here, and the property suite pins the
+/// whole list by name. `PartialBudgetExceeded` is the one class nothing
+/// constructs yet, so the diagnostic is disabled for this declaration rather
+/// than the class being deleted and re-added when a budget lands.
+#warnings("-unused_constructor")
 priv enum PartialSurgeryRefusal {
   InvalidParagraph
   InvalidRange
