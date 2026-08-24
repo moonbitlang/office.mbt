@@ -1,6 +1,6 @@
 name = "bobzhang/office-lib"
 
-version = "0.3.0"
+version = "0.4.0"
 
 readme = "README.mbt.md"
 
@@ -15,7 +15,7 @@ description = "Agent-oriented XLSX and DOCX tooling for MoonBit"
 import {
   "bobzhang/mbtexcel@0.1.9",
   "bobzhang/pagelayout@0.1.0",
-  "bobzhang/docx2html@0.3.0",
+  "bobzhang/docx2html@0.4.0",
   "moonbitlang/async@0.20.2",
   "moonbitlang/x@0.4.50",
   "tonyfettes/unicode@0.3.3",
