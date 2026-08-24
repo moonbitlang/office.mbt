@@ -44,7 +44,7 @@ fn is_whitespace(ch : Char) -> Bool {
 fn tokenize_filter_expression(expression : StringView) -> Array[String] {
   let tokens : Array[String] = []
   let chars = expression.to_array()
-  let mut current = StringBuilder::new()
+  let mut current = StringBuilder()
   let mut has_content = false
   let mut in_quotes = false
   let mut i = 0
@@ -67,7 +67,7 @@ fn tokenize_filter_expression(expression : StringView) -> Array[String] {
     if is_whitespace(ch) {
       if has_content {
         tokens.push(current.to_string())
-        current = StringBuilder::new()
+        current = StringBuilder()
         has_content = false
       }
       i = i + 1

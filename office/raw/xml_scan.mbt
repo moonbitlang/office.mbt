@@ -276,7 +276,7 @@ fn raw_decode_attribute_value(
   source : String,
   part : String,
 ) -> String raise RawError {
-  let normalized = StringBuilder::new()
+  let normalized = StringBuilder()
   let mut offset = 0
   while offset < source.length() {
     let character = match source.get_char(offset) {
@@ -298,7 +298,7 @@ fn raw_decode_attribute_value(
     offset = offset + character.utf16_len()
   }
   let value = normalized.to_string()
-  let output = StringBuilder::new()
+  let output = StringBuilder()
   offset = 0
   while offset < value.length() {
     if value[offset] == '&' {

@@ -206,7 +206,7 @@ test "bounded selector parser does not panic on deterministic fuzz input" {
   for _ in 0..<500 {
     state = state * 1664525 + 1013904223
     let length = (state % 96).reinterpret_as_int()
-    let text = StringBuilder::new()
+    let text = StringBuilder()
     for _ in 0..<length {
       state = state * 1664525 + 1013904223
       text.write_char(

@@ -311,7 +311,7 @@ fn FormulaParser::parse_quoted_sheet_name(
   self : FormulaParser,
 ) -> String raise XlsxError {
   self.consume()
-  let sb = StringBuilder::new()
+  let sb = StringBuilder()
   while self.pos < self.chars.length() {
     let ch = self.chars[self.pos]
     self.consume()
@@ -332,7 +332,7 @@ fn FormulaParser::parse_quoted_sheet_name(
 ///|
 fn FormulaParser::parse_string(self : FormulaParser) -> Expr {
   self.consume()
-  let sb = StringBuilder::new()
+  let sb = StringBuilder()
   while self.pos < self.chars.length() {
     let ch = self.chars[self.pos]
     self.consume()
@@ -378,7 +378,7 @@ fn FormulaParser::parse_list(self : FormulaParser) -> Expr raise XlsxError {
 
 ///|
 fn FormulaParser::parse_number(self : FormulaParser) -> Expr raise XlsxError {
-  let sb = StringBuilder::new()
+  let sb = StringBuilder()
   let mut seen_dot = false
   while self.pos < self.chars.length() {
     let ch = self.chars[self.pos]
@@ -485,7 +485,7 @@ fn FormulaParser::parse_identifier_expr(
 
 ///|
 fn FormulaParser::parse_identifier_token(self : FormulaParser) -> String {
-  let sb = StringBuilder::new()
+  let sb = StringBuilder()
   while self.pos < self.chars.length() {
     let ch = self.chars[self.pos]
     if ch.is_ascii_alphabetic() ||
@@ -504,7 +504,7 @@ fn FormulaParser::parse_identifier_token(self : FormulaParser) -> String {
 
 ///|
 fn FormulaParser::parse_row_token(self : FormulaParser) -> String {
-  let sb = StringBuilder::new()
+  let sb = StringBuilder()
   while self.pos < self.chars.length() {
     let ch = self.chars[self.pos]
     if ch.is_ascii_digit() {
@@ -582,8 +582,8 @@ fn parse_range_ref_token(
     Some(value) => return (value, value)
     None => ()
   }
-  let col_sb = StringBuilder::new()
-  let row_sb = StringBuilder::new()
+  let col_sb = StringBuilder()
+  let row_sb = StringBuilder()
   for ch in token {
     if ch == '$' {
       continue
@@ -654,7 +654,7 @@ fn parse_r1c1_token(text : StringView) -> (Int, Int)? {
   if chars.length() < 3 || chars[0] != 'R' {
     return None
   }
-  let row_sb = StringBuilder::new()
+  let row_sb = StringBuilder()
   let mut idx = 1
   while idx < chars.length() && chars[idx].is_ascii_digit() {
     row_sb.write_char(chars[idx])
@@ -668,7 +668,7 @@ fn parse_r1c1_token(text : StringView) -> (Int, Int)? {
     return None
   }
   idx = idx + 1
-  let col_sb = StringBuilder::new()
+  let col_sb = StringBuilder()
   while idx < chars.length() && chars[idx].is_ascii_digit() {
     col_sb.write_char(chars[idx])
     idx = idx + 1
@@ -691,7 +691,7 @@ fn unquote_sheet_name(text : String) -> String {
     return text
   }
   let inner = text.unsafe_substring(start=1, end=text.length() - 1)
-  let sb = StringBuilder::new()
+  let sb = StringBuilder()
   let chars = inner.to_array()
   let mut idx = 0
   while idx < chars.length() {

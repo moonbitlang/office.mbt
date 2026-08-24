@@ -27,7 +27,7 @@ fn assert_partial_edits(
   // the receipt's precomputed string.
   let reprojected = surgery_native_projection(spliced)
   assert_true(paragraph < reprojected.paragraphs.length())
-  let after = StringBuilder::new()
+  let after = StringBuilder()
   for contribution in reprojected.paragraphs[paragraph].contributions {
     after.write_string(contribution.value)
   }
@@ -527,7 +527,7 @@ test "partial: xml:space appears when the post-batch content needs it" {
   let spliced = @utf8.decode(apply_run_surgery_edits(bytes, byte_edits))
   assert_true(spliced.contains("xml:space=\"preserve\""))
   let reprojected = surgery_native_projection(spliced)
-  let after = StringBuilder::new()
+  let after = StringBuilder()
   for contribution in reprojected.paragraphs[0].contributions {
     after.write_string(contribution.value)
   }
@@ -917,7 +917,7 @@ test "partial: xml:space decides per touched host across one edit" {
     ),
   )
   let reprojected = surgery_native_projection(spliced)
-  let after = StringBuilder::new()
+  let after = StringBuilder()
   for contribution in reprojected.paragraphs[0].contributions {
     after.write_string(contribution.value)
   }
@@ -1027,7 +1027,7 @@ test "partial: cross-run xml:space lands only on the start host" {
     ),
   )
   let reprojected = surgery_native_projection(spliced)
-  let after = StringBuilder::new()
+  let after = StringBuilder()
   for contribution in reprojected.paragraphs[0].contributions {
     after.write_string(contribution.value)
   }
@@ -1205,7 +1205,7 @@ test "partial: two insertions into an atomless run compose into one element" {
   let spliced = @utf8.decode(apply_run_surgery_edits(bytes, byte_edits))
   assert_true(spliced.contains(">XY</w:t></w:r>"))
   let reprojected = surgery_native_projection(spliced)
-  let after = StringBuilder::new()
+  let after = StringBuilder()
   for contribution in reprojected.paragraphs[0].contributions {
     after.write_string(contribution.value)
   }
@@ -1277,7 +1277,7 @@ test "partial: a quoted attribute value is not mistaken for xml:space" {
   // ...and a REAL declaration is added to the element.
   assert_true(spliced.contains("xml:space=\"preserve\""))
   let reprojected = surgery_native_projection(spliced)
-  let after = StringBuilder::new()
+  let after = StringBuilder()
   for contribution in reprojected.paragraphs[0].contributions {
     after.write_string(contribution.value)
   }

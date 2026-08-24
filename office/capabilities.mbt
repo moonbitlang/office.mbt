@@ -2068,7 +2068,7 @@ fn append_fingerprint_command(
 
 ///|
 fn capability_fingerprint_source() -> String {
-  let buffer = StringBuilder::new()
+  let buffer = StringBuilder()
   append_fingerprint_token(buffer, SCHEMA_CAPABILITIES)
   let formats = capability_formats()
   append_fingerprint_section(buffer, "formats", formats.length())

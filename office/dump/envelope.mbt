@@ -199,7 +199,7 @@ pub fn DumpEnvelope::to_jsonl_lines(self : DumpEnvelope) -> Array[String] {
   }
   // integrity digest over the concatenated canonical op lines, so a
   // truncated or reordered stream is detectable on replay
-  let op_payload = StringBuilder::new()
+  let op_payload = StringBuilder()
   for line in lines {
     if line.contains("\"record\":\"op\"") {
       op_payload.write_string(line)

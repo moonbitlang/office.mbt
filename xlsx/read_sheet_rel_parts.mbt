@@ -35,7 +35,7 @@ fn normalize_parsed_comment_runs(
   if runs.length() == 0 {
     return runs
   }
-  let rich_text_builder = StringBuilder::new()
+  let rich_text_builder = StringBuilder()
   for run in runs {
     rich_text_builder.write_view(run.text)
   }

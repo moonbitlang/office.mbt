@@ -62,7 +62,7 @@ fn reader_segmentation_clip_name(name : String) -> String {
   if name.length() <= READER_SEGMENTATION_NAME_LIMIT {
     return name
   }
-  let output = StringBuilder::new()
+  let output = StringBuilder()
   let mut units = 0
   for character in name {
     // the cap is UTF-16 units, the length() currency: a non-BMP

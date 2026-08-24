@@ -350,7 +350,7 @@ fn adjust_defined_name_refers_to_for_sheet(
   let quoted_prefix = "'\{escape_sheet_name(sheet_name)}'!"
   let plain_chars = plain_prefix.to_array()
   let quoted_chars = quoted_prefix.to_array()
-  let sb = StringBuilder::new()
+  let sb = StringBuilder()
   let mut idx = 0
   let find_prefix = fn(
     text : Array[Char],
@@ -405,7 +405,7 @@ fn adjust_defined_name_refers_to_for_sheet(
         while end < raw_chars.length() && is_ref_char(raw_chars[end]) {
           end = end + 1
         }
-        let ref_sb = StringBuilder::new()
+        let ref_sb = StringBuilder()
         for i in start..<end {
           if (i & 4095) == 0 {
             check_read_cancelled(cancelled)

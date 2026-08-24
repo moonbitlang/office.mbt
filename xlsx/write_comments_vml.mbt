@@ -191,7 +191,7 @@ fn skip_vml_non_element_markup(xml : StringView, start : Int) -> Int {
 
 ///|
 fn mask_vml_non_element_markup(xml : StringView) -> String {
-  let output = StringBuilder::new()
+  let output = StringBuilder()
   let mut cursor = 0
   let mut index = 0
   while index < xml.length() {
@@ -1246,7 +1246,7 @@ test "write comments vml wb: live ClientData, coordinates, and free IDs" {
   inspect(vml_shape_is_comment(spoofed_control), content="false")
   debug_inspect(vml_comment_cell(spoofed_control), content="None")
 
-  let crowded_note = StringBuilder::new()
+  let crowded_note = StringBuilder()
   crowded_note.write_view("<v:shape id='_x0000_s2049'>")
   for _ in 0..<1024 {
     crowded_note.write_view("<v:path/>")

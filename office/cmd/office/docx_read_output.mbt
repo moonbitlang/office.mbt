@@ -1141,7 +1141,7 @@ fn DocxHumanWriter::new(
   {
     format,
     maximum,
-    output: StringBuilder::new(),
+    output: StringBuilder(),
     used: docx_cli_output_framing_chars,
     lines: 0,
   }

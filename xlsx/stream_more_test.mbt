@@ -36,7 +36,7 @@ test "stream cell constructors cover rich text and values" {
 
 ///|
 test "stream cell rich text too long" {
-  let sb = StringBuilder::new()
+  let sb = StringBuilder()
   for _ in 0..<32768 {
     sb.write_char('a')
   }

@@ -28,7 +28,7 @@ fn ct_workbook_children(xml : String) -> Array[String] {
   for line in xml.split("\n") {
     guard line is [.. "  <", .. rest] else { continue }
     guard !(rest is [.. "/", ..]) else { continue }
-    let name = StringBuilder::new()
+    let name = StringBuilder()
     for ch in rest {
       match ch {
         ' ' | '/' | '>' => break

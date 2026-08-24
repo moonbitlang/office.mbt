@@ -221,7 +221,7 @@ fn plan_paragraph_text_edits(
   // The ordered projecting contributions, with paragraph-local spans, and
   // the paragraph projection they concatenate to.
   let parts : Array[PartialProjectingPart] = []
-  let before = StringBuilder::new()
+  let before = StringBuilder()
   for contribution in paragraph.contributions {
     before.write_string(contribution.value)
     guard contribution.kind is ProjectedText(text_kind) else { continue }
@@ -1117,7 +1117,7 @@ fn plan_paragraph_text_edits(
       (local.0, if local.1 > local.0 { 1 } else { 0 }, local.3)
     })
     // The post-batch content of this `w:t` decides xml:space once.
-    let after = StringBuilder::new()
+    let after = StringBuilder()
     let mut cursor = 0
     for local in host.local_edits {
       let (local_start, local_end, replacement, _) = local
@@ -1333,7 +1333,7 @@ fn plan_paragraph_text_edits(
   }
   let _ = involved_elements
   // Receipt: the exact post-batch paragraph projection.
-  let expected = StringBuilder::new()
+  let expected = StringBuilder()
   let mut cursor = 0
   for edit in requested {
     expected.write_string(

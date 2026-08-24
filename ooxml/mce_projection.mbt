@@ -402,7 +402,7 @@ fn xml_mce_namespace_attributes(
     let (prefix, _) = declaration
     seen.add(prefix)
   }
-  let output = StringBuilder::new()
+  let output = StringBuilder()
   let mut current = pending
   while current is Some(BindingScope(declarations, parent)) {
     for declaration in declarations {

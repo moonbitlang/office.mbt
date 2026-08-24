@@ -1217,7 +1217,7 @@ fn StructuralFindings::new() -> StructuralFindings {
 
 ///|
 fn bounded_structural_finding(value : String, maximum? : Int = 512) -> String {
-  let output = StringBuilder::new()
+  let output = StringBuilder()
   let mut count = 0
   for character in value {
     if count >= maximum {

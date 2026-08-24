@@ -80,7 +80,7 @@ fn unescape_xml_text(value : StringView) -> String {
   if !value.contains("&") {
     return value.to_owned()
   }
-  let output = StringBuilder::new()
+  let output = StringBuilder()
   let mut index = 0
   let mut literal_start = 0
   while index < value.length() {

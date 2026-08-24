@@ -1,6 +1,6 @@
 ///|
 fn repeat_rich_text(text : String, count : Int) -> String {
-  let sb = StringBuilder::new()
+  let sb = StringBuilder()
   for _ in 0..<count {
     sb.write_view(text)
   }

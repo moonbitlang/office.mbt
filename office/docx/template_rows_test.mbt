@@ -439,7 +439,7 @@ async test "docx region clone bytes are bounded before allocation" {
     // the data document stays a few MiB (a 4096-record document would
     // itself be hundreds of MiB and OOM the wasm runtime)
     let big = String::make(65536, 'x')
-    let records = StringBuilder::new()
+    let records = StringBuilder()
     for index in 0..<40 {
       if index > 0 {
         records.write_string(", ")

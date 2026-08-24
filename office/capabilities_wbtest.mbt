@@ -1,13 +1,13 @@
 ///|
 fn fingerprint_command_for_test(command : CapabilityCommand) -> String {
-  let buffer = StringBuilder::new()
+  let buffer = StringBuilder()
   append_fingerprint_command(buffer, command)
   buffer.to_string()
 }
 
 ///|
 fn fingerprint_format_for_test(format : CapabilityFormat) -> String {
-  let buffer = StringBuilder::new()
+  let buffer = StringBuilder()
   append_fingerprint_format(buffer, format)
   buffer.to_string()
 }

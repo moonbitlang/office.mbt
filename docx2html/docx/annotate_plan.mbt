@@ -523,7 +523,7 @@ fn canonical_para_identity(value : String) -> String? {
   if value.length() != 8 {
     return None
   }
-  let builder = StringBuilder::new()
+  let builder = StringBuilder()
   for unit in value {
     let code = unit.to_int()
     if code >= '0'.to_int() && code <= '9'.to_int() {

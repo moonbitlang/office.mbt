@@ -511,7 +511,7 @@ fn docx_run_specs(
       ),
     )
   }
-  let text = StringBuilder::new()
+  let text = StringBuilder()
   let mut pushed = false
   let mut only_references = true
   let flush = (force : Bool) => {

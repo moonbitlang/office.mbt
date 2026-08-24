@@ -6,7 +6,7 @@
 /// and report the replacement count instead of crashing.
 pub fn sanitize_utf16_lossy(text : String) -> (String, Int) {
   let mut replaced = 0
-  let out = StringBuilder::new()
+  let out = StringBuilder()
   let mut start = 0
   let mut index = 0
   while index < text.length() {

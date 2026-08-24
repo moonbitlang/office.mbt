@@ -178,7 +178,7 @@ fn format_column_name_unchecked(col : Int) -> String {
     }
     idx = idx - 1
   }
-  let sb = StringBuilder::new()
+  let sb = StringBuilder()
   for ch in out {
     sb.write_char(ch)
   }

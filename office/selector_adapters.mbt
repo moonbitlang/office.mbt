@@ -94,7 +94,7 @@ pub fn selector_from_docx_projection_path(
   let parsed = @docxpaths.parse_path(path) catch {
     PathError(message) => raise legacy_selector_error(path, message)
   }
-  let canonical = StringBuilder::new()
+  let canonical = StringBuilder()
   append_docx_root(canonical, parsed.root)
   for step in parsed.steps {
     append_docx_step(canonical, step)

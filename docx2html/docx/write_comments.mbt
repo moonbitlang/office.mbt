@@ -784,7 +784,7 @@ const MC_NAMESPACE : String = "http://schemas.openxmlformats.org/markup-compatib
 /// counter positive and far below Word's 0x80000000 ceiling.
 fn format_para_id(value : Int) -> String {
   let digits = "0123456789ABCDEF"
-  let builder = StringBuilder::new()
+  let builder = StringBuilder()
   for shift in [28, 24, 20, 16, 12, 8, 4, 0] {
     let nibble = (value >> shift) & 0xF
     match digits.get_char(nibble) {

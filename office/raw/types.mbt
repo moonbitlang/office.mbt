@@ -59,7 +59,7 @@ fn bounded_raw_text(value : String, limit : Int) -> String {
   if !raw_text_is_well_formed(value) {
     return "<invalid UTF-16>"
   }
-  let output = StringBuilder::new()
+  let output = StringBuilder()
   let mut count = 0
   let mut boundary : Char? = None
   let mut truncated = false

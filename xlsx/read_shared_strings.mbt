@@ -19,7 +19,7 @@ fn remove_lexical_element_subtrees(
     Some(value) => value
     None => return xml.to_owned()
   }
-  let output = StringBuilder::new(size_hint=xml.length())
+  let output = StringBuilder(size_hint=xml.length())
   let mut cursor = 0
   let mut start = first
   for ;; {
@@ -52,7 +52,7 @@ fn remove_lexical_element_subtrees(
 fn parse_text_nodes(xml : StringView) -> String raise XlsxError {
   // Phonetic guides (`rPh`) are annotations, not displayed cell text.
   let semantic = remove_lexical_element_subtrees(xml, "rPh")
-  let sb = StringBuilder::new()
+  let sb = StringBuilder()
   let mut cursor = 0
   while find_xml_open_tag_start_from(semantic, "t", cursor) is Some(start) {
     let open_end = match xml_open_tag_end_from(semantic, start + 1) {

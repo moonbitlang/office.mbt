@@ -261,7 +261,7 @@ test "raw scanners reject deterministic punctuation and control fuzz corpora" {
     if code == 0x09 || code == 0x0a || code == 0x0d {
       continue
     }
-    let fragment = StringBuilder::new()
+    let fragment = StringBuilder()
     ignore(fragment.write_string("<p>"))
     ignore(fragment.write_char(code.unsafe_to_char()))
     ignore(fragment.write_string("</p>"))
@@ -282,7 +282,7 @@ test "raw scanners reject deterministic punctuation and control fuzz corpora" {
 
 ///|
 test "raw XML node budgets run before strict DOM materialization" {
-  let document = StringBuilder::new()
+  let document = StringBuilder()
   document.write_string("<w:document xmlns:w=\"\{word_namespace}\"><w:body>")
   |> ignore
   for _ in 0..<100_000 {

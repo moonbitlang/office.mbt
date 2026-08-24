@@ -1197,7 +1197,7 @@ fn xml_diagnostic_token(value : String) -> String {
   if value.length() <= xml_diagnostic_token_chars {
     return value
   }
-  let output = StringBuilder::new()
+  let output = StringBuilder()
   let mut count = 0
   for character in value {
     if count == xml_diagnostic_token_chars - 1 {

@@ -435,7 +435,7 @@ fn format_number_code(
 ///|
 fn split_format_sections(code : String) -> Array[String] {
   let sections : Array[String] = []
-  let mut current = StringBuilder::new()
+  let mut current = StringBuilder()
   let mut in_quote = false
   let mut escape_next = false
   let mut bracket_depth = 0
@@ -469,7 +469,7 @@ fn split_format_sections(code : String) -> Array[String] {
       ';' =>
         if !in_quote && bracket_depth == 0 {
           sections.push(current.to_string())
-          current = StringBuilder::new()
+          current = StringBuilder()
         } else {
           current.write_char(c)
         }
@@ -512,7 +512,7 @@ fn number_format_scalar_width_at(text : StringView, at : Int) -> Int {
 
 ///|
 fn parse_section_metadata(section : String) -> (String, String?, String) {
-  let sb = StringBuilder::new()
+  let sb = StringBuilder()
   let mut in_quote = false
   let mut escape_next = false
   let mut skip_next = false
@@ -606,7 +606,7 @@ fn is_supported_locale(tag : String) -> Bool {
 
 ///|
 fn render_literal_segment(segment : String) -> String {
-  let sb = StringBuilder::new()
+  let sb = StringBuilder()
   let mut in_quote = false
   let mut escape_next = false
   let mut skip_next = false
@@ -688,7 +688,7 @@ fn format_text_pattern(
     None => return raw
   }
   let (pattern, _locale, currency_prefix) = parse_section_metadata(section)
-  let sb = StringBuilder::new()
+  let sb = StringBuilder()
   let mut output_chars = checked_formatted_output_growth(
     0,
     currency_prefix.length(),
@@ -861,7 +861,7 @@ fn format_number_pattern(
   } else {
     format_decimal_number(scaled, info)
   }
-  let output = StringBuilder::new()
+  let output = StringBuilder()
   if add_minus {
     output.write_char('-')
   }
@@ -1425,7 +1425,7 @@ fn format_fixed_number(
     int_part = int_part + 1UL
     frac_part = 0UL
   }
-  let result = StringBuilder::new()
+  let result = StringBuilder()
   if negative {
     result.write_char('-')
   }
@@ -1455,7 +1455,7 @@ fn pad_left_int(value : Int, width : Int) -> String {
   if text.length() >= width {
     return text
   }
-  let sb = StringBuilder::new()
+  let sb = StringBuilder()
   for _ in text.length()..<width {
     sb.write_char('0')
   }
@@ -1469,7 +1469,7 @@ fn pad_left_int64(value : Int64, width : Int) -> String {
   if text.length() >= width {
     return text
   }
-  let sb = StringBuilder::new()
+  let sb = StringBuilder()
   for _ in text.length()..<width {
     sb.write_char('0')
   }
@@ -1483,7 +1483,7 @@ fn pad_left_uint64(value : UInt64, width : Int) -> String {
   if text.length() >= width {
     return text
   }
-  let sb = StringBuilder::new()
+  let sb = StringBuilder()
   for _ in text.length()..<width {
     sb.write_char('0')
   }
@@ -1518,7 +1518,7 @@ fn format_uint64_padded(
 ///|
 fn format_int_grouped_string(text : String) -> String {
   let len = text.length()
-  let sb = StringBuilder::new()
+  let sb = StringBuilder()
   let mut i = 0
   for c in text {
     if i > 0 && (len - i) % 3 == 0 {
@@ -1640,7 +1640,7 @@ priv enum DateToken {
 ///|
 fn tokenize_date_pattern(pattern : String) -> Array[DateToken] {
   let tokens : Array[DateToken] = []
-  let mut sb = StringBuilder::new()
+  let mut sb = StringBuilder()
   let mut has_literal = false
   let mut in_quote = false
   let mut escape_next = false
@@ -1668,7 +1668,7 @@ fn tokenize_date_pattern(pattern : String) -> Array[DateToken] {
           if j < len {
             if has_literal {
               tokens.push(Literal(sb.to_string()))
-              sb = StringBuilder::new()
+              sb = StringBuilder()
               has_literal = false
             }
             match number_format_elapsed_token(pattern[i + 1:j]) {
@@ -1698,7 +1698,7 @@ fn tokenize_date_pattern(pattern : String) -> Array[DateToken] {
           if is_ampm {
             if has_literal {
               tokens.push(Literal(sb.to_string()))
-              sb = StringBuilder::new()
+              sb = StringBuilder()
               has_literal = false
             }
             let upper = c == 'A' || pattern[i + 3] == 'P'
@@ -1713,7 +1713,7 @@ fn tokenize_date_pattern(pattern : String) -> Array[DateToken] {
           if is_ap {
             if has_literal {
               tokens.push(Literal(sb.to_string()))
-              sb = StringBuilder::new()
+              sb = StringBuilder()
               has_literal = false
             }
             let upper = c == 'A' || pattern[i + 2] == 'P'
@@ -1733,7 +1733,7 @@ fn tokenize_date_pattern(pattern : String) -> Array[DateToken] {
             c == 'S' {
             if has_literal {
               tokens.push(Literal(sb.to_string()))
-              sb = StringBuilder::new()
+              sb = StringBuilder()
               has_literal = false
             }
             let mut j = i
@@ -1806,7 +1806,7 @@ fn format_date_pattern_tokens(
   let elapsed_hours = total_seconds / 3600L
   let elapsed_minutes = total_seconds / 60L
   let elapsed_seconds = total_seconds
-  let output = StringBuilder::new()
+  let output = StringBuilder()
   for idx, token in tokens {
     match token {
       Literal(text) => output.write_view(text)

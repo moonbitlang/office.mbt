@@ -283,7 +283,7 @@ test "OOXML validation bounds relationship findings and scan retention" {
   let workbook = @xlsx.Workbook::new()
   ignore(workbook.add_sheet("Sheet1"))
   let archive = @zip.read(@xlsx.write(workbook))
-  let rels = StringBuilder::new()
+  let rels = StringBuilder()
   rels.write_string(
     "<?xml version=\"1.0\" encoding=\"UTF-8\"?>" +
     "<Relationships xmlns=\"http://schemas.openxmlformats.org/package/2006/relationships\">",

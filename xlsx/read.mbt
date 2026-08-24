@@ -1164,7 +1164,7 @@ fn parse_data_validations_x14(
       }
       None => ()
     }
-    let sb = StringBuilder::new()
+    let sb = StringBuilder()
     sb.write_view("<dataValidation allowBlank=\"")
     sb.write_view(escape_xml_attr(allow_blank))
     sb.write_view("\"")
@@ -1243,7 +1243,7 @@ fn build_icon_set_rule_xml_from_x14(
   priority : Int,
   cfvos : ArrayView[String],
 ) -> String {
-  let sb = StringBuilder::new()
+  let sb = StringBuilder()
   sb.write_view("<cfRule type=\"iconSet\"")
   sb.write_view(" priority=\"\{priority}\"")
   write_stop_if_true(sb, opt)
@@ -1327,7 +1327,7 @@ fn parse_x14_cfvo_values(xml : StringView) -> Array[String] raise XlsxError {
     if typ == "" {
       continue
     }
-    let sb = StringBuilder::new()
+    let sb = StringBuilder()
     sb.write_view("<cfvo type=\"")
     sb.write_view(escape_xml_attr(typ))
     sb.write_view("\"")

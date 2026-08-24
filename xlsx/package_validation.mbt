@@ -425,7 +425,7 @@ fn resolve_part_path(base : StringView, target : StringView) -> String {
   } else if !consume(base) || !consume(target) {
     return ""
   }
-  let result = StringBuilder::new()
+  let result = StringBuilder()
   for index, segment in segments {
     if index > 0 {
       result.write_char('/')

@@ -164,7 +164,7 @@ async fn read_file_bytes(path : String) -> Bytes raise XlsxError {
 
 ///|
 fn bounded_xlsx_error_text(value : String) -> String {
-  let output = StringBuilder::new()
+  let output = StringBuilder()
   let mut count = 0
   for character in value {
     if character == '\n' || character == '\r' {

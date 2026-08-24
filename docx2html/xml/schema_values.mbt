@@ -2,7 +2,7 @@
 /// Applies the XML Schema `whiteSpace=collapse` facet: XML whitespace runs
 /// become one ASCII space, and leading/trailing runs are removed.
 pub fn collapse_xml_schema_whitespace(value : StringView) -> String {
-  let output = StringBuilder::new(size_hint=value.length())
+  let output = StringBuilder(size_hint=value.length())
   let mut wrote_value = false
   let mut pending_space = false
   for character in value {

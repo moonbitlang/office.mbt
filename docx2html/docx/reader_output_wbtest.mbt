@@ -210,7 +210,7 @@ test "segmentation refuses structural surprises instead of narrowing" {
 
 ///|
 test "refusal diagnostics clip hostile names" {
-  let long_uri = StringBuilder::new()
+  let long_uri = StringBuilder()
   long_uri.write_string("urn:")
   for _ in 0..<200 {
     long_uri.write_char('x')
@@ -227,7 +227,7 @@ test "refusal diagnostics clip hostile names" {
   // the cap is UTF-16 units, not characters: forty non-BMP name
   // characters are eighty units and must still clip. 31 fit (62 units)
   // plus the ellipsis makes 63.
-  let astral_name = StringBuilder::new()
+  let astral_name = StringBuilder()
   for _ in 0..<40 {
     astral_name.write_char('\u{1D54F}')
   }

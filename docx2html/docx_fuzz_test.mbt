@@ -26,7 +26,7 @@ fn docx_fuzz_xmlish(rng : @random.Rand, len : Int) -> String {
   for c in "<>/=\"'& ;\t\n?!-[]abcABC012xyz:" {
     alphabet.push(c)
   }
-  let sb = StringBuilder::new()
+  let sb = StringBuilder()
   for _ in 0..<len {
     sb.write_char(alphabet[rng.int(limit=alphabet.length())])
   }

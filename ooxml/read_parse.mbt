@@ -121,7 +121,7 @@ let max_relationship_mce_work_chars : Int = 16 * 1024 * 1024
 
 ///|
 fn collapse_schema_whitespace(value : StringView) -> String {
-  let output = StringBuilder::new()
+  let output = StringBuilder()
   let mut pending_space = false
   let mut wrote = false
   for unit in value {
@@ -1288,7 +1288,7 @@ pub fn package_part_name_key_cancellable(
   if cancelled() {
     raise ReadCancelled
   }
-  let output = StringBuilder::new(size_hint=name.length())
+  let output = StringBuilder(size_hint=name.length())
   let mut offset = 0
   for character in name {
     if offset % 4096 == 0 && cancelled() {

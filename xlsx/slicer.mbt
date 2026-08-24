@@ -27,7 +27,7 @@ pub fn Slicer::new(name : String) -> Slicer raise XlsxError {
   }
   fn sanitize_cache_stub(value : StringView) -> String {
     let name = value.to_owned()
-    let sb = StringBuilder::new()
+    let sb = StringBuilder()
     for i, ch in name {
       let code = ch.to_int()
       let is_letter = (code >= 65 && code <= 90) || (code >= 97 && code <= 122)

@@ -181,7 +181,7 @@ pub fn DataValidation::set_drop_list(
   self : DataValidation,
   values : ArrayView[String],
 ) -> Unit raise XlsxError {
-  let sb = StringBuilder::new()
+  let sb = StringBuilder()
   for i, value in values {
     if i > 0 {
       sb.write_char(',')
@@ -275,7 +275,7 @@ fn data_validation_xml(dv : DataValidation) -> String raise XlsxError {
   // Keep the serializer as a defense-in-depth boundary for values reconstructed
   // from raw XML or older in-memory state, even though typed setters normalize.
   let sqref = normalize_sqref_for_write(dv.sqref)
-  let sb = StringBuilder::new()
+  let sb = StringBuilder()
   sb.write_view("<dataValidation")
   sb.write_view(" allowBlank=\"\{data_validation_bool_attr(dv.allow_blank)}\"")
   write_opt_xml_attr(sb, "error", dv.error)

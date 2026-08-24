@@ -2718,7 +2718,7 @@ test "docx numbering xml terminates cyclic numbering style links" {
 ///|
 test "docx numbering pre-resolves a deep style-link graph once" {
   let depth = 1_024
-  let xml = StringBuilder::new()
+  let xml = StringBuilder()
   let styles : Map[String, StyleInfo] = Map([])
   xml.write_string(
     (

@@ -96,7 +96,7 @@ let bounded_identifier_name : String = "office-docx-bounded"
 
 ///|
 fn bounded_docx_text(text : String, limit : Int) -> String {
-  let output = StringBuilder::new()
+  let output = StringBuilder()
   let mut count = 0
   for character in text {
     if count == limit {

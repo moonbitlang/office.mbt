@@ -82,7 +82,7 @@ fn scan_selector_unicode(text : String, limit : Int) -> SelectorUnicodeScan {
 
 ///|
 fn bounded_selector_text(text : String, limit : Int) -> String {
-  let output = StringBuilder::new()
+  let output = StringBuilder()
   let mut length = 0
   let mut truncated = false
   for character in text {
@@ -201,7 +201,7 @@ fn SelectorParser::parse_name(
       "\{role} name exceeds \{SELECTOR_MAX_NAME_LENGTH} characters",
     )
   }
-  let output = StringBuilder::new()
+  let output = StringBuilder()
   for index in start..<self.position {
     output.write_char(self.chars[index]) |> ignore
   }
@@ -263,7 +263,7 @@ fn SelectorParser::parse_json_string(
       "office.selector.unsupported_predicate", "named selectors require a JSON string value",
     )
   }
-  let raw = StringBuilder::new()
+  let raw = StringBuilder()
   raw.write_char('"') |> ignore
   self.advance() |> ignore
   let mut closed = false
@@ -357,7 +357,7 @@ fn SelectorParser::parse_coordinate_token(
   )
   self.count_selection()
   let start = self.position
-  let value = StringBuilder::new()
+  let value = StringBuilder()
   while self.peek() is Some(character) && character != ']' {
     if character == '[' || character == '/' || character == '"' {
       raise self.fail(

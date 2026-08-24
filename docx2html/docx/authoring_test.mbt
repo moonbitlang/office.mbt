@@ -66,7 +66,7 @@ test "image_occurrences counts every reference, image_paths deduplicates" {
 
 ///|
 test "author_docx_bytes refuses over the emitted-media part ceiling" {
-  let runs = StringBuilder::new()
+  let runs = StringBuilder()
   for i in 0..<1001 {
     if i > 0 {
       runs.write_string(",")

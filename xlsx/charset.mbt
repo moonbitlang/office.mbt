@@ -119,7 +119,7 @@ let windows_1252_high : FixedArray[Int] = [
 /// it): identical to Latin-1 except for the 0x80-0x9F range, which maps
 /// to typographic punctuation and letters.
 fn decode_windows_1252(bytes : BytesView) -> String {
-  let sb = StringBuilder::new()
+  let sb = StringBuilder()
   for b in bytes {
     let value = b.to_int()
     let code = if value >= 0x80 && value <= 0x9f {

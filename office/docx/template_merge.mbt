@@ -52,7 +52,7 @@ let docx_template_scan_budget : Int = 4 * 1024 * 1024
 /// anything else (symbols, field instructions, nested markup, unknown
 /// entities) — the fail-closed fidelity gate before any rewrite.
 fn docx_decode_text_region(region : String) -> String? {
-  let out = StringBuilder::new()
+  let out = StringBuilder()
   let mut index = 0
   let units = region
   let length = units.length()
@@ -175,7 +175,7 @@ fn decode_numeric_entity(entity : String) -> String? {
 
 ///|
 fn docx_escape_text(text : String) -> String {
-  let out = StringBuilder::new()
+  let out = StringBuilder()
   for ch in text {
     match ch {
       '&' => out.write_string("&amp;")

@@ -12,7 +12,7 @@
 fn parse_csv(text : String) -> Array[Array[String]] {
   let rows : Array[Array[String]] = []
   let row : Array[String] = []
-  let field = StringBuilder::new()
+  let field = StringBuilder()
   let chars : Array[Char] = []
   for c in text {
     chars.push(c)

@@ -1647,7 +1647,7 @@ fn write_styles_xml(
   ]
   let border_ids : Map[String, Int] = Map([])
   fn normalize_border_key(entry : BorderXmlEntry) -> String {
-    let sb = StringBuilder::new()
+    let sb = StringBuilder()
     sb.write_view(if entry.diagonal_up { "1" } else { "0" })
     sb.write_char(',')
     sb.write_view(if entry.diagonal_down { "1" } else { "0" })

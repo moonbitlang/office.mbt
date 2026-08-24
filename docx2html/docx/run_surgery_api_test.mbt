@@ -23,7 +23,7 @@ test "an addressed run replacement plans, applies, and preserves" {
     expect="beta",
     text="BETA",
   )
-  inspect(
+  @debug.debug_inspect(
     (
       receipt.story_part(),
       receipt.at_relative(),
@@ -31,7 +31,7 @@ test "an addressed run replacement plans, applies, and preserves" {
       receipt.edit_count(),
     ),
     content=(
-      #|(word/document.xml, p[1]/r[2], beta, 1)
+      #|("word/document.xml", "p[1]/r[2]", "beta", 1)
     ),
   )
   let spliced = @splice.splice_docx_archive(
@@ -43,14 +43,14 @@ test "an addressed run replacement plans, applies, and preserves" {
   let reread = @docx.read_docx_annotated(spliced)
   let texts : Array[String] = []
   for pair in reread.result().document.to_raw_text().split("\n\n") {
-    if pair.to_string().length() > 0 {
-      texts.push(pair.to_string())
+    if pair.to_owned().length() > 0 {
+      texts.push(pair.to_owned())
     }
   }
-  inspect(
+  @debug.debug_inspect(
     texts,
     content=(
-      #|[alphaBETA, gamma]
+      #|["alphaBETA", "gamma"]
     ),
   )
   // and the edited package still reads mutation-safe with a fresh

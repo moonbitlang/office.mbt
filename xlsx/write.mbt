@@ -21,7 +21,7 @@ priv struct LimitedXmlBuilder {
 
 ///|
 fn LimitedXmlBuilder::new(budget : WritePartBudget?) -> LimitedXmlBuilder {
-  { builder: StringBuilder::new(), budget, encoded_bytes: 0 }
+  { builder: StringBuilder(), budget, encoded_bytes: 0 }
 }
 
 ///|

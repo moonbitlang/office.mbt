@@ -2571,7 +2571,7 @@ fn decode_entities(value : String) -> String {
     return value
   }
   let units = value.code_units()
-  let builder = StringBuilder::new()
+  let builder = StringBuilder()
   let length = units.length()
   let mut at = 0
   while at < length {
@@ -2648,7 +2648,7 @@ fn decode_entities(value : String) -> String {
       at += 1
       continue
     }
-    let name_builder = StringBuilder::new()
+    let name_builder = StringBuilder()
     for i in (at + 1)..<semi {
       match units[i].to_int().to_char() {
         Some(ch) => name_builder.write_char(ch)

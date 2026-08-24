@@ -54,7 +54,7 @@ fn row_byte_is_name(byte : Byte) -> Bool {
 /// (names and namespace URIs in OOXML are ASCII — anything else refuses
 /// upstream).
 fn row_ascii(bytes : BytesView, start : Int, end : Int) -> String? {
-  let out = StringBuilder::new()
+  let out = StringBuilder()
   for index in start..<end {
     let byte = bytes[index]
     if byte < 0x20 || byte > 0x7E {
@@ -70,7 +70,7 @@ fn row_ascii(bytes : BytesView, start : Int, end : Int) -> String? {
 /// (namespace URIs bound through entity spellings still resolve — the
 /// round-4 plan note); None on anything unknown or non-ASCII.
 fn row_attr_value(bytes : BytesView, start : Int, end : Int) -> String? {
-  let out = StringBuilder::new()
+  let out = StringBuilder()
   let mut index = start
   while index < end {
     let byte = bytes[index]

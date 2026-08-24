@@ -27,7 +27,7 @@ priv struct XmlOutputBuilder {
 
 ///|
 fn XmlOutputBuilder::new(maximum : Int?) -> XmlOutputBuilder {
-  { builder: StringBuilder::new(), maximum, encoded_bytes: 0, exceeded: false }
+  { builder: StringBuilder(), maximum, encoded_bytes: 0, exceeded: false }
 }
 
 ///|
@@ -122,7 +122,7 @@ pub fn escape_xml_text(value : StringView) -> String {
   if !xml_needs_escape(value, attr=false) {
     return value.to_owned()
   }
-  let sb = StringBuilder::new()
+  let sb = StringBuilder()
   let mut literal_start = 0
   for index in 0..<value.length() {
     let escaped = match value[index] {
@@ -151,7 +151,7 @@ pub fn escape_xml_attr(value : StringView) -> String {
   if !xml_needs_escape(value, attr=true) {
     return value.to_owned()
   }
-  let sb = StringBuilder::new()
+  let sb = StringBuilder()
   let mut literal_start = 0
   for index in 0..<value.length() {
     let escaped = match value[index] {
