@@ -65,59 +65,55 @@ async fn atomic_write_new_with_faults(
     )
   }
   let mut published = false
-  try {
-    @async.pause()
-    publication_temp_write(
-      temp,
-      data.to_owned(),
-      fail_after_bytes~,
-      stall_after_bytes~,
-    )
-    publication_temp_sync(temp)
-    ignore(
-      publication_temp_publish(
-        temp, destination_leaf, false, output_path, permission,
-      ),
-    )
-    published = true
-    publication_temp_close(temp)
-    ignore(
-      @async.protect_from_cancel(
-        () => {
-          match post_rename_release {
-            Some(release) => {
-              @afs.write_file(
-                release + ".ready",
-                b"ready",
-                create_mode=CreateNew,
-                permission=0o600,
-              )
-              while !@afs.exists(release) {
-                @async.pause()
-              }
-            }
-            None => ()
-          }
-          publication_directory_sync(directory)
-        },
-        resume_on_cancel=true,
-      ) catch {
-        _ => false
-      },
-    )
-  } catch {
-    error => {
-      if !published {
-        publication_temp_cleanup(temp, output_path)
-      } else {
-        publication_temp_close(temp)
-      }
-      if @async.is_being_cancelled() {
-        @async.pause()
-      }
-      raise error
+  errdefer {
+    if !published {
+      publication_temp_cleanup(temp, output_path)
+    } else {
+      publication_temp_close(temp)
+    }
+    if @async.is_being_cancelled() {
+      @async.pause()
     }
   }
+  @async.pause()
+  publication_temp_write(
+    temp,
+    data.to_owned(),
+    fail_after_bytes~,
+    stall_after_bytes~,
+  )
+  publication_temp_sync(temp)
+  ignore(
+    publication_temp_publish(
+      temp, destination_leaf, false, output_path, permission,
+    ),
+  )
+  published = true
+  publication_temp_close(temp)
+  ignore(
+    @async.protect_from_cancel(
+      () => {
+        match post_rename_release {
+          Some(release) => {
+            @afs.write_file(
+              release + ".ready",
+              b"ready",
+              create_mode=CreateNew,
+              permission=0o600,
+            )
+            while !@afs.exists(release) {
+              @async.pause()
+            }
+          }
+          None => ()
+        }
+        publication_directory_sync(directory)
+      },
+      resume_on_cancel=true,
+    ) catch {
+      _ => false
+    },
+  )
 }
 
 ///|

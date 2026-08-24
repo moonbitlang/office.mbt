@@ -448,55 +448,51 @@ async fn publication_temp_publish(
   @async.pause()
   @async.protect_from_cancel(
     () => {
-      try {
-        publication_set_permission(temp.path, permission) catch {
-          error =>
-            raise transaction_error(
-              "office.transaction.commit_failed",
-              "could not apply destination permissions: \{bounded_text(error.to_string(), 240)}",
-            )
-        }
-        temp.final_permission_applied = true
-        temp.file.sync() catch {
-          error =>
-            raise transaction_error(
-              "office.transaction.sync_failed",
-              "could not sync final package metadata: \{bounded_text(error.to_string(), 240)}",
-            )
-        }
+      errdefer {
         temp.file.close()
-        @afs.rename(temp.path, destination, replace~) catch {
-          @os_error.OSError(_) as error if !replace && error.is_EEXIST() =>
-            raise transaction_error(
-              "office.transaction.output_exists",
-              "destination appeared before the atomic publish completed",
-              details=Json::object({
-                "output": Json::string(bounded_text(output_path, 160)),
-              }),
-            )
-          error =>
-            raise transaction_error(
-              "office.transaction.commit_failed",
-              "could not atomically publish destination: \{bounded_text(error.to_string(), 240)}",
-              details=Json::object({
-                "output": Json::string(bounded_text(output_path, 160)),
-              }),
-            )
+        let restored = try {
+          publication_set_permission(temp.path, 0o600)
+          true
+        } catch {
+          _ => false
         }
-      } catch {
-        error => {
-          temp.file.close()
-          let restored = try {
-            publication_set_permission(temp.path, 0o600)
-            true
-          } catch {
-            _ => false
-          }
-          if restored {
-            temp.final_permission_applied = false
-          }
-          raise error
+        if restored {
+          temp.final_permission_applied = false
         }
+      }
+      publication_set_permission(temp.path, permission) catch {
+        error =>
+          raise transaction_error(
+            "office.transaction.commit_failed",
+            "could not apply destination permissions: \{bounded_text(error.to_string(), 240)}",
+          )
+      }
+      temp.final_permission_applied = true
+      temp.file.sync() catch {
+        error =>
+          raise transaction_error(
+            "office.transaction.sync_failed",
+            "could not sync final package metadata: \{bounded_text(error.to_string(), 240)}",
+          )
+      }
+      temp.file.close()
+      @afs.rename(temp.path, destination, replace~) catch {
+        @os_error.OSError(_) as error if !replace && error.is_EEXIST() =>
+          raise transaction_error(
+            "office.transaction.output_exists",
+            "destination appeared before the atomic publish completed",
+            details=Json::object({
+              "output": Json::string(bounded_text(output_path, 160)),
+            }),
+          )
+        error =>
+          raise transaction_error(
+            "office.transaction.commit_failed",
+            "could not atomically publish destination: \{bounded_text(error.to_string(), 240)}",
+            details=Json::object({
+              "output": Json::string(bounded_text(output_path, 160)),
+            }),
+          )
       }
     },
     resume_on_cancel=true,

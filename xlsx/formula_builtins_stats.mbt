@@ -1839,12 +1839,12 @@ fn resolve_cell_value(
   }
   ctx.visiting[key] = true
   ctx.depth = ctx.depth + 1
-  let value = calc_cell_value_internal(workbook, sheet_name, reference, ctx) catch {
-    error => {
+  let value = {
+    errdefer {
       ignore(ctx.visiting.remove(key))
       ctx.depth = ctx.depth - 1
-      raise error
     }
+    calc_cell_value_internal(workbook, sheet_name, reference, ctx)
   }
   ignore(ctx.visiting.remove(key))
   ctx.depth = ctx.depth - 1
@@ -1947,12 +1947,12 @@ fn calc_cell_value_internal(
           let prev_ref = ctx.current_ref
           ctx.current_sheet = sheet_name
           ctx.current_ref = reference
-          let result = eval_expr(workbook, sheet_name, expr, ctx) catch {
-            error => {
+          let result = {
+            errdefer {
               ctx.current_sheet = prev_sheet
               ctx.current_ref = prev_ref
-              raise error
             }
+            eval_expr(workbook, sheet_name, expr, ctx)
           }
           ctx.current_sheet = prev_sheet
           ctx.current_ref = prev_ref
