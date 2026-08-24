@@ -1076,8 +1076,8 @@ fn plan_paragraph_text_edits(
     guard elements[host.source_identity].text_map is Some(map) else {
       raise partial_surgery_refuse(InternalPlanConflict, "host lost its map")
     }
-    for local in host.local_edits {
-      let (local_start, local_end, _, _) = local
+    for local_edit in host.local_edits {
+      let (local_start, local_end, _, _) = local_edit
       guard map.byte_offset_at(local_start) is Some(_) &&
         map.byte_offset_at(local_end) is Some(_) else {
         raise partial_surgery_refuse(
@@ -1089,8 +1089,8 @@ fn plan_paragraph_text_edits(
   }
   // Phase 5: replacement validity, batch-wide.
   for host in touched {
-    for local in host.local_edits {
-      let (_, _, replacement, _) = local
+    for local_edit in host.local_edits {
+      let (_, _, replacement, _) = local_edit
       (run_surgery_escape(replacement) |> ignore) catch {
         Unsupported(message~) =>
           raise partial_surgery_refuse(InvalidReplacement, message)
@@ -1113,14 +1113,22 @@ fn plan_paragraph_text_edits(
     guard element.text_map is Some(map) else {
       raise partial_surgery_refuse(InternalPlanConflict, "host lost its map")
     }
-    host.local_edits.sort_by_key(local => {
-      (local.0, if local.1 > local.0 { 1 } else { 0 }, local.3)
+    host.local_edits.sort_by_key(local_edit => {
+      (
+        local_edit.0,
+        if local_edit.1 > local_edit.0 {
+          1
+        } else {
+          0
+        },
+        local_edit.3,
+      )
     })
     // The post-batch content of this `w:t` decides xml:space once.
     let after = StringBuilder()
     let mut cursor = 0
-    for local in host.local_edits {
-      let (local_start, local_end, replacement, _) = local
+    for local_edit in host.local_edits {
+      let (local_start, local_end, replacement, _) = local_edit
       after.write_string(
         host.contribution_value
         .view(start_offset=cursor, end_offset=local_start)
@@ -1174,8 +1182,8 @@ fn plan_paragraph_text_edits(
     // identical keys.
     let mut pending_insertion_at = -1
     let mut pending_insertion = ""
-    for local in host.local_edits {
-      let (local_start, local_end, replacement, _) = local
+    for local_edit in host.local_edits {
+      let (local_start, local_end, replacement, _) = local_edit
       guard map.byte_offset_at(local_start) is Some(byte_from) &&
         map.byte_offset_at(local_end) is Some(byte_to) else {
         raise partial_surgery_refuse(
