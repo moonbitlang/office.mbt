@@ -47,7 +47,7 @@ fn partial_offset_classes(
           continue
         }
         let SourceElementId(identity) = contribution.source
-        let local = offset - start
+        let local_offset = offset - start
         match elements[identity].text_map {
           Some(map) => {
             let mut named = false
@@ -60,10 +60,10 @@ fn partial_offset_classes(
                 NumericCharRef => "numref"
                 CData => "cdata"
               }
-              if local == token_start || local == token_end {
+              if local_offset == token_start || local_offset == token_end {
                 classes.push("\{kind}-edge")
                 named = true
-              } else if local > token_start && local < token_end {
+              } else if local_offset > token_start && local_offset < token_end {
                 classes.push("\{kind}-interior")
                 named = true
               }
