@@ -13,10 +13,7 @@ fn assert_partial_edits(
   let bytes = @utf8.encode(source)
   let projection = surgery_native_projection(source)
   let (byte_edits, receipt) = plan_paragraph_text_edits(
-    projection,
-    bytes[:],
-    paragraph,
-    edits,
+    projection, bytes, paragraph, edits,
   )
   assert_eq(receipt.expected_projection, expected)
   assert_eq(receipt.paragraph_index, paragraph)
@@ -50,7 +47,7 @@ fn assert_partial_refusal(
   let bytes = @utf8.encode(source)
   let projection = surgery_native_projection(source)
   try
-    plan_paragraph_text_edits(projection, bytes[:], paragraph, edits) |> ignore
+    plan_paragraph_text_edits(projection, bytes, paragraph, edits) |> ignore
   catch {
     Unsupported(message~) =>
       assert_true(
@@ -146,7 +143,7 @@ test "partial: edits around entity boundaries preserve outside spellings" {
   let source = "<w:document xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\" xmlns:v=\"urn:schemas-microsoft-com:vml\"><w:body>\{body}</w:body></w:document>"
   let bytes = @utf8.encode(source)
   let projection = surgery_native_projection(source)
-  let (byte_edits, _) = plan_paragraph_text_edits(projection, bytes[:], 0, [
+  let (byte_edits, _) = plan_paragraph_text_edits(projection, bytes, 0, [
     partial_edit(2, 3, "B"),
   ])
   let spliced = @utf8.decode(apply_run_surgery_edits(bytes, byte_edits))
@@ -181,12 +178,9 @@ test "partial: logical no-op over a reference spelling never canonicalizes" {
   let source = "<w:document xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\" xmlns:v=\"urn:schemas-microsoft-com:vml\"><w:body>\{body}</w:body></w:document>"
   let bytes = @utf8.encode(source)
   let projection = surgery_native_projection(source)
-  let (byte_edits, receipt) = plan_paragraph_text_edits(
-    projection,
-    bytes[:],
-    0,
-    [partial_edit(1, 2, "&")],
-  )
+  let (byte_edits, receipt) = plan_paragraph_text_edits(projection, bytes, 0, [
+    partial_edit(1, 2, "&"),
+  ])
   assert_eq(byte_edits.length(), 0)
   assert_eq(receipt.logical_edits.length(), 1)
   guard receipt.logical_edits[0].placement is LogicalNoOp else {
@@ -269,7 +263,7 @@ test "partial: a cross-w:t range plans with the start host and a trimmed end" {
   let source = "<w:document xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\" xmlns:v=\"urn:schemas-microsoft-com:vml\"><w:body>\{body}</w:body></w:document>"
   let bytes = @utf8.encode(source)
   let projection = surgery_native_projection(source)
-  let (byte_edits, _) = plan_paragraph_text_edits(projection, bytes[:], 0, [
+  let (byte_edits, _) = plan_paragraph_text_edits(projection, bytes, 0, [
     partial_edit(1, 3, "X"),
   ])
   let spliced = @utf8.decode(apply_run_surgery_edits(bytes, byte_edits))
@@ -288,7 +282,7 @@ test "partial: a fully covered middle w:t is emptied in place" {
   let source = "<w:document xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\" xmlns:v=\"urn:schemas-microsoft-com:vml\"><w:body>\{body}</w:body></w:document>"
   let bytes = @utf8.encode(source)
   let projection = surgery_native_projection(source)
-  let (byte_edits, _) = plan_paragraph_text_edits(projection, bytes[:], 0, [
+  let (byte_edits, _) = plan_paragraph_text_edits(projection, bytes, 0, [
     partial_edit(1, 6, "Z"),
   ])
   let spliced = @utf8.decode(apply_run_surgery_edits(bytes, byte_edits))
@@ -307,7 +301,7 @@ test "partial: a whole atom deletes via a covering range" {
   let source = "<w:document xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\" xmlns:v=\"urn:schemas-microsoft-com:vml\"><w:body>\{body}</w:body></w:document>"
   let bytes = @utf8.encode(source)
   let projection = surgery_native_projection(source)
-  let (byte_edits, _) = plan_paragraph_text_edits(projection, bytes[:], 0, [
+  let (byte_edits, _) = plan_paragraph_text_edits(projection, bytes, 0, [
     partial_edit(2, 3, ""),
   ])
   let spliced = @utf8.decode(apply_run_surgery_edits(bytes, byte_edits))
@@ -328,12 +322,9 @@ test "partial: an atom-start range synthesizes at the atom, inside seams" {
   let source = "<w:document xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\" xmlns:v=\"urn:schemas-microsoft-com:vml\"><w:body>\{body}</w:body></w:document>"
   let bytes = @utf8.encode(source)
   let projection = surgery_native_projection(source)
-  let (byte_edits, receipt) = plan_paragraph_text_edits(
-    projection,
-    bytes[:],
-    0,
-    [partial_edit(2, 4, "X")],
-  )
+  let (byte_edits, receipt) = plan_paragraph_text_edits(projection, bytes, 0, [
+    partial_edit(2, 4, "X"),
+  ])
   guard receipt.logical_edits[0].placement is AtomSynthesis else {
     fail("expected atom synthesis placement")
   }
@@ -368,7 +359,7 @@ test "partial: a transparent seam inside the range survives untouched" {
   let source = "<w:document xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\" xmlns:v=\"urn:schemas-microsoft-com:vml\"><w:body>\{body}</w:body></w:document>"
   let bytes = @utf8.encode(source)
   let projection = surgery_native_projection(source)
-  let (byte_edits, _) = plan_paragraph_text_edits(projection, bytes[:], 0, [
+  let (byte_edits, _) = plan_paragraph_text_edits(projection, bytes, 0, [
     partial_edit(1, 3, "Y"),
   ])
   let spliced = @utf8.decode(apply_run_surgery_edits(bytes, byte_edits))
@@ -394,7 +385,7 @@ test "partial: a cross-run range plans, preserving both run shells" {
   let source = "<w:document xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\" xmlns:v=\"urn:schemas-microsoft-com:vml\"><w:body>\{body}</w:body></w:document>"
   let bytes = @utf8.encode(source)
   let projection = surgery_native_projection(source)
-  let (byte_edits, _) = plan_paragraph_text_edits(projection, bytes[:], 0, [
+  let (byte_edits, _) = plan_paragraph_text_edits(projection, bytes, 0, [
     partial_edit(1, 3, "X"),
   ])
   let spliced = @utf8.decode(apply_run_surgery_edits(bytes, byte_edits))
@@ -419,7 +410,7 @@ test "partial: a cross-run range spanning an empty middle run plans" {
   let source = "<w:document xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\" xmlns:v=\"urn:schemas-microsoft-com:vml\"><w:body>\{body}</w:body></w:document>"
   let bytes = @utf8.encode(source)
   let projection = surgery_native_projection(source)
-  let (byte_edits, _) = plan_paragraph_text_edits(projection, bytes[:], 0, [
+  let (byte_edits, _) = plan_paragraph_text_edits(projection, bytes, 0, [
     partial_edit(1, 3, "Y"),
   ])
   let spliced = @utf8.decode(apply_run_surgery_edits(bytes, byte_edits))
@@ -455,7 +446,7 @@ test "partial: a cross-run edit ending at an atom consumes it whole" {
   let source = "<w:document xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\" xmlns:v=\"urn:schemas-microsoft-com:vml\"><w:body>\{body}</w:body></w:document>"
   let bytes = @utf8.encode(source)
   let projection = surgery_native_projection(source)
-  let (byte_edits, _) = plan_paragraph_text_edits(projection, bytes[:], 0, [
+  let (byte_edits, _) = plan_paragraph_text_edits(projection, bytes, 0, [
     partial_edit(1, 3, "Z"),
   ])
   let spliced = @utf8.decode(apply_run_surgery_edits(bytes, byte_edits))
@@ -517,12 +508,9 @@ test "partial: xml:space appears when the post-batch content needs it" {
   let source = "<w:document xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\" xmlns:v=\"urn:schemas-microsoft-com:vml\"><w:body>\{body}</w:body></w:document>"
   let bytes = @utf8.encode(source)
   let projection = surgery_native_projection(source)
-  let (byte_edits, receipt) = plan_paragraph_text_edits(
-    projection,
-    bytes[:],
-    0,
-    [partial_edit(0, 1, " ")],
-  )
+  let (byte_edits, receipt) = plan_paragraph_text_edits(projection, bytes, 0, [
+    partial_edit(0, 1, " "),
+  ])
   assert_eq(receipt.expected_projection, " bc")
   let spliced = @utf8.decode(apply_run_surgery_edits(bytes, byte_edits))
   assert_true(spliced.contains("xml:space=\"preserve\""))
@@ -542,7 +530,7 @@ test "partial: an existing declaration is left byte-identical when unneeded" {
   let source = "<w:document xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\" xmlns:v=\"urn:schemas-microsoft-com:vml\"><w:body>\{body}</w:body></w:document>"
   let bytes = @utf8.encode(source)
   let projection = surgery_native_projection(source)
-  let (byte_edits, _) = plan_paragraph_text_edits(projection, bytes[:], 0, [
+  let (byte_edits, _) = plan_paragraph_text_edits(projection, bytes, 0, [
     partial_edit(0, 1, ""),
   ])
   let spliced = @utf8.decode(apply_run_surgery_edits(bytes, byte_edits))
@@ -557,7 +545,7 @@ test "partial: an untouched neighbouring w:t never gains the attribute" {
   let bytes = @utf8.encode(source)
   let projection = surgery_native_projection(source)
   // Edit only the FIRST w:t, giving it edge whitespace.
-  let (byte_edits, _) = plan_paragraph_text_edits(projection, bytes[:], 0, [
+  let (byte_edits, _) = plan_paragraph_text_edits(projection, bytes, 0, [
     partial_edit(0, 1, " "),
   ])
   let spliced = @utf8.decode(apply_run_surgery_edits(bytes, byte_edits))
@@ -583,7 +571,7 @@ test "partial: whole-content deletion leaves an emptied element in place" {
   let source = "<w:document xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\" xmlns:v=\"urn:schemas-microsoft-com:vml\"><w:body>\{body}</w:body></w:document>"
   let bytes = @utf8.encode(source)
   let projection = surgery_native_projection(source)
-  let (byte_edits, _) = plan_paragraph_text_edits(projection, bytes[:], 0, [
+  let (byte_edits, _) = plan_paragraph_text_edits(projection, bytes, 0, [
     partial_edit(0, 4, ""),
   ])
   let spliced = @utf8.decode(apply_run_surgery_edits(bytes, byte_edits))
@@ -596,12 +584,7 @@ test "partial: an empty batch plans nothing" {
   let source = "<w:document xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\" xmlns:v=\"urn:schemas-microsoft-com:vml\"><w:body>\{body}</w:body></w:document>"
   let bytes = @utf8.encode(source)
   let projection = surgery_native_projection(source)
-  let (byte_edits, receipt) = plan_paragraph_text_edits(
-    projection,
-    bytes[:],
-    0,
-    [],
-  )
+  let (byte_edits, receipt) = plan_paragraph_text_edits(projection, bytes, 0, [])
   assert_eq(byte_edits.length(), 0)
   assert_eq(receipt.expected_projection, "abc")
   assert_eq(receipt.touched_source_count, 0)
@@ -721,7 +704,7 @@ test "partial: a twice-projected host refuses as duplicate source" {
   }
   assert_true(duplicated)
   try
-    plan_paragraph_text_edits(projection, bytes[:], 0, [partial_edit(0, 1, "x")])
+    plan_paragraph_text_edits(projection, bytes, 0, [partial_edit(0, 1, "x")])
     |> ignore
   catch {
     Unsupported(message~) =>
@@ -740,7 +723,7 @@ test "partial: a run reused by another paragraph refuses" {
   // Force the defect: paragraph 1 also claims paragraph 0's run.
   projection.paragraphs[1].runs.push(projection.paragraphs[0].runs[0])
   try
-    plan_paragraph_text_edits(projection, bytes[:], 0, [partial_edit(0, 1, "x")])
+    plan_paragraph_text_edits(projection, bytes, 0, [partial_edit(0, 1, "x")])
     |> ignore
   catch {
     Unsupported(message~) =>
@@ -766,12 +749,10 @@ test "partial: two insertions before one atom keep request order" {
   let source = "<w:document xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\" xmlns:v=\"urn:schemas-microsoft-com:vml\"><w:body>\{body}</w:body></w:document>"
   let bytes = @utf8.encode(source)
   let projection = surgery_native_projection(source)
-  let (byte_edits, receipt) = plan_paragraph_text_edits(
-    projection,
-    bytes[:],
-    0,
-    [partial_edit(0, 0, "X"), partial_edit(0, 0, "Y")],
-  )
+  let (byte_edits, receipt) = plan_paragraph_text_edits(projection, bytes, 0, [
+    partial_edit(0, 0, "X"),
+    partial_edit(0, 0, "Y"),
+  ])
   // One distinct carrier atom, two synthesis operations.
   assert_eq(receipt.touched_source_count, 1)
   let spliced = @utf8.decode(apply_run_surgery_edits(bytes, byte_edits))
@@ -795,7 +776,7 @@ test "partial: insertion after a trailing atom lands after it" {
   let source = "<w:document xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\" xmlns:v=\"urn:schemas-microsoft-com:vml\"><w:body>\{body}</w:body></w:document>"
   let bytes = @utf8.encode(source)
   let projection = surgery_native_projection(source)
-  let (byte_edits, _) = plan_paragraph_text_edits(projection, bytes[:], 0, [
+  let (byte_edits, _) = plan_paragraph_text_edits(projection, bytes, 0, [
     partial_edit(3, 3, "Z"),
   ])
   let spliced = @utf8.decode(apply_run_surgery_edits(bytes, byte_edits))
@@ -818,7 +799,7 @@ test "partial: an interior insertion into a twice-projected host refuses" {
   }
   assert_true(duplicated)
   try
-    plan_paragraph_text_edits(projection, bytes[:], 0, [partial_edit(1, 1, "x")])
+    plan_paragraph_text_edits(projection, bytes, 0, [partial_edit(1, 1, "x")])
     |> ignore
   catch {
     Unsupported(message~) =>
@@ -853,7 +834,7 @@ test "partial: consuming from a shared boundary edits the right-hand host" {
   let source = "<w:document xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\" xmlns:v=\"urn:schemas-microsoft-com:vml\"><w:body>\{body}</w:body></w:document>"
   let bytes = @utf8.encode(source)
   let projection = surgery_native_projection(source)
-  let (byte_edits, _) = plan_paragraph_text_edits(projection, bytes[:], 0, [
+  let (byte_edits, _) = plan_paragraph_text_edits(projection, bytes, 0, [
     partial_edit(2, 3, "X"),
   ])
   let spliced = @utf8.decode(apply_run_surgery_edits(bytes, byte_edits))
@@ -881,7 +862,7 @@ test "partial: a barrier exactly at an endpoint is outside the range" {
   let source = "<w:document xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\" xmlns:v=\"urn:schemas-microsoft-com:vml\"><w:body>\{body}</w:body></w:document>"
   let bytes = @utf8.encode(source)
   let projection = surgery_native_projection(source)
-  let (byte_edits, _) = plan_paragraph_text_edits(projection, bytes[:], 0, [
+  let (byte_edits, _) = plan_paragraph_text_edits(projection, bytes, 0, [
     partial_edit(2, 4, "XY"),
   ])
   let spliced = @utf8.decode(apply_run_surgery_edits(bytes, byte_edits))
@@ -897,12 +878,9 @@ test "partial: xml:space decides per touched host across one edit" {
   let source = "<w:document xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\" xmlns:v=\"urn:schemas-microsoft-com:vml\"><w:body>\{body}</w:body></w:document>"
   let bytes = @utf8.encode(source)
   let projection = surgery_native_projection(source)
-  let (byte_edits, receipt) = plan_paragraph_text_edits(
-    projection,
-    bytes[:],
-    0,
-    [partial_edit(1, 5, " ")],
-  )
+  let (byte_edits, receipt) = plan_paragraph_text_edits(projection, bytes, 0, [
+    partial_edit(1, 5, " "),
+  ])
   assert_eq(receipt.expected_projection, "a f")
   assert_eq(receipt.touched_source_count, 3)
   let spliced = @utf8.decode(apply_run_surgery_edits(bytes, byte_edits))
@@ -931,12 +909,9 @@ test "partial: an empty insertion is a validated no-op" {
   let source = "<w:document xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\" xmlns:v=\"urn:schemas-microsoft-com:vml\"><w:body>\{body}</w:body></w:document>"
   let bytes = @utf8.encode(source)
   let projection = surgery_native_projection(source)
-  let (byte_edits, receipt) = plan_paragraph_text_edits(
-    projection,
-    bytes[:],
-    0,
-    [partial_edit(1, 1, "")],
-  )
+  let (byte_edits, receipt) = plan_paragraph_text_edits(projection, bytes, 0, [
+    partial_edit(1, 1, ""),
+  ])
   assert_eq(byte_edits.length(), 0)
   guard receipt.logical_edits[0].placement is LogicalNoOp else {
     fail("expected a validated no-op")
@@ -990,7 +965,7 @@ test "partial: a start at run 1's exact end makes run 2 the carrier" {
   let source = "<w:document xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\" xmlns:v=\"urn:schemas-microsoft-com:vml\"><w:body>\{body}</w:body></w:document>"
   let bytes = @utf8.encode(source)
   let projection = surgery_native_projection(source)
-  let (byte_edits, _) = plan_paragraph_text_edits(projection, bytes[:], 0, [
+  let (byte_edits, _) = plan_paragraph_text_edits(projection, bytes, 0, [
     partial_edit(2, 3, "X"),
   ])
   let spliced = @utf8.decode(apply_run_surgery_edits(bytes, byte_edits))
@@ -1008,12 +983,9 @@ test "partial: cross-run xml:space lands only on the start host" {
   let source = "<w:document xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\" xmlns:v=\"urn:schemas-microsoft-com:vml\"><w:body>\{body}</w:body></w:document>"
   let bytes = @utf8.encode(source)
   let projection = surgery_native_projection(source)
-  let (byte_edits, receipt) = plan_paragraph_text_edits(
-    projection,
-    bytes[:],
-    0,
-    [partial_edit(1, 3, " ")],
-  )
+  let (byte_edits, receipt) = plan_paragraph_text_edits(projection, bytes, 0, [
+    partial_edit(1, 3, " "),
+  ])
   assert_eq(receipt.expected_projection, "a d")
   let spliced = @utf8.decode(apply_run_surgery_edits(bytes, byte_edits))
   let mut declarations = 0
@@ -1127,7 +1099,7 @@ test "partial: a later run reused by another paragraph refuses" {
   // Force the defect on the SECOND run of paragraph 0.
   projection.paragraphs[1].runs.push(projection.paragraphs[0].runs[1])
   try
-    plan_paragraph_text_edits(projection, bytes[:], 0, [partial_edit(1, 3, "x")])
+    plan_paragraph_text_edits(projection, bytes, 0, [partial_edit(1, 3, "x")])
     |> ignore
   catch {
     Unsupported(message~) =>
@@ -1155,7 +1127,7 @@ test "partial: a nested run between an outer run's texts is gated" {
   let source = "<w:document xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\" xmlns:v=\"urn:schemas-microsoft-com:vml\"><w:body>\{body}</w:body></w:document>"
   let bytes = @utf8.encode(source)
   let projection = surgery_native_projection(source)
-  let (byte_edits, _) = plan_paragraph_text_edits(projection, bytes[:], 0, [
+  let (byte_edits, _) = plan_paragraph_text_edits(projection, bytes, 0, [
     partial_edit(1, 3, "X"),
   ])
   let spliced = @utf8.decode(apply_run_surgery_edits(bytes, byte_edits))
@@ -1168,7 +1140,7 @@ test "partial: a nested run between an outer run's texts is gated" {
   assert_eq(paragraph.runs.length(), 2)
   paragraph.runs[1].field_region = FieldInstruction
   try
-    plan_paragraph_text_edits(poisoned, bytes[:], 0, [partial_edit(1, 3, "X")])
+    plan_paragraph_text_edits(poisoned, bytes, 0, [partial_edit(1, 3, "X")])
     |> ignore
   catch {
     Unsupported(message~) =>
@@ -1191,12 +1163,10 @@ test "partial: two insertions into an atomless run compose into one element" {
   let source = "<w:document xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\" xmlns:v=\"urn:schemas-microsoft-com:vml\"><w:body>\{body}</w:body></w:document>"
   let bytes = @utf8.encode(source)
   let projection = surgery_native_projection(source)
-  let (byte_edits, receipt) = plan_paragraph_text_edits(
-    projection,
-    bytes[:],
-    0,
-    [partial_edit(0, 0, "X"), partial_edit(0, 0, "Y")],
-  )
+  let (byte_edits, receipt) = plan_paragraph_text_edits(projection, bytes, 0, [
+    partial_edit(0, 0, "X"),
+    partial_edit(0, 0, "Y"),
+  ])
   assert_eq(byte_edits.length(), 1)
   assert_eq(receipt.expected_projection, "XY")
   guard receipt.logical_edits[0].placement is RunSynthesis else {
@@ -1244,7 +1214,7 @@ test "partial: atomless synthesis refuses a run shared with another paragraph" {
   }
   guard empty_index >= 0 else { fail("expected an empty logical paragraph") }
   try
-    plan_paragraph_text_edits(projection, bytes[:], empty_index, [
+    plan_paragraph_text_edits(projection, bytes, empty_index, [
       partial_edit(0, 0, "X"),
     ])
     |> ignore
@@ -1268,7 +1238,7 @@ test "partial: a quoted attribute value is not mistaken for xml:space" {
   let source = "<w:document xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\" xmlns:v=\"urn:schemas-microsoft-com:vml\"><w:body>\{body}</w:body></w:document>"
   let bytes = @utf8.encode(source)
   let projection = surgery_native_projection(source)
-  let (byte_edits, _) = plan_paragraph_text_edits(projection, bytes[:], 0, [
+  let (byte_edits, _) = plan_paragraph_text_edits(projection, bytes, 0, [
     partial_edit(0, 1, " s"),
   ])
   let spliced = @utf8.decode(apply_run_surgery_edits(bytes, byte_edits))
@@ -1304,12 +1274,9 @@ test "partial: an atom-only no-op plans nothing" {
   let source = "<w:document xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\" xmlns:v=\"urn:schemas-microsoft-com:vml\"><w:body>\{body}</w:body></w:document>"
   let bytes = @utf8.encode(source)
   let projection = surgery_native_projection(source)
-  let (byte_edits, receipt) = plan_paragraph_text_edits(
-    projection,
-    bytes[:],
-    0,
-    [partial_edit(0, 1, "\t")],
-  )
+  let (byte_edits, receipt) = plan_paragraph_text_edits(projection, bytes, 0, [
+    partial_edit(0, 1, "\t"),
+  ])
   assert_eq(byte_edits.length(), 0)
   guard receipt.logical_edits[0].placement is LogicalNoOp else {
     fail("expected a logical no-op")
@@ -1324,7 +1291,7 @@ test "partial: synthesis reproduces a default-namespace run's spelling" {
   let source = "<document xmlns=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\"><body>\{body}</body></document>"
   let bytes = @utf8.encode(source)
   let projection = surgery_native_projection(source)
-  let (byte_edits, _) = plan_paragraph_text_edits(projection, bytes[:], 0, [
+  let (byte_edits, _) = plan_paragraph_text_edits(projection, bytes, 0, [
     partial_edit(0, 1, "X"),
   ])
   let spliced = @utf8.decode(apply_run_surgery_edits(bytes, byte_edits))
@@ -1388,7 +1355,7 @@ test "partial: every VML drawing container is a hard barrier too" {
     let bytes = @utf8.encode(source)
     let projection = surgery_native_projection(source)
     try
-      plan_whole_run_replacement(projection, bytes[:], 0, 0, "x") |> ignore
+      plan_whole_run_replacement(projection, bytes, 0, 0, "x") |> ignore
     catch {
       Unsupported(message~) =>
         assert_true(message.contains("visible non-text"), msg=message)
@@ -1408,9 +1375,7 @@ test "whole-run replacement refuses a run holding an empty drawing" {
     #|<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:body><w:p><w:r><w:t>a</w:t><w:drawing/></w:r></w:p></w:body></w:document>
   let bytes = @utf8.encode(source)
   let projection = surgery_native_projection(source)
-  try
-    plan_whole_run_replacement(projection, bytes[:], 0, 0, "x") |> ignore
-  catch {
+  try plan_whole_run_replacement(projection, bytes, 0, 0, "x") |> ignore catch {
     Unsupported(message~) =>
       assert_true(message.contains("visible non-text"), msg=message)
     _ => fail("expected an Unsupported refusal")
@@ -1429,7 +1394,7 @@ test "partial: an existing preserve declaration is left byte-identical" {
   let source = "<w:document xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\" xmlns:v=\"urn:schemas-microsoft-com:vml\"><w:body>\{body}</w:body></w:document>"
   let bytes = @utf8.encode(source)
   let projection = surgery_native_projection(source)
-  let (byte_edits, _) = plan_paragraph_text_edits(projection, bytes[:], 0, [
+  let (byte_edits, _) = plan_paragraph_text_edits(projection, bytes, 0, [
     partial_edit(1, 2, "X"),
   ])
   let spliced = @utf8.decode(apply_run_surgery_edits(bytes, byte_edits))
@@ -1443,7 +1408,7 @@ test "partial: an existing preserve declaration is left byte-identical" {
   let default_projection = surgery_native_projection(default_source)
   let (default_edits, _) = plan_paragraph_text_edits(
     default_projection,
-    default_bytes[:],
+    default_bytes,
     0,
     [partial_edit(0, 1, " s")],
   )
@@ -1460,7 +1425,7 @@ test "whole-run replacement leaves an existing preserve byte-identical" {
     #|<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:body><w:p><w:r><w:t xml:space='preserve'> a </w:t></w:r></w:p></w:body></w:document>
   let bytes = @utf8.encode(source)
   let projection = surgery_native_projection(source)
-  let edits = plan_whole_run_replacement(projection, bytes[:], 0, 0, " b ")
+  let edits = plan_whole_run_replacement(projection, bytes, 0, 0, " b ")
   let spliced = @utf8.decode(apply_run_surgery_edits(bytes, edits))
   assert_true(spliced.contains("xml:space='preserve'"))
   assert_false(spliced.contains("xml:space=\"preserve\""))
@@ -1477,7 +1442,7 @@ test "partial: a reference-spelled preserve is left byte-identical" {
   let source = "<w:document xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\" xmlns:v=\"urn:schemas-microsoft-com:vml\"><w:body>\{body}</w:body></w:document>"
   let bytes = @utf8.encode(source)
   let projection = surgery_native_projection(source)
-  let (byte_edits, _) = plan_paragraph_text_edits(projection, bytes[:], 0, [
+  let (byte_edits, _) = plan_paragraph_text_edits(projection, bytes, 0, [
     partial_edit(1, 2, "X"),
   ])
   let spliced = @utf8.decode(apply_run_surgery_edits(bytes, byte_edits))
@@ -1491,7 +1456,7 @@ test "partial: a reference-spelled preserve is left byte-identical" {
   let decimal_bytes = @utf8.encode(decimal_source)
   let (decimal_edits, _) = plan_paragraph_text_edits(
     surgery_native_projection(decimal_source),
-    decimal_bytes[:],
+    decimal_bytes,
     0,
     [partial_edit(1, 2, "X")],
   )
@@ -1505,7 +1470,7 @@ test "partial: a reference-spelled preserve is left byte-identical" {
   let other_bytes = @utf8.encode(other_source)
   let (other_edits, _) = plan_paragraph_text_edits(
     surgery_native_projection(other_source),
-    other_bytes[:],
+    other_bytes,
     0,
     [partial_edit(0, 1, " s")],
   )
@@ -1522,7 +1487,7 @@ test "whole-run replacement leaves a reference-spelled preserve alone" {
     #|<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:body><w:p><w:r><w:t xml:space="pre&#x73;erve"> a </w:t></w:r></w:p></w:body></w:document>
   let bytes = @utf8.encode(source)
   let projection = surgery_native_projection(source)
-  let edits = plan_whole_run_replacement(projection, bytes[:], 0, 0, " b ")
+  let edits = plan_whole_run_replacement(projection, bytes, 0, 0, " b ")
   let spliced = @utf8.decode(apply_run_surgery_edits(bytes, edits))
   assert_true(spliced.contains("xml:space=\"pre&#x73;erve\""))
   assert_false(spliced.contains("xml:space=\"preserve\""))
