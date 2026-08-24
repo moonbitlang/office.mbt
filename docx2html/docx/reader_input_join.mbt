@@ -23,6 +23,8 @@
 ///|
 /// A physical element identity: the index into the story scan's element
 /// table, assigned in opening-tag order.
+// `Eq` is production-used (`reader_projection_adapter.mbt`); `Debug` only by
+// whitebox snapshots, which the library build does not compile.
 #warnings("-unused_value")
 priv struct SourceElementId(Int) derive(Debug, Eq)
 

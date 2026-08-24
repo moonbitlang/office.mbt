@@ -178,6 +178,13 @@ priv struct PartialProjectingPart {
 /// overlap), paragraph ownership, structural restrictions (interval walk,
 /// run gates, host gates), endpoint resolution, replacement validity, then
 /// internal byte-plan validation. On refusal nothing is returned.
+/// NOT WIRED UP. No shipped surface reaches N0c2: `run_surgery_api.mbt`
+/// documents the addressed run-replacement boundary as the ONE public seam,
+/// and it reaches N0c1. Everything below this entry point is therefore live
+/// only under its whitebox and property suites, which is why the suppression
+/// is here rather than the code being deleted -- and why this note exists,
+/// so the diagnostic's real message (an unreached implementation) is not
+/// lost with it. See moonbitlang/office.mbt#499.
 #warnings("-unused_value")
 fn plan_paragraph_text_edits(
   projection : ReaderProjection,
