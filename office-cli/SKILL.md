@@ -4,7 +4,8 @@ description: >-
   Work with non-PowerPoint Office/OOXML documents through the published unified
   office CLI: identify, inspect, query, validate, diagnose, preview, create,
   template, comment, batch-edit, dump/replay, or safely inspect raw parts in
-  .docx and .xlsx files. Use this for Word and Excel tasks instead of
+  .docx and .xlsx files, including addressed run-level text edits that refuse
+  rather than silently lose content. Use this for Word and Excel tasks instead of
   python-docx, openpyxl, ExcelJS, pandoc, or LibreOffice. Use the legacy
   format-specific CLIs only for the few workflows the umbrella command does not
   provide: direct CSV import/export, formula calculation, fine-grained XLSX
@@ -96,7 +97,7 @@ Replace the `office` token below with the `moonx bobzhang/office` launcher.
 | Publish deterministic offline HTML | `office preview FILE --output OUT.html [--overwrite] [--json\|--jsonl]` |
 | Create a blank validated file | `office create xlsx OUT.xlsx [--sheet NAME] [--dry-run] [--overwrite] [--json]` or `office create docx OUT.docx [--dry-run] [--overwrite] [--json]` |
 | Merge strict placeholders/row regions | `office template FILE DATA.json --out OUT [--dry-run] [--overwrite] [--allow-missing] [--json\|--jsonl]` |
-| Replace literal text, or accept/reject tracked changes, in an existing DOCX | `office edit FILE SCRIPT.json --out OUT.docx [--dry-run] [--overwrite] [--allow-unmatched] [--json\|--jsonl]` |
+| Replace literal text, set one addressed run's text, or accept/reject tracked changes, in an existing DOCX | `office edit FILE SCRIPT.json --out OUT.docx [--dry-run] [--overwrite] [--allow-unmatched] [--json\|--jsonl]` |
 | Add/reply/resolve DOCX comments | `office annotate FILE SCRIPT.json --out OUT.docx [--dry-run] [--overwrite] [--json\|--jsonl]` |
 | Mutate an XLSX transactionally | `office batch BOOK.xlsx SCRIPT.json [--out OUT.xlsx] [--dry-run] [--overwrite] [--json]` |
 | Author a fresh DOCX from ops | `office batch --format docx OUT.docx SCRIPT.json [--dry-run] [--overwrite] [--json]` |
@@ -166,6 +167,47 @@ single `data.cell` **object**, while a `range[A1:C12]` selector returns a
   deletion) unwraps the element and keeps its runs; rejecting an insertion (or
   accepting a deletion) removes the element and its content. One script is
   entirely `replace_text` or entirely revision ops — mixing them is rejected.
+- `edit` also has an ADDRESSED text surface, `set_run_text`, under
+  `"schema": "docx.edit/2"`. Use it when you know *which* run to change rather
+  than which text to find: `{"op": "set_run_text", "params": {"at", "expect",
+  "text"}}`. `at` names ONE run — the `office query` path
+  (`/docx/body/p[3]/r[2]`) or its body-relative form (`p[3]/r[2]`). `expect`
+  must equal that run's **entire** current text, not a substring; a stale
+  expectation refuses rather than editing the wrong run, because addresses are
+  snapshot-relative and a document you read earlier may have moved. `text`
+  replaces the run's whole text. Setting a run to its own text validates and
+  changes nothing. A script is entirely `set_run_text` or entirely another
+  family — never mixed. Prefer this over `replace_text` when the same literal
+  occurs more than once, or when the text you want to change is short and
+  ambiguous.
+- **Addressed edits refuse on content whose edit would not survive.** This is
+  the surface's main safety property and the most common surprise. A refusal
+  here is not a defect to retry around — it means the write would have been
+  lost, misattributed, or contradicted, and nothing downstream could have told
+  you. `set_run_text` refuses a run that:
+  - holds a **field's cached result** (a `PAGE`, `DATE`, `TOC`, `REF` or
+    `MERGEFIELD` answer). Word recomputes it and discards your text. Edit what
+    the field *asks*, or flatten the field, rather than its answer.
+  - sits in a **tracked insertion** (`w:ins`). Writing there makes the document
+    record that the insertion's named author wrote your words. Resolve the
+    revision first with `accept_revision`, then edit the resulting plain text.
+  - sits in a **content control** (`w:sdt`). A data-bound one is repopulated
+    from its XML part on open. Change the bound data instead. Plain-text
+    controls refuse too — the reader cannot yet tell them apart, and refusing
+    the safe case is the deliberate side to err on.
+  - sits in **textbox content** or a **markup-compatibility fallback**, where
+    the same text is commonly stored twice and editing one copy leaves the
+    other disagreeing.
+  - **owns suppressed content** the reader could not model — a picture, an
+    unmappable symbol, an unrecognised element — because replacing the run
+    would leave content beside your text that you never saw.
+  - sits in a **logical paragraph joined from several physical ones** (a
+    deleted paragraph mark joins them), where one address does not name one
+    place in the file.
+  - **spans a hyperlink boundary**, where the rewrite would silently grow or
+    shrink what is linked.
+  Each refusal names the construct it found. Read the message: it tells you
+  which of the above you hit, and therefore what to do instead.
 - `annotate` is the preservation-safe existing-DOCX mutation surface. It
   consumes `docx.annotation-batch/1` with `comment_add`, `comment_reply`,
   `comment_resolve`, and `comment_unresolve` ops and publishes a separate
@@ -191,7 +233,8 @@ single `data.cell` **object**, while a `range[A1:C12]` selector returns a
 
 Run `office help schema ID --json` before authoring any consumed JSON
 document. It is normative for `xlsx.batch/2`, `docx.batch/2`,
-`docx.edit/1`, `office.template.data/1`, and `docx.annotation-batch/1`.
+`docx.edit/1`, `docx.edit/2`, `office.template.data/1`, and
+`docx.annotation-batch/1`.
 
 ## Shapes that are easy to get wrong
 
