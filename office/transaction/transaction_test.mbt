@@ -1019,7 +1019,9 @@ async test "Windows current-drive-root input and output paths remain valid" {
 #cfg(target="wasm")
 async test "Wasm relative and absolute aliases resolve to one path" {
   with_transaction_test_dir(directory => {
-    guard @env.current_dir() is Some(cwd)
+    guard @env.current_dir() is Some(cwd) else {
+      fail("wasm host exposes no current directory to build a relative alias")
+    }
     let input = "\{directory}/input.docx"
     let relative = "\{@path.Path(input).relative(base=Path(cwd))}"
     let original = @word.new_blank_docx()
@@ -1047,7 +1049,11 @@ async test "Wasm relative and absolute aliases resolve to one path" {
 async test "Wasm rejects ambiguous double-root output aliases" {
   with_transaction_test_dir(directory => {
     let input = "\{directory}/input.docx"
-    guard input.has_prefix("/")
+    guard input.has_prefix("/") else {
+      fail(
+        "test directory is not absolute, so \"/\" + input is not a double root",
+      )
+    }
     let ambiguous_alias = "/" + input
     let original = @word.new_blank_docx()
     write_test_file(input, original)
