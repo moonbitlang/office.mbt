@@ -673,7 +673,6 @@ fn hostile_native_projection(source : String) -> ReaderProjection? raise {
     fail("expected the story to join")
   }
   guard segment_joined_reader_story(
-      "word/document.xml",
       story,
       empty_body_reader({ relationships: [] }),
     )

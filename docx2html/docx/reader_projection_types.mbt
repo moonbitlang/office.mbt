@@ -70,7 +70,6 @@ priv struct ReaderProjectionContribution {
 #warnings("-unused_field")
 priv struct ReaderProjectionRun {
   source : SourceElementId
-  source_span : ReaderSourceSpan
   /// Position among the paragraph's runs in first-appearance order -- the
   /// r[j] a surgery address names. Atomless runs participate, exactly as
   /// the legacy walker's zero-width run-open seams made them.
@@ -111,7 +110,6 @@ priv struct ReaderProjectionParagraph {
 ///|
 #warnings("-unused_field")
 priv struct ReaderProjection {
-  source_part : String
   scan : StoryScan
   paragraphs : Array[ReaderProjectionParagraph]
   /// One event per direct physical child of each visited paragraph, in

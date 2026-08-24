@@ -14,7 +14,7 @@ fn project_text_story(source : String) -> ReaderProjectionBuildResult raise {
   let items = empty_body_reader({ relationships: [] }).read_children(
     body.element_children(),
   )
-  project_reader_items("word/document.xml", story.scan, items)
+  project_reader_items(story.scan, items)
 }
 
 ///|
@@ -121,7 +121,7 @@ test "projection refuses trailing visible content and unjoined reads" {
     body.element_children(),
   )
   let scan = scan_projection_source_tree(@utf8.encode(xml))
-  guard project_reader_items("word/document.xml", scan, items)
+  guard project_reader_items(scan, items)
     is ProjectionRefused(MissingSourceIdentity(..)) else {
     fail("expected a missing-identity refusal")
   }
@@ -334,8 +334,7 @@ test "projection partitions generated documents like the reader" {
       let items = empty_body_reader({ relationships: [] }).read_children(
         children,
       )
-      let projection = match
-        project_reader_items("word/document.xml", story.scan, items) {
+      let projection = match project_reader_items(story.scan, items) {
         Projected(projection) => projection
         // visible content no paragraph owns is a TYPED refusal by design
         // (the fourth pinned divergence class); require the independent
@@ -460,14 +459,7 @@ test "projection budgets bound the build" {
     retained_left: 1024,
   }
   let outcome = try {
-    ignore(
-      project_reader_items(
-        "word/document.xml",
-        story.scan,
-        items,
-        budget=starved,
-      ),
-    )
+    ignore(project_reader_items(story.scan, items, budget=starved))
     "completed"
   } catch {
     // budget exhaustion is a TYPED resource ceiling (#434 PR 6c), so
