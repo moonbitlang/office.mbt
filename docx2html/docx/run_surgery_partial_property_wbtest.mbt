@@ -1746,7 +1746,7 @@ test "payload licenses are exercised by escaping and whitespace" {
       )
       pairs.push("escape:\{start_class}>\{end_class}")
     }
-    let batch : PartialBatchPlan = { paragraph_index: 0, edits, pairs }
+    let batch = PartialBatchPlan::{ paragraph_index: 0, edits, pairs }
     let fresh = surgery_native_projection(source)
     let (_, refusal, _) = assert_partial_batch(source, fresh, batch)
     assert_eq(refusal, "", msg="escaping batch refused for \{body}")

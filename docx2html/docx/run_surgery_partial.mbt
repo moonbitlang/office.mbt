@@ -1345,7 +1345,7 @@ fn plan_paragraph_text_edits(
     cursor = edit.end
   }
   expected.write_string(before_projection.view(start_offset=cursor).to_owned())
-  let receipt : PartialSurgeryReceipt = {
+  let receipt = PartialSurgeryReceipt::{
     paragraph_index,
     before_projection,
     expected_projection: expected.to_string(),
