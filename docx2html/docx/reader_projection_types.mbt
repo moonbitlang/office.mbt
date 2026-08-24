@@ -31,13 +31,12 @@ fn reader_atom_span(element : ScannedElement) -> ReaderSourceSpan {
 /// TransparentSeam/HardBarrier pair: a barrier that is VISIBLE (a break, a
 /// reference, an image, a checkbox) is distinguished from suppressed
 /// content, and text keeps its atom kind.
-#warnings("-unused_value")
 priv enum ReaderProjectionContributionKind {
   ProjectedText(ReaderProjectedTextKind)
   VisibleNonText
   Transparent
   SuppressedContent
-} derive(Debug, Eq)
+}
 
 ///|
 /// One reader decision in story order. Only `ProjectedText` occupies UTF-16

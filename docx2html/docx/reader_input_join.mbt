@@ -42,12 +42,11 @@ priv struct JoinedReaderStory {
 
 ///|
 /// Which stage of the end-to-end preparation refused.
-#warnings("-unused_value")
 priv enum ReaderInputJoinStage {
   StrictGate
   SourceScan
   TolerantDom
-} derive(Debug, Eq)
+}
 
 ///|
 /// Why a story could not be joined. Stage refusals preserve the original
