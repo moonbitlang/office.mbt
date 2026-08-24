@@ -587,7 +587,7 @@ images inserted by the `IMAGE()` function. They are read from the
 
 ```mbt nocheck
 ///|
-test "read the images anchored at a cell" {
+async test "read the images anchored at a cell" {
   let workbook = @mbtexcel.open_file("with_images.xlsx")
   let pictures = workbook.get_pictures("Sheet1", "A1")
   for picture in pictures {
