@@ -164,43 +164,19 @@ fn find_source_kind(kind : ReaderProjectionContributionKind) -> String? {
 }
 
 ///|
-/// Turn a refusal message into the stable public reason vocabulary.
+/// Read the refusal's own public slug out of its message.
 ///
-/// The planner's message carries its class as `partial surgery [Class]`.
-/// Mapping from the CLASS rather than from prose keeps this stable when
-/// the wording changes, and keeps one taxonomy behind two surfaces.
+/// The planner embeds it in a `<reason:...>` marker, rendered from the
+/// CLASS by `partial_surgery_refusal_slug`. Find therefore holds no copy
+/// of the taxonomy: a class added there appears here without this file
+/// changing, and cannot drift out of step.
 fn find_reason_for(message : String) -> String {
-  let classes = [
-    ("CDataContext", "cdata"),
-    ("VisibleBarrier", "visible-barrier"),
-    ("SuppressedRegion", "suppressed-region"),
-    ("RestrictedRegion", "restricted-region"),
-    ("MultiPhysicalParagraph", "multi-physical-paragraph"),
-    ("NonScalarBoundary", "non-scalar-boundary"),
-    ("AmbiguousBoundary", "ambiguous-boundary"),
-    ("PartialFieldInstruction", "field-instruction"),
-    ("PartialMalformedField", "malformed-field"),
-    ("RefusedField", "refused-field"),
-    ("PartialCheckboxControl", "checkbox-control"),
-    ("DuplicateSource", "duplicate-source"),
-    ("CrossParagraphSourceReuse", "cross-paragraph-reuse"),
-    ("UnsupportedTextSource", "unsupported-source"),
-    ("NoSynthesisCarrier", "no-synthesis-carrier"),
-    ("InvalidReplacement", "invalid-replacement"),
-    ("PartialBudgetExceeded", "budget-exceeded"),
-    ("InternalPlanConflict", "internal"),
-    ("InvalidRange", "invalid-range"),
-    ("LogicalOverlap", "logical-overlap"),
-    ("UnorderedEdits", "unordered-edits"),
-    ("InvalidParagraph", "invalid-paragraph"),
-  ]
-  for entry in classes {
-    let (name, reason) = entry
-    if message.contains("[" + name + "]") {
-      return reason
-    }
-  }
-  "unsupported"
+  let marker = "<reason:"
+  guard message.find(marker) is Some(at) else { return "unsupported" }
+  let from = at + marker.length()
+  let rest = message.substring(start=from)
+  guard rest.find(">") is Some(to) else { return "unsupported" }
+  rest.substring(start=0, end=to)
 }
 
 ///|
