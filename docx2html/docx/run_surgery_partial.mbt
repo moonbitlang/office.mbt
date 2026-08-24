@@ -118,9 +118,9 @@ fn partial_surgery_refuse(
 
 ///|
 /// How one logical edit was realized.
-/// Every variant is produced by the planner and inspected by the whitebox
-/// suites, which the library build does not compile -- so with N0c2 still
-/// unreached (moonbitlang/office.mbt#499) the compiler sees four variants
+/// All four variants are produced by the planner and asserted on by the
+/// whitebox suites, which the library build does not compile -- so with N0c2
+/// still unreached (moonbitlang/office.mbt#499) the compiler sees four variants
 /// nothing reads. This suppression is the tail of deleting the enum's dead
 /// `Show` derive, which was the only thing reading them. If #499 removes N0c2,
 /// this instrumentation goes with it.
