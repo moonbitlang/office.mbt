@@ -47,6 +47,7 @@ priv struct ReaderProjectionParagraphFrame {
 ///|
 /// Projects one read's items over its story scan. `items` must come from
 /// reading a JOINED story: any node without a physical identity refuses.
+#warnings("-unused_value")
 fn project_reader_items(
   source_part : String,
   scan : StoryScan,

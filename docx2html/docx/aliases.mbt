@@ -154,6 +154,7 @@ fn document(
 }
 
 ///|
+#warnings("-unused_value")
 fn paragraph(
   children : Array[DocumentElement],
   properties? : ParagraphProperties = @document.ParagraphProperties::default(),
@@ -162,6 +163,7 @@ fn paragraph(
 }
 
 ///|
+#warnings("-unused_value")
 fn run(
   children : Array[DocumentElement],
   properties? : RunProperties = @document.RunProperties::default(),
@@ -170,6 +172,7 @@ fn run(
 }
 
 ///|
+#warnings("-unused_value")
 fn text(value : String) -> DocumentElement {
   @document.text(value)
 }

@@ -2,6 +2,7 @@
 /// Retained as the differential oracle, not as a production path: encoding now
 /// goes through the MoonBit port on every backend, and this is what that port
 /// is compared against.
+#warnings("-unused_value")
 #cfg(target="native")
 #borrow(data, status)
 extern "C" fn pdf_flate_zlib_encode_ffi(

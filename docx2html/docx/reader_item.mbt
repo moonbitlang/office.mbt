@@ -186,6 +186,7 @@ fn erase_reader_items_into(
 /// The effect stream in document order: a tree's own effects come before its
 /// children's (the decision happens at the node), and a paragraph's extras
 /// follow its children, matching the erase order.
+#warnings("-unused_value")
 fn collect_reader_effects(items : Array[ReaderItem]) -> Array[ReaderEffect] {
   let out : Array[ReaderEffect] = []
   collect_reader_effects_into(items, out)

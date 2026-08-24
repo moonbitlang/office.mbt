@@ -25,6 +25,7 @@ priv struct JoinedReaderOutput {
 /// consumption. Production READING narrows silently -- an unexpected
 /// container simply never surfaces -- but a mutation-safe view must not
 /// silently lose story content, so every structural surprise refuses.
+#warnings("-unused_value")
 priv enum ReaderSegmentationRefusal {
   UnexpectedStoryRoot(name~ : String)
   MissingDocumentBody

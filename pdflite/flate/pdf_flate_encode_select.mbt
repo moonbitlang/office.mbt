@@ -126,6 +126,7 @@ fn pdf_flate_max_probes_for_level(level : Int) -> Int {
 }
 
 ///|
+#warnings("-unused_value")
 fn pdf_flate_encode_view_with_level_pure(
   data : BytesView,
   level : Int,
@@ -149,6 +150,7 @@ fn pdf_flate_encode_view_with_level_pure(
 }
 
 ///|
+#warnings("-unused_value")
 fn pdf_flate_encode_view_pure(data : BytesView) -> @core.PdfBytes {
   pdf_flate_encode_shortest_view_with_header(
     data,
