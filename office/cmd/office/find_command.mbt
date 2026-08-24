@@ -48,7 +48,7 @@ fn docx_find_command() -> @argparse.Command {
 }
 
 ///|
-/// One candidate as `docx.matches/1` JSON.
+/// One candidate as `office.docx.matches/1` JSON.
 fn docx_find_entry_json(hit : @docx.DocxMatch) -> Json {
   Json::object({
     "ordinal": Json::number(hit.ordinal().to_double()),
@@ -76,7 +76,7 @@ fn docx_find_entry_json(hit : @docx.DocxMatch) -> Json {
 }
 
 ///|
-/// The `docx.matches/1` payload.
+/// The `office.docx.matches/1` payload.
 fn docx_find_payload(
   file : String,
   needle : String,
@@ -96,7 +96,7 @@ fn docx_find_payload(
     }
   }
   let data = Json::object({
-    "schema": Json::string("docx.matches/1"),
+    "schema": Json::string(@lib.SCHEMA_DOCX_MATCHES),
     "file": Json::string(file),
     "format": Json::string("docx"),
     "text": Json::string(needle),
