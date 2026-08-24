@@ -61,6 +61,7 @@ priv struct ReaderTree {
 /// reader states unrepresentable: no `ReaderDocument` (assembly stays the
 /// erase boundary) and no `ReaderField` (authoring-only; this reader never
 /// produces it).
+#warnings("-unused_field")
 priv struct ReaderParagraphInput {
   /// The physical `w:p` element itself -- a deleted prefix or the
   /// surviving terminal paragraph.

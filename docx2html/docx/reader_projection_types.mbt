@@ -42,6 +42,7 @@ priv enum ReaderProjectionContributionKind {
 /// One reader decision in story order. Only `ProjectedText` occupies UTF-16
 /// width; everything else is a zero-width position marker. `source` always
 /// indexes the story's scan.
+#warnings("-unused_field")
 priv struct ReaderProjectionContribution {
   kind : ReaderProjectionContributionKind
   value : String
@@ -66,6 +67,7 @@ priv struct ReaderProjectionContribution {
 /// One physical run observed inside a logical paragraph, in order of first
 /// appearance. Registered structurally on entering the run, so an atomless
 /// run stays addressable without any effect.
+#warnings("-unused_field")
 priv struct ReaderProjectionRun {
   source : SourceElementId
   source_span : ReaderSourceSpan
@@ -89,12 +91,14 @@ priv struct ReaderProjectionRun {
 /// One physical source paragraph of a logical paragraph: deleted
 /// paragraph-mark prefixes stay separate entries even though their content
 /// joined the terminal paragraph.
+#warnings("-unused_field")
 priv struct ReaderProjectionParagraphSource {
   source : SourceElementId
   source_span : ReaderSourceSpan
 }
 
 ///|
+#warnings("-unused_field")
 priv struct ReaderProjectionParagraph {
   sources : Array[ReaderProjectionParagraphSource]
   runs : Array[ReaderProjectionRun]
@@ -105,6 +109,7 @@ priv struct ReaderProjectionParagraph {
 }
 
 ///|
+#warnings("-unused_field")
 priv struct ReaderProjection {
   source_part : String
   scan : StoryScan
