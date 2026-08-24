@@ -152,27 +152,3 @@ fn document(
 ) -> DocumentElement {
   @document.document(children, notes~, comments~)
 }
-
-///|
-#warnings("-unused_value")
-fn paragraph(
-  children : Array[DocumentElement],
-  properties? : ParagraphProperties = @document.ParagraphProperties::default(),
-) -> DocumentElement {
-  @document.paragraph(children, properties~)
-}
-
-///|
-#warnings("-unused_value")
-fn run(
-  children : Array[DocumentElement],
-  properties? : RunProperties = @document.RunProperties::default(),
-) -> DocumentElement {
-  @document.run(children, properties~)
-}
-
-///|
-#warnings("-unused_value")
-fn text(value : String) -> DocumentElement {
-  @document.text(value)
-}
