@@ -223,7 +223,7 @@ fn erased_has_unowned_visible(
   elements : Array[DocumentElement],
   inside_paragraph : Bool,
 ) -> Bool {
-  let state : ErasedUnownedState = { pending_outside: false }
+  let state = ErasedUnownedState::{ pending_outside: false }
   erased_walk_unowned(elements, inside_paragraph, state)
   state.pending_outside
 }
@@ -454,7 +454,7 @@ test "projection budgets bound the build" {
   let items = empty_body_reader({ relationships: [] }).read_children(
     body.element_children(),
   )
-  let starved : ReaderProjectionBudget = {
+  let starved = ReaderProjectionBudget::{
     visits_left: 2,
     contributions_left: 1024,
     retained_left: 1024,

@@ -150,7 +150,7 @@ test "read-time path-budget exhaustion keeps resource classification" {
     #|<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:body><w:p><w:r><w:t>x</w:t></w:r></w:p></w:body></w:document>
   let bytes = @utf8.encode(source)
   // Scan level: the C1b plumbing genuinely charges a supplied budget.
-  let tiny : AnnotationPathBudget = {
+  let tiny = AnnotationPathBudget::{
     shared_xml_budget: None,
     remaining_chars: 4,
   }
@@ -166,7 +166,7 @@ test "read-time path-budget exhaustion keeps resource classification" {
   // ResourceLimit cause, and the join wrapper passes that cause through
   // unwrapped — the classification the pre-adoption index raise produced —
   // while an ample path budget admits the same bytes.
-  let starved : AnnotationPathBudget = {
+  let starved = AnnotationPathBudget::{
     shared_xml_budget: None,
     remaining_chars: 4,
   }
@@ -182,7 +182,7 @@ test "read-time path-budget exhaustion keeps resource classification" {
     }
     _ => fail("expected the tiny path budget to refuse the source scan")
   }
-  let ample : AnnotationPathBudget = {
+  let ample = AnnotationPathBudget::{
     shared_xml_budget: None,
     remaining_chars: 65536,
   }

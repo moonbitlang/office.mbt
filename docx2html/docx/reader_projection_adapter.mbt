@@ -71,7 +71,7 @@ fn project_reader_item_segments(
     Some(value) => value
     None => reader_projection_budget(scan)
   }
-  let builder : ReaderProjectionBuilder = {
+  let builder = ReaderProjectionBuilder::{
     scan,
     budget,
     paragraphs: [],
@@ -93,7 +93,7 @@ fn project_reader_item_segments(
       None => ()
     }
   }
-  let projection : ReaderProjection = {
+  let projection = ReaderProjection::{
     source_part,
     scan,
     paragraphs: builder.paragraphs,
@@ -470,7 +470,7 @@ fn ReaderProjectionBuilder::walk_items(
             // carrier containing this paragraph BEFORE its group fires
             self.arm_enclosing_frames()
             self.advance_enclosing_cursors(tree.source)
-            let frame : ReaderProjectionParagraphFrame = {
+            let frame = ReaderProjectionParagraphFrame::{
               inputs,
               armed: true,
               cursor: self.carrier_cursor(inputs),
