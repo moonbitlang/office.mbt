@@ -19,26 +19,46 @@ pub struct RunTextReceipt {
 }
 
 ///|
+/// The story part the addressed run lives in, spelled exactly as the
+/// annotated read exposed it (for example `word/document.xml`). This is
+/// the part the returned plan edits, and no other.
 pub fn RunTextReceipt::story_part(self : RunTextReceipt) -> String {
   self.story_part
 }
 
 ///|
+/// The story-relative ordinal run path that named the run (for example
+/// `p[1]/r[2]`), echoed back once it has resolved to exactly one run in
+/// this story. Addresses are snapshot-relative, so this is re-usable only
+/// against a fresh mutation-safe read of the package the plan produced.
 pub fn RunTextReceipt::at_relative(self : RunTextReceipt) -> String {
   self.at_relative
 }
 
 ///|
+/// The `expect` string the caller passed, returned only after it was
+/// checked equal to the run's reader-visible text. So this is both what
+/// the caller asserted and what the run actually held: a receipt exists
+/// only when those agree.
 pub fn RunTextReceipt::replaced_text(self : RunTextReceipt) -> String {
   self.replaced_text
 }
 
 ///|
+/// The `text` the addressed run holds once the plan is applied: reading
+/// the spliced package back through the reader reproduces exactly this
+/// for that run. When it equals `replaced_text` the run already holds it
+/// and the plan is empty.
 pub fn RunTextReceipt::result_text(self : RunTextReceipt) -> String {
   self.result_text
 }
 
 ///|
+/// How many byte edits the plan carries. It is a size, not a count of
+/// runs or characters -- one addressed run can need several edits. Zero
+/// means the replacement was the run's own text: the address, the
+/// expectation and the run's writability were all still checked, and the
+/// plan edits nothing rather than re-encoding bytes that already say it.
 pub fn RunTextReceipt::edit_count(self : RunTextReceipt) -> Int {
   self.edit_count
 }
