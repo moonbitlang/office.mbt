@@ -929,14 +929,14 @@ fn assert_partial_batch(
   )
   let expected = independent.to_string()
   let licenses = partial_expected_licenses(
-    bytes[:],
+    bytes,
     paragraph,
     elements,
     batch.edits,
   )
   let planned = plan_paragraph_text_edits(
     projection,
-    bytes[:],
+    bytes,
     batch.paragraph_index,
     batch.edits,
   ) catch {
@@ -1026,7 +1026,7 @@ test "generated documents compose partial edits over every boundary pair" {
   let cases : Array[Array[Int]] = @quickcheck.samples(48)
   let mut planned = 0
   for case in cases {
-    let source = hostile_document(case[:])
+    let source = hostile_document(case)
     guard hostile_native_projection(source) is Some(projection) else {
       continue
     }
@@ -1441,7 +1441,7 @@ test "the source allowlist rejects a plan that widens beyond the request" {
     { start: 0, end: 1, replacement: "A" },
   ]
   let allowed = partial_expected_licenses(
-    @utf8.encode(source)[:],
+    @utf8.encode(source),
     paragraph,
     elements,
     requested,
@@ -1506,7 +1506,7 @@ test "the allowlist pins the half-open rule and the synthesis anchors" {
   let elements = projection.scan.elements()
   let paragraph = projection.paragraphs[0]
   let allowed = partial_expected_licenses(
-    @utf8.encode(abutting)[:],
+    @utf8.encode(abutting),
     paragraph,
     elements,
     [
@@ -1546,7 +1546,7 @@ test "the allowlist pins the half-open rule and the synthesis anchors" {
   let simple_paragraph = simple_projection.paragraphs[0]
   // Edit only inside the text, leaving the tab untouched.
   let simple_allowed = partial_expected_licenses(
-    @utf8.encode(simple)[:],
+    @utf8.encode(simple),
     simple_paragraph,
     simple_elements,
     [({ start: 1, end: 2, replacement: "A" } : ParagraphTextEdit)],

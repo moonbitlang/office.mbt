@@ -154,7 +154,7 @@ test "read-time path-budget exhaustion keeps resource classification" {
     shared_xml_budget: None,
     remaining_chars: 4,
   }
-  try scan_projection_source_tree(bytes[:], path_budget=tiny) |> ignore catch {
+  try scan_projection_source_tree(bytes, path_budget=tiny) |> ignore catch {
     ResourceLimit(..) => ()
     _ => fail("expected a ResourceLimit refusal")
   } noraise {
@@ -170,7 +170,7 @@ test "read-time path-budget exhaustion keeps resource classification" {
     shared_xml_budget: None,
     remaining_chars: 4,
   }
-  match join_reader_input_story_limited(bytes[:], path_budget=starved) {
+  match join_reader_input_story_limited(bytes, path_budget=starved) {
     Refused(StageRefused(stage=SourceScan, cause~) as refusal) => {
       guard cause is ResourceLimit(..) else {
         fail("expected a ResourceLimit source-scan cause")
@@ -186,8 +186,7 @@ test "read-time path-budget exhaustion keeps resource classification" {
     shared_xml_budget: None,
     remaining_chars: 65536,
   }
-  guard join_reader_input_story_limited(bytes[:], path_budget=ample)
-    is Joined(_) else {
+  guard join_reader_input_story_limited(bytes, path_budget=ample) is Joined(_) else {
     fail("expected the ample path budget to admit the same bytes")
   }
 }

@@ -350,15 +350,15 @@ test "the budget-threaded join refuses on each stage's own budget" {
     max_materialized_chars=8,
     max_token_chars=8,
   )
-  guard join_reader_input_story_limited(bytes[:], strict_budget=tiny)
+  guard join_reader_input_story_limited(bytes, strict_budget=tiny)
     is Refused(StageRefused(stage=StrictGate, ..)) else {
     fail("expected the strict gate to spend its own budget")
   }
-  guard join_reader_input_story_limited(bytes[:], tolerant_budget=tiny)
+  guard join_reader_input_story_limited(bytes, tolerant_budget=tiny)
     is Refused(StageRefused(stage=TolerantDom, ..)) else {
     fail("expected the tolerant stage to spend its own budget")
   }
-  guard join_reader_input_story_limited(bytes[:]) is Joined(_) else {
+  guard join_reader_input_story_limited(bytes) is Joined(_) else {
     fail("expected the unbudgeted join to succeed")
   }
 }

@@ -5,7 +5,7 @@
 
 ///|
 fn join_text_story(source : String) -> ReaderInputJoinResult {
-  join_reader_input_story(@utf8.encode(source)[:])
+  join_reader_input_story(@utf8.encode(source))
 }
 
 ///|
@@ -236,7 +236,7 @@ test "join surfaces scanner refusals" {
 test "join refuses structural disagreement instead of guessing" {
   let source =
     #|<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:body><w:p/><w:p/></w:body></w:document>
-  let scan = scan_projection_source_tree(@utf8.encode(source)[:])
+  let scan = scan_projection_source_tree(@utf8.encode(source))
   // a DOM with one child MISSING under body
   let fewer = read_xml_string(
     (
