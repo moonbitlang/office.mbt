@@ -17,7 +17,7 @@ and JSONL inventories without deferred PowerPoint or MCP entries.
   $ office.exe help | sed -n '1,8p'
   Office capability registry
     Schema: office.capabilities/2
-    Fingerprint: crc32:6a4ead18
+    Fingerprint: crc32:77e9b4e8
   Formats:
     docx (aliases: word) — WordprocessingML documents
     xlsx (aliases: excel) — SpreadsheetML workbooks
@@ -40,10 +40,10 @@ and JSONL inventories without deferred PowerPoint or MCP entries.
   {"formats":["xlsx"],"variants":[{"name":"xlsx","result_schema":"office.xlsx.query/1","constraints":["format=xlsx"]}]}
 
   $ office.exe help all --json | jq -c '{schema,success,capability_schema:.data.schema,fingerprint:.data.fingerprint,names:[.data.records[].name]}'
-  {"schema":"office.output/1","success":true,"capability_schema":"office.capabilities/2","fingerprint":"crc32:6a4ead18","names":["docx","xlsx","help","identify","outline","get","text","query","find","validate","dump","replay","issues","preview","render","create","template","edit","annotate","batch","raw"]}
+  {"schema":"office.output/1","success":true,"capability_schema":"office.capabilities/2","fingerprint":"crc32:77e9b4e8","names":["docx","xlsx","help","identify","outline","get","text","query","find","validate","dump","replay","issues","preview","render","create","template","edit","annotate","batch","raw"]}
 
   $ office.exe help all --jsonl | jq -s -c 'map({schema,fingerprint,kind,name})'
-  [{"schema":"office.capability/2","fingerprint":"crc32:6a4ead18","kind":"format","name":"docx"},{"schema":"office.capability/2","fingerprint":"crc32:6a4ead18","kind":"format","name":"xlsx"},{"schema":"office.capability/2","fingerprint":"crc32:6a4ead18","kind":"command","name":"help"},{"schema":"office.capability/2","fingerprint":"crc32:6a4ead18","kind":"command","name":"identify"},{"schema":"office.capability/2","fingerprint":"crc32:6a4ead18","kind":"command","name":"outline"},{"schema":"office.capability/2","fingerprint":"crc32:6a4ead18","kind":"command","name":"get"},{"schema":"office.capability/2","fingerprint":"crc32:6a4ead18","kind":"command","name":"text"},{"schema":"office.capability/2","fingerprint":"crc32:6a4ead18","kind":"command","name":"query"},{"schema":"office.capability/2","fingerprint":"crc32:6a4ead18","kind":"command","name":"find"},{"schema":"office.capability/2","fingerprint":"crc32:6a4ead18","kind":"command","name":"validate"},{"schema":"office.capability/2","fingerprint":"crc32:6a4ead18","kind":"command","name":"dump"},{"schema":"office.capability/2","fingerprint":"crc32:6a4ead18","kind":"command","name":"replay"},{"schema":"office.capability/2","fingerprint":"crc32:6a4ead18","kind":"command","name":"issues"},{"schema":"office.capability/2","fingerprint":"crc32:6a4ead18","kind":"command","name":"preview"},{"schema":"office.capability/2","fingerprint":"crc32:6a4ead18","kind":"command","name":"render"},{"schema":"office.capability/2","fingerprint":"crc32:6a4ead18","kind":"command","name":"create"},{"schema":"office.capability/2","fingerprint":"crc32:6a4ead18","kind":"command","name":"template"},{"schema":"office.capability/2","fingerprint":"crc32:6a4ead18","kind":"command","name":"edit"},{"schema":"office.capability/2","fingerprint":"crc32:6a4ead18","kind":"command","name":"annotate"},{"schema":"office.capability/2","fingerprint":"crc32:6a4ead18","kind":"command","name":"batch"},{"schema":"office.capability/2","fingerprint":"crc32:6a4ead18","kind":"command","name":"raw"}]
+  [{"schema":"office.capability/2","fingerprint":"crc32:77e9b4e8","kind":"format","name":"docx"},{"schema":"office.capability/2","fingerprint":"crc32:77e9b4e8","kind":"format","name":"xlsx"},{"schema":"office.capability/2","fingerprint":"crc32:77e9b4e8","kind":"command","name":"help"},{"schema":"office.capability/2","fingerprint":"crc32:77e9b4e8","kind":"command","name":"identify"},{"schema":"office.capability/2","fingerprint":"crc32:77e9b4e8","kind":"command","name":"outline"},{"schema":"office.capability/2","fingerprint":"crc32:77e9b4e8","kind":"command","name":"get"},{"schema":"office.capability/2","fingerprint":"crc32:77e9b4e8","kind":"command","name":"text"},{"schema":"office.capability/2","fingerprint":"crc32:77e9b4e8","kind":"command","name":"query"},{"schema":"office.capability/2","fingerprint":"crc32:77e9b4e8","kind":"command","name":"find"},{"schema":"office.capability/2","fingerprint":"crc32:77e9b4e8","kind":"command","name":"validate"},{"schema":"office.capability/2","fingerprint":"crc32:77e9b4e8","kind":"command","name":"dump"},{"schema":"office.capability/2","fingerprint":"crc32:77e9b4e8","kind":"command","name":"replay"},{"schema":"office.capability/2","fingerprint":"crc32:77e9b4e8","kind":"command","name":"issues"},{"schema":"office.capability/2","fingerprint":"crc32:77e9b4e8","kind":"command","name":"preview"},{"schema":"office.capability/2","fingerprint":"crc32:77e9b4e8","kind":"command","name":"render"},{"schema":"office.capability/2","fingerprint":"crc32:77e9b4e8","kind":"command","name":"create"},{"schema":"office.capability/2","fingerprint":"crc32:77e9b4e8","kind":"command","name":"template"},{"schema":"office.capability/2","fingerprint":"crc32:77e9b4e8","kind":"command","name":"edit"},{"schema":"office.capability/2","fingerprint":"crc32:77e9b4e8","kind":"command","name":"annotate"},{"schema":"office.capability/2","fingerprint":"crc32:77e9b4e8","kind":"command","name":"batch"},{"schema":"office.capability/2","fingerprint":"crc32:77e9b4e8","kind":"command","name":"raw"}]
 
 Installed help exposes every consumed JSON input contract without requiring
 repository-only documentation. Inventory and individual records are versioned;
@@ -278,7 +278,7 @@ A malformed request still refuses: the needle is required, and an empty one
 would name every position.
 
   $ office.exe find "$TESTDIR/../../../../docx2html/tests/cram/fixtures/single-paragraph.docx" --text "" --json | jq -c '{success,code:.error.code}'
-  {"success":false,"code":"office.docx.read_failed"}
+  {"success":false,"code":"office.invalid_arguments"}
 
 The MUTATION reader is stricter than the tolerant projection: it re-resolves
 every section story reference and fails closed. Annotating the authored

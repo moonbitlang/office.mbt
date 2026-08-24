@@ -185,3 +185,57 @@ test "find keeps a mix of actionable and refused verdicts" {
     ),
   )
 }
+
+///|
+/// `within` must not widen by ordinal digits. This passes only because
+/// scanner paths bracket their ordinals; a change to the path grammar
+/// would break it, which is the point of pinning it.
+test "find's subtree filter does not confuse p[1] with p[10]" {
+  let body = StringBuilder()
+  for index in 1..<=11 {
+    body.write_string("<w:p><w:r><w:t>needle\{index}</w:t></w:r></w:p>")
+  }
+  let annotated = find_fixture(body.to_string())
+  // Unrestricted: every paragraph contributes one candidate.
+  assert_eq(find_all(annotated, "needle").length(), 11)
+  // Restricted to p[1]: exactly one, and NOT p[10] or p[11].
+  let scoped = find_all(annotated, "needle", within="p[1]")
+  assert_eq(scoped.length(), 1)
+  assert_eq(scoped[0].path(), "p[1]")
+  assert_eq(scoped[0].context_after(), "1")
+}
+
+///|
+/// Context windows must not split a surrogate pair.
+///
+/// Offsets are code-unit arithmetic, so an astral character near the
+/// window edge lands the boundary between a pair's two halves.
+/// `substring` returns that ill-formed string rather than trapping, so
+/// nothing fails here — it fails much later, when the value is encoded.
+/// The window is snapped outward instead, costing at most one character.
+///
+/// The fixture is codex's counterexample: one astral character, then
+/// enough ASCII that the default window starts inside the pair.
+test "find never returns a context window split across a surrogate pair" {
+  let filler = StringBuilder()
+  for _ in 0..<23 {
+    filler.write_string("a")
+  }
+  let annotated = find_fixture(
+    "<w:p><w:r><w:t>😀\{filler.to_string()}X</w:t></w:r></w:p>",
+  )
+  let hits = find_all(annotated, "X")
+  assert_eq(hits.length(), 1)
+  let before = hits[0].context_before()
+  // Well-formed means every code unit re-encodes. A lone half would
+  // survive in memory and only fail at the boundary, so the check is
+  // that the value round-trips as bytes.
+  let encoded = @utf8.encode(before)
+  assert_eq(@utf8.decode(encoded), before)
+  // And the window really did reach back to the astral character's
+  // neighbourhood, so the test is not passing by having no context.
+  assert_true(
+    before.length() >= 20,
+    msg="context window collapsed to " + before.length().to_string(),
+  )
+}

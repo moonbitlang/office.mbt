@@ -98,7 +98,17 @@ pub fn DocxMatch::run_kinds(self : DocxMatch) -> Array[String] {
 }
 
 ///|
-/// Whether a partial edit over this exact range would be permitted.
+/// Whether the RANGE is structurally editable.
+///
+/// Precisely: whether the mutation surface accepts an edit over these
+/// coordinates, judged by everything it can know from the document
+/// alone — regions, ancestry, boundaries, carriers.
+///
+/// It is NOT a promise that a particular replacement will be accepted.
+/// Validity of the new TEXT belongs to the write and is checked there: a
+/// replacement carrying a control character is refused over a range this
+/// reports actionable, and correctly so, because that refusal is about
+/// the caller's string rather than the document.
 pub fn DocxMatch::actionable(self : DocxMatch) -> Bool {
   self.actionable
 }
@@ -137,6 +147,64 @@ fn find_paragraph_projection(paragraph : ReaderProjectionParagraph) -> String {
     text.write_string(contribution.value)
   }
   text.to_string()
+}
+
+///|
+/// Whether `needle` occurs at code-unit position `at`, WITHOUT
+/// allocating.
+///
+/// The obvious spelling — slice the remaining suffix and test its prefix
+/// — allocates the whole tail at every position, so scanning one large
+/// `w:t` for an absent needle costs O(n^2) bytes of churn. On a
+/// permitted 1 MiB text that is on the order of a terabyte of
+/// allocation, which is an availability problem on a document the reader
+/// otherwise accepts.
+fn find_occurs_at(text : StringView, needle : StringView, at : Int) -> Bool {
+  for offset in 0..<needle.length() {
+    if text.unsafe_charcode_at(at + offset) != needle.unsafe_charcode_at(offset) {
+      return false
+    }
+  }
+  true
+}
+
+///|
+/// Whether the code unit at `index` is the SECOND half of a surrogate
+/// pair, i.e. a position no slice boundary may land on.
+fn find_is_trailing_surrogate(text : StringView, index : Int) -> Bool {
+  if index < 0 || index >= text.length() {
+    return false
+  }
+  let unit = text.unsafe_get(index).to_int()
+  unit >= 0xDC00 && unit <= 0xDFFF
+}
+
+///|
+/// Move a context boundary off the middle of a surrogate pair.
+///
+/// Context offsets are plain code-unit arithmetic, so an astral
+/// character near the window edge puts the boundary between a pair's two
+/// halves. `substring` returns that ill-formed string rather than
+/// trapping, but it cannot be encoded: emitting it as JSON traps later,
+/// far from the cause. Snapping outward keeps the window well-formed and
+/// costs at most one character of context.
+fn find_snap_start(text : StringView, index : Int) -> Int {
+  if find_is_trailing_surrogate(text, index) {
+    index + 1
+  } else {
+    index
+  }
+}
+
+///|
+/// The same, for an exclusive end: an end that lands on a trailing half
+/// would cut the pair and leave a lone leading half inside the window.
+fn find_snap_end(text : StringView, index : Int) -> Int {
+  if find_is_trailing_surrogate(text, index) {
+    index - 1
+  } else {
+    index
+  }
 }
 
 ///|
@@ -250,12 +318,24 @@ fn find_restricted_construct(
 ///
 /// `within` restricts to a subtree by body-relative path prefix, so
 /// `p[3]` takes one paragraph and `tbl[1]` takes a whole table.
+///
+/// At most `limit` candidates are EXAMINED. Every examined candidate
+/// costs a planner run, so the bound is on work rather than only on
+/// output; candidates past it are counted through `ordinal` but carry no
+/// verdict, and the caller sees fewer entries than the last ordinal.
 pub fn find_docx_matches(
   annotated : DocxAnnotatedResult,
   story : DocxStoryPartSource,
   needle~ : String,
   within? : String,
   context? : Int = 24,
+  // How many candidates to EXAMINE. Scanning is linear and cheap, but
+  // every examined candidate runs the planner, so an unbounded needle
+  // over a large story would do unbounded work for output the caller
+  // then discards. Candidates past this are still COUNTED through
+  // `ordinal`, so the caller learns they exist without paying for a
+  // verdict it asked not to receive.
+  limit? : Int = 1000,
 ) -> Array[DocxMatch] raise DocxError {
   guard needle != "" else {
     raise Unsupported(
@@ -287,21 +367,32 @@ pub fn find_docx_matches(
       is Some(path) else {
       continue
     }
+    // A plain prefix test is safe here only because scanner ordinals are
+    // BRACKETED: `p[1]` is not a prefix of `p[10]`, since the `]` falls
+    // where the `0` would be. Were paths written `p1`/`p10` this would
+    // silently widen the scope, so the grammar is doing real work and a
+    // change to it must revisit this line.
     if within is Some(prefix) && !path.has_prefix(prefix) {
       continue
     }
     let text = find_paragraph_projection(paragraph)
+    let view = text[:]
+    let needle_view = needle[:]
     // Non-overlapping, left to right, so two candidates never claim the
     // same character and an agent can act on them independently.
     let mut cursor = 0
     while cursor <= text.length() - needle.length() {
-      guard text.substring(start=cursor).has_prefix(needle) else {
+      guard find_occurs_at(view, needle_view, cursor) else {
         cursor = cursor + 1
         continue
       }
       let start = cursor
       let end = cursor + needle.length()
       ordinal = ordinal + 1
+      if matches.length() >= limit {
+        cursor = end
+        continue
+      }
       // The planner's OWN verdict: an identity replacement validates
       // everything and plans nothing.
       let mut actionable = true
@@ -353,12 +444,25 @@ pub fn find_docx_matches(
           }
         }
       }
-      let before_from = if start > context { start - context } else { 0 }
-      let after_to = if end + context < text.length() {
-        end + context
-      } else {
-        text.length()
-      }
+      // Context is clamped non-negative (a negative window would invert
+      // the slice bounds) and snapped off surrogate halves.
+      let window = if context > 0 { context } else { 0 }
+      let before_from = find_snap_start(
+        view,
+        if start > window {
+          start - window
+        } else {
+          0
+        },
+      )
+      let after_to = find_snap_end(
+        view,
+        if end + window < text.length() {
+          end + window
+        } else {
+          text.length()
+        },
+      )
       matches.push({
         ordinal,
         story: "body",

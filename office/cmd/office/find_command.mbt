@@ -161,8 +161,18 @@ fn docx_find_human(
 /// empty needle — or a document that cannot be read safely.
 async fn run_docx_find(matches : @argparse.Matches) -> Unit {
   let file = required_value(matches, "file")
+  // Both shapes of a missing needle are REQUEST errors, and both report
+  // as one. Letting the empty case fall through to the library made it
+  // surface as a document read failure, which tells an agent to distrust
+  // the file when the fault is in the call.
   let needle = match optional_value(matches, "text") {
-    Some(value) => value
+    Some(value) if value != "" => value
+    Some(_) =>
+      raise docx_cli_failure(
+        "office.invalid_arguments",
+        "find requires a non-empty --text; an empty needle matches every position",
+        details=Json::object({ "argument": Json::string("text") }),
+      )
     None =>
       raise docx_cli_failure(
         "office.invalid_arguments",
@@ -195,6 +205,7 @@ async fn run_docx_find(matches : @argparse.Matches) -> Unit {
         needle~,
         within?,
         context~,
+        limit~,
       ) catch {
         error => raise docx_reader_failure(error, file)
       }

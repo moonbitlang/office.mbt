@@ -875,7 +875,7 @@ pub fn capability_commands() -> Array[CapabilityCommand] {
           "stories_scanned", "array(string)", true, "the stories searched; /body in v1",
         ),
         capability_field(
-          "matches", "array(object)", true, "per candidate: ordinal, story, path, range {start, end, unit=utf16} paragraph-relative over the PROJECTION, text, context_before, context_after, runs (affected run paths), source_kinds (text|tab|no-break-hyphen|soft-hyphen|symbol), actionable, and reason (null when actionable)",
+          "matches", "array(object)", true, "per candidate: ordinal, story, path, range {start, end, unit=utf16} paragraph-relative over the PROJECTION, text, context_before, context_after, runs (affected run paths), source_kinds (text|tab|no-break-hyphen|soft-hyphen|symbol), actionable, and reason (null when actionable). `actionable` reports whether the RANGE is structurally editable — regions, ancestry, boundaries, carriers — NOT that any given replacement will be accepted; validity of the new text belongs to the write, so a replacement carrying a control character is still refused over an actionable range",
         ),
         capability_field(
           "matches_total", "integer", true, "candidates found before --limit truncation",
