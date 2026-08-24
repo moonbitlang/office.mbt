@@ -139,7 +139,7 @@ test "span surfaces read the SHARED scan instance, not a rescan" {
   // surface can see it, the surface reads THIS instance.
   projection.scan
   .nodes()
-  .push(ScannedNode::{
+  .push({
     path: "p[77]/r[77]",
     kind: "r",
     open_order: 9_999,
@@ -168,7 +168,7 @@ test "span surfaces read the SHARED scan instance, not a rescan" {
   assert_true(original_open >= 0)
   projection.scan
   .nodes()
-  .push(ScannedNode::{
+  .push({
     path: "p[88]",
     kind: "p",
     open_order: 9_998,
@@ -257,7 +257,7 @@ test "the resolver's splice touches exactly the span the surface reports" {
   assert_true(real_byte_start >= 0)
   projection.scan
   .nodes()
-  .push(ScannedNode::{
+  .push({
     path: "p[66]/r[66]",
     kind: "r",
     open_order: 9_997,

@@ -470,7 +470,7 @@ test "review round 3: XML-unrepresentable characters and highlight 'none' are re
   try {
     let _ = @batch.parse_batch(surrogate_script)
   } catch {
-    @batch.BatchError(message) => {
+    BatchError(message) => {
       assert_true(
         message.has_prefix(
           "ops[0].params.text contains a character XML cannot represent (code 55296",

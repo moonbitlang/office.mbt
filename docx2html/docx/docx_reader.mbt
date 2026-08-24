@@ -858,7 +858,7 @@ fn DocumentParts::read_document_joined(
 /// A body reader bound to the MAIN part's relationships, matching
 /// `read_document_xml_with_messages`' construction exactly.
 fn DocumentParts::story_body_reader(self : DocumentParts) -> BodyReader {
-  BodyReader::{
+  {
     styles: self.styles,
     zip: self.zip,
     relationship_index: self.relationship_index,
