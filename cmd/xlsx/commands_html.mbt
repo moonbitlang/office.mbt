@@ -58,8 +58,11 @@ async fn run_html(m : @argparse.Matches) -> Unit {
 }
 
 ///|
-/// A path's resolved identity when it exists: native realpath, falling back
-/// to the lexically-normalized spelling for a path that does not exist.
+/// A path's resolved identity: native realpath, falling back to the
+/// lexically-normalized spelling whenever realpath fails. That is not only
+/// the does-not-exist case -- an existing path under a directory the process
+/// cannot search fails with EACCES and takes the same fallback -- and the
+/// fallback is what keeps the caller's alias check total.
 #cfg(target="native")
 async fn resolve_existing(path : String) -> String noraise {
   resolve_save_target(path) catch {
