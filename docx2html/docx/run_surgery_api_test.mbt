@@ -70,7 +70,7 @@ test "an addressed run replacement refuses every wrong premise typed" {
   let bytes = run_text_fixture()
   let archive = try! @mbtzip.read(bytes)
   let annotated = @docx.read_docx_annotated_archive(archive)
-  fn refusal(at : String, expect : String) -> String raise {
+  fn refusal(at : String, expect : String) -> String {
     try {
       let _ = @docx.plan_run_text_replacement(
         annotated,
