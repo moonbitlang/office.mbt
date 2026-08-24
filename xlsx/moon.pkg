@@ -7,8 +7,10 @@ import {
   "moonbitlang/core/encoding/utf8" @encoding/utf8,
   "moonbitlang/core/encoding/utf16" @encoding/utf16,
   "moonbitlang/async/io" @async/io,
-  // NOT removable despite `unused_package`: io.mbt's filesystem path uses it
-  // on native and wasm, so the warning only fires on js and wasm-gc.
+  // NOT removable despite `unused_package`: io.mbt's filesystem paths use it
+  // under `#cfg(any(target="native", target="wasm"))` and under native-only
+  // gates, so the warning fires on js and wasm-gc only (measured: native,
+  // wasm and llvm report nothing). See the `warnings` key at the bottom.
   "moonbitlang/async/fs" @async/fs,
   "moonbitlang/async",
   "moonbitlang/core/random",
@@ -28,3 +30,21 @@ import {
   "moonbitlang/core/double",
   "moonbitlang/core/test",
 } for "test"
+
+// `moonbitlang/async/fs` above is reported `unused_package` on js and wasm-gc,
+// because the only code that uses it sits behind native/wasm `#cfg` gates. The
+// import cannot be deleted, and MoonBit has no target-qualified import.
+//
+// The alternative -- and the one taken for the root package's native-only
+// validity tests, which moved into `sdk_validity/` in this same change -- is to
+// split the target-specific code into a package with its own
+// `supported_targets`. That is not available here: the code in question is
+// xlsx's PUBLIC filesystem API (`open_file` and the save paths), so moving it
+// would relocate published symbols. That is an API break, not a manifest edit.
+//
+// Cost: a genuinely dead import added to THIS package will no longer be
+// flagged. Scoped to `xlsx`; every other package keeps the check. Remove this
+// key if MoonBit gains target-qualified imports, or if xlsx's filesystem API
+// is ever extracted into its own package.
+
+warnings = "-unused_package"

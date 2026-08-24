@@ -1,0 +1,29 @@
+// The root module's native-only tests. Most shell out to the Microsoft
+// DocumentFormat.OpenXml SDK validator through scripts/validate_xlsx.sh; the
+// two in open_file_test.mbt only touch the filesystem. Either way they need a
+// real filesystem, and the validator ones a subprocess, so none of them can
+// run on js or wasm.
+//
+// Keeping them in their own `supported_targets = "native"` package is what lets
+// `moonbitlang/async/fs`, `moonbitlang/async/process` and
+// `bobzhang/mbtexcel/batch` be declared where they are actually used -- in the
+// root package, which also compiles for js, they were reported
+// `unused_package` there because js compiles none of these files.
+//
+// Mirrors office/xlsx/sdk_validity, which is the same arrangement for the
+// office facade: a package with no sources of its own, only blackbox tests.
+
+import {
+  "bobzhang/mbtexcel",
+  "bobzhang/mbtexcel/xlsx",
+  "bobzhang/mbtexcel/demos",
+  "bobzhang/mbtexcel/batch",
+  "moonbitlang/async",
+  "moonbitlang/async/fs" @async/fs,
+  "moonbitlang/async/process",
+  "moonbitlang/core/env",
+  "moonbitlang/core/json",
+  "moonbitlang/core/encoding/utf8" @encoding/utf8,
+} for "test"
+
+supported_targets = "native"

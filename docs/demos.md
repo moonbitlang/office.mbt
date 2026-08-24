@@ -52,7 +52,8 @@ scripts/test_demo_roundtrip.sh
 ```
 
 This script runs all `mbtexcel_demo_*_roundtrip_test.mbt` files plus
-`demos_openxml_validity_test.mbt`. Treat it as the default demo quality gate
+`sdk_validity/demos_openxml_validity_test.mbt`. Treat it as the default demo
+quality gate
 for local verification and CI pipelines.
 
 ## How the demo runner works
