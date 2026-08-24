@@ -67,7 +67,7 @@ priv enum PartialSurgeryRefusal {
   InvalidReplacement
   PartialBudgetExceeded
   InternalPlanConflict
-} derive(Show)
+} derive(Debug)
 
 ///|
 fn partial_surgery_refusal_reason(kind : PartialSurgeryRefusal) -> String {
@@ -112,7 +112,7 @@ fn partial_surgery_refuse(
   context : String,
 ) -> DocxError {
   Unsupported(
-    message="partial surgery [\{kind}]: \{partial_surgery_refusal_reason(kind)} (\{context})",
+    message="partial surgery [\{@debug.Repr(kind)}]: \{partial_surgery_refusal_reason(kind)} (\{context})",
   )
 }
 
@@ -123,7 +123,7 @@ priv enum PartialSurgeryPlacement {
   AtomSynthesis
   RunSynthesis
   LogicalNoOp
-} derive(Show)
+} derive(Debug)
 
 ///|
 priv struct PartialSurgeryLogicalEdit {

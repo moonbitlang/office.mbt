@@ -817,7 +817,7 @@ priv enum RestrictedConstruct {
   ContentControl
   TextBoxContent
   FallbackContent
-} derive(Show)
+} derive(Debug)
 
 ///|
 /// The user-facing name of a restricted construct.
