@@ -58,13 +58,22 @@ async fn run_html(m : @argparse.Matches) -> Unit {
 }
 
 ///|
-/// A path's resolved identity when it exists (native realpath); a path
-/// that does not exist (or a wasm path) is its own lexically-normalized
-/// identity.
+/// A path's resolved identity when it exists: native realpath, falling back
+/// to the lexically-normalized spelling for a path that does not exist.
+#cfg(target="native")
 async fn resolve_existing(path : String) -> String noraise {
   resolve_save_target(path) catch {
     _ => lexical_normalize(path)
   }
+}
+
+///|
+/// A path's resolved identity on wasm, where there is no realpath: the path
+/// itself. `resolve_save_target` cannot fail here, so there is nothing to
+/// fall back from. Callers that need the lexical form ask for it directly.
+#cfg(target="wasm")
+async fn resolve_existing(path : String) -> String noraise {
+  resolve_save_target(path)
 }
 
 ///|
