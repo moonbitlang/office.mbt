@@ -184,6 +184,6 @@ async fn resolve_save_target(path : String) -> String {
 
 ///|
 #cfg(target="wasm")
-async fn resolve_save_target(path : String) -> String noraise {
+fn resolve_save_target(path : String) -> String noraise {
   path
 }

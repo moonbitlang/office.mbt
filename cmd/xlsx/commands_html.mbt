@@ -75,7 +75,7 @@ async fn resolve_existing(path : String) -> String noraise {
 /// itself. `resolve_save_target` cannot fail here, so there is nothing to
 /// fall back from. Callers that need the lexical form ask for it directly.
 #cfg(target="wasm")
-async fn resolve_existing(path : String) -> String noraise {
+fn resolve_existing(path : String) -> String noraise {
   resolve_save_target(path)
 }
 
