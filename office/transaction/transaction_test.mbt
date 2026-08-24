@@ -1049,11 +1049,11 @@ async test "Wasm relative and absolute aliases resolve to one path" {
 async test "Wasm rejects ambiguous double-root output aliases" {
   with_transaction_test_dir(directory => {
     let input = "\{directory}/input.docx"
-    guard input.has_prefix("/") else {
-      fail(
-        "test directory is not absolute, so \"/\" + input is not a double root",
-      )
-    }
+    // Skipped, not failed, when the temp directory is not slash-rooted: a
+    // Windows-hosted wasm run gets a drive-absolute path (`C:\...`), where
+    // prepending "/" produces no double root and there is nothing for this
+    // test to assert. Same reasoning as the Windows current-drive test above.
+    guard input.has_prefix("/") else { return }
     let ambiguous_alias = "/" + input
     let original = @word.new_blank_docx()
     write_test_file(input, original)
