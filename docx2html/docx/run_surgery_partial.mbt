@@ -17,6 +17,12 @@
 ///
 /// B3 generalizes composition. The refusal vocabulary below is the stable
 /// N0c2 taxonomy; these increments raise the subset they can reach.
+///
+/// Constructed only by the whitebox suites that drive
+/// `plan_paragraph_text_edits`, which the library build does not compile --
+/// hence the suppression, matching how the rest of this file's staged N0c2
+/// declarations are handled.
+#warnings("-struct_never_constructed")
 priv struct ParagraphTextEdit {
   start : Int
   end : Int
