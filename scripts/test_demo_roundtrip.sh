@@ -18,7 +18,7 @@ for test_file in "${demo_tests[@]}"; do
   moon test "${test_file}"
 done
 
-echo "==> moon test demos_openxml_validity_test.mbt"
-moon test demos_openxml_validity_test.mbt
+echo "==> moon test sdk_validity/demos_openxml_validity_test.mbt"
+moon test sdk_validity/demos_openxml_validity_test.mbt
 
 echo "Demo roundtrip regression suite passed."

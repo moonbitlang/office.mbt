@@ -4743,7 +4743,7 @@ Commands used:
     - `moon clean`
     - `moon test mbtexcel_demo_pivot_slicer_roundtrip_test.mbt`
     - `moon test xlsx/integration_pivot_slicer_rel_consistency_test.mbt`
-    - `moon test demos_openxml_validity_test.mbt`
+    - `moon test sdk_validity/demos_openxml_validity_test.mbt`
     - `moon check --deny-warn`
     - `moon info && moon fmt`
 
@@ -4768,7 +4768,7 @@ Commands used:
     - `moon clean`
     - `moon test mbtexcel_demo_combo_chart_roundtrip_test.mbt`
     - `moon test mbtexcel_demo_pivot_slicer_roundtrip_test.mbt`
-    - `moon test demos_openxml_validity_test.mbt`
+    - `moon test sdk_validity/demos_openxml_validity_test.mbt`
     - `moon check --deny-warn`
     - `moon info && moon fmt`
 
@@ -4795,7 +4795,7 @@ Commands used:
     - `moon test mbtexcel_demo_stream_roundtrip_test.mbt`
     - `moon test mbtexcel_demo_combo_chart_roundtrip_test.mbt`
     - `moon test mbtexcel_demo_pivot_slicer_roundtrip_test.mbt`
-    - `moon test demos_openxml_validity_test.mbt`
+    - `moon test sdk_validity/demos_openxml_validity_test.mbt`
     - `moon check --deny-warn`
     - `moon info && moon fmt`
 
@@ -4824,7 +4824,7 @@ Commands used:
     - `moon test mbtexcel_demo_stream_roundtrip_test.mbt`
     - `moon test mbtexcel_demo_combo_chart_roundtrip_test.mbt`
     - `moon test mbtexcel_demo_pivot_slicer_roundtrip_test.mbt`
-    - `moon test demos_openxml_validity_test.mbt`
+    - `moon test sdk_validity/demos_openxml_validity_test.mbt`
     - `moon check --deny-warn`
     - `moon info && moon fmt`
 
@@ -4855,7 +4855,7 @@ Commands used:
     - `moon test mbtexcel_demo_stream_roundtrip_test.mbt`
     - `moon test mbtexcel_demo_combo_chart_roundtrip_test.mbt`
     - `moon test mbtexcel_demo_pivot_slicer_roundtrip_test.mbt`
-    - `moon test demos_openxml_validity_test.mbt`
+    - `moon test sdk_validity/demos_openxml_validity_test.mbt`
     - `moon check --deny-warn`
     - `moon info && moon fmt`
 
@@ -4884,7 +4884,7 @@ Commands used:
   - Validation gates:
     - `moon clean`
     - `moon test mbtexcel_demo_dashboard_roundtrip_test.mbt`
-    - `moon test demos_openxml_validity_test.mbt`
+    - `moon test sdk_validity/demos_openxml_validity_test.mbt`
     - `moon check --deny-warn`
     - `moon info && moon fmt`
 
@@ -4912,7 +4912,7 @@ Commands used:
   - Validation gates:
     - `moon clean`
     - `moon test mbtexcel_demo_ooxml_showcase_roundtrip_test.mbt`
-    - `moon test demos_openxml_validity_test.mbt`
+    - `moon test sdk_validity/demos_openxml_validity_test.mbt`
     - `moon check --deny-warn`
     - `moon info && moon fmt`
 
@@ -4941,7 +4941,7 @@ Commands used:
   - Validation gates:
     - `moon clean`
     - `moon test mbtexcel_demo_tracker_heatmap_roundtrip_test.mbt`
-    - `moon test demos_openxml_validity_test.mbt`
+    - `moon test sdk_validity/demos_openxml_validity_test.mbt`
     - `moon check --deny-warn`
     - `moon info && moon fmt`
 
@@ -4968,7 +4968,7 @@ Commands used:
   - Validation gates:
     - `moon clean`
     - `moon test mbtexcel_demo_invoice_roundtrip_test.mbt`
-    - `moon test demos_openxml_validity_test.mbt`
+    - `moon test sdk_validity/demos_openxml_validity_test.mbt`
     - `moon check --deny-warn`
     - `moon info && moon fmt`
 
@@ -4991,7 +4991,7 @@ Commands used:
   - Validation gates:
     - `moon clean`
     - `for f in mbtexcel_demo_*_roundtrip_test.mbt; do moon test \"$f\"; done`
-    - `moon test demos_openxml_validity_test.mbt`
+    - `moon test sdk_validity/demos_openxml_validity_test.mbt`
     - `moon check --deny-warn`
     - `moon info && moon fmt`
 
@@ -5010,7 +5010,7 @@ Commands used:
   - Validation gates:
     - `moon clean`
     - `moon test mbtexcel_demo_secure_password_roundtrip_test.mbt`
-    - `moon test demos_openxml_validity_test.mbt`
+    - `moon test sdk_validity/demos_openxml_validity_test.mbt`
     - `moon check --deny-warn`
     - `moon info && moon fmt`
 
@@ -5024,7 +5024,7 @@ Commands used:
     - Script behavior:
       - auto-discovers `mbtexcel_demo_*_roundtrip_test.mbt`
       - runs each with `moon test`
-      - runs `moon test demos_openxml_validity_test.mbt`
+      - runs `moon test sdk_validity/demos_openxml_validity_test.mbt`
       - fails fast on first error and prints progress markers.
   - Validation gates:
     - `scripts/test_demo_roundtrip.sh`
