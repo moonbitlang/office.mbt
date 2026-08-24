@@ -124,29 +124,32 @@ fn docx_find_human(
   hits : Array[@docx.DocxMatch],
   limit : Int,
 ) -> String {
-  let out = StringBuilder()
+  // Lines are JOINED rather than each terminated: the success emitter
+  // supplies the final newline, and terminating here too prints a blank
+  // line that the other read commands do not.
+  let lines : Array[String] = []
   if hits.length() == 0 {
-    out.write_string("no candidates for '\{needle}'\n")
-    return out.to_string()
-  }
-  let shown = if hits.length() > limit { limit } else { hits.length() }
-  for index in 0..<shown {
-    let hit = hits[index]
-    out.write_string(
-      "\{hit.ordinal()}. \{hit.path()} [\{hit.start()},\{hit.end()}) \{hit.text()}",
-    )
-    if hit.actionable() {
-      out.write_string("\n")
-    } else {
-      out.write_string("  -- NOT EDITABLE: \{hit.reason()}\n")
+    lines.push("no candidates for '\{needle}'")
+  } else {
+    let shown = if hits.length() > limit { limit } else { hits.length() }
+    for index in 0..<shown {
+      let hit = hits[index]
+      let head = "\{hit.ordinal()}. \{hit.path()} [\{hit.start()},\{hit.end()}) \{hit.text()}"
+      lines.push(
+        if hit.actionable() {
+          head
+        } else {
+          head + "  -- NOT EDITABLE: " + hit.reason()
+        },
+      )
+    }
+    if hits.length() > shown {
+      lines.push(
+        "... \{hits.length() - shown} more (raise --limit to see them)",
+      )
     }
   }
-  if hits.length() > shown {
-    out.write_string(
-      "... \{hits.length() - shown} more (raise --limit to see them)\n",
-    )
-  }
-  out.to_string()
+  lines.join("\n")
 }
 
 ///|
