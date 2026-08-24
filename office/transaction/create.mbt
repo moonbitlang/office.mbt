@@ -82,63 +82,57 @@ async fn resolve_create_policy(
     path_parent(destination_target),
     options.output_path,
   )
-  try {
-    let destination_leaf = path_leaf(destination_target)
-    let pinned_kind = publication_entry_kind(
-      destination_directory,
-      destination_leaf,
-      options.output_path,
+  errdefer publication_directory_close(destination_directory)
+  let destination_leaf = path_leaf(destination_target)
+  let pinned_kind = publication_entry_kind(
+    destination_directory,
+    destination_leaf,
+    options.output_path,
+  )
+  if pinned_kind == 2 {
+    raise transaction_error(
+      "office.transaction.invalid_options", "output_path must name a file, not a directory",
     )
-    if pinned_kind == 2 {
-      raise transaction_error(
-        "office.transaction.invalid_options", "output_path must name a file, not a directory",
-      )
-    }
-    if pinned_kind > 1 {
-      raise transaction_error(
-        "office.transaction.invalid_options", "output_path must name a regular file",
-      )
-    }
-    if pinned_kind == 1 && !options.overwrite {
-      raise transaction_error(
-        "office.transaction.output_exists",
-        "destination already exists; set overwrite=true to replace it",
-        details=Json::object({
-          "output": Json::string(bounded_text(options.output_path, 160)),
-        }),
-      )
-    }
-    let overwrite_baseline_size = if pinned_kind == 1 {
-      Some(
-        publication_entry_size(
-          destination_directory,
-          destination_leaf,
-          options.output_path,
-        ),
-      )
-    } else {
-      None
-    }
-    {
-      source_target: destination_target,
-      source_directory: publication_directory_duplicate(
+  }
+  if pinned_kind > 1 {
+    raise transaction_error(
+      "office.transaction.invalid_options", "output_path must name a regular file",
+    )
+  }
+  if pinned_kind == 1 && !options.overwrite {
+    raise transaction_error(
+      "office.transaction.output_exists",
+      "destination already exists; set overwrite=true to replace it",
+      details=Json::object({
+        "output": Json::string(bounded_text(options.output_path, 160)),
+      }),
+    )
+  }
+  let overwrite_baseline_size = if pinned_kind == 1 {
+    Some(
+      publication_entry_size(
         destination_directory,
+        destination_leaf,
         options.output_path,
       ),
-      source_leaf: destination_leaf,
-      destination_target,
+    )
+  } else {
+    None
+  }
+  {
+    source_target: destination_target,
+    source_directory: publication_directory_duplicate(
       destination_directory,
-      destination_leaf,
-      output_path: options.output_path,
-      mode: Create,
-      replace: options.overwrite,
-      overwrite_baseline_size,
-    }
-  } catch {
-    error => {
-      publication_directory_close(destination_directory)
-      raise error
-    }
+      options.output_path,
+    ),
+    source_leaf: destination_leaf,
+    destination_target,
+    destination_directory,
+    destination_leaf,
+    output_path: options.output_path,
+    mode: Create,
+    replace: options.overwrite,
+    overwrite_baseline_size,
   }
 }
 

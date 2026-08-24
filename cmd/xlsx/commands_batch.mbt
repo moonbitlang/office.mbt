@@ -131,36 +131,26 @@ async fn write_file_replacing(target : String, bytes : Bytes) -> Unit {
       raise CliError("error: could not create a temp file next to \{target}")
   }
   // The exclusive handle is ours; from here on, any failure must close
-  // the handle and remove the temp so no partial workbook bytes leak.
-  file.write(bytes) catch {
-    err => {
+  // the handle and remove the temp so no partial workbook bytes leak. The
+  // block bounds the `errdefer` to the region that still owns the handle:
+  // past `file.close()` the cleanup must no longer close it again.
+  {
+    errdefer {
       file.close()
       @async/fs.remove(temp) catch {
         _ => ()
       }
-      raise err
     }
-  }
-  // Flush to stable storage before the rename: with delayed writeback, an
-  // ENOSPC/EIO surfacing after a NoSync close could replace the last good
-  // copy with a corrupt one.
-  file.sync() catch {
-    err => {
-      file.close()
-      @async/fs.remove(temp) catch {
-        _ => ()
-      }
-      raise err
-    }
+    file.write(bytes)
+    // Flush to stable storage before the rename: with delayed writeback, an
+    // ENOSPC/EIO surfacing after a NoSync close could replace the last good
+    // copy with a corrupt one.
+    file.sync()
   }
   file.close()
-  @async/fs.rename(temp, target, replace=true) catch {
-    err => {
-      @async/fs.remove(temp) catch {
-        _ => ()
-      }
-      raise err
-    }
+  {
+    errdefer (@async/fs.remove(temp) catch { _ => () })
+    @async/fs.rename(temp, target, replace=true)
   }
   // Best-effort parent-directory sync so the rename itself is durable;
   // some platforms cannot fsync a directory, which is not worth failing

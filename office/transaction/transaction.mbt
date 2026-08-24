@@ -346,147 +346,135 @@ async fn resolve_policy(options : TransactionOptions) -> ResolvedPolicy {
     path_parent(source_target),
     options.input_path,
   )
-  try {
-    match options.output_path {
-      None => {
-        let destination_directory = publication_directory_duplicate(
-          source_directory,
-          options.input_path,
-        )
-        {
-          source_target,
-          source_directory,
-          source_leaf,
-          destination_target: source_target,
-          destination_directory,
-          destination_leaf: source_leaf,
-          output_path: options.input_path,
-          mode: InPlace,
-          replace: true,
-          overwrite_baseline_size: None,
-        }
-      }
-      Some(output_path) => {
-        let destination_exists = path_exists_checked(output_path)
-        let destination_target = if destination_exists {
-          let kind = @afs.kind(filesystem_path(output_path)) catch {
-            error if @async.is_being_cancelled() => raise error
-            error =>
-              raise transaction_error(
-                "office.transaction.destination_check_failed",
-                "could not inspect destination '\{bounded_text(output_path, 160)}': \{bounded_text(error.to_string(), 240)}",
-              )
-          }
-          if kind is Directory {
-            raise transaction_error(
-              "office.transaction.invalid_options", "output_path must name a file, not a directory",
-            )
-          }
-          canonical_existing_path(output_path) catch {
-            error if @async.is_being_cancelled() => raise error
-            error =>
-              raise transaction_error(
-                "office.transaction.destination_check_failed",
-                "could not resolve destination '\{bounded_text(output_path, 160)}': \{bounded_text(error.to_string(), 240)}",
-              )
-          }
-        } else {
-          resolve_new_destination(output_path)
-        }
-        if destination_target == source_target {
-          raise transaction_error(
-            "office.transaction.output_aliases_input",
-            "output_path resolves to the input; omit output_path for an in-place transaction",
-            details=Json::object({
-              "input": Json::string(bounded_text(options.input_path, 160)),
-              "output": Json::string(bounded_text(output_path, 160)),
-            }),
-          )
-        }
-        if destination_exists && !options.overwrite {
-          raise transaction_error(
-            "office.transaction.output_exists",
-            "destination already exists; set overwrite=true to replace it",
-            details=Json::object({
-              "output": Json::string(bounded_text(output_path, 160)),
-            }),
-          )
-        }
-        let destination_directory = publication_directory_open(
-          path_parent(destination_target),
-          output_path,
-        )
-        try {
-          let destination_leaf = path_leaf(destination_target)
-          let pinned_kind = publication_entry_kind(
-            destination_directory, destination_leaf, output_path,
-          )
-          if pinned_kind == 2 {
-            raise transaction_error(
-              "office.transaction.invalid_options", "output_path must name a file, not a directory",
-            )
-          }
-          if pinned_kind > 1 {
-            raise transaction_error(
-              "office.transaction.invalid_options", "output_path must name a regular file",
-            )
-          }
-          if pinned_kind == 1 &&
-            publication_entries_same(
-              source_directory, source_leaf, destination_directory, destination_leaf,
-              output_path,
-            ) {
-            raise transaction_error(
-              "office.transaction.output_aliases_input",
-              "output_path resolves to the input; omit output_path for an in-place transaction",
-              details=Json::object({
-                "input": Json::string(bounded_text(options.input_path, 160)),
-                "output": Json::string(bounded_text(output_path, 160)),
-              }),
-            )
-          }
-          if pinned_kind == 1 && !options.overwrite {
-            raise transaction_error(
-              "office.transaction.output_exists",
-              "destination already exists; set overwrite=true to replace it",
-              details=Json::object({
-                "output": Json::string(bounded_text(output_path, 160)),
-              }),
-            )
-          }
-          let overwrite_baseline_size = if pinned_kind == 1 {
-            Some(
-              publication_entry_size(
-                destination_directory, destination_leaf, output_path,
-              ),
-            )
-          } else {
-            None
-          }
-          {
-            source_target,
-            source_directory,
-            source_leaf,
-            destination_target,
-            destination_directory,
-            destination_leaf,
-            output_path,
-            mode: Output,
-            replace: options.overwrite,
-            overwrite_baseline_size,
-          }
-        } catch {
-          error => {
-            publication_directory_close(destination_directory)
-            raise error
-          }
-        }
+  errdefer publication_directory_close(source_directory)
+  match options.output_path {
+    None => {
+      let destination_directory = publication_directory_duplicate(
+        source_directory,
+        options.input_path,
+      )
+      {
+        source_target,
+        source_directory,
+        source_leaf,
+        destination_target: source_target,
+        destination_directory,
+        destination_leaf: source_leaf,
+        output_path: options.input_path,
+        mode: InPlace,
+        replace: true,
+        overwrite_baseline_size: None,
       }
     }
-  } catch {
-    error => {
-      publication_directory_close(source_directory)
-      raise error
+    Some(output_path) => {
+      let destination_exists = path_exists_checked(output_path)
+      let destination_target = if destination_exists {
+        let kind = @afs.kind(filesystem_path(output_path)) catch {
+          error if @async.is_being_cancelled() => raise error
+          error =>
+            raise transaction_error(
+              "office.transaction.destination_check_failed",
+              "could not inspect destination '\{bounded_text(output_path, 160)}': \{bounded_text(error.to_string(), 240)}",
+            )
+        }
+        if kind is Directory {
+          raise transaction_error(
+            "office.transaction.invalid_options", "output_path must name a file, not a directory",
+          )
+        }
+        canonical_existing_path(output_path) catch {
+          error if @async.is_being_cancelled() => raise error
+          error =>
+            raise transaction_error(
+              "office.transaction.destination_check_failed",
+              "could not resolve destination '\{bounded_text(output_path, 160)}': \{bounded_text(error.to_string(), 240)}",
+            )
+        }
+      } else {
+        resolve_new_destination(output_path)
+      }
+      if destination_target == source_target {
+        raise transaction_error(
+          "office.transaction.output_aliases_input",
+          "output_path resolves to the input; omit output_path for an in-place transaction",
+          details=Json::object({
+            "input": Json::string(bounded_text(options.input_path, 160)),
+            "output": Json::string(bounded_text(output_path, 160)),
+          }),
+        )
+      }
+      if destination_exists && !options.overwrite {
+        raise transaction_error(
+          "office.transaction.output_exists",
+          "destination already exists; set overwrite=true to replace it",
+          details=Json::object({
+            "output": Json::string(bounded_text(output_path, 160)),
+          }),
+        )
+      }
+      let destination_directory = publication_directory_open(
+        path_parent(destination_target),
+        output_path,
+      )
+      errdefer publication_directory_close(destination_directory)
+      let destination_leaf = path_leaf(destination_target)
+      let pinned_kind = publication_entry_kind(
+        destination_directory, destination_leaf, output_path,
+      )
+      if pinned_kind == 2 {
+        raise transaction_error(
+          "office.transaction.invalid_options", "output_path must name a file, not a directory",
+        )
+      }
+      if pinned_kind > 1 {
+        raise transaction_error(
+          "office.transaction.invalid_options", "output_path must name a regular file",
+        )
+      }
+      if pinned_kind == 1 &&
+        publication_entries_same(
+          source_directory, source_leaf, destination_directory, destination_leaf,
+          output_path,
+        ) {
+        raise transaction_error(
+          "office.transaction.output_aliases_input",
+          "output_path resolves to the input; omit output_path for an in-place transaction",
+          details=Json::object({
+            "input": Json::string(bounded_text(options.input_path, 160)),
+            "output": Json::string(bounded_text(output_path, 160)),
+          }),
+        )
+      }
+      if pinned_kind == 1 && !options.overwrite {
+        raise transaction_error(
+          "office.transaction.output_exists",
+          "destination already exists; set overwrite=true to replace it",
+          details=Json::object({
+            "output": Json::string(bounded_text(output_path, 160)),
+          }),
+        )
+      }
+      let overwrite_baseline_size = if pinned_kind == 1 {
+        Some(
+          publication_entry_size(
+            destination_directory, destination_leaf, output_path,
+          ),
+        )
+      } else {
+        None
+      }
+      {
+        source_target,
+        source_directory,
+        source_leaf,
+        destination_target,
+        destination_directory,
+        destination_leaf,
+        output_path,
+        mode: Output,
+        replace: options.overwrite,
+        overwrite_baseline_size,
+      }
     }
   }
 }
@@ -1027,162 +1015,157 @@ async fn publish_candidate(
   cleanup_release : String?,
 ) -> (Bool, Bool) {
   let temp = create_temp(policy)
-  try {
-    // Exclusive creation and staging chmod are cancellation-shielded so their
-    // outcome is never ambiguous. Observe a cancellation before doing more
-    // work; the surrounding catch then owns deterministic cleanup.
-    @async.pause()
-    match faults.relocate_parent_to {
-      Some(target) =>
-        @afs.rename(
-          path_parent(policy.destination_target),
-          filesystem_path(target),
-          replace=false,
+  errdefer {
+    match cleanup_release {
+      Some(release) =>
+        publication_temp_cleanup(
+          temp,
+          policy.output_path,
+          cleanup_release=release,
+        )
+      None => publication_temp_cleanup(temp, policy.output_path)
+    }
+    if @async.is_being_cancelled() {
+      @async.pause()
+    }
+  }
+  // Exclusive creation and staging chmod are cancellation-shielded so their
+  // outcome is never ambiguous. Observe a cancellation before doing more
+  // work; the `errdefer` above then owns deterministic cleanup.
+  @async.pause()
+  match faults.relocate_parent_to {
+    Some(target) =>
+      @afs.rename(
+        path_parent(policy.destination_target),
+        filesystem_path(target),
+        replace=false,
+      ) catch {
+        error if @async.is_being_cancelled() => raise error
+        error =>
+          raise transaction_error(
+            "office.transaction.commit_failed",
+            "could not inject the destination-parent relocation: \{bounded_text(error.to_string(), 240)}",
+          )
+      }
+    None => ()
+  }
+  if faults.deny_cleanup {
+    publication_temp_substitute(temp)
+  }
+  if faults.stall_after_temp {
+    @async.sleep(60_000)
+  }
+  if faults.fail_write {
+    raise transaction_error(
+      "office.transaction.write_failed", "injected temporary-file write failure",
+    )
+  }
+  publication_temp_write(
+    temp,
+    candidate,
+    fail_after_bytes=faults.fail_write_after_bytes,
+    stall_after_bytes=faults.stall_write_after_bytes,
+  )
+  publication_temp_sync(temp)
+  if policy.mode is InPlace {
+    match faults.concurrent_replacement {
+      Some(replacement) => {
+        match faults.relocate_parent_to {
+          Some(_) =>
+            @afs.mkdir(path_parent(policy.source_target)) catch {
+              error if @async.is_being_cancelled() => raise error
+              error =>
+                raise transaction_error(
+                  "office.transaction.commit_failed",
+                  "could not inject the replacement source parent: \{bounded_text(error.to_string(), 240)}",
+                )
+            }
+          None => ()
+        }
+        @afs.write_file(
+          policy.source_target,
+          replacement,
+          create_mode=if faults.relocate_parent_to is Some(_) {
+            CreateNew
+          } else {
+            CreateOrTruncate
+          },
+          permission=options.permission,
         ) catch {
           error if @async.is_being_cancelled() => raise error
           error =>
             raise transaction_error(
               "office.transaction.commit_failed",
-              "could not inject the destination-parent relocation: \{bounded_text(error.to_string(), 240)}",
+              "could not inject the concurrent-source test replacement: \{bounded_text(error.to_string(), 240)}",
+            )
+        }
+      }
+      None => ()
+    }
+    check_source_unchanged(
+      policy.source_directory,
+      policy.source_leaf,
+      original,
+    ) catch {
+      error if @async.is_being_cancelled() => raise error
+      error => raise error
+    }
+  }
+  if policy.mode is Output || policy.mode is Create {
+    match faults.concurrent_destination {
+      Some(replacement) =>
+        @afs.write_file(
+          policy.destination_target,
+          replacement,
+          create_mode=CreateNew,
+          permission=options.permission,
+        ) catch {
+          error if @async.is_being_cancelled() => raise error
+          error =>
+            raise transaction_error(
+              "office.transaction.commit_failed",
+              "could not inject the concurrent-destination test file: \{bounded_text(error.to_string(), 240)}",
             )
         }
       None => ()
     }
-    if faults.deny_cleanup {
-      publication_temp_substitute(temp)
-    }
-    if faults.stall_after_temp {
-      @async.sleep(60_000)
-    }
-    if faults.fail_write {
-      raise transaction_error(
-        "office.transaction.write_failed", "injected temporary-file write failure",
-      )
-    }
-    publication_temp_write(
-      temp,
-      candidate,
-      fail_after_bytes=faults.fail_write_after_bytes,
-      stall_after_bytes=faults.stall_write_after_bytes,
-    )
-    publication_temp_sync(temp)
-    if policy.mode is InPlace {
-      match faults.concurrent_replacement {
-        Some(replacement) => {
-          match faults.relocate_parent_to {
-            Some(_) =>
-              @afs.mkdir(path_parent(policy.source_target)) catch {
-                error if @async.is_being_cancelled() => raise error
-                error =>
-                  raise transaction_error(
-                    "office.transaction.commit_failed",
-                    "could not inject the replacement source parent: \{bounded_text(error.to_string(), 240)}",
-                  )
-              }
-            None => ()
-          }
-          @afs.write_file(
-            policy.source_target,
-            replacement,
-            create_mode=if faults.relocate_parent_to is Some(_) {
-              CreateNew
-            } else {
-              CreateOrTruncate
-            },
-            permission=options.permission,
-          ) catch {
-            error if @async.is_being_cancelled() => raise error
-            error =>
-              raise transaction_error(
-                "office.transaction.commit_failed",
-                "could not inject the concurrent-source test replacement: \{bounded_text(error.to_string(), 240)}",
-              )
-          }
-        }
-        None => ()
-      }
-      check_source_unchanged(
-        policy.source_directory,
-        policy.source_leaf,
-        original,
-      ) catch {
-        error if @async.is_being_cancelled() => raise error
-        error => raise error
-      }
-    }
-    if policy.mode is Output || policy.mode is Create {
-      match faults.concurrent_destination {
-        Some(replacement) =>
-          @afs.write_file(
-            policy.destination_target,
-            replacement,
-            create_mode=CreateNew,
-            permission=options.permission,
-          ) catch {
-            error if @async.is_being_cancelled() => raise error
-            error =>
-              raise transaction_error(
-                "office.transaction.commit_failed",
-                "could not inject the concurrent-destination test file: \{bounded_text(error.to_string(), 240)}",
-              )
-          }
-        None => ()
-      }
-    }
-    if faults.fail_rename {
-      raise transaction_error(
-        "office.transaction.commit_failed", "injected atomic-rename failure",
-      )
-    }
-    let temp_clean = publication_temp_publish(
-      temp,
-      policy.destination_leaf,
-      policy.replace,
-      policy.output_path,
-      options.permission,
-    )
-    publication_temp_close(temp)
-    let parent_synced = @async.protect_from_cancel(
-      () => {
-        match faults.post_rename_release {
-          Some(release) => {
-            @afs.write_file(
-              release + ".ready",
-              b"ready",
-              create_mode=CreateNew,
-              permission=0o600,
-            )
-            while !@afs.exists(release) {
-              @async.pause()
-            }
-          }
-          None => ()
-        }
-        publication_directory_sync(policy.destination_directory)
-      },
-      resume_on_cancel=true,
-    ) catch {
-      _ => false
-    }
-    (parent_synced, temp_clean)
-  } catch {
-    error => {
-      match cleanup_release {
-        Some(release) =>
-          publication_temp_cleanup(
-            temp,
-            policy.output_path,
-            cleanup_release=release,
-          )
-        None => publication_temp_cleanup(temp, policy.output_path)
-      }
-      if @async.is_being_cancelled() {
-        @async.pause()
-        raise error
-      }
-      raise error
-    }
   }
+  if faults.fail_rename {
+    raise transaction_error(
+      "office.transaction.commit_failed", "injected atomic-rename failure",
+    )
+  }
+  let temp_clean = publication_temp_publish(
+    temp,
+    policy.destination_leaf,
+    policy.replace,
+    policy.output_path,
+    options.permission,
+  )
+  publication_temp_close(temp)
+  let parent_synced = @async.protect_from_cancel(
+    () => {
+      match faults.post_rename_release {
+        Some(release) => {
+          @afs.write_file(
+            release + ".ready",
+            b"ready",
+            create_mode=CreateNew,
+            permission=0o600,
+          )
+          while !@afs.exists(release) {
+            @async.pause()
+          }
+        }
+        None => ()
+      }
+      publication_directory_sync(policy.destination_directory)
+    },
+    resume_on_cancel=true,
+  ) catch {
+    _ => false
+  }
+  (parent_synced, temp_clean)
 }
 
 ///|
