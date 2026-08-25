@@ -106,10 +106,19 @@ test "an identity edit is a valid proxy for a real edit" {
   // Pinned so the agreement is not vacuous: if every range in every
   // fixture were accepted, the two edits would agree trivially and this
   // test would prove nothing.
-  inspect(
+  debug_inspect(
     verdicts,
     content=(
-      #|[66/0 refused, 66/0 refused, 66/0 refused, 66/66 refused, 66/66 refused, 66/66 refused, 66/30 refused, 66/0 refused]
+      #|[
+      #|  "66/0 refused",
+      #|  "66/0 refused",
+      #|  "66/0 refused",
+      #|  "66/66 refused",
+      #|  "66/66 refused",
+      #|  "66/66 refused",
+      #|  "66/30 refused",
+      #|  "66/0 refused",
+      #|]
     ),
   )
 }

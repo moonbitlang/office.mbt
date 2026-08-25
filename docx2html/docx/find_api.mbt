@@ -246,14 +246,37 @@ fn find_snap_end(text : StringView, index : Int) -> Int {
 }
 
 ///|
-/// The scanner path of the element at `byte_start`, for a node kind.
-fn find_node_path(scan : StoryScan, kind : String, byte_start : Int) -> String? {
+/// Slice by UTF-16 code-unit offsets, KEEPING `substring`.
+///
+/// The deprecation's replacement, `str[:]`, TRAPS when a boundary lands
+/// on a trailing surrogate; `substring` returns the string. Boundaries
+/// here are arbitrary offsets over attacker-supplied documents — match
+/// edges are surrogate-aligned because a well-formed needle cannot end
+/// half a pair, and context edges are snapped — but the slicing
+/// primitive itself must not be one that converts "odd range" into
+/// "crash while reading". The suppression is contained to this one
+/// helper so any OTHER deprecation in this file still surfaces.
+#warnings("-deprecated")
+fn find_slice(text : String, start : Int, end : Int) -> String {
+  text.substring(start~, end~)
+}
+
+///|
+/// One pass over the scan, byte offset -> path, for one node kind.
+///
+/// `find` needs a path for every paragraph and every returned run. A
+/// per-lookup scan of the node list is O(P·N) across a document — with
+/// the retained-source ceiling near a million elements that is a CPU
+/// denial-of-service on an absent needle — so the maps are built once
+/// and lookups are O(1).
+fn find_path_map(scan : StoryScan, kind : String) -> Map[Int, String] {
+  let paths : Map[Int, String] = Map([])
   for node in scan.nodes() {
-    if node.kind == kind && node.byte_start == byte_start {
-      return Some(node.path)
+    if node.kind == kind {
+      paths[node.byte_start] = node.path
     }
   }
-  None
+  paths
 }
 
 ///|
@@ -280,9 +303,9 @@ fn find_reason_for(message : String) -> String {
   let marker = "<reason:"
   guard message.find(marker) is Some(at) else { return "unsupported" }
   let from = at + marker.length()
-  let rest = message.substring(start=from)
+  let rest = find_slice(message, from, message.length())
   guard rest.find(">") is Some(to) else { return "unsupported" }
-  rest.substring(start=0, end=to)
+  find_slice(rest, 0, to)
 }
 
 ///|
@@ -381,6 +404,16 @@ pub fn find_docx_matches(
     )
   }
   let part = story.part()
+  // v1 is BODY-ONLY, and says so rather than mislabelling. The engine
+  // would happily search any story with a retained projection, but every
+  // candidate carries `story: "body"` in the v1 schema — so accepting a
+  // header or footnote source here would return results whose addressing
+  // metadata is false, which is worse than declining.
+  guard part == annotated.main_story_source().part() else {
+    raise Unsupported(
+      message="find searches the body story only in v1; '\{part}' is not the main document part",
+    )
+  }
   guard annotated.reader_projections.get(part) is Some(projection) else {
     raise Unsupported(
       message="find requires a mutation-safe read with a retained projection for '\{part}'",
@@ -394,6 +427,14 @@ pub fn find_docx_matches(
   let elements = projection.scan.elements()
   let matches : Array[DocxMatch] = []
   let mut ordinal = 0
+  // Built once, used per paragraph and per returned run: the path maps
+  // replace per-lookup scans of the node list, and the KMP table
+  // depends only on the needle, so rebuilding it per paragraph would
+  // pay O(paragraphs × needle) for nothing.
+  let paragraph_paths = find_path_map(projection.scan, "p")
+  let run_paths = find_path_map(projection.scan, "r")
+  let needle_view = needle[:]
+  let failure = find_failure_table(needle_view)
   for paragraph_index, paragraph in projection.paragraphs {
     // The paragraph's own path. A logical paragraph joined from several
     // physical ones is named by its FIRST source; the planner refuses to
@@ -401,8 +442,7 @@ pub fn find_docx_matches(
     // a reason rather than hidden.
     guard paragraph.sources.length() > 0 else { continue }
     let SourceElementId(head) = paragraph.sources[0].source
-    guard find_node_path(projection.scan, "p", elements[head].byte_start)
-      is Some(path) else {
+    guard paragraph_paths.get(elements[head].byte_start) is Some(path) else {
       continue
     }
     // A plain prefix test is safe here only because scanner ordinals are
@@ -415,8 +455,6 @@ pub fn find_docx_matches(
     }
     let text = find_paragraph_projection(paragraph)
     let view = text[:]
-    let needle_view = needle[:]
-    let failure = find_failure_table(needle_view)
     // KMP, left to right, non-overlapping: two candidates never claim
     // the same character, so an agent can act on them independently.
     // `matched` is how much of the needle the scan currently holds.
@@ -485,12 +523,7 @@ pub fn find_docx_matches(
           kinds.push(kind)
         }
         if contribution.run_source is Some(SourceElementId(run_identity)) {
-          if find_node_path(
-              projection.scan,
-              "r",
-              elements[run_identity].byte_start,
-            )
-            is Some(run_path) &&
+          if run_paths.get(elements[run_identity].byte_start) is Some(run_path) &&
             !runs.contains(run_path) {
             runs.push(run_path)
           }
@@ -532,9 +565,9 @@ pub fn find_docx_matches(
         path,
         start,
         end,
-        text: text.substring(start~, end~),
-        context_before: text.substring(start=before_from, end=start),
-        context_after: text.substring(start=end, end=after_to),
+        text: find_slice(text, start, end),
+        context_before: find_slice(text, before_from, start),
+        context_after: find_slice(text, end, after_to),
         runs,
         run_kinds: kinds,
         actionable,

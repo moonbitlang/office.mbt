@@ -33,10 +33,10 @@ test "find reports projection coordinates across run boundaries" {
   let hit = hits[0]
   // The literal never appears in the XML -- it spans two `w:t` elements.
   // That is the whole reason a projection-coordinate matcher exists.
-  inspect(
+  debug_inspect(
     (hit.ordinal(), hit.path(), hit.start(), hit.end(), hit.text()),
     content=(
-      #|(1, p[1], 3, 8, lo wo)
+      #|(1, "p[1]", 3, 8, "lo wo")
     ),
   )
   assert_eq(hit.runs().length(), 2)
@@ -83,10 +83,10 @@ test "find numbers non-overlapping candidates in document order" {
     )
   }
   // Three, not five: `aaaa` yields two non-overlapping hits.
-  inspect(
+  debug_inspect(
     seen,
     content=(
-      #|[1:p[1][0,2), 2:p[1][2,4), 3:p[2][0,2)]
+      #|["1:p[1][0,2)", "2:p[1][2,4)", "3:p[2][0,2)"]
     ),
   )
 }
@@ -113,10 +113,10 @@ test "find names the source kinds a match draws from" {
   )
   let hits = find_all(annotated, "a\tb")
   assert_eq(hits.length(), 1)
-  inspect(
+  debug_inspect(
     hits[0].run_kinds(),
     content=(
-      #|[text, tab]
+      #|["text", "tab"]
     ),
   )
 }
@@ -178,10 +178,10 @@ test "find keeps a mix of actionable and refused verdicts" {
       verdicts.push(if hit.actionable() { "ok" } else { hit.reason() })
     }
   }
-  inspect(
+  debug_inspect(
     verdicts,
     content=(
-      #|[ok, ok, field-region, tracked-region, hyperlink-boundary]
+      #|["ok", "ok", "field-region", "tracked-region", "hyperlink-boundary"]
     ),
   )
 }
@@ -289,4 +289,46 @@ test "find clamps an oversized context window" {
   assert_eq(hits.length(), 1)
   assert_eq(hits[0].context_before(), "a")
   assert_eq(hits[0].context_after(), "c")
+}
+
+///|
+/// v1 refuses a non-body story rather than mislabelling its results.
+///
+/// The engine could search any story with a retained projection, but
+/// every candidate carries `story: "body"` in the v1 schema — accepting
+/// a header source would return results whose addressing metadata is
+/// false, which is worse than declining.
+test "find refuses a non-body story rather than mislabel it" {
+  let annotated = find_fixture("<w:p><w:r><w:t>alpha</w:t></w:r></w:p>")
+  // A fixture WITH a comment carries a comments story, which is the
+  // non-body probe.
+  let commented = @docx.read_docx_annotated(
+    fixture_docx(
+      (
+        #|<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:body><w:p><w:r><w:t>alpha</w:t></w:r></w:p><w:sectPr/></w:body></w:document>
+      ),
+      comments_xml=Some(
+        (
+          #|<w:comments xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:comment w:id="1" w:author="A"><w:p><w:r><w:t>alpha</w:t></w:r></w:p></w:comment></w:comments>
+        ),
+      ),
+    ),
+  )
+  ignore(annotated)
+  guard commented.comments_story_source() is Some(comments) else {
+    fail("expected a comments story source on a commented fixture")
+  }
+  let mut refusal = ""
+  try
+    ignore(@docx.find_docx_matches(commented, comments, needle="alpha"))
+  catch {
+    Unsupported(message~) => refusal = message
+    _ => ()
+  } noraise {
+    _ => ()
+  }
+  assert_true(
+    refusal.contains("body story only"),
+    msg="expected the v1 body-only refusal, got '" + refusal + "'",
+  )
 }

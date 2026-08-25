@@ -128,8 +128,15 @@ fn docx_find_human(needle : String, found : @docx.DocxMatchList) -> String {
   // line that the other read commands do not.
   let hits = found.matches()
   let lines : Array[String] = []
-  if hits.length() == 0 {
+  if found.total() == 0 {
     lines.push("no candidates for '\{needle}'")
+  } else if hits.length() == 0 {
+    // `--limit 0`: candidates exist, none examined. Saying "no
+    // candidates" here would contradict the JSON's totals and tell a
+    // reader the text is absent when it is present.
+    lines.push(
+      "\{found.total()} candidate(s) exist; none examined (raise --limit)",
+    )
   } else {
     for hit in hits {
       let head = "\{hit.ordinal()}. \{hit.path()} [\{hit.start()},\{hit.end()}) \{hit.text()}"
