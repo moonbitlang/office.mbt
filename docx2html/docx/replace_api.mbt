@@ -216,3 +216,32 @@ pub fn plan_docx_replacements(
   }
   (plan, { selected: ordinals, replaced, affected })
 }
+
+///|
+/// One paragraph's full projection text, by its body-relative path.
+///
+/// This is the readback half of the replace contract: after a splice is
+/// applied, the transaction re-reads the candidate and compares each
+/// affected paragraph's projection — through THIS accessor — against the
+/// receipt's precomputed expectation. `None` means the path names no
+/// paragraph in the story, which a readback must treat as a mismatch
+/// rather than a pass.
+pub fn docx_paragraph_projection(
+  annotated : DocxAnnotatedResult,
+  story : DocxStoryPartSource,
+  path~ : String,
+) -> String? {
+  guard annotated.reader_projections.get(story.part()) is Some(projection) else {
+    return None
+  }
+  let paragraph_paths = find_path_map(projection.scan, "p")
+  let elements = projection.scan.elements()
+  for paragraph in projection.paragraphs {
+    guard paragraph.sources.length() > 0 else { continue }
+    let SourceElementId(head) = paragraph.sources[0].source
+    if paragraph_paths.get(elements[head].byte_start) == Some(path) {
+      return Some(find_paragraph_projection(paragraph))
+    }
+  }
+  None
+}
