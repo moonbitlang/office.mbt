@@ -1136,6 +1136,85 @@ fn validate_docx_read_archive(
 }
 
 ///|
+/// The CLI's XML read budget. One definition, so the tolerant and
+/// mutation-safe reads below cannot drift apart on limits.
+fn docx_cli_xml_budget(cancelled : () -> Bool) -> @xml.XmlReadBudget {
+  @xml.xml_read_budget(
+    max_source_units=docx_cli_max_xml_source_units,
+    max_tokens=docx_cli_max_xml_tokens,
+    max_materialized_chars=docx_cli_max_xml_materialized_chars,
+    max_token_chars=docx_cli_max_xml_token_chars,
+    cancelled~,
+  )
+}
+
+///|
+/// The MUTATION-SAFE annotated read, which retains the reader
+/// projections and the source bytes beside them.
+///
+/// `find` needs this rather than the tolerant read: the tolerant one
+/// recovers from malformed markup and does NOT retain projections, so
+/// the match engine has nothing to consume. The distinction is the whole
+/// reason find reports a document it cannot search rather than guessing
+/// — a tolerantly-repaired document has no byte-exact coordinates to
+/// offer.
+async fn open_docx_mutation_annotated_archive(
+  file : String,
+  archive : @zip.Archive,
+  cancelled? : () -> Bool = () => false,
+) -> @docx.DocxAnnotatedResult {
+  check_office_read_cancelled(cancelled)
+  @async.pause()
+  let main_document_part = validate_docx_read_archive(file, archive, cancelled~)
+  @async.pause()
+  check_office_read_cancelled(cancelled)
+  let annotated = @docx.read_docx_annotated_archive_limited(
+    archive,
+    docx_cli_xml_budget(cancelled),
+    expected_main_document_path=main_document_part,
+  ) catch {
+    error => {
+      check_office_read_cancelled(cancelled)
+      raise docx_reader_failure(error, file)
+    }
+  }
+  check_office_read_cancelled(cancelled)
+  @async.pause()
+  annotated
+}
+
+///|
+/// The TOLERANT annotated read, which recovers from malformed markup and
+/// backs the read-only projection commands.
+async fn open_docx_annotated_archive(
+  file : String,
+  archive : @zip.Archive,
+  cancelled? : () -> Bool = () => false,
+) -> @docx.DocxAnnotatedResult {
+  check_office_read_cancelled(cancelled)
+  @async.pause()
+  check_office_read_cancelled(cancelled)
+  let main_document_part = validate_docx_read_archive(file, archive, cancelled~)
+  @async.pause()
+  check_office_read_cancelled(cancelled)
+  let annotated = @docx.read_docx_annotated_archive_tolerant_limited(
+    archive,
+    docx_cli_xml_budget(cancelled),
+    max_diagnostics=docx_cli_max_warnings,
+    max_diagnostic_chars=512,
+    expected_main_document_path=main_document_part,
+  ) catch {
+    error => {
+      check_office_read_cancelled(cancelled)
+      raise docx_reader_failure(error, file)
+    }
+  }
+  check_office_read_cancelled(cancelled)
+  @async.pause()
+  annotated
+}
+
+///|
 async fn open_docx_projection_archive(
   file : String,
   archive : @zip.Archive,
@@ -1154,31 +1233,6 @@ async fn open_docx_projection_archive(
       }),
     )
   }
-  @async.pause()
-  check_office_read_cancelled(cancelled)
-  let main_document_part = validate_docx_read_archive(file, archive, cancelled~)
-  @async.pause()
-  check_office_read_cancelled(cancelled)
-  let xml_budget = @xml.xml_read_budget(
-    max_source_units=docx_cli_max_xml_source_units,
-    max_tokens=docx_cli_max_xml_tokens,
-    max_materialized_chars=docx_cli_max_xml_materialized_chars,
-    max_token_chars=docx_cli_max_xml_token_chars,
-    cancelled~,
-  )
-  let annotated = @docx.read_docx_annotated_archive_tolerant_limited(
-    archive,
-    xml_budget,
-    max_diagnostics=docx_cli_max_warnings,
-    max_diagnostic_chars=512,
-    expected_main_document_path=main_document_part,
-  ) catch {
-    error => {
-      check_office_read_cancelled(cancelled)
-      raise docx_reader_failure(error, file)
-    }
-  }
-  check_office_read_cancelled(cancelled)
-  @async.pause()
+  let annotated = open_docx_annotated_archive(file, archive, cancelled~)
   projection_from_annotated(file, annotated, max_elements, cancelled~)
 }

@@ -38,6 +38,8 @@ pub fn embed_style_map(BytesView, String) -> Bytes raise @core.DocxError
 
 pub fn extract_raw_text(BytesView, external_file_access? : Bool, read_external_file? : (String) -> Bytes?) -> @core.ConversionResult raise @core.DocxError
 
+pub fn find_docx_matches(DocxAnnotatedResult, DocxStoryPartSource, needle~ : String, within? : String, context? : Int, limit? : Int) -> DocxMatchList raise @core.DocxError
+
 pub fn header_footer_spec(variant~ : String, Array[@document.DocumentElement]) -> HeaderFooterSpec raise @core.DocxError
 
 pub fn new_blank_docx() -> Bytes
@@ -164,6 +166,41 @@ pub fn DocxAnnotatedResult::story_paragraph_span(Self, String, String) -> NodeSp
 pub fn DocxAnnotatedResult::story_root_span(Self, String) -> NodeSpan?
 pub fn DocxAnnotatedResult::story_row_span(Self, String, String) -> NodeSpan?
 pub fn DocxAnnotatedResult::story_run_span(Self, String, String) -> NodeSpan?
+
+pub struct DocxMatch {
+  ordinal : Int
+  story : String
+  path : String
+  start : Int
+  end : Int
+  text : String
+  context_before : String
+  context_after : String
+  runs : Array[String]
+  run_kinds : Array[String]
+  actionable : Bool
+  reason : String
+}
+pub fn DocxMatch::actionable(Self) -> Bool
+pub fn DocxMatch::context_after(Self) -> String
+pub fn DocxMatch::context_before(Self) -> String
+pub fn DocxMatch::end(Self) -> Int
+pub fn DocxMatch::ordinal(Self) -> Int
+pub fn DocxMatch::path(Self) -> String
+pub fn DocxMatch::reason(Self) -> String
+pub fn DocxMatch::run_kinds(Self) -> Array[String]
+pub fn DocxMatch::runs(Self) -> Array[String]
+pub fn DocxMatch::start(Self) -> Int
+pub fn DocxMatch::story(Self) -> String
+pub fn DocxMatch::text(Self) -> String
+
+pub struct DocxMatchList {
+  matches : Array[DocxMatch]
+  total : Int
+}
+pub fn DocxMatchList::matches(Self) -> Array[DocxMatch]
+pub fn DocxMatchList::total(Self) -> Int
+pub fn DocxMatchList::truncated(Self) -> Bool
 
 pub(all) struct DocxPackageResult {
   document : @document.DocumentElement

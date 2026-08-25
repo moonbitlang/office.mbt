@@ -1,0 +1,579 @@
+// The read-only match surface (N2a). One candidate per literal hit, with
+// the coordinates a partial edit would consume and an explicit statement
+// of whether that edit would be permitted.
+//
+// The point of shipping this BEFORE the mutation is that an agent cannot
+// look at a rendered document. `find` is how it sees what an edit would
+// touch, and -- more importantly -- what it would refuse and why.
+
+///|
+/// One candidate the literal matcher found in a story.
+///
+/// `actionable` is not a second opinion about editability. It is the
+/// PLANNER's own answer: each candidate is offered to
+/// `plan_paragraph_text_edits` as an identity replacement, which runs
+/// every structural check and plans no bytes. So a candidate reported
+/// actionable here is one the mutation surface accepts, by construction
+/// rather than by a parallel classifier that could drift out of step.
+pub struct DocxMatch {
+  ordinal : Int
+  story : String
+  path : String
+  start : Int
+  end : Int
+  text : String
+  context_before : String
+  context_after : String
+  runs : Array[String]
+  run_kinds : Array[String]
+  actionable : Bool
+  reason : String
+}
+
+///|
+/// Position among all candidates in document order, from 1.
+pub fn DocxMatch::ordinal(self : DocxMatch) -> Int {
+  self.ordinal
+}
+
+///|
+/// The story the candidate sits in. `"body"` in v1; the field is
+/// reserved so header, footer and note stories can join without a
+/// schema break.
+pub fn DocxMatch::story(self : DocxMatch) -> String {
+  self.story
+}
+
+///|
+/// The candidate's paragraph, as a body-relative scanner path.
+pub fn DocxMatch::path(self : DocxMatch) -> String {
+  self.path
+}
+
+///|
+/// Paragraph-relative UTF-16 start of the match, over the PROJECTION --
+/// the text a reader sees, not the bytes.
+pub fn DocxMatch::start(self : DocxMatch) -> Int {
+  self.start
+}
+
+///|
+/// Paragraph-relative UTF-16 end, exclusive.
+pub fn DocxMatch::end(self : DocxMatch) -> Int {
+  self.end
+}
+
+///|
+/// The matched projection text.
+pub fn DocxMatch::text(self : DocxMatch) -> String {
+  self.text
+}
+
+///|
+/// Bounded projection text immediately before the match.
+pub fn DocxMatch::context_before(self : DocxMatch) -> String {
+  self.context_before
+}
+
+///|
+/// Bounded projection text immediately after the match.
+pub fn DocxMatch::context_after(self : DocxMatch) -> String {
+  self.context_after
+}
+
+///|
+/// The runs the match draws from, as body-relative paths, in document
+/// order. A match crossing run boundaries names each one.
+pub fn DocxMatch::runs(self : DocxMatch) -> Array[String] {
+  self.runs
+}
+
+///|
+/// The source kinds the match draws from, deduplicated and in document
+/// order: `text`, `tab`, `no-break-hyphen`, `soft-hyphen`, `symbol`.
+/// A match reading as ordinary prose can still be carried by an atom,
+/// and an agent that assumes otherwise will address the wrong thing.
+pub fn DocxMatch::run_kinds(self : DocxMatch) -> Array[String] {
+  self.run_kinds
+}
+
+///|
+/// Whether the RANGE is structurally editable.
+///
+/// Precisely: whether the mutation surface accepts an edit over these
+/// coordinates, judged by everything it can know from the document
+/// alone — regions, ancestry, boundaries, carriers.
+///
+/// It is NOT a promise that a particular replacement will be accepted.
+/// Validity of the new TEXT belongs to the write and is checked there: a
+/// replacement carrying a control character is refused over a range this
+/// reports actionable, and correctly so, because that refusal is about
+/// the caller's string rather than the document.
+pub fn DocxMatch::actionable(self : DocxMatch) -> Bool {
+  self.actionable
+}
+
+///|
+/// Why the candidate is not actionable; empty when it is.
+///
+/// The vocabulary names the construct rather than the mechanism, since
+/// what an agent needs is what to do instead: `field-region`,
+/// `hyperlink-boundary`, `tracked-region`, `sdt-content`,
+/// `alternate-content`, `textbox`, `cdata`, `visible-barrier`,
+/// `suppressed-region`, `multi-physical-paragraph`, `non-scalar-boundary`,
+/// `ambiguous-boundary`, `unsupported-source`, `checkbox-control`,
+/// `duplicate-source`, `cross-paragraph-reuse`, `no-synthesis-carrier`,
+/// `refused-field`, `malformed-field`, `field-instruction`, `internal`.
+pub fn DocxMatch::reason(self : DocxMatch) -> String {
+  self.reason
+}
+
+///|
+/// What a search found: the examined candidates, and how many exist.
+///
+/// The two are separated because they cost differently. Counting a
+/// candidate is a scan step; EXAMINING one runs the planner. So a search
+/// counts everything and examines at most `limit`, and the caller is
+/// told both numbers rather than being left to infer the total from a
+/// list that was deliberately cut short.
+pub struct DocxMatchList {
+  matches : Array[DocxMatch]
+  total : Int
+}
+
+///|
+/// The examined candidates, in document order, at most `limit` of them.
+pub fn DocxMatchList::matches(self : DocxMatchList) -> Array[DocxMatch] {
+  self.matches
+}
+
+///|
+/// How many candidates EXIST, which may exceed the examined list.
+pub fn DocxMatchList::total(self : DocxMatchList) -> Int {
+  self.total
+}
+
+///|
+/// Whether candidates exist that were counted but not examined.
+pub fn DocxMatchList::truncated(self : DocxMatchList) -> Bool {
+  self.total > self.matches.length()
+}
+
+///|
+/// The projection text of one paragraph, which is the coordinate space
+/// every offset in a `DocxMatch` is expressed in.
+///
+/// NOTE ON `substring`: the deprecation suggesting `str[:]` is NOT taken
+/// anywhere in this file, deliberately. `str[:]` TRAPS when a boundary
+/// lands on a trailing surrogate, where `substring` returns the string.
+/// Match boundaries here are arbitrary UTF-16 offsets over
+/// attacker-supplied documents, so taking that replacement would turn
+/// "reports an odd range" into "crashes while reading" -- a denial of
+/// service in a reader of untrusted input. A split boundary is instead
+/// reported as a non-actionable candidate, because the planner refuses
+/// it as a non-scalar boundary.
+fn find_paragraph_projection(paragraph : ReaderProjectionParagraph) -> String {
+  let text = StringBuilder()
+  for contribution in paragraph.contributions {
+    text.write_string(contribution.value)
+  }
+  text.to_string()
+}
+
+///|
+/// The KMP failure function over the needle's code units.
+///
+/// The naive scan is linear in ALLOCATION once suffixes are not copied,
+/// but still quadratic in COMPARISONS: for text `a^n` and needle
+/// `a^(n/2)b`, every position re-compares almost the whole needle, which
+/// on a permitted 1 MiB paragraph is on the order of 10^11 comparisons.
+/// `--limit` cannot help, because the cost is paid before a match is
+/// ever found. This table makes the scan O(n + m) instead.
+fn find_failure_table(needle : StringView) -> Array[Int] {
+  let table = Array::make(needle.length(), 0)
+  let mut prefix = 0
+  for index in 1..<needle.length() {
+    while prefix > 0 &&
+          needle.unsafe_get(index).to_int() !=
+          needle.unsafe_get(prefix).to_int() {
+      prefix = table[prefix - 1]
+    }
+    if needle.unsafe_get(index).to_int() == needle.unsafe_get(prefix).to_int() {
+      prefix = prefix + 1
+    }
+    table[index] = prefix
+  }
+  table
+}
+
+///|
+/// Whether the code unit at `index` is the SECOND half of a surrogate
+/// pair, i.e. a position no slice boundary may land on.
+fn find_is_trailing_surrogate(text : StringView, index : Int) -> Bool {
+  if index < 0 || index >= text.length() {
+    return false
+  }
+  let unit = text.unsafe_get(index).to_int()
+  unit >= 0xDC00 && unit <= 0xDFFF
+}
+
+///|
+/// Move a context boundary off the middle of a surrogate pair.
+///
+/// Context offsets are plain code-unit arithmetic, so an astral
+/// character near the window edge puts the boundary between a pair's two
+/// halves. `substring` returns that ill-formed string rather than
+/// trapping, but it cannot be encoded: emitting it as JSON traps later,
+/// far from the cause. Snapping outward keeps the window well-formed and
+/// costs at most one character of context.
+fn find_snap_start(text : StringView, index : Int) -> Int {
+  if find_is_trailing_surrogate(text, index) {
+    index + 1
+  } else {
+    index
+  }
+}
+
+///|
+/// The same, for an exclusive end: an end that lands on a trailing half
+/// would cut the pair and leave a lone leading half inside the window.
+fn find_snap_end(text : StringView, index : Int) -> Int {
+  if find_is_trailing_surrogate(text, index) {
+    index - 1
+  } else {
+    index
+  }
+}
+
+///|
+/// Slice by UTF-16 code-unit offsets, KEEPING `substring`.
+///
+/// The deprecation's replacement, `str[:]`, TRAPS when a boundary lands
+/// on a trailing surrogate; `substring` returns the string. Boundaries
+/// here are arbitrary offsets over attacker-supplied documents — match
+/// edges are surrogate-aligned because a well-formed needle cannot end
+/// half a pair, and context edges are snapped — but the slicing
+/// primitive itself must not be one that converts "odd range" into
+/// "crash while reading". The suppression is contained to this one
+/// helper so any OTHER deprecation in this file still surfaces.
+#warnings("-deprecated")
+fn find_slice(text : String, start : Int, end : Int) -> String {
+  text.substring(start~, end~)
+}
+
+///|
+/// One pass over the scan, byte offset -> path, for one node kind.
+///
+/// `find` needs a path for every paragraph and every returned run. A
+/// per-lookup scan of the node list is O(P·N) across a document — with
+/// the retained-source ceiling near a million elements that is a CPU
+/// denial-of-service on an absent needle — so the maps are built once
+/// and lookups are O(1).
+fn find_path_map(scan : StoryScan, kind : String) -> Map[Int, String] {
+  let paths : Map[Int, String] = Map([])
+  for node in scan.nodes() {
+    if node.kind == kind {
+      paths[node.byte_start] = node.path
+    }
+  }
+  paths
+}
+
+///|
+/// The reader's own name for a projected atom's source.
+fn find_source_kind(kind : ReaderProjectionContributionKind) -> String? {
+  match kind {
+    ProjectedText(FromText) => Some("text")
+    ProjectedText(FromTab) => Some("tab")
+    ProjectedText(FromNoBreakHyphen) => Some("no-break-hyphen")
+    ProjectedText(FromSoftHyphen) => Some("soft-hyphen")
+    ProjectedText(FromSymbol) => Some("symbol")
+    _ => None
+  }
+}
+
+///|
+/// Read the refusal's own public slug out of its message.
+///
+/// The planner embeds it in a `<reason:...>` marker, rendered from the
+/// CLASS by `partial_surgery_refusal_slug`. Find therefore holds no copy
+/// of the taxonomy: a class added there appears here without this file
+/// changing, and cannot drift out of step.
+fn find_reason_for(message : String) -> String {
+  let marker = "<reason:"
+  guard message.find(marker) is Some(at) else { return "unsupported" }
+  let from = at + marker.length()
+  let rest = find_slice(message, from, message.length())
+  guard rest.find(">") is Some(to) else { return "unsupported" }
+  find_slice(rest, 0, to)
+}
+
+///|
+/// Refine a restricted refusal into the construct an agent can act on.
+///
+/// `RestrictedRegion` is one class to the mutation surface, deliberately:
+/// its callers match on a stable taxonomy. A READER wants the construct,
+/// because the remedy differs -- resolve the revision, edit the bound
+/// data, flatten the field. So find looks at the same ancestry the
+/// planner did and names what it finds.
+fn find_restricted_construct(
+  elements : Array[ScannedElement],
+  paragraph : ReaderProjectionParagraph,
+  start : Int,
+  end : Int,
+) -> String {
+  let base = paragraph.projection_start
+  let mut link : Int?? = None
+  let mut crossing = false
+  let mut named : String? = None
+  for contribution in paragraph.contributions {
+    let from = contribution.projection_start - base
+    let to = contribution.projection_end - base
+    if from >= end ||
+      to <= start ||
+      (contribution.kind is ProjectedText(_)) == false {
+      continue
+    }
+    let SourceElementId(identity) = contribution.source
+    let element = elements[identity]
+    if named is None &&
+      run_surgery_restricted_ancestor(elements, element) is Some(construct) {
+      named = Some(
+        match construct {
+          TrackedInsertion => "tracked-region"
+          ContentControl => "sdt-content"
+          TextBoxContent => "textbox"
+          FallbackContent => "alternate-content"
+        },
+      )
+    }
+    let here = run_surgery_hyperlink_ancestor(elements, element)
+    match link {
+      None => link = Some(here)
+      Some(first) => if first != here { crossing = true }
+    }
+  }
+  // A field's cached result is a REGION rather than an ancestry, so it
+  // is asked separately -- and it outranks the others, because it is the
+  // one whose loss no re-read can detect.
+  for contribution in paragraph.contributions {
+    let from = contribution.projection_start - base
+    let to = contribution.projection_end - base
+    if from < end && to > start && contribution.field_region is FieldResult {
+      return "field-region"
+    }
+  }
+  match named {
+    Some(construct) => construct
+    None => if crossing { "hyperlink-boundary" } else { "restricted-region" }
+  }
+}
+
+///|
+/// List every literal candidate for `needle`, in document order.
+///
+/// This is a READ. Zero matches is an empty list and not a refusal --
+/// only a mutation fails closed on finding nothing. What can still
+/// refuse is the request itself: an empty needle names every position,
+/// and a story with no retained projection cannot be searched.
+///
+/// `within` restricts to a subtree by body-relative path prefix, so
+/// `p[3]` takes one paragraph and `tbl[1]` takes a whole table.
+///
+/// At most `limit` candidates are EXAMINED. Every examined candidate
+/// costs a planner run, so the bound is on work rather than only on
+/// output; candidates past it are counted through `ordinal` but carry no
+/// verdict, and the caller sees fewer entries than the last ordinal.
+pub fn find_docx_matches(
+  annotated : DocxAnnotatedResult,
+  story : DocxStoryPartSource,
+  needle~ : String,
+  within? : String,
+  context? : Int = 24,
+  // How many candidates to EXAMINE. Scanning is linear and cheap, but
+  // every examined candidate runs the planner, so an unbounded needle
+  // over a large story would do unbounded work for output the caller
+  // then discards. Candidates past this are still COUNTED through
+  // `ordinal`, so the caller learns they exist without paying for a
+  // verdict it asked not to receive.
+  limit? : Int = 1000,
+) -> DocxMatchList raise DocxError {
+  guard needle != "" else {
+    raise Unsupported(
+      message="find needs a non-empty needle; an empty one matches every position",
+    )
+  }
+  let part = story.part()
+  // v1 is BODY-ONLY, and says so rather than mislabelling. The engine
+  // would happily search any story with a retained projection, but every
+  // candidate carries `story: "body"` in the v1 schema — so accepting a
+  // header or footnote source here would return results whose addressing
+  // metadata is false, which is worse than declining.
+  guard part == annotated.main_story_source().part() else {
+    raise Unsupported(
+      message="find searches the body story only in v1; '\{part}' is not the main document part",
+    )
+  }
+  guard annotated.reader_projections.get(part) is Some(projection) else {
+    raise Unsupported(
+      message="find requires a mutation-safe read with a retained projection for '\{part}'",
+    )
+  }
+  guard annotated.reader_projection_sources.get(part) is Some(bytes) else {
+    raise Unsupported(
+      message="the mutation-safe read retained no source bytes for '\{part}'",
+    )
+  }
+  let elements = projection.scan.elements()
+  let matches : Array[DocxMatch] = []
+  let mut ordinal = 0
+  // Built once, used per paragraph and per returned run: the path maps
+  // replace per-lookup scans of the node list, and the KMP table
+  // depends only on the needle, so rebuilding it per paragraph would
+  // pay O(paragraphs × needle) for nothing.
+  let paragraph_paths = find_path_map(projection.scan, "p")
+  let run_paths = find_path_map(projection.scan, "r")
+  let needle_view = needle[:]
+  let failure = find_failure_table(needle_view)
+  for paragraph_index, paragraph in projection.paragraphs {
+    // The paragraph's own path. A logical paragraph joined from several
+    // physical ones is named by its FIRST source; the planner refuses to
+    // edit it anyway, and the candidate still deserves to be listed with
+    // a reason rather than hidden.
+    guard paragraph.sources.length() > 0 else { continue }
+    let SourceElementId(head) = paragraph.sources[0].source
+    guard paragraph_paths.get(elements[head].byte_start) is Some(path) else {
+      continue
+    }
+    // A plain prefix test is safe here only because scanner ordinals are
+    // BRACKETED: `p[1]` is not a prefix of `p[10]`, since the `]` falls
+    // where the `0` would be. Were paths written `p1`/`p10` this would
+    // silently widen the scope, so the grammar is doing real work and a
+    // change to it must revisit this line.
+    if within is Some(prefix) && !path.has_prefix(prefix) {
+      continue
+    }
+    let text = find_paragraph_projection(paragraph)
+    let view = text[:]
+    // KMP, left to right, non-overlapping: two candidates never claim
+    // the same character, so an agent can act on them independently.
+    // `matched` is how much of the needle the scan currently holds.
+    let mut cursor = 0
+    let mut matched = 0
+    while cursor < text.length() {
+      while matched > 0 &&
+            view.unsafe_get(cursor).to_int() !=
+            needle_view.unsafe_get(matched).to_int() {
+        matched = failure[matched - 1]
+      }
+      if view.unsafe_get(cursor).to_int() ==
+        needle_view.unsafe_get(matched).to_int() {
+        matched = matched + 1
+      }
+      cursor = cursor + 1
+      if matched < needle.length() {
+        continue
+      }
+      let end = cursor
+      let start = end - needle.length()
+      // Non-overlapping: the next search starts after this candidate
+      // rather than resuming inside it.
+      matched = 0
+      ordinal = ordinal + 1
+      if matches.length() >= limit {
+        continue
+      }
+      // The planner's OWN verdict: an identity replacement validates
+      // everything and plans nothing.
+      let mut actionable = true
+      let mut reason = ""
+      try
+        ignore(
+          plan_paragraph_text_edits(projection, bytes, paragraph_index, [
+            { start, end, replacement: needle },
+          ]),
+        )
+      catch {
+        Unsupported(message~) => {
+          actionable = false
+          reason = find_reason_for(message)
+          if reason == "restricted-region" {
+            reason = find_restricted_construct(elements, paragraph, start, end)
+          }
+        }
+        _ => {
+          actionable = false
+          reason = "unsupported"
+        }
+      } noraise {
+        _ => ()
+      }
+      // The runs and source kinds the match actually draws from.
+      let runs : Array[String] = []
+      let kinds : Array[String] = []
+      let base = paragraph.projection_start
+      for contribution in paragraph.contributions {
+        let from = contribution.projection_start - base
+        let to = contribution.projection_end - base
+        if from >= end || to <= start {
+          continue
+        }
+        if find_source_kind(contribution.kind) is Some(kind) &&
+          !kinds.contains(kind) {
+          kinds.push(kind)
+        }
+        if contribution.run_source is Some(SourceElementId(run_identity)) {
+          if run_paths.get(elements[run_identity].byte_start) is Some(run_path) &&
+            !runs.contains(run_path) {
+            runs.push(run_path)
+          }
+        }
+      }
+      // Context is clamped non-negative (a negative window would invert
+      // the slice bounds) and snapped off surrogate halves.
+      // Clamped at BOTH ends. A negative window would invert the slice
+      // bounds; a huge one overflows `end + window` back to negative and
+      // reaches `substring` as a wrapped index, which panics instead of
+      // raising. The text's own length is the largest window that can
+      // mean anything, so it is the ceiling.
+      let window = if context < 0 {
+        0
+      } else if context > text.length() {
+        text.length()
+      } else {
+        context
+      }
+      let before_from = find_snap_start(
+        view,
+        if start > window {
+          start - window
+        } else {
+          0
+        },
+      )
+      let after_to = find_snap_end(
+        view,
+        if end + window < text.length() {
+          end + window
+        } else {
+          text.length()
+        },
+      )
+      matches.push({
+        ordinal,
+        story: "body",
+        path,
+        start,
+        end,
+        text: find_slice(text, start, end),
+        context_before: find_slice(text, before_from, start),
+        context_after: find_slice(text, end, after_to),
+        runs,
+        run_kinds: kinds,
+        actionable,
+        reason,
+      })
+    }
+  }
+  { matches, total: ordinal }
+}

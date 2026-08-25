@@ -17,6 +17,8 @@ pub const SCHEMA_DOCX_CREATE_RESULT : String = "office.docx.create/1"
 
 pub const SCHEMA_DOCX_ELEMENT : String = "office.docx.element/1"
 
+pub const SCHEMA_DOCX_MATCHES : String = "office.docx.matches/1"
+
 pub const SCHEMA_DOCX_OUTLINE : String = "office.docx.outline/1"
 
 pub const SCHEMA_DOCX_QUERY : String = "office.docx.query/1"

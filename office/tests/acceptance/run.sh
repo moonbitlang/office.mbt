@@ -102,7 +102,7 @@ jq -e '
   (.data.fingerprint | test("^crc32:[0-9a-f]{8}$")) and
   ([.data.records[].name] == [
     "docx", "xlsx", "help", "identify", "outline", "get", "text",
-    "query", "validate", "dump", "replay", "issues", "preview",
+    "query", "find", "validate", "dump", "replay", "issues", "preview",
     "render", "create", "template", "edit", "annotate", "batch", "raw"
   ])
 ' >/dev/null <<<"$capabilities" || fail "capability registry"

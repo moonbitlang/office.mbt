@@ -112,8 +112,44 @@ fn partial_surgery_refuse(
   context : String,
 ) -> DocxError {
   Unsupported(
-    message="partial surgery [\{@debug.Repr(kind)}]: \{partial_surgery_refusal_reason(kind)} (\{context})",
+    message="partial surgery [\{@debug.Repr(kind)}]: \{partial_surgery_refusal_reason(kind)} (\{context}) <reason:\{partial_surgery_refusal_slug(kind)}>",
   )
+}
+
+///|
+/// The stable PUBLIC slug for a refusal class.
+///
+/// This lives beside the taxonomy, and matches on the CONSTRUCTORS
+/// rather than on class-name strings, so a reader of the refusal cannot
+/// hold a second copy of the class names that silently drifts from this
+/// one. `office find` reports these verbatim, which is why they are
+/// hyphenated and construct-named rather than mechanical renderings of
+/// the MoonBit identifiers.
+fn partial_surgery_refusal_slug(kind : PartialSurgeryRefusal) -> String {
+  match kind {
+    InvalidParagraph => "invalid-paragraph"
+    InvalidRange => "invalid-range"
+    UnorderedEdits => "unordered-edits"
+    LogicalOverlap => "logical-overlap"
+    MultiPhysicalParagraph => "multi-physical-paragraph"
+    NonScalarBoundary => "non-scalar-boundary"
+    AmbiguousBoundary => "ambiguous-boundary"
+    CDataContext => "cdata"
+    VisibleBarrier => "visible-barrier"
+    SuppressedRegion => "suppressed-region"
+    RestrictedRegion => "restricted-region"
+    PartialFieldInstruction => "field-instruction"
+    PartialMalformedField => "malformed-field"
+    RefusedField => "refused-field"
+    PartialCheckboxControl => "checkbox-control"
+    DuplicateSource => "duplicate-source"
+    CrossParagraphSourceReuse => "cross-paragraph-reuse"
+    UnsupportedTextSource => "unsupported-source"
+    NoSynthesisCarrier => "no-synthesis-carrier"
+    InvalidReplacement => "invalid-replacement"
+    PartialBudgetExceeded => "budget-exceeded"
+    InternalPlanConflict => "internal"
+  }
 }
 
 ///|

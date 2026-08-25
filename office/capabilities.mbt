@@ -33,6 +33,13 @@ pub const SCHEMA_DOCX_TEXT : String = "office.docx.text/1"
 pub const SCHEMA_DOCX_QUERY : String = "office.docx.query/1"
 
 ///|
+/// The `office find` result. The roadmap's N2a note calls this
+/// `docx.matches/1`; the id follows this file's `office.<format>.<name>`
+/// convention instead, so it sits with the other twenty output schemas
+/// rather than beside the `docx.edit/N` INPUT contracts.
+pub const SCHEMA_DOCX_MATCHES : String = "office.docx.matches/1"
+
+///|
 pub const SCHEMA_XLSX_OUTLINE : String = "office.xlsx.outline/1"
 
 ///|
@@ -821,6 +828,75 @@ pub fn capability_commands() -> Array[CapabilityCommand] {
           "office query FILE [cell[predicate]...]",
           SCHEMA_XLSX_QUERY,
           ["format=xlsx"],
+        ),
+      ],
+    },
+    {
+      name: "find",
+      summary: "List every literal text candidate in a DOCX, with whether an edit there is allowed",
+      usage: "office find FILE --text TEXT [--in PATH] [--limit N] [--context N] [--json]",
+      formats: ["docx"],
+      aliases: [],
+      inputs: [
+        capability_field(
+          "file", "path", true, "existing .docx package (never modified)",
+        ),
+        capability_field(
+          "text", "string", true, "literal text to find — never a regular expression or wildcard; matched over the reader PROJECTION, so it spans run boundaries",
+        ),
+        capability_field(
+          "in", "string", false, "restrict to a body-relative subtree by path prefix, e.g. p[3] or tbl[1]",
+        ),
+        capability_field(
+          "limit", "integer", false, "maximum returned candidates (default 100, hard limit 1000)",
+        ),
+        capability_field(
+          "context", "integer", false, "projection characters of context each side (default 24, maximum 200)",
+        ),
+        capability_field(
+          "json", "boolean", false, "emit one office.output/1 JSON document",
+        ),
+      ],
+      outputs: [
+        capability_field(
+          "schema", "literal(office.docx.matches/1)", true, "match result schema",
+        ),
+        capability_field("file", "string", true, "the searched path"),
+        capability_field(
+          "format", "literal(docx)", true, "searched document format",
+        ),
+        capability_field(
+          "text", "string", true, "the literal that was searched for",
+        ),
+        capability_field(
+          "in", "string", false, "the subtree restriction, null when unrestricted",
+        ),
+        capability_field(
+          "stories_scanned", "array(string)", true, "the stories searched; /body in v1",
+        ),
+        capability_field(
+          "matches", "array(object)", true, "per candidate: ordinal, story, path, range {start, end, unit=utf16} paragraph-relative over the PROJECTION, text, context_before, context_after, runs (affected run paths), source_kinds (text|tab|no-break-hyphen|soft-hyphen|symbol), actionable, and reason (null when actionable). `actionable` reports whether the RANGE is structurally editable — regions, ancestry, boundaries, carriers — NOT that any given replacement will be accepted; validity of the new text belongs to the write, so a replacement carrying a control character is still refused over an actionable range",
+        ),
+        capability_field(
+          "matches_total", "integer", true, "candidates that EXIST in the searched stories, counted whether or not --limit examined them",
+        ),
+        capability_field(
+          "actionable_returned", "integer", true, "of the RETURNED entries, how many a partial edit would be permitted over. Counted over the returned page rather than the document, because a candidate past --limit is never offered to the planner and so has no verdict",
+        ),
+        capability_field(
+          "unactionable_returned", "integer", true, "of the RETURNED entries, how many exist but must not be rewritten",
+        ),
+        capability_field(
+          "truncated", "boolean", true, "whether --limit omitted later candidates",
+        ),
+      ],
+      output_modes: ["human", "json"],
+      variants: [
+        capability_variant(
+          "docx",
+          "office find FILE --text TEXT [--in PATH]",
+          SCHEMA_DOCX_MATCHES,
+          ["format=docx"],
         ),
       ],
     },

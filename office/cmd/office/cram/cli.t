@@ -17,7 +17,7 @@ and JSONL inventories without deferred PowerPoint or MCP entries.
   $ office.exe help | sed -n '1,8p'
   Office capability registry
     Schema: office.capabilities/2
-    Fingerprint: crc32:cf08925d
+    Fingerprint: crc32:91c815c1
   Formats:
     docx (aliases: word) — WordprocessingML documents
     xlsx (aliases: excel) — SpreadsheetML workbooks
@@ -40,10 +40,10 @@ and JSONL inventories without deferred PowerPoint or MCP entries.
   {"formats":["xlsx"],"variants":[{"name":"xlsx","result_schema":"office.xlsx.query/1","constraints":["format=xlsx"]}]}
 
   $ office.exe help all --json | jq -c '{schema,success,capability_schema:.data.schema,fingerprint:.data.fingerprint,names:[.data.records[].name]}'
-  {"schema":"office.output/1","success":true,"capability_schema":"office.capabilities/2","fingerprint":"crc32:cf08925d","names":["docx","xlsx","help","identify","outline","get","text","query","validate","dump","replay","issues","preview","render","create","template","edit","annotate","batch","raw"]}
+  {"schema":"office.output/1","success":true,"capability_schema":"office.capabilities/2","fingerprint":"crc32:91c815c1","names":["docx","xlsx","help","identify","outline","get","text","query","find","validate","dump","replay","issues","preview","render","create","template","edit","annotate","batch","raw"]}
 
   $ office.exe help all --jsonl | jq -s -c 'map({schema,fingerprint,kind,name})'
-  [{"schema":"office.capability/2","fingerprint":"crc32:cf08925d","kind":"format","name":"docx"},{"schema":"office.capability/2","fingerprint":"crc32:cf08925d","kind":"format","name":"xlsx"},{"schema":"office.capability/2","fingerprint":"crc32:cf08925d","kind":"command","name":"help"},{"schema":"office.capability/2","fingerprint":"crc32:cf08925d","kind":"command","name":"identify"},{"schema":"office.capability/2","fingerprint":"crc32:cf08925d","kind":"command","name":"outline"},{"schema":"office.capability/2","fingerprint":"crc32:cf08925d","kind":"command","name":"get"},{"schema":"office.capability/2","fingerprint":"crc32:cf08925d","kind":"command","name":"text"},{"schema":"office.capability/2","fingerprint":"crc32:cf08925d","kind":"command","name":"query"},{"schema":"office.capability/2","fingerprint":"crc32:cf08925d","kind":"command","name":"validate"},{"schema":"office.capability/2","fingerprint":"crc32:cf08925d","kind":"command","name":"dump"},{"schema":"office.capability/2","fingerprint":"crc32:cf08925d","kind":"command","name":"replay"},{"schema":"office.capability/2","fingerprint":"crc32:cf08925d","kind":"command","name":"issues"},{"schema":"office.capability/2","fingerprint":"crc32:cf08925d","kind":"command","name":"preview"},{"schema":"office.capability/2","fingerprint":"crc32:cf08925d","kind":"command","name":"render"},{"schema":"office.capability/2","fingerprint":"crc32:cf08925d","kind":"command","name":"create"},{"schema":"office.capability/2","fingerprint":"crc32:cf08925d","kind":"command","name":"template"},{"schema":"office.capability/2","fingerprint":"crc32:cf08925d","kind":"command","name":"edit"},{"schema":"office.capability/2","fingerprint":"crc32:cf08925d","kind":"command","name":"annotate"},{"schema":"office.capability/2","fingerprint":"crc32:cf08925d","kind":"command","name":"batch"},{"schema":"office.capability/2","fingerprint":"crc32:cf08925d","kind":"command","name":"raw"}]
+  [{"schema":"office.capability/2","fingerprint":"crc32:91c815c1","kind":"format","name":"docx"},{"schema":"office.capability/2","fingerprint":"crc32:91c815c1","kind":"format","name":"xlsx"},{"schema":"office.capability/2","fingerprint":"crc32:91c815c1","kind":"command","name":"help"},{"schema":"office.capability/2","fingerprint":"crc32:91c815c1","kind":"command","name":"identify"},{"schema":"office.capability/2","fingerprint":"crc32:91c815c1","kind":"command","name":"outline"},{"schema":"office.capability/2","fingerprint":"crc32:91c815c1","kind":"command","name":"get"},{"schema":"office.capability/2","fingerprint":"crc32:91c815c1","kind":"command","name":"text"},{"schema":"office.capability/2","fingerprint":"crc32:91c815c1","kind":"command","name":"query"},{"schema":"office.capability/2","fingerprint":"crc32:91c815c1","kind":"command","name":"find"},{"schema":"office.capability/2","fingerprint":"crc32:91c815c1","kind":"command","name":"validate"},{"schema":"office.capability/2","fingerprint":"crc32:91c815c1","kind":"command","name":"dump"},{"schema":"office.capability/2","fingerprint":"crc32:91c815c1","kind":"command","name":"replay"},{"schema":"office.capability/2","fingerprint":"crc32:91c815c1","kind":"command","name":"issues"},{"schema":"office.capability/2","fingerprint":"crc32:91c815c1","kind":"command","name":"preview"},{"schema":"office.capability/2","fingerprint":"crc32:91c815c1","kind":"command","name":"render"},{"schema":"office.capability/2","fingerprint":"crc32:91c815c1","kind":"command","name":"create"},{"schema":"office.capability/2","fingerprint":"crc32:91c815c1","kind":"command","name":"template"},{"schema":"office.capability/2","fingerprint":"crc32:91c815c1","kind":"command","name":"edit"},{"schema":"office.capability/2","fingerprint":"crc32:91c815c1","kind":"command","name":"annotate"},{"schema":"office.capability/2","fingerprint":"crc32:91c815c1","kind":"command","name":"batch"},{"schema":"office.capability/2","fingerprint":"crc32:91c815c1","kind":"command","name":"raw"}]
 
 Installed help exposes every consumed JSON input contract without requiring
 repository-only documentation. Inventory and individual records are versioned;
@@ -245,6 +245,40 @@ never static text, so Word repaginates it.
   2 w:fldChar w:fldCharType="separate"
   $ office.exe raw read d3-story.docx /word/footer1.xml | grep -c 'w:instrText xml:space="preserve"> PAGE <'
   1
+
+`find` lists every literal candidate with the coordinates a partial edit
+consumes, and says whether an edit there is allowed. Offsets are
+paragraph-relative UTF-16 over the reader PROJECTION, so a needle spanning
+run boundaries still matches — the literal need not exist contiguously in
+the XML.
+
+  $ office.exe find "$TESTDIR/../../../../docx2html/tests/cram/fixtures/single-paragraph.docx" --text "on imported"
+  1. p[1] [8,19) on imported
+  $ office.exe find "$TESTDIR/../../../../docx2html/tests/cram/fixtures/single-paragraph.docx" --text "on imported" --json | jq -c '{schema:.data.schema,total:.data.matches_total,actionable:.data.actionable_returned,unactionable:.data.unactionable_returned}'
+  {"schema":"office.docx.matches/1","total":1,"actionable":1,"unactionable":0}
+  $ office.exe find "$TESTDIR/../../../../docx2html/tests/cram/fixtures/single-paragraph.docx" --text "on imported" --json | jq -c '.data.matches[0] | {path,range,runs,source_kinds,actionable,reason}'
+  {"path":"p[1]","range":{"start":8,"end":19,"unit":"utf16"},"runs":["p[1]/r[1]"],"source_kinds":["text"],"actionable":true,"reason":null}
+
+Finding nothing is a fact about the document, not a failed request: a read
+exits 0 with an empty list. Only a mutation fails closed on no match.
+
+  $ office.exe find "$TESTDIR/../../../../docx2html/tests/cram/fixtures/single-paragraph.docx" --text "absent"
+  no candidates for 'absent'
+  $ office.exe find "$TESTDIR/../../../../docx2html/tests/cram/fixtures/single-paragraph.docx" --text "absent" --json | jq -c '{total:.data.matches_total,matches:.data.matches}'
+  {"total":0,"matches":[]}
+
+v1 searches the body only, which `stories_scanned` states rather than
+implying. d3-story.docx carries a live PAGE field in its FOOTER; find does
+not report it, and says which stories it looked at.
+
+  $ office.exe find d3-story.docx --text "Report" --json | jq -c '{stories:.data.stories_scanned,total:.data.matches_total}'
+  {"stories":["/body"],"total":1}
+
+A malformed request still refuses: the needle is required, and an empty one
+would name every position.
+
+  $ office.exe find "$TESTDIR/../../../../docx2html/tests/cram/fixtures/single-paragraph.docx" --text "" --json | jq -c '{success,code:.error.code}'
+  {"success":false,"code":"office.invalid_arguments"}
 
 The MUTATION reader is stricter than the tolerant projection: it re-resolves
 every section story reference and fails closed. Annotating the authored

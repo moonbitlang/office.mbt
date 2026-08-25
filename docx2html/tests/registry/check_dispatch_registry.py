@@ -66,6 +66,7 @@ FILES = {
     # N0c2 partial surgery: dispatches on the host element's local name to
     # require an ordinary text carrier, same read pattern as run_surgery.mbt
     'run_surgery_partial.mbt': 'extract',
+    'find_api.mbt': 'extract',
     'annotate_plan.mbt': 'extract',
     'annotate_thread.mbt': 'extract',
     'annotation_index.mbt': 'extract',
