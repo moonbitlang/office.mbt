@@ -60,6 +60,8 @@ pub fn plan_comment_resolution(DocxAnnotatedResult, BytesView, comment_id~ : Str
 
 pub fn plan_comment_resolution_archive(DocxAnnotatedResult, @zip.Archive, comment_id~ : String, done~ : Bool, xml_budget? : @xml.XmlReadBudget) -> @splice.SplicePlan raise @core.DocxError
 
+pub fn plan_docx_replacements(DocxAnnotatedResult, DocxStoryPartSource, needle~ : String, replacement~ : String, within? : String, nth? : Int) -> (@splice.SplicePlan, DocxReplaceReceipt) raise @core.DocxError
+
 pub fn plan_run_text_replacement(DocxAnnotatedResult, DocxStoryPartSource, at_relative~ : String, expect~ : String, text~ : String) -> (@splice.SplicePlan, RunTextReceipt) raise @core.DocxError
 
 pub fn read_docx(BytesView, external_file_access? : Bool, read_external_file? : (String) -> Bytes?) -> @document.DocumentElement raise @core.DocxError
@@ -226,6 +228,22 @@ pub fn DocxReadResult::equal(Self, Self) -> Bool
 pub fn DocxReadResult::not_equal(Self, Self) -> Bool
 #deprecated
 pub fn DocxReadResult::to_repr(Self) -> @debug.Repr
+
+pub struct DocxReplaceAffected {
+  path : String
+  expected : String
+}
+pub fn DocxReplaceAffected::expected(Self) -> String
+pub fn DocxReplaceAffected::path(Self) -> String
+
+pub struct DocxReplaceReceipt {
+  selected : Array[Int]
+  replaced : Int
+  affected : Array[DocxReplaceAffected]
+}
+pub fn DocxReplaceReceipt::affected(Self) -> Array[DocxReplaceAffected]
+pub fn DocxReplaceReceipt::replaced(Self) -> Int
+pub fn DocxReplaceReceipt::selected(Self) -> Array[Int]
 
 pub enum DocxStoryPartAuthority {
   RelationshipBacked
