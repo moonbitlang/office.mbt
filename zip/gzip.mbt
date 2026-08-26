@@ -1,41 +1,8 @@
 ///|
-fn read_u16_le(bytes : BytesView, offset : Int) -> UInt raise ZipError {
-  if offset < 0 || offset + 2 > bytes.length() {
-    raise OutOfBounds(offset~)
-  }
-  let b0 = bytes[offset].to_uint()
-  let b1 = bytes[offset + 1].to_uint()
-  b0 | (b1 << 8)
-}
-
-///|
-fn read_u32_le(bytes : BytesView, offset : Int) -> UInt raise ZipError {
-  if offset < 0 || offset + 4 > bytes.length() {
-    raise OutOfBounds(offset~)
-  }
-  let b0 = bytes[offset].to_uint()
-  let b1 = bytes[offset + 1].to_uint()
-  let b2 = bytes[offset + 2].to_uint()
-  let b3 = bytes[offset + 3].to_uint()
-  b0 | (b1 << 8) | (b2 << 16) | (b3 << 24)
-}
-
-///|
-fn gzip_push_u32_le(out : FixedByteOutput, value : UInt) -> Unit raise ZipError {
-  out.write_byte((value & 0xFF).to_byte())
-  out.write_byte(((value >> 8) & 0xFF).to_byte())
-  out.write_byte(((value >> 16) & 0xFF).to_byte())
-  out.write_byte(((value >> 24) & 0xFF).to_byte())
-}
-
-///|
 fn skip_cstring(bytes : BytesView, start : Int) -> Int? {
-  for i in start..<bytes.length() {
-    if bytes[i] == 0 {
-      return Some(i + 1)
-    }
-  }
-  None
+  guard bytes.get_view(start~) is Some(view) else { return None }
+  guard view.find(b"\x00") is Some(offset) else { return None }
+  Some(start + offset + 1)
 }
 
 ///|
@@ -44,7 +11,7 @@ pub fn gunzip(bytes : BytesView) -> Bytes raise ZipError {
   if bytes.length() < 18 {
     raise UnsupportedFeature(msg="invalid gzip data")
   }
-  if bytes[0] != 0x1F || bytes[1] != 0x8B {
+  if !bytes.has_prefix(b"\x1F\x8B") {
     raise UnsupportedFeature(msg="invalid gzip header")
   }
   let compression_method = bytes[2].to_int()
@@ -54,7 +21,7 @@ pub fn gunzip(bytes : BytesView) -> Bytes raise ZipError {
   let flags = bytes[3].to_int()
   let mut idx = 10
   if (flags & 0x04) != 0 {
-    let xlen = read_u16_le(bytes, idx).reinterpret_as_int()
+    let xlen = read_u16_le_at(bytes, idx)
     idx = idx + 2 + xlen
   }
   if (flags & 0x08) != 0 {
@@ -75,21 +42,13 @@ pub fn gunzip(bytes : BytesView) -> Bytes raise ZipError {
   if idx < 0 || idx > bytes.length() - 8 {
     raise UnsupportedFeature(msg="invalid gzip data")
   }
-  let trailer_crc = read_u32_le(bytes, bytes.length() - 8)
-  let trailer_isize = read_u32_le(bytes, bytes.length() - 4)
+  let trailer_crc = read_u32_le_at_raw(bytes, bytes.length() - 8)
+  let trailer_isize = read_u32_le_at_raw(bytes, bytes.length() - 4)
   let compressed = bytes[idx:bytes.length() - 8]
   // Allow a legitimately large declared size, but keep a hard ceiling so a
   // lying tiny stream cannot expand without bound (decompression bomb).
-  let declared_isize = if trailer_isize <= (0x7FFFFFFF : UInt) {
-    trailer_isize.reinterpret_as_int()
-  } else {
-    0x7FFFFFFF
-  }
-  let max_output = if declared_isize > deflate_max_output_default {
-    declared_isize
-  } else {
-    deflate_max_output_default
-  }
+  let declared_isize = trailer_isize.min(0x7FFFFFFF).reinterpret_as_int()
+  let max_output = declared_isize.max(deflate_max_output_default)
   let decoded = deflate_decode(compressed, max_output~)
   let expected_isize = (decoded.length() & 0xFFFFFFFF).reinterpret_as_uint()
   if trailer_isize != expected_isize {
@@ -110,36 +69,17 @@ pub fn gzip(bytes : BytesView) -> Bytes raise ZipError {
   }
   let out = FixedByteOutput::allocated(10 + compressed_size + 8)
   // ID1 ID2 CM FLG MTIME(4) XFL OS
-  out.write_byte(0x1F)
-  out.write_byte(0x8B)
-  out.write_byte(0x08)
-  out.write_byte(0x00)
-  out.write_byte(0x00)
-  out.write_byte(0x00)
-  out.write_byte(0x00)
-  out.write_byte(0x00)
-  out.write_byte(0x00)
-  out.write_byte(0xFF)
+  out.write_bytes(b"\x1F\x8B\x08\x00\x00\x00\x00\x00\x00\xFF")
   let actual_size = deflate_encode_to_output(bytes, out)
   if actual_size != compressed_size {
     raise UnsupportedFeature(msg="DEFLATE sizing and gzip emission disagreed")
   }
   let crc = crc32(bytes)
-  gzip_push_u32_le(out, crc)
-  gzip_push_u32_le(out, (bytes.length() & 0xFFFFFFFF).reinterpret_as_uint())
+  write_u32_le_bounded(out, crc, None)
+  write_u32_le_bounded(
+    out,
+    (bytes.length() & 0xFFFFFFFF).reinterpret_as_uint(),
+    None,
+  )
   out.finish()
-}
-
-///|
-test "gzip wb: helper read bounds guards" {
-  try read_u16_le(b"\x00", 0) catch {
-    e => inspect(e is OutOfBounds(_), content="true")
-  } noraise {
-    _ => fail("expected read_u16_le to raise")
-  }
-  try read_u32_le(b"\x00\x01", 0) catch {
-    e => inspect(e is OutOfBounds(_), content="true")
-  } noraise {
-    _ => fail("expected read_u32_le to raise")
-  }
 }
