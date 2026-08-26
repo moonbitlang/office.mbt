@@ -742,7 +742,7 @@ test "zip read: unsupported flags hits ensure_flags_supported branch" {
 }
 
 ///|
-test "zip read: u32_to_int overflow hits UnsupportedFeature" {
+test "zip read: UInt::to_int_checked overflow hits UnsupportedFeature" {
   let archive = @zip.Archive::new()
   archive.add("a.txt", b"hello")
   let raw_bytes = @zip.write(archive).to_array()

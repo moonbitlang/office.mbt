@@ -65,7 +65,7 @@ fn Reader::read_u16(self : Reader) -> Int raise ZipError {
 ///|
 fn Reader::read_u32(self : Reader) -> Int raise ZipError {
   let value = self.read_u32_raw()
-  u32_to_int(value)
+  value.to_int_checked()
 }
 
 ///|
@@ -147,24 +147,6 @@ fn copy_zip_bytes_cancellable(
 fn initialized_zip_byte_buffer_to_bytes(
   buffer : UninitializedArray[Byte],
 ) -> Bytes = "%identity"
-
-///|
-fn u32_to_int(value : UInt) -> Int raise ZipError {
-  let max_u32_int : UInt = 0x7FFFFFFF
-  if value > max_u32_int {
-    raise UnsupportedFeature(msg="u32 exceeds Int range")
-  }
-  value.reinterpret_as_int()
-}
-
-///|
-fn u64_to_int(value : UInt64) -> Int raise ZipError {
-  let max_int : UInt64 = 0x7FFFFFFF
-  if value > max_int {
-    raise UnsupportedFeature(msg="u64 exceeds Int range")
-  }
-  value.to_int()
-}
 
 ///|
 fn read_u16_le_at(bytes : BytesView, offset : Int) -> Int raise ZipError {
@@ -424,7 +406,7 @@ fn read_zip64_eocd(
   if locator_disk != 0 || locator_disks != 1 {
     raise UnsupportedFeature(msg="multi-disk zip not supported")
   }
-  let zip64_offset = u64_to_int(zip64_offset_u64)
+  let zip64_offset = zip64_offset_u64.to_int_checked()
   if zip64_offset > locator_offset || 12 > locator_offset - zip64_offset {
     raise OutOfBounds(offset=zip64_offset)
   }
@@ -916,8 +898,8 @@ fn read_impl(
     }
     (
       total_entries.to_uint64(),
-      u32_to_int(central_size_raw).to_uint64(),
-      u32_to_int(central_offset_raw).to_uint64(),
+      central_size_raw.to_int_checked().to_uint64(),
+      central_offset_raw.to_int_checked().to_uint64(),
       eocd_offset,
       None,
     )
@@ -931,9 +913,9 @@ fn read_impl(
       )
     _ => ()
   }
-  let entry_count = u64_to_int(entry_count_raw)
-  let central_size = u64_to_int(central_size_raw64)
-  let central_offset = u64_to_int(central_offset_raw64)
+  let entry_count = entry_count_raw.to_int_checked()
+  let central_size = central_size_raw64.to_int_checked()
+  let central_offset = central_offset_raw64.to_int_checked()
   if central_offset > central_boundary ||
     central_boundary > bytes.length() ||
     central_size != central_boundary - central_offset {
@@ -1024,7 +1006,7 @@ fn read_impl(
               )
             _ => ()
           }
-          u64_to_int(value)
+          value.to_int_checked()
         }
         None => raise UnsupportedFeature(msg="zip64 size missing")
       }
@@ -1048,23 +1030,23 @@ fn read_impl(
           )
         _ => ()
       }
-      u32_to_int(uncomp_size_raw)
+      uncomp_size_raw.to_int_checked()
     }
     let comp_size = if need_comp {
       match zip_comp {
-        Some(value) => u64_to_int(value)
+        Some(value) => value.to_int_checked()
         None => raise UnsupportedFeature(msg="zip64 size missing")
       }
     } else {
-      u32_to_int(comp_size_raw)
+      comp_size_raw.to_int_checked()
     }
     let local_offset = if need_offset {
       match zip_offset {
-        Some(value) => u64_to_int(value)
+        Some(value) => value.to_int_checked()
         None => raise UnsupportedFeature(msg="zip64 offset missing")
       }
     } else {
-      u32_to_int(local_offset_raw)
+      local_offset_raw.to_int_checked()
     }
     let (
       central_zip64_uncompressed_position,
