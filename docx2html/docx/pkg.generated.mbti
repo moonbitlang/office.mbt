@@ -242,8 +242,10 @@ pub struct DocxReplaceReceipt {
   selected : Array[Int]
   replaced : Int
   affected : Array[DocxReplaceAffected]
+  matches : Array[DocxMatch]
 }
 pub fn DocxReplaceReceipt::affected(Self) -> Array[DocxReplaceAffected]
+pub fn DocxReplaceReceipt::matches(Self) -> Array[DocxMatch]
 pub fn DocxReplaceReceipt::replaced(Self) -> Int
 pub fn DocxReplaceReceipt::selected(Self) -> Array[Int]
 

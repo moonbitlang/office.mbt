@@ -83,14 +83,17 @@ fn replace_command() -> @argparse.Command {
 /// silently become break/tab elements, and both are surprises. The
 /// engine itself permits XML-valid tab/LF/CR — this is verb policy, the
 /// same split `set_run_text` uses.
-fn replace_reject_control_text(text : String) -> Unit raise CliFailure {
+fn replace_reject_control_text(
+  text : String,
+  flag : String,
+) -> Unit raise CliFailure {
   for character in text {
     let code = character.to_int()
     if code < 0x20 {
       raise CliFailure(
         @lib.protocol_error(
           "office.invalid_arguments",
-          "--with must not contain control characters (found U+\{code}); v1 makes no breaks or tabs from text",
+          "\{flag} must not contain control characters (found U+\{code}); v1 neither matches nor makes structural breaks and tabs from text — use `office find` to locate atom content",
         ),
       )
     }
@@ -109,6 +112,7 @@ fn replace_report_json(
   allow_zero : Bool,
   dry_run : Bool,
   report : @office_docx.DocxFindReplaceReport,
+  changed : Bool,
   transaction~ : Json,
 ) -> Json {
   Json::object({
@@ -132,6 +136,10 @@ fn replace_report_json(
     },
     "allow_zero": Json::boolean(allow_zero),
     "dry_run": Json::boolean(dry_run),
+    // From the TRANSACTION, which knows whether bytes changed — the
+    // receipt's replaced count cannot say: replacing text with itself
+    // selects a candidate and plans no bytes.
+    "changed": Json::boolean(changed),
     "selected": Json::array(
       report.selected().map(ordinal => Json::number(ordinal.to_double())),
     ),
@@ -139,7 +147,11 @@ fn replace_report_json(
     "affected": Json::array(
       report.affected_paths().map(path => Json::string(path)),
     ),
-    "changed": Json::boolean(report.changed()),
+    // The matches payload the dry-run contract promises: the selected
+    // candidates in find's own entry shape, ranges and runs included —
+    // emitted on every run, since a real run's caller deserves the same
+    // visibility.
+    "matches": Json::array(report.matches().map(docx_find_entry_json)),
     "stories_scanned": Json::array([Json::string("/body")]),
     "transaction": transaction,
   })
@@ -188,7 +200,11 @@ async fn run_replace(matches : @argparse.Matches) -> Unit {
         ),
       )
   }
-  replace_reject_control_text(replacement)
+  // The needle too: a control character in `--text` can match a
+  // STRUCTURAL atom (a tab projects as U+0009), and replacing that atom
+  // is exactly the structural mutation v1 forbids from text.
+  replace_reject_control_text(needle, "--text")
+  replace_reject_control_text(replacement, "--with")
   let within = optional_value(matches, "in")
   let allow_zero = matches.flags.get_or_default("allow-zero", false)
   let dry_run = matches.flags.get_or_default("dry-run", false)
@@ -241,6 +257,7 @@ async fn run_replace(matches : @argparse.Matches) -> Unit {
     allow_zero,
     dry_run,
     result.report(),
+    result.transaction().changed,
     transaction=result.transaction().to_json(),
   )
   match mode {

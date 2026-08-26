@@ -11,6 +11,7 @@ pub struct DocxReplaceReceipt {
   selected : Array[Int]
   replaced : Int
   affected : Array[DocxReplaceAffected]
+  matches : Array[DocxMatch]
 }
 
 ///|
@@ -24,6 +25,16 @@ pub struct DocxReplaceReceipt {
 pub struct DocxReplaceAffected {
   path : String
   expected : String
+}
+
+///|
+/// The selected candidates themselves — the same entries `find` would
+/// report, so a dry-run can print the matches payload the roadmap
+/// promises rather than a summary that hides ranges and runs.
+pub fn DocxReplaceReceipt::matches(
+  self : DocxReplaceReceipt,
+) -> Array[DocxMatch] {
+  self.matches
 }
 
 ///|
@@ -214,7 +225,7 @@ pub fn plan_docx_replacements(
     affected.push({ path, expected })
     cursor = stop
   }
-  (plan, { selected: ordinals, replaced, affected })
+  (plan, { selected: ordinals, replaced, affected, matches: selected })
 }
 
 ///|

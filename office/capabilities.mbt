@@ -982,6 +982,9 @@ pub fn capability_commands() -> Array[CapabilityCommand] {
         capability_field(
           "affected", "array(string)", true, "the affected paragraphs' body-relative paths; each was read back after the splice and its FULL projection compared against the plan-time expectation",
         ),
+        capability_field(
+          "matches", "array(object)", true, "the SELECTED candidates in find's entry shape (ordinal, path, range, text, context, runs, source_kinds, actionable, reason) — the matches payload a dry-run prints, emitted on every run",
+        ),
         capability_field("changed", "boolean", true, "whether any byte changed"),
         capability_field(
           "stories_scanned", "array(string)", true, "the stories searched; /body in v1",

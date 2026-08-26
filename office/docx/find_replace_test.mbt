@@ -54,7 +54,7 @@ async test "replace transaction publishes and the output re-reads" {
     assert_true(failure is None, msg="unexpected failure")
     guard result is Some(outcome) else { fail("expected a result") }
     assert_eq(outcome.report().replaced(), 1)
-    assert_true(outcome.report().changed())
+    assert_true(outcome.transaction().changed)
     guard published is Some(bytes) else { fail("expected a published output") }
     let reread = @word.read_docx_annotated(bytes)
     assert_true(reread.result().document.to_raw_text().contains("Help world"))
@@ -88,7 +88,7 @@ async test "replace refuses zero matches and publishes nothing" {
     )
     assert_true(none is None, msg="allow-zero failed")
     guard ok is Some(outcome) else { fail("expected a result") }
-    assert_false(outcome.report().changed())
+    assert_false(outcome.transaction().changed)
     assert_true(out is Some(_))
   })
 }
@@ -156,5 +156,56 @@ async test "replace with a restricted candidate publishes nothing" {
     assert_true(text.contains("eight"))
     // The field's cached result is untouched.
     assert_true(text.contains("seven"))
+  })
+}
+
+///|
+/// `--expect 0` is a satisfiable assertion: zero matches SUCCEEDS under
+/// it, publishing an unchanged output. The first version checked the
+/// generic zero-refusal first, which made the advertised `--expect 0`
+/// impossible to ever pass.
+async test "replace expect zero holds on zero matches" {
+  with_docx_session_test_dir(directory => {
+    let (ok, failure, out) = replace_probe(
+      directory,
+      "expect-zero",
+      "<w:r><w:t>alpha</w:t></w:r>",
+      "absent",
+      "x",
+      expect=0,
+    )
+    assert_true(failure is None, msg="expect 0 refused on zero matches")
+    guard ok is Some(outcome) else { fail("expected a result") }
+    assert_eq(outcome.report().replaced(), 0)
+    assert_false(outcome.transaction().changed)
+    assert_true(out is Some(_))
+    // And a nonzero count still fails the assertion.
+    let (none, refusal, _) = replace_probe(
+      directory,
+      "expect-zero-miss",
+      "<w:r><w:t>alpha</w:t></w:r>",
+      "alpha",
+      "x",
+      expect=0,
+    )
+    assert_true(none is None)
+    guard refusal is Some(message) else { fail("expected the mismatch") }
+    assert_true(message.contains("office.replace.expect_mismatch"))
+  })
+}
+
+///|
+/// Replacing text with itself selects a candidate and changes no bytes,
+/// and the CHANGED signal must say so: it comes from the transaction,
+/// which watched the bytes, not from the selected count.
+async test "replace identity selects but does not change" {
+  with_docx_session_test_dir(directory => {
+    let (ok, failure, _) = replace_probe(
+      directory, "identity", "<w:r><w:t>alpha</w:t></w:r>", "alpha", "alpha",
+    )
+    assert_true(failure is None, msg="identity replacement refused")
+    guard ok is Some(outcome) else { fail("expected a result") }
+    assert_eq(outcome.report().replaced(), 1)
+    assert_false(outcome.transaction().changed)
   })
 }

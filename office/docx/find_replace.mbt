@@ -11,7 +11,7 @@ pub struct DocxFindReplaceReport {
   selected : Array[Int]
   replaced : Int
   affected_paths : Array[String]
-  changed : Bool
+  matches : Array[@word.DocxMatch]
 }
 
 ///|
@@ -34,8 +34,11 @@ pub fn DocxFindReplaceReport::affected_paths(
 }
 
 ///|
-pub fn DocxFindReplaceReport::changed(self : DocxFindReplaceReport) -> Bool {
-  self.changed
+/// The selected candidates, find-shaped, for the matches payload.
+pub fn DocxFindReplaceReport::matches(
+  self : DocxFindReplaceReport,
+) -> Array[@word.DocxMatch] {
+  self.matches
 }
 
 ///|
@@ -192,11 +195,10 @@ pub async fn transact_docx_find_replace(
         within?,
         nth?,
       )
-      if receipt.replaced() == 0 && !allow_zero {
-        raise @transaction.transaction_failure(
-          "office.replace.no_match", "no candidate matched the needle; pass allow-zero to treat that as success",
-        )
-      }
+      // `expect` is checked FIRST, so `--expect 0` can hold: an
+      // explicit assertion of zero is a satisfiable claim, and letting
+      // the generic zero-refusal fire before it made the advertised
+      // `--expect 0` impossible to ever pass.
       match expect {
         Some(count) =>
           if receipt.replaced() != count {
@@ -205,14 +207,19 @@ pub async fn transact_docx_find_replace(
               "expected \{count} replacement(s) but \{receipt.replaced()} were selected",
             )
           }
-        None => ()
+        None =>
+          if receipt.replaced() == 0 && !allow_zero {
+            raise @transaction.transaction_failure(
+              "office.replace.no_match", "no candidate matched the needle; pass allow-zero to treat that as success, or expect 0 to assert it",
+            )
+          }
       }
       affected.val = receipt.affected()
       collected.val = Some({
         selected: receipt.selected(),
         replaced: receipt.replaced(),
         affected_paths: receipt.affected().map(entry => entry.path()),
-        changed: receipt.replaced() > 0,
+        matches: receipt.matches(),
       })
     },
     validators=[readback],

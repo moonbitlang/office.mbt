@@ -243,10 +243,10 @@ pub struct DocxFindReplaceReport {
   selected : Array[Int]
   replaced : Int
   affected_paths : Array[String]
-  changed : Bool
+  matches : Array[@bobzhang/docx2html/docx.DocxMatch]
 }
 pub fn DocxFindReplaceReport::affected_paths(Self) -> Array[String]
-pub fn DocxFindReplaceReport::changed(Self) -> Bool
+pub fn DocxFindReplaceReport::matches(Self) -> Array[@bobzhang/docx2html/docx.DocxMatch]
 pub fn DocxFindReplaceReport::replaced(Self) -> Int
 pub fn DocxFindReplaceReport::selected(Self) -> Array[Int]
 
