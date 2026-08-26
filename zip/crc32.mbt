@@ -21,12 +21,17 @@ fn crc32_make_table() -> FixedArray[UInt] {
 }
 
 ///|
+/// One CRC-32 table step for a single byte.
+fn crc32_byte(crc : UInt, byte : Byte) -> UInt {
+  crc32_table[((crc ^ byte.to_uint()) & 0xFF).reinterpret_as_int()] ^ (crc >> 8)
+}
+
+///|
 /// Computes the CRC-32 (IEEE, as used by ZIP) of a byte view.
 pub fn crc32(bytes : BytesView) -> UInt {
   let mut crc : UInt = 0xFFFFFFFF
   for b in bytes {
-    crc = crc32_table[((crc ^ b.to_uint()) & 0xFF).reinterpret_as_int()] ^
-      (crc >> 8)
+    crc = crc32_byte(crc, b)
   }
   crc ^ 0xFFFFFFFF
 }
@@ -46,9 +51,7 @@ pub fn crc32_cancellable(
     if (index & 4095) == 0 {
       check_zip_cancelled(cancelled)
     }
-    let byte = bytes[index]
-    crc = crc32_table[((crc ^ byte.to_uint()) & 0xFF).reinterpret_as_int()] ^
-      (crc >> 8)
+    crc = crc32_byte(crc, bytes[index])
     index += 1
   }
   check_zip_cancelled(cancelled)

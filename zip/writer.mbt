@@ -329,7 +329,7 @@ fn add_classic_u16_patch(
   value : Int,
 ) -> Unit raise ZipError {
   if read_u16_le_at(template, offset) != 0xffff {
-    patches.push(PatchU16(offset, if value > 0xffff { 0xffff } else { value }))
+    patches.push(PatchU16(offset, value.min(0xffff)))
   }
 }
 

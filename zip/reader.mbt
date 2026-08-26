@@ -208,7 +208,7 @@ fn find_end_of_central(bytes : BytesView) -> Int? raise ZipError {
     return None
   }
   let max_scan = 22 + 0xFFFF
-  let min_offset = if len > max_scan { len - max_scan } else { 0 }
+  let min_offset = (len - max_scan).max(0)
   for i in (len - 22)>=..min_offset {
     if read_u32_le_at_raw(bytes, i) == end_of_central_sig.reinterpret_as_uint() &&
       read_u16_le_at(bytes, i + 20) == len - i - 22 {
@@ -273,6 +273,26 @@ fn ensure_flags_supported(flags : Int) -> Unit raise ZipError {
 }
 
 ///|
+/// Reads one ZIP extra-field header (`ID, size`) at `pos` and returns the header
+/// plus the offset of the field data. `data_offset` is the field-data offset;
+/// callers advance past the field with `data_offset + data_size`.
+fn next_extra_field(
+  extra : BytesView,
+  pos : Int,
+) -> (Int, Int, Int) raise ZipError {
+  if pos > extra.length() || 4 > extra.length() - pos {
+    raise UnsupportedFeature(msg="truncated zip extra field header")
+  }
+  let header_id = read_u16_le_at(extra, pos)
+  let data_size = read_u16_le_at(extra, pos + 2)
+  let data_offset = pos + 4
+  if data_offset > extra.length() || data_size > extra.length() - data_offset {
+    raise OutOfBounds(offset=data_offset)
+  }
+  (header_id, data_size, data_offset)
+}
+
+///|
 fn parse_zip64_extra(
   extra : BytesView,
   raw_name : BytesView,
@@ -289,17 +309,9 @@ fn parse_zip64_extra(
   let mut comp : UInt64? = None
   let mut offset : UInt64? = None
   while pos < extra.length() {
-    if pos > extra.length() || 4 > extra.length() - pos {
-      raise UnsupportedFeature(msg="truncated zip extra field header")
-    }
-    let header_id = read_u16_le_at(extra, pos)
-    let data_size = read_u16_le_at(extra, pos + 2)
-    pos = pos + 4
-    if pos > extra.length() || data_size > extra.length() - pos {
-      raise OutOfBounds(offset=pos)
-    }
-    let field = extra[pos:pos + data_size]
-    pos = pos + data_size
+    let (header_id, data_size, data_offset) = next_extra_field(extra, pos)
+    let field = extra[data_offset:data_offset + data_size]
+    pos = data_offset + data_size
     if header_id == unicode_path_extra_id {
       if found_unicode_path {
         raise UnsupportedFeature(msg="duplicate unicode path extra field")
@@ -356,15 +368,7 @@ fn zip64_value_positions(
 ) -> (Int?, Int?, Int?) raise ZipError {
   let mut position = 0
   while position < extra.length() {
-    if position > extra.length() || 4 > extra.length() - position {
-      raise UnsupportedFeature(msg="truncated zip extra field header")
-    }
-    let header_id = read_u16_le_at(extra, position)
-    let data_size = read_u16_le_at(extra, position + 2)
-    let data_offset = position + 4
-    if data_offset > extra.length() || data_size > extra.length() - data_offset {
-      raise OutOfBounds(offset=data_offset)
-    }
+    let (header_id, data_size, data_offset) = next_extra_field(extra, position)
     if header_id == 0x0001 {
       let read_uncomp = need_uncomp || descriptor_sizes
       let read_comp = need_comp || descriptor_sizes
@@ -784,15 +788,9 @@ fn materialize_entry_data(
     Deflate => {
       // Allow legitimately large declared entries, but keep a hard ceiling so a
       // lying tiny archive cannot expand without bound (decompression bomb).
-      let max_output = match max_uncompressed_bytes {
-        Some(limit) => limit
-        None =>
-          if meta.uncompressed_size > deflate_max_output_default {
-            meta.uncompressed_size
-          } else {
-            deflate_max_output_default
-          }
-      }
+      let max_output = max_uncompressed_bytes.unwrap_or(
+        meta.uncompressed_size.max(deflate_max_output_default),
+      )
       deflate_decode(record.compressed, max_output~, cancelled~) catch {
         OutputLimitExceeded(limit~) =>
           match max_uncompressed_bytes {
@@ -948,11 +946,7 @@ fn read_impl(
   // during parsing without a huge up-front allocation.
   let max_plausible_entries = central_size / 46
   let metas : Array[EntryMeta] = Array::new(
-    capacity=if entry_count < max_plausible_entries {
-      entry_count
-    } else {
-      max_plausible_entries
-    },
+    capacity=entry_count.min(max_plausible_entries),
   )
   let central_bytes = bytes[central_offset:central_boundary]
   let central_reader = Reader::new(central_bytes, 0)
