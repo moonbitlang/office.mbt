@@ -174,6 +174,9 @@ fn replace_readback_validator(
 /// - zero selected without `allow_zero` refuses; nothing is written.
 /// - `expect` combined with `allow_zero` is rejected by the CLI parser
 ///   as contradictory before this function is reached.
+/// - `preflight` lets the caller refuse the transaction over the REPORT
+///   it is about to receive (the CLI budgets its JSON output here);
+///   raising from it aborts before anything is published.
 pub async fn transact_docx_find_replace(
   options : @transaction.TransactionOptions,
   needle~ : String,
@@ -182,6 +185,7 @@ pub async fn transact_docx_find_replace(
   nth? : Int,
   expect? : Int,
   allow_zero? : Bool = false,
+  preflight? : (DocxFindReplaceReport) -> Unit raise,
 ) -> DocxFindReplaceResult {
   let collected : Ref[DocxFindReplaceReport?] = Ref(None)
   let affected : Ref[Array[@word.DocxReplaceAffected]] = Ref([])
@@ -215,12 +219,21 @@ pub async fn transact_docx_find_replace(
           }
       }
       affected.val = receipt.affected()
-      collected.val = Some({
+      let report : DocxFindReplaceReport = {
         selected: receipt.selected(),
         replaced: receipt.replaced(),
         affected_paths: receipt.affected().map(entry => entry.path()),
         matches: receipt.matches(),
-      })
+      }
+      // The caller's preflight runs INSIDE the transaction, after the
+      // outcome assertions but before validation and publication: a
+      // caller that cannot deliver this outcome (an output contract it
+      // must honor, say) refuses here, and nothing is written.
+      match preflight {
+        Some(check) => check(report)
+        None => ()
+      }
+      collected.val = Some(report)
     },
     validators=[readback],
   )

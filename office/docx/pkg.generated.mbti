@@ -66,7 +66,7 @@ pub async fn transact_docx_annotations(@transaction.TransactionOptions, Annotati
 
 pub async fn transact_docx_edit(@transaction.TransactionOptions, DocxEditScript, allow_unmatched~ : Bool) -> DocxEditResult
 
-pub async fn transact_docx_find_replace(@transaction.TransactionOptions, needle~ : String, replacement~ : String, within? : String, nth? : Int, expect? : Int, allow_zero? : Bool) -> DocxFindReplaceResult
+pub async fn transact_docx_find_replace(@transaction.TransactionOptions, needle~ : String, replacement~ : String, within? : String, nth? : Int, expect? : Int, allow_zero? : Bool, preflight? : (DocxFindReplaceReport) -> Unit raise) -> DocxFindReplaceResult
 
 pub async fn transact_docx_template(@transaction.TransactionOptions, Map[String, @template.TemplateValue], allow_missing~ : Bool) -> DocxTemplateResult
 

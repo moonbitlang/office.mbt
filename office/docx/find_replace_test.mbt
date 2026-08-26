@@ -209,3 +209,48 @@ async test "replace identity selects but does not change" {
     assert_false(outcome.transaction().changed)
   })
 }
+
+///|
+/// A raising preflight aborts the transaction BEFORE publication: the
+/// caller sees its own failure, sees the report it refused over, and no
+/// output file exists. This is the hook the CLI budgets its JSON report
+/// through.
+async test "replace preflight refusal publishes nothing" {
+  with_docx_session_test_dir(directory => {
+    let input = edit_fixture(
+      directory, "preflight-in.docx", "<w:r><w:t>alpha</w:t></w:r>",
+    )
+    let output = directory + "/preflight-out.docx"
+    let seen : Ref[Int?] = Ref(None)
+    let mut failure : String? = None
+    ignore(
+      @docx.transact_docx_find_replace(
+        @transaction.transaction_options(input, output_path=output),
+        needle="alpha",
+        replacement="beta",
+        preflight=report => {
+          seen.val = Some(report.replaced())
+          raise @transaction.transaction_failure(
+            "office.replace.report_too_large", "refused by the trial preflight",
+          )
+        },
+      ),
+    ) catch {
+      error => failure = Some("\{error}")
+    }
+    assert_eq(seen.val, Some(1))
+    guard failure is Some(message) else { fail("expected the refusal") }
+    assert_true(
+      message.contains("office.replace.report_too_large"),
+      msg="got '" + message + "'",
+    )
+    let mut published = false
+    try {
+      ignore(@afs.read_file(output))
+      published = true
+    } catch {
+      _ => ()
+    }
+    assert_false(published, msg="a refused preflight must write nothing")
+  })
+}

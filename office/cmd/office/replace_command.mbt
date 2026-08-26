@@ -172,6 +172,30 @@ fn replace_report_json(
 }
 
 ///|
+/// Slack reserved for the fields the preflight cannot know yet: the
+/// transaction report (fixed shape — validator names, sizes, and the
+/// touched part paths; a body replace changes one part) serialized where
+/// the preflight measured `null`. 64 KiB dominates it by orders of
+/// magnitude.
+let replace_report_transaction_slack : Int = 64 * 1024
+
+///|
+/// Refuse a replace whose JSON report would exceed the output ceiling.
+/// Raised as a transaction failure because it runs INSIDE the
+/// transaction, before publication — nothing is written on refusal.
+fn ensure_replace_report_budget(
+  record : Json,
+  maximum : Int,
+) -> Unit raise @transaction.TransactionError {
+  ignore(bounded_docx_payload(record, [], maximum)) catch {
+    _ =>
+      raise @transaction.transaction_failure(
+        "office.replace.report_too_large", "the JSON report for this replace would exceed the output ceiling, so nothing was written; re-run without --json for the human summary, or narrow the scope with --in or --nth",
+      )
+  }
+}
+
+///|
 async fn run_replace(matches : @argparse.Matches) -> Unit {
   let file = required_value(matches, "file")
   let output = required_value(matches, "out")
@@ -249,6 +273,35 @@ async fn run_replace(matches : @argparse.Matches) -> Unit {
   ) catch {
     error => raise transaction_failure(error)
   }
+  // In JSON modes the report IS the deliverable, so its budget is part
+  // of the transaction: the preflight builds the record as it will be
+  // emitted (transaction fields still unknown — measured as null and
+  // paid for by the slack) and refuses BEFORE publication if it cannot
+  // fit. Human mode prints no report and takes no preflight.
+  let preflight : ((@office_docx.DocxFindReplaceReport) -> Unit raise)? = match
+    mode {
+    Human => None
+    JsonDocument | JsonLines =>
+      Some((report : @office_docx.DocxFindReplaceReport) => {
+        ensure_replace_report_budget(
+          replace_report_json(
+            file,
+            output,
+            needle,
+            replacement,
+            within,
+            nth,
+            expect,
+            allow_zero,
+            dry_run,
+            report,
+            true,
+            transaction=Json::null(),
+          ),
+          docx_cli_default_max_output_chars - replace_report_transaction_slack,
+        )
+      })
+  }
   let result = @office_docx.transact_docx_find_replace(
     options,
     needle~,
@@ -257,6 +310,7 @@ async fn run_replace(matches : @argparse.Matches) -> Unit {
     nth?,
     expect?,
     allow_zero~,
+    preflight?,
   ) catch {
     error => raise map_replace_failure(error)
   }
@@ -275,12 +329,13 @@ async fn run_replace(matches : @argparse.Matches) -> Unit {
     transaction=result.transaction().to_json(),
   )
   match mode {
-    // Both JSON modes go through the bounded-output preflight, exactly
-    // as the read commands do: the report can carry match text, and a
-    // report that exceeds the output ceiling must refuse loudly rather
-    // than print without bound. On a real run the FILE is already
-    // published at this point — the refusal names the output, not the
-    // edit, and the message says the edit itself succeeded.
+    // Both JSON modes emit through the bounded pipeline the read
+    // commands share. The in-transaction preflight already guaranteed
+    // the record fits (it measured this exact record with the
+    // transaction fields as null, against the ceiling minus the slack
+    // those fields are bounded by), so a failure here is an accounting
+    // bug, not a user outcome — the message says so, and names the
+    // already-published output.
     JsonDocument | JsonLines => {
       let payload = bounded_docx_payload(
         record,
@@ -290,7 +345,8 @@ async fn run_replace(matches : @argparse.Matches) -> Unit {
         _ =>
           raise CliFailure(
             @lib.protocol_error(
-              "office.replace.report_too_large", "the replace succeeded but its report exceeds the output ceiling; re-run with --json omitted or a narrower scope",
+              "office.replace.report_internal",
+              "internal: the replace report exceeded the output ceiling despite the preflight; the edit itself completed and \{output} is valid",
             ),
           )
       }

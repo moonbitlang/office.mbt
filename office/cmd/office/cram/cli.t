@@ -316,8 +316,9 @@ structural mutation v1 forbids from text.
   office: --text must not contain control characters (found U+9); v1 neither matches nor makes structural breaks and tabs from text — use `office find` to locate atom content
   [1]
 
-The payload carries the selected candidates in find's own entry shape, so
-a dry-run prints the full matches payload rather than a summary; and
+The payload carries the selected candidates in find's own entry shape
+(bounded at 100 entries, `matches_truncated` marking the rest), so a
+dry-run prints the matches payload rather than a summary; and
 `changed` comes from the TRANSACTION, so replacing text with itself
 selects a candidate while changing nothing.
 
