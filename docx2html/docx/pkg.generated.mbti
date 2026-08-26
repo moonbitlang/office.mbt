@@ -34,6 +34,8 @@ pub fn convert_to_html(BytesView, style_map? : Array[String], include_default_st
 
 pub fn convert_to_markdown(BytesView, style_map? : Array[String], include_default_style_map? : Bool, include_embedded_style_map? : Bool, ignore_empty_paragraphs? : Bool, id_prefix? : String, convert_image? : (@document.Image) -> @converter.ImageConversion, transform_document? : (@document.DocumentElement) -> @document.DocumentElement, external_file_access? : Bool, read_external_file? : (String) -> Bytes?) -> @core.ConversionResult raise @core.DocxError
 
+pub fn docx_paragraph_projection(DocxAnnotatedResult, DocxStoryPartSource, path~ : String) -> String?
+
 pub fn embed_style_map(BytesView, String) -> Bytes raise @core.DocxError
 
 pub fn extract_raw_text(BytesView, external_file_access? : Bool, read_external_file? : (String) -> Bytes?) -> @core.ConversionResult raise @core.DocxError
@@ -59,6 +61,8 @@ pub fn plan_comment_reply_archive(DocxAnnotatedResult, @zip.Archive, parent_id~ 
 pub fn plan_comment_resolution(DocxAnnotatedResult, BytesView, comment_id~ : String, done~ : Bool) -> @splice.SplicePlan raise @core.DocxError
 
 pub fn plan_comment_resolution_archive(DocxAnnotatedResult, @zip.Archive, comment_id~ : String, done~ : Bool, xml_budget? : @xml.XmlReadBudget) -> @splice.SplicePlan raise @core.DocxError
+
+pub fn plan_docx_replacements(DocxAnnotatedResult, DocxStoryPartSource, needle~ : String, replacement~ : String, within? : String, nth? : Int) -> (@splice.SplicePlan, DocxReplaceReceipt) raise @core.DocxError
 
 pub fn plan_run_text_replacement(DocxAnnotatedResult, DocxStoryPartSource, at_relative~ : String, expect~ : String, text~ : String) -> (@splice.SplicePlan, RunTextReceipt) raise @core.DocxError
 
@@ -226,6 +230,24 @@ pub fn DocxReadResult::equal(Self, Self) -> Bool
 pub fn DocxReadResult::not_equal(Self, Self) -> Bool
 #deprecated
 pub fn DocxReadResult::to_repr(Self) -> @debug.Repr
+
+pub struct DocxReplaceAffected {
+  path : String
+  expected : String
+}
+pub fn DocxReplaceAffected::expected(Self) -> String
+pub fn DocxReplaceAffected::path(Self) -> String
+
+pub struct DocxReplaceReceipt {
+  selected : Array[Int]
+  replaced : Int
+  affected : Array[DocxReplaceAffected]
+  matches : Array[DocxMatch]
+}
+pub fn DocxReplaceReceipt::affected(Self) -> Array[DocxReplaceAffected]
+pub fn DocxReplaceReceipt::matches(Self) -> Array[DocxMatch]
+pub fn DocxReplaceReceipt::replaced(Self) -> Int
+pub fn DocxReplaceReceipt::selected(Self) -> Array[Int]
 
 pub enum DocxStoryPartAuthority {
   RelationshipBacked

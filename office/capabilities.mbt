@@ -901,6 +901,112 @@ pub fn capability_commands() -> Array[CapabilityCommand] {
       ],
     },
     {
+      name: "replace",
+      summary: "Replace literal text in a DOCX, refusing wherever an edit would not survive",
+      usage: "office replace FILE OUT.docx --text TEXT --with TEXT [--in PATH] [--nth K] [--expect N] [--allow-zero] [--dry-run] [--overwrite] [--json]",
+      formats: ["docx"],
+      aliases: [],
+      inputs: [
+        capability_field(
+          "file", "path", true, "existing .docx package (never modified in place)",
+        ),
+        capability_field(
+          "out", "path", true, "destination .docx; created atomically, nothing written on any refusal",
+        ),
+        capability_field(
+          "text", "string", true, "literal text to replace — never a regular expression or wildcard; matched over the reader PROJECTION, so it spans run boundaries",
+        ),
+        capability_field(
+          "with", "string", true, "replacement text; empty deletes the match. Control characters including tab and newline are rejected — v1 makes no breaks or tabs from text",
+        ),
+        capability_field(
+          "in", "string", false, "restrict to a body-relative subtree by path prefix, e.g. p[3] or tbl[1]",
+        ),
+        capability_field(
+          "nth", "integer", false, "select ONE candidate by the ordinal `office find` reports (1-based, counted over ALL candidates including restricted ones); selecting a restricted candidate refuses naming its reason",
+        ),
+        capability_field(
+          "expect", "integer", false, "assert exactly N replacements are selected; a mismatch refuses with nothing written. Contradicts --allow-zero",
+        ),
+        capability_field(
+          "allow-zero", "boolean", false, "treat zero matches as success instead of refusing",
+        ),
+        capability_field(
+          "dry-run", "boolean", false, "run the identical selection and preflight pipeline, exit as the real run would, write nothing",
+        ),
+        capability_field(
+          "overwrite", "boolean", false, "replace an existing destination",
+        ),
+        capability_field(
+          "json", "boolean", false, "emit one office.output/1 JSON document",
+        ),
+      ],
+      outputs: [
+        capability_field(
+          "schema", "literal(office.docx.replace/1)", true, "replace result schema",
+        ),
+        capability_field("file", "string", true, "the edited source path"),
+        capability_field(
+          "format", "literal(docx)", true, "edited document format",
+        ),
+        capability_field(
+          "output", "string", true, "the publication destination",
+        ),
+        capability_field(
+          "text", "string", true, "the literal that was replaced (bounded)",
+        ),
+        capability_field(
+          "with", "string", true, "the replacement text (bounded)",
+        ),
+        capability_field(
+          "in", "string", false, "the subtree restriction, null when unrestricted",
+        ),
+        capability_field(
+          "nth", "integer", false, "the selected ordinal, null when all candidates were selected",
+        ),
+        capability_field(
+          "expect", "integer", false, "the asserted count, null when not asserted",
+        ),
+        capability_field(
+          "allow_zero", "boolean", true, "whether zero matches was permitted",
+        ),
+        capability_field(
+          "dry_run", "boolean", true, "whether this run validated without publishing",
+        ),
+        capability_field(
+          "selected", "array(integer)", true, "the replaced candidates' ordinals — the same ordinals `office find` reports",
+        ),
+        capability_field(
+          "replaced", "integer", true, "how many occurrences were replaced",
+        ),
+        capability_field(
+          "affected", "array(string)", true, "the affected paragraphs' body-relative paths; each was read back after the splice and its FULL projection compared against the plan-time expectation",
+        ),
+        capability_field(
+          "matches", "array(object)", true, "the SELECTED candidates in find's entry shape (ordinal, path, range, text, context, runs, source_kinds, actionable, reason) — the matches payload a dry-run prints, emitted on every run; at most 100 entries",
+        ),
+        capability_field(
+          "matches_truncated", "boolean", true, "whether the matches array omitted selected candidates beyond the 100-entry bound; selected and replaced still count them all",
+        ),
+        capability_field("changed", "boolean", true, "whether any byte changed"),
+        capability_field(
+          "stories_scanned", "array(string)", true, "the stories searched; /body in v1",
+        ),
+        capability_field(
+          "transaction", "object", true, "office.transaction/2 report; preservation is authoritative, candidates are validated strictly, and the replace readback re-reads every affected paragraph before publication. Nothing is published on any refusal",
+        ),
+      ],
+      output_modes: ["human", "json"],
+      variants: [
+        capability_variant(
+          "docx",
+          "office replace FILE OUT.docx --text TEXT --with TEXT",
+          "office.docx.replace/1",
+          ["format=docx"],
+        ),
+      ],
+    },
+    {
       name: "validate",
       summary: "Validate an XLSX or DOCX package with the shared mutation gate",
       usage: "office validate FILE [--json|--jsonl]",

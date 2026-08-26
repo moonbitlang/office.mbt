@@ -454,6 +454,7 @@ reader_projection_adapter.mbt	w:r	ReaderProjectionBuilder::register_run	value	re
 reader_projection_fields.mbt	p	reader_projection_owning_paragraph	name	field_projection_wbtest:"field projection keeps nested story-wide ancestry and intervals"
 reader_projection_types.mbt	t	reader_atom_span	name	reader_projection_wbtest:"text contributions span their content, atoms their element"
 relationship_mutation.mbt	{http://schemas.openxmlformats.org/package/2006/relationships}Relationships	read_mutation_relationships	name	docx_wbtest:"relationship mutation refuses consumer-dependent MCE branches"
+replace_api.mbt	p	docx_paragraph_projection,plan_docx_replacements	name	replace_api_test:"replace acts on all candidates and batches per paragraph"
 run_surgery.mbt	:	run_surgery_qualified_prefix	fragment	run_surgery_wbtest:"whole-run synthesis is namespace-correct"
 run_surgery.mbt	Fallback	run_surgery_restricted_ancestor	name	run_surgery_wbtest:"whole-run replacement refuses every restricted construct"
 run_surgery.mbt	checkbox	run_surgery_inside_checkbox_control	name	run_surgery_wbtest:"whole-run replacement refuses text the reader replaces"

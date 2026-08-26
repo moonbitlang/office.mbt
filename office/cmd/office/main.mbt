@@ -139,6 +139,7 @@ fn build_command() -> @argparse.Command {
       text_command(),
       query_command(),
       docx_find_command(),
+      replace_command(),
       validate_command(),
       dump_command(),
       replay_command(),
@@ -165,6 +166,7 @@ fn is_implemented_command(name : StringView) -> Bool {
     | "text"
     | "query"
     | "find"
+    | "replace"
     | "validate"
     | "dump"
     | "replay"
@@ -195,6 +197,7 @@ async fn run_cli(args : Array[String]) -> Unit {
         "text" => run_docx_text(values)
         "query" => run_docx_query(values)
         "find" => run_docx_find(values)
+        "replace" => run_replace(values)
         "validate" => run_validate(values)
         "dump" => run_dump(values)
         "replay" => run_replay(values)

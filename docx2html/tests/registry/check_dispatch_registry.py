@@ -67,6 +67,7 @@ FILES = {
     # require an ordinary text carrier, same read pattern as run_surgery.mbt
     'run_surgery_partial.mbt': 'extract',
     'find_api.mbt': 'extract',
+    'replace_api.mbt': 'extract',
     'annotate_plan.mbt': 'extract',
     'annotate_thread.mbt': 'extract',
     'annotation_index.mbt': 'extract',
