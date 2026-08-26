@@ -16,7 +16,7 @@ fn FixedByteOutput::counting(limit? : Int) -> FixedByteOutput raise ZipError {
       raise UnsupportedFeature(msg="ZIP output limit must be non-negative")
     _ => ()
   }
-  { storage: None, position: 0, limit, }
+  { storage: None, position: 0, limit }
 }
 
 ///|

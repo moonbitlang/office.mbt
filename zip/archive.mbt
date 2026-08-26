@@ -99,7 +99,7 @@ struct Archive {
 
 ///|
 pub fn Archive::new() -> Archive {
-  { entries: [], comment: b"", zip64_trailer: None, bounded_source: None, }
+  { entries: [], comment: b"", zip64_trailer: None, bounded_source: None }
 }
 
 ///|
@@ -179,7 +179,7 @@ fn archive_from_source(
   zip64_trailer : Zip64TrailerTemplate?,
   bounded_source : BoundedSource?,
 ) -> Archive {
-  { entries: [], comment, zip64_trailer, bounded_source, }
+  { entries: [], comment, zip64_trailer, bounded_source }
 }
 
 ///|

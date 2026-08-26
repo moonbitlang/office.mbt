@@ -162,7 +162,7 @@ fn planned_entry_metadata(
       size
     }
   }
-  { local_offset, compressed_size, crc32: crc32(entry.data()), }
+  { local_offset, compressed_size, crc32: crc32(entry.data()) }
 }
 
 ///|
