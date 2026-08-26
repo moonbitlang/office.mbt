@@ -175,8 +175,10 @@ fn replace_report_json(
 /// Slack reserved for the fields the preflight cannot know yet: the
 /// transaction report (fixed shape — validator names, sizes, and the
 /// touched part paths; a body replace changes one part) serialized where
-/// the preflight measured `null`. 64 KiB dominates it by orders of
-/// magnitude.
+/// the preflight measured `null`. Worst case under current limits: two
+/// 4096-character paths escape to ~48 KiB, the changed part path to
+/// ~6 KiB, plus the fixed structure — roughly 56 KiB, inside the
+/// reserve with headroom.
 let replace_report_transaction_slack : Int = 64 * 1024
 
 ///|
