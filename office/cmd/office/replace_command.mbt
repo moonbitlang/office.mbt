@@ -150,8 +150,22 @@ fn replace_report_json(
     // The matches payload the dry-run contract promises: the selected
     // candidates in find's own entry shape, ranges and runs included —
     // emitted on every run, since a real run's caller deserves the same
-    // visibility.
-    "matches": Json::array(report.matches().map(docx_find_entry_json)),
+    // visibility. Bounded at 100 entries: the candidate CEILING bounds
+    // count, not bytes, and a long needle at high multiplicity would
+    // otherwise carry megabytes of match text into the report.
+    "matches": {
+      let shown = if report.matches().length() > 100 {
+        100
+      } else {
+        report.matches().length()
+      }
+      let entries : Array[Json] = []
+      for index in 0..<shown {
+        entries.push(docx_find_entry_json(report.matches()[index]))
+      }
+      Json::array(entries)
+    },
+    "matches_truncated": Json::boolean(report.matches().length() > 100),
     "stories_scanned": Json::array([Json::string("/body")]),
     "transaction": transaction,
   })
@@ -261,8 +275,27 @@ async fn run_replace(matches : @argparse.Matches) -> Unit {
     transaction=result.transaction().to_json(),
   )
   match mode {
-    JsonDocument => println(@lib.output_success(record).stringify(indent=2))
-    JsonLines => println(@lib.output_success(record).stringify())
+    // Both JSON modes go through the bounded-output preflight, exactly
+    // as the read commands do: the report can carry match text, and a
+    // report that exceeds the output ceiling must refuse loudly rather
+    // than print without bound. On a real run the FILE is already
+    // published at this point — the refusal names the output, not the
+    // edit, and the message says the edit itself succeeded.
+    JsonDocument | JsonLines => {
+      let payload = bounded_docx_payload(
+        record,
+        [],
+        docx_cli_default_max_output_chars,
+      ) catch {
+        _ =>
+          raise CliFailure(
+            @lib.protocol_error(
+              "office.replace.report_too_large", "the replace succeeded but its report exceeds the output ceiling; re-run with --json omitted or a narrower scope",
+            ),
+          )
+      }
+      println(checked_office_json_output(payload))
+    }
     Human => {
       let verb = if dry_run { "would replace" } else { "replaced" }
       println(
