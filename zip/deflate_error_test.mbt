@@ -63,7 +63,7 @@ test "gunzip invalid deflate: invalid stored block length" {
 ///|
 test "gunzip invalid deflate: empty dynamic huffman table" {
   // Dynamic Huffman block with all code-length code lengths set to 0
-  // -> hits `empty huffman table`.
+  // -> hits the empty-table rejection in the flate decoder.
   let payload = [
     (0x05).to_byte(),
     (0x00).to_byte(),
@@ -72,9 +72,10 @@ test "gunzip invalid deflate: empty dynamic huffman table" {
   ]
   let gz = gzip_bytes_with_deflate_payload(payload)
   try @zip.gunzip(gz) catch {
-    UnsupportedFeature(msg~) => inspect(msg, content="empty huffman table")
-    _ => fail("expected UnsupportedFeature(empty huffman table)")
+    UnsupportedFeature(msg~) =>
+      inspect(msg, content="corrupt: bad Huffman code")
+    _ => fail("expected UnsupportedFeature(corrupt: bad Huffman code)")
   } noraise {
-    _ => fail("expected UnsupportedFeature(empty huffman table)")
+    _ => fail("expected UnsupportedFeature(corrupt: bad Huffman code)")
   }
 }

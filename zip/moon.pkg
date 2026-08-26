@@ -1,4 +1,5 @@
 import {
+  "moonbit-community/flate",
   "moonbitlang/core/debug",
   "moonbitlang/core/encoding/utf8" @encoding/utf8,
 }

@@ -42,7 +42,7 @@ priv struct Reader {
 
 ///|
 fn Reader::new(bytes : BytesView, pos : Int) -> Reader {
-  { bytes, pos }
+  { bytes, pos, }
 }
 
 ///|
@@ -506,7 +506,7 @@ priv struct PreservedSourceBudget {
 
 ///|
 fn PreservedSourceBudget::new(limit : Int?) -> PreservedSourceBudget {
-  { limit, used: 0 }
+  { limit, used: 0, }
 }
 
 ///|

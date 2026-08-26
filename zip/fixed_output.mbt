@@ -16,7 +16,7 @@ fn FixedByteOutput::counting(limit? : Int) -> FixedByteOutput raise ZipError {
       raise UnsupportedFeature(msg="ZIP output limit must be non-negative")
     _ => ()
   }
-  { storage: None, position: 0, limit }
+  { storage: None, position: 0, limit, }
 }
 
 ///|
@@ -135,29 +135,6 @@ fn FixedByteOutput::write_bytes(
     None => ()
   }
   self.position = self.position + length
-}
-
-///|
-/// Emits an overlapping DEFLATE back-reference. A counting sink needs only the
-/// validated distance and length; an allocated sink copies from bytes already
-/// written to the same exact-size destination.
-fn FixedByteOutput::copy_back_reference(
-  self : FixedByteOutput,
-  distance : Int,
-  length : Int,
-) -> Unit raise ZipError {
-  if distance <= 0 || distance > self.position {
-    raise UnsupportedFeature(msg="invalid back-reference distance")
-  }
-  self.check_growth(length)
-  match self.storage {
-    Some(storage) =>
-      for _ in 0..<length {
-        storage[self.position] = storage[self.position - distance]
-        self.position = self.position + 1
-      }
-    None => self.position = self.position + length
-  }
 }
 
 ///|
