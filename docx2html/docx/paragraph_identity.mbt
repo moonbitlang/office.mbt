@@ -23,9 +23,10 @@ pub struct DocxParagraphAnchor {
   /// report the value; neither duplicate is an addressable anchor).
   /// Absent for `missing`, `invalid`, and `multi_physical`.
   para_id : String?
-  /// For `multi_physical` only: the valid canonical ids of the joined
-  /// physical paragraphs, in document order, bounded — a diagnostic
-  /// inventory, never a singular anchor.
+  /// For `multi_physical` only: the valid canonical ids of the
+  /// PARTICIPATING physical paragraphs, in document order, bounded — a
+  /// diagnostic inventory, never a singular anchor. One element when a
+  /// single physical paragraph is shared by several logical ones.
   physical_para_ids : Array[String]
 }
 

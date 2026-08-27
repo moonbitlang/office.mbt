@@ -148,7 +148,8 @@ pub fn DocxMatch::anchor_status(self : DocxMatch) -> String {
 }
 
 ///|
-/// For `multi_physical` anchors: the joined physical ids, bounded.
+/// For `multi_physical` anchors: the participating physical ids,
+/// bounded — joined from several `w:p`, or sharing one.
 pub fn DocxMatch::physical_para_ids(self : DocxMatch) -> Array[String] {
   self.physical_para_ids
 }
