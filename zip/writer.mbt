@@ -60,22 +60,6 @@ fn write_bytes_bounded(
 }
 
 ///|
-fn to_u32(value : Int) -> UInt raise ZipError {
-  if value < 0 {
-    raise UnsupportedFeature(msg="u32 exceeds Int range")
-  }
-  value.reinterpret_as_uint()
-}
-
-///|
-fn to_u64(value : Int) -> UInt64 raise ZipError {
-  if value < 0 {
-    raise UnsupportedFeature(msg="u64 exceeds Int range")
-  }
-  UInt64::extend_uint(value.reinterpret_as_uint())
-}
-
-///|
 fn build_zip64_extra(
   uncomp~ : Int?,
   comp~ : Int?,
@@ -99,15 +83,15 @@ fn build_zip64_extra(
   write_u16_le_bounded(extra, 0x0001, None)
   write_u16_le_bounded(extra, data_len, None)
   match uncomp {
-    Some(value) => write_u64_le_bounded(extra, to_u64(value), None)
+    Some(value) => write_u64_le_bounded(extra, value.to_uint64_checked(), None)
     None => ()
   }
   match comp {
-    Some(value) => write_u64_le_bounded(extra, to_u64(value), None)
+    Some(value) => write_u64_le_bounded(extra, value.to_uint64_checked(), None)
     None => ()
   }
   match offset {
-    Some(value) => write_u64_le_bounded(extra, to_u64(value), None)
+    Some(value) => write_u64_le_bounded(extra, value.to_uint64_checked(), None)
     None => ()
   }
   extra.finish()
@@ -129,11 +113,11 @@ fn write_data_descriptor_bounded(
   )
   write_u32_le_bounded(buf, crc, max_output)
   if zip64_sizes {
-    write_u64_le_bounded(buf, to_u64(comp_size), max_output)
-    write_u64_le_bounded(buf, to_u64(uncomp_size), max_output)
+    write_u64_le_bounded(buf, comp_size.to_uint64_checked(), max_output)
+    write_u64_le_bounded(buf, uncomp_size.to_uint64_checked(), max_output)
   } else {
-    write_u32_le_bounded(buf, to_u32(comp_size), max_output)
-    write_u32_le_bounded(buf, to_u32(uncomp_size), max_output)
+    write_u32_le_bounded(buf, comp_size.to_uint_checked(), max_output)
+    write_u32_le_bounded(buf, uncomp_size.to_uint_checked(), max_output)
   }
 }
 
@@ -280,7 +264,8 @@ fn add_central_size_patch(
   let raw = read_u32_le_at_raw(template, classic_position)
   let max_u32 : UInt = 0xFFFFFFFF
   match zip64_position {
-    Some(position) => patches.push(PatchU64(position, to_u64(value)))
+    Some(position) =>
+      patches.push(PatchU64(position, value.to_uint64_checked()))
     None if raw == max_u32 =>
       raise UnsupportedFeature(
         msg="ZIP64 size field is missing from replacement template",
@@ -288,7 +273,7 @@ fn add_central_size_patch(
     None => ()
   }
   if raw != max_u32 {
-    patches.push(PatchU32(classic_position, to_u32(value)))
+    patches.push(PatchU32(classic_position, value.to_uint_checked()))
   }
 }
 
@@ -304,7 +289,8 @@ fn add_local_size_patch(
   let raw = read_u32_le_at_raw(template, classic_position)
   let max_u32 : UInt = 0xffffffff
   match zip64_position {
-    Some(position) => patches.push(PatchU64(position, to_u64(value)))
+    Some(position) =>
+      patches.push(PatchU64(position, value.to_uint64_checked()))
     None if raw == max_u32 =>
       raise UnsupportedFeature(
         msg="ZIP64 size field is missing from replacement template",
@@ -318,7 +304,7 @@ fn add_local_size_patch(
   if preserve_zero_placeholder && raw == zero {
     return
   }
-  patches.push(PatchU32(classic_position, to_u32(value)))
+  patches.push(PatchU32(classic_position, value.to_uint_checked()))
 }
 
 ///|
@@ -329,7 +315,7 @@ fn add_classic_u16_patch(
   value : Int,
 ) -> Unit raise ZipError {
   if read_u16_le_at(template, offset) != 0xffff {
-    patches.push(PatchU16(offset, if value > 0xffff { 0xffff } else { value }))
+    patches.push(PatchU16(offset, value.min(0xffff)))
   }
 }
 
@@ -348,7 +334,7 @@ fn add_classic_u32_patch(
         if value < 0 || value.reinterpret_as_uint() > max_u32 {
           max_u32
         } else {
-          to_u32(value)
+          value.to_uint_checked()
         },
       ),
     )
@@ -427,11 +413,11 @@ fn write_replacement_local_record(
     }
     write_u32_le_bounded(out, crc, max_output)
     if template.descriptor_zip64 {
-      write_u64_le_bounded(out, to_u64(payload_len), max_output)
-      write_u64_le_bounded(out, to_u64(data_len), max_output)
+      write_u64_le_bounded(out, payload_len.to_uint64_checked(), max_output)
+      write_u64_le_bounded(out, data_len.to_uint64_checked(), max_output)
     } else {
-      write_u32_le_bounded(out, to_u32(payload_len), max_output)
-      write_u32_le_bounded(out, to_u32(data_len), max_output)
+      write_u32_le_bounded(out, payload_len.to_uint_checked(), max_output)
+      write_u32_le_bounded(out, data_len.to_uint_checked(), max_output)
     }
   }
 }
@@ -491,12 +477,12 @@ fn write_generated_local_record(
     let comp_field = if needs_zip64_sizes {
       max_u32
     } else {
-      to_u32(payload_len)
+      payload_len.to_uint_checked()
     }
     let uncomp_field = if needs_zip64_sizes {
       max_u32
     } else {
-      to_u32(data_len)
+      data_len.to_uint_checked()
     }
     write_u32_le_bounded(out, comp_field, max_output)
     write_u32_le_bounded(out, uncomp_field, max_output)
@@ -527,8 +513,9 @@ fn write_preserved_central_record(
   }
   let patches : Array[RecordPatch] = []
   match template.central_zip64_offset_position {
-    Some(position) => patches.push(PatchU64(position, to_u64(local_offset)))
-    None => patches.push(PatchU32(42, to_u32(local_offset)))
+    Some(position) =>
+      patches.push(PatchU64(position, local_offset.to_uint64_checked()))
+    None => patches.push(PatchU32(42, local_offset.to_uint_checked()))
   }
   write_patched_record(out, template.central_record, patches, max_output)
 }
@@ -563,8 +550,10 @@ fn write_replacement_central_record(
   )
   match template.central_zip64_offset_position {
     Some(position) =>
-      patches.push(PatchU64(position, to_u64(metadata.local_offset)))
-    None => patches.push(PatchU32(42, to_u32(metadata.local_offset)))
+      patches.push(
+        PatchU64(position, metadata.local_offset.to_uint64_checked()),
+      )
+    None => patches.push(PatchU32(42, metadata.local_offset.to_uint_checked()))
   }
   write_patched_record(out, template.central_record, patches, max_output)
 }
@@ -622,12 +611,12 @@ fn write_generated_central_record(
   let central_comp = if needs_zip64_sizes {
     max_u32
   } else {
-    to_u32(payload_len)
+    payload_len.to_uint_checked()
   }
   let central_uncomp = if needs_zip64_sizes {
     max_u32
   } else {
-    to_u32(data_len)
+    data_len.to_uint_checked()
   }
   write_u32_le_bounded(out, central_comp, max_output)
   write_u32_le_bounded(out, central_uncomp, max_output)
@@ -640,7 +629,7 @@ fn write_generated_central_record(
   let offset_field = if needs_zip64_offset {
     max_u32
   } else {
-    to_u32(metadata.local_offset)
+    metadata.local_offset.to_uint_checked()
   }
   write_u32_le_bounded(out, offset_field, max_output)
   write_bytes_bounded(out, name_bytes, max_output)
@@ -694,22 +683,22 @@ fn write_preserved_zip64_trailer(
     )
   }
   let zip64_offset = out.length()
-  let count = to_u64(total_entries)
+  let count = total_entries.to_uint64_checked()
   write_patched_record(
     out,
     template.end_record,
     [
       PatchU64(24, count),
       PatchU64(32, count),
-      PatchU64(40, to_u64(central_size)),
-      PatchU64(48, to_u64(central_offset)),
+      PatchU64(40, central_size.to_uint64_checked()),
+      PatchU64(48, central_offset.to_uint64_checked()),
     ],
     max_output,
   )
   write_patched_record(
     out,
     template.locator,
-    [PatchU64(8, to_u64(zip64_offset))],
+    [PatchU64(8, zip64_offset.to_uint64_checked())],
     max_output,
   )
   let classic_patches : Array[RecordPatch] = []
@@ -755,19 +744,19 @@ fn write_generated_zip64_records(
 ) -> Unit raise ZipError {
   let zip64_offset = out.length()
   write_u32_le_bounded(out, zip64_eocd_sig.reinterpret_as_uint(), max_output)
-  write_u64_le_bounded(out, to_u64(44), max_output)
+  write_u64_le_bounded(out, (44).to_uint64_checked(), max_output)
   write_u16_le_bounded(out, 45, max_output)
   write_u16_le_bounded(out, 45, max_output)
   write_u32_le_bounded(out, 0, max_output)
   write_u32_le_bounded(out, 0, max_output)
-  let entry_count = to_u64(total_entries)
+  let entry_count = total_entries.to_uint64_checked()
   write_u64_le_bounded(out, entry_count, max_output)
   write_u64_le_bounded(out, entry_count, max_output)
-  write_u64_le_bounded(out, to_u64(central_size), max_output)
-  write_u64_le_bounded(out, to_u64(central_offset), max_output)
+  write_u64_le_bounded(out, central_size.to_uint64_checked(), max_output)
+  write_u64_le_bounded(out, central_offset.to_uint64_checked(), max_output)
   write_u32_le_bounded(out, zip64_locator_sig.reinterpret_as_uint(), max_output)
   write_u32_le_bounded(out, 0, max_output)
-  write_u64_le_bounded(out, to_u64(zip64_offset), max_output)
+  write_u64_le_bounded(out, zip64_offset.to_uint64_checked(), max_output)
   write_u32_le_bounded(out, 1, max_output)
 }
 
@@ -797,8 +786,8 @@ fn write_generated_classic_end_record(
   } else {
     write_u16_le_bounded(out, total_entries, max_output)
     write_u16_le_bounded(out, total_entries, max_output)
-    write_u32_le_bounded(out, to_u32(central_size), max_output)
-    write_u32_le_bounded(out, to_u32(central_offset), max_output)
+    write_u32_le_bounded(out, central_size.to_uint_checked(), max_output)
+    write_u32_le_bounded(out, central_offset.to_uint_checked(), max_output)
   }
   if comment.length() > 0xffff {
     raise UnsupportedFeature(msg="archive comment too long")
@@ -1059,8 +1048,8 @@ test "zip write_limited streams generated central-heavy archives" {
   guard find_end_of_central(exact) is Some(eocd_offset) else {
     fail("missing generated central-heavy end record")
   }
-  let central_size = u32_to_int(read_u32_le_at_raw(exact, eocd_offset + 12))
-  let central_offset = u32_to_int(read_u32_le_at_raw(exact, eocd_offset + 16))
+  let central_size = read_u32_le_at_raw(exact, eocd_offset + 12).to_int_checked()
+  let central_offset = read_u32_le_at_raw(exact, eocd_offset + 16).to_int_checked()
   assert_true(central_size > 1024 * 1024)
   assert_eq(write_limited(archive, max_output_bytes=exact.length()), exact)
   let central_prefix_limit = central_offset + central_size / 2
@@ -1148,15 +1137,15 @@ test "zip writer wb: helper guard and zip64 descriptor branches" {
   } noraise {
     _ => fail("expected write_u16_le_bounded to raise")
   }
-  try to_u32(-1) catch {
+  try (-1).to_uint_checked() catch {
     e => inspect(e is UnsupportedFeature(_), content="true")
   } noraise {
-    _ => fail("expected to_u32 to raise")
+    _ => fail("expected Int::to_uint_checked to raise")
   }
-  try to_u64(-1) catch {
+  try (-1).to_uint64_checked() catch {
     e => inspect(e is UnsupportedFeature(_), content="true")
   } noraise {
-    _ => fail("expected to_u64 to raise")
+    _ => fail("expected Int::to_uint64_checked to raise")
   }
 
   let offset_only = build_zip64_extra(uncomp=None, comp=None, offset=Some(7))

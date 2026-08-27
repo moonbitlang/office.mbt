@@ -32,11 +32,11 @@ fn write_data_descriptor(
   write_u32_le(buffer, data_descriptor_sig.reinterpret_as_uint())
   write_u32_le(buffer, crc)
   if zip64_sizes {
-    write_u64_le(buffer, to_u64(compressed_size))
-    write_u64_le(buffer, to_u64(uncompressed_size))
+    write_u64_le(buffer, compressed_size.to_uint64_checked())
+    write_u64_le(buffer, uncompressed_size.to_uint64_checked())
   } else {
-    write_u32_le(buffer, to_u32(compressed_size))
-    write_u32_le(buffer, to_u32(uncompressed_size))
+    write_u32_le(buffer, compressed_size.to_uint_checked())
+    write_u32_le(buffer, uncompressed_size.to_uint_checked())
   }
 }
 
@@ -436,8 +436,8 @@ test "zip write_limited streams preserved central-heavy records" {
   guard find_end_of_central(exact) is Some(eocd_offset) else {
     fail("missing preserved central-heavy end record")
   }
-  let central_size = u32_to_int(read_u32_le_at_raw(exact, eocd_offset + 12))
-  let central_offset = u32_to_int(read_u32_le_at_raw(exact, eocd_offset + 16))
+  let central_size = read_u32_le_at_raw(exact, eocd_offset + 12).to_int_checked()
+  let central_offset = read_u32_le_at_raw(exact, eocd_offset + 16).to_int_checked()
   assert_true(central_size > 1024 * 1024)
   assert_eq(write_limited(archive, max_output_bytes=exact.length()), exact)
   let central_prefix_limit = central_offset + central_size / 2
@@ -641,10 +641,10 @@ fn entry_zip64_classic_eocd_fixture() -> Bytes raise ZipError {
     raise UnsupportedFeature(msg="expected generated ZIP64 end record")
   }
   let locator_offset = eocd_offset - 20
-  let zip64_offset = u64_to_int(read_u64_le_at(generated, locator_offset + 8))
-  let total_entries = u64_to_int(read_u64_le_at(generated, zip64_offset + 32))
-  let central_size = u64_to_int(read_u64_le_at(generated, zip64_offset + 40))
-  let central_offset = u64_to_int(read_u64_le_at(generated, zip64_offset + 48))
+  let zip64_offset = read_u64_le_at(generated, locator_offset + 8).to_int_checked()
+  let total_entries = read_u64_le_at(generated, zip64_offset + 32).to_int_checked()
+  let central_size = read_u64_le_at(generated, zip64_offset + 40).to_int_checked()
+  let central_offset = read_u64_le_at(generated, zip64_offset + 48).to_int_checked()
   let comment = b"entry-zip64-classic-eocd"
   let output : Array[Byte] = []
   write_bytes(output, generated[:zip64_offset])
@@ -653,8 +653,8 @@ fn entry_zip64_classic_eocd_fixture() -> Bytes raise ZipError {
   write_u16_le(output, 0)
   write_u16_le(output, total_entries)
   write_u16_le(output, total_entries)
-  write_u32_le(output, to_u32(central_size))
-  write_u32_le(output, to_u32(central_offset))
+  write_u32_le(output, central_size.to_uint_checked())
+  write_u32_le(output, central_offset.to_uint_checked())
   write_u16_le(output, comment.length())
   write_bytes(output, comment)
   Bytes::from_array(output)
@@ -720,14 +720,18 @@ fn customized_zip64_fixture() -> Bytes raise ZipError {
     raise UnsupportedFeature(msg="expected generated ZIP64 end record")
   }
   let locator_offset = eocd_offset - 20
-  let zip64_offset = u64_to_int(read_u64_le_at(generated, locator_offset + 8))
+  let zip64_offset = read_u64_le_at(generated, locator_offset + 8).to_int_checked()
   let extensible_sector = b"\xde\xad\xbe\xef\x10\x20\x30"
   let comment = b"custom-zip64-comment"
   let output : Array[Byte] = []
   write_bytes(output, generated[:zip64_offset])
 
   let end_record = generated[zip64_offset:locator_offset].to_array()
-  patch_u64_le(end_record, 4, to_u64(44 + extensible_sector.length()))
+  patch_u64_le(
+    end_record,
+    4,
+    (44 + extensible_sector.length()).to_uint64_checked(),
+  )
   // Deliberately retain producer-specific version values.
   patch_u16_le(end_record, 12, 63)
   patch_u16_le(end_record, 14, 46)
@@ -736,11 +740,11 @@ fn customized_zip64_fixture() -> Bytes raise ZipError {
   write_bytes(output, generated[locator_offset:eocd_offset])
 
   let classic = generated[eocd_offset:eocd_offset + 22].to_array()
-  let central_size = u64_to_int(read_u64_le_at(generated, zip64_offset + 40))
+  let central_size = read_u64_le_at(generated, zip64_offset + 40).to_int_checked()
   // Exercise a mixed ZIP32/ZIP64 sentinel policy: one concrete and one
   // sentinel count field, plus one concrete and one sentinel central field.
   patch_u16_le(classic, 8, 1)
-  patch_u32_le(classic, 12, to_u32(central_size))
+  patch_u32_le(classic, 12, central_size.to_uint_checked())
   patch_u16_le(classic, 20, comment.length())
   write_bytes(output, Bytes::from_array(classic))
   write_bytes(output, comment)

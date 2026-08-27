@@ -291,10 +291,10 @@ test "zip reader wb: direct guard error branches" {
   } noraise {
     _ => fail("expected skip to raise")
   }
-  try u64_to_int(0x1_0000_0000) catch {
+  try (0x1_0000_0000 : UInt64).to_int_checked() catch {
     e => inspect(e is UnsupportedFeature(_), content="true")
   } noraise {
-    _ => fail("expected u64_to_int to raise")
+    _ => fail("expected UInt64::to_int_checked to raise")
   }
   try read_u16_le_at(b"\x00", 0) catch {
     e => inspect(e is OutOfBounds(_), content="true")

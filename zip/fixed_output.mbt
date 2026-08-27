@@ -138,29 +138,6 @@ fn FixedByteOutput::write_bytes(
 }
 
 ///|
-/// Emits an overlapping DEFLATE back-reference. A counting sink needs only the
-/// validated distance and length; an allocated sink copies from bytes already
-/// written to the same exact-size destination.
-fn FixedByteOutput::copy_back_reference(
-  self : FixedByteOutput,
-  distance : Int,
-  length : Int,
-) -> Unit raise ZipError {
-  if distance <= 0 || distance > self.position {
-    raise UnsupportedFeature(msg="invalid back-reference distance")
-  }
-  self.check_growth(length)
-  match self.storage {
-    Some(storage) =>
-      for _ in 0..<length {
-        storage[self.position] = storage[self.position - distance]
-        self.position = self.position + 1
-      }
-    None => self.position = self.position + length
-  }
-}
-
-///|
 /// Reinterprets the one exact backing allocation as immutable bytes. Callers
 /// must not retain or mutate the output sink after this ownership handoff.
 fn FixedByteOutput::finish(self : FixedByteOutput) -> Bytes raise ZipError {
