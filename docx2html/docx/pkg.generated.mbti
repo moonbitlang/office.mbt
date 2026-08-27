@@ -34,6 +34,8 @@ pub fn convert_to_html(BytesView, style_map? : Array[String], include_default_st
 
 pub fn convert_to_markdown(BytesView, style_map? : Array[String], include_default_style_map? : Bool, include_embedded_style_map? : Bool, ignore_empty_paragraphs? : Bool, id_prefix? : String, convert_image? : (@document.Image) -> @converter.ImageConversion, transform_document? : (@document.DocumentElement) -> @document.DocumentElement, external_file_access? : Bool, read_external_file? : (String) -> Bytes?) -> @core.ConversionResult raise @core.DocxError
 
+pub fn docx_paragraph_anchor_index(DocxAnnotatedResult, DocxStoryPartSource) -> DocxParagraphAnchorIndex raise @core.DocxError
+
 pub fn docx_paragraph_projection(DocxAnnotatedResult, DocxStoryPartSource, path~ : String) -> String?
 
 pub fn embed_style_map(BytesView, String) -> Bytes raise @core.DocxError
@@ -85,6 +87,8 @@ pub fn read_embedded_style_map(BytesView) -> String? raise @core.DocxError
 pub fn validate_annotation_identity_state(DocxAnnotatedResult) -> Unit raise @core.DocxError
 
 pub fn validate_global_para_id_state_archive_limited(DocxAnnotatedResult, @zip.Archive, @xml.XmlReadBudget) -> Unit raise @core.DocxError
+
+pub fn validated_para_id(String) -> String?
 
 pub fn write_docx(Array[@document.DocumentElement]) -> Bytes raise @core.DocxError
 
@@ -184,13 +188,19 @@ pub struct DocxMatch {
   run_kinds : Array[String]
   actionable : Bool
   reason : String
+  para_id : String?
+  anchor_status : String
+  physical_para_ids : Array[String]
 }
 pub fn DocxMatch::actionable(Self) -> Bool
+pub fn DocxMatch::anchor_status(Self) -> String
 pub fn DocxMatch::context_after(Self) -> String
 pub fn DocxMatch::context_before(Self) -> String
 pub fn DocxMatch::end(Self) -> Int
 pub fn DocxMatch::ordinal(Self) -> Int
+pub fn DocxMatch::para_id(Self) -> String?
 pub fn DocxMatch::path(Self) -> String
+pub fn DocxMatch::physical_para_ids(Self) -> Array[String]
 pub fn DocxMatch::reason(Self) -> String
 pub fn DocxMatch::run_kinds(Self) -> Array[String]
 pub fn DocxMatch::runs(Self) -> Array[String]
@@ -220,6 +230,20 @@ pub fn DocxPackageResult::not_equal(Self, Self) -> Bool
 #deprecated
 pub fn DocxPackageResult::to_repr(Self) -> @debug.Repr
 
+pub struct DocxParagraphAnchor {
+  status : String
+  para_id : String?
+  physical_para_ids : Array[String]
+}
+pub fn DocxParagraphAnchor::para_id(Self) -> String?
+pub fn DocxParagraphAnchor::physical_para_ids(Self) -> Array[String]
+pub fn DocxParagraphAnchor::status(Self) -> String
+
+pub struct DocxParagraphAnchorIndex {
+  by_path : Map[String, DocxParagraphAnchor]
+}
+pub fn DocxParagraphAnchorIndex::anchor_at(Self, String) -> DocxParagraphAnchor?
+
 pub(all) struct DocxReadResult {
   document : @document.DocumentElement
   messages : Array[@core.Message]
@@ -234,8 +258,12 @@ pub fn DocxReadResult::to_repr(Self) -> @debug.Repr
 pub struct DocxReplaceAffected {
   path : String
   expected : String
+  para_id : String?
+  anchor_status : String
 }
+pub fn DocxReplaceAffected::anchor_status(Self) -> String
 pub fn DocxReplaceAffected::expected(Self) -> String
+pub fn DocxReplaceAffected::para_id(Self) -> String?
 pub fn DocxReplaceAffected::path(Self) -> String
 
 pub struct DocxReplaceReceipt {

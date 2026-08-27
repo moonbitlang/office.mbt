@@ -147,6 +147,24 @@ fn replace_report_json(
     "affected": Json::array(
       report.affected_paths().map(path => Json::string(path)),
     ),
+    // The same paragraphs with their anchor judgments: after this
+    // publish, the ordinal path may be the LAST time these paragraphs
+    // are addressable by position, so the receipt hands the caller the
+    // stable identity to re-anchor on.
+    "affected_paragraphs": Json::array(
+      report
+      .affected()
+      .map(entry => {
+        Json::object({
+          "path": Json::string(entry.path()),
+          "para_id": match entry.para_id() {
+            Some(id) => Json::string(id)
+            None => Json::null()
+          },
+          "paragraph_anchor_status": Json::string(entry.anchor_status()),
+        })
+      }),
+    ),
     // The matches payload the dry-run contract promises: the selected
     // candidates in find's own entry shape, ranges and runs included —
     // emitted on every run, since a real run's caller deserves the same

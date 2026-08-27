@@ -21,6 +21,14 @@ fn is_wml_uri(uri : String) -> Bool {
 }
 
 ///|
+/// The w14 (Office 2010 WordprocessingML extensions) namespace that
+/// carries `w14:paraId`. MS-DOCX defines exactly this URI; Strict OOXML
+/// has no alternate spelling for it.
+fn is_w14_uri(uri : String) -> Bool {
+  uri == "http://schemas.microsoft.com/office/word/2010/wordml"
+}
+
+///|
 /// A marker the scanner can locate.
 priv enum ScanMarkerKind {
   CommentStart
@@ -249,6 +257,10 @@ priv struct ScannedElement {
   local_name : String
   same_name_ordinal : Int
   field_char_type : String?
+  // A WML `w:p` element's `w14:paraId` value AS SPELLED in the source
+  // (never normalized here — validity and canonical case are the
+  // identity layer's judgment). None when the attribute is absent.
+  para_id_raw : String?
   parent_index : Int
   mut first_child_index : Int
   mut next_sibling_index : Int
@@ -1506,6 +1518,11 @@ fn scan_story(
           } else {
             None
           },
+          para_id_raw: if is_wml_uri(uri) && local_name == "p" {
+            uri_attribute_value(attributes, "paraId", namespaces, is_w14_uri)
+          } else {
+            None
+          },
           parent_index,
           first_child_index: -1,
           next_sibling_index: -1,
@@ -2494,7 +2511,13 @@ fn annotation_attribute_is_relevant(
   bytes_range_has_ascii_suffix(part, start, end, ":date") ||
   (
     retain_projection_attributes &&
-    bytes_range_has_ascii_suffix(part, start, end, ":fldCharType")
+    (
+      bytes_range_has_ascii_suffix(part, start, end, ":fldCharType") ||
+      // Paragraph identity: `w14:paraId` values are retained AS SPELLED
+      // for the identity layer. The suffix admits any prefix; the
+      // URI-aware lookup at capture time is the namespace judgment.
+      bytes_range_has_ascii_suffix(part, start, end, ":paraId")
+    )
   )
 }
 
@@ -2531,6 +2554,36 @@ fn utf8_slice(
 /// scans historically took the first match; #462 phase C unified them so a
 /// document resolves identical marker/revision identities whether its scan
 /// is rebuilt or adopted from the retained reader projection.
+fn uri_attribute_value(
+  attributes : Array[(String, String)],
+  local_name : String,
+  namespaces : StableStringMap[Array[String]],
+  uri_matches : (String) -> Bool,
+) -> String? {
+  let mut matched : String? = None
+  for pair in attributes {
+    let (name, value) = pair
+    match name.find(":") {
+      Some(colon) => {
+        let prefix = name[0:colon].to_owned()
+        let attr_local = name[colon + 1:].to_owned()
+        if attr_local == local_name {
+          match namespaces.get(prefix) {
+            Some(stack) if stack.length() > 0 &&
+              uri_matches(stack[stack.length() - 1]) => matched = Some(value)
+            _ => ()
+          }
+        }
+      }
+      // Unprefixed attributes are in NO namespace (default xmlns does not
+      // apply to attributes) — they never match a namespaced attribute.
+      None => ()
+    }
+  }
+  matched
+}
+
+///|
 fn attribute_value(
   attributes : Array[(String, String)],
   local_name : String,
