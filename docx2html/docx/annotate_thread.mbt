@@ -504,6 +504,92 @@ fn collect_para_ids(
 }
 
 ///|
+/// The document's per-part `w14:paraId` inventory: every reachable
+/// story part mapped to its raw attribute values in document order. No
+/// judgment is applied — invalid spellings and duplicates are listed as
+/// they stand, because the caller's question is "what did the
+/// operation CHANGE about the identity state", not "is the identity
+/// state clean". The delta judgment lives in
+/// `para_id_state_delta_violation`.
+pub fn para_id_inventory_archive_limited(
+  annotated : DocxAnnotatedResult,
+  archive : @mbtzip.Archive,
+  xml_budget : @xml.XmlReadBudget,
+) -> Map[String, Array[String]] raise DocxError {
+  let zip = open_zip_archive(archive)
+  let comments_part = annotated.comments_part()
+  let parts : Array[String] = [annotated.main_story_part()]
+  let seen_parts : StableStringSet = SortedSet(parts)
+  match comments_part {
+    Some(part) if !seen_parts.contains(part) => {
+      seen_parts.add(part)
+      parts.push(part)
+    }
+    _ => ()
+  }
+  let logical_main = main_story_logical_part(annotated, zip)
+  let (main_dir, main_base) = split_part_path(logical_main)
+  let rels_part = if main_dir == "" {
+    "_rels/\{main_base}.rels"
+  } else {
+    "\{main_dir}/_rels/\{main_base}.rels"
+  }
+  let relationships = read_relationships_strict_limited(
+    zip, rels_part, xml_budget,
+  )
+  for
+    reachable in resolve_reachable_annotation_story_parts(
+      zip, relationships, main_dir,
+    ) {
+    if !seen_parts.contains(reachable.path) {
+      seen_parts.add(reachable.path)
+      parts.push(reachable.path)
+    }
+  }
+  let inventory : Map[String, Array[String]] = Map([])
+  for part in parts {
+    guard zip.read_bytes(part) is Some(bytes) else {
+      raise MissingPart(
+        message="a paraId-bearing story relationship targets missing part '\{part}'",
+      )
+    }
+    let root = @xml.read_xml_bytes_strict_limited(
+      bytes,
+      xml_budget,
+      namespace_map=office_namespace_map(),
+    ) catch {
+      ResourceLimit(..) as error => raise error
+      error =>
+        raise InvalidXml(
+          message="could not parse paraId-bearing story part '\{part}': \{repr(error)}",
+        )
+    }
+    let values : Array[String] = []
+    collect_raw_para_id_values(root, values)
+    inventory[part] = values
+  }
+  inventory
+}
+
+///|
+/// Raw `w14:paraId` values in document order.
+fn collect_raw_para_id_values(
+  element : XmlElement,
+  values : Array[String],
+) -> Unit {
+  match element.attributes.get("w14:paraId") {
+    Some(para_id) => values.push(para_id)
+    None => ()
+  }
+  for child in element.children {
+    match child {
+      XmlElement(inner) => collect_raw_para_id_values(inner, values)
+      _ => ()
+    }
+  }
+}
+
+///|
 /// Validates every reachable story's `w14:paraId` values under one cumulative
 /// XML budget. This is the candidate-side gate for generic splice plans; the
 /// reply/resolution planners use the same traversal before allocating IDs.

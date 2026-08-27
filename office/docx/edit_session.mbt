@@ -660,7 +660,16 @@ fn package_identifier() -> @transaction.TransactionIdentifier raise @transaction
 /// Builds the strict archive-backed DOCX validator used by edit transactions.
 /// It consumes the already inflated candidate archive and emits at most 64
 /// bounded findings under one stable validator identity.
-pub fn package_validator() -> @transaction.TransactionValidator raise @transaction.TransactionError {
+/// The generic candidate gate. `source_para_id_inventory` carries the
+/// SOURCE document's per-part paraId inventory, captured when the
+/// session opened: the paraId judgment is a DELTA policy — existing
+/// duplicate or invalid ids may survive a text edit untouched (Word's
+/// uniqueness rule is part-scoped and real documents are dirty), but an
+/// operation that CHANGES the inventory refuses. Callers with no
+/// inventory (the Ref still None) fall back to the strict global gate.
+pub fn package_validator(
+  source_para_id_inventory? : Ref[Map[String, Array[String]]?] = Ref(None),
+) -> @transaction.TransactionValidator raise @transaction.TransactionError {
   @transaction.transaction_validator("office-docx-package", (
     format,
     _bytes,
@@ -707,6 +716,7 @@ pub fn package_validator() -> @transaction.TransactionValidator raise @transacti
       )
     }
     if findings.is_empty() {
+      let mut para_id_delta_violation : String? = None
       match validation.main_document_part() {
         Some(main_document_part) =>
           try {
@@ -716,11 +726,29 @@ pub fn package_validator() -> @transaction.TransactionValidator raise @transacti
               expected_main_document_path=main_document_part,
             )
             @word.validate_annotation_identity_state(annotated)
-            @word.validate_global_para_id_state_archive_limited(
-              annotated,
-              archive,
-              candidate_xml_budget(),
-            )
+            match source_para_id_inventory.val {
+              Some(source_inventory) => {
+                let candidate_inventory = @word.para_id_inventory_archive_limited(
+                  annotated,
+                  archive,
+                  candidate_xml_budget(),
+                )
+                // Recorded here, PUSHED after the try: building the
+                // finding raises TransactionError, which must not
+                // widen this DocxError-only catch.
+                para_id_delta_violation = @word.para_id_state_delta_violation(
+                  source_inventory, candidate_inventory,
+                )
+              }
+              // No source inventory captured: fail closed to the strict
+              // global gate rather than skipping identity validation.
+              None =>
+                @word.validate_global_para_id_state_archive_limited(
+                  annotated,
+                  archive,
+                  candidate_xml_budget(),
+                )
+            }
           } catch {
             error => {
               let message = docx_error_message(error)
@@ -747,6 +775,16 @@ pub fn package_validator() -> @transaction.TransactionValidator raise @transacti
             ),
           )
       }
+      match para_id_delta_violation {
+        Some(why) =>
+          findings.push(
+            @transaction.validation_finding(
+              "docx.package.para_id_state_changed",
+              docx_validator_message(why),
+            ),
+          )
+        None => ()
+      }
     }
     findings
   })
@@ -763,7 +801,8 @@ pub async fn transact_docx(
   validators? : Array[@transaction.TransactionValidator] = [],
 ) -> @transaction.TransactionReport {
   let validators = validators.copy()
-  validators.insert(0, package_validator())
+  let source_para_id_inventory : Ref[Map[String, Array[String]]?] = Ref(None)
+  validators.insert(0, package_validator(source_para_id_inventory~))
   @transaction.transact(
     options,
     (format, _original, archive, budget) => {
@@ -774,6 +813,17 @@ pub async fn transact_docx(
         )
       }
       let session = open_edit_session(archive, budget)
+      // The SOURCE's identity inventory, captured before any edit is
+      // queued: the candidate gate compares against this, so existing
+      // paraId dirt survives a text edit while any inventory CHANGE
+      // refuses before publication.
+      source_para_id_inventory.val = Some(
+        @word.para_id_inventory_archive_limited(
+          session.annotated,
+          archive,
+          candidate_xml_budget(),
+        ),
+      )
       edit(session)
       session.finish()
     },

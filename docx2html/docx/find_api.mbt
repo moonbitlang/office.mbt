@@ -586,7 +586,10 @@ pub fn find_docx_matches(
           text.length()
         },
       )
-      let anchor = anchors.anchor_at(path)
+      // Joined by PROJECTION INDEX, never by path: two logical
+      // paragraphs can share a head path, and the path-keyed lookup
+      // refuses that ambiguity while the index does not have it.
+      let anchor = anchors.anchor_of_paragraph(paragraph_index)
       matches.push({
         ordinal,
         story: "body",

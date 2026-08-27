@@ -52,6 +52,10 @@ pub fn new_blank_docx_limited(@opc.PackageLimits) -> Bytes raise @core.DocxError
 
 pub fn note_spec(Array[@document.DocumentElement]) -> NoteSpec raise @core.DocxError
 
+pub fn para_id_inventory_archive_limited(DocxAnnotatedResult, @zip.Archive, @xml.XmlReadBudget) -> Map[String, Array[String]] raise @core.DocxError
+
+pub fn para_id_state_delta_violation(Map[String, Array[String]], Map[String, Array[String]]) -> String?
+
 pub fn plan_comment_addition(DocxAnnotatedResult, BytesView, at_relative~ : String, to_relative~ : String, CommentSpec, max_fragment_bytes? : Int) -> (@splice.SplicePlan, String) raise @core.DocxError
 
 pub fn plan_comment_addition_archive(DocxAnnotatedResult, @zip.Archive, at_relative~ : String, to_relative~ : String, CommentSpec, xml_budget? : @xml.XmlReadBudget, max_fragment_bytes? : Int) -> (@splice.SplicePlan, String) raise @core.DocxError
@@ -240,9 +244,11 @@ pub fn DocxParagraphAnchor::physical_para_ids(Self) -> Array[String]
 pub fn DocxParagraphAnchor::status(Self) -> String
 
 pub struct DocxParagraphAnchorIndex {
-  by_path : Map[String, DocxParagraphAnchor]
+  anchors : Array[DocxParagraphAnchor?]
+  by_path : Map[String, DocxParagraphAnchor?]
 }
 pub fn DocxParagraphAnchorIndex::anchor_at(Self, String) -> DocxParagraphAnchor?
+pub fn DocxParagraphAnchorIndex::anchor_of_paragraph(Self, Int) -> DocxParagraphAnchor?
 
 pub(all) struct DocxReadResult {
   document : @document.DocumentElement

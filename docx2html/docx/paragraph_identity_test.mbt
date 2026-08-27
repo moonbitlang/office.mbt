@@ -215,3 +215,100 @@ test "replace affected entries carry anchor provenance" {
     ),
   )
 }
+
+///|
+/// Paths are NOT unique: a tolerated nested paragraph splits its host
+/// into two logical paragraphs sharing one physical head. Neither may
+/// claim a singular anchor (a shared physical voids one-to-one
+/// mapping), and the path-keyed lookup refuses the ambiguous name
+/// instead of answering for either claimant.
+test "identity refuses anchors across a shared physical paragraph" {
+  let annotated = identity_fixture(
+    "<w:p w14:paraId=\"12ABCDEF\"><w:r><w:t>pre</w:t><w:p><w:r><w:t>inner</w:t></w:r></w:p><w:t>post</w:t></w:r></w:p>",
+  )
+  let hits = @docx.find_docx_matches(
+    annotated,
+    annotated.main_story_source(),
+    needle="p",
+  ).matches()
+  // "pre"/"post" live in the split host halves; "inner" in the nested
+  // paragraph. Every one shares physical w:p 1 directly or by joining.
+  assert_true(hits.length() >= 2)
+  for hit in hits {
+    assert_eq(hit.anchor_status(), "multi_physical")
+    assert_true(hit.para_id() is None)
+  }
+  let index = @docx.docx_paragraph_anchor_index(
+    annotated,
+    annotated.main_story_source(),
+  )
+  // The collided path answers for neither claimant.
+  assert_true(index.anchor_at("p[1]") is None)
+}
+
+///|
+/// The mutation delta rules: dirt survives, removals and fresh valid
+/// ids are fine; a NEW invalid spelling or an increased per-part
+/// collision refuses. Identity scope is the part, comparison is
+/// case-insensitive.
+test "para_id delta rules bound what a write may change" {
+  let base : Map[String, Array[String]] = {
+    "word/document.xml": ["11111111", "22222222"],
+  }
+  // Unchanged: fine.
+  assert_true(@docx.para_id_state_delta_violation(base, base) is None)
+  // Removal (consumed content takes its ids): fine.
+  assert_true(
+    @docx.para_id_state_delta_violation(base, {
+      "word/document.xml": ["11111111"],
+    })
+    is None,
+  )
+  // Fresh valid addition (annotation retrofit, creation): fine.
+  assert_true(
+    @docx.para_id_state_delta_violation(base, {
+      "word/document.xml": ["11111111", "22222222", "33333333"],
+    })
+    is None,
+  )
+  // Surviving duplicates: a dirty source stays editable.
+  let dirty : Map[String, Array[String]] = {
+    "word/document.xml": ["11111111", "11111111"],
+  }
+  assert_true(@docx.para_id_state_delta_violation(dirty, dirty) is None)
+  // NEW collision (1 -> 2), including by case: refuse.
+  debug_inspect(
+    @docx.para_id_state_delta_violation(base, {
+      "word/document.xml": ["11111111", "22222222", "1a2b3c4d", "1A2B3C4D"],
+    }),
+    content=(
+      #|Some("the operation makes w14:paraId '1A2B3C4D' collide in 'word/document.xml'")
+    ),
+  )
+  // Deepened collision (2 -> 3): refuse.
+  assert_true(
+    @docx.para_id_state_delta_violation(dirty, {
+      "word/document.xml": ["11111111", "11111111", "11111111"],
+    })
+    is Some(_),
+  )
+  // NEW invalid spelling: refuse; a SURVIVING one is fine.
+  let stained : Map[String, Array[String]] = { "word/document.xml": ["XYZ"] }
+  assert_true(@docx.para_id_state_delta_violation(stained, stained) is None)
+  debug_inspect(
+    @docx.para_id_state_delta_violation(base, {
+      "word/document.xml": ["11111111", "22222222", "XYZ"],
+    }),
+    content=(
+      #|Some("the operation introduces an invalid w14:paraId spelling in 'word/document.xml'")
+    ),
+  )
+  // Cross-part equality is NOT a collision — identity scope is the part.
+  assert_true(
+    @docx.para_id_state_delta_violation(base, {
+      "word/document.xml": ["11111111", "22222222"],
+      "word/comments.xml": ["11111111"],
+    })
+    is None,
+  )
+}

@@ -23,7 +23,7 @@ annotate_thread.mbt	mc:Ignorable	queue_comments_extended_edits	name	annotation_i
 annotate_thread.mbt	paraId	scan_comment_ex_part	name	annotation_index_test:"identity validation structurally checks paraId and commentEx keys"
 annotate_thread.mbt	rIdAnnotate	queue_comments_extended_edits	value	docx_wbtest:"comment addition covers a newly created Relationships part by Override"
 annotate_thread.mbt	w14	ensure_w14_on_root	prefix	annotation_index_test:"comment resolution chooses an unshadowed namespace and preserves prefixed OPC metadata"
-annotate_thread.mbt	w14:paraId	collect_para_id_attributes	name	annotation_index_test:"index: ranges, points, threading, and coverage on a conformance-shaped fixture"
+annotate_thread.mbt	w14:paraId	collect_para_id_attributes,collect_raw_para_id_values	name	annotation_index_test:"index: ranges, points, threading, and coverage on a conformance-shaped fixture"; paragraph_identity_test:"para_id delta rules bound what a write may change"
 annotate_thread.mbt	w15	comment_ex_fragment,queue_comments_extended_edits	prefix	annotation_index_test:"identity validation structurally checks paraId and commentEx keys"
 annotate_thread.mbt	w15:commentEx	comment_ex_fragment,queue_comments_extended_edits	name	annotation_index_test:"index: ranges, points, threading, and coverage on a conformance-shaped fixture"
 annotate_thread.mbt	w15:commentsEx	queue_comments_extended_edits	name	annotation_index_test:"identity validation structurally checks paraId and commentEx keys"
