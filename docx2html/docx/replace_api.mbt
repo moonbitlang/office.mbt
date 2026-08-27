@@ -70,17 +70,22 @@ pub fn DocxReplaceAffected::path(self : DocxReplaceAffected) -> String {
 }
 
 ///|
-/// The full projection text the paragraph must read after the edit.
+/// The paragraph's canonical anchor paraId, when the source carries one
+/// (the anchor judgment copied from its selected matches).
 pub fn DocxReplaceAffected::para_id(self : DocxReplaceAffected) -> String? {
   self.para_id
 }
 
 ///|
+/// The paragraph's anchor status (`unique`, `missing`, `invalid`,
+/// `duplicate`), copied from its selected matches. Never
+/// `multi_physical`: the planner refuses those.
 pub fn DocxReplaceAffected::anchor_status(self : DocxReplaceAffected) -> String {
   self.anchor_status
 }
 
 ///|
+/// The full projection text the paragraph must read after the edit.
 pub fn DocxReplaceAffected::expected(self : DocxReplaceAffected) -> String {
   self.expected
 }

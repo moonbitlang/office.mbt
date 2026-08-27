@@ -31,16 +31,22 @@ pub struct DocxParagraphAnchor {
 }
 
 ///|
+/// The anchor status: `unique`, `missing`, `invalid`, `duplicate`, or
+/// `multi_physical`.
 pub fn DocxParagraphAnchor::status(self : DocxParagraphAnchor) -> String {
   self.status
 }
 
 ///|
+/// The canonical (uppercase) paraId when the spelling is valid and the
+/// anchor is a carrier (`unique` or `duplicate`); `None` otherwise.
 pub fn DocxParagraphAnchor::para_id(self : DocxParagraphAnchor) -> String? {
   self.para_id
 }
 
 ///|
+/// For `multi_physical` anchors only: the valid canonical ids of the
+/// participating physical paragraphs, in document order, bounded.
 pub fn DocxParagraphAnchor::physical_para_ids(
   self : DocxParagraphAnchor,
 ) -> Array[String] {
