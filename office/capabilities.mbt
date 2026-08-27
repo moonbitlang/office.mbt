@@ -875,7 +875,7 @@ pub fn capability_commands() -> Array[CapabilityCommand] {
           "stories_scanned", "array(string)", true, "the stories searched; /body in v1",
         ),
         capability_field(
-          "matches", "array(object)", true, "per candidate: ordinal, story, path, range {start, end, unit=utf16} paragraph-relative over the PROJECTION, text, context_before, context_after, runs (affected run paths), source_kinds (text|tab|no-break-hyphen|soft-hyphen|symbol), actionable, and reason (null when actionable). `actionable` reports whether the RANGE is structurally editable — regions, ancestry, boundaries, carriers — NOT that any given replacement will be accepted; validity of the new text belongs to the write, so a replacement carrying a control character is still refused over an actionable range",
+          "matches", "array(object)", true, "per candidate: ordinal, story, path, range {start, end, unit=utf16} paragraph-relative over the PROJECTION, text, context_before, context_after, runs (affected run paths), source_kinds (text|tab|no-break-hyphen|soft-hyphen|symbol), actionable, reason (null when actionable), para_id (canonical uppercase w14:paraId, null unless the paragraph carries a valid one), paragraph_anchor_status (unique|missing|invalid|duplicate|multi_physical — anchor health is a separate dimension from actionable; multi_physical means NO one-to-one logical/physical mapping, whether revision-joined from several w:p or sharing one w:p with another logical paragraph), and physical_para_ids (non-null only for multi_physical: the participating paragraphs' valid ids, bounded). `actionable` reports whether the RANGE is structurally editable — regions, ancestry, boundaries, carriers — NOT that any given replacement will be accepted; validity of the new text belongs to the write, so a replacement carrying a control character is still refused over an actionable range",
         ),
         capability_field(
           "matches_total", "integer", true, "candidates that EXIST in the searched stories, counted whether or not --limit examined them",
@@ -983,7 +983,10 @@ pub fn capability_commands() -> Array[CapabilityCommand] {
           "affected", "array(string)", true, "the affected paragraphs' body-relative paths; each was read back after the splice and its FULL projection compared against the plan-time expectation",
         ),
         capability_field(
-          "matches", "array(object)", true, "the SELECTED candidates in find's entry shape (ordinal, path, range, text, context, runs, source_kinds, actionable, reason) — the matches payload a dry-run prints, emitted on every run; at most 100 entries",
+          "affected_paragraphs", "array(object)", true, "the same paragraphs with stable identity: path, para_id (canonical w14:paraId or null), and paragraph_anchor_status — the anchors to re-address by once ordinal paths go stale",
+        ),
+        capability_field(
+          "matches", "array(object)", true, "the SELECTED candidates in find's entry shape (ordinal, path, range, text, context, runs, source_kinds, actionable, reason, para_id, paragraph_anchor_status, physical_para_ids) — the matches payload a dry-run prints, emitted on every run; at most 100 entries",
         ),
         capability_field(
           "matches_truncated", "boolean", true, "whether the matches array omitted selected candidates beyond the 100-entry bound; selected and replaced still count them all",

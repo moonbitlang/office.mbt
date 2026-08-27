@@ -7,6 +7,7 @@ import {
   "bobzhang/office-lib/template",
   "bobzhang/office-lib/transaction",
   "moonbitlang/core/debug",
+  "moonbitlang/core/ref",
 }
 
 // Values
@@ -52,7 +53,7 @@ pub async fn create_blank_document(@transaction.CreateTransactionOptions) -> Doc
 
 pub fn docx_edit_operation_names_list() -> Array[String]
 
-pub fn package_validator() -> @transaction.TransactionValidator raise @transaction.TransactionError
+pub fn package_validator(source_para_id_inventory? : @ref.Ref[Map[String, Array[String]]?]) -> @transaction.TransactionValidator raise @transaction.TransactionError
 
 pub fn parse_annotation_batch(String) -> AnnotationBatch raise DocxAnnotationParseError
 
@@ -243,8 +244,10 @@ pub struct DocxFindReplaceReport {
   selected : Array[Int]
   replaced : Int
   affected_paths : Array[String]
+  affected : Array[@bobzhang/docx2html/docx.DocxReplaceAffected]
   matches : Array[@bobzhang/docx2html/docx.DocxMatch]
 }
+pub fn DocxFindReplaceReport::affected(Self) -> Array[@bobzhang/docx2html/docx.DocxReplaceAffected]
 pub fn DocxFindReplaceReport::affected_paths(Self) -> Array[String]
 pub fn DocxFindReplaceReport::matches(Self) -> Array[@bobzhang/docx2html/docx.DocxMatch]
 pub fn DocxFindReplaceReport::replaced(Self) -> Int

@@ -25,6 +25,12 @@ pub struct DocxReplaceReceipt {
 pub struct DocxReplaceAffected {
   path : String
   expected : String
+  // The paragraph's anchor judgment, copied from its selected matches
+  // (same paragraph, same judgment). A planned paragraph is never
+  // `multi_physical` — the planner refuses those — but it can carry a
+  // duplicate or missing anchor and still be ordinal-editable.
+  para_id : String?
+  anchor_status : String
 }
 
 ///|
@@ -65,6 +71,16 @@ pub fn DocxReplaceAffected::path(self : DocxReplaceAffected) -> String {
 
 ///|
 /// The full projection text the paragraph must read after the edit.
+pub fn DocxReplaceAffected::para_id(self : DocxReplaceAffected) -> String? {
+  self.para_id
+}
+
+///|
+pub fn DocxReplaceAffected::anchor_status(self : DocxReplaceAffected) -> String {
+  self.anchor_status
+}
+
+///|
 pub fn DocxReplaceAffected::expected(self : DocxReplaceAffected) -> String {
   self.expected
 }
@@ -222,7 +238,12 @@ pub fn plan_docx_replacements(
         replacement +
         find_slice(expected, hit.end(), expected.length())
     }
-    affected.push({ path, expected })
+    affected.push({
+      path,
+      expected,
+      para_id: selected[cursor].para_id(),
+      anchor_status: selected[cursor].anchor_status(),
+    })
     cursor = stop
   }
   (plan, { selected: ordinals, replaced, affected, matches: selected })

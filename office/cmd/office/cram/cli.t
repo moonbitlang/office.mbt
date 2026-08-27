@@ -17,7 +17,7 @@ and JSONL inventories without deferred PowerPoint or MCP entries.
   $ office.exe help | sed -n '1,8p'
   Office capability registry
     Schema: office.capabilities/2
-    Fingerprint: crc32:4610c2df
+    Fingerprint: crc32:79fb2248
   Formats:
     docx (aliases: word) — WordprocessingML documents
     xlsx (aliases: excel) — SpreadsheetML workbooks
@@ -40,10 +40,10 @@ and JSONL inventories without deferred PowerPoint or MCP entries.
   {"formats":["xlsx"],"variants":[{"name":"xlsx","result_schema":"office.xlsx.query/1","constraints":["format=xlsx"]}]}
 
   $ office.exe help all --json | jq -c '{schema,success,capability_schema:.data.schema,fingerprint:.data.fingerprint,names:[.data.records[].name]}'
-  {"schema":"office.output/1","success":true,"capability_schema":"office.capabilities/2","fingerprint":"crc32:4610c2df","names":["docx","xlsx","help","identify","outline","get","text","query","find","replace","validate","dump","replay","issues","preview","render","create","template","edit","annotate","batch","raw"]}
+  {"schema":"office.output/1","success":true,"capability_schema":"office.capabilities/2","fingerprint":"crc32:79fb2248","names":["docx","xlsx","help","identify","outline","get","text","query","find","replace","validate","dump","replay","issues","preview","render","create","template","edit","annotate","batch","raw"]}
 
   $ office.exe help all --jsonl | jq -s -c 'map({schema,fingerprint,kind,name})'
-  [{"schema":"office.capability/2","fingerprint":"crc32:4610c2df","kind":"format","name":"docx"},{"schema":"office.capability/2","fingerprint":"crc32:4610c2df","kind":"format","name":"xlsx"},{"schema":"office.capability/2","fingerprint":"crc32:4610c2df","kind":"command","name":"help"},{"schema":"office.capability/2","fingerprint":"crc32:4610c2df","kind":"command","name":"identify"},{"schema":"office.capability/2","fingerprint":"crc32:4610c2df","kind":"command","name":"outline"},{"schema":"office.capability/2","fingerprint":"crc32:4610c2df","kind":"command","name":"get"},{"schema":"office.capability/2","fingerprint":"crc32:4610c2df","kind":"command","name":"text"},{"schema":"office.capability/2","fingerprint":"crc32:4610c2df","kind":"command","name":"query"},{"schema":"office.capability/2","fingerprint":"crc32:4610c2df","kind":"command","name":"find"},{"schema":"office.capability/2","fingerprint":"crc32:4610c2df","kind":"command","name":"replace"},{"schema":"office.capability/2","fingerprint":"crc32:4610c2df","kind":"command","name":"validate"},{"schema":"office.capability/2","fingerprint":"crc32:4610c2df","kind":"command","name":"dump"},{"schema":"office.capability/2","fingerprint":"crc32:4610c2df","kind":"command","name":"replay"},{"schema":"office.capability/2","fingerprint":"crc32:4610c2df","kind":"command","name":"issues"},{"schema":"office.capability/2","fingerprint":"crc32:4610c2df","kind":"command","name":"preview"},{"schema":"office.capability/2","fingerprint":"crc32:4610c2df","kind":"command","name":"render"},{"schema":"office.capability/2","fingerprint":"crc32:4610c2df","kind":"command","name":"create"},{"schema":"office.capability/2","fingerprint":"crc32:4610c2df","kind":"command","name":"template"},{"schema":"office.capability/2","fingerprint":"crc32:4610c2df","kind":"command","name":"edit"},{"schema":"office.capability/2","fingerprint":"crc32:4610c2df","kind":"command","name":"annotate"},{"schema":"office.capability/2","fingerprint":"crc32:4610c2df","kind":"command","name":"batch"},{"schema":"office.capability/2","fingerprint":"crc32:4610c2df","kind":"command","name":"raw"}]
+  [{"schema":"office.capability/2","fingerprint":"crc32:79fb2248","kind":"format","name":"docx"},{"schema":"office.capability/2","fingerprint":"crc32:79fb2248","kind":"format","name":"xlsx"},{"schema":"office.capability/2","fingerprint":"crc32:79fb2248","kind":"command","name":"help"},{"schema":"office.capability/2","fingerprint":"crc32:79fb2248","kind":"command","name":"identify"},{"schema":"office.capability/2","fingerprint":"crc32:79fb2248","kind":"command","name":"outline"},{"schema":"office.capability/2","fingerprint":"crc32:79fb2248","kind":"command","name":"get"},{"schema":"office.capability/2","fingerprint":"crc32:79fb2248","kind":"command","name":"text"},{"schema":"office.capability/2","fingerprint":"crc32:79fb2248","kind":"command","name":"query"},{"schema":"office.capability/2","fingerprint":"crc32:79fb2248","kind":"command","name":"find"},{"schema":"office.capability/2","fingerprint":"crc32:79fb2248","kind":"command","name":"replace"},{"schema":"office.capability/2","fingerprint":"crc32:79fb2248","kind":"command","name":"validate"},{"schema":"office.capability/2","fingerprint":"crc32:79fb2248","kind":"command","name":"dump"},{"schema":"office.capability/2","fingerprint":"crc32:79fb2248","kind":"command","name":"replay"},{"schema":"office.capability/2","fingerprint":"crc32:79fb2248","kind":"command","name":"issues"},{"schema":"office.capability/2","fingerprint":"crc32:79fb2248","kind":"command","name":"preview"},{"schema":"office.capability/2","fingerprint":"crc32:79fb2248","kind":"command","name":"render"},{"schema":"office.capability/2","fingerprint":"crc32:79fb2248","kind":"command","name":"create"},{"schema":"office.capability/2","fingerprint":"crc32:79fb2248","kind":"command","name":"template"},{"schema":"office.capability/2","fingerprint":"crc32:79fb2248","kind":"command","name":"edit"},{"schema":"office.capability/2","fingerprint":"crc32:79fb2248","kind":"command","name":"annotate"},{"schema":"office.capability/2","fingerprint":"crc32:79fb2248","kind":"command","name":"batch"},{"schema":"office.capability/2","fingerprint":"crc32:79fb2248","kind":"command","name":"raw"}]
 
 Installed help exposes every consumed JSON input contract without requiring
 repository-only documentation. Inventory and individual records are versioned;
@@ -256,8 +256,8 @@ the XML.
   1. p[1] [8,19) on imported
   $ office.exe find "$TESTDIR/../../../../docx2html/tests/cram/fixtures/single-paragraph.docx" --text "on imported" --json | jq -c '{schema:.data.schema,total:.data.matches_total,actionable:.data.actionable_returned,unactionable:.data.unactionable_returned}'
   {"schema":"office.docx.matches/1","total":1,"actionable":1,"unactionable":0}
-  $ office.exe find "$TESTDIR/../../../../docx2html/tests/cram/fixtures/single-paragraph.docx" --text "on imported" --json | jq -c '.data.matches[0] | {path,range,runs,source_kinds,actionable,reason}'
-  {"path":"p[1]","range":{"start":8,"end":19,"unit":"utf16"},"runs":["p[1]/r[1]"],"source_kinds":["text"],"actionable":true,"reason":null}
+  $ office.exe find "$TESTDIR/../../../../docx2html/tests/cram/fixtures/single-paragraph.docx" --text "on imported" --json | jq -c '.data.matches[0] | {path,range,runs,source_kinds,actionable,reason,para_id,paragraph_anchor_status,physical_para_ids}'
+  {"path":"p[1]","range":{"start":8,"end":19,"unit":"utf16"},"runs":["p[1]/r[1]"],"source_kinds":["text"],"actionable":true,"reason":null,"para_id":null,"paragraph_anchor_status":"missing","physical_para_ids":null}
 
 Finding nothing is a fact about the document, not a failed request: a read
 exits 0 with an empty list. Only a mutation fails closed on no match.
@@ -283,8 +283,8 @@ refusal.
   replace: replaced 1 occurrence(s) across 1 paragraph(s) -> fr-out.docx
   $ office.exe text fr-out.docx
   /docx/body/p[1]	Walking on borrowed air
-  $ office.exe replace "$TESTDIR/../../../../docx2html/tests/cram/fixtures/single-paragraph.docx" fr-json.docx --text "imported" --with "borrowed" --expect 1 --json | jq -c '{schema:.data.schema,replaced:.data.replaced,selected:.data.selected,affected:.data.affected,changed:.data.changed}'
-  {"schema":"office.docx.replace/1","replaced":1,"selected":[1],"affected":["p[1]"],"changed":true}
+  $ office.exe replace "$TESTDIR/../../../../docx2html/tests/cram/fixtures/single-paragraph.docx" fr-json.docx --text "imported" --with "borrowed" --expect 1 --json | jq -c '{schema:.data.schema,replaced:.data.replaced,selected:.data.selected,affected:.data.affected,affected_paragraphs:.data.affected_paragraphs,changed:.data.changed}'
+  {"schema":"office.docx.replace/1","replaced":1,"selected":[1],"affected":["p[1]"],"affected_paragraphs":[{"path":"p[1]","para_id":null,"paragraph_anchor_status":"missing"}],"changed":true}
 
 `--dry-run` runs the identical selection and preflight pipeline, exits as
 the real run would, and writes nothing.

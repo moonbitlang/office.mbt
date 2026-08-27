@@ -28,6 +28,12 @@ pub struct DocxMatch {
   run_kinds : Array[String]
   actionable : Bool
   reason : String
+  // The paragraph's stable-anchor judgment (paraId R1). Anchor health
+  // is a SEPARATE dimension from `actionable`: a match can be editable
+  // at its current ordinal path while carrying a duplicate anchor.
+  para_id : String?
+  anchor_status : String
+  physical_para_ids : Array[String]
 }
 
 ///|
@@ -126,6 +132,26 @@ pub fn DocxMatch::actionable(self : DocxMatch) -> Bool {
 /// `refused-field`, `malformed-field`, `field-instruction`, `internal`.
 pub fn DocxMatch::reason(self : DocxMatch) -> String {
   self.reason
+}
+
+///|
+/// The canonical `w14:paraId`, present for `unique` and `duplicate`
+/// anchor statuses.
+pub fn DocxMatch::para_id(self : DocxMatch) -> String? {
+  self.para_id
+}
+
+///|
+/// `unique`, `missing`, `invalid`, `duplicate`, or `multi_physical`.
+pub fn DocxMatch::anchor_status(self : DocxMatch) -> String {
+  self.anchor_status
+}
+
+///|
+/// For `multi_physical` anchors: the participating physical ids,
+/// bounded — joined from several `w:p`, or sharing one.
+pub fn DocxMatch::physical_para_ids(self : DocxMatch) -> Array[String] {
+  self.physical_para_ids
 }
 
 ///|
@@ -433,6 +459,8 @@ pub fn find_docx_matches(
   // pay O(paragraphs × needle) for nothing.
   let paragraph_paths = find_path_map(projection.scan, "p")
   let run_paths = find_path_map(projection.scan, "r")
+  // Anchor judgments join by the same paths, built once alongside them.
+  let anchors = docx_paragraph_anchor_index(annotated, story)
   let needle_view = needle[:]
   let failure = find_failure_table(needle_view)
   for paragraph_index, paragraph in projection.paragraphs {
@@ -559,6 +587,10 @@ pub fn find_docx_matches(
           text.length()
         },
       )
+      // Joined by PROJECTION INDEX, never by path: two logical
+      // paragraphs can share a head path, and the path-keyed lookup
+      // refuses that ambiguity while the index does not have it.
+      let anchor = anchors.anchor_of_paragraph(paragraph_index)
       matches.push({
         ordinal,
         story: "body",
@@ -572,6 +604,20 @@ pub fn find_docx_matches(
         run_kinds: kinds,
         actionable,
         reason,
+        para_id: match anchor {
+          Some(judgment) => judgment.para_id()
+          None => None
+        },
+        anchor_status: match anchor {
+          Some(judgment) => judgment.status()
+          // Every listed paragraph came through the projection the index
+          // walked, so an absent judgment cannot name an anchor.
+          None => "missing"
+        },
+        physical_para_ids: match anchor {
+          Some(judgment) => judgment.physical_para_ids()
+          None => []
+        },
       })
     }
   }

@@ -11,6 +11,7 @@ pub struct DocxFindReplaceReport {
   selected : Array[Int]
   replaced : Int
   affected_paths : Array[String]
+  affected : Array[@word.DocxReplaceAffected]
   matches : Array[@word.DocxMatch]
 }
 
@@ -31,6 +32,15 @@ pub fn DocxFindReplaceReport::affected_paths(
   self : DocxFindReplaceReport,
 ) -> Array[String] {
   self.affected_paths
+}
+
+///|
+/// The affected paragraphs with their plan-time expectations and
+/// anchor judgments.
+pub fn DocxFindReplaceReport::affected(
+  self : DocxFindReplaceReport,
+) -> Array[@word.DocxReplaceAffected] {
+  self.affected
 }
 
 ///|
@@ -223,6 +233,7 @@ pub async fn transact_docx_find_replace(
         selected: receipt.selected(),
         replaced: receipt.replaced(),
         affected_paths: receipt.affected().map(entry => entry.path()),
+        affected: receipt.affected(),
         matches: receipt.matches(),
       }
       // The caller's preflight runs INSIDE the transaction, after the

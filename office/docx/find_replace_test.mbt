@@ -254,3 +254,33 @@ async test "replace preflight refusal publishes nothing" {
     assert_false(published, msg="a refused preflight must write nothing")
   })
 }
+
+///|
+/// Existing paraId dirt SURVIVES a text edit: Word's uniqueness rule is
+/// part-scoped and real documents carry duplicates, so the candidate
+/// gate compares the identity INVENTORY against the source instead of
+/// refusing dirt outright. The edit publishes; the duplicate ids
+/// survive byte-identical.
+async test "replace preserves and tolerates duplicate paraIds" {
+  with_docx_session_test_dir(directory => {
+    let runs =
+      #|<w:r><w:t>alpha</w:t></w:r></w:p><w:p w14:paraId="1A2B3C4D"><w:r><w:t>alpha</w:t></w:r>
+    let (ok, failure, out) = replace_probe(
+      directory,
+      "dirty",
+      "<w:r><w:t>alpha</w:t></w:r></w:p><w:p w14:paraId=\"1A2B3C4D\"><w:r><w:t>beta</w:t></w:r></w:p><w:p w14:paraId=\"1A2B3C4D\">" +
+      runs,
+      "alpha",
+      "gamma",
+      nth=1,
+    )
+    assert_true(
+      failure is None,
+      msg="dirty-package replace refused: " + failure.unwrap_or(""),
+    )
+    assert_true(ok is Some(_))
+    guard out is Some(bytes) else { fail("expected a published output") }
+    let text = @word.read_docx_annotated(bytes).result().document.to_raw_text()
+    assert_true(text.contains("gamma"))
+  })
+}

@@ -72,6 +72,19 @@ fn docx_find_entry_json(hit : @docx.DocxMatch) -> Json {
     } else {
       Json::string(hit.reason())
     },
+    // Stable-anchor provenance (paraId R1): what the paragraph IS
+    // across structural edits, beside `path` — where it is in this
+    // snapshot. Anchor health never alters `actionable`.
+    "para_id": match hit.para_id() {
+      Some(id) => Json::string(id)
+      None => Json::null()
+    },
+    "paragraph_anchor_status": Json::string(hit.anchor_status()),
+    "physical_para_ids": if hit.anchor_status() == "multi_physical" {
+      Json::array(hit.physical_para_ids().map(id => Json::string(id)))
+    } else {
+      Json::null()
+    },
   })
 }
 
