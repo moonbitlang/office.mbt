@@ -342,8 +342,8 @@ pub enum DocxParagraphJoin {
 /// occurrences in erase order, each mapped to at most one projection
 /// paragraph by source-vector bijection.
 pub struct DocxParagraphAnchorJoinIndex {
-  joins : Array[DocxParagraphJoin]
-  reverse : Map[Int, Int]
+  priv joins : Array[DocxParagraphJoin]
+  priv reverse : Map[Int, Int]
 }
 
 ///|

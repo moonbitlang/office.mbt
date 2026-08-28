@@ -350,8 +350,13 @@ test "anchor join follows source-vector bijection" {
 
 ///|
 /// The nested-paragraph shape: tree partitions (outer holding pre+post,
-/// inner) never coincide with projection partitions (head join, post
-/// half), so every occurrence is unjoined and the reverse map is empty.
+/// inner) never coincide with projection partitions (head join absorbing
+/// the inner, post half), so every occurrence is unjoined and the reverse
+/// map is empty. The refusal reasons are pinned too: the outer tree
+/// paragraph's vector [host] has exactly one projection claimant, but the
+/// host also participates in the joined head — shared-physical-source —
+/// while the inner tree paragraph's vector has no projection counterpart
+/// at all — no-projection-counterpart.
 test "anchor join refuses the nested-paragraph shape" {
   let annotated = identity_fixture(
     "<w:p w14:paraId=\"12ABCDEF\"><w:r><w:t>pre</w:t><w:p><w:r><w:t>inner</w:t></w:r></w:p><w:t>post</w:t></w:r></w:p>",
@@ -361,11 +366,14 @@ test "anchor join refuses the nested-paragraph shape" {
     annotated.main_story_source(),
   )
   assert_eq(join.occurrence_count(), 2)
-  for occurrence in 0..<join.occurrence_count() {
-    guard join.join_of_occurrence(occurrence) is Some(Unjoined(_)) else {
-      fail("expected occurrence \{occurrence} unjoined")
-    }
+  guard join.join_of_occurrence(0) is Some(Unjoined(reason)) else {
+    fail("expected occurrence 0 unjoined")
   }
+  assert_eq(reason, "shared-physical-source")
+  guard join.join_of_occurrence(1) is Some(Unjoined(reason)) else {
+    fail("expected occurrence 1 unjoined")
+  }
+  assert_eq(reason, "no-projection-counterpart")
   assert_true(join.occurrence_of_paragraph(0) is None)
   assert_true(join.occurrence_of_paragraph(1) is None)
 }

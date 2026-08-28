@@ -877,7 +877,7 @@ async fn DocxProjectionBuilder::add_story(
   // count matches the provenance channel's — a disagreement means the
   // two enumerations walked different shapes, and every paragraph must
   // read as unjoined rather than trust a misaligned cursor.
-  self.story_joins = match joins {
+  let story_joins = match joins {
     Some(index) =>
       if count_tree_paragraphs(document) == index.occurrence_count() {
         Some(index)
@@ -886,8 +886,25 @@ async fn DocxProjectionBuilder::add_story(
       }
     None => None
   }
+  self.story_joins = story_joins
   self.story_paragraph_cursor = 0
   self.walk_element_children(root, document)
+  // The walk and the provenance channel both enumerate depth-first from
+  // the SAME reader output, so the cursor must land exactly on the join's
+  // occurrence count — a drift here would silently misattribute anchors.
+  // Ordering within that count is aligned by construction; the count is
+  // the cheap guard that catches an enumeration that walked a different
+  // shape than the pre-walk check measured.
+  match story_joins {
+    Some(index) =>
+      if self.story_paragraph_cursor != index.occurrence_count() {
+        raise docx_cli_failure(
+          "office.docx.anchor_join_drift",
+          "the projection walk enumerated \{self.story_paragraph_cursor} paragraphs but the provenance channel recorded \{index.occurrence_count()} for '\{path}'",
+        )
+      }
+    None => ()
+  }
   self.story_joins = None
 }
 
@@ -1279,18 +1296,17 @@ async fn open_docx_mutation_annotated_archive(
 
 ///|
 /// The TOLERANT annotated read, which recovers from malformed markup and
-/// backs the read-only projection commands.
+/// backs the read-only projection commands. The main-document part comes
+/// pre-validated from the projection entry point, so the fallback never
+/// re-validates the archive it already accepted.
 async fn open_docx_annotated_archive(
   file : String,
   archive : @zip.Archive,
+  main_document_part : String,
   cancelled? : () -> Bool = () => false,
 ) -> @docx.DocxAnnotatedResult {
   check_office_read_cancelled(cancelled)
   @async.pause()
-  check_office_read_cancelled(cancelled)
-  let main_document_part = validate_docx_read_archive(file, archive, cancelled~)
-  @async.pause()
-  check_office_read_cancelled(cancelled)
   let annotated = @docx.read_docx_annotated_archive_tolerant_limited(
     archive,
     docx_cli_xml_budget(cancelled),
@@ -1336,21 +1352,36 @@ async fn open_docx_projection_archive(
 }
 
 ///|
-/// Open the single annotated tree used by the projection. A strict parser
-/// refusal is the only case that falls back to the tolerant read; package
-/// validation, cancellation, and resource limits remain fatal.
+/// Open the single annotated tree used by the projection. The archive is
+/// validated exactly ONCE at this entry; a strict parser refusal is then
+/// the only failure that falls back to the tolerant read. Cancellation,
+/// package-validation, and resource-limit failures stay fatal: budgets
+/// bound work, and the tolerant side-read must not become a way around
+/// them. (The side effect is a deliberate behavior change: a document
+/// the tolerant reader can process within budget but the heavier joined
+/// read cannot now fails where it used to succeed.)
 async fn open_docx_projection_annotated_archive(
   file : String,
   archive : @zip.Archive,
   cancelled? : () -> Bool = () => false,
 ) -> @docx.DocxAnnotatedResult {
-  open_docx_joined_projection_annotated_archive(file, archive, cancelled~) catch {
+  check_office_read_cancelled(cancelled)
+  @async.pause()
+  let main_document_part = validate_docx_read_archive(file, archive, cancelled~)
+  @async.pause()
+  check_office_read_cancelled(cancelled)
+  open_docx_joined_projection_annotated_archive(
+    file,
+    archive,
+    main_document_part,
+    cancelled~,
+  ) catch {
     CliFailure(error) => {
       check_office_read_cancelled(cancelled)
       if error.code != "office.docx.read_failed" {
         raise CliFailure(error)
       }
-      open_docx_annotated_archive(file, archive, cancelled~)
+      open_docx_annotated_archive(file, archive, main_document_part, cancelled~)
     }
     error => raise error
   }
@@ -1362,13 +1393,11 @@ async fn open_docx_projection_annotated_archive(
 async fn open_docx_joined_projection_annotated_archive(
   file : String,
   archive : @zip.Archive,
+  main_document_part : String,
   cancelled? : () -> Bool = () => false,
 ) -> @docx.DocxAnnotatedResult {
   check_office_read_cancelled(cancelled)
   @async.pause()
-  let main_document_part = validate_docx_read_archive(file, archive, cancelled~)
-  @async.pause()
-  check_office_read_cancelled(cancelled)
   let annotated = @docx.read_docx_annotated_archive_joined_projection_limited(
     archive,
     docx_cli_xml_budget(cancelled),

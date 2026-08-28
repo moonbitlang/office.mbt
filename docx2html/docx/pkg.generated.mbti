@@ -255,8 +255,7 @@ pub fn DocxParagraphAnchorIndex::anchor_at(Self, String) -> DocxParagraphAnchor?
 pub fn DocxParagraphAnchorIndex::anchor_of_paragraph(Self, Int) -> DocxParagraphAnchor?
 
 pub struct DocxParagraphAnchorJoinIndex {
-  joins : Array[DocxParagraphJoin]
-  reverse : Map[Int, Int]
+  // private fields
 }
 pub fn DocxParagraphAnchorJoinIndex::join_of_occurrence(Self, Int) -> DocxParagraphJoin?
 pub fn DocxParagraphAnchorJoinIndex::occurrence_count(Self) -> Int
