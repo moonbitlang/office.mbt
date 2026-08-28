@@ -222,8 +222,8 @@ when stitching several conversion fragments together:
 test "combine conversion results" {
   let combined = @docx2html.combine_results([
     @docx2html.success("One"),
-    { value: "Two", messages: [Warning("same")] },
-    { value: "Three", messages: [Warning("same")] },
+    { value: "Two", messages: [Warning("same")], },
+    { value: "Three", messages: [Warning("same")], },
   ])
   inspect(combined.value, content="OneTwoThree")
   debug_inspect(combined.messages, content="[Warning(\"same\")]")

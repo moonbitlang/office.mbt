@@ -88,7 +88,7 @@ test "degenerate tables residualize instead of aborting" {
   let residual : Array[DumpResidual] = []
   let empty = docx_table_params(
     [],
-    { style_id: None, style_name: None },
+    { style_id: None, style_name: None, },
     0,
     wb_ctx(residual),
   )
@@ -113,7 +113,7 @@ test "degenerate tables residualize instead of aborting" {
         is_header=false,
       ),
     ],
-    { style_id: None, style_name: None },
+    { style_id: None, style_name: None, },
     0,
     wb_ctx(mixed),
   )
@@ -232,7 +232,7 @@ test "parser-hostile values residualize and the ops still parse" {
       TableRow(children=[cell(64, 1)], is_header=false),
       TableRow(children=[cell(1, 5)], is_header=false),
     ],
-    { style_id: None, style_name: None },
+    { style_id: None, style_name: None, },
     0,
     wb_ctx(spans),
   )
@@ -277,7 +277,11 @@ test "run-nested images hoist and capture assets" {
   docx_run_specs(
     [
       @document.text("before"),
-      Image({ content_type: "image/png", alt_text: Some("logo"), data: payload }),
+      Image({
+        content_type: "image/png",
+        alt_text: Some("logo"),
+        data: payload,
+      }),
       @document.text("after"),
     ],
     @document.run_properties(is_bold=true),
@@ -301,7 +305,7 @@ test "run-nested images hoist and capture assets" {
   // dedup: the same payload again adds no asset
   let out2 : Array[Json] = []
   docx_run_specs(
-    [Image({ content_type: "image/png", alt_text: None, data: payload })],
+    [Image({ content_type: "image/png", alt_text: None, data: payload, })],
     @document.run_properties(),
     1,
     ctx,
@@ -313,7 +317,7 @@ test "run-nested images hoist and capture assets" {
   // a conflicting content type on the duplicate is disclosed
   let out3 : Array[Json] = []
   docx_run_specs(
-    [Image({ content_type: "image/jpeg", alt_text: None, data: payload })],
+    [Image({ content_type: "image/jpeg", alt_text: None, data: payload, })],
     @document.run_properties(),
     2,
     ctx,
@@ -330,7 +334,7 @@ test "run-nested images hoist and capture assets" {
   // for the parser to infer from)
   let out4 : Array[Json] = []
   docx_run_specs(
-    [Image({ content_type: "", alt_text: None, data: payload })],
+    [Image({ content_type: "", alt_text: None, data: payload, })],
     @document.run_properties(),
     3,
     ctx,
@@ -349,7 +353,7 @@ test "run-nested images hoist and capture assets" {
   let ctx_tiff = wb_ctx(tiff)
   let out5 : Array[Json] = []
   docx_run_specs(
-    [Image({ content_type: "image/tiff", alt_text: None, data: payload })],
+    [Image({ content_type: "image/tiff", alt_text: None, data: payload, })],
     @document.run_properties(),
     0,
     ctx_tiff,
@@ -466,7 +470,7 @@ test "links and images inside note bodies degrade honestly" {
             target_frame=None,
           ),
           @document.run([
-            Image({ content_type: "image/png", alt_text: None, data: b"\x89" }),
+            Image({ content_type: "image/png", alt_text: None, data: b"\x89", }),
           ]),
         ]),
       ],
@@ -523,7 +527,7 @@ test "dedup-first unsupported type cannot poison a later supported use" {
   // first occurrence: TIFF — carried as an asset, disclosed, no op
   let out1 : Array[Json] = []
   docx_run_specs(
-    [Image({ content_type: "image/tiff", alt_text: None, data: payload })],
+    [Image({ content_type: "image/tiff", alt_text: None, data: payload, })],
     @document.run_properties(),
     0,
     ctx,
@@ -538,7 +542,7 @@ test "dedup-first unsupported type cannot poison a later supported use" {
   // residualize instead
   let out2 : Array[Json] = []
   docx_run_specs(
-    [Image({ content_type: "image/png", alt_text: None, data: payload })],
+    [Image({ content_type: "image/png", alt_text: None, data: payload, })],
     @document.run_properties(),
     1,
     ctx,
@@ -610,7 +614,7 @@ test "table grid geometry the writer rejects residualizes" {
   let overflow : Array[DumpResidual] = []
   let wide = docx_table_params(
     [TableRow(children=[cell(32), cell(32)], is_header=false)],
-    { style_id: None, style_name: None },
+    { style_id: None, style_name: None, },
     0,
     wb_ctx(overflow),
   )
@@ -625,7 +629,7 @@ test "table grid geometry the writer rejects residualizes" {
       TableRow(children=[cell(1), cell(1)], is_header=false),
       TableRow(children=[cell(1)], is_header=false),
     ],
-    { style_id: None, style_name: None },
+    { style_id: None, style_name: None, },
     0,
     wb_ctx(uneven),
   )
@@ -640,7 +644,7 @@ test "table grid geometry the writer rejects residualizes" {
       TableRow(children=[cell(1), cell(1)], is_header=false),
       TableRow(children=[cell(2)], is_header=false),
     ],
-    { style_id: None, style_name: None },
+    { style_id: None, style_name: None, },
     0,
     wb_ctx(fine),
   )
@@ -673,7 +677,7 @@ test "vmerge tables gate by placement, not raw widths" {
       TableRow(children=[cell(1, 2), cell(1, 1)], is_header=false),
       TableRow(children=[cell(1, 1)], is_header=false),
     ],
-    { style_id: None, style_name: None },
+    { style_id: None, style_name: None, },
     0,
     wb_ctx(merged),
   )
@@ -692,7 +696,7 @@ test "vmerge tables gate by placement, not raw widths" {
       TableRow(children=[], is_header=false),
       TableRow(children=[cell(1, 1), cell(1, 1)], is_header=false),
     ],
-    { style_id: None, style_name: None },
+    { style_id: None, style_name: None, },
     0,
     wb_ctx(stripped),
   )
@@ -711,7 +715,7 @@ test "vmerge tables gate by placement, not raw widths" {
       TableRow(children=[], is_header=false),
       TableRow(children=[cell(1, 1), cell(1, 1)], is_header=false),
     ],
-    { style_id: None, style_name: None },
+    { style_id: None, style_name: None, },
     0,
     wb_ctx(after_merge),
   )
@@ -734,7 +738,7 @@ test "vmerge tables gate by placement, not raw widths" {
       TableRow(children=[], is_header=false),
       TableRow(children=[cell(1, 1)], is_header=false),
     ],
-    { style_id: None, style_name: None },
+    { style_id: None, style_name: None, },
     0,
     wb_ctx(plain),
   )
@@ -747,7 +751,7 @@ test "vmerge tables gate by placement, not raw widths" {
       TableRow(children=[cell(1, 1), cell(1, 1)], is_header=false),
       TableRow(children=[cell(1, 1)], is_header=false),
     ],
-    { style_id: None, style_name: None },
+    { style_id: None, style_name: None, },
     0,
     wb_ctx(ragged),
   )

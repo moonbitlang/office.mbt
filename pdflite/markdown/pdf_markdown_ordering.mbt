@@ -122,11 +122,11 @@ fn pdf_markdown_lines_of_sorted_chunks(
   let lines : Array[PdfMarkdownTextLine] = []
   for chunk in sorted {
     if lines.length() == 0 {
-      lines.push({ y: chunk.y, chunks: [chunk] })
+      lines.push({ y: chunk.y, chunks: [chunk], })
     } else {
       let last = lines[lines.length() - 1]
       if (chunk.y - last.y).abs() > pdf_markdown_line_y_tolerance {
-        lines.push({ y: chunk.y, chunks: [chunk] })
+        lines.push({ y: chunk.y, chunks: [chunk], })
       } else {
         last.chunks.push(chunk)
       }

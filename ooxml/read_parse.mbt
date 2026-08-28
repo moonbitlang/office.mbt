@@ -398,7 +398,7 @@ fn relationship_mce_expanded_name_key(
     parts[0],
     label,
   )
-  (namespace_uri, { namespace_id, local_name: parts[1].to_owned() })
+  (namespace_uri, { namespace_id, local_name: parts[1].to_owned(), })
 }
 
 ///|
@@ -505,7 +505,7 @@ fn relationship_mce_enter_scope(
       None => ()
     }
   }
-  { delta, must_understand_supported }
+  { delta, must_understand_supported, }
 }
 
 ///|
@@ -736,7 +736,7 @@ fn relationship_mce_state_for_current_element(
         relationship_mce_require_must_understand(scope_entry)
       }
     } else if context.is_effectively_ignorable(namespace_id, namespace_uri) {
-      let key : RelationshipMceName = { namespace_id, local_name }
+      let key : RelationshipMceName = { namespace_id, local_name, }
       if context.processes(key) {
         raise InvalidXml(msg="MCE AlternateContent child is invalid")
       }
@@ -757,7 +757,7 @@ fn relationship_mce_state_for_current_element(
       relationship_mce_require_must_understand(scope_entry)
     }
   } else if context.is_effectively_ignorable(namespace_id, namespace_uri) {
-    let key : RelationshipMceName = { namespace_id, local_name }
+    let key : RelationshipMceName = { namespace_id, local_name, }
     if context.processes(key) {
       if scanner.attribute(xml_namespace_uri, "base") is Some(_) ||
         scanner.attribute(xml_namespace_uri, "lang") is Some(_) ||
@@ -967,7 +967,7 @@ pub fn parse_package_relationships(
       raise InvalidXml(msg="relationship retained text limit exceeded")
     }
     retained_chars = retained_chars + retained
-    relationships.push({ id, rel_type, target, external: external_target })
+    relationships.push({ id, rel_type, target, external: external_target, })
   }
   trim_relationship_mce_states(mce_states, 1, mce_context)
   relationships
@@ -1421,7 +1421,7 @@ pub fn parse_package_content_types(
   if records == 0 {
     raise InvalidXml(msg="content types document has no declarations")
   }
-  { overrides, override_part_names, defaults }
+  { overrides, override_part_names, defaults, }
 }
 
 ///|

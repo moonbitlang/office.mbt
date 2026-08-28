@@ -14,7 +14,7 @@
 ///|
 /// miniz's own answer for `data` at `level`.
 fn miniz_compress(data : Bytes, level : Int) -> Bytes raise {
-  let status = Ref::{ val: 0 }
+  let status = Ref::{ val: 0, }
   let out = pdf_flate_zlib_encode_ffi(data, level, status)
   assert_eq(status.val, 1, msg="miniz refused to compress at level \{level}")
   out

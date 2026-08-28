@@ -567,7 +567,7 @@ fn transaction_mutation_budget(
   } else {
     capped_splice_share.to_int()
   }
-  { max_candidate_package_bytes, max_splice_materialized_bytes }
+  { max_candidate_package_bytes, max_splice_materialized_bytes, }
 }
 
 ///|
@@ -876,7 +876,7 @@ fn validate_candidate(
             details=Json::object({ "identifier": Json::string(identifier.name) }),
           )
       }
-      summaries.push({ name: identifier.name, passed: true, finding_count: 0 })
+      summaries.push({ name: identifier.name, passed: true, finding_count: 0, })
       Some(candidate_format)
     }
     None => None
@@ -953,7 +953,7 @@ fn validate_candidate(
         }),
       )
     }
-    summaries.push({ name: validator.name, passed: true, finding_count: 0 })
+    summaries.push({ name: validator.name, passed: true, finding_count: 0, })
   }
   (summaries, archive)
 }

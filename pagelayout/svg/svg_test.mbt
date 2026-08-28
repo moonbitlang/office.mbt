@@ -88,7 +88,7 @@ test "bold and italic faces emit weight and style attributes" {
 ///|
 test "rects and images transcribe with data uris" {
   let model = @pagelayout.PageModel::new()
-  let page = @pagelayout.Page::{ width_pt: 100, height_pt: 100, items: [] }
+  let page = @pagelayout.Page::{ width_pt: 100, height_pt: 100, items: [], }
   page.items.push(
     Rect({
       x_pt: 10,

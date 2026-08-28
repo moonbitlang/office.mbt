@@ -52,7 +52,7 @@ fn XmlMceContext::new(
   let extensions : Set[XmlMceExtensionName] = Set([])
   for extension in extension_elements {
     let (namespace_uri, local_name) = extension
-    extensions.add({ namespace_uri, local_name })
+    extensions.add({ namespace_uri, local_name, })
   }
   {
     understood_namespaces: understood,
@@ -70,7 +70,7 @@ fn XmlMceContext::is_extension_element(
   namespace_uri : String,
   local_name : String,
 ) -> Bool {
-  self.extension_elements.contains({ namespace_uri, local_name })
+  self.extension_elements.contains({ namespace_uri, local_name, })
 }
 
 ///|
@@ -232,7 +232,7 @@ fn xml_mce_expanded_name(
     parts[0],
     label,
   )
-  (namespace_uri, { namespace_id, local_name: parts[1].to_owned() })
+  (namespace_uri, { namespace_id, local_name: parts[1].to_owned(), })
 }
 
 ///|
@@ -330,7 +330,7 @@ fn xml_mce_enter_scope(
       None => ()
     }
   }
-  { delta, must_understand_supported }
+  { delta, must_understand_supported, }
 }
 
 ///|
@@ -581,7 +581,7 @@ fn xml_mce_state_for_current_element(
         scanner.remove_current_subtree()
       }
     } else if context.is_effectively_ignorable(namespace_id, namespace_uri) {
-      if context.processes({ namespace_id, local_name }) {
+      if context.processes({ namespace_id, local_name, }) {
         raise InvalidXml(msg="MCE AlternateContent child is invalid")
       }
       active = false
@@ -604,7 +604,7 @@ fn xml_mce_state_for_current_element(
     )
     is_alternate_content = true
   } else if context.is_effectively_ignorable(namespace_id, namespace_uri) {
-    let name : XmlMceName = { namespace_id, local_name }
+    let name : XmlMceName = { namespace_id, local_name, }
     if context.processes(name) {
       if scanner.attribute(xml_namespace_uri, "base") is Some(_) ||
         scanner.attribute(xml_namespace_uri, "lang") is Some(_) ||

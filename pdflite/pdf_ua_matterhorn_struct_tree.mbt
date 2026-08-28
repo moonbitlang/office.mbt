@@ -129,7 +129,7 @@ fn PdfDocument::pdf_ua_matterhorn_read_struct_tree_inner(
     }
     Some(_) => raise SoftError("malformed st node")
   }
-  { name, attrs, children }
+  { name, attrs, children, }
 }
 
 ///|
@@ -140,12 +140,12 @@ fn PdfDocument::pdf_ua_matterhorn_read_struct_tree(
   let root_name = rolemap.rewrite_name(pdf_ua_struct_tree_root_key())
   let catalog = self.catalog() catch { _ => raise SoftError("read_st no root") }
   match catalog.lookup_immediate(pdf_ua_struct_tree_root_key()) {
-    None => { name: root_name, attrs: [], children: [] }
+    None => { name: root_name, attrs: [], children: [], }
     Some(struct_tree_root) => {
       let tree = self.pdf_ua_matterhorn_read_struct_tree_inner(
         struct_tree_root, rolemap, 0,
       )
-      { name: root_name, attrs: tree.attrs, children: tree.children }
+      { name: root_name, attrs: tree.attrs, children: tree.children, }
     }
   }
 }

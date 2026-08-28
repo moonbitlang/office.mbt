@@ -48,7 +48,7 @@ pub fn pdf_texttopdf_of_utf8_with_newlines(
   text : BytesView,
 ) -> Array[PdfTypeElement] raise @core.PdfError {
   let output : Array[PdfTypeElement] = []
-  let current_font = Ref::{ val: -1 }
+  let current_font = Ref::{ val: -1, }
   let codepoints = pdf_codepoints_of_utf8(text)
   let mut buffer : Array[Int] = []
   for codepoint in codepoints {

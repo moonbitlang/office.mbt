@@ -15,7 +15,7 @@ pub struct Relationships {
 ///|
 /// No relationships — every lookup misses, so callers fall back.
 pub fn Relationships::empty() -> Relationships {
-  { targets: Map([]), types: Map([]) }
+  { targets: Map([]), types: Map([]), }
 }
 
 ///|

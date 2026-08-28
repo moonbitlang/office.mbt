@@ -51,7 +51,7 @@ fn surgery_native_projection(source : String) -> ReaderProjection raise {
   }
   guard segment_joined_reader_story(
       story,
-      empty_body_reader({ relationships: [] }),
+      empty_body_reader({ relationships: [], }),
     )
     is SegmentedStory(output) else {
     fail("expected the story to segment")

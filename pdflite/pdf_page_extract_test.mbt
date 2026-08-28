@@ -852,7 +852,7 @@ test "PdfDocument remove_unreferenced nullifies deleted page references" {
   let doc = @pdflite.pdf_document_empty()
   let page_root = try! doc.add_pagetree([
     @page.pdf_page_blank(@geometry.paper_a4),
-    { ..@page.pdf_page_blank(@geometry.paper_a4), rotate: Rotate90 },
+    { ..@page.pdf_page_blank(@geometry.paper_a4), rotate: Rotate90, },
   ])
   ignore(try! doc.add_root(page_root, []))
   let old_numbers = try! doc.page_reference_numbers()

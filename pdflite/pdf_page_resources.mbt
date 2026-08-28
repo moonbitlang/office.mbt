@@ -267,7 +267,7 @@ fn PdfDocument::pdf_page_process_form_xobject(
               ).remove_dict_entry(pdf_page_filter_key())
               self.add_object_given_number(
                 object_number,
-                PdfStreamObject({ dictionary, data: processed_stream.data }),
+                PdfStreamObject({ dictionary, data: processed_stream.data, }),
               )
             }
             _ => raise ParseStreamExpected

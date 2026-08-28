@@ -87,7 +87,7 @@ pub fn PdfFont::uses_two_byte_codes(self : PdfFont) -> Bool {
 ///|
 /// Build a text extractor for an already parsed font.
 pub fn PdfFont::text_extractor(self : PdfFont) -> PdfTextExtractor {
-  { font: self }
+  { font: self, }
 }
 
 ///|

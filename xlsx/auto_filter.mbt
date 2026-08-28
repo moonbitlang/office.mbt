@@ -173,26 +173,26 @@ fn auto_filter_column_from_expression(
   let tokens = tokenize_filter_expression(expression)
   let (ops, values) = parse_filter_expression(tokens)
   if ops.length() == 1 && ops[0] == 2 {
-    return { col, filters: Some(values), custom_filters: None }
+    return { col, filters: Some(values), custom_filters: None, }
   }
   if ops.length() == 3 && ops[0] == 2 && ops[1] == 1 && ops[2] == 2 {
-    return { col, filters: Some(values), custom_filters: None }
+    return { col, filters: Some(values), custom_filters: None, }
   }
   let custom_filters : Array[AutoFilterCustomFilter] = []
   if ops.length() == 1 {
     let operator = custom_filter_operator(ops[0])
-    custom_filters.push({ operator, value: values[0] })
+    custom_filters.push({ operator, value: values[0], })
   } else {
     let operator1 = custom_filter_operator(ops[0])
     let operator2 = custom_filter_operator(ops[2])
-    custom_filters.push({ operator: operator1, value: values[0] })
-    custom_filters.push({ operator: operator2, value: values[1] })
+    custom_filters.push({ operator: operator1, value: values[0], })
+    custom_filters.push({ operator: operator2, value: values[1], })
   }
   let and_value = ops.length() == 3 && ops[1] == 0
   {
     col,
     filters: None,
-    custom_filters: Some({ and_filter: and_value, filters: custom_filters }),
+    custom_filters: Some({ and_filter: and_value, filters: custom_filters, }),
   }
 }
 
@@ -229,7 +229,7 @@ fn auto_filter_from_options(
       columns.push(column)
     }
   }
-  { range_ref: normalized, columns }
+  { range_ref: normalized, columns, }
 }
 
 ///|
@@ -250,15 +250,15 @@ fn clone_auto_filter(filter : AutoFilter) -> AutoFilter {
       Some(custom) => {
         let copied_filters : Array[AutoFilterCustomFilter] = []
         for entry in custom.filters {
-          copied_filters.push({ operator: entry.operator, value: entry.value })
+          copied_filters.push({ operator: entry.operator, value: entry.value, })
         }
-        Some({ and_filter: custom.and_filter, filters: copied_filters })
+        Some({ and_filter: custom.and_filter, filters: copied_filters, })
       }
       None => None
     }
-    columns.push({ col: column.col, filters, custom_filters })
+    columns.push({ col: column.col, filters, custom_filters, })
   }
-  { range_ref: filter.range_ref, columns }
+  { range_ref: filter.range_ref, columns, }
 }
 
 ///|

@@ -902,10 +902,10 @@ fn scan_open_tag_attributes(
       raise Unsupported(message="an unterminated open tag; refusing")
     }
     if bytes[at] == b'>' {
-      return { entries, tag_gt: at, self_closing: false }
+      return { entries, tag_gt: at, self_closing: false, }
     }
     if bytes[at] == b'/' && at + 1 < limit && bytes[at + 1] == b'>' {
-      return { entries, tag_gt: at + 1, self_closing: true }
+      return { entries, tag_gt: at + 1, self_closing: true, }
     }
     let name_start = at
     while at < limit &&

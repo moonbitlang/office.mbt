@@ -893,7 +893,7 @@ test "pdf_object_of_json decodes parsed content-stream operation arrays" {
     ],
   }
   let expected_ops : Array[@content.PdfContentOp] = [
-    Op_cm({ a: 1.0, b: 0.0, c: 0.0, d: 1.0, e: 50.0, f: 770.0 }),
+    Op_cm({ a: 1.0, b: 0.0, c: 0.0, d: 1.0, e: 50.0, f: 770.0, }),
     Op_BT,
     Op_Tf(util_name_for_test("/F0"), 36.0),
     Op_Tj(b"Hello"),
@@ -1050,7 +1050,7 @@ test "pdf_document_of_json imports cpdf top-level document arrays" {
     fail("expected imported stream data")
   }
   @test.assert_eq(try! @pdflite.pdf_parse_content_ops_from_bytes(data), [
-    Op_cm({ a: 1.0, b: 0.0, c: 0.0, d: 1.0, e: 50.0, f: 770.0 }),
+    Op_cm({ a: 1.0, b: 0.0, c: 0.0, d: 1.0, e: 50.0, f: 770.0, }),
     Op_BT,
     Op_Tf(util_name_for_test("/F0"), 36.0),
     Op_Tj(b"Hello"),
@@ -1116,7 +1116,7 @@ test "PdfDocument json_of_document emits cpdf top-level arrays and round trips" 
     fail("expected round-tripped stream data")
   }
   @test.assert_eq(try! @pdflite.pdf_parse_content_ops_from_bytes(data), [
-    Op_cm({ a: 1.0, b: 0.0, c: 0.0, d: 1.0, e: 50.0, f: 770.0 }),
+    Op_cm({ a: 1.0, b: 0.0, c: 0.0, d: 1.0, e: 50.0, f: 770.0, }),
     Op_BT,
     Op_Tf(util_name_for_test("/F0"), 36.0),
     Op_Tj(b"Hello"),
@@ -1164,7 +1164,7 @@ test "pdf_document_of_json_blob imports UTF-8 CPDFJSON bytes" {
     fail("expected imported stream data")
   }
   @test.assert_eq(try! @pdflite.pdf_parse_content_ops_from_bytes(data), [
-    Op_cm({ a: 1.0, b: 0.0, c: 0.0, d: 1.0, e: 50.0, f: 770.0 }),
+    Op_cm({ a: 1.0, b: 0.0, c: 0.0, d: 1.0, e: 50.0, f: 770.0, }),
     Op_BT,
     Op_Tf(util_name_for_test("/F0"), 36.0),
     Op_Tj(b"Hello"),
@@ -1245,7 +1245,7 @@ test "PdfDocument json_of_document parses content streams into operation arrays"
   }
 
   let expected_ops : Array[@content.PdfContentOp] = [
-    Op_cm({ a: 1.0, b: 0.0, c: 0.0, d: 1.0, e: 50.0, f: 770.0 }),
+    Op_cm({ a: 1.0, b: 0.0, c: 0.0, d: 1.0, e: 50.0, f: 770.0, }),
     Op_BT,
     Op_Tf(util_name_for_test("/F0"), 36.0),
     Op_Tj(b"Hello"),

@@ -153,7 +153,7 @@ fn PdfDocument::pdf_image_resolution_process_content(
               {
                 object: PdfImageResolutionImage(width, height),
                 object_number,
-                ..,
+                ..
               }
             ) =>
               pdf_image_resolution_push_entry(
@@ -168,7 +168,7 @@ fn PdfDocument::pdf_image_resolution_process_content(
             Some(
               {
                 object: PdfImageResolutionForm(matrix, form, form_resources),
-                ..,
+                ..
               }
             ) => {
               let form_candidates = self.pdf_image_resolution_candidates(

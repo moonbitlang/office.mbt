@@ -73,7 +73,7 @@ fn push_bounded(
   detail : String,
 ) -> Unit {
   if findings.length() < template_finding_limit {
-    findings.push({ location, detail })
+    findings.push({ location, detail, })
   }
 }
 
@@ -309,7 +309,7 @@ fn merge_template_workbook(
       for key in outcome.present_keys {
         used_keys.add(key)
         if report.locations.length() < template_finding_limit {
-          report.locations.push({ location, detail: key })
+          report.locations.push({ location, detail: key, })
         } else {
           report.locations_truncated = true
         }
@@ -441,5 +441,5 @@ pub async fn transact_template(
       "office.xlsx.template_internal", "the merge produced no report",
     )
   }
-  { report: merge, transaction: report }
+  { report: merge, transaction: report, }
 }

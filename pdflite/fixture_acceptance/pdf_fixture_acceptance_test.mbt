@@ -2952,7 +2952,7 @@ fn fixture_acceptance_assert_cpdf_draw_operator_fixture_for_test(
       fixture_acceptance_assert_content_op_for_test(ops, Op_Tr(7))
       fixture_acceptance_assert_content_op_for_test(
         ops,
-        Op_cm({ a: 1.0, b: 0.0, c: 0.0, d: 1.0, e: 100.0, f: 200.0 }),
+        Op_cm({ a: 1.0, b: 0.0, c: 0.0, d: 1.0, e: 100.0, f: 200.0, }),
       )
       fixture_acceptance_assert_content_op_for_test(ops, Op_TL(55.0))
       fixture_acceptance_assert_content_op_for_test(ops, Op_Tj(b"This is"))
@@ -2964,7 +2964,7 @@ fn fixture_acceptance_assert_cpdf_draw_operator_fixture_for_test(
       fixture_acceptance_assert_content_op_for_test(ops, Op_q)
       fixture_acceptance_assert_content_op_for_test(
         ops,
-        Op_cm({ a: 1.5, b: 0.0, c: 0.0, d: 2.0, e: 0.0, f: 0.0 }),
+        Op_cm({ a: 1.5, b: 0.0, c: 0.0, d: 2.0, e: 0.0, f: 0.0, }),
       )
       fixture_acceptance_assert_content_op_for_test(ops, Op_Q)
       fixture_acceptance_assert_content_op_for_test(ops, Op_S)
@@ -2972,7 +2972,7 @@ fn fixture_acceptance_assert_cpdf_draw_operator_fixture_for_test(
     "fixtures/cpdf-source/manualimages/png.pdf" => {
       fixture_acceptance_assert_content_op_for_test(
         ops,
-        Op_cm({ a: 400.0, b: 0.0, c: 0.0, d: 294.0, e: 0.0, f: 0.0 }),
+        Op_cm({ a: 400.0, b: 0.0, c: 0.0, d: 294.0, e: 0.0, f: 0.0, }),
       )
       fixture_acceptance_assert_content_op_for_test(
         ops,
@@ -2989,7 +2989,7 @@ fn fixture_acceptance_assert_cpdf_draw_operator_fixture_for_test(
     "fixtures/cpdf-source/manualimages/fontparams.pdf" => {
       fixture_acceptance_assert_content_op_for_test(
         ops,
-        Op_cm({ a: 1.0, b: 0.0, c: 0.0, d: 1.0, e: 10.0, f: 20.0 }),
+        Op_cm({ a: 1.0, b: 0.0, c: 0.0, d: 1.0, e: 10.0, f: 20.0, }),
       )
       fixture_acceptance_assert_content_op_for_test(ops, Op_Tz(75.0))
       fixture_acceptance_assert_content_op_for_test(ops, Op_Tc(5.0))
@@ -3011,7 +3011,7 @@ fn fixture_acceptance_assert_cpdf_draw_operator_fixture_for_test(
     "fixtures/cpdf-source/manualimages/fonts.pdf" => {
       fixture_acceptance_assert_content_op_for_test(
         ops,
-        Op_cm({ a: 1.0, b: 0.0, c: 0.0, d: 1.0, e: 10.0, f: 20.0 }),
+        Op_cm({ a: 1.0, b: 0.0, c: 0.0, d: 1.0, e: 10.0, f: 20.0, }),
       )
       fixture_acceptance_assert_content_op_for_test(ops, Op_BT)
       fixture_acceptance_assert_content_op_for_test(
@@ -3059,7 +3059,7 @@ fn fixture_acceptance_assert_cpdf_draw_operator_fixture_for_test(
     "fixtures/cpdf-source/manualimages/lines.pdf" => {
       fixture_acceptance_assert_content_op_for_test(
         ops,
-        Op_cm({ a: 1.0, b: 0.0, c: 0.0, d: 1.0, e: 100.0, f: 200.0 }),
+        Op_cm({ a: 1.0, b: 0.0, c: 0.0, d: 1.0, e: 100.0, f: 200.0, }),
       )
       fixture_acceptance_assert_content_op_for_test(ops, Op_TL(55.0))
       fixture_acceptance_assert_content_op_for_test(
@@ -3074,7 +3074,7 @@ fn fixture_acceptance_assert_cpdf_draw_operator_fixture_for_test(
     "fixtures/cpdf-source/manualimages/stext.pdf" => {
       fixture_acceptance_assert_content_op_for_test(
         ops,
-        Op_cm({ a: 1.0, b: 0.0, c: 0.0, d: 1.0, e: 50.0, f: 50.0 }),
+        Op_cm({ a: 1.0, b: 0.0, c: 0.0, d: 1.0, e: 50.0, f: 50.0, }),
       )
       fixture_acceptance_assert_content_op_for_test(ops, Op_BT)
       fixture_acceptance_assert_content_op_for_test(
@@ -3087,7 +3087,7 @@ fn fixture_acceptance_assert_cpdf_draw_operator_fixture_for_test(
     "fixtures/cpdf-source/manualimages/text.pdf" => {
       fixture_acceptance_assert_content_op_for_test(
         ops,
-        Op_cm({ a: 1.0, b: 0.0, c: 0.0, d: 1.0, e: 50.0, f: 50.0 }),
+        Op_cm({ a: 1.0, b: 0.0, c: 0.0, d: 1.0, e: 50.0, f: 50.0, }),
       )
       fixture_acceptance_assert_content_op_for_test(ops, Op_BT)
       fixture_acceptance_assert_content_op_for_test(
@@ -3100,7 +3100,7 @@ fn fixture_acceptance_assert_cpdf_draw_operator_fixture_for_test(
     "fixtures/cpdf-source/manualimages/para.pdf" => {
       fixture_acceptance_assert_content_op_for_test(
         ops,
-        Op_cm({ a: 1.0, b: 0.0, c: 0.0, d: 1.0, e: 200.0, f: 400.0 }),
+        Op_cm({ a: 1.0, b: 0.0, c: 0.0, d: 1.0, e: 200.0, f: 400.0, }),
       )
       fixture_acceptance_assert_content_op_for_test(ops, Op_TL(25.0))
       fixture_acceptance_assert_content_op_for_test(ops, Op_Tj(b"paragraph"))
@@ -3110,7 +3110,7 @@ fn fixture_acceptance_assert_cpdf_draw_operator_fixture_for_test(
     "fixtures/cpdf-source/manualimages/paras.pdf" => {
       fixture_acceptance_assert_content_op_for_test(
         ops,
-        Op_cm({ a: 1.0, b: 0.0, c: 0.0, d: 1.0, e: 200.0, f: 500.0 }),
+        Op_cm({ a: 1.0, b: 0.0, c: 0.0, d: 1.0, e: 200.0, f: 500.0, }),
       )
       fixture_acceptance_assert_content_op_for_test(ops, Op_TL(25.0))
       fixture_acceptance_assert_content_op_for_test(ops, Op_Td(0.0, 0.0))
@@ -3139,7 +3139,7 @@ fn fixture_acceptance_assert_cpdf_draw_operator_fixture_for_test(
       fixture_acceptance_assert_content_op_for_test(ops, Op_RG(1.0, 0.0, 0.0))
       fixture_acceptance_assert_content_op_for_test(
         ops,
-        Op_cm({ a: 1.0, b: 0.0, c: 0.0, d: 1.0, e: 20.0, f: 20.0 }),
+        Op_cm({ a: 1.0, b: 0.0, c: 0.0, d: 1.0, e: 20.0, f: 20.0, }),
       )
     }
     _ => fail("unexpected cpdf draw operator fixture path: " + path)
@@ -3228,7 +3228,7 @@ fn fixture_acceptance_assert_cpdf_source_attachments_removed_for_test(
 ///|
 fn fixture_acceptance_cpdf_source_texttopdf_fontpack_for_test() -> @pdflite.PdfFontPack raise {
   @pdflite.pdf_fontpack_of_standard_font(
-    PdfFontStandard({ font: PdfHelvetica, encoding: PdfWinAnsiEncoding }),
+    PdfFontStandard({ font: PdfHelvetica, encoding: PdfWinAnsiEncoding, }),
   )
 }
 
@@ -3506,7 +3506,7 @@ fn fixture_acceptance_rect_for_test(
   max_x : Double,
   max_y : Double,
 ) -> @geometry.PdfRectangle {
-  { min_x, min_y, max_x, max_y }
+  { min_x, min_y, max_x, max_y, }
 }
 
 ///|
@@ -3731,7 +3731,7 @@ fn fixture_acceptance_chop_source_hello_for_test(
       PdfInteger(7),
     )
   let decorated = document.change_pages(
-    [{ ..pages[0], rest: decorated_rest }],
+    [{ ..pages[0], rest: decorated_rest, }],
     change_references=true,
   )
   decorated.chop(2, 2, false, false, false, [1])
@@ -4303,7 +4303,7 @@ fn fixture_acceptance_page_transform_source_hello_for_test(
       ]),
     )
   let decorated = document.change_pages(
-    [{ ..pages[0], rest: decorated_rest }],
+    [{ ..pages[0], rest: decorated_rest, }],
     change_references=true,
   )
   let rotated = @pdflite.pdf_rotate_pages(decorated, 90, [1])
@@ -4377,7 +4377,7 @@ fn fixture_acceptance_pad_source_hello_for_test(
       PdfInteger(7),
     )
   let decorated = document.change_pages(
-    [{ ..pages[0], rest: decorated_rest }],
+    [{ ..pages[0], rest: decorated_rest, }],
     change_references=true,
   )
   @pdflite.pdf_pad_after(decorated, [1])
@@ -5238,7 +5238,7 @@ fn fixture_acceptance_assert_cpdf_manual_pdf_of_pages_for_test(
 fn fixture_acceptance_cpdf_manual_addtext_fontpack_for_test() -> @pdflite.PdfFontPack {
   {
     fonts: [
-      PdfFontStandard({ font: PdfHelvetica, encoding: PdfWinAnsiEncoding }),
+      PdfFontStandard({ font: PdfHelvetica, encoding: PdfWinAnsiEncoding, }),
     ],
     entries: [],
   }
@@ -5736,7 +5736,7 @@ fn fixture_acceptance_assert_cpdf_manual_title_bookmark_for_test(
 ///|
 fn fixture_acceptance_cpdf_toc_fontpack_for_test() -> @pdflite.PdfFontPack raise {
   @pdflite.pdf_fontpack_of_standard_font(
-    PdfFontStandard({ font: PdfHelvetica, encoding: PdfWinAnsiEncoding }),
+    PdfFontStandard({ font: PdfHelvetica, encoding: PdfWinAnsiEncoding, }),
   )
 }
 
@@ -6001,7 +6001,7 @@ fn fixture_acceptance_cpdf_source_hello_with_inline_image_for_test(
   let pages = document.pages_of_pagetree()
   @test.assert_eq(pages.length(), 1)
   let image_ops : Array[@content.PdfContentOp] = [
-    Op_cm({ a: 72.0, b: 0.0, c: 0.0, d: 72.0, e: 0.0, f: 0.0 }),
+    Op_cm({ a: 72.0, b: 0.0, c: 0.0, d: 72.0, e: 0.0, f: 0.0, }),
     Op_InlineImage(
       fixture_acceptance_cpdf_source_inline_image_dictionary_for_test(),
       None,
@@ -6132,7 +6132,7 @@ fn fixture_acceptance_cpdf_source_form_image_form_for_test(
   image_number : Int,
 ) -> @syntax.PdfObject raise {
   @pdflite.pdf_content_stream_of_ops([
-    Op_cm({ a: 72.0, b: 0.0, c: 0.0, d: 72.0, e: 72.0, f: 72.0 }),
+    Op_cm({ a: 72.0, b: 0.0, c: 0.0, d: 72.0, e: 72.0, f: 72.0, }),
     Op_Do(fixture_acceptance_pdf_name_for_test("/SourceNestedImage")),
   ])
   .add_dict_entry(
@@ -6338,7 +6338,7 @@ fn fixture_acceptance_assert_cpdf_source_form_image_for_test(
   @test.assert_eq(
     document.parse_content_ops_with_resources(form_resources, [form]),
     [
-      Op_cm({ a: 72.0, b: 0.0, c: 0.0, d: 72.0, e: 72.0, f: 72.0 }),
+      Op_cm({ a: 72.0, b: 0.0, c: 0.0, d: 72.0, e: 72.0, f: 72.0, }),
       Op_Do(fixture_acceptance_pdf_name_for_test("/SourceNestedImage")),
     ],
   )

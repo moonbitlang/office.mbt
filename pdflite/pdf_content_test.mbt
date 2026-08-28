@@ -426,7 +426,7 @@ test "pdf_content_stream_of_ops creates an owned stream that round trips" {
   let stream = try! @pdflite.pdf_content_stream_of_ops(
     hello_content_ops_for_test(),
   )
-  guard stream is PdfStreamObject({ dictionary, data: StreamGot(data) }) else {
+  guard stream is PdfStreamObject({ dictionary, data: StreamGot(data), }) else {
     fail("expected owned content stream")
   }
   @test.assert_eq(

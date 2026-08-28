@@ -19,7 +19,7 @@ fn OfficeQueryWorkBudget::new(
   maximum : Int,
   format? : String = "docx",
 ) -> OfficeQueryWorkBudget {
-  { format, maximum, used: 0 }
+  { format, maximum, used: 0, }
 }
 
 ///|
@@ -83,7 +83,7 @@ fn OfficeLinearPattern::compile(
     }
     failure[at] = matched
   }
-  { characters, failure, ignore_case }
+  { characters, failure, ignore_case, }
 }
 
 ///|
@@ -126,7 +126,7 @@ async fn OfficeLinearPattern::compile_cooperative(
     failure[at] = matched
     visited += 1
   }
-  { characters, failure, ignore_case }
+  { characters, failure, ignore_case, }
 }
 
 ///|

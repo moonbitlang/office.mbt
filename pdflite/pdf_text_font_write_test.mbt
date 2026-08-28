@@ -13,7 +13,7 @@ fn text_font_write_difference_for_test(
   name : String,
   code : Int,
 ) -> @pdflite.PdfEncodingDifference {
-  { name: text_font_write_name_for_test(name), code }
+  { name: text_font_write_name_for_test(name), code, }
 }
 
 ///|
@@ -21,7 +21,7 @@ fn text_font_write_standard_font_data_for_test(
   font : @pdflite.PdfStandardFont,
   encoding : @pdflite.PdfEncoding,
 ) -> @pdflite.PdfStandardFontData {
-  { font, encoding }
+  { font, encoding, }
 }
 
 ///|
@@ -32,7 +32,7 @@ fn text_font_write_descriptor_for_test() -> @pdflite.PdfFontDescriptor {
     avgwidth: 0.0,
     maxwidth: 0.0,
     flags: 0,
-    fontbbox: { min_x: 0.0, min_y: 0.0, max_x: 0.0, max_y: 0.0 },
+    fontbbox: { min_x: 0.0, min_y: 0.0, max_x: 0.0, max_y: 0.0, },
     italicangle: 0.0,
     capheight: 0.0,
     xheight: 0.0,
@@ -221,7 +221,7 @@ test "PdfDocument write_font writes Type3 fonts" {
   let number = try! doc.write_font(
     PdfFontSimple({
       fonttype: PdfType3({
-        fontbbox: { min_x: 1.0, min_y: 2.0, max_x: 3.0, max_y: 4.0 },
+        fontbbox: { min_x: 1.0, min_y: 2.0, max_x: 3.0, max_y: 4.0, },
         fontmatrix,
         charprocs: [
           (text_font_write_name_for_test("/A"), d0_stream),
@@ -322,7 +322,7 @@ test "PdfDocument write_font writes Type3 custom encoding object" {
   let number = try! doc.write_font(
     PdfFontSimple({
       fonttype: PdfType3({
-        fontbbox: { min_x: 0.0, min_y: 0.0, max_x: 0.0, max_y: 0.0 },
+        fontbbox: { min_x: 0.0, min_y: 0.0, max_x: 0.0, max_y: 0.0, },
         fontmatrix: @geometry.transform_identity_matrix,
         charprocs: [(text_font_write_name_for_test("/A"), PdfInteger(10))],
         resources: @syntax.pdf_dictionary([]),
@@ -374,7 +374,7 @@ test "PdfDocument write_font writes embedded TrueType fonts" {
     avgwidth: 501.0,
     maxwidth: 1000.0,
     flags: 32,
-    fontbbox: { min_x: -10.0, min_y: -200.0, max_x: 500.0, max_y: 700.0 },
+    fontbbox: { min_x: -10.0, min_y: -200.0, max_x: 500.0, max_y: 700.0, },
     italicangle: -12.0,
     capheight: 680.0,
     xheight: 450.0,
@@ -601,7 +601,7 @@ test "PdfDocument write_font writes TrueType ToUnicode CMaps" {
         ),
         codepoints: [0x42],
       },
-      { glyphname: text_font_write_name_for_test(".notdef"), codepoints: [35] },
+      { glyphname: text_font_write_name_for_test(".notdef"), codepoints: [35], },
     ],
   )
   @test.assert_eq(

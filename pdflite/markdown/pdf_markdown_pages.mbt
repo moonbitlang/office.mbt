@@ -41,7 +41,7 @@ fn pdf_markdown_positioned_text_codepoints_of_page(
   font_cache : PdfMarkdownFontCache,
 ) -> Array[Int]? raise {
   let chunks : Array[PdfMarkdownTextChunk] = []
-  let next_index = Ref::{ val: 0 }
+  let next_index = Ref::{ val: 0, }
   pdf_markdown_collect_positioned_text_chunks(
     document,
     page.resources,

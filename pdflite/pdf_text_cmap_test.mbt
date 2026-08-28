@@ -29,7 +29,7 @@ fn text_cmap_font_descriptor_for_test() -> @pdflite.PdfFontDescriptor {
     avgwidth: 0.0,
     maxwidth: 0.0,
     flags: 0,
-    fontbbox: { min_x: 0.0, min_y: 0.0, max_x: 0.0, max_y: 0.0 },
+    fontbbox: { min_x: 0.0, min_y: 0.0, max_x: 0.0, max_y: 0.0, },
     italicangle: 0.0,
     capheight: 0.0,
     xheight: 0.0,
@@ -155,7 +155,7 @@ test "pdf_parse_cmap_data reads CMap header metadata" {
   @test.assert_eq(parsed.cmap_type, Some(2))
   @test.assert_eq(
     parsed.cid_system_info,
-    Some({ registry: b"Adobe", ordering: b"UCS", supplement: 0 }),
+    Some({ registry: b"Adobe", ordering: b"UCS", supplement: 0, }),
   )
   let dict_style = @pdflite.pdf_parse_cmap_data(
     @ascii.encode(
@@ -168,7 +168,7 @@ test "pdf_parse_cmap_data reads CMap header metadata" {
   )
   @test.assert_eq(
     dict_style.cid_system_info,
-    Some({ registry: b"Adobe", ordering: b"Japan1", supplement: 6 }),
+    Some({ registry: b"Adobe", ordering: b"Japan1", supplement: 6, }),
   )
   let malformed = @pdflite.pdf_parse_cmap_data(
     @ascii.encode(
@@ -272,7 +272,11 @@ test "PdfDocument parse_cmap reads stream dictionary metadata" {
   @test.assert_eq(parsed.cmap_type, Some(1))
   @test.assert_eq(
     parsed.cid_system_info,
-    Some({ registry: b"DictRegistry", ordering: b"DictOrdering", supplement: 4 }),
+    Some({
+      registry: b"DictRegistry",
+      ordering: b"DictOrdering",
+      supplement: 4,
+    }),
   )
 
   let overriding_data = @ascii.encode(
@@ -316,7 +320,11 @@ test "PdfDocument parse_cmap reads stream dictionary metadata" {
   @test.assert_eq(overridden.cmap_type, Some(2))
   @test.assert_eq(
     overridden.cid_system_info,
-    Some({ registry: b"ProgRegistry", ordering: b"ProgOrdering", supplement: 5 }),
+    Some({
+      registry: b"ProgRegistry",
+      ordering: b"ProgOrdering",
+      supplement: 5,
+    }),
   )
 
   doc.add_object_given_number(
@@ -407,8 +415,8 @@ test "pdf_parse_cmap_data reads external CID mappings and codespaces" {
     ),
   )
   @test.assert_eq(parsed.codespaces, [
-    { length: 1, first: 0x00, last: 0x7F },
-    { length: 2, first: 0x8100, last: 0x81FF },
+    { length: 1, first: 0x00, last: 0x7F, },
+    { length: 2, first: 0x8100, last: 0x81FF, },
   ])
   @test.assert_eq(parsed.cid_map, [
     (0x41, 100),
@@ -674,10 +682,10 @@ test "PdfDocument composes external CMap UseCMap stream bases" {
   @test.assert_eq(parsed.cmap_type, Some(2))
   @test.assert_eq(
     parsed.cid_system_info,
-    Some({ registry: b"Adobe", ordering: b"Test", supplement: 3 }),
+    Some({ registry: b"Adobe", ordering: b"Test", supplement: 3, }),
   )
   @test.assert_eq(parsed.codespaces, [
-    { length: 2, first: 0x0000, last: 0x00FF },
+    { length: 2, first: 0x0000, last: 0x00FF, },
   ])
   @test.assert_eq(parsed.cid_map, [(0x0041, 99), (0x0040, 500), (0x0042, 502)])
   @test.assert_eq(parsed.notdef_map, [(0x0050, 77), (0x0051, 701)])
@@ -1374,9 +1382,9 @@ test "pdf_parse_cmap_data ignores PDF comments in CMap programs" {
   @test.assert_eq(parsed.cmap_type, Some(2))
   @test.assert_eq(
     parsed.cid_system_info,
-    Some({ registry: b"Ad%obe", ordering: b"UCS", supplement: 0 }),
+    Some({ registry: b"Ad%obe", ordering: b"UCS", supplement: 0, }),
   )
-  @test.assert_eq(parsed.codespaces, [{ length: 1, first: 0x00, last: 0x7F }])
+  @test.assert_eq(parsed.codespaces, [{ length: 1, first: 0x00, last: 0x7F, }])
   @test.assert_eq(parsed.map, [
     (0x41, text_cmap_bytes_for_test([0x00, 0x41])),
     (0x42, text_cmap_bytes_for_test([0x00, 0x42])),
@@ -1392,7 +1400,7 @@ test "pdf_parse_cmap_data ignores PDF comments in CMap programs" {
   )
   @test.assert_eq(
     escaped_literal.cid_system_info,
-    Some({ registry: b"Ad%o(be)", ordering: b"UCS", supplement: 1 }),
+    Some({ registry: b"Ad%o(be)", ordering: b"UCS", supplement: 1, }),
   )
 }
 
@@ -1499,8 +1507,8 @@ test "PdfDocument applies indirect external CMap text segmentation and CID mappi
     fail("expected parsed external CMap")
   }
   @test.assert_eq(parsed.codespaces, [
-    { length: 1, first: 0x00, last: 0x7F },
-    { length: 2, first: 0x8100, last: 0x81FF },
+    { length: 1, first: 0x00, last: 0x7F, },
+    { length: 2, first: 0x8100, last: 0x81FF, },
   ])
   let extractor = try! doc.text_extractor_of_font(font)
   @test.assert_eq(
@@ -1551,7 +1559,7 @@ test "PdfTextExtractor keeps external CMap text lookup precedence" {
       ],
       cid_map: [(0x41, 99), (0x41, 100)],
       notdef_map: [(0x42, 77), (0x42, 78)],
-      codespaces: [{ length: 1, first: 0x00, last: 0xFF }],
+      codespaces: [{ length: 1, first: 0x00, last: 0xFF, }],
       usecmap: None,
       wmode: None,
       cmap_name: None,
@@ -1572,10 +1580,10 @@ test "PdfTextExtractor keeps external CMap text lookup precedence" {
       text_cmap_bytes_for_test([0x41, 0x42, 0x43, 0x44]),
     ),
     [
-      { glyphname: notdef, codepoints: [99] },
-      { glyphname: notdef, codepoints: [77] },
-      { glyphname: notdef, codepoints: [0x63] },
-      { glyphname: notdef, codepoints: [0x44] },
+      { glyphname: notdef, codepoints: [99], },
+      { glyphname: notdef, codepoints: [77], },
+      { glyphname: notdef, codepoints: [0x63], },
+      { glyphname: notdef, codepoints: [0x44], },
     ],
   )
   let identity_font : @pdflite.PdfFont = PdfFontCIDKeyed({
@@ -1597,7 +1605,7 @@ test "PdfTextExtractor keeps external CMap text lookup precedence" {
     try! identity_font
     .text_extractor()
     .glyphnames_and_codepoints_of_text(text_cmap_bytes_for_test([0x00, 0x42])),
-    [{ glyphname: notdef, codepoints: [0x42] }],
+    [{ glyphname: notdef, codepoints: [0x42], }],
   )
   let predefined_font : @pdflite.PdfFont = PdfFontCIDKeyed({
     basefont: text_cmap_name_for_test("/ExternalGBEUCCMap"),
@@ -1621,8 +1629,8 @@ test "PdfTextExtractor keeps external CMap text lookup precedence" {
       text_cmap_bytes_for_test([0xC4, 0xE3, 0x81, 0x40]),
     ),
     [
-      { glyphname: notdef, codepoints: [0x4F60] },
-      { glyphname: notdef, codepoints: [0x8140] },
+      { glyphname: notdef, codepoints: [0x4F60], },
+      { glyphname: notdef, codepoints: [0x8140], },
     ],
   )
 }

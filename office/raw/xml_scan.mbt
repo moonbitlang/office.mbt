@@ -931,7 +931,7 @@ fn raw_apply_namespace_declarations(
         }
         undo.push((prefix, previous))
         namespaces[prefix] = attribute.value
-        declarations.push({ prefix, uri: attribute.value })
+        declarations.push({ prefix, uri: attribute.value, })
       }
       None => ()
     }
@@ -1227,7 +1227,7 @@ fn scan_raw_xml(
   if !node_stack.is_empty() || nodes.is_empty() {
     raise raw_xml_scan_error(part, "element stack is incomplete")
   }
-  { bytes, nodes }
+  { bytes, nodes, }
 }
 
 ///|

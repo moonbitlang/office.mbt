@@ -206,7 +206,7 @@ pub fn pdf_page_label_of_single(
   label : PdfPageLabel,
 ) -> PdfPageLabel {
   let real_number = page_number - (label.start_page - label.start_value)
-  { ..label, start_page: real_number, start_value: real_number }
+  { ..label, start_page: real_number, start_value: real_number, }
 }
 
 ///|

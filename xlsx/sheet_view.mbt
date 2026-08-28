@@ -7,7 +7,7 @@ pub struct Selection {
 
 ///|
 fn Selection::new() -> Selection {
-  { sqref: "", active_cell: "", pane: "" }
+  { sqref: "", active_cell: "", pane: "", }
 }
 
 ///|
@@ -258,7 +258,7 @@ fn SheetView::new() -> SheetView {
 
 ///|
 fn SheetPane::new() -> SheetPane {
-  { active_pane: "", state: "", top_left_cell: "", x_split: 0.0, y_split: 0.0 }
+  { active_pane: "", state: "", top_left_cell: "", x_split: 0.0, y_split: 0.0, }
 }
 
 ///|

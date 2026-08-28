@@ -24,7 +24,7 @@ priv struct MceProcessTracker {
 
 ///|
 fn MceProcessTracker::new() -> MceProcessTracker {
-  { key_counts: Map([]), generations: Map([]), next_generation: 1 }
+  { key_counts: Map([]), generations: Map([]), next_generation: 1, }
 }
 
 ///|
@@ -63,10 +63,10 @@ fn MceProcessTracker::processes(
   local_name : String,
 ) -> Bool {
   let generation = self.generations.get_or_default(namespace_id, 0)
-  self.key_counts.get_or_default({ namespace_id, generation, local_name }, 0) >
+  self.key_counts.get_or_default({ namespace_id, generation, local_name, }, 0) >
   0 ||
   self.key_counts.get_or_default(
-    { namespace_id, generation, local_name: "*" },
+    { namespace_id, generation, local_name: "*", },
     0,
   ) >
   0

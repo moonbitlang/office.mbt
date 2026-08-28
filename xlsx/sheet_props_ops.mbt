@@ -294,7 +294,7 @@ pub fn Worksheet::set_sheet_background(
     Some(value) => value
     None => raise InvalidSheetBackground(msg="unsupported image type")
   }
-  self.sheet_background = Some({ data, extension: ext, content_type })
+  self.sheet_background = Some({ data, extension: ext, content_type, })
 }
 
 ///|

@@ -435,7 +435,7 @@ pub fn parse_batch(script : Json) -> BatchScript raise BatchError {
   // Notes only exist in /2; a None collector makes every note key an
   // addressed schema error under /1.
   let notes : NoteCollector? = if schema == SCHEMA_BATCH_V2 {
-    Some({ footnotes: [], endnotes: [] })
+    Some({ footnotes: [], endnotes: [], })
   } else {
     None
   }
@@ -569,7 +569,7 @@ fn parse_story(
     policy=StoryContent,
     what="the \{kind} story",
   )
-  { at, variant, body }
+  { at, variant, body, }
 }
 
 ///|
@@ -908,7 +908,7 @@ fn parse_paragraph(
         "\{at} needs text or runs (use \"text\": \"\" for a blank paragraph)",
       )
   }
-  { style, align, list, inlines }
+  { style, align, list, inlines, }
 }
 
 ///|
@@ -1288,7 +1288,7 @@ fn parse_table(
             "\{cell_where} needs text or paragraphs (use \"text\": \"\" for a blank cell)",
           )
       }
-      cells.push({ paragraphs, col_span, row_span })
+      cells.push({ paragraphs, col_span, row_span, })
     }
     rows.push(cells)
   }
@@ -1884,7 +1884,7 @@ fn build_note_bodies(
     for paragraph in paragraphs {
       body.push(build_paragraph(paragraph, no_images))
     }
-    built.push({ at, body })
+    built.push({ at, body, })
   }
   built
 }
@@ -2026,7 +2026,7 @@ fn build_stories(specs : Array[StoryOp]) -> Array[BatchStory] raise BatchError {
     for paragraph in spec.body {
       body.push(build_paragraph(paragraph, no_images))
     }
-    built.push({ at: spec.at, variant: spec.variant, body })
+    built.push({ at: spec.at, variant: spec.variant, body, })
   }
   built
 }
@@ -2145,5 +2145,5 @@ pub fn parse_annotate(json : Json) -> AnnotateEnvelope raise BatchError {
       ),
     )
   }
-  { author, initials, date, body }
+  { author, initials, date, body, }
 }

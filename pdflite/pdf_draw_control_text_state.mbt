@@ -309,7 +309,7 @@ pub fn PdfDrawControl::add_paras(
 ///|
 /// Start a text-section frame.
 pub fn PdfDrawControl::begin_text_section(self : PdfDrawControl) -> Unit {
-  self.frames.push({ name: pdf_draw_control_text_frame, ops: [] })
+  self.frames.push({ name: pdf_draw_control_text_frame, ops: [], })
 }
 
 ///|

@@ -434,7 +434,7 @@ pub fn parse_template_document(
             ),
           )
         }
-        regions.push({ name, address, records })
+        regions.push({ name, address, records, })
       }
       // the disjoint-union rule: a key living in both `values` and any
       // record would make region lookup order observable — reject instead
@@ -457,5 +457,5 @@ pub fn parse_template_document(
     Some(_) =>
       raise TemplateDataError("regions must be an object of named regions")
   }
-  { values, regions }
+  { values, regions, }
 }

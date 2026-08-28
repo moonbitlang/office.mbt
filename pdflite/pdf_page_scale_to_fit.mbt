@@ -103,7 +103,7 @@ fn PdfDocument::pdf_page_scale_to_fit_boxes(
       None => ()
     }
   }
-  { ..page, mediabox: target, rest }
+  { ..page, mediabox: target, rest, }
 }
 
 ///|

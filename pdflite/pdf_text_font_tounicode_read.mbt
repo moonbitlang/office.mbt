@@ -19,7 +19,7 @@ fn PdfFontDescriptor::pdf_text_with_tounicode(
   self : PdfFontDescriptor,
   tounicode : Array[(Int, @core.PdfBytes)],
 ) -> PdfFontDescriptor {
-  { ..self, tounicode: Some(tounicode) }
+  { ..self, tounicode: Some(tounicode), }
 }
 
 ///|

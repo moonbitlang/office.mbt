@@ -143,7 +143,7 @@ pub fn scan_literal(
   }
   let spans : Array[TemplateSpan] = []
   guard needle_length > 0 && needle_length <= total else { return spans }
-  let cursor : ScanCursor = { segments, starts, total }
+  let cursor : ScanCursor = { segments, starts, total, }
   let mut position = 0
   while position + needle_length <= total {
     let mut probe = 0
@@ -220,7 +220,7 @@ fn ScanCursor::point(self : ScanCursor, position : Int) -> (Int, Int) {
 fn ScanCursor::span(self : ScanCursor, start : Int, end : Int) -> TemplateSpan {
   let (start_segment, start_offset) = self.point(start)
   let (end_segment, end_offset) = self.point(end)
-  { start_segment, start_offset, end_segment, end_offset }
+  { start_segment, start_offset, end_segment, end_offset, }
 }
 
 ///|
@@ -238,7 +238,7 @@ pub fn scan_placeholders(
     starts.push(total)
     total += segment.code_units().length()
   }
-  let cursor : ScanCursor = { segments, starts, total }
+  let cursor : ScanCursor = { segments, starts, total, }
   let matches : Array[PlaceholderMatch] = []
   let escapes : Array[TemplateSpan] = []
   let malformed : Array[MalformedPlaceholder] = []
@@ -319,5 +319,5 @@ pub fn scan_placeholders(
     }
     position += 1
   }
-  { matches, escapes, malformed }
+  { matches, escapes, malformed, }
 }

@@ -1036,7 +1036,7 @@ pub fn dump_xlsx_workbook(
   for name in rest {
     ops.push(dump_op("add-sheet", { "name": Json::string(name) }))
   }
-  let style_ctx : StyleContext = { workbook, extracts: {}, reported: Set([]) }
+  let style_ctx : StyleContext = { workbook, extracts: {}, reported: Set([]), }
   for name in worksheet_names {
     check_cancelled(cancelled)
     guard workbook.sheet(name) is Some(worksheet) else { continue }

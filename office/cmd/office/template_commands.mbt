@@ -82,23 +82,23 @@ fn docx_report_as_shared(
     distinct_keys_used: report.distinct_keys_used,
     missing: report.missing.map(entry => {
       (
-        { location: entry.location, detail: entry.detail } :
+        { location: entry.location, detail: entry.detail, } :
         @office_xlsx.XlsxTemplateFinding)
     }),
     unused: report.unused,
     malformed: report.malformed.map(entry => {
       (
-        { location: entry.location, detail: entry.detail } :
+        { location: entry.location, detail: entry.detail, } :
         @office_xlsx.XlsxTemplateFinding)
     }),
     unsupported: report.unsupported.map(entry => {
       (
-        { location: entry.location, detail: entry.detail } :
+        { location: entry.location, detail: entry.detail, } :
         @office_xlsx.XlsxTemplateFinding)
     }),
     locations: report.locations.map(entry => {
       (
-        { location: entry.location, detail: entry.detail } :
+        { location: entry.location, detail: entry.detail, } :
         @office_xlsx.XlsxTemplateFinding)
     }),
     locations_truncated: report.locations_truncated,

@@ -38,7 +38,7 @@ test "pdf_strftime_with_time preserves cpdf source quirks" {
 
 ///|
 test "pdf_strftime_with_time reports fallback names for invalid fields" {
-  let invalid = { ..strftime_sample_time(), tm_wday: 9, tm_mon: 99 }
+  let invalid = { ..strftime_sample_time(), tm_wday: 9, tm_mon: 99, }
   @test.assert_eq(
     @date.pdf_strftime_with_time(invalid, "%a|%A|%b|%B"),
     "str|strf_AFail|str|strf_Bfail",

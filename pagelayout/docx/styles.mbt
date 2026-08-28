@@ -59,7 +59,7 @@ fn read_style_entry(style : @xml.XmlElement, theme : ThemeFonts) -> StyleEntry {
     }
     None => ParaProps::empty()
   }
-  { based_on, run, para }
+  { based_on, run, para, }
 }
 
 ///|
@@ -126,7 +126,7 @@ pub fn read_stylesheet(
       _ => ()
     }
   }
-  { ..sheet, default_run, default_para, default_paragraph_style }
+  { ..sheet, default_run, default_para, default_paragraph_style, }
 }
 
 ///|
@@ -160,7 +160,7 @@ pub fn StyleSheet::for_table(
     run_base = run_base.merge(entry.run)
     para_base = para_base.merge(entry.para)
   }
-  { ..self, default_run: run_base, default_para: para_base }
+  { ..self, default_run: run_base, default_para: para_base, }
 }
 
 ///|

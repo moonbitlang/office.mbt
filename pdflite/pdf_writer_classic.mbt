@@ -70,12 +70,12 @@ fn pdf_writer_write_document_objects_for_numbers(
   for number in numbers {
     if number > 0 {
       match document.objects.get_entry(number) {
-        Some({ data: ObjectParsed(object), generation })
-        | Some({ data: ObjectParsedAlreadyDecrypted(object), generation }) => {
+        Some({ data: ObjectParsed(object), generation, })
+        | Some({ data: ObjectParsedAlreadyDecrypted(object), generation, }) => {
           xrefs.push((number, output.length(), generation))
           pdf_writer_push_view(
             output,
-            pdf_write_indirect_object({ number, generation, object }),
+            pdf_write_indirect_object({ number, generation, object, }),
           )
         }
         Some(_) => raise ParsedObjectExpected
@@ -138,7 +138,7 @@ fn pdf_writer_push_classic_sparse_xref_and_trailer(
   previous_xref : Int,
 ) -> Unit raise @core.PdfError {
   pdf_writer_push_ascii(output, "xref\n")
-  let xref_index = Ref::{ val: 0 }
+  let xref_index = Ref::{ val: 0, }
   let mut run_start = -1
   let mut run_length = 0
   for number in entry_numbers {

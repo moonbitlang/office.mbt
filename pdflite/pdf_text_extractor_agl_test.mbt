@@ -13,7 +13,7 @@ fn text_difference_for_test(
   name : String,
   code : Int,
 ) -> @pdflite.PdfEncodingDifference {
-  { name: text_name_for_test(name), code }
+  { name: text_name_for_test(name), code, }
 }
 
 ///|
@@ -21,7 +21,7 @@ fn text_standard_font_data_for_test(
   font : @pdflite.PdfStandardFont,
   encoding : @pdflite.PdfEncoding,
 ) -> @pdflite.PdfStandardFontData {
-  { font, encoding }
+  { font, encoding, }
 }
 
 ///|

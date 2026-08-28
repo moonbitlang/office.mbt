@@ -32,7 +32,7 @@ fn pdf_ua_matterhorn_failure(
   check : PdfUAMatterhornTest,
   extra : Json,
 ) -> PdfUAMatterhornFailure {
-  { name: check.name, error: check.error, section: check.section, extra }
+  { name: check.name, error: check.error, section: check.section, extra, }
 }
 
 ///|

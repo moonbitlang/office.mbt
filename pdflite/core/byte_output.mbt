@@ -20,7 +20,7 @@ pub fn byte_output_new(initial_size? : Int = 0) -> ByteOutput raise PdfError {
     raise InvalidReadLength(initial_size)
   }
   let data : Array[Byte] = [ for _ in 0..<initial_size => 0 ]
-  { data, position: 0, written_length: 0 }
+  { data, position: 0, written_length: 0, }
 }
 
 ///|

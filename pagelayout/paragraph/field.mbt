@@ -50,8 +50,8 @@ pub fn RunInput::evaluate(
 ) -> RunInput {
   match self.field {
     NotAField => self
-    PageNumber => { ..self, text: page_number.to_string() }
-    PageCount => { ..self, text: page_count.to_string() }
+    PageNumber => { ..self, text: page_number.to_string(), }
+    PageCount => { ..self, text: page_count.to_string(), }
   }
 }
 

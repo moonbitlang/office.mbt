@@ -8,7 +8,7 @@ fn pdf_ccitt_read_run_code(
     bits = (bits << 1) | input.get_bit_int()
     for code in table {
       if code.width == width && code.bits == bits {
-        return { run: code.run, makeup: code.makeup }
+        return { run: code.run, makeup: code.makeup, }
       }
     }
   }

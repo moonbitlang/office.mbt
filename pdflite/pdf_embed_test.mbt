@@ -1,11 +1,11 @@
 ///|
 fn embed_standard_font_for_test() -> @pdflite.PdfFont {
-  PdfFontStandard({ font: PdfHelvetica, encoding: PdfWinAnsiEncoding })
+  PdfFontStandard({ font: PdfHelvetica, encoding: PdfWinAnsiEncoding, })
 }
 
 ///|
 fn embed_bold_font_for_test() -> @pdflite.PdfFont {
-  PdfFontStandard({ font: PdfHelveticaBold, encoding: PdfWinAnsiEncoding })
+  PdfFontStandard({ font: PdfHelveticaBold, encoding: PdfWinAnsiEncoding, })
 }
 
 ///|
@@ -315,10 +315,10 @@ test "PdfFontPack::get_char follows cpdf duplicate and missing semantics" {
   let pack = @pdflite.PdfFontPack::{
     fonts: [first, second],
     entries: [
-      { codepoint: 65, font_index: 0, charcode: 41 },
-      { codepoint: 66, font_index: 7, charcode: 42 },
-      { codepoint: 65, font_index: 1, charcode: 43 },
-      { codepoint: 67, font_index: -1, charcode: 44 },
+      { codepoint: 65, font_index: 0, charcode: 41, },
+      { codepoint: 66, font_index: 7, charcode: 42, },
+      { codepoint: 65, font_index: 1, charcode: 43, },
+      { codepoint: 67, font_index: -1, charcode: 44, },
     ],
   }
   @test.assert_eq(pack.get_char(65), Some((43, 1, second)))
@@ -354,8 +354,8 @@ test "pdf_embed_truetype builds font pack and embedded font streams" {
   )
   @test.assert_eq(pack.fonts.length(), 2)
   @test.assert_eq(pack.entries, [
-    { codepoint: 65, font_index: 0, charcode: 65 },
-    { codepoint: 0x0100, font_index: 1, charcode: 33 },
+    { codepoint: 65, font_index: 0, charcode: 65, },
+    { codepoint: 0x0100, font_index: 1, charcode: 33, },
   ])
   @test.assert_eq(pack.get_char(65), Some((65, 0, pack.fonts[0])))
   @test.assert_eq(pack.get_char(0x0100), Some((33, 1, pack.fonts[1])))

@@ -85,7 +85,7 @@ pub fn pdf_addtext_get_urls_line(
       }
       let url = pdf_addtext_utf8_string(bytes[pipe + 1:close])
       let end = position
-      urls.push({ url, start, end })
+      urls.push({ url, start, end, })
       index = close + 1
     } else {
       output[position] = bytes[index]
@@ -93,5 +93,5 @@ pub fn pdf_addtext_get_urls_line(
       index += 1
     }
   }
-  { text: pdf_addtext_utf8_string(Bytes::from_array(output)), urls }
+  { text: pdf_addtext_utf8_string(Bytes::from_array(output)), urls, }
 }

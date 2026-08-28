@@ -27,7 +27,7 @@ priv struct XmlOutputBuilder {
 
 ///|
 fn XmlOutputBuilder::new(maximum : Int?) -> XmlOutputBuilder {
-  { builder: StringBuilder(), maximum, encoded_bytes: 0, exceeded: false }
+  { builder: StringBuilder(), maximum, encoded_bytes: 0, exceeded: false, }
 }
 
 ///|

@@ -53,7 +53,7 @@ test "private text glyph helpers cover fallback and CID ToUnicode branches" {
 
   let fallback_font = wbtest_text_simple_font(
     PdfCustomEncoding(PdfImplicitInFontFile, [
-      { name: wbtest_text_name("/unknown"), code: 65 },
+      { name: wbtest_text_name("/unknown"), code: 65, },
     ]),
     None,
   )

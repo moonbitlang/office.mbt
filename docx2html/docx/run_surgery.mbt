@@ -1028,6 +1028,6 @@ fn run_surgery_synthesise_text(
       replacement: ">\{synthesised}</\{prefix}r>",
     }
   } else {
-    { byte_start: anchor, byte_end: consumed, replacement: synthesised }
+    { byte_start: anchor, byte_end: consumed, replacement: synthesised, }
   }
 }

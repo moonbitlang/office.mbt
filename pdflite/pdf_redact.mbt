@@ -182,7 +182,7 @@ fn pdf_redact_content_entry_bounds(
     double_max(bbox.y0, bbox.y1),
     double_max(bbox.y2, bbox.y3),
   )
-  { min_x, min_y, max_x, max_y }
+  { min_x, min_y, max_x, max_y, }
 }
 
 ///|

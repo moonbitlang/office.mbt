@@ -96,7 +96,7 @@ fn pdf_annotation_default_border() -> PdfAnnotationBorder {
 
 ///|
 fn pdf_annotation_zero_rectangle() -> PdfRectangle {
-  { min_x: 0.0, min_y: 0.0, max_x: 0.0, max_y: 0.0 }
+  { min_x: 0.0, min_y: 0.0, max_x: 0.0, max_y: 0.0, }
 }
 
 ///|
@@ -132,5 +132,5 @@ pub fn pdf_annotation_make(
   colour? : PdfAnnotationColour? = None,
   subject? : PdfBytes? = None,
 ) -> PdfAnnotation {
-  { subtype, contents, subject, rectangle, border, colour, rest: PdfNull }
+  { subtype, contents, subject, rectangle, border, colour, rest: PdfNull, }
 }

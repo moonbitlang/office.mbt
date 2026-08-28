@@ -123,7 +123,7 @@ fn pdf_path_subpath(
   closure : PdfPathClosure,
   segments : ArrayView[PdfPathSegment],
 ) -> PdfPathSubpath {
-  { hole, closure, segments: segments.to_owned() }
+  { hole, closure, segments: segments.to_owned(), }
 }
 
 ///|
@@ -131,7 +131,7 @@ fn pdf_path(
   winding_rule : PdfPathWindingRule,
   subpaths : ArrayView[PdfPathSubpath],
 ) -> PdfPath {
-  { winding_rule, subpaths: subpaths.to_owned() }
+  { winding_rule, subpaths: subpaths.to_owned(), }
 }
 
 ///|

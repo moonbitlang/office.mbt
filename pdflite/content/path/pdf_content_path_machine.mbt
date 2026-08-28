@@ -80,7 +80,7 @@ pub fn PdfContentPartialPath::content_apply_path_op(
         false,
       )
     Op_fstar => self.content_paint(PdfPathEvenOdd, true, false, false)
-    Op_n => { partial_path: PdfContentNoPartialPath, drawn_path: None }
+    Op_n => { partial_path: PdfContentNoPartialPath, drawn_path: None, }
     _ => pdf_content_path_empty_result(self)
   }
 }

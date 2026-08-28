@@ -87,7 +87,7 @@ priv struct PdfMarkdownFontCache {
 
 ///|
 fn pdf_markdown_font_cache() -> PdfMarkdownFontCache {
-  { values: HashMap([]) }
+  { values: HashMap([]), }
 }
 
 ///|

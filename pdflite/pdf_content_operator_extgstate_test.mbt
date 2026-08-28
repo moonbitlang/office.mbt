@@ -95,7 +95,7 @@ test "cpdfcontent operator state applies ExtGState dash parameters" {
         ),
       ]),
     ).path_state.dash_pattern,
-    { array: [], phase: 0.5 },
+    { array: [], phase: 0.5, },
   )
   @test.assert_eq(
     try! doc.content_apply_extgstate_dash_op(

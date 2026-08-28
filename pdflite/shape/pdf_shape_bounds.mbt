@@ -78,7 +78,7 @@ pub fn pdf_path_segment_bounds(segment : PdfPathSegment) -> PdfRectangle {
 
 ///|
 fn pdf_path_empty_bounds() -> PdfRectangle {
-  { min_x: 0.0, min_y: 0.0, max_x: 0.0, max_y: 0.0 }
+  { min_x: 0.0, min_y: 0.0, max_x: 0.0, max_y: 0.0, }
 }
 
 ///|

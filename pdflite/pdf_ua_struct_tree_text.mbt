@@ -108,7 +108,7 @@ fn PdfDocument::pdf_ua_read_struct_tree_text_inner(
     }
     _ => raise SoftError("malformed st node")
   }
-  { name, page_ref, children }
+  { name, page_ref, children, }
 }
 
 ///|
@@ -121,12 +121,12 @@ fn PdfDocument::pdf_ua_read_struct_tree_text(
   }
   let root_name = rolemap.rewrite_name(pdf_ua_struct_tree_root_key())
   match catalog.lookup_immediate(pdf_ua_struct_tree_root_key()) {
-    None => { name: root_name, page_ref: None, children: [] }
+    None => { name: root_name, page_ref: None, children: [], }
     Some(struct_tree_root) => {
       let tree = self.pdf_ua_read_struct_tree_text_inner(
         struct_tree_root, rolemap, 0,
       )
-      { name: root_name, page_ref: tree.page_ref, children: tree.children }
+      { name: root_name, page_ref: tree.page_ref, children: tree.children, }
     }
   }
 }
@@ -149,7 +149,7 @@ fn pdf_ua_remove_empty_struct_tree_text_nodes(
       children.push(pruned)
     }
   }
-  { name: node.name, page_ref: node.page_ref, children }
+  { name: node.name, page_ref: node.page_ref, children, }
 }
 
 ///|

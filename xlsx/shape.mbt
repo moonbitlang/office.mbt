@@ -6,7 +6,7 @@ pub struct ShapeLine {
 
 ///|
 fn ShapeLine::new() -> ShapeLine {
-  { color: None, width: None }
+  { color: None, width: None, }
 }
 
 ///|
@@ -31,7 +31,7 @@ pub struct ShapeFill {
 
 ///|
 fn ShapeFill::new() -> ShapeFill {
-  { color: None, transparency: None }
+  { color: None, transparency: None, }
 }
 
 ///|

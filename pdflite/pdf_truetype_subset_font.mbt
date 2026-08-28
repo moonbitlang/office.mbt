@@ -56,7 +56,7 @@ pub fn pdf_truetype_subset_cmap_table(
       pdf_truetype_normalize_u16(glyph_index),
     )
   }
-  { length, bytes: Bytes::from_array(output) }
+  { length, bytes: Bytes::from_array(output), }
 }
 
 ///|
@@ -132,7 +132,7 @@ fn pdf_truetype_subset_original_table(
   let (offset, length) = pdf_truetype_subset_original_table_span(
     data, sorted_tables, tag,
   )
-  { length: directory_length, bytes: data[offset:offset + length].to_owned() }
+  { length: directory_length, bytes: data[offset:offset + length].to_owned(), }
 }
 
 ///|

@@ -230,7 +230,7 @@ test "cpdfcontent operator core threads graphics stack" {
   @test.assert_eq(changed.marked_content.length(), 1)
   @test.assert_eq(changed.miter_limit, 9.0)
   @test.assert_eq(changed.flatness, 0.25)
-  @test.assert_eq(changed.type3_d0, Some({ width_x: 500.0, width_y: 0.0 }))
+  @test.assert_eq(changed.type3_d0, Some({ width_x: 500.0, width_y: 0.0, }))
   @test.assert_eq(changed.content_apply_core_op(Op_Q), initial)
   @test.assert_eq(initial.content_apply_core_op(Op_BX), initial)
 }
@@ -715,14 +715,14 @@ test "cpdfcontent operator state applies marked content operators" {
   let point = initial.content_apply_marked_content_op(Op_MP(span))
   @test.assert_eq(
     point.marked_content_point,
-    Some({ tag: "/Span", properties: None }),
+    Some({ tag: "/Span", properties: None, }),
   )
   let point_with_properties = point.content_apply_marked_content_op(
     Op_DP(span, properties),
   )
   @test.assert_eq(
     point_with_properties.marked_content_point,
-    Some({ tag: "/Span", properties: Some(properties) }),
+    Some({ tag: "/Span", properties: Some(properties), }),
   )
   let nested = initial
     .content_apply_core_op(Op_BMC(artifact))
@@ -752,7 +752,7 @@ test "cpdfcontent operator state applies Type 3 metric operators" {
     0.0, 0.0, 100.0, 200.0,
   )
   let d0 = initial.content_apply_type3_metrics_op(Op_d0(500.0, 0.0))
-  @test.assert_eq(d0.type3_d0, Some({ width_x: 500.0, width_y: 0.0 }))
+  @test.assert_eq(d0.type3_d0, Some({ width_x: 500.0, width_y: 0.0, }))
   @test.assert_eq(d0.type3_d1, None)
   let d1 = d0.content_apply_core_op(Op_d1(500.0, 0.0, 0.0, -10.0, 600.0, 700.0))
   @test.assert_eq(d1.type3_d0, d0.type3_d0)
@@ -772,7 +772,7 @@ test "cpdfcontent operator state applies Type 3 metric operators" {
       initial,
       Op_d1(1.0, 2.0, 3.0, 4.0, 5.0, 6.0),
     ).type3_d1,
-    Some({ width_x: 1.0, width_y: 2.0, llx: 3.0, lly: 4.0, urx: 5.0, ury: 6.0 }),
+    Some({ width_x: 1.0, width_y: 2.0, llx: 3.0, lly: 4.0, urx: 5.0, ury: 6.0, }),
   )
 }
 
@@ -1462,7 +1462,7 @@ test "cpdfcontent operator state emits shading entries" {
   let name = content_operator_name_for_test("/Sh1")
   let explicit = state.content_shading_entry(
     name,
-    Some({ min_x: 1.0, min_y: 2.0, max_x: 3.0, max_y: 4.0 }),
+    Some({ min_x: 1.0, min_y: 2.0, max_x: 3.0, max_y: 4.0, }),
   )
   guard explicit is Some(explicit_entry) else {
     fail("expected explicit shading bbox entry")

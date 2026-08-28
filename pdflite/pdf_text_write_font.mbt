@@ -29,7 +29,7 @@ pub fn PdfDocument::write_font(
   objnum? : Int? = None,
 ) -> Int raise @core.PdfError {
   match font {
-    PdfFontStandard({ font, encoding }) =>
+    PdfFontStandard({ font, encoding, }) =>
       self.pdf_text_add_font_object(
         pdf_make_font(font.pdf_name(), encoding),
         objnum,
@@ -42,7 +42,7 @@ pub fn PdfDocument::write_font(
         widths,
         encoding,
         fontdescriptor,
-        ..,
+        ..
       }
     ) =>
       match fontdescriptor {
@@ -64,7 +64,7 @@ pub fn PdfDocument::write_font(
         widths,
         fontdescriptor: Some(descriptor),
         encoding,
-        ..,
+        ..
       }
     ) =>
       self.pdf_text_add_font_object(

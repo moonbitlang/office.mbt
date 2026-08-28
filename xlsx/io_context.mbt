@@ -7,7 +7,7 @@ pub struct WorkbookIOContext {
 
 ///|
 fn empty_workbook_io_context() -> WorkbookIOContext {
-  { file_path: None, zip_writer: None, charset_transcoder: None }
+  { file_path: None, zip_writer: None, charset_transcoder: None, }
 }
 
 ///|

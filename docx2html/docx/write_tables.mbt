@@ -139,7 +139,7 @@ fn write_table(
             message="a row span of \{row_span} starting at row \{row_index + 1} exceeds the table's \{rows.length()} row(s)",
           )
         }
-        pending[grid_column] = { remaining: row_span - 1, col_span }
+        pending[grid_column] = { remaining: row_span - 1, col_span, }
       }
       cell_nodes.push(
         XmlElement(write_table_cell(children, col_span, row_span > 1, ctx)),

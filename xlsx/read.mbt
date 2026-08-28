@@ -1007,7 +1007,7 @@ fn parse_defined_names(
         }
       None => "Workbook"
     }
-    names.push({ name, refers_to: unescape_xml_text(data), scope, comment })
+    names.push({ name, refers_to: unescape_xml_text(data), scope, comment, })
   }
   names
 }
@@ -1509,7 +1509,7 @@ fn parse_x14_data_bars(
           }
         None => ()
       }
-      bars[id] = { sqref, bar_direction, bar_solid, bar_border_color }
+      bars[id] = { sqref, bar_direction, bar_solid, bar_border_color, }
     }
   }
   bars
@@ -1812,7 +1812,7 @@ fn parse_sheet_view_selections(
         }
     }
     let tag = text[:end]
-    let selection = { sqref: "", active_cell: "", pane: "" }
+    let selection = { sqref: "", active_cell: "", pane: "", }
     match attr_value(tag, "sqref") {
       Some(value) =>
         selection.sqref = normalize_sqref_for_read(
@@ -2480,7 +2480,7 @@ fn parse_page_breaks(
       Some(value) => parse_bool_attr(value)
       None => false
     }
-    breaks.push({ id, min, max, manual })
+    breaks.push({ id, min, max, manual, })
   }
   breaks
 }
@@ -2600,14 +2600,14 @@ fn parse_auto_filter_columns(
               Some(value) => unescape_xml_text(value)
               None => ""
             }
-            entries.push({ operator, value: val })
+            entries.push({ operator, value: val, })
           }
-          custom_filters = Some({ and_filter: and_value, filters: entries })
+          custom_filters = Some({ and_filter: and_value, filters: entries, })
         }
         None => ()
       }
     }
-    columns.push({ col, filters, custom_filters })
+    columns.push({ col, filters, custom_filters, })
   }
   columns
 }
@@ -2633,7 +2633,7 @@ fn parse_auto_filter(xml : StringView) -> AutoFilter? raise XlsxError {
       None => []
     }
   }
-  Some({ range_ref, columns })
+  Some({ range_ref, columns, })
 }
 
 ///|
@@ -2689,7 +2689,7 @@ fn parse_hyperlink_elements(
       Some(value) => Some(value.to_string())
       None => None
     }
-    links.push({ reference, r_id, location, display, tooltip })
+    links.push({ reference, r_id, location, display, tooltip, })
   }
   links
 }
@@ -2865,7 +2865,7 @@ fn parse_inline_string(rest : StringView) -> InlineStringEntry raise XlsxError {
   let text = rest.to_owned()
   let start = match text.find("<is") {
     Some(pos) => pos
-    None => return { text: "", runs: None }
+    None => return { text: "", runs: None, }
   }
   let after_start = text[start:]
   let open_end = match after_start.find(">") {
@@ -2888,7 +2888,7 @@ fn parse_inline_string(rest : StringView) -> InlineStringEntry raise XlsxError {
   } else {
     None
   }
-  { text: parse_text_nodes(body), runs }
+  { text: parse_text_nodes(body), runs, }
 }
 
 ///|
@@ -2984,7 +2984,7 @@ fn parse_row_dimensions(
       let next = materialized_dimensions.val + 1
       materialized_dimensions.val = next
     }
-    dims[row] = { height, hidden, outline_level, style_id: style }
+    dims[row] = { height, hidden, outline_level, style_id: style, }
   }
   dims
 }
@@ -3085,7 +3085,7 @@ fn parse_col_dimensions(
       )
     }
     dimension_work.val = dimension_work.val + span
-    let dim = { width, hidden, outline_level, style_id: style }
+    let dim = { width, hidden, outline_level, style_id: style, }
     for col in min_col..<=max_col {
       if !dims.contains(col) {
         if materialized_dimensions.val >= max_materialized_dimensions {

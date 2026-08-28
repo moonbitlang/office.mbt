@@ -74,7 +74,7 @@ fn PdfDocument::pdf_squeeze_update_stream_objects(
     }
     match replacement {
       Some(data) => {
-        self.objects.set_entry(number, { data, generation: entry.generation })
+        self.objects.set_entry(number, { data, generation: entry.generation, })
         self.objects.log.push((number, ObjectAltered))
       }
       None => ()

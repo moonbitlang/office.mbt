@@ -52,8 +52,8 @@ pub fn demo_ooxml_showcase_bytes() -> Bytes raise @xlsx.XlsxError {
     family: Some("Calibri"),
   }
   sheet.set_cell_rich_text("A2", [
-    { text: "Spreadsheet as a ", font: Some(title_font) },
-    { text: "Document", font: Some(accent_font) },
+    { text: "Spreadsheet as a ", font: Some(title_font), },
+    { text: "Document", font: Some(accent_font), },
   ])
   sheet.merge_cells("A2:C2")
 
@@ -104,8 +104,8 @@ pub fn demo_ooxml_showcase_bytes() -> Bytes raise @xlsx.XlsxError {
     author_id: None,
     text: "",
     paragraph: [
-      { text: "Note:", font: Some(note_font) },
-      { text: " internal hyperlinks use HyperlinkType::Location", font: None },
+      { text: "Note:", font: Some(note_font), },
+      { text: " internal hyperlinks use HyperlinkType::Location", font: None, },
     ],
     width: Some(260),
     height: Some(80),

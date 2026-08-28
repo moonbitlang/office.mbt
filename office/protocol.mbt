@@ -16,7 +16,7 @@ pub(all) struct ProtocolError {
 ///|
 /// Creates a warning for an Office protocol response.
 pub fn protocol_warning(code : String, message : String) -> ProtocolWarning {
-  { code, message }
+  { code, message, }
 }
 
 ///|
@@ -26,7 +26,7 @@ pub fn protocol_error(
   message : String,
   details? : Json,
 ) -> ProtocolError {
-  { code, message, details }
+  { code, message, details, }
 }
 
 ///|

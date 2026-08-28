@@ -9,7 +9,7 @@ pub(all) struct PdfVersion {
 
 ///|
 /// Fallback version used when a PDF header cannot be found.
-pub let pdf_default_version : PdfVersion = { major: 2, minor: 0 }
+pub let pdf_default_version : PdfVersion = { major: 2, minor: 0, }
 
 ///|
 fn pdf_header_at(cursor : @core.ByteCursor, position : Int) -> PdfVersion? {
@@ -31,7 +31,7 @@ fn pdf_header_at(cursor : @core.ByteCursor, position : Int) -> PdfVersion? {
         let major = header[5].to_int()
         let minor = header[7].to_int()
         if @core.pdf_is_digit_byte(major) && @core.pdf_is_digit_byte(minor) {
-          Some({ major: major - 48, minor: minor - 48 })
+          Some({ major: major - 48, minor: minor - 48, })
         } else {
           None
         }

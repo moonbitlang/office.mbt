@@ -120,7 +120,7 @@ pub fn pdf_truetype_partition_subsets(
       rest.push(codepoint)
     }
   }
-  { main_subset, higher_subsets: pdf_truetype_split_subsets(rest, 224) }
+  { main_subset, higher_subsets: pdf_truetype_split_subsets(rest, 224), }
 }
 
 ///|

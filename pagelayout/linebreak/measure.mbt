@@ -51,5 +51,5 @@ pub fn measure(
       i += 1
     }
   }
-  { advances_pt, fallback }
+  { advances_pt, fallback, }
 }

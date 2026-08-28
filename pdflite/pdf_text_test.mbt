@@ -16,7 +16,7 @@ fn text_core_font_descriptor_for_test() -> @pdflite.PdfFontDescriptor {
     avgwidth: 0.0,
     maxwidth: 0.0,
     flags: 0,
-    fontbbox: { min_x: 0.0, min_y: 0.0, max_x: 0.0, max_y: 0.0 },
+    fontbbox: { min_x: 0.0, min_y: 0.0, max_x: 0.0, max_y: 0.0, },
     italicangle: 0.0,
     capheight: 0.0,
     xheight: 0.0,
@@ -157,7 +157,7 @@ test "PdfDocument write_font rejects unsupported font variants" {
     doc.write_font(
       PdfFontSimple({
         fonttype: PdfType3({
-          fontbbox: { min_x: 0.0, min_y: 0.0, max_x: 0.0, max_y: 0.0 },
+          fontbbox: { min_x: 0.0, min_y: 0.0, max_x: 0.0, max_y: 0.0, },
           fontmatrix: @geometry.transform_identity_matrix,
           charprocs: [],
           resources: @syntax.pdf_dictionary([]),
@@ -183,7 +183,7 @@ test "PdfDocument write_font rejects unsupported font variants" {
     doc.write_font(
       PdfFontSimple({
         fonttype: PdfType3({
-          fontbbox: { min_x: 0.0, min_y: 0.0, max_x: 0.0, max_y: 0.0 },
+          fontbbox: { min_x: 0.0, min_y: 0.0, max_x: 0.0, max_y: 0.0, },
           fontmatrix: @geometry.transform_identity_matrix,
           charprocs: [],
           resources: @syntax.pdf_dictionary([]),

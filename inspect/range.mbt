@@ -70,7 +70,7 @@ pub fn parse_range_unbounded(target : String) -> CellRange raise RangeError {
   match target.find(":") {
     None => {
       let (col, row) = parse_cell_ref(target, full=target)
-      { col_lo: col, row_lo: row, col_hi: col, row_hi: row }
+      { col_lo: col, row_lo: row, col_hi: col, row_hi: row, }
     }
     Some(index) => {
       let (c1, r1) = parse_cell_ref(target[:index], full=target)

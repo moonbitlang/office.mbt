@@ -51,7 +51,7 @@ fn addtext_name_for_test(text : String) -> @core.PdfName {
 
 ///|
 fn addtext_bounds_for_test() -> @geometry.PdfRectangle {
-  { min_x: 0.0, min_y: 0.0, max_x: 100.0, max_y: 50.0 }
+  { min_x: 0.0, min_y: 0.0, max_x: 100.0, max_y: 50.0, }
 }
 
 ///|
@@ -92,7 +92,7 @@ fn addtext_font_descriptor_for_test(
     avgwidth: 0.0,
     maxwidth: 0.0,
     flags: 0,
-    fontbbox: { min_x: 0.0, min_y: 0.0, max_x: 0.0, max_y: 0.0 },
+    fontbbox: { min_x: 0.0, min_y: 0.0, max_x: 0.0, max_y: 0.0, },
     italicangle: 0.0,
     capheight,
     xheight: 0.0,
@@ -133,7 +133,7 @@ fn addtext_simple_font_without_descriptor_for_test() -> @pdflite.PdfFont {
 
 ///|
 fn addtext_standard_font_for_test() -> @pdflite.PdfFont {
-  PdfFontStandard({ font: PdfHelvetica, encoding: PdfWinAnsiEncoding })
+  PdfFontStandard({ font: PdfHelvetica, encoding: PdfWinAnsiEncoding, })
 }
 
 ///|
@@ -356,10 +356,10 @@ test "pdf_addtext_text_ops switches fontpack runs" {
   let pack = @pdflite.PdfFontPack::{
     fonts: [regular, bold],
     entries: [
-      { codepoint: 65, font_index: 0, charcode: 1 },
-      { codepoint: 66, font_index: 1, charcode: 2 },
-      { codepoint: 67, font_index: 1, charcode: 3 },
-      { codepoint: 68, font_index: 0, charcode: 4 },
+      { codepoint: 65, font_index: 0, charcode: 1, },
+      { codepoint: 66, font_index: 1, charcode: 2, },
+      { codepoint: 67, font_index: 1, charcode: 3, },
+      { codepoint: 68, font_index: 0, charcode: 4, },
     ],
   }
   let fallback_font = addtext_name_for_test("/Fallback")
@@ -1318,7 +1318,7 @@ test "PdfDocument addtexts_with_source uses first premade fontpack font" {
     font: PdfTimesRoman,
     encoding: PdfWinAnsiEncoding,
   })
-  let pack = @pdflite.PdfFontPack::{ fonts: [first, second], entries: [] }
+  let pack = @pdflite.PdfFontPack::{ fonts: [first, second], entries: [], }
   let stamped = try! document.addtexts_with_source(
     [1],
     "A",
@@ -1420,7 +1420,7 @@ test "PdfDocument addtexts_with_source delegates existing named fonts" {
 test "pdf_addtexts_with_source skips empty visible text before resolving sources" {
   let document = try! @pdflite.pdf_blank_document(100.0, 50.0, 1)
   let before = document.object_count()
-  let empty_pack = @pdflite.PdfFontPack::{ fonts: [], entries: [] }
+  let empty_pack = @pdflite.PdfFontPack::{ fonts: [], entries: [], }
   let stamped = try! @pdflite.pdf_addtexts_with_source(
     document,
     [1],
@@ -1442,7 +1442,7 @@ test "pdf_addtexts_with_source skips empty visible text before resolving sources
 ///|
 test "pdf_addtexts_with_source rejects empty premade fontpacks" {
   let document = try! @pdflite.pdf_blank_document(100.0, 50.0, 1)
-  let empty_pack = @pdflite.PdfFontPack::{ fonts: [], entries: [] }
+  let empty_pack = @pdflite.PdfFontPack::{ fonts: [], entries: [], }
   let result : Result[@pdflite.PdfDocument, Error] = try
     @pdflite.pdf_addtexts_with_source(
       document,

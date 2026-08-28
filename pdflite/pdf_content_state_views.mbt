@@ -12,7 +12,7 @@ fn pdf_content_state_copy_paths(
 pub fn pdf_content_clipping_state_of_paths(
   clipping_path : ArrayView[@shape.PdfPath],
 ) -> PdfContentClippingState {
-  { clipping_path: pdf_content_state_copy_paths(clipping_path) }
+  { clipping_path: pdf_content_state_copy_paths(clipping_path), }
 }
 
 ///|
@@ -21,7 +21,7 @@ pub fn PdfContentPathState::content_with_clipping_path(
   self : PdfContentPathState,
   clipping_path : ArrayView[@shape.PdfPath],
 ) -> PdfContentPathState {
-  { ..self, clipping_path: pdf_content_state_copy_paths(clipping_path) }
+  { ..self, clipping_path: pdf_content_state_copy_paths(clipping_path), }
 }
 
 ///|

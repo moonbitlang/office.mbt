@@ -70,8 +70,8 @@ test "package validity: comments and rich text" {
     height: None,
   })
   sheet.set_cell_rich_text("B2", [
-    { text: "bold ", font: None },
-    { text: "plain", font: None },
+    { text: "bold ", font: None, },
+    { text: "plain", font: None, },
   ])
   assert_valid_package("comments+richtext", workbook)
 }

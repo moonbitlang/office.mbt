@@ -592,7 +592,7 @@ pub struct RowStream {
 
 ///|
 fn RowStream::new(sheet : Worksheet) -> RowStream {
-  { cells: sheet.sorted_cells(), index: 0 }
+  { cells: sheet.sorted_cells(), index: 0, }
 }
 
 ///|

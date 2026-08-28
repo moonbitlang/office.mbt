@@ -282,8 +282,8 @@ test "auto filter criteria round-trip through read" {
   sheet.set_cell_value("B2", Numeric(10.0))
   sheet.set_cell_value("C2", Numeric(3.5))
   let options : Array[@xlsx.AutoFilterOption] = [
-    { column: "B", expression: "x == 10" },
-    { column: "C", expression: "x > 5" },
+    { column: "B", expression: "x == 10", },
+    { column: "C", expression: "x > 5", },
   ]
   workbook.set_auto_filter("Sheet1", "A1:C3", options)
   let parsed = @xlsx.read(@xlsx.write(workbook))

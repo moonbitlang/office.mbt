@@ -151,7 +151,7 @@ fn partial_exhaustive_batches_for(
     let pairs : Array[String] = []
     for entry in requested {
       let (start, end, replacement) = entry
-      edits.push({ start, end, replacement })
+      edits.push({ start, end, replacement, })
       let start_class = partial_primary_class(
         partial_offset_classes(paragraph, elements, start),
       )
@@ -168,7 +168,7 @@ fn partial_exhaustive_batches_for(
       pairs.push("\{shape}:\{start_class}>\{end_class}")
     }
     if edits.length() > 0 {
-      batches.push({ paragraph_index, edits, pairs })
+      batches.push({ paragraph_index, edits, pairs, })
     }
   }
 
@@ -216,7 +216,7 @@ fn partial_batches_for(
     let pairs : Array[String] = []
     for entry in requested {
       let (start, end, replacement) = entry
-      edits.push({ start, end, replacement })
+      edits.push({ start, end, replacement, })
       let start_class = partial_primary_class(
         partial_offset_classes(paragraph, elements, start),
       )
@@ -233,7 +233,7 @@ fn partial_batches_for(
       pairs.push("\{shape}:\{start_class}>\{end_class}")
     }
     if edits.length() > 0 {
-      batches.push({ paragraph_index, edits, pairs })
+      batches.push({ paragraph_index, edits, pairs, })
     }
   }
 
@@ -1437,7 +1437,7 @@ test "the source allowlist rejects a plan that widens beyond the request" {
   let elements = projection.scan.elements()
   let paragraph = projection.paragraphs[0]
   let requested : Array[ParagraphTextEdit] = [
-    { start: 0, end: 1, replacement: "A" },
+    { start: 0, end: 1, replacement: "A", },
   ]
   let allowed = partial_expected_licenses(
     @utf8.encode(source),
@@ -1509,8 +1509,8 @@ test "the allowlist pins the half-open rule and the synthesis anchors" {
     paragraph,
     elements,
     [
-      ({ start: 0, end: 1, replacement: "A" } : ParagraphTextEdit),
-      { start: 2, end: 3, replacement: "C" },
+      ({ start: 0, end: 1, replacement: "A", } : ParagraphTextEdit),
+      { start: 2, end: 3, replacement: "C", },
     ],
   )
   let mut first_host : ScannedElement? = None
@@ -1548,7 +1548,7 @@ test "the allowlist pins the half-open rule and the synthesis anchors" {
     @utf8.encode(simple),
     simple_paragraph,
     simple_elements,
-    [({ start: 1, end: 2, replacement: "A" } : ParagraphTextEdit)],
+    [({ start: 1, end: 2, replacement: "A", } : ParagraphTextEdit)],
   )
   let SourceElementId(run_identity) = simple_paragraph.runs[0].source
   let run_element = simple_elements[run_identity]
@@ -1698,37 +1698,37 @@ test "payload licenses are exercised by escaping and whitespace" {
   let bodies : Array[(String, Array[ParagraphTextEdit])] = [
     (
       "<w:p><w:r><w:t>abc</w:t></w:r></w:p>",
-      [{ start: 1, end: 2, replacement: "&<>" }],
+      [{ start: 1, end: 2, replacement: "&<>", }],
     ),
     (
       "<w:p><w:r><w:t>abc</w:t></w:r></w:p>",
-      [{ start: 0, end: 3, replacement: "x\ry" }],
+      [{ start: 0, end: 3, replacement: "x\ry", }],
     ),
     (
       "<w:p><w:r><w:t>abc</w:t></w:r></w:p>",
-      [{ start: 0, end: 1, replacement: " lead" }],
+      [{ start: 0, end: 1, replacement: " lead", }],
     ),
     (
       "<w:p><w:r><w:t>abc</w:t></w:r></w:p>",
-      [{ start: 2, end: 3, replacement: "trail " }],
+      [{ start: 2, end: 3, replacement: "trail ", }],
     ),
     (
       "<w:p><w:r><w:t xml:space='preserve'> ab </w:t></w:r></w:p>",
-      [{ start: 1, end: 2, replacement: "&" }],
+      [{ start: 1, end: 2, replacement: "&", }],
     ),
     (
       "<w:p><w:r><w:t xml:space = \"default\">ab</w:t></w:r></w:p>",
-      [{ start: 0, end: 1, replacement: " s" }],
+      [{ start: 0, end: 1, replacement: " s", }],
     ),
     (
       "<w:p><w:r><w:t notxml:space='default' xmlns:notxml='urn:decoy'>ab</w:t></w:r></w:p>",
-      [{ start: 0, end: 1, replacement: " s" }],
+      [{ start: 0, end: 1, replacement: " s", }],
     ),
     (
       "<w:p><w:r><w:tab/><w:t>ab</w:t></w:r></w:p>",
-      [{ start: 0, end: 1, replacement: "&x" }],
+      [{ start: 0, end: 1, replacement: "&x", }],
     ),
-    ("<w:p><w:r/></w:p>", [{ start: 0, end: 0, replacement: " &z " }]),
+    ("<w:p><w:r/></w:p>", [{ start: 0, end: 0, replacement: " &z ", }]),
   ]
   for entry in bodies {
     let (body, edits) = entry
@@ -1745,7 +1745,7 @@ test "payload licenses are exercised by escaping and whitespace" {
       )
       pairs.push("escape:\{start_class}>\{end_class}")
     }
-    let batch = PartialBatchPlan::{ paragraph_index: 0, edits, pairs }
+    let batch = PartialBatchPlan::{ paragraph_index: 0, edits, pairs, }
     let fresh = surgery_native_projection(source)
     let (_, refusal, _) = assert_partial_batch(source, fresh, batch)
     assert_eq(refusal, "", msg="escaping batch refused for \{body}")

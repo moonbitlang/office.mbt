@@ -72,7 +72,7 @@ fn drawing_axis_metrics_for_sheet(
     delta_sum = delta_sum + Int64::from_int(delta)
     prefix_deltas.push(delta_sum)
   }
-  { axis: axis.to_owned(), limit, default_px, override_indices, prefix_deltas }
+  { axis: axis.to_owned(), limit, default_px, override_indices, prefix_deltas, }
 }
 
 ///|

@@ -31,7 +31,7 @@ priv struct RowGateOutcome {
 
 ///|
 fn row_gate_refuse(reason : String) -> RowGateOutcome {
-  { strip_spans: [], refusal: Some(reason) }
+  { strip_spans: [], refusal: Some(reason), }
 }
 
 ///|
@@ -540,7 +540,7 @@ fn row_safety_gate(
     index = tag_end + 1
   }
   strip_spans.sort_by((a, b) => a.0 - b.0)
-  { strip_spans, refusal: None }
+  { strip_spans, refusal: None, }
 }
 
 ///|
@@ -807,7 +807,7 @@ pub async fn transact_docx_template_document(
     fn refuse(location : String, detail : String) {
       state.report.unsupported_total += 1
       if state.report.unsupported.length() < docx_template_finding_limit {
-        state.report.unsupported.push({ location, detail })
+        state.report.unsupported.push({ location, detail, })
       }
     }
 
@@ -1256,7 +1256,7 @@ fn docx_build_row_clone(
   let edits : Array[CloneEdit] = []
   for strip in strip_spans {
     let (start, end) = strip
-    edits.push({ start, end, replacement: b"" })
+    edits.push({ start, end, replacement: b"", })
   }
   for edit in record_edits {
     guard annotated.story_run_span(edit.story, edit.run_path) is Some(span) else {
@@ -1268,7 +1268,7 @@ fn docx_build_row_clone(
       if start < 0 || end > span_end - span_start || start > end {
         return None
       }
-      edits.push({ start, end, replacement: b"" })
+      edits.push({ start, end, replacement: b"", })
       continue
     }
     guard (span.content_start(), span.close_tag_start())
@@ -1285,7 +1285,7 @@ fn docx_build_row_clone(
     let replacement = "<w:t xml:space=\"preserve\">" +
       docx_escape_text(edit.final_text) +
       "</w:t>"
-    edits.push({ start, end, replacement: @utf8.encode(replacement) })
+    edits.push({ start, end, replacement: @utf8.encode(replacement), })
   }
   edits.sort_by((a, b) => a.start - b.start)
   let mut previous_end = 0

@@ -13,7 +13,7 @@ fn addtext_resource_font_descriptor_for_test(
     avgwidth: 0.0,
     maxwidth: 0.0,
     flags: 0,
-    fontbbox: { min_x: 0.0, min_y: 0.0, max_x: 0.0, max_y: 0.0 },
+    fontbbox: { min_x: 0.0, min_y: 0.0, max_x: 0.0, max_y: 0.0, },
     italicangle: 0.0,
     capheight,
     xheight: 0.0,
@@ -58,7 +58,7 @@ fn addtext_resource_simple_font_with_encoding_for_test(
 
 ///|
 fn addtext_resource_standard_font_for_test() -> @pdflite.PdfFont {
-  PdfFontStandard({ font: PdfHelvetica, encoding: PdfWinAnsiEncoding })
+  PdfFontStandard({ font: PdfHelvetica, encoding: PdfWinAnsiEncoding, })
 }
 
 ///|
@@ -66,7 +66,7 @@ test "pdf_addtext_effective_encoding follows selected add-text font" {
   @test.assert_eq(
     @pdflite.pdf_addtext_effective_encoding(
       Some(
-        PdfFontStandard({ font: PdfTimesRoman, encoding: PdfMacRomanEncoding }),
+        PdfFontStandard({ font: PdfTimesRoman, encoding: PdfMacRomanEncoding, }),
       ),
     ),
     PdfMacRomanEncoding,

@@ -141,7 +141,7 @@ pub fn parse_dump_envelope(
             "asset \"\{id}\" payload does not hash to its id",
           )
         }
-        assets[id] = { content_type, size: decoded.length(), data }
+        assets[id] = { content_type, size: decoded.length(), data, }
       }
     Some(_) => raise DumpParseError("non-object \"assets\"")
     None => ()

@@ -65,10 +65,10 @@ fn docx_paragraph_pieces(
 ) -> Array[DocxPiece] {
   let pieces : Array[DocxPiece] = []
   let separator = () => {
-    pieces.push({ run_path: "", parent: "", text: "\n", rewritable: false })
+    pieces.push({ run_path: "", parent: "", text: "\n", rewritable: false, })
   }
   let opaque_text = (value : String) => {
-    pieces.push({ run_path: "", parent: "", text: value, rewritable: false })
+    pieces.push({ run_path: "", parent: "", text: value, rewritable: false, })
   }
   // descendant collector for content nested inside opaque runs (complex
   // fields wrap hyperlinks inside runs): text renders adjacently but is
@@ -111,7 +111,12 @@ fn docx_paragraph_pieces(
           text.write_string(value)
         }
       }
-      pieces.push({ run_path, parent, text: text.to_string(), rewritable: true })
+      pieces.push({
+        run_path,
+        parent,
+        text: text.to_string(),
+        rewritable: true,
+      })
     } else {
       for child in run_children {
         match child {

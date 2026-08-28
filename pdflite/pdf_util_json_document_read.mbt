@@ -75,8 +75,8 @@ pub fn pdf_document_of_json(json : Json) -> PdfDocument raise @core.PdfError {
     Array(values) => values
     _ => raise BadText
   }
-  let params = Ref::{ val: @syntax.PdfObject::PdfNull }
-  let trailer = Ref::{ val: @syntax.PdfObject::PdfNull }
+  let params = Ref::{ val: @syntax.PdfObject::PdfNull, }
+  let trailer = Ref::{ val: @syntax.PdfObject::PdfNull, }
   let objects : Array[(Int, @syntax.PdfObject)] = Array::new(
     capacity=items.length(),
   )

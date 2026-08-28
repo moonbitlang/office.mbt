@@ -518,7 +518,7 @@ pub fn find_docx_matches(
       try
         ignore(
           plan_paragraph_text_edits(projection, bytes, paragraph_index, [
-            { start, end, replacement: needle },
+            { start, end, replacement: needle, },
           ]),
         )
       catch {
@@ -621,5 +621,5 @@ pub fn find_docx_matches(
       })
     }
   }
-  { matches, total: ordinal }
+  { matches, total: ordinal, }
 }

@@ -115,7 +115,7 @@ priv struct ExtentAccumulator {
 
 ///|
 fn ExtentAccumulator::new() -> ExtentAccumulator {
-  { present: false, max_row: 0, is_opaque: false }
+  { present: false, max_row: 0, is_opaque: false, }
 }
 
 ///|
@@ -157,7 +157,7 @@ fn ExtentAccumulator::entry(
   } else {
     RowsUpTo(self.max_row)
   }
-  into.push({ class, extent, handling })
+  into.push({ class, extent, handling, })
 }
 
 ///|
@@ -754,14 +754,14 @@ pub fn Worksheet::raw_data_validation_criteria(
     }
     if root_end >= 2 && trimmed[root_end - 2] == '/' {
       // a self-closing root has no formula children at all
-      out.push({ validation_type, sqref, formula1: "", formula2: "" })
+      out.push({ validation_type, sqref, formula1: "", formula2: "", })
       continue
     }
     let formula1 = raw_direct_child_text(trimmed, root_end, "formula1")
     let formula2 = raw_direct_child_text(trimmed, root_end, "formula2")
     match (formula1, formula2) {
       (Some(first), Some(second)) =>
-        out.push({ validation_type, sqref, formula1: first, formula2: second })
+        out.push({ validation_type, sqref, formula1: first, formula2: second, })
       _ => out.push(fallback)
     }
   }

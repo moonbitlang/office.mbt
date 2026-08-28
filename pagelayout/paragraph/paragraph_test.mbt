@@ -17,8 +17,8 @@ fn para(
 ) -> @paragraph.ParagraphInput {
   let style = @paragraph.ParagraphStyle::default()
   {
-    runs: [{ text, style: plain_style(12), field: NotAField }],
-    style: { ..style, align, indent_first_pt: first },
+    runs: [{ text, style: plain_style(12), field: NotAField, }],
+    style: { ..style, align, indent_first_pt: first, },
   }
 }
 
@@ -131,8 +131,8 @@ test "multi-style runs keep their boundaries" {
   }
   let input = @paragraph.ParagraphInput::{
     runs: [
-      { text: "normal ", style: plain_style(12), field: NotAField },
-      { text: "bold", style: bold, field: NotAField },
+      { text: "normal ", style: plain_style(12), field: NotAField, },
+      { text: "bold", style: bold, field: NotAField, },
     ],
     style: @paragraph.ParagraphStyle::default(),
   }
@@ -150,17 +150,20 @@ test "line spacing rules scale heights" {
   let natural = base.lines[0].height_pt
   let style = @paragraph.ParagraphStyle::default()
   let double_spaced = @paragraph.layout_paragraph(
-    { runs: para("Hello").runs, style: { ..style, line_spacing: Multiple(2) } },
+    {
+      runs: para("Hello").runs,
+      style: { ..style, line_spacing: Multiple(2), },
+    },
     400,
   )
   assert_eq(double_spaced.lines[0].height_pt, natural * 2)
   let exact = @paragraph.layout_paragraph(
-    { runs: para("Hello").runs, style: { ..style, line_spacing: Exact(20) } },
+    { runs: para("Hello").runs, style: { ..style, line_spacing: Exact(20), }, },
     400,
   )
   assert_eq(exact.lines[0].height_pt, 20)
   let at_least_small = @paragraph.layout_paragraph(
-    { runs: para("Hello").runs, style: { ..style, line_spacing: AtLeast(6) } },
+    { runs: para("Hello").runs, style: { ..style, line_spacing: AtLeast(6), }, },
     400,
   )
   assert_eq(at_least_small.lines[0].height_pt, natural)
@@ -172,7 +175,7 @@ test "space before and after pad the paragraph height" {
   let padded = @paragraph.layout_paragraph(
     {
       runs: para("Hello").runs,
-      style: { ..style, space_before_pt: 6, space_after_pt: 10 },
+      style: { ..style, space_before_pt: 6, space_after_pt: 10, },
     },
     400,
   )

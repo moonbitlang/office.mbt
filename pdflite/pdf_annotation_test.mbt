@@ -10,7 +10,7 @@ fn annotation_rect_for_test(
   max_x : Double,
   max_y : Double,
 ) -> @geometry.PdfRectangle {
-  { min_x, min_y, max_x, max_y }
+  { min_x, min_y, max_x, max_y, }
 }
 
 ///|
@@ -501,7 +501,7 @@ test "PdfDocument annotations_of_page reads popup annotations" {
     style: AnnotationDashed,
     dash_array: [3, 1],
   })
-  @test.assert_eq(parent.colour, Some({ red: 1, green: 2, blue: 3 }))
+  @test.assert_eq(parent.colour, Some({ red: 1, green: 2, blue: 3, }))
   @test.assert_eq(parent.rest, PdfDictionary([(key_nm, PdfString(b"n1"))]))
   @test.assert_eq(
     annotations[0].rest,
@@ -529,7 +529,7 @@ test "PdfDocument add_annotation writes annotation objects into page rest" {
       dash_array=[4, 2],
     ),
     rectangle=annotation_rect_for_test(1.0, 2.0, 3.0, 4.0),
-    colour=Some({ red: 9, green: 8, blue: 7 }),
+    colour=Some({ red: 9, green: 8, blue: 7, }),
     subject=Some(b"subject"),
   )
   let page = try! doc.add_annotation(

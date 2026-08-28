@@ -46,7 +46,7 @@ pub fn break_lines(
   while i < n {
     let unit = text[i].to_int()
     if unit == '\n'.to_int() {
-      lines.push({ start: line_start, end: i, width_pt: content_width })
+      lines.push({ start: line_start, end: i, width_pt: content_width, })
       line_start = i + 1
       content_width = 0.0
       pending_spaces = 0.0
@@ -76,7 +76,7 @@ pub fn break_lines(
       for j in line_start..<visible_end {
         width += advances_pt[j]
       }
-      lines.push({ start: line_start, end: break_at, width_pt: width })
+      lines.push({ start: line_start, end: break_at, width_pt: width, })
       line_start = break_at
       content_width = 0.0
       pending_spaces = 0.0
@@ -89,7 +89,7 @@ pub fn break_lines(
     i += 1
   }
   if line_start < n || lines.length() == 0 {
-    lines.push({ start: line_start, end: n, width_pt: content_width })
+    lines.push({ start: line_start, end: n, width_pt: content_width, })
   }
   lines
 }

@@ -163,7 +163,7 @@ fn capability_field(
   required : Bool,
   description : String,
 ) -> CapabilityField {
-  { name, type_name, required, description }
+  { name, type_name, required, description, }
 }
 
 ///|
@@ -173,7 +173,7 @@ fn capability_action(
   forbids : Array[String],
   restrictions? : Array[String] = [],
 ) -> CapabilityAction {
-  { name, requires, forbids, restrictions }
+  { name, requires, forbids, restrictions, }
 }
 
 ///|

@@ -225,7 +225,7 @@ fn CfbBuilder::prepare(self : CfbBuilder) -> Unit {
     if self.sectors[i].type_id == 0 {
       continue
     }
-    objects.push({ path: self.paths[i], sector: self.sectors[i] })
+    objects.push({ path: self.paths[i], sector: self.sectors[i], })
   }
   objects.sort_by((a, b) => cfb_compare(a.path, b.path))
   self.paths = []
@@ -771,7 +771,7 @@ fn cfb_read(
     dir_data.append(chunk.to_array())
   }
   let entries : Array[CfbEntry] = []
-  let mut root_entry : CfbEntry = { name: "", type_id: 0, start: 0, size: 0 }
+  let mut root_entry : CfbEntry = { name: "", type_id: 0, start: 0, size: 0, }
   let mut offset = 0
   while offset + 128 <= dir_data.length() {
     if offset % 4096 == 0 {
@@ -797,7 +797,7 @@ fn cfb_read(
     } else {
       ""
     }
-    let entry = { name, type_id, start, size }
+    let entry = { name, type_id, start, size, }
     if entries.length() == 0 {
       root_entry = entry
     }
@@ -1190,7 +1190,7 @@ test "cfb wb: read_stream guard branches" {
     mini_sector_size: 64,
     fat: [],
     mini_fat: [],
-    entries: [{ name: "x", type_id: 5, start: 0, size: 1 }],
+    entries: [{ name: "x", type_id: 5, start: 0, size: 1, }],
     mini_stream: Default::default(),
   }
   let not_stream_result : Result[Bytes, Error] = Ok(not_stream.read_stream("x")) catch {
@@ -1208,7 +1208,7 @@ test "cfb wb: read_stream guard branches" {
     mini_sector_size: 64,
     fat: [],
     mini_fat: [],
-    entries: [{ name: "x", type_id: 2, start: 0, size: 0 }],
+    entries: [{ name: "x", type_id: 2, start: 0, size: 0, }],
     mini_stream: Default::default(),
   }
   inspect(zero_size.read_stream("x"), content="b\"\"")
@@ -1219,7 +1219,7 @@ test "cfb wb: read_stream guard branches" {
     mini_sector_size: 64,
     fat: [],
     mini_fat: [],
-    entries: [{ name: "x", type_id: 2, start: 0, size: 1 }],
+    entries: [{ name: "x", type_id: 2, start: 0, size: 1, }],
     mini_stream: Default::default(),
   }
   let mini_missing_result : Result[Bytes, Error] = Ok(
@@ -1239,7 +1239,7 @@ test "cfb wb: read_stream guard branches" {
     mini_sector_size: 64,
     fat: [],
     mini_fat: [0],
-    entries: [{ name: "x", type_id: 2, start: 1, size: 1 }],
+    entries: [{ name: "x", type_id: 2, start: 1, size: 1, }],
     mini_stream: Bytes::make(64, (0x00).to_byte()),
   }
   let mini_oob_result : Result[Bytes, Error] = Ok(mini_oob.read_stream("x")) catch {
@@ -1257,7 +1257,7 @@ test "cfb wb: read_stream guard branches" {
     mini_sector_size: 64,
     fat: [],
     mini_fat: [],
-    entries: [{ name: "x", type_id: 2, start: 0, size: 1 }],
+    entries: [{ name: "x", type_id: 2, start: 0, size: 1, }],
     mini_stream: Bytes::make(64, (0x00).to_byte()),
   }
   let mini_chain_oob_result : Result[Bytes, Error] = Ok(
@@ -1277,7 +1277,7 @@ test "cfb wb: read_stream guard branches" {
     mini_sector_size: 64,
     fat: [],
     mini_fat: [0],
-    entries: [{ name: "x", type_id: 2, start: 0, size: 128 }],
+    entries: [{ name: "x", type_id: 2, start: 0, size: 128, }],
     mini_stream: Bytes::make(64, (0x00).to_byte()),
   }
   let mini_chain_long_result : Result[Bytes, Error] = Ok(

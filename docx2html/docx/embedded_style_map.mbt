@@ -47,7 +47,7 @@ fn unzip_write_entries(
   }
   let entries : Array[ZipWriteEntry] = []
   for entry in archive.entries() {
-    entries.push({ path: entry.name(), content: entry.data().to_owned() })
+    entries.push({ path: entry.name(), content: entry.data().to_owned(), })
   }
   entries
 }
@@ -72,11 +72,11 @@ fn replace_or_append_zip_entry(
   let canonical_path = path.to_lower()
   for index in 0..<entries.length() {
     if entries[index].path.to_lower() == canonical_path {
-      entries[index] = { path: entries[index].path, content }
+      entries[index] = { path: entries[index].path, content, }
       return
     }
   }
-  entries.push({ path, content })
+  entries.push({ path, content, })
 }
 
 ///|

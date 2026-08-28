@@ -68,7 +68,7 @@ fn style(size_pt : Double) -> @paragraph.RunStyle {
 ///|
 fn para(text : String) -> @paragraph.ParagraphInput {
   {
-    runs: [{ text, style: style(12), field: NotAField }],
+    runs: [{ text, style: style(12), field: NotAField, }],
     style: @paragraph.ParagraphStyle::default(),
   }
 }
@@ -137,8 +137,8 @@ test "page geometry reaches the pdf mediabox" {
 ///|
 test "the y axis is flipped from the IR's top-left origin" {
   let model = @pagelayout.PageModel::new()
-  let font = model.add_font({ family: "Carlito", bold: false, italic: false })
-  let page = @pagelayout.Page::{ width_pt: 200, height_pt: 100, items: [] }
+  let font = model.add_font({ family: "Carlito", bold: false, italic: false, })
+  let page = @pagelayout.Page::{ width_pt: 200, height_pt: 100, items: [], }
   page.items.push(
     Text({
       font,
@@ -160,7 +160,7 @@ test "the y axis is flipped from the IR's top-left origin" {
 ///|
 test "rects are flipped and filled" {
   let model = @pagelayout.PageModel::new()
-  let page = @pagelayout.Page::{ width_pt: 200, height_pt: 100, items: [] }
+  let page = @pagelayout.Page::{ width_pt: 200, height_pt: 100, items: [], }
   page.items.push(
     Rect({
       x_pt: 10,
@@ -215,8 +215,8 @@ test "a real docx renders to a pdf that parses" {
 ///|
 test "characters outside WinAnsi do not break the run that follows" {
   let model = @pagelayout.PageModel::new()
-  let font = model.add_font({ family: "Carlito", bold: false, italic: false })
-  let page = @pagelayout.Page::{ width_pt: 300, height_pt: 100, items: [] }
+  let font = model.add_font({ family: "Carlito", bold: false, italic: false, })
+  let page = @pagelayout.Page::{ width_pt: 300, height_pt: 100, items: [], }
   page.items.push(
     Text({
       font,
@@ -241,7 +241,7 @@ test "characters outside WinAnsi do not break the run that follows" {
 test "an image becomes an XObject drawn at its box" {
   let png = b"\x89\x50\x4e\x47\x0d\x0a\x1a\x0a\x00\x00\x00\x0d\x49\x48\x44\x52\x00\x00\x00\x01\x00\x00\x00\x01\x08\x02\x00\x00\x00\x90\x77\x53\xde\x00\x00\x00\x0c\x49\x44\x41\x54\x08\xd7\x63\xf8\xcf\xc0\x00\x00\x03\x01\x01\x00\x18\xdd\x8d\xb0\x00\x00\x00\x00\x49\x45\x4e\x44\xae\x42\x60\x82"
   let model = @pagelayout.PageModel::new()
-  let page = @pagelayout.Page::{ width_pt: 200, height_pt: 100, items: [] }
+  let page = @pagelayout.Page::{ width_pt: 200, height_pt: 100, items: [], }
   page.items.push(
     Image({
       x_pt: 10,
@@ -268,7 +268,7 @@ test "an image becomes an XObject drawn at its box" {
 ///|
 test "an unembeddable image is skipped, not written as garbage" {
   let model = @pagelayout.PageModel::new()
-  let page = @pagelayout.Page::{ width_pt: 200, height_pt: 100, items: [] }
+  let page = @pagelayout.Page::{ width_pt: 200, height_pt: 100, items: [], }
   page.items.push(
     Image({
       x_pt: 0,
@@ -467,7 +467,7 @@ test "two documents sharing image bytes each carry their own XObject" {
   let png = b"\x89\x50\x4e\x47\x0d\x0a\x1a\x0a\x00\x00\x00\x0d\x49\x48\x44\x52\x00\x00\x00\x01\x00\x00\x00\x01\x08\x02\x00\x00\x00\x90\x77\x53\xde\x00\x00\x00\x0c\x49\x44\x41\x54\x08\xd7\x63\xf8\xcf\xc0\x00\x00\x03\x01\x01\x00\x18\xdd\x8d\xb0\x00\x00\x00\x00\x49\x45\x4e\x44\xae\x42\x60\x82"
   fn build() {
     let model = @pagelayout.PageModel::new()
-    let page = @pagelayout.Page::{ width_pt: 200, height_pt: 100, items: [] }
+    let page = @pagelayout.Page::{ width_pt: 200, height_pt: 100, items: [], }
     page.items.push(
       Image({
         x_pt: 10,
@@ -498,8 +498,8 @@ test "a face goes composite only for characters it can actually draw" {
   // losing the advance the layout chose — so the emitter must keep the
   // font simple and break the run around the character instead.
   let model = @pagelayout.PageModel::new()
-  let font = model.add_font({ family: "Carlito", bold: false, italic: false })
-  let page = @pagelayout.Page::{ width_pt: 300, height_pt: 100, items: [] }
+  let font = model.add_font({ family: "Carlito", bold: false, italic: false, })
+  let page = @pagelayout.Page::{ width_pt: 300, height_pt: 100, items: [], }
   page.items.push(
     Text({
       font,
@@ -529,8 +529,10 @@ test "images the backend cannot embed are reported, not just skipped" {
   let png = b"\x89\x50\x4e\x47\x0d\x0a\x1a\x0a\x00\x00\x00\x0d\x49\x48\x44\x52\x00\x00\x00\x01\x00\x00\x00\x01\x08\x02\x00\x00\x00\x90\x77\x53\xde\x00\x00\x00\x0c\x49\x44\x41\x54\x08\xd7\x63\xf8\xcf\xc0\x00\x00\x03\x01\x01\x00\x18\xdd\x8d\xb0\x00\x00\x00\x00\x49\x45\x4e\x44\xae\x42\x60\x82"
   fn model_with(data : Bytes, mime : String) {
     let model = @pagelayout.PageModel::new()
-    let page = @pagelayout.Page::{ width_pt: 200, height_pt: 100, items: [] }
-    page.items.push(Image({ x_pt: 0, y_pt: 0, w_pt: 10, h_pt: 10, data, mime }))
+    let page = @pagelayout.Page::{ width_pt: 200, height_pt: 100, items: [], }
+    page.items.push(
+      Image({ x_pt: 0, y_pt: 0, w_pt: 10, h_pt: 10, data, mime, }),
+    )
     model.pages.push(page)
     model
   }

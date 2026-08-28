@@ -76,7 +76,7 @@ pub struct WorkbookPropsOptions {
 
 ///|
 fn WorkbookPropsOptions::new() -> WorkbookPropsOptions {
-  { date_1904: None, filter_privacy: None, code_name: None }
+  { date_1904: None, filter_privacy: None, code_name: None, }
 }
 
 ///|
@@ -85,7 +85,7 @@ pub fn WorkbookPropsOptions::with_values(
   filter_privacy? : Bool,
   code_name? : String,
 ) -> WorkbookPropsOptions {
-  { date_1904, filter_privacy, code_name }
+  { date_1904, filter_privacy, code_name, }
 }
 
 ///|
@@ -108,7 +108,7 @@ pub fn CustomProperty::new(
   name : String,
   value : CustomPropertyValue?,
 ) -> CustomProperty {
-  { name, value }
+  { name, value, }
 }
 
 ///|
@@ -136,7 +136,7 @@ pub fn WorkbookProtectionOptions::with_values(
   lock_structure? : Bool = false,
   lock_windows? : Bool = false,
 ) -> WorkbookProtectionOptions {
-  { algorithm_name, password, lock_structure, lock_windows }
+  { algorithm_name, password, lock_structure, lock_windows, }
 }
 
 ///|

@@ -12,7 +12,7 @@ priv struct ReaderSourceSpan {
 
 ///|
 fn reader_element_span(element : ScannedElement) -> ReaderSourceSpan {
-  { byte_start: element.byte_start, byte_end: element.byte_end }
+  { byte_start: element.byte_start, byte_end: element.byte_end, }
 }
 
 ///|
@@ -20,7 +20,7 @@ fn reader_atom_span(element : ScannedElement) -> ReaderSourceSpan {
   if is_wml_uri(element.uri) &&
     element.local_name == "t" &&
     element.text_map is Some(_) {
-    { byte_start: element.content_start, byte_end: element.content_end }
+    { byte_start: element.content_start, byte_end: element.content_end, }
   } else {
     reader_element_span(element)
   }

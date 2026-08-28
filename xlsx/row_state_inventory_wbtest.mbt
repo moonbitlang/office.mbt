@@ -27,11 +27,15 @@ test "inventory: API-built classes report parsed extents and insert handling" {
   let entries = workbook.sheet_row_state_inventory("Data")
   assert_eq(
     wb_inventory_entry(entries, Cells),
-    Some({ class: Cells, extent: RowsUpTo(7), handling: ShiftedByInsert }),
+    Some({ class: Cells, extent: RowsUpTo(7), handling: ShiftedByInsert, }),
   )
   assert_eq(
     wb_inventory_entry(entries, MergedRanges),
-    Some({ class: MergedRanges, extent: RowsUpTo(2), handling: ShiftedByInsert }),
+    Some({
+      class: MergedRanges,
+      extent: RowsUpTo(2),
+      handling: ShiftedByInsert,
+    }),
   )
   assert_eq(
     wb_inventory_entry(entries, RowDimensions),
@@ -85,7 +89,7 @@ test "inventory: sparkline extent folds the source range" {
   let sheet = workbook.add_sheet("Data")
   sheet.sparkline_groups.push({
     sparkline_type: Line,
-    sparklines: [{ range_ref: "A100:A200", location: "F2" }],
+    sparklines: [{ range_ref: "A100:A200", location: "F2", }],
     options: SparklineGroupOptions::new(),
   })
   let entries = sheet.row_state_inventory()
@@ -127,7 +131,7 @@ test "inventory: opaque and internal-state classes degrade to whole-sheet" {
   )
   assert_eq(
     wb_inventory_entry(entries, VmlContent),
-    Some({ class: VmlContent, extent: WholeSheet, handling: StaticOnWrite }),
+    Some({ class: VmlContent, extent: WholeSheet, handling: StaticOnWrite, }),
   )
   assert_eq(
     wb_inventory_entry(entries, CellValueMetadata),
@@ -155,7 +159,7 @@ test "inventory: opaque and internal-state classes degrade to whole-sheet" {
   )
   assert_eq(
     wb_inventory_entry(entries, MergedRanges),
-    Some({ class: MergedRanges, extent: WholeSheet, handling: ShiftedByInsert }),
+    Some({ class: MergedRanges, extent: WholeSheet, handling: ShiftedByInsert, }),
   )
 }
 
@@ -163,7 +167,7 @@ test "inventory: opaque and internal-state classes degrade to whole-sheet" {
 test "inventory: row breaks use one-based rows from zero-based ids" {
   let workbook = Workbook::new()
   let sheet = workbook.add_sheet("Data")
-  sheet.row_breaks.push({ id: 41, min: 0, max: 16383, manual: true })
+  sheet.row_breaks.push({ id: 41, min: 0, max: 16383, manual: true, })
   let entries = sheet.row_state_inventory()
   assert_eq(
     wb_inventory_entry(entries, RowPageBreaks),

@@ -674,5 +674,5 @@ pub async fn transact_docx_annotations(
       "office.docx.annotation_internal", "the annotation batch produced no report",
     )
   }
-  { report: result, transaction: report }
+  { report: result, transaction: report, }
 }

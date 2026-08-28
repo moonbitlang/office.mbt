@@ -13,7 +13,7 @@ fn text_standard_font_difference_for_test(
   name : String,
   code : Int,
 ) -> @pdflite.PdfEncodingDifference {
-  { name: text_standard_font_name_for_test(name), code }
+  { name: text_standard_font_name_for_test(name), code, }
 }
 
 ///|
@@ -21,7 +21,7 @@ fn text_standard_font_data_helper_for_test(
   font : @pdflite.PdfStandardFont,
   encoding : @pdflite.PdfEncoding,
 ) -> @pdflite.PdfStandardFontData {
-  { font, encoding }
+  { font, encoding, }
 }
 
 ///|
@@ -32,7 +32,7 @@ fn text_standard_font_descriptor_for_test() -> @pdflite.PdfFontDescriptor {
     avgwidth: 0.0,
     maxwidth: 0.0,
     flags: 0,
-    fontbbox: { min_x: 0.0, min_y: 0.0, max_x: 0.0, max_y: 0.0 },
+    fontbbox: { min_x: 0.0, min_y: 0.0, max_x: 0.0, max_y: 0.0, },
     italicangle: 0.0,
     capheight: 0.0,
     xheight: 0.0,
@@ -264,7 +264,7 @@ test "PdfStandardFont text_width uses glyph-name widths for explicit encodings" 
     722,
   )
   let slashless : @pdflite.PdfEncoding = PdfCustomEncoding(PdfWinAnsiEncoding, [
-    { name: text_standard_font_name_for_test("AE"), code: 65 },
+    { name: text_standard_font_name_for_test("AE"), code: 65, },
   ])
   @test.assert_eq(
     @pdflite.PdfHelvetica.text_width(slashless, symbol_text),

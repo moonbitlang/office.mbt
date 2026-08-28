@@ -1,7 +1,7 @@
 ///|
 /// Creates a two-dimensional point.
 pub fn point2(x : Double, y : Double) -> Point2 {
-  { x, y }
+  { x, y, }
 }
 
 ///|
@@ -24,7 +24,7 @@ pub fn transform_identity() -> Array[TransformOp] {
 ///|
 /// Creates a translation matrix.
 pub fn transform_translate(tx : Double, ty : Double) -> TransformMatrix {
-  { ..transform_identity_matrix, e: tx, f: ty }
+  { ..transform_identity_matrix, e: tx, f: ty, }
 }
 
 ///|
@@ -55,7 +55,7 @@ pub fn transform_scale(
   transform_matrix_compose(
     translate_back,
     transform_matrix_compose(
-      { ..transform_identity_matrix, a: sx, d: sy },
+      { ..transform_identity_matrix, a: sx, d: sy, },
       translate,
     ),
   )
@@ -91,7 +91,7 @@ pub fn transform_shear_x(origin : Point2, factor : Double) -> TransformMatrix {
   transform_matrix_compose(
     translate_back,
     transform_matrix_compose(
-      { ..transform_identity_matrix, c: factor },
+      { ..transform_identity_matrix, c: factor, },
       translate,
     ),
   )
@@ -105,7 +105,7 @@ pub fn transform_shear_y(origin : Point2, factor : Double) -> TransformMatrix {
   transform_matrix_compose(
     translate_back,
     transform_matrix_compose(
-      { ..transform_identity_matrix, b: factor },
+      { ..transform_identity_matrix, b: factor, },
       translate,
     ),
   )

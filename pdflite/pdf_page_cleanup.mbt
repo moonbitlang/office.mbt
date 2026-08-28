@@ -71,7 +71,7 @@ fn pdf_page_nullify_entry(
         ),
         generation: entry.generation,
       }
-    _ => { data: entry.data, generation: entry.generation }
+    _ => { data: entry.data, generation: entry.generation, }
   }
 }
 

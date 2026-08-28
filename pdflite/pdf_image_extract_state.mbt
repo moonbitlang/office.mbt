@@ -31,6 +31,6 @@ fn PdfImageExtractionState::add_jbig2_global(
 ) -> Int {
   self.next_jbig2_serial.val += 1
   let serial = self.next_jbig2_serial.val
-  self.globals.push({ object_number, serial })
+  self.globals.push({ object_number, serial, })
   serial
 }

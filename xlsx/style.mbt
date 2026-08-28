@@ -570,7 +570,7 @@ priv struct BorderXmlEntry {
 
 ///|
 fn Border::new(typ : String) -> Border {
-  { typ, color: None, style: None }
+  { typ, color: None, style: None, }
 }
 
 ///|
@@ -612,7 +612,7 @@ pub struct Protection {
 
 ///|
 fn Protection::new() -> Protection {
-  { hidden: None, locked: None }
+  { hidden: None, locked: None, }
 }
 
 ///|
@@ -1715,7 +1715,7 @@ fn write_styles_xml(
       diagonal_style = 0
     }
     lines.push(("diagonal", diagonal_style, diagonal_color))
-    { diagonal_up, diagonal_down, lines }
+    { diagonal_up, diagonal_down, lines, }
   }
 
   for style in style_list {

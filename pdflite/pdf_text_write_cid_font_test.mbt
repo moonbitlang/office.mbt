@@ -6,7 +6,7 @@ fn cid_descriptor() -> @pdflite.PdfFontDescriptor {
     avgwidth: 1000,
     maxwidth: 1000,
     flags: 4,
-    fontbbox: { min_x: -100, min_y: -250, max_x: 1100, max_y: 950 },
+    fontbbox: { min_x: -100, min_y: -250, max_x: 1100, max_y: 950, },
     italicangle: 0,
     capheight: 700,
     xheight: 500,
@@ -110,7 +110,7 @@ test "a font with no widths omits the W array rather than writing an empty one" 
 fn cid_font_with_tounicode(
   tounicode : Array[(Int, @core.PdfBytes)],
 ) -> @pdflite.PdfFont {
-  let descriptor = { ..cid_descriptor(), tounicode: Some(tounicode) }
+  let descriptor = { ..cid_descriptor(), tounicode: Some(tounicode), }
   PdfFontCIDKeyed({
     basefont: @core.pdf_name_of_bytes(b"/NotoSansSC"),
     composite: {

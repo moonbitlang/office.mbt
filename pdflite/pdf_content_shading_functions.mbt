@@ -1,6 +1,6 @@
 ///|
 fn pdf_content_default_function() -> PdfFunction {
-  { func: PdfFunctionCalculator({ operations: [] }), domain: [], range: None }
+  { func: PdfFunctionCalculator({ operations: [], }), domain: [], range: None, }
 }
 
 ///|

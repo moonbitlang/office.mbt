@@ -137,7 +137,7 @@ fn pdf_font_table_entry(
         let (unicode, utf8, unicode_name) = pdf_font_table_unicode_fields(
           codepoints,
         )
-        Some({ code, unicode, utf8, unicode_name, glyphnames: glyphnames_text })
+        Some({ code, unicode, utf8, unicode_name, glyphnames: glyphnames_text, })
       }
     }
   }

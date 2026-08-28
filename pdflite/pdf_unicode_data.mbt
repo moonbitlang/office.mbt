@@ -13,7 +13,7 @@ let pdf_unicode_data_cache : Ref[Array[@unicodedata.PdfUnicodeDataEntry]?] = {
 ///|
 let pdf_unicode_data_lookup_cache : Ref[
   @hashmap.HashMap[Int, PdfUnicodeDataLookup]?,
-] = { val: None }
+] = { val: None, }
 
 ///|
 fn pdf_unicode_data_field(

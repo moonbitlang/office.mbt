@@ -203,7 +203,7 @@ fn segment_joined_reader_story(
         UnexpectedStoryRoot(name=reader_segmentation_clip_name(name)),
       )
   }
-  SegmentedStory({ story, segments })
+  SegmentedStory({ story, segments, })
 }
 
 ///|
@@ -337,7 +337,7 @@ fn finish_joined_story_read(
           )
         Projected(projection) => {
           classify_reader_projection_fields(projection)
-          { output, projection }
+          { output, projection, }
         }
       }
   }

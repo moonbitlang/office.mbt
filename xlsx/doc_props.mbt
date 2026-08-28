@@ -623,7 +623,7 @@ fn parse_custom_properties(
       None => ""
     }
     let value = parse_custom_property_value(body)
-    properties.push({ name, value })
+    properties.push({ name, value, })
   }
   properties
 }

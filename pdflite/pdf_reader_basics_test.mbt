@@ -33,7 +33,7 @@ test "@reader.pdf_read_header_from_view reads borrowed slices" {
   let wrapped = reader_pdf_ascii("xx%PDF-1.6\nzz")
   @test.assert_eq(
     try! @reader.pdf_read_header_from_view(wrapped[2:wrapped.length() - 2]),
-    { major: 1, minor: 6 },
+    { major: 1, minor: 6, },
   )
 }
 
@@ -41,10 +41,10 @@ test "@reader.pdf_read_header_from_view reads borrowed slices" {
 test "pdf_document_of_parsed_indirect_objects preserves version and generations" {
   let document = @pdflite.pdf_document_of_parsed_indirect_objects(
     [
-      { number: 7, generation: 2, object: PdfInteger(70) },
-      { number: 3, generation: 0, object: PdfBoolean(true) },
+      { number: 7, generation: 2, object: PdfInteger(70), },
+      { number: 3, generation: 0, object: PdfBoolean(true), },
     ],
-    version={ major: 1, minor: 6 },
+    version={ major: 1, minor: 6, },
   )
   @test.assert_eq(document.version(), (1, 6))
   @test.assert_eq(document.object_numbers(), [3, 7])

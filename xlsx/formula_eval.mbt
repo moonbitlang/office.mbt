@@ -160,7 +160,7 @@ fn transpose_range_values(range : RangeValues) -> RangeValues {
       out.push(range.values[row * range.cols + col])
     }
   }
-  { values: out, rows: range.cols, cols: range.rows }
+  { values: out, rows: range.cols, cols: range.rows, }
 }
 
 ///|
@@ -190,7 +190,7 @@ fn munit_range_values(dimension : Int) -> RangeValues {
       out.push(Number(value))
     }
   }
-  { values: out, rows: dimension, cols: dimension }
+  { values: out, rows: dimension, cols: dimension, }
 }
 
 ///|
@@ -201,12 +201,12 @@ fn munit_range_values_from_expr(
   ctx : CalcContext,
 ) -> RangeValues raise XlsxError {
   if args.length() != 1 {
-    return { values: [Error(formula_error_value)], rows: 1, cols: 1 }
+    return { values: [Error(formula_error_value)], rows: 1, cols: 1, }
   }
   let dimension_value = eval_expr(workbook, sheet_name, args[0], ctx)
   match munit_dimension(dimension_value) {
     Ok(dimension) => munit_range_values(dimension)
-    Err(err) => { values: [err], rows: 1, cols: 1 }
+    Err(err) => { values: [err], rows: 1, cols: 1, }
   }
 }
 
@@ -218,7 +218,7 @@ fn transpose_range_values_from_expr(
   ctx : CalcContext,
 ) -> RangeValues raise XlsxError {
   if args.length() != 1 {
-    return { values: [Error(formula_error_value)], rows: 1, cols: 1 }
+    return { values: [Error(formula_error_value)], rows: 1, cols: 1, }
   }
   let arg_expr = args[0]
   let arg_value = eval_expr(workbook, sheet_name, arg_expr, ctx)
@@ -580,7 +580,7 @@ fn prepare_trend_growth(
     m = 1
     n = cnt_y
   }
-  Ok({ trend_type, n_cx, n_rx, m, n, mtx_x: new_x, mtx_y: new_y })
+  Ok({ trend_type, n_cx, n_rx, m, n, mtx_x: new_x, mtx_y: new_y, })
 }
 
 ///|
@@ -1224,7 +1224,7 @@ fn unique_range_values(
     }
     ignore(counts.remove(key))
   }
-  let mut result = { values: out, rows: kept_rows, cols: base.cols }
+  let mut result = { values: out, rows: kept_rows, cols: base.cols, }
   if by_col {
     result = transpose_range_values(result)
   }
@@ -1379,7 +1379,7 @@ fn slice_range_values(
       out.push(range.values[offset + col])
     }
   }
-  Ok({ values: out, rows: row_count, cols: col_count })
+  Ok({ values: out, rows: row_count, cols: col_count, })
 }
 
 ///|
@@ -1908,7 +1908,7 @@ fn sort_range_values(
       out.push(range.values[offset + col])
     }
   }
-  Ok({ values: out, rows: range.rows, cols: range.cols })
+  Ok({ values: out, rows: range.rows, cols: range.cols, })
 }
 
 ///|
@@ -2241,11 +2241,11 @@ fn range_from_expr_or_value(
     match value {
       List(list) =>
         if list.length() == 0 {
-          { rows: 1, cols: 1, values: [Empty] }
+          { rows: 1, cols: 1, values: [Empty], }
         } else {
-          { rows: 1, cols: list.length(), values: list }
+          { rows: 1, cols: list.length(), values: list, }
         }
-      _ => { rows: 1, cols: 1, values: [value] }
+      _ => { rows: 1, cols: 1, values: [value], }
     }
   }
   match expr {
@@ -2262,7 +2262,7 @@ fn range_from_expr_or_value(
             match array_shape_from_expr(workbook, sheet_name, expr, ctx) {
               Some((rows, cols)) =>
                 if rows > 0 && cols > 0 && rows * cols == list.length() {
-                  { rows, cols, values: list }
+                  { rows, cols, values: list, }
                 } else {
                   range_from_value(value)
                 }
@@ -4916,17 +4916,17 @@ priv struct Complex {
 
 ///|
 fn complex_new(real : Double, imag : Double) -> Complex {
-  { real, imag }
+  { real, imag, }
 }
 
 ///|
 fn complex_add(left : Complex, right : Complex) -> Complex {
-  { real: left.real + right.real, imag: left.imag + right.imag }
+  { real: left.real + right.real, imag: left.imag + right.imag, }
 }
 
 ///|
 fn complex_sub(left : Complex, right : Complex) -> Complex {
-  { real: left.real - right.real, imag: left.imag - right.imag }
+  { real: left.real - right.real, imag: left.imag - right.imag, }
 }
 
 ///|
@@ -4948,7 +4948,7 @@ fn complex_div(left : Complex, right : Complex) -> Complex {
 
 ///|
 fn complex_scale(value : Complex, factor : Double) -> Complex {
-  { real: value.real * factor, imag: value.imag * factor }
+  { real: value.real * factor, imag: value.imag * factor, }
 }
 
 ///|
@@ -4963,18 +4963,18 @@ fn complex_arg(value : Complex) -> Double {
 
 ///|
 fn complex_conj(value : Complex) -> Complex {
-  { real: value.real, imag: -value.imag }
+  { real: value.real, imag: -value.imag, }
 }
 
 ///|
 fn complex_exp(value : Complex) -> Complex {
   let scale = @math.exp(value.real)
-  { real: scale * @math.cos(value.imag), imag: scale * @math.sin(value.imag) }
+  { real: scale * @math.cos(value.imag), imag: scale * @math.sin(value.imag), }
 }
 
 ///|
 fn complex_log(value : Complex) -> Complex {
-  { real: @math.ln(complex_abs(value)), imag: complex_arg(value) }
+  { real: @math.ln(complex_abs(value)), imag: complex_arg(value), }
 }
 
 ///|
@@ -4988,7 +4988,7 @@ fn complex_sqrt(value : Complex) -> Complex {
   let real = Double::sqrt((r + value.real) / 2.0)
   let sign = if value.imag < 0.0 { -1.0 } else { 1.0 }
   let imag = sign * Double::sqrt((r - value.real) / 2.0)
-  { real, imag }
+  { real, imag, }
 }
 
 ///|
@@ -5372,7 +5372,7 @@ fn build_criteria_pattern(text : StringView) -> String {
 fn parse_formula_criteria(value : FormulaValue) -> FormulaCriteria {
   let text = formula_value_string(value)
   if text == "" {
-    return { kind: Unset, condition: Empty }
+    return { kind: Unset, condition: Empty, }
   }
   if is_digits(text) {
     return {
@@ -5422,7 +5422,7 @@ fn parse_formula_criteria(value : FormulaValue) -> FormulaCriteria {
     Some(num) => condition = Number(num)
     None => ()
   }
-  { kind, condition }
+  { kind, condition, }
 }
 
 ///|
@@ -5596,7 +5596,7 @@ fn calc_database_new(
       return None
     }
   }
-  Some({ row: 0, col, index_map: Map([]), database, criteria })
+  Some({ row: 0, col, index_map: Map([]), database, criteria, })
 }
 
 ///|

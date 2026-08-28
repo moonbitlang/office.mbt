@@ -503,7 +503,7 @@ pub fn Workbook::set_sheet_name(
         old_name,
         target,
       )
-      updated.push({ name: dn.name, refers_to, scope, comment: dn.comment })
+      updated.push({ name: dn.name, refers_to, scope, comment: dn.comment, })
     }
     self.defined_names.clear()
     self.defined_names.append(updated)

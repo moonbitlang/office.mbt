@@ -476,7 +476,7 @@ test "PdfDocument image_resolution reports selected image xobject DPI" {
       StreamGot([]),
     ),
   )
-  let placement = { ..@geometry.transform_identity_matrix, a: 400.0, d: 300.0 }
+  let placement = { ..@geometry.transform_identity_matrix, a: 400.0, d: 300.0, }
   let page = {
     ..@page.pdf_page_blank(@geometry.paper_a4),
     resources: @syntax.pdf_dictionary([
@@ -527,7 +527,7 @@ test "PdfDocument image_resolution optionally includes inline images" {
       PdfNameObject(image_name_for_test("/DeviceRGB")),
     ),
   ])
-  let placement = { ..@geometry.transform_identity_matrix, a: 144.0, d: 72.0 }
+  let placement = { ..@geometry.transform_identity_matrix, a: 144.0, d: 72.0, }
   let page = {
     ..@page.pdf_page_blank(@geometry.paper_a4),
     content: [
@@ -572,7 +572,7 @@ test "PdfDocument image_resolution descends into form xobjects" {
       StreamGot([]),
     ),
   )
-  let form_scale = { ..@geometry.transform_identity_matrix, a: 72.0, d: 72.0 }
+  let form_scale = { ..@geometry.transform_identity_matrix, a: 72.0, d: 72.0, }
   let form = (try! @pdflite.pdf_content_stream_of_ops([
       Op_cm(form_scale),
       Op_Do(image_name_for_test("/Inner")),
@@ -593,7 +593,7 @@ test "PdfDocument image_resolution descends into form xobjects" {
       ]),
     )
   doc.add_object_given_number(30, form)
-  let page_scale = { ..@geometry.transform_identity_matrix, a: 2.0, d: 2.0 }
+  let page_scale = { ..@geometry.transform_identity_matrix, a: 2.0, d: 2.0, }
   let page = {
     ..@page.pdf_page_blank(@geometry.paper_a4),
     resources: @syntax.pdf_dictionary([
@@ -1167,7 +1167,7 @@ test "pdf_image_document_of_jpeg_data creates structured image page" {
     try! image_lookup_for_test(pages[0].rest, "/StructParents"),
     PdfInteger(1),
   )
-  let placement = { ..@geometry.transform_identity_matrix, a: 400.0, d: 300.0 }
+  let placement = { ..@geometry.transform_identity_matrix, a: 400.0, d: 300.0, }
   @test.assert_eq(try! document.parse_content_ops(pages[0].content), [
     Op_BDC(
       image_name_for_test("/Figure"),

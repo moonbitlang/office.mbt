@@ -383,7 +383,7 @@ fn draw_fixture_matrix_for_test(
   e : Double,
   f : Double,
 ) -> @geometry.TransformMatrix {
-  { a, b, c, d, e, f }
+  { a, b, c, d, e, f, }
 }
 
 ///|

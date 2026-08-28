@@ -46,7 +46,7 @@ fn constraint(
   accepted_params : Array[String],
   rejected_params : Array[String],
 ) -> ConstraintSpec {
-  { text, accepted_params, rejected_params }
+  { text, accepted_params, rejected_params, }
 }
 
 ///|

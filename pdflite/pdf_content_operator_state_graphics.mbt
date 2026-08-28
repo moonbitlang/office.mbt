@@ -58,7 +58,7 @@ fn pdf_content_operator_marked_content(
   tag : @core.PdfName,
   properties : @syntax.PdfObject?,
 ) -> PdfContentMarkedContent {
-  { tag: pdf_content_state_name_text(tag), properties }
+  { tag: pdf_content_state_name_text(tag), properties, }
 }
 
 ///|
@@ -93,7 +93,7 @@ fn PdfContentOperatorState::content_push_state(
 ) -> PdfContentOperatorState {
   let stack = pdf_content_operator_copy_stack(self.state_stack)
   stack.push(self.content_frame())
-  { ..self, state_stack: stack }
+  { ..self, state_stack: stack, }
 }
 
 ///|
@@ -152,7 +152,7 @@ pub fn PdfContentOperatorState::content_apply_graphics_state_op(
     Op_q => self.content_push_state()
     Op_Q => self.content_pop_state()
     Op_cm(matrix) =>
-      { ..self, ctm: @geometry.transform_matrix_compose(self.ctm, matrix) }
+      { ..self, ctm: @geometry.transform_matrix_compose(self.ctm, matrix), }
     _ => self
   }
 }
@@ -173,7 +173,7 @@ pub fn PdfContentOperatorState::content_apply_graphics_parameter_op(
   op : @content.PdfContentOp,
 ) -> PdfContentOperatorState {
   match op {
-    Op_M(limit) => { ..self, miter_limit: limit }
+    Op_M(limit) => { ..self, miter_limit: limit, }
     Op_i(flatness) => { ..self, flatness, }
     _ => self
   }

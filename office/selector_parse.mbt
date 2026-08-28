@@ -101,7 +101,7 @@ fn bounded_selector_text(text : String, limit : Int) -> String {
 
 ///|
 fn SelectorParser::new(source : String) -> SelectorParser {
-  { source, chars: source.to_array(), position: 0, selection_count: 0 }
+  { source, chars: source.to_array(), position: 0, selection_count: 0, }
 }
 
 ///|
@@ -431,7 +431,7 @@ fn parse_a1_address(
       )
     }
   }
-  { column, row }
+  { column, row, }
 }
 
 ///|
@@ -488,7 +488,7 @@ fn SelectorParser::parse_segment(
   } else {
     None
   }
-  Regular({ name, selection })
+  Regular({ name, selection, })
 }
 
 ///|

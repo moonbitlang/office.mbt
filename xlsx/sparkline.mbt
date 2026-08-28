@@ -31,13 +31,13 @@ fn rgb(value : StringView) -> SparklineColor raise XlsxError {
       raise InvalidSparkline(msg="sparkline color must be hex")
     }
   }
-  { rgb: Some(normalized), theme: None, tint: None }
+  { rgb: Some(normalized), theme: None, tint: None, }
 }
 
 ///|
 fn theme(theme : Int, tint? : Double = 0.0) -> SparklineColor {
   let tint_opt = if tint == 0.0 { None } else { Some(tint) }
-  { rgb: None, theme: Some(theme), tint: tint_opt }
+  { rgb: None, theme: Some(theme), tint: tint_opt, }
 }
 
 ///|
@@ -656,76 +656,76 @@ let sparkline_presets : Array[SparklinePreset] = [
     color_low: theme(0, tint=0.249977111117893),
   }, // 26
   {
-    color_series: { rgb: Some("FF323232"), theme: None, tint: None },
-    color_negative: { rgb: Some("FFD00000"), theme: None, tint: None },
-    color_markers: { rgb: Some("FFD00000"), theme: None, tint: None },
-    color_first: { rgb: Some("FFD00000"), theme: None, tint: None },
-    color_last: { rgb: Some("FFD00000"), theme: None, tint: None },
-    color_high: { rgb: Some("FFD00000"), theme: None, tint: None },
-    color_low: { rgb: Some("FFD00000"), theme: None, tint: None },
+    color_series: { rgb: Some("FF323232"), theme: None, tint: None, },
+    color_negative: { rgb: Some("FFD00000"), theme: None, tint: None, },
+    color_markers: { rgb: Some("FFD00000"), theme: None, tint: None, },
+    color_first: { rgb: Some("FFD00000"), theme: None, tint: None, },
+    color_last: { rgb: Some("FFD00000"), theme: None, tint: None, },
+    color_high: { rgb: Some("FFD00000"), theme: None, tint: None, },
+    color_low: { rgb: Some("FFD00000"), theme: None, tint: None, },
   }, // 27
   {
-    color_series: { rgb: Some("FF000000"), theme: None, tint: None },
-    color_negative: { rgb: Some("FF0070C0"), theme: None, tint: None },
-    color_markers: { rgb: Some("FF0070C0"), theme: None, tint: None },
-    color_first: { rgb: Some("FF0070C0"), theme: None, tint: None },
-    color_last: { rgb: Some("FF0070C0"), theme: None, tint: None },
-    color_high: { rgb: Some("FF0070C0"), theme: None, tint: None },
-    color_low: { rgb: Some("FF0070C0"), theme: None, tint: None },
+    color_series: { rgb: Some("FF000000"), theme: None, tint: None, },
+    color_negative: { rgb: Some("FF0070C0"), theme: None, tint: None, },
+    color_markers: { rgb: Some("FF0070C0"), theme: None, tint: None, },
+    color_first: { rgb: Some("FF0070C0"), theme: None, tint: None, },
+    color_last: { rgb: Some("FF0070C0"), theme: None, tint: None, },
+    color_high: { rgb: Some("FF0070C0"), theme: None, tint: None, },
+    color_low: { rgb: Some("FF0070C0"), theme: None, tint: None, },
   }, // 28
   {
-    color_series: { rgb: Some("FF376092"), theme: None, tint: None },
-    color_negative: { rgb: Some("FFD00000"), theme: None, tint: None },
-    color_markers: { rgb: Some("FFD00000"), theme: None, tint: None },
-    color_first: { rgb: Some("FFD00000"), theme: None, tint: None },
-    color_last: { rgb: Some("FFD00000"), theme: None, tint: None },
-    color_high: { rgb: Some("FFD00000"), theme: None, tint: None },
-    color_low: { rgb: Some("FFD00000"), theme: None, tint: None },
+    color_series: { rgb: Some("FF376092"), theme: None, tint: None, },
+    color_negative: { rgb: Some("FFD00000"), theme: None, tint: None, },
+    color_markers: { rgb: Some("FFD00000"), theme: None, tint: None, },
+    color_first: { rgb: Some("FFD00000"), theme: None, tint: None, },
+    color_last: { rgb: Some("FFD00000"), theme: None, tint: None, },
+    color_high: { rgb: Some("FFD00000"), theme: None, tint: None, },
+    color_low: { rgb: Some("FFD00000"), theme: None, tint: None, },
   }, // 29
   {
-    color_series: { rgb: Some("FF0070C0"), theme: None, tint: None },
-    color_negative: { rgb: Some("FF000000"), theme: None, tint: None },
-    color_markers: { rgb: Some("FF000000"), theme: None, tint: None },
-    color_first: { rgb: Some("FF000000"), theme: None, tint: None },
-    color_last: { rgb: Some("FF000000"), theme: None, tint: None },
-    color_high: { rgb: Some("FF000000"), theme: None, tint: None },
-    color_low: { rgb: Some("FF000000"), theme: None, tint: None },
+    color_series: { rgb: Some("FF0070C0"), theme: None, tint: None, },
+    color_negative: { rgb: Some("FF000000"), theme: None, tint: None, },
+    color_markers: { rgb: Some("FF000000"), theme: None, tint: None, },
+    color_first: { rgb: Some("FF000000"), theme: None, tint: None, },
+    color_last: { rgb: Some("FF000000"), theme: None, tint: None, },
+    color_high: { rgb: Some("FF000000"), theme: None, tint: None, },
+    color_low: { rgb: Some("FF000000"), theme: None, tint: None, },
   }, // 30
   {
-    color_series: { rgb: Some("FF5F5F5F"), theme: None, tint: None },
-    color_negative: { rgb: Some("FFFFB620"), theme: None, tint: None },
-    color_markers: { rgb: Some("FFD70077"), theme: None, tint: None },
-    color_first: { rgb: Some("FF5687C2"), theme: None, tint: None },
-    color_last: { rgb: Some("FF359CEB"), theme: None, tint: None },
-    color_high: { rgb: Some("FF56BE79"), theme: None, tint: None },
-    color_low: { rgb: Some("FFFF5055"), theme: None, tint: None },
+    color_series: { rgb: Some("FF5F5F5F"), theme: None, tint: None, },
+    color_negative: { rgb: Some("FFFFB620"), theme: None, tint: None, },
+    color_markers: { rgb: Some("FFD70077"), theme: None, tint: None, },
+    color_first: { rgb: Some("FF5687C2"), theme: None, tint: None, },
+    color_last: { rgb: Some("FF359CEB"), theme: None, tint: None, },
+    color_high: { rgb: Some("FF56BE79"), theme: None, tint: None, },
+    color_low: { rgb: Some("FFFF5055"), theme: None, tint: None, },
   }, // 31
   {
-    color_series: { rgb: Some("FF5687C2"), theme: None, tint: None },
-    color_negative: { rgb: Some("FFFFB620"), theme: None, tint: None },
-    color_markers: { rgb: Some("FFD70077"), theme: None, tint: None },
-    color_first: { rgb: Some("FF777777"), theme: None, tint: None },
-    color_last: { rgb: Some("FF359CEB"), theme: None, tint: None },
-    color_high: { rgb: Some("FF56BE79"), theme: None, tint: None },
-    color_low: { rgb: Some("FFFF5055"), theme: None, tint: None },
+    color_series: { rgb: Some("FF5687C2"), theme: None, tint: None, },
+    color_negative: { rgb: Some("FFFFB620"), theme: None, tint: None, },
+    color_markers: { rgb: Some("FFD70077"), theme: None, tint: None, },
+    color_first: { rgb: Some("FF777777"), theme: None, tint: None, },
+    color_last: { rgb: Some("FF359CEB"), theme: None, tint: None, },
+    color_high: { rgb: Some("FF56BE79"), theme: None, tint: None, },
+    color_low: { rgb: Some("FFFF5055"), theme: None, tint: None, },
   }, // 32
   {
-    color_series: { rgb: Some("FFC6EFCE"), theme: None, tint: None },
-    color_negative: { rgb: Some("FFFFC7CE"), theme: None, tint: None },
-    color_markers: { rgb: Some("FF8CADD6"), theme: None, tint: None },
-    color_first: { rgb: Some("FFFFDC47"), theme: None, tint: None },
-    color_last: { rgb: Some("FFFFEB9C"), theme: None, tint: None },
-    color_high: { rgb: Some("FF60D276"), theme: None, tint: None },
-    color_low: { rgb: Some("FFFF5367"), theme: None, tint: None },
+    color_series: { rgb: Some("FFC6EFCE"), theme: None, tint: None, },
+    color_negative: { rgb: Some("FFFFC7CE"), theme: None, tint: None, },
+    color_markers: { rgb: Some("FF8CADD6"), theme: None, tint: None, },
+    color_first: { rgb: Some("FFFFDC47"), theme: None, tint: None, },
+    color_last: { rgb: Some("FFFFEB9C"), theme: None, tint: None, },
+    color_high: { rgb: Some("FF60D276"), theme: None, tint: None, },
+    color_low: { rgb: Some("FFFF5367"), theme: None, tint: None, },
   }, // 33
   {
-    color_series: { rgb: Some("FF00B050"), theme: None, tint: None },
-    color_negative: { rgb: Some("FFFF0000"), theme: None, tint: None },
-    color_markers: { rgb: Some("FF0070C0"), theme: None, tint: None },
-    color_first: { rgb: Some("FFFFC000"), theme: None, tint: None },
-    color_last: { rgb: Some("FFFFC000"), theme: None, tint: None },
-    color_high: { rgb: Some("FF00B050"), theme: None, tint: None },
-    color_low: { rgb: Some("FFFF0000"), theme: None, tint: None },
+    color_series: { rgb: Some("FF00B050"), theme: None, tint: None, },
+    color_negative: { rgb: Some("FFFF0000"), theme: None, tint: None, },
+    color_markers: { rgb: Some("FF0070C0"), theme: None, tint: None, },
+    color_first: { rgb: Some("FFFFC000"), theme: None, tint: None, },
+    color_last: { rgb: Some("FFFFC000"), theme: None, tint: None, },
+    color_high: { rgb: Some("FF00B050"), theme: None, tint: None, },
+    color_low: { rgb: Some("FFFF0000"), theme: None, tint: None, },
   }, // 34
   {
     color_series: theme(3),
@@ -935,7 +935,7 @@ fn parse_sparkline_color(tag : StringView) -> SparklineColor? raise XlsxError {
   if parsed_rgb is None && parsed_theme is None {
     None
   } else {
-    Some({ rgb: parsed_rgb, theme: parsed_theme, tint: parsed_tint })
+    Some({ rgb: parsed_rgb, theme: parsed_theme, tint: parsed_tint, })
   }
 }
 
@@ -1135,10 +1135,10 @@ fn parse_sparkline_groups(
       let (row, col) = cell_ref_to_rc(location)
       let canonical_loc = cell_ref_from(row, col)
       let normalized_range = normalize_sparkline_range_ref(range)
-      sparklines.push({ range_ref: normalized_range, location: canonical_loc })
+      sparklines.push({ range_ref: normalized_range, location: canonical_loc, })
     }
     if sparklines.length() > 0 {
-      groups.push({ sparkline_type: kind, sparklines, options })
+      groups.push({ sparkline_type: kind, sparklines, options, })
     }
   }
   groups
@@ -1235,7 +1235,7 @@ fn build_sparklines(
     let (row, col) = cell_ref_to_rc(location)
     let canonical_loc = cell_ref_from(row, col)
     let normalized_range = normalize_sparkline_range_for_write(ranges[i])
-    sparklines.push({ range_ref: normalized_range, location: canonical_loc })
+    sparklines.push({ range_ref: normalized_range, location: canonical_loc, })
   }
   sparklines
 }
@@ -1246,5 +1246,5 @@ fn build_sparkline_group_from_options(
 ) -> SparklineGroup raise XlsxError {
   let sparklines = build_sparklines(opts.locations, opts.ranges)
   let options = sparkline_group_options_from_sparkline_options(opts)
-  { sparkline_type: opts.sparkline_type, sparklines, options }
+  { sparkline_type: opts.sparkline_type, sparklines, options, }
 }

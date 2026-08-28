@@ -414,7 +414,7 @@ fn archive_part_index(
     }
     canonical[key] = entry.data()
   }
-  { exact, canonical }
+  { exact, canonical, }
 }
 
 ///|
@@ -496,7 +496,7 @@ fn decode_xml_part(
       )
   }
   context.checkpoint()
-  { text, source_encoding }
+  { text, source_encoding, }
 }
 
 ///|
@@ -1212,7 +1212,7 @@ priv struct StructuralFindings {
 
 ///|
 fn StructuralFindings::new() -> StructuralFindings {
-  { first: None, count: 0 }
+  { first: None, count: 0, }
 }
 
 ///|

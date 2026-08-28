@@ -93,7 +93,7 @@ test "CLI output-dir helpers match Mammoth naming" {
     output_path(options),
     content="Some(\"out/single-paragraph.html\")",
   )
-  let markdown_options = CliOptions::{ ..options, output_format: Markdown }
+  let markdown_options = CliOptions::{ ..options, output_format: Markdown, }
   debug_inspect(
     output_path(markdown_options),
     content="Some(\"out/single-paragraph.md\")",

@@ -26,7 +26,10 @@ fn PdfDocument::pdf_tweak_remove_clipping_page(
   page : @page.PdfPage,
 ) -> @page.PdfPage raise @core.PdfError {
   let ops = self.pdf_page_parse_content_ops(page.resources, page.content)
-  { ..page, content: [pdf_content_stream_of_ops(pdf_remove_clipping_ops(ops))] }
+  {
+    ..page,
+    content: [pdf_content_stream_of_ops(pdf_remove_clipping_ops(ops))],
+  }
 }
 
 ///|

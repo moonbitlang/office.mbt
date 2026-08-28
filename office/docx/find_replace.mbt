@@ -253,5 +253,5 @@ pub async fn transact_docx_find_replace(
       "office.docx.edit_internal", "the replace transaction returned no report",
     )
   }
-  { report, transaction }
+  { report, transaction, }
 }

@@ -305,7 +305,7 @@ fn collect_merge_spans(
     }
     let r_hi = if r2 < rows { r2 } else { rows }
     let c_hi = if c2 < cols { c2 } else { cols }
-    spans["\{r1}:\{c1}"] = { colspan: c_hi - c1 + 1, rowspan: r_hi - r1 + 1 }
+    spans["\{r1}:\{c1}"] = { colspan: c_hi - c1 + 1, rowspan: r_hi - r1 + 1, }
     for r in r1..<=r_hi {
       for c in c1..<=c_hi {
         if r != r1 || c != c1 {

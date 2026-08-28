@@ -5,7 +5,7 @@ struct MemWriter {
 
 ///|
 fn MemWriter::new() -> MemWriter {
-  { data: [] }
+  { data: [], }
 }
 
 ///|
