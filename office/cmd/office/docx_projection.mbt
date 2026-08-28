@@ -50,8 +50,10 @@ priv struct DocxProjectionEntry {
   // The paragraph's tree/projection anchor join (paraId R1b). Some only
   // when the join was soundly computed for this occurrence; None means
   // the serializers emit `unjoined` for paragraph entries — anchors are
-  // never guessed.
-  paragraph_join : @docx.DocxParagraphJoin?
+  // never guessed. Mutable for exactly one reason: a story whose final
+  // paragraph count disagrees with the provenance channel has every
+  // optimistically-attached join REVOKED after its walk.
+  mut paragraph_join : @docx.DocxParagraphJoin?
 }
 
 ///|
@@ -107,11 +109,13 @@ priv struct DocxProjectionBuilder {
   cancelled : () -> Bool
   mut work_since_yield : Int
   // Active only while walking a story whose anchor join is available:
-  // the join index and the story-scoped paragraph-occurrence cursor,
-  // advancing in the SAME depth-first order the erase boundary's
-  // provenance channel recorded.
+  // the join index, the story-scoped paragraph-occurrence cursor
+  // (advancing in the SAME depth-first order the erase boundary's
+  // provenance channel recorded), and the story's paragraph entry
+  // indices so a count disagreement can revoke every join it attached.
   mut story_joins : @docx.DocxParagraphAnchorJoinIndex?
   mut story_paragraph_cursor : Int
+  story_paragraph_entries : Array[Int]
 }
 
 ///|
@@ -196,6 +200,7 @@ fn DocxProjectionBuilder::new(
     work_since_yield: 0,
     story_joins: None,
     story_paragraph_cursor: 0,
+    story_paragraph_entries: [],
   }
 }
 
@@ -844,6 +849,9 @@ async fn DocxProjectionBuilder::walk_element_children(
           parent.source,
           paragraph_join?,
         )
+        if kind == "p" && self.story_joins is Some(_) {
+          self.story_paragraph_entries.push(self.entries.length() - 1)
+        }
         parent.children.push(path)
         self.walk_element_children(entry, child)
       }
@@ -873,55 +881,28 @@ async fn DocxProjectionBuilder::add_story(
     Json::empty_object(),
     source,
   )
-  // The join answers for this story only when the tree's own paragraph
-  // count matches the provenance channel's — a disagreement means the
-  // two enumerations walked different shapes, and every paragraph must
-  // read as unjoined rather than trust a misaligned cursor.
-  let story_joins = match joins {
-    Some(index) =>
-      if count_tree_paragraphs(document) == index.occurrence_count() {
-        Some(index)
-      } else {
-        None
-      }
-    None => None
-  }
-  self.story_joins = story_joins
+  // Joins attach optimistically during the ONE bounded, cooperative
+  // walk (a separate pre-count would traverse the document outside the
+  // work ceiling and cancellation polling). If the story's final
+  // paragraph count disagrees with the provenance channel's, the two
+  // enumerations walked different shapes and every join this story
+  // attached is REVOKED — the paragraphs read as unjoined rather than
+  // trusting a misaligned cursor.
+  self.story_joins = joins
   self.story_paragraph_cursor = 0
+  self.story_paragraph_entries.clear()
   self.walk_element_children(root, document)
-  // The walk and the provenance channel both enumerate depth-first from
-  // the SAME reader output, so the cursor must land exactly on the join's
-  // occurrence count — a drift here would silently misattribute anchors.
-  // Ordering within that count is aligned by construction; the count is
-  // the cheap guard that catches an enumeration that walked a different
-  // shape than the pre-walk check measured.
-  match story_joins {
+  match self.story_joins {
     Some(index) =>
       if self.story_paragraph_cursor != index.occurrence_count() {
-        raise docx_cli_failure(
-          "office.docx.anchor_join_drift",
-          "the projection walk enumerated \{self.story_paragraph_cursor} paragraphs but the provenance channel recorded \{index.occurrence_count()} for '\{path}'",
-        )
+        for entry_index in self.story_paragraph_entries {
+          self.entries[entry_index].paragraph_join = None
+        }
       }
     None => ()
   }
   self.story_joins = None
-}
-
-///|
-/// Paragraph occurrences under one story root, counted by the SAME
-/// child enumeration the walk uses.
-fn count_tree_paragraphs(element : @document.DocumentElement) -> Int {
-  let mut count = 0
-  for child in @docx_paths.element_children(element) {
-    if @docx_paths.segment_kind(child) is Some(kind) {
-      if kind == "p" {
-        count += 1
-      }
-      count += count_tree_paragraphs(child)
-    }
-  }
-  count
+  self.story_paragraph_entries.clear()
 }
 
 ///|
