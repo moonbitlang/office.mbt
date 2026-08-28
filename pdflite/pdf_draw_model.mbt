@@ -92,7 +92,7 @@ pub fn pdf_draw_render_state_new() -> PdfDrawRenderState {
     fonts: [],
     fontpacks: [],
     current_fontpack_identifier: "",
-    current_fontpack: { fonts: [], entries: [] },
+    current_fontpack: { fonts: [], entries: [], },
     font_size: 12.0,
     structure_tree_enabled: false,
     auto_tag: true,
@@ -108,7 +108,7 @@ pub fn pdf_draw_special_text_context(
   time : @date.PdfStrftimeTime,
   replacement_values : @addtext.PdfAddTextReplacementValues,
 ) -> PdfDrawSpecialTextContext {
-  { time, replacement_values }
+  { time, replacement_values, }
 }
 
 ///|
@@ -134,7 +134,7 @@ pub fn PdfDocument::draw_special_text_context(
     bates,
     bates_pad,
   )
-  { time: resolved_time, replacement_values: values }
+  { time: resolved_time, replacement_values: values, }
 }
 
 ///|

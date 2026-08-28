@@ -205,7 +205,7 @@ fn font_descriptor(
     } else {
       0x20
     },
-    fontbbox: { min_x: -1000, min_y: -500, max_x: 2000, max_y: 1500 },
+    fontbbox: { min_x: -1000, min_y: -500, max_x: 2000, max_y: 1500, },
     italicangle: if face.spec.italic {
       -12.0
     } else {

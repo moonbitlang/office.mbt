@@ -68,7 +68,7 @@ async fn PreparedDocxQuery::build(
       )
     None => None
   }
-  { spec, scope_path, scope_prefix, text_pattern }
+  { spec, scope_path, scope_prefix, text_pattern, }
 }
 
 ///|
@@ -93,7 +93,7 @@ fn OfficeOutputBudget::new(
   maximum : Int,
   format? : String = "docx",
 ) -> OfficeOutputBudget {
-  { format, maximum, used: docx_cli_output_framing_chars }
+  { format, maximum, used: docx_cli_output_framing_chars, }
 }
 
 ///|
@@ -340,7 +340,7 @@ fn bounded_office_payload(
   ignore(checked_output_limit(maximum))
   let budget = OfficeOutputBudget::new(maximum, format~)
   budget.reserve_success_envelope(data, warnings)
-  { data, budget, warnings }
+  { data, budget, warnings, }
 }
 
 ///|

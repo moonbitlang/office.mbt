@@ -165,7 +165,7 @@ fn parse_workbook_sheets(
         }
       None => Visible
     }
-    sheets.push({ name, sheet_id, state, rel_id })
+    sheets.push({ name, sheet_id, state, rel_id, })
   }
   sheets
 }

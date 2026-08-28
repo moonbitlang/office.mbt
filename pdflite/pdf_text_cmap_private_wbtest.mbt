@@ -76,7 +76,7 @@ test "private text ToUnicode CMap helpers reject malformed ranges" {
     fail("expected missing unicode bfrange line")
   }
   @test.assert_eq(invalid_bfrange_entries, [])
-  let pending = PdfTextCMapBFRangeArray::{ first: 1, last: 2, unicodes: [] }
+  let pending = PdfTextCMapBFRangeArray::{ first: 1, last: 2, unicodes: [], }
   let pending_entries : Array[(Int, @core.PdfBytes)] = []
   let append_result = pdf_text_append_pending_bfrange_array(
     pending_entries, pending, b"<0041>]",
@@ -188,7 +188,7 @@ test "private external CMap helpers cover malformed and compact sections" {
     map: [],
     cid_map: [],
     notdef_map: [],
-    codespaces: [{ length: 1, first: 0x00, last: 0x7F }],
+    codespaces: [{ length: 1, first: 0x00, last: 0x7F, }],
     usecmap: Some(cmap_wbtest_text_name("/Identity-H")),
     wmode: None,
     cmap_name: None,
@@ -206,7 +206,7 @@ test "private external CMap helpers cover malformed and compact sections" {
     map: [],
     cid_map: [],
     notdef_map: [],
-    codespaces: [{ length: 2, first: 0x0000, last: 0xFFFF }],
+    codespaces: [{ length: 2, first: 0x0000, last: 0xFFFF, }],
     usecmap: None,
     wmode: None,
     cmap_name: None,
@@ -222,8 +222,8 @@ test "private external CMap helpers cover malformed and compact sections" {
     cid_map: [],
     notdef_map: [],
     codespaces: [
-      { length: 2, first: 0x4100, last: 0x41FF },
-      { length: 1, first: 0x00, last: 0x7F },
+      { length: 2, first: 0x4100, last: 0x41FF, },
+      { length: 1, first: 0x00, last: 0x7F, },
     ],
     usecmap: None,
     wmode: None,
@@ -244,7 +244,7 @@ test "private external CMap helpers cover malformed and compact sections" {
       map: [(1, cmap_wbtest_text_bytes([0x00, 0x41]))],
       cid_map: [(1, 10)],
       notdef_map: [(1, 20)],
-      codespaces: [{ length: 1, first: 1, last: 1 }],
+      codespaces: [{ length: 1, first: 1, last: 1, }],
       usecmap: Some(cmap_wbtest_text_name("/Identity-V")),
       wmode: Some(1),
       cmap_name: Some(cmap_wbtest_text_name("/Derived")),
@@ -263,7 +263,7 @@ test "private external CMap helpers cover malformed and compact sections" {
       ],
       cid_map: [(1, 11), (2, 12), (2, 13)],
       notdef_map: [(1, 21), (2, 22), (2, 23)],
-      codespaces: [{ length: 2, first: 0, last: 0xFFFF }],
+      codespaces: [{ length: 2, first: 0, last: 0xFFFF, }],
       usecmap: Some(cmap_wbtest_text_name("/Identity-H")),
       wmode: Some(0),
       cmap_name: Some(cmap_wbtest_text_name("/Base")),
@@ -282,8 +282,8 @@ test "private external CMap helpers cover malformed and compact sections" {
   @test.assert_eq(composed.cid_map, [(1, 10), (2, 12)])
   @test.assert_eq(composed.notdef_map, [(1, 20), (2, 22)])
   @test.assert_eq(composed.codespaces, [
-    { length: 1, first: 1, last: 1 },
-    { length: 2, first: 0, last: 0xFFFF },
+    { length: 1, first: 1, last: 1, },
+    { length: 2, first: 0, last: 0xFFFF, },
   ])
   @test.assert_eq(composed.usecmap, Some(cmap_wbtest_text_name("/Identity-V")))
   @test.assert_eq(composed.wmode, Some(1))
@@ -397,7 +397,7 @@ test "private external CMap helpers cover malformed and compact sections" {
         "1 begin\n" + "codespacerange\n" + "<00><7F>\n" + "endcodespacerange\n",
       ),
     ),
-    Some([{ length: 1, first: 0x00, last: 0x7F }]),
+    Some([{ length: 1, first: 0x00, last: 0x7F, }]),
   )
   @test.assert_eq(
     pdf_text_parse_cmap_codespaces(
@@ -410,8 +410,8 @@ test "private external CMap helpers cover malformed and compact sections" {
       ),
     ),
     Some([
-      { length: 1, first: 0x00, last: 0x7F },
-      { length: 2, first: 0x8100, last: 0x81FF },
+      { length: 1, first: 0x00, last: 0x7F, },
+      { length: 2, first: 0x8100, last: 0x81FF, },
     ]),
   )
 

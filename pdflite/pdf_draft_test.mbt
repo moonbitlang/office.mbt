@@ -428,7 +428,7 @@ test "PdfDocument draft keeps selected pages without xobject resources" {
 ///|
 test "PdfDocument draft handles null resources on empty selected pages" {
   let doc = @pdflite.pdf_document_empty()
-  let page = { ..@page.pdf_page_blank(@geometry.paper_a4), resources: PdfNull }
+  let page = { ..@page.pdf_page_blank(@geometry.paper_a4), resources: PdfNull, }
   let drafted = try! draft_document_for_test(doc, [page]).draft(None, true, [1])
   let pages = try! drafted.pages_of_pagetree()
   @test.assert_eq(try! drafted.parse_content_ops(pages[0].content), [])

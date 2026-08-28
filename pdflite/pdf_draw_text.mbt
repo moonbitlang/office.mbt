@@ -16,7 +16,7 @@ priv struct PdfDrawFontWidthCache {
 
 ///|
 fn pdf_draw_font_width_cache_new(font_size : Double) -> PdfDrawFontWidthCache {
-  { font_size, entries: [] }
+  { font_size, entries: [], }
 }
 
 ///|

@@ -28,7 +28,7 @@ fn edit_sample_report() -> @office_docx.DocxEditReport {
     unsupported_total: 0,
     conflicts: [],
     conflicts_total: 0,
-    locations: [{ location: "/docx/body/p[1]", detail: "draft" }],
+    locations: [{ location: "/docx/body/p[1]", detail: "draft", }],
     locations_truncated: false,
     stories_scanned: ["/body"],
     changed: true,
@@ -115,7 +115,7 @@ test "revision result entries publish a selector and null the needle" {
     conflicts: [],
     conflicts_total: 0,
     locations: [
-      { location: "/docx/body/p[1]", detail: "accept w:ins id=\"2\"" },
+      { location: "/docx/body/p[1]", detail: "accept w:ins id=\"2\"", },
     ],
     locations_truncated: false,
     stories_scanned: ["/body"],

@@ -4,7 +4,7 @@ fn markdown_chunk_for_wbtest(
   y : Double,
   index : Int,
 ) -> PdfMarkdownTextChunk {
-  { x, y, width: 1.0, font_size: 1.0, index, codepoints: [] }
+  { x, y, width: 1.0, font_size: 1.0, index, codepoints: [], }
 }
 
 ///|
@@ -29,7 +29,7 @@ fn markdown_text_chunk_for_wbtest(
   index : Int,
   codepoints : Array[Int],
 ) -> PdfMarkdownTextChunk {
-  { x, y, width, font_size: 10.0, index, codepoints }
+  { x, y, width, font_size: 10.0, index, codepoints, }
 }
 
 ///|
@@ -82,9 +82,9 @@ test "private positioned chunk compare preserves stream order for equal origins"
 ///|
 test "private positioned text array treats large integer adjustment as space" {
   let chunks : Array[PdfMarkdownTextChunk] = []
-  let next_index = Ref::{ val: 0 }
+  let next_index = Ref::{ val: 0, }
   let extractor = @pdflite.pdf_text_extractor_of_font_real(
-    PdfFontStandard({ font: PdfHelvetica, encoding: PdfWinAnsiEncoding }),
+    PdfFontStandard({ font: PdfHelvetica, encoding: PdfWinAnsiEncoding, }),
   )
   pdf_markdown_add_positioned_text_array(
     chunks,

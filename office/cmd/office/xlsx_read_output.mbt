@@ -81,7 +81,7 @@ fn XlsxConditionalFormatBudget::new(
   maximum_ranges? : Int = office_read_max_parser_items,
   maximum_work_units? : Int = office_read_max_xml_part_bytes,
 ) -> XlsxConditionalFormatBudget {
-  { maximum_ranges, maximum_work_units, ranges: 0, work_units: 0 }
+  { maximum_ranges, maximum_work_units, ranges: 0, work_units: 0, }
 }
 
 ///|
@@ -624,7 +624,7 @@ async fn collect_xlsx_cell_page(
   }
   projection.checkpoint()
   @async.pause()
-  { cells, matched_total: matched, scanned_cells: scan.scanned, offset }
+  { cells, matched_total: matched, scanned_cells: scan.scanned, offset, }
 }
 
 ///|
@@ -741,7 +741,7 @@ async fn xlsx_get_data(
     Cell(sheet, rect, path~) => {
       let page = collect_xlsx_cell_page(
         projection,
-        [{ sheet, rect }],
+        [{ sheet, rect, }],
         PresentCells,
         0,
         1,
@@ -769,7 +769,7 @@ async fn xlsx_get_data(
     Range(sheet, rect, path~) => {
       let page = collect_xlsx_cell_page(
         projection,
-        [{ sheet, rect }],
+        [{ sheet, rect, }],
         PresentCells,
         0,
         projection.max_scan_cells,
@@ -868,7 +868,7 @@ async fn xlsx_get_payload(
       }
       let page = collect_xlsx_cell_page(
         projection,
-        [{ sheet, rect }],
+        [{ sheet, rect, }],
         PresentCells,
         0,
         projection.max_scan_cells,
@@ -1090,7 +1090,7 @@ async fn xlsx_get_human(
     Cell(sheet, rect, path~) => {
       let page = collect_xlsx_cell_page(
         projection,
-        [{ sheet, rect }],
+        [{ sheet, rect, }],
         PresentCells,
         0,
         1,
@@ -1109,7 +1109,7 @@ async fn xlsx_get_human(
         projection,
         collect_xlsx_cell_page(
           projection,
-          [{ sheet, rect }],
+          [{ sheet, rect, }],
           PresentCells,
           0,
           projection.max_scan_cells,

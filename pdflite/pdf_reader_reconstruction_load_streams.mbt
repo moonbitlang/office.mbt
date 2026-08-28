@@ -80,7 +80,7 @@ fn PdfDocument::load_reconstructed_physical_object_stream_members(
       Ok(context) =>
         for index in 0..<context.pairs.length() {
           let loaded_member : Result[(Int, @syntax.PdfObject), Error] = try
-            context.read_reference({ object_stream_number, index })
+            context.read_reference({ object_stream_number, index, })
           catch {
             err => Err(err)
           } noraise {

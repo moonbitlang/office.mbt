@@ -19,7 +19,7 @@ fn PdfDocument::pdf_crypt_prepare_plaintext_for_recrypt(
 ) -> Unit {
   for number in self.object_numbers() {
     match self.objects.get_entry(number) {
-      Some({ data: ObjectParsedAlreadyDecrypted(object), generation }) =>
+      Some({ data: ObjectParsedAlreadyDecrypted(object), generation, }) =>
         self.objects.set_entry(number, {
           data: ObjectParsed(object),
           generation,

@@ -130,7 +130,7 @@ pub fn WorkbookManifest::new(
       workbook_rels.add_auto(rel_type=rel_calc_chain, target="calcChain.xml"),
     )
   }
-  { content_types, root_rels, workbook_rels }
+  { content_types, root_rels, workbook_rels, }
 }
 
 ///|
@@ -213,11 +213,11 @@ pub fn WorkbookManifest::set_workbook_content_type(
   let overrides = self.content_types.overrides
   for i, item in overrides {
     if item.part_name == "/xl/workbook.xml" {
-      overrides[i] = { part_name: "/xl/workbook.xml", content_type }
+      overrides[i] = { part_name: "/xl/workbook.xml", content_type, }
       return
     }
   }
-  overrides.push({ part_name: "/xl/workbook.xml", content_type })
+  overrides.push({ part_name: "/xl/workbook.xml", content_type, })
 }
 
 ///|

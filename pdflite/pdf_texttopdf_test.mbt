@@ -1,11 +1,11 @@
 ///|
 fn texttopdf_standard_font_for_test() -> @pdflite.PdfFont {
-  PdfFontStandard({ font: PdfHelvetica, encoding: PdfWinAnsiEncoding })
+  PdfFontStandard({ font: PdfHelvetica, encoding: PdfWinAnsiEncoding, })
 }
 
 ///|
 fn texttopdf_bold_font_for_test() -> @pdflite.PdfFont {
-  PdfFontStandard({ font: PdfHelveticaBold, encoding: PdfWinAnsiEncoding })
+  PdfFontStandard({ font: PdfHelveticaBold, encoding: PdfWinAnsiEncoding, })
 }
 
 ///|
@@ -94,10 +94,10 @@ test "pdf_texttopdf_of_utf8_with_newlines switches font runs" {
   let pack = @pdflite.PdfFontPack::{
     fonts: [regular, bold],
     entries: [
-      { codepoint: 65, font_index: 0, charcode: 65 },
-      { codepoint: 66, font_index: 1, charcode: 66 },
-      { codepoint: 67, font_index: 1, charcode: 67 },
-      { codepoint: 68, font_index: 0, charcode: 68 },
+      { codepoint: 65, font_index: 0, charcode: 65, },
+      { codepoint: 66, font_index: 1, charcode: 66, },
+      { codepoint: 67, font_index: 1, charcode: 67, },
+      { codepoint: 68, font_index: 0, charcode: 68, },
     ],
   }
   @test.assert_eq(
@@ -118,7 +118,7 @@ test "pdf_texttopdf_of_utf8_with_newlines rejects invalid charcodes" {
   let font = texttopdf_standard_font_for_test()
   let pack = @pdflite.PdfFontPack::{
     fonts: [font],
-    entries: [{ codepoint: 65, font_index: 0, charcode: 300 }],
+    entries: [{ codepoint: 65, font_index: 0, charcode: 300, }],
   }
   let result : Result[Array[@pdflite.PdfTypeElement], Error] = try
     @pdflite.pdf_texttopdf_of_utf8_with_newlines(pack, 10.0, b"A")

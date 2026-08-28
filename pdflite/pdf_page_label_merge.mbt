@@ -54,7 +54,7 @@ pub fn pdf_page_label_merge(
       let label = @label.pdf_page_label_of_page_number(
         page_number, source_labels,
       ).unwrap()
-      labels.push({ ..label, start_page: merged_page })
+      labels.push({ ..label, start_page: merged_page, })
       merged_page += 1
     }
   }

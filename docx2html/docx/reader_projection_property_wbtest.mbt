@@ -544,7 +544,7 @@ fn hostile_document(seeds : ArrayView[Int]) -> String {
 ///|
 /// The same document, plus what the generator recorded while building it.
 fn hostile_document_tagged(seeds : ArrayView[Int]) -> (String, Array[String]) {
-  let choices = HostileChoices::{ seeds, at: 0, tags: [] }
+  let choices = HostileChoices::{ seeds, at: 0, tags: [], }
   let body = StringBuilder()
   let blocks = choices.next(4) + 1
   for _ in 0..<blocks {
@@ -674,7 +674,7 @@ fn hostile_native_projection(source : String) -> ReaderProjection? raise {
   }
   guard segment_joined_reader_story(
       story,
-      empty_body_reader({ relationships: [] }),
+      empty_body_reader({ relationships: [], }),
     )
     is SegmentedStory(output) else {
     fail("expected the story to segment")

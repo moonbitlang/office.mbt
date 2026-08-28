@@ -52,7 +52,7 @@ fn pdf_decode_stream_onestage_value(
         stream.dictionary,
         data.length(),
       )
-      { dictionary, data: StreamGot(data) }
+      { dictionary, data: StreamGot(data), }
     }
     Some(filter) => {
       let decoded = pdf_decode_stream_filter_bytes(
@@ -65,7 +65,7 @@ fn pdf_decode_stream_onestage_value(
         pdf_remove_first_decoder(stream.dictionary),
         unpredicted.length(),
       )
-      { dictionary, data: StreamGot(unpredicted) }
+      { dictionary, data: StreamGot(unpredicted), }
     }
   }
 }
@@ -94,7 +94,7 @@ fn PdfDocument::pdf_decode_stream_onestage_value_direct(
         stream.dictionary,
         data.length(),
       )
-      { dictionary, data: StreamGot(data) }
+      { dictionary, data: StreamGot(data), }
     }
     Some((filter_key, filter_value, filter)) => {
       let decoded = self.pdf_decode_stream_filter_bytes_direct(
@@ -114,7 +114,7 @@ fn PdfDocument::pdf_decode_stream_onestage_value_direct(
         ),
         unpredicted.length(),
       )
-      { dictionary, data: StreamGot(unpredicted) }
+      { dictionary, data: StreamGot(unpredicted), }
     }
   }
 }

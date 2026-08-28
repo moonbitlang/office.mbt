@@ -124,7 +124,7 @@ pub fn pdf_xref_stream_entries(
             offset: field2,
             generation: field3,
             in_use: true,
-            object_stream: Some({ object_stream_number: field2, index: field3 }),
+            object_stream: Some({ object_stream_number: field2, index: field3, }),
           })
         // Unknown entry types are retained as non-loadable markers so a newer
         // xref stream can still hide older or physically reconstructed objects.

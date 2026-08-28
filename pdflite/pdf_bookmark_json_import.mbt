@@ -30,7 +30,7 @@ fn pdf_bookmark_json_colour(
   match value {
     Some(
       Array([Number(red, repr=_), Number(green, repr=_), Number(blue, repr=_)])
-    ) => { red, green, blue }
+    ) => { red, green, blue, }
     _ => raise SoftError("malformed mark in mark_of_json")
   }
 }

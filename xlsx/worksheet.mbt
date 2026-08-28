@@ -392,7 +392,7 @@ pub fn Worksheet::get_cell_rich_text(
           }
           None => {
             let runs : Array[RichTextRun] = []
-            runs.push({ text: cell.value, font: None })
+            runs.push({ text: cell.value, font: None, })
             Some(runs)
           }
         }
@@ -2383,7 +2383,7 @@ pub fn Worksheet::add_shape(
 ) -> Unit raise XlsxError {
   self.ensure_stream_idle()
   let drawing_order = self.allocate_drawing_order()
-  self.shapes.push({ ..shape, drawing_order: Some(drawing_order) })
+  self.shapes.push({ ..shape, drawing_order: Some(drawing_order), })
 }
 
 ///|
@@ -2455,7 +2455,7 @@ pub fn Worksheet::add_slicer(
 ) -> Unit raise XlsxError {
   self.ensure_stream_idle()
   let drawing_order = self.allocate_drawing_order()
-  self.slicers.push({ ..slicer, drawing_order: Some(drawing_order) })
+  self.slicers.push({ ..slicer, drawing_order: Some(drawing_order), })
 }
 
 ///|
@@ -3348,12 +3348,12 @@ pub fn Worksheet::get_col(
 
 ///|
 fn default_row_dimension() -> RowDimension {
-  { height: None, hidden: false, outline_level: 0, style_id: None }
+  { height: None, hidden: false, outline_level: 0, style_id: None, }
 }
 
 ///|
 fn default_col_dimension() -> ColDimension {
-  { width: None, hidden: false, outline_level: 0, style_id: None }
+  { width: None, hidden: false, outline_level: 0, style_id: None, }
 }
 
 ///|
@@ -5291,7 +5291,7 @@ fn adjust_page_breaks_after_insert(
       check_read_cancelled(cancelled)
     }
     let new_id = if brk.id >= start { brk.id + count } else { brk.id }
-    updated.push({ id: new_id, min: brk.min, max: brk.max, manual: brk.manual })
+    updated.push({ id: new_id, min: brk.min, max: brk.max, manual: brk.manual, })
   }
   check_read_cancelled(cancelled)
   updated
@@ -5399,7 +5399,7 @@ fn adjust_auto_filter_after_row_insert(
 ) -> AutoFilter raise XlsxError {
   let range_ref = adjust_range_after_row_insert(filter.range_ref, row, count)
   let copied = clone_auto_filter(filter)
-  { range_ref, columns: copied.columns }
+  { range_ref, columns: copied.columns, }
 }
 
 ///|
@@ -5411,7 +5411,7 @@ fn adjust_auto_filter_after_row_remove(
   match adjust_range_after_row_remove(filter.range_ref, row, count) {
     Some(range_ref) => {
       let copied = clone_auto_filter(filter)
-      Some({ range_ref, columns: copied.columns })
+      Some({ range_ref, columns: copied.columns, })
     }
     None => None
   }
@@ -5437,7 +5437,7 @@ fn adjust_auto_filter_after_col_insert(
       custom_filters: entry.custom_filters,
     })
   }
-  { range_ref, columns }
+  { range_ref, columns, }
 }
 
 ///|
@@ -5465,7 +5465,7 @@ fn adjust_auto_filter_after_col_remove(
           custom_filters: entry.custom_filters,
         })
       }
-      Some({ range_ref, columns })
+      Some({ range_ref, columns, })
     }
     None => None
   }
@@ -5758,7 +5758,7 @@ fn adjust_sparkline_group_after_row_insert(
       count,
     )
     let location = adjust_cell_after_row_insert(sparkline.location, row, count)
-    updated.push({ range_ref, location })
+    updated.push({ range_ref, location, })
   }
   {
     sparkline_type: group.sparkline_type,
@@ -5786,7 +5786,8 @@ fn adjust_sparkline_group_after_row_remove(
     )
     let location = adjust_cell_after_row_remove(sparkline.location, row, count)
     match (range_ref, location) {
-      (Some(range_ref), Some(location)) => updated.push({ range_ref, location })
+      (Some(range_ref), Some(location)) =>
+        updated.push({ range_ref, location, })
       _ => ()
     }
   }
@@ -5815,7 +5816,7 @@ fn adjust_sparkline_group_after_col_insert(
       count,
     )
     let location = adjust_cell_after_col_insert(sparkline.location, col, count)
-    updated.push({ range_ref, location })
+    updated.push({ range_ref, location, })
   }
   {
     sparkline_type: group.sparkline_type,
@@ -5843,7 +5844,8 @@ fn adjust_sparkline_group_after_col_remove(
     )
     let location = adjust_cell_after_col_remove(sparkline.location, col, count)
     match (range_ref, location) {
-      (Some(range_ref), Some(location)) => updated.push({ range_ref, location })
+      (Some(range_ref), Some(location)) =>
+        updated.push({ range_ref, location, })
       _ => ()
     }
   }
@@ -6905,8 +6907,8 @@ test "worksheet wb: col insert/remove structural edge branches" {
   insert.auto_filter = Some({
     range_ref: "A1:D4",
     columns: [
-      { col: 1, filters: Some(["keep"]), custom_filters: None },
-      { col: 3, filters: Some(["shift"]), custom_filters: None },
+      { col: 1, filters: Some(["keep"]), custom_filters: None, },
+      { col: 3, filters: Some(["shift"]), custom_filters: None, },
     ],
   })
   insert.hyperlinks.push({
@@ -6960,9 +6962,9 @@ test "worksheet wb: col insert/remove structural edge branches" {
   remove.auto_filter = Some({
     range_ref: "A1:D4",
     columns: [
-      { col: 1, filters: Some(["left"]), custom_filters: None },
-      { col: 2, filters: Some(["drop"]), custom_filters: None },
-      { col: 4, filters: Some(["right"]), custom_filters: None },
+      { col: 1, filters: Some(["left"]), custom_filters: None, },
+      { col: 2, filters: Some(["drop"]), custom_filters: None, },
+      { col: 4, filters: Some(["right"]), custom_filters: None, },
     ],
   })
   ignore(remove.add_table("B1:B2", "DropColTable", ["B"]))
@@ -6980,8 +6982,8 @@ test "worksheet wb: col insert/remove structural edge branches" {
     ChartSeries::new("Remove!$A$1:$A$2", "Remove!$B$1:$B$2"),
   )
   remove.add_chart_with_options("B1", remove_chart_b)
-  remove.col_breaks.push({ id: 0, min: 0, max: 16383, manual: true })
-  remove.col_breaks.push({ id: 4, min: 0, max: 16383, manual: true })
+  remove.col_breaks.push({ id: 0, min: 0, max: 16383, manual: true, })
+  remove.col_breaks.push({ id: 4, min: 0, max: 16383, manual: true, })
   remove.remove_cols(2, 1)
   inspect(remove.merged_cells().length(), content="0")
   inspect(remove.hyperlinks().length(), content="1")
@@ -7014,7 +7016,7 @@ test "worksheet wb: col insert/remove structural edge branches" {
   let filter_drop = Worksheet::new("FilterDrop")
   filter_drop.auto_filter = Some({
     range_ref: "B1:B2",
-    columns: [{ col: 2, filters: Some(["x"]), custom_filters: None }],
+    columns: [{ col: 2, filters: Some(["x"]), custom_filters: None, }],
   })
   filter_drop.remove_cols(2, 1)
   debug_inspect(filter_drop.auto_filter, content="None")
@@ -7032,7 +7034,7 @@ test "worksheet wb: col insert/remove structural edge branches" {
 ///|
 test "worksheet wb: row remove residual drop and range-helper branches" {
   let sheet = Worksheet::new("RowDrop")
-  sheet.auto_filter = Some({ range_ref: "A2:B2", columns: [] })
+  sheet.auto_filter = Some({ range_ref: "A2:B2", columns: [], })
   sheet.hyperlinks.push({
     reference: "A1:A3",
     target: "https://rows.example",

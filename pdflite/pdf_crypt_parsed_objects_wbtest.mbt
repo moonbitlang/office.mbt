@@ -435,7 +435,7 @@ test "PdfDocument AESV2 parsed-object encryption skips metadata streams" {
     ],
     b"data",
   )
-  let calls = Ref::{ val: 0 }
+  let calls = Ref::{ val: 0, }
   let doc = pdf_document_empty()
   doc.add_object_given_number(12, metadata_stream)
   let encrypted_doc = try! doc.aesv2_encrypt_parsed_objects_with_iv_provider(

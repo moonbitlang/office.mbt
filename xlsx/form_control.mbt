@@ -817,7 +817,7 @@ fn parse_vml_textbox(
     } else {
       None
     }
-    runs.push({ text, font })
+    runs.push({ text, font, })
     i = content_start + close_rel + "</font>".length()
   }
   if runs.length() > 0 {

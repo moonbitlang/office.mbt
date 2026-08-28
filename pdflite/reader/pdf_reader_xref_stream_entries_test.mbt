@@ -49,7 +49,7 @@ test "xref stream entries decode normal, object stream, and unknown kinds" {
     offset: 7,
     generation: 3,
     in_use: true,
-    object_stream: Some({ object_stream_number: 7, index: 3 }),
+    object_stream: Some({ object_stream_number: 7, index: 3, }),
   })
   @test.assert_eq(entries[2], {
     object_number: 7,

@@ -124,7 +124,7 @@ fn toc_fixture_reparse_bad_final_startxref_for_test(
 ///|
 fn toc_fixture_fontpack_for_test() -> @pdflite.PdfFontPack raise {
   @pdflite.pdf_fontpack_of_standard_font(
-    PdfFontStandard({ font: PdfHelvetica, encoding: PdfWinAnsiEncoding }),
+    PdfFontStandard({ font: PdfHelvetica, encoding: PdfWinAnsiEncoding, }),
   )
 }
 

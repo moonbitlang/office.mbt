@@ -31,7 +31,7 @@ pub fn image_conversion(
   nodes : Array[HtmlNode],
   messages? : Array[Message] = [],
 ) -> ImageConversion {
-  { nodes, messages }
+  { nodes, messages, }
 }
 
 ///|
@@ -109,7 +109,7 @@ pub fn convert_document(
     Html => write_html(nodes, pretty_print~)
     Markdown => write_markdown(nodes)
   }
-  { value, messages: converted.messages }
+  { value, messages: converted.messages, }
 }
 
 ///|
@@ -147,7 +147,7 @@ fn convert_document_to_nodes(
     image_converter: convert_image,
   }
   let nodes = converter.convert_element(document)
-  { nodes, messages: @core.dedupe_messages(converter.messages) }
+  { nodes, messages: @core.dedupe_messages(converter.messages), }
 }
 
 ///|
@@ -248,7 +248,7 @@ fn DocumentConverter::convert_element(
     NoteReference(note_type~, note_id~) => {
       let label = self.note_number.to_string()
       self.note_number = self.note_number + 1
-      self.note_references.push({ note_type, note_id })
+      self.note_references.push({ note_type, note_id, })
       let id = self.options.id_prefix + note_type + "-ref-" + note_id
       let href = "#" + self.options.id_prefix + note_type + "-" + note_id
       [
@@ -317,7 +317,7 @@ fn DocumentConverter::convert_paragraph(
     []
   } else {
     let default_path : Array[HtmlPathElement] = [
-      { tag: "p", attributes: Map([]), fresh: true, separator: None },
+      { tag: "p", attributes: Map([]), fresh: true, separator: None, },
     ]
     if @style_map.find_style_mapping(element, self.options.style_map) == None {
       self.warn_unrecognised_style(
@@ -374,11 +374,11 @@ fn DocumentConverter::convert_run(
   match properties.vertical_alignment {
     Superscript =>
       paths.push([
-        { tag: "sup", attributes: Map([]), fresh: false, separator: None },
+        { tag: "sup", attributes: Map([]), fresh: false, separator: None, },
       ])
     Subscript =>
       paths.push([
-        { tag: "sub", attributes: Map([]), fresh: false, separator: None },
+        { tag: "sub", attributes: Map([]), fresh: false, separator: None, },
       ])
     Baseline => ()
   }
@@ -441,7 +441,7 @@ fn path_for_property(
     }
   }
   match default_tag {
-    Some(tag) => [{ tag, attributes: Map([]), fresh: false, separator: None }]
+    Some(tag) => [{ tag, attributes: Map([]), fresh: false, separator: None, }]
     None => []
   }
 }
@@ -472,7 +472,7 @@ fn DocumentConverter::convert_table(
 ) -> Array[HtmlNode] {
   let rows = force_write_nodes(self.convert_table_children(children))
   let default_path : Array[HtmlPathElement] = [
-    { tag: "table", attributes: Map([]), fresh: true, separator: None },
+    { tag: "table", attributes: Map([]), fresh: true, separator: None, },
   ]
   ignore(properties)
   self.wrap_with_style(element, rows, default_path)
@@ -755,7 +755,7 @@ fn DocumentConverter::convert_comment_reference(
             self.comment_number.to_string() +
             "]"
           self.comment_number = self.comment_number + 1
-          self.comment_references.push({ comment_id, label })
+          self.comment_references.push({ comment_id, label, })
           let id = self.options.id_prefix + "comment-ref-" + comment_id
           let href = "#" + self.options.id_prefix + "comment-" + comment_id
           wrap_html_path(mapping.to, [

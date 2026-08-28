@@ -330,7 +330,7 @@ pub async fn transact_batch(
     validators=[validator],
     identifier~,
   )
-  { stats, transaction: report }
+  { stats, transaction: report, }
 }
 
 ///|
@@ -367,7 +367,7 @@ pub async fn create_workbook(
     validators=[validator],
     identifier~,
   )
-  { sheet, transaction: report }
+  { sheet, transaction: report, }
 }
 
 ///|

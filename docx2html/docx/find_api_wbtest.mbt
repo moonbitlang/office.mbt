@@ -136,7 +136,7 @@ fn find_wbtest_plans(
   try {
     ignore(
       plan_paragraph_text_edits(projection, bytes, paragraph_index, [
-        { start, end, replacement },
+        { start, end, replacement, },
       ]),
     )
     true

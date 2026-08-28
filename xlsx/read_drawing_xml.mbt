@@ -622,7 +622,7 @@ fn parse_drawing_shape_text_runs(
       (source[open_end + 1:close_start].to_owned(), end)
     }
     if next_name == "a:br" {
-      runs.push({ text: "\n", font: parse_drawing_text_font(container_body) })
+      runs.push({ text: "\n", font: parse_drawing_text_font(container_body), })
     } else {
       let text = match extract_tag_body_from(container_body, "a:t") {
         Some(value) => unescape_xml_text(value)
@@ -633,7 +633,7 @@ fn parse_drawing_shape_text_runs(
             raise InvalidXml(msg="drawing text value is missing")
           }
       }
-      runs.push({ text, font: parse_drawing_text_font(container_body) })
+      runs.push({ text, font: parse_drawing_text_font(container_body), })
     }
     cursor = close_end + 1
   }

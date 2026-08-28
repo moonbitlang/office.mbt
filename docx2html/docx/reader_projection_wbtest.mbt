@@ -11,7 +11,7 @@ fn project_text_story(source : String) -> ReaderProjectionBuildResult raise {
   guard story.root.first("w:body") is Some(body) else {
     fail("expected a body")
   }
-  let items = empty_body_reader({ relationships: [] }).read_children(
+  let items = empty_body_reader({ relationships: [], }).read_children(
     body.element_children(),
   )
   project_reader_items(story.scan, items)
@@ -117,7 +117,7 @@ test "projection refuses trailing visible content and unjoined reads" {
     read_xml_string(xml, namespace_map=office_namespace_map()),
   )
   guard root.first("w:body") is Some(body) else { fail("expected a body") }
-  let items = empty_body_reader({ relationships: [] }).read_children(
+  let items = empty_body_reader({ relationships: [], }).read_children(
     body.element_children(),
   )
   let scan = scan_projection_source_tree(@utf8.encode(xml))
@@ -223,7 +223,7 @@ fn erased_has_unowned_visible(
   elements : Array[DocumentElement],
   inside_paragraph : Bool,
 ) -> Bool {
-  let state = ErasedUnownedState::{ pending_outside: false }
+  let state = ErasedUnownedState::{ pending_outside: false, }
   erased_walk_unowned(elements, inside_paragraph, state)
   state.pending_outside
 }
@@ -331,7 +331,7 @@ test "projection partitions generated documents like the reader" {
         Some(body) => body.element_children()
         None => node.element_children()
       }
-      let items = empty_body_reader({ relationships: [] }).read_children(
+      let items = empty_body_reader({ relationships: [], }).read_children(
         children,
       )
       let projection = match project_reader_items(story.scan, items) {
@@ -450,7 +450,7 @@ test "projection budgets bound the build" {
   guard story.root.first("w:body") is Some(body) else {
     fail("expected a body")
   }
-  let items = empty_body_reader({ relationships: [] }).read_children(
+  let items = empty_body_reader({ relationships: [], }).read_children(
     body.element_children(),
   )
   let starved = ReaderProjectionBudget::{

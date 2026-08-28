@@ -106,7 +106,13 @@ fn PdfDocument::pdf_annotation_border(
         Some(dash) => self.pdf_annotation_number_array(dash)
         _ => []
       }
-      { width, vertical_radius: 0.0, horizontal_radius: 0.0, style, dash_array }
+      {
+        width,
+        vertical_radius: 0.0,
+        horizontal_radius: 0.0,
+        style,
+        dash_array,
+      }
     }
     None =>
       match self.lookup_direct(pdf_annotation_border_key(), annotation) {

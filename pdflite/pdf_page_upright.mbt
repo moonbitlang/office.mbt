@@ -152,7 +152,7 @@ fn PdfDocument::pdf_page_upright_transform_boxes(
       None => ()
     }
   }
-  { ..page, mediabox: self.transform_rect(matrix, page.mediabox), rest }
+  { ..page, mediabox: self.transform_rect(matrix, page.mediabox), rest, }
 }
 
 ///|
@@ -201,7 +201,7 @@ fn PdfDocument::pdf_page_upright_page(
     let rotation_matrix = self.pdf_page_upright_rotation_matrix(page)
     let page = self.pdf_page_upright_transform_boxes(page, rotation_matrix)
     let page = self.pdf_page_upright_transform_content(
-      { ..page, rotate: Rotate0 },
+      { ..page, rotate: Rotate0, },
       rotation_matrix,
       fast,
     )

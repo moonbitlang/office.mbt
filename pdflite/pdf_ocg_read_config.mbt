@@ -17,7 +17,7 @@ fn PdfDocument::pdf_ocg_read_appdict(
     Some(object) => self.pdf_ocg_name_array(object)
     _ => []
   }
-  { event, ocgs, category }
+  { event, ocgs, category, }
 }
 
 ///|

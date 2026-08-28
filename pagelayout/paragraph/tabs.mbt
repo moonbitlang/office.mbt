@@ -41,7 +41,7 @@ pub(all) struct TabRuler {
 ///|
 /// Word's default ruler: no explicit stops, every 36pt.
 pub fn TabRuler::default() -> TabRuler {
-  { stops: [], default_interval_pt: 36.0 }
+  { stops: [], default_interval_pt: 36.0, }
 }
 
 ///|
@@ -76,5 +76,5 @@ pub fn TabRuler::next_stop_of(self : TabRuler, x : Double) -> TabStop {
   // the next multiple of the interval strictly past x; implicit stops
   // are always left-aligned
   let steps = (x / interval).floor() + 1.0
-  { position_pt: steps * interval, align: TabLeft }
+  { position_pt: steps * interval, align: TabLeft, }
 }

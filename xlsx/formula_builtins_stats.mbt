@@ -1785,7 +1785,7 @@ fn ifs_match(
     for col in 0..<base.cols {
       let value = base.values[row * base.cols + col]
       if formula_criteria_eval(value, base_criteria) {
-        matches.push({ row, col })
+        matches.push({ row, col, })
       }
     }
   }
@@ -2006,7 +2006,7 @@ fn collect_range_values_with_shape(
       out.push(resolve_cell_value(workbook, sheet_name, cell_ref, ctx))
     }
   }
-  { values: out, rows: max_row - min_row + 1, cols: max_col - min_col + 1 }
+  { values: out, rows: max_row - min_row + 1, cols: max_col - min_col + 1, }
 }
 
 ///|
@@ -2026,7 +2026,7 @@ fn eval_range_expr(
     Cell(sheet, reference) => {
       let target_sheet = if sheet == "" { sheet_name } else { sheet }
       let value = resolve_cell_value(workbook, target_sheet, reference, ctx)
-      { values: [value], rows: 1, cols: 1 }
+      { values: [value], rows: 1, cols: 1, }
     }
     FuncCall(name, args) =>
       if is_munit_func(name) {
@@ -2035,11 +2035,11 @@ fn eval_range_expr(
         transpose_range_values_from_expr(workbook, sheet_name, args, ctx)
       } else {
         let value = eval_expr(workbook, sheet_name, expr, ctx)
-        { values: [value], rows: 1, cols: 1 }
+        { values: [value], rows: 1, cols: 1, }
       }
     _ => {
       let value = eval_expr(workbook, sheet_name, expr, ctx)
-      { values: [value], rows: 1, cols: 1 }
+      { values: [value], rows: 1, cols: 1, }
     }
   }
 }

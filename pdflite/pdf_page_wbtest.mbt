@@ -163,7 +163,7 @@ test "private page tree readers cover guard branches" {
       None,
       None,
       Rotate0,
-      { val: pdf_page_default_mediabox() },
+      { val: pdf_page_default_mediabox(), },
       0,
     )
   catch {
@@ -181,7 +181,7 @@ test "private page tree readers cover guard branches" {
       None,
       None,
       Rotate0,
-      { val: pdf_page_default_mediabox() },
+      { val: pdf_page_default_mediabox(), },
       10001,
     )
   catch {
@@ -241,7 +241,7 @@ test "private page tree readers cover guard branches" {
     fail("expected quick missing kids")
   }
 
-  let last_mediabox = Ref::{ val: pdf_page_default_mediabox() }
+  let last_mediabox = Ref::{ val: pdf_page_default_mediabox(), }
   let branch_pages = try! doc.pdf_pages_of_node(
     PdfDictionary([(pdf_page_kids_key(), PdfArray([PdfDictionary([])]))]),
     None,
@@ -342,7 +342,7 @@ test "private page root and content helpers cover filtered shapes" {
   @test.assert_eq(doc.pdf_page_content_list(Some(PdfInteger(1))), [])
 
   let fast_page = try! doc.postpend_operators(
-    { ..@page.pdf_page_blank(@geometry.paper_a4), content: [stream] },
+    { ..@page.pdf_page_blank(@geometry.paper_a4), content: [stream], },
     [Op_g(0.5)],
     fast=true,
   )
@@ -397,7 +397,7 @@ test "PdfDocument change_pages preserves object stream bookkeeping" {
   let page_numbers = try! doc.page_reference_numbers()
   doc.objects.object_stream_ids[page_numbers[0]] = 42
   let changed = try! doc.change_pages(
-    [{ ..@page.pdf_page_blank(@geometry.paper_a4), rotate: Rotate90 }],
+    [{ ..@page.pdf_page_blank(@geometry.paper_a4), rotate: Rotate90, }],
     change_references=true,
   )
   @test.assert_eq(

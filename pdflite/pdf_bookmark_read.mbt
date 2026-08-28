@@ -75,7 +75,7 @@ fn PdfDocument::pdf_bookmark_colour(
           self.pdf_bookmark_colour_number(green),
           self.pdf_bookmark_colour_number(blue),
         ) {
-        (Some(red), Some(green), Some(blue)) => { red, green, blue }
+        (Some(red), Some(green), Some(blue)) => { red, green, blue, }
         _ => @bookmark.pdf_bookmark_black
       }
     _ => @bookmark.pdf_bookmark_black

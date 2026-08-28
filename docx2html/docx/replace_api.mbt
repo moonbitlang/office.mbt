@@ -251,7 +251,7 @@ pub fn plan_docx_replacements(
     })
     cursor = stop
   }
-  (plan, { selected: ordinals, replaced, affected, matches: selected })
+  (plan, { selected: ordinals, replaced, affected, matches: selected, })
 }
 
 ///|

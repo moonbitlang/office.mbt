@@ -19,12 +19,13 @@ fn PdfDocument::pdf_image_extracted_files_of_image(
 ) -> Array[PdfExtractedImageFile] raise @core.PdfError {
   pdf_check_injectible(name)
   match self.get_image_24bpp(resources, image) {
-    PdfJPEG(data, _) => [{ path: name + ".jpg", data }]
-    PdfJPEG2000(data, _) => [{ path: name + ".jpx", data }]
-    PdfJBIG2(data, _, None) => [{ path: name + ".jbig2", data }]
+    PdfJPEG(data, _) => [{ path: name + ".jpg", data, }]
+    PdfJPEG2000(data, _) => [{ path: name + ".jpx", data, }]
+    PdfJBIG2(data, _, None) => [{ path: name + ".jbig2", data, }]
     PdfJBIG2(data, _, Some(global_number)) =>
       match state.jbig2_serial(global_number) {
-        Some(serial) => [{ path: name + ".jbig2__" + serial.to_string(), data }]
+        Some(serial) =>
+          [{ path: name + ".jbig2__" + serial.to_string(), data, }]
         None =>
           match self.pdf_image_jbig2_global_data(global_number) {
             Some(global_data) => {
@@ -37,7 +38,7 @@ fn PdfDocument::pdf_image_extracted_files_of_image(
                   ),
                   data: global_data,
                 },
-                { path: name + ".jbig2__" + serial.to_string(), data },
+                { path: name + ".jbig2__" + serial.to_string(), data, },
               ]
             }
             None => []

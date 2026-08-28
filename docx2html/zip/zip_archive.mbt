@@ -68,7 +68,7 @@ pub fn zip_archive_entries(
       entries, canonical_names, logical_names, part_names, name, bytes,
     )
   }
-  { entries, canonical_names, logical_names }
+  { entries, canonical_names, logical_names, }
 }
 
 ///|
@@ -163,7 +163,7 @@ pub fn open_zip_archive(
       entry.data(),
     )
   }
-  { entries, canonical_names, logical_names }
+  { entries, canonical_names, logical_names, }
 }
 
 ///|

@@ -292,8 +292,8 @@ test "write rels xml: drawing relationships preserve hyperlink target modes" {
     [(2, "../media/image1.png")],
     [(3, "../charts/chart1.xml")],
     [
-      { rel_id: 4, target: "https://example.com", link_type: External },
-      { rel_id: 5, target: "Sheet1!A1", link_type: Location },
+      { rel_id: 4, target: "https://example.com", link_type: External, },
+      { rel_id: 5, target: "Sheet1!A1", link_type: Location, },
     ],
   )
   inspect(

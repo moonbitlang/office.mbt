@@ -13,7 +13,7 @@ fn text_font_read_standard_font_data_for_test(
   font : @pdflite.PdfStandardFont,
   encoding : @pdflite.PdfEncoding,
 ) -> @pdflite.PdfStandardFontData {
-  { font, encoding }
+  { font, encoding, }
 }
 
 ///|
@@ -993,10 +993,10 @@ test "PdfDocument read_font reads CID-keyed Type0 fonts" {
     (12, 600.0),
   ])
   @test.assert_eq(composite.cid_widths2, [
-    (20, { width: 100.0, vx: 1.0, vy: 2.0 }),
-    (21, { width: 200.0, vx: 3.0, vy: 4.0 }),
-    (30, { width: 900.0, vx: 5.0, vy: 6.0 }),
-    (31, { width: 900.0, vx: 5.0, vy: 6.0 }),
+    (20, { width: 100.0, vx: 1.0, vy: 2.0, }),
+    (21, { width: 200.0, vx: 3.0, vy: 4.0, }),
+    (30, { width: 900.0, vx: 5.0, vy: 6.0, }),
+    (31, { width: 900.0, vx: 5.0, vy: 6.0, }),
   ])
   @test.assert_eq(composite.cid_default_width, 1001.0)
   @test.assert_eq(composite.cid_default_width2, [880.0, -1000.5])
@@ -1061,7 +1061,7 @@ test "PdfDocument read_cidkeyed_font supports indirect CMap streams" {
         avgwidth: 0.0,
         maxwidth: 0.0,
         flags: 0,
-        fontbbox: { min_x: 0.0, min_y: 0.0, max_x: 0.0, max_y: 0.0 },
+        fontbbox: { min_x: 0.0, min_y: 0.0, max_x: 0.0, max_y: 0.0, },
         italicangle: 0.0,
         capheight: 0.0,
         xheight: 0.0,

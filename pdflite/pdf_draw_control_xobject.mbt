@@ -101,7 +101,7 @@ pub fn PdfDrawControl::start_xobject(
   self : PdfDrawControl,
   name : String,
 ) -> Unit {
-  self.frames.push({ name, ops: [] })
+  self.frames.push({ name, ops: [], })
 }
 
 ///|

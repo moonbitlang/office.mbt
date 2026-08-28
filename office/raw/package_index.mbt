@@ -655,7 +655,7 @@ fn parse_content_types(
         }
     }
   }
-  { defaults, overrides }
+  { defaults, overrides, }
 }
 
 ///|
@@ -1014,7 +1014,7 @@ fn parse_relationships(
                   "relationship '\{bounded_raw_text(id, 120)}' in '/\{canonical}' has an invalid external target",
                 )
               }
-              output.push({ id, kind, target, external: true })
+              output.push({ id, kind, target, external: true, })
             } else {
               match
                 normalize_relationship_target(
@@ -1024,7 +1024,7 @@ fn parse_relationships(
                 Some(resolved) =>
                   match pkg.names.get(canonical_part_key(resolved)) {
                     Some(actual) =>
-                      output.push({ id, kind, target: actual, external: false })
+                      output.push({ id, kind, target: actual, external: false, })
                     None =>
                       raise raw_error(
                         "office.raw.invalid_relationship",
@@ -2040,7 +2040,7 @@ pub fn raw_inventory(
     parts.push(pkg.part_info(name))
   }
   parts.sort_by(fn(left, right) { left.name.compare(right.name) })
-  { format: pkg.format, parts: ReadOnlyArray::from_array(parts) }
+  { format: pkg.format, parts: ReadOnlyArray::from_array(parts), }
 }
 
 ///|
@@ -2076,5 +2076,5 @@ pub fn raw_read(
   let pkg = open_raw_package(path, data)
   let name = pkg.resolve_part(part)
   let bytes = pkg.part_bytes(name)
-  { format: pkg.format, info: pkg.part_info(name), bytes: bytes.to_owned() }
+  { format: pkg.format, info: pkg.part_info(name), bytes: bytes.to_owned(), }
 }

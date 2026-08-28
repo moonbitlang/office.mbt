@@ -182,7 +182,7 @@ pub fn PdfDocument::addtext_line_widths(
       ),
     )
   }
-  { text_width, widths, longest_width: pdf_addtext_longest_width(widths) }
+  { text_width, widths, longest_width: pdf_addtext_longest_width(widths), }
 }
 
 ///|

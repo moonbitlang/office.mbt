@@ -28,7 +28,7 @@ pub struct BitStreamPosition {
 ///|
 /// Creates a bit stream that reads from an existing byte cursor.
 pub fn bitstream_of_cursor(input : ByteCursor) -> BitStream {
-  { input, current_byte: 0, bit_mask: 0, bits_read: 0 }
+  { input, current_byte: 0, bit_mask: 0, bits_read: 0, }
 }
 
 ///|

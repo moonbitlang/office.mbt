@@ -171,7 +171,7 @@ test "cpdfcontent path geometry computes segment and path bounds" {
   }
   assert_rectangle_for_shape_test(path.bounds(), -5.0, -3.0, 10.0, 20.0)
   @test.assert_eq(@shape.pdf_path_bounds(path), path.bounds())
-  let empty = @shape.PdfPath::{ winding_rule: PdfPathEvenOdd, subpaths: [] }
+  let empty = @shape.PdfPath::{ winding_rule: PdfPathEvenOdd, subpaths: [], }
   assert_rectangle_for_shape_test(empty.bounds(), 0.0, 0.0, 0.0, 0.0)
 }
 
@@ -262,7 +262,7 @@ test "cpdfcontent path geometry emits content bounding box quads" {
   assert_content_bbox_for_shape_test(
     stroked, 0.0, 3.0, 0.0, 18.0, 8.0, 18.0, 8.0, 3.0,
   )
-  let empty = @shape.PdfPath::{ winding_rule: PdfPathEvenOdd, subpaths: [] }
+  let empty = @shape.PdfPath::{ winding_rule: PdfPathEvenOdd, subpaths: [], }
   @test.assert_eq(
     @pdflite.pdf_path_content_bounding_box(
       empty, @geometry.transform_identity_matrix, 1.0, false,
@@ -291,7 +291,7 @@ test "cpdfcontent path geometry serializes drawn path content JSON" {
   let drawn = @shape.PdfDrawnPath::{
     stroked: true,
     filled: false,
-    path: { winding_rule: PdfPathEvenOdd, subpaths: [subpath] },
+    path: { winding_rule: PdfPathEvenOdd, subpaths: [subpath], },
   }
   let segment_json : Json = {
     "line": [{ "x": 1.0, "y": 2.0 }, { "x": 3.0, "y": 4.0 }],

@@ -291,5 +291,5 @@ pub fn PdfDocument::read_cidkeyed_font(
       self.pdf_text_read_descendant(self.direct(descendant))
     _ => raise DescendantFontExpected
   }
-  { basefont, composite, encoding: self.pdf_text_read_cmap_encoding(font) }
+  { basefont, composite, encoding: self.pdf_text_read_cmap_encoding(font), }
 }

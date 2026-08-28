@@ -14,7 +14,7 @@ pub fn DefinedName::new(
   comment? : String = "",
 ) -> DefinedName {
   let scope_value = if scope == "" { "Workbook" } else { scope }
-  { name, refers_to, scope: scope_value, comment }
+  { name, refers_to, scope: scope_value, comment, }
 }
 
 ///|

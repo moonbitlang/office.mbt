@@ -10,7 +10,7 @@ fn PdfDocument::pdf_util_precombine_page_content(
       rewritten.push(page)
     } else {
       let ops = self.pdf_page_parse_content_ops(page.resources, page.content)
-      rewritten.push({ ..page, content: [pdf_content_stream_of_ops(ops)] })
+      rewritten.push({ ..page, content: [pdf_content_stream_of_ops(ops)], })
       changed = true
     }
   }

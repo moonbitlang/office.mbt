@@ -569,7 +569,7 @@ fn acceptance_assert_one_page_invariants_for_test(
   let font_object = acceptance_font_object_for_test(pages[0].resources)
   @test.assert_eq(
     doc.read_font(font_object),
-    PdfFontStandard({ font: PdfTimesItalic, encoding: PdfImplicitInFontFile }),
+    PdfFontStandard({ font: PdfTimesItalic, encoding: PdfImplicitInFontFile, }),
   )
   let extractor = doc.text_extractor_of_font(font_object)
   @test.assert_eq(
@@ -1878,7 +1878,7 @@ fn acceptance_type3_fixture_inline_data_for_test() -> @core.PdfBytes raise {
 fn acceptance_type3_fixture_t_ops_for_test() -> Array[@content.PdfContentOp] raise {
   [
     Op_q,
-    Op_cm({ a: 6.0, b: 0.0, c: 0.0, d: 12.0, e: 1.0, f: 2.0 }),
+    Op_cm({ a: 6.0, b: 0.0, c: 0.0, d: 12.0, e: 1.0, f: 2.0, }),
     Op_InlineImage(
       acceptance_type3_fixture_inline_dictionary_for_test(),
       None,
@@ -4610,9 +4610,9 @@ fn acceptance_assert_identity_v_text_for_test(
     PdfPredefinedCMap(acceptance_name_for_test("/Identity-V")),
   )
   @test.assert_eq(cid_font.composite.cid_widths2, [
-    (0x43, { width: 1000.0, vx: 20.0, vy: 880.0 }),
-    (0x44, { width: 900.0, vx: 25.0, vy: 870.0 }),
-    (0x4E8C, { width: 1200.0, vx: 30.0, vy: 860.0 }),
+    (0x43, { width: 1000.0, vx: 20.0, vy: 880.0, }),
+    (0x44, { width: 900.0, vx: 25.0, vy: 870.0, }),
+    (0x4E8C, { width: 1200.0, vx: 30.0, vy: 860.0, }),
   ])
   @test.assert_eq(cid_font.composite.cid_default_width2, [880.0, -1000.0])
   @test.assert_eq(
@@ -5669,7 +5669,7 @@ fn acceptance_truetype_descriptor_for_test() -> @pdflite.PdfFontDescriptor raise
     avgwidth: 501.0,
     maxwidth: 1000.0,
     flags: 32,
-    fontbbox: { min_x: -10.0, min_y: -200.0, max_x: 500.0, max_y: 700.0 },
+    fontbbox: { min_x: -10.0, min_y: -200.0, max_x: 500.0, max_y: 700.0, },
     italicangle: -12.0,
     capheight: 680.0,
     xheight: 450.0,

@@ -103,7 +103,7 @@ test "CCITT Group 3 covers alignment EOL padding EOF and invalid params" {
     pdf_ccitt_decode_g3_1d(
       @core.bitstream_of_bytes(ccitt_wb_bits([1, 0, 1, 1])),
       @core.bit_writer_new(),
-      { ..pdf_ccitt_default_params(), columns: 4, rows: 1 },
+      { ..pdf_ccitt_default_params(), columns: 4, rows: 1, },
       2,
       0,
     )
@@ -225,7 +225,7 @@ test "CCITT Group 4 covers pass vertical horizontal black EOFB and unsupported m
       // row 2: vertical left one, then horizontal while current color is black
        0, 1, 0, 0, 0, 1, 0, 1, 0, 0, 1, 1, 1,
     ]),
-    { ..pdf_ccitt_default_params(), k: -1, columns: 4, rows: 2 },
+    { ..pdf_ccitt_default_params(), k: -1, columns: 4, rows: 2, },
   )
   @test.assert_eq(mixed, ccitt_wb_bytes([0xC0, 0xB0]))
 
@@ -236,7 +236,7 @@ test "CCITT Group 4 covers pass vertical horizontal black EOFB and unsupported m
       // row 2: vertical left one, then pass while current color is black
        0, 1, 0, 0, 0, 0, 1,
     ]),
-    { ..pdf_ccitt_default_params(), k: -1, columns: 4, rows: 2 },
+    { ..pdf_ccitt_default_params(), k: -1, columns: 4, rows: 2, },
   )
   @test.assert_eq(pass_black, ccitt_wb_bytes([0xC0, 0x80]))
 
@@ -247,7 +247,7 @@ test "CCITT Group 4 covers pass vertical horizontal black EOFB and unsupported m
       // row 2: vertical left one, vertical left one while black, vertical zero
        0, 1, 0, 0, 1, 0, 1,
     ]),
-    { ..pdf_ccitt_default_params(), k: -1, columns: 4, rows: 2 },
+    { ..pdf_ccitt_default_params(), k: -1, columns: 4, rows: 2, },
   )
   @test.assert_eq(vertical_black, ccitt_wb_bytes([0xC0, 0x90]))
 
@@ -300,7 +300,7 @@ test "CCITT Group 4 covers pass vertical horizontal black EOFB and unsupported m
     pdf_ccitt_decode_g4(
       @core.bitstream_of_bytes(ccitt_wb_bits([1])),
       @core.bit_writer_new(),
-      { ..pdf_ccitt_default_params(), k: -1, columns: 4, rows: 1 },
+      { ..pdf_ccitt_default_params(), k: -1, columns: 4, rows: 1, },
       2,
       0,
     )

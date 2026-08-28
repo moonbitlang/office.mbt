@@ -242,7 +242,7 @@ fn extract_vml_element_spans(
         None => break
       }
     }
-    spans.push({ start, close_start, end })
+    spans.push({ start, close_start, end, })
     index = end
   }
   spans
@@ -308,11 +308,11 @@ fn vml_direct_element_span(
     let self_closing = masked[start + 1:open_end].trim().has_suffix("/")
     if target_at_start {
       if self_closing {
-        return Some({ start, close_start: open_end, end: open_end + 1 })
+        return Some({ start, close_start: open_end, end: open_end + 1, })
       }
       return match find_xml_close_tag_from(masked, element_name, open_end + 1) {
         Some((close_start, close_end)) =>
-          Some({ start, close_start, end: close_end + 1 })
+          Some({ start, close_start, end: close_end + 1, })
         None =>
           raise InvalidVmlDrawing(
             msg="retained VML \{element_name.to_owned()} element is malformed",
@@ -895,7 +895,7 @@ fn wb_comment(
   text : String,
   paragraph : Array[RichTextRun],
 ) -> Comment {
-  { cell, author, author_id: None, text, paragraph, width: None, height: None }
+  { cell, author, author_id: None, text, paragraph, width: None, height: None, }
 }
 
 ///|
@@ -1022,12 +1022,12 @@ test "write comments vml wb: rich comment xml branches" {
   }
   let comments : ReadOnlyArray[Comment] = [
     wb_comment("A1", "", "", [
-      { text: "Rich", font: Some(rich_font) },
-      { text: "Theme", font: Some(theme_font) },
-      { text: "Indexed", font: Some(indexed_font) },
-      { text: "ThemeTint", font: Some(theme_tint_font) },
-      { text: "IndexedNoTint", font: Some(indexed_no_tint_font) },
-      { text: "TintOnly", font: Some(tint_only_font) },
+      { text: "Rich", font: Some(rich_font), },
+      { text: "Theme", font: Some(theme_font), },
+      { text: "Indexed", font: Some(indexed_font), },
+      { text: "ThemeTint", font: Some(theme_tint_font), },
+      { text: "IndexedNoTint", font: Some(indexed_no_tint_font), },
+      { text: "TintOnly", font: Some(tint_only_font), },
     ]),
     wb_comment("B2", "Bob", " lead\n", []),
   ]
@@ -1064,9 +1064,9 @@ test "write comments vml wb: invalid comments reject without truncation" {
     wb_comment("A1", "A".repeat(max_comment_author_chars + 1), "valid", []),
     wb_comment("A1", "Alice", "B".repeat(max_comment_content_chars + 1), []),
     wb_comment("A1", "Alice", "", [
-      { text: "C".repeat(max_comment_content_chars + 1), font: None },
+      { text: "C".repeat(max_comment_content_chars + 1), font: None, },
     ]),
-    wb_comment("A1", "Alice", "plain", [{ text: "rich", font: None }]),
+    wb_comment("A1", "Alice", "plain", [{ text: "rich", font: None, }]),
   ]
   for comment in invalid_comments {
     let one : ReadOnlyArray[Comment] = [comment]

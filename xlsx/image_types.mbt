@@ -94,7 +94,7 @@ fn image_part_identity(
       }
     None => canonical
   }
-  { extension, content_type }
+  { extension, content_type, }
 }
 
 ///|

@@ -102,7 +102,7 @@ test "malformed worksheet constructs are rejected" {
   ignore(filtered.add_sheet("Sheet1"))
   filtered.set_cell("Sheet1", "A1", "Name")
   filtered.set_auto_filter("Sheet1", "A1:C3", [
-    { column: "B", expression: "x > 5" },
+    { column: "B", expression: "x > 5", },
   ])
   let filter_bytes = @xlsx.write(filtered)
   expect_invalid_xml(

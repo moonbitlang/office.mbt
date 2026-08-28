@@ -27,7 +27,7 @@ pub struct HyperlinkOpts {
 
 ///|
 pub fn HyperlinkOpts::new() -> HyperlinkOpts {
-  { display: None, tooltip: None }
+  { display: None, tooltip: None, }
 }
 
 ///|
@@ -354,7 +354,7 @@ fn index_hyperlink_bounds(
     if index % 4096 == 0 {
       budget.checkpoint()
     }
-    indexed.push({ index, bounds: parse_range_ref(link.reference) })
+    indexed.push({ index, bounds: parse_range_ref(link.reference), })
   }
   charge_hyperlink_bound_sort(budget, indexed.length())
   indexed.sort_by(compare_indexed_hyperlink_bounds)
@@ -376,7 +376,7 @@ fn index_merged_range_bounds(
     }
     let bounds = parse_range_ref(merged)
     let (min_row, min_col, _, _) = bounds
-    indexed.push({ order, bounds, anchor: cell_ref_from(min_row, min_col) })
+    indexed.push({ order, bounds, anchor: cell_ref_from(min_row, min_col), })
   }
   charge_hyperlink_bound_sort(budget, indexed.length())
   indexed.sort_by(compare_indexed_merged_range_bounds)

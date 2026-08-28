@@ -207,13 +207,13 @@ async fn transact_docx_revisions(
     let note_unsupported = (location : String, detail : String) => {
       report.unsupported_total += 1
       if report.unsupported.length() < docx_edit_finding_limit {
-        report.unsupported.push({ location, detail })
+        report.unsupported.push({ location, detail, })
       }
     }
     let note_conflict = (location : String, detail : String) => {
       report.conflicts_total += 1
       if report.conflicts.length() < docx_edit_finding_limit {
-        report.conflicts.push({ location, detail })
+        report.conflicts.push({ location, detail, })
       }
     }
     let annotated = session.annotated()
@@ -277,7 +277,7 @@ async fn transact_docx_revisions(
             None => ()
           }
           match parts_by_story.get(span.story()) {
-            Some(part) => targets.push({ span, part, location, accept })
+            Some(part) => targets.push({ span, part, location, accept, })
             None =>
               note_unsupported(
                 location,
@@ -422,5 +422,5 @@ async fn transact_docx_revisions(
       "office.docx.edit_internal", "the revision resolution produced no report",
     )
   }
-  { report: edit, transaction: report }
+  { report: edit, transaction: report, }
 }

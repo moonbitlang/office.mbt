@@ -89,7 +89,7 @@ pub struct Counters {
 ///|
 /// Fresh counters: every level starts unused.
 pub fn Counters::new() -> Counters {
-  { values: Map([]), started: Map([]) }
+  { values: Map([]), started: Map([]), }
 }
 
 ///|

@@ -568,8 +568,8 @@ test "PdfDocument remove_clipping rewrites selected page form xobjects" {
 test "PdfDocument append_page_content prepends parsed bytes to selected pages" {
   let base = try! @pdflite.pdf_blank_document(200.0, 100.0, 2)
   let pages = try! base.pages_of_pagetree()
-  let first = { ..pages[0], content: [tweak_stream_for_test([Op_S])] }
-  let second = { ..pages[1], content: [tweak_stream_for_test([Op_S])] }
+  let first = { ..pages[0], content: [tweak_stream_for_test([Op_S])], }
+  let second = { ..pages[1], content: [tweak_stream_for_test([Op_S])], }
   let document = try! base.change_pages([first, second])
   let original_pages = try! document.pages_of_pagetree()
 
@@ -609,8 +609,8 @@ test "PdfDocument append_page_content prepends parsed bytes to selected pages" {
 test "PdfDocument append_page_content_ops appends selected pages in fast mode" {
   let base = try! @pdflite.pdf_blank_document(200.0, 100.0, 2)
   let pages = try! base.pages_of_pagetree()
-  let first = { ..pages[0], content: [tweak_stream_for_test([Op_BT, Op_ET])] }
-  let second = { ..pages[1], content: [tweak_stream_for_test([Op_BT, Op_ET])] }
+  let first = { ..pages[0], content: [tweak_stream_for_test([Op_BT, Op_ET])], }
+  let second = { ..pages[1], content: [tweak_stream_for_test([Op_BT, Op_ET])], }
   let document = try! base.change_pages([first, second])
 
   let appended = try! @pdflite.pdf_append_page_content_ops(
@@ -638,7 +638,7 @@ test "PdfDocument append_page_content_ops appends selected pages in fast mode" {
 test "PdfDocument append_page_content no-ops for empty content and ops" {
   let base = try! @pdflite.pdf_blank_document(200.0, 100.0, 1)
   let pages = try! base.pages_of_pagetree()
-  let page = { ..pages[0], content: [tweak_stream_for_test([Op_S])] }
+  let page = { ..pages[0], content: [tweak_stream_for_test([Op_S])], }
   let document = try! base.change_pages([page])
   let unchanged_bytes = try! @pdflite.pdf_append_page_content(
     document,

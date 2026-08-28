@@ -51,7 +51,7 @@ fn read_border(el : @xml.XmlElement) -> @table.Border? {
         Some("auto") | None => @pagelayout.black
         Some(hex) => parse_hex_color(hex).unwrap_or(@pagelayout.black)
       }
-      Some({ width: EighthPoints(width), color })
+      Some({ width: EighthPoints(width), color, })
     }
   }
 }
@@ -67,14 +67,14 @@ fn read_borders(
     guard child is XmlElement(el) else { continue }
     let side = read_border(el)
     match el.name {
-      "w:top" => borders = { ..borders, top: side }
-      "w:bottom" => borders = { ..borders, bottom: side }
+      "w:top" => borders = { ..borders, top: side, }
+      "w:bottom" => borders = { ..borders, bottom: side, }
       // insideH/insideV apply between cells; approximate them onto the
       // shared edges so gridded tables draw their interior lines
-      "w:left" | "w:start" => borders = { ..borders, left: side }
-      "w:right" | "w:end" => borders = { ..borders, right: side }
-      "w:insideH" => borders = { ..borders, top: side, bottom: side }
-      "w:insideV" => borders = { ..borders, left: side, right: side }
+      "w:left" | "w:start" => borders = { ..borders, left: side, }
+      "w:right" | "w:end" => borders = { ..borders, right: side, }
+      "w:insideH" => borders = { ..borders, top: side, bottom: side, }
+      "w:insideV" => borders = { ..borders, left: side, right: side, }
       _ => ()
     }
   }
@@ -91,10 +91,10 @@ fn read_cell_margins(
     guard child is XmlElement(el) else { continue }
     guard parse_twips(attr(el, "w:w")) is Some(v) else { continue }
     match el.name {
-      "w:top" => margins = { ..margins, top: Twips(v) }
-      "w:bottom" => margins = { ..margins, bottom: Twips(v) }
-      "w:left" | "w:start" => margins = { ..margins, left: Twips(v) }
-      "w:right" | "w:end" => margins = { ..margins, right: Twips(v) }
+      "w:top" => margins = { ..margins, top: Twips(v), }
+      "w:bottom" => margins = { ..margins, bottom: Twips(v), }
+      "w:left" | "w:start" => margins = { ..margins, left: Twips(v), }
+      "w:right" | "w:end" => margins = { ..margins, right: Twips(v), }
       _ => ()
     }
   }

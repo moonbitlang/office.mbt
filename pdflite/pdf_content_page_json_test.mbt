@@ -23,8 +23,8 @@ fn content_page_json_document_for_test() -> @pdflite.PdfDocument raise @core.Pdf
     Op_S,
   ])
   base.change_pages([
-    { ..pages[0], content: [first_stream] },
-    { ..pages[1], content: [second_stream] },
+    { ..pages[0], content: [first_stream], },
+    { ..pages[1], content: [second_stream], },
   ])
 }
 
@@ -62,8 +62,8 @@ fn content_page_json_text_document_for_test() -> @pdflite.PdfDocument raise @cor
     Op_ET,
   ])
   document.change_pages([
-    { ..pages[0], content: [first_stream], resources },
-    { ..pages[1], content: [second_stream], resources },
+    { ..pages[0], content: [first_stream], resources, },
+    { ..pages[1], content: [second_stream], resources, },
   ])
 }
 

@@ -4,7 +4,7 @@ fn wb_range(
   rows : Int,
   cols : Int,
 ) -> RangeValues {
-  { values, rows, cols }
+  { values, rows, cols, }
 }
 
 ///|

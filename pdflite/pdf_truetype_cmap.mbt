@@ -62,13 +62,13 @@ fn pdf_truetype_push_cmap_glyph(
   let mut replaced = false
   for index in 0..<entries.length() {
     if entries[index].codepoint == codepoint {
-      entries[index] = { codepoint, glyph_index: normalized }
+      entries[index] = { codepoint, glyph_index: normalized, }
       replaced = true
       break
     }
   }
   if !replaced {
-    entries.push({ codepoint, glyph_index: normalized })
+    entries.push({ codepoint, glyph_index: normalized, })
   }
 }
 
@@ -196,7 +196,7 @@ fn pdf_truetype_cmap_subtable_glyphs(
 ///|
 fn pdf_truetype_identity_cmap_glyphs() -> Array[@truetype.PdfTrueTypeCMapGlyph] {
   [
-    for codepoint in 0..<256 => { codepoint, glyph_index: codepoint }
+    for codepoint in 0..<256 => { codepoint, glyph_index: codepoint, }
   ]
 }
 

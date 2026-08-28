@@ -46,7 +46,7 @@ pub(all) struct Borders {
 ///|
 /// No borders on any side.
 pub fn Borders::none() -> Borders {
-  { top: None, bottom: None, left: None, right: None }
+  { top: None, bottom: None, left: None, right: None, }
 }
 
 ///|
@@ -61,7 +61,7 @@ pub(all) struct CellMargins {
 ///|
 /// Word's default cell padding: 0 vertical, 108 twips (0.075") each side.
 pub fn CellMargins::default() -> CellMargins {
-  { top: Twips(0), bottom: Twips(0), left: Twips(108), right: Twips(108) }
+  { top: Twips(0), bottom: Twips(0), left: Twips(108), right: Twips(108), }
 }
 
 ///|
@@ -97,7 +97,7 @@ pub fn Cell::new(
   margins? : CellMargins = CellMargins::default(),
   shading? : @pagelayout.Color? = None,
 ) -> Cell {
-  { content, width, grid_span, vmerge, borders, margins, shading }
+  { content, width, grid_span, vmerge, borders, margins, shading, }
 }
 
 ///|
@@ -120,7 +120,7 @@ pub fn Row::new(
   cant_split? : Bool = false,
   min_height? : @pagelayout.Twips? = None,
 ) -> Row {
-  { cells, header, cant_split, min_height }
+  { cells, header, cant_split, min_height, }
 }
 
 ///|
@@ -145,7 +145,7 @@ pub fn Table::new(
   borders? : Borders = Borders::none(),
   indent? : @pagelayout.Twips = Twips(0),
 ) -> Table {
-  { rows, grid, width, layout, borders, indent }
+  { rows, grid, width, layout, borders, indent, }
 }
 
 ///|

@@ -176,7 +176,7 @@ let pdf_image_pdfua2_namespace : @core.PdfBytes = @ascii.encode(
 let pdf_image_jbig2_globals_object_number : Int = 10000
 
 ///|
-let pdf_image_debug_image_processing_enabled : Ref[Bool] = { val: false }
+let pdf_image_debug_image_processing_enabled : Ref[Bool] = { val: false, }
 
 ///|
 /// Return cpdfimage's `debug_image_processing` flag.

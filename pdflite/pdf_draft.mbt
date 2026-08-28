@@ -313,7 +313,7 @@ fn PdfDocument::pdf_draft_page(
     rewritten_stream,
     only_if_smaller=true,
   )
-  { ..page, content: [encoded], resources: rewritten_resources }
+  { ..page, content: [encoded], resources: rewritten_resources, }
 }
 
 ///|

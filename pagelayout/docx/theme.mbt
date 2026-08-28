@@ -19,7 +19,7 @@ pub(all) struct ThemeFonts {
 /// A theme that names no fonts — used when the package has no theme
 /// part, so the cascade falls through to the engine defaults.
 pub fn ThemeFonts::empty() -> ThemeFonts {
-  { major: None, minor: None }
+  { major: None, minor: None, }
 }
 
 ///|

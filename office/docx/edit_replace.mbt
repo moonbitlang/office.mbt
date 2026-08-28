@@ -388,7 +388,7 @@ pub fn parse_docx_edit_script(
         required_nonempty=false,
         op="set_run_text",
       )
-      run_texts.push({ at, expect, text })
+      run_texts.push({ at, expect, text, })
       continue
     }
     guard run_texts.is_empty() else {
@@ -454,14 +454,14 @@ pub fn parse_docx_edit_script(
           "ops[\{index}].params.occurrence must be a number when present",
         )
     }
-    replacements.push({ find, replace, occurrence })
+    replacements.push({ find, replace, occurrence, })
   }
   if !run_texts.is_empty() {
-    { program: SetRunTextProgram(run_texts), schema }
+    { program: SetRunTextProgram(run_texts), schema, }
   } else if revisions.is_empty() {
-    { program: ReplaceProgram(replacements), schema }
+    { program: ReplaceProgram(replacements), schema, }
   } else {
-    { program: RevisionProgram(revisions), schema }
+    { program: RevisionProgram(revisions), schema, }
   }
 }
 
@@ -601,7 +601,7 @@ fn parse_docx_revision_op(
       "ops[\{index}].params needs at least one of id, author, type, or all",
     )
   }
-  { accept, id, author, kind, all }
+  { accept, id, author, kind, all, }
 }
 
 ///|
@@ -622,7 +622,7 @@ fn DocxEditState::note_unsupported(
 ) -> Unit {
   self.report.unsupported_total += 1
   if self.report.unsupported.length() < docx_edit_finding_limit {
-    self.report.unsupported.push({ location, detail })
+    self.report.unsupported.push({ location, detail, })
   }
 }
 
@@ -634,7 +634,7 @@ fn DocxEditState::note_conflict(
 ) -> Unit {
   self.report.conflicts_total += 1
   if self.report.conflicts.length() < docx_edit_finding_limit {
-    self.report.conflicts.push({ location, detail })
+    self.report.conflicts.push({ location, detail, })
   }
 }
 
@@ -736,11 +736,11 @@ fn DocxEditState::scan_paragraph(
       location~,
       self.checks,
     )
-    rewrites.push({ span, replacement: self.ops[op_index].replace })
+    rewrites.push({ span, replacement: self.ops[op_index].replace, })
     self.report.results[op_index].replacements += 1
     self.report.replacements += 1
     if self.report.locations.length() < docx_edit_finding_limit {
-      self.report.locations.push({ location, detail: self.ops[op_index].find })
+      self.report.locations.push({ location, detail: self.ops[op_index].find, })
     } else {
       self.report.locations_truncated = true
     }
@@ -861,7 +861,7 @@ async fn transact_docx_set_run_text(
       "office.docx.edit_internal", "the edit transaction returned no report",
     )
   }
-  { report, transaction }
+  { report, transaction, }
 }
 
 ///|
@@ -1005,5 +1005,5 @@ async fn transact_docx_replace(
       "office.docx.edit_internal", "the edit produced no report",
     )
   }
-  { report: edit, transaction: report }
+  { report: edit, transaction: report, }
 }

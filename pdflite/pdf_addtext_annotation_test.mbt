@@ -24,7 +24,7 @@ fn addtext_annot_name_for_test(text : String) -> @core.PdfName {
 
 ///|
 fn addtext_annot_bounds_for_test() -> @geometry.PdfRectangle {
-  { min_x: 0.0, min_y: 0.0, max_x: 100.0, max_y: 50.0 }
+  { min_x: 0.0, min_y: 0.0, max_x: 100.0, max_y: 50.0, }
 }
 
 ///|
@@ -45,7 +45,7 @@ fn addtext_annot_font_descriptor_for_test(
     avgwidth: 0.0,
     maxwidth: 0.0,
     flags: 0,
-    fontbbox: { min_x: 0.0, min_y: 0.0, max_x: 0.0, max_y: 0.0 },
+    fontbbox: { min_x: 0.0, min_y: 0.0, max_x: 0.0, max_y: 0.0, },
     italicangle: 0.0,
     capheight,
     xheight: 0.0,
@@ -77,7 +77,7 @@ test "pdf_addtext_url_annotation builds cpdf link annotation objects" {
     @geometry.point2(3.0, 4.0),
     @geometry.point2(5.0, 6.0),
     @geometry.point2(7.0, 8.0),
-    { min_x: 1.0, min_y: 2.0, max_x: 7.0, max_y: 8.0 },
+    { min_x: 1.0, min_y: 2.0, max_x: 7.0, max_y: 8.0, },
     "https://example.test",
     true,
   )
@@ -221,7 +221,7 @@ test "pdf_addtext_url_annotation_geometry applies rotation before offset" {
 
 ///|
 test "pdf_addtext_url_annotation_widths measures span prefixes" {
-  let span = @addtext.PdfAddTextUrl::{ url: "u", start: 1, end: 4 }
+  let span = @addtext.PdfAddTextUrl::{ url: "u", start: 1, end: 4, }
   @test.assert_eq(
     try! @pdflite.pdf_addtext_url_annotation_widths("abcde", span, fn(prefix) {
       prefix.length().to_double() * 2.0
@@ -232,7 +232,7 @@ test "pdf_addtext_url_annotation_widths measures span prefixes" {
 
 ///|
 test "pdf_addtext_url_annotation_widths uses UTF-8 byte offsets" {
-  let span = @addtext.PdfAddTextUrl::{ url: "u", start: 2, end: 3 }
+  let span = @addtext.PdfAddTextUrl::{ url: "u", start: 2, end: 3, }
   @test.assert_eq(
     try! @pdflite.pdf_addtext_url_annotation_widths("éx", span, fn(prefix) {
       @utf8.encode(prefix).length().to_double()
@@ -242,7 +242,7 @@ test "pdf_addtext_url_annotation_widths uses UTF-8 byte offsets" {
   let bad : Result[(Double, Double), Error] = try
     @pdflite.pdf_addtext_url_annotation_widths(
       "é",
-      { url: "u", start: 1, end: 2 },
+      { url: "u", start: 1, end: 2, },
       fn(prefix) { prefix.length().to_double() },
     )
   catch {
@@ -259,8 +259,8 @@ test "pdf_addtext_url_annotation_widths uses UTF-8 byte offsets" {
 test "PdfDocument addtext_url_annotation_references creates indirect links" {
   let document = @pdflite.pdf_document_empty()
   let urls : Array[@addtext.PdfAddTextUrl] = [
-    { url: "https://a.test", start: 1, end: 3 },
-    { url: "https://b.test", start: 0, end: 4 },
+    { url: "https://a.test", start: 1, end: 3, },
+    { url: "https://b.test", start: 0, end: 4, },
   ]
   let refs = try! document.addtext_url_annotation_references(
     "abcd",
@@ -321,7 +321,7 @@ test "PdfDocument addtext_url_annotation_references creates indirect links" {
 test "pdf_addtext_url_annotation_references wrapper propagates measure errors" {
   let document = @pdflite.pdf_document_empty()
   let urls : Array[@addtext.PdfAddTextUrl] = [
-    { url: "https://a.test", start: 0, end: 2 },
+    { url: "https://a.test", start: 0, end: 2, },
   ]
   let result : Result[Array[@syntax.PdfObject], Error] = try
     @pdflite.pdf_addtext_url_annotation_references(

@@ -593,7 +593,7 @@ fn offset_item(
   dy : Double,
 ) -> @pagelayout.PageItem {
   match item {
-    Text(run) => Text({ ..run, x_pt: run.x_pt + dx, baseline_pt: dy })
+    Text(run) => Text({ ..run, x_pt: run.x_pt + dx, baseline_pt: dy, })
     other => other
   }
 }

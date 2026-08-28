@@ -47,7 +47,7 @@ fn PdfDocument::read_object_stream_context_from_object(
         data.length(),
         first,
       )
-      { data, first, pairs, end_offsets }
+      { data, first, pairs, end_offsets, }
     }
     _ => raise XRefEntryExpected
   }

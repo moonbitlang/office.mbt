@@ -35,7 +35,7 @@ fn page_info_document_for_test() -> @pdflite.PdfDocument raise @core.PdfError {
     PdfArray([PdfReal(9.0), PdfReal(18.0), PdfReal(45.0), PdfReal(54.0)]),
   )).add_dict_entry(annots, PdfArray([PdfDictionary([]), PdfDictionary([])]))
   let changed = try! document.change_pages([
-    { ..pages[0], rotate: Rotate90, rest: first_rest },
+    { ..pages[0], rotate: Rotate90, rest: first_rest, },
     pages[1],
   ])
   changed.write_page_labels([

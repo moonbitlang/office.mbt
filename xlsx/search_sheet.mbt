@@ -51,11 +51,11 @@ fn parse_regex_tokens(pattern : StringView) -> (Array[RegexToken], Bool, Bool) {
     let ch = chars[i]
     if ch == '\\' {
       if i + 1 < end {
-        tokens.push({ kind: Literal(chars[i + 1]), repeat: false })
+        tokens.push({ kind: Literal(chars[i + 1]), repeat: false, })
         i = i + 2
         continue
       }
-      tokens.push({ kind: Literal(ch), repeat: false })
+      tokens.push({ kind: Literal(ch), repeat: false, })
       i = i + 1
       continue
     }
@@ -81,10 +81,10 @@ fn parse_regex_tokens(pattern : StringView) -> (Array[RegexToken], Bool, Bool) {
         }
         if j + 1 < end && chars[j] == '-' && chars[j + 1] != ']' {
           let end_char = chars[j + 1]
-          ranges.push({ start: start_char, end: end_char })
+          ranges.push({ start: start_char, end: end_char, })
           j = j + 2
         } else {
-          ranges.push({ start: start_char, end: start_char })
+          ranges.push({ start: start_char, end: start_char, })
         }
       }
       if closed {
@@ -102,7 +102,7 @@ fn parse_regex_tokens(pattern : StringView) -> (Array[RegexToken], Bool, Bool) {
       repeat = true
       i = i + 1
     }
-    tokens.push({ kind, repeat })
+    tokens.push({ kind, repeat, })
   }
   (tokens, anchor_start, anchor_end)
 }

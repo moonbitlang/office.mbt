@@ -35,7 +35,7 @@ pub struct FormulaOpts {
 
 ///|
 fn FormulaOpts::new() -> FormulaOpts {
-  { formula_type: None, range_ref: None }
+  { formula_type: None, range_ref: None, }
 }
 
 ///|

@@ -147,7 +147,7 @@ pub fn PdfDocument::replace_stream_by_spec(
       )
       self.replace_object_by_spec(
         spec,
-        PdfStreamObject({ dictionary, data: StreamGot(data) }),
+        PdfStreamObject({ dictionary, data: StreamGot(data), }),
       )
     }
     _ => raise ParseStreamExpected

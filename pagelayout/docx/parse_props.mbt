@@ -196,22 +196,22 @@ pub fn read_run_props(
           }
         }
         match family {
-          Some(f) => props = { ..props, family: Some(f) }
+          Some(f) => props = { ..props, family: Some(f), }
           None => ()
         }
       }
       "w:sz" =>
         match parse_half_points(attr(el, "w:val")) {
-          Some(hp) => props = { ..props, size: Some(HalfPoints(hp)) }
+          Some(hp) => props = { ..props, size: Some(HalfPoints(hp)), }
           None => ()
         }
-      "w:b" => props = { ..props, bold: Some(parse_toggle(el)) }
-      "w:i" => props = { ..props, italic: Some(parse_toggle(el)) }
+      "w:b" => props = { ..props, bold: Some(parse_toggle(el)), }
+      "w:i" => props = { ..props, italic: Some(parse_toggle(el)), }
       "w:color" =>
         match attr(el, "w:val") {
           Some(v) =>
             match parse_hex_color(v) {
-              Some(c) => props = { ..props, color: Some(c) }
+              Some(c) => props = { ..props, color: Some(c), }
               None => ()
             }
           None => ()
@@ -235,19 +235,19 @@ fn read_indent(el : @xml.XmlElement, props : ParaProps) -> ParaProps {
     None => attr(el, "w:end")
   }
   match parse_twips(left) {
-    Some(v) => out = { ..out, indent_left: Some(Twips(v)) }
+    Some(v) => out = { ..out, indent_left: Some(Twips(v)), }
     None => ()
   }
   match parse_twips(right) {
-    Some(v) => out = { ..out, indent_right: Some(Twips(v)) }
+    Some(v) => out = { ..out, indent_right: Some(Twips(v)), }
     None => ()
   }
   // hanging is a negative first-line indent; firstLine is positive
   match parse_twips(attr(el, "w:hanging")) {
-    Some(v) => out = { ..out, indent_first: Some(Twips(-v)) }
+    Some(v) => out = { ..out, indent_first: Some(Twips(-v)), }
     None =>
       match parse_twips(attr(el, "w:firstLine")) {
-        Some(v) => out = { ..out, indent_first: Some(Twips(v)) }
+        Some(v) => out = { ..out, indent_first: Some(Twips(v)), }
         None => ()
       }
   }
@@ -258,11 +258,11 @@ fn read_indent(el : @xml.XmlElement, props : ParaProps) -> ParaProps {
 fn read_spacing(el : @xml.XmlElement, props : ParaProps) -> ParaProps {
   let mut out = props
   match parse_twips(attr(el, "w:before")) {
-    Some(v) => out = { ..out, space_before: Some(Twips(v)) }
+    Some(v) => out = { ..out, space_before: Some(Twips(v)), }
     None => ()
   }
   match parse_twips(attr(el, "w:after")) {
-    Some(v) => out = { ..out, space_after: Some(Twips(v)) }
+    Some(v) => out = { ..out, space_after: Some(Twips(v)), }
     None => ()
   }
   match parse_int(attr(el, "w:line")) {
@@ -275,7 +275,7 @@ fn read_spacing(el : @xml.XmlElement, props : ParaProps) -> ParaProps {
         "atLeast" => AtLeast(@pagelayout.Twips(line).to_pt())
         _ => Multiple(line.to_double() / 240.0)
       }
-      out = { ..out, line_spacing: Some(spacing) }
+      out = { ..out, line_spacing: Some(spacing), }
     }
     None => ()
   }
@@ -303,7 +303,7 @@ pub fn read_para_props(ppr : @xml.XmlElement) -> (ParaProps, String?) {
               _ => None
             }
             match align {
-              Some(a) => props = { ..props, align: Some(a) }
+              Some(a) => props = { ..props, align: Some(a), }
               None => ()
             }
           }
@@ -311,12 +311,12 @@ pub fn read_para_props(ppr : @xml.XmlElement) -> (ParaProps, String?) {
         }
       "w:ind" => props = read_indent(el, props)
       "w:spacing" => props = read_spacing(el, props)
-      "w:keepLines" => props = { ..props, keep_lines: Some(parse_toggle(el)) }
-      "w:keepNext" => props = { ..props, keep_next: Some(parse_toggle(el)) }
+      "w:keepLines" => props = { ..props, keep_lines: Some(parse_toggle(el)), }
+      "w:keepNext" => props = { ..props, keep_next: Some(parse_toggle(el)), }
       "w:widowControl" =>
-        props = { ..props, widow_control: Some(parse_toggle(el)) }
+        props = { ..props, widow_control: Some(parse_toggle(el)), }
       "w:pageBreakBefore" =>
-        props = { ..props, page_break_before: Some(parse_toggle(el)) }
+        props = { ..props, page_break_before: Some(parse_toggle(el)), }
       "w:tabs" => {
         let stops : Array[@paragraph.TabStop] = []
         for stop in el.elements_by_tag_name("w:tab") {
@@ -333,15 +333,15 @@ pub fn read_para_props(ppr : @xml.XmlElement) -> (ParaProps, String?) {
             // as left keeps the column rather than losing it
             _ => TabLeft
           }
-          stops.push({ position_pt: @pagelayout.Twips(pos).to_pt(), align })
+          stops.push({ position_pt: @pagelayout.Twips(pos).to_pt(), align, })
         }
-        props = { ..props, tabs: Some(stops) }
+        props = { ..props, tabs: Some(stops), }
       }
       "w:numPr" => {
         match el.first("w:numId") {
           Some(id) =>
             match parse_int(attr(id, "w:val")) {
-              Some(v) => props = { ..props, num_id: Some(v) }
+              Some(v) => props = { ..props, num_id: Some(v), }
               None => ()
             }
           None => ()
@@ -349,7 +349,7 @@ pub fn read_para_props(ppr : @xml.XmlElement) -> (ParaProps, String?) {
         match el.first("w:ilvl") {
           Some(lvl) =>
             match parse_int(attr(lvl, "w:val")) {
-              Some(v) => props = { ..props, num_level: Some(v) }
+              Some(v) => props = { ..props, num_level: Some(v), }
               None => ()
             }
           None => ()
@@ -372,7 +372,10 @@ pub fn read_section_props(sectpr : @xml.XmlElement) -> @paginate.SectionProps {
       "w:pgSz" => {
         match parse_twips(attr(el, "w:w")) {
           Some(w) =>
-            section = { ..section, page_width_pt: @pagelayout.Twips(w).to_pt() }
+            section = {
+              ..section,
+              page_width_pt: @pagelayout.Twips(w).to_pt(),
+            }
           None => ()
         }
         match parse_twips(attr(el, "w:h")) {
@@ -387,7 +390,10 @@ pub fn read_section_props(sectpr : @xml.XmlElement) -> @paginate.SectionProps {
       "w:pgMar" => {
         match parse_twips(attr(el, "w:top")) {
           Some(v) =>
-            section = { ..section, margin_top_pt: @pagelayout.Twips(v).to_pt() }
+            section = {
+              ..section,
+              margin_top_pt: @pagelayout.Twips(v).to_pt(),
+            }
           None => ()
         }
         match parse_twips(attr(el, "w:bottom")) {
@@ -416,12 +422,12 @@ pub fn read_section_props(sectpr : @xml.XmlElement) -> @paginate.SectionProps {
         }
         match parse_twips(attr(el, "w:header")) {
           Some(v) =>
-            section = { ..section, header_pt: @pagelayout.Twips(v).to_pt() }
+            section = { ..section, header_pt: @pagelayout.Twips(v).to_pt(), }
           None => ()
         }
         match parse_twips(attr(el, "w:footer")) {
           Some(v) =>
-            section = { ..section, footer_pt: @pagelayout.Twips(v).to_pt() }
+            section = { ..section, footer_pt: @pagelayout.Twips(v).to_pt(), }
           None => ()
         }
       }

@@ -12,7 +12,7 @@ fn field_test_projection(
   }
   guard segment_joined_reader_story(
       story,
-      empty_body_reader({ relationships: [] }),
+      empty_body_reader({ relationships: [], }),
     )
     is SegmentedStory(output) else {
     raise Unsupported(message="field test: the story did not segment")
@@ -46,7 +46,7 @@ fn field_reader_text(source : String) -> String raise DocxError {
   }
   document(
     reader_items_to_elements(
-      empty_body_reader({ relationships: [] }).read_children(children),
+      empty_body_reader({ relationships: [], }).read_children(children),
     ),
   ).to_raw_text()
 }

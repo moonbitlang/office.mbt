@@ -13,7 +13,7 @@ fn current_reader_story_text(source : String) -> String raise DocxError {
   }
   document(
     reader_items_to_elements(
-      empty_body_reader({ relationships: [] }).read_children(children),
+      empty_body_reader({ relationships: [], }).read_children(children),
     ),
   ).to_raw_text()
 }
@@ -51,7 +51,7 @@ fn reader_paragraph_texts(source : String) -> Array[String] raise {
   }
   let tree = document(
     reader_items_to_elements(
-      empty_body_reader({ relationships: [] }).read_children(children),
+      empty_body_reader({ relationships: [], }).read_children(children),
     ),
   )
   let paragraphs = []

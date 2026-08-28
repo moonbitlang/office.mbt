@@ -125,7 +125,7 @@ pub fn ChartNumFmt::new(
   custom_num_fmt? : String = "",
   source_linked? : Bool = true,
 ) -> ChartNumFmt {
-  { custom_num_fmt, source_linked }
+  { custom_num_fmt, source_linked, }
 }
 
 ///|
@@ -206,7 +206,7 @@ struct ChartDimension {
 
 ///|
 fn ChartDimension::new() -> ChartDimension {
-  { width: 480, height: 260 }
+  { width: 480, height: 260, }
 }
 
 ///|
@@ -217,7 +217,7 @@ pub fn ChartDimension::with_values(
   if width <= 0 || height <= 0 {
     raise InvalidSheetOperation(msg="chart dimension must be > 0")
   }
-  { width, height }
+  { width, height, }
 }
 
 ///|
@@ -251,7 +251,7 @@ pub(all) struct ChartUpDownBar {
 
 ///|
 fn ChartUpDownBar::new() -> ChartUpDownBar {
-  { fill_color: "", border: ChartLine::new(), fill: None }
+  { fill_color: "", border: ChartLine::new(), fill: None, }
 }
 
 ///|
@@ -306,7 +306,7 @@ fn ChartLegend::new(
   position? : String = "bottom",
   show_legend_key? : Bool = false,
 ) -> ChartLegend {
-  { position, show_legend_key, font: None }
+  { position, show_legend_key, font: None, }
 }
 
 ///|
@@ -364,7 +364,7 @@ pub fn ChartDataPoint::new(
   fill_color? : String = "",
   fill? : ChartFill,
 ) -> ChartDataPoint {
-  { index, fill_color, fill }
+  { index, fill_color, fill, }
 }
 
 ///|
@@ -391,7 +391,7 @@ pub fn ChartFill::new(
   shading? : Int = 0,
   transparency? : Int = 0,
 ) -> ChartFill {
-  { typ, pattern, color, shading, transparency }
+  { typ, pattern, color, shading, transparency, }
 }
 
 ///|
@@ -911,7 +911,7 @@ fn write_chart_title(
     None =>
       if title != "" {
         sb.write_view("    <c:title>\n")
-        write_chart_rich_tx(sb, "      ", [{ text: title, font: None }])
+        write_chart_rich_tx(sb, "      ", [{ text: title, font: None, }])
         sb.write_view("    </c:title>\n")
       }
   }
@@ -1468,7 +1468,7 @@ fn write_axis_title(
     None =>
       if title != "" {
         sb.write_view("        <c:title>\n")
-        write_chart_rich_tx(sb, "          ", [{ text: title, font: None }])
+        write_chart_rich_tx(sb, "          ", [{ text: title, font: None, }])
         sb.write_view("        </c:title>\n")
       }
   }

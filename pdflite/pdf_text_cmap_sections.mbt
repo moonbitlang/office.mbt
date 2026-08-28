@@ -57,7 +57,7 @@ fn pdf_text_push_cmap_codespace_entries(
     match (pdf_text_bytes_to_int(source), pdf_text_bytes_to_int(stop)) {
       (Some(first), Some(last)) if first <= last &&
         source.length() == stop.length() =>
-        entries.push({ length: source.length(), first, last })
+        entries.push({ length: source.length(), first, last, })
       _ => ()
     }
     continue after_stop

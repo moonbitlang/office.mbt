@@ -21,7 +21,7 @@ priv struct LimitedXmlBuilder {
 
 ///|
 fn LimitedXmlBuilder::new(budget : WritePartBudget?) -> LimitedXmlBuilder {
-  { builder: StringBuilder(), budget, encoded_bytes: 0 }
+  { builder: StringBuilder(), budget, encoded_bytes: 0, }
 }
 
 ///|
@@ -382,7 +382,7 @@ priv struct WritePartBudgetTracker {
 fn WritePartBudgetTracker::new(
   budget : WritePartBudget?,
 ) -> WritePartBudgetTracker {
-  { budget, encoded_bytes: 0 }
+  { budget, encoded_bytes: 0, }
 }
 
 ///|
@@ -1330,7 +1330,7 @@ fn write_drawing_xml(
       let runs = if shape.paragraph.length() > 0 {
         shape.paragraph[:]
       } else {
-        [{ text: shape.text, font: None }]
+        [{ text: shape.text, font: None, }]
       }
       for run in runs {
         sb.write_view("        <a:p>\n")
@@ -3882,7 +3882,7 @@ fn write_with_io(
         hyperlink_rel_id = Some(link_rel_id)
       }
       image_targets.push((image_rel_id, media_rel_target(file_name)))
-      drawing_images.push({ image, rel_id: image_rel_id, hyperlink_rel_id })
+      drawing_images.push({ image, rel_id: image_rel_id, hyperlink_rel_id, })
       if !added_extensions.contains(image.extension) {
         manifest.add_content_default(image.extension, image.content_type)
         added_extensions.set(image.extension, true)
@@ -3929,7 +3929,7 @@ fn write_with_io(
       let source_sheet_key = normalize_sheet_name(slicer.table_sheet)
       let source_key = "\{source_sheet_key}|\{slicer.table_name.to_lower()}"
       let is_table_slicer = table_lookup.contains(source_key)
-      drawing_slicers.push({ slicer, is_table_slicer })
+      drawing_slicers.push({ slicer, is_table_slicer, })
     }
     let drawing_xml = write_drawing_xml(
       Some(sheet),
@@ -4263,7 +4263,7 @@ fn wb_drawing_image_with_offset(
     drawing_height_emu: None,
     drawing_order: None,
   }
-  { image, rel_id: 1, hyperlink_rel_id: None }
+  { image, rel_id: 1, hyperlink_rel_id: None, }
 }
 
 ///|
@@ -4318,7 +4318,7 @@ fn wb_shape_for_anchor(
   Shape::new(
     "D5",
     "rect",
-    paragraph=[{ text: "shape", font: Some(font) }],
+    paragraph=[{ text: "shape", font: Some(font), }],
     line_width=2.0,
     positioning~,
   )
@@ -4365,7 +4365,7 @@ fn wb_drawing_slicer(
     drawing_height_emu: None,
     drawing_order: None,
   }
-  { slicer, is_table_slicer }
+  { slicer, is_table_slicer, }
 }
 
 ///|
@@ -4474,11 +4474,11 @@ test "write hardening wb: write_shared_strings rich-text color and preserve-spac
     family: None,
   }
   let entries : Array[SharedStringEntry] = [
-    { text: "I", runs: Some([{ text: "I", font: Some(font_indexed_tint) }]) },
-    { text: "R", runs: Some([{ text: "R", font: Some(font_rgb_tint) }]) },
-    { text: "T", runs: Some([{ text: "T", font: Some(font_tint_only) }]) },
-    { text: "M", runs: Some([{ text: "M", font: Some(font_theme_no_tint) }]) },
-    { text: " plain", runs: None },
+    { text: "I", runs: Some([{ text: "I", font: Some(font_indexed_tint), }]), },
+    { text: "R", runs: Some([{ text: "R", font: Some(font_rgb_tint), }]), },
+    { text: "T", runs: Some([{ text: "T", font: Some(font_tint_only), }]), },
+    { text: "M", runs: Some([{ text: "M", font: Some(font_theme_no_tint), }]), },
+    { text: " plain", runs: None, },
   ]
   let xml = write_shared_strings_xml(entries, 5)
   inspect(xml.contains("<color indexed=\"64\" tint=\"0.25\"/>"), content="true")
@@ -4749,7 +4749,7 @@ test "write hardening wb: worksheet_dimension covers cell merge and table min/ma
 test "write hardening wb: worksheet_dimension covers auto-filter expansion branches" {
   let sheet = Worksheet::new("FilterDim")
   sheet.set_cell("C3", "x")
-  sheet.auto_filter = Some({ range_ref: "B2:D4", columns: [] })
+  sheet.auto_filter = Some({ range_ref: "B2:D4", columns: [], })
   let dimension = worksheet_dimension(sheet) catch {
     err => fail("worksheet_dimension failed: \{repr(err)}")
   }
@@ -4880,7 +4880,7 @@ test "write hardening wb: write_worksheet_xml covers shared-string and hyperlink
     col: 1,
     value: "ignored",
     value_type: String,
-    rich_text: Some([{ text: "R", font: None }]),
+    rich_text: Some([{ text: "R", font: None, }]),
     formula: None,
     formula_type: None,
     formula_ref: None,

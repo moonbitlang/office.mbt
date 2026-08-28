@@ -4,7 +4,7 @@ fn reader_xref_entry_for_test(
   offset : Int,
   in_use? : Bool = true,
 ) -> @reader.PdfClassicXRefEntry {
-  { object_number, offset, generation: 0, in_use, object_stream: None }
+  { object_number, offset, generation: 0, in_use, object_stream: None, }
 }
 
 ///|

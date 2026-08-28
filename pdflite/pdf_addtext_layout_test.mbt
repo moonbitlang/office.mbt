@@ -46,7 +46,7 @@ fn addtext_layout_name_for_test(text : String) -> @core.PdfName {
 
 ///|
 fn addtext_layout_bounds_for_test() -> @geometry.PdfRectangle {
-  { min_x: 0.0, min_y: 0.0, max_x: 100.0, max_y: 50.0 }
+  { min_x: 0.0, min_y: 0.0, max_x: 100.0, max_y: 50.0, }
 }
 
 ///|
@@ -60,7 +60,7 @@ fn addtext_layout_bookmark_for_test(
     text: addtext_layout_pdfdoc_text_for_test(text),
     target: DestFit(TargetPageObject(page_object)),
     is_open: true,
-    colour: { red: 0.0, green: 0.0, blue: 0.0 },
+    colour: { red: 0.0, green: 0.0, blue: 0.0, },
     flags: 0,
   }
 }
@@ -75,7 +75,7 @@ fn addtext_layout_font_descriptor_for_test(
     avgwidth: 0.0,
     maxwidth: 0.0,
     flags: 0,
-    fontbbox: { min_x: 0.0, min_y: 0.0, max_x: 0.0, max_y: 0.0 },
+    fontbbox: { min_x: 0.0, min_y: 0.0, max_x: 0.0, max_y: 0.0, },
     italicangle: 0.0,
     capheight,
     xheight: 0.0,
@@ -118,7 +118,7 @@ fn addtext_layout_simple_font_with_metrics_for_test(
 
 ///|
 fn addtext_layout_standard_font_for_test() -> @pdflite.PdfFont {
-  PdfFontStandard({ font: PdfHelvetica, encoding: PdfWinAnsiEncoding })
+  PdfFontStandard({ font: PdfHelvetica, encoding: PdfWinAnsiEncoding, })
 }
 
 ///|
@@ -148,7 +148,7 @@ test "pdf_addtext_width_of_text mirrors cpdf zero fallbacks" {
   )
   @test.assert_eq(
     @pdflite.pdf_addtext_width_of_text(
-      PdfFontStandard({ font: PdfHelvetica, encoding: PdfWinAnsiEncoding }),
+      PdfFontStandard({ font: PdfHelvetica, encoding: PdfWinAnsiEncoding, }),
       b"A",
     ),
     0.0,
@@ -196,8 +196,8 @@ test "pdf_addtext_width_of_fontpack sums mapped codepoint widths" {
       addtext_layout_simple_font_with_metrics_for_test(Some(metrics)),
     ],
     entries: [
-      { codepoint: 65, font_index: 0, charcode: 65 },
-      { codepoint: 66, font_index: 1, charcode: 66 },
+      { codepoint: 65, font_index: 0, charcode: 65, },
+      { codepoint: 66, font_index: 1, charcode: 66, },
     ],
   }
   addtext_layout_assert_close_for_test(
@@ -206,7 +206,7 @@ test "pdf_addtext_width_of_fontpack sums mapped codepoint widths" {
   )
   let bad_pack = @pdflite.PdfFontPack::{
     fonts: [addtext_layout_simple_font_with_metrics_for_test(None)],
-    entries: [{ codepoint: 65, font_index: 0, charcode: 65 }],
+    entries: [{ codepoint: 65, font_index: 0, charcode: 65, }],
   }
   let result : Result[Double, Error] = try
     @pdflite.pdf_addtext_width_of_fontpack(bad_pack, 10.0, "A")
@@ -249,8 +249,8 @@ test "PdfDocument addtext_calc_textwidth measures fontpacks from UTF-8" {
       addtext_layout_simple_font_with_metrics_for_test(Some(metrics)),
     ],
     entries: [
-      { codepoint: 65, font_index: 0, charcode: 65 },
-      { codepoint: 66, font_index: 1, charcode: 66 },
+      { codepoint: 65, font_index: 0, charcode: 65, },
+      { codepoint: 66, font_index: 1, charcode: 66, },
     ],
   }
   addtext_layout_assert_close_for_test(
@@ -353,8 +353,8 @@ test "pdf_addtext_line_widths wrapper handles fontpacks" {
       addtext_layout_simple_font_with_metrics_for_test(Some(metrics)),
     ],
     entries: [
-      { codepoint: 65, font_index: 0, charcode: 65 },
-      { codepoint: 66, font_index: 1, charcode: 66 },
+      { codepoint: 65, font_index: 0, charcode: 65, },
+      { codepoint: 66, font_index: 1, charcode: 66, },
     ],
   }
   let widths = try! @pdflite.pdf_addtext_line_widths(
@@ -428,7 +428,7 @@ test "pdf_addtext_measurement_bytes follows cpdf selected-font modes" {
     ),
     [65, 226, 152, 131, 66],
   )
-  let pack = @pdflite.PdfFontPack::{ fonts: [font], entries: [] }
+  let pack = @pdflite.PdfFontPack::{ fonts: [font], entries: [], }
   @test.assert_eq(
     try! @pdflite.pdf_addtext_measurement_bytes(
       Some(font),
@@ -462,7 +462,7 @@ test "PdfDocument addtext_prepare_line expands URLs widths and placement" {
     justification=PdfAddTextLeftJustify,
   )
   @test.assert_eq(prepared.text, "3 A")
-  @test.assert_eq(prepared.urls, [{ url: "u", start: 2, end: 3 }])
+  @test.assert_eq(prepared.urls, [{ url: "u", start: 2, end: 3, }])
   @test.assert_eq(prepared.expanded_lines, ["3 A", "Wide"])
   @test.assert_eq(@core.pdf_int_array_of_bytes(prepared.text_bytes), [
     51, 32, 65,
@@ -802,7 +802,7 @@ test "pdf_addtext_get_urls_line strips one URL marker" {
   )
   @test.assert_eq(parsed.text, "pre label post")
   @test.assert_eq(parsed.urls, [
-    { url: "https://example.test", start: 4, end: 9 },
+    { url: "https://example.test", start: 4, end: 9, },
   ])
 }
 
@@ -813,8 +813,8 @@ test "pdf_addtext_get_urls_line preserves URL order and visible offsets" {
   )
   @test.assert_eq(parsed.text, "ABCDE")
   @test.assert_eq(parsed.urls, [
-    { url: "u1", start: 1, end: 2 },
-    { url: "u2", start: 3, end: 5 },
+    { url: "u1", start: 1, end: 2, },
+    { url: "u2", start: 3, end: 5, },
   ])
 }
 
@@ -822,7 +822,7 @@ test "pdf_addtext_get_urls_line preserves URL order and visible offsets" {
 test "pdf_addtext_get_urls_line uses byte offsets for UTF-8 text" {
   let parsed = try! @addtext.pdf_addtext_get_urls_line("é%URL[ß|u]")
   @test.assert_eq(parsed.text, "éß")
-  @test.assert_eq(parsed.urls, [{ url: "u", start: 2, end: 4 }])
+  @test.assert_eq(parsed.urls, [{ url: "u", start: 2, end: 4, }])
 }
 
 ///|
@@ -852,7 +852,7 @@ test "pdf_addtext_get_urls_line reports malformed URL markers" {
 
 ///|
 test "pdf_addtext_process_text_with_time applies replacements before strftime" {
-  let page_calls = Ref::{ val: 0 }
+  let page_calls = Ref::{ val: 0, }
   let replacements : Array[(String, () -> String)] = [
     (
       "%Page",
@@ -885,9 +885,9 @@ test "pdf_addtext_process_text_with_time applies replacements before strftime" {
 
 ///|
 test "pdf_addtext_process_text_with_time keeps lazy replacement order" {
-  let absent_calls = Ref::{ val: 0 }
-  let one_calls = Ref::{ val: 0 }
-  let two_calls = Ref::{ val: 0 }
+  let absent_calls = Ref::{ val: 0, }
+  let one_calls = Ref::{ val: 0, }
+  let two_calls = Ref::{ val: 0, }
   let replacements : Array[(String, () -> String)] = [
     (
       "%Absent",
@@ -926,7 +926,7 @@ test "pdf_addtext_process_text_with_time keeps lazy replacement order" {
 
 ///|
 test "pdf_addtext_process_text_with_time ignores empty replacement markers" {
-  let calls = Ref::{ val: 0 }
+  let calls = Ref::{ val: 0, }
   let replacements : Array[(String, () -> String)] = [
     (
       "",
@@ -1027,7 +1027,7 @@ test "pdf_addtext_lines_for_rotation reverses upside-down rotations" {
 
 ///|
 test "pdf_addtext_expand_lines_with_time expands replacements and strips URLs" {
-  let page_calls = Ref::{ val: 0 }
+  let page_calls = Ref::{ val: 0, }
   let replacements : Array[(String, () -> String)] = [
     (
       "%Page",

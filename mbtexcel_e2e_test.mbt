@@ -283,8 +283,8 @@ test "mbtexcel e2e auto filter roundtrip" {
   let workbook = @mbtexcel.new_workbook()
   ignore(workbook.add_sheet("Sheet1"))
   let options : Array[@xlsx.AutoFilterOption] = [
-    { column: "B", expression: "x == 10" },
-    { column: "C", expression: "x > 5" },
+    { column: "B", expression: "x == 10", },
+    { column: "C", expression: "x > 5", },
   ]
   workbook.set_auto_filter("Sheet1", "A1:C3", options)
   let parsed = @mbtexcel.read(@mbtexcel.write(workbook))

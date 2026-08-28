@@ -102,7 +102,7 @@ fn PdfDocument::pdf_remove_text_page(
   transform : (ArrayView[@content.PdfContentOp]) -> Array[@content.PdfContentOp],
 ) -> @page.PdfPage raise @core.PdfError {
   let ops = self.pdf_page_parse_content_ops(page.resources, page.content)
-  { ..page, content: [pdf_content_stream_of_ops(transform(ops))] }
+  { ..page, content: [pdf_content_stream_of_ops(transform(ops))], }
 }
 
 ///|

@@ -68,7 +68,7 @@ fn token_map_budget(
   guard max_source_bytes >= 0 && max_tokens >= 0 else {
     raise TokenMapError("token-map budget limits must be non-negative")
   }
-  { source_bytes_left: max_source_bytes, tokens_left: max_tokens }
+  { source_bytes_left: max_source_bytes, tokens_left: max_tokens, }
 }
 
 ///|

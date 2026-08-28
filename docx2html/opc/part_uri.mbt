@@ -201,7 +201,7 @@ priv struct PartNameTrieNode {
 
 ///|
 fn new_part_name_trie_node() -> PartNameTrieNode {
-  { terminal: None, first_part: None, children: SortedMap([]) }
+  { terminal: None, first_part: None, children: SortedMap([]), }
 }
 
 ///|
@@ -222,7 +222,7 @@ pub struct PartNameRegistry {
 ///|
 /// Creates an empty PartName registry.
 pub fn PartNameRegistry::new() -> PartNameRegistry {
-  { nodes: [new_part_name_trie_node()] }
+  { nodes: [new_part_name_trie_node()], }
 }
 
 ///|

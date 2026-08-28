@@ -92,7 +92,7 @@ fn rich_text_truncate_runs(
       remaining = remaining - units
     } else {
       let text = truncate_utf16_units(run.text, remaining)
-      truncated.push({ text, font: run.font })
+      truncated.push({ text, font: run.font, })
       break
     }
   }
@@ -108,8 +108,8 @@ test "rich text truncate utf16 handles non-positive limit" {
 ///|
 test "rich text truncate runs supports partial and exact limits" {
   let runs : Array[RichTextRun] = [
-    { text: "AB", font: None },
-    { text: "C", font: None },
+    { text: "AB", font: None, },
+    { text: "C", font: None, },
   ]
   debug_inspect(
     rich_text_truncate_runs(runs, 1),

@@ -27,7 +27,7 @@ test "pdf_writer_int_array_contains handles present and missing values" {
 test "pdf_writer_push_classic_xref_subsection scans sorted xrefs in order" {
   let output : Array[Byte] = []
   let xrefs : Array[(Int, Int, Int)] = [(2, 33, 1), (4, 44, 2)]
-  let xref_index = Ref::{ val: 0 }
+  let xref_index = Ref::{ val: 0, }
   pdf_writer_push_classic_xref_subsection(output, xrefs, 0, 3, xref_index)
   pdf_writer_push_classic_xref_subsection(output, xrefs, 4, 1, xref_index)
   @test.assert_eq(

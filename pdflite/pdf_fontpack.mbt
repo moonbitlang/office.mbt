@@ -20,7 +20,7 @@ pub(all) struct PdfFontPack {
 
 ///|
 fn pdf_fontpack_empty() -> PdfFontPack {
-  { fonts: [], entries: [] }
+  { fonts: [], entries: [], }
 }
 
 ///|
@@ -37,9 +37,9 @@ pub fn pdf_fontpack_of_standard_font(
     let bytes : FixedArray[Byte] = [code.to_byte()]
     let codepoints = extractor.codepoints_of_text(Bytes::from_array(bytes))
     guard codepoints.length() > 0 else { raise BadText }
-    entries.push({ codepoint: codepoints[0], font_index: 0, charcode: code })
+    entries.push({ codepoint: codepoints[0], font_index: 0, charcode: code, })
   }
-  { fonts: [font], entries }
+  { fonts: [font], entries, }
 }
 
 ///|

@@ -3358,7 +3358,7 @@ fn eval_function(
         let range = match args[0] {
           Range(_, _, _) | Cell(_, _) =>
             eval_range_expr(workbook, sheet_name, args[0], ctx)
-          _ => { rows: 1, cols: 1, values: [values[0]] }
+          _ => { rows: 1, cols: 1, values: [values[0]], }
         }
         let rows : Array[String] = []
         for row in 0..<range.rows {
@@ -3553,9 +3553,9 @@ fn eval_function(
                 if list.length() == 0 {
                   return Error(formula_error_value)
                 } else {
-                  { rows: 1, cols: list.length(), values: list }
+                  { rows: 1, cols: list.length(), values: list, }
                 }
-              _ => { rows: 1, cols: 1, values: [values[0]] }
+              _ => { rows: 1, cols: 1, values: [values[0]], }
             }
         }
         match unique_range_values(range, by_col, exactly_once) {
@@ -5223,107 +5223,107 @@ fn lcm_values(values : ArrayView[FormulaValue]) -> FormulaValue {
 ///|
 let roman_table : Array[Array[RomanNumeral]] = [
   [
-    { n: 1000.0, s: "M" },
-    { n: 900.0, s: "CM" },
-    { n: 500.0, s: "D" },
-    { n: 400.0, s: "CD" },
-    { n: 100.0, s: "C" },
-    { n: 90.0, s: "XC" },
-    { n: 50.0, s: "L" },
-    { n: 40.0, s: "XL" },
-    { n: 10.0, s: "X" },
-    { n: 9.0, s: "IX" },
-    { n: 5.0, s: "V" },
-    { n: 4.0, s: "IV" },
-    { n: 1.0, s: "I" },
+    { n: 1000.0, s: "M", },
+    { n: 900.0, s: "CM", },
+    { n: 500.0, s: "D", },
+    { n: 400.0, s: "CD", },
+    { n: 100.0, s: "C", },
+    { n: 90.0, s: "XC", },
+    { n: 50.0, s: "L", },
+    { n: 40.0, s: "XL", },
+    { n: 10.0, s: "X", },
+    { n: 9.0, s: "IX", },
+    { n: 5.0, s: "V", },
+    { n: 4.0, s: "IV", },
+    { n: 1.0, s: "I", },
   ],
   [
-    { n: 1000.0, s: "M" },
-    { n: 950.0, s: "LM" },
-    { n: 900.0, s: "CM" },
-    { n: 500.0, s: "D" },
-    { n: 450.0, s: "LD" },
-    { n: 400.0, s: "CD" },
-    { n: 100.0, s: "C" },
-    { n: 95.0, s: "VC" },
-    { n: 90.0, s: "XC" },
-    { n: 50.0, s: "L" },
-    { n: 45.0, s: "VL" },
-    { n: 40.0, s: "XL" },
-    { n: 10.0, s: "X" },
-    { n: 9.0, s: "IX" },
-    { n: 5.0, s: "V" },
-    { n: 4.0, s: "IV" },
-    { n: 1.0, s: "I" },
+    { n: 1000.0, s: "M", },
+    { n: 950.0, s: "LM", },
+    { n: 900.0, s: "CM", },
+    { n: 500.0, s: "D", },
+    { n: 450.0, s: "LD", },
+    { n: 400.0, s: "CD", },
+    { n: 100.0, s: "C", },
+    { n: 95.0, s: "VC", },
+    { n: 90.0, s: "XC", },
+    { n: 50.0, s: "L", },
+    { n: 45.0, s: "VL", },
+    { n: 40.0, s: "XL", },
+    { n: 10.0, s: "X", },
+    { n: 9.0, s: "IX", },
+    { n: 5.0, s: "V", },
+    { n: 4.0, s: "IV", },
+    { n: 1.0, s: "I", },
   ],
   [
-    { n: 1000.0, s: "M" },
-    { n: 990.0, s: "XM" },
-    { n: 950.0, s: "LM" },
-    { n: 900.0, s: "CM" },
-    { n: 500.0, s: "D" },
-    { n: 490.0, s: "XD" },
-    { n: 450.0, s: "LD" },
-    { n: 400.0, s: "CD" },
-    { n: 100.0, s: "C" },
-    { n: 99.0, s: "IC" },
-    { n: 90.0, s: "XC" },
-    { n: 50.0, s: "L" },
-    { n: 45.0, s: "VL" },
-    { n: 40.0, s: "XL" },
-    { n: 10.0, s: "X" },
-    { n: 9.0, s: "IX" },
-    { n: 5.0, s: "V" },
-    { n: 4.0, s: "IV" },
-    { n: 1.0, s: "I" },
+    { n: 1000.0, s: "M", },
+    { n: 990.0, s: "XM", },
+    { n: 950.0, s: "LM", },
+    { n: 900.0, s: "CM", },
+    { n: 500.0, s: "D", },
+    { n: 490.0, s: "XD", },
+    { n: 450.0, s: "LD", },
+    { n: 400.0, s: "CD", },
+    { n: 100.0, s: "C", },
+    { n: 99.0, s: "IC", },
+    { n: 90.0, s: "XC", },
+    { n: 50.0, s: "L", },
+    { n: 45.0, s: "VL", },
+    { n: 40.0, s: "XL", },
+    { n: 10.0, s: "X", },
+    { n: 9.0, s: "IX", },
+    { n: 5.0, s: "V", },
+    { n: 4.0, s: "IV", },
+    { n: 1.0, s: "I", },
   ],
   [
-    { n: 1000.0, s: "M" },
-    { n: 995.0, s: "VM" },
-    { n: 990.0, s: "XM" },
-    { n: 950.0, s: "LM" },
-    { n: 900.0, s: "CM" },
-    { n: 500.0, s: "D" },
-    { n: 495.0, s: "VD" },
-    { n: 490.0, s: "XD" },
-    { n: 450.0, s: "LD" },
-    { n: 400.0, s: "CD" },
-    { n: 100.0, s: "C" },
-    { n: 99.0, s: "IC" },
-    { n: 90.0, s: "XC" },
-    { n: 50.0, s: "L" },
-    { n: 45.0, s: "VL" },
-    { n: 40.0, s: "XL" },
-    { n: 10.0, s: "X" },
-    { n: 9.0, s: "IX" },
-    { n: 5.0, s: "V" },
-    { n: 4.0, s: "IV" },
-    { n: 1.0, s: "I" },
+    { n: 1000.0, s: "M", },
+    { n: 995.0, s: "VM", },
+    { n: 990.0, s: "XM", },
+    { n: 950.0, s: "LM", },
+    { n: 900.0, s: "CM", },
+    { n: 500.0, s: "D", },
+    { n: 495.0, s: "VD", },
+    { n: 490.0, s: "XD", },
+    { n: 450.0, s: "LD", },
+    { n: 400.0, s: "CD", },
+    { n: 100.0, s: "C", },
+    { n: 99.0, s: "IC", },
+    { n: 90.0, s: "XC", },
+    { n: 50.0, s: "L", },
+    { n: 45.0, s: "VL", },
+    { n: 40.0, s: "XL", },
+    { n: 10.0, s: "X", },
+    { n: 9.0, s: "IX", },
+    { n: 5.0, s: "V", },
+    { n: 4.0, s: "IV", },
+    { n: 1.0, s: "I", },
   ],
   [
-    { n: 1000.0, s: "M" },
-    { n: 999.0, s: "IM" },
-    { n: 995.0, s: "VM" },
-    { n: 990.0, s: "XM" },
-    { n: 950.0, s: "LM" },
-    { n: 900.0, s: "CM" },
-    { n: 500.0, s: "D" },
-    { n: 499.0, s: "ID" },
-    { n: 495.0, s: "VD" },
-    { n: 490.0, s: "XD" },
-    { n: 450.0, s: "LD" },
-    { n: 400.0, s: "CD" },
-    { n: 100.0, s: "C" },
-    { n: 99.0, s: "IC" },
-    { n: 90.0, s: "XC" },
-    { n: 50.0, s: "L" },
-    { n: 45.0, s: "VL" },
-    { n: 40.0, s: "XL" },
-    { n: 10.0, s: "X" },
-    { n: 9.0, s: "IX" },
-    { n: 5.0, s: "V" },
-    { n: 4.0, s: "IV" },
-    { n: 1.0, s: "I" },
+    { n: 1000.0, s: "M", },
+    { n: 999.0, s: "IM", },
+    { n: 995.0, s: "VM", },
+    { n: 990.0, s: "XM", },
+    { n: 950.0, s: "LM", },
+    { n: 900.0, s: "CM", },
+    { n: 500.0, s: "D", },
+    { n: 499.0, s: "ID", },
+    { n: 495.0, s: "VD", },
+    { n: 490.0, s: "XD", },
+    { n: 450.0, s: "LD", },
+    { n: 400.0, s: "CD", },
+    { n: 100.0, s: "C", },
+    { n: 99.0, s: "IC", },
+    { n: 90.0, s: "XC", },
+    { n: 50.0, s: "L", },
+    { n: 45.0, s: "VL", },
+    { n: 40.0, s: "XL", },
+    { n: 10.0, s: "X", },
+    { n: 9.0, s: "IX", },
+    { n: 5.0, s: "V", },
+    { n: 4.0, s: "IV", },
+    { n: 1.0, s: "I", },
   ],
 ]
 
@@ -6344,7 +6344,7 @@ fn confidence_t_values(values : ArrayView[FormulaValue]) -> FormulaValue {
   if size == 1.0 {
     return Error(formula_error_div)
   }
-  let iterator = { fp: alpha, fdf: size - 1.0, nt: 2.0, kind: TDist }
+  let iterator = { fp: alpha, fdf: size - 1.0, nt: 2.0, kind: TDist, }
   let result = calc_iterate_inverse(iterator, size / 2.0, size)
   let raw = std_dev * result / Double::sqrt(size)
   number_or_num_error(round_significant_digits(raw, 15))
@@ -7072,9 +7072,9 @@ fn tinv_values(values : ArrayView[FormulaValue]) -> FormulaValue {
     return Error(formula_error_num)
   }
   let iterator = if probability < 0.5 {
-    { fp: 1.0 - probability, fdf: degrees, nt: 4.0, kind: TDist }
+    { fp: 1.0 - probability, fdf: degrees, nt: 4.0, kind: TDist, }
   } else {
-    { fp: probability, fdf: degrees, nt: 4.0, kind: TDist }
+    { fp: probability, fdf: degrees, nt: 4.0, kind: TDist, }
   }
   let mut result = calc_iterate_inverse(iterator, degrees / 2.0, degrees)
   if probability < 0.5 {
@@ -7097,7 +7097,7 @@ fn tinv_2t_values(values : ArrayView[FormulaValue]) -> FormulaValue {
   if probability <= 0.0 || probability > 1.0 || degrees < 1.0 {
     return Error(formula_error_num)
   }
-  let iterator = { fp: probability, fdf: degrees, nt: 2.0, kind: TDist }
+  let iterator = { fp: probability, fdf: degrees, nt: 2.0, kind: TDist, }
   let result = calc_iterate_inverse(iterator, degrees / 2.0, degrees)
   number_or_num_error(round_significant_digits(result, 15))
 }
@@ -7353,7 +7353,7 @@ fn chiinv_values(values : ArrayView[FormulaValue]) -> FormulaValue {
   if probability == 1.0 {
     return Number(0.0)
   }
-  let iterator = { fp: 1.0 - probability, fdf: degrees, nt: 0.0, kind: ChiSq }
+  let iterator = { fp: 1.0 - probability, fdf: degrees, nt: 0.0, kind: ChiSq, }
   let result = calc_iterate_inverse(iterator, degrees / 2.0, degrees)
   number_or_num_error(result)
 }
@@ -7408,7 +7408,7 @@ fn chisq_inv_values(values : ArrayView[FormulaValue]) -> FormulaValue {
   if probability == 0.0 {
     return Number(0.0)
   }
-  let iterator = { fp: probability, fdf: degrees, nt: 0.0, kind: ChiSq }
+  let iterator = { fp: probability, fdf: degrees, nt: 0.0, kind: ChiSq, }
   let result = calc_iterate_inverse(iterator, degrees / 2.0, degrees)
   number_or_num_error(result)
 }

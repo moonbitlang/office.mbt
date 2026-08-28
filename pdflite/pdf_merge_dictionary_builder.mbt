@@ -6,7 +6,7 @@ priv struct PdfMergeDictionaryBuilder {
 
 ///|
 fn pdf_merge_dictionary_builder() -> PdfMergeDictionaryBuilder {
-  { entries: [], indexes: HashMap([]) }
+  { entries: [], indexes: HashMap([]), }
 }
 
 ///|

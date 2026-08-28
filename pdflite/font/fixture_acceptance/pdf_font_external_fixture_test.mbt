@@ -531,7 +531,7 @@ fn font_external_assert_pdfium_resource_fixture_for_test(
     ]),
     [
       Op_q,
-      Op_cm({ a: 6.0, b: 0.0, c: 0.0, d: 48.0, e: 6.0, f: 0.0 }),
+      Op_cm({ a: 6.0, b: 0.0, c: 0.0, d: 48.0, e: 6.0, f: 0.0, }),
       font_external_inline_image_op_for_test(6, 48, 48),
       Op_Q,
     ],

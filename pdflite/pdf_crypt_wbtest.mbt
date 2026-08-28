@@ -849,7 +849,7 @@ test "PdfDocument AESV2 encrypt preserves parser-private object states" {
   doc.objects.set_entry(
     3,
     pdf_object_entry(
-      ObjectToParseFromObjectStream({ object_stream_number: 7, index: 0 }),
+      ObjectToParseFromObjectStream({ object_stream_number: 7, index: 0, }),
     ),
   )
   let encrypted = try! doc.aesv2_encrypt_parsed_objects_with_iv_provider(
@@ -875,7 +875,7 @@ test "PdfDocument AESV2 decrypt preserves parser-private object states" {
   doc.objects.set_entry(
     3,
     pdf_object_entry(
-      ObjectToParseFromObjectStream({ object_stream_number: 7, index: 0 }),
+      ObjectToParseFromObjectStream({ object_stream_number: 7, index: 0, }),
     ),
   )
   let decrypted = try! doc.aesv2_decrypt_parsed_objects(key, 128, false, 0)
@@ -897,7 +897,7 @@ test "PdfDocument AESV3 encrypt recurses and preserves parser-private object sta
   doc.objects.set_entry(
     4,
     pdf_object_entry(
-      ObjectToParseFromObjectStream({ object_stream_number: 7, index: 0 }),
+      ObjectToParseFromObjectStream({ object_stream_number: 7, index: 0, }),
     ),
   )
   let encrypted = try! doc.aesv3_encrypt_parsed_objects_with_iv_provider(
@@ -930,7 +930,7 @@ test "PdfDocument AESV3 decrypt preserves parser-private object states" {
   doc.objects.set_entry(
     3,
     pdf_object_entry(
-      ObjectToParseFromObjectStream({ object_stream_number: 7, index: 0 }),
+      ObjectToParseFromObjectStream({ object_stream_number: 7, index: 0, }),
     ),
   )
   let decrypted = try! doc.aesv3_decrypt_parsed_objects(key, false, 0)

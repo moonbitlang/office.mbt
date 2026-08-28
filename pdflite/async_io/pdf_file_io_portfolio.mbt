@@ -5,7 +5,7 @@ pub fn pdf_portfolio_file_entry(
   relationship? : String? = None,
   description? : String? = None,
 ) -> PdfPortfolioFileEntry {
-  { filename, relationship, description }
+  { filename, relationship, description, }
 }
 
 ///|

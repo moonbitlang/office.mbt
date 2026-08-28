@@ -31,8 +31,8 @@ test "capability fingerprint distinguishes collection boundaries" {
     output_modes: ["json"],
     variants: [],
   }
-  let moved_format = { ..base, formats: [], aliases: ["shared"] }
-  let moved_field = { ..base, inputs: [], outputs: [field] }
+  let moved_format = { ..base, formats: [], aliases: ["shared"], }
+  let moved_field = { ..base, inputs: [], outputs: [field], }
   let with_variant = {
     ..base,
     variants: [
@@ -57,7 +57,7 @@ test "capability fingerprint distinguishes collection boundaries" {
     ..with_variant.variants[0],
     registry: Some(Json::object({ "schema": Json::string("probe/1") })),
   }
-  let with_registry = { ..with_variant, variants: [registry_variant] }
+  let with_registry = { ..with_variant, variants: [registry_variant], }
   assert_true(
     fingerprint_command_for_test(with_variant) !=
     fingerprint_command_for_test(with_registry),
@@ -78,7 +78,7 @@ test "capability fingerprint includes selector boundaries" {
   }
   let changed_status = {
     ..base,
-    selector: { ..base.selector, status: "resolution" },
+    selector: { ..base.selector, status: "resolution", },
   }
   assert_true(encoded != fingerprint_format_for_test(moved_example))
   assert_true(encoded != fingerprint_format_for_test(changed_status))

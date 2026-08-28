@@ -70,7 +70,7 @@ fn pdf_ocg_coalesce_appdict(
   changes : ArrayView[(Int, Int)],
   appdict : @ocg.PdfOcgAppDict,
 ) -> @ocg.PdfOcgAppDict {
-  { ..appdict, ocgs: pdf_ocg_coalesce_numbers(changes, appdict.ocgs) }
+  { ..appdict, ocgs: pdf_ocg_coalesce_numbers(changes, appdict.ocgs), }
 }
 
 ///|

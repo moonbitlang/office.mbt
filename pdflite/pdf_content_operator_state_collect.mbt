@@ -36,7 +36,7 @@ pub fn pdf_content_entries_of_ops(
 fn PdfContentOperatorState::content_without_font_cache(
   self : PdfContentOperatorState,
 ) -> PdfContentOperatorState {
-  { ..self, text_state: { ..self.text_state, font_cache: [] } }
+  { ..self, text_state: { ..self.text_state, font_cache: [], }, }
 }
 
 ///|
@@ -90,7 +90,7 @@ fn PdfDocument::content_entries_of_ops_recursive_from_state(
       }
     }
   }
-  { state, entries }
+  { state, entries, }
 }
 
 ///|

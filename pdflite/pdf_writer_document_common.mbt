@@ -41,12 +41,12 @@ fn pdf_writer_write_document_objects(
   )
   for number in object_numbers {
     match document.objects.get_entry(number).unwrap() {
-      { data: ObjectParsed(object), generation }
-      | { data: ObjectParsedAlreadyDecrypted(object), generation } => {
+      { data: ObjectParsed(object), generation, }
+      | { data: ObjectParsedAlreadyDecrypted(object), generation, } => {
         xrefs.push((number, output.length(), generation))
         pdf_writer_push_view(
           output,
-          pdf_write_indirect_object({ number, generation, object }),
+          pdf_write_indirect_object({ number, generation, object, }),
         )
       }
       _ => raise ParsedObjectExpected

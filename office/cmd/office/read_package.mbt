@@ -180,7 +180,7 @@ async fn read_office_package(
     error => raise office_zip_read_failure(error, file, expected)
   }
   let format = detect_office_archive_format(file, archive, cancelled)
-  { file, format, bytes: data, archive }
+  { file, format, bytes: data, archive, }
 }
 
 ///|

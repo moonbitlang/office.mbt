@@ -11,8 +11,12 @@ fn pdf_duplicate_stream_candidate(
   object : @syntax.PdfObject,
 ) -> PdfDuplicateStreamCandidate? {
   match object {
-    PdfStreamObject({ dictionary, data }) =>
-      Some({ number, dictionary, data: try! @syntax.pdf_stream_data_view(data) })
+    PdfStreamObject({ dictionary, data, }) =>
+      Some({
+        number,
+        dictionary,
+        data: try! @syntax.pdf_stream_data_view(data),
+      })
     _ => None
   }
 }

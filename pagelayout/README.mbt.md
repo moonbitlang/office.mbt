@@ -14,8 +14,8 @@ never re-measure.
 ///|
 test "build a one-page model" {
   let model = @pagelayout.PageModel::new()
-  let font = model.add_font({ family: "Carlito", bold: false, italic: false })
-  let page = @pagelayout.Page::{ width_pt: 612, height_pt: 792, items: [] }
+  let font = model.add_font({ family: "Carlito", bold: false, italic: false, })
+  let page = @pagelayout.Page::{ width_pt: 612, height_pt: 792, items: [], }
   page.items.push(
     Text({
       font,

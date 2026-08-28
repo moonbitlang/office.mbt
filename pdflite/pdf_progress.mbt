@@ -1,8 +1,8 @@
 ///|
-let pdf_progress_enabled : Ref[Bool] = { val: false }
+let pdf_progress_enabled : Ref[Bool] = { val: false, }
 
 ///|
-let pdf_progress_fragments : Ref[Array[String]] = { val: [] }
+let pdf_progress_fragments : Ref[Array[String]] = { val: [], }
 
 ///|
 /// Return whether progress output capture is enabled.

@@ -605,7 +605,7 @@ fn plan_paragraph_text_edits(
           involved_elements.push(identity)
           if edit.replacement == "" {
             noop_endpoint_checks.push((identity, edit.start - part.local_start))
-            logical_edits.push({ placement: LogicalNoOp })
+            logical_edits.push({ placement: LogicalNoOp, })
             continue
           }
           touch_wt(
@@ -616,7 +616,7 @@ fn plan_paragraph_text_edits(
             edit.replacement,
             ordinal,
           )
-          logical_edits.push({ placement: InsideText })
+          logical_edits.push({ placement: InsideText, })
         }
         None => {
           // Boundary candidates: text edges, atom edges, and — when the
@@ -697,7 +697,7 @@ fn plan_paragraph_text_edits(
             let SourceElementId(carrier_identity) = carrier.source
             require_host_element(carrier_identity, ordinal)
             if edit.replacement == "" {
-              logical_edits.push({ placement: LogicalNoOp })
+              logical_edits.push({ placement: LogicalNoOp, })
               continue
             }
             let carrier_element = elements[carrier_identity]
@@ -715,7 +715,7 @@ fn plan_paragraph_text_edits(
                 carrier_identity,
               ),
             )
-            logical_edits.push({ placement: RunSynthesis })
+            logical_edits.push({ placement: RunSynthesis, })
             continue
           }
           if total > 1 {
@@ -787,7 +787,7 @@ fn plan_paragraph_text_edits(
                 noop_endpoint_checks.push(
                   (identity, edit.start - part.local_start),
                 )
-                logical_edits.push({ placement: LogicalNoOp })
+                logical_edits.push({ placement: LogicalNoOp, })
                 continue
               }
               touch_wt(
@@ -798,7 +798,7 @@ fn plan_paragraph_text_edits(
                 edit.replacement,
                 ordinal,
               )
-              logical_edits.push({ placement: InsideText })
+              logical_edits.push({ placement: InsideText, })
             }
             _ =>
               match atom_candidates {
@@ -820,13 +820,13 @@ fn plan_paragraph_text_edits(
                   if edit.replacement == "" {
                     // An empty insertion beside an atom validates its
                     // carrier and synthesizes nothing.
-                    logical_edits.push({ placement: LogicalNoOp })
+                    logical_edits.push({ placement: LogicalNoOp, })
                     continue
                   }
                   syntheses.push(
                     (run_identity, at, at, edit.replacement, ordinal, identity),
                   )
-                  logical_edits.push({ placement: AtomSynthesis })
+                  logical_edits.push({ placement: AtomSynthesis, })
                 }
                 _ =>
                   raise partial_surgery_refuse(
@@ -974,7 +974,7 @@ fn plan_paragraph_text_edits(
         let SourceElementId(identity) = tail.contribution.source
         noop_endpoint_checks.push((identity, edit.end - tail.local_start))
       }
-      logical_edits.push({ placement: LogicalNoOp })
+      logical_edits.push({ placement: LogicalNoOp, })
       continue
     }
     let first = intersecting[0]
@@ -999,7 +999,7 @@ fn plan_paragraph_text_edits(
         edit.replacement,
         ordinal,
       )
-      logical_edits.push({ placement: InsideText })
+      logical_edits.push({ placement: InsideText, })
     } else {
       // The first consumed content is an atom: synthesize in its run,
       // replacing the atom in the same edit — unless the replacement is
@@ -1009,7 +1009,7 @@ fn plan_paragraph_text_edits(
       let SourceElementId(run_identity) = run.source
       if edit.replacement == "" {
         atom_deletions.push(identity)
-        logical_edits.push({ placement: InsideText })
+        logical_edits.push({ placement: InsideText, })
       } else {
         syntheses.push(
           (
@@ -1021,7 +1021,7 @@ fn plan_paragraph_text_edits(
             identity,
           ),
         )
-        logical_edits.push({ placement: AtomSynthesis })
+        logical_edits.push({ placement: AtomSynthesis, })
       }
     }
     // Middle and end contributions: emptied, deleted, or trimmed.

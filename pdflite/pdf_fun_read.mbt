@@ -231,7 +231,7 @@ fn PdfDocument::pdf_fun_read_sampled(
   for _ in 0..<sample_count {
     samples.push(bitstream.get_value_int(bits_per_sample))
   }
-  { size, order, encode, decode, bits_per_sample, samples }
+  { size, order, encode, decode, bits_per_sample, samples, }
 }
 
 ///|
@@ -260,7 +260,7 @@ fn PdfDocument::pdf_fun_read_stitching(
     stitch_encode.length() != functions.length() * 2 {
     raise FunctionExpected
   }
-  { functions, bounds, stitch_encode }
+  { functions, bounds, stitch_encode, }
 }
 
 ///|

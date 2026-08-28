@@ -3,7 +3,7 @@ fn reader_reconstruction_plan_entry_for_test(
   object_number : Int,
   offset : Int,
 ) -> @reader.PdfClassicXRefEntry {
-  { object_number, offset, generation: 0, in_use: true, object_stream: None }
+  { object_number, offset, generation: 0, in_use: true, object_stream: None, }
 }
 
 ///|

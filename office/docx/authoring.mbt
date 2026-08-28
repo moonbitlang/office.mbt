@@ -132,7 +132,7 @@ pub async fn create_blank_document(
     validators=[package_validator()],
     identifier=package_identifier(),
   )
-  { transaction: report }
+  { transaction: report, }
 }
 
 ///|

@@ -169,7 +169,7 @@ test "private function helpers cover parser and evaluator guards" {
   let interpolation = PdfFunction::{
     domain: [0.0, 1.0],
     range: None,
-    func: PdfFunctionInterpolation({ c0: [0.0], c1: [1.0], n: 1.0 }),
+    func: PdfFunctionInterpolation({ c0: [0.0], c1: [1.0], n: 1.0, }),
   }
   let stitching = PdfStitchingFunction::{
     functions: [interpolation],

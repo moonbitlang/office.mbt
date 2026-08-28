@@ -1,6 +1,6 @@
 ///|
 test "image and link variants serialize to json" {
-  let page = @pagelayout.Page::{ width_pt: 100, height_pt: 100, items: [] }
+  let page = @pagelayout.Page::{ width_pt: 100, height_pt: 100, items: [], }
   page.items.push(
     Image({
       x_pt: 10,
@@ -12,7 +12,13 @@ test "image and link variants serialize to json" {
     }),
   )
   page.items.push(
-    Link({ x_pt: 10, y_pt: 20, w_pt: 30, h_pt: 12, target: "https://a.example" }),
+    Link({
+      x_pt: 10,
+      y_pt: 20,
+      w_pt: 30,
+      h_pt: 12,
+      target: "https://a.example",
+    }),
   )
   json_inspect(page.items, content=[
     [
@@ -42,8 +48,8 @@ test "image and link variants serialize to json" {
 ///|
 test "validate accepts a well-formed model" {
   let model = @pagelayout.PageModel::new()
-  let font = model.add_font({ family: "Carlito", bold: false, italic: false })
-  let page = @pagelayout.Page::{ width_pt: 612, height_pt: 792, items: [] }
+  let font = model.add_font({ family: "Carlito", bold: false, italic: false, })
+  let page = @pagelayout.Page::{ width_pt: 612, height_pt: 792, items: [], }
   page.items.push(
     Text({
       font,
@@ -62,7 +68,7 @@ test "validate accepts a well-formed model" {
 ///|
 test "validate reports every structural violation" {
   let model = @pagelayout.PageModel::new()
-  let page = @pagelayout.Page::{ width_pt: 612, height_pt: 792, items: [] }
+  let page = @pagelayout.Page::{ width_pt: 612, height_pt: 792, items: [], }
   // advances/text mismatch AND dangling font index
   page.items.push(
     Text({
@@ -109,8 +115,8 @@ test "validate reports every structural violation" {
 ///|
 test "validate flags raw out-of-range color channels" {
   let model = @pagelayout.PageModel::new()
-  let font = model.add_font({ family: "Carlito", bold: false, italic: false })
-  let page = @pagelayout.Page::{ width_pt: 612, height_pt: 792, items: [] }
+  let font = model.add_font({ family: "Carlito", bold: false, italic: false, })
+  let page = @pagelayout.Page::{ width_pt: 612, height_pt: 792, items: [], }
   page.items.push(
     Text({
       font,
@@ -119,7 +125,7 @@ test "validate flags raw out-of-range color channels" {
       baseline_pt: 0,
       text: "x",
       advances_pt: [5.0],
-      color: { r: 300, g: -5, b: 0 },
+      color: { r: 300, g: -5, b: 0, },
     }),
   )
   model.pages.push(page)

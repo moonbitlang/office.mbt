@@ -262,7 +262,7 @@ fn DocxMergeState::note_unsupported(
 ) -> Unit {
   self.report.unsupported_total += 1
   if self.report.unsupported.length() < docx_template_finding_limit {
-    self.report.unsupported.push({ location, detail })
+    self.report.unsupported.push({ location, detail, })
   }
 }
 
@@ -299,7 +299,7 @@ fn DocxMergeState::scan_paragraph(
   for entry in scan.malformed {
     self.report.malformed_total += 1
     if self.report.malformed.length() < docx_template_finding_limit {
-      self.report.malformed.push({ location, detail: entry.reason })
+      self.report.malformed.push({ location, detail: entry.reason, })
     }
   }
   guard scan.matches.length() > 0 || scan.escapes.length() > 0 else { return }
@@ -339,17 +339,17 @@ fn DocxMergeState::scan_paragraph(
       Some(value) => {
         self.used_keys.add(matched.key)
         if self.report.locations.length() < docx_template_finding_limit {
-          self.report.locations.push({ location, detail: matched.key })
+          self.report.locations.push({ location, detail: matched.key, })
         } else {
           self.report.locations_truncated = true
         }
-        accepted.push({ span: matched.span, replacement: value.render() })
+        accepted.push({ span: matched.span, replacement: value.render(), })
       }
       None => {
         region_missing = true
         self.report.missing_total += 1
         if self.report.missing.length() < docx_template_finding_limit {
-          self.report.missing.push({ location, detail: matched.key })
+          self.report.missing.push({ location, detail: matched.key, })
         }
       }
     }
@@ -376,7 +376,7 @@ fn DocxMergeState::scan_paragraph(
           location~,
           self.checks,
         )
-        ok_escapes.push({ span, replacement: "{{" })
+        ok_escapes.push({ span, replacement: "{{", })
       }
     }
   }
@@ -545,7 +545,7 @@ pub async fn transact_docx_template(
       "office.docx.template_internal", "the merge produced no report",
     )
   }
-  { report: merge, transaction: report }
+  { report: merge, transaction: report, }
 }
 
 ///|

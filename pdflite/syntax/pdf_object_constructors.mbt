@@ -77,7 +77,7 @@ pub fn pdf_recurse_dict(
 /// malformed inputs can carry other objects and will be reported by helpers that
 /// require dictionary metadata.
 pub fn pdf_stream(dictionary : PdfObject, data : PdfStreamData) -> PdfObject {
-  PdfStreamObject({ dictionary, data })
+  PdfStreamObject({ dictionary, data, })
 }
 
 ///|
@@ -90,5 +90,5 @@ pub fn stream_to_get(
   position : Int,
   length : Int,
 ) -> ToGet {
-  { input, position, length, crypt: PdfStreamDataNoCrypt }
+  { input, position, length, crypt: PdfStreamDataNoCrypt, }
 }

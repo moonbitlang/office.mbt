@@ -41,7 +41,7 @@ fn pdf_flate_decode_bytes_native(
   if data.length() == 0 {
     Bytes::new(0)
   } else {
-    let status = Ref::{ val: 0 }
+    let status = Ref::{ val: 0, }
     try
       pdf_flate_native_payload(pdf_flate_zlib_decode_ffi(data, status), status)
     catch {

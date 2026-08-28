@@ -82,7 +82,7 @@ pub fn pdf_flate_decode_view(
   if data.length() == 0 {
     Bytes::new(0)
   } else {
-    let status = Ref::{ val: 0 }
+    let status = Ref::{ val: 0, }
     try
       pdf_flate_native_payload(
         pdf_flate_zlib_decode_ffi(data.to_owned(), status),

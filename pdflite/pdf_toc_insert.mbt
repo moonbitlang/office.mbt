@@ -36,7 +36,7 @@ pub fn pdf_toc_shift_page_labels(
     },
   ]
   for label in labels {
-    output.push({ ..label, start_page: label.start_page + toc_page_count })
+    output.push({ ..label, start_page: label.start_page + toc_page_count, })
   }
   output
 }

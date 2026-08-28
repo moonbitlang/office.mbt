@@ -95,7 +95,7 @@ fn ocg_merge_content_for_test(
       order: Some([(Some(ocg_bytes_for_test(layer_name)), [number])]),
       radio_button_groups: Some([[number]]),
     },
-    configs: [{ ..@ocg.pdf_ocg_default_config(), locked: [number] }],
+    configs: [{ ..@ocg.pdf_ocg_default_config(), locked: [number], }],
   }
 }
 
@@ -299,7 +299,7 @@ test "PdfDocument read_optional_content_groups decodes OCG dictionaries" {
   @test.assert_eq(content.default_config.off, [11])
   @test.assert_eq(content.default_config.intent, [ocg_name_for_test("/View")])
   let expected_apps : Array[@ocg.PdfOcgAppDict] = [
-    { event: OcgPrint, ocgs: [10], category: [ocg_name_for_test("/Print")] },
+    { event: OcgPrint, ocgs: [10], category: [ocg_name_for_test("/Print")], },
   ]
   @test.assert_eq(content.default_config.usage_applications, expected_apps)
   @test.assert_eq(
@@ -551,7 +551,7 @@ test "PdfDocument ocg_order_all writes every group to default order" {
         },
       ),
     ],
-    default_config: { ..content.default_config, order: None },
+    default_config: { ..content.default_config, order: None, },
   }
   let doc = try! ocg_catalog_document_for_test().write_optional_content_groups(
     content,
@@ -600,13 +600,13 @@ test "PdfDocument ocg_coalesce removes duplicate names and rewrites references" 
       on: [10, 11],
       off: [11],
       usage_applications: [
-        { event: OcgView, ocgs: [11], category: [ocg_name_for_test("/View")] },
+        { event: OcgView, ocgs: [11], category: [ocg_name_for_test("/View")], },
       ],
       order: Some([(None, [10]), (None, [11])]),
       radio_button_groups: Some([[10, 11]]),
       locked: [11],
     },
-    configs: [{ ..@ocg.pdf_ocg_default_config(), locked: [11] }],
+    configs: [{ ..@ocg.pdf_ocg_default_config(), locked: [11], }],
   }
   let with_duplicates = try! doc.write_optional_content_groups(
     duplicate_content,
@@ -694,7 +694,7 @@ test "PdfDocument write_optional_content_groups builds readable OCG data" {
     base_state: OcgOff,
     on: [7],
     usage_applications: [
-      { event: OcgPrint, ocgs: [7], category: [ocg_name_for_test("/Print")] },
+      { event: OcgPrint, ocgs: [7], category: [ocg_name_for_test("/Print")], },
     ],
     order: Some([(Some(ocg_bytes_for_test("Layers")), [7])]),
     list_mode: OcgVisiblePages,
@@ -768,7 +768,7 @@ test "PdfDocument write_optional_content_groups reserves explicit OCG numbers be
         },
       ),
     ],
-    default_config: { ..@ocg.pdf_ocg_default_config(), on: [10], off: [11] },
+    default_config: { ..@ocg.pdf_ocg_default_config(), on: [10], off: [11], },
     configs: [],
   }
   let updated = try! doc.write_optional_content_groups(content)

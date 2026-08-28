@@ -228,7 +228,7 @@ fn RawPathParser::parse_qname(
         )
     }
   }
-  { prefix, local_name, uri, expanded: expanded_xml_name(uri, local_name) }
+  { prefix, local_name, uri, expanded: expanded_xml_name(uri, local_name), }
 }
 
 ///|
@@ -329,7 +329,7 @@ fn parse_raw_path(
       "raw XML path must contain 1 to \{raw_max_path_length} Unicode scalar values",
     )
   }
-  let parser = RawPathParser::{ source, offset: 0, namespaces }
+  let parser = RawPathParser::{ source, offset: 0, namespaces, }
   let segments : Array[RawPathSegment] = []
   for ;; {
     parser.expect('/')
@@ -346,7 +346,7 @@ fn parse_raw_path(
     } else {
       None
     }
-    segments.push({ name, predicate })
+    segments.push({ name, predicate, })
     if segments.length() > raw_max_path_depth {
       raise raw_path_error(
         source,
@@ -365,7 +365,7 @@ fn parse_raw_path(
       "raw XML path contains unsupported syntax",
     )
   }
-  { source, segments }
+  { source, segments, }
 }
 
 ///|

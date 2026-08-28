@@ -23,7 +23,7 @@ fn pdf_squeeze_duplicate_candidate(
   number : Int,
   object : @syntax.PdfObject,
 ) -> PdfSqueezeDuplicateCandidate raise @core.PdfError {
-  { number, object: pdf_squeeze_materialized_object(object) }
+  { number, object: pdf_squeeze_materialized_object(object), }
 }
 
 ///|

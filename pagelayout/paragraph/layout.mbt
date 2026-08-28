@@ -62,7 +62,7 @@ pub fn layout_paragraph(
     sb.write_string(run.text)
     advances.append(measured.advances_pt)
     fallback.append(measured.fallback)
-    flat_runs.push({ style: run.style, face, end: offset + run.text.length() })
+    flat_runs.push({ style: run.style, face, end: offset + run.text.length(), })
     offset += run.text.length()
   }
   let text = sb.to_string()
@@ -199,7 +199,7 @@ pub fn layout_paragraph(
     })
     y += line_height
   }
-  { height_pt: y + style.space_after_pt, lines: line_boxes }
+  { height_pt: y + style.space_after_pt, lines: line_boxes, }
 }
 
 ///|

@@ -71,7 +71,7 @@ pub fn SharedFormulaLimits::with_values(
       msg="shared formula output limit exceeds cumulative output limit",
     )
   }
-  { max_input_chars, max_output_chars, max_total_output_chars, max_work_units }
+  { max_input_chars, max_output_chars, max_total_output_chars, max_work_units, }
 }
 
 ///|
@@ -115,7 +115,7 @@ fn SharedFormulaMaterializationBudget::new(
   limits : SharedFormulaLimits,
   cancelled? : () -> Bool = () => false,
 ) -> SharedFormulaMaterializationBudget {
-  { limits, cancelled, output_chars: 0, work_units: 0 }
+  { limits, cancelled, output_chars: 0, work_units: 0, }
 }
 
 ///|
@@ -332,7 +332,7 @@ fn FormulaTranslationBudget::new(
   maximum_work_units : Int,
   cancelled : () -> Bool,
 ) -> FormulaTranslationBudget {
-  { maximum_work_units, cancelled, work_units: 0, next_checkpoint: 0 }
+  { maximum_work_units, cancelled, work_units: 0, next_checkpoint: 0, }
 }
 
 ///|
@@ -389,7 +389,7 @@ fn FormulaTranslationOutput::new(
   maximum_chars : Int,
   budget : FormulaTranslationBudget,
 ) -> FormulaTranslationOutput {
-  { builder: StringBuilder(size_hint~), budget, maximum_chars, chars: 0 }
+  { builder: StringBuilder(size_hint~), budget, maximum_chars, chars: 0, }
 }
 
 ///|
@@ -639,7 +639,7 @@ fn parse_formula_column_token(
     is Some(column) else {
     return None
   }
-  Some({ start, end: index, absolute, column })
+  Some({ start, end: index, absolute, column, })
 }
 
 ///|
@@ -670,7 +670,7 @@ fn parse_formula_row_token(
     is Some(row) else {
     return None
   }
-  Some({ start, end: index, absolute, row })
+  Some({ start, end: index, absolute, row, })
 }
 
 ///|

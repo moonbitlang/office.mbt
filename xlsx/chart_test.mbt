@@ -589,12 +589,12 @@ test "chart options rich title + axis title runs" {
     ),
   )
   opts.title_rich = Some([
-    { text: "Hello ", font: None },
-    { text: "World", font: Some(font) },
+    { text: "Hello ", font: None, },
+    { text: "World", font: Some(font), },
   ])
   opts.x_axis.title_rich = Some([
-    { text: "X ", font: None },
-    { text: "Axis", font: Some(font) },
+    { text: "X ", font: None, },
+    { text: "Axis", font: Some(font), },
   ])
   workbook.add_chart_with_options("Sheet1", "C3", opts)
   let bytes = @xlsx.write(workbook)

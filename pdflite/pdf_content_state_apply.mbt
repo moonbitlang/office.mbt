@@ -5,16 +5,16 @@ pub fn PdfContentPathState::content_apply_path_state_op(
   op : @content.PdfContentOp,
 ) -> PdfContentPathState {
   match op {
-    Op_w(width) => { ..self, line_width: width }
-    Op_J(cap) => { ..self, line_cap: cap }
-    Op_j(join) => { ..self, line_join: join }
+    Op_w(width) => { ..self, line_width: width, }
+    Op_J(cap) => { ..self, line_cap: cap, }
+    Op_j(join) => { ..self, line_join: join, }
     Op_d(dashes, phase) =>
       {
         ..self,
-        dash_pattern: { array: pdf_content_state_copy_doubles(dashes), phase },
+        dash_pattern: { array: pdf_content_state_copy_doubles(dashes), phase, },
       }
     Op_ri(intent) =>
-      { ..self, rendering_intent: pdf_content_state_name_text(intent) }
+      { ..self, rendering_intent: pdf_content_state_name_text(intent), }
     Op_CS(name) =>
       match pdf_colour_space_of_device_name(name) {
         Some(space) =>

@@ -530,7 +530,7 @@ fn comment_details(
     }
     fields["anchors"] = anchors_by_id.get(info.id()).unwrap_or(Json::array([]))
   }
-  { metadata: Json::object(fields), properties }
+  { metadata: Json::object(fields), properties, }
 }
 
 ///|
@@ -543,7 +543,7 @@ fn note_details(
     Some(references) => fields["references"] = references
     None => ()
   }
-  { metadata: Json::object(fields), properties: Map([]) }
+  { metadata: Json::object(fields), properties: Map([]), }
 }
 
 ///|
@@ -631,7 +631,15 @@ async fn annotation_story_plan(
       unrepresentable_ids += 1
     }
   }
-  { story, kind, pairs, paths, missing_ids, duplicate_ids, unrepresentable_ids }
+  {
+    story,
+    kind,
+    pairs,
+    paths,
+    missing_ids,
+    duplicate_ids,
+    unrepresentable_ids,
+  }
 }
 
 ///|

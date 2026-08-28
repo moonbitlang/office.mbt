@@ -26,7 +26,7 @@
 ///|
 /// Hand one stream to miniz and require it to accept and reproduce `input`.
 fn miniz_accepts(encoded : Bytes, input : Bytes, what : String) -> Unit raise {
-  let status = Ref::{ val: 0 }
+  let status = Ref::{ val: 0, }
   let decoded = pdf_flate_zlib_decode_ffi(encoded, status)
   // status is the FFI's own verdict; the fallback in pdf_flate.mbt would have
   // hidden a refusal behind a successful pure decode

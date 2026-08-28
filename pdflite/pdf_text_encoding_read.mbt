@@ -75,7 +75,7 @@ fn PdfDocument::read_encoding_differences(
           PdfNameObject(name) =>
             match next_code {
               Some(code) => {
-                output.push({ name, code })
+                output.push({ name, code, })
                 next_code = Some(code + 1)
               }
               None => raise EncodingDifferencesMalformed

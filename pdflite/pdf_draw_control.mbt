@@ -35,14 +35,14 @@ pub struct PdfDrawControl {
 
 ///|
 fn pdf_draw_control_default_bbox() -> @geometry.PdfCoordRectangle {
-  { x: 0.0, y: 0.0, width: 1000.0, height: 1000.0 }
+  { x: 0.0, y: 0.0, width: 1000.0, height: 1000.0, }
 }
 
 ///|
 /// Create a fresh cpdf draw-control state with an empty main frame.
 pub fn pdf_draw_control_new() -> PdfDrawControl {
   {
-    frames: [{ name: pdf_draw_control_main_frame, ops: [] }],
+    frames: [{ name: pdf_draw_control_main_frame, ops: [], }],
     xobject_bbox: pdf_draw_control_default_bbox(),
     font_name: "Times-Roman",
     font_size: 12.0,

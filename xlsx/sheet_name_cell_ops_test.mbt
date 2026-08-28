@@ -24,7 +24,7 @@ test "cell APIs validate sheet name" {
     workbook.set_cell_rich_text(
       "Sheet:1",
       "A1",
-      ([{ text: "rt", font: None }] : Array[@xlsx.RichTextRun]),
+      ([{ text: "rt", font: None, }] : Array[@xlsx.RichTextRun]),
     ),
   ) catch {
     e => Err(e)

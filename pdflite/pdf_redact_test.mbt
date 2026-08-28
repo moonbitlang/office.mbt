@@ -282,7 +282,7 @@ test "PdfDocument show_bounding_boxes draws page content rectangles" {
   let filtered = try! @pdflite.pdf_show_bounding_boxes(
     document,
     [1],
-    shape=Some({ min_x: 0.0, min_y: 0.0, max_x: 5.0, max_y: 5.0 }),
+    shape=Some({ min_x: 0.0, min_y: 0.0, max_x: 5.0, max_y: 5.0, }),
     light=true,
     fast=true,
   )
@@ -293,7 +293,7 @@ test "PdfDocument show_bounding_boxes draws page content rectangles" {
   )
   let filtered_source_order = try! @pdflite.pdf_show_bounding_boxes_cpdf_order(
     true,
-    Some({ min_x: 0.0, min_y: 0.0, max_x: 5.0, max_y: 5.0 }),
+    Some({ min_x: 0.0, min_y: 0.0, max_x: 5.0, max_y: 5.0, }),
     true,
     document,
     [1],

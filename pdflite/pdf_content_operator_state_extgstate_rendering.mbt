@@ -8,12 +8,12 @@ pub fn PdfDocument::content_apply_extgstate_rendering_op(
   let mut output = state
   match
     self.content_extgstate_number(extgstate, pdf_content_extgstate_sm_name) {
-    Some(value) => output = { ..output, smoothness: value }
+    Some(value) => output = { ..output, smoothness: value, }
     None => ()
   }
   match
     self.content_extgstate_boolean(extgstate, pdf_content_extgstate_sa_name) {
-    Some(value) => output = { ..output, stroke_adjustment: value }
+    Some(value) => output = { ..output, stroke_adjustment: value, }
     None => ()
   }
   output

@@ -16,7 +16,7 @@ pub(all) struct RunProps {
 ///|
 /// Formatting that specifies nothing — the identity for `merge`.
 pub fn RunProps::empty() -> RunProps {
-  { family: None, size: None, bold: None, italic: None, color: None }
+  { family: None, size: None, bold: None, italic: None, color: None, }
 }
 
 ///|

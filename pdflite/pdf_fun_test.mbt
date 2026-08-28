@@ -78,7 +78,7 @@ test "PdfCalculatorOp debug strings preserve CamlPDF calculator syntax" {
 ///|
 test "PdfFunction debug strings cover all CamlPDF function kinds" {
   let interpolation = @pdflite.PdfFunction::{
-    func: PdfFunctionInterpolation({ c0: [0.0], c1: [1.0], n: 2.0 }),
+    func: PdfFunctionInterpolation({ c0: [0.0], c1: [1.0], n: 2.0, }),
     domain: [0.0, 1.0],
     range: Some([0.0, 1.0]),
   }
@@ -267,7 +267,7 @@ test "PdfDocument pdf_object_of_function writes interpolation functions" {
   let function = @pdflite.PdfFunction::{
     domain: [0.0, 1.0],
     range: Some([0.0, 2.0]),
-    func: PdfFunctionInterpolation({ c0: [0.0], c1: [2.0], n: 1.0 }),
+    func: PdfFunctionInterpolation({ c0: [0.0], c1: [2.0], n: 1.0, }),
   }
   let object = doc.pdf_object_of_function(function)
   @test.assert_eq(
@@ -292,12 +292,12 @@ test "PdfDocument pdf_object_of_function writes stitching child objects" {
   let first = @pdflite.PdfFunction::{
     domain: [0.0, 1.0],
     range: None,
-    func: PdfFunctionInterpolation({ c0: [0.0], c1: [0.0], n: 1.0 }),
+    func: PdfFunctionInterpolation({ c0: [0.0], c1: [0.0], n: 1.0, }),
   }
   let second = @pdflite.PdfFunction::{
     domain: [0.0, 1.0],
     range: None,
-    func: PdfFunctionInterpolation({ c0: [1.0], c1: [1.0], n: 1.0 }),
+    func: PdfFunctionInterpolation({ c0: [1.0], c1: [1.0], n: 1.0, }),
   }
   let function = @pdflite.PdfFunction::{
     domain: [0.0, 1.0],

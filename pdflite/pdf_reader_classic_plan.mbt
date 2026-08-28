@@ -100,5 +100,5 @@ fn pdf_reader_classic_read_plan(
     }
     depth += 1
   }
-  { xrefs, xref_stream_refs, trailer }
+  { xrefs, xref_stream_refs, trailer, }
 }

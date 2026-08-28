@@ -95,7 +95,7 @@ let category_information = 11
 let category_speed = 12
 
 ///|
-let formula_rand_state : Ref[@random.Rand?] = { val: None }
+let formula_rand_state : Ref[@random.Rand?] = { val: None, }
 
 ///|
 /// Defer the WASI-backed seed until after the command runtime initializes memory.

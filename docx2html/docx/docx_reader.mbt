@@ -319,7 +319,7 @@ fn external_file_access_options(
   enabled : Bool,
   read_file : (String) -> Bytes?,
 ) -> ExternalFileAccess {
-  { enabled, read_file }
+  { enabled, read_file, }
 }
 
 ///|
@@ -493,7 +493,7 @@ fn prepend_messages(
     let combined : Array[Message] = []
     combined.append(messages)
     combined.append(result.messages)
-    { value: result.value, messages: @core.dedupe_messages(combined) }
+    { value: result.value, messages: @core.dedupe_messages(combined), }
   }
 }
 
@@ -1053,7 +1053,7 @@ fn find_main_document(
         None => ()
       }
     }
-    { path: authoritative, relationship_dialect }
+    { path: authoritative, relationship_dialect, }
   }
   match expected_main_document_path {
     Some(expected) =>
@@ -1074,7 +1074,7 @@ fn find_main_document(
         Some(authoritative) => authoritative_part(authoritative)
         None =>
           match zip.resolve_path("word/document.xml") {
-            Some(actual) => { path: actual, relationship_dialect: None }
+            Some(actual) => { path: actual, relationship_dialect: None, }
             None =>
               raise MissingPart(
                 message="Could not find main document part. Are you sure this is a valid .docx file?",
@@ -1101,7 +1101,7 @@ fn read_relationships(
 ) -> Relationships raise DocxError {
   match zip.read_bytes(path) {
     Some(bytes) => decode_relationships_bytes(bytes, xml_budget?)
-    None => { relationships: [] }
+    None => { relationships: [], }
   }
 }
 
@@ -1128,7 +1128,7 @@ fn read_relationships_strict_limited(
 ) -> Relationships raise DocxError {
   match zip.read_bytes(path) {
     Some(bytes) => decode_relationships_bytes(bytes, xml_budget~)
-    None => { relationships: [] }
+    None => { relationships: [], }
   }
 }
 
@@ -1321,7 +1321,7 @@ fn resolve_unique_wordprocessing_part(
     }
     if !seen.contains(actual) {
       seen.add(actual)
-      parts.push({ path: actual, relationship_dialect })
+      parts.push({ path: actual, relationship_dialect, })
     }
   }
   if matches > 1 {
@@ -1414,7 +1414,7 @@ fn resolve_reachable_annotation_story_parts(
     }
     kind_by_path[actual] = kind
     dialect_by_path[actual] = relationship_dialect
-    resolved_parts.push({ kind, path: actual, relationship_dialect })
+    resolved_parts.push({ kind, path: actual, relationship_dialect, })
   }
   resolved_parts
 }
@@ -1519,7 +1519,7 @@ fn read_content_types(
     }
     None => ()
   }
-  { defaults, overrides }
+  { defaults, overrides, }
 }
 
 ///|
@@ -1847,7 +1847,7 @@ fn NumberingMap::find_level_by_paragraph_style_id(
 
 ///|
 fn NumberingLevel::to_numbering(self : NumberingLevel) -> Numbering {
-  { is_ordered: self.is_ordered, level: self.level }
+  { is_ordered: self.is_ordered, level: self.level, }
 }
 
 ///|
@@ -1908,7 +1908,7 @@ fn read_notes_for_document(
   notes.append(endnotes.notes)
   annotation_ids.append(endnotes.annotation_ids)
   messages.append(endnotes.messages)
-  { notes, annotation_ids, messages: @core.dedupe_messages(messages) }
+  { notes, annotation_ids, messages: @core.dedupe_messages(messages), }
 }
 
 ///|
@@ -1929,7 +1929,7 @@ fn read_note_part_at_path(
   diagnostics? : ReaderDiagnosticCollector,
 ) -> NotesReadResult raise DocxError {
   if !zip.exists(path) {
-    return { notes: [], annotation_ids: [], messages: [] }
+    return { notes: [], annotation_ids: [], messages: [], }
   }
   let part_relationships = read_relationships(
     zip,
@@ -1975,7 +1975,7 @@ fn read_note_part_at_path(
         annotation_ids.push(annotation_id)
       }
     }
-    return { notes, annotation_ids, messages: reader.messages }
+    return { notes, annotation_ids, messages: reader.messages, }
   }
   let root = read_xml_part(zip, path, xml_budget?)
   let notes : Array[Note] = []
@@ -1999,7 +1999,7 @@ fn read_note_part_at_path(
       annotation_ids.push(annotation_id)
     }
   }
-  { notes, annotation_ids, messages: reader.messages }
+  { notes, annotation_ids, messages: reader.messages, }
 }
 
 ///|
@@ -2034,7 +2034,7 @@ fn read_comments_for_document(
   }
   let path = authoritative.unwrap_or("word/comments.xml")
   if !zip.exists(path) {
-    return { comments: [], annotation_ids: [], messages: [] }
+    return { comments: [], annotation_ids: [], messages: [], }
   }
   let part_relationships = read_relationships(
     zip,
@@ -2087,7 +2087,7 @@ fn read_comments_for_document(
         annotation_ids.push(annotation_id)
       }
     }
-    return { comments, annotation_ids, messages: reader.messages }
+    return { comments, annotation_ids, messages: reader.messages, }
   }
   let root = read_xml_part(zip, path, xml_budget?)
   let comments : Array[Comment] = []
@@ -2104,7 +2104,7 @@ fn read_comments_for_document(
     })
     annotation_ids.push(annotation_id)
   }
-  { comments, annotation_ids, messages: reader.messages }
+  { comments, annotation_ids, messages: reader.messages, }
 }
 
 ///|
@@ -2650,11 +2650,11 @@ fn BodyReader::read_paragraph_elements_with_prefix(
   let carrier_stream : Array[ReaderNode] = []
   for deleted in deleted_prefix {
     let carriers = deleted.element_children()
-    inputs.push({ paragraph: deleted, carriers })
+    inputs.push({ paragraph: deleted, carriers, })
     carrier_stream.append(carriers)
   }
   let carriers = element.element_children()
-  inputs.push({ paragraph: element, carriers })
+  inputs.push({ paragraph: element, carriers, })
   carrier_stream.append(carriers)
   // The extras are structural: owned by this paragraph, erased as its
   // siblings. That split is the extras mechanism itself, and the erase
@@ -3217,7 +3217,7 @@ fn replace_first_text_in_item(
   checked : Bool,
 ) -> (ReaderItem, Bool) {
   match item {
-    New({ source, local_effects: _, shape: ReaderText(value) }) =>
+    New({ source, local_effects: _, shape: ReaderText(value), }) =>
       if value.length() > 0 {
         // the text's projection is suppressed and the checkbox stands in
         // its place
@@ -3238,7 +3238,7 @@ fn replace_first_text_in_item(
     New(tree) => {
       let (shape, found) = replace_first_text_in_shape(tree.shape, checked)
       (
-        New({ source: tree.source, local_effects: tree.local_effects, shape }),
+        New({ source: tree.source, local_effects: tree.local_effects, shape, }),
         found,
       )
     }
@@ -4049,7 +4049,7 @@ fn BodyReader::make_image(
       "Image of type ", content_type, " is unlikely to display in web browsers",
     ])
   }
-  { content_type, alt_text, data: data.to_owned() }
+  { content_type, alt_text, data: data.to_owned(), }
 }
 
 ///|
@@ -4106,7 +4106,7 @@ fn BodyReader::read_table_properties(
     element.first_or_empty("w:tblStyle"),
     "w:val",
   )
-  { style_id, style_name: self.style_name(style_id, "table") }
+  { style_id, style_name: self.style_name(style_id, "table"), }
 }
 
 ///|
@@ -4280,7 +4280,7 @@ fn BodyReader::calculate_table_row_spans(
     guard self.table_cells_for_span(children) is Some((cells, trailing)) else {
       return items
     }
-    typed_rows.push({ cells, trailing, is_header, source, leading })
+    typed_rows.push({ cells, trailing, is_header, source, leading, })
   }
   let rows = self.calculate_typed_table_row_spans(typed_rows)
   rows.append(pending)

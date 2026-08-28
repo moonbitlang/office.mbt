@@ -102,7 +102,7 @@ fn xlsx_bounded_test_source(
     max_total_uncompressed_bytes=office_read_max_zip_total_bytes,
     max_total_preserved_source_bytes=office_read_max_preserved_source_bytes,
   )
-  { file, format: Xlsx, bytes: Bytes::new(0), archive }
+  { file, format: Xlsx, bytes: Bytes::new(0), archive, }
 }
 
 ///|
@@ -139,7 +139,7 @@ async test "XLSX command cell scans yield before their bounded maximum" {
   }
   let region : XlsxScanRegion = {
     sheet,
-    rect: { col_lo: 1, row_lo: 1, col_hi: 1_000, row_hi: 100 },
+    rect: { col_lo: 1, row_lo: 1, col_hi: 1_000, row_hi: 100, },
   }
   @async.with_task_group() <| group => {
     let task = group.spawn(() => {
@@ -164,7 +164,7 @@ async test "XLSX command cell scans yield before their bounded maximum" {
 
 ///|
 async test "XLSX post-projection metadata, styles, and human output observe cancellation" {
-  let projection = { ..xlsx_read_test_projection(), cancelled: () => true }
+  let projection = { ..xlsx_read_test_projection(), cancelled: () => true, }
   guard projection.sheets[0].content is Worksheet(worksheet) else {
     fail("expected worksheet fixture")
   }
@@ -175,7 +175,7 @@ async test "XLSX post-projection metadata, styles, and human output observe canc
         ignore(
           xlsx_page_human(
             projection,
-            { cells: [], matched_total: 0, scanned_cells: 0, offset: 0 },
+            { cells: [], matched_total: 0, scanned_cells: 0, offset: 0, },
             false,
             10_000,
           ),

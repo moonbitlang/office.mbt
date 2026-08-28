@@ -44,7 +44,7 @@ fn emit_run(
     ops.push(Op_BT)
     ops.push(Op_Tf(resource, run.size_pt))
     ops.push(Op_rg(r, g, b))
-    ops.push(Op_Tm({ a: 1, b: 0, c: 0, d: 1, e: x, f: baseline }))
+    ops.push(Op_Tm({ a: 1, b: 0, c: 0, d: 1, e: x, f: baseline, }))
     ops.push(Op_Tj(Bytes::from_array(codes)))
     ops.push(Op_ET)
     codes.clear()
@@ -209,7 +209,7 @@ pub fn render_pdf(model : @pagelayout.PageModel) -> Bytes raise {
   // rather than a `/W` array governing spacing.
   for index, codepoints in used_codepoints {
     let face = faces[index]
-    faces[index] = { ..face, composite: needs_composite(face, codepoints) }
+    faces[index] = { ..face, composite: needs_composite(face, codepoints), }
   }
 
   // one PDF font object per interned IR font, shared by every page
@@ -431,7 +431,7 @@ fn emit_image(
   let y = flip(page_height, image.y_pt + image.h_pt)
   ops.push(Op_q)
   ops.push(
-    Op_cm({ a: image.w_pt, b: 0, c: 0, d: image.h_pt, e: image.x_pt, f: y }),
+    Op_cm({ a: image.w_pt, b: 0, c: 0, d: image.h_pt, e: image.x_pt, f: y, }),
   )
   ops.push(Op_Do(resource))
   ops.push(Op_Q)

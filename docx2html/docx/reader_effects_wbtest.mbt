@@ -13,7 +13,7 @@ fn reader_effect_items(source : String) -> Array[ReaderItem] raise DocxError {
     Some(body) => body.element_children()
     None => node.element_children()
   }
-  empty_body_reader({ relationships: [] }).read_children(children)
+  empty_body_reader({ relationships: [], }).read_children(children)
 }
 
 ///|
@@ -186,7 +186,7 @@ test "reader effects select the alternate fallback and suppress choices" {
   let root = read_xml_string(xml, namespace_map=office_namespace_map())
   inspect(
     effect_summaries(
-      empty_body_reader({ relationships: [] }).read_element(
+      empty_body_reader({ relationships: [], }).read_element(
         ReaderNode::of(root),
       ),
     ),
@@ -377,7 +377,7 @@ test "reader effects: alternate content rejections stay in document order" {
   let xml =
     #|<mc:AlternateContent xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><mc:Fallback><w:t>A</w:t></mc:Fallback><mc:Choice Requires="wps"><w:t>B</w:t></mc:Choice><mc:Fallback><w:t>C</w:t></mc:Fallback></mc:AlternateContent>
   let root = read_xml_string(xml, namespace_map=office_namespace_map())
-  let items = empty_body_reader({ relationships: [] }).read_element(
+  let items = empty_body_reader({ relationships: [], }).read_element(
     ReaderNode::of(root),
   )
   inspect(
@@ -413,7 +413,7 @@ test "reader effects: pict extras record their own alternate rejections" {
       ]),
     ),
   ])
-  let items = empty_body_reader({ relationships: [] }).read_element(
+  let items = empty_body_reader({ relationships: [], }).read_element(
     ReaderNode::of(pict_alternate),
   )
   inspect(

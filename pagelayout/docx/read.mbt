@@ -226,7 +226,7 @@ fn read_paragraph(
         None => NotAField
       }
     }
-    runs.push({ text, style, field })
+    runs.push({ text, style, field, })
   }
   // an empty paragraph still occupies a line, styled by its paragraph
   // mark's run properties (w:pPr/w:rPr)
@@ -262,16 +262,16 @@ fn read_paragraph(
       // the whole nesting hierarchy to one depth.
       if direct_para.indent_left is None {
         match level.indent_left {
-          Some(v) => style = { ..style, indent_left_pt: v.to_pt() }
+          Some(v) => style = { ..style, indent_left_pt: v.to_pt(), }
           None => ()
         }
       }
       if direct_para.indent_first is None {
         match level.indent_hanging {
-          Some(v) => style = { ..style, indent_first_pt: -v.to_pt() }
+          Some(v) => style = { ..style, indent_first_pt: -v.to_pt(), }
           None =>
             match level.indent_first {
-              Some(v) => style = { ..style, indent_first_pt: v.to_pt() }
+              Some(v) => style = { ..style, indent_first_pt: v.to_pt(), }
               None => ()
             }
         }
@@ -298,7 +298,7 @@ fn read_paragraph(
             None => ()
           }
           match level.size {
-            Some(hp) => marker_style = { ..marker_style, size_pt: hp.to_pt() }
+            Some(hp) => marker_style = { ..marker_style, size_pt: hp.to_pt(), }
             None => ()
           }
           let separator = match level.suffix {
@@ -333,7 +333,7 @@ fn read_paragraph(
     style = style.with_hanging_tab_stop()
   }
   let block = @paginate.Block::paragraph(
-    { runs, style },
+    { runs, style, },
     keep_lines=resolved_para.keep_lines.unwrap_or(false),
     keep_next=resolved_para.keep_next.unwrap_or(false),
     widow_control=resolved_para.widow_control.unwrap_or(true),
@@ -713,23 +713,23 @@ pub fn read_furniture_refs(sectpr : @xml.XmlElement) -> FurnitureRefs {
   for child in sectpr.children {
     guard child is XmlElement(el) else { continue }
     if el.name == "w:titlePg" {
-      refs = { ..refs, title_page: parse_toggle(el) }
+      refs = { ..refs, title_page: parse_toggle(el), }
       continue
     }
     let kind = el.attributes.get("w:type").unwrap_or("default")
     match (el.name, kind, el.attributes.get("r:id")) {
       ("w:headerReference", "default", Some(v)) =>
-        refs = { ..refs, header_default: Some(v) }
+        refs = { ..refs, header_default: Some(v), }
       ("w:footerReference", "default", Some(v)) =>
-        refs = { ..refs, footer_default: Some(v) }
+        refs = { ..refs, footer_default: Some(v), }
       ("w:headerReference", "first", Some(v)) =>
-        refs = { ..refs, header_first: Some(v) }
+        refs = { ..refs, header_first: Some(v), }
       ("w:footerReference", "first", Some(v)) =>
-        refs = { ..refs, footer_first: Some(v) }
+        refs = { ..refs, footer_first: Some(v), }
       ("w:headerReference", "even", Some(v)) =>
-        refs = { ..refs, header_even: Some(v) }
+        refs = { ..refs, header_even: Some(v), }
       ("w:footerReference", "even", Some(v)) =>
-        refs = { ..refs, footer_even: Some(v) }
+        refs = { ..refs, footer_even: Some(v), }
       _ => ()
     }
   }
