@@ -217,13 +217,13 @@ pub fn docx_paragraph_anchor_index(
           }
         }
       }
-      { status: "multi_physical", para_id: None, physical_para_ids: physical }
+      { status: "multi_physical", para_id: None, physical_para_ids: physical, }
     } else {
       match elements[head].para_id_raw {
-        None => { status: "missing", para_id: None, physical_para_ids: [] }
+        None => { status: "missing", para_id: None, physical_para_ids: [], }
         Some(raw) =>
           match validated_para_id(raw) {
-            None => { status: "invalid", para_id: None, physical_para_ids: [] }
+            None => { status: "invalid", para_id: None, physical_para_ids: [], }
             Some(canonical) =>
               if occupancy.get(canonical).unwrap_or(0) > 1 {
                 {
@@ -253,7 +253,7 @@ pub fn docx_paragraph_anchor_index(
       None => ()
     }
   }
-  { anchors, by_path }
+  { anchors, by_path, }
 }
 
 ///|

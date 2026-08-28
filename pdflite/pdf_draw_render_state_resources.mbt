@@ -10,7 +10,7 @@ fn PdfDrawRenderState::extgstate(
     }
   }
   let name = self.fresh_name("/G")
-  self.extgstates.push({ kind, value, name })
+  self.extgstates.push({ kind, value, name, })
   name
 }
 

@@ -13,7 +13,7 @@ fn PdfDocument::pdf_page_rotate_rewrite(
     let page_number = index + 1
     let page = pages[index]
     if selected_pages.contains(page_number) {
-      rewritten.push({ ..page, rotate: rotate(page) })
+      rewritten.push({ ..page, rotate: rotate(page), })
     } else {
       rewritten.push(page)
     }

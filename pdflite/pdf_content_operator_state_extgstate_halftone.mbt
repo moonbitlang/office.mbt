@@ -7,15 +7,15 @@ pub fn PdfDocument::content_apply_extgstate_halftone_op(
 ) -> PdfContentOperatorState {
   let mut output = state
   match self.lookup_direct(pdf_content_extgstate_ht_name, extgstate) {
-    Some(value) => output = { ..output, halftone: value }
+    Some(value) => output = { ..output, halftone: value, }
     None => ()
   }
   match self.lookup_direct(pdf_content_extgstate_smask_name, extgstate) {
-    Some(value) => output = { ..output, halftone: value }
+    Some(value) => output = { ..output, halftone: value, }
     None => ()
   }
   match self.lookup_direct(pdf_content_extgstate_hto_name, extgstate) {
-    Some(value) => output = { ..output, halftone: value }
+    Some(value) => output = { ..output, halftone: value, }
     None => ()
   }
   output

@@ -36,6 +36,6 @@ test "pdf_read_header_from_view reads borrowed slices" {
   ])
   @test.assert_eq(
     try! @reader.pdf_read_header_from_view(bytes[2:bytes.length() - 2]),
-    { major: 1, minor: 6 },
+    { major: 1, minor: 6, },
   )
 }

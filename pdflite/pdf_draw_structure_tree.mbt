@@ -24,7 +24,7 @@ priv struct PdfDrawStructureBuildContext {
 
 ///|
 fn pdf_draw_structure_context_new() -> PdfDrawStructureBuildContext {
-  { namespace_uri: pdf_draw_standard_namespace, element_info: [] }
+  { namespace_uri: pdf_draw_standard_namespace, element_info: [], }
 }
 
 ///|
@@ -159,7 +159,7 @@ fn PdfDocument::pdf_draw_make_structure_tree(
   self : PdfDocument,
   data : ArrayView[PdfDrawStructureData],
 ) -> Array[PdfDrawStructureNode] raise @core.PdfError {
-  let index = Ref::{ val: 0 }
+  let index = Ref::{ val: 0, }
   pdf_draw_make_structure_tree_items(
     data,
     index,
@@ -176,7 +176,7 @@ priv struct PdfDrawNamespaceMap {
 
 ///|
 fn pdf_draw_namespace_map_new() -> PdfDrawNamespaceMap {
-  { entries: [] }
+  { entries: [], }
 }
 
 ///|
@@ -210,7 +210,7 @@ priv struct PdfDrawParentMap {
 
 ///|
 fn pdf_draw_parent_map_new() -> PdfDrawParentMap {
-  { entries: [] }
+  { entries: [], }
 }
 
 ///|

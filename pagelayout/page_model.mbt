@@ -34,7 +34,7 @@ pub(all) struct Color {
 
 ///|
 /// Default document text color.
-pub let black : Color = { r: 0, g: 0, b: 0 }
+pub let black : Color = { r: 0, g: 0, b: 0, }
 
 ///|
 /// Build a color, clamping each channel into 0..=255. Frontends convert
@@ -51,7 +51,7 @@ pub fn Color::rgb(r : Int, g : Int, b : Int) -> Color {
     }
   }
 
-  { r: clamp(r), g: clamp(g), b: clamp(b) }
+  { r: clamp(r), g: clamp(g), b: clamp(b), }
 }
 
 ///|
@@ -160,5 +160,5 @@ pub fn PageModel::add_font(self : PageModel, spec : FontSpec) -> Int {
 ///|
 /// An empty model to accumulate fonts and pages into.
 pub fn PageModel::new() -> PageModel {
-  { fonts: [], pages: [] }
+  { fonts: [], pages: [], }
 }

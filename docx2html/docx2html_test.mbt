@@ -1098,7 +1098,7 @@ test "style map parser handles malformed and escaped edge cases" {
   )
   match
     expect_style_mapping("p:ordered-list(2):unordered-list(3) => ul > li").from {
-    ParagraphMatcher(numbering=Some({ is_ordered: false, level: 3 }), ..) => ()
+    ParagraphMatcher(numbering=Some({ is_ordered: false, level: 3, }), ..) => ()
     _ => fail("expected later list suffix to win")
   }
   inspect(@docx2html.read_style_map(["p => span "]).length(), content="0")
@@ -1305,14 +1305,14 @@ test "default nested list mappings collapse across orderedness" {
   let unordered_parent = @docx2html.ParagraphProperties::{
     style_id: None,
     style_name: None,
-    numbering: Some({ is_ordered: false, level: 1 }),
+    numbering: Some({ is_ordered: false, level: 1, }),
     alignment: None,
     indent: @docx2html.Indent::default(),
   }
   let ordered_child = @docx2html.ParagraphProperties::{
     style_id: None,
     style_name: None,
-    numbering: Some({ is_ordered: true, level: 2 }),
+    numbering: Some({ is_ordered: true, level: 2, }),
     alignment: None,
     indent: @docx2html.Indent::default(),
   }
@@ -1334,14 +1334,14 @@ test "default nested list mappings collapse across orderedness" {
   let ordered_parent = @docx2html.ParagraphProperties::{
     style_id: None,
     style_name: None,
-    numbering: Some({ is_ordered: true, level: 1 }),
+    numbering: Some({ is_ordered: true, level: 1, }),
     alignment: None,
     indent: @docx2html.Indent::default(),
   }
   let unordered_child = @docx2html.ParagraphProperties::{
     style_id: None,
     style_name: None,
-    numbering: Some({ is_ordered: false, level: 2 }),
+    numbering: Some({ is_ordered: false, level: 2, }),
     alignment: None,
     indent: @docx2html.Indent::default(),
   }

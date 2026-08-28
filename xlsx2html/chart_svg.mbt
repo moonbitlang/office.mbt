@@ -407,7 +407,7 @@ fn chart_svg_collect(workbook : @xlsx.Workbook, xml : String) -> ChartSvgData? {
       Some(value) if value != "" => chart_series_display_name(workbook, value)
       _ => "series \{index + 1}"
     }
-    series.push({ name, values, present })
+    series.push({ name, values, present, })
   }
   guard series.length() > 0 else { return None }
   let omitted_series = if metas.length() > CHART_SVG_MAX_SERIES {

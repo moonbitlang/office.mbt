@@ -84,7 +84,7 @@ fn pdf_page_renumber_entry_with_map(
         ),
         generation: entry.generation,
       }
-    _ => { data: entry.data, generation: entry.generation }
+    _ => { data: entry.data, generation: entry.generation, }
   }
 }
 

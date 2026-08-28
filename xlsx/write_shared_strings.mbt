@@ -24,7 +24,7 @@ fn collect_shared_strings(
               Some(_) => ()
               None => {
                 let idx = shared_strings.length()
-                shared_strings.push({ text: cell.value, runs: None })
+                shared_strings.push({ text: cell.value, runs: None, })
                 text_map.set(cell.value, idx)
               }
             }

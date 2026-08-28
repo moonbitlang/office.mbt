@@ -57,7 +57,7 @@ pub fn PdfDocument::read_standard14_font(
     Some(PdfNameObject(base_font)) =>
       match pdf_standard_font_of_pdf_name(base_font) {
         Some(standard_font) =>
-          { font: standard_font, encoding: self.read_encoding(font) }
+          { font: standard_font, encoding: self.read_encoding(font), }
         None => raise StandardFontExpected
       }
     _ => raise BaseFontExpected

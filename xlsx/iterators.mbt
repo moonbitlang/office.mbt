@@ -26,7 +26,7 @@ pub fn RowOpts::with_values(
   style_id? : Int = 0,
   outline_level? : Int = 0,
 ) -> RowOpts {
-  { height, hidden, style_id, outline_level }
+  { height, hidden, style_id, outline_level, }
 }
 
 ///|
@@ -64,7 +64,7 @@ fn collect_row_cells(sheet : Worksheet) -> Array[RowCells] {
   for row in row_keys {
     let row_entries = row_cells.get(row).unwrap_or([])
     if row_entries.is_empty() {
-      entries.push({ row, cells: [], max_col: 0 })
+      entries.push({ row, cells: [], max_col: 0, })
       continue
     }
     let mut max_col = 0
@@ -73,7 +73,7 @@ fn collect_row_cells(sheet : Worksheet) -> Array[RowCells] {
         max_col = cell.col
       }
     }
-    entries.push({ row, cells: row_entries, max_col })
+    entries.push({ row, cells: row_entries, max_col, })
   }
   entries
 }
@@ -166,7 +166,7 @@ fn row_opts_for_row(sheet : Worksheet, row : Int) -> RowOpts {
     None => default_row_height(sheet)
   }
   let style_id = dim.style_id.unwrap_or(0)
-  { height, hidden: dim.hidden, style_id, outline_level: dim.outline_level }
+  { height, hidden: dim.hidden, style_id, outline_level: dim.outline_level, }
 }
 
 ///|
@@ -254,7 +254,7 @@ fn collect_row_entries_with_options(
   for row in row_keys {
     let row_entries = row_cells.get(row).unwrap_or([])
     if row_entries.is_empty() {
-      entries.push({ row, values: [] })
+      entries.push({ row, values: [], })
       continue
     }
     let mut max_col = 0
@@ -274,7 +274,7 @@ fn collect_row_entries_with_options(
       )
       values[cell.col - 1] = formatted
     }
-    entries.push({ row, values })
+    entries.push({ row, values, })
   }
   entries
 }

@@ -313,5 +313,5 @@ pub fn pdf_truetype_subset_glyf_table(
       position += 1
     }
   }
-  { length, bytes: Bytes::from_array(output) }
+  { length, bytes: Bytes::from_array(output), }
 }

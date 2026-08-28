@@ -3,8 +3,8 @@ test "auto filter set and roundtrip" {
   let workbook = @xlsx.Workbook::new()
   ignore(workbook.add_sheet("Sheet1"))
   let options : Array[@xlsx.AutoFilterOption] = [
-    { column: "B", expression: "x == 10" },
-    { column: "C", expression: "x > 5" },
+    { column: "B", expression: "x == 10", },
+    { column: "C", expression: "x > 5", },
   ]
   workbook.set_auto_filter("Sheet1", "A1:C3", options)
   debug_inspect(
@@ -61,7 +61,7 @@ test "auto filter or expression" {
   let workbook = @xlsx.Workbook::new()
   ignore(workbook.add_sheet("Sheet1"))
   let options : Array[@xlsx.AutoFilterOption] = [
-    { column: "A", expression: "x == 1 or x == 3" },
+    { column: "A", expression: "x == 1 or x == 3", },
   ]
   workbook.set_auto_filter("Sheet1", "A1:B5", options)
   debug_inspect(
@@ -82,7 +82,7 @@ test "auto filter adjusts on insert" {
   let workbook = @xlsx.Workbook::new()
   ignore(workbook.add_sheet("Sheet1"))
   let options : Array[@xlsx.AutoFilterOption] = [
-    { column: "C", expression: "x >= 5" },
+    { column: "C", expression: "x >= 5", },
   ]
   workbook.set_auto_filter("Sheet1", "A1:C3", options)
   workbook.insert_cols("Sheet1", 2, 1)
@@ -115,7 +115,7 @@ test "auto filter invalid expression" {
   let workbook = @xlsx.Workbook::new()
   ignore(workbook.add_sheet("Sheet1"))
   let options : Array[@xlsx.AutoFilterOption] = [
-    { column: "A", expression: "x >< 1" },
+    { column: "A", expression: "x >< 1", },
   ]
   let result : Result[Unit, Error] = Ok(
     workbook.set_auto_filter("Sheet1", "A1:A2", options),
@@ -137,7 +137,7 @@ test "auto filter: quoted tokens, wildcards, blanks/nonblanks" {
 
   // Tokenize quotes + escaped quotes inside quotes.
   workbook.set_auto_filter("Sheet1", "A1:A2", [
-    { column: "A", expression: "x == \"a\"\"b\"" },
+    { column: "A", expression: "x == \"a\"\"b\"", },
   ])
   debug_inspect(
     workbook.get_auto_filter("Sheet1"),
@@ -153,7 +153,7 @@ test "auto filter: quoted tokens, wildcards, blanks/nonblanks" {
 
   // Wildcards make this a custom filter (op 22).
   workbook.set_auto_filter("Sheet1", "A1:A2", [
-    { column: "A", expression: "x == A*" },
+    { column: "A", expression: "x == A*", },
   ])
   let f1 = match workbook.get_auto_filter("Sheet1") {
     Some(v) => v
@@ -163,7 +163,7 @@ test "auto filter: quoted tokens, wildcards, blanks/nonblanks" {
 
   // blanks/nonblanks normalization.
   workbook.set_auto_filter("Sheet1", "A1:A2", [
-    { column: "A", expression: "x != blanks" },
+    { column: "A", expression: "x != blanks", },
   ])
   let f2 = match workbook.get_auto_filter("Sheet1") {
     Some(v) => v
@@ -171,7 +171,7 @@ test "auto filter: quoted tokens, wildcards, blanks/nonblanks" {
   }
   inspect(f2.columns[0].custom_filters is Some(_), content="true")
   workbook.set_auto_filter("Sheet1", "A1:A2", [
-    { column: "A", expression: "x == nonblanks" },
+    { column: "A", expression: "x == nonblanks", },
   ])
   let f3 = match workbook.get_auto_filter("Sheet1") {
     Some(v) => v
@@ -186,7 +186,7 @@ test "auto filter: invalid token count and blanks operator" {
   ignore(workbook.add_sheet("Sheet1"))
   let bad_tokens : Result[Unit, Error] = Ok(
     workbook.set_auto_filter("Sheet1", "A1:A2", [
-      { column: "A", expression: "x ==" },
+      { column: "A", expression: "x ==", },
     ]),
   ) catch {
     e => Err(e)
@@ -199,7 +199,7 @@ test "auto filter: invalid token count and blanks operator" {
   )
   let bad_tokens2 : Result[Unit, Error] = Ok(
     workbook.set_auto_filter("Sheet1", "A1:A2", [
-      { column: "A", expression: "x == 1 2" },
+      { column: "A", expression: "x == 1 2", },
     ]),
   ) catch {
     e => Err(e)
@@ -212,7 +212,7 @@ test "auto filter: invalid token count and blanks operator" {
   )
   let bad_blanks_op : Result[Unit, Error] = Ok(
     workbook.set_auto_filter("Sheet1", "A1:A2", [
-      { column: "A", expression: "x > blanks" },
+      { column: "A", expression: "x > blanks", },
     ]),
   ) catch {
     e => Err(e)
@@ -232,7 +232,7 @@ test "auto filter: custom operators, and-expression, and column validation" {
 
   // < and <= map to custom filter operators.
   workbook.set_auto_filter("Sheet1", "A1:A2", [
-    { column: "A", expression: "x < 3" },
+    { column: "A", expression: "x < 3", },
   ])
   debug_inspect(
     workbook.get_auto_filter("Sheet1"),
@@ -252,7 +252,7 @@ test "auto filter: custom operators, and-expression, and column validation" {
     ),
   )
   workbook.set_auto_filter("Sheet1", "A1:A2", [
-    { column: "A", expression: "x <= 3" },
+    { column: "A", expression: "x <= 3", },
   ])
   debug_inspect(
     workbook.get_auto_filter("Sheet1"),
@@ -279,7 +279,7 @@ test "auto filter: custom operators, and-expression, and column validation" {
 
   // blanks/nonblanks (including the != nonblanks normalization path).
   workbook.set_auto_filter("Sheet1", "A1:A2", [
-    { column: "A", expression: "x != nonblanks" },
+    { column: "A", expression: "x != nonblanks", },
   ])
   debug_inspect(
     workbook.get_auto_filter("Sheet1"),
@@ -295,7 +295,7 @@ test "auto filter: custom operators, and-expression, and column validation" {
 
   // Two custom filters with an `and` expression.
   workbook.set_auto_filter("Sheet1", "A1:A2", [
-    { column: "A", expression: "x > 1 and x < 3" },
+    { column: "A", expression: "x > 1 and x < 3", },
   ])
   let f1 = match workbook.get_auto_filter("Sheet1") {
     Some(v) => v
@@ -310,9 +310,9 @@ test "auto filter: custom operators, and-expression, and column validation" {
 
   // Empty options are ignored.
   workbook.set_auto_filter("Sheet1", "A1:A2", [
-    { column: "", expression: "x == 1" },
-    { column: "A", expression: "" },
-    { column: "A", expression: "x == 1" },
+    { column: "", expression: "x == 1", },
+    { column: "A", expression: "", },
+    { column: "A", expression: "x == 1", },
   ])
   debug_inspect(
     workbook.get_auto_filter("Sheet1"),
@@ -329,7 +329,7 @@ test "auto filter: custom operators, and-expression, and column validation" {
   // Column invalid.
   let bad_col : Result[Unit, Error] = Ok(
     workbook.set_auto_filter("Sheet1", "A1:A2", [
-      { column: "1", expression: "x == 1" },
+      { column: "1", expression: "x == 1", },
     ]),
   ) catch {
     e => Err(e)
@@ -344,7 +344,7 @@ test "auto filter: custom operators, and-expression, and column validation" {
   // Column out of range.
   let out_of_range : Result[Unit, Error] = Ok(
     workbook.set_auto_filter("Sheet1", "A1:A2", [
-      { column: "B", expression: "x == 1" },
+      { column: "B", expression: "x == 1", },
     ]),
   ) catch {
     e => Err(e)
@@ -358,8 +358,8 @@ test "auto filter: custom operators, and-expression, and column validation" {
 
   // Duplicate column is replaced.
   workbook.set_auto_filter("Sheet1", "A1:A2", [
-    { column: "A", expression: "x == 1" },
-    { column: "A", expression: "x == 2" },
+    { column: "A", expression: "x == 1", },
+    { column: "A", expression: "x == 2", },
   ])
   debug_inspect(
     workbook.get_auto_filter("Sheet1"),

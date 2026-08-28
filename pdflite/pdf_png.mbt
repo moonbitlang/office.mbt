@@ -212,7 +212,7 @@ fn pdf_read_png_view_inner(data : BytesView) -> PdfPNG raise @core.PdfError {
   } else {
     concatenated
   }
-  { width, height, bit_depth, color_type, idat, palette }
+  { width, height, bit_depth, color_type, idat, palette, }
 }
 
 ///|

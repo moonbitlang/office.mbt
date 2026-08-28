@@ -40,7 +40,7 @@ fn pdf_position_calculated(
   y : Double,
   rotation : Double,
 ) -> PdfCalculatedPosition {
-  { x, y, rotation }
+  { x, y, rotation, }
 }
 
 ///|

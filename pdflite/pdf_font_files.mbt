@@ -16,7 +16,7 @@ pub fn PdfFont::embedded_fontfile_number(self : PdfFont) -> Int? {
     PdfFontCIDKeyed(
       {
         composite: { cid_fontdescriptor: { fontfile: Some(fontfile), .. }, .. },
-        ..,
+        ..
       }
     ) => Some(fontfile.object_number())
     _ => None

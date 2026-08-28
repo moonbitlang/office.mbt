@@ -395,7 +395,7 @@ pub fn transaction_options(
       details=Json::object({ "field": Json::string("permission") }),
     )
   }
-  { input_path, output_path, dry_run, overwrite, permission }
+  { input_path, output_path, dry_run, overwrite, permission, }
 }
 
 ///|
@@ -539,7 +539,7 @@ pub fn transaction_identifier(
       "transaction identifier name '\{transaction_portable_validator_name}' is reserved for mandatory portable OPC validation",
     )
   }
-  { name, identify }
+  { name, identify, }
 }
 
 ///|
@@ -566,7 +566,7 @@ pub fn validation_finding(
 ) -> ValidationFinding raise TransactionError {
   checked_identifier(code, "validation finding code")
   checked_message(message, "validation finding message")
-  { code, message }
+  { code, message, }
 }
 
 ///|
@@ -589,7 +589,7 @@ pub fn transaction_validator(
   ] raise,
 ) -> TransactionValidator raise TransactionError {
   checked_identifier(name, "validator name")
-  { name, validate }
+  { name, validate, }
 }
 
 ///|
@@ -641,7 +641,7 @@ fn TransactionMutation::resolve_against_original(
         candidate
       }
   }
-  { bytes, declared_parts: self.declared_parts, warnings: self.warnings }
+  { bytes, declared_parts: self.declared_parts, warnings: self.warnings, }
 }
 
 ///|

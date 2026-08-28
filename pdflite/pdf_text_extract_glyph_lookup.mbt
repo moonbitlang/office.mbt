@@ -20,10 +20,10 @@ fn PdfTextExtractor::pdf_text_encoded_glyph_of_charcode(
   match self.font.pdf_text_glyphname_of_charcode(code) {
     Some(glyphname) =>
       match self.font.pdf_text_codepoints_of_glyphname(glyphname) {
-        Some(codepoints) => { glyphname, codepoints }
-        None => { glyphname, codepoints: [code] }
+        Some(codepoints) => { glyphname, codepoints, }
+        None => { glyphname, codepoints: [code], }
       }
-    None => { glyphname: pdf_text_notdef_name(), codepoints: [code] }
+    None => { glyphname: pdf_text_notdef_name(), codepoints: [code], }
   }
 }
 
@@ -92,20 +92,20 @@ fn PdfTextExtractor::pdf_text_glyph_of_charcode(
       match pdf_text_lookup_tounicode(tounicode, code) {
         Some(bytes) =>
           try pdf_codepoints_of_utf16be(bytes) catch {
-            _ => { glyphname: pdf_text_notdef_name(), codepoints: [code] }
+            _ => { glyphname: pdf_text_notdef_name(), codepoints: [code], }
           } noraise {
             codepoints =>
-              { glyphname: pdf_text_tounicode_glyphname(bytes), codepoints }
+              { glyphname: pdf_text_tounicode_glyphname(bytes), codepoints, }
           }
-        None => { glyphname: pdf_text_notdef_name(), codepoints: [code] }
+        None => { glyphname: pdf_text_notdef_name(), codepoints: [code], }
       }
     None =>
       match self.font.pdf_text_predefined_builtin_codepoints(code) {
-        Some(codepoints) => { glyphname: pdf_text_notdef_name(), codepoints }
+        Some(codepoints) => { glyphname: pdf_text_notdef_name(), codepoints, }
         None =>
           match self.font.pdf_text_external_cmap_codepoints(code) {
             Some(codepoints) =>
-              { glyphname: pdf_text_notdef_name(), codepoints }
+              { glyphname: pdf_text_notdef_name(), codepoints, }
             None => self.pdf_text_encoded_glyph_of_charcode(code)
           }
       }

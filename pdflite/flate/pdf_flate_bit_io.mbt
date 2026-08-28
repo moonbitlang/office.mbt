@@ -8,7 +8,7 @@ priv struct FlateBitReader {
 
 ///|
 fn FlateBitReader::new(bytes : BytesView) -> FlateBitReader {
-  { bytes, byte_pos: 0, bit_buf: 0, bit_count: 0 }
+  { bytes, byte_pos: 0, bit_buf: 0, bit_count: 0, }
 }
 
 ///|
@@ -128,7 +128,7 @@ priv struct FlateBitWriter {
 
 ///|
 fn FlateBitWriter::new(output : Array[Byte]) -> FlateBitWriter {
-  { output, current_byte: 0, bit_count: 0 }
+  { output, current_byte: 0, bit_count: 0, }
 }
 
 ///|

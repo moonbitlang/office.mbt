@@ -40,7 +40,7 @@ fn pdf_text_parsed_cmap_next_charcode(
 
 ///|
 fn pdf_text_identity_codespace() -> PdfCMapCodeSpace {
-  { length: 2, first: 0x0000, last: 0xFFFF }
+  { length: 2, first: 0x0000, last: 0xFFFF, }
 }
 
 ///|

@@ -5,7 +5,7 @@ async test "async file wrappers write and read PDF documents" {
   let original = try! @pdflite.pdf_minimum_valid_pdf()
   pdf_write_document_to_file(original, path)
   let loaded = pdf_read_document_from_file(path)
-  @test.assert_eq(pdf_read_header_from_file(path), { major: 1, minor: 0 })
+  @test.assert_eq(pdf_read_header_from_file(path), { major: 1, minor: 0, })
   @test.assert_eq(pdf_is_linearized_file(path), false)
   pdf_async_io_remove_if_exists_for_test(path)
   @test.assert_eq(try! loaded.endpage(), 1)
@@ -1079,7 +1079,7 @@ async test "async file wrappers read checked-in CamlPDF fixture PDFs" {
   pdf_async_io_remove_if_exists_for_test(intro_decompressed_roundtrip)
 
   let logo = pdf_read_document_from_file(logo_path)
-  @test.assert_eq(pdf_read_header_from_file(logo_path), { major: 1, minor: 4 })
+  @test.assert_eq(pdf_read_header_from_file(logo_path), { major: 1, minor: 4, })
   @test.assert_eq(pdf_is_linearized_file(logo_path), true)
   @test.assert_eq(logo.version(), (1, 4))
   @test.assert_eq(try! logo.endpage(), 1)
@@ -1088,7 +1088,7 @@ async test "async file wrappers read checked-in CamlPDF fixture PDFs" {
   @test.assert_eq(try! logo_reparsed.endpage(), 1)
 
   let intro = pdf_read_document_from_file(intro_path)
-  @test.assert_eq(pdf_read_header_from_file(intro_path), { major: 1, minor: 5 })
+  @test.assert_eq(pdf_read_header_from_file(intro_path), { major: 1, minor: 5, })
   @test.assert_eq(intro.version(), (1, 5))
   pdf_async_io_assert_intro_fixture_text_for_test(intro)
   pdf_write_document_to_file_with_compressed_xref_stream(intro, intro_roundtrip)
@@ -1391,7 +1391,7 @@ async test "async file wrappers do not reconstruct mismatched object-stream root
     create_mode=CreateOrTruncate,
     permission=0o644,
   )
-  @test.assert_eq(pdf_read_header_from_file(path), { major: 1, minor: 5 })
+  @test.assert_eq(pdf_read_header_from_file(path), { major: 1, minor: 5, })
   let strict : Result[@pdflite.PdfDocument, Error] = try
     @pdflite.pdf_read_classic_document_from_bytes(@fs.read_file(path).binary())
   catch {
@@ -1425,7 +1425,7 @@ async test "async file wrappers reject invalid object-stream data slices" {
     create_mode=CreateOrTruncate,
     permission=0o644,
   )
-  @test.assert_eq(pdf_read_header_from_file(path), { major: 1, minor: 5 })
+  @test.assert_eq(pdf_read_header_from_file(path), { major: 1, minor: 5, })
   let result : Result[@pdflite.PdfDocument, Error] = try
     pdf_read_document_from_file(path)
   catch {
@@ -1700,7 +1700,7 @@ async test "async file wrappers reject truncated xref stream data" {
     create_mode=CreateOrTruncate,
     permission=0o644,
   )
-  @test.assert_eq(pdf_read_header_from_file(path), { major: 1, minor: 5 })
+  @test.assert_eq(pdf_read_header_from_file(path), { major: 1, minor: 5, })
   let result : Result[@pdflite.PdfDocument, Error] = try
     pdf_read_document_from_file(path)
   catch {
@@ -1728,7 +1728,7 @@ async test "async file wrappers reconstruct missing startxref PDFs" {
     create_mode=CreateOrTruncate,
     permission=0o644,
   )
-  @test.assert_eq(pdf_read_header_from_file(path), { major: 1, minor: 4 })
+  @test.assert_eq(pdf_read_header_from_file(path), { major: 1, minor: 4, })
   let strict : Result[@pdflite.PdfDocument, Error] = try
     @pdflite.pdf_read_classic_document_from_bytes(@fs.read_file(path).binary())
   catch {
@@ -1786,7 +1786,7 @@ async test "async file wrappers reconstruct literal endobj text in strings" {
     create_mode=CreateOrTruncate,
     permission=0o644,
   )
-  @test.assert_eq(pdf_read_header_from_file(path), { major: 1, minor: 4 })
+  @test.assert_eq(pdf_read_header_from_file(path), { major: 1, minor: 4, })
   let strict : Result[@pdflite.PdfDocument, Error] = try
     @pdflite.pdf_read_classic_document_from_bytes(@fs.read_file(path).binary())
   catch {
@@ -1985,7 +1985,7 @@ async test "async file wrappers stop cyclic Prev chains" {
     create_mode=CreateOrTruncate,
     permission=0o644,
   )
-  @test.assert_eq(pdf_read_header_from_file(path), { major: 1, minor: 4 })
+  @test.assert_eq(pdf_read_header_from_file(path), { major: 1, minor: 4, })
   let result : Result[@pdflite.PdfDocument, Error] = try
     pdf_read_document_from_file(path)
   catch {
@@ -2009,7 +2009,7 @@ async test "async file wrappers read classic Prev revisions" {
     create_mode=CreateOrTruncate,
     permission=0o644,
   )
-  @test.assert_eq(pdf_read_header_from_file(path), { major: 1, minor: 4 })
+  @test.assert_eq(pdf_read_header_from_file(path), { major: 1, minor: 4, })
   @test.assert_eq(pdf_revisions_from_file(path), 2)
   let full = pdf_read_document_from_file(path)
   let latest = pdf_read_document_revision_from_file(path, 1)
@@ -2112,7 +2112,7 @@ async test "async file wrappers read compressed xref stream Prev revisions" {
     create_mode=CreateOrTruncate,
     permission=0o644,
   )
-  @test.assert_eq(pdf_read_header_from_file(path), { major: 1, minor: 5 })
+  @test.assert_eq(pdf_read_header_from_file(path), { major: 1, minor: 5, })
   @test.assert_eq(pdf_revisions_from_file(path), 2)
   let updated = pdf_read_document_from_file(path)
   let older = pdf_read_document_revision_from_file(path, 2)
@@ -2663,7 +2663,7 @@ async test "async file wrappers reconstruct out-of-range startxref PDFs" {
     create_mode=CreateOrTruncate,
     permission=0o644,
   )
-  @test.assert_eq(pdf_read_header_from_file(path), { major: 1, minor: 4 })
+  @test.assert_eq(pdf_read_header_from_file(path), { major: 1, minor: 4, })
   let strict : Result[@pdflite.PdfDocument, Error] = try
     @pdflite.pdf_read_classic_document_from_bytes(@fs.read_file(path).binary())
   catch {
@@ -2695,7 +2695,7 @@ async test "async file wrappers reconstruct in-range bad startxref PDFs" {
     create_mode=CreateOrTruncate,
     permission=0o644,
   )
-  @test.assert_eq(pdf_read_header_from_file(path), { major: 1, minor: 4 })
+  @test.assert_eq(pdf_read_header_from_file(path), { major: 1, minor: 4, })
   let strict : Result[@pdflite.PdfDocument, Error] = try
     @pdflite.pdf_read_classic_document_from_bytes(@fs.read_file(path).binary())
   catch {
@@ -3738,7 +3738,10 @@ async test "async file wrappers load object-stream entries from disk" {
     major: 1,
     minor: 5,
   })
-  @test.assert_eq(pdf_read_header_from_file(stream_path), { major: 1, minor: 5 })
+  @test.assert_eq(pdf_read_header_from_file(stream_path), {
+    major: 1,
+    minor: 5,
+  })
   let entries = pdf_read_document_from_file(entries_path)
   let embedded_stream_doc = pdf_read_document_from_file(stream_path)
   pdf_write_document_to_file_with_compressed_xref_stream(
@@ -3836,7 +3839,7 @@ async test "async file wrappers reconstruct multi-revision object-stream roots" 
     create_mode=CreateOrTruncate,
     permission=0o644,
   )
-  @test.assert_eq(pdf_read_header_from_file(path), { major: 1, minor: 5 })
+  @test.assert_eq(pdf_read_header_from_file(path), { major: 1, minor: 5, })
   let strict : Result[@pdflite.PdfDocument, Error] = try
     @pdflite.pdf_read_classic_document_from_bytes(@fs.read_file(path).binary())
   catch {
@@ -3928,7 +3931,10 @@ async test "async file wrappers do not reconstruct object-stream decode failures
     create_mode=CreateOrTruncate,
     permission=0o644,
   )
-  @test.assert_eq(pdf_read_header_from_file(filter_path), { major: 1, minor: 5 })
+  @test.assert_eq(pdf_read_header_from_file(filter_path), {
+    major: 1,
+    minor: 5,
+  })
   let filter_result : Result[@pdflite.PdfDocument, Error] = try
     pdf_read_document_from_file(filter_path)
   catch {
@@ -3982,7 +3988,7 @@ async test "async file wrappers reconstruct indirect object-stream bounds" {
     create_mode=CreateOrTruncate,
     permission=0o644,
   )
-  @test.assert_eq(pdf_read_header_from_file(path), { major: 1, minor: 5 })
+  @test.assert_eq(pdf_read_header_from_file(path), { major: 1, minor: 5, })
   let strict : Result[@pdflite.PdfDocument, Error] = try
     @pdflite.pdf_read_classic_document_from_bytes(@fs.read_file(path).binary())
   catch {
@@ -4027,7 +4033,7 @@ async test "async file wrappers reconstruct object streams with indirect filters
     create_mode=CreateOrTruncate,
     permission=0o644,
   )
-  @test.assert_eq(pdf_read_header_from_file(path), { major: 1, minor: 5 })
+  @test.assert_eq(pdf_read_header_from_file(path), { major: 1, minor: 5, })
   let strict : Result[@pdflite.PdfDocument, Error] = try
     @pdflite.pdf_read_classic_document_from_bytes(@fs.read_file(path).binary())
   catch {
@@ -4146,7 +4152,7 @@ async test "async file wrappers reject encrypted xref streams with missing objec
     create_mode=CreateOrTruncate,
     permission=0o644,
   )
-  @test.assert_eq(pdf_read_header_from_file(path), { major: 1, minor: 5 })
+  @test.assert_eq(pdf_read_header_from_file(path), { major: 1, minor: 5, })
   let result : Result[@pdflite.PdfDecryptionResult?, Error] = try
     pdf_read_document_from_file_with_passwords(path)
   catch {

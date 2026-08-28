@@ -363,7 +363,7 @@ fn docx_residual(
   location : Json,
   detail : String,
 ) -> DumpResidual {
-  { code, severity: "dropped", scope, location, asset: None, detail }
+  { code, severity: "dropped", scope, location, asset: None, detail, }
 }
 
 ///|

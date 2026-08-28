@@ -103,8 +103,8 @@ async test "feature matrix is Microsoft OpenXML schema-valid" {
   ss.set_cell_value("A1", Numeric(1234.5))
   styled.set_cell_style("Sheet1", "A1", style)
   ss.set_cell_rich_text("A2", [
-    { text: "run one ", font: None },
-    { text: "run two", font: None },
+    { text: "run one ", font: None, },
+    { text: "run two", font: None, },
   ])
   styled.set_defined_name(@xlsx.DefinedName::new("Total", "Sheet1!$A$1"))
   validate_via_sdk(dir, "styles_richtext", @xlsx.write(styled))

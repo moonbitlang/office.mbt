@@ -32,8 +32,8 @@ test "rich text set/get" {
     family: Some("Calibri"),
   }
   let runs : Array[@xlsx.RichTextRun] = [
-    { text: "Hello ", font: None },
-    { text: "World", font: Some(font) },
+    { text: "Hello ", font: None, },
+    { text: "World", font: Some(font), },
   ]
   workbook.set_cell_rich_text("Sheet1", "A1", runs)
   debug_inspect(
@@ -104,8 +104,8 @@ test "rich text get on non-string cell returns None" {
 test "rich text set updates existing cell" {
   let workbook = @xlsx.Workbook::new()
   ignore(workbook.add_sheet("Sheet1"))
-  workbook.set_cell_rich_text("Sheet1", "A1", [{ text: "v1", font: None }])
-  workbook.set_cell_rich_text("Sheet1", "A1", [{ text: "v2", font: None }])
+  workbook.set_cell_rich_text("Sheet1", "A1", [{ text: "v1", font: None, }])
+  workbook.set_cell_rich_text("Sheet1", "A1", [{ text: "v2", font: None, }])
   debug_inspect(workbook.get_cell("Sheet1", "A1"), content="Some(\"v2\")")
 }
 
@@ -134,8 +134,8 @@ test "rich text roundtrip" {
     family: Some("Arial"),
   }
   let runs : Array[@xlsx.RichTextRun] = [
-    { text: "Moon", font: Some(font) },
-    { text: "Bit", font: None },
+    { text: "Moon", font: Some(font), },
+    { text: "Bit", font: None, },
   ]
   workbook.set_cell_rich_text("Sheet1", "B2", runs)
   let parsed = @xlsx.read(@xlsx.write(workbook))
@@ -189,7 +189,7 @@ test "rich text length limit uses utf16" {
   let emoji_bytes : Bytes = [0xf0, 0x9f, 0x98, 0x80]
   let emoji = @encoding/utf8.decode(emoji_bytes)
   let text = repeat_rich_text(emoji, 16384)
-  let runs : Array[@xlsx.RichTextRun] = [{ text, font: None }]
+  let runs : Array[@xlsx.RichTextRun] = [{ text, font: None, }]
   let result : Result[Unit, Error] = Ok(
     workbook.set_cell_rich_text("Sheet1", "A1", runs),
   ) catch {
@@ -222,7 +222,7 @@ test "rich text font extended fields roundtrip" {
     vert_align: Some("superscript"),
     family: Some("Calibri"),
   }
-  let runs : Array[@xlsx.RichTextRun] = [{ text: "X", font: Some(font) }]
+  let runs : Array[@xlsx.RichTextRun] = [{ text: "X", font: Some(font), }]
   workbook.set_cell_rich_text("Sheet1", "C3", runs)
   let bytes = @xlsx.write(workbook)
   let archive = @zip.read(bytes)
@@ -324,8 +324,8 @@ test "rich text color theme/indexed/tint roundtrip" {
     family: None,
   }
   workbook.set_cell_rich_text("Sheet1", "D4", [
-    { text: "T", font: Some(font_theme) },
-    { text: "I", font: Some(font_indexed) },
+    { text: "T", font: Some(font_theme), },
+    { text: "I", font: Some(font_indexed), },
   ])
   let bytes = @xlsx.write(workbook)
   let archive = @zip.read(bytes)

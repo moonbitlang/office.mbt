@@ -45,7 +45,7 @@ fn pdf_ua_matterhorn_test_02_001() -> PdfUAMatterhornTest {
 
 ///|
 fn pdf_ua_matterhorn_test_02_003() -> PdfUAMatterhornTest {
-  { name: "02-003", error: "A circular mapping exists.", section: "UA1:7.1-3" }
+  { name: "02-003", error: "A circular mapping exists.", section: "UA1:7.1-3", }
 }
 
 ///|

@@ -532,7 +532,7 @@ test "pdf_page_label_add_label inserts a bounded label range" {
   }
   @test.assert_eq(
     @pdflite.pdf_page_label_add_label(12, [basic, appendix], inserted, 5),
-    [basic, inserted, { ..basic, start_page: 6, start_value: 6 }, appendix],
+    [basic, inserted, { ..basic, start_page: 6, start_value: 6, }, appendix],
   )
 }
 
@@ -591,7 +591,7 @@ test "pdf_page_label_add_label removes overlapped ranges" {
       inserted,
       6,
     ),
-    [basic, inserted, { ..old_inner, start_page: 7, start_value: 4 }, after],
+    [basic, inserted, { ..old_inner, start_page: 7, start_value: 4, }, after],
   )
 }
 
@@ -612,7 +612,7 @@ test "pdf_page_label_add_label replaces an existing same-start label" {
   }
   @test.assert_eq(
     @pdflite.pdf_page_label_add_label(10, [basic, old], inserted, 6),
-    [basic, inserted, { ..old, start_page: 7, start_value: 4 }],
+    [basic, inserted, { ..old, start_page: 7, start_value: 4, }],
   )
 }
 
@@ -822,7 +822,7 @@ test "pdf_page_label_merge uses basic labels for unlabeled source PDFs" {
   let doc = page_label_catalog_document_for_test()
   let merged = try! @pdflite.pdf_page_label_merge([doc], [[2, 3]])
   @test.assert_eq(merged, [
-    { ..@label.pdf_page_label_basic, start_page: 1, start_value: 2 },
+    { ..@label.pdf_page_label_basic, start_page: 1, start_value: 2, },
   ])
   @test.assert_eq(
     @label.pdf_page_label_text_of_page_number(2, merged),
@@ -864,7 +864,7 @@ test "PdfDocument add_page_labels splits ranges and progresses numbering" {
       start_page: 2,
       start_value: 10,
     },
-    { ..@label.pdf_page_label_basic, start_page: 4, start_value: 4 },
+    { ..@label.pdf_page_label_basic, start_page: 4, start_value: 4, },
     {
       label_style: PageLabelDecimalArabic,
       label_prefix: Some(page_label_bytes_for_test("A-")),
@@ -1023,7 +1023,7 @@ test "PdfDocument add_page_labels preserves an existing page one label" {
       start_page: 3,
       start_value: 1,
     },
-    { ..original, start_page: 4, start_value: 6 },
+    { ..original, start_page: 4, start_value: 6, },
   ])
 }
 

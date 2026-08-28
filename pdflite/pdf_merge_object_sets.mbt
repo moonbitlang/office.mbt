@@ -19,7 +19,7 @@ priv struct PdfMergeNameSet {
 
 ///|
 fn pdf_merge_name_set() -> PdfMergeNameSet {
-  { values: HashMap([]) }
+  { values: HashMap([]), }
 }
 
 ///|
@@ -42,7 +42,7 @@ priv struct PdfMergeBytesSet {
 
 ///|
 fn pdf_merge_bytes_set() -> PdfMergeBytesSet {
-  { values: HashMap([]) }
+  { values: HashMap([]), }
 }
 
 ///|

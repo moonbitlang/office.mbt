@@ -1,7 +1,7 @@
 ///|
 /// Serializes HTML nodes to Markdown.
 pub fn write_markdown(nodes : Array[HtmlNode]) -> String {
-  let writer = MarkdownWriter::{ buffer: StringBuilder() }
+  let writer = MarkdownWriter::{ buffer: StringBuilder(), }
   writer.write_nodes(nodes)
   writer.buffer.to_string()
 }

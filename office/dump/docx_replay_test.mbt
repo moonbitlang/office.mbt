@@ -50,14 +50,14 @@ test "docx replay refuses wrong formats and schemas" {
     residual: [],
     warnings: [],
   }
-  try @dump.replay_docx_dump({ ..base, format: "xlsx" }) |> ignore catch {
+  try @dump.replay_docx_dump({ ..base, format: "xlsx", }) |> ignore catch {
     ReplayInvalidFormat(_) => ()
     _ => fail("expected a format refusal")
   } noraise {
     _ => fail("expected a format refusal")
   }
   try
-    @dump.replay_docx_dump({ ..base, batch_schema: "docx.batch/1" }) |> ignore
+    @dump.replay_docx_dump({ ..base, batch_schema: "docx.batch/1", }) |> ignore
   catch {
     ReplayInvalidFormat(_) => ()
     _ => fail("expected a schema refusal")

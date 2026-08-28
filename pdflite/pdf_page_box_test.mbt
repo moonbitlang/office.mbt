@@ -202,7 +202,7 @@ test "PdfDocument copy_page_box copies selected boxes and wrappers" {
   let string_pages = try! copied_string.pages_of_pagetree()
   @test.assert_eq(
     try! copied_string.parse_rectangle(string_pages[0].mediabox),
-    { min_x: 10.0, min_y: 20.0, max_x: 90.0, max_y: 150.0 },
+    { min_x: 10.0, min_y: 20.0, max_x: 90.0, max_y: 150.0, },
   )
 }
 

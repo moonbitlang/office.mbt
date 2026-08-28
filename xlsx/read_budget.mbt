@@ -15,7 +15,7 @@ fn ReadBudget::new(
   limits : ReadLimits,
   cancelled? : () -> Bool = () => false,
 ) -> ReadBudget {
-  { limits, cancelled, parser_items: 0, parser_work_units: 0 }
+  { limits, cancelled, parser_items: 0, parser_work_units: 0, }
 }
 
 ///|

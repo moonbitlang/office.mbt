@@ -205,7 +205,7 @@ fn office_render_select(
   for page in pages {
     selected.push(model.pages[page - 1])
   }
-  { fonts: model.fonts, pages: selected }
+  { fonts: model.fonts, pages: selected, }
 }
 
 ///|

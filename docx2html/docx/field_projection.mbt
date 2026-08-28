@@ -96,7 +96,7 @@ priv struct ReaderFieldIndex {
 
 ///|
 fn empty_reader_field_index() -> ReaderFieldIndex {
-  { fields: [], refusals: [] }
+  { fields: [], refusals: [], }
 }
 
 ///|
@@ -338,7 +338,7 @@ fn scan_reader_field_carrier(
     }
   }
   visit(identity)
-  { marker_identity, marker_count, repeated_instruction }
+  { marker_identity, marker_count, repeated_instruction, }
 }
 
 ///|
@@ -466,7 +466,7 @@ fn reader_current_field_class(
       }
     }
     None =>
-      { field_identity: None, region: OutsideField, refusal_identity: None }
+      { field_identity: None, region: OutsideField, refusal_identity: None, }
   }
 }
 
@@ -579,7 +579,7 @@ fn classify_reader_carrier(
         begin_marker_identity: marker_identity,
         begin_carrier_identity: carrier_identity,
         instruction: {
-          start: { carrier_identity, side: AfterCarrier },
+          start: { carrier_identity, side: AfterCarrier, },
           end: None,
         },
         separate_marker_identity: None,
@@ -620,7 +620,7 @@ fn classify_reader_carrier(
             field.separate_marker_identity = Some(marker_identity)
             field.separate_carrier_identity = Some(carrier_identity)
             field.result = Some({
-              start: { carrier_identity, side: AfterCarrier },
+              start: { carrier_identity, side: AfterCarrier, },
               end: None,
             })
             {
@@ -648,7 +648,7 @@ fn classify_reader_carrier(
           let field = index.fields[field_identity]
           let region = match field.result {
             Some(result) => {
-              result.end = Some({ carrier_identity, side: BeforeCarrier })
+              result.end = Some({ carrier_identity, side: BeforeCarrier, })
               FieldResult
             }
             None => {
@@ -817,7 +817,7 @@ fn classify_reader_field_slots(
     }
     let summary = match state.failed_refusal {
       Some(_) =>
-        { marker_identity: None, marker_count: 0, repeated_instruction: None }
+        { marker_identity: None, marker_count: 0, repeated_instruction: None, }
       None => {
         // BodyReader collects all instruction text in the carrier before
         // it interprets the carrier's first descendant field marker.

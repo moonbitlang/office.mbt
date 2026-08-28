@@ -67,7 +67,7 @@ pub fn PdfDocument::prepend_operators(
   fast? : Bool = false,
 ) -> @page.PdfPage raise @core.PdfError {
   if fast {
-    { ..page, content: [pdf_content_stream_of_ops(ops), ..page.content] }
+    { ..page, content: [pdf_content_stream_of_ops(ops), ..page.content], }
   } else {
     let old_ops = self.pdf_page_parse_content_ops(page.resources, page.content)
     {
@@ -114,7 +114,7 @@ pub fn PdfDocument::postpend_operators(
       page.content,
     )
     if existing_ops.length() == 0 {
-      { ..page, content: [pdf_content_stream_of_ops(ops)] }
+      { ..page, content: [pdf_content_stream_of_ops(ops)], }
     } else {
       let before_ops : Array[@content.PdfContentOp] = [Op_q]
       let after_ops = pdf_page_concat3_ops(

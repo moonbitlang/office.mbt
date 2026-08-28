@@ -7,7 +7,7 @@ pub fn PdfDocument::content_apply_extgstate_compositing_op(
 ) -> PdfContentOperatorState {
   let mut output = state
   match self.lookup_direct(pdf_content_extgstate_bm_name, extgstate) {
-    Some(value) => output = { ..output, blend_mode: value }
+    Some(value) => output = { ..output, blend_mode: value, }
     None => ()
   }
   match

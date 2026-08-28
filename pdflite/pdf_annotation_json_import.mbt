@@ -28,7 +28,7 @@ fn pdf_annotation_json_import_data(
     Array(values) => values
     _ => raise SoftError("Bad Annotations JSON file")
   }
-  let max_object_number = Ref::{ val: 0 }
+  let max_object_number = Ref::{ val: 0, }
   let extras : Array[(Int, @syntax.PdfObject)] = Array::new(
     capacity=entries.length(),
   )
@@ -64,7 +64,7 @@ fn pdf_annotation_json_import_data(
       _ => raise SoftError("Bad annots entry")
     }
   }
-  { max_object_number: max_object_number.val, extras, annotations }
+  { max_object_number: max_object_number.val, extras, annotations, }
 }
 
 ///|

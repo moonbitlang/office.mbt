@@ -14,23 +14,23 @@ pub fn PdfDocument::content_apply_extgstate_overprint_op(
       extgstate, pdf_content_extgstate_op_stroke_name,
     ) {
     Some(value) => {
-      output = { ..output, overprint_stroke: value }
+      output = { ..output, overprint_stroke: value, }
       match non_stroke_overprint {
         Some(_) => ()
-        None => output = { ..output, overprint_non_stroke: value }
+        None => output = { ..output, overprint_non_stroke: value, }
       }
     }
     None => ()
   }
   match non_stroke_overprint {
-    Some(value) => output = { ..output, overprint_non_stroke: value }
+    Some(value) => output = { ..output, overprint_non_stroke: value, }
     None => ()
   }
   match
     self.content_extgstate_integer(
       extgstate, pdf_content_extgstate_op_non_stroke_name,
     ) {
-    Some(value) => output = { ..output, overprint_mode: value }
+    Some(value) => output = { ..output, overprint_mode: value, }
     None => ()
   }
   output

@@ -38,7 +38,7 @@ pub fn byte_cursor_of_view(
   data : BytesView,
   source? : String = "bytes",
 ) -> ByteCursor {
-  { data, position: 0, offset: 0, source }
+  { data, position: 0, offset: 0, source, }
 }
 
 ///|

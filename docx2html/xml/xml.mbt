@@ -20,7 +20,7 @@ pub fn xml_element(
   attributes? : Map[String, String] = Map([]),
   children? : Array[XmlNode] = [],
 ) -> XmlElement {
-  { name, attributes: SortedMap(attributes.to_array()), children }
+  { name, attributes: SortedMap(attributes.to_array()), children, }
 }
 
 ///|
@@ -582,7 +582,7 @@ pub fn write_xml_fragment_limited(
   }
   sizer.size_element(element, is_root=true, depth=0)
   let output_bytes = limit - sizer.remaining_bytes
-  let writer = XmlWriter::{ namespaces, namespace_lookup }
+  let writer = XmlWriter::{ namespaces, namespace_lookup, }
   let builder = StringBuilder(size_hint=output_bytes)
   writer.write_element(builder, element, is_root=true)
   builder.to_string()
@@ -980,7 +980,7 @@ fn finish_namespace_lookup(
     }
     previous_uri = Some(uri)
   }
-  { entries, max_uri_chars }
+  { entries, max_uri_chars, }
 }
 
 ///|
@@ -1419,7 +1419,7 @@ fn XmlParser::record_namespace_binding(
     Some(budget) => budget.charge_namespace_bindings(2)
     None => ()
   }
-  changes.push({ prefix, previous: self.namespaces.get(prefix) })
+  changes.push({ prefix, previous: self.namespaces.get(prefix), })
   self.namespaces[prefix] = namespace_uri
   self.invalidate_name_caches()
 }
@@ -1669,7 +1669,7 @@ fn XmlParser::build_element(
     let local_name = if prefix == "" { "xmlns" } else { prefix }
     attributes[self.materialize_braced_name(XMLNS_NAMESPACE_URI, local_name)] = namespace_uri
   }
-  { name: self.map_name(raw_name, is_attribute=false), attributes, children }
+  { name: self.map_name(raw_name, is_attribute=false), attributes, children, }
 }
 
 ///|

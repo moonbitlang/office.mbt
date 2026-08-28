@@ -1647,7 +1647,7 @@ fn scan_story(
             Some(frame) => frame.projection_path
             None => None
           }
-          revisions.push({ kind, id, author, date, container_path })
+          revisions.push({ kind, id, author, date, container_path, })
           work.emitted_revisions += 1
           if author is None {
             warnings.add(
@@ -2066,7 +2066,7 @@ fn build_story_level_positions(
     } else {
       match nearest_before {
         Some(node) =>
-          positions[marker.seq] = { path: node.path, node_is_after: false }
+          positions[marker.seq] = { path: node.path, node_is_after: false, }
         None => ()
       }
     }

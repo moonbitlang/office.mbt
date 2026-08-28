@@ -218,7 +218,7 @@ pub fn pdf_reader_reconstruction_xref_coverage(
       None => ()
     }
   }
-  { sections: covered }
+  { sections: covered, }
 }
 
 ///|

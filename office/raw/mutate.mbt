@@ -125,7 +125,7 @@ fn parse_raw_attribute_name(
       "office.raw.invalid_attribute", "attribute name is empty or exceeds the bounded qualified-name limit",
     )
   }
-  let parser = RawPathParser::{ source, offset: 0, namespaces }
+  let parser = RawPathParser::{ source, offset: 0, namespaces, }
   let name = parser.parse_qname() catch {
     RawError(code=_, message~, ..) =>
       raise raw_error("office.raw.invalid_attribute", message)
@@ -300,7 +300,7 @@ fn raw_element_edit(
       } else {
         node.start_tag_end
       }
-      { start: at, end: at, replacement: child, ordinal }
+      { start: at, end: at, replacement: child, ordinal, }
     }
     InsertBefore | InsertAfter => {
       if node.parent < 0 {
@@ -310,7 +310,7 @@ fn raw_element_edit(
         )
       }
       let at = if action is InsertBefore { node.start } else { node.end }
-      { start: at, end: at, replacement: fragment.unwrap(), ordinal }
+      { start: at, end: at, replacement: fragment.unwrap(), ordinal, }
     }
     Replace =>
       {
@@ -325,7 +325,7 @@ fn raw_element_edit(
           "office.raw.invalid_action", "remove cannot target the document element",
         )
       }
-      { start: node.start, end: node.end, replacement: b"", ordinal }
+      { start: node.start, end: node.end, replacement: b"", ordinal, }
     }
     SetAttribute => {
       let name = attribute_name.unwrap()

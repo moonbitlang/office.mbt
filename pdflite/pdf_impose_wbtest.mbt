@@ -620,7 +620,7 @@ test "pdf_impose_transforms applies fit spacing and margin transforms" {
       output_height=100.0,
       count=1,
     ),
-    [{ a: 0.8, b: 0.0, c: 0.0, d: 0.8, e: 20.0, f: 10.0 }],
+    [{ a: 0.8, b: 0.0, c: 0.0, d: 0.8, e: 20.0, f: 10.0, }],
   )
 }
 

@@ -24,7 +24,7 @@ fn pdf_flate_push_code_length_token(
   extra? : Int = 0,
   extra_width? : Int = 0,
 ) -> Unit {
-  output.push({ symbol, extra, extra_width })
+  output.push({ symbol, extra, extra_width, })
 }
 
 ///|

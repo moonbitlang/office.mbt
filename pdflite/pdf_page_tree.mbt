@@ -6,7 +6,7 @@
 pub fn PdfDocument::pages_of_pagetree(
   self : PdfDocument,
 ) -> Array[@page.PdfPage] raise @core.PdfError {
-  let last_mediabox = Ref::{ val: pdf_page_default_mediabox() }
+  let last_mediabox = Ref::{ val: pdf_page_default_mediabox(), }
   self.pdf_pages_of_node(
     pdf_page_root_pages_node(self),
     None,

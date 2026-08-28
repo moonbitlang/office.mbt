@@ -187,7 +187,7 @@ fn pdf_content_matrix_from_operands(
       pdf_content_operand_number(operands, 5),
     ) {
     (Some(a), Some(b), Some(c), Some(d), Some(e), Some(f)) =>
-      Some({ a, b, c, d, e, f })
+      Some({ a, b, c, d, e, f, })
     _ => None
   }
 }

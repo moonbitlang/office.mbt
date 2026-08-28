@@ -424,7 +424,7 @@ test "reading a joined story yields effects with physical identities" {
   guard story.root.first("w:body") is Some(body) else {
     fail("expected a body")
   }
-  let items = empty_body_reader({ relationships: [] }).read_children(
+  let items = empty_body_reader({ relationships: [], }).read_children(
     body.element_children(),
   )
   let labelled : Array[String] = []
@@ -444,7 +444,7 @@ test "reading a joined story yields effects with physical identities" {
   inspect(labelled.join(" ; "), content="text=a@4 ; text=\t@5 ; text=b@8")
   // and the produced trees' own sources carry identities too
   guard items[0]
-    is New({ source: paragraph_source, local_effects: _, shape: _ }) else {
+    is New({ source: paragraph_source, local_effects: _, shape: _, }) else {
     fail("expected a paragraph tree")
   }
   debug_inspect(
@@ -466,7 +466,7 @@ test "joined identities survive the rebuilding transforms" {
   guard story.root.first("w:body") is Some(body) else {
     fail("expected a body")
   }
-  let items = empty_body_reader({ relationships: [] }).read_children(
+  let items = empty_body_reader({ relationships: [], }).read_children(
     body.element_children(),
   )
   // document=0 body=1 tbl=2 tr=3 tc=4 tcPr=5 vMerge=6 p=7 r=8 t=9
@@ -510,7 +510,7 @@ test "joined paragraph inputs record the deleted prefix paragraphs" {
   guard story.root.first("w:body") is Some(body) else {
     fail("expected a body")
   }
-  let items = empty_body_reader({ relationships: [] }).read_children(
+  let items = empty_body_reader({ relationships: [], }).read_children(
     body.element_children(),
   )
   guard items[0]

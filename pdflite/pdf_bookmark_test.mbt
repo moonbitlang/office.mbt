@@ -47,7 +47,7 @@ fn bookmark_colour_for_test(
   green : Double,
   blue : Double,
 ) -> @bookmark.PdfBookmarkColour {
-  { red, green, blue }
+  { red, green, blue, }
 }
 
 ///|
@@ -1331,7 +1331,7 @@ test "PdfDocument transform_bookmark transforms bookmark target" {
       @geometry.transform_translate(10.0, 20.0),
       bookmark,
     ),
-    { ..bookmark, target: DestFitH(TargetPageObject(7), Some(25.0)) },
+    { ..bookmark, target: DestFitH(TargetPageObject(7), Some(25.0)), },
   )
   @test.assert_eq(
     try! @pdflite.pdf_transform_bookmark(
@@ -1339,6 +1339,6 @@ test "PdfDocument transform_bookmark transforms bookmark target" {
       @geometry.transform_translate(10.0, 20.0),
       bookmark,
     ),
-    { ..bookmark, target: DestFitH(TargetPageObject(7), Some(25.0)) },
+    { ..bookmark, target: DestFitH(TargetPageObject(7), Some(25.0)), },
   )
 }

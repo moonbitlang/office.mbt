@@ -18,5 +18,5 @@ pub fn pdf_portfolio_entry(
   relationship? : String? = None,
   description? : String? = None,
 ) -> PdfPortfolioEntry {
-  { filename, data: data.to_owned(), relationship, description }
+  { filename, data: data.to_owned(), relationship, description, }
 }

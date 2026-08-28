@@ -142,7 +142,7 @@ fn pdf_flate_canonical_codes(lengths : ArrayView[Int]) -> Array[Int] {
 /// which is what should happen, since a block that declared no distance codes
 /// has no business reading one.
 fn pdf_flate_empty_huffman() -> FlateHuffmanTable {
-  { max_bits: 1, sym: [-1, -1], len: [0, 0] }
+  { max_bits: 1, sym: [-1, -1], len: [0, 0], }
 }
 
 ///|
@@ -209,7 +209,7 @@ fn pdf_flate_build_huffman(
       len_table[index] = length
     }
   }
-  { max_bits, sym, len: len_table }
+  { max_bits, sym, len: len_table, }
 }
 
 ///|

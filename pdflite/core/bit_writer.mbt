@@ -12,7 +12,7 @@ pub struct BitWriter {
 ///|
 /// Creates an empty bit writer.
 pub fn bit_writer_new() -> BitWriter {
-  { current_byte: 0, bit_index: 0, bytes: [] }
+  { current_byte: 0, bit_index: 0, bytes: [], }
 }
 
 ///|

@@ -14,7 +14,7 @@ priv struct Relationships {
 
 ///|
 fn Relationships::new() -> Relationships {
-  { items: [], next_id: 1 }
+  { items: [], next_id: 1, }
 }
 
 ///|
@@ -26,7 +26,7 @@ fn Relationships::add_auto(
 ) -> String {
   let id = "rId\{self.next_id}"
   self.next_id = self.next_id + 1
-  self.items.push({ id, rel_type, target, target_mode })
+  self.items.push({ id, rel_type, target, target_mode, })
   id
 }
 

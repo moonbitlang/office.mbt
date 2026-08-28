@@ -7,7 +7,7 @@ pub fn PdfDocument::content_apply_extgstate_text_op(
 ) -> PdfContentOperatorState {
   match self.lookup_direct(pdf_content_extgstate_tk_key(), extgstate) {
     Some(PdfBoolean(knockout)) =>
-      { ..state, text_state: { ..state.text_state, knockout, } }
+      { ..state, text_state: { ..state.text_state, knockout, }, }
     _ => state
   }
 }

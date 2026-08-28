@@ -56,7 +56,7 @@ test "cpdfcontent text state exposes initial defaults and basic operators" {
   @test.assert_eq(initial.font, "")
   @test.assert_eq(
     initial.current_font,
-    PdfFontStandard({ font: PdfTimesRoman, encoding: PdfWinAnsiEncoding }),
+    PdfFontStandard({ font: PdfTimesRoman, encoding: PdfWinAnsiEncoding, }),
   )
   @test.assert_eq(initial.font_cache.length(), 0)
   @test.assert_eq(initial.font_size, 12.0)
@@ -153,7 +153,7 @@ fn content_text_font_descriptor_for_test() -> @pdflite.PdfFontDescriptor {
     avgwidth: 0.0,
     maxwidth: 0.0,
     flags: 0,
-    fontbbox: { min_x: 0.0, min_y: 0.0, max_x: 0.0, max_y: 0.0 },
+    fontbbox: { min_x: 0.0, min_y: 0.0, max_x: 0.0, max_y: 0.0, },
     italicangle: 0.0,
     capheight: 0.0,
     xheight: 0.0,
@@ -174,7 +174,7 @@ fn content_text_simple_width_font_for_test() -> @pdflite.PdfFont {
     widths: [],
     fontdescriptor: Some({
       ..content_text_font_descriptor_for_test(),
-      fontbbox: { min_x: 0.0, min_y: -200.0, max_x: 600.0, max_y: 800.0 },
+      fontbbox: { min_x: 0.0, min_y: -200.0, max_x: 600.0, max_y: 800.0, },
     }),
     fontmetrics: Some(
       [
@@ -406,7 +406,7 @@ test "cpdfcontent extra metrics mirror font-specific fallbacks" {
     ..content_text_font_descriptor_for_test(),
     ascent: 810.0,
     descent: -190.0,
-    fontbbox: { min_x: -20.0, min_y: -210.0, max_x: 520.0, max_y: 730.0 },
+    fontbbox: { min_x: -20.0, min_y: -210.0, max_x: 520.0, max_y: 730.0, },
   }
   let simple : @pdflite.PdfFont = PdfFontSimple({
     fonttype: PdfTrueType,
@@ -428,8 +428,8 @@ test "cpdfcontent extra metrics mirror font-specific fallbacks" {
   @test.assert_eq(cid.content_extra_metrics(), (700.0, -180.0))
   let type3 : @pdflite.PdfFont = PdfFontSimple({
     fonttype: PdfType3({
-      fontbbox: { min_x: 1.0, min_y: -200.0, max_x: 500.0, max_y: 700.0 },
-      fontmatrix: { a: 1.0, b: 0.0, c: 0.0, d: 0.5, e: 2.0, f: 3.0 },
+      fontbbox: { min_x: 1.0, min_y: -200.0, max_x: 500.0, max_y: 700.0, },
+      fontmatrix: { a: 1.0, b: 0.0, c: 0.0, d: 0.5, e: 2.0, f: 3.0, },
       charprocs: [],
       resources: @syntax.pdf_dictionary([]),
     }),
@@ -505,7 +505,7 @@ test "cpdfcontent vertical predicate mirrors source CMap cases" {
   let external_horizontal : @pdflite.PdfFont = PdfFontCIDKeyed({
     basefont: content_text_name_for_test("/Top"),
     composite,
-    encoding: PdfExternalCMap(8, { ..parsed_vertical, wmode: Some(0) }),
+    encoding: PdfExternalCMap(8, { ..parsed_vertical, wmode: Some(0), }),
   })
   @test.assert_eq(external_horizontal.content_is_vertical(), false)
 }
@@ -526,8 +526,8 @@ test "cpdfcontent width of charcode mirrors font metric branches" {
   @test.assert_eq(simple.content_width_of_charcode(3), (0.0, 0.0, 0.0))
   let type3 : @pdflite.PdfFont = PdfFontSimple({
     fonttype: PdfType3({
-      fontbbox: { min_x: 0.0, min_y: 0.0, max_x: 0.0, max_y: 0.0 },
-      fontmatrix: { a: 0.5, b: 0.0, c: 0.0, d: 1.0, e: 0.0, f: 0.0 },
+      fontbbox: { min_x: 0.0, min_y: 0.0, max_x: 0.0, max_y: 0.0, },
+      fontmatrix: { a: 0.5, b: 0.0, c: 0.0, d: 1.0, e: 0.0, f: 0.0, },
       charprocs: [],
       resources: @syntax.pdf_dictionary([]),
     }),
@@ -573,7 +573,7 @@ test "cpdfcontent width of charcode mirrors font metric branches" {
       {
         ..font.composite,
         cid_widths: [(5, 600.0), (6, 640.0)],
-        cid_widths2: [(5, { width: 700.0, vx: 11.0, vy: 12.0 })],
+        cid_widths2: [(5, { width: 700.0, vx: 11.0, vy: 12.0, })],
         cid_default_width2: [880.0, -1000.0],
       }
     _ => abort("expected CID font")
@@ -604,7 +604,7 @@ test "cpdfcontent text layout mirrors horizontal process_tj placement" {
     widths: [],
     fontdescriptor: Some({
       ..content_text_font_descriptor_for_test(),
-      fontbbox: { min_x: 0.0, min_y: -200.0, max_x: 600.0, max_y: 800.0 },
+      fontbbox: { min_x: 0.0, min_y: -200.0, max_x: 600.0, max_y: 800.0, },
     }),
     fontmetrics: Some(
       [
@@ -689,7 +689,7 @@ test "cpdfcontent text layout mirrors vertical process_tj placement" {
     PdfFontCIDKeyed(font) =>
       {
         ..font.composite,
-        cid_widths2: [(0x0102, { width: 700.0, vx: 20.0, vy: 30.0 })],
+        cid_widths2: [(0x0102, { width: 700.0, vx: 20.0, vy: 30.0, })],
       }
     _ => abort("expected CID font")
   }
@@ -745,7 +745,7 @@ test "cpdfcontent TJ layout applies horizontal numeric adjustments" {
     widths: [],
     fontdescriptor: Some({
       ..content_text_font_descriptor_for_test(),
-      fontbbox: { min_x: 0.0, min_y: -200.0, max_x: 600.0, max_y: 800.0 },
+      fontbbox: { min_x: 0.0, min_y: -200.0, max_x: 600.0, max_y: 800.0, },
     }),
     fontmetrics: Some([ for _ in 0..<256 => 500.0 ]),
     encoding: PdfWinAnsiEncoding,
@@ -802,7 +802,7 @@ test "cpdfcontent TJ layout applies vertical numeric adjustments" {
     PdfFontCIDKeyed(font) =>
       {
         ..font.composite,
-        cid_widths2: [(0x0102, { width: 700.0, vx: 0.0, vy: 0.0 })],
+        cid_widths2: [(0x0102, { width: 700.0, vx: 0.0, vy: 0.0, })],
       }
     _ => abort("expected CID font")
   }

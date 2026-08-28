@@ -25,7 +25,7 @@ pub fn create_transaction_options(
       details=Json::object({ "field": Json::string("permission") }),
     )
   }
-  { output_path, dry_run, overwrite, permission }
+  { output_path, dry_run, overwrite, permission, }
 }
 
 ///|

@@ -383,13 +383,13 @@ fn xlsx_used_rect(
   if max_col < 1 || max_row < 1 {
     None
   } else {
-    Some({ col_lo: 1, row_lo: 1, col_hi: max_col, row_hi: max_row })
+    Some({ col_lo: 1, row_lo: 1, col_hi: max_col, row_hi: max_row, })
   }
 }
 
 ///|
 fn XlsxStoredCellBudget::new(maximum : Int) -> XlsxStoredCellBudget {
-  { maximum, used: 0 }
+  { maximum, used: 0, }
 }
 
 ///|
@@ -577,12 +577,12 @@ fn xlsx_scan_regions(
   let stored_cells = XlsxStoredCellBudget::new(projection.max_scan_cells)
   match under {
     Some(Cell(sheet, rect, ..)) | Some(Range(sheet, rect, ..)) =>
-      regions.push({ sheet, rect })
+      regions.push({ sheet, rect, })
     Some(Sheet(sheet)) =>
       match sheet.content {
         Worksheet(worksheet) =>
           match xlsx_used_rect(projection, worksheet, stored_cells) {
-            Some(rect) => regions.push({ sheet, rect })
+            Some(rect) => regions.push({ sheet, rect, })
             None => ()
           }
         ChartSheet(_) => ()
@@ -593,7 +593,7 @@ fn xlsx_scan_regions(
         match sheet.content {
           Worksheet(worksheet) =>
             match xlsx_used_rect(projection, worksheet, stored_cells) {
-              Some(rect) => regions.push({ sheet, rect })
+              Some(rect) => regions.push({ sheet, rect, })
               None => ()
             }
           ChartSheet(_) => ()
@@ -620,7 +620,7 @@ fn XlsxStringBudget::new(
   maximum? : Int = xlsx_cli_max_scanned_string_chars,
   per_value_maximum? : Int = xlsx_cli_max_cell_string_chars,
 ) -> XlsxStringBudget {
-  { maximum, per_value_maximum, used: 0 }
+  { maximum, per_value_maximum, used: 0, }
 }
 
 ///|
@@ -658,7 +658,7 @@ fn XlsxStringBudget::remaining_for_value(self : XlsxStringBudget) -> Int {
 fn XlsxFormatBudget::new(
   maximum? : Int = xlsx_cli_max_format_work_units,
 ) -> XlsxFormatBudget {
-  { maximum, used: 0 }
+  { maximum, used: 0, }
 }
 
 ///|
@@ -693,7 +693,7 @@ fn XlsxFormatBudget::charge_style(
 fn XlsxFormulaBudget::new(
   maximum? : Int = xlsx_cli_max_formula_work_units,
 ) -> XlsxFormulaBudget {
-  { maximum, used: 0 }
+  { maximum, used: 0, }
 }
 
 ///|

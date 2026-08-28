@@ -16,7 +16,7 @@ fn draw_bytes_for_test(values : ArrayView[Int]) -> @core.PdfBytes {
 fn draw_standard_font_for_test(
   font : @pdflite.PdfStandardFont,
 ) -> @pdflite.PdfFont {
-  PdfFontStandard({ font, encoding: PdfWinAnsiEncoding })
+  PdfFontStandard({ font, encoding: PdfWinAnsiEncoding, })
 }
 
 ///|
@@ -67,7 +67,7 @@ test "pdf draw debug strings match cpdf spelling" {
     @pdflite.pdf_string_of_drawops([
       PdfDrawRect(0.0, 0.0, 1.0, 2.0),
       PdfDrawMatrix(@geometry.transform_translate(1.0, 2.0)),
-      PdfDrawFontPack("F0", { fonts: [], entries: [] }, []),
+      PdfDrawFontPack("F0", { fonts: [], entries: [], }, []),
       PdfDrawTag("Span"),
       PdfDrawSTag("P"),
     ]),
@@ -237,11 +237,11 @@ test "pdf draw document-aware fontpacks render text runs and resources" {
   let pack = @pdflite.PdfFontPack::{
     fonts: [regular, bold],
     entries: [
-      { codepoint: 65, font_index: 0, charcode: 1 },
-      { codepoint: 66, font_index: 1, charcode: 2 },
-      { codepoint: 67, font_index: 1, charcode: 3 },
-      { codepoint: 68, font_index: 0, charcode: 4 },
-      { codepoint: 90, font_index: 9, charcode: 5 },
+      { codepoint: 65, font_index: 0, charcode: 1, },
+      { codepoint: 66, font_index: 1, charcode: 2, },
+      { codepoint: 67, font_index: 1, charcode: 3, },
+      { codepoint: 68, font_index: 0, charcode: 4, },
+      { codepoint: 90, font_index: 9, charcode: 5, },
     ],
   }
   let f1 = draw_name_for_test("/F1")

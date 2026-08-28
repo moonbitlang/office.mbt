@@ -15,7 +15,7 @@ fn text_extractor_agl_extra_difference_for_test(
   name : String,
   code : Int,
 ) -> @pdflite.PdfEncodingDifference {
-  { name: text_extractor_agl_extra_name_for_test(name), code }
+  { name: text_extractor_agl_extra_name_for_test(name), code, }
 }
 
 ///|
@@ -23,7 +23,7 @@ fn text_extractor_agl_extra_standard_font_data_for_test(
   font : @pdflite.PdfStandardFont,
   encoding : @pdflite.PdfEncoding,
 ) -> @pdflite.PdfStandardFontData {
-  { font, encoding }
+  { font, encoding, }
 }
 
 ///|

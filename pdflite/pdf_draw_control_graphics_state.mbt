@@ -229,7 +229,7 @@ pub fn PdfDrawControl::add_stroke_opacity(
 ///|
 /// Start a pushed graphics-state frame.
 pub fn PdfDrawControl::push_group(self : PdfDrawControl) -> Unit {
-  self.frames.push({ name: pdf_draw_control_push_frame, ops: [] })
+  self.frames.push({ name: pdf_draw_control_push_frame, ops: [], })
 }
 
 ///|

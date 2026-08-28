@@ -20,7 +20,7 @@ pub fn pdf_metadata_xmltree_of_bytes(
   )
   let end = pdf_metadata_xml_skip_misc(metadata, after_tree)
   guard end == metadata.length() else { raise BadText }
-  { dtd, tree }
+  { dtd, tree, }
 }
 
 ///|

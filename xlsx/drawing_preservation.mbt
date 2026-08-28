@@ -374,7 +374,7 @@ fn collect_preserved_drawing_parts(
       Some(value) => value.charge_items(1)
       None => ()
     }
-    parts.push({ source_path, data, content_type, relationships })
+    parts.push({ source_path, data, content_type, relationships, })
   }
   parts
 }
@@ -402,7 +402,7 @@ fn preserved_unsupported_drawing_state(
     if !anchor.unsupported {
       continue
     }
-    opaque_anchors.push({ order: anchor.order, xml: anchor.xml })
+    opaque_anchors.push({ order: anchor.order, xml: anchor.xml, })
     for id in opaque_drawing_relationship_ids(anchor.xml, cancelled~) {
       if !required_ids_seen.contains(id) {
         required_ids_seen.add(id)

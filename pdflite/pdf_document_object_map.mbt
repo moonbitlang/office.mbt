@@ -6,13 +6,13 @@ pub fn pdf_object_entry(
   data : PdfObjectData,
   generation? : Int = 0,
 ) -> PdfObjectEntry {
-  { data, generation }
+  { data, generation, }
 }
 
 ///|
 /// Construct an empty object-number map.
 pub fn pdf_object_map_empty() -> PdfObjectMap {
-  { entries: HashMap([]) }
+  { entries: HashMap([]), }
 }
 
 ///|
@@ -77,7 +77,7 @@ fn PdfObjectMap::copy(self : PdfObjectMap) -> PdfObjectMap {
       ObjectToParseFromObjectStream(reference) =>
         ObjectToParseFromObjectStream(reference)
     }
-    output.set_entry(number, { data, generation: entry.generation })
+    output.set_entry(number, { data, generation: entry.generation, })
   }
   output
 }

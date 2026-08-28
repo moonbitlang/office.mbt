@@ -600,7 +600,7 @@ fn docx_story_part_source(
   part : String,
   authority : DocxStoryPartAuthority,
 ) -> DocxStoryPartSource {
-  { part, authority }
+  { part, authority, }
 }
 
 ///|
@@ -1462,7 +1462,7 @@ fn build_annotation_index(
   // footer[1..], footnotes, endnotes. Header/footer paths come from the
   // collector's dedup maps (index -> path).
   let stories : Array[PublicAnnotationStory] = [
-    { public_path: "/body", kind: "body", part_path: parts.main_document_path },
+    { public_path: "/body", kind: "body", part_path: parts.main_document_path, },
   ]
   for pair in inverted_part_paths(collector.header_index_by_path) {
     let (index, path) = pair
@@ -1887,7 +1887,10 @@ fn read_comments_extended(
   for record in root.elements_by_tag_name("w15:commentEx") {
     let raw_para_id = record.attributes.get("w15:paraId")
     let raw_parent_para_id = record.attributes.get("w15:paraIdParent")
-    identities.push({ para_id: raw_para_id, parent_para_id: raw_parent_para_id })
+    identities.push({
+      para_id: raw_para_id,
+      parent_para_id: raw_parent_para_id,
+    })
     match raw_para_id {
       Some(raw_para_id) => {
         let para_id = canonical_para_id(raw_para_id)
@@ -2378,10 +2381,11 @@ fn point_span(
   match paragraph_prefix(marker.container_path(), path_budget) {
     Some(paragraph) =>
       match node_spans.get(paragraph) {
-        Some((low, high)) => { comment_id: id, story, low, high }
-        None => { comment_id: id, story, low: marker.seq(), high: marker.seq() }
+        Some((low, high)) => { comment_id: id, story, low, high, }
+        None =>
+          { comment_id: id, story, low: marker.seq(), high: marker.seq(), }
       }
-    None => { comment_id: id, story, low: marker.seq(), high: marker.seq() }
+    None => { comment_id: id, story, low: marker.seq(), high: marker.seq(), }
   }
 }
 
@@ -2566,7 +2570,7 @@ fn build_notes(
       "footnote" => footnote_refs.get(note_id).unwrap_or([])
       _ => endnote_refs.get(note_id).unwrap_or([])
     }
-    let info = NoteInfo::{ id: note_id, references: refs }
+    let info = NoteInfo::{ id: note_id, references: refs, }
     if note.note_type == "footnote" {
       // Duplicate ids make [@id=...] ambiguous — the plan-locked
       // diagnostic (comments get theirs at definition parse).
@@ -2596,7 +2600,7 @@ fn build_notes(
           "annotation index: footnote references target id '\{warnings.text(id)}' which has no definition",
         )
       }
-      footnotes.push({ id, references: refs })
+      footnotes.push({ id, references: refs, })
     }
   }
   for id, refs in endnote_refs {
@@ -2606,7 +2610,7 @@ fn build_notes(
           "annotation index: endnote references target id '\{warnings.text(id)}' which has no definition",
         )
       }
-      endnotes.push({ id, references: refs })
+      endnotes.push({ id, references: refs, })
     }
   }
   (footnotes, endnotes)

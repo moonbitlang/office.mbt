@@ -10,7 +10,7 @@ fn nonembedded_descriptor() -> @pdflite.PdfFontDescriptor {
     avgwidth: 500,
     maxwidth: 1000,
     flags: 32,
-    fontbbox: { min_x: -100, min_y: -200, max_x: 1000, max_y: 900 },
+    fontbbox: { min_x: -100, min_y: -200, max_x: 1000, max_y: 900, },
     italicangle: 0,
     capheight: 700,
     xheight: 500,

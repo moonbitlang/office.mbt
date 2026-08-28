@@ -73,7 +73,7 @@ pub fn comment_spec(
     )
   }
   check_comment_body(body)
-  { author, initials, date, target: Anchored(from~, to~), done, body }
+  { author, initials, date, target: Anchored(from~, to~), done, body, }
 }
 
 ///|
@@ -101,7 +101,7 @@ pub fn comment_reply(
     )
   }
   check_comment_body(body)
-  { author, initials, date, target: ReplyTo(reply_to), done, body }
+  { author, initials, date, target: ReplyTo(reply_to), done, body, }
 }
 
 ///|

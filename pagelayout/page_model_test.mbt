@@ -1,9 +1,9 @@
 ///|
 test "color hex formatting is lowercase and clamped" {
   inspect(@pagelayout.black.to_hex(), content="#000000")
-  let c = @pagelayout.Color::{ r: 255, g: 128, b: 11 }
+  let c = @pagelayout.Color::{ r: 255, g: 128, b: 11, }
   inspect(c.to_hex(), content="#ff800b")
-  let out_of_range = @pagelayout.Color::{ r: 300, g: -5, b: 0 }
+  let out_of_range = @pagelayout.Color::{ r: 300, g: -5, b: 0, }
   inspect(out_of_range.to_hex(), content="#ff0000")
 }
 
@@ -50,8 +50,8 @@ test "color rgb constructor clamps channels" {
 ///|
 test "page model serializes to canonical json (one-way; no FromJson yet)" {
   let model = @pagelayout.PageModel::new()
-  let font = model.add_font({ family: "Carlito", bold: false, italic: false })
-  let page = @pagelayout.Page::{ width_pt: 612, height_pt: 792, items: [] }
+  let font = model.add_font({ family: "Carlito", bold: false, italic: false, })
+  let page = @pagelayout.Page::{ width_pt: 612, height_pt: 792, items: [], }
   page.items.push(
     Text({
       font,

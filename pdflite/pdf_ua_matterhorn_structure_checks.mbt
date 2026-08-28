@@ -291,7 +291,7 @@ fn PdfDocument::pdf_ua_matterhorn_check_09_006(
   self : PdfDocument,
 ) -> Json? raise @core.PdfError {
   let tree = self.pdf_ua_matterhorn_read_struct_tree()
-  let seen_toc = Ref::{ val: false }
+  let seen_toc = Ref::{ val: false, }
   match pdf_ua_matterhorn_check_toci_position(tree, seen_toc) {
     Some(failure) => Some(failure)
     None => pdf_ua_matterhorn_check_toc_children(tree)

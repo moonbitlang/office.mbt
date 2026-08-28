@@ -24,9 +24,9 @@ test "evaluating substitutes the real page number" {
     color: @pagelayout.black,
   }
   // "37" is the value Word cached when the document was last saved
-  let page = @paragraph.RunInput::{ text: "37", style, field: PageNumber }
-  let count = @paragraph.RunInput::{ text: "37", style, field: PageCount }
-  let plain = @paragraph.RunInput::{ text: "37", style, field: NotAField }
+  let page = @paragraph.RunInput::{ text: "37", style, field: PageNumber, }
+  let count = @paragraph.RunInput::{ text: "37", style, field: PageCount, }
+  let plain = @paragraph.RunInput::{ text: "37", style, field: NotAField, }
   inspect(page.evaluate(5, 56).text, content="5")
   inspect(count.evaluate(5, 56).text, content="56")
   // ordinary text that happens to look like a number is untouched
@@ -43,13 +43,13 @@ test "a paragraph reports whether it holds fields" {
     color: @pagelayout.black,
   }
   let plain = @paragraph.ParagraphInput::{
-    runs: [{ text: "x", style, field: NotAField }],
+    runs: [{ text: "x", style, field: NotAField, }],
     style: @paragraph.ParagraphStyle::default(),
   }
   let with_field = @paragraph.ParagraphInput::{
     runs: [
-      { text: "Page ", style, field: NotAField },
-      { text: "1", style, field: PageNumber },
+      { text: "Page ", style, field: NotAField, },
+      { text: "1", style, field: PageNumber, },
     ],
     style: @paragraph.ParagraphStyle::default(),
   }

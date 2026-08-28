@@ -79,7 +79,7 @@ fn pdf_ocg_read_json_appdict(
         ),
         "ocg_read_ocg: bad category",
       )
-      Some({ event, ocgs, category })
+      Some({ event, ocgs, category, })
     }
     _ => raise SoftError("ocg_read_appdict: malformed")
   }

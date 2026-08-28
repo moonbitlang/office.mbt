@@ -120,5 +120,5 @@ fn PdfDocument::pdf_ocg_read_individual(
     Some(usage) => Some(self.pdf_ocg_read_usage(usage))
     None => None
   }
-  { name, intent, usage }
+  { name, intent, usage, }
 }

@@ -91,7 +91,7 @@ fn pdf_merge_renumber_struct_parent_entry(
         ),
         generation: entry.generation,
       }
-    _ => { data: entry.data, generation: entry.generation }
+    _ => { data: entry.data, generation: entry.generation, }
   }
 }
 

@@ -169,7 +169,7 @@ pub fn pdf_parse_pagespec_with_selectors(
   if end_page < 1 {
     raise BadPageSpecification(spec)
   }
-  { end_page, selectors, source: spec }.parse_inner(spec)
+  { end_page, selectors, source: spec, }.parse_inner(spec)
 }
 
 ///|

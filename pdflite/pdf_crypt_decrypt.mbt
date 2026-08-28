@@ -161,7 +161,7 @@ pub fn PdfDocument::decrypt_with_passwords(
   no_encrypt_metadata? : Bool = false,
 ) -> PdfDecryptionResult? raise @core.PdfError {
   if !self.is_encrypted() {
-    Some({ document: self.copy(), denied_permissions: [] })
+    Some({ document: self.copy(), denied_permissions: [], })
   } else {
     let values = self.encryption_values()
     match

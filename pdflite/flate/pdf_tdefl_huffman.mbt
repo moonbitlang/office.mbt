@@ -196,12 +196,12 @@ fn TdeflState::optimize_huffman_table(
     }
   } else {
     let counts = self.huff_count[table_num]
-    let syms0 = FixedArray::makei(table_len, _ => { key: 0, sym_index: 0 })
-    let syms1 = FixedArray::makei(table_len, _ => { key: 0, sym_index: 0 })
+    let syms0 = FixedArray::makei(table_len, _ => { key: 0, sym_index: 0, })
+    let syms1 = FixedArray::makei(table_len, _ => { key: 0, sym_index: 0, })
     let mut used = 0
     for i in 0..<table_len {
       if counts[i] != 0 {
-        syms0[used] = { key: counts[i], sym_index: i }
+        syms0[used] = { key: counts[i], sym_index: i, }
         used = used + 1
       }
     }

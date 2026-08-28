@@ -30,7 +30,7 @@ pub(all) struct RunInput {
 ///|
 /// A plain (non-field) run.
 pub fn RunInput::plain(text : String, style : RunStyle) -> RunInput {
-  { text, style, field: NotAField }
+  { text, style, field: NotAField, }
 }
 
 ///|
@@ -97,8 +97,8 @@ pub fn ParagraphStyle::with_hanging_tab_stop(
       break
     }
   }
-  merged.insert(at, { position_pt: self.indent_left_pt, align: TabLeft })
-  { ..self, tabs: { ..self.tabs, stops: merged } }
+  merged.insert(at, { position_pt: self.indent_left_pt, align: TabLeft, })
+  { ..self, tabs: { ..self.tabs, stops: merged, }, }
 }
 
 ///|

@@ -4,7 +4,7 @@ fn thin_borders() -> @table.Borders {
     width: EighthPoints(4), // 0.5pt
     color: @pagelayout.black,
   }
-  { top: Some(edge), bottom: Some(edge), left: Some(edge), right: Some(edge) }
+  { top: Some(edge), bottom: Some(edge), left: Some(edge), right: Some(edge), }
 }
 
 ///|
@@ -128,7 +128,7 @@ test "emitted geometry is absolute and validates" {
   let laid = @table.layout_table(t, 144)
   let model = @pagelayout.PageModel::new()
   let items = @table.emit_rows(model, laid, 72, 100, 0, laid.rows.length())
-  let page = @pagelayout.Page::{ width_pt: 612, height_pt: 792, items: [] }
+  let page = @pagelayout.Page::{ width_pt: 612, height_pt: 792, items: [], }
   for item in items {
     page.items.push(item)
   }

@@ -717,7 +717,7 @@ fn image_external_cpdf_source_hello_with_inline_image_for_test(
   let pages = document.pages_of_pagetree()
   @test.assert_eq(pages.length(), 1)
   let image_ops : Array[@content.PdfContentOp] = [
-    Op_cm({ a: 72.0, b: 0.0, c: 0.0, d: 72.0, e: 0.0, f: 0.0 }),
+    Op_cm({ a: 72.0, b: 0.0, c: 0.0, d: 72.0, e: 0.0, f: 0.0, }),
     Op_InlineImage(
       image_external_cpdf_source_inline_image_dictionary_for_test(),
       None,
@@ -831,7 +831,7 @@ fn image_external_cpdf_source_form_image_form_for_test(
   image_number : Int,
 ) -> @syntax.PdfObject raise {
   @pdflite.pdf_content_stream_of_ops([
-    Op_cm({ a: 72.0, b: 0.0, c: 0.0, d: 72.0, e: 72.0, f: 72.0 }),
+    Op_cm({ a: 72.0, b: 0.0, c: 0.0, d: 72.0, e: 72.0, f: 72.0, }),
     Op_Do(image_external_name_for_test("/SourceNestedImage")),
   ])
   .add_dict_entry(
@@ -1023,7 +1023,7 @@ fn image_external_assert_cpdf_source_form_image_for_test(
   @test.assert_eq(
     document.parse_content_ops_with_resources(form_resources, [form]),
     [
-      Op_cm({ a: 72.0, b: 0.0, c: 0.0, d: 72.0, e: 72.0, f: 72.0 }),
+      Op_cm({ a: 72.0, b: 0.0, c: 0.0, d: 72.0, e: 72.0, f: 72.0, }),
       Op_Do(image_external_name_for_test("/SourceNestedImage")),
     ],
   )

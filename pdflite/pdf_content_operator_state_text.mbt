@@ -5,9 +5,10 @@ pub fn PdfContentOperatorState::content_apply_type3_metrics_op(
   op : @content.PdfContentOp,
 ) -> PdfContentOperatorState {
   match op {
-    Op_d0(width_x, width_y) => { ..self, type3_d0: Some({ width_x, width_y }) }
+    Op_d0(width_x, width_y) =>
+      { ..self, type3_d0: Some({ width_x, width_y, }), }
     Op_d1(width_x, width_y, llx, lly, urx, ury) =>
-      { ..self, type3_d1: Some({ width_x, width_y, llx, lly, urx, ury }) }
+      { ..self, type3_d1: Some({ width_x, width_y, llx, lly, urx, ury, }), }
     _ => self
   }
 }
@@ -78,14 +79,14 @@ pub fn PdfContentOperatorState::content_apply_text_show_op(
   op : @content.PdfContentOp,
 ) -> PdfContentOperatorTextResult raise @core.PdfError {
   let text_result = self.text_state.content_apply_text_op(font, self.ctm, op)
-  let state = { ..self, text_state: text_result.text_state }
+  let state = { ..self, text_state: text_result.text_state, }
   let entries : Array[PdfContentJsonEntry] = Array::new(
     capacity=text_result.glyphs.length(),
   )
   for glyph in text_result.glyphs {
     entries.push(state.content_text_glyph_entry(font, glyph))
   }
-  { state, entries }
+  { state, entries, }
 }
 
 ///|

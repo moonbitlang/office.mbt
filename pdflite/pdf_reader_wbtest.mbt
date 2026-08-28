@@ -305,7 +305,7 @@ test "private xref stream helpers cover malformed and deferred entries" {
   @test.assert_eq(deferred_entries[0].in_use, true)
   @test.assert_eq(
     deferred_entries[0].object_stream,
-    Some({ object_stream_number: 7, index: 0 }),
+    Some({ object_stream_number: 7, index: 0, }),
   )
   @test.assert_eq(deferred_entries[1].object_number, 4)
   @test.assert_eq(deferred_entries[1].offset, 0)
@@ -395,15 +395,15 @@ test "private object stream helpers cover malformed object streams" {
   let context = try! doc.read_object_stream_context(7)
   @test.assert_eq(context.end_offsets, [4, 9])
   @test.assert_eq(
-    try! context.read_reference({ object_stream_number: 7, index: 0 }),
+    try! context.read_reference({ object_stream_number: 7, index: 0, }),
     (2, PdfBoolean(true)),
   )
   @test.assert_eq(
-    try! context.read_reference({ object_stream_number: 7, index: 1 }),
+    try! context.read_reference({ object_stream_number: 7, index: 1, }),
     (3, PdfBoolean(false)),
   )
   let bad_index : Result[(Int, @syntax.PdfObject), Error] = try
-    context.read_reference({ object_stream_number: 7, index: 9 })
+    context.read_reference({ object_stream_number: 7, index: 9, })
   catch {
     err => Err(err)
   } noraise {
@@ -420,14 +420,14 @@ test "private object stream helpers cover malformed object streams" {
       offset: 0,
       generation: 0,
       in_use: true,
-      object_stream: Some({ object_stream_number: 7, index: 0 }),
+      object_stream: Some({ object_stream_number: 7, index: 0, }),
     },
     {
       object_number: 3,
       offset: 0,
       generation: 0,
       in_use: true,
-      object_stream: Some({ object_stream_number: 7, index: 1 }),
+      object_stream: Some({ object_stream_number: 7, index: 1, }),
     },
   ]
   let grouped_xrefs = @reader.pdf_reader_object_stream_groups([
@@ -436,7 +436,7 @@ test "private object stream helpers cover malformed object streams" {
       offset: 0,
       generation: 0,
       in_use: true,
-      object_stream: Some({ object_stream_number: 7, index: 0 }),
+      object_stream: Some({ object_stream_number: 7, index: 0, }),
     },
     recovered_xrefs[0],
     {
@@ -444,7 +444,7 @@ test "private object stream helpers cover malformed object streams" {
       offset: 0,
       generation: 0,
       in_use: false,
-      object_stream: Some({ object_stream_number: 9, index: 0 }),
+      object_stream: Some({ object_stream_number: 9, index: 0, }),
     },
     recovered_xrefs[1],
     {
@@ -452,7 +452,7 @@ test "private object stream helpers cover malformed object streams" {
       offset: 0,
       generation: 0,
       in_use: true,
-      object_stream: Some({ object_stream_number: 9, index: 0 }),
+      object_stream: Some({ object_stream_number: 9, index: 0, }),
     },
     {
       object_number: 6,
@@ -494,7 +494,7 @@ test "private object stream helpers cover malformed object streams" {
       offset: 0,
       generation: 0,
       in_use: true,
-      object_stream: Some({ object_stream_number: 7, index: 9 }),
+      object_stream: Some({ object_stream_number: 7, index: 9, }),
     },
   ]
   recovered_doc.load_reconstructed_xref_stream_embedded_objects(
@@ -522,7 +522,7 @@ test "private object stream helpers cover malformed object streams" {
   )
   let no_type_context = try! no_type_doc.read_object_stream_context(10)
   @test.assert_eq(
-    try! no_type_context.read_reference({ object_stream_number: 10, index: 0 }),
+    try! no_type_context.read_reference({ object_stream_number: 10, index: 0, }),
     (2, PdfBoolean(true)),
   )
 
@@ -587,7 +587,7 @@ test "private object stream helpers cover malformed object streams" {
   )
   let bad_offset_context = try! bad_offset_doc.read_object_stream_context(9)
   let bad_offset : Result[(Int, @syntax.PdfObject), Error] = try
-    bad_offset_context.read_reference({ object_stream_number: 9, index: 0 })
+    bad_offset_context.read_reference({ object_stream_number: 9, index: 0, })
   catch {
     err => Err(err)
   } noraise {
@@ -689,7 +689,7 @@ test "private reader xref helpers report malformed inputs" {
     try! pdf_cursor_read_plain_indirect_object_at_current(
       @core.byte_cursor_of_bytes(b"2 0 obj\n42\n"),
     ),
-    { number: 2, generation: 0, object: PdfInteger(42) },
+    { number: 2, generation: 0, object: PdfInteger(42), },
   )
   let adjacent_source = @ascii.encode(
     "2 0 obj\n42\nendobj\n3 0 obj\n99\nendobj\n",
@@ -697,7 +697,7 @@ test "private reader xref helpers report malformed inputs" {
   let adjacent = @core.byte_cursor_of_bytes(adjacent_source)
   @test.assert_eq(
     try! pdf_cursor_read_first_indirect_object_at_current(adjacent, empty_xrefs),
-    { number: 2, generation: 0, object: PdfInteger(42) },
+    { number: 2, generation: 0, object: PdfInteger(42), },
   )
   @test.assert_eq(adjacent.absolute_position(), b"2 0 obj\n42\nendobj".length())
 

@@ -1335,7 +1335,7 @@ fn check_content_types(
     }
   }
   if valid {
-    Some({ defaults, overrides })
+    Some({ defaults, overrides, })
   } else {
     None
   }

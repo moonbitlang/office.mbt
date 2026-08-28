@@ -18,7 +18,7 @@ priv struct ContentTypes {
 
 ///|
 fn ContentTypes::new() -> ContentTypes {
-  { defaults: [], overrides: [] }
+  { defaults: [], overrides: [], }
 }
 
 ///|
@@ -27,7 +27,7 @@ fn ContentTypes::add_default(
   extension : String,
   content_type : String,
 ) -> Unit {
-  self.defaults.push({ extension, content_type })
+  self.defaults.push({ extension, content_type, })
 }
 
 ///|
@@ -36,7 +36,7 @@ fn ContentTypes::add_override(
   part_name : String,
   content_type : String,
 ) -> Unit {
-  self.overrides.push({ part_name, content_type })
+  self.overrides.push({ part_name, content_type, })
 }
 
 ///|

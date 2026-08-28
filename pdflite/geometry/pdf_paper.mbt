@@ -16,7 +16,7 @@ pub fn paper_size_make(
   width : Double,
   height : Double,
 ) -> PaperSize {
-  { unit, width, height }
+  { unit, width, height, }
 }
 
 ///|
@@ -40,7 +40,7 @@ pub fn PaperSize::height(self : PaperSize) -> Double {
 ///|
 /// Returns the same paper dimensions with width and height swapped.
 pub fn PaperSize::landscape(self : PaperSize) -> PaperSize {
-  { unit: self.unit, width: self.height, height: self.width }
+  { unit: self.unit, width: self.height, height: self.width, }
 }
 
 ///|

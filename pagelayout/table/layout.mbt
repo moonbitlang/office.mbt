@@ -133,5 +133,5 @@ pub fn layout_table(table : Table, available_pt : Double) -> TableLayoutResult {
   for c in columns {
     width += c
   }
-  { width_pt: width, height_pt: y, columns, rows }
+  { width_pt: width, height_pt: y, columns, rows, }
 }

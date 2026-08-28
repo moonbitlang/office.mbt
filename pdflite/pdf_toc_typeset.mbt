@@ -116,7 +116,7 @@ pub fn PdfDocument::toc_typeset_pages(
     Some(crop) => Some(pdf_toc_rectangle_object(crop))
     None => None
   }
-  { ..result, pages: pdf_toc_cropbox_pages(result.pages, cropbox_object) }
+  { ..result, pages: pdf_toc_cropbox_pages(result.pages, cropbox_object), }
 }
 
 ///|

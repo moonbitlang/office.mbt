@@ -36,7 +36,7 @@ fn ReaderNode::of(element : XmlElement) -> ReaderNode {
       XmlText(_) => ()
     }
   }
-  { element, source_element_id: None, children }
+  { element, source_element_id: None, children, }
 }
 
 ///|

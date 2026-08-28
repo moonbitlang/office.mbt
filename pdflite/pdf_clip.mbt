@@ -33,7 +33,7 @@ pub(all) struct PdfClipPolygon {
 ///|
 /// Build a cpdf/GPC polygon vertex.
 pub fn pdf_clip_vertex(x : Double, y : Double) -> PdfClipVertex {
-  { x, y }
+  { x, y, }
 }
 
 ///|
@@ -42,7 +42,7 @@ pub fn pdf_clip_contour(
   hole : Bool,
   vertices : ArrayView[PdfClipVertex],
 ) -> PdfClipContour {
-  { hole, vertices: vertices.to_owned() }
+  { hole, vertices: vertices.to_owned(), }
 }
 
 ///|
@@ -52,13 +52,13 @@ pub fn pdf_clip_polygon(contours : ArrayView[PdfClipContour]) -> PdfClipPolygon 
   for contour in contours {
     copied.push(pdf_clip_contour(contour.hole, contour.vertices))
   }
-  { contours: copied }
+  { contours: copied, }
 }
 
 ///|
 /// Return the cpdf null GPC polygon.
 pub fn pdf_clip_null_polygon() -> PdfClipPolygon {
-  { contours: [] }
+  { contours: [], }
 }
 
 ///|

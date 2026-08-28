@@ -32,7 +32,7 @@ pub(all) struct PdfContentTextOpResult {
 
 ///|
 fn pdf_content_initial_text_font() -> PdfFont {
-  PdfFontStandard({ font: PdfTimesRoman, encoding: PdfWinAnsiEncoding })
+  PdfFontStandard({ font: PdfTimesRoman, encoding: PdfWinAnsiEncoding, })
 }
 
 ///|
@@ -82,14 +82,14 @@ fn pdf_content_text_font_cache_with(
   let mut found = false
   for entry in cache {
     if entry.name == name {
-      output.push({ name, font })
+      output.push({ name, font, })
       found = true
     } else {
       output.push(entry)
     }
   }
   if !found {
-    output.push({ name, font })
+    output.push({ name, font, })
   }
   output
 }

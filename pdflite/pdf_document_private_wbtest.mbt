@@ -133,7 +133,7 @@ test "PdfDocument ARC4 crypt preserves parser-private object states" {
   doc.objects.set_entry(
     3,
     pdf_object_entry(
-      ObjectToParseFromObjectStream({ object_stream_number: 7, index: 0 }),
+      ObjectToParseFromObjectStream({ object_stream_number: 7, index: 0, }),
     ),
   )
   let encrypted = try! doc.arc4_crypt_parsed_objects(key, 40, false, 0)
@@ -150,7 +150,7 @@ test "PdfDocument select_object_numbers ignores deferred parser states" {
   doc.objects.set_entry(
     3,
     pdf_object_entry(
-      ObjectToParseFromObjectStream({ object_stream_number: 7, index: 0 }),
+      ObjectToParseFromObjectStream({ object_stream_number: 7, index: 0, }),
     ),
   )
   @test.assert_eq(doc.select_object_numbers(fn(object) { object == PdfNull }), [

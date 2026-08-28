@@ -66,7 +66,7 @@ fn partial_edit(
   end : Int,
   replacement : String,
 ) -> ParagraphTextEdit {
-  { start, end, replacement }
+  { start, end, replacement, }
 }
 
 ///|

@@ -47,7 +47,7 @@ test "private OCG appdict and order readers cover sparse forms" {
     doc.pdf_ocg_read_appdict(
       PdfDictionary([(pdf_ocg_event_key(), ocg_wb_name_object("/Export"))]),
     ),
-    { event: OcgExport, ocgs: [], category: [] },
+    { event: OcgExport, ocgs: [], category: [], },
   )
   @test.assert_eq(
     doc.pdf_ocg_read_order(
@@ -137,7 +137,7 @@ test "private OCG individual and public reader guard malformed roots" {
     try! doc.pdf_ocg_read_individual(
       PdfDictionary([(pdf_ocg_name_key(), PdfString(ocg_wb_text("Layer")))]),
     ),
-    { name: ocg_wb_text("Layer"), intent: [pdf_ocg_view_name()], usage: None },
+    { name: ocg_wb_text("Layer"), intent: [pdf_ocg_view_name()], usage: None, },
   )
 
   let root_doc = pdf_document_empty()
@@ -194,7 +194,7 @@ test "private OCG copy and merge helpers cover optional fields" {
     ..@ocg.pdf_ocg_default_config(),
     creator: Some(ocg_wb_text("creator")),
     usage_applications: [
-      { event: OcgView, ocgs: [1], category: [pdf_ocg_view_name()] },
+      { event: OcgView, ocgs: [1], category: [pdf_ocg_view_name()], },
     ],
     order: Some([(None, [1])]),
     radio_button_groups: Some([[1]]),
@@ -216,7 +216,11 @@ test "private OCG copy and merge helpers cover optional fields" {
         },
       ),
     ],
-    default_config: { ..config, base_state: OcgOff, list_mode: OcgVisiblePages },
+    default_config: {
+      ..config,
+      base_state: OcgOff,
+      list_mode: OcgVisiblePages,
+    },
     configs: [config],
   }
   let written = try! doc.write_optional_content_groups(content)
@@ -302,7 +306,7 @@ test "private OCG writers cover event and optional usage/config forms" {
     ..@ocg.pdf_ocg_default_config(),
     creator: Some(ocg_wb_text("creator")),
     usage_applications: [
-      { event: OcgExport, ocgs: [1], category: [pdf_ocg_export_name()] },
+      { event: OcgExport, ocgs: [1], category: [pdf_ocg_export_name()], },
     ],
     order: Some([(None, [1]), (None, [1, 2])]),
   })

@@ -50,7 +50,7 @@ pub fn header_footer_spec(
     )
   }
   check_story_body(body, what="header/footer")
-  { variant, body }
+  { variant, body, }
 }
 
 ///|

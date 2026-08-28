@@ -24,7 +24,7 @@ pub(all) struct Numbering {
 ///|
 /// Builds paragraph numbering metadata.
 pub fn numbering(is_ordered : Bool, level : Int) -> Numbering {
-  { is_ordered, level }
+  { is_ordered, level, }
 }
 
 ///|
@@ -168,7 +168,7 @@ pub fn table_properties(
   style_id? : String? = None,
   style_name? : String? = None,
 ) -> TableProperties {
-  { style_id: none_if_empty(style_id), style_name: none_if_empty(style_name) }
+  { style_id: none_if_empty(style_id), style_name: none_if_empty(style_name), }
 }
 
 ///|
@@ -320,7 +320,7 @@ pub fn image(
   data : Bytes,
   alt_text? : String? = None,
 ) -> DocumentElement {
-  Image({ content_type, alt_text, data })
+  Image({ content_type, alt_text, data, })
 }
 
 ///|
@@ -371,7 +371,7 @@ pub fn note(
   note_id : String,
   body : Array[DocumentElement],
 ) -> Note {
-  { note_type, note_id, body }
+  { note_type, note_id, body, }
 }
 
 ///|
@@ -382,7 +382,7 @@ pub fn comment(
   author_name? : String = "",
   author_initials? : String = "",
 ) -> Comment {
-  { comment_id, body, author_name, author_initials }
+  { comment_id, body, author_name, author_initials, }
 }
 
 ///|

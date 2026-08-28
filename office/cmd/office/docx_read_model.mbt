@@ -41,7 +41,7 @@ priv struct DocxCollectedText {
 
 ///|
 fn DocxTextBudget::new(resource : String, maximum : Int) -> DocxTextBudget {
-  { resource, maximum, reported_maximum: maximum, reported_offset: 0, used: 0 }
+  { resource, maximum, reported_maximum: maximum, reported_offset: 0, used: 0, }
 }
 
 ///|
@@ -51,7 +51,7 @@ fn DocxTextBudget::new_reported(
   reported_maximum : Int,
   reported_offset : Int,
 ) -> DocxTextBudget {
-  { resource, maximum, reported_maximum, reported_offset, used: 0 }
+  { resource, maximum, reported_maximum, reported_offset, used: 0, }
 }
 
 ///|
@@ -396,7 +396,7 @@ async fn collect_docx_text_counted_cooperative(
     collector.output.to_string(),
     cancelled,
   )
-  { text, scanned: collector.scanned, truncated: collector.truncated }
+  { text, scanned: collector.scanned, truncated: collector.truncated, }
 }
 
 ///|

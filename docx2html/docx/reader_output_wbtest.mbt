@@ -12,7 +12,7 @@ fn project_segmented_story(
   }
   guard segment_joined_reader_story(
       story,
-      empty_body_reader({ relationships: [] }),
+      empty_body_reader({ relationships: [], }),
     )
     is SegmentedStory(output) else {
     fail("expected the story to segment")
@@ -27,7 +27,7 @@ fn segmentation_refusal_of(source : String) -> ReaderSegmentationRefusal raise {
   }
   guard segment_joined_reader_story(
       story,
-      empty_body_reader({ relationships: [] }),
+      empty_body_reader({ relationships: [], }),
     )
     is SegmentationRefused(refusal) else {
     fail("expected segmentation to refuse")
@@ -49,7 +49,7 @@ fn project_flattened_notes(
   for container in story.root.element_children() {
     if !reader_note_container_is_plumbing(container) {
       collected.append(
-        empty_body_reader({ relationships: [] }).read_children(
+        empty_body_reader({ relationships: [], }).read_children(
           container.element_children(),
         ),
       )

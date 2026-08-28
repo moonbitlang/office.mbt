@@ -18,8 +18,8 @@ fn PdfContentOperatorState::content_apply_path_machine_op(
 ) -> PdfContentOperatorState {
   let result = self.partial_path.content_apply_path_op(op)
   match result.drawn_path {
-    Some(path) => { ..self, partial_path: result.partial_path, path }
-    None => { ..self, partial_path: result.partial_path }
+    Some(path) => { ..self, partial_path: result.partial_path, path, }
+    None => { ..self, partial_path: result.partial_path, }
   }
 }
 
@@ -32,7 +32,7 @@ fn PdfContentOperatorState::content_apply_clipping_state_op(
     self.clipping_path,
     op,
   )
-  { ..self, partial_path: result.partial_path }.content_with_clipping_path(
+  { ..self, partial_path: result.partial_path, }.content_with_clipping_path(
     result.clipping_path,
   )
 }
@@ -122,7 +122,7 @@ pub fn PdfDocument::content_apply_resource_op(
     | Op_quote(_)
     | Op_double_quote(_, _, _) => {
       let result = self.content_apply_text_resource_op(state, resources, op)
-      { state: result.state, entries: result.entries }
+      { state: result.state, entries: result.entries, }
     }
     Op_gs(name) =>
       {
@@ -137,7 +137,7 @@ pub fn PdfDocument::content_apply_resource_op(
         ),
       }
     Op_InlineImage(_, _, _) =>
-      { state, entries: [state.content_inline_image_entry()] }
+      { state, entries: [state.content_inline_image_entry()], }
     Op_Do(name) =>
       {
         state,
@@ -152,7 +152,7 @@ pub fn PdfDocument::content_apply_resource_op(
           pdf_content_entries_of_optional(next.content_path_entry(stroking))
         None => []
       }
-      { state: next, entries }
+      { state: next, entries, }
     }
   }
 }

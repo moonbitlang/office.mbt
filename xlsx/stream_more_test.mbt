@@ -5,7 +5,7 @@ test "stream cell constructors cover rich text and values" {
   let writer = workbook.new_stream_writer("Sheet1")
   let cells : Array[@xlsx.StreamCell] = []
   cells.push(@xlsx.StreamCell::new_value(Numeric(3.0), formula="SUM(1,2)"))
-  let runs : Array[@xlsx.RichTextRun] = [{ text: "hi", font: None }]
+  let runs : Array[@xlsx.RichTextRun] = [{ text: "hi", font: None, }]
   cells.push(@xlsx.StreamCell::new_rich_text(runs))
   writer.set_row_cells("A1", cells)
   writer.flush()
@@ -41,7 +41,7 @@ test "stream cell rich text too long" {
     sb.write_char('a')
   }
   let too_long = sb.to_string()
-  let runs : Array[@xlsx.RichTextRun] = [{ text: too_long, font: None }]
+  let runs : Array[@xlsx.RichTextRun] = [{ text: too_long, font: None, }]
   let result : Result[@xlsx.StreamCell, Error] = Ok(
     @xlsx.StreamCell::new_rich_text(runs),
   ) catch {

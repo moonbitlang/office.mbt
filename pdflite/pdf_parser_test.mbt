@@ -231,7 +231,7 @@ test "@syntax.pdf_parse_indirect_object_lexemes reports malformed indirect objec
       LexObj,
       LexNull,
     ]),
-    { number: 7, generation: 0, object: PdfNull },
+    { number: 7, generation: 0, object: PdfNull, },
   )
   let missing_object : Result[@syntax.PdfParsedIndirectObject, Error] = try
     @syntax.pdf_parse_indirect_object_lexemes([

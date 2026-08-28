@@ -148,7 +148,7 @@ pub fn parse_path(path : String) -> ParsedPath raise PathError {
   for i in 1..<segments.length() {
     steps.push(parse_step(segments[i], path))
   }
-  { root, steps }
+  { root, steps, }
 }
 
 ///|
@@ -205,7 +205,7 @@ fn parse_step(segment : String, path : String) -> PathStep raise PathError {
         "invalid path segment '\{segment}' in '\{path}': [@id=...] selects notes and comments only (positional kinds use [index])",
       )
     }
-    return { kind, selector: ById(token) }
+    return { kind, selector: ById(token), }
   }
   let index = parse_positive_int(inner) catch {
     _ =>
@@ -213,7 +213,7 @@ fn parse_step(segment : String, path : String) -> PathStep raise PathError {
         "invalid path segment '\{segment}' in '\{path}': index must be a positive integer",
       )
   }
-  { kind, selector: Ordinal(index) }
+  { kind, selector: Ordinal(index), }
 }
 
 ///|

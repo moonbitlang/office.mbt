@@ -229,14 +229,14 @@ fn ReaderProjectionBuilder::carrier_cursor(
         while child != -1 {
           self.budget.charge_retained()
           positions[child] = events.length()
-          events.push({ paragraph_identity, carrier_identity: child })
+          events.push({ paragraph_identity, carrier_identity: child, })
           child = elements[child].next_sibling_index
         }
       }
       None => ()
     }
   }
-  { events, positions, next: 0 }
+  { events, positions, next: 0, }
 }
 
 ///|
@@ -553,7 +553,7 @@ fn ReaderProjectionBuilder::flush_paragraph(
           for input in frame.inputs {
             guard self.identity_of(input.paragraph) is Some(id) else { return }
             self.budget.charge_retained()
-            sources.push({ source: id, source_span: self.element_span(id) })
+            sources.push({ source: id, source_span: self.element_span(id), })
           }
           frame.armed = false
         }
@@ -563,7 +563,7 @@ fn ReaderProjectionBuilder::flush_paragraph(
   for input in inputs {
     guard self.identity_of(input.paragraph) is Some(id) else { return }
     self.budget.charge_retained()
-    sources.push({ source: id, source_span: self.element_span(id) })
+    sources.push({ source: id, source_span: self.element_span(id), })
   }
   let contributions : Array[ReaderProjectionContribution] = []
   contributions.append(self.pending)

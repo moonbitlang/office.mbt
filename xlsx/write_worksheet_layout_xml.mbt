@@ -505,7 +505,7 @@ test "write worksheet layout wb: sheet protection and page breaks branches" {
   inspect(protection_xml.contains("spinCount=\"100000\""), content="true")
   inspect(protection_xml.contains("autoFilter=\"1\""), content="true")
 
-  let breaks : Array[PageBreak] = [{ id: 7, min: 1, max: 10, manual: true }]
+  let breaks : Array[PageBreak] = [{ id: 7, min: 1, max: 10, manual: true, }]
   let breaks_xml = write_page_breaks_xml("rowBreaks", breaks)
   inspect(breaks_xml is Some(_), content="true")
   match breaks_xml {
@@ -525,8 +525,8 @@ test "write worksheet layout wb: auto-filter custom and invalid-column branches"
         custom_filters: Some({
           and_filter: true,
           filters: [
-            { operator: "greaterThan", value: "1" },
-            { operator: "lessThan", value: "9" },
+            { operator: "greaterThan", value: "1", },
+            { operator: "lessThan", value: "9", },
           ],
         }),
       },
@@ -537,7 +537,7 @@ test "write worksheet layout wb: auto-filter custom and invalid-column branches"
 
   let out_of_range : AutoFilter = {
     range_ref: "A1:B2",
-    columns: [{ col: 3, filters: None, custom_filters: None }],
+    columns: [{ col: 3, filters: None, custom_filters: None, }],
   }
   let bad : Result[String, Error] = Ok(write_auto_filter_xml(out_of_range)) catch {
     e => Err(e)

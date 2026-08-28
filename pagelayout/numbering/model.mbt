@@ -115,7 +115,7 @@ pub struct Numbering {
 ///|
 /// An empty definition set: every lookup falls back to Word's defaults.
 pub fn Numbering::empty() -> Numbering {
-  { abstracts: Map([]), instances: Map([]) }
+  { abstracts: Map([]), instances: Map([]), }
 }
 
 ///|
@@ -124,7 +124,7 @@ pub fn Numbering::new(
   abstracts : Map[Int, AbstractNum],
   instances : Map[Int, NumInstance],
 ) -> Numbering {
-  { abstracts, instances }
+  { abstracts, instances, }
 }
 
 ///|

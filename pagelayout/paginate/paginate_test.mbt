@@ -163,7 +163,7 @@ test "space before is suppressed at page top" {
   let style = @paragraph.ParagraphStyle::default()
   let spaced = @paragraph.ParagraphInput::{
     runs: body("after break").runs,
-    style: { ..style, space_before_pt: 100 },
+    style: { ..style, space_before_pt: 100, },
   }
   let model = @paginate.paginate([
     @paginate.Block::paragraph(body("page one")),

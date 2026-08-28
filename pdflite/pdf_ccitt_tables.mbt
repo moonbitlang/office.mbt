@@ -5,7 +5,7 @@ fn pdf_ccitt_code(
   run : Int,
   makeup? : Bool = false,
 ) -> PdfCCITTCode {
-  { bits, width, run, makeup }
+  { bits, width, run, makeup, }
 }
 
 ///|
@@ -228,15 +228,15 @@ let pdf_ccitt_black_codes : Array[PdfCCITTCode] = [
 
 ///|
 let pdf_ccitt_mode_codes : Array[PdfCCITTMode] = [
-  { bits: 0b1, width: 1, mode: CCITTVertical(0) },
-  { bits: 0b011, width: 3, mode: CCITTVertical(-1) },
-  { bits: 0b010, width: 3, mode: CCITTVertical(1) },
-  { bits: 0b001, width: 3, mode: CCITTHorizontal },
-  { bits: 0b0001, width: 4, mode: CCITTPass },
-  { bits: 0b000011, width: 6, mode: CCITTVertical(-2) },
-  { bits: 0b000010, width: 6, mode: CCITTVertical(2) },
-  { bits: 0b0000011, width: 7, mode: CCITTVertical(-3) },
-  { bits: 0b0000010, width: 7, mode: CCITTVertical(3) },
-  { bits: 0b000000001111, width: 12, mode: CCITTUncompressed },
-  { bits: 0b000000000001000000000001, width: 24, mode: CCITTEOFB },
+  { bits: 0b1, width: 1, mode: CCITTVertical(0), },
+  { bits: 0b011, width: 3, mode: CCITTVertical(-1), },
+  { bits: 0b010, width: 3, mode: CCITTVertical(1), },
+  { bits: 0b001, width: 3, mode: CCITTHorizontal, },
+  { bits: 0b0001, width: 4, mode: CCITTPass, },
+  { bits: 0b000011, width: 6, mode: CCITTVertical(-2), },
+  { bits: 0b000010, width: 6, mode: CCITTVertical(2), },
+  { bits: 0b0000011, width: 7, mode: CCITTVertical(-3), },
+  { bits: 0b0000010, width: 7, mode: CCITTVertical(3), },
+  { bits: 0b000000001111, width: 12, mode: CCITTUncompressed, },
+  { bits: 0b000000000001000000000001, width: 24, mode: CCITTEOFB, },
 ]

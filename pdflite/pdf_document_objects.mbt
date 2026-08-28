@@ -55,7 +55,7 @@ pub fn PdfObjects::map_objects_in_place(
         ObjectParsedAlreadyDecrypted(transform(object))
       _ => entry.data
     }
-    self.set_entry(number, { data, generation: entry.generation })
+    self.set_entry(number, { data, generation: entry.generation, })
   }
 }
 

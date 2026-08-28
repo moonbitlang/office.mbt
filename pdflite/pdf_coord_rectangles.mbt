@@ -10,7 +10,7 @@ fn pdf_coord_rectangle(
   width : Double,
   height : Double,
 ) -> @geometry.PdfCoordRectangle {
-  { x, y, width, height }
+  { x, y, width, height, }
 }
 
 ///|

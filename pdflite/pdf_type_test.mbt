@@ -92,7 +92,7 @@ fn type_simple_font_without_metrics_for_test() -> @pdflite.PdfFont {
 
 ///|
 fn type_standard_font_for_test() -> @pdflite.PdfFont {
-  PdfFontStandard({ font: PdfHelvetica, encoding: PdfWinAnsiEncoding })
+  PdfFontStandard({ font: PdfHelvetica, encoding: PdfWinAnsiEncoding, })
 }
 
 ///|

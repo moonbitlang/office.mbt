@@ -19,7 +19,7 @@ pub fn pdf_truetype_tables(
             pdf_truetype_read_u32_as_int(data, table_offset + 12),
           ) {
           (Some(tag), Some(checksum), Some(offset), Some(length)) =>
-            records.push({ tag, checksum, offset, length })
+            records.push({ tag, checksum, offset, length, })
           _ => break
         }
       }

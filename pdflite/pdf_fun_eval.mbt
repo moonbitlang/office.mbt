@@ -212,7 +212,7 @@ pub fn PdfFunction::eval(
   let clamped_inputs = self.clamped_inputs(inputs)
   let output = match self.func {
     PdfFunctionSampled(sampled) => sampled.eval_sampled(self, clamped_inputs)
-    PdfFunctionInterpolation({ c0, c1, n }) => {
+    PdfFunctionInterpolation({ c0, c1, n, }) => {
       let values : Array[Double] = []
       for input in clamped_inputs {
         let factor = @math.pow(input, n)

@@ -3,7 +3,7 @@ fn reader_reconstruction_xref_entry_for_test(
   object_number : Int,
   offset : Int,
 ) -> @reader.PdfClassicXRefEntry {
-  { object_number, offset, generation: 0, in_use: true, object_stream: None }
+  { object_number, offset, generation: 0, in_use: true, object_stream: None, }
 }
 
 ///|
@@ -13,7 +13,7 @@ fn reader_reconstruction_xref_section_for_test(
   stream_object_number? : Int? = None,
   stream_object_offset? : Int? = None,
 ) -> @reader.PdfXRefSection {
-  { entries, trailer, stream_object_number, stream_object_offset }
+  { entries, trailer, stream_object_number, stream_object_offset, }
 }
 
 ///|

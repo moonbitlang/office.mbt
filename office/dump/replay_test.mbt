@@ -452,7 +452,7 @@ test "historical v1 XLSX dumps remain replayable" {
     source_file="legacy.xlsx",
     source_bytes=1,
   )
-  let historical = { ..current, batch_schema: "xlsx.batch/1" }
+  let historical = { ..current, batch_schema: "xlsx.batch/1", }
   let replayed = @dump.replay_xlsx_dump(historical)
   assert_eq(replayed.get_cell_value("Data", "A1"), Some("legacy"))
   assert_eq(replayed.get_cell_value("Data", "B1"), Some("7"))

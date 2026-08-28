@@ -14,7 +14,7 @@ pub fn pdf_composition_entry(
   bytes : Int,
   file_size : Int,
 ) -> PdfCompositionEntry {
-  { label, bytes, percent: bytes.to_double() / file_size.to_double() * 100.0 }
+  { label, bytes, percent: bytes.to_double() / file_size.to_double() * 100.0, }
 }
 
 ///|

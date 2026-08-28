@@ -76,7 +76,7 @@ fn collect_sections(
     // raises on a missing one, so this branch is unreachable from
     // read_docx_package. Kept so the section invariant ("each body range
     // maps to exactly one section") holds for any caller.
-    return [{ ends_after_paragraph: None, headers: [], footers: [] }]
+    return [{ ends_after_paragraph: None, headers: [], footers: [], }]
   }
   let mut paragraph_index = 0
   let mut trailing_sect_pr : XmlElement? = None
@@ -101,7 +101,7 @@ fn collect_sections(
     // running to the body end.
     None =>
       scans.push({
-        section: { ends_after_paragraph: None, headers: [], footers: [] },
+        section: { ends_after_paragraph: None, headers: [], footers: [], },
         declared_headers: [],
         declared_footers: [],
       })
@@ -153,7 +153,7 @@ fn inherit_missing_variants(
       }
     }
     if !present {
-      current.push({ variant: candidate.variant, part: candidate.part })
+      current.push({ variant: candidate.variant, part: candidate.part, })
     }
   }
 }
@@ -240,7 +240,7 @@ fn HeaderFooterCollector::section(
     }
     match self.resolve_part(rel_id, is_header~) {
       Some(index) => {
-        let section_ref = @document.SectionRef::{ variant, part: index }
+        let section_ref = @document.SectionRef::{ variant, part: index, }
         if is_header {
           headers.push(section_ref)
         } else {
@@ -251,7 +251,7 @@ fn HeaderFooterCollector::section(
     }
   }
   {
-    section: { ends_after_paragraph, headers, footers },
+    section: { ends_after_paragraph, headers, footers, },
     declared_headers,
     declared_footers,
   }

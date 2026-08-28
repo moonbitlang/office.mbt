@@ -6,7 +6,7 @@ pub struct MergeCell {
 
 ///|
 fn MergeCell::new(range_ref : String, value : String) -> MergeCell {
-  { range_ref, value }
+  { range_ref, value, }
 }
 
 ///|

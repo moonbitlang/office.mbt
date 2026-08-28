@@ -489,7 +489,7 @@ fn query_properties(
         )
       }
     }
-    predicates.push({ name, value: property_value })
+    predicates.push({ name, value: property_value, })
   }
   predicates
 }

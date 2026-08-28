@@ -78,7 +78,7 @@ let pdf_space_metadata_key_name : @core.PdfName = pdf_space_name("/Metadata")
 
 ///|
 fn pdf_space_empty_point() -> PdfTristimulusPoint {
-  { x: 0.0, y: 0.0, z: 0.0 }
+  { x: 0.0, y: 0.0, z: 0.0, }
 }
 
 ///|
@@ -89,7 +89,7 @@ fn PdfDocument::pdf_space_read_point(
 ) -> PdfTristimulusPoint raise @core.PdfError {
   match self.lookup_direct(key, dictionary) {
     Some(PdfArray([x, y, z])) =>
-      { x: self.get_number(x), y: self.get_number(y), z: self.get_number(z) }
+      { x: self.get_number(x), y: self.get_number(y), z: self.get_number(z), }
     _ => pdf_space_empty_point()
   }
 }

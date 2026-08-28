@@ -38,7 +38,7 @@ pub fn PdfDocument::read_optional_content_groups(
           ]
         _ => []
       }
-      Some({ ocgs, default_config, configs })
+      Some({ ocgs, default_config, configs, })
     }
   }
 }

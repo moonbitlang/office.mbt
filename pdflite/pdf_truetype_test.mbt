@@ -448,12 +448,12 @@ test "pdf_truetype_tables reads table directory records" {
     ("maxp", [3, 4, 5]),
   ])
   @test.assert_eq(@pdflite.pdf_truetype_tables(font), [
-    { tag: "head", checksum: 0x10000002U, offset: 44, length: 2 },
-    { tag: "maxp", checksum: 0x10000003U, offset: 46, length: 3 },
+    { tag: "head", checksum: 0x10000002U, offset: 44, length: 2, },
+    { tag: "maxp", checksum: 0x10000003U, offset: 46, length: 3, },
   ])
   @test.assert_eq(
     @pdflite.pdf_truetype_table(font, "maxp"),
-    Some({ tag: "maxp", checksum: 0x10000003U, offset: 46, length: 3 }),
+    Some({ tag: "maxp", checksum: 0x10000003U, offset: 46, length: 3, }),
   )
   @test.assert_eq(@pdflite.pdf_truetype_table(font, "hhea"), None)
 }
@@ -798,10 +798,10 @@ test "pdf_truetype_expand_composite_glyphs expands nested components" {
     [0, 1, 2, 3],
   )
   @test.assert_eq(try! @pdflite.pdf_truetype_glyph_byte_ranges(font, [1]), [
-    { glyph_index: 0, start_offset: 0, end_offset: 10 },
-    { glyph_index: 1, start_offset: 10, end_offset: 38 },
-    { glyph_index: 2, start_offset: 38, end_offset: 54 },
-    { glyph_index: 3, start_offset: 54, end_offset: 64 },
+    { glyph_index: 0, start_offset: 0, end_offset: 10, },
+    { glyph_index: 1, start_offset: 10, end_offset: 38, },
+    { glyph_index: 2, start_offset: 38, end_offset: 54, },
+    { glyph_index: 3, start_offset: 54, end_offset: 64, },
   ])
 }
 
@@ -998,11 +998,11 @@ test "pdf_truetype_subset_font assembles source table directory" {
      0, 80, // source rangeShift = numTables * 16
   ])
   @test.assert_eq(@pdflite.pdf_truetype_tables(subset), [
-    { tag: "head", checksum: 0x10000036U, offset: 92, length: 54 },
-    { tag: "maxp", checksum: 0x10000006U, offset: 146, length: 6 },
-    { tag: "cmap", checksum: 0x10000018U, offset: 152, length: 24 },
-    { tag: "loca", checksum: 0x1000000CU, offset: 176, length: 12 },
-    { tag: "glyf", checksum: 0x10000014U, offset: 188, length: 20 },
+    { tag: "head", checksum: 0x10000036U, offset: 92, length: 54, },
+    { tag: "maxp", checksum: 0x10000006U, offset: 146, length: 6, },
+    { tag: "cmap", checksum: 0x10000018U, offset: 152, length: 24, },
+    { tag: "loca", checksum: 0x1000000CU, offset: 176, length: 12, },
+    { tag: "glyf", checksum: 0x10000014U, offset: 188, length: 20, },
   ])
   @test.assert_eq(@pdflite.pdf_truetype_table(subset, "name"), None)
   @test.assert_eq(subset.length(), 208)
@@ -1017,11 +1017,11 @@ test "pdf_truetype_subset_font rewrites implicit cmap and shifts later tables" {
     rewrite_cmap=true,
   )
   @test.assert_eq(@pdflite.pdf_truetype_tables(subset), [
-    { tag: "head", checksum: 0x10000036U, offset: 92, length: 54 },
-    { tag: "maxp", checksum: 0x10000006U, offset: 146, length: 6 },
-    { tag: "cmap", checksum: 0x10000018U, offset: 152, length: 26 },
-    { tag: "loca", checksum: 0x1000000CU, offset: 180, length: 12 },
-    { tag: "glyf", checksum: 0x10000014U, offset: 192, length: 20 },
+    { tag: "head", checksum: 0x10000036U, offset: 92, length: 54, },
+    { tag: "maxp", checksum: 0x10000006U, offset: 146, length: 6, },
+    { tag: "cmap", checksum: 0x10000018U, offset: 152, length: 26, },
+    { tag: "loca", checksum: 0x1000000CU, offset: 180, length: 12, },
+    { tag: "glyf", checksum: 0x10000014U, offset: 192, length: 20, },
   ])
   @test.assert_eq(subset.length(), 212)
   @test.assert_eq(@pdflite.pdf_truetype_cmap_glyph(subset, 33), Some(1))
@@ -1035,9 +1035,9 @@ test "pdf_truetype_cmap_glyphs reads source-supported format 6 tables" {
     (3, 1, truetype_format6_subtable_for_test(30, [7, 8, 9])),
   ])
   @test.assert_eq(@pdflite.pdf_truetype_cmap_glyphs(font), [
-    { codepoint: 30, glyph_index: 7 },
-    { codepoint: 31, glyph_index: 8 },
-    { codepoint: 32, glyph_index: 9 },
+    { codepoint: 30, glyph_index: 7, },
+    { codepoint: 31, glyph_index: 8, },
+    { codepoint: 32, glyph_index: 9, },
   ])
   @test.assert_eq(@pdflite.pdf_truetype_cmap_glyph(font, 31), Some(8))
   @test.assert_eq(@pdflite.pdf_truetype_cmap_glyph(font, 99), None)
@@ -1049,8 +1049,8 @@ test "pdf_truetype_cmap_glyphs reads format 4 range-offset glyph arrays" {
     (3, 1, truetype_format4_range_offset_subtable_for_test()),
   ])
   @test.assert_eq(@pdflite.pdf_truetype_cmap_glyphs(font), [
-    { codepoint: 70, glyph_index: 15 },
-    { codepoint: 71, glyph_index: 16 },
+    { codepoint: 70, glyph_index: 15, },
+    { codepoint: 71, glyph_index: 16, },
   ])
   @test.assert_eq(@pdflite.pdf_truetype_cmap_glyph(font, 70), Some(15))
 }
@@ -1068,8 +1068,8 @@ test "pdf_truetype_cmap_glyphs mirrors source table replacement and no-cmap fall
   ])
   @test.assert_eq(@pdflite.pdf_truetype_cmaps(font), [(3, 10), (3, 1)])
   @test.assert_eq(@pdflite.pdf_truetype_cmap_glyphs(font), [
-    { codepoint: 65, glyph_index: 2 },
-    { codepoint: 66, glyph_index: 3 },
+    { codepoint: 65, glyph_index: 2, },
+    { codepoint: 66, glyph_index: 3, },
   ])
   @test.assert_eq(
     @pdflite.pdf_truetype_cmap_glyphs(

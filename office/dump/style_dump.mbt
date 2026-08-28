@@ -267,7 +267,7 @@ fn extract_style(style : @xlsx.Style) -> StyleExtract {
   if style.protection is Some(_) {
     unexpressible.push("protection")
   }
-  { params, unexpressible }
+  { params, unexpressible, }
 }
 
 ///|

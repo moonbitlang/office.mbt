@@ -677,7 +677,7 @@ fn next_xml_attribute(
   }
   let value_end = index
   index = index + 1
-  Some({ name_start, name_end, value_start, value_end, next: index })
+  Some({ name_start, name_end, value_start, value_end, next: index, })
 }
 
 ///|

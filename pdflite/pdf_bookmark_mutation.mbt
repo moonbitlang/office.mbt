@@ -60,7 +60,7 @@ pub fn PdfDocument::add_bookmark_title(
     },
   ]
   for bookmark in bookmarks {
-    indented.push({ ..bookmark, level: bookmark.level + 1 })
+    indented.push({ ..bookmark, level: bookmark.level + 1, })
   }
   self.add_bookmarks(indented)
 }
@@ -84,7 +84,7 @@ pub fn PdfDocument::bookmarks_open_to_level(
   let bookmarks = self.read_bookmarks(preserve_actions=true)
   let updated : Array[@bookmark.PdfBookmark] = []
   for bookmark in bookmarks {
-    updated.push({ ..bookmark, is_open: bookmark.level < level })
+    updated.push({ ..bookmark, is_open: bookmark.level < level, })
   }
   self.add_bookmarks(updated)
 }
@@ -202,7 +202,7 @@ pub fn PdfDocument::transform_bookmark(
   matrix : @geometry.TransformMatrix,
   bookmark : @bookmark.PdfBookmark,
 ) -> @bookmark.PdfBookmark raise @core.PdfError {
-  { ..bookmark, target: self.transform_destination(matrix, bookmark.target) }
+  { ..bookmark, target: self.transform_destination(matrix, bookmark.target), }
 }
 
 ///|

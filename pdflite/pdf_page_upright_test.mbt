@@ -120,7 +120,7 @@ test "PdfDocument upright_pages removes rotation and rectifies boxes" {
     @geometry.point2(50.0, 100.0),
     -@math.PI / 2.0,
   )
-  let content_rotation_matrix = { ..rotation_matrix, a: 0.0, d: 0.0 }
+  let content_rotation_matrix = { ..rotation_matrix, a: 0.0, d: 0.0, }
   let rotated_mediabox = try! document.transform_rect(rotation_matrix, mediabox)
   let rotated_bounds = try! document.parse_rectangle(rotated_mediabox)
   let rectification_matrix = @geometry.transform_translate(

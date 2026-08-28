@@ -402,7 +402,7 @@ priv struct OpcPartNameTrieNode {
 
 ///|
 fn new_opc_part_name_trie_node() -> OpcPartNameTrieNode {
-  { terminal: None, first_part: None, children: SortedMap([]) }
+  { terminal: None, first_part: None, children: SortedMap([]), }
 }
 
 ///|

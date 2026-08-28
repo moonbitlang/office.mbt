@@ -10,7 +10,7 @@ fn page_rect_for_test(
   max_x : Double,
   max_y : Double,
 ) -> @geometry.PdfRectangle {
-  { min_x, min_y, max_x, max_y }
+  { min_x, min_y, max_x, max_y, }
 }
 
 ///|
@@ -579,7 +579,7 @@ test "pdfhello-style standard font document roundtrips" {
   }
   @test.assert_eq(
     try! parsed.read_font(font_object),
-    PdfFontStandard({ font: PdfTimesItalic, encoding: PdfImplicitInFontFile }),
+    PdfFontStandard({ font: PdfTimesItalic, encoding: PdfImplicitInFontFile, }),
   )
 
   let hello = b"Hello, World!"
@@ -896,7 +896,7 @@ test "PdfDocument process_pages rewrites selected pages and carries matrices" {
   let processed = try! document.process_pages([1, 99], (page_number, page) => {
     seen.push(page_number)
     (
-      { ..page, rotate: Rotate90 },
+      { ..page, rotate: Rotate90, },
       page_number,
       @geometry.transform_translate(10.0, 20.0),
     )
@@ -935,7 +935,7 @@ test "PdfDocument process_pages rewrites selected pages and carries matrices" {
     (page_number, page) => {
       source_order_seen.push(page_number)
       (
-        { ..page, rotate: Rotate180 },
+        { ..page, rotate: Rotate180, },
         page_number,
         @geometry.transform_identity_matrix,
       )
@@ -1085,8 +1085,8 @@ test "PdfDocument process_xobjects materializes deferred form streams" {
       (page_name_for_test("/Fm1"), PdfIndirect(20)),
     ]),
   }
-  let seen_data = Ref::{ val: None }
-  let seen_length = Ref::{ val: None }
+  let seen_data = Ref::{ val: None, }
+  let seen_length = Ref::{ val: None, }
   try! doc.process_xobjects(page, fn(_, _, streams) raise @core.PdfError {
     if streams.length() < 0 {
       raise ParseStreamExpected
@@ -1131,7 +1131,7 @@ test "PdfDocument process_xobjects skips non-form xobjects" {
       (page_name_for_test("/Im1"), PdfIndirect(21)),
     ]),
   }
-  let calls = Ref::{ val: 0 }
+  let calls = Ref::{ val: 0, }
   try! doc.process_xobjects(page, fn(_, _, streams) raise @core.PdfError {
     if streams.length() < 0 {
       raise ParseStreamExpected
@@ -1311,7 +1311,7 @@ test "PdfDocument process_xobjects validates xobject resources" {
   guard non_stream is Err(@core.PdfError::ParseStreamExpected) else {
     fail("expected @core.PdfError::ParseStreamExpected for non-stream form")
   }
-  let calls = Ref::{ val: 0 }
+  let calls = Ref::{ val: 0, }
   try! doc.process_xobjects(@page.pdf_page_blank(@geometry.paper_a4), fn(
     _,
     _,

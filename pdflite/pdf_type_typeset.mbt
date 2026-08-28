@@ -25,7 +25,7 @@ pub fn PdfDocument::pdf_type_typeset(
     )
   }
   state.write_page(self, process_struct_tree, paper)
-  { pages: state.pages, tags: state.tags_out }
+  { pages: state.pages, tags: state.tags_out, }
 }
 
 ///|

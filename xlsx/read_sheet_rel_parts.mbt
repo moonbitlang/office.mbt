@@ -47,7 +47,7 @@ fn normalize_parsed_comment_runs(
     Some(prefix) =>
       if prefix.length() > 0 {
         let normalized : Array[RichTextRun] = [
-          { text: prefix.to_owned(), font: None },
+          { text: prefix.to_owned(), font: None, },
         ]
         for run in runs {
           normalized.push(run)
@@ -265,7 +265,7 @@ fn parse_slicer_part_entries(
       Some(value) => Some(parse_bool_attr(value))
       None => None
     }
-    entries.push({ name, cache, caption, display_header })
+    entries.push({ name, cache, caption, display_header, })
   }
   entries
 }

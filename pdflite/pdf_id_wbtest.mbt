@@ -13,7 +13,7 @@ test "private current ID generation honors env and time source" {
   let ordinary = pdf_generate_id_bytes_from_text("", fn() { "12345" })
   let current = pdf_generate_current_id_bytes("")
   @env.set_env_var("CAMLPDF_REPRODUCIBLE_IDS", "true")
-  let called = Ref::{ val: false }
+  let called = Ref::{ val: false, }
   let reproducible = pdf_generate_id_bytes_from_text("ignored", fn() {
     called.val = true
     "unreached"

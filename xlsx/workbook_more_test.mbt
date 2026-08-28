@@ -515,7 +515,7 @@ test "workbook: copy_sheet clones complex worksheet state" {
     author_id: None,
     text: "ab",
     paragraph: [
-      { text: "a", font: None },
+      { text: "a", font: None, },
       {
         text: "b",
         font: Some({
@@ -613,7 +613,7 @@ test "workbook: copy_sheet clones complex worksheet state" {
 test "workbook: missing-sheet cell/media wrapper guards" {
   let workbook = @xlsx.Workbook::new()
   ignore(workbook.add_sheet("Sheet1"))
-  let rich : Array[@xlsx.RichTextRun] = [{ text: "x", font: None }]
+  let rich : Array[@xlsx.RichTextRun] = [{ text: "x", font: None, }]
   let shape = @xlsx.Shape::new("A1", "rect") catch {
     err => fail("shape init failed: \{repr(err)}")
   }

@@ -43,7 +43,7 @@ pub fn span_edit(
       message="a span edit cannot end at \{end}, before its start at \{start}",
     )
   }
-  { start, end, replacement }
+  { start, end, replacement, }
 }
 
 ///|
@@ -121,7 +121,7 @@ pub fn splice_limits(
 ///|
 /// An empty plan.
 pub fn SplicePlan::new() -> SplicePlan {
-  { part_edits: SortedMap([]), new_parts: [], source_parts: SortedMap([]) }
+  { part_edits: SortedMap([]), new_parts: [], source_parts: SortedMap([]), }
 }
 
 ///|
@@ -137,7 +137,7 @@ pub fn SplicePlan::copy(self : SplicePlan) -> SplicePlan {
   for name, source in self.source_parts {
     source_parts[name] = source
   }
-  { part_edits, new_parts: self.new_parts.copy(), source_parts }
+  { part_edits, new_parts: self.new_parts.copy(), source_parts, }
 }
 
 ///|
@@ -486,7 +486,7 @@ pub fn SpliceLimits::with_max_materialized_bytes(
       message="the reduced materialized ceiling cannot be negative",
     )
   }
-  { ..self, max_materialized_bytes: bytes }
+  { ..self, max_materialized_bytes: bytes, }
 }
 
 ///|

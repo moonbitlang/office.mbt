@@ -301,7 +301,7 @@ async test "pending read cancellation reaches dry-run and no-op paths" {
 ///|
 async test "publication identity comparison stays chunked across package boundaries" {
   wb_with_transaction_dir(directory => {
-    let publication_directory : PublicationDirectory = { path: directory }
+    let publication_directory : PublicationDirectory = { path: directory, }
     let output = "\{directory}/output.docx"
     let temp = match
       publication_temp_try_create(
@@ -329,7 +329,7 @@ async test "publication identity comparison stays chunked across package boundar
 #cfg(all(target="native", not(platform="windows")))
 async test "staging access survives restrictive creation modes" {
   wb_with_transaction_dir(directory => {
-    let publication_directory : PublicationDirectory = { path: directory }
+    let publication_directory : PublicationDirectory = { path: directory, }
     let temp = match
       publication_temp_try_create(
         publication_directory,
@@ -356,7 +356,7 @@ async test "staging access survives restrictive creation modes" {
 ///|
 async test "initial staging cleanup failures are never hidden" {
   wb_with_transaction_dir(directory => {
-    let publication_directory : PublicationDirectory = { path: directory }
+    let publication_directory : PublicationDirectory = { path: directory, }
     let leaf = ".office-tmp-initial-cleanup"
     let output = "\{directory}/output.docx"
     let code = try {
@@ -385,7 +385,7 @@ async test "initial staging cleanup failures are never hidden" {
 ///|
 async test "initial staging cleanup re-observes pending cancellation" {
   wb_with_transaction_dir(directory => {
-    let publication_directory : PublicationDirectory = { path: directory }
+    let publication_directory : PublicationDirectory = { path: directory, }
     let release = "\{directory}/secure-release"
     @async.with_task_group() <| group => {
       let task = group.spawn(() => {
@@ -582,7 +582,7 @@ async test "destination inspection permission errors remain structured" {
   wb_with_transaction_dir(directory => {
     let locked = "\{directory}/locked"
     @afs.mkdir(locked, permission=0o700)
-    let publication_directory : PublicationDirectory = { path: locked }
+    let publication_directory : PublicationDirectory = { path: locked, }
     @afs.chmod(locked, 0o000)
     let code = try {
       ignore(
@@ -1634,7 +1634,7 @@ test "transaction output schema is deterministic and nests A2 warnings" {
     replaced_existing: true,
     overwritten_size: Some(8L),
     validations: ReadOnlyArray::from_array([
-      { name: "office-portable-opc", passed: true, finding_count: 0 },
+      { name: "office-portable-opc", passed: true, finding_count: 0, },
     ]),
     preservation: {
       whole_file_identical: false,

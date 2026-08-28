@@ -14,28 +14,28 @@ fn read_level(lvl : @xml.XmlElement) -> (Int, @numbering.Level) {
     match el.name {
       "w:numFmt" =>
         match attr(el, "w:val") {
-          Some(v) => level = { ..level, format: @numbering.number_format(v) }
+          Some(v) => level = { ..level, format: @numbering.number_format(v), }
           None => ()
         }
       "w:lvlText" =>
         match attr(el, "w:val") {
           Some(v) => {
-            level = { ..level, text: v }
+            level = { ..level, text: v, }
             saw_text = true
           }
           None => ()
         }
       "w:start" =>
         match parse_int(attr(el, "w:val")) {
-          Some(v) => level = { ..level, start: v }
+          Some(v) => level = { ..level, start: v, }
           None => ()
         }
       "w:lvlRestart" =>
         match parse_int(attr(el, "w:val")) {
-          Some(v) => level = { ..level, restart: Some(v) }
+          Some(v) => level = { ..level, restart: Some(v), }
           None => ()
         }
-      "w:isLgl" => level = { ..level, is_legal: parse_toggle(el) }
+      "w:isLgl" => level = { ..level, is_legal: parse_toggle(el), }
       // a level's own run properties style its marker. Word's bullets are
       // private-use codepoints that render only in the named face, so the
       // family must travel with the level rather than inherit the body's —
@@ -45,10 +45,10 @@ fn read_level(lvl : @xml.XmlElement) -> (Int, @numbering.Level) {
         match el.first("w:rFonts") {
           Some(fonts) =>
             match attr(fonts, "w:ascii") {
-              Some(f) => level = { ..level, font_family: Some(f) }
+              Some(f) => level = { ..level, font_family: Some(f), }
               None =>
                 match attr(fonts, "w:hAnsi") {
-                  Some(f) => level = { ..level, font_family: Some(f) }
+                  Some(f) => level = { ..level, font_family: Some(f), }
                   None => ()
                 }
             }
@@ -57,7 +57,7 @@ fn read_level(lvl : @xml.XmlElement) -> (Int, @numbering.Level) {
         match el.first("w:sz") {
           Some(sz) =>
             match parse_half_points(attr(sz, "w:val")) {
-              Some(hp) => level = { ..level, size: Some(HalfPoints(hp)) }
+              Some(hp) => level = { ..level, size: Some(HalfPoints(hp)), }
               None => ()
             }
           None => ()
@@ -81,14 +81,14 @@ fn read_level(lvl : @xml.XmlElement) -> (Int, @numbering.Level) {
               None => attr(ind, "w:start")
             }
             match parse_twips(left) {
-              Some(v) => level = { ..level, indent_left: Some(Twips(v)) }
+              Some(v) => level = { ..level, indent_left: Some(Twips(v)), }
               None => ()
             }
             match parse_twips(attr(ind, "w:hanging")) {
-              Some(v) => level = { ..level, indent_hanging: Some(Twips(v)) }
+              Some(v) => level = { ..level, indent_hanging: Some(Twips(v)), }
               None =>
                 match parse_twips(attr(ind, "w:firstLine")) {
-                  Some(v) => level = { ..level, indent_first: Some(Twips(v)) }
+                  Some(v) => level = { ..level, indent_first: Some(Twips(v)), }
                   None => ()
                 }
             }
@@ -101,7 +101,7 @@ fn read_level(lvl : @xml.XmlElement) -> (Int, @numbering.Level) {
   // a bullet level with no w:lvlText would otherwise keep the numeric
   // placeholder from the default and render "%1." as its glyph
   if level.format is Bullet && !saw_text {
-    level = { ..level, text: "\u{2022}" }
+    level = { ..level, text: "\u{2022}", }
   }
   (depth, level)
 }
@@ -231,7 +231,7 @@ pub fn read_numbering(root : @xml.XmlElement) -> @numbering.Numbering {
         None => ()
       }
     }
-    instances[num_id] = { abstract_id, overrides, start_overrides }
+    instances[num_id] = { abstract_id, overrides, start_overrides, }
   }
   @numbering.Numbering::new(abstracts, instances)
 }

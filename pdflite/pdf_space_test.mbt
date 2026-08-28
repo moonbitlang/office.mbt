@@ -19,23 +19,23 @@ test "PdfColourSpace debug names preserve CamlPDF forms" {
   @test.assert_eq(@pdflite.PdfDeviceCMYK.debug_name(), "/DeviceCMYK")
   @test.assert_eq(
     @pdflite.PdfCalGray(
-      { x: 1.0, y: 1.0, z: 1.0 },
-      { x: 0.0, y: 0.0, z: 0.0 },
+      { x: 1.0, y: 1.0, z: 1.0, },
+      { x: 0.0, y: 0.0, z: 0.0, },
       1.0,
     ).debug_name(),
     "/CalGray",
   )
   @test.assert_eq(
     @pdflite.PdfCalRGB(
-      { x: 1.0, y: 1.0, z: 1.0 },
-      { x: 0.0, y: 0.0, z: 0.0 },
+      { x: 1.0, y: 1.0, z: 1.0, },
+      { x: 0.0, y: 0.0, z: 0.0, },
       [1.0, 1.0, 1.0],
       [1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0],
     ).debug_name(),
     "/CalRGB",
   )
   @test.assert_eq(
-    @pdflite.PdfLab({ x: 1.0, y: 1.0, z: 1.0 }, { x: 0.0, y: 0.0, z: 0.0 }, [
+    @pdflite.PdfLab({ x: 1.0, y: 1.0, z: 1.0, }, { x: 0.0, y: 0.0, z: 0.0, }, [
       -100.0, 100.0, -100.0, 100.0,
     ]).debug_name(),
     "/Lab",
@@ -75,20 +75,20 @@ test "cpdfcontent state serializes colour spaces and colour operands" {
     (PdfDeviceRGB, Json::string("DeviceRGB")),
     (PdfDeviceCMYK, Json::string("DeviceCMYK")),
     (
-      PdfCalGray({ x: 1.0, y: 1.0, z: 1.0 }, { x: 0.0, y: 0.0, z: 0.0 }, 1.0),
+      PdfCalGray({ x: 1.0, y: 1.0, z: 1.0, }, { x: 0.0, y: 0.0, z: 0.0, }, 1.0),
       Json::string("CalGray"),
     ),
     (
       PdfCalRGB(
-        { x: 1.0, y: 1.0, z: 1.0 },
-        { x: 0.0, y: 0.0, z: 0.0 },
+        { x: 1.0, y: 1.0, z: 1.0, },
+        { x: 0.0, y: 0.0, z: 0.0, },
         [1.0, 1.0, 1.0],
         [1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0],
       ),
       Json::string("CalRGB"),
     ),
     (
-      PdfLab({ x: 1.0, y: 1.0, z: 1.0 }, { x: 0.0, y: 0.0, z: 0.0 }, [
+      PdfLab({ x: 1.0, y: 1.0, z: 1.0, }, { x: 0.0, y: 0.0, z: 0.0, }, [
         -100.0, 100.0, -100.0, 100.0,
       ]),
       Json::string("Lab"),
@@ -555,7 +555,7 @@ test "PdfDocument read_colour_space parses calibrated dictionaries" {
       ]),
     ),
     Some(
-      PdfCalGray({ x: 0.0, y: 0.0, z: 0.0 }, { x: 0.0, y: 0.0, z: 0.0 }, 1.0),
+      PdfCalGray({ x: 0.0, y: 0.0, z: 0.0, }, { x: 0.0, y: 0.0, z: 0.0, }, 1.0),
     ),
   )
   @test.assert_eq(
@@ -573,7 +573,7 @@ test "PdfDocument read_colour_space parses calibrated dictionaries" {
       ]),
     ),
     Some(
-      PdfCalGray({ x: 0.9, y: 1.0, z: 0.8 }, { x: 0.0, y: 0.0, z: 0.0 }, 2.2),
+      PdfCalGray({ x: 0.9, y: 1.0, z: 0.8, }, { x: 0.0, y: 0.0, z: 0.0, }, 2.2),
     ),
   )
   @test.assert_eq(
@@ -595,8 +595,8 @@ test "PdfDocument read_colour_space parses calibrated dictionaries" {
     ),
     Some(
       PdfCalRGB(
-        { x: 1.0, y: 1.0, z: 1.0 },
-        { x: 0.0, y: 0.0, z: 0.0 },
+        { x: 1.0, y: 1.0, z: 1.0, },
+        { x: 0.0, y: 0.0, z: 0.0, },
         [1.8, 1.9, 2.0],
         [1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0],
       ),
@@ -625,7 +625,7 @@ test "PdfDocument read_colour_space parses calibrated dictionaries" {
       ]),
     ),
     Some(
-      PdfLab({ x: 1.0, y: 1.0, z: 1.0 }, { x: 0.0, y: 0.0, z: 0.0 }, [
+      PdfLab({ x: 1.0, y: 1.0, z: 1.0, }, { x: 0.0, y: 0.0, z: 0.0, }, [
         -80.0, 90.0, -70.0, 85.0,
       ]),
     ),
@@ -1148,8 +1148,8 @@ test "pdf_object_of_colour_space writes supported colour spaces" {
       ]),
     ),
   )
-  let whitepoint = @pdflite.PdfTristimulusPoint::{ x: 0.9, y: 1.0, z: 1.1 }
-  let blackpoint = @pdflite.PdfTristimulusPoint::{ x: 0.1, y: 0.2, z: 0.3 }
+  let whitepoint = @pdflite.PdfTristimulusPoint::{ x: 0.9, y: 1.0, z: 1.1, }
+  let blackpoint = @pdflite.PdfTristimulusPoint::{ x: 0.1, y: 0.2, z: 0.3, }
   @test.assert_eq(
     @pdflite.pdf_object_of_colour_space(PdfCalGray(whitepoint, blackpoint, 2.2)),
     Some(

@@ -1,6 +1,6 @@
 ///|
 fn style(family : String, size_pt : Double) -> @paragraph.RunStyle {
-  { family, size_pt, bold: false, italic: false, color: @pagelayout.black }
+  { family, size_pt, bold: false, italic: false, color: @pagelayout.black, }
 }
 
 ///|
@@ -42,7 +42,7 @@ fn article_model() -> @pagelayout.PageModel {
               },
             },
           ],
-          style: { ..base, space_after_pt: 6 },
+          style: { ..base, space_after_pt: 6, },
         },
         keep_next=true,
       ),
@@ -54,7 +54,7 @@ fn article_model() -> @pagelayout.PageModel {
             field: NotAField,
           },
         ],
-        style: { ..base, align: AlignJustify, indent_first_pt: 18 },
+        style: { ..base, align: AlignJustify, indent_first_pt: 18, },
       }),
     ],
     section={

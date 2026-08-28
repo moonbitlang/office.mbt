@@ -38,7 +38,7 @@ pub fn read_drawing(drawing : @xml.XmlElement) -> ImageRef? {
   let blips = inline.descendants_by_tag_name("a:blip")
   guard blips.get(0) is Some(blip) else { return None }
   guard blip.attributes.get("r:embed") is Some(id) else { return None }
-  Some({ width: Emu(cx), height: Emu(cy), relationship: id })
+  Some({ width: Emu(cx), height: Emu(cy), relationship: id, })
 }
 
 ///|

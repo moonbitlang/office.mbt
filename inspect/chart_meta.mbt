@@ -64,7 +64,7 @@ pub fn chart_series(xml : String) -> Array[ChartSeriesMeta] {
         if self_closing {
           // `<c:ser/>` is a valid, empty series — record it and keep
           // scanning; it must not swallow the series after it.
-          series.push({ name: None, categories: None, values: None })
+          series.push({ name: None, categories: None, values: None, })
           continue content_start
         }
         let end = match find_tag_close(view, tag, content_start) {

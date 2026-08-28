@@ -70,7 +70,7 @@ fn reader_object_stream_xref_for_test(
     offset: 0,
     generation: 0,
     in_use,
-    object_stream: Some({ object_stream_number, index }),
+    object_stream: Some({ object_stream_number, index, }),
   }
 }
 

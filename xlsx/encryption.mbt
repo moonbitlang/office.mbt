@@ -178,11 +178,11 @@ fn pad_zero(data : BytesView, block_size : Int) -> Bytes {
 /// Lazily-initialized process-global generator behind `random_bytes`.
 /// A fresh `Rand::new()` per call would reuse ChaCha8's fixed default
 /// seed, making every salt/verifier identical across files and runs.
-let random_bytes_rng : Ref[@random.Rand?] = { val: None }
+let random_bytes_rng : Ref[@random.Rand?] = { val: None, }
 
 ///|
 /// Optional user-supplied source of cryptographically secure bytes.
-let random_bytes_override : Ref[((Int) -> Bytes)?] = { val: None }
+let random_bytes_override : Ref[((Int) -> Bytes)?] = { val: None, }
 
 ///|
 /// Installs a custom source for the random bytes used in workbook
@@ -625,7 +625,7 @@ fn agile_decrypt(
     encryption,
     cancelled~,
   )
-  { bytes: decrypted, password_verified: password_ok }
+  { bytes: decrypted, password_verified: password_ok, }
 }
 
 ///|
@@ -773,10 +773,10 @@ fn standard_decrypt(
     if password_verified {
       raise InvalidEncryptedPackage(msg="decrypted package size is invalid")
     }
-    return { bytes: Default::default(), password_verified: false }
+    return { bytes: Default::default(), password_verified: false, }
   }
   let raw_size = raw_size_u64.to_int()
-  { bytes: decrypted[:raw_size].to_owned(), password_verified }
+  { bytes: decrypted[:raw_size].to_owned(), password_verified, }
 }
 
 ///|

@@ -9,7 +9,7 @@ let pdf_embed_length1_key_name : @core.PdfName = @core.pdf_name_of_bytes(
 )
 
 ///|
-let pdf_embed_font_number : Ref[Int] = { val: 0 }
+let pdf_embed_font_number : Ref[Int] = { val: 0, }
 
 ///|
 fn pdf_embed_name(text : String) -> @core.PdfName {
@@ -127,7 +127,7 @@ fn pdf_embed_make_fontpack_entries(
     for codepoint in subset {
       match extractor.charcode_of_codepoint(codepoint) {
         Some(charcode) =>
-          entries.push({ codepoint, font_index: index, charcode })
+          entries.push({ codepoint, font_index: index, charcode, })
         None => ()
       }
     }

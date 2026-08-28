@@ -70,7 +70,7 @@ fn publication_directory_duplicate(
   directory : PublicationDirectory,
   _output_path : String,
 ) -> PublicationDirectory {
-  { path: directory.path }
+  { path: directory.path, }
 }
 
 ///|

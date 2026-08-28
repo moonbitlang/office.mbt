@@ -357,7 +357,7 @@ fn parse_rich_text_runs(xml : StringView) -> Array[RichTextRun] raise XlsxError 
     let body = xml_str[body_start:body_end]
     let run_text = parse_text_nodes(body)
     let font = parse_rich_text_font(body)
-    runs.push({ text: run_text, font })
+    runs.push({ text: run_text, font, })
     index = body_start + close_end_rel + 1
   }
   runs
@@ -434,7 +434,7 @@ fn parse_shared_strings(
     } else {
       None
     }
-    values.push({ text: parse_text_nodes(body), runs })
+    values.push({ text: parse_text_nodes(body), runs, })
     cursor = close_end + 1
   }
   values

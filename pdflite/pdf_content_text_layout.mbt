@@ -156,7 +156,7 @@ pub fn PdfFont::content_text_layout_of_bytes(
       @geometry.transform_translate(advance.0, advance.1),
     )
   }
-  { glyphs, text_matrix }
+  { glyphs, text_matrix, }
 }
 
 ///|
@@ -224,7 +224,7 @@ pub fn PdfFont::content_text_layout_of_tj_array(
       _ => ()
     }
   }
-  { glyphs, text_matrix }
+  { glyphs, text_matrix, }
 }
 
 ///|

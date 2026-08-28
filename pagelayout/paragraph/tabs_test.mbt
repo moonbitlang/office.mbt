@@ -11,8 +11,8 @@ test "the default interval steps at multiples" {
 test "explicit stops win, then the default takes over" {
   let ruler = @paragraph.TabRuler::{
     stops: [
-      { position_pt: 50, align: TabLeft },
-      { position_pt: 120, align: TabCenter },
+      { position_pt: 50, align: TabLeft, },
+      { position_pt: 120, align: TabCenter, },
     ],
     default_interval_pt: 36,
   }
@@ -26,8 +26,8 @@ test "explicit stops win, then the default takes over" {
 test "a bar stop draws a rule and does not stop text" {
   let ruler = @paragraph.TabRuler::{
     stops: [
-      { position_pt: 40, align: TabBar },
-      { position_pt: 90, align: TabLeft },
+      { position_pt: 40, align: TabBar, },
+      { position_pt: 90, align: TabLeft, },
     ],
     default_interval_pt: 36,
   }
@@ -37,7 +37,7 @@ test "a bar stop draws a rule and does not stop text" {
 ///|
 test "a tab always advances, even past every stop" {
   let ruler = @paragraph.TabRuler::{
-    stops: [{ position_pt: 10, align: TabLeft }],
+    stops: [{ position_pt: 10, align: TabLeft, }],
     default_interval_pt: 0,
   }
   // a degenerate interval must not stall the pen
@@ -55,11 +55,11 @@ test "a tab advances the pen to its stop, not by a glyph width" {
     color: @pagelayout.black,
   }
   let input = @paragraph.ParagraphInput::{
-    runs: [{ text: "ab\tcd", style: run, field: NotAField }],
+    runs: [{ text: "ab\tcd", style: run, field: NotAField, }],
     style: {
       ..style,
       tabs: {
-        stops: [{ position_pt: 100, align: TabLeft }],
+        stops: [{ position_pt: 100, align: TabLeft, }],
         default_interval_pt: 36,
       },
     },
@@ -90,11 +90,11 @@ test "a right stop ends the following text at the stop" {
     color: @pagelayout.black,
   }
   let input = @paragraph.ParagraphInput::{
-    runs: [{ text: "Chapter\t9", style: run, field: NotAField }],
+    runs: [{ text: "Chapter\t9", style: run, field: NotAField, }],
     style: {
       ..style,
       tabs: {
-        stops: [{ position_pt: 200, align: TabRight }],
+        stops: [{ position_pt: 200, align: TabRight, }],
         default_interval_pt: 36,
       },
     },
@@ -120,11 +120,11 @@ test "a centre stop centres the following text on the stop" {
     color: @pagelayout.black,
   }
   let input = @paragraph.ParagraphInput::{
-    runs: [{ text: "a\tXY", style: run, field: NotAField }],
+    runs: [{ text: "a\tXY", style: run, field: NotAField, }],
     style: {
       ..style,
       tabs: {
-        stops: [{ position_pt: 100, align: TabCenter }],
+        stops: [{ position_pt: 100, align: TabCenter, }],
         default_interval_pt: 36,
       },
     },
@@ -167,7 +167,7 @@ test "a right stop never pulls text backwards" {
     style: {
       ..style,
       tabs: {
-        stops: [{ position_pt: 20, align: TabRight }],
+        stops: [{ position_pt: 20, align: TabRight, }],
         default_interval_pt: 36,
       },
     },
@@ -201,7 +201,7 @@ test "a tab on a wrapped line measures from that line's origin" {
     style: {
       ..@paragraph.ParagraphStyle::default(),
       tabs: {
-        stops: [{ position_pt: 60, align: TabLeft }],
+        stops: [{ position_pt: 60, align: TabLeft, }],
         default_interval_pt: 36,
       },
     },
@@ -237,11 +237,11 @@ test "a decimal stop aligns the separator on the stop" {
   }
   fn place(text : String) {
     let input = @paragraph.ParagraphInput::{
-      runs: [{ text, style: run, field: NotAField }],
+      runs: [{ text, style: run, field: NotAField, }],
       style: {
         ..style,
         tabs: {
-          stops: [{ position_pt: 200, align: TabDecimal }],
+          stops: [{ position_pt: 200, align: TabDecimal, }],
           default_interval_pt: 36,
         },
       },
@@ -314,7 +314,7 @@ test "a hanging indent supplies the implicit stop a marker tab aims for" {
     color: @pagelayout.black,
   }
   let input = @paragraph.ParagraphInput::{
-    runs: [{ text: "(a)\tthe", style: run, field: NotAField }],
+    runs: [{ text: "(a)\tthe", style: run, field: NotAField, }],
     style,
   }
   let laid = @paragraph.layout_paragraph(input, 453)

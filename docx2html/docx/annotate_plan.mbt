@@ -919,7 +919,7 @@ fn mutation_part_path_from_logical(
       message="the logical \{role} part name '\{logical}' cannot be represented as a ZIP item",
     )
   }
-  { logical, physical: zip.resolve_path(logical).unwrap_or(canonical) }
+  { logical, physical: zip.resolve_path(logical).unwrap_or(canonical), }
 }
 
 ///|

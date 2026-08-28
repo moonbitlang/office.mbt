@@ -2,7 +2,7 @@
 fn pdf_content_path_empty_result(
   partial_path : PdfContentPartialPath,
 ) -> PdfContentPathOpResult {
-  { partial_path, drawn_path: None }
+  { partial_path, drawn_path: None, }
 }
 
 ///|
@@ -66,7 +66,7 @@ fn pdf_content_path_subpath(
 fn pdf_content_partial_path_clear(
   state : PdfContentPartialPathState,
 ) -> PdfContentPartialPath {
-  PdfContentPartialPath({ ..state, segments: [], subpaths: [] })
+  PdfContentPartialPath({ ..state, segments: [], subpaths: [], })
 }
 
 ///|
@@ -230,7 +230,7 @@ fn PdfContentPartialPath::content_paint(
       let subpaths = pdf_content_path_finish_subpaths(state, close_current)
       {
         partial_path: pdf_content_partial_path_clear(state),
-        drawn_path: Some({ stroked, filled, path: { winding_rule, subpaths } }),
+        drawn_path: Some({ stroked, filled, path: { winding_rule, subpaths, }, }),
       }
     }
     PdfContentNoPartialPath => pdf_content_path_empty_result(self)
@@ -256,7 +256,7 @@ fn PdfContentPartialPath::content_clipping_path(
           }
           output
         }
-        Some({ winding_rule, subpaths })
+        Some({ winding_rule, subpaths, })
       }
     PdfContentNoPartialPath => None
   }

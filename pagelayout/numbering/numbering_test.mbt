@@ -29,8 +29,8 @@ fn numbering_of(levels : Array[@numbering.Level]) -> @numbering.Numbering {
   for i, l in levels {
     by_depth[i] = l
   }
-  @numbering.Numbering::new({ 100: { levels: by_depth } }, {
-    1: { abstract_id: 100, overrides: Map([]), start_overrides: Map([]) },
+  @numbering.Numbering::new({ 100: { levels: by_depth, } }, {
+    1: { abstract_id: 100, overrides: Map([]), start_overrides: Map([]), },
   })
 }
 
@@ -145,8 +145,8 @@ test "lvlRestart 0 keeps a sublevel counting across parents" {
 ///|
 test "startOverride forces a level's first value" {
   let n = @numbering.Numbering::new(
-    { 100: { levels: { 0: level(Decimal, "%1.") } } },
-    { 1: { abstract_id: 100, overrides: Map([]), start_overrides: { 0: 7 } } },
+    { 100: { levels: { 0: level(Decimal, "%1.") }, } },
+    { 1: { abstract_id: 100, overrides: Map([]), start_overrides: { 0: 7 }, } },
   )
   let c = @numbering.Counters::new()
   inspect(c.advance(n, 1, 0).unwrap(), content="7.")
@@ -156,7 +156,7 @@ test "startOverride forces a level's first value" {
 ///|
 test "an instance level override beats the abstract definition" {
   let n = @numbering.Numbering::new(
-    { 100: { levels: { 0: level(Decimal, "%1.") } } },
+    { 100: { levels: { 0: level(Decimal, "%1.") }, } },
     {
       1: {
         abstract_id: 100,
@@ -172,10 +172,10 @@ test "an instance level override beats the abstract definition" {
 ///|
 test "separate numIds count independently" {
   let n = @numbering.Numbering::new(
-    { 100: { levels: { 0: level(Decimal, "%1.") } } },
+    { 100: { levels: { 0: level(Decimal, "%1.") }, } },
     {
-      1: { abstract_id: 100, overrides: Map([]), start_overrides: Map([]) },
-      2: { abstract_id: 100, overrides: Map([]), start_overrides: Map([]) },
+      1: { abstract_id: 100, overrides: Map([]), start_overrides: Map([]), },
+      2: { abstract_id: 100, overrides: Map([]), start_overrides: Map([]), },
     },
   )
   let c = @numbering.Counters::new()

@@ -99,7 +99,7 @@ pub fn read_style_map_with_messages(
       None => ()
     }
   }
-  { mappings, messages }
+  { mappings, messages, }
 }
 
 ///|
@@ -141,7 +141,7 @@ fn read_style_mapping_with_message(line : String) -> (StyleMapping?, Message?) {
   let (to, error) = read_html_path_text(line, to_raw, after_arrow)
   match error {
     Some(error) => (None, Some(style_mapping_warning(line, error)))
-    None => (Some({ from, to }), None)
+    None => (Some({ from, to, }), None)
   }
 }
 
@@ -272,7 +272,7 @@ fn parse_style_matcher_suffixes(
         match error {
           Some(error) => return (suffixes, next, Some(error))
           None => {
-            suffixes = { ..suffixes, style_id: Some(style_id) }
+            suffixes = { ..suffixes, style_id: Some(style_id), }
             index = next
           }
         }
@@ -434,7 +434,7 @@ fn parse_style_list_suffix_after_colon(
       Some(style_parse_error(line, next, end, "close-paren")),
     )
   }
-  (Some({ is_ordered, level }), next + 1, true, None)
+  (Some({ is_ordered, level, }), next + 1, true, None)
 }
 
 ///|
@@ -571,7 +571,7 @@ fn parse_style_html_path(
 ) -> (Array[HtmlPathElement], Int, String?) {
   if line[index] == '!' {
     return (
-      [{ tag: "!", attributes: Map([]), fresh: false, separator: None }],
+      [{ tag: "!", attributes: Map([]), fresh: false, separator: None, }],
       index + 1,
       None,
     )
@@ -687,7 +687,7 @@ fn parse_style_html_path_element(
   if consumed {
     index = next
   }
-  ParsedHtmlPathElementOk({ tag, attributes, fresh, separator }, index)
+  ParsedHtmlPathElementOk({ tag, attributes, fresh, separator, }, index)
 }
 
 ///|

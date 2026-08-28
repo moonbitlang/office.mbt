@@ -1,11 +1,11 @@
 ///|
 fn position_bounds_for_test() -> @geometry.PdfRectangle {
-  { min_x: 0.0, min_y: 0.0, max_x: 100.0, max_y: 50.0 }
+  { min_x: 0.0, min_y: 0.0, max_x: 100.0, max_y: 50.0, }
 }
 
 ///|
 fn position_square_bounds_for_test() -> @geometry.PdfRectangle {
-  { min_x: 0.0, min_y: 0.0, max_x: 100.0, max_y: 100.0 }
+  { min_x: 0.0, min_y: 0.0, max_x: 100.0, max_y: 100.0, }
 }
 
 ///|

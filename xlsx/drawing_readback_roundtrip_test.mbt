@@ -419,7 +419,7 @@ test "rich text long-tail font round-trip" {
   let workbook = @xlsx.Workbook::new()
   ignore(workbook.add_sheet("Sheet1"))
   workbook.set_cell_rich_text("Sheet1", "A1", [
-    { text: "plain ", font: None },
+    { text: "plain ", font: None, },
     {
       text: "themed",
       font: Some({

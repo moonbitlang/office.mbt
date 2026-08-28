@@ -35,7 +35,7 @@ priv struct FormulaParser {
 
 ///|
 fn FormulaParser::new(text : String) -> FormulaParser {
-  { chars: text.to_array(), pos: 0 }
+  { chars: text.to_array(), pos: 0, }
 }
 
 ///|

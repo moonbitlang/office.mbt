@@ -16,7 +16,7 @@ pub fn PdfDocument::content_apply_extgstate_font_op(
         value => Ok(value)
       }
       let text_state = match size_result {
-        Ok(value) => { ..state.text_state, font_size: value }
+        Ok(value) => { ..state.text_state, font_size: value, }
         Err(_) => state.text_state
       }
       {
@@ -72,7 +72,8 @@ pub fn PdfDocument::content_apply_font_resource_op(
     Op_Tf(font_name, font_size),
   )
   match text_state.content_cached_font(name_text) {
-    Some(font) => { ..state, text_state: { ..text_state, current_font: font } }
+    Some(font) =>
+      { ..state, text_state: { ..text_state, current_font: font, }, }
     None =>
       match self.content_font_resource(resources, font_name) {
         Some(font) =>

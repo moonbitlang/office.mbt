@@ -241,5 +241,5 @@ pub fn pdf_read_afm(data : BytesView) -> PdfAfmData raise PdfError {
       }
     }
   }
-  { headers, char_metrics, kerns, char_name_widths }
+  { headers, char_metrics, kerns, char_name_widths, }
 }

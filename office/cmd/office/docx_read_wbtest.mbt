@@ -477,7 +477,7 @@ async test "DOCX query uses only its declared property set" {
         kind: Some("hyperlink"),
         text: None,
         stable_id: None,
-        properties: [{ name: "href", value: "https://www.moonbitlang.com/" }],
+        properties: [{ name: "href", value: "https://www.moonbitlang.com/", }],
         ignore_case: false,
         offset: 0,
         limit: 10,
@@ -515,7 +515,7 @@ async test "DOCX exact queries cover the full supported XML token length" {
     annotated, footnotes, endnotes, comments, builder,
   )
   builder.add_annotation_story(annotation_index, comments, None)
-  let item = { ..builder.entries[1], properties: { "author": long_property } }
+  let item = { ..builder.entries[1], properties: { "author": long_property }, }
   assert_eq(item.path, "/docx/comments/comment[1]")
   assert_eq(item.stable_id, Some(long_id))
   let spec : DocxQuerySpec = {
@@ -523,7 +523,7 @@ async test "DOCX exact queries cover the full supported XML token length" {
     kind: Some("comment"),
     text: None,
     stable_id: Some(long_id),
-    properties: [{ name: "author", value: long_property }],
+    properties: [{ name: "author", value: long_property, }],
     ignore_case: false,
     offset: 0,
     limit: 1,
@@ -943,7 +943,7 @@ async test "bounded DOCX payloads account for their exact serialized envelopes" 
     kind: Some("p"),
     text: None,
     stable_id: None,
-    properties: [{ name: "style_id", value: "Heading1" }],
+    properties: [{ name: "style_id", value: "Heading1", }],
     ignore_case: false,
     offset: 0,
     limit: 10,
@@ -985,10 +985,10 @@ async test "bounded DOCX payloads account for their exact serialized envelopes" 
       {
         ends_after_paragraph: Some(12),
         headers: [
-          { variant: "default", part: 0 },
-          { variant: "first", part: 1 },
+          { variant: "default", part: 0, },
+          { variant: "first", part: 1, },
         ],
-        footers: [{ variant: "even", part: 2 }],
+        footers: [{ variant: "even", part: 2, }],
       },
       nested.budget,
       false,
@@ -1200,7 +1200,7 @@ async test "literal newlines consume scan budgets even when presentation trims t
   assert_eq(preview, "")
   assert_true(truncated)
   let projection = docx_read_test_projection()
-  let entry = { ..projection.entries[0], element: Some(newline_only) }
+  let entry = { ..projection.entries[0], element: Some(newline_only), }
   let aggregate = DocxTextBudget::new("query text scan characters", 16)
   try
     entry_text_with_budget_cooperative(
@@ -1393,19 +1393,19 @@ async test "DOCX human output escapes control sequences in paths, kinds, and tex
   let outputs = [
     docx_get_human(unsafe_entry, "value\u{009b}", []),
     docx_text_human(
-      { ..projection, entries: [unsafe_text_entry] },
+      { ..projection, entries: [unsafe_text_entry], },
       None,
       0,
       1,
       [],
     ),
     docx_query_human(
-      { ..projection, entries: [unsafe_query_entry] },
+      { ..projection, entries: [unsafe_query_entry], },
       None,
       query_spec,
       [],
     ),
-    docx_outline_human({ ..projection, entries: [unsafe_entry] }),
+    docx_outline_human({ ..projection, entries: [unsafe_entry], }),
   ]
   for output in outputs {
     assert_false(output.contains("\u{009b}"))

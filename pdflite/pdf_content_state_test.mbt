@@ -153,7 +153,7 @@ test "cpdfcontent state derives JSON-facing states from operator state" {
   @test.assert_eq(glyph_state.font, "/F2")
   @test.assert_eq(glyph_state.font_size, 13.0)
   @test.assert_eq(glyph_state.clipping_path, clipping_path)
-  let non_knockout_state = { ..text_state, knockout: false }.content_glyph_state(
+  let non_knockout_state = { ..text_state, knockout: false, }.content_glyph_state(
     clipping_path,
   )
   @test.assert_eq(non_knockout_state.knockout, false)
@@ -177,7 +177,7 @@ test "cpdfcontent state applies basic path-state operators" {
   @test.assert_eq(state.line_width, 2.5)
   @test.assert_eq(state.line_cap, 1)
   @test.assert_eq(state.line_join, 2)
-  @test.assert_eq(state.dash_pattern, { array: [3.0, 1.5], phase: 0.25 })
+  @test.assert_eq(state.dash_pattern, { array: [3.0, 1.5], phase: 0.25, })
   @test.assert_eq(state.rendering_intent, "/Absolute")
   @test.assert_eq(
     @pdflite.pdf_content_apply_path_state_op(state, Op_w(4.0)).line_width,
@@ -240,7 +240,7 @@ test "cpdfcontent state serializes path drawing state JSON" {
     line_width: 2.5,
     line_cap: 1,
     line_join: 2,
-    dash_pattern: { array: [3.0, 1.5], phase: 0.25 },
+    dash_pattern: { array: [3.0, 1.5], phase: 0.25, },
     rendering_intent: "/RelativeColorimetric",
   }
   let dash_json = Json::object(

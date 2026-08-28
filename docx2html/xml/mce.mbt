@@ -272,7 +272,7 @@ fn MceProcessor::apply_namespace_declarations(
     let declaration_name = name[local_start:].to_owned()
     let prefix = if declaration_name == "xmlns" { "" } else { declaration_name }
     self.budget.charge_namespace_bindings(2)
-    changes.push({ prefix, previous: self.namespaces.get(prefix) })
+    changes.push({ prefix, previous: self.namespaces.get(prefix), })
     self.namespaces[prefix] = namespace_uri
   }
   changes
@@ -309,11 +309,11 @@ fn MceProcessor::add_process_content_names(
     self.budget.charge_namespace_bindings(1)
     if local_name == "*" {
       increment_mce_count(self.process_wildcard_namespaces, namespace_uri)
-      additions.push({ key: namespace_uri, wildcard: true })
+      additions.push({ key: namespace_uri, wildcard: true, })
     } else {
       let expanded = mce_expanded_name(namespace_uri, local_name, self.budget)
       increment_mce_count(self.process_exact_names, expanded)
-      additions.push({ key: expanded, wildcard: false })
+      additions.push({ key: expanded, wildcard: false, })
     }
   }
   additions
@@ -753,7 +753,7 @@ fn MceProcessor::process_element(
   mce_require_must_understand(scope)
   let attributes = self.filter_attributes(element)
   let children = self.process_children(element.children)
-  let output_element = XmlElement::{ name: element.name, attributes, children }
+  let output_element = XmlElement::{ name: element.name, attributes, children, }
   self.leave_element(scope)
   [XmlElement(output_element)]
 }

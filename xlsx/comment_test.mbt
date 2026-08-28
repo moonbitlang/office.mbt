@@ -124,8 +124,8 @@ test "comment roundtrip" {
     family: None,
   }
   let runs : Array[@xlsx.RichTextRun] = [
-    { text: "Note", font: Some(font) },
-    { text: " 1", font: None },
+    { text: "Note", font: Some(font), },
+    { text: " 1", font: None, },
   ]
   let comment : @xlsx.Comment = {
     cell: "B2",
@@ -213,7 +213,7 @@ test "legacy mixed plain and rich comment rewrites without loss" {
     author: "Alice",
     author_id: None,
     text: "",
-    paragraph: [{ text: "rich", font: None }],
+    paragraph: [{ text: "rich", font: None, }],
     width: None,
     height: None,
   })
@@ -296,8 +296,8 @@ test "comment UTF-16 limits reject without truncation or mutation" {
       author_id: None,
       text: "",
       paragraph: [
-        { text: repeat_comment_text("r", 20000), font: None },
-        { text: repeat_comment_text("s", 20000), font: None },
+        { text: repeat_comment_text("r", 20000), font: None, },
+        { text: repeat_comment_text("s", 20000), font: None, },
       ],
       width: None,
       height: None,
@@ -336,7 +336,7 @@ test "comment XML-invalid fields reject atomically" {
       author: "Alice",
       author_id: None,
       text: "",
-      paragraph: [{ text: "bad\u{1} run", font: None }],
+      paragraph: [{ text: "bad\u{1} run", font: None, }],
       width: None,
       height: None,
     },
@@ -381,7 +381,7 @@ test "comment replacement rejects XML-invalid rich fonts atomically" {
       author: "Alice",
       author_id: None,
       text: "",
-      paragraph: [{ text: "replacement", font: Some(invalid_font) }],
+      paragraph: [{ text: "replacement", font: Some(invalid_font), }],
       width: None,
       height: None,
     }),
@@ -401,8 +401,8 @@ test "comment rich runs are authoritative and conflicts reject" {
   let workbook = @xlsx.Workbook::new()
   let sheet = workbook.add_sheet("Sheet1")
   let runs : Array[@xlsx.RichTextRun] = [
-    { text: "rich", font: None },
-    { text: " text", font: None },
+    { text: "rich", font: None, },
+    { text: " text", font: None, },
   ]
   sheet.add_comment({
     cell: "C3",
@@ -422,7 +422,7 @@ test "comment rich runs are authoritative and conflicts reject" {
     author: "Alice",
     author_id: None,
     text: "different",
-    paragraph: [{ text: "rich", font: None }],
+    paragraph: [{ text: "rich", font: None, }],
     width: None,
     height: None,
   }
@@ -442,17 +442,17 @@ test "comment read APIs return detached rich-text arrays" {
     author: "Alice",
     author_id: None,
     text: "",
-    paragraph: [{ text: "stored", font: None }],
+    paragraph: [{ text: "stored", font: None, }],
     width: None,
     height: None,
   })
 
   let single = sheet.get_comment("A1").unwrap()
-  single.paragraph.push({ text: "single mutation", font: None })
+  single.paragraph.push({ text: "single mutation", font: None, })
   let workbook_list = workbook.get_comments("Sheet1")
-  workbook_list[0].paragraph.push({ text: "list mutation", font: None })
+  workbook_list[0].paragraph.push({ text: "list mutation", font: None, })
   let sheet_view = sheet.comments()
-  sheet_view[0].paragraph.push({ text: "view mutation", font: None })
+  sheet_view[0].paragraph.push({ text: "view mutation", font: None, })
 
   match sheet.get_comment("A1") {
     Some(stored) => {

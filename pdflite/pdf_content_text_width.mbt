@@ -99,7 +99,7 @@ pub fn PdfFont::content_width_of_charcode(
 ) -> (Double, Double, Double) {
   match self {
     PdfFontSimple(font) => pdf_content_simple_width_of_charcode(font, charcode)
-    PdfFontStandard({ font, encoding }) =>
+    PdfFontStandard({ font, encoding, }) =>
       (
         pdf_standard14_width_of_code(font.afm_data(), encoding, charcode).to_double(),
         0.0,

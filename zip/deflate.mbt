@@ -312,7 +312,7 @@ fn build_huffman(lengths : ArrayView[Int]) -> HuffmanTable raise ZipError {
       len_table[idx] = length
     }
   }
-  { max_bits, sym, len: len_table }
+  { max_bits, sym, len: len_table, }
 }
 
 ///|
@@ -444,7 +444,7 @@ fn read_dynamic_tables(
 /// `max_bits` = 0 bits, reads `len[0]` = 0, and raises -- so referencing this
 /// table is an error rather than a silent misdecode.
 fn empty_huffman() -> HuffmanTable {
-  { max_bits: 0, sym: [-1], len: [0] }
+  { max_bits: 0, sym: [-1], len: [0], }
 }
 
 ///|
@@ -503,7 +503,7 @@ priv struct BitWriter {
 
 ///|
 fn BitWriter::new(out : FixedByteOutput) -> BitWriter {
-  { bit_buf: 0, bit_count: 0, out }
+  { bit_buf: 0, bit_count: 0, out, }
 }
 
 ///|
@@ -804,7 +804,7 @@ test "deflate encode lz77 matches" {
 
 ///|
 fn wb_single_symbol_table(symbol : Int) -> HuffmanTable {
-  { max_bits: 1, sym: [symbol, symbol], len: [1, 1] }
+  { max_bits: 1, sym: [symbol, symbol], len: [1, 1], }
 }
 
 ///|

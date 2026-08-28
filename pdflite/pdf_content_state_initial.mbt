@@ -43,13 +43,13 @@ pub fn pdf_content_initial_drawn_path() -> @shape.PdfDrawnPath {
   {
     stroked: false,
     filled: false,
-    path: { winding_rule: PdfPathEvenOdd, subpaths: [] },
+    path: { winding_rule: PdfPathEvenOdd, subpaths: [], },
   }
 }
 
 ///|
 fn pdf_content_initial_dash_pattern() -> PdfContentDashPattern {
-  { array: [], phase: 0.0 }
+  { array: [], phase: 0.0, }
 }
 
 ///|
@@ -100,7 +100,7 @@ pub fn pdf_content_initial_clipping_state(
   maxx : Double,
   maxy : Double,
 ) -> PdfContentClippingState {
-  { clipping_path: pdf_content_initial_clipping_path(minx, miny, maxx, maxy) }
+  { clipping_path: pdf_content_initial_clipping_path(minx, miny, maxx, maxy), }
 }
 
 ///|

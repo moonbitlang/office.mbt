@@ -56,7 +56,7 @@ fn PdfDocument::pdf_page_remove_box_page(
   box_name : @core.PdfName,
 ) -> @page.PdfPage raise @core.PdfError {
   ignore(self)
-  { ..page, rest: page.rest.remove_dict_entry(box_name) }
+  { ..page, rest: page.rest.remove_dict_entry(box_name), }
 }
 
 ///|
@@ -87,9 +87,9 @@ fn PdfDocument::pdf_page_copy_box_page(
   match self.pdf_page_copy_box_source(page, from_box, mediabox_if_missing) {
     Some(value) =>
       if to_box == pdf_page_mediabox_key() {
-        { ..page, mediabox: value }
+        { ..page, mediabox: value, }
       } else {
-        { ..page, rest: page.rest.add_dict_entry(to_box, value) }
+        { ..page, rest: page.rest.add_dict_entry(to_box, value), }
       }
     None => page
   }
@@ -103,7 +103,7 @@ fn PdfDocument::pdf_page_set_mediabox_page(
   boxes : ArrayView[(Double, Double, Double, Double)],
 ) -> @page.PdfPage {
   ignore(self)
-  { ..page, mediabox: pdf_page_box_xywh_object(boxes[page_number - 1]) }
+  { ..page, mediabox: pdf_page_box_xywh_object(boxes[page_number - 1]), }
 }
 
 ///|

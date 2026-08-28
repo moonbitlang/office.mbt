@@ -106,7 +106,7 @@ pub fn pdf_addtext_url_annotation_geometry(
   let p1 = matrix.apply(@geometry.point2(max_x, max_y))
   let p2 = matrix.apply(@geometry.point2(min_x, max_y))
   let p3 = matrix.apply(@geometry.point2(max_x, min_y))
-  { p0, p1, p2, p3, rectangle: pdf_addtext_bounds_of_points(p0, p1, p2, p3) }
+  { p0, p1, p2, p3, rectangle: pdf_addtext_bounds_of_points(p0, p1, p2, p3), }
 }
 
 ///|

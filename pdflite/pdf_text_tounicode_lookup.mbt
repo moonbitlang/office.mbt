@@ -8,9 +8,9 @@ fn PdfFont::pdf_text_tounicode(self : PdfFont) -> Array[(Int, @core.PdfBytes)]? 
       {
         composite: {
           cid_fontdescriptor: { tounicode: Some(tounicode), .. },
-          ..,
+          ..
         },
-        ..,
+        ..
       }
     ) => Some(tounicode)
     _ => None
