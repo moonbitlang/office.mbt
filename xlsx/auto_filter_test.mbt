@@ -185,9 +185,9 @@ test "auto filter: quoted values keep spaces without quote delimiters" {
   let workbook = @xlsx.Workbook::new()
   ignore(workbook.add_sheet("S"))
   workbook.set_auto_filter("S", "A1:D50", [
-    { column: "A", expression: "x == \"North America\"" },
-    { column: "B", expression: "x >= \"1 000\"" },
-    { column: "C", expression: "x == \"\"" },
+    { column: "A", expression: "x == \"North America\"", },
+    { column: "B", expression: "x >= \"1 000\"", },
+    { column: "C", expression: "x == \"\"", },
   ])
   debug_inspect(
     workbook.get_auto_filter("S"),
@@ -215,7 +215,7 @@ test "auto filter: quoted values keep spaces without quote delimiters" {
   )
   // Escaped doubled quote inside a quoted value is a literal quote.
   workbook.set_auto_filter("S", "A1:A2", [
-    { column: "A", expression: "x == \"say \"\"hi\"\"\"" },
+    { column: "A", expression: "x == \"say \"\"hi\"\"\"", },
   ])
   debug_inspect(
     workbook.get_auto_filter("S"),
@@ -247,7 +247,7 @@ test "auto filter: quoted value written to xml without delimiters" {
   let workbook = @xlsx.Workbook::new()
   ignore(workbook.add_sheet("S"))
   workbook.set_auto_filter("S", "A1:D50", [
-    { column: "A", expression: "x == \"North America\"" },
+    { column: "A", expression: "x == \"North America\"", },
   ])
   let archive = @zip.read(@xlsx.write(workbook))
   guard archive.get("xl/worksheets/sheet1.xml") is Some(bytes) else {
@@ -264,7 +264,7 @@ test "auto filter: unclosed quote raises InvalidAutoFilter" {
   ignore(workbook.add_sheet("Sheet1"))
   let result : Result[Unit, Error] = Ok(
     workbook.set_auto_filter("Sheet1", "A1:A2", [
-      { column: "A", expression: "x == \"North America" },
+      { column: "A", expression: "x == \"North America", },
     ]),
   ) catch {
     e => Err(e)
