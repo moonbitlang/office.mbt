@@ -1037,7 +1037,6 @@ async fn projection_from_annotated(
   file : String,
   annotated : @docx.DocxAnnotatedResult,
   max_elements : Int,
-  body_joins? : @docx.DocxParagraphAnchorJoinIndex,
   cancelled? : () -> Bool = () => false,
 ) -> DocxProjection {
   let builder = DocxProjectionBuilder::new(max_elements, cancelled~)
@@ -1066,6 +1065,12 @@ async fn projection_from_annotated(
   )
   let header_sources = annotated.header_story_sources()
   let footer_sources = annotated.footer_story_sources()
+  let body_joins = attempt_docx_story_anchor_join(
+    file,
+    annotated,
+    annotated.main_story_source(),
+    cancelled~,
+  )
   builder.add_story(
     "/docx/body",
     "body",
@@ -1075,26 +1080,41 @@ async fn projection_from_annotated(
     ),
     joins?=body_joins,
   )
+
   for index, header in result.headers {
     builder.cooperate()
-    let source = docx_story_source_fields("header", header_sources.get(index))
+    let header_source = header_sources.get(index)
+    let source = docx_story_source_fields("header", header_source)
     source["part_index"] = Json::number((index + 1).to_double())
+    let joins = match header_source {
+      Some(value) =>
+        attempt_docx_story_anchor_join(file, annotated, value, cancelled~)
+      None => None
+    }
     builder.add_story(
       "/docx/header[\{index + 1}]",
       "header",
       header.body,
       Json::object(source),
+      joins?,
     )
   }
   for index, footer in result.footers {
     builder.cooperate()
-    let source = docx_story_source_fields("footer", footer_sources.get(index))
+    let footer_source = footer_sources.get(index)
+    let source = docx_story_source_fields("footer", footer_source)
     source["part_index"] = Json::number((index + 1).to_double())
+    let joins = match footer_source {
+      Some(value) =>
+        attempt_docx_story_anchor_join(file, annotated, value, cancelled~)
+      None => None
+    }
     builder.add_story(
       "/docx/footer[\{index + 1}]",
       "footer",
       footer.body,
       Json::object(source),
+      joins?,
     )
   }
   builder.add_annotation_story(
@@ -1307,65 +1327,77 @@ async fn open_docx_projection_archive(
       }),
     )
   }
-  let (annotated, body_joins) = open_docx_projection_annotated_archive(
+  let annotated = open_docx_projection_annotated_archive(
     file,
     archive,
     cancelled~,
   )
-  projection_from_annotated(
-    file,
-    annotated,
-    max_elements,
-    body_joins?,
-    cancelled~,
-  )
+  projection_from_annotated(file, annotated, max_elements, cancelled~)
 }
 
 ///|
-/// Open the annotated tree and, when possible, derive its body-story anchor
-/// join from the SAME mutation-safe read. A strict parser refusal is the only
-/// case that falls back to the tolerant read; package validation, cancellation,
-/// and resource limits remain fatal.
+/// Open the single annotated tree used by the projection. A strict parser
+/// refusal is the only case that falls back to the tolerant read; package
+/// validation, cancellation, and resource limits remain fatal.
 async fn open_docx_projection_annotated_archive(
   file : String,
   archive : @zip.Archive,
   cancelled? : () -> Bool = () => false,
-) -> (@docx.DocxAnnotatedResult, @docx.DocxParagraphAnchorJoinIndex?) {
-  try {
-    let annotated = open_docx_mutation_annotated_archive(
-      file,
-      archive,
-      cancelled~,
-    )
-    let body_joins = attempt_docx_body_anchor_join(file, annotated, cancelled~)
-    (annotated, body_joins)
-  } catch {
+) -> @docx.DocxAnnotatedResult {
+  open_docx_joined_projection_annotated_archive(file, archive, cancelled~) catch {
     CliFailure(error) => {
       check_office_read_cancelled(cancelled)
       if error.code != "office.docx.read_failed" {
         raise CliFailure(error)
       }
-      (open_docx_annotated_archive(file, archive, cancelled~), None)
+      open_docx_annotated_archive(file, archive, cancelled~)
     }
     error => raise error
   }
 }
 
 ///|
-/// Try to build the body story's anchor join for a successful mutation-safe
-/// read. Join construction can refuse when the tree/projection correspondence
-/// is not provable; that refusal only disables anchors and does not require a
-/// second document read.
-fn attempt_docx_body_anchor_join(
+/// The joined projection read retains reader scans and provenance while using
+/// tolerant annotation identity semantics. It is read-only by policy.
+async fn open_docx_joined_projection_annotated_archive(
+  file : String,
+  archive : @zip.Archive,
+  cancelled? : () -> Bool = () => false,
+) -> @docx.DocxAnnotatedResult {
+  check_office_read_cancelled(cancelled)
+  @async.pause()
+  let main_document_part = validate_docx_read_archive(file, archive, cancelled~)
+  @async.pause()
+  check_office_read_cancelled(cancelled)
+  let annotated = @docx.read_docx_annotated_archive_joined_projection_limited(
+    archive,
+    docx_cli_xml_budget(cancelled),
+    max_diagnostics=docx_cli_max_warnings,
+    max_diagnostic_chars=512,
+    expected_main_document_path=main_document_part,
+  ) catch {
+    error => {
+      check_office_read_cancelled(cancelled)
+      raise docx_reader_failure(error, file)
+    }
+  }
+  check_office_read_cancelled(cancelled)
+  @async.pause()
+  annotated
+}
+
+///|
+/// Try to build a story's paragraph anchor join for a successful joined read.
+/// Join construction can refuse when the tree/projection correspondence is not
+/// provable; that refusal only disables anchors and does not reread the part.
+fn attempt_docx_story_anchor_join(
   file : String,
   annotated : @docx.DocxAnnotatedResult,
+  story_source : @docx.DocxStoryPartSource,
   cancelled? : () -> Bool = () => false,
 ) -> @docx.DocxParagraphAnchorJoinIndex? raise CliFailure {
   let joins = Some(
-    @docx.docx_paragraph_anchor_join_index(
-      annotated,
-      annotated.main_story_source(),
-    ),
+    @docx.docx_paragraph_anchor_join_index(annotated, story_source),
   ) catch {
     InvalidZip(..) => None
     InvalidXml(..) => None

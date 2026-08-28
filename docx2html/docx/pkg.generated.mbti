@@ -80,6 +80,8 @@ pub fn read_docx_annotated(BytesView, external_file_access? : Bool, read_externa
 
 pub fn read_docx_annotated_archive(@zip.Archive, external_file_access? : Bool, read_external_file? : (String) -> Bytes?) -> DocxAnnotatedResult raise @core.DocxError
 
+pub fn read_docx_annotated_archive_joined_projection_limited(@zip.Archive, @xml.XmlReadBudget, external_file_access? : Bool, read_external_file? : (String) -> Bytes?, max_diagnostics? : Int, max_diagnostic_chars? : Int, expected_main_document_path? : String) -> DocxAnnotatedResult raise @core.DocxError
+
 pub fn read_docx_annotated_archive_limited(@zip.Archive, @xml.XmlReadBudget, external_file_access? : Bool, read_external_file? : (String) -> Bytes?, max_diagnostics? : Int, max_diagnostic_chars? : Int, expected_main_document_path? : String) -> DocxAnnotatedResult raise @core.DocxError
 
 pub fn read_docx_annotated_archive_tolerant_limited(@zip.Archive, @xml.XmlReadBudget, external_file_access? : Bool, read_external_file? : (String) -> Bytes?, max_diagnostics? : Int, max_diagnostic_chars? : Int, expected_main_document_path? : String) -> DocxAnnotatedResult raise @core.DocxError

@@ -671,8 +671,9 @@ pub struct DocxAnnotatedResult {
   // can never be a sound source for an annotation mutation plan.
   priv read_policy : AnnotationReadPolicy
   // The classified reader-native projection of every joined-read story
-  // part, keyed by part path (#434 PR 6c). Populated only for
-  // mutation-safe reads; the N0c1 surgery surface consumes these.
+  // part, keyed by part path (#434 PR 6c). Populated for mutation-safe and
+  // joined read-only projections; the N0c1 surgery surface consumes only the
+  // former.
   priv reader_projections : StableStringMap[ReaderProjection]
   priv reader_projection_sources : StableStringMap[BytesView]
   // Erase-order paragraph provenance per mutation-safe story part
@@ -901,9 +902,36 @@ pub fn read_docx_annotated_archive_tolerant_limited(
 }
 
 ///|
+/// Builds a read-only projection with the joined story reader while retaining
+/// tolerant annotation identities. This is the projection command's single
+/// read path: strict story correspondence is available for paragraph anchors,
+/// but mutation-only identity gates remain disabled.
+pub fn read_docx_annotated_archive_joined_projection_limited(
+  archive : @mbtzip.Archive,
+  xml_budget : @xml.XmlReadBudget,
+  external_file_access? : Bool = false,
+  read_external_file? : (String) -> Bytes? = no_external_file_reader,
+  max_diagnostics? : Int = DEFAULT_MAX_READER_DIAGNOSTICS,
+  max_diagnostic_chars? : Int = DEFAULT_MAX_READER_DIAGNOSTIC_CHARS,
+  expected_main_document_path? : String,
+) -> DocxAnnotatedResult raise DocxError {
+  read_docx_annotated_archive_with_policy_limited(
+    archive,
+    xml_budget,
+    external_file_access,
+    read_external_file,
+    max_diagnostics,
+    max_diagnostic_chars,
+    expected_main_document_path,
+    JoinedProjection,
+  )
+}
+
+///|
 priv enum AnnotationReadPolicy {
   MutationSafe
   TolerantProjection
+  JoinedProjection
 }
 
 ///|
@@ -930,7 +958,7 @@ fn indexed_annotation_id(
 ) -> String raise DocxError {
   match policy {
     MutationSafe => package_id
-    TolerantProjection => d2_annotation_id(source_id)
+    TolerantProjection | JoinedProjection => d2_annotation_id(source_id)
   }
 }
 
@@ -939,7 +967,7 @@ fn validate_scanned_marker_ids(
   scan : StoryScan,
   policy : AnnotationReadPolicy,
 ) -> Unit raise DocxError {
-  if policy is TolerantProjection {
+  if policy is TolerantProjection || policy is JoinedProjection {
     for marker in scan.markers {
       if marker.id_was_present() && marker.id() == "" {
         raise InvalidXml(
@@ -994,9 +1022,9 @@ fn read_docx_annotated_zip(
     xml_budget?,
     diagnostics?,
     expected_main_document_path?,
-    strict_main_document=policy is MutationSafe,
+    strict_main_document=policy is MutationSafe || policy is JoinedProjection,
     story_reader_mode=match policy {
-      MutationSafe => JoinedMutationReader
+      MutationSafe | JoinedProjection => JoinedMutationReader
       TolerantProjection => TolerantReader
     },
   )
@@ -1541,7 +1569,7 @@ fn build_annotation_index(
     )
     match zip.read_bytes(path) {
       Some(bytes) => {
-        // Mutation-safe public stories ADOPT the retained joined-read scan:
+        // Joined public stories ADOPT the retained joined-read scan:
         // the read already ran the strict gate and the one authoritative
         // scan under the shared cumulative budget, and the scan-parity
         // oracle (scan_mode_parity_wbtest.mbt) holds the two modes to
@@ -1549,11 +1577,11 @@ fn build_annotation_index(
         // regression and must refuse loudly — a silent rescan here would
         // hide it and quietly fork the mutation truth source.
         let scan = match (policy, parts.reader_projections.get(path)) {
-          (MutationSafe, Some(projection)) => {
+          (MutationSafe | JoinedProjection, Some(projection)) => {
             warnings.replay_scan_warnings(projection.scan)
             projection.scan
           }
-          (MutationSafe, None) =>
+          (MutationSafe | JoinedProjection, None) =>
             raise Unsupported(
               message="annotation index expected a retained reader projection for '\{path}'",
             )

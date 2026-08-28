@@ -745,8 +745,9 @@ fn child_reference_json(projection : DocxProjection, path : String) -> Json {
 ///|
 /// Anchor provenance for a paragraph record (paraId R1b): the judgment
 /// travels only across the engine's proven tree/projection join, so an
-/// entry without one — nested shapes, tolerant-only reads, non-body
-/// stories in v1 — reports `unjoined` rather than a borrowed identity.
+/// entry without one — nested shapes, tolerant-only fallback reads, and
+/// annotation stories without a supported join — reports `unjoined` rather
+/// than a borrowed identity.
 /// Non-paragraph records carry none of these fields.
 fn paragraph_anchor_fields(
   entry : DocxProjectionEntry,

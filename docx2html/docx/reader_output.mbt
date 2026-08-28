@@ -225,8 +225,8 @@ fn project_joined_reader_output(
 ///|
 /// Which reader semantics a `DocumentParts` uses for story parts.
 /// Ordinary and tolerant-annotated reading keep the tolerant unjoined
-/// path; ONLY mutation-safe annotated reads go joined -- and once
-/// joined there is no fallback: a join, segmentation or projection
+/// path; mutation-safe and joined read-only annotated reads go joined -- and
+/// once joined there is no fallback: a join, segmentation or projection
 /// failure refuses the whole read.
 priv enum StoryReaderMode {
   TolerantReader

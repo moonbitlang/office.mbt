@@ -359,6 +359,7 @@ pub fn DocxParagraphAnchorJoinIndex::join_of_occurrence(
 }
 
 ///|
+/// Number of paragraph occurrences represented by this story join.
 pub fn DocxParagraphAnchorJoinIndex::occurrence_count(
   self : DocxParagraphAnchorJoinIndex,
 ) -> Int {

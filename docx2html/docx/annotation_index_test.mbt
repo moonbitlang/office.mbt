@@ -1101,6 +1101,18 @@ test "tolerant D2 ids distinguish missing attributes from literal undefined" {
   assert_eq(tolerant.result().sections, package_read.sections)
   assert_eq(tolerant.comment_bodies().map(pair => pair.0), ["", "undefined"])
   assert_eq(tolerant.footnote_bodies().map(pair => pair.0), ["", "undefined"])
+  let joined_archive = try! @mbtzip.read(bytes)
+  let joined_budget = @xml.xml_read_budget(
+    max_source_units=1024 * 1024,
+    max_tokens=4096,
+    max_materialized_chars=1024 * 1024,
+    max_token_chars=4096,
+  )
+  let joined = @docx.read_docx_annotated_archive_joined_projection_limited(
+    joined_archive, joined_budget,
+  )
+  assert_eq(joined.comment_bodies().map(pair => pair.0), ["", "undefined"])
+  assert_eq(joined.footnote_bodies().map(pair => pair.0), ["", "undefined"])
 }
 
 ///|
@@ -1127,6 +1139,23 @@ test "tolerant D2 ids reject a present empty value instead of aliasing absence" 
     _ => fail("expected a present empty annotation id to be rejected")
   } noraise {
     _ => fail("expected a present empty annotation id to be rejected")
+  }
+  let joined_archive = try! @mbtzip.read(bytes)
+  let joined_budget = @xml.xml_read_budget(
+    max_source_units=1024 * 1024,
+    max_tokens=4096,
+    max_materialized_chars=1024 * 1024,
+    max_token_chars=4096,
+  )
+  try
+    @docx.read_docx_annotated_archive_joined_projection_limited(
+      joined_archive, joined_budget,
+    )
+  catch {
+    InvalidXml(message~) => assert_true(message.contains("present but empty"))
+    _ => fail("expected a joined projection empty annotation id to be rejected")
+  } noraise {
+    _ => fail("expected a joined projection empty annotation id to be rejected")
   }
 }
 

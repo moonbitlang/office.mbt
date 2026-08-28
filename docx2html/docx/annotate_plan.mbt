@@ -349,7 +349,8 @@ fn check_mutation_gates(
 fn check_annotation_identity_state(
   annotated : DocxAnnotatedResult,
 ) -> Unit raise DocxError {
-  if annotated.read_policy is TolerantProjection {
+  if annotated.read_policy is TolerantProjection ||
+    annotated.read_policy is JoinedProjection {
     raise Unsupported(
       message="a tolerant DOCX projection is read-only and cannot be used to plan annotation mutations",
     )

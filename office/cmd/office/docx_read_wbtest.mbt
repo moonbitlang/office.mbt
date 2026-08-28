@@ -138,6 +138,57 @@ async test "DOCX projection reports physical story sources and authority" {
 }
 
 ///|
+async test "DOCX projection joins header and footer paragraph anchors" {
+  let bytes = @word.write_docx_with_annotations(
+    [@word.paragraph([@word.run([@word.text("body")])])],
+    headers=[
+      @word.header_footer_spec(variant="default", [
+        @word.paragraph([@word.run([@word.text("header")])]),
+      ]),
+    ],
+    footers=[
+      @word.header_footer_spec(variant="default", [
+        @word.paragraph([@word.run([@word.text("footer")])]),
+      ]),
+    ],
+  )
+  let archive = try! @zip.read(bytes)
+  for part in ["word/header1.xml", "word/footer1.xml"] {
+    guard archive.get(part) is Some(raw) else {
+      fail("expected generated story part \{part}")
+    }
+    let source = try! @utf8.decode(raw, ignore_bom=true)
+    let root = if part.has_prefix("word/header") { "w:hdr" } else { "w:ftr" }
+    let with_namespace = source.replace(
+      old="<\{root} xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\">",
+      new="<\{root} xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\" xmlns:w14=\"http://schemas.microsoft.com/office/word/2010/wordml\">",
+    )
+    let para_id_suffix = if part.has_prefix("word/header") { "1" } else { "2" }
+    let with_para_id = with_namespace.replace(
+      old="<w:p>",
+      new="<w:p w14:paraId=\"1234567\{para_id_suffix}\">",
+    )
+    assert_true(archive.replace(part, @utf8.encode(with_para_id)))
+  }
+  let projection = open_docx_projection(
+    "header-footer-anchors.docx",
+    @zip.write(archive),
+    1000,
+  )
+  for path in ["/docx/header[1]/p[1]", "/docx/footer[1]/p[1]"] {
+    let entry = resolve_projection_selector(projection, path)
+    let payload = get_docx_payload(projection, entry, 100_000).data
+    guard payload is Object(fields) else {
+      fail("expected object payload for \{path}")
+    }
+    assert_eq(
+      fields.get("paragraph_anchor_status"),
+      Some(Json::string("unique")),
+    )
+  }
+}
+
+///|
 async test "DOCX annotation anchors expose canonical story selectors" {
   let projection = docx_read_test_projection()
   let comment = resolve_projection_selector(
