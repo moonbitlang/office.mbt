@@ -730,6 +730,7 @@ fn child_reference_json(projection : DocxProjection, path : String) -> Json {
         Some(id) => fields["id"] = Json::string(id)
         None => ()
       }
+      paragraph_anchor_fields(entry, fields)
       Json::object(fields)
     }
     None =>
@@ -738,6 +739,40 @@ fn child_reference_json(projection : DocxProjection, path : String) -> Json {
         "kind": Json::string("unknown"),
         "stability": Json::string("snapshot-relative"),
       })
+  }
+}
+
+///|
+/// Anchor provenance for a paragraph record (paraId R1b): the judgment
+/// travels only across the engine's proven tree/projection join, so an
+/// entry without one — nested shapes, tolerant-only reads, non-body
+/// stories in v1 — reports `unjoined` rather than a borrowed identity.
+/// Non-paragraph records carry none of these fields.
+fn paragraph_anchor_fields(
+  entry : DocxProjectionEntry,
+  fields : Map[String, Json],
+) -> Unit {
+  if entry.kind != "p" {
+    return
+  }
+  match entry.paragraph_join {
+    Some(Joined(_, anchor)) => {
+      fields["para_id"] = match anchor.para_id() {
+        Some(id) => Json::string(id)
+        None => Json::null()
+      }
+      fields["paragraph_anchor_status"] = Json::string(anchor.status())
+      fields["physical_para_ids"] = if anchor.status() == "multi_physical" {
+        Json::array(anchor.physical_para_ids().map(id => Json::string(id)))
+      } else {
+        Json::null()
+      }
+    }
+    _ => {
+      fields["para_id"] = Json::null()
+      fields["paragraph_anchor_status"] = Json::string("unjoined")
+      fields["physical_para_ids"] = Json::null()
+    }
   }
 }
 
@@ -764,5 +799,6 @@ fn entry_base_json(
   fields["children"] = Json::array(children)
   fields["properties"] = entry_properties_json(entry)
   fields["metadata"] = entry.metadata
+  paragraph_anchor_fields(entry, fields)
   fields
 }

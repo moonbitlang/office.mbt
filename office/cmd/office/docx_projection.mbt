@@ -47,6 +47,11 @@ priv struct DocxProjectionEntry {
   properties : Map[String, String]
   metadata : Json
   source : Json
+  // The paragraph's tree/projection anchor join (paraId R1b). Some only
+  // when the join was soundly computed for this occurrence; None means
+  // the serializers emit `unjoined` for paragraph entries — anchors are
+  // never guessed.
+  paragraph_join : @docx.DocxParagraphJoin?
 }
 
 ///|
@@ -101,6 +106,12 @@ priv struct DocxProjectionBuilder {
   mut warnings_truncated : Bool
   cancelled : () -> Bool
   mut work_since_yield : Int
+  // Active only while walking a story whose anchor join is available:
+  // the join index and the story-scoped paragraph-occurrence cursor,
+  // advancing in the SAME depth-first order the erase boundary's
+  // provenance channel recorded.
+  mut story_joins : @docx.DocxParagraphAnchorJoinIndex?
+  mut story_paragraph_cursor : Int
 }
 
 ///|
@@ -183,6 +194,8 @@ fn DocxProjectionBuilder::new(
     warnings_truncated: false,
     cancelled,
     work_since_yield: 0,
+    story_joins: None,
+    story_paragraph_cursor: 0,
   }
 }
 
@@ -287,6 +300,7 @@ fn DocxProjectionBuilder::add_entry(
   properties : Map[String, String],
   metadata : Json,
   source : Json,
+  paragraph_join? : @docx.DocxParagraphJoin,
 ) -> DocxProjectionEntry raise CliFailure {
   self.require_entry_capacity()
   let selector = @lib.parse_selector(path) catch {
@@ -335,6 +349,7 @@ fn DocxProjectionBuilder::add_entry(
     properties,
     metadata,
     source,
+    paragraph_join,
   }
   let index = self.entries.length()
   self.entries.push(entry)
@@ -801,6 +816,22 @@ async fn DocxProjectionBuilder::walk_element_children(
         let ordinal = counters.get(kind).unwrap_or(0) + 1
         counters[kind] = ordinal
         let path = "\{parent.path}/\{kind}[\{ordinal}]"
+        // The occurrence cursor advances for EVERY paragraph in this
+        // story's depth-first order — the same order the erase
+        // boundary's provenance channel recorded — whether or not the
+        // join answers for it.
+        let paragraph_join : @docx.DocxParagraphJoin? = if kind == "p" {
+          match self.story_joins {
+            Some(joins) => {
+              let occurrence = self.story_paragraph_cursor
+              self.story_paragraph_cursor += 1
+              joins.join_of_occurrence(occurrence)
+            }
+            None => None
+          }
+        } else {
+          None
+        }
         let entry = self.add_entry(
           path,
           Some(parent.path),
@@ -811,6 +842,7 @@ async fn DocxProjectionBuilder::walk_element_children(
           element_query_properties(child),
           Json::empty_object(),
           parent.source,
+          paragraph_join?,
         )
         parent.children.push(path)
         self.walk_element_children(entry, child)
@@ -827,6 +859,7 @@ async fn DocxProjectionBuilder::add_story(
   kind : String,
   body : Array[@document.DocumentElement],
   source : Json,
+  joins? : @docx.DocxParagraphAnchorJoinIndex,
 ) -> Unit {
   let document = @document.document(body)
   let root = self.add_entry(
@@ -840,7 +873,38 @@ async fn DocxProjectionBuilder::add_story(
     Json::empty_object(),
     source,
   )
+  // The join answers for this story only when the tree's own paragraph
+  // count matches the provenance channel's — a disagreement means the
+  // two enumerations walked different shapes, and every paragraph must
+  // read as unjoined rather than trust a misaligned cursor.
+  self.story_joins = match joins {
+    Some(index) =>
+      if count_tree_paragraphs(document) == index.occurrence_count() {
+        Some(index)
+      } else {
+        None
+      }
+    None => None
+  }
+  self.story_paragraph_cursor = 0
   self.walk_element_children(root, document)
+  self.story_joins = None
+}
+
+///|
+/// Paragraph occurrences under one story root, counted by the SAME
+/// child enumeration the walk uses.
+fn count_tree_paragraphs(element : @document.DocumentElement) -> Int {
+  let mut count = 0
+  for child in @docx_paths.element_children(element) {
+    if @docx_paths.segment_kind(child) is Some(kind) {
+      if kind == "p" {
+        count += 1
+      }
+      count += count_tree_paragraphs(child)
+    }
+  }
+  count
 }
 
 ///|
@@ -973,6 +1037,7 @@ async fn projection_from_annotated(
   file : String,
   annotated : @docx.DocxAnnotatedResult,
   max_elements : Int,
+  body_joins? : @docx.DocxParagraphAnchorJoinIndex,
   cancelled? : () -> Bool = () => false,
 ) -> DocxProjection {
   let builder = DocxProjectionBuilder::new(max_elements, cancelled~)
@@ -1008,6 +1073,7 @@ async fn projection_from_annotated(
     Json::object(
       docx_story_source_fields("body", Some(annotated.main_story_source())),
     ),
+    joins?=body_joins,
   )
   for index, header in result.headers {
     builder.cooperate()
@@ -1242,5 +1308,47 @@ async fn open_docx_projection_archive(
     )
   }
   let annotated = open_docx_annotated_archive(file, archive, cancelled~)
-  projection_from_annotated(file, annotated, max_elements, cancelled~)
+  let body_joins = attempt_docx_body_anchor_joins(file, archive, cancelled~)
+  projection_from_annotated(
+    file,
+    annotated,
+    max_elements,
+    body_joins?,
+    cancelled~,
+  )
+}
+
+///|
+/// Try to build the body story's anchor join for a read-only surface.
+///
+/// The tolerant read above stays authoritative for the TREE; this
+/// second, mutation-safe read exists only to supply identity anchors.
+/// A document the strict reader refuses simply reads without anchors —
+/// every paragraph reports `unjoined` — but resource-limit and
+/// cancellation failures stay FATAL: budgets bound work, and a
+/// side-channel must not become a way around them.
+async fn attempt_docx_body_anchor_joins(
+  file : String,
+  archive : @zip.Archive,
+  cancelled? : () -> Bool = () => false,
+) -> @docx.DocxParagraphAnchorJoinIndex? {
+  let mut joins : @docx.DocxParagraphAnchorJoinIndex? = None
+  try {
+    let strict = open_docx_mutation_annotated_archive(file, archive, cancelled~)
+    joins = Some(
+      @docx.docx_paragraph_anchor_join_index(strict, strict.main_story_source()),
+    )
+  } catch {
+    CliFailure(error) => {
+      check_office_read_cancelled(cancelled)
+      if error.code == "office.docx.resource_limit" {
+        raise CliFailure(error)
+      }
+    }
+    // Anything else here is the join builder's own refusal (a DocxError
+    // that never involves an XML read, so no resource limit can hide in
+    // it) — the read proceeds without anchors.
+    _ => check_office_read_cancelled(cancelled)
+  }
+  joins
 }

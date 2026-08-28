@@ -492,7 +492,7 @@ pub fn capability_commands() -> Array[CapabilityCommand] {
         ),
         capability_field("stories", "array", false, "DOCX only: story roots"),
         capability_field(
-          "headings", "array", false, "DOCX only: bounded heading previews",
+          "headings", "array", false, "DOCX only: bounded heading previews; each carries the paragraph anchor fields (para_id, paragraph_anchor_status, physical_para_ids)",
         ),
         capability_field(
           "comments", "array", false, "DOCX only: comment threads with author, resolved state, parent, and anchor paragraph; done and parent_id appear only when the document records them",
@@ -591,7 +591,16 @@ pub fn capability_commands() -> Array[CapabilityCommand] {
           "id", "string", false, "annotation id when the resolved item carries one",
         ),
         capability_field(
-          "children", "array", false, "DOCX only: addressable direct children",
+          "para_id", "string", false, "DOCX paragraph entries only: canonical w14:paraId, null unless the paragraph carries a valid one",
+        ),
+        capability_field(
+          "paragraph_anchor_status", "string", false, "DOCX paragraph entries only: unique|missing|invalid|duplicate|multi_physical|unjoined — unjoined means no sound tree/projection correspondence exists, so no identity is claimed",
+        ),
+        capability_field(
+          "physical_para_ids", "array", false, "DOCX paragraph entries only: non-null only for multi_physical — the participating paragraphs' valid ids, bounded",
+        ),
+        capability_field(
+          "children", "array", false, "DOCX only: addressable direct children (paragraph child references carry the anchor fields too)",
         ),
         capability_field(
           "properties", "object", false, "DOCX only: declared formatting and element summary",
@@ -685,7 +694,7 @@ pub fn capability_commands() -> Array[CapabilityCommand] {
           "format", "enum(docx|xlsx)", true, "resolved document format",
         ),
         capability_field(
-          "entries", "array(object{path,text,stability})", true, "paragraphs in document order or cells in sheet/row-major order",
+          "entries", "array(object{path,text,stability})", true, "paragraphs in document order or cells in sheet/row-major order. DOCX paragraph records also carry para_id (canonical w14:paraId or null), paragraph_anchor_status (unique|missing|invalid|duplicate|multi_physical|unjoined — unjoined means no sound tree/projection correspondence, e.g. nested paragraphs or a document the strict reader refuses), and physical_para_ids (non-null only for multi_physical)",
         ),
         capability_field(
           "matched_total", "integer", true, "complete bounded-scan matching paragraph or cell count",
@@ -784,7 +793,7 @@ pub fn capability_commands() -> Array[CapabilityCommand] {
           "filters", "object", false, "DOCX only: normalized predicates applied by this query",
         ),
         capability_field(
-          "matches", "array", true, "deterministic document-order or sheet/row-major match records",
+          "matches", "array", true, "deterministic document-order or sheet/row-major match records; DOCX paragraph matches carry para_id, paragraph_anchor_status, and physical_para_ids",
         ),
         capability_field(
           "matched_total", "integer", true, "complete bounded-scan match count",
