@@ -145,7 +145,7 @@ test "auto filter: quoted tokens, wildcards, blanks/nonblanks" {
       #|Some(
       #|  {
       #|    range_ref: "A1:A2",
-      #|    columns: [{ col: 1, filters: Some(["\"a\"\"b\""]), custom_filters: None }],
+      #|    columns: [{ col: 1, filters: Some(["a\"b"]), custom_filters: None }],
       #|  },
       #|)
     ),
@@ -178,6 +178,103 @@ test "auto filter: quoted tokens, wildcards, blanks/nonblanks" {
     None => fail("missing auto filter")
   }
   inspect(f3.columns[0].custom_filters is Some(_), content="true")
+}
+
+///|
+test "auto filter: quoted values keep spaces without quote delimiters" {
+  let workbook = @xlsx.Workbook::new()
+  ignore(workbook.add_sheet("S"))
+  workbook.set_auto_filter("S", "A1:D50", [
+    { column: "A", expression: "x == \"North America\"", },
+    { column: "B", expression: "x >= \"1 000\"", },
+    { column: "C", expression: "x == \"\"", },
+  ])
+  debug_inspect(
+    workbook.get_auto_filter("S"),
+    content=(
+      #|Some(
+      #|  {
+      #|    range_ref: "A1:D50",
+      #|    columns: [
+      #|      { col: 1, filters: Some(["North America"]), custom_filters: None },
+      #|      {
+      #|        col: 2,
+      #|        filters: None,
+      #|        custom_filters: Some(
+      #|          {
+      #|            and_filter: false,
+      #|            filters: [{ operator: "greaterThanOrEqual", value: "1 000" }],
+      #|          },
+      #|        ),
+      #|      },
+      #|      { col: 3, filters: Some([""]), custom_filters: None },
+      #|    ],
+      #|  },
+      #|)
+    ),
+  )
+  // Escaped doubled quote inside a quoted value is a literal quote.
+  workbook.set_auto_filter("S", "A1:A2", [
+    { column: "A", expression: "x == \"say \"\"hi\"\"\"", },
+  ])
+  debug_inspect(
+    workbook.get_auto_filter("S"),
+    content=(
+      #|Some(
+      #|  {
+      #|    range_ref: "A1:A2",
+      #|    columns: [{ col: 1, filters: Some(["say \"hi\""]), custom_filters: None }],
+      #|  },
+      #|)
+    ),
+  )
+  // Roundtrip keeps the unquoted value.
+  let parsed = @xlsx.read(@xlsx.write(workbook))
+  match parsed.get_auto_filter("S") {
+    Some(filter) =>
+      debug_inspect(
+        filter.columns[0].filters,
+        content=(
+          #|Some(["say \"hi\""])
+        ),
+      )
+    None => fail("missing auto filter")
+  }
+}
+
+///|
+test "auto filter: quoted value written to xml without delimiters" {
+  let workbook = @xlsx.Workbook::new()
+  ignore(workbook.add_sheet("S"))
+  workbook.set_auto_filter("S", "A1:D50", [
+    { column: "A", expression: "x == \"North America\"", },
+  ])
+  let archive = @zip.read(@xlsx.write(workbook))
+  guard archive.get("xl/worksheets/sheet1.xml") is Some(bytes) else {
+    fail("no sheet1.xml")
+  }
+  let xml = @encoding/utf8.decode(bytes)
+  inspect(xml.contains("<filter val=\"North America\"/>"), content="true")
+  inspect(xml.contains("&quot;"), content="false")
+}
+
+///|
+test "auto filter: unclosed quote raises InvalidAutoFilter" {
+  let workbook = @xlsx.Workbook::new()
+  ignore(workbook.add_sheet("Sheet1"))
+  let result : Result[Unit, Error] = Ok(
+    workbook.set_auto_filter("Sheet1", "A1:A2", [
+      { column: "A", expression: "x == \"North America", },
+    ]),
+  ) catch {
+    e => Err(e)
+  }
+  debug_inspect(
+    result,
+    content=(
+      #|Err(InvalidAutoFilter(msg="auto filter expression unclosed quote"))
+    ),
+  )
 }
 
 ///|

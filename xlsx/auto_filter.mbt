@@ -41,7 +41,9 @@ fn is_whitespace(ch : Char) -> Bool {
 }
 
 ///|
-fn tokenize_filter_expression(expression : StringView) -> Array[String] {
+fn tokenize_filter_expression(
+  expression : StringView,
+) -> Array[String] raise XlsxError {
   let tokens : Array[String] = []
   let chars = expression.to_array()
   let mut current = StringBuilder()
@@ -51,8 +53,6 @@ fn tokenize_filter_expression(expression : StringView) -> Array[String] {
   while i < chars.length() {
     let ch = chars[i]
     if in_quotes {
-      current.write_char(ch)
-      has_content = true
       if ch == '"' {
         if i + 1 < chars.length() && chars[i + 1] == '"' {
           current.write_char('"')
@@ -60,6 +60,9 @@ fn tokenize_filter_expression(expression : StringView) -> Array[String] {
         } else {
           in_quotes = false
         }
+      } else {
+        current.write_char(ch)
+        has_content = true
       }
       i = i + 1
       continue
@@ -75,7 +78,6 @@ fn tokenize_filter_expression(expression : StringView) -> Array[String] {
     }
     if ch == '"' {
       in_quotes = true
-      current.write_char(ch)
       has_content = true
       i = i + 1
       continue
@@ -83,6 +85,9 @@ fn tokenize_filter_expression(expression : StringView) -> Array[String] {
     current.write_char(ch)
     has_content = true
     i = i + 1
+  }
+  if in_quotes {
+    raise InvalidAutoFilter(msg="auto filter expression unclosed quote")
   }
   if has_content {
     tokens.push(current.to_string())
