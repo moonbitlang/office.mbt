@@ -1307,8 +1307,11 @@ async fn open_docx_projection_archive(
       }),
     )
   }
-  let annotated = open_docx_annotated_archive(file, archive, cancelled~)
-  let body_joins = attempt_docx_body_anchor_joins(file, archive, cancelled~)
+  let (annotated, body_joins) = open_docx_projection_annotated_archive(
+    file,
+    archive,
+    cancelled~,
+  )
   projection_from_annotated(
     file,
     annotated,
@@ -1319,36 +1322,58 @@ async fn open_docx_projection_archive(
 }
 
 ///|
-/// Try to build the body story's anchor join for a read-only surface.
-///
-/// The tolerant read above stays authoritative for the TREE; this
-/// second, mutation-safe read exists only to supply identity anchors.
-/// A document the strict reader refuses simply reads without anchors —
-/// every paragraph reports `unjoined` — but resource-limit and
-/// cancellation failures stay FATAL: budgets bound work, and a
-/// side-channel must not become a way around them.
-async fn attempt_docx_body_anchor_joins(
+/// Open the annotated tree and, when possible, derive its body-story anchor
+/// join from the SAME mutation-safe read. A strict parser refusal is the only
+/// case that falls back to the tolerant read; package validation, cancellation,
+/// and resource limits remain fatal.
+async fn open_docx_projection_annotated_archive(
   file : String,
   archive : @zip.Archive,
   cancelled? : () -> Bool = () => false,
-) -> @docx.DocxParagraphAnchorJoinIndex? {
-  let mut joins : @docx.DocxParagraphAnchorJoinIndex? = None
+) -> (@docx.DocxAnnotatedResult, @docx.DocxParagraphAnchorJoinIndex?) {
   try {
-    let strict = open_docx_mutation_annotated_archive(file, archive, cancelled~)
-    joins = Some(
-      @docx.docx_paragraph_anchor_join_index(strict, strict.main_story_source()),
+    let annotated = open_docx_mutation_annotated_archive(
+      file,
+      archive,
+      cancelled~,
     )
+    let body_joins = attempt_docx_body_anchor_join(file, annotated, cancelled~)
+    (annotated, body_joins)
   } catch {
     CliFailure(error) => {
       check_office_read_cancelled(cancelled)
-      if error.code == "office.docx.resource_limit" {
+      if error.code != "office.docx.read_failed" {
         raise CliFailure(error)
       }
+      (open_docx_annotated_archive(file, archive, cancelled~), None)
     }
-    // Anything else here is the join builder's own refusal (a DocxError
-    // that never involves an XML read, so no resource limit can hide in
-    // it) — the read proceeds without anchors.
-    _ => check_office_read_cancelled(cancelled)
+    error => raise error
   }
+}
+
+///|
+/// Try to build the body story's anchor join for a successful mutation-safe
+/// read. Join construction can refuse when the tree/projection correspondence
+/// is not provable; that refusal only disables anchors and does not require a
+/// second document read.
+fn attempt_docx_body_anchor_join(
+  file : String,
+  annotated : @docx.DocxAnnotatedResult,
+  cancelled? : () -> Bool = () => false,
+) -> @docx.DocxParagraphAnchorJoinIndex? raise CliFailure {
+  let joins = Some(
+    @docx.docx_paragraph_anchor_join_index(
+      annotated,
+      annotated.main_story_source(),
+    ),
+  ) catch {
+    InvalidZip(..) => None
+    InvalidXml(..) => None
+    MissingPart(..) => None
+    Unsupported(..) => None
+    ResourceLimit(..) as error => raise docx_reader_failure(error, file)
+    WriteResourceLimit(..) as error => raise docx_reader_failure(error, file)
+  }
+  check_office_read_cancelled(cancelled)
   joins
 }
