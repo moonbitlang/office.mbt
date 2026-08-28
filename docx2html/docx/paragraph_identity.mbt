@@ -325,3 +325,155 @@ pub fn para_id_state_delta_violation(
   }
   None
 }
+
+///|
+/// One tree paragraph occurrence's relationship to the projection: the
+/// judgment travels ONLY across a proven bijection. `Unjoined` is a
+/// JOIN outcome, not a sixth anchor status — the engine vocabulary is
+/// unchanged, and a tree surface reporting it says "no sound
+/// correspondence", never a borrowed judgment.
+pub enum DocxParagraphJoin {
+  Joined(Int, DocxParagraphAnchor)
+  Unjoined(String)
+}
+
+///|
+/// The tree/projection join for one story (paraId R1b): tree paragraph
+/// occurrences in erase order, each mapped to at most one projection
+/// paragraph by source-vector bijection.
+pub struct DocxParagraphAnchorJoinIndex {
+  joins : Array[DocxParagraphJoin]
+  reverse : Map[Int, Int]
+}
+
+///|
+/// The join for the Nth tree Paragraph occurrence, in the depth-first
+/// order the erased tree presents them. None when the occurrence is out
+/// of range — a caller whose own enumeration disagrees with the
+/// provenance channel must treat EVERY paragraph as unjoined.
+pub fn DocxParagraphAnchorJoinIndex::join_of_occurrence(
+  self : DocxParagraphAnchorJoinIndex,
+  occurrence : Int,
+) -> DocxParagraphJoin? {
+  self.joins.get(occurrence)
+}
+
+///|
+pub fn DocxParagraphAnchorJoinIndex::occurrence_count(
+  self : DocxParagraphAnchorJoinIndex,
+) -> Int {
+  self.joins.length()
+}
+
+///|
+/// The R2a seam: the unique tree occurrence a projection paragraph
+/// joined to, if the bijection held in both directions.
+pub fn DocxParagraphAnchorJoinIndex::occurrence_of_paragraph(
+  self : DocxParagraphAnchorJoinIndex,
+  paragraph_index : Int,
+) -> Int? {
+  self.reverse.get(paragraph_index)
+}
+
+///|
+/// Build the story's tree/projection join.
+///
+/// A tree occurrence joins a projection paragraph only when ALL hold:
+/// the source vectors are exactly equal; exactly one occurrence and one
+/// projection paragraph claim that vector; and every physical source in
+/// the vector participates in exactly one projection paragraph. The
+/// last condition kills the false match the nested-paragraph shape
+/// offers (the outer tree paragraph's [host] superficially equals the
+/// post-half projection paragraph's [host], but the host also
+/// participates in the joined head) — refusing beats first-wins.
+pub fn docx_paragraph_anchor_join_index(
+  annotated : DocxAnnotatedResult,
+  story : DocxStoryPartSource,
+) -> DocxParagraphAnchorJoinIndex raise DocxError {
+  let part = story.part()
+  guard annotated.reader_paragraph_provenance.get(part) is Some(tree_vectors) else {
+    raise Unsupported(
+      message="paragraph identity join requires a mutation-safe read with retained provenance for '\{part}'",
+    )
+  }
+  guard annotated.reader_projections.get(part) is Some(projection) else {
+    raise Unsupported(
+      message="paragraph identity join requires a retained projection for '\{part}'",
+    )
+  }
+  let anchors = docx_paragraph_anchor_index(annotated, story)
+  // Projection-side claims and participation.
+  let projection_claims : Map[String, Array[Int]] = Map([])
+  let participation : Map[Int, Int] = Map([])
+  for paragraph_index, paragraph in projection.paragraphs {
+    let key = StringBuilder()
+    for source in paragraph.sources {
+      let SourceElementId(index) = source.source
+      participation[index] = participation.get(index).unwrap_or(0) + 1
+      key.write_string("\{index},")
+    }
+    let rendered = key.to_string()
+    match projection_claims.get(rendered) {
+      Some(list) => list.push(paragraph_index)
+      None => projection_claims[rendered] = [paragraph_index]
+    }
+  }
+  // Tree-side claims.
+  let tree_claims : Map[String, Int] = Map([])
+  let tree_keys : Array[String?] = []
+  for vector in tree_vectors {
+    let mut incomplete = false
+    let key = StringBuilder()
+    for entry in vector {
+      match entry {
+        Some(SourceElementId(index)) => key.write_string("\{index},")
+        None => incomplete = true
+      }
+    }
+    if incomplete || vector.length() == 0 {
+      tree_keys.push(None)
+    } else {
+      let rendered = key.to_string()
+      tree_claims[rendered] = tree_claims.get(rendered).unwrap_or(0) + 1
+      tree_keys.push(Some(rendered))
+    }
+  }
+  let joins : Array[DocxParagraphJoin] = []
+  let reverse : Map[Int, Int] = Map([])
+  for occurrence, entry in tree_keys {
+    match entry {
+      None => joins.push(Unjoined("missing-source-identity"))
+      Some(key) =>
+        match projection_claims.get(key) {
+          None => joins.push(Unjoined("no-projection-counterpart"))
+          Some(claimants) =>
+            if claimants.length() != 1 {
+              joins.push(Unjoined("ambiguous-projection-claim"))
+            } else if tree_claims.get(key).unwrap_or(0) != 1 {
+              joins.push(Unjoined("ambiguous-tree-claim"))
+            } else {
+              let paragraph_index = claimants[0]
+              let mut shared = false
+              for source in projection.paragraphs[paragraph_index].sources {
+                let SourceElementId(index) = source.source
+                if participation.get(index).unwrap_or(0) > 1 {
+                  shared = true
+                }
+              }
+              if shared {
+                joins.push(Unjoined("shared-physical-source"))
+              } else {
+                match anchors.anchor_of_paragraph(paragraph_index) {
+                  Some(anchor) => {
+                    joins.push(Joined(paragraph_index, anchor))
+                    reverse[paragraph_index] = occurrence
+                  }
+                  None => joins.push(Unjoined("unjudged-paragraph"))
+                }
+              }
+            }
+        }
+    }
+  }
+  { joins, reverse, }
+}

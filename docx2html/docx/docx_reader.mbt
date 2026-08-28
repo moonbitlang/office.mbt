@@ -601,6 +601,10 @@ priv struct DocumentParts {
   /// archive at planning time. Both empty in tolerant mode.
   reader_projections : StableStringMap[ReaderProjection]
   reader_projection_sources : StableStringMap[BytesView]
+  // Erase-order paragraph provenance per mutation-safe story part: one
+  // physical-identity vector per tree Paragraph occurrence (paraId R1b's
+  // join channel; absent for tolerant reads).
+  reader_paragraph_provenance : StableStringMap[Array[Array[SourceElementId?]]]
   /// The cumulative annotation path budget, created BEFORE the joined
   /// reads so every story part charges the shared allowance exactly once
   /// (at scan time); the annotation index adopts the retained scans and
@@ -720,6 +724,9 @@ fn DocumentParts::build(
   }
   let reader_projections : StableStringMap[ReaderProjection] = SortedMap([])
   let reader_projection_sources : StableStringMap[BytesView] = SortedMap([])
+  let reader_paragraph_provenance : StableStringMap[
+    Array[Array[SourceElementId?]],
+  ] = SortedMap([])
   let annotation_path_budget = if story_reader_mode is JoinedMutationReader {
     Some(AnnotationPathBudget::new(xml_budget))
   } else {
@@ -791,6 +798,7 @@ fn DocumentParts::build(
     story_reader_mode,
     reader_projections,
     reader_projection_sources,
+    reader_paragraph_provenance,
   }
 }
 
@@ -844,6 +852,11 @@ fn DocumentParts::read_document_joined(
       message="mutation-safe main-document read produced an unexpected segment count",
     )
   }
+  // The erase-order provenance sidecar, captured from the SAME items the
+  // tree below is erased from — the paraId join's tree half.
+  self.reader_paragraph_provenance[self.main_document_path] = collect_paragraph_provenance(
+    segment.items,
+  )
   {
     document: document(
       reader_items_to_elements(segment.items),

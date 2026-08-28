@@ -675,6 +675,13 @@ pub struct DocxAnnotatedResult {
   // mutation-safe reads; the N0c1 surgery surface consumes these.
   priv reader_projections : StableStringMap[ReaderProjection]
   priv reader_projection_sources : StableStringMap[BytesView]
+  // Erase-order paragraph provenance per mutation-safe story part
+  // (paraId R1b): the tree half of the anchor join. Empty for tolerant
+  // reads — absence means every tree paragraph is unjoined, never a
+  // guessed identity.
+  priv reader_paragraph_provenance : StableStringMap[
+    Array[Array[SourceElementId?]],
+  ]
 }
 
 ///|
@@ -1204,6 +1211,7 @@ fn read_docx_annotated_zip(
     read_policy: policy,
     reader_projections: parts.reader_projections,
     reader_projection_sources: parts.reader_projection_sources,
+    reader_paragraph_provenance: parts.reader_paragraph_provenance,
     footnote_bodies: footnote_pairs,
     endnote_bodies: endnote_pairs,
     comment_bodies: comment_pairs,

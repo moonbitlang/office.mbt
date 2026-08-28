@@ -312,3 +312,60 @@ test "para_id delta rules bound what a write may change" {
     is None,
   )
 }
+
+///|
+/// The tree/projection join on the shapes that motivated it. Ordinary
+/// paragraphs join; the deleted-mark join maps ONE tree paragraph to
+/// the multi-source projection paragraph; the nested split leaves every
+/// claimant of the shared physical unjoined.
+test "anchor join follows source-vector bijection" {
+  // Ordinary + deleted-mark join: tree p1 = [del, terminal], tree p2 = [p3].
+  let annotated = identity_fixture(
+    "<w:p w14:paraId=\"66666666\"><w:pPr><w:rPr><w:del w:id=\"1\" w:author=\"a\"/></w:rPr></w:pPr><w:r><w:t>one</w:t></w:r></w:p><w:p w14:paraId=\"77777777\"><w:r><w:t>two</w:t></w:r></w:p><w:p w14:paraId=\"33333333\"><w:r><w:t>three</w:t></w:r></w:p>",
+  )
+  let join = @docx.docx_paragraph_anchor_join_index(
+    annotated,
+    annotated.main_story_source(),
+  )
+  assert_eq(join.occurrence_count(), 2)
+  guard join.join_of_occurrence(0) is Some(Joined(first, joined_anchor)) else {
+    fail("expected the deleted-mark join to be sound")
+  }
+  assert_eq(first, 0)
+  assert_eq(joined_anchor.status(), "multi_physical")
+  guard join.join_of_occurrence(1) is Some(Joined(second, plain_anchor)) else {
+    fail("expected the plain paragraph to join")
+  }
+  assert_eq(second, 1)
+  debug_inspect(
+    (plain_anchor.status(), plain_anchor.para_id()),
+    content=(
+      #|("unique", Some("33333333"))
+    ),
+  )
+  // The reverse direction — the R2a seam.
+  assert_eq(join.occurrence_of_paragraph(1), Some(1))
+  assert_eq(join.occurrence_of_paragraph(0), Some(0))
+}
+
+///|
+/// The nested-paragraph shape: tree partitions (outer holding pre+post,
+/// inner) never coincide with projection partitions (head join, post
+/// half), so every occurrence is unjoined and the reverse map is empty.
+test "anchor join refuses the nested-paragraph shape" {
+  let annotated = identity_fixture(
+    "<w:p w14:paraId=\"12ABCDEF\"><w:r><w:t>pre</w:t><w:p><w:r><w:t>inner</w:t></w:r></w:p><w:t>post</w:t></w:r></w:p>",
+  )
+  let join = @docx.docx_paragraph_anchor_join_index(
+    annotated,
+    annotated.main_story_source(),
+  )
+  assert_eq(join.occurrence_count(), 2)
+  for occurrence in 0..<join.occurrence_count() {
+    guard join.join_of_occurrence(occurrence) is Some(Unjoined(_)) else {
+      fail("expected occurrence \{occurrence} unjoined")
+    }
+  }
+  assert_true(join.occurrence_of_paragraph(0) is None)
+  assert_true(join.occurrence_of_paragraph(1) is None)
+}

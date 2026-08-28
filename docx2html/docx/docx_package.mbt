@@ -392,6 +392,9 @@ fn HeaderFooterCollector::read_part_story(
         message="mutation-safe \{kind} read produced an unexpected segment count",
       )
     }
+    self.parts.reader_paragraph_provenance[path] = collect_paragraph_provenance(
+      segment.items,
+    )
     let body = reader_items_to_elements(segment.items)
     self.messages.append(reader.messages)
     return body
