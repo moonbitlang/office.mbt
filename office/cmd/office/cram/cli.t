@@ -17,7 +17,7 @@ and JSONL inventories without deferred PowerPoint or MCP entries.
   $ office.exe help | sed -n '1,8p'
   Office capability registry
     Schema: office.capabilities/2
-    Fingerprint: crc32:79fb2248
+    Fingerprint: crc32:2b2555bc
   Formats:
     docx (aliases: word) — WordprocessingML documents
     xlsx (aliases: excel) — SpreadsheetML workbooks
@@ -40,10 +40,10 @@ and JSONL inventories without deferred PowerPoint or MCP entries.
   {"formats":["xlsx"],"variants":[{"name":"xlsx","result_schema":"office.xlsx.query/1","constraints":["format=xlsx"]}]}
 
   $ office.exe help all --json | jq -c '{schema,success,capability_schema:.data.schema,fingerprint:.data.fingerprint,names:[.data.records[].name]}'
-  {"schema":"office.output/1","success":true,"capability_schema":"office.capabilities/2","fingerprint":"crc32:79fb2248","names":["docx","xlsx","help","identify","outline","get","text","query","find","replace","validate","dump","replay","issues","preview","render","create","template","edit","annotate","batch","raw"]}
+  {"schema":"office.output/1","success":true,"capability_schema":"office.capabilities/2","fingerprint":"crc32:2b2555bc","names":["docx","xlsx","help","identify","outline","get","text","query","find","replace","validate","dump","replay","issues","preview","render","create","template","edit","annotate","batch","raw"]}
 
   $ office.exe help all --jsonl | jq -s -c 'map({schema,fingerprint,kind,name})'
-  [{"schema":"office.capability/2","fingerprint":"crc32:79fb2248","kind":"format","name":"docx"},{"schema":"office.capability/2","fingerprint":"crc32:79fb2248","kind":"format","name":"xlsx"},{"schema":"office.capability/2","fingerprint":"crc32:79fb2248","kind":"command","name":"help"},{"schema":"office.capability/2","fingerprint":"crc32:79fb2248","kind":"command","name":"identify"},{"schema":"office.capability/2","fingerprint":"crc32:79fb2248","kind":"command","name":"outline"},{"schema":"office.capability/2","fingerprint":"crc32:79fb2248","kind":"command","name":"get"},{"schema":"office.capability/2","fingerprint":"crc32:79fb2248","kind":"command","name":"text"},{"schema":"office.capability/2","fingerprint":"crc32:79fb2248","kind":"command","name":"query"},{"schema":"office.capability/2","fingerprint":"crc32:79fb2248","kind":"command","name":"find"},{"schema":"office.capability/2","fingerprint":"crc32:79fb2248","kind":"command","name":"replace"},{"schema":"office.capability/2","fingerprint":"crc32:79fb2248","kind":"command","name":"validate"},{"schema":"office.capability/2","fingerprint":"crc32:79fb2248","kind":"command","name":"dump"},{"schema":"office.capability/2","fingerprint":"crc32:79fb2248","kind":"command","name":"replay"},{"schema":"office.capability/2","fingerprint":"crc32:79fb2248","kind":"command","name":"issues"},{"schema":"office.capability/2","fingerprint":"crc32:79fb2248","kind":"command","name":"preview"},{"schema":"office.capability/2","fingerprint":"crc32:79fb2248","kind":"command","name":"render"},{"schema":"office.capability/2","fingerprint":"crc32:79fb2248","kind":"command","name":"create"},{"schema":"office.capability/2","fingerprint":"crc32:79fb2248","kind":"command","name":"template"},{"schema":"office.capability/2","fingerprint":"crc32:79fb2248","kind":"command","name":"edit"},{"schema":"office.capability/2","fingerprint":"crc32:79fb2248","kind":"command","name":"annotate"},{"schema":"office.capability/2","fingerprint":"crc32:79fb2248","kind":"command","name":"batch"},{"schema":"office.capability/2","fingerprint":"crc32:79fb2248","kind":"command","name":"raw"}]
+  [{"schema":"office.capability/2","fingerprint":"crc32:2b2555bc","kind":"format","name":"docx"},{"schema":"office.capability/2","fingerprint":"crc32:2b2555bc","kind":"format","name":"xlsx"},{"schema":"office.capability/2","fingerprint":"crc32:2b2555bc","kind":"command","name":"help"},{"schema":"office.capability/2","fingerprint":"crc32:2b2555bc","kind":"command","name":"identify"},{"schema":"office.capability/2","fingerprint":"crc32:2b2555bc","kind":"command","name":"outline"},{"schema":"office.capability/2","fingerprint":"crc32:2b2555bc","kind":"command","name":"get"},{"schema":"office.capability/2","fingerprint":"crc32:2b2555bc","kind":"command","name":"text"},{"schema":"office.capability/2","fingerprint":"crc32:2b2555bc","kind":"command","name":"query"},{"schema":"office.capability/2","fingerprint":"crc32:2b2555bc","kind":"command","name":"find"},{"schema":"office.capability/2","fingerprint":"crc32:2b2555bc","kind":"command","name":"replace"},{"schema":"office.capability/2","fingerprint":"crc32:2b2555bc","kind":"command","name":"validate"},{"schema":"office.capability/2","fingerprint":"crc32:2b2555bc","kind":"command","name":"dump"},{"schema":"office.capability/2","fingerprint":"crc32:2b2555bc","kind":"command","name":"replay"},{"schema":"office.capability/2","fingerprint":"crc32:2b2555bc","kind":"command","name":"issues"},{"schema":"office.capability/2","fingerprint":"crc32:2b2555bc","kind":"command","name":"preview"},{"schema":"office.capability/2","fingerprint":"crc32:2b2555bc","kind":"command","name":"render"},{"schema":"office.capability/2","fingerprint":"crc32:2b2555bc","kind":"command","name":"create"},{"schema":"office.capability/2","fingerprint":"crc32:2b2555bc","kind":"command","name":"template"},{"schema":"office.capability/2","fingerprint":"crc32:2b2555bc","kind":"command","name":"edit"},{"schema":"office.capability/2","fingerprint":"crc32:2b2555bc","kind":"command","name":"annotate"},{"schema":"office.capability/2","fingerprint":"crc32:2b2555bc","kind":"command","name":"batch"},{"schema":"office.capability/2","fingerprint":"crc32:2b2555bc","kind":"command","name":"raw"}]
 
 Installed help exposes every consumed JSON input contract without requiring
 repository-only documentation. Inventory and individual records are versioned;
@@ -315,6 +315,39 @@ structural mutation v1 forbids from text.
   $ office.exe replace "$TESTDIR/../../../../docx2html/tests/cram/fixtures/single-paragraph.docx" fr-ctl.docx --text "a	b" --with "x"
   office: --text must not contain control characters (found U+9); v1 neither matches nor makes structural breaks and tabs from text — use `office find` to locate atom content
   [1]
+
+Paragraph identity rides every read surface (paraId R1b): text, get,
+query, and outline headings report the SAME judgment find does — one
+judge, joined to the tree only across a proven correspondence. The
+duplicate fixture carries the same id twice (differing by case) plus a
+unique heading; both duplicate carriers say so, and neither becomes an
+addressable anchor.
+
+  $ office.exe text "$TESTDIR/../../../../docx2html/tests/cram/fixtures/duplicate-para-id.docx" --json | jq -c '[.data.entries[] | {path,para_id,paragraph_anchor_status}]'
+  [{"path":"/docx/body/p[1]","para_id":"1A2B3C4D","paragraph_anchor_status":"duplicate"},{"path":"/docx/body/p[2]","para_id":"1A2B3C4D","paragraph_anchor_status":"duplicate"},{"path":"/docx/body/p[3]","para_id":"5E5E5E5E","paragraph_anchor_status":"unique"}]
+
+  $ office.exe get "$TESTDIR/../../../../docx2html/tests/cram/fixtures/duplicate-para-id.docx" "/docx/body/p[1]" --json | jq -c '{path:.data.path,para_id:.data.para_id,status:.data.paragraph_anchor_status}'
+  {"path":"/docx/body/p[1]","para_id":"1A2B3C4D","status":"duplicate"}
+
+  $ office.exe query "$TESTDIR/../../../../docx2html/tests/cram/fixtures/duplicate-para-id.docx" --kind p --json | jq -c '[.data.matches[] | {path,para_id,paragraph_anchor_status}]'
+  [{"path":"/docx/body/p[1]","para_id":"1A2B3C4D","paragraph_anchor_status":"duplicate"},{"path":"/docx/body/p[2]","para_id":"1A2B3C4D","paragraph_anchor_status":"duplicate"},{"path":"/docx/body/p[3]","para_id":"5E5E5E5E","paragraph_anchor_status":"unique"}]
+
+  $ office.exe outline "$TESTDIR/../../../../docx2html/tests/cram/fixtures/duplicate-para-id.docx" --json | jq -c '.data.headings'
+  [{"path":"/docx/body/p[3]","level":1,"text":"Gamma heading","text_truncated":false,"para_id":"5E5E5E5E","paragraph_anchor_status":"unique","physical_para_ids":null}]
+
+The cross-surface invariant, executable: find agrees with the tree
+surfaces on the same document.
+
+  $ office.exe find "$TESTDIR/../../../../docx2html/tests/cram/fixtures/duplicate-para-id.docx" --text alpha --json | jq -c '[.data.matches[] | {path,para_id,paragraph_anchor_status}]'
+  [{"path":"p[1]","para_id":"1A2B3C4D","paragraph_anchor_status":"duplicate"}]
+
+A tolerated nested paragraph partitions the tree differently than the
+projection, so NO tree paragraph may borrow either projection
+judgment: both occurrences refuse with `unjoined`, never a guessed
+identity.
+
+  $ office.exe text "$TESTDIR/../../../../docx2html/tests/cram/fixtures/nested-paragraph.docx" --json | jq -c '[.data.entries[] | {path,paragraph_anchor_status}]'
+  [{"path":"/docx/body/p[1]","paragraph_anchor_status":"unjoined"},{"path":"/docx/body/p[1]/r[1]/p[1]","paragraph_anchor_status":"unjoined"}]
 
 The payload carries the selected candidates in find's own entry shape
 (bounded at 100 entries, `matches_truncated` marking the rest), so a

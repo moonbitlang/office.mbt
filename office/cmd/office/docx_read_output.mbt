@@ -467,11 +467,13 @@ async fn get_docx_payload(
 
 ///|
 fn text_record_json(entry : DocxProjectionEntry, text : String) -> Json {
-  Json::object({
+  let fields : Map[String, Json] = {
     "path": Json::string(entry.path),
     "stability": Json::string(selector_stability_text(entry.stability)),
     "text": Json::string(text),
-  })
+  }
+  paragraph_anchor_fields(entry, fields)
+  Json::object(fields)
 }
 
 ///|
@@ -581,6 +583,7 @@ fn query_record_json(
     "preview_truncated": Json::boolean(preview_truncated),
     "properties": query_property_json(entry.properties),
   }
+  paragraph_anchor_fields(entry, fields)
   match entry.stable_id {
     Some(id) => fields["id"] = Json::string(id)
     None => ()
@@ -1049,12 +1052,14 @@ async fn docx_outline_payload(
               docx_cli_heading_preview_chars,
               cancelled=projection.cancelled,
             )
-            let record = Json::object({
+            let heading_fields : Map[String, Json] = {
               "path": Json::string(entry.path),
               "level": Json::number(level.to_double()),
               "text": Json::string(text),
               "text_truncated": Json::boolean(truncated),
-            })
+            }
+            paragraph_anchor_fields(entry, heading_fields)
+            let record = Json::object(heading_fields)
             bounded.budget.reserve_array_item(record, !headings.is_empty())
             headings.push(record)
           }

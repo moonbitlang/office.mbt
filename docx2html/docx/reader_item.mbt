@@ -232,3 +232,61 @@ fn collect_reader_effects_into(
     }
   }
 }
+
+///|
+/// The provenance sidecar for the erase boundary: one record per tree
+/// Paragraph occurrence, in exactly the order the erased tree presents
+/// them to a depth-first walk — paragraph first, its children (nested
+/// paragraphs included) next, its extras as following siblings. Each
+/// record is the ordered physical `w:p` identity vector of the
+/// occurrence's inputs; a missing identity stays None and makes the
+/// occurrence unjoinable rather than inventing one.
+fn collect_paragraph_provenance(
+  items : Array[ReaderItem],
+) -> Array[Array[SourceElementId?]] {
+  let out : Array[Array[SourceElementId?]] = []
+  collect_paragraph_provenance_into(items, out)
+  out
+}
+
+///|
+fn collect_paragraph_provenance_into(
+  items : Array[ReaderItem],
+  out : Array[Array[SourceElementId?]],
+) -> Unit {
+  for item in items {
+    match item {
+      Trace(_) => ()
+      New(tree) =>
+        match tree.shape {
+          ReaderParagraph(inputs~, children~, extras~, properties=_) => {
+            let vector : Array[SourceElementId?] = []
+            for input in inputs {
+              vector.push(input.paragraph.source_element_id)
+            }
+            out.push(vector)
+            collect_paragraph_provenance_into(children, out)
+            collect_paragraph_provenance_into(extras, out)
+          }
+          ReaderRun(children~, properties=_) =>
+            collect_paragraph_provenance_into(children, out)
+          ReaderHyperlink(children~, ..) =>
+            collect_paragraph_provenance_into(children, out)
+          ReaderTable(children~, properties=_) =>
+            collect_paragraph_provenance_into(children, out)
+          ReaderTableRow(children~, is_header=_) =>
+            collect_paragraph_provenance_into(children, out)
+          ReaderTableCell(children~, ..) =>
+            collect_paragraph_provenance_into(children, out)
+          ReaderText(_)
+          | ReaderTab
+          | ReaderCheckbox(_)
+          | ReaderNoteReference(..)
+          | ReaderCommentReference(_)
+          | ReaderImage(_)
+          | ReaderBreak(_)
+          | ReaderBookmarkStart(_) => ()
+        }
+    }
+  }
+}

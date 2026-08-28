@@ -47,6 +47,11 @@ priv struct DocxProjectionEntry {
   properties : Map[String, String]
   metadata : Json
   source : Json
+  // The paragraph's tree/projection anchor join (paraId R1b). Some only
+  // when the join was soundly computed for this occurrence; None means
+  // the serializers emit `unjoined` for paragraph entries — anchors are
+  // never guessed.
+  paragraph_join : @docx.DocxParagraphJoin?
 }
 
 ///|
@@ -101,6 +106,12 @@ priv struct DocxProjectionBuilder {
   mut warnings_truncated : Bool
   cancelled : () -> Bool
   mut work_since_yield : Int
+  // Active only while walking a story whose anchor join is available:
+  // the join index and the story-scoped paragraph-occurrence cursor,
+  // advancing in the SAME depth-first order the erase boundary's
+  // provenance channel recorded.
+  mut story_joins : @docx.DocxParagraphAnchorJoinIndex?
+  mut story_paragraph_cursor : Int
 }
 
 ///|
@@ -183,6 +194,8 @@ fn DocxProjectionBuilder::new(
     warnings_truncated: false,
     cancelled,
     work_since_yield: 0,
+    story_joins: None,
+    story_paragraph_cursor: 0,
   }
 }
 
@@ -287,6 +300,7 @@ fn DocxProjectionBuilder::add_entry(
   properties : Map[String, String],
   metadata : Json,
   source : Json,
+  paragraph_join? : @docx.DocxParagraphJoin,
 ) -> DocxProjectionEntry raise CliFailure {
   self.require_entry_capacity()
   let selector = @lib.parse_selector(path) catch {
@@ -335,6 +349,7 @@ fn DocxProjectionBuilder::add_entry(
     properties,
     metadata,
     source,
+    paragraph_join,
   }
   let index = self.entries.length()
   self.entries.push(entry)
@@ -801,6 +816,22 @@ async fn DocxProjectionBuilder::walk_element_children(
         let ordinal = counters.get(kind).unwrap_or(0) + 1
         counters[kind] = ordinal
         let path = "\{parent.path}/\{kind}[\{ordinal}]"
+        // The occurrence cursor advances for EVERY paragraph in this
+        // story's depth-first order — the same order the erase
+        // boundary's provenance channel recorded — whether or not the
+        // join answers for it.
+        let paragraph_join : @docx.DocxParagraphJoin? = if kind == "p" {
+          match self.story_joins {
+            Some(joins) => {
+              let occurrence = self.story_paragraph_cursor
+              self.story_paragraph_cursor += 1
+              joins.join_of_occurrence(occurrence)
+            }
+            None => None
+          }
+        } else {
+          None
+        }
         let entry = self.add_entry(
           path,
           Some(parent.path),
@@ -811,6 +842,7 @@ async fn DocxProjectionBuilder::walk_element_children(
           element_query_properties(child),
           Json::empty_object(),
           parent.source,
+          paragraph_join?,
         )
         parent.children.push(path)
         self.walk_element_children(entry, child)
@@ -827,6 +859,7 @@ async fn DocxProjectionBuilder::add_story(
   kind : String,
   body : Array[@document.DocumentElement],
   source : Json,
+  joins? : @docx.DocxParagraphAnchorJoinIndex,
 ) -> Unit {
   let document = @document.document(body)
   let root = self.add_entry(
@@ -840,7 +873,55 @@ async fn DocxProjectionBuilder::add_story(
     Json::empty_object(),
     source,
   )
+  // The join answers for this story only when the tree's own paragraph
+  // count matches the provenance channel's — a disagreement means the
+  // two enumerations walked different shapes, and every paragraph must
+  // read as unjoined rather than trust a misaligned cursor.
+  let story_joins = match joins {
+    Some(index) =>
+      if count_tree_paragraphs(document) == index.occurrence_count() {
+        Some(index)
+      } else {
+        None
+      }
+    None => None
+  }
+  self.story_joins = story_joins
+  self.story_paragraph_cursor = 0
   self.walk_element_children(root, document)
+  // The walk and the provenance channel both enumerate depth-first from
+  // the SAME reader output, so the cursor must land exactly on the join's
+  // occurrence count — a drift here would silently misattribute anchors.
+  // Ordering within that count is aligned by construction; the count is
+  // the cheap guard that catches an enumeration that walked a different
+  // shape than the pre-walk check measured.
+  match story_joins {
+    Some(index) =>
+      if self.story_paragraph_cursor != index.occurrence_count() {
+        raise docx_cli_failure(
+          "office.docx.anchor_join_drift",
+          "the projection walk enumerated \{self.story_paragraph_cursor} paragraphs but the provenance channel recorded \{index.occurrence_count()} for '\{path}'",
+        )
+      }
+    None => ()
+  }
+  self.story_joins = None
+}
+
+///|
+/// Paragraph occurrences under one story root, counted by the SAME
+/// child enumeration the walk uses.
+fn count_tree_paragraphs(element : @document.DocumentElement) -> Int {
+  let mut count = 0
+  for child in @docx_paths.element_children(element) {
+    if @docx_paths.segment_kind(child) is Some(kind) {
+      if kind == "p" {
+        count += 1
+      }
+      count += count_tree_paragraphs(child)
+    }
+  }
+  count
 }
 
 ///|
@@ -1001,6 +1082,12 @@ async fn projection_from_annotated(
   )
   let header_sources = annotated.header_story_sources()
   let footer_sources = annotated.footer_story_sources()
+  let body_joins = attempt_docx_story_anchor_join(
+    file,
+    annotated,
+    annotated.main_story_source(),
+    cancelled~,
+  )
   builder.add_story(
     "/docx/body",
     "body",
@@ -1008,27 +1095,43 @@ async fn projection_from_annotated(
     Json::object(
       docx_story_source_fields("body", Some(annotated.main_story_source())),
     ),
+    joins?=body_joins,
   )
+
   for index, header in result.headers {
     builder.cooperate()
-    let source = docx_story_source_fields("header", header_sources.get(index))
+    let header_source = header_sources.get(index)
+    let source = docx_story_source_fields("header", header_source)
     source["part_index"] = Json::number((index + 1).to_double())
+    let joins = match header_source {
+      Some(value) =>
+        attempt_docx_story_anchor_join(file, annotated, value, cancelled~)
+      None => None
+    }
     builder.add_story(
       "/docx/header[\{index + 1}]",
       "header",
       header.body,
       Json::object(source),
+      joins?,
     )
   }
   for index, footer in result.footers {
     builder.cooperate()
-    let source = docx_story_source_fields("footer", footer_sources.get(index))
+    let footer_source = footer_sources.get(index)
+    let source = docx_story_source_fields("footer", footer_source)
     source["part_index"] = Json::number((index + 1).to_double())
+    let joins = match footer_source {
+      Some(value) =>
+        attempt_docx_story_anchor_join(file, annotated, value, cancelled~)
+      None => None
+    }
     builder.add_story(
       "/docx/footer[\{index + 1}]",
       "footer",
       footer.body,
       Json::object(source),
+      joins?,
     )
   }
   builder.add_annotation_story(
@@ -1193,18 +1296,17 @@ async fn open_docx_mutation_annotated_archive(
 
 ///|
 /// The TOLERANT annotated read, which recovers from malformed markup and
-/// backs the read-only projection commands.
+/// backs the read-only projection commands. The main-document part comes
+/// pre-validated from the projection entry point, so the fallback never
+/// re-validates the archive it already accepted.
 async fn open_docx_annotated_archive(
   file : String,
   archive : @zip.Archive,
+  main_document_part : String,
   cancelled? : () -> Bool = () => false,
 ) -> @docx.DocxAnnotatedResult {
   check_office_read_cancelled(cancelled)
   @async.pause()
-  check_office_read_cancelled(cancelled)
-  let main_document_part = validate_docx_read_archive(file, archive, cancelled~)
-  @async.pause()
-  check_office_read_cancelled(cancelled)
   let annotated = @docx.read_docx_annotated_archive_tolerant_limited(
     archive,
     docx_cli_xml_budget(cancelled),
@@ -1241,6 +1343,98 @@ async fn open_docx_projection_archive(
       }),
     )
   }
-  let annotated = open_docx_annotated_archive(file, archive, cancelled~)
+  let annotated = open_docx_projection_annotated_archive(
+    file,
+    archive,
+    cancelled~,
+  )
   projection_from_annotated(file, annotated, max_elements, cancelled~)
+}
+
+///|
+/// Open the single annotated tree used by the projection. The archive is
+/// validated exactly ONCE at this entry; a strict parser refusal is then
+/// the only failure that falls back to the tolerant read. Cancellation,
+/// package-validation, and resource-limit failures stay fatal: budgets
+/// bound work, and the tolerant side-read must not become a way around
+/// them. (The side effect is a deliberate behavior change: a document
+/// the tolerant reader can process within budget but the heavier joined
+/// read cannot now fails where it used to succeed.)
+async fn open_docx_projection_annotated_archive(
+  file : String,
+  archive : @zip.Archive,
+  cancelled? : () -> Bool = () => false,
+) -> @docx.DocxAnnotatedResult {
+  check_office_read_cancelled(cancelled)
+  @async.pause()
+  let main_document_part = validate_docx_read_archive(file, archive, cancelled~)
+  @async.pause()
+  check_office_read_cancelled(cancelled)
+  open_docx_joined_projection_annotated_archive(
+    file,
+    archive,
+    main_document_part,
+    cancelled~,
+  ) catch {
+    CliFailure(error) => {
+      check_office_read_cancelled(cancelled)
+      if error.code != "office.docx.read_failed" {
+        raise CliFailure(error)
+      }
+      open_docx_annotated_archive(file, archive, main_document_part, cancelled~)
+    }
+    error => raise error
+  }
+}
+
+///|
+/// The joined projection read retains reader scans and provenance while using
+/// tolerant annotation identity semantics. It is read-only by policy.
+async fn open_docx_joined_projection_annotated_archive(
+  file : String,
+  archive : @zip.Archive,
+  main_document_part : String,
+  cancelled? : () -> Bool = () => false,
+) -> @docx.DocxAnnotatedResult {
+  check_office_read_cancelled(cancelled)
+  @async.pause()
+  let annotated = @docx.read_docx_annotated_archive_joined_projection_limited(
+    archive,
+    docx_cli_xml_budget(cancelled),
+    max_diagnostics=docx_cli_max_warnings,
+    max_diagnostic_chars=512,
+    expected_main_document_path=main_document_part,
+  ) catch {
+    error => {
+      check_office_read_cancelled(cancelled)
+      raise docx_reader_failure(error, file)
+    }
+  }
+  check_office_read_cancelled(cancelled)
+  @async.pause()
+  annotated
+}
+
+///|
+/// Try to build a story's paragraph anchor join for a successful joined read.
+/// Join construction can refuse when the tree/projection correspondence is not
+/// provable; that refusal only disables anchors and does not reread the part.
+fn attempt_docx_story_anchor_join(
+  file : String,
+  annotated : @docx.DocxAnnotatedResult,
+  story_source : @docx.DocxStoryPartSource,
+  cancelled? : () -> Bool = () => false,
+) -> @docx.DocxParagraphAnchorJoinIndex? raise CliFailure {
+  let joins = Some(
+    @docx.docx_paragraph_anchor_join_index(annotated, story_source),
+  ) catch {
+    InvalidZip(..) => None
+    InvalidXml(..) => None
+    MissingPart(..) => None
+    Unsupported(..) => None
+    ResourceLimit(..) as error => raise docx_reader_failure(error, file)
+    WriteResourceLimit(..) as error => raise docx_reader_failure(error, file)
+  }
+  check_office_read_cancelled(cancelled)
+  joins
 }

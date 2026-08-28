@@ -36,6 +36,8 @@ pub fn convert_to_markdown(BytesView, style_map? : Array[String], include_defaul
 
 pub fn docx_paragraph_anchor_index(DocxAnnotatedResult, DocxStoryPartSource) -> DocxParagraphAnchorIndex raise @core.DocxError
 
+pub fn docx_paragraph_anchor_join_index(DocxAnnotatedResult, DocxStoryPartSource) -> DocxParagraphAnchorJoinIndex raise @core.DocxError
+
 pub fn docx_paragraph_projection(DocxAnnotatedResult, DocxStoryPartSource, path~ : String) -> String?
 
 pub fn embed_style_map(BytesView, String) -> Bytes raise @core.DocxError
@@ -77,6 +79,8 @@ pub fn read_docx(BytesView, external_file_access? : Bool, read_external_file? : 
 pub fn read_docx_annotated(BytesView, external_file_access? : Bool, read_external_file? : (String) -> Bytes?) -> DocxAnnotatedResult raise @core.DocxError
 
 pub fn read_docx_annotated_archive(@zip.Archive, external_file_access? : Bool, read_external_file? : (String) -> Bytes?) -> DocxAnnotatedResult raise @core.DocxError
+
+pub fn read_docx_annotated_archive_joined_projection_limited(@zip.Archive, @xml.XmlReadBudget, external_file_access? : Bool, read_external_file? : (String) -> Bytes?, max_diagnostics? : Int, max_diagnostic_chars? : Int, expected_main_document_path? : String) -> DocxAnnotatedResult raise @core.DocxError
 
 pub fn read_docx_annotated_archive_limited(@zip.Archive, @xml.XmlReadBudget, external_file_access? : Bool, read_external_file? : (String) -> Bytes?, max_diagnostics? : Int, max_diagnostic_chars? : Int, expected_main_document_path? : String) -> DocxAnnotatedResult raise @core.DocxError
 
@@ -249,6 +253,18 @@ pub struct DocxParagraphAnchorIndex {
 }
 pub fn DocxParagraphAnchorIndex::anchor_at(Self, String) -> DocxParagraphAnchor?
 pub fn DocxParagraphAnchorIndex::anchor_of_paragraph(Self, Int) -> DocxParagraphAnchor?
+
+pub struct DocxParagraphAnchorJoinIndex {
+  // private fields
+}
+pub fn DocxParagraphAnchorJoinIndex::join_of_occurrence(Self, Int) -> DocxParagraphJoin?
+pub fn DocxParagraphAnchorJoinIndex::occurrence_count(Self) -> Int
+pub fn DocxParagraphAnchorJoinIndex::occurrence_of_paragraph(Self, Int) -> Int?
+
+pub enum DocxParagraphJoin {
+  Joined(Int, DocxParagraphAnchor)
+  Unjoined(String)
+}
 
 pub(all) struct DocxReadResult {
   document : @document.DocumentElement

@@ -513,3 +513,9 @@ paragraph_identity.mbt	missing	docx_paragraph_anchor_index	value	paragraph_ident
 paragraph_identity.mbt	multi_physical	docx_paragraph_anchor_index	value	paragraph_identity_test:"identity refuses a singular anchor for joined paragraphs"
 paragraph_identity.mbt	p	docx_paragraph_anchor_index	name	paragraph_identity_test:"identity reports unique and missing anchors"; paragraph_identity_test:"identity refuses duplicate ids on both carriers"
 paragraph_identity.mbt	unique	docx_paragraph_anchor_index	value	paragraph_identity_test:"identity reports unique and missing anchors"
+paragraph_identity.mbt	ambiguous-projection-claim	docx_paragraph_anchor_join_index	value	(unreachable: no two projection flushes produce byte-identical source vectors -- an enclosing frame contributes at most once and every flush appends its own paragraph's inputs)
+paragraph_identity.mbt	ambiguous-tree-claim	docx_paragraph_anchor_join_index	value	(unreachable: no reader shape emits two tree occurrences with an identical input vector -- each physical w:p owns a unique id and a single occurrence)
+paragraph_identity.mbt	missing-source-identity	docx_paragraph_anchor_join_index	value	(unreachable: joined-read paragraph inputs always carry a physical id, and synthetic None nodes are never paragraph inputs)
+paragraph_identity.mbt	no-projection-counterpart	docx_paragraph_anchor_join_index	value	paragraph_identity_test:"anchor join refuses the nested-paragraph shape"
+paragraph_identity.mbt	shared-physical-source	docx_paragraph_anchor_join_index	value	paragraph_identity_test:"anchor join refuses the nested-paragraph shape"
+paragraph_identity.mbt	unjudged-paragraph	docx_paragraph_anchor_join_index	value	(unreachable: projection paragraphs always retain at least one source, so the anchors-array None entry never answers)
