@@ -48,7 +48,8 @@ pub fn DocxFindReplaceReport::affected(
 }
 
 ///|
-/// The selected candidates, find-shaped, for the matches payload.
+/// The scan path a stable `p[id="…"]` scope resolved to; None when the
+/// request's scope was ordinal or absent.
 pub fn DocxFindReplaceReport::resolved_within(
   self : DocxFindReplaceReport,
 ) -> String? {
@@ -56,6 +57,7 @@ pub fn DocxFindReplaceReport::resolved_within(
 }
 
 ///|
+/// The selected candidates, find-shaped, for the matches payload.
 pub fn DocxFindReplaceReport::matches(
   self : DocxFindReplaceReport,
 ) -> Array[@word.DocxMatch] {
@@ -131,7 +133,13 @@ fn resolve_stable_replace_scope(
   // through to the prefix matcher where it matches nothing and an
   // --expect 0 run would publish.
   guard scope.has_prefix("p[id") else { return scope }
-  guard scope.has_prefix("p[id=\"") && scope.has_suffix("\"]") else {
+  // length >= 8: the shortest VALID spelling is p[id=""] (eight code
+  // units) — at seven, p[id="] satisfies both the prefix and the
+  // suffix with the SAME quote, and slicing would panic instead of
+  // refusing typed.
+  guard scope.has_prefix("p[id=\"") &&
+    scope.has_suffix("\"]") &&
+    scope.length() >= 8 else {
     raise @transaction.transaction_failure(
       "office.docx.para_id_invalid", "a stable scope is spelled p[id=\"XXXXXXXX\"]",
     )

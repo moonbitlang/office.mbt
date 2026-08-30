@@ -778,3 +778,19 @@ async test "docx.edit/2 empty stable id refuses typed at transaction time" {
     )
   }
 }
+
+///|
+/// The same seven-unit edge through the edit parser: `p[id="]/r[1]`
+/// refuses at PARSE (the head's prefix and suffix must be distinct
+/// quotes), never reaching a panicking slice.
+async test "docx.edit/2 seven-unit stable head refuses at parse" {
+  let mut refused = false
+  try
+    ignore(edit_script_v2([set_run_text_op("p[id=\"]/r[1]", "a", "b")]))
+  catch {
+    _ => refused = true
+  } noraise {
+    _ => ()
+  }
+  assert_true(refused, msg="seven-unit head must refuse at parse")
+}

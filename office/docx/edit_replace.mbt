@@ -470,11 +470,14 @@ pub fn parse_docx_edit_script(
 
 ///|
 /// Validates and normalizes one `set_run_text` address. Accepted forms:
-/// the canonical query selector (`/docx/body/p[1]/r[2]`) and its
-/// body-relative form (`p[1]/r[2]`). Segments are `kind[ordinal]` with
-/// kind in {p, r, tbl, tr, tc} and ordinal >= 1; the path must end in a
-/// run segment. The normalized body-relative form is returned, so
-/// agents can paste `office query` paths directly.
+/// the canonical query selector (`/docx/body/p[1]/r[2]`), its
+/// body-relative form (`p[1]/r[2]`), and a STABLE head as the first
+/// segment (`p[id="1A2B3C4D"]/r[2]`) whose spelling is checked here
+/// and whose identity is judged at transaction time. Ordinal segments
+/// are `kind[ordinal]` with kind in {p, r, tbl, tr, tc} and
+/// ordinal >= 1; the path must end in a run segment. The normalized
+/// body-relative form is returned, so agents can paste `office query`
+/// paths directly.
 fn parse_docx_run_address(
   value : String,
   index : Int,
@@ -503,11 +506,13 @@ fn parse_docx_run_address(
     // p[id="XXXXXXXX"] — the spelling is checked here, the identity is
     // judged at transaction time against the edited snapshot.
     if segment_index == 0 && segment.has_prefix("p[id=") {
-      // The payload may be structurally empty (p[id=""]) — validity is
-      // the TRANSACTION's judgment, refused there as para_id_invalid.
+      // The payload may be structurally empty (p[id=""], eight code
+      // units — the minimum where prefix and suffix are DISTINCT
+      // quotes) — validity is the TRANSACTION's judgment, refused
+      // there as para_id_invalid.
       guard segment.has_prefix("p[id=\"") &&
         segment.has_suffix("\"]") &&
-        segment.length() >= 7 else {
+        segment.length() >= 8 else {
         raise refuse(
           "carries a malformed stable paragraph head; the spelling is p[id=\"XXXXXXXX\"]",
         )

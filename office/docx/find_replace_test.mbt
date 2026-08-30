@@ -348,3 +348,32 @@ async test "replace near-miss stable scope refuses instead of matching nothing" 
     assert_false(published, msg="a near-miss scope must publish nothing")
   })
 }
+
+///|
+/// Round 2's edge, pinned: `p[id="]` is seven units whose single quote
+/// satisfies both the prefix and the suffix — it must refuse typed,
+/// never panic in the slice.
+async test "replace seven-unit stable scope refuses typed" {
+  with_docx_session_test_dir(directory => {
+    let input = edit_fixture(
+      directory, "seven-in.docx", "<w:r><w:t>alpha</w:t></w:r>",
+    )
+    let output = directory + "/seven-out.docx"
+    let mut failure : String? = None
+    ignore(
+      @docx.transact_docx_find_replace(
+        @transaction.transaction_options(input, output_path=output),
+        needle="alpha",
+        replacement="x",
+        within="p[id=\"]",
+      ),
+    ) catch {
+      error => failure = Some("\{error}")
+    }
+    guard failure is Some(message) else { fail("expected the refusal") }
+    assert_true(
+      message.contains("office.docx.para_id_invalid"),
+      msg="got '" + message + "'",
+    )
+  })
+}
