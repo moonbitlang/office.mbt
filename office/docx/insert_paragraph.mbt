@@ -90,6 +90,12 @@ pub fn DocxEditSession::queue_insert_paragraph(
   for value in conservative_para_id_sweep(self.archive) {
     used.push(value)
   }
+  // The union shares the structured sweep's retention envelope.
+  if used.length() > 131072 {
+    raise @transaction.transaction_failure(
+      "office.docx.resource_limit", "the package carries more paraId occupants than the mint inventory retains; refusing rather than minting blind",
+    )
+  }
   let (plan, receipt) = @word.plan_docx_paragraph_insertion(
     self.annotated,
     at~,
@@ -275,10 +281,14 @@ fn conservative_para_id_sweep(archive : @zip.Archive) -> Array[String] {
       let mut value_end = value_start
       while value_end < bytes.length() &&
             bytes[value_end] != quote &&
-            value_end - value_start <= 64 {
+            value_end - value_start < 64 {
         value_end += 1
       }
-      if value_end > value_start && value_end < bytes.length() {
+      // Only a value that actually CLOSED within the bound is an
+      // occupant; an unterminated or over-long run is noise.
+      if value_end > value_start &&
+        value_end < bytes.length() &&
+        bytes[value_end] == quote {
         let builder = StringBuilder()
         let mut ascii = true
         for index in value_start..<value_end {

@@ -377,21 +377,16 @@ fn insert_payload_duplicate_key(text : String) -> String? {
 /// key for the diagnostic: valid scalars as themselves, everything
 /// else as \uXXXX. Identity comparison never uses this form.
 fn render_duplicate_key(identity : String) -> String {
-  let builder = StringBuilder()
+  // Decode the unit sequence first, then render: surrogate PAIRS
+  // recombine to their scalar, lone halves and controls become
+  // \uXXXX, and every other scalar shows as itself.
+  let units : Array[Int] = []
   let mut value = 0
   let mut has_digit = false
   for character in identity {
     if character == ';' {
       if has_digit {
-        match value.to_char() {
-          Some(scalar) =>
-            if value >= 0x20 && value < 0x7F {
-              builder.write_char(scalar)
-            } else {
-              builder.write_string(render_unit_escape(value))
-            }
-          None => builder.write_string(render_unit_escape(value))
-        }
+        units.push(value)
       }
       value = 0
       has_digit = false
@@ -402,6 +397,38 @@ fn render_duplicate_key(identity : String) -> String {
       value = value * 10 + digit
       has_digit = true
     }
+  }
+  let builder = StringBuilder()
+  let mut index = 0
+  while index < units.length() {
+    let unit = units[index]
+    if unit >= 0xD800 &&
+      unit <= 0xDBFF &&
+      index + 1 < units.length() &&
+      units[index + 1] >= 0xDC00 &&
+      units[index + 1] <= 0xDFFF {
+      let scalar = 0x10000 +
+        ((unit - 0xD800) << 10) +
+        (units[index + 1] - 0xDC00)
+      match scalar.to_char() {
+        Some(character) => builder.write_char(character)
+        None => {
+          builder.write_string(render_unit_escape(unit))
+          builder.write_string(render_unit_escape(units[index + 1]))
+        }
+      }
+      index += 2
+      continue
+    }
+    if unit >= 0x20 && unit != 0x7F && (unit < 0xD800 || unit > 0xDFFF) {
+      match unit.to_char() {
+        Some(character) => builder.write_char(character)
+        None => builder.write_string(render_unit_escape(unit))
+      }
+    } else {
+      builder.write_string(render_unit_escape(unit))
+    }
+    index += 1
   }
   builder.to_string()
 }

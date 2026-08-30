@@ -524,3 +524,5 @@ paragraph_insert.mbt	body	plan_docx_paragraph_insertion	name	paragraph_insert_te
 paragraph_insert.mbt	p	plan_docx_paragraph_insertion	name	paragraph_insert_test:"insertion refuses an anchor wrapped by a content control"; paragraph_insert_test:"insertion refuses the v1 boundaries"
 paragraph_insert.mbt	mc	plan_docx_paragraph_insertion	name	paragraph_insert_test:"insertion refuses the v1 boundaries"
 paragraph_insert.mbt	w14	plan_docx_paragraph_insertion	name	paragraph_insert_test:"insertion plans splice and read back with the minted identity"
+paragraph_insert.mbt	run text	plan_docx_paragraph_insertion	noise	paragraph_insert_test:"insertion refuses the v1 boundaries"
+paragraph_insert.mbt	style reference	plan_docx_paragraph_insertion	noise	paragraph_insert_test:"insertion refuses the v1 boundaries"

@@ -118,13 +118,11 @@ pub fn plan_docx_paragraph_insertion(
     )
   }
   for run in content.runs {
-    for character in run.text {
-      if character.to_int() < 0x20 {
-        raise Unsupported(
-          message="insert-paragraph run text must not contain control characters; v1 makes no structural breaks or tabs from text",
-        )
-      }
-    }
+    validate_insert_text(run.text, "run text")
+  }
+  match content.style {
+    Some(style) => validate_insert_text(style, "style reference")
+    None => ()
   }
   match content.style {
     Some(style) =>
@@ -354,4 +352,44 @@ fn escape_insert_attribute(text : String) -> String {
     }
   }
   builder.to_string()
+}
+
+///|
+/// Every code unit of insertion text must be XML-representable: no
+/// controls (v1 makes no structural breaks from text), no unpaired
+/// surrogates (the UTF-8 encoder would panic), and no U+FFFE/U+FFFF
+/// (never legal XML characters).
+fn validate_insert_text(text : String, what : String) -> Unit raise DocxError {
+  let units = text.code_units()
+  let mut index = 0
+  while index < units.length() {
+    let unit = units[index].to_int()
+    if unit < 0x20 {
+      raise Unsupported(
+        message="insert-paragraph \{what} must not contain control characters; v1 makes no structural breaks or tabs from text",
+      )
+    }
+    if unit == 0xFFFE || unit == 0xFFFF {
+      raise Unsupported(
+        message="insert-paragraph \{what} contains a code point XML cannot represent",
+      )
+    }
+    if unit >= 0xD800 && unit <= 0xDBFF {
+      guard index + 1 < units.length() &&
+        units[index + 1].to_int() >= 0xDC00 &&
+        units[index + 1].to_int() <= 0xDFFF else {
+        raise Unsupported(
+          message="insert-paragraph \{what} contains an unpaired surrogate",
+        )
+      }
+      index += 2
+      continue
+    }
+    if unit >= 0xDC00 && unit <= 0xDFFF {
+      raise Unsupported(
+        message="insert-paragraph \{what} contains an unpaired surrogate",
+      )
+    }
+    index += 1
+  }
 }

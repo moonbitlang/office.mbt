@@ -606,12 +606,17 @@ pub fn sweep_archive_para_id_values(
   fresh_budget~ : () -> @xml.XmlReadBudget,
 ) -> Array[String] raise DocxError {
   let found : Array[String] = []
+  // Classification by the OPC AUTHORITY, not by filename: the content
+  // types part decides which parts ARE XML (a word/custom.dat can be
+  // declared XML by override; a suffix filter would never see it).
+  let zip = open_zip_archive(archive)
+  let content_types = read_content_types(zip)
   for entry in archive.entries() {
-    // OPC extension handling is case-insensitive; so is this filter.
-    let lowered = entry.name().to_lower()
-    guard lowered.has_suffix(".xml") || lowered.has_suffix(".rels") else {
-      continue
-    }
+    let declared = content_types.find_content_type(entry.name(), zip~)
+    let is_xml = declared.has_suffix("+xml") ||
+      declared == "application/xml" ||
+      declared == "text/xml"
+    guard is_xml else { continue }
     let bytes = entry.data()
     if bytes_look_utf16(bytes) {
       raise Unsupported(
@@ -624,9 +629,12 @@ pub fn sweep_archive_para_id_values(
       namespace_map=office_namespace_map(),
     ) catch {
       ResourceLimit(..) as limit => raise limit
-      // A NUL-free part that is not UTF-8 XML cannot be UTF-16 text;
-      // the caller's lexical belt covers its ASCII spellings.
-      _ => continue
+      // A part the package DECLARES as XML but this reader cannot
+      // parse is a part the sweep cannot judge — fail closed.
+      _ =>
+        raise Unsupported(
+          message="the package declares '\{entry.name()}' as XML but it does not parse; the identity sweep refuses rather than minting blind",
+        )
     }
     let part_values : Array[String] = []
     collect_raw_para_id_values(root, part_values)
@@ -643,7 +651,10 @@ pub fn sweep_archive_para_id_values(
       }
     }
     if found.length() > max_swept_para_id_values {
-      raise Unsupported(
+      // A RESOURCE refusal, so the CLI surfaces it as the typed
+      // resource-limit code rather than a plan refusal.
+      raise ResourceLimit(
+        limit=DocxXmlMaterializedCharacters,
         message="the package carries more paraId values than the identity sweep retains; refusing rather than minting blind",
       )
     }
