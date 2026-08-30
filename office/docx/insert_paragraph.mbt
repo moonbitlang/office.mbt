@@ -65,37 +65,30 @@ pub fn DocxEditSession::queue_insert_paragraph(
   ) catch {
     error => raise mapped_plan_failure(error)
   }
-  let used : Array[String] = []
+  // R3's mint is CONSERVATIVELY package-global, assembled as a true
+  // UNION with the cap enforced as members join — duplicates never
+  // count against the envelope, and no source can materialize past it.
+  let occupants = ParaIdOccupants::new()
   for _part, values in inventory {
     for value in values {
-      used.push(value)
+      occupants.admit(value)
     }
   }
-  // R3's mint is CONSERVATIVELY package-global: the structured
-  // inventory covers the reachable story parts, but a paraId in a
-  // glossary document or any unclassified XML part must also block its
-  // value. The PRIMARY sweep strict-parses every XML part, so quote
-  // styles, attribute whitespace, and entity encodings are all
-  // normalized by the parser; the byte-level sweep stays as a belt for
-  // parts the parser refuses. Over-collection only shrinks the mint
-  // space, never corrupts it.
+  // The structured inventory covers the reachable story parts; the
+  // PRIMARY sweep strict-parses every content-type-declared XML part
+  // (parser-normalized spellings), and the byte-level belt covers the
+  // rest. Over-collection only shrinks the mint space, never corrupts
+  // it.
   let swept = @word.sweep_archive_para_id_values(self.archive, fresh_budget=() => {
     candidate_xml_budget()
   }) catch {
     error => raise mapped_plan_failure(error)
   }
   for value in swept {
-    used.push(value)
+    occupants.admit(value)
   }
-  for value in conservative_para_id_sweep(self.archive) {
-    used.push(value)
-  }
-  // The union shares the structured sweep's retention envelope.
-  if used.length() > 131072 {
-    raise @transaction.transaction_failure(
-      "office.docx.resource_limit", "the package carries more paraId occupants than the mint inventory retains; refusing rather than minting blind",
-    )
-  }
+  conservative_para_id_sweep(self.archive, occupants)
+  let used = occupants.to_used()
   let (plan, receipt) = @word.plan_docx_paragraph_insertion(
     self.annotated,
     at~,
@@ -251,8 +244,55 @@ pub async fn transact_docx_insert_paragraph(
 /// archive part. Purely conservative input to the mint: prefix-blind
 /// (any `…paraId="` spelling counts) and judgment-free (whatever sits
 /// between the quotes is collected as an occupant).
-fn conservative_para_id_sweep(archive : @zip.Archive) -> Array[String] {
-  let found : Array[String] = []
+priv struct ParaIdOccupants {
+  members : Set[String]
+  mut overflowed : Bool
+}
+
+///|
+fn ParaIdOccupants::new() -> ParaIdOccupants {
+  { members: Set([]), overflowed: false, }
+}
+
+///|
+/// Admit one occupant into the capped UNION. The cap is on distinct
+/// members; crossing it marks overflow, and `to_used` refuses then —
+/// so no code path can materialize an unbounded inventory first.
+fn ParaIdOccupants::admit(self : ParaIdOccupants, value : String) -> Unit {
+  if self.overflowed || value.length() > 64 {
+    return
+  }
+  if self.members.contains(value) {
+    return
+  }
+  if self.members.size() >= 131072 {
+    self.overflowed = true
+    return
+  }
+  self.members.add(value)
+}
+
+///|
+fn ParaIdOccupants::to_used(
+  self : ParaIdOccupants,
+) -> Array[String] raise @transaction.TransactionError {
+  if self.overflowed {
+    raise @transaction.transaction_failure(
+      "office.docx.resource_limit", "the package carries more paraId occupants than the mint inventory retains; refusing rather than minting blind",
+    )
+  }
+  let used : Array[String] = []
+  for value in self.members {
+    used.push(value)
+  }
+  used
+}
+
+///|
+fn conservative_para_id_sweep(
+  archive : @zip.Archive,
+  occupants : ParaIdOccupants,
+) -> Unit {
   // XML attributes take EITHER quote style; the sweep matches the
   // name+equals and accepts whichever quote follows, closing on the
   // same one.
@@ -299,11 +339,10 @@ fn conservative_para_id_sweep(archive : @zip.Archive) -> Array[String] {
           builder.write_char(bytes[index].to_int().unsafe_to_char())
         }
         if ascii {
-          found.push(builder.to_string())
+          occupants.admit(builder.to_string())
         }
       }
       at = value_end
     }
   }
-  found
 }

@@ -610,9 +610,14 @@ pub fn sweep_archive_para_id_values(
   // types part decides which parts ARE XML (a word/custom.dat can be
   // declared XML by override; a suffix filter would never see it).
   let zip = open_zip_archive(archive)
-  let content_types = read_content_types(zip)
+  let content_types = read_content_types(zip, xml_budget=fresh_budget())
   for entry in archive.entries() {
-    let declared = content_types.find_content_type(entry.name(), zip~)
+    // The comparison uses the trimmed, lowercased media-type ESSENCE:
+    // RFC parameters (";charset=…") and case variants are valid OPC
+    // spellings and must not change the classification.
+    let declared = media_type_essence(
+      content_types.find_content_type(entry.name(), zip~),
+    )
     let is_xml = declared.has_suffix("+xml") ||
       declared == "application/xml" ||
       declared == "text/xml"
@@ -1582,4 +1587,15 @@ fn self_closing_rewrite_range(
   replacement.write_bytesview(slice[1:name_end])
   replacement.write_bytes(b">")
   @splice.span_edit(start~, end~, replacement.contents())
+}
+
+///|
+/// The lowercased media-type essence: parameters stripped at the first
+/// ';', surrounding whitespace trimmed.
+fn media_type_essence(declared : String) -> String {
+  let cut = match declared.find(";") {
+    Some(index) => declared.substring(start=0, end=index).to_string()
+    None => declared
+  }
+  cut.trim(chars=" \t").to_string().to_lower()
 }
