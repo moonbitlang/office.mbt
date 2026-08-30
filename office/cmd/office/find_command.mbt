@@ -217,6 +217,21 @@ async fn run_docx_find(matches : @argparse.Matches) -> Unit {
         source.archive,
         cancelled=office_async_cancelled,
       )
+      // paraId R2a: `--in 'p[id="…"]'` scopes by IDENTITY. The engine
+      // resolves it to the paragraph's CURRENT scan path (the same
+      // typed refusals as selector resolution — an ambiguous or buried
+      // identity never scopes to its first carrier); a resolved-but-
+      // tree-unjoined carrier still has a scan path, which is all find
+      // needs.
+      let within = match within {
+        Some(scope) =>
+          Some(
+            resolve_find_para_id_scope(annotated, scope) catch {
+              error => raise error
+            },
+          )
+        None => None
+      }
       let found = @docx.find_docx_matches(
         annotated,
         annotated.main_story_source(),
@@ -245,6 +260,75 @@ async fn run_docx_find(matches : @argparse.Matches) -> Unit {
     _ =>
       raise docx_cli_failure(
         "office.unsupported_format", "find reads .docx packages; use `office query` for .xlsx",
+      )
+  }
+}
+
+///|
+/// Translate a stable `p[id="…"]` scope to its current scan path;
+/// ordinal scopes pass through untouched.
+fn resolve_find_para_id_scope(
+  annotated : @docx.DocxAnnotatedResult,
+  scope : String,
+) -> String raise CliFailure {
+  guard scope.has_prefix("p[id=") else { return scope }
+  // Accept exactly the selector spelling: p[id="XXXXXXXX"].
+  guard scope.has_prefix("p[id=\"") && scope.has_suffix("\"]") else {
+    raise docx_cli_failure(
+      "office.docx.para_id_invalid",
+      "a stable scope is spelled p[id=\"XXXXXXXX\"]",
+      details=Json::object({ "in": Json::string(bounded_text(scope, 80)) }),
+    )
+  }
+  let raw = scope.substring(start=6, end=scope.length() - 2).to_string()
+  let joins = @docx.docx_paragraph_anchor_join_index(
+    annotated,
+    annotated.main_story_source(),
+  ) catch {
+    _ =>
+      raise docx_cli_failure(
+        "office.docx.para_id_unavailable",
+        "stable scoping is unavailable for this document",
+        details=Json::object({ "in": Json::string(bounded_text(scope, 80)) }),
+      )
+  }
+  let paragraph_index = match joins.resolve_para_id(raw) {
+    ResolvedOccurrence(_, paragraph_index) => paragraph_index
+    // find scopes over SCAN paths, so a tree-unjoined carrier is still
+    // a sound scope — the join only matters to tree surfaces.
+    ParaIdUnjoined(paragraph_index) => paragraph_index
+    ParaIdInvalid =>
+      raise docx_cli_failure(
+        "office.docx.para_id_invalid",
+        "a paraId is exactly eight hex digits, nonzero, below 0x80000000",
+        details=Json::object({ "in": Json::string(bounded_text(scope, 80)) }),
+      )
+    ParaIdNotFound =>
+      raise docx_cli_failure(
+        "office.docx.para_id_not_found",
+        "no paragraph in the body story carries this id",
+        details=Json::object({ "in": Json::string(bounded_text(scope, 80)) }),
+      )
+    ParaIdAmbiguous(_) =>
+      raise docx_cli_failure(
+        "office.docx.para_id_ambiguous",
+        "this id names more than one paragraph; scope by ordinal path instead",
+        details=Json::object({ "in": Json::string(bounded_text(scope, 80)) }),
+      )
+    ParaIdInMultiPhysical =>
+      raise docx_cli_failure(
+        "office.docx.para_id_not_addressable",
+        "this id's only carriers are inside revision-joined paragraphs",
+        details=Json::object({ "in": Json::string(bounded_text(scope, 80)) }),
+      )
+  }
+  match joins.anchor_index().scan_path_of_paragraph(paragraph_index) {
+    Some(path) => path
+    None =>
+      raise docx_cli_failure(
+        "office.docx.para_id_unjoined",
+        "the paragraph carrying this id has no addressable path in this snapshot",
+        details=Json::object({ "in": Json::string(bounded_text(scope, 80)) }),
       )
   }
 }

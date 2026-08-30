@@ -186,6 +186,24 @@ async test "DOCX projection joins header and footer paragraph anchors" {
       Some(Json::string("unique")),
     )
   }
+  // The round-1 High, pinned: header and footer walks reuse the
+  // builder's story-scoped join scratch, and a FOOTER's identity must
+  // never answer a /docx/body selector — the body pair is captured
+  // before any later story walks.
+  for footer_id in ["12345671", "12345672"] {
+    try
+      resolve_projection_selector(
+        projection,
+        "/docx/body/p[id=\"\{footer_id}\"]",
+      )
+    catch {
+      CliFailure(error) =>
+        assert_eq(error.code, "office.docx.para_id_not_found")
+      _ => fail("unexpected failure kind for footer id \{footer_id}")
+    } noraise {
+      entry => fail("footer id resolved as body: \{entry.path}")
+    }
+  }
 }
 
 ///|
@@ -745,7 +763,10 @@ async test "DOCX resolver reports malformed, missing, and unsupported stable sel
   for
     case in [
       ("/docx/body/p[999]", "office.docx.selector_not_found"),
-      ("/docx/body/p[id=\"7\"]", "office.docx.unsupported_stable_id"),
+      // `p[id=…]` is a SUPPORTED stable selector since R2a — "7" fails
+      // the paraId validity judgment, not the support gate.
+      ("/docx/body/p[id=\"7\"]", "office.docx.para_id_invalid"),
+      ("/docx/body/p[1]/r[id=\"7\"]", "office.docx.unsupported_stable_id"),
       ("/xlsx/sheet[name=\"Data\"]", "office.docx.selector_format_mismatch"),
     ] {
     let (path, expected) = case
@@ -796,6 +817,8 @@ async test "duplicate annotation ids stay positional and stable lookup is ambigu
     annotated,
     entries: builder.entries,
     entry_index: builder.entry_index,
+    body_joins: None,
+    body_paragraph_entries: [],
     revisions: annotation_index.revisions,
     warnings: builder.warnings,
     cancelled: () => false,

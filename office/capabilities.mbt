@@ -208,7 +208,9 @@ pub fn capability_formats() -> Array[CapabilityFormat] {
         schema: "office.selector/1",
         root: "/docx",
         status: "read-resolved",
-        examples: ["/docx/body/p[1]/r[2]", "/docx/comments/comment[id=\"7\"]"],
+        examples: [
+          "/docx/body/p[1]/r[2]", "/docx/body/p[id=\"1A2B3C4D\"]", "/docx/comments/comment[id=\"7\"]",
+        ],
         description: "bounded canonical resolution for outline, get, text, and declared query predicates",
       },
     },
@@ -588,7 +590,7 @@ pub fn capability_commands() -> Array[CapabilityCommand] {
           "parent", "office.selector/1", false, "canonical parent path; absent for projection roots",
         ),
         capability_field(
-          "id", "string", false, "annotation id when the resolved item carries one",
+          "id", "string", false, "the entry's stable id: an annotation id, or a soundly-joined UNIQUE paragraph's canonical w14:paraId — resolvable back via p[id=\"…\"]; duplicates never earn one",
         ),
         capability_field(
           "para_id", "string", false, "DOCX paragraph entries only: canonical w14:paraId, null unless the paragraph carries a valid one",
@@ -854,7 +856,7 @@ pub fn capability_commands() -> Array[CapabilityCommand] {
           "text", "string", true, "literal text to find — never a regular expression or wildcard; matched over the reader PROJECTION, so it spans run boundaries",
         ),
         capability_field(
-          "in", "string", false, "restrict to a body-relative subtree by path prefix, e.g. p[3] or tbl[1]",
+          "in", "string", false, "restrict to a body-relative subtree by path prefix (p[3], tbl[1]) or by stable identity: p[id=\"1A2B3C4D\"] resolves through the anchor judge and refuses ambiguous, buried, absent, or invalid ids — never first-wins",
         ),
         capability_field(
           "limit", "integer", false, "maximum returned candidates (default 100, hard limit 1000)",
