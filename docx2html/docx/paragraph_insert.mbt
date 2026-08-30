@@ -146,11 +146,47 @@ pub fn plan_docx_paragraph_insertion(
       message="insert-paragraph requires a mutation-safe read with retained source bytes",
     )
   }
+  // The path grammar flattens transparent containers (w:sdt, w:ins,
+  // mc:Fallback…), so "p[1]" can name a paragraph INSIDE a wrapper —
+  // and an insertion beside it would land inside that wrapper. The
+  // anchor must be a PHYSICAL child of w:body, proven on the element
+  // tree, not inferred from the path.
+  guard annotated.reader_projections.get(part) is Some(projection) else {
+    raise Unsupported(
+      message="insert-paragraph requires a mutation-safe read with a retained projection",
+    )
+  }
+  let elements = projection.scan.elements()
+  let mut anchor_is_direct = false
+  for element in elements {
+    if element.byte_start == span.byte_start() &&
+      element.local_name == "p" &&
+      is_wml_uri(element.uri) {
+      let parent = element.parent_index
+      if parent >= 0 && parent < elements.length() {
+        let holder = elements[parent]
+        if holder.local_name == "body" && is_wml_uri(holder.uri) {
+          anchor_is_direct = true
+        }
+      }
+      break
+    }
+  }
+  guard anchor_is_direct else {
+    raise Unsupported(
+      message="insert-paragraph anchor '\{at}' is not a DIRECT child of the body — paragraphs inside content controls, revisions, or compatibility wrappers are not insertion anchors",
+    )
+  }
   // The neighbour's own tag names the WML prefix this document binds —
   // the fragment reuses it rather than assuming `w`.
   let prefix = paragraph_tag_prefix(bytes, span.byte_start())
+  guard projection.scan.root_namespace_uri() is Some(wml_uri) else {
+    raise Unsupported(
+      message="insert-paragraph could not determine the document's WML namespace",
+    )
+  }
   let minted = mint_para_id(used_para_ids)
-  let fragment = render_insert_fragment(prefix, minted, content)
+  let fragment = render_insert_fragment(prefix, wml_uri, minted, content)
   let offset = if before { span.byte_start() } else { span.byte_end() }
   let plan = @splice.SplicePlan::new()
   plan.pin_part(part, bytes)
@@ -199,6 +235,13 @@ fn paragraph_tag_prefix(
   let mut at = offset + 1
   while at < bytes.length() && bytes[at] != b':' {
     let byte = bytes[at]
+    guard byte < b'\x80' else {
+      // A non-ASCII prefix would be byte-mangled by this walk; refuse
+      // rather than synthesize a corrupt fragment.
+      raise Unsupported(
+        message="insert-paragraph requires an ASCII namespace prefix at the anchor",
+      )
+    }
     guard byte != b'>' && byte != b' ' && byte != b'/' else {
       // An unprefixed paragraph element: legal XML, but this reader's
       // WML documents always carry a prefix — refuse rather than
@@ -219,17 +262,21 @@ fn paragraph_tag_prefix(
 }
 
 ///|
-/// Render the namespace-self-contained fragment. The w14 binding is
-/// declared LOCALLY on the new paragraph — the document root is never
-/// rewritten just to add a prefix.
+/// Render the fully self-contained fragment: the WML prefix binding,
+/// the w14 binding, AND the MCE declaration all ride the new paragraph
+/// locally — no ancestor binding is relied on (an anchor-locally-bound
+/// prefix is not inherited by a new SIBLING), and a consumer without
+/// w14 support sees mc:Ignorable resolve against OUR binding. The
+/// document root is never rewritten.
 fn render_insert_fragment(
   prefix : String,
+  wml_uri : String,
   para_id : String,
   content : DocxInsertContent,
 ) -> String {
   let builder = StringBuilder()
   builder.write_string(
-    "<\{prefix}:p xmlns:w14=\"http://schemas.microsoft.com/office/word/2010/wordml\" w14:paraId=\"\{para_id}\">",
+    "<\{prefix}:p xmlns:\{prefix}=\"\{wml_uri}\" xmlns:w14=\"http://schemas.microsoft.com/office/word/2010/wordml\" xmlns:mc=\"http://schemas.openxmlformats.org/markup-compatibility/2006\" mc:Ignorable=\"w14\" w14:paraId=\"\{para_id}\">",
   )
   match content.style {
     Some(style) =>
@@ -288,6 +335,12 @@ fn escape_insert_attribute(text : String) -> String {
       '&' => builder.write_string("&amp;")
       '<' => builder.write_string("&lt;")
       '"' => builder.write_string("&quot;")
+      // Literal whitespace in an attribute value is NORMALIZED by XML
+      // parsers — a style id that passed existence checking must not
+      // change spelling on emission, so these become numeric refs.
+      '\t' => builder.write_string("&#x9;")
+      '\n' => builder.write_string("&#xA;")
+      '\r' => builder.write_string("&#xD;")
       _ => builder.write_char(character)
     }
   }

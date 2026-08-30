@@ -71,6 +71,13 @@ fn parse_insert_paragraph_content(
       "--content is a docx.paragraph/1 payload: " + reason,
     )
   }
+  // Duplicate members collapse last-wins in a parsed object, so the
+  // RAW text is scanned first: two spellings of the same key in the
+  // same object refuse before any value is trusted.
+  match insert_payload_duplicate_key(payload) {
+    Some(key) => raise refuse("duplicate member \"" + key + "\"")
+    None => ()
+  }
   let parsed : Json = @json.parse(payload) catch {
     _ => raise refuse("the value is not valid JSON")
   }
@@ -252,4 +259,72 @@ fn map_insert_paragraph_failure(error : Error) -> CliFailure {
         "office.insert_paragraph.failed", "insert-paragraph", error,
       )
   }
+}
+
+///|
+/// A string-aware, frame-aware scan for duplicate object members in
+/// the raw payload text. Frames get identities on '{'; a key seen
+/// twice in ONE frame is the duplicate — the same key in two sibling
+/// run objects is fine. Malformed text returns None and lets the JSON
+/// parser produce its own refusal.
+fn insert_payload_duplicate_key(text : String) -> String? {
+  let units = text.code_units()
+  let seen : Map[String, Bool] = Map([])
+  let frames : Array[Int] = []
+  let mut next_frame = 0
+  let mut expecting_key = false
+  let mut index = 0
+  while index < units.length() {
+    let unit = units[index].to_int()
+    if unit == '"'.to_int() {
+      // Read the string verbatim, honouring escapes.
+      let start = index + 1
+      let mut end = start
+      let mut escaped = false
+      while end < units.length() {
+        let inner = units[end].to_int()
+        if escaped {
+          escaped = false
+        } else if inner == '\\'.to_int() {
+          escaped = true
+        } else if inner == '"'.to_int() {
+          break
+        }
+        end += 1
+      }
+      if expecting_key && frames.length() > 0 {
+        let builder = StringBuilder()
+        for at in start..<end {
+          match units[at].to_int().to_char() {
+            Some(character) => builder.write_char(character)
+            None => ()
+          }
+        }
+        let key = "\{frames[frames.length() - 1]}:" + builder.to_string()
+        if seen.contains(key) {
+          return Some(builder.to_string())
+        }
+        seen[key] = true
+        expecting_key = false
+      }
+      index = end + 1
+      continue
+    }
+    if unit == '{'.to_int() {
+      frames.push(next_frame)
+      next_frame += 1
+      expecting_key = true
+    } else if unit == '}'.to_int() {
+      if frames.length() > 0 {
+        ignore(frames.pop())
+      }
+      expecting_key = false
+    } else if unit == ','.to_int() {
+      expecting_key = frames.length() > 0
+    } else if unit == ':'.to_int() || unit == '['.to_int() {
+      expecting_key = false
+    }
+    index += 1
+  }
+  None
 }

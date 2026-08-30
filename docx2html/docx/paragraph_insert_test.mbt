@@ -4,14 +4,22 @@
 
 ///|
 test "mint_para_id is valid, fresh, and case-insensitively conservative" {
+  // R3's rule: assert VALIDITY and FRESHNESS, never the allocator's
+  // sequence.
   let minted = @docx.mint_para_id([])
   assert_eq(@docx.validated_para_id(minted), Some(minted))
-  // Occupied slots are skipped, case-insensitively, and raw invalid
-  // spellings still block their exact value.
-  let next = @docx.mint_para_id(["00000001", "00000002", "junk"])
-  assert_eq(next, "00000003")
-  let case_blocked = @docx.mint_para_id(["00000001", "00000002", "00000003"])
-  assert_eq(case_blocked, "00000004")
+  let occupied = ["00000001", "0000000a", "junk"]
+  let next = @docx.mint_para_id(occupied)
+  assert_eq(@docx.validated_para_id(next), Some(next))
+  // Fresh against every occupant, case-insensitively (the lowercase
+  // occupant blocks its canonical form too).
+  for value in occupied {
+    assert_true(next != value)
+    match @docx.validated_para_id(value) {
+      Some(canonical) => assert_true(next != canonical)
+      None => ()
+    }
+  }
 }
 
 ///|
@@ -33,7 +41,11 @@ test "insertion plans splice and read back with the minted identity" {
     },
     used_para_ids=["00000001", "00000002"],
   )
-  assert_eq(receipt.para_id(), "00000003")
+  // Validity and freshness, never the allocator sequence.
+  assert_eq(@docx.validated_para_id(receipt.para_id()), Some(receipt.para_id()))
+  assert_true(
+    receipt.para_id() != "00000001" && receipt.para_id() != "00000002",
+  )
   assert_eq(receipt.planned_path(), "p[2]")
   let source = fixture_docx(
     "<w:document xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\" xmlns:w14=\"http://schemas.microsoft.com/office/word/2010/wordml\"><w:body><w:p w14:paraId=\"00000001\"><w:r><w:t>first</w:t></w:r></w:p><w:p w14:paraId=\"00000002\"><w:r><w:t>second</w:t></w:r></w:p><w:sectPr/></w:body></w:document>",
@@ -49,12 +61,8 @@ test "insertion plans splice and read back with the minted identity" {
   guard index.anchor_at("p[2]") is Some(anchor) else {
     fail("expected the inserted paragraph's anchor")
   }
-  debug_inspect(
-    (anchor.status(), anchor.para_id()),
-    content=(
-      #|("unique", Some("00000003"))
-    ),
-  )
+  assert_eq(anchor.status(), "unique")
+  assert_eq(anchor.para_id(), Some(receipt.para_id()))
   // Neighbours keep their identities and order.
   guard index.anchor_at("p[1]") is Some(first) else { fail("p[1]") }
   assert_eq(first.para_id(), Some("00000001"))
@@ -108,5 +116,39 @@ test "insertion refuses the v1 boundaries" {
       style: Some("NoSuchStyle"),
       runs: [{ text: "x", bold: false, italic: false, underline: false, }],
     }).contains("styles part does not define"),
+  )
+}
+
+///|
+/// Round 1's High, pinned: the flattened path grammar lets a paragraph
+/// INSIDE a block content control answer to "p[1]" — but it is not a
+/// physical child of w:body, and an insertion beside it would land
+/// inside the wrapper. The anchor proof is on the element tree.
+test "insertion refuses an anchor wrapped by a content control" {
+  let annotated = identity_fixture(
+    "<w:sdt><w:sdtContent><w:p w14:paraId=\"00000001\"><w:r><w:t>wrapped</w:t></w:r></w:p></w:sdtContent></w:sdt>",
+  )
+  let mut message = ""
+  try
+    ignore(
+      @docx.plan_docx_paragraph_insertion(
+        annotated,
+        at="p[1]",
+        before=false,
+        content={
+          style: None,
+          runs: [{ text: "x", bold: false, italic: false, underline: false, }],
+        },
+        used_para_ids=[],
+      ),
+    )
+  catch {
+    error => message = repr(error)
+  } noraise {
+    _ => fail("expected the wrapped-anchor refusal")
+  }
+  assert_true(
+    message.contains("not a DIRECT child"),
+    msg="got '" + message + "'",
   )
 }

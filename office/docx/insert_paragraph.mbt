@@ -71,6 +71,15 @@ pub fn DocxEditSession::queue_insert_paragraph(
       used.push(value)
     }
   }
+  // R3's mint is CONSERVATIVELY package-global: the structured
+  // inventory covers the reachable story parts, but a paraId in a
+  // glossary document or any unclassified XML part must also block its
+  // value. A byte-level sweep over every part catches any spelling of
+  // a paraId attribute regardless of prefix binding — over-collection
+  // only shrinks the mint space, never corrupts it.
+  for value in conservative_para_id_sweep(self.archive) {
+    used.push(value)
+  }
   let (plan, receipt) = @word.plan_docx_paragraph_insertion(
     self.annotated,
     at~,
@@ -219,4 +228,54 @@ pub async fn transact_docx_insert_paragraph(
     )
   }
   { report, transaction, }
+}
+
+///|
+/// Byte-level sweep for `paraId="…"` attribute values across EVERY
+/// archive part. Purely conservative input to the mint: prefix-blind
+/// (any `…paraId="` spelling counts) and judgment-free (whatever sits
+/// between the quotes is collected as an occupant).
+fn conservative_para_id_sweep(archive : @zip.Archive) -> Array[String] {
+  let found : Array[String] = []
+  let needle : Bytes = "paraId=\""
+  for entry in archive.entries() {
+    let bytes = entry.data()
+    let mut at = 0
+    while at + needle.length() <= bytes.length() {
+      let mut matched = true
+      for offset in 0..<needle.length() {
+        if bytes[at + offset] != needle[offset] {
+          matched = false
+          break
+        }
+      }
+      if !matched {
+        at += 1
+        continue
+      }
+      let value_start = at + needle.length()
+      let mut value_end = value_start
+      while value_end < bytes.length() &&
+            bytes[value_end] != b'"' &&
+            value_end - value_start <= 64 {
+        value_end += 1
+      }
+      if value_end > value_start && value_end < bytes.length() {
+        let builder = StringBuilder()
+        let mut ascii = true
+        for index in value_start..<value_end {
+          if bytes[index] >= b'\x80' {
+            ascii = false
+            break
+          }
+          builder.write_char(bytes[index].to_int().unsafe_to_char())
+        }
+        if ascii {
+          found.push(builder.to_string())
+        }
+      }
+      at = value_end
+    }
+  }
+  found
 }

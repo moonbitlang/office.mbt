@@ -59,13 +59,14 @@ an unknown ID fails nonzero with a bounded typed suggestion.
     docx.edit/1 — Strict preservation-safe literal find & replace, or tracked-change accept/reject, script for an existing DOCX
     docx.edit/2 — Everything docx.edit/1 accepts plus the addressed set_run_text whole-run replacement
     docx.annotation-batch/1 — Strict preservation-safe comment mutation script for an existing DOCX
+    docx.paragraph/1 — Resource-free paragraph content for office insert-paragraph
   Use 'office help schema <id> --json' for the exact contract.
 
   $ office.exe help schemas --json | jq -c '{schema,success,data:{schema:.data.schema,ids:[.data.contracts[].id],fingerprints_valid:all(.data.contracts[];.fingerprint|test("^sha256:[0-9a-f]{64}$"))}}'
-  {"schema":"office.output/1","success":true,"data":{"schema":"office.input-contracts/1","ids":["xlsx.batch/2","docx.batch/2","office.template.data/1","docx.edit/1","docx.edit/2","docx.annotation-batch/1"],"fingerprints_valid":true}}
+  {"schema":"office.output/1","success":true,"data":{"schema":"office.input-contracts/1","ids":["xlsx.batch/2","docx.batch/2","office.template.data/1","docx.edit/1","docx.edit/2","docx.annotation-batch/1","docx.paragraph/1"],"fingerprints_valid":true}}
 
   $ office.exe help schemas --jsonl | jq -c '{schema,contracts:[.contracts[].id]}'
-  {"schema":"office.input-contracts/1","contracts":["xlsx.batch/2","docx.batch/2","office.template.data/1","docx.edit/1","docx.edit/2","docx.annotation-batch/1"]}
+  {"schema":"office.input-contracts/1","contracts":["xlsx.batch/2","docx.batch/2","office.template.data/1","docx.edit/1","docx.edit/2","docx.annotation-batch/1","docx.paragraph/1"]}
 
   $ office.exe help schema docx.batch/2 | jq -c '{schema,id,definitions:(.definitions|length)}'
   {"schema":"office.input-contract/1","id":"docx.batch/2","definitions":15}
@@ -381,11 +382,11 @@ paragraph's stable identity — fresh against the whole package, verified
 by readback before publication — and the published document addresses
 it immediately. Refusals (an undefined style here) publish nothing.
 
-  $ office.exe insert-paragraph "$TESTDIR/../../../../docx2html/tests/cram/fixtures/duplicate-para-id.docx" ip-out.docx --after 'p[3]' --content '{"runs":[{"text":"fresh paragraph","bold":true}]}' --json | jq -c '{schema:.data.schema,path:.data.path,para_id:.data.para_id,side:.data.side,changed:.data.changed}'
-  {"schema":"office.docx.insert-paragraph/1","path":"p[4]","para_id":"00000001","side":"after","changed":true}
+  $ office.exe insert-paragraph "$TESTDIR/../../../../docx2html/tests/cram/fixtures/duplicate-para-id.docx" ip-out.docx --after 'p[3]' --content '{"runs":[{"text":"fresh paragraph","bold":true}]}' --json | jq -c '{schema:.data.schema,path:.data.path,minted:(.data.para_id|test("^[0-9A-F]{8}$")),side:.data.side,changed:.data.changed}'
+  {"schema":"office.docx.insert-paragraph/1","path":"p[4]","minted":true,"side":"after","changed":true}
 
-  $ office.exe text ip-out.docx --json | jq -c '[.data.entries[] | {path,para_id,paragraph_anchor_status}] | last'
-  {"path":"/docx/body/p[4]","para_id":"00000001","paragraph_anchor_status":"unique"}
+  $ office.exe text ip-out.docx --json | jq -c '[.data.entries[] | {path,minted:(.para_id!=null and (.para_id|test("^[0-9A-F]{8}$"))),paragraph_anchor_status}] | last'
+  {"path":"/docx/body/p[4]","minted":true,"paragraph_anchor_status":"unique"}
 
   $ office.exe insert-paragraph "$TESTDIR/../../../../docx2html/tests/cram/fixtures/duplicate-para-id.docx" ip-ref.docx --before 'p[1]' --content '{"style":"Ghost","runs":[{"text":"x"}]}' --json 2>&1 | jq -c '.error.code'
   "office.docx.invalid_plan"

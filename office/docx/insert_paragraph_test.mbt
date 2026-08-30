@@ -25,7 +25,9 @@ async test "insert-paragraph publishes a minted addressable paragraph" {
       },
     )
     assert_eq(result.report().path(), "p[3]")
-    assert_eq(result.report().para_id(), "00000002")
+    let minted = result.report().para_id()
+    assert_eq(@word.validated_para_id(minted), Some(minted))
+    assert_true(minted != "00000001")
     assert_true(result.transaction().changed)
     let published = @afs.read_file(output).binary()
     let reread = @word.read_docx_annotated(published)
@@ -37,12 +39,8 @@ async test "insert-paragraph publishes a minted addressable paragraph" {
     guard anchors.anchor_at("p[3]") is Some(anchor) else {
       fail("expected the inserted anchor")
     }
-    debug_inspect(
-      (anchor.status(), anchor.para_id()),
-      content=(
-        #|("unique", Some("00000002"))
-      ),
-    )
+    assert_eq(anchor.status(), "unique")
+    assert_eq(anchor.para_id(), Some(minted))
   })
 }
 

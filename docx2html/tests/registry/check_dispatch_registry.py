@@ -67,6 +67,9 @@ FILES = {
     # require an ordinary text carrier, same read pattern as run_surgery.mbt
     'run_surgery_partial.mbt': 'extract',
     'find_api.mbt': 'extract',
+    # N3a's insertion planner: reads the anchor element tree (direct-
+    # body proof) and RENDERS the namespace-self-contained fragment
+    'paragraph_insert.mbt': 'extract',
     # paraId R1's identity layer: dispatches on WML `p` and the anchor
     # status vocabulary; reads the scanner's as-spelled capture
     'paragraph_identity.mbt': 'extract',
