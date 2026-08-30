@@ -79,11 +79,12 @@ pub fn DocxEditSession::queue_insert_paragraph(
   // normalized by the parser; the byte-level sweep stays as a belt for
   // parts the parser refuses. Over-collection only shrinks the mint
   // space, never corrupts it.
-  for
-    value in @word.sweep_archive_para_id_values(
-      self.archive,
-      candidate_xml_budget(),
-    ) {
+  let swept = @word.sweep_archive_para_id_values(self.archive, fresh_budget=() => {
+    candidate_xml_budget()
+  }) catch {
+    error => raise mapped_plan_failure(error)
+  }
+  for value in swept {
     used.push(value)
   }
   for value in conservative_para_id_sweep(self.archive) {

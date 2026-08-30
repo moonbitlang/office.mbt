@@ -64,6 +64,10 @@ test "every advertised example passes its production parser" {
   for example in edit_input_contract().examples {
     ignore(@office_docx.parse_docx_edit_script(example.stringify()))
   }
+  for example in paragraph_input_contract().examples {
+    let content = parse_insert_paragraph_content(example.stringify())
+    assert_true(content.runs.length() > 0)
+  }
 }
 
 ///|

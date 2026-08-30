@@ -319,34 +319,27 @@ fn insert_payload_duplicate_key(text : String) -> String? {
                 code = code * 16 + value
               }
               if valid {
-                match code.to_char() {
-                  Some(character) => builder.write_char(character)
-                  None => ()
-                }
+                // UNIT identity, not scalar identity: a lone surrogate
+                // half is a legal decoded JSON unit and must neither
+                // vanish nor conflate with a different key.
+                builder.write_string("\{code};")
                 at += 6
                 continue
               }
             }
             let decoded = match escape.to_char() {
-              Some('n') => Some('\n')
-              Some('t') => Some('\t')
-              Some('r') => Some('\r')
-              Some('b') => Some('\u{8}')
-              Some('f') => Some('\u{c}')
-              Some(other) => Some(other)
-              None => None
+              Some('n') => '\n'.to_int()
+              Some('t') => '\t'.to_int()
+              Some('r') => '\r'.to_int()
+              Some('b') => 8
+              Some('f') => 12
+              _ => escape
             }
-            match decoded {
-              Some(character) => builder.write_char(character)
-              None => ()
-            }
+            builder.write_string("\{decoded};")
             at += 2
             continue
           }
-          match inner.to_char() {
-            Some(character) => builder.write_char(character)
-            None => ()
-          }
+          builder.write_string("\{inner};")
           at += 1
         }
         let key = "\{frames[frames.length() - 1]}:" + builder.to_string()

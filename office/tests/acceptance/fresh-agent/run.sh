@@ -2115,12 +2115,13 @@ extract_isolated_contracts() {
     (.data | keys) == ["contracts", "fingerprint", "schema"] and
     .data.schema == "office.input-contracts/1" and
     (.data.fingerprint | test("^sha256:[0-9a-f]{64}$")) and
-    (.data.contracts | type) == "array" and (.data.contracts | length) == 6 and
+    (.data.contracts | type) == "array" and (.data.contracts | length) == 7 and
     ([.data.contracts[].id] | sort) == [
       "docx.annotation-batch/1",
       "docx.batch/2",
       "docx.edit/1",
       "docx.edit/2",
+      "docx.paragraph/1",
       "office.template.data/1",
       "xlsx.batch/2"
     ] and

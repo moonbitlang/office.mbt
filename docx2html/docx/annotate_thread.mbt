@@ -594,28 +594,56 @@ fn collect_raw_para_id_values(
 /// archive part that parses as strict XML contributes its decoded
 /// `w14:paraId` values — quote style, attribute whitespace, and entity
 /// encodings all normalized by the parser, any prefix bound to the w14
-/// URI normalized by the namespace map. Parts that do not parse are
-/// skipped here (a part Word cannot load cannot contribute a colliding
-/// paragraph); the caller may keep a lexical belt for those.
+/// URI normalized by the namespace map. FAIL-CLOSED where the sweep
+/// cannot judge: each part gets a FRESH budget (earlier parts can
+/// never starve later ones), a part that exhausts its own budget
+/// refuses the caller's operation, and a UTF-16 part — which the
+/// strict reader cannot decode and a byte belt cannot match — refuses
+/// too. Only parts that are not XML at all are skipped, and the caller
+/// keeps a lexical belt for those.
 pub fn sweep_archive_para_id_values(
   archive : @mbtzip.Archive,
-  xml_budget : @xml.XmlReadBudget,
-) -> Array[String] {
+  fresh_budget~ : () -> @xml.XmlReadBudget,
+) -> Array[String] raise DocxError {
   let found : Array[String] = []
   for entry in archive.entries() {
     guard entry.name().has_suffix(".xml") || entry.name().has_suffix(".rels") else {
       continue
     }
+    let bytes = entry.data()
+    if bytes_look_utf16(bytes) {
+      raise Unsupported(
+        message="the package holds a UTF-16 XML part ('\{entry.name()}') this identity sweep cannot judge; refusing rather than minting blind",
+      )
+    }
     let root = @xml.read_xml_bytes_strict_limited(
-      entry.data(),
-      xml_budget,
+      bytes,
+      fresh_budget(),
       namespace_map=office_namespace_map(),
     ) catch {
+      ResourceLimit(..) as limit => raise limit
       _ => continue
     }
     collect_raw_para_id_values(root, found)
   }
   found
+}
+
+///|
+/// A cheap UTF-16 tell: the BOM in either endianness, or a NUL beside
+/// the opening angle bracket.
+fn bytes_look_utf16(bytes : BytesView) -> Bool {
+  if bytes.length() >= 2 {
+    if (bytes[0] == b'\xFF' && bytes[1] == b'\xFE') ||
+      (bytes[0] == b'\xFE' && bytes[1] == b'\xFF') {
+      return true
+    }
+    if (bytes[0] == b'<' && bytes[1] == b'\x00') ||
+      (bytes[0] == b'\x00' && bytes[1] == b'<') {
+      return true
+    }
+  }
+  false
 }
 
 ///|
