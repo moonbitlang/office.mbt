@@ -28,11 +28,13 @@ disagree, the tests are the source of truth and this document has a bug.
   validation is STRICT. Unknown keys, unknown enum values, and wrong value
   types are rejected with an error naming the op — a typo must fail
   loudly, not silently no-op or drop content.
-- **`null` is never emitted**, with one deliberate exception: the DOCX
-  paragraph-anchor fields (`para_id`, `physical_para_ids`) emit `null`
-  alongside a `paragraph_anchor_status` that explains it — an agent
-  testing identity must see the judgment, not guess from absence.
-  Everywhere else an absent key means "unset / not present".
+- **`null` is emitted only where a schema explicitly specifies it** —
+  for example a find entry's `reason` (null when actionable), nullable
+  transaction fields, and the DOCX paragraph-anchor fields (`para_id`,
+  `physical_para_ids`), which emit `null` alongside a
+  `paragraph_anchor_status` that explains it: an agent testing identity
+  must see the judgment, not guess from absence. Everywhere else an
+  absent key means "unset / not present".
   Top-level inventory lists (`sheets`, `merges`, `tables`, `charts`,
   `images`, `pivot_tables`, `defined_names`, `cells`) are always present
   (possibly `[]`); optional sub-object fields — including list-valued ones
