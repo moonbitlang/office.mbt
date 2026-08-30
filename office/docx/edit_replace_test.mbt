@@ -706,3 +706,75 @@ async test "docx.edit/2 stable head refuses a duplicate id" {
     assert_false(published, msg="a refused stable edit must write nothing")
   }
 }
+
+///|
+/// Round 1's High, pinned: EVERY stable head is judged before ANY op
+/// is planned. A script whose second op carries an ambiguous id
+/// refuses whole — the valid first op must not have planned anything,
+/// and nothing is published.
+async test "docx.edit/2 judges all stable heads before planning any op" {
+  @async.with_task_group() <| group => {
+    let directory = @afs.tmpdir(prefix="office-docx-edit-order-")
+    group.add_defer() <| () => {
+      @async.protect_from_cancel(() => @afs.rmdir(directory, recursive=true))
+    }
+    let input = edit_fixture(
+      directory, "in.docx", "<w:r><w:t>plain</w:t></w:r></w:p><w:p w14:paraId=\"1A2B3C4D\"><w:r><w:t>dup one</w:t></w:r></w:p><w:p w14:paraId=\"1a2b3c4d\"><w:r><w:t>dup two</w:t></w:r>",
+    )
+    let output = directory + "/out.docx"
+    let mut failure : String? = None
+    ignore(
+      @docx.transact_docx_edit(
+        @transaction.transaction_options(input, output_path=output),
+        edit_script_v2([
+          set_run_text_op("p[1]/r[1]", "plain", "changed"),
+          set_run_text_op("p[id=\"1A2B3C4D\"]/r[1]", "dup one", "x"),
+        ]),
+        allow_unmatched=false,
+      ),
+    ) catch {
+      error => failure = Some("\{error}")
+    }
+    guard failure is Some(message) else { fail("expected the refusal") }
+    assert_true(message.contains("office.docx.para_id_ambiguous"))
+    let mut published = false
+    try {
+      ignore(@afs.read_file(output))
+      published = true
+    } catch {
+      _ => ()
+    }
+    assert_false(published, msg="op 1 must not publish past op 2's refusal")
+  }
+}
+
+///|
+/// Round 1's empty-id split, pinned: `p[id=""]/r[1]` parses (spelling
+/// is structural) and refuses at TRANSACTION time as para_id_invalid.
+async test "docx.edit/2 empty stable id refuses typed at transaction time" {
+  @async.with_task_group() <| group => {
+    let directory = @afs.tmpdir(prefix="office-docx-edit-empty-")
+    group.add_defer() <| () => {
+      @async.protect_from_cancel(() => @afs.rmdir(directory, recursive=true))
+    }
+    let input = edit_fixture(
+      directory, "in.docx", "<w:r><w:t>alpha</w:t></w:r>",
+    )
+    let output = directory + "/out.docx"
+    let mut failure : String? = None
+    ignore(
+      @docx.transact_docx_edit(
+        @transaction.transaction_options(input, output_path=output),
+        edit_script_v2([set_run_text_op("p[id=\"\"]/r[1]", "alpha", "x")]),
+        allow_unmatched=false,
+      ),
+    ) catch {
+      error => failure = Some("\{error}")
+    }
+    guard failure is Some(message) else { fail("expected the refusal") }
+    assert_true(
+      message.contains("office.docx.para_id_invalid"),
+      msg="got '" + message + "'",
+    )
+  }
+}

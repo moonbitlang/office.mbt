@@ -126,7 +126,11 @@ fn resolve_stable_replace_scope(
   session : DocxEditSession,
   scope : String,
 ) -> String raise @transaction.TransactionError {
-  guard scope.has_prefix("p[id=") else { return scope }
+  // ANY scope that begins like a stable spelling is judged as one:
+  // a near-miss (p[id ="X"], p[id"X"]) must refuse typed, never fall
+  // through to the prefix matcher where it matches nothing and an
+  // --expect 0 run would publish.
+  guard scope.has_prefix("p[id") else { return scope }
   guard scope.has_prefix("p[id=\"") && scope.has_suffix("\"]") else {
     raise @transaction.transaction_failure(
       "office.docx.para_id_invalid", "a stable scope is spelled p[id=\"XXXXXXXX\"]",
@@ -143,7 +147,7 @@ fn resolve_stable_replace_scope(
       )
   }
   match anchors.resolve_para_id_carrier(raw) {
-    ResolvedOccurrence(_, paragraph_index) =>
+    ResolvedCarrier(paragraph_index) =>
       match anchors.scan_path_of_paragraph(paragraph_index) {
         Some(path) => path
         None =>
@@ -151,25 +155,21 @@ fn resolve_stable_replace_scope(
             "office.docx.para_id_unjoined", "the paragraph carrying this id has no addressable path in this snapshot",
           )
       }
-    ParaIdInvalid =>
+    CarrierInvalid =>
       raise @transaction.transaction_failure(
         "office.docx.para_id_invalid", "a paraId is exactly eight hex digits, nonzero, below 0x80000000",
       )
-    ParaIdNotFound =>
+    CarrierNotFound =>
       raise @transaction.transaction_failure(
         "office.docx.para_id_not_found", "no paragraph in the body story carries this id",
       )
-    ParaIdAmbiguous(_) =>
+    CarrierAmbiguous(_) =>
       raise @transaction.transaction_failure(
         "office.docx.para_id_ambiguous", "this id names more than one paragraph; scope by ordinal path instead — an ambiguous identity never resolves to its first carrier",
       )
-    ParaIdInMultiPhysical =>
+    CarrierInMultiPhysical =>
       raise @transaction.transaction_failure(
         "office.docx.para_id_not_addressable", "this id's only carriers are inside revision-joined paragraphs",
-      )
-    ParaIdUnjoined(_) =>
-      raise @transaction.transaction_failure(
-        "office.docx.para_id_unjoined", "the paragraph carrying this id has no addressable path in this snapshot",
       )
   }
 }

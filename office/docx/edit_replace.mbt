@@ -503,9 +503,11 @@ fn parse_docx_run_address(
     // p[id="XXXXXXXX"] — the spelling is checked here, the identity is
     // judged at transaction time against the edited snapshot.
     if segment_index == 0 && segment.has_prefix("p[id=") {
+      // The payload may be structurally empty (p[id=""]) — validity is
+      // the TRANSACTION's judgment, refused there as para_id_invalid.
       guard segment.has_prefix("p[id=\"") &&
         segment.has_suffix("\"]") &&
-        segment.length() > 8 else {
+        segment.length() >= 7 else {
         raise refuse(
           "carries a malformed stable paragraph head; the spelling is p[id=\"XXXXXXXX\"]",
         )
@@ -847,15 +849,21 @@ async fn transact_docx_set_run_text(
         } : DocxEditOpResult)
     })
     let mut replacements = 0
+    // Pass 1: EVERY stable head resolves before ANY op is planned —
+    // the whole script's identities are judged first, so op 1 can
+    // never be queued ahead of op 2's typed refusal.
+    let addresses : Array[String] = []
     for index, op in ops {
-      // A stable head resolves against THIS snapshot; the ordinal
-      // address it lands on is recorded beside the request.
       let at_relative = resolve_stable_run_address(session, op.at)
       if at_relative != op.at {
         results[index].resolved_at = Some(at_relative)
       }
+      addresses.push(at_relative)
+    }
+    // Pass 2: queue, with every address already judged.
+    for index, op in ops {
       let receipt = session.queue_run_text_replacement(
-        at_relative~,
+        at_relative=addresses[index],
         expect=op.expect,
         text=op.text,
       )

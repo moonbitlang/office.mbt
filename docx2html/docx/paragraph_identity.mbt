@@ -567,6 +567,19 @@ pub enum DocxParaIdResolution {
 }
 
 ///|
+/// A carrier-level resolution: the identity judgment WITHOUT the tree
+/// step. Its own type, so no consumer can mistake a carrier answer for
+/// a tree occurrence.
+pub enum DocxParaIdCarrierResolution {
+  /// The single addressable carrier's projection index.
+  ResolvedCarrier(Int)
+  CarrierInvalid
+  CarrierNotFound
+  CarrierAmbiguous(Array[Int])
+  CarrierInMultiPhysical
+}
+
+///|
 /// The identity judgment WITHOUT the tree step: resolve an as-spelled
 /// paraId to its single addressable carrier's projection index, or the
 /// typed reason it never resolves. Scan-path consumers (find scopes,
@@ -574,17 +587,17 @@ pub enum DocxParaIdResolution {
 pub fn DocxParagraphAnchorIndex::resolve_para_id_carrier(
   self : DocxParagraphAnchorIndex,
   raw : String,
-) -> DocxParaIdResolution {
-  guard validated_para_id(raw) is Some(canonical) else { return ParaIdInvalid }
+) -> DocxParaIdCarrierResolution {
+  guard validated_para_id(raw) is Some(canonical) else { return CarrierInvalid }
   let carriers = self.paragraphs_with_para_id(canonical)
   if carriers.length() > 1 {
-    return ParaIdAmbiguous(carriers)
+    return CarrierAmbiguous(carriers)
   }
   guard carriers is [paragraph_index] else {
     if self.buried_para_ids.get(canonical).unwrap_or(0) > 0 {
-      return ParaIdInMultiPhysical
+      return CarrierInMultiPhysical
     }
-    return ParaIdNotFound
+    return CarrierNotFound
   }
   // A single addressable carrier whose PART-SCOPED occupancy is still
   // plural means the other claimants are buried or suppressed — the
@@ -593,13 +606,11 @@ pub fn DocxParagraphAnchorIndex::resolve_para_id_carrier(
   match self.anchor_of_paragraph(paragraph_index) {
     Some(anchor) =>
       if anchor.status() != "unique" {
-        return ParaIdAmbiguous(carriers)
+        return CarrierAmbiguous(carriers)
       }
-    None => return ParaIdAmbiguous(carriers)
+    None => return CarrierAmbiguous(carriers)
   }
-  // The carrier resolution reuses ResolvedOccurrence with the OCCURRENCE
-  // slot unset (-1): only the join step can name a tree occurrence.
-  ResolvedOccurrence(-1, paragraph_index)
+  ResolvedCarrier(paragraph_index)
 }
 
 ///|
@@ -609,12 +620,15 @@ pub fn DocxParagraphAnchorJoinIndex::resolve_para_id(
   raw : String,
 ) -> DocxParaIdResolution {
   match self.anchor_index.resolve_para_id_carrier(raw) {
-    ResolvedOccurrence(_, paragraph_index) =>
+    ResolvedCarrier(paragraph_index) =>
       match self.reverse.get(paragraph_index) {
         Some(occurrence) => ResolvedOccurrence(occurrence, paragraph_index)
         None => ParaIdUnjoined(paragraph_index)
       }
-    other => other
+    CarrierInvalid => ParaIdInvalid
+    CarrierNotFound => ParaIdNotFound
+    CarrierAmbiguous(carriers) => ParaIdAmbiguous(carriers)
+    CarrierInMultiPhysical => ParaIdInMultiPhysical
   }
 }
 

@@ -309,3 +309,42 @@ async test "replace resolves a stable scope and reports both spellings" {
     assert_true(text.contains("gamma beta"))
   })
 }
+
+///|
+/// Round 1's near-miss, pinned: a scope that BEGINS like a stable
+/// spelling but is malformed refuses typed — it must never fall
+/// through to the prefix matcher where zero matches plus --expect 0
+/// would publish an output.
+async test "replace near-miss stable scope refuses instead of matching nothing" {
+  with_docx_session_test_dir(directory => {
+    let input = edit_fixture(
+      directory, "nearmiss-in.docx", "<w:r><w:t>alpha</w:t></w:r>",
+    )
+    let output = directory + "/nearmiss-out.docx"
+    let mut failure : String? = None
+    ignore(
+      @docx.transact_docx_find_replace(
+        @transaction.transaction_options(input, output_path=output),
+        needle="alpha",
+        replacement="x",
+        within="p[id =\"1A2B3C4D\"]",
+        expect=0,
+      ),
+    ) catch {
+      error => failure = Some("\{error}")
+    }
+    guard failure is Some(message) else { fail("expected the refusal") }
+    assert_true(
+      message.contains("office.docx.para_id_invalid"),
+      msg="got '" + message + "'",
+    )
+    let mut published = false
+    try {
+      ignore(@afs.read_file(output))
+      published = true
+    } catch {
+      _ => ()
+    }
+    assert_false(published, msg="a near-miss scope must publish nothing")
+  })
+}

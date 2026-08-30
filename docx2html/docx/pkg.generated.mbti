@@ -238,6 +238,14 @@ pub fn DocxPackageResult::not_equal(Self, Self) -> Bool
 #deprecated
 pub fn DocxPackageResult::to_repr(Self) -> @debug.Repr
 
+pub enum DocxParaIdCarrierResolution {
+  ResolvedCarrier(Int)
+  CarrierInvalid
+  CarrierNotFound
+  CarrierAmbiguous(Array[Int])
+  CarrierInMultiPhysical
+}
+
 pub enum DocxParaIdResolution {
   ResolvedOccurrence(Int, Int)
   ParaIdInvalid
@@ -260,7 +268,7 @@ pub struct DocxParagraphAnchorIndex {
 pub fn DocxParagraphAnchorIndex::anchor_at(Self, String) -> DocxParagraphAnchor?
 pub fn DocxParagraphAnchorIndex::anchor_of_paragraph(Self, Int) -> DocxParagraphAnchor?
 pub fn DocxParagraphAnchorIndex::paragraphs_with_para_id(Self, String) -> Array[Int]
-pub fn DocxParagraphAnchorIndex::resolve_para_id_carrier(Self, String) -> DocxParaIdResolution
+pub fn DocxParagraphAnchorIndex::resolve_para_id_carrier(Self, String) -> DocxParaIdCarrierResolution
 pub fn DocxParagraphAnchorIndex::scan_path_of_paragraph(Self, Int) -> String?
 
 pub struct DocxParagraphAnchorJoinIndex {
