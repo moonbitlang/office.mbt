@@ -17,7 +17,7 @@ and JSONL inventories without deferred PowerPoint or MCP entries.
   $ office.exe help | sed -n '1,8p'
   Office capability registry
     Schema: office.capabilities/2
-    Fingerprint: crc32:a28dfc87
+    Fingerprint: crc32:d2f3f05e
   Formats:
     docx (aliases: word) — WordprocessingML documents
     xlsx (aliases: excel) — SpreadsheetML workbooks
@@ -41,10 +41,10 @@ and JSONL inventories without deferred PowerPoint or MCP entries.
   {"formats":["xlsx"],"variants":[{"name":"xlsx","result_schema":"office.xlsx.query/1","constraints":["format=xlsx"]}]}
 
   $ office.exe help all --json | jq -c '{schema,success,capability_schema:.data.schema,fingerprint:.data.fingerprint,names:[.data.records[].name]}'
-  {"schema":"office.output/1","success":true,"capability_schema":"office.capabilities/2","fingerprint":"crc32:a28dfc87","names":["docx","xlsx","help","identify","outline","get","text","query","find","replace","validate","dump","replay","issues","preview","render","create","template","edit","annotate","batch","raw"]}
+  {"schema":"office.output/1","success":true,"capability_schema":"office.capabilities/2","fingerprint":"crc32:d2f3f05e","names":["docx","xlsx","help","identify","outline","get","text","query","find","replace","insert-paragraph","validate","dump","replay","issues","preview","render","create","template","edit","annotate","batch","raw"]}
 
   $ office.exe help all --jsonl | jq -s -c 'map({schema,fingerprint,kind,name})'
-  [{"schema":"office.capability/2","fingerprint":"crc32:a28dfc87","kind":"format","name":"docx"},{"schema":"office.capability/2","fingerprint":"crc32:a28dfc87","kind":"format","name":"xlsx"},{"schema":"office.capability/2","fingerprint":"crc32:a28dfc87","kind":"command","name":"help"},{"schema":"office.capability/2","fingerprint":"crc32:a28dfc87","kind":"command","name":"identify"},{"schema":"office.capability/2","fingerprint":"crc32:a28dfc87","kind":"command","name":"outline"},{"schema":"office.capability/2","fingerprint":"crc32:a28dfc87","kind":"command","name":"get"},{"schema":"office.capability/2","fingerprint":"crc32:a28dfc87","kind":"command","name":"text"},{"schema":"office.capability/2","fingerprint":"crc32:a28dfc87","kind":"command","name":"query"},{"schema":"office.capability/2","fingerprint":"crc32:a28dfc87","kind":"command","name":"find"},{"schema":"office.capability/2","fingerprint":"crc32:a28dfc87","kind":"command","name":"replace"},{"schema":"office.capability/2","fingerprint":"crc32:a28dfc87","kind":"command","name":"validate"},{"schema":"office.capability/2","fingerprint":"crc32:a28dfc87","kind":"command","name":"dump"},{"schema":"office.capability/2","fingerprint":"crc32:a28dfc87","kind":"command","name":"replay"},{"schema":"office.capability/2","fingerprint":"crc32:a28dfc87","kind":"command","name":"issues"},{"schema":"office.capability/2","fingerprint":"crc32:a28dfc87","kind":"command","name":"preview"},{"schema":"office.capability/2","fingerprint":"crc32:a28dfc87","kind":"command","name":"render"},{"schema":"office.capability/2","fingerprint":"crc32:a28dfc87","kind":"command","name":"create"},{"schema":"office.capability/2","fingerprint":"crc32:a28dfc87","kind":"command","name":"template"},{"schema":"office.capability/2","fingerprint":"crc32:a28dfc87","kind":"command","name":"edit"},{"schema":"office.capability/2","fingerprint":"crc32:a28dfc87","kind":"command","name":"annotate"},{"schema":"office.capability/2","fingerprint":"crc32:a28dfc87","kind":"command","name":"batch"},{"schema":"office.capability/2","fingerprint":"crc32:a28dfc87","kind":"command","name":"raw"}]
+  [{"schema":"office.capability/2","fingerprint":"crc32:d2f3f05e","kind":"format","name":"docx"},{"schema":"office.capability/2","fingerprint":"crc32:d2f3f05e","kind":"format","name":"xlsx"},{"schema":"office.capability/2","fingerprint":"crc32:d2f3f05e","kind":"command","name":"help"},{"schema":"office.capability/2","fingerprint":"crc32:d2f3f05e","kind":"command","name":"identify"},{"schema":"office.capability/2","fingerprint":"crc32:d2f3f05e","kind":"command","name":"outline"},{"schema":"office.capability/2","fingerprint":"crc32:d2f3f05e","kind":"command","name":"get"},{"schema":"office.capability/2","fingerprint":"crc32:d2f3f05e","kind":"command","name":"text"},{"schema":"office.capability/2","fingerprint":"crc32:d2f3f05e","kind":"command","name":"query"},{"schema":"office.capability/2","fingerprint":"crc32:d2f3f05e","kind":"command","name":"find"},{"schema":"office.capability/2","fingerprint":"crc32:d2f3f05e","kind":"command","name":"replace"},{"schema":"office.capability/2","fingerprint":"crc32:d2f3f05e","kind":"command","name":"insert-paragraph"},{"schema":"office.capability/2","fingerprint":"crc32:d2f3f05e","kind":"command","name":"validate"},{"schema":"office.capability/2","fingerprint":"crc32:d2f3f05e","kind":"command","name":"dump"},{"schema":"office.capability/2","fingerprint":"crc32:d2f3f05e","kind":"command","name":"replay"},{"schema":"office.capability/2","fingerprint":"crc32:d2f3f05e","kind":"command","name":"issues"},{"schema":"office.capability/2","fingerprint":"crc32:d2f3f05e","kind":"command","name":"preview"},{"schema":"office.capability/2","fingerprint":"crc32:d2f3f05e","kind":"command","name":"render"},{"schema":"office.capability/2","fingerprint":"crc32:d2f3f05e","kind":"command","name":"create"},{"schema":"office.capability/2","fingerprint":"crc32:d2f3f05e","kind":"command","name":"template"},{"schema":"office.capability/2","fingerprint":"crc32:d2f3f05e","kind":"command","name":"edit"},{"schema":"office.capability/2","fingerprint":"crc32:d2f3f05e","kind":"command","name":"annotate"},{"schema":"office.capability/2","fingerprint":"crc32:d2f3f05e","kind":"command","name":"batch"},{"schema":"office.capability/2","fingerprint":"crc32:d2f3f05e","kind":"command","name":"raw"}]
 
 Installed help exposes every consumed JSON input contract without requiring
 repository-only documentation. Inventory and individual records are versioned;
@@ -374,6 +374,23 @@ transaction before anything is planned or written.
   "office.docx.para_id_ambiguous"
 
   $ test -f r2b-dup.docx
+  [1]
+
+The first structural verb (N3a + R3): insert-paragraph MINTS the new
+paragraph's stable identity — fresh against the whole package, verified
+by readback before publication — and the published document addresses
+it immediately. Refusals (an undefined style here) publish nothing.
+
+  $ office.exe insert-paragraph "$TESTDIR/../../../../docx2html/tests/cram/fixtures/duplicate-para-id.docx" ip-out.docx --after 'p[3]' --content '{"runs":[{"text":"fresh paragraph","bold":true}]}' --json | jq -c '{schema:.data.schema,path:.data.path,para_id:.data.para_id,side:.data.side,changed:.data.changed}'
+  {"schema":"office.docx.insert-paragraph/1","path":"p[4]","para_id":"00000001","side":"after","changed":true}
+
+  $ office.exe text ip-out.docx --json | jq -c '[.data.entries[] | {path,para_id,paragraph_anchor_status}] | last'
+  {"path":"/docx/body/p[4]","para_id":"00000001","paragraph_anchor_status":"unique"}
+
+  $ office.exe insert-paragraph "$TESTDIR/../../../../docx2html/tests/cram/fixtures/duplicate-para-id.docx" ip-ref.docx --before 'p[1]' --content '{"style":"Ghost","runs":[{"text":"x"}]}' --json 2>&1 | jq -c '.error.code'
+  "office.docx.invalid_plan"
+
+  $ test -f ip-ref.docx
   [1]
 
 The cross-surface invariant, executable: find agrees with the tree

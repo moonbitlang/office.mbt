@@ -519,3 +519,4 @@ paragraph_identity.mbt	missing-source-identity	docx_paragraph_anchor_join_index	
 paragraph_identity.mbt	no-projection-counterpart	docx_paragraph_anchor_join_index	value	paragraph_identity_test:"anchor join refuses the nested-paragraph shape"
 paragraph_identity.mbt	shared-physical-source	docx_paragraph_anchor_join_index	value	paragraph_identity_test:"anchor join refuses the nested-paragraph shape"
 paragraph_identity.mbt	unjudged-paragraph	docx_paragraph_anchor_join_index	value	(unreachable: projection paragraphs always retain at least one source, so the anchors-array None entry never answers)
+docx_reader.mbt	paragraph:	DocumentParts::build	fragment	paragraph_insert_test:"insertion refuses the v1 boundaries"

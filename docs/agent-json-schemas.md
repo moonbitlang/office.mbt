@@ -852,6 +852,26 @@ any refusal publishes nothing.
 | `changed_parts` | array | the sorted union changed-part manifest across every op (added parts included: `word/comments.xml` and `word/commentsExtended.xml` when first created, plus `[Content_Types].xml` and the document relationships) |
 | `transaction` | object | untouched `office.transaction/2` report; preservation is authoritative. The document part gains only the narrow comment-anchor markers (the body text is never wholesale-rewritten), while the comment, content-type, and relationship parts are added or updated as the comments require |
 
+### `office.docx.insert-paragraph/1` (`office insert-paragraph FILE OUT.docx (--before P|--after P) --content JSON [--dry-run] [--overwrite] [--json]`)
+
+The first structural verb. `--content` is a dedicated `docx.paragraph/1`
+payload — `{"style"?: "StyleId", "runs": [{"text", "bold"?, "italic"?,
+"underline"?}]}` — resource-free only: style ids must exist in the
+target's styles part (refused by name otherwise), and hyperlinks,
+images, notes, and list bullets are v1 refusals. The verb MINTS the new
+paragraph's `w14:paraId` (fresh against the whole package, canonical
+uppercase) and verifies it by readback before publication.
+
+| key | type | notes |
+| --- | --- | --- |
+| `schema` | string | `"office.docx.insert-paragraph/1"` |
+| `file`, `format`, `output` | string | input path, literal `"docx"`, destination |
+| `at`, `side` | string | the anchor as requested and `before`\|`after` |
+| `dry_run`, `changed` | boolean | request mode and whether bytes changed |
+| `path` | string | the ordinal path the new paragraph answers to, readback-verified |
+| `para_id` | string | the minted stable identity — immediately addressable as `p[id="…"]` |
+| `transaction` | object | `office.transaction/2` report; nothing is published on any refusal |
+
 ### `office.dump/1` (`office dump FILE [--json|--jsonl]`)
 
 A replayable semantic dump: the document re-expressed as an ordered stream

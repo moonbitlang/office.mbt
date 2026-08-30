@@ -48,6 +48,8 @@ pub fn find_docx_matches(DocxAnnotatedResult, DocxStoryPartSource, needle~ : Str
 
 pub fn header_footer_spec(variant~ : String, Array[@document.DocumentElement]) -> HeaderFooterSpec raise @core.DocxError
 
+pub fn mint_para_id(Array[String]) -> String raise @core.DocxError
+
 pub fn new_blank_docx() -> Bytes
 
 pub fn new_blank_docx_limited(@opc.PackageLimits) -> Bytes raise @core.DocxError
@@ -69,6 +71,8 @@ pub fn plan_comment_reply_archive(DocxAnnotatedResult, @zip.Archive, parent_id~ 
 pub fn plan_comment_resolution(DocxAnnotatedResult, BytesView, comment_id~ : String, done~ : Bool) -> @splice.SplicePlan raise @core.DocxError
 
 pub fn plan_comment_resolution_archive(DocxAnnotatedResult, @zip.Archive, comment_id~ : String, done~ : Bool, xml_budget? : @xml.XmlReadBudget) -> @splice.SplicePlan raise @core.DocxError
+
+pub fn plan_docx_paragraph_insertion(DocxAnnotatedResult, at~ : String, before~ : Bool, content~ : DocxInsertContent, used_para_ids~ : Array[String]) -> (@splice.SplicePlan, DocxInsertReceipt) raise @core.DocxError
 
 pub fn plan_docx_replacements(DocxAnnotatedResult, DocxStoryPartSource, needle~ : String, replacement~ : String, within? : String, nth? : Int) -> (@splice.SplicePlan, DocxReplaceReceipt) raise @core.DocxError
 
@@ -176,12 +180,31 @@ pub fn DocxAnnotatedResult::footnotes_story_source(Self) -> DocxStoryPartSource?
 pub fn DocxAnnotatedResult::header_story_sources(Self) -> Array[DocxStoryPartSource]
 pub fn DocxAnnotatedResult::main_story_part(Self) -> String
 pub fn DocxAnnotatedResult::main_story_source(Self) -> DocxStoryPartSource
+pub fn DocxAnnotatedResult::paragraph_style_ids(Self) -> Array[String]
 pub fn DocxAnnotatedResult::result(Self) -> DocxPackageResult
 pub fn DocxAnnotatedResult::revision_spans(Self) -> Array[RevisionSpan]
 pub fn DocxAnnotatedResult::story_paragraph_span(Self, String, String) -> NodeSpan?
 pub fn DocxAnnotatedResult::story_root_span(Self, String) -> NodeSpan?
 pub fn DocxAnnotatedResult::story_row_span(Self, String, String) -> NodeSpan?
 pub fn DocxAnnotatedResult::story_run_span(Self, String, String) -> NodeSpan?
+
+pub(all) struct DocxInsertContent {
+  style : String?
+  runs : Array[DocxInsertRun]
+} derive(Eq, @debug.Debug)
+
+pub struct DocxInsertReceipt {
+  // private fields
+}
+pub fn DocxInsertReceipt::para_id(Self) -> String
+pub fn DocxInsertReceipt::planned_path(Self) -> String
+
+pub(all) struct DocxInsertRun {
+  text : String
+  bold : Bool
+  italic : Bool
+  underline : Bool
+} derive(Eq, @debug.Debug)
 
 pub struct DocxMatch {
   ordinal : Int

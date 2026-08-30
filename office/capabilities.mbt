@@ -1024,6 +1024,75 @@ pub fn capability_commands() -> Array[CapabilityCommand] {
       ],
     },
     {
+      name: "insert-paragraph",
+      summary: "Insert one resource-free paragraph beside a direct body paragraph, minting its stable identity",
+      usage: "office insert-paragraph FILE OUT.docx (--before P|--after P) --content JSON [--dry-run] [--overwrite] [--json]",
+      formats: ["docx"],
+      aliases: [],
+      inputs: [
+        capability_field(
+          "file", "path", true, "existing .docx package (never modified in place)",
+        ),
+        capability_field(
+          "out", "path", true, "destination .docx; created atomically, nothing written on refusal",
+        ),
+        capability_field(
+          "before", "string", false, "insert before this DIRECT body paragraph (p[3]); exclusive with --after",
+        ),
+        capability_field(
+          "after", "string", false, "insert after this DIRECT body paragraph (p[3]); exclusive with --before",
+        ),
+        capability_field(
+          "content", "docx.paragraph/1", true, "the dedicated payload: optional \"style\" (a paragraph style id the TARGET's styles part must define, else refuse naming it) and \"runs\" of {text, bold?, italic?, underline?} — resource-free only. Hyperlinks, images, notes, and list bullets are v1 refusals; run text rejects control characters",
+        ),
+        capability_field(
+          "dry-run", "boolean", false, "run the identical mint/plan/validate pipeline, exit as the real run would, write nothing",
+        ),
+        capability_field(
+          "overwrite", "boolean", false, "replace an existing destination",
+        ),
+        capability_field(
+          "json", "boolean", false, "emit one office.output/1 JSON document",
+        ),
+      ],
+      outputs: [
+        capability_field(
+          "schema", "literal(office.docx.insert-paragraph/1)", true, "result schema",
+        ),
+        capability_field(
+          "file", "path", true, "the input path exactly as supplied",
+        ),
+        capability_field("format", "literal(docx)", true, "the edited format"),
+        capability_field("output", "path", true, "the destination path"),
+        capability_field("at", "string", true, "the anchor as requested"),
+        capability_field(
+          "side", "enum(before|after)", true, "which side of the anchor",
+        ),
+        capability_field(
+          "dry_run", "boolean", true, "whether this was a dry run",
+        ),
+        capability_field(
+          "path", "string", true, "the ordinal path the new paragraph answers to — READBACK-VERIFIED before publication",
+        ),
+        capability_field(
+          "para_id", "string", true, "the MINTED w14:paraId (canonical uppercase, allocated fresh against the whole package's inventory, stamped into the fragment before planning) — the stable address to re-anchor by; a new physical paragraph is the only thing that ever receives a new id",
+        ),
+        capability_field("changed", "boolean", true, "whether any byte changed"),
+        capability_field(
+          "transaction", "object", true, "office.transaction/2 report; the insert readback verifies the minted identity reads back UNIQUE at the reported path before publication. Nothing is published on any refusal",
+        ),
+      ],
+      output_modes: ["human", "json"],
+      variants: [
+        capability_variant(
+          "docx",
+          "office insert-paragraph FILE OUT.docx --after 'p[2]' --content '{\"runs\":[{\"text\":\"…\"}]}'",
+          "office.docx.insert-paragraph/1",
+          ["format=docx"],
+        ),
+      ],
+    },
+    {
       name: "validate",
       summary: "Validate an XLSX or DOCX package with the shared mutation gate",
       usage: "office validate FILE [--json|--jsonl]",

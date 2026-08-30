@@ -605,6 +605,10 @@ priv struct DocumentParts {
   // physical-identity vector per tree Paragraph occurrence (paraId R1b's
   // join channel; absent for tolerant reads).
   reader_paragraph_provenance : StableStringMap[Array[Array[SourceElementId?]]]
+  // PARAGRAPH style ids declared by the styles part, for insertion's
+  // style-reference verification (N3a): a fragment may only reference
+  // a style the target document defines.
+  paragraph_style_ids : Array[String]
   /// The cumulative annotation path budget, created BEFORE the joined
   /// reads so every story part charges the shared allowance exactly once
   /// (at scan time); the annotation index adopts the retained scans and
@@ -707,6 +711,14 @@ fn DocumentParts::build(
     }
     None => SortedMap([])
   }
+  let paragraph_style_ids : Array[String] = []
+  for key, _info in styles {
+    if key.has_prefix("paragraph:") {
+      paragraph_style_ids.push(
+        key.substring(start=10, end=key.length()).to_string(),
+      )
+    }
+  }
   let numbering = match numbering_part {
     Some(part) => {
       content_types.require_wordprocessing_part(zip, part, NumberingPartRole)
@@ -799,6 +811,7 @@ fn DocumentParts::build(
     reader_projections,
     reader_projection_sources,
     reader_paragraph_provenance,
+    paragraph_style_ids,
   }
 }
 
