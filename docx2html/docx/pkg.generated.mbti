@@ -96,6 +96,8 @@ pub fn read_docx_with_messages(BytesView, external_file_access? : Bool, read_ext
 
 pub fn read_embedded_style_map(BytesView) -> String? raise @core.DocxError
 
+pub fn sweep_archive_para_id_values(@zip.Archive, @xml.XmlReadBudget) -> Array[String]
+
 pub fn validate_annotation_identity_state(DocxAnnotatedResult) -> Unit raise @core.DocxError
 
 pub fn validate_global_para_id_state_archive_limited(DocxAnnotatedResult, @zip.Archive, @xml.XmlReadBudget) -> Unit raise @core.DocxError

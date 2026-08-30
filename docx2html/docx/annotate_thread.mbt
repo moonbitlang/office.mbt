@@ -590,6 +590,35 @@ fn collect_raw_para_id_values(
 }
 
 ///|
+/// A PACKAGE-GLOBAL paraId value sweep for the mint's used set: every
+/// archive part that parses as strict XML contributes its decoded
+/// `w14:paraId` values — quote style, attribute whitespace, and entity
+/// encodings all normalized by the parser, any prefix bound to the w14
+/// URI normalized by the namespace map. Parts that do not parse are
+/// skipped here (a part Word cannot load cannot contribute a colliding
+/// paragraph); the caller may keep a lexical belt for those.
+pub fn sweep_archive_para_id_values(
+  archive : @mbtzip.Archive,
+  xml_budget : @xml.XmlReadBudget,
+) -> Array[String] {
+  let found : Array[String] = []
+  for entry in archive.entries() {
+    guard entry.name().has_suffix(".xml") || entry.name().has_suffix(".rels") else {
+      continue
+    }
+    let root = @xml.read_xml_bytes_strict_limited(
+      entry.data(),
+      xml_budget,
+      namespace_map=office_namespace_map(),
+    ) catch {
+      _ => continue
+    }
+    collect_raw_para_id_values(root, found)
+  }
+  found
+}
+
+///|
 /// Validates every reachable story's `w14:paraId` values under one cumulative
 /// XML budget. This is the candidate-side gate for generic splice plans; the
 /// reply/resolution planners use the same traversal before allocating IDs.

@@ -89,3 +89,30 @@ async test "insert-paragraph refusals publish nothing" {
     }
   })
 }
+
+///|
+/// Round 2's High, pinned: paraId spellings the byte needle cannot see
+/// — single quotes, spaced equals, entity-encoded digits — still block
+/// the mint, because the primary sweep strict-parses every XML part.
+async test "insert-paragraph mint respects exotic paraId spellings" {
+  with_docx_session_test_dir(directory => {
+    let input = edit_fixture(
+      directory, "exotic-in.docx", "<w:r><w:t>seed</w:t></w:r></w:p><w:p w14:paraId='00000001'><w:r><w:t>single</w:t></w:r></w:p><w:p w14:paraId = \"0000000&#x32;\"><w:r><w:t>entity</w:t></w:r>",
+    )
+    let output = directory + "/exotic-out.docx"
+    let result = @docx.transact_docx_insert_paragraph(
+      @transaction.transaction_options(input, output_path=output),
+      at="p[1]",
+      before=true,
+      content={
+        style: None,
+        runs: [{ text: "fresh", bold: false, italic: false, underline: false, }],
+      },
+    )
+    let minted = result.report().para_id()
+    assert_eq(@word.validated_para_id(minted), Some(minted))
+    // Neither the single-quoted 00000001 nor the entity-spelled
+    // 00000002 may be reused.
+    assert_true(minted != "00000001" && minted != "00000002")
+  })
+}

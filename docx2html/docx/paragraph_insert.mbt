@@ -180,6 +180,15 @@ pub fn plan_docx_paragraph_insertion(
   // The neighbour's own tag names the WML prefix this document binds —
   // the fragment reuses it rather than assuming `w`.
   let prefix = paragraph_tag_prefix(bytes, span.byte_start())
+  // The fragment hard-declares xmlns:w14 and xmlns:mc; a document whose
+  // WML prefix IS one of those would make the fragment declare the same
+  // prefix twice with conflicting URIs — malformed. Refuse the exotic
+  // case rather than emit it.
+  guard prefix != "w14" && prefix != "mc" else {
+    raise Unsupported(
+      message="insert-paragraph cannot synthesize a fragment when the document's WML prefix is the reserved '\{prefix}'",
+    )
+  }
   guard projection.scan.root_namespace_uri() is Some(wml_uri) else {
     raise Unsupported(
       message="insert-paragraph could not determine the document's WML namespace",

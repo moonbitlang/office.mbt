@@ -74,9 +74,18 @@ pub fn DocxEditSession::queue_insert_paragraph(
   // R3's mint is CONSERVATIVELY package-global: the structured
   // inventory covers the reachable story parts, but a paraId in a
   // glossary document or any unclassified XML part must also block its
-  // value. A byte-level sweep over every part catches any spelling of
-  // a paraId attribute regardless of prefix binding — over-collection
-  // only shrinks the mint space, never corrupts it.
+  // value. The PRIMARY sweep strict-parses every XML part, so quote
+  // styles, attribute whitespace, and entity encodings are all
+  // normalized by the parser; the byte-level sweep stays as a belt for
+  // parts the parser refuses. Over-collection only shrinks the mint
+  // space, never corrupts it.
+  for
+    value in @word.sweep_archive_para_id_values(
+      self.archive,
+      candidate_xml_budget(),
+    ) {
+    used.push(value)
+  }
   for value in conservative_para_id_sweep(self.archive) {
     used.push(value)
   }
@@ -237,11 +246,14 @@ pub async fn transact_docx_insert_paragraph(
 /// between the quotes is collected as an occupant).
 fn conservative_para_id_sweep(archive : @zip.Archive) -> Array[String] {
   let found : Array[String] = []
-  let needle : Bytes = "paraId=\""
+  // XML attributes take EITHER quote style; the sweep matches the
+  // name+equals and accepts whichever quote follows, closing on the
+  // same one.
+  let needle : Bytes = "paraId="
   for entry in archive.entries() {
     let bytes = entry.data()
     let mut at = 0
-    while at + needle.length() <= bytes.length() {
+    while at + needle.length() + 1 <= bytes.length() {
       let mut matched = true
       for offset in 0..<needle.length() {
         if bytes[at + offset] != needle[offset] {
@@ -253,10 +265,15 @@ fn conservative_para_id_sweep(archive : @zip.Archive) -> Array[String] {
         at += 1
         continue
       }
-      let value_start = at + needle.length()
+      let quote = bytes[at + needle.length()]
+      if quote != b'"' && quote != b'\'' {
+        at += needle.length()
+        continue
+      }
+      let value_start = at + needle.length() + 1
       let mut value_end = value_start
       while value_end < bytes.length() &&
-            bytes[value_end] != b'"' &&
+            bytes[value_end] != quote &&
             value_end - value_start <= 64 {
         value_end += 1
       }

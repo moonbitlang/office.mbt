@@ -183,3 +183,26 @@ test "schema help emits versioned JSONL and unknown ids have bounded typed sugge
     _ => fail("unknown schema should fail")
   }
 }
+
+///|
+/// Round 2's escaped-duplicate pin: "\u0074ext" and "text" decode to
+/// the same member, so the raw-text scan must refuse them together.
+test "paragraph payload refuses escaped-equivalent duplicate members" {
+  let mut refused = false
+  try
+    ignore(
+      parse_insert_paragraph_content(
+        "{\"runs\":[{\"text\":\"a\",\"\\u0074ext\":\"b\"}]}",
+      ),
+    )
+  catch {
+    CliFailure(error) => {
+      refused = true
+      assert_true(error.message.contains("duplicate member"))
+    }
+    _ => fail("unexpected failure kind")
+  } noraise {
+    _ => ()
+  }
+  assert_true(refused, msg="escaped duplicate must refuse")
+}

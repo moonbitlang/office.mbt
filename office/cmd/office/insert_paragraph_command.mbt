@@ -293,12 +293,61 @@ fn insert_payload_duplicate_key(text : String) -> String? {
         end += 1
       }
       if expecting_key && frames.length() > 0 {
+        // Keys compare DECODED: "\u0074ext" and "text" are the same
+        // member after parsing, so they must collide here too.
         let builder = StringBuilder()
-        for at in start..<end {
-          match units[at].to_int().to_char() {
+        let mut at = start
+        while at < end {
+          let inner = units[at].to_int()
+          if inner == '\\'.to_int() && at + 1 < end {
+            let escape = units[at + 1].to_int()
+            if escape == 'u'.to_int() && at + 5 < end {
+              let mut code = 0
+              let mut valid = true
+              for digit in (at + 2)..<(at + 6) {
+                let d = units[digit].to_int()
+                let value = if d >= '0'.to_int() && d <= '9'.to_int() {
+                  d - '0'.to_int()
+                } else if d >= 'a'.to_int() && d <= 'f'.to_int() {
+                  d - 'a'.to_int() + 10
+                } else if d >= 'A'.to_int() && d <= 'F'.to_int() {
+                  d - 'A'.to_int() + 10
+                } else {
+                  valid = false
+                  0
+                }
+                code = code * 16 + value
+              }
+              if valid {
+                match code.to_char() {
+                  Some(character) => builder.write_char(character)
+                  None => ()
+                }
+                at += 6
+                continue
+              }
+            }
+            let decoded = match escape.to_char() {
+              Some('n') => Some('\n')
+              Some('t') => Some('\t')
+              Some('r') => Some('\r')
+              Some('b') => Some('\u{8}')
+              Some('f') => Some('\u{c}')
+              Some(other) => Some(other)
+              None => None
+            }
+            match decoded {
+              Some(character) => builder.write_char(character)
+              None => ()
+            }
+            at += 2
+            continue
+          }
+          match inner.to_char() {
             Some(character) => builder.write_char(character)
             None => ()
           }
+          at += 1
         }
         let key = "\{frames[frames.length() - 1]}:" + builder.to_string()
         if seen.contains(key) {
