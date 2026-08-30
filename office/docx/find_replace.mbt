@@ -13,6 +13,10 @@ pub struct DocxFindReplaceReport {
   affected_paths : Array[String]
   affected : Array[@word.DocxReplaceAffected]
   matches : Array[@word.DocxMatch]
+  // The scan path a stable `p[id="…"]` scope resolved to, when the
+  // request used one — the receipt names both spellings so an agent
+  // can re-anchor.
+  resolved_within : String?
 }
 
 ///|
@@ -41,6 +45,15 @@ pub fn DocxFindReplaceReport::affected(
   self : DocxFindReplaceReport,
 ) -> Array[@word.DocxReplaceAffected] {
   self.affected
+}
+
+///|
+/// The scan path a stable `p[id="…"]` scope resolved to; None when the
+/// request's scope was ordinal or absent.
+pub fn DocxFindReplaceReport::resolved_within(
+  self : DocxFindReplaceReport,
+) -> String? {
+  self.resolved_within
 }
 
 ///|
@@ -79,19 +92,94 @@ pub fn DocxEditSession::queue_find_replace(
   replacement~ : String,
   within? : String,
   nth? : Int,
-) -> @word.DocxReplaceReceipt raise @transaction.TransactionError {
+) -> (@word.DocxReplaceReceipt, String?) raise @transaction.TransactionError {
+  // paraId R2b: a stable `p[id="…"]` scope resolves against THIS
+  // transaction's snapshot — the same typed refusals as the read
+  // surfaces, and never a first carrier or an ordinal guess.
+  let resolved_within : String? = match within {
+    Some(scope) => Some(resolve_stable_replace_scope(self, scope))
+    None => None
+  }
   let (plan, receipt) = @word.plan_docx_replacements(
     self.annotated,
     self.annotated.main_story_source(),
     needle~,
     replacement~,
-    within?,
+    within?=resolved_within,
     nth?,
   ) catch {
     error => raise mapped_plan_failure(error)
   }
   self.queue_plan(plan)
-  receipt
+  (
+    receipt,
+    match (within, resolved_within) {
+      (Some(requested), Some(resolved)) if requested != resolved =>
+        Some(resolved)
+      _ => None
+    },
+  )
+}
+
+///|
+/// Resolve a replace scope: stable `p[id="…"]` spellings become the
+/// carrier's CURRENT scan path; ordinal scopes pass through untouched.
+fn resolve_stable_replace_scope(
+  session : DocxEditSession,
+  scope : String,
+) -> String raise @transaction.TransactionError {
+  // ANY scope that begins like a stable spelling is judged as one:
+  // a near-miss (p[id ="X"], p[id"X"]) must refuse typed, never fall
+  // through to the prefix matcher where it matches nothing and an
+  // --expect 0 run would publish.
+  guard scope.has_prefix("p[id") else { return scope }
+  // length >= 8: the shortest VALID spelling is p[id=""] (eight code
+  // units) — at seven, p[id="] satisfies both the prefix and the
+  // suffix with the SAME quote, and slicing would panic instead of
+  // refusing typed.
+  guard scope.has_prefix("p[id=\"") &&
+    scope.has_suffix("\"]") &&
+    scope.length() >= 8 else {
+    raise @transaction.transaction_failure(
+      "office.docx.para_id_invalid", "a stable scope is spelled p[id=\"XXXXXXXX\"]",
+    )
+  }
+  let raw = scope.substring(start=6, end=scope.length() - 2).to_string()
+  let anchors = @word.docx_paragraph_anchor_index(
+    session.annotated,
+    session.annotated.main_story_source(),
+  ) catch {
+    _ =>
+      raise @transaction.transaction_failure(
+        "office.docx.para_id_unavailable", "stable scoping is unavailable for this document",
+      )
+  }
+  match anchors.resolve_para_id_carrier(raw) {
+    ResolvedCarrier(paragraph_index) =>
+      match anchors.scan_path_of_paragraph(paragraph_index) {
+        Some(path) => path
+        None =>
+          raise @transaction.transaction_failure(
+            "office.docx.para_id_unjoined", "the paragraph carrying this id has no addressable path in this snapshot",
+          )
+      }
+    CarrierInvalid =>
+      raise @transaction.transaction_failure(
+        "office.docx.para_id_invalid", "a paraId is exactly eight hex digits, nonzero, below 0x80000000",
+      )
+    CarrierNotFound =>
+      raise @transaction.transaction_failure(
+        "office.docx.para_id_not_found", "no paragraph in the body story carries this id",
+      )
+    CarrierAmbiguous(_) =>
+      raise @transaction.transaction_failure(
+        "office.docx.para_id_ambiguous", "this id names more than one paragraph; scope by ordinal path instead — an ambiguous identity never resolves to its first carrier",
+      )
+    CarrierInMultiPhysical =>
+      raise @transaction.transaction_failure(
+        "office.docx.para_id_not_addressable", "this id's only carriers are inside revision-joined paragraphs",
+      )
+  }
 }
 
 ///|
@@ -203,7 +291,7 @@ pub async fn transact_docx_find_replace(
   let transaction = transact_docx(
     options,
     session => {
-      let receipt = session.queue_find_replace(
+      let (receipt, resolved_within) = session.queue_find_replace(
         needle~,
         replacement~,
         within?,
@@ -235,6 +323,7 @@ pub async fn transact_docx_find_replace(
         affected_paths: receipt.affected().map(entry => entry.path()),
         affected: receipt.affected(),
         matches: receipt.matches(),
+        resolved_within,
       }
       // The caller's preflight runs INSIDE the transaction, after the
       // outcome assertions but before validation and publication: a

@@ -284,3 +284,96 @@ async test "replace preserves and tolerates duplicate paraIds" {
     assert_true(text.contains("gamma"))
   })
 }
+
+///|
+/// paraId R2b: a stable scope drives the replace transaction — the
+/// report names the ordinal path it resolved to, and an ambiguous id
+/// refuses the transaction before anything is planned.
+async test "replace resolves a stable scope and reports both spellings" {
+  with_docx_session_test_dir(directory => {
+    let runs =
+      #|<w:r><w:t>alpha</w:t></w:r></w:p><w:p w14:paraId="5C5C5C5C"><w:r><w:t>alpha beta</w:t></w:r>
+    let input = edit_fixture(directory, "stable-in.docx", runs)
+    let output = directory + "/stable-out.docx"
+    let result = @docx.transact_docx_find_replace(
+      @transaction.transaction_options(input, output_path=output),
+      needle="alpha",
+      replacement="gamma",
+      within="p[id=\"5C5C5C5C\"]",
+    )
+    assert_eq(result.report().replaced(), 1)
+    assert_eq(result.report().resolved_within(), Some("p[2]"))
+    let text = @word.read_docx_annotated(@afs.read_file(output).binary()).result().document.to_raw_text()
+    // Only the scoped paragraph changed; the first alpha survives.
+    assert_true(text.contains("alpha"))
+    assert_true(text.contains("gamma beta"))
+  })
+}
+
+///|
+/// Round 1's near-miss, pinned: a scope that BEGINS like a stable
+/// spelling but is malformed refuses typed — it must never fall
+/// through to the prefix matcher where zero matches plus --expect 0
+/// would publish an output.
+async test "replace near-miss stable scope refuses instead of matching nothing" {
+  with_docx_session_test_dir(directory => {
+    let input = edit_fixture(
+      directory, "nearmiss-in.docx", "<w:r><w:t>alpha</w:t></w:r>",
+    )
+    let output = directory + "/nearmiss-out.docx"
+    let mut failure : String? = None
+    ignore(
+      @docx.transact_docx_find_replace(
+        @transaction.transaction_options(input, output_path=output),
+        needle="alpha",
+        replacement="x",
+        within="p[id =\"1A2B3C4D\"]",
+        expect=0,
+      ),
+    ) catch {
+      error => failure = Some("\{error}")
+    }
+    guard failure is Some(message) else { fail("expected the refusal") }
+    assert_true(
+      message.contains("office.docx.para_id_invalid"),
+      msg="got '" + message + "'",
+    )
+    let mut published = false
+    try {
+      ignore(@afs.read_file(output))
+      published = true
+    } catch {
+      _ => ()
+    }
+    assert_false(published, msg="a near-miss scope must publish nothing")
+  })
+}
+
+///|
+/// Round 2's edge, pinned: `p[id="]` is seven units whose single quote
+/// satisfies both the prefix and the suffix — it must refuse typed,
+/// never panic in the slice.
+async test "replace seven-unit stable scope refuses typed" {
+  with_docx_session_test_dir(directory => {
+    let input = edit_fixture(
+      directory, "seven-in.docx", "<w:r><w:t>alpha</w:t></w:r>",
+    )
+    let output = directory + "/seven-out.docx"
+    let mut failure : String? = None
+    ignore(
+      @docx.transact_docx_find_replace(
+        @transaction.transaction_options(input, output_path=output),
+        needle="alpha",
+        replacement="x",
+        within="p[id=\"]",
+      ),
+    ) catch {
+      error => failure = Some("\{error}")
+    }
+    guard failure is Some(message) else { fail("expected the refusal") }
+    assert_true(
+      message.contains("office.docx.para_id_invalid"),
+      msg="got '" + message + "'",
+    )
+  })
+}

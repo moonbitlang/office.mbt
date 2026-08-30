@@ -567,36 +567,68 @@ pub enum DocxParaIdResolution {
 }
 
 ///|
-/// Resolve one as-spelled paraId to a tree occurrence.
-pub fn DocxParagraphAnchorJoinIndex::resolve_para_id(
-  self : DocxParagraphAnchorJoinIndex,
+/// A carrier-level resolution: the identity judgment WITHOUT the tree
+/// step. Its own type, so no consumer can mistake a carrier answer for
+/// a tree occurrence.
+pub enum DocxParaIdCarrierResolution {
+  /// The single addressable carrier's projection index.
+  ResolvedCarrier(Int)
+  CarrierInvalid
+  CarrierNotFound
+  CarrierAmbiguous(Array[Int])
+  CarrierInMultiPhysical
+}
+
+///|
+/// The identity judgment WITHOUT the tree step: resolve an as-spelled
+/// paraId to its single addressable carrier's projection index, or the
+/// typed reason it never resolves. Scan-path consumers (find scopes,
+/// the write verbs) build on this; tree surfaces add the join step.
+pub fn DocxParagraphAnchorIndex::resolve_para_id_carrier(
+  self : DocxParagraphAnchorIndex,
   raw : String,
-) -> DocxParaIdResolution {
-  guard validated_para_id(raw) is Some(canonical) else { return ParaIdInvalid }
-  let carriers = self.anchor_index.paragraphs_with_para_id(canonical)
+) -> DocxParaIdCarrierResolution {
+  guard validated_para_id(raw) is Some(canonical) else { return CarrierInvalid }
+  let carriers = self.paragraphs_with_para_id(canonical)
   if carriers.length() > 1 {
-    return ParaIdAmbiguous(carriers)
+    return CarrierAmbiguous(carriers)
   }
   guard carriers is [paragraph_index] else {
-    if self.anchor_index.buried_para_ids.get(canonical).unwrap_or(0) > 0 {
-      return ParaIdInMultiPhysical
+    if self.buried_para_ids.get(canonical).unwrap_or(0) > 0 {
+      return CarrierInMultiPhysical
     }
-    return ParaIdNotFound
+    return CarrierNotFound
   }
   // A single addressable carrier whose PART-SCOPED occupancy is still
   // plural means the other claimants are buried or suppressed — the
   // identity is contested and never resolves. The carrier's own anchor
   // status carries that occupancy judgment.
-  match self.anchor_index.anchor_of_paragraph(paragraph_index) {
+  match self.anchor_of_paragraph(paragraph_index) {
     Some(anchor) =>
       if anchor.status() != "unique" {
-        return ParaIdAmbiguous(carriers)
+        return CarrierAmbiguous(carriers)
       }
-    None => return ParaIdAmbiguous(carriers)
+    None => return CarrierAmbiguous(carriers)
   }
-  match self.reverse.get(paragraph_index) {
-    Some(occurrence) => ResolvedOccurrence(occurrence, paragraph_index)
-    None => ParaIdUnjoined(paragraph_index)
+  ResolvedCarrier(paragraph_index)
+}
+
+///|
+/// Resolve one as-spelled paraId to a tree occurrence.
+pub fn DocxParagraphAnchorJoinIndex::resolve_para_id(
+  self : DocxParagraphAnchorJoinIndex,
+  raw : String,
+) -> DocxParaIdResolution {
+  match self.anchor_index.resolve_para_id_carrier(raw) {
+    ResolvedCarrier(paragraph_index) =>
+      match self.reverse.get(paragraph_index) {
+        Some(occurrence) => ResolvedOccurrence(occurrence, paragraph_index)
+        None => ParaIdUnjoined(paragraph_index)
+      }
+    CarrierInvalid => ParaIdInvalid
+    CarrierNotFound => ParaIdNotFound
+    CarrierAmbiguous(carriers) => ParaIdAmbiguous(carriers)
+    CarrierInMultiPhysical => ParaIdInMultiPhysical
   }
 }
 

@@ -173,6 +173,9 @@ pub(all) struct DocxEditOpResult {
   at : String?
   expect : String?
   text : String?
+  // set_run_text with a stable paragraph head: the ordinal address the
+  // head resolved to in this transaction's snapshot.
+  mut resolved_at : String?
   // revision selector, as spelled; `selector_all` is the explicit no-filter
   // form. All absent/false for replace_text.
   selector_id : String?
@@ -467,11 +470,14 @@ pub fn parse_docx_edit_script(
 
 ///|
 /// Validates and normalizes one `set_run_text` address. Accepted forms:
-/// the canonical query selector (`/docx/body/p[1]/r[2]`) and its
-/// body-relative form (`p[1]/r[2]`). Segments are `kind[ordinal]` with
-/// kind in {p, r, tbl, tr, tc} and ordinal >= 1; the path must end in a
-/// run segment. The normalized body-relative form is returned, so
-/// agents can paste `office query` paths directly.
+/// the canonical query selector (`/docx/body/p[1]/r[2]`), its
+/// body-relative form (`p[1]/r[2]`), and a STABLE head as the first
+/// segment (`p[id="1A2B3C4D"]/r[2]`) whose spelling is checked here
+/// and whose identity is judged at transaction time. Ordinal segments
+/// are `kind[ordinal]` with kind in {p, r, tbl, tr, tc} and
+/// ordinal >= 1; the path must end in a run segment. The normalized
+/// body-relative form is returned, so agents can paste `office query`
+/// paths directly.
 fn parse_docx_run_address(
   value : String,
   index : Int,
@@ -494,8 +500,26 @@ fn parse_docx_run_address(
   }
   let segments = relative.split("/").collect()
   let mut last_kind = ""
-  for segment_view in segments {
+  for segment_index, segment_view in segments {
     let segment = segment_view.to_owned()
+    // paraId R2b: the FIRST segment may be a stable paragraph head,
+    // p[id="XXXXXXXX"] — the spelling is checked here, the identity is
+    // judged at transaction time against the edited snapshot.
+    if segment_index == 0 && segment.has_prefix("p[id=") {
+      // The payload may be structurally empty (p[id=""], eight code
+      // units — the minimum where prefix and suffix are DISTINCT
+      // quotes) — validity is the TRANSACTION's judgment, refused
+      // there as para_id_invalid.
+      guard segment.has_prefix("p[id=\"") &&
+        segment.has_suffix("\"]") &&
+        segment.length() >= 8 else {
+        raise refuse(
+          "carries a malformed stable paragraph head; the spelling is p[id=\"XXXXXXXX\"]",
+        )
+      }
+      last_kind = "p"
+      continue
+    }
     guard segment.find("[") is Some(open_at) && segment.has_suffix("]") else {
       raise refuse("carries a segment without an ordinal (\"\{segment}\")")
     }
@@ -819,6 +843,7 @@ async fn transact_docx_set_run_text(
           at: Some(op.at),
           expect: Some(op.expect),
           text: Some(op.text),
+          resolved_at: None,
           selector_id: None,
           selector_author: None,
           selector_type: None,
@@ -829,9 +854,21 @@ async fn transact_docx_set_run_text(
         } : DocxEditOpResult)
     })
     let mut replacements = 0
+    // Pass 1: EVERY stable head resolves before ANY op is planned —
+    // the whole script's identities are judged first, so op 1 can
+    // never be queued ahead of op 2's typed refusal.
+    let addresses : Array[String] = []
+    for index, op in ops {
+      let at_relative = resolve_stable_run_address(session, op.at)
+      if at_relative != op.at {
+        results[index].resolved_at = Some(at_relative)
+      }
+      addresses.push(at_relative)
+    }
+    // Pass 2: queue, with every address already judged.
     for index, op in ops {
       let receipt = session.queue_run_text_replacement(
-        at_relative=op.at,
+        at_relative=addresses[index],
         expect=op.expect,
         text=op.text,
       )
@@ -865,6 +902,23 @@ async fn transact_docx_set_run_text(
 }
 
 ///|
+/// Resolve a run address whose head is a stable `p[id="…"]` to its
+/// ordinal form against the session snapshot; ordinal addresses pass
+/// through untouched. The identity judgments and typed refusals are
+/// the resolver's — never first-wins, never an ordinal guess.
+fn resolve_stable_run_address(
+  session : DocxEditSession,
+  at : String,
+) -> String raise @transaction.TransactionError {
+  guard at.has_prefix("p[id=\"") else { return at }
+  guard at.find("\"]") is Some(close) else { return at }
+  let head = at.substring(start=0, end=close + 2).to_string()
+  let rest = at.substring(start=close + 2, end=at.length()).to_string()
+  let paragraph = resolve_stable_replace_scope(session, head)
+  paragraph + rest
+}
+
+///|
 /// The literal find & replace half of `transact_docx_edit`.
 async fn transact_docx_replace(
   options : @transaction.TransactionOptions,
@@ -883,6 +937,7 @@ async fn transact_docx_replace(
           at: None,
           expect: None,
           text: None,
+          resolved_at: None,
           selector_id: None,
           selector_author: None,
           selector_type: None,

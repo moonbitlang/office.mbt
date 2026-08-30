@@ -931,7 +931,7 @@ pub fn capability_commands() -> Array[CapabilityCommand] {
           "with", "string", true, "replacement text; empty deletes the match. Control characters including tab and newline are rejected — v1 makes no breaks or tabs from text",
         ),
         capability_field(
-          "in", "string", false, "restrict to a body-relative subtree by path prefix, e.g. p[3] or tbl[1]",
+          "in", "string", false, "restrict to a body-relative subtree by path prefix (p[3], tbl[1]) or by stable identity: p[id=\"1A2B3C4D\"] resolves against the transaction snapshot with the typed para_id refusals; the report then records resolved_in",
         ),
         capability_field(
           "nth", "integer", false, "select ONE candidate by the ordinal `office find` reports (1-based, counted over ALL candidates including restricted ones); selecting a restricted candidate refuses naming its reason",
@@ -980,6 +980,9 @@ pub fn capability_commands() -> Array[CapabilityCommand] {
         ),
         capability_field(
           "allow_zero", "boolean", true, "whether zero matches was permitted",
+        ),
+        capability_field(
+          "resolved_in", "string", false, "the scan path a stable p[id=\"…\"] scope resolved to; null when the scope was ordinal or absent",
         ),
         capability_field(
           "dry_run", "boolean", true, "whether this run validated without publishing",
@@ -1467,7 +1470,7 @@ pub fn capability_commands() -> Array[CapabilityCommand] {
           "file", "path", true, "existing .docx package (never modified in place)",
         ),
         capability_field(
-          "script", "docx.edit/1-or-2-file", true, "strict replace_text OR accept_revision/reject_revision OR (schema docx.edit/2) set_run_text script; a script never mixes operation families. set_run_text: `at` is the body-relative run path from `office query` (`p[3]/r[2]`), `expect` must equal the run's current full text (stale expectations refuse; addresses are snapshot-relative), `text` replaces the run's whole text; setting a run's text to itself validates and changes nothing. replace_text: `find` is LITERAL text — never a regular expression or wildcard — matched across run boundaries; `replace` may be empty to delete the matched text; `occurrence` omitted replaces every occurrence in document order, `occurrence: N` replaces only the Nth. accept_revision/reject_revision select tracked changes by `id` (the stable w:id handle), `author`, `type` (ins|del), or `all: true`; spelled selector fields are conjunctive",
+          "script", "docx.edit/1-or-2-file", true, "strict replace_text OR accept_revision/reject_revision OR (schema docx.edit/2) set_run_text script; a script never mixes operation families. set_run_text: `at` is the body-relative run path from `office query` (`p[3]/r[2]`) or a stable head (`p[id=\"1A2B3C4D\"]/r[2]`, identity-judged at transaction time), `expect` must equal the run's current full text (stale expectations refuse; addresses are snapshot-relative), `text` replaces the run's whole text; setting a run's text to itself validates and changes nothing. replace_text: `find` is LITERAL text — never a regular expression or wildcard — matched across run boundaries; `replace` may be empty to delete the matched text; `occurrence` omitted replaces every occurrence in document order, `occurrence: N` replaces only the Nth. accept_revision/reject_revision select tracked changes by `id` (the stable w:id handle), `author`, `type` (ins|del), or `all: true`; spelled selector fields are conjunctive",
         ),
         capability_field(
           "out", "path", true, "destination .docx; created atomically, refused when present unless --overwrite",
@@ -1513,7 +1516,7 @@ pub fn capability_commands() -> Array[CapabilityCommand] {
           "revisions_resolved", "number", true, "distinct tracked changes accepted or rejected; always 0 for a replace_text script",
         ),
         capability_field(
-          "results", "array(object)", true, "per op: op, find, replace, occurrence, selector, matched, replacements, resolved — all bounded, with one fixed key set per schema version; docx.edit/2 results additionally carry at, expect, and text on EVERY entry (null when inapplicable). A replace_text entry nulls selector; a revision entry nulls find, replace, and occurrence and carries selector {id, author, type, all}; a set_run_text entry nulls find, replace, occurrence, and selector and carries at/expect/text with matched (address resolved) and replacements (spans rewritten)",
+          "results", "array(object)", true, "per op: op, find, replace, occurrence, selector, matched, replacements, resolved — all bounded, with one fixed key set per schema version; docx.edit/2 results additionally carry at, expect, and text on EVERY entry (null when inapplicable), plus resolved_at ONLY on a set_run_text entry whose stable head resolved — the one conditional key. A replace_text entry nulls selector; a revision entry nulls find, replace, and occurrence and carries selector {id, author, type, all}; a set_run_text entry nulls find, replace, occurrence, and selector and carries at/expect/text with matched (address resolved) and replacements (spans rewritten)",
         ),
         capability_field(
           "unmatched", "array(finding)", true, "operations that found fewer occurrences than they require, or revision selectors that matched no tracked change (bounded); refuses unless --allow-unmatched",

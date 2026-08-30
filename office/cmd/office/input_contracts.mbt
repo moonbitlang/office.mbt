@@ -543,7 +543,7 @@ fn edit_operation(name : String) -> Json {
         ],
         ["at", "expect", "text"],
         [
-          "requires \"schema\": \"docx.edit/2\"", "at names ONE run: the office query path (/docx/body/p[3]/r[2]) or its body-relative form (p[3]/r[2])",
+          "requires \"schema\": \"docx.edit/2\"", "at names ONE run: the office query path (/docx/body/p[3]/r[2]), its body-relative form (p[3]/r[2]), or a stable head p[id=\"1A2B3C4D\"]/r[2] resolved by identity at transaction time — the result then records resolved_at",
           "expect must equal the run's CURRENT full reader-visible text; addresses are snapshot-relative, so a stale expectation refuses without publishing",
           "text replaces the run's WHOLE text; text equal to expect validates the address and changes nothing",
           "--allow-unmatched has no effect: an unresolved address always refuses",
@@ -630,9 +630,10 @@ fn edit_input_contract_versioned(version : Int) -> InputContractCore {
     } else {
       [
         contract_type("run_path", "nonempty-string", constraints=[
-          "the office query path (/docx/body/p[3]/r[2]) or its body-relative form (p[3]/r[2])",
-          "segments are kind[ordinal] with kind in {p, r, tbl, tr, tc} and 1-based ordinals; the path ends in a run segment",
-          "validated at parse time; a well-formed path that names nothing refuses at plan time with the addressable-run count",
+          "the office query path (/docx/body/p[3]/r[2]), its body-relative form (p[3]/r[2]), or a stable head p[id=\"1A2B3C4D\"]/r[2]",
+          "segments are kind[ordinal] with kind in {p, r, tbl, tr, tc} and 1-based ordinals; the path ends in a run segment; a stable head may replace the FIRST segment only",
+          "spelling is validated at parse time; a stable head's identity is judged at transaction time with the typed office.docx.para_id_* refusals, and the result then records resolved_at",
+          "a well-formed path that names nothing refuses at plan time with the addressable-run count",
         ]),
       ]
     }),
