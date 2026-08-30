@@ -377,3 +377,47 @@ test "anchor join refuses the nested-paragraph shape" {
   assert_true(join.occurrence_of_paragraph(0) is None)
   assert_true(join.occurrence_of_paragraph(1) is None)
 }
+
+///|
+/// Stable resolution end to end: a unique id resolves (case-insensitive
+/// input, canonical judgment) to its occurrence; every other identity
+/// state is its own typed refusal — never first-wins, never a fallback.
+test "para_id resolution refuses every contested identity" {
+  let annotated = identity_fixture(
+    "<w:p w14:paraId=\"1A2B3C4D\"><w:r><w:t>one</w:t></w:r></w:p><w:p w14:paraId=\"22222222\"><w:r><w:t>two</w:t></w:r></w:p><w:p w14:paraId=\"22222222\"><w:r><w:t>three</w:t></w:r></w:p>",
+  )
+  let join = @docx.docx_paragraph_anchor_join_index(
+    annotated,
+    annotated.main_story_source(),
+  )
+  // Unique: resolves, lowercase input included.
+  guard join.resolve_para_id("1a2b3c4d")
+    is ResolvedOccurrence(occurrence, paragraph) else {
+    fail("expected resolution")
+  }
+  assert_eq((occurrence, paragraph), (0, 0))
+  // Duplicate: ambiguous with both carriers named.
+  guard join.resolve_para_id("22222222") is ParaIdAmbiguous(carriers) else {
+    fail("expected ambiguity")
+  }
+  assert_eq(carriers, [1, 2])
+  // Absent and invalid each refuse in their own words.
+  assert_true(join.resolve_para_id("33333333") is ParaIdNotFound)
+  assert_true(join.resolve_para_id("XYZ") is ParaIdInvalid)
+  assert_true(join.resolve_para_id("80000000") is ParaIdInvalid)
+}
+
+///|
+/// An id buried inside a revision-joined paragraph exists but names no
+/// addressable paragraph — resolution says exactly that.
+test "para_id resolution refuses buried identities" {
+  let annotated = identity_fixture(
+    "<w:p w14:paraId=\"66666666\"><w:pPr><w:rPr><w:del w:id=\"1\" w:author=\"a\"/></w:rPr></w:pPr><w:r><w:t>first</w:t></w:r></w:p><w:p w14:paraId=\"77777777\"><w:r><w:t>second</w:t></w:r></w:p>",
+  )
+  let join = @docx.docx_paragraph_anchor_join_index(
+    annotated,
+    annotated.main_story_source(),
+  )
+  assert_true(join.resolve_para_id("66666666") is ParaIdInMultiPhysical)
+  assert_true(join.resolve_para_id("77777777") is ParaIdInMultiPhysical)
+}

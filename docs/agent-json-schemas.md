@@ -559,7 +559,12 @@ to 8 MiB each and 32 MiB in aggregate.
 Common keys are `schema`, `file`, `format`, canonical `path`, `kind`, `role`,
 `stability`, `source`, optional `parent` and stable `id`, `children`,
 `properties`, `metadata`, and bounded raw `text`. Child references are
-`{path, kind, stability, id?}`. Paragraph entries (and paragraph child
+`{path, kind, stability, id?}`. A paragraph whose anchor is soundly
+joined and `unique` carries its canonical paraId as `id` and is
+addressable as `/docx/body/p[id="…"]` (suffix segments positional);
+ambiguous, buried, invalid, absent, and unjoined identities refuse with
+typed `office.docx.para_id_*` errors — never first-wins, never an
+ordinal fallback. Paragraph entries (and paragraph child
 references) additionally carry `para_id` (canonical `w14:paraId` or `null`), `paragraph_anchor_status` (`unique`\|`missing`\|`invalid`\|`duplicate`\|`multi_physical`\|`unjoined`), and `physical_para_ids` (non-null only for `multi_physical`).
 
 `source` contains logical `story`, an `authority` of `relationship`,

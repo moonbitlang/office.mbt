@@ -745,7 +745,10 @@ async test "DOCX resolver reports malformed, missing, and unsupported stable sel
   for
     case in [
       ("/docx/body/p[999]", "office.docx.selector_not_found"),
-      ("/docx/body/p[id=\"7\"]", "office.docx.unsupported_stable_id"),
+      // `p[id=…]` is a SUPPORTED stable selector since R2a — "7" fails
+      // the paraId validity judgment, not the support gate.
+      ("/docx/body/p[id=\"7\"]", "office.docx.para_id_invalid"),
+      ("/docx/body/p[1]/r[id=\"7\"]", "office.docx.unsupported_stable_id"),
       ("/xlsx/sheet[name=\"Data\"]", "office.docx.selector_format_mismatch"),
     ] {
     let (path, expected) = case
@@ -796,6 +799,8 @@ async test "duplicate annotation ids stay positional and stable lookup is ambigu
     annotated,
     entries: builder.entries,
     entry_index: builder.entry_index,
+    body_joins: None,
+    body_paragraph_entries: [],
     revisions: annotation_index.revisions,
     warnings: builder.warnings,
     cancelled: () => false,

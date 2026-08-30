@@ -17,33 +17,34 @@ and JSONL inventories without deferred PowerPoint or MCP entries.
   $ office.exe help | sed -n '1,8p'
   Office capability registry
     Schema: office.capabilities/2
-    Fingerprint: crc32:2b2555bc
+    Fingerprint: crc32:44aacee9
   Formats:
     docx (aliases: word) — WordprocessingML documents
     xlsx (aliases: excel) — SpreadsheetML workbooks
   Commands:
     help — Show implemented capabilities or consumed input contracts
 
-  $ office.exe help word | sed -n '1,7p'
+  $ office.exe help word | sed -n '1,8p'
   Format: docx (aliases: word)
     WordprocessingML documents
     Selector: office.selector/1 /docx (read-resolved)
       bounded canonical resolution for outline, get, text, and declared query predicates
       /docx/body/p[1]/r[2]
+      /docx/body/p[id="1A2B3C4D"]
       /docx/comments/comment[id="7"]
     Implemented commands:
 
   $ office.exe help docx --json | jq -c '.data.records[0] | {kind,name,selector}'
-  {"kind":"format","name":"docx","selector":{"schema":"office.selector/1","root":"/docx","status":"read-resolved","examples":["/docx/body/p[1]/r[2]","/docx/comments/comment[id=\"7\"]"],"description":"bounded canonical resolution for outline, get, text, and declared query predicates"}}
+  {"kind":"format","name":"docx","selector":{"schema":"office.selector/1","root":"/docx","status":"read-resolved","examples":["/docx/body/p[1]/r[2]","/docx/body/p[id=\"1A2B3C4D\"]","/docx/comments/comment[id=\"7\"]"],"description":"bounded canonical resolution for outline, get, text, and declared query predicates"}}
 
   $ office.exe help xlsx query --json | jq -c '.data.records[0] | {formats,variants:[.variants[]|{name,result_schema,constraints}]}'
   {"formats":["xlsx"],"variants":[{"name":"xlsx","result_schema":"office.xlsx.query/1","constraints":["format=xlsx"]}]}
 
   $ office.exe help all --json | jq -c '{schema,success,capability_schema:.data.schema,fingerprint:.data.fingerprint,names:[.data.records[].name]}'
-  {"schema":"office.output/1","success":true,"capability_schema":"office.capabilities/2","fingerprint":"crc32:2b2555bc","names":["docx","xlsx","help","identify","outline","get","text","query","find","replace","validate","dump","replay","issues","preview","render","create","template","edit","annotate","batch","raw"]}
+  {"schema":"office.output/1","success":true,"capability_schema":"office.capabilities/2","fingerprint":"crc32:44aacee9","names":["docx","xlsx","help","identify","outline","get","text","query","find","replace","validate","dump","replay","issues","preview","render","create","template","edit","annotate","batch","raw"]}
 
   $ office.exe help all --jsonl | jq -s -c 'map({schema,fingerprint,kind,name})'
-  [{"schema":"office.capability/2","fingerprint":"crc32:2b2555bc","kind":"format","name":"docx"},{"schema":"office.capability/2","fingerprint":"crc32:2b2555bc","kind":"format","name":"xlsx"},{"schema":"office.capability/2","fingerprint":"crc32:2b2555bc","kind":"command","name":"help"},{"schema":"office.capability/2","fingerprint":"crc32:2b2555bc","kind":"command","name":"identify"},{"schema":"office.capability/2","fingerprint":"crc32:2b2555bc","kind":"command","name":"outline"},{"schema":"office.capability/2","fingerprint":"crc32:2b2555bc","kind":"command","name":"get"},{"schema":"office.capability/2","fingerprint":"crc32:2b2555bc","kind":"command","name":"text"},{"schema":"office.capability/2","fingerprint":"crc32:2b2555bc","kind":"command","name":"query"},{"schema":"office.capability/2","fingerprint":"crc32:2b2555bc","kind":"command","name":"find"},{"schema":"office.capability/2","fingerprint":"crc32:2b2555bc","kind":"command","name":"replace"},{"schema":"office.capability/2","fingerprint":"crc32:2b2555bc","kind":"command","name":"validate"},{"schema":"office.capability/2","fingerprint":"crc32:2b2555bc","kind":"command","name":"dump"},{"schema":"office.capability/2","fingerprint":"crc32:2b2555bc","kind":"command","name":"replay"},{"schema":"office.capability/2","fingerprint":"crc32:2b2555bc","kind":"command","name":"issues"},{"schema":"office.capability/2","fingerprint":"crc32:2b2555bc","kind":"command","name":"preview"},{"schema":"office.capability/2","fingerprint":"crc32:2b2555bc","kind":"command","name":"render"},{"schema":"office.capability/2","fingerprint":"crc32:2b2555bc","kind":"command","name":"create"},{"schema":"office.capability/2","fingerprint":"crc32:2b2555bc","kind":"command","name":"template"},{"schema":"office.capability/2","fingerprint":"crc32:2b2555bc","kind":"command","name":"edit"},{"schema":"office.capability/2","fingerprint":"crc32:2b2555bc","kind":"command","name":"annotate"},{"schema":"office.capability/2","fingerprint":"crc32:2b2555bc","kind":"command","name":"batch"},{"schema":"office.capability/2","fingerprint":"crc32:2b2555bc","kind":"command","name":"raw"}]
+  [{"schema":"office.capability/2","fingerprint":"crc32:44aacee9","kind":"format","name":"docx"},{"schema":"office.capability/2","fingerprint":"crc32:44aacee9","kind":"format","name":"xlsx"},{"schema":"office.capability/2","fingerprint":"crc32:44aacee9","kind":"command","name":"help"},{"schema":"office.capability/2","fingerprint":"crc32:44aacee9","kind":"command","name":"identify"},{"schema":"office.capability/2","fingerprint":"crc32:44aacee9","kind":"command","name":"outline"},{"schema":"office.capability/2","fingerprint":"crc32:44aacee9","kind":"command","name":"get"},{"schema":"office.capability/2","fingerprint":"crc32:44aacee9","kind":"command","name":"text"},{"schema":"office.capability/2","fingerprint":"crc32:44aacee9","kind":"command","name":"query"},{"schema":"office.capability/2","fingerprint":"crc32:44aacee9","kind":"command","name":"find"},{"schema":"office.capability/2","fingerprint":"crc32:44aacee9","kind":"command","name":"replace"},{"schema":"office.capability/2","fingerprint":"crc32:44aacee9","kind":"command","name":"validate"},{"schema":"office.capability/2","fingerprint":"crc32:44aacee9","kind":"command","name":"dump"},{"schema":"office.capability/2","fingerprint":"crc32:44aacee9","kind":"command","name":"replay"},{"schema":"office.capability/2","fingerprint":"crc32:44aacee9","kind":"command","name":"issues"},{"schema":"office.capability/2","fingerprint":"crc32:44aacee9","kind":"command","name":"preview"},{"schema":"office.capability/2","fingerprint":"crc32:44aacee9","kind":"command","name":"render"},{"schema":"office.capability/2","fingerprint":"crc32:44aacee9","kind":"command","name":"create"},{"schema":"office.capability/2","fingerprint":"crc32:44aacee9","kind":"command","name":"template"},{"schema":"office.capability/2","fingerprint":"crc32:44aacee9","kind":"command","name":"edit"},{"schema":"office.capability/2","fingerprint":"crc32:44aacee9","kind":"command","name":"annotate"},{"schema":"office.capability/2","fingerprint":"crc32:44aacee9","kind":"command","name":"batch"},{"schema":"office.capability/2","fingerprint":"crc32:44aacee9","kind":"command","name":"raw"}]
 
 Installed help exposes every consumed JSON input contract without requiring
 repository-only documentation. Inventory and individual records are versioned;
@@ -334,6 +335,33 @@ addressable anchor.
 
   $ office.exe outline "$TESTDIR/../../../../docx2html/tests/cram/fixtures/duplicate-para-id.docx" --json | jq -c '.data.headings'
   [{"path":"/docx/body/p[3]","level":1,"text":"Gamma heading","text_truncated":false,"para_id":"5E5E5E5E","paragraph_anchor_status":"unique","physical_para_ids":null}]
+
+Stable addressing (paraId R2a): a soundly-joined unique id IS an
+address — `get` resolves it (suffix segments stay positional),
+`query --id` finds it, `find --in` scopes by it, and every contested
+identity refuses typed: an ambiguous id lists its claimants and never
+resolves to the first one.
+
+  $ office.exe get "$TESTDIR/../../../../docx2html/tests/cram/fixtures/duplicate-para-id.docx" "/docx/body/p[id=\"5E5E5E5E\"]" --json | jq -c '{path:.data.path,id:.data.id}'
+  {"path":"/docx/body/p[3]","id":"5E5E5E5E"}
+
+  $ office.exe get "$TESTDIR/../../../../docx2html/tests/cram/fixtures/duplicate-para-id.docx" "/docx/body/p[id=\"5E5E5E5E\"]/r[1]" --json | jq -c '{path:.data.path,kind:.data.kind}'
+  {"path":"/docx/body/p[3]/r[1]","kind":"r"}
+
+  $ office.exe get "$TESTDIR/../../../../docx2html/tests/cram/fixtures/duplicate-para-id.docx" "/docx/body/p[id=\"1A2B3C4D\"]" --json 2>&1 | jq -c '{code:.error.code,candidates:.error.details.candidates}'
+  {"code":"office.docx.para_id_ambiguous","candidates":["/docx/body/p[1]","/docx/body/p[2]"]}
+
+  $ office.exe get "$TESTDIR/../../../../docx2html/tests/cram/fixtures/duplicate-para-id.docx" "/docx/body/p[id=\"33333333\"]" --json > /dev/null
+  [1]
+
+  $ office.exe query "$TESTDIR/../../../../docx2html/tests/cram/fixtures/duplicate-para-id.docx" --id 5E5E5E5E --json | jq -c '[.data.matches[] | {path,kind}]'
+  [{"path":"/docx/body/p[3]","kind":"p"}]
+
+  $ office.exe find "$TESTDIR/../../../../docx2html/tests/cram/fixtures/duplicate-para-id.docx" --text a --in 'p[id="5E5E5E5E"]' --json | jq -c '[.data.matches[].path] | unique'
+  ["p[3]"]
+
+  $ office.exe find "$TESTDIR/../../../../docx2html/tests/cram/fixtures/duplicate-para-id.docx" --text a --in 'p[id="1A2B3C4D"]' --json 2>&1 | jq -c '.error.code'
+  "office.docx.para_id_ambiguous"
 
 The cross-surface invariant, executable: find agrees with the tree
 surfaces on the same document.

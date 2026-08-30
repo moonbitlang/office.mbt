@@ -109,6 +109,15 @@ pub fn validated_para_id(raw : String) -> String? {
 pub struct DocxParagraphAnchorIndex {
   anchors : Array[DocxParagraphAnchor?]
   by_path : Map[String, DocxParagraphAnchor?]
+  // The scanner paragraph path per projection paragraph — the address a
+  // resolved identity CURRENTLY answers to.
+  paths : Array[String?]
+  // canonical id -> projection indices of ADDRESSABLE carriers (single
+  // physical, not shared; status unique or duplicate). A carrier buried
+  // inside a multi-physical join is deliberately NOT here — it counts
+  // in `buried_para_ids` so resolution can refuse with the truth.
+  by_para_id : Map[String, Array[Int]]
+  buried_para_ids : Map[String, Int]
 }
 
 ///|
@@ -122,6 +131,28 @@ pub fn DocxParagraphAnchorIndex::anchor_of_paragraph(
     Some(anchor) => anchor
     None => None
   }
+}
+
+///|
+/// The scanner paragraph path a projection paragraph answers to in
+/// THIS snapshot.
+pub fn DocxParagraphAnchorIndex::scan_path_of_paragraph(
+  self : DocxParagraphAnchorIndex,
+  paragraph_index : Int,
+) -> String? {
+  match self.paths.get(paragraph_index) {
+    Some(path) => path
+    None => None
+  }
+}
+
+///|
+/// Projection indices of the ADDRESSABLE carriers of a canonical id.
+pub fn DocxParagraphAnchorIndex::paragraphs_with_para_id(
+  self : DocxParagraphAnchorIndex,
+  canonical : String,
+) -> Array[Int] {
+  self.by_para_id.get(canonical).unwrap_or([])
 }
 
 ///|
@@ -191,9 +222,13 @@ pub fn docx_paragraph_anchor_index(
   let paragraph_paths = find_path_map(projection.scan, "p")
   let anchors : Array[DocxParagraphAnchor?] = []
   let by_path : Map[String, DocxParagraphAnchor?] = Map([])
-  for paragraph in projection.paragraphs {
+  let paths : Array[String?] = []
+  let by_para_id : Map[String, Array[Int]] = Map([])
+  let buried_para_ids : Map[String, Int] = Map([])
+  for paragraph_index, paragraph in projection.paragraphs {
     guard paragraph.sources.length() > 0 else {
       anchors.push(None)
+      paths.push(None)
       continue
     }
     let SourceElementId(head) = paragraph.sources[0].source
@@ -223,6 +258,10 @@ pub fn docx_paragraph_anchor_index(
           }
         }
       }
+      for canonical in physical {
+        buried_para_ids[canonical] = buried_para_ids.get(canonical).unwrap_or(0) +
+          1
+      }
       { status: "multi_physical", para_id: None, physical_para_ids: physical, }
     } else {
       match elements[head].para_id_raw {
@@ -248,18 +287,28 @@ pub fn docx_paragraph_anchor_index(
       }
     }
     anchors.push(Some(anchor))
+    match anchor.para_id {
+      Some(canonical) =>
+        match by_para_id.get(canonical) {
+          Some(list) => list.push(paragraph_index)
+          None => by_para_id[canonical] = [paragraph_index]
+        }
+      None => ()
+    }
     match paragraph_paths.get(elements[head].byte_start) {
-      Some(path) =>
+      Some(path) => {
+        paths.push(Some(path))
         if by_path.contains(path) {
           // Second claimant: the path no longer names one paragraph.
           by_path[path] = None
         } else {
           by_path[path] = Some(anchor)
         }
-      None => ()
+      }
+      None => paths.push(None)
     }
   }
-  { anchors, by_path, }
+  { anchors, by_path, paths, by_para_id, buried_para_ids, }
 }
 
 ///|
@@ -344,6 +393,7 @@ pub enum DocxParagraphJoin {
 pub struct DocxParagraphAnchorJoinIndex {
   priv joins : Array[DocxParagraphJoin]
   priv reverse : Map[Int, Int]
+  priv anchor_index : DocxParagraphAnchorIndex
 }
 
 ///|
@@ -476,5 +526,73 @@ pub fn docx_paragraph_anchor_join_index(
         }
     }
   }
-  { joins, reverse, }
+  { joins, reverse, anchor_index: anchors, }
+}
+
+///|
+/// One stable-selector resolution outcome. `p[id="…"]` resolves to a
+/// TREE OCCURRENCE only through the whole chain — validated id, exactly
+/// one addressable carrier, sound tree join — and every other state is
+/// its own typed refusal. There is no first-wins and no ordinal
+/// fallback anywhere in this enum.
+pub enum DocxParaIdResolution {
+  /// The unique carrier's tree occurrence (erase order) and its
+  /// projection index.
+  ResolvedOccurrence(Int, Int)
+  /// Not eight case-insensitive hex digits in 1..0x7FFFFFFF.
+  ParaIdInvalid
+  /// No paragraph in the story carries the id.
+  ParaIdNotFound
+  /// More than one carrier claims the id (part-scoped, case-insensitive)
+  /// — the ADDRESSABLE carriers' projection indices, for diagnostics.
+  ParaIdAmbiguous(Array[Int])
+  /// The id's only carriers are buried inside multi-physical joins —
+  /// the identity exists but names no addressable paragraph.
+  ParaIdInMultiPhysical
+  /// A single addressable carrier exists but its tree join does not —
+  /// the paragraph cannot be named in the tree without guessing.
+  ParaIdUnjoined(Int)
+}
+
+///|
+/// Resolve one as-spelled paraId to a tree occurrence.
+pub fn DocxParagraphAnchorJoinIndex::resolve_para_id(
+  self : DocxParagraphAnchorJoinIndex,
+  raw : String,
+) -> DocxParaIdResolution {
+  guard validated_para_id(raw) is Some(canonical) else { return ParaIdInvalid }
+  let carriers = self.anchor_index.paragraphs_with_para_id(canonical)
+  if carriers.length() > 1 {
+    return ParaIdAmbiguous(carriers)
+  }
+  guard carriers is [paragraph_index] else {
+    if self.anchor_index.buried_para_ids.get(canonical).unwrap_or(0) > 0 {
+      return ParaIdInMultiPhysical
+    }
+    return ParaIdNotFound
+  }
+  // A single addressable carrier whose PART-SCOPED occupancy is still
+  // plural means the other claimants are buried or suppressed — the
+  // identity is contested and never resolves. The carrier's own anchor
+  // status carries that occupancy judgment.
+  match self.anchor_index.anchor_of_paragraph(paragraph_index) {
+    Some(anchor) =>
+      if anchor.status() != "unique" {
+        return ParaIdAmbiguous(carriers)
+      }
+    None => return ParaIdAmbiguous(carriers)
+  }
+  match self.reverse.get(paragraph_index) {
+    Some(occurrence) => ResolvedOccurrence(occurrence, paragraph_index)
+    None => ParaIdUnjoined(paragraph_index)
+  }
+}
+
+///|
+/// The anchor index this join was judged against, for callers that
+/// need scan paths or per-paragraph anchors beside the resolution.
+pub fn DocxParagraphAnchorJoinIndex::anchor_index(
+  self : DocxParagraphAnchorJoinIndex,
+) -> DocxParagraphAnchorIndex {
+  self.anchor_index
 }

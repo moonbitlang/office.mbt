@@ -528,7 +528,9 @@ fn reject_unsupported_stable_ids(
 ) -> Unit raise CliFailure {
   for segment in selector.segments() {
     match segment.key_value("id") {
-      Some(_) if segment.name() != "note" && segment.name() != "comment" =>
+      Some(_) if segment.name() != "note" &&
+        segment.name() != "comment" &&
+        segment.name() != "p" =>
         raise docx_cli_failure(
           "office.docx.unsupported_stable_id",
           "stable id selectors are currently supported only for DOCX notes and comments",
@@ -599,9 +601,146 @@ async fn resolve_projection_selector(
     }
     None => ()
   }
+  match resolve_paragraph_id_selector(projection, selector, canonical) {
+    Some(entry) => return entry
+    None => ()
+  }
   match find_projection_entry(projection, canonical) {
     Some(entry) => entry
     None => raise selector_not_found(canonical)
+  }
+}
+
+///|
+/// Resolve a `p[id="…"]` stable selector (paraId R2a) to its CURRENT
+/// entry: the engine resolves the identity to a tree occurrence through
+/// the anchor join, and the occurrence names the entry. Every contested
+/// or unavailable state is a typed refusal — no first-wins, and NEVER a
+/// fallback to an ordinal path.
+fn resolve_paragraph_id_selector(
+  projection : DocxProjection,
+  selector : @lib.OfficeSelector,
+  canonical : String,
+) -> DocxProjectionEntry? raise CliFailure {
+  let segments = selector.segments()
+  let mut para_segment = -1
+  for index in 0..<segments.length() {
+    if segments[index].name() == "p" &&
+      segments[index].key_value("id") is Some(_) {
+      if para_segment >= 0 {
+        raise docx_cli_failure(
+          "office.docx.para_id_invalid",
+          "a selector carries at most one stable paragraph key",
+          details=Json::object({ "selector": Json::string(canonical) }),
+        )
+      }
+      para_segment = index
+    }
+  }
+  if para_segment < 0 {
+    return None
+  }
+  // v1 scope: the join covers the body story, so the stable segment
+  // must sit directly under /docx/body.
+  guard para_segment == 1 && segments[0].name() == "body" else {
+    raise docx_cli_failure(
+      "office.docx.para_id_invalid",
+      "stable paragraph selectors resolve as /docx/body/p[id=\"…\"] in v1",
+      details=Json::object({ "selector": Json::string(canonical) }),
+    )
+  }
+  guard segments[para_segment].key_value("id") is Some(raw) else { return None }
+  guard projection.body_joins is Some(joins) else {
+    raise docx_cli_failure(
+      "office.docx.para_id_unavailable",
+      "stable paragraph addressing is unavailable for this document: the strict reader could not supply anchors, so identities cannot be resolved without guessing",
+      details=Json::object({ "selector": Json::string(canonical) }),
+    )
+  }
+  let entry_path = match joins.resolve_para_id(raw) {
+    ResolvedOccurrence(occurrence, _) => {
+      guard projection.body_paragraph_entries.get(occurrence)
+        is Some(entry_index) &&
+        projection.entries.get(entry_index) is Some(entry) else {
+        raise selector_not_found(canonical)
+      }
+      entry.path
+    }
+    ParaIdInvalid =>
+      raise docx_cli_failure(
+        "office.docx.para_id_invalid",
+        "a paraId is exactly eight hex digits, nonzero, below 0x80000000",
+        details=Json::object({ "selector": Json::string(canonical) }),
+      )
+    ParaIdNotFound =>
+      raise docx_cli_failure(
+        "office.docx.para_id_not_found",
+        "no paragraph in the body story carries this id",
+        details=Json::object({ "selector": Json::string(canonical) }),
+      )
+    ParaIdAmbiguous(carriers) => {
+      let candidates : Array[Json] = []
+      let mut truncated = false
+      for paragraph_index in carriers {
+        if candidates.length() >= 8 {
+          truncated = true
+          continue
+        }
+        match joins.occurrence_of_paragraph(paragraph_index) {
+          Some(occurrence) =>
+            match projection.body_paragraph_entries.get(occurrence) {
+              Some(entry_index) =>
+                match projection.entries.get(entry_index) {
+                  Some(entry) => candidates.push(Json::string(entry.path))
+                  None => ()
+                }
+              None => ()
+            }
+          None => ()
+        }
+      }
+      raise docx_cli_failure(
+        "office.docx.para_id_ambiguous",
+        "this id names more than one paragraph; address by ordinal path instead — an ambiguous identity never resolves to its first carrier",
+        details=Json::object({
+          "selector": Json::string(canonical),
+          "candidates": Json::array(candidates),
+          "candidates_truncated": Json::boolean(truncated),
+        }),
+      )
+    }
+    ParaIdInMultiPhysical =>
+      raise docx_cli_failure(
+        "office.docx.para_id_not_addressable",
+        "this id's only carriers are inside revision-joined paragraphs, which have no singular stable anchor",
+        details=Json::object({ "selector": Json::string(canonical) }),
+      )
+    ParaIdUnjoined(_) =>
+      raise docx_cli_failure(
+        "office.docx.para_id_unjoined",
+        "the paragraph carrying this id has no sound tree correspondence in this snapshot",
+        details=Json::object({ "selector": Json::string(canonical) }),
+      )
+  }
+  // Suffix segments after the stable paragraph stay positional in v1.
+  let target = StringBuilder()
+  target.write_string(entry_path)
+  for index in (para_segment + 1)..<segments.length() {
+    let segment = segments[index]
+    match segment.position() {
+      Some(position) => target.write_string("/\{segment.name()}[\{position}]")
+      None =>
+        raise docx_cli_failure(
+          "office.docx.para_id_invalid",
+          "segments under a stable paragraph selector are positional in v1",
+          details=Json::object({ "selector": Json::string(canonical) }),
+        )
+    }
+  }
+  let resolved = target.to_string()
+  match find_projection_entry(projection, resolved) {
+    Some(entry) => Some(entry)
+    None => raise selector_not_found(resolved)
   }
 }
 

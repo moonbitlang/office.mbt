@@ -238,6 +238,15 @@ pub fn DocxPackageResult::not_equal(Self, Self) -> Bool
 #deprecated
 pub fn DocxPackageResult::to_repr(Self) -> @debug.Repr
 
+pub enum DocxParaIdResolution {
+  ResolvedOccurrence(Int, Int)
+  ParaIdInvalid
+  ParaIdNotFound
+  ParaIdAmbiguous(Array[Int])
+  ParaIdInMultiPhysical
+  ParaIdUnjoined(Int)
+}
+
 pub struct DocxParagraphAnchor {
   status : String
   para_id : String?
@@ -250,16 +259,23 @@ pub fn DocxParagraphAnchor::status(Self) -> String
 pub struct DocxParagraphAnchorIndex {
   anchors : Array[DocxParagraphAnchor?]
   by_path : Map[String, DocxParagraphAnchor?]
+  paths : Array[String?]
+  by_para_id : Map[String, Array[Int]]
+  buried_para_ids : Map[String, Int]
 }
 pub fn DocxParagraphAnchorIndex::anchor_at(Self, String) -> DocxParagraphAnchor?
 pub fn DocxParagraphAnchorIndex::anchor_of_paragraph(Self, Int) -> DocxParagraphAnchor?
+pub fn DocxParagraphAnchorIndex::paragraphs_with_para_id(Self, String) -> Array[Int]
+pub fn DocxParagraphAnchorIndex::scan_path_of_paragraph(Self, Int) -> String?
 
 pub struct DocxParagraphAnchorJoinIndex {
   // private fields
 }
+pub fn DocxParagraphAnchorJoinIndex::anchor_index(Self) -> DocxParagraphAnchorIndex
 pub fn DocxParagraphAnchorJoinIndex::join_of_occurrence(Self, Int) -> DocxParagraphJoin?
 pub fn DocxParagraphAnchorJoinIndex::occurrence_count(Self) -> Int
 pub fn DocxParagraphAnchorJoinIndex::occurrence_of_paragraph(Self, Int) -> Int?
+pub fn DocxParagraphAnchorJoinIndex::resolve_para_id(Self, String) -> DocxParaIdResolution
 
 pub enum DocxParagraphJoin {
   Joined(Int, DocxParagraphAnchor)

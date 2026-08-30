@@ -40,7 +40,10 @@ priv struct DocxProjectionEntry {
   parent : String?
   kind : String
   stability : @lib.SelectorStability
-  stable_id : String?
+  // Mutable for the same single reason as `paragraph_join`: a story
+  // whose walk disagrees with the provenance channel revokes the
+  // paragraph stable ids it optimistically assigned.
+  mut stable_id : String?
   role : DocxProjectionRole
   element : @document.DocumentElement?
   children : Array[String]
@@ -62,6 +65,12 @@ priv struct DocxProjection {
   annotated : @docx.DocxAnnotatedResult
   entries : Array[DocxProjectionEntry]
   entry_index : @sorted_map.SortedMap[String, Int]
+  // Stable-selector resolution state (paraId R2a): the body story's
+  // anchor join and its occurrence -> entry-index map, retained ONLY
+  // when the join survived the walk's count check. Absent means every
+  // `p[id="…"]` selector refuses as unavailable — never guesses.
+  body_joins : @docx.DocxParagraphAnchorJoinIndex?
+  body_paragraph_entries : Array[Int]
   // Tracked changes, already reduced to canonical-path records. They have no
   // projection entry of their own: the reader flattens `w:ins` into the
   // accepted text and drops `w:del`, so this is the only surface that says
@@ -116,6 +125,7 @@ priv struct DocxProjectionBuilder {
   mut story_joins : @docx.DocxParagraphAnchorJoinIndex?
   mut story_paragraph_cursor : Int
   story_paragraph_entries : Array[Int]
+  mut surviving_joins : @docx.DocxParagraphAnchorJoinIndex?
 }
 
 ///|
@@ -201,6 +211,7 @@ fn DocxProjectionBuilder::new(
     story_joins: None,
     story_paragraph_cursor: 0,
     story_paragraph_entries: [],
+    surviving_joins: None,
   }
 }
 
@@ -837,11 +848,23 @@ async fn DocxProjectionBuilder::walk_element_children(
         } else {
           None
         }
+        // A soundly joined UNIQUE paragraph is the only paragraph that
+        // earns a stable id (paraId R2a): a duplicate may show its
+        // para_id diagnostically but never becomes addressable.
+        let stable_id : String? = match paragraph_join {
+          Some(Joined(_, anchor)) =>
+            if anchor.status() == "unique" {
+              anchor.para_id()
+            } else {
+              None
+            }
+          _ => None
+        }
         let entry = self.add_entry(
           path,
           Some(parent.path),
           kind,
-          None,
+          stable_id,
           ElementNode,
           Some(child),
           element_query_properties(child),
@@ -897,12 +920,18 @@ async fn DocxProjectionBuilder::add_story(
       if self.story_paragraph_cursor != index.occurrence_count() {
         for entry_index in self.story_paragraph_entries {
           self.entries[entry_index].paragraph_join = None
+          self.entries[entry_index].stable_id = None
         }
+        self.story_paragraph_entries.clear()
+        self.surviving_joins = None
+      } else {
+        // The join survived: keep it and the occurrence map for
+        // stable-selector resolution.
+        self.surviving_joins = Some(index)
       }
     None => ()
   }
   self.story_joins = None
-  self.story_paragraph_entries.clear()
 }
 
 ///|
@@ -1142,6 +1171,8 @@ async fn projection_from_annotated(
     annotated,
     entries: builder.entries,
     entry_index: builder.entry_index,
+    body_joins: builder.surviving_joins,
+    body_paragraph_entries: builder.story_paragraph_entries.copy(),
     revisions: annotations.revisions,
     warnings: builder.warnings,
     cancelled,
