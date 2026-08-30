@@ -342,9 +342,10 @@ fn insert_payload_duplicate_key(text : String) -> String? {
           builder.write_string("\{inner};")
           at += 1
         }
-        let key = "\{frames[frames.length() - 1]}:" + builder.to_string()
+        let identity = builder.to_string()
+        let key = "\{frames[frames.length() - 1]}:" + identity
         if seen.contains(key) {
-          return Some(builder.to_string())
+          return Some(render_duplicate_key(identity))
         }
         seen[key] = true
         expecting_key = false
@@ -369,4 +370,50 @@ fn insert_payload_duplicate_key(text : String) -> String? {
     index += 1
   }
   None
+}
+
+///|
+/// Render an identity unit-sequence ("116;101;…") back to a readable
+/// key for the diagnostic: valid scalars as themselves, everything
+/// else as \uXXXX. Identity comparison never uses this form.
+fn render_duplicate_key(identity : String) -> String {
+  let builder = StringBuilder()
+  let mut value = 0
+  let mut has_digit = false
+  for character in identity {
+    if character == ';' {
+      if has_digit {
+        match value.to_char() {
+          Some(scalar) =>
+            if value >= 0x20 && value < 0x7F {
+              builder.write_char(scalar)
+            } else {
+              builder.write_string(render_unit_escape(value))
+            }
+          None => builder.write_string(render_unit_escape(value))
+        }
+      }
+      value = 0
+      has_digit = false
+      continue
+    }
+    let digit = character.to_int() - '0'.to_int()
+    if digit >= 0 && digit <= 9 {
+      value = value * 10 + digit
+      has_digit = true
+    }
+  }
+  builder.to_string()
+}
+
+///|
+fn render_unit_escape(value : Int) -> String {
+  let digits = "0123456789ABCDEF"
+  let units = digits.code_units()
+  let builder = StringBuilder()
+  builder.write_string("\\u")
+  for shift in [12, 8, 4, 0] {
+    builder.write_char(units[(value >> shift) & 0xF].to_int().unsafe_to_char())
+  }
+  builder.to_string()
 }

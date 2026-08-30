@@ -607,7 +607,9 @@ pub fn sweep_archive_para_id_values(
 ) -> Array[String] raise DocxError {
   let found : Array[String] = []
   for entry in archive.entries() {
-    guard entry.name().has_suffix(".xml") || entry.name().has_suffix(".rels") else {
+    // OPC extension handling is case-insensitive; so is this filter.
+    let lowered = entry.name().to_lower()
+    guard lowered.has_suffix(".xml") || lowered.has_suffix(".rels") else {
       continue
     }
     let bytes = entry.data()
@@ -622,24 +624,51 @@ pub fn sweep_archive_para_id_values(
       namespace_map=office_namespace_map(),
     ) catch {
       ResourceLimit(..) as limit => raise limit
+      // A NUL-free part that is not UTF-8 XML cannot be UTF-16 text;
+      // the caller's lexical belt covers its ASCII spellings.
       _ => continue
     }
-    collect_raw_para_id_values(root, found)
+    let part_values : Array[String] = []
+    collect_raw_para_id_values(root, part_values)
+    // The RETENTION envelope: per-part budgets bound each parse, and
+    // this bounds what the sweep KEEPS. A value longer than 64 units
+    // can never equal an eight-hex mint candidate, so dropping it here
+    // (in the sweep only — the delta gate's inventory keeps every
+    // value) loses nothing; the cap on the total is a value COUNT — a
+    // package carrying more identities than this is refused, never
+    // guessed at.
+    for value in part_values {
+      if value.length() <= 64 {
+        found.push(value)
+      }
+    }
+    if found.length() > max_swept_para_id_values {
+      raise Unsupported(
+        message="the package carries more paraId values than the identity sweep retains; refusing rather than minting blind",
+      )
+    }
   }
   found
 }
 
 ///|
-/// A cheap UTF-16 tell: the BOM in either endianness, or a NUL beside
-/// the opening angle bracket.
+let max_swept_para_id_values : Int = 65536
+
+///|
+/// A cheap UTF-16 tell: the BOM in either endianness, or ANY NUL in
+/// the leading window — UTF-8 XML never contains NUL, while UTF-16
+/// text carries one in nearly every code unit, so leading whitespace
+/// or a declaration cannot hide the lane.
 fn bytes_look_utf16(bytes : BytesView) -> Bool {
   if bytes.length() >= 2 {
     if (bytes[0] == b'\xFF' && bytes[1] == b'\xFE') ||
       (bytes[0] == b'\xFE' && bytes[1] == b'\xFF') {
       return true
     }
-    if (bytes[0] == b'<' && bytes[1] == b'\x00') ||
-      (bytes[0] == b'\x00' && bytes[1] == b'<') {
+  }
+  let window = if bytes.length() < 256 { bytes.length() } else { 256 }
+  for index in 0..<window {
+    if bytes[index] == b'\x00' {
       return true
     }
   }
