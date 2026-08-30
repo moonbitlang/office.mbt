@@ -928,6 +928,57 @@ fn annotation_input_contract() -> InputContractCore {
 }
 
 ///|
+fn paragraph_input_contract() -> InputContractCore {
+  {
+    id: "docx.paragraph/1",
+    summary: "Resource-free paragraph content for office insert-paragraph",
+    consumed_by: [
+      "office insert-paragraph FILE OUT.docx (--before P|--after P) --content JSON",
+    ],
+    envelope: contract_envelope(
+      [("style", "paragraph-style-id"), ("runs", "nonempty-array(insert_run)")],
+      ["runs"],
+    ),
+    definitions: [
+      contract_type("paragraph-style-id", "nonempty-string", constraints=[
+        "must name a paragraph style the TARGET's styles part defines; refused by name otherwise",
+      ]),
+      contract_object(
+        "insert_run",
+        [
+          ("text", "control-free-string"),
+          ("bold", "boolean"),
+          ("italic", "boolean"),
+          ("underline", "boolean"),
+        ],
+        required=["text"],
+        constraints=[
+          "text rejects control characters; v1 makes no structural breaks or tabs from text",
+          "hyperlinks, images, notes, and list bullets are v1 refusals — resource-free content only",
+          "duplicate members anywhere in the payload refuse before parsing",
+        ],
+      ),
+    ],
+    operations: [],
+    constraints: [
+      "unknown envelope and run members are rejected naming the key", "the minted w14:paraId is the verb's output, never an input — content cannot request an identity",
+    ],
+    limits: Json::empty_object(),
+    examples: [
+      Json::object({
+        "style": Json::string("Heading1"),
+        "runs": Json::array([
+          Json::object({
+            "text": Json::string("Fresh paragraph"),
+            "bold": Json::boolean(true),
+          }),
+        ]),
+      }),
+    ],
+  }
+}
+
+///|
 fn input_contract_cores() -> Array[InputContractCore] {
   [
     xlsx_input_contract(),
@@ -936,6 +987,7 @@ fn input_contract_cores() -> Array[InputContractCore] {
     edit_v1_input_contract(),
     edit_input_contract(),
     annotation_input_contract(),
+    paragraph_input_contract(),
   ]
 }
 

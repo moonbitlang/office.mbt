@@ -69,6 +69,8 @@ pub async fn transact_docx_edit(@transaction.TransactionOptions, DocxEditScript,
 
 pub async fn transact_docx_find_replace(@transaction.TransactionOptions, needle~ : String, replacement~ : String, within? : String, nth? : Int, expect? : Int, allow_zero? : Bool, preflight? : (DocxFindReplaceReport) -> Unit raise) -> DocxFindReplaceResult
 
+pub async fn transact_docx_insert_paragraph(@transaction.TransactionOptions, at~ : String, before~ : Bool, content~ : @bobzhang/docx2html/docx.DocxInsertContent) -> DocxInsertParagraphResult
+
 pub async fn transact_docx_template(@transaction.TransactionOptions, Map[String, @template.TemplateValue], allow_missing~ : Bool) -> DocxTemplateResult
 
 pub async fn transact_docx_template_document(@transaction.TransactionOptions, @template.TemplateData, allow_missing~ : Bool) -> DocxTemplateDocumentResult
@@ -236,6 +238,7 @@ pub fn DocxEditSession::queue_comment_addition(Self, at_relative~ : String, to_r
 pub fn DocxEditSession::queue_comment_reply(Self, parent_id~ : String, @bobzhang/docx2html/docx.CommentSpec) -> String raise @transaction.TransactionError
 pub fn DocxEditSession::queue_comment_resolution(Self, comment_id~ : String, done~ : Bool) -> Unit raise @transaction.TransactionError
 pub fn DocxEditSession::queue_find_replace(Self, needle~ : String, replacement~ : String, within? : String, nth? : Int) -> (@bobzhang/docx2html/docx.DocxReplaceReceipt, String?) raise @transaction.TransactionError
+pub fn DocxEditSession::queue_insert_paragraph(Self, at~ : String, before~ : Bool, content~ : @bobzhang/docx2html/docx.DocxInsertContent) -> @bobzhang/docx2html/docx.DocxInsertReceipt raise @transaction.TransactionError
 pub fn DocxEditSession::queue_plan(Self, @splice.SplicePlan) -> Unit raise @transaction.TransactionError
 pub fn DocxEditSession::queue_run_text_replacement(Self, at_relative~ : String, expect~ : String, text~ : String) -> @bobzhang/docx2html/docx.RunTextReceipt raise @transaction.TransactionError
 pub fn DocxEditSession::queue_span_edit(Self, String, start~ : Int, end~ : Int, Bytes) -> Unit raise @transaction.TransactionError
@@ -262,6 +265,18 @@ pub struct DocxFindReplaceResult {
 }
 pub fn DocxFindReplaceResult::report(Self) -> DocxFindReplaceReport
 pub fn DocxFindReplaceResult::transaction(Self) -> @transaction.TransactionReport
+
+pub struct DocxInsertParagraphReport {
+  // private fields
+}
+pub fn DocxInsertParagraphReport::para_id(Self) -> String
+pub fn DocxInsertParagraphReport::path(Self) -> String
+
+pub struct DocxInsertParagraphResult {
+  // private fields
+}
+pub fn DocxInsertParagraphResult::report(Self) -> DocxInsertParagraphReport
+pub fn DocxInsertParagraphResult::transaction(Self) -> @transaction.TransactionReport
 
 pub struct DocxPartFingerprint {
   // private fields

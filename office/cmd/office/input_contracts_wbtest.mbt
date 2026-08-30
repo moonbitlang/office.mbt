@@ -23,7 +23,7 @@ test "input contract inventory is stable, ordered, and versioned" {
     fields.get("fingerprint"),
     Some(
       Json::string(
-        "sha256:799f2d38c561bd58df300c3ee10d4c72cf41d12f6022f7aacffe9b4596e68140",
+        "sha256:ab831a2d3a833ad082ae7a76053622ed17f9e4fc83ba54b5a082ac69630f22a5",
       ),
     ),
   )
@@ -43,7 +43,7 @@ test "input contract inventory is stable, ordered, and versioned" {
   }
   assert_eq(ids, [
     "xlsx.batch/2", "docx.batch/2", "office.template.data/1", "docx.edit/1", "docx.edit/2",
-    "docx.annotation-batch/1",
+    "docx.annotation-batch/1", "docx.paragraph/1",
   ])
 }
 
@@ -63,6 +63,10 @@ test "every advertised example passes its production parser" {
   }
   for example in edit_input_contract().examples {
     ignore(@office_docx.parse_docx_edit_script(example.stringify()))
+  }
+  for example in paragraph_input_contract().examples {
+    let content = parse_insert_paragraph_content(example.stringify())
+    assert_true(content.runs.length() > 0)
   }
 }
 
@@ -182,4 +186,27 @@ test "schema help emits versioned JSONL and unknown ids have bounded typed sugge
   } noraise {
     _ => fail("unknown schema should fail")
   }
+}
+
+///|
+/// Round 2's escaped-duplicate pin: "\u0074ext" and "text" decode to
+/// the same member, so the raw-text scan must refuse them together.
+test "paragraph payload refuses escaped-equivalent duplicate members" {
+  let mut refused = false
+  try
+    ignore(
+      parse_insert_paragraph_content(
+        "{\"runs\":[{\"text\":\"a\",\"\\u0074ext\":\"b\"}]}",
+      ),
+    )
+  catch {
+    CliFailure(error) => {
+      refused = true
+      assert_true(error.message.contains("duplicate member"))
+    }
+    _ => fail("unexpected failure kind")
+  } noraise {
+    _ => ()
+  }
+  assert_true(refused, msg="escaped duplicate must refuse")
 }

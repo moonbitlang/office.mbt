@@ -590,6 +590,108 @@ fn collect_raw_para_id_values(
 }
 
 ///|
+/// A PACKAGE-GLOBAL paraId value sweep for the mint's used set: every
+/// archive part that parses as strict XML contributes its decoded
+/// `w14:paraId` values — quote style, attribute whitespace, and entity
+/// encodings all normalized by the parser, any prefix bound to the w14
+/// URI normalized by the namespace map. FAIL-CLOSED where the sweep
+/// cannot judge: each part gets a FRESH budget (earlier parts can
+/// never starve later ones), a part that exhausts its own budget
+/// refuses the caller's operation, and a UTF-16 part — which the
+/// strict reader cannot decode and a byte belt cannot match — refuses
+/// too. Only parts that are not XML at all are skipped, and the caller
+/// keeps a lexical belt for those.
+pub fn sweep_archive_para_id_values(
+  archive : @mbtzip.Archive,
+  fresh_budget~ : () -> @xml.XmlReadBudget,
+) -> Array[String] raise DocxError {
+  let found : Array[String] = []
+  // Classification by the OPC AUTHORITY, not by filename: the content
+  // types part decides which parts ARE XML (a word/custom.dat can be
+  // declared XML by override; a suffix filter would never see it).
+  let zip = open_zip_archive(archive)
+  let content_types = read_content_types(zip, xml_budget=fresh_budget())
+  for entry in archive.entries() {
+    // The comparison uses the trimmed, lowercased media-type ESSENCE:
+    // RFC parameters (";charset=…") and case variants are valid OPC
+    // spellings and must not change the classification.
+    let declared = media_type_essence(
+      content_types.find_content_type(entry.name(), zip~),
+    )
+    let is_xml = declared.has_suffix("+xml") ||
+      declared == "application/xml" ||
+      declared == "text/xml"
+    guard is_xml else { continue }
+    let bytes = entry.data()
+    if bytes_look_utf16(bytes) {
+      raise Unsupported(
+        message="the package holds a UTF-16 XML part ('\{entry.name()}') this identity sweep cannot judge; refusing rather than minting blind",
+      )
+    }
+    let root = @xml.read_xml_bytes_strict_limited(
+      bytes,
+      fresh_budget(),
+      namespace_map=office_namespace_map(),
+    ) catch {
+      ResourceLimit(..) as limit => raise limit
+      // A part the package DECLARES as XML but this reader cannot
+      // parse is a part the sweep cannot judge — fail closed.
+      _ =>
+        raise Unsupported(
+          message="the package declares '\{entry.name()}' as XML but it does not parse; the identity sweep refuses rather than minting blind",
+        )
+    }
+    let part_values : Array[String] = []
+    collect_raw_para_id_values(root, part_values)
+    // The RETENTION envelope: per-part budgets bound each parse, and
+    // this bounds what the sweep KEEPS. A value longer than 64 units
+    // can never equal an eight-hex mint candidate, so dropping it here
+    // (in the sweep only — the delta gate's inventory keeps every
+    // value) loses nothing; the cap on the total is a value COUNT — a
+    // package carrying more identities than this is refused, never
+    // guessed at.
+    for value in part_values {
+      if value.length() <= 64 {
+        found.push(value)
+      }
+    }
+    if found.length() > max_swept_para_id_values {
+      // A RESOURCE refusal, so the CLI surfaces it as the typed
+      // resource-limit code rather than a plan refusal.
+      raise ResourceLimit(
+        limit=DocxXmlMaterializedCharacters,
+        message="the package carries more paraId values than the identity sweep retains; refusing rather than minting blind",
+      )
+    }
+  }
+  found
+}
+
+///|
+let max_swept_para_id_values : Int = 65536
+
+///|
+/// A cheap UTF-16 tell: the BOM in either endianness, or ANY NUL in
+/// the leading window — UTF-8 XML never contains NUL, while UTF-16
+/// text carries one in nearly every code unit, so leading whitespace
+/// or a declaration cannot hide the lane.
+fn bytes_look_utf16(bytes : BytesView) -> Bool {
+  if bytes.length() >= 2 {
+    if (bytes[0] == b'\xFF' && bytes[1] == b'\xFE') ||
+      (bytes[0] == b'\xFE' && bytes[1] == b'\xFF') {
+      return true
+    }
+  }
+  let window = if bytes.length() < 256 { bytes.length() } else { 256 }
+  for index in 0..<window {
+    if bytes[index] == b'\x00' {
+      return true
+    }
+  }
+  false
+}
+
+///|
 /// Validates every reachable story's `w14:paraId` values under one cumulative
 /// XML budget. This is the candidate-side gate for generic splice plans; the
 /// reply/resolution planners use the same traversal before allocating IDs.
@@ -1485,4 +1587,15 @@ fn self_closing_rewrite_range(
   replacement.write_bytesview(slice[1:name_end])
   replacement.write_bytes(b">")
   @splice.span_edit(start~, end~, replacement.contents())
+}
+
+///|
+/// The lowercased media-type essence: parameters stripped at the first
+/// ';', surrounding whitespace trimmed.
+fn media_type_essence(declared : String) -> String {
+  let cut = match declared.find(";") {
+    Some(index) => declared.substring(start=0, end=index).to_string()
+    None => declared
+  }
+  cut.trim(chars=" \t").to_string().to_lower()
 }

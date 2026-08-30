@@ -683,6 +683,16 @@ pub struct DocxAnnotatedResult {
   priv reader_paragraph_provenance : StableStringMap[
     Array[Array[SourceElementId?]],
   ]
+  priv paragraph_style_ids : Array[String]
+}
+
+///|
+/// The PARAGRAPH style ids the styles part declares — a COPY, for
+/// insertion's style-reference verification.
+pub fn DocxAnnotatedResult::paragraph_style_ids(
+  self : DocxAnnotatedResult,
+) -> Array[String] {
+  self.paragraph_style_ids.copy()
 }
 
 ///|
@@ -1240,6 +1250,7 @@ fn read_docx_annotated_zip(
     reader_projections: parts.reader_projections,
     reader_projection_sources: parts.reader_projection_sources,
     reader_paragraph_provenance: parts.reader_paragraph_provenance,
+    paragraph_style_ids: parts.paragraph_style_ids,
     footnote_bodies: footnote_pairs,
     endnote_bodies: endnote_pairs,
     comment_bodies: comment_pairs,
