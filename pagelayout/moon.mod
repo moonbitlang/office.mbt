@@ -1,6 +1,6 @@
 name = "bobzhang/pagelayout"
 
-version = "0.1.0"
+version = "0.1.1"
 
 readme = "README.mbt.md"
 
@@ -15,7 +15,7 @@ description = "Paginated document layout engine: format-neutral page-model IR wi
 import {
   "moonbitlang/async@0.20.2",
   "moonbitlang/x@0.4.50",
-  "bobzhang/docx2html@0.3.0",
+  "bobzhang/docx2html@0.5.0",
   "bobzhang/mbtexcel@0.1.9",
   "bobzhang/pdflite@0.1.41",
 }
