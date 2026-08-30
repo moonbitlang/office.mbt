@@ -175,6 +175,7 @@ pub(all) struct DocxEditOpResult {
   at : String?
   expect : String?
   text : String?
+  mut resolved_at : String?
   selector_id : String?
   selector_author : String?
   selector_type : String?
@@ -234,7 +235,7 @@ pub fn DocxEditSession::queue_added_part(Self, String, Bytes) -> Unit raise @tra
 pub fn DocxEditSession::queue_comment_addition(Self, at_relative~ : String, to_relative~ : String, @bobzhang/docx2html/docx.CommentSpec) -> String raise @transaction.TransactionError
 pub fn DocxEditSession::queue_comment_reply(Self, parent_id~ : String, @bobzhang/docx2html/docx.CommentSpec) -> String raise @transaction.TransactionError
 pub fn DocxEditSession::queue_comment_resolution(Self, comment_id~ : String, done~ : Bool) -> Unit raise @transaction.TransactionError
-pub fn DocxEditSession::queue_find_replace(Self, needle~ : String, replacement~ : String, within? : String, nth? : Int) -> @bobzhang/docx2html/docx.DocxReplaceReceipt raise @transaction.TransactionError
+pub fn DocxEditSession::queue_find_replace(Self, needle~ : String, replacement~ : String, within? : String, nth? : Int) -> (@bobzhang/docx2html/docx.DocxReplaceReceipt, String?) raise @transaction.TransactionError
 pub fn DocxEditSession::queue_plan(Self, @splice.SplicePlan) -> Unit raise @transaction.TransactionError
 pub fn DocxEditSession::queue_run_text_replacement(Self, at_relative~ : String, expect~ : String, text~ : String) -> @bobzhang/docx2html/docx.RunTextReceipt raise @transaction.TransactionError
 pub fn DocxEditSession::queue_span_edit(Self, String, start~ : Int, end~ : Int, Bytes) -> Unit raise @transaction.TransactionError
@@ -246,11 +247,13 @@ pub struct DocxFindReplaceReport {
   affected_paths : Array[String]
   affected : Array[@bobzhang/docx2html/docx.DocxReplaceAffected]
   matches : Array[@bobzhang/docx2html/docx.DocxMatch]
+  resolved_within : String?
 }
 pub fn DocxFindReplaceReport::affected(Self) -> Array[@bobzhang/docx2html/docx.DocxReplaceAffected]
 pub fn DocxFindReplaceReport::affected_paths(Self) -> Array[String]
 pub fn DocxFindReplaceReport::matches(Self) -> Array[@bobzhang/docx2html/docx.DocxMatch]
 pub fn DocxFindReplaceReport::replaced(Self) -> Int
+pub fn DocxFindReplaceReport::resolved_within(Self) -> String?
 pub fn DocxFindReplaceReport::selected(Self) -> Array[Int]
 
 pub struct DocxFindReplaceResult {

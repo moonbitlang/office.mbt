@@ -641,3 +641,68 @@ async test "docx.edit/2 refuses stale expectations and no-ops cleanly" {
     assert_eq(@afs.read_file(output).binary(), @afs.read_file(input).binary())
   }
 }
+
+///|
+/// paraId R2b: a stable head addresses the run through IDENTITY. The
+/// result records both spellings — the request and the ordinal address
+/// it resolved to in this snapshot — and an ambiguous id refuses the
+/// whole transaction, publishing nothing.
+async test "docx.edit/2 set_run_text resolves a stable paragraph head" {
+  @async.with_task_group() <| group => {
+    let directory = @afs.tmpdir(prefix="office-docx-edit-stable-")
+    group.add_defer() <| () => {
+      @async.protect_from_cancel(() => @afs.rmdir(directory, recursive=true))
+    }
+    let input = edit_fixture(
+      directory, "in.docx", "<w:r><w:t>first</w:t></w:r></w:p><w:p w14:paraId=\"1A2B3C4D\"><w:r><w:t>target</w:t></w:r>",
+    )
+    let output = directory + "/out.docx"
+    let result = @docx.transact_docx_edit(
+      @transaction.transaction_options(input, output_path=output),
+      edit_script_v2([
+        set_run_text_op("p[id=\"1A2B3C4D\"]/r[1]", "target", "landed"),
+      ]),
+      allow_unmatched=false,
+    )
+    assert_eq(result.report.replacements, 1)
+    assert_eq(result.report.results[0].resolved_at, Some("p[2]/r[1]"))
+    assert_true(published_document(output).contains("landed"))
+  }
+}
+
+///|
+async test "docx.edit/2 stable head refuses a duplicate id" {
+  @async.with_task_group() <| group => {
+    let directory = @afs.tmpdir(prefix="office-docx-edit-dup-")
+    group.add_defer() <| () => {
+      @async.protect_from_cancel(() => @afs.rmdir(directory, recursive=true))
+    }
+    let input = edit_fixture(
+      directory, "in.docx", "<w:r><w:t>a</w:t></w:r></w:p><w:p w14:paraId=\"1A2B3C4D\"><w:r><w:t>b</w:t></w:r></w:p><w:p w14:paraId=\"1a2b3c4d\"><w:r><w:t>c</w:t></w:r>",
+    )
+    let output = directory + "/out.docx"
+    let mut failure : String? = None
+    ignore(
+      @docx.transact_docx_edit(
+        @transaction.transaction_options(input, output_path=output),
+        edit_script_v2([set_run_text_op("p[id=\"1A2B3C4D\"]/r[1]", "b", "x")]),
+        allow_unmatched=false,
+      ),
+    ) catch {
+      error => failure = Some("\{error}")
+    }
+    guard failure is Some(message) else { fail("expected the refusal") }
+    assert_true(
+      message.contains("office.docx.para_id_ambiguous"),
+      msg="got '" + message + "'",
+    )
+    let mut published = false
+    try {
+      ignore(@afs.read_file(output))
+      published = true
+    } catch {
+      _ => ()
+    }
+    assert_false(published, msg="a refused stable edit must write nothing")
+  }
+}

@@ -931,7 +931,7 @@ pub fn capability_commands() -> Array[CapabilityCommand] {
           "with", "string", true, "replacement text; empty deletes the match. Control characters including tab and newline are rejected — v1 makes no breaks or tabs from text",
         ),
         capability_field(
-          "in", "string", false, "restrict to a body-relative subtree by path prefix, e.g. p[3] or tbl[1]",
+          "in", "string", false, "restrict to a body-relative subtree by path prefix (p[3], tbl[1]) or by stable identity: p[id=\"1A2B3C4D\"] resolves against the transaction snapshot with the typed para_id refusals; the report then records resolved_in",
         ),
         capability_field(
           "nth", "integer", false, "select ONE candidate by the ordinal `office find` reports (1-based, counted over ALL candidates including restricted ones); selecting a restricted candidate refuses naming its reason",
@@ -980,6 +980,9 @@ pub fn capability_commands() -> Array[CapabilityCommand] {
         ),
         capability_field(
           "allow_zero", "boolean", true, "whether zero matches was permitted",
+        ),
+        capability_field(
+          "resolved_in", "string", false, "the scan path a stable p[id=\"…\"] scope resolved to; null when the scope was ordinal or absent",
         ),
         capability_field(
           "dry_run", "boolean", true, "whether this run validated without publishing",

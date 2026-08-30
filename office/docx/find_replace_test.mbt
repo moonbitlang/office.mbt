@@ -284,3 +284,28 @@ async test "replace preserves and tolerates duplicate paraIds" {
     assert_true(text.contains("gamma"))
   })
 }
+
+///|
+/// paraId R2b: a stable scope drives the replace transaction — the
+/// report names the ordinal path it resolved to, and an ambiguous id
+/// refuses the transaction before anything is planned.
+async test "replace resolves a stable scope and reports both spellings" {
+  with_docx_session_test_dir(directory => {
+    let runs =
+      #|<w:r><w:t>alpha</w:t></w:r></w:p><w:p w14:paraId="5C5C5C5C"><w:r><w:t>alpha beta</w:t></w:r>
+    let input = edit_fixture(directory, "stable-in.docx", runs)
+    let output = directory + "/stable-out.docx"
+    let result = @docx.transact_docx_find_replace(
+      @transaction.transaction_options(input, output_path=output),
+      needle="alpha",
+      replacement="gamma",
+      within="p[id=\"5C5C5C5C\"]",
+    )
+    assert_eq(result.report().replaced(), 1)
+    assert_eq(result.report().resolved_within(), Some("p[2]"))
+    let text = @word.read_docx_annotated(@afs.read_file(output).binary()).result().document.to_raw_text()
+    // Only the scoped paragraph changed; the first alpha survives.
+    assert_true(text.contains("alpha"))
+    assert_true(text.contains("gamma beta"))
+  })
+}

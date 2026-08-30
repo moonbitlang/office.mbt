@@ -179,6 +179,7 @@ async fn transact_docx_revisions(
           at: None,
           expect: None,
           text: None,
+          resolved_at: None,
           selector_id: op.id,
           selector_author: op.author,
           selector_type: op.kind,

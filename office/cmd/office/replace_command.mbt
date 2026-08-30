@@ -126,6 +126,12 @@ fn replace_report_json(
       Some(prefix) => Json::string(prefix)
       None => Json::null()
     },
+    // When the scope was a stable p[id="…"], the scan path it resolved
+    // to in THIS snapshot — both spellings, so the caller can re-anchor.
+    "resolved_in": match report.resolved_within() {
+      Some(path) => Json::string(path)
+      None => Json::null()
+    },
     "nth": match nth {
       Some(ordinal) => Json::number(ordinal.to_double())
       None => Json::null()

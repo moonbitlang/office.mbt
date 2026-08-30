@@ -543,7 +543,7 @@ fn edit_operation(name : String) -> Json {
         ],
         ["at", "expect", "text"],
         [
-          "requires \"schema\": \"docx.edit/2\"", "at names ONE run: the office query path (/docx/body/p[3]/r[2]) or its body-relative form (p[3]/r[2])",
+          "requires \"schema\": \"docx.edit/2\"", "at names ONE run: the office query path (/docx/body/p[3]/r[2]), its body-relative form (p[3]/r[2]), or a stable head p[id=\"1A2B3C4D\"]/r[2] resolved by identity at transaction time — the result then records resolved_at",
           "expect must equal the run's CURRENT full reader-visible text; addresses are snapshot-relative, so a stale expectation refuses without publishing",
           "text replaces the run's WHOLE text; text equal to expect validates the address and changes nothing",
           "--allow-unmatched has no effect: an unresolved address always refuses",

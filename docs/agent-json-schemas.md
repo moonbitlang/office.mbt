@@ -564,7 +564,11 @@ joined and `unique` carries its canonical paraId as `id` and is
 addressable as `/docx/body/p[id="…"]` (suffix segments positional);
 ambiguous, buried, invalid, absent, and unjoined identities refuse with
 typed `office.docx.para_id_*` errors — never first-wins, never an
-ordinal fallback. Paragraph entries (and paragraph child
+ordinal fallback. The WRITE verbs accept the same identity: `replace
+--in 'p[id="…"]'` (the report records `resolved_in`) and `docx.edit/2`
+`set_run_text` with `"at": "p[id=\"…\"]/r[2]"` (the result records
+`resolved_at`), each resolved against the transaction's own snapshot
+with the same typed refusals, and nothing written on any refusal. Paragraph entries (and paragraph child
 references) additionally carry `para_id` (canonical `w14:paraId` or `null`), `paragraph_anchor_status` (`unique`\|`missing`\|`invalid`\|`duplicate`\|`multi_physical`\|`unjoined`), and `physical_para_ids` (non-null only for `multi_physical`).
 
 `source` contains logical `story`, an `authority` of `relationship`,

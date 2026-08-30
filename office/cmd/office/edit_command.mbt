@@ -85,6 +85,12 @@ fn edit_report_json(
       // entry, null when inapplicable, so agents never branch on `op`
       // to learn the key set
       fields["at"] = optional_text(entry.at)
+      // Present only when a stable p[id="…"] head resolved: the ordinal
+      // address it landed on in this transaction's snapshot.
+      match entry.resolved_at {
+        Some(path) => fields["resolved_at"] = Json::string(path)
+        None => ()
+      }
       fields["expect"] = optional_text(entry.expect)
       fields["text"] = optional_text(entry.text)
     }

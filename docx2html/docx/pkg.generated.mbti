@@ -260,6 +260,7 @@ pub struct DocxParagraphAnchorIndex {
 pub fn DocxParagraphAnchorIndex::anchor_at(Self, String) -> DocxParagraphAnchor?
 pub fn DocxParagraphAnchorIndex::anchor_of_paragraph(Self, Int) -> DocxParagraphAnchor?
 pub fn DocxParagraphAnchorIndex::paragraphs_with_para_id(Self, String) -> Array[Int]
+pub fn DocxParagraphAnchorIndex::resolve_para_id_carrier(Self, String) -> DocxParaIdResolution
 pub fn DocxParagraphAnchorIndex::scan_path_of_paragraph(Self, Int) -> String?
 
 pub struct DocxParagraphAnchorJoinIndex {
