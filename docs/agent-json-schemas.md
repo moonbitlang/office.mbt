@@ -28,7 +28,13 @@ disagree, the tests are the source of truth and this document has a bug.
   validation is STRICT. Unknown keys, unknown enum values, and wrong value
   types are rejected with an error naming the op — a typo must fail
   loudly, not silently no-op or drop content.
-- **`null` is never emitted.** An absent key means "unset / not present".
+- **`null` is emitted only where a schema explicitly specifies it** —
+  for example a find entry's `reason` (null when actionable), nullable
+  transaction fields, and the DOCX paragraph-anchor fields (`para_id`,
+  `physical_para_ids`), which emit `null` alongside a
+  `paragraph_anchor_status` that explains it: an agent testing identity
+  must see the judgment, not guess from absence. Everywhere else an
+  absent key means "unset / not present".
   Top-level inventory lists (`sheets`, `merges`, `tables`, `charts`,
   `images`, `pivot_tables`, `defined_names`, `cells`) are always present
   (possibly `[]`); optional sub-object fields — including list-valued ones
@@ -540,7 +546,7 @@ to 8 MiB each and 32 MiB in aggregate.
 | `scanned_elements` | number | total bounded projection nodes |
 | `counts` | object | body/header/footer story counts plus note, comment, paragraph, run, table, row, cell, hyperlink, and image counts, plus `insertions` and `deletions` (tracked changes, counted apart because they distort the accepted view in opposite directions) |
 | `stories` | array | `{path, kind, children, stability, source}` roots in deterministic story order |
-| `headings` | array | `{path, level, text, text_truncated}` bounded previews |
+| `headings` | array | `{path, level, text, text_truncated}` bounded previews, each carrying `para_id` (canonical `w14:paraId` or `null`), `paragraph_anchor_status` (`unique`\|`missing`\|`invalid`\|`duplicate`\|`multi_physical`\|`unjoined`), and `physical_para_ids` (non-null only for `multi_physical`) |
 | `comments` | array | comment threads in document order: `{path, id?, author?, done?, parent_id?, anchor?}` where `anchor` is the first anchor's start paragraph and `parent_id` marks a reply. `done` and `parent_id` are present only when the document records them, so treat a missing `done` as unresolved and a missing `parent_id` as top-level. Comment *text* is not here — read it with `text --under '/docx/comments'` |
 | `revisions` | array | unaccepted tracked changes in document order: `{type, path?, id?, author?, date?}` where `type` is `ins` or `del` and `path` is the containing paragraph. `id`, `author`, and `date` are copied only when the document records them. Read-only: `text` still returns the accepted view |
 | `styles_in_use` | array | first-use-deduplicated `{kind, id?, name?}` |
@@ -553,7 +559,8 @@ to 8 MiB each and 32 MiB in aggregate.
 Common keys are `schema`, `file`, `format`, canonical `path`, `kind`, `role`,
 `stability`, `source`, optional `parent` and stable `id`, `children`,
 `properties`, `metadata`, and bounded raw `text`. Child references are
-`{path, kind, stability, id?}`.
+`{path, kind, stability, id?}`. Paragraph entries (and paragraph child
+references) additionally carry `para_id` (canonical `w14:paraId` or `null`), `paragraph_anchor_status` (`unique`\|`missing`\|`invalid`\|`duplicate`\|`multi_physical`\|`unjoined`), and `physical_para_ids` (non-null only for `multi_physical`).
 
 `source` contains logical `story`, an `authority` of `relationship`,
 `legacy-fallback`, or `absent`, and the exact physical ZIP `part` when present.
@@ -574,7 +581,7 @@ metadata carries canonical references.
 | `schema` | string | `"office.docx.text/1"` |
 | `file`, `format` | string | input path and literal `"docx"` |
 | `under` | string? | resolved canonical subtree root |
-| `entries` | array | `{path, stability, text}` paragraphs in deterministic order |
+| `entries` | array | `{path, stability, text}` paragraphs in deterministic order, each carrying `para_id` (canonical `w14:paraId` or `null`), `paragraph_anchor_status` (`unique`\|`missing`\|`invalid`\|`duplicate`\|`multi_physical`\|`unjoined`), and `physical_para_ids` (non-null only for `multi_physical`) |
 | `matched_total` | number | exact count after the completed bounded scan |
 | `offset`, `limit`, `returned` | number | explicit pagination |
 | `truncated` | boolean | later matches were omitted |
@@ -588,7 +595,7 @@ metadata carries canonical references.
 | `file`, `format` | string | input path and literal `"docx"` |
 | `under` | string? | resolved canonical subtree root |
 | `filters` | object | normalized `kind?`, `text?`, `id?`, `under?`, `properties[]`, and `ignore_case` |
-| `matches` | array | `{path, kind, role, stability, id?, preview, preview_truncated, properties}` |
+| `matches` | array | `{path, kind, role, stability, id?, preview, preview_truncated, properties}`; paragraph matches additionally carry `para_id` (canonical `w14:paraId` or `null`), `paragraph_anchor_status` (`unique`\|`missing`\|`invalid`\|`duplicate`\|`multi_physical`\|`unjoined`), and `physical_para_ids` (non-null only for `multi_physical`) |
 | `matched_total` | number | exact count after the completed bounded scan |
 | `offset`, `limit`, `returned` | number | explicit pagination |
 | `truncated` | boolean | later matches were omitted |
