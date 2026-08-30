@@ -17,17 +17,17 @@
 /// editability (`actionable`), which this layer never touches.
 pub struct DocxParagraphAnchor {
   /// `unique`, `missing`, `invalid`, `duplicate`, or `multi_physical`.
-  status : String
+  priv status : String
   /// The canonical (uppercase) value when the spelling is a valid
   /// paraId — present for `unique` AND `duplicate` (both carriers
   /// report the value; neither duplicate is an addressable anchor).
   /// Absent for `missing`, `invalid`, and `multi_physical`.
-  para_id : String?
+  priv para_id : String?
   /// For `multi_physical` only: the valid canonical ids of the
   /// PARTICIPATING physical paragraphs, in document order, bounded — a
   /// diagnostic inventory, never a singular anchor. One element when a
   /// single physical paragraph is shared by several logical ones.
-  physical_para_ids : Array[String]
+  priv physical_para_ids : Array[String]
 }
 
 ///|
@@ -50,7 +50,9 @@ pub fn DocxParagraphAnchor::para_id(self : DocxParagraphAnchor) -> String? {
 pub fn DocxParagraphAnchor::physical_para_ids(
   self : DocxParagraphAnchor,
 ) -> Array[String] {
-  self.physical_para_ids
+  // A COPY: arrays are reference-backed, and a caller's mutation must
+  // not rewrite the anchor's judgment.
+  self.physical_para_ids.copy()
 }
 
 ///|
@@ -107,17 +109,17 @@ pub fn validated_para_id(raw : String) -> String? {
 /// head, hence one path), so a path-keyed lookup refuses collided
 /// paths rather than answering for either claimant.
 pub struct DocxParagraphAnchorIndex {
-  anchors : Array[DocxParagraphAnchor?]
-  by_path : Map[String, DocxParagraphAnchor?]
+  priv anchors : Array[DocxParagraphAnchor?]
+  priv by_path : Map[String, DocxParagraphAnchor?]
   // The scanner paragraph path per projection paragraph — the address a
   // resolved identity CURRENTLY answers to.
-  paths : Array[String?]
+  priv paths : Array[String?]
   // canonical id -> projection indices of ADDRESSABLE carriers (single
   // physical, not shared; status unique or duplicate). A carrier buried
   // inside a multi-physical join is deliberately NOT here — it counts
   // in `buried_para_ids` so resolution can refuse with the truth.
-  by_para_id : Map[String, Array[Int]]
-  buried_para_ids : Map[String, Int]
+  priv by_para_id : Map[String, Array[Int]]
+  priv buried_para_ids : Map[String, Int]
 }
 
 ///|
@@ -152,7 +154,12 @@ pub fn DocxParagraphAnchorIndex::paragraphs_with_para_id(
   self : DocxParagraphAnchorIndex,
   canonical : String,
 ) -> Array[Int] {
-  self.by_para_id.get(canonical).unwrap_or([])
+  // A COPY: the internal carrier list is the resolver's authority, and
+  // a caller's mutation must not change later resolution answers.
+  match self.by_para_id.get(canonical) {
+    Some(list) => list.copy()
+    None => []
+  }
 }
 
 ///|

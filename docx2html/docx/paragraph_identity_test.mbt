@@ -421,3 +421,34 @@ test "para_id resolution refuses buried identities" {
   assert_true(join.resolve_para_id("66666666") is ParaIdInMultiPhysical)
   assert_true(join.resolve_para_id("77777777") is ParaIdInMultiPhysical)
 }
+
+///|
+/// The resolver's authority is immune to caller mutation: the arrays
+/// accessors hand out are COPIES, and the backing fields are private —
+/// pushing into a returned carrier list or physical inventory must not
+/// change any later answer.
+test "resolver state survives caller mutation" {
+  let annotated = identity_fixture(
+    "<w:p w14:paraId=\"1A2B3C4D\"><w:r><w:t>one</w:t></w:r></w:p><w:p w14:paraId=\"66666666\"><w:pPr><w:rPr><w:del w:id=\"1\" w:author=\"a\"/></w:rPr></w:pPr><w:r><w:t>two</w:t></w:r></w:p><w:p w14:paraId=\"77777777\"><w:r><w:t>three</w:t></w:r></w:p>",
+  )
+  let join = @docx.docx_paragraph_anchor_join_index(
+    annotated,
+    annotated.main_story_source(),
+  )
+  // Mutate a returned carrier list; resolution must not notice.
+  let carriers = join.anchor_index().paragraphs_with_para_id("1A2B3C4D")
+  carriers.clear()
+  carriers.push(999)
+  guard join.resolve_para_id("1A2B3C4D") is ResolvedOccurrence(_, 0) else {
+    fail("carrier mutation changed resolution")
+  }
+  // Mutate a returned physical inventory; the anchor must not notice.
+  guard join.join_of_occurrence(1) is Some(Joined(_, anchor)) else {
+    fail("expected the joined revision paragraph")
+  }
+  let inventory = anchor.physical_para_ids()
+  inventory.clear()
+  assert_eq(anchor.physical_para_ids().length(), 2)
+  // And the buried judgment still holds after the mutations above.
+  assert_true(join.resolve_para_id("66666666") is ParaIdInMultiPhysical)
+}

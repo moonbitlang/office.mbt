@@ -248,20 +248,14 @@ pub enum DocxParaIdResolution {
 }
 
 pub struct DocxParagraphAnchor {
-  status : String
-  para_id : String?
-  physical_para_ids : Array[String]
+  // private fields
 }
 pub fn DocxParagraphAnchor::para_id(Self) -> String?
 pub fn DocxParagraphAnchor::physical_para_ids(Self) -> Array[String]
 pub fn DocxParagraphAnchor::status(Self) -> String
 
 pub struct DocxParagraphAnchorIndex {
-  anchors : Array[DocxParagraphAnchor?]
-  by_path : Map[String, DocxParagraphAnchor?]
-  paths : Array[String?]
-  by_para_id : Map[String, Array[Int]]
-  buried_para_ids : Map[String, Int]
+  // private fields
 }
 pub fn DocxParagraphAnchorIndex::anchor_at(Self, String) -> DocxParagraphAnchor?
 pub fn DocxParagraphAnchorIndex::anchor_of_paragraph(Self, Int) -> DocxParagraphAnchor?
