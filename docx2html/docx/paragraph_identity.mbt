@@ -247,20 +247,25 @@ pub fn docx_paragraph_anchor_index(
       let physical : Array[String] = []
       for source in paragraph.sources {
         let SourceElementId(index) = source.source
-        if physical.length() < max_reported_physical_para_ids {
-          match elements[index].para_id_raw {
-            Some(raw) =>
-              match validated_para_id(raw) {
-                Some(canonical) => physical.push(canonical)
-                None => ()
+        match elements[index].para_id_raw {
+          Some(raw) =>
+            match validated_para_id(raw) {
+              Some(canonical) => {
+                // The buried INVENTORY is complete — resolution's
+                // judgment must not depend on the diagnostic cap,
+                // which bounds only the reported array below.
+                buried_para_ids[canonical] = buried_para_ids
+                  .get(canonical)
+                  .unwrap_or(0) +
+                  1
+                if physical.length() < max_reported_physical_para_ids {
+                  physical.push(canonical)
+                }
               }
-            None => ()
-          }
+              None => ()
+            }
+          None => ()
         }
-      }
-      for canonical in physical {
-        buried_para_ids[canonical] = buried_para_ids.get(canonical).unwrap_or(0) +
-          1
       }
       { status: "multi_physical", para_id: None, physical_para_ids: physical, }
     } else {

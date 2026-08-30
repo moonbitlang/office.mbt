@@ -533,7 +533,7 @@ fn reject_unsupported_stable_ids(
         segment.name() != "p" =>
         raise docx_cli_failure(
           "office.docx.unsupported_stable_id",
-          "stable id selectors are currently supported only for DOCX notes and comments",
+          "stable id selectors are supported for DOCX notes, comments, and body paragraphs (p[id=\"…\"])",
           details=Json::object({
             "selector": Json::string(selector.render()),
             "segment": Json::string(segment.name()),

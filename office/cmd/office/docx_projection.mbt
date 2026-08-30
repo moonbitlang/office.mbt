@@ -925,13 +925,30 @@ async fn DocxProjectionBuilder::add_story(
         self.story_paragraph_entries.clear()
         self.surviving_joins = None
       } else {
-        // The join survived: keep it and the occurrence map for
-        // stable-selector resolution.
+        // The join survived: keep it and the occurrence map for the
+        // CALLER to take before the next story walks — these fields are
+        // story-scoped scratch, not an accumulator.
         self.surviving_joins = Some(index)
       }
-    None => ()
+    None => self.surviving_joins = None
   }
   self.story_joins = None
+}
+
+///|
+/// Take the just-walked story's surviving join state, clearing it so a
+/// later story can never be mistaken for this one. The BODY caller
+/// takes this immediately after its add_story — header and footer
+/// walks reuse the same scratch fields for their own anchor emission,
+/// and a footer's identity must never answer a /docx/body selector.
+fn DocxProjectionBuilder::take_story_join_state(
+  self : DocxProjectionBuilder,
+) -> (@docx.DocxParagraphAnchorJoinIndex?, Array[Int]) {
+  let joins = self.surviving_joins
+  let entries = self.story_paragraph_entries.copy()
+  self.surviving_joins = None
+  self.story_paragraph_entries.clear()
+  (joins, entries)
 }
 
 ///|
@@ -1107,6 +1124,7 @@ async fn projection_from_annotated(
     ),
     joins?=body_joins,
   )
+  let (surviving_body_joins, surviving_body_entries) = builder.take_story_join_state()
 
   for index, header in result.headers {
     builder.cooperate()
@@ -1171,8 +1189,8 @@ async fn projection_from_annotated(
     annotated,
     entries: builder.entries,
     entry_index: builder.entry_index,
-    body_joins: builder.surviving_joins,
-    body_paragraph_entries: builder.story_paragraph_entries.copy(),
+    body_joins: surviving_body_joins,
+    body_paragraph_entries: surviving_body_entries,
     revisions: annotations.revisions,
     warnings: builder.warnings,
     cancelled,

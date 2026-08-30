@@ -186,6 +186,24 @@ async test "DOCX projection joins header and footer paragraph anchors" {
       Some(Json::string("unique")),
     )
   }
+  // The round-1 High, pinned: header and footer walks reuse the
+  // builder's story-scoped join scratch, and a FOOTER's identity must
+  // never answer a /docx/body selector — the body pair is captured
+  // before any later story walks.
+  for footer_id in ["12345671", "12345672"] {
+    try
+      resolve_projection_selector(
+        projection,
+        "/docx/body/p[id=\"\{footer_id}\"]",
+      )
+    catch {
+      CliFailure(error) =>
+        assert_eq(error.code, "office.docx.para_id_not_found")
+      _ => fail("unexpected failure kind for footer id \{footer_id}")
+    } noraise {
+      entry => fail("footer id resolved as body: \{entry.path}")
+    }
+  }
 }
 
 ///|
