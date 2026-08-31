@@ -25,4 +25,9 @@ import {
   "moonbitlang/core/encoding/utf8",
 } for "test"
 
+import {
+  "moonbitlang/async",
+  "moonbitlang/async/fs" @afs,
+} for "wbtest"
+
 supported_targets = "native+wasm"

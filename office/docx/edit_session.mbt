@@ -812,6 +812,10 @@ pub async fn transact_docx(
           "DOCX edit transaction received a \{format.name()} package",
         )
       }
+      // The SHARED mutation preflight, before any verb plans anything:
+      // a signed package, an enforced protection, or a document
+      // recording revisions is not edited by this toolkit at all.
+      docx_mutation_preflight(archive)
       let session = open_edit_session(archive, budget)
       // The SOURCE's identity inventory, captured before any edit is
       // queued: the candidate gate compares against this, so existing

@@ -273,19 +273,7 @@ pub fn DocxFindReplaceResult::report(Self) -> DocxFindReplaceReport
 pub fn DocxFindReplaceResult::transaction(Self) -> @transaction.TransactionReport
 
 pub struct DocxFormatReport {
-  mode : String
-  requested_text : String?
-  requested_within : String?
-  requested_nth : Int?
-  requested_range : (Int, Int)?
-  resolved_within : String?
-  selected : Array[Int]
-  spans : Array[@bobzhang/docx2html/docx.DocxFormatSpan]
-  affected : Array[@bobzhang/docx2html/docx.DocxFormatAffected]
-  runs_changed : Int
-  runs_already_satisfied : Int
-  splits : Int
-  byte_edits : Int
+  // private fields
 }
 pub fn DocxFormatReport::affected(Self) -> Array[@bobzhang/docx2html/docx.DocxFormatAffected]
 pub fn DocxFormatReport::affected_paths(Self) -> Array[String]
