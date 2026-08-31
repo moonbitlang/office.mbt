@@ -2185,3 +2185,64 @@ test "format preservation stays bounded under deep ancestry" {
     is Some(_),
   )
 }
+
+///|
+/// Round 22: many runs inheriting many declarations must not re-read
+/// the ancestor's attributes apiece — resolution is memoized per
+/// element and prefix.
+test "format preservation resolves inherited namespaces once" {
+  let declarations = StringBuilder()
+  for index in 0..<4000 {
+    declarations.write_string(" xmlns:n\{index}=\"urn:example:\{index}\"")
+  }
+  let runs = StringBuilder()
+  for _ in 0..<4000 {
+    runs.write_string("<w:r><w:rPr><x:glow/></w:rPr><w:t>a</w:t></w:r>")
+  }
+  let body = "<w:p xmlns:x=\"http://schemas.microsoft.com/office/word/2010/wordml\"" +
+    declarations.to_string() +
+    ">" +
+    runs.to_string() +
+    "</w:p>"
+  let before = format_fixture(body)
+  let (plan, receipt) = @docx.plan_docx_format(
+    before,
+    before.main_story_source(),
+    format=@docx.docx_direct_format(bold=true),
+    within="p[1]",
+    range=(0, 1),
+  )
+  assert_eq(receipt.runs_changed(), 1)
+  let after = format_apply(body, plan)
+  assert_eq(
+    @docx.docx_paragraph_format_preserved(
+      before,
+      before.main_story_source(),
+      after,
+      after.main_story_source(),
+      path="p[1]",
+      spans=[(0, 1)],
+      format=@docx.docx_direct_format(bold=true),
+    ),
+    None,
+  )
+  // And the rebinding it exists to catch is still caught.
+  let rebound_body = "<w:p xmlns:x=\"http://schemas.microsoft.com/office/word/2012/wordml\"" +
+    declarations.to_string() +
+    ">" +
+    runs.to_string() +
+    "</w:p>"
+  let rebound = format_fixture(rebound_body)
+  assert_true(
+    @docx.docx_paragraph_format_preserved(
+      before,
+      before.main_story_source(),
+      rebound,
+      rebound.main_story_source(),
+      path="p[1]",
+      spans=[(0, 1)],
+      format=@docx.docx_direct_format(bold=true),
+    )
+    is Some(_),
+  )
+}

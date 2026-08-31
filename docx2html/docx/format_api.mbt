@@ -822,6 +822,9 @@ fn docx_format_paragraph_provenance(
     // under the paragraph — has no properties to preserve, and says so.
     units.push(("", ""))
   }
+  // Namespace resolutions, memoized per element and prefix: an
+  // ancestor's declarations are read once, not once per descendant.
+  let resolutions : Map[String, String] = Map([])
   // A run's properties, read ONCE per run: recomputing them for every
   // contribution walks its children again and again, and a run of many
   // small text elements is legal.
@@ -862,7 +865,12 @@ fn docx_format_paragraph_provenance(
           child = entry.next_sibling_index
         }
         let read = if properties_identity >= 0 {
-          docx_format_binding_digest(bytes, elements, properties_identity)
+          docx_format_binding_digest(
+            bytes,
+            elements,
+            properties_identity,
+            resolutions~,
+          )
         } else {
           ""
         }
@@ -969,7 +977,7 @@ fn docx_format_paragraph_provenance(
       elements[run_identity],
     )
     silent.push(
-      "\{signature}\u{1}\{properties}\u{1}\{docx_format_binding_digest(bytes, elements, run_identity)}",
+      "\{signature}\u{1}\{properties}\u{1}\{docx_format_binding_digest(bytes, elements, run_identity, resolutions~)}",
     )
   }
   // Carriers that belong to no run at all: `w:pPr`, `w:sdtPr`,
@@ -1000,7 +1008,7 @@ fn docx_format_paragraph_provenance(
       keys~,
     )
     silent.push(
-      "\{owner_path}\u{1}\{format_surgery_decode(bytes[entry.byte_start:entry.byte_end])}\u{1}\{docx_format_binding_digest(bytes, elements, carrier_identity)}",
+      "\{owner_path}\u{1}\{format_surgery_decode(bytes[entry.byte_start:entry.byte_end])}\u{1}\{docx_format_binding_digest(bytes, elements, carrier_identity, resolutions~)}",
     )
   }
   // Every pPr in the paragraph's physical subtree, in document order:
@@ -1041,7 +1049,7 @@ fn docx_format_paragraph_provenance(
     )
     mark_builder.write_string("~")
     mark_builder.write_string(
-      docx_format_binding_digest(bytes, elements, mark_identity),
+      docx_format_binding_digest(bytes, elements, mark_identity, resolutions~),
     )
   }
   let mark = mark_builder.to_string()
@@ -1082,6 +1090,7 @@ fn docx_format_binding_digest(
   bytes : BytesView,
   elements : Array[ScannedElement],
   root_identity : Int,
+  resolutions~ : Map[String, String],
 ) -> String raise DocxError {
   let prefixes : Array[String] = []
   let seen : Map[String, Bool] = Map([])
@@ -1091,7 +1100,13 @@ fn docx_format_binding_digest(
   prefixes.sort()
   let builder = StringBuilder()
   for prefix in prefixes {
-    let uri = docx_format_resolve_prefix(bytes, elements, root_identity, prefix)
+    let uri = docx_format_resolve_prefix(
+      bytes,
+      elements,
+      root_identity,
+      prefix,
+      resolutions~,
+    )
     // A prefix resolving to WML explains nothing this digest is for:
     // the request writes WML, and the rPr engine vouches for that
     // binding when it judges the run. Recording it would make a run
@@ -1148,27 +1163,46 @@ fn docx_format_resolve_prefix(
   elements : Array[ScannedElement],
   element_identity : Int,
   prefix : String,
+  resolutions~ : Map[String, String],
 ) -> String raise DocxError {
   // `xml` is bound by the XML specification itself and can never be
   // rebound, so it explains nothing and is not looked up.
   if prefix == "xml" {
     return "http://www.w3.org/XML/1998/namespace"
   }
-  let declaration = if prefix == "" { "xmlns" } else { "xmlns:\{prefix}" }
-  let mut at = element_identity
-  while at >= 0 && at < elements.length() {
-    let ancestor = elements[at]
-    for attribute in docx_format_attribute_names(bytes, ancestor) {
-      if attribute == declaration {
-        return docx_format_attribute_value(bytes, ancestor, attribute)
-      }
-    }
-    if format_surgery_element_prefix(bytes, ancestor) == prefix {
-      return ancestor.uri
-    }
-    at = ancestor.parent_index
+  if element_identity < 0 || element_identity >= elements.length() {
+    return "?"
   }
-  "?"
+  // Memoized per element AND prefix: an ancestor's declarations are
+  // read once, not once per descendant that inherits them.
+  let memo = "\{element_identity}#\{prefix}"
+  match resolutions.get(memo) {
+    Some(known) => known
+    None => {
+      let declaration = if prefix == "" { "xmlns" } else { "xmlns:\{prefix}" }
+      let element = elements[element_identity]
+      let mut answer = ""
+      for attribute in docx_format_attribute_names(bytes, element) {
+        if attribute == declaration && answer == "" {
+          answer = docx_format_attribute_value(bytes, element, attribute)
+        }
+      }
+      if answer == "" && format_surgery_element_prefix(bytes, element) == prefix {
+        answer = element.uri
+      }
+      if answer == "" {
+        answer = docx_format_resolve_prefix(
+          bytes,
+          elements,
+          element.parent_index,
+          prefix,
+          resolutions~,
+        )
+      }
+      resolutions[memo] = answer
+      answer
+    }
+  }
 }
 
 ///|
