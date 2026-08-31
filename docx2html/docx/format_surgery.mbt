@@ -429,6 +429,15 @@ fn format_surgery_hard_barrier_ancestor(
     if run_surgery_is_hard_barrier_container(ancestor) {
       return true
     }
+    // `w:pict` is deliberately absent from the shared predicate — the
+    // reader SUPPRESSES it and then re-homes its unrecognized children,
+    // so a paragraph inside a picture becomes addressable while its
+    // carrier's own contribution belongs to another paragraph. Text
+    // that paints through a picture is no more formattable than text
+    // painting through a drawing.
+    if is_wml_uri(ancestor.uri) && ancestor.local_name == "pict" {
+      return true
+    }
     at = ancestor.parent_index
   }
   false

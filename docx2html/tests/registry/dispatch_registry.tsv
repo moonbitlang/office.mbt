@@ -643,3 +643,4 @@ format_surgery.mbt	hyperlink	format_surgery_transparent_wrapper	name	format_surg
 format_surgery.mbt	ins	format_surgery_transparent_wrapper	name	format_surgery_wbtest:"format: the transparent classifier covers every name it dispatches"
 format_surgery.mbt	sdtContent	format_surgery_transparent_wrapper	name	format_surgery_wbtest:"format: the transparent classifier covers every name it dispatches"
 format_surgery.mbt	smartTag	format_surgery_transparent_wrapper	name	format_surgery_wbtest:"format: the transparent classifier covers every name it dispatches"
+format_surgery.mbt	pict	format_surgery_hard_barrier_ancestor	name	format_surgery_wbtest:"format: text painting inside a drawable refuses"

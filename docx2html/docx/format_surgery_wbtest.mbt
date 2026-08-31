@@ -1622,6 +1622,12 @@ test "format: text painting inside a drawable refuses" {
       (
         "vml-textbox", "<w:p><w:r><w:drawing><v:textbox><w:r><w:t>abcd</w:t></w:r></v:textbox></w:drawing></w:r></w:p>",
       ),
+      // A picture SUPPRESSES its own contribution and re-homes its
+      // children, so the inner paragraph is addressable while its
+      // carrier belongs elsewhere: only ancestry sees it.
+      (
+        "pict", "<w:p><w:r><w:pict><w:p><w:r><w:t>abcd</w:t></w:r></w:p></w:pict></w:r></w:p>",
+      ),
     ] {
     let (name, body) = shape
     for span in [format_span(0, 4), format_span(1, 3)] {
