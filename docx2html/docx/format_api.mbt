@@ -897,7 +897,6 @@ fn docx_format_paragraph_provenance(
   // contain a large subtree, and every carrier inside it would
   // otherwise re-read and re-store that whole text.
   let signatures : Map[Int, String] = Map([])
-  let paths : Map[Int, String] = Map([])
   let keys : Map[Int, String] = Map([])
   let run_offsets : Map[Int, Int] = Map([])
   for contribution in paragraph.contributions {
@@ -998,7 +997,6 @@ fn docx_format_paragraph_provenance(
       paragraph_head_identity,
       run_offsets~,
       signatures~,
-      paths~,
       keys~,
     )
     silent.push(
@@ -1034,7 +1032,6 @@ fn docx_format_paragraph_provenance(
         paragraph_head_identity,
         run_offsets~,
         signatures~,
-        paths~,
         keys~,
       ),
     )
@@ -1674,14 +1671,16 @@ fn docx_format_run_signature(
 }
 
 ///|
-/// A carrier's key within the paragraph: the ancestor path, built ONCE
-/// per element by extending its parent's, and carried as a bounded
-/// fingerprint. Each step is namespace-QUALIFIED (a foreign
-/// `sdtEndPr` is not the WML one), and a RUN step is keyed by where it
-/// sits and what it holds rather than by its ordinal — splitting
-/// renumbers runs, and a carrier nested inside one must survive that
-/// unchanged. Paths can be deep and carriers many, so neither the path
-/// nor its text is stored per carrier.
+/// A carrier's key within the paragraph, derived INCREMENTALLY from
+/// its parent's key and its own step, and memoized per element. Each
+/// step is namespace-QUALIFIED (a foreign `sdtEndPr` is not the WML
+/// one), and a RUN step is keyed by where it sits and what it holds
+/// rather than by its ordinal — splitting renumbers runs, and a
+/// carrier nested inside one must survive that unchanged.
+///
+/// No ancestor path is ever materialized: a paragraph may hold many
+/// carriers under a deep chain, each with a different immediate owner,
+/// and building a path apiece would put the depth back into the cost.
 fn docx_format_carrier_key(
   bytes : BytesView,
   elements : Array[ScannedElement],
@@ -1689,50 +1688,14 @@ fn docx_format_carrier_key(
   stop_identity : Int,
   run_offsets~ : Map[Int, Int],
   signatures~ : Map[Int, String],
-  paths~ : Map[Int, String],
   keys~ : Map[Int, String],
-) -> String raise DocxError {
-  // Memoized per element: carriers beneath one deep ancestry share an
-  // owner, and hashing that ancestry once per carrier would put the
-  // depth back into the cost.
-  match keys.get(element_identity) {
-    Some(known) => known
-    None => {
-      let key = docx_format_fingerprint(
-        docx_format_carrier_path(
-          bytes,
-          elements,
-          element_identity,
-          stop_identity,
-          run_offsets~,
-          signatures~,
-          paths~,
-        ),
-      )
-      keys[element_identity] = key
-      key
-    }
-  }
-}
-
-///|
-/// The ancestor path itself, memoized per element so a paragraph of
-/// many carriers under one deep ancestor pays for that ancestry once.
-fn docx_format_carrier_path(
-  bytes : BytesView,
-  elements : Array[ScannedElement],
-  element_identity : Int,
-  stop_identity : Int,
-  run_offsets~ : Map[Int, Int],
-  signatures~ : Map[Int, String],
-  paths~ : Map[Int, String],
 ) -> String raise DocxError {
   if element_identity < 0 ||
     element_identity >= elements.length() ||
     element_identity == stop_identity {
     return ""
   }
-  match paths.get(element_identity) {
+  match keys.get(element_identity) {
     Some(known) => known
     None => {
       let entry = elements[element_identity]
@@ -1748,18 +1711,18 @@ fn docx_format_carrier_path(
       } else {
         "\{entry.uri}:\{entry.local_name}[\{entry.same_name_ordinal}]"
       }
-      let parent = docx_format_carrier_path(
+      let parent = docx_format_carrier_key(
         bytes,
         elements,
         entry.parent_index,
         stop_identity,
         run_offsets~,
         signatures~,
-        paths~,
+        keys~,
       )
-      let path = if parent == "" { step } else { "\{parent}/\{step}" }
-      paths[element_identity] = path
-      path
+      let key = docx_format_fingerprint("\{parent}/\{step}")
+      keys[element_identity] = key
+      key
     }
   }
 }

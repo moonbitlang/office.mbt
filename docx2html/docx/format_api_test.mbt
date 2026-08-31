@@ -2126,7 +2126,10 @@ test "format preservation stays bounded under deep ancestry" {
   let carriers = 40000
   let inner = StringBuilder()
   for _ in 0..<carriers {
-    inner.write_string("<w:rPr/>")
+    // DISTINCT immediate owners, so no two carriers share a key: the
+    // cost must still come from the document rather than from depth
+    // times count.
+    inner.write_string("<w:bar><w:rPr/></w:bar>")
   }
   let nested = StringBuilder()
   for _ in 0..<wrappers {
