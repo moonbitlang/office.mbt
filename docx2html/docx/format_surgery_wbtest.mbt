@@ -52,6 +52,59 @@ fn assert_format_edits(
   assert_eq(after.to_string(), receipt.expected_projection)
   current_reader_story_text(spliced) |> ignore
   assert_untouched_bytes_survive(bytes, spliced_bytes, byte_edits)
+  // EVERY result run whose projection lies wholly inside the requested
+  // span union must satisfy the INDEPENDENT F0 verifier — cross-run,
+  // multi-span, and split variants alike, not just hand-picked runs.
+  for run in reprojected.paragraphs[paragraph].runs {
+    let mut run_start = -1
+    let mut run_end = -1
+    for contribution in reprojected.paragraphs[paragraph].contributions {
+      if contribution.run_source == Some(run.source) &&
+        contribution.kind is ProjectedText(_) {
+        let local_start = contribution.projection_start -
+          reprojected.paragraphs[paragraph].projection_start
+        let local_end = contribution.projection_end -
+          reprojected.paragraphs[paragraph].projection_start
+        if run_start < 0 || local_start < run_start {
+          run_start = local_start
+        }
+        if local_end > run_end {
+          run_end = local_end
+        }
+      }
+    }
+    if run_start < 0 || run_end <= run_start {
+      continue
+    }
+    let mut inside = true
+    let mut cursor = run_start
+    for span in spans {
+      if span.start <= cursor && cursor < span.end {
+        cursor = span.end
+      }
+    }
+    if cursor < run_end {
+      inside = false
+    }
+    if inside {
+      let SourceElementId(identity) = run.source
+      let element = reprojected.scan.elements()[identity]
+      let spliced_all = @utf8.encode(spliced)
+      let out : Array[Byte] = []
+      for index in element.byte_start..<element.byte_end {
+        out.push(spliced_all[index])
+      }
+      assert_eq(
+        verify_run_format(
+          Bytes::from_array(out),
+          prefix="w",
+          extension_prefixes=["w14"],
+          format~,
+        ),
+        None,
+      )
+    }
+  }
   (spliced, receipt)
 }
 
@@ -912,4 +965,99 @@ test "format: the refusal taxonomy is pinned by name" {
     assert_eq(format_surgery_refusal_slug(kind), slug)
     assert_true(format_surgery_refusal_reason(kind).length() > 0)
   }
+}
+
+///|
+/// The High from review round 1: a non-scalar endpoint must refuse even
+/// when the satisfaction or full-coverage shortcut would otherwise skip
+/// byte planning entirely.
+test "format: non-scalar endpoints refuse before any shortcut" {
+  // Already-bold emoji, span bisecting the surrogate pair: the
+  // already-satisfied path must not swallow the defect.
+  assert_format_refusal(
+    "<w:p><w:r><w:rPr><w:b/><w:bCs/></w:rPr><w:t>\u{1F600}</w:t></w:r></w:p>",
+    paragraph=0,
+    [format_span(0, 1)],
+    refusal="FormatNonScalarBoundary",
+    bold=true,
+  )
+  // Unformatted emoji, abutting spans meeting INSIDE the pair: full
+  // coverage must not swallow it either.
+  assert_format_refusal(
+    "<w:p><w:r><w:t>\u{1F600}</w:t></w:r></w:p>",
+    paragraph=0,
+    [format_span(0, 1), format_span(1, 2)],
+    refusal="FormatNonScalarBoundary",
+    bold=true,
+  )
+  // Same shape through a numeric character reference.
+  assert_format_refusal(
+    "<w:p><w:r><w:rPr><w:b/><w:bCs/></w:rPr><w:t>&#128512;</w:t></w:r></w:p>",
+    paragraph=0,
+    [format_span(0, 1)],
+    refusal="FormatNonScalarBoundary",
+    bold=true,
+  )
+}
+
+///|
+/// The whole run is the split footprint, so a duplicated UNSELECTED
+/// contribution of a touched run refuses — the partition must never
+/// silently choose one occurrence.
+test "format: a duplicated unselected contribution of a split run refuses" {
+  let source = format_fixture_source(
+    "<w:p><w:r><w:t>ab</w:t><w:t>cd</w:t></w:r></w:p>",
+  )
+  let bytes = @utf8.encode(source)
+  let projection = surgery_native_projection(source)
+  let paragraph = projection.paragraphs[0]
+  // Duplicate the SECOND text's contribution — the span selects only
+  // the first.
+  let mut duplicated = false
+  for contribution in paragraph.contributions {
+    if contribution.kind is ProjectedText(FromText) &&
+      contribution.value == "cd" &&
+      !duplicated {
+      paragraph.contributions.push(contribution)
+      duplicated = true
+    }
+  }
+  assert_true(duplicated)
+  try
+    plan_paragraph_format_edits(
+      projection,
+      bytes,
+      0,
+      [format_span(0, 1)],
+      docx_direct_format(bold=true),
+    )
+    |> ignore
+  catch {
+    Unsupported(message~) =>
+      assert_true(message.contains("[FormatDuplicateSource]"), msg=message)
+    _ => fail("expected a typed refusal")
+  } noraise {
+    _ => fail("expected refusal [FormatDuplicateSource]")
+  }
+}
+
+///|
+/// Hostile spellings inside the split footprint survive byte-for-byte:
+/// single-quoted and oddly spaced attributes, entity text, and the run's
+/// own attribute list — pinned by FULL-document equality, which no
+/// alternative mutation can slip past.
+test "format: hostile spellings survive the split byte-for-byte" {
+  let body = "<w:p><w:r  w:rsidR='00AB12CD' ><w:rPr><w:i/></w:rPr><w:t xml:space = 'default' >a&amp;b cd</w:t></w:r></w:p>"
+  let (spliced, _) = assert_format_edits(
+    body,
+    paragraph=0,
+    [format_span(0, 4)],
+    bold=true,
+  )
+  inspect(
+    spliced,
+    content=(
+      #|<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main" xmlns:w14="http://schemas.microsoft.com/office/word/2010/wordml" xmlns:v="urn:schemas-microsoft-com:vml"><w:body><w:p><w:r  w:rsidR='00AB12CD' ><w:rPr><w:b/><w:bCs/><w:i/></w:rPr><w:t xml:space="preserve" >a&amp;b </w:t></w:r><w:r  w:rsidR='00AB12CD' ><w:rPr><w:i/></w:rPr><w:t xml:space = 'default' >cd</w:t></w:r></w:p></w:body></w:document>
+    ),
+  )
 }

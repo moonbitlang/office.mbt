@@ -604,7 +604,6 @@ format_surgery.mbt	duplicate-rpr	format_surgery_refusal_slug	value	format_surger
 format_surgery.mbt	duplicate-source	format_surgery_refusal_slug	value	format_surgery_wbtest:"format: duplicated projection and cross-paragraph reuse refuse"
 format_surgery.mbt	empty-range	format_surgery_refusal_slug	value	format_surgery_wbtest:"format: the request-shape refusal matrix"
 format_surgery.mbt	field-instruction	format_surgery_refusal_slug	value	format_surgery_wbtest:"format: the structural refusal matrix"
-format_surgery.mbt	has no rank	format_surgery_map_rpr_refusal	fragment	format_surgery_wbtest:"format: rPr defects map onto the formatting taxonomy"
 format_surgery.mbt	internal	format_surgery_refusal_slug	value	format_surgery_wbtest:"format: the refusal taxonomy is pinned by name"
 format_surgery.mbt	invalid-paragraph	format_surgery_refusal_slug	value	format_surgery_wbtest:"format: the request-shape refusal matrix"
 format_surgery.mbt	invalid-range	format_surgery_refusal_slug	value	format_surgery_wbtest:"format: the request-shape refusal matrix"

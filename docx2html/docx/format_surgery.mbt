@@ -155,7 +155,10 @@ fn format_surgery_refuse(
 /// Map the F0 rPr engine's refusal onto the formatting taxonomy. The
 /// engine's messages are this package's own stable strings — matching them
 /// here is the same arrangement `mapped_plan_failure` uses for splice
-/// messages, and the fallback class is honest about what it is.
+/// messages, and the fallback class is honest about what it is. The
+/// engine message is NOT echoed into the rendered refusal: it can carry
+/// source QNames, and this taxonomy promises to never echo document
+/// content.
 fn format_surgery_map_rpr_refusal(
   message : String,
   context : String,
@@ -167,13 +170,12 @@ fn format_surgery_map_rpr_refusal(
   } else if message.contains("rPrChange") {
     FormatRprChange
   } else if message.contains("out of schema order") ||
-    message.contains("after the trailing extension block") ||
-    message.contains("has no rank") {
+    message.contains("after the trailing extension block") {
     AmbiguousRprOrder
   } else {
     UnsupportedRpr
   }
-  format_surgery_refuse(kind, "\{context}: \{message}")
+  format_surgery_refuse(kind, context)
 }
 
 ///|
@@ -592,11 +594,75 @@ fn plan_paragraph_format_edits(
       }
     }
   }
+  // Phase 3b: scalar endpoints, batch-wide and BEFORE any satisfaction
+  // or in-place shortcut — an endpoint interior to a text part must
+  // resolve through its token map even when the run turns out to be
+  // already satisfied or fully covered.
+  for ordinal, span in requested {
+    for endpoint in [span.start, span.end] {
+      for part in parts {
+        if part.is_text &&
+          part.local_start < endpoint &&
+          endpoint < part.local_end {
+          let SourceElementId(identity) = part.contribution.source
+          guard elements[identity].text_map is Some(map) else {
+            raise format_surgery_refuse(
+              FormatInternalPlanConflict,
+              "span \{ordinal} in paragraph \{paragraph_index} lost its map",
+            )
+          }
+          guard map.byte_offset_at(endpoint - part.local_start) is Some(_) else {
+            raise format_surgery_refuse(
+              FormatNonScalarBoundary,
+              "span \{ordinal} in paragraph \{paragraph_index}",
+            )
+          }
+        }
+      }
+    }
+  }
   // Per-run hyperlink ancestry: a formatting span may CROSS a hyperlink
   // boundary between sibling runs (each run keeps its wrapper), but a
   // tolerated run whose OWN contributions cross hyperlink ancestry cannot
   // be mutated soundly.
   for run in touched_runs {
+    // The WHOLE run is the mutation footprint, so every projecting
+    // contribution it owns — selected or not — must be singly
+    // projected and field-supported before any partition is planned.
+    for part in parts {
+      if part.contribution.run_source == Some(run.source) {
+        let mut count = 0
+        for other in parts {
+          if other.contribution.source == part.contribution.source {
+            count += 1
+          }
+        }
+        if count > 1 {
+          raise format_surgery_refuse(
+            FormatDuplicateSource,
+            "paragraph \{paragraph_index}: a touched run is projected more than once",
+          )
+        }
+        match part.contribution.field_region {
+          FieldInstruction =>
+            raise format_surgery_refuse(
+              FormatFieldInstruction,
+              "paragraph \{paragraph_index}",
+            )
+          MalformedField =>
+            raise format_surgery_refuse(
+              FormatMalformedField,
+              "paragraph \{paragraph_index}",
+            )
+          FieldResult =>
+            raise format_surgery_refuse(
+              FormatRestrictedRegion,
+              "paragraph \{paragraph_index}",
+            )
+          _ => ()
+        }
+      }
+    }
     let mut anchor : Int?? = None
     for part in parts {
       if part.contribution.run_source == Some(run.source) {
