@@ -839,10 +839,26 @@ fn docx_format_paragraph_provenance(
     // The bindings this run's own properties depend on: two runs may
     // each bind the same prefix to a different vocabulary, so the
     // digest belongs to the unit, not to the paragraph.
+    // Rooted at the PROPERTIES, not the whole run: splitting
+    // legitimately adds `xml:space` to a text element, and a digest
+    // that reached the text would call that a change of meaning.
     let digest = match digests_by_run.get(run_identity) {
       Some(known) => known
       None => {
-        let read = docx_format_binding_digest(bytes, elements, run_identity)
+        let mut properties_identity = -1
+        let mut child = elements[run_identity].first_child_index
+        while child >= 0 {
+          let entry = elements[child]
+          if is_wml_uri(entry.uri) && entry.local_name == "rPr" {
+            properties_identity = entry.identity
+          }
+          child = entry.next_sibling_index
+        }
+        let read = if properties_identity >= 0 {
+          docx_format_binding_digest(bytes, elements, properties_identity)
+        } else {
+          ""
+        }
         digests_by_run[run_identity] = read
         read
       }
@@ -1055,6 +1071,13 @@ fn docx_format_binding_digest(
   let builder = StringBuilder()
   for prefix in prefixes {
     let uri = docx_format_resolve_prefix(bytes, elements, root_identity, prefix)
+    // A prefix resolving to WML explains nothing this digest is for:
+    // the request writes WML, and the rPr engine vouches for that
+    // binding when it judges the run. Recording it would make a run
+    // that GAINED its first property look like a change of meaning.
+    if is_wml_uri(uri) {
+      continue
+    }
     builder.write_string("\{prefix}=\{uri}|")
   }
   builder.to_string()
@@ -1072,7 +1095,10 @@ fn docx_format_collect_used_prefixes(
 ) -> Unit raise DocxError {
   let element = elements[element_identity]
   fn note(prefix : String) -> Unit {
-    if prefix != "" && seen.get(prefix) is None {
+    // The DEFAULT binding counts: an unprefixed extension element
+    // means whatever `xmlns` currently says, and rebinding it changes
+    // the vocabulary without touching a byte of the property.
+    if seen.get(prefix) is None {
       seen[prefix] = true
       out.push(prefix)
     }
@@ -1102,11 +1128,17 @@ fn docx_format_resolve_prefix(
   element_identity : Int,
   prefix : String,
 ) -> String raise DocxError {
+  // `xml` is bound by the XML specification itself and can never be
+  // rebound, so it explains nothing and is not looked up.
+  if prefix == "xml" {
+    return "http://www.w3.org/XML/1998/namespace"
+  }
+  let declaration = if prefix == "" { "xmlns" } else { "xmlns:\{prefix}" }
   let mut at = element_identity
   while at >= 0 && at < elements.length() {
     let ancestor = elements[at]
     for attribute in docx_format_attribute_names(bytes, ancestor) {
-      if attribute == "xmlns:\{prefix}" {
+      if attribute == declaration {
         return docx_format_attribute_value(bytes, ancestor, attribute)
       }
     }

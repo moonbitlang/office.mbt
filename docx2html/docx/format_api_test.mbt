@@ -1969,3 +1969,78 @@ test "format preservation binds namespaces per property" {
     None,
   )
 }
+
+///|
+/// Round 17: an unprefixed extension element means whatever `xmlns`
+/// currently says, and ordinary whitespace splitting must not read as
+/// a change of meaning.
+test "format preservation reads default bindings and tolerates xml:space" {
+  // The DEFAULT binding changes vocabulary without touching a byte of
+  // the property.
+  let before = format_fixture(
+    "<w:p xmlns=\"http://schemas.microsoft.com/office/word/2010/wordml\" xmlns:x=\"http://schemas.microsoft.com/office/word/2010/wordml\"><w:r><w:rPr><x:glow x:rad=\"101600\"><srgbClr x:val=\"FF0000\"/></x:glow></w:rPr><w:t>ab</w:t></w:r></w:p>",
+  )
+  let rebound = format_fixture(
+    "<w:p xmlns=\"http://schemas.microsoft.com/office/word/2012/wordml\" xmlns:x=\"http://schemas.microsoft.com/office/word/2010/wordml\"><w:r><w:rPr><w:b/><w:bCs/><x:glow x:rad=\"101600\"><srgbClr x:val=\"FF0000\"/></x:glow></w:rPr><w:t>ab</w:t></w:r></w:p>",
+  )
+  assert_eq(
+    @docx.docx_paragraph_direct_format(
+      rebound,
+      rebound.main_story_source(),
+      path="p[1]",
+      start=0,
+      end=2,
+      format=@docx.docx_direct_format(bold=true),
+    ),
+    None,
+  )
+  assert_true(
+    @docx.docx_paragraph_format_preserved(
+      before,
+      before.main_story_source(),
+      rebound,
+      rebound.main_story_source(),
+      path="p[1]",
+      spans=[(0, 2)],
+      format=@docx.docx_direct_format(bold=true),
+    )
+    is Some(_),
+  )
+  // And the ordinary request that motivated the scoping: bolding a
+  // word whose split leaves a trailing space, so the clone acquires
+  // `xml:space`. Nothing about its meaning changed.
+  let body = "<w:p><w:r><w:t>a b</w:t></w:r></w:p>"
+  let plain = format_fixture(body)
+  let (plan, _) = @docx.plan_docx_format(
+    plain,
+    plain.main_story_source(),
+    format=@docx.docx_direct_format(bold=true),
+    within="p[1]",
+    range=(0, 2),
+  )
+  let after = format_apply(body, plan)
+  assert_true(after.result().document.to_raw_text().contains("a b"))
+  assert_eq(
+    @docx.docx_paragraph_direct_format(
+      after,
+      after.main_story_source(),
+      path="p[1]",
+      start=0,
+      end=2,
+      format=@docx.docx_direct_format(bold=true),
+    ),
+    None,
+  )
+  assert_eq(
+    @docx.docx_paragraph_format_preserved(
+      plain,
+      plain.main_story_source(),
+      after,
+      after.main_story_source(),
+      path="p[1]",
+      spans=[(0, 2)],
+      format=@docx.docx_direct_format(bold=true),
+    ),
+    None,
+  )
+}
