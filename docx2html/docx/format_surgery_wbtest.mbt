@@ -1604,3 +1604,57 @@ test "format: an interstitial rPr proves itself formatting-only" {
     ),
   )
 }
+
+///|
+/// Round 13: a drawable ANCESTOR encloses the text that paints through
+/// it. Its own boundary sits outside the span, so only an ancestry walk
+/// can see it — full-span and partial-span alike, for every drawable
+/// container.
+test "format: text painting inside a drawable refuses" {
+  for
+    shape in [
+      (
+        "drawing", "<w:p><w:r><w:drawing><w:r><w:t>abcd</w:t></w:r></w:drawing></w:r></w:p>",
+      ),
+      (
+        "object", "<w:p><w:r><w:object><w:r><w:t>abcd</w:t></w:r></w:object></w:r></w:p>",
+      ),
+      (
+        "vml-textbox", "<w:p><w:r><w:drawing><v:textbox><w:r><w:t>abcd</w:t></w:r></v:textbox></w:drawing></w:r></w:p>",
+      ),
+    ] {
+    let (name, body) = shape
+    for span in [format_span(0, 4), format_span(1, 3)] {
+      let source = format_fixture_source(body)
+      let bytes = @utf8.encode(source)
+      let projection = surgery_native_projection(source)
+      let mut target = -1
+      for index, paragraph in projection.paragraphs {
+        if paragraph.projection_end - paragraph.projection_start >= 4 &&
+          target < 0 {
+          target = index
+        }
+      }
+      assert_true(target >= 0, msg=name)
+      let mut refusal = ""
+      try
+        plan_paragraph_format_edits(
+          projection,
+          bytes,
+          target,
+          [span],
+          docx_direct_format(bold=true),
+        )
+        |> ignore
+      catch {
+        error => refusal = repr(error)
+      } noraise {
+        _ => fail("expected a refusal for " + name)
+      }
+      assert_true(
+        refusal.contains("formatting surgery ["),
+        msg=name + ": " + refusal,
+      )
+    }
+  }
+}

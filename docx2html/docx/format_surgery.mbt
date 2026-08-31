@@ -414,6 +414,27 @@ fn format_surgery_transparent_is_accounted(element : ScannedElement) -> Bool {
 }
 
 ///|
+/// Whether any ANCESTOR of this element is a drawable container. A run
+/// nested inside a drawing paints through that drawing, so formatting
+/// it changes content the span did not select — and the drawing's own
+/// boundary contribution sits outside the span, where the interior
+/// barrier pass never looks.
+fn format_surgery_hard_barrier_ancestor(
+  elements : Array[ScannedElement],
+  element : ScannedElement,
+) -> Bool {
+  let mut at = element.parent_index
+  while at >= 0 && at < elements.length() {
+    let ancestor = elements[at]
+    if run_surgery_is_hard_barrier_container(ancestor) {
+      return true
+    }
+    at = ancestor.parent_index
+  }
+  false
+}
+
+///|
 /// Whether an `rPr` subtree holds NOTHING but formatting: every child a
 /// ranked CT_RPr property with no element content, or a recognized
 /// extension whose subtree carries no WML. This mirrors the rPr
@@ -692,6 +713,14 @@ fn plan_paragraph_format_edits(
       raise format_surgery_refuse(
         FormatRestrictedRegion,
         "span \{ordinal} in paragraph \{paragraph_index}",
+      )
+    }
+    // After the more specific ancestry classes: a host painting inside
+    // a drawable is content this planner must not reformat.
+    if format_surgery_hard_barrier_ancestor(elements, element) {
+      raise format_surgery_refuse(
+        FormatVisibleBarrier,
+        "span \{ordinal} in paragraph \{paragraph_index}: the addressed text paints inside a drawable",
       )
     }
     for index, other in projection.paragraphs {
