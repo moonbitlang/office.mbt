@@ -56,8 +56,11 @@ fn assert_format_edits(
   // span union must satisfy the INDEPENDENT F0 verifier — cross-run,
   // multi-span, and split variants alike, not just hand-picked runs.
   for run in reprojected.paragraphs[paragraph].runs {
-    let mut run_start = -1
-    let mut run_end = -1
+    // Contribution-by-contribution coverage, never a convex hull: a
+    // tolerated run's contributions can be discontinuous around a
+    // nested run, and the hull's gap would false-skip verification.
+    let mut has_text = false
+    let mut inside = true
     for contribution in reprojected.paragraphs[paragraph].contributions {
       if contribution.run_source == Some(run.source) &&
         contribution.kind is ProjectedText(_) {
@@ -65,26 +68,23 @@ fn assert_format_edits(
           reprojected.paragraphs[paragraph].projection_start
         let local_end = contribution.projection_end -
           reprojected.paragraphs[paragraph].projection_start
-        if run_start < 0 || local_start < run_start {
-          run_start = local_start
+        if local_end <= local_start {
+          continue
         }
-        if local_end > run_end {
-          run_end = local_end
+        has_text = true
+        let mut cursor = local_start
+        for span in spans {
+          if span.start <= cursor && cursor < span.end {
+            cursor = span.end
+          }
+        }
+        if cursor < local_end {
+          inside = false
         }
       }
     }
-    if run_start < 0 || run_end <= run_start {
+    if !has_text {
       continue
-    }
-    let mut inside = true
-    let mut cursor = run_start
-    for span in spans {
-      if span.start <= cursor && cursor < span.end {
-        cursor = span.end
-      }
-    }
-    if cursor < run_end {
-      inside = false
     }
     if inside {
       let SourceElementId(identity) = run.source
@@ -1059,5 +1059,28 @@ test "format: hostile spellings survive the split byte-for-byte" {
     content=(
       #|<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main" xmlns:w14="http://schemas.microsoft.com/office/word/2010/wordml" xmlns:v="urn:schemas-microsoft-com:vml"><w:body><w:p><w:r  w:rsidR='00AB12CD' ><w:rPr><w:b/><w:bCs/><w:i/></w:rPr><w:t xml:space="preserve" >a&amp;b </w:t></w:r><w:r  w:rsidR='00AB12CD' ><w:rPr><w:i/></w:rPr><w:t xml:space = 'default' >cd</w:t></w:r></w:p></w:body></w:document>
     ),
+  )
+}
+
+///|
+/// Round 2's Medium: a tolerated run that ENCLOSES a checkbox control
+/// (its glyph contributions are zero-width and unselected) must refuse
+/// with the structural class before any in-place shortcut.
+test "format: a run enclosing a checkbox refuses before the shortcut" {
+  assert_format_refusal(
+    "<w:p><w:r><w:t>a</w:t><w:sdt><w:sdtPr><w14:checkbox/></w:sdtPr><w:sdtContent><w:t>x</w:t></w:sdtContent></w:sdt></w:r></w:p>",
+    paragraph=0,
+    [format_span(0, 1)],
+    refusal="FormatCheckboxControl",
+    bold=true,
+  )
+  // The same class of escape through a tracked insertion the run
+  // tolerates as its own child.
+  assert_format_refusal(
+    "<w:p><w:r><w:t>a</w:t><w:ins w:id=\"9\" w:author=\"Ada\" w:date=\"2001-01-01T00:00:00Z\"><w:t>x</w:t></w:ins></w:r></w:p>",
+    paragraph=0,
+    [format_span(0, 1)],
+    refusal="FormatRestrictedRegion",
+    bold=true,
   )
 }

@@ -255,6 +255,37 @@ fn format_surgery_element_prefix(
 }
 
 ///|
+/// Whether this element IS a checkbox content control. The shared
+/// ancestry detector walks strict ancestors, but a checkbox sdt's own
+/// glyph contributions carry the sdt itself as their source — the
+/// self-inclusive case an enclosure walk must also recognize.
+fn format_surgery_is_checkbox_sdt(
+  elements : Array[ScannedElement],
+  element : ScannedElement,
+) -> Bool {
+  if !(is_wml_uri(element.uri) && element.local_name == "sdt") {
+    return false
+  }
+  let mut child = element.first_child_index
+  while child >= 0 {
+    let properties = elements[child]
+    if is_wml_uri(properties.uri) && properties.local_name == "sdtPr" {
+      let mut declared = properties.first_child_index
+      while declared >= 0 {
+        let marker = elements[declared]
+        if is_w14_uri(marker.uri) && marker.local_name == "checkbox" {
+          return true
+        }
+        declared = marker.next_sibling_index
+      }
+      return false
+    }
+    child = properties.next_sibling_index
+  }
+  false
+}
+
+///|
 /// One projecting piece of a run's mapped text, in `w:t`-local UTF-16
 /// coordinates, tagged with whether the batch covers it.
 priv struct FormatPiece {
@@ -626,24 +657,29 @@ fn plan_paragraph_format_edits(
   // tolerated run whose OWN contributions cross hyperlink ancestry cannot
   // be mutated soundly.
   for run in touched_runs {
-    // The WHOLE run is the mutation footprint, so every projecting
-    // contribution it owns — selected or not — must be singly
-    // projected and field-supported before any partition is planned.
-    for part in parts {
-      if part.contribution.run_source == Some(run.source) {
-        let mut count = 0
-        for other in parts {
-          if other.contribution.source == part.contribution.source {
-            count += 1
+    // The WHOLE run is the mutation footprint, so EVERY contribution it
+    // owns — selected or not, projecting or zero-width — must pass the
+    // host gates before any shortcut: duplicate projection, field
+    // state, checkbox and restricted ancestry. `parts` holds projecting
+    // text only, so this walk reads the paragraph's full contribution
+    // list.
+    for contribution in paragraph.contributions {
+      if contribution.run_source == Some(run.source) {
+        if contribution.kind is ProjectedText(_) {
+          let mut count = 0
+          for other in parts {
+            if other.contribution.source == contribution.source {
+              count += 1
+            }
+          }
+          if count > 1 {
+            raise format_surgery_refuse(
+              FormatDuplicateSource,
+              "paragraph \{paragraph_index}: a touched run is projected more than once",
+            )
           }
         }
-        if count > 1 {
-          raise format_surgery_refuse(
-            FormatDuplicateSource,
-            "paragraph \{paragraph_index}: a touched run is projected more than once",
-          )
-        }
-        match part.contribution.field_region {
+        match contribution.field_region {
           FieldInstruction =>
             raise format_surgery_refuse(
               FormatFieldInstruction,
@@ -660,6 +696,35 @@ fn plan_paragraph_format_edits(
               "paragraph \{paragraph_index}",
             )
           _ => ()
+        }
+        let SourceElementId(owned_identity) = contribution.source
+        let owned_element = elements[owned_identity]
+        if format_surgery_is_checkbox_sdt(elements, owned_element) ||
+          run_surgery_inside_checkbox_control(elements, owned_element) {
+          raise format_surgery_refuse(
+            FormatCheckboxControl,
+            "paragraph \{paragraph_index}: the run encloses a checkbox control",
+          )
+        }
+        if run_surgery_restricted_ancestor(elements, owned_element) is Some(_) {
+          raise format_surgery_refuse(
+            FormatRestrictedRegion,
+            "paragraph \{paragraph_index}: the run encloses restricted content",
+          )
+        }
+      }
+    }
+    // A run claimed by another paragraph cannot be this paragraph's
+    // footprint.
+    for index, other in projection.paragraphs {
+      if index != paragraph_index {
+        for candidate in other.runs {
+          if candidate.source == run.source {
+            raise format_surgery_refuse(
+              FormatCrossParagraphSourceReuse,
+              "paragraph \{paragraph_index} would mutate a run of paragraph \{index}",
+            )
+          }
         }
       }
     }
