@@ -682,6 +682,13 @@ pub fn docx_paragraph_direct_format_spans(
 /// and the runs that project no text at all (a note reference alone in
 /// its run) must keep theirs too, compared in document order.
 ///
+/// SCOPE: this judges the PARAGRAPH's own formatting — its runs, its
+/// carriers, its mark. Formatting that lives outside the paragraph (a
+/// table cell's `w:tcPr`, a style definition) is not compared here,
+/// and does not need to be: a plan's declared byte edits bound what it
+/// can touch, so anything outside them is preserved by the splice
+/// itself rather than by this check.
+///
 /// `spans` are the paragraph-local ranges the plan was asked to format.
 /// Returns None when preserved, or the first discrepancy.
 pub fn docx_paragraph_format_preserved(
@@ -886,6 +893,10 @@ fn docx_format_paragraph_provenance(
   }
   // Where each run sits, in projection units — including the zero-width
   // contributions a text-less run makes, so every run has a position.
+  // Run signatures are BOUNDED and computed once each: a run may
+  // contain a large subtree, and every carrier inside it would
+  // otherwise re-read and re-store that whole text.
+  let signatures : Map[Int, String] = Map([])
   let run_offsets : Map[Int, Int] = Map([])
   for contribution in paragraph.contributions {
     guard contribution.run_source is Some(SourceElementId(owner)) else {
@@ -945,7 +956,12 @@ fn docx_format_paragraph_provenance(
     if !docx_format_run_carries_content(elements, run_identity) {
       continue
     }
-    let signature = docx_format_run_signature(bytes, elements, run_identity)
+    let signature = docx_format_run_signature_key(
+      bytes,
+      elements,
+      run_identity,
+      signatures~,
+    )
     let properties = docx_format_run_properties(
       bytes,
       elements,
@@ -979,6 +995,7 @@ fn docx_format_paragraph_provenance(
       entry.parent_index,
       paragraph_head_identity,
       run_offsets~,
+      signatures~,
     )
     silent.push(
       "\{owner_path}\u{1}\{format_surgery_decode(bytes[entry.byte_start:entry.byte_end])}\u{1}\{docx_format_binding_digest(bytes, elements, carrier_identity)}",
@@ -1012,6 +1029,7 @@ fn docx_format_paragraph_provenance(
         mark_identity,
         paragraph_head_identity,
         run_offsets~,
+        signatures~,
       ),
     )
     mark_builder.write_string("=")
@@ -1661,6 +1679,7 @@ fn docx_format_carrier_key(
   element_identity : Int,
   stop_identity : Int,
   run_offsets~ : Map[Int, Int],
+  signatures~ : Map[Int, String],
 ) -> String raise DocxError {
   let steps : Array[String] = []
   let mut at = element_identity
@@ -1675,7 +1694,7 @@ fn docx_format_carrier_key(
       // splitter refuses anything but properties and mapped text.
       let offset = run_offsets.get(at).unwrap_or(-1)
       steps.push(
-        "r@\{offset}#{\{docx_format_run_signature(bytes, elements, at)}}",
+        "r@\{offset}#{\{docx_format_run_signature_key(bytes, elements, at, signatures~)}}",
       )
     } else {
       steps.push("\{entry.uri}:\{entry.local_name}[\{entry.same_name_ordinal}]")
@@ -1692,4 +1711,36 @@ fn docx_format_carrier_key(
     index -= 1
   }
   builder.to_string()
+}
+
+///|
+/// A BOUNDED key for a run's content signature: its length and a
+/// fingerprint, computed once per run. The signature itself can be the
+/// whole of a large subtree, and a paragraph may hold many carriers
+/// inside one such run — storing the text in every entry would grow
+/// with their product rather than with the document.
+fn docx_format_run_signature_key(
+  bytes : BytesView,
+  elements : Array[ScannedElement],
+  run_identity : Int,
+  signatures~ : Map[Int, String],
+) -> String raise DocxError {
+  match signatures.get(run_identity) {
+    Some(known) => known
+    None => {
+      let signature = docx_format_run_signature(bytes, elements, run_identity)
+      // FNV-1a over the signature's units: two runs differ in this key
+      // exactly when a fingerprint collision does not hide it, and the
+      // length is carried alongside so a collision must also match in
+      // size.
+      let mut hash : UInt = 2166136261
+      for unit in signature.code_units() {
+        hash = hash ^ unit.to_uint()
+        hash = hash * 16777619
+      }
+      let key = "\{signature.length()}:\{hash}"
+      signatures[run_identity] = key
+      key
+    }
+  }
 }

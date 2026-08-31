@@ -2044,3 +2044,72 @@ test "format preservation reads default bindings and tolerates xml:space" {
     None,
   )
 }
+
+///|
+/// Round 18: a run may hold a large subtree, and a paragraph may hold
+/// many carriers inside it. Signatures are bounded and computed once,
+/// so a legal document does not make its own readback impossible —
+/// while still telling look-alike runs apart.
+test "format preservation stays bounded on a heavy run" {
+  let properties = StringBuilder()
+  for _ in 0..<2000 {
+    properties.write_string("<w:rPr/>")
+  }
+  let body = "<w:p><w:r><w:foo>" +
+    properties.to_string() +
+    "</w:foo></w:r><w:r><w:t>x</w:t></w:r></w:p>"
+  let before = format_fixture(body)
+  let (plan, receipt) = @docx.plan_docx_format(
+    before,
+    before.main_story_source(),
+    format=@docx.docx_direct_format(bold=true),
+    within="p[1]",
+    range=(0, 1),
+  )
+  assert_eq(receipt.runs_changed(), 1)
+  let after = format_apply(body, plan)
+  // The readback completes, and agrees.
+  assert_eq(
+    @docx.docx_paragraph_direct_format(
+      after,
+      after.main_story_source(),
+      path="p[1]",
+      start=0,
+      end=1,
+      format=@docx.docx_direct_format(bold=true),
+    ),
+    None,
+  )
+  assert_eq(
+    @docx.docx_paragraph_format_preserved(
+      before,
+      before.main_story_source(),
+      after,
+      after.main_story_source(),
+      path="p[1]",
+      spans=[(0, 1)],
+      format=@docx.docx_direct_format(bold=true),
+    ),
+    None,
+  )
+  // And a bounded key still distinguishes look-alike runs: the marker
+  // swap from the earlier witness is caught by the same machinery.
+  let markers_before = format_fixture(
+    "<w:p><w:r><w:rPr><w:i/><w:iCs/></w:rPr><w:footnoteReference w:id=\"1\"/></w:r><w:r><w:endnoteReference w:id=\"2\"/></w:r><w:r><w:t>ab</w:t></w:r></w:p>",
+  )
+  let markers_moved = format_fixture(
+    "<w:p><w:r><w:footnoteReference w:id=\"1\"/></w:r><w:r><w:rPr><w:i/><w:iCs/></w:rPr><w:endnoteReference w:id=\"2\"/></w:r><w:r><w:rPr><w:b/><w:bCs/></w:rPr><w:t>ab</w:t></w:r></w:p>",
+  )
+  assert_true(
+    @docx.docx_paragraph_format_preserved(
+      markers_before,
+      markers_before.main_story_source(),
+      markers_moved,
+      markers_moved.main_story_source(),
+      path="p[1]",
+      spans=[(2, 4)],
+      format=@docx.docx_direct_format(bold=true),
+    )
+    is Some(_),
+  )
+}
