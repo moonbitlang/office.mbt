@@ -745,6 +745,33 @@ fn plan_paragraph_format_edits(
     // list.
     for contribution in paragraph.contributions {
       if contribution.run_source == Some(run.source) {
+        // Zero-width VISIBLE or SUPPRESSED content the run owns cannot
+        // be included in or excluded from a span — it has no width to
+        // select — yet the footprint would format it along with the
+        // run. A note reference at a run edge is exactly that shape,
+        // so v1 refuses rather than formatting content no span chose.
+        match contribution.kind {
+          VisibleNonText =>
+            raise format_surgery_refuse(
+              FormatVisibleBarrier,
+              "paragraph \{paragraph_index}: the run carries visible non-text content",
+            )
+          SuppressedContent =>
+            raise format_surgery_refuse(
+              FormatSuppressedRegion,
+              "paragraph \{paragraph_index}: the run carries suppressed content",
+            )
+          Transparent => {
+            let SourceElementId(seam_identity) = contribution.source
+            if run_surgery_is_hard_barrier_container(elements[seam_identity]) {
+              raise format_surgery_refuse(
+                FormatVisibleBarrier,
+                "paragraph \{paragraph_index}: the run carries a hard barrier",
+              )
+            }
+          }
+          _ => ()
+        }
         if contribution.kind is ProjectedText(_) {
           let mut count = 0
           for other in parts {

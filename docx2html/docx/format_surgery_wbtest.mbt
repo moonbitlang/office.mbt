@@ -96,6 +96,31 @@ fn assert_format_edits(
     if !has_text {
       continue
     }
+    if !inside {
+      // An UNCOVERED run must not have gained formatting: whatever rPr
+      // it carries has to come from the original document verbatim.
+      // This is the preservation license the review showed the oracle
+      // could not otherwise see.
+      let SourceElementId(uncovered_identity) = run.source
+      let uncovered = reprojected.scan.elements()[uncovered_identity]
+      let mut child = uncovered.first_child_index
+      while child >= 0 {
+        let entry = reprojected.scan.elements()[child]
+        if entry.local_name == "rPr" {
+          let rpr_out : Array[Byte] = []
+          for index in entry.byte_start..<entry.byte_end {
+            rpr_out.push(spliced_bytes[index])
+          }
+          let rpr_text = @utf8.decode(Bytes::from_array(rpr_out))
+          assert_true(
+            source.contains(rpr_text),
+            msg="an uncovered run gained formatting: " + rpr_text,
+          )
+        }
+        child = entry.next_sibling_index
+      }
+      continue
+    }
     if inside {
       let SourceElementId(identity) = run.source
       let element = reprojected.scan.elements()[identity]
@@ -1231,6 +1256,43 @@ test "format: a run nesting another run refuses" {
     paragraph=0,
     [format_span(0, 6)],
     refusal="FormatUnsupportedTextSource",
+    bold=true,
+  )
+}
+
+///|
+/// Round 6's Medium: zero-width visible content a run owns has no width
+/// to select, so it can be neither included nor excluded — and the
+/// footprint would format it regardless. A note reference at a run edge
+/// refuses instead of being silently formatted.
+test "format: zero-width visible content in a touched run refuses" {
+  for
+    reference in [
+      "<w:footnoteReference w:id=\"1\"/>", "<w:endnoteReference w:id=\"1\"/>", "<w:commentReference w:id=\"1\"/>",
+    ] {
+    let body = "<w:p><w:r><w:t>ab</w:t>" + reference + "</w:r></w:p>"
+    assert_format_refusal(
+      body,
+      paragraph=0,
+      [format_span(0, 2)],
+      refusal="FormatVisibleBarrier",
+      bold=true,
+    )
+  }
+  // The same at the LEADING edge, where the span starts after it.
+  assert_format_refusal(
+    "<w:p><w:r><w:footnoteReference w:id=\"1\"/><w:t>ab</w:t></w:r></w:p>",
+    paragraph=0,
+    [format_span(0, 2)],
+    refusal="FormatVisibleBarrier",
+    bold=true,
+  )
+  // And a suppressed deletion the run owns.
+  assert_format_refusal(
+    "<w:p><w:r><w:t>ab</w:t><w:delText>x</w:delText></w:r></w:p>",
+    paragraph=0,
+    [format_span(0, 2)],
+    refusal="FormatSuppressedRegion",
     bold=true,
   )
 }
