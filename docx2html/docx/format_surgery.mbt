@@ -344,6 +344,28 @@ fn format_surgery_open_tag_has_identity_attribute(
 }
 
 ///|
+/// Whether an element OR ANY DESCENDANT carries an identity-bearing
+/// attribute: the whole subtree is what a clone copies.
+fn format_surgery_subtree_has_identity_attribute(
+  source : BytesView,
+  elements : Array[ScannedElement],
+  element : ScannedElement,
+) -> Bool {
+  if format_surgery_open_tag_has_identity_attribute(source, element) {
+    return true
+  }
+  let mut child = element.first_child_index
+  while child >= 0 {
+    let entry = elements[child]
+    if format_surgery_subtree_has_identity_attribute(source, elements, entry) {
+      return true
+    }
+    child = entry.next_sibling_index
+  }
+  false
+}
+
+///|
 /// One projecting piece of a run's mapped text, in `w:t`-local UTF-16
 /// coordinates, tagged with whether the batch covers it.
 priv struct FormatPiece {
@@ -1050,9 +1072,10 @@ fn format_surgery_split_run(
       "a partially covered run has no mapped text",
     )
   }
-  // Cloning duplicates every open-tag attribute; an identity-bearing
-  // one (xml:id and friends) must not be duplicated, so the split
-  // refuses.
+  // Cloning duplicates every attribute in its footprint; an
+  // identity-bearing one (xml:id and friends) must not be duplicated,
+  // so the split refuses — for the run's open tag, for every mapped
+  // text element, and for the WHOLE rPr subtree the clones copy.
   if format_surgery_open_tag_has_identity_attribute(source, run_element) {
     raise format_surgery_refuse(
       UnsplittableRun,
@@ -1066,6 +1089,18 @@ fn format_surgery_split_run(
         "a text element carries an identity-bearing attribute a split would duplicate",
       )
     }
+  }
+  match rpr {
+    Some(element) =>
+      if format_surgery_subtree_has_identity_attribute(
+          source, elements, element,
+        ) {
+        raise format_surgery_refuse(
+          UnsplittableRun,
+          "the run properties carry an identity-bearing attribute a split would duplicate",
+        )
+      }
+    None => ()
   }
   // Pieces: per `w:t`, wt-local boundaries at every covered-interval edge.
   let pieces : Array[FormatPiece] = []

@@ -52,24 +52,15 @@ fn assert_format_edits(
   assert_eq(after.to_string(), receipt.expected_projection)
   current_reader_story_text(spliced) |> ignore
   assert_untouched_bytes_survive(bytes, spliced_bytes, byte_edits)
-  // XML ID uniqueness: no split may duplicate an xml:id value.
+  // XML ID uniqueness, through the REAL scan's elements and a
+  // quote-aware attribute walk — every spelling of every element's
+  // identity attributes, not one literal substring.
   let ids : Array[String] = []
-  let mut first_segment = true
-  for segment in spliced.split("xml:id=\"") {
-    if first_segment {
-      first_segment = false
-      continue
+  for element in reprojected.scan.elements() {
+    for value in collect_identity_values(spliced_bytes, element) {
+      assert_false(ids.contains(value), msg="duplicated id " + value)
+      ids.push(value)
     }
-    let text = segment.to_string()
-    let mut value_end = 0
-    while value_end < text.length() &&
-          text.view(start_offset=value_end, end_offset=value_end + 1).to_owned() !=
-          "\"" {
-      value_end += 1
-    }
-    let value = text.view(start_offset=0, end_offset=value_end).to_owned()
-    assert_false(ids.contains(value), msg="duplicated xml:id " + value)
-    ids.push(value)
   }
   // EVERY result run whose projection lies wholly inside the requested
   // span union must satisfy the INDEPENDENT F0 verifier — cross-run,
@@ -1135,5 +1126,87 @@ test "format: identity-bearing attributes refuse the split" {
     spliced.contains(
       "<w:r xml:id=\"r1\"><w:rPr><w:b/><w:bCs/></w:rPr><w:t>abcd</w:t></w:r>",
     ),
+  )
+}
+
+///|
+/// The values of identity-bearing attributes (local name `id` under any
+/// prefix) in one element's open tag — quote-aware, whitespace-tolerant.
+fn collect_identity_values(
+  source : Bytes,
+  element : ScannedElement,
+) -> Array[String] {
+  let values : Array[String] = []
+  let stop = run_surgery_open_tag_end(element)
+  let mut at = element.byte_start + 1
+  while at < stop &&
+        source[at] != b'>' &&
+        source[at] != b'/' &&
+        !is_xml_ws(source[at]) {
+    at += 1
+  }
+  while at < stop {
+    if is_xml_ws(source[at]) {
+      at += 1
+      continue
+    }
+    if source[at] == b'>' || source[at] == b'/' {
+      break
+    }
+    let name_start = at
+    while at < stop && source[at] != b'=' && !is_xml_ws(source[at]) {
+      at += 1
+    }
+    let name_builder = StringBuilder()
+    for index in name_start..<at {
+      if source[index] < b'\x80' {
+        name_builder.write_char(source[index].to_int().unsafe_to_char())
+      }
+    }
+    let (_, attribute_local) = split_qname(name_builder.to_string())
+    while at < stop && source[at] != b'"' && source[at] != b'\'' {
+      at += 1
+    }
+    if at >= stop {
+      break
+    }
+    let quote = source[at]
+    at += 1
+    let value_start = at
+    while at < stop && source[at] != quote {
+      at += 1
+    }
+    if attribute_local == "id" {
+      let value_builder = StringBuilder()
+      for index in value_start..<at {
+        if source[index] < b'\x80' {
+          value_builder.write_char(source[index].to_int().unsafe_to_char())
+        }
+      }
+      values.push(value_builder.to_string())
+    }
+    at += 1
+  }
+  values
+}
+
+///|
+/// Round 4's Medium: the cloned rPr SUBTREE is part of the split
+/// footprint too — an identity on the container or any descendant
+/// refuses.
+test "format: identity inside the rPr subtree refuses the split" {
+  assert_format_refusal(
+    "<w:p><w:r><w:rPr xml:id=\"rp1\"><w:i/></w:rPr><w:t>abcd</w:t></w:r></w:p>",
+    paragraph=0,
+    [format_span(1, 3)],
+    refusal="UnsplittableRun",
+    bold=true,
+  )
+  assert_format_refusal(
+    "<w:p><w:r><w:rPr><w:i xml:id=\"i1\"/></w:rPr><w:t>abcd</w:t></w:r></w:p>",
+    paragraph=0,
+    [format_span(1, 3)],
+    refusal="UnsplittableRun",
+    bold=true,
   )
 }
