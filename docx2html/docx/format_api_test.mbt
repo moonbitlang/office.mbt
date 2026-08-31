@@ -917,3 +917,105 @@ test "format preservation tolerates a split's empty text clone" {
     None,
   )
 }
+
+///|
+/// Round 4's Highs and Medium: the checks must not pass on a document
+/// that cannot hold the formatting, must not lose an rPr's own
+/// attributes, and must not false-fail legal spellings the planner
+/// itself produces.
+test "format readbacks judge coverage, shells, and spellings" {
+  // A selected unit carried by NO run cannot hold direct formatting,
+  // even though a neighbouring run satisfies the request.
+  let runless = format_fixture(
+    "<w:p><w:t>a</w:t><w:r><w:rPr><w:b/><w:bCs/></w:rPr><w:t>b</w:t></w:r></w:p>",
+  )
+  let verdict = @docx.docx_paragraph_direct_format(
+    runless,
+    runless.main_story_source(),
+    path="p[1]",
+    start=0,
+    end=2,
+    format=@docx.docx_direct_format(bold=true),
+  )
+  assert_true(verdict is Some(_))
+  guard verdict is Some(message) else { fail("expected a coverage verdict") }
+  assert_true(message.contains("not carried by any run"), msg=message)
+  // An rPr's OWN attributes are not part of the empty-shell
+  // equivalence: changing one while adding bold is still a change
+  // nobody asked for.
+  let shell_before = format_fixture(
+    "<w:p><w:r><w:rPr w14:textId=\"A\"></w:rPr><w:t>ab</w:t></w:r></w:p>",
+  )
+  let shell_after = format_fixture(
+    "<w:p><w:r><w:rPr w14:textId=\"B\"><w:b/><w:bCs/></w:rPr><w:t>ab</w:t></w:r></w:p>",
+  )
+  assert_true(
+    @docx.docx_paragraph_format_preserved(
+      shell_before,
+      shell_before.main_story_source(),
+      shell_after,
+      shell_after.main_story_source(),
+      path="p[1]",
+      spans=[(0, 2)],
+      format=@docx.docx_direct_format(bold=true),
+    )
+    is Some(_),
+  )
+  // The same attribute kept is faithful.
+  let shell_kept = format_fixture(
+    "<w:p><w:r><w:rPr w14:textId=\"A\"><w:b/><w:bCs/></w:rPr><w:t>ab</w:t></w:r></w:p>",
+  )
+  assert_eq(
+    @docx.docx_paragraph_format_preserved(
+      shell_before,
+      shell_before.main_story_source(),
+      shell_kept,
+      shell_kept.main_story_source(),
+      path="p[1]",
+      spans=[(0, 2)],
+      format=@docx.docx_direct_format(bold=true),
+    ),
+    None,
+  )
+  // A self-closing rPr the planner expands, and a close tag spelled
+  // with whitespace, are both faithful.
+  for
+    spelling in [
+      "<w:p><w:r><w:rPr/><w:t>ab</w:t></w:r></w:p>", "<w:p><w:r><w:rPr ></w:rPr ><w:t>ab</w:t></w:r></w:p>",
+    ] {
+    let before = format_fixture(spelling)
+    let (plan, _) = @docx.plan_docx_format(
+      before,
+      before.main_story_source(),
+      format=@docx.docx_direct_format(bold=true),
+      within="p[1]",
+      range=(0, 2),
+    )
+    let after = format_apply(spelling, plan)
+    assert_eq(
+      @docx.docx_paragraph_format_preserved(
+        before,
+        before.main_story_source(),
+        after,
+        after.main_story_source(),
+        path="p[1]",
+        spans=[(0, 2)],
+        format=@docx.docx_direct_format(bold=true),
+      ),
+      None,
+      msg=spelling,
+    )
+    assert_eq(
+      @docx.docx_paragraph_direct_format(
+        after,
+        after.main_story_source(),
+        path="p[1]",
+        start=0,
+        end=2,
+        format=@docx.docx_direct_format(bold=true),
+      ),
+      None,
+      msg=spelling,
+    )
+  }
+}

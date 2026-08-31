@@ -573,6 +573,28 @@ pub fn docx_paragraph_direct_format(
   }
   let paragraph = projection.paragraphs[target]
   let base = paragraph.projection_start
+  // EVERY selected unit must belong to a run: text the tolerant reader
+  // admits directly under the paragraph has no run to carry direct
+  // formatting, so a range covering it can never be satisfied — and
+  // judging only the runs that happen to exist would call that a pass.
+  for unit in start..<end {
+    let mut carried = false
+    for contribution in paragraph.contributions {
+      guard contribution.kind is ProjectedText(_) else { continue }
+      let local_start = contribution.projection_start - base
+      let local_end = contribution.projection_end - base
+      if local_start <= unit && unit < local_end {
+        if contribution.run_source is Some(_) {
+          carried = true
+        }
+      }
+    }
+    guard carried else {
+      return Some(
+        "unit \{unit} of '\{path}' is not carried by any run, so it cannot hold direct formatting",
+      )
+    }
+  }
   // Every run holding selected text must carry the properties; a run
   // whose text lies only OUTSIDE the span is none of this check's
   // business.
@@ -914,7 +936,11 @@ fn docx_format_filter_region(
     let open_end = cursor + 1
     let self_closing = bytes[cursor - 1] == b'/'
     if self_closing {
-      if !touched.contains(property_name) {
+      if property_name == "rPr" {
+        // `<w:rPr/>` and an rPr the filter empties say the same thing;
+        // only its ATTRIBUTES distinguish it from no rPr at all.
+        builder.write_string(docx_format_shell(bytes, name_end, cursor - 1, ""))
+      } else if !touched.contains(property_name) {
         builder.write_string(format_surgery_decode(bytes[at:open_end]))
       }
       at = open_end
@@ -922,23 +948,25 @@ fn docx_format_filter_region(
     }
     // Paired element: find its matching close tag by depth over its own
     // qualified name.
-    let close = "</\{qname}>"
+    let close_marker = "</\{qname}"
     let open_marker = "<\{qname}"
     let mut depth = 1
     let mut probe = open_end
     let mut content_end = -1
     while probe < to {
       if bytes[probe] == b'<' {
-        if docx_format_matches_at(bytes, probe, close) {
+        // A close tag may carry whitespace before its '>', and a
+        // LONGER name that merely starts with this one is a different
+        // element.
+        if docx_format_matches_at(bytes, probe, close_marker) &&
+          docx_format_name_ends_at(bytes, probe + close_marker.length(), to) {
           depth -= 1
           if depth == 0 {
             content_end = probe
             break
           }
-          probe += close.length()
-          continue
-        }
-        if docx_format_matches_at(bytes, probe, open_marker) {
+        } else if docx_format_matches_at(bytes, probe, open_marker) &&
+          docx_format_name_ends_at(bytes, probe + open_marker.length(), to) {
           depth += 1
         }
       }
@@ -948,21 +976,29 @@ fn docx_format_filter_region(
       builder.write_string(format_surgery_decode(bytes[at:to]))
       return builder.to_string()
     }
-    let element_end = content_end + close.length()
+    // The close tag runs to its own '>', whitespace included.
+    let mut close_cursor = content_end + close_marker.length()
+    while close_cursor < to && bytes[close_cursor] != b'>' {
+      close_cursor += 1
+    }
+    let element_end = close_cursor + 1
     if property_name == "rPr" {
-      // An rPr that holds nothing but touched properties says the same
-      // as no rPr at all — otherwise a run that GAINED its first
-      // property would read as a change to properties nobody named.
+      // An rPr holding nothing but touched properties says the same as
+      // no rPr at all — otherwise a run that GAINED its first property
+      // would read as a change to properties nobody named. Its
+      // ATTRIBUTES are not part of that equivalence: they survive, so
+      // an unrelated change to them is still a change.
       let remaining = docx_format_filter_region(
         bytes, open_end, content_end, touched,
       )
-      if remaining.trim(chars=" \t\n\r").to_string() != "" {
-        builder.write_string(format_surgery_decode(bytes[at:open_end]))
-        builder.write_string(remaining)
-        builder.write_string(
-          format_surgery_decode(bytes[content_end:element_end]),
-        )
-      }
+      builder.write_string(
+        docx_format_shell(
+          bytes,
+          name_end,
+          open_end - 1,
+          remaining.trim(chars=" \t\n\r").to_string(),
+        ),
+      )
     } else if !touched.contains(property_name) {
       builder.write_string(format_surgery_decode(bytes[at:element_end]))
     }
@@ -983,4 +1019,46 @@ fn docx_format_matches_at(bytes : BytesView, at : Int, needle : String) -> Bool 
     }
   }
   true
+}
+
+///|
+/// A canonical `rPr` shell: its attributes as spelled, with the
+/// surviving children between. An attribute-less shell holding nothing
+/// renders as "", so an absent rPr, a self-closing one, and one the
+/// filter emptied all compare equal — while an attribute keeps the
+/// shell visible, because a change to one is a change nobody named.
+fn docx_format_shell(
+  bytes : BytesView,
+  attributes_from : Int,
+  attributes_to : Int,
+  children : String,
+) -> String raise DocxError {
+  let attributes = if attributes_to > attributes_from {
+    format_surgery_decode(bytes[attributes_from:attributes_to])
+    .trim(chars=" \t\n\r")
+    .to_string()
+  } else {
+    ""
+  }
+  if attributes == "" && children == "" {
+    return ""
+  }
+  "<rPr \{attributes}>\{children}</rPr>"
+}
+
+///|
+/// Whether a name ends at this offset — the next byte may not continue
+/// an XML name, so `<w:rPrChange` never counts as `<w:rPr`.
+fn docx_format_name_ends_at(bytes : BytesView, at : Int, to : Int) -> Bool {
+  if at >= to {
+    return true
+  }
+  let byte = bytes[at]
+  !((byte >= b'a' && byte <= b'z') ||
+  (byte >= b'A' && byte <= b'Z') ||
+  (byte >= b'0' && byte <= b'9') ||
+  byte == b'_' ||
+  byte == b'-' ||
+  byte == b'.' ||
+  byte == b':')
 }
