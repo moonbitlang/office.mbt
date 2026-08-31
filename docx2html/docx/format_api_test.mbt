@@ -1811,3 +1811,64 @@ test "format preservation distinguishes look-alike run occurrences" {
     None,
   )
 }
+
+///|
+/// Round 15: the same spelling can mean a different vocabulary. An
+/// inherited rebinding changes what a property IS without changing a
+/// byte of it, so preservation pins the namespace environment the
+/// paragraph's own elements demonstrate.
+test "format preservation pins the namespace environment" {
+  let before = format_fixture(
+    "<w:p xmlns:x=\"http://schemas.microsoft.com/office/word/2010/wordml\"><w:r><w:rPr><x:glow/></w:rPr><w:t>ab</w:t></w:r></w:p>",
+  )
+  // Bold arrives as asked, but `x` now names a different vocabulary:
+  // the extension formatting silently became something else.
+  let rebound = format_fixture(
+    "<w:p xmlns:x=\"http://schemas.microsoft.com/office/word/2012/wordml\"><w:r><w:rPr><w:b/><w:bCs/><x:glow/></w:rPr><w:t>ab</w:t></w:r></w:p>",
+  )
+  assert_eq(
+    @docx.docx_paragraph_direct_format(
+      rebound,
+      rebound.main_story_source(),
+      path="p[1]",
+      start=0,
+      end=2,
+      format=@docx.docx_direct_format(bold=true),
+    ),
+    None,
+  )
+  let verdict = @docx.docx_paragraph_format_preserved(
+    before,
+    before.main_story_source(),
+    rebound,
+    rebound.main_story_source(),
+    path="p[1]",
+    spans=[(0, 2)],
+    format=@docx.docx_direct_format(bold=true),
+  )
+  assert_true(verdict is Some(_))
+  guard verdict is Some(message) else { fail("expected a binding verdict") }
+  assert_true(message.contains("namespace bindings"), msg=message)
+  // The planner's own output keeps the binding, and preserves.
+  let body = "<w:p xmlns:x=\"http://schemas.microsoft.com/office/word/2010/wordml\"><w:r><w:rPr><x:glow/></w:rPr><w:t>ab</w:t></w:r></w:p>"
+  let (plan, _) = @docx.plan_docx_format(
+    before,
+    before.main_story_source(),
+    format=@docx.docx_direct_format(bold=true),
+    within="p[1]",
+    range=(0, 2),
+  )
+  let after = format_apply(body, plan)
+  assert_eq(
+    @docx.docx_paragraph_format_preserved(
+      before,
+      before.main_story_source(),
+      after,
+      after.main_story_source(),
+      path="p[1]",
+      spans=[(0, 2)],
+      format=@docx.docx_direct_format(bold=true),
+    ),
+    None,
+  )
+}

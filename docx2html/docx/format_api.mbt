@@ -699,12 +699,17 @@ pub fn docx_paragraph_format_preserved(
   // positive check passes and the projection is unchanged.
   let touched = docx_format_touched_properties(format)
   guard docx_format_paragraph_provenance(before, before_story, path~)
-    is Some((original_units, original_silent, original_mark)) else {
+    is Some((original_units, original_silent, original_mark, original_bindings)) else {
     return Some("the path '\{path}' names no single paragraph before the edit")
   }
   guard docx_format_paragraph_provenance(after, after_story, path~)
-    is Some((result_units, result_silent, result_mark)) else {
+    is Some((result_units, result_silent, result_mark, result_bindings)) else {
     return Some("the path '\{path}' names no single paragraph after the edit")
+  }
+  guard original_bindings == result_bindings else {
+    return Some(
+      "the namespace bindings of '\{path}' changed, so its properties may no longer mean what they did",
+    )
   }
   guard original_mark == result_mark else {
     return Some(
@@ -772,7 +777,7 @@ fn docx_format_paragraph_provenance(
   annotated : DocxAnnotatedResult,
   story : DocxStoryPartSource,
   path~ : String,
-) -> (Array[String], Array[String], String)? raise DocxError {
+) -> (Array[String], Array[String], String, String)? raise DocxError {
   let part = story.part()
   guard annotated.reader_projections.get(part) is Some(projection) else {
     return None
@@ -980,7 +985,23 @@ fn docx_format_paragraph_provenance(
     )
   }
   let mark = mark_builder.to_string()
-  Some((units, silent, mark))
+  // The namespace environment the paragraph's own elements
+  // demonstrate: prefix to resolved URI. Literal property bytes cannot
+  // see an INHERITED rebinding — the same `x:glow` spelling meaning a
+  // different vocabulary — but this does, and a faithful edit never
+  // changes it.
+  let bindings : Array[String] = []
+  let seen_bindings : Map[String, Bool] = Map([])
+  docx_format_collect_bindings(
+    bytes, elements, paragraph_head_identity, bindings, seen_bindings,
+  )
+  bindings.sort()
+  let environment = StringBuilder()
+  for entry in bindings {
+    environment.write_string(entry)
+    environment.write_string("|")
+  }
+  Some((units, silent, mark, environment.to_string()))
 }
 
 ///|
@@ -1456,4 +1477,30 @@ fn docx_format_carrier_key(
     index -= 1
   }
   builder.to_string()
+}
+
+///|
+/// Every prefix-to-URI binding the paragraph's own elements
+/// demonstrate. An element's spelling gives the prefix and the scan
+/// gives its resolved URI, so a rebinding inherited from an ancestor
+/// shows up here even though no property's bytes changed.
+fn docx_format_collect_bindings(
+  bytes : BytesView,
+  elements : Array[ScannedElement],
+  element_identity : Int,
+  out : Array[String],
+  seen : Map[String, Bool],
+) -> Unit raise DocxError {
+  let element = elements[element_identity]
+  let prefix = format_surgery_element_prefix(bytes, element)
+  let entry = "\{prefix}=\{element.uri}"
+  if seen.get(entry) is None {
+    seen[entry] = true
+    out.push(entry)
+  }
+  let mut child = element.first_child_index
+  while child >= 0 {
+    docx_format_collect_bindings(bytes, elements, child, out, seen)
+    child = elements[child].next_sibling_index
+  }
 }
