@@ -196,12 +196,13 @@ pub fn DocxAnnotatedResult::story_root_span(Self, String) -> NodeSpan?
 pub fn DocxAnnotatedResult::story_row_span(Self, String, String) -> NodeSpan?
 pub fn DocxAnnotatedResult::story_run_span(Self, String, String) -> NodeSpan?
 
-pub(all) struct DocxDirectFormat {
-  bold : Bool?
-  italic : Bool?
-  underline : Bool?
-  color : String?
+pub struct DocxDirectFormat {
+  // private fields
 } derive(Eq, @debug.Debug)
+pub fn DocxDirectFormat::bold(Self) -> Bool?
+pub fn DocxDirectFormat::color(Self) -> String?
+pub fn DocxDirectFormat::italic(Self) -> Bool?
+pub fn DocxDirectFormat::underline(Self) -> Bool?
 
 pub(all) struct DocxInsertContent {
   style : String?
