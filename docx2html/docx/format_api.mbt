@@ -706,7 +706,6 @@ pub fn docx_paragraph_format_preserved(
   // positive check passes and the projection is unchanged.
   let touched = docx_format_touched_properties(format)
   let filtered : Map[String, String] = Map([])
-  let raw : Map[String, String] = Map([])
   guard docx_format_paragraph_provenance(before, before_story, path~)
     is Some((original_units, original_silent, original_mark)) else {
     return Some("the path '\{path}' names no single paragraph before the edit")
@@ -741,8 +740,8 @@ pub fn docx_paragraph_format_preserved(
   }
   for unit in 0..<original_units.length() {
     let selected = selected_units[unit]
-    let (original_properties, original_digest) = original_units[unit]
-    let (result_properties, result_digest) = result_units[unit]
+    let (original_properties, original_key, original_digest) = original_units[unit]
+    let (result_properties, result_key, result_digest) = result_units[unit]
     // Units of one run share their properties, so both the raw and the
     // filtered comparisons are made on FINGERPRINTS computed once per
     // distinct text: comparing or hashing the whole property bytes per
@@ -760,16 +759,20 @@ pub fn docx_paragraph_format_preserved(
       // results are cached by their text: consecutive units of one run
       // share properties, and re-filtering them per unit would cost
       // text times property bytes.
-      guard docx_format_filtered(original_properties, touched, filtered~) ==
-        docx_format_filtered(result_properties, touched, filtered~) else {
+      guard docx_format_filtered(
+          original_properties,
+          original_key,
+          touched,
+          filtered~,
+        ) ==
+        docx_format_filtered(result_properties, result_key, touched, filtered~) else {
         return Some(
           "unit \{unit} of '\{path}' lost or gained a run property the request never named",
         )
       }
       continue
     }
-    guard docx_format_raw(original_properties, raw~) ==
-      docx_format_raw(result_properties, raw~) else {
+    guard original_key == result_key else {
       return Some(
         "unit \{unit} of '\{path}' lies outside every requested span but its run properties changed",
       )
@@ -799,7 +802,7 @@ fn docx_format_paragraph_provenance(
   annotated : DocxAnnotatedResult,
   story : DocxStoryPartSource,
   path~ : String,
-) -> (Array[(String, String)], Array[String], String)? raise DocxError {
+) -> (Array[(String, String, String)], Array[String], String)? raise DocxError {
   let part = story.part()
   guard annotated.reader_projections.get(part) is Some(projection) else {
     return None
@@ -826,11 +829,11 @@ fn docx_format_paragraph_provenance(
   let SourceElementId(paragraph_head_identity) = paragraph.sources[0].source
   let base = paragraph.projection_start
   let width = paragraph.projection_end - base
-  let units : Array[(String, String)] = []
+  let units : Array[(String, String, String)] = []
   for _ in 0..<width {
     // A unit no run claims — text the tolerant reader admits directly
     // under the paragraph — has no properties to preserve, and says so.
-    units.push(("", ""))
+    units.push(("", "0", "0"))
   }
   // Namespace scopes and declaration tables, memoized per element: an
   // ancestor's declarations are read once, and an element that
@@ -844,6 +847,7 @@ fn docx_format_paragraph_provenance(
   // small text elements is legal.
   let properties_by_run : Map[Int, String] = Map([])
   let digests_by_run : Map[Int, String] = Map([])
+  let keys_by_run : Map[Int, String] = Map([])
   for contribution in paragraph.contributions {
     guard contribution.kind is ProjectedText(_) else { continue }
     guard contribution.run_source is Some(run_source) else { continue }
@@ -863,6 +867,17 @@ fn docx_format_paragraph_provenance(
     // The bindings this run's own properties depend on: two runs may
     // each bind the same prefix to a different vocabulary, so the
     // digest belongs to the unit, not to the paragraph.
+    // A small key for these properties, computed ONCE per run: the
+    // comparisons below are made per UNIT, and hashing the whole
+    // property text apiece would cost the run's length times its size.
+    let properties_key = match keys_by_run.get(run_identity) {
+      Some(known) => known
+      None => {
+        let read = docx_format_fingerprint(properties)
+        keys_by_run[run_identity] = read
+        read
+      }
+    }
     // Rooted at the PROPERTIES, not the whole run: splitting
     // legitimately adds `xml:space` to a text element, and a digest
     // that reached the text would call that a change of meaning.
@@ -894,7 +909,7 @@ fn docx_format_paragraph_provenance(
     let to = contribution.projection_end - base
     for unit in from..<to {
       if unit >= 0 && unit < width {
-        units[unit] = (properties, digest)
+        units[unit] = (properties, properties_key, digest)
       }
     }
   }
@@ -1599,16 +1614,19 @@ fn docx_format_run_signature_key(
 /// unit would cost the text's length times the property bytes.
 fn docx_format_filtered(
   properties : String,
+  properties_key : String,
   touched : Array[String],
   filtered~ : Map[String, String],
 ) -> String raise DocxError {
-  match filtered.get(properties) {
+  // Keyed by the properties' own small fingerprint: keying by the text
+  // would hash every byte of it on each lookup.
+  match filtered.get(properties_key) {
     Some(known) => known
     None => {
       let result = docx_format_fingerprint(
         docx_format_without(properties, touched),
       )
-      filtered[properties] = result
+      filtered[properties_key] = result
       result
     }
   }
@@ -1637,6 +1655,18 @@ fn docx_format_binding_digests(
 ) -> Map[Int, UInt] raise DocxError {
   let digests : Map[Int, UInt] = Map([])
   let scope : Map[String, String] = Map([])
+  // Each binding's contribution, hashed ONCE when it is declared: a
+  // long URI used by many descendants would otherwise be rehashed per
+  // use.
+  let scope_hash : Map[String, UInt] = Map([])
+  fn binding_hash(prefix : String, uri : String) -> UInt {
+    let mut hash : UInt = 2166136261
+    for unit in "\{prefix}=\{uri}".code_units() {
+      hash = hash ^ unit.to_uint()
+      hash = hash * 16777619
+    }
+    hash
+  }
   fn walk(identity : Int) -> UInt raise DocxError {
     let element = elements[identity]
     // Declarations on this element, parsed in ONE pass over its tag,
@@ -1686,10 +1716,20 @@ fn docx_format_binding_digests(
       if attribute == "xmlns" {
         undo.push(("", scope.get("")))
         scope[""] = value
+        scope_hash[""] = if is_wml_uri(value) {
+          0
+        } else {
+          binding_hash("", value)
+        }
       } else if attribute.has_prefix("xmlns:") {
         let declared = attribute[6:].to_owned()
         undo.push((declared, scope.get(declared)))
         scope[declared] = value
+        scope_hash[declared] = if is_wml_uri(value) {
+          0
+        } else {
+          binding_hash(declared, value)
+        }
       } else {
         let (attribute_prefix, _) = split_qname(attribute)
         used.push(attribute_prefix)
@@ -1699,23 +1739,20 @@ fn docx_format_binding_digests(
     // depend on, folded order-independently.
     let mut own : UInt = 0
     for prefix in used {
-      let uri = if prefix == "xml" {
-        "http://www.w3.org/XML/1998/namespace"
-      } else {
-        match scope.get(prefix) {
-          Some(known) => known
-          None => if prefix == element_prefix { element.uri } else { "?" }
-        }
+      // Declared bindings answer from their precomputed hash; only the
+      // element's own fallback is hashed here, once per element.
+      match scope_hash.get(prefix) {
+        Some(known) => own = own + known
+        None =>
+          if prefix == "xml" {
+            ()
+          } else {
+            let uri = if prefix == element_prefix { element.uri } else { "?" }
+            if !is_wml_uri(uri) {
+              own = own + binding_hash(prefix, uri)
+            }
+          }
       }
-      if is_wml_uri(uri) {
-        continue
-      }
-      let mut hash : UInt = 2166136261
-      for unit in "\{prefix}=\{uri}".code_units() {
-        hash = hash ^ unit.to_uint()
-        hash = hash * 16777619
-      }
-      own = own + hash
     }
     let mut total = own
     let mut child = element.first_child_index
@@ -1726,8 +1763,18 @@ fn docx_format_binding_digests(
     digests[identity] = total
     for entry in undo {
       match entry.1 {
-        Some(previous) => scope[entry.0] = previous
-        None => scope.remove(entry.0)
+        Some(previous) => {
+          scope[entry.0] = previous
+          scope_hash[entry.0] = if is_wml_uri(previous) {
+            0
+          } else {
+            binding_hash(entry.0, previous)
+          }
+        }
+        None => {
+          scope.remove(entry.0)
+          scope_hash.remove(entry.0)
+        }
       }
     }
     total
@@ -1781,27 +1828,23 @@ fn docx_format_binding_digests(
       at += 1
       if attribute == "xmlns" {
         scope[""] = value
+        scope_hash[""] = if is_wml_uri(value) {
+          0
+        } else {
+          binding_hash("", value)
+        }
       } else if attribute.has_prefix("xmlns:") {
-        scope[attribute[6:].to_owned()] = value
+        let declared = attribute[6:].to_owned()
+        scope[declared] = value
+        scope_hash[declared] = if is_wml_uri(value) {
+          0
+        } else {
+          binding_hash(declared, value)
+        }
       }
     }
     index -= 1
   }
   walk(root_identity) |> ignore
   digests
-}
-
-///|
-/// A properties text's own fingerprint, memoized by that text: units of
-/// one run share it, and comparing the bytes per unit would cost the
-/// run's text length times its property size.
-fn docx_format_raw(properties : String, raw~ : Map[String, String]) -> String {
-  match raw.get(properties) {
-    Some(known) => known
-    None => {
-      let result = docx_format_fingerprint(properties)
-      raw[properties] = result
-      result
-    }
-  }
 }

@@ -2285,9 +2285,17 @@ test "format preservation stays bounded on adversarial shapes" {
   for _ in 0..<80 {
     deep.write_string("</w:foo>")
   }
+  // LONG URIs, declared once and used by many descendants: a binding's
+  // hash must be paid where it is declared, not where it is used.
+  let padding = StringBuilder()
+  for _ in 0..<400 {
+    padding.write_string("x")
+  }
   let declarations = StringBuilder()
   for index in 0..<600 {
-    declarations.write_string(" xmlns:p\{index}=\"urn:p:\{index}\"")
+    declarations.write_string(
+      " xmlns:p\{index}=\"urn:p:\{padding.to_string()}:\{index}\"",
+    )
   }
   // A long selected run carrying a HEAVY extension block: the unit
   // comparison must not cost the text's length times the property
