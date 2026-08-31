@@ -701,14 +701,22 @@ pub fn docx_paragraph_format_preserved(
       "'\{path}' projected \{original_units.length()} unit(s) before the edit and \{result_units.length()} after",
     )
   }
-  for unit in 0..<original_units.length() {
-    let mut selected = false
-    for span in spans {
-      let (from, to) = span
-      if from <= unit && unit < to {
-        selected = true
+  // The selection, marked once: testing every span per unit is
+  // quadratic when a paragraph carries many spans.
+  let selected_units : Array[Bool] = []
+  for _ in 0..<original_units.length() {
+    selected_units.push(false)
+  }
+  for span in spans {
+    let (from, to) = span
+    for unit in from..<to {
+      if unit >= 0 && unit < selected_units.length() {
+        selected_units[unit] = true
       }
     }
+  }
+  for unit in 0..<original_units.length() {
+    let selected = selected_units[unit]
     if selected {
       // The properties the request does NOT name must survive.
       guard docx_format_without(original_units[unit], touched) ==
@@ -773,6 +781,7 @@ fn docx_format_paragraph_provenance(
   }
   guard target >= 0 && found == 1 else { return None }
   let paragraph = projection.paragraphs[target]
+  let SourceElementId(paragraph_head_identity) = paragraph.sources[0].source
   let base = paragraph.projection_start
   let width = paragraph.projection_end - base
   let units : Array[String] = []
@@ -811,14 +820,17 @@ fn docx_format_paragraph_provenance(
     }
     projecting[identity] = true
   }
-  // Runs that project no text: a note reference alone in its run still
-  // paints, and formatting it would be collateral no span asked for.
+  // Every PHYSICAL run of this paragraph that carries no projected
+  // unit — including runs the reader never registered because it
+  // suppressed their container (a `w:del` subtree is reduced to one
+  // trace). A note reference alone in its run still paints, and a
+  // deleted run's properties are still OOXML nobody asked to change.
   let silent : Array[String] = []
-  for run in paragraph.runs {
-    let SourceElementId(run_projection_identity) = run.source
-    let projects = projecting.get(run_projection_identity) == Some(true)
+  let physical : Array[Int] = []
+  docx_format_collect_runs(elements, paragraph_head_identity, physical)
+  for run_identity in physical {
+    let projects = projecting.get(run_identity) == Some(true)
     guard !projects else { continue }
-    let SourceElementId(run_identity) = run.source
     // A run holding only properties and EMPTY text elements paints
     // nothing, and splitting legitimately creates one when a run began
     // with an empty `w:t`. Only a run carrying something else — a note
@@ -843,7 +855,7 @@ fn docx_format_paragraph_provenance(
   // `w:pPr/w:rPr`. It projects nothing, so no unit or run speaks for
   // it — and no format request in v1 touches it, which makes any
   // change to it collateral.
-  let SourceElementId(paragraph_head) = paragraph.sources[0].source
+  let paragraph_head = paragraph_head_identity
   // EVERY direct pPr in document order: the reader takes the first,
   // the planner refuses none, and a change to any of them is
   // collateral — so a later empty one must not erase an earlier
@@ -853,9 +865,12 @@ fn docx_format_paragraph_provenance(
   while paragraph_child >= 0 {
     let entry = elements[paragraph_child]
     if is_wml_uri(entry.uri) && entry.local_name == "pPr" {
+      // The WHOLE pPr: alignment, spacing, numbering and the mark's
+      // own rPr alike. No v1 request touches any of it, so anything
+      // that differs is collateral.
       mark_builder.write_string("|")
       mark_builder.write_string(
-        docx_format_run_properties(bytes, elements, entry),
+        format_surgery_decode(bytes[entry.byte_start:entry.byte_end]),
       )
     }
     paragraph_child = entry.next_sibling_index
@@ -1188,4 +1203,57 @@ fn docx_format_touched_residue(
   } else {
     "<\{qname}\{residue}>"
   }
+}
+
+///|
+/// Every `w:r` in this paragraph's physical subtree, in document order,
+/// without descending into a nested `w:p` — that paragraph answers for
+/// its own runs.
+fn docx_format_collect_runs(
+  elements : Array[ScannedElement],
+  element_identity : Int,
+  out : Array[Int],
+) -> Unit {
+  let mut child = elements[element_identity].first_child_index
+  while child >= 0 {
+    let entry = elements[child]
+    if is_wml_uri(entry.uri) && entry.local_name == "p" {
+      child = entry.next_sibling_index
+      continue
+    }
+    if is_wml_uri(entry.uri) && entry.local_name == "r" {
+      out.push(entry.identity)
+    }
+    docx_format_collect_runs(elements, entry.identity, out)
+    child = entry.next_sibling_index
+  }
+}
+
+///|
+/// The positive check over MANY spans of one paragraph, sharing the
+/// carrier index. F2b verifies a paragraph's whole batch this way
+/// rather than paying for the index once per span.
+pub fn docx_paragraph_direct_format_spans(
+  annotated : DocxAnnotatedResult,
+  story : DocxStoryPartSource,
+  path~ : String,
+  spans~ : Array[(Int, Int)],
+  format~ : DocxDirectFormat,
+) -> String? raise DocxError {
+  for span in spans {
+    let (start, end) = span
+    match
+      docx_paragraph_direct_format(
+        annotated,
+        story,
+        path~,
+        start~,
+        end~,
+        format~,
+      ) {
+      Some(discrepancy) => return Some(discrepancy)
+      None => ()
+    }
+  }
+  None
 }

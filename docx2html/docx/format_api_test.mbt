@@ -1236,3 +1236,134 @@ test "format preservation reads every paragraph mark" {
     is Some(_),
   )
 }
+
+///|
+/// Round 7: preservation must see ALL of a paragraph's formatting —
+/// paragraph properties beyond the mark's own rPr, and runs the reader
+/// never registered because it suppressed their container.
+test "format preservation sees paragraph properties and suppressed runs" {
+  // Alignment is paragraph formatting no v1 request authorizes.
+  let aligned = format_fixture(
+    "<w:p><w:pPr><w:jc w:val=\"left\"/></w:pPr><w:r><w:t>ab</w:t></w:r></w:p>",
+  )
+  let realigned = format_fixture(
+    "<w:p><w:pPr><w:jc w:val=\"right\"/></w:pPr><w:r><w:rPr><w:b/><w:bCs/></w:rPr><w:t>ab</w:t></w:r></w:p>",
+  )
+  assert_eq(
+    @docx.docx_paragraph_direct_format(
+      realigned,
+      realigned.main_story_source(),
+      path="p[1]",
+      start=0,
+      end=2,
+      format=@docx.docx_direct_format(bold=true),
+    ),
+    None,
+  )
+  assert_true(
+    @docx.docx_paragraph_format_preserved(
+      aligned,
+      aligned.main_story_source(),
+      realigned,
+      realigned.main_story_source(),
+      path="p[1]",
+      spans=[(0, 2)],
+      format=@docx.docx_direct_format(bold=true),
+    )
+    is Some(_),
+  )
+  // A deleted run's properties are OOXML nobody asked to change, even
+  // though the reader reduces its container to one suppressed trace.
+  let deleted = format_fixture(
+    "<w:p><w:r><w:t>ab</w:t></w:r><w:del w:id=\"1\" w:author=\"A\" w:date=\"2026-01-01T00:00:00Z\"><w:r><w:rPr><w:i/><w:iCs/></w:rPr><w:delText>x</w:delText></w:r></w:del></w:p>",
+  )
+  let repainted = format_fixture(
+    "<w:p><w:r><w:rPr><w:b/><w:bCs/></w:rPr><w:t>ab</w:t></w:r><w:del w:id=\"1\" w:author=\"A\" w:date=\"2026-01-01T00:00:00Z\"><w:r><w:rPr><w:u w:val=\"single\"/></w:rPr><w:delText>x</w:delText></w:r></w:del></w:p>",
+  )
+  assert_eq(
+    @docx.docx_paragraph_direct_format(
+      repainted,
+      repainted.main_story_source(),
+      path="p[1]",
+      start=0,
+      end=2,
+      format=@docx.docx_direct_format(bold=true),
+    ),
+    None,
+  )
+  assert_true(
+    @docx.docx_paragraph_format_preserved(
+      deleted,
+      deleted.main_story_source(),
+      repainted,
+      repainted.main_story_source(),
+      path="p[1]",
+      spans=[(0, 2)],
+      format=@docx.docx_direct_format(bold=true),
+    )
+    is Some(_),
+  )
+  // The planner's own faithful output over the same shapes preserves.
+  let body = "<w:p><w:pPr><w:jc w:val=\"left\"/></w:pPr><w:r><w:t>ab</w:t></w:r><w:del w:id=\"1\" w:author=\"A\" w:date=\"2026-01-01T00:00:00Z\"><w:r><w:rPr><w:i/><w:iCs/></w:rPr><w:delText>x</w:delText></w:r></w:del></w:p>"
+  let before = format_fixture(body)
+  let (plan, _) = @docx.plan_docx_format(
+    before,
+    before.main_story_source(),
+    format=@docx.docx_direct_format(bold=true),
+    within="p[1]",
+    range=(0, 2),
+  )
+  let after = format_apply(body, plan)
+  assert_eq(
+    @docx.docx_paragraph_format_preserved(
+      before,
+      before.main_story_source(),
+      after,
+      after.main_story_source(),
+      path="p[1]",
+      spans=[(0, 2)],
+      format=@docx.docx_direct_format(bold=true),
+    ),
+    None,
+  )
+}
+
+///|
+/// The batched positive check answers for a whole paragraph's spans,
+/// so a transaction pays for the carrier index once.
+test "format verifies many spans of a paragraph together" {
+  let body = "<w:p><w:r><w:t>ab cd ab</w:t></w:r></w:p>"
+  let annotated = format_fixture(body)
+  let (plan, receipt) = @docx.plan_docx_format(
+    annotated,
+    annotated.main_story_source(),
+    format=@docx.docx_direct_format(bold=true),
+    text="ab",
+  )
+  let after = format_apply(body, plan)
+  let spans : Array[(Int, Int)] = []
+  for span in receipt.spans() {
+    spans.push((span.start(), span.end()))
+  }
+  assert_eq(
+    @docx.docx_paragraph_direct_format_spans(
+      after,
+      after.main_story_source(),
+      path="p[1]",
+      spans~,
+      format=@docx.docx_direct_format(bold=true),
+    ),
+    None,
+  )
+  // An unformatted span in the same batch is reported.
+  assert_true(
+    @docx.docx_paragraph_direct_format_spans(
+      after,
+      after.main_story_source(),
+      path="p[1]",
+      spans=[(0, 2), (3, 5)],
+      format=@docx.docx_direct_format(bold=true),
+    )
+    is Some(_),
+  )
+}

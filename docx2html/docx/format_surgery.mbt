@@ -794,6 +794,10 @@ fn plan_paragraph_format_edits(
 
   // The set of touched runs, in first-touch order.
   let touched_runs : Array[ReaderProjectionRun] = []
+  // Membership by identity: a growing linear scan is quadratic when a
+  // span crosses many runs, and a paragraph of many small runs is
+  // legal.
+  let touched_seen : Map[Int, Bool] = Map([])
   for ordinal, span in requested {
     // Zero-width barriers strictly inside the span refuse.
     for contribution in paragraph.contributions {
@@ -887,13 +891,9 @@ fn plan_paragraph_format_edits(
           "span \{ordinal} in paragraph \{paragraph_index}",
         )
       }
-      let mut seen = false
-      for existing in touched_runs {
-        if existing.source == run.source {
-          seen = true
-        }
-      }
-      if !seen {
+      let SourceElementId(touched_identity) = run.source
+      if touched_seen.get(touched_identity) is None {
+        touched_seen[touched_identity] = true
         touched_runs.push(run)
       }
     }

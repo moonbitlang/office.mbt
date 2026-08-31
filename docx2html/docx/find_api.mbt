@@ -538,6 +538,7 @@ pub fn find_docx_matches(
       }
       // The runs and source kinds the match actually draws from.
       let runs : Array[String] = []
+      let seen_runs : Map[Int, Bool] = Map([])
       let kinds : Array[String] = []
       let base = paragraph.projection_start
       for contribution in paragraph.contributions {
@@ -551,8 +552,12 @@ pub fn find_docx_matches(
           kinds.push(kind)
         }
         if contribution.run_source is Some(SourceElementId(run_identity)) {
+          // Membership by identity: a growing linear scan is quadratic
+          // when a candidate spans many runs, and a paragraph of many
+          // small runs is legal.
           if run_paths.get(elements[run_identity].byte_start) is Some(run_path) &&
-            !runs.contains(run_path) {
+            seen_runs.get(run_identity) is None {
+            seen_runs[run_identity] = true
             runs.push(run_path)
           }
         }
