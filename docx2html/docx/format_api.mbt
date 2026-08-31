@@ -839,8 +839,12 @@ fn docx_format_paragraph_provenance(
   // ancestor's declarations are read once, and an element that
   // declares nothing shares its parent's scope outright.
   // Every element's subtree binding digest, computed in ONE pass.
+  let namespace_tokens : Map[Int, UInt] = Map([])
   let binding_digests = docx_format_binding_digests(
-    bytes, elements, paragraph_head_identity,
+    bytes,
+    elements,
+    paragraph_head_identity,
+    tokens=namespace_tokens,
   )
   // A run's properties, read ONCE per run: recomputing them for every
   // contribution walks its children again and again, and a run of many
@@ -1033,6 +1037,7 @@ fn docx_format_paragraph_provenance(
       run_offsets~,
       signatures~,
       keys~,
+      namespace_tokens~,
     )
     silent.push(
       "\{owner_path}\u{1}\{docx_format_fingerprint(format_surgery_decode(bytes[entry.byte_start:entry.byte_end]))}\u{1}\{binding_digests.get(carrier_identity).unwrap_or(0)}",
@@ -1068,6 +1073,7 @@ fn docx_format_paragraph_provenance(
         run_offsets~,
         signatures~,
         keys~,
+        namespace_tokens~,
       ),
     )
     mark_builder.write_string("=")
@@ -1534,6 +1540,7 @@ fn docx_format_carrier_key(
   run_offsets~ : Map[Int, Int],
   signatures~ : Map[Int, String],
   keys~ : Map[Int, String],
+  namespace_tokens~ : Map[Int, UInt],
 ) -> String raise DocxError {
   if element_identity < 0 ||
     element_identity >= elements.length() ||
@@ -1554,7 +1561,7 @@ fn docx_format_carrier_key(
         )
         "r@\{offset}#{\{signature}}"
       } else {
-        "\{entry.uri}:\{entry.local_name}[\{entry.same_name_ordinal}]"
+        "\{namespace_tokens.get(element_identity).unwrap_or(0)}:\{entry.local_name}[\{entry.same_name_ordinal}]"
       }
       let parent = docx_format_carrier_key(
         bytes,
@@ -1564,6 +1571,7 @@ fn docx_format_carrier_key(
         run_offsets~,
         signatures~,
         keys~,
+        namespace_tokens~,
       )
       let key = docx_format_fingerprint("\{parent}/\{step}")
       keys[element_identity] = key
@@ -1652,6 +1660,7 @@ fn docx_format_binding_digests(
   bytes : BytesView,
   elements : Array[ScannedElement],
   root_identity : Int,
+  tokens~ : Map[Int, UInt],
 ) -> Map[Int, UInt] raise DocxError {
   let digests : Map[Int, UInt] = Map([])
   let scope : Map[String, String] = Map([])
@@ -1671,7 +1680,7 @@ fn docx_format_binding_digests(
     let element = elements[identity]
     // Declarations on this element, parsed in ONE pass over its tag,
     // applied to the scope with an undo record.
-    let undo : Array[(String, String?)] = []
+    let undo : Array[(String, String?, UInt?)] = []
     let used : Array[String] = []
     let stop = run_surgery_open_tag_end(element)
     let mut at = element.byte_start + 1
@@ -1714,7 +1723,7 @@ fn docx_format_binding_digests(
       let value = format_surgery_decode(bytes[value_start:at])
       at += 1
       if attribute == "xmlns" {
-        undo.push(("", scope.get("")))
+        undo.push(("", scope.get(""), scope_hash.get("")))
         scope[""] = value
         scope_hash[""] = if is_wml_uri(value) {
           0
@@ -1723,7 +1732,7 @@ fn docx_format_binding_digests(
         }
       } else if attribute.has_prefix("xmlns:") {
         let declared = attribute[6:].to_owned()
-        undo.push((declared, scope.get(declared)))
+        undo.push((declared, scope.get(declared), scope_hash.get(declared)))
         scope[declared] = value
         scope_hash[declared] = if is_wml_uri(value) {
           0
@@ -1754,6 +1763,10 @@ fn docx_format_binding_digests(
           }
       }
     }
+    // The element's own namespace, as a BOUNDED token: a structural
+    // key that embedded the URI would hash it once per element that
+    // uses it.
+    tokens[identity] = scope_hash.get(element_prefix).unwrap_or(0)
     let mut total = own
     let mut child = element.first_child_index
     while child >= 0 {
@@ -1762,13 +1775,14 @@ fn docx_format_binding_digests(
     }
     digests[identity] = total
     for entry in undo {
+      // The shadowed binding's HASH is restored with it: recomputing it
+      // would hash a long ancestor URI once per child that shadowed it.
       match entry.1 {
         Some(previous) => {
           scope[entry.0] = previous
-          scope_hash[entry.0] = if is_wml_uri(previous) {
-            0
-          } else {
-            binding_hash(entry.0, previous)
+          match entry.2 {
+            Some(previous_hash) => scope_hash[entry.0] = previous_hash
+            None => scope_hash.remove(entry.0)
           }
         }
         None => {

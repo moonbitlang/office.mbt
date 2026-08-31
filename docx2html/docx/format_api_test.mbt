@@ -2272,6 +2272,12 @@ test "format preservation stays bounded on adversarial shapes" {
     }
     heavy.write_string("/><w:footnoteReference w:id=\"1\"/></w:r>")
   }
+  // Long URIs, so a per-use hash would show. Declared once, used and
+  // shadowed throughout.
+  let padding = StringBuilder()
+  for _ in 0..<400 {
+    padding.write_string("x")
+  }
   // Distinct prefixes under one deep chain.
   let deep = StringBuilder()
   for index in 0..<80 {
@@ -2280,16 +2286,15 @@ test "format preservation stays bounded on adversarial shapes" {
     deep.write_string("<w:foo xmlns:c\{index}=\"urn:c:\{index}\">")
   }
   for index in 0..<600 {
-    deep.write_string("<w:bar><w:rPr><p\{index}:glow/></w:rPr></w:bar>")
+    // FOREIGN carrier owners under long-URI prefixes, each SHADOWING
+    // the inherited binding: a key that embedded the URI, or an undo
+    // that rehashed the shadowed one, would pay per element.
+    deep.write_string(
+      "<p\{index}:bar xmlns:p\{index}=\"urn:q:\{padding.to_string()}:\{index}\"><w:rPr><p\{index}:glow/></w:rPr></p\{index}:bar>",
+    )
   }
   for _ in 0..<80 {
     deep.write_string("</w:foo>")
-  }
-  // LONG URIs, declared once and used by many descendants: a binding's
-  // hash must be paid where it is declared, not where it is used.
-  let padding = StringBuilder()
-  for _ in 0..<400 {
-    padding.write_string("x")
   }
   let declarations = StringBuilder()
   for index in 0..<600 {
