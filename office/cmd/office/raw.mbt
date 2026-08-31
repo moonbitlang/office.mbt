@@ -446,6 +446,13 @@ async fn run_raw_replace(matches : @argparse.Matches) -> Unit {
   let report = @transaction.transact(
     options,
     (format, original, archive, budget) => {
+      // A raw part replacement is still an edit of the document, so it
+      // meets the shared preflight. It waives the tracking condition
+      // alone: raw surgery makes no semantic claim about the document,
+      // and it is how a caller clears the flag in the first place.
+      if format is Docx {
+        @office_docx.docx_mutation_preflight(archive, tracking_waived=true)
+      }
       let mutation = @raw.raw_replace_part_archive(
         format,
         archive,
@@ -531,6 +538,9 @@ async fn run_raw_edit(matches : @argparse.Matches) -> Unit {
   let report = @transaction.transact(
     options,
     (format, original, archive, budget) => {
+      if format is Docx {
+        @office_docx.docx_mutation_preflight(archive, tracking_waived=true)
+      }
       let mutation = @raw.raw_edit_archive(
         format,
         archive,

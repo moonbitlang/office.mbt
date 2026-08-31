@@ -154,7 +154,7 @@ pub fn DocxFormatResult::transaction(
 /// to touch.
 pub fn docx_mutation_preflight(
   archive : @zip.Archive,
-  resolving_revisions? : Bool = false,
+  tracking_waived? : Bool = false,
 ) -> Unit raise @transaction.TransactionError {
   // Signatures are identified by CONTENT TYPE, not by where they are
   // stored: OPC lets a package name its signature parts freely, so a
@@ -200,9 +200,13 @@ pub fn docx_mutation_preflight(
       "office.docx.settings_unreadable", "this document's settings part is not a WML settings part, so its editing protections cannot be checked",
     )
   }
+  // What this toolkit's reader would act on, and what it would pass
+  // over: a protection declared in a branch that is passed over is a
+  // protection this preflight cannot resolve, not one it may ignore.
+  let (effective, suppressed) = docx_settings_partition(root)
   match
     docx_settings_flag(
-      root,
+      effective,
       "documentProtection",
       "enforcement",
       absent_means_on=false,
@@ -215,25 +219,45 @@ pub fn docx_mutation_preflight(
       raise @transaction.transaction_failure(
         "office.docx.settings_ambiguous", "this document's editing protection is declared more than once, or with a value outside the schema, so it cannot be read as enforced or not",
       )
-    Disabled | Missing => ()
+    Disabled | Missing =>
+      if docx_settings_flag(
+          suppressed,
+          "documentProtection",
+          "enforcement",
+          absent_means_on=false,
+        )
+        is (Enabled | Ambiguous) {
+        raise @transaction.transaction_failure(
+          "office.docx.settings_ambiguous", "this document's editing protection is declared inside compatibility alternatives this toolkit does not resolve",
+        )
+      }
   }
   // Write protection that carries a password is enforcement too, and it
   // is a different element from `documentProtection`.
-  if docx_write_protection_enforced(root) {
+  if docx_write_protection_enforced(effective) ||
+    docx_write_protection_enforced(suppressed) {
     raise @transaction.transaction_failure(
       "office.docx.protected_document", "this document is write protected; remove the write protection before editing",
     )
   }
-  // Resolving revisions is the one edit that REMOVES revision markup the
-  // document already carries. Refusing it would strand a caller with
-  // tracked changes and no verb in this toolkit that can ever clear
-  // them, so this condition — and only this one — is waived for it. A
-  // signature or an enforced protection still refuses every verb.
-  if resolving_revisions {
+  // The tracking condition exists because this toolkit's SEMANTIC verbs
+  // cannot write revision marks, so their edits would land unrecorded in
+  // a document that asked for every change to be recorded. Two callers
+  // waive it, and only it:
+  //
+  // - resolving revisions REMOVES the markup the document carries, and
+  // - `office raw` is byte surgery the caller directs, which makes no
+  //   semantic claim about the document.
+  //
+  // Both are also the only ways this toolkit can clear the flag; without
+  // the waiver a tracked document would be one nothing here can ever
+  // edit again. A signature or an enforced protection refuses every
+  // verb, waiver or not.
+  if tracking_waived {
     return
   }
   match
-    docx_settings_flag(root, "trackRevisions", "val", absent_means_on=true) {
+    docx_settings_flag(effective, "trackRevisions", "val", absent_means_on=true) {
     Enabled =>
       raise @transaction.transaction_failure(
         "office.docx.track_revisions", "this document records revisions; editing it would write an untracked change",
@@ -242,7 +266,18 @@ pub fn docx_mutation_preflight(
       raise @transaction.transaction_failure(
         "office.docx.settings_ambiguous", "this document's revision tracking is declared more than once, or with a value outside the schema, so it cannot be read as on or off",
       )
-    Disabled | Missing => ()
+    Disabled | Missing =>
+      if docx_settings_flag(
+          suppressed,
+          "trackRevisions",
+          "val",
+          absent_means_on=true,
+        )
+        is (Enabled | Ambiguous) {
+        raise @transaction.transaction_failure(
+          "office.docx.settings_ambiguous", "this document's revision tracking is declared inside compatibility alternatives this toolkit does not resolve",
+        )
+      }
   }
 }
 
@@ -277,6 +312,9 @@ fn docx_package_parts(archive : @zip.Archive) -> Map[String, (String, String)] {
       continue
     }
     let key = @opc.part_name_key(logical)
+    // Two entries that share a part key are a package the strict
+    // validation refuses as a duplicate part before any edit is
+    // published, so which of them this reads does not decide anything.
     if parts.get(key) is None {
       parts[key] = (logical, entry.name())
     }
@@ -298,14 +336,15 @@ fn docx_part_bytes(
 }
 
 ///|
-/// Whether the package CONTAINS a part whose content type is a digital
-/// signature.
+/// Whether the package carries a DISCOVERABLE digital signature.
 ///
-/// Both halves matter. Reading the content types rather than the part
-/// names means a signature stored under any name is found, since OPC
-/// lets a package name its parts freely; requiring a part to carry the
-/// type means a lone declaration — or the string appearing in a comment
-/// — does not refuse an unsigned package.
+/// OPC signature discovery is a walk, not a scan: the package relates to
+/// a signature ORIGIN part, and the origin relates to each signature.
+/// A part that merely carries the signature content type without being
+/// reachable that way is not a signature any consumer would find, and
+/// refusing over it would refuse a document nothing has signed. Both
+/// halves are required — reachable, and carrying the type — because
+/// either alone describes scaffolding.
 ///
 /// A content-types part that cannot be read at all is left to the strict
 /// package validation that runs a moment later, which refuses on any
@@ -314,19 +353,56 @@ fn docx_package_declares_signature(
   archive : @zip.Archive,
   parts : Map[String, (String, String)],
 ) -> Bool {
-  // The content-types part's name is reserved with an exact spelling,
-  // which the strict validation that opens the session enforces.
-  guard archive.get("[Content_Types].xml") is Some(types) else { return false }
-  let root = @xml.read_xml_bytes_strict_limited(types, candidate_xml_budget()) catch {
-    _ => return false
+  let origins = docx_relationship_targets(archive, parts, "", [
+    DOCX_SIGNATURE_ORIGIN_RELATIONSHIP,
+  ])
+  guard !origins.is_empty() else { return false }
+  let signatures : Array[String] = []
+  for origin in origins {
+    for
+      target in docx_relationship_targets(archive, parts, origin, [
+        DOCX_SIGNATURE_RELATIONSHIP,
+      ]) {
+      signatures.push(target)
+    }
   }
-  guard root.name == DOCX_CONTENT_TYPES_ROOT else { return false }
-  // EVERY declaration is recorded, not only the interesting ones: a
-  // part's content type is its Override when it has one and the Default
-  // for its extension only otherwise, so a Default that would look like
-  // a signature says nothing about a part an Override has spoken for.
+  guard !signatures.is_empty() else { return false }
+  let (defaults, overrides) = docx_content_types(archive)
+  for signature in signatures {
+    guard parts.get(@opc.part_name_key(signature)) is Some(entry) else {
+      continue
+    }
+    let (logical, _) = entry
+    if docx_effective_content_type(defaults, overrides, logical)
+      is Some(content_type) &&
+      docx_is_signature_content_type(content_type) {
+      return true
+    }
+  }
+  false
+}
+
+///|
+/// The package's content-type declarations: Defaults by lowercased
+/// extension, Overrides by part key. Both are recorded whole, because a
+/// part's type is its Override when it has one and the Default for its
+/// extension ONLY otherwise.
+fn docx_content_types(
+  archive : @zip.Archive,
+) -> (Map[String, String], Map[String, String]) {
   let defaults : Map[String, String] = Map([])
   let overrides : Map[String, String] = Map([])
+  // The content-types part's name is reserved with an exact spelling,
+  // which the strict validation that opens the session enforces.
+  guard archive.get("[Content_Types].xml") is Some(types) else {
+    return (defaults, overrides)
+  }
+  let root = @xml.read_xml_bytes_strict_limited(types, candidate_xml_budget()) catch {
+    _ => return (defaults, overrides)
+  }
+  guard root.name == DOCX_CONTENT_TYPES_ROOT else {
+    return (defaults, overrides)
+  }
   for node in root.children {
     guard node is XmlElement(element) else { continue }
     if element.name == DOCX_CONTENT_TYPES_DEFAULT {
@@ -349,22 +425,25 @@ fn docx_package_declares_signature(
       }
     }
   }
-  for entry in parts {
-    let (logical, _) = entry.1
-    let declared = match overrides.get(@opc.part_name_key("/" + logical)) {
-      Some(content_type) => Some(content_type)
-      None =>
-        match docx_part_extension(logical) {
-          Some(extension) => defaults.get(extension)
-          None => None
-        }
-    }
-    if declared is Some(content_type) &&
-      docx_is_signature_content_type(content_type) {
-      return true
-    }
+  (defaults, overrides)
+}
+
+///|
+/// One part's content type: its Override, or the Default for its
+/// extension.
+fn docx_effective_content_type(
+  defaults : Map[String, String],
+  overrides : Map[String, String],
+  logical : String,
+) -> String? {
+  match overrides.get(@opc.part_name_key("/" + logical)) {
+    Some(content_type) => Some(content_type)
+    None =>
+      match docx_part_extension(logical) {
+        Some(extension) => defaults.get(extension)
+        None => None
+      }
   }
-  false
 }
 
 ///|
@@ -392,6 +471,14 @@ fn docx_part_extension(name : String) -> String? {
     None
   }
 }
+
+///|
+/// The package's signature relationships: the origin the package points
+/// at, and the signatures the origin points at.
+const DOCX_SIGNATURE_ORIGIN_RELATIONSHIP : String = "http://schemas.openxmlformats.org/package/2006/relationships/digital-signature/origin"
+
+///|
+const DOCX_SIGNATURE_RELATIONSHIP : String = "http://schemas.openxmlformats.org/package/2006/relationships/digital-signature/signature"
 
 ///|
 /// The relationship element, in the two spellings the readers emit: the
@@ -460,15 +547,35 @@ fn docx_relationship_target(
   source : String,
   types : Array[String],
 ) -> DocxPartLookup {
+  match docx_relationship_targets(archive, parts, source, types) {
+    [] => Absent
+    [only] => Found(only)
+    // Several relationships of the same type naming different parts is
+    // legal OPC and meaningless WML: nothing downstream would refuse it,
+    // so the preflight must.
+    _ => Ambiguous
+  }
+}
+
+///|
+/// Every INTERNAL part named by `source`'s relationships of one of
+/// `types`, resolved against `source`'s own location and deduplicated by
+/// part identity.
+fn docx_relationship_targets(
+  archive : @zip.Archive,
+  parts : Map[String, (String, String)],
+  source : String,
+  types : Array[String],
+) -> Array[String] {
   let rels_name = @opc.relationships_part_name_for_source(source)
   guard docx_part_bytes(archive, parts, rels_name) is Some(bytes) else {
-    return Absent
+    return []
   }
   let root = @opc.read_opc_relationships_xml_limited(
     bytes,
     candidate_xml_budget(),
   ) catch {
-    _ => return Absent
+    _ => return []
   }
   let base = match source.rev_find("/") {
     Some(slash) => source[:slash].to_owned()
@@ -503,14 +610,7 @@ fn docx_relationship_target(
       resolved.push(part)
     }
   }
-  match resolved.length() {
-    0 => Absent
-    1 => Found(resolved[0])
-    // Several relationships of the same type naming different parts is
-    // legal OPC and meaningless WML: nothing downstream would refuse it,
-    // so the preflight must.
-    _ => Ambiguous
-  }
+  resolved
 }
 
 ///|
@@ -529,18 +629,62 @@ priv enum DocxSettingsFlag {
 }
 
 ///|
-/// Reads the settings part and answers one WML on/off flag.
+/// The settings part split the way this toolkit's reader reads
+/// compatibility markup: the content it would act on, and the content it
+/// would pass over.
 ///
-/// The part is parsed rather than scanned, so the answer is about
-/// EXPANDED names: `<w:trackRevisions x:val="false"/>` carries no WML
-/// `w:val` at all and therefore means on, whatever a local-name reading
-/// would say. Occurrences anywhere in the part count, so a setting
-/// wrapped in compatibility markup is still seen; occurrences that
-/// disagree are reported rather than resolved, because a preflight that
-/// picks a winner is guessing about a document it is refusing to guess
-/// about.
-fn docx_settings_flag(
+/// Everywhere else in this toolkit an `mc:AlternateContent` contributes
+/// its FIRST `mc:Fallback` and every `mc:Choice` is suppressed — this
+/// reader claims support for no application namespace. The preflight
+/// reads settings the same way rather than inventing a second policy,
+/// but it does not discard what it passed over: a suppressed branch that
+/// declares a PROTECTION is a document whose protections depend on a
+/// choice this toolkit cannot resolve, and that is refused rather than
+/// guessed at.
+fn docx_settings_partition(
   root : @xml.XmlElement,
+) -> (Array[@xml.XmlElement], Array[@xml.XmlElement]) {
+  let effective : Array[@xml.XmlElement] = []
+  let suppressed : Array[@xml.XmlElement] = []
+  fn walk(element : @xml.XmlElement, passed_over : Bool) -> Unit {
+    for node in element.children {
+      guard node is XmlElement(child) else { continue }
+      if child.name == "{\{DOCX_MC_NAMESPACE}}AlternateContent" {
+        let mut fallback_seen = false
+        for branch in child.children {
+          guard branch is XmlElement(alternative) else { continue }
+          let selected = alternative.name == "{\{DOCX_MC_NAMESPACE}}Fallback" &&
+            !fallback_seen
+          if selected {
+            fallback_seen = true
+          }
+          walk(alternative, passed_over || !selected)
+        }
+      } else {
+        if passed_over {
+          suppressed.push(child)
+        } else {
+          effective.push(child)
+        }
+        walk(child, passed_over)
+      }
+    }
+  }
+
+  walk(root, false)
+  (effective, suppressed)
+}
+
+///|
+/// One WML on/off flag, read from a list of settings elements.
+///
+/// The answer is about EXPANDED names: `<w:trackRevisions x:val="false"/>`
+/// carries no WML `w:val` at all and therefore means on, whatever a
+/// local-name reading would say. Occurrences that disagree are reported
+/// rather than resolved, because a preflight that picks a winner is
+/// guessing about a document it is refusing to guess about.
+fn docx_settings_flag(
+  elements : Array[@xml.XmlElement],
   local : String,
   attribute : String,
   absent_means_on~ : Bool,
@@ -556,49 +700,61 @@ fn docx_settings_flag(
     }
   }
 
-  for namespace in [DOCX_WML_NAMESPACE, DOCX_STRICT_WML_NAMESPACE] {
-    for element in root.descendants_by_tag_name("{\{namespace}}\{local}") {
-      let values : Array[String] = []
-      for dialect in [DOCX_WML_NAMESPACE, DOCX_STRICT_WML_NAMESPACE] {
-        if element.attributes.get("{\{dialect}}\{attribute}") is Some(value) {
-          let text = @xml.collapse_xml_schema_whitespace(value)
-          if !values.contains(text) {
-            values.push(text)
-          }
+  for element in elements {
+    guard element.name == "{\{DOCX_WML_NAMESPACE}}\{local}" ||
+      element.name == "{\{DOCX_STRICT_WML_NAMESPACE}}\{local}" else {
+      continue
+    }
+    let values : Array[String] = []
+    for dialect in [DOCX_WML_NAMESPACE, DOCX_STRICT_WML_NAMESPACE] {
+      if element.attributes.get("{\{dialect}}\{attribute}") is Some(value) {
+        let text = @xml.collapse_xml_schema_whitespace(value)
+        if !values.contains(text) {
+          values.push(text)
         }
       }
-      if values.length() > 1 {
-        observe(Ambiguous)
-      } else if values.is_empty() {
-        observe(if absent_means_on { Enabled } else { Disabled })
-      } else {
-        observe(docx_on_off(values[0]))
-      }
+    }
+    if values.length() > 1 {
+      observe(Ambiguous)
+    } else if values.is_empty() {
+      observe(if absent_means_on { Enabled } else { Disabled })
+    } else {
+      observe(docx_on_off(values[0]))
     }
   }
   verdict
 }
 
 ///|
+const DOCX_MC_NAMESPACE : String = "http://schemas.openxmlformats.org/markup-compatibility/2006"
+
+///|
 /// Whether the document's write protection is ENFORCED rather than
 /// merely recommended.
 ///
 /// `<w:writeProtection w:recommended="1"/>` is advice Word lets a reader
-/// dismiss, so refusing it would refuse documents anyone can edit. Every
-/// other attribute of the element carries the password that makes the
-/// protection real, so their presence — whichever generation's spelling
-/// is used — is the test.
-fn docx_write_protection_enforced(root : @xml.XmlElement) -> Bool {
-  for namespace in [DOCX_WML_NAMESPACE, DOCX_STRICT_WML_NAMESPACE] {
-    for element in root.descendants_by_tag_name("{\{namespace}}writeProtection") {
-      for attribute in element.attributes {
-        for dialect in [DOCX_WML_NAMESPACE, DOCX_STRICT_WML_NAMESPACE] {
-          if attribute.0.has_prefix("{\{dialect}}") &&
-            attribute.0 != "{\{dialect}}recommended" {
-            return true
-          }
+/// dismiss, so refusing it would refuse documents anyone can edit.
+/// Everything else the element can say is enforcement: the password
+/// attributes in either generation's spelling, and the bare element,
+/// which asks for write protection without recommending anything.
+fn docx_write_protection_enforced(elements : Array[@xml.XmlElement]) -> Bool {
+  for element in elements {
+    guard element.name == "{\{DOCX_WML_NAMESPACE}}writeProtection" ||
+      element.name == "{\{DOCX_STRICT_WML_NAMESPACE}}writeProtection" else {
+      continue
+    }
+    let mut recommended_only = false
+    for attribute in element.attributes {
+      for dialect in [DOCX_WML_NAMESPACE, DOCX_STRICT_WML_NAMESPACE] {
+        if attribute.0 == "{\{dialect}}recommended" {
+          recommended_only = true
+        } else if attribute.0.has_prefix("{\{dialect}}") {
+          return true
         }
       }
+    }
+    if !recommended_only {
+      return true
     }
   }
   false

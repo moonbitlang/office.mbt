@@ -801,7 +801,7 @@ pub async fn transact_docx(
   edit : (DocxEditSession) -> Unit raise,
   validators? : Array[@transaction.TransactionValidator] = [],
 ) -> @transaction.TransactionReport {
-  docx_transaction(options, edit, validators~, resolving_revisions=false)
+  docx_transaction(options, edit, validators~, tracking_waived=false)
 }
 
 ///|
@@ -814,7 +814,7 @@ async fn docx_transaction(
   options : @transaction.TransactionOptions,
   edit : (DocxEditSession) -> Unit raise,
   validators~ : Array[@transaction.TransactionValidator],
-  resolving_revisions~ : Bool,
+  tracking_waived~ : Bool,
 ) -> @transaction.TransactionReport {
   let validators = validators.copy()
   let source_para_id_inventory : Ref[Map[String, Array[String]]?] = Ref(None)
@@ -831,7 +831,7 @@ async fn docx_transaction(
       // The SHARED mutation preflight, before any verb plans anything:
       // a signed package, an enforced protection, or a document
       // recording revisions is not edited by this toolkit at all.
-      docx_mutation_preflight(archive, resolving_revisions~)
+      docx_mutation_preflight(archive, tracking_waived~)
       let session = open_edit_session(archive, budget)
       // The SOURCE's identity inventory, captured before any edit is
       // queued: the candidate gate compares against this, so existing

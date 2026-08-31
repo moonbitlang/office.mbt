@@ -375,44 +375,6 @@ async fn format_input_probe(input : String, output : String) -> (String?, Bool) 
 /// actually declares rather than on where things happen to sit.
 async test "the mutation preflight judges declarations, not paths" {
   with_docx_session_test_dir(directory => {
-    // A signature part, declared by CONTENT TYPE under a custom name:
-    // a path-prefix check would miss it.
-    let signed = preflight_fixture(
-      directory,
-      "signed",
-      "",
-      [("custom/sig1.xml", "<Signature/>")],
-      content_types_insert="<Override PartName=\"/custom/sig1.xml\" ContentType=\"application/vnd.openxmlformats-package.digital-signature-xmlsignature+xml\"/>",
-    )
-    let (signed_failure, signed_published) = format_input_probe(
-      signed,
-      directory + "/signed-out.docx",
-    )
-    guard signed_failure is Some(signed_message) else {
-      fail("expected a signed-package refusal")
-    }
-    assert_true(
-      signed_message.contains("digital signature"),
-      msg=signed_message,
-    )
-    assert_false(signed_published, msg="nothing may be published")
-    // An ORIGIN part alone is scaffolding, not a signature.
-    let origin = preflight_fixture(
-      directory,
-      "origin",
-      "",
-      [("_xmlsignatures/origin.sigs", "")],
-      content_types_insert="<Override PartName=\"/_xmlsignatures/origin.sigs\" ContentType=\"application/vnd.openxmlformats-package.digital-signature-origin\"/>",
-    )
-    let (origin_failure, origin_published) = format_input_probe(
-      origin,
-      directory + "/origin-out.docx",
-    )
-    assert_true(
-      origin_failure is None,
-      msg="an origin part is not a signature: \{origin_failure}",
-    )
-    assert_true(origin_published, msg="an unsigned package publishes")
     // Protection that is DECLARED but not enforced is a preference.
     let unenforced = preflight_fixture(
       directory,
@@ -752,12 +714,9 @@ async fn repackaged_fixture(
   renames : Array[(String, String)],
   edits : Array[(String, String, String)],
   additions : Array[(String, String)],
+  runs? : String = "<w:r><w:t>Hello world</w:t></w:r>",
 ) -> String {
-  let source = edit_fixture(
-    directory,
-    name + "-source.docx",
-    "<w:r><w:t>Hello world</w:t></w:r>",
-  )
+  let source = edit_fixture(directory, name + "-source.docx", runs)
   let archive = @zip.read(@afs.read_file(source).binary())
   let rebuilt = @zip.Archive::new()
   for entry in archive.entries() {
@@ -898,55 +857,74 @@ async test "the preflight reads the settings the package points at" {
 }
 
 ///|
-/// A signature refusal needs a signature PART, not merely a declaration:
-/// a content type nothing uses is scaffolding.
-async test "the preflight refuses signatures that are actually present" {
+/// A discovered signature's content type is read the way OPC reads any
+/// part's: its Override if it has one, and the Default for its extension
+/// only otherwise.
+async test "the preflight reads a signature's content type by precedence" {
   with_docx_session_test_dir(directory => {
-    // Declared by extension, with a part that carries it.
-    let signed = repackaged_fixture(
+    let by_default = repackaged_fixture(
       directory,
-      "default-signed",
+      "sig-default",
       [],
       [
         (
-          "[Content_Types].xml", "</Types>", "<Default Extension=\"sigx\" ContentType=\"APPLICATION/VND.OPENXMLFORMATS-PACKAGE.DIGITAL-SIGNATURE-XMLSIGNATURE+XML\"/></Types>",
+          "_rels/.rels", "</Relationships>", "<Relationship Id=\"rIdSigOrigin\" Type=\"http://schemas.openxmlformats.org/package/2006/relationships/digital-signature/origin\" Target=\"_xmlsignatures/origin.sigs\"/></Relationships>",
+        ),
+        (
+          "[Content_Types].xml", "</Types>", "<Default Extension=\"sigs\" ContentType=\"application/vnd.openxmlformats-package.digital-signature-origin\"/><Default Extension=\"sigx\" ContentType=\"APPLICATION/VND.OPENXMLFORMATS-PACKAGE.DIGITAL-SIGNATURE-XMLSIGNATURE+XML\"/></Types>",
         ),
       ],
-      [("_xmlsignatures/sig1.sigx", "<Signature/>")],
+      [
+        ("_xmlsignatures/origin.sigs", "<origin/>"),
+        (
+          "_xmlsignatures/_rels/origin.sigs.rels", "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?><Relationships xmlns=\"http://schemas.openxmlformats.org/package/2006/relationships\"><Relationship Id=\"rIdSig1\" Type=\"http://schemas.openxmlformats.org/package/2006/relationships/digital-signature/signature\" Target=\"sig1.sigx\"/></Relationships>",
+        ),
+        ("_xmlsignatures/sig1.sigx", "<Signature/>"),
+      ],
     )
-    let (signed_failure, signed_published) = format_input_probe(
-      signed,
-      directory + "/default-signed-out.docx",
+    let (default_failure, default_published) = format_input_probe(
+      by_default,
+      directory + "/sig-default-out.docx",
     )
-    guard signed_failure is Some(signed_message) else {
-      fail("a signature part declared by extension is a signature")
+    guard default_failure is Some(default_message) else {
+      fail("a signature typed by Default is a signature")
     }
     assert_true(
-      signed_message.contains("digital signature"),
-      msg=signed_message,
+      default_message.contains("digital signature"),
+      msg=default_message,
     )
-    assert_false(signed_published, msg="nothing may be published")
-    // The same declaration with no part carrying it refuses nothing.
-    let declared = repackaged_fixture(
+    assert_false(default_published, msg="nothing may be published")
+    // The same package, with the signature part's OWN Override saying
+    // something else: the Override is what the part is.
+    let overridden = repackaged_fixture(
       directory,
-      "declared-only",
+      "sig-override",
       [],
       [
         (
-          "[Content_Types].xml", "</Types>", "<Default Extension=\"sigx\" ContentType=\"application/vnd.openxmlformats-package.digital-signature-xmlsignature+xml\"/></Types>",
+          "_rels/.rels", "</Relationships>", "<Relationship Id=\"rIdSigOrigin\" Type=\"http://schemas.openxmlformats.org/package/2006/relationships/digital-signature/origin\" Target=\"_xmlsignatures/origin.sigs\"/></Relationships>",
+        ),
+        (
+          "[Content_Types].xml", "</Types>", "<Default Extension=\"sigs\" ContentType=\"application/vnd.openxmlformats-package.digital-signature-origin\"/><Default Extension=\"sigx\" ContentType=\"application/vnd.openxmlformats-package.digital-signature-xmlsignature+xml\"/><Override PartName=\"/_xmlsignatures/sig1.sigx\" ContentType=\"application/xml\"/></Types>",
         ),
       ],
-      [],
+      [
+        ("_xmlsignatures/origin.sigs", "<origin/>"),
+        (
+          "_xmlsignatures/_rels/origin.sigs.rels", "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?><Relationships xmlns=\"http://schemas.openxmlformats.org/package/2006/relationships\"><Relationship Id=\"rIdSig1\" Type=\"http://schemas.openxmlformats.org/package/2006/relationships/digital-signature/signature\" Target=\"sig1.sigx\"/></Relationships>",
+        ),
+        ("_xmlsignatures/sig1.sigx", "<note/>"),
+      ],
     )
-    let (declared_failure, declared_published) = format_input_probe(
-      declared,
-      directory + "/declared-only-out.docx",
+    let (override_failure, override_published) = format_input_probe(
+      overridden,
+      directory + "/sig-override-out.docx",
     )
     assert_true(
-      declared_failure is None,
-      msg="a declaration alone is not a signature: \{declared_failure}",
+      override_failure is None,
+      msg="an overridden part is not a signature: \{override_failure}",
     )
-    assert_true(declared_published, msg="the edit publishes")
+    assert_true(override_published, msg="the edit publishes")
   })
 }
 
@@ -998,12 +976,10 @@ async test "the preflight lets a tracked document resolve its own revisions" {
     guard failure is Some(message) else { fail("expected a refusal") }
     assert_true(message.contains("records revisions"), msg=message)
     // And the waiver does not reach the other two conditions.
-    let signed = preflight_fixture(
+    let signed = signed_fixture(
       directory,
       "signed-tracked",
       "<w:trackRevisions/>",
-      [("_xmlsignatures/sig1.xml", "<Signature/>")],
-      content_types_insert="<Override PartName=\"/_xmlsignatures/sig1.xml\" ContentType=\"application/vnd.openxmlformats-package.digital-signature-xmlsignature+xml\"/>",
       runs=REVENUE_RUNS,
     )
     let mut signed_failure : String? = None
@@ -1084,7 +1060,10 @@ async test "the preflight reads settings as XML" {
       foreign_message.contains("records revisions"),
       msg=foreign_message,
     )
-    // Compatibility markup hides nothing: the setting is still there.
+    // A setting this toolkit's reader would PASS OVER is not a setting
+    // it may ignore: the reader selects the fallback and suppresses
+    // every choice, so a protection declared only in a choice is one
+    // whose effect depends on who opens the document.
     let wrapped = preflight_fixture(
       directory,
       "wrapped",
@@ -1096,12 +1075,50 @@ async test "the preflight reads settings as XML" {
       directory + "/wrapped-out.docx",
     )
     guard wrapped_failure is Some(wrapped_message) else {
-      fail("a wrapped setting is still a setting")
+      fail("a suppressed protection is not an absent one")
     }
     assert_true(
-      wrapped_message.contains("records revisions"),
+      wrapped_message.contains("compatibility alternatives"),
       msg=wrapped_message,
     )
+    // The choice and the fallback DISAGREEING is the same situation:
+    // Word would read one, this toolkit reads the other, and neither
+    // reading is the document's own answer.
+    let disagreeing = preflight_fixture(
+      directory,
+      "disagreeing",
+      "<mc:AlternateContent xmlns:mc=\"http://schemas.openxmlformats.org/markup-compatibility/2006\"><mc:Choice Requires=\"w14\"><w:trackRevisions/></mc:Choice><mc:Fallback><w:trackRevisions w:val=\"false\"/></mc:Fallback></mc:AlternateContent>",
+      [],
+    )
+    let (disagreeing_failure, disagreeing_published) = format_input_probe(
+      disagreeing,
+      directory + "/disagreeing-out.docx",
+    )
+    guard disagreeing_failure is Some(disagreeing_message) else {
+      fail("a protection that depends on the reader is not resolved here")
+    }
+    assert_true(
+      disagreeing_message.contains("compatibility alternatives"),
+      msg=disagreeing_message,
+    )
+    assert_false(disagreeing_published, msg="nothing may be published")
+    // A fallback that turns tracking OFF, with a choice that says the
+    // same, is simply off: agreement is not ambiguity.
+    let agreeing = preflight_fixture(
+      directory,
+      "agreeing",
+      "<mc:AlternateContent xmlns:mc=\"http://schemas.openxmlformats.org/markup-compatibility/2006\"><mc:Choice Requires=\"w14\"><w:trackRevisions w:val=\"0\"/></mc:Choice><mc:Fallback><w:trackRevisions w:val=\"false\"/></mc:Fallback></mc:AlternateContent>",
+      [],
+    )
+    let (agreeing_failure, agreeing_published) = format_input_probe(
+      agreeing,
+      directory + "/agreeing-out.docx",
+    )
+    assert_true(
+      agreeing_failure is None,
+      msg="branches that agree decide the question: \{agreeing_failure}",
+    )
+    assert_true(agreeing_published, msg="the edit publishes")
     // A value the schema does not define is neither on nor off.
     let nonsense = preflight_fixture(
       directory,
@@ -1315,27 +1332,153 @@ async test "the preflight resolves parts by OPC identity" {
       msg=recased_message,
     )
     assert_false(recased_published, msg="nothing may be published")
-    // The Default says signature, the part's own Override says
-    // otherwise, and the Override is what the part IS.
-    let overridden = repackaged_fixture(
+  })
+}
+
+///|
+/// A paragraph inside a table cell is a paragraph. The preservation
+/// check is paragraph-scoped by design — a cell's `w:tcPr` is outside
+/// the plan's declared byte edits — so this pins that the splice keeps
+/// it rather than that the check compares it.
+async test "format transaction reaches a paragraph inside a table" {
+  with_docx_session_test_dir(directory => {
+    let (result, failure, published) = format_probe(
       directory,
-      "overridden",
+      "table",
+      "<w:r><w:t>Hello world</w:t></w:r></w:p>" +
+      "<w:tbl><w:tblPr><w:tblW w:w=\"0\" w:type=\"auto\"/></w:tblPr>" +
+      "<w:tblGrid><w:gridCol w:w=\"4675\"/></w:tblGrid>" +
+      "<w:tr><w:tc><w:tcPr><w:tcW w:w=\"4675\" w:type=\"dxa\"/>" +
+      "<w:shd w:val=\"clear\" w:color=\"auto\" w:fill=\"FFFF00\"/></w:tcPr>" +
+      "<w:p><w:r><w:t>cell world</w:t></w:r></w:p>" +
+      "</w:tc></w:tr></w:tbl><w:p>",
+      @word.docx_direct_format(italic=true),
+      text="cell world",
+    )
+    assert_true(failure is None, msg="\{failure}")
+    guard result is Some(value) else { fail("no result") }
+    let report = value.report()
+    assert_eq(report.spans().length(), 1)
+    // The affected paragraph is the one in the cell, not the body's.
+    let paths = report.affected_paths()
+    assert_eq(paths.length(), 1)
+    assert_true(paths[0].contains("tbl"), msg=paths[0])
+    guard published is Some(bytes) else { fail("nothing published") }
+    let archive = @zip.read(bytes)
+    guard archive.get("word/document.xml") is Some(payload) else {
+      fail("no document part")
+    }
+    let document = @utf8.decode(payload)
+    assert_eq(document.split("<w:i/>").collect().length() - 1, 1)
+    // The cell's own formatting is untouched by the splice.
+    assert_true(document.contains("w:fill=\"FFFF00\""), msg=document)
+    assert_true(document.contains("<w:tcW w:w=\"4675\""), msg=document)
+    assert_true(document.contains("Hello world"), msg=document)
+  })
+}
+
+///|
+/// A package with a real OPC signature chain: the package relates to an
+/// origin part, and the origin relates to the signature. Discovery is a
+/// walk, so a fixture that only drops a signature-typed part in the zip
+/// would not be signed.
+async fn signed_fixture(
+  directory : String,
+  name : String,
+  settings_body : String,
+  runs? : String = "<w:r><w:t>Hello world</w:t></w:r>",
+  origin_only? : Bool = false,
+) -> String {
+  let additions : Array[(String, String)] = [
+    ("_xmlsignatures/origin.sigs", "<origin/>"),
+  ]
+  if !origin_only {
+    additions.push(
+      (
+        "_xmlsignatures/_rels/origin.sigs.rels", "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?><Relationships xmlns=\"http://schemas.openxmlformats.org/package/2006/relationships\"><Relationship Id=\"rIdSig1\" Type=\"http://schemas.openxmlformats.org/package/2006/relationships/digital-signature/signature\" Target=\"sig1.xml\"/></Relationships>",
+      ),
+    )
+    additions.push(("_xmlsignatures/sig1.xml", "<Signature/>"))
+  }
+  let edits : Array[(String, String, String)] = [
+    (
+      "_rels/.rels", "</Relationships>", "<Relationship Id=\"rIdSigOrigin\" Type=\"http://schemas.openxmlformats.org/package/2006/relationships/digital-signature/origin\" Target=\"_xmlsignatures/origin.sigs\"/></Relationships>",
+    ),
+    (
+      "[Content_Types].xml",
+      "</Types>",
+      "<Default Extension=\"sigs\" ContentType=\"application/vnd.openxmlformats-package.digital-signature-origin\"/>" +
+      (if origin_only {
+        ""
+      } else {
+        "<Override PartName=\"/_xmlsignatures/sig1.xml\" ContentType=\"application/vnd.openxmlformats-package.digital-signature-xmlsignature+xml\"/>"
+      }) +
+      "</Types>",
+    ),
+  ]
+  if settings_body != "" {
+    edits.push(
+      ("word/settings.xml", "</w:settings>", settings_body + "</w:settings>"),
+    )
+  }
+  repackaged_fixture(directory, name, [], edits, additions, runs~)
+}
+
+///|
+/// A signature is DISCOVERED, not spotted: the package relates to an
+/// origin and the origin relates to the signature. A signature-typed
+/// part nothing points at is not a signature any consumer would find.
+async test "the preflight discovers signatures through their relationships" {
+  with_docx_session_test_dir(directory => {
+    let signed = signed_fixture(directory, "chained", "")
+    let (signed_failure, signed_published) = format_input_probe(
+      signed,
+      directory + "/chained-out.docx",
+    )
+    guard signed_failure is Some(signed_message) else {
+      fail("a related signature is a signature")
+    }
+    assert_true(
+      signed_message.contains("digital signature"),
+      msg=signed_message,
+    )
+    assert_false(signed_published, msg="nothing may be published")
+    // An origin with no signature relationship is scaffolding.
+    let scaffolding = signed_fixture(
+      directory,
+      "scaffolding",
+      "",
+      origin_only=true,
+    )
+    let (scaffolding_failure, scaffolding_published) = format_input_probe(
+      scaffolding,
+      directory + "/scaffolding-out.docx",
+    )
+    assert_true(
+      scaffolding_failure is None,
+      msg="an origin alone is not a signature: \{scaffolding_failure}",
+    )
+    assert_true(scaffolding_published, msg="the edit publishes")
+    // A signature-typed part nothing relates to is not discoverable.
+    let orphan = repackaged_fixture(
+      directory,
+      "orphan",
       [],
       [
         (
-          "[Content_Types].xml", "</Types>", "<Default Extension=\"sigx\" ContentType=\"application/vnd.openxmlformats-package.digital-signature-xmlsignature+xml\"/><Override PartName=\"/custom/note.sigx\" ContentType=\"application/xml\"/></Types>",
+          "[Content_Types].xml", "</Types>", "<Override PartName=\"/custom/sig.xml\" ContentType=\"application/vnd.openxmlformats-package.digital-signature-xmlsignature+xml\"/></Types>",
         ),
       ],
-      [("custom/note.sigx", "<note/>")],
+      [("custom/sig.xml", "<Signature/>")],
     )
-    let (overridden_failure, overridden_published) = format_input_probe(
-      overridden,
-      directory + "/overridden-out.docx",
+    let (orphan_failure, orphan_published) = format_input_probe(
+      orphan,
+      directory + "/orphan-out.docx",
     )
     assert_true(
-      overridden_failure is None,
-      msg="an overridden part is not a signature: \{overridden_failure}",
+      orphan_failure is None,
+      msg="an unreachable signature part is not a package signature: \{orphan_failure}",
     )
-    assert_true(overridden_published, msg="the edit publishes")
+    assert_true(orphan_published, msg="the edit publishes")
   })
 }

@@ -54,7 +54,7 @@ pub async fn create_blank_document(@transaction.CreateTransactionOptions) -> Doc
 
 pub fn docx_edit_operation_names_list() -> Array[String]
 
-pub fn docx_mutation_preflight(@zip.Archive, resolving_revisions? : Bool) -> Unit raise @transaction.TransactionError
+pub fn docx_mutation_preflight(@zip.Archive, tracking_waived? : Bool) -> Unit raise @transaction.TransactionError
 
 pub fn package_validator(source_para_id_inventory? : @ref.Ref[Map[String, Array[String]]?]) -> @transaction.TransactionValidator raise @transaction.TransactionError
 
