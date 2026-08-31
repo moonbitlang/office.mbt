@@ -1122,3 +1122,117 @@ test "format preservation distinguishes rPrChange from rPr" {
     is Some(_),
   )
 }
+
+///|
+/// Round 6: a request authorizes only the ATTRIBUTES it needs. An
+/// underline may change its `val`; its colour is nobody's to touch, and
+/// an absolute colour may drop theme linkage but keep the rest.
+test "format preservation authorizes attributes, not whole properties" {
+  let before = format_fixture(
+    "<w:p><w:r><w:rPr><w:u w:val=\"double\" w:color=\"FF0000\"/></w:rPr><w:t>ab</w:t></w:r></w:p>",
+  )
+  // The planner's own output: val becomes single, the colour survives.
+  let (plan, _) = @docx.plan_docx_format(
+    before,
+    before.main_story_source(),
+    format=@docx.docx_direct_format(underline=true),
+    within="p[1]",
+    range=(0, 2),
+  )
+  let faithful = format_apply(
+    "<w:p><w:r><w:rPr><w:u w:val=\"double\" w:color=\"FF0000\"/></w:rPr><w:t>ab</w:t></w:r></w:p>",
+    plan,
+  )
+  assert_eq(
+    @docx.docx_paragraph_format_preserved(
+      before,
+      before.main_story_source(),
+      faithful,
+      faithful.main_story_source(),
+      path="p[1]",
+      spans=[(0, 2)],
+      format=@docx.docx_direct_format(underline=true),
+    ),
+    None,
+  )
+  // A result that also repainted the underline's colour passes the
+  // positive check and the projection, and is caught here.
+  let recoloured = format_fixture(
+    "<w:p><w:r><w:rPr><w:u w:val=\"single\" w:color=\"00FF00\"/></w:rPr><w:t>ab</w:t></w:r></w:p>",
+  )
+  assert_eq(
+    @docx.docx_paragraph_direct_format(
+      recoloured,
+      recoloured.main_story_source(),
+      path="p[1]",
+      start=0,
+      end=2,
+      format=@docx.docx_direct_format(underline=true),
+    ),
+    None,
+  )
+  assert_true(
+    @docx.docx_paragraph_format_preserved(
+      before,
+      before.main_story_source(),
+      recoloured,
+      recoloured.main_story_source(),
+      path="p[1]",
+      spans=[(0, 2)],
+      format=@docx.docx_direct_format(underline=true),
+    )
+    is Some(_),
+  )
+  // An absolute colour legitimately drops theme linkage.
+  let themed = format_fixture(
+    "<w:p><w:r><w:rPr><w:color w:val=\"auto\" w:themeColor=\"accent1\"/></w:rPr><w:t>ab</w:t></w:r></w:p>",
+  )
+  let (colour_plan, _) = @docx.plan_docx_format(
+    themed,
+    themed.main_story_source(),
+    format=@docx.docx_direct_format(color="00B050"),
+    within="p[1]",
+    range=(0, 2),
+  )
+  let coloured = format_apply(
+    "<w:p><w:r><w:rPr><w:color w:val=\"auto\" w:themeColor=\"accent1\"/></w:rPr><w:t>ab</w:t></w:r></w:p>",
+    colour_plan,
+  )
+  assert_eq(
+    @docx.docx_paragraph_format_preserved(
+      themed,
+      themed.main_story_source(),
+      coloured,
+      coloured.main_story_source(),
+      path="p[1]",
+      spans=[(0, 2)],
+      format=@docx.docx_direct_format(color="00B050"),
+    ),
+    None,
+  )
+}
+
+///|
+/// Round 6: the reader takes the FIRST pPr and the planner refuses
+/// none, so a trailing empty one must not erase an earlier mark's
+/// formatting from the comparison.
+test "format preservation reads every paragraph mark" {
+  let before = format_fixture(
+    "<w:p><w:pPr><w:rPr><w:i/><w:iCs/></w:rPr></w:pPr><w:pPr/><w:r><w:t>ab</w:t></w:r></w:p>",
+  )
+  let clobbered = format_fixture(
+    "<w:p><w:pPr><w:rPr><w:u w:val=\"single\"/></w:rPr></w:pPr><w:pPr/><w:r><w:rPr><w:b/><w:bCs/></w:rPr><w:t>ab</w:t></w:r></w:p>",
+  )
+  assert_true(
+    @docx.docx_paragraph_format_preserved(
+      before,
+      before.main_story_source(),
+      clobbered,
+      clobbered.main_story_source(),
+      path="p[1]",
+      spans=[(0, 2)],
+      format=@docx.docx_direct_format(bold=true),
+    )
+    is Some(_),
+  )
+}

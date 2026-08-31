@@ -502,6 +502,7 @@ fn docx_format_source_runs(
   let paragraph = projection.paragraphs[paragraph_index]
   let base = paragraph.projection_start
   let out : Array[String] = []
+  let seen : Map[String, Bool] = Map([])
   for contribution in paragraph.contributions {
     guard contribution.kind is ProjectedText(_) else { continue }
     let local_start = contribution.projection_start - base
@@ -514,7 +515,8 @@ fn docx_format_source_runs(
       Some(found) => found
       None => paragraph_path
     }
-    if !out.contains(path) {
+    if seen.get(path) is None {
+      seen[path] = true
       out.push(path)
     }
   }
@@ -607,13 +609,15 @@ pub fn docx_paragraph_direct_format(
   // Every run holding selected text must carry the properties; a run
   // whose text lies only OUTSIDE the span is none of this check's
   // business.
-  let judged : Array[Int] = []
+  let judged : Map[Int, Bool] = Map([])
+  let mut judged_count = 0
   for unit in start..<end {
     guard unit >= 0 && unit < width else { continue }
     let run_identity = carrier[unit]
     guard run_identity >= 0 else { continue }
-    guard !judged.contains(run_identity) else { continue }
-    judged.push(run_identity)
+    guard judged.get(run_identity) is None else { continue }
+    judged[run_identity] = true
+    judged_count = judged_count + 1
     let run_element = elements[run_identity]
     let binding = format_surgery_run_binding(
       bytes,
@@ -641,7 +645,7 @@ pub fn docx_paragraph_direct_format(
       return Some(discrepancy)
     }
   }
-  if judged.length() == 0 {
+  if judged_count == 0 {
     return Some(
       "the range \{start}:\{end} of '\{path}' holds no run after the edit",
     )
@@ -840,15 +844,23 @@ fn docx_format_paragraph_provenance(
   // it — and no format request in v1 touches it, which makes any
   // change to it collateral.
   let SourceElementId(paragraph_head) = paragraph.sources[0].source
-  let mut mark = ""
+  // EVERY direct pPr in document order: the reader takes the first,
+  // the planner refuses none, and a change to any of them is
+  // collateral — so a later empty one must not erase an earlier
+  // mark's formatting from the comparison.
+  let mark_builder = StringBuilder()
   let mut paragraph_child = elements[paragraph_head].first_child_index
   while paragraph_child >= 0 {
     let entry = elements[paragraph_child]
     if is_wml_uri(entry.uri) && entry.local_name == "pPr" {
-      mark = docx_format_run_properties(bytes, elements, entry)
+      mark_builder.write_string("|")
+      mark_builder.write_string(
+        docx_format_run_properties(bytes, elements, entry),
+      )
     }
     paragraph_child = entry.next_sibling_index
   }
+  let mark = mark_builder.to_string()
   Some((units, silent, mark))
 }
 
@@ -966,7 +978,17 @@ fn docx_format_filter_region(
         // `<w:rPr/>` and an rPr the filter empties say the same thing;
         // only its ATTRIBUTES distinguish it from no rPr at all.
         builder.write_string(docx_format_shell(bytes, name_end, cursor - 1, ""))
-      } else if !touched.contains(property_name) {
+      } else if touched.contains(property_name) {
+        builder.write_string(
+          docx_format_touched_residue(
+            bytes,
+            qname,
+            property_name,
+            name_end,
+            cursor - 1,
+          ),
+        )
+      } else {
         builder.write_string(format_surgery_decode(bytes[at:open_end]))
       }
       at = open_end
@@ -1025,7 +1047,23 @@ fn docx_format_filter_region(
           remaining.trim(chars=" \t\n\r").to_owned(),
         ),
       )
-    } else if !touched.contains(property_name) {
+    } else if touched.contains(property_name) {
+      // A property the request names may change the attributes the
+      // request AUTHORIZES and nothing else; its other attributes and
+      // any content are compared exactly.
+      builder.write_string(
+        docx_format_touched_residue(
+          bytes,
+          qname,
+          property_name,
+          name_end,
+          open_end - 1,
+        ),
+      )
+      builder.write_string(
+        docx_format_filter_region(bytes, open_end, content_end, touched),
+      )
+    } else {
       builder.write_string(format_surgery_decode(bytes[at:element_end]))
     }
     at = element_end
@@ -1062,7 +1100,7 @@ fn docx_format_shell(
   let attributes = if attributes_to > attributes_from {
     format_surgery_decode(bytes[attributes_from:attributes_to])
     .trim(chars=" \t\n\r")
-    .to_string()
+    .to_owned()
   } else {
     ""
   }
@@ -1087,4 +1125,67 @@ fn docx_format_name_ends_at(bytes : BytesView, at : Int, to : Int) -> Bool {
   byte == b'-' ||
   byte == b'.' ||
   byte == b':')
+}
+
+///|
+/// What survives of a property the request NAMES: its attributes other
+/// than the ones the request authorizes it to change. An element left
+/// with none says the same as an absent one, so adding a property is
+/// not mistaken for changing something nobody named — while a `w:u`
+/// keeping its colour, or a `w:color` keeping an unrelated attribute,
+/// still compares exactly.
+fn docx_format_touched_residue(
+  bytes : BytesView,
+  qname : String,
+  property_name : String,
+  from : Int,
+  to : Int,
+) -> String raise DocxError {
+  // The attributes a request may rewrite: an on/off or underline
+  // property owns its `val`; an absolute colour additionally drops the
+  // theme linkage that would contradict it.
+  let authorized = if property_name == "color" {
+    ["val", "themeColor", "themeTint", "themeShade"]
+  } else {
+    ["val"]
+  }
+  let kept = StringBuilder()
+  let mut at = from
+  while at < to {
+    if is_xml_ws(bytes[at]) {
+      at += 1
+      continue
+    }
+    if bytes[at] == b'/' {
+      at += 1
+      continue
+    }
+    let name_start = at
+    while at < to && bytes[at] != b'=' && !is_xml_ws(bytes[at]) {
+      at += 1
+    }
+    let attribute = format_surgery_decode(bytes[name_start:at])
+    while at < to && bytes[at] != b'"' && bytes[at] != b'\'' {
+      at += 1
+    }
+    guard at < to else { break }
+    let quote = bytes[at]
+    at += 1
+    let value_start = at
+    while at < to && bytes[at] != quote {
+      at += 1
+    }
+    let value = format_surgery_decode(bytes[value_start:at])
+    at += 1
+    let (_, attribute_local) = split_qname(attribute)
+    if !authorized.contains(attribute_local) {
+      kept.write_string(" \{attribute}=\"\{value}\"")
+    }
+  }
+  let residue = kept.to_string()
+  if residue == "" {
+    ""
+  } else {
+    "<\{qname}\{residue}>"
+  }
 }
