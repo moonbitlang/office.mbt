@@ -577,19 +577,28 @@ pub fn docx_paragraph_direct_format(
   // admits directly under the paragraph has no run to carry direct
   // formatting, so a range covering it can never be satisfied — and
   // judging only the runs that happen to exist would call that a pass.
-  for unit in start..<end {
-    let mut carried = false
-    for contribution in paragraph.contributions {
-      guard contribution.kind is ProjectedText(_) else { continue }
-      let local_start = contribution.projection_start - base
-      let local_end = contribution.projection_end - base
-      if local_start <= unit && unit < local_end {
-        if contribution.run_source is Some(_) {
-          carried = true
-        }
+  // Index the units a run carries ONCE: scanning every contribution
+  // per unit is quadratic, and a paragraph of many small runs is legal.
+  let width = paragraph.projection_end - base
+  let carrier : Array[Int] = []
+  for _ in 0..<width {
+    carrier.push(-1)
+  }
+  for contribution in paragraph.contributions {
+    guard contribution.kind is ProjectedText(_) else { continue }
+    guard contribution.run_source is Some(SourceElementId(run_identity)) else {
+      continue
+    }
+    let from = contribution.projection_start - base
+    let to = contribution.projection_end - base
+    for unit in from..<to {
+      if unit >= 0 && unit < width {
+        carrier[unit] = run_identity
       }
     }
-    guard carried else {
+  }
+  for unit in start..<end {
+    guard unit >= 0 && unit < width && carrier[unit] >= 0 else {
       return Some(
         "unit \{unit} of '\{path}' is not carried by any run, so it cannot hold direct formatting",
       )
@@ -599,19 +608,10 @@ pub fn docx_paragraph_direct_format(
   // whose text lies only OUTSIDE the span is none of this check's
   // business.
   let judged : Array[Int] = []
-  for run in paragraph.runs {
-    let SourceElementId(run_identity) = run.source
-    let mut holds_selected = false
-    for contribution in paragraph.contributions {
-      guard contribution.kind is ProjectedText(_) else { continue }
-      guard contribution.run_source == Some(run.source) else { continue }
-      let local_start = contribution.projection_start - base
-      let local_end = contribution.projection_end - base
-      if local_start < end && local_end > start && local_end > local_start {
-        holds_selected = true
-      }
-    }
-    guard holds_selected else { continue }
+  for unit in start..<end {
+    guard unit >= 0 && unit < width else { continue }
+    let run_identity = carrier[unit]
+    guard run_identity >= 0 else { continue }
     guard !judged.contains(run_identity) else { continue }
     judged.push(run_identity)
     let run_element = elements[run_identity]
@@ -680,12 +680,17 @@ pub fn docx_paragraph_format_preserved(
   // positive check passes and the projection is unchanged.
   let touched = docx_format_touched_properties(format)
   guard docx_format_paragraph_provenance(before, before_story, path~)
-    is Some((original_units, original_silent)) else {
+    is Some((original_units, original_silent, original_mark)) else {
     return Some("the path '\{path}' names no single paragraph before the edit")
   }
   guard docx_format_paragraph_provenance(after, after_story, path~)
-    is Some((result_units, result_silent)) else {
+    is Some((result_units, result_silent, result_mark)) else {
     return Some("the path '\{path}' names no single paragraph after the edit")
+  }
+  guard original_mark == result_mark else {
+    return Some(
+      "the paragraph mark of '\{path}' changed its formatting, though no span selected it",
+    )
   }
   guard original_units.length() == result_units.length() else {
     return Some(
@@ -740,7 +745,7 @@ fn docx_format_paragraph_provenance(
   annotated : DocxAnnotatedResult,
   story : DocxStoryPartSource,
   path~ : String,
-) -> (Array[String], Array[String])? raise DocxError {
+) -> (Array[String], Array[String], String)? raise DocxError {
   let part = story.part()
   guard annotated.reader_projections.get(part) is Some(projection) else {
     return None
@@ -789,18 +794,25 @@ fn docx_format_paragraph_provenance(
       }
     }
   }
+  // Which runs project text, indexed once: scanning every contribution
+  // per run is quadratic, and a paragraph of many small runs is legal.
+  let projecting : Map[Int, Bool] = Map([])
+  for contribution in paragraph.contributions {
+    guard contribution.kind is ProjectedText(_) else { continue }
+    guard contribution.projection_end > contribution.projection_start else {
+      continue
+    }
+    guard contribution.run_source is Some(SourceElementId(identity)) else {
+      continue
+    }
+    projecting[identity] = true
+  }
   // Runs that project no text: a note reference alone in its run still
   // paints, and formatting it would be collateral no span asked for.
   let silent : Array[String] = []
   for run in paragraph.runs {
-    let mut projects = false
-    for contribution in paragraph.contributions {
-      if contribution.run_source == Some(run.source) &&
-        contribution.kind is ProjectedText(_) &&
-        contribution.projection_end > contribution.projection_start {
-        projects = true
-      }
-    }
+    let SourceElementId(run_projection_identity) = run.source
+    let projects = projecting.get(run_projection_identity) == Some(true)
     guard !projects else { continue }
     let SourceElementId(run_identity) = run.source
     // A run holding only properties and EMPTY text elements paints
@@ -823,7 +835,21 @@ fn docx_format_paragraph_provenance(
       docx_format_run_properties(bytes, elements, elements[run_identity]),
     )
   }
-  Some((units, silent))
+  // The paragraph MARK carries direct formatting of its own, in
+  // `w:pPr/w:rPr`. It projects nothing, so no unit or run speaks for
+  // it — and no format request in v1 touches it, which makes any
+  // change to it collateral.
+  let SourceElementId(paragraph_head) = paragraph.sources[0].source
+  let mut mark = ""
+  let mut paragraph_child = elements[paragraph_head].first_child_index
+  while paragraph_child >= 0 {
+    let entry = elements[paragraph_child]
+    if is_wml_uri(entry.uri) && entry.local_name == "pPr" {
+      mark = docx_format_run_properties(bytes, elements, entry)
+    }
+    paragraph_child = entry.next_sibling_index
+  }
+  Some((units, silent, mark))
 }
 
 ///|
@@ -882,7 +908,7 @@ fn docx_format_without(
 ) -> String raise DocxError {
   guard properties != "" else { return "" }
   let bytes = @utf8.encode(properties)
-  docx_format_filter_region(bytes[:], 0, bytes.length(), touched)
+  docx_format_filter_region(bytes, 0, bytes.length(), touched)
 }
 
 ///|
@@ -996,7 +1022,7 @@ fn docx_format_filter_region(
           bytes,
           name_end,
           open_end - 1,
-          remaining.trim(chars=" \t\n\r").to_string(),
+          remaining.trim(chars=" \t\n\r").to_owned(),
         ),
       )
     } else if !touched.contains(property_name) {

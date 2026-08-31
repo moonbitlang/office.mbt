@@ -657,3 +657,4 @@ format_api.mbt	i	docx_format_touched_properties	name	format_api_test:"format pre
 format_api.mbt	iCs	docx_format_touched_properties	name	format_api_test:"format preservation guards unrelated properties inside spans"
 format_api.mbt	t	docx_format_paragraph_provenance	name	format_api_test:"format preservation guards unrelated properties inside spans"
 format_api.mbt	u	docx_format_touched_properties	name	format_api_test:"format preservation guards unrelated properties inside spans"
+format_api.mbt	pPr	docx_format_paragraph_provenance	name	format_api_test:"format preservation guards the paragraph mark"

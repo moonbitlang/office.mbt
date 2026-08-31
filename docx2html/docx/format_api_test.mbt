@@ -1019,3 +1019,106 @@ test "format readbacks judge coverage, shells, and spellings" {
     )
   }
 }
+
+///|
+/// Round 5: the paragraph MARK carries formatting of its own in
+/// `w:pPr/w:rPr`. It projects nothing, so no unit or run speaks for it,
+/// and no v1 request touches it — a change there is collateral.
+test "format preservation guards the paragraph mark" {
+  let before = format_fixture(
+    "<w:p><w:pPr><w:rPr><w:i/><w:iCs/></w:rPr></w:pPr><w:r><w:t>ab</w:t></w:r></w:p>",
+  )
+  // Bold arrives on the run as asked, but the mark's italic became an
+  // underline: projection and the positive check both pass.
+  let clobbered = format_fixture(
+    "<w:p><w:pPr><w:rPr><w:u w:val=\"single\"/></w:rPr></w:pPr><w:r><w:rPr><w:b/><w:bCs/></w:rPr><w:t>ab</w:t></w:r></w:p>",
+  )
+  assert_eq(
+    @docx.docx_paragraph_direct_format(
+      clobbered,
+      clobbered.main_story_source(),
+      path="p[1]",
+      start=0,
+      end=2,
+      format=@docx.docx_direct_format(bold=true),
+    ),
+    None,
+  )
+  let verdict = @docx.docx_paragraph_format_preserved(
+    before,
+    before.main_story_source(),
+    clobbered,
+    clobbered.main_story_source(),
+    path="p[1]",
+    spans=[(0, 2)],
+    format=@docx.docx_direct_format(bold=true),
+  )
+  assert_true(verdict is Some(_))
+  guard verdict is Some(message) else { fail("expected a mark discrepancy") }
+  assert_true(message.contains("paragraph mark"), msg=message)
+  // The planner's own output keeps the mark untouched.
+  let body = "<w:p><w:pPr><w:rPr><w:i/><w:iCs/></w:rPr></w:pPr><w:r><w:t>ab</w:t></w:r></w:p>"
+  let (plan, _) = @docx.plan_docx_format(
+    before,
+    before.main_story_source(),
+    format=@docx.docx_direct_format(bold=true),
+    within="p[1]",
+    range=(0, 2),
+  )
+  let after = format_apply(body, plan)
+  assert_eq(
+    @docx.docx_paragraph_format_preserved(
+      before,
+      before.main_story_source(),
+      after,
+      after.main_story_source(),
+      path="p[1]",
+      spans=[(0, 2)],
+      format=@docx.docx_direct_format(bold=true),
+    ),
+    None,
+  )
+}
+
+///|
+/// Round 5's Low: a longer name that merely starts with a shorter one
+/// must not be counted as it. Without the name-boundary check the
+/// depth walk mis-parses this rPr and reports a difference where there
+/// is none.
+test "format preservation distinguishes rPrChange from rPr" {
+  let before = format_fixture(
+    "<w:p><w:r><w:rPr><w:rPrChange w:id=\"1\" w:author=\"a\" w:date=\"2020-01-01T00:00:00Z\"/><w:b/></w:rPr><w:t>ab</w:t></w:r></w:p>",
+  )
+  let after = format_fixture(
+    "<w:p><w:r><w:rPr><w:rPrChange w:id=\"1\" w:author=\"a\" w:date=\"2020-01-01T00:00:00Z\"/><w:b/><w:bCs/></w:rPr><w:t>ab</w:t></w:r></w:p>",
+  )
+  // Only bold-family children differ, and bold is what was requested.
+  assert_eq(
+    @docx.docx_paragraph_format_preserved(
+      before,
+      before.main_story_source(),
+      after,
+      after.main_story_source(),
+      path="p[1]",
+      spans=[(0, 2)],
+      format=@docx.docx_direct_format(bold=true),
+    ),
+    None,
+  )
+  // A change to the tracked-change record itself is not bold's to make.
+  let tampered = format_fixture(
+    "<w:p><w:r><w:rPr><w:rPrChange w:id=\"2\" w:author=\"a\" w:date=\"2020-01-01T00:00:00Z\"/><w:b/><w:bCs/></w:rPr><w:t>ab</w:t></w:r></w:p>",
+  )
+  assert_true(
+    @docx.docx_paragraph_format_preserved(
+      before,
+      before.main_story_source(),
+      tampered,
+      tampered.main_story_source(),
+      path="p[1]",
+      spans=[(0, 2)],
+      format=@docx.docx_direct_format(bold=true),
+    )
+    is Some(_),
+  )
+}
