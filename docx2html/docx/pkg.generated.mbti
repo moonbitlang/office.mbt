@@ -78,7 +78,7 @@ pub fn plan_docx_paragraph_insertion(DocxAnnotatedResult, at~ : String, before~ 
 
 pub fn plan_docx_replacements(DocxAnnotatedResult, DocxStoryPartSource, needle~ : String, replacement~ : String, within? : String, nth? : Int) -> (@splice.SplicePlan, DocxReplaceReceipt) raise @core.DocxError
 
-pub fn plan_run_format(BytesView, prefix~ : String, format~ : DocxDirectFormat) -> RunFormatPlan raise @core.DocxError
+pub fn plan_run_format(BytesView, prefix~ : String, attr_prefix? : String, extension_prefixes? : Array[String], format~ : DocxDirectFormat) -> RunFormatPlan raise @core.DocxError
 
 pub fn plan_run_text_replacement(DocxAnnotatedResult, DocxStoryPartSource, at_relative~ : String, expect~ : String, text~ : String) -> (@splice.SplicePlan, RunTextReceipt) raise @core.DocxError
 
@@ -108,7 +108,7 @@ pub fn validate_global_para_id_state_archive_limited(DocxAnnotatedResult, @zip.A
 
 pub fn validated_para_id(String) -> String?
 
-pub fn verify_run_format(BytesView, prefix~ : String, format~ : DocxDirectFormat) -> String? raise @core.DocxError
+pub fn verify_run_format(BytesView, prefix~ : String, attr_prefix? : String, extension_prefixes? : Array[String], format~ : DocxDirectFormat) -> String? raise @core.DocxError
 
 pub fn write_docx(Array[@document.DocumentElement]) -> Bytes raise @core.DocxError
 

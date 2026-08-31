@@ -68,23 +68,19 @@ pub fn docx_direct_format(
           message="format color is a six-digit RGB value (RRGGBB or #RRGGBB)",
         )
       }
-      let units = hex.code_units()
       let builder = StringBuilder(size_hint=6)
-      for index in 0..<6 {
-        let code = units[index].to_int()
-        let upper = if code >= 'a'.to_int() && code <= 'f'.to_int() {
-          code - 32
+      for ch in hex {
+        let upper = if ch is ('a'..='f') {
+          (ch.to_int() - 32).unsafe_to_char()
         } else {
-          code
+          ch
         }
-        let is_hex = (upper >= '0'.to_int() && upper <= '9'.to_int()) ||
-          (upper >= 'A'.to_int() && upper <= 'F'.to_int())
-        guard is_hex else {
+        guard upper is ('0'..='9' | 'A'..='F') else {
           raise Unsupported(
             message="format color is a six-digit RGB value (RRGGBB or #RRGGBB)",
           )
         }
-        builder.write_char(upper.unsafe_to_char())
+        builder.write_char(upper)
       }
       Some(builder.to_string())
     }
@@ -136,8 +132,10 @@ pub struct RunFormatPlan {
 }
 
 ///|
+/// A defensive copy — the plan's sorted/non-overlapping invariant
+/// cannot be mutated away by a caller.
 pub fn RunFormatPlan::edits(self : RunFormatPlan) -> Array[RunFormatEdit] {
-  self.edits
+  self.edits.copy()
 }
 
 ///|
@@ -150,22 +148,89 @@ pub fn RunFormatPlan::changed(self : RunFormatPlan) -> Bool {
 // ---------------------------------------------------------------------------
 
 ///|
-/// The qualified spelling of a WML name under the document's binding:
-/// `prefix=""` is the default-namespace document (`<r>`, `<rPr>`), any
-/// other prefix spells `prefix:local`. ATTRIBUTES in the WML namespace
-/// are prefixed in prefixed documents and UNPREFIXED (no namespace,
-/// per XML rules — Word writes them so) in default-namespace ones.
-fn wml_name(prefix : String, local : String) -> String {
-  if prefix == "" {
+/// The caller-vouched namespace binding this lexical engine edits
+/// under. XML default namespaces apply to ELEMENTS only, so `element`
+/// may be "" (a default-namespace document spells `<r>`, `<rPr>`), but
+/// an unprefixed attribute has NO namespace — WML's schema qualifies
+/// its attributes, so `attribute` is never "". `extensions` lists the
+/// prefixes the caller warrants are bound to recognized rPr extension
+/// namespaces (w14 and friends) — and NOT to WML or to
+/// markup-compatibility.
+priv struct WmlBinding {
+  element : String
+  attribute : String
+  extensions : Array[String]
+}
+
+///|
+fn make_binding(
+  prefix : String,
+  attr_prefix : String?,
+  extension_prefixes : Array[String]?,
+) -> WmlBinding raise DocxError {
+  let attribute = attr_prefix.unwrap_or(prefix)
+  guard attribute != "" else {
+    raise Unsupported(
+      message="run formatting requires an attribute prefix: XML default namespaces do not apply to attributes, so WML attributes are always qualified",
+    )
+  }
+  guard prefix != "xmlns" && prefix != "xml" && attribute != "xmlns" else {
+    raise Unsupported(
+      message="run formatting refuses a reserved namespace prefix",
+    )
+  }
+  let extensions = extension_prefixes.unwrap_or([])
+  for entry in extensions {
+    guard entry != "" &&
+      entry != prefix &&
+      entry != attribute &&
+      entry != "mc" &&
+      entry != "xml" &&
+      entry != "xmlns" else {
+      raise Unsupported(
+        message="run formatting refuses the extension prefix \{entry}: extension prefixes must be distinct from the WML and reserved bindings",
+      )
+    }
+  }
+  { element: prefix, attribute, extensions, }
+}
+
+///|
+/// The qualified spelling of a WML ELEMENT under the binding:
+/// `element=""` is the default-namespace document (`<r>`, `<rPr>`),
+/// any other prefix spells `prefix:local`.
+fn wml_name(binding : WmlBinding, local : String) -> String {
+  if binding.element == "" {
     local
   } else {
-    "\{prefix}:\{local}"
+    "\{binding.element}:\{local}"
   }
+}
+
+///|
+/// Split a child's qname into (prefix, local) — prefix "" when the
+/// name carries no colon.
+fn split_qname(name : String) -> (String, String) {
+  let units = name.code_units()
+  for index in 0..<units.length() {
+    if units[index].to_int() == ':'.to_int() {
+      return (
+        name.substring(start=0, end=index).to_string(),
+        name.substring(start=index + 1, end=name.length()).to_string(),
+      )
+    }
+  }
+  ("", name)
 }
 
 // ---------------------------------------------------------------------------
 // Lexical scanning
 // ---------------------------------------------------------------------------
+
+///|
+fn is_xml_ws(byte : Byte) -> Bool {
+  byte is (b' ' | b'\t' | b'\n' | b'\r')
+}
 
 ///|
 priv struct FormatAttribute {
@@ -207,7 +272,7 @@ fn scan_direct_children(
   let mut at = content_start
   while at < content_end {
     let byte = bytes[at]
-    if byte == b' ' || byte == b'\t' || byte == b'\n' || byte == b'\r' {
+    if is_xml_ws(byte) {
       at += 1
       continue
     }
@@ -238,12 +303,7 @@ fn scan_direct_children(
       // the close tag means element or text content.
       let mut probe = open_end
       while probe < close_at.0 {
-        let inner = bytes[probe]
-        if inner == b'<' {
-          has_element_children = true
-          break
-        }
-        if inner != b' ' && inner != b'\t' && inner != b'\n' && inner != b'\r' {
+        if !is_xml_ws(bytes[probe]) {
           has_element_children = true
           break
         }
@@ -292,25 +352,30 @@ fn consume_subtree(
       )
     }
     if bytes[at + 1] == b'/' {
+      // XML permits whitespace AFTER the end-tag name, never before it:
+      // the name starts immediately at "</".
       let close_start = at
       let name_start = at + 2
       let mut cursor = name_start
-      while cursor < limit && bytes[cursor] != b'>' {
+      while cursor < limit && bytes[cursor] != b'>' && !is_xml_ws(bytes[cursor]) {
         cursor += 1
       }
-      guard cursor < limit else {
-        raise Unsupported(message="run formatting found a truncated close tag")
-      }
       let close_name = ascii_slice(bytes, name_start, cursor)
-        .trim(chars=" \t\n\r")
-        .to_string()
+      validate_xml_name(close_name)
+      let mut probe = cursor
+      while probe < limit && is_xml_ws(bytes[probe]) {
+        probe += 1
+      }
+      guard probe < limit && bytes[probe] == b'>' else {
+        raise Unsupported(message="run formatting found a malformed close tag")
+      }
       guard stack.length() > 0 && stack[stack.length() - 1] == close_name else {
         raise Unsupported(
           message="run formatting found a close tag that does not match its element",
         )
       }
       ignore(stack.pop())
-      at = cursor + 1
+      at = probe + 1
       if stack.length() == 0 {
         return (close_start, at)
       }
@@ -341,12 +406,9 @@ fn scan_format_tag(
   let mut at = start + 1
   let name_start = at
   while at < limit &&
-        bytes[at] != b' ' &&
         bytes[at] != b'>' &&
         bytes[at] != b'/' &&
-        bytes[at] != b'\t' &&
-        bytes[at] != b'\n' &&
-        bytes[at] != b'\r' {
+        !is_xml_ws(bytes[at]) {
     guard bytes[at] < b'\x80' else {
       raise Unsupported(
         message="run formatting requires ASCII element names at the edit site",
@@ -355,16 +417,11 @@ fn scan_format_tag(
     at += 1
   }
   let name = ascii_slice(bytes, name_start, at)
+  validate_xml_name(name)
   let attributes : Array[FormatAttribute] = []
   let mut self_closing = false
   while at < limit {
-    while at < limit &&
-          (
-            bytes[at] == b' ' ||
-            bytes[at] == b'\t' ||
-            bytes[at] == b'\n' ||
-            bytes[at] == b'\r'
-          ) {
+    while at < limit && is_xml_ws(bytes[at]) {
       at += 1
     }
     guard at < limit else {
@@ -386,12 +443,7 @@ fn scan_format_tag(
     // name's first byte through the closing quote is recorded so a
     // whole-attribute removal never leaves a dangling name.
     let attr_name_start = at
-    while at < limit &&
-          bytes[at] != b'=' &&
-          bytes[at] != b' ' &&
-          bytes[at] != b'\t' &&
-          bytes[at] != b'\n' &&
-          bytes[at] != b'\r' {
+    while at < limit && bytes[at] != b'=' && !is_xml_ws(bytes[at]) {
       guard bytes[at] < b'\x80' else {
         raise Unsupported(
           message="run formatting requires ASCII attribute names at the edit site",
@@ -405,13 +457,8 @@ fn scan_format_tag(
       at += 1
     }
     let attr_name = ascii_slice(bytes, attr_name_start, at)
-    while at < limit &&
-          (
-            bytes[at] == b' ' ||
-            bytes[at] == b'\t' ||
-            bytes[at] == b'\n' ||
-            bytes[at] == b'\r'
-          ) {
+    validate_xml_name(attr_name)
+    while at < limit && is_xml_ws(bytes[at]) {
       at += 1
     }
     guard at < limit && bytes[at] == b'=' else {
@@ -420,13 +467,7 @@ fn scan_format_tag(
       )
     }
     at += 1
-    while at < limit &&
-          (
-            bytes[at] == b' ' ||
-            bytes[at] == b'\t' ||
-            bytes[at] == b'\n' ||
-            bytes[at] == b'\r'
-          ) {
+    while at < limit && is_xml_ws(bytes[at]) {
       at += 1
     }
     guard at < limit && (bytes[at] == b'"' || bytes[at] == b'\'') else {
@@ -461,6 +502,29 @@ fn scan_format_tag(
     at += 1
   }
   (name, attributes, self_closing, at)
+}
+
+///|
+/// The ASCII subset of XML names this engine will edit around: a name
+/// starts with a letter or underscore and continues with letters,
+/// digits, '_', '-', '.', or ':'. Anything else — including an empty
+/// name, so `</ w:b>` can never pass as `w:b` — is a refusal.
+fn validate_xml_name(name : String) -> Unit raise DocxError {
+  guard name.length() > 0 else {
+    raise Unsupported(message="run formatting found a malformed XML name")
+  }
+  let mut first = true
+  for ch in name {
+    let valid = if first {
+      ch is ('A'..='Z' | 'a'..='z' | '_')
+    } else {
+      ch is ('A'..='Z' | 'a'..='z' | '0'..='9' | '_' | '-' | '.' | ':')
+    }
+    guard valid else {
+      raise Unsupported(message="run formatting found a malformed XML name")
+    }
+    first = false
+  }
 }
 
 ///|
@@ -544,18 +608,25 @@ priv struct PendingEdit {
 }
 
 ///|
-/// Plan the minimal edits that make `format` hold explicitly on one
-/// run, given the run's complete byte slice and the document's WML
-/// binding (`prefix=""` for a default-namespace document).
-pub fn plan_run_format(
+/// The scanned structure of one run slice: where its open tag ends,
+/// whether it is self-closing, and its (unique, first-child) `rPr` if
+/// present. Shared by the planner and the verifier — this is lexer
+/// truth, not edit generation.
+priv struct RunShape {
+  open_end : Int
+  self_closing : Bool
+  rpr : RunChildTag?
+}
+
+///|
+fn scan_run_shape(
   run_slice : BytesView,
-  prefix~ : String,
-  format~ : DocxDirectFormat,
-) -> RunFormatPlan raise DocxError {
+  binding : WmlBinding,
+) -> RunShape raise DocxError {
   guard run_slice.length() > 0 && run_slice[0] == b'<' else {
     raise Unsupported(message="run formatting requires the run's element slice")
   }
-  let run_qname = wml_name(prefix, "r")
+  let run_qname = wml_name(binding, "r")
   let (run_name, _, run_self_closing, run_open_end) = scan_format_tag(
     run_slice,
     0,
@@ -572,28 +643,7 @@ pub fn plan_run_format(
         message="run formatting requires the slice to end at the run",
       )
     }
-    // Expand only the closing "/>" — the open tag's own attributes and
-    // spacing are preserved untouched.
-    let rendered = render_rpr_children(prefix, format)
-    let insert_at = run_slice.length() - 2
-    guard run_slice[insert_at] == b'/' && run_slice[insert_at + 1] == b'>' else {
-      raise Unsupported(
-        message="run formatting found a malformed self-closing run",
-      )
-    }
-    let rpr_qname = wml_name(prefix, "rPr")
-    return {
-      edits: [
-        {
-          start: insert_at,
-          end: run_slice.length(),
-          replacement: "><\{rpr_qname}>" +
-          rendered +
-          "</\{rpr_qname}></\{run_qname}>",
-        },
-      ],
-      changed: true,
-    }
+    return { open_end: run_open_end, self_closing: true, rpr: None, }
   }
   // The slice must end with this run's own close tag — checked, not
   // assumed, because this is a public planner.
@@ -612,7 +662,7 @@ pub fn plan_run_format(
     }
   }
   let children = scan_direct_children(run_slice, run_open_end, content_end)
-  let rpr_qname = wml_name(prefix, "rPr")
+  let rpr_qname = wml_name(binding, "rPr")
   let mut rpr : RunChildTag? = None
   for index, child in children {
     if child.name == rpr_qname {
@@ -630,63 +680,115 @@ pub fn plan_run_format(
       rpr = Some(child)
     }
   }
-  match rpr {
+  { open_end: run_open_end, self_closing: false, rpr, }
+}
+
+///|
+/// Plan the minimal edits that make `format` hold explicitly on one
+/// run, given the run's complete byte slice and the document's WML
+/// binding: `prefix` is the ELEMENT prefix ("" for a default-namespace
+/// document), `attr_prefix` (default: `prefix`) is the prefix WML
+/// attributes carry — never empty, because default namespaces do not
+/// apply to attributes — and `extension_prefixes` lists the prefixes
+/// the caller warrants are bound to recognized rPr extension
+/// namespaces.
+pub fn plan_run_format(
+  run_slice : BytesView,
+  prefix~ : String,
+  attr_prefix? : String,
+  extension_prefixes? : Array[String],
+  format~ : DocxDirectFormat,
+) -> RunFormatPlan raise DocxError {
+  let binding = make_binding(prefix, attr_prefix, extension_prefixes)
+  let shape = scan_run_shape(run_slice, binding)
+  let run_qname = wml_name(binding, "r")
+  let rpr_qname = wml_name(binding, "rPr")
+  if shape.self_closing {
+    // Expand only the closing "/>" — the open tag's own attributes and
+    // spacing are preserved untouched.
+    let rendered = render_rpr_children(binding, format)
+    let insert_at = run_slice.length() - 2
+    guard run_slice[insert_at] == b'/' && run_slice[insert_at + 1] == b'>' else {
+      raise Unsupported(
+        message="run formatting found a malformed self-closing run",
+      )
+    }
+    return {
+      edits: [
+        {
+          start: insert_at,
+          end: run_slice.length(),
+          replacement: "><\{rpr_qname}>" +
+          rendered +
+          "</\{rpr_qname}></\{run_qname}>",
+        },
+      ],
+      changed: true,
+    }
+  }
+  match shape.rpr {
     None => {
-      let rendered = render_rpr_children(prefix, format)
+      let rendered = render_rpr_children(binding, format)
       {
         edits: [
           {
-            start: run_open_end,
-            end: run_open_end,
+            start: shape.open_end,
+            end: shape.open_end,
             replacement: "<\{rpr_qname}>" + rendered + "</\{rpr_qname}>",
           },
         ],
         changed: true,
       }
     }
-    Some(container) => plan_within_rpr(run_slice, prefix, format, container)
+    Some(container) => plan_within_rpr(run_slice, binding, format, container)
   }
 }
 
 ///|
-fn plan_within_rpr(
-  run_slice : BytesView,
-  prefix : String,
-  format : DocxDirectFormat,
-  container : RunChildTag,
-) -> RunFormatPlan raise DocxError {
-  let rpr_qname = wml_name(prefix, "rPr")
-  if container.self_closing {
-    // Expand only the closing "/>": the open tag with every attribute
-    // and spacing survives byte-for-byte.
-    let rendered = render_rpr_children(prefix, format)
-    let slash_at = container.open_end - 2
-    guard run_slice[slash_at] == b'/' && run_slice[slash_at + 1] == b'>' else {
-      raise Unsupported(
-        message="run formatting found a malformed self-closing rPr",
-      )
-    }
-    return {
-      edits: [
-        {
-          start: slash_at,
-          end: container.open_end,
-          replacement: ">" + rendered + "</\{rpr_qname}>",
-        },
-      ],
-      changed: true,
-    }
+/// The classified inventory of one non-self-closing rPr: targeted
+/// properties recorded (duplicates refused), ranked children proven
+/// monotonic, extension children admitted ONLY under a caller-vouched
+/// prefix — and never when their local name collides with a ranked
+/// WML property (a possible alias) or spells markup-compatibility
+/// content this lexical engine cannot resolve.
+priv struct RprInventory {
+  bold : RunChildTag?
+  bold_cs : RunChildTag?
+  italic : RunChildTag?
+  italic_cs : RunChildTag?
+  underline : RunChildTag?
+  color : RunChildTag?
+  children : Array[RunChildTag]
+  insertion_limit : Int
+}
+
+///|
+fn empty_inventory() -> RprInventory {
+  {
+    bold: None,
+    bold_cs: None,
+    italic: None,
+    italic_cs: None,
+    underline: None,
+    color: None,
+    children: [],
+    insertion_limit: 0,
   }
-  let close = "</\{rpr_qname}>"
+}
+
+///|
+fn classify_rpr_children(
+  run_slice : BytesView,
+  binding : WmlBinding,
+  container : RunChildTag,
+) -> RprInventory raise DocxError {
+  let close = "</\{wml_name(binding, "rPr")}>"
   let interior_end = container.byte_end - close.length()
   let children = scan_direct_children(
     run_slice,
     container.open_end,
     interior_end,
   )
-  // One classification pass: targeted properties recorded (duplicates
-  // refused), ranked children checked for monotonic schema order,
-  // unranked children legal ONLY as a trailing extension block.
   let mut seen_b : RunChildTag? = None
   let mut seen_bcs : RunChildTag? = None
   let mut seen_i : RunChildTag? = None
@@ -696,24 +798,40 @@ fn plan_within_rpr(
   let mut last_rank = -1
   let mut extension_block_start : Int? = None
   for child in children {
-    if child.name == wml_name(prefix, "rPrChange") {
+    let (child_prefix, local) = split_qname(child.name)
+    if child_prefix != binding.element {
+      // A foreign-prefixed child is legal ONLY as part of the trailing
+      // extension block, under a prefix the caller vouched for — and
+      // even then never under a ranked property's name (a possible
+      // WML alias) or a markup-compatibility name (content selection
+      // this lexical engine cannot resolve).
+      guard binding.extensions.contains(child_prefix) else {
+        raise Unsupported(
+          message="run formatting refuses the rPr child \{child.name}: its prefix is outside the caller-vouched extension prefixes",
+        )
+      }
+      guard rpr_rank(local) is None else {
+        raise Unsupported(
+          message="run formatting refuses \{child.name}: a ranked property name under a foreign prefix may be a WML alias",
+        )
+      }
+      guard local != "AlternateContent" &&
+        local != "Choice" &&
+        local != "Fallback" &&
+        local != "ProcessContent" else {
+        raise Unsupported(
+          message="run formatting refuses markup-compatibility content inside rPr",
+        )
+      }
+      if extension_block_start is None {
+        extension_block_start = Some(child.byte_start)
+      }
+      continue
+    }
+    if local == "rPrChange" {
       raise Unsupported(
         message="run formatting refuses a run with an in-flight tracked property change (rPrChange)",
       )
-    }
-    let local = if prefix == "" {
-      child.name
-    } else if child.name.has_prefix("\{prefix}:") {
-      child.name
-      .substring(start=prefix.length() + 1, end=child.name.length())
-      .to_string()
-    } else {
-      // Foreign prefix: only legal inside the trailing extension block.
-      match extension_block_start {
-        None => extension_block_start = Some(child.byte_start)
-        Some(_) => ()
-      }
-      continue
     }
     match rpr_rank(local) {
       Some(rank) => {
@@ -730,10 +848,9 @@ fn plan_within_rpr(
         last_rank = rank
       }
       None =>
-        match extension_block_start {
-          None => extension_block_start = Some(child.byte_start)
-          Some(_) => ()
-        }
+        raise Unsupported(
+          message="run formatting does not recognize the rPr child \{child.name}",
+        )
     }
     fn record(
       slot : RunChildTag?,
@@ -767,17 +884,70 @@ fn plan_within_rpr(
       seen_color = record(seen_color, child)
     }
   }
-  // The unique legal insertion boundary for NEW children is before the
-  // trailing extension block (or the interior end).
-  let insertion_limit = extension_block_start.unwrap_or(interior_end)
+  {
+    bold: seen_b,
+    bold_cs: seen_bcs,
+    italic: seen_i,
+    italic_cs: seen_ics,
+    underline: seen_u,
+    color: seen_color,
+    children,
+    // The unique legal insertion boundary for NEW children is before
+    // the trailing extension block (or the interior end).
+    insertion_limit: extension_block_start.unwrap_or(interior_end),
+  }
+}
+
+///|
+fn plan_within_rpr(
+  run_slice : BytesView,
+  binding : WmlBinding,
+  format : DocxDirectFormat,
+  container : RunChildTag,
+) -> RunFormatPlan raise DocxError {
+  let rpr_qname = wml_name(binding, "rPr")
+  if container.self_closing {
+    // Expand only the closing "/>": the open tag with every attribute
+    // and spacing survives byte-for-byte.
+    let rendered = render_rpr_children(binding, format)
+    let slash_at = container.open_end - 2
+    guard run_slice[slash_at] == b'/' && run_slice[slash_at + 1] == b'>' else {
+      raise Unsupported(
+        message="run formatting found a malformed self-closing rPr",
+      )
+    }
+    return {
+      edits: [
+        {
+          start: slash_at,
+          end: container.open_end,
+          replacement: ">" + rendered + "</\{rpr_qname}>",
+        },
+      ],
+      changed: true,
+    }
+  }
+  let inventory = classify_rpr_children(run_slice, binding, container)
   let pending : Array[PendingEdit] = []
   match format.bold {
     Some(value) => {
       plan_on_off(
-        prefix, "b", value, seen_b, children, container, insertion_limit, pending,
+        binding,
+        "b",
+        value,
+        inventory.bold,
+        inventory,
+        container,
+        pending,
       )
       plan_on_off(
-        prefix, "bCs", value, seen_bcs, children, container, insertion_limit, pending,
+        binding,
+        "bCs",
+        value,
+        inventory.bold_cs,
+        inventory,
+        container,
+        pending,
       )
     }
     None => ()
@@ -785,10 +955,22 @@ fn plan_within_rpr(
   match format.italic {
     Some(value) => {
       plan_on_off(
-        prefix, "i", value, seen_i, children, container, insertion_limit, pending,
+        binding,
+        "i",
+        value,
+        inventory.italic,
+        inventory,
+        container,
+        pending,
       )
       plan_on_off(
-        prefix, "iCs", value, seen_ics, children, container, insertion_limit, pending,
+        binding,
+        "iCs",
+        value,
+        inventory.italic_cs,
+        inventory,
+        container,
+        pending,
       )
     }
     None => ()
@@ -796,14 +978,24 @@ fn plan_within_rpr(
   match format.underline {
     Some(value) =>
       plan_underline(
-        prefix, value, seen_u, children, container, insertion_limit, pending,
+        binding,
+        value,
+        inventory.underline,
+        inventory,
+        container,
+        pending,
       )
     None => ()
   }
   match format.color {
     Some(value) =>
       plan_color(
-        run_slice, prefix, value, seen_color, children, container, insertion_limit,
+        run_slice,
+        binding,
+        value,
+        inventory.color,
+        inventory,
+        container,
         pending,
       )
     None => ()
@@ -830,31 +1022,25 @@ fn plan_within_rpr(
 
 ///|
 /// The insertion offset for a new `local` child: after the last ranked
-/// child of lower-or-equal rank, never past the trailing extension
-/// block. Ranked children are already proven monotonic, so this point
-/// is unique and legal by construction.
+/// child of lower rank, never past the trailing extension block.
+/// Ranked children are already proven monotonic, so this point is
+/// unique and legal by construction.
 fn rpr_insertion_offset(
-  prefix : String,
+  binding : WmlBinding,
   local : String,
-  children : Array[RunChildTag],
+  inventory : RprInventory,
   container : RunChildTag,
-  insertion_limit : Int,
 ) -> (Int, Int) raise DocxError {
   guard rpr_rank(local) is Some(rank) else {
     raise Unsupported(message="run formatting has no rank for \{local}")
   }
   let mut offset = container.open_end
-  for child in children {
-    if child.byte_start >= insertion_limit {
+  for child in inventory.children {
+    if child.byte_start >= inventory.insertion_limit {
       break
     }
-    let child_local = if prefix == "" {
-      child.name
-    } else if child.name.has_prefix("\{prefix}:") {
-      child.name
-      .substring(start=prefix.length() + 1, end=child.name.length())
-      .to_string()
-    } else {
+    let (child_prefix, child_local) = split_qname(child.name)
+    if child_prefix != binding.element {
       break
     }
     match rpr_rank(child_local) {
@@ -866,23 +1052,19 @@ fn rpr_insertion_offset(
 }
 
 ///|
-/// The attribute name a WML-namespaced attribute carries in this
-/// document: prefixed documents spell `w:val`; default-namespace
-/// documents spell it `val` (attributes take no default namespace).
-fn wml_attr(prefix : String, local : String) -> String {
-  if prefix == "" {
-    local
-  } else {
-    "\{prefix}:\{local}"
-  }
+/// The attribute name a WML-namespaced attribute carries — ALWAYS
+/// qualified, because XML default namespaces do not apply to
+/// attributes.
+fn wml_attr(binding : WmlBinding, local : String) -> String {
+  "\{binding.attribute}:\{local}"
 }
 
 ///|
 fn find_val(
-  prefix : String,
+  binding : WmlBinding,
   tag : RunChildTag,
 ) -> FormatAttribute? raise DocxError {
-  let val_name = wml_attr(prefix, "val")
+  let val_name = wml_attr(binding, "val")
   let mut found : FormatAttribute? = None
   for attribute in tag.attributes {
     if attribute.name == val_name {
@@ -898,19 +1080,51 @@ fn find_val(
 }
 
 ///|
+/// On properties that keep their other attributes (u, color), any
+/// attribute SPELLED like a val under a different binding — a bare
+/// `val` (no namespace), a foreign `x:val` — is refused rather than
+/// read past: it may be the very value this engine is about to
+/// contradict.
+fn refuse_val_alias(
+  binding : WmlBinding,
+  tag : RunChildTag,
+) -> Unit raise DocxError {
+  let val_name = wml_attr(binding, "val")
+  for attribute in tag.attributes {
+    let (_, local) = split_qname(attribute.name)
+    if local == "val" && attribute.name != val_name {
+      raise Unsupported(
+        message="run formatting refuses the attribute \{attribute.name} on \{tag.name}",
+      )
+    }
+  }
+}
+
+///|
 fn plan_on_off(
-  prefix : String,
+  binding : WmlBinding,
   local : String,
   requested : Bool,
   existing : RunChildTag?,
-  children : Array[RunChildTag],
+  inventory : RprInventory,
   container : RunChildTag,
-  insertion_limit : Int,
   pending : Array[PendingEdit],
 ) -> Unit raise DocxError {
   match existing {
     Some(tag) => {
-      let val = find_val(prefix, tag)
+      // ST_OnOff properties carry ONLY the val attribute; anything
+      // else — a bare `val` with no namespace, a foreign-prefixed
+      // val — would change what this planner is reading, so it
+      // refuses rather than misreads the property as val-less.
+      let val_name = wml_attr(binding, "val")
+      for attribute in tag.attributes {
+        guard attribute.name == val_name else {
+          raise Unsupported(
+            message="run formatting refuses the attribute \{attribute.name} on \{tag.name}",
+          )
+        }
+      }
+      let val = find_val(binding, tag)
       match on_off_value(val.map(entry => entry.value)) {
         Some(current) =>
           if current != requested {
@@ -935,7 +1149,7 @@ fn plan_on_off(
                 pending.push({
                   start: insert_at,
                   end: insert_at,
-                  replacement: " \{wml_attr(prefix, "val")}=\"0\"",
+                  replacement: " \{wml_attr(binding, "val")}=\"0\"",
                   order: 0,
                 })
               }
@@ -949,13 +1163,13 @@ fn plan_on_off(
     }
     None => {
       let (offset, rank) = rpr_insertion_offset(
-        prefix, local, children, container, insertion_limit,
+        binding, local, inventory, container,
       )
-      let qname = wml_name(prefix, local)
+      let qname = wml_name(binding, local)
       let rendered = if requested {
         "<\{qname}/>"
       } else {
-        "<\{qname} \{wml_attr(prefix, "val")}=\"0\"/>"
+        "<\{qname} \{wml_attr(binding, "val")}=\"0\"/>"
       }
       pending.push({
         start: offset,
@@ -969,18 +1183,18 @@ fn plan_on_off(
 
 ///|
 fn plan_underline(
-  prefix : String,
+  binding : WmlBinding,
   requested : Bool,
   existing : RunChildTag?,
-  children : Array[RunChildTag],
+  inventory : RprInventory,
   container : RunChildTag,
-  insertion_limit : Int,
   pending : Array[PendingEdit],
 ) -> Unit raise DocxError {
   let wanted = if requested { "single" } else { "none" }
   match existing {
-    Some(tag) =>
-      match find_val(prefix, tag) {
+    Some(tag) => {
+      refuse_val_alias(binding, tag)
+      match find_val(binding, tag) {
         Some(attribute) =>
           if attribute.value != wanted {
             pending.push({
@@ -995,14 +1209,15 @@ fn plan_underline(
             message="run formatting found an underline without a val attribute",
           )
       }
+    }
     None => {
       let (offset, rank) = rpr_insertion_offset(
-        prefix, "u", children, container, insertion_limit,
+        binding, "u", inventory, container,
       )
       pending.push({
         start: offset,
         end: offset,
-        replacement: "<\{wml_name(prefix, "u")} \{wml_attr(prefix, "val")}=\"\{wanted}\"/>",
+        replacement: "<\{wml_name(binding, "u")} \{wml_attr(binding, "val")}=\"\{wanted}\"/>",
         order: rank,
       })
     }
@@ -1019,12 +1234,13 @@ fn rgb_equal(existing : String, requested : String) -> Bool {
   let left = existing.code_units()
   let right = requested.code_units()
   for index in 0..<6 {
-    let mut a = left[index].to_int()
-    let b = right[index].to_int()
-    if a >= 'a'.to_int() && a <= 'f'.to_int() {
-      a -= 32
+    let a = left[index].to_int().unsafe_to_char()
+    let folded = if a is ('a'..='f') {
+      (a.to_int() - 32).unsafe_to_char()
+    } else {
+      a
     }
-    if a != b {
+    if folded.to_int() != right[index].to_int() {
       return false
     }
   }
@@ -1034,21 +1250,21 @@ fn rgb_equal(existing : String, requested : String) -> Bool {
 ///|
 fn plan_color(
   run_slice : BytesView,
-  prefix : String,
+  binding : WmlBinding,
   requested : String,
   existing : RunChildTag?,
-  children : Array[RunChildTag],
+  inventory : RprInventory,
   container : RunChildTag,
-  insertion_limit : Int,
   pending : Array[PendingEdit],
 ) -> Unit raise DocxError {
   match existing {
     Some(tag) => {
-      let val = find_val(prefix, tag)
+      refuse_val_alias(binding, tag)
+      let val = find_val(binding, tag)
       let theme_names = [
-        wml_attr(prefix, "themeColor"),
-        wml_attr(prefix, "themeTint"),
-        wml_attr(prefix, "themeShade"),
+        wml_attr(binding, "themeColor"),
+        wml_attr(binding, "themeTint"),
+        wml_attr(binding, "themeShade"),
       ]
       for attribute in tag.attributes {
         if theme_names.contains(attribute.name) {
@@ -1056,13 +1272,7 @@ fn plan_color(
           // through the closing quote — spans come from the scanner,
           // never reconstructed.
           let mut span_start = attribute.name_start
-          while span_start > 0 &&
-                (
-                  run_slice[span_start - 1] == b' ' ||
-                  run_slice[span_start - 1] == b'\t' ||
-                  run_slice[span_start - 1] == b'\n' ||
-                  run_slice[span_start - 1] == b'\r'
-                ) {
+          while span_start > 0 && is_xml_ws(run_slice[span_start - 1]) {
             span_start -= 1
           }
           pending.push({
@@ -1091,12 +1301,12 @@ fn plan_color(
     }
     None => {
       let (offset, rank) = rpr_insertion_offset(
-        prefix, "color", children, container, insertion_limit,
+        binding, "color", inventory, container,
       )
       pending.push({
         start: offset,
         end: offset,
-        replacement: "<\{wml_name(prefix, "color")} \{wml_attr(prefix, "val")}=\"\{requested}\"/>",
+        replacement: "<\{wml_name(binding, "color")} \{wml_attr(binding, "val")}=\"\{requested}\"/>",
         order: rank,
       })
     }
@@ -1105,42 +1315,45 @@ fn plan_color(
 
 ///|
 /// Render the CHILDREN of a fresh `rPr` in schema order.
-fn render_rpr_children(prefix : String, format : DocxDirectFormat) -> String {
+fn render_rpr_children(
+  binding : WmlBinding,
+  format : DocxDirectFormat,
+) -> String {
   let builder = StringBuilder()
-  let val = wml_attr(prefix, "val")
+  let val = wml_attr(binding, "val")
   match format.bold {
     Some(true) =>
       builder.write_string(
-        "<\{wml_name(prefix, "b")}/><\{wml_name(prefix, "bCs")}/>",
+        "<\{wml_name(binding, "b")}/><\{wml_name(binding, "bCs")}/>",
       )
     Some(false) =>
       builder.write_string(
-        "<\{wml_name(prefix, "b")} \{val}=\"0\"/><\{wml_name(prefix, "bCs")} \{val}=\"0\"/>",
+        "<\{wml_name(binding, "b")} \{val}=\"0\"/><\{wml_name(binding, "bCs")} \{val}=\"0\"/>",
       )
     None => ()
   }
   match format.italic {
     Some(true) =>
       builder.write_string(
-        "<\{wml_name(prefix, "i")}/><\{wml_name(prefix, "iCs")}/>",
+        "<\{wml_name(binding, "i")}/><\{wml_name(binding, "iCs")}/>",
       )
     Some(false) =>
       builder.write_string(
-        "<\{wml_name(prefix, "i")} \{val}=\"0\"/><\{wml_name(prefix, "iCs")} \{val}=\"0\"/>",
+        "<\{wml_name(binding, "i")} \{val}=\"0\"/><\{wml_name(binding, "iCs")} \{val}=\"0\"/>",
       )
     None => ()
   }
   match format.color {
     Some(value) =>
       builder.write_string(
-        "<\{wml_name(prefix, "color")} \{val}=\"\{value}\"/>",
+        "<\{wml_name(binding, "color")} \{val}=\"\{value}\"/>",
       )
     None => ()
   }
   match format.underline {
     Some(value) => {
       let wanted = if value { "single" } else { "none" }
-      builder.write_string("<\{wml_name(prefix, "u")} \{val}=\"\{wanted}\"/>")
+      builder.write_string("<\{wml_name(binding, "u")} \{val}=\"\{wanted}\"/>")
     }
     None => ()
   }
@@ -1152,18 +1365,190 @@ fn render_rpr_children(prefix : String, format : DocxDirectFormat) -> String {
 // ---------------------------------------------------------------------------
 
 ///|
+/// Read one ST_OnOff property strictly for VERIFICATION and compare
+/// it to the requested value — written against the vocabulary, not
+/// against the planner's edit generation.
+fn verify_on_off(
+  binding : WmlBinding,
+  existing : RunChildTag?,
+  requested : Bool,
+  label : String,
+) -> String? raise DocxError {
+  match existing {
+    None => Some("\{label} is not stated explicitly")
+    Some(tag) => {
+      let val_name = wml_attr(binding, "val")
+      let mut spelled : String? = None
+      let mut has_val = false
+      for attribute in tag.attributes {
+        guard attribute.name == val_name else {
+          raise Unsupported(
+            message="run formatting refuses the attribute \{attribute.name} on \{tag.name}",
+          )
+        }
+        guard !has_val else {
+          raise Unsupported(
+            message="run formatting refuses duplicate val attributes on \{tag.name}",
+          )
+        }
+        has_val = true
+        spelled = Some(attribute.value)
+      }
+      match on_off_value(spelled) {
+        Some(observed) =>
+          if observed == requested {
+            None
+          } else {
+            let observed_text = if observed { "on" } else { "off" }
+            let requested_text = if requested { "on" } else { "off" }
+            Some(
+              "\{tag.name} states \{observed_text} where \{label} \{requested_text} was requested",
+            )
+          }
+        None =>
+          raise Unsupported(
+            message="run formatting found an unrecognized on/off value on \{tag.name}",
+          )
+      }
+    }
+  }
+}
+
+///|
 /// Verify that every requested property holds EXPLICITLY on the run
-/// slice — the readback's judgment, sharing the planner's lexical
-/// reading so the two can never disagree about a spelling. Returns
-/// None when satisfied, or the first discrepancy's description.
+/// slice by EXTRACTING each property's observed value and comparing
+/// it semantically — independent of the planner's edit generation
+/// (the two share only the lexical scanner and the rPr
+/// classification). Returns None when satisfied, or the FIRST
+/// discrepancy in property order (b, bCs, i, iCs, u, color). As a
+/// final cross-check the planner must also consider a satisfied slice
+/// a fixed point; a disagreement between the two readings is itself
+/// reported.
 pub fn verify_run_format(
   run_slice : BytesView,
   prefix~ : String,
+  attr_prefix? : String,
+  extension_prefixes? : Array[String],
   format~ : DocxDirectFormat,
 ) -> String? raise DocxError {
-  let plan = plan_run_format(run_slice, prefix~, format~)
+  let binding = make_binding(prefix, attr_prefix, extension_prefixes)
+  let shape = scan_run_shape(run_slice, binding)
+  let inventory : RprInventory = match shape.rpr {
+    Some(container) =>
+      if container.self_closing {
+        empty_inventory()
+      } else {
+        classify_rpr_children(run_slice, binding, container)
+      }
+    None => empty_inventory()
+  }
+  match format.bold {
+    Some(requested) => {
+      match verify_on_off(binding, inventory.bold, requested, "bold") {
+        Some(discrepancy) => return Some(discrepancy)
+        None => ()
+      }
+      match
+        verify_on_off(
+          binding,
+          inventory.bold_cs,
+          requested,
+          "complex-script bold",
+        ) {
+        Some(discrepancy) => return Some(discrepancy)
+        None => ()
+      }
+    }
+    None => ()
+  }
+  match format.italic {
+    Some(requested) => {
+      match verify_on_off(binding, inventory.italic, requested, "italic") {
+        Some(discrepancy) => return Some(discrepancy)
+        None => ()
+      }
+      match
+        verify_on_off(
+          binding,
+          inventory.italic_cs,
+          requested,
+          "complex-script italic",
+        ) {
+        Some(discrepancy) => return Some(discrepancy)
+        None => ()
+      }
+    }
+    None => ()
+  }
+  match format.underline {
+    Some(requested) => {
+      let wanted = if requested { "single" } else { "none" }
+      match inventory.underline {
+        None => return Some("underline is not stated explicitly")
+        Some(tag) => {
+          refuse_val_alias(binding, tag)
+          match find_val(binding, tag) {
+            Some(attribute) =>
+              if attribute.value != wanted {
+                return Some(
+                  "\{tag.name} states \{attribute.value} where \{wanted} was requested",
+                )
+              }
+            None =>
+              raise Unsupported(
+                message="run formatting found an underline without a val attribute",
+              )
+          }
+        }
+      }
+    }
+    None => ()
+  }
+  match format.color {
+    Some(requested) =>
+      match inventory.color {
+        None => return Some("color is not stated explicitly")
+        Some(tag) => {
+          refuse_val_alias(binding, tag)
+          let theme_names = [
+            wml_attr(binding, "themeColor"),
+            wml_attr(binding, "themeTint"),
+            wml_attr(binding, "themeShade"),
+          ]
+          for attribute in tag.attributes {
+            if theme_names.contains(attribute.name) {
+              return Some(
+                "\{tag.name} keeps theme linkage (\{attribute.name}) where an absolute color was requested",
+              )
+            }
+          }
+          match find_val(binding, tag) {
+            Some(attribute) =>
+              if !rgb_equal(attribute.value, requested) {
+                return Some(
+                  "\{tag.name} states \{attribute.value} where \{requested} was requested",
+                )
+              }
+            None =>
+              raise Unsupported(
+                message="run formatting found a color without a val attribute",
+              )
+          }
+        }
+      }
+    None => ()
+  }
+  let plan = plan_run_format(
+    run_slice,
+    prefix~,
+    attr_prefix?,
+    extension_prefixes?,
+    format~,
+  )
   if plan.changed {
-    Some("the run does not carry every requested property explicitly")
+    Some(
+      "the planner would still edit a slice whose extracted properties satisfy the request",
+    )
   } else {
     None
   }

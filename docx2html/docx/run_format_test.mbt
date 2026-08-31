@@ -1,6 +1,7 @@
 // F0 witnesses: the lexical rPr engine's edits are minimal, spelled at
 // schema positions, byte-preserving outside their spans — and the
-// oracle shares the planner's reading, so agreement is structural.
+// oracle EXTRACTS observed values and compares them, keeping the
+// planner's fixed point only as a cross-check.
 
 ///|
 /// Apply a plan's slice-relative edits to a run slice, right-to-left.
@@ -33,10 +34,12 @@ fn plan_for(
   italic? : Bool,
   underline? : Bool,
   color? : String,
+  extension_prefixes? : Array[String],
 ) -> @docx.RunFormatPlan raise {
   @docx.plan_run_format(
     @utf8.encode(source)[:],
     prefix="w",
+    extension_prefixes?,
     format=@docx.docx_direct_format(bold?, italic?, underline?, color?),
   )
 }
@@ -48,10 +51,11 @@ fn format_result(
   italic? : Bool,
   underline? : Bool,
   color? : String,
+  extension_prefixes? : Array[String],
 ) -> String raise {
   apply_format_plan(
     source,
-    plan_for(source, bold?, italic?, underline?, color?),
+    plan_for(source, bold?, italic?, underline?, color?, extension_prefixes?),
   )
 }
 
@@ -233,15 +237,26 @@ test "format refuses every ambiguity" {
   )
   // A ranked property AFTER the extension block is the ambiguity;
   // the trailing block itself is legal (see the dedicated witness).
-  assert_true(
-    refuse("<w:r><w:rPr><w14:glow/><w:i/></w:rPr><w:t>x</w:t></w:r>").contains(
-      "after the trailing extension block",
-    ),
-  )
+  let mut message = ""
+  try
+    ignore(
+      plan_for(
+        "<w:r><w:rPr><w14:glow/><w:i/></w:rPr><w:t>x</w:t></w:r>",
+        bold=true,
+        extension_prefixes=["w14"],
+      ),
+    )
+  catch {
+    error => message = repr(error)
+  } noraise {
+    _ => fail("expected a refusal for a ranked property after the block")
+  }
+  assert_true(message.contains("after the trailing extension block"))
 }
 
 ///|
-/// The oracle shares the planner's reading: satisfied slices verify,
+/// The oracle extracts and compares independently, then cross-checks
+/// that the planner sees a fixed point: satisfied slices verify,
 /// unsatisfied ones name the discrepancy, and applying a plan always
 /// yields a slice the oracle accepts.
 test "the oracle agrees with the planner" {
@@ -265,12 +280,14 @@ test "the oracle agrees with the planner" {
 
 ///|
 /// Round 1's corpus-grounded rule: a TRAILING extension block
-/// (w14:glow etc.) is legal, and new properties insert before it.
+/// (w14:glow etc.) is legal under a caller-vouched extension prefix,
+/// and new properties insert before it.
 test "format inserts before a trailing extension block" {
   inspect(
     format_result(
       "<w:r><w:rPr><w:i/><w14:glow w14:rad=\"101600\"/></w:rPr><w:t>x</w:t></w:r>",
       bold=true,
+      extension_prefixes=["w14"],
     ),
     content=(
       #|<w:r><w:rPr><w:b/><w:bCs/><w:i/><w14:glow w14:rad="101600"/></w:rPr><w:t>x</w:t></w:r>
@@ -279,13 +296,73 @@ test "format inserts before a trailing extension block" {
 }
 
 ///|
-/// A default-namespace document spells names without prefixes — and
-/// its WML attributes carry NO prefix at all.
-test "format handles a default-namespace document" {
-  let source = "<r><rPr><b val=\"0\"/><bCs val=\"0\"/></rPr><t>x</t></r>"
+/// Round 2's boundary: the extension tolerance reaches exactly as far
+/// as the caller's warrant. An unvouched prefix, a ranked property
+/// name under a foreign prefix (a possible WML alias), same-prefix
+/// children outside the schema, markup-compatibility content, and a
+/// warrant naming a reserved or WML prefix all refuse.
+test "format refuses extension shapes it cannot interpret" {
+  fn refuse_ext(
+    source : String,
+    extension_prefixes : Array[String],
+  ) -> String raise {
+    let mut message = ""
+    try ignore(plan_for(source, bold=true, extension_prefixes~)) catch {
+      error => message = repr(error)
+    } noraise {
+      _ => fail("expected a refusal for " + source)
+    }
+    message
+  }
+
+  assert_true(
+    refuse_ext("<w:r><w:rPr><w:i/><w14:glow/></w:rPr><w:t>x</w:t></w:r>", []).contains(
+      "outside the caller-vouched extension prefixes",
+    ),
+  )
+  assert_true(
+    refuse_ext("<w:r><w:rPr><w:i/><x:b/></w:rPr><w:t>x</w:t></w:r>", ["x"]).contains(
+      "may be a WML alias",
+    ),
+  )
+  for mce in ["AlternateContent", "Choice", "Fallback", "ProcessContent"] {
+    assert_true(
+      refuse_ext(
+        "<w:r><w:rPr><w:i/><q:" + mce + "/></w:rPr><w:t>x</w:t></w:r>",
+        ["q"],
+      ).contains("markup-compatibility"),
+      msg=mce,
+    )
+  }
+  assert_true(
+    refuse_ext("<w:r><w:rPr><w:bogus/></w:rPr><w:t>x</w:t></w:r>", []).contains(
+      "does not recognize",
+    ),
+  )
+  assert_true(
+    refuse_ext("<w:r><w:rPr><w:i/></w:rPr><w:t>x</w:t></w:r>", ["mc"]).contains(
+      "extension prefix",
+    ),
+  )
+  assert_true(
+    refuse_ext("<w:r><w:rPr><w:i/></w:rPr><w:t>x</w:t></w:r>", ["w"]).contains(
+      "extension prefix",
+    ),
+  )
+}
+
+///|
+/// A default-namespace document spells its ELEMENTS without prefixes,
+/// but default namespaces do not apply to attributes: its WML
+/// attributes stay qualified under whatever prefix the document bound
+/// to the WML namespace (here `s`) — and the caller states that
+/// prefix explicitly.
+test "format handles a default-namespace document with qualified attributes" {
+  let source = "<r><rPr><b s:val=\"0\"/><bCs s:val=\"0\"/></rPr><t>x</t></r>"
   let plan = @docx.plan_run_format(
     @utf8.encode(source),
     prefix="",
+    attr_prefix="s",
     format=@docx.docx_direct_format(bold=true),
   )
   let mut result = source
@@ -301,9 +378,47 @@ test "format handles a default-namespace document" {
   inspect(
     result,
     content=(
-      #|<r><rPr><b val="1"/><bCs val="1"/></rPr><t>x</t></r>
+      #|<r><rPr><b s:val="1"/><bCs s:val="1"/></rPr><t>x</t></r>
     ),
   )
+}
+
+///|
+/// The namespace shapes this engine refuses to guess about: a
+/// default-namespace request without an attribute prefix, a bare
+/// (no-namespace) `val` on an on/off property, and a foreign-prefixed
+/// val — each would change what the planner is reading.
+test "format refuses namespace shapes it cannot vouch for" {
+  let mut message = ""
+  try
+    ignore(
+      @docx.plan_run_format(
+        @utf8.encode("<r><t>x</t></r>"),
+        prefix="",
+        format=@docx.docx_direct_format(bold=true),
+      ),
+    )
+  catch {
+    error => message = repr(error)
+  } noraise {
+    _ => fail("expected a refusal without an attribute prefix")
+  }
+  assert_true(message.contains("default namespaces do not apply to attributes"))
+  for
+    poisoned in [
+      "<w:r><w:rPr><w:b val=\"0\"/></w:rPr><w:t>x</w:t></w:r>", "<w:r><w:rPr><w:b x:val=\"0\"/></w:rPr><w:t>x</w:t></w:r>",
+    ] {
+    let mut attr_message = ""
+    try ignore(plan_for(poisoned, bold=true)) catch {
+      error => attr_message = repr(error)
+    } noraise {
+      _ => fail("expected a refusal for " + poisoned)
+    }
+    assert_true(
+      attr_message.contains("refuses the attribute"),
+      msg=poisoned + " -> " + attr_message,
+    )
+  }
 }
 
 ///|
@@ -453,4 +568,156 @@ test "format refuses structural ambiguities" {
     ),
   )
   assert_true(refuse("<w:rr><w:t>a</w:t></w:rr>").contains("expected a <w:r>"))
+}
+
+///|
+/// Round 2's lexical strictness: whitespace may follow an end-tag
+/// name but never precede it (`</ w:b>` can never pass as `w:b`), and
+/// element and attribute names must be XML names.
+test "format refuses malformed close tags and names" {
+  fn refuse(source : String) -> String raise {
+    let mut message = ""
+    try ignore(plan_for(source, bold=true)) catch {
+      error => message = repr(error)
+    } noraise {
+      _ => fail("expected a refusal for " + source)
+    }
+    message
+  }
+
+  assert_true(
+    refuse("<w:r><w:rPr><w:b></ w:b><w:bCs/></w:rPr><w:t>x</w:t></w:r>").contains(
+      "malformed XML name",
+    ),
+  )
+  assert_true(
+    refuse("<w:r><w:rPr><1b/></w:rPr><w:t>x</w:t></w:r>").contains(
+      "malformed XML name",
+    ),
+  )
+  assert_true(
+    refuse("<w:r><w:rPr><w:b w:val=\"1\" 2x=\"3\"/></w:rPr><w:t>x</w:t></w:r>").contains(
+      "malformed XML name",
+    ),
+  )
+  // Whitespace AFTER the end-tag name is valid XML and accepted.
+  let plan = plan_for(
+    "<w:r><w:rPr><w:u w:val=\"single\"></w:u ></w:rPr><w:t>x</w:t></w:r>",
+    underline=true,
+  )
+  assert_false(plan.changed())
+}
+
+///|
+/// The verifier EXTRACTS observed values and compares them — it is
+/// not a replan. Round 2's counterexample: a default-namespace slice
+/// whose qualified attributes state bold OFF fails verification for
+/// bold ON (it never false-verifies); a missing complex-script twin
+/// and remaining theme linkage are named; a satisfied slice verifies
+/// clean.
+test "the verifier extracts observed values rather than replanning" {
+  debug_inspect(
+    @docx.verify_run_format(
+      @utf8.encode(
+        "<r><rPr><b s:val=\"0\"/><bCs s:val=\"0\"/></rPr><t>x</t></r>",
+      ),
+      prefix="",
+      attr_prefix="s",
+      format=@docx.docx_direct_format(bold=true),
+    ),
+    content=(
+      #|Some("b states off where bold on was requested")
+    ),
+  )
+  debug_inspect(
+    @docx.verify_run_format(
+      @utf8.encode("<w:r><w:rPr><w:b/></w:rPr><w:t>x</w:t></w:r>"),
+      prefix="w",
+      format=@docx.docx_direct_format(bold=true),
+    ),
+    content=(
+      #|Some("complex-script bold is not stated explicitly")
+    ),
+  )
+  debug_inspect(
+    @docx.verify_run_format(
+      @utf8.encode(
+        "<w:r><w:rPr><w:color w:val=\"112233\" w:themeColor=\"accent1\"/></w:rPr><w:t>x</w:t></w:r>",
+      ),
+      prefix="w",
+      format=@docx.docx_direct_format(color="112233"),
+    ),
+    content=(
+      #|Some("w:color keeps theme linkage (w:themeColor) where an absolute color was requested")
+    ),
+  )
+  debug_inspect(
+    @docx.verify_run_format(
+      @utf8.encode("<w:r><w:rPr><w:sz w:val=\"24\"/></w:rPr><w:t>x</w:t></w:r>"),
+      prefix="w",
+      format=@docx.docx_direct_format(italic=true),
+    ),
+    content=(
+      #|Some("italic is not stated explicitly")
+    ),
+  )
+  debug_inspect(
+    @docx.verify_run_format(
+      @utf8.encode("<w:r><w:rPr><w:i/></w:rPr><w:t>x</w:t></w:r>"),
+      prefix="w",
+      format=@docx.docx_direct_format(italic=true),
+    ),
+    content=(
+      #|Some("complex-script italic is not stated explicitly")
+    ),
+  )
+  debug_inspect(
+    @docx.verify_run_format(
+      @utf8.encode("<w:r><w:rPr><w:b/><w:bCs/></w:rPr><w:t>x</w:t></w:r>"),
+      prefix="w",
+      format=@docx.docx_direct_format(bold=true),
+    ),
+    content="None",
+  )
+}
+
+///|
+/// EVERY name in the CT_RPr rank table, exercised: an inserted color
+/// (rank 18) lands after each lower-ranked neighbour and before each
+/// higher-ranked one, so the whole table drives real insertion
+/// positions — no entry is dead weight.
+test "format ranks every CT_RPr property in the table" {
+  let order = [
+    "rStyle", "rFonts", "b", "bCs", "i", "iCs", "caps", "smallCaps", "strike", "dstrike",
+    "outline", "shadow", "emboss", "imprint", "noProof", "snapToGrid", "vanish",
+    "webHidden", "color", "spacing", "w", "kern", "position", "sz", "szCs", "highlight",
+    "u", "effect", "bdr", "shd", "fitText", "vertAlign", "rtl", "cs", "em", "lang",
+    "eastAsianLayout", "specVanish", "oMath",
+  ]
+  let color_xml = "<w:color w:val=\"112233\"/>"
+  for index, name in order {
+    if name == "color" {
+      inspect(
+        format_result(
+          "<w:r><w:rPr><w:color w:val=\"00FF00\"/></w:rPr><w:t>x</w:t></w:r>",
+          color="112233",
+        ),
+        content=(
+          #|<w:r><w:rPr><w:color w:val="112233"/></w:rPr><w:t>x</w:t></w:r>
+        ),
+      )
+      continue
+    }
+    let child = "<w:" + name + "/>"
+    let expected = if index < 18 {
+      "<w:r><w:rPr>" + child + color_xml + "</w:rPr><w:t>x</w:t></w:r>"
+    } else {
+      "<w:r><w:rPr>" + color_xml + child + "</w:rPr><w:t>x</w:t></w:r>"
+    }
+    let got = format_result(
+      "<w:r><w:rPr>" + child + "</w:rPr><w:t>x</w:t></w:r>",
+      color="112233",
+    )
+    assert_true(got == expected, msg="rank neighbour " + name + ": " + got)
+  }
 }
