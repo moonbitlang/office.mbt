@@ -451,6 +451,18 @@ test "format receipts echo their selector" {
   assert_eq(all.requested_nth(), None)
   assert_eq(all.requested_range(), None)
   debug_inspect(all.selected(), content="[1, 2]")
+  // The distinction a count cannot make: ONE candidate selected
+  // implicitly, versus the same one selected by ordinal. Both receipts
+  // carry one span; only the echo tells them apart.
+  let (_, implicit) = @docx.plan_docx_format(
+    annotated,
+    annotated.main_story_source(),
+    format=@docx.docx_direct_format(bold=true),
+    text="ab",
+    within="p[2]",
+  )
+  assert_eq(implicit.spans().length(), 1)
+  assert_eq(implicit.requested_nth(), None)
   let (_, single) = @docx.plan_docx_format(
     annotated,
     annotated.main_story_source(),
@@ -459,6 +471,7 @@ test "format receipts echo their selector" {
     within="p[2]",
     nth=1,
   )
+  assert_eq(single.spans().length(), 1)
   assert_eq(single.requested_nth(), Some(1))
   assert_eq(single.requested_within(), Some("p[2]"))
   // A zero-candidate receipt still says what was asked for.
@@ -607,6 +620,9 @@ test "format edits the body story only" {
       comments_xml=Some(
         "<w:comments xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\"><w:comment w:id=\"0\"><w:p><w:r><w:t>note</w:t></w:r></w:p></w:comment></w:comments>",
       ),
+      footnotes_xml=Some(
+        "<w:footnotes xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\"><w:footnote w:id=\"1\"><w:p><w:r><w:t>foot</w:t></w:r></w:p></w:footnote></w:footnotes>",
+      ),
     ),
   )
   let others : Array[@docx.DocxStoryPartSource] = []
@@ -660,4 +676,124 @@ test "format refuses an ordinal beyond the candidate count" {
     _ => fail("expected an ordinal refusal")
   }
   assert_true(message.contains("2 candidate"), msg=message)
+}
+
+///|
+/// Round 2's High and Medium: preservation is judged PER PROJECTION
+/// UNIT, so a split cannot look like a change, a discontinuous
+/// tolerated run cannot false-fail, and a text-less run cannot be
+/// formatted unnoticed.
+test "format preservation is per-unit, not per-run" {
+  // A faithful split preserves every unit outside the span.
+  let body = "<w:p><w:r><w:t>alphabet</w:t></w:r></w:p>"
+  let annotated = format_fixture(body)
+  let (plan, _) = @docx.plan_docx_format(
+    annotated,
+    annotated.main_story_source(),
+    format=@docx.docx_direct_format(bold=true),
+    within="p[1]",
+    range=(2, 5),
+  )
+  let after = format_apply(body, plan)
+  assert_eq(
+    @docx.docx_paragraph_format_preserved(
+      annotated,
+      annotated.main_story_source(),
+      after,
+      after.main_story_source(),
+      path="p[1]",
+      spans=[(2, 5)],
+    ),
+    None,
+  )
+  // An already-satisfied run that legitimately stays UNSPLIT passes,
+  // even though it straddles the span.
+  let satisfied = "<w:p><w:r><w:rPr><w:b/><w:bCs/></w:rPr><w:t>alphabet</w:t></w:r></w:p>"
+  let satisfied_read = format_fixture(satisfied)
+  let (satisfied_plan, satisfied_receipt) = @docx.plan_docx_format(
+    satisfied_read,
+    satisfied_read.main_story_source(),
+    format=@docx.docx_direct_format(bold=true),
+    within="p[1]",
+    range=(2, 5),
+  )
+  assert_eq(satisfied_receipt.byte_edits(), 0)
+  let satisfied_after = format_apply(satisfied, satisfied_plan)
+  assert_eq(
+    @docx.docx_paragraph_format_preserved(
+      satisfied_read,
+      satisfied_read.main_story_source(),
+      satisfied_after,
+      satisfied_after.main_story_source(),
+      path="p[1]",
+      spans=[(2, 5)],
+    ),
+    None,
+  )
+  // A TEXT-LESS run formatted as collateral is caught, though it
+  // projects nothing and every other check passes.
+  let with_reference = "<w:p><w:r><w:t>ab</w:t></w:r><w:r><w:footnoteReference w:id=\"1\"/></w:r></w:p>"
+  let reference_read = format_fixture(with_reference)
+  let collateral = format_fixture(
+    "<w:p><w:r><w:t>ab</w:t></w:r><w:r><w:rPr><w:b/><w:bCs/></w:rPr><w:footnoteReference w:id=\"1\"/></w:r></w:p>",
+  )
+  assert_true(
+    @docx.docx_paragraph_format_preserved(
+      reference_read,
+      reference_read.main_story_source(),
+      collateral,
+      collateral.main_story_source(),
+      path="p[1]",
+      spans=[(0, 2)],
+    )
+    is Some(_),
+  )
+}
+
+///|
+/// Both readback accessors refuse a collided path rather than
+/// answering for a claimant, and a binding they cannot vouch for is a
+/// discrepancy rather than a raise.
+test "format readbacks refuse what they cannot answer for" {
+  let collided = format_fixture(
+    "<w:p><w:r><w:t>same</w:t></w:r><w:p><w:r><w:t>same</w:t></w:r></w:p></w:p>",
+  )
+  assert_true(
+    @docx.docx_paragraph_direct_format(
+      collided,
+      collided.main_story_source(),
+      path="p[1]",
+      start=0,
+      end=4,
+      format=@docx.docx_direct_format(bold=true),
+    )
+    is Some(_),
+  )
+  assert_true(
+    @docx.docx_paragraph_format_preserved(
+      collided,
+      collided.main_story_source(),
+      collided,
+      collided.main_story_source(),
+      path="p[1]",
+      spans=[(0, 4)],
+    )
+    is Some(_),
+  )
+  // A default-namespace run has no vouchable attribute binding: the
+  // readback reports that instead of raising.
+  let default_ns = @docx.read_docx_annotated(
+    fixture_docx(
+      "<document xmlns=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\"><body><p><r><t>ab</t></r></p><sectPr/></body></document>",
+    ),
+  )
+  let verdict = @docx.docx_paragraph_direct_format(
+    default_ns,
+    default_ns.main_story_source(),
+    path="p[1]",
+    start=0,
+    end=2,
+    format=@docx.docx_direct_format(bold=true),
+  )
+  assert_true(verdict is Some(_))
 }

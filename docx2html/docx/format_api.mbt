@@ -631,14 +631,15 @@ pub fn docx_paragraph_direct_format(
 /// The readback's PRESERVATION judgment: did formatting stay inside the
 /// spans it was asked for?
 ///
-/// The positive check cannot answer this. A run whose text lies wholly
-/// outside the union may legitimately have carried the property all
-/// along, so presence proves nothing — provenance does: every such run
-/// must carry EXACTLY the run properties the corresponding paragraph of
-/// the ORIGINAL document carried for that text. A planner that
-/// formatted a whole mixed run instead of splitting it is caught here
-/// even though the projection is unchanged and the positive check
-/// passes.
+/// The positive check cannot answer this. A run outside the union may
+/// have carried the property all along, so presence proves nothing —
+/// provenance does. The comparison is made PER PROJECTION UNIT rather
+/// than per run: splitting changes which runs exist and how their
+/// contributions are grouped, but it must never change which properties
+/// apply to a given character. Every unit outside the requested spans
+/// must therefore carry exactly the run properties it carried before,
+/// and the runs that project no text at all (a note reference alone in
+/// its run) must keep theirs too, compared in document order.
 ///
 /// `spans` are the paragraph-local ranges the plan was asked to format.
 /// Returns None when preserved, or the first discrepancy.
@@ -650,47 +651,43 @@ pub fn docx_paragraph_format_preserved(
   path~ : String,
   spans~ : Array[(Int, Int)],
 ) -> String? raise DocxError {
-  guard docx_format_paragraph_runs(before, before_story, path~)
-    is Some(original) else {
-    return Some("the path '\{path}' names no paragraph before the edit")
+  guard docx_format_paragraph_provenance(before, before_story, path~)
+    is Some((original_units, original_silent)) else {
+    return Some("the path '\{path}' names no single paragraph before the edit")
   }
-  guard docx_format_paragraph_runs(after, after_story, path~) is Some(result) else {
-    return Some("the path '\{path}' names no paragraph after the edit")
+  guard docx_format_paragraph_provenance(after, after_story, path~)
+    is Some((result_units, result_silent)) else {
+    return Some("the path '\{path}' names no single paragraph after the edit")
   }
-  for entry in result {
-    let (start, end, properties) = entry
-    guard end > start else { continue }
-    // A run WHOLLY inside the union is the positive check's business.
-    // Everything else — outside, or straddling a boundary — must carry
-    // exactly the properties the original run carried for that text.
-    // Straddling is legitimate only when nothing was done (an
-    // already-satisfied run stays unsplit); a plan that formatted a
-    // mixed run instead of splitting it changed them, and is caught
-    // here even though the projection is unchanged and the requested
-    // span really did become bold.
-    let mut cursor = start
+  guard original_units.length() == result_units.length() else {
+    return Some(
+      "'\{path}' projected \{original_units.length()} unit(s) before the edit and \{result_units.length()} after",
+    )
+  }
+  for unit in 0..<original_units.length() {
+    let mut selected = false
     for span in spans {
       let (from, to) = span
-      if from <= cursor && cursor < to {
-        cursor = to
+      if from <= unit && unit < to {
+        selected = true
       }
     }
-    guard cursor < end else { continue }
-    let mut matched = false
-    for source in original {
-      let (source_start, source_end, source_properties) = source
-      if source_end > source_start && source_start <= start && end <= source_end {
-        matched = true
-        guard properties == source_properties else {
-          return Some(
-            "the run holding \{start}:\{end} of '\{path}' is not wholly inside a requested span, but its run properties changed",
-          )
-        }
-      }
-    }
-    guard matched else {
+    guard !selected else { continue }
+    guard original_units[unit] == result_units[unit] else {
       return Some(
-        "the text \{start}:\{end} of '\{path}' has no original run to compare against",
+        "unit \{unit} of '\{path}' lies outside every requested span but its run properties changed",
+      )
+    }
+  }
+  guard original_silent.length() == result_silent.length() else {
+    return Some(
+      "'\{path}' carried \{original_silent.length()} text-less run(s) before the edit and \{result_silent.length()} after",
+    )
+  }
+  for index in 0..<original_silent.length() {
+    guard original_silent[index] == result_silent[index] else {
+      return Some(
+        "a text-less run of '\{path}' changed its run properties, though no span selected it",
       )
     }
   }
@@ -698,15 +695,15 @@ pub fn docx_paragraph_format_preserved(
 }
 
 ///|
-/// One paragraph's runs as (projection start, projection end, rPr bytes
-/// as spelled) — the evidence a preservation judgment needs from both
-/// snapshots. `None` when the path names no paragraph, or names more
-/// than one (a collided path cannot be answered for).
-fn docx_format_paragraph_runs(
+/// One paragraph's provenance: the run properties that apply to each
+/// projection unit, and the properties of the runs that project no text,
+/// in document order. `None` when the path names no paragraph, or names
+/// more than one (a collided path cannot be answered for).
+fn docx_format_paragraph_provenance(
   annotated : DocxAnnotatedResult,
   story : DocxStoryPartSource,
   path~ : String,
-) -> Array[(Int, Int, String)]? raise DocxError {
+) -> (Array[String], Array[String])? raise DocxError {
   let part = story.part()
   guard annotated.reader_projections.get(part) is Some(projection) else {
     return None
@@ -731,38 +728,70 @@ fn docx_format_paragraph_runs(
   guard target >= 0 && found == 1 else { return None }
   let paragraph = projection.paragraphs[target]
   let base = paragraph.projection_start
-  let out : Array[(Int, Int, String)] = []
-  for run in paragraph.runs {
-    let mut start = -1
-    let mut end = -1
-    for contribution in paragraph.contributions {
-      guard contribution.kind is ProjectedText(_) else { continue }
-      guard contribution.run_source == Some(run.source) else { continue }
-      let local_start = contribution.projection_start - base
-      let local_end = contribution.projection_end - base
-      guard local_end > local_start else { continue }
-      if start < 0 || local_start < start {
-        start = local_start
-      }
-      if local_end > end {
-        end = local_end
-      }
-    }
-    guard start >= 0 else { continue }
-    let SourceElementId(run_identity) = run.source
-    let run_element = elements[run_identity]
-    let mut properties = ""
-    let mut child = run_element.first_child_index
-    while child >= 0 {
-      let entry = elements[child]
-      if is_wml_uri(entry.uri) && entry.local_name == "rPr" {
-        properties = format_surgery_decode(
-          bytes[entry.byte_start:entry.byte_end],
-        )
-      }
-      child = entry.next_sibling_index
-    }
-    out.push((start, end, properties))
+  let width = paragraph.projection_end - base
+  let units : Array[String] = []
+  for _ in 0..<width {
+    // A unit no run claims — text the tolerant reader admits directly
+    // under the paragraph — has no properties to preserve, and says so.
+    units.push("")
   }
-  Some(out)
+  for contribution in paragraph.contributions {
+    guard contribution.kind is ProjectedText(_) else { continue }
+    guard contribution.run_source is Some(run_source) else { continue }
+    let SourceElementId(run_identity) = run_source
+    let properties = docx_format_run_properties(
+      bytes,
+      elements,
+      elements[run_identity],
+    )
+    let from = contribution.projection_start - base
+    let to = contribution.projection_end - base
+    for unit in from..<to {
+      if unit >= 0 && unit < width {
+        units[unit] = properties
+      }
+    }
+  }
+  // Runs that project no text: a note reference alone in its run still
+  // paints, and formatting it would be collateral no span asked for.
+  let silent : Array[String] = []
+  for run in paragraph.runs {
+    let mut projects = false
+    for contribution in paragraph.contributions {
+      if contribution.run_source == Some(run.source) &&
+        contribution.kind is ProjectedText(_) &&
+        contribution.projection_end > contribution.projection_start {
+        projects = true
+      }
+    }
+    guard !projects else { continue }
+    let SourceElementId(run_identity) = run.source
+    silent.push(
+      docx_format_run_properties(bytes, elements, elements[run_identity]),
+    )
+  }
+  Some((units, silent))
+}
+
+///|
+/// A run's properties as spelled: EVERY direct `rPr` child's bytes,
+/// joined. Duplicates are a refusal at planning time, but a readback
+/// must still see a change in any one of them rather than the last.
+fn docx_format_run_properties(
+  bytes : BytesView,
+  elements : Array[ScannedElement],
+  run_element : ScannedElement,
+) -> String raise DocxError {
+  let builder = StringBuilder()
+  let mut child = run_element.first_child_index
+  while child >= 0 {
+    let entry = elements[child]
+    if is_wml_uri(entry.uri) && entry.local_name == "rPr" {
+      builder.write_string(
+        format_surgery_decode(bytes[entry.byte_start:entry.byte_end]),
+      )
+    }
+    child = entry.next_sibling_index
+  }
+  builder.to_string()
 }
