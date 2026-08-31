@@ -626,3 +626,6 @@ format_surgery.mbt	unsupported-namespace	format_surgery_refusal_slug	value	forma
 format_surgery.mbt	unsupported-rpr	format_surgery_refusal_slug	value	format_surgery_wbtest:"format: the refusal taxonomy is pinned by name"
 format_surgery.mbt	unsupported-source	format_surgery_refusal_slug	value	format_surgery_wbtest:"format: the shared-gate parity matrix"
 format_surgery.mbt	visible-barrier	format_surgery_refusal_slug	value	format_surgery_wbtest:"format: the shared-gate parity matrix"
+format_surgery.mbt	checkbox	format_surgery_is_checkbox_sdt	name	format_surgery_wbtest:"format: a run enclosing a checkbox refuses before the shortcut"
+format_surgery.mbt	sdt	format_surgery_is_checkbox_sdt	name	format_surgery_wbtest:"format: a run enclosing a checkbox refuses before the shortcut"
+format_surgery.mbt	sdtPr	format_surgery_is_checkbox_sdt	name	format_surgery_wbtest:"format: a run enclosing a checkbox refuses before the shortcut"
