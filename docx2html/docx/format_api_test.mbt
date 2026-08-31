@@ -2274,8 +2274,10 @@ test "format preservation stays bounded on adversarial shapes" {
   }
   // Distinct prefixes under one deep chain.
   let deep = StringBuilder()
-  for _ in 0..<80 {
-    deep.write_string("<w:foo>")
+  for index in 0..<80 {
+    // One declaration per LEVEL: inheriting scopes must not be copied
+    // down the chain.
+    deep.write_string("<w:foo xmlns:c\{index}=\"urn:c:\{index}\">")
   }
   for index in 0..<600 {
     deep.write_string("<w:bar><w:rPr><p\{index}:glow/></w:rPr></w:bar>")
@@ -2287,7 +2289,13 @@ test "format preservation stays bounded on adversarial shapes" {
   for index in 0..<600 {
     declarations.write_string(" xmlns:p\{index}=\"urn:p:\{index}\"")
   }
-  // A long selected run carrying a heavy extension block.
+  // A long selected run carrying a HEAVY extension block: the unit
+  // comparison must not cost the text's length times the property
+  // bytes.
+  let extension = StringBuilder()
+  for index in 0..<400 {
+    extension.write_string("<w14:srgbClr w14:val=\"FF00\{index % 10}0\"/>")
+  }
   let text = StringBuilder()
   for _ in 0..<4000 {
     text.write_string("a")
@@ -2298,7 +2306,9 @@ test "format preservation stays bounded on adversarial shapes" {
     heavy.to_string() +
     "<w:r>" +
     deep.to_string() +
-    "</w:r><w:r><w:rPr><w14:glow w14:rad=\"101600\"><w14:srgbClr w14:val=\"FF0000\"/></w14:glow></w:rPr><w:t>" +
+    "</w:r><w:r><w:rPr><w14:glow w14:rad=\"101600\">" +
+    extension.to_string() +
+    "</w14:glow></w:rPr><w:t>" +
     text.to_string() +
     "</w:t></w:r></w:p>"
   let before = format_fixture(body)

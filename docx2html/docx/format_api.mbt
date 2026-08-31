@@ -706,6 +706,7 @@ pub fn docx_paragraph_format_preserved(
   // positive check passes and the projection is unchanged.
   let touched = docx_format_touched_properties(format)
   let filtered : Map[String, String] = Map([])
+  let raw : Map[String, String] = Map([])
   guard docx_format_paragraph_provenance(before, before_story, path~)
     is Some((original_units, original_silent, original_mark)) else {
     return Some("the path '\{path}' names no single paragraph before the edit")
@@ -742,6 +743,10 @@ pub fn docx_paragraph_format_preserved(
     let selected = selected_units[unit]
     let (original_properties, original_digest) = original_units[unit]
     let (result_properties, result_digest) = result_units[unit]
+    // Units of one run share their properties, so both the raw and the
+    // filtered comparisons are made on FINGERPRINTS computed once per
+    // distinct text: comparing or hashing the whole property bytes per
+    // unit would cost the text's length times their size.
     // A unit's properties only mean what its namespace bindings say
     // they mean: the same spelling under a rebound prefix is different
     // formatting, and a faithful edit never disturbs it.
@@ -763,7 +768,8 @@ pub fn docx_paragraph_format_preserved(
       }
       continue
     }
-    guard original_properties == result_properties else {
+    guard docx_format_raw(original_properties, raw~) ==
+      docx_format_raw(result_properties, raw~) else {
       return Some(
         "unit \{unit} of '\{path}' lies outside every requested span but its run properties changed",
       )
@@ -829,9 +835,10 @@ fn docx_format_paragraph_provenance(
   // Namespace scopes and declaration tables, memoized per element: an
   // ancestor's declarations are read once, and an element that
   // declares nothing shares its parent's scope outright.
-  let scopes : Map[Int, Map[String, String]] = Map([])
-  let used : Map[Int, Array[String]] = Map([])
-  let declarations : Map[Int, Map[String, String]] = Map([])
+  // Every element's subtree binding digest, computed in ONE pass.
+  let binding_digests = docx_format_binding_digests(
+    bytes, elements, paragraph_head_identity,
+  )
   // A run's properties, read ONCE per run: recomputing them for every
   // contribution walks its children again and again, and a run of many
   // small text elements is legal.
@@ -871,17 +878,13 @@ fn docx_format_paragraph_provenance(
           }
           child = entry.next_sibling_index
         }
+        // Absent properties and properties that depend on no
+        // extension binding say the same thing, so both read as the
+        // empty digest.
         let read = if properties_identity >= 0 {
-          docx_format_binding_digest(
-            bytes,
-            elements,
-            properties_identity,
-            scopes~,
-            declarations~,
-            used~,
-          )
+          "\{binding_digests.get(properties_identity).unwrap_or(0)}"
         } else {
-          ""
+          "0"
         }
         digests_by_run[run_identity] = read
         read
@@ -986,7 +989,7 @@ fn docx_format_paragraph_provenance(
       elements[run_identity],
     )
     silent.push(
-      "\{signature}\u{1}\{properties}\u{1}\{docx_format_binding_digest(bytes, elements, run_identity, scopes~, declarations~, used~)}",
+      "\{signature}\u{1}\{properties}\u{1}\{binding_digests.get(run_identity).unwrap_or(0)}",
     )
   }
   // Carriers that belong to no run at all: `w:pPr`, `w:sdtPr`,
@@ -1017,7 +1020,7 @@ fn docx_format_paragraph_provenance(
       keys~,
     )
     silent.push(
-      "\{owner_path}\u{1}\{docx_format_fingerprint(format_surgery_decode(bytes[entry.byte_start:entry.byte_end]))}\u{1}\{docx_format_binding_digest(bytes, elements, carrier_identity, scopes~, declarations~, used~)}",
+      "\{owner_path}\u{1}\{docx_format_fingerprint(format_surgery_decode(bytes[entry.byte_start:entry.byte_end]))}\u{1}\{binding_digests.get(carrier_identity).unwrap_or(0)}",
     )
   }
   // Every pPr in the paragraph's physical subtree, in document order:
@@ -1060,14 +1063,7 @@ fn docx_format_paragraph_provenance(
     )
     mark_builder.write_string("~")
     mark_builder.write_string(
-      docx_format_binding_digest(
-        bytes,
-        elements,
-        mark_identity,
-        scopes~,
-        declarations~,
-        used~,
-      ),
+      "\{binding_digests.get(mark_identity).unwrap_or(0)}",
     )
   }
   let mark = mark_builder.to_string()
@@ -1095,229 +1091,6 @@ fn docx_format_run_properties(
     child = entry.next_sibling_index
   }
   builder.to_string()
-}
-
-///|
-/// The bindings THIS carrier's own subtree depends on: every prefix its
-/// elements and attributes use, against the URI in scope where it sits.
-/// A paragraph-wide set cannot say which occurrence used which binding
-/// — two runs may each bind `x` differently — and attribute prefixes
-/// never appear as element prefixes at all, so both are gathered here,
-/// per carrier.
-fn docx_format_binding_digest(
-  bytes : BytesView,
-  elements : Array[ScannedElement],
-  root_identity : Int,
-  scopes~ : Map[Int, Map[String, String]],
-  declarations~ : Map[Int, Map[String, String]],
-  used~ : Map[Int, Array[String]],
-) -> String raise DocxError {
-  let prefixes = docx_format_used_prefixes(
-    bytes,
-    elements,
-    root_identity,
-    used~,
-  ).copy()
-  prefixes.sort()
-  let builder = StringBuilder()
-  for prefix in prefixes {
-    let uri = docx_format_resolve_prefix(
-      bytes,
-      elements,
-      root_identity,
-      prefix,
-      scopes~,
-      declarations~,
-    )
-    // A prefix resolving to WML explains nothing this digest is for:
-    // the request writes WML, and the rPr engine vouches for that
-    // binding when it judges the run. Recording it would make a run
-    // that GAINED its first property look like a change of meaning.
-    if is_wml_uri(uri) {
-      continue
-    }
-    builder.write_string("\{prefix}=\{uri}|")
-  }
-  builder.to_string()
-}
-
-///|
-/// Every namespace prefix an element subtree uses, on its own names and
-/// on its attributes.
-fn docx_format_used_prefixes(
-  bytes : BytesView,
-  elements : Array[ScannedElement],
-  element_identity : Int,
-  used~ : Map[Int, Array[String]],
-) -> Array[String] raise DocxError {
-  // Memoized per element and built from its children's sets: nested
-  // carriers overlap, and re-walking a shared subtree for each of them
-  // would cost depth times subtree.
-  match used.get(element_identity) {
-    Some(known) => known
-    None => {
-      let out : Array[String] = []
-      let seen : Map[String, Bool] = Map([])
-      fn note(prefix : String) -> Unit {
-        // The DEFAULT binding counts: an unprefixed extension element
-        // means whatever `xmlns` currently says, and rebinding it
-        // changes the vocabulary without touching the property.
-        if seen.get(prefix) is None {
-          seen[prefix] = true
-          out.push(prefix)
-        }
-      }
-
-      let element = elements[element_identity]
-      note(format_surgery_element_prefix(bytes, element))
-      for attribute in docx_format_attribute_names(bytes, element) {
-        if !attribute.has_prefix("xmlns") {
-          let (attribute_prefix, _) = split_qname(attribute)
-          note(attribute_prefix)
-        }
-      }
-      let mut child = element.first_child_index
-      while child >= 0 {
-        for prefix in docx_format_used_prefixes(bytes, elements, child, used~) {
-          note(prefix)
-        }
-        child = elements[child].next_sibling_index
-      }
-      used[element_identity] = out
-      out
-    }
-  }
-}
-
-///|
-/// The URI a prefix resolves to where this element sits: the nearest
-/// ancestor declaration wins, and an element's own resolved URI
-/// confirms its own prefix.
-fn docx_format_resolve_prefix(
-  bytes : BytesView,
-  elements : Array[ScannedElement],
-  element_identity : Int,
-  prefix : String,
-  scopes~ : Map[Int, Map[String, String]],
-  declarations~ : Map[Int, Map[String, String]],
-) -> String raise DocxError {
-  // `xml` is bound by the XML specification itself and can never be
-  // rebound, so it explains nothing and is not looked up.
-  if prefix == "xml" {
-    return "http://www.w3.org/XML/1998/namespace"
-  }
-  if element_identity < 0 || element_identity >= elements.length() {
-    return "?"
-  }
-  // The bindings in scope at this element, shared with its parent when
-  // it declares none of its own: resolving each prefix by walking the
-  // ancestry would multiply distinct prefixes by depth.
-  let scope = docx_format_scope(
-    bytes,
-    elements,
-    element_identity,
-    scopes~,
-    declarations~,
-  )
-  match scope.get(prefix) {
-    Some(uri) => uri
-    None =>
-      if format_surgery_element_prefix(bytes, elements[element_identity]) ==
-        prefix {
-        elements[element_identity].uri
-      } else {
-        "?"
-      }
-  }
-}
-
-///|
-/// The namespace bindings in scope at an element: its ancestors' with
-/// its own applied over them. An element declaring nothing SHARES its
-/// parent's map rather than copying it, so scope construction costs
-/// what the document's declarations cost, not depth times elements.
-fn docx_format_scope(
-  bytes : BytesView,
-  elements : Array[ScannedElement],
-  element_identity : Int,
-  scopes~ : Map[Int, Map[String, String]],
-  declarations~ : Map[Int, Map[String, String]],
-) -> Map[String, String] raise DocxError {
-  match scopes.get(element_identity) {
-    Some(known) => known
-    None => {
-      let own = docx_format_declarations(
-        bytes,
-        elements,
-        element_identity,
-        declarations~,
-      )
-      let parent_index = elements[element_identity].parent_index
-      let inherited = if parent_index >= 0 && parent_index < elements.length() {
-        docx_format_scope(bytes, elements, parent_index, scopes~, declarations~)
-      } else {
-        Map([])
-      }
-      let scope = if own.length() == 0 {
-        inherited
-      } else {
-        let merged : Map[String, String] = Map([])
-        for entry in inherited {
-          merged[entry.0] = entry.1
-        }
-        for entry in own {
-          merged[entry.0] = entry.1
-        }
-        merged
-      }
-      scopes[element_identity] = scope
-      scope
-    }
-  }
-}
-
-///|
-/// The attribute names an element's open tag spells, in order.
-fn docx_format_attribute_names(
-  bytes : BytesView,
-  element : ScannedElement,
-) -> Array[String] raise DocxError {
-  let names : Array[String] = []
-  let stop = run_surgery_open_tag_end(element)
-  let mut at = element.byte_start + 1
-  while at < stop &&
-        bytes[at] != b'>' &&
-        bytes[at] != b'/' &&
-        !is_xml_ws(bytes[at]) {
-    at += 1
-  }
-  while at < stop {
-    if is_xml_ws(bytes[at]) || bytes[at] == b'/' {
-      at += 1
-      continue
-    }
-    if bytes[at] == b'>' {
-      break
-    }
-    let name_start = at
-    while at < stop && bytes[at] != b'=' && !is_xml_ws(bytes[at]) {
-      at += 1
-    }
-    names.push(format_surgery_decode(bytes[name_start:at]))
-    while at < stop && bytes[at] != b'"' && bytes[at] != b'\'' {
-      at += 1
-    }
-    if at >= stop {
-      break
-    }
-    let quote = bytes[at]
-    at += 1
-    while at < stop && bytes[at] != quote {
-      at += 1
-    }
-    at += 1
-  }
-  names
 }
 
 ///|
@@ -1821,70 +1594,6 @@ fn docx_format_run_signature_key(
 }
 
 ///|
-/// One element's namespace declarations, parsed once: prefix to URI,
-/// with the default declaration under the empty prefix.
-fn docx_format_declarations(
-  bytes : BytesView,
-  elements : Array[ScannedElement],
-  element_identity : Int,
-  declarations~ : Map[Int, Map[String, String]],
-) -> Map[String, String] raise DocxError {
-  match declarations.get(element_identity) {
-    Some(known) => known
-    None => {
-      // ONE pass over the open tag: reading it again per declaration
-      // would make a tag with many of them quadratic by itself.
-      let table : Map[String, String] = Map([])
-      let element = elements[element_identity]
-      let stop = run_surgery_open_tag_end(element)
-      let mut at = element.byte_start + 1
-      while at < stop &&
-            bytes[at] != b'>' &&
-            bytes[at] != b'/' &&
-            !is_xml_ws(bytes[at]) {
-        at += 1
-      }
-      while at < stop {
-        if is_xml_ws(bytes[at]) || bytes[at] == b'/' {
-          at += 1
-          continue
-        }
-        if bytes[at] == b'>' {
-          break
-        }
-        let name_start = at
-        while at < stop && bytes[at] != b'=' && !is_xml_ws(bytes[at]) {
-          at += 1
-        }
-        let name = format_surgery_decode(bytes[name_start:at])
-        while at < stop && bytes[at] != b'"' && bytes[at] != b'\'' {
-          at += 1
-        }
-        if at >= stop {
-          break
-        }
-        let quote = bytes[at]
-        at += 1
-        let value_start = at
-        while at < stop && bytes[at] != quote {
-          at += 1
-        }
-        if name == "xmlns" {
-          table[""] = format_surgery_decode(bytes[value_start:at])
-        } else if name.has_prefix("xmlns:") {
-          table[name[6:].to_owned()] = format_surgery_decode(
-            bytes[value_start:at],
-          )
-        }
-        at += 1
-      }
-      declarations[element_identity] = table
-      table
-    }
-  }
-}
-
-///|
 /// `docx_format_without`, memoized by the properties text: a run's
 /// units all carry the same properties, and filtering them once per
 /// unit would cost the text's length times the property bytes.
@@ -1896,8 +1605,202 @@ fn docx_format_filtered(
   match filtered.get(properties) {
     Some(known) => known
     None => {
-      let result = docx_format_without(properties, touched)
+      let result = docx_format_fingerprint(
+        docx_format_without(properties, touched),
+      )
       filtered[properties] = result
+      result
+    }
+  }
+}
+
+///|
+/// Every element's SUBTREE binding digest, computed in one pass.
+///
+/// A property's meaning depends on the namespace bindings in scope
+/// where it sits, and a carrier must be compared together with them.
+/// Resolving prefixes per carrier — or materializing a scope map per
+/// element, or a prefix set per subtree — costs depth times breadth on
+/// documents the reader accepts. So the scope is carried down a single
+/// depth-first walk with an undo log, each element's own
+/// prefix-to-URI pairs are folded into an order-independent sum, and a
+/// subtree's digest is its own pairs plus its children's. Every
+/// carrier then reads its digest in one lookup.
+///
+/// Prefixes resolving to WML are left out: the request writes WML and
+/// the rPr engine vouches for that binding, so recording it would make
+/// a run that GAINED its first property look like a change of meaning.
+fn docx_format_binding_digests(
+  bytes : BytesView,
+  elements : Array[ScannedElement],
+  root_identity : Int,
+) -> Map[Int, UInt] raise DocxError {
+  let digests : Map[Int, UInt] = Map([])
+  let scope : Map[String, String] = Map([])
+  fn walk(identity : Int) -> UInt raise DocxError {
+    let element = elements[identity]
+    // Declarations on this element, parsed in ONE pass over its tag,
+    // applied to the scope with an undo record.
+    let undo : Array[(String, String?)] = []
+    let used : Array[String] = []
+    let stop = run_surgery_open_tag_end(element)
+    let mut at = element.byte_start + 1
+    let name_start = at
+    while at < stop &&
+          bytes[at] != b'>' &&
+          bytes[at] != b'/' &&
+          !is_xml_ws(bytes[at]) {
+      at += 1
+    }
+    let (element_prefix, _) = split_qname(
+      format_surgery_decode(bytes[name_start:at]),
+    )
+    used.push(element_prefix)
+    while at < stop {
+      if is_xml_ws(bytes[at]) || bytes[at] == b'/' {
+        at += 1
+        continue
+      }
+      if bytes[at] == b'>' {
+        break
+      }
+      let attribute_start = at
+      while at < stop && bytes[at] != b'=' && !is_xml_ws(bytes[at]) {
+        at += 1
+      }
+      let attribute = format_surgery_decode(bytes[attribute_start:at])
+      while at < stop && bytes[at] != b'"' && bytes[at] != b'\'' {
+        at += 1
+      }
+      if at >= stop {
+        break
+      }
+      let quote = bytes[at]
+      at += 1
+      let value_start = at
+      while at < stop && bytes[at] != quote {
+        at += 1
+      }
+      let value = format_surgery_decode(bytes[value_start:at])
+      at += 1
+      if attribute == "xmlns" {
+        undo.push(("", scope.get("")))
+        scope[""] = value
+      } else if attribute.has_prefix("xmlns:") {
+        let declared = attribute[6:].to_owned()
+        undo.push((declared, scope.get(declared)))
+        scope[declared] = value
+      } else {
+        let (attribute_prefix, _) = split_qname(attribute)
+        used.push(attribute_prefix)
+      }
+    }
+    // This element's own contribution: the bindings its own names
+    // depend on, folded order-independently.
+    let mut own : UInt = 0
+    for prefix in used {
+      let uri = if prefix == "xml" {
+        "http://www.w3.org/XML/1998/namespace"
+      } else {
+        match scope.get(prefix) {
+          Some(known) => known
+          None => if prefix == element_prefix { element.uri } else { "?" }
+        }
+      }
+      if is_wml_uri(uri) {
+        continue
+      }
+      let mut hash : UInt = 2166136261
+      for unit in "\{prefix}=\{uri}".code_units() {
+        hash = hash ^ unit.to_uint()
+        hash = hash * 16777619
+      }
+      own = own + hash
+    }
+    let mut total = own
+    let mut child = element.first_child_index
+    while child >= 0 {
+      total = total + walk(child)
+      child = elements[child].next_sibling_index
+    }
+    digests[identity] = total
+    for entry in undo {
+      match entry.1 {
+        Some(previous) => scope[entry.0] = previous
+        None => scope.remove(entry.0)
+      }
+    }
+    total
+  }
+
+  // The scope above the paragraph matters too, so the walk starts at
+  // the story root and records digests for everything beneath it.
+  let mut ancestor = root_identity
+  let chain : Array[Int] = []
+  while ancestor >= 0 && ancestor < elements.length() {
+    chain.push(ancestor)
+    ancestor = elements[ancestor].parent_index
+  }
+  let mut index = chain.length() - 1
+  while index > 0 {
+    let element = elements[chain[index]]
+    let stop = run_surgery_open_tag_end(element)
+    let mut at = element.byte_start + 1
+    while at < stop &&
+          bytes[at] != b'>' &&
+          bytes[at] != b'/' &&
+          !is_xml_ws(bytes[at]) {
+      at += 1
+    }
+    while at < stop {
+      if is_xml_ws(bytes[at]) || bytes[at] == b'/' {
+        at += 1
+        continue
+      }
+      if bytes[at] == b'>' {
+        break
+      }
+      let attribute_start = at
+      while at < stop && bytes[at] != b'=' && !is_xml_ws(bytes[at]) {
+        at += 1
+      }
+      let attribute = format_surgery_decode(bytes[attribute_start:at])
+      while at < stop && bytes[at] != b'"' && bytes[at] != b'\'' {
+        at += 1
+      }
+      if at >= stop {
+        break
+      }
+      let quote = bytes[at]
+      at += 1
+      let value_start = at
+      while at < stop && bytes[at] != quote {
+        at += 1
+      }
+      let value = format_surgery_decode(bytes[value_start:at])
+      at += 1
+      if attribute == "xmlns" {
+        scope[""] = value
+      } else if attribute.has_prefix("xmlns:") {
+        scope[attribute[6:].to_owned()] = value
+      }
+    }
+    index -= 1
+  }
+  walk(root_identity) |> ignore
+  digests
+}
+
+///|
+/// A properties text's own fingerprint, memoized by that text: units of
+/// one run share it, and comparing the bytes per unit would cost the
+/// run's text length times its property size.
+fn docx_format_raw(properties : String, raw~ : Map[String, String]) -> String {
+  match raw.get(properties) {
+    Some(known) => known
+    None => {
+      let result = docx_format_fingerprint(properties)
+      raw[properties] = result
       result
     }
   }
