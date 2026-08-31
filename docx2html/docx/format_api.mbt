@@ -124,6 +124,10 @@ pub fn DocxFormatAffected::splits(self : DocxFormatAffected) -> Int {
 /// What a planned formatting batch will do.
 pub struct DocxFormatReceipt {
   mode : String
+  requested_text : String?
+  requested_within : String?
+  requested_nth : Int?
+  requested_range : (Int, Int)?
   selected : Array[Int]
   spans : Array[DocxFormatSpan]
   affected : Array[DocxFormatAffected]
@@ -137,6 +141,35 @@ pub struct DocxFormatReceipt {
 /// `text` or `range` — which selector produced the spans.
 pub fn DocxFormatReceipt::mode(self : DocxFormatReceipt) -> String {
   self.mode
+}
+
+///|
+/// The needle the caller asked for, in text mode.
+pub fn DocxFormatReceipt::requested_text(self : DocxFormatReceipt) -> String? {
+  self.requested_text
+}
+
+///|
+/// The subtree the caller restricted to, if any — and in range mode,
+/// the paragraph it addressed.
+pub fn DocxFormatReceipt::requested_within(self : DocxFormatReceipt) -> String? {
+  self.requested_within
+}
+
+///|
+/// The ordinal the caller selected, if any. `None` with one span means
+/// "all candidates, and there was one" — a distinction a count alone
+/// cannot make.
+pub fn DocxFormatReceipt::requested_nth(self : DocxFormatReceipt) -> Int? {
+  self.requested_nth
+}
+
+///|
+/// The explicit range the caller addressed, in range mode.
+pub fn DocxFormatReceipt::requested_range(
+  self : DocxFormatReceipt,
+) -> (Int, Int)? {
+  self.requested_range
 }
 
 ///|
@@ -220,6 +253,15 @@ pub fn plan_docx_format(
   range? : (Int, Int),
 ) -> (@splice.SplicePlan, DocxFormatReceipt) raise DocxError {
   let part = story.part()
+  // v1 is BODY-ONLY in both selector modes. Text mode inherits find's
+  // own check, but range mode reaches the projection directly, and a
+  // header or footnote formatted through it would carry body
+  // addressing metadata that is false.
+  guard part == annotated.main_story_source().part() else {
+    raise Unsupported(
+      message="format edits the body story only in v1; '\{part}' is not the main document part",
+    )
+  }
   guard !(text is Some(_) && range is Some(_)) else {
     raise Unsupported(
       message="format takes exactly one selector: a text needle or an explicit range",
@@ -247,15 +289,43 @@ pub fn plan_docx_format(
   }
   let paragraph_paths = find_path_map(projection.scan, "p")
   let elements = projection.scan.elements()
+  // Paths are NOT unique: a tolerated nested paragraph makes two
+  // logical paragraphs share one physical head, hence one path. A
+  // last-wins map would format one paragraph while the receipt
+  // described the other, so collided paths are counted and refused
+  // rather than answered for.
   let index_by_path : Map[String, Int] = Map([])
-  let path_by_index : Map[Int, String] = Map([])
+  let claimants : Map[String, Int] = Map([])
   for paragraph_index, paragraph in projection.paragraphs {
     guard paragraph.sources.length() > 0 else { continue }
     let SourceElementId(head) = paragraph.sources[0].source
     if paragraph_paths.get(elements[head].byte_start) is Some(path) {
-      index_by_path[path] = paragraph_index
-      path_by_index[paragraph_index] = path
+      claimants[path] = match claimants.get(path) {
+        Some(seen) => seen + 1
+        None => 1
+      }
+      if claimants.get(path) == Some(1) {
+        index_by_path[path] = paragraph_index
+      }
     }
+  }
+  fn resolve_paragraph(path : String) -> Int raise DocxError {
+    guard claimants.get(path) is Some(count) else {
+      raise Unsupported(
+        message="the paragraph '\{path}' did not resolve to a projection paragraph",
+      )
+    }
+    guard count == 1 else {
+      raise Unsupported(
+        message="the path '\{path}' names \{count} logical paragraphs (a tolerated nested paragraph shares its head); formatting refuses an ambiguous address",
+      )
+    }
+    guard index_by_path.get(path) is Some(paragraph_index) else {
+      raise Unsupported(
+        message="the paragraph '\{path}' did not resolve to a projection paragraph",
+      )
+    }
+    paragraph_index
   }
   // Selection.
   let mode = if range is Some(_) { "range" } else { "text" }
@@ -268,11 +338,12 @@ pub fn plan_docx_format(
           message="an explicit range needs the paragraph it addresses (--in)",
         )
       }
-      guard index_by_path.get(scope) is Some(paragraph_index) else {
+      guard claimants.get(scope) is Some(_) else {
         raise Unsupported(
           message="the scope '\{scope}' does not name a paragraph of this story",
         )
       }
+      let paragraph_index = resolve_paragraph(scope)
       let paragraph = projection.paragraphs[paragraph_index]
       let projected = find_paragraph_projection(paragraph)
       guard start >= 0 && start < end && end <= projected.length() else {
@@ -363,11 +434,7 @@ pub fn plan_docx_format(
     while stop < spans.length() && spans[stop].path == path {
       stop = stop + 1
     }
-    guard index_by_path.get(path) is Some(paragraph_index) else {
-      raise Unsupported(
-        message="selected paragraph '\{path}' did not resolve to a projection paragraph",
-      )
-    }
+    let paragraph_index = resolve_paragraph(path)
     let requested : Array[ParagraphFormatSpan] = []
     for at in cursor..<stop {
       requested.push({ start: spans[at].start, end: spans[at].end, })
@@ -405,6 +472,10 @@ pub fn plan_docx_format(
     plan,
     {
       mode,
+      requested_text: text,
+      requested_within: within,
+      requested_nth: nth,
+      requested_range: range,
       selected: ordinals,
       spans,
       affected,
@@ -478,15 +549,27 @@ pub fn docx_paragraph_direct_format(
   let paragraph_paths = find_path_map(projection.scan, "p")
   let elements = projection.scan.elements()
   let mut target = -1
+  let mut found = 0
   for paragraph_index, paragraph in projection.paragraphs {
     guard paragraph.sources.length() > 0 else { continue }
     let SourceElementId(head) = paragraph.sources[0].source
     if paragraph_paths.get(elements[head].byte_start) == Some(path) {
-      target = paragraph_index
+      found = found + 1
+      if found == 1 {
+        target = paragraph_index
+      }
     }
   }
   guard target >= 0 else {
     return Some("the path '\{path}' names no paragraph after the edit")
+  }
+  // A collided path cannot be answered for: the planner refuses these,
+  // so seeing one at readback means the document changed shape under
+  // the edit.
+  guard found == 1 else {
+    return Some(
+      "the path '\{path}' names \{found} logical paragraphs after the edit",
+    )
   }
   let paragraph = projection.paragraphs[target]
   let base = paragraph.projection_start
@@ -510,12 +593,16 @@ pub fn docx_paragraph_direct_format(
     guard !judged.contains(run_identity) else { continue }
     judged.push(run_identity)
     let run_element = elements[run_identity]
-    let (prefix, extension_prefixes) = format_surgery_run_binding(
+    let binding = format_surgery_run_binding(
       bytes,
       elements,
       run_element,
       "readback of '\{path}'",
-    )
+    ) catch {
+      Unsupported(message~) => return Some(message)
+      error => raise error
+    }
+    let (prefix, extension_prefixes) = binding
     let slice = bytes[run_element.byte_start:run_element.byte_end]
     // A refusal during readback is itself a discrepancy: the run can no
     // longer be judged, which is exactly what a readback must catch.
@@ -538,4 +625,144 @@ pub fn docx_paragraph_direct_format(
     )
   }
   None
+}
+
+///|
+/// The readback's PRESERVATION judgment: did formatting stay inside the
+/// spans it was asked for?
+///
+/// The positive check cannot answer this. A run whose text lies wholly
+/// outside the union may legitimately have carried the property all
+/// along, so presence proves nothing — provenance does: every such run
+/// must carry EXACTLY the run properties the corresponding paragraph of
+/// the ORIGINAL document carried for that text. A planner that
+/// formatted a whole mixed run instead of splitting it is caught here
+/// even though the projection is unchanged and the positive check
+/// passes.
+///
+/// `spans` are the paragraph-local ranges the plan was asked to format.
+/// Returns None when preserved, or the first discrepancy.
+pub fn docx_paragraph_format_preserved(
+  before : DocxAnnotatedResult,
+  before_story : DocxStoryPartSource,
+  after : DocxAnnotatedResult,
+  after_story : DocxStoryPartSource,
+  path~ : String,
+  spans~ : Array[(Int, Int)],
+) -> String? raise DocxError {
+  guard docx_format_paragraph_runs(before, before_story, path~)
+    is Some(original) else {
+    return Some("the path '\{path}' names no paragraph before the edit")
+  }
+  guard docx_format_paragraph_runs(after, after_story, path~) is Some(result) else {
+    return Some("the path '\{path}' names no paragraph after the edit")
+  }
+  for entry in result {
+    let (start, end, properties) = entry
+    guard end > start else { continue }
+    // A run WHOLLY inside the union is the positive check's business.
+    // Everything else — outside, or straddling a boundary — must carry
+    // exactly the properties the original run carried for that text.
+    // Straddling is legitimate only when nothing was done (an
+    // already-satisfied run stays unsplit); a plan that formatted a
+    // mixed run instead of splitting it changed them, and is caught
+    // here even though the projection is unchanged and the requested
+    // span really did become bold.
+    let mut cursor = start
+    for span in spans {
+      let (from, to) = span
+      if from <= cursor && cursor < to {
+        cursor = to
+      }
+    }
+    guard cursor < end else { continue }
+    let mut matched = false
+    for source in original {
+      let (source_start, source_end, source_properties) = source
+      if source_end > source_start && source_start <= start && end <= source_end {
+        matched = true
+        guard properties == source_properties else {
+          return Some(
+            "the run holding \{start}:\{end} of '\{path}' is not wholly inside a requested span, but its run properties changed",
+          )
+        }
+      }
+    }
+    guard matched else {
+      return Some(
+        "the text \{start}:\{end} of '\{path}' has no original run to compare against",
+      )
+    }
+  }
+  None
+}
+
+///|
+/// One paragraph's runs as (projection start, projection end, rPr bytes
+/// as spelled) — the evidence a preservation judgment needs from both
+/// snapshots. `None` when the path names no paragraph, or names more
+/// than one (a collided path cannot be answered for).
+fn docx_format_paragraph_runs(
+  annotated : DocxAnnotatedResult,
+  story : DocxStoryPartSource,
+  path~ : String,
+) -> Array[(Int, Int, String)]? raise DocxError {
+  let part = story.part()
+  guard annotated.reader_projections.get(part) is Some(projection) else {
+    return None
+  }
+  guard annotated.reader_projection_sources.get(part) is Some(bytes) else {
+    return None
+  }
+  let paragraph_paths = find_path_map(projection.scan, "p")
+  let elements = projection.scan.elements()
+  let mut target = -1
+  let mut found = 0
+  for paragraph_index, paragraph in projection.paragraphs {
+    guard paragraph.sources.length() > 0 else { continue }
+    let SourceElementId(head) = paragraph.sources[0].source
+    if paragraph_paths.get(elements[head].byte_start) == Some(path) {
+      found = found + 1
+      if found == 1 {
+        target = paragraph_index
+      }
+    }
+  }
+  guard target >= 0 && found == 1 else { return None }
+  let paragraph = projection.paragraphs[target]
+  let base = paragraph.projection_start
+  let out : Array[(Int, Int, String)] = []
+  for run in paragraph.runs {
+    let mut start = -1
+    let mut end = -1
+    for contribution in paragraph.contributions {
+      guard contribution.kind is ProjectedText(_) else { continue }
+      guard contribution.run_source == Some(run.source) else { continue }
+      let local_start = contribution.projection_start - base
+      let local_end = contribution.projection_end - base
+      guard local_end > local_start else { continue }
+      if start < 0 || local_start < start {
+        start = local_start
+      }
+      if local_end > end {
+        end = local_end
+      }
+    }
+    guard start >= 0 else { continue }
+    let SourceElementId(run_identity) = run.source
+    let run_element = elements[run_identity]
+    let mut properties = ""
+    let mut child = run_element.first_child_index
+    while child >= 0 {
+      let entry = elements[child]
+      if is_wml_uri(entry.uri) && entry.local_name == "rPr" {
+        properties = format_surgery_decode(
+          bytes[entry.byte_start:entry.byte_end],
+        )
+      }
+      child = entry.next_sibling_index
+    }
+    out.push((start, end, properties))
+  }
+  Some(out)
 }

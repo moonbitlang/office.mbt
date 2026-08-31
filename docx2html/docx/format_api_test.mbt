@@ -389,3 +389,275 @@ test "format plans are pinned to the read they were planned against" {
   }
   assert_true(message.length() > 0)
 }
+
+///|
+/// Round 1's Critical: a tolerated nested paragraph makes two logical
+/// paragraphs share one path. Formatting refuses that address rather
+/// than picking a claimant — in both selector modes.
+test "format refuses a path two logical paragraphs claim" {
+  let annotated = format_fixture(
+    "<w:p><w:r><w:t>same</w:t></w:r><w:p><w:r><w:t>same</w:t></w:r></w:p></w:p>",
+  )
+  let mut text_message = ""
+  try
+    @docx.plan_docx_format(
+      annotated,
+      annotated.main_story_source(),
+      format=@docx.docx_direct_format(bold=true),
+      text="same",
+    )
+    |> ignore
+  catch {
+    error => text_message = repr(error)
+  } noraise {
+    _ => fail("expected an ambiguous-address refusal")
+  }
+  assert_true(text_message.contains("logical paragraphs"), msg=text_message)
+  let mut range_message = ""
+  try
+    @docx.plan_docx_format(
+      annotated,
+      annotated.main_story_source(),
+      format=@docx.docx_direct_format(bold=true),
+      within="p[1]",
+      range=(0, 4),
+    )
+    |> ignore
+  catch {
+    error => range_message = repr(error)
+  } noraise {
+    _ => fail("expected an ambiguous-address refusal")
+  }
+  assert_true(range_message.contains("logical paragraphs"), msg=range_message)
+}
+
+///|
+/// The receipt echoes the selector the caller used, so a report can
+/// reconstruct the request — including the distinction a count cannot
+/// make, between "all candidates, and there was one" and `nth=1`.
+test "format receipts echo their selector" {
+  let annotated = format_fixture(
+    "<w:p><w:r><w:t>ab ab</w:t></w:r></w:p><w:p><w:r><w:t>ab</w:t></w:r></w:p>",
+  )
+  let (_, all) = @docx.plan_docx_format(
+    annotated,
+    annotated.main_story_source(),
+    format=@docx.docx_direct_format(bold=true),
+    text="ab",
+    within="p[1]",
+  )
+  assert_eq(all.requested_text(), Some("ab"))
+  assert_eq(all.requested_within(), Some("p[1]"))
+  assert_eq(all.requested_nth(), None)
+  assert_eq(all.requested_range(), None)
+  debug_inspect(all.selected(), content="[1, 2]")
+  let (_, single) = @docx.plan_docx_format(
+    annotated,
+    annotated.main_story_source(),
+    format=@docx.docx_direct_format(bold=true),
+    text="ab",
+    within="p[2]",
+    nth=1,
+  )
+  assert_eq(single.requested_nth(), Some(1))
+  assert_eq(single.requested_within(), Some("p[2]"))
+  // A zero-candidate receipt still says what was asked for.
+  let (_, empty) = @docx.plan_docx_format(
+    annotated,
+    annotated.main_story_source(),
+    format=@docx.docx_direct_format(bold=true),
+    text="absent",
+  )
+  assert_eq(empty.spans().length(), 0)
+  assert_eq(empty.requested_text(), Some("absent"))
+  // Range mode echoes its coordinates.
+  let (_, ranged) = @docx.plan_docx_format(
+    annotated,
+    annotated.main_story_source(),
+    format=@docx.docx_direct_format(bold=true),
+    within="p[2]",
+    range=(0, 2),
+  )
+  assert_eq(ranged.requested_range(), Some((0, 2)))
+  assert_eq(ranged.requested_text(), None)
+}
+
+///|
+/// Several spans in ONE paragraph are planned as one batch, and a
+/// refusal anywhere in the batch aborts everything — formatting never
+/// half-applies what it selected.
+test "format batches many spans per paragraph and aborts as a whole" {
+  let body = "<w:p><w:r><w:t>ab cd ab</w:t></w:r></w:p>"
+  let annotated = format_fixture(body)
+  let (plan, receipt) = @docx.plan_docx_format(
+    annotated,
+    annotated.main_story_source(),
+    format=@docx.docx_direct_format(bold=true),
+    text="ab",
+  )
+  debug_inspect(receipt.selected(), content="[1, 2]")
+  assert_eq(receipt.affected().length(), 1)
+  assert_eq(receipt.affected()[0].splits(), 1)
+  let reread = format_apply(body, plan)
+  for probe in [(0, 2), (6, 8)] {
+    let (start, end) = probe
+    assert_eq(
+      @docx.docx_paragraph_direct_format(
+        reread,
+        reread.main_story_source(),
+        path="p[1]",
+        start~,
+        end~,
+        format=@docx.docx_direct_format(bold=true),
+      ),
+      None,
+    )
+  }
+  // A later candidate that refuses aborts the earlier valid one too: no
+  // plan is returned at all.
+  let mixed = format_fixture(
+    "<w:p><w:r><w:t>ab</w:t></w:r></w:p><w:p><w:ins w:id=\"1\" w:author=\"a\" w:date=\"2020-01-01T00:00:00Z\"><w:r><w:t>ab</w:t></w:r></w:ins></w:p>",
+  )
+  let mut message = ""
+  try
+    @docx.plan_docx_format(
+      mixed,
+      mixed.main_story_source(),
+      format=@docx.docx_direct_format(bold=true),
+      text="ab",
+    )
+    |> ignore
+  catch {
+    error => message = repr(error)
+  } noraise {
+    _ => fail("expected the batch to abort")
+  }
+  assert_true(message.contains("restricted-region"), msg=message)
+}
+
+///|
+/// The preservation readback proves the negative the positive check
+/// cannot: formatting stayed inside its spans. A faithful edit passes;
+/// a whole-run edit where a split was required is caught even though
+/// the projection is unchanged.
+test "format preservation readback catches formatting outside the span" {
+  let body = "<w:p><w:r><w:t>alpha</w:t></w:r></w:p>"
+  let annotated = format_fixture(body)
+  let (plan, _) = @docx.plan_docx_format(
+    annotated,
+    annotated.main_story_source(),
+    format=@docx.docx_direct_format(bold=true),
+    within="p[1]",
+    range=(0, 2),
+  )
+  let faithful = format_apply(body, plan)
+  assert_eq(
+    @docx.docx_paragraph_format_preserved(
+      annotated,
+      annotated.main_story_source(),
+      faithful,
+      faithful.main_story_source(),
+      path="p[1]",
+      spans=[(0, 2)],
+    ),
+    None,
+  )
+  // The sabotage: the SAME span formatted by rewriting the whole run.
+  let sabotaged = @docx.read_docx_annotated(
+    fixture_docx(
+      format_fixture_body(
+        "<w:p><w:r><w:rPr><w:b/><w:bCs/></w:rPr><w:t>alpha</w:t></w:r></w:p>",
+      ),
+    ),
+  )
+  // The positive check still passes — the span really is bold...
+  assert_eq(
+    @docx.docx_paragraph_direct_format(
+      sabotaged,
+      sabotaged.main_story_source(),
+      path="p[1]",
+      start=0,
+      end=2,
+      format=@docx.docx_direct_format(bold=true),
+    ),
+    None,
+  )
+  // ...and the projection is unchanged. Only provenance catches it.
+  assert_true(
+    @docx.docx_paragraph_format_preserved(
+      annotated,
+      annotated.main_story_source(),
+      sabotaged,
+      sabotaged.main_story_source(),
+      path="p[1]",
+      spans=[(0, 2)],
+    )
+    is Some(_),
+  )
+}
+
+///|
+/// Text mode is body-only in v1, and so is range mode: a range into
+/// another story would carry body addressing metadata that is false.
+test "format edits the body story only" {
+  // A fixture with a comments story, so a non-body source exists.
+  let annotated = @docx.read_docx_annotated(
+    fixture_docx(
+      format_fixture_body("<w:p><w:r><w:t>Hello</w:t></w:r></w:p>"),
+      comments_xml=Some(
+        "<w:comments xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\"><w:comment w:id=\"0\"><w:p><w:r><w:t>note</w:t></w:r></w:p></w:comment></w:comments>",
+      ),
+    ),
+  )
+  let others : Array[@docx.DocxStoryPartSource] = []
+  if annotated.comments_story_source() is Some(comments) {
+    others.push(comments)
+  }
+  if annotated.footnotes_story_source() is Some(footnotes) {
+    others.push(footnotes)
+  }
+  for source in annotated.header_story_sources() {
+    others.push(source)
+  }
+  assert_true(others.length() > 0, msg="the fixture has no non-body story")
+  for source in others {
+    let mut message = ""
+    try
+      @docx.plan_docx_format(
+        annotated,
+        source,
+        format=@docx.docx_direct_format(bold=true),
+        within="p[1]",
+        range=(0, 1),
+      )
+      |> ignore
+    catch {
+      error => message = repr(error)
+    } noraise {
+      _ => fail("expected a body-only refusal for " + source.part())
+    }
+    assert_true(message.contains("body story only"), msg=message)
+  }
+}
+
+///|
+/// An out-of-bounds ordinal names the count it exceeded.
+test "format refuses an ordinal beyond the candidate count" {
+  let annotated = format_fixture("<w:p><w:r><w:t>ab ab</w:t></w:r></w:p>")
+  let mut message = ""
+  try
+    @docx.plan_docx_format(
+      annotated,
+      annotated.main_story_source(),
+      format=@docx.docx_direct_format(bold=true),
+      text="ab",
+      nth=3,
+    )
+    |> ignore
+  catch {
+    error => message = repr(error)
+  } noraise {
+    _ => fail("expected an ordinal refusal")
+  }
+  assert_true(message.contains("2 candidate"), msg=message)
+}

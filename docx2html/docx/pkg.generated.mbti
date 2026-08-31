@@ -42,6 +42,8 @@ pub fn docx_paragraph_anchor_join_index(DocxAnnotatedResult, DocxStoryPartSource
 
 pub fn docx_paragraph_direct_format(DocxAnnotatedResult, DocxStoryPartSource, path~ : String, start~ : Int, end~ : Int, format~ : DocxDirectFormat) -> String? raise @core.DocxError
 
+pub fn docx_paragraph_format_preserved(DocxAnnotatedResult, DocxStoryPartSource, DocxAnnotatedResult, DocxStoryPartSource, path~ : String, spans~ : Array[(Int, Int)]) -> String? raise @core.DocxError
+
 pub fn docx_paragraph_projection(DocxAnnotatedResult, DocxStoryPartSource, path~ : String) -> String?
 
 pub fn embed_style_map(BytesView, String) -> Bytes raise @core.DocxError
@@ -227,6 +229,10 @@ pub fn DocxFormatAffected::splits(Self) -> Int
 
 pub struct DocxFormatReceipt {
   mode : String
+  requested_text : String?
+  requested_within : String?
+  requested_nth : Int?
+  requested_range : (Int, Int)?
   selected : Array[Int]
   spans : Array[DocxFormatSpan]
   affected : Array[DocxFormatAffected]
@@ -238,6 +244,10 @@ pub struct DocxFormatReceipt {
 pub fn DocxFormatReceipt::affected(Self) -> Array[DocxFormatAffected]
 pub fn DocxFormatReceipt::byte_edits(Self) -> Int
 pub fn DocxFormatReceipt::mode(Self) -> String
+pub fn DocxFormatReceipt::requested_nth(Self) -> Int?
+pub fn DocxFormatReceipt::requested_range(Self) -> (Int, Int)?
+pub fn DocxFormatReceipt::requested_text(Self) -> String?
+pub fn DocxFormatReceipt::requested_within(Self) -> String?
 pub fn DocxFormatReceipt::runs_already_satisfied(Self) -> Int
 pub fn DocxFormatReceipt::runs_changed(Self) -> Int
 pub fn DocxFormatReceipt::selected(Self) -> Array[Int]
