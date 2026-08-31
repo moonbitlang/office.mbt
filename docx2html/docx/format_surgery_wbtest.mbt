@@ -52,6 +52,25 @@ fn assert_format_edits(
   assert_eq(after.to_string(), receipt.expected_projection)
   current_reader_story_text(spliced) |> ignore
   assert_untouched_bytes_survive(bytes, spliced_bytes, byte_edits)
+  // XML ID uniqueness: no split may duplicate an xml:id value.
+  let ids : Array[String] = []
+  let mut first_segment = true
+  for segment in spliced.split("xml:id=\"") {
+    if first_segment {
+      first_segment = false
+      continue
+    }
+    let text = segment.to_string()
+    let mut value_end = 0
+    while value_end < text.length() &&
+          text.view(start_offset=value_end, end_offset=value_end + 1).to_owned() !=
+          "\"" {
+      value_end += 1
+    }
+    let value = text.view(start_offset=0, end_offset=value_end).to_owned()
+    assert_false(ids.contains(value), msg="duplicated xml:id " + value)
+    ids.push(value)
+  }
   // EVERY result run whose projection lies wholly inside the requested
   // span union must satisfy the INDEPENDENT F0 verifier — cross-run,
   // multi-span, and split variants alike, not just hand-picked runs.
@@ -1082,5 +1101,39 @@ test "format: a run enclosing a checkbox refuses before the shortcut" {
     [format_span(0, 1)],
     refusal="FormatRestrictedRegion",
     bold=true,
+  )
+}
+
+///|
+/// Round 3's Medium: an identity-bearing attribute must never be
+/// duplicated by a clone-split — on the run or on a text element — while
+/// full coverage (which clones nothing) still formats in place.
+test "format: identity-bearing attributes refuse the split" {
+  assert_format_refusal(
+    "<w:p><w:r xml:id=\"r1\"><w:t>abcd</w:t></w:r></w:p>",
+    paragraph=0,
+    [format_span(1, 3)],
+    refusal="UnsplittableRun",
+    bold=true,
+  )
+  assert_format_refusal(
+    "<w:p><w:r><w:t xml:id=\"t1\">abcd</w:t></w:r></w:p>",
+    paragraph=0,
+    [format_span(1, 3)],
+    refusal="UnsplittableRun",
+    bold=true,
+  )
+  // Full coverage clones nothing, so the identity survives uniquely.
+  let (spliced, receipt) = assert_format_edits(
+    "<w:p><w:r xml:id=\"r1\"><w:t>abcd</w:t></w:r></w:p>",
+    paragraph=0,
+    [format_span(0, 4)],
+    bold=true,
+  )
+  assert_eq(receipt.splits, 0)
+  assert_true(
+    spliced.contains(
+      "<w:r xml:id=\"r1\"><w:rPr><w:b/><w:bCs/></w:rPr><w:t>abcd</w:t></w:r>",
+    ),
   )
 }

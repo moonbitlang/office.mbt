@@ -629,3 +629,4 @@ format_surgery.mbt	visible-barrier	format_surgery_refusal_slug	value	format_surg
 format_surgery.mbt	checkbox	format_surgery_is_checkbox_sdt	name	format_surgery_wbtest:"format: a run enclosing a checkbox refuses before the shortcut"
 format_surgery.mbt	sdt	format_surgery_is_checkbox_sdt	name	format_surgery_wbtest:"format: a run enclosing a checkbox refuses before the shortcut"
 format_surgery.mbt	sdtPr	format_surgery_is_checkbox_sdt	name	format_surgery_wbtest:"format: a run enclosing a checkbox refuses before the shortcut"
+format_surgery.mbt	id	format_surgery_open_tag_has_identity_attribute	name	format_surgery_wbtest:"format: identity-bearing attributes refuse the split"

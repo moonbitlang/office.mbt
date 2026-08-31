@@ -286,6 +286,64 @@ fn format_surgery_is_checkbox_sdt(
 }
 
 ///|
+/// Whether an element's open tag carries an identity-bearing attribute
+/// (local name `id` under any prefix — `xml:id`, `w:id`, bare `id`).
+/// Cloning such an element would duplicate the identity and violate
+/// XML ID uniqueness, so a split refuses instead.
+fn format_surgery_open_tag_has_identity_attribute(
+  source : BytesView,
+  element : ScannedElement,
+) -> Bool {
+  let stop = run_surgery_open_tag_end(element)
+  let mut at = element.byte_start + 1
+  // Skip the element name.
+  while at < stop &&
+        source[at] != b'>' &&
+        source[at] != b'/' &&
+        !is_xml_ws(source[at]) {
+    at += 1
+  }
+  while at < stop {
+    if is_xml_ws(source[at]) {
+      at += 1
+      continue
+    }
+    if source[at] == b'>' || source[at] == b'/' {
+      break
+    }
+    // Attribute name.
+    let name_start = at
+    while at < stop && source[at] != b'=' && !is_xml_ws(source[at]) {
+      at += 1
+    }
+    let builder = StringBuilder()
+    for index in name_start..<at {
+      if source[index] < b'\x80' {
+        builder.write_char(source[index].to_int().unsafe_to_char())
+      }
+    }
+    let (_, attribute_local) = split_qname(builder.to_string())
+    if attribute_local == "id" {
+      return true
+    }
+    // Skip to and over the quoted value.
+    while at < stop && source[at] != b'"' && source[at] != b'\'' {
+      at += 1
+    }
+    if at >= stop {
+      break
+    }
+    let quote = source[at]
+    at += 1
+    while at < stop && source[at] != quote {
+      at += 1
+    }
+    at += 1
+  }
+  false
+}
+
+///|
 /// One projecting piece of a run's mapped text, in `w:t`-local UTF-16
 /// coordinates, tagged with whether the batch covers it.
 priv struct FormatPiece {
@@ -991,6 +1049,23 @@ fn format_surgery_split_run(
       FormatInternalPlanConflict,
       "a partially covered run has no mapped text",
     )
+  }
+  // Cloning duplicates every open-tag attribute; an identity-bearing
+  // one (xml:id and friends) must not be duplicated, so the split
+  // refuses.
+  if format_surgery_open_tag_has_identity_attribute(source, run_element) {
+    raise format_surgery_refuse(
+      UnsplittableRun,
+      "the run carries an identity-bearing attribute a split would duplicate",
+    )
+  }
+  for wt in wts {
+    if format_surgery_open_tag_has_identity_attribute(source, wt) {
+      raise format_surgery_refuse(
+        UnsplittableRun,
+        "a text element carries an identity-bearing attribute a split would duplicate",
+      )
+    }
   }
   // Pieces: per `w:t`, wt-local boundaries at every covered-interval edge.
   let pieces : Array[FormatPiece] = []
