@@ -354,8 +354,9 @@ fn format_surgery_invisible_seam(element : ScannedElement) -> Bool {
     return false
   }
   if element.local_name == "rPr" {
-    // Run properties are scanned in full by the rPr engine, which
-    // judges every child itself.
+    // Run properties hold formatting, not content. For a run this
+    // batch touches the rPr engine proves that; for one it does not
+    // touch, the interstitial pass below proves it.
     return true
   }
   // The markers below render nothing — but only as the LEAVES the
@@ -410,6 +411,56 @@ fn format_surgery_transparent_is_accounted(element : ScannedElement) -> Bool {
   }
   format_surgery_transparent_wrapper(element) ||
   format_surgery_invisible_seam(element)
+}
+
+///|
+/// Whether an `rPr` subtree holds NOTHING but formatting: every child a
+/// ranked CT_RPr property with no element content, or a recognized
+/// extension whose subtree carries no WML. This mirrors the rPr
+/// engine's own admission rules, for the runs the engine never sees.
+fn format_surgery_rpr_is_formatting_only(
+  elements : Array[ScannedElement],
+  rpr : ScannedElement,
+) -> Bool {
+  let mut child = rpr.first_child_index
+  while child >= 0 {
+    let entry = elements[child]
+    if is_wml_uri(entry.uri) {
+      guard rpr_rank(entry.local_name) is Some(_) else { return false }
+      if entry.first_child_index >= 0 {
+        return false
+      }
+    } else if format_extension_uri(entry.uri) {
+      if format_surgery_subtree_carries_wml(elements, entry) {
+        return false
+      }
+    } else {
+      return false
+    }
+    child = entry.next_sibling_index
+  }
+  true
+}
+
+///|
+/// Whether any element in this subtree belongs to the WML vocabulary —
+/// the shape an extension wrapper must not conceal.
+fn format_surgery_subtree_carries_wml(
+  elements : Array[ScannedElement],
+  element : ScannedElement,
+) -> Bool {
+  let mut child = element.first_child_index
+  while child >= 0 {
+    let entry = elements[child]
+    if is_wml_uri(entry.uri) {
+      return true
+    }
+    if format_surgery_subtree_carries_wml(elements, entry) {
+      return true
+    }
+    child = entry.next_sibling_index
+  }
+  false
 }
 
 ///|
@@ -813,6 +864,35 @@ fn plan_paragraph_format_edits(
             )
           }
         }
+      }
+    }
+  }
+  // An rPr belonging to a run this batch does NOT touch never reaches
+  // the rPr engine, so nothing else would notice content hiding in it.
+  // Proven here, for every such rPr sitting inside a span.
+  for ordinal, span in requested {
+    for contribution in paragraph.contributions {
+      let position = contribution.projection_start - paragraph.projection_start
+      guard contribution.projection_start == contribution.projection_end &&
+        position > span.start &&
+        position < span.end else {
+        continue
+      }
+      let SourceElementId(seam_identity) = contribution.source
+      let seam = elements[seam_identity]
+      guard is_wml_uri(seam.uri) && seam.local_name == "rPr" else { continue }
+      let mut owner_touched = false
+      for touched in touched_runs {
+        if contribution.run_source == Some(touched.source) {
+          owner_touched = true
+        }
+      }
+      if !owner_touched &&
+        !format_surgery_rpr_is_formatting_only(elements, seam) {
+        raise format_surgery_refuse(
+          FormatVisibleBarrier,
+          "span \{ordinal} in paragraph \{paragraph_index}: an untouched run's properties hold content this planner cannot prove renders nothing",
+        )
       }
     }
   }

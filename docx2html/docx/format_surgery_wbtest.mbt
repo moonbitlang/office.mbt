@@ -1569,3 +1569,38 @@ test "format: painted content nested in an rPr property refuses" {
     bold=true,
   )
 }
+
+///|
+/// Round 12: an ATOMLESS run's rPr never reaches the rPr engine, so the
+/// span-wide pass proves it itself — formatting-only rPr passes, a
+/// painted mark or an unranked child inside one refuses.
+test "format: an interstitial rPr proves itself formatting-only" {
+  assert_format_refusal(
+    "<w:p><w:r><w:t>a</w:t></w:r><w:r><w:rPr><w:rFonts w:ascii=\"Arial\"><w:annotationRef/></w:rFonts></w:rPr></w:r><w:r><w:t>b</w:t></w:r></w:p>",
+    paragraph=0,
+    [format_span(0, 2)],
+    refusal="FormatVisibleBarrier",
+    bold=true,
+  )
+  assert_format_refusal(
+    "<w:p><w:r><w:t>a</w:t></w:r><w:r><w:rPr><w:annotationRef/></w:rPr></w:r><w:r><w:t>b</w:t></w:r></w:p>",
+    paragraph=0,
+    [format_span(0, 2)],
+    refusal="FormatVisibleBarrier",
+    bold=true,
+  )
+  // An ordinary formatting-only rPr on an atomless run is legitimate
+  // and must not be refused.
+  let (spliced, receipt) = assert_format_edits(
+    "<w:p><w:r><w:t>a</w:t></w:r><w:r><w:rPr><w:rFonts w:ascii=\"Arial\"/><w:i/></w:rPr></w:r><w:r><w:t>b</w:t></w:r></w:p>",
+    paragraph=0,
+    [format_span(0, 2)],
+    bold=true,
+  )
+  assert_eq(receipt.runs_changed, 2)
+  assert_true(
+    spliced.contains(
+      "<w:r><w:rPr><w:rFonts w:ascii=\"Arial\"/><w:i/></w:rPr></w:r>",
+    ),
+  )
+}
