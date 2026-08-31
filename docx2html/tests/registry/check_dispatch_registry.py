@@ -70,6 +70,9 @@ FILES = {
     # N3a's insertion planner: reads the anchor element tree (direct-
     # body proof) and RENDERS the namespace-self-contained fragment
     'paragraph_insert.mbt': 'extract',
+    # F0's lexical rPr engine: reads and edits run-property spellings
+    # in place, dispatching on the CT_RPr child vocabulary
+    'run_format.mbt': 'extract',
     # paraId R1's identity layer: dispatches on WML `p` and the anchor
     # status vocabulary; reads the scanner's as-spelled capture
     'paragraph_identity.mbt': 'extract',
