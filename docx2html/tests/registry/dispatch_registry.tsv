@@ -655,7 +655,7 @@ format_api.mbt	bCs	docx_format_touched_properties	name	format_api_test:"format p
 format_api.mbt	color	docx_format_touched_properties,docx_format_touched_residue	name	format_api_test:"format preservation guards unrelated properties inside spans"
 format_api.mbt	i	docx_format_touched_properties	name	format_api_test:"format preservation guards unrelated properties inside spans"
 format_api.mbt	iCs	docx_format_touched_properties	name	format_api_test:"format preservation guards unrelated properties inside spans"
-format_api.mbt	t	docx_format_paragraph_provenance	name	format_api_test:"format preservation guards unrelated properties inside spans"
+format_api.mbt	t	docx_format_run_carries_content	name	format_api_test:"format preservation guards unrelated properties inside spans"
 format_api.mbt	u	docx_format_touched_properties	name	format_api_test:"format preservation guards unrelated properties inside spans"
 format_api.mbt	pPr	docx_format_paragraph_provenance	name	format_api_test:"format preservation guards the paragraph mark"
 format_api.mbt	themeColor	docx_format_touched_residue	name	format_api_test:"format preservation authorizes attributes, not whole properties"
