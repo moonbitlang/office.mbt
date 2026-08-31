@@ -616,6 +616,9 @@ pub fn docx_paragraphs_direct_format(
   requests~ : Array[(String, Array[(Int, Int)])],
   format~ : DocxDirectFormat,
 ) -> Array[String?] raise DocxError {
+  // An empty batch asks nothing, and building the lookup for it would
+  // charge a pass over the story for no question.
+  guard !requests.is_empty() else { return [] }
   let part = story.part()
   guard annotated.reader_projections.get(part) is Some(projection) else {
     return requests.map(_ => {
@@ -813,6 +816,7 @@ pub fn docx_paragraphs_format_preserved(
   requests~ : Array[(String, Array[(Int, Int)])],
   format~ : DocxDirectFormat,
 ) -> Array[String?] raise DocxError {
+  guard !requests.is_empty() else { return [] }
   let before_part = before_story.part()
   let after_part = after_story.part()
   guard before.reader_projections.get(before_part) is Some(before_projection) &&

@@ -1229,3 +1229,56 @@ async test "the preflight refuses before it knows whether anything would change"
     assert_true(dry_message.contains("records revisions"), msg=dry_message)
   })
 }
+
+///|
+/// Write protection is a second protection element, and only the
+/// password-carrying form is enforcement.
+async test "the preflight refuses password write protection" {
+  with_docx_session_test_dir(directory => {
+    let recommended = preflight_fixture(
+      directory,
+      "recommended",
+      "<w:writeProtection w:recommended=\"1\"/>",
+      [],
+    )
+    let (recommended_failure, recommended_published) = format_input_probe(
+      recommended,
+      directory + "/recommended-out.docx",
+    )
+    assert_true(
+      recommended_failure is None,
+      msg="read-only RECOMMENDED is advice: \{recommended_failure}",
+    )
+    assert_true(recommended_published, msg="the edit publishes")
+    let enforced = preflight_fixture(
+      directory,
+      "write-protected",
+      "<w:writeProtection w:algorithmName=\"SHA-512\" w:hashValue=\"abc\" w:saltValue=\"def\" w:spinCount=\"100000\"/>",
+      [],
+    )
+    let (enforced_failure, enforced_published) = format_input_probe(
+      enforced,
+      directory + "/write-protected-out.docx",
+    )
+    guard enforced_failure is Some(message) else {
+      fail("password write protection is enforcement")
+    }
+    assert_true(message.contains("write protected"), msg=message)
+    assert_false(enforced_published, msg="nothing may be published")
+    // The legacy spelling is the same protection.
+    let legacy = preflight_fixture(
+      directory,
+      "legacy-protected",
+      "<w:writeProtection w:hash=\"abc\" w:salt=\"def\"/>",
+      [],
+    )
+    let (legacy_failure, _) = format_input_probe(
+      legacy,
+      directory + "/legacy-protected-out.docx",
+    )
+    guard legacy_failure is Some(legacy_message) else {
+      fail("the legacy password spelling is enforcement too")
+    }
+    assert_true(legacy_message.contains("write protected"), msg=legacy_message)
+  })
+}

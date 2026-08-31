@@ -281,6 +281,7 @@ pub fn docx_paragraphs_projection(
   story : DocxStoryPartSource,
   paths~ : Array[String],
 ) -> Array[String?] {
+  guard !paths.is_empty() else { return [] }
   guard annotated.reader_projections.get(story.part()) is Some(projection) else {
     return paths.map(_ => None)
   }

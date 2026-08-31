@@ -164,253 +164,258 @@ async fn transact_docx_revisions(
   allow_unmatched~ : Bool,
 ) -> DocxEditResult {
   let collected : Ref[DocxEditReport?] = Ref(None)
-  let report = transact_docx(options, resolving_revisions=true, session => {
-    let results = ops.map(op => {
-      (
-        {
-          op: if op.accept {
-            "accept_revision"
-          } else {
-            "reject_revision"
-          },
-          find: "",
-          replace: "",
-          occurrence: None,
-          at: None,
-          expect: None,
-          text: None,
-          resolved_at: None,
-          selector_id: op.id,
-          selector_author: op.author,
-          selector_type: op.kind,
-          selector_all: op.all,
-          matched: 0,
-          replacements: 0,
-          resolved: 0,
-        } : DocxEditOpResult)
-    })
-    let report : DocxEditReport = {
-      ops_applied: ops.length(),
-      replacements: 0,
-      revisions_resolved: 0,
-      results,
-      unmatched: [],
-      unmatched_total: 0,
-      unsupported: [],
-      unsupported_total: 0,
-      conflicts: [],
-      conflicts_total: 0,
-      locations: [],
-      locations_truncated: false,
-      stories_scanned: [],
-      changed: false,
-    }
-    let note_unsupported = (location : String, detail : String) => {
-      report.unsupported_total += 1
-      if report.unsupported.length() < docx_edit_finding_limit {
-        report.unsupported.push({ location, detail, })
+  let report = docx_transaction(
+    options,
+    validators=[],
+    resolving_revisions=true,
+    session => {
+      let results = ops.map(op => {
+        (
+          {
+            op: if op.accept {
+              "accept_revision"
+            } else {
+              "reject_revision"
+            },
+            find: "",
+            replace: "",
+            occurrence: None,
+            at: None,
+            expect: None,
+            text: None,
+            resolved_at: None,
+            selector_id: op.id,
+            selector_author: op.author,
+            selector_type: op.kind,
+            selector_all: op.all,
+            matched: 0,
+            replacements: 0,
+            resolved: 0,
+          } : DocxEditOpResult)
+      })
+      let report : DocxEditReport = {
+        ops_applied: ops.length(),
+        replacements: 0,
+        revisions_resolved: 0,
+        results,
+        unmatched: [],
+        unmatched_total: 0,
+        unsupported: [],
+        unsupported_total: 0,
+        conflicts: [],
+        conflicts_total: 0,
+        locations: [],
+        locations_truncated: false,
+        stories_scanned: [],
+        changed: false,
       }
-    }
-    let note_conflict = (location : String, detail : String) => {
-      report.conflicts_total += 1
-      if report.conflicts.length() < docx_edit_finding_limit {
-        report.conflicts.push({ location, detail, })
+      let note_unsupported = (location : String, detail : String) => {
+        report.unsupported_total += 1
+        if report.unsupported.length() < docx_edit_finding_limit {
+          report.unsupported.push({ location, detail, })
+        }
       }
-    }
-    let annotated = session.annotated()
-    // Stories whose parts this build rewrites, exactly the set the literal
-    // edit owns. A revision in any other scanned story (a footnote, an
-    // endnote, a comment) is reported as unsupported rather than skipped.
-    let parts_by_story : Map[String, String] = Map([])
-    parts_by_story["/body"] = annotated.main_story_source().part()
-    for index, source in annotated.header_story_sources() {
-      parts_by_story["/header[\{index + 1}]"] = source.part()
-    }
-    for index, source in annotated.footer_story_sources() {
-      parts_by_story["/footer[\{index + 1}]"] = source.part()
-    }
-    report.stories_scanned.push("/body")
-    for index, _ in annotated.header_story_sources() {
-      report.stories_scanned.push("/header[\{index + 1}]")
-    }
-    for index, _ in annotated.footer_story_sources() {
-      report.stories_scanned.push("/footer[\{index + 1}]")
-    }
-    let spans = annotated.revision_spans()
+      let note_conflict = (location : String, detail : String) => {
+        report.conflicts_total += 1
+        if report.conflicts.length() < docx_edit_finding_limit {
+          report.conflicts.push({ location, detail, })
+        }
+      }
+      let annotated = session.annotated()
+      // Stories whose parts this build rewrites, exactly the set the literal
+      // edit owns. A revision in any other scanned story (a footnote, an
+      // endnote, a comment) is reported as unsupported rather than skipped.
+      let parts_by_story : Map[String, String] = Map([])
+      parts_by_story["/body"] = annotated.main_story_source().part()
+      for index, source in annotated.header_story_sources() {
+        parts_by_story["/header[\{index + 1}]"] = source.part()
+      }
+      for index, source in annotated.footer_story_sources() {
+        parts_by_story["/footer[\{index + 1}]"] = source.part()
+      }
+      report.stories_scanned.push("/body")
+      for index, _ in annotated.header_story_sources() {
+        report.stories_scanned.push("/header[\{index + 1}]")
+      }
+      for index, _ in annotated.footer_story_sources() {
+        report.stories_scanned.push("/footer[\{index + 1}]")
+      }
+      let spans = annotated.revision_spans()
 
-    // Pass 1 — selection. A revision selected by two operations that
-    // disagree about the action has no defined outcome and refuses; two
-    // operations agreeing resolve it once and both report it.
-    let targets : Array[DocxRevisionTarget] = []
-    let selected : Array[Bool] = Array::make(spans.length(), false)
-    for index, span in spans {
-      let location = docx_revision_location(span)
-      let mut action : Bool? = None
-      for op_index, op in ops {
-        if !docx_revision_selects(op, span) {
-          continue
-        }
-        results[op_index].matched += 1
-        match action {
-          None => action = Some(op.accept)
-          Some(previous) =>
-            if previous != op.accept {
-              note_conflict(
-                location,
-                "accept_revision and reject_revision both select " +
-                docx_revision_detail(span),
-              )
-            }
-        }
-      }
-      match action {
-        None => continue
-        Some(accept) => {
-          selected[index] = true
-          match docx_revision_resolvable(span, accept~) {
-            Some(reason) => {
-              note_unsupported(
-                location,
-                docx_revision_detail(span) + ": " + reason,
-              )
-              continue
-            }
-            None => ()
+      // Pass 1 — selection. A revision selected by two operations that
+      // disagree about the action has no defined outcome and refuses; two
+      // operations agreeing resolve it once and both report it.
+      let targets : Array[DocxRevisionTarget] = []
+      let selected : Array[Bool] = Array::make(spans.length(), false)
+      for index, span in spans {
+        let location = docx_revision_location(span)
+        let mut action : Bool? = None
+        for op_index, op in ops {
+          if !docx_revision_selects(op, span) {
+            continue
           }
-          match parts_by_story.get(span.story()) {
-            Some(part) => targets.push({ span, part, location, accept, })
-            None =>
-              note_unsupported(
-                location,
-                docx_revision_detail(span) +
-                ": revisions in " +
-                span.story() +
-                " stories are not resolvable in this build",
-              )
-          }
-        }
-      }
-    }
-
-    // Pass 2 — nesting. Resolving an outer revision rewrites bytes that an
-    // inner one also owns, so the two edits would overlap. Word does emit
-    // `w:ins` wrapping `w:del` (text inserted, then deleted by someone
-    // else); the caller must resolve the inner revision first.
-    for index, span in spans {
-      if !selected[index] {
-        continue
-      }
-      for other_index, other in spans {
-        if other_index == index || other.story() != span.story() {
-          continue
-        }
-        if other.byte_start() >= span.byte_start() &&
-          other.byte_end() <= span.byte_end() {
-          note_conflict(
-            docx_revision_location(span),
-            docx_revision_detail(span) +
-            " contains " +
-            docx_revision_detail(other) +
-            "; resolve the inner revision first",
-          )
-        }
-      }
-    }
-    for index, entry in results {
-      if entry.matched == 0 {
-        report.unmatched_total += 1
-        if report.unmatched.length() < docx_edit_finding_limit {
-          report.unmatched.push({
-            location: "ops[\{index}]",
-            detail: "the selector matched no tracked change",
-          })
-        }
-      }
-    }
-    let blocked = report.blocked(allow_unmatched)
-
-    // Pass 3 — emission, as ONE plan. Unwrapping is two edits that are only
-    // jointly well-formed: removing an open tag without its matching close
-    // tag is malformed XML, and the session validates every queued plan
-    // against the candidate part. Queueing the halves separately would
-    // therefore refuse on a document that is perfectly resolvable, so all
-    // edits for all targets become valid together or not at all.
-    if !blocked && !targets.is_empty() {
-      let plan = @splice.SplicePlan::new()
-      let pinned : Set[String] = Set([])
-      let queue = (part : String, start : Int, end : Int, replacement : Bytes) => {
-        if !pinned.contains(part) {
-          guard session.archive.get(part) is Some(source) else {
-            raise docx_failure(
-              "office.docx.missing_part",
-              "source DOCX does not contain part '" + part + "'",
-            )
-          }
-          plan.pin_part(part, source) catch {
-            error => raise mapped_plan_failure(error)
-          }
-          pinned.add(part)
-        }
-        let edit = @splice.span_edit(start~, end~, replacement) catch {
-          error => raise mapped_plan_failure(error)
-        }
-        plan.edit_part(part, edit) catch {
-          error => raise mapped_plan_failure(error)
-        }
-      }
-      for target in targets {
-        let span = target.span
-        let unwrap = (span.kind() == "ins") == target.accept
-        match (span.content_start(), span.close_tag_start()) {
-          (Some(content_start), Some(close_tag_start)) =>
-            if unwrap {
-              queue(target.part, span.byte_start(), content_start, b"")
-              queue(target.part, close_tag_start, span.byte_end(), b"")
-              // Restoring deleted text is the only resolution that rewrites
-              // anything rather than deleting: each `w:delText` becomes a
-              // `w:t` by overwriting its LOCAL NAME in both tags, which
-              // keeps the source prefix, `xml:space`, and every other byte.
-              for edit in span.name_edits() {
-                queue(
-                  target.part,
-                  edit.start(),
-                  edit.end(),
-                  @utf8.encode(edit.replacement()),
+          results[op_index].matched += 1
+          match action {
+            None => action = Some(op.accept)
+            Some(previous) =>
+              if previous != op.accept {
+                note_conflict(
+                  location,
+                  "accept_revision and reject_revision both select " +
+                  docx_revision_detail(span),
                 )
               }
-            } else {
-              queue(target.part, span.byte_start(), span.byte_end(), b"")
-            }
-          // The self-closing form holds no content, so unwrapping it and
-          // removing it are the same edit.
-          _ => queue(target.part, span.byte_start(), span.byte_end(), b"")
-        }
-        report.revisions_resolved += 1
-        report.changed = true
-        for op_index, op in ops {
-          if docx_revision_selects(op, span) {
-            results[op_index].resolved += 1
           }
         }
-        if report.locations.length() < docx_edit_finding_limit {
-          report.locations.push({
-            location: target.location,
-            detail: (if target.accept { "accept " } else { "reject " }) +
-            docx_revision_detail(span),
-          })
-        } else {
-          report.locations_truncated = true
+        match action {
+          None => continue
+          Some(accept) => {
+            selected[index] = true
+            match docx_revision_resolvable(span, accept~) {
+              Some(reason) => {
+                note_unsupported(
+                  location,
+                  docx_revision_detail(span) + ": " + reason,
+                )
+                continue
+              }
+              None => ()
+            }
+            match parts_by_story.get(span.story()) {
+              Some(part) => targets.push({ span, part, location, accept, })
+              None =>
+                note_unsupported(
+                  location,
+                  docx_revision_detail(span) +
+                  ": revisions in " +
+                  span.story() +
+                  " stories are not resolvable in this build",
+                )
+            }
+          }
         }
       }
-      session.queue_plan(plan)
-    }
-    collected.val = Some(report)
-    if blocked {
-      raise docx_failure(
-        "office.docx.edit_refused", "strict revision findings refuse publication",
-      )
-    }
-  }) catch {
+
+      // Pass 2 — nesting. Resolving an outer revision rewrites bytes that an
+      // inner one also owns, so the two edits would overlap. Word does emit
+      // `w:ins` wrapping `w:del` (text inserted, then deleted by someone
+      // else); the caller must resolve the inner revision first.
+      for index, span in spans {
+        if !selected[index] {
+          continue
+        }
+        for other_index, other in spans {
+          if other_index == index || other.story() != span.story() {
+            continue
+          }
+          if other.byte_start() >= span.byte_start() &&
+            other.byte_end() <= span.byte_end() {
+            note_conflict(
+              docx_revision_location(span),
+              docx_revision_detail(span) +
+              " contains " +
+              docx_revision_detail(other) +
+              "; resolve the inner revision first",
+            )
+          }
+        }
+      }
+      for index, entry in results {
+        if entry.matched == 0 {
+          report.unmatched_total += 1
+          if report.unmatched.length() < docx_edit_finding_limit {
+            report.unmatched.push({
+              location: "ops[\{index}]",
+              detail: "the selector matched no tracked change",
+            })
+          }
+        }
+      }
+      let blocked = report.blocked(allow_unmatched)
+
+      // Pass 3 — emission, as ONE plan. Unwrapping is two edits that are only
+      // jointly well-formed: removing an open tag without its matching close
+      // tag is malformed XML, and the session validates every queued plan
+      // against the candidate part. Queueing the halves separately would
+      // therefore refuse on a document that is perfectly resolvable, so all
+      // edits for all targets become valid together or not at all.
+      if !blocked && !targets.is_empty() {
+        let plan = @splice.SplicePlan::new()
+        let pinned : Set[String] = Set([])
+        let queue = (part : String, start : Int, end : Int, replacement : Bytes) => {
+          if !pinned.contains(part) {
+            guard session.archive.get(part) is Some(source) else {
+              raise docx_failure(
+                "office.docx.missing_part",
+                "source DOCX does not contain part '" + part + "'",
+              )
+            }
+            plan.pin_part(part, source) catch {
+              error => raise mapped_plan_failure(error)
+            }
+            pinned.add(part)
+          }
+          let edit = @splice.span_edit(start~, end~, replacement) catch {
+            error => raise mapped_plan_failure(error)
+          }
+          plan.edit_part(part, edit) catch {
+            error => raise mapped_plan_failure(error)
+          }
+        }
+        for target in targets {
+          let span = target.span
+          let unwrap = (span.kind() == "ins") == target.accept
+          match (span.content_start(), span.close_tag_start()) {
+            (Some(content_start), Some(close_tag_start)) =>
+              if unwrap {
+                queue(target.part, span.byte_start(), content_start, b"")
+                queue(target.part, close_tag_start, span.byte_end(), b"")
+                // Restoring deleted text is the only resolution that rewrites
+                // anything rather than deleting: each `w:delText` becomes a
+                // `w:t` by overwriting its LOCAL NAME in both tags, which
+                // keeps the source prefix, `xml:space`, and every other byte.
+                for edit in span.name_edits() {
+                  queue(
+                    target.part,
+                    edit.start(),
+                    edit.end(),
+                    @utf8.encode(edit.replacement()),
+                  )
+                }
+              } else {
+                queue(target.part, span.byte_start(), span.byte_end(), b"")
+              }
+            // The self-closing form holds no content, so unwrapping it and
+            // removing it are the same edit.
+            _ => queue(target.part, span.byte_start(), span.byte_end(), b"")
+          }
+          report.revisions_resolved += 1
+          report.changed = true
+          for op_index, op in ops {
+            if docx_revision_selects(op, span) {
+              results[op_index].resolved += 1
+            }
+          }
+          if report.locations.length() < docx_edit_finding_limit {
+            report.locations.push({
+              location: target.location,
+              detail: (if target.accept { "accept " } else { "reject " }) +
+              docx_revision_detail(span),
+            })
+          } else {
+            report.locations_truncated = true
+          }
+        }
+        session.queue_plan(plan)
+      }
+      collected.val = Some(report)
+      if blocked {
+        raise docx_failure(
+          "office.docx.edit_refused", "strict revision findings refuse publication",
+        )
+      }
+    },
+  ) catch {
     error =>
       match collected.val {
         Some(edit) if edit.blocked(allow_unmatched) =>

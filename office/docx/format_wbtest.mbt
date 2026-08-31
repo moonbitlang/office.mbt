@@ -213,3 +213,51 @@ async test "the format readback refuses candidates that its three checks catch" 
     )
   })
 }
+
+///|
+/// A document with many formatted paragraphs, end to end.
+///
+/// Every question the readback asks about a story is asked in one
+/// batch, because resolving a paragraph path costs a pass over the
+/// story: asking per paragraph made a document like this one cost the
+/// whole document once per formatted paragraph per check. Measured on
+/// this fixture, the per-paragraph form spent about three times the CPU
+/// of the batched one, and the gap grows with the document.
+async test "one request formats hundreds of paragraphs" {
+  with_format_readback_dir(directory => {
+    let builder = StringBuilder()
+    let paragraphs = 300
+    for index in 0..<paragraphs {
+      if index > 0 {
+        builder.write_string("</w:p><w:p>")
+      }
+      for run in 0..<8 {
+        builder.write_string(
+          "<w:r><w:t xml:space=\"preserve\">filler \{run} </w:t></w:r>",
+        )
+      }
+      builder.write_string("<w:r><w:t>hello world</w:t></w:r>")
+    }
+    let source = format_readback_fixture(
+      directory,
+      "many.docx",
+      builder.to_string(),
+    )
+    let output = directory + "/many-out.docx"
+    let result = transact_docx_format(
+      @transaction.transaction_options(source, output_path=output),
+      format=@word.docx_direct_format(bold=true),
+      text="world",
+    )
+    assert_eq(result.report().spans().length(), paragraphs)
+    assert_eq(result.report().affected().length(), paragraphs)
+    let published = @zip.read(@afs.read_file(output).binary())
+    guard published.get("word/document.xml") is Some(payload) else {
+      fail("no document part")
+    }
+    let document = @utf8.decode(payload)
+    // One bold per selected span, and the filler runs are untouched.
+    assert_eq(document.split("<w:b/>").collect().length() - 1, paragraphs)
+    assert_eq(document.split("filler 0 ").collect().length() - 1, paragraphs)
+  })
+}

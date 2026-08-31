@@ -212,6 +212,13 @@ pub fn docx_mutation_preflight(
       )
     Disabled | Missing => ()
   }
+  // Write protection that carries a password is enforcement too, and it
+  // is a different element from `documentProtection`.
+  if docx_write_protection_enforced(root) {
+    raise @transaction.transaction_failure(
+      "office.docx.protected_document", "this document is write protected; remove the write protection before editing",
+    )
+  }
   // Resolving revisions is the one edit that REMOVES revision markup the
   // document already carries. Refusing it would strand a caller with
   // tracked changes and no verb in this toolkit that can ever clear
@@ -508,6 +515,31 @@ fn docx_settings_flag(
     }
   }
   verdict
+}
+
+///|
+/// Whether the document's write protection is ENFORCED rather than
+/// merely recommended.
+///
+/// `<w:writeProtection w:recommended="1"/>` is advice Word lets a reader
+/// dismiss, so refusing it would refuse documents anyone can edit. Every
+/// other attribute of the element carries the password that makes the
+/// protection real, so their presence — whichever generation's spelling
+/// is used — is the test.
+fn docx_write_protection_enforced(root : @xml.XmlElement) -> Bool {
+  for namespace in [DOCX_WML_NAMESPACE, DOCX_STRICT_WML_NAMESPACE] {
+    for element in root.descendants_by_tag_name("{\{namespace}}writeProtection") {
+      for attribute in element.attributes {
+        for dialect in [DOCX_WML_NAMESPACE, DOCX_STRICT_WML_NAMESPACE] {
+          if attribute.0.has_prefix("{\{dialect}}") &&
+            attribute.0 != "{\{dialect}}recommended" {
+            return true
+          }
+        }
+      }
+    }
+  }
+  false
 }
 
 ///|
