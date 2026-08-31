@@ -6585,7 +6585,7 @@ Commands used:
     regression guard script and wire it into wrapper/docs coverage.
   - Delivered:
     - Added executable script:
-      - `scripts/check_parity_preflight_matrix_smoke_contract.sh`
+      - `scripts/check_parity_preflight_matrix_smoke_contract_1.sh`
     - Contract checker validates:
       - `scripts/check_parity_preflight_matrix_smoke.sh --json` contains:
         - top-level `result` in `pass|fail`
@@ -6601,7 +6601,7 @@ Commands used:
       - `docs/parity-commands.md`
       - `docs/excelize-parity.md`
   - Validation gates:
-    - `scripts/check_parity_preflight_matrix_smoke_contract.sh`
+    - `scripts/check_parity_preflight_matrix_smoke_contract_1.sh`
     - `scripts/check_parity_wrappers.sh`
     - `scripts/check_parity_docs_wrapper_coverage.sh`
     - `scripts/check_parity_docs_refs.sh`
@@ -6616,7 +6616,7 @@ Commands used:
   - Delivered:
     - Updated `scripts/test_parity_gates.sh`:
       - adds `SKIP_PARITY_PREFLIGHT_MATRIX_SMOKE_CONTRACT_PREFLIGHT=0|1` handling
-      - runs `scripts/check_parity_preflight_matrix_smoke_contract.sh` in preflight flow
+      - runs `scripts/check_parity_preflight_matrix_smoke_contract_1.sh` in preflight flow
     - Updated helper/status/env consistency:
       - `scripts/show_parity_preflight_status.sh` includes
         `preflight_matrix_smoke_contract_preflight` status and
@@ -6629,13 +6629,13 @@ Commands used:
       - `scripts/check_parity_gate_skip_toggles.sh` expects the new skip key
       - `scripts/check_parity_preflight_matrix_smoke.sh` includes the new
         contract preflight status/env key in matrix expectations
-    - Hardened `scripts/check_parity_preflight_matrix_smoke_contract.sh` to
+    - Hardened `scripts/check_parity_preflight_matrix_smoke_contract_1.sh` to
       assert aggregate-gate wiring patterns are present.
     - Updated docs:
       - `docs/excelize-parity.md`
       - `docs/parity-commands.md`
   - Validation gates:
-    - `scripts/check_parity_preflight_matrix_smoke_contract.sh`
+    - `scripts/check_parity_preflight_matrix_smoke_contract_1.sh`
     - `scripts/check_parity_preflight_matrix_smoke.sh`
     - `scripts/check_parity_gate_skip_toggles.sh`
     - `scripts/check_parity_gate_skip_toggles_contract.sh`
@@ -6654,7 +6654,7 @@ Commands used:
   - DoD: expose machine-readable contract-check results while preserving
     default plain output and exit semantics.
   - Delivered:
-    - Refactored `scripts/check_parity_preflight_matrix_smoke_contract.sh`:
+    - Refactored `scripts/check_parity_preflight_matrix_smoke_contract_1.sh`:
       - adds CLI parsing with `--json` support
       - emits structured JSON payload:
         - top-level `result` (`pass|fail`)
@@ -6662,13 +6662,13 @@ Commands used:
       - preserves plain-text pass/fail output in default mode
       - preserves non-zero exit on any failed check
       - validates invalid args with usage:
-        - `Usage: scripts/check_parity_preflight_matrix_smoke_contract.sh [--json]`
+        - `Usage: scripts/check_parity_preflight_matrix_smoke_contract_1.sh [--json]`
     - Updated docs for JSON mode usage:
       - `docs/parity-commands.md`
       - `docs/excelize-parity.md`
   - Validation gates:
-    - `scripts/check_parity_preflight_matrix_smoke_contract.sh`
-    - `scripts/check_parity_preflight_matrix_smoke_contract.sh --json`
+    - `scripts/check_parity_preflight_matrix_smoke_contract_1.sh`
+    - `scripts/check_parity_preflight_matrix_smoke_contract_1.sh --json`
     - `scripts/check_parity_wrappers.sh`
     - `scripts/check_parity_docs_wrapper_coverage.sh`
     - `scripts/check_parity_docs_refs.sh`
@@ -6682,15 +6682,15 @@ Commands used:
     dedicated regression guard script and wire it into wrapper/docs coverage.
   - Delivered:
     - Added executable script:
-      - `scripts/check_parity_preflight_matrix_smoke_contract_contract.sh`
+      - `scripts/check_parity_preflight_matrix_smoke_contract_2.sh`
     - Contract checker validates:
-      - `scripts/check_parity_preflight_matrix_smoke_contract.sh --json` contains:
+      - `scripts/check_parity_preflight_matrix_smoke_contract_1.sh --json` contains:
         - top-level `result` in `pass|fail`
         - top-level `checks` list
         - per-entry `check`, `ok`, `detail` fields with expected types
         - required check names for pattern and matrix-smoke schema checks
       - invalid args return code `2` with usage:
-        - `Usage: scripts/check_parity_preflight_matrix_smoke_contract.sh [--json]`
+        - `Usage: scripts/check_parity_preflight_matrix_smoke_contract_1.sh [--json]`
     - Added script to wrapper/docs coverage tracking:
       - `scripts/check_parity_wrappers.sh`
       - `scripts/check_parity_docs_wrapper_coverage.sh`
@@ -6698,7 +6698,7 @@ Commands used:
       - `docs/parity-commands.md`
       - `docs/excelize-parity.md`
   - Validation gates:
-    - `scripts/check_parity_preflight_matrix_smoke_contract_contract.sh`
+    - `scripts/check_parity_preflight_matrix_smoke_contract_2.sh`
     - `scripts/check_parity_wrappers.sh`
     - `scripts/check_parity_docs_wrapper_coverage.sh`
     - `scripts/check_parity_docs_refs.sh`
@@ -6713,7 +6713,7 @@ Commands used:
   - Delivered:
     - Updated `scripts/test_parity_gates.sh`:
       - adds `SKIP_PARITY_PREFLIGHT_MATRIX_SMOKE_CONTRACT_CONTRACT_PREFLIGHT=0|1` handling
-      - runs `scripts/check_parity_preflight_matrix_smoke_contract_contract.sh` in preflight flow
+      - runs `scripts/check_parity_preflight_matrix_smoke_contract_2.sh` in preflight flow
     - Updated helper/status/env consistency:
       - `scripts/show_parity_preflight_status.sh` includes
         `preflight_matrix_smoke_contract_contract_preflight` status and
@@ -6726,14 +6726,14 @@ Commands used:
       - `scripts/check_parity_gate_skip_toggles.sh` expects the new skip key
       - `scripts/check_parity_preflight_matrix_smoke.sh` includes new
         contract-contract preflight status/env key in matrix expectations
-    - Hardened `scripts/check_parity_preflight_matrix_smoke_contract_contract.sh`
+    - Hardened `scripts/check_parity_preflight_matrix_smoke_contract_2.sh`
       to assert aggregate-gate wiring patterns are present.
     - Updated docs:
       - `docs/excelize-parity.md`
       - `docs/parity-commands.md`
   - Validation gates:
-    - `scripts/check_parity_preflight_matrix_smoke_contract_contract.sh`
-    - `scripts/check_parity_preflight_matrix_smoke_contract.sh`
+    - `scripts/check_parity_preflight_matrix_smoke_contract_2.sh`
+    - `scripts/check_parity_preflight_matrix_smoke_contract_1.sh`
     - `scripts/check_parity_preflight_matrix_smoke.sh`
     - `scripts/check_parity_gate_skip_toggles.sh`
     - `scripts/check_parity_gate_skip_toggles_contract.sh`
@@ -6752,7 +6752,7 @@ Commands used:
   - DoD: expose machine-readable contract-check results while preserving
     default plain output and exit semantics.
   - Delivered:
-    - Refactored `scripts/check_parity_preflight_matrix_smoke_contract_contract.sh`:
+    - Refactored `scripts/check_parity_preflight_matrix_smoke_contract_2.sh`:
       - adds CLI parsing with `--json` support
       - emits structured JSON payload:
         - top-level `result` (`pass|fail`)
@@ -6760,13 +6760,13 @@ Commands used:
       - preserves plain-text pass/fail output in default mode
       - preserves non-zero exit on any failed check
       - validates invalid args with usage:
-        - `Usage: scripts/check_parity_preflight_matrix_smoke_contract_contract.sh [--json]`
+        - `Usage: scripts/check_parity_preflight_matrix_smoke_contract_2.sh [--json]`
     - Updated docs for JSON mode usage:
       - `docs/parity-commands.md`
       - `docs/excelize-parity.md`
   - Validation gates:
-    - `scripts/check_parity_preflight_matrix_smoke_contract_contract.sh`
-    - `scripts/check_parity_preflight_matrix_smoke_contract_contract.sh --json`
+    - `scripts/check_parity_preflight_matrix_smoke_contract_2.sh`
+    - `scripts/check_parity_preflight_matrix_smoke_contract_2.sh --json`
     - `scripts/check_parity_wrappers.sh`
     - `scripts/check_parity_docs_wrapper_coverage.sh`
     - `scripts/check_parity_docs_refs.sh`
@@ -6780,15 +6780,15 @@ Commands used:
     a dedicated regression guard script and wire it into wrapper/docs coverage.
   - Delivered:
     - Added executable script:
-      - `scripts/check_parity_preflight_matrix_smoke_contract_contract_contract.sh`
+      - `scripts/check_parity_preflight_matrix_smoke_contract_3.sh`
     - Contract checker validates:
-      - `scripts/check_parity_preflight_matrix_smoke_contract_contract.sh --json` contains:
+      - `scripts/check_parity_preflight_matrix_smoke_contract_2.sh --json` contains:
         - top-level `result` in `pass|fail`
         - top-level `checks` list
         - per-entry `check`, `ok`, `detail` fields with expected types
         - required check names for pattern and matrix-smoke-contract schema checks
       - invalid args return code `2` with usage:
-        - `Usage: scripts/check_parity_preflight_matrix_smoke_contract_contract.sh [--json]`
+        - `Usage: scripts/check_parity_preflight_matrix_smoke_contract_2.sh [--json]`
     - Added script to wrapper/docs coverage tracking:
       - `scripts/check_parity_wrappers.sh`
       - `scripts/check_parity_docs_wrapper_coverage.sh`
@@ -6796,7 +6796,7 @@ Commands used:
       - `docs/parity-commands.md`
       - `docs/excelize-parity.md`
   - Validation gates:
-    - `scripts/check_parity_preflight_matrix_smoke_contract_contract_contract.sh`
+    - `scripts/check_parity_preflight_matrix_smoke_contract_3.sh`
     - `scripts/check_parity_wrappers.sh`
     - `scripts/check_parity_docs_wrapper_coverage.sh`
     - `scripts/check_parity_docs_refs.sh`
@@ -6812,7 +6812,7 @@ Commands used:
   - Delivered:
     - Updated `scripts/test_parity_gates.sh`:
       - adds `SKIP_PARITY_PREFLIGHT_MATRIX_SMOKE_CONTRACT_CONTRACT_CONTRACT_PREFLIGHT=0|1` handling
-      - runs `scripts/check_parity_preflight_matrix_smoke_contract_contract_contract.sh` in preflight flow
+      - runs `scripts/check_parity_preflight_matrix_smoke_contract_3.sh` in preflight flow
     - Updated helper/status/env consistency:
       - `scripts/show_parity_preflight_status.sh` includes
         `preflight_matrix_smoke_contract_contract_contract_preflight` status and
@@ -6826,14 +6826,14 @@ Commands used:
       - `scripts/check_parity_preflight_matrix_smoke.sh` includes new
         contract-contract-contract preflight status/env key in matrix expectations
     - Hardened
-      `scripts/check_parity_preflight_matrix_smoke_contract_contract_contract.sh`
+      `scripts/check_parity_preflight_matrix_smoke_contract_3.sh`
       to assert aggregate-gate wiring patterns are present.
     - Updated docs:
       - `docs/excelize-parity.md`
       - `docs/parity-commands.md`
   - Validation gates:
-    - `scripts/check_parity_preflight_matrix_smoke_contract_contract_contract.sh`
-    - `scripts/check_parity_preflight_matrix_smoke_contract_contract.sh`
+    - `scripts/check_parity_preflight_matrix_smoke_contract_3.sh`
+    - `scripts/check_parity_preflight_matrix_smoke_contract_2.sh`
     - `scripts/check_parity_preflight_matrix_smoke.sh`
     - `scripts/check_parity_gate_skip_toggles.sh`
     - `scripts/check_parity_gate_skip_toggles_contract.sh`
@@ -6852,7 +6852,7 @@ Commands used:
   - DoD: expose machine-readable contract-check results while preserving
     default plain output and exit semantics.
   - Delivered:
-    - Refactored `scripts/check_parity_preflight_matrix_smoke_contract_contract_contract.sh`:
+    - Refactored `scripts/check_parity_preflight_matrix_smoke_contract_3.sh`:
       - adds CLI parsing with `--json` support
       - emits structured JSON payload:
         - top-level `result` (`pass|fail`)
@@ -6860,13 +6860,13 @@ Commands used:
       - preserves plain-text pass/fail output in default mode
       - preserves non-zero exit on any failed check
       - validates invalid args with usage:
-        - `Usage: scripts/check_parity_preflight_matrix_smoke_contract_contract_contract.sh [--json]`
+        - `Usage: scripts/check_parity_preflight_matrix_smoke_contract_3.sh [--json]`
     - Updated docs for JSON mode usage:
       - `docs/parity-commands.md`
       - `docs/excelize-parity.md`
   - Validation gates:
-    - `scripts/check_parity_preflight_matrix_smoke_contract_contract_contract.sh`
-    - `scripts/check_parity_preflight_matrix_smoke_contract_contract_contract.sh --json`
+    - `scripts/check_parity_preflight_matrix_smoke_contract_3.sh`
+    - `scripts/check_parity_preflight_matrix_smoke_contract_3.sh --json`
     - `scripts/check_parity_wrappers.sh`
     - `scripts/check_parity_docs_wrapper_coverage.sh`
     - `scripts/check_parity_docs_refs.sh`
@@ -6881,15 +6881,15 @@ Commands used:
     wrapper/docs coverage.
   - Delivered:
     - Added executable script:
-      - `scripts/check_parity_preflight_matrix_smoke_contract_contract_contract_contract.sh`
+      - `scripts/check_parity_preflight_matrix_smoke_contract_4.sh`
     - Contract checker validates:
-      - `scripts/check_parity_preflight_matrix_smoke_contract_contract_contract.sh --json` contains:
+      - `scripts/check_parity_preflight_matrix_smoke_contract_3.sh --json` contains:
         - top-level `result` in `pass|fail`
         - top-level `checks` list
         - per-entry `check`, `ok`, `detail` fields with expected types
         - required check names for pattern and matrix-smoke-contract-contract schema checks
       - invalid args return code `2` with usage:
-        - `Usage: scripts/check_parity_preflight_matrix_smoke_contract_contract_contract.sh [--json]`
+        - `Usage: scripts/check_parity_preflight_matrix_smoke_contract_3.sh [--json]`
     - Added script to wrapper/docs coverage tracking:
       - `scripts/check_parity_wrappers.sh`
       - `scripts/check_parity_docs_wrapper_coverage.sh`
@@ -6897,7 +6897,7 @@ Commands used:
       - `docs/parity-commands.md`
       - `docs/excelize-parity.md`
   - Validation gates:
-    - `scripts/check_parity_preflight_matrix_smoke_contract_contract_contract_contract.sh`
+    - `scripts/check_parity_preflight_matrix_smoke_contract_4.sh`
     - `scripts/check_parity_wrappers.sh`
     - `scripts/check_parity_docs_wrapper_coverage.sh`
     - `scripts/check_parity_docs_refs.sh`
@@ -6913,7 +6913,7 @@ Commands used:
   - Delivered:
     - Updated `scripts/test_parity_gates.sh`:
       - adds `SKIP_PARITY_PREFLIGHT_MATRIX_SMOKE_CONTRACT_CONTRACT_CONTRACT_CONTRACT_PREFLIGHT=0|1` handling
-      - runs `scripts/check_parity_preflight_matrix_smoke_contract_contract_contract_contract.sh` in preflight flow
+      - runs `scripts/check_parity_preflight_matrix_smoke_contract_4.sh` in preflight flow
     - Updated helper/status/env consistency:
       - `scripts/show_parity_preflight_status.sh` includes
         `preflight_matrix_smoke_contract_contract_contract_contract_preflight` status and
@@ -6927,14 +6927,14 @@ Commands used:
       - `scripts/check_parity_preflight_matrix_smoke.sh` includes new
         contract-contract-contract-contract preflight status/env key in matrix expectations
     - Hardened
-      `scripts/check_parity_preflight_matrix_smoke_contract_contract_contract_contract.sh`
+      `scripts/check_parity_preflight_matrix_smoke_contract_4.sh`
       to assert aggregate-gate wiring patterns are present.
     - Updated docs:
       - `docs/excelize-parity.md`
       - `docs/parity-commands.md`
   - Validation gates:
-    - `scripts/check_parity_preflight_matrix_smoke_contract_contract_contract_contract.sh`
-    - `scripts/check_parity_preflight_matrix_smoke_contract_contract_contract.sh`
+    - `scripts/check_parity_preflight_matrix_smoke_contract_4.sh`
+    - `scripts/check_parity_preflight_matrix_smoke_contract_3.sh`
     - `scripts/check_parity_preflight_matrix_smoke.sh`
     - `scripts/check_parity_gate_skip_toggles.sh`
     - `scripts/check_parity_gate_skip_toggles_contract.sh`
@@ -6953,7 +6953,7 @@ Commands used:
   - DoD: expose machine-readable contract-check results while preserving
     default plain output and exit semantics.
   - Delivered:
-    - Refactored `scripts/check_parity_preflight_matrix_smoke_contract_contract_contract_contract.sh`:
+    - Refactored `scripts/check_parity_preflight_matrix_smoke_contract_4.sh`:
       - adds CLI parsing with `--json` support
       - emits structured JSON payload:
         - top-level `result` (`pass|fail`)
@@ -6961,13 +6961,13 @@ Commands used:
       - preserves plain-text pass/fail output in default mode
       - preserves non-zero exit on any failed check
       - validates invalid args with usage:
-        - `Usage: scripts/check_parity_preflight_matrix_smoke_contract_contract_contract_contract.sh [--json]`
+        - `Usage: scripts/check_parity_preflight_matrix_smoke_contract_4.sh [--json]`
     - Updated docs for JSON mode usage:
       - `docs/parity-commands.md`
       - `docs/excelize-parity.md`
   - Validation gates:
-    - `scripts/check_parity_preflight_matrix_smoke_contract_contract_contract_contract.sh`
-    - `scripts/check_parity_preflight_matrix_smoke_contract_contract_contract_contract.sh --json`
+    - `scripts/check_parity_preflight_matrix_smoke_contract_4.sh`
+    - `scripts/check_parity_preflight_matrix_smoke_contract_4.sh --json`
     - `scripts/check_parity_wrappers.sh`
     - `scripts/check_parity_docs_wrapper_coverage.sh`
     - `scripts/check_parity_docs_refs.sh`
@@ -6982,15 +6982,15 @@ Commands used:
     wrapper/docs coverage.
   - Delivered:
     - Added executable script:
-      - `scripts/check_parity_preflight_matrix_smoke_contract_contract_contract_contract_contract.sh`
+      - `scripts/check_parity_preflight_matrix_smoke_contract_5.sh`
     - Contract checker validates:
-      - `scripts/check_parity_preflight_matrix_smoke_contract_contract_contract_contract.sh --json` contains:
+      - `scripts/check_parity_preflight_matrix_smoke_contract_4.sh --json` contains:
         - top-level `result` in `pass|fail`
         - top-level `checks` list
         - per-entry `check`, `ok`, `detail` fields with expected types
         - required check names for pattern and matrix-smoke-contract-contract-contract schema checks
       - invalid args return code `2` with usage:
-        - `Usage: scripts/check_parity_preflight_matrix_smoke_contract_contract_contract_contract.sh [--json]`
+        - `Usage: scripts/check_parity_preflight_matrix_smoke_contract_4.sh [--json]`
     - Added script to wrapper/docs coverage tracking:
       - `scripts/check_parity_wrappers.sh`
       - `scripts/check_parity_docs_wrapper_coverage.sh`
@@ -6998,7 +6998,7 @@ Commands used:
       - `docs/parity-commands.md`
       - `docs/excelize-parity.md`
   - Validation gates:
-    - `scripts/check_parity_preflight_matrix_smoke_contract_contract_contract_contract_contract.sh`
+    - `scripts/check_parity_preflight_matrix_smoke_contract_5.sh`
     - `scripts/check_parity_wrappers.sh`
     - `scripts/check_parity_docs_wrapper_coverage.sh`
     - `scripts/check_parity_docs_refs.sh`
@@ -7014,7 +7014,7 @@ Commands used:
   - Delivered:
     - Updated `scripts/test_parity_gates.sh`:
       - adds `SKIP_PARITY_PREFLIGHT_MATRIX_SMOKE_CONTRACT_CONTRACT_CONTRACT_CONTRACT_CONTRACT_PREFLIGHT=0|1` handling
-      - runs `scripts/check_parity_preflight_matrix_smoke_contract_contract_contract_contract_contract.sh` in preflight flow
+      - runs `scripts/check_parity_preflight_matrix_smoke_contract_5.sh` in preflight flow
     - Updated helper/status/env consistency:
       - `scripts/show_parity_preflight_status.sh` includes
         `preflight_matrix_smoke_contract_contract_contract_contract_contract_preflight` status and
@@ -7028,14 +7028,14 @@ Commands used:
       - `scripts/check_parity_preflight_matrix_smoke.sh` includes new
         contract-contract-contract-contract-contract preflight status/env key in matrix expectations
     - Hardened
-      `scripts/check_parity_preflight_matrix_smoke_contract_contract_contract_contract_contract.sh`
+      `scripts/check_parity_preflight_matrix_smoke_contract_5.sh`
       to assert aggregate-gate wiring patterns are present.
     - Updated docs:
       - `docs/excelize-parity.md`
       - `docs/parity-commands.md`
   - Validation gates:
-    - `scripts/check_parity_preflight_matrix_smoke_contract_contract_contract_contract_contract.sh`
-    - `scripts/check_parity_preflight_matrix_smoke_contract_contract_contract_contract.sh`
+    - `scripts/check_parity_preflight_matrix_smoke_contract_5.sh`
+    - `scripts/check_parity_preflight_matrix_smoke_contract_4.sh`
     - `scripts/check_parity_preflight_matrix_smoke.sh`
     - `scripts/check_parity_gate_skip_toggles.sh`
     - `scripts/check_parity_gate_skip_toggles_contract.sh`
@@ -7054,7 +7054,7 @@ Commands used:
   - DoD: expose machine-readable contract-check results while preserving
     default plain output and exit semantics.
   - Delivered:
-    - Refactored `scripts/check_parity_preflight_matrix_smoke_contract_contract_contract_contract_contract.sh`:
+    - Refactored `scripts/check_parity_preflight_matrix_smoke_contract_5.sh`:
       - adds CLI parsing with `--json` support
       - emits structured JSON payload:
         - top-level `result` (`pass|fail`)
@@ -7062,13 +7062,13 @@ Commands used:
       - preserves plain-text pass/fail output in default mode
       - preserves non-zero exit on any failed check
       - validates invalid args with usage:
-        - `Usage: scripts/check_parity_preflight_matrix_smoke_contract_contract_contract_contract_contract.sh [--json]`
+        - `Usage: scripts/check_parity_preflight_matrix_smoke_contract_5.sh [--json]`
     - Updated docs for JSON mode usage:
       - `docs/parity-commands.md`
       - `docs/excelize-parity.md`
   - Validation gates:
-    - `scripts/check_parity_preflight_matrix_smoke_contract_contract_contract_contract_contract.sh`
-    - `scripts/check_parity_preflight_matrix_smoke_contract_contract_contract_contract_contract.sh --json`
+    - `scripts/check_parity_preflight_matrix_smoke_contract_5.sh`
+    - `scripts/check_parity_preflight_matrix_smoke_contract_5.sh --json`
     - `scripts/check_parity_wrappers.sh`
     - `scripts/check_parity_docs_wrapper_coverage.sh`
     - `scripts/check_parity_docs_refs.sh`
@@ -7083,15 +7083,15 @@ Commands used:
     wrapper/docs coverage.
   - Delivered:
     - Added executable script:
-      - `scripts/check_parity_preflight_matrix_smoke_contract_contract_contract_contract_contract_contract.sh`
+      - `scripts/check_parity_preflight_matrix_smoke_contract_6.sh`
     - Contract checker validates:
-      - `scripts/check_parity_preflight_matrix_smoke_contract_contract_contract_contract_contract.sh --json` contains:
+      - `scripts/check_parity_preflight_matrix_smoke_contract_5.sh --json` contains:
         - top-level `result` in `pass|fail`
         - top-level `checks` list
         - per-entry `check`, `ok`, `detail` fields with expected types
         - required check names for pattern and matrix-smoke-contract-contract-contract-contract schema checks
       - invalid args return code `2` with usage:
-        - `Usage: scripts/check_parity_preflight_matrix_smoke_contract_contract_contract_contract_contract.sh [--json]`
+        - `Usage: scripts/check_parity_preflight_matrix_smoke_contract_5.sh [--json]`
     - Added script to wrapper/docs coverage tracking:
       - `scripts/check_parity_wrappers.sh`
       - `scripts/check_parity_docs_wrapper_coverage.sh`
@@ -7099,7 +7099,7 @@ Commands used:
       - `docs/parity-commands.md`
       - `docs/excelize-parity.md`
   - Validation gates:
-    - `scripts/check_parity_preflight_matrix_smoke_contract_contract_contract_contract_contract_contract.sh`
+    - `scripts/check_parity_preflight_matrix_smoke_contract_6.sh`
     - `scripts/check_parity_wrappers.sh`
     - `scripts/check_parity_docs_wrapper_coverage.sh`
     - `scripts/check_parity_docs_refs.sh`
@@ -7115,7 +7115,7 @@ Commands used:
   - Delivered:
     - Updated `scripts/test_parity_gates.sh`:
       - adds `SKIP_PARITY_PREFLIGHT_MATRIX_SMOKE_CONTRACT_CONTRACT_CONTRACT_CONTRACT_CONTRACT_CONTRACT_PREFLIGHT=0|1` handling
-      - runs `scripts/check_parity_preflight_matrix_smoke_contract_contract_contract_contract_contract_contract.sh` in preflight flow
+      - runs `scripts/check_parity_preflight_matrix_smoke_contract_6.sh` in preflight flow
     - Updated helper/status/env consistency:
       - `scripts/show_parity_preflight_status.sh` includes
         `preflight_matrix_smoke_contract_contract_contract_contract_contract_contract_preflight` status and
@@ -7129,14 +7129,14 @@ Commands used:
       - `scripts/check_parity_preflight_matrix_smoke.sh` includes new
         contract-contract-contract-contract-contract-contract preflight status/env key in matrix expectations
     - Hardened
-      `scripts/check_parity_preflight_matrix_smoke_contract_contract_contract_contract_contract_contract.sh`
+      `scripts/check_parity_preflight_matrix_smoke_contract_6.sh`
       to assert aggregate-gate wiring patterns are present.
     - Updated docs:
       - `docs/excelize-parity.md`
       - `docs/parity-commands.md`
   - Validation gates:
-    - `scripts/check_parity_preflight_matrix_smoke_contract_contract_contract_contract_contract_contract.sh`
-    - `scripts/check_parity_preflight_matrix_smoke_contract_contract_contract_contract_contract.sh`
+    - `scripts/check_parity_preflight_matrix_smoke_contract_6.sh`
+    - `scripts/check_parity_preflight_matrix_smoke_contract_5.sh`
     - `scripts/check_parity_preflight_matrix_smoke.sh`
     - `scripts/check_parity_gate_skip_toggles.sh`
     - `scripts/check_parity_gate_skip_toggles_contract.sh`
@@ -7155,7 +7155,7 @@ Commands used:
   - DoD: expose machine-readable contract-check results while preserving
     default plain output and exit semantics.
   - Delivered:
-    - Refactored `scripts/check_parity_preflight_matrix_smoke_contract_contract_contract_contract_contract_contract.sh`:
+    - Refactored `scripts/check_parity_preflight_matrix_smoke_contract_6.sh`:
       - adds CLI parsing with `--json` support
       - emits structured JSON payload:
         - top-level `result` (`pass|fail`)
@@ -7163,13 +7163,13 @@ Commands used:
       - preserves plain-text pass/fail output in default mode
       - preserves non-zero exit on any failed check
       - validates invalid args with usage:
-        - `Usage: scripts/check_parity_preflight_matrix_smoke_contract_contract_contract_contract_contract_contract.sh [--json]`
+        - `Usage: scripts/check_parity_preflight_matrix_smoke_contract_6.sh [--json]`
     - Updated docs for JSON mode usage:
       - `docs/parity-commands.md`
       - `docs/excelize-parity.md`
   - Validation gates:
-    - `scripts/check_parity_preflight_matrix_smoke_contract_contract_contract_contract_contract_contract.sh`
-    - `scripts/check_parity_preflight_matrix_smoke_contract_contract_contract_contract_contract_contract.sh --json`
+    - `scripts/check_parity_preflight_matrix_smoke_contract_6.sh`
+    - `scripts/check_parity_preflight_matrix_smoke_contract_6.sh --json`
     - `scripts/check_parity_wrappers.sh`
     - `scripts/check_parity_docs_wrapper_coverage.sh`
     - `scripts/check_parity_docs_refs.sh`
@@ -7184,15 +7184,15 @@ Commands used:
     wrapper/docs coverage.
   - Delivered:
     - Added executable script:
-      - `scripts/check_parity_preflight_matrix_smoke_contract_contract_contract_contract_contract_contract_contract.sh`
+      - `scripts/check_parity_preflight_matrix_smoke_contract_7.sh`
     - Contract checker validates:
-      - `scripts/check_parity_preflight_matrix_smoke_contract_contract_contract_contract_contract_contract.sh --json` contains:
+      - `scripts/check_parity_preflight_matrix_smoke_contract_6.sh --json` contains:
         - top-level `result` in `pass|fail`
         - top-level `checks` list
         - per-entry `check`, `ok`, `detail` fields with expected types
         - required check names for pattern and matrix-smoke-contract-contract-contract-contract-contract schema checks
       - invalid args return code `2` with usage:
-        - `Usage: scripts/check_parity_preflight_matrix_smoke_contract_contract_contract_contract_contract_contract.sh [--json]`
+        - `Usage: scripts/check_parity_preflight_matrix_smoke_contract_6.sh [--json]`
     - Added script to wrapper/docs coverage tracking:
       - `scripts/check_parity_wrappers.sh`
       - `scripts/check_parity_docs_wrapper_coverage.sh`
@@ -7200,7 +7200,7 @@ Commands used:
       - `docs/parity-commands.md`
       - `docs/excelize-parity.md`
   - Validation gates:
-    - `scripts/check_parity_preflight_matrix_smoke_contract_contract_contract_contract_contract_contract_contract.sh`
+    - `scripts/check_parity_preflight_matrix_smoke_contract_7.sh`
     - `scripts/check_parity_wrappers.sh`
     - `scripts/check_parity_docs_wrapper_coverage.sh`
     - `scripts/check_parity_docs_refs.sh`
@@ -7216,7 +7216,7 @@ Commands used:
   - Delivered:
     - Updated `scripts/test_parity_gates.sh`:
       - adds `SKIP_PARITY_PREFLIGHT_MATRIX_SMOKE_CONTRACT_CONTRACT_CONTRACT_CONTRACT_CONTRACT_CONTRACT_CONTRACT_PREFLIGHT=0|1` handling
-      - runs `scripts/check_parity_preflight_matrix_smoke_contract_contract_contract_contract_contract_contract_contract.sh` in preflight flow
+      - runs `scripts/check_parity_preflight_matrix_smoke_contract_7.sh` in preflight flow
     - Updated helper/status/env consistency:
       - `scripts/show_parity_preflight_status.sh` includes
         `preflight_matrix_smoke_contract_contract_contract_contract_contract_contract_contract_preflight` status and
@@ -7230,14 +7230,14 @@ Commands used:
       - `scripts/check_parity_preflight_matrix_smoke.sh` includes new
         contract-contract-contract-contract-contract-contract-contract preflight status/env key in matrix expectations
     - Hardened
-      `scripts/check_parity_preflight_matrix_smoke_contract_contract_contract_contract_contract_contract_contract.sh`
+      `scripts/check_parity_preflight_matrix_smoke_contract_7.sh`
       to assert aggregate-gate wiring patterns are present.
     - Updated docs:
       - `docs/excelize-parity.md`
       - `docs/parity-commands.md`
   - Validation gates:
-    - `scripts/check_parity_preflight_matrix_smoke_contract_contract_contract_contract_contract_contract_contract.sh`
-    - `scripts/check_parity_preflight_matrix_smoke_contract_contract_contract_contract_contract_contract.sh`
+    - `scripts/check_parity_preflight_matrix_smoke_contract_7.sh`
+    - `scripts/check_parity_preflight_matrix_smoke_contract_6.sh`
     - `scripts/check_parity_preflight_matrix_smoke.sh`
     - `scripts/check_parity_gate_skip_toggles.sh`
     - `scripts/check_parity_gate_skip_toggles_contract.sh`
@@ -7256,7 +7256,7 @@ Commands used:
   - DoD: expose machine-readable contract-check results while preserving
     default plain output and exit semantics.
   - Delivered:
-    - Refactored `scripts/check_parity_preflight_matrix_smoke_contract_contract_contract_contract_contract_contract_contract.sh`:
+    - Refactored `scripts/check_parity_preflight_matrix_smoke_contract_7.sh`:
       - adds CLI parsing with `--json` support
       - emits structured JSON payload:
         - top-level `result` (`pass|fail`)
@@ -7264,13 +7264,13 @@ Commands used:
       - preserves plain-text pass/fail output in default mode
       - preserves non-zero exit on any failed check
       - validates invalid args with usage:
-        - `Usage: scripts/check_parity_preflight_matrix_smoke_contract_contract_contract_contract_contract_contract_contract.sh [--json]`
+        - `Usage: scripts/check_parity_preflight_matrix_smoke_contract_7.sh [--json]`
     - Updated docs for JSON mode usage:
       - `docs/parity-commands.md`
       - `docs/excelize-parity.md`
   - Validation gates:
-    - `scripts/check_parity_preflight_matrix_smoke_contract_contract_contract_contract_contract_contract_contract.sh`
-    - `scripts/check_parity_preflight_matrix_smoke_contract_contract_contract_contract_contract_contract_contract.sh --json`
+    - `scripts/check_parity_preflight_matrix_smoke_contract_7.sh`
+    - `scripts/check_parity_preflight_matrix_smoke_contract_7.sh --json`
     - `scripts/check_parity_wrappers.sh`
     - `scripts/check_parity_docs_wrapper_coverage.sh`
     - `scripts/check_parity_docs_refs.sh`
@@ -7285,15 +7285,15 @@ Commands used:
     wrapper/docs coverage.
   - Delivered:
     - Added executable script:
-      - `scripts/check_parity_preflight_matrix_smoke_contract_contract_contract_contract_contract_contract_contract_contract.sh`
+      - `scripts/check_parity_preflight_matrix_smoke_contract_8.sh`
     - Contract checker validates:
-      - `scripts/check_parity_preflight_matrix_smoke_contract_contract_contract_contract_contract_contract_contract.sh --json` contains:
+      - `scripts/check_parity_preflight_matrix_smoke_contract_7.sh --json` contains:
         - top-level `result` in `pass|fail`
         - top-level `checks` list
         - per-entry `check`, `ok`, `detail` fields with expected types
         - required check names for pattern and matrix-smoke-contract-contract-contract-contract-contract-contract schema checks
       - invalid args return code `2` with usage:
-        - `Usage: scripts/check_parity_preflight_matrix_smoke_contract_contract_contract_contract_contract_contract_contract.sh [--json]`
+        - `Usage: scripts/check_parity_preflight_matrix_smoke_contract_7.sh [--json]`
     - Added script to wrapper/docs coverage tracking:
       - `scripts/check_parity_wrappers.sh`
       - `scripts/check_parity_docs_wrapper_coverage.sh`
@@ -7301,7 +7301,7 @@ Commands used:
       - `docs/parity-commands.md`
       - `docs/excelize-parity.md`
   - Validation gates:
-    - `scripts/check_parity_preflight_matrix_smoke_contract_contract_contract_contract_contract_contract_contract_contract.sh`
+    - `scripts/check_parity_preflight_matrix_smoke_contract_8.sh`
     - `scripts/check_parity_wrappers.sh`
     - `scripts/check_parity_docs_wrapper_coverage.sh`
     - `scripts/check_parity_docs_refs.sh`
@@ -7317,7 +7317,7 @@ Commands used:
   - Delivered:
     - Updated `scripts/test_parity_gates.sh`:
       - adds `SKIP_PARITY_PREFLIGHT_MATRIX_SMOKE_CONTRACT_CONTRACT_CONTRACT_CONTRACT_CONTRACT_CONTRACT_CONTRACT_CONTRACT_PREFLIGHT=0|1` handling
-      - runs `scripts/check_parity_preflight_matrix_smoke_contract_contract_contract_contract_contract_contract_contract_contract.sh` in preflight flow
+      - runs `scripts/check_parity_preflight_matrix_smoke_contract_8.sh` in preflight flow
     - Updated helper/status/env consistency:
       - `scripts/show_parity_preflight_status.sh` includes
         `preflight_matrix_smoke_contract_contract_contract_contract_contract_contract_contract_contract_preflight` status and
@@ -7331,14 +7331,14 @@ Commands used:
       - `scripts/check_parity_preflight_matrix_smoke.sh` includes new
         contract-contract-contract-contract-contract-contract-contract-contract preflight status/env key in matrix expectations
     - Hardened
-      `scripts/check_parity_preflight_matrix_smoke_contract_contract_contract_contract_contract_contract_contract_contract.sh`
+      `scripts/check_parity_preflight_matrix_smoke_contract_8.sh`
       to assert aggregate-gate wiring patterns are present.
     - Updated docs:
       - `docs/excelize-parity.md`
       - `docs/parity-commands.md`
   - Validation gates:
-    - `scripts/check_parity_preflight_matrix_smoke_contract_contract_contract_contract_contract_contract_contract_contract.sh`
-    - `scripts/check_parity_preflight_matrix_smoke_contract_contract_contract_contract_contract_contract_contract.sh`
+    - `scripts/check_parity_preflight_matrix_smoke_contract_8.sh`
+    - `scripts/check_parity_preflight_matrix_smoke_contract_7.sh`
     - `scripts/check_parity_preflight_matrix_smoke.sh`
     - `scripts/check_parity_gate_skip_toggles.sh`
     - `scripts/check_parity_gate_skip_toggles_contract.sh`
@@ -7357,7 +7357,7 @@ Commands used:
   - DoD: expose machine-readable contract-check results while preserving
     default plain output and exit semantics.
   - Delivered:
-    - Refactored `scripts/check_parity_preflight_matrix_smoke_contract_contract_contract_contract_contract_contract_contract_contract.sh`:
+    - Refactored `scripts/check_parity_preflight_matrix_smoke_contract_8.sh`:
       - adds CLI parsing with `--json` support
       - emits structured JSON payload:
         - top-level `result` (`pass|fail`)
@@ -7365,13 +7365,13 @@ Commands used:
       - preserves plain-text pass/fail output in default mode
       - preserves non-zero exit on any failed check
       - validates invalid args with usage:
-        - `Usage: scripts/check_parity_preflight_matrix_smoke_contract_contract_contract_contract_contract_contract_contract_contract.sh [--json]`
+        - `Usage: scripts/check_parity_preflight_matrix_smoke_contract_8.sh [--json]`
     - Updated docs for JSON mode usage:
       - `docs/parity-commands.md`
       - `docs/excelize-parity.md`
   - Validation gates:
-    - `scripts/check_parity_preflight_matrix_smoke_contract_contract_contract_contract_contract_contract_contract_contract.sh`
-    - `scripts/check_parity_preflight_matrix_smoke_contract_contract_contract_contract_contract_contract_contract_contract.sh --json`
+    - `scripts/check_parity_preflight_matrix_smoke_contract_8.sh`
+    - `scripts/check_parity_preflight_matrix_smoke_contract_8.sh --json`
     - `scripts/check_parity_wrappers.sh`
     - `scripts/check_parity_docs_wrapper_coverage.sh`
     - `scripts/check_parity_docs_refs.sh`
@@ -7386,15 +7386,15 @@ Commands used:
     wrapper/docs coverage.
   - Delivered:
     - Added executable script:
-      - `scripts/check_parity_preflight_matrix_smoke_contract_contract_contract_contract_contract_contract_contract_contract_contract.sh`
+      - `scripts/check_parity_preflight_matrix_smoke_contract_9.sh`
     - Contract checker validates:
-      - `scripts/check_parity_preflight_matrix_smoke_contract_contract_contract_contract_contract_contract_contract_contract.sh --json` contains:
+      - `scripts/check_parity_preflight_matrix_smoke_contract_8.sh --json` contains:
         - top-level `result` in `pass|fail`
         - top-level `checks` list
         - per-entry `check`, `ok`, `detail` fields with expected types
         - required check names for pattern and matrix-smoke-contract-contract-contract-contract-contract-contract-contract schema checks
       - invalid args return code `2` with usage:
-        - `Usage: scripts/check_parity_preflight_matrix_smoke_contract_contract_contract_contract_contract_contract_contract_contract.sh [--json]`
+        - `Usage: scripts/check_parity_preflight_matrix_smoke_contract_8.sh [--json]`
     - Added script to wrapper/docs coverage tracking:
       - `scripts/check_parity_wrappers.sh`
       - `scripts/check_parity_docs_wrapper_coverage.sh`
@@ -7402,7 +7402,7 @@ Commands used:
       - `docs/parity-commands.md`
       - `docs/excelize-parity.md`
   - Validation gates:
-    - `scripts/check_parity_preflight_matrix_smoke_contract_contract_contract_contract_contract_contract_contract_contract_contract.sh`
+    - `scripts/check_parity_preflight_matrix_smoke_contract_9.sh`
     - `scripts/check_parity_wrappers.sh`
     - `scripts/check_parity_docs_wrapper_coverage.sh`
     - `scripts/check_parity_docs_refs.sh`
@@ -7418,7 +7418,7 @@ Commands used:
   - Delivered:
     - Updated `scripts/test_parity_gates.sh`:
       - adds `SKIP_PARITY_PREFLIGHT_MATRIX_SMOKE_CONTRACT_CONTRACT_CONTRACT_CONTRACT_CONTRACT_CONTRACT_CONTRACT_CONTRACT_CONTRACT_PREFLIGHT=0|1` handling
-      - runs `scripts/check_parity_preflight_matrix_smoke_contract_contract_contract_contract_contract_contract_contract_contract_contract.sh` in preflight flow
+      - runs `scripts/check_parity_preflight_matrix_smoke_contract_9.sh` in preflight flow
     - Updated helper/status/env consistency:
       - `scripts/show_parity_preflight_status.sh` includes
         `preflight_matrix_smoke_contract_contract_contract_contract_contract_contract_contract_contract_contract_preflight` status and
@@ -7432,14 +7432,14 @@ Commands used:
       - `scripts/check_parity_preflight_matrix_smoke.sh` includes new
         contract-contract-contract-contract-contract-contract-contract-contract-contract preflight status/env key in matrix expectations
     - Hardened
-      `scripts/check_parity_preflight_matrix_smoke_contract_contract_contract_contract_contract_contract_contract_contract_contract.sh`
+      `scripts/check_parity_preflight_matrix_smoke_contract_9.sh`
       to assert aggregate-gate wiring patterns are present.
     - Updated docs:
       - `docs/excelize-parity.md`
       - `docs/parity-commands.md`
   - Validation gates:
-    - `scripts/check_parity_preflight_matrix_smoke_contract_contract_contract_contract_contract_contract_contract_contract_contract.sh`
-    - `scripts/check_parity_preflight_matrix_smoke_contract_contract_contract_contract_contract_contract_contract_contract.sh`
+    - `scripts/check_parity_preflight_matrix_smoke_contract_9.sh`
+    - `scripts/check_parity_preflight_matrix_smoke_contract_8.sh`
     - `scripts/check_parity_preflight_matrix_smoke.sh`
     - `scripts/check_parity_gate_skip_toggles.sh`
     - `scripts/check_parity_gate_skip_toggles_contract.sh`
@@ -7458,7 +7458,7 @@ Commands used:
   - DoD: expose machine-readable contract-check results while preserving
     default plain output and exit semantics.
   - Delivered:
-    - Refactored `scripts/check_parity_preflight_matrix_smoke_contract_contract_contract_contract_contract_contract_contract_contract_contract.sh`:
+    - Refactored `scripts/check_parity_preflight_matrix_smoke_contract_9.sh`:
       - adds CLI parsing with `--json` support
       - emits structured JSON payload:
         - top-level `result` (`pass|fail`)
@@ -7466,13 +7466,13 @@ Commands used:
       - preserves plain-text pass/fail output in default mode
       - preserves non-zero exit on any failed check
       - validates invalid args with usage:
-        - `Usage: scripts/check_parity_preflight_matrix_smoke_contract_contract_contract_contract_contract_contract_contract_contract_contract.sh [--json]`
+        - `Usage: scripts/check_parity_preflight_matrix_smoke_contract_9.sh [--json]`
     - Updated docs for JSON mode usage:
       - `docs/parity-commands.md`
       - `docs/excelize-parity.md`
   - Validation gates:
-    - `scripts/check_parity_preflight_matrix_smoke_contract_contract_contract_contract_contract_contract_contract_contract_contract.sh`
-    - `scripts/check_parity_preflight_matrix_smoke_contract_contract_contract_contract_contract_contract_contract_contract_contract.sh --json`
+    - `scripts/check_parity_preflight_matrix_smoke_contract_9.sh`
+    - `scripts/check_parity_preflight_matrix_smoke_contract_9.sh --json`
     - `scripts/check_parity_wrappers.sh`
     - `scripts/check_parity_docs_wrapper_coverage.sh`
     - `scripts/check_parity_docs_refs.sh`
@@ -7487,15 +7487,15 @@ Commands used:
     wrapper/docs coverage.
   - Delivered:
     - Added executable script:
-      - `scripts/check_parity_preflight_matrix_smoke_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract.sh`
+      - `scripts/check_parity_preflight_matrix_smoke_contract_10.sh`
     - Contract checker validates:
-      - `scripts/check_parity_preflight_matrix_smoke_contract_contract_contract_contract_contract_contract_contract_contract_contract.sh --json` contains:
+      - `scripts/check_parity_preflight_matrix_smoke_contract_9.sh --json` contains:
         - top-level `result` in `pass|fail`
         - top-level `checks` list
         - per-entry `check`, `ok`, `detail` fields with expected types
         - required check names for pattern and matrix-smoke-contract-contract-contract-contract-contract-contract-contract-contract schema checks
       - invalid args return code `2` with usage:
-        - `Usage: scripts/check_parity_preflight_matrix_smoke_contract_contract_contract_contract_contract_contract_contract_contract_contract.sh [--json]`
+        - `Usage: scripts/check_parity_preflight_matrix_smoke_contract_9.sh [--json]`
     - Added script to wrapper/docs coverage tracking:
       - `scripts/check_parity_wrappers.sh`
       - `scripts/check_parity_docs_wrapper_coverage.sh`
@@ -7503,7 +7503,7 @@ Commands used:
       - `docs/parity-commands.md`
       - `docs/excelize-parity.md`
   - Validation gates:
-    - `scripts/check_parity_preflight_matrix_smoke_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract.sh`
+    - `scripts/check_parity_preflight_matrix_smoke_contract_10.sh`
     - `scripts/check_parity_wrappers.sh`
     - `scripts/check_parity_docs_wrapper_coverage.sh`
     - `scripts/check_parity_docs_refs.sh`
@@ -7519,7 +7519,7 @@ Commands used:
   - Delivered:
     - Updated `scripts/test_parity_gates.sh`:
       - adds `SKIP_PARITY_PREFLIGHT_MATRIX_SMOKE_CONTRACT_CONTRACT_CONTRACT_CONTRACT_CONTRACT_CONTRACT_CONTRACT_CONTRACT_CONTRACT_CONTRACT_PREFLIGHT=0|1` handling
-      - runs `scripts/check_parity_preflight_matrix_smoke_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract.sh` in preflight flow
+      - runs `scripts/check_parity_preflight_matrix_smoke_contract_10.sh` in preflight flow
     - Updated helper/status/env consistency:
       - `scripts/show_parity_preflight_status.sh` includes
         `preflight_matrix_smoke_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_preflight` status and
@@ -7533,14 +7533,14 @@ Commands used:
       - `scripts/check_parity_preflight_matrix_smoke.sh` includes new
         contract-contract-contract-contract-contract-contract-contract-contract-contract-contract preflight status/env key in matrix expectations
     - Hardened
-      `scripts/check_parity_preflight_matrix_smoke_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract.sh`
+      `scripts/check_parity_preflight_matrix_smoke_contract_10.sh`
       to assert aggregate-gate wiring patterns are present.
     - Updated docs:
       - `docs/excelize-parity.md`
       - `docs/parity-commands.md`
   - Validation gates:
-    - `scripts/check_parity_preflight_matrix_smoke_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract.sh`
-    - `scripts/check_parity_preflight_matrix_smoke_contract_contract_contract_contract_contract_contract_contract_contract_contract.sh`
+    - `scripts/check_parity_preflight_matrix_smoke_contract_10.sh`
+    - `scripts/check_parity_preflight_matrix_smoke_contract_9.sh`
     - `scripts/check_parity_preflight_matrix_smoke.sh`
     - `scripts/check_parity_gate_skip_toggles.sh`
     - `scripts/check_parity_gate_skip_toggles_contract.sh`
@@ -7559,7 +7559,7 @@ Commands used:
   - DoD: expose machine-readable contract-check results while preserving
     default plain output and exit semantics.
   - Delivered:
-    - Refactored `scripts/check_parity_preflight_matrix_smoke_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract.sh`:
+    - Refactored `scripts/check_parity_preflight_matrix_smoke_contract_10.sh`:
       - adds CLI parsing with `--json` support
       - emits structured JSON payload:
         - top-level `result` (`pass|fail`)
@@ -7567,13 +7567,13 @@ Commands used:
       - preserves plain-text pass/fail output in default mode
       - preserves non-zero exit on any failed check
       - validates invalid args with usage:
-        - `Usage: scripts/check_parity_preflight_matrix_smoke_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract.sh [--json]`
+        - `Usage: scripts/check_parity_preflight_matrix_smoke_contract_10.sh [--json]`
     - Updated docs for JSON mode usage:
       - `docs/parity-commands.md`
       - `docs/excelize-parity.md`
   - Validation gates:
-    - `scripts/check_parity_preflight_matrix_smoke_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract.sh`
-    - `scripts/check_parity_preflight_matrix_smoke_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract.sh --json`
+    - `scripts/check_parity_preflight_matrix_smoke_contract_10.sh`
+    - `scripts/check_parity_preflight_matrix_smoke_contract_10.sh --json`
     - `scripts/check_parity_wrappers.sh`
     - `scripts/check_parity_docs_wrapper_coverage.sh`
     - `scripts/check_parity_docs_refs.sh`
@@ -7588,15 +7588,15 @@ Commands used:
     wrapper/docs coverage.
   - Delivered:
     - Added executable script:
-      - `scripts/check_parity_preflight_matrix_smoke_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract.sh`
+      - `scripts/check_parity_preflight_matrix_smoke_contract_11.sh`
     - Contract checker validates:
-      - `scripts/check_parity_preflight_matrix_smoke_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract.sh --json` contains:
+      - `scripts/check_parity_preflight_matrix_smoke_contract_10.sh --json` contains:
         - top-level `result` in `pass|fail`
         - top-level `checks` list
         - per-entry `check`, `ok`, `detail` fields with expected types
         - required check names for pattern and matrix-smoke-contract-contract-contract-contract-contract-contract-contract-contract-contract schema checks
       - invalid args return code `2` with usage:
-        - `Usage: scripts/check_parity_preflight_matrix_smoke_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract.sh [--json]`
+        - `Usage: scripts/check_parity_preflight_matrix_smoke_contract_10.sh [--json]`
     - Added script to wrapper/docs coverage tracking:
       - `scripts/check_parity_wrappers.sh`
       - `scripts/check_parity_docs_wrapper_coverage.sh`
@@ -7604,7 +7604,7 @@ Commands used:
       - `docs/parity-commands.md`
       - `docs/excelize-parity.md`
   - Validation gates:
-    - `scripts/check_parity_preflight_matrix_smoke_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract.sh`
+    - `scripts/check_parity_preflight_matrix_smoke_contract_11.sh`
     - `scripts/check_parity_wrappers.sh`
     - `scripts/check_parity_docs_wrapper_coverage.sh`
     - `scripts/check_parity_docs_refs.sh`
@@ -7620,7 +7620,7 @@ Commands used:
   - Delivered:
     - Updated `scripts/test_parity_gates.sh`:
       - adds `SKIP_PARITY_PREFLIGHT_MATRIX_SMOKE_CONTRACT_CONTRACT_CONTRACT_CONTRACT_CONTRACT_CONTRACT_CONTRACT_CONTRACT_CONTRACT_CONTRACT_CONTRACT_PREFLIGHT=0|1` handling
-      - runs `scripts/check_parity_preflight_matrix_smoke_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract.sh` in preflight flow
+      - runs `scripts/check_parity_preflight_matrix_smoke_contract_11.sh` in preflight flow
     - Updated helper/status/env consistency:
       - `scripts/show_parity_preflight_status.sh` includes
         `preflight_matrix_smoke_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_preflight` status and
@@ -7634,14 +7634,14 @@ Commands used:
       - `scripts/check_parity_preflight_matrix_smoke.sh` includes new
         contract-contract-contract-contract-contract-contract-contract-contract-contract-contract-contract preflight status/env key in matrix expectations
     - Hardened
-      `scripts/check_parity_preflight_matrix_smoke_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract.sh`
+      `scripts/check_parity_preflight_matrix_smoke_contract_11.sh`
       to assert aggregate-gate wiring patterns are present.
     - Updated docs:
       - `docs/excelize-parity.md`
       - `docs/parity-commands.md`
   - Validation gates:
-    - `scripts/check_parity_preflight_matrix_smoke_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract.sh`
-    - `scripts/check_parity_preflight_matrix_smoke_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract.sh`
+    - `scripts/check_parity_preflight_matrix_smoke_contract_11.sh`
+    - `scripts/check_parity_preflight_matrix_smoke_contract_10.sh`
     - `scripts/check_parity_preflight_matrix_smoke.sh`
     - `scripts/check_parity_gate_skip_toggles.sh`
     - `scripts/check_parity_gate_skip_toggles_contract.sh`
@@ -7660,7 +7660,7 @@ Commands used:
   - DoD: expose machine-readable contract-check results while preserving
     default plain output and exit semantics.
   - Delivered:
-    - Refactored `scripts/check_parity_preflight_matrix_smoke_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract.sh`:
+    - Refactored `scripts/check_parity_preflight_matrix_smoke_contract_11.sh`:
       - adds CLI parsing with `--json` support
       - emits structured JSON payload:
         - top-level `result` (`pass|fail`)
@@ -7668,13 +7668,13 @@ Commands used:
       - preserves plain-text pass/fail output in default mode
       - preserves non-zero exit on any failed check
       - validates invalid args with usage:
-        - `Usage: scripts/check_parity_preflight_matrix_smoke_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract.sh [--json]`
+        - `Usage: scripts/check_parity_preflight_matrix_smoke_contract_11.sh [--json]`
     - Updated docs for JSON mode usage:
       - `docs/parity-commands.md`
       - `docs/excelize-parity.md`
   - Validation gates:
-    - `scripts/check_parity_preflight_matrix_smoke_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract.sh`
-    - `scripts/check_parity_preflight_matrix_smoke_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract.sh --json`
+    - `scripts/check_parity_preflight_matrix_smoke_contract_11.sh`
+    - `scripts/check_parity_preflight_matrix_smoke_contract_11.sh --json`
     - `scripts/check_parity_wrappers.sh`
     - `scripts/check_parity_docs_wrapper_coverage.sh`
     - `scripts/check_parity_docs_refs.sh`
@@ -7689,15 +7689,15 @@ Commands used:
     wrapper/docs coverage.
   - Delivered:
     - Added executable script:
-      - `scripts/check_parity_preflight_matrix_smoke_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract.sh`
+      - `scripts/check_parity_preflight_matrix_smoke_contract_12.sh`
     - Contract checker validates:
-      - `scripts/check_parity_preflight_matrix_smoke_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract.sh --json` contains:
+      - `scripts/check_parity_preflight_matrix_smoke_contract_11.sh --json` contains:
         - top-level `result` in `pass|fail`
         - top-level `checks` list
         - per-entry `check`, `ok`, `detail` fields with expected types
         - required check names for pattern and matrix-smoke-contract-contract-contract-contract-contract-contract-contract-contract-contract-contract-contract schema checks
       - invalid args return code `2` with usage:
-        - `Usage: scripts/check_parity_preflight_matrix_smoke_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract.sh [--json]`
+        - `Usage: scripts/check_parity_preflight_matrix_smoke_contract_11.sh [--json]`
     - Added script to wrapper/docs coverage tracking:
       - `scripts/check_parity_wrappers.sh`
       - `scripts/check_parity_docs_wrapper_coverage.sh`
@@ -7705,7 +7705,7 @@ Commands used:
       - `docs/parity-commands.md`
       - `docs/excelize-parity.md`
   - Validation gates:
-    - `scripts/check_parity_preflight_matrix_smoke_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract.sh`
+    - `scripts/check_parity_preflight_matrix_smoke_contract_12.sh`
     - `scripts/check_parity_wrappers.sh`
     - `scripts/check_parity_docs_wrapper_coverage.sh`
     - `scripts/check_parity_docs_refs.sh`
@@ -7721,7 +7721,7 @@ Commands used:
   - Delivered:
     - Updated `scripts/test_parity_gates.sh`:
       - adds `SKIP_PARITY_PREFLIGHT_MATRIX_SMOKE_CONTRACT_CONTRACT_CONTRACT_CONTRACT_CONTRACT_CONTRACT_CONTRACT_CONTRACT_CONTRACT_CONTRACT_CONTRACT_CONTRACT_PREFLIGHT=0|1` handling
-      - runs `scripts/check_parity_preflight_matrix_smoke_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract.sh` in preflight flow
+      - runs `scripts/check_parity_preflight_matrix_smoke_contract_12.sh` in preflight flow
     - Updated helper/status/env consistency:
       - `scripts/show_parity_preflight_status.sh` includes
         `preflight_matrix_smoke_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_preflight` status and
@@ -7735,14 +7735,14 @@ Commands used:
       - `scripts/check_parity_preflight_matrix_smoke.sh` includes new
         contract-contract-contract-contract-contract-contract-contract-contract-contract-contract-contract-contract preflight status/env key in matrix expectations
     - Hardened
-      `scripts/check_parity_preflight_matrix_smoke_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract.sh`
+      `scripts/check_parity_preflight_matrix_smoke_contract_12.sh`
       to assert aggregate-gate wiring patterns are present.
     - Updated docs:
       - `docs/excelize-parity.md`
       - `docs/parity-commands.md`
   - Validation gates:
-    - `scripts/check_parity_preflight_matrix_smoke_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract.sh`
-    - `scripts/check_parity_preflight_matrix_smoke_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract.sh`
+    - `scripts/check_parity_preflight_matrix_smoke_contract_12.sh`
+    - `scripts/check_parity_preflight_matrix_smoke_contract_11.sh`
     - `scripts/check_parity_preflight_matrix_smoke.sh`
     - `scripts/check_parity_gate_skip_toggles.sh`
     - `scripts/check_parity_gate_skip_toggles_contract.sh`
@@ -7761,7 +7761,7 @@ Commands used:
   - DoD: expose machine-readable contract-check results while preserving
     default plain output and exit semantics.
   - Delivered:
-    - Refactored `scripts/check_parity_preflight_matrix_smoke_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract.sh`:
+    - Refactored `scripts/check_parity_preflight_matrix_smoke_contract_12.sh`:
       - adds CLI parsing with `--json` support
       - emits structured JSON payload:
         - top-level `result` (`pass|fail`)
@@ -7769,13 +7769,13 @@ Commands used:
       - preserves plain-text pass/fail output in default mode
       - preserves non-zero exit on any failed check
       - validates invalid args with usage:
-        - `Usage: scripts/check_parity_preflight_matrix_smoke_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract.sh [--json]`
+        - `Usage: scripts/check_parity_preflight_matrix_smoke_contract_12.sh [--json]`
     - Updated docs for JSON mode usage:
       - `docs/parity-commands.md`
       - `docs/excelize-parity.md`
   - Validation gates:
-    - `scripts/check_parity_preflight_matrix_smoke_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract.sh`
-    - `scripts/check_parity_preflight_matrix_smoke_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract.sh --json`
+    - `scripts/check_parity_preflight_matrix_smoke_contract_12.sh`
+    - `scripts/check_parity_preflight_matrix_smoke_contract_12.sh --json`
     - `scripts/check_parity_wrappers.sh`
     - `scripts/check_parity_docs_wrapper_coverage.sh`
     - `scripts/check_parity_docs_refs.sh`
@@ -7790,15 +7790,15 @@ Commands used:
     wrapper/docs coverage.
   - Delivered:
     - Added executable script:
-      - `scripts/check_parity_preflight_matrix_smoke_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract.sh`
+      - `scripts/check_parity_preflight_matrix_smoke_contract_13.sh`
     - Contract checker validates:
-      - `scripts/check_parity_preflight_matrix_smoke_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract.sh --json` contains:
+      - `scripts/check_parity_preflight_matrix_smoke_contract_12.sh --json` contains:
         - top-level `result` in `pass|fail`
         - top-level `checks` list
         - per-entry `check`, `ok`, `detail` fields with expected types
         - required check names for pattern and matrix-smoke-contract-contract-contract-contract-contract-contract-contract-contract-contract-contract-contract-contract schema checks
       - invalid args return code `2` with usage:
-        - `Usage: scripts/check_parity_preflight_matrix_smoke_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract.sh [--json]`
+        - `Usage: scripts/check_parity_preflight_matrix_smoke_contract_12.sh [--json]`
     - Added script to wrapper/docs coverage tracking:
       - `scripts/check_parity_wrappers.sh`
       - `scripts/check_parity_docs_wrapper_coverage.sh`
@@ -7806,7 +7806,7 @@ Commands used:
       - `docs/parity-commands.md`
       - `docs/excelize-parity.md`
   - Validation gates:
-    - `scripts/check_parity_preflight_matrix_smoke_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract.sh`
+    - `scripts/check_parity_preflight_matrix_smoke_contract_13.sh`
     - `scripts/check_parity_wrappers.sh`
     - `scripts/check_parity_docs_wrapper_coverage.sh`
     - `scripts/check_parity_docs_refs.sh`
@@ -7822,7 +7822,7 @@ Commands used:
   - Delivered:
     - Updated `scripts/test_parity_gates.sh`:
       - adds `SKIP_PARITY_PREFLIGHT_MATRIX_SMOKE_CONTRACT_CONTRACT_CONTRACT_CONTRACT_CONTRACT_CONTRACT_CONTRACT_CONTRACT_CONTRACT_CONTRACT_CONTRACT_CONTRACT_CONTRACT_PREFLIGHT=0|1` handling
-      - runs `scripts/check_parity_preflight_matrix_smoke_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract.sh` in preflight flow
+      - runs `scripts/check_parity_preflight_matrix_smoke_contract_13.sh` in preflight flow
     - Updated helper/status/env consistency:
       - `scripts/show_parity_preflight_status.sh` includes
         `preflight_matrix_smoke_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_preflight` status and
@@ -7836,14 +7836,14 @@ Commands used:
       - `scripts/check_parity_preflight_matrix_smoke.sh` includes new
         contract-contract-contract-contract-contract-contract-contract-contract-contract-contract-contract-contract-contract preflight status/env key in matrix expectations
     - Hardened
-      `scripts/check_parity_preflight_matrix_smoke_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract.sh`
+      `scripts/check_parity_preflight_matrix_smoke_contract_13.sh`
       to assert aggregate-gate wiring patterns are present.
     - Updated docs:
       - `docs/excelize-parity.md`
       - `docs/parity-commands.md`
   - Validation gates:
-    - `scripts/check_parity_preflight_matrix_smoke_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract.sh`
-    - `scripts/check_parity_preflight_matrix_smoke_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract.sh`
+    - `scripts/check_parity_preflight_matrix_smoke_contract_13.sh`
+    - `scripts/check_parity_preflight_matrix_smoke_contract_12.sh`
     - `scripts/check_parity_preflight_matrix_smoke.sh`
     - `scripts/check_parity_gate_skip_toggles.sh`
     - `scripts/check_parity_gate_skip_toggles_contract.sh`
@@ -7862,7 +7862,7 @@ Commands used:
   - DoD: expose machine-readable contract-check results while preserving
     default plain output and exit semantics.
   - Delivered:
-    - Refactored `scripts/check_parity_preflight_matrix_smoke_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract.sh`:
+    - Refactored `scripts/check_parity_preflight_matrix_smoke_contract_13.sh`:
       - adds CLI parsing with `--json` support
       - emits structured JSON payload:
         - top-level `result` (`pass|fail`)
@@ -7870,13 +7870,13 @@ Commands used:
       - preserves plain-text pass/fail output in default mode
       - preserves non-zero exit on any failed check
       - validates invalid args with usage:
-        - `Usage: scripts/check_parity_preflight_matrix_smoke_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract.sh [--json]`
+        - `Usage: scripts/check_parity_preflight_matrix_smoke_contract_13.sh [--json]`
     - Updated docs for JSON mode usage:
       - `docs/parity-commands.md`
       - `docs/excelize-parity.md`
   - Validation gates:
-    - `scripts/check_parity_preflight_matrix_smoke_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract.sh`
-    - `scripts/check_parity_preflight_matrix_smoke_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract.sh --json`
+    - `scripts/check_parity_preflight_matrix_smoke_contract_13.sh`
+    - `scripts/check_parity_preflight_matrix_smoke_contract_13.sh --json`
     - `scripts/check_parity_wrappers.sh`
     - `scripts/check_parity_docs_wrapper_coverage.sh`
     - `scripts/check_parity_docs_refs.sh`
@@ -7891,15 +7891,15 @@ Commands used:
     wrapper/docs coverage.
   - Delivered:
     - Added executable script:
-      - `scripts/check_parity_preflight_matrix_smoke_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract.sh`
+      - `scripts/check_parity_preflight_matrix_smoke_contract_14.sh`
     - Contract checker validates:
-      - `scripts/check_parity_preflight_matrix_smoke_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract.sh --json` contains:
+      - `scripts/check_parity_preflight_matrix_smoke_contract_13.sh --json` contains:
         - top-level `result` in `pass|fail`
         - top-level `checks` list
         - per-entry `check`, `ok`, `detail` fields with expected types
         - required check names for pattern and matrix-smoke-contract-contract-contract-contract-contract-contract-contract-contract-contract-contract-contract-contract-contract schema checks
       - invalid args return code `2` with usage:
-        - `Usage: scripts/check_parity_preflight_matrix_smoke_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract.sh [--json]`
+        - `Usage: scripts/check_parity_preflight_matrix_smoke_contract_13.sh [--json]`
     - Added script to wrapper/docs coverage tracking:
       - `scripts/check_parity_wrappers.sh`
       - `scripts/check_parity_docs_wrapper_coverage.sh`
@@ -7907,7 +7907,7 @@ Commands used:
       - `docs/parity-commands.md`
       - `docs/excelize-parity.md`
   - Validation gates:
-    - `scripts/check_parity_preflight_matrix_smoke_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract.sh`
+    - `scripts/check_parity_preflight_matrix_smoke_contract_14.sh`
     - `scripts/check_parity_wrappers.sh`
     - `scripts/check_parity_docs_wrapper_coverage.sh`
     - `scripts/check_parity_docs_refs.sh`
@@ -7924,7 +7924,7 @@ Commands used:
     - Updated aggregate preflight wiring in `scripts/test_parity_gates.sh`:
       - added `SKIP_PARITY_PREFLIGHT_MATRIX_SMOKE_CONTRACT_CONTRACT_CONTRACT_CONTRACT_CONTRACT_CONTRACT_CONTRACT_CONTRACT_CONTRACT_CONTRACT_CONTRACT_CONTRACT_CONTRACT_CONTRACT_PREFLIGHT`
       - added x14 preflight step invocation:
-        - `scripts/check_parity_preflight_matrix_smoke_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract.sh`
+        - `scripts/check_parity_preflight_matrix_smoke_contract_14.sh`
     - Updated preflight status resolution surfaces:
       - `scripts/show_parity_preflight_status.sh`
       - `scripts/show_parity_env.sh`
@@ -7938,7 +7938,7 @@ Commands used:
       - `docs/excelize-parity.md`
   - Validation gates:
     - `moon clean`
-    - `scripts/check_parity_preflight_matrix_smoke_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract.sh`
+    - `scripts/check_parity_preflight_matrix_smoke_contract_14.sh`
     - `scripts/check_parity_preflight_matrix_smoke.sh`
     - `scripts/check_parity_gate_skip_toggles.sh`
     - `scripts/check_parity_gate_skip_toggles_contract.sh`
@@ -7957,7 +7957,7 @@ Commands used:
   - DoD: expose machine-readable contract-check results while preserving
     default plain output and exit semantics.
   - Delivered:
-    - Refactored `scripts/check_parity_preflight_matrix_smoke_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract.sh`:
+    - Refactored `scripts/check_parity_preflight_matrix_smoke_contract_14.sh`:
       - adds CLI parsing with `--json` support
       - emits structured JSON payload:
         - top-level `result` (`pass|fail`)
@@ -7965,14 +7965,14 @@ Commands used:
       - preserves plain-text pass/fail output in default mode
       - preserves non-zero exit on any failed check
       - validates invalid args with usage:
-        - `Usage: scripts/check_parity_preflight_matrix_smoke_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract.sh [--json]`
+        - `Usage: scripts/check_parity_preflight_matrix_smoke_contract_14.sh [--json]`
     - Updated docs for JSON mode usage:
       - `docs/parity-commands.md`
       - `docs/excelize-parity.md`
   - Validation gates:
     - `moon clean`
-    - `scripts/check_parity_preflight_matrix_smoke_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract.sh`
-    - `scripts/check_parity_preflight_matrix_smoke_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract.sh --json`
+    - `scripts/check_parity_preflight_matrix_smoke_contract_14.sh`
+    - `scripts/check_parity_preflight_matrix_smoke_contract_14.sh --json`
     - `scripts/check_parity_wrappers.sh`
     - `scripts/check_parity_docs_wrapper_coverage.sh`
     - `scripts/check_parity_docs_refs.sh`
@@ -7987,15 +7987,15 @@ Commands used:
     wrapper/docs coverage.
   - Delivered:
     - Added executable script:
-      - `scripts/check_parity_preflight_matrix_smoke_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract.sh`
+      - `scripts/check_parity_preflight_matrix_smoke_contract_15.sh`
     - Contract checker validates:
-      - `scripts/check_parity_preflight_matrix_smoke_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract.sh --json` contains:
+      - `scripts/check_parity_preflight_matrix_smoke_contract_14.sh --json` contains:
         - top-level `result` in `pass|fail`
         - top-level `checks` list
         - per-entry `check`, `ok`, `detail` fields with expected types
         - required check names for pattern and matrix-smoke-contract-contract-contract-contract-contract-contract-contract-contract-contract-contract-contract-contract-contract-contract schema checks
       - invalid args return code `2` with usage:
-        - `Usage: scripts/check_parity_preflight_matrix_smoke_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract.sh [--json]`
+        - `Usage: scripts/check_parity_preflight_matrix_smoke_contract_14.sh [--json]`
     - Added script to wrapper/docs coverage tracking:
       - `scripts/check_parity_wrappers.sh`
       - `scripts/check_parity_docs_wrapper_coverage.sh`
@@ -8004,7 +8004,7 @@ Commands used:
       - `docs/excelize-parity.md`
   - Validation gates:
     - `moon clean`
-    - `scripts/check_parity_preflight_matrix_smoke_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract.sh`
+    - `scripts/check_parity_preflight_matrix_smoke_contract_15.sh`
     - `scripts/check_parity_wrappers.sh`
     - `scripts/check_parity_docs_wrapper_coverage.sh`
     - `scripts/check_parity_docs_refs.sh`
@@ -8017,7 +8017,7 @@ Commands used:
   - DoD: expose machine-readable contract-check results while preserving
     default plain output and exit semantics.
   - Delivered:
-    - Refactored `scripts/check_parity_preflight_matrix_smoke_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract.sh`:
+    - Refactored `scripts/check_parity_preflight_matrix_smoke_contract_15.sh`:
       - adds CLI parsing with `--json` support
       - emits structured JSON payload:
         - top-level `result` (`pass|fail`)
@@ -8025,14 +8025,14 @@ Commands used:
       - preserves plain-text pass/fail output in default mode
       - preserves non-zero exit on any failed check
       - validates invalid args with usage:
-        - `Usage: scripts/check_parity_preflight_matrix_smoke_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract.sh [--json]`
+        - `Usage: scripts/check_parity_preflight_matrix_smoke_contract_15.sh [--json]`
     - Updated docs for JSON mode usage:
       - `docs/parity-commands.md`
       - `docs/excelize-parity.md`
   - Validation gates:
     - `moon clean`
-    - `scripts/check_parity_preflight_matrix_smoke_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract.sh`
-    - `scripts/check_parity_preflight_matrix_smoke_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract.sh --json`
+    - `scripts/check_parity_preflight_matrix_smoke_contract_15.sh`
+    - `scripts/check_parity_preflight_matrix_smoke_contract_15.sh --json`
     - `scripts/check_parity_wrappers.sh`
     - `scripts/check_parity_docs_wrapper_coverage.sh`
     - `scripts/check_parity_docs_refs.sh`
@@ -8047,15 +8047,15 @@ Commands used:
     wrapper/docs coverage.
   - Delivered:
     - Added executable script:
-      - `scripts/check_parity_preflight_matrix_smoke_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract.sh`
+      - `scripts/check_parity_preflight_matrix_smoke_contract_16.sh`
     - Contract checker validates:
-      - `scripts/check_parity_preflight_matrix_smoke_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract.sh --json` contains:
+      - `scripts/check_parity_preflight_matrix_smoke_contract_15.sh --json` contains:
         - top-level `result` in `pass|fail`
         - top-level `checks` list
         - per-entry `check`, `ok`, `detail` fields with expected types
         - required check names for pattern and matrix-smoke-contract-contract-contract-contract-contract-contract-contract-contract-contract-contract-contract-contract-contract-contract-contract schema checks
       - invalid args return code `2` with usage:
-        - `Usage: scripts/check_parity_preflight_matrix_smoke_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract.sh [--json]`
+        - `Usage: scripts/check_parity_preflight_matrix_smoke_contract_15.sh [--json]`
     - Added script to wrapper/docs coverage tracking:
       - `scripts/check_parity_wrappers.sh`
       - `scripts/check_parity_docs_wrapper_coverage.sh`
@@ -8064,7 +8064,7 @@ Commands used:
       - `docs/excelize-parity.md`
   - Validation gates:
     - `moon clean`
-    - `scripts/check_parity_preflight_matrix_smoke_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract.sh`
+    - `scripts/check_parity_preflight_matrix_smoke_contract_16.sh`
     - `scripts/check_parity_wrappers.sh`
     - `scripts/check_parity_docs_wrapper_coverage.sh`
     - `scripts/check_parity_docs_refs.sh`
@@ -8077,7 +8077,7 @@ Commands used:
   - DoD: expose machine-readable contract-check results while preserving
     default plain output and exit semantics.
   - Delivered:
-    - Refactored `scripts/check_parity_preflight_matrix_smoke_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract.sh`:
+    - Refactored `scripts/check_parity_preflight_matrix_smoke_contract_16.sh`:
       - adds CLI parsing with `--json` support
       - emits structured JSON payload:
         - top-level `result` (`pass|fail`)
@@ -8085,14 +8085,14 @@ Commands used:
       - preserves plain-text pass/fail output in default mode
       - preserves non-zero exit on any failed check
       - validates invalid args with usage:
-        - `Usage: scripts/check_parity_preflight_matrix_smoke_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract.sh [--json]`
+        - `Usage: scripts/check_parity_preflight_matrix_smoke_contract_16.sh [--json]`
     - Updated docs for JSON mode usage:
       - `docs/parity-commands.md`
       - `docs/excelize-parity.md`
   - Validation gates:
     - `moon clean`
-    - `scripts/check_parity_preflight_matrix_smoke_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract.sh`
-    - `scripts/check_parity_preflight_matrix_smoke_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract.sh --json`
+    - `scripts/check_parity_preflight_matrix_smoke_contract_16.sh`
+    - `scripts/check_parity_preflight_matrix_smoke_contract_16.sh --json`
     - `scripts/check_parity_wrappers.sh`
     - `scripts/check_parity_docs_wrapper_coverage.sh`
     - `scripts/check_parity_docs_refs.sh`
@@ -8107,15 +8107,15 @@ Commands used:
     wrapper/docs coverage.
   - Delivered:
     - Added executable script:
-      - `scripts/check_parity_preflight_matrix_smoke_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract.sh`
+      - `scripts/check_parity_preflight_matrix_smoke_contract_17.sh`
     - Contract checker validates:
-      - `scripts/check_parity_preflight_matrix_smoke_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract.sh --json` contains:
+      - `scripts/check_parity_preflight_matrix_smoke_contract_16.sh --json` contains:
         - top-level `result` in `pass|fail`
         - top-level `checks` list
         - per-entry `check`, `ok`, `detail` fields with expected types
         - required check names for pattern and matrix-smoke-contract-contract-contract-contract-contract-contract-contract-contract-contract-contract-contract-contract-contract-contract-contract-contract schema checks
       - invalid args return code `2` with usage:
-        - `Usage: scripts/check_parity_preflight_matrix_smoke_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract.sh [--json]`
+        - `Usage: scripts/check_parity_preflight_matrix_smoke_contract_16.sh [--json]`
     - Added script to wrapper/docs coverage tracking:
       - `scripts/check_parity_wrappers.sh`
       - `scripts/check_parity_docs_wrapper_coverage.sh`
@@ -8124,7 +8124,7 @@ Commands used:
       - `docs/excelize-parity.md`
   - Validation gates:
     - `moon clean`
-    - `scripts/check_parity_preflight_matrix_smoke_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract.sh`
+    - `scripts/check_parity_preflight_matrix_smoke_contract_17.sh`
     - `scripts/check_parity_wrappers.sh`
     - `scripts/check_parity_docs_wrapper_coverage.sh`
     - `scripts/check_parity_docs_refs.sh`
@@ -8137,7 +8137,7 @@ Commands used:
   - DoD: expose machine-readable contract-check results while preserving
     default plain output and exit semantics.
   - Delivered:
-    - Refactored `scripts/check_parity_preflight_matrix_smoke_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract.sh`:
+    - Refactored `scripts/check_parity_preflight_matrix_smoke_contract_17.sh`:
       - adds CLI parsing with `--json` support
       - emits structured JSON payload:
         - top-level `result` (`pass|fail`)
@@ -8145,14 +8145,14 @@ Commands used:
       - preserves plain-text pass/fail output in default mode
       - preserves non-zero exit on any failed check
       - validates invalid args with usage:
-        - `Usage: scripts/check_parity_preflight_matrix_smoke_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract.sh [--json]`
+        - `Usage: scripts/check_parity_preflight_matrix_smoke_contract_17.sh [--json]`
     - Updated docs for JSON mode usage:
       - `docs/parity-commands.md`
       - `docs/excelize-parity.md`
   - Validation gates:
     - `moon clean`
-    - `scripts/check_parity_preflight_matrix_smoke_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract.sh`
-    - `scripts/check_parity_preflight_matrix_smoke_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract.sh --json`
+    - `scripts/check_parity_preflight_matrix_smoke_contract_17.sh`
+    - `scripts/check_parity_preflight_matrix_smoke_contract_17.sh --json`
     - `scripts/check_parity_wrappers.sh`
     - `scripts/check_parity_docs_wrapper_coverage.sh`
     - `scripts/check_parity_docs_refs.sh`
@@ -8167,15 +8167,15 @@ Commands used:
     wrapper/docs coverage.
   - Delivered:
     - Added executable script:
-      - `scripts/check_parity_preflight_matrix_smoke_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract.sh`
+      - `scripts/check_parity_preflight_matrix_smoke_contract_18.sh`
     - Contract checker validates:
-      - `scripts/check_parity_preflight_matrix_smoke_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract.sh --json` contains:
+      - `scripts/check_parity_preflight_matrix_smoke_contract_17.sh --json` contains:
         - top-level `result` in `pass|fail`
         - top-level `checks` list
         - per-entry `check`, `ok`, `detail` fields with expected types
         - required check names for pattern and matrix-smoke-contract-contract-contract-contract-contract-contract-contract-contract-contract-contract-contract-contract-contract-contract-contract-contract-contract schema checks
       - invalid args return code `2` with usage:
-        - `Usage: scripts/check_parity_preflight_matrix_smoke_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract.sh [--json]`
+        - `Usage: scripts/check_parity_preflight_matrix_smoke_contract_17.sh [--json]`
     - Added script to wrapper/docs coverage tracking:
       - `scripts/check_parity_wrappers.sh`
       - `scripts/check_parity_docs_wrapper_coverage.sh`
@@ -8184,7 +8184,7 @@ Commands used:
       - `docs/excelize-parity.md`
   - Validation gates:
     - `moon clean`
-    - `scripts/check_parity_preflight_matrix_smoke_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract.sh`
+    - `scripts/check_parity_preflight_matrix_smoke_contract_18.sh`
     - `scripts/check_parity_wrappers.sh`
     - `scripts/check_parity_docs_wrapper_coverage.sh`
     - `scripts/check_parity_docs_refs.sh`
@@ -8197,7 +8197,7 @@ Commands used:
   - DoD: expose machine-readable contract-check results while preserving
     default plain output and exit semantics.
   - Delivered:
-    - Refactored `scripts/check_parity_preflight_matrix_smoke_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract.sh`:
+    - Refactored `scripts/check_parity_preflight_matrix_smoke_contract_18.sh`:
       - adds CLI parsing with `--json` support
       - emits structured JSON payload:
         - top-level `result` (`pass|fail`)
@@ -8205,14 +8205,14 @@ Commands used:
       - preserves plain-text pass/fail output in default mode
       - preserves non-zero exit on any failed check
       - validates invalid args with usage:
-        - `Usage: scripts/check_parity_preflight_matrix_smoke_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract.sh [--json]`
+        - `Usage: scripts/check_parity_preflight_matrix_smoke_contract_18.sh [--json]`
     - Updated docs for JSON mode usage:
       - `docs/parity-commands.md`
       - `docs/excelize-parity.md`
   - Validation gates:
     - `moon clean`
-    - `scripts/check_parity_preflight_matrix_smoke_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract.sh`
-    - `scripts/check_parity_preflight_matrix_smoke_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract.sh --json`
+    - `scripts/check_parity_preflight_matrix_smoke_contract_18.sh`
+    - `scripts/check_parity_preflight_matrix_smoke_contract_18.sh --json`
     - `scripts/check_parity_wrappers.sh`
     - `scripts/check_parity_docs_wrapper_coverage.sh`
     - `scripts/check_parity_docs_refs.sh`
@@ -8227,15 +8227,15 @@ Commands used:
     wrapper/docs coverage.
   - Delivered:
     - Added executable script:
-      - `scripts/check_parity_preflight_matrix_smoke_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract.sh`
+      - `scripts/check_parity_preflight_matrix_smoke_contract_19.sh`
     - Contract checker validates:
-      - `scripts/check_parity_preflight_matrix_smoke_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract.sh --json` contains:
+      - `scripts/check_parity_preflight_matrix_smoke_contract_18.sh --json` contains:
         - top-level `result` in `pass|fail`
         - top-level `checks` list
         - per-entry `check`, `ok`, `detail` fields with expected types
         - required check names for pattern and matrix-smoke-contract-contract-contract-contract-contract-contract-contract-contract-contract-contract-contract-contract-contract-contract-contract-contract-contract-contract schema checks
       - invalid args return code `2` with usage:
-        - `Usage: scripts/check_parity_preflight_matrix_smoke_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract.sh [--json]`
+        - `Usage: scripts/check_parity_preflight_matrix_smoke_contract_18.sh [--json]`
     - Added script to wrapper/docs coverage tracking:
       - `scripts/check_parity_wrappers.sh`
       - `scripts/check_parity_docs_wrapper_coverage.sh`
@@ -8244,7 +8244,7 @@ Commands used:
       - `docs/excelize-parity.md`
   - Validation gates:
     - `moon clean`
-    - `scripts/check_parity_preflight_matrix_smoke_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract.sh`
+    - `scripts/check_parity_preflight_matrix_smoke_contract_19.sh`
     - `scripts/check_parity_wrappers.sh`
     - `scripts/check_parity_docs_wrapper_coverage.sh`
     - `scripts/check_parity_docs_refs.sh`
@@ -8257,7 +8257,7 @@ Commands used:
   - DoD: expose machine-readable contract-check results while preserving
     default plain output and exit semantics.
   - Delivered:
-    - Refactored `scripts/check_parity_preflight_matrix_smoke_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract.sh`:
+    - Refactored `scripts/check_parity_preflight_matrix_smoke_contract_19.sh`:
       - adds CLI parsing with `--json` support
       - emits structured JSON payload:
         - top-level `result` (`pass|fail`)
@@ -8265,14 +8265,14 @@ Commands used:
       - preserves plain-text pass/fail output in default mode
       - preserves non-zero exit on any failed check
       - validates invalid args with usage:
-        - `Usage: scripts/check_parity_preflight_matrix_smoke_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract.sh [--json]`
+        - `Usage: scripts/check_parity_preflight_matrix_smoke_contract_19.sh [--json]`
     - Updated docs for JSON mode usage:
       - `docs/parity-commands.md`
       - `docs/excelize-parity.md`
   - Validation gates:
     - `moon clean`
-    - `scripts/check_parity_preflight_matrix_smoke_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract.sh`
-    - `scripts/check_parity_preflight_matrix_smoke_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract.sh --json`
+    - `scripts/check_parity_preflight_matrix_smoke_contract_19.sh`
+    - `scripts/check_parity_preflight_matrix_smoke_contract_19.sh --json`
     - `scripts/check_parity_wrappers.sh`
     - `scripts/check_parity_docs_wrapper_coverage.sh`
     - `scripts/check_parity_docs_refs.sh`
@@ -8287,15 +8287,15 @@ Commands used:
     wrapper/docs coverage.
   - Delivered:
     - Added executable script:
-      - `scripts/check_parity_preflight_matrix_smoke_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract.sh`
+      - `scripts/check_parity_preflight_matrix_smoke_contract_20.sh`
     - Contract checker validates:
-      - `scripts/check_parity_preflight_matrix_smoke_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract.sh --json` contains:
+      - `scripts/check_parity_preflight_matrix_smoke_contract_19.sh --json` contains:
         - top-level `result` in `pass|fail`
         - top-level `checks` list
         - per-entry `check`, `ok`, `detail` fields with expected types
         - required check names for pattern and matrix-smoke-contract-contract-contract-contract-contract-contract-contract-contract-contract-contract-contract-contract-contract-contract-contract-contract-contract-contract-contract schema checks
       - invalid args return code `2` with usage:
-        - `Usage: scripts/check_parity_preflight_matrix_smoke_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract.sh [--json]`
+        - `Usage: scripts/check_parity_preflight_matrix_smoke_contract_19.sh [--json]`
     - Added script to wrapper/docs coverage tracking:
       - `scripts/check_parity_wrappers.sh`
       - `scripts/check_parity_docs_wrapper_coverage.sh`
@@ -8304,7 +8304,7 @@ Commands used:
       - `docs/excelize-parity.md`
   - Validation gates:
     - `moon clean`
-    - `scripts/check_parity_preflight_matrix_smoke_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract.sh`
+    - `scripts/check_parity_preflight_matrix_smoke_contract_20.sh`
     - `scripts/check_parity_wrappers.sh`
     - `scripts/check_parity_docs_wrapper_coverage.sh`
     - `scripts/check_parity_docs_refs.sh`
@@ -8317,7 +8317,7 @@ Commands used:
   - DoD: expose machine-readable contract-check results while preserving
     default plain output and exit semantics.
   - Delivered:
-    - Refactored `scripts/check_parity_preflight_matrix_smoke_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract.sh`:
+    - Refactored `scripts/check_parity_preflight_matrix_smoke_contract_20.sh`:
       - adds CLI parsing with `--json` support
       - emits structured JSON payload:
         - top-level `result` (`pass|fail`)
@@ -8325,14 +8325,14 @@ Commands used:
       - preserves plain-text pass/fail output in default mode
       - preserves non-zero exit on any failed check
       - validates invalid args with usage:
-        - `Usage: scripts/check_parity_preflight_matrix_smoke_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract.sh [--json]`
+        - `Usage: scripts/check_parity_preflight_matrix_smoke_contract_20.sh [--json]`
     - Updated docs for JSON mode usage:
       - `docs/parity-commands.md`
       - `docs/excelize-parity.md`
   - Validation gates:
     - `moon clean`
-    - `scripts/check_parity_preflight_matrix_smoke_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract.sh`
-    - `scripts/check_parity_preflight_matrix_smoke_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract.sh --json`
+    - `scripts/check_parity_preflight_matrix_smoke_contract_20.sh`
+    - `scripts/check_parity_preflight_matrix_smoke_contract_20.sh --json`
     - `scripts/check_parity_wrappers.sh`
     - `scripts/check_parity_docs_wrapper_coverage.sh`
     - `scripts/check_parity_docs_refs.sh`
@@ -8347,15 +8347,15 @@ Commands used:
     wrapper/docs coverage.
   - Delivered:
     - Added executable script:
-      - `scripts/check_parity_preflight_matrix_smoke_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract.sh`
+      - `scripts/check_parity_preflight_matrix_smoke_contract_21.sh`
     - Contract checker validates:
-      - `scripts/check_parity_preflight_matrix_smoke_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract.sh --json` contains:
+      - `scripts/check_parity_preflight_matrix_smoke_contract_20.sh --json` contains:
         - top-level `result` in `pass|fail`
         - top-level `checks` list
         - per-entry `check`, `ok`, `detail` fields with expected types
         - required check names for pattern and matrix-smoke-contract-contract-contract-contract-contract-contract-contract-contract-contract-contract-contract-contract-contract-contract-contract-contract-contract-contract-contract-contract schema checks
       - invalid args return code `2` with usage:
-        - `Usage: scripts/check_parity_preflight_matrix_smoke_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract.sh [--json]`
+        - `Usage: scripts/check_parity_preflight_matrix_smoke_contract_20.sh [--json]`
     - Added script to wrapper/docs coverage tracking:
       - `scripts/check_parity_wrappers.sh`
       - `scripts/check_parity_docs_wrapper_coverage.sh`
@@ -8364,7 +8364,7 @@ Commands used:
       - `docs/excelize-parity.md`
   - Validation gates:
     - `moon clean`
-    - `scripts/check_parity_preflight_matrix_smoke_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract.sh`
+    - `scripts/check_parity_preflight_matrix_smoke_contract_21.sh`
     - `scripts/check_parity_wrappers.sh`
     - `scripts/check_parity_docs_wrapper_coverage.sh`
     - `scripts/check_parity_docs_refs.sh`
@@ -8377,7 +8377,7 @@ Commands used:
   - DoD: expose machine-readable contract-check results while preserving
     default plain output and exit semantics.
   - Delivered:
-    - Refactored `scripts/check_parity_preflight_matrix_smoke_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract.sh`:
+    - Refactored `scripts/check_parity_preflight_matrix_smoke_contract_21.sh`:
       - adds CLI parsing with `--json` support
       - emits structured JSON payload:
         - top-level `result` (`pass|fail`)
@@ -8385,14 +8385,14 @@ Commands used:
       - preserves plain-text pass/fail output in default mode
       - preserves non-zero exit on any failed check
       - validates invalid args with usage:
-        - `Usage: scripts/check_parity_preflight_matrix_smoke_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract.sh [--json]`
+        - `Usage: scripts/check_parity_preflight_matrix_smoke_contract_21.sh [--json]`
     - Updated docs for JSON mode usage:
       - `docs/parity-commands.md`
       - `docs/excelize-parity.md`
   - Validation gates:
     - `moon clean`
-    - `scripts/check_parity_preflight_matrix_smoke_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract.sh`
-    - `scripts/check_parity_preflight_matrix_smoke_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract.sh --json`
+    - `scripts/check_parity_preflight_matrix_smoke_contract_21.sh`
+    - `scripts/check_parity_preflight_matrix_smoke_contract_21.sh --json`
     - `scripts/check_parity_wrappers.sh`
     - `scripts/check_parity_docs_wrapper_coverage.sh`
     - `scripts/check_parity_docs_refs.sh`
@@ -8407,15 +8407,15 @@ Commands used:
     wrapper/docs coverage.
   - Delivered:
     - Added executable script:
-      - `scripts/check_parity_preflight_matrix_smoke_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract.sh`
+      - `scripts/check_parity_preflight_matrix_smoke_contract_22.sh`
     - Contract checker validates:
-      - `scripts/check_parity_preflight_matrix_smoke_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract.sh --json` contains:
+      - `scripts/check_parity_preflight_matrix_smoke_contract_21.sh --json` contains:
         - top-level `result` in `pass|fail`
         - top-level `checks` list
         - per-entry `check`, `ok`, `detail` fields with expected types
         - required check names for pattern and matrix-smoke-contract-contract-contract-contract-contract-contract-contract-contract-contract-contract-contract-contract-contract-contract-contract-contract-contract-contract-contract-contract-contract schema checks
       - invalid args return code `2` with usage:
-        - `Usage: scripts/check_parity_preflight_matrix_smoke_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract.sh [--json]`
+        - `Usage: scripts/check_parity_preflight_matrix_smoke_contract_21.sh [--json]`
     - Added script to wrapper/docs coverage tracking:
       - `scripts/check_parity_wrappers.sh`
       - `scripts/check_parity_docs_wrapper_coverage.sh`
@@ -8424,7 +8424,7 @@ Commands used:
       - `docs/excelize-parity.md`
   - Validation gates:
     - `moon clean`
-    - `scripts/check_parity_preflight_matrix_smoke_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract.sh`
+    - `scripts/check_parity_preflight_matrix_smoke_contract_22.sh`
     - `scripts/check_parity_wrappers.sh`
     - `scripts/check_parity_docs_wrapper_coverage.sh`
     - `scripts/check_parity_docs_refs.sh`
@@ -8437,7 +8437,7 @@ Commands used:
   - DoD: expose machine-readable contract-check results while preserving
     default plain output and exit semantics.
   - Delivered:
-    - Refactored `scripts/check_parity_preflight_matrix_smoke_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract.sh`:
+    - Refactored `scripts/check_parity_preflight_matrix_smoke_contract_22.sh`:
       - adds CLI parsing with `--json` support
       - emits structured JSON payload:
         - top-level `result` (`pass|fail`)
@@ -8445,14 +8445,14 @@ Commands used:
       - preserves plain-text pass/fail output in default mode
       - preserves non-zero exit on any failed check
       - validates invalid args with usage:
-        - `Usage: scripts/check_parity_preflight_matrix_smoke_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract.sh [--json]`
+        - `Usage: scripts/check_parity_preflight_matrix_smoke_contract_22.sh [--json]`
     - Updated docs for JSON mode usage:
       - `docs/parity-commands.md`
       - `docs/excelize-parity.md`
   - Validation gates:
     - `moon clean`
-    - `scripts/check_parity_preflight_matrix_smoke_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract.sh`
-    - `scripts/check_parity_preflight_matrix_smoke_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract.sh --json`
+    - `scripts/check_parity_preflight_matrix_smoke_contract_22.sh`
+    - `scripts/check_parity_preflight_matrix_smoke_contract_22.sh --json`
     - `scripts/check_parity_wrappers.sh`
     - `scripts/check_parity_docs_wrapper_coverage.sh`
     - `scripts/check_parity_docs_refs.sh`
@@ -8467,15 +8467,15 @@ Commands used:
     wrapper/docs coverage.
   - Delivered:
     - Added executable script:
-      - `scripts/check_parity_preflight_matrix_smoke_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract.sh`
+      - `scripts/check_parity_preflight_matrix_smoke_contract_23.sh`
     - Contract checker validates:
-      - `scripts/check_parity_preflight_matrix_smoke_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract.sh --json` contains:
+      - `scripts/check_parity_preflight_matrix_smoke_contract_22.sh --json` contains:
         - top-level `result` in `pass|fail`
         - top-level `checks` list
         - per-entry `check`, `ok`, `detail` fields with expected types
         - required check names for pattern and matrix-smoke-contract-contract-contract-contract-contract-contract-contract-contract-contract-contract-contract-contract-contract-contract-contract-contract-contract-contract-contract-contract-contract-contract schema checks
       - invalid args return code `2` with usage:
-        - `Usage: scripts/check_parity_preflight_matrix_smoke_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract.sh [--json]`
+        - `Usage: scripts/check_parity_preflight_matrix_smoke_contract_22.sh [--json]`
     - Added script to wrapper/docs coverage tracking:
       - `scripts/check_parity_wrappers.sh`
       - `scripts/check_parity_docs_wrapper_coverage.sh`
@@ -8484,7 +8484,7 @@ Commands used:
       - `docs/excelize-parity.md`
   - Validation gates:
     - `moon clean`
-    - `scripts/check_parity_preflight_matrix_smoke_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract.sh`
+    - `scripts/check_parity_preflight_matrix_smoke_contract_23.sh`
     - `scripts/check_parity_wrappers.sh`
     - `scripts/check_parity_docs_wrapper_coverage.sh`
     - `scripts/check_parity_docs_refs.sh`
@@ -8497,7 +8497,7 @@ Commands used:
   - DoD: expose machine-readable contract-check results while preserving
     default plain output and exit semantics.
   - Delivered:
-    - Refactored `scripts/check_parity_preflight_matrix_smoke_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract.sh`:
+    - Refactored `scripts/check_parity_preflight_matrix_smoke_contract_23.sh`:
       - adds CLI parsing with `--json` support
       - emits structured JSON payload:
         - top-level `result` (`pass|fail`)
@@ -8505,14 +8505,14 @@ Commands used:
       - preserves plain-text pass/fail output in default mode
       - preserves non-zero exit on any failed check
       - validates invalid args with usage:
-        - `Usage: scripts/check_parity_preflight_matrix_smoke_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract.sh [--json]`
+        - `Usage: scripts/check_parity_preflight_matrix_smoke_contract_23.sh [--json]`
     - Updated docs for JSON mode usage:
       - `docs/parity-commands.md`
       - `docs/excelize-parity.md`
   - Validation gates:
     - `moon clean`
-    - `scripts/check_parity_preflight_matrix_smoke_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract.sh`
-    - `scripts/check_parity_preflight_matrix_smoke_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract.sh --json`
+    - `scripts/check_parity_preflight_matrix_smoke_contract_23.sh`
+    - `scripts/check_parity_preflight_matrix_smoke_contract_23.sh --json`
     - `scripts/check_parity_wrappers.sh`
     - `scripts/check_parity_docs_wrapper_coverage.sh`
     - `scripts/check_parity_docs_refs.sh`
@@ -8527,15 +8527,15 @@ Commands used:
     wrapper/docs coverage.
   - Delivered:
     - Added executable script:
-      - `scripts/check_parity_preflight_matrix_smoke_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract.sh`
+      - `scripts/check_parity_preflight_matrix_smoke_contract_24.sh`
     - Contract checker validates:
-      - `scripts/check_parity_preflight_matrix_smoke_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract.sh --json` contains:
+      - `scripts/check_parity_preflight_matrix_smoke_contract_23.sh --json` contains:
         - top-level `result` in `pass|fail`
         - top-level `checks` list
         - per-entry `check`, `ok`, `detail` fields with expected types
         - required check names for pattern and matrix-smoke-contract-contract-contract-contract-contract-contract-contract-contract-contract-contract-contract-contract-contract-contract-contract-contract-contract-contract-contract-contract-contract-contract-contract schema checks
       - invalid args return code `2` with usage:
-        - `Usage: scripts/check_parity_preflight_matrix_smoke_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract.sh [--json]`
+        - `Usage: scripts/check_parity_preflight_matrix_smoke_contract_23.sh [--json]`
     - Added script to wrapper/docs coverage tracking:
       - `scripts/check_parity_wrappers.sh`
       - `scripts/check_parity_docs_wrapper_coverage.sh`
@@ -8544,7 +8544,7 @@ Commands used:
       - `docs/excelize-parity.md`
   - Validation gates:
     - `moon clean`
-    - `scripts/check_parity_preflight_matrix_smoke_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract.sh`
+    - `scripts/check_parity_preflight_matrix_smoke_contract_24.sh`
     - `scripts/check_parity_wrappers.sh`
     - `scripts/check_parity_docs_wrapper_coverage.sh`
     - `scripts/check_parity_docs_refs.sh`
@@ -8557,7 +8557,7 @@ Commands used:
   - DoD: expose machine-readable contract-check results while preserving
     default plain output and exit semantics.
   - Delivered:
-    - Refactored `scripts/check_parity_preflight_matrix_smoke_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract.sh`:
+    - Refactored `scripts/check_parity_preflight_matrix_smoke_contract_24.sh`:
       - adds CLI parsing with `--json` support
       - emits structured JSON payload:
         - top-level `result` (`pass|fail`)
@@ -8565,14 +8565,14 @@ Commands used:
       - preserves plain-text pass/fail output in default mode
       - preserves non-zero exit on any failed check
       - validates invalid args with usage:
-        - `Usage: scripts/check_parity_preflight_matrix_smoke_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract.sh [--json]`
+        - `Usage: scripts/check_parity_preflight_matrix_smoke_contract_24.sh [--json]`
     - Updated docs for JSON mode usage:
       - `docs/parity-commands.md`
       - `docs/excelize-parity.md`
   - Validation gates:
     - `moon clean`
-    - `scripts/check_parity_preflight_matrix_smoke_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract.sh`
-    - `scripts/check_parity_preflight_matrix_smoke_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract.sh --json`
+    - `scripts/check_parity_preflight_matrix_smoke_contract_24.sh`
+    - `scripts/check_parity_preflight_matrix_smoke_contract_24.sh --json`
     - `scripts/check_parity_wrappers.sh`
     - `scripts/check_parity_docs_wrapper_coverage.sh`
     - `scripts/check_parity_docs_refs.sh`
@@ -8589,13 +8589,13 @@ Commands used:
     - Added executable script:
       - `scripts/check_parity_preflight_matrix_smoke_contract_x25.sh`
     - Contract checker validates:
-      - `scripts/check_parity_preflight_matrix_smoke_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract.sh --json` contains:
+      - `scripts/check_parity_preflight_matrix_smoke_contract_24.sh --json` contains:
         - top-level `result` in `pass|fail`
         - top-level `checks` list
         - per-entry `check`, `ok`, `detail` fields with expected types
         - required check names for pattern and matrix-smoke-contract-contract-contract-contract-contract-contract-contract-contract-contract-contract-contract-contract-contract-contract-contract-contract-contract-contract-contract-contract-contract-contract-contract-contract schema checks
       - invalid args return code `2` with usage:
-        - `Usage: scripts/check_parity_preflight_matrix_smoke_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract.sh [--json]`
+        - `Usage: scripts/check_parity_preflight_matrix_smoke_contract_24.sh [--json]`
     - Added script to wrapper/docs coverage tracking:
       - `scripts/check_parity_wrappers.sh`
       - `scripts/check_parity_docs_wrapper_coverage.sh`

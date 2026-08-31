@@ -151,98 +151,98 @@ if [[ "$SKIP_PREFLIGHT_MATRIX_SMOKE_CONTRACT_PREFLIGHT" == "1" ]]; then
   echo "==> parity preflight matrix smoke contract preflight (skipped)"
 else
   echo "==> parity preflight matrix smoke contract preflight"
-  scripts/check_parity_preflight_matrix_smoke_contract.sh
+  scripts/check_parity_preflight_matrix_smoke_contract_1.sh
 fi
 
 if [[ "$SKIP_PREFLIGHT_MATRIX_SMOKE_CONTRACT_CONTRACT_PREFLIGHT" == "1" ]]; then
   echo "==> parity preflight matrix smoke contract-contract preflight (skipped)"
 else
   echo "==> parity preflight matrix smoke contract-contract preflight"
-  scripts/check_parity_preflight_matrix_smoke_contract_contract.sh
+  scripts/check_parity_preflight_matrix_smoke_contract_2.sh
 fi
 
 if [[ "$SKIP_PREFLIGHT_MATRIX_SMOKE_CONTRACT_CONTRACT_CONTRACT_PREFLIGHT" == "1" ]]; then
   echo "==> parity preflight matrix smoke contract-contract-contract preflight (skipped)"
 else
   echo "==> parity preflight matrix smoke contract-contract-contract preflight"
-  scripts/check_parity_preflight_matrix_smoke_contract_contract_contract.sh
+  scripts/check_parity_preflight_matrix_smoke_contract_3.sh
 fi
 
 if [[ "$SKIP_PREFLIGHT_MATRIX_SMOKE_CONTRACT_CONTRACT_CONTRACT_CONTRACT_PREFLIGHT" == "1" ]]; then
   echo "==> parity preflight matrix smoke contract-contract-contract-contract preflight (skipped)"
 else
   echo "==> parity preflight matrix smoke contract-contract-contract-contract preflight"
-  scripts/check_parity_preflight_matrix_smoke_contract_contract_contract_contract.sh
+  scripts/check_parity_preflight_matrix_smoke_contract_4.sh
 fi
 
 if [[ "$SKIP_PREFLIGHT_MATRIX_SMOKE_CONTRACT_CONTRACT_CONTRACT_CONTRACT_CONTRACT_PREFLIGHT" == "1" ]]; then
   echo "==> parity preflight matrix smoke contract-contract-contract-contract-contract preflight (skipped)"
 else
   echo "==> parity preflight matrix smoke contract-contract-contract-contract-contract preflight"
-  scripts/check_parity_preflight_matrix_smoke_contract_contract_contract_contract_contract.sh
+  scripts/check_parity_preflight_matrix_smoke_contract_5.sh
 fi
 
 if [[ "$SKIP_PREFLIGHT_MATRIX_SMOKE_CONTRACT_CONTRACT_CONTRACT_CONTRACT_CONTRACT_CONTRACT_PREFLIGHT" == "1" ]]; then
   echo "==> parity preflight matrix smoke contract-contract-contract-contract-contract-contract preflight (skipped)"
 else
   echo "==> parity preflight matrix smoke contract-contract-contract-contract-contract-contract preflight"
-  scripts/check_parity_preflight_matrix_smoke_contract_contract_contract_contract_contract_contract.sh
+  scripts/check_parity_preflight_matrix_smoke_contract_6.sh
 fi
 
 if [[ "$SKIP_PREFLIGHT_MATRIX_SMOKE_CONTRACT_CONTRACT_CONTRACT_CONTRACT_CONTRACT_CONTRACT_CONTRACT_PREFLIGHT" == "1" ]]; then
   echo "==> parity preflight matrix smoke contract-contract-contract-contract-contract-contract-contract preflight (skipped)"
 else
   echo "==> parity preflight matrix smoke contract-contract-contract-contract-contract-contract-contract preflight"
-  scripts/check_parity_preflight_matrix_smoke_contract_contract_contract_contract_contract_contract_contract.sh
+  scripts/check_parity_preflight_matrix_smoke_contract_7.sh
 fi
 
 if [[ "$SKIP_PREFLIGHT_MATRIX_SMOKE_CONTRACT_CONTRACT_CONTRACT_CONTRACT_CONTRACT_CONTRACT_CONTRACT_CONTRACT_PREFLIGHT" == "1" ]]; then
   echo "==> parity preflight matrix smoke contract-contract-contract-contract-contract-contract-contract-contract preflight (skipped)"
 else
   echo "==> parity preflight matrix smoke contract-contract-contract-contract-contract-contract-contract-contract preflight"
-  scripts/check_parity_preflight_matrix_smoke_contract_contract_contract_contract_contract_contract_contract_contract.sh
+  scripts/check_parity_preflight_matrix_smoke_contract_8.sh
 fi
 
 if [[ "$SKIP_PREFLIGHT_MATRIX_SMOKE_CONTRACT_CONTRACT_CONTRACT_CONTRACT_CONTRACT_CONTRACT_CONTRACT_CONTRACT_CONTRACT_PREFLIGHT" == "1" ]]; then
   echo "==> parity preflight matrix smoke contract-contract-contract-contract-contract-contract-contract-contract-contract preflight (skipped)"
 else
   echo "==> parity preflight matrix smoke contract-contract-contract-contract-contract-contract-contract-contract-contract preflight"
-  scripts/check_parity_preflight_matrix_smoke_contract_contract_contract_contract_contract_contract_contract_contract_contract.sh
+  scripts/check_parity_preflight_matrix_smoke_contract_9.sh
 fi
 
 if [[ "$SKIP_PREFLIGHT_MATRIX_SMOKE_CONTRACT_CONTRACT_CONTRACT_CONTRACT_CONTRACT_CONTRACT_CONTRACT_CONTRACT_CONTRACT_CONTRACT_PREFLIGHT" == "1" ]]; then
   echo "==> parity preflight matrix smoke contract-contract-contract-contract-contract-contract-contract-contract-contract-contract preflight (skipped)"
 else
   echo "==> parity preflight matrix smoke contract-contract-contract-contract-contract-contract-contract-contract-contract-contract preflight"
-  scripts/check_parity_preflight_matrix_smoke_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract.sh
+  scripts/check_parity_preflight_matrix_smoke_contract_10.sh
 fi
 
 if [[ "$SKIP_PREFLIGHT_MATRIX_SMOKE_CONTRACT_CONTRACT_CONTRACT_CONTRACT_CONTRACT_CONTRACT_CONTRACT_CONTRACT_CONTRACT_CONTRACT_CONTRACT_PREFLIGHT" == "1" ]]; then
   echo "==> parity preflight matrix smoke contract-contract-contract-contract-contract-contract-contract-contract-contract-contract-contract preflight (skipped)"
 else
   echo "==> parity preflight matrix smoke contract-contract-contract-contract-contract-contract-contract-contract-contract-contract-contract preflight"
-  scripts/check_parity_preflight_matrix_smoke_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract.sh
+  scripts/check_parity_preflight_matrix_smoke_contract_11.sh
 fi
 
 if [[ "$SKIP_PREFLIGHT_MATRIX_SMOKE_CONTRACT_CONTRACT_CONTRACT_CONTRACT_CONTRACT_CONTRACT_CONTRACT_CONTRACT_CONTRACT_CONTRACT_CONTRACT_CONTRACT_PREFLIGHT" == "1" ]]; then
   echo "==> parity preflight matrix smoke contract-contract-contract-contract-contract-contract-contract-contract-contract-contract-contract-contract preflight (skipped)"
 else
   echo "==> parity preflight matrix smoke contract-contract-contract-contract-contract-contract-contract-contract-contract-contract-contract-contract preflight"
-  scripts/check_parity_preflight_matrix_smoke_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract.sh
+  scripts/check_parity_preflight_matrix_smoke_contract_12.sh
 fi
 
 if [[ "$SKIP_PREFLIGHT_MATRIX_SMOKE_CONTRACT_CONTRACT_CONTRACT_CONTRACT_CONTRACT_CONTRACT_CONTRACT_CONTRACT_CONTRACT_CONTRACT_CONTRACT_CONTRACT_CONTRACT_PREFLIGHT" == "1" ]]; then
   echo "==> parity preflight matrix smoke contract-contract-contract-contract-contract-contract-contract-contract-contract-contract-contract-contract-contract preflight (skipped)"
 else
   echo "==> parity preflight matrix smoke contract-contract-contract-contract-contract-contract-contract-contract-contract-contract-contract-contract-contract preflight"
-  scripts/check_parity_preflight_matrix_smoke_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract.sh
+  scripts/check_parity_preflight_matrix_smoke_contract_13.sh
 fi
 
 if [[ "$SKIP_PREFLIGHT_MATRIX_SMOKE_CONTRACT_CONTRACT_CONTRACT_CONTRACT_CONTRACT_CONTRACT_CONTRACT_CONTRACT_CONTRACT_CONTRACT_CONTRACT_CONTRACT_CONTRACT_CONTRACT_PREFLIGHT" == "1" ]]; then
   echo "==> parity preflight matrix smoke contract-contract-contract-contract-contract-contract-contract-contract-contract-contract-contract-contract-contract-contract preflight (skipped)"
 else
   echo "==> parity preflight matrix smoke contract-contract-contract-contract-contract-contract-contract-contract-contract-contract-contract-contract-contract-contract preflight"
-  scripts/check_parity_preflight_matrix_smoke_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract.sh
+  scripts/check_parity_preflight_matrix_smoke_contract_14.sh
 fi
 
 if [[ "$SKIP_DOCS_PREFLIGHT" == "1" ]]; then
