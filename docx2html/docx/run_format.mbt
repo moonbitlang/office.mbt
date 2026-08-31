@@ -989,6 +989,16 @@ fn classify_rpr_children(
             message="run formatting refuses an rPr whose children are out of schema order",
           )
         }
+        // EVERY ranked CT_RPr property is an empty element in the
+        // schema — the attribute-only ones (rFonts, sz, lang, bdr, …)
+        // just as much as the on/off ones. A child inside one is
+        // content this engine cannot account for, and the reader would
+        // not walk into it either.
+        guard !child.has_element_children else {
+          raise Unsupported(
+            message="run formatting refuses a non-leaf \{child.name} property",
+          )
+        }
         last_rank = rank
       }
       None =>
