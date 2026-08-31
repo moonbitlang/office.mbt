@@ -897,6 +897,7 @@ fn docx_format_paragraph_provenance(
   // contain a large subtree, and every carrier inside it would
   // otherwise re-read and re-store that whole text.
   let signatures : Map[Int, String] = Map([])
+  let paths : Map[Int, String] = Map([])
   let run_offsets : Map[Int, Int] = Map([])
   for contribution in paragraph.contributions {
     guard contribution.run_source is Some(SourceElementId(owner)) else {
@@ -996,6 +997,7 @@ fn docx_format_paragraph_provenance(
       paragraph_head_identity,
       run_offsets~,
       signatures~,
+      paths~,
     )
     silent.push(
       "\{owner_path}\u{1}\{format_surgery_decode(bytes[entry.byte_start:entry.byte_end])}\u{1}\{docx_format_binding_digest(bytes, elements, carrier_identity)}",
@@ -1030,6 +1032,7 @@ fn docx_format_paragraph_provenance(
         paragraph_head_identity,
         run_offsets~,
         signatures~,
+        paths~,
       ),
     )
     mark_builder.write_string("=")
@@ -1668,11 +1671,14 @@ fn docx_format_run_signature(
 }
 
 ///|
-/// A carrier's key within the paragraph: each ancestor step,
-/// namespace-QUALIFIED (a foreign `sdtEndPr` is not the WML one), and
-/// with a RUN step keyed by what it contains rather than by its
-/// ordinal — splitting renumbers runs, and a carrier nested inside one
-/// must survive that unchanged.
+/// A carrier's key within the paragraph: the ancestor path, built ONCE
+/// per element by extending its parent's, and carried as a bounded
+/// fingerprint. Each step is namespace-QUALIFIED (a foreign
+/// `sdtEndPr` is not the WML one), and a RUN step is keyed by where it
+/// sits and what it holds rather than by its ordinal — splitting
+/// renumbers runs, and a carrier nested inside one must survive that
+/// unchanged. Paths can be deep and carriers many, so neither the path
+/// nor its text is stored per carrier.
 fn docx_format_carrier_key(
   bytes : BytesView,
   elements : Array[ScannedElement],
@@ -1680,37 +1686,81 @@ fn docx_format_carrier_key(
   stop_identity : Int,
   run_offsets~ : Map[Int, Int],
   signatures~ : Map[Int, String],
+  paths~ : Map[Int, String],
 ) -> String raise DocxError {
-  let steps : Array[String] = []
-  let mut at = element_identity
-  while at >= 0 && at < elements.length() && at != stop_identity {
-    let entry = elements[at]
-    if is_wml_uri(entry.uri) && entry.local_name == "r" {
-      // A run step carries WHERE it sits as well as what it holds:
-      // two runs with identical content are different occurrences, and
-      // formatting moving between them must not read as unchanged. The
-      // position is a PROJECTION offset, which splitting preserves —
-      // and a run holding a carrier is never split, because the
-      // splitter refuses anything but properties and mapped text.
-      let offset = run_offsets.get(at).unwrap_or(-1)
-      steps.push(
-        "r@\{offset}#{\{docx_format_run_signature_key(bytes, elements, at, signatures~)}}",
+  docx_format_fingerprint(
+    docx_format_carrier_path(
+      bytes,
+      elements,
+      element_identity,
+      stop_identity,
+      run_offsets~,
+      signatures~,
+      paths~,
+    ),
+  )
+}
+
+///|
+/// The ancestor path itself, memoized per element so a paragraph of
+/// many carriers under one deep ancestor pays for that ancestry once.
+fn docx_format_carrier_path(
+  bytes : BytesView,
+  elements : Array[ScannedElement],
+  element_identity : Int,
+  stop_identity : Int,
+  run_offsets~ : Map[Int, Int],
+  signatures~ : Map[Int, String],
+  paths~ : Map[Int, String],
+) -> String raise DocxError {
+  if element_identity < 0 ||
+    element_identity >= elements.length() ||
+    element_identity == stop_identity {
+    return ""
+  }
+  match paths.get(element_identity) {
+    Some(known) => known
+    None => {
+      let entry = elements[element_identity]
+      let step = if is_wml_uri(entry.uri) && entry.local_name == "r" {
+        let offset = run_offsets.get(element_identity).unwrap_or(-1)
+        let signature = docx_format_run_signature_key(
+          bytes,
+          elements,
+          element_identity,
+          signatures~,
+        )
+        "r@\{offset}#{\{signature}}"
+      } else {
+        "\{entry.uri}:\{entry.local_name}[\{entry.same_name_ordinal}]"
+      }
+      let parent = docx_format_carrier_path(
+        bytes,
+        elements,
+        entry.parent_index,
+        stop_identity,
+        run_offsets~,
+        signatures~,
+        paths~,
       )
-    } else {
-      steps.push("\{entry.uri}:\{entry.local_name}[\{entry.same_name_ordinal}]")
+      let path = if parent == "" { step } else { "\{parent}/\{step}" }
+      paths[element_identity] = path
+      path
     }
-    at = entry.parent_index
   }
-  let builder = StringBuilder()
-  let mut index = steps.length() - 1
-  while index >= 0 {
-    if index < steps.length() - 1 {
-      builder.write_string("/")
-    }
-    builder.write_string(steps[index])
-    index -= 1
+}
+
+///|
+/// A bounded fingerprint: length and an FNV-1a digest. Two texts differ
+/// in this exactly when a collision does not hide it, and the length is
+/// carried alongside so a collision must also match in size.
+fn docx_format_fingerprint(text : String) -> String {
+  let mut hash : UInt = 2166136261
+  for unit in text.code_units() {
+    hash = hash ^ unit.to_uint()
+    hash = hash * 16777619
   }
-  builder.to_string()
+  "\{text.length()}:\{hash}"
 }
 
 ///|
@@ -1729,16 +1779,7 @@ fn docx_format_run_signature_key(
     Some(known) => known
     None => {
       let signature = docx_format_run_signature(bytes, elements, run_identity)
-      // FNV-1a over the signature's units: two runs differ in this key
-      // exactly when a fingerprint collision does not hide it, and the
-      // length is carried alongside so a collision must also match in
-      // size.
-      let mut hash : UInt = 2166136261
-      for unit in signature.code_units() {
-        hash = hash ^ unit.to_uint()
-        hash = hash * 16777619
-      }
-      let key = "\{signature.length()}:\{hash}"
+      let key = docx_format_fingerprint(signature)
       signatures[run_identity] = key
       key
     }

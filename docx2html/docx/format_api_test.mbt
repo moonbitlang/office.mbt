@@ -2113,3 +2113,69 @@ test "format preservation stays bounded on a heavy run" {
     is Some(_),
   )
 }
+
+///|
+/// Round 19: a deep ancestry with many carriers under it must cost the
+/// ancestry once, not once per carrier — and the keys must still tell
+/// two different owners apart.
+test "format preservation stays bounded under deep ancestry" {
+  let wrappers = 40
+  let carriers = 3000
+  let inner = StringBuilder()
+  for _ in 0..<carriers {
+    inner.write_string("<w:rPr/>")
+  }
+  let nested = StringBuilder()
+  for _ in 0..<wrappers {
+    nested.write_string("<w:foo>")
+  }
+  nested.write_string(inner.to_string())
+  for _ in 0..<wrappers {
+    nested.write_string("</w:foo>")
+  }
+  let body = "<w:p><w:r>" +
+    nested.to_string() +
+    "</w:r><w:r><w:t>x</w:t></w:r></w:p>"
+  let before = format_fixture(body)
+  let (plan, receipt) = @docx.plan_docx_format(
+    before,
+    before.main_story_source(),
+    format=@docx.docx_direct_format(bold=true),
+    within="p[1]",
+    range=(0, 1),
+  )
+  assert_eq(receipt.runs_changed(), 1)
+  let after = format_apply(body, plan)
+  assert_eq(
+    @docx.docx_paragraph_format_preserved(
+      before,
+      before.main_story_source(),
+      after,
+      after.main_story_source(),
+      path="p[1]",
+      spans=[(0, 1)],
+      format=@docx.docx_direct_format(bold=true),
+    ),
+    None,
+  )
+  // Two owners at the same depth remain distinguishable: the
+  // content-control swap from the earlier witness still fails.
+  let controls_before = format_fixture(
+    "<w:p><w:sdt><w:sdtPr/><w:sdtEndPr><w:rPr><w:i/><w:iCs/></w:rPr></w:sdtEndPr><w:sdtContent><w:r><w:t>x</w:t></w:r></w:sdtContent></w:sdt><w:sdt><w:sdtPr/><w:sdtEndPr/><w:sdtContent><w:r><w:t>y</w:t></w:r></w:sdtContent></w:sdt><w:r><w:t>ab</w:t></w:r></w:p>",
+  )
+  let controls_moved = format_fixture(
+    "<w:p><w:sdt><w:sdtPr/><w:sdtEndPr/><w:sdtContent><w:r><w:t>x</w:t></w:r></w:sdtContent></w:sdt><w:sdt><w:sdtPr/><w:sdtEndPr><w:rPr><w:i/><w:iCs/></w:rPr></w:sdtEndPr><w:sdtContent><w:r><w:t>y</w:t></w:r></w:sdtContent></w:sdt><w:r><w:rPr><w:b/><w:bCs/></w:rPr><w:t>ab</w:t></w:r></w:p>",
+  )
+  assert_true(
+    @docx.docx_paragraph_format_preserved(
+      controls_before,
+      controls_before.main_story_source(),
+      controls_moved,
+      controls_moved.main_story_source(),
+      path="p[1]",
+      spans=[(2, 4)],
+      format=@docx.docx_direct_format(bold=true),
+    )
+    is Some(_),
+  )
+}
