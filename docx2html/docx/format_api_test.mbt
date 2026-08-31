@@ -572,6 +572,7 @@ test "format preservation readback catches formatting outside the span" {
       faithful.main_story_source(),
       path="p[1]",
       spans=[(0, 2)],
+      format=@docx.docx_direct_format(bold=true),
     ),
     None,
   )
@@ -604,6 +605,7 @@ test "format preservation readback catches formatting outside the span" {
       sabotaged.main_story_source(),
       path="p[1]",
       spans=[(0, 2)],
+      format=@docx.docx_direct_format(bold=true),
     )
     is Some(_),
   )
@@ -703,6 +705,7 @@ test "format preservation is per-unit, not per-run" {
       after.main_story_source(),
       path="p[1]",
       spans=[(2, 5)],
+      format=@docx.docx_direct_format(bold=true),
     ),
     None,
   )
@@ -727,6 +730,7 @@ test "format preservation is per-unit, not per-run" {
       satisfied_after.main_story_source(),
       path="p[1]",
       spans=[(2, 5)],
+      format=@docx.docx_direct_format(bold=true),
     ),
     None,
   )
@@ -745,6 +749,7 @@ test "format preservation is per-unit, not per-run" {
       collateral.main_story_source(),
       path="p[1]",
       spans=[(0, 2)],
+      format=@docx.docx_direct_format(bold=true),
     )
     is Some(_),
   )
@@ -755,19 +760,27 @@ test "format preservation is per-unit, not per-run" {
 /// answering for a claimant, and a binding they cannot vouch for is a
 /// discrepancy rather than a raise.
 test "format readbacks refuse what they cannot answer for" {
+  // BOTH claimants already satisfy the request, so a first-claimant
+  // regression would answer None: only the collision refusal can make
+  // this Some, and it must say so by name.
   let collided = format_fixture(
-    "<w:p><w:r><w:t>same</w:t></w:r><w:p><w:r><w:t>same</w:t></w:r></w:p></w:p>",
+    "<w:p><w:r><w:rPr><w:b/><w:bCs/></w:rPr><w:t>same</w:t></w:r><w:p><w:r><w:rPr><w:b/><w:bCs/></w:rPr><w:t>same</w:t></w:r></w:p></w:p>",
   )
+  let collided_verdict = @docx.docx_paragraph_direct_format(
+    collided,
+    collided.main_story_source(),
+    path="p[1]",
+    start=0,
+    end=4,
+    format=@docx.docx_direct_format(bold=true),
+  )
+  assert_true(collided_verdict is Some(_))
+  guard collided_verdict is Some(collided_message) else {
+    fail("expected a collision discrepancy")
+  }
   assert_true(
-    @docx.docx_paragraph_direct_format(
-      collided,
-      collided.main_story_source(),
-      path="p[1]",
-      start=0,
-      end=4,
-      format=@docx.docx_direct_format(bold=true),
-    )
-    is Some(_),
+    collided_message.contains("logical paragraphs"),
+    msg=collided_message,
   )
   assert_true(
     @docx.docx_paragraph_format_preserved(
@@ -777,6 +790,7 @@ test "format readbacks refuse what they cannot answer for" {
       collided.main_story_source(),
       path="p[1]",
       spans=[(0, 4)],
+      format=@docx.docx_direct_format(bold=true),
     )
     is Some(_),
   )
@@ -796,4 +810,110 @@ test "format readbacks refuse what they cannot answer for" {
     format=@docx.docx_direct_format(bold=true),
   )
   assert_true(verdict is Some(_))
+}
+
+///|
+/// Round 3's High: an omitted property means UNTOUCHED, so preservation
+/// must judge selected units too — only the properties the request
+/// names may differ there.
+test "format preservation guards unrelated properties inside spans" {
+  let before = format_fixture(
+    "<w:p><w:r><w:rPr><w:i/><w:iCs/></w:rPr><w:t>ab</w:t></w:r></w:p>",
+  )
+  // Bold arrives, italic vanishes: the projection is unchanged and
+  // bold really does hold, so only preservation can catch it.
+  let clobbered = format_fixture(
+    "<w:p><w:r><w:rPr><w:b/><w:bCs/></w:rPr><w:t>ab</w:t></w:r></w:p>",
+  )
+  assert_eq(
+    @docx.docx_paragraph_direct_format(
+      clobbered,
+      clobbered.main_story_source(),
+      path="p[1]",
+      start=0,
+      end=2,
+      format=@docx.docx_direct_format(bold=true),
+    ),
+    None,
+  )
+  assert_true(
+    @docx.docx_paragraph_format_preserved(
+      before,
+      before.main_story_source(),
+      clobbered,
+      clobbered.main_story_source(),
+      path="p[1]",
+      spans=[(0, 2)],
+      format=@docx.docx_direct_format(bold=true),
+    )
+    is Some(_),
+  )
+  // The faithful edit — bold added, italic kept — preserves.
+  let faithful = format_fixture(
+    "<w:p><w:r><w:rPr><w:b/><w:bCs/><w:i/><w:iCs/></w:rPr><w:t>ab</w:t></w:r></w:p>",
+  )
+  assert_eq(
+    @docx.docx_paragraph_format_preserved(
+      before,
+      before.main_story_source(),
+      faithful,
+      faithful.main_story_source(),
+      path="p[1]",
+      spans=[(0, 2)],
+      format=@docx.docx_direct_format(bold=true),
+    ),
+    None,
+  )
+  // And the real planner's own output preserves.
+  let body = "<w:p><w:r><w:rPr><w:i/><w:iCs/></w:rPr><w:t>abcd</w:t></w:r></w:p>"
+  let source_read = format_fixture(body)
+  let (plan, _) = @docx.plan_docx_format(
+    source_read,
+    source_read.main_story_source(),
+    format=@docx.docx_direct_format(bold=true),
+    within="p[1]",
+    range=(1, 3),
+  )
+  let planned = format_apply(body, plan)
+  assert_eq(
+    @docx.docx_paragraph_format_preserved(
+      source_read,
+      source_read.main_story_source(),
+      planned,
+      planned.main_story_source(),
+      path="p[1]",
+      spans=[(1, 3)],
+      format=@docx.docx_direct_format(bold=true),
+    ),
+    None,
+  )
+}
+
+///|
+/// Round 3's Medium: a split legitimately re-homes an empty text
+/// element into its own clone. That clone paints nothing, so it is not
+/// collateral and preservation must not false-fail on it.
+test "format preservation tolerates a split's empty text clone" {
+  let body = "<w:p><w:r><w:t></w:t><w:t>abc</w:t></w:r></w:p>"
+  let annotated = format_fixture(body)
+  let (plan, _) = @docx.plan_docx_format(
+    annotated,
+    annotated.main_story_source(),
+    format=@docx.docx_direct_format(bold=true),
+    within="p[1]",
+    range=(0, 1),
+  )
+  let after = format_apply(body, plan)
+  assert_eq(
+    @docx.docx_paragraph_format_preserved(
+      annotated,
+      annotated.main_story_source(),
+      after,
+      after.main_story_source(),
+      path="p[1]",
+      spans=[(0, 1)],
+      format=@docx.docx_direct_format(bold=true),
+    ),
+    None,
+  )
 }

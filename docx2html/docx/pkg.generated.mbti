@@ -42,7 +42,7 @@ pub fn docx_paragraph_anchor_join_index(DocxAnnotatedResult, DocxStoryPartSource
 
 pub fn docx_paragraph_direct_format(DocxAnnotatedResult, DocxStoryPartSource, path~ : String, start~ : Int, end~ : Int, format~ : DocxDirectFormat) -> String? raise @core.DocxError
 
-pub fn docx_paragraph_format_preserved(DocxAnnotatedResult, DocxStoryPartSource, DocxAnnotatedResult, DocxStoryPartSource, path~ : String, spans~ : Array[(Int, Int)]) -> String? raise @core.DocxError
+pub fn docx_paragraph_format_preserved(DocxAnnotatedResult, DocxStoryPartSource, DocxAnnotatedResult, DocxStoryPartSource, path~ : String, spans~ : Array[(Int, Int)], format~ : DocxDirectFormat) -> String? raise @core.DocxError
 
 pub fn docx_paragraph_projection(DocxAnnotatedResult, DocxStoryPartSource, path~ : String) -> String?
 

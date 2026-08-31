@@ -650,7 +650,13 @@ pub fn docx_paragraph_format_preserved(
   after_story : DocxStoryPartSource,
   path~ : String,
   spans~ : Array[(Int, Int)],
+  format~ : DocxDirectFormat,
 ) -> String? raise DocxError {
+  // Inside a span only the REQUESTED properties may differ: an
+  // omitted property means untouched, so a plan that dropped an
+  // unrelated one while setting bold must be caught even though the
+  // positive check passes and the projection is unchanged.
+  let touched = docx_format_touched_properties(format)
   guard docx_format_paragraph_provenance(before, before_story, path~)
     is Some((original_units, original_silent)) else {
     return Some("the path '\{path}' names no single paragraph before the edit")
@@ -672,7 +678,16 @@ pub fn docx_paragraph_format_preserved(
         selected = true
       }
     }
-    guard !selected else { continue }
+    if selected {
+      // The properties the request does NOT name must survive.
+      guard docx_format_without(original_units[unit], touched) ==
+        docx_format_without(result_units[unit], touched) else {
+        return Some(
+          "unit \{unit} of '\{path}' lost or gained a run property the request never named",
+        )
+      }
+      continue
+    }
     guard original_units[unit] == result_units[unit] else {
       return Some(
         "unit \{unit} of '\{path}' lies outside every requested span but its run properties changed",
@@ -766,6 +781,22 @@ fn docx_format_paragraph_provenance(
     }
     guard !projects else { continue }
     let SourceElementId(run_identity) = run.source
+    // A run holding only properties and EMPTY text elements paints
+    // nothing, and splitting legitimately creates one when a run began
+    // with an empty `w:t`. Only a run carrying something else — a note
+    // reference, a drawable — is collateral worth comparing.
+    let mut paints = false
+    let mut child = elements[run_identity].first_child_index
+    while child >= 0 {
+      let entry = elements[child]
+      let is_properties = is_wml_uri(entry.uri) && entry.local_name == "rPr"
+      let is_text = is_wml_uri(entry.uri) && entry.local_name == "t"
+      if !is_properties && !is_text {
+        paints = true
+      }
+      child = entry.next_sibling_index
+    }
+    guard paints else { continue }
     silent.push(
       docx_format_run_properties(bytes, elements, elements[run_identity]),
     )
@@ -794,4 +825,162 @@ fn docx_format_run_properties(
     child = entry.next_sibling_index
   }
   builder.to_string()
+}
+
+///|
+/// The rPr child names a request touches — the ONLY ones that may
+/// differ inside a selected span.
+fn docx_format_touched_properties(format : DocxDirectFormat) -> Array[String] {
+  let touched : Array[String] = []
+  if format.bold() is Some(_) {
+    touched.push("b")
+    touched.push("bCs")
+  }
+  if format.italic() is Some(_) {
+    touched.push("i")
+    touched.push("iCs")
+  }
+  if format.underline() is Some(_) {
+    touched.push("u")
+  }
+  if format.color() is Some(_) {
+    touched.push("color")
+  }
+  touched
+}
+
+///|
+/// One run's properties with the touched ones removed, as a comparable
+/// string: the `rPr` shell and every child the request does NOT name
+/// survive verbatim, so a difference anywhere else is still a
+/// difference.
+fn docx_format_without(
+  properties : String,
+  touched : Array[String],
+) -> String raise DocxError {
+  guard properties != "" else { return "" }
+  let bytes = @utf8.encode(properties)
+  docx_format_filter_region(bytes[:], 0, bytes.length(), touched)
+}
+
+///|
+/// Filter one region: text survives, an `rPr` shell is descended into,
+/// and any other element is dropped exactly when the request names it.
+fn docx_format_filter_region(
+  bytes : BytesView,
+  from : Int,
+  to : Int,
+  touched : Array[String],
+) -> String raise DocxError {
+  let builder = StringBuilder()
+  let mut at = from
+  while at < to {
+    if bytes[at] != b'<' {
+      builder.write_string(format_surgery_decode(bytes[at:at + 1]))
+      at += 1
+      continue
+    }
+    let name_start = at + 1
+    let mut name_end = name_start
+    while name_end < to &&
+          bytes[name_end] != b'>' &&
+          bytes[name_end] != b'/' &&
+          !is_xml_ws(bytes[name_end]) {
+      name_end += 1
+    }
+    let qname = format_surgery_decode(bytes[name_start:name_end])
+    let (_, property_name) = split_qname(qname)
+    // The open tag ends at the first '>' outside a quoted value.
+    let mut cursor = name_end
+    let mut quote = b'\x00'
+    while cursor < to {
+      let byte = bytes[cursor]
+      if quote != b'\x00' {
+        if byte == quote {
+          quote = b'\x00'
+        }
+      } else if byte == b'"' || byte == b'\'' {
+        quote = byte
+      } else if byte == b'>' {
+        break
+      }
+      cursor += 1
+    }
+    guard cursor < to else {
+      // Unparseable: keep the remainder verbatim rather than lose it.
+      builder.write_string(format_surgery_decode(bytes[at:to]))
+      return builder.to_string()
+    }
+    let open_end = cursor + 1
+    let self_closing = bytes[cursor - 1] == b'/'
+    if self_closing {
+      if !touched.contains(property_name) {
+        builder.write_string(format_surgery_decode(bytes[at:open_end]))
+      }
+      at = open_end
+      continue
+    }
+    // Paired element: find its matching close tag by depth over its own
+    // qualified name.
+    let close = "</\{qname}>"
+    let open_marker = "<\{qname}"
+    let mut depth = 1
+    let mut probe = open_end
+    let mut content_end = -1
+    while probe < to {
+      if bytes[probe] == b'<' {
+        if docx_format_matches_at(bytes, probe, close) {
+          depth -= 1
+          if depth == 0 {
+            content_end = probe
+            break
+          }
+          probe += close.length()
+          continue
+        }
+        if docx_format_matches_at(bytes, probe, open_marker) {
+          depth += 1
+        }
+      }
+      probe += 1
+    }
+    guard content_end >= 0 else {
+      builder.write_string(format_surgery_decode(bytes[at:to]))
+      return builder.to_string()
+    }
+    let element_end = content_end + close.length()
+    if property_name == "rPr" {
+      // An rPr that holds nothing but touched properties says the same
+      // as no rPr at all — otherwise a run that GAINED its first
+      // property would read as a change to properties nobody named.
+      let remaining = docx_format_filter_region(
+        bytes, open_end, content_end, touched,
+      )
+      if remaining.trim(chars=" \t\n\r").to_string() != "" {
+        builder.write_string(format_surgery_decode(bytes[at:open_end]))
+        builder.write_string(remaining)
+        builder.write_string(
+          format_surgery_decode(bytes[content_end:element_end]),
+        )
+      }
+    } else if !touched.contains(property_name) {
+      builder.write_string(format_surgery_decode(bytes[at:element_end]))
+    }
+    at = element_end
+  }
+  builder.to_string()
+}
+
+///|
+fn docx_format_matches_at(bytes : BytesView, at : Int, needle : String) -> Bool {
+  let units = needle.code_units()
+  if at + units.length() > bytes.length() {
+    return false
+  }
+  for index in 0..<units.length() {
+    if bytes[at + index].to_int() != units[index].to_int() {
+      return false
+    }
+  }
+  true
 }
