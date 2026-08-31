@@ -516,6 +516,49 @@ fn format_surgery_subtree_has_identity_attribute(
 }
 
 ///|
+/// One run's caller-vouched binding, read from the document itself: the
+/// prefix the run is SPELLED with, and the prefixes of any recognized
+/// rPr extension vocabularies, vouched by NAMESPACE URI from the scan
+/// rather than by spelling. Shared by the planner and the readback
+/// accessor so the two can never disagree about a binding.
+fn format_surgery_run_binding(
+  source : BytesView,
+  elements : Array[ScannedElement],
+  run_element : ScannedElement,
+  context : String,
+) -> (String, Array[String]) raise DocxError {
+  let run_prefix = format_surgery_element_prefix(source, run_element)
+  guard run_prefix != "" else {
+    raise format_surgery_refuse(
+      UnsupportedNamespaceBinding,
+      "\{context}: the run binds WML as its default namespace",
+    )
+  }
+  let extension_prefixes : Array[String] = []
+  let mut run_child = run_element.first_child_index
+  while run_child >= 0 {
+    let child = elements[run_child]
+    if is_wml_uri(child.uri) && child.local_name == "rPr" {
+      let mut rpr_child = child.first_child_index
+      while rpr_child >= 0 {
+        let entry = elements[rpr_child]
+        if format_extension_uri(entry.uri) {
+          let entry_prefix = format_surgery_element_prefix(source, entry)
+          if entry_prefix != run_prefix &&
+            entry_prefix != "" &&
+            !extension_prefixes.contains(entry_prefix) {
+            extension_prefixes.push(entry_prefix)
+          }
+        }
+        rpr_child = entry.next_sibling_index
+      }
+    }
+    run_child = child.next_sibling_index
+  }
+  (run_prefix, extension_prefixes)
+}
+
+///|
 /// One projecting piece of a run's mapped text, in `w:t`-local UTF-16
 /// coordinates, tagged with whether the batch covers it.
 priv struct FormatPiece {
@@ -595,6 +638,18 @@ fn plan_paragraph_format_edits(
   // The ordered projecting contributions with paragraph-local spans, and
   // the projection they concatenate to (the receipt's UNCHANGED
   // expectation).
+  // Which runs OTHER paragraphs claim, and which runs own each
+  // projected source — both indexed once. Scanning every other
+  // paragraph's runs for every part is cubic on a legal document.
+  let foreign_runs : Map[Int, Int] = Map([])
+  for other_index, other in projection.paragraphs {
+    if other_index != paragraph_index {
+      for candidate in other.runs {
+        let SourceElementId(candidate_identity) = candidate.source
+        foreign_runs[candidate_identity] = other_index
+      }
+    }
+  }
   let parts : Array[PartialProjectingPart] = []
   let before = StringBuilder()
   for contribution in paragraph.contributions {
@@ -608,6 +663,18 @@ fn plan_paragraph_format_edits(
     })
   }
   let before_projection = before.to_string()
+  // Which runs project each source, for the cross-paragraph check.
+  let owning_runs : Map[Int, Array[Int]] = Map([])
+  for part in parts {
+    let SourceElementId(source_identity) = part.contribution.source
+    guard part.contribution.run_source is Some(SourceElementId(owner)) else {
+      continue
+    }
+    match owning_runs.get(source_identity) {
+      Some(existing) => if !existing.contains(owner) { existing.push(owner) }
+      None => owning_runs[source_identity] = [owner]
+    }
+  }
   // Phase 3: structural restrictions, batch-wide.
   fn require_supported_run(
     run : ReaderProjectionRun,
@@ -664,16 +731,24 @@ fn plan_paragraph_format_edits(
     }
   }
 
+  // How many times each source projects, counted ONCE: rescanning
+  // every part per part is quadratic, and a run of many small text
+  // elements is legal.
+  let projection_counts : Map[Int, Int] = Map([])
+  for part in parts {
+    let SourceElementId(part_identity) = part.contribution.source
+    projection_counts[part_identity] = match
+      projection_counts.get(part_identity) {
+      Some(seen) => seen + 1
+      None => 1
+    }
+  }
   fn require_singly_projected(
     contribution : ReaderProjectionContribution,
     ordinal : Int,
   ) -> Unit raise DocxError {
-    let mut count = 0
-    for part in parts {
-      if part.contribution.source == contribution.source {
-        count += 1
-      }
-    }
+    let SourceElementId(source_identity) = contribution.source
+    let count = projection_counts.get(source_identity).unwrap_or(0)
     if count > 1 {
       raise format_surgery_refuse(
         FormatDuplicateSource,
@@ -682,6 +757,14 @@ fn plan_paragraph_format_edits(
     }
   }
 
+  // Runs by identity, indexed ONCE: resolving a part's run by scanning
+  // every run is quadratic, and a paragraph of many small runs is
+  // legal.
+  let run_by_identity : Map[Int, ReaderProjectionRun] = Map([])
+  for run in paragraph.runs {
+    let SourceElementId(run_identity) = run.source
+    run_by_identity[run_identity] = run
+  }
   fn resolve_run(
     run_source : SourceElementId?,
     ordinal : Int,
@@ -692,12 +775,8 @@ fn plan_paragraph_format_edits(
         "span \{ordinal} in paragraph \{paragraph_index} draws from content outside any run",
       )
     }
-    let mut found : ReaderProjectionRun? = None
-    for run in paragraph.runs {
-      if run.source == source_id {
-        found = Some(run)
-      }
-    }
+    let SourceElementId(wanted) = source_id
+    let found = run_by_identity.get(wanted)
     guard found is Some(run) else {
       raise format_surgery_refuse(
         FormatInternalPlanConflict,
@@ -732,25 +811,22 @@ fn plan_paragraph_format_edits(
         "span \{ordinal} in paragraph \{paragraph_index}: the addressed text paints inside a drawable",
       )
     }
-    for index, other in projection.paragraphs {
-      if index != paragraph_index {
-        for candidate in other.runs {
-          for part in parts {
-            if part.contribution.source == SourceElementId(identity) &&
-              part.contribution.run_source == Some(candidate.source) {
-              raise format_surgery_refuse(
-                FormatCrossParagraphSourceReuse,
-                "span \{ordinal} in paragraph \{paragraph_index} reuses a run of paragraph \{index}",
-              )
-            }
-          }
-        }
+    for owner in owning_runs.get(identity).unwrap_or([]) {
+      if foreign_runs.get(owner) is Some(index) {
+        raise format_surgery_refuse(
+          FormatCrossParagraphSourceReuse,
+          "span \{ordinal} in paragraph \{paragraph_index} reuses a run of paragraph \{index}",
+        )
       }
     }
   }
 
   // The set of touched runs, in first-touch order.
   let touched_runs : Array[ReaderProjectionRun] = []
+  // Membership by identity: a growing linear scan is quadratic when a
+  // span crosses many runs, and a paragraph of many small runs is
+  // legal.
+  let touched_seen : Map[Int, Bool] = Map([])
   for ordinal, span in requested {
     // Zero-width barriers strictly inside the span refuse.
     for contribution in paragraph.contributions {
@@ -844,13 +920,9 @@ fn plan_paragraph_format_edits(
           "span \{ordinal} in paragraph \{paragraph_index}",
         )
       }
-      let mut seen = false
-      for existing in touched_runs {
-        if existing.source == run.source {
-          seen = true
-        }
-      }
-      if !seen {
+      let SourceElementId(touched_identity) = run.source
+      if touched_seen.get(touched_identity) is None {
+        touched_seen[touched_identity] = true
         touched_runs.push(run)
       }
     }
@@ -938,6 +1010,64 @@ fn plan_paragraph_format_edits(
   // boundary between sibling runs (each run keeps its wrapper), but a
   // tolerated run whose OWN contributions cross hyperlink ancestry cannot
   // be mutated soundly.
+  //
+  // Contributions indexed by their owning run ONCE: walking the
+  // paragraph's whole list per touched run is quadratic, and a
+  // paragraph of many small runs is legal.
+  let contributions_by_run : Map[Int, Array[ReaderProjectionContribution]] = Map([],
+  )
+  for contribution in paragraph.contributions {
+    guard contribution.run_source is Some(SourceElementId(owner)) else {
+      continue
+    }
+    match contributions_by_run.get(owner) {
+      Some(existing) => existing.push(contribution)
+      None => contributions_by_run[owner] = [contribution]
+    }
+  }
+  // A run's projecting parts, indexed ONCE: rescanning every part per
+  // touched run is quadratic.
+  let parts_by_run : Map[Int, Array[PartialProjectingPart]] = Map([])
+  for part in parts {
+    guard part.contribution.run_source is Some(SourceElementId(owner)) else {
+      continue
+    }
+    match parts_by_run.get(owner) {
+      Some(existing) => existing.push(part)
+      None => parts_by_run[owner] = [part]
+    }
+  }
+  // Runs that physically nest another run, computed ONCE by sweeping
+  // the runs in source order rather than comparing every pair.
+  let nesting_runs : Map[Int, Bool] = Map([])
+  let ordered_runs : Array[(Int, Int, Int)] = []
+  for candidate in paragraph.runs {
+    let SourceElementId(candidate_identity) = candidate.source
+    let candidate_element = elements[candidate_identity]
+    ordered_runs.push(
+      (
+        candidate_element.byte_start,
+        candidate_element.byte_end,
+        candidate_identity,
+      ),
+    )
+  }
+  ordered_runs.sort_by_key(entry => (entry.0, -entry.1))
+  for index, entry in ordered_runs {
+    let (outer_start, outer_end, outer_identity) = entry
+    let mut probe = index + 1
+    while probe < ordered_runs.length() {
+      let (inner_start, inner_end, _) = ordered_runs[probe]
+      if inner_start >= outer_end {
+        break
+      }
+      if inner_start >= outer_start && inner_end <= outer_end {
+        nesting_runs[outer_identity] = true
+        break
+      }
+      probe += 1
+    }
+  }
   for run in touched_runs {
     // The WHOLE run is the mutation footprint, so EVERY contribution it
     // owns — selected or not, projecting or zero-width — must pass the
@@ -945,89 +1075,87 @@ fn plan_paragraph_format_edits(
     // state, checkbox and restricted ancestry. `parts` holds projecting
     // text only, so this walk reads the paragraph's full contribution
     // list.
-    for contribution in paragraph.contributions {
-      if contribution.run_source == Some(run.source) {
-        if contribution.kind is ProjectedText(_) {
-          let mut count = 0
-          for other in parts {
-            if other.contribution.source == contribution.source {
-              count += 1
-            }
-          }
-          if count > 1 {
-            raise format_surgery_refuse(
-              FormatDuplicateSource,
-              "paragraph \{paragraph_index}: a touched run is projected more than once",
-            )
-          }
-        }
-        match contribution.field_region {
-          FieldInstruction =>
-            raise format_surgery_refuse(
-              FormatFieldInstruction,
-              "paragraph \{paragraph_index}",
-            )
-          MalformedField =>
-            raise format_surgery_refuse(
-              FormatMalformedField,
-              "paragraph \{paragraph_index}",
-            )
-          FieldResult =>
-            raise format_surgery_refuse(
-              FormatRestrictedRegion,
-              "paragraph \{paragraph_index}",
-            )
-          _ => ()
-        }
-        let SourceElementId(owned_identity) = contribution.source
-        let owned_element = elements[owned_identity]
-        if format_surgery_is_checkbox_sdt(elements, owned_element) ||
-          run_surgery_inside_checkbox_control(elements, owned_element) {
+    let SourceElementId(owned_run_identity) = run.source
+    let owned_contributions = contributions_by_run
+      .get(owned_run_identity)
+      .unwrap_or([])
+    for contribution in owned_contributions {
+      if contribution.kind is ProjectedText(_) {
+        let SourceElementId(owned_source) = contribution.source
+        let count = projection_counts.get(owned_source).unwrap_or(0)
+        if count > 1 {
           raise format_surgery_refuse(
-            FormatCheckboxControl,
-            "paragraph \{paragraph_index}: the run encloses a checkbox control",
+            FormatDuplicateSource,
+            "paragraph \{paragraph_index}: a touched run is projected more than once",
           )
         }
-        if run_surgery_restricted_ancestor(elements, owned_element) is Some(_) {
+      }
+      match contribution.field_region {
+        FieldInstruction =>
+          raise format_surgery_refuse(
+            FormatFieldInstruction,
+            "paragraph \{paragraph_index}",
+          )
+        MalformedField =>
+          raise format_surgery_refuse(
+            FormatMalformedField,
+            "paragraph \{paragraph_index}",
+          )
+        FieldResult =>
           raise format_surgery_refuse(
             FormatRestrictedRegion,
-            "paragraph \{paragraph_index}: the run encloses restricted content",
+            "paragraph \{paragraph_index}",
           )
-        }
-        // Zero-width VISIBLE or SUPPRESSED content the run owns cannot
-        // be included in or excluded from a span — it has no width to
-        // select — yet the footprint would format it along with the
-        // run. A note reference at a run edge is exactly that shape,
-        // so v1 refuses rather than formatting content no span chose.
-        match contribution.kind {
-          VisibleNonText =>
+        _ => ()
+      }
+      let SourceElementId(owned_identity) = contribution.source
+      let owned_element = elements[owned_identity]
+      if format_surgery_is_checkbox_sdt(elements, owned_element) ||
+        run_surgery_inside_checkbox_control(elements, owned_element) {
+        raise format_surgery_refuse(
+          FormatCheckboxControl,
+          "paragraph \{paragraph_index}: the run encloses a checkbox control",
+        )
+      }
+      if run_surgery_restricted_ancestor(elements, owned_element) is Some(_) {
+        raise format_surgery_refuse(
+          FormatRestrictedRegion,
+          "paragraph \{paragraph_index}: the run encloses restricted content",
+        )
+      }
+      // Zero-width VISIBLE or SUPPRESSED content the run owns cannot
+      // be included in or excluded from a span — it has no width to
+      // select — yet the footprint would format it along with the
+      // run. A note reference at a run edge is exactly that shape,
+      // so v1 refuses rather than formatting content no span chose.
+      match contribution.kind {
+        VisibleNonText =>
+          raise format_surgery_refuse(
+            FormatVisibleBarrier,
+            "paragraph \{paragraph_index}: the run carries visible non-text content",
+          )
+        SuppressedContent =>
+          raise format_surgery_refuse(
+            FormatSuppressedRegion,
+            "paragraph \{paragraph_index}: the run carries suppressed content",
+          )
+        Transparent => {
+          // The reader's "transparent" verdict is about PROJECTION,
+          // not about rendering: `w:annotationRef` is the visible
+          // comment mark and would take the run's new formatting.
+          // So the rule here is an ALLOWLIST of seams that provably
+          // render nothing — everything else refuses, including
+          // constructs this planner has never seen.
+          let SourceElementId(seam_identity) = contribution.source
+          let seam = elements[seam_identity]
+          guard format_surgery_transparent_is_accounted(seam) else {
             raise format_surgery_refuse(
               FormatVisibleBarrier,
-              "paragraph \{paragraph_index}: the run carries visible non-text content",
+              "paragraph \{paragraph_index}: the run carries content this planner cannot prove renders nothing",
             )
-          SuppressedContent =>
-            raise format_surgery_refuse(
-              FormatSuppressedRegion,
-              "paragraph \{paragraph_index}: the run carries suppressed content",
-            )
-          Transparent => {
-            // The reader's "transparent" verdict is about PROJECTION,
-            // not about rendering: `w:annotationRef` is the visible
-            // comment mark and would take the run's new formatting.
-            // So the rule here is an ALLOWLIST of seams that provably
-            // render nothing — everything else refuses, including
-            // constructs this planner has never seen.
-            let SourceElementId(seam_identity) = contribution.source
-            let seam = elements[seam_identity]
-            guard format_surgery_transparent_is_accounted(seam) else {
-              raise format_surgery_refuse(
-                FormatVisibleBarrier,
-                "paragraph \{paragraph_index}: the run carries content this planner cannot prove renders nothing",
-              )
-            }
           }
-          _ => ()
         }
+        _ => ()
       }
     }
     // A run with a NESTED registered run inside its byte span is a
@@ -1035,49 +1163,33 @@ fn plan_paragraph_format_edits(
     // nested run's text is outside this run's own contributions, yet
     // an rPr edit here would wrap it in the new formatting.
     let SourceElementId(footprint_identity) = run.source
-    let footprint_element = elements[footprint_identity]
-    for candidate in paragraph.runs {
-      if candidate.source != run.source {
-        let SourceElementId(candidate_identity) = candidate.source
-        let candidate_element = elements[candidate_identity]
-        if candidate_element.byte_start >= footprint_element.byte_start &&
-          candidate_element.byte_end <= footprint_element.byte_end {
-          raise format_surgery_refuse(
-            FormatUnsupportedTextSource,
-            "paragraph \{paragraph_index}: the run nests another run inside its footprint",
-          )
-        }
-      }
+    if nesting_runs.get(footprint_identity) == Some(true) {
+      raise format_surgery_refuse(
+        FormatUnsupportedTextSource,
+        "paragraph \{paragraph_index}: the run nests another run inside its footprint",
+      )
     }
     // A run claimed by another paragraph cannot be this paragraph's
     // footprint.
-    for index, other in projection.paragraphs {
-      if index != paragraph_index {
-        for candidate in other.runs {
-          if candidate.source == run.source {
-            raise format_surgery_refuse(
-              FormatCrossParagraphSourceReuse,
-              "paragraph \{paragraph_index} would mutate a run of paragraph \{index}",
-            )
-          }
-        }
-      }
+    if foreign_runs.get(footprint_identity) is Some(index) {
+      raise format_surgery_refuse(
+        FormatCrossParagraphSourceReuse,
+        "paragraph \{paragraph_index} would mutate a run of paragraph \{index}",
+      )
     }
     let mut anchor : Int?? = None
-    for part in parts {
-      if part.contribution.run_source == Some(run.source) {
-        let SourceElementId(identity) = part.contribution.source
-        let link = run_surgery_hyperlink_ancestor(elements, elements[identity])
-        match anchor {
-          None => anchor = Some(link)
-          Some(first) =>
-            if first != link {
-              raise format_surgery_refuse(
-                FormatRestrictedRegion,
-                "paragraph \{paragraph_index}: a run's contributions cross hyperlink ancestry",
-              )
-            }
-        }
+    for part in parts_by_run.get(owned_run_identity).unwrap_or([]) {
+      let SourceElementId(identity) = part.contribution.source
+      let link = run_surgery_hyperlink_ancestor(elements, elements[identity])
+      match anchor {
+        None => anchor = Some(link)
+        Some(first) =>
+          if first != link {
+            raise format_surgery_refuse(
+              FormatRestrictedRegion,
+              "paragraph \{paragraph_index}: a run's contributions cross hyperlink ancestry",
+            )
+          }
       }
     }
   }
@@ -1093,44 +1205,15 @@ fn plan_paragraph_format_edits(
     // The run's own binding, from its own tag. A default-namespace run
     // has no derivable ATTRIBUTE binding (default namespaces do not
     // apply to attributes), so v1 refuses it here rather than guessing.
-    let run_prefix = format_surgery_element_prefix(source, run_element)
-    guard run_prefix != "" else {
-      raise format_surgery_refuse(
-        UnsupportedNamespaceBinding,
-        "paragraph \{paragraph_index}: the run binds WML as its default namespace",
-      )
-    }
-    // Vouch extension prefixes by NAMESPACE URI, from the scan: an rPr
-    // child whose element resolves to a recognized extension vocabulary
-    // is warranted under the prefix it is spelled with.
-    let extension_prefixes : Array[String] = []
-    let mut run_child = run_element.first_child_index
-    while run_child >= 0 {
-      let child = elements[run_child]
-      if is_wml_uri(child.uri) && child.local_name == "rPr" {
-        let mut rpr_child = child.first_child_index
-        while rpr_child >= 0 {
-          let entry = elements[rpr_child]
-          if format_extension_uri(entry.uri) {
-            let entry_prefix = format_surgery_element_prefix(source, entry)
-            if entry_prefix != run_prefix &&
-              entry_prefix != "" &&
-              !extension_prefixes.contains(entry_prefix) {
-              extension_prefixes.push(entry_prefix)
-            }
-          }
-          rpr_child = entry.next_sibling_index
-        }
-      }
-      run_child = child.next_sibling_index
-    }
+    let (run_prefix, extension_prefixes) = format_surgery_run_binding(
+      source,
+      elements,
+      run_element,
+      "paragraph \{paragraph_index}",
+    )
     // The run's projecting parts, in order, with their coverage.
-    let run_parts : Array[PartialProjectingPart] = []
-    for part in parts {
-      if part.contribution.run_source == Some(run.source) {
-        run_parts.push(part)
-      }
-    }
+    let SourceElementId(run_parts_identity) = run.source
+    let run_parts = parts_by_run.get(run_parts_identity).unwrap_or([])
     let mut fully_covered = true
     for part in run_parts {
       let mut cursor = part.local_start
@@ -1358,14 +1441,19 @@ fn format_surgery_split_run(
     None => ()
   }
   // Pieces: per `w:t`, wt-local boundaries at every covered-interval edge.
+  // Index the run's parts and their projections by text element ONCE:
+  // scanning every part per element, and re-reading the projection per
+  // piece, is quadratic — a run of many small text elements is legal.
+  let part_by_wt : Map[Int, PartialProjectingPart] = Map([])
+  let projection_by_wt : Map[Int, String] = Map([])
+  for part in run_parts {
+    let SourceElementId(part_identity) = part.contribution.source
+    part_by_wt[part_identity] = part
+    projection_by_wt[part_identity] = part.contribution.value
+  }
   let pieces : Array[FormatPiece] = []
   for wt in wts {
-    let mut wt_part : PartialProjectingPart? = None
-    for part in run_parts {
-      if part.contribution.source == SourceElementId(wt.identity) {
-        wt_part = Some(part)
-      }
-    }
+    let wt_part = part_by_wt.get(wt.identity)
     guard wt_part is Some(part) else {
       // A `w:t` that projects nothing (empty content): a neutral piece
       // cloned verbatim into whichever segment is current.
@@ -1487,7 +1575,9 @@ fn format_surgery_split_run(
       }
       if piece.local_from == piece.local_to && piece.local_from == 0 {
         // A neutral empty `w:t`: cloned verbatim.
-        let whole_projection = format_surgery_wt_projection(projection, wt)
+        let whole_projection = projection_by_wt
+          .get(piece.wt_identity)
+          .unwrap_or("")
         if whole_projection == "" {
           body.write_string(
             format_surgery_decode(source[wt.byte_start:wt.byte_end]),
@@ -1505,7 +1595,8 @@ fn format_surgery_split_run(
           "a span boundary inside the split run",
         )
       }
-      let fragment_text = format_surgery_wt_projection(projection, wt)
+      let whole = projection_by_wt.get(piece.wt_identity).unwrap_or("")
+      let fragment_text = whole
         .view(start_offset=piece.local_from, end_offset=piece.local_to)
         .to_owned()
       body.write_string(
@@ -1555,22 +1646,6 @@ fn format_surgery_split_run(
     )
   }
   (emitted, rendered.to_string())
-}
-
-///|
-/// The decoded projection of one mapped `w:t`, from its own contribution.
-fn format_surgery_wt_projection(
-  projection : ReaderProjection,
-  wt : ScannedElement,
-) -> String {
-  for paragraph in projection.paragraphs {
-    for contribution in paragraph.contributions {
-      if contribution.source == SourceElementId(wt.identity) {
-        return contribution.value
-      }
-    }
-  }
-  ""
 }
 
 ///|

@@ -67,6 +67,7 @@ FILES = {
     # require an ordinary text carrier, same read pattern as run_surgery.mbt
     'run_surgery_partial.mbt': 'extract',
     'find_api.mbt': 'extract',
+    'format_api.mbt': 'extract',
     # N3a's insertion planner: reads the anchor element tree (direct-
     # body proof) and RENDERS the namespace-self-contained fragment
     'paragraph_insert.mbt': 'extract',
