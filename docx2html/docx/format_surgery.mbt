@@ -344,6 +344,26 @@ fn format_surgery_open_tag_has_identity_attribute(
 }
 
 ///|
+/// The transparent seams a run may own that provably render nothing, so
+/// a run-wide formatting edit cannot change how they appear. The list is
+/// an ALLOWLIST on purpose: an unrecognized transparent construct — or
+/// one the reader ignores for projection but Word still paints, as with
+/// `w:annotationRef` — must refuse rather than be formatted silently.
+fn format_surgery_invisible_seam(element : ScannedElement) -> Bool {
+  if !is_wml_uri(element.uri) {
+    return false
+  }
+  element.local_name
+  is ("proofErr"
+  | "bookmarkStart"
+  | "bookmarkEnd"
+  | "commentRangeStart"
+  | "commentRangeEnd"
+  | "lastRenderedPageBreak"
+  | "rPr")
+}
+
+///|
 /// Whether an element OR ANY DESCENDANT carries an identity-bearing
 /// attribute: the whole subtree is what a clone copies.
 fn format_surgery_subtree_has_identity_attribute(
@@ -745,33 +765,6 @@ fn plan_paragraph_format_edits(
     // list.
     for contribution in paragraph.contributions {
       if contribution.run_source == Some(run.source) {
-        // Zero-width VISIBLE or SUPPRESSED content the run owns cannot
-        // be included in or excluded from a span — it has no width to
-        // select — yet the footprint would format it along with the
-        // run. A note reference at a run edge is exactly that shape,
-        // so v1 refuses rather than formatting content no span chose.
-        match contribution.kind {
-          VisibleNonText =>
-            raise format_surgery_refuse(
-              FormatVisibleBarrier,
-              "paragraph \{paragraph_index}: the run carries visible non-text content",
-            )
-          SuppressedContent =>
-            raise format_surgery_refuse(
-              FormatSuppressedRegion,
-              "paragraph \{paragraph_index}: the run carries suppressed content",
-            )
-          Transparent => {
-            let SourceElementId(seam_identity) = contribution.source
-            if run_surgery_is_hard_barrier_container(elements[seam_identity]) {
-              raise format_surgery_refuse(
-                FormatVisibleBarrier,
-                "paragraph \{paragraph_index}: the run carries a hard barrier",
-              )
-            }
-          }
-          _ => ()
-        }
         if contribution.kind is ProjectedText(_) {
           let mut count = 0
           for other in parts {
@@ -818,6 +811,40 @@ fn plan_paragraph_format_edits(
             FormatRestrictedRegion,
             "paragraph \{paragraph_index}: the run encloses restricted content",
           )
+        }
+        // Zero-width VISIBLE or SUPPRESSED content the run owns cannot
+        // be included in or excluded from a span — it has no width to
+        // select — yet the footprint would format it along with the
+        // run. A note reference at a run edge is exactly that shape,
+        // so v1 refuses rather than formatting content no span chose.
+        match contribution.kind {
+          VisibleNonText =>
+            raise format_surgery_refuse(
+              FormatVisibleBarrier,
+              "paragraph \{paragraph_index}: the run carries visible non-text content",
+            )
+          SuppressedContent =>
+            raise format_surgery_refuse(
+              FormatSuppressedRegion,
+              "paragraph \{paragraph_index}: the run carries suppressed content",
+            )
+          Transparent => {
+            // The reader's "transparent" verdict is about PROJECTION,
+            // not about rendering: `w:annotationRef` is the visible
+            // comment mark and would take the run's new formatting.
+            // So the rule here is an ALLOWLIST of seams that provably
+            // render nothing — everything else refuses, including
+            // constructs this planner has never seen.
+            let SourceElementId(seam_identity) = contribution.source
+            let seam = elements[seam_identity]
+            guard format_surgery_invisible_seam(seam) else {
+              raise format_surgery_refuse(
+                FormatVisibleBarrier,
+                "paragraph \{paragraph_index}: the run carries content this planner cannot prove renders nothing",
+              )
+            }
+          }
+          _ => ()
         }
       }
     }

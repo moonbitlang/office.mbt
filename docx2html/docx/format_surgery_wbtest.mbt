@@ -97,28 +97,29 @@ fn assert_format_edits(
       continue
     }
     if !inside {
-      // An UNCOVERED run must not have gained formatting: whatever rPr
-      // it carries has to come from the original document verbatim.
-      // This is the preservation license the review showed the oracle
-      // could not otherwise see.
-      let SourceElementId(uncovered_identity) = run.source
-      let uncovered = reprojected.scan.elements()[uncovered_identity]
-      let mut child = uncovered.first_child_index
-      while child >= 0 {
-        let entry = reprojected.scan.elements()[child]
-        if entry.local_name == "rPr" {
-          let rpr_out : Array[Byte] = []
-          for index in entry.byte_start..<entry.byte_end {
-            rpr_out.push(spliced_bytes[index])
-          }
-          let rpr_text = @utf8.decode(Bytes::from_array(rpr_out))
-          assert_true(
-            source.contains(rpr_text),
-            msg="an uncovered run gained formatting: " + rpr_text,
+      // An UNCOVERED run must not have gained formatting: its rPr has to
+      // equal, byte for byte, the rPr of the ORIGINAL run whose text it
+      // carries — not merely appear somewhere in the document, which a
+      // wrong splitter could satisfy by copying another run's rPr.
+      let (result_start, result_end) = run_projection_range(
+        reprojected, paragraph, run,
+      )
+      let mut matched = false
+      for original in projection.paragraphs[paragraph].runs {
+        let (original_start, original_end) = run_projection_range(
+          projection, paragraph, original,
+        )
+        if original_end > original_start &&
+          original_start <= result_start &&
+          result_end <= original_end {
+          matched = true
+          assert_eq(
+            run_rpr_text(spliced_bytes, reprojected, run),
+            run_rpr_text(bytes, projection, original),
           )
         }
-        child = entry.next_sibling_index
       }
+      assert_true(matched, msg="an uncovered run has no original to match")
       continue
     }
     if inside {
@@ -1295,4 +1296,107 @@ test "format: zero-width visible content in a touched run refuses" {
     refusal="FormatSuppressedRegion",
     bold=true,
   )
+}
+
+///|
+/// One run's paragraph-local projected text range, or (0, 0) when it
+/// projects nothing.
+fn run_projection_range(
+  projection : ReaderProjection,
+  paragraph : Int,
+  run : ReaderProjectionRun,
+) -> (Int, Int) {
+  let base = projection.paragraphs[paragraph].projection_start
+  let mut start = -1
+  let mut end = -1
+  for contribution in projection.paragraphs[paragraph].contributions {
+    if contribution.run_source == Some(run.source) &&
+      contribution.kind is ProjectedText(_) &&
+      contribution.projection_end > contribution.projection_start {
+      let local_start = contribution.projection_start - base
+      let local_end = contribution.projection_end - base
+      if start < 0 || local_start < start {
+        start = local_start
+      }
+      if local_end > end {
+        end = local_end
+      }
+    }
+  }
+  if start < 0 {
+    (0, 0)
+  } else {
+    (start, end)
+  }
+}
+
+///|
+/// A run's `rPr` bytes as spelled, or "" when it declares none.
+fn run_rpr_text(
+  source : Bytes,
+  projection : ReaderProjection,
+  run : ReaderProjectionRun,
+) -> String raise {
+  let SourceElementId(identity) = run.source
+  let elements = projection.scan.elements()
+  let mut child = elements[identity].first_child_index
+  while child >= 0 {
+    let entry = elements[child]
+    if is_wml_uri(entry.uri) && entry.local_name == "rPr" {
+      let out : Array[Byte] = []
+      for index in entry.byte_start..<entry.byte_end {
+        out.push(source[index])
+      }
+      return @utf8.decode(Bytes::from_array(out))
+    }
+    child = entry.next_sibling_index
+  }
+  ""
+}
+
+///|
+/// Round 7's Medium: the reader ignores `w:annotationRef` for
+/// PROJECTION, but Word paints it — so a run owning one refuses rather
+/// than formatting the comment mark nobody selected. The seams that
+/// provably render nothing still format in place.
+test "format: transparent seams are allowlisted, not assumed" {
+  assert_format_refusal(
+    "<w:p><w:r><w:t>ab</w:t><w:annotationRef/></w:r></w:p>",
+    paragraph=0,
+    [format_span(0, 2)],
+    refusal="FormatVisibleBarrier",
+    bold=true,
+  )
+  // A construct this planner has never seen refuses the same way.
+  assert_format_refusal(
+    "<w:p><w:r><w:t>ab</w:t><w:sectPr/></w:r></w:p>",
+    paragraph=0,
+    [format_span(0, 2)],
+    refusal="FormatVisibleBarrier",
+    bold=true,
+  )
+  // EVERY allowlisted seam is exercised positively: each renders
+  // nothing, so a whole-run edit over it is legitimate and the seam
+  // survives byte-identically. Over-refusing these would reject the
+  // commonest Word output there is.
+  for
+    seam in [
+      "<w:lastRenderedPageBreak/>", "<w:proofErr w:type=\"spellStart\"/>", "<w:bookmarkStart w:id=\"1\" w:name=\"anchor\"/>",
+      "<w:bookmarkEnd w:id=\"1\"/>", "<w:commentRangeStart w:id=\"1\"/>", "<w:commentRangeEnd w:id=\"1\"/>",
+    ] {
+    let (spliced, receipt) = assert_format_edits(
+      "<w:p><w:r>" + seam + "<w:t>ab</w:t></w:r></w:p>",
+      paragraph=0,
+      [format_span(0, 2)],
+      bold=true,
+    )
+    assert_eq(receipt.runs_changed, 1, msg=seam)
+    assert_eq(receipt.splits, 0, msg=seam)
+    assert_true(
+      spliced.contains(
+        "<w:r><w:rPr><w:b/><w:bCs/></w:rPr>" + seam + "<w:t>ab</w:t></w:r>",
+      ),
+      msg=seam,
+    )
+  }
 }
