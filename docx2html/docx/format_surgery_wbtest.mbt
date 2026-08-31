@@ -1547,3 +1547,25 @@ test "format: seams must be leaves and drawables are never accounted" {
     bold=true,
   )
 }
+
+///|
+/// Round 11: the rPr exemption is only as good as the rPr engine's own
+/// accounting, and a painted mark nested in a non-targeted property is
+/// exactly what it must refuse.
+test "format: painted content nested in an rPr property refuses" {
+  assert_format_refusal(
+    "<w:p><w:r><w:rPr><w:rFonts w:ascii=\"Arial\"><w:annotationRef/></w:rFonts></w:rPr><w:t>abcd</w:t></w:r></w:p>",
+    paragraph=0,
+    [format_span(0, 4)],
+    refusal="UnsupportedRpr",
+    bold=true,
+  )
+  // And on the split path, where the rPr rides into every clone.
+  assert_format_refusal(
+    "<w:p><w:r><w:rPr><w:rFonts w:ascii=\"Arial\"><w:annotationRef/></w:rFonts></w:rPr><w:t>abcd</w:t></w:r></w:p>",
+    paragraph=0,
+    [format_span(1, 3)],
+    refusal="UnsupportedRpr",
+    bold=true,
+  )
+}

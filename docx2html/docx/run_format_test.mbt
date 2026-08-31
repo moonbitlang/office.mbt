@@ -961,3 +961,24 @@ test "format seals markup-compatibility escapes" {
     ),
   )
 }
+
+///|
+/// Every ranked CT_RPr property is an empty element in the schema, so a
+/// child inside ANY of them — not only the ones this engine targets —
+/// is content it cannot account for.
+test "format refuses a non-leaf ranked property" {
+  for
+    poisoned in [
+      "<w:rFonts w:ascii=\"Arial\"><w:annotationRef/></w:rFonts>", "<w:sz w:val=\"24\"><w:t>x</w:t></w:sz>",
+      "<w:lang w:val=\"en-US\"><w:noProof/></w:lang>",
+    ] {
+    let source = "<w:r><w:rPr>" + poisoned + "</w:rPr><w:t>x</w:t></w:r>"
+    let mut message = ""
+    try ignore(plan_for(source, bold=true)) catch {
+      error => message = repr(error)
+    } noraise {
+      _ => fail("expected a refusal for " + poisoned)
+    }
+    assert_true(message.contains("non-leaf"), msg=poisoned + " -> " + message)
+  }
+}
