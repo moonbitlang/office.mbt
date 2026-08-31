@@ -533,27 +533,31 @@ fn docx_format_source_runs(
 }
 
 ///|
-/// Every paragraph path in one story, resolved ONCE: the paragraph that
-/// carries each path, and how many paragraphs claim it.
+/// What every question about one story needs to know about it, built
+/// ONCE: which paragraph carries each path and how many claim it, and
+/// which source elements the reader registered as paragraphs.
 ///
-/// The readback asks about many paragraphs of the same story. Resolving
-/// a path by scanning the story is linear in the DOCUMENT, so answering
-/// per paragraph costs the whole document again for each one — a
-/// thousand formatted paragraphs in a large document turn a bounded
-/// read into a quadratic one. The lookup is therefore built once and
-/// shared by every question asked of that story.
-priv struct DocxParagraphPathIndex {
+/// Both are story-wide facts, and deriving either costs a pass over the
+/// whole document. The readback asks about many paragraphs of the same
+/// story, so deriving them per question would cost the document again
+/// for each one — a thousand formatted paragraphs in a large document
+/// turn a bounded read into a quadratic one.
+priv struct DocxStoryIndex {
   by_path : Map[String, (Int, Int)]
+  registered : Map[Int, Bool]
 }
 
 ///|
-fn docx_paragraph_path_index(
-  projection : ReaderProjection,
-) -> DocxParagraphPathIndex {
+fn docx_story_index(projection : ReaderProjection) -> DocxStoryIndex {
   let by_path : Map[String, (Int, Int)] = Map([])
+  let registered : Map[Int, Bool] = Map([])
   let paragraph_paths = find_path_map(projection.scan, "p")
   let elements = projection.scan.elements()
   for paragraph_index, paragraph in projection.paragraphs {
+    for source in paragraph.sources {
+      let SourceElementId(head) = source.source
+      registered[head] = true
+    }
     guard paragraph.sources.length() > 0 else { continue }
     let SourceElementId(head) = paragraph.sources[0].source
     guard paragraph_paths.get(elements[head].byte_start) is Some(path) else {
@@ -564,15 +568,12 @@ fn docx_paragraph_path_index(
       None => by_path[path] = (paragraph_index, 1)
     }
   }
-  { by_path, }
+  { by_path, registered, }
 }
 
 ///|
 /// The paragraph a path names, and how many paragraphs name it.
-fn DocxParagraphPathIndex::locate(
-  self : DocxParagraphPathIndex,
-  path : String,
-) -> (Int, Int) {
+fn DocxStoryIndex::locate(self : DocxStoryIndex, path : String) -> (Int, Int) {
   match self.by_path.get(path) {
     Some(entry) => entry
     None => (-1, 0)
@@ -630,7 +631,7 @@ pub fn docx_paragraphs_direct_format(
       Some("the re-read retained no source bytes for '\{part}'")
     })
   }
-  let index = docx_paragraph_path_index(projection)
+  let index = docx_story_index(projection)
   let answers : Array[String?] = []
   for request in requests {
     let (path, spans) = request
@@ -648,7 +649,7 @@ pub fn docx_paragraphs_direct_format(
 fn docx_paragraph_direct_format_at(
   projection : ReaderProjection,
   bytes : BytesView,
-  index : DocxParagraphPathIndex,
+  index : DocxStoryIndex,
   path : String,
   spans : Array[(Int, Int)],
   format : DocxDirectFormat,
@@ -831,8 +832,8 @@ pub fn docx_paragraphs_format_preserved(
       Some("the re-read retained no projection for '\{after_part}'")
     })
   }
-  let before_index = docx_paragraph_path_index(before_projection)
-  let after_index = docx_paragraph_path_index(after_projection)
+  let before_index = docx_story_index(before_projection)
+  let after_index = docx_story_index(after_projection)
   let answers : Array[String?] = []
   for request in requests {
     answers.push(
@@ -857,10 +858,10 @@ pub fn docx_paragraphs_format_preserved(
 fn docx_paragraph_format_preserved_at(
   before_projection : ReaderProjection,
   before_bytes : BytesView,
-  before_index : DocxParagraphPathIndex,
+  before_index : DocxStoryIndex,
   after_projection : ReaderProjection,
   after_bytes : BytesView,
-  after_index : DocxParagraphPathIndex,
+  after_index : DocxStoryIndex,
   path : String,
   spans : Array[(Int, Int)],
   format : DocxDirectFormat,
@@ -970,7 +971,7 @@ fn docx_paragraph_format_preserved_at(
 fn docx_format_paragraph_provenance(
   projection : ReaderProjection,
   bytes : BytesView,
-  index : DocxParagraphPathIndex,
+  index : DocxStoryIndex,
   path : String,
 ) -> (Array[(String, String, String)], Array[String], String)? raise DocxError {
   let elements = projection.scan.elements()
@@ -1099,15 +1100,11 @@ fn docx_format_paragraph_provenance(
       None => run_offsets[owner] = offset
     }
   }
-  // The paragraphs the reader registered: only these answer for their
-  // own carriers.
-  let registered : Map[Int, Bool] = Map([])
-  for other in projection.paragraphs {
-    for source in other.sources {
-      let SourceElementId(head) = source.source
-      registered[head] = true
-    }
-  }
+  // The paragraphs the reader registered — only these answer for their
+  // own carriers — come from the story index, because deriving them
+  // here would cost a pass over every paragraph in the document for
+  // every paragraph judged.
+  let registered = index.registered
   // What formatting survives outside the per-unit comparison, bound to
   // WHAT IT FORMATS rather than to its position in a list. A carrier's
   // properties alone cannot tell that italic MOVED from a footnote

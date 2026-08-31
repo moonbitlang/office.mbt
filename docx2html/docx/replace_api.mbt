@@ -285,7 +285,7 @@ pub fn docx_paragraphs_projection(
   guard annotated.reader_projections.get(story.part()) is Some(projection) else {
     return paths.map(_ => None)
   }
-  let index = docx_paragraph_path_index(projection)
+  let index = docx_story_index(projection)
   paths.map(path => {
     match index.locate(path) {
       (target, _) if target >= 0 =>

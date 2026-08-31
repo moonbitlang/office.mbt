@@ -160,12 +160,15 @@ pub fn docx_mutation_preflight(
   // stored: OPC lets a package name its signature parts freely, so a
   // path prefix would both miss a signature kept elsewhere and refuse
   // an unsigned package that merely has an origin part.
-  if docx_package_declares_signature(archive) {
+  // Part names are OPC identities, not ZIP strings: the same part may
+  // be stored under a different case than the name that reaches it.
+  let parts = docx_package_parts(archive)
+  if docx_package_declares_signature(archive, parts) {
     raise @transaction.transaction_failure(
       "office.docx.signed_package", "this package carries a digital signature, which any edit would invalidate",
     )
   }
-  let settings_name = match docx_settings_part(archive) {
+  let settings_name = match docx_settings_part(archive, parts) {
     Found(name) => name
     // A document with no settings part declares no protections.
     Absent => return
@@ -177,7 +180,9 @@ pub fn docx_mutation_preflight(
   // A settings part the package promises but does not contain is a
   // broken package, which the strict validation that opens the session
   // refuses on its own terms.
-  guard archive.get(settings_name) is Some(settings) else { return }
+  guard docx_part_bytes(archive, parts, settings_name) is Some(settings) else {
+    return
+  }
   // A settings part that cannot be READ cannot be cleared: a preflight
   // that cannot see its own evidence refuses rather than proceeds.
   let root = @xml.read_xml_bytes_strict_limited(
@@ -257,6 +262,42 @@ const DOCX_CONTENT_TYPES_DEFAULT : String = "{http://schemas.openxmlformats.org/
 const DOCX_CONTENT_TYPES_OVERRIDE : String = "{http://schemas.openxmlformats.org/package/2006/content-types}Override"
 
 ///|
+/// Every part of the package, by OPC identity: its logical name and the
+/// ZIP entry that stores it, keyed by the case-insensitive part key.
+///
+/// A relationship names a PART, and two spellings that differ only in
+/// case name the same one. Looking an entry up by its exact ZIP string
+/// would miss a settings part the strict validation and Word both
+/// resolve, and would let an enforced protection through unread.
+fn docx_package_parts(archive : @zip.Archive) -> Map[String, (String, String)] {
+  let parts : Map[String, (String, String)] = Map([])
+  for entry in archive.entries() {
+    guard @opc.logical_part_name_from_zip_item_name(entry.name())
+      is Some(logical) else {
+      continue
+    }
+    let key = @opc.part_name_key(logical)
+    if parts.get(key) is None {
+      parts[key] = (logical, entry.name())
+    }
+  }
+  parts
+}
+
+///|
+/// One part's bytes, by logical name.
+fn docx_part_bytes(
+  archive : @zip.Archive,
+  parts : Map[String, (String, String)],
+  logical : String,
+) -> BytesView? {
+  guard parts.get(@opc.part_name_key(logical)) is Some(entry) else {
+    return None
+  }
+  archive.get(entry.1)
+}
+
+///|
 /// Whether the package CONTAINS a part whose content type is a digital
 /// signature.
 ///
@@ -269,14 +310,23 @@ const DOCX_CONTENT_TYPES_OVERRIDE : String = "{http://schemas.openxmlformats.org
 /// A content-types part that cannot be read at all is left to the strict
 /// package validation that runs a moment later, which refuses on any
 /// finding; this preflight only decides about packages that parse.
-fn docx_package_declares_signature(archive : @zip.Archive) -> Bool {
+fn docx_package_declares_signature(
+  archive : @zip.Archive,
+  parts : Map[String, (String, String)],
+) -> Bool {
+  // The content-types part's name is reserved with an exact spelling,
+  // which the strict validation that opens the session enforces.
   guard archive.get("[Content_Types].xml") is Some(types) else { return false }
   let root = @xml.read_xml_bytes_strict_limited(types, candidate_xml_budget()) catch {
     _ => return false
   }
   guard root.name == DOCX_CONTENT_TYPES_ROOT else { return false }
-  let defaults : Map[String, Bool] = Map([])
-  let overrides : Map[String, Bool] = Map([])
+  // EVERY declaration is recorded, not only the interesting ones: a
+  // part's content type is its Override when it has one and the Default
+  // for its extension only otherwise, so a Default that would look like
+  // a signature says nothing about a part an Override has spoken for.
+  let defaults : Map[String, String] = Map([])
+  let overrides : Map[String, String] = Map([])
   for node in root.children {
     guard node is XmlElement(element) else { continue }
     if element.name == DOCX_CONTENT_TYPES_DEFAULT {
@@ -284,31 +334,33 @@ fn docx_package_declares_signature(archive : @zip.Archive) -> Bool {
         element.attributes.get("Extension") is Some(extension) else {
         continue
       }
-      if docx_is_signature_content_type(content_type) {
-        defaults[extension.to_lower()] = true
+      let key = extension.to_lower()
+      if defaults.get(key) is None {
+        defaults[key] = content_type
       }
     } else if element.name == DOCX_CONTENT_TYPES_OVERRIDE {
       guard element.attributes.get("ContentType") is Some(content_type) &&
         element.attributes.get("PartName") is Some(part_name) else {
         continue
       }
-      if docx_is_signature_content_type(content_type) {
-        overrides[@opc.part_name_key(part_name)] = true
+      let key = @opc.part_name_key(part_name)
+      if overrides.get(key) is None {
+        overrides[key] = content_type
       }
     }
   }
-  if defaults.is_empty() && overrides.is_empty() {
-    return false
-  }
-  for entry in archive.entries() {
-    guard @opc.logical_part_name_from_zip_item_name(entry.name()) is Some(part) else {
-      continue
+  for entry in parts {
+    let (logical, _) = entry.1
+    let declared = match overrides.get(@opc.part_name_key("/" + logical)) {
+      Some(content_type) => Some(content_type)
+      None =>
+        match docx_part_extension(logical) {
+          Some(extension) => defaults.get(extension)
+          None => None
+        }
     }
-    if overrides.get(@opc.part_name_key("/" + part)) is Some(_) {
-      return true
-    }
-    if docx_part_extension(part) is Some(extension) &&
-      defaults.get(extension) is Some(_) {
+    if declared is Some(content_type) &&
+      docx_is_signature_content_type(content_type) {
       return true
     }
   }
@@ -366,19 +418,22 @@ const DOCX_STRICT_SETTINGS_RELATIONSHIP : String = "http://purl.oclc.org/ooxml/o
 /// `word/…` by rule — OPC part names are the package's to choose, and a
 /// `word/settings.xml` nothing refers to is not this document's
 /// settings.
-fn docx_settings_part(archive : @zip.Archive) -> DocxPartLookup {
+fn docx_settings_part(
+  archive : @zip.Archive,
+  parts : Map[String, (String, String)],
+) -> DocxPartLookup {
   // A package that names several main document parts is refused by the
   // strict validation that opens the session, in those words; this
   // preflight leaves that verdict to it rather than reporting the
   // package's shape as a settings problem.
-  guard docx_relationship_target(archive, "", [
+  guard docx_relationship_target(archive, parts, "", [
       DOCX_OFFICE_DOCUMENT_RELATIONSHIP,
       DOCX_STRICT_OFFICE_DOCUMENT_RELATIONSHIP,
     ])
     is Found(document) else {
     return Absent
   }
-  docx_relationship_target(archive, document, [
+  docx_relationship_target(archive, parts, document, [
     DOCX_SETTINGS_RELATIONSHIP,
     DOCX_STRICT_SETTINGS_RELATIONSHIP,
   ])
@@ -401,11 +456,14 @@ priv enum DocxPartLookup {
 /// these types name different parts, which no later gate would catch.
 fn docx_relationship_target(
   archive : @zip.Archive,
+  parts : Map[String, (String, String)],
   source : String,
   types : Array[String],
 ) -> DocxPartLookup {
   let rels_name = @opc.relationships_part_name_for_source(source)
-  guard archive.get(rels_name) is Some(bytes) else { return Absent }
+  guard docx_part_bytes(archive, parts, rels_name) is Some(bytes) else {
+    return Absent
+  }
   let root = @opc.read_opc_relationships_xml_limited(
     bytes,
     candidate_xml_budget(),
@@ -417,6 +475,7 @@ fn docx_relationship_target(
     None => ""
   }
   let found : Array[String] = []
+  let resolved : Array[String] = []
   for node in root.children {
     guard node is XmlElement(relationship) else { continue }
     guard relationship.name
@@ -437,13 +496,16 @@ fn docx_relationship_target(
       relationship.attributes.get_or_default("Target", ""),
     )
     guard @opc.resolve_part_target(base, target) is Some(part) else { continue }
-    if !found.contains(part) {
-      found.push(part)
+    // Two targets that differ only in case name ONE part.
+    let key = @opc.part_name_key(part)
+    if !found.contains(key) {
+      found.push(key)
+      resolved.push(part)
     }
   }
-  match found.length() {
+  match resolved.length() {
     0 => Absent
-    1 => Found(found[0])
+    1 => Found(resolved[0])
     // Several relationships of the same type naming different parts is
     // legal OPC and meaningless WML: nothing downstream would refuse it,
     // so the preflight must.

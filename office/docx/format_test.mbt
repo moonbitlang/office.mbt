@@ -1282,3 +1282,60 @@ async test "the preflight refuses password write protection" {
     assert_true(legacy_message.contains("write protected"), msg=legacy_message)
   })
 }
+
+///|
+/// Part names are OPC identities, not ZIP strings: a relationship that
+/// names the settings part in another case names the same part, and a
+/// part's Override outranks the Default for its extension.
+async test "the preflight resolves parts by OPC identity" {
+  with_docx_session_test_dir(directory => {
+    let recased = repackaged_fixture(
+      directory,
+      "recased",
+      [],
+      [
+        (
+          "word/_rels/document.xml.rels", "Target=\"settings.xml\"", "Target=\"SETTINGS.XML\"",
+        ),
+        (
+          "word/settings.xml", "</w:settings>", "<w:trackRevisions/></w:settings>",
+        ),
+      ],
+      [],
+    )
+    let (recased_failure, recased_published) = format_input_probe(
+      recased,
+      directory + "/recased-out.docx",
+    )
+    guard recased_failure is Some(recased_message) else {
+      fail("a differently-cased target names the same settings part")
+    }
+    assert_true(
+      recased_message.contains("records revisions"),
+      msg=recased_message,
+    )
+    assert_false(recased_published, msg="nothing may be published")
+    // The Default says signature, the part's own Override says
+    // otherwise, and the Override is what the part IS.
+    let overridden = repackaged_fixture(
+      directory,
+      "overridden",
+      [],
+      [
+        (
+          "[Content_Types].xml", "</Types>", "<Default Extension=\"sigx\" ContentType=\"application/vnd.openxmlformats-package.digital-signature-xmlsignature+xml\"/><Override PartName=\"/custom/note.sigx\" ContentType=\"application/xml\"/></Types>",
+        ),
+      ],
+      [("custom/note.sigx", "<note/>")],
+    )
+    let (overridden_failure, overridden_published) = format_input_probe(
+      overridden,
+      directory + "/overridden-out.docx",
+    )
+    assert_true(
+      overridden_failure is None,
+      msg="an overridden part is not a signature: \{overridden_failure}",
+    )
+    assert_true(overridden_published, msg="the edit publishes")
+  })
+}
