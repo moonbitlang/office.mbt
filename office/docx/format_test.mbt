@@ -306,12 +306,9 @@ async fn preflight_fixture(
   settings_body : String,
   extra : Array[(String, String)],
   content_types_insert? : String,
+  runs? : String = "<w:r><w:t>Hello world</w:t></w:r>",
 ) -> String {
-  let source = edit_fixture(
-    directory,
-    name + "-source.docx",
-    "<w:r><w:t>Hello world</w:t></w:r>",
-  )
+  let source = edit_fixture(directory, name + "-source.docx", runs)
   let archive = @zip.read(@afs.read_file(source).binary())
   let rebuilt = @zip.Archive::new()
   for entry in archive.entries() {
@@ -528,7 +525,7 @@ async test "the mutation preflight judges declarations, not paths" {
       fail("expected an ambiguity refusal")
     }
     assert_true(
-      ambiguous_message.contains("more than once"),
+      ambiguous_message.contains("declared more than once"),
       msg=ambiguous_message,
     )
   })
@@ -562,6 +559,32 @@ async test "the mutation preflight guards the shared path" {
       fail("replace must reach the shared preflight")
     }
     assert_true(message.contains("records revisions"), msg=message)
+    // Annotations run their own transaction rather than an edit session,
+    // so they ask for the preflight themselves — and must still get it.
+    let mut annotation_failure : String? = None
+    try
+      @docx.transact_docx_annotations(
+        @transaction.transaction_options(
+          tracked,
+          output_path=directory + "/shared-annotated.docx",
+        ),
+        @docx.parse_annotation_batch(
+          "{\"schema\": \"docx.annotation-batch/1\", \"ops\": [" +
+          "{\"op\": \"comment_add\", \"anchor\": {\"at\": \"/docx/body/p[1]\"}, " +
+          "\"author\": \"Ada\", \"body\": [\"Please revise\"]}]}",
+        ),
+      )
+      |> ignore
+    catch {
+      error => annotation_failure = Some("\{error}")
+    }
+    guard annotation_failure is Some(annotation_message) else {
+      fail("annotations must reach the shared preflight")
+    }
+    assert_true(
+      annotation_message.contains("records revisions"),
+      msg=annotation_message,
+    )
   })
 }
 
@@ -705,11 +728,504 @@ async test "format report accessors hand out copies" {
     let spans = report.spans()
     let affected = report.affected()
     let selected = report.selected()
+    spans[0].source_runs.clear()
     spans.clear()
     affected.clear()
     selected.clear()
     assert_eq(report.spans().length(), 1)
+    assert_true(
+      report.spans()[0].source_runs.length() > 0,
+      msg="a span's own array is the caller's copy too",
+    )
     assert_eq(report.affected().length(), 1)
     assert_eq(report.selected().length(), 1)
+  })
+}
+
+///|
+/// A fixture repackaged part by part: entries renamed, text substituted,
+/// and extra parts added, so a test can move the main document part or
+/// re-spell a relationship target without hand-writing a package.
+async fn repackaged_fixture(
+  directory : String,
+  name : String,
+  renames : Array[(String, String)],
+  edits : Array[(String, String, String)],
+  additions : Array[(String, String)],
+) -> String {
+  let source = edit_fixture(
+    directory,
+    name + "-source.docx",
+    "<w:r><w:t>Hello world</w:t></w:r>",
+  )
+  let archive = @zip.read(@afs.read_file(source).binary())
+  let rebuilt = @zip.Archive::new()
+  for entry in archive.entries() {
+    let old_name = entry.name()
+    guard archive.get(old_name) is Some(payload) else { continue }
+    let mut entry_name = old_name
+    for rename in renames {
+      if rename.0 == old_name {
+        entry_name = rename.1
+      }
+    }
+    let mut text : String? = None
+    for edit in edits {
+      if edit.0 == entry_name {
+        let current = match text {
+          Some(value) => value
+          None => @utf8.decode(payload)
+        }
+        guard current.contains(edit.1) else {
+          fail("\{entry_name} does not contain \{edit.1}")
+        }
+        text = Some(current.replace(old=edit.1, new=edit.2))
+      }
+    }
+    match text {
+      Some(value) => rebuilt.add(entry_name, @utf8.encode(value))
+      None => rebuilt.add(entry_name, payload.to_owned())
+    }
+  }
+  for addition in additions {
+    rebuilt.add(addition.0, @utf8.encode(addition.1))
+  }
+  let path = directory + "/" + name + ".docx"
+  @afs.write_file(
+    path,
+    @zip.write(rebuilt),
+    create_mode=CreateNew,
+    permission=0o600,
+  )
+  path
+}
+
+///|
+/// The preflight follows the package's own relationships. A document
+/// whose main part is not `word/document.xml`, or whose settings target
+/// is spelled with a dot segment, still has its settings read — and a
+/// settings-shaped part nothing refers to is not this document's
+/// settings.
+async test "the preflight reads the settings the package points at" {
+  with_docx_session_test_dir(directory => {
+    // The main document part moved, so a `word/_rels/document.xml.rels`
+    // assumption would find nothing at all.
+    let rehomed = repackaged_fixture(
+      directory,
+      "rehomed",
+      [
+        ("word/document.xml", "word/document2.xml"),
+        ("word/_rels/document.xml.rels", "word/_rels/document2.xml.rels"),
+      ],
+      [
+        (
+          "[Content_Types].xml", "PartName=\"/word/document.xml\"", "PartName=\"/word/document2.xml\"",
+        ),
+        (
+          "_rels/.rels", "Target=\"word/document.xml\"", "Target=\"word/document2.xml\"",
+        ),
+        (
+          "word/settings.xml", "</w:settings>", "<w:trackRevisions/></w:settings>",
+        ),
+      ],
+      [],
+    )
+    let (rehomed_failure, rehomed_published) = format_input_probe(
+      rehomed,
+      directory + "/rehomed-out.docx",
+    )
+    guard rehomed_failure is Some(rehomed_message) else {
+      fail("a rehomed main part must still have its settings read")
+    }
+    assert_true(
+      rehomed_message.contains("records revisions"),
+      msg=rehomed_message,
+    )
+    assert_false(rehomed_published, msg="nothing may be published")
+    // A dot-segmented target names the same part.
+    let dotted = repackaged_fixture(
+      directory,
+      "dotted",
+      [],
+      [
+        (
+          "word/_rels/document.xml.rels", "Target=\"settings.xml\"", "Target=\"./settings.xml\"",
+        ),
+        (
+          "word/settings.xml", "</w:settings>", "<w:trackRevisions/></w:settings>",
+        ),
+      ],
+      [],
+    )
+    let (dotted_failure, _) = format_input_probe(
+      dotted,
+      directory + "/dotted-out.docx",
+    )
+    guard dotted_failure is Some(dotted_message) else {
+      fail("a dot-segmented target names the settings part")
+    }
+    assert_true(
+      dotted_message.contains("records revisions"),
+      msg=dotted_message,
+    )
+    // A settings-shaped part with no relationship to this document is
+    // some other package's business.
+    let unrelated = repackaged_fixture(
+      directory,
+      "unrelated",
+      [],
+      [
+        (
+          "[Content_Types].xml", "<Override PartName=\"/word/settings.xml\"", "<Override PartName=\"/word/settings2.xml\" ContentType=\"application/vnd.openxmlformats-officedocument.wordprocessingml.settings+xml\"/><Override PartName=\"/word/settings.xml\"",
+        ),
+      ],
+      [
+        (
+          "word/settings2.xml", "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?><w:settings xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\"><w:trackRevisions/></w:settings>",
+        ),
+      ],
+    )
+    let (unrelated_failure, unrelated_published) = format_input_probe(
+      unrelated,
+      directory + "/unrelated-out.docx",
+    )
+    assert_true(
+      unrelated_failure is None,
+      msg="an unreferenced settings part must not block: \{unrelated_failure}",
+    )
+    assert_true(unrelated_published, msg="the edit publishes")
+  })
+}
+
+///|
+/// A signature refusal needs a signature PART, not merely a declaration:
+/// a content type nothing uses is scaffolding.
+async test "the preflight refuses signatures that are actually present" {
+  with_docx_session_test_dir(directory => {
+    // Declared by extension, with a part that carries it.
+    let signed = repackaged_fixture(
+      directory,
+      "default-signed",
+      [],
+      [
+        (
+          "[Content_Types].xml", "</Types>", "<Default Extension=\"sigx\" ContentType=\"APPLICATION/VND.OPENXMLFORMATS-PACKAGE.DIGITAL-SIGNATURE-XMLSIGNATURE+XML\"/></Types>",
+        ),
+      ],
+      [("_xmlsignatures/sig1.sigx", "<Signature/>")],
+    )
+    let (signed_failure, signed_published) = format_input_probe(
+      signed,
+      directory + "/default-signed-out.docx",
+    )
+    guard signed_failure is Some(signed_message) else {
+      fail("a signature part declared by extension is a signature")
+    }
+    assert_true(
+      signed_message.contains("digital signature"),
+      msg=signed_message,
+    )
+    assert_false(signed_published, msg="nothing may be published")
+    // The same declaration with no part carrying it refuses nothing.
+    let declared = repackaged_fixture(
+      directory,
+      "declared-only",
+      [],
+      [
+        (
+          "[Content_Types].xml", "</Types>", "<Default Extension=\"sigx\" ContentType=\"application/vnd.openxmlformats-package.digital-signature-xmlsignature+xml\"/></Types>",
+        ),
+      ],
+      [],
+    )
+    let (declared_failure, declared_published) = format_input_probe(
+      declared,
+      directory + "/declared-only-out.docx",
+    )
+    assert_true(
+      declared_failure is None,
+      msg="a declaration alone is not a signature: \{declared_failure}",
+    )
+    assert_true(declared_published, msg="the edit publishes")
+  })
+}
+
+///|
+/// The one edit a document that records revisions must still accept:
+/// resolving the revisions it already carries. Refusing it would leave a
+/// caller with tracked changes and no verb that can clear them — but the
+/// waiver is narrow, and a signature or an enforced protection still
+/// refuses the same script.
+async test "the preflight lets a tracked document resolve its own revisions" {
+  with_docx_session_test_dir(directory => {
+    let tracked = preflight_fixture(
+      directory,
+      "resolvable",
+      "<w:trackRevisions/>",
+      [],
+      runs=REVENUE_RUNS,
+    )
+    let accepted = directory + "/resolvable-out.docx"
+    let result = @docx.transact_docx_edit(
+      @transaction.transaction_options(tracked, output_path=accepted),
+      edit_script([revision_op(true, all=true)]),
+      allow_unmatched=false,
+    )
+    assert_true(result.report.revisions_resolved > 0)
+    let published = @zip.read(@afs.read_file(accepted).binary())
+    guard published.get("word/document.xml") is Some(payload) else {
+      fail("no document part")
+    }
+    let document = @utf8.decode(payload)
+    assert_true(document.contains("up 18%"), msg=document)
+    assert_false(document.contains("<w:del "), msg=document)
+    // The SAME document refuses an ordinary text edit: the waiver is for
+    // resolving revisions, not for editing tracked documents.
+    let mut failure : String? = None
+    try
+      @docx.transact_docx_find_replace(
+        @transaction.transaction_options(
+          tracked,
+          output_path=directory + "/resolvable-replaced.docx",
+        ),
+        needle="revenue",
+        replacement="profit",
+      )
+      |> ignore
+    catch {
+      error => failure = Some("\{error}")
+    }
+    guard failure is Some(message) else { fail("expected a refusal") }
+    assert_true(message.contains("records revisions"), msg=message)
+    // And the waiver does not reach the other two conditions.
+    let signed = preflight_fixture(
+      directory,
+      "signed-tracked",
+      "<w:trackRevisions/>",
+      [("_xmlsignatures/sig1.xml", "<Signature/>")],
+      content_types_insert="<Override PartName=\"/_xmlsignatures/sig1.xml\" ContentType=\"application/vnd.openxmlformats-package.digital-signature-xmlsignature+xml\"/>",
+      runs=REVENUE_RUNS,
+    )
+    let mut signed_failure : String? = None
+    try
+      @docx.transact_docx_edit(
+        @transaction.transaction_options(
+          signed,
+          output_path=directory + "/signed-tracked-out.docx",
+        ),
+        edit_script([revision_op(true, all=true)]),
+        allow_unmatched=false,
+      )
+      |> ignore
+    catch {
+      error => signed_failure = Some("\{error}")
+    }
+    guard signed_failure is Some(signed_message) else {
+      fail("a signed package refuses every verb")
+    }
+    assert_true(
+      signed_message.contains("digital signature"),
+      msg=signed_message,
+    )
+    let protected_input = preflight_fixture(
+      directory,
+      "protected-tracked",
+      "<w:documentProtection w:edit=\"readOnly\" w:enforcement=\"1\"/><w:trackRevisions/>",
+      [],
+      runs=REVENUE_RUNS,
+    )
+    let mut protected_failure : String? = None
+    try
+      @docx.transact_docx_edit(
+        @transaction.transaction_options(
+          protected_input,
+          output_path=directory + "/protected-tracked-out.docx",
+        ),
+        edit_script([revision_op(true, all=true)]),
+        allow_unmatched=false,
+      )
+      |> ignore
+    catch {
+      error => protected_failure = Some("\{error}")
+    }
+    guard protected_failure is Some(protected_message) else {
+      fail("an enforced protection refuses every verb")
+    }
+    assert_true(
+      protected_message.contains("editing protection"),
+      msg=protected_message,
+    )
+  })
+}
+
+///|
+/// The settings part is READ, not scanned. Every case here turns on the
+/// difference: a foreign attribute is not `w:val`, a setting inside
+/// compatibility markup is still a setting, and a part that does not
+/// parse is not evidence of anything.
+async test "the preflight reads settings as XML" {
+  with_docx_session_test_dir(directory => {
+    // A foreign `val` leaves the WML attribute ABSENT, and an absent
+    // `w:val` on an on/off element means on.
+    let foreign_val = preflight_fixture(
+      directory,
+      "foreign-val",
+      "<w:trackRevisions xmlns:x=\"urn:example:x\" x:val=\"false\"/>",
+      [],
+    )
+    let (foreign_failure, _) = format_input_probe(
+      foreign_val,
+      directory + "/foreign-val-out.docx",
+    )
+    guard foreign_failure is Some(foreign_message) else {
+      fail("a foreign val does not disable a WML flag")
+    }
+    assert_true(
+      foreign_message.contains("records revisions"),
+      msg=foreign_message,
+    )
+    // Compatibility markup hides nothing: the setting is still there.
+    let wrapped = preflight_fixture(
+      directory,
+      "wrapped",
+      "<mc:AlternateContent xmlns:mc=\"http://schemas.openxmlformats.org/markup-compatibility/2006\"><mc:Choice Requires=\"w14\"><w:trackRevisions/></mc:Choice></mc:AlternateContent>",
+      [],
+    )
+    let (wrapped_failure, _) = format_input_probe(
+      wrapped,
+      directory + "/wrapped-out.docx",
+    )
+    guard wrapped_failure is Some(wrapped_message) else {
+      fail("a wrapped setting is still a setting")
+    }
+    assert_true(
+      wrapped_message.contains("records revisions"),
+      msg=wrapped_message,
+    )
+    // A value the schema does not define is neither on nor off.
+    let nonsense = preflight_fixture(
+      directory,
+      "nonsense",
+      "<w:trackRevisions w:val=\"maybe\"/>",
+      [],
+    )
+    let (nonsense_failure, _) = format_input_probe(
+      nonsense,
+      directory + "/nonsense-out.docx",
+    )
+    guard nonsense_failure is Some(nonsense_message) else {
+      fail("an undefined on/off value is not a verdict")
+    }
+    assert_true(
+      nonsense_message.contains("outside the schema"),
+      msg=nonsense_message,
+    )
+    // A settings part that does not parse refuses BEFORE the package
+    // validation that would also object, with a code that says why.
+    let malformed = repackaged_fixture(
+      directory,
+      "malformed",
+      [],
+      [("word/settings.xml", "</w:settings>", "<w:trackRevisions>")],
+      [],
+    )
+    let (malformed_failure, malformed_published) = format_input_probe(
+      malformed,
+      directory + "/malformed-out.docx",
+    )
+    guard malformed_failure is Some(malformed_message) else {
+      fail("an unparseable settings part is not evidence of safety")
+    }
+    assert_true(
+      malformed_message.contains("could not be read"),
+      msg=malformed_message,
+    )
+    assert_false(malformed_published, msg="nothing may be published")
+  })
+}
+
+///|
+/// Two settings relationships naming different parts is legal OPC and
+/// meaningless WML, so nothing downstream refuses it and the preflight
+/// must.
+async test "the preflight refuses a package with two settings parts" {
+  with_docx_session_test_dir(directory => {
+    let ambiguous = repackaged_fixture(
+      directory,
+      "two-settings",
+      [],
+      [
+        (
+          "[Content_Types].xml", "<Override PartName=\"/word/settings.xml\"", "<Override PartName=\"/word/settings3.xml\" ContentType=\"application/vnd.openxmlformats-officedocument.wordprocessingml.settings+xml\"/><Override PartName=\"/word/settings.xml\"",
+        ),
+        (
+          "word/_rels/document.xml.rels", "</Relationships>", "<Relationship Id=\"rIdSettings3\" Type=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships/settings\" Target=\"settings3.xml\"/></Relationships>",
+        ),
+      ],
+      [
+        (
+          "word/settings3.xml", "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?><w:settings xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\"/>",
+        ),
+      ],
+    )
+    let (failure, published) = format_input_probe(
+      ambiguous,
+      directory + "/two-settings-out.docx",
+    )
+    guard failure is Some(message) else {
+      fail("two settings parts cannot both be this document's settings")
+    }
+    assert_true(message.contains("more than one settings part"), msg=message)
+    assert_false(published, msg="nothing may be published")
+  })
+}
+
+///|
+/// The preflight judges the REQUEST, not its outcome: a request that
+/// would have changed nothing is still a request to edit a document
+/// this toolkit does not edit.
+async test "the preflight refuses before it knows whether anything would change" {
+  with_docx_session_test_dir(directory => {
+    let tracked = preflight_fixture(directory, "noop", "<w:trackRevisions/>", [])
+    // Nothing would match, and zero matches are explicitly allowed.
+    let mut zero_failure : String? = None
+    try
+      @docx.transact_docx_format(
+        @transaction.transaction_options(
+          tracked,
+          output_path=directory + "/noop-zero.docx",
+        ),
+        format=@word.docx_direct_format(bold=true),
+        text="nothing here matches",
+        allow_zero=true,
+      )
+      |> ignore
+    catch {
+      error => zero_failure = Some("\{error}")
+    }
+    guard zero_failure is Some(zero_message) else {
+      fail("the preflight judges the request, not the match count")
+    }
+    assert_true(zero_message.contains("records revisions"), msg=zero_message)
+    // And a dry run is still a request to edit.
+    let mut dry_failure : String? = None
+    try
+      @docx.transact_docx_format(
+        @transaction.transaction_options(
+          tracked,
+          output_path=directory + "/noop-dry.docx",
+          dry_run=true,
+        ),
+        format=@word.docx_direct_format(bold=true),
+        text="world",
+      )
+      |> ignore
+    catch {
+      error => dry_failure = Some("\{error}")
+    }
+    guard dry_failure is Some(dry_message) else {
+      fail("a dry run of a refused edit is still refused")
+    }
+    assert_true(dry_message.contains("records revisions"), msg=dry_message)
   })
 }

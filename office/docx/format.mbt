@@ -76,7 +76,7 @@ pub fn DocxFormatReport::selected(self : DocxFormatReport) -> Array[Int] {
 pub fn DocxFormatReport::spans(
   self : DocxFormatReport,
 ) -> Array[@word.DocxFormatSpan] {
-  self.spans.copy()
+  self.spans.map(@word.DocxFormatSpan::copy)
 }
 
 ///|
@@ -139,20 +139,22 @@ pub fn DocxFormatResult::transaction(
 }
 
 ///|
-/// The shared DOCX mutation preflight: the conditions under which this
-/// toolkit declines to change a document at all.
+/// The conditions under which this toolkit does not edit a DOCX at all:
+/// the package carries a digital signature, the document enforces
+/// editing protection, or the document records revisions this toolkit
+/// cannot write.
 ///
-/// A signature covers the parts being edited, so any edit invalidates
-/// it and this toolkit cannot re-sign. Enforced protection is the
-/// author's standing instruction that the document is not to be
-/// changed. And a document recording revisions expects every edit to
-/// arrive as one — writing an untracked edit would misrepresent it as
-/// the author's own text.
-///
-/// None of these is a formatting question, which is why this runs on
-/// the SHARED mutation path: every verb that changes a DOCX reaches it.
+/// It runs BEFORE anything is planned, on the request rather than on
+/// its outcome. A caller who asks to modify a signed document is told
+/// no whether or not the edit would have matched anything: a refusal
+/// that depended on whether a match happened to be found would make the
+/// same request succeed on one document and fail on another for reasons
+/// that have nothing to do with the package's protections, and would
+/// make this toolkit plan edits to documents it has already decided not
+/// to touch.
 pub fn docx_mutation_preflight(
   archive : @zip.Archive,
+  resolving_revisions? : Bool = false,
 ) -> Unit raise @transaction.TransactionError {
   // Signatures are identified by CONTENT TYPE, not by where they are
   // stored: OPC lets a package name its signature parts freely, so a
@@ -163,19 +165,39 @@ pub fn docx_mutation_preflight(
       "office.docx.signed_package", "this package carries a digital signature, which any edit would invalidate",
     )
   }
-  guard docx_settings_part(archive) is Some(settings_name) else { return }
+  let settings_name = match docx_settings_part(archive) {
+    Found(name) => name
+    // A document with no settings part declares no protections.
+    Absent => return
+    Ambiguous =>
+      raise @transaction.transaction_failure(
+        "office.docx.settings_ambiguous", "this package names more than one settings part, so its editing protections cannot be checked",
+      )
+  }
+  // A settings part the package promises but does not contain is a
+  // broken package, which the strict validation that opens the session
+  // refuses on its own terms.
   guard archive.get(settings_name) is Some(settings) else { return }
-  // An unreadable settings part cannot be cleared: a preflight that
-  // cannot see its own evidence refuses rather than proceeds.
-  let text = @utf8.decode(settings) catch {
+  // A settings part that cannot be READ cannot be cleared: a preflight
+  // that cannot see its own evidence refuses rather than proceeds.
+  let root = @xml.read_xml_bytes_strict_limited(
+    settings,
+    candidate_xml_budget(),
+  ) catch {
     _ =>
       raise @transaction.transaction_failure(
         "office.docx.settings_unreadable", "this document's settings part could not be read, so its editing protections cannot be checked",
       )
   }
+  guard root.name == "{\{DOCX_WML_NAMESPACE}}settings" ||
+    root.name == "{\{DOCX_STRICT_WML_NAMESPACE}}settings" else {
+    raise @transaction.transaction_failure(
+      "office.docx.settings_unreadable", "this document's settings part is not a WML settings part, so its editing protections cannot be checked",
+    )
+  }
   match
     docx_settings_flag(
-      text,
+      root,
       "documentProtection",
       "enforcement",
       absent_means_on=false,
@@ -186,132 +208,247 @@ pub fn docx_mutation_preflight(
       )
     Ambiguous =>
       raise @transaction.transaction_failure(
-        "office.docx.settings_ambiguous", "this document declares its editing protection more than once, with different values",
+        "office.docx.settings_ambiguous", "this document's editing protection is declared more than once, or with a value outside the schema, so it cannot be read as enforced or not",
       )
     Disabled | Missing => ()
   }
+  // Resolving revisions is the one edit that REMOVES revision markup the
+  // document already carries. Refusing it would strand a caller with
+  // tracked changes and no verb in this toolkit that can ever clear
+  // them, so this condition — and only this one — is waived for it. A
+  // signature or an enforced protection still refuses every verb.
+  if resolving_revisions {
+    return
+  }
   match
-    docx_settings_flag(text, "trackRevisions", "val", absent_means_on=true) {
+    docx_settings_flag(root, "trackRevisions", "val", absent_means_on=true) {
     Enabled =>
       raise @transaction.transaction_failure(
         "office.docx.track_revisions", "this document records revisions; editing it would write an untracked change",
       )
     Ambiguous =>
       raise @transaction.transaction_failure(
-        "office.docx.settings_ambiguous", "this document declares revision tracking more than once, with different values",
+        "office.docx.settings_ambiguous", "this document's revision tracking is declared more than once, or with a value outside the schema, so it cannot be read as on or off",
       )
     Disabled | Missing => ()
   }
 }
 
 ///|
-/// Whether the package declares a digital SIGNATURE part. An origin or
-/// certificate part alone is not a signature: a package may carry the
-/// scaffolding before anything is signed.
+/// The OPC content type that says a part IS a digital signature. The
+/// origin and certificate parts of a signature are scaffolding and may
+/// exist in a package nobody has signed.
+const DOCX_SIGNATURE_CONTENT_TYPE : String = "application/vnd.openxmlformats-package.digital-signature-xmlsignature+xml"
+
+///|
+const DOCX_CONTENT_TYPES_ROOT : String = "{http://schemas.openxmlformats.org/package/2006/content-types}Types"
+
+///|
+const DOCX_CONTENT_TYPES_DEFAULT : String = "{http://schemas.openxmlformats.org/package/2006/content-types}Default"
+
+///|
+const DOCX_CONTENT_TYPES_OVERRIDE : String = "{http://schemas.openxmlformats.org/package/2006/content-types}Override"
+
+///|
+/// Whether the package CONTAINS a part whose content type is a digital
+/// signature.
+///
+/// Both halves matter. Reading the content types rather than the part
+/// names means a signature stored under any name is found, since OPC
+/// lets a package name its parts freely; requiring a part to carry the
+/// type means a lone declaration — or the string appearing in a comment
+/// — does not refuse an unsigned package.
+///
+/// A content-types part that cannot be read at all is left to the strict
+/// package validation that runs a moment later, which refuses on any
+/// finding; this preflight only decides about packages that parse.
 fn docx_package_declares_signature(archive : @zip.Archive) -> Bool {
   guard archive.get("[Content_Types].xml") is Some(types) else { return false }
-  let text = @utf8.decode(types) catch { _ => return false }
-  text.contains(
-    "application/vnd.openxmlformats-package.digital-signature-xmlsignature+xml",
-  )
-}
-
-///|
-/// The settings part's name, found through the main document's
-/// RELATIONSHIPS rather than assumed: OPC part names are not
-/// predictable, and an unreferenced `word/settings.xml` is not this
-/// document's settings.
-fn docx_settings_part(archive : @zip.Archive) -> String? {
-  guard archive.get("word/_rels/document.xml.rels") is Some(rels) else {
-    return None
+  let root = @xml.read_xml_bytes_strict_limited(types, candidate_xml_budget()) catch {
+    _ => return false
   }
-  let text = @utf8.decode(rels) catch { _ => return None }
-  let bytes = @utf8.encode(text)
-  let limit = bytes.length()
-  let mut at = 0
-  while at < limit {
-    if bytes[at] != b'<' {
-      at += 1
+  guard root.name == DOCX_CONTENT_TYPES_ROOT else { return false }
+  let defaults : Map[String, Bool] = Map([])
+  let overrides : Map[String, Bool] = Map([])
+  for node in root.children {
+    guard node is XmlElement(element) else { continue }
+    if element.name == DOCX_CONTENT_TYPES_DEFAULT {
+      guard element.attributes.get("ContentType") is Some(content_type) &&
+        element.attributes.get("Extension") is Some(extension) else {
+        continue
+      }
+      if docx_is_signature_content_type(content_type) {
+        defaults[extension.to_lower()] = true
+      }
+    } else if element.name == DOCX_CONTENT_TYPES_OVERRIDE {
+      guard element.attributes.get("ContentType") is Some(content_type) &&
+        element.attributes.get("PartName") is Some(part_name) else {
+        continue
+      }
+      if docx_is_signature_content_type(content_type) {
+        overrides[@opc.part_name_key(part_name)] = true
+      }
+    }
+  }
+  if defaults.is_empty() && overrides.is_empty() {
+    return false
+  }
+  for entry in archive.entries() {
+    guard @opc.logical_part_name_from_zip_item_name(entry.name()) is Some(part) else {
       continue
     }
-    let element_start = at
-    while at < limit && bytes[at] != b'>' {
-      at += 1
+    if overrides.get(@opc.part_name_key("/" + part)) is Some(_) {
+      return true
     }
-    let element = docx_ascii_text(bytes, element_start, at)
-    at += 1
-    guard element.contains("Relationship") else { continue }
-    guard element.contains(
-      "http://schemas.openxmlformats.org/officeDocument/2006/relationships/settings",
-    ) else {
+    if docx_part_extension(part) is Some(extension) &&
+      defaults.get(extension) is Some(_) {
+      return true
+    }
+  }
+  false
+}
+
+///|
+/// A media type comparison that ignores what RFC 2045 says is not part
+/// of the type: case, surrounding space, and any parameters.
+fn docx_is_signature_content_type(declared : String) -> Bool {
+  let value = match declared.find(";") {
+    Some(semicolon) => declared[:semicolon].to_owned()
+    None => declared
+  }
+  value.trim(chars=" \t\r\n").to_lower() == DOCX_SIGNATURE_CONTENT_TYPE
+}
+
+///|
+/// A part name's extension, lowercased, from its final segment.
+fn docx_part_extension(name : String) -> String? {
+  guard name.rev_find(".") is Some(dot) else { return None }
+  let after_slash = match name.rev_find("/") {
+    Some(slash) => dot > slash
+    None => true
+  }
+  if after_slash && dot + 1 < name.length() {
+    Some(name[dot + 1:].to_owned().to_lower())
+  } else {
+    None
+  }
+}
+
+///|
+/// The relationship element, in the two spellings the readers emit: the
+/// expanded name, and the mapped prefix a namespace map produces.
+const DOCX_PACKAGE_RELATIONSHIP_ELEMENT : String = "{http://schemas.openxmlformats.org/package/2006/relationships}Relationship"
+
+///|
+const DOCX_OFFICE_DOCUMENT_RELATIONSHIP : String = "http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument"
+
+///|
+const DOCX_STRICT_OFFICE_DOCUMENT_RELATIONSHIP : String = "http://purl.oclc.org/ooxml/officeDocument/relationships/officeDocument"
+
+///|
+const DOCX_SETTINGS_RELATIONSHIP : String = "http://schemas.openxmlformats.org/officeDocument/2006/relationships/settings"
+
+///|
+const DOCX_STRICT_SETTINGS_RELATIONSHIP : String = "http://purl.oclc.org/ooxml/officeDocument/relationships/settings"
+
+///|
+/// The settings part's name, found by FOLLOWING relationships from the
+/// package root: the main document part is whatever the root
+/// `officeDocument` relationship names, and the settings part is
+/// whatever that part's own settings relationship names. Neither is
+/// `word/…` by rule — OPC part names are the package's to choose, and a
+/// `word/settings.xml` nothing refers to is not this document's
+/// settings.
+fn docx_settings_part(archive : @zip.Archive) -> DocxPartLookup {
+  // A package that names several main document parts is refused by the
+  // strict validation that opens the session, in those words; this
+  // preflight leaves that verdict to it rather than reporting the
+  // package's shape as a settings problem.
+  guard docx_relationship_target(archive, "", [
+      DOCX_OFFICE_DOCUMENT_RELATIONSHIP,
+      DOCX_STRICT_OFFICE_DOCUMENT_RELATIONSHIP,
+    ])
+    is Found(document) else {
+    return Absent
+  }
+  docx_relationship_target(archive, document, [
+    DOCX_SETTINGS_RELATIONSHIP,
+    DOCX_STRICT_SETTINGS_RELATIONSHIP,
+  ])
+}
+
+///|
+/// What following a relationship found.
+priv enum DocxPartLookup {
+  Absent
+  Found(String)
+  Ambiguous
+}
+
+///|
+/// The single INTERNAL part named by `source`'s relationships of one of
+/// `types`, resolved against `source`'s own location.
+///
+/// `Absent` when there is no such relationship or its target is
+/// external or unresolvable; `Ambiguous` when several relationships of
+/// these types name different parts, which no later gate would catch.
+fn docx_relationship_target(
+  archive : @zip.Archive,
+  source : String,
+  types : Array[String],
+) -> DocxPartLookup {
+  let rels_name = @opc.relationships_part_name_for_source(source)
+  guard archive.get(rels_name) is Some(bytes) else { return Absent }
+  let root = @opc.read_opc_relationships_xml_limited(
+    bytes,
+    candidate_xml_budget(),
+  ) catch {
+    _ => return Absent
+  }
+  let base = match source.rev_find("/") {
+    Some(slash) => source[:slash].to_owned()
+    None => ""
+  }
+  let found : Array[String] = []
+  for node in root.children {
+    guard node is XmlElement(relationship) else { continue }
+    guard relationship.name
+      is (DOCX_PACKAGE_RELATIONSHIP_ELEMENT | "relationships:Relationship") else {
       continue
     }
-    guard docx_attribute_of(element, "Target") is Some(target) else { continue }
-    // Targets in the document part's rels are relative to `word/`; an
-    // absolute one names the part outright.
-    if target.has_prefix("/") {
-      return Some(target.substring(start=1, end=target.length()).to_string())
+    let kind = @xml.collapse_xml_schema_whitespace(
+      relationship.attributes.get_or_default("Type", ""),
+    )
+    guard types.contains(kind) else { continue }
+    // An EXTERNAL target names something outside the package, which is
+    // not a part and cannot be read.
+    let mode = @xml.collapse_xml_schema_whitespace(
+      relationship.attributes.get_or_default("TargetMode", "Internal"),
+    )
+    guard mode == "Internal" else { continue }
+    let target = @xml.collapse_xml_schema_whitespace(
+      relationship.attributes.get_or_default("Target", ""),
+    )
+    guard @opc.resolve_part_target(base, target) is Some(part) else { continue }
+    if !found.contains(part) {
+      found.push(part)
     }
-    return Some("word/" + target)
   }
-  None
+  match found.length() {
+    0 => Absent
+    1 => Found(found[0])
+    // Several relationships of the same type naming different parts is
+    // legal OPC and meaningless WML: nothing downstream would refuse it,
+    // so the preflight must.
+    _ => Ambiguous
+  }
 }
 
 ///|
-/// One attribute of an open tag's text, by exact name.
-fn docx_attribute_of(element : String, attribute : String) -> String? {
-  let bytes = @utf8.encode(element)
-  let limit = bytes.length()
-  let mut at = 0
-  while at < limit {
-    while at < limit && bytes[at] != b'=' {
-      at += 1
-    }
-    guard at < limit else { break }
-    let mut name_end = at
-    while name_end > 0 && docx_is_space(bytes[name_end - 1]) {
-      name_end -= 1
-    }
-    let mut name_start = name_end
-    while name_start > 0 &&
-          !docx_is_space(bytes[name_start - 1]) &&
-          bytes[name_start - 1] != b'<' {
-      name_start -= 1
-    }
-    at += 1
-    while at < limit && docx_is_space(bytes[at]) {
-      at += 1
-    }
-    guard at < limit && (bytes[at] == b'"' || bytes[at] == b'\'') else { break }
-    let quote = bytes[at]
-    at += 1
-    let value_start = at
-    while at < limit && bytes[at] != quote {
-      at += 1
-    }
-    if docx_ascii_text(bytes, name_start, name_end) == attribute {
-      return Some(docx_ascii_text(bytes, value_start, at))
-    }
-    at += 1
-  }
-  None
-}
+const DOCX_WML_NAMESPACE : String = "http://schemas.openxmlformats.org/wordprocessingml/2006/main"
 
 ///|
-fn docx_is_space(byte : Byte) -> Bool {
-  byte is (b' ' | b'\t' | b'\n' | b'\r')
-}
-
-///|
-fn docx_ascii_text(bytes : Bytes, from : Int, to : Int) -> String {
-  let builder = StringBuilder()
-  for index in from..<to {
-    if bytes[index] < b'\x80' {
-      builder.write_char(bytes[index].to_int().unsafe_to_char())
-    }
-  }
-  builder.to_string()
-}
+const DOCX_STRICT_WML_NAMESPACE : String = "http://purl.oclc.org/ooxml/wordprocessingml/main"
 
 ///|
 /// What a settings flag says.
@@ -323,264 +460,65 @@ priv enum DocxSettingsFlag {
 }
 
 ///|
-/// Read one WML settings flag: the element by local name UNDER THE WML
-/// namespace, its attribute by local name, entity references in the
-/// value expanded, comments skipped, and DUPLICATES that disagree
-/// reported rather than resolved — a preflight never picks a winner.
+/// Reads the settings part and answers one WML on/off flag.
+///
+/// The part is parsed rather than scanned, so the answer is about
+/// EXPANDED names: `<w:trackRevisions x:val="false"/>` carries no WML
+/// `w:val` at all and therefore means on, whatever a local-name reading
+/// would say. Occurrences anywhere in the part count, so a setting
+/// wrapped in compatibility markup is still seen; occurrences that
+/// disagree are reported rather than resolved, because a preflight that
+/// picks a winner is guessing about a document it is refusing to guess
+/// about.
 fn docx_settings_flag(
-  settings : String,
-  element : String,
+  root : @xml.XmlElement,
+  local : String,
   attribute : String,
   absent_means_on~ : Bool,
 ) -> DocxSettingsFlag {
-  let bytes = @utf8.encode(settings)
-  let limit = bytes.length()
-  // The prefixes bound to WML anywhere in this part: a settings part
-  // declares them at its root, and a flag under another vocabulary is
-  // not this document's setting.
-  let wml : Map[String, Bool] = Map([])
-  let mut scan = 0
-  while scan < limit {
-    if bytes[scan] != b'x' {
-      scan += 1
-      continue
+  let mut verdict : DocxSettingsFlag = Missing
+  fn observe(state : DocxSettingsFlag) -> Unit {
+    verdict = match (verdict, state) {
+      (Missing, seen) => seen
+      (_, Ambiguous) | (Ambiguous, _) => Ambiguous
+      (Enabled, Enabled) => Enabled
+      (Disabled, Disabled) => Disabled
+      _ => Ambiguous
     }
-    let candidate = docx_ascii_text(bytes, scan, @cmp.minimum(scan + 6, limit))
-    if candidate == "xmlns:" || candidate == "xmlns=" {
-      let mut cursor = scan + 6
-      let name_start = scan + 6
-      while cursor < limit && bytes[cursor] != b'=' {
-        cursor += 1
-      }
-      let prefix = if candidate == "xmlns=" {
-        ""
-      } else {
-        docx_ascii_text(bytes, name_start, cursor)
-      }
-      while cursor < limit && bytes[cursor] != b'"' && bytes[cursor] != b'\'' {
-        cursor += 1
-      }
-      if cursor < limit {
-        let quote = bytes[cursor]
-        cursor += 1
-        let value_start = cursor
-        while cursor < limit && bytes[cursor] != quote {
-          cursor += 1
-        }
-        let uri = docx_ascii_text(bytes, value_start, cursor)
-        if uri == "http://schemas.openxmlformats.org/wordprocessingml/2006/main" ||
-          uri == "http://purl.oclc.org/ooxml/wordprocessingml/main" {
-          wml[prefix] = true
-        }
-      }
-      scan = cursor
-      continue
-    }
-    scan += 1
   }
-  let mut verdict = Missing
-  let mut at = 0
-  while at < limit {
-    if bytes[at] != b'<' {
-      at += 1
-      continue
-    }
-    // Comments and processing instructions carry no elements.
-    if at + 3 < limit &&
-      bytes[at + 1] == b'!' &&
-      bytes[at + 2] == b'-' &&
-      bytes[at + 3] == b'-' {
-      at += 4
-      while at + 2 < limit &&
-            !(bytes[at] == b'-' &&
-            bytes[at + 1] == b'-' &&
-            bytes[at + 2] == b'>') {
-        at += 1
-      }
-      at += 3
-      continue
-    }
-    if at + 1 < limit && (bytes[at + 1] == b'!' || bytes[at + 1] == b'?') {
-      while at < limit && bytes[at] != b'>' {
-        at += 1
-      }
-      at += 1
-      continue
-    }
-    let element_start = at
-    while at < limit && bytes[at] != b'>' {
-      at += 1
-    }
-    let open_tag = docx_ascii_text(
-      bytes,
-      element_start,
-      @cmp.minimum(at + 1, limit),
-    )
-    at += 1
-    let mut name_end = 1
-    let units = open_tag.length()
-    while name_end < units &&
-          !(open_tag.substring(start=name_end, end=name_end + 1).to_string()
-          is (" " | "\t" | "\n" | "\r" | ">" | "/")) {
-      name_end += 1
-    }
-    let qname = open_tag.substring(start=1, end=name_end).to_string()
-    let (prefix, local) = match docx_split_qname(qname) {
-      (found_prefix, found_local) => (found_prefix, found_local)
-    }
-    guard local == element && wml.get(prefix) == Some(true) else { continue }
-    let reading = match docx_attribute_local(open_tag, attribute) {
-      Some(value) =>
-        if docx_expand_entities(value) is ("1" | "true" | "on") {
-          Enabled
-        } else {
-          Disabled
+
+  for namespace in [DOCX_WML_NAMESPACE, DOCX_STRICT_WML_NAMESPACE] {
+    for element in root.descendants_by_tag_name("{\{namespace}}\{local}") {
+      let values : Array[String] = []
+      for dialect in [DOCX_WML_NAMESPACE, DOCX_STRICT_WML_NAMESPACE] {
+        if element.attributes.get("{\{dialect}}\{attribute}") is Some(value) {
+          let text = @xml.collapse_xml_schema_whitespace(value)
+          if !values.contains(text) {
+            values.push(text)
+          }
         }
-      None => if absent_means_on { Enabled } else { Disabled }
-    }
-    verdict = match verdict {
-      Missing => reading
-      Enabled => if reading is Enabled { Enabled } else { Ambiguous }
-      Disabled => if reading is Disabled { Disabled } else { Ambiguous }
-      Ambiguous => Ambiguous
+      }
+      if values.length() > 1 {
+        observe(Ambiguous)
+      } else if values.is_empty() {
+        observe(if absent_means_on { Enabled } else { Disabled })
+      } else {
+        observe(docx_on_off(values[0]))
+      }
     }
   }
   verdict
 }
 
 ///|
-fn docx_split_qname(qname : String) -> (String, String) {
-  let units = qname.code_units()
-  for index in 0..<units.length() {
-    if units[index].to_int() == ':'.to_int() {
-      return (
-        qname.substring(start=0, end=index).to_string(),
-        qname.substring(start=index + 1, end=qname.length()).to_string(),
-      )
-    }
+/// One `ST_OnOff` value. Anything the schema does not define is neither
+/// on nor off, and a preflight does not invent a meaning for it.
+fn docx_on_off(value : String) -> DocxSettingsFlag {
+  match value {
+    "true" | "1" | "on" => Enabled
+    "false" | "0" | "off" => Disabled
+    _ => Ambiguous
   }
-  ("", qname)
-}
-
-///|
-/// One attribute of an open tag, matched by LOCAL name.
-fn docx_attribute_local(open_tag : String, attribute : String) -> String? {
-  let bytes = @utf8.encode(open_tag)
-  let limit = bytes.length()
-  let mut at = 1
-  while at < limit && !docx_is_space(bytes[at]) && bytes[at] != b'>' {
-    at += 1
-  }
-  while at < limit {
-    while at < limit && (docx_is_space(bytes[at]) || bytes[at] == b'/') {
-      at += 1
-    }
-    if at >= limit || bytes[at] == b'>' {
-      break
-    }
-    let name_start = at
-    while at < limit &&
-          bytes[at] != b'=' &&
-          !docx_is_space(bytes[at]) &&
-          bytes[at] != b'>' {
-      at += 1
-    }
-    let (_, local) = docx_split_qname(docx_ascii_text(bytes, name_start, at))
-    while at < limit &&
-          bytes[at] != b'"' &&
-          bytes[at] != b'\'' &&
-          bytes[at] != b'>' {
-      at += 1
-    }
-    if at >= limit || bytes[at] == b'>' {
-      break
-    }
-    let quote = bytes[at]
-    at += 1
-    let value_start = at
-    while at < limit && bytes[at] != quote {
-      at += 1
-    }
-    if local == attribute {
-      return Some(docx_ascii_text(bytes, value_start, at))
-    }
-    at += 1
-  }
-  None
-}
-
-///|
-/// Expand the entity references a settings value may spell its flag
-/// with: `&#49;` is as much a `1` as `1` is.
-fn docx_expand_entities(value : String) -> String {
-  let bytes = @utf8.encode(value)
-  let limit = bytes.length()
-  let builder = StringBuilder()
-  let mut at = 0
-  while at < limit {
-    if bytes[at] != b'&' {
-      if bytes[at] < b'\x80' {
-        builder.write_char(bytes[at].to_int().unsafe_to_char())
-      }
-      at += 1
-      continue
-    }
-    let mut cursor = at + 1
-    while cursor < limit && bytes[cursor] != b';' && cursor - at < 12 {
-      cursor += 1
-    }
-    guard cursor < limit && bytes[cursor] == b';' else {
-      builder.write_char('&')
-      at += 1
-      continue
-    }
-    let body = docx_ascii_text(bytes, at + 1, cursor)
-    if body.has_prefix("#") {
-      let digits = if body.has_prefix("#x") || body.has_prefix("#X") {
-        body.substring(start=2, end=body.length()).to_string()
-      } else {
-        body.substring(start=1, end=body.length()).to_string()
-      }
-      let base = if body.has_prefix("#x") || body.has_prefix("#X") {
-        16
-      } else {
-        10
-      }
-      let mut code = 0
-      let mut valid = digits.length() > 0
-      for unit in digits.code_units() {
-        let digit = unit.to_int()
-        let value = if digit >= '0'.to_int() && digit <= '9'.to_int() {
-          digit - '0'.to_int()
-        } else if digit >= 'a'.to_int() && digit <= 'f'.to_int() {
-          digit - 'a'.to_int() + 10
-        } else if digit >= 'A'.to_int() && digit <= 'F'.to_int() {
-          digit - 'A'.to_int() + 10
-        } else {
-          -1
-        }
-        if value < 0 || value >= base {
-          valid = false
-        } else {
-          code = code * base + value
-        }
-      }
-      if valid && code > 0 && code < 0x80 {
-        builder.write_char(code.unsafe_to_char())
-      }
-    } else {
-      match body {
-        "amp" => builder.write_char('&')
-        "lt" => builder.write_char('<')
-        "gt" => builder.write_char('>')
-        "quot" => builder.write_char('"')
-        "apos" => builder.write_char('\'')
-        _ => ()
-      }
-    }
-    at = cursor + 1
-  }
-  builder.to_string()
 }
 
 ///|
@@ -701,9 +639,17 @@ fn format_readback_findings(
     return findings
   }
   let story = annotated.main_story_source()
-  // (1) Every affected paragraph still projects what it did.
-  for entry in captured.affected {
-    match @word.docx_paragraph_projection(annotated, story, path=entry.path()) {
+  // (1) Every affected paragraph still projects what it did. Every
+  // question about this story is asked in ONE batch: resolving a
+  // paragraph path costs a pass over the story, so asking per paragraph
+  // would cost the document once per formatted paragraph.
+  let projections = @word.docx_paragraphs_projection(
+    annotated,
+    story,
+    paths=captured.affected.map(entry => entry.path()),
+  )
+  for position, entry in captured.affected {
+    match projections[position] {
       Some(actual) =>
         if actual != entry.expected() {
           findings.push(
@@ -739,24 +685,30 @@ fn format_readback_findings(
     }
     ranges.push((span.start(), span.end()))
   }
-  // (2) The selected spans carry the request EXPLICITLY.
+  // The batch every span-level question is asked in, in one order.
+  let requests : Array[(String, Array[(Int, Int)])] = []
   for entry in by_paragraph {
-    let (path, ranges) = entry
-    let verdict = @word.docx_paragraph_direct_format_spans(
-      annotated,
-      story,
-      path~,
-      spans=ranges,
-      format~,
-    ) catch {
-      error => Some("could not be judged: \{docx_error_message(error)}")
-    }
-    if verdict is Some(discrepancy) {
+    requests.push(entry)
+  }
+  // (2) The selected spans carry the request EXPLICITLY.
+  let formatted = @word.docx_paragraphs_direct_format(
+    annotated,
+    story,
+    requests~,
+    format~,
+  ) catch {
+    error =>
+      requests.map(_ => {
+        Some("could not be judged: \{docx_error_message(error)}")
+      })
+  }
+  for position, request in requests {
+    if formatted[position] is Some(discrepancy) {
       findings.push(
         @transaction.validation_finding(
           "docx.format.readback_unformatted",
           docx_validator_message(
-            "paragraph \{path} does not carry the requested formatting: \{discrepancy}",
+            "paragraph \{request.0} does not carry the requested formatting: \{discrepancy}",
           ),
         ),
       )
@@ -807,25 +759,26 @@ fn format_readback_findings(
   // (3) Nothing else about the paragraph's formatting moved.
   let original = captured.before
   let original_story = original.main_story_source()
-  for entry in by_paragraph {
-    let (path, ranges) = entry
-    let verdict = @word.docx_paragraph_format_preserved(
-      original,
-      original_story,
-      annotated,
-      story,
-      path~,
-      spans=ranges,
-      format~,
-    ) catch {
-      error => Some("could not be compared: \{docx_error_message(error)}")
-    }
-    if verdict is Some(discrepancy) {
+  let preserved = @word.docx_paragraphs_format_preserved(
+    original,
+    original_story,
+    annotated,
+    story,
+    requests~,
+    format~,
+  ) catch {
+    error =>
+      requests.map(_ => {
+        Some("could not be compared: \{docx_error_message(error)}")
+      })
+  }
+  for position, request in requests {
+    if preserved[position] is Some(discrepancy) {
       findings.push(
         @transaction.validation_finding(
           "docx.format.readback_collateral",
           docx_validator_message(
-            "paragraph \{path} changed formatting nobody asked for: \{discrepancy}",
+            "paragraph \{request.0} changed formatting nobody asked for: \{discrepancy}",
           ),
         ),
       )

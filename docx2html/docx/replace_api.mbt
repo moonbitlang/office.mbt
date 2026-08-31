@@ -268,17 +268,28 @@ pub fn docx_paragraph_projection(
   story : DocxStoryPartSource,
   path~ : String,
 ) -> String? {
+  docx_paragraphs_projection(annotated, story, paths=[path])[0]
+}
+
+///|
+/// The projections of many paragraphs of one story, with the path
+/// lookup built once for the whole batch: asking per paragraph costs
+/// the whole story per question. Answers are returned in the order
+/// asked, `None` where the path names no paragraph.
+pub fn docx_paragraphs_projection(
+  annotated : DocxAnnotatedResult,
+  story : DocxStoryPartSource,
+  paths~ : Array[String],
+) -> Array[String?] {
   guard annotated.reader_projections.get(story.part()) is Some(projection) else {
-    return None
+    return paths.map(_ => None)
   }
-  let paragraph_paths = find_path_map(projection.scan, "p")
-  let elements = projection.scan.elements()
-  for paragraph in projection.paragraphs {
-    guard paragraph.sources.length() > 0 else { continue }
-    let SourceElementId(head) = paragraph.sources[0].source
-    if paragraph_paths.get(elements[head].byte_start) == Some(path) {
-      return Some(find_paragraph_projection(paragraph))
+  let index = docx_paragraph_path_index(projection)
+  paths.map(path => {
+    match index.locate(path) {
+      (target, _) if target >= 0 =>
+        Some(find_paragraph_projection(projection.paragraphs[target]))
+      _ => None
     }
-  }
-  None
+  })
 }

@@ -164,7 +164,7 @@ async fn transact_docx_revisions(
   allow_unmatched~ : Bool,
 ) -> DocxEditResult {
   let collected : Ref[DocxEditReport?] = Ref(None)
-  let report = transact_docx(options, session => {
+  let report = transact_docx(options, resolving_revisions=true, session => {
     let results = ops.map(op => {
       (
         {

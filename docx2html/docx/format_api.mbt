@@ -184,7 +184,16 @@ pub fn DocxFormatReceipt::selected(self : DocxFormatReceipt) -> Array[Int] {
 pub fn DocxFormatReceipt::spans(
   self : DocxFormatReceipt,
 ) -> Array[DocxFormatSpan] {
-  self.spans.copy()
+  // A span carries an array of its own, so copying only the outer array
+  // would hand the caller a handle back into the receipt.
+  self.spans.map(DocxFormatSpan::copy)
+}
+
+///|
+/// A span that shares nothing with this one, so a caller handed it
+/// cannot reach back into the receipt it came from.
+pub fn DocxFormatSpan::copy(self : DocxFormatSpan) -> DocxFormatSpan {
+  { ..self, source_runs: self.source_runs.copy(), }
 }
 
 ///|
@@ -524,6 +533,55 @@ fn docx_format_source_runs(
 }
 
 ///|
+/// Every paragraph path in one story, resolved ONCE: the paragraph that
+/// carries each path, and how many paragraphs claim it.
+///
+/// The readback asks about many paragraphs of the same story. Resolving
+/// a path by scanning the story is linear in the DOCUMENT, so answering
+/// per paragraph costs the whole document again for each one — a
+/// thousand formatted paragraphs in a large document turn a bounded
+/// read into a quadratic one. The lookup is therefore built once and
+/// shared by every question asked of that story.
+priv struct DocxParagraphPathIndex {
+  by_path : Map[String, (Int, Int)]
+}
+
+///|
+fn docx_paragraph_path_index(
+  projection : ReaderProjection,
+) -> DocxParagraphPathIndex {
+  let by_path : Map[String, (Int, Int)] = Map([])
+  let paragraph_paths = find_path_map(projection.scan, "p")
+  let elements = projection.scan.elements()
+  for paragraph_index, paragraph in projection.paragraphs {
+    guard paragraph.sources.length() > 0 else { continue }
+    let SourceElementId(head) = paragraph.sources[0].source
+    guard paragraph_paths.get(elements[head].byte_start) is Some(path) else {
+      continue
+    }
+    match by_path.get(path) {
+      Some((first, count)) => by_path[path] = (first, count + 1)
+      None => by_path[path] = (paragraph_index, 1)
+    }
+  }
+  { by_path, }
+}
+
+///|
+/// The paragraph a path names, and how many paragraphs name it.
+fn DocxParagraphPathIndex::locate(
+  self : DocxParagraphPathIndex,
+  path : String,
+) -> (Int, Int) {
+  match self.by_path.get(path) {
+    Some(entry) => entry
+    None => (-1, 0)
+  }
+}
+
+///|
+
+///|
 /// The readback's direct-format judgment: does every run whose
 /// projected text lies inside `[start, end)` of paragraph `path` carry
 /// every requested property EXPLICITLY?
@@ -540,27 +598,60 @@ pub fn docx_paragraph_direct_format_spans(
   spans~ : Array[(Int, Int)],
   format~ : DocxDirectFormat,
 ) -> String? raise DocxError {
+  docx_paragraphs_direct_format(
+    annotated,
+    story,
+    requests=[(path, spans)],
+    format~,
+  )[0]
+}
+
+///|
+/// The same judgment for many paragraphs of one story, with the path
+/// lookup built once for the whole batch. Answers are returned in the
+/// order asked.
+pub fn docx_paragraphs_direct_format(
+  annotated : DocxAnnotatedResult,
+  story : DocxStoryPartSource,
+  requests~ : Array[(String, Array[(Int, Int)])],
+  format~ : DocxDirectFormat,
+) -> Array[String?] raise DocxError {
   let part = story.part()
   guard annotated.reader_projections.get(part) is Some(projection) else {
-    return Some("the re-read retained no projection for '\{part}'")
+    return requests.map(_ => {
+      Some("the re-read retained no projection for '\{part}'")
+    })
   }
   guard annotated.reader_projection_sources.get(part) is Some(bytes) else {
-    return Some("the re-read retained no source bytes for '\{part}'")
+    return requests.map(_ => {
+      Some("the re-read retained no source bytes for '\{part}'")
+    })
   }
-  let paragraph_paths = find_path_map(projection.scan, "p")
+  let index = docx_paragraph_path_index(projection)
+  let answers : Array[String?] = []
+  for request in requests {
+    let (path, spans) = request
+    answers.push(
+      docx_paragraph_direct_format_at(
+        projection, bytes, index, path, spans, format,
+      ),
+    )
+  }
+  answers
+}
+
+///|
+/// One paragraph's positive check, against a lookup already built.
+fn docx_paragraph_direct_format_at(
+  projection : ReaderProjection,
+  bytes : BytesView,
+  index : DocxParagraphPathIndex,
+  path : String,
+  spans : Array[(Int, Int)],
+  format : DocxDirectFormat,
+) -> String? raise DocxError {
   let elements = projection.scan.elements()
-  let mut target = -1
-  let mut found = 0
-  for paragraph_index, paragraph in projection.paragraphs {
-    guard paragraph.sources.length() > 0 else { continue }
-    let SourceElementId(head) = paragraph.sources[0].source
-    if paragraph_paths.get(elements[head].byte_start) == Some(path) {
-      found = found + 1
-      if found == 1 {
-        target = paragraph_index
-      }
-    }
-  }
+  let (target, found) = index.locate(path)
   guard target >= 0 else {
     return Some("the path '\{path}' names no paragraph after the edit")
   }
@@ -700,17 +791,91 @@ pub fn docx_paragraph_format_preserved(
   spans~ : Array[(Int, Int)],
   format~ : DocxDirectFormat,
 ) -> String? raise DocxError {
+  docx_paragraphs_format_preserved(
+    before,
+    before_story,
+    after,
+    after_story,
+    requests=[(path, spans)],
+    format~,
+  )[0]
+}
+
+///|
+/// The same judgment for many paragraphs of one story, with each
+/// document's path lookup built once for the whole batch. Answers are
+/// returned in the order asked.
+pub fn docx_paragraphs_format_preserved(
+  before : DocxAnnotatedResult,
+  before_story : DocxStoryPartSource,
+  after : DocxAnnotatedResult,
+  after_story : DocxStoryPartSource,
+  requests~ : Array[(String, Array[(Int, Int)])],
+  format~ : DocxDirectFormat,
+) -> Array[String?] raise DocxError {
+  let before_part = before_story.part()
+  let after_part = after_story.part()
+  guard before.reader_projections.get(before_part) is Some(before_projection) &&
+    before.reader_projection_sources.get(before_part) is Some(before_bytes) else {
+    return requests.map(_ => {
+      Some("the source retained no projection for '\{before_part}'")
+    })
+  }
+  guard after.reader_projections.get(after_part) is Some(after_projection) &&
+    after.reader_projection_sources.get(after_part) is Some(after_bytes) else {
+    return requests.map(_ => {
+      Some("the re-read retained no projection for '\{after_part}'")
+    })
+  }
+  let before_index = docx_paragraph_path_index(before_projection)
+  let after_index = docx_paragraph_path_index(after_projection)
+  let answers : Array[String?] = []
+  for request in requests {
+    answers.push(
+      docx_paragraph_format_preserved_at(
+        before_projection,
+        before_bytes,
+        before_index,
+        after_projection,
+        after_bytes,
+        after_index,
+        request.0,
+        request.1,
+        format,
+      ),
+    )
+  }
+  answers
+}
+
+///|
+/// One paragraph's preservation check, against lookups already built.
+fn docx_paragraph_format_preserved_at(
+  before_projection : ReaderProjection,
+  before_bytes : BytesView,
+  before_index : DocxParagraphPathIndex,
+  after_projection : ReaderProjection,
+  after_bytes : BytesView,
+  after_index : DocxParagraphPathIndex,
+  path : String,
+  spans : Array[(Int, Int)],
+  format : DocxDirectFormat,
+) -> String? raise DocxError {
   // Inside a span only the REQUESTED properties may differ: an
   // omitted property means untouched, so a plan that dropped an
   // unrelated one while setting bold must be caught even though the
   // positive check passes and the projection is unchanged.
   let touched = docx_format_touched_properties(format)
   let filtered : Map[String, String] = Map([])
-  guard docx_format_paragraph_provenance(before, before_story, path~)
+  guard docx_format_paragraph_provenance(
+      before_projection, before_bytes, before_index, path,
+    )
     is Some((original_units, original_silent, original_mark)) else {
     return Some("the path '\{path}' names no single paragraph before the edit")
   }
-  guard docx_format_paragraph_provenance(after, after_story, path~)
+  guard docx_format_paragraph_provenance(
+      after_projection, after_bytes, after_index, path,
+    )
     is Some((result_units, result_silent, result_mark)) else {
     return Some("the path '\{path}' names no single paragraph after the edit")
   }
@@ -799,31 +964,13 @@ pub fn docx_paragraph_format_preserved(
 /// in document order. `None` when the path names no paragraph, or names
 /// more than one (a collided path cannot be answered for).
 fn docx_format_paragraph_provenance(
-  annotated : DocxAnnotatedResult,
-  story : DocxStoryPartSource,
-  path~ : String,
+  projection : ReaderProjection,
+  bytes : BytesView,
+  index : DocxParagraphPathIndex,
+  path : String,
 ) -> (Array[(String, String, String)], Array[String], String)? raise DocxError {
-  let part = story.part()
-  guard annotated.reader_projections.get(part) is Some(projection) else {
-    return None
-  }
-  guard annotated.reader_projection_sources.get(part) is Some(bytes) else {
-    return None
-  }
-  let paragraph_paths = find_path_map(projection.scan, "p")
   let elements = projection.scan.elements()
-  let mut target = -1
-  let mut found = 0
-  for paragraph_index, paragraph in projection.paragraphs {
-    guard paragraph.sources.length() > 0 else { continue }
-    let SourceElementId(head) = paragraph.sources[0].source
-    if paragraph_paths.get(elements[head].byte_start) == Some(path) {
-      found = found + 1
-      if found == 1 {
-        target = paragraph_index
-      }
-    }
-  }
+  let (target, found) = index.locate(path)
   guard target >= 0 && found == 1 else { return None }
   let paragraph = projection.paragraphs[target]
   let SourceElementId(paragraph_head_identity) = paragraph.sources[0].source

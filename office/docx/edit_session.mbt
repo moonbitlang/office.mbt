@@ -799,6 +799,7 @@ pub async fn transact_docx(
   options : @transaction.TransactionOptions,
   edit : (DocxEditSession) -> Unit raise,
   validators? : Array[@transaction.TransactionValidator] = [],
+  resolving_revisions? : Bool = false,
 ) -> @transaction.TransactionReport {
   let validators = validators.copy()
   let source_para_id_inventory : Ref[Map[String, Array[String]]?] = Ref(None)
@@ -815,7 +816,7 @@ pub async fn transact_docx(
       // The SHARED mutation preflight, before any verb plans anything:
       // a signed package, an enforced protection, or a document
       // recording revisions is not edited by this toolkit at all.
-      docx_mutation_preflight(archive)
+      docx_mutation_preflight(archive, resolving_revisions~)
       let session = open_edit_session(archive, budget)
       // The SOURCE's identity inventory, captured before any edit is
       // queued: the candidate gate compares against this, so existing
