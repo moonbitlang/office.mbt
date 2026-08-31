@@ -835,53 +835,36 @@ fn docx_format_paragraph_provenance(
     }
     projecting[identity] = true
   }
-  // Every PHYSICAL run of this paragraph that carries no projected
-  // unit — including runs the reader never registered because it
-  // suppressed their container (a `w:del` subtree is reduced to one
-  // trace). A note reference alone in its run still paints, and a
-  // deleted run's properties are still OOXML nobody asked to change.
+  // EVERY `w:rPr` in the paragraph's physical subtree that the
+  // per-unit comparison does not already own, in document order.
+  // Formatting carriers are not only runs: `w:pPr`, `w:sdtPr` and
+  // `w:sdtEndPr` hold run properties too, and a run the reader
+  // suppressed (a `w:del` subtree) or never registered carries its own.
+  // Enumerating the carrier ELEMENT rather than a list of known
+  // container kinds is what makes this closed: a carrier this planner
+  // has never heard of is still compared.
   let silent : Array[String] = []
-  let physical : Array[Int] = []
-  docx_format_collect_runs(elements, paragraph_head_identity, physical)
-  for run_identity in physical {
-    let projects = projecting.get(run_identity) == Some(true)
-    guard !projects else { continue }
-    // A run holding only properties and EMPTY text elements paints
-    // nothing, and splitting legitimately creates one when a run began
-    // with an empty `w:t`. Only a run carrying something else — a note
-    // reference, a drawable — is collateral worth comparing.
-    // A run holding only properties and EMPTY text elements carries
-    // nothing: splitting legitimately creates one when a run began
-    // with an empty `w:t`. Anything else — a note reference, a
-    // drawable, or TEXT the reader suppressed rather than projected —
-    // is content whose formatting nobody asked to change.
-    let mut carries = false
-    let mut child = elements[run_identity].first_child_index
-    while child >= 0 {
-      let entry = elements[child]
-      let is_properties = is_wml_uri(entry.uri) && entry.local_name == "rPr"
-      let is_empty_text = is_wml_uri(entry.uri) &&
-        entry.local_name == "t" &&
-        entry.content_end <= entry.content_start
-      if !is_properties && !is_empty_text {
-        carries = true
+  let carriers : Array[Int] = []
+  docx_format_collect_named(elements, paragraph_head_identity, "rPr", carriers)
+  for carrier_identity in carriers {
+    let owner = docx_format_owning_run(elements, carrier_identity)
+    match owner {
+      Some(run_identity) => {
+        // A run carrying projected units is compared per unit, with the
+        // request's authorization; a WEIGHTLESS run (properties and
+        // empty text only) is what a split legitimately creates.
+        if projecting.get(run_identity) == Some(true) {
+          continue
+        }
+        if !docx_format_run_carries_content(elements, run_identity) {
+          continue
+        }
       }
-      child = entry.next_sibling_index
+      None => ()
     }
-    guard carries else { continue }
-    silent.push(
-      docx_format_run_properties(bytes, elements, elements[run_identity]),
-    )
+    let entry = elements[carrier_identity]
+    silent.push(format_surgery_decode(bytes[entry.byte_start:entry.byte_end]))
   }
-  // The paragraph MARK carries direct formatting of its own, in
-  // `w:pPr/w:rPr`. It projects nothing, so no unit or run speaks for
-  // it — and no format request in v1 touches it, which makes any
-  // change to it collateral.
-  let paragraph_head = paragraph_head_identity
-  // EVERY direct pPr in document order: the reader takes the first,
-  // the planner refuses none, and a change to any of them is
-  // collateral — so a later empty one must not erase an earlier
-  // mark's formatting from the comparison.
   // Every pPr in the paragraph's physical subtree, in document order:
   // the reader PROMOTES an `mc:AlternateContent` branch's children
   // into the logical paragraph, so properties can sit a level down
@@ -889,7 +872,7 @@ fn docx_format_paragraph_provenance(
   // alignment, spacing, numbering, and the mark's own rPr alike —
   // because no v1 request touches any of it.
   let marks : Array[Int] = []
-  docx_format_collect_named(elements, paragraph_head, "pPr", marks)
+  docx_format_collect_named(elements, paragraph_head_identity, "pPr", marks)
   let mark_builder = StringBuilder()
   for mark_identity in marks {
     let entry = elements[mark_identity]
@@ -1229,18 +1212,6 @@ fn docx_format_touched_residue(
 }
 
 ///|
-/// Every `w:r` in this paragraph's physical subtree, in document order,
-/// without descending into a nested `w:p` — that paragraph answers for
-/// its own runs.
-fn docx_format_collect_runs(
-  elements : Array[ScannedElement],
-  element_identity : Int,
-  out : Array[Int],
-) -> Unit {
-  docx_format_collect_named(elements, element_identity, "r", out)
-}
-
-///|
 /// Every WML element with this local name in a paragraph's physical
 /// subtree, in document order, without descending into a nested `w:p`
 /// — that paragraph answers for its own.
@@ -1283,4 +1254,48 @@ pub fn docx_paragraph_direct_format(
     spans=[(start, end)],
     format~,
   )
+}
+
+///|
+/// The `w:r` a formatting carrier belongs to, if any — the nearest run
+/// ancestor. `w:pPr`, `w:sdtPr` and `w:sdtEndPr` carriers have none.
+fn docx_format_owning_run(
+  elements : Array[ScannedElement],
+  element_identity : Int,
+) -> Int? {
+  let mut at = elements[element_identity].parent_index
+  while at >= 0 && at < elements.length() {
+    let ancestor = elements[at]
+    if is_wml_uri(ancestor.uri) && ancestor.local_name == "r" {
+      return Some(at)
+    }
+    if is_wml_uri(ancestor.uri) && ancestor.local_name == "p" {
+      return None
+    }
+    at = ancestor.parent_index
+  }
+  None
+}
+
+///|
+/// Whether a run carries anything at all: a run holding only properties
+/// and EMPTY text elements is the weightless shell a split legitimately
+/// re-homes, and nothing about it is worth comparing.
+fn docx_format_run_carries_content(
+  elements : Array[ScannedElement],
+  run_identity : Int,
+) -> Bool {
+  let mut child = elements[run_identity].first_child_index
+  while child >= 0 {
+    let entry = elements[child]
+    let is_properties = is_wml_uri(entry.uri) && entry.local_name == "rPr"
+    let is_empty_text = is_wml_uri(entry.uri) &&
+      entry.local_name == "t" &&
+      entry.content_end <= entry.content_start
+    if !is_properties && !is_empty_text {
+      return true
+    }
+    child = entry.next_sibling_index
+  }
+  false
 }

@@ -1437,3 +1437,57 @@ test "format preservation sees promoted properties and suppressed text" {
     None,
   )
 }
+
+///|
+/// Round 9: formatting carriers are not only runs and paragraph
+/// properties. A content control's `sdtPr`/`sdtEndPr` hold run
+/// properties too — and enumerating the CARRIER ELEMENT rather than a
+/// list of known containers is what makes the inventory closed.
+test "format preservation sees every run-property carrier" {
+  let before = format_fixture(
+    "<w:p><w:sdt><w:sdtPr/><w:sdtEndPr><w:rPr><w:i/><w:iCs/></w:rPr></w:sdtEndPr><w:sdtContent><w:r><w:t>x</w:t></w:r></w:sdtContent></w:sdt><w:r><w:t>ab</w:t></w:r></w:p>",
+  )
+  let repainted = format_fixture(
+    "<w:p><w:sdt><w:sdtPr/><w:sdtEndPr><w:rPr><w:u w:val=\"single\"/></w:rPr></w:sdtEndPr><w:sdtContent><w:r><w:t>x</w:t></w:r></w:sdtContent></w:sdt><w:r><w:rPr><w:b/><w:bCs/></w:rPr><w:t>ab</w:t></w:r></w:p>",
+  )
+  // The projection and the positive check both accept it.
+  assert_eq(
+    @docx.docx_paragraph_direct_format(
+      repainted,
+      repainted.main_story_source(),
+      path="p[1]",
+      start=1,
+      end=3,
+      format=@docx.docx_direct_format(bold=true),
+    ),
+    None,
+  )
+  assert_true(
+    @docx.docx_paragraph_format_preserved(
+      before,
+      before.main_story_source(),
+      repainted,
+      repainted.main_story_source(),
+      path="p[1]",
+      spans=[(1, 3)],
+      format=@docx.docx_direct_format(bold=true),
+    )
+    is Some(_),
+  )
+  // The same carrier left alone is faithful.
+  let faithful = format_fixture(
+    "<w:p><w:sdt><w:sdtPr/><w:sdtEndPr><w:rPr><w:i/><w:iCs/></w:rPr></w:sdtEndPr><w:sdtContent><w:r><w:t>x</w:t></w:r></w:sdtContent></w:sdt><w:r><w:rPr><w:b/><w:bCs/></w:rPr><w:t>ab</w:t></w:r></w:p>",
+  )
+  assert_eq(
+    @docx.docx_paragraph_format_preserved(
+      before,
+      before.main_story_source(),
+      faithful,
+      faithful.main_story_source(),
+      path="p[1]",
+      spans=[(1, 3)],
+      format=@docx.docx_direct_format(bold=true),
+    ),
+    None,
+  )
+}
