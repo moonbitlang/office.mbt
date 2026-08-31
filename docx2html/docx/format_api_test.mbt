@@ -1548,3 +1548,75 @@ test "format preservation descends into unregistered nested paragraphs" {
     None,
   )
 }
+
+///|
+/// Round 11: formatting can MOVE between text-less runs while an
+/// ordered list of carrier properties stays identical. Every entry
+/// binds its properties to WHAT THEY FORMAT, so a marker swap is
+/// caught.
+test "format preservation binds formatting to what it formats" {
+  let before = format_fixture(
+    "<w:p><w:r><w:t>ab</w:t></w:r><w:r><w:rPr><w:i/><w:iCs/></w:rPr><w:footnoteReference w:id=\"1\"/></w:r><w:r><w:endnoteReference w:id=\"2\"/></w:r></w:p>",
+  )
+  // Italic moved from the footnote marker to the endnote marker: the
+  // multiset of carrier properties is unchanged.
+  let moved = format_fixture(
+    "<w:p><w:r><w:rPr><w:b/><w:bCs/></w:rPr><w:t>ab</w:t></w:r><w:r><w:footnoteReference w:id=\"1\"/></w:r><w:r><w:rPr><w:i/><w:iCs/></w:rPr><w:endnoteReference w:id=\"2\"/></w:r></w:p>",
+  )
+  assert_eq(
+    @docx.docx_paragraph_direct_format(
+      moved,
+      moved.main_story_source(),
+      path="p[1]",
+      start=0,
+      end=2,
+      format=@docx.docx_direct_format(bold=true),
+    ),
+    None,
+  )
+  assert_true(
+    @docx.docx_paragraph_format_preserved(
+      before,
+      before.main_story_source(),
+      moved,
+      moved.main_story_source(),
+      path="p[1]",
+      spans=[(0, 2)],
+      format=@docx.docx_direct_format(bold=true),
+    )
+    is Some(_),
+  )
+  // Leaving both markers alone is faithful.
+  let faithful = format_fixture(
+    "<w:p><w:r><w:rPr><w:b/><w:bCs/></w:rPr><w:t>ab</w:t></w:r><w:r><w:rPr><w:i/><w:iCs/></w:rPr><w:footnoteReference w:id=\"1\"/></w:r><w:r><w:endnoteReference w:id=\"2\"/></w:r></w:p>",
+  )
+  assert_eq(
+    @docx.docx_paragraph_format_preserved(
+      before,
+      before.main_story_source(),
+      faithful,
+      faithful.main_story_source(),
+      path="p[1]",
+      spans=[(0, 2)],
+      format=@docx.docx_direct_format(bold=true),
+    ),
+    None,
+  )
+  // A property-less marker run keeps its slot: giving it formatting is
+  // a change even though nothing was taken away.
+  let adorned = format_fixture(
+    "<w:p><w:r><w:rPr><w:b/><w:bCs/></w:rPr><w:t>ab</w:t></w:r><w:r><w:rPr><w:i/><w:iCs/></w:rPr><w:footnoteReference w:id=\"1\"/></w:r><w:r><w:rPr><w:u w:val=\"single\"/></w:rPr><w:endnoteReference w:id=\"2\"/></w:r></w:p>",
+  )
+  assert_true(
+    @docx.docx_paragraph_format_preserved(
+      before,
+      before.main_story_source(),
+      adorned,
+      adorned.main_story_source(),
+      path="p[1]",
+      spans=[(0, 2)],
+      format=@docx.docx_direct_format(bold=true),
+    )
+    is Some(_),
+  )
+}

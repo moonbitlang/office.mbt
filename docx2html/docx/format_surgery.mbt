@@ -1380,14 +1380,19 @@ fn format_surgery_split_run(
     None => ()
   }
   // Pieces: per `w:t`, wt-local boundaries at every covered-interval edge.
+  // Index the run's parts and their projections by text element ONCE:
+  // scanning every part per element, and re-reading the projection per
+  // piece, is quadratic — a run of many small text elements is legal.
+  let part_by_wt : Map[Int, PartialProjectingPart] = Map([])
+  let projection_by_wt : Map[Int, String] = Map([])
+  for part in run_parts {
+    let SourceElementId(part_identity) = part.contribution.source
+    part_by_wt[part_identity] = part
+    projection_by_wt[part_identity] = part.contribution.value
+  }
   let pieces : Array[FormatPiece] = []
   for wt in wts {
-    let mut wt_part : PartialProjectingPart? = None
-    for part in run_parts {
-      if part.contribution.source == SourceElementId(wt.identity) {
-        wt_part = Some(part)
-      }
-    }
+    let wt_part = part_by_wt.get(wt.identity)
     guard wt_part is Some(part) else {
       // A `w:t` that projects nothing (empty content): a neutral piece
       // cloned verbatim into whichever segment is current.
@@ -1509,7 +1514,9 @@ fn format_surgery_split_run(
       }
       if piece.local_from == piece.local_to && piece.local_from == 0 {
         // A neutral empty `w:t`: cloned verbatim.
-        let whole_projection = format_surgery_wt_projection(projection, wt)
+        let whole_projection = projection_by_wt
+          .get(piece.wt_identity)
+          .unwrap_or("")
         if whole_projection == "" {
           body.write_string(
             format_surgery_decode(source[wt.byte_start:wt.byte_end]),
@@ -1527,7 +1534,8 @@ fn format_surgery_split_run(
           "a span boundary inside the split run",
         )
       }
-      let fragment_text = format_surgery_wt_projection(projection, wt)
+      let whole = projection_by_wt.get(piece.wt_identity).unwrap_or("")
+      let fragment_text = whole
         .view(start_offset=piece.local_from, end_offset=piece.local_to)
         .to_owned()
       body.write_string(
@@ -1577,22 +1585,6 @@ fn format_surgery_split_run(
     )
   }
   (emitted, rendered.to_string())
-}
-
-///|
-/// The decoded projection of one mapped `w:t`, from its own contribution.
-fn format_surgery_wt_projection(
-  projection : ReaderProjection,
-  wt : ScannedElement,
-) -> String {
-  for paragraph in projection.paragraphs {
-    for contribution in paragraph.contributions {
-      if contribution.source == SourceElementId(wt.identity) {
-        return contribution.value
-      }
-    }
-  }
-  ""
 }
 
 ///|

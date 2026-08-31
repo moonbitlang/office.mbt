@@ -846,14 +846,6 @@ fn docx_format_paragraph_provenance(
     }
     projecting[identity] = true
   }
-  // EVERY `w:rPr` in the paragraph's physical subtree that the
-  // per-unit comparison does not already own, in document order.
-  // Formatting carriers are not only runs: `w:pPr`, `w:sdtPr` and
-  // `w:sdtEndPr` hold run properties too, and a run the reader
-  // suppressed (a `w:del` subtree) or never registered carries its own.
-  // Enumerating the carrier ELEMENT rather than a list of known
-  // container kinds is what makes this closed: a carrier this planner
-  // has never heard of is still compared.
   // The paragraphs the reader registered: only these answer for their
   // own carriers.
   let registered : Map[Int, Bool] = Map([])
@@ -863,7 +855,55 @@ fn docx_format_paragraph_provenance(
       registered[head] = true
     }
   }
+  // What formatting survives outside the per-unit comparison, bound to
+  // WHAT IT FORMATS rather than to its position in a list. A carrier's
+  // properties alone cannot tell that italic MOVED from a footnote
+  // marker to an endnote marker — the ordered strings would match —
+  // so every entry pairs an owner signature with its properties, and a
+  // run with no properties still occupies a slot.
+  //
+  // Formatting carriers are not only runs: `w:pPr`, `w:sdtPr` and
+  // `w:sdtEndPr` hold run properties too, and enumerating the carrier
+  // ELEMENT rather than a list of known container kinds is what keeps
+  // this closed against a container nobody has heard of.
   let silent : Array[String] = []
+  let physical_runs : Array[Int] = []
+  docx_format_collect_named(
+    elements,
+    paragraph_head_identity,
+    "r",
+    physical_runs,
+    registered~,
+  )
+  let run_carriers : Map[Int, Bool] = Map([])
+  for run_identity in physical_runs {
+    // A run carrying projected units is compared per unit, with the
+    // request's authorization; a WEIGHTLESS run (properties and empty
+    // text only) is the shell a split legitimately re-homes.
+    let mut child = elements[run_identity].first_child_index
+    while child >= 0 {
+      let entry = elements[child]
+      if is_wml_uri(entry.uri) && entry.local_name == "rPr" {
+        run_carriers[entry.identity] = true
+      }
+      child = entry.next_sibling_index
+    }
+    if projecting.get(run_identity) == Some(true) {
+      continue
+    }
+    if !docx_format_run_carries_content(elements, run_identity) {
+      continue
+    }
+    let signature = docx_format_run_signature(bytes, elements, run_identity)
+    let properties = docx_format_run_properties(
+      bytes,
+      elements,
+      elements[run_identity],
+    )
+    silent.push("\{signature}\u{1}\{properties}")
+  }
+  // Carriers that belong to no run at all: `w:pPr`, `w:sdtPr`,
+  // `w:sdtEndPr`, or any container this planner has never seen.
   let carriers : Array[Int] = []
   docx_format_collect_named(
     elements,
@@ -873,23 +913,12 @@ fn docx_format_paragraph_provenance(
     registered~,
   )
   for carrier_identity in carriers {
-    let owner = docx_format_owning_run(elements, carrier_identity)
-    match owner {
-      Some(run_identity) => {
-        // A run carrying projected units is compared per unit, with the
-        // request's authorization; a WEIGHTLESS run (properties and
-        // empty text only) is what a split legitimately creates.
-        if projecting.get(run_identity) == Some(true) {
-          continue
-        }
-        if !docx_format_run_carries_content(elements, run_identity) {
-          continue
-        }
-      }
-      None => ()
-    }
+    guard run_carriers.get(carrier_identity) is None else { continue }
     let entry = elements[carrier_identity]
-    silent.push(format_surgery_decode(bytes[entry.byte_start:entry.byte_end]))
+    let owner = elements[entry.parent_index]
+    silent.push(
+      "\{owner.local_name}\u{1}\{format_surgery_decode(bytes[entry.byte_start:entry.byte_end])}",
+    )
   }
   // Every pPr in the paragraph's physical subtree, in document order:
   // the reader PROMOTES an `mc:AlternateContent` branch's children
@@ -1301,27 +1330,6 @@ pub fn docx_paragraph_direct_format(
 }
 
 ///|
-/// The `w:r` a formatting carrier belongs to, if any — the nearest run
-/// ancestor. `w:pPr`, `w:sdtPr` and `w:sdtEndPr` carriers have none.
-fn docx_format_owning_run(
-  elements : Array[ScannedElement],
-  element_identity : Int,
-) -> Int? {
-  let mut at = elements[element_identity].parent_index
-  while at >= 0 && at < elements.length() {
-    let ancestor = elements[at]
-    if is_wml_uri(ancestor.uri) && ancestor.local_name == "r" {
-      return Some(at)
-    }
-    if is_wml_uri(ancestor.uri) && ancestor.local_name == "p" {
-      return None
-    }
-    at = ancestor.parent_index
-  }
-  None
-}
-
-///|
 /// Whether a run carries anything at all: a run holding only properties
 /// and EMPTY text elements is the weightless shell a split legitimately
 /// re-homes, and nothing about it is worth comparing.
@@ -1342,4 +1350,28 @@ fn docx_format_run_carries_content(
     child = entry.next_sibling_index
   }
   false
+}
+
+///|
+/// What a run FORMATS, as a signature: its content with its properties
+/// removed. Two text-less runs holding different markers have
+/// different signatures, so formatting cannot move between them
+/// unnoticed.
+fn docx_format_run_signature(
+  bytes : BytesView,
+  elements : Array[ScannedElement],
+  run_identity : Int,
+) -> String raise DocxError {
+  let builder = StringBuilder()
+  let mut child = elements[run_identity].first_child_index
+  while child >= 0 {
+    let entry = elements[child]
+    if !(is_wml_uri(entry.uri) && entry.local_name == "rPr") {
+      builder.write_string(
+        format_surgery_decode(bytes[entry.byte_start:entry.byte_end]),
+      )
+    }
+    child = entry.next_sibling_index
+  }
+  builder.to_string()
 }
