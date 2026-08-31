@@ -662,4 +662,5 @@ format_api.mbt	themeColor	docx_format_touched_residue	name	format_api_test:"form
 format_api.mbt	themeShade	docx_format_touched_residue	name	format_api_test:"format preservation authorizes attributes, not whole properties"
 format_api.mbt	themeTint	docx_format_touched_residue	name	format_api_test:"format preservation authorizes attributes, not whole properties"
 format_api.mbt	val	docx_format_touched_residue	name	format_api_test:"format preservation authorizes attributes, not whole properties"
-format_api.mbt	xmlns	docx_format_collect_used_prefixes	name	format_api_test:"format preservation binds namespaces per property"
+format_api.mbt	xmlns	docx_format_collect_used_prefixes,docx_format_resolve_prefix	name	format_api_test:"format preservation binds namespaces per property"
+format_api.mbt	xml	docx_format_resolve_prefix	prefix	format_api_test:"format preservation reads default bindings and tolerates xml:space"
