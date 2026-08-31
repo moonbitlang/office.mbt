@@ -533,12 +533,11 @@ fn docx_format_source_runs(
 /// the edit landed. Returns None when satisfied, or the first
 /// discrepancy's description. `None` for a missing paragraph is not
 /// possible: an unresolvable path is itself a discrepancy.
-pub fn docx_paragraph_direct_format(
+pub fn docx_paragraph_direct_format_spans(
   annotated : DocxAnnotatedResult,
   story : DocxStoryPartSource,
   path~ : String,
-  start~ : Int,
-  end~ : Int,
+  spans~ : Array[(Int, Int)],
   format~ : DocxDirectFormat,
 ) -> String? raise DocxError {
   let part = story.part()
@@ -599,8 +598,26 @@ pub fn docx_paragraph_direct_format(
       }
     }
   }
-  for unit in start..<end {
-    guard unit >= 0 && unit < width && carrier[unit] >= 0 else {
+  // Mark the selection ONCE: the paragraph lookup and the carrier
+  // index are built once for the whole batch, so verifying a
+  // paragraph's spans costs one pass rather than one per span.
+  let selected : Array[Bool] = []
+  for _ in 0..<width {
+    selected.push(false)
+  }
+  for span in spans {
+    let (start, end) = span
+    guard start >= 0 && start < end && end <= width else {
+      return Some(
+        "the range \{start}:\{end} is outside the \{width} unit(s) of '\{path}'",
+      )
+    }
+    for unit in start..<end {
+      selected[unit] = true
+    }
+  }
+  for unit in 0..<width {
+    guard !selected[unit] || carrier[unit] >= 0 else {
       return Some(
         "unit \{unit} of '\{path}' is not carried by any run, so it cannot hold direct formatting",
       )
@@ -611,8 +628,8 @@ pub fn docx_paragraph_direct_format(
   // business.
   let judged : Map[Int, Bool] = Map([])
   let mut judged_count = 0
-  for unit in start..<end {
-    guard unit >= 0 && unit < width else { continue }
+  for unit in 0..<width {
+    guard selected[unit] else { continue }
     let run_identity = carrier[unit]
     guard run_identity >= 0 else { continue }
     guard judged.get(run_identity) is None else { continue }
@@ -646,9 +663,7 @@ pub fn docx_paragraph_direct_format(
     }
   }
   if judged_count == 0 {
-    return Some(
-      "the range \{start}:\{end} of '\{path}' holds no run after the edit",
-    )
+    return Some("the requested spans of '\{path}' hold no run after the edit")
   }
   None
 }
@@ -835,18 +850,25 @@ fn docx_format_paragraph_provenance(
     // nothing, and splitting legitimately creates one when a run began
     // with an empty `w:t`. Only a run carrying something else — a note
     // reference, a drawable — is collateral worth comparing.
-    let mut paints = false
+    // A run holding only properties and EMPTY text elements carries
+    // nothing: splitting legitimately creates one when a run began
+    // with an empty `w:t`. Anything else — a note reference, a
+    // drawable, or TEXT the reader suppressed rather than projected —
+    // is content whose formatting nobody asked to change.
+    let mut carries = false
     let mut child = elements[run_identity].first_child_index
     while child >= 0 {
       let entry = elements[child]
       let is_properties = is_wml_uri(entry.uri) && entry.local_name == "rPr"
-      let is_text = is_wml_uri(entry.uri) && entry.local_name == "t"
-      if !is_properties && !is_text {
-        paints = true
+      let is_empty_text = is_wml_uri(entry.uri) &&
+        entry.local_name == "t" &&
+        entry.content_end <= entry.content_start
+      if !is_properties && !is_empty_text {
+        carries = true
       }
       child = entry.next_sibling_index
     }
-    guard paints else { continue }
+    guard carries else { continue }
     silent.push(
       docx_format_run_properties(bytes, elements, elements[run_identity]),
     )
@@ -860,20 +882,21 @@ fn docx_format_paragraph_provenance(
   // the planner refuses none, and a change to any of them is
   // collateral — so a later empty one must not erase an earlier
   // mark's formatting from the comparison.
+  // Every pPr in the paragraph's physical subtree, in document order:
+  // the reader PROMOTES an `mc:AlternateContent` branch's children
+  // into the logical paragraph, so properties can sit a level down
+  // and still be the paragraph's own. The WHOLE element is compared —
+  // alignment, spacing, numbering, and the mark's own rPr alike —
+  // because no v1 request touches any of it.
+  let marks : Array[Int] = []
+  docx_format_collect_named(elements, paragraph_head, "pPr", marks)
   let mark_builder = StringBuilder()
-  let mut paragraph_child = elements[paragraph_head].first_child_index
-  while paragraph_child >= 0 {
-    let entry = elements[paragraph_child]
-    if is_wml_uri(entry.uri) && entry.local_name == "pPr" {
-      // The WHOLE pPr: alignment, spacing, numbering and the mark's
-      // own rPr alike. No v1 request touches any of it, so anything
-      // that differs is collateral.
-      mark_builder.write_string("|")
-      mark_builder.write_string(
-        format_surgery_decode(bytes[entry.byte_start:entry.byte_end]),
-      )
-    }
-    paragraph_child = entry.next_sibling_index
+  for mark_identity in marks {
+    let entry = elements[mark_identity]
+    mark_builder.write_string("|")
+    mark_builder.write_string(
+      format_surgery_decode(bytes[entry.byte_start:entry.byte_end]),
+    )
   }
   let mark = mark_builder.to_string()
   Some((units, silent, mark))
@@ -1214,6 +1237,19 @@ fn docx_format_collect_runs(
   element_identity : Int,
   out : Array[Int],
 ) -> Unit {
+  docx_format_collect_named(elements, element_identity, "r", out)
+}
+
+///|
+/// Every WML element with this local name in a paragraph's physical
+/// subtree, in document order, without descending into a nested `w:p`
+/// — that paragraph answers for its own.
+fn docx_format_collect_named(
+  elements : Array[ScannedElement],
+  element_identity : Int,
+  local_name : String,
+  out : Array[Int],
+) -> Unit {
   let mut child = elements[element_identity].first_child_index
   while child >= 0 {
     let entry = elements[child]
@@ -1221,39 +1257,30 @@ fn docx_format_collect_runs(
       child = entry.next_sibling_index
       continue
     }
-    if is_wml_uri(entry.uri) && entry.local_name == "r" {
+    if is_wml_uri(entry.uri) && entry.local_name == local_name {
       out.push(entry.identity)
     }
-    docx_format_collect_runs(elements, entry.identity, out)
+    docx_format_collect_named(elements, entry.identity, local_name, out)
     child = entry.next_sibling_index
   }
 }
 
 ///|
-/// The positive check over MANY spans of one paragraph, sharing the
-/// carrier index. F2b verifies a paragraph's whole batch this way
-/// rather than paying for the index once per span.
-pub fn docx_paragraph_direct_format_spans(
+/// The positive check over ONE span — the batched judgment applied to
+/// a single range.
+pub fn docx_paragraph_direct_format(
   annotated : DocxAnnotatedResult,
   story : DocxStoryPartSource,
   path~ : String,
-  spans~ : Array[(Int, Int)],
+  start~ : Int,
+  end~ : Int,
   format~ : DocxDirectFormat,
 ) -> String? raise DocxError {
-  for span in spans {
-    let (start, end) = span
-    match
-      docx_paragraph_direct_format(
-        annotated,
-        story,
-        path~,
-        start~,
-        end~,
-        format~,
-      ) {
-      Some(discrepancy) => return Some(discrepancy)
-      None => ()
-    }
-  }
-  None
+  docx_paragraph_direct_format_spans(
+    annotated,
+    story,
+    path~,
+    spans=[(start, end)],
+    format~,
+  )
 }

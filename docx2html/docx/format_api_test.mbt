@@ -1367,3 +1367,73 @@ test "format verifies many spans of a paragraph together" {
     is Some(_),
   )
 }
+
+///|
+/// Round 8: paragraph properties can sit a level down — the reader
+/// PROMOTES an mc:AlternateContent branch's children into the logical
+/// paragraph — and a suppressed run's TEXT is content too, not an
+/// empty shell a split may create.
+test "format preservation sees promoted properties and suppressed text" {
+  let mc = "xmlns:mc=\"http://schemas.openxmlformats.org/markup-compatibility/2006\""
+  let promoted = format_fixture(
+    "<w:p><mc:AlternateContent \{mc}><mc:Choice Requires=\"w14\"><w:pPr><w:jc w:val=\"left\"/></w:pPr></mc:Choice><mc:Fallback><w:pPr><w:jc w:val=\"left\"/></w:pPr></mc:Fallback></mc:AlternateContent><w:r><w:t>ab</w:t></w:r></w:p>",
+  )
+  let realigned = format_fixture(
+    "<w:p><mc:AlternateContent \{mc}><mc:Choice Requires=\"w14\"><w:pPr><w:jc w:val=\"right\"/></w:pPr></mc:Choice><mc:Fallback><w:pPr><w:jc w:val=\"right\"/></w:pPr></mc:Fallback></mc:AlternateContent><w:r><w:rPr><w:b/><w:bCs/></w:rPr><w:t>ab</w:t></w:r></w:p>",
+  )
+  assert_true(
+    @docx.docx_paragraph_format_preserved(
+      promoted,
+      promoted.main_story_source(),
+      realigned,
+      realigned.main_story_source(),
+      path="p[1]",
+      spans=[(0, 2)],
+      format=@docx.docx_direct_format(bold=true),
+    )
+    is Some(_),
+  )
+  // A suppressed run holding real TEXT is content whose formatting
+  // nobody asked to change.
+  let deleted_text = format_fixture(
+    "<w:p><w:r><w:t>ab</w:t></w:r><w:del w:id=\"1\" w:author=\"A\" w:date=\"2026-01-01T00:00:00Z\"><w:r><w:rPr><w:i/><w:iCs/></w:rPr><w:t>x</w:t></w:r></w:del></w:p>",
+  )
+  let repainted_text = format_fixture(
+    "<w:p><w:r><w:rPr><w:b/><w:bCs/></w:rPr><w:t>ab</w:t></w:r><w:del w:id=\"1\" w:author=\"A\" w:date=\"2026-01-01T00:00:00Z\"><w:r><w:rPr><w:u w:val=\"single\"/></w:rPr><w:t>x</w:t></w:r></w:del></w:p>",
+  )
+  assert_true(
+    @docx.docx_paragraph_format_preserved(
+      deleted_text,
+      deleted_text.main_story_source(),
+      repainted_text,
+      repainted_text.main_story_source(),
+      path="p[1]",
+      spans=[(0, 2)],
+      format=@docx.docx_direct_format(bold=true),
+    )
+    is Some(_),
+  )
+  // And the split's empty-text clone is still tolerated.
+  let body = "<w:p><w:r><w:t></w:t><w:t>abc</w:t></w:r></w:p>"
+  let before = format_fixture(body)
+  let (plan, _) = @docx.plan_docx_format(
+    before,
+    before.main_story_source(),
+    format=@docx.docx_direct_format(bold=true),
+    within="p[1]",
+    range=(0, 1),
+  )
+  let after = format_apply(body, plan)
+  assert_eq(
+    @docx.docx_paragraph_format_preserved(
+      before,
+      before.main_story_source(),
+      after,
+      after.main_story_source(),
+      path="p[1]",
+      spans=[(0, 1)],
+      format=@docx.docx_direct_format(bold=true),
+    ),
+    None,
+  )
+}
