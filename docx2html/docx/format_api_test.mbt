@@ -1752,3 +1752,62 @@ test "format preservation keys carriers by qualified, split-stable provenance" {
     None,
   )
 }
+
+///|
+/// Round 14: two runs holding identical content are different
+/// OCCURRENCES. A carrier key therefore records where its run sits, in
+/// projection units, so formatting moving between look-alike runs is a
+/// difference.
+test "format preservation distinguishes look-alike run occurrences" {
+  let before = format_fixture(
+    "<w:p><w:r><w:sdt><w:sdtPr/><w:sdtEndPr><w:rPr><w:i/><w:iCs/></w:rPr></w:sdtEndPr><w:sdtContent><w:t>x</w:t></w:sdtContent></w:sdt></w:r><w:r><w:sdt><w:sdtPr/><w:sdtEndPr/><w:sdtContent><w:t>x</w:t></w:sdtContent></w:sdt></w:r><w:r><w:t>ab</w:t></w:r></w:p>",
+  )
+  let moved = format_fixture(
+    "<w:p><w:r><w:sdt><w:sdtPr/><w:sdtEndPr/><w:sdtContent><w:t>x</w:t></w:sdtContent></w:sdt></w:r><w:r><w:sdt><w:sdtPr/><w:sdtEndPr><w:rPr><w:i/><w:iCs/></w:rPr></w:sdtEndPr><w:sdtContent><w:t>x</w:t></w:sdtContent></w:sdt></w:r><w:r><w:rPr><w:b/><w:bCs/></w:rPr><w:t>ab</w:t></w:r></w:p>",
+  )
+  assert_eq(
+    @docx.docx_paragraph_direct_format(
+      moved,
+      moved.main_story_source(),
+      path="p[1]",
+      start=2,
+      end=4,
+      format=@docx.docx_direct_format(bold=true),
+    ),
+    None,
+  )
+  assert_true(
+    @docx.docx_paragraph_format_preserved(
+      before,
+      before.main_story_source(),
+      moved,
+      moved.main_story_source(),
+      path="p[1]",
+      spans=[(2, 4)],
+      format=@docx.docx_direct_format(bold=true),
+    )
+    is Some(_),
+  )
+  // The planner's own output over the same document preserves.
+  let body = "<w:p><w:r><w:sdt><w:sdtPr/><w:sdtEndPr><w:rPr><w:i/><w:iCs/></w:rPr></w:sdtEndPr><w:sdtContent><w:t>x</w:t></w:sdtContent></w:sdt></w:r><w:r><w:sdt><w:sdtPr/><w:sdtEndPr/><w:sdtContent><w:t>x</w:t></w:sdtContent></w:sdt></w:r><w:r><w:t>ab</w:t></w:r></w:p>"
+  let (plan, _) = @docx.plan_docx_format(
+    before,
+    before.main_story_source(),
+    format=@docx.docx_direct_format(bold=true),
+    within="p[1]",
+    range=(2, 4),
+  )
+  let after = format_apply(body, plan)
+  assert_eq(
+    @docx.docx_paragraph_format_preserved(
+      before,
+      before.main_story_source(),
+      after,
+      after.main_story_source(),
+      path="p[1]",
+      spans=[(2, 4)],
+      format=@docx.docx_direct_format(bold=true),
+    ),
+    None,
+  )
+}

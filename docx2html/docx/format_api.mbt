@@ -846,6 +846,19 @@ fn docx_format_paragraph_provenance(
     }
     projecting[identity] = true
   }
+  // Where each run sits, in projection units — including the zero-width
+  // contributions a text-less run makes, so every run has a position.
+  let run_offsets : Map[Int, Int] = Map([])
+  for contribution in paragraph.contributions {
+    guard contribution.run_source is Some(SourceElementId(owner)) else {
+      continue
+    }
+    let offset = contribution.projection_start - base
+    match run_offsets.get(owner) {
+      Some(known) => if offset < known { run_offsets[owner] = offset }
+      None => run_offsets[owner] = offset
+    }
+  }
   // The paragraphs the reader registered: only these answer for their
   // own carriers.
   let registered : Map[Int, Bool] = Map([])
@@ -925,6 +938,7 @@ fn docx_format_paragraph_provenance(
       elements,
       entry.parent_index,
       paragraph_head_identity,
+      run_offsets~,
     )
     silent.push(
       "\{owner_path}\u{1}\{format_surgery_decode(bytes[entry.byte_start:entry.byte_end])}",
@@ -953,7 +967,11 @@ fn docx_format_paragraph_provenance(
     mark_builder.write_string("|")
     mark_builder.write_string(
       docx_format_carrier_key(
-        bytes, elements, mark_identity, paragraph_head_identity,
+        bytes,
+        elements,
+        mark_identity,
+        paragraph_head_identity,
+        run_offsets~,
       ),
     )
     mark_builder.write_string("=")
@@ -1406,13 +1424,23 @@ fn docx_format_carrier_key(
   elements : Array[ScannedElement],
   element_identity : Int,
   stop_identity : Int,
+  run_offsets~ : Map[Int, Int],
 ) -> String raise DocxError {
   let steps : Array[String] = []
   let mut at = element_identity
   while at >= 0 && at < elements.length() && at != stop_identity {
     let entry = elements[at]
     if is_wml_uri(entry.uri) && entry.local_name == "r" {
-      steps.push("r{\{docx_format_run_signature(bytes, elements, at)}}")
+      // A run step carries WHERE it sits as well as what it holds:
+      // two runs with identical content are different occurrences, and
+      // formatting moving between them must not read as unchanged. The
+      // position is a PROJECTION offset, which splitting preserves —
+      // and a run holding a carrier is never split, because the
+      // splitter refuses anything but properties and mapped text.
+      let offset = run_offsets.get(at).unwrap_or(-1)
+      steps.push(
+        "r@\{offset}#{\{docx_format_run_signature(bytes, elements, at)}}",
+      )
     } else {
       steps.push("\{entry.uri}:\{entry.local_name}[\{entry.same_name_ordinal}]")
     }

@@ -638,6 +638,18 @@ fn plan_paragraph_format_edits(
   // The ordered projecting contributions with paragraph-local spans, and
   // the projection they concatenate to (the receipt's UNCHANGED
   // expectation).
+  // Which runs OTHER paragraphs claim, and which runs own each
+  // projected source — both indexed once. Scanning every other
+  // paragraph's runs for every part is cubic on a legal document.
+  let foreign_runs : Map[Int, Int] = Map([])
+  for other_index, other in projection.paragraphs {
+    if other_index != paragraph_index {
+      for candidate in other.runs {
+        let SourceElementId(candidate_identity) = candidate.source
+        foreign_runs[candidate_identity] = other_index
+      }
+    }
+  }
   let parts : Array[PartialProjectingPart] = []
   let before = StringBuilder()
   for contribution in paragraph.contributions {
@@ -651,6 +663,18 @@ fn plan_paragraph_format_edits(
     })
   }
   let before_projection = before.to_string()
+  // Which runs project each source, for the cross-paragraph check.
+  let owning_runs : Map[Int, Array[Int]] = Map([])
+  for part in parts {
+    let SourceElementId(source_identity) = part.contribution.source
+    guard part.contribution.run_source is Some(SourceElementId(owner)) else {
+      continue
+    }
+    match owning_runs.get(source_identity) {
+      Some(existing) => if !existing.contains(owner) { existing.push(owner) }
+      None => owning_runs[source_identity] = [owner]
+    }
+  }
   // Phase 3: structural restrictions, batch-wide.
   fn require_supported_run(
     run : ReaderProjectionRun,
@@ -787,19 +811,12 @@ fn plan_paragraph_format_edits(
         "span \{ordinal} in paragraph \{paragraph_index}: the addressed text paints inside a drawable",
       )
     }
-    for index, other in projection.paragraphs {
-      if index != paragraph_index {
-        for candidate in other.runs {
-          for part in parts {
-            if part.contribution.source == SourceElementId(identity) &&
-              part.contribution.run_source == Some(candidate.source) {
-              raise format_surgery_refuse(
-                FormatCrossParagraphSourceReuse,
-                "span \{ordinal} in paragraph \{paragraph_index} reuses a run of paragraph \{index}",
-              )
-            }
-          }
-        }
+    for owner in owning_runs.get(identity).unwrap_or([]) {
+      if foreign_runs.get(owner) is Some(index) {
+        raise format_surgery_refuse(
+          FormatCrossParagraphSourceReuse,
+          "span \{ordinal} in paragraph \{paragraph_index} reuses a run of paragraph \{index}",
+        )
       }
     }
   }
@@ -1154,17 +1171,11 @@ fn plan_paragraph_format_edits(
     }
     // A run claimed by another paragraph cannot be this paragraph's
     // footprint.
-    for index, other in projection.paragraphs {
-      if index != paragraph_index {
-        for candidate in other.runs {
-          if candidate.source == run.source {
-            raise format_surgery_refuse(
-              FormatCrossParagraphSourceReuse,
-              "paragraph \{paragraph_index} would mutate a run of paragraph \{index}",
-            )
-          }
-        }
-      }
+    if foreign_runs.get(footprint_identity) is Some(index) {
+      raise format_surgery_refuse(
+        FormatCrossParagraphSourceReuse,
+        "paragraph \{paragraph_index} would mutate a run of paragraph \{index}",
+      )
     }
     let mut anchor : Int?? = None
     for part in parts_by_run.get(owned_run_identity).unwrap_or([]) {
