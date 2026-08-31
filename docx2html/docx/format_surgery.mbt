@@ -794,6 +794,25 @@ fn plan_paragraph_format_edits(
         }
       }
     }
+    // A run with a NESTED registered run inside its byte span is a
+    // tolerated physical shape this planner refuses to mutate: the
+    // nested run's text is outside this run's own contributions, yet
+    // an rPr edit here would wrap it in the new formatting.
+    let SourceElementId(footprint_identity) = run.source
+    let footprint_element = elements[footprint_identity]
+    for candidate in paragraph.runs {
+      if candidate.source != run.source {
+        let SourceElementId(candidate_identity) = candidate.source
+        let candidate_element = elements[candidate_identity]
+        if candidate_element.byte_start >= footprint_element.byte_start &&
+          candidate_element.byte_end <= footprint_element.byte_end {
+          raise format_surgery_refuse(
+            FormatUnsupportedTextSource,
+            "paragraph \{paragraph_index}: the run nests another run inside its footprint",
+          )
+        }
+      }
+    }
     // A run claimed by another paragraph cannot be this paragraph's
     // footprint.
     for index, other in projection.paragraphs {

@@ -1210,3 +1210,27 @@ test "format: identity inside the rPr subtree refuses the split" {
     bold=true,
   )
 }
+
+///|
+/// Round 5's Medium: a tolerated run nesting another run cannot be
+/// mutated — the nested text is outside the outer run's own coverage,
+/// yet an outer rPr edit would wrap it in the new formatting.
+test "format: a run nesting another run refuses" {
+  assert_format_refusal(
+    "<w:p><w:r><w:t>ab</w:t><w:r><w:t>XX</w:t></w:r><w:t>cd</w:t></w:r></w:p>",
+    paragraph=0,
+    [format_span(0, 2), format_span(4, 6)],
+    refusal="FormatUnsupportedTextSource",
+    bold=true,
+  )
+  // Even full-span coverage refuses: the nested run would inherit the
+  // outer formatting without carrying it explicitly, which the direct
+  // readback could never verify.
+  assert_format_refusal(
+    "<w:p><w:r><w:t>ab</w:t><w:r><w:t>XX</w:t></w:r><w:t>cd</w:t></w:r></w:p>",
+    paragraph=0,
+    [format_span(0, 6)],
+    refusal="FormatUnsupportedTextSource",
+    bold=true,
+  )
+}
