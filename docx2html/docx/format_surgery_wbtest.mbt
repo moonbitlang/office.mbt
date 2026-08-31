@@ -1400,3 +1400,29 @@ test "format: transparent seams are allowlisted, not assumed" {
     )
   }
 }
+
+///|
+/// Round 8's Medium: a visible-but-reader-transparent leaf need not
+/// belong to a run this batch touches. Sitting strictly inside the
+/// span, it would stay unformatted while the receipt called the span
+/// formatted — so it refuses, in its own run just as inside a touched
+/// one. Legitimate transparent WRAPPERS (a hyperlink around a run) are
+/// unaffected.
+test "format: a transparent leaf inside the span refuses across runs" {
+  assert_format_refusal(
+    "<w:p><w:r><w:t>a</w:t></w:r><w:r><w:annotationRef/></w:r><w:r><w:t>b</w:t></w:r></w:p>",
+    paragraph=0,
+    [format_span(0, 2)],
+    refusal="FormatVisibleBarrier",
+    bold=true,
+  )
+  // An allowlisted seam in its own run stays legitimate.
+  let (spliced, receipt) = assert_format_edits(
+    "<w:p><w:r><w:t>a</w:t></w:r><w:r><w:lastRenderedPageBreak/></w:r><w:r><w:t>b</w:t></w:r></w:p>",
+    paragraph=0,
+    [format_span(0, 2)],
+    bold=true,
+  )
+  assert_eq(receipt.runs_changed, 2)
+  assert_true(spliced.contains("<w:r><w:lastRenderedPageBreak/></w:r>"))
+}

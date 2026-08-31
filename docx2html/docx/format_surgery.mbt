@@ -633,10 +633,25 @@ fn plan_paragraph_format_edits(
             )
           Transparent => {
             let SourceElementId(seam_identity) = contribution.source
-            if run_surgery_is_hard_barrier_container(elements[seam_identity]) {
+            let seam = elements[seam_identity]
+            if run_surgery_is_hard_barrier_container(seam) {
               raise format_surgery_refuse(
                 FormatVisibleBarrier,
                 "span \{ordinal} in paragraph \{paragraph_index}",
+              )
+            }
+            // A transparent LEAF strictly inside the span may still be
+            // painted (`w:annotationRef` is), and it need not belong to
+            // a run this batch touches — so it would sit unformatted in
+            // the middle of a span the receipt calls formatted. Only the
+            // allowlist can vouch for one. WRAPPERS (hyperlink, ins,
+            // smartTag, sdtContent) have element children and pass here;
+            // their own gates judge them.
+            if seam.first_child_index < 0 &&
+              !format_surgery_invisible_seam(seam) {
+              raise format_surgery_refuse(
+                FormatVisibleBarrier,
+                "span \{ordinal} in paragraph \{paragraph_index}: a transparent leaf inside the span cannot be proven to render nothing",
               )
             }
           }
