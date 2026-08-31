@@ -1416,6 +1416,29 @@ test "format: a transparent leaf inside the span refuses across runs" {
     refusal="FormatVisibleBarrier",
     bold=true,
   )
+  // Round 9: child presence proves nothing — the reader ignores
+  // annotationRef WITH its children, so a non-leaf one refuses too.
+  assert_format_refusal(
+    "<w:p><w:r><w:t>a</w:t></w:r><w:r><w:annotationRef><w:proofErr w:type=\"spellStart\"/></w:annotationRef></w:r><w:r><w:t>b</w:t></w:r></w:p>",
+    paragraph=0,
+    [format_span(0, 2)],
+    refusal="FormatVisibleBarrier",
+    bold=true,
+  )
+  // A genuine WRAPPER the reader walks into is unaffected: its contents
+  // arrive as contributions of their own.
+  let (linked, link_receipt) = assert_format_edits(
+    "<w:p><w:r><w:t>a</w:t></w:r><w:hyperlink r:id=\"rId9\" xmlns:r=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships\"><w:r><w:t>b</w:t></w:r></w:hyperlink></w:p>",
+    paragraph=0,
+    [format_span(0, 2)],
+    bold=true,
+  )
+  assert_eq(link_receipt.runs_changed, 2)
+  assert_true(
+    linked.contains(
+      "<w:hyperlink r:id=\"rId9\" xmlns:r=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships\"><w:r><w:rPr><w:b/><w:bCs/></w:rPr><w:t>b</w:t></w:r></w:hyperlink>",
+    ),
+  )
   // An allowlisted seam in its own run stays legitimate.
   let (spliced, receipt) = assert_format_edits(
     "<w:p><w:r><w:t>a</w:t></w:r><w:r><w:lastRenderedPageBreak/></w:r><w:r><w:t>b</w:t></w:r></w:p>",
@@ -1425,4 +1448,62 @@ test "format: a transparent leaf inside the span refuses across runs" {
   )
   assert_eq(receipt.runs_changed, 2)
   assert_true(spliced.contains("<w:r><w:lastRenderedPageBreak/></w:r>"))
+}
+
+///|
+/// Every QName the transparent classifier dispatches on, exercised
+/// against a REAL scan: wrappers the reader walks into are accounted
+/// for, seams that render nothing are accounted for, and the painted
+/// marks are not. Names are what the reader dispatches on, so names are
+/// what this pins.
+test "format: the transparent classifier covers every name it dispatches" {
+  let mc = "xmlns:mc=\"http://schemas.openxmlformats.org/markup-compatibility/2006\""
+  let source = format_fixture_source(
+    "<w:p><w:ins w:id=\"1\" w:author=\"a\" w:date=\"2001-01-01T00:00:00Z\"><w:r><w:t>a</w:t></w:r></w:ins>" +
+    "<w:smartTag><w:r><w:t>b</w:t></w:r></w:smartTag>" +
+    "<w:sdt><w:sdtPr/><w:sdtContent><w:r><w:t>c</w:t></w:r></w:sdtContent></w:sdt>" +
+    "<w:hyperlink r:id=\"rId9\" xmlns:r=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships\"><w:r><w:t>d</w:t></w:r></w:hyperlink>" +
+    "<w:r><w:drawing/><w:object/></w:r>" +
+    "<mc:AlternateContent \{mc}><mc:Choice Requires=\"wps\"><w:r><w:t>e</w:t></w:r></mc:Choice><mc:Fallback><w:r><w:t>f</w:t></w:r></mc:Fallback></mc:AlternateContent>" +
+    "<w:r><w:pict><v:group><v:shape><v:rect/><v:roundrect/><v:textbox><w:txbxContent><w:p><w:r><w:t>g</w:t></w:r></w:p></w:txbxContent></v:textbox></v:shape></v:group></w:pict></w:r>" +
+    "<w:r><w:proofErr w:type=\"spellStart\"/><w:bookmarkStart w:id=\"1\" w:name=\"n\"/><w:bookmarkEnd w:id=\"1\"/>" +
+    "<w:commentRangeStart w:id=\"1\"/><w:commentRangeEnd w:id=\"1\"/><w:lastRenderedPageBreak/><w:annotationRef/><w:t>h</w:t></w:r></w:p>",
+  )
+  let projection = surgery_native_projection(source)
+  let elements = projection.scan.elements()
+  fn find(local : String) -> ScannedElement raise {
+    for element in elements {
+      if element.local_name == local {
+        return element
+      }
+    }
+    fail("fixture is missing " + local)
+  }
+
+  // Wrappers: the reader walks into them, so their contents speak for
+  // themselves.
+  for
+    wrapper in [
+      "ins", "smartTag", "sdt", "sdtContent", "hyperlink", "drawing", "object", "AlternateContent",
+      "Choice", "Fallback", "shape", "rect", "roundrect", "textbox", "group",
+    ] {
+    let element = find(wrapper)
+    assert_true(format_surgery_transparent_wrapper(element), msg=wrapper)
+    assert_true(format_surgery_transparent_is_accounted(element), msg=wrapper)
+  }
+  // Seams that render nothing.
+  for
+    seam in [
+      "proofErr", "bookmarkStart", "bookmarkEnd", "commentRangeStart", "commentRangeEnd",
+      "lastRenderedPageBreak",
+    ] {
+    let element = find(seam)
+    assert_true(format_surgery_invisible_seam(element), msg=seam)
+    assert_false(format_surgery_transparent_wrapper(element), msg=seam)
+  }
+  // The painted mark is neither.
+  let reference = find("annotationRef")
+  assert_false(format_surgery_transparent_wrapper(reference))
+  assert_false(format_surgery_invisible_seam(reference))
+  assert_false(format_surgery_transparent_is_accounted(reference))
 }

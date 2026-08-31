@@ -364,6 +364,45 @@ fn format_surgery_invisible_seam(element : ScannedElement) -> Bool {
 }
 
 ///|
+/// The transparent WRAPPERS whose children the reader actually
+/// traverses, so their descendants arrive as contributions of their own
+/// and are judged on their own merits. Classification is by QNAME
+/// because that is what the reader dispatches on: child presence proves
+/// nothing (`w:annotationRef` is ignored WITH its children, and would
+/// otherwise pass as a wrapper).
+fn format_surgery_transparent_wrapper(element : ScannedElement) -> Bool {
+  if is_wml_uri(element.uri) {
+    return element.local_name
+      is ("ins"
+      | "smartTag"
+      | "sdt"
+      | "sdtContent"
+      | "hyperlink"
+      | "drawing"
+      | "object")
+  }
+  if element.uri ==
+    "http://schemas.openxmlformats.org/markup-compatibility/2006" {
+    return element.local_name is ("AlternateContent" | "Choice" | "Fallback")
+  }
+  if element.uri == "urn:schemas-microsoft-com:vml" {
+    return element.local_name
+      is ("shape" | "rect" | "roundrect" | "textbox" | "group")
+  }
+  false
+}
+
+///|
+/// Whether a transparent contribution is ACCOUNTED FOR: either the
+/// reader walks into it (a wrapper, whose contents speak for
+/// themselves) or it provably renders nothing. Everything else may be
+/// painted, and formatting around it would be a false receipt.
+fn format_surgery_transparent_is_accounted(element : ScannedElement) -> Bool {
+  format_surgery_transparent_wrapper(element) ||
+  format_surgery_invisible_seam(element)
+}
+
+///|
 /// Whether an element OR ANY DESCENDANT carries an identity-bearing
 /// attribute: the whole subtree is what a clone copies.
 fn format_surgery_subtree_has_identity_attribute(
@@ -640,15 +679,15 @@ fn plan_paragraph_format_edits(
                 "span \{ordinal} in paragraph \{paragraph_index}",
               )
             }
-            // A transparent LEAF strictly inside the span may still be
+            // Transparent content strictly inside the span may still be
             // painted (`w:annotationRef` is), and it need not belong to
             // a run this batch touches — so it would sit unformatted in
-            // the middle of a span the receipt calls formatted. Only the
-            // allowlist can vouch for one. WRAPPERS (hyperlink, ins,
-            // smartTag, sdtContent) have element children and pass here;
-            // their own gates judge them.
-            if seam.first_child_index < 0 &&
-              !format_surgery_invisible_seam(seam) {
+            // the middle of a span the receipt calls formatted. Only a
+            // QNAME the reader walks into (a wrapper) or one that
+            // provably renders nothing can be vouched for; child
+            // presence proves nothing, because the reader ignores
+            // `w:annotationRef` WITH its children.
+            if !format_surgery_transparent_is_accounted(seam) {
               raise format_surgery_refuse(
                 FormatVisibleBarrier,
                 "span \{ordinal} in paragraph \{paragraph_index}: a transparent leaf inside the span cannot be proven to render nothing",
@@ -852,7 +891,7 @@ fn plan_paragraph_format_edits(
             // constructs this planner has never seen.
             let SourceElementId(seam_identity) = contribution.source
             let seam = elements[seam_identity]
-            guard format_surgery_invisible_seam(seam) else {
+            guard format_surgery_transparent_is_accounted(seam) else {
               raise format_surgery_refuse(
                 FormatVisibleBarrier,
                 "paragraph \{paragraph_index}: the run carries content this planner cannot prove renders nothing",
