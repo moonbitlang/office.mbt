@@ -673,6 +673,25 @@ priv struct RunShape {
 }
 
 ///|
+/// Markup-compatibility directive attributes are refused wherever
+/// they could redirect what this engine is editing around.
+fn refuse_mce_attributes(
+  owner : String,
+  attributes : Array[FormatAttribute],
+) -> Unit raise DocxError {
+  for attribute in attributes {
+    let (_, attr_local) = split_qname(attribute.name)
+    if attr_local == "Ignorable" ||
+      attr_local == "ProcessContent" ||
+      attr_local == "MustUnderstand" {
+      raise Unsupported(
+        message="run formatting refuses a markup-compatibility attribute on \{owner}",
+      )
+    }
+  }
+}
+
+///|
 fn scan_run_shape(
   run_slice : BytesView,
   binding : WmlBinding,
@@ -681,7 +700,7 @@ fn scan_run_shape(
     raise Unsupported(message="run formatting requires the run's element slice")
   }
   let run_qname = wml_name(binding, "r")
-  let (run_name, _, run_self_closing, run_open_end) = scan_format_tag(
+  let (run_name, run_attributes, run_self_closing, run_open_end) = scan_format_tag(
     run_slice,
     0,
     run_slice.length(),
@@ -691,6 +710,10 @@ fn scan_run_shape(
       message="run formatting expected a <\{run_qname}> element at the slice head",
     )
   }
+  // Markup-compatibility DIRECTIVES on the run itself (and they are
+  // inherited from ancestors this slice cannot see — the wrapper
+  // refusals below are the real guard) are refused on sight.
+  refuse_mce_attributes(run_qname, run_attributes)
   if run_self_closing {
     guard run_open_end == run_slice.length() else {
       raise Unsupported(
@@ -741,7 +764,7 @@ fn scan_run_shape(
     // may be a WML alias (editing around it would plan a duplicate or
     // false-verify), and a markup-compatibility container could
     // supply one after content selection.
-    let (_, child_local) = split_qname(child.name)
+    let (child_prefix, child_local) = split_qname(child.name)
     if child_local == "rPr" && child.name != rpr_qname {
       raise Unsupported(
         message="run formatting refuses the run child \{child.name}: an rPr under another prefix may be a WML alias",
@@ -755,7 +778,17 @@ fn scan_run_shape(
         message="run formatting refuses markup-compatibility content inside a run",
       )
     }
+    // ANY foreign-prefixed run child could be a wrapper that an
+    // inherited mc:ProcessContent directive splices away — its
+    // effective contents (a hidden rPr, say) cannot be established
+    // from this slice, so it refuses.
+    if child_prefix != binding.element {
+      raise Unsupported(
+        message="run formatting refuses the run child \{child.name}: a foreign-prefixed run child may be a markup-compatibility wrapper whose effective contents this engine cannot establish",
+      )
+    }
     if child.name == rpr_qname {
+      refuse_mce_attributes(child.name, child.attributes)
       guard rpr is None else {
         raise Unsupported(
           message="run formatting refuses a run with duplicate rPr elements",
@@ -923,6 +956,17 @@ fn classify_rpr_children(
           message="run formatting refuses markup-compatibility content inside rPr",
         )
       }
+      // The wrapper's SUBTREE must not conceal WML either: an
+      // inherited mc:ProcessContent directive could splice its
+      // children into rPr after the fact.
+      if !child.self_closing {
+        scan_extension_interior(
+          run_slice,
+          binding,
+          child.open_end,
+          child.close_start,
+        )
+      }
       if extension_block_start is None {
         extension_block_start = Some(child.byte_start)
       }
@@ -995,6 +1039,48 @@ fn classify_rpr_children(
     // The unique legal insertion boundary for NEW children is before
     // the trailing extension block (or the interior end).
     insertion_limit: extension_block_start.unwrap_or(interior_end),
+  }
+}
+
+///|
+/// An admitted extension wrapper's DESCENDANTS must not conceal WML:
+/// an inherited mc:ProcessContent directive can splice a wrapper's
+/// children into rPr after the fact, so anything that could then
+/// contradict this engine's absolute set — an element under the WML
+/// binding, a ranked or structural local under ANY prefix, or nested
+/// markup-compatibility content — refuses now, while it is still
+/// hidden. Genuine extension content (w14:glow's theme colours, say)
+/// passes untouched.
+fn scan_extension_interior(
+  bytes : BytesView,
+  binding : WmlBinding,
+  start : Int,
+  end : Int,
+) -> Unit raise DocxError {
+  let children = scan_direct_children(bytes, start, end)
+  for child in children {
+    let (child_prefix, local) = split_qname(child.name)
+    guard child_prefix != binding.element else {
+      raise Unsupported(
+        message="run formatting refuses WML content (\{child.name}) inside an extension wrapper",
+      )
+    }
+    guard rpr_rank(local) is None && local != "rPr" && local != "rPrChange" else {
+      raise Unsupported(
+        message="run formatting refuses \{child.name} inside an extension wrapper: it may be a WML alias",
+      )
+    }
+    guard local != "AlternateContent" &&
+      local != "Choice" &&
+      local != "Fallback" &&
+      local != "ProcessContent" else {
+      raise Unsupported(
+        message="run formatting refuses markup-compatibility content inside an extension wrapper",
+      )
+    }
+    if !child.self_closing {
+      scan_extension_interior(bytes, binding, child.open_end, child.close_start)
+    }
   }
 }
 

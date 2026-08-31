@@ -871,3 +871,93 @@ test "format ranks every CT_RPr property in the table" {
     assert_true(got == expected, msg="rank neighbour " + name + ": " + got)
   }
 }
+
+///|
+/// Round 5: inherited mc:ProcessContent means a wrapper's children
+/// can be spliced into place AFTER this engine edits — so anything
+/// whose effective contents cannot be established refuses: foreign
+/// run children, markup-compatibility directive attributes on the run
+/// or its rPr, and extension wrappers concealing WML, aliases, or
+/// nested compatibility content. Genuine extension subtrees still
+/// pass.
+test "format seals markup-compatibility escapes" {
+  fn refuse_shape(
+    source : String,
+    extension_prefixes : Array[String],
+  ) -> String raise {
+    let mut message = ""
+    try ignore(plan_for(source, bold=true, extension_prefixes~)) catch {
+      error => message = repr(error)
+    } noraise {
+      _ => fail("expected a refusal for " + source)
+    }
+    message
+  }
+
+  assert_true(
+    refuse_shape(
+      "<w:r mc:Ignorable=\"q\" mc:ProcessContent=\"q:unwrap\"><q:unwrap><w:rPr><w:b w:val=\"0\"/></w:rPr></q:unwrap><w:t>x</w:t></w:r>",
+      [],
+    ).contains("markup-compatibility attribute"),
+  )
+  assert_true(
+    refuse_shape(
+      "<w:r><w:rPr mc:Ignorable=\"q\"><w:b/></w:rPr><w:t>x</w:t></w:r>",
+      [],
+    ).contains("markup-compatibility attribute"),
+  )
+  assert_true(
+    refuse_shape(
+      "<w:r><q:unwrap><w:rPr><w:b w:val=\"0\"/><w:bCs w:val=\"0\"/></w:rPr></q:unwrap><w:t>x</w:t></w:r>",
+      [],
+    ).contains("cannot establish"),
+  )
+  // The verifier refuses the same wrapper rather than false-passing.
+  let mut wrapped_verify = ""
+  try
+    ignore(
+      @docx.verify_run_format(
+        @utf8.encode(
+          "<w:r><q:unwrap><w:rPr><w:b w:val=\"0\"/><w:bCs w:val=\"0\"/></w:rPr></q:unwrap><w:t>x</w:t></w:r>",
+        ),
+        prefix="w",
+        format=@docx.docx_direct_format(bold=true),
+      ),
+    )
+  catch {
+    error => wrapped_verify = repr(error)
+  } noraise {
+    _ => fail("expected the verifier to refuse the wrapper")
+  }
+  assert_true(wrapped_verify.contains("cannot establish"))
+  assert_true(
+    refuse_shape(
+      "<w:r><w:rPr><w:i/><q:wrap><w:b w:val=\"0\"/></q:wrap></w:rPr><w:t>x</w:t></w:r>",
+      ["q"],
+    ).contains("WML content"),
+  )
+  assert_true(
+    refuse_shape(
+      "<w:r><w:rPr><w:i/><q:wrap><z:b/></q:wrap></w:rPr><w:t>x</w:t></w:r>",
+      ["q"],
+    ).contains("may be a WML alias"),
+  )
+  assert_true(
+    refuse_shape(
+      "<w:r><w:rPr><w:i/><q:wrap><z:AlternateContent/></q:wrap></w:rPr><w:t>x</w:t></w:r>",
+      ["q"],
+    ).contains("inside an extension wrapper"),
+  )
+  // A genuine extension subtree (glow with its theme colour) still
+  // formats, the wrapper untouched.
+  inspect(
+    format_result(
+      "<w:r><w:rPr><w:i/><w14:glow w14:rad=\"101600\"><w14:srgbClr w14:val=\"FF0000\"/></w14:glow></w:rPr><w:t>x</w:t></w:r>",
+      bold=true,
+      extension_prefixes=["w14"],
+    ),
+    content=(
+      #|<w:r><w:rPr><w:b/><w:bCs/><w:i/><w14:glow w14:rad="101600"><w14:srgbClr w14:val="FF0000"/></w14:glow></w:rPr><w:t>x</w:t></w:r>
+    ),
+  )
+}
