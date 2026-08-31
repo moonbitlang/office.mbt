@@ -699,17 +699,12 @@ pub fn docx_paragraph_format_preserved(
   // positive check passes and the projection is unchanged.
   let touched = docx_format_touched_properties(format)
   guard docx_format_paragraph_provenance(before, before_story, path~)
-    is Some((original_units, original_silent, original_mark, original_bindings)) else {
+    is Some((original_units, original_silent, original_mark)) else {
     return Some("the path '\{path}' names no single paragraph before the edit")
   }
   guard docx_format_paragraph_provenance(after, after_story, path~)
-    is Some((result_units, result_silent, result_mark, result_bindings)) else {
+    is Some((result_units, result_silent, result_mark)) else {
     return Some("the path '\{path}' names no single paragraph after the edit")
-  }
-  guard original_bindings == result_bindings else {
-    return Some(
-      "the namespace bindings of '\{path}' changed, so its properties may no longer mean what they did",
-    )
   }
   guard original_mark == result_mark else {
     return Some(
@@ -737,17 +732,27 @@ pub fn docx_paragraph_format_preserved(
   }
   for unit in 0..<original_units.length() {
     let selected = selected_units[unit]
+    let (original_properties, original_digest) = original_units[unit]
+    let (result_properties, result_digest) = result_units[unit]
+    // A unit's properties only mean what its namespace bindings say
+    // they mean: the same spelling under a rebound prefix is different
+    // formatting, and a faithful edit never disturbs it.
+    guard original_digest == result_digest else {
+      return Some(
+        "unit \{unit} of '\{path}' had its namespace bindings changed, so its properties may no longer mean what they did",
+      )
+    }
     if selected {
       // The properties the request does NOT name must survive.
-      guard docx_format_without(original_units[unit], touched) ==
-        docx_format_without(result_units[unit], touched) else {
+      guard docx_format_without(original_properties, touched) ==
+        docx_format_without(result_properties, touched) else {
         return Some(
           "unit \{unit} of '\{path}' lost or gained a run property the request never named",
         )
       }
       continue
     }
-    guard original_units[unit] == result_units[unit] else {
+    guard original_properties == result_properties else {
       return Some(
         "unit \{unit} of '\{path}' lies outside every requested span but its run properties changed",
       )
@@ -777,7 +782,7 @@ fn docx_format_paragraph_provenance(
   annotated : DocxAnnotatedResult,
   story : DocxStoryPartSource,
   path~ : String,
-) -> (Array[String], Array[String], String, String)? raise DocxError {
+) -> (Array[(String, String)], Array[String], String)? raise DocxError {
   let part = story.part()
   guard annotated.reader_projections.get(part) is Some(projection) else {
     return None
@@ -804,16 +809,17 @@ fn docx_format_paragraph_provenance(
   let SourceElementId(paragraph_head_identity) = paragraph.sources[0].source
   let base = paragraph.projection_start
   let width = paragraph.projection_end - base
-  let units : Array[String] = []
+  let units : Array[(String, String)] = []
   for _ in 0..<width {
     // A unit no run claims — text the tolerant reader admits directly
     // under the paragraph — has no properties to preserve, and says so.
-    units.push("")
+    units.push(("", ""))
   }
   // A run's properties, read ONCE per run: recomputing them for every
   // contribution walks its children again and again, and a run of many
   // small text elements is legal.
   let properties_by_run : Map[Int, String] = Map([])
+  let digests_by_run : Map[Int, String] = Map([])
   for contribution in paragraph.contributions {
     guard contribution.kind is ProjectedText(_) else { continue }
     guard contribution.run_source is Some(run_source) else { continue }
@@ -830,11 +836,22 @@ fn docx_format_paragraph_provenance(
         read
       }
     }
+    // The bindings this run's own properties depend on: two runs may
+    // each bind the same prefix to a different vocabulary, so the
+    // digest belongs to the unit, not to the paragraph.
+    let digest = match digests_by_run.get(run_identity) {
+      Some(known) => known
+      None => {
+        let read = docx_format_binding_digest(bytes, elements, run_identity)
+        digests_by_run[run_identity] = read
+        read
+      }
+    }
     let from = contribution.projection_start - base
     let to = contribution.projection_end - base
     for unit in from..<to {
       if unit >= 0 && unit < width {
-        units[unit] = properties
+        units[unit] = (properties, digest)
       }
     }
   }
@@ -918,7 +935,9 @@ fn docx_format_paragraph_provenance(
       elements,
       elements[run_identity],
     )
-    silent.push("\{signature}\u{1}\{properties}")
+    silent.push(
+      "\{signature}\u{1}\{properties}\u{1}\{docx_format_binding_digest(bytes, elements, run_identity)}",
+    )
   }
   // Carriers that belong to no run at all: `w:pPr`, `w:sdtPr`,
   // `w:sdtEndPr`, or any container this planner has never seen.
@@ -946,7 +965,7 @@ fn docx_format_paragraph_provenance(
       run_offsets~,
     )
     silent.push(
-      "\{owner_path}\u{1}\{format_surgery_decode(bytes[entry.byte_start:entry.byte_end])}",
+      "\{owner_path}\u{1}\{format_surgery_decode(bytes[entry.byte_start:entry.byte_end])}\u{1}\{docx_format_binding_digest(bytes, elements, carrier_identity)}",
     )
   }
   // Every pPr in the paragraph's physical subtree, in document order:
@@ -983,25 +1002,13 @@ fn docx_format_paragraph_provenance(
     mark_builder.write_string(
       format_surgery_decode(bytes[entry.byte_start:entry.byte_end]),
     )
+    mark_builder.write_string("~")
+    mark_builder.write_string(
+      docx_format_binding_digest(bytes, elements, mark_identity),
+    )
   }
   let mark = mark_builder.to_string()
-  // The namespace environment the paragraph's own elements
-  // demonstrate: prefix to resolved URI. Literal property bytes cannot
-  // see an INHERITED rebinding — the same `x:glow` spelling meaning a
-  // different vocabulary — but this does, and a faithful edit never
-  // changes it.
-  let bindings : Array[String] = []
-  let seen_bindings : Map[String, Bool] = Map([])
-  docx_format_collect_bindings(
-    bytes, elements, paragraph_head_identity, bindings, seen_bindings,
-  )
-  bindings.sort()
-  let environment = StringBuilder()
-  for entry in bindings {
-    environment.write_string(entry)
-    environment.write_string("|")
-  }
-  Some((units, silent, mark, environment.to_string()))
+  Some((units, silent, mark))
 }
 
 ///|
@@ -1025,6 +1032,182 @@ fn docx_format_run_properties(
     child = entry.next_sibling_index
   }
   builder.to_string()
+}
+
+///|
+/// The bindings THIS carrier's own subtree depends on: every prefix its
+/// elements and attributes use, against the URI in scope where it sits.
+/// A paragraph-wide set cannot say which occurrence used which binding
+/// — two runs may each bind `x` differently — and attribute prefixes
+/// never appear as element prefixes at all, so both are gathered here,
+/// per carrier.
+fn docx_format_binding_digest(
+  bytes : BytesView,
+  elements : Array[ScannedElement],
+  root_identity : Int,
+) -> String raise DocxError {
+  let prefixes : Array[String] = []
+  let seen : Map[String, Bool] = Map([])
+  docx_format_collect_used_prefixes(
+    bytes, elements, root_identity, prefixes, seen,
+  )
+  prefixes.sort()
+  let builder = StringBuilder()
+  for prefix in prefixes {
+    let uri = docx_format_resolve_prefix(bytes, elements, root_identity, prefix)
+    builder.write_string("\{prefix}=\{uri}|")
+  }
+  builder.to_string()
+}
+
+///|
+/// Every namespace prefix an element subtree uses, on its own names and
+/// on its attributes.
+fn docx_format_collect_used_prefixes(
+  bytes : BytesView,
+  elements : Array[ScannedElement],
+  element_identity : Int,
+  out : Array[String],
+  seen : Map[String, Bool],
+) -> Unit raise DocxError {
+  let element = elements[element_identity]
+  fn note(prefix : String) -> Unit {
+    if prefix != "" && seen.get(prefix) is None {
+      seen[prefix] = true
+      out.push(prefix)
+    }
+  }
+
+  note(format_surgery_element_prefix(bytes, element))
+  for attribute in docx_format_attribute_names(bytes, element) {
+    if !attribute.has_prefix("xmlns") {
+      let (attribute_prefix, _) = split_qname(attribute)
+      note(attribute_prefix)
+    }
+  }
+  let mut child = element.first_child_index
+  while child >= 0 {
+    docx_format_collect_used_prefixes(bytes, elements, child, out, seen)
+    child = elements[child].next_sibling_index
+  }
+}
+
+///|
+/// The URI a prefix resolves to where this element sits: the nearest
+/// ancestor declaration wins, and an element's own resolved URI
+/// confirms its own prefix.
+fn docx_format_resolve_prefix(
+  bytes : BytesView,
+  elements : Array[ScannedElement],
+  element_identity : Int,
+  prefix : String,
+) -> String raise DocxError {
+  let mut at = element_identity
+  while at >= 0 && at < elements.length() {
+    let ancestor = elements[at]
+    for attribute in docx_format_attribute_names(bytes, ancestor) {
+      if attribute == "xmlns:\{prefix}" {
+        return docx_format_attribute_value(bytes, ancestor, attribute)
+      }
+    }
+    if format_surgery_element_prefix(bytes, ancestor) == prefix {
+      return ancestor.uri
+    }
+    at = ancestor.parent_index
+  }
+  "?"
+}
+
+///|
+/// The attribute names an element's open tag spells, in order.
+fn docx_format_attribute_names(
+  bytes : BytesView,
+  element : ScannedElement,
+) -> Array[String] raise DocxError {
+  let names : Array[String] = []
+  let stop = run_surgery_open_tag_end(element)
+  let mut at = element.byte_start + 1
+  while at < stop &&
+        bytes[at] != b'>' &&
+        bytes[at] != b'/' &&
+        !is_xml_ws(bytes[at]) {
+    at += 1
+  }
+  while at < stop {
+    if is_xml_ws(bytes[at]) || bytes[at] == b'/' {
+      at += 1
+      continue
+    }
+    if bytes[at] == b'>' {
+      break
+    }
+    let name_start = at
+    while at < stop && bytes[at] != b'=' && !is_xml_ws(bytes[at]) {
+      at += 1
+    }
+    names.push(format_surgery_decode(bytes[name_start:at]))
+    while at < stop && bytes[at] != b'"' && bytes[at] != b'\'' {
+      at += 1
+    }
+    if at >= stop {
+      break
+    }
+    let quote = bytes[at]
+    at += 1
+    while at < stop && bytes[at] != quote {
+      at += 1
+    }
+    at += 1
+  }
+  names
+}
+
+///|
+/// One attribute's value as spelled.
+fn docx_format_attribute_value(
+  bytes : BytesView,
+  element : ScannedElement,
+  wanted : String,
+) -> String raise DocxError {
+  let stop = run_surgery_open_tag_end(element)
+  let mut at = element.byte_start + 1
+  while at < stop &&
+        bytes[at] != b'>' &&
+        bytes[at] != b'/' &&
+        !is_xml_ws(bytes[at]) {
+    at += 1
+  }
+  while at < stop {
+    if is_xml_ws(bytes[at]) || bytes[at] == b'/' {
+      at += 1
+      continue
+    }
+    if bytes[at] == b'>' {
+      break
+    }
+    let name_start = at
+    while at < stop && bytes[at] != b'=' && !is_xml_ws(bytes[at]) {
+      at += 1
+    }
+    let name = format_surgery_decode(bytes[name_start:at])
+    while at < stop && bytes[at] != b'"' && bytes[at] != b'\'' {
+      at += 1
+    }
+    if at >= stop {
+      break
+    }
+    let quote = bytes[at]
+    at += 1
+    let value_start = at
+    while at < stop && bytes[at] != quote {
+      at += 1
+    }
+    if name == wanted {
+      return format_surgery_decode(bytes[value_start:at])
+    }
+    at += 1
+  }
+  ""
 }
 
 ///|
@@ -1477,30 +1660,4 @@ fn docx_format_carrier_key(
     index -= 1
   }
   builder.to_string()
-}
-
-///|
-/// Every prefix-to-URI binding the paragraph's own elements
-/// demonstrate. An element's spelling gives the prefix and the scan
-/// gives its resolved URI, so a rebinding inherited from an ancestor
-/// shows up here even though no property's bytes changed.
-fn docx_format_collect_bindings(
-  bytes : BytesView,
-  elements : Array[ScannedElement],
-  element_identity : Int,
-  out : Array[String],
-  seen : Map[String, Bool],
-) -> Unit raise DocxError {
-  let element = elements[element_identity]
-  let prefix = format_surgery_element_prefix(bytes, element)
-  let entry = "\{prefix}=\{element.uri}"
-  if seen.get(entry) is None {
-    seen[entry] = true
-    out.push(entry)
-  }
-  let mut child = element.first_child_index
-  while child >= 0 {
-    docx_format_collect_bindings(bytes, elements, child, out, seen)
-    child = elements[child].next_sibling_index
-  }
 }

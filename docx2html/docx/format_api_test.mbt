@@ -1872,3 +1872,100 @@ test "format preservation pins the namespace environment" {
     None,
   )
 }
+
+///|
+/// Round 16: bindings belong to the property that uses them, not to
+/// the paragraph. Two runs may each bind the same prefix differently,
+/// and an ATTRIBUTE prefix never appears as an element prefix at all.
+test "format preservation binds namespaces per property" {
+  // Two runs, each binding `x` to a different vocabulary; the wrong
+  // result exchanges them, so a paragraph-wide set is unchanged.
+  let before = format_fixture(
+    "<w:p><w:r xmlns:x=\"http://schemas.microsoft.com/office/word/2010/wordml\"><w:rPr><x:glow/></w:rPr><w:t>a</w:t></w:r><w:r xmlns:x=\"http://schemas.microsoft.com/office/word/2012/wordml\"><w:rPr><x:glow/></w:rPr><w:t>b</w:t></w:r></w:p>",
+  )
+  let swapped = format_fixture(
+    "<w:p><w:r xmlns:x=\"http://schemas.microsoft.com/office/word/2012/wordml\"><w:rPr><w:b/><w:bCs/><x:glow/></w:rPr><w:t>a</w:t></w:r><w:r xmlns:x=\"http://schemas.microsoft.com/office/word/2010/wordml\"><w:rPr><w:b/><w:bCs/><x:glow/></w:rPr><w:t>b</w:t></w:r></w:p>",
+  )
+  // The rPr engine declines to judge a run that declares a namespace
+  // locally, so the positive check reports that rather than a clean
+  // pass — and preservation names the exchange regardless.
+  assert_true(
+    @docx.docx_paragraph_direct_format(
+      swapped,
+      swapped.main_story_source(),
+      path="p[1]",
+      start=0,
+      end=2,
+      format=@docx.docx_direct_format(bold=true),
+    )
+    is Some(_),
+  )
+  assert_true(
+    @docx.docx_paragraph_format_preserved(
+      before,
+      before.main_story_source(),
+      swapped,
+      swapped.main_story_source(),
+      path="p[1]",
+      spans=[(0, 2)],
+      format=@docx.docx_direct_format(bold=true),
+    )
+    is Some(_),
+  )
+  // An ATTRIBUTE prefix rebinding, which no element spelling reveals.
+  let attribute_before = format_fixture(
+    "<w:p xmlns:x=\"http://schemas.microsoft.com/office/word/2010/wordml\" xmlns:y=\"http://schemas.microsoft.com/office/word/2010/wordml\"><w:r><w:rPr><x:glow y:val=\"1\"/></w:rPr><w:t>ab</w:t></w:r></w:p>",
+  )
+  let attribute_rebound = format_fixture(
+    "<w:p xmlns:x=\"http://schemas.microsoft.com/office/word/2010/wordml\" xmlns:y=\"http://schemas.microsoft.com/office/word/2012/wordml\"><w:r><w:rPr><w:b/><w:bCs/><x:glow y:val=\"1\"/></w:rPr><w:t>ab</w:t></w:r></w:p>",
+  )
+  // The positive check accepts this one — the run itself declares
+  // nothing — so only preservation can see the rebinding.
+  assert_eq(
+    @docx.docx_paragraph_direct_format(
+      attribute_rebound,
+      attribute_rebound.main_story_source(),
+      path="p[1]",
+      start=0,
+      end=2,
+      format=@docx.docx_direct_format(bold=true),
+    ),
+    None,
+  )
+  assert_true(
+    @docx.docx_paragraph_format_preserved(
+      attribute_before,
+      attribute_before.main_story_source(),
+      attribute_rebound,
+      attribute_rebound.main_story_source(),
+      path="p[1]",
+      spans=[(0, 2)],
+      format=@docx.docx_direct_format(bold=true),
+    )
+    is Some(_),
+  )
+  // The planner refuses a run that declares a namespace locally, so
+  // the swap fixture is never something it could produce. Its own
+  // output over the paragraph-scoped document is what must preserve.
+  let body = "<w:p xmlns:x=\"http://schemas.microsoft.com/office/word/2010/wordml\" xmlns:y=\"http://schemas.microsoft.com/office/word/2010/wordml\"><w:r><w:rPr><x:glow y:val=\"1\"/></w:rPr><w:t>ab</w:t></w:r></w:p>"
+  let (plan, _) = @docx.plan_docx_format(
+    attribute_before,
+    attribute_before.main_story_source(),
+    format=@docx.docx_direct_format(bold=true),
+    within="p[1]",
+    range=(0, 2),
+  )
+  let after = format_apply(body, plan)
+  assert_eq(
+    @docx.docx_paragraph_format_preserved(
+      attribute_before,
+      attribute_before.main_story_source(),
+      after,
+      after.main_story_source(),
+      path="p[1]",
+      spans=[(0, 2)],
+      format=@docx.docx_direct_format(bold=true),
+    ),
+    None,
+  )
+}
