@@ -805,15 +805,26 @@ fn docx_format_paragraph_provenance(
     // under the paragraph — has no properties to preserve, and says so.
     units.push("")
   }
+  // A run's properties, read ONCE per run: recomputing them for every
+  // contribution walks its children again and again, and a run of many
+  // small text elements is legal.
+  let properties_by_run : Map[Int, String] = Map([])
   for contribution in paragraph.contributions {
     guard contribution.kind is ProjectedText(_) else { continue }
     guard contribution.run_source is Some(run_source) else { continue }
     let SourceElementId(run_identity) = run_source
-    let properties = docx_format_run_properties(
-      bytes,
-      elements,
-      elements[run_identity],
-    )
+    let properties = match properties_by_run.get(run_identity) {
+      Some(known) => known
+      None => {
+        let read = docx_format_run_properties(
+          bytes,
+          elements,
+          elements[run_identity],
+        )
+        properties_by_run[run_identity] = read
+        read
+      }
+    }
     let from = contribution.projection_start - base
     let to = contribution.projection_end - base
     for unit in from..<to {
@@ -843,9 +854,24 @@ fn docx_format_paragraph_provenance(
   // Enumerating the carrier ELEMENT rather than a list of known
   // container kinds is what makes this closed: a carrier this planner
   // has never heard of is still compared.
+  // The paragraphs the reader registered: only these answer for their
+  // own carriers.
+  let registered : Map[Int, Bool] = Map([])
+  for other in projection.paragraphs {
+    for source in other.sources {
+      let SourceElementId(head) = source.source
+      registered[head] = true
+    }
+  }
   let silent : Array[String] = []
   let carriers : Array[Int] = []
-  docx_format_collect_named(elements, paragraph_head_identity, "rPr", carriers)
+  docx_format_collect_named(
+    elements,
+    paragraph_head_identity,
+    "rPr",
+    carriers,
+    registered~,
+  )
   for carrier_identity in carriers {
     let owner = docx_format_owning_run(elements, carrier_identity)
     match owner {
@@ -872,7 +898,13 @@ fn docx_format_paragraph_provenance(
   // alignment, spacing, numbering, and the mark's own rPr alike —
   // because no v1 request touches any of it.
   let marks : Array[Int] = []
-  docx_format_collect_named(elements, paragraph_head_identity, "pPr", marks)
+  docx_format_collect_named(
+    elements,
+    paragraph_head_identity,
+    "pPr",
+    marks,
+    registered~,
+  )
   let mark_builder = StringBuilder()
   for mark_identity in marks {
     let entry = elements[mark_identity]
@@ -1220,18 +1252,30 @@ fn docx_format_collect_named(
   element_identity : Int,
   local_name : String,
   out : Array[Int],
+  registered~ : Map[Int, Bool],
 ) -> Unit {
   let mut child = elements[element_identity].first_child_index
   while child >= 0 {
     let entry = elements[child]
-    if is_wml_uri(entry.uri) && entry.local_name == "p" {
+    // A nested paragraph answers for its own carriers only if the
+    // reader REGISTERED it. One inside a suppressed container never
+    // becomes a logical paragraph, so nobody else would look.
+    if is_wml_uri(entry.uri) &&
+      entry.local_name == "p" &&
+      registered.get(entry.identity) == Some(true) {
       child = entry.next_sibling_index
       continue
     }
     if is_wml_uri(entry.uri) && entry.local_name == local_name {
       out.push(entry.identity)
     }
-    docx_format_collect_named(elements, entry.identity, local_name, out)
+    docx_format_collect_named(
+      elements,
+      entry.identity,
+      local_name,
+      out,
+      registered~,
+    )
     child = entry.next_sibling_index
   }
 }

@@ -1491,3 +1491,60 @@ test "format preservation sees every run-property carrier" {
     None,
   )
 }
+
+///|
+/// Round 10: a nested paragraph answers for its own carriers only when
+/// the reader REGISTERED it. One inside a suppressed container never
+/// becomes a logical paragraph, so its carriers are this paragraph's
+/// to compare.
+test "format preservation descends into unregistered nested paragraphs" {
+  let before = format_fixture(
+    "<w:p><w:r><w:t>ab</w:t></w:r><w:del w:id=\"1\" w:author=\"A\" w:date=\"2026-01-01T00:00:00Z\"><w:p><w:pPr><w:rPr><w:i/><w:iCs/></w:rPr></w:pPr></w:p></w:del></w:p>",
+  )
+  let repainted = format_fixture(
+    "<w:p><w:r><w:rPr><w:b/><w:bCs/></w:rPr><w:t>ab</w:t></w:r><w:del w:id=\"1\" w:author=\"A\" w:date=\"2026-01-01T00:00:00Z\"><w:p><w:pPr><w:rPr><w:u w:val=\"single\"/></w:rPr></w:pPr></w:p></w:del></w:p>",
+  )
+  assert_eq(
+    @docx.docx_paragraph_direct_format(
+      repainted,
+      repainted.main_story_source(),
+      path="p[1]",
+      start=0,
+      end=2,
+      format=@docx.docx_direct_format(bold=true),
+    ),
+    None,
+  )
+  assert_true(
+    @docx.docx_paragraph_format_preserved(
+      before,
+      before.main_story_source(),
+      repainted,
+      repainted.main_story_source(),
+      path="p[1]",
+      spans=[(0, 2)],
+      format=@docx.docx_direct_format(bold=true),
+    )
+    is Some(_),
+  )
+  // A REGISTERED sibling paragraph still answers for itself: changing
+  // its own formatting is not this paragraph's discrepancy.
+  let sibling_before = format_fixture(
+    "<w:p><w:r><w:t>ab</w:t></w:r></w:p><w:p><w:pPr><w:rPr><w:i/><w:iCs/></w:rPr></w:pPr><w:r><w:t>cd</w:t></w:r></w:p>",
+  )
+  let sibling_after = format_fixture(
+    "<w:p><w:r><w:rPr><w:b/><w:bCs/></w:rPr><w:t>ab</w:t></w:r></w:p><w:p><w:pPr><w:rPr><w:u w:val=\"single\"/></w:rPr></w:pPr><w:r><w:t>cd</w:t></w:r></w:p>",
+  )
+  assert_eq(
+    @docx.docx_paragraph_format_preserved(
+      sibling_before,
+      sibling_before.main_story_source(),
+      sibling_after,
+      sibling_after.main_story_source(),
+      path="p[1]",
+      spans=[(0, 2)],
+      format=@docx.docx_direct_format(bold=true),
+    ),
+    None,
+  )
+}

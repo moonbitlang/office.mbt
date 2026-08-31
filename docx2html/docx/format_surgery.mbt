@@ -707,16 +707,24 @@ fn plan_paragraph_format_edits(
     }
   }
 
+  // How many times each source projects, counted ONCE: rescanning
+  // every part per part is quadratic, and a run of many small text
+  // elements is legal.
+  let projection_counts : Map[Int, Int] = Map([])
+  for part in parts {
+    let SourceElementId(part_identity) = part.contribution.source
+    projection_counts[part_identity] = match
+      projection_counts.get(part_identity) {
+      Some(seen) => seen + 1
+      None => 1
+    }
+  }
   fn require_singly_projected(
     contribution : ReaderProjectionContribution,
     ordinal : Int,
   ) -> Unit raise DocxError {
-    let mut count = 0
-    for part in parts {
-      if part.contribution.source == contribution.source {
-        count += 1
-      }
-    }
+    let SourceElementId(source_identity) = contribution.source
+    let count = projection_counts.get(source_identity).unwrap_or(0)
     if count > 1 {
       raise format_surgery_refuse(
         FormatDuplicateSource,
@@ -991,12 +999,8 @@ fn plan_paragraph_format_edits(
     for contribution in paragraph.contributions {
       if contribution.run_source == Some(run.source) {
         if contribution.kind is ProjectedText(_) {
-          let mut count = 0
-          for other in parts {
-            if other.contribution.source == contribution.source {
-              count += 1
-            }
-          }
+          let SourceElementId(owned_source) = contribution.source
+          let count = projection_counts.get(owned_source).unwrap_or(0)
           if count > 1 {
             raise format_surgery_refuse(
               FormatDuplicateSource,
