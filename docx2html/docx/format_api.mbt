@@ -898,6 +898,7 @@ fn docx_format_paragraph_provenance(
   // otherwise re-read and re-store that whole text.
   let signatures : Map[Int, String] = Map([])
   let paths : Map[Int, String] = Map([])
+  let keys : Map[Int, String] = Map([])
   let run_offsets : Map[Int, Int] = Map([])
   for contribution in paragraph.contributions {
     guard contribution.run_source is Some(SourceElementId(owner)) else {
@@ -998,6 +999,7 @@ fn docx_format_paragraph_provenance(
       run_offsets~,
       signatures~,
       paths~,
+      keys~,
     )
     silent.push(
       "\{owner_path}\u{1}\{format_surgery_decode(bytes[entry.byte_start:entry.byte_end])}\u{1}\{docx_format_binding_digest(bytes, elements, carrier_identity)}",
@@ -1033,6 +1035,7 @@ fn docx_format_paragraph_provenance(
         run_offsets~,
         signatures~,
         paths~,
+        keys~,
       ),
     )
     mark_builder.write_string("=")
@@ -1687,18 +1690,29 @@ fn docx_format_carrier_key(
   run_offsets~ : Map[Int, Int],
   signatures~ : Map[Int, String],
   paths~ : Map[Int, String],
+  keys~ : Map[Int, String],
 ) -> String raise DocxError {
-  docx_format_fingerprint(
-    docx_format_carrier_path(
-      bytes,
-      elements,
-      element_identity,
-      stop_identity,
-      run_offsets~,
-      signatures~,
-      paths~,
-    ),
-  )
+  // Memoized per element: carriers beneath one deep ancestry share an
+  // owner, and hashing that ancestry once per carrier would put the
+  // depth back into the cost.
+  match keys.get(element_identity) {
+    Some(known) => known
+    None => {
+      let key = docx_format_fingerprint(
+        docx_format_carrier_path(
+          bytes,
+          elements,
+          element_identity,
+          stop_identity,
+          run_offsets~,
+          signatures~,
+          paths~,
+        ),
+      )
+      keys[element_identity] = key
+      key
+    }
+  }
 }
 
 ///|

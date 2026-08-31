@@ -2119,8 +2119,11 @@ test "format preservation stays bounded on a heavy run" {
 /// ancestry once, not once per carrier — and the keys must still tell
 /// two different owners apart.
 test "format preservation stays bounded under deep ancestry" {
-  let wrappers = 40
-  let carriers = 3000
+  // Deep and wide enough that a per-carrier ancestry walk would not
+  // finish: the cost must come from the document, not from their
+  // product.
+  let wrappers = 200
+  let carriers = 40000
   let inner = StringBuilder()
   for _ in 0..<carriers {
     inner.write_string("<w:rPr/>")
