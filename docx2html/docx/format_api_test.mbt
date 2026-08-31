@@ -2192,11 +2192,21 @@ test "format preservation stays bounded under deep ancestry" {
 /// element and prefix.
 test "format preservation resolves inherited namespaces once" {
   let declarations = StringBuilder()
-  for index in 0..<4000 {
+  for index in 0..<1500 {
     declarations.write_string(" xmlns:n\{index}=\"urn:example:\{index}\"")
   }
+  // An untouched marker run whose properties USE every declared
+  // prefix: resolving them must read the paragraph's declaration table
+  // once, not once per prefix.
+  let marker = StringBuilder()
+  marker.write_string("<w:r><w:rPr>")
+  for index in 0..<1500 {
+    marker.write_string("<n\{index}:glow/>")
+  }
+  marker.write_string("</w:rPr><w:footnoteReference w:id=\"1\"/></w:r>")
   let runs = StringBuilder()
-  for _ in 0..<4000 {
+  runs.write_string(marker.to_string())
+  for _ in 0..<1500 {
     runs.write_string("<w:r><w:rPr><x:glow/></w:rPr><w:t>a</w:t></w:r>")
   }
   let body = "<w:p xmlns:x=\"http://schemas.microsoft.com/office/word/2010/wordml\"" +

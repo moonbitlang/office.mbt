@@ -825,6 +825,7 @@ fn docx_format_paragraph_provenance(
   // Namespace resolutions, memoized per element and prefix: an
   // ancestor's declarations are read once, not once per descendant.
   let resolutions : Map[String, String] = Map([])
+  let declarations : Map[Int, Map[String, String]] = Map([])
   // A run's properties, read ONCE per run: recomputing them for every
   // contribution walks its children again and again, and a run of many
   // small text elements is legal.
@@ -870,6 +871,7 @@ fn docx_format_paragraph_provenance(
             elements,
             properties_identity,
             resolutions~,
+            declarations~,
           )
         } else {
           ""
@@ -977,7 +979,7 @@ fn docx_format_paragraph_provenance(
       elements[run_identity],
     )
     silent.push(
-      "\{signature}\u{1}\{properties}\u{1}\{docx_format_binding_digest(bytes, elements, run_identity, resolutions~)}",
+      "\{signature}\u{1}\{properties}\u{1}\{docx_format_binding_digest(bytes, elements, run_identity, resolutions~, declarations~)}",
     )
   }
   // Carriers that belong to no run at all: `w:pPr`, `w:sdtPr`,
@@ -1008,7 +1010,7 @@ fn docx_format_paragraph_provenance(
       keys~,
     )
     silent.push(
-      "\{owner_path}\u{1}\{format_surgery_decode(bytes[entry.byte_start:entry.byte_end])}\u{1}\{docx_format_binding_digest(bytes, elements, carrier_identity, resolutions~)}",
+      "\{owner_path}\u{1}\{format_surgery_decode(bytes[entry.byte_start:entry.byte_end])}\u{1}\{docx_format_binding_digest(bytes, elements, carrier_identity, resolutions~, declarations~)}",
     )
   }
   // Every pPr in the paragraph's physical subtree, in document order:
@@ -1049,7 +1051,13 @@ fn docx_format_paragraph_provenance(
     )
     mark_builder.write_string("~")
     mark_builder.write_string(
-      docx_format_binding_digest(bytes, elements, mark_identity, resolutions~),
+      docx_format_binding_digest(
+        bytes,
+        elements,
+        mark_identity,
+        resolutions~,
+        declarations~,
+      ),
     )
   }
   let mark = mark_builder.to_string()
@@ -1091,6 +1099,7 @@ fn docx_format_binding_digest(
   elements : Array[ScannedElement],
   root_identity : Int,
   resolutions~ : Map[String, String],
+  declarations~ : Map[Int, Map[String, String]],
 ) -> String raise DocxError {
   let prefixes : Array[String] = []
   let seen : Map[String, Bool] = Map([])
@@ -1106,6 +1115,7 @@ fn docx_format_binding_digest(
       root_identity,
       prefix,
       resolutions~,
+      declarations~,
     )
     // A prefix resolving to WML explains nothing this digest is for:
     // the request writes WML, and the rPr engine vouches for that
@@ -1164,6 +1174,7 @@ fn docx_format_resolve_prefix(
   element_identity : Int,
   prefix : String,
   resolutions~ : Map[String, String],
+  declarations~ : Map[Int, Map[String, String]],
 ) -> String raise DocxError {
   // `xml` is bound by the XML specification itself and can never be
   // rebound, so it explains nothing and is not looked up.
@@ -1179,14 +1190,17 @@ fn docx_format_resolve_prefix(
   match resolutions.get(memo) {
     Some(known) => known
     None => {
-      let declaration = if prefix == "" { "xmlns" } else { "xmlns:\{prefix}" }
       let element = elements[element_identity]
-      let mut answer = ""
-      for attribute in docx_format_attribute_names(bytes, element) {
-        if attribute == declaration && answer == "" {
-          answer = docx_format_attribute_value(bytes, element, attribute)
-        }
-      }
+      // The element's declarations, parsed ONCE: a tag may carry many,
+      // and reading it again for every prefix that inherits from it is
+      // quadratic.
+      let table = docx_format_declarations(
+        bytes,
+        elements,
+        element_identity,
+        declarations~,
+      )
+      let mut answer = table.get(prefix).unwrap_or("")
       if answer == "" && format_surgery_element_prefix(bytes, element) == prefix {
         answer = element.uri
       }
@@ -1197,6 +1211,7 @@ fn docx_format_resolve_prefix(
           element.parent_index,
           prefix,
           resolutions~,
+          declarations~,
         )
       }
       resolutions[memo] = answer
@@ -1793,6 +1808,36 @@ fn docx_format_run_signature_key(
       let key = docx_format_fingerprint(signature)
       signatures[run_identity] = key
       key
+    }
+  }
+}
+
+///|
+/// One element's namespace declarations, parsed once: prefix to URI,
+/// with the default declaration under the empty prefix.
+fn docx_format_declarations(
+  bytes : BytesView,
+  elements : Array[ScannedElement],
+  element_identity : Int,
+  declarations~ : Map[Int, Map[String, String]],
+) -> Map[String, String] raise DocxError {
+  match declarations.get(element_identity) {
+    Some(known) => known
+    None => {
+      let table : Map[String, String] = Map([])
+      let element = elements[element_identity]
+      for attribute in docx_format_attribute_names(bytes, element) {
+        if attribute == "xmlns" {
+          table[""] = docx_format_attribute_value(bytes, element, attribute)
+        } else if attribute.has_prefix("xmlns:") {
+          let declared = attribute[6:].to_string()
+          table[declared] = docx_format_attribute_value(
+            bytes, element, attribute,
+          )
+        }
+      }
+      declarations[element_identity] = table
+      table
     }
   }
 }
