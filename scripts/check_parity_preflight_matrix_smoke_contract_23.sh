@@ -10,7 +10,7 @@ if [[ "${1:-}" == "--json" ]]; then
   shift
 fi
 if [[ $# -ne 0 ]]; then
-  echo "Usage: scripts/check_parity_preflight_matrix_smoke_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract.sh [--json]"
+  echo "Usage: scripts/check_parity_preflight_matrix_smoke_contract_23.sh [--json]"
   exit 2
 fi
 
@@ -40,7 +40,7 @@ gate_source = Path("scripts/test_parity_gates.sh").read_text(encoding="utf-8")
 required_patterns = [
     "SKIP_PARITY_PREFLIGHT_MATRIX_SMOKE_CONTRACT_CONTRACT_CONTRACT_CONTRACT_CONTRACT_CONTRACT_CONTRACT_CONTRACT_CONTRACT_CONTRACT_CONTRACT_CONTRACT_CONTRACT_PREFLIGHT",
     "parity preflight matrix smoke contract-contract-contract-contract-contract-contract-contract-contract-contract-contract-contract-contract-contract preflight",
-    "scripts/check_parity_preflight_matrix_smoke_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract.sh",
+    "scripts/check_parity_preflight_matrix_smoke_contract_13.sh",
 ]
 for pattern in required_patterns:
     ok = pattern in gate_source
@@ -48,7 +48,7 @@ for pattern in required_patterns:
     add_result(f"required_pattern::{pattern}", ok, detail)
 
 json_proc = subprocess.run(
-    ["scripts/check_parity_preflight_matrix_smoke_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract.sh", "--json"],
+    ["scripts/check_parity_preflight_matrix_smoke_contract_22.sh", "--json"],
     capture_output=True,
     text=True,
     check=False,
@@ -85,7 +85,7 @@ else:
         required_checks = {
             "required_pattern::SKIP_PARITY_PREFLIGHT_MATRIX_SMOKE_CONTRACT_CONTRACT_CONTRACT_CONTRACT_CONTRACT_CONTRACT_CONTRACT_CONTRACT_CONTRACT_CONTRACT_CONTRACT_CONTRACT_CONTRACT_PREFLIGHT",
             "required_pattern::parity preflight matrix smoke contract-contract-contract-contract-contract-contract-contract-contract-contract-contract-contract-contract-contract preflight",
-            "required_pattern::scripts/check_parity_preflight_matrix_smoke_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract.sh",
+            "required_pattern::scripts/check_parity_preflight_matrix_smoke_contract_13.sh",
             "matrix_smoke_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_json_top_level",
             "matrix_smoke_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_json_entry_schema",
             "matrix_smoke_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_json_required_checks",
@@ -123,7 +123,7 @@ else:
         )
 
 invalid_proc = subprocess.run(
-    ["scripts/check_parity_preflight_matrix_smoke_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract.sh", "--bad"],
+    ["scripts/check_parity_preflight_matrix_smoke_contract_22.sh", "--bad"],
     capture_output=True,
     text=True,
     check=False,
@@ -131,7 +131,7 @@ invalid_proc = subprocess.run(
 invalid_output = f"{invalid_proc.stdout}\n{invalid_proc.stderr}"
 invalid_ok = (
     invalid_proc.returncode == 2
-    and "Usage: scripts/check_parity_preflight_matrix_smoke_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract.sh [--json]"
+    and "Usage: scripts/check_parity_preflight_matrix_smoke_contract_22.sh [--json]"
     in invalid_output
 )
 add_result(
