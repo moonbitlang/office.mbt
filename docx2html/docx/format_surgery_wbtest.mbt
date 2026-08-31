@@ -1484,12 +1484,24 @@ test "format: the transparent classifier covers every name it dispatches" {
   // themselves.
   for
     wrapper in [
-      "ins", "smartTag", "sdt", "sdtContent", "hyperlink", "drawing", "object", "AlternateContent",
-      "Choice", "Fallback", "shape", "rect", "roundrect", "textbox", "group",
+      "ins", "smartTag", "sdt", "sdtContent", "hyperlink", "AlternateContent", "Choice",
+      "Fallback",
     ] {
     let element = find(wrapper)
     assert_true(format_surgery_transparent_wrapper(element), msg=wrapper)
     assert_true(format_surgery_transparent_is_accounted(element), msg=wrapper)
+  }
+  // The drawable containers this codebase already calls hard barriers
+  // are NOT wrappers: a drawing inside a formatted run is content no
+  // span selected.
+  for
+    barrier in [
+      "drawing", "object", "shape", "rect", "roundrect", "textbox", "group",
+    ] {
+    let element = find(barrier)
+    assert_true(run_surgery_is_hard_barrier_container(element), msg=barrier)
+    assert_false(format_surgery_transparent_wrapper(element), msg=barrier)
+    assert_false(format_surgery_transparent_is_accounted(element), msg=barrier)
   }
   // Seams that render nothing.
   for
@@ -1506,4 +1518,32 @@ test "format: the transparent classifier covers every name it dispatches" {
   assert_false(format_surgery_transparent_wrapper(reference))
   assert_false(format_surgery_invisible_seam(reference))
   assert_false(format_surgery_transparent_is_accounted(reference))
+}
+
+///|
+/// Round 10: a marker seam renders nothing only as the LEAF the schema
+/// says it is, and a drawable container in a touched run is content no
+/// span selected. Both refuse rather than being formatted around.
+test "format: seams must be leaves and drawables are never accounted" {
+  assert_format_refusal(
+    "<w:p><w:r><w:t>ab</w:t><w:proofErr w:type=\"spellStart\"><w:annotationRef/></w:proofErr></w:r></w:p>",
+    paragraph=0,
+    [format_span(0, 2)],
+    refusal="FormatVisibleBarrier",
+    bold=true,
+  )
+  assert_format_refusal(
+    "<w:p><w:r><w:object><v:rect/></w:object><w:t>ab</w:t></w:r></w:p>",
+    paragraph=0,
+    [format_span(0, 2)],
+    refusal="FormatVisibleBarrier",
+    bold=true,
+  )
+  assert_format_refusal(
+    "<w:p><w:r><w:t>ab</w:t><w:drawing/></w:r></w:p>",
+    paragraph=0,
+    [format_span(0, 2)],
+    refusal="FormatVisibleBarrier",
+    bold=true,
+  )
 }

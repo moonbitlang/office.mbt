@@ -353,14 +353,24 @@ fn format_surgery_invisible_seam(element : ScannedElement) -> Bool {
   if !is_wml_uri(element.uri) {
     return false
   }
+  if element.local_name == "rPr" {
+    // Run properties are scanned in full by the rPr engine, which
+    // judges every child itself.
+    return true
+  }
+  // The markers below render nothing — but only as the LEAVES the
+  // schema says they are. The reader does not walk into them, so a
+  // child would be painted content nobody could see.
+  if element.first_child_index >= 0 {
+    return false
+  }
   element.local_name
   is ("proofErr"
   | "bookmarkStart"
   | "bookmarkEnd"
   | "commentRangeStart"
   | "commentRangeEnd"
-  | "lastRenderedPageBreak"
-  | "rPr")
+  | "lastRenderedPageBreak")
 }
 
 ///|
@@ -370,24 +380,18 @@ fn format_surgery_invisible_seam(element : ScannedElement) -> Bool {
 /// because that is what the reader dispatches on: child presence proves
 /// nothing (`w:annotationRef` is ignored WITH its children, and would
 /// otherwise pass as a wrapper).
+///
+/// `w:drawing`, `w:object` and the VML shape family are deliberately
+/// ABSENT: this codebase already calls them hard barriers, and a
+/// drawable inside a formatted run is content no span selected.
 fn format_surgery_transparent_wrapper(element : ScannedElement) -> Bool {
   if is_wml_uri(element.uri) {
     return element.local_name
-      is ("ins"
-      | "smartTag"
-      | "sdt"
-      | "sdtContent"
-      | "hyperlink"
-      | "drawing"
-      | "object")
+      is ("ins" | "smartTag" | "sdt" | "sdtContent" | "hyperlink")
   }
   if element.uri ==
     "http://schemas.openxmlformats.org/markup-compatibility/2006" {
     return element.local_name is ("AlternateContent" | "Choice" | "Fallback")
-  }
-  if element.uri == "urn:schemas-microsoft-com:vml" {
-    return element.local_name
-      is ("shape" | "rect" | "roundrect" | "textbox" | "group")
   }
   false
 }
@@ -398,6 +402,12 @@ fn format_surgery_transparent_wrapper(element : ScannedElement) -> Bool {
 /// themselves) or it provably renders nothing. Everything else may be
 /// painted, and formatting around it would be a false receipt.
 fn format_surgery_transparent_is_accounted(element : ScannedElement) -> Bool {
+  // A drawable container is a hard barrier wherever it sits: the
+  // codebase already says so, and a drawing inside a formatted run is
+  // content no span selected.
+  if run_surgery_is_hard_barrier_container(element) {
+    return false
+  }
   format_surgery_transparent_wrapper(element) ||
   format_surgery_invisible_seam(element)
 }
