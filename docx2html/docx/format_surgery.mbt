@@ -993,6 +993,64 @@ fn plan_paragraph_format_edits(
   // boundary between sibling runs (each run keeps its wrapper), but a
   // tolerated run whose OWN contributions cross hyperlink ancestry cannot
   // be mutated soundly.
+  //
+  // Contributions indexed by their owning run ONCE: walking the
+  // paragraph's whole list per touched run is quadratic, and a
+  // paragraph of many small runs is legal.
+  let contributions_by_run : Map[Int, Array[ReaderProjectionContribution]] = Map([],
+  )
+  for contribution in paragraph.contributions {
+    guard contribution.run_source is Some(SourceElementId(owner)) else {
+      continue
+    }
+    match contributions_by_run.get(owner) {
+      Some(existing) => existing.push(contribution)
+      None => contributions_by_run[owner] = [contribution]
+    }
+  }
+  // A run's projecting parts, indexed ONCE: rescanning every part per
+  // touched run is quadratic.
+  let parts_by_run : Map[Int, Array[PartialProjectingPart]] = Map([])
+  for part in parts {
+    guard part.contribution.run_source is Some(SourceElementId(owner)) else {
+      continue
+    }
+    match parts_by_run.get(owner) {
+      Some(existing) => existing.push(part)
+      None => parts_by_run[owner] = [part]
+    }
+  }
+  // Runs that physically nest another run, computed ONCE by sweeping
+  // the runs in source order rather than comparing every pair.
+  let nesting_runs : Map[Int, Bool] = Map([])
+  let ordered_runs : Array[(Int, Int, Int)] = []
+  for candidate in paragraph.runs {
+    let SourceElementId(candidate_identity) = candidate.source
+    let candidate_element = elements[candidate_identity]
+    ordered_runs.push(
+      (
+        candidate_element.byte_start,
+        candidate_element.byte_end,
+        candidate_identity,
+      ),
+    )
+  }
+  ordered_runs.sort_by_key(entry => (entry.0, -entry.1))
+  for index, entry in ordered_runs {
+    let (outer_start, outer_end, outer_identity) = entry
+    let mut probe = index + 1
+    while probe < ordered_runs.length() {
+      let (inner_start, inner_end, _) = ordered_runs[probe]
+      if inner_start >= outer_end {
+        break
+      }
+      if inner_start >= outer_start && inner_end <= outer_end {
+        nesting_runs[outer_identity] = true
+        break
+      }
+      probe += 1
+    }
+  }
   for run in touched_runs {
     // The WHOLE run is the mutation footprint, so EVERY contribution it
     // owns — selected or not, projecting or zero-width — must pass the
@@ -1000,85 +1058,87 @@ fn plan_paragraph_format_edits(
     // state, checkbox and restricted ancestry. `parts` holds projecting
     // text only, so this walk reads the paragraph's full contribution
     // list.
-    for contribution in paragraph.contributions {
-      if contribution.run_source == Some(run.source) {
-        if contribution.kind is ProjectedText(_) {
-          let SourceElementId(owned_source) = contribution.source
-          let count = projection_counts.get(owned_source).unwrap_or(0)
-          if count > 1 {
-            raise format_surgery_refuse(
-              FormatDuplicateSource,
-              "paragraph \{paragraph_index}: a touched run is projected more than once",
-            )
-          }
-        }
-        match contribution.field_region {
-          FieldInstruction =>
-            raise format_surgery_refuse(
-              FormatFieldInstruction,
-              "paragraph \{paragraph_index}",
-            )
-          MalformedField =>
-            raise format_surgery_refuse(
-              FormatMalformedField,
-              "paragraph \{paragraph_index}",
-            )
-          FieldResult =>
-            raise format_surgery_refuse(
-              FormatRestrictedRegion,
-              "paragraph \{paragraph_index}",
-            )
-          _ => ()
-        }
-        let SourceElementId(owned_identity) = contribution.source
-        let owned_element = elements[owned_identity]
-        if format_surgery_is_checkbox_sdt(elements, owned_element) ||
-          run_surgery_inside_checkbox_control(elements, owned_element) {
+    let SourceElementId(owned_run_identity) = run.source
+    let owned_contributions = contributions_by_run
+      .get(owned_run_identity)
+      .unwrap_or([])
+    for contribution in owned_contributions {
+      if contribution.kind is ProjectedText(_) {
+        let SourceElementId(owned_source) = contribution.source
+        let count = projection_counts.get(owned_source).unwrap_or(0)
+        if count > 1 {
           raise format_surgery_refuse(
-            FormatCheckboxControl,
-            "paragraph \{paragraph_index}: the run encloses a checkbox control",
+            FormatDuplicateSource,
+            "paragraph \{paragraph_index}: a touched run is projected more than once",
           )
         }
-        if run_surgery_restricted_ancestor(elements, owned_element) is Some(_) {
+      }
+      match contribution.field_region {
+        FieldInstruction =>
+          raise format_surgery_refuse(
+            FormatFieldInstruction,
+            "paragraph \{paragraph_index}",
+          )
+        MalformedField =>
+          raise format_surgery_refuse(
+            FormatMalformedField,
+            "paragraph \{paragraph_index}",
+          )
+        FieldResult =>
           raise format_surgery_refuse(
             FormatRestrictedRegion,
-            "paragraph \{paragraph_index}: the run encloses restricted content",
+            "paragraph \{paragraph_index}",
           )
-        }
-        // Zero-width VISIBLE or SUPPRESSED content the run owns cannot
-        // be included in or excluded from a span — it has no width to
-        // select — yet the footprint would format it along with the
-        // run. A note reference at a run edge is exactly that shape,
-        // so v1 refuses rather than formatting content no span chose.
-        match contribution.kind {
-          VisibleNonText =>
+        _ => ()
+      }
+      let SourceElementId(owned_identity) = contribution.source
+      let owned_element = elements[owned_identity]
+      if format_surgery_is_checkbox_sdt(elements, owned_element) ||
+        run_surgery_inside_checkbox_control(elements, owned_element) {
+        raise format_surgery_refuse(
+          FormatCheckboxControl,
+          "paragraph \{paragraph_index}: the run encloses a checkbox control",
+        )
+      }
+      if run_surgery_restricted_ancestor(elements, owned_element) is Some(_) {
+        raise format_surgery_refuse(
+          FormatRestrictedRegion,
+          "paragraph \{paragraph_index}: the run encloses restricted content",
+        )
+      }
+      // Zero-width VISIBLE or SUPPRESSED content the run owns cannot
+      // be included in or excluded from a span — it has no width to
+      // select — yet the footprint would format it along with the
+      // run. A note reference at a run edge is exactly that shape,
+      // so v1 refuses rather than formatting content no span chose.
+      match contribution.kind {
+        VisibleNonText =>
+          raise format_surgery_refuse(
+            FormatVisibleBarrier,
+            "paragraph \{paragraph_index}: the run carries visible non-text content",
+          )
+        SuppressedContent =>
+          raise format_surgery_refuse(
+            FormatSuppressedRegion,
+            "paragraph \{paragraph_index}: the run carries suppressed content",
+          )
+        Transparent => {
+          // The reader's "transparent" verdict is about PROJECTION,
+          // not about rendering: `w:annotationRef` is the visible
+          // comment mark and would take the run's new formatting.
+          // So the rule here is an ALLOWLIST of seams that provably
+          // render nothing — everything else refuses, including
+          // constructs this planner has never seen.
+          let SourceElementId(seam_identity) = contribution.source
+          let seam = elements[seam_identity]
+          guard format_surgery_transparent_is_accounted(seam) else {
             raise format_surgery_refuse(
               FormatVisibleBarrier,
-              "paragraph \{paragraph_index}: the run carries visible non-text content",
+              "paragraph \{paragraph_index}: the run carries content this planner cannot prove renders nothing",
             )
-          SuppressedContent =>
-            raise format_surgery_refuse(
-              FormatSuppressedRegion,
-              "paragraph \{paragraph_index}: the run carries suppressed content",
-            )
-          Transparent => {
-            // The reader's "transparent" verdict is about PROJECTION,
-            // not about rendering: `w:annotationRef` is the visible
-            // comment mark and would take the run's new formatting.
-            // So the rule here is an ALLOWLIST of seams that provably
-            // render nothing — everything else refuses, including
-            // constructs this planner has never seen.
-            let SourceElementId(seam_identity) = contribution.source
-            let seam = elements[seam_identity]
-            guard format_surgery_transparent_is_accounted(seam) else {
-              raise format_surgery_refuse(
-                FormatVisibleBarrier,
-                "paragraph \{paragraph_index}: the run carries content this planner cannot prove renders nothing",
-              )
-            }
           }
-          _ => ()
         }
+        _ => ()
       }
     }
     // A run with a NESTED registered run inside its byte span is a
@@ -1086,19 +1146,11 @@ fn plan_paragraph_format_edits(
     // nested run's text is outside this run's own contributions, yet
     // an rPr edit here would wrap it in the new formatting.
     let SourceElementId(footprint_identity) = run.source
-    let footprint_element = elements[footprint_identity]
-    for candidate in paragraph.runs {
-      if candidate.source != run.source {
-        let SourceElementId(candidate_identity) = candidate.source
-        let candidate_element = elements[candidate_identity]
-        if candidate_element.byte_start >= footprint_element.byte_start &&
-          candidate_element.byte_end <= footprint_element.byte_end {
-          raise format_surgery_refuse(
-            FormatUnsupportedTextSource,
-            "paragraph \{paragraph_index}: the run nests another run inside its footprint",
-          )
-        }
-      }
+    if nesting_runs.get(footprint_identity) == Some(true) {
+      raise format_surgery_refuse(
+        FormatUnsupportedTextSource,
+        "paragraph \{paragraph_index}: the run nests another run inside its footprint",
+      )
     }
     // A run claimed by another paragraph cannot be this paragraph's
     // footprint.
@@ -1115,36 +1167,22 @@ fn plan_paragraph_format_edits(
       }
     }
     let mut anchor : Int?? = None
-    for part in parts {
-      if part.contribution.run_source == Some(run.source) {
-        let SourceElementId(identity) = part.contribution.source
-        let link = run_surgery_hyperlink_ancestor(elements, elements[identity])
-        match anchor {
-          None => anchor = Some(link)
-          Some(first) =>
-            if first != link {
-              raise format_surgery_refuse(
-                FormatRestrictedRegion,
-                "paragraph \{paragraph_index}: a run's contributions cross hyperlink ancestry",
-              )
-            }
-        }
+    for part in parts_by_run.get(owned_run_identity).unwrap_or([]) {
+      let SourceElementId(identity) = part.contribution.source
+      let link = run_surgery_hyperlink_ancestor(elements, elements[identity])
+      match anchor {
+        None => anchor = Some(link)
+        Some(first) =>
+          if first != link {
+            raise format_surgery_refuse(
+              FormatRestrictedRegion,
+              "paragraph \{paragraph_index}: a run's contributions cross hyperlink ancestry",
+            )
+          }
       }
     }
   }
   // Phase 4: per-run coverage partition and boundary resolution.
-  // A run's projecting parts, indexed ONCE: rescanning every part per
-  // touched run is quadratic.
-  let parts_by_run : Map[Int, Array[PartialProjectingPart]] = Map([])
-  for part in parts {
-    guard part.contribution.run_source is Some(SourceElementId(owner)) else {
-      continue
-    }
-    match parts_by_run.get(owner) {
-      Some(existing) => existing.push(part)
-      None => parts_by_run[owner] = [part]
-    }
-  }
   let edits : Array[RunSurgeryEdit] = []
   let outcomes : Array[FormatRunOutcome] = []
   let mut runs_changed = 0

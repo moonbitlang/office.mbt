@@ -1680,3 +1680,75 @@ test "format preservation identifies carriers structurally" {
     None,
   )
 }
+
+///|
+/// Round 13: a carrier's key must be namespace-QUALIFIED, must bind a
+/// `pPr` to where it sits, and must survive the renumbering that
+/// splitting causes.
+test "format preservation keys carriers by qualified, split-stable provenance" {
+  let mc = "xmlns:mc=\"http://schemas.openxmlformats.org/markup-compatibility/2006\""
+  // A foreign `sdtEndPr` is not the WML one: moving the properties
+  // between them loses the end-character formatting.
+  let qualified_before = format_fixture(
+    "<w:p xmlns:x=\"urn:example:x\"><w:sdt><w:sdtPr/><w:sdtEndPr><w:rPr><w:i/><w:iCs/></w:rPr></w:sdtEndPr><x:sdtEndPr/><w:sdtContent><w:r><w:t>x</w:t></w:r></w:sdtContent></w:sdt><w:r><w:t>ab</w:t></w:r></w:p>",
+  )
+  let qualified_moved = format_fixture(
+    "<w:p xmlns:x=\"urn:example:x\"><w:sdt><w:sdtPr/><w:sdtEndPr/><x:sdtEndPr><w:rPr><w:i/><w:iCs/></w:rPr></x:sdtEndPr><w:sdtContent><w:r><w:t>x</w:t></w:r></w:sdtContent></w:sdt><w:r><w:rPr><w:b/><w:bCs/></w:rPr><w:t>ab</w:t></w:r></w:p>",
+  )
+  assert_true(
+    @docx.docx_paragraph_format_preserved(
+      qualified_before,
+      qualified_before.main_story_source(),
+      qualified_moved,
+      qualified_moved.main_story_source(),
+      path="p[1]",
+      spans=[(1, 3)],
+      format=@docx.docx_direct_format(bold=true),
+    )
+    is Some(_),
+  )
+  // An identical `pPr` moved from a Choice into the Fallback changes
+  // which one applies.
+  let branch_before = format_fixture(
+    "<w:p><mc:AlternateContent \{mc}><mc:Choice Requires=\"w14\"><w:pPr><w:jc w:val=\"center\"/></w:pPr></mc:Choice><mc:Fallback/></mc:AlternateContent><w:r><w:t>ab</w:t></w:r></w:p>",
+  )
+  let branch_moved = format_fixture(
+    "<w:p><mc:AlternateContent \{mc}><mc:Choice Requires=\"w14\"/><mc:Fallback><w:pPr><w:jc w:val=\"center\"/></w:pPr></mc:Fallback></mc:AlternateContent><w:r><w:rPr><w:b/><w:bCs/></w:rPr><w:t>ab</w:t></w:r></w:p>",
+  )
+  assert_true(
+    @docx.docx_paragraph_format_preserved(
+      branch_before,
+      branch_before.main_story_source(),
+      branch_moved,
+      branch_moved.main_story_source(),
+      path="p[1]",
+      spans=[(0, 2)],
+      format=@docx.docx_direct_format(bold=true),
+    )
+    is Some(_),
+  )
+  // And a carrier nested INSIDE a run survives the split that
+  // renumbers its neighbours: the planner's own output preserves.
+  let nested = "<w:p><w:r><w:t>abc</w:t></w:r><w:r><w:sdt><w:sdtPr/><w:sdtEndPr><w:rPr><w:i/><w:iCs/></w:rPr></w:sdtEndPr><w:sdtContent><w:t>z</w:t></w:sdtContent></w:sdt></w:r></w:p>"
+  let nested_before = format_fixture(nested)
+  let (plan, _) = @docx.plan_docx_format(
+    nested_before,
+    nested_before.main_story_source(),
+    format=@docx.docx_direct_format(bold=true),
+    within="p[1]",
+    range=(1, 2),
+  )
+  let nested_after = format_apply(nested, plan)
+  assert_eq(
+    @docx.docx_paragraph_format_preserved(
+      nested_before,
+      nested_before.main_story_source(),
+      nested_after,
+      nested_after.main_story_source(),
+      path="p[1]",
+      spans=[(1, 2)],
+      format=@docx.docx_direct_format(bold=true),
+    ),
+    None,
+  )
+}

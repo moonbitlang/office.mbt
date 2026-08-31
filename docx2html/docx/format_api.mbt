@@ -920,7 +920,8 @@ fn docx_format_paragraph_provenance(
     // moving from one to the other must not look like no change at
     // all. Splitting never renumbers these ancestors — only runs — so
     // the path is stable across a faithful edit.
-    let owner_path = docx_format_structural_path(
+    let owner_path = docx_format_carrier_key(
+      bytes,
       elements,
       entry.parent_index,
       paragraph_head_identity,
@@ -946,7 +947,16 @@ fn docx_format_paragraph_provenance(
   let mark_builder = StringBuilder()
   for mark_identity in marks {
     let entry = elements[mark_identity]
+    // Bound to WHERE it sits: an identical `pPr` moved from an
+    // mc:Choice into the Fallback changes which one applies, and a
+    // bare concatenation could not tell.
     mark_builder.write_string("|")
+    mark_builder.write_string(
+      docx_format_carrier_key(
+        bytes, elements, mark_identity, paragraph_head_identity,
+      ),
+    )
+    mark_builder.write_string("=")
     mark_builder.write_string(
       format_surgery_decode(bytes[entry.byte_start:entry.byte_end]),
     )
@@ -1386,20 +1396,26 @@ fn docx_format_run_signature(
 }
 
 ///|
-/// An element's structural path within the paragraph: each ancestor's
-/// local name with its same-name ordinal, root last. Splitting
-/// renumbers RUNS, so this is only used for carriers that no run owns
-/// — where it is stable across a faithful edit.
-fn docx_format_structural_path(
+/// A carrier's key within the paragraph: each ancestor step,
+/// namespace-QUALIFIED (a foreign `sdtEndPr` is not the WML one), and
+/// with a RUN step keyed by what it contains rather than by its
+/// ordinal — splitting renumbers runs, and a carrier nested inside one
+/// must survive that unchanged.
+fn docx_format_carrier_key(
+  bytes : BytesView,
   elements : Array[ScannedElement],
   element_identity : Int,
   stop_identity : Int,
-) -> String {
+) -> String raise DocxError {
   let steps : Array[String] = []
   let mut at = element_identity
   while at >= 0 && at < elements.length() && at != stop_identity {
     let entry = elements[at]
-    steps.push("\{entry.local_name}[\{entry.same_name_ordinal}]")
+    if is_wml_uri(entry.uri) && entry.local_name == "r" {
+      steps.push("r{\{docx_format_run_signature(bytes, elements, at)}}")
+    } else {
+      steps.push("\{entry.uri}:\{entry.local_name}[\{entry.same_name_ordinal}]")
+    }
     at = entry.parent_index
   }
   let builder = StringBuilder()
