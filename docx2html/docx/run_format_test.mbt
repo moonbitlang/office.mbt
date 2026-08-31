@@ -419,6 +419,63 @@ test "format refuses namespace shapes it cannot vouch for" {
       msg=poisoned + " -> " + attr_message,
     )
   }
+  // Round 3: an ALIASED WML attribute — a theme local under a foreign
+  // prefix — may be WML after namespace resolution; both the planner
+  // and the verifier refuse rather than read past it.
+  let aliased = "<w:r><w:rPr><w:color w:val=\"112233\" x:themeColor=\"accent1\"/></w:rPr><w:t>x</w:t></w:r>"
+  let mut alias_message = ""
+  try ignore(plan_for(aliased, color="112233")) catch {
+    error => alias_message = repr(error)
+  } noraise {
+    _ => fail("expected an aliased-theme refusal")
+  }
+  assert_true(alias_message.contains("x:themeColor"))
+  let mut verify_message = ""
+  try
+    ignore(
+      @docx.verify_run_format(
+        @utf8.encode(aliased),
+        prefix="w",
+        format=@docx.docx_direct_format(color="112233"),
+      ),
+    )
+  catch {
+    error => verify_message = repr(error)
+  } noraise {
+    _ => fail("expected the verifier to refuse the alias")
+  }
+  assert_true(verify_message.contains("x:themeColor"))
+  // Reserved and malformed prefixes never become the binding.
+  fn refuse_binding(
+    element : String,
+    attribute : String?,
+    extensions : Array[String]?,
+  ) -> String raise {
+    let mut message = ""
+    try
+      ignore(
+        @docx.plan_run_format(
+          @utf8.encode("<w:r><w:t>x</w:t></w:r>"),
+          prefix=element,
+          attr_prefix?=attribute,
+          extension_prefixes?=extensions,
+          format=@docx.docx_direct_format(bold=true),
+        ),
+      )
+    catch {
+      error => message = repr(error)
+    } noraise {
+      _ => fail("expected a binding refusal")
+    }
+    message
+  }
+
+  assert_true(
+    refuse_binding("w", Some("xml"), None).contains("reserved namespace prefix"),
+  )
+  assert_true(refuse_binding("w", Some("x:y"), None).contains("NCNames"))
+  assert_true(refuse_binding("1w", None, None).contains("NCNames"))
+  assert_true(refuse_binding("w", None, Some(["a:b"])).contains("NCNames"))
 }
 
 ///|
@@ -563,6 +620,11 @@ test "format refuses structural ambiguities" {
     ),
   )
   assert_true(
+    refuse("<w:r><w:rPr xmlns=\"urn:x\"><w:b/></w:rPr><w:t>a</w:t></w:r>").contains(
+      "namespace declaration",
+    ),
+  )
+  assert_true(
     refuse("<w:r><w:rPr>stray<w:i/></w:rPr><w:t>a</w:t></w:r>").contains(
       "character data",
     ),
@@ -606,6 +668,20 @@ test "format refuses malformed close tags and names" {
     underline=true,
   )
   assert_false(plan.changed())
+  // ...including on the CONTAINER close tags: a satisfied slice with
+  // `</w:rPr >` and `</w:r >` stays a fixed point, and insertion
+  // lands before the rPr close, never inside it.
+  let ws_plan = plan_for(
+    "<w:r><w:rPr><w:b/><w:bCs/></w:rPr ><w:t>x</w:t></w:r >",
+    bold=true,
+  )
+  assert_false(ws_plan.changed())
+  inspect(
+    format_result("<w:r><w:rPr><w:i/></w:rPr ><w:t>x</w:t></w:r>", bold=true),
+    content=(
+      #|<w:r><w:rPr><w:b/><w:bCs/><w:i/></w:rPr ><w:t>x</w:t></w:r>
+    ),
+  )
 }
 
 ///|

@@ -168,13 +168,22 @@ fn make_binding(
   attr_prefix : String?,
   extension_prefixes : Array[String]?,
 ) -> WmlBinding raise DocxError {
+  if prefix != "" {
+    validate_ns_prefix(prefix)
+  }
   let attribute = attr_prefix.unwrap_or(prefix)
   guard attribute != "" else {
     raise Unsupported(
       message="run formatting requires an attribute prefix: XML default namespaces do not apply to attributes, so WML attributes are always qualified",
     )
   }
-  guard prefix != "xmlns" && prefix != "xml" && attribute != "xmlns" else {
+  validate_ns_prefix(attribute)
+  // `xml` and `xmlns` are bound by the XML specs themselves — they can
+  // never be the WML binding.
+  guard prefix != "xmlns" &&
+    prefix != "xml" &&
+    attribute != "xmlns" &&
+    attribute != "xml" else {
     raise Unsupported(
       message="run formatting refuses a reserved namespace prefix",
     )
@@ -191,8 +200,31 @@ fn make_binding(
         message="run formatting refuses the extension prefix \{entry}: extension prefixes must be distinct from the WML and reserved bindings",
       )
     }
+    validate_ns_prefix(entry)
   }
   { element: prefix, attribute, extensions, }
+}
+
+///|
+/// A namespace prefix must be an NCName — in this engine's ASCII
+/// subset: a letter or underscore, then letters, digits, '_', '-',
+/// '.'. NO colon: `x:y` as a "prefix" would spell malformed names
+/// like `x:y:val`.
+fn validate_ns_prefix(prefix : String) -> Unit raise DocxError {
+  let mut first = true
+  for ch in prefix {
+    let valid = if first {
+      ch is ('A'..='Z' | 'a'..='z' | '_')
+    } else {
+      ch is ('A'..='Z' | 'a'..='z' | '0'..='9' | '_' | '-' | '.')
+    }
+    guard valid else {
+      raise Unsupported(
+        message="run formatting requires namespace prefixes to be NCNames",
+      )
+    }
+    first = false
+  }
 }
 
 ///|
@@ -252,6 +284,10 @@ priv struct RunChildTag {
   byte_end : Int
   self_closing : Bool
   open_end : Int
+  // Where the close tag STARTS (equals byte_end for a self-closing
+  // tag) — recorded, never reconstructed, because `</w:rPr >` is
+  // legal XML and longer than the canonical spelling.
+  close_start : Int
   attributes : Array[FormatAttribute]
   // Direct element children found inside (non-leaf detection).
   has_element_children : Bool
@@ -296,6 +332,7 @@ fn scan_direct_children(
       bytes, at, content_end,
     )
     let mut byte_end = open_end
+    let mut close_start = open_end
     let mut has_element_children = false
     if !self_closing {
       let close_at = consume_subtree(bytes, name, open_end, content_end)
@@ -309,6 +346,7 @@ fn scan_direct_children(
         }
         probe += 1
       }
+      close_start = close_at.0
       byte_end = close_at.1
     }
     children.push({
@@ -317,6 +355,7 @@ fn scan_direct_children(
       byte_end,
       self_closing,
       open_end,
+      close_start,
       attributes,
       has_element_children,
     })
@@ -646,21 +685,39 @@ fn scan_run_shape(
     return { open_end: run_open_end, self_closing: true, rpr: None, }
   }
   // The slice must end with this run's own close tag — checked, not
-  // assumed, because this is a public planner.
-  let close = "</\{run_qname}>"
-  let close_length = close.length()
-  guard run_slice.length() >= run_open_end + close_length else {
-    raise Unsupported(message="run formatting found a truncated run")
+  // assumed, because this is a public planner. Parsed, not compared
+  // to a canonical spelling: `</w:r >` is legal XML. A '<' inside
+  // content would be a well-formedness error anyway, so the LAST '<'
+  // opens the run's close tag.
+  let mut close_start = run_slice.length() - 1
+  while close_start >= run_open_end && run_slice[close_start] != b'<' {
+    close_start -= 1
   }
-  let content_end = run_slice.length() - close_length
-  let close_units = close.code_units()
-  for index in 0..<close_length {
-    guard run_slice[content_end + index].to_int() == close_units[index].to_int() else {
-      raise Unsupported(
-        message="run formatting requires the slice to end at the run's close tag",
-      )
-    }
+  guard close_start >= run_open_end &&
+    close_start + 1 < run_slice.length() &&
+    run_slice[close_start + 1] == b'/' else {
+    raise Unsupported(
+      message="run formatting requires the slice to end at the run's close tag",
+    )
   }
+  let mut cursor = close_start + 2
+  while cursor < run_slice.length() &&
+        run_slice[cursor] != b'>' &&
+        !is_xml_ws(run_slice[cursor]) {
+    cursor += 1
+  }
+  let close_name = ascii_slice(run_slice, close_start + 2, cursor)
+  while cursor < run_slice.length() && is_xml_ws(run_slice[cursor]) {
+    cursor += 1
+  }
+  guard close_name == run_qname &&
+    cursor == run_slice.length() - 1 &&
+    run_slice[cursor] == b'>' else {
+    raise Unsupported(
+      message="run formatting requires the slice to end at the run's close tag",
+    )
+  }
+  let content_end = close_start
   let children = scan_direct_children(run_slice, run_open_end, content_end)
   let rpr_qname = wml_name(binding, "rPr")
   let mut rpr : RunChildTag? = None
@@ -782,8 +839,10 @@ fn classify_rpr_children(
   binding : WmlBinding,
   container : RunChildTag,
 ) -> RprInventory raise DocxError {
-  let close = "</\{wml_name(binding, "rPr")}>"
-  let interior_end = container.byte_end - close.length()
+  // The interior ends where the scanner RECORDED the close tag —
+  // never reconstructed from the canonical spelling, which `</w:rPr >`
+  // would exceed.
+  let interior_end = container.close_start
   let children = scan_direct_children(
     run_slice,
     container.open_end,
@@ -1081,18 +1140,19 @@ fn find_val(
 
 ///|
 /// On properties that keep their other attributes (u, color), any
-/// attribute SPELLED like a val under a different binding — a bare
-/// `val` (no namespace), a foreign `x:val` — is refused rather than
-/// read past: it may be the very value this engine is about to
-/// contradict.
-fn refuse_val_alias(
+/// attribute whose LOCAL name is one this engine asserts about but
+/// whose prefix is not the bound one — a bare `val` (no namespace), a
+/// foreign `x:val`, an aliased `x:themeColor` — is refused rather
+/// than read past: under an aliased WML binding it may be the very
+/// value this engine is about to contradict or leave behind.
+fn refuse_wml_attr_alias(
   binding : WmlBinding,
   tag : RunChildTag,
+  locals : Array[String],
 ) -> Unit raise DocxError {
-  let val_name = wml_attr(binding, "val")
   for attribute in tag.attributes {
-    let (_, local) = split_qname(attribute.name)
-    if local == "val" && attribute.name != val_name {
+    let (attr_prefix, local) = split_qname(attribute.name)
+    if locals.contains(local) && attr_prefix != binding.attribute {
       raise Unsupported(
         message="run formatting refuses the attribute \{attribute.name} on \{tag.name}",
       )
@@ -1193,7 +1253,7 @@ fn plan_underline(
   let wanted = if requested { "single" } else { "none" }
   match existing {
     Some(tag) => {
-      refuse_val_alias(binding, tag)
+      refuse_wml_attr_alias(binding, tag, ["val"])
       match find_val(binding, tag) {
         Some(attribute) =>
           if attribute.value != wanted {
@@ -1259,7 +1319,9 @@ fn plan_color(
 ) -> Unit raise DocxError {
   match existing {
     Some(tag) => {
-      refuse_val_alias(binding, tag)
+      refuse_wml_attr_alias(binding, tag, [
+        "val", "themeColor", "themeTint", "themeShade",
+      ])
       let val = find_val(binding, tag)
       let theme_names = [
         wml_attr(binding, "themeColor"),
@@ -1486,7 +1548,7 @@ pub fn verify_run_format(
       match inventory.underline {
         None => return Some("underline is not stated explicitly")
         Some(tag) => {
-          refuse_val_alias(binding, tag)
+          refuse_wml_attr_alias(binding, tag, ["val"])
           match find_val(binding, tag) {
             Some(attribute) =>
               if attribute.value != wanted {
@@ -1509,7 +1571,9 @@ pub fn verify_run_format(
       match inventory.color {
         None => return Some("color is not stated explicitly")
         Some(tag) => {
-          refuse_val_alias(binding, tag)
+          refuse_wml_attr_alias(binding, tag, [
+            "val", "themeColor", "themeTint", "themeShade",
+          ])
           let theme_names = [
             wml_attr(binding, "themeColor"),
             wml_attr(binding, "themeTint"),
