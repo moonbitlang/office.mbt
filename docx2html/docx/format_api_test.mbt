@@ -2256,3 +2256,81 @@ test "format preservation resolves inherited namespaces once" {
     is Some(_),
   )
 }
+
+///|
+/// Round 24's shapes: many declaration-heavy tags, distinct prefixes
+/// under deep shared ancestry, nested carriers whose subtrees overlap,
+/// and a long selected run with a heavy extension block. All are legal
+/// documents this planner can be asked to format.
+test "format preservation stays bounded on adversarial shapes" {
+  // Many runs, each with a declaration-heavy rPr tag.
+  let heavy = StringBuilder()
+  for run_index in 0..<120 {
+    heavy.write_string("<w:r><w:rPr")
+    for index in 0..<120 {
+      heavy.write_string(" xmlns:d\{run_index}x\{index}=\"urn:d:\{index}\"")
+    }
+    heavy.write_string("/><w:footnoteReference w:id=\"1\"/></w:r>")
+  }
+  // Distinct prefixes under one deep chain.
+  let deep = StringBuilder()
+  for _ in 0..<80 {
+    deep.write_string("<w:foo>")
+  }
+  for index in 0..<600 {
+    deep.write_string("<w:bar><w:rPr><p\{index}:glow/></w:rPr></w:bar>")
+  }
+  for _ in 0..<80 {
+    deep.write_string("</w:foo>")
+  }
+  let declarations = StringBuilder()
+  for index in 0..<600 {
+    declarations.write_string(" xmlns:p\{index}=\"urn:p:\{index}\"")
+  }
+  // A long selected run carrying a heavy extension block.
+  let text = StringBuilder()
+  for _ in 0..<4000 {
+    text.write_string("a")
+  }
+  let body = "<w:p" +
+    declarations.to_string() +
+    ">" +
+    heavy.to_string() +
+    "<w:r>" +
+    deep.to_string() +
+    "</w:r><w:r><w:rPr><w14:glow w14:rad=\"101600\"><w14:srgbClr w14:val=\"FF0000\"/></w14:glow></w:rPr><w:t>" +
+    text.to_string() +
+    "</w:t></w:r></w:p>"
+  let before = format_fixture(body)
+  let (plan, receipt) = @docx.plan_docx_format(
+    before,
+    before.main_story_source(),
+    format=@docx.docx_direct_format(bold=true),
+    within="p[1]",
+    range=(0, 4000),
+  )
+  assert_eq(receipt.runs_changed(), 1)
+  let after = format_apply(body, plan)
+  assert_eq(
+    @docx.docx_paragraph_direct_format_spans(
+      after,
+      after.main_story_source(),
+      path="p[1]",
+      spans=[(0, 4000)],
+      format=@docx.docx_direct_format(bold=true),
+    ),
+    None,
+  )
+  assert_eq(
+    @docx.docx_paragraph_format_preserved(
+      before,
+      before.main_story_source(),
+      after,
+      after.main_story_source(),
+      path="p[1]",
+      spans=[(0, 4000)],
+      format=@docx.docx_direct_format(bold=true),
+    ),
+    None,
+  )
+}
