@@ -1620,3 +1620,63 @@ test "format preservation binds formatting to what it formats" {
     is Some(_),
   )
 }
+
+///|
+/// Round 12: two content controls both own an `sdtEndPr`, so a
+/// container's NAME cannot identify it. End-character formatting
+/// moving from one control to the other is caught by the carrier's
+/// structural path.
+test "format preservation identifies carriers structurally" {
+  let before = format_fixture(
+    "<w:p><w:sdt><w:sdtPr/><w:sdtEndPr><w:rPr><w:i/><w:iCs/></w:rPr></w:sdtEndPr><w:sdtContent><w:r><w:t>x</w:t></w:r></w:sdtContent></w:sdt><w:sdt><w:sdtPr/><w:sdtEndPr/><w:sdtContent><w:r><w:t>y</w:t></w:r></w:sdtContent></w:sdt><w:r><w:t>ab</w:t></w:r></w:p>",
+  )
+  let moved = format_fixture(
+    "<w:p><w:sdt><w:sdtPr/><w:sdtEndPr/><w:sdtContent><w:r><w:t>x</w:t></w:r></w:sdtContent></w:sdt><w:sdt><w:sdtPr/><w:sdtEndPr><w:rPr><w:i/><w:iCs/></w:rPr></w:sdtEndPr><w:sdtContent><w:r><w:t>y</w:t></w:r></w:sdtContent></w:sdt><w:r><w:rPr><w:b/><w:bCs/></w:rPr><w:t>ab</w:t></w:r></w:p>",
+  )
+  assert_eq(
+    @docx.docx_paragraph_direct_format(
+      moved,
+      moved.main_story_source(),
+      path="p[1]",
+      start=2,
+      end=4,
+      format=@docx.docx_direct_format(bold=true),
+    ),
+    None,
+  )
+  assert_true(
+    @docx.docx_paragraph_format_preserved(
+      before,
+      before.main_story_source(),
+      moved,
+      moved.main_story_source(),
+      path="p[1]",
+      spans=[(2, 4)],
+      format=@docx.docx_direct_format(bold=true),
+    )
+    is Some(_),
+  )
+  // Leaving both controls alone is faithful — and the planner's own
+  // output over the same document preserves.
+  let body = "<w:p><w:sdt><w:sdtPr/><w:sdtEndPr><w:rPr><w:i/><w:iCs/></w:rPr></w:sdtEndPr><w:sdtContent><w:r><w:t>x</w:t></w:r></w:sdtContent></w:sdt><w:sdt><w:sdtPr/><w:sdtEndPr/><w:sdtContent><w:r><w:t>y</w:t></w:r></w:sdtContent></w:sdt><w:r><w:t>ab</w:t></w:r></w:p>"
+  let (plan, _) = @docx.plan_docx_format(
+    before,
+    before.main_story_source(),
+    format=@docx.docx_direct_format(bold=true),
+    within="p[1]",
+    range=(2, 4),
+  )
+  let after = format_apply(body, plan)
+  assert_eq(
+    @docx.docx_paragraph_format_preserved(
+      before,
+      before.main_story_source(),
+      after,
+      after.main_story_source(),
+      path="p[1]",
+      spans=[(2, 4)],
+      format=@docx.docx_direct_format(bold=true),
+    ),
+    None,
+  )
+}

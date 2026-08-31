@@ -915,9 +915,18 @@ fn docx_format_paragraph_provenance(
   for carrier_identity in carriers {
     guard run_carriers.get(carrier_identity) is None else { continue }
     let entry = elements[carrier_identity]
-    let owner = elements[entry.parent_index]
+    // A STRUCTURAL path, not just the container's name: two content
+    // controls both own an `sdtEndPr`, and end-character formatting
+    // moving from one to the other must not look like no change at
+    // all. Splitting never renumbers these ancestors — only runs — so
+    // the path is stable across a faithful edit.
+    let owner_path = docx_format_structural_path(
+      elements,
+      entry.parent_index,
+      paragraph_head_identity,
+    )
     silent.push(
-      "\{owner.local_name}\u{1}\{format_surgery_decode(bytes[entry.byte_start:entry.byte_end])}",
+      "\{owner_path}\u{1}\{format_surgery_decode(bytes[entry.byte_start:entry.byte_end])}",
     )
   }
   // Every pPr in the paragraph's physical subtree, in document order:
@@ -1372,6 +1381,35 @@ fn docx_format_run_signature(
       )
     }
     child = entry.next_sibling_index
+  }
+  builder.to_string()
+}
+
+///|
+/// An element's structural path within the paragraph: each ancestor's
+/// local name with its same-name ordinal, root last. Splitting
+/// renumbers RUNS, so this is only used for carriers that no run owns
+/// — where it is stable across a faithful edit.
+fn docx_format_structural_path(
+  elements : Array[ScannedElement],
+  element_identity : Int,
+  stop_identity : Int,
+) -> String {
+  let steps : Array[String] = []
+  let mut at = element_identity
+  while at >= 0 && at < elements.length() && at != stop_identity {
+    let entry = elements[at]
+    steps.push("\{entry.local_name}[\{entry.same_name_ordinal}]")
+    at = entry.parent_index
+  }
+  let builder = StringBuilder()
+  let mut index = steps.length() - 1
+  while index >= 0 {
+    if index < steps.length() - 1 {
+      builder.write_string("/")
+    }
+    builder.write_string(steps[index])
+    index -= 1
   }
   builder.to_string()
 }

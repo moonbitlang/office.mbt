@@ -733,6 +733,14 @@ fn plan_paragraph_format_edits(
     }
   }
 
+  // Runs by identity, indexed ONCE: resolving a part's run by scanning
+  // every run is quadratic, and a paragraph of many small runs is
+  // legal.
+  let run_by_identity : Map[Int, ReaderProjectionRun] = Map([])
+  for run in paragraph.runs {
+    let SourceElementId(run_identity) = run.source
+    run_by_identity[run_identity] = run
+  }
   fn resolve_run(
     run_source : SourceElementId?,
     ordinal : Int,
@@ -743,12 +751,8 @@ fn plan_paragraph_format_edits(
         "span \{ordinal} in paragraph \{paragraph_index} draws from content outside any run",
       )
     }
-    let mut found : ReaderProjectionRun? = None
-    for run in paragraph.runs {
-      if run.source == source_id {
-        found = Some(run)
-      }
-    }
+    let SourceElementId(wanted) = source_id
+    let found = run_by_identity.get(wanted)
     guard found is Some(run) else {
       raise format_surgery_refuse(
         FormatInternalPlanConflict,
@@ -1129,6 +1133,18 @@ fn plan_paragraph_format_edits(
     }
   }
   // Phase 4: per-run coverage partition and boundary resolution.
+  // A run's projecting parts, indexed ONCE: rescanning every part per
+  // touched run is quadratic.
+  let parts_by_run : Map[Int, Array[PartialProjectingPart]] = Map([])
+  for part in parts {
+    guard part.contribution.run_source is Some(SourceElementId(owner)) else {
+      continue
+    }
+    match parts_by_run.get(owner) {
+      Some(existing) => existing.push(part)
+      None => parts_by_run[owner] = [part]
+    }
+  }
   let edits : Array[RunSurgeryEdit] = []
   let outcomes : Array[FormatRunOutcome] = []
   let mut runs_changed = 0
@@ -1147,12 +1163,8 @@ fn plan_paragraph_format_edits(
       "paragraph \{paragraph_index}",
     )
     // The run's projecting parts, in order, with their coverage.
-    let run_parts : Array[PartialProjectingPart] = []
-    for part in parts {
-      if part.contribution.run_source == Some(run.source) {
-        run_parts.push(part)
-      }
-    }
+    let SourceElementId(run_parts_identity) = run.source
+    let run_parts = parts_by_run.get(run_parts_identity).unwrap_or([])
     let mut fully_covered = true
     for part in run_parts {
       let mut cursor = part.local_start
