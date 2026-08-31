@@ -211,19 +211,11 @@ fn make_binding(
 /// '.'. NO colon: `x:y` as a "prefix" would spell malformed names
 /// like `x:y:val`.
 fn validate_ns_prefix(prefix : String) -> Unit raise DocxError {
-  let mut first = true
-  for ch in prefix {
-    let valid = if first {
-      ch is ('A'..='Z' | 'a'..='z' | '_')
-    } else {
-      ch is ('A'..='Z' | 'a'..='z' | '0'..='9' | '_' | '-' | '.')
-    }
-    guard valid else {
+  validate_ncname_part(prefix) catch {
+    _ =>
       raise Unsupported(
         message="run formatting requires namespace prefixes to be NCNames",
       )
-    }
-    first = false
   }
 }
 
@@ -544,20 +536,43 @@ fn scan_format_tag(
 }
 
 ///|
-/// The ASCII subset of XML names this engine will edit around: a name
-/// starts with a letter or underscore and continues with letters,
-/// digits, '_', '-', '.', or ':'. Anything else — including an empty
-/// name, so `</ w:b>` can never pass as `w:b` — is a refusal.
+/// The ASCII subset of XML QNAMES this engine will edit around: at
+/// most ONE colon, each side a nonempty NCName. Anything else — an
+/// empty name (so `</ w:b>` can never pass as `w:b`), `w:`, `x:y:z` —
+/// is a refusal: a multi-colon spelling would let split_qname's
+/// first-colon split evade the alias guards.
 fn validate_xml_name(name : String) -> Unit raise DocxError {
-  guard name.length() > 0 else {
+  let units = name.code_units()
+  let mut colon = -1
+  for index in 0..<units.length() {
+    if units[index].to_int() == ':'.to_int() {
+      guard colon < 0 else {
+        raise Unsupported(message="run formatting found a malformed XML name")
+      }
+      colon = index
+    }
+  }
+  if colon < 0 {
+    validate_ncname_part(name)
+  } else {
+    validate_ncname_part(name.substring(start=0, end=colon).to_string())
+    validate_ncname_part(
+      name.substring(start=colon + 1, end=name.length()).to_string(),
+    )
+  }
+}
+
+///|
+fn validate_ncname_part(part : String) -> Unit raise DocxError {
+  guard part.length() > 0 else {
     raise Unsupported(message="run formatting found a malformed XML name")
   }
   let mut first = true
-  for ch in name {
+  for ch in part {
     let valid = if first {
       ch is ('A'..='Z' | 'a'..='z' | '_')
     } else {
-      ch is ('A'..='Z' | 'a'..='z' | '0'..='9' | '_' | '-' | '.' | ':')
+      ch is ('A'..='Z' | 'a'..='z' | '0'..='9' | '_' | '-' | '.')
     }
     guard valid else {
       raise Unsupported(message="run formatting found a malformed XML name")
@@ -722,6 +737,24 @@ fn scan_run_shape(
   let rpr_qname = wml_name(binding, "rPr")
   let mut rpr : RunChildTag? = None
   for index, child in children {
+    // The alias family stops HERE too: an rPr under any other prefix
+    // may be a WML alias (editing around it would plan a duplicate or
+    // false-verify), and a markup-compatibility container could
+    // supply one after content selection.
+    let (_, child_local) = split_qname(child.name)
+    if child_local == "rPr" && child.name != rpr_qname {
+      raise Unsupported(
+        message="run formatting refuses the run child \{child.name}: an rPr under another prefix may be a WML alias",
+      )
+    }
+    if child_local == "AlternateContent" ||
+      child_local == "Choice" ||
+      child_local == "Fallback" ||
+      child_local == "ProcessContent" {
+      raise Unsupported(
+        message="run formatting refuses markup-compatibility content inside a run",
+      )
+    }
     if child.name == rpr_qname {
       guard rpr is None else {
         raise Unsupported(
@@ -872,6 +905,14 @@ fn classify_rpr_children(
       guard rpr_rank(local) is None else {
         raise Unsupported(
           message="run formatting refuses \{child.name}: a ranked property name under a foreign prefix may be a WML alias",
+        )
+      }
+      // The unranked WML structural names are alias-suspect too: an
+      // aliased tracked change (or nested rPr) must never ride in as
+      // an "extension".
+      guard local != "rPrChange" && local != "rPr" else {
+        raise Unsupported(
+          message="run formatting refuses \{child.name}: \{local} under a foreign prefix may be a WML alias",
         )
       }
       guard local != "AlternateContent" &&

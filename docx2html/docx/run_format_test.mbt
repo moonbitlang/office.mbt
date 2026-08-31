@@ -470,6 +470,62 @@ test "format refuses namespace shapes it cannot vouch for" {
     message
   }
 
+  // Round 4: the alias family at the RUN boundary — an rPr under any
+  // other prefix, markup-compatibility containers beside it, and
+  // structural WML names riding an admitted extension prefix all
+  // refuse, in the planner and the verifier alike.
+  let mut rpr_alias = ""
+  try
+    ignore(plan_for("<w:r><x:rPr><x:b/></x:rPr><w:t>x</w:t></w:r>", bold=true))
+  catch {
+    error => rpr_alias = repr(error)
+  } noraise {
+    _ => fail("expected an aliased-rPr refusal")
+  }
+  assert_true(rpr_alias.contains("may be a WML alias"))
+  let mut rpr_second = ""
+  try
+    ignore(
+      @docx.verify_run_format(
+        @utf8.encode(
+          "<w:r><w:rPr><w:b/><w:bCs/></w:rPr><x:rPr><x:b w:val=\"0\"/></x:rPr><w:t>x</w:t></w:r>",
+        ),
+        prefix="w",
+        format=@docx.docx_direct_format(bold=true),
+      ),
+    )
+  catch {
+    error => rpr_second = repr(error)
+  } noraise {
+    _ => fail("expected the verifier to refuse a second aliased rPr")
+  }
+  assert_true(rpr_second.contains("may be a WML alias"))
+  let mut mc_run = ""
+  try
+    ignore(plan_for("<w:r><mc:AlternateContent/><w:t>x</w:t></w:r>", bold=true))
+  catch {
+    error => mc_run = repr(error)
+  } noraise {
+    _ => fail("expected a run-level markup-compatibility refusal")
+  }
+  assert_true(mc_run.contains("markup-compatibility"))
+  for structural in ["rPrChange", "rPr"] {
+    let mut riding = ""
+    try
+      ignore(
+        plan_for(
+          "<w:r><w:rPr><w:i/><q:" + structural + "/></w:rPr><w:t>x</w:t></w:r>",
+          bold=true,
+          extension_prefixes=["q"],
+        ),
+      )
+    catch {
+      error => riding = repr(error)
+    } noraise {
+      _ => fail("expected a foreign " + structural + " refusal")
+    }
+    assert_true(riding.contains("may be a WML alias"), msg=structural)
+  }
   assert_true(
     refuse_binding("w", Some("xml"), None).contains("reserved namespace prefix"),
   )
@@ -659,6 +715,24 @@ test "format refuses malformed close tags and names" {
   )
   assert_true(
     refuse("<w:r><w:rPr><w:b w:val=\"1\" 2x=\"3\"/></w:rPr><w:t>x</w:t></w:r>").contains(
+      "malformed XML name",
+    ),
+  )
+  // QName shape: at most one colon, both sides nonempty — `x:y:z`,
+  // `w:`, and a two-colon attribute all refuse (a multi-colon name
+  // would evade the first-colon alias guards).
+  assert_true(
+    refuse("<w:r><w:rPr><x:y:z/></w:rPr><w:t>x</w:t></w:r>").contains(
+      "malformed XML name",
+    ),
+  )
+  assert_true(
+    refuse("<w:r><w:rPr><w:/></w:rPr><w:t>x</w:t></w:r>").contains(
+      "malformed XML name",
+    ),
+  )
+  assert_true(
+    refuse("<w:r><w:rPr><w:u w:val:z=\"single\"/></w:rPr><w:t>x</w:t></w:r>").contains(
       "malformed XML name",
     ),
   )
