@@ -516,6 +516,49 @@ fn format_surgery_subtree_has_identity_attribute(
 }
 
 ///|
+/// One run's caller-vouched binding, read from the document itself: the
+/// prefix the run is SPELLED with, and the prefixes of any recognized
+/// rPr extension vocabularies, vouched by NAMESPACE URI from the scan
+/// rather than by spelling. Shared by the planner and the readback
+/// accessor so the two can never disagree about a binding.
+fn format_surgery_run_binding(
+  source : BytesView,
+  elements : Array[ScannedElement],
+  run_element : ScannedElement,
+  context : String,
+) -> (String, Array[String]) raise DocxError {
+  let run_prefix = format_surgery_element_prefix(source, run_element)
+  guard run_prefix != "" else {
+    raise format_surgery_refuse(
+      UnsupportedNamespaceBinding,
+      "\{context}: the run binds WML as its default namespace",
+    )
+  }
+  let extension_prefixes : Array[String] = []
+  let mut run_child = run_element.first_child_index
+  while run_child >= 0 {
+    let child = elements[run_child]
+    if is_wml_uri(child.uri) && child.local_name == "rPr" {
+      let mut rpr_child = child.first_child_index
+      while rpr_child >= 0 {
+        let entry = elements[rpr_child]
+        if format_extension_uri(entry.uri) {
+          let entry_prefix = format_surgery_element_prefix(source, entry)
+          if entry_prefix != run_prefix &&
+            entry_prefix != "" &&
+            !extension_prefixes.contains(entry_prefix) {
+            extension_prefixes.push(entry_prefix)
+          }
+        }
+        rpr_child = entry.next_sibling_index
+      }
+    }
+    run_child = child.next_sibling_index
+  }
+  (run_prefix, extension_prefixes)
+}
+
+///|
 /// One projecting piece of a run's mapped text, in `w:t`-local UTF-16
 /// coordinates, tagged with whether the batch covers it.
 priv struct FormatPiece {
@@ -1093,37 +1136,12 @@ fn plan_paragraph_format_edits(
     // The run's own binding, from its own tag. A default-namespace run
     // has no derivable ATTRIBUTE binding (default namespaces do not
     // apply to attributes), so v1 refuses it here rather than guessing.
-    let run_prefix = format_surgery_element_prefix(source, run_element)
-    guard run_prefix != "" else {
-      raise format_surgery_refuse(
-        UnsupportedNamespaceBinding,
-        "paragraph \{paragraph_index}: the run binds WML as its default namespace",
-      )
-    }
-    // Vouch extension prefixes by NAMESPACE URI, from the scan: an rPr
-    // child whose element resolves to a recognized extension vocabulary
-    // is warranted under the prefix it is spelled with.
-    let extension_prefixes : Array[String] = []
-    let mut run_child = run_element.first_child_index
-    while run_child >= 0 {
-      let child = elements[run_child]
-      if is_wml_uri(child.uri) && child.local_name == "rPr" {
-        let mut rpr_child = child.first_child_index
-        while rpr_child >= 0 {
-          let entry = elements[rpr_child]
-          if format_extension_uri(entry.uri) {
-            let entry_prefix = format_surgery_element_prefix(source, entry)
-            if entry_prefix != run_prefix &&
-              entry_prefix != "" &&
-              !extension_prefixes.contains(entry_prefix) {
-              extension_prefixes.push(entry_prefix)
-            }
-          }
-          rpr_child = entry.next_sibling_index
-        }
-      }
-      run_child = child.next_sibling_index
-    }
+    let (run_prefix, extension_prefixes) = format_surgery_run_binding(
+      source,
+      elements,
+      run_element,
+      "paragraph \{paragraph_index}",
+    )
     // The run's projecting parts, in order, with their coverage.
     let run_parts : Array[PartialProjectingPart] = []
     for part in parts {

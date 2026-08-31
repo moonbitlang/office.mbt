@@ -40,6 +40,8 @@ pub fn docx_paragraph_anchor_index(DocxAnnotatedResult, DocxStoryPartSource) -> 
 
 pub fn docx_paragraph_anchor_join_index(DocxAnnotatedResult, DocxStoryPartSource) -> DocxParagraphAnchorJoinIndex raise @core.DocxError
 
+pub fn docx_paragraph_direct_format(DocxAnnotatedResult, DocxStoryPartSource, path~ : String, start~ : Int, end~ : Int, format~ : DocxDirectFormat) -> String? raise @core.DocxError
+
 pub fn docx_paragraph_projection(DocxAnnotatedResult, DocxStoryPartSource, path~ : String) -> String?
 
 pub fn embed_style_map(BytesView, String) -> Bytes raise @core.DocxError
@@ -73,6 +75,8 @@ pub fn plan_comment_reply_archive(DocxAnnotatedResult, @zip.Archive, parent_id~ 
 pub fn plan_comment_resolution(DocxAnnotatedResult, BytesView, comment_id~ : String, done~ : Bool) -> @splice.SplicePlan raise @core.DocxError
 
 pub fn plan_comment_resolution_archive(DocxAnnotatedResult, @zip.Archive, comment_id~ : String, done~ : Bool, xml_budget? : @xml.XmlReadBudget) -> @splice.SplicePlan raise @core.DocxError
+
+pub fn plan_docx_format(DocxAnnotatedResult, DocxStoryPartSource, format~ : DocxDirectFormat, text? : String, within? : String, nth? : Int, range? : (Int, Int)) -> (@splice.SplicePlan, DocxFormatReceipt) raise @core.DocxError
 
 pub fn plan_docx_paragraph_insertion(DocxAnnotatedResult, at~ : String, before~ : Bool, content~ : DocxInsertContent, used_para_ids~ : Array[String]) -> (@splice.SplicePlan, DocxInsertReceipt) raise @core.DocxError
 
@@ -203,6 +207,59 @@ pub fn DocxDirectFormat::bold(Self) -> Bool?
 pub fn DocxDirectFormat::color(Self) -> String?
 pub fn DocxDirectFormat::italic(Self) -> Bool?
 pub fn DocxDirectFormat::underline(Self) -> Bool?
+
+pub struct DocxFormatAffected {
+  path : String
+  expected : String
+  para_id : String?
+  anchor_status : String
+  runs_changed : Int
+  runs_already_satisfied : Int
+  splits : Int
+}
+pub fn DocxFormatAffected::anchor_status(Self) -> String
+pub fn DocxFormatAffected::expected(Self) -> String
+pub fn DocxFormatAffected::para_id(Self) -> String?
+pub fn DocxFormatAffected::path(Self) -> String
+pub fn DocxFormatAffected::runs_already_satisfied(Self) -> Int
+pub fn DocxFormatAffected::runs_changed(Self) -> Int
+pub fn DocxFormatAffected::splits(Self) -> Int
+
+pub struct DocxFormatReceipt {
+  mode : String
+  selected : Array[Int]
+  spans : Array[DocxFormatSpan]
+  affected : Array[DocxFormatAffected]
+  runs_changed : Int
+  runs_already_satisfied : Int
+  splits : Int
+  byte_edits : Int
+}
+pub fn DocxFormatReceipt::affected(Self) -> Array[DocxFormatAffected]
+pub fn DocxFormatReceipt::byte_edits(Self) -> Int
+pub fn DocxFormatReceipt::mode(Self) -> String
+pub fn DocxFormatReceipt::runs_already_satisfied(Self) -> Int
+pub fn DocxFormatReceipt::runs_changed(Self) -> Int
+pub fn DocxFormatReceipt::selected(Self) -> Array[Int]
+pub fn DocxFormatReceipt::spans(Self) -> Array[DocxFormatSpan]
+pub fn DocxFormatReceipt::splits(Self) -> Int
+
+pub struct DocxFormatSpan {
+  path : String
+  para_id : String?
+  anchor_status : String
+  start : Int
+  end : Int
+  text : String
+  source_runs : Array[String]
+}
+pub fn DocxFormatSpan::anchor_status(Self) -> String
+pub fn DocxFormatSpan::end(Self) -> Int
+pub fn DocxFormatSpan::para_id(Self) -> String?
+pub fn DocxFormatSpan::path(Self) -> String
+pub fn DocxFormatSpan::source_runs(Self) -> Array[String]
+pub fn DocxFormatSpan::start(Self) -> Int
+pub fn DocxFormatSpan::text(Self) -> String
 
 pub(all) struct DocxInsertContent {
   style : String?
