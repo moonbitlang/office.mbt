@@ -704,7 +704,7 @@ fn docx_relationship_targets(
     Some(slash) => source[:slash].to_owned()
     None => ""
   }
-  let found : Array[String] = []
+  let found : Map[String, Bool] = Map([])
   let resolved : Array[String] = []
   for node in effective.children {
     guard node is XmlElement(relationship) else { continue }
@@ -726,10 +726,11 @@ fn docx_relationship_targets(
       relationship.attributes.get_or_default("Target", ""),
     )
     guard @opc.resolve_part_target(base, target) is Some(part) else { continue }
-    // Two targets that differ only in case name ONE part.
+    // Two targets that differ only in case name ONE part; membership is
+    // a map, so many targets cost their number, not its square.
     let key = @opc.part_name_key(part)
-    if !found.contains(key) {
-      found.push(key)
+    if found.get(key) is None {
+      found[key] = true
       resolved.push(part)
     }
   }
