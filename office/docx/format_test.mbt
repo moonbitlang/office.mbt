@@ -2317,3 +2317,81 @@ async test "the preflight reasons about clauses as sets" {
     assert_true(ordered_published, msg="the edit publishes")
   })
 }
+
+///|
+/// Round-15 fidelity: promotion reaches roots, descent carries the
+/// wrapper's own condition, and normalization keeps the antichain small.
+async test "the preflight promotes roots and normalizes clauses" {
+  with_docx_session_test_dir(directory => {
+    // A rels part whose effective root arrives through a PROMOTED
+    // wrapper: the consumers who find `x` ignorable read the promoted
+    // Relationships, whose settings part enforces protection.
+    let promoted_root = repackaged_fixture(
+      directory,
+      "promoted-root",
+      [],
+      [
+        (
+          "word/_rels/document.xml.rels",
+          "<Relationships xmlns=\"http://schemas.openxmlformats.org/package/2006/relationships\">",
+          "<x:wrap xmlns:x=\"urn:example:x\" xmlns:mc=\"http://schemas.openxmlformats.org/markup-compatibility/2006\" mc:Ignorable=\"x\" mc:ProcessContent=\"x:wrap\">" +
+          "<Relationships xmlns=\"http://schemas.openxmlformats.org/package/2006/relationships\">",
+        ),
+        (
+          "word/_rels/document.xml.rels", "</Relationships>", "</Relationships></x:wrap>",
+        ),
+        (
+          "word/settings.xml", "</w:settings>", "<w:documentProtection w:edit=\"readOnly\" w:enforcement=\"1\"/></w:settings>",
+        ),
+      ],
+      [],
+    )
+    let (promoted_failure, promoted_published) = format_input_probe(
+      promoted_root,
+      directory + "/promoted-root-out.docx",
+    )
+    guard promoted_failure is Some(promoted_message) else {
+      fail("the promoted root's settings are real for its consumers")
+    }
+    assert_true(
+      promoted_message.contains("editing protection") ||
+      promoted_message.contains("could not be read") ||
+      promoted_message.contains("settings"),
+      msg=promoted_message,
+    )
+    assert_false(promoted_published, msg="nothing may be published")
+    // A protection under a wrapper promoted only when `x` is
+    // UNSUPPORTED, inside a part reachable only when `x` IS supported:
+    // no consumer sees both, and the edit publishes.
+    let contradictory_wrap = repackaged_fixture(
+      directory,
+      "contradictory-wrap",
+      [],
+      [
+        (
+          "word/_rels/document.xml.rels",
+          "<Relationship Id=\"rId3\" Type=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships/settings\" Target=\"settings.xml\"/>",
+          "<mc:AlternateContent xmlns:mc=\"http://schemas.openxmlformats.org/markup-compatibility/2006\" xmlns:x=\"urn:example:x\">" +
+          "<mc:Choice Requires=\"x\"><Relationship Id=\"rId3\" Type=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships/settings\" Target=\"settings.xml\"/></mc:Choice>" +
+          "<mc:Fallback/></mc:AlternateContent>",
+        ),
+        (
+          "word/settings.xml", "mc:Ignorable=\"w14\"", "mc:Ignorable=\"w14 x14\" mc:ProcessContent=\"x14:wrap\" xmlns:x14=\"urn:example:x\"",
+        ),
+        (
+          "word/settings.xml", "</w:settings>", "<x14:wrap xmlns:x14=\"urn:example:x\"><w:trackRevisions/></x14:wrap></w:settings>",
+        ),
+      ],
+      [],
+    )
+    let (wrap_failure, wrap_published) = format_input_probe(
+      contradictory_wrap,
+      directory + "/contradictory-wrap-out.docx",
+    )
+    assert_true(
+      wrap_failure is None,
+      msg="no consumer both reaches the part and promotes the wrapper: \{wrap_failure}",
+    )
+    assert_true(wrap_published, msg="the edit publishes")
+  })
+}

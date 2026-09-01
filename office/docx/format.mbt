@@ -651,6 +651,12 @@ fn docx_push_condition(
   conditions : Array[DocxCondition],
   condition : DocxCondition,
 ) -> Unit raise @transaction.TransactionError {
+  // Normalized first: a clause member the condition already REQUIRES
+  // cannot be the unsupported one, so it drops out — and a clause with
+  // nothing left is the unsatisfiable condition, which no consumer
+  // meets and no list needs.
+  let condition = condition.normalized()
+  guard condition.satisfiable() else { return }
   for existing in conditions {
     if docx_condition_subsumes(existing, condition) {
       return
@@ -934,6 +940,21 @@ fn docx_mce_possible_roots(
 ) -> Array[(@xml.XmlElement, DocxCondition)] {
   let roots : Array[(@xml.XmlElement, DocxCondition)] = []
   let scope : Map[String, String] = Map([])
+  let process_exact : Map[String, Int] = Map([])
+  let process_wildcard : Map[String, Int] = Map([])
+  let generations : Map[String, Int] = Map([])
+  fn root_count_up(counts : Map[String, Int], key : String) -> Unit {
+    counts[key] = counts.get(key).unwrap_or(0) + 1
+  }
+
+  fn root_count_down(counts : Map[String, Int], key : String) -> Unit {
+    match counts.get(key) {
+      Some(count) if count > 1 => counts[key] = count - 1
+      Some(_) => counts.remove(key)
+      None => ()
+    }
+  }
+
   fn root_declarations(element : @xml.XmlElement) -> Array[(String, String?)] {
     let undo : Array[(String, String?)] = []
     for attribute in element.attributes {
@@ -960,6 +981,93 @@ fn docx_mce_possible_roots(
     }
   }
 
+  // The same scoped `Ignorable`/`ProcessContent` reading the child walk
+  // makes: a promoted wrapper's children are candidate ROOTS for the
+  // consumers who find the wrapper ignorable.
+  fn root_directives(
+    element : @xml.XmlElement,
+  ) -> (Array[(String, Int?)], Array[(Bool, String)]) {
+    let generation_undo : Array[(String, Int?)] = []
+    match element.attributes.get("{\{DOCX_MC_NAMESPACE}}Ignorable") {
+      Some(value) =>
+        for token in docx_split_tokens(value) {
+          guard scope.get(token) is Some(uri) else { continue }
+          let previous = generations.get(uri)
+          generation_undo.push((uri, previous))
+          generations[uri] = previous.unwrap_or(0) + 1
+        }
+      None => ()
+    }
+    let added : Array[(Bool, String)] = []
+    match element.attributes.get("{\{DOCX_MC_NAMESPACE}}ProcessContent") {
+      Some(value) =>
+        for token in docx_split_tokens(value) {
+          let (uri, local) = match token.find(":") {
+            Some(colon) => {
+              let prefix = token.substring(start=0, end=colon).to_string()
+              let local = token.substring(start=colon + 1).to_string()
+              match scope.get(prefix) {
+                Some(uri) => (uri, local)
+                None => continue
+              }
+            }
+            None =>
+              match scope.get("") {
+                Some(uri) => (uri, token.to_string())
+                None => continue
+              }
+          }
+          let generation = generations.get(uri).unwrap_or(0)
+          if local == "*" {
+            let key = "\{generation}\u{1}\{uri}"
+            root_count_up(process_wildcard, key)
+            added.push((true, key))
+          } else {
+            let key = "\{generation}\u{1}{\{uri}}\{local}"
+            root_count_up(process_exact, key)
+            added.push((false, key))
+          }
+        }
+      None => ()
+    }
+    (generation_undo, added)
+  }
+
+  fn root_undo_directives(
+    generation_undo : Array[(String, Int?)],
+    added : Array[(Bool, String)],
+  ) -> Unit {
+    for entry in added {
+      if entry.0 {
+        root_count_down(process_wildcard, entry.1)
+      } else {
+        root_count_down(process_exact, entry.1)
+      }
+    }
+    for offset in 0..<generation_undo.length() {
+      let entry = generation_undo[generation_undo.length() - offset - 1]
+      match entry.1 {
+        Some(previous) => generations[entry.0] = previous
+        None => generations.remove(entry.0)
+      }
+    }
+  }
+
+  fn root_element_uri(name : String) -> String {
+    guard name.has_prefix("{") else { return "" }
+    match name.find("}") {
+      Some(close) => name.substring(start=1, end=close).to_string()
+      None => ""
+    }
+  }
+
+  fn root_matches_process_content(name : String) -> Bool {
+    let uri = root_element_uri(name)
+    let generation = generations.get(uri).unwrap_or(0)
+    process_exact.get("\{generation}\u{1}\{name}") is Some(_) ||
+    process_wildcard.get("\{generation}\u{1}\{uri}") is Some(_)
+  }
+
   fn branch_requires(choice : @xml.XmlElement) -> Array[String]? {
     let requires = match choice.attributes.get("Requires") {
       Some(value) => value
@@ -982,6 +1090,7 @@ fn docx_mce_possible_roots(
 
   fn collect(element : @xml.XmlElement, condition : DocxCondition) -> Unit {
     let undo = root_declarations(element)
+    let (generation_undo, added) = root_directives(element)
     if element.name == "{\{DOCX_MC_NAMESPACE}}AlternateContent" {
       // One CLAUSE per choice passed over: at least one of its
       // namespaces must be unsupported, whichever one.
@@ -989,6 +1098,7 @@ fn docx_mce_possible_roots(
       for branch_node in element.children {
         guard branch_node is XmlElement(branch) else { continue }
         let branch_undo = root_declarations(branch)
+        let (branch_generation_undo, branch_added) = root_directives(branch)
         let branch_condition = condition.snapshot()
         for clause in passed_over {
           branch_condition.refused.push(clause)
@@ -1019,6 +1129,7 @@ fn docx_mce_possible_roots(
           // A choice every consumer of the vocabulary satisfies is the
           // one every consumer selects: nothing after it is a root.
           if decides {
+            root_undo_directives(branch_generation_undo, branch_added)
             root_restore(branch_undo)
             break
           }
@@ -1044,11 +1155,26 @@ fn docx_mce_possible_roots(
             }
           }
         }
+        root_undo_directives(branch_generation_undo, branch_added)
         root_restore(branch_undo)
       }
     } else if condition.satisfiable() {
       roots.push((element, condition))
+      if !understood.contains(root_element_uri(element.name)) &&
+        root_matches_process_content(element.name) {
+        // Promotion happens for the consumers who find the wrapper
+        // IGNORABLE — the ones who do not support its namespace — and
+        // it puts the wrapper's children where the wrapper stood: they
+        // are candidate roots for those consumers.
+        let promoted = condition.snapshot()
+        promoted.refused.push([root_element_uri(element.name)])
+        for node in element.children {
+          guard node is XmlElement(candidate) else { continue }
+          collect(candidate, promoted)
+        }
+      }
     }
+    root_undo_directives(generation_undo, added)
     root_restore(undo)
   }
 
@@ -1100,6 +1226,24 @@ fn DocxCondition::always() -> DocxCondition {
 ///|
 fn DocxCondition::snapshot(self : DocxCondition) -> DocxCondition {
   { required: self.required.copy(), refused: self.refused.copy(), }
+}
+
+///|
+/// The same condition with each clause reduced by the namespaces the
+/// condition requires: a required namespace is supported, so it cannot
+/// be a clause's unsupported member.
+fn DocxCondition::normalized(self : DocxCondition) -> DocxCondition {
+  let reduced : Array[Array[String]] = []
+  for group in self.refused {
+    let kept : Array[String] = []
+    for uri in group {
+      if !self.required.contains(uri) {
+        kept.push(uri)
+      }
+    }
+    reduced.push(kept)
+  }
+  { required: self.required.copy(), refused: reduced, }
 }
 
 ///|
@@ -1401,7 +1545,12 @@ fn docx_mce_possible(
         possible.push((child, condition.snapshot()))
         if !understood.contains(element_uri(child.name)) &&
           matches_process_content(child.name) {
+          // Promotion happens for the consumers who find the wrapper
+          // IGNORABLE — the ones who do not support its namespace; a
+          // consumer who supports it keeps the wrapper as content.
+          condition.refused.push([element_uri(child.name)])
           level(child)
+          condition.refused.pop() |> ignore
         }
       }
       undo_directives(generation_undo, added)
