@@ -603,15 +603,22 @@ fn docx_settings_parts(
         main.conditions,
       ) {
       let key = @opc.part_name_key(candidate.part)
-      match by_key.get(key) {
-        Some(known) =>
-          for condition in candidate.conditions {
-            docx_push_condition(known.conditions, condition)
-          }
+      let entry = match by_key.get(key) {
+        Some(known) => known
         None => {
-          by_key[key] = candidate
+          // Through the same push, so the FIRST conditions are
+          // normalized and antichain-kept like every later one.
+          let created : DocxPossiblePart = {
+            part: candidate.part,
+            conditions: [],
+          }
+          by_key[key] = created
           order.push(key)
+          created
         }
+      }
+      for condition in candidate.conditions {
+        docx_push_condition(entry.conditions, condition)
       }
     }
   }
@@ -625,12 +632,27 @@ fn docx_settings_parts(
 
 ///|
 /// Whether any single consumer could reach two DISTINCT parts at once.
-fn docx_parts_coexist(candidates : Array[DocxPossiblePart]) -> Bool {
+fn docx_parts_coexist(
+  candidates : Array[DocxPossiblePart],
+) -> Bool raise @transaction.TransactionError {
+  // The pairwise test is bounded by WORK, not by shape: a package can
+  // declare thousands of mutually exclusive parts whose conditions grow
+  // along the way, and an analysis that cannot finish within its budget
+  // refuses rather than guesses.
+  let mut work = 0
   for first_index, first in candidates {
     for second_index, second in candidates {
       guard second_index > first_index else { continue }
       for condition_a in first.conditions {
         for condition_b in second.conditions {
+          work += condition_a.required.length() +
+            condition_b.required.length() +
+            condition_a.refused.length() +
+            condition_b.refused.length() +
+            1
+          if work > 1000000 {
+            raise docx_analysis_refusal()
+          }
           if condition_a.conjoin(condition_b).satisfiable() {
             return true
           }
@@ -840,7 +862,11 @@ fn docx_relationship_targets(
       match by_key.get(key) {
         Some(known) => docx_push_condition(known.conditions, condition)
         None => {
-          by_key[key] = { part, conditions: [condition], }
+          // Through the same push, so the FIRST condition is normalized
+          // and antichain-kept like every later one.
+          let entry : DocxPossiblePart = { part, conditions: [], }
+          docx_push_condition(entry.conditions, condition)
+          by_key[key] = entry
           order.push(key)
         }
       }
@@ -1068,6 +1094,21 @@ fn docx_mce_possible_roots(
     process_wildcard.get("\{generation}\u{1}\{uri}") is Some(_)
   }
 
+  fn root_must_understand(element : @xml.XmlElement) -> Array[String] {
+    let uris : Array[String] = []
+    match element.attributes.get("{\{DOCX_MC_NAMESPACE}}MustUnderstand") {
+      Some(value) =>
+        for token in docx_split_tokens(value) {
+          guard scope.get(token) is Some(uri) else { continue }
+          if !understood.contains(uri) && !uris.contains(uri) {
+            uris.push(uri)
+          }
+        }
+      None => ()
+    }
+    uris
+  }
+
   fn branch_requires(choice : @xml.XmlElement) -> Array[String]? {
     let requires = match choice.attributes.get("Requires") {
       Some(value) => value
@@ -1088,9 +1129,23 @@ fn docx_mce_possible_roots(
     Some(uris)
   }
 
-  fn collect(element : @xml.XmlElement, condition : DocxCondition) -> Unit {
+  fn collect(element : @xml.XmlElement, arriving : DocxCondition) -> Unit {
     let undo = root_declarations(element)
     let (generation_undo, added) = root_directives(element)
+    // Only consumers who support what a `MustUnderstand` names process
+    // this content at all.
+    let understand = root_must_understand(element)
+    let condition = if understand.is_empty() {
+      arriving
+    } else {
+      let stronger = arriving.snapshot()
+      for uri in understand {
+        if !stronger.required.contains(uri) {
+          stronger.required.push(uri)
+        }
+      }
+      stronger
+    }
     if element.name == "{\{DOCX_MC_NAMESPACE}}AlternateContent" {
       // One CLAUSE per choice passed over: at least one of its
       // namespaces must be unsupported, whichever one.
@@ -1100,6 +1155,11 @@ fn docx_mce_possible_roots(
         let branch_undo = root_declarations(branch)
         let (branch_generation_undo, branch_added) = root_directives(branch)
         let branch_condition = condition.snapshot()
+        for uri in root_must_understand(branch) {
+          if !branch_condition.required.contains(uri) {
+            branch_condition.required.push(uri)
+          }
+        }
         for clause in passed_over {
           branch_condition.refused.push(clause)
         }
@@ -1357,10 +1417,24 @@ fn docx_mce_possible(
   // The directives an element carries, applied in the order the spec
   // gives them meaning: `Ignorable` opens a new generation for each of
   // its namespaces, retiring inherited rules; the element's own
-  // `ProcessContent` then declares rules in the new generation.
+  // `ProcessContent` then declares rules in the new generation. A
+  // `MustUnderstand` is a POSITIVE requirement: only consumers who
+  // support what it names process this content at all.
   fn directives(
     element : @xml.XmlElement,
-  ) -> (Array[(String, Int?)], Array[(Bool, String)]) {
+  ) -> (Array[(String, Int?)], Array[(Bool, String)], Int) {
+    let mut required_added = 0
+    match element.attributes.get("{\{DOCX_MC_NAMESPACE}}MustUnderstand") {
+      Some(value) =>
+        for token in docx_split_tokens(value) {
+          guard scope.get(token) is Some(uri) else { continue }
+          if !understood.contains(uri) && !condition.required.contains(uri) {
+            condition.required.push(uri)
+            required_added += 1
+          }
+        }
+      None => ()
+    }
     let generation_undo : Array[(String, Int?)] = []
     match element.attributes.get("{\{DOCX_MC_NAMESPACE}}Ignorable") {
       Some(value) =>
@@ -1404,13 +1478,17 @@ fn docx_mce_possible(
         }
       None => ()
     }
-    (generation_undo, added)
+    (generation_undo, added, required_added)
   }
 
   fn undo_directives(
     generation_undo : Array[(String, Int?)],
     added : Array[(Bool, String)],
+    required_added : Int,
   ) -> Unit {
+    for _ in 0..<required_added {
+      condition.required.pop() |> ignore
+    }
     for entry in added {
       if entry.0 {
         count_down(process_wildcard, entry.1)
@@ -1484,7 +1562,7 @@ fn docx_mce_possible(
     for node in container.children {
       guard node is XmlElement(child) else { continue }
       let undo = declarations(child)
-      let (generation_undo, added) = directives(child)
+      let (generation_undo, added, required_added) = directives(child)
       if child.name == "{\{DOCX_MC_NAMESPACE}}AlternateContent" {
         let mut decided = false
         // Each choice passed over adds one CLAUSE for the branches
@@ -1495,7 +1573,9 @@ fn docx_mce_possible(
           guard branch_node is XmlElement(branch) else { continue }
           guard !decided else { break }
           let branch_undo = declarations(branch)
-          let (branch_generation_undo, branch_added) = directives(branch)
+          let (branch_generation_undo, branch_added, branch_required) = directives(
+            branch,
+          )
           let mut pushed = 0
           if branch.name == "{\{DOCX_MC_NAMESPACE}}Choice" {
             let requires = choice_requires(branch)
@@ -1535,7 +1615,7 @@ fn docx_mce_possible(
           for _ in 0..<pushed {
             condition.required.pop() |> ignore
           }
-          undo_directives(branch_generation_undo, branch_added)
+          undo_directives(branch_generation_undo, branch_added, branch_required)
           restore(branch_undo)
         }
         for _ in 0..<clauses_added {
@@ -1553,15 +1633,15 @@ fn docx_mce_possible(
           condition.refused.pop() |> ignore
         }
       }
-      undo_directives(generation_undo, added)
+      undo_directives(generation_undo, added, required_added)
       restore(undo)
     }
   }
 
   let root_undo = declarations(raw)
-  let (root_generation_undo, root_added) = directives(raw)
+  let (root_generation_undo, root_added, root_required) = directives(raw)
   level(raw)
-  undo_directives(root_generation_undo, root_added)
+  undo_directives(root_generation_undo, root_added, root_required)
   restore(root_undo)
   possible
 }

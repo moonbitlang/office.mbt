@@ -2395,3 +2395,43 @@ async test "the preflight promotes roots and normalizes clauses" {
     assert_true(wrap_published, msg="the edit publishes")
   })
 }
+
+///|
+/// Round-16 fidelity: `MustUnderstand` is a positive requirement — a
+/// consumer that processes the branch supports what it names, so nobody
+/// both reaches the part through it and promotes an ignorable wrapper
+/// of that namespace inside it.
+async test "the preflight reads MustUnderstand as a requirement" {
+  with_docx_session_test_dir(directory => {
+    let understood = repackaged_fixture(
+      directory,
+      "must-understand",
+      [],
+      [
+        (
+          "word/_rels/document.xml.rels",
+          "<Relationship Id=\"rId3\" Type=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships/settings\" Target=\"settings.xml\"/>",
+          "<mc:AlternateContent xmlns:mc=\"http://schemas.openxmlformats.org/markup-compatibility/2006\" xmlns:y=\"urn:example:y\" xmlns:x=\"urn:example:x\">" +
+          "<mc:Choice Requires=\"y\" mc:MustUnderstand=\"x\"><Relationship Id=\"rId3\" Type=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships/settings\" Target=\"settings.xml\"/></mc:Choice>" +
+          "<mc:Fallback/></mc:AlternateContent>",
+        ),
+        (
+          "word/settings.xml", "mc:Ignorable=\"w14\"", "mc:Ignorable=\"w14 x14\" mc:ProcessContent=\"x14:wrap\" xmlns:x14=\"urn:example:x\"",
+        ),
+        (
+          "word/settings.xml", "</w:settings>", "<x14:wrap xmlns:x14=\"urn:example:x\"><w:trackRevisions/></x14:wrap></w:settings>",
+        ),
+      ],
+      [],
+    )
+    let (failure, published) = format_input_probe(
+      understood,
+      directory + "/must-understand-out.docx",
+    )
+    assert_true(
+      failure is None,
+      msg="reaching the part means supporting x, and promotion means not: \{failure}",
+    )
+    assert_true(published, msg="the edit publishes")
+  })
+}

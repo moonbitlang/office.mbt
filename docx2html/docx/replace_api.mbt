@@ -179,12 +179,22 @@ pub fn plan_docx_replacements(
   // same identity find used to name it.
   let paragraph_paths = find_path_map(projection.scan, "p")
   let elements = projection.scan.elements()
+  // A path CLAIMED BY TWO paragraphs cannot be planned against: the
+  // selection named one of them and a last-wins map could plan against
+  // the other, publishing an edit to a paragraph nobody selected.
   let index_by_path : Map[String, Int] = Map([])
+  let claimants : Map[String, Int] = Map([])
   for paragraph_index, paragraph in projection.paragraphs {
     guard paragraph.sources.length() > 0 else { continue }
     let SourceElementId(head) = paragraph.sources[0].source
     if paragraph_paths.get(elements[head].byte_start) is Some(path) {
-      index_by_path[path] = paragraph_index
+      match claimants.get(path) {
+        Some(count) => claimants[path] = count + 1
+        None => {
+          claimants[path] = 1
+          index_by_path[path] = paragraph_index
+        }
+      }
     }
   }
   // One batch per paragraph, in document order: the partial planner
@@ -206,6 +216,11 @@ pub fn plan_docx_replacements(
     guard index_by_path.get(path) is Some(paragraph_index) else {
       raise Unsupported(
         message="candidate paragraph '\{path}' did not resolve to a projection paragraph",
+      )
+    }
+    guard claimants.get(path) == Some(1) else {
+      raise Unsupported(
+        message="the path '\{path}' names more than one logical paragraph, so the selection cannot be planned against",
       )
     }
     let edits : Array[ParagraphTextEdit] = []
@@ -287,8 +302,11 @@ pub fn docx_paragraphs_projection(
   }
   let index = docx_story_index(projection)
   paths.map(path => {
+    // A collided path cannot be answered for: the planner refuses
+    // these, so seeing one at readback means the document changed
+    // shape under the edit.
     match index.locate(path) {
-      (target, _) if target >= 0 =>
+      (target, 1) if target >= 0 =>
         Some(find_paragraph_projection(projection.paragraphs[target]))
       _ => None
     }
