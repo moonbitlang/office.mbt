@@ -232,9 +232,16 @@ fn replace_readback_validator(
       }
     }
     let story = annotated.main_story_source()
-    for entry in affected.val {
-      match
-        @word.docx_paragraph_projection(annotated, story, path=entry.path()) {
+    // ONE batch for the whole story: resolving a paragraph path costs a
+    // pass over the document, so asking per affected paragraph would
+    // cost the document once per replacement site.
+    let projections = @word.docx_paragraphs_projection(
+      annotated,
+      story,
+      paths=affected.val.map(entry => entry.path()),
+    )
+    for position, entry in affected.val {
+      match projections[position] {
         Some(actual) =>
           if actual != entry.expected() {
             findings.push(

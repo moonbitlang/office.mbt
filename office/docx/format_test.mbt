@@ -1924,3 +1924,60 @@ async test "the preflight and readback survive round-nine adversaria" {
     assert_false(double_published, msg="nothing may be published")
   })
 }
+
+///|
+/// Round-10 fidelity: root branches obey ordered-choice semantics, and
+/// a replacement across many paragraphs is read back in one pass.
+async test "the preflight orders root branches and the replace readback batches" {
+  with_docx_session_test_dir(directory => {
+    // Two consecutive choices requiring the SAME namespace: any
+    // consumer satisfying `x` selects the first, so a settings target
+    // named only by the second is one nothing reaches, and it must not
+    // fork the settings answer. (MCE in the package ROOT rels never
+    // gets this far: identification refuses such a package outright.)
+    let unreachable = repackaged_fixture(
+      directory,
+      "unreachable-branch",
+      [],
+      [
+        (
+          "word/_rels/document.xml.rels",
+          "<Relationship Id=\"rId3\" Type=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships/settings\" Target=\"settings.xml\"/>",
+          "<mc:AlternateContent xmlns:mc=\"http://schemas.openxmlformats.org/markup-compatibility/2006\" xmlns:x=\"urn:example:x\">" +
+          "<mc:Choice Requires=\"x\"/>" +
+          "<mc:Choice Requires=\"x\"><Relationship Id=\"rId3a\" Type=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships/settings\" Target=\"webSettings.xml\"/></mc:Choice>" +
+          "<mc:Fallback><Relationship Id=\"rId3\" Type=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships/settings\" Target=\"settings.xml\"/></mc:Fallback>" +
+          "</mc:AlternateContent>",
+        ),
+      ],
+      [],
+    )
+    let (unreachable_failure, unreachable_published) = format_input_probe(
+      unreachable,
+      directory + "/unreachable-branch-out.docx",
+    )
+    assert_true(
+      unreachable_failure is None,
+      msg="an unreachable branch forks nothing: \{unreachable_failure}",
+    )
+    assert_true(unreachable_published, msg="the edit publishes")
+    // The replace readback across many paragraphs runs in one batch.
+    let builder = StringBuilder()
+    for index in 0..<200 {
+      if index > 0 {
+        builder.write_string("</w:p><w:p>")
+      }
+      builder.write_string("<w:r><w:t>target \{index}</w:t></w:r>")
+    }
+    let many = edit_fixture(directory, "many-replace.docx", builder.to_string())
+    let replaced = @docx.transact_docx_find_replace(
+      @transaction.transaction_options(
+        many,
+        output_path=directory + "/many-replace-out.docx",
+      ),
+      needle="target",
+      replacement="done",
+    )
+    assert_eq(replaced.report.replaced, 200)
+  })
+}

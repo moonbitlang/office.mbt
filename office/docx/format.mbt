@@ -626,11 +626,18 @@ fn docx_relationship_targets(
   // consumer would. A part whose ROOT is compatibility markup resolves
   // to a different root per consumer, so every possible root is walked.
   for possible_root in docx_mce_possible_roots(root) {
+    let (root_element, root_condition) = possible_root
     for
-      entry in docx_mce_possible(possible_root, [
+      entry in docx_mce_possible(root_element, [
         DOCX_PACKAGE_RELATIONSHIPS_NAMESPACE,
       ]) {
-      let (relationship, condition) = entry
+      let relationship = entry.0
+      // The root's own path condition CONJOINS with the walk's.
+      let condition = root_condition.copy()
+      for capability in entry.1 {
+        condition.push(capability)
+      }
+      guard docx_capabilities_satisfiable(condition) else { continue }
       guard relationship.name
         is (DOCX_PACKAGE_RELATIONSHIP_ELEMENT | "relationships:Relationship") else {
         continue
@@ -655,9 +662,16 @@ fn docx_relationship_targets(
       let key = @opc.part_name_key(part)
       match by_key.get(key) {
         Some(known) =>
-          // A bounded number of alternative paths is plenty: past it,
-          // treat the part as reachable outright.
-          if known.conditions.length() < 8 {
+          // A bounded number of alternative paths is tracked exactly;
+          // past the bound the part becomes UNCONDITIONALLY reachable —
+          // a dropped path could otherwise hide the one a real consumer
+          // walks.
+          if known.conditions is [[]] {
+            ()
+          } else if known.conditions.length() >= 8 {
+            known.conditions.clear()
+            known.conditions.push([])
+          } else {
             known.conditions.push(condition)
           }
         None => {
@@ -690,16 +704,27 @@ fn docx_relationship_target_under(
   let reachable : Array[DocxPossiblePart] = []
   for candidate in docx_relationship_targets(archive, parts, source, types) {
     let combined : Array[Array[DocxCapability]] = []
+    let mut saturated = false
     for before in prior {
       for condition in candidate.conditions {
         let joined = before.copy()
         for capability in condition {
           joined.push(capability)
         }
-        if docx_capabilities_satisfiable(joined) && combined.length() < 8 {
-          combined.push(joined)
+        if docx_capabilities_satisfiable(joined) {
+          if combined.length() >= 8 {
+            // Past the bound the part becomes UNCONDITIONALLY reachable
+            // rather than missing its ninth path.
+            saturated = true
+          } else {
+            combined.push(joined)
+          }
         }
       }
+    }
+    if saturated {
+      combined.clear()
+      combined.push([])
     }
     if !combined.is_empty() {
       reachable.push({ part: candidate.part, conditions: combined, })
@@ -762,7 +787,8 @@ fn docx_settings_possible(raw : @xml.XmlElement) -> Array[@xml.XmlElement] {
   // different root per consumer: every possible settings root's
   // children are possible settings.
   let collected : Array[@xml.XmlElement] = []
-  for root in docx_mce_possible_roots(raw) {
+  for possible_root in docx_mce_possible_roots(raw) {
+    let root = possible_root.0
     guard root.name == "{\{DOCX_WML_NAMESPACE}}settings" ||
       root.name == "{\{DOCX_STRICT_WML_NAMESPACE}}settings" else {
       continue
@@ -779,30 +805,114 @@ fn docx_settings_possible(raw : @xml.XmlElement) -> Array[@xml.XmlElement] {
 }
 
 ///|
-/// Every element that could be the ROOT a consumer reads: the part's
-/// own root, or — when the root is an alternate — a branch's root,
-/// recursively.
-fn docx_mce_possible_roots(raw : @xml.XmlElement) -> Array[@xml.XmlElement] {
-  let roots : Array[@xml.XmlElement] = []
-  fn collect(element : @xml.XmlElement) -> Unit {
-    if element.name == "{\{DOCX_MC_NAMESPACE}}AlternateContent" {
-      for branch_node in element.children {
-        guard branch_node is XmlElement(branch) else { continue }
-        guard branch.name == "{\{DOCX_MC_NAMESPACE}}Choice" ||
-          branch.name == "{\{DOCX_MC_NAMESPACE}}Fallback" else {
-          continue
-        }
-        for node in branch.children {
-          guard node is XmlElement(candidate) else { continue }
-          collect(candidate)
-        }
+/// Every element that could be the ROOT a consumer reads, with the
+/// capability condition of the path to it: the part's own root, or —
+/// when the root is an alternate — a branch's root, under ordered-choice
+/// semantics. A branch after a single-requirement choice demands that
+/// namespace UNSUPPORTED, so two consecutive choices requiring the same
+/// thing leave the second unreachable, and an unsatisfiable root is not
+/// a root anyone reads.
+fn docx_mce_possible_roots(
+  raw : @xml.XmlElement,
+) -> Array[(@xml.XmlElement, Array[DocxCapability])] {
+  let roots : Array[(@xml.XmlElement, Array[DocxCapability])] = []
+  let scope : Map[String, String] = Map([])
+  fn root_declarations(element : @xml.XmlElement) -> Array[(String, String?)] {
+    let undo : Array[(String, String?)] = []
+    for attribute in element.attributes {
+      guard attribute.0.has_prefix("{\{DOCX_XMLNS_NAMESPACE}}") else {
+        continue
       }
-    } else {
-      roots.push(element)
+      let local = attribute.0
+        .substring(start=DOCX_XMLNS_NAMESPACE.length() + 2)
+        .to_string()
+      let prefix = if local == "xmlns" { "" } else { local }
+      undo.push((prefix, scope.get(prefix)))
+      scope[prefix] = attribute.1
+    }
+    undo
+  }
+
+  fn root_restore(undo : Array[(String, String?)]) -> Unit {
+    for offset in 0..<undo.length() {
+      let entry = undo[undo.length() - offset - 1]
+      match entry.1 {
+        Some(previous) => scope[entry.0] = previous
+        None => scope.remove(entry.0)
+      }
     }
   }
 
-  collect(raw)
+  fn branch_requires(choice : @xml.XmlElement) -> Array[String]? {
+    let requires = match choice.attributes.get("Requires") {
+      Some(value) => value
+      None =>
+        match choice.attributes.get("{\{DOCX_MC_NAMESPACE}}Requires") {
+          Some(value) => value
+          None => return None
+        }
+    }
+    let uris : Array[String] = []
+    for token in docx_split_tokens(requires) {
+      guard scope.get(token) is Some(uri) else { return None }
+      uris.push(uri)
+    }
+    if uris.is_empty() {
+      return None
+    }
+    Some(uris)
+  }
+
+  fn collect(
+    element : @xml.XmlElement,
+    condition : Array[DocxCapability],
+  ) -> Unit {
+    let undo = root_declarations(element)
+    if element.name == "{\{DOCX_MC_NAMESPACE}}AlternateContent" {
+      let passed_over : Array[DocxCapability] = []
+      for branch_node in element.children {
+        guard branch_node is XmlElement(branch) else { continue }
+        let branch_undo = root_declarations(branch)
+        let branch_condition = condition.copy()
+        for capability in passed_over {
+          branch_condition.push(capability)
+        }
+        if branch.name == "{\{DOCX_MC_NAMESPACE}}Choice" {
+          let requires = branch_requires(branch)
+          match requires {
+            Some(uris) =>
+              for uri in uris {
+                branch_condition.push({ uri, supported: true, })
+              }
+            None => ()
+          }
+          if docx_capabilities_satisfiable(branch_condition) {
+            for node in branch.children {
+              guard node is XmlElement(candidate) else { continue }
+              collect(candidate, branch_condition)
+            }
+          }
+          match requires {
+            Some([only]) => passed_over.push({ uri: only, supported: false, })
+            _ => ()
+          }
+        } else if branch.name == "{\{DOCX_MC_NAMESPACE}}Fallback" {
+          if docx_capabilities_satisfiable(branch_condition) {
+            for node in branch.children {
+              guard node is XmlElement(candidate) else { continue }
+              collect(candidate, branch_condition)
+            }
+          }
+        }
+        root_restore(branch_undo)
+      }
+    } else if docx_capabilities_satisfiable(condition) {
+      roots.push((element, condition))
+    }
+    root_restore(undo)
+  }
+
+  collect(raw, [])
   roots
 }
 
