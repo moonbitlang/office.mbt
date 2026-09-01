@@ -1933,7 +1933,8 @@ fn docx_format_binding_digests(
       while at < stop && bytes[at] != quote {
         at += 1
       }
-      let value = format_surgery_decode(bytes[value_start:at])
+      // Entity-spelled bindings and directives mean what they decode to.
+      let value = decode_entities(format_surgery_decode(bytes[value_start:at]))
       at += 1
       if attribute == "xmlns" {
         undo.push(("", scope.get(""), scope_hash.get("")))
@@ -2116,7 +2117,8 @@ fn docx_format_binding_digests(
       while at < stop && bytes[at] != quote {
         at += 1
       }
-      let value = format_surgery_decode(bytes[value_start:at])
+      // Entity-spelled bindings and directives mean what they decode to.
+      let value = decode_entities(format_surgery_decode(bytes[value_start:at]))
       at += 1
       if attribute == "xmlns" {
         scope[""] = value

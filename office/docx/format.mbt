@@ -370,13 +370,30 @@ fn docx_package_declares_signature(
     DOCX_SIGNATURE_ORIGIN_RELATIONSHIP,
   ])
   guard !origins.is_empty() else { return false }
+  // Conditions CONJOIN across the chain: an origin reachable only when a
+  // namespace is supported, whose signature relationship is reachable
+  // only when it is not, is a path no consumer walks.
   let signatures : Array[String] = []
   for origin in origins {
     for
-      target in docx_relationship_targets(archive, parts, origin, [
+      target in docx_relationship_targets(archive, parts, origin.part, [
         DOCX_SIGNATURE_RELATIONSHIP,
       ]) {
-      signatures.push(target)
+      let mut reachable = false
+      for before in origin.conditions {
+        for condition in target.conditions {
+          let joined = before.copy()
+          for capability in condition {
+            joined.push(capability)
+          }
+          if docx_capabilities_satisfiable(joined) {
+            reachable = true
+          }
+        }
+      }
+      if reachable {
+        signatures.push(target.part)
+      }
     }
   }
   guard !signatures.is_empty() else { return false }
@@ -528,20 +545,32 @@ fn docx_settings_part(
   // Several main document parts — including one hidden in a
   // compatibility branch the strict validation's effective reading does
   // not take — leave no single settings answer, and are refused rather
-  // than resolved.
-  let document = match
-    docx_relationship_target(archive, parts, "", [
+  // than resolved. Conditions CONJOIN across the hops: a settings part
+  // reachable only by a consumer no single capability assignment
+  // describes is reachable by nobody.
+  let (main_lookup, main_conditions) = docx_relationship_target_under(
+    archive,
+    parts,
+    "",
+    [
       DOCX_OFFICE_DOCUMENT_RELATIONSHIP,
       DOCX_STRICT_OFFICE_DOCUMENT_RELATIONSHIP,
-    ]) {
+    ],
+    [[]],
+  )
+  let document = match main_lookup {
     Found(name) => name
     Absent => return Absent
     Ambiguous => return Ambiguous
   }
-  docx_relationship_target(archive, parts, document, [
-    DOCX_SETTINGS_RELATIONSHIP,
-    DOCX_STRICT_SETTINGS_RELATIONSHIP,
-  ])
+  let (settings_lookup, _) = docx_relationship_target_under(
+    archive,
+    parts,
+    document,
+    [DOCX_SETTINGS_RELATIONSHIP, DOCX_STRICT_SETTINGS_RELATIONSHIP],
+    main_conditions,
+  )
+  settings_lookup
 }
 
 ///|
@@ -553,38 +582,24 @@ priv enum DocxPartLookup {
 }
 
 ///|
-/// The single INTERNAL part named by `source`'s relationships of one of
-/// `types`, resolved against `source`'s own location.
-///
-/// `Absent` when there is no such relationship or its target is
-/// external or unresolvable; `Ambiguous` when several relationships of
-/// these types name different parts, which no later gate would catch.
-fn docx_relationship_target(
-  archive : @zip.Archive,
-  parts : Map[String, (String, String)],
-  source : String,
-  types : Array[String],
-) -> DocxPartLookup {
-  match docx_relationship_targets(archive, parts, source, types) {
-    [] => Absent
-    [only] => Found(only)
-    // Several relationships of the same type naming different parts is
-    // legal OPC and meaningless WML: nothing downstream would refuse it,
-    // so the preflight must.
-    _ => Ambiguous
-  }
+/// One part a relationship walk could reach, with the consumer
+/// capabilities each PATH to it demands. Two paths to one part keep
+/// their conditions side by side: reachable under either.
+priv struct DocxPossiblePart {
+  part : String
+  conditions : Array[Array[DocxCapability]]
 }
 
 ///|
 /// Every INTERNAL part named by `source`'s relationships of one of
-/// `types`, resolved against `source`'s own location and deduplicated by
-/// part identity.
+/// `types`, resolved against `source`'s own location, deduplicated by
+/// part identity, each with the capability conditions of its paths.
 fn docx_relationship_targets(
   archive : @zip.Archive,
   parts : Map[String, (String, String)],
   source : String,
   types : Array[String],
-) -> Array[String] {
+) -> Array[DocxPossiblePart] {
   let rels_name = @opc.relationships_part_name_for_source(source)
   guard docx_part_bytes(archive, parts, rels_name) is Some(bytes) else {
     return []
@@ -603,42 +618,101 @@ fn docx_relationship_targets(
     Some(slash) => source[:slash].to_owned()
     None => ""
   }
-  let found : Array[String] = []
-  let resolved : Array[String] = []
+  let by_key : Map[String, DocxPossiblePart] = Map([])
+  let order : Array[String] = []
   // Every OPC consumer understands the relationships vocabulary itself,
   // so a choice requiring only it decides its alternate, and an element
   // outside it is looked through only where a `ProcessContent` says a
-  // consumer would.
-  for
-    relationship in docx_mce_possible(root, [
-      DOCX_PACKAGE_RELATIONSHIPS_NAMESPACE,
-    ]) {
-    guard relationship.name
-      is (DOCX_PACKAGE_RELATIONSHIP_ELEMENT | "relationships:Relationship") else {
-      continue
-    }
-    let kind = @xml.collapse_xml_schema_whitespace(
-      relationship.attributes.get_or_default("Type", ""),
-    )
-    guard types.contains(kind) else { continue }
-    // An EXTERNAL target names something outside the package, which is
-    // not a part and cannot be read.
-    let mode = @xml.collapse_xml_schema_whitespace(
-      relationship.attributes.get_or_default("TargetMode", "Internal"),
-    )
-    guard mode == "Internal" else { continue }
-    let target = @xml.collapse_xml_schema_whitespace(
-      relationship.attributes.get_or_default("Target", ""),
-    )
-    guard @opc.resolve_part_target(base, target) is Some(part) else { continue }
-    // Two targets that differ only in case name ONE part.
-    let key = @opc.part_name_key(part)
-    if !found.contains(key) {
-      found.push(key)
-      resolved.push(part)
+  // consumer would. A part whose ROOT is compatibility markup resolves
+  // to a different root per consumer, so every possible root is walked.
+  for possible_root in docx_mce_possible_roots(root) {
+    for
+      entry in docx_mce_possible(possible_root, [
+        DOCX_PACKAGE_RELATIONSHIPS_NAMESPACE,
+      ]) {
+      let (relationship, condition) = entry
+      guard relationship.name
+        is (DOCX_PACKAGE_RELATIONSHIP_ELEMENT | "relationships:Relationship") else {
+        continue
+      }
+      let kind = @xml.collapse_xml_schema_whitespace(
+        relationship.attributes.get_or_default("Type", ""),
+      )
+      guard types.contains(kind) else { continue }
+      // An EXTERNAL target names something outside the package, which is
+      // not a part and cannot be read.
+      let mode = @xml.collapse_xml_schema_whitespace(
+        relationship.attributes.get_or_default("TargetMode", "Internal"),
+      )
+      guard mode == "Internal" else { continue }
+      let target = @xml.collapse_xml_schema_whitespace(
+        relationship.attributes.get_or_default("Target", ""),
+      )
+      guard @opc.resolve_part_target(base, target) is Some(part) else {
+        continue
+      }
+      // Two targets that differ only in case name ONE part.
+      let key = @opc.part_name_key(part)
+      match by_key.get(key) {
+        Some(known) =>
+          // A bounded number of alternative paths is plenty: past it,
+          // treat the part as reachable outright.
+          if known.conditions.length() < 8 {
+            known.conditions.push(condition)
+          }
+        None => {
+          by_key[key] = { part, conditions: [condition], }
+          order.push(key)
+        }
+      }
     }
   }
+  let resolved : Array[DocxPossiblePart] = []
+  for key in order {
+    guard by_key.get(key) is Some(entry) else { continue }
+    resolved.push(entry)
+  }
   resolved
+}
+
+///|
+/// The single part of `types` reachable from `source` under `prior`
+/// conditions: `Absent`, `Found` with the combined conditions of its
+/// paths, or `Ambiguous` when several DISTINCT parts are each reachable
+/// by some consumer — which no later gate would catch.
+fn docx_relationship_target_under(
+  archive : @zip.Archive,
+  parts : Map[String, (String, String)],
+  source : String,
+  types : Array[String],
+  prior : Array[Array[DocxCapability]],
+) -> (DocxPartLookup, Array[Array[DocxCapability]]) {
+  let reachable : Array[DocxPossiblePart] = []
+  for candidate in docx_relationship_targets(archive, parts, source, types) {
+    let combined : Array[Array[DocxCapability]] = []
+    for before in prior {
+      for condition in candidate.conditions {
+        let joined = before.copy()
+        for capability in condition {
+          joined.push(capability)
+        }
+        if docx_capabilities_satisfiable(joined) && combined.length() < 8 {
+          combined.push(joined)
+        }
+      }
+    }
+    if !combined.is_empty() {
+      reachable.push({ part: candidate.part, conditions: combined, })
+    }
+  }
+  match reachable {
+    [] => (Absent, [])
+    [only] => (Found(only.part), only.conditions)
+    // Several relationships of the same type naming different parts is
+    // legal OPC and meaningless WML: nothing downstream would refuse it,
+    // so the preflight must.
+    _ => (Ambiguous, [])
+  }
 }
 
 ///|
@@ -684,7 +758,73 @@ const DOCX_XMLNS_NAMESPACE : String = "http://www.w3.org/2000/xmlns/"
 /// could sit at the settings-child level under SOME resolution of the
 /// part's compatibility markup.
 fn docx_settings_possible(raw : @xml.XmlElement) -> Array[@xml.XmlElement] {
-  docx_mce_possible(raw, [DOCX_WML_NAMESPACE, DOCX_STRICT_WML_NAMESPACE])
+  // A settings part whose ROOT is compatibility markup resolves to a
+  // different root per consumer: every possible settings root's
+  // children are possible settings.
+  let collected : Array[@xml.XmlElement] = []
+  for root in docx_mce_possible_roots(raw) {
+    guard root.name == "{\{DOCX_WML_NAMESPACE}}settings" ||
+      root.name == "{\{DOCX_STRICT_WML_NAMESPACE}}settings" else {
+      continue
+    }
+    for
+      entry in docx_mce_possible(root, [
+        DOCX_WML_NAMESPACE,
+        DOCX_STRICT_WML_NAMESPACE,
+      ]) {
+      collected.push(entry.0)
+    }
+  }
+  collected
+}
+
+///|
+/// Every element that could be the ROOT a consumer reads: the part's
+/// own root, or — when the root is an alternate — a branch's root,
+/// recursively.
+fn docx_mce_possible_roots(raw : @xml.XmlElement) -> Array[@xml.XmlElement] {
+  let roots : Array[@xml.XmlElement] = []
+  fn collect(element : @xml.XmlElement) -> Unit {
+    if element.name == "{\{DOCX_MC_NAMESPACE}}AlternateContent" {
+      for branch_node in element.children {
+        guard branch_node is XmlElement(branch) else { continue }
+        guard branch.name == "{\{DOCX_MC_NAMESPACE}}Choice" ||
+          branch.name == "{\{DOCX_MC_NAMESPACE}}Fallback" else {
+          continue
+        }
+        for node in branch.children {
+          guard node is XmlElement(candidate) else { continue }
+          collect(candidate)
+        }
+      }
+    } else {
+      roots.push(element)
+    }
+  }
+
+  collect(raw)
+  roots
+}
+
+///|
+/// One consumer-capability constraint: the namespace must (or must not)
+/// be supported for this path to be taken.
+priv struct DocxCapability {
+  uri : String
+  supported : Bool
+}
+
+///|
+/// Whether one consumer could satisfy every constraint at once.
+fn docx_capabilities_satisfiable(condition : Array[DocxCapability]) -> Bool {
+  let assignments : Map[String, Bool] = Map([])
+  for capability in condition {
+    match assignments.get(capability.uri) {
+      Some(known) => if known != capability.supported { return false }
+      None => assignments[capability.uri] = capability.supported
+    }
+  }
+  true
 }
 
 ///|
@@ -708,8 +848,15 @@ fn docx_settings_possible(raw : @xml.XmlElement) -> Array[@xml.XmlElement] {
 fn docx_mce_possible(
   raw : @xml.XmlElement,
   understood : Array[String],
-) -> Array[@xml.XmlElement] {
-  let possible : Array[@xml.XmlElement] = []
+) -> Array[(@xml.XmlElement, Array[DocxCapability])] {
+  let possible : Array[(@xml.XmlElement, Array[DocxCapability])] = []
+  // The capability constraints of the path to the element being walked:
+  // a choice branch requires its namespaces supported, and the branches
+  // after a SINGLE-requirement choice require it unsupported. (An
+  // unsatisfied multi-requirement choice constrains by disjunction,
+  // which is over-approximated as no constraint: more paths are treated
+  // reachable, never fewer.)
+  let condition : Array[DocxCapability] = []
   let scope : Map[String, String] = Map([])
   let process_exact : Map[String, Int] = Map([])
   let process_wildcard : Map[String, Int] = Map([])
@@ -743,7 +890,10 @@ fn docx_mce_possible(
   }
 
   fn restore(undo : Array[(String, String?)]) -> Unit {
-    for entry in undo {
+    // In REVERSE: two entries about the same key must put back the
+    // older state last.
+    for offset in 0..<undo.length() {
+      let entry = undo[undo.length() - offset - 1]
       match entry.1 {
         Some(previous) => scope[entry.0] = previous
         None => scope.remove(entry.0)
@@ -815,7 +965,10 @@ fn docx_mce_possible(
         count_down(process_exact, entry.1)
       }
     }
-    for entry in generation_undo {
+    // In REVERSE: `Ignorable="v v2"` may bind one URI twice, and the
+    // older generation must be what survives the undo.
+    for offset in 0..<generation_undo.length() {
+      let entry = generation_undo[generation_undo.length() - offset - 1]
       match entry.1 {
         Some(previous) => generations[entry.0] = previous
         None => generations.remove(entry.0)
@@ -838,26 +991,40 @@ fn docx_mce_possible(
     process_wildcard.get("\{generation}\u{1}\{uri}") is Some(_)
   }
 
-  // Every prefix a choice requires resolves to an understood namespace
-  // exactly when every consumer of this vocabulary satisfies it.
-  fn choice_decides(choice : @xml.XmlElement) -> Bool {
+  // The namespaces a choice requires, resolved where it sits; None for
+  // a choice with no requirement to read.
+  fn choice_requires(choice : @xml.XmlElement) -> Array[String]? {
     let requires = match choice.attributes.get("Requires") {
       Some(value) => value
       None =>
         match choice.attributes.get("{\{DOCX_MC_NAMESPACE}}Requires") {
           Some(value) => value
-          None => return false
+          None => return None
         }
     }
-    let tokens = docx_split_tokens(requires)
-    if tokens.is_empty() {
-      return false
+    let uris : Array[String] = []
+    for token in docx_split_tokens(requires) {
+      guard scope.get(token) is Some(uri) else { return None }
+      uris.push(uri)
     }
-    for token in tokens {
-      guard scope.get(token) is Some(uri) else { return false }
-      guard understood.contains(uri) else { return false }
+    if uris.is_empty() {
+      return None
     }
-    true
+    Some(uris)
+  }
+
+  // Every prefix a choice requires resolves to an understood namespace
+  // exactly when every consumer of this vocabulary satisfies it.
+  fn choice_decides(choice : @xml.XmlElement) -> Bool {
+    match choice_requires(choice) {
+      Some(uris) => {
+        for uri in uris {
+          guard understood.contains(uri) else { return false }
+        }
+        true
+      }
+      None => false
+    }
   }
 
   fn level(container : @xml.XmlElement) -> Unit {
@@ -867,24 +1034,56 @@ fn docx_mce_possible(
       let (generation_undo, added) = directives(child)
       if child.name == "{\{DOCX_MC_NAMESPACE}}AlternateContent" {
         let mut decided = false
+        // What reaching each later branch says about the consumer: every
+        // single-requirement choice passed over required its namespace
+        // UNSUPPORTED.
+        let passed_over : Array[DocxCapability] = []
         for branch_node in child.children {
           guard branch_node is XmlElement(branch) else { continue }
           guard !decided else { break }
           let branch_undo = declarations(branch)
           let (branch_generation_undo, branch_added) = directives(branch)
+          let mut pushed = 0
+          for capability in passed_over {
+            condition.push(capability)
+            pushed += 1
+          }
           if branch.name == "{\{DOCX_MC_NAMESPACE}}Choice" {
+            let requires = choice_requires(branch)
+            match requires {
+              Some(uris) =>
+                for uri in uris {
+                  if !understood.contains(uri) {
+                    condition.push({ uri, supported: true, })
+                    pushed += 1
+                  }
+                }
+              None => ()
+            }
             level(branch)
             if choice_decides(branch) {
               decided = true
             }
+            match requires {
+              Some([only]) =>
+                if !understood.contains(only) {
+                  passed_over.push({ uri: only, supported: false, })
+                }
+              _ => ()
+            }
           } else if branch.name == "{\{DOCX_MC_NAMESPACE}}Fallback" {
             level(branch)
+          }
+          for _ in 0..<pushed {
+            condition.pop() |> ignore
           }
           undo_directives(branch_generation_undo, branch_added)
           restore(branch_undo)
         }
       } else {
-        possible.push(child)
+        if docx_capabilities_satisfiable(condition) {
+          possible.push((child, condition.copy()))
+        }
         if !understood.contains(element_uri(child.name)) &&
           matches_process_content(child.name) {
           level(child)

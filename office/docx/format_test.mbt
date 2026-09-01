@@ -1791,3 +1791,136 @@ async test "the preflight applies reachability and generation resets" {
     assert_true(retired_published, msg="the edit publishes")
   })
 }
+
+///|
+/// Round-9 fidelity: entity-spelled bindings, alternate-rooted parts,
+/// unsatisfiable chains, and generation undo order.
+async test "the preflight and readback survive round-nine adversaria" {
+  with_docx_session_test_dir(directory => {
+    // An entity-spelled WML binding still MEANS WML: an honest bold
+    // request on such a document must go through, not read back as
+    // foreign collateral.
+    let entity_bound = repackaged_fixture(
+      directory,
+      "entity-bound",
+      [],
+      [
+        (
+          "word/document.xml", "xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\"",
+          "xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/&#x6d;ain\"",
+        ),
+      ],
+      [],
+    )
+    let (entity_failure, entity_published) = format_input_probe(
+      entity_bound,
+      directory + "/entity-bound-out.docx",
+    )
+    assert_true(
+      entity_failure is None,
+      msg="an entity-spelled binding means what it decodes to: \{entity_failure}",
+    )
+    assert_true(entity_published, msg="the edit publishes")
+    // A settings part whose ROOT is an alternate resolves to a different
+    // root per consumer: a protected root in the choice refuses even
+    // when the fallback root is unprotected.
+    let forked_root = repackaged_fixture(
+      directory,
+      "forked-root",
+      [],
+      [
+        (
+          "word/settings.xml",
+          "<w:settings",
+          "<mc0:AlternateContent xmlns:mc0=\"http://schemas.openxmlformats.org/markup-compatibility/2006\" xmlns:x=\"urn:example:x\">" +
+          "<mc0:Choice Requires=\"x\"><w:settings xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\"><w:trackRevisions/></w:settings></mc0:Choice>" +
+          "<mc0:Fallback><w:settings",
+        ),
+        (
+          "word/settings.xml", "</w:settings>", "</w:settings></mc0:Fallback></mc0:AlternateContent>",
+        ),
+      ],
+      [],
+    )
+    let (forked_failure, forked_published) = format_input_probe(
+      forked_root,
+      directory + "/forked-root-out.docx",
+    )
+    guard forked_failure is Some(forked_message) else {
+      fail("a protected possible root is a protection")
+    }
+    // Whichever voice speaks — the possible-roots walk, or the MCE
+    // reader refusing to read an alternate-rooted part at all — the
+    // document is refused, never silently edited.
+    assert_true(
+      forked_message.contains("compatibility alternatives") ||
+      forked_message.contains("records revisions") ||
+      forked_message.contains("could not be read"),
+      msg=forked_message,
+    )
+    assert_false(forked_published, msg="nothing may be published")
+    // A signature chain whose hops demand CONTRADICTORY capabilities is
+    // a path no consumer walks: origin only when `x` is supported, the
+    // signature relationship only when it is not.
+    let contradictory = repackaged_fixture(
+      directory,
+      "contradictory",
+      [],
+      [
+        (
+          "_rels/.rels",
+          "</Relationships>",
+          "<mc:AlternateContent xmlns:mc=\"http://schemas.openxmlformats.org/markup-compatibility/2006\" xmlns:x=\"urn:example:x\">" +
+          "<mc:Choice Requires=\"x\"><Relationship Id=\"rIdSigOrigin\" Type=\"http://schemas.openxmlformats.org/package/2006/relationships/digital-signature/origin\" Target=\"_xmlsignatures/origin.sigs\"/></mc:Choice>" +
+          "<mc:Fallback/></mc:AlternateContent></Relationships>",
+        ),
+        (
+          "[Content_Types].xml", "</Types>", "<Default Extension=\"sigs\" ContentType=\"application/vnd.openxmlformats-package.digital-signature-origin\"/><Override PartName=\"/_xmlsignatures/sig1.xml\" ContentType=\"application/vnd.openxmlformats-package.digital-signature-xmlsignature+xml\"/></Types>",
+        ),
+      ],
+      [
+        ("_xmlsignatures/origin.sigs", "<origin/>"),
+        (
+          "_xmlsignatures/_rels/origin.sigs.rels",
+          "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?><Relationships xmlns=\"http://schemas.openxmlformats.org/package/2006/relationships\" xmlns:mc=\"http://schemas.openxmlformats.org/markup-compatibility/2006\" xmlns:x=\"urn:example:x\">" +
+          "<mc:AlternateContent><mc:Choice Requires=\"x\"/><mc:Fallback><Relationship Id=\"rIdSig1\" Type=\"http://schemas.openxmlformats.org/package/2006/relationships/digital-signature/signature\" Target=\"sig1.xml\"/></mc:Fallback></mc:AlternateContent></Relationships>",
+        ),
+        ("_xmlsignatures/sig1.xml", "<Signature/>"),
+      ],
+    )
+    let (contradictory_failure, contradictory_published) = format_input_probe(
+      contradictory,
+      directory + "/contradictory-out.docx",
+    )
+    assert_true(
+      contradictory_failure is None,
+      msg="an unwalkable chain signs nothing: \{contradictory_failure}",
+    )
+    assert_true(contradictory_published, msg="the edit publishes")
+    // `Ignorable="v v2"` binding one URI twice must UNDO to the outer
+    // generation, so the root's promotion rule applies again after the
+    // scope closes and the tracking flag inside the next wrapper is
+    // seen.
+    let double_bound = preflight_fixture(
+      directory,
+      "double-bound",
+      "<w14:a xmlns:v=\"http://schemas.microsoft.com/office/word/2010/wordml\" xmlns:v2=\"http://schemas.microsoft.com/office/word/2010/wordml\" mc2:Ignorable=\"v v2\" xmlns:mc2=\"http://schemas.openxmlformats.org/markup-compatibility/2006\"><w14:c/></w14:a>" +
+      "<w14:b><w:trackRevisions/></w14:b>",
+      [],
+      settings_root_insert=" mc:ProcessContent=\"w14:*\"",
+    )
+    let (double_failure, double_published) = format_input_probe(
+      double_bound,
+      directory + "/double-bound-out.docx",
+    )
+    guard double_failure is Some(double_message) else {
+      fail("the outer generation must survive the doubled undo")
+    }
+    assert_true(
+      double_message.contains("records revisions") ||
+      double_message.contains("compatibility alternatives"),
+      msg=double_message,
+    )
+    assert_false(double_published, msg="nothing may be published")
+  })
+}
