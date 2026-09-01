@@ -1,13 +1,4 @@
 ///|
-// Per-formula handlers for the text family. Each maps one (or a few aliases of)
-// one Excel formula to its implementation; eval_function routes to these via a HashMap.
-
-///|
-fn eval_dollar(call : EvalCall) -> FormulaValue {
-  dollar_values(call.values)
-}
-
-///|
 fn eval_len(call : EvalCall) -> FormulaValue {
   match call.values {
     [v0] =>
@@ -975,11 +966,6 @@ fn eval_unicode(call : EvalCall) -> FormulaValue {
     [v0] => code_value("UNICODE", v0)
     _ => Error(formula_error_value)
   }
-}
-
-///|
-fn eval_concat(call : EvalCall) -> FormulaValue {
-  concat_values(call.values)
 }
 
 ///|

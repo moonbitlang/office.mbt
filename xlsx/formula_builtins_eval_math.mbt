@@ -1,28 +1,4 @@
 ///|
-// Per-formula handlers for the math family. Each maps one (or a few aliases of)
-// one Excel formula to its implementation; eval_function routes to these via a HashMap.
-
-///|
-fn eval_sum(call : EvalCall) -> FormulaValue {
-  sum_values(call.values)
-}
-
-///|
-fn eval_subtotal(call : EvalCall) -> FormulaValue {
-  subtotal_values(call.values)
-}
-
-///|
-fn eval_aggregate(call : EvalCall) -> FormulaValue {
-  aggregate_values(call.values)
-}
-
-///|
-fn eval_product(call : EvalCall) -> FormulaValue {
-  product_values(call.values)
-}
-
-///|
 fn eval_sign(call : EvalCall) -> FormulaValue {
   match call.values {
     [v0] =>
@@ -135,11 +111,6 @@ fn eval_sumproduct(call : EvalCall) -> FormulaValue raise XlsxError {
 }
 
 ///|
-fn eval_sumsq(call : EvalCall) -> FormulaValue {
-  sumsq_values(call.values)
-}
-
-///|
 fn eval_sumx2my2(call : EvalCall) -> FormulaValue raise XlsxError {
   match call.args {
     [a0, a1] => {
@@ -217,16 +188,6 @@ fn eval_sumifs(call : EvalCall) -> FormulaValue raise XlsxError {
   } else {
     Error(formula_error_value)
   }
-}
-
-///|
-fn eval_gcd(call : EvalCall) -> FormulaValue {
-  gcd_values(call.values)
-}
-
-///|
-fn eval_lcm(call : EvalCall) -> FormulaValue {
-  lcm_values(call.values)
 }
 
 ///|
@@ -325,11 +286,6 @@ fn eval_factdouble(call : EvalCall) -> FormulaValue {
       }
     _ => Error(formula_error_value)
   }
-}
-
-///|
-fn eval_multinomial(call : EvalCall) -> FormulaValue {
-  multinomial_values(call.values)
 }
 
 ///|
@@ -553,11 +509,6 @@ fn eval_arabic(call : EvalCall) -> FormulaValue {
 }
 
 ///|
-fn eval_base(call : EvalCall) -> FormulaValue {
-  base_values(call.values)
-}
-
-///|
 fn eval_bin2dec(call : EvalCall) -> FormulaValue {
   match call.values {
     [v0] =>
@@ -615,21 +566,6 @@ fn eval_bin2oct(call : EvalCall) -> FormulaValue {
       }
     _ => Error(formula_error_value)
   }
-}
-
-///|
-fn eval_dec2bin(call : EvalCall) -> FormulaValue {
-  dec2x_values("DEC2BIN", call.values)
-}
-
-///|
-fn eval_dec2hex(call : EvalCall) -> FormulaValue {
-  dec2x_values("DEC2HEX", call.values)
-}
-
-///|
-fn eval_dec2oct(call : EvalCall) -> FormulaValue {
-  dec2x_values("DEC2OCT", call.values)
 }
 
 ///|
@@ -900,16 +836,6 @@ fn eval_erfcdotprecise(call : EvalCall) -> FormulaValue {
 }
 
 ///|
-fn eval_convert(call : EvalCall) -> FormulaValue {
-  convert_values(call.values)
-}
-
-///|
-fn eval_euroconvert(call : EvalCall) -> FormulaValue {
-  euroconvert_values(call.values)
-}
-
-///|
 fn eval_gestep(call : EvalCall) -> FormulaValue {
   match call.values {
     [v0] | [v0, _] => {
@@ -929,31 +855,6 @@ fn eval_gestep(call : EvalCall) -> FormulaValue {
     }
     _ => Error(formula_error_value)
   }
-}
-
-///|
-fn eval_bitand(call : EvalCall) -> FormulaValue {
-  bitwise_values("BITAND", call.values)
-}
-
-///|
-fn eval_bitlshift(call : EvalCall) -> FormulaValue {
-  bitwise_values("BITLSHIFT", call.values)
-}
-
-///|
-fn eval_bitor(call : EvalCall) -> FormulaValue {
-  bitwise_values("BITOR", call.values)
-}
-
-///|
-fn eval_bitrshift(call : EvalCall) -> FormulaValue {
-  bitwise_values("BITRSHIFT", call.values)
-}
-
-///|
-fn eval_bitxor(call : EvalCall) -> FormulaValue {
-  bitwise_values("BITXOR", call.values)
 }
 
 ///|
@@ -1266,11 +1167,6 @@ fn eval_rand(call : EvalCall) -> FormulaValue {
     [] => Number(formula_rand().double())
     _ => Error(formula_error_value)
   }
-}
-
-///|
-fn eval_randarray(call : EvalCall) -> FormulaValue {
-  randarray_values(call.values)
 }
 
 ///|

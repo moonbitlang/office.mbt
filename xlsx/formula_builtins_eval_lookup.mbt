@@ -1,8 +1,4 @@
 ///|
-// Per-formula handlers for the lookup family. Each maps one (or a few aliases of)
-// one Excel formula to its implementation; eval_function routes to these via a HashMap.
-
-///|
 fn eval_transpose(call : EvalCall) -> FormulaValue raise XlsxError {
   match call.args {
     [a0] => {
@@ -17,11 +13,6 @@ fn eval_transpose(call : EvalCall) -> FormulaValue raise XlsxError {
     }
     _ => Error(formula_error_value)
   }
-}
-
-///|
-fn eval_sequence(call : EvalCall) -> FormulaValue {
-  sequence_values(call.values)
 }
 
 ///|

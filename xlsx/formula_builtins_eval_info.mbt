@@ -1,8 +1,4 @@
 ///|
-// Per-formula handlers for the info family. Each maps one (or a few aliases of)
-// one Excel formula to its implementation; eval_function routes to these via a HashMap.
-
-///|
 fn eval_dispimg(call : EvalCall) -> FormulaValue {
   match call.values {
     [v0, _] => v0
