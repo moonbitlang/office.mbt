@@ -119,3 +119,21 @@ test "format request grammar refuses what it cannot mean" {
   guard decimal_prefix_value("1a") is None else { fail("mixed") }
   guard decimal_prefix_value("99999999") is None else { fail("wide") }
 }
+
+///|
+/// `--in` must be canonical before it may act as a prefix: a truncated
+/// scope would silently widen the selection past the bracket boundary
+/// the engine's prefix test relies on.
+test "format scope validation admits only canonical spellings" {
+  format_validate_scope("p[3]")
+  format_validate_scope("tbl[1]/tr[1]/tc[1]/p[1]")
+  format_validate_scope("p[id=\"1A2B3C4D\"]")
+  for bad in ["", "p[1", "p[", "p[0]", "p]1[", "p[1]/", "P[1]", "body/p[1]"] {
+    let mut refused = false
+    format_validate_scope(bad) catch {
+      CliFailure(_) => refused = true
+      _ => ()
+    }
+    assert_true(refused, msg="expected a refusal for '" + bad + "'")
+  }
+}

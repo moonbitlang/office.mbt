@@ -297,6 +297,9 @@ jq -e '.error.code == "office.format.no_match"' "$work/docx-format-miss.json" >/
 expect_failure "$work/docx-format-flagless.json" format "$work/docx-filled.docx" \
   "$work/docx-format-never2.docx" --text "Ada" --json
 jq -e '.error.code == "office.invalid_arguments"' "$work/docx-format-flagless.json" >/dev/null || fail "docx format propertyless code"
+expect_failure "$work/docx-format-badscope.json" format "$work/docx-filled.docx" \
+  "$work/docx-format-never3.docx" --text "Ada" --in "p[1" --bold on --json
+jq -e '.error.code == "office.invalid_arguments" and (.error.message | test("canonical"))' "$work/docx-format-badscope.json" >/dev/null || fail "docx format noncanonical scope"
 
 # Tracked-change resolution on the same command: accepting everything keeps the
 # insertion and drops the deletion, rejecting everything does the reverse (which

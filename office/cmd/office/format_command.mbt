@@ -161,6 +161,36 @@ fn decimal_prefix_value(text : String) -> Int? {
 }
 
 ///|
+/// `--in` must be CANONICAL before it may act as a prefix: the engine's
+/// prefix test is safe exactly because scanner ordinals are bracketed
+/// (`p[1]` is not a prefix of `p[10]`), and a truncated or noncanonical
+/// scope would silently widen the selection. A stable `p[id="…"]`
+/// passes through — the engine resolves and validates it with its own
+/// typed refusals.
+fn format_validate_scope(scope : String) -> Unit raise CliFailure {
+  if scope == "" {
+    raise CliFailure(
+      @lib.protocol_error(
+        "office.invalid_arguments", "--in must name a body-relative subtree (p[3], tbl[1]) or a stable p[id=\"…\"]; an empty scope would match everything",
+      ),
+    )
+  }
+  if scope.has_prefix("p[id=") {
+    return
+  }
+  let full = "/docx/body/" + scope
+  let canonical = @lib.parse_selector(full).render() catch { _ => "" }
+  guard canonical == full else {
+    raise CliFailure(
+      @lib.protocol_error(
+        "office.invalid_arguments",
+        "--in '\{bounded_text(scope, 80)}' is not a canonical body-relative path; pass the exact spelling the read surfaces report (p[3], tbl[1]/tr[1]/tc[1]/p[1]) or a stable p[id=\"…\"]",
+      ),
+    )
+  }
+}
+
+///|
 fn format_property_json(value : Bool?) -> Json {
   match value {
     Some(state) => Json::boolean(state)
@@ -286,8 +316,10 @@ fn format_report_json(
 }
 
 ///|
-/// Slack reserved for the transaction fields the preflight measures as
-/// null — the same bound the replace verb reserves, for the same shape.
+/// Slack reserved for what the preflight cannot measure yet: the
+/// transaction fields it records as null, and the publication warnings
+/// the envelope will carry — a fixed set of short typed records. The
+/// same bound the replace verb reserves, for the same shapes.
 let format_report_transaction_slack : Int = 64 * 1024
 
 ///|
@@ -346,6 +378,10 @@ async fn run_format(matches : @argparse.Matches) -> Unit {
     other => other
   }
   let within = optional_value(matches, "in")
+  match within {
+    Some(scope) => format_validate_scope(scope)
+    None => ()
+  }
   let range = format_range_option(matches)
   // Exactly ONE selector: text finds occurrences, range names units.
   match (text, range) {
@@ -367,6 +403,13 @@ async fn run_format(matches : @argparse.Matches) -> Unit {
     raise CliFailure(
       @lib.protocol_error(
         "office.invalid_arguments", "--range needs --in naming the ONE paragraph its units index into",
+      ),
+    )
+  }
+  if range is Some(_) && optional_value(matches, "nth") is Some(_) {
+    raise CliFailure(
+      @lib.protocol_error(
+        "office.invalid_arguments", "--nth orders TEXT occurrences; a --range names its units directly, so the two cannot combine",
       ),
     )
   }
@@ -476,10 +519,12 @@ async fn run_format(matches : @argparse.Matches) -> Unit {
   )
   match mode {
     JsonDocument | JsonLines => {
+      let warnings = []
+      for warning in result.transaction().warning_records() {
+        warnings.push(warning)
+      }
       let payload = bounded_docx_payload(
-        record,
-        [],
-        docx_cli_default_max_output_chars,
+        record, warnings, docx_cli_default_max_output_chars,
       ) catch {
         _ =>
           raise CliFailure(
@@ -499,6 +544,11 @@ async fn run_format(matches : @argparse.Matches) -> Unit {
         " \{result.report().spans().length()} span(s) across \{result.report().affected_paths().length()} paragraph(s) -> " +
         human_text(output, 160),
       )
+      for warning in result.transaction().warning_records() {
+        println(
+          "warning [\{human_text(warning.code, 160)}]: \{human_text(warning.message, 320)}",
+        )
+      }
     }
   }
 }
