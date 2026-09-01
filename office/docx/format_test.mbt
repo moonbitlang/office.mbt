@@ -2178,3 +2178,55 @@ async test "the preflight models dialects and exclusion exactly" {
     assert_true(wide_published, msg="the edit publishes")
   })
 }
+
+///|
+/// Round-13 fidelity: many paths to one part stay EXACT — seventeen
+/// ordered choices to settings A above a fallback to settings B give
+/// every consumer exactly one part, and no width of paths turns that
+/// into a fork.
+async test "the preflight keeps many-path reachability exact" {
+  with_docx_session_test_dir(directory => {
+    let ns_decls = StringBuilder()
+    let choices = StringBuilder()
+    for index in 0..<17 {
+      ns_decls.write_string(" xmlns:n\{index}=\"urn:x:\{index}\"")
+      choices.write_string(
+        "<mc:Choice Requires=\"n\{index}\"><Relationship Id=\"rId3\" Type=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships/settings\" Target=\"settings.xml\"/></mc:Choice>",
+      )
+    }
+    let many_paths = repackaged_fixture(
+      directory,
+      "many-paths",
+      [],
+      [
+        (
+          "[Content_Types].xml", "<Override PartName=\"/word/settings.xml\"", "<Override PartName=\"/word/settings-b.xml\" ContentType=\"application/vnd.openxmlformats-officedocument.wordprocessingml.settings+xml\"/><Override PartName=\"/word/settings.xml\"",
+        ),
+        (
+          "word/_rels/document.xml.rels",
+          "<Relationship Id=\"rId3\" Type=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships/settings\" Target=\"settings.xml\"/>",
+          "<mc:AlternateContent xmlns:mc=\"http://schemas.openxmlformats.org/markup-compatibility/2006\"" +
+          ns_decls.to_string() +
+          ">" +
+          choices.to_string() +
+          "<mc:Fallback><Relationship Id=\"rId3b\" Type=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships/settings\" Target=\"settings-b.xml\"/></mc:Fallback>" +
+          "</mc:AlternateContent>",
+        ),
+      ],
+      [
+        (
+          "word/settings-b.xml", "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?><w:settings xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\"><w:zoom w:percent=\"110\"/></w:settings>",
+        ),
+      ],
+    )
+    let (failure, published) = format_input_probe(
+      many_paths,
+      directory + "/many-paths-out.docx",
+    )
+    assert_true(
+      failure is None,
+      msg="seventeen exclusive paths are not a fork: \{failure}",
+    )
+    assert_true(published, msg="the edit publishes")
+  })
+}

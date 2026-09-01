@@ -676,10 +676,10 @@ fn docx_paragraph_direct_format_at(
   // Index the units a run carries ONCE: scanning every contribution
   // per unit is quadratic, and a paragraph of many small runs is legal.
   let width = paragraph.projection_end - base
-  let carrier : Array[Int] = []
-  for _ in 0..<width {
-    carrier.push(-1)
-  }
+  // Ownership as ordered INTERVALS: a paragraph is allowed to be one
+  // enormous run, and a table sized by its units would be sized by the
+  // text.
+  let owned : Array[(Int, Int, Int)] = []
   for contribution in paragraph.contributions {
     guard contribution.kind is ProjectedText(_) else { continue }
     guard contribution.run_source is Some(SourceElementId(run_identity)) else {
@@ -687,19 +687,14 @@ fn docx_paragraph_direct_format_at(
     }
     let from = contribution.projection_start - base
     let to = contribution.projection_end - base
-    for unit in from..<to {
-      if unit >= 0 && unit < width {
-        carrier[unit] = run_identity
-      }
+    if to > from && from >= 0 && to <= width {
+      owned.push((from, to, run_identity))
     }
   }
-  // Mark the selection ONCE: the paragraph lookup and the carrier
-  // index are built once for the whole batch, so verifying a
-  // paragraph's spans costs one pass rather than one per span.
-  let selected : Array[Bool] = []
-  for _ in 0..<width {
-    selected.push(false)
-  }
+  owned.sort_by(fn(left, right) { left.0.compare(right.0) })
+  // The selection, sorted and coalesced ONCE: the sweep below then
+  // costs the contributions and the spans, not the characters.
+  let selection : Array[(Int, Int)] = []
   for span in spans {
     let (start, end) = span
     guard start >= 0 && start < end && end <= width else {
@@ -707,29 +702,43 @@ fn docx_paragraph_direct_format_at(
         "the range \{start}:\{end} is outside the \{width} unit(s) of '\{path}'",
       )
     }
-    for unit in start..<end {
-      selected[unit] = true
-    }
+    selection.push(span)
   }
-  for unit in 0..<width {
-    guard !selected[unit] || carrier[unit] >= 0 else {
-      return Some(
-        "unit \{unit} of '\{path}' is not carried by any run, so it cannot hold direct formatting",
-      )
-    }
-  }
+  selection.sort_by(fn(left, right) { left.0.compare(right.0) })
+  // EVERY selected unit must belong to a run: text the tolerant reader
+  // admits directly under the paragraph has no run to carry direct
+  // formatting, so a range covering it can never be satisfied — and
+  // judging only the runs that happen to exist would call that a pass.
   // Every run holding selected text must carry the properties; a run
   // whose text lies only OUTSIDE the span is none of this check's
   // business.
   let judged : Map[Int, Bool] = Map([])
-  let mut judged_count = 0
-  for unit in 0..<width {
-    guard selected[unit] else { continue }
-    let run_identity = carrier[unit]
-    guard run_identity >= 0 else { continue }
-    guard judged.get(run_identity) is None else { continue }
-    judged[run_identity] = true
-    judged_count = judged_count + 1
+  let judged_runs : Array[Int] = []
+  let mut owned_at = 0
+  for span in selection {
+    let (start, end) = span
+    let mut cursor = start
+    while owned_at < owned.length() && owned[owned_at].1 <= cursor {
+      owned_at += 1
+    }
+    let mut probe = owned_at
+    while cursor < end {
+      guard probe < owned.length() && owned[probe].0 <= cursor else {
+        return Some(
+          "unit \{cursor} of '\{path}' is not carried by any run, so it cannot hold direct formatting",
+        )
+      }
+      let (_, owned_end, run_identity) = owned[probe]
+      if judged.get(run_identity) is None {
+        judged[run_identity] = true
+        judged_runs.push(run_identity)
+      }
+      cursor = owned_end
+      probe += 1
+    }
+  }
+  let judged_count = judged_runs.length()
+  for run_identity in judged_runs {
     let run_element = elements[run_identity]
     let binding = format_surgery_run_binding(
       bytes,
@@ -884,7 +893,7 @@ fn docx_paragraph_format_preserved_at(
       path,
       interner~,
     )
-    is Some((original_units, original_silent, original_mark)) else {
+    is Some((original_units, original_width, original_silent, original_mark)) else {
     return Some("the path '\{path}' names no single paragraph before the edit")
   }
   guard docx_format_paragraph_provenance(
@@ -894,7 +903,7 @@ fn docx_paragraph_format_preserved_at(
       path,
       interner~,
     )
-    is Some((result_units, result_silent, result_mark)) else {
+    is Some((result_units, result_width, result_silent, result_mark)) else {
     return Some("the path '\{path}' names no single paragraph after the edit")
   }
   guard original_mark == result_mark else {
@@ -902,33 +911,107 @@ fn docx_paragraph_format_preserved_at(
       "the paragraph mark of '\{path}' changed its formatting, though no span selected it",
     )
   }
-  guard original_units.length() == result_units.length() else {
+  guard original_width == result_width else {
     return Some(
-      "'\{path}' projected \{original_units.length()} unit(s) before the edit and \{result_units.length()} after",
+      "'\{path}' projected \{original_width} unit(s) before the edit and \{result_width} after",
     )
   }
-  // The selection, marked once: testing every span per unit is
-  // quadratic when a paragraph carries many spans.
-  let selected_units : Array[Bool] = []
-  for _ in 0..<original_units.length() {
-    selected_units.push(false)
-  }
+  // The selection as sorted, coalesced INTERVALS, like the ownership:
+  // the comparison sweeps segment boundaries, so a paragraph allowed to
+  // be one enormous run costs its contributions, not its characters.
+  let selection : Array[(Int, Int)] = []
   for span in spans {
     let (from, to) = span
-    for unit in from..<to {
-      if unit >= 0 && unit < selected_units.length() {
-        selected_units[unit] = true
-      }
+    let start = if from < 0 { 0 } else { from }
+    let end = if to > original_width { original_width } else { to }
+    if end > start {
+      selection.push((start, end))
     }
   }
-  for unit in 0..<original_units.length() {
-    let selected = selected_units[unit]
-    let (original_properties, original_key, original_digest) = original_units[unit]
-    let (result_properties, result_key, result_digest) = result_units[unit]
-    // Units of one run share their properties, so both the raw and the
-    // filtered comparisons are made on FINGERPRINTS computed once per
-    // distinct text: comparing or hashing the whole property bytes per
-    // unit would cost the text's length times their size.
+  selection.sort_by(fn(left, right) { left.0.compare(right.0) })
+  let merged_selection : Array[(Int, Int)] = []
+  for span in selection {
+    match merged_selection.last() {
+      Some(last) if span.0 <= last.1 =>
+        if span.1 > last.1 {
+          merged_selection[merged_selection.length() - 1] = (last.0, span.1)
+        }
+      _ => merged_selection.push(span)
+    }
+  }
+  // The piecewise comparison: at every maximal segment on which the
+  // before-owner, after-owner, and selection are all constant, apply
+  // the same three judgments the per-unit loop made.
+  let mut cursor = 0
+  let mut before_at = 0
+  let mut after_at = 0
+  let mut selected_at = 0
+  let unowned : (String, String, String) = ("", "0", "0")
+  while cursor < original_width {
+    while before_at < original_units.length() &&
+          original_units[before_at].end <= cursor {
+      before_at += 1
+    }
+    while after_at < result_units.length() &&
+          result_units[after_at].end <= cursor {
+      after_at += 1
+    }
+    while selected_at < merged_selection.length() &&
+          merged_selection[selected_at].1 <= cursor {
+      selected_at += 1
+    }
+    let mut segment_end = original_width
+    let (original_properties, original_key, original_digest) = if before_at <
+      original_units.length() {
+      let owned = original_units[before_at]
+      if owned.start > cursor {
+        if owned.start < segment_end {
+          segment_end = owned.start
+        }
+        unowned
+      } else {
+        if owned.end < segment_end {
+          segment_end = owned.end
+        }
+        (owned.properties, owned.key, owned.digest)
+      }
+    } else {
+      unowned
+    }
+    let (result_properties, result_key, result_digest) = if after_at <
+      result_units.length() {
+      let owned = result_units[after_at]
+      if owned.start > cursor {
+        if owned.start < segment_end {
+          segment_end = owned.start
+        }
+        unowned
+      } else {
+        if owned.end < segment_end {
+          segment_end = owned.end
+        }
+        (owned.properties, owned.key, owned.digest)
+      }
+    } else {
+      unowned
+    }
+    let selected = if selected_at < merged_selection.length() {
+      let span = merged_selection[selected_at]
+      if span.0 > cursor {
+        if span.0 < segment_end {
+          segment_end = span.0
+        }
+        false
+      } else {
+        if span.1 < segment_end {
+          segment_end = span.1
+        }
+        true
+      }
+    } else {
+      false
+    }
+    let unit = cursor
     // A unit's properties only mean what its namespace bindings say
     // they mean: the same spelling under a rebound prefix is different
     // formatting, and a faithful edit never disturbs it.
@@ -939,9 +1022,9 @@ fn docx_paragraph_format_preserved_at(
     }
     if selected {
       // The properties the request does NOT name must survive. Filtered
-      // results are cached by their text: consecutive units of one run
-      // share properties, and re-filtering them per unit would cost
-      // text times property bytes.
+      // results are cached by their text: segments of one run share
+      // properties, and re-filtering them per segment would cost text
+      // times property bytes.
       guard docx_format_filtered(
           original_properties,
           original_key,
@@ -960,13 +1043,14 @@ fn docx_paragraph_format_preserved_at(
           "unit \{unit} of '\{path}' lost or gained a run property the request never named",
         )
       }
-      continue
+    } else {
+      guard original_key == result_key else {
+        return Some(
+          "unit \{unit} of '\{path}' lies outside every requested span but its run properties changed",
+        )
+      }
     }
-    guard original_key == result_key else {
-      return Some(
-        "unit \{unit} of '\{path}' lies outside every requested span but its run properties changed",
-      )
-    }
+    cursor = segment_end
   }
   guard original_silent.length() == result_silent.length() else {
     return Some(
@@ -984,17 +1068,29 @@ fn docx_paragraph_format_preserved_at(
 }
 
 ///|
+/// One text contribution's provenance: the unit range it claims and the
+/// owning run's properties, key, and binding digest.
+priv struct DocxFormatOwnedSpan {
+  start : Int
+  end : Int
+  properties : String
+  key : String
+  digest : String
+}
+
+///|
 /// One paragraph's provenance: the run properties that apply to each
-/// projection unit, and the properties of the runs that project no text,
-/// in document order. `None` when the path names no paragraph, or names
-/// more than one (a collided path cannot be answered for).
+/// projection unit (as ordered intervals over the units), the
+/// projection width, and the properties of the runs that project no
+/// text, in document order. `None` when the path names no paragraph, or
+/// names more than one (a collided path cannot be answered for).
 fn docx_format_paragraph_provenance(
   projection : ReaderProjection,
   bytes : BytesView,
   index : DocxStoryIndex,
   path : String,
   interner~ : DocxFormatInterner,
-) -> (Array[(String, String, String)], Array[String], String)? raise DocxError {
+) -> (Array[DocxFormatOwnedSpan], Int, Array[String], String)? raise DocxError {
   let elements = projection.scan.elements()
   let (target, found) = index.locate(path)
   guard target >= 0 && found == 1 else { return None }
@@ -1002,12 +1098,13 @@ fn docx_format_paragraph_provenance(
   let SourceElementId(paragraph_head_identity) = paragraph.sources[0].source
   let base = paragraph.projection_start
   let width = paragraph.projection_end - base
-  let units : Array[(String, String, String)] = []
-  for _ in 0..<width {
-    // A unit no run claims — text the tolerant reader admits directly
-    // under the paragraph — has no properties to preserve, and says so.
-    units.push(("", "0", "0")) // key "0" = unowned; ids start at 1
-  }
+  // Ownership as INTERVALS, one per text contribution, in projection
+  // order: a paragraph is allowed to be one enormous run, and a table
+  // sized by its units would be sized by the text. A unit inside no
+  // interval — text the tolerant reader admits directly under the
+  // paragraph — has no properties to preserve, and the comparison
+  // treats the gap as saying so.
+  let units : Array[DocxFormatOwnedSpan] = []
   // Namespace scopes and declaration tables, memoized per element: an
   // ancestor's declarations are read once, and an element that
   // declares nothing shares its parent's scope outright.
@@ -1085,12 +1182,17 @@ fn docx_format_paragraph_provenance(
     }
     let from = contribution.projection_start - base
     let to = contribution.projection_end - base
-    for unit in from..<to {
-      if unit >= 0 && unit < width {
-        units[unit] = (properties, properties_key, digest)
-      }
+    if to > from && from >= 0 && to <= width {
+      units.push({
+        start: from,
+        end: to,
+        properties,
+        key: properties_key,
+        digest,
+      })
     }
   }
+  units.sort_by(fn(left, right) { left.start.compare(right.start) })
   // Which runs project text, indexed once: scanning every contribution
   // per run is quadratic, and a paragraph of many small runs is legal.
   let projecting : Map[Int, Bool] = Map([])
@@ -1259,7 +1361,7 @@ fn docx_format_paragraph_provenance(
     )
   }
   let mark = mark_builder.to_string()
-  Some((units, silent, mark))
+  Some((units, width, silent, mark))
 }
 
 ///|

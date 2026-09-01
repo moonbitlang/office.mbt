@@ -515,3 +515,38 @@ async test "the readback sees rebinding behind compatibility directives" {
     )
   })
 }
+
+///|
+/// A paragraph is allowed to be one enormous run. The readback's
+/// comparisons are per CONTRIBUTION and per SEGMENT, not per character,
+/// so a multi-megabyte paragraph formats without tables sized by its
+/// text.
+async test "one huge paragraph formats without per-unit tables" {
+  with_format_readback_dir(directory => {
+    let filler = StringBuilder()
+    for _ in 0..<200000 {
+      filler.write_string("lorem ipsum ")
+    }
+    let source = format_readback_fixture(
+      directory,
+      "huge.docx",
+      "<w:r><w:rPr><w:i/></w:rPr><w:t xml:space=\"preserve\">" +
+      filler.to_string() +
+      "</w:t></w:r><w:r><w:t>Hello world</w:t></w:r>",
+    )
+    let output = directory + "/huge-out.docx"
+    let result = transact_docx_format(
+      @transaction.transaction_options(source, output_path=output),
+      format=@word.docx_direct_format(bold=true),
+      text="world",
+    )
+    assert_eq(result.report().spans().length(), 1)
+    let published = @zip.read(@afs.read_file(output).binary())
+    guard published.get("word/document.xml") is Some(payload) else {
+      fail("no document part")
+    }
+    let document = @utf8.decode(payload)
+    assert_eq(document.split("<w:b/>").collect().length() - 1, 1)
+    assert_true(document.contains("<w:i/>"), msg="the huge run keeps italic")
+  })
+}

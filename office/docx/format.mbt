@@ -405,7 +405,7 @@ fn docx_part_bytes(
 fn docx_package_declares_signature(
   archive : @zip.Archive,
   parts : Map[String, (String, String)],
-) -> Bool {
+) -> Bool raise @transaction.TransactionError {
   let origins = docx_relationship_targets(archive, parts, "", [
     DOCX_SIGNATURE_ORIGIN_RELATIONSHIP,
   ])
@@ -577,7 +577,7 @@ const DOCX_STRICT_SETTINGS_RELATIONSHIP : String = "http://purl.oclc.org/ooxml/o
 fn docx_settings_parts(
   archive : @zip.Archive,
   parts : Map[String, (String, String)],
-) -> (Bool, Array[DocxPossiblePart]) {
+) -> (Bool, Array[DocxPossiblePart]) raise @transaction.TransactionError {
   let mains = docx_reachable_parts(
     archive,
     parts,
@@ -642,20 +642,69 @@ fn docx_parts_coexist(candidates : Array[DocxPossiblePart]) -> Bool {
 }
 
 ///|
-/// A bounded push: past the bound a part's conditions collapse to
-/// ALWAYS — unconditionally reachable, never missing a path.
+/// A bounded push, EXACT below the bound: a redundant condition — one
+/// already subsumed by a weaker condition in the list, which every
+/// consumer it admits already satisfies — is dropped; past the bound
+/// the push raises the analysis refusal, because widening in either
+/// direction manufactures a verdict about consumers nobody modeled.
 fn docx_push_condition(
   conditions : Array[DocxCondition],
   condition : DocxCondition,
-) -> Unit {
-  if conditions is [only] && only.required.is_empty() && only.refused.is_empty() {
-    return
+) -> Unit raise @transaction.TransactionError {
+  for existing in conditions {
+    if docx_condition_subsumes(existing, condition) {
+      return
+    }
   }
-  if conditions.length() >= 16 {
-    conditions.clear()
-    conditions.push(DocxCondition::always())
-  } else {
-    conditions.push(condition)
+  if conditions.length() >= 64 {
+    raise docx_analysis_refusal()
+  }
+  conditions.push(condition)
+}
+
+///|
+/// Whether `weaker` admits every consumer `stronger` admits: fewer
+/// positive requirements and fewer clauses, as sets.
+fn docx_condition_subsumes(
+  weaker : DocxCondition,
+  stronger : DocxCondition,
+) -> Bool {
+  for uri in weaker.required {
+    if !stronger.required.contains(uri) {
+      return false
+    }
+  }
+  for group in weaker.refused {
+    let mut present = false
+    for candidate in stronger.refused {
+      if candidate.length() == group.length() {
+        let mut same = true
+        for uri in group {
+          if !candidate.contains(uri) {
+            same = false
+          }
+        }
+        if same {
+          present = true
+        }
+      }
+    }
+    if !present {
+      return false
+    }
+  }
+  true
+}
+
+///|
+/// The refusal for compatibility markup past the analysis bound: this
+/// preflight is EXACT below it and refuses above it, because a widened
+/// answer would be a guess about which consumers see what.
+fn docx_analysis_refusal() -> @transaction.TransactionError {
+  @transaction.transaction_failure(
+    "office.docx.settings_ambiguous", "this package's compatibility markup is too complex to analyze; its editing protections cannot be checked",
+  ) catch {
+    error => error
   }
 }
 
@@ -669,7 +718,7 @@ fn docx_reachable_parts(
   source : String,
   types : Array[String],
   prior : Array[DocxCondition],
-) -> Array[DocxPossiblePart] {
+) -> Array[DocxPossiblePart] raise @transaction.TransactionError {
   let reachable : Array[DocxPossiblePart] = []
   for candidate in docx_relationship_targets(archive, parts, source, types) {
     let combined : Array[DocxCondition] = []
@@ -706,7 +755,7 @@ fn docx_relationship_targets(
   parts : Map[String, (String, String)],
   source : String,
   types : Array[String],
-) -> Array[DocxPossiblePart] {
+) -> Array[DocxPossiblePart] raise @transaction.TransactionError {
   let rels_name = @opc.relationships_part_name_for_source(source)
   guard docx_part_bytes(archive, parts, rels_name) is Some(bytes) else {
     return []
