@@ -2558,3 +2558,78 @@ async test "the preflight analyzes unreached parts without demanding them" {
     assert_false(tracked_published, msg="nothing may be published")
   })
 }
+
+///|
+/// Round-19 fidelity: present rels fail closed, and a branch with two
+/// sibling roots is no document.
+async test "the preflight fails closed on rels and multi-root branches" {
+  with_docx_session_test_dir(directory => {
+    // A PRESENT origin rels part that cannot be parsed hides nothing:
+    // the package refuses as unreadable instead of publishing over a
+    // signature the analysis could not see.
+    let broken_rels = repackaged_fixture(
+      directory,
+      "broken-rels",
+      [],
+      [
+        (
+          "_rels/.rels", "</Relationships>", "<Relationship Id=\"rIdSigOrigin\" Type=\"http://schemas.openxmlformats.org/package/2006/relationships/digital-signature/origin\" Target=\"_xmlsignatures/origin.sigs\"/></Relationships>",
+        ),
+      ],
+      [
+        ("_xmlsignatures/origin.sigs", "<origin/>"),
+        ("_xmlsignatures/_rels/origin.sigs.rels", "<Relationships"),
+      ],
+    )
+    let (broken_failure, broken_published) = format_input_probe(
+      broken_rels,
+      directory + "/broken-rels-out.docx",
+    )
+    guard broken_failure is Some(broken_message) else {
+      fail("an unreadable present rels part is not evidence of safety")
+    }
+    assert_true(
+      broken_message.contains("could not be read") ||
+      broken_message.contains("invalid"),
+      msg=broken_message,
+    )
+    assert_false(broken_published, msg="nothing may be published")
+    // A choice holding TWO sibling settings roots is no document for
+    // its consumers: the tracked sibling decides nothing, and the
+    // single-root fallback publishes.
+    let twin_roots = repackaged_fixture(
+      directory,
+      "twin-roots",
+      [],
+      [
+        (
+          "word/settings.xml",
+          "<w:settings",
+          "<mc0:AlternateContent xmlns:mc0=\"http://schemas.openxmlformats.org/markup-compatibility/2006\" xmlns:x=\"urn:example:x\">" +
+          "<mc0:Choice Requires=\"x\">" +
+          "<w:settings xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\"><w:trackRevisions/></w:settings>" +
+          "<w:settings xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\"/>" +
+          "</mc0:Choice><mc0:Fallback><w:settings",
+        ),
+        (
+          "word/settings.xml", "</w:settings>", "</w:settings></mc0:Fallback></mc0:AlternateContent>",
+        ),
+      ],
+      [],
+    )
+    let (twin_failure, twin_published) = format_input_probe(
+      twin_roots,
+      directory + "/twin-roots-out.docx",
+    )
+    // Whichever voice speaks — the single-root rule publishing, or the
+    // MCE reader refusing an alternate-rooted part outright — the twin
+    // roots never refuse AS TRACKING.
+    match twin_failure {
+      Some(message) => {
+        assert_true(message.contains("could not be read"), msg=message)
+        assert_false(twin_published, msg="nothing published on refusal")
+      }
+      None => assert_true(twin_published, msg="the edit publishes")
+    }
+  })
+}

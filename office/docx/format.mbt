@@ -819,11 +819,17 @@ fn docx_relationship_targets(
   // `mc:Choice` is one some consumer resolves, and a preflight that read
   // only its own projection would miss a settings part — or a signature
   // chain — that Word follows.
+  // A PRESENT relationships part that cannot be read is not evidence of
+  // anything: failing open here would let an unparseable rels part hide
+  // a signature chain or a settings part.
   let (root, _effective) = @opc.read_opc_relationships_xml_with_roots_limited(
     bytes,
     candidate_xml_budget(),
   ) catch {
-    _ => return []
+    _ =>
+      raise @transaction.transaction_failure(
+        "office.docx.settings_unreadable", "this package's relationships could not be read, so its editing protections cannot be checked",
+      )
   }
   let base = match source.rev_find("/") {
     Some(slash) => source[:slash].to_owned()
@@ -1043,35 +1049,35 @@ fn docx_mce_possible_roots(
   // consumers who find the wrapper ignorable.
   fn root_directives(
     element : @xml.XmlElement,
-  ) -> (Array[(String, Int?)], Array[(Bool, String)]) {
+  ) -> (Array[(String, Int?)], Array[(Bool, String)]) raise @transaction.TransactionError {
     let generation_undo : Array[(String, Int?)] = []
     match element.attributes.get("{\{DOCX_MC_NAMESPACE}}Ignorable") {
       Some(value) =>
-        for token in docx_split_tokens(value) {
-          guard scope.get(token) is Some(uri) else { continue }
+        docx_tokens_charged(value, root_charge, token => {
+          guard scope.get(token) is Some(uri) else { return }
           let previous = generations.get(uri)
           generation_undo.push((uri, previous))
           generations[uri] = previous.unwrap_or(0) + 1
-        }
+        })
       None => ()
     }
     let added : Array[(Bool, String)] = []
     match element.attributes.get("{\{DOCX_MC_NAMESPACE}}ProcessContent") {
       Some(value) =>
-        for token in docx_split_tokens(value) {
+        docx_tokens_charged(value, root_charge, token => {
           let (uri, local) = match token.find(":") {
             Some(colon) => {
               let prefix = token.substring(start=0, end=colon).to_string()
               let local = token.substring(start=colon + 1).to_string()
               match scope.get(prefix) {
                 Some(uri) => (uri, local)
-                None => continue
+                None => return
               }
             }
             None =>
               match scope.get("") {
                 Some(uri) => (uri, token.to_string())
-                None => continue
+                None => return
               }
           }
           let generation = generations.get(uri).unwrap_or(0)
@@ -1084,7 +1090,7 @@ fn docx_mce_possible_roots(
             root_count_up(process_exact, key)
             added.push((false, key))
           }
-        }
+        })
       None => ()
     }
     (generation_undo, added)
@@ -1132,20 +1138,24 @@ fn docx_mce_possible_roots(
     let seen : Map[String, Bool] = Map([])
     match element.attributes.get("{\{DOCX_MC_NAMESPACE}}MustUnderstand") {
       Some(value) =>
-        for token in docx_split_tokens(value) {
-          root_charge(1)
-          guard scope.get(token) is Some(uri) else { continue }
+        docx_tokens_charged(value, root_charge, token => {
+          guard scope.get(token) is Some(uri) else { return }
           if !understood.contains(uri) && seen.get(uri) is None {
+            if uris.length() >= 64 {
+              raise docx_analysis_refusal()
+            }
             seen[uri] = true
             uris.push(uri)
           }
-        }
+        })
       None => ()
     }
     uris
   }
 
-  fn branch_requires(choice : @xml.XmlElement) -> Array[String]? {
+  fn branch_requires(
+    choice : @xml.XmlElement,
+  ) -> Array[String]? raise @transaction.TransactionError {
     let requires = match choice.attributes.get("Requires") {
       Some(value) => value
       None =>
@@ -1155,14 +1165,36 @@ fn docx_mce_possible_roots(
         }
     }
     let uris : Array[String] = []
-    for token in docx_split_tokens(requires) {
-      guard scope.get(token) is Some(uri) else { return None }
+    let mut resolved = true
+    docx_tokens_charged(requires, root_charge, token => {
+      guard scope.get(token) is Some(uri) else {
+        resolved = false
+        return
+      }
+      if uris.length() >= 64 {
+        raise docx_analysis_refusal()
+      }
       uris.push(uri)
-    }
-    if uris.is_empty() {
+    })
+    if !resolved || uris.is_empty() {
       return None
     }
     Some(uris)
+  }
+
+  // A branch resolves to a READABLE document only when it holds exactly
+  // one element: two sibling roots are no document for that consumer,
+  // and nothing inside them is anyone's settings.
+  fn single_element(container : @xml.XmlElement) -> @xml.XmlElement? {
+    let mut found : @xml.XmlElement? = None
+    for node in container.children {
+      guard node is XmlElement(child) else { continue }
+      if found is Some(_) {
+        return None
+      }
+      found = Some(child)
+    }
+    found
   }
 
   fn collect(
@@ -1237,9 +1269,9 @@ fn docx_mce_possible_roots(
             None => ()
           }
           if branch_condition.satisfiable() {
-            for node in branch.children {
-              guard node is XmlElement(candidate) else { continue }
-              collect(candidate, branch_condition)
+            match single_element(branch) {
+              Some(candidate) => collect(candidate, branch_condition)
+              None => ()
             }
           }
           // A choice every consumer of the vocabulary satisfies is the
@@ -1273,9 +1305,9 @@ fn docx_mce_possible_roots(
           }
         } else if branch.name == "{\{DOCX_MC_NAMESPACE}}Fallback" {
           if branch_condition.satisfiable() {
-            for node in branch.children {
-              guard node is XmlElement(candidate) else { continue }
-              collect(candidate, branch_condition)
+            match single_element(branch) {
+              Some(candidate) => collect(candidate, branch_condition)
+              None => ()
             }
           }
         }
@@ -1295,9 +1327,9 @@ fn docx_mce_possible_roots(
         let promoted = condition.snapshot()
         promoted.refused.push([root_element_uri(element.name)])
         trail.push(element)
-        for node in element.children {
-          guard node is XmlElement(candidate) else { continue }
-          collect(candidate, promoted)
+        match single_element(element) {
+          Some(candidate) => collect(candidate, promoted)
+          None => ()
         }
         trail.pop() |> ignore
       }
@@ -1528,47 +1560,47 @@ fn docx_mce_possible(
   fn directives(
     element : @xml.XmlElement,
   ) -> (Array[(String, Int?)], Array[(Bool, String)], Int) raise @transaction.TransactionError {
-    let mut required_added = 0
+    let required_box : Array[Int] = [0]
     match element.attributes.get("{\{DOCX_MC_NAMESPACE}}MustUnderstand") {
       Some(value) =>
-        for token in docx_split_tokens(value) {
-          charge(1)
-          guard scope.get(token) is Some(uri) else { continue }
+        docx_tokens_charged(value, charge, token => {
+          guard scope.get(token) is Some(uri) else { return }
           if !understood.contains(uri) && require(uri) {
             condition.required.push(uri)
-            required_added += 1
+            required_box[0] += 1
           }
-        }
+        })
       None => ()
     }
+    let required_added = required_box[0]
     let generation_undo : Array[(String, Int?)] = []
     match element.attributes.get("{\{DOCX_MC_NAMESPACE}}Ignorable") {
       Some(value) =>
-        for token in docx_split_tokens(value) {
-          guard scope.get(token) is Some(uri) else { continue }
+        docx_tokens_charged(value, charge, token => {
+          guard scope.get(token) is Some(uri) else { return }
           let previous = generations.get(uri)
           generation_undo.push((uri, previous))
           generations[uri] = previous.unwrap_or(0) + 1
-        }
+        })
       None => ()
     }
     let added : Array[(Bool, String)] = []
     match element.attributes.get("{\{DOCX_MC_NAMESPACE}}ProcessContent") {
       Some(value) =>
-        for token in docx_split_tokens(value) {
+        docx_tokens_charged(value, charge, token => {
           let (uri, local) = match token.find(":") {
             Some(colon) => {
               let prefix = token.substring(start=0, end=colon).to_string()
               let local = token.substring(start=colon + 1).to_string()
               match scope.get(prefix) {
                 Some(uri) => (uri, local)
-                None => continue
+                None => return
               }
             }
             None =>
               match scope.get("") {
                 Some(uri) => (uri, token.to_string())
-                None => continue
+                None => return
               }
           }
           let generation = generations.get(uri).unwrap_or(0)
@@ -1581,7 +1613,7 @@ fn docx_mce_possible(
             count_up(process_exact, key)
             added.push((false, key))
           }
-        }
+        })
       None => ()
     }
     (generation_undo, added, required_added)
@@ -1628,7 +1660,9 @@ fn docx_mce_possible(
 
   // The namespaces a choice requires, resolved where it sits; None for
   // a choice with no requirement to read.
-  fn choice_requires(choice : @xml.XmlElement) -> Array[String]? {
+  fn choice_requires(
+    choice : @xml.XmlElement,
+  ) -> Array[String]? raise @transaction.TransactionError {
     let requires = match choice.attributes.get("Requires") {
       Some(value) => value
       None =>
@@ -1638,11 +1672,18 @@ fn docx_mce_possible(
         }
     }
     let uris : Array[String] = []
-    for token in docx_split_tokens(requires) {
-      guard scope.get(token) is Some(uri) else { return None }
+    let mut resolved = true
+    docx_tokens_charged(requires, charge, token => {
+      guard scope.get(token) is Some(uri) else {
+        resolved = false
+        return
+      }
+      if uris.length() >= 64 {
+        raise docx_analysis_refusal()
+      }
       uris.push(uri)
-    }
-    if uris.is_empty() {
+    })
+    if !resolved || uris.is_empty() {
       return None
     }
     Some(uris)
@@ -1650,7 +1691,9 @@ fn docx_mce_possible(
 
   // Every prefix a choice requires resolves to an understood namespace
   // exactly when every consumer of this vocabulary satisfies it.
-  fn choice_decides(choice : @xml.XmlElement) -> Bool {
+  fn choice_decides(
+    choice : @xml.XmlElement,
+  ) -> Bool raise @transaction.TransactionError {
     match choice_requires(choice) {
       Some(uris) => {
         for uri in uris {
@@ -1765,6 +1808,31 @@ fn docx_mce_possible(
 
 ///|
 /// XML-whitespace-separated tokens of an attribute value.
+fn docx_tokens_charged(
+  value : String,
+  charge : (Int) -> Unit raise @transaction.TransactionError,
+  each : (String) -> Unit raise @transaction.TransactionError,
+) -> Unit raise @transaction.TransactionError {
+  // Charged BEFORE each token is materialized: an attribute is allowed
+  // to be megabytes of whitespace-separated names, and allocating them
+  // all first would spend the memory before any meter could speak.
+  let mut start = -1
+  for offset in 0..<=value.length() {
+    let boundary = offset == value.length() ||
+      value[offset] is (' ' | '\t' | '\n' | '\r')
+    if boundary {
+      if start >= 0 {
+        charge(8)
+        each(value.substring(start~, end=offset).to_string())
+        start = -1
+      }
+    } else if start < 0 {
+      start = offset
+    }
+  }
+}
+
+///|
 fn docx_split_tokens(value : String) -> Array[String] {
   let tokens : Array[String] = []
   let mut start = -1
