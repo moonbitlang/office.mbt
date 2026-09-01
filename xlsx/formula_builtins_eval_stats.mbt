@@ -1,18 +1,4 @@
 ///|
-// Per-formula handlers for the stats family. Each maps one (or a few aliases of)
-// one Excel formula to its implementation; eval_function routes to these via a HashMap.
-
-///|
-fn eval_average(call : EvalCall) -> FormulaValue {
-  average_values(call.values)
-}
-
-///|
-fn eval_averagea(call : EvalCall) -> FormulaValue {
-  averagea_values(call.values)
-}
-
-///|
 fn eval_stdev(call : EvalCall) -> FormulaValue {
   match call.values {
     [_, ..] => stdev_values(false, call.values)
@@ -88,11 +74,6 @@ fn eval_varpa(call : EvalCall) -> FormulaValue {
     [_, ..] => variance_values(call.values, false, true)
     [] => Error(formula_error_value)
   }
-}
-
-///|
-fn eval_trimmean(call : EvalCall) -> FormulaValue {
-  trimmean_values(call.values)
 }
 
 ///|
@@ -499,41 +480,6 @@ fn eval_steyx(call : EvalCall) -> FormulaValue {
 }
 
 ///|
-fn eval_median(call : EvalCall) -> FormulaValue {
-  median_values(call.values)
-}
-
-///|
-fn eval_min(call : EvalCall) -> FormulaValue {
-  min_values(call.values)
-}
-
-///|
-fn eval_max(call : EvalCall) -> FormulaValue {
-  max_values(call.values)
-}
-
-///|
-fn eval_mina(call : EvalCall) -> FormulaValue {
-  mina_values(call.values)
-}
-
-///|
-fn eval_maxa(call : EvalCall) -> FormulaValue {
-  maxa_values(call.values)
-}
-
-///|
-fn eval_count(call : EvalCall) -> FormulaValue {
-  count_values(call.values)
-}
-
-///|
-fn eval_counta(call : EvalCall) -> FormulaValue {
-  counta_values(call.values)
-}
-
-///|
 fn eval_countblank(call : EvalCall) -> FormulaValue raise XlsxError {
   match call.args {
     [a0] => {
@@ -547,17 +493,6 @@ fn eval_countblank(call : EvalCall) -> FormulaValue raise XlsxError {
     }
     _ => Error(formula_error_value)
   }
-}
-
-///|
-fn eval_frequency(call : EvalCall) -> FormulaValue raise XlsxError {
-  frequency_values(
-    call.workbook,
-    call.sheet_name,
-    call.args,
-    call.values,
-    call.ctx,
-  )
 }
 
 ///|
@@ -856,38 +791,8 @@ fn eval_permutationa(call : EvalCall) -> FormulaValue {
 }
 
 ///|
-fn eval_weibull(call : EvalCall) -> FormulaValue {
-  weibull_value(call.values)
-}
-
-///|
 fn eval_weibulldotdist(call : EvalCall) -> FormulaValue {
   weibull_value(call.values)
-}
-
-///|
-fn eval_betadotdist(call : EvalCall) -> FormulaValue {
-  beta_dist_values(call.values)
-}
-
-///|
-fn eval_betadist(call : EvalCall) -> FormulaValue {
-  betadist_values(call.values)
-}
-
-///|
-fn eval_betainv(call : EvalCall) -> FormulaValue {
-  betainv_values(call.values)
-}
-
-///|
-fn eval_betadotinv(call : EvalCall) -> FormulaValue {
-  betainv_values(call.values)
-}
-
-///|
-fn eval_confidence(call : EvalCall) -> FormulaValue {
-  confidence_values(call.values)
 }
 
 ///|
@@ -901,33 +806,8 @@ fn eval_confidencedott(call : EvalCall) -> FormulaValue {
 }
 
 ///|
-fn eval_normdotdist(call : EvalCall) -> FormulaValue {
-  normdist_values(call.values)
-}
-
-///|
-fn eval_normdist(call : EvalCall) -> FormulaValue {
-  normdist_values(call.values)
-}
-
-///|
-fn eval_normdotinv(call : EvalCall) -> FormulaValue {
-  norminv_values(call.values)
-}
-
-///|
-fn eval_norminv(call : EvalCall) -> FormulaValue {
-  norminv_values(call.values)
-}
-
-///|
 fn eval_normdotsdotdist(call : EvalCall) -> FormulaValue {
   norm_s_dist_values(call.values)
-}
-
-///|
-fn eval_normsdist(call : EvalCall) -> FormulaValue {
-  norms_dist_values(call.values)
 }
 
 ///|
@@ -936,23 +816,8 @@ fn eval_normdotsdotinv(call : EvalCall) -> FormulaValue {
 }
 
 ///|
-fn eval_normsinv(call : EvalCall) -> FormulaValue {
-  norms_inv_values(call.values)
-}
-
-///|
 fn eval_lognormdotdist(call : EvalCall) -> FormulaValue {
   lognorm_dist_values(call.values)
-}
-
-///|
-fn eval_lognormdist(call : EvalCall) -> FormulaValue {
-  lognormdist_values(call.values)
-}
-
-///|
-fn eval_loginv(call : EvalCall) -> FormulaValue {
-  loginv_values(call.values)
 }
 
 ///|
@@ -961,33 +826,8 @@ fn eval_lognormdotinv(call : EvalCall) -> FormulaValue {
 }
 
 ///|
-fn eval_gamma(call : EvalCall) -> FormulaValue {
-  gamma_value(call.values)
-}
-
-///|
 fn eval_gammadotdist(call : EvalCall) -> FormulaValue {
   gamma_dist_values(call.values)
-}
-
-///|
-fn eval_gammadist(call : EvalCall) -> FormulaValue {
-  gamma_dist_values(call.values)
-}
-
-///|
-fn eval_gammadotinv(call : EvalCall) -> FormulaValue {
-  gamma_inv_values(call.values)
-}
-
-///|
-fn eval_gammainv(call : EvalCall) -> FormulaValue {
-  gamma_inv_values(call.values)
-}
-
-///|
-fn eval_gammaln(call : EvalCall) -> FormulaValue {
-  gammaln_values(call.values)
 }
 
 ///|
@@ -1001,32 +841,12 @@ fn eval_expondotdist(call : EvalCall) -> FormulaValue {
 }
 
 ///|
-fn eval_expondist(call : EvalCall) -> FormulaValue {
-  expon_dist_values(call.values)
-}
-
-///|
 fn eval_poissondotdist(call : EvalCall) -> FormulaValue {
   poisson_values(call.values)
 }
 
 ///|
-fn eval_poisson(call : EvalCall) -> FormulaValue {
-  poisson_values(call.values)
-}
-
-///|
-fn eval_prob(call : EvalCall) -> FormulaValue {
-  prob_values(call.values)
-}
-
-///|
 fn eval_binomdotdist(call : EvalCall) -> FormulaValue {
-  binomdist_values(call.values)
-}
-
-///|
-fn eval_binomdist(call : EvalCall) -> FormulaValue {
   binomdist_values(call.values)
 }
 
@@ -1036,53 +856,13 @@ fn eval_binomdotdistdotrange(call : EvalCall) -> FormulaValue {
 }
 
 ///|
-fn eval_binomdotinv(call : EvalCall) -> FormulaValue {
-  binom_inv_values(call.values)
-}
-
-///|
-fn eval_critbinom(call : EvalCall) -> FormulaValue {
-  binom_inv_values(call.values)
-}
-
-///|
 fn eval_hypgeomdotdist(call : EvalCall) -> FormulaValue {
   hypgeom_dist_values(call.values)
 }
 
 ///|
-fn eval_hypgeomdist(call : EvalCall) -> FormulaValue {
-  hypgeomdist_values(call.values)
-}
-
-///|
 fn eval_negbinomdotdist(call : EvalCall) -> FormulaValue {
   negbinom_dist_values(call.values)
-}
-
-///|
-fn eval_negbinomdist(call : EvalCall) -> FormulaValue {
-  negbinomdist_values(call.values)
-}
-
-///|
-fn eval_gauss(call : EvalCall) -> FormulaValue {
-  gauss_value(call.values)
-}
-
-///|
-fn eval_phi(call : EvalCall) -> FormulaValue {
-  phi_value(call.values)
-}
-
-///|
-fn eval_chidist(call : EvalCall) -> FormulaValue {
-  chidist_values(call.values)
-}
-
-///|
-fn eval_chiinv(call : EvalCall) -> FormulaValue {
-  chiinv_values(call.values)
 }
 
 ///|
@@ -1096,24 +876,8 @@ fn eval_chisqdotdistdotrt(call : EvalCall) -> FormulaValue {
 }
 
 ///|
-fn eval_chisqdotinv(call : EvalCall) -> FormulaValue {
-  chisq_inv_values(call.values)
-}
-
-///|
 fn eval_chisqdotinvdotrt(call : EvalCall) -> FormulaValue {
   chiinv_values(call.values)
-}
-
-///|
-fn eval_chitest(call : EvalCall) -> FormulaValue raise XlsxError {
-  chitest_values(
-    call.workbook,
-    call.sheet_name,
-    call.args,
-    call.values,
-    call.ctx,
-  )
 }
 
 ///|
@@ -1128,96 +892,6 @@ fn eval_chisqdottest(call : EvalCall) -> FormulaValue raise XlsxError {
 }
 
 ///|
-fn eval_fdotdist(call : EvalCall) -> FormulaValue {
-  fdist_values(call.values)
-}
-
-///|
-fn eval_fdist(call : EvalCall) -> FormulaValue {
-  fdist_rt_values(call.values)
-}
-
-///|
-fn eval_fdotdistdotrt(call : EvalCall) -> FormulaValue {
-  fdist_rt_values(call.values)
-}
-
-///|
-fn eval_fdotinv(call : EvalCall) -> FormulaValue {
-  finv_values(call.values)
-}
-
-///|
-fn eval_fdotinvdotrt(call : EvalCall) -> FormulaValue {
-  finv_rt_values(call.values)
-}
-
-///|
-fn eval_finv(call : EvalCall) -> FormulaValue {
-  finv_rt_values(call.values)
-}
-
-///|
-fn eval_ftest(call : EvalCall) -> FormulaValue raise XlsxError {
-  ftest_values(call.workbook, call.sheet_name, call.args, call.values, call.ctx)
-}
-
-///|
 fn eval_fdottest(call : EvalCall) -> FormulaValue raise XlsxError {
   ftest_values(call.workbook, call.sheet_name, call.args, call.values, call.ctx)
-}
-
-///|
-fn eval_tdotdist(call : EvalCall) -> FormulaValue {
-  tdist_values(call.values)
-}
-
-///|
-fn eval_tdotdistdot2t(call : EvalCall) -> FormulaValue {
-  tdist_2t_values(call.values)
-}
-
-///|
-fn eval_tdotdistdotrt(call : EvalCall) -> FormulaValue {
-  tdist_rt_values(call.values)
-}
-
-///|
-fn eval_tdist(call : EvalCall) -> FormulaValue {
-  tdist_legacy_values(call.values)
-}
-
-///|
-fn eval_tdotinv(call : EvalCall) -> FormulaValue {
-  tinv_values(call.values)
-}
-
-///|
-fn eval_tdotinvdot2t(call : EvalCall) -> FormulaValue {
-  tinv_2t_values(call.values)
-}
-
-///|
-fn eval_tinv(call : EvalCall) -> FormulaValue {
-  tinv_2t_values(call.values)
-}
-
-///|
-fn eval_tdottest(call : EvalCall) -> FormulaValue {
-  ttest_values(call.values)
-}
-
-///|
-fn eval_ttest(call : EvalCall) -> FormulaValue {
-  ttest_values(call.values)
-}
-
-///|
-fn eval_zdottest(call : EvalCall) -> FormulaValue {
-  ztest_values(call.values)
-}
-
-///|
-fn eval_ztest(call : EvalCall) -> FormulaValue {
-  ztest_values(call.values)
 }

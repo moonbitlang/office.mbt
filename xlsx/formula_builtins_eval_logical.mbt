@@ -1,18 +1,4 @@
 ///|
-// Per-formula handlers for the logical family. Each maps one (or a few aliases of)
-// one Excel formula to its implementation; eval_function routes to these via a HashMap.
-
-///|
-fn eval_true(_call : EvalCall) -> FormulaValue {
-  Bool(true)
-}
-
-///|
-fn eval_false(_call : EvalCall) -> FormulaValue {
-  Bool(false)
-}
-
-///|
 fn eval_and(call : EvalCall) -> FormulaValue {
   if call.values.length() == 0 || call.values.length() > 30 {
     Error(formula_error_value)

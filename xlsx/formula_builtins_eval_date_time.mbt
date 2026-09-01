@@ -1,8 +1,4 @@
 ///|
-// Per-formula handlers for the date_time family. Each maps one (or a few aliases of)
-// one Excel formula to its implementation; eval_function routes to these via a HashMap.
-
-///|
 fn eval_date(call : EvalCall) -> FormulaValue {
   match call.values {
     [v0, v1, v2] =>
