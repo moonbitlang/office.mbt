@@ -1024,6 +1024,153 @@ pub fn capability_commands() -> Array[CapabilityCommand] {
       ],
     },
     {
+      name: "format",
+      summary: "Apply direct character formatting to selected text in a DOCX, refusing wherever the result could differ from the request",
+      usage: "office format FILE OUT.docx (--text TEXT [--in PATH] [--nth K] | --range START:END --in P) [--bold on|off] [--italic on|off] [--underline on|off] [--color RRGGBB] [--expect N] [--allow-zero] [--dry-run] [--overwrite] [--json]  (at least one property flag)",
+      formats: ["docx"],
+      aliases: [],
+      inputs: [
+        capability_field(
+          "file", "path", true, "existing .docx package (never modified in place)",
+        ),
+        capability_field(
+          "out", "path", true, "destination .docx; created atomically, nothing written on any refusal",
+        ),
+        capability_field(
+          "text", "string", false, "literal text to format — never a regular expression; matched over the reader PROJECTION, so it spans run boundaries. Every occurrence is selected unless --nth narrows it. Exactly one of --text / --range",
+        ),
+        capability_field(
+          "range", "string", false, "paragraph-local unit range START:END (half-open, the units the read surfaces report); requires --in naming ONE paragraph. Exactly one of --text / --range",
+        ),
+        capability_field(
+          "in", "string", false, "restrict to a body-relative subtree (p[3], tbl[1]) or a stable p[id=\"…\"] resolved against the transaction snapshot; the report then records resolved_in",
+        ),
+        capability_field(
+          "nth", "integer", false, "select ONE text occurrence by ordinal (1-based)",
+        ),
+        capability_field(
+          "bold", "string", false, "on|off — set or clear bold explicitly; an omitted property is left untouched, everywhere",
+        ),
+        capability_field(
+          "italic", "string", false, "on|off — set or clear italic",
+        ),
+        capability_field(
+          "underline", "string", false, "on|off — set or clear single underline",
+        ),
+        capability_field(
+          "color", "string", false, "RRGGBB or #RRGGBB — absolute text colour; the engine refuses where theme linkage cannot be removed faithfully",
+        ),
+        capability_field(
+          "expect", "integer", false, "assert exactly N spans are selected; a mismatch refuses with nothing written. Contradicts --allow-zero",
+        ),
+        capability_field(
+          "allow-zero", "boolean", false, "treat zero selected spans as success instead of refusing",
+        ),
+        capability_field(
+          "dry-run", "boolean", false, "run the identical selection and preflight pipeline, exit as the real run would, write nothing",
+        ),
+        capability_field(
+          "overwrite", "boolean", false, "replace an existing destination",
+        ),
+        capability_field(
+          "json", "boolean", false, "emit one office.output/1 JSON document",
+        ),
+      ],
+      outputs: [
+        capability_field(
+          "schema", "literal(office.docx.format/1)", true, "format result schema",
+        ),
+        capability_field("file", "string", true, "the edited source path"),
+        capability_field(
+          "format", "literal(docx)", true, "edited document format",
+        ),
+        capability_field(
+          "output", "string", true, "the publication destination",
+        ),
+        capability_field(
+          "mode", "string", true, "which selector produced the spans: text or range",
+        ),
+        capability_field(
+          "text", "string", false, "the literal that was formatted (bounded), null in range mode",
+        ),
+        capability_field(
+          "in", "string", false, "the subtree restriction, null when unrestricted",
+        ),
+        capability_field(
+          "resolved_in", "string", false, "the scan path a stable p[id=\"…\"] scope resolved to; null when the scope was ordinal or absent",
+        ),
+        capability_field(
+          "range", "string", false, "the requested unit range START:END, null in text mode",
+        ),
+        capability_field(
+          "nth", "integer", false, "the selected ordinal, null when all occurrences were selected",
+        ),
+        capability_field(
+          "bold", "boolean", false, "the request's bold state: true set, false cleared, null untouched",
+        ),
+        capability_field(
+          "italic", "boolean", false, "the request's italic state, three-state as bold",
+        ),
+        capability_field(
+          "underline", "boolean", false, "the request's underline state, three-state as bold",
+        ),
+        capability_field(
+          "color", "string", false, "the requested absolute colour, null when untouched",
+        ),
+        capability_field(
+          "expect", "integer", false, "the asserted span count, null when not asserted",
+        ),
+        capability_field(
+          "allow_zero", "boolean", true, "whether zero selected spans was permitted",
+        ),
+        capability_field(
+          "dry_run", "boolean", true, "whether this run validated without publishing",
+        ),
+        capability_field(
+          "changed", "boolean", true, "whether any byte changed — a span already carrying the request selects and plans nothing",
+        ),
+        capability_field(
+          "selected", "array(integer)", true, "the selected occurrences' ordinals in text mode; empty in range mode",
+        ),
+        capability_field(
+          "spans", "array(object)", true, "every formatted span: path, para_id, paragraph_anchor_status, start, end (half-open units), and the span's text (bounded)",
+        ),
+        capability_field(
+          "affected", "array(string)", true, "the affected paragraphs' body-relative paths; each was read back after the splice with the three-check readback — projection unchanged, request carried explicitly, nothing else moved",
+        ),
+        capability_field(
+          "affected_paragraphs", "array(object)", true, "the same paragraphs with stable identity: path, para_id (canonical w14:paraId or null), and paragraph_anchor_status",
+        ),
+        capability_field(
+          "runs_changed", "integer", true, "runs whose properties the plan rewrote",
+        ),
+        capability_field(
+          "runs_already_satisfied", "integer", true, "runs that already carried the request explicitly and were left untouched",
+        ),
+        capability_field(
+          "splits", "integer", true, "runs the plan clone-split so formatting landed only on the selected units",
+        ),
+        capability_field(
+          "byte_edits", "integer", true, "byte edits the splice plan declared",
+        ),
+        capability_field(
+          "stories_scanned", "array(string)", true, "the stories searched; /body in v1",
+        ),
+        capability_field(
+          "transaction", "object", true, "office.transaction/2 report; the shared mutation preflight (signature, enforced protection, trackRevisions, the compatibility contract) refuses before planning, and nothing is published on any refusal",
+        ),
+      ],
+      output_modes: ["human", "json"],
+      variants: [
+        capability_variant(
+          "docx",
+          "office format FILE OUT.docx --text TEXT --bold on",
+          "office.docx.format/1",
+          ["format=docx"],
+        ),
+      ],
+    },
+    {
       name: "insert-paragraph",
       summary: "Insert one resource-free paragraph beside a direct body paragraph, minting its stable identity",
       usage: "office insert-paragraph FILE OUT.docx (--before P|--after P) --content JSON [--dry-run] [--overwrite] [--json]",

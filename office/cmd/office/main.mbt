@@ -140,6 +140,7 @@ fn build_command() -> @argparse.Command {
       query_command(),
       docx_find_command(),
       replace_command(),
+      format_command(),
       insert_paragraph_command(),
       validate_command(),
       dump_command(),
@@ -168,6 +169,7 @@ fn is_implemented_command(name : StringView) -> Bool {
     | "query"
     | "find"
     | "replace"
+    | "format"
     | "insert-paragraph"
     | "validate"
     | "dump"
@@ -200,6 +202,7 @@ async fn run_cli(args : Array[String]) -> Unit {
         "query" => run_docx_query(values)
         "find" => run_docx_find(values)
         "replace" => run_replace(values)
+        "format" => run_format(values)
         "insert-paragraph" => run_insert_paragraph(values)
         "validate" => run_validate(values)
         "dump" => run_dump(values)
