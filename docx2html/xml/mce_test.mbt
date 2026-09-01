@@ -274,6 +274,23 @@ test "MustUnderstand on an ignorable element still refuses" {
   guard outcome is Err(_) else {
     fail("a demanded namespace is not quietly droppable")
   }
+  // The same demand on an ignorable CHILD of an alternate is equally
+  // binding.
+  let child_text = "<root xmlns:mc=\"http://schemas.openxmlformats.org/markup-compatibility/2006\" xmlns:w14=\"urn:example:w14\" mc:Ignorable=\"w14\"><mc:AlternateContent><w14:extra mc:MustUnderstand=\"w14\"/><mc:Fallback/></mc:AlternateContent></root>"
+  let child_outcome = try? @xml.read_xml_string_strict_mce_encoded_limited(
+    child_text,
+    Utf8,
+    @xml.xml_read_budget(
+      max_source_units=65536,
+      max_tokens=65536,
+      max_materialized_chars=1 << 20,
+      max_token_chars=65536,
+    ),
+    [],
+  )
+  guard child_outcome is Err(_) else {
+    fail("a demanded alternate-content child is not quietly droppable")
+  }
   // The same document WITHOUT the demand drops the element quietly.
   let tolerant = "<root xmlns:mc=\"http://schemas.openxmlformats.org/markup-compatibility/2006\" xmlns:w14=\"urn:example:w14\" mc:Ignorable=\"w14\"><w14:opaque/></root>"
   let effective = @xml.read_xml_string_strict_mce_encoded_limited(

@@ -635,6 +635,10 @@ fn MceProcessor::foreign_alternate_content_child_is_ignored(
   element : XmlElement,
 ) -> Bool raise DocxError {
   let scope = self.enter_element(element)
+  // `MustUnderstand` outranks ignorability HERE too: an alternate-content
+  // child that demands understanding is not one this application may
+  // quietly drop.
+  mce_require_must_understand(scope)
   let ignored = match
     mce_namespace_from_expanded_name(element.name, self.budget) {
     Some(namespace_uri) =>
