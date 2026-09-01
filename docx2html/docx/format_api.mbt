@@ -1006,7 +1006,7 @@ fn docx_format_paragraph_provenance(
   for _ in 0..<width {
     // A unit no run claims — text the tolerant reader admits directly
     // under the paragraph — has no properties to preserve, and says so.
-    units.push(("", "0", "0"))
+    units.push(("", "0", "0")) // key "0" = unowned; ids start at 1
   }
   // Namespace scopes and declaration tables, memoized per element: an
   // ancestor's declarations are read once, and an element that
@@ -1018,6 +1018,7 @@ fn docx_format_paragraph_provenance(
     elements,
     paragraph_head_identity,
     tokens=namespace_tokens,
+    interner~,
   )
   // A run's properties, read ONCE per run: recomputing them for every
   // contribution walks its children again and again, and a run of many
@@ -1776,11 +1777,25 @@ fn DocxFormatInterner::new() -> DocxFormatInterner {
 }
 
 ///|
+fn DocxFormatInterner::uid(self : DocxFormatInterner, text : String) -> UInt {
+  match self.ids.get(text) {
+    Some(known) => known.reinterpret_as_uint()
+    None => {
+      let id = self.ids.length() + 1
+      self.ids[text] = id
+      id.reinterpret_as_uint()
+    }
+  }
+}
+
+///|
 fn DocxFormatInterner::id(self : DocxFormatInterner, text : String) -> String {
   match self.ids.get(text) {
     Some(known) => "\{known}"
     None => {
-      let id = self.ids.length()
+      // Ids start at 1: "0" is the SENTINEL for a unit no run claims,
+      // and the first real property text must not compare equal to it.
+      let id = self.ids.length() + 1
       self.ids[text] = id
       "\{id}"
     }
@@ -1855,20 +1870,18 @@ fn docx_format_binding_digests(
   elements : Array[ScannedElement],
   root_identity : Int,
   tokens~ : Map[Int, UInt],
+  interner~ : DocxFormatInterner,
 ) -> Map[Int, UInt] raise DocxError {
   let digests : Map[Int, UInt] = Map([])
   let scope : Map[String, String] = Map([])
-  // Each binding's contribution, hashed ONCE when it is declared: a
-  // long URI used by many descendants would otherwise be rehashed per
-  // use.
+  // Each binding's identity, interned ONCE when it is declared: a long
+  // URI used by many descendants would otherwise be re-read per use.
+  // These are EXACT — equal ids mean equal prefix=uri pairs — where the
+  // folded hash they replace answered equality only up to collisions,
+  // and a 32-bit collision between two bindings is searchable.
   let scope_hash : Map[String, UInt] = Map([])
   fn binding_hash(prefix : String, uri : String) -> UInt {
-    let mut hash : UInt = 2166136261
-    for unit in "\{prefix}=\{uri}".code_units() {
-      hash = hash ^ unit.to_uint()
-      hash = hash * 16777619
-    }
-    hash
+    interner.uid("b|\{prefix}=\{uri}")
   }
   fn walk(identity : Int) -> UInt raise DocxError {
     let element = elements[identity]
@@ -1938,34 +1951,58 @@ fn docx_format_binding_digests(
         used.push(attribute_prefix)
       }
     }
-    // This element's own contribution: the bindings its own names
-    // depend on, folded order-independently.
-    let mut own : UInt = 0
+    // This element's own contribution: the ids of the NON-WML bindings
+    // its own names depend on, in document order. WML uses are omitted
+    // rather than recorded as zeros, so that a surgery which adds a
+    // pure-WML property to a subtree — the one thing a faithful format
+    // edit inserts — leaves the digest of that subtree what it was.
+    let own_builder = StringBuilder()
     for prefix in used {
-      // Declared bindings answer from their precomputed hash; only the
-      // element's own fallback is hashed here, once per element.
-      match scope_hash.get(prefix) {
-        Some(known) => own = own + known
+      // Declared bindings answer from their interned id; only the
+      // element's own fallback is interned here, once per element.
+      let contribution = match scope_hash.get(prefix) {
+        Some(known) => known
         None =>
           if prefix == "xml" {
-            ()
+            0
           } else {
             let uri = if prefix == element_prefix { element.uri } else { "?" }
-            if !is_wml_uri(uri) {
-              own = own + binding_hash(prefix, uri)
+            if is_wml_uri(uri) {
+              0
+            } else {
+              binding_hash(prefix, uri)
             }
           }
       }
+      if contribution != 0 {
+        own_builder.write_string("\{contribution},")
+      }
     }
     // The element's own namespace, as a BOUNDED token: a structural
-    // key that embedded the URI would hash it once per element that
+    // key that embedded the URI would record it once per element that
     // uses it.
     tokens[identity] = scope_hash.get(element_prefix).unwrap_or(0)
-    let mut total = own
+    // The subtree's digest is an interned token over the element's own
+    // contribution and its children's tokens IN ORDER, with the
+    // all-WML token 0 omitted on both sides so a pure-WML subtree — and
+    // an absent one — read as 0 exactly. Equal tokens mean equal
+    // sequences of foreign-binding uses; the sum this replaces could
+    // cancel.
+    let children_builder = StringBuilder()
     let mut child = element.first_child_index
     while child >= 0 {
-      total = total + walk(child)
+      let token = walk(child)
+      if token != 0 {
+        children_builder.write_string("\{token},")
+      }
       child = elements[child].next_sibling_index
+    }
+    let own_part = own_builder.to_string()
+    let children_part = children_builder.to_string()
+    let total : UInt = if own_part == "" && children_part == "" {
+      0
+    } else {
+      interner.uid("s|\{own_part}/\{children_part}")
     }
     digests[identity] = total
     for entry in undo {

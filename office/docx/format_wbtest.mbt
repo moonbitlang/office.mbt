@@ -318,3 +318,118 @@ async test "the readback tells apart properties a digest cannot" {
     )
   })
 }
+
+///|
+/// The tolerant reader admits text sitting directly under a paragraph,
+/// and such a unit's provenance is the SENTINEL "no run claims this".
+/// The sentinel must not compare equal to any real property identity:
+/// a candidate that unwraps an italic run into bare text keeps the
+/// projection, keeps the requested span, and loses the italic — only
+/// the sentinel/property distinction catches it.
+async test "the readback tells a runless unit from a formatted one" {
+  with_format_readback_dir(directory => {
+    let source = format_readback_fixture(
+      directory,
+      "unwrap.docx",
+      "<w:r><w:rPr><w:i/></w:rPr><w:t xml:space=\"preserve\">keep </w:t></w:r>" +
+      "<w:r><w:t>Hello world</w:t></w:r>",
+    )
+    let format = @word.docx_direct_format(bold=true)
+    let output = directory + "/unwrap-out.docx"
+    transact_docx_format(
+      @transaction.transaction_options(source, output_path=output),
+      format~,
+      text="world",
+    )
+    |> ignore
+    let candidate = @zip.read(@afs.read_file(output).binary())
+    let before_archive = @zip.read(@afs.read_file(source).binary())
+    let before = @word.read_docx_annotated_archive_limited(
+      before_archive,
+      candidate_xml_budget(),
+    )
+    let (_, receipt) = @word.plan_docx_format(
+      before,
+      before.main_story_source(),
+      format~,
+      text="world",
+    )
+    let snapshot : Ref[FormatReadbackSnapshot?] = Ref(
+      Some({ before, affected: receipt.affected(), spans: receipt.spans(), }),
+    )
+    assert_eq(
+      finding_codes(format_readback_findings(snapshot, format, Docx, candidate)),
+      "",
+    )
+    assert_eq(
+      finding_codes(
+        format_readback_findings(
+          snapshot,
+          format,
+          Docx,
+          doctored_candidate(
+            candidate, "<w:r><w:rPr><w:i/></w:rPr><w:t xml:space=\"preserve\">keep </w:t></w:r>",
+            "<w:t xml:space=\"preserve\">keep </w:t>",
+          ),
+        ),
+      ),
+      "docx.format.readback_collateral",
+    )
+  })
+}
+
+///|
+/// A property means what its namespace bindings say it means. The
+/// sabotage below keeps the untouched run's rPr BYTES identical and
+/// shadows the prefix they depend on at the run element — the property
+/// text comparison cannot see it, and only the binding identity can.
+async test "the readback sees a rebound prefix behind unchanged bytes" {
+  with_format_readback_dir(directory => {
+    let source = format_readback_fixture(
+      directory,
+      "rebind.docx",
+      "<w:r><w:rPr><w14:ligatures w14:val=\"none\"/></w:rPr><w:t xml:space=\"preserve\">keep </w:t></w:r>" +
+      "<w:r><w:t>Hello world</w:t></w:r>",
+    )
+    let format = @word.docx_direct_format(bold=true)
+    let output = directory + "/rebind-out.docx"
+    transact_docx_format(
+      @transaction.transaction_options(source, output_path=output),
+      format~,
+      text="world",
+    )
+    |> ignore
+    let candidate = @zip.read(@afs.read_file(output).binary())
+    let before_archive = @zip.read(@afs.read_file(source).binary())
+    let before = @word.read_docx_annotated_archive_limited(
+      before_archive,
+      candidate_xml_budget(),
+    )
+    let (_, receipt) = @word.plan_docx_format(
+      before,
+      before.main_story_source(),
+      format~,
+      text="world",
+    )
+    let snapshot : Ref[FormatReadbackSnapshot?] = Ref(
+      Some({ before, affected: receipt.affected(), spans: receipt.spans(), }),
+    )
+    assert_eq(
+      finding_codes(format_readback_findings(snapshot, format, Docx, candidate)),
+      "",
+    )
+    assert_eq(
+      finding_codes(
+        format_readback_findings(
+          snapshot,
+          format,
+          Docx,
+          doctored_candidate(
+            candidate, "<w:r><w:rPr><w14:ligatures w14:val=\"none\"/></w:rPr>", "<w:r xmlns:w14=\"urn:example:evil\"><w:rPr><w14:ligatures w14:val=\"none\"/></w:rPr>",
+          ),
+        ),
+      ),
+      "docx.format.readback_collateral",
+    )
+  })
+}

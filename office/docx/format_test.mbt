@@ -472,6 +472,33 @@ async test "the mutation preflight judges declarations, not paths" {
       commented_failure is None,
       msg="a commented setting must not block: \{commented_failure}",
     )
+    // A fork NESTED inside the fallback this toolkit took is still a
+    // fork: a consumer that understands the inner vocabulary reads the
+    // protected branch, so the protection depends on who opens the
+    // document.
+    let nested_fork = preflight_fixture(
+      directory,
+      "nested-fork",
+      "<mc:AlternateContent xmlns:mc=\"http://schemas.openxmlformats.org/markup-compatibility/2006\">" +
+      "<mc:Choice Requires=\"x\" xmlns:x=\"urn:example:x\"><w:documentProtection w:enforcement=\"0\"/></mc:Choice>" +
+      "<mc:Fallback><mc:AlternateContent><mc:Choice Requires=\"w14\"><w:documentProtection w:edit=\"readOnly\" w:enforcement=\"1\"/></mc:Choice>" +
+      "<mc:Fallback><w:documentProtection w:enforcement=\"0\"/></mc:Fallback></mc:AlternateContent></mc:Fallback>" +
+      "</mc:AlternateContent>",
+      [],
+    )
+    let (nested_fork_failure, nested_fork_published) = format_input_probe(
+      nested_fork,
+      directory + "/nested-fork-out.docx",
+    )
+    guard nested_fork_failure is Some(nested_fork_message) else {
+      fail("a nested fork still forks the protection")
+    }
+    assert_true(
+      nested_fork_message.contains("compatibility alternatives") ||
+      nested_fork_message.contains("more than once"),
+      msg=nested_fork_message,
+    )
+    assert_false(nested_fork_published, msg="nothing may be published")
     // Contradictory duplicates refuse rather than pick a winner.
     let ambiguous = preflight_fixture(
       directory,

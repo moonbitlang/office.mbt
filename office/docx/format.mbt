@@ -209,7 +209,11 @@ pub fn docx_mutation_preflight(
   // over: a protection declared in a branch that is passed over is a
   // protection this preflight cannot resolve, not one it may ignore.
   let effective = docx_settings_children(root)
-  let suppressed = docx_settings_alternatives(raw)
+  // Everything ANY consumer might read at the settings level. Judged as
+  // one set: branches that agree decide the question, and disagreement
+  // anywhere — with the effective reading or between alternatives — is
+  // a protection that depends on who opens the document.
+  let suppressed = docx_settings_possible(raw)
   match
     docx_settings_flag(
       effective,
@@ -653,31 +657,62 @@ fn docx_settings_children(root : @xml.XmlElement) -> Array[@xml.XmlElement] {
 }
 
 ///|
-/// The settings a DIFFERENT consumer might act on: the children of every
-/// `mc:Choice` this toolkit passed over.
+/// The settings a DIFFERENT consumer might act on: every element that
+/// could sit at the settings-child level under SOME resolution of the
+/// part's compatibility markup.
 ///
-/// A choice is not ignorable content — it is content another application
-/// selects instead of the fallback. So a protection declared only inside
-/// one is a protection whose effect depends on who opens the document,
-/// and the preflight refuses rather than resolving it in its own favour.
-/// Ignorable content is NOT collected here: every consumer drops it.
-fn docx_settings_alternatives(raw : @xml.XmlElement) -> Array[@xml.XmlElement] {
-  let alternatives : Array[@xml.XmlElement] = []
-  for node in raw.children {
-    guard node is XmlElement(child) else { continue }
-    guard child.name == "{\{DOCX_MC_NAMESPACE}}AlternateContent" else {
-      continue
-    }
-    for branch in child.children {
-      guard branch is XmlElement(alternative) else { continue }
-      guard alternative.name == "{\{DOCX_MC_NAMESPACE}}Choice" else { continue }
-      for node in alternative.children {
-        guard node is XmlElement(candidate) else { continue }
-        alternatives.push(candidate)
+/// This reader resolves markup compatibility one way — no application
+/// namespace is claimed, so every `mc:Choice` is passed over and
+/// ignorable content is dropped. Another consumer resolves it another
+/// way: it may select a choice (at any depth — a nested alternate
+/// inside the fallback this reader took is still a fork), and it may
+/// keep an element this reader promoted, or promote one this reader
+/// kept. So the walk takes EVERY branch of every alternate, and — only
+/// when the part declares `mc:ProcessContent` at all — looks through
+/// non-WML elements, whose content some consumer may process at this
+/// level. WML elements are never looked through: every consumer
+/// understands WML, so nothing promotes their content.
+fn docx_settings_possible(raw : @xml.XmlElement) -> Array[@xml.XmlElement] {
+  let possible : Array[@xml.XmlElement] = []
+  let promotion = docx_process_content_declared(raw)
+  fn level(container : @xml.XmlElement) -> Unit {
+    for node in container.children {
+      guard node is XmlElement(child) else { continue }
+      if child.name == "{\{DOCX_MC_NAMESPACE}}AlternateContent" {
+        for branch in child.children {
+          guard branch is XmlElement(alternative) else { continue }
+          level(alternative)
+        }
+      } else {
+        possible.push(child)
+        if promotion &&
+          !child.name.has_prefix("{\{DOCX_WML_NAMESPACE}}") &&
+          !child.name.has_prefix("{\{DOCX_STRICT_WML_NAMESPACE}}") {
+          level(child)
+        }
       }
     }
   }
-  alternatives
+
+  level(raw)
+  possible
+}
+
+///|
+/// Whether the part declares `mc:ProcessContent` anywhere. Promotion of
+/// an ignorable element's content requires the declaration, so a part
+/// without one has no promoted content under any consumer.
+fn docx_process_content_declared(element : @xml.XmlElement) -> Bool {
+  if element.attributes.get("{\{DOCX_MC_NAMESPACE}}ProcessContent") is Some(_) {
+    return true
+  }
+  for node in element.children {
+    guard node is XmlElement(child) else { continue }
+    if docx_process_content_declared(child) {
+      return true
+    }
+  }
+  false
 }
 
 ///|
