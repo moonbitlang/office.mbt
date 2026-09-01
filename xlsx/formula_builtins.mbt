@@ -80,396 +80,998 @@ fn eval_function(
   for arg in args {
     values.push(eval_expr(workbook, sheet_name, arg, ctx))
   }
+  raising_handlers()
+  .get(name)
+  .map(h => h(workbook, sheet_name, name, args, values, ctx))
+  .unwrap_or_else(() => {
+    plain_handlers()
+    .get(name)
+    .map(h => h(workbook, sheet_name, name, args, values, ctx))
+    .unwrap_or_else(() => {
+      eval_function_unknown(workbook, sheet_name, name, args, ctx)
+    })
+  })
+}
+
+///|
+type RaisingHandler = (
+  Workbook,
+  String,
+  String,
+  ArrayView[Expr],
+  Array[FormulaValue],
+  CalcContext,
+) -> FormulaValue raise XlsxError
+
+///|
+type PlainHandler = (
+  Workbook,
+  String,
+  String,
+  ArrayView[Expr],
+  Array[FormulaValue],
+  CalcContext,
+) -> FormulaValue
+
+///|
+let raising_handlers_cached : @ref.Ref[
+  @hashmap.HashMap[String, RaisingHandler]?,
+] = Ref(None)
+
+///|
+let plain_handlers_cached : @ref.Ref[@hashmap.HashMap[String, PlainHandler]?] = Ref(
+  None,
+)
+
+///|
+fn raising_handlers() -> @hashmap.HashMap[String, RaisingHandler] {
+  raising_handlers_cached.val.unwrap_or_else(() => {
+    let m = build_raising_handlers()
+    raising_handlers_cached.val = Some(m)
+    m
+  })
+}
+
+///|
+fn plain_handlers() -> @hashmap.HashMap[String, PlainHandler] {
+  plain_handlers_cached.val.unwrap_or_else(() => {
+    let m = build_plain_handlers()
+    plain_handlers_cached.val = Some(m)
+    m
+  })
+}
+
+///|
+fn build_raising_handlers() -> @hashmap.HashMap[String, RaisingHandler] {
+  let m : @hashmap.HashMap[String, RaisingHandler] = HashMap([])
+  eval_register_raising(m)
+  m
+}
+
+///|
+fn build_plain_handlers() -> @hashmap.HashMap[String, PlainHandler] {
+  let m : @hashmap.HashMap[String, PlainHandler] = HashMap([])
+  eval_register_plain(m)
+  m
+}
+
+///|
+fn eval_register_raising(m : @hashmap.HashMap[String, RaisingHandler]) -> Unit {
+  m.set("SUM", eval_function_math_1)
+  m.set("SUBTOTAL", eval_function_math_1)
+  m.set("AGGREGATE", eval_function_math_1)
+  m.set("PRODUCT", eval_function_math_1)
+  m.set("SIGN", eval_function_math_1)
+  m.set("SERIESSUM", eval_function_math_1)
+  m.set("SUMIF", eval_function_math_1)
+  m.set("SUMPRODUCT", eval_function_math_1)
+  m.set("SUMSQ", eval_function_math_1)
+  m.set("SUMX2MY2", eval_function_math_1)
+  m.set("SUMX2PY2", eval_function_math_1)
+  m.set("SUMXMY2", eval_function_math_1)
+  m.set("SUMIFS", eval_function_math_1)
+  m.set("GCD", eval_function_math_1)
+  m.set("LCM", eval_function_math_1)
+  m.set("COMBIN", eval_function_math_1)
+  m.set("COMBINA", eval_function_math_1)
+  m.set("_XLFN.COMBINA", eval_function_math_1)
+  m.set("COMPLEX", eval_function_math_1)
+  m.set("FACT", eval_function_math_1)
+  m.set("FACTDOUBLE", eval_function_math_1)
+  m.set("MULTINOMIAL", eval_function_math_1)
+  m.set("MDETERM", eval_function_math_1)
+  m.set("MINVERSE", eval_function_math_1)
+  m.set("MMULT", eval_function_math_1)
+  m.set("MUNIT", eval_function_math_1)
+  m.set("_XLFN.MUNIT", eval_function_math_1)
+  m.set("ABS", eval_function_math_1)
+  m.set("INT", eval_function_math_1)
+  m.set("LN", eval_function_math_1)
+  m.set("EXP", eval_function_math_1)
+  m.set("DECIMAL", eval_function_math_1)
+  m.set("_XLFN.DECIMAL", eval_function_math_1)
+  m.set("ROMAN", eval_function_math_1)
+  m.set("ARABIC", eval_function_math_1)
+  m.set("_XLFN.ARABIC", eval_function_math_1)
+  m.set("BASE", eval_function_math_1)
+  m.set("BIN2DEC", eval_function_math_1)
+  m.set("BIN2HEX", eval_function_math_1)
+  m.set("BIN2OCT", eval_function_math_1)
+  m.set("DEC2BIN", eval_function_math_1)
+  m.set("DEC2BIN", eval_function_math_1)
+  m.set("DEC2HEX", eval_function_math_1)
+  m.set("DEC2HEX", eval_function_math_1)
+  m.set("DEC2OCT", eval_function_math_1)
+  m.set("DEC2OCT", eval_function_math_1)
+  m.set("HEX2BIN", eval_function_math_1)
+  m.set("HEX2DEC", eval_function_math_1)
+  m.set("HEX2OCT", eval_function_math_1)
+  m.set("OCT2BIN", eval_function_math_1)
+  m.set("OCT2DEC", eval_function_math_1)
+  m.set("OCT2HEX", eval_function_math_1)
+  m.set("BESSELI", eval_function_math_1)
+  m.set("BESSELJ", eval_function_math_1)
+  m.set("BESSELK", eval_function_math_1)
+  m.set("BESSELY", eval_function_math_1)
+  m.set("DELTA", eval_function_math_1)
+  m.set("ERF", eval_function_math_1)
+  m.set("ERFdotPRECISE", eval_function_math_1)
+  m.set("ERF.PRECISE", eval_function_math_1)
+  m.set("_XLFN.ERF.PRECISE", eval_function_math_1)
+  m.set("ERFC", eval_function_math_1)
+  m.set("ERFCdotPRECISE", eval_function_math_1)
+  m.set("ERFC.PRECISE", eval_function_math_1)
+  m.set("_XLFN.ERFC.PRECISE", eval_function_math_1)
+  m.set("CONVERT", eval_function_math_1)
+  m.set("EUROCONVERT", eval_function_math_1)
+  m.set("GESTEP", eval_function_math_1)
+  m.set("BITAND", eval_function_math_1)
+  m.set("BITAND", eval_function_math_1)
+  m.set("BITLSHIFT", eval_function_math_1)
+  m.set("BITLSHIFT", eval_function_math_1)
+  m.set("AVERAGE", eval_function_stats_1)
+  m.set("AVERAGEA", eval_function_stats_1)
+  m.set("STDEV", eval_function_stats_1)
+  m.set("STDEV.S", eval_function_stats_1)
+  m.set("STDEVA", eval_function_stats_1)
+  m.set("STDEVP", eval_function_stats_1)
+  m.set("STDEV.P", eval_function_stats_1)
+  m.set("STDEVPA", eval_function_stats_1)
+  m.set("VAR", eval_function_stats_1)
+  m.set("VAR.S", eval_function_stats_1)
+  m.set("VARA", eval_function_stats_1)
+  m.set("VARP", eval_function_stats_1)
+  m.set("VAR.P", eval_function_stats_1)
+  m.set("VARPA", eval_function_stats_1)
+  m.set("TRIMMEAN", eval_function_stats_1)
+  m.set("AVEDEV", eval_function_stats_1)
+  m.set("DEVSQ", eval_function_stats_1)
+  m.set("GEOMEAN", eval_function_stats_1)
+  m.set("HARMEAN", eval_function_stats_1)
+  m.set("KURT", eval_function_stats_1)
+  m.set("SKEW", eval_function_stats_1)
+  m.set("SKEW.P", eval_function_stats_1)
+  m.set("STANDARDIZE", eval_function_stats_1)
+  m.set("LARGE", eval_function_stats_1)
+  m.set("SMALL", eval_function_stats_1)
+  m.set("MODE", eval_function_stats_1)
+  m.set("MODE.SNGL", eval_function_stats_1)
+  m.set("MODE.MULT", eval_function_stats_1)
+  m.set("PERCENTILE", eval_function_stats_1)
+  m.set("PERCENTILE.INC", eval_function_stats_1)
+  m.set("PERCENTILE.EXC", eval_function_stats_1)
+  m.set("PERCENTRANK", eval_function_stats_1)
+  m.set("PERCENTRANK.INC", eval_function_stats_1)
+  m.set("PERCENTRANK.EXC", eval_function_stats_1)
+  m.set("QUARTILE", eval_function_stats_1)
+  m.set("QUARTILE.INC", eval_function_stats_1)
+  m.set("QUARTILE.EXC", eval_function_stats_1)
+  m.set("RANK", eval_function_stats_1)
+  m.set("RANK.EQ", eval_function_stats_1)
+  m.set("CORREL", eval_function_stats_1)
+  m.set("COVAR", eval_function_stats_1)
+  m.set("COVARIANCE.P", eval_function_stats_1)
+  m.set("COVARIANCE.S", eval_function_stats_1)
+  m.set("PEARSON", eval_function_stats_1)
+  m.set("RSQ", eval_function_stats_1)
+  m.set("SLOPE", eval_function_stats_1)
+  m.set("INTERCEPT", eval_function_stats_1)
+  m.set("FORECAST", eval_function_stats_1)
+  m.set("FORECAST.LINEAR", eval_function_stats_1)
+  m.set("GROWTH", eval_function_stats_1)
+  m.set("TREND", eval_function_stats_1)
+  m.set("FISHER", eval_function_stats_1)
+  m.set("FISHERINV", eval_function_stats_1)
+  m.set("STEYX", eval_function_stats_1)
+  m.set("MEDIAN", eval_function_stats_1)
+  m.set("MIN", eval_function_stats_1)
+  m.set("MAX", eval_function_stats_1)
+  m.set("MINA", eval_function_stats_1)
+  m.set("MAXA", eval_function_stats_1)
+  m.set("COUNT", eval_function_stats_1)
+  m.set("COUNTA", eval_function_stats_1)
+  m.set("COUNTBLANK", eval_function_stats_1)
+  m.set("FREQUENCY", eval_function_stats_1)
+  m.set("COUNTIF", eval_function_stats_1)
+  m.set("COUNTIFS", eval_function_stats_1)
+  m.set("DAVERAGE", eval_function_stats_2)
+  m.set("DMAX", eval_function_stats_2)
+  m.set("DMIN", eval_function_stats_2)
+  m.set("DPRODUCT", eval_function_stats_2)
+  m.set("DSTDEV", eval_function_stats_2)
+  m.set("DSTDEVP", eval_function_stats_2)
+  m.set("DSUM", eval_function_stats_2)
+  m.set("DVAR", eval_function_stats_2)
+  m.set("DVARP", eval_function_stats_2)
+  m.set("DCOUNT", eval_function_stats_2)
+  m.set("DCOUNTA", eval_function_stats_2)
+  m.set("DGET", eval_function_stats_2)
+  m.set("AVERAGEIF", eval_function_stats_2)
+  m.set("AVERAGEIFS", eval_function_stats_2)
+  m.set("MAXIFS", eval_function_stats_2)
+  m.set("MINIFS", eval_function_stats_2)
+  m.set("PERMUT", eval_function_stats_2)
+  m.set("PERMUTATIONA", eval_function_stats_2)
+  m.set("WEIBULL", eval_function_stats_2)
+  m.set("WEIBULLdotDIST", eval_function_stats_2)
+  m.set("WEIBULL.DIST", eval_function_stats_2)
+  m.set("_XLFN.WEIBULL.DIST", eval_function_stats_2)
+  m.set("BETAdotDIST", eval_function_stats_2)
+  m.set("BETA.DIST", eval_function_stats_2)
+  m.set("_XLFN.BETA.DIST", eval_function_stats_2)
+  m.set("BETADIST", eval_function_stats_2)
+  m.set("BETAINV", eval_function_stats_2)
+  m.set("BETAdotINV", eval_function_stats_2)
+  m.set("BETA.INV", eval_function_stats_2)
+  m.set("_XLFN.BETA.INV", eval_function_stats_2)
+  m.set("CONFIDENCE", eval_function_stats_2)
+  m.set("CONFIDENCEdotNORM", eval_function_stats_2)
+  m.set("CONFIDENCE.NORM", eval_function_stats_2)
+  m.set("_XLFN.CONFIDENCE.NORM", eval_function_stats_2)
+  m.set("CONFIDENCEdotT", eval_function_stats_2)
+  m.set("CONFIDENCE.T", eval_function_stats_2)
+  m.set("_XLFN.CONFIDENCE.T", eval_function_stats_2)
+  m.set("NORMdotDIST", eval_function_stats_2)
+  m.set("NORM.DIST", eval_function_stats_2)
+  m.set("_XLFN.NORM.DIST", eval_function_stats_2)
+  m.set("NORMDIST", eval_function_stats_2)
+  m.set("NORMdotINV", eval_function_stats_2)
+  m.set("NORM.INV", eval_function_stats_2)
+  m.set("_XLFN.NORM.INV", eval_function_stats_2)
+  m.set("NORMINV", eval_function_stats_2)
+  m.set("NORMdotSdotDIST", eval_function_stats_2)
+  m.set("NORM.S.DIST", eval_function_stats_2)
+  m.set("_XLFN.NORM.S.DIST", eval_function_stats_2)
+  m.set("NORMSDIST", eval_function_stats_2)
+  m.set("NORMdotSdotINV", eval_function_stats_2)
+  m.set("NORM.S.INV", eval_function_stats_2)
+  m.set("_XLFN.NORM.S.INV", eval_function_stats_2)
+  m.set("NORMSINV", eval_function_stats_2)
+  m.set("LOGNORMdotDIST", eval_function_stats_2)
+  m.set("LOGNORM.DIST", eval_function_stats_2)
+  m.set("_XLFN.LOGNORM.DIST", eval_function_stats_2)
+  m.set("LOGNORMDIST", eval_function_stats_2)
+  m.set("LOGINV", eval_function_stats_2)
+  m.set("LOGNORMdotINV", eval_function_stats_2)
+  m.set("LOGNORM.INV", eval_function_stats_2)
+  m.set("_XLFN.LOGNORM.INV", eval_function_stats_2)
+  m.set("GAMMA", eval_function_stats_2)
+  m.set("GAMMAdotDIST", eval_function_stats_2)
+  m.set("GAMMA.DIST", eval_function_stats_2)
+  m.set("_XLFN.GAMMA.DIST", eval_function_stats_2)
+  m.set("GAMMADIST", eval_function_stats_2)
+  m.set("GAMMAdotINV", eval_function_stats_2)
+  m.set("GAMMA.INV", eval_function_stats_2)
+  m.set("_XLFN.GAMMA.INV", eval_function_stats_2)
+  m.set("GAMMAINV", eval_function_stats_2)
+  m.set("GAMMALN", eval_function_stats_2)
+  m.set("GAMMALNdotPRECISE", eval_function_stats_2)
+  m.set("GAMMALN.PRECISE", eval_function_stats_2)
+  m.set("_XLFN.GAMMALN.PRECISE", eval_function_stats_2)
+  m.set("EXPONdotDIST", eval_function_stats_2)
+  m.set("EXPON.DIST", eval_function_stats_2)
+  m.set("_XLFN.EXPON.DIST", eval_function_stats_2)
+  m.set("EXPONDIST", eval_function_stats_2)
+  m.set("POISSONdotDIST", eval_function_stats_2)
+  m.set("POISSON.DIST", eval_function_stats_2)
+  m.set("_XLFN.POISSON.DIST", eval_function_stats_2)
+  m.set("POISSON", eval_function_stats_2)
+  m.set("PROB", eval_function_stats_2)
+  m.set("BINOMdotDIST", eval_function_stats_2)
+  m.set("BINOM.DIST", eval_function_stats_2)
+  m.set("_XLFN.BINOM.DIST", eval_function_stats_2)
+  m.set("BINOMDIST", eval_function_stats_2)
+  m.set("BINOMdotDISTdotRANGE", eval_function_stats_2)
+  m.set("BINOM.DIST.RANGE", eval_function_stats_2)
+  m.set("_XLFN.BINOM.DIST.RANGE", eval_function_stats_2)
+  m.set("BINOMdotINV", eval_function_stats_3)
+  m.set("BINOM.INV", eval_function_stats_3)
+  m.set("_XLFN.BINOM.INV", eval_function_stats_3)
+  m.set("CRITBINOM", eval_function_stats_3)
+  m.set("HYPGEOMdotDIST", eval_function_stats_3)
+  m.set("HYPGEOM.DIST", eval_function_stats_3)
+  m.set("_XLFN.HYPGEOM.DIST", eval_function_stats_3)
+  m.set("HYPGEOMDIST", eval_function_stats_3)
+  m.set("NEGBINOMdotDIST", eval_function_stats_3)
+  m.set("NEGBINOM.DIST", eval_function_stats_3)
+  m.set("_XLFN.NEGBINOM.DIST", eval_function_stats_3)
+  m.set("NEGBINOMDIST", eval_function_stats_3)
+  m.set("GAUSS", eval_function_stats_3)
+  m.set("PHI", eval_function_stats_3)
+  m.set("CHIDIST", eval_function_stats_3)
+  m.set("CHIINV", eval_function_stats_3)
+  m.set("CHISQdotDIST", eval_function_stats_3)
+  m.set("CHISQ.DIST", eval_function_stats_3)
+  m.set("_XLFN.CHISQ.DIST", eval_function_stats_3)
+  m.set("CHISQdotDISTdotRT", eval_function_stats_3)
+  m.set("CHISQ.DIST.RT", eval_function_stats_3)
+  m.set("_XLFN.CHISQ.DIST.RT", eval_function_stats_3)
+  m.set("CHISQdotINV", eval_function_stats_3)
+  m.set("CHISQ.INV", eval_function_stats_3)
+  m.set("_XLFN.CHISQ.INV", eval_function_stats_3)
+  m.set("CHISQdotINVdotRT", eval_function_stats_3)
+  m.set("CHISQ.INV.RT", eval_function_stats_3)
+  m.set("_XLFN.CHISQ.INV.RT", eval_function_stats_3)
+  m.set("CHITEST", eval_function_stats_3)
+  m.set("CHISQdotTEST", eval_function_stats_3)
+  m.set("CHISQ.TEST", eval_function_stats_3)
+  m.set("_XLFN.CHISQ.TEST", eval_function_stats_3)
+  m.set("FdotDIST", eval_function_stats_3)
+  m.set("F.DIST", eval_function_stats_3)
+  m.set("_XLFN.F.DIST", eval_function_stats_3)
+  m.set("FDIST", eval_function_stats_3)
+  m.set("FdotDISTdotRT", eval_function_stats_3)
+  m.set("F.DIST.RT", eval_function_stats_3)
+  m.set("_XLFN.F.DIST.RT", eval_function_stats_3)
+  m.set("FdotINV", eval_function_stats_3)
+  m.set("F.INV", eval_function_stats_3)
+  m.set("_XLFN.F.INV", eval_function_stats_3)
+  m.set("FdotINVdotRT", eval_function_stats_3)
+  m.set("F.INV.RT", eval_function_stats_3)
+  m.set("_XLFN.F.INV.RT", eval_function_stats_3)
+  m.set("FINV", eval_function_stats_3)
+  m.set("FTEST", eval_function_stats_3)
+  m.set("FdotTEST", eval_function_stats_3)
+  m.set("F.TEST", eval_function_stats_3)
+  m.set("_XLFN.F.TEST", eval_function_stats_3)
+  m.set("TdotDIST", eval_function_stats_3)
+  m.set("T.DIST", eval_function_stats_3)
+  m.set("_XLFN.T.DIST", eval_function_stats_3)
+  m.set("TdotDISTdot2T", eval_function_stats_3)
+  m.set("T.DIST.2T", eval_function_stats_3)
+  m.set("_XLFN.T.DIST.2T", eval_function_stats_3)
+  m.set("TdotDISTdotRT", eval_function_stats_3)
+  m.set("T.DIST.RT", eval_function_stats_3)
+  m.set("_XLFN.T.DIST.RT", eval_function_stats_3)
+  m.set("TDIST", eval_function_stats_3)
+  m.set("TdotINV", eval_function_stats_3)
+  m.set("T.INV", eval_function_stats_3)
+  m.set("_XLFN.T.INV", eval_function_stats_3)
+  m.set("TdotINVdot2T", eval_function_stats_3)
+  m.set("T.INV.2T", eval_function_stats_3)
+  m.set("_XLFN.T.INV.2T", eval_function_stats_3)
+  m.set("TINV", eval_function_stats_3)
+  m.set("TdotTEST", eval_function_stats_3)
+  m.set("T.TEST", eval_function_stats_3)
+  m.set("_XLFN.T.TEST", eval_function_stats_3)
+  m.set("TTEST", eval_function_stats_3)
+  m.set("ZdotTEST", eval_function_stats_3)
+  m.set("Z.TEST", eval_function_stats_3)
+  m.set("_XLFN.Z.TEST", eval_function_stats_3)
+  m.set("ZTEST", eval_function_stats_3)
+  m.set("DOLLAR", eval_function_text)
+  m.set("LEN", eval_function_text)
+  m.set("LENB", eval_function_text)
+  m.set("LOWER", eval_function_text)
+  m.set("UPPER", eval_function_text)
+  m.set("PROPER", eval_function_text)
+  m.set("DBCS", eval_function_text)
+  m.set("TRIM", eval_function_text)
+  m.set("LEFT", eval_function_text)
+  m.set("LEFTB", eval_function_text)
+  m.set("RIGHT", eval_function_text)
+  m.set("RIGHTB", eval_function_text)
+  m.set("MID", eval_function_text)
+  m.set("MIDB", eval_function_text)
+  m.set("REPT", eval_function_text)
+  m.set("REPLACE", eval_function_text)
+  m.set("REPLACEB", eval_function_text)
+  m.set("SUBSTITUTE", eval_function_text)
+  m.set("FIND", eval_function_text)
+  m.set("FINDB", eval_function_text)
+  m.set("SEARCH", eval_function_text)
+  m.set("SEARCHB", eval_function_text)
+  m.set("EXACT", eval_function_text)
+  m.set("FIXED", eval_function_text)
+  m.set("VALUE", eval_function_text)
+  m.set("VALUETOTEXT", eval_function_text)
+  m.set("TEXT", eval_function_text)
+  m.set("ARRAYTOTEXT", eval_function_text)
+  m.set("TEXTAFTER", eval_function_text)
+  m.set("TEXTBEFORE", eval_function_text)
+  m.set("_XLFN.TEXTAFTER", eval_function_text)
+  m.set("_XLFN.TEXTBEFORE", eval_function_text)
+  m.set("TEXTSPLIT", eval_function_text)
+  m.set("_XLFN.TEXTSPLIT", eval_function_text)
+  m.set("TEXTJOIN", eval_function_text)
+  m.set("CHAR", eval_function_text)
+  m.set("UNICHAR", eval_function_text)
+  m.set("CLEAN", eval_function_text)
+  m.set("ENCODEURL", eval_function_text)
+  m.set("BAHTTEXT", eval_function_text)
+  m.set("CODE", eval_function_text)
+  m.set("UNICODE", eval_function_text)
+  m.set("CONCAT", eval_function_text)
+  m.set("CONCATENATE", eval_function_text)
+  m.set("T", eval_function_text)
+  m.set("TRANSPOSE", eval_function_lookup)
+  m.set("SEQUENCE", eval_function_lookup)
+  m.set("_XLFN.SEQUENCE", eval_function_lookup)
+  m.set("TAKE", eval_function_lookup)
+  m.set("_XLFN.TAKE", eval_function_lookup)
+  m.set("DROP", eval_function_lookup)
+  m.set("_XLFN.DROP", eval_function_lookup)
+  m.set("CHOOSECOLS", eval_function_lookup)
+  m.set("_XLFN.CHOOSECOLS", eval_function_lookup)
+  m.set("CHOOSEROWS", eval_function_lookup)
+  m.set("_XLFN.CHOOSEROWS", eval_function_lookup)
+  m.set("HSTACK", eval_function_lookup)
+  m.set("_XLFN.HSTACK", eval_function_lookup)
+  m.set("VSTACK", eval_function_lookup)
+  m.set("_XLFN.VSTACK", eval_function_lookup)
+  m.set("EXPAND", eval_function_lookup)
+  m.set("_XLFN.EXPAND", eval_function_lookup)
+  m.set("WRAPROWS", eval_function_lookup)
+  m.set("_XLFN.WRAPROWS", eval_function_lookup)
+  m.set("WRAPCOLS", eval_function_lookup)
+  m.set("_XLFN.WRAPCOLS", eval_function_lookup)
+  m.set("TOCOL", eval_function_lookup)
+  m.set("_XLFN.TOCOL", eval_function_lookup)
+  m.set("TOROW", eval_function_lookup)
+  m.set("_XLFN.TOROW", eval_function_lookup)
+  m.set("SORT", eval_function_lookup)
+  m.set("_XLFN.SORT", eval_function_lookup)
+  m.set("SORTBY", eval_function_lookup)
+  m.set("_XLFN.SORTBY", eval_function_lookup)
+  m.set("FILTER", eval_function_lookup)
+  m.set("_XLFN.FILTER", eval_function_lookup)
+  m.set("UNIQUE", eval_function_lookup)
+  m.set("_XLFN.UNIQUE", eval_function_lookup)
+  m.set("INDEX", eval_function_lookup)
+  m.set("MATCH", eval_function_lookup)
+  m.set("VLOOKUP", eval_function_lookup)
+  m.set("HLOOKUP", eval_function_lookup)
+  m.set("LOOKUP", eval_function_lookup)
+  m.set("XLOOKUP", eval_function_lookup)
+  m.set("_XLFN.XLOOKUP", eval_function_lookup)
+  m.set("ANCHORARRAY", eval_function_lookup)
+  m.set("_XLFN.ANCHORARRAY", eval_function_lookup)
+  m.set("ADDRESS", eval_function_lookup)
+  m.set("INDIRECT", eval_function_lookup)
+  m.set("HYPERLINK", eval_function_lookup)
+  m.set("CHOOSE", eval_function_lookup)
+}
+
+///|
+fn eval_register_plain(m : @hashmap.HashMap[String, PlainHandler]) -> Unit {
+  m.set("BITOR", eval_function_math_2)
+  m.set("BITOR", eval_function_math_2)
+  m.set("BITRSHIFT", eval_function_math_2)
+  m.set("BITRSHIFT", eval_function_math_2)
+  m.set("BITXOR", eval_function_math_2)
+  m.set("BITXOR", eval_function_math_2)
+  m.set("ACOS", eval_function_math_2)
+  m.set("ACOSH", eval_function_math_2)
+  m.set("ACOT", eval_function_math_2)
+  m.set("_XLFN.ACOT", eval_function_math_2)
+  m.set("ACOTH", eval_function_math_2)
+  m.set("_XLFN.ACOTH", eval_function_math_2)
+  m.set("ASIN", eval_function_math_2)
+  m.set("ASINH", eval_function_math_2)
+  m.set("ATAN", eval_function_math_2)
+  m.set("ATANH", eval_function_math_2)
+  m.set("ATAN2", eval_function_math_2)
+  m.set("COS", eval_function_math_2)
+  m.set("COSH", eval_function_math_2)
+  m.set("SIN", eval_function_math_2)
+  m.set("SINH", eval_function_math_2)
+  m.set("TAN", eval_function_math_2)
+  m.set("TANH", eval_function_math_2)
+  m.set("COT", eval_function_math_2)
+  m.set("_XLFN.COT", eval_function_math_2)
+  m.set("COTH", eval_function_math_2)
+  m.set("_XLFN.COTH", eval_function_math_2)
+  m.set("CSC", eval_function_math_2)
+  m.set("_XLFN.CSC", eval_function_math_2)
+  m.set("CSCH", eval_function_math_2)
+  m.set("_XLFN.CSCH", eval_function_math_2)
+  m.set("SEC", eval_function_math_2)
+  m.set("_XLFN.SEC", eval_function_math_2)
+  m.set("SECH", eval_function_math_2)
+  m.set("_XLFN.SECH", eval_function_math_2)
+  m.set("DEGREES", eval_function_math_2)
+  m.set("RADIANS", eval_function_math_2)
+  m.set("RAND", eval_function_math_2)
+  m.set("RANDARRAY", eval_function_math_2)
+  m.set("_XLFN.RANDARRAY", eval_function_math_2)
+  m.set("RANDBETWEEN", eval_function_math_2)
+  m.set("PI", eval_function_math_2)
+  m.set("SQRTPI", eval_function_math_2)
+  m.set("LOG", eval_function_math_2)
+  m.set("LOG10", eval_function_math_2)
+  m.set("IMABS", eval_function_math_2)
+  m.set("IMAGINARY", eval_function_math_2)
+  m.set("IMARGUMENT", eval_function_math_2)
+  m.set("IMCONJUGATE", eval_function_math_2)
+  m.set("IMCOS", eval_function_math_2)
+  m.set("IMCOSH", eval_function_math_2)
+  m.set("IMCOT", eval_function_math_2)
+  m.set("IMCSC", eval_function_math_2)
+  m.set("IMCSCH", eval_function_math_2)
+  m.set("IMDIV", eval_function_math_2)
+  m.set("IMEXP", eval_function_math_2)
+  m.set("IMLN", eval_function_math_2)
+  m.set("IMLOG10", eval_function_math_2)
+  m.set("IMLOG2", eval_function_math_2)
+  m.set("IMPOWER", eval_function_math_2)
+  m.set("IMPRODUCT", eval_function_math_2)
+  m.set("IMREAL", eval_function_math_2)
+  m.set("IMSEC", eval_function_math_2)
+  m.set("IMSECH", eval_function_math_2)
+  m.set("IMSIN", eval_function_math_2)
+  m.set("IMSINH", eval_function_math_2)
+  m.set("IMSQRT", eval_function_math_2)
+  m.set("IMSUB", eval_function_math_2)
+  m.set("IMSUM", eval_function_math_2)
+  m.set("IMTAN", eval_function_math_2)
+  m.set("FLOOR", eval_function_math_2)
+  m.set("CEILING", eval_function_math_2)
+  m.set("CEILINGdotMATH", eval_function_math_2)
+  m.set("CEILING.MATH", eval_function_math_2)
+  m.set("_XLFN.CEILING.MATH", eval_function_math_2)
+  m.set("CEILINGdotPRECISE", eval_function_math_3)
+  m.set("CEILING.PRECISE", eval_function_math_3)
+  m.set("_XLFN.CEILING.PRECISE", eval_function_math_3)
+  m.set("FLOORdotMATH", eval_function_math_3)
+  m.set("FLOOR.MATH", eval_function_math_3)
+  m.set("_XLFN.FLOOR.MATH", eval_function_math_3)
+  m.set("FLOORdotPRECISE", eval_function_math_3)
+  m.set("FLOOR.PRECISE", eval_function_math_3)
+  m.set("_XLFN.FLOOR.PRECISE", eval_function_math_3)
+  m.set("ISOdotCEILING", eval_function_math_3)
+  m.set("ISO.CEILING", eval_function_math_3)
+  m.set("_XLFN.ISO.CEILING", eval_function_math_3)
+  m.set("TRUNC", eval_function_math_3)
+  m.set("ROUND", eval_function_math_3)
+  m.set("ROUNDUP", eval_function_math_3)
+  m.set("ROUNDDOWN", eval_function_math_3)
+  m.set("SQRT", eval_function_math_3)
+  m.set("POWER", eval_function_math_3)
+  m.set("EVEN", eval_function_math_3)
+  m.set("ODD", eval_function_math_3)
+  m.set("MROUND", eval_function_math_3)
+  m.set("MOD", eval_function_math_3)
+  m.set("QUOTIENT", eval_function_math_3)
+  m.set("ACCRINT", eval_function_financial)
+  m.set("ACCRINTM", eval_function_financial)
+  m.set("AMORDEGRC", eval_function_financial)
+  m.set("AMORLINC", eval_function_financial)
+  m.set("COUPDAYBS", eval_function_financial)
+  m.set("COUPDAYS", eval_function_financial)
+  m.set("COUPDAYSNC", eval_function_financial)
+  m.set("COUPNCD", eval_function_financial)
+  m.set("COUPNUM", eval_function_financial)
+  m.set("COUPPCD", eval_function_financial)
+  m.set("CUMIPMT", eval_function_financial)
+  m.set("CUMIPMT", eval_function_financial)
+  m.set("CUMPRINC", eval_function_financial)
+  m.set("CUMPRINC", eval_function_financial)
+  m.set("DURATION", eval_function_financial)
+  m.set("DB", eval_function_financial)
+  m.set("DDB", eval_function_financial)
+  m.set("FV", eval_function_financial)
+  m.set("FVSCHEDULE", eval_function_financial)
+  m.set("DISC", eval_function_financial)
+  m.set("INTRATE", eval_function_financial)
+  m.set("IRR", eval_function_financial)
+  m.set("MDURATION", eval_function_financial)
+  m.set("MIRR", eval_function_financial)
+  m.set("DOLLARDE", eval_function_financial)
+  m.set("DOLLARDE", eval_function_financial)
+  m.set("DOLLARFR", eval_function_financial)
+  m.set("DOLLARFR", eval_function_financial)
+  m.set("EFFECT", eval_function_financial)
+  m.set("IPMT", eval_function_financial)
+  m.set("IPMT", eval_function_financial)
+  m.set("ISPMT", eval_function_financial)
+  m.set("NOMINAL", eval_function_financial)
+  m.set("NPER", eval_function_financial)
+  m.set("NPV", eval_function_financial)
+  m.set("ODDFPRICE", eval_function_financial)
+  m.set("ODDFYIELD", eval_function_financial)
+  m.set("ODDLPRICE", eval_function_financial)
+  m.set("ODDLYIELD", eval_function_financial)
+  m.set("PDURATION", eval_function_financial)
+  m.set("PMT", eval_function_financial)
+  m.set("PPMT", eval_function_financial)
+  m.set("PPMT", eval_function_financial)
+  m.set("PRICE", eval_function_financial)
+  m.set("PRICEDISC", eval_function_financial)
+  m.set("PRICEMAT", eval_function_financial)
+  m.set("PV", eval_function_financial)
+  m.set("RATE", eval_function_financial)
+  m.set("RECEIVED", eval_function_financial)
+  m.set("RRI", eval_function_financial)
+  m.set("SLN", eval_function_financial)
+  m.set("SYD", eval_function_financial)
+  m.set("TBILLEQ", eval_function_financial)
+  m.set("TBILLPRICE", eval_function_financial)
+  m.set("TBILLYIELD", eval_function_financial)
+  m.set("XIRR", eval_function_financial)
+  m.set("XNPV", eval_function_financial)
+  m.set("YIELD", eval_function_financial)
+  m.set("YIELDDISC", eval_function_financial)
+  m.set("YIELDMAT", eval_function_financial)
+  m.set("VDB", eval_function_financial)
+  m.set("DATE", eval_function_date_time)
+  m.set("TIME", eval_function_date_time)
+  m.set("DATEVALUE", eval_function_date_time)
+  m.set("TIMEVALUE", eval_function_date_time)
+  m.set("DATEDIF", eval_function_date_time)
+  m.set("DAYS", eval_function_date_time)
+  m.set("DAYS360", eval_function_date_time)
+  m.set("ISOWEEKNUM", eval_function_date_time)
+  m.set("EDATE", eval_function_date_time)
+  m.set("EOMONTH", eval_function_date_time)
+  m.set("YEARFRAC", eval_function_date_time)
+  m.set("WEEKDAY", eval_function_date_time)
+  m.set("WEEKNUM", eval_function_date_time)
+  m.set("NETWORKDAYS", eval_function_date_time)
+  m.set("NETWORKDAYS.INTL", eval_function_date_time)
+  m.set("WORKDAY", eval_function_date_time)
+  m.set("WORKDAY.INTL", eval_function_date_time)
+  m.set("NOW", eval_function_date_time)
+  m.set("TODAY", eval_function_date_time)
+  m.set("YEAR", eval_function_date_time)
+  m.set("MONTH", eval_function_date_time)
+  m.set("DAY", eval_function_date_time)
+  m.set("HOUR", eval_function_date_time)
+  m.set("MINUTE", eval_function_date_time)
+  m.set("SECOND", eval_function_date_time)
+  m.set("DISPIMG", eval_function_info)
+  m.set("_XLFN.DISPIMG", eval_function_info)
+  m.set("ISBLANK", eval_function_info)
+  m.set("ISERR", eval_function_info)
+  m.set("ISEVEN", eval_function_info)
+  m.set("ISODD", eval_function_info)
+  m.set("ISERROR", eval_function_info)
+  m.set("ISLOGICAL", eval_function_info)
+  m.set("ISNA", eval_function_info)
+  m.set("ISNUMBER", eval_function_info)
+  m.set("ISTEXT", eval_function_info)
+  m.set("ISNONTEXT", eval_function_info)
+  m.set("ISREF", eval_function_info)
+  m.set("ISFORMULA", eval_function_info)
+  m.set("ERRORdotTYPE", eval_function_info)
+  m.set("ERROR.TYPE", eval_function_info)
+  m.set("SHEET", eval_function_info)
+  m.set("SHEETS", eval_function_info)
+  m.set("TYPE", eval_function_info)
+  m.set("NA", eval_function_info)
+  m.set("N", eval_function_info)
+  m.set("TRUE", eval_function_logical)
+  m.set("FALSE", eval_function_logical)
+  m.set("AND", eval_function_logical)
+  m.set("OR", eval_function_logical)
+  m.set("NOT", eval_function_logical)
+  m.set("XOR", eval_function_logical)
+  m.set("IF", eval_function_logical)
+  m.set("IFERROR", eval_function_logical)
+  m.set("IFNA", eval_function_logical)
+  m.set("IFS", eval_function_logical)
+  m.set("SWITCH", eval_function_logical)
+}
+
+///|
+fn eval_function_math_1(
+  workbook : Workbook,
+  sheet_name : String,
+  name : String,
+  args : ArrayView[Expr],
+  values : Array[FormulaValue],
+  ctx : CalcContext,
+) -> FormulaValue raise XlsxError {
   match name {
-    "TRUE" => Bool(true)
-    "FALSE" => Bool(false)
     "SUM" => sum_values(values)
     "SUBTOTAL" => subtotal_values(values)
     "AGGREGATE" => aggregate_values(values)
     "PRODUCT" => product_values(values)
+    "SIGN" => sign_values(workbook, sheet_name, name, args, values, ctx)
+    "SERIESSUM" =>
+      seriessum_values(workbook, sheet_name, name, args, values, ctx)
+    "SUMIF" => sumif_values2(workbook, sheet_name, name, args, values, ctx)
+    "SUMPRODUCT" =>
+      sumproduct_values2(workbook, sheet_name, name, args, values, ctx)
+    "SUMSQ" => sumsq_values(values)
+    "SUMX2MY2" => sumx2my2_values(workbook, sheet_name, name, args, values, ctx)
+    "SUMX2PY2" => sumx2py2_values(workbook, sheet_name, name, args, values, ctx)
+    "SUMXMY2" => sumxmy2_values(workbook, sheet_name, name, args, values, ctx)
+    "SUMIFS" => sumifs_values(workbook, sheet_name, name, args, values, ctx)
+    "GCD" => gcd_values(values)
+    "LCM" => lcm_values(values)
+    "COMBIN" => combin_values2(workbook, sheet_name, name, args, values, ctx)
+    "COMBINA" | "_XLFN.COMBINA" =>
+      combina_xlfn_combina_values(workbook, sheet_name, name, args, values, ctx)
+    "COMPLEX" => complex_values(workbook, sheet_name, name, args, values, ctx)
+    "FACT" => fact_values(workbook, sheet_name, name, args, values, ctx)
+    "FACTDOUBLE" =>
+      factdouble_values(workbook, sheet_name, name, args, values, ctx)
+    "MULTINOMIAL" => multinomial_values(values)
+    "MDETERM" => mdeterm_values(workbook, sheet_name, name, args, values, ctx)
+    "MINVERSE" => minverse_values(workbook, sheet_name, name, args, values, ctx)
+    "MMULT" => mmult_values(workbook, sheet_name, name, args, values, ctx)
+    "MUNIT" | "_XLFN.MUNIT" =>
+      munit_xlfn_munit_values(workbook, sheet_name, name, args, values, ctx)
+    "ABS" => abs_values(workbook, sheet_name, name, args, values, ctx)
+    "INT" => int_values(workbook, sheet_name, name, args, values, ctx)
+    "LN" => ln_values(workbook, sheet_name, name, args, values, ctx)
+    "EXP" => exp_values(workbook, sheet_name, name, args, values, ctx)
+    "DECIMAL" | "_XLFN.DECIMAL" =>
+      decimal_xlfn_decimal_values(workbook, sheet_name, name, args, values, ctx)
+    "ROMAN" => roman_values(workbook, sheet_name, name, args, values, ctx)
+    "ARABIC" | "_XLFN.ARABIC" =>
+      arabic_xlfn_arabic_values(workbook, sheet_name, name, args, values, ctx)
+    "BASE" => base_values(values)
+    "BIN2DEC" => bin2dec_values(workbook, sheet_name, name, args, values, ctx)
+    "BIN2HEX" => bin2hex_values(workbook, sheet_name, name, args, values, ctx)
+    "BIN2OCT" => bin2oct_values(workbook, sheet_name, name, args, values, ctx)
+    "DEC2BIN" => dec2x_values("DEC2BIN", values)
+    "DEC2HEX" => dec2x_values("DEC2HEX", values)
+    "DEC2OCT" => dec2x_values("DEC2OCT", values)
+    "HEX2BIN" => hex2bin_values(workbook, sheet_name, name, args, values, ctx)
+    "HEX2DEC" => hex2dec_values(workbook, sheet_name, name, args, values, ctx)
+    "HEX2OCT" => hex2oct_values(workbook, sheet_name, name, args, values, ctx)
+    "OCT2BIN" => oct2bin_values(workbook, sheet_name, name, args, values, ctx)
+    "OCT2DEC" => oct2dec_values(workbook, sheet_name, name, args, values, ctx)
+    "OCT2HEX" => oct2hex_values(workbook, sheet_name, name, args, values, ctx)
+    "BESSELI" => besseli_values(workbook, sheet_name, name, args, values, ctx)
+    "BESSELJ" => besselj_values(workbook, sheet_name, name, args, values, ctx)
+    "BESSELK" => besselk_values(workbook, sheet_name, name, args, values, ctx)
+    "BESSELY" => bessely_values(workbook, sheet_name, name, args, values, ctx)
+    "DELTA" => delta_values(workbook, sheet_name, name, args, values, ctx)
+    "ERF" => erf_values(workbook, sheet_name, name, args, values, ctx)
+    "ERFdotPRECISE" | "ERF.PRECISE" | "_XLFN.ERF.PRECISE" =>
+      erfdotpreciseerf_precise_xlfn_erf_precise_values(
+        workbook, sheet_name, name, args, values, ctx,
+      )
+    "ERFC" => erfc_values(workbook, sheet_name, name, args, values, ctx)
+    "ERFCdotPRECISE" | "ERFC.PRECISE" | "_XLFN.ERFC.PRECISE" =>
+      erfcdotpreciseerfc_precise_xlfn_erfc_precise_values(
+        workbook, sheet_name, name, args, values, ctx,
+      )
+    "CONVERT" => convert_values(values)
+    "EUROCONVERT" => euroconvert_values(values)
+    "GESTEP" => gestep_values(workbook, sheet_name, name, args, values, ctx)
+    "BITAND" => bitwise_values("BITAND", values)
+    "BITLSHIFT" => bitwise_values("BITLSHIFT", values)
+    _ => Error(formula_error_name)
+  }
+}
+
+///|
+fn eval_function_math_2(
+  workbook : Workbook,
+  sheet_name : String,
+  name : String,
+  args : ArrayView[Expr],
+  values : Array[FormulaValue],
+  ctx : CalcContext,
+) -> FormulaValue {
+  match name {
+    "BITOR" => bitwise_values("BITOR", values)
+    "BITRSHIFT" => bitwise_values("BITRSHIFT", values)
+    "BITXOR" => bitwise_values("BITXOR", values)
+    "ACOS" => acos_values(workbook, sheet_name, name, args, values, ctx)
+    "ACOSH" => acosh_values(workbook, sheet_name, name, args, values, ctx)
+    "ACOT" | "_XLFN.ACOT" =>
+      acot_xlfn_acot_values(workbook, sheet_name, name, args, values, ctx)
+    "ACOTH" | "_XLFN.ACOTH" =>
+      acoth_xlfn_acoth_values(workbook, sheet_name, name, args, values, ctx)
+    "ASIN" => asin_values(workbook, sheet_name, name, args, values, ctx)
+    "ASINH" => asinh_values(workbook, sheet_name, name, args, values, ctx)
+    "ATAN" => atan_values(workbook, sheet_name, name, args, values, ctx)
+    "ATANH" => atanh_values(workbook, sheet_name, name, args, values, ctx)
+    "ATAN2" => atan2_values(workbook, sheet_name, name, args, values, ctx)
+    "COS" => cos_values(workbook, sheet_name, name, args, values, ctx)
+    "COSH" => cosh_values(workbook, sheet_name, name, args, values, ctx)
+    "SIN" => sin_values(workbook, sheet_name, name, args, values, ctx)
+    "SINH" => sinh_values(workbook, sheet_name, name, args, values, ctx)
+    "TAN" => tan_values(workbook, sheet_name, name, args, values, ctx)
+    "TANH" => tanh_values(workbook, sheet_name, name, args, values, ctx)
+    "COT" | "_XLFN.COT" =>
+      cot_xlfn_cot_values(workbook, sheet_name, name, args, values, ctx)
+    "COTH" | "_XLFN.COTH" =>
+      coth_xlfn_coth_values(workbook, sheet_name, name, args, values, ctx)
+    "CSC" | "_XLFN.CSC" =>
+      csc_xlfn_csc_values(workbook, sheet_name, name, args, values, ctx)
+    "CSCH" | "_XLFN.CSCH" =>
+      csch_xlfn_csch_values(workbook, sheet_name, name, args, values, ctx)
+    "SEC" | "_XLFN.SEC" =>
+      sec_xlfn_sec_values(workbook, sheet_name, name, args, values, ctx)
+    "SECH" | "_XLFN.SECH" =>
+      sech_xlfn_sech_values(workbook, sheet_name, name, args, values, ctx)
+    "DEGREES" => degrees_values(workbook, sheet_name, name, args, values, ctx)
+    "RADIANS" => radians_values(workbook, sheet_name, name, args, values, ctx)
+    "RAND" => rand_values(workbook, sheet_name, name, args, values, ctx)
+    "RANDARRAY" | "_XLFN.RANDARRAY" => randarray_values(values)
+    "RANDBETWEEN" =>
+      randbetween_values(workbook, sheet_name, name, args, values, ctx)
+    "PI" => pi_values(workbook, sheet_name, name, args, values, ctx)
+    "SQRTPI" => sqrtpi_values(workbook, sheet_name, name, args, values, ctx)
+    "LOG" => log_values(workbook, sheet_name, name, args, values, ctx)
+    "LOG10" => log10_values(workbook, sheet_name, name, args, values, ctx)
+    "IMABS" => imabs_values(workbook, sheet_name, name, args, values, ctx)
+    "IMAGINARY" =>
+      imaginary_values(workbook, sheet_name, name, args, values, ctx)
+    "IMARGUMENT" =>
+      imargument_values(workbook, sheet_name, name, args, values, ctx)
+    "IMCONJUGATE" =>
+      imconjugate_values(workbook, sheet_name, name, args, values, ctx)
+    "IMCOS" => imcos_values(workbook, sheet_name, name, args, values, ctx)
+    "IMCOSH" => imcosh_values(workbook, sheet_name, name, args, values, ctx)
+    "IMCOT" => imcot_values(workbook, sheet_name, name, args, values, ctx)
+    "IMCSC" => imcsc_values(workbook, sheet_name, name, args, values, ctx)
+    "IMCSCH" => imcsch_values(workbook, sheet_name, name, args, values, ctx)
+    "IMDIV" => imdiv_values(workbook, sheet_name, name, args, values, ctx)
+    "IMEXP" => imexp_values(workbook, sheet_name, name, args, values, ctx)
+    "IMLN" => imln_values(workbook, sheet_name, name, args, values, ctx)
+    "IMLOG10" => imlog10_values(workbook, sheet_name, name, args, values, ctx)
+    "IMLOG2" => imlog2_values(workbook, sheet_name, name, args, values, ctx)
+    "IMPOWER" => impower_values(workbook, sheet_name, name, args, values, ctx)
+    "IMPRODUCT" =>
+      improduct_values(workbook, sheet_name, name, args, values, ctx)
+    "IMREAL" => imreal_values(workbook, sheet_name, name, args, values, ctx)
+    "IMSEC" => imsec_values(workbook, sheet_name, name, args, values, ctx)
+    "IMSECH" => imsech_values(workbook, sheet_name, name, args, values, ctx)
+    "IMSIN" => imsin_values(workbook, sheet_name, name, args, values, ctx)
+    "IMSINH" => imsinh_values(workbook, sheet_name, name, args, values, ctx)
+    "IMSQRT" => imsqrt_values(workbook, sheet_name, name, args, values, ctx)
+    "IMSUB" => imsub_values(workbook, sheet_name, name, args, values, ctx)
+    "IMSUM" => imsum_values(workbook, sheet_name, name, args, values, ctx)
+    "IMTAN" => imtan_values(workbook, sheet_name, name, args, values, ctx)
+    "FLOOR" => floor_values(workbook, sheet_name, name, args, values, ctx)
+    "CEILING" => ceiling_values(workbook, sheet_name, name, args, values, ctx)
+    "CEILINGdotMATH" | "CEILING.MATH" | "_XLFN.CEILING.MATH" =>
+      ceilingdotmathceiling_math_xlfn_ceiling_math_values(
+        workbook, sheet_name, name, args, values, ctx,
+      )
+    _ => Error(formula_error_name)
+  }
+}
+
+///|
+fn eval_function_math_3(
+  workbook : Workbook,
+  sheet_name : String,
+  name : String,
+  args : ArrayView[Expr],
+  values : Array[FormulaValue],
+  ctx : CalcContext,
+) -> FormulaValue {
+  match name {
+    "CEILINGdotPRECISE" | "CEILING.PRECISE" | "_XLFN.CEILING.PRECISE" =>
+      ceilingdotpreciseceiling_precise_xlfn_ceiling_precise_values(
+        workbook, sheet_name, name, args, values, ctx,
+      )
+    "FLOORdotMATH" | "FLOOR.MATH" | "_XLFN.FLOOR.MATH" =>
+      floordotmathfloor_math_xlfn_floor_math_values(
+        workbook, sheet_name, name, args, values, ctx,
+      )
+    "FLOORdotPRECISE" | "FLOOR.PRECISE" | "_XLFN.FLOOR.PRECISE" =>
+      floordotprecisefloor_precise_xlfn_floor_precise_values(
+        workbook, sheet_name, name, args, values, ctx,
+      )
+    "ISOdotCEILING" | "ISO.CEILING" | "_XLFN.ISO.CEILING" =>
+      isodotceilingiso_ceiling_xlfn_iso_ceiling_values(
+        workbook, sheet_name, name, args, values, ctx,
+      )
+    "TRUNC" => trunc_values(workbook, sheet_name, name, args, values, ctx)
+    "ROUND" => round_values(workbook, sheet_name, name, args, values, ctx)
+    "ROUNDUP" => roundup_values(workbook, sheet_name, name, args, values, ctx)
+    "ROUNDDOWN" =>
+      rounddown_values(workbook, sheet_name, name, args, values, ctx)
+    "SQRT" => sqrt_values(workbook, sheet_name, name, args, values, ctx)
+    "POWER" => power_values(workbook, sheet_name, name, args, values, ctx)
+    "EVEN" => even_values(workbook, sheet_name, name, args, values, ctx)
+    "ODD" => odd_values(workbook, sheet_name, name, args, values, ctx)
+    "MROUND" => mround_values(workbook, sheet_name, name, args, values, ctx)
+    "MOD" => mod_values(workbook, sheet_name, name, args, values, ctx)
+    "QUOTIENT" => quotient_values(workbook, sheet_name, name, args, values, ctx)
+    _ => Error(formula_error_name)
+  }
+}
+
+///|
+fn eval_function_stats_1(
+  workbook : Workbook,
+  sheet_name : String,
+  name : String,
+  args : ArrayView[Expr],
+  values : Array[FormulaValue],
+  ctx : CalcContext,
+) -> FormulaValue raise XlsxError {
+  match name {
     "AVERAGE" => average_values(values)
     "AVERAGEA" => averagea_values(values)
     "STDEV" | "STDEV.S" =>
-      match values {
-        [_, ..] => stdev_values(false, values)
-        [] => Error(formula_error_value)
-      }
-    "STDEVA" =>
-      match values {
-        [_, ..] => stdev_values(true, values)
-        [] => Error(formula_error_value)
-      }
+      stdevstdev_s_values(workbook, sheet_name, name, args, values, ctx)
+    "STDEVA" => stdeva_values(workbook, sheet_name, name, args, values, ctx)
     "STDEVP" | "STDEV.P" =>
-      match values {
-        [_, ..] =>
-          match variance_values(values, false, false) {
-            Number(variance) => {
-              let result = @math.pow(variance, 0.5)
-              Number(round_significant_digits(result, 15))
-            }
-            value => value
-          }
-        [] => Error(formula_error_value)
-      }
-    "STDEVPA" =>
-      match values {
-        [_, ..] =>
-          match variance_values(values, false, true) {
-            Number(variance) => {
-              let result = @math.pow(variance, 0.5)
-              Number(round_significant_digits(result, 15))
-            }
-            value => value
-          }
-        [] => Error(formula_error_value)
-      }
+      stdevpstdev_p_values(workbook, sheet_name, name, args, values, ctx)
+    "STDEVPA" => stdevpa_values(workbook, sheet_name, name, args, values, ctx)
     "VAR" | "VAR.S" =>
-      match values {
-        [_, ..] => variance_values(values, true, false)
-        [] => Error(formula_error_value)
-      }
-    "VARA" =>
-      match values {
-        [_, ..] => variance_values(values, true, true)
-        [] => Error(formula_error_value)
-      }
+      varvar_s_values(workbook, sheet_name, name, args, values, ctx)
+    "VARA" => vara_values(workbook, sheet_name, name, args, values, ctx)
     "VARP" | "VAR.P" =>
-      match values {
-        [_, ..] => variance_values(values, false, false)
-        [] => Error(formula_error_value)
-      }
-    "VARPA" =>
-      match values {
-        [_, ..] => variance_values(values, false, true)
-        [] => Error(formula_error_value)
-      }
+      varpvar_p_values(workbook, sheet_name, name, args, values, ctx)
+    "VARPA" => varpa_values(workbook, sheet_name, name, args, values, ctx)
     "TRIMMEAN" => trimmean_values(values)
-    "AVEDEV" =>
-      match values {
-        [_, ..] => avedev_values(values)
-        [] => Error(formula_error_value)
-      }
-    "DEVSQ" =>
-      match values {
-        [_, ..] => devsq_values(values)
-        [] => Error(formula_error_value)
-      }
-    "GEOMEAN" =>
-      match values {
-        [_, ..] => geomean_values(values)
-        [] => Error(formula_error_value)
-      }
-    "HARMEAN" =>
-      match values {
-        [_, ..] => harmean_values(values)
-        [] => Error(formula_error_value)
-      }
-    "KURT" =>
-      match values {
-        [_, ..] => kurt_values(values)
-        [] => Error(formula_error_value)
-      }
-    "SKEW" =>
-      match values {
-        [_, ..] => skew_values("SKEW", values)
-        [] => Error(formula_error_value)
-      }
-    "SKEW.P" =>
-      match values {
-        [_, ..] => skew_values("SKEW.P", values)
-        [] => Error(formula_error_value)
-      }
+    "AVEDEV" => avedev_values2(workbook, sheet_name, name, args, values, ctx)
+    "DEVSQ" => devsq_values2(workbook, sheet_name, name, args, values, ctx)
+    "GEOMEAN" => geomean_values2(workbook, sheet_name, name, args, values, ctx)
+    "HARMEAN" => harmean_values2(workbook, sheet_name, name, args, values, ctx)
+    "KURT" => kurt_values2(workbook, sheet_name, name, args, values, ctx)
+    "SKEW" => skew_values2(workbook, sheet_name, name, args, values, ctx)
+    "SKEW.P" => skew_p_values(workbook, sheet_name, name, args, values, ctx)
     "STANDARDIZE" =>
-      match values {
-        [_, _, _] => standardize_values(values)
-        _ => Error(formula_error_value)
-      }
-    "LARGE" =>
-      match values {
-        [v0, v1] => kth_values("LARGE", v0, v1)
-        _ => Error(formula_error_value)
-      }
-    "SMALL" =>
-      match values {
-        [v0, v1] => kth_values("SMALL", v0, v1)
-        _ => Error(formula_error_value)
-      }
-    "MODE" =>
-      match values {
-        [_, ..] => mode_values(values)
-        [] => Error(formula_error_value)
-      }
+      standardize_values2(workbook, sheet_name, name, args, values, ctx)
+    "LARGE" => large_values(workbook, sheet_name, name, args, values, ctx)
+    "SMALL" => small_values(workbook, sheet_name, name, args, values, ctx)
+    "MODE" => mode_values2(workbook, sheet_name, name, args, values, ctx)
     "MODE.SNGL" =>
-      match values {
-        [_, ..] => mode_values(values)
-        [] => Error(formula_error_value)
-      }
+      mode_sngl_values(workbook, sheet_name, name, args, values, ctx)
     "MODE.MULT" =>
-      match values {
-        [_, ..] => mode_mult_values(values)
-        [] => Error(formula_error_value)
-      }
+      mode_mult_values2(workbook, sheet_name, name, args, values, ctx)
     "PERCENTILE" =>
-      match values {
-        [v0, v1] =>
-          match value_as_number(v1) {
-            Ok(k) =>
-              if k < 0.0 || k > 1.0 {
-                Error(formula_error_na)
-              } else {
-                percentile_values(v0, k, false, false)
-              }
-            Err(err) => err
-          }
-        _ => Error(formula_error_value)
-      }
+      percentile_values2(workbook, sheet_name, name, args, values, ctx)
     "PERCENTILE.INC" =>
-      match values {
-        [v0, v1] =>
-          match value_as_number(v1) {
-            Ok(k) =>
-              if k < 0.0 || k > 1.0 {
-                Error(formula_error_na)
-              } else {
-                percentile_values(v0, k, false, false)
-              }
-            Err(err) => err
-          }
-        _ => Error(formula_error_value)
-      }
+      percentile_inc_values(workbook, sheet_name, name, args, values, ctx)
     "PERCENTILE.EXC" =>
-      match values {
-        [v0, v1] =>
-          match value_as_number(v1) {
-            Ok(k) =>
-              if k <= 0.0 || k >= 1.0 {
-                Error(formula_error_num)
-              } else {
-                percentile_values(v0, k, true, true)
-              }
-            Err(err) => err
-          }
-        _ => Error(formula_error_value)
-      }
+      percentile_exc_values(workbook, sheet_name, name, args, values, ctx)
     "PERCENTRANK" =>
-      match values {
-        [v0, v1] | [v0, v1, _] =>
-          match value_as_number(v1) {
-            Ok(x) => {
-              let significance = if values is [_, _, v2] {
-                match value_as_number(v2) {
-                  Ok(num) => num
-                  Err(err) => return err
-                }
-              } else {
-                3.0
-              }
-              percentrank_values("PERCENTRANK", v0, x, significance)
-            }
-            Err(err) => err
-          }
-        _ => Error(formula_error_value)
-      }
+      percentrank_values2(workbook, sheet_name, name, args, values, ctx)
     "PERCENTRANK.INC" =>
-      match values {
-        [v0, v1] | [v0, v1, _] =>
-          match value_as_number(v1) {
-            Ok(x) => {
-              let significance = if values is [_, _, v2] {
-                match value_as_number(v2) {
-                  Ok(num) => num
-                  Err(err) => return err
-                }
-              } else {
-                3.0
-              }
-              percentrank_values("PERCENTRANK.INC", v0, x, significance)
-            }
-            Err(err) => err
-          }
-        _ => Error(formula_error_value)
-      }
+      percentrank_inc_values(workbook, sheet_name, name, args, values, ctx)
     "PERCENTRANK.EXC" =>
-      match values {
-        [v0, v1] | [v0, v1, _] =>
-          match value_as_number(v1) {
-            Ok(x) => {
-              let significance = if values is [_, _, v2] {
-                match value_as_number(v2) {
-                  Ok(num) => num
-                  Err(err) => return err
-                }
-              } else {
-                3.0
-              }
-              percentrank_values("PERCENTRANK.EXC", v0, x, significance)
-            }
-            Err(err) => err
-          }
-        _ => Error(formula_error_value)
-      }
+      percentrank_exc_values(workbook, sheet_name, name, args, values, ctx)
     "QUARTILE" =>
-      match values {
-        [v0, v1] =>
-          match value_as_number(v1) {
-            Ok(quart) => quartile_values("QUARTILE", v0, quart, false)
-            Err(err) => err
-          }
-        _ => Error(formula_error_value)
-      }
+      quartile_values2(workbook, sheet_name, name, args, values, ctx)
     "QUARTILE.INC" =>
-      match values {
-        [v0, v1] =>
-          match value_as_number(v1) {
-            Ok(quart) => quartile_values("QUARTILE.INC", v0, quart, false)
-            Err(err) => err
-          }
-        _ => Error(formula_error_value)
-      }
+      quartile_inc_values(workbook, sheet_name, name, args, values, ctx)
     "QUARTILE.EXC" =>
-      match values {
-        [v0, v1] =>
-          match value_as_number(v1) {
-            Ok(quart) => quartile_values("QUARTILE.EXC", v0, quart, true)
-            Err(err) => err
-          }
-        _ => Error(formula_error_value)
-      }
+      quartile_exc_values(workbook, sheet_name, name, args, values, ctx)
     "RANK" | "RANK.EQ" =>
-      match values {
-        [v0, v1] | [v0, v1, _] => {
-          let order = if values is [_, _, v2] {
-            match value_as_number(v2) {
-              Ok(num) => Some(num)
-              Err(err) => return err
-            }
-          } else {
-            None
-          }
-          rank_values(v0, v1, order)
-        }
-        _ => Error(formula_error_value)
-      }
-    "SIGN" =>
-      match values {
-        [v0] =>
-          match value_as_number(v0) {
-            Ok(num) =>
-              Number(
-                if num < 0.0 {
-                  -1.0
-                } else if num > 0.0 {
-                  1.0
-                } else {
-                  0.0
-                },
-              )
-            Err(err) => err
-          }
-        _ => Error(formula_error_value)
-      }
-    "SERIESSUM" =>
-      match values {
-        [v0, v1, v2, v3] => {
-          let x = match value_as_number(v0) {
-            Ok(num) => num
-            Err(err) => return err
-          }
-          let n = match value_as_number(v1) {
-            Ok(num) => num
-            Err(err) => return err
-          }
-          let m = match value_as_number(v2) {
-            Ok(num) => num
-            Err(err) => return err
-          }
-          let coefficients = list_from_value(v3)
-          let mut result = 0.0
-          let mut idx = 0.0
-          for coefficient in coefficients {
-            if formula_value_string(coefficient) == "" {
-              continue
-            }
-            let num = match value_as_number(coefficient) {
-              Ok(num) => num
-              Err(err) => return err
-            }
-            result = result + num * @math.pow(x, n + m * idx)
-            idx = idx + 1.0
-          }
-          Number(round_significant_digits(result, 15))
-        }
-        _ => Error(formula_error_value)
-      }
-    "CORREL" =>
-      match values {
-        [v0, v1] => correl_values(v0, v1)
-        _ => Error(formula_error_value)
-      }
-    "COVAR" =>
-      match values {
-        [v0, v1] => covar_values("COVAR", v0, v1)
-        _ => Error(formula_error_value)
-      }
+      rankrank_eq_values(workbook, sheet_name, name, args, values, ctx)
+    "CORREL" => correl_values2(workbook, sheet_name, name, args, values, ctx)
+    "COVAR" => covar_values2(workbook, sheet_name, name, args, values, ctx)
     "COVARIANCE.P" =>
-      match values {
-        [v0, v1] => covar_values("COVARIANCE.P", v0, v1)
-        _ => Error(formula_error_value)
-      }
+      covariance_p_values(workbook, sheet_name, name, args, values, ctx)
     "COVARIANCE.S" =>
-      match values {
-        [v0, v1] => covar_values("COVARIANCE.S", v0, v1)
-        _ => Error(formula_error_value)
-      }
-    "PEARSON" =>
-      match values {
-        [_, _] => pearson_product_values("PEARSON", values)
-        _ => Error(formula_error_value)
-      }
-    "RSQ" =>
-      match values {
-        [_, _] => pearson_product_values("RSQ", values)
-        _ => Error(formula_error_value)
-      }
-    "SLOPE" =>
-      match values {
-        [_, _] => pearson_product_values("SLOPE", values)
-        _ => Error(formula_error_value)
-      }
+      covariance_s_values(workbook, sheet_name, name, args, values, ctx)
+    "PEARSON" => pearson_values(workbook, sheet_name, name, args, values, ctx)
+    "RSQ" => rsq_values(workbook, sheet_name, name, args, values, ctx)
+    "SLOPE" => slope_values(workbook, sheet_name, name, args, values, ctx)
     "INTERCEPT" =>
-      match values {
-        [_, _] => pearson_product_values("INTERCEPT", values)
-        _ => Error(formula_error_value)
-      }
-    "FORECAST" =>
-      match values {
-        [_, _, _] => pearson_product_values("FORECAST", values)
-        _ => Error(formula_error_value)
-      }
+      intercept_values(workbook, sheet_name, name, args, values, ctx)
+    "FORECAST" => forecast_values(workbook, sheet_name, name, args, values, ctx)
     "FORECAST.LINEAR" =>
-      match values {
-        [_, _, _] => pearson_product_values("FORECAST.LINEAR", values)
-        _ => Error(formula_error_value)
-      }
-    "GROWTH" =>
-      trend_growth_values(workbook, sheet_name, "GROWTH", args, values, ctx)
-    "TREND" =>
-      trend_growth_values(workbook, sheet_name, "TREND", args, values, ctx)
-    "FISHER" =>
-      match values {
-        [v0] => fisher_value(v0)
-        _ => Error(formula_error_value)
-      }
+      forecast_linear_values(workbook, sheet_name, name, args, values, ctx)
+    "GROWTH" => growth_values(workbook, sheet_name, name, args, values, ctx)
+    "TREND" => trend_values(workbook, sheet_name, name, args, values, ctx)
+    "FISHER" => fisher_values(workbook, sheet_name, name, args, values, ctx)
     "FISHERINV" =>
-      match values {
-        [v0] => fisherinv_value(v0)
-        _ => Error(formula_error_value)
-      }
-    "STEYX" =>
-      match values {
-        [_, _] => steyx_values(values)
-        _ => Error(formula_error_value)
-      }
+      fisherinv_values(workbook, sheet_name, name, args, values, ctx)
+    "STEYX" => steyx_values2(workbook, sheet_name, name, args, values, ctx)
     "MEDIAN" => median_values(values)
     "MIN" => min_values(values)
     "MAX" => max_values(values)
@@ -478,45 +1080,24 @@ fn eval_function(
     "COUNT" => count_values(values)
     "COUNTA" => counta_values(values)
     "COUNTBLANK" =>
-      match args {
-        [a0] => {
-          let range_values = eval_range_expr(workbook, sheet_name, a0, ctx)
-          countblank_values(range_values)
-        }
-        _ => Error(formula_error_value)
-      }
+      countblank_values2(workbook, sheet_name, name, args, values, ctx)
     "FREQUENCY" => frequency_values(workbook, sheet_name, args, values, ctx)
-    "COUNTIF" =>
-      match args {
-        [a0, _] => {
-          let range_values = eval_range_expr(workbook, sheet_name, a0, ctx)
-          countif_values(range_values, values[1])
-        }
-        _ => Error(formula_error_value)
-      }
-    "COUNTIFS" =>
-      if args.length() >= 2 {
-        if args.length() % 2 != 0 {
-          Error(formula_error_na)
-        } else {
-          let ranges : Array[RangeValues] = []
-          let criterias : Array[FormulaCriteria] = []
-          for i in 0..<(args.length() / 2) {
-            let range_values = eval_range_expr(
-              workbook,
-              sheet_name,
-              args[i * 2],
-              ctx,
-            )
-            ranges.push(range_values)
-            criterias.push(parse_formula_criteria(values[i * 2 + 1]))
-          }
-          let matches = ifs_match(ranges, criterias)
-          Number(Double::from_int(matches.length()))
-        }
-      } else {
-        Error(formula_error_value)
-      }
+    "COUNTIF" => countif_values2(workbook, sheet_name, name, args, values, ctx)
+    "COUNTIFS" => countifs_values(workbook, sheet_name, name, args, values, ctx)
+    _ => Error(formula_error_name)
+  }
+}
+
+///|
+fn eval_function_stats_2(
+  workbook : Workbook,
+  sheet_name : String,
+  name : String,
+  args : ArrayView[Expr],
+  values : Array[FormulaValue],
+  ctx : CalcContext,
+) -> FormulaValue raise XlsxError {
+  match name {
     "DAVERAGE"
     | "DMAX"
     | "DMIN"
@@ -525,937 +1106,142 @@ fn eval_function(
     | "DSTDEVP"
     | "DSUM"
     | "DVAR"
-    | "DVARP" =>
-      match args {
-        [a0, _, a2] => {
-          let database = eval_range_expr(workbook, sheet_name, a0, ctx)
-          let criteria = eval_range_expr(workbook, sheet_name, a2, ctx)
-          database_values(name, database, values[1], criteria)
-        }
-        _ => Error(formula_error_value)
-      }
+    | "DVARP" => daverage_values(workbook, sheet_name, name, args, values, ctx)
     "DCOUNT" | "DCOUNTA" =>
-      if args.length() >= 2 && args.length() <= 3 {
-        let database = eval_range_expr(workbook, sheet_name, args[0], ctx)
-        let field = if args.length() == 3 {
-          match args[1] {
-            FuncCall(name, _) if name == "" => Empty
-            _ => values[1]
-          }
-        } else {
-          Empty
-        }
-        let criteria_idx = if args.length() == 3 { 2 } else { 1 }
-        let criteria = eval_range_expr(
-          workbook,
-          sheet_name,
-          args[criteria_idx],
-          ctx,
-        )
-        dcount_values(name, database, field, criteria)
-      } else {
-        Error(formula_error_value)
-      }
-    "DGET" =>
-      match args {
-        [a0, _, a2] => {
-          let database = eval_range_expr(workbook, sheet_name, a0, ctx)
-          let criteria = eval_range_expr(workbook, sheet_name, a2, ctx)
-          dget_values(database, values[1], criteria)
-        }
-        _ => Error(formula_error_value)
-      }
-    "SUMIF" =>
-      match args {
-        [a0, _] | [a0, _, _] => {
-          let range_values = eval_range_expr(workbook, sheet_name, a0, ctx)
-          let sum_range = if args is [_, _, a2] {
-            Some(eval_range_expr(workbook, sheet_name, a2, ctx))
-          } else {
-            None
-          }
-          sumif_values(range_values, values[1], sum_range)
-        }
-        _ => Error(formula_error_value)
-      }
-    "SUMPRODUCT" =>
-      if args.length() >= 1 {
-        let ranges : Array[RangeValues] = []
-        let scalars : Array[FormulaValue] = []
-        let mut has_range = false
-        let mut has_scalar = false
-        for i in 0..<args.length() {
-          match args[i] {
-            Range(_, _, _) | Cell(_, _) => {
-              has_range = true
-              ranges.push(eval_range_expr(workbook, sheet_name, args[i], ctx))
-            }
-            _ =>
-              match values[i] {
-                Error(err) => return Error(err)
-                _ => {
-                  has_scalar = true
-                  scalars.push(values[i])
-                }
-              }
-          }
-        }
-        if has_range && has_scalar {
-          Error(formula_error_value)
-        } else if has_range {
-          sumproduct_values(ranges)
-        } else {
-          sumproduct_scalars(scalars)
-        }
-      } else {
-        Error(formula_error_value)
-      }
-    "SUMSQ" => sumsq_values(values)
-    "SUMX2MY2" =>
-      match args {
-        [a0, a1] => {
-          let left = eval_range_expr(workbook, sheet_name, a0, ctx)
-          let right = eval_range_expr(workbook, sheet_name, a1, ctx)
-          sumx_values("SUMX2MY2", left, right)
-        }
-        _ => Error(formula_error_value)
-      }
-    "SUMX2PY2" =>
-      match args {
-        [a0, a1] => {
-          let left = eval_range_expr(workbook, sheet_name, a0, ctx)
-          let right = eval_range_expr(workbook, sheet_name, a1, ctx)
-          sumx_values("SUMX2PY2", left, right)
-        }
-        _ => Error(formula_error_value)
-      }
-    "SUMXMY2" =>
-      match args {
-        [a0, a1] => {
-          let left = eval_range_expr(workbook, sheet_name, a0, ctx)
-          let right = eval_range_expr(workbook, sheet_name, a1, ctx)
-          sumx_values("SUMXMY2", left, right)
-        }
-        _ => Error(formula_error_value)
-      }
-    "SUMIFS" =>
-      if args.length() >= 3 {
-        if args.length() % 2 != 1 {
-          Error(formula_error_na)
-        } else {
-          let sum_range = eval_range_expr(workbook, sheet_name, args[0], ctx)
-          let ranges : Array[RangeValues] = []
-          let criterias : Array[FormulaCriteria] = []
-          for i in 0..<((args.length() - 1) / 2) {
-            let offset = 1 + i * 2
-            let range_values = eval_range_expr(
-              workbook,
-              sheet_name,
-              args[offset],
-              ctx,
-            )
-            ranges.push(range_values)
-            criterias.push(parse_formula_criteria(values[offset + 1]))
-          }
-          let matches = ifs_match(ranges, criterias)
-          let mut sum = 0.0
-          for cell in matches {
-            match sum_range.get(cell.row, cell.col) {
-              Some(value) =>
-                match value_as_number_opt(value) {
-                  Some(num) => sum = sum + num
-                  None => ()
-                }
-              None => return Error(formula_error_value)
-            }
-          }
-          Number(sum)
-        }
-      } else {
-        Error(formula_error_value)
-      }
+      dcountdcounta_values(workbook, sheet_name, name, args, values, ctx)
+    "DGET" => dget_values2(workbook, sheet_name, name, args, values, ctx)
     "AVERAGEIF" =>
-      match args {
-        [a0, _] | [a0, _, _] => {
-          let range_values = eval_range_expr(workbook, sheet_name, a0, ctx)
-          let average_range = if args is [_, _, a2] {
-            Some(eval_range_expr(workbook, sheet_name, a2, ctx))
-          } else {
-            None
-          }
-          averageif_values(range_values, values[1], average_range)
-        }
-        _ => Error(formula_error_value)
-      }
+      averageif_values2(workbook, sheet_name, name, args, values, ctx)
     "AVERAGEIFS" =>
-      if args.length() >= 3 {
-        if args.length() % 2 != 1 {
-          Error(formula_error_na)
-        } else {
-          let average_range = eval_range_expr(
-            workbook,
-            sheet_name,
-            args[0],
-            ctx,
-          )
-          let ranges : Array[RangeValues] = []
-          let criterias : Array[FormulaCriteria] = []
-          for i in 0..<((args.length() - 1) / 2) {
-            let offset = 1 + i * 2
-            let range_values = eval_range_expr(
-              workbook,
-              sheet_name,
-              args[offset],
-              ctx,
-            )
-            ranges.push(range_values)
-            criterias.push(parse_formula_criteria(values[offset + 1]))
-          }
-          let matches = ifs_match(ranges, criterias)
-          let mut sum = 0.0
-          let mut count = 0
-          for cell in matches {
-            match average_range.get(cell.row, cell.col) {
-              Some(value) =>
-                match value_as_number_opt(value) {
-                  Some(num) => {
-                    sum = sum + num
-                    count = count + 1
-                  }
-                  None => ()
-                }
-              None => return Error(formula_error_value)
-            }
-          }
-          if count == 0 {
-            Error(formula_error_div)
-          } else {
-            Number(sum / Double::from_int(count))
-          }
-        }
-      } else {
-        Error(formula_error_value)
-      }
-    "MAXIFS" =>
-      if args.length() >= 3 {
-        if args.length() % 2 != 1 {
-          Error(formula_error_na)
-        } else {
-          let max_range = eval_range_expr(workbook, sheet_name, args[0], ctx)
-          let ranges : Array[RangeValues] = []
-          let criterias : Array[FormulaCriteria] = []
-          for i in 0..<((args.length() - 1) / 2) {
-            let offset = 1 + i * 2
-            let range_values = eval_range_expr(
-              workbook,
-              sheet_name,
-              args[offset],
-              ctx,
-            )
-            ranges.push(range_values)
-            criterias.push(parse_formula_criteria(values[offset + 1]))
-          }
-          let matches = ifs_match(ranges, criterias)
-          maxifs_values(max_range, matches)
-        }
-      } else {
-        Error(formula_error_value)
-      }
-    "MINIFS" =>
-      if args.length() >= 3 {
-        if args.length() % 2 != 1 {
-          Error(formula_error_na)
-        } else {
-          let min_range = eval_range_expr(workbook, sheet_name, args[0], ctx)
-          let ranges : Array[RangeValues] = []
-          let criterias : Array[FormulaCriteria] = []
-          for i in 0..<((args.length() - 1) / 2) {
-            let offset = 1 + i * 2
-            let range_values = eval_range_expr(
-              workbook,
-              sheet_name,
-              args[offset],
-              ctx,
-            )
-            ranges.push(range_values)
-            criterias.push(parse_formula_criteria(values[offset + 1]))
-          }
-          let matches = ifs_match(ranges, criterias)
-          minifs_values(min_range, matches)
-        }
-      } else {
-        Error(formula_error_value)
-      }
-    "GCD" => gcd_values(values)
-    "LCM" => lcm_values(values)
-    "COMBIN" =>
-      match values {
-        [v0, v1] =>
-          match (value_as_number(v0), value_as_number(v1)) {
-            (Ok(num), Ok(chosen)) => combin_values(num, chosen)
-            (Err(err), _) => err
-            (_, Err(err)) => err
-          }
-        _ => Error(formula_error_value)
-      }
-    "COMBINA" | "_XLFN.COMBINA" =>
-      match values {
-        [v0, v1] =>
-          match (value_as_number(v0), value_as_number(v1)) {
-            (Ok(num), Ok(chosen)) => {
-              let n = trunc_double(num)
-              let k = trunc_double(chosen)
-              if n < k {
-                Error(formula_error_value)
-              } else if n == 0.0 {
-                Number(n)
-              } else {
-                combin_values(n + k - 1.0, n - 1.0)
-              }
-            }
-            (Err(err), _) => err
-            (_, Err(err)) => err
-          }
-        _ => Error(formula_error_value)
-      }
-    "COMPLEX" =>
-      match values {
-        [v0, v1] | [v0, v1, _] =>
-          match (value_as_number(v0), value_as_number(v1)) {
-            (Ok(real), Ok(imag)) => {
-              let mut suffix = "i"
-              if values is [_, _, v2] {
-                match value_as_string(v2) {
-                  Ok(text) => {
-                    let lower = text.to_lower()
-                    if lower != "i" && lower != "j" {
-                      return Error(formula_error_value)
-                    }
-                    suffix = lower
-                  }
-                  Err(err) => return err
-                }
-              }
-              String(complex_to_string(complex_new(real, imag), suffix))
-            }
-            (Err(err), _) => err
-            (_, Err(err)) => err
-          }
-        _ => Error(formula_error_value)
-      }
-    "FACT" =>
-      match values {
-        [v0] =>
-          match value_as_number(v0) {
-            Ok(num) =>
-              if num < 0.0 {
-                Error(formula_error_num)
-              } else {
-                Number(factorial_double(num))
-              }
-            Err(err) => err
-          }
-        _ => Error(formula_error_value)
-      }
-    "FACTDOUBLE" =>
-      match values {
-        [v0] =>
-          match value_as_number(v0) {
-            Ok(num) =>
-              if num < 0.0 {
-                Error(formula_error_num)
-              } else {
-                Number(double_factorial_double(num))
-              }
-            Err(err) => err
-          }
-        _ => Error(formula_error_value)
-      }
-    "MULTINOMIAL" => multinomial_values(values)
-    "MDETERM" =>
-      match values {
-        [v0] => {
-          let range = range_from_expr_or_value(
-            workbook,
-            sheet_name,
-            args[0],
-            v0,
-            ctx,
-          )
-          match number_matrix_from_range(range, true) {
-            Ok(matrix) => Number(matrix_det(matrix))
-            Err(err) => err
-          }
-        }
-        _ => Error(formula_error_value)
-      }
-    "MINVERSE" =>
-      match values {
-        [v0] => {
-          let range = range_from_expr_or_value(
-            workbook,
-            sheet_name,
-            args[0],
-            v0,
-            ctx,
-          )
-          match number_matrix_from_range(range, true) {
-            Ok(matrix) => {
-              let det_value = matrix_det(matrix)
-              if det_value == 0.0 {
-                Error(formula_error_num)
-              } else {
-                let adj = matrix_adjugate(matrix)
-                let scale = 1.0 / det_value
-                for row in 0..<adj.length() {
-                  for col in 0..<adj[row].length() {
-                    let value = adj[row][col]
-                    if value == 0.0 && scale < 0.0 {
-                      adj[row][col] = -0.0
-                    } else {
-                      adj[row][col] = value * scale
-                    }
-                  }
-                }
-                List(matrix_values(adj))
-              }
-            }
-            Err(err) => err
-          }
-        }
-        _ => Error(formula_error_value)
-      }
-    "MMULT" =>
-      match values {
-        [v0, v1] =>
-          match (v0, v1) {
-            (Number(lhs), Number(rhs)) => Number(lhs * rhs)
-            _ => {
-              let left_range = range_from_expr_or_value(
-                workbook,
-                sheet_name,
-                args[0],
-                v0,
-                ctx,
-              )
-              let right_range = range_from_expr_or_value(
-                workbook,
-                sheet_name,
-                args[1],
-                v1,
-                ctx,
-              )
-              match
-                (
-                  number_matrix_from_range(left_range, false),
-                  number_matrix_from_range(right_range, false),
-                ) {
-                (Ok(left), Ok(right)) =>
-                  match matrix_multiply(left, right) {
-                    Ok(matrix) => List(matrix_values(matrix))
-                    Err(err) => err
-                  }
-                (Err(err), _) => err
-                (_, Err(err)) => err
-              }
-            }
-          }
-        _ => Error(formula_error_value)
-      }
-    "MUNIT" | "_XLFN.MUNIT" =>
-      match values {
-        [v0] =>
-          match munit_dimension(v0) {
-            Ok(dimension) => List(munit_range_values(dimension).values)
-            Err(err) => err
-          }
-        _ => Error(formula_error_value)
-      }
-    "TRANSPOSE" =>
-      match args {
-        [a0] => {
-          let base_range = range_from_expr_or_value(
-            workbook,
-            sheet_name,
-            a0,
-            values[0],
-            ctx,
-          )
-          List(transpose_range_values(base_range).values)
-        }
-        _ => Error(formula_error_value)
-      }
-    "PERMUT" =>
-      match values {
-        [v0, v1] =>
-          match (value_as_number(v0), value_as_number(v1)) {
-            (Ok(num), Ok(chosen)) =>
-              if num < chosen {
-                Error(formula_error_na)
-              } else {
-                let result = factorial_double(num) /
-                  factorial_double(num - chosen)
-                Number(round_half_away_from_zero(result))
-              }
-            (Err(err), _) => err
-            (_, Err(err)) => err
-          }
-        _ => Error(formula_error_value)
-      }
+      averageifs_values(workbook, sheet_name, name, args, values, ctx)
+    "MAXIFS" => maxifs_values2(workbook, sheet_name, name, args, values, ctx)
+    "MINIFS" => minifs_values2(workbook, sheet_name, name, args, values, ctx)
+    "PERMUT" => permut_values(workbook, sheet_name, name, args, values, ctx)
     "PERMUTATIONA" =>
-      match values {
-        [v0, v1] =>
-          match (value_as_number(v0), value_as_number(v1)) {
-            (Ok(num), Ok(chosen)) => {
-              let number = Double::floor(num)
-              let number_chosen = Double::floor(chosen)
-              if number < 0.0 || number_chosen < 0.0 {
-                Error(formula_error_na)
-              } else {
-                Number(@math.pow(number, number_chosen))
-              }
-            }
-            (Err(err), _) => err
-            (_, Err(err)) => err
-          }
-        _ => Error(formula_error_value)
-      }
-    "ABS" =>
-      match values {
-        [v0] =>
-          match value_as_number(v0) {
-            Ok(num) => Number(abs_double(num))
-            Err(err) => err
-          }
-        _ => Error(formula_error_value)
-      }
-    "INT" =>
-      match values {
-        [v0] =>
-          match value_as_number(v0) {
-            Ok(num) => Number(Double::floor(num))
-            Err(err) => err
-          }
-        _ => Error(formula_error_value)
-      }
-    "LN" =>
-      match values {
-        [v0] =>
-          match value_as_number(v0) {
-            Ok(num) => Number(@math.ln(num))
-            Err(err) => err
-          }
-        _ => Error(formula_error_value)
-      }
-    "EXP" =>
-      match values {
-        [v0] =>
-          match value_as_number(v0) {
-            Ok(num) => Number(@math.exp(num))
-            Err(err) => err
-          }
-        _ => Error(formula_error_value)
-      }
-    "DECIMAL" | "_XLFN.DECIMAL" =>
-      match values {
-        [v0, v1] =>
-          match (value_as_string(v0), value_as_number(v1)) {
-            (Ok(text), Ok(radix)) => {
-              let base = Double::to_int(trunc_double(radix))
-              let text_value = strip_hex_prefix(text)
-              let parsed = @string.parse_int(text_value, base~) catch {
-                _ => return Error(formula_error_value)
-              }
-              Number(Double::from_int(parsed))
-            }
-            (Err(err), _) => err
-            (_, Err(err)) => err
-          }
-        _ => Error(formula_error_value)
-      }
-    "ROMAN" =>
-      match values {
-        [v0] | [v0, _] =>
-          match value_as_number(v0) {
-            Ok(num) => {
-              let mut form = 0
-              if values is [_, v1] {
-                match value_as_number(v1) {
-                  Ok(raw) => {
-                    let mut mode = Double::to_int(trunc_double(raw))
-                    if mode < 0 {
-                      mode = 0
-                    } else if mode > 4 {
-                      mode = 4
-                    }
-                    form = mode
-                  }
-                  Err(err) => return err
-                }
-              }
-              String(roman_string(num, form))
-            }
-            Err(err) => err
-          }
-        _ => Error(formula_error_value)
-      }
-    "ARABIC" | "_XLFN.ARABIC" =>
-      match values {
-        [v0] =>
-          match value_as_string(v0) {
-            Ok(text) => arabic_string_value(text)
-            Err(err) => err
-          }
-        _ => Error(formula_error_value)
-      }
-    "BASE" => base_values(values)
-    "BIN2DEC" =>
-      match values {
-        [v0] =>
-          match value_as_number(v0) {
-            Ok(_) => bin2dec_string(formula_value_string(v0))
-            Err(err) => err
-          }
-        _ => Error(formula_error_value)
-      }
-    "BIN2HEX" =>
-      match values {
-        [v0] | [v0, _] =>
-          match value_as_number(v0) {
-            Ok(_) => {
-              let decimal = bin2dec_string(formula_value_string(v0))
-              match decimal {
-                Error(_) => decimal
-                _ => {
-                  let new_values : Array[FormulaValue] = [decimal]
-                  if values is [_, places] {
-                    new_values.push(places)
-                  }
-                  dec2x_values("BIN2HEX", new_values)
-                }
-              }
-            }
-            Err(err) => err
-          }
-        _ => Error(formula_error_value)
-      }
-    "BIN2OCT" =>
-      match values {
-        [v0] | [v0, _] =>
-          match value_as_number(v0) {
-            Ok(_) => {
-              let decimal = bin2dec_string(formula_value_string(v0))
-              match decimal {
-                Error(_) => decimal
-                _ => {
-                  let new_values : Array[FormulaValue] = [decimal]
-                  if values is [_, places] {
-                    new_values.push(places)
-                  }
-                  dec2x_values("BIN2OCT", new_values)
-                }
-              }
-            }
-            Err(err) => err
-          }
-        _ => Error(formula_error_value)
-      }
-    "DEC2BIN" => dec2x_values("DEC2BIN", values)
-    "DEC2HEX" => dec2x_values("DEC2HEX", values)
-    "DEC2OCT" => dec2x_values("DEC2OCT", values)
-    "HEX2BIN" =>
-      match values {
-        [v0] | [v0, _] =>
-          match value_as_string(v0) {
-            Ok(text) => {
-              let decimal = hex2dec_string(text)
-              match decimal {
-                Error(_) => decimal
-                _ => {
-                  let new_values : Array[FormulaValue] = [decimal]
-                  if values is [_, places] {
-                    new_values.push(places)
-                  }
-                  dec2x_values("HEX2BIN", new_values)
-                }
-              }
-            }
-            Err(err) => err
-          }
-        _ => Error(formula_error_value)
-      }
-    "HEX2DEC" =>
-      match values {
-        [v0] =>
-          match value_as_string(v0) {
-            Ok(text) => hex2dec_string(text)
-            Err(err) => err
-          }
-        _ => Error(formula_error_value)
-      }
-    "HEX2OCT" =>
-      match values {
-        [v0] | [v0, _] =>
-          match value_as_string(v0) {
-            Ok(text) => {
-              let decimal = hex2dec_string(text)
-              match decimal {
-                Error(_) => decimal
-                _ => {
-                  let new_values : Array[FormulaValue] = [decimal]
-                  if values is [_, places] {
-                    new_values.push(places)
-                  }
-                  dec2x_values("HEX2OCT", new_values)
-                }
-              }
-            }
-            Err(err) => err
-          }
-        _ => Error(formula_error_value)
-      }
-    "OCT2BIN" =>
-      match values {
-        [v0] | [v0, _] =>
-          match value_as_number(v0) {
-            Ok(_) => {
-              let decimal = oct2dec_string(formula_value_string(v0))
-              let new_values : Array[FormulaValue] = [decimal]
-              if values is [_, places] {
-                new_values.push(places)
-              }
-              dec2x_values("OCT2BIN", new_values)
-            }
-            Err(err) => err
-          }
-        _ => Error(formula_error_value)
-      }
-    "OCT2DEC" =>
-      match values {
-        [v0] =>
-          match value_as_number(v0) {
-            Ok(_) => oct2dec_string(formula_value_string(v0))
-            Err(err) => err
-          }
-        _ => Error(formula_error_value)
-      }
-    "OCT2HEX" =>
-      match values {
-        [v0] | [v0, _] =>
-          match value_as_number(v0) {
-            Ok(_) => {
-              let decimal = oct2dec_string(formula_value_string(v0))
-              let new_values : Array[FormulaValue] = [decimal]
-              if values is [_, places] {
-                new_values.push(places)
-              }
-              dec2x_values("OCT2HEX", new_values)
-            }
-            Err(err) => err
-          }
-        _ => Error(formula_error_value)
-      }
-    "BESSELI" =>
-      match values {
-        [v0, v1] =>
-          match (value_as_number(v0), value_as_number(v1)) {
-            (Ok(x), Ok(n)) => number_or_num_error(bessel_i(x, n))
-            (Err(err), _) => err
-            (_, Err(err)) => err
-          }
-        _ => Error(formula_error_value)
-      }
-    "BESSELJ" =>
-      match values {
-        [v0, v1] =>
-          match (value_as_number(v0), value_as_number(v1)) {
-            (Ok(x), Ok(n)) => number_or_num_error(bessel_j(x, n))
-            (Err(err), _) => err
-            (_, Err(err)) => err
-          }
-        _ => Error(formula_error_value)
-      }
-    "BESSELK" =>
-      match values {
-        [v0, v1] =>
-          match (value_as_number(v0), value_as_number(v1)) {
-            (Ok(x), Ok(n)) =>
-              if x <= 0.0 || n < 0.0 {
-                Error(formula_error_num)
-              } else {
-                let order = Double::floor(n)
-                let result = if order == 0.0 {
-                  bessel_k0(x)
-                } else if order == 1.0 {
-                  bessel_k1(x)
-                } else {
-                  bessel_k2(x, n)
-                }
-                number_or_num_error(result)
-              }
-            (Err(err), _) => err
-            (_, Err(err)) => err
-          }
-        _ => Error(formula_error_value)
-      }
-    "BESSELY" =>
-      match values {
-        [v0, v1] =>
-          match (value_as_number(v0), value_as_number(v1)) {
-            (Ok(x), Ok(n)) =>
-              if x <= 0.0 || n < 0.0 {
-                Error(formula_error_num)
-              } else {
-                let order = Double::floor(n)
-                let result = if order == 0.0 {
-                  bessel_y0(x)
-                } else if order == 1.0 {
-                  bessel_y1(x)
-                } else {
-                  bessel_y2(x, n)
-                }
-                number_or_num_error(result)
-              }
-            (Err(err), _) => err
-            (_, Err(err)) => err
-          }
-        _ => Error(formula_error_value)
-      }
-    "DELTA" =>
-      match values {
-        [v0] | [v0, _] => {
-          let number1 = match value_as_number(v0) {
-            Ok(num) => num
-            Err(err) => return err
-          }
-          let number2 = if values is [_, v1] {
-            match value_as_number(v1) {
-              Ok(num) => num
-              Err(err) => return err
-            }
-          } else {
-            0.0
-          }
-          Number(if number1 == number2 { 1.0 } else { 0.0 })
-        }
-        _ => Error(formula_error_value)
-      }
-    "ERF" =>
-      match values {
-        [v0] | [v0, _] =>
-          match value_as_number(v0) {
-            Ok(lower) =>
-              if values is [_, v1] {
-                match value_as_number(v1) {
-                  Ok(upper) =>
-                    number_or_num_error(erf_double(upper) - erf_double(lower))
-                  Err(err) => err
-                }
-              } else {
-                number_or_num_error(erf_double(lower))
-              }
-            Err(err) => err
-          }
-        _ => Error(formula_error_value)
-      }
-    "ERFdotPRECISE" | "ERF.PRECISE" | "_XLFN.ERF.PRECISE" =>
-      match values {
-        [v0] =>
-          match value_as_number(v0) {
-            Ok(value) => number_or_num_error(erf_double(value))
-            Err(err) => err
-          }
-        _ => Error(formula_error_value)
-      }
-    "ERFC" =>
-      match values {
-        [v0] =>
-          match value_as_number(v0) {
-            Ok(value) => number_or_num_error(erfc_double(value))
-            Err(err) => err
-          }
-        _ => Error(formula_error_value)
-      }
-    "ERFCdotPRECISE" | "ERFC.PRECISE" | "_XLFN.ERFC.PRECISE" =>
-      match values {
-        [v0] =>
-          match value_as_number(v0) {
-            Ok(value) => number_or_num_error(erfc_double(value))
-            Err(err) => err
-          }
-        _ => Error(formula_error_value)
-      }
+      permutationa_values(workbook, sheet_name, name, args, values, ctx)
     "WEIBULL" => weibull_value(values)
     "WEIBULLdotDIST" | "WEIBULL.DIST" | "_XLFN.WEIBULL.DIST" =>
-      weibull_value(values)
+      weibulldotdistweibull_dist_xlfn_weibull_dist_values(
+        workbook, sheet_name, name, args, values, ctx,
+      )
     "BETAdotDIST" | "BETA.DIST" | "_XLFN.BETA.DIST" => beta_dist_values(values)
     "BETADIST" => betadist_values(values)
     "BETAINV" => betainv_values(values)
     "BETAdotINV" | "BETA.INV" | "_XLFN.BETA.INV" => betainv_values(values)
     "CONFIDENCE" => confidence_values(values)
     "CONFIDENCEdotNORM" | "CONFIDENCE.NORM" | "_XLFN.CONFIDENCE.NORM" =>
-      confidence_values(values)
+      confidencedotnormconfidence_norm_xlfn_confidence_norm_values(
+        workbook, sheet_name, name, args, values, ctx,
+      )
     "CONFIDENCEdotT" | "CONFIDENCE.T" | "_XLFN.CONFIDENCE.T" =>
-      confidence_t_values(values)
+      confidencedottconfidence_t_xlfn_confidence_t_values(
+        workbook, sheet_name, name, args, values, ctx,
+      )
     "NORMdotDIST" | "NORM.DIST" | "_XLFN.NORM.DIST" => normdist_values(values)
     "NORMDIST" => normdist_values(values)
     "NORMdotINV" | "NORM.INV" | "_XLFN.NORM.INV" => norminv_values(values)
     "NORMINV" => norminv_values(values)
     "NORMdotSdotDIST" | "NORM.S.DIST" | "_XLFN.NORM.S.DIST" =>
-      norm_s_dist_values(values)
+      normdotsdotdistnorm_s_dist_xlfn_norm_s_dist_values(
+        workbook, sheet_name, name, args, values, ctx,
+      )
     "NORMSDIST" => norms_dist_values(values)
     "NORMdotSdotINV" | "NORM.S.INV" | "_XLFN.NORM.S.INV" =>
-      norm_s_inv_values(values)
+      normdotsdotinvnorm_s_inv_xlfn_norm_s_inv_values(
+        workbook, sheet_name, name, args, values, ctx,
+      )
     "NORMSINV" => norms_inv_values(values)
     "LOGNORMdotDIST" | "LOGNORM.DIST" | "_XLFN.LOGNORM.DIST" =>
-      lognorm_dist_values(values)
+      lognormdotdistlognorm_dist_xlfn_lognorm_dist_values(
+        workbook, sheet_name, name, args, values, ctx,
+      )
     "LOGNORMDIST" => lognormdist_values(values)
     "LOGINV" => loginv_values(values)
     "LOGNORMdotINV" | "LOGNORM.INV" | "_XLFN.LOGNORM.INV" =>
-      loginv_values(values)
+      lognormdotinvlognorm_inv_xlfn_lognorm_inv_values(
+        workbook, sheet_name, name, args, values, ctx,
+      )
     "GAMMA" => gamma_value(values)
     "GAMMAdotDIST" | "GAMMA.DIST" | "_XLFN.GAMMA.DIST" =>
-      gamma_dist_values(values)
+      gammadotdistgamma_dist_xlfn_gamma_dist_values(
+        workbook, sheet_name, name, args, values, ctx,
+      )
     "GAMMADIST" => gamma_dist_values(values)
     "GAMMAdotINV" | "GAMMA.INV" | "_XLFN.GAMMA.INV" => gamma_inv_values(values)
     "GAMMAINV" => gamma_inv_values(values)
     "GAMMALN" => gammaln_values(values)
     "GAMMALNdotPRECISE" | "GAMMALN.PRECISE" | "_XLFN.GAMMALN.PRECISE" =>
-      gammaln_precise_values(values)
+      gammalndotprecisegammaln_precise_xlfn_gammaln_precise_values(
+        workbook, sheet_name, name, args, values, ctx,
+      )
     "EXPONdotDIST" | "EXPON.DIST" | "_XLFN.EXPON.DIST" =>
-      expon_dist_values(values)
+      expondotdistexpon_dist_xlfn_expon_dist_values(
+        workbook, sheet_name, name, args, values, ctx,
+      )
     "EXPONDIST" => expon_dist_values(values)
     "POISSONdotDIST" | "POISSON.DIST" | "_XLFN.POISSON.DIST" =>
-      poisson_values(values)
+      poissondotdistpoisson_dist_xlfn_poisson_dist_values(
+        workbook, sheet_name, name, args, values, ctx,
+      )
     "POISSON" => poisson_values(values)
     "PROB" => prob_values(values)
     "BINOMdotDIST" | "BINOM.DIST" | "_XLFN.BINOM.DIST" =>
-      binomdist_values(values)
+      binomdotdistbinom_dist_xlfn_binom_dist_values(
+        workbook, sheet_name, name, args, values, ctx,
+      )
     "BINOMDIST" => binomdist_values(values)
     "BINOMdotDISTdotRANGE" | "BINOM.DIST.RANGE" | "_XLFN.BINOM.DIST.RANGE" =>
-      binom_dist_range_values(values)
+      binomdotdistdotrangebinom_dist_range_xlfn_binom_dist_range_values(
+        workbook, sheet_name, name, args, values, ctx,
+      )
+    _ => Error(formula_error_name)
+  }
+}
+
+///|
+fn eval_function_stats_3(
+  workbook : Workbook,
+  sheet_name : String,
+  name : String,
+  args : ArrayView[Expr],
+  values : Array[FormulaValue],
+  ctx : CalcContext,
+) -> FormulaValue raise XlsxError {
+  match name {
     "BINOMdotINV" | "BINOM.INV" | "_XLFN.BINOM.INV" => binom_inv_values(values)
     "CRITBINOM" => binom_inv_values(values)
     "HYPGEOMdotDIST" | "HYPGEOM.DIST" | "_XLFN.HYPGEOM.DIST" =>
-      hypgeom_dist_values(values)
+      hypgeomdotdisthypgeom_dist_xlfn_hypgeom_dist_values(
+        workbook, sheet_name, name, args, values, ctx,
+      )
     "HYPGEOMDIST" => hypgeomdist_values(values)
     "NEGBINOMdotDIST" | "NEGBINOM.DIST" | "_XLFN.NEGBINOM.DIST" =>
-      negbinom_dist_values(values)
+      negbinomdotdistnegbinom_dist_xlfn_negbinom_dist_values(
+        workbook, sheet_name, name, args, values, ctx,
+      )
     "NEGBINOMDIST" => negbinomdist_values(values)
     "GAUSS" => gauss_value(values)
     "PHI" => phi_value(values)
     "CHIDIST" => chidist_values(values)
     "CHIINV" => chiinv_values(values)
     "CHISQdotDIST" | "CHISQ.DIST" | "_XLFN.CHISQ.DIST" =>
-      chisq_dist_values(values)
+      chisqdotdistchisq_dist_xlfn_chisq_dist_values(
+        workbook, sheet_name, name, args, values, ctx,
+      )
     "CHISQdotDISTdotRT" | "CHISQ.DIST.RT" | "_XLFN.CHISQ.DIST.RT" =>
-      chidist_values(values)
+      chisqdotdistdotrtchisq_dist_rt_xlfn_chisq_dist_rt_values(
+        workbook, sheet_name, name, args, values, ctx,
+      )
     "CHISQdotINV" | "CHISQ.INV" | "_XLFN.CHISQ.INV" => chisq_inv_values(values)
     "CHISQdotINVdotRT" | "CHISQ.INV.RT" | "_XLFN.CHISQ.INV.RT" =>
-      chiinv_values(values)
+      chisqdotinvdotrtchisq_inv_rt_xlfn_chisq_inv_rt_values(
+        workbook, sheet_name, name, args, values, ctx,
+      )
     "CHITEST" => chitest_values(workbook, sheet_name, args, values, ctx)
     "CHISQdotTEST" | "CHISQ.TEST" | "_XLFN.CHISQ.TEST" =>
-      chitest_values(workbook, sheet_name, args, values, ctx)
+      chisqdottestchisq_test_xlfn_chisq_test_values(
+        workbook, sheet_name, name, args, values, ctx,
+      )
     "FdotDIST" | "F.DIST" | "_XLFN.F.DIST" => fdist_values(values)
     "FDIST" => fdist_rt_values(values)
     "FdotDISTdotRT" | "F.DIST.RT" | "_XLFN.F.DIST.RT" => fdist_rt_values(values)
@@ -1464,7 +1250,34 @@ fn eval_function(
     "FINV" => finv_rt_values(values)
     "FTEST" => ftest_values(workbook, sheet_name, args, values, ctx)
     "FdotTEST" | "F.TEST" | "_XLFN.F.TEST" =>
-      ftest_values(workbook, sheet_name, args, values, ctx)
+      fdottestf_test_xlfn_f_test_values(
+        workbook, sheet_name, name, args, values, ctx,
+      )
+    "TdotDIST" | "T.DIST" | "_XLFN.T.DIST" => tdist_values(values)
+    "TdotDISTdot2T" | "T.DIST.2T" | "_XLFN.T.DIST.2T" => tdist_2t_values(values)
+    "TdotDISTdotRT" | "T.DIST.RT" | "_XLFN.T.DIST.RT" => tdist_rt_values(values)
+    "TDIST" => tdist_legacy_values(values)
+    "TdotINV" | "T.INV" | "_XLFN.T.INV" => tinv_values(values)
+    "TdotINVdot2T" | "T.INV.2T" | "_XLFN.T.INV.2T" => tinv_2t_values(values)
+    "TINV" => tinv_2t_values(values)
+    "TdotTEST" | "T.TEST" | "_XLFN.T.TEST" => ttest_values(values)
+    "TTEST" => ttest_values(values)
+    "ZdotTEST" | "Z.TEST" | "_XLFN.Z.TEST" => ztest_values(values)
+    "ZTEST" => ztest_values(values)
+    _ => Error(formula_error_name)
+  }
+}
+
+///|
+fn eval_function_financial(
+  workbook : Workbook,
+  sheet_name : String,
+  name : String,
+  args : ArrayView[Expr],
+  values : Array[FormulaValue],
+  ctx : CalcContext,
+) -> FormulaValue {
+  match name {
     "ACCRINT" => accrint_values(values, use_1904_dates=ctx.use_1904_dates)
     "ACCRINTM" => accrintm_values(values, use_1904_dates=ctx.use_1904_dates)
     "AMORDEGRC" => amordegrc_values(values, use_1904_dates=ctx.use_1904_dates)
@@ -1482,19 +1295,14 @@ fn eval_function(
     "DDB" => ddb_values(values)
     "FV" => fv_values(values)
     "FVSCHEDULE" => fvschedule_values(values)
-    "DISC" =>
-      disc_intrate_values("DISC", values, use_1904_dates=ctx.use_1904_dates)
-    "INTRATE" =>
-      disc_intrate_values("INTRATE", values, use_1904_dates=ctx.use_1904_dates)
+    "DISC" => disc_values(workbook, sheet_name, name, args, values, ctx)
+    "INTRATE" => intrate_values(workbook, sheet_name, name, args, values, ctx)
     "IRR" => irr_values(values)
     "MDURATION" => mduration_values(values, use_1904_dates=ctx.use_1904_dates)
     "MIRR" => mirr_values(values)
-    "DOLLAR" => dollar_values(values)
     "DOLLARDE" => dollar_fraction_values("DOLLARDE", values)
     "DOLLARFR" => dollar_fraction_values("DOLLARFR", values)
     "EFFECT" => effect_values(values)
-    "CONVERT" => convert_values(values)
-    "EUROCONVERT" => euroconvert_values(values)
     "IPMT" => ipmt_values("IPMT", values)
     "ISPMT" => ispmt_values(values)
     "NOMINAL" => nominal_values(values)
@@ -1503,14 +1311,13 @@ fn eval_function(
     "ODDFPRICE" => oddfprice_values(values, use_1904_dates=ctx.use_1904_dates)
     "ODDFYIELD" => oddfyield_values(values, use_1904_dates=ctx.use_1904_dates)
     "ODDLPRICE" =>
-      oddl_values("ODDLPRICE", values, use_1904_dates=ctx.use_1904_dates)
+      oddlprice_values(workbook, sheet_name, name, args, values, ctx)
     "ODDLYIELD" =>
-      oddl_values("ODDLYIELD", values, use_1904_dates=ctx.use_1904_dates)
+      oddlyield_values(workbook, sheet_name, name, args, values, ctx)
     "PDURATION" => pduration_values(values)
     "PMT" => pmt_values(values)
     "PPMT" => ipmt_values("PPMT", values)
-    "PRICE" =>
-      price_yield_values("PRICE", values, use_1904_dates=ctx.use_1904_dates)
+    "PRICE" => price_values(workbook, sheet_name, name, args, values, ctx)
     "PRICEDISC" => pricedisc_values(values, use_1904_dates=ctx.use_1904_dates)
     "PRICEMAT" => pricemat_values(values, use_1904_dates=ctx.use_1904_dates)
     "PV" => pv_values(values)
@@ -1524,3507 +1331,8181 @@ fn eval_function(
     "TBILLYIELD" => tbillyield_values(values, use_1904_dates=ctx.use_1904_dates)
     "XIRR" => xirr_values(values)
     "XNPV" => xnpv_values(values)
-    "YIELD" =>
-      price_yield_values("YIELD", values, use_1904_dates=ctx.use_1904_dates)
+    "YIELD" => yield_values(workbook, sheet_name, name, args, values, ctx)
     "YIELDDISC" => yielddisc_values(values, use_1904_dates=ctx.use_1904_dates)
     "YIELDMAT" => yieldmat_values(values, use_1904_dates=ctx.use_1904_dates)
     "VDB" => vdb_values(values)
-    "TdotDIST" | "T.DIST" | "_XLFN.T.DIST" => tdist_values(values)
-    "TdotDISTdot2T" | "T.DIST.2T" | "_XLFN.T.DIST.2T" => tdist_2t_values(values)
-    "TdotDISTdotRT" | "T.DIST.RT" | "_XLFN.T.DIST.RT" => tdist_rt_values(values)
-    "TDIST" => tdist_legacy_values(values)
-    "TdotINV" | "T.INV" | "_XLFN.T.INV" => tinv_values(values)
-    "TdotINVdot2T" | "T.INV.2T" | "_XLFN.T.INV.2T" => tinv_2t_values(values)
-    "TINV" => tinv_2t_values(values)
-    "TdotTEST" | "T.TEST" | "_XLFN.T.TEST" => ttest_values(values)
-    "TTEST" => ttest_values(values)
-    "ZdotTEST" | "Z.TEST" | "_XLFN.Z.TEST" => ztest_values(values)
-    "ZTEST" => ztest_values(values)
-    "GESTEP" =>
-      match values {
-        [v0] | [v0, _] => {
-          let number = match value_as_number(v0) {
-            Ok(num) => num
-            Err(err) => return err
+    _ => Error(formula_error_name)
+  }
+}
+
+///|
+fn eval_function_date_time(
+  workbook : Workbook,
+  sheet_name : String,
+  name : String,
+  args : ArrayView[Expr],
+  values : Array[FormulaValue],
+  ctx : CalcContext,
+) -> FormulaValue {
+  match name {
+    "DATE" => date_values(workbook, sheet_name, name, args, values, ctx)
+    "TIME" => time_values(workbook, sheet_name, name, args, values, ctx)
+    "DATEVALUE" =>
+      datevalue_values(workbook, sheet_name, name, args, values, ctx)
+    "TIMEVALUE" =>
+      timevalue_values(workbook, sheet_name, name, args, values, ctx)
+    "DATEDIF" => datedif_values(workbook, sheet_name, name, args, values, ctx)
+    "DAYS" => days_values(workbook, sheet_name, name, args, values, ctx)
+    "DAYS360" => days360_values(workbook, sheet_name, name, args, values, ctx)
+    "ISOWEEKNUM" =>
+      isoweeknum_values(workbook, sheet_name, name, args, values, ctx)
+    "EDATE" => edate_values(workbook, sheet_name, name, args, values, ctx)
+    "EOMONTH" => eomonth_values(workbook, sheet_name, name, args, values, ctx)
+    "YEARFRAC" => yearfrac_values(workbook, sheet_name, name, args, values, ctx)
+    "WEEKDAY" => weekday_values(workbook, sheet_name, name, args, values, ctx)
+    "WEEKNUM" => weeknum_values(workbook, sheet_name, name, args, values, ctx)
+    "NETWORKDAYS" =>
+      networkdays_values(workbook, sheet_name, name, args, values, ctx)
+    "NETWORKDAYS.INTL" =>
+      networkdays_intl_values(workbook, sheet_name, name, args, values, ctx)
+    "WORKDAY" => workday_values(workbook, sheet_name, name, args, values, ctx)
+    "WORKDAY.INTL" =>
+      workday_intl_values(workbook, sheet_name, name, args, values, ctx)
+    "NOW" => now_values(workbook, sheet_name, name, args, values, ctx)
+    "TODAY" => today_values(workbook, sheet_name, name, args, values, ctx)
+    "YEAR" => year_values(workbook, sheet_name, name, args, values, ctx)
+    "MONTH" => month_values(workbook, sheet_name, name, args, values, ctx)
+    "DAY" => day_values(workbook, sheet_name, name, args, values, ctx)
+    "HOUR" => hour_values(workbook, sheet_name, name, args, values, ctx)
+    "MINUTE" => minute_values(workbook, sheet_name, name, args, values, ctx)
+    "SECOND" => second_values(workbook, sheet_name, name, args, values, ctx)
+    _ => Error(formula_error_name)
+  }
+}
+
+///|
+fn eval_function_text(
+  workbook : Workbook,
+  sheet_name : String,
+  name : String,
+  args : ArrayView[Expr],
+  values : Array[FormulaValue],
+  ctx : CalcContext,
+) -> FormulaValue raise XlsxError {
+  match name {
+    "DOLLAR" => dollar_values(values)
+    "LEN" => len_values(workbook, sheet_name, name, args, values, ctx)
+    "LENB" => lenb_values(workbook, sheet_name, name, args, values, ctx)
+    "LOWER" => lower_values(workbook, sheet_name, name, args, values, ctx)
+    "UPPER" => upper_values(workbook, sheet_name, name, args, values, ctx)
+    "PROPER" => proper_values(workbook, sheet_name, name, args, values, ctx)
+    "DBCS" => dbcs_values(workbook, sheet_name, name, args, values, ctx)
+    "TRIM" => trim_values(workbook, sheet_name, name, args, values, ctx)
+    "LEFT" => left_values(workbook, sheet_name, name, args, values, ctx)
+    "LEFTB" => leftb_values(workbook, sheet_name, name, args, values, ctx)
+    "RIGHT" => right_values(workbook, sheet_name, name, args, values, ctx)
+    "RIGHTB" => rightb_values(workbook, sheet_name, name, args, values, ctx)
+    "MID" => mid_values(workbook, sheet_name, name, args, values, ctx)
+    "MIDB" => midb_values(workbook, sheet_name, name, args, values, ctx)
+    "REPT" => rept_values(workbook, sheet_name, name, args, values, ctx)
+    "REPLACE" => replace_values(workbook, sheet_name, name, args, values, ctx)
+    "REPLACEB" => replaceb_values(workbook, sheet_name, name, args, values, ctx)
+    "SUBSTITUTE" =>
+      substitute_values(workbook, sheet_name, name, args, values, ctx)
+    "FIND" => find_values(workbook, sheet_name, name, args, values, ctx)
+    "FINDB" => findb_values(workbook, sheet_name, name, args, values, ctx)
+    "SEARCH" => search_values(workbook, sheet_name, name, args, values, ctx)
+    "SEARCHB" => searchb_values(workbook, sheet_name, name, args, values, ctx)
+    "EXACT" => exact_values(workbook, sheet_name, name, args, values, ctx)
+    "FIXED" => fixed_values(workbook, sheet_name, name, args, values, ctx)
+    "VALUE" => value_values(workbook, sheet_name, name, args, values, ctx)
+    "VALUETOTEXT" =>
+      valuetotext_values(workbook, sheet_name, name, args, values, ctx)
+    "TEXT" => text_values(workbook, sheet_name, name, args, values, ctx)
+    "ARRAYTOTEXT" =>
+      arraytotext_values(workbook, sheet_name, name, args, values, ctx)
+    "TEXTAFTER" | "TEXTBEFORE" | "_XLFN.TEXTAFTER" | "_XLFN.TEXTBEFORE" =>
+      textaftertextbefore_xlfn_textafter_xlfn_textbefore_values(
+        workbook, sheet_name, name, args, values, ctx,
+      )
+    "TEXTSPLIT" | "_XLFN.TEXTSPLIT" =>
+      textsplit_xlfn_textsplit_values(
+        workbook, sheet_name, name, args, values, ctx,
+      )
+    "TEXTJOIN" => textjoin_values(workbook, sheet_name, name, args, values, ctx)
+    "CHAR" => char_values(workbook, sheet_name, name, args, values, ctx)
+    "UNICHAR" => unichar_values(workbook, sheet_name, name, args, values, ctx)
+    "CLEAN" => clean_values(workbook, sheet_name, name, args, values, ctx)
+    "ENCODEURL" =>
+      encodeurl_values(workbook, sheet_name, name, args, values, ctx)
+    "BAHTTEXT" =>
+      bahttext_values2(workbook, sheet_name, name, args, values, ctx)
+    "CODE" => code_values(workbook, sheet_name, name, args, values, ctx)
+    "UNICODE" => unicode_values(workbook, sheet_name, name, args, values, ctx)
+    "CONCAT" | "CONCATENATE" => concat_values(values)
+    "T" => t_values(workbook, sheet_name, name, args, values, ctx)
+    _ => Error(formula_error_name)
+  }
+}
+
+///|
+fn eval_function_lookup(
+  workbook : Workbook,
+  sheet_name : String,
+  name : String,
+  args : ArrayView[Expr],
+  values : Array[FormulaValue],
+  ctx : CalcContext,
+) -> FormulaValue raise XlsxError {
+  match name {
+    "TRANSPOSE" =>
+      transpose_values(workbook, sheet_name, name, args, values, ctx)
+    "SEQUENCE" | "_XLFN.SEQUENCE" => sequence_values(values)
+    "TAKE" | "_XLFN.TAKE" =>
+      take_xlfn_take_values(workbook, sheet_name, name, args, values, ctx)
+    "DROP" | "_XLFN.DROP" =>
+      drop_xlfn_drop_values(workbook, sheet_name, name, args, values, ctx)
+    "CHOOSECOLS" | "_XLFN.CHOOSECOLS" =>
+      choosecols_xlfn_choosecols_values(
+        workbook, sheet_name, name, args, values, ctx,
+      )
+    "CHOOSEROWS" | "_XLFN.CHOOSEROWS" =>
+      chooserows_xlfn_chooserows_values(
+        workbook, sheet_name, name, args, values, ctx,
+      )
+    "HSTACK" | "_XLFN.HSTACK" =>
+      hstack_xlfn_hstack_values(workbook, sheet_name, name, args, values, ctx)
+    "VSTACK" | "_XLFN.VSTACK" =>
+      vstack_xlfn_vstack_values(workbook, sheet_name, name, args, values, ctx)
+    "EXPAND" | "_XLFN.EXPAND" =>
+      expand_xlfn_expand_values(workbook, sheet_name, name, args, values, ctx)
+    "WRAPROWS" | "_XLFN.WRAPROWS" =>
+      wraprows_xlfn_wraprows_values(
+        workbook, sheet_name, name, args, values, ctx,
+      )
+    "WRAPCOLS" | "_XLFN.WRAPCOLS" =>
+      wrapcols_xlfn_wrapcols_values(
+        workbook, sheet_name, name, args, values, ctx,
+      )
+    "TOCOL" | "_XLFN.TOCOL" =>
+      tocol_xlfn_tocol_values(workbook, sheet_name, name, args, values, ctx)
+    "TOROW" | "_XLFN.TOROW" =>
+      torow_xlfn_torow_values(workbook, sheet_name, name, args, values, ctx)
+    "SORT" | "_XLFN.SORT" =>
+      sort_xlfn_sort_values(workbook, sheet_name, name, args, values, ctx)
+    "SORTBY" | "_XLFN.SORTBY" =>
+      sortby_xlfn_sortby_values(workbook, sheet_name, name, args, values, ctx)
+    "FILTER" | "_XLFN.FILTER" =>
+      filter_xlfn_filter_values(workbook, sheet_name, name, args, values, ctx)
+    "UNIQUE" | "_XLFN.UNIQUE" =>
+      unique_xlfn_unique_values(workbook, sheet_name, name, args, values, ctx)
+    "INDEX" => index_values(workbook, sheet_name, name, args, values, ctx)
+    "MATCH" => match_values(workbook, sheet_name, name, args, values, ctx)
+    "VLOOKUP" => vlookup_values(workbook, sheet_name, name, args, values, ctx)
+    "HLOOKUP" => hlookup_values(workbook, sheet_name, name, args, values, ctx)
+    "LOOKUP" => lookup_values(workbook, sheet_name, name, args, values, ctx)
+    "XLOOKUP" | "_XLFN.XLOOKUP" =>
+      xlookup_xlfn_xlookup_values(workbook, sheet_name, name, args, values, ctx)
+    "ANCHORARRAY" | "_XLFN.ANCHORARRAY" =>
+      anchorarray_xlfn_anchorarray_values(
+        workbook, sheet_name, name, args, values, ctx,
+      )
+    "ADDRESS" => address_values(workbook, sheet_name, name, args, values, ctx)
+    "INDIRECT" => indirect_values(workbook, sheet_name, name, args, values, ctx)
+    "HYPERLINK" =>
+      hyperlink_values(workbook, sheet_name, name, args, values, ctx)
+    "CHOOSE" => choose_values(workbook, sheet_name, name, args, values, ctx)
+    _ => Error(formula_error_name)
+  }
+}
+
+///|
+fn eval_function_info(
+  workbook : Workbook,
+  sheet_name : String,
+  name : String,
+  args : ArrayView[Expr],
+  values : Array[FormulaValue],
+  ctx : CalcContext,
+) -> FormulaValue {
+  match name {
+    "DISPIMG" | "_XLFN.DISPIMG" =>
+      dispimg_xlfn_dispimg_values(workbook, sheet_name, name, args, values, ctx)
+    "ISBLANK" => isblank_values(workbook, sheet_name, name, args, values, ctx)
+    "ISERR" => iserr_values(workbook, sheet_name, name, args, values, ctx)
+    "ISEVEN" => iseven_values(workbook, sheet_name, name, args, values, ctx)
+    "ISODD" => isodd_values(workbook, sheet_name, name, args, values, ctx)
+    "ISERROR" => iserror_values(workbook, sheet_name, name, args, values, ctx)
+    "ISLOGICAL" =>
+      islogical_values(workbook, sheet_name, name, args, values, ctx)
+    "ISNA" => isna_values(workbook, sheet_name, name, args, values, ctx)
+    "ISNUMBER" => isnumber_values(workbook, sheet_name, name, args, values, ctx)
+    "ISTEXT" => istext_values(workbook, sheet_name, name, args, values, ctx)
+    "ISNONTEXT" =>
+      isnontext_values(workbook, sheet_name, name, args, values, ctx)
+    "ISREF" => isref_values(workbook, sheet_name, name, args, values, ctx)
+    "ISFORMULA" =>
+      isformula_values(workbook, sheet_name, name, args, values, ctx)
+    "ERRORdotTYPE" | "ERROR.TYPE" =>
+      errordottypeerror_type_values(
+        workbook, sheet_name, name, args, values, ctx,
+      )
+    "SHEET" => sheet_values(workbook, sheet_name, name, args, values, ctx)
+    "SHEETS" => sheets_values(workbook, sheet_name, name, args, values, ctx)
+    "TYPE" => type_values(workbook, sheet_name, name, args, values, ctx)
+    "NA" => na_values(workbook, sheet_name, name, args, values, ctx)
+    "N" => n_values(workbook, sheet_name, name, args, values, ctx)
+    _ => Error(formula_error_name)
+  }
+}
+
+///|
+fn eval_function_logical(
+  workbook : Workbook,
+  sheet_name : String,
+  name : String,
+  args : ArrayView[Expr],
+  values : Array[FormulaValue],
+  ctx : CalcContext,
+) -> FormulaValue {
+  match name {
+    "TRUE" => Bool(true)
+    "FALSE" => Bool(false)
+    "AND" => and_values(workbook, sheet_name, name, args, values, ctx)
+    "OR" => or_values(workbook, sheet_name, name, args, values, ctx)
+    "NOT" => not_values(workbook, sheet_name, name, args, values, ctx)
+    "XOR" => xor_values(workbook, sheet_name, name, args, values, ctx)
+    "IF" => if_values(workbook, sheet_name, name, args, values, ctx)
+    "IFERROR" => iferror_values(workbook, sheet_name, name, args, values, ctx)
+    "IFNA" => ifna_values(workbook, sheet_name, name, args, values, ctx)
+    "IFS" => ifs_values(workbook, sheet_name, name, args, values, ctx)
+    "SWITCH" => switch_values(workbook, sheet_name, name, args, values, ctx)
+    _ => Error(formula_error_name)
+  }
+}
+
+///|
+fn sign_values(
+  _workbook : Workbook,
+  _sheet_name : String,
+  _name : String,
+  _args : ArrayView[Expr],
+  values : Array[FormulaValue],
+  _ctx : CalcContext,
+) -> FormulaValue {
+  match values {
+    [v0] =>
+      match value_as_number(v0) {
+        Ok(num) =>
+          Number(if num < 0.0 { -1.0 } else if num > 0.0 { 1.0 } else { 0.0 })
+        Err(err) => err
+      }
+    _ => Error(formula_error_value)
+  }
+}
+
+///|
+fn seriessum_values(
+  _workbook : Workbook,
+  _sheet_name : String,
+  _name : String,
+  _args : ArrayView[Expr],
+  values : Array[FormulaValue],
+  _ctx : CalcContext,
+) -> FormulaValue {
+  match values {
+    [v0, v1, v2, v3] => {
+      let x = match value_as_number(v0) {
+        Ok(num) => num
+        Err(err) => return err
+      }
+      let n = match value_as_number(v1) {
+        Ok(num) => num
+        Err(err) => return err
+      }
+      let m = match value_as_number(v2) {
+        Ok(num) => num
+        Err(err) => return err
+      }
+      let coefficients = list_from_value(v3)
+      let mut result = 0.0
+      let mut idx = 0.0
+      for coefficient in coefficients {
+        if formula_value_string(coefficient) == "" {
+          continue
+        }
+        let num = match value_as_number(coefficient) {
+          Ok(num) => num
+          Err(err) => return err
+        }
+        result = result + num * @math.pow(x, n + m * idx)
+        idx = idx + 1.0
+      }
+      Number(round_significant_digits(result, 15))
+    }
+    _ => Error(formula_error_value)
+  }
+}
+
+///|
+fn sumif_values2(
+  workbook : Workbook,
+  sheet_name : String,
+  _name : String,
+  args : ArrayView[Expr],
+  values : Array[FormulaValue],
+  ctx : CalcContext,
+) -> FormulaValue raise XlsxError {
+  match args {
+    [a0, _] | [a0, _, _] => {
+      let range_values = eval_range_expr(workbook, sheet_name, a0, ctx)
+      let sum_range = if args is [_, _, a2] {
+        Some(eval_range_expr(workbook, sheet_name, a2, ctx))
+      } else {
+        None
+      }
+      sumif_values(range_values, values[1], sum_range)
+    }
+    _ => Error(formula_error_value)
+  }
+}
+
+///|
+fn sumproduct_values2(
+  workbook : Workbook,
+  sheet_name : String,
+  _name : String,
+  args : ArrayView[Expr],
+  values : Array[FormulaValue],
+  ctx : CalcContext,
+) -> FormulaValue raise XlsxError {
+  if args.length() >= 1 {
+    let ranges : Array[RangeValues] = []
+    let scalars : Array[FormulaValue] = []
+    let mut has_range = false
+    let mut has_scalar = false
+    for i in 0..<args.length() {
+      match args[i] {
+        Range(_, _, _) | Cell(_, _) => {
+          has_range = true
+          ranges.push(eval_range_expr(workbook, sheet_name, args[i], ctx))
+        }
+        _ =>
+          match values[i] {
+            Error(err) => return Error(err)
+            _ => {
+              has_scalar = true
+              scalars.push(values[i])
+            }
           }
-          let step = if values is [_, v1] {
-            match value_as_number(v1) {
-              Ok(num) => num
+      }
+    }
+    if has_range && has_scalar {
+      Error(formula_error_value)
+    } else if has_range {
+      sumproduct_values(ranges)
+    } else {
+      sumproduct_scalars(scalars)
+    }
+  } else {
+    Error(formula_error_value)
+  }
+}
+
+///|
+fn sumx2my2_values(
+  workbook : Workbook,
+  sheet_name : String,
+  _name : String,
+  args : ArrayView[Expr],
+  _values : Array[FormulaValue],
+  ctx : CalcContext,
+) -> FormulaValue raise XlsxError {
+  match args {
+    [a0, a1] => {
+      let left = eval_range_expr(workbook, sheet_name, a0, ctx)
+      let right = eval_range_expr(workbook, sheet_name, a1, ctx)
+      sumx_values("SUMX2MY2", left, right)
+    }
+    _ => Error(formula_error_value)
+  }
+}
+
+///|
+fn sumx2py2_values(
+  workbook : Workbook,
+  sheet_name : String,
+  _name : String,
+  args : ArrayView[Expr],
+  _values : Array[FormulaValue],
+  ctx : CalcContext,
+) -> FormulaValue raise XlsxError {
+  match args {
+    [a0, a1] => {
+      let left = eval_range_expr(workbook, sheet_name, a0, ctx)
+      let right = eval_range_expr(workbook, sheet_name, a1, ctx)
+      sumx_values("SUMX2PY2", left, right)
+    }
+    _ => Error(formula_error_value)
+  }
+}
+
+///|
+fn sumxmy2_values(
+  workbook : Workbook,
+  sheet_name : String,
+  _name : String,
+  args : ArrayView[Expr],
+  _values : Array[FormulaValue],
+  ctx : CalcContext,
+) -> FormulaValue raise XlsxError {
+  match args {
+    [a0, a1] => {
+      let left = eval_range_expr(workbook, sheet_name, a0, ctx)
+      let right = eval_range_expr(workbook, sheet_name, a1, ctx)
+      sumx_values("SUMXMY2", left, right)
+    }
+    _ => Error(formula_error_value)
+  }
+}
+
+///|
+fn sumifs_values(
+  workbook : Workbook,
+  sheet_name : String,
+  _name : String,
+  args : ArrayView[Expr],
+  values : Array[FormulaValue],
+  ctx : CalcContext,
+) -> FormulaValue raise XlsxError {
+  if args.length() >= 3 {
+    if args.length() % 2 != 1 {
+      Error(formula_error_na)
+    } else {
+      let sum_range = eval_range_expr(workbook, sheet_name, args[0], ctx)
+      let ranges : Array[RangeValues] = []
+      let criterias : Array[FormulaCriteria] = []
+      for i in 0..<((args.length() - 1) / 2) {
+        let offset = 1 + i * 2
+        let range_values = eval_range_expr(
+          workbook,
+          sheet_name,
+          args[offset],
+          ctx,
+        )
+        ranges.push(range_values)
+        criterias.push(parse_formula_criteria(values[offset + 1]))
+      }
+      let matches = ifs_match(ranges, criterias)
+      let mut sum = 0.0
+      for cell in matches {
+        match sum_range.get(cell.row, cell.col) {
+          Some(value) =>
+            match value_as_number_opt(value) {
+              Some(num) => sum = sum + num
+              None => ()
+            }
+          None => return Error(formula_error_value)
+        }
+      }
+      Number(sum)
+    }
+  } else {
+    Error(formula_error_value)
+  }
+}
+
+///|
+fn combin_values2(
+  _workbook : Workbook,
+  _sheet_name : String,
+  _name : String,
+  _args : ArrayView[Expr],
+  values : Array[FormulaValue],
+  _ctx : CalcContext,
+) -> FormulaValue {
+  match values {
+    [v0, v1] =>
+      match (value_as_number(v0), value_as_number(v1)) {
+        (Ok(num), Ok(chosen)) => combin_values(num, chosen)
+        (Err(err), _) => err
+        (_, Err(err)) => err
+      }
+    _ => Error(formula_error_value)
+  }
+}
+
+///|
+fn combina_xlfn_combina_values(
+  _workbook : Workbook,
+  _sheet_name : String,
+  _name : String,
+  _args : ArrayView[Expr],
+  values : Array[FormulaValue],
+  _ctx : CalcContext,
+) -> FormulaValue {
+  match values {
+    [v0, v1] =>
+      match (value_as_number(v0), value_as_number(v1)) {
+        (Ok(num), Ok(chosen)) => {
+          let n = trunc_double(num)
+          let k = trunc_double(chosen)
+          if n < k {
+            Error(formula_error_value)
+          } else if n == 0.0 {
+            Number(n)
+          } else {
+            combin_values(n + k - 1.0, n - 1.0)
+          }
+        }
+        (Err(err), _) => err
+        (_, Err(err)) => err
+      }
+    _ => Error(formula_error_value)
+  }
+}
+
+///|
+fn complex_values(
+  _workbook : Workbook,
+  _sheet_name : String,
+  _name : String,
+  _args : ArrayView[Expr],
+  values : Array[FormulaValue],
+  _ctx : CalcContext,
+) -> FormulaValue {
+  match values {
+    [v0, v1] | [v0, v1, _] =>
+      match (value_as_number(v0), value_as_number(v1)) {
+        (Ok(real), Ok(imag)) => {
+          let mut suffix = "i"
+          if values is [_, _, v2] {
+            match value_as_string(v2) {
+              Ok(text) => {
+                let lower = text.to_lower()
+                if lower != "i" && lower != "j" {
+                  return Error(formula_error_value)
+                }
+                suffix = lower
+              }
               Err(err) => return err
             }
-          } else {
-            0.0
           }
-          Number(if number >= step { 1.0 } else { 0.0 })
+          String(complex_to_string(complex_new(real, imag), suffix))
         }
-        _ => Error(formula_error_value)
+        (Err(err), _) => err
+        (_, Err(err)) => err
       }
-    "BITAND" => bitwise_values("BITAND", values)
-    "BITLSHIFT" => bitwise_values("BITLSHIFT", values)
-    "BITOR" => bitwise_values("BITOR", values)
-    "BITRSHIFT" => bitwise_values("BITRSHIFT", values)
-    "BITXOR" => bitwise_values("BITXOR", values)
-    "ACOS" =>
-      match values {
-        [v0] =>
-          match value_as_number(v0) {
-            Ok(num) => number_or_num_error(@math.acos(num))
-            Err(err) => err
+    _ => Error(formula_error_value)
+  }
+}
+
+///|
+fn fact_values(
+  _workbook : Workbook,
+  _sheet_name : String,
+  _name : String,
+  _args : ArrayView[Expr],
+  values : Array[FormulaValue],
+  _ctx : CalcContext,
+) -> FormulaValue {
+  match values {
+    [v0] =>
+      match value_as_number(v0) {
+        Ok(num) =>
+          if num < 0.0 {
+            Error(formula_error_num)
+          } else {
+            Number(factorial_double(num))
           }
-        _ => Error(formula_error_value)
+        Err(err) => err
       }
-    "ACOSH" =>
-      match values {
-        [v0] =>
-          match value_as_number(v0) {
-            Ok(num) => number_or_num_error(@math.acosh(num))
-            Err(err) => err
+    _ => Error(formula_error_value)
+  }
+}
+
+///|
+fn factdouble_values(
+  _workbook : Workbook,
+  _sheet_name : String,
+  _name : String,
+  _args : ArrayView[Expr],
+  values : Array[FormulaValue],
+  _ctx : CalcContext,
+) -> FormulaValue {
+  match values {
+    [v0] =>
+      match value_as_number(v0) {
+        Ok(num) =>
+          if num < 0.0 {
+            Error(formula_error_num)
+          } else {
+            Number(double_factorial_double(num))
           }
-        _ => Error(formula_error_value)
+        Err(err) => err
       }
-    "ACOT" | "_XLFN.ACOT" =>
-      match values {
-        [v0] =>
-          match value_as_number(v0) {
-            Ok(num) => number_or_num_error(@math.PI / 2.0 - @math.atan(num))
-            Err(err) => err
-          }
-        _ => Error(formula_error_value)
+    _ => Error(formula_error_value)
+  }
+}
+
+///|
+fn mdeterm_values(
+  workbook : Workbook,
+  sheet_name : String,
+  _name : String,
+  args : ArrayView[Expr],
+  values : Array[FormulaValue],
+  ctx : CalcContext,
+) -> FormulaValue raise XlsxError {
+  match values {
+    [v0] => {
+      let range = range_from_expr_or_value(
+        workbook,
+        sheet_name,
+        args[0],
+        v0,
+        ctx,
+      )
+      match number_matrix_from_range(range, true) {
+        Ok(matrix) => Number(matrix_det(matrix))
+        Err(err) => err
       }
-    "ACOTH" | "_XLFN.ACOTH" =>
-      match values {
-        [v0] =>
-          match value_as_number(v0) {
-            Ok(num) => number_or_num_error(@math.atanh(1.0 / num))
-            Err(err) => err
-          }
-        _ => Error(formula_error_value)
-      }
-    "ASIN" =>
-      match values {
-        [v0] =>
-          match value_as_number(v0) {
-            Ok(num) => number_or_num_error(@math.asin(num))
-            Err(err) => err
-          }
-        _ => Error(formula_error_value)
-      }
-    "ASINH" =>
-      match values {
-        [v0] =>
-          match value_as_number(v0) {
-            Ok(num) => number_or_num_error(@math.asinh(num))
-            Err(err) => err
-          }
-        _ => Error(formula_error_value)
-      }
-    "ATAN" =>
-      match values {
-        [v0] =>
-          match value_as_number(v0) {
-            Ok(num) => number_or_num_error(@math.atan(num))
-            Err(err) => err
-          }
-        _ => Error(formula_error_value)
-      }
-    "ATANH" =>
-      match values {
-        [v0] =>
-          match value_as_number(v0) {
-            Ok(num) => number_or_num_error(@math.atanh(num))
-            Err(err) => err
-          }
-        _ => Error(formula_error_value)
-      }
-    "ATAN2" =>
-      match values {
-        [v0, v1] =>
-          match (value_as_number(v0), value_as_number(v1)) {
-            (Ok(y), Ok(x)) => number_or_num_error(@math.atan2(x, y))
-            (Err(err), _) => err
-            (_, Err(err)) => err
-          }
-        _ => Error(formula_error_value)
-      }
-    "COS" =>
-      match values {
-        [v0] =>
-          match value_as_number(v0) {
-            Ok(num) => number_or_num_error(@math.cos(num))
-            Err(err) => err
-          }
-        _ => Error(formula_error_value)
-      }
-    "COSH" =>
-      match values {
-        [v0] =>
-          match value_as_number(v0) {
-            Ok(num) => number_or_num_error(@math.cosh(num))
-            Err(err) => err
-          }
-        _ => Error(formula_error_value)
-      }
-    "SIN" =>
-      match values {
-        [v0] =>
-          match value_as_number(v0) {
-            Ok(num) => number_or_num_error(@math.sin(num))
-            Err(err) => err
-          }
-        _ => Error(formula_error_value)
-      }
-    "SINH" =>
-      match values {
-        [v0] =>
-          match value_as_number(v0) {
-            Ok(num) => number_or_num_error(@math.sinh(num))
-            Err(err) => err
-          }
-        _ => Error(formula_error_value)
-      }
-    "TAN" =>
-      match values {
-        [v0] =>
-          match value_as_number(v0) {
-            Ok(num) => number_or_num_error(@math.tan(num))
-            Err(err) => err
-          }
-        _ => Error(formula_error_value)
-      }
-    "TANH" =>
-      match values {
-        [v0] =>
-          match value_as_number(v0) {
-            Ok(num) => number_or_num_error(@math.tanh(num))
-            Err(err) => err
-          }
-        _ => Error(formula_error_value)
-      }
-    "COT" | "_XLFN.COT" =>
-      match values {
-        [v0] =>
-          match value_as_number(v0) {
-            Ok(num) =>
-              if num == 0.0 {
-                Error(formula_error_div)
-              } else {
-                number_or_num_error(1.0 / @math.tan(num))
-              }
-            Err(err) => err
-          }
-        _ => Error(formula_error_value)
-      }
-    "COTH" | "_XLFN.COTH" =>
-      match values {
-        [v0] =>
-          match value_as_number(v0) {
-            Ok(num) =>
-              if num == 0.0 {
-                Error(formula_error_div)
-              } else {
-                let exp_pos = @math.exp(num)
-                let exp_neg = @math.exp(-num)
-                number_or_num_error((exp_pos + exp_neg) / (exp_pos - exp_neg))
-              }
-            Err(err) => err
-          }
-        _ => Error(formula_error_value)
-      }
-    "CSC" | "_XLFN.CSC" =>
-      match values {
-        [v0] =>
-          match value_as_number(v0) {
-            Ok(num) =>
-              if num == 0.0 {
-                Error(formula_error_div)
-              } else {
-                number_or_num_error(1.0 / @math.sin(num))
-              }
-            Err(err) => err
-          }
-        _ => Error(formula_error_value)
-      }
-    "CSCH" | "_XLFN.CSCH" =>
-      match values {
-        [v0] =>
-          match value_as_number(v0) {
-            Ok(num) =>
-              if num == 0.0 {
-                Error(formula_error_div)
-              } else {
-                number_or_num_error(1.0 / @math.sinh(num))
-              }
-            Err(err) => err
-          }
-        _ => Error(formula_error_value)
-      }
-    "SEC" | "_XLFN.SEC" =>
-      match values {
-        [v0] =>
-          match value_as_number(v0) {
-            Ok(num) => number_or_num_error(@math.cos(num))
-            Err(err) => err
-          }
-        _ => Error(formula_error_value)
-      }
-    "SECH" | "_XLFN.SECH" =>
-      match values {
-        [v0] =>
-          match value_as_number(v0) {
-            Ok(num) => number_or_num_error(1.0 / @math.cosh(num))
-            Err(err) => err
-          }
-        _ => Error(formula_error_value)
-      }
-    "DEGREES" =>
-      match values {
-        [v0] =>
-          match value_as_number(v0) {
-            Ok(num) =>
-              if num == 0.0 {
-                Error(formula_error_div)
-              } else {
-                Number(180.0 / @math.PI * num)
-              }
-            Err(err) => err
-          }
-        _ => Error(formula_error_value)
-      }
-    "RADIANS" =>
-      match values {
-        [v0] =>
-          match value_as_number(v0) {
-            Ok(num) => Number(@math.PI / 180.0 * num)
-            Err(err) => err
-          }
-        _ => Error(formula_error_value)
-      }
-    "RAND" =>
-      match values {
-        [] => Number(formula_rand().double())
-        _ => Error(formula_error_value)
-      }
-    "RANDARRAY" | "_XLFN.RANDARRAY" => randarray_values(values)
-    "RANDBETWEEN" =>
-      match values {
-        [v0, v1] =>
-          match (value_as_number(v0), value_as_number(v1)) {
-            (Ok(bottom), Ok(top)) =>
-              if top < bottom {
-                Error(formula_error_num)
-              } else {
-                // Keep sampling overflow-safe for very wide bounds by staying in Double space.
-                let bottom_int = trunc_double(bottom)
-                let top_int = trunc_double(top)
-                let range = top_int - bottom_int + 1.0
-                let rand_value = Double::floor(formula_rand().double() * range)
-                Number(bottom_int + rand_value)
-              }
-            (Err(err), _) => err
-            (_, Err(err)) => err
-          }
-        _ => Error(formula_error_value)
-      }
-    "PI" =>
-      match values {
-        [] => Number(@math.PI)
-        _ => Error(formula_error_value)
-      }
-    "SQRTPI" =>
-      match values {
-        [v0] =>
-          match value_as_number(v0) {
-            Ok(num) => Number(@math.pow(num * @math.PI, 0.5))
-            Err(err) => err
-          }
-        _ => Error(formula_error_value)
-      }
-    "LOG" =>
-      match values {
-        [v0] | [v0, _] =>
-          match value_as_number(v0) {
-            Ok(num) => {
-              let mut base = 10.0
-              if values is [_, v1] {
-                match value_as_number(v1) {
-                  Ok(value) => base = value
-                  Err(err) => return err
-                }
-              }
-              if num == 0.0 || base == 0.0 {
-                Error(formula_error_num)
-              } else if base == 1.0 {
-                Error(formula_error_div)
-              } else {
-                Number(@math.ln(num) / @math.ln(base))
-              }
-            }
-            Err(err) => err
-          }
-        _ => Error(formula_error_value)
-      }
-    "LOG10" =>
-      match values {
-        [v0] =>
-          match value_as_number(v0) {
-            Ok(num) => Number(@math.log10(num))
-            Err(err) => err
-          }
-        _ => Error(formula_error_value)
-      }
-    "IMABS" =>
-      match values {
-        [v0] =>
-          match parse_complex_value(v0) {
-            Ok(num) =>
-              number_or_num_error(
-                round_significant_digits(complex_abs(num), 15),
-              )
-            Err(err) => err
-          }
-        _ => Error(formula_error_value)
-      }
-    "IMAGINARY" =>
-      match values {
-        [v0] =>
-          match parse_complex_value(v0) {
-            Ok(num) =>
-              number_or_num_error(round_significant_digits(num.imag, 15))
-            Err(err) => err
-          }
-        _ => Error(formula_error_value)
-      }
-    "IMARGUMENT" =>
-      match values {
-        [v0] =>
-          match parse_complex_value(v0) {
-            Ok(num) =>
-              number_or_num_error(
-                round_significant_digits(complex_arg(num), 15),
-              )
-            Err(err) => err
-          }
-        _ => Error(formula_error_value)
-      }
-    "IMCONJUGATE" =>
-      match values {
-        [v0] =>
-          match parse_complex_value_with_suffix(v0) {
-            Ok((num, suffix)) =>
-              String(complex_to_string(complex_conj(num), suffix))
-            Err(err) => err
-          }
-        _ => Error(formula_error_value)
-      }
-    "IMCOS" =>
-      match values {
-        [v0] =>
-          match parse_complex_value_with_suffix(v0) {
-            Ok((num, suffix)) =>
-              String(complex_to_string(complex_cos(num), suffix))
-            Err(err) => err
-          }
-        _ => Error(formula_error_value)
-      }
-    "IMCOSH" =>
-      match values {
-        [v0] =>
-          match parse_complex_value_with_suffix(v0) {
-            Ok((num, suffix)) =>
-              String(complex_to_string(complex_cosh(num), suffix))
-            Err(err) => err
-          }
-        _ => Error(formula_error_value)
-      }
-    "IMCOT" =>
-      match values {
-        [v0] =>
-          match parse_complex_value_with_suffix(v0) {
-            Ok((num, suffix)) =>
-              String(
-                complex_to_string(
-                  complex_div(complex_cos(num), complex_sin(num)),
-                  suffix,
-                ),
-              )
-            Err(err) => err
-          }
-        _ => Error(formula_error_value)
-      }
-    "IMCSC" =>
-      match values {
-        [v0] =>
-          match parse_complex_value_with_suffix(v0) {
-            Ok((num, suffix)) => {
-              let result = complex_div(complex_new(1.0, 0.0), complex_sin(num))
-              if complex_is_invalid(result) {
-                Error(formula_error_num)
-              } else {
-                String(complex_to_string(result, suffix))
-              }
-            }
-            Err(err) => err
-          }
-        _ => Error(formula_error_value)
-      }
-    "IMCSCH" =>
-      match values {
-        [v0] =>
-          match parse_complex_value_with_suffix(v0) {
-            Ok((num, suffix)) => {
-              let result = complex_div(complex_new(1.0, 0.0), complex_sinh(num))
-              if complex_is_invalid(result) {
-                Error(formula_error_num)
-              } else {
-                String(complex_to_string(result, suffix))
-              }
-            }
-            Err(err) => err
-          }
-        _ => Error(formula_error_value)
-      }
-    "IMDIV" =>
-      match values {
-        [v0, v1] =>
-          match (parse_complex_value_with_suffix(v0), parse_complex_value(v1)) {
-            (Ok((left, suffix)), Ok(right)) => {
-              let result = complex_div(left, right)
-              if complex_is_invalid(result) {
-                Error(formula_error_num)
-              } else {
-                String(complex_to_string(result, suffix))
-              }
-            }
-            (Err(err), _) => err
-            (_, Err(err)) => err
-          }
-        _ => Error(formula_error_value)
-      }
-    "IMEXP" =>
-      match values {
-        [v0] =>
-          match parse_complex_value_with_suffix(v0) {
-            Ok((num, suffix)) =>
-              String(complex_to_string(complex_exp(num), suffix))
-            Err(err) => err
-          }
-        _ => Error(formula_error_value)
-      }
-    "IMLN" =>
-      match values {
-        [v0] =>
-          match parse_complex_value_with_suffix(v0) {
-            Ok((num, suffix)) => {
-              let result = complex_log(num)
-              if complex_is_invalid(result) {
-                Error(formula_error_num)
-              } else {
-                String(complex_to_string(result, suffix))
-              }
-            }
-            Err(err) => err
-          }
-        _ => Error(formula_error_value)
-      }
-    "IMLOG10" =>
-      match values {
-        [v0] =>
-          match parse_complex_value_with_suffix(v0) {
-            Ok((num, suffix)) => {
-              let result = complex_scale(complex_log(num), 1.0 / @math.ln(10.0))
-              if complex_is_invalid(result) {
-                Error(formula_error_num)
-              } else {
-                String(complex_to_string(result, suffix))
-              }
-            }
-            Err(err) => err
-          }
-        _ => Error(formula_error_value)
-      }
-    "IMLOG2" =>
-      match values {
-        [v0] =>
-          match parse_complex_value_with_suffix(v0) {
-            Ok((num, suffix)) => {
-              let result = complex_scale(complex_log(num), 1.0 / @math.ln(2.0))
-              if complex_is_invalid(result) {
-                Error(formula_error_num)
-              } else {
-                String(complex_to_string(result, suffix))
-              }
-            }
-            Err(err) => err
-          }
-        _ => Error(formula_error_value)
-      }
-    "IMPOWER" =>
-      match values {
-        [v0, v1] =>
-          match (parse_complex_value_with_suffix(v0), parse_complex_value(v1)) {
-            (Ok((base, suffix)), Ok(exponent)) =>
-              if base.real == 0.0 &&
-                base.imag == 0.0 &&
-                exponent.real == 0.0 &&
-                exponent.imag == 0.0 {
-                Error(formula_error_num)
-              } else {
-                let result = complex_pow(base, exponent)
-                if complex_is_invalid(result) {
-                  Error(formula_error_num)
+    }
+    _ => Error(formula_error_value)
+  }
+}
+
+///|
+fn minverse_values(
+  workbook : Workbook,
+  sheet_name : String,
+  _name : String,
+  args : ArrayView[Expr],
+  values : Array[FormulaValue],
+  ctx : CalcContext,
+) -> FormulaValue raise XlsxError {
+  match values {
+    [v0] => {
+      let range = range_from_expr_or_value(
+        workbook,
+        sheet_name,
+        args[0],
+        v0,
+        ctx,
+      )
+      match number_matrix_from_range(range, true) {
+        Ok(matrix) => {
+          let det_value = matrix_det(matrix)
+          if det_value == 0.0 {
+            Error(formula_error_num)
+          } else {
+            let adj = matrix_adjugate(matrix)
+            let scale = 1.0 / det_value
+            for row in 0..<adj.length() {
+              for col in 0..<adj[row].length() {
+                let value = adj[row][col]
+                if value == 0.0 && scale < 0.0 {
+                  adj[row][col] = -0.0
                 } else {
-                  String(complex_to_string(result, suffix))
+                  adj[row][col] = value * scale
                 }
+              }
+            }
+            List(matrix_values(adj))
+          }
+        }
+        Err(err) => err
+      }
+    }
+    _ => Error(formula_error_value)
+  }
+}
+
+///|
+fn mmult_values(
+  workbook : Workbook,
+  sheet_name : String,
+  _name : String,
+  args : ArrayView[Expr],
+  values : Array[FormulaValue],
+  ctx : CalcContext,
+) -> FormulaValue raise XlsxError {
+  match values {
+    [v0, v1] =>
+      match (v0, v1) {
+        (Number(lhs), Number(rhs)) => Number(lhs * rhs)
+        _ => {
+          let left_range = range_from_expr_or_value(
+            workbook,
+            sheet_name,
+            args[0],
+            v0,
+            ctx,
+          )
+          let right_range = range_from_expr_or_value(
+            workbook,
+            sheet_name,
+            args[1],
+            v1,
+            ctx,
+          )
+          match
+            (
+              number_matrix_from_range(left_range, false),
+              number_matrix_from_range(right_range, false),
+            ) {
+            (Ok(left), Ok(right)) =>
+              match matrix_multiply(left, right) {
+                Ok(matrix) => List(matrix_values(matrix))
+                Err(err) => err
               }
             (Err(err), _) => err
             (_, Err(err)) => err
           }
-        _ => Error(formula_error_value)
+        }
       }
-    "IMPRODUCT" => {
-      let mut product = complex_new(1.0, 0.0)
+    _ => Error(formula_error_value)
+  }
+}
+
+///|
+fn munit_xlfn_munit_values(
+  _workbook : Workbook,
+  _sheet_name : String,
+  _name : String,
+  _args : ArrayView[Expr],
+  values : Array[FormulaValue],
+  _ctx : CalcContext,
+) -> FormulaValue {
+  match values {
+    [v0] =>
+      match munit_dimension(v0) {
+        Ok(dimension) => List(munit_range_values(dimension).values)
+        Err(err) => err
+      }
+    _ => Error(formula_error_value)
+  }
+}
+
+///|
+fn abs_values(
+  _workbook : Workbook,
+  _sheet_name : String,
+  _name : String,
+  _args : ArrayView[Expr],
+  values : Array[FormulaValue],
+  _ctx : CalcContext,
+) -> FormulaValue {
+  match values {
+    [v0] =>
+      match value_as_number(v0) {
+        Ok(num) => Number(abs_double(num))
+        Err(err) => err
+      }
+    _ => Error(formula_error_value)
+  }
+}
+
+///|
+fn int_values(
+  _workbook : Workbook,
+  _sheet_name : String,
+  _name : String,
+  _args : ArrayView[Expr],
+  values : Array[FormulaValue],
+  _ctx : CalcContext,
+) -> FormulaValue {
+  match values {
+    [v0] =>
+      match value_as_number(v0) {
+        Ok(num) => Number(Double::floor(num))
+        Err(err) => err
+      }
+    _ => Error(formula_error_value)
+  }
+}
+
+///|
+fn ln_values(
+  _workbook : Workbook,
+  _sheet_name : String,
+  _name : String,
+  _args : ArrayView[Expr],
+  values : Array[FormulaValue],
+  _ctx : CalcContext,
+) -> FormulaValue {
+  match values {
+    [v0] =>
+      match value_as_number(v0) {
+        Ok(num) => Number(@math.ln(num))
+        Err(err) => err
+      }
+    _ => Error(formula_error_value)
+  }
+}
+
+///|
+fn exp_values(
+  _workbook : Workbook,
+  _sheet_name : String,
+  _name : String,
+  _args : ArrayView[Expr],
+  values : Array[FormulaValue],
+  _ctx : CalcContext,
+) -> FormulaValue {
+  match values {
+    [v0] =>
+      match value_as_number(v0) {
+        Ok(num) => Number(@math.exp(num))
+        Err(err) => err
+      }
+    _ => Error(formula_error_value)
+  }
+}
+
+///|
+fn decimal_xlfn_decimal_values(
+  _workbook : Workbook,
+  _sheet_name : String,
+  _name : String,
+  _args : ArrayView[Expr],
+  values : Array[FormulaValue],
+  _ctx : CalcContext,
+) -> FormulaValue {
+  match values {
+    [v0, v1] =>
+      match (value_as_string(v0), value_as_number(v1)) {
+        (Ok(text), Ok(radix)) => {
+          let base = Double::to_int(trunc_double(radix))
+          let text_value = strip_hex_prefix(text)
+          let parsed = @string.parse_int(text_value, base~) catch {
+            _ => return Error(formula_error_value)
+          }
+          Number(Double::from_int(parsed))
+        }
+        (Err(err), _) => err
+        (_, Err(err)) => err
+      }
+    _ => Error(formula_error_value)
+  }
+}
+
+///|
+fn roman_values(
+  _workbook : Workbook,
+  _sheet_name : String,
+  _name : String,
+  _args : ArrayView[Expr],
+  values : Array[FormulaValue],
+  _ctx : CalcContext,
+) -> FormulaValue {
+  match values {
+    [v0] | [v0, _] =>
+      match value_as_number(v0) {
+        Ok(num) => {
+          let mut form = 0
+          if values is [_, v1] {
+            match value_as_number(v1) {
+              Ok(raw) => {
+                let mut mode = Double::to_int(trunc_double(raw))
+                if mode < 0 {
+                  mode = 0
+                } else if mode > 4 {
+                  mode = 4
+                }
+                form = mode
+              }
+              Err(err) => return err
+            }
+          }
+          String(roman_string(num, form))
+        }
+        Err(err) => err
+      }
+    _ => Error(formula_error_value)
+  }
+}
+
+///|
+fn arabic_xlfn_arabic_values(
+  _workbook : Workbook,
+  _sheet_name : String,
+  _name : String,
+  _args : ArrayView[Expr],
+  values : Array[FormulaValue],
+  _ctx : CalcContext,
+) -> FormulaValue {
+  match values {
+    [v0] =>
+      match value_as_string(v0) {
+        Ok(text) => arabic_string_value(text)
+        Err(err) => err
+      }
+    _ => Error(formula_error_value)
+  }
+}
+
+///|
+fn bin2dec_values(
+  _workbook : Workbook,
+  _sheet_name : String,
+  _name : String,
+  _args : ArrayView[Expr],
+  values : Array[FormulaValue],
+  _ctx : CalcContext,
+) -> FormulaValue {
+  match values {
+    [v0] =>
+      match value_as_number(v0) {
+        Ok(_) => bin2dec_string(formula_value_string(v0))
+        Err(err) => err
+      }
+    _ => Error(formula_error_value)
+  }
+}
+
+///|
+fn bin2hex_values(
+  _workbook : Workbook,
+  _sheet_name : String,
+  _name : String,
+  _args : ArrayView[Expr],
+  values : Array[FormulaValue],
+  _ctx : CalcContext,
+) -> FormulaValue {
+  match values {
+    [v0] | [v0, _] =>
+      match value_as_number(v0) {
+        Ok(_) => {
+          let decimal = bin2dec_string(formula_value_string(v0))
+          match decimal {
+            Error(_) => decimal
+            _ => {
+              let new_values : Array[FormulaValue] = [decimal]
+              if values is [_, places] {
+                new_values.push(places)
+              }
+              dec2x_values("BIN2HEX", new_values)
+            }
+          }
+        }
+        Err(err) => err
+      }
+    _ => Error(formula_error_value)
+  }
+}
+
+///|
+fn bin2oct_values(
+  _workbook : Workbook,
+  _sheet_name : String,
+  _name : String,
+  _args : ArrayView[Expr],
+  values : Array[FormulaValue],
+  _ctx : CalcContext,
+) -> FormulaValue {
+  match values {
+    [v0] | [v0, _] =>
+      match value_as_number(v0) {
+        Ok(_) => {
+          let decimal = bin2dec_string(formula_value_string(v0))
+          match decimal {
+            Error(_) => decimal
+            _ => {
+              let new_values : Array[FormulaValue] = [decimal]
+              if values is [_, places] {
+                new_values.push(places)
+              }
+              dec2x_values("BIN2OCT", new_values)
+            }
+          }
+        }
+        Err(err) => err
+      }
+    _ => Error(formula_error_value)
+  }
+}
+
+///|
+fn hex2bin_values(
+  _workbook : Workbook,
+  _sheet_name : String,
+  _name : String,
+  _args : ArrayView[Expr],
+  values : Array[FormulaValue],
+  _ctx : CalcContext,
+) -> FormulaValue {
+  match values {
+    [v0] | [v0, _] =>
+      match value_as_string(v0) {
+        Ok(text) => {
+          let decimal = hex2dec_string(text)
+          match decimal {
+            Error(_) => decimal
+            _ => {
+              let new_values : Array[FormulaValue] = [decimal]
+              if values is [_, places] {
+                new_values.push(places)
+              }
+              dec2x_values("HEX2BIN", new_values)
+            }
+          }
+        }
+        Err(err) => err
+      }
+    _ => Error(formula_error_value)
+  }
+}
+
+///|
+fn hex2dec_values(
+  _workbook : Workbook,
+  _sheet_name : String,
+  _name : String,
+  _args : ArrayView[Expr],
+  values : Array[FormulaValue],
+  _ctx : CalcContext,
+) -> FormulaValue {
+  match values {
+    [v0] =>
+      match value_as_string(v0) {
+        Ok(text) => hex2dec_string(text)
+        Err(err) => err
+      }
+    _ => Error(formula_error_value)
+  }
+}
+
+///|
+fn hex2oct_values(
+  _workbook : Workbook,
+  _sheet_name : String,
+  _name : String,
+  _args : ArrayView[Expr],
+  values : Array[FormulaValue],
+  _ctx : CalcContext,
+) -> FormulaValue {
+  match values {
+    [v0] | [v0, _] =>
+      match value_as_string(v0) {
+        Ok(text) => {
+          let decimal = hex2dec_string(text)
+          match decimal {
+            Error(_) => decimal
+            _ => {
+              let new_values : Array[FormulaValue] = [decimal]
+              if values is [_, places] {
+                new_values.push(places)
+              }
+              dec2x_values("HEX2OCT", new_values)
+            }
+          }
+        }
+        Err(err) => err
+      }
+    _ => Error(formula_error_value)
+  }
+}
+
+///|
+fn oct2bin_values(
+  _workbook : Workbook,
+  _sheet_name : String,
+  _name : String,
+  _args : ArrayView[Expr],
+  values : Array[FormulaValue],
+  _ctx : CalcContext,
+) -> FormulaValue {
+  match values {
+    [v0] | [v0, _] =>
+      match value_as_number(v0) {
+        Ok(_) => {
+          let decimal = oct2dec_string(formula_value_string(v0))
+          let new_values : Array[FormulaValue] = [decimal]
+          if values is [_, places] {
+            new_values.push(places)
+          }
+          dec2x_values("OCT2BIN", new_values)
+        }
+        Err(err) => err
+      }
+    _ => Error(formula_error_value)
+  }
+}
+
+///|
+fn oct2dec_values(
+  _workbook : Workbook,
+  _sheet_name : String,
+  _name : String,
+  _args : ArrayView[Expr],
+  values : Array[FormulaValue],
+  _ctx : CalcContext,
+) -> FormulaValue {
+  match values {
+    [v0] =>
+      match value_as_number(v0) {
+        Ok(_) => oct2dec_string(formula_value_string(v0))
+        Err(err) => err
+      }
+    _ => Error(formula_error_value)
+  }
+}
+
+///|
+fn oct2hex_values(
+  _workbook : Workbook,
+  _sheet_name : String,
+  _name : String,
+  _args : ArrayView[Expr],
+  values : Array[FormulaValue],
+  _ctx : CalcContext,
+) -> FormulaValue {
+  match values {
+    [v0] | [v0, _] =>
+      match value_as_number(v0) {
+        Ok(_) => {
+          let decimal = oct2dec_string(formula_value_string(v0))
+          let new_values : Array[FormulaValue] = [decimal]
+          if values is [_, places] {
+            new_values.push(places)
+          }
+          dec2x_values("OCT2HEX", new_values)
+        }
+        Err(err) => err
+      }
+    _ => Error(formula_error_value)
+  }
+}
+
+///|
+fn besseli_values(
+  _workbook : Workbook,
+  _sheet_name : String,
+  _name : String,
+  _args : ArrayView[Expr],
+  values : Array[FormulaValue],
+  _ctx : CalcContext,
+) -> FormulaValue {
+  match values {
+    [v0, v1] =>
+      match (value_as_number(v0), value_as_number(v1)) {
+        (Ok(x), Ok(n)) => number_or_num_error(bessel_i(x, n))
+        (Err(err), _) => err
+        (_, Err(err)) => err
+      }
+    _ => Error(formula_error_value)
+  }
+}
+
+///|
+fn besselj_values(
+  _workbook : Workbook,
+  _sheet_name : String,
+  _name : String,
+  _args : ArrayView[Expr],
+  values : Array[FormulaValue],
+  _ctx : CalcContext,
+) -> FormulaValue {
+  match values {
+    [v0, v1] =>
+      match (value_as_number(v0), value_as_number(v1)) {
+        (Ok(x), Ok(n)) => number_or_num_error(bessel_j(x, n))
+        (Err(err), _) => err
+        (_, Err(err)) => err
+      }
+    _ => Error(formula_error_value)
+  }
+}
+
+///|
+fn besselk_values(
+  _workbook : Workbook,
+  _sheet_name : String,
+  _name : String,
+  _args : ArrayView[Expr],
+  values : Array[FormulaValue],
+  _ctx : CalcContext,
+) -> FormulaValue {
+  match values {
+    [v0, v1] =>
+      match (value_as_number(v0), value_as_number(v1)) {
+        (Ok(x), Ok(n)) =>
+          if x <= 0.0 || n < 0.0 {
+            Error(formula_error_num)
+          } else {
+            let order = Double::floor(n)
+            let result = if order == 0.0 {
+              bessel_k0(x)
+            } else if order == 1.0 {
+              bessel_k1(x)
+            } else {
+              bessel_k2(x, n)
+            }
+            number_or_num_error(result)
+          }
+        (Err(err), _) => err
+        (_, Err(err)) => err
+      }
+    _ => Error(formula_error_value)
+  }
+}
+
+///|
+fn bessely_values(
+  _workbook : Workbook,
+  _sheet_name : String,
+  _name : String,
+  _args : ArrayView[Expr],
+  values : Array[FormulaValue],
+  _ctx : CalcContext,
+) -> FormulaValue {
+  match values {
+    [v0, v1] =>
+      match (value_as_number(v0), value_as_number(v1)) {
+        (Ok(x), Ok(n)) =>
+          if x <= 0.0 || n < 0.0 {
+            Error(formula_error_num)
+          } else {
+            let order = Double::floor(n)
+            let result = if order == 0.0 {
+              bessel_y0(x)
+            } else if order == 1.0 {
+              bessel_y1(x)
+            } else {
+              bessel_y2(x, n)
+            }
+            number_or_num_error(result)
+          }
+        (Err(err), _) => err
+        (_, Err(err)) => err
+      }
+    _ => Error(formula_error_value)
+  }
+}
+
+///|
+fn delta_values(
+  _workbook : Workbook,
+  _sheet_name : String,
+  _name : String,
+  _args : ArrayView[Expr],
+  values : Array[FormulaValue],
+  _ctx : CalcContext,
+) -> FormulaValue {
+  match values {
+    [v0] | [v0, _] => {
+      let number1 = match value_as_number(v0) {
+        Ok(num) => num
+        Err(err) => return err
+      }
+      let number2 = if values is [_, v1] {
+        match value_as_number(v1) {
+          Ok(num) => num
+          Err(err) => return err
+        }
+      } else {
+        0.0
+      }
+      Number(if number1 == number2 { 1.0 } else { 0.0 })
+    }
+    _ => Error(formula_error_value)
+  }
+}
+
+///|
+fn erf_values(
+  _workbook : Workbook,
+  _sheet_name : String,
+  _name : String,
+  _args : ArrayView[Expr],
+  values : Array[FormulaValue],
+  _ctx : CalcContext,
+) -> FormulaValue {
+  match values {
+    [v0] | [v0, _] =>
+      match value_as_number(v0) {
+        Ok(lower) =>
+          if values is [_, v1] {
+            match value_as_number(v1) {
+              Ok(upper) =>
+                number_or_num_error(erf_double(upper) - erf_double(lower))
+              Err(err) => err
+            }
+          } else {
+            number_or_num_error(erf_double(lower))
+          }
+        Err(err) => err
+      }
+    _ => Error(formula_error_value)
+  }
+}
+
+///|
+fn erfdotpreciseerf_precise_xlfn_erf_precise_values(
+  _workbook : Workbook,
+  _sheet_name : String,
+  _name : String,
+  _args : ArrayView[Expr],
+  values : Array[FormulaValue],
+  _ctx : CalcContext,
+) -> FormulaValue {
+  match values {
+    [v0] =>
+      match value_as_number(v0) {
+        Ok(value) => number_or_num_error(erf_double(value))
+        Err(err) => err
+      }
+    _ => Error(formula_error_value)
+  }
+}
+
+///|
+fn erfc_values(
+  _workbook : Workbook,
+  _sheet_name : String,
+  _name : String,
+  _args : ArrayView[Expr],
+  values : Array[FormulaValue],
+  _ctx : CalcContext,
+) -> FormulaValue {
+  match values {
+    [v0] =>
+      match value_as_number(v0) {
+        Ok(value) => number_or_num_error(erfc_double(value))
+        Err(err) => err
+      }
+    _ => Error(formula_error_value)
+  }
+}
+
+///|
+fn erfcdotpreciseerfc_precise_xlfn_erfc_precise_values(
+  _workbook : Workbook,
+  _sheet_name : String,
+  _name : String,
+  _args : ArrayView[Expr],
+  values : Array[FormulaValue],
+  _ctx : CalcContext,
+) -> FormulaValue {
+  match values {
+    [v0] =>
+      match value_as_number(v0) {
+        Ok(value) => number_or_num_error(erfc_double(value))
+        Err(err) => err
+      }
+    _ => Error(formula_error_value)
+  }
+}
+
+///|
+fn gestep_values(
+  _workbook : Workbook,
+  _sheet_name : String,
+  _name : String,
+  _args : ArrayView[Expr],
+  values : Array[FormulaValue],
+  _ctx : CalcContext,
+) -> FormulaValue {
+  match values {
+    [v0] | [v0, _] => {
+      let number = match value_as_number(v0) {
+        Ok(num) => num
+        Err(err) => return err
+      }
+      let step = if values is [_, v1] {
+        match value_as_number(v1) {
+          Ok(num) => num
+          Err(err) => return err
+        }
+      } else {
+        0.0
+      }
+      Number(if number >= step { 1.0 } else { 0.0 })
+    }
+    _ => Error(formula_error_value)
+  }
+}
+
+///|
+fn acos_values(
+  _workbook : Workbook,
+  _sheet_name : String,
+  _name : String,
+  _args : ArrayView[Expr],
+  values : Array[FormulaValue],
+  _ctx : CalcContext,
+) -> FormulaValue {
+  match values {
+    [v0] =>
+      match value_as_number(v0) {
+        Ok(num) => number_or_num_error(@math.acos(num))
+        Err(err) => err
+      }
+    _ => Error(formula_error_value)
+  }
+}
+
+///|
+fn acosh_values(
+  _workbook : Workbook,
+  _sheet_name : String,
+  _name : String,
+  _args : ArrayView[Expr],
+  values : Array[FormulaValue],
+  _ctx : CalcContext,
+) -> FormulaValue {
+  match values {
+    [v0] =>
+      match value_as_number(v0) {
+        Ok(num) => number_or_num_error(@math.acosh(num))
+        Err(err) => err
+      }
+    _ => Error(formula_error_value)
+  }
+}
+
+///|
+fn acot_xlfn_acot_values(
+  _workbook : Workbook,
+  _sheet_name : String,
+  _name : String,
+  _args : ArrayView[Expr],
+  values : Array[FormulaValue],
+  _ctx : CalcContext,
+) -> FormulaValue {
+  match values {
+    [v0] =>
+      match value_as_number(v0) {
+        Ok(num) => number_or_num_error(@math.PI / 2.0 - @math.atan(num))
+        Err(err) => err
+      }
+    _ => Error(formula_error_value)
+  }
+}
+
+///|
+fn acoth_xlfn_acoth_values(
+  _workbook : Workbook,
+  _sheet_name : String,
+  _name : String,
+  _args : ArrayView[Expr],
+  values : Array[FormulaValue],
+  _ctx : CalcContext,
+) -> FormulaValue {
+  match values {
+    [v0] =>
+      match value_as_number(v0) {
+        Ok(num) => number_or_num_error(@math.atanh(1.0 / num))
+        Err(err) => err
+      }
+    _ => Error(formula_error_value)
+  }
+}
+
+///|
+fn asin_values(
+  _workbook : Workbook,
+  _sheet_name : String,
+  _name : String,
+  _args : ArrayView[Expr],
+  values : Array[FormulaValue],
+  _ctx : CalcContext,
+) -> FormulaValue {
+  match values {
+    [v0] =>
+      match value_as_number(v0) {
+        Ok(num) => number_or_num_error(@math.asin(num))
+        Err(err) => err
+      }
+    _ => Error(formula_error_value)
+  }
+}
+
+///|
+fn asinh_values(
+  _workbook : Workbook,
+  _sheet_name : String,
+  _name : String,
+  _args : ArrayView[Expr],
+  values : Array[FormulaValue],
+  _ctx : CalcContext,
+) -> FormulaValue {
+  match values {
+    [v0] =>
+      match value_as_number(v0) {
+        Ok(num) => number_or_num_error(@math.asinh(num))
+        Err(err) => err
+      }
+    _ => Error(formula_error_value)
+  }
+}
+
+///|
+fn atan_values(
+  _workbook : Workbook,
+  _sheet_name : String,
+  _name : String,
+  _args : ArrayView[Expr],
+  values : Array[FormulaValue],
+  _ctx : CalcContext,
+) -> FormulaValue {
+  match values {
+    [v0] =>
+      match value_as_number(v0) {
+        Ok(num) => number_or_num_error(@math.atan(num))
+        Err(err) => err
+      }
+    _ => Error(formula_error_value)
+  }
+}
+
+///|
+fn atanh_values(
+  _workbook : Workbook,
+  _sheet_name : String,
+  _name : String,
+  _args : ArrayView[Expr],
+  values : Array[FormulaValue],
+  _ctx : CalcContext,
+) -> FormulaValue {
+  match values {
+    [v0] =>
+      match value_as_number(v0) {
+        Ok(num) => number_or_num_error(@math.atanh(num))
+        Err(err) => err
+      }
+    _ => Error(formula_error_value)
+  }
+}
+
+///|
+fn atan2_values(
+  _workbook : Workbook,
+  _sheet_name : String,
+  _name : String,
+  _args : ArrayView[Expr],
+  values : Array[FormulaValue],
+  _ctx : CalcContext,
+) -> FormulaValue {
+  match values {
+    [v0, v1] =>
+      match (value_as_number(v0), value_as_number(v1)) {
+        (Ok(y), Ok(x)) => number_or_num_error(@math.atan2(x, y))
+        (Err(err), _) => err
+        (_, Err(err)) => err
+      }
+    _ => Error(formula_error_value)
+  }
+}
+
+///|
+fn cos_values(
+  _workbook : Workbook,
+  _sheet_name : String,
+  _name : String,
+  _args : ArrayView[Expr],
+  values : Array[FormulaValue],
+  _ctx : CalcContext,
+) -> FormulaValue {
+  match values {
+    [v0] =>
+      match value_as_number(v0) {
+        Ok(num) => number_or_num_error(@math.cos(num))
+        Err(err) => err
+      }
+    _ => Error(formula_error_value)
+  }
+}
+
+///|
+fn cosh_values(
+  _workbook : Workbook,
+  _sheet_name : String,
+  _name : String,
+  _args : ArrayView[Expr],
+  values : Array[FormulaValue],
+  _ctx : CalcContext,
+) -> FormulaValue {
+  match values {
+    [v0] =>
+      match value_as_number(v0) {
+        Ok(num) => number_or_num_error(@math.cosh(num))
+        Err(err) => err
+      }
+    _ => Error(formula_error_value)
+  }
+}
+
+///|
+fn sin_values(
+  _workbook : Workbook,
+  _sheet_name : String,
+  _name : String,
+  _args : ArrayView[Expr],
+  values : Array[FormulaValue],
+  _ctx : CalcContext,
+) -> FormulaValue {
+  match values {
+    [v0] =>
+      match value_as_number(v0) {
+        Ok(num) => number_or_num_error(@math.sin(num))
+        Err(err) => err
+      }
+    _ => Error(formula_error_value)
+  }
+}
+
+///|
+fn sinh_values(
+  _workbook : Workbook,
+  _sheet_name : String,
+  _name : String,
+  _args : ArrayView[Expr],
+  values : Array[FormulaValue],
+  _ctx : CalcContext,
+) -> FormulaValue {
+  match values {
+    [v0] =>
+      match value_as_number(v0) {
+        Ok(num) => number_or_num_error(@math.sinh(num))
+        Err(err) => err
+      }
+    _ => Error(formula_error_value)
+  }
+}
+
+///|
+fn tan_values(
+  _workbook : Workbook,
+  _sheet_name : String,
+  _name : String,
+  _args : ArrayView[Expr],
+  values : Array[FormulaValue],
+  _ctx : CalcContext,
+) -> FormulaValue {
+  match values {
+    [v0] =>
+      match value_as_number(v0) {
+        Ok(num) => number_or_num_error(@math.tan(num))
+        Err(err) => err
+      }
+    _ => Error(formula_error_value)
+  }
+}
+
+///|
+fn tanh_values(
+  _workbook : Workbook,
+  _sheet_name : String,
+  _name : String,
+  _args : ArrayView[Expr],
+  values : Array[FormulaValue],
+  _ctx : CalcContext,
+) -> FormulaValue {
+  match values {
+    [v0] =>
+      match value_as_number(v0) {
+        Ok(num) => number_or_num_error(@math.tanh(num))
+        Err(err) => err
+      }
+    _ => Error(formula_error_value)
+  }
+}
+
+///|
+fn cot_xlfn_cot_values(
+  _workbook : Workbook,
+  _sheet_name : String,
+  _name : String,
+  _args : ArrayView[Expr],
+  values : Array[FormulaValue],
+  _ctx : CalcContext,
+) -> FormulaValue {
+  match values {
+    [v0] =>
+      match value_as_number(v0) {
+        Ok(num) =>
+          if num == 0.0 {
+            Error(formula_error_div)
+          } else {
+            number_or_num_error(1.0 / @math.tan(num))
+          }
+        Err(err) => err
+      }
+    _ => Error(formula_error_value)
+  }
+}
+
+///|
+fn coth_xlfn_coth_values(
+  _workbook : Workbook,
+  _sheet_name : String,
+  _name : String,
+  _args : ArrayView[Expr],
+  values : Array[FormulaValue],
+  _ctx : CalcContext,
+) -> FormulaValue {
+  match values {
+    [v0] =>
+      match value_as_number(v0) {
+        Ok(num) =>
+          if num == 0.0 {
+            Error(formula_error_div)
+          } else {
+            let exp_pos = @math.exp(num)
+            let exp_neg = @math.exp(-num)
+            number_or_num_error((exp_pos + exp_neg) / (exp_pos - exp_neg))
+          }
+        Err(err) => err
+      }
+    _ => Error(formula_error_value)
+  }
+}
+
+///|
+fn csc_xlfn_csc_values(
+  _workbook : Workbook,
+  _sheet_name : String,
+  _name : String,
+  _args : ArrayView[Expr],
+  values : Array[FormulaValue],
+  _ctx : CalcContext,
+) -> FormulaValue {
+  match values {
+    [v0] =>
+      match value_as_number(v0) {
+        Ok(num) =>
+          if num == 0.0 {
+            Error(formula_error_div)
+          } else {
+            number_or_num_error(1.0 / @math.sin(num))
+          }
+        Err(err) => err
+      }
+    _ => Error(formula_error_value)
+  }
+}
+
+///|
+fn csch_xlfn_csch_values(
+  _workbook : Workbook,
+  _sheet_name : String,
+  _name : String,
+  _args : ArrayView[Expr],
+  values : Array[FormulaValue],
+  _ctx : CalcContext,
+) -> FormulaValue {
+  match values {
+    [v0] =>
+      match value_as_number(v0) {
+        Ok(num) =>
+          if num == 0.0 {
+            Error(formula_error_div)
+          } else {
+            number_or_num_error(1.0 / @math.sinh(num))
+          }
+        Err(err) => err
+      }
+    _ => Error(formula_error_value)
+  }
+}
+
+///|
+fn sec_xlfn_sec_values(
+  _workbook : Workbook,
+  _sheet_name : String,
+  _name : String,
+  _args : ArrayView[Expr],
+  values : Array[FormulaValue],
+  _ctx : CalcContext,
+) -> FormulaValue {
+  match values {
+    [v0] =>
+      match value_as_number(v0) {
+        Ok(num) => number_or_num_error(@math.cos(num))
+        Err(err) => err
+      }
+    _ => Error(formula_error_value)
+  }
+}
+
+///|
+fn sech_xlfn_sech_values(
+  _workbook : Workbook,
+  _sheet_name : String,
+  _name : String,
+  _args : ArrayView[Expr],
+  values : Array[FormulaValue],
+  _ctx : CalcContext,
+) -> FormulaValue {
+  match values {
+    [v0] =>
+      match value_as_number(v0) {
+        Ok(num) => number_or_num_error(1.0 / @math.cosh(num))
+        Err(err) => err
+      }
+    _ => Error(formula_error_value)
+  }
+}
+
+///|
+fn degrees_values(
+  _workbook : Workbook,
+  _sheet_name : String,
+  _name : String,
+  _args : ArrayView[Expr],
+  values : Array[FormulaValue],
+  _ctx : CalcContext,
+) -> FormulaValue {
+  match values {
+    [v0] =>
+      match value_as_number(v0) {
+        Ok(num) =>
+          if num == 0.0 {
+            Error(formula_error_div)
+          } else {
+            Number(180.0 / @math.PI * num)
+          }
+        Err(err) => err
+      }
+    _ => Error(formula_error_value)
+  }
+}
+
+///|
+fn radians_values(
+  _workbook : Workbook,
+  _sheet_name : String,
+  _name : String,
+  _args : ArrayView[Expr],
+  values : Array[FormulaValue],
+  _ctx : CalcContext,
+) -> FormulaValue {
+  match values {
+    [v0] =>
+      match value_as_number(v0) {
+        Ok(num) => Number(@math.PI / 180.0 * num)
+        Err(err) => err
+      }
+    _ => Error(formula_error_value)
+  }
+}
+
+///|
+fn rand_values(
+  _workbook : Workbook,
+  _sheet_name : String,
+  _name : String,
+  _args : ArrayView[Expr],
+  values : Array[FormulaValue],
+  _ctx : CalcContext,
+) -> FormulaValue {
+  match values {
+    [] => Number(formula_rand().double())
+    _ => Error(formula_error_value)
+  }
+}
+
+///|
+fn randbetween_values(
+  _workbook : Workbook,
+  _sheet_name : String,
+  _name : String,
+  _args : ArrayView[Expr],
+  values : Array[FormulaValue],
+  _ctx : CalcContext,
+) -> FormulaValue {
+  match values {
+    [v0, v1] =>
+      match (value_as_number(v0), value_as_number(v1)) {
+        (Ok(bottom), Ok(top)) =>
+          if top < bottom {
+            Error(formula_error_num)
+          } else {
+            // Keep sampling overflow-safe for very wide bounds by staying in Double space.
+            let bottom_int = trunc_double(bottom)
+            let top_int = trunc_double(top)
+            let range = top_int - bottom_int + 1.0
+            let rand_value = Double::floor(formula_rand().double() * range)
+            Number(bottom_int + rand_value)
+          }
+        (Err(err), _) => err
+        (_, Err(err)) => err
+      }
+    _ => Error(formula_error_value)
+  }
+}
+
+///|
+fn pi_values(
+  _workbook : Workbook,
+  _sheet_name : String,
+  _name : String,
+  _args : ArrayView[Expr],
+  values : Array[FormulaValue],
+  _ctx : CalcContext,
+) -> FormulaValue {
+  match values {
+    [] => Number(@math.PI)
+    _ => Error(formula_error_value)
+  }
+}
+
+///|
+fn sqrtpi_values(
+  _workbook : Workbook,
+  _sheet_name : String,
+  _name : String,
+  _args : ArrayView[Expr],
+  values : Array[FormulaValue],
+  _ctx : CalcContext,
+) -> FormulaValue {
+  match values {
+    [v0] =>
+      match value_as_number(v0) {
+        Ok(num) => Number(@math.pow(num * @math.PI, 0.5))
+        Err(err) => err
+      }
+    _ => Error(formula_error_value)
+  }
+}
+
+///|
+fn log_values(
+  _workbook : Workbook,
+  _sheet_name : String,
+  _name : String,
+  _args : ArrayView[Expr],
+  values : Array[FormulaValue],
+  _ctx : CalcContext,
+) -> FormulaValue {
+  match values {
+    [v0] | [v0, _] =>
+      match value_as_number(v0) {
+        Ok(num) => {
+          let mut base = 10.0
+          if values is [_, v1] {
+            match value_as_number(v1) {
+              Ok(value) => base = value
+              Err(err) => return err
+            }
+          }
+          if num == 0.0 || base == 0.0 {
+            Error(formula_error_num)
+          } else if base == 1.0 {
+            Error(formula_error_div)
+          } else {
+            Number(@math.ln(num) / @math.ln(base))
+          }
+        }
+        Err(err) => err
+      }
+    _ => Error(formula_error_value)
+  }
+}
+
+///|
+fn log10_values(
+  _workbook : Workbook,
+  _sheet_name : String,
+  _name : String,
+  _args : ArrayView[Expr],
+  values : Array[FormulaValue],
+  _ctx : CalcContext,
+) -> FormulaValue {
+  match values {
+    [v0] =>
+      match value_as_number(v0) {
+        Ok(num) => Number(@math.log10(num))
+        Err(err) => err
+      }
+    _ => Error(formula_error_value)
+  }
+}
+
+///|
+fn imabs_values(
+  _workbook : Workbook,
+  _sheet_name : String,
+  _name : String,
+  _args : ArrayView[Expr],
+  values : Array[FormulaValue],
+  _ctx : CalcContext,
+) -> FormulaValue {
+  match values {
+    [v0] =>
+      match parse_complex_value(v0) {
+        Ok(num) =>
+          number_or_num_error(round_significant_digits(complex_abs(num), 15))
+        Err(err) => err
+      }
+    _ => Error(formula_error_value)
+  }
+}
+
+///|
+fn imaginary_values(
+  _workbook : Workbook,
+  _sheet_name : String,
+  _name : String,
+  _args : ArrayView[Expr],
+  values : Array[FormulaValue],
+  _ctx : CalcContext,
+) -> FormulaValue {
+  match values {
+    [v0] =>
+      match parse_complex_value(v0) {
+        Ok(num) => number_or_num_error(round_significant_digits(num.imag, 15))
+        Err(err) => err
+      }
+    _ => Error(formula_error_value)
+  }
+}
+
+///|
+fn imargument_values(
+  _workbook : Workbook,
+  _sheet_name : String,
+  _name : String,
+  _args : ArrayView[Expr],
+  values : Array[FormulaValue],
+  _ctx : CalcContext,
+) -> FormulaValue {
+  match values {
+    [v0] =>
+      match parse_complex_value(v0) {
+        Ok(num) =>
+          number_or_num_error(round_significant_digits(complex_arg(num), 15))
+        Err(err) => err
+      }
+    _ => Error(formula_error_value)
+  }
+}
+
+///|
+fn imconjugate_values(
+  _workbook : Workbook,
+  _sheet_name : String,
+  _name : String,
+  _args : ArrayView[Expr],
+  values : Array[FormulaValue],
+  _ctx : CalcContext,
+) -> FormulaValue {
+  match values {
+    [v0] =>
+      match parse_complex_value_with_suffix(v0) {
+        Ok((num, suffix)) =>
+          String(complex_to_string(complex_conj(num), suffix))
+        Err(err) => err
+      }
+    _ => Error(formula_error_value)
+  }
+}
+
+///|
+fn imcos_values(
+  _workbook : Workbook,
+  _sheet_name : String,
+  _name : String,
+  _args : ArrayView[Expr],
+  values : Array[FormulaValue],
+  _ctx : CalcContext,
+) -> FormulaValue {
+  match values {
+    [v0] =>
+      match parse_complex_value_with_suffix(v0) {
+        Ok((num, suffix)) => String(complex_to_string(complex_cos(num), suffix))
+        Err(err) => err
+      }
+    _ => Error(formula_error_value)
+  }
+}
+
+///|
+fn imcosh_values(
+  _workbook : Workbook,
+  _sheet_name : String,
+  _name : String,
+  _args : ArrayView[Expr],
+  values : Array[FormulaValue],
+  _ctx : CalcContext,
+) -> FormulaValue {
+  match values {
+    [v0] =>
+      match parse_complex_value_with_suffix(v0) {
+        Ok((num, suffix)) =>
+          String(complex_to_string(complex_cosh(num), suffix))
+        Err(err) => err
+      }
+    _ => Error(formula_error_value)
+  }
+}
+
+///|
+fn imcot_values(
+  _workbook : Workbook,
+  _sheet_name : String,
+  _name : String,
+  _args : ArrayView[Expr],
+  values : Array[FormulaValue],
+  _ctx : CalcContext,
+) -> FormulaValue {
+  match values {
+    [v0] =>
+      match parse_complex_value_with_suffix(v0) {
+        Ok((num, suffix)) =>
+          String(
+            complex_to_string(
+              complex_div(complex_cos(num), complex_sin(num)),
+              suffix,
+            ),
+          )
+        Err(err) => err
+      }
+    _ => Error(formula_error_value)
+  }
+}
+
+///|
+fn imcsc_values(
+  _workbook : Workbook,
+  _sheet_name : String,
+  _name : String,
+  _args : ArrayView[Expr],
+  values : Array[FormulaValue],
+  _ctx : CalcContext,
+) -> FormulaValue {
+  match values {
+    [v0] =>
+      match parse_complex_value_with_suffix(v0) {
+        Ok((num, suffix)) => {
+          let result = complex_div(complex_new(1.0, 0.0), complex_sin(num))
+          if complex_is_invalid(result) {
+            Error(formula_error_num)
+          } else {
+            String(complex_to_string(result, suffix))
+          }
+        }
+        Err(err) => err
+      }
+    _ => Error(formula_error_value)
+  }
+}
+
+///|
+fn imcsch_values(
+  _workbook : Workbook,
+  _sheet_name : String,
+  _name : String,
+  _args : ArrayView[Expr],
+  values : Array[FormulaValue],
+  _ctx : CalcContext,
+) -> FormulaValue {
+  match values {
+    [v0] =>
+      match parse_complex_value_with_suffix(v0) {
+        Ok((num, suffix)) => {
+          let result = complex_div(complex_new(1.0, 0.0), complex_sinh(num))
+          if complex_is_invalid(result) {
+            Error(formula_error_num)
+          } else {
+            String(complex_to_string(result, suffix))
+          }
+        }
+        Err(err) => err
+      }
+    _ => Error(formula_error_value)
+  }
+}
+
+///|
+fn imdiv_values(
+  _workbook : Workbook,
+  _sheet_name : String,
+  _name : String,
+  _args : ArrayView[Expr],
+  values : Array[FormulaValue],
+  _ctx : CalcContext,
+) -> FormulaValue {
+  match values {
+    [v0, v1] =>
+      match (parse_complex_value_with_suffix(v0), parse_complex_value(v1)) {
+        (Ok((left, suffix)), Ok(right)) => {
+          let result = complex_div(left, right)
+          if complex_is_invalid(result) {
+            Error(formula_error_num)
+          } else {
+            String(complex_to_string(result, suffix))
+          }
+        }
+        (Err(err), _) => err
+        (_, Err(err)) => err
+      }
+    _ => Error(formula_error_value)
+  }
+}
+
+///|
+fn imexp_values(
+  _workbook : Workbook,
+  _sheet_name : String,
+  _name : String,
+  _args : ArrayView[Expr],
+  values : Array[FormulaValue],
+  _ctx : CalcContext,
+) -> FormulaValue {
+  match values {
+    [v0] =>
+      match parse_complex_value_with_suffix(v0) {
+        Ok((num, suffix)) => String(complex_to_string(complex_exp(num), suffix))
+        Err(err) => err
+      }
+    _ => Error(formula_error_value)
+  }
+}
+
+///|
+fn imln_values(
+  _workbook : Workbook,
+  _sheet_name : String,
+  _name : String,
+  _args : ArrayView[Expr],
+  values : Array[FormulaValue],
+  _ctx : CalcContext,
+) -> FormulaValue {
+  match values {
+    [v0] =>
+      match parse_complex_value_with_suffix(v0) {
+        Ok((num, suffix)) => {
+          let result = complex_log(num)
+          if complex_is_invalid(result) {
+            Error(formula_error_num)
+          } else {
+            String(complex_to_string(result, suffix))
+          }
+        }
+        Err(err) => err
+      }
+    _ => Error(formula_error_value)
+  }
+}
+
+///|
+fn imlog10_values(
+  _workbook : Workbook,
+  _sheet_name : String,
+  _name : String,
+  _args : ArrayView[Expr],
+  values : Array[FormulaValue],
+  _ctx : CalcContext,
+) -> FormulaValue {
+  match values {
+    [v0] =>
+      match parse_complex_value_with_suffix(v0) {
+        Ok((num, suffix)) => {
+          let result = complex_scale(complex_log(num), 1.0 / @math.ln(10.0))
+          if complex_is_invalid(result) {
+            Error(formula_error_num)
+          } else {
+            String(complex_to_string(result, suffix))
+          }
+        }
+        Err(err) => err
+      }
+    _ => Error(formula_error_value)
+  }
+}
+
+///|
+fn imlog2_values(
+  _workbook : Workbook,
+  _sheet_name : String,
+  _name : String,
+  _args : ArrayView[Expr],
+  values : Array[FormulaValue],
+  _ctx : CalcContext,
+) -> FormulaValue {
+  match values {
+    [v0] =>
+      match parse_complex_value_with_suffix(v0) {
+        Ok((num, suffix)) => {
+          let result = complex_scale(complex_log(num), 1.0 / @math.ln(2.0))
+          if complex_is_invalid(result) {
+            Error(formula_error_num)
+          } else {
+            String(complex_to_string(result, suffix))
+          }
+        }
+        Err(err) => err
+      }
+    _ => Error(formula_error_value)
+  }
+}
+
+///|
+fn impower_values(
+  _workbook : Workbook,
+  _sheet_name : String,
+  _name : String,
+  _args : ArrayView[Expr],
+  values : Array[FormulaValue],
+  _ctx : CalcContext,
+) -> FormulaValue {
+  match values {
+    [v0, v1] =>
+      match (parse_complex_value_with_suffix(v0), parse_complex_value(v1)) {
+        (Ok((base, suffix)), Ok(exponent)) =>
+          if base.real == 0.0 &&
+            base.imag == 0.0 &&
+            exponent.real == 0.0 &&
+            exponent.imag == 0.0 {
+            Error(formula_error_num)
+          } else {
+            let result = complex_pow(base, exponent)
+            if complex_is_invalid(result) {
+              Error(formula_error_num)
+            } else {
+              String(complex_to_string(result, suffix))
+            }
+          }
+        (Err(err), _) => err
+        (_, Err(err)) => err
+      }
+    _ => Error(formula_error_value)
+  }
+}
+
+///|
+fn improduct_values(
+  _workbook : Workbook,
+  _sheet_name : String,
+  _name : String,
+  _args : ArrayView[Expr],
+  values : Array[FormulaValue],
+  _ctx : CalcContext,
+) -> FormulaValue {
+  let mut product = complex_new(1.0, 0.0)
+  for value in flatten_values(values) {
+    match value {
+      Error(err) => return Error(err)
+      Empty => ()
+      Number(num) => product = complex_mul(product, complex_new(num, 0.0))
+      Bool(flag) => {
+        let num = if flag { 1.0 } else { 0.0 }
+        product = complex_mul(product, complex_new(num, 0.0))
+      }
+      String(text) =>
+        if text == "" {
+          ()
+        } else {
+          match parse_complex_text(text) {
+            Ok(num) => product = complex_mul(product, num)
+            Err(err) => return err
+          }
+        }
+      List(_) => ()
+    }
+  }
+  String(complex_to_string(product, "i"))
+}
+
+///|
+fn imreal_values(
+  _workbook : Workbook,
+  _sheet_name : String,
+  _name : String,
+  _args : ArrayView[Expr],
+  values : Array[FormulaValue],
+  _ctx : CalcContext,
+) -> FormulaValue {
+  match values {
+    [v0] =>
+      match parse_complex_value(v0) {
+        Ok(num) => String(format_number(num.real))
+        Err(err) => err
+      }
+    _ => Error(formula_error_value)
+  }
+}
+
+///|
+fn imsec_values(
+  _workbook : Workbook,
+  _sheet_name : String,
+  _name : String,
+  _args : ArrayView[Expr],
+  values : Array[FormulaValue],
+  _ctx : CalcContext,
+) -> FormulaValue {
+  match values {
+    [v0] =>
+      match parse_complex_value_with_suffix(v0) {
+        Ok((num, suffix)) => {
+          let result = complex_div(complex_new(1.0, 0.0), complex_cos(num))
+          String(complex_to_string(result, suffix))
+        }
+        Err(err) => err
+      }
+    _ => Error(formula_error_value)
+  }
+}
+
+///|
+fn imsech_values(
+  _workbook : Workbook,
+  _sheet_name : String,
+  _name : String,
+  _args : ArrayView[Expr],
+  values : Array[FormulaValue],
+  _ctx : CalcContext,
+) -> FormulaValue {
+  match values {
+    [v0] =>
+      match parse_complex_value_with_suffix(v0) {
+        Ok((num, suffix)) => {
+          let result = complex_div(complex_new(1.0, 0.0), complex_cosh(num))
+          String(complex_to_string(result, suffix))
+        }
+        Err(err) => err
+      }
+    _ => Error(formula_error_value)
+  }
+}
+
+///|
+fn imsin_values(
+  _workbook : Workbook,
+  _sheet_name : String,
+  _name : String,
+  _args : ArrayView[Expr],
+  values : Array[FormulaValue],
+  _ctx : CalcContext,
+) -> FormulaValue {
+  match values {
+    [v0] =>
+      match parse_complex_value_with_suffix(v0) {
+        Ok((num, suffix)) => String(complex_to_string(complex_sin(num), suffix))
+        Err(err) => err
+      }
+    _ => Error(formula_error_value)
+  }
+}
+
+///|
+fn imsinh_values(
+  _workbook : Workbook,
+  _sheet_name : String,
+  _name : String,
+  _args : ArrayView[Expr],
+  values : Array[FormulaValue],
+  _ctx : CalcContext,
+) -> FormulaValue {
+  match values {
+    [v0] =>
+      match parse_complex_value_with_suffix(v0) {
+        Ok((num, suffix)) =>
+          String(complex_to_string(complex_sinh(num), suffix))
+        Err(err) => err
+      }
+    _ => Error(formula_error_value)
+  }
+}
+
+///|
+fn imsqrt_values(
+  _workbook : Workbook,
+  _sheet_name : String,
+  _name : String,
+  _args : ArrayView[Expr],
+  values : Array[FormulaValue],
+  _ctx : CalcContext,
+) -> FormulaValue {
+  match values {
+    [v0] =>
+      match parse_complex_value_with_suffix(v0) {
+        Ok((num, suffix)) =>
+          String(complex_to_string(complex_sqrt(num), suffix))
+        Err(err) => err
+      }
+    _ => Error(formula_error_value)
+  }
+}
+
+///|
+fn imsub_values(
+  _workbook : Workbook,
+  _sheet_name : String,
+  _name : String,
+  _args : ArrayView[Expr],
+  values : Array[FormulaValue],
+  _ctx : CalcContext,
+) -> FormulaValue {
+  match values {
+    [v0, v1] =>
+      match (parse_complex_value(v0), parse_complex_value(v1)) {
+        (Ok(left), Ok(right)) =>
+          String(complex_to_string(complex_sub(left, right), "i"))
+        (Err(err), _) => err
+        (_, Err(err)) => err
+      }
+    _ => Error(formula_error_value)
+  }
+}
+
+///|
+fn imsum_values(
+  _workbook : Workbook,
+  _sheet_name : String,
+  _name : String,
+  _args : ArrayView[Expr],
+  values : Array[FormulaValue],
+  _ctx : CalcContext,
+) -> FormulaValue {
+  match values {
+    [_, ..] => {
+      let mut result = complex_new(0.0, 0.0)
       for value in flatten_values(values) {
         match value {
           Error(err) => return Error(err)
-          Empty => ()
-          Number(num) => product = complex_mul(product, complex_new(num, 0.0))
-          Bool(flag) => {
-            let num = if flag { 1.0 } else { 0.0 }
-            product = complex_mul(product, complex_new(num, 0.0))
-          }
-          String(text) =>
-            if text == "" {
-              ()
-            } else {
-              match parse_complex_text(text) {
-                Ok(num) => product = complex_mul(product, num)
-                Err(err) => return err
-              }
+          _ =>
+            match parse_complex_value(value) {
+              Ok(num) => result = complex_add(result, num)
+              Err(err) => return err
             }
-          List(_) => ()
         }
       }
-      String(complex_to_string(product, "i"))
+      String(complex_to_string(result, "i"))
     }
-    "IMREAL" =>
-      match values {
-        [v0] =>
-          match parse_complex_value(v0) {
-            Ok(num) => String(format_number(num.real))
-            Err(err) => err
-          }
-        _ => Error(formula_error_value)
+    [] => Error(formula_error_value)
+  }
+}
+
+///|
+fn imtan_values(
+  _workbook : Workbook,
+  _sheet_name : String,
+  _name : String,
+  _args : ArrayView[Expr],
+  values : Array[FormulaValue],
+  _ctx : CalcContext,
+) -> FormulaValue {
+  match values {
+    [v0] =>
+      match parse_complex_value_with_suffix(v0) {
+        Ok((num, suffix)) => String(complex_to_string(complex_tan(num), suffix))
+        Err(err) => err
       }
-    "IMSEC" =>
-      match values {
-        [v0] =>
-          match parse_complex_value_with_suffix(v0) {
-            Ok((num, suffix)) => {
-              let result = complex_div(complex_new(1.0, 0.0), complex_cos(num))
-              String(complex_to_string(result, suffix))
+    _ => Error(formula_error_value)
+  }
+}
+
+///|
+fn floor_values(
+  _workbook : Workbook,
+  _sheet_name : String,
+  _name : String,
+  _args : ArrayView[Expr],
+  values : Array[FormulaValue],
+  _ctx : CalcContext,
+) -> FormulaValue {
+  match values {
+    [v0, v1] =>
+      match (value_as_number(v0), value_as_number(v1)) {
+        (Ok(num), Ok(significance)) =>
+          if significance < 0.0 && num >= 0.0 {
+            Error(formula_error_num)
+          } else {
+            let (whole, frac) = modf_double(num / significance)
+            let mut val = whole
+            if frac != 0.0 && num < 0.0 && frac < 0.0 {
+              val = val - 1.0
             }
-            Err(err) => err
+            Number(val * significance)
           }
-        _ => Error(formula_error_value)
+        (Err(err), _) => err
+        (_, Err(err)) => err
       }
-    "IMSECH" =>
-      match values {
-        [v0] =>
-          match parse_complex_value_with_suffix(v0) {
-            Ok((num, suffix)) => {
-              let result = complex_div(complex_new(1.0, 0.0), complex_cosh(num))
-              String(complex_to_string(result, suffix))
-            }
-            Err(err) => err
-          }
-        _ => Error(formula_error_value)
-      }
-    "IMSIN" =>
-      match values {
-        [v0] =>
-          match parse_complex_value_with_suffix(v0) {
-            Ok((num, suffix)) =>
-              String(complex_to_string(complex_sin(num), suffix))
-            Err(err) => err
-          }
-        _ => Error(formula_error_value)
-      }
-    "IMSINH" =>
-      match values {
-        [v0] =>
-          match parse_complex_value_with_suffix(v0) {
-            Ok((num, suffix)) =>
-              String(complex_to_string(complex_sinh(num), suffix))
-            Err(err) => err
-          }
-        _ => Error(formula_error_value)
-      }
-    "IMSQRT" =>
-      match values {
-        [v0] =>
-          match parse_complex_value_with_suffix(v0) {
-            Ok((num, suffix)) =>
-              String(complex_to_string(complex_sqrt(num), suffix))
-            Err(err) => err
-          }
-        _ => Error(formula_error_value)
-      }
-    "IMSUB" =>
-      match values {
-        [v0, v1] =>
-          match (parse_complex_value(v0), parse_complex_value(v1)) {
-            (Ok(left), Ok(right)) =>
-              String(complex_to_string(complex_sub(left, right), "i"))
-            (Err(err), _) => err
-            (_, Err(err)) => err
-          }
-        _ => Error(formula_error_value)
-      }
-    "IMSUM" =>
-      match values {
-        [_, ..] => {
-          let mut result = complex_new(0.0, 0.0)
-          for value in flatten_values(values) {
-            match value {
-              Error(err) => return Error(err)
-              _ =>
-                match parse_complex_value(value) {
-                  Ok(num) => result = complex_add(result, num)
-                  Err(err) => return err
-                }
+    _ => Error(formula_error_value)
+  }
+}
+
+///|
+fn ceiling_values(
+  _workbook : Workbook,
+  _sheet_name : String,
+  _name : String,
+  _args : ArrayView[Expr],
+  values : Array[FormulaValue],
+  _ctx : CalcContext,
+) -> FormulaValue {
+  match values {
+    [v0] | [v0, _] =>
+      match value_as_number(v0) {
+        Ok(num) => {
+          let mut significance = if num < 0.0 { -1.0 } else { 1.0 }
+          if values is [_, v1] {
+            match value_as_number(v1) {
+              Ok(value) => significance = value
+              Err(err) => return err
             }
           }
-          String(complex_to_string(result, "i"))
+          if significance < 0.0 && num > 0.0 {
+            Error(formula_error_value)
+          } else if values is [_] {
+            Number(Double::ceil(num))
+          } else {
+            let (whole, frac) = modf_double(num / significance)
+            let mut val = whole
+            if frac > 0.0 {
+              val = val + 1.0
+            }
+            Number(val * significance)
+          }
         }
-        [] => Error(formula_error_value)
+        Err(err) => err
       }
-    "IMTAN" =>
-      match values {
-        [v0] =>
-          match parse_complex_value_with_suffix(v0) {
-            Ok((num, suffix)) =>
-              String(complex_to_string(complex_tan(num), suffix))
-            Err(err) => err
+    _ => Error(formula_error_value)
+  }
+}
+
+///|
+fn ceilingdotmathceiling_math_xlfn_ceiling_math_values(
+  _workbook : Workbook,
+  _sheet_name : String,
+  _name : String,
+  _args : ArrayView[Expr],
+  values : Array[FormulaValue],
+  _ctx : CalcContext,
+) -> FormulaValue {
+  match values {
+    [v0] =>
+      match value_as_number(v0) {
+        Ok(num) => Number(Double::ceil(num))
+        Err(err) => err
+      }
+    [v0, v1] | [v0, v1, _] =>
+      match value_as_number(v0) {
+        Ok(num) => {
+          let mut significance = if num < 0.0 { -1.0 } else { 1.0 }
+          let mut mode = 1.0
+          match value_as_number(v1) {
+            Ok(value) => significance = value
+            Err(err) => return err
           }
-        _ => Error(formula_error_value)
-      }
-    "FLOOR" =>
-      match values {
-        [v0, v1] =>
-          match (value_as_number(v0), value_as_number(v1)) {
-            (Ok(num), Ok(significance)) =>
-              if significance < 0.0 && num >= 0.0 {
-                Error(formula_error_num)
-              } else {
-                let (whole, frac) = modf_double(num / significance)
-                let mut val = whole
-                if frac != 0.0 && num < 0.0 && frac < 0.0 {
-                  val = val - 1.0
-                }
-                Number(val * significance)
-              }
-            (Err(err), _) => err
-            (_, Err(err)) => err
+          if values is [_, _, v2] {
+            match value_as_number(v2) {
+              Ok(value) => mode = value
+              Err(err) => return err
+            }
           }
-        _ => Error(formula_error_value)
+          let (whole, frac) = modf_double(num / significance)
+          let mut val = whole
+          if frac != 0.0 {
+            if num > 0.0 {
+              val = val + 1.0
+            } else if mode < 0.0 {
+              val = val - 1.0
+            }
+          }
+          Number(val * significance)
+        }
+        Err(err) => err
       }
-    "CEILING" =>
-      match values {
-        [v0] | [v0, _] =>
-          match value_as_number(v0) {
-            Ok(num) => {
-              let mut significance = if num < 0.0 { -1.0 } else { 1.0 }
-              if values is [_, v1] {
-                match value_as_number(v1) {
-                  Ok(value) => significance = value
-                  Err(err) => return err
-                }
-              }
-              if significance < 0.0 && num > 0.0 {
-                Error(formula_error_value)
-              } else if values is [_] {
-                Number(Double::ceil(num))
+    _ => Error(formula_error_value)
+  }
+}
+
+///|
+fn ceilingdotpreciseceiling_precise_xlfn_ceiling_precise_values(
+  _workbook : Workbook,
+  _sheet_name : String,
+  _name : String,
+  _args : ArrayView[Expr],
+  values : Array[FormulaValue],
+  _ctx : CalcContext,
+) -> FormulaValue {
+  match values {
+    [v0] =>
+      match value_as_number(v0) {
+        Ok(num) => Number(Double::ceil(num))
+        Err(err) => err
+      }
+    [v0, v1] =>
+      match value_as_number(v0) {
+        Ok(num) =>
+          match value_as_number(v1) {
+            Ok(significance) => {
+              let abs_significance = abs_double(significance)
+              if abs_significance == 0.0 {
+                Number(0.0)
               } else {
-                let (whole, frac) = modf_double(num / significance)
+                let (whole, frac) = modf_double(num / abs_significance)
                 let mut val = whole
-                if frac > 0.0 {
+                if frac != 0.0 && num > 0.0 {
                   val = val + 1.0
                 }
-                Number(val * significance)
+                Number(val * abs_significance)
               }
             }
             Err(err) => err
           }
-        _ => Error(formula_error_value)
+        Err(err) => err
       }
-    "CEILINGdotMATH" | "CEILING.MATH" | "_XLFN.CEILING.MATH" =>
-      match values {
-        [v0] =>
-          match value_as_number(v0) {
-            Ok(num) => Number(Double::ceil(num))
-            Err(err) => err
+    _ => Error(formula_error_value)
+  }
+}
+
+///|
+fn floordotmathfloor_math_xlfn_floor_math_values(
+  _workbook : Workbook,
+  _sheet_name : String,
+  _name : String,
+  _args : ArrayView[Expr],
+  values : Array[FormulaValue],
+  _ctx : CalcContext,
+) -> FormulaValue {
+  match values {
+    [v0] =>
+      match value_as_number(v0) {
+        Ok(num) => Number(Double::floor(num))
+        Err(err) => err
+      }
+    [v0, v1] | [v0, v1, _] =>
+      match value_as_number(v0) {
+        Ok(num) => {
+          let mut significance = if num < 0.0 { -1.0 } else { 1.0 }
+          let mut mode = 1.0
+          match value_as_number(v1) {
+            Ok(value) => significance = value
+            Err(err) => return err
           }
-        [v0, v1] | [v0, v1, _] =>
-          match value_as_number(v0) {
-            Ok(num) => {
-              let mut significance = if num < 0.0 { -1.0 } else { 1.0 }
-              let mut mode = 1.0
-              match value_as_number(v1) {
-                Ok(value) => significance = value
-                Err(err) => return err
-              }
-              if values is [_, _, v2] {
-                match value_as_number(v2) {
-                  Ok(value) => mode = value
-                  Err(err) => return err
-                }
-              }
-              let (whole, frac) = modf_double(num / significance)
-              let mut val = whole
-              if frac != 0.0 {
-                if num > 0.0 {
-                  val = val + 1.0
-                } else if mode < 0.0 {
+          if values is [_, _, v2] {
+            match value_as_number(v2) {
+              Ok(value) => mode = value
+              Err(err) => return err
+            }
+          }
+          let (whole, frac) = modf_double(num / significance)
+          let mut val = whole
+          if frac != 0.0 && num < 0.0 && mode > 0.0 {
+            val = val - 1.0
+          }
+          Number(val * significance)
+        }
+        Err(err) => err
+      }
+    _ => Error(formula_error_value)
+  }
+}
+
+///|
+fn floordotprecisefloor_precise_xlfn_floor_precise_values(
+  _workbook : Workbook,
+  _sheet_name : String,
+  _name : String,
+  _args : ArrayView[Expr],
+  values : Array[FormulaValue],
+  _ctx : CalcContext,
+) -> FormulaValue {
+  match values {
+    [v0] =>
+      match value_as_number(v0) {
+        Ok(num) => Number(Double::floor(num))
+        Err(err) => err
+      }
+    [v0, v1] =>
+      match value_as_number(v0) {
+        Ok(num) =>
+          match value_as_number(v1) {
+            Ok(significance) => {
+              let abs_significance = abs_double(significance)
+              if abs_significance == 0.0 {
+                Number(0.0)
+              } else {
+                let (whole, frac) = modf_double(num / abs_significance)
+                let mut val = whole
+                if frac != 0.0 && num < 0.0 {
                   val = val - 1.0
                 }
+                Number(val * abs_significance)
               }
-              Number(val * significance)
             }
             Err(err) => err
           }
-        _ => Error(formula_error_value)
+        Err(err) => err
       }
-    "CEILINGdotPRECISE" | "CEILING.PRECISE" | "_XLFN.CEILING.PRECISE" =>
-      match values {
-        [v0] =>
-          match value_as_number(v0) {
-            Ok(num) => Number(Double::ceil(num))
-            Err(err) => err
-          }
-        [v0, v1] =>
-          match value_as_number(v0) {
-            Ok(num) =>
-              match value_as_number(v1) {
-                Ok(significance) => {
-                  let abs_significance = abs_double(significance)
-                  if abs_significance == 0.0 {
-                    Number(0.0)
-                  } else {
-                    let (whole, frac) = modf_double(num / abs_significance)
-                    let mut val = whole
-                    if frac != 0.0 && num > 0.0 {
-                      val = val + 1.0
-                    }
-                    Number(val * abs_significance)
-                  }
-                }
-                Err(err) => err
-              }
-            Err(err) => err
-          }
-        _ => Error(formula_error_value)
+    _ => Error(formula_error_value)
+  }
+}
+
+///|
+fn isodotceilingiso_ceiling_xlfn_iso_ceiling_values(
+  _workbook : Workbook,
+  _sheet_name : String,
+  _name : String,
+  _args : ArrayView[Expr],
+  values : Array[FormulaValue],
+  _ctx : CalcContext,
+) -> FormulaValue {
+  match values {
+    [v0] =>
+      match value_as_number(v0) {
+        Ok(num) => Number(Double::ceil(num))
+        Err(err) => err
       }
-    "FLOORdotMATH" | "FLOOR.MATH" | "_XLFN.FLOOR.MATH" =>
-      match values {
-        [v0] =>
-          match value_as_number(v0) {
-            Ok(num) => Number(Double::floor(num))
-            Err(err) => err
-          }
-        [v0, v1] | [v0, v1, _] =>
-          match value_as_number(v0) {
-            Ok(num) => {
-              let mut significance = if num < 0.0 { -1.0 } else { 1.0 }
-              let mut mode = 1.0
-              match value_as_number(v1) {
-                Ok(value) => significance = value
-                Err(err) => return err
-              }
-              if values is [_, _, v2] {
-                match value_as_number(v2) {
-                  Ok(value) => mode = value
-                  Err(err) => return err
-                }
-              }
-              let (whole, frac) = modf_double(num / significance)
-              let mut val = whole
-              if frac != 0.0 && num < 0.0 && mode > 0.0 {
-                val = val - 1.0
-              }
-              Number(val * significance)
-            }
-            Err(err) => err
-          }
-        _ => Error(formula_error_value)
-      }
-    "FLOORdotPRECISE" | "FLOOR.PRECISE" | "_XLFN.FLOOR.PRECISE" =>
-      match values {
-        [v0] =>
-          match value_as_number(v0) {
-            Ok(num) => Number(Double::floor(num))
-            Err(err) => err
-          }
-        [v0, v1] =>
-          match value_as_number(v0) {
-            Ok(num) =>
-              match value_as_number(v1) {
-                Ok(significance) => {
-                  let abs_significance = abs_double(significance)
-                  if abs_significance == 0.0 {
-                    Number(0.0)
-                  } else {
-                    let (whole, frac) = modf_double(num / abs_significance)
-                    let mut val = whole
-                    if frac != 0.0 && num < 0.0 {
-                      val = val - 1.0
-                    }
-                    Number(val * abs_significance)
-                  }
-                }
-                Err(err) => err
-              }
-            Err(err) => err
-          }
-        _ => Error(formula_error_value)
-      }
-    "ISOdotCEILING" | "ISO.CEILING" | "_XLFN.ISO.CEILING" =>
-      match values {
-        [v0] =>
-          match value_as_number(v0) {
-            Ok(num) => Number(Double::ceil(num))
-            Err(err) => err
-          }
-        [v0, v1] =>
-          match value_as_number(v0) {
-            Ok(num) =>
-              match value_as_number(v1) {
-                Ok(significance) => {
-                  let abs_significance = abs_double(significance)
-                  if abs_significance == 0.0 {
-                    Number(0.0)
-                  } else {
-                    let (whole, frac) = modf_double(num / abs_significance)
-                    let mut val = whole
-                    if frac != 0.0 && num > 0.0 {
-                      val = val + 1.0
-                    }
-                    Number(val * abs_significance)
-                  }
-                }
-                Err(err) => err
-              }
-            Err(err) => err
-          }
-        _ => Error(formula_error_value)
-      }
-    "TRUNC" =>
-      match values {
-        [v0] | [v0, _] =>
-          match value_as_number(v0) {
-            Ok(num) => {
-              let digits = if values is [_, v1] {
-                match value_as_number(v1) {
-                  Ok(value) => Double::to_int(value)
-                  Err(err) => return err
-                }
+    [v0, v1] =>
+      match value_as_number(v0) {
+        Ok(num) =>
+          match value_as_number(v1) {
+            Ok(significance) => {
+              let abs_significance = abs_double(significance)
+              if abs_significance == 0.0 {
+                Number(0.0)
               } else {
-                0
-              }
-              Number(round_down_with_digits(num, digits))
-            }
-            Err(err) => err
-          }
-        _ => Error(formula_error_value)
-      }
-    "ROUND" =>
-      match values {
-        [v0, v1] =>
-          match (value_as_number(v0), value_as_number(v1)) {
-            (Ok(num), Ok(digits)) =>
-              Number(round_with_digits(num, Double::to_int(digits)))
-            (Err(err), _) => err
-            (_, Err(err)) => err
-          }
-        _ => Error(formula_error_value)
-      }
-    "ROUNDUP" =>
-      match values {
-        [v0, v1] =>
-          match (value_as_number(v0), value_as_number(v1)) {
-            (Ok(num), Ok(digits)) =>
-              Number(round_up_with_digits(num, Double::to_int(digits)))
-            (Err(err), _) => err
-            (_, Err(err)) => err
-          }
-        _ => Error(formula_error_value)
-      }
-    "ROUNDDOWN" =>
-      match values {
-        [v0, v1] =>
-          match (value_as_number(v0), value_as_number(v1)) {
-            (Ok(num), Ok(digits)) =>
-              Number(round_down_with_digits(num, Double::to_int(digits)))
-            (Err(err), _) => err
-            (_, Err(err)) => err
-          }
-        _ => Error(formula_error_value)
-      }
-    "SQRT" =>
-      match values {
-        [v0] =>
-          match value_as_number(v0) {
-            Ok(num) =>
-              if num < 0.0 {
-                Error(formula_error_num)
-              } else {
-                Number(@math.pow(num, 0.5))
-              }
-            Err(err) => err
-          }
-        _ => Error(formula_error_value)
-      }
-    "POWER" =>
-      match values {
-        [v0, v1] =>
-          match (value_as_number(v0), value_as_number(v1)) {
-            (Ok(lhs), Ok(rhs)) => Number(@math.pow(lhs, rhs))
-            (Err(err), _) => err
-            (_, Err(err)) => err
-          }
-        _ => Error(formula_error_value)
-      }
-    "EVEN" =>
-      match values {
-        [v0] =>
-          match value_as_number(v0) {
-            Ok(num) => {
-              let sign = num < 0.0
-              let (whole, frac) = modf_double(num / 2.0)
-              let mut val = whole * 2.0
-              if frac != 0.0 {
-                if sign {
-                  val = val - 2.0
-                } else {
-                  val = val + 2.0
+                let (whole, frac) = modf_double(num / abs_significance)
+                let mut val = whole
+                if frac != 0.0 && num > 0.0 {
+                  val = val + 1.0
                 }
+                Number(val * abs_significance)
               }
-              Number(val)
             }
             Err(err) => err
           }
-        _ => Error(formula_error_value)
+        Err(err) => err
       }
-    "ODD" =>
-      match values {
-        [v0] =>
-          match value_as_number(v0) {
-            Ok(num) =>
-              if num == 0.0 {
-                Number(1.0)
-              } else {
-                let sign = num < 0.0
-                let (whole, frac) = modf_double((num - 1.0) / 2.0)
-                let mut val = whole * 2.0 + 1.0
-                if frac != 0.0 {
-                  if sign {
-                    val = val - 2.0
-                  } else {
-                    val = val + 2.0
-                  }
-                }
-                Number(val)
-              }
-            Err(err) => err
-          }
-        _ => Error(formula_error_value)
-      }
-    "MROUND" =>
-      match values {
-        [v0, v1] =>
-          match (value_as_number(v0), value_as_number(v1)) {
-            (Ok(num), Ok(multiple)) =>
-              if multiple == 0.0 {
-                Error(formula_error_num)
-              } else if (multiple < 0.0 && num > 0.0) ||
-                (multiple > 0.0 && num < 0.0) {
-                Error(formula_error_num)
-              } else {
-                let (whole, frac) = modf_double(num / multiple)
-                let mut rounded = whole
-                if trunc_double(frac + 0.5) > 0.0 {
-                  rounded = rounded + 1.0
-                }
-                Number(rounded * multiple)
-              }
-            (Err(err), _) => err
-            (_, Err(err)) => err
-          }
-        _ => Error(formula_error_value)
-      }
-    "MOD" =>
-      match values {
-        [v0, v1] =>
-          match (value_as_number(v0), value_as_number(v1)) {
-            (Ok(num), Ok(divisor)) =>
-              if divisor == 0.0 {
-                Error(formula_error_div)
-              } else {
-                let quotient = num / divisor
-                let truncated = Double::floor(quotient)
-                Number(num - divisor * truncated)
-              }
-            (Err(err), _) => err
-            (_, Err(err)) => err
-          }
-        _ => Error(formula_error_value)
-      }
-    "QUOTIENT" =>
-      match values {
-        [v0, v1] =>
-          match (value_as_number(v0), value_as_number(v1)) {
-            (Ok(num), Ok(divisor)) =>
-              if divisor == 0.0 {
-                Error(formula_error_div)
-              } else {
-                Number(trunc_double(num / divisor))
-              }
-            (Err(err), _) => err
-            (_, Err(err)) => err
-          }
-        _ => Error(formula_error_value)
-      }
-    "AND" =>
-      if values.length() == 0 || values.length() > 30 {
-        Error(formula_error_value)
-      } else {
-        let mut result = true
-        for value in values {
-          match value {
-            Empty => ()
-            Error(err) => return Error(err)
-            Number(num) => result = result && num != 0.0
-            Bool(flag) => result = result && flag
-            String(text) =>
-              if text == "TRUE" {
-                ()
-              } else if text == "FALSE" {
-                return Bool(false)
-              } else {
-                return Error(formula_error_value)
-              }
-            List(_) => return Error(formula_error_value)
-          }
-        }
-        Bool(result)
-      }
-    "OR" =>
-      if values.length() == 0 || values.length() > 30 {
-        Error(formula_error_value)
-      } else {
-        for value in flatten_values(values) {
-          match normalize_scalar(value) {
-            Error(err) => return Error(err)
-            Number(num) => if num != 0.0 { return Bool(true) }
-            Bool(flag) => if flag { return Bool(true) }
-            String(text) =>
-              if text == "FALSE" {
-                ()
-              } else if text == "TRUE" {
-                return Bool(true)
-              } else {
-                return Error(formula_error_value)
-              }
-            Empty | List(_) => ()
-          }
-        }
-        Bool(false)
-      }
-    "NOT" =>
-      match values {
-        [v0] =>
-          match normalize_scalar(v0) {
-            Error(err) => Error(err)
-            Bool(flag) => Bool(!flag)
-            Number(num) => Bool(!(num != 0.0))
-            String(text) =>
-              if text.to_upper() == "TRUE" {
-                Bool(false)
-              } else if text.to_upper() == "FALSE" {
-                Bool(true)
-              } else {
-                Error(formula_error_value)
-              }
-            _ => Error(formula_error_value)
-          }
-        _ => Error(formula_error_value)
-      }
-    "XOR" =>
-      if values.length() == 0 {
-        Error(formula_error_value)
-      } else {
-        let mut count = 0
-        let mut ok = false
-        for value in flatten_values(values) {
-          match normalize_scalar(value) {
-            Error(err) => return Error(err)
-            Number(num) => {
-              ok = true
-              if num != 0.0 {
-                count = count + 1
-              }
-            }
-            Bool(flag) => {
-              ok = true
-              if flag {
-                count = count + 1
-              }
-            }
-            String(_) => ()
-            Empty | List(_) => ()
-          }
-        }
-        if !ok {
-          Error(formula_error_value)
-        } else {
-          Bool(count % 2 != 0)
-        }
-      }
-    "LEN" =>
-      match values {
-        [v0] =>
-          match value_as_string(v0) {
-            Ok(text) => Number(Double::from_int(text.length()))
-            Err(err) => err
-          }
-        _ => Error(formula_error_value)
-      }
-    "LENB" =>
-      match values {
-        [v0] =>
-          match value_as_string(v0) {
-            Ok(text) => Number(Double::from_int(dbcs_byte_length(text)))
-            Err(err) => err
-          }
-        _ => Error(formula_error_value)
-      }
-    "LOWER" =>
-      match values {
-        [v0] =>
-          match value_as_string(v0) {
-            Ok(text) => String(text.to_lower())
-            Err(err) => err
-          }
-        _ => Error(formula_error_value)
-      }
-    "UPPER" =>
-      match values {
-        [v0] =>
-          match value_as_string(v0) {
-            Ok(text) => String(text.to_upper())
-            Err(err) => err
-          }
-        _ => Error(formula_error_value)
-      }
-    "PROPER" =>
-      match values {
-        [v0] =>
-          match value_as_string(v0) {
-            Ok(text) => String(proper_case(text))
-            Err(err) => err
-          }
-        _ => Error(formula_error_value)
-      }
-    "DBCS" =>
-      match values {
-        [v0] =>
-          match value_as_string(v0) {
-            Ok(text) =>
-              if dbcs_enabled(workbook) {
-                String(dbcs_convert(text))
-              } else {
-                String(text)
-              }
-            Err(err) => err
-          }
-        _ => Error(formula_error_value)
-      }
-    "TRIM" =>
-      match values {
-        [v0] =>
-          match value_as_string(v0) {
-            Ok(text) => String(trim_excel_text(text))
-            Err(err) => err
-          }
-        _ => Error(formula_error_value)
-      }
-    "LEFT" =>
-      match values {
-        [v0] | [v0, _] => {
-          let text = match value_as_string(v0) {
-            Ok(text) => text
-            Err(err) => return err
-          }
-          let count = if values is [_, v1] {
-            match value_as_int(v1) {
-              Ok(num) => num
-              Err(err) => return err
-            }
-          } else {
-            1
-          }
-          if count < 0 {
-            Error(formula_error_value)
-          } else {
-            let len = text.length()
-            let end = if count > len { len } else { count }
-            let start = 0
-            String(text.unsafe_substring(start~, end~))
-          }
-        }
-        _ => Error(formula_error_value)
-      }
-    "LEFTB" =>
-      match values {
-        [v0] | [v0, _] => {
-          let text = match value_as_string(v0) {
-            Ok(text) => text
-            Err(err) => return err
-          }
-          let count = if values is [_, v1] {
-            match value_as_int(v1) {
-              Ok(num) => num
-              Err(err) => return err
-            }
-          } else {
-            1
-          }
-          if count < 0 {
-            Error(formula_error_value)
-          } else {
-            let len = dbcs_byte_length(text)
-            if count >= len {
-              String(text)
-            } else {
-              String(dbcs_byte_range(text, 1, count))
-            }
-          }
-        }
-        _ => Error(formula_error_value)
-      }
-    "RIGHT" =>
-      match values {
-        [v0] | [v0, _] => {
-          let text = match value_as_string(v0) {
-            Ok(text) => text
-            Err(err) => return err
-          }
-          let count = if values is [_, v1] {
-            match value_as_int(v1) {
-              Ok(num) => num
-              Err(err) => return err
-            }
-          } else {
-            1
-          }
-          if count < 0 {
-            Error(formula_error_value)
-          } else {
-            let len = text.length()
-            let start = if count >= len { 0 } else { len - count }
-            let end = len
-            String(text.unsafe_substring(start~, end~))
-          }
-        }
-        _ => Error(formula_error_value)
-      }
-    "RIGHTB" =>
-      match values {
-        [v0] | [v0, _] => {
-          let text = match value_as_string(v0) {
-            Ok(text) => text
-            Err(err) => return err
-          }
-          let count = if values is [_, v1] {
-            match value_as_int(v1) {
-              Ok(num) => num
-              Err(err) => return err
-            }
-          } else {
-            1
-          }
-          if count < 0 {
-            Error(formula_error_value)
-          } else {
-            let len = dbcs_byte_length(text)
-            if count >= len {
-              String(text)
-            } else {
-              String(dbcs_byte_range(text, len - count + 1, count))
-            }
-          }
-        }
-        _ => Error(formula_error_value)
-      }
-    "MID" =>
-      match values {
-        [v0, v1, v2] => {
-          let text = match value_as_string(v0) {
-            Ok(text) => text
-            Err(err) => return err
-          }
-          let start_num = match value_as_int(v1) {
-            Ok(num) => num
-            Err(err) => return err
-          }
-          let count = match value_as_int(v2) {
-            Ok(num) => num
-            Err(err) => return err
-          }
-          if start_num <= 0 || count < 0 {
-            Error(formula_error_value)
-          } else {
-            let len = text.length()
-            if start_num > len {
-              String("")
-            } else {
-              let start = start_num - 1
-              let mut end = start + count
-              if end > len {
-                end = len
-              }
-              String(text.unsafe_substring(start~, end~))
-            }
-          }
-        }
-        _ => Error(formula_error_value)
-      }
-    "MIDB" =>
-      match values {
-        [v0, v1, v2] => {
-          let text = match value_as_string(v0) {
-            Ok(text) => text
-            Err(err) => return err
-          }
-          let start_num = match value_as_int(v1) {
-            Ok(num) => num
-            Err(err) => return err
-          }
-          let count = match value_as_int(v2) {
-            Ok(num) => num
-            Err(err) => return err
-          }
-          if start_num <= 0 || count < 0 {
-            Error(formula_error_value)
-          } else if count == 0 {
-            String("")
-          } else if start_num > dbcs_byte_length(text) {
-            String("")
-          } else {
-            String(dbcs_byte_range(text, start_num, count))
-          }
-        }
-        _ => Error(formula_error_value)
-      }
-    "REPT" =>
-      match values {
-        [v0, v1] => {
-          let text = match value_as_string(v0) {
-            Ok(text) => text
-            Err(err) => return err
-          }
-          let times = match value_as_int(v1) {
-            Ok(num) => num
-            Err(err) => return err
-          }
-          if times < 0 {
-            Error(formula_error_value)
-          } else if times == 0 || text.length() == 0 {
-            String("")
-          } else if text.length() > max_cell_chars / times {
-            Error(formula_error_value)
-          } else {
-            String(text.repeat(times))
-          }
-        }
-        _ => Error(formula_error_value)
-      }
-    "REPLACE" =>
-      match values {
-        [v0, v1, v2, v3] => {
-          let text = match value_as_string(v0) {
-            Ok(text) => text
-            Err(err) => return err
-          }
-          let start_num = match value_as_int(v1) {
-            Ok(num) => num
-            Err(err) => return err
-          }
-          let count = match value_as_int(v2) {
-            Ok(num) => num
-            Err(err) => return err
-          }
-          let new_text = match value_as_string(v3) {
-            Ok(text) => text
-            Err(err) => return err
-          }
-          if start_num <= 0 || count < 0 {
-            Error(formula_error_value)
-          } else {
-            let len = text.length()
-            let mut start = start_num - 1
-            if start > len {
-              start = len
-            }
-            let mut end = start + count
-            if end > len {
-              end = len
-            }
-            let sb = StringBuilder()
-            sb.write_view(text.unsafe_substring(start=0, end=start))
-            sb.write_view(new_text)
-            sb.write_view(text.unsafe_substring(start=end, end=len))
-            String(sb.to_string())
-          }
-        }
-        _ => Error(formula_error_value)
-      }
-    "REPLACEB" =>
-      match values {
-        [v0, v1, v2, v3] => {
-          let text = match value_as_string(v0) {
-            Ok(text) => text
-            Err(err) => return err
-          }
-          let start_num = match value_as_int(v1) {
-            Ok(num) => num
-            Err(err) => return err
-          }
-          let count = match value_as_int(v2) {
-            Ok(num) => num
-            Err(err) => return err
-          }
-          let new_text = match value_as_string(v3) {
-            Ok(text) => text
-            Err(err) => return err
-          }
-          if start_num <= 0 || count < 0 {
-            Error(formula_error_value)
-          } else {
-            let len = dbcs_byte_length(text)
-            let prefix_count = if start_num - 1 < len {
-              start_num - 1
-            } else {
-              len
-            }
-            let removed_end = start_num + count - 1
-            let suffix_start = if removed_end < len {
-              removed_end + 1
-            } else {
-              len + 1
-            }
-            let sb = StringBuilder()
-            sb.write_view(dbcs_byte_range(text, 1, prefix_count))
-            sb.write_view(new_text)
-            // suffix runs from just past the replaced range to end of string
-            sb.write_view(dbcs_byte_range(text, suffix_start, len))
-            String(sb.to_string())
-          }
-        }
-        _ => Error(formula_error_value)
-      }
-    "SUBSTITUTE" =>
-      match values {
-        [v0, v1, v2] | [v0, v1, v2, _] => {
-          let text = match value_as_string(v0) {
-            Ok(text) => text
-            Err(err) => return err
-          }
-          let old_text = match value_as_string(v1) {
-            Ok(text) => text
-            Err(err) => return err
-          }
-          let new_text = match value_as_string(v2) {
-            Ok(text) => text
-            Err(err) => return err
-          }
-          if old_text.length() == 0 {
-            Error(formula_error_value)
-          } else if values is [_, _, _, v3] {
-            let instance = match value_as_int(v3) {
-              Ok(num) => num
-              Err(err) => return err
-            }
-            if instance <= 0 {
-              Error(formula_error_value)
-            } else {
-              let mut index = 0
-              let mut count = 0
-              let len = text.length()
-              let pattern_len = old_text.length()
-              while true {
-                match find_substring_from(text, old_text, index) {
-                  Some(found) => {
-                    count = count + 1
-                    if count == instance {
-                      let sb = StringBuilder()
-                      sb.write_view(text.unsafe_substring(start=0, end=found))
-                      sb.write_view(new_text)
-                      let tail_start = found + pattern_len
-                      sb.write_view(
-                        text.unsafe_substring(start=tail_start, end=len),
-                      )
-                      return String(sb.to_string())
-                    }
-                    index = found + pattern_len
-                  }
-                  None => break
-                }
-              }
-              String(text)
-            }
-          } else {
-            let mut index = 0
-            let len = text.length()
-            let pattern_len = old_text.length()
-            let sb = StringBuilder()
-            while true {
-              match find_substring_from(text, old_text, index) {
-                Some(found) => {
-                  sb.write_view(text.unsafe_substring(start=index, end=found))
-                  sb.write_view(new_text)
-                  index = found + pattern_len
-                }
-                None => {
-                  sb.write_view(text.unsafe_substring(start=index, end=len))
-                  break
-                }
-              }
-            }
-            String(sb.to_string())
-          }
-        }
-        _ => Error(formula_error_value)
-      }
-    "FIND" =>
-      match values {
-        [v0, v1] | [v0, v1, _] => {
-          let find_text = match value_as_string(v0) {
-            Ok(text) => text
-            Err(err) => return err
-          }
-          let within_text = match value_as_string(v1) {
-            Ok(text) => text
-            Err(err) => return err
-          }
-          let start_num = if values is [_, _, v2] {
-            match value_as_int(v2) {
-              Ok(num) => num
-              Err(err) => return err
-            }
-          } else {
-            1
-          }
-          if start_num <= 0 {
-            Error(formula_error_value)
-          } else {
-            let start = start_num - 1
-            let len = within_text.length()
-            if start > len {
-              Error(formula_error_value)
-            } else if find_text.length() == 0 {
-              Number(Double::from_int(start_num))
-            } else {
-              match find_substring_from(within_text, find_text, start) {
-                Some(idx) => Number(Double::from_int(idx + 1))
-                None => Error(formula_error_value)
-              }
-            }
-          }
-        }
-        _ => Error(formula_error_value)
-      }
-    "FINDB" =>
-      match values {
-        [v0, v1] | [v0, v1, _] => {
-          let find_text = match value_as_string(v0) {
-            Ok(text) => text
-            Err(err) => return err
-          }
-          let within_text = match value_as_string(v1) {
-            Ok(text) => text
-            Err(err) => return err
-          }
-          let start_num = if values is [_, _, v2] {
-            match value_as_int(v2) {
-              Ok(num) => num
-              Err(err) => return err
-            }
-          } else {
-            1
-          }
-          match find_dbcs(within_text, find_text, start_num, false) {
-            Some(value) => Number(Double::from_int(value))
-            None => Error(formula_error_value)
-          }
-        }
-        _ => Error(formula_error_value)
-      }
-    "SEARCH" =>
-      match values {
-        [v0, v1] | [v0, v1, _] => {
-          let find_text = match value_as_string(v0) {
-            Ok(text) => text
-            Err(err) => return err
-          }
-          let within_text = match value_as_string(v1) {
-            Ok(text) => text
-            Err(err) => return err
-          }
-          let start_num = if values is [_, _, v2] {
-            match value_as_int(v2) {
-              Ok(num) => num
-              Err(err) => return err
-            }
-          } else {
-            1
-          }
-          if start_num <= 0 {
-            Error(formula_error_value)
-          } else {
-            let start = start_num - 1
-            let lower_text = within_text.to_lower()
-            let lower_find = find_text.to_lower()
-            let len = lower_text.length()
-            if start > len {
-              Error(formula_error_value)
-            } else if lower_find.length() == 0 {
-              Number(Double::from_int(start_num))
-            } else {
-              match wildcard_find(lower_text, lower_find, start) {
-                Some(idx) => Number(Double::from_int(idx + 1))
-                None => Error(formula_error_value)
-              }
-            }
-          }
-        }
-        _ => Error(formula_error_value)
-      }
-    "SEARCHB" =>
-      match values {
-        [v0, v1] | [v0, v1, _] => {
-          let find_text = match value_as_string(v0) {
-            Ok(text) => text
-            Err(err) => return err
-          }
-          let within_text = match value_as_string(v1) {
-            Ok(text) => text
-            Err(err) => return err
-          }
-          let start_num = if values is [_, _, v2] {
-            match value_as_int(v2) {
-              Ok(num) => num
-              Err(err) => return err
-            }
-          } else {
-            1
-          }
-          let lower_find = find_text.to_lower()
-          let lower_text = within_text.to_lower()
-          match find_dbcs(lower_text, lower_find, start_num, true) {
-            Some(value) => Number(Double::from_int(value))
-            None => Error(formula_error_value)
-          }
-        }
-        _ => Error(formula_error_value)
-      }
-    "EXACT" =>
-      match values {
-        [v0, v1] => {
-          let left = match value_as_string(v0) {
-            Ok(text) => text
-            Err(err) => return err
-          }
-          let right = match value_as_string(v1) {
-            Ok(text) => text
-            Err(err) => return err
-          }
-          Bool(left == right)
-        }
-        _ => Error(formula_error_value)
-      }
-    "FIXED" =>
-      if values.length() >= 1 && values.length() <= 3 {
-        let number = match value_as_number(values[0]) {
-          Ok(num) => num
-          Err(err) => return err
-        }
-        let mut decimals = if values.length() == 1 {
-          decimal_places_from_text(formula_value_string(values[0]))
-        } else {
-          match value_as_int(values[1]) {
-            Ok(num) => num
-            Err(err) => return err
-          }
-        }
-        if decimals < 0 {
-          decimals = 0
-        }
-        let no_commas = if values.length() == 3 {
-          match value_as_bool(values[2]) {
-            Ok(flag) => flag
-            Err(err) => return err
-          }
-        } else {
-          false
-        }
-        String(format_fixed_number(number, decimals, !no_commas, 1))
-      } else {
-        Error(formula_error_value)
-      }
-    "VALUE" =>
-      match values {
-        [v0] =>
-          match value_as_number_text(v0) {
-            Ok(num) => Number(num)
-            Err(err) => err
-          }
-        _ => Error(formula_error_value)
-      }
-    "VALUETOTEXT" =>
-      match values {
-        [v0] | [v0, _] => {
-          let format = if values is [_, v1] {
-            match value_as_int(v1) {
-              Ok(num) => num
+    _ => Error(formula_error_value)
+  }
+}
+
+///|
+fn trunc_values(
+  _workbook : Workbook,
+  _sheet_name : String,
+  _name : String,
+  _args : ArrayView[Expr],
+  values : Array[FormulaValue],
+  _ctx : CalcContext,
+) -> FormulaValue {
+  match values {
+    [v0] | [v0, _] =>
+      match value_as_number(v0) {
+        Ok(num) => {
+          let digits = if values is [_, v1] {
+            match value_as_number(v1) {
+              Ok(value) => Double::to_int(value)
               Err(err) => return err
             }
           } else {
             0
           }
-          if format != 0 && format != 1 {
-            Error(formula_error_value)
-          } else {
-            let text = formula_value_string(v0)
-            match value_as_number(v0) {
-              Ok(_) => String(text)
-              Err(_) =>
-                if format == 1 {
-                  String("\"" + text + "\"")
-                } else {
-                  String(text)
-                }
-            }
-          }
+          Number(round_down_with_digits(num, digits))
         }
-        _ => Error(formula_error_value)
+        Err(err) => err
       }
-    "TEXT" =>
-      match values {
-        [v0, v1] => {
-          let format_text = match value_as_string(v1) {
-            Ok(text) => text
-            Err(err) => return err
-          }
-          match value_as_number_text(v0) {
-            Ok(num) => {
-              let formatted = format_number_code(
-                format_number(num),
-                format_text,
-                Options::new(),
-                use_1904_format=ctx.use_1904_dates,
-              ) catch {
-                _ => return Error(formula_error_value)
-              }
-              String(formatted)
-            }
-            Err(err) => err
-          }
-        }
-        _ => Error(formula_error_value)
+    _ => Error(formula_error_value)
+  }
+}
+
+///|
+fn round_values(
+  _workbook : Workbook,
+  _sheet_name : String,
+  _name : String,
+  _args : ArrayView[Expr],
+  values : Array[FormulaValue],
+  _ctx : CalcContext,
+) -> FormulaValue {
+  match values {
+    [v0, v1] =>
+      match (value_as_number(v0), value_as_number(v1)) {
+        (Ok(num), Ok(digits)) =>
+          Number(round_with_digits(num, Double::to_int(digits)))
+        (Err(err), _) => err
+        (_, Err(err)) => err
       }
-    "ARRAYTOTEXT" =>
-      if values.length() == 1 || values.length() == 2 {
-        let format = if values.length() == 2 {
-          match value_as_int(values[1]) {
-            Ok(num) => num
-            Err(err) => return err
+    _ => Error(formula_error_value)
+  }
+}
+
+///|
+fn roundup_values(
+  _workbook : Workbook,
+  _sheet_name : String,
+  _name : String,
+  _args : ArrayView[Expr],
+  values : Array[FormulaValue],
+  _ctx : CalcContext,
+) -> FormulaValue {
+  match values {
+    [v0, v1] =>
+      match (value_as_number(v0), value_as_number(v1)) {
+        (Ok(num), Ok(digits)) =>
+          Number(round_up_with_digits(num, Double::to_int(digits)))
+        (Err(err), _) => err
+        (_, Err(err)) => err
+      }
+    _ => Error(formula_error_value)
+  }
+}
+
+///|
+fn rounddown_values(
+  _workbook : Workbook,
+  _sheet_name : String,
+  _name : String,
+  _args : ArrayView[Expr],
+  values : Array[FormulaValue],
+  _ctx : CalcContext,
+) -> FormulaValue {
+  match values {
+    [v0, v1] =>
+      match (value_as_number(v0), value_as_number(v1)) {
+        (Ok(num), Ok(digits)) =>
+          Number(round_down_with_digits(num, Double::to_int(digits)))
+        (Err(err), _) => err
+        (_, Err(err)) => err
+      }
+    _ => Error(formula_error_value)
+  }
+}
+
+///|
+fn sqrt_values(
+  _workbook : Workbook,
+  _sheet_name : String,
+  _name : String,
+  _args : ArrayView[Expr],
+  values : Array[FormulaValue],
+  _ctx : CalcContext,
+) -> FormulaValue {
+  match values {
+    [v0] =>
+      match value_as_number(v0) {
+        Ok(num) =>
+          if num < 0.0 {
+            Error(formula_error_num)
+          } else {
+            Number(@math.pow(num, 0.5))
           }
-        } else {
-          0
-        }
-        if format != 0 && format != 1 {
-          return Error(formula_error_value)
-        }
-        let range = match args[0] {
-          Range(_, _, _) | Cell(_, _) =>
-            eval_range_expr(workbook, sheet_name, args[0], ctx)
-          _ => { rows: 1, cols: 1, values: [values[0]], }
-        }
-        let rows : Array[String] = []
-        for row in 0..<range.rows {
-          let cells : Array[String] = []
-          for col in 0..<range.cols {
-            let value = range.values[row * range.cols + col]
-            match normalize_scalar(value) {
-              Error(err) => return Error(err)
-              _ => {
-                let text = formula_value_string(value)
-                match value_as_number(value) {
-                  Ok(_) => cells.push(text)
-                  Err(_) =>
-                    if format == 1 {
-                      cells.push("\"" + text + "\"")
-                    } else {
-                      cells.push(text)
-                    }
-                }
-              }
+        Err(err) => err
+      }
+    _ => Error(formula_error_value)
+  }
+}
+
+///|
+fn power_values(
+  _workbook : Workbook,
+  _sheet_name : String,
+  _name : String,
+  _args : ArrayView[Expr],
+  values : Array[FormulaValue],
+  _ctx : CalcContext,
+) -> FormulaValue {
+  match values {
+    [v0, v1] =>
+      match (value_as_number(v0), value_as_number(v1)) {
+        (Ok(lhs), Ok(rhs)) => Number(@math.pow(lhs, rhs))
+        (Err(err), _) => err
+        (_, Err(err)) => err
+      }
+    _ => Error(formula_error_value)
+  }
+}
+
+///|
+fn even_values(
+  _workbook : Workbook,
+  _sheet_name : String,
+  _name : String,
+  _args : ArrayView[Expr],
+  values : Array[FormulaValue],
+  _ctx : CalcContext,
+) -> FormulaValue {
+  match values {
+    [v0] =>
+      match value_as_number(v0) {
+        Ok(num) => {
+          let sign = num < 0.0
+          let (whole, frac) = modf_double(num / 2.0)
+          let mut val = whole * 2.0
+          if frac != 0.0 {
+            if sign {
+              val = val - 2.0
+            } else {
+              val = val + 2.0
             }
           }
-          let joined = if format == 1 {
-            cells.join(",")
-          } else {
-            cells.join(", ")
-          }
-          rows.push(joined)
+          Number(val)
         }
-        if format == 1 {
-          String("{" + rows.join(";") + "}")
-        } else {
-          String(rows.join(", "))
+        Err(err) => err
+      }
+    _ => Error(formula_error_value)
+  }
+}
+
+///|
+fn odd_values(
+  _workbook : Workbook,
+  _sheet_name : String,
+  _name : String,
+  _args : ArrayView[Expr],
+  values : Array[FormulaValue],
+  _ctx : CalcContext,
+) -> FormulaValue {
+  match values {
+    [v0] =>
+      match value_as_number(v0) {
+        Ok(num) =>
+          if num == 0.0 {
+            Number(1.0)
+          } else {
+            let sign = num < 0.0
+            let (whole, frac) = modf_double((num - 1.0) / 2.0)
+            let mut val = whole * 2.0 + 1.0
+            if frac != 0.0 {
+              if sign {
+                val = val - 2.0
+              } else {
+                val = val + 2.0
+              }
+            }
+            Number(val)
+          }
+        Err(err) => err
+      }
+    _ => Error(formula_error_value)
+  }
+}
+
+///|
+fn mround_values(
+  _workbook : Workbook,
+  _sheet_name : String,
+  _name : String,
+  _args : ArrayView[Expr],
+  values : Array[FormulaValue],
+  _ctx : CalcContext,
+) -> FormulaValue {
+  match values {
+    [v0, v1] =>
+      match (value_as_number(v0), value_as_number(v1)) {
+        (Ok(num), Ok(multiple)) =>
+          if multiple == 0.0 {
+            Error(formula_error_num)
+          } else if (multiple < 0.0 && num > 0.0) ||
+            (multiple > 0.0 && num < 0.0) {
+            Error(formula_error_num)
+          } else {
+            let (whole, frac) = modf_double(num / multiple)
+            let mut rounded = whole
+            if trunc_double(frac + 0.5) > 0.0 {
+              rounded = rounded + 1.0
+            }
+            Number(rounded * multiple)
+          }
+        (Err(err), _) => err
+        (_, Err(err)) => err
+      }
+    _ => Error(formula_error_value)
+  }
+}
+
+///|
+fn mod_values(
+  _workbook : Workbook,
+  _sheet_name : String,
+  _name : String,
+  _args : ArrayView[Expr],
+  values : Array[FormulaValue],
+  _ctx : CalcContext,
+) -> FormulaValue {
+  match values {
+    [v0, v1] =>
+      match (value_as_number(v0), value_as_number(v1)) {
+        (Ok(num), Ok(divisor)) =>
+          if divisor == 0.0 {
+            Error(formula_error_div)
+          } else {
+            let quotient = num / divisor
+            let truncated = Double::floor(quotient)
+            Number(num - divisor * truncated)
+          }
+        (Err(err), _) => err
+        (_, Err(err)) => err
+      }
+    _ => Error(formula_error_value)
+  }
+}
+
+///|
+fn quotient_values(
+  _workbook : Workbook,
+  _sheet_name : String,
+  _name : String,
+  _args : ArrayView[Expr],
+  values : Array[FormulaValue],
+  _ctx : CalcContext,
+) -> FormulaValue {
+  match values {
+    [v0, v1] =>
+      match (value_as_number(v0), value_as_number(v1)) {
+        (Ok(num), Ok(divisor)) =>
+          if divisor == 0.0 {
+            Error(formula_error_div)
+          } else {
+            Number(trunc_double(num / divisor))
+          }
+        (Err(err), _) => err
+        (_, Err(err)) => err
+      }
+    _ => Error(formula_error_value)
+  }
+}
+
+///|
+fn stdevstdev_s_values(
+  _workbook : Workbook,
+  _sheet_name : String,
+  _name : String,
+  _args : ArrayView[Expr],
+  values : Array[FormulaValue],
+  _ctx : CalcContext,
+) -> FormulaValue {
+  match values {
+    [_, ..] => stdev_values(false, values)
+    [] => Error(formula_error_value)
+  }
+}
+
+///|
+fn stdeva_values(
+  _workbook : Workbook,
+  _sheet_name : String,
+  _name : String,
+  _args : ArrayView[Expr],
+  values : Array[FormulaValue],
+  _ctx : CalcContext,
+) -> FormulaValue {
+  match values {
+    [_, ..] => stdev_values(true, values)
+    [] => Error(formula_error_value)
+  }
+}
+
+///|
+fn stdevpstdev_p_values(
+  _workbook : Workbook,
+  _sheet_name : String,
+  _name : String,
+  _args : ArrayView[Expr],
+  values : Array[FormulaValue],
+  _ctx : CalcContext,
+) -> FormulaValue {
+  match values {
+    [_, ..] =>
+      match variance_values(values, false, false) {
+        Number(variance) => {
+          let result = @math.pow(variance, 0.5)
+          Number(round_significant_digits(result, 15))
+        }
+        value => value
+      }
+    [] => Error(formula_error_value)
+  }
+}
+
+///|
+fn stdevpa_values(
+  _workbook : Workbook,
+  _sheet_name : String,
+  _name : String,
+  _args : ArrayView[Expr],
+  values : Array[FormulaValue],
+  _ctx : CalcContext,
+) -> FormulaValue {
+  match values {
+    [_, ..] =>
+      match variance_values(values, false, true) {
+        Number(variance) => {
+          let result = @math.pow(variance, 0.5)
+          Number(round_significant_digits(result, 15))
+        }
+        value => value
+      }
+    [] => Error(formula_error_value)
+  }
+}
+
+///|
+fn varvar_s_values(
+  _workbook : Workbook,
+  _sheet_name : String,
+  _name : String,
+  _args : ArrayView[Expr],
+  values : Array[FormulaValue],
+  _ctx : CalcContext,
+) -> FormulaValue {
+  match values {
+    [_, ..] => variance_values(values, true, false)
+    [] => Error(formula_error_value)
+  }
+}
+
+///|
+fn vara_values(
+  _workbook : Workbook,
+  _sheet_name : String,
+  _name : String,
+  _args : ArrayView[Expr],
+  values : Array[FormulaValue],
+  _ctx : CalcContext,
+) -> FormulaValue {
+  match values {
+    [_, ..] => variance_values(values, true, true)
+    [] => Error(formula_error_value)
+  }
+}
+
+///|
+fn varpvar_p_values(
+  _workbook : Workbook,
+  _sheet_name : String,
+  _name : String,
+  _args : ArrayView[Expr],
+  values : Array[FormulaValue],
+  _ctx : CalcContext,
+) -> FormulaValue {
+  match values {
+    [_, ..] => variance_values(values, false, false)
+    [] => Error(formula_error_value)
+  }
+}
+
+///|
+fn varpa_values(
+  _workbook : Workbook,
+  _sheet_name : String,
+  _name : String,
+  _args : ArrayView[Expr],
+  values : Array[FormulaValue],
+  _ctx : CalcContext,
+) -> FormulaValue {
+  match values {
+    [_, ..] => variance_values(values, false, true)
+    [] => Error(formula_error_value)
+  }
+}
+
+///|
+fn avedev_values2(
+  _workbook : Workbook,
+  _sheet_name : String,
+  _name : String,
+  _args : ArrayView[Expr],
+  values : Array[FormulaValue],
+  _ctx : CalcContext,
+) -> FormulaValue {
+  match values {
+    [_, ..] => avedev_values(values)
+    [] => Error(formula_error_value)
+  }
+}
+
+///|
+fn devsq_values2(
+  _workbook : Workbook,
+  _sheet_name : String,
+  _name : String,
+  _args : ArrayView[Expr],
+  values : Array[FormulaValue],
+  _ctx : CalcContext,
+) -> FormulaValue {
+  match values {
+    [_, ..] => devsq_values(values)
+    [] => Error(formula_error_value)
+  }
+}
+
+///|
+fn geomean_values2(
+  _workbook : Workbook,
+  _sheet_name : String,
+  _name : String,
+  _args : ArrayView[Expr],
+  values : Array[FormulaValue],
+  _ctx : CalcContext,
+) -> FormulaValue {
+  match values {
+    [_, ..] => geomean_values(values)
+    [] => Error(formula_error_value)
+  }
+}
+
+///|
+fn harmean_values2(
+  _workbook : Workbook,
+  _sheet_name : String,
+  _name : String,
+  _args : ArrayView[Expr],
+  values : Array[FormulaValue],
+  _ctx : CalcContext,
+) -> FormulaValue {
+  match values {
+    [_, ..] => harmean_values(values)
+    [] => Error(formula_error_value)
+  }
+}
+
+///|
+fn kurt_values2(
+  _workbook : Workbook,
+  _sheet_name : String,
+  _name : String,
+  _args : ArrayView[Expr],
+  values : Array[FormulaValue],
+  _ctx : CalcContext,
+) -> FormulaValue {
+  match values {
+    [_, ..] => kurt_values(values)
+    [] => Error(formula_error_value)
+  }
+}
+
+///|
+fn skew_values2(
+  _workbook : Workbook,
+  _sheet_name : String,
+  _name : String,
+  _args : ArrayView[Expr],
+  values : Array[FormulaValue],
+  _ctx : CalcContext,
+) -> FormulaValue {
+  match values {
+    [_, ..] => skew_values("SKEW", values)
+    [] => Error(formula_error_value)
+  }
+}
+
+///|
+fn skew_p_values(
+  _workbook : Workbook,
+  _sheet_name : String,
+  _name : String,
+  _args : ArrayView[Expr],
+  values : Array[FormulaValue],
+  _ctx : CalcContext,
+) -> FormulaValue {
+  match values {
+    [_, ..] => skew_values("SKEW.P", values)
+    [] => Error(formula_error_value)
+  }
+}
+
+///|
+fn standardize_values2(
+  _workbook : Workbook,
+  _sheet_name : String,
+  _name : String,
+  _args : ArrayView[Expr],
+  values : Array[FormulaValue],
+  _ctx : CalcContext,
+) -> FormulaValue {
+  match values {
+    [_, _, _] => standardize_values(values)
+    _ => Error(formula_error_value)
+  }
+}
+
+///|
+fn large_values(
+  _workbook : Workbook,
+  _sheet_name : String,
+  _name : String,
+  _args : ArrayView[Expr],
+  values : Array[FormulaValue],
+  _ctx : CalcContext,
+) -> FormulaValue {
+  match values {
+    [v0, v1] => kth_values("LARGE", v0, v1)
+    _ => Error(formula_error_value)
+  }
+}
+
+///|
+fn small_values(
+  _workbook : Workbook,
+  _sheet_name : String,
+  _name : String,
+  _args : ArrayView[Expr],
+  values : Array[FormulaValue],
+  _ctx : CalcContext,
+) -> FormulaValue {
+  match values {
+    [v0, v1] => kth_values("SMALL", v0, v1)
+    _ => Error(formula_error_value)
+  }
+}
+
+///|
+fn mode_values2(
+  _workbook : Workbook,
+  _sheet_name : String,
+  _name : String,
+  _args : ArrayView[Expr],
+  values : Array[FormulaValue],
+  _ctx : CalcContext,
+) -> FormulaValue {
+  match values {
+    [_, ..] => mode_values(values)
+    [] => Error(formula_error_value)
+  }
+}
+
+///|
+fn mode_sngl_values(
+  _workbook : Workbook,
+  _sheet_name : String,
+  _name : String,
+  _args : ArrayView[Expr],
+  values : Array[FormulaValue],
+  _ctx : CalcContext,
+) -> FormulaValue {
+  match values {
+    [_, ..] => mode_values(values)
+    [] => Error(formula_error_value)
+  }
+}
+
+///|
+fn mode_mult_values2(
+  _workbook : Workbook,
+  _sheet_name : String,
+  _name : String,
+  _args : ArrayView[Expr],
+  values : Array[FormulaValue],
+  _ctx : CalcContext,
+) -> FormulaValue {
+  match values {
+    [_, ..] => mode_mult_values(values)
+    [] => Error(formula_error_value)
+  }
+}
+
+///|
+fn percentile_values2(
+  _workbook : Workbook,
+  _sheet_name : String,
+  _name : String,
+  _args : ArrayView[Expr],
+  values : Array[FormulaValue],
+  _ctx : CalcContext,
+) -> FormulaValue {
+  match values {
+    [v0, v1] =>
+      match value_as_number(v1) {
+        Ok(k) =>
+          if k < 0.0 || k > 1.0 {
+            Error(formula_error_na)
+          } else {
+            percentile_values(v0, k, false, false)
+          }
+        Err(err) => err
+      }
+    _ => Error(formula_error_value)
+  }
+}
+
+///|
+fn percentile_inc_values(
+  _workbook : Workbook,
+  _sheet_name : String,
+  _name : String,
+  _args : ArrayView[Expr],
+  values : Array[FormulaValue],
+  _ctx : CalcContext,
+) -> FormulaValue {
+  match values {
+    [v0, v1] =>
+      match value_as_number(v1) {
+        Ok(k) =>
+          if k < 0.0 || k > 1.0 {
+            Error(formula_error_na)
+          } else {
+            percentile_values(v0, k, false, false)
+          }
+        Err(err) => err
+      }
+    _ => Error(formula_error_value)
+  }
+}
+
+///|
+fn percentile_exc_values(
+  _workbook : Workbook,
+  _sheet_name : String,
+  _name : String,
+  _args : ArrayView[Expr],
+  values : Array[FormulaValue],
+  _ctx : CalcContext,
+) -> FormulaValue {
+  match values {
+    [v0, v1] =>
+      match value_as_number(v1) {
+        Ok(k) =>
+          if k <= 0.0 || k >= 1.0 {
+            Error(formula_error_num)
+          } else {
+            percentile_values(v0, k, true, true)
+          }
+        Err(err) => err
+      }
+    _ => Error(formula_error_value)
+  }
+}
+
+///|
+fn percentrank_values2(
+  _workbook : Workbook,
+  _sheet_name : String,
+  _name : String,
+  _args : ArrayView[Expr],
+  values : Array[FormulaValue],
+  _ctx : CalcContext,
+) -> FormulaValue {
+  match values {
+    [v0, v1] | [v0, v1, _] =>
+      match value_as_number(v1) {
+        Ok(x) => {
+          let significance = if values is [_, _, v2] {
+            match value_as_number(v2) {
+              Ok(num) => num
+              Err(err) => return err
+            }
+          } else {
+            3.0
+          }
+          percentrank_values("PERCENTRANK", v0, x, significance)
+        }
+        Err(err) => err
+      }
+    _ => Error(formula_error_value)
+  }
+}
+
+///|
+fn percentrank_inc_values(
+  _workbook : Workbook,
+  _sheet_name : String,
+  _name : String,
+  _args : ArrayView[Expr],
+  values : Array[FormulaValue],
+  _ctx : CalcContext,
+) -> FormulaValue {
+  match values {
+    [v0, v1] | [v0, v1, _] =>
+      match value_as_number(v1) {
+        Ok(x) => {
+          let significance = if values is [_, _, v2] {
+            match value_as_number(v2) {
+              Ok(num) => num
+              Err(err) => return err
+            }
+          } else {
+            3.0
+          }
+          percentrank_values("PERCENTRANK.INC", v0, x, significance)
+        }
+        Err(err) => err
+      }
+    _ => Error(formula_error_value)
+  }
+}
+
+///|
+fn percentrank_exc_values(
+  _workbook : Workbook,
+  _sheet_name : String,
+  _name : String,
+  _args : ArrayView[Expr],
+  values : Array[FormulaValue],
+  _ctx : CalcContext,
+) -> FormulaValue {
+  match values {
+    [v0, v1] | [v0, v1, _] =>
+      match value_as_number(v1) {
+        Ok(x) => {
+          let significance = if values is [_, _, v2] {
+            match value_as_number(v2) {
+              Ok(num) => num
+              Err(err) => return err
+            }
+          } else {
+            3.0
+          }
+          percentrank_values("PERCENTRANK.EXC", v0, x, significance)
+        }
+        Err(err) => err
+      }
+    _ => Error(formula_error_value)
+  }
+}
+
+///|
+fn quartile_values2(
+  _workbook : Workbook,
+  _sheet_name : String,
+  _name : String,
+  _args : ArrayView[Expr],
+  values : Array[FormulaValue],
+  _ctx : CalcContext,
+) -> FormulaValue {
+  match values {
+    [v0, v1] =>
+      match value_as_number(v1) {
+        Ok(quart) => quartile_values("QUARTILE", v0, quart, false)
+        Err(err) => err
+      }
+    _ => Error(formula_error_value)
+  }
+}
+
+///|
+fn quartile_inc_values(
+  _workbook : Workbook,
+  _sheet_name : String,
+  _name : String,
+  _args : ArrayView[Expr],
+  values : Array[FormulaValue],
+  _ctx : CalcContext,
+) -> FormulaValue {
+  match values {
+    [v0, v1] =>
+      match value_as_number(v1) {
+        Ok(quart) => quartile_values("QUARTILE.INC", v0, quart, false)
+        Err(err) => err
+      }
+    _ => Error(formula_error_value)
+  }
+}
+
+///|
+fn quartile_exc_values(
+  _workbook : Workbook,
+  _sheet_name : String,
+  _name : String,
+  _args : ArrayView[Expr],
+  values : Array[FormulaValue],
+  _ctx : CalcContext,
+) -> FormulaValue {
+  match values {
+    [v0, v1] =>
+      match value_as_number(v1) {
+        Ok(quart) => quartile_values("QUARTILE.EXC", v0, quart, true)
+        Err(err) => err
+      }
+    _ => Error(formula_error_value)
+  }
+}
+
+///|
+fn rankrank_eq_values(
+  _workbook : Workbook,
+  _sheet_name : String,
+  _name : String,
+  _args : ArrayView[Expr],
+  values : Array[FormulaValue],
+  _ctx : CalcContext,
+) -> FormulaValue {
+  match values {
+    [v0, v1] | [v0, v1, _] => {
+      let order = if values is [_, _, v2] {
+        match value_as_number(v2) {
+          Ok(num) => Some(num)
+          Err(err) => return err
         }
       } else {
-        Error(formula_error_value)
+        None
       }
-    "TEXTAFTER" | "TEXTBEFORE" | "_XLFN.TEXTAFTER" | "_XLFN.TEXTBEFORE" =>
-      if values.length() >= 2 && values.length() <= 6 {
-        let text = match value_as_string(values[0]) {
-          Ok(value) => value
-          Err(err) => return err
-        }
-        let delimiter = match value_as_string(values[1]) {
-          Ok(value) => value
-          Err(err) => return err
-        }
-        if text == "" {
-          return Error(formula_error_na)
-        }
-        let instance_num = if values.length() >= 3 {
-          match value_as_int(values[2]) {
-            Ok(num) => num
-            Err(err) => return err
-          }
-        } else {
-          1
-        }
-        if instance_num == 0 ||
-          instance_num > text.length() ||
-          -instance_num > text.length() {
-          return Error(formula_error_value)
-        }
-        let match_mode = if values.length() >= 4 {
-          match value_as_int(values[3]) {
-            Ok(num) => num
-            Err(err) => return err
-          }
-        } else {
-          0
-        }
-        if match_mode != 0 && match_mode != 1 {
-          return Error(formula_error_value)
-        }
-        let match_end = if values.length() >= 5 {
-          match value_as_bool(values[4]) {
-            Ok(flag) => flag
-            Err(err) => return err
-          }
-        } else {
-          false
-        }
-        let if_not_found = if values.length() == 6 { values[5] } else { Empty }
-        let idx_opt = text_after_before_index(
-          text, delimiter, instance_num, match_mode, match_end,
+      rank_values(v0, v1, order)
+    }
+    _ => Error(formula_error_value)
+  }
+}
+
+///|
+fn correl_values2(
+  _workbook : Workbook,
+  _sheet_name : String,
+  _name : String,
+  _args : ArrayView[Expr],
+  values : Array[FormulaValue],
+  _ctx : CalcContext,
+) -> FormulaValue {
+  match values {
+    [v0, v1] => correl_values(v0, v1)
+    _ => Error(formula_error_value)
+  }
+}
+
+///|
+fn covar_values2(
+  _workbook : Workbook,
+  _sheet_name : String,
+  _name : String,
+  _args : ArrayView[Expr],
+  values : Array[FormulaValue],
+  _ctx : CalcContext,
+) -> FormulaValue {
+  match values {
+    [v0, v1] => covar_values("COVAR", v0, v1)
+    _ => Error(formula_error_value)
+  }
+}
+
+///|
+fn covariance_p_values(
+  _workbook : Workbook,
+  _sheet_name : String,
+  _name : String,
+  _args : ArrayView[Expr],
+  values : Array[FormulaValue],
+  _ctx : CalcContext,
+) -> FormulaValue {
+  match values {
+    [v0, v1] => covar_values("COVARIANCE.P", v0, v1)
+    _ => Error(formula_error_value)
+  }
+}
+
+///|
+fn covariance_s_values(
+  _workbook : Workbook,
+  _sheet_name : String,
+  _name : String,
+  _args : ArrayView[Expr],
+  values : Array[FormulaValue],
+  _ctx : CalcContext,
+) -> FormulaValue {
+  match values {
+    [v0, v1] => covar_values("COVARIANCE.S", v0, v1)
+    _ => Error(formula_error_value)
+  }
+}
+
+///|
+fn pearson_values(
+  _workbook : Workbook,
+  _sheet_name : String,
+  _name : String,
+  _args : ArrayView[Expr],
+  values : Array[FormulaValue],
+  _ctx : CalcContext,
+) -> FormulaValue {
+  match values {
+    [_, _] => pearson_product_values("PEARSON", values)
+    _ => Error(formula_error_value)
+  }
+}
+
+///|
+fn rsq_values(
+  _workbook : Workbook,
+  _sheet_name : String,
+  _name : String,
+  _args : ArrayView[Expr],
+  values : Array[FormulaValue],
+  _ctx : CalcContext,
+) -> FormulaValue {
+  match values {
+    [_, _] => pearson_product_values("RSQ", values)
+    _ => Error(formula_error_value)
+  }
+}
+
+///|
+fn slope_values(
+  _workbook : Workbook,
+  _sheet_name : String,
+  _name : String,
+  _args : ArrayView[Expr],
+  values : Array[FormulaValue],
+  _ctx : CalcContext,
+) -> FormulaValue {
+  match values {
+    [_, _] => pearson_product_values("SLOPE", values)
+    _ => Error(formula_error_value)
+  }
+}
+
+///|
+fn intercept_values(
+  _workbook : Workbook,
+  _sheet_name : String,
+  _name : String,
+  _args : ArrayView[Expr],
+  values : Array[FormulaValue],
+  _ctx : CalcContext,
+) -> FormulaValue {
+  match values {
+    [_, _] => pearson_product_values("INTERCEPT", values)
+    _ => Error(formula_error_value)
+  }
+}
+
+///|
+fn forecast_values(
+  _workbook : Workbook,
+  _sheet_name : String,
+  _name : String,
+  _args : ArrayView[Expr],
+  values : Array[FormulaValue],
+  _ctx : CalcContext,
+) -> FormulaValue {
+  match values {
+    [_, _, _] => pearson_product_values("FORECAST", values)
+    _ => Error(formula_error_value)
+  }
+}
+
+///|
+fn forecast_linear_values(
+  _workbook : Workbook,
+  _sheet_name : String,
+  _name : String,
+  _args : ArrayView[Expr],
+  values : Array[FormulaValue],
+  _ctx : CalcContext,
+) -> FormulaValue {
+  match values {
+    [_, _, _] => pearson_product_values("FORECAST.LINEAR", values)
+    _ => Error(formula_error_value)
+  }
+}
+
+///|
+fn growth_values(
+  workbook : Workbook,
+  sheet_name : String,
+  _name : String,
+  args : ArrayView[Expr],
+  values : Array[FormulaValue],
+  ctx : CalcContext,
+) -> FormulaValue raise XlsxError {
+  trend_growth_values(workbook, sheet_name, "GROWTH", args, values, ctx)
+}
+
+///|
+fn trend_values(
+  workbook : Workbook,
+  sheet_name : String,
+  _name : String,
+  args : ArrayView[Expr],
+  values : Array[FormulaValue],
+  ctx : CalcContext,
+) -> FormulaValue raise XlsxError {
+  trend_growth_values(workbook, sheet_name, "TREND", args, values, ctx)
+}
+
+///|
+fn fisher_values(
+  _workbook : Workbook,
+  _sheet_name : String,
+  _name : String,
+  _args : ArrayView[Expr],
+  values : Array[FormulaValue],
+  _ctx : CalcContext,
+) -> FormulaValue {
+  match values {
+    [v0] => fisher_value(v0)
+    _ => Error(formula_error_value)
+  }
+}
+
+///|
+fn fisherinv_values(
+  _workbook : Workbook,
+  _sheet_name : String,
+  _name : String,
+  _args : ArrayView[Expr],
+  values : Array[FormulaValue],
+  _ctx : CalcContext,
+) -> FormulaValue {
+  match values {
+    [v0] => fisherinv_value(v0)
+    _ => Error(formula_error_value)
+  }
+}
+
+///|
+fn steyx_values2(
+  _workbook : Workbook,
+  _sheet_name : String,
+  _name : String,
+  _args : ArrayView[Expr],
+  values : Array[FormulaValue],
+  _ctx : CalcContext,
+) -> FormulaValue {
+  match values {
+    [_, _] => steyx_values(values)
+    _ => Error(formula_error_value)
+  }
+}
+
+///|
+fn countblank_values2(
+  workbook : Workbook,
+  sheet_name : String,
+  _name : String,
+  args : ArrayView[Expr],
+  _values : Array[FormulaValue],
+  ctx : CalcContext,
+) -> FormulaValue raise XlsxError {
+  match args {
+    [a0] => {
+      let range_values = eval_range_expr(workbook, sheet_name, a0, ctx)
+      countblank_values(range_values)
+    }
+    _ => Error(formula_error_value)
+  }
+}
+
+///|
+fn countif_values2(
+  workbook : Workbook,
+  sheet_name : String,
+  _name : String,
+  args : ArrayView[Expr],
+  values : Array[FormulaValue],
+  ctx : CalcContext,
+) -> FormulaValue raise XlsxError {
+  match args {
+    [a0, _] => {
+      let range_values = eval_range_expr(workbook, sheet_name, a0, ctx)
+      countif_values(range_values, values[1])
+    }
+    _ => Error(formula_error_value)
+  }
+}
+
+///|
+fn countifs_values(
+  workbook : Workbook,
+  sheet_name : String,
+  _name : String,
+  args : ArrayView[Expr],
+  values : Array[FormulaValue],
+  ctx : CalcContext,
+) -> FormulaValue raise XlsxError {
+  if args.length() >= 2 {
+    if args.length() % 2 != 0 {
+      Error(formula_error_na)
+    } else {
+      let ranges : Array[RangeValues] = []
+      let criterias : Array[FormulaCriteria] = []
+      for i in 0..<(args.length() / 2) {
+        let range_values = eval_range_expr(
+          workbook,
+          sheet_name,
+          args[i * 2],
+          ctx,
         )
-        let idx = match idx_opt {
-          Some(value) => value
-          None => return if_not_found
+        ranges.push(range_values)
+        criterias.push(parse_formula_criteria(values[i * 2 + 1]))
+      }
+      let matches = ifs_match(ranges, criterias)
+      Number(Double::from_int(matches.length()))
+    }
+  } else {
+    Error(formula_error_value)
+  }
+}
+
+///|
+fn daverage_values(
+  workbook : Workbook,
+  sheet_name : String,
+  name : String,
+  args : ArrayView[Expr],
+  values : Array[FormulaValue],
+  ctx : CalcContext,
+) -> FormulaValue raise XlsxError {
+  match args {
+    [a0, _, a2] => {
+      let database = eval_range_expr(workbook, sheet_name, a0, ctx)
+      let criteria = eval_range_expr(workbook, sheet_name, a2, ctx)
+      database_values(name, database, values[1], criteria)
+    }
+    _ => Error(formula_error_value)
+  }
+}
+
+///|
+fn dcountdcounta_values(
+  workbook : Workbook,
+  sheet_name : String,
+  name : String,
+  args : ArrayView[Expr],
+  values : Array[FormulaValue],
+  ctx : CalcContext,
+) -> FormulaValue raise XlsxError {
+  if args.length() >= 2 && args.length() <= 3 {
+    let database = eval_range_expr(workbook, sheet_name, args[0], ctx)
+    let field = if args.length() == 3 {
+      match args[1] {
+        FuncCall(name, _) if name == "" => Empty
+        _ => values[1]
+      }
+    } else {
+      Empty
+    }
+    let criteria_idx = if args.length() == 3 { 2 } else { 1 }
+    let criteria = eval_range_expr(
+      workbook,
+      sheet_name,
+      args[criteria_idx],
+      ctx,
+    )
+    dcount_values(name, database, field, criteria)
+  } else {
+    Error(formula_error_value)
+  }
+}
+
+///|
+fn dget_values2(
+  workbook : Workbook,
+  sheet_name : String,
+  _name : String,
+  args : ArrayView[Expr],
+  values : Array[FormulaValue],
+  ctx : CalcContext,
+) -> FormulaValue raise XlsxError {
+  match args {
+    [a0, _, a2] => {
+      let database = eval_range_expr(workbook, sheet_name, a0, ctx)
+      let criteria = eval_range_expr(workbook, sheet_name, a2, ctx)
+      dget_values(database, values[1], criteria)
+    }
+    _ => Error(formula_error_value)
+  }
+}
+
+///|
+fn averageif_values2(
+  workbook : Workbook,
+  sheet_name : String,
+  _name : String,
+  args : ArrayView[Expr],
+  values : Array[FormulaValue],
+  ctx : CalcContext,
+) -> FormulaValue raise XlsxError {
+  match args {
+    [a0, _] | [a0, _, _] => {
+      let range_values = eval_range_expr(workbook, sheet_name, a0, ctx)
+      let average_range = if args is [_, _, a2] {
+        Some(eval_range_expr(workbook, sheet_name, a2, ctx))
+      } else {
+        None
+      }
+      averageif_values(range_values, values[1], average_range)
+    }
+    _ => Error(formula_error_value)
+  }
+}
+
+///|
+fn averageifs_values(
+  workbook : Workbook,
+  sheet_name : String,
+  _name : String,
+  args : ArrayView[Expr],
+  values : Array[FormulaValue],
+  ctx : CalcContext,
+) -> FormulaValue raise XlsxError {
+  if args.length() >= 3 {
+    if args.length() % 2 != 1 {
+      Error(formula_error_na)
+    } else {
+      let average_range = eval_range_expr(workbook, sheet_name, args[0], ctx)
+      let ranges : Array[RangeValues] = []
+      let criterias : Array[FormulaCriteria] = []
+      for i in 0..<((args.length() - 1) / 2) {
+        let offset = 1 + i * 2
+        let range_values = eval_range_expr(
+          workbook,
+          sheet_name,
+          args[offset],
+          ctx,
+        )
+        ranges.push(range_values)
+        criterias.push(parse_formula_criteria(values[offset + 1]))
+      }
+      let matches = ifs_match(ranges, criterias)
+      let mut sum = 0.0
+      let mut count = 0
+      for cell in matches {
+        match average_range.get(cell.row, cell.col) {
+          Some(value) =>
+            match value_as_number_opt(value) {
+              Some(num) => {
+                sum = sum + num
+                count = count + 1
+              }
+              None => ()
+            }
+          None => return Error(formula_error_value)
         }
-        if name == "TEXTAFTER" || name == "_XLFN.TEXTAFTER" {
-          let start = idx + delimiter.length()
-          if start >= text.length() {
-            Empty
+      }
+      if count == 0 {
+        Error(formula_error_div)
+      } else {
+        Number(sum / Double::from_int(count))
+      }
+    }
+  } else {
+    Error(formula_error_value)
+  }
+}
+
+///|
+fn maxifs_values2(
+  workbook : Workbook,
+  sheet_name : String,
+  _name : String,
+  args : ArrayView[Expr],
+  values : Array[FormulaValue],
+  ctx : CalcContext,
+) -> FormulaValue raise XlsxError {
+  if args.length() >= 3 {
+    if args.length() % 2 != 1 {
+      Error(formula_error_na)
+    } else {
+      let max_range = eval_range_expr(workbook, sheet_name, args[0], ctx)
+      let ranges : Array[RangeValues] = []
+      let criterias : Array[FormulaCriteria] = []
+      for i in 0..<((args.length() - 1) / 2) {
+        let offset = 1 + i * 2
+        let range_values = eval_range_expr(
+          workbook,
+          sheet_name,
+          args[offset],
+          ctx,
+        )
+        ranges.push(range_values)
+        criterias.push(parse_formula_criteria(values[offset + 1]))
+      }
+      let matches = ifs_match(ranges, criterias)
+      maxifs_values(max_range, matches)
+    }
+  } else {
+    Error(formula_error_value)
+  }
+}
+
+///|
+fn minifs_values2(
+  workbook : Workbook,
+  sheet_name : String,
+  _name : String,
+  args : ArrayView[Expr],
+  values : Array[FormulaValue],
+  ctx : CalcContext,
+) -> FormulaValue raise XlsxError {
+  if args.length() >= 3 {
+    if args.length() % 2 != 1 {
+      Error(formula_error_na)
+    } else {
+      let min_range = eval_range_expr(workbook, sheet_name, args[0], ctx)
+      let ranges : Array[RangeValues] = []
+      let criterias : Array[FormulaCriteria] = []
+      for i in 0..<((args.length() - 1) / 2) {
+        let offset = 1 + i * 2
+        let range_values = eval_range_expr(
+          workbook,
+          sheet_name,
+          args[offset],
+          ctx,
+        )
+        ranges.push(range_values)
+        criterias.push(parse_formula_criteria(values[offset + 1]))
+      }
+      let matches = ifs_match(ranges, criterias)
+      minifs_values(min_range, matches)
+    }
+  } else {
+    Error(formula_error_value)
+  }
+}
+
+///|
+fn permut_values(
+  _workbook : Workbook,
+  _sheet_name : String,
+  _name : String,
+  _args : ArrayView[Expr],
+  values : Array[FormulaValue],
+  _ctx : CalcContext,
+) -> FormulaValue {
+  match values {
+    [v0, v1] =>
+      match (value_as_number(v0), value_as_number(v1)) {
+        (Ok(num), Ok(chosen)) =>
+          if num < chosen {
+            Error(formula_error_na)
           } else {
-            String(text.unsafe_substring(start~, end=text.length()))
+            let result = factorial_double(num) / factorial_double(num - chosen)
+            Number(round_half_away_from_zero(result))
           }
-        } else if idx <= 0 {
-          String("")
-        } else {
-          String(text.unsafe_substring(start=0, end=idx))
+        (Err(err), _) => err
+        (_, Err(err)) => err
+      }
+    _ => Error(formula_error_value)
+  }
+}
+
+///|
+fn permutationa_values(
+  _workbook : Workbook,
+  _sheet_name : String,
+  _name : String,
+  _args : ArrayView[Expr],
+  values : Array[FormulaValue],
+  _ctx : CalcContext,
+) -> FormulaValue {
+  match values {
+    [v0, v1] =>
+      match (value_as_number(v0), value_as_number(v1)) {
+        (Ok(num), Ok(chosen)) => {
+          let number = Double::floor(num)
+          let number_chosen = Double::floor(chosen)
+          if number < 0.0 || number_chosen < 0.0 {
+            Error(formula_error_na)
+          } else {
+            Number(@math.pow(number, number_chosen))
+          }
         }
-      } else {
-        Error(formula_error_value)
+        (Err(err), _) => err
+        (_, Err(err)) => err
       }
-    "TEXTSPLIT" | "_XLFN.TEXTSPLIT" =>
-      if values.length() >= 2 && values.length() <= 6 {
-        textsplit_values(values)
-      } else {
-        Error(formula_error_value)
+    _ => Error(formula_error_value)
+  }
+}
+
+///|
+fn weibulldotdistweibull_dist_xlfn_weibull_dist_values(
+  _workbook : Workbook,
+  _sheet_name : String,
+  _name : String,
+  _args : ArrayView[Expr],
+  values : Array[FormulaValue],
+  _ctx : CalcContext,
+) -> FormulaValue {
+  weibull_value(values)
+}
+
+///|
+fn confidencedotnormconfidence_norm_xlfn_confidence_norm_values(
+  _workbook : Workbook,
+  _sheet_name : String,
+  _name : String,
+  _args : ArrayView[Expr],
+  values : Array[FormulaValue],
+  _ctx : CalcContext,
+) -> FormulaValue {
+  confidence_values(values)
+}
+
+///|
+fn confidencedottconfidence_t_xlfn_confidence_t_values(
+  _workbook : Workbook,
+  _sheet_name : String,
+  _name : String,
+  _args : ArrayView[Expr],
+  values : Array[FormulaValue],
+  _ctx : CalcContext,
+) -> FormulaValue {
+  confidence_t_values(values)
+}
+
+///|
+fn normdotsdotdistnorm_s_dist_xlfn_norm_s_dist_values(
+  _workbook : Workbook,
+  _sheet_name : String,
+  _name : String,
+  _args : ArrayView[Expr],
+  values : Array[FormulaValue],
+  _ctx : CalcContext,
+) -> FormulaValue {
+  norm_s_dist_values(values)
+}
+
+///|
+fn normdotsdotinvnorm_s_inv_xlfn_norm_s_inv_values(
+  _workbook : Workbook,
+  _sheet_name : String,
+  _name : String,
+  _args : ArrayView[Expr],
+  values : Array[FormulaValue],
+  _ctx : CalcContext,
+) -> FormulaValue {
+  norm_s_inv_values(values)
+}
+
+///|
+fn lognormdotdistlognorm_dist_xlfn_lognorm_dist_values(
+  _workbook : Workbook,
+  _sheet_name : String,
+  _name : String,
+  _args : ArrayView[Expr],
+  values : Array[FormulaValue],
+  _ctx : CalcContext,
+) -> FormulaValue {
+  lognorm_dist_values(values)
+}
+
+///|
+fn lognormdotinvlognorm_inv_xlfn_lognorm_inv_values(
+  _workbook : Workbook,
+  _sheet_name : String,
+  _name : String,
+  _args : ArrayView[Expr],
+  values : Array[FormulaValue],
+  _ctx : CalcContext,
+) -> FormulaValue {
+  loginv_values(values)
+}
+
+///|
+fn gammadotdistgamma_dist_xlfn_gamma_dist_values(
+  _workbook : Workbook,
+  _sheet_name : String,
+  _name : String,
+  _args : ArrayView[Expr],
+  values : Array[FormulaValue],
+  _ctx : CalcContext,
+) -> FormulaValue {
+  gamma_dist_values(values)
+}
+
+///|
+fn gammalndotprecisegammaln_precise_xlfn_gammaln_precise_values(
+  _workbook : Workbook,
+  _sheet_name : String,
+  _name : String,
+  _args : ArrayView[Expr],
+  values : Array[FormulaValue],
+  _ctx : CalcContext,
+) -> FormulaValue {
+  gammaln_precise_values(values)
+}
+
+///|
+fn expondotdistexpon_dist_xlfn_expon_dist_values(
+  _workbook : Workbook,
+  _sheet_name : String,
+  _name : String,
+  _args : ArrayView[Expr],
+  values : Array[FormulaValue],
+  _ctx : CalcContext,
+) -> FormulaValue {
+  expon_dist_values(values)
+}
+
+///|
+fn poissondotdistpoisson_dist_xlfn_poisson_dist_values(
+  _workbook : Workbook,
+  _sheet_name : String,
+  _name : String,
+  _args : ArrayView[Expr],
+  values : Array[FormulaValue],
+  _ctx : CalcContext,
+) -> FormulaValue {
+  poisson_values(values)
+}
+
+///|
+fn binomdotdistbinom_dist_xlfn_binom_dist_values(
+  _workbook : Workbook,
+  _sheet_name : String,
+  _name : String,
+  _args : ArrayView[Expr],
+  values : Array[FormulaValue],
+  _ctx : CalcContext,
+) -> FormulaValue {
+  binomdist_values(values)
+}
+
+///|
+fn binomdotdistdotrangebinom_dist_range_xlfn_binom_dist_range_values(
+  _workbook : Workbook,
+  _sheet_name : String,
+  _name : String,
+  _args : ArrayView[Expr],
+  values : Array[FormulaValue],
+  _ctx : CalcContext,
+) -> FormulaValue {
+  binom_dist_range_values(values)
+}
+
+///|
+fn hypgeomdotdisthypgeom_dist_xlfn_hypgeom_dist_values(
+  _workbook : Workbook,
+  _sheet_name : String,
+  _name : String,
+  _args : ArrayView[Expr],
+  values : Array[FormulaValue],
+  _ctx : CalcContext,
+) -> FormulaValue {
+  hypgeom_dist_values(values)
+}
+
+///|
+fn negbinomdotdistnegbinom_dist_xlfn_negbinom_dist_values(
+  _workbook : Workbook,
+  _sheet_name : String,
+  _name : String,
+  _args : ArrayView[Expr],
+  values : Array[FormulaValue],
+  _ctx : CalcContext,
+) -> FormulaValue {
+  negbinom_dist_values(values)
+}
+
+///|
+fn chisqdotdistchisq_dist_xlfn_chisq_dist_values(
+  _workbook : Workbook,
+  _sheet_name : String,
+  _name : String,
+  _args : ArrayView[Expr],
+  values : Array[FormulaValue],
+  _ctx : CalcContext,
+) -> FormulaValue {
+  chisq_dist_values(values)
+}
+
+///|
+fn chisqdotdistdotrtchisq_dist_rt_xlfn_chisq_dist_rt_values(
+  _workbook : Workbook,
+  _sheet_name : String,
+  _name : String,
+  _args : ArrayView[Expr],
+  values : Array[FormulaValue],
+  _ctx : CalcContext,
+) -> FormulaValue {
+  chidist_values(values)
+}
+
+///|
+fn chisqdotinvdotrtchisq_inv_rt_xlfn_chisq_inv_rt_values(
+  _workbook : Workbook,
+  _sheet_name : String,
+  _name : String,
+  _args : ArrayView[Expr],
+  values : Array[FormulaValue],
+  _ctx : CalcContext,
+) -> FormulaValue {
+  chiinv_values(values)
+}
+
+///|
+fn chisqdottestchisq_test_xlfn_chisq_test_values(
+  workbook : Workbook,
+  sheet_name : String,
+  _name : String,
+  args : ArrayView[Expr],
+  values : Array[FormulaValue],
+  ctx : CalcContext,
+) -> FormulaValue raise XlsxError {
+  chitest_values(workbook, sheet_name, args, values, ctx)
+}
+
+///|
+fn fdottestf_test_xlfn_f_test_values(
+  workbook : Workbook,
+  sheet_name : String,
+  _name : String,
+  args : ArrayView[Expr],
+  values : Array[FormulaValue],
+  ctx : CalcContext,
+) -> FormulaValue raise XlsxError {
+  ftest_values(workbook, sheet_name, args, values, ctx)
+}
+
+///|
+fn disc_values(
+  _workbook : Workbook,
+  _sheet_name : String,
+  _name : String,
+  _args : ArrayView[Expr],
+  values : Array[FormulaValue],
+  ctx : CalcContext,
+) -> FormulaValue {
+  disc_intrate_values("DISC", values, use_1904_dates=ctx.use_1904_dates)
+}
+
+///|
+fn intrate_values(
+  _workbook : Workbook,
+  _sheet_name : String,
+  _name : String,
+  _args : ArrayView[Expr],
+  values : Array[FormulaValue],
+  ctx : CalcContext,
+) -> FormulaValue {
+  disc_intrate_values("INTRATE", values, use_1904_dates=ctx.use_1904_dates)
+}
+
+///|
+fn oddlprice_values(
+  _workbook : Workbook,
+  _sheet_name : String,
+  _name : String,
+  _args : ArrayView[Expr],
+  values : Array[FormulaValue],
+  ctx : CalcContext,
+) -> FormulaValue {
+  oddl_values("ODDLPRICE", values, use_1904_dates=ctx.use_1904_dates)
+}
+
+///|
+fn oddlyield_values(
+  _workbook : Workbook,
+  _sheet_name : String,
+  _name : String,
+  _args : ArrayView[Expr],
+  values : Array[FormulaValue],
+  ctx : CalcContext,
+) -> FormulaValue {
+  oddl_values("ODDLYIELD", values, use_1904_dates=ctx.use_1904_dates)
+}
+
+///|
+fn price_values(
+  _workbook : Workbook,
+  _sheet_name : String,
+  _name : String,
+  _args : ArrayView[Expr],
+  values : Array[FormulaValue],
+  ctx : CalcContext,
+) -> FormulaValue {
+  price_yield_values("PRICE", values, use_1904_dates=ctx.use_1904_dates)
+}
+
+///|
+fn yield_values(
+  _workbook : Workbook,
+  _sheet_name : String,
+  _name : String,
+  _args : ArrayView[Expr],
+  values : Array[FormulaValue],
+  ctx : CalcContext,
+) -> FormulaValue {
+  price_yield_values("YIELD", values, use_1904_dates=ctx.use_1904_dates)
+}
+
+///|
+fn date_values(
+  _workbook : Workbook,
+  _sheet_name : String,
+  _name : String,
+  _args : ArrayView[Expr],
+  values : Array[FormulaValue],
+  ctx : CalcContext,
+) -> FormulaValue {
+  match values {
+    [v0, v1, v2] =>
+      match (value_as_int(v0), value_as_int(v1), value_as_int(v2)) {
+        (Ok(year), Ok(month), Ok(day)) =>
+          match
+            excel_serial_from_date(
+              year,
+              month,
+              day,
+              use_1904_dates=ctx.use_1904_dates,
+            ) {
+            Some(serial) => Number(serial)
+            None => Error(formula_error_num)
+          }
+        (Err(err), _, _) => err
+        (_, Err(err), _) => err
+        (_, _, Err(err)) => err
       }
-    "TEXTJOIN" =>
-      if values.length() >= 3 {
-        let delimiter = match value_as_string(values[0]) {
-          Ok(text) => text
+    _ => Error(formula_error_value)
+  }
+}
+
+///|
+fn time_values(
+  _workbook : Workbook,
+  _sheet_name : String,
+  _name : String,
+  _args : ArrayView[Expr],
+  values : Array[FormulaValue],
+  _ctx : CalcContext,
+) -> FormulaValue {
+  match values {
+    [v0, v1, v2] =>
+      match (value_as_int(v0), value_as_int(v1), value_as_int(v2)) {
+        (Ok(hours), Ok(minutes), Ok(seconds)) =>
+          match excel_time_fraction(hours, minutes, seconds) {
+            Some(value) => Number(value)
+            None => Error(formula_error_num)
+          }
+        (Err(err), _, _) => err
+        (_, Err(err), _) => err
+        (_, _, Err(err)) => err
+      }
+    _ => Error(formula_error_value)
+  }
+}
+
+///|
+fn datevalue_values(
+  _workbook : Workbook,
+  _sheet_name : String,
+  _name : String,
+  _args : ArrayView[Expr],
+  values : Array[FormulaValue],
+  ctx : CalcContext,
+) -> FormulaValue {
+  match values {
+    [v0] => {
+      let text = match value_as_string(v0) {
+        Ok(value) => value
+        Err(err) => return err
+      }
+      match parse_date_parts(text) {
+        Some((year, month, day)) =>
+          match
+            excel_serial_from_date(
+              year,
+              month,
+              day,
+              use_1904_dates=ctx.use_1904_dates,
+            ) {
+            Some(serial) => Number(serial)
+            None => Error(formula_error_value)
+          }
+        None => Error(formula_error_value)
+      }
+    }
+    _ => Error(formula_error_value)
+  }
+}
+
+///|
+fn timevalue_values(
+  _workbook : Workbook,
+  _sheet_name : String,
+  _name : String,
+  _args : ArrayView[Expr],
+  values : Array[FormulaValue],
+  _ctx : CalcContext,
+) -> FormulaValue {
+  match values {
+    [v0] => {
+      let text = match value_as_string(v0) {
+        Ok(value) => value
+        Err(err) => return err
+      }
+      match parse_time_parts(text) {
+        Some((hours, minutes, seconds)) =>
+          // parse_time_parts only yields non-negative components.
+          Number(excel_time_fraction(hours, minutes, seconds).unwrap())
+        None => Error(formula_error_value)
+      }
+    }
+    _ => Error(formula_error_value)
+  }
+}
+
+///|
+fn datedif_values(
+  _workbook : Workbook,
+  _sheet_name : String,
+  _name : String,
+  _args : ArrayView[Expr],
+  values : Array[FormulaValue],
+  ctx : CalcContext,
+) -> FormulaValue {
+  match values {
+    [v0, v1, v2] => {
+      let start_serial = match
+        value_as_date_serial(v0, use_1904_dates=ctx.use_1904_dates) {
+        Ok(value) => value
+        Err(err) => return err
+      }
+      let end_serial = match
+        value_as_date_serial(v1, use_1904_dates=ctx.use_1904_dates) {
+        Ok(value) => value
+        Err(err) => return err
+      }
+      if start_serial > end_serial {
+        Error(formula_error_num)
+      } else if start_serial == end_serial {
+        Number(0.0)
+      } else {
+        let unit = match value_as_string(v2) {
+          Ok(text) => text.to_lower()
           Err(err) => return err
         }
-        let ignore_empty = match value_as_bool(values[1]) {
+        let (sy, sm, sd) = match
+          date_parts_from_serial(
+            start_serial,
+            use_1904_dates=ctx.use_1904_dates,
+          ) {
+          Some(parts) => parts
+          None => return Error(formula_error_num)
+        }
+        let (ey, em, ed) = match
+          date_parts_from_serial(end_serial, use_1904_dates=ctx.use_1904_dates) {
+          Some(parts) => parts
+          None => return Error(formula_error_num)
+        }
+        match unit {
+          "y" => {
+            let mut diff = ey - sy
+            if em < sm || (em == sm && ed < sd) {
+              diff = diff - 1
+            }
+            Number(Double::from_int(diff))
+          }
+          "m" => {
+            let mut diff = (ey - sy) * 12 + (em - sm)
+            if ed < sd {
+              diff = diff - 1
+            }
+            Number(Double::from_int(diff))
+          }
+          "d" => Number(end_serial - start_serial)
+          "ym" => {
+            let mut diff = em - sm
+            if ed < sd {
+              diff = diff - 1
+            }
+            if diff < 0 {
+              diff = diff + 12
+            }
+            Number(Double::from_int(diff))
+          }
+          "yd" => {
+            let mut target_year = sy
+            if em < sm || (em == sm && ed < sd) {
+              target_year = sy + 1
+            }
+            let start_base = excel_serial_from_date(
+              sy,
+              sm,
+              sd,
+              use_1904_dates=ctx.use_1904_dates,
+            ).unwrap()
+            let end_base = excel_serial_from_date(
+              target_year,
+              em,
+              ed,
+              use_1904_dates=ctx.use_1904_dates,
+            ).unwrap()
+            Number(end_base - start_base)
+          }
+          "md" => {
+            let diff = if ed >= sd {
+              ed - sd
+            } else {
+              let (prev_year, prev_month) = normalize_year_month(ey, em - 1)
+              let dim = days_in_month(prev_year, prev_month)
+              dim - sd + ed
+            }
+            Number(Double::from_int(diff))
+          }
+          _ => Error(formula_error_value)
+        }
+      }
+    }
+    _ => Error(formula_error_value)
+  }
+}
+
+///|
+fn days_values(
+  _workbook : Workbook,
+  _sheet_name : String,
+  _name : String,
+  _args : ArrayView[Expr],
+  values : Array[FormulaValue],
+  ctx : CalcContext,
+) -> FormulaValue {
+  match values {
+    [v0, v1] => {
+      let end_serial = match
+        value_as_date_serial(v0, use_1904_dates=ctx.use_1904_dates) {
+        Ok(value) => value
+        Err(err) => return err
+      }
+      let start_serial = match
+        value_as_date_serial(v1, use_1904_dates=ctx.use_1904_dates) {
+        Ok(value) => value
+        Err(err) => return err
+      }
+      Number(end_serial - start_serial)
+    }
+    _ => Error(formula_error_value)
+  }
+}
+
+///|
+fn days360_values(
+  _workbook : Workbook,
+  _sheet_name : String,
+  _name : String,
+  _args : ArrayView[Expr],
+  values : Array[FormulaValue],
+  ctx : CalcContext,
+) -> FormulaValue {
+  match values {
+    [v0, v1] | [v0, v1, _] => {
+      let start_serial = match
+        value_as_date_serial(v0, use_1904_dates=ctx.use_1904_dates) {
+        Ok(value) => value
+        Err(err) => return err
+      }
+      let end_serial = match
+        value_as_date_serial(v1, use_1904_dates=ctx.use_1904_dates) {
+        Ok(value) => value
+        Err(err) => return err
+      }
+      let (sy, sm, sd) = match
+        date_parts_from_serial(start_serial, use_1904_dates=ctx.use_1904_dates) {
+        Some(parts) => parts
+        None => return Error(formula_error_num)
+      }
+      let (ey, em, ed) = match
+        date_parts_from_serial(end_serial, use_1904_dates=ctx.use_1904_dates) {
+        Some(parts) => parts
+        None => return Error(formula_error_num)
+      }
+      let mut start_day = sd
+      let mut end_day = ed
+      let end_year = ey
+      let mut end_month = em
+      let use_european = if values is [_, _, v2] {
+        match value_as_bool(v2) {
           Ok(flag) => flag
           Err(err) => return err
         }
-        let parts : Array[String] = []
-        for i in 2..<values.length() {
-          match textjoin_collect_value(values[i], ignore_empty, parts) {
-            Ok(_) => ()
-            Err(err) => return err
+      } else {
+        false
+      }
+      if use_european {
+        if start_day == 31 {
+          start_day = 30
+        }
+        if end_day == 31 {
+          end_day = 30
+        }
+      } else {
+        if days_in_month(sy, sm) == start_day {
+          start_day = 30
+        }
+        if end_day > 30 {
+          if start_day < 30 {
+            end_month = end_month + 1
+            end_day = 1
+          } else {
+            end_day = 30
           }
         }
-        let result = parts.join(delimiter)
-        if result.length() > max_cell_chars {
-          Error(formula_error_value)
-        } else {
-          String(result)
+      }
+      let (norm_year, norm_month) = normalize_year_month(end_year, end_month)
+      let diff = (norm_year - sy) * 360 +
+        (norm_month - sm) * 30 +
+        (end_day - start_day)
+      Number(Double::from_int(diff))
+    }
+    _ => Error(formula_error_value)
+  }
+}
+
+///|
+fn isoweeknum_values(
+  _workbook : Workbook,
+  _sheet_name : String,
+  _name : String,
+  _args : ArrayView[Expr],
+  values : Array[FormulaValue],
+  ctx : CalcContext,
+) -> FormulaValue {
+  match values {
+    [v0] => {
+      let serial = match
+        value_as_date_serial(v0, use_1904_dates=ctx.use_1904_dates) {
+        Ok(value) => value
+        Err(err) => return err
+      }
+      // Serial zero is the 1900 system's artificial day before its epoch,
+      // but is the real 1904-01-01 epoch in a date-1904 workbook.
+      if !ctx.use_1904_dates && serial < 1.0 {
+        return Error(formula_error_num)
+      }
+      // Excel assigns the fictitious 1900-02-29 (including its time
+      // fraction) to ISO week 9. It cannot pass through the Gregorian helper
+      // below because 1900 was not actually a leap year.
+      if is_1900_phantom_date_serial(serial, ctx.use_1904_dates) {
+        return Number(9.0)
+      }
+      let (year, month, day) = match
+        date_parts_from_serial(serial, use_1904_dates=ctx.use_1904_dates) {
+        Some(parts) => parts
+        None => return Error(formula_error_num)
+      }
+      match iso_week_number(year, month, day) {
+        Some(week) => Number(Double::from_int(week))
+        None => Error(formula_error_num)
+      }
+    }
+    _ => Error(formula_error_value)
+  }
+}
+
+///|
+fn edate_values(
+  _workbook : Workbook,
+  _sheet_name : String,
+  _name : String,
+  _args : ArrayView[Expr],
+  values : Array[FormulaValue],
+  ctx : CalcContext,
+) -> FormulaValue {
+  match values {
+    [v0, v1] => {
+      let (year, month, day) = match
+        date_parts_from_value(v0, use_1904_dates=ctx.use_1904_dates) {
+        Ok(parts) => parts
+        Err(err) => return err
+      }
+      let months = match value_as_number(v1) {
+        Ok(num) => Double::to_int(trunc_double(num))
+        Err(err) => return err
+      }
+      let (new_year, new_month) = normalize_year_month(year, month + months)
+      let max_day = days_in_month(new_year, new_month)
+      let new_day = if day > max_day { max_day } else { day }
+      match
+        excel_serial_from_date(
+          new_year,
+          new_month,
+          new_day,
+          use_1904_dates=ctx.use_1904_dates,
+        ) {
+        Some(serial) => Number(serial)
+        None => Error(formula_error_num)
+      }
+    }
+    _ => Error(formula_error_value)
+  }
+}
+
+///|
+fn eomonth_values(
+  _workbook : Workbook,
+  _sheet_name : String,
+  _name : String,
+  _args : ArrayView[Expr],
+  values : Array[FormulaValue],
+  ctx : CalcContext,
+) -> FormulaValue {
+  match values {
+    [v0, v1] => {
+      let (year, month, _) = match
+        date_parts_from_value(v0, use_1904_dates=ctx.use_1904_dates) {
+        Ok(parts) => parts
+        Err(err) => return err
+      }
+      let months = match value_as_number(v1) {
+        Ok(num) => Double::to_int(trunc_double(num))
+        Err(err) => return err
+      }
+      let (new_year, new_month) = normalize_year_month(year, month + months)
+      let new_day = days_in_month(new_year, new_month)
+      match
+        excel_serial_from_date(
+          new_year,
+          new_month,
+          new_day,
+          use_1904_dates=ctx.use_1904_dates,
+        ) {
+        Some(serial) => Number(serial)
+        None => Error(formula_error_num)
+      }
+    }
+    _ => Error(formula_error_value)
+  }
+}
+
+///|
+fn yearfrac_values(
+  _workbook : Workbook,
+  _sheet_name : String,
+  _name : String,
+  _args : ArrayView[Expr],
+  values : Array[FormulaValue],
+  ctx : CalcContext,
+) -> FormulaValue {
+  match values {
+    [v0, v1] | [v0, v1, _] => {
+      let start_serial = match
+        value_as_date_serial(v0, use_1904_dates=ctx.use_1904_dates) {
+        Ok(value) => value
+        Err(err) => return err
+      }
+      let end_serial = match
+        value_as_date_serial(v1, use_1904_dates=ctx.use_1904_dates) {
+        Ok(value) => value
+        Err(err) => return err
+      }
+      let basis = if values is [_, _, v2] {
+        match value_as_number(v2) {
+          Ok(num) => Double::to_int(trunc_double(num))
+          Err(err) => return err
         }
+      } else {
+        0
+      }
+      yearfrac_value(
+        start_serial,
+        end_serial,
+        basis,
+        use_1904_dates=ctx.use_1904_dates,
+      )
+    }
+    _ => Error(formula_error_value)
+  }
+}
+
+///|
+fn weekday_values(
+  _workbook : Workbook,
+  _sheet_name : String,
+  _name : String,
+  _args : ArrayView[Expr],
+  values : Array[FormulaValue],
+  ctx : CalcContext,
+) -> FormulaValue {
+  match values {
+    [v0] | [v0, _] => {
+      let (year, month, day) = match
+        date_parts_from_value(v0, use_1904_dates=ctx.use_1904_dates) {
+        Ok(parts) => parts
+        Err(err) => return err
+      }
+      let mut return_type = 1
+      if values is [_, v1] {
+        return_type = match value_as_number(v1) {
+          Ok(num) => Double::to_int(trunc_double(num))
+          Err(err) => return err
+        }
+      }
+      if return_type == 2 {
+        return_type = 11
+      }
+      let weekday = weekday_sun1(year, month, day)
+      if return_type == 1 {
+        Number(Double::from_int(weekday))
+      } else if return_type == 3 {
+        let value = (weekday + 6 - 1) % 7
+        Number(Double::from_int(value))
+      } else if return_type >= 11 && return_type <= 17 {
+        let value = (weekday + 6 - (return_type - 10)) % 7 + 1
+        Number(Double::from_int(value))
       } else {
         Error(formula_error_value)
       }
-    "SEQUENCE" | "_XLFN.SEQUENCE" => sequence_values(values)
-    "TAKE" | "_XLFN.TAKE" =>
-      take_values(workbook, sheet_name, args, values, ctx)
-    "DROP" | "_XLFN.DROP" =>
-      drop_values(workbook, sheet_name, args, values, ctx)
-    "CHOOSECOLS" | "_XLFN.CHOOSECOLS" =>
-      choosecols_values(workbook, sheet_name, args, values, ctx)
-    "CHOOSEROWS" | "_XLFN.CHOOSEROWS" =>
-      chooserows_values(workbook, sheet_name, args, values, ctx)
-    "HSTACK" | "_XLFN.HSTACK" =>
-      stack_from_values(workbook, sheet_name, args, values, ctx, true)
-    "VSTACK" | "_XLFN.VSTACK" =>
-      stack_from_values(workbook, sheet_name, args, values, ctx, false)
-    "EXPAND" | "_XLFN.EXPAND" =>
-      expand_values(workbook, sheet_name, args, values, ctx)
-    "WRAPROWS" | "_XLFN.WRAPROWS" =>
-      wrap_values(workbook, sheet_name, args, values, ctx, true)
-    "WRAPCOLS" | "_XLFN.WRAPCOLS" =>
-      wrap_values(workbook, sheet_name, args, values, ctx, false)
-    "TOCOL" | "_XLFN.TOCOL" =>
-      tocol_torow_values(workbook, sheet_name, args, values, ctx, false)
-    "TOROW" | "_XLFN.TOROW" =>
-      tocol_torow_values(workbook, sheet_name, args, values, ctx, false)
-    "SORT" | "_XLFN.SORT" =>
-      sort_values(workbook, sheet_name, args, values, ctx)
-    "SORTBY" | "_XLFN.SORTBY" =>
-      sortby_values(workbook, sheet_name, args, values, ctx)
-    "FILTER" | "_XLFN.FILTER" =>
-      filter_values(workbook, sheet_name, args, values, ctx)
-    "UNIQUE" | "_XLFN.UNIQUE" =>
-      if args.length() >= 1 && args.length() <= 3 {
-        let by_col = if args.length() >= 2 {
-          match value_as_bool(values[1]) {
-            Ok(flag) => flag
-            Err(err) => return err
-          }
-        } else {
-          false
-        }
-        let exactly_once = if args.length() == 3 {
-          match value_as_bool(values[2]) {
-            Ok(flag) => flag
-            Err(err) => return err
-          }
-        } else {
-          false
-        }
-        let range = match args[0] {
-          Range(_, _, _) | Cell(_, _) =>
-            eval_range_expr(workbook, sheet_name, args[0], ctx)
-          _ =>
-            match values[0] {
-              Error(err) => return Error(err)
-              List(list) =>
-                if list.length() == 0 {
-                  return Error(formula_error_value)
-                } else {
-                  { rows: 1, cols: list.length(), values: list, }
-                }
-              _ => { rows: 1, cols: 1, values: [values[0]], }
-            }
-        }
-        match unique_range_values(range, by_col, exactly_once) {
-          Ok(result) => List(result.values)
-          Err(err) => err
-        }
-      } else {
-        Error(formula_error_value)
+    }
+    _ => Error(formula_error_value)
+  }
+}
+
+///|
+fn weeknum_values(
+  _workbook : Workbook,
+  _sheet_name : String,
+  _name : String,
+  _args : ArrayView[Expr],
+  values : Array[FormulaValue],
+  ctx : CalcContext,
+) -> FormulaValue {
+  match values {
+    [v0] | [v0, _] => {
+      let (year, month, day) = match
+        date_parts_from_value(v0, use_1904_dates=ctx.use_1904_dates) {
+        Ok(parts) => parts
+        Err(err) => return err
       }
-    "DATE" =>
-      match values {
-        [v0, v1, v2] =>
-          match (value_as_int(v0), value_as_int(v1), value_as_int(v2)) {
-            (Ok(year), Ok(month), Ok(day)) =>
-              match
-                excel_serial_from_date(
-                  year,
-                  month,
-                  day,
-                  use_1904_dates=ctx.use_1904_dates,
-                ) {
-                Some(serial) => Number(serial)
-                None => Error(formula_error_num)
-              }
-            (Err(err), _, _) => err
-            (_, Err(err), _) => err
-            (_, _, Err(err)) => err
-          }
-        _ => Error(formula_error_value)
-      }
-    "TIME" =>
-      match values {
-        [v0, v1, v2] =>
-          match (value_as_int(v0), value_as_int(v1), value_as_int(v2)) {
-            (Ok(hours), Ok(minutes), Ok(seconds)) =>
-              match excel_time_fraction(hours, minutes, seconds) {
-                Some(value) => Number(value)
-                None => Error(formula_error_num)
-              }
-            (Err(err), _, _) => err
-            (_, Err(err), _) => err
-            (_, _, Err(err)) => err
-          }
-        _ => Error(formula_error_value)
-      }
-    "DATEVALUE" =>
-      match values {
-        [v0] => {
-          let text = match value_as_string(v0) {
-            Ok(value) => value
-            Err(err) => return err
-          }
-          match parse_date_parts(text) {
-            Some((year, month, day)) =>
-              match
-                excel_serial_from_date(
-                  year,
-                  month,
-                  day,
-                  use_1904_dates=ctx.use_1904_dates,
-                ) {
-                Some(serial) => Number(serial)
-                None => Error(formula_error_value)
-              }
-            None => Error(formula_error_value)
-          }
+      let mut return_type = 1
+      if values is [_, v1] {
+        return_type = match value_as_number(v1) {
+          Ok(num) => Double::to_int(trunc_double(num))
+          Err(err) => return err
         }
-        _ => Error(formula_error_value)
       }
-    "TIMEVALUE" =>
-      match values {
-        [v0] => {
-          let text = match value_as_string(v0) {
-            Ok(value) => value
-            Err(err) => return err
-          }
-          match parse_time_parts(text) {
-            Some((hours, minutes, seconds)) =>
-              // parse_time_parts only yields non-negative components.
-              Number(excel_time_fraction(hours, minutes, seconds).unwrap())
-            None => Error(formula_error_value)
-          }
-        }
-        _ => Error(formula_error_value)
+      let days = day_of_year(year, month, day)
+      let mut week_mod = days % 7
+      if week_mod == 0 {
+        week_mod = 7
       }
-    "DATEDIF" =>
-      match values {
-        [v0, v1, v2] => {
-          let start_serial = match
-            value_as_date_serial(v0, use_1904_dates=ctx.use_1904_dates) {
-            Ok(value) => value
-            Err(err) => return err
-          }
-          let end_serial = match
-            value_as_date_serial(v1, use_1904_dates=ctx.use_1904_dates) {
-            Ok(value) => value
-            Err(err) => return err
-          }
-          if start_serial > end_serial {
-            Error(formula_error_num)
-          } else if start_serial == end_serial {
-            Number(0.0)
-          } else {
-            let unit = match value_as_string(v2) {
-              Ok(text) => text.to_lower()
-              Err(err) => return err
-            }
-            let (sy, sm, sd) = match
-              date_parts_from_serial(
-                start_serial,
-                use_1904_dates=ctx.use_1904_dates,
-              ) {
-              Some(parts) => parts
-              None => return Error(formula_error_num)
-            }
-            let (ey, em, ed) = match
-              date_parts_from_serial(
-                end_serial,
-                use_1904_dates=ctx.use_1904_dates,
-              ) {
-              Some(parts) => parts
-              None => return Error(formula_error_num)
-            }
-            match unit {
-              "y" => {
-                let mut diff = ey - sy
-                if em < sm || (em == sm && ed < sd) {
-                  diff = diff - 1
-                }
-                Number(Double::from_int(diff))
-              }
-              "m" => {
-                let mut diff = (ey - sy) * 12 + (em - sm)
-                if ed < sd {
-                  diff = diff - 1
-                }
-                Number(Double::from_int(diff))
-              }
-              "d" => Number(end_serial - start_serial)
-              "ym" => {
-                let mut diff = em - sm
-                if ed < sd {
-                  diff = diff - 1
-                }
-                if diff < 0 {
-                  diff = diff + 12
-                }
-                Number(Double::from_int(diff))
-              }
-              "yd" => {
-                let mut target_year = sy
-                if em < sm || (em == sm && ed < sd) {
-                  target_year = sy + 1
-                }
-                let start_base = excel_serial_from_date(
-                  sy,
-                  sm,
-                  sd,
-                  use_1904_dates=ctx.use_1904_dates,
-                ).unwrap()
-                let end_base = excel_serial_from_date(
-                  target_year,
-                  em,
-                  ed,
-                  use_1904_dates=ctx.use_1904_dates,
-                ).unwrap()
-                Number(end_base - start_base)
-              }
-              "md" => {
-                let diff = if ed >= sd {
-                  ed - sd
-                } else {
-                  let (prev_year, prev_month) = normalize_year_month(ey, em - 1)
-                  let dim = days_in_month(prev_year, prev_month)
-                  dim - sd + ed
-                }
-                Number(Double::from_int(diff))
-              }
-              _ => Error(formula_error_value)
-            }
-          }
-        }
-        _ => Error(formula_error_value)
+      let mut week_num = (days + 6) / 7
+      let first_weekday = weekday_sun1(year, 1, 1) - 1
+      let offset = match return_type {
+        1 | 17 => 0
+        2 | 11 | 21 => 1
+        12 | 13 | 14 | 15 | 16 => return_type - 10
+        _ => return Error(formula_error_num)
       }
-    "DAYS" =>
-      match values {
-        [v0, v1] => {
-          let end_serial = match
-            value_as_date_serial(v0, use_1904_dates=ctx.use_1904_dates) {
-            Ok(value) => value
-            Err(err) => return err
-          }
-          let start_serial = match
-            value_as_date_serial(v1, use_1904_dates=ctx.use_1904_dates) {
-            Ok(value) => value
-            Err(err) => return err
-          }
-          Number(end_serial - start_serial)
-        }
-        _ => Error(formula_error_value)
+      let mut padding = offset + 7 - first_weekday
+      if padding > 7 {
+        padding = padding - 7
       }
-    "DAYS360" =>
-      match values {
-        [v0, v1] | [v0, v1, _] => {
-          let start_serial = match
-            value_as_date_serial(v0, use_1904_dates=ctx.use_1904_dates) {
-            Ok(value) => value
-            Err(err) => return err
-          }
-          let end_serial = match
-            value_as_date_serial(v1, use_1904_dates=ctx.use_1904_dates) {
-            Ok(value) => value
-            Err(err) => return err
-          }
-          let (sy, sm, sd) = match
-            date_parts_from_serial(
-              start_serial,
-              use_1904_dates=ctx.use_1904_dates,
-            ) {
-            Some(parts) => parts
-            None => return Error(formula_error_num)
-          }
-          let (ey, em, ed) = match
-            date_parts_from_serial(
-              end_serial,
-              use_1904_dates=ctx.use_1904_dates,
-            ) {
-            Some(parts) => parts
-            None => return Error(formula_error_num)
-          }
-          let mut start_day = sd
-          let mut end_day = ed
-          let end_year = ey
-          let mut end_month = em
-          let use_european = if values is [_, _, v2] {
-            match value_as_bool(v2) {
-              Ok(flag) => flag
-              Err(err) => return err
-            }
-          } else {
-            false
-          }
-          if use_european {
-            if start_day == 31 {
-              start_day = 30
-            }
-            if end_day == 31 {
-              end_day = 30
-            }
-          } else {
-            if days_in_month(sy, sm) == start_day {
-              start_day = 30
-            }
-            if end_day > 30 {
-              if start_day < 30 {
-                end_month = end_month + 1
-                end_day = 1
-              } else {
-                end_day = 30
-              }
-            }
-          }
-          let (norm_year, norm_month) = normalize_year_month(
-            end_year, end_month,
-          )
-          let diff = (norm_year - sy) * 360 +
-            (norm_month - sm) * 30 +
-            (end_day - start_day)
-          Number(Double::from_int(diff))
-        }
-        _ => Error(formula_error_value)
+      if week_mod > padding {
+        week_num = week_num + 1
       }
-    "ISOWEEKNUM" =>
-      match values {
-        [v0] => {
-          let serial = match
-            value_as_date_serial(v0, use_1904_dates=ctx.use_1904_dates) {
-            Ok(value) => value
-            Err(err) => return err
-          }
-          // Serial zero is the 1900 system's artificial day before its epoch,
-          // but is the real 1904-01-01 epoch in a date-1904 workbook.
-          if !ctx.use_1904_dates && serial < 1.0 {
-            return Error(formula_error_num)
-          }
-          // Excel assigns the fictitious 1900-02-29 (including its time
-          // fraction) to ISO week 9. It cannot pass through the Gregorian helper
-          // below because 1900 was not actually a leap year.
-          if is_1900_phantom_date_serial(serial, ctx.use_1904_dates) {
-            return Number(9.0)
-          }
-          let (year, month, day) = match
-            date_parts_from_serial(serial, use_1904_dates=ctx.use_1904_dates) {
-            Some(parts) => parts
-            None => return Error(formula_error_num)
-          }
-          match iso_week_number(year, month, day) {
-            Some(week) => Number(Double::from_int(week))
-            None => Error(formula_error_num)
-          }
-        }
-        _ => Error(formula_error_value)
-      }
-    "EDATE" =>
-      match values {
-        [v0, v1] => {
-          let (year, month, day) = match
-            date_parts_from_value(v0, use_1904_dates=ctx.use_1904_dates) {
-            Ok(parts) => parts
-            Err(err) => return err
-          }
-          let months = match value_as_number(v1) {
-            Ok(num) => Double::to_int(trunc_double(num))
-            Err(err) => return err
-          }
-          let (new_year, new_month) = normalize_year_month(year, month + months)
-          let max_day = days_in_month(new_year, new_month)
-          let new_day = if day > max_day { max_day } else { day }
-          match
-            excel_serial_from_date(
-              new_year,
-              new_month,
-              new_day,
-              use_1904_dates=ctx.use_1904_dates,
-            ) {
-            Some(serial) => Number(serial)
-            None => Error(formula_error_num)
-          }
-        }
-        _ => Error(formula_error_value)
-      }
-    "EOMONTH" =>
-      match values {
-        [v0, v1] => {
-          let (year, month, _) = match
-            date_parts_from_value(v0, use_1904_dates=ctx.use_1904_dates) {
-            Ok(parts) => parts
-            Err(err) => return err
-          }
-          let months = match value_as_number(v1) {
-            Ok(num) => Double::to_int(trunc_double(num))
-            Err(err) => return err
-          }
-          let (new_year, new_month) = normalize_year_month(year, month + months)
-          let new_day = days_in_month(new_year, new_month)
-          match
-            excel_serial_from_date(
-              new_year,
-              new_month,
-              new_day,
-              use_1904_dates=ctx.use_1904_dates,
-            ) {
-            Some(serial) => Number(serial)
-            None => Error(formula_error_num)
-          }
-        }
-        _ => Error(formula_error_value)
-      }
-    "YEARFRAC" =>
-      match values {
-        [v0, v1] | [v0, v1, _] => {
-          let start_serial = match
-            value_as_date_serial(v0, use_1904_dates=ctx.use_1904_dates) {
-            Ok(value) => value
-            Err(err) => return err
-          }
-          let end_serial = match
-            value_as_date_serial(v1, use_1904_dates=ctx.use_1904_dates) {
-            Ok(value) => value
-            Err(err) => return err
-          }
-          let basis = if values is [_, _, v2] {
-            match value_as_number(v2) {
-              Ok(num) => Double::to_int(trunc_double(num))
-              Err(err) => return err
-            }
-          } else {
-            0
-          }
-          yearfrac_value(
-            start_serial,
-            end_serial,
-            basis,
-            use_1904_dates=ctx.use_1904_dates,
-          )
-        }
-        _ => Error(formula_error_value)
-      }
-    "WEEKDAY" =>
-      match values {
-        [v0] | [v0, _] => {
-          let (year, month, day) = match
-            date_parts_from_value(v0, use_1904_dates=ctx.use_1904_dates) {
-            Ok(parts) => parts
-            Err(err) => return err
-          }
-          let mut return_type = 1
-          if values is [_, v1] {
-            return_type = match value_as_number(v1) {
-              Ok(num) => Double::to_int(trunc_double(num))
-              Err(err) => return err
-            }
-          }
-          if return_type == 2 {
-            return_type = 11
-          }
-          let weekday = weekday_sun1(year, month, day)
-          if return_type == 1 {
-            Number(Double::from_int(weekday))
-          } else if return_type == 3 {
-            let value = (weekday + 6 - 1) % 7
-            Number(Double::from_int(value))
-          } else if return_type >= 11 && return_type <= 17 {
-            let value = (weekday + 6 - (return_type - 10)) % 7 + 1
-            Number(Double::from_int(value))
-          } else {
-            Error(formula_error_value)
-          }
-        }
-        _ => Error(formula_error_value)
-      }
-    "WEEKNUM" =>
-      match values {
-        [v0] | [v0, _] => {
-          let (year, month, day) = match
-            date_parts_from_value(v0, use_1904_dates=ctx.use_1904_dates) {
-            Ok(parts) => parts
-            Err(err) => return err
-          }
-          let mut return_type = 1
-          if values is [_, v1] {
-            return_type = match value_as_number(v1) {
-              Ok(num) => Double::to_int(trunc_double(num))
-              Err(err) => return err
-            }
-          }
-          let days = day_of_year(year, month, day)
-          let mut week_mod = days % 7
-          if week_mod == 0 {
-            week_mod = 7
-          }
-          let mut week_num = (days + 6) / 7
-          let first_weekday = weekday_sun1(year, 1, 1) - 1
-          let offset = match return_type {
-            1 | 17 => 0
-            2 | 11 | 21 => 1
-            12 | 13 | 14 | 15 | 16 => return_type - 10
-            _ => return Error(formula_error_num)
-          }
-          let mut padding = offset + 7 - first_weekday
-          if padding > 7 {
-            padding = padding - 7
-          }
-          if week_mod > padding {
+      if return_type == 21 && (first_weekday == 0 || first_weekday > 4) {
+        week_num = week_num - 1
+        if week_num < 1 {
+          week_num = 52
+          let prev_first_weekday = weekday_sun1(year - 1, 1, 1) - 1
+          if prev_first_weekday < 4 {
             week_num = week_num + 1
           }
-          if return_type == 21 && (first_weekday == 0 || first_weekday > 4) {
-            week_num = week_num - 1
-            if week_num < 1 {
-              week_num = 52
-              let prev_first_weekday = weekday_sun1(year - 1, 1, 1) - 1
-              if prev_first_weekday < 4 {
-                week_num = week_num + 1
-              }
-            }
-          }
-          Number(Double::from_int(week_num))
         }
-        _ => Error(formula_error_value)
       }
-    "NETWORKDAYS" =>
-      match values {
-        [v0, v1] | [v0, v1, _] => {
-          let start_serial = match
-            value_as_date_serial(v0, use_1904_dates=ctx.use_1904_dates) {
-            Ok(value) => value
-            Err(err) => return err
-          }
-          let end_serial = match
-            value_as_date_serial(v1, use_1904_dates=ctx.use_1904_dates) {
-            Ok(value) => value
-            Err(err) => return err
-          }
-          let holidays = if values is [_, _, v2] {
-            collect_holidays(v2, use_1904_dates=ctx.use_1904_dates)
-          } else {
-            []
-          }
-          networkdays_intl_value(
-            start_serial,
-            end_serial,
-            Number(1.0),
-            holidays,
-            use_1904_dates=ctx.use_1904_dates,
-          )
-        }
-        _ => Error(formula_error_value)
+      Number(Double::from_int(week_num))
+    }
+    _ => Error(formula_error_value)
+  }
+}
+
+///|
+fn networkdays_values(
+  _workbook : Workbook,
+  _sheet_name : String,
+  _name : String,
+  _args : ArrayView[Expr],
+  values : Array[FormulaValue],
+  ctx : CalcContext,
+) -> FormulaValue {
+  match values {
+    [v0, v1] | [v0, v1, _] => {
+      let start_serial = match
+        value_as_date_serial(v0, use_1904_dates=ctx.use_1904_dates) {
+        Ok(value) => value
+        Err(err) => return err
       }
-    "NETWORKDAYS.INTL" =>
-      if values.length() >= 2 && values.length() <= 4 {
-        let start_serial = match
-          value_as_date_serial(values[0], use_1904_dates=ctx.use_1904_dates) {
-          Ok(value) => value
-          Err(err) => return err
-        }
-        let end_serial = match
-          value_as_date_serial(values[1], use_1904_dates=ctx.use_1904_dates) {
-          Ok(value) => value
-          Err(err) => return err
-        }
-        let weekend_value = if values.length() >= 3 {
-          values[2]
-        } else {
-          Number(1.0)
-        }
-        let holidays = if values.length() == 4 {
-          collect_holidays(values[3], use_1904_dates=ctx.use_1904_dates)
-        } else {
-          []
-        }
-        networkdays_intl_value(
-          start_serial,
-          end_serial,
-          weekend_value,
-          holidays,
-          use_1904_dates=ctx.use_1904_dates,
-        )
+      let end_serial = match
+        value_as_date_serial(v1, use_1904_dates=ctx.use_1904_dates) {
+        Ok(value) => value
+        Err(err) => return err
+      }
+      let holidays = if values is [_, _, v2] {
+        collect_holidays(v2, use_1904_dates=ctx.use_1904_dates)
       } else {
-        Error(formula_error_value)
+        []
       }
-    "WORKDAY" =>
-      match values {
-        [v0, v1] | [v0, v1, _] => {
-          let start_serial = match
-            value_as_date_serial(v0, use_1904_dates=ctx.use_1904_dates) {
-            Ok(value) => value
-            Err(err) => return err
-          }
-          let days = match value_as_number(v1) {
-            Ok(num) => num
-            Err(err) => return err
-          }
-          let holidays = if values is [_, _, v2] {
-            collect_holidays(v2, use_1904_dates=ctx.use_1904_dates)
+      networkdays_intl_value(
+        start_serial,
+        end_serial,
+        Number(1.0),
+        holidays,
+        use_1904_dates=ctx.use_1904_dates,
+      )
+    }
+    _ => Error(formula_error_value)
+  }
+}
+
+///|
+fn networkdays_intl_values(
+  _workbook : Workbook,
+  _sheet_name : String,
+  _name : String,
+  _args : ArrayView[Expr],
+  values : Array[FormulaValue],
+  ctx : CalcContext,
+) -> FormulaValue {
+  if values.length() >= 2 && values.length() <= 4 {
+    let start_serial = match
+      value_as_date_serial(values[0], use_1904_dates=ctx.use_1904_dates) {
+      Ok(value) => value
+      Err(err) => return err
+    }
+    let end_serial = match
+      value_as_date_serial(values[1], use_1904_dates=ctx.use_1904_dates) {
+      Ok(value) => value
+      Err(err) => return err
+    }
+    let weekend_value = if values.length() >= 3 {
+      values[2]
+    } else {
+      Number(1.0)
+    }
+    let holidays = if values.length() == 4 {
+      collect_holidays(values[3], use_1904_dates=ctx.use_1904_dates)
+    } else {
+      []
+    }
+    networkdays_intl_value(
+      start_serial,
+      end_serial,
+      weekend_value,
+      holidays,
+      use_1904_dates=ctx.use_1904_dates,
+    )
+  } else {
+    Error(formula_error_value)
+  }
+}
+
+///|
+fn workday_values(
+  _workbook : Workbook,
+  _sheet_name : String,
+  _name : String,
+  _args : ArrayView[Expr],
+  values : Array[FormulaValue],
+  ctx : CalcContext,
+) -> FormulaValue {
+  match values {
+    [v0, v1] | [v0, v1, _] => {
+      let start_serial = match
+        value_as_date_serial(v0, use_1904_dates=ctx.use_1904_dates) {
+        Ok(value) => value
+        Err(err) => return err
+      }
+      let days = match value_as_number(v1) {
+        Ok(num) => num
+        Err(err) => return err
+      }
+      let holidays = if values is [_, _, v2] {
+        collect_holidays(v2, use_1904_dates=ctx.use_1904_dates)
+      } else {
+        []
+      }
+      workday_intl_value(
+        start_serial,
+        days,
+        Number(1.0),
+        holidays,
+        use_1904_dates=ctx.use_1904_dates,
+      )
+    }
+    _ => Error(formula_error_value)
+  }
+}
+
+///|
+fn workday_intl_values(
+  _workbook : Workbook,
+  _sheet_name : String,
+  _name : String,
+  _args : ArrayView[Expr],
+  values : Array[FormulaValue],
+  ctx : CalcContext,
+) -> FormulaValue {
+  if values.length() >= 2 && values.length() <= 4 {
+    let start_serial = match
+      value_as_date_serial(values[0], use_1904_dates=ctx.use_1904_dates) {
+      Ok(value) => value
+      Err(err) => return err
+    }
+    let days = match value_as_number(values[1]) {
+      Ok(num) => num
+      Err(err) => return err
+    }
+    let weekend_value = if values.length() >= 3 {
+      values[2]
+    } else {
+      Number(1.0)
+    }
+    let holidays = if values.length() == 4 {
+      collect_holidays(values[3], use_1904_dates=ctx.use_1904_dates)
+    } else {
+      []
+    }
+    workday_intl_value(
+      start_serial,
+      days,
+      weekend_value,
+      holidays,
+      use_1904_dates=ctx.use_1904_dates,
+    )
+  } else {
+    Error(formula_error_value)
+  }
+}
+
+///|
+fn now_values(
+  _workbook : Workbook,
+  _sheet_name : String,
+  _name : String,
+  _args : ArrayView[Expr],
+  values : Array[FormulaValue],
+  ctx : CalcContext,
+) -> FormulaValue {
+  match values {
+    [] => {
+      let now_ms = @env.now()
+      let total_seconds = UInt64::to_double(now_ms) / 1000.0
+      let days = Double::floor(total_seconds / 86400.0)
+      let seconds_in_day = total_seconds - days * 86400.0
+      let epoch_serial = if ctx.use_1904_dates { 24107.0 } else { 25569.0 }
+      let serial = days + epoch_serial + seconds_in_day / 86400.0
+      Number(serial)
+    }
+    _ => Error(formula_error_value)
+  }
+}
+
+///|
+fn today_values(
+  _workbook : Workbook,
+  _sheet_name : String,
+  _name : String,
+  _args : ArrayView[Expr],
+  values : Array[FormulaValue],
+  ctx : CalcContext,
+) -> FormulaValue {
+  match values {
+    [] => {
+      let now_ms = @env.now()
+      let total_seconds = UInt64::to_double(now_ms) / 1000.0
+      let days = Double::floor(total_seconds / 86400.0)
+      let epoch_serial = if ctx.use_1904_dates { 24107.0 } else { 25569.0 }
+      Number(days + epoch_serial)
+    }
+    _ => Error(formula_error_value)
+  }
+}
+
+///|
+fn year_values(
+  _workbook : Workbook,
+  _sheet_name : String,
+  _name : String,
+  _args : ArrayView[Expr],
+  values : Array[FormulaValue],
+  ctx : CalcContext,
+) -> FormulaValue {
+  match values {
+    [v0] =>
+      match excel_serial_date_parts(v0, use_1904_dates=ctx.use_1904_dates) {
+        Ok((year, _, _)) => Number(Double::from_int(year))
+        Err(err) => err
+      }
+    _ => Error(formula_error_value)
+  }
+}
+
+///|
+fn month_values(
+  _workbook : Workbook,
+  _sheet_name : String,
+  _name : String,
+  _args : ArrayView[Expr],
+  values : Array[FormulaValue],
+  ctx : CalcContext,
+) -> FormulaValue {
+  match values {
+    [v0] =>
+      match excel_serial_date_parts(v0, use_1904_dates=ctx.use_1904_dates) {
+        Ok((_, month, _)) => Number(Double::from_int(month))
+        Err(err) => err
+      }
+    _ => Error(formula_error_value)
+  }
+}
+
+///|
+fn day_values(
+  _workbook : Workbook,
+  _sheet_name : String,
+  _name : String,
+  _args : ArrayView[Expr],
+  values : Array[FormulaValue],
+  ctx : CalcContext,
+) -> FormulaValue {
+  match values {
+    [v0] =>
+      match excel_serial_date_parts(v0, use_1904_dates=ctx.use_1904_dates) {
+        Ok((_, _, day)) => Number(Double::from_int(day))
+        Err(err) => err
+      }
+    _ => Error(formula_error_value)
+  }
+}
+
+///|
+fn hour_values(
+  _workbook : Workbook,
+  _sheet_name : String,
+  _name : String,
+  _args : ArrayView[Expr],
+  values : Array[FormulaValue],
+  ctx : CalcContext,
+) -> FormulaValue {
+  match values {
+    [v0] =>
+      match excel_serial_parts(v0, use_1904_dates=ctx.use_1904_dates) {
+        Ok((_, _, _, hour, _, _)) => Number(Double::from_int(hour))
+        Err(err) => err
+      }
+    _ => Error(formula_error_value)
+  }
+}
+
+///|
+fn minute_values(
+  _workbook : Workbook,
+  _sheet_name : String,
+  _name : String,
+  _args : ArrayView[Expr],
+  values : Array[FormulaValue],
+  ctx : CalcContext,
+) -> FormulaValue {
+  match values {
+    [v0] =>
+      match excel_serial_parts(v0, use_1904_dates=ctx.use_1904_dates) {
+        Ok((_, _, _, _, minute, _)) => Number(Double::from_int(minute))
+        Err(err) => err
+      }
+    _ => Error(formula_error_value)
+  }
+}
+
+///|
+fn second_values(
+  _workbook : Workbook,
+  _sheet_name : String,
+  _name : String,
+  _args : ArrayView[Expr],
+  values : Array[FormulaValue],
+  ctx : CalcContext,
+) -> FormulaValue {
+  match values {
+    [v0] =>
+      match excel_serial_parts(v0, use_1904_dates=ctx.use_1904_dates) {
+        Ok((_, _, _, _, _, second)) => Number(Double::from_int(second))
+        Err(err) => err
+      }
+    _ => Error(formula_error_value)
+  }
+}
+
+///|
+fn len_values(
+  _workbook : Workbook,
+  _sheet_name : String,
+  _name : String,
+  _args : ArrayView[Expr],
+  values : Array[FormulaValue],
+  _ctx : CalcContext,
+) -> FormulaValue {
+  match values {
+    [v0] =>
+      match value_as_string(v0) {
+        Ok(text) => Number(Double::from_int(text.length()))
+        Err(err) => err
+      }
+    _ => Error(formula_error_value)
+  }
+}
+
+///|
+fn lenb_values(
+  _workbook : Workbook,
+  _sheet_name : String,
+  _name : String,
+  _args : ArrayView[Expr],
+  values : Array[FormulaValue],
+  _ctx : CalcContext,
+) -> FormulaValue {
+  match values {
+    [v0] =>
+      match value_as_string(v0) {
+        Ok(text) => Number(Double::from_int(dbcs_byte_length(text)))
+        Err(err) => err
+      }
+    _ => Error(formula_error_value)
+  }
+}
+
+///|
+fn lower_values(
+  _workbook : Workbook,
+  _sheet_name : String,
+  _name : String,
+  _args : ArrayView[Expr],
+  values : Array[FormulaValue],
+  _ctx : CalcContext,
+) -> FormulaValue {
+  match values {
+    [v0] =>
+      match value_as_string(v0) {
+        Ok(text) => String(text.to_lower())
+        Err(err) => err
+      }
+    _ => Error(formula_error_value)
+  }
+}
+
+///|
+fn upper_values(
+  _workbook : Workbook,
+  _sheet_name : String,
+  _name : String,
+  _args : ArrayView[Expr],
+  values : Array[FormulaValue],
+  _ctx : CalcContext,
+) -> FormulaValue {
+  match values {
+    [v0] =>
+      match value_as_string(v0) {
+        Ok(text) => String(text.to_upper())
+        Err(err) => err
+      }
+    _ => Error(formula_error_value)
+  }
+}
+
+///|
+fn proper_values(
+  _workbook : Workbook,
+  _sheet_name : String,
+  _name : String,
+  _args : ArrayView[Expr],
+  values : Array[FormulaValue],
+  _ctx : CalcContext,
+) -> FormulaValue {
+  match values {
+    [v0] =>
+      match value_as_string(v0) {
+        Ok(text) => String(proper_case(text))
+        Err(err) => err
+      }
+    _ => Error(formula_error_value)
+  }
+}
+
+///|
+fn dbcs_values(
+  workbook : Workbook,
+  _sheet_name : String,
+  _name : String,
+  _args : ArrayView[Expr],
+  values : Array[FormulaValue],
+  _ctx : CalcContext,
+) -> FormulaValue {
+  match values {
+    [v0] =>
+      match value_as_string(v0) {
+        Ok(text) =>
+          if dbcs_enabled(workbook) {
+            String(dbcs_convert(text))
           } else {
-            []
+            String(text)
           }
-          workday_intl_value(
-            start_serial,
-            days,
-            Number(1.0),
-            holidays,
-            use_1904_dates=ctx.use_1904_dates,
-          )
-        }
-        _ => Error(formula_error_value)
+        Err(err) => err
       }
-    "WORKDAY.INTL" =>
-      if values.length() >= 2 && values.length() <= 4 {
-        let start_serial = match
-          value_as_date_serial(values[0], use_1904_dates=ctx.use_1904_dates) {
-          Ok(value) => value
-          Err(err) => return err
-        }
-        let days = match value_as_number(values[1]) {
+    _ => Error(formula_error_value)
+  }
+}
+
+///|
+fn trim_values(
+  _workbook : Workbook,
+  _sheet_name : String,
+  _name : String,
+  _args : ArrayView[Expr],
+  values : Array[FormulaValue],
+  _ctx : CalcContext,
+) -> FormulaValue {
+  match values {
+    [v0] =>
+      match value_as_string(v0) {
+        Ok(text) => String(trim_excel_text(text))
+        Err(err) => err
+      }
+    _ => Error(formula_error_value)
+  }
+}
+
+///|
+fn left_values(
+  _workbook : Workbook,
+  _sheet_name : String,
+  _name : String,
+  _args : ArrayView[Expr],
+  values : Array[FormulaValue],
+  _ctx : CalcContext,
+) -> FormulaValue {
+  match values {
+    [v0] | [v0, _] => {
+      let text = match value_as_string(v0) {
+        Ok(text) => text
+        Err(err) => return err
+      }
+      let count = if values is [_, v1] {
+        match value_as_int(v1) {
           Ok(num) => num
           Err(err) => return err
         }
-        let weekend_value = if values.length() >= 3 {
-          values[2]
-        } else {
-          Number(1.0)
-        }
-        let holidays = if values.length() == 4 {
-          collect_holidays(values[3], use_1904_dates=ctx.use_1904_dates)
-        } else {
-          []
-        }
-        workday_intl_value(
-          start_serial,
-          days,
-          weekend_value,
-          holidays,
-          use_1904_dates=ctx.use_1904_dates,
-        )
       } else {
+        1
+      }
+      if count < 0 {
         Error(formula_error_value)
-      }
-    "NOW" =>
-      match values {
-        [] => {
-          let now_ms = @env.now()
-          let total_seconds = UInt64::to_double(now_ms) / 1000.0
-          let days = Double::floor(total_seconds / 86400.0)
-          let seconds_in_day = total_seconds - days * 86400.0
-          let epoch_serial = if ctx.use_1904_dates { 24107.0 } else { 25569.0 }
-          let serial = days + epoch_serial + seconds_in_day / 86400.0
-          Number(serial)
-        }
-        _ => Error(formula_error_value)
-      }
-    "TODAY" =>
-      match values {
-        [] => {
-          let now_ms = @env.now()
-          let total_seconds = UInt64::to_double(now_ms) / 1000.0
-          let days = Double::floor(total_seconds / 86400.0)
-          let epoch_serial = if ctx.use_1904_dates { 24107.0 } else { 25569.0 }
-          Number(days + epoch_serial)
-        }
-        _ => Error(formula_error_value)
-      }
-    "YEAR" =>
-      match values {
-        [v0] =>
-          match excel_serial_date_parts(v0, use_1904_dates=ctx.use_1904_dates) {
-            Ok((year, _, _)) => Number(Double::from_int(year))
-            Err(err) => err
-          }
-        _ => Error(formula_error_value)
-      }
-    "MONTH" =>
-      match values {
-        [v0] =>
-          match excel_serial_date_parts(v0, use_1904_dates=ctx.use_1904_dates) {
-            Ok((_, month, _)) => Number(Double::from_int(month))
-            Err(err) => err
-          }
-        _ => Error(formula_error_value)
-      }
-    "DAY" =>
-      match values {
-        [v0] =>
-          match excel_serial_date_parts(v0, use_1904_dates=ctx.use_1904_dates) {
-            Ok((_, _, day)) => Number(Double::from_int(day))
-            Err(err) => err
-          }
-        _ => Error(formula_error_value)
-      }
-    "HOUR" =>
-      match values {
-        [v0] =>
-          match excel_serial_parts(v0, use_1904_dates=ctx.use_1904_dates) {
-            Ok((_, _, _, hour, _, _)) => Number(Double::from_int(hour))
-            Err(err) => err
-          }
-        _ => Error(formula_error_value)
-      }
-    "MINUTE" =>
-      match values {
-        [v0] =>
-          match excel_serial_parts(v0, use_1904_dates=ctx.use_1904_dates) {
-            Ok((_, _, _, _, minute, _)) => Number(Double::from_int(minute))
-            Err(err) => err
-          }
-        _ => Error(formula_error_value)
-      }
-    "SECOND" =>
-      match values {
-        [v0] =>
-          match excel_serial_parts(v0, use_1904_dates=ctx.use_1904_dates) {
-            Ok((_, _, _, _, _, second)) => Number(Double::from_int(second))
-            Err(err) => err
-          }
-        _ => Error(formula_error_value)
-      }
-    "INDEX" =>
-      match args {
-        [a0, _] | [a0, _, _] => {
-          let range = eval_range_expr(workbook, sheet_name, a0, ctx)
-          let row_num = match value_as_int(values[1]) {
-            Ok(num) => num
-            Err(err) => return err
-          }
-          let col_num = if args is [_, _, _] {
-            match value_as_int(values[2]) {
-              Ok(num) => num
-              Err(err) => return err
-            }
-          } else {
-            1
-          }
-          if row_num <= 0 || col_num <= 0 {
-            Error(formula_error_value)
-          } else if row_num > range.rows || col_num > range.cols {
-            Error(formula_error_ref)
-          } else {
-            let index = (row_num - 1) * range.cols + (col_num - 1)
-            range.values[index]
-          }
-        }
-        _ => Error(formula_error_value)
-      }
-    "MATCH" =>
-      match args {
-        [_, a1] | [_, a1, _] => {
-          let lookup = values[0]
-          let range = eval_range_expr(workbook, sheet_name, a1, ctx)
-          let match_type = if args is [_, _, _] {
-            match value_as_int(values[2]) {
-              Ok(num) => num
-              Err(err) => return err
-            }
-          } else {
-            1
-          }
-          match_range_value(lookup, range, match_type)
-        }
-        _ => Error(formula_error_value)
-      }
-    "VLOOKUP" =>
-      match args {
-        [_, a1, _] | [_, a1, _, _] => {
-          let lookup = values[0]
-          let table = eval_range_expr(workbook, sheet_name, a1, ctx)
-          let col_index = match value_as_int(values[2]) {
-            Ok(num) => num
-            Err(err) => return err
-          }
-          let range_lookup = if args is [_, _, _, _] {
-            match lookup_range_flag(values[3]) {
-              Ok(flag) => flag
-              Err(err) => return err
-            }
-          } else {
-            true
-          }
-          vlookup_value(lookup, table, col_index, range_lookup)
-        }
-        _ => Error(formula_error_value)
-      }
-    "HLOOKUP" =>
-      match args {
-        [_, a1, _] | [_, a1, _, _] => {
-          let lookup = values[0]
-          let table = eval_range_expr(workbook, sheet_name, a1, ctx)
-          let row_index = match value_as_int(values[2]) {
-            Ok(num) => num
-            Err(err) => return err
-          }
-          let range_lookup = if args is [_, _, _, _] {
-            match lookup_range_flag(values[3]) {
-              Ok(flag) => flag
-              Err(err) => return err
-            }
-          } else {
-            true
-          }
-          hlookup_value(lookup, table, row_index, range_lookup)
-        }
-        _ => Error(formula_error_value)
-      }
-    "LOOKUP" =>
-      if args.length() == 2 || args.length() == 3 {
-        let lookup = values[0]
-        if args.length() == 2 {
-          let array_range = range_from_expr_or_value(
-            workbook,
-            sheet_name,
-            args[1],
-            values[1],
-            ctx,
-          )
-          if array_range.rows == 0 || array_range.cols == 0 {
-            return Error(formula_error_value)
-          }
-          if array_range.rows == 1 || array_range.cols == 1 {
-            let lookup_vec = if array_range.rows == 1 {
-              range_row_required(array_range, 0)
-            } else {
-              range_column_required(array_range, 0)
-            }
-            let idx = match lookup_best_index(lookup, lookup_vec) {
-              Ok(value) => value
-              Err(err) => return err
-            }
-            match idx {
-              Some(i) => lookup_vec[i]
-              None => Error(formula_error_na)
-            }
-          } else {
-            let use_cols = array_range.rows >= array_range.cols
-            let lookup_list = if use_cols {
-              range_column_required(array_range, 0)
-            } else {
-              range_row_required(array_range, 0)
-            }
-            let result_list = if use_cols {
-              range_column_required(array_range, array_range.cols - 1)
-            } else {
-              range_row_required(array_range, array_range.rows - 1)
-            }
-            let idx = match lookup_best_index(lookup, lookup_list) {
-              Ok(value) => value
-              Err(err) => return err
-            }
-            match idx {
-              Some(i) => result_list[i]
-              None => Error(formula_error_na)
-            }
-          }
-        } else {
-          let lookup_range = range_from_expr_or_value(
-            workbook,
-            sheet_name,
-            args[1],
-            values[1],
-            ctx,
-          )
-          let result_range = range_from_expr_or_value(
-            workbook,
-            sheet_name,
-            args[2],
-            values[2],
-            ctx,
-          )
-          if lookup_range.rows == 0 ||
-            lookup_range.cols == 0 ||
-            result_range.rows == 0 ||
-            result_range.cols == 0 {
-            return Error(formula_error_value)
-          }
-          let lookup_list = match range_vector(lookup_range) {
-            Some(list) => list
-            None => return Error(formula_error_na)
-          }
-          let result_list = match range_vector(result_range) {
-            Some(list) => list
-            None => return Error(formula_error_na)
-          }
-          if lookup_list.length() != result_list.length() {
-            return Error(formula_error_na)
-          }
-          let idx = match lookup_best_index(lookup, lookup_list) {
-            Ok(value) => value
-            Err(err) => return err
-          }
-          match idx {
-            Some(i) => result_list[i]
-            None => Error(formula_error_na)
-          }
-        }
       } else {
-        Error(formula_error_value)
+        let len = text.length()
+        let end = if count > len { len } else { count }
+        let start = 0
+        String(text.unsafe_substring(start~, end~))
       }
-    "XLOOKUP" | "_XLFN.XLOOKUP" =>
-      if args.length() >= 3 && args.length() <= 6 {
-        let lookup = values[0]
-        let lookup_range = range_from_expr_or_value(
-          workbook,
-          sheet_name,
-          args[1],
-          values[1],
-          ctx,
-        )
-        let return_range = range_from_expr_or_value(
-          workbook,
-          sheet_name,
-          args[2],
-          values[2],
-          ctx,
-        )
-        let if_not_found = if args.length() >= 4 {
-          values[3]
-        } else {
-          Error(formula_error_na)
-        }
-        let match_mode = if args.length() >= 5 {
-          match value_as_int(values[4]) {
-            Ok(num) => num
-            Err(err) => return err
-          }
-        } else {
-          0
-        }
-        let search_mode = if args.length() >= 6 {
-          match value_as_int(values[5]) {
-            Ok(num) => num
-            Err(err) => return err
-          }
-        } else {
-          1
-        }
-        if match_mode != -1 &&
-          match_mode != 0 &&
-          match_mode != 1 &&
-          match_mode != 2 {
-          return Error(formula_error_value)
-        }
-        if search_mode != 1 &&
-          search_mode != -1 &&
-          search_mode != 2 &&
-          search_mode != -2 {
-          return Error(formula_error_value)
-        }
-        let is_row = lookup_range.rows == 1
-        let is_col = lookup_range.cols == 1
-        if !is_row && !is_col {
-          return Error(formula_error_value)
-        }
-        let lookup_values = if is_row {
-          range_row_required(lookup_range, 0)
-        } else {
-          range_column_required(lookup_range, 0)
-        }
-        let match_idx = match
-          xlookup_find_index(lookup, lookup_values, match_mode, search_mode) {
-          Ok(value) => value
-          Err(err) => return err
-        }
-        let idx = match match_idx {
-          Some(value) => value
-          None => return if_not_found
-        }
-        if is_row {
-          if return_range.cols != lookup_range.cols {
-            return Error(formula_error_value)
-          }
-          if return_range.rows == 1 {
-            return_range.values[idx]
-          } else {
-            List(range_column_required(return_range, idx))
-          }
-        } else {
-          if return_range.rows != lookup_range.rows {
-            return Error(formula_error_value)
-          }
-          if return_range.cols == 1 {
-            return_range.values[idx * return_range.cols]
-          } else {
-            List(range_row_required(return_range, idx))
-          }
-        }
-      } else {
-        Error(formula_error_value)
+    }
+    _ => Error(formula_error_value)
+  }
+}
+
+///|
+fn leftb_values(
+  _workbook : Workbook,
+  _sheet_name : String,
+  _name : String,
+  _args : ArrayView[Expr],
+  values : Array[FormulaValue],
+  _ctx : CalcContext,
+) -> FormulaValue {
+  match values {
+    [v0] | [v0, _] => {
+      let text = match value_as_string(v0) {
+        Ok(text) => text
+        Err(err) => return err
       }
-    "ANCHORARRAY" | "_XLFN.ANCHORARRAY" =>
-      anchorarray_values(workbook, sheet_name, args, values)
-    "ADDRESS" =>
-      if values.length() >= 2 && values.length() <= 5 {
-        let row_num = match value_as_int(values[0]) {
+      let count = if values is [_, v1] {
+        match value_as_int(v1) {
           Ok(num) => num
           Err(err) => return err
         }
-        let col_num = match value_as_int(values[1]) {
+      } else {
+        1
+      }
+      if count < 0 {
+        Error(formula_error_value)
+      } else {
+        let len = dbcs_byte_length(text)
+        if count >= len {
+          String(text)
+        } else {
+          String(dbcs_byte_range(text, 1, count))
+        }
+      }
+    }
+    _ => Error(formula_error_value)
+  }
+}
+
+///|
+fn right_values(
+  _workbook : Workbook,
+  _sheet_name : String,
+  _name : String,
+  _args : ArrayView[Expr],
+  values : Array[FormulaValue],
+  _ctx : CalcContext,
+) -> FormulaValue {
+  match values {
+    [v0] | [v0, _] => {
+      let text = match value_as_string(v0) {
+        Ok(text) => text
+        Err(err) => return err
+      }
+      let count = if values is [_, v1] {
+        match value_as_int(v1) {
           Ok(num) => num
           Err(err) => return err
         }
-        if row_num <= 0 ||
-          row_num > cell_ref_max_rows ||
-          col_num <= 0 ||
-          col_num > cell_ref_max_cols {
-          return Error(formula_error_value)
-        }
-        let abs_num = if values.length() >= 3 {
-          match value_as_int(values[2]) {
-            Ok(num) => num
-            Err(err) => return err
-          }
-        } else {
-          1
-        }
-        if abs_num < 1 || abs_num > 4 {
-          return Error(formula_error_value)
-        }
-        let a1 = if values.length() >= 4 {
-          match value_as_bool(values[3]) {
-            Ok(flag) => flag
-            Err(err) => return err
-          }
-        } else {
-          true
-        }
-        let sheet_text = if values.length() == 5 {
-          match value_as_string(values[4]) {
-            Ok(text) => text
-            Err(err) => return err
-          }
-        } else {
-          ""
-        }
-        let address = if a1 {
-          address_a1(row_num, col_num, abs_num)
-        } else {
-          address_r1c1(row_num, col_num, abs_num)
-        }
-        let text = if sheet_text == "" {
-          address
-        } else {
-          sheet_text + "!" + address
-        }
-        String(text)
       } else {
+        1
+      }
+      if count < 0 {
         Error(formula_error_value)
-      }
-    "INDIRECT" =>
-      match values {
-        [v0] | [v0, _] => {
-          let ref_text = match value_as_string(v0) {
-            Ok(text) => text
-            Err(err) => return err
-          }
-          let a1 = if values is [_, v1] {
-            match value_as_bool(v1) {
-              Ok(flag) => flag
-              Err(err) => return err
-            }
-          } else {
-            true
-          }
-          let (sheet_text, ref_part) = split_sheet_ref(ref_text)
-          let target_sheet = if sheet_text == "" {
-            sheet_name
-          } else {
-            sheet_text
-          }
-          if a1 {
-            match ref_part.find(":") {
-              Some(idx) => {
-                let start_token = ref_part.unsafe_substring(start=0, end=idx)
-                let end_token = ref_part.unsafe_substring(
-                  start=idx + 1,
-                  end=ref_part.length(),
-                )
-                let (start_ref, _start_end) = parse_range_ref_token(start_token) catch {
-                  _ => return Error(formula_error_ref)
-                }
-                let (_end_start, end_ref) = parse_range_ref_token(end_token) catch {
-                  _ => return Error(formula_error_ref)
-                }
-                List(
-                  collect_range_values(
-                    workbook, target_sheet, start_ref, end_ref, ctx,
-                  ),
-                )
-              }
-              None =>
-                match parse_cell_ref_token(ref_part) {
-                  Some(reference) =>
-                    resolve_cell_value(workbook, target_sheet, reference, ctx)
-                  None => {
-                    let (start_ref, end_ref) = parse_range_ref_token(ref_part) catch {
-                      _ => return Error(formula_error_ref)
-                    }
-                    List(
-                      collect_range_values(
-                        workbook, target_sheet, start_ref, end_ref, ctx,
-                      ),
-                    )
-                  }
-                }
-            }
-          } else {
-            match ref_part.find(":") {
-              Some(idx) => {
-                let start_token = ref_part.unsafe_substring(start=0, end=idx)
-                let end_token = ref_part.unsafe_substring(
-                  start=idx + 1,
-                  end=ref_part.length(),
-                )
-                let (row1, col1) = match parse_r1c1_token(start_token) {
-                  Some(value) => value
-                  None => return Error(formula_error_ref)
-                }
-                let (row2, col2) = match parse_r1c1_token(end_token) {
-                  Some(value) => value
-                  None => return Error(formula_error_ref)
-                }
-                let start_ref = cell_ref_from(row1, col1) catch {
-                  _ => return Error(formula_error_ref)
-                }
-                let end_ref = cell_ref_from(row2, col2) catch {
-                  _ => return Error(formula_error_ref)
-                }
-                List(
-                  collect_range_values(
-                    workbook, target_sheet, start_ref, end_ref, ctx,
-                  ),
-                )
-              }
-              None =>
-                match parse_r1c1_token(ref_part) {
-                  Some((row, col)) => {
-                    let reference = cell_ref_from(row, col) catch {
-                      _ => return Error(formula_error_ref)
-                    }
-                    resolve_cell_value(workbook, target_sheet, reference, ctx)
-                  }
-                  None => Error(formula_error_ref)
-                }
-            }
-          }
-        }
-        _ => Error(formula_error_value)
-      }
-    "CHAR" =>
-      match values {
-        [v0] =>
-          match value_as_number(v0) {
-            Ok(num) => {
-              let code = Double::to_int(trunc_double(num))
-              if code < 0 || code > max_field_length {
-                Error(formula_error_value)
-              } else {
-                String(char_from_code(code))
-              }
-            }
-            Err(err) => err
-          }
-        _ => Error(formula_error_value)
-      }
-    "UNICHAR" =>
-      match values {
-        [v0] =>
-          match value_as_number(v0) {
-            Ok(num) =>
-              if num <= 0.0 || num > 55295.0 {
-                Error(formula_error_value)
-              } else {
-                let code = Double::to_int(trunc_double(num))
-                String(char_from_code(code))
-              }
-            Err(err) => err
-          }
-        _ => Error(formula_error_value)
-      }
-    "CLEAN" =>
-      match values {
-        [v0] => clean_text_value(v0)
-        _ => Error(formula_error_value)
-      }
-    "ENCODEURL" =>
-      match values {
-        [v0] => encode_url_value(v0)
-        _ => Error(formula_error_value)
-      }
-    "BAHTTEXT" =>
-      match values {
-        [_] => bahttext_values(values)
-        _ => Error(formula_error_value)
-      }
-    "CODE" =>
-      match values {
-        [v0] => code_value("CODE", v0)
-        _ => Error(formula_error_value)
-      }
-    "UNICODE" =>
-      match values {
-        [v0] => code_value("UNICODE", v0)
-        _ => Error(formula_error_value)
-      }
-    "HYPERLINK" =>
-      if values.length() == 1 || values.length() == 2 {
-        match value_as_string(values[values.length() - 1]) {
-          Ok(text) => String(text)
-          Err(err) => err
-        }
       } else {
-        Error(formula_error_value)
+        let len = text.length()
+        let start = if count >= len { 0 } else { len - count }
+        let end = len
+        String(text.unsafe_substring(start~, end~))
       }
-    "DISPIMG" | "_XLFN.DISPIMG" =>
-      match values {
-        [v0, _] => v0
-        _ => Error(formula_error_value)
+    }
+    _ => Error(formula_error_value)
+  }
+}
+
+///|
+fn rightb_values(
+  _workbook : Workbook,
+  _sheet_name : String,
+  _name : String,
+  _args : ArrayView[Expr],
+  values : Array[FormulaValue],
+  _ctx : CalcContext,
+) -> FormulaValue {
+  match values {
+    [v0] | [v0, _] => {
+      let text = match value_as_string(v0) {
+        Ok(text) => text
+        Err(err) => return err
       }
-    "CHOOSE" =>
-      if values.length() >= 2 {
-        let index_text = match value_as_string(values[0]) {
-          Ok(text) => text
+      let count = if values is [_, v1] {
+        match value_as_int(v1) {
+          Ok(num) => num
           Err(err) => return err
         }
-        let idx = @string.parse_int(index_text, base=10) catch {
-          _ => return Error(formula_error_value)
+      } else {
+        1
+      }
+      if count < 0 {
+        Error(formula_error_value)
+      } else {
+        let len = dbcs_byte_length(text)
+        if count >= len {
+          String(text)
+        } else {
+          String(dbcs_byte_range(text, len - count + 1, count))
         }
-        if values.length() <= idx {
+      }
+    }
+    _ => Error(formula_error_value)
+  }
+}
+
+///|
+fn mid_values(
+  _workbook : Workbook,
+  _sheet_name : String,
+  _name : String,
+  _args : ArrayView[Expr],
+  values : Array[FormulaValue],
+  _ctx : CalcContext,
+) -> FormulaValue {
+  match values {
+    [v0, v1, v2] => {
+      let text = match value_as_string(v0) {
+        Ok(text) => text
+        Err(err) => return err
+      }
+      let start_num = match value_as_int(v1) {
+        Ok(num) => num
+        Err(err) => return err
+      }
+      let count = match value_as_int(v2) {
+        Ok(num) => num
+        Err(err) => return err
+      }
+      if start_num <= 0 || count < 0 {
+        Error(formula_error_value)
+      } else {
+        let len = text.length()
+        if start_num > len {
+          String("")
+        } else {
+          let start = start_num - 1
+          let mut end = start + count
+          if end > len {
+            end = len
+          }
+          String(text.unsafe_substring(start~, end~))
+        }
+      }
+    }
+    _ => Error(formula_error_value)
+  }
+}
+
+///|
+fn midb_values(
+  _workbook : Workbook,
+  _sheet_name : String,
+  _name : String,
+  _args : ArrayView[Expr],
+  values : Array[FormulaValue],
+  _ctx : CalcContext,
+) -> FormulaValue {
+  match values {
+    [v0, v1, v2] => {
+      let text = match value_as_string(v0) {
+        Ok(text) => text
+        Err(err) => return err
+      }
+      let start_num = match value_as_int(v1) {
+        Ok(num) => num
+        Err(err) => return err
+      }
+      let count = match value_as_int(v2) {
+        Ok(num) => num
+        Err(err) => return err
+      }
+      if start_num <= 0 || count < 0 {
+        Error(formula_error_value)
+      } else if count == 0 {
+        String("")
+      } else if start_num > dbcs_byte_length(text) {
+        String("")
+      } else {
+        String(dbcs_byte_range(text, start_num, count))
+      }
+    }
+    _ => Error(formula_error_value)
+  }
+}
+
+///|
+fn rept_values(
+  _workbook : Workbook,
+  _sheet_name : String,
+  _name : String,
+  _args : ArrayView[Expr],
+  values : Array[FormulaValue],
+  _ctx : CalcContext,
+) -> FormulaValue {
+  match values {
+    [v0, v1] => {
+      let text = match value_as_string(v0) {
+        Ok(text) => text
+        Err(err) => return err
+      }
+      let times = match value_as_int(v1) {
+        Ok(num) => num
+        Err(err) => return err
+      }
+      if times < 0 {
+        Error(formula_error_value)
+      } else if times == 0 || text.length() == 0 {
+        String("")
+      } else if text.length() > max_cell_chars / times {
+        Error(formula_error_value)
+      } else {
+        String(text.repeat(times))
+      }
+    }
+    _ => Error(formula_error_value)
+  }
+}
+
+///|
+fn replace_values(
+  _workbook : Workbook,
+  _sheet_name : String,
+  _name : String,
+  _args : ArrayView[Expr],
+  values : Array[FormulaValue],
+  _ctx : CalcContext,
+) -> FormulaValue {
+  match values {
+    [v0, v1, v2, v3] => {
+      let text = match value_as_string(v0) {
+        Ok(text) => text
+        Err(err) => return err
+      }
+      let start_num = match value_as_int(v1) {
+        Ok(num) => num
+        Err(err) => return err
+      }
+      let count = match value_as_int(v2) {
+        Ok(num) => num
+        Err(err) => return err
+      }
+      let new_text = match value_as_string(v3) {
+        Ok(text) => text
+        Err(err) => return err
+      }
+      if start_num <= 0 || count < 0 {
+        Error(formula_error_value)
+      } else {
+        let len = text.length()
+        let mut start = start_num - 1
+        if start > len {
+          start = len
+        }
+        let mut end = start + count
+        if end > len {
+          end = len
+        }
+        let sb = StringBuilder()
+        sb.write_view(text.unsafe_substring(start=0, end=start))
+        sb.write_view(new_text)
+        sb.write_view(text.unsafe_substring(start=end, end=len))
+        String(sb.to_string())
+      }
+    }
+    _ => Error(formula_error_value)
+  }
+}
+
+///|
+fn replaceb_values(
+  _workbook : Workbook,
+  _sheet_name : String,
+  _name : String,
+  _args : ArrayView[Expr],
+  values : Array[FormulaValue],
+  _ctx : CalcContext,
+) -> FormulaValue {
+  match values {
+    [v0, v1, v2, v3] => {
+      let text = match value_as_string(v0) {
+        Ok(text) => text
+        Err(err) => return err
+      }
+      let start_num = match value_as_int(v1) {
+        Ok(num) => num
+        Err(err) => return err
+      }
+      let count = match value_as_int(v2) {
+        Ok(num) => num
+        Err(err) => return err
+      }
+      let new_text = match value_as_string(v3) {
+        Ok(text) => text
+        Err(err) => return err
+      }
+      if start_num <= 0 || count < 0 {
+        Error(formula_error_value)
+      } else {
+        let len = dbcs_byte_length(text)
+        let prefix_count = if start_num - 1 < len { start_num - 1 } else { len }
+        let removed_end = start_num + count - 1
+        let suffix_start = if removed_end < len {
+          removed_end + 1
+        } else {
+          len + 1
+        }
+        let sb = StringBuilder()
+        sb.write_view(dbcs_byte_range(text, 1, prefix_count))
+        sb.write_view(new_text)
+        // suffix runs from just past the replaced range to end of string
+        sb.write_view(dbcs_byte_range(text, suffix_start, len))
+        String(sb.to_string())
+      }
+    }
+    _ => Error(formula_error_value)
+  }
+}
+
+///|
+fn substitute_values(
+  _workbook : Workbook,
+  _sheet_name : String,
+  _name : String,
+  _args : ArrayView[Expr],
+  values : Array[FormulaValue],
+  _ctx : CalcContext,
+) -> FormulaValue {
+  match values {
+    [v0, v1, v2] | [v0, v1, v2, _] => {
+      let text = match value_as_string(v0) {
+        Ok(text) => text
+        Err(err) => return err
+      }
+      let old_text = match value_as_string(v1) {
+        Ok(text) => text
+        Err(err) => return err
+      }
+      let new_text = match value_as_string(v2) {
+        Ok(text) => text
+        Err(err) => return err
+      }
+      if old_text.length() == 0 {
+        Error(formula_error_value)
+      } else if values is [_, _, _, v3] {
+        let instance = match value_as_int(v3) {
+          Ok(num) => num
+          Err(err) => return err
+        }
+        if instance <= 0 {
           Error(formula_error_value)
-        } else if idx <= 0 {
-          values[0]
         } else {
-          values[idx]
+          let mut index = 0
+          let mut count = 0
+          let len = text.length()
+          let pattern_len = old_text.length()
+          while true {
+            match find_substring_from(text, old_text, index) {
+              Some(found) => {
+                count = count + 1
+                if count == instance {
+                  let sb = StringBuilder()
+                  sb.write_view(text.unsafe_substring(start=0, end=found))
+                  sb.write_view(new_text)
+                  let tail_start = found + pattern_len
+                  sb.write_view(
+                    text.unsafe_substring(start=tail_start, end=len),
+                  )
+                  return String(sb.to_string())
+                }
+                index = found + pattern_len
+              }
+              None => break
+            }
+          }
+          String(text)
         }
       } else {
-        Error(formula_error_value)
-      }
-    "CONCAT" | "CONCATENATE" => concat_values(values)
-    "IF" =>
-      match values {
-        [v0] =>
-          match value_as_bool(v0) {
-            Ok(cond) => Bool(cond)
-            Err(err) => err
-          }
-        [v0, v1] =>
-          match value_as_bool(v0) {
-            Ok(cond) => if cond { v1 } else { Bool(false) }
-            Err(err) => err
-          }
-        [v0, v1, v2] =>
-          match value_as_bool(v0) {
-            Ok(cond) => if cond { v1 } else { v2 }
-            Err(err) => err
-          }
-        _ => Error(formula_error_value)
-      }
-    "IFERROR" =>
-      match values {
-        [v0, v1] =>
-          match normalize_scalar(v0) {
-            Error(_) => v1
-            Empty => Number(0.0)
-            _ => v0
-          }
-        _ => Error(formula_error_value)
-      }
-    "IFNA" =>
-      match values {
-        [v0, v1] =>
-          match normalize_scalar(v0) {
-            Error(err) => if err == formula_error_na { v1 } else { v0 }
-            _ => v0
-          }
-        _ => Error(formula_error_value)
-      }
-    "IFS" =>
-      if values.length() < 2 || values.length() % 2 != 0 {
-        Error(formula_error_value)
-      } else {
-        for i in 0..<(values.length() / 2) {
-          match value_as_bool(values[i * 2]) {
-            Ok(flag) => if flag { return values[i * 2 + 1] }
-            Err(err) => return err
-          }
-        }
-        Error(formula_error_na)
-      }
-    "SWITCH" =>
-      if values.length() < 3 {
-        Error(formula_error_value)
-      } else {
-        let target = values[0]
-        let arg_count = values.length() - 1
-        let switch_count = arg_count / 2
-        let has_default = arg_count % 2 != 0
-        let mut result = if has_default {
-          values[values.length() - 1]
-        } else {
-          Error(formula_error_na)
-        }
-        for i in 0..<switch_count {
-          let match_value = values[1 + i * 2]
-          match compare_values(target, match_value) {
-            Ok(0) => {
-              result = values[1 + i * 2 + 1]
+        let mut index = 0
+        let len = text.length()
+        let pattern_len = old_text.length()
+        let sb = StringBuilder()
+        while true {
+          match find_substring_from(text, old_text, index) {
+            Some(found) => {
+              sb.write_view(text.unsafe_substring(start=index, end=found))
+              sb.write_view(new_text)
+              index = found + pattern_len
+            }
+            None => {
+              sb.write_view(text.unsafe_substring(start=index, end=len))
               break
             }
-            Ok(_) => ()
-            Err(err) => return err
           }
         }
-        result
+        String(sb.to_string())
       }
-    "ISBLANK" =>
-      match values {
-        [v0] =>
-          match normalize_scalar(v0) {
-            Empty => Bool(true)
-            _ => Bool(false)
+    }
+    _ => Error(formula_error_value)
+  }
+}
+
+///|
+fn find_values(
+  _workbook : Workbook,
+  _sheet_name : String,
+  _name : String,
+  _args : ArrayView[Expr],
+  values : Array[FormulaValue],
+  _ctx : CalcContext,
+) -> FormulaValue {
+  match values {
+    [v0, v1] | [v0, v1, _] => {
+      let find_text = match value_as_string(v0) {
+        Ok(text) => text
+        Err(err) => return err
+      }
+      let within_text = match value_as_string(v1) {
+        Ok(text) => text
+        Err(err) => return err
+      }
+      let start_num = if values is [_, _, v2] {
+        match value_as_int(v2) {
+          Ok(num) => num
+          Err(err) => return err
+        }
+      } else {
+        1
+      }
+      if start_num <= 0 {
+        Error(formula_error_value)
+      } else {
+        let start = start_num - 1
+        let len = within_text.length()
+        if start > len {
+          Error(formula_error_value)
+        } else if find_text.length() == 0 {
+          Number(Double::from_int(start_num))
+        } else {
+          match find_substring_from(within_text, find_text, start) {
+            Some(idx) => Number(Double::from_int(idx + 1))
+            None => Error(formula_error_value)
           }
-        _ => Error(formula_error_value)
+        }
       }
-    "ISERR" =>
-      match values {
-        [v0] =>
-          match normalize_scalar(v0) {
-            Error(err) =>
-              Bool(is_known_error_code(err) && err != formula_error_na)
-            _ => Bool(false)
+    }
+    _ => Error(formula_error_value)
+  }
+}
+
+///|
+fn findb_values(
+  _workbook : Workbook,
+  _sheet_name : String,
+  _name : String,
+  _args : ArrayView[Expr],
+  values : Array[FormulaValue],
+  _ctx : CalcContext,
+) -> FormulaValue {
+  match values {
+    [v0, v1] | [v0, v1, _] => {
+      let find_text = match value_as_string(v0) {
+        Ok(text) => text
+        Err(err) => return err
+      }
+      let within_text = match value_as_string(v1) {
+        Ok(text) => text
+        Err(err) => return err
+      }
+      let start_num = if values is [_, _, v2] {
+        match value_as_int(v2) {
+          Ok(num) => num
+          Err(err) => return err
+        }
+      } else {
+        1
+      }
+      match find_dbcs(within_text, find_text, start_num, false) {
+        Some(value) => Number(Double::from_int(value))
+        None => Error(formula_error_value)
+      }
+    }
+    _ => Error(formula_error_value)
+  }
+}
+
+///|
+fn search_values(
+  _workbook : Workbook,
+  _sheet_name : String,
+  _name : String,
+  _args : ArrayView[Expr],
+  values : Array[FormulaValue],
+  _ctx : CalcContext,
+) -> FormulaValue {
+  match values {
+    [v0, v1] | [v0, v1, _] => {
+      let find_text = match value_as_string(v0) {
+        Ok(text) => text
+        Err(err) => return err
+      }
+      let within_text = match value_as_string(v1) {
+        Ok(text) => text
+        Err(err) => return err
+      }
+      let start_num = if values is [_, _, v2] {
+        match value_as_int(v2) {
+          Ok(num) => num
+          Err(err) => return err
+        }
+      } else {
+        1
+      }
+      if start_num <= 0 {
+        Error(formula_error_value)
+      } else {
+        let start = start_num - 1
+        let lower_text = within_text.to_lower()
+        let lower_find = find_text.to_lower()
+        let len = lower_text.length()
+        if start > len {
+          Error(formula_error_value)
+        } else if lower_find.length() == 0 {
+          Number(Double::from_int(start_num))
+        } else {
+          match wildcard_find(lower_text, lower_find, start) {
+            Some(idx) => Number(Double::from_int(idx + 1))
+            None => Error(formula_error_value)
           }
-        _ => Error(formula_error_value)
+        }
       }
-    "ISEVEN" =>
-      match values {
-        [v0] =>
-          match normalize_scalar(v0) {
-            Empty => Bool(true)
-            _ =>
-              match value_as_number(v0) {
-                Ok(num) => {
-                  let even = if num == 1.0 {
-                    false
-                  } else {
-                    num == num / 2.0 * 2.0
-                  }
-                  Bool(even)
+    }
+    _ => Error(formula_error_value)
+  }
+}
+
+///|
+fn searchb_values(
+  _workbook : Workbook,
+  _sheet_name : String,
+  _name : String,
+  _args : ArrayView[Expr],
+  values : Array[FormulaValue],
+  _ctx : CalcContext,
+) -> FormulaValue {
+  match values {
+    [v0, v1] | [v0, v1, _] => {
+      let find_text = match value_as_string(v0) {
+        Ok(text) => text
+        Err(err) => return err
+      }
+      let within_text = match value_as_string(v1) {
+        Ok(text) => text
+        Err(err) => return err
+      }
+      let start_num = if values is [_, _, v2] {
+        match value_as_int(v2) {
+          Ok(num) => num
+          Err(err) => return err
+        }
+      } else {
+        1
+      }
+      let lower_find = find_text.to_lower()
+      let lower_text = within_text.to_lower()
+      match find_dbcs(lower_text, lower_find, start_num, true) {
+        Some(value) => Number(Double::from_int(value))
+        None => Error(formula_error_value)
+      }
+    }
+    _ => Error(formula_error_value)
+  }
+}
+
+///|
+fn exact_values(
+  _workbook : Workbook,
+  _sheet_name : String,
+  _name : String,
+  _args : ArrayView[Expr],
+  values : Array[FormulaValue],
+  _ctx : CalcContext,
+) -> FormulaValue {
+  match values {
+    [v0, v1] => {
+      let left = match value_as_string(v0) {
+        Ok(text) => text
+        Err(err) => return err
+      }
+      let right = match value_as_string(v1) {
+        Ok(text) => text
+        Err(err) => return err
+      }
+      Bool(left == right)
+    }
+    _ => Error(formula_error_value)
+  }
+}
+
+///|
+fn fixed_values(
+  _workbook : Workbook,
+  _sheet_name : String,
+  _name : String,
+  _args : ArrayView[Expr],
+  values : Array[FormulaValue],
+  _ctx : CalcContext,
+) -> FormulaValue {
+  if values.length() >= 1 && values.length() <= 3 {
+    let number = match value_as_number(values[0]) {
+      Ok(num) => num
+      Err(err) => return err
+    }
+    let mut decimals = if values.length() == 1 {
+      decimal_places_from_text(formula_value_string(values[0]))
+    } else {
+      match value_as_int(values[1]) {
+        Ok(num) => num
+        Err(err) => return err
+      }
+    }
+    if decimals < 0 {
+      decimals = 0
+    }
+    let no_commas = if values.length() == 3 {
+      match value_as_bool(values[2]) {
+        Ok(flag) => flag
+        Err(err) => return err
+      }
+    } else {
+      false
+    }
+    String(format_fixed_number(number, decimals, !no_commas, 1))
+  } else {
+    Error(formula_error_value)
+  }
+}
+
+///|
+fn value_values(
+  _workbook : Workbook,
+  _sheet_name : String,
+  _name : String,
+  _args : ArrayView[Expr],
+  values : Array[FormulaValue],
+  _ctx : CalcContext,
+) -> FormulaValue {
+  match values {
+    [v0] =>
+      match value_as_number_text(v0) {
+        Ok(num) => Number(num)
+        Err(err) => err
+      }
+    _ => Error(formula_error_value)
+  }
+}
+
+///|
+fn valuetotext_values(
+  _workbook : Workbook,
+  _sheet_name : String,
+  _name : String,
+  _args : ArrayView[Expr],
+  values : Array[FormulaValue],
+  _ctx : CalcContext,
+) -> FormulaValue {
+  match values {
+    [v0] | [v0, _] => {
+      let format = if values is [_, v1] {
+        match value_as_int(v1) {
+          Ok(num) => num
+          Err(err) => return err
+        }
+      } else {
+        0
+      }
+      if format != 0 && format != 1 {
+        Error(formula_error_value)
+      } else {
+        let text = formula_value_string(v0)
+        match value_as_number(v0) {
+          Ok(_) => String(text)
+          Err(_) =>
+            if format == 1 {
+              String("\"" + text + "\"")
+            } else {
+              String(text)
+            }
+        }
+      }
+    }
+    _ => Error(formula_error_value)
+  }
+}
+
+///|
+fn text_values(
+  _workbook : Workbook,
+  _sheet_name : String,
+  _name : String,
+  _args : ArrayView[Expr],
+  values : Array[FormulaValue],
+  ctx : CalcContext,
+) -> FormulaValue {
+  match values {
+    [v0, v1] => {
+      let format_text = match value_as_string(v1) {
+        Ok(text) => text
+        Err(err) => return err
+      }
+      match value_as_number_text(v0) {
+        Ok(num) => {
+          let formatted = format_number_code(
+            format_number(num),
+            format_text,
+            Options::new(),
+            use_1904_format=ctx.use_1904_dates,
+          ) catch {
+            _ => return Error(formula_error_value)
+          }
+          String(formatted)
+        }
+        Err(err) => err
+      }
+    }
+    _ => Error(formula_error_value)
+  }
+}
+
+///|
+fn arraytotext_values(
+  workbook : Workbook,
+  sheet_name : String,
+  _name : String,
+  args : ArrayView[Expr],
+  values : Array[FormulaValue],
+  ctx : CalcContext,
+) -> FormulaValue raise XlsxError {
+  if values.length() == 1 || values.length() == 2 {
+    let format = if values.length() == 2 {
+      match value_as_int(values[1]) {
+        Ok(num) => num
+        Err(err) => return err
+      }
+    } else {
+      0
+    }
+    if format != 0 && format != 1 {
+      return Error(formula_error_value)
+    }
+    let range = match args[0] {
+      Range(_, _, _) | Cell(_, _) =>
+        eval_range_expr(workbook, sheet_name, args[0], ctx)
+      _ => { rows: 1, cols: 1, values: [values[0]], }
+    }
+    let rows : Array[String] = []
+    for row in 0..<range.rows {
+      let cells : Array[String] = []
+      for col in 0..<range.cols {
+        let value = range.values[row * range.cols + col]
+        match normalize_scalar(value) {
+          Error(err) => return Error(err)
+          _ => {
+            let text = formula_value_string(value)
+            match value_as_number(value) {
+              Ok(_) => cells.push(text)
+              Err(_) =>
+                if format == 1 {
+                  cells.push("\"" + text + "\"")
+                } else {
+                  cells.push(text)
                 }
-                Err(err) => err
-              }
+            }
           }
-        _ => Error(formula_error_value)
+        }
       }
-    "ISODD" =>
-      match values {
-        [v0] =>
+      let joined = if format == 1 { cells.join(",") } else { cells.join(", ") }
+      rows.push(joined)
+    }
+    if format == 1 {
+      String("{" + rows.join(";") + "}")
+    } else {
+      String(rows.join(", "))
+    }
+  } else {
+    Error(formula_error_value)
+  }
+}
+
+///|
+fn textaftertextbefore_xlfn_textafter_xlfn_textbefore_values(
+  _workbook : Workbook,
+  _sheet_name : String,
+  name : String,
+  _args : ArrayView[Expr],
+  values : Array[FormulaValue],
+  _ctx : CalcContext,
+) -> FormulaValue {
+  if values.length() >= 2 && values.length() <= 6 {
+    let text = match value_as_string(values[0]) {
+      Ok(value) => value
+      Err(err) => return err
+    }
+    let delimiter = match value_as_string(values[1]) {
+      Ok(value) => value
+      Err(err) => return err
+    }
+    if text == "" {
+      return Error(formula_error_na)
+    }
+    let instance_num = if values.length() >= 3 {
+      match value_as_int(values[2]) {
+        Ok(num) => num
+        Err(err) => return err
+      }
+    } else {
+      1
+    }
+    if instance_num == 0 ||
+      instance_num > text.length() ||
+      -instance_num > text.length() {
+      return Error(formula_error_value)
+    }
+    let match_mode = if values.length() >= 4 {
+      match value_as_int(values[3]) {
+        Ok(num) => num
+        Err(err) => return err
+      }
+    } else {
+      0
+    }
+    if match_mode != 0 && match_mode != 1 {
+      return Error(formula_error_value)
+    }
+    let match_end = if values.length() >= 5 {
+      match value_as_bool(values[4]) {
+        Ok(flag) => flag
+        Err(err) => return err
+      }
+    } else {
+      false
+    }
+    let if_not_found = if values.length() == 6 { values[5] } else { Empty }
+    let idx_opt = text_after_before_index(
+      text, delimiter, instance_num, match_mode, match_end,
+    )
+    let idx = match idx_opt {
+      Some(value) => value
+      None => return if_not_found
+    }
+    if name == "TEXTAFTER" || name == "_XLFN.TEXTAFTER" {
+      let start = idx + delimiter.length()
+      if start >= text.length() {
+        Empty
+      } else {
+        String(text.unsafe_substring(start~, end=text.length()))
+      }
+    } else if idx <= 0 {
+      String("")
+    } else {
+      String(text.unsafe_substring(start=0, end=idx))
+    }
+  } else {
+    Error(formula_error_value)
+  }
+}
+
+///|
+fn textsplit_xlfn_textsplit_values(
+  _workbook : Workbook,
+  _sheet_name : String,
+  _name : String,
+  _args : ArrayView[Expr],
+  values : Array[FormulaValue],
+  _ctx : CalcContext,
+) -> FormulaValue {
+  if values.length() >= 2 && values.length() <= 6 {
+    textsplit_values(values)
+  } else {
+    Error(formula_error_value)
+  }
+}
+
+///|
+fn textjoin_values(
+  _workbook : Workbook,
+  _sheet_name : String,
+  _name : String,
+  _args : ArrayView[Expr],
+  values : Array[FormulaValue],
+  _ctx : CalcContext,
+) -> FormulaValue {
+  if values.length() >= 3 {
+    let delimiter = match value_as_string(values[0]) {
+      Ok(text) => text
+      Err(err) => return err
+    }
+    let ignore_empty = match value_as_bool(values[1]) {
+      Ok(flag) => flag
+      Err(err) => return err
+    }
+    let parts : Array[String] = []
+    for i in 2..<values.length() {
+      match textjoin_collect_value(values[i], ignore_empty, parts) {
+        Ok(_) => ()
+        Err(err) => return err
+      }
+    }
+    let result = parts.join(delimiter)
+    if result.length() > max_cell_chars {
+      Error(formula_error_value)
+    } else {
+      String(result)
+    }
+  } else {
+    Error(formula_error_value)
+  }
+}
+
+///|
+fn char_values(
+  _workbook : Workbook,
+  _sheet_name : String,
+  _name : String,
+  _args : ArrayView[Expr],
+  values : Array[FormulaValue],
+  _ctx : CalcContext,
+) -> FormulaValue {
+  match values {
+    [v0] =>
+      match value_as_number(v0) {
+        Ok(num) => {
+          let code = Double::to_int(trunc_double(num))
+          if code < 0 || code > max_field_length {
+            Error(formula_error_value)
+          } else {
+            String(char_from_code(code))
+          }
+        }
+        Err(err) => err
+      }
+    _ => Error(formula_error_value)
+  }
+}
+
+///|
+fn unichar_values(
+  _workbook : Workbook,
+  _sheet_name : String,
+  _name : String,
+  _args : ArrayView[Expr],
+  values : Array[FormulaValue],
+  _ctx : CalcContext,
+) -> FormulaValue {
+  match values {
+    [v0] =>
+      match value_as_number(v0) {
+        Ok(num) =>
+          if num <= 0.0 || num > 55295.0 {
+            Error(formula_error_value)
+          } else {
+            let code = Double::to_int(trunc_double(num))
+            String(char_from_code(code))
+          }
+        Err(err) => err
+      }
+    _ => Error(formula_error_value)
+  }
+}
+
+///|
+fn clean_values(
+  _workbook : Workbook,
+  _sheet_name : String,
+  _name : String,
+  _args : ArrayView[Expr],
+  values : Array[FormulaValue],
+  _ctx : CalcContext,
+) -> FormulaValue {
+  match values {
+    [v0] => clean_text_value(v0)
+    _ => Error(formula_error_value)
+  }
+}
+
+///|
+fn encodeurl_values(
+  _workbook : Workbook,
+  _sheet_name : String,
+  _name : String,
+  _args : ArrayView[Expr],
+  values : Array[FormulaValue],
+  _ctx : CalcContext,
+) -> FormulaValue {
+  match values {
+    [v0] => encode_url_value(v0)
+    _ => Error(formula_error_value)
+  }
+}
+
+///|
+fn bahttext_values2(
+  _workbook : Workbook,
+  _sheet_name : String,
+  _name : String,
+  _args : ArrayView[Expr],
+  values : Array[FormulaValue],
+  _ctx : CalcContext,
+) -> FormulaValue {
+  match values {
+    [_] => bahttext_values(values)
+    _ => Error(formula_error_value)
+  }
+}
+
+///|
+fn code_values(
+  _workbook : Workbook,
+  _sheet_name : String,
+  _name : String,
+  _args : ArrayView[Expr],
+  values : Array[FormulaValue],
+  _ctx : CalcContext,
+) -> FormulaValue {
+  match values {
+    [v0] => code_value("CODE", v0)
+    _ => Error(formula_error_value)
+  }
+}
+
+///|
+fn unicode_values(
+  _workbook : Workbook,
+  _sheet_name : String,
+  _name : String,
+  _args : ArrayView[Expr],
+  values : Array[FormulaValue],
+  _ctx : CalcContext,
+) -> FormulaValue {
+  match values {
+    [v0] => code_value("UNICODE", v0)
+    _ => Error(formula_error_value)
+  }
+}
+
+///|
+fn t_values(
+  _workbook : Workbook,
+  _sheet_name : String,
+  _name : String,
+  _args : ArrayView[Expr],
+  values : Array[FormulaValue],
+  _ctx : CalcContext,
+) -> FormulaValue {
+  match values {
+    [v0] =>
+      match normalize_scalar(v0) {
+        Error(err) => Error(err)
+        Number(_) | Empty | List(_) => String("")
+        String(text) => String(text)
+        Bool(flag) => String(if flag { "TRUE" } else { "FALSE" })
+      }
+    _ => Error(formula_error_value)
+  }
+}
+
+///|
+fn transpose_values(
+  workbook : Workbook,
+  sheet_name : String,
+  _name : String,
+  args : ArrayView[Expr],
+  values : Array[FormulaValue],
+  ctx : CalcContext,
+) -> FormulaValue raise XlsxError {
+  match args {
+    [a0] => {
+      let base_range = range_from_expr_or_value(
+        workbook,
+        sheet_name,
+        a0,
+        values[0],
+        ctx,
+      )
+      List(transpose_range_values(base_range).values)
+    }
+    _ => Error(formula_error_value)
+  }
+}
+
+///|
+fn take_xlfn_take_values(
+  workbook : Workbook,
+  sheet_name : String,
+  _name : String,
+  args : ArrayView[Expr],
+  values : Array[FormulaValue],
+  ctx : CalcContext,
+) -> FormulaValue raise XlsxError {
+  take_values(workbook, sheet_name, args, values, ctx)
+}
+
+///|
+fn drop_xlfn_drop_values(
+  workbook : Workbook,
+  sheet_name : String,
+  _name : String,
+  args : ArrayView[Expr],
+  values : Array[FormulaValue],
+  ctx : CalcContext,
+) -> FormulaValue raise XlsxError {
+  drop_values(workbook, sheet_name, args, values, ctx)
+}
+
+///|
+fn choosecols_xlfn_choosecols_values(
+  workbook : Workbook,
+  sheet_name : String,
+  _name : String,
+  args : ArrayView[Expr],
+  values : Array[FormulaValue],
+  ctx : CalcContext,
+) -> FormulaValue raise XlsxError {
+  choosecols_values(workbook, sheet_name, args, values, ctx)
+}
+
+///|
+fn chooserows_xlfn_chooserows_values(
+  workbook : Workbook,
+  sheet_name : String,
+  _name : String,
+  args : ArrayView[Expr],
+  values : Array[FormulaValue],
+  ctx : CalcContext,
+) -> FormulaValue raise XlsxError {
+  chooserows_values(workbook, sheet_name, args, values, ctx)
+}
+
+///|
+fn hstack_xlfn_hstack_values(
+  workbook : Workbook,
+  sheet_name : String,
+  _name : String,
+  args : ArrayView[Expr],
+  values : Array[FormulaValue],
+  ctx : CalcContext,
+) -> FormulaValue raise XlsxError {
+  stack_from_values(workbook, sheet_name, args, values, ctx, true)
+}
+
+///|
+fn vstack_xlfn_vstack_values(
+  workbook : Workbook,
+  sheet_name : String,
+  _name : String,
+  args : ArrayView[Expr],
+  values : Array[FormulaValue],
+  ctx : CalcContext,
+) -> FormulaValue raise XlsxError {
+  stack_from_values(workbook, sheet_name, args, values, ctx, false)
+}
+
+///|
+fn expand_xlfn_expand_values(
+  workbook : Workbook,
+  sheet_name : String,
+  _name : String,
+  args : ArrayView[Expr],
+  values : Array[FormulaValue],
+  ctx : CalcContext,
+) -> FormulaValue raise XlsxError {
+  expand_values(workbook, sheet_name, args, values, ctx)
+}
+
+///|
+fn wraprows_xlfn_wraprows_values(
+  workbook : Workbook,
+  sheet_name : String,
+  _name : String,
+  args : ArrayView[Expr],
+  values : Array[FormulaValue],
+  ctx : CalcContext,
+) -> FormulaValue raise XlsxError {
+  wrap_values(workbook, sheet_name, args, values, ctx, true)
+}
+
+///|
+fn wrapcols_xlfn_wrapcols_values(
+  workbook : Workbook,
+  sheet_name : String,
+  _name : String,
+  args : ArrayView[Expr],
+  values : Array[FormulaValue],
+  ctx : CalcContext,
+) -> FormulaValue raise XlsxError {
+  wrap_values(workbook, sheet_name, args, values, ctx, false)
+}
+
+///|
+fn tocol_xlfn_tocol_values(
+  workbook : Workbook,
+  sheet_name : String,
+  _name : String,
+  args : ArrayView[Expr],
+  values : Array[FormulaValue],
+  ctx : CalcContext,
+) -> FormulaValue raise XlsxError {
+  tocol_torow_values(workbook, sheet_name, args, values, ctx, false)
+}
+
+///|
+fn torow_xlfn_torow_values(
+  workbook : Workbook,
+  sheet_name : String,
+  _name : String,
+  args : ArrayView[Expr],
+  values : Array[FormulaValue],
+  ctx : CalcContext,
+) -> FormulaValue raise XlsxError {
+  tocol_torow_values(workbook, sheet_name, args, values, ctx, false)
+}
+
+///|
+fn sort_xlfn_sort_values(
+  workbook : Workbook,
+  sheet_name : String,
+  _name : String,
+  args : ArrayView[Expr],
+  values : Array[FormulaValue],
+  ctx : CalcContext,
+) -> FormulaValue raise XlsxError {
+  sort_values(workbook, sheet_name, args, values, ctx)
+}
+
+///|
+fn sortby_xlfn_sortby_values(
+  workbook : Workbook,
+  sheet_name : String,
+  _name : String,
+  args : ArrayView[Expr],
+  values : Array[FormulaValue],
+  ctx : CalcContext,
+) -> FormulaValue raise XlsxError {
+  sortby_values(workbook, sheet_name, args, values, ctx)
+}
+
+///|
+fn filter_xlfn_filter_values(
+  workbook : Workbook,
+  sheet_name : String,
+  _name : String,
+  args : ArrayView[Expr],
+  values : Array[FormulaValue],
+  ctx : CalcContext,
+) -> FormulaValue raise XlsxError {
+  filter_values(workbook, sheet_name, args, values, ctx)
+}
+
+///|
+fn unique_xlfn_unique_values(
+  workbook : Workbook,
+  sheet_name : String,
+  _name : String,
+  args : ArrayView[Expr],
+  values : Array[FormulaValue],
+  ctx : CalcContext,
+) -> FormulaValue raise XlsxError {
+  if args.length() >= 1 && args.length() <= 3 {
+    let by_col = if args.length() >= 2 {
+      match value_as_bool(values[1]) {
+        Ok(flag) => flag
+        Err(err) => return err
+      }
+    } else {
+      false
+    }
+    let exactly_once = if args.length() == 3 {
+      match value_as_bool(values[2]) {
+        Ok(flag) => flag
+        Err(err) => return err
+      }
+    } else {
+      false
+    }
+    let range = match args[0] {
+      Range(_, _, _) | Cell(_, _) =>
+        eval_range_expr(workbook, sheet_name, args[0], ctx)
+      _ =>
+        match values[0] {
+          Error(err) => return Error(err)
+          List(list) =>
+            if list.length() == 0 {
+              return Error(formula_error_value)
+            } else {
+              { rows: 1, cols: list.length(), values: list, }
+            }
+          _ => { rows: 1, cols: 1, values: [values[0]], }
+        }
+    }
+    match unique_range_values(range, by_col, exactly_once) {
+      Ok(result) => List(result.values)
+      Err(err) => err
+    }
+  } else {
+    Error(formula_error_value)
+  }
+}
+
+///|
+fn index_values(
+  workbook : Workbook,
+  sheet_name : String,
+  _name : String,
+  args : ArrayView[Expr],
+  values : Array[FormulaValue],
+  ctx : CalcContext,
+) -> FormulaValue raise XlsxError {
+  match args {
+    [a0, _] | [a0, _, _] => {
+      let range = eval_range_expr(workbook, sheet_name, a0, ctx)
+      let row_num = match value_as_int(values[1]) {
+        Ok(num) => num
+        Err(err) => return err
+      }
+      let col_num = if args is [_, _, _] {
+        match value_as_int(values[2]) {
+          Ok(num) => num
+          Err(err) => return err
+        }
+      } else {
+        1
+      }
+      if row_num <= 0 || col_num <= 0 {
+        Error(formula_error_value)
+      } else if row_num > range.rows || col_num > range.cols {
+        Error(formula_error_ref)
+      } else {
+        let index = (row_num - 1) * range.cols + (col_num - 1)
+        range.values[index]
+      }
+    }
+    _ => Error(formula_error_value)
+  }
+}
+
+///|
+fn match_values(
+  workbook : Workbook,
+  sheet_name : String,
+  _name : String,
+  args : ArrayView[Expr],
+  values : Array[FormulaValue],
+  ctx : CalcContext,
+) -> FormulaValue raise XlsxError {
+  match args {
+    [_, a1] | [_, a1, _] => {
+      let lookup = values[0]
+      let range = eval_range_expr(workbook, sheet_name, a1, ctx)
+      let match_type = if args is [_, _, _] {
+        match value_as_int(values[2]) {
+          Ok(num) => num
+          Err(err) => return err
+        }
+      } else {
+        1
+      }
+      match_range_value(lookup, range, match_type)
+    }
+    _ => Error(formula_error_value)
+  }
+}
+
+///|
+fn vlookup_values(
+  workbook : Workbook,
+  sheet_name : String,
+  _name : String,
+  args : ArrayView[Expr],
+  values : Array[FormulaValue],
+  ctx : CalcContext,
+) -> FormulaValue raise XlsxError {
+  match args {
+    [_, a1, _] | [_, a1, _, _] => {
+      let lookup = values[0]
+      let table = eval_range_expr(workbook, sheet_name, a1, ctx)
+      let col_index = match value_as_int(values[2]) {
+        Ok(num) => num
+        Err(err) => return err
+      }
+      let range_lookup = if args is [_, _, _, _] {
+        match lookup_range_flag(values[3]) {
+          Ok(flag) => flag
+          Err(err) => return err
+        }
+      } else {
+        true
+      }
+      vlookup_value(lookup, table, col_index, range_lookup)
+    }
+    _ => Error(formula_error_value)
+  }
+}
+
+///|
+fn hlookup_values(
+  workbook : Workbook,
+  sheet_name : String,
+  _name : String,
+  args : ArrayView[Expr],
+  values : Array[FormulaValue],
+  ctx : CalcContext,
+) -> FormulaValue raise XlsxError {
+  match args {
+    [_, a1, _] | [_, a1, _, _] => {
+      let lookup = values[0]
+      let table = eval_range_expr(workbook, sheet_name, a1, ctx)
+      let row_index = match value_as_int(values[2]) {
+        Ok(num) => num
+        Err(err) => return err
+      }
+      let range_lookup = if args is [_, _, _, _] {
+        match lookup_range_flag(values[3]) {
+          Ok(flag) => flag
+          Err(err) => return err
+        }
+      } else {
+        true
+      }
+      hlookup_value(lookup, table, row_index, range_lookup)
+    }
+    _ => Error(formula_error_value)
+  }
+}
+
+///|
+fn lookup_values(
+  workbook : Workbook,
+  sheet_name : String,
+  _name : String,
+  args : ArrayView[Expr],
+  values : Array[FormulaValue],
+  ctx : CalcContext,
+) -> FormulaValue raise XlsxError {
+  if args.length() == 2 || args.length() == 3 {
+    let lookup = values[0]
+    if args.length() == 2 {
+      let array_range = range_from_expr_or_value(
+        workbook,
+        sheet_name,
+        args[1],
+        values[1],
+        ctx,
+      )
+      if array_range.rows == 0 || array_range.cols == 0 {
+        return Error(formula_error_value)
+      }
+      if array_range.rows == 1 || array_range.cols == 1 {
+        let lookup_vec = if array_range.rows == 1 {
+          range_row_required(array_range, 0)
+        } else {
+          range_column_required(array_range, 0)
+        }
+        let idx = match lookup_best_index(lookup, lookup_vec) {
+          Ok(value) => value
+          Err(err) => return err
+        }
+        match idx {
+          Some(i) => lookup_vec[i]
+          None => Error(formula_error_na)
+        }
+      } else {
+        let use_cols = array_range.rows >= array_range.cols
+        let lookup_list = if use_cols {
+          range_column_required(array_range, 0)
+        } else {
+          range_row_required(array_range, 0)
+        }
+        let result_list = if use_cols {
+          range_column_required(array_range, array_range.cols - 1)
+        } else {
+          range_row_required(array_range, array_range.rows - 1)
+        }
+        let idx = match lookup_best_index(lookup, lookup_list) {
+          Ok(value) => value
+          Err(err) => return err
+        }
+        match idx {
+          Some(i) => result_list[i]
+          None => Error(formula_error_na)
+        }
+      }
+    } else {
+      let lookup_range = range_from_expr_or_value(
+        workbook,
+        sheet_name,
+        args[1],
+        values[1],
+        ctx,
+      )
+      let result_range = range_from_expr_or_value(
+        workbook,
+        sheet_name,
+        args[2],
+        values[2],
+        ctx,
+      )
+      if lookup_range.rows == 0 ||
+        lookup_range.cols == 0 ||
+        result_range.rows == 0 ||
+        result_range.cols == 0 {
+        return Error(formula_error_value)
+      }
+      let lookup_list = match range_vector(lookup_range) {
+        Some(list) => list
+        None => return Error(formula_error_na)
+      }
+      let result_list = match range_vector(result_range) {
+        Some(list) => list
+        None => return Error(formula_error_na)
+      }
+      if lookup_list.length() != result_list.length() {
+        return Error(formula_error_na)
+      }
+      let idx = match lookup_best_index(lookup, lookup_list) {
+        Ok(value) => value
+        Err(err) => return err
+      }
+      match idx {
+        Some(i) => result_list[i]
+        None => Error(formula_error_na)
+      }
+    }
+  } else {
+    Error(formula_error_value)
+  }
+}
+
+///|
+fn xlookup_xlfn_xlookup_values(
+  workbook : Workbook,
+  sheet_name : String,
+  _name : String,
+  args : ArrayView[Expr],
+  values : Array[FormulaValue],
+  ctx : CalcContext,
+) -> FormulaValue raise XlsxError {
+  if args.length() >= 3 && args.length() <= 6 {
+    let lookup = values[0]
+    let lookup_range = range_from_expr_or_value(
+      workbook,
+      sheet_name,
+      args[1],
+      values[1],
+      ctx,
+    )
+    let return_range = range_from_expr_or_value(
+      workbook,
+      sheet_name,
+      args[2],
+      values[2],
+      ctx,
+    )
+    let if_not_found = if args.length() >= 4 {
+      values[3]
+    } else {
+      Error(formula_error_na)
+    }
+    let match_mode = if args.length() >= 5 {
+      match value_as_int(values[4]) {
+        Ok(num) => num
+        Err(err) => return err
+      }
+    } else {
+      0
+    }
+    let search_mode = if args.length() >= 6 {
+      match value_as_int(values[5]) {
+        Ok(num) => num
+        Err(err) => return err
+      }
+    } else {
+      1
+    }
+    if match_mode != -1 && match_mode != 0 && match_mode != 1 && match_mode != 2 {
+      return Error(formula_error_value)
+    }
+    if search_mode != 1 &&
+      search_mode != -1 &&
+      search_mode != 2 &&
+      search_mode != -2 {
+      return Error(formula_error_value)
+    }
+    let is_row = lookup_range.rows == 1
+    let is_col = lookup_range.cols == 1
+    if !is_row && !is_col {
+      return Error(formula_error_value)
+    }
+    let lookup_values = if is_row {
+      range_row_required(lookup_range, 0)
+    } else {
+      range_column_required(lookup_range, 0)
+    }
+    let match_idx = match
+      xlookup_find_index(lookup, lookup_values, match_mode, search_mode) {
+      Ok(value) => value
+      Err(err) => return err
+    }
+    let idx = match match_idx {
+      Some(value) => value
+      None => return if_not_found
+    }
+    if is_row {
+      if return_range.cols != lookup_range.cols {
+        return Error(formula_error_value)
+      }
+      if return_range.rows == 1 {
+        return_range.values[idx]
+      } else {
+        List(range_column_required(return_range, idx))
+      }
+    } else {
+      if return_range.rows != lookup_range.rows {
+        return Error(formula_error_value)
+      }
+      if return_range.cols == 1 {
+        return_range.values[idx * return_range.cols]
+      } else {
+        List(range_row_required(return_range, idx))
+      }
+    }
+  } else {
+    Error(formula_error_value)
+  }
+}
+
+///|
+fn anchorarray_xlfn_anchorarray_values(
+  workbook : Workbook,
+  sheet_name : String,
+  _name : String,
+  args : ArrayView[Expr],
+  values : Array[FormulaValue],
+  _ctx : CalcContext,
+) -> FormulaValue {
+  anchorarray_values(workbook, sheet_name, args, values)
+}
+
+///|
+fn address_values(
+  _workbook : Workbook,
+  _sheet_name : String,
+  _name : String,
+  _args : ArrayView[Expr],
+  values : Array[FormulaValue],
+  _ctx : CalcContext,
+) -> FormulaValue raise XlsxError {
+  if values.length() >= 2 && values.length() <= 5 {
+    let row_num = match value_as_int(values[0]) {
+      Ok(num) => num
+      Err(err) => return err
+    }
+    let col_num = match value_as_int(values[1]) {
+      Ok(num) => num
+      Err(err) => return err
+    }
+    if row_num <= 0 ||
+      row_num > cell_ref_max_rows ||
+      col_num <= 0 ||
+      col_num > cell_ref_max_cols {
+      return Error(formula_error_value)
+    }
+    let abs_num = if values.length() >= 3 {
+      match value_as_int(values[2]) {
+        Ok(num) => num
+        Err(err) => return err
+      }
+    } else {
+      1
+    }
+    if abs_num < 1 || abs_num > 4 {
+      return Error(formula_error_value)
+    }
+    let a1 = if values.length() >= 4 {
+      match value_as_bool(values[3]) {
+        Ok(flag) => flag
+        Err(err) => return err
+      }
+    } else {
+      true
+    }
+    let sheet_text = if values.length() == 5 {
+      match value_as_string(values[4]) {
+        Ok(text) => text
+        Err(err) => return err
+      }
+    } else {
+      ""
+    }
+    let address = if a1 {
+      address_a1(row_num, col_num, abs_num)
+    } else {
+      address_r1c1(row_num, col_num, abs_num)
+    }
+    let text = if sheet_text == "" {
+      address
+    } else {
+      sheet_text + "!" + address
+    }
+    String(text)
+  } else {
+    Error(formula_error_value)
+  }
+}
+
+///|
+fn indirect_values(
+  workbook : Workbook,
+  sheet_name : String,
+  _name : String,
+  _args : ArrayView[Expr],
+  values : Array[FormulaValue],
+  ctx : CalcContext,
+) -> FormulaValue raise XlsxError {
+  match values {
+    [v0] | [v0, _] => {
+      let ref_text = match value_as_string(v0) {
+        Ok(text) => text
+        Err(err) => return err
+      }
+      let a1 = if values is [_, v1] {
+        match value_as_bool(v1) {
+          Ok(flag) => flag
+          Err(err) => return err
+        }
+      } else {
+        true
+      }
+      let (sheet_text, ref_part) = split_sheet_ref(ref_text)
+      let target_sheet = if sheet_text == "" { sheet_name } else { sheet_text }
+      if a1 {
+        match ref_part.find(":") {
+          Some(idx) => {
+            let start_token = ref_part.unsafe_substring(start=0, end=idx)
+            let end_token = ref_part.unsafe_substring(
+              start=idx + 1,
+              end=ref_part.length(),
+            )
+            let (start_ref, _start_end) = parse_range_ref_token(start_token) catch {
+              _ => return Error(formula_error_ref)
+            }
+            let (_end_start, end_ref) = parse_range_ref_token(end_token) catch {
+              _ => return Error(formula_error_ref)
+            }
+            List(
+              collect_range_values(
+                workbook, target_sheet, start_ref, end_ref, ctx,
+              ),
+            )
+          }
+          None =>
+            match parse_cell_ref_token(ref_part) {
+              Some(reference) =>
+                resolve_cell_value(workbook, target_sheet, reference, ctx)
+              None => {
+                let (start_ref, end_ref) = parse_range_ref_token(ref_part) catch {
+                  _ => return Error(formula_error_ref)
+                }
+                List(
+                  collect_range_values(
+                    workbook, target_sheet, start_ref, end_ref, ctx,
+                  ),
+                )
+              }
+            }
+        }
+      } else {
+        match ref_part.find(":") {
+          Some(idx) => {
+            let start_token = ref_part.unsafe_substring(start=0, end=idx)
+            let end_token = ref_part.unsafe_substring(
+              start=idx + 1,
+              end=ref_part.length(),
+            )
+            let (row1, col1) = match parse_r1c1_token(start_token) {
+              Some(value) => value
+              None => return Error(formula_error_ref)
+            }
+            let (row2, col2) = match parse_r1c1_token(end_token) {
+              Some(value) => value
+              None => return Error(formula_error_ref)
+            }
+            let start_ref = cell_ref_from(row1, col1) catch {
+              _ => return Error(formula_error_ref)
+            }
+            let end_ref = cell_ref_from(row2, col2) catch {
+              _ => return Error(formula_error_ref)
+            }
+            List(
+              collect_range_values(
+                workbook, target_sheet, start_ref, end_ref, ctx,
+              ),
+            )
+          }
+          None =>
+            match parse_r1c1_token(ref_part) {
+              Some((row, col)) => {
+                let reference = cell_ref_from(row, col) catch {
+                  _ => return Error(formula_error_ref)
+                }
+                resolve_cell_value(workbook, target_sheet, reference, ctx)
+              }
+              None => Error(formula_error_ref)
+            }
+        }
+      }
+    }
+    _ => Error(formula_error_value)
+  }
+}
+
+///|
+fn hyperlink_values(
+  _workbook : Workbook,
+  _sheet_name : String,
+  _name : String,
+  _args : ArrayView[Expr],
+  values : Array[FormulaValue],
+  _ctx : CalcContext,
+) -> FormulaValue {
+  if values.length() == 1 || values.length() == 2 {
+    match value_as_string(values[values.length() - 1]) {
+      Ok(text) => String(text)
+      Err(err) => err
+    }
+  } else {
+    Error(formula_error_value)
+  }
+}
+
+///|
+fn choose_values(
+  _workbook : Workbook,
+  _sheet_name : String,
+  _name : String,
+  _args : ArrayView[Expr],
+  values : Array[FormulaValue],
+  _ctx : CalcContext,
+) -> FormulaValue {
+  if values.length() >= 2 {
+    let index_text = match value_as_string(values[0]) {
+      Ok(text) => text
+      Err(err) => return err
+    }
+    let idx = @string.parse_int(index_text, base=10) catch {
+      _ => return Error(formula_error_value)
+    }
+    if values.length() <= idx {
+      Error(formula_error_value)
+    } else if idx <= 0 {
+      values[0]
+    } else {
+      values[idx]
+    }
+  } else {
+    Error(formula_error_value)
+  }
+}
+
+///|
+fn dispimg_xlfn_dispimg_values(
+  _workbook : Workbook,
+  _sheet_name : String,
+  _name : String,
+  _args : ArrayView[Expr],
+  values : Array[FormulaValue],
+  _ctx : CalcContext,
+) -> FormulaValue {
+  match values {
+    [v0, _] => v0
+    _ => Error(formula_error_value)
+  }
+}
+
+///|
+fn isblank_values(
+  _workbook : Workbook,
+  _sheet_name : String,
+  _name : String,
+  _args : ArrayView[Expr],
+  values : Array[FormulaValue],
+  _ctx : CalcContext,
+) -> FormulaValue {
+  match values {
+    [v0] =>
+      match normalize_scalar(v0) {
+        Empty => Bool(true)
+        _ => Bool(false)
+      }
+    _ => Error(formula_error_value)
+  }
+}
+
+///|
+fn iserr_values(
+  _workbook : Workbook,
+  _sheet_name : String,
+  _name : String,
+  _args : ArrayView[Expr],
+  values : Array[FormulaValue],
+  _ctx : CalcContext,
+) -> FormulaValue {
+  match values {
+    [v0] =>
+      match normalize_scalar(v0) {
+        Error(err) => Bool(is_known_error_code(err) && err != formula_error_na)
+        _ => Bool(false)
+      }
+    _ => Error(formula_error_value)
+  }
+}
+
+///|
+fn iseven_values(
+  _workbook : Workbook,
+  _sheet_name : String,
+  _name : String,
+  _args : ArrayView[Expr],
+  values : Array[FormulaValue],
+  _ctx : CalcContext,
+) -> FormulaValue {
+  match values {
+    [v0] =>
+      match normalize_scalar(v0) {
+        Empty => Bool(true)
+        _ =>
           match value_as_number(v0) {
             Ok(num) => {
-              let n = Double::to_int(num)
-              Bool(n != n / 2 * 2)
+              let even = if num == 1.0 { false } else { num == num / 2.0 * 2.0 }
+              Bool(even)
             }
             Err(err) => err
           }
-        _ => Error(formula_error_value)
       }
-    "ISERROR" =>
-      match values {
-        [v0] =>
-          match normalize_scalar(v0) {
-            Error(err) => Bool(is_known_error_code(err))
-            _ => Bool(false)
+    _ => Error(formula_error_value)
+  }
+}
+
+///|
+fn isodd_values(
+  _workbook : Workbook,
+  _sheet_name : String,
+  _name : String,
+  _args : ArrayView[Expr],
+  values : Array[FormulaValue],
+  _ctx : CalcContext,
+) -> FormulaValue {
+  match values {
+    [v0] =>
+      match value_as_number(v0) {
+        Ok(num) => {
+          let n = Double::to_int(num)
+          Bool(n != n / 2 * 2)
+        }
+        Err(err) => err
+      }
+    _ => Error(formula_error_value)
+  }
+}
+
+///|
+fn iserror_values(
+  _workbook : Workbook,
+  _sheet_name : String,
+  _name : String,
+  _args : ArrayView[Expr],
+  values : Array[FormulaValue],
+  _ctx : CalcContext,
+) -> FormulaValue {
+  match values {
+    [v0] =>
+      match normalize_scalar(v0) {
+        Error(err) => Bool(is_known_error_code(err))
+        _ => Bool(false)
+      }
+    _ => Error(formula_error_value)
+  }
+}
+
+///|
+fn islogical_values(
+  _workbook : Workbook,
+  _sheet_name : String,
+  _name : String,
+  _args : ArrayView[Expr],
+  values : Array[FormulaValue],
+  _ctx : CalcContext,
+) -> FormulaValue {
+  match values {
+    [v0] =>
+      match normalize_scalar(v0) {
+        Bool(_) => Bool(true)
+        String(text) => Bool(text == "TRUE" || text == "FALSE")
+        _ => Bool(false)
+      }
+    _ => Error(formula_error_value)
+  }
+}
+
+///|
+fn isna_values(
+  _workbook : Workbook,
+  _sheet_name : String,
+  _name : String,
+  _args : ArrayView[Expr],
+  values : Array[FormulaValue],
+  _ctx : CalcContext,
+) -> FormulaValue {
+  match values {
+    [v0] =>
+      match normalize_scalar(v0) {
+        Error(err) => Bool(err == formula_error_na)
+        _ => Bool(false)
+      }
+    _ => Error(formula_error_value)
+  }
+}
+
+///|
+fn isnumber_values(
+  _workbook : Workbook,
+  _sheet_name : String,
+  _name : String,
+  _args : ArrayView[Expr],
+  values : Array[FormulaValue],
+  _ctx : CalcContext,
+) -> FormulaValue {
+  match values {
+    [v0] =>
+      match normalize_scalar(v0) {
+        Number(_) => Bool(true)
+        _ => Bool(false)
+      }
+    _ => Error(formula_error_value)
+  }
+}
+
+///|
+fn istext_values(
+  _workbook : Workbook,
+  _sheet_name : String,
+  _name : String,
+  _args : ArrayView[Expr],
+  values : Array[FormulaValue],
+  _ctx : CalcContext,
+) -> FormulaValue {
+  match values {
+    [v0] =>
+      match normalize_scalar(v0) {
+        String(text) =>
+          match parse_double_opt(text) {
+            Some(_) => Bool(false)
+            None => Bool(true)
+          }
+        _ => Bool(false)
+      }
+    _ => Error(formula_error_value)
+  }
+}
+
+///|
+fn isnontext_values(
+  _workbook : Workbook,
+  _sheet_name : String,
+  _name : String,
+  _args : ArrayView[Expr],
+  values : Array[FormulaValue],
+  _ctx : CalcContext,
+) -> FormulaValue {
+  match values {
+    [v0] =>
+      match normalize_scalar(v0) {
+        String(_) => Bool(false)
+        _ => Bool(true)
+      }
+    _ => Error(formula_error_value)
+  }
+}
+
+///|
+fn isref_values(
+  _workbook : Workbook,
+  _sheet_name : String,
+  _name : String,
+  args : ArrayView[Expr],
+  _values : Array[FormulaValue],
+  _ctx : CalcContext,
+) -> FormulaValue {
+  match args {
+    [a0] => Bool(is_ref_expr(a0))
+    _ => Error(formula_error_value)
+  }
+}
+
+///|
+fn isformula_values(
+  workbook : Workbook,
+  sheet_name : String,
+  _name : String,
+  args : ArrayView[Expr],
+  _values : Array[FormulaValue],
+  _ctx : CalcContext,
+) -> FormulaValue {
+  match args {
+    [a0] =>
+      match a0 {
+        Cell(sheet, reference) => {
+          let target_sheet = if sheet == "" { sheet_name } else { sheet }
+          Bool(cell_has_formula(workbook, target_sheet, reference))
+        }
+        _ => Bool(false)
+      }
+    _ => Error(formula_error_value)
+  }
+}
+
+///|
+fn errordottypeerror_type_values(
+  _workbook : Workbook,
+  _sheet_name : String,
+  _name : String,
+  _args : ArrayView[Expr],
+  values : Array[FormulaValue],
+  _ctx : CalcContext,
+) -> FormulaValue {
+  match values {
+    [v0] => error_type_value(v0)
+    _ => Error(formula_error_value)
+  }
+}
+
+///|
+fn sheet_values(
+  workbook : Workbook,
+  sheet_name : String,
+  _name : String,
+  args : ArrayView[Expr],
+  values : Array[FormulaValue],
+  _ctx : CalcContext,
+) -> FormulaValue {
+  match args {
+    [] =>
+      match sheet_index_opt(workbook, sheet_name) {
+        Some(index) => Number(Double::from_int(index + 1))
+        None => Error(formula_error_na)
+      }
+    [arg] => {
+      let target_sheet = match arg {
+        Cell(sheet, _) => if sheet == "" { sheet_name } else { sheet }
+        Range(sheet, _, _) => if sheet == "" { sheet_name } else { sheet }
+        _ => formula_value_string(values[0])
+      }
+      match sheet_index_opt(workbook, target_sheet) {
+        Some(index) => Number(Double::from_int(index + 1))
+        None => Error(formula_error_na)
+      }
+    }
+    _ => Error(formula_error_value)
+  }
+}
+
+///|
+fn sheets_values(
+  workbook : Workbook,
+  _sheet_name : String,
+  _name : String,
+  args : ArrayView[Expr],
+  _values : Array[FormulaValue],
+  _ctx : CalcContext,
+) -> FormulaValue {
+  match args {
+    [] => Number(Double::from_int(workbook.sheets().length()))
+    [arg] =>
+      match arg {
+        Cell(_, _) | Range(_, _, _) => Number(1.0)
+        _ => Error(formula_error_na)
+      }
+    _ => Error(formula_error_value)
+  }
+}
+
+///|
+fn type_values(
+  _workbook : Workbook,
+  _sheet_name : String,
+  _name : String,
+  _args : ArrayView[Expr],
+  values : Array[FormulaValue],
+  _ctx : CalcContext,
+) -> FormulaValue {
+  match values {
+    [v0] => type_value(v0)
+    _ => Error(formula_error_value)
+  }
+}
+
+///|
+fn na_values(
+  _workbook : Workbook,
+  _sheet_name : String,
+  _name : String,
+  _args : ArrayView[Expr],
+  values : Array[FormulaValue],
+  _ctx : CalcContext,
+) -> FormulaValue {
+  match values {
+    [] => Error(formula_error_na)
+    _ => Error(formula_error_value)
+  }
+}
+
+///|
+fn n_values(
+  _workbook : Workbook,
+  _sheet_name : String,
+  _name : String,
+  _args : ArrayView[Expr],
+  values : Array[FormulaValue],
+  _ctx : CalcContext,
+) -> FormulaValue {
+  match values {
+    [v0] =>
+      match normalize_scalar(v0) {
+        Error(err) => Error(err)
+        Number(num) => Number(num)
+        Bool(flag) => Number(if flag { 1.0 } else { 0.0 })
+        String(text) =>
+          match parse_double_opt(text) {
+            Some(num) => Number(num)
+            None => if text == "TRUE" { Number(1.0) } else { Number(0.0) }
+          }
+        Empty | List(_) => Number(0.0)
+      }
+    _ => Error(formula_error_value)
+  }
+}
+
+///|
+fn and_values(
+  _workbook : Workbook,
+  _sheet_name : String,
+  _name : String,
+  _args : ArrayView[Expr],
+  values : Array[FormulaValue],
+  _ctx : CalcContext,
+) -> FormulaValue {
+  if values.length() == 0 || values.length() > 30 {
+    Error(formula_error_value)
+  } else {
+    let mut result = true
+    for value in values {
+      match value {
+        Empty => ()
+        Error(err) => return Error(err)
+        Number(num) => result = result && num != 0.0
+        Bool(flag) => result = result && flag
+        String(text) =>
+          if text == "TRUE" {
+            ()
+          } else if text == "FALSE" {
+            return Bool(false)
+          } else {
+            return Error(formula_error_value)
+          }
+        List(_) => return Error(formula_error_value)
+      }
+    }
+    Bool(result)
+  }
+}
+
+///|
+fn or_values(
+  _workbook : Workbook,
+  _sheet_name : String,
+  _name : String,
+  _args : ArrayView[Expr],
+  values : Array[FormulaValue],
+  _ctx : CalcContext,
+) -> FormulaValue {
+  if values.length() == 0 || values.length() > 30 {
+    Error(formula_error_value)
+  } else {
+    for value in flatten_values(values) {
+      match normalize_scalar(value) {
+        Error(err) => return Error(err)
+        Number(num) => if num != 0.0 { return Bool(true) }
+        Bool(flag) => if flag { return Bool(true) }
+        String(text) =>
+          if text == "FALSE" {
+            ()
+          } else if text == "TRUE" {
+            return Bool(true)
+          } else {
+            return Error(formula_error_value)
+          }
+        Empty | List(_) => ()
+      }
+    }
+    Bool(false)
+  }
+}
+
+///|
+fn not_values(
+  _workbook : Workbook,
+  _sheet_name : String,
+  _name : String,
+  _args : ArrayView[Expr],
+  values : Array[FormulaValue],
+  _ctx : CalcContext,
+) -> FormulaValue {
+  match values {
+    [v0] =>
+      match normalize_scalar(v0) {
+        Error(err) => Error(err)
+        Bool(flag) => Bool(!flag)
+        Number(num) => Bool(!(num != 0.0))
+        String(text) =>
+          if text.to_upper() == "TRUE" {
+            Bool(false)
+          } else if text.to_upper() == "FALSE" {
+            Bool(true)
+          } else {
+            Error(formula_error_value)
           }
         _ => Error(formula_error_value)
       }
-    "ISLOGICAL" =>
-      match values {
-        [v0] =>
-          match normalize_scalar(v0) {
-            Bool(_) => Bool(true)
-            String(text) => Bool(text == "TRUE" || text == "FALSE")
-            _ => Bool(false)
-          }
-        _ => Error(formula_error_value)
-      }
-    "ISNA" =>
-      match values {
-        [v0] =>
-          match normalize_scalar(v0) {
-            Error(err) => Bool(err == formula_error_na)
-            _ => Bool(false)
-          }
-        _ => Error(formula_error_value)
-      }
-    "ISNUMBER" =>
-      match values {
-        [v0] =>
-          match normalize_scalar(v0) {
-            Number(_) => Bool(true)
-            _ => Bool(false)
-          }
-        _ => Error(formula_error_value)
-      }
-    "ISTEXT" =>
-      match values {
-        [v0] =>
-          match normalize_scalar(v0) {
-            String(text) =>
-              match parse_double_opt(text) {
-                Some(_) => Bool(false)
-                None => Bool(true)
-              }
-            _ => Bool(false)
-          }
-        _ => Error(formula_error_value)
-      }
-    "ISNONTEXT" =>
-      match values {
-        [v0] =>
-          match normalize_scalar(v0) {
-            String(_) => Bool(false)
-            _ => Bool(true)
-          }
-        _ => Error(formula_error_value)
-      }
-    "ISREF" =>
-      match args {
-        [a0] => Bool(is_ref_expr(a0))
-        _ => Error(formula_error_value)
-      }
-    "ISFORMULA" =>
-      match args {
-        [a0] =>
-          match a0 {
-            Cell(sheet, reference) => {
-              let target_sheet = if sheet == "" { sheet_name } else { sheet }
-              Bool(cell_has_formula(workbook, target_sheet, reference))
-            }
-            _ => Bool(false)
-          }
-        _ => Error(formula_error_value)
-      }
-    "ERRORdotTYPE" | "ERROR.TYPE" =>
-      match values {
-        [v0] => error_type_value(v0)
-        _ => Error(formula_error_value)
-      }
-    "SHEET" =>
-      match args {
-        [] =>
-          match sheet_index_opt(workbook, sheet_name) {
-            Some(index) => Number(Double::from_int(index + 1))
-            None => Error(formula_error_na)
-          }
-        [arg] => {
-          let target_sheet = match arg {
-            Cell(sheet, _) => if sheet == "" { sheet_name } else { sheet }
-            Range(sheet, _, _) => if sheet == "" { sheet_name } else { sheet }
-            _ => formula_value_string(values[0])
-          }
-          match sheet_index_opt(workbook, target_sheet) {
-            Some(index) => Number(Double::from_int(index + 1))
-            None => Error(formula_error_na)
+    _ => Error(formula_error_value)
+  }
+}
+
+///|
+fn xor_values(
+  _workbook : Workbook,
+  _sheet_name : String,
+  _name : String,
+  _args : ArrayView[Expr],
+  values : Array[FormulaValue],
+  _ctx : CalcContext,
+) -> FormulaValue {
+  if values.length() == 0 {
+    Error(formula_error_value)
+  } else {
+    let mut count = 0
+    let mut ok = false
+    for value in flatten_values(values) {
+      match normalize_scalar(value) {
+        Error(err) => return Error(err)
+        Number(num) => {
+          ok = true
+          if num != 0.0 {
+            count = count + 1
           }
         }
-        _ => Error(formula_error_value)
-      }
-    "SHEETS" =>
-      match args {
-        [] => Number(Double::from_int(workbook.sheets().length()))
-        [arg] =>
-          match arg {
-            Cell(_, _) | Range(_, _, _) => Number(1.0)
-            _ => Error(formula_error_na)
+        Bool(flag) => {
+          ok = true
+          if flag {
+            count = count + 1
           }
-        _ => Error(formula_error_value)
-      }
-    "TYPE" =>
-      match values {
-        [v0] => type_value(v0)
-        _ => Error(formula_error_value)
-      }
-    "T" =>
-      match values {
-        [v0] =>
-          match normalize_scalar(v0) {
-            Error(err) => Error(err)
-            Number(_) | Empty | List(_) => String("")
-            String(text) => String(text)
-            Bool(flag) => String(if flag { "TRUE" } else { "FALSE" })
-          }
-        _ => Error(formula_error_value)
-      }
-    "NA" =>
-      match values {
-        [] => Error(formula_error_na)
-        _ => Error(formula_error_value)
-      }
-    "N" =>
-      match values {
-        [v0] =>
-          match normalize_scalar(v0) {
-            Error(err) => Error(err)
-            Number(num) => Number(num)
-            Bool(flag) => Number(if flag { 1.0 } else { 0.0 })
-            String(text) =>
-              match parse_double_opt(text) {
-                Some(num) => Number(num)
-                None => if text == "TRUE" { Number(1.0) } else { Number(0.0) }
-              }
-            Empty | List(_) => Number(0.0)
-          }
-        _ => Error(formula_error_value)
-      }
-    _ =>
-      if args.length() == 0 {
-        match defined_name_value(workbook, sheet_name, name, ctx) {
-          Some(value) => value
-          None => Error(formula_error_name)
         }
-      } else {
-        Error(formula_error_name)
+        String(_) => ()
+        Empty | List(_) => ()
       }
+    }
+    if !ok {
+      Error(formula_error_value)
+    } else {
+      Bool(count % 2 != 0)
+    }
+  }
+}
+
+///|
+fn if_values(
+  _workbook : Workbook,
+  _sheet_name : String,
+  _name : String,
+  _args : ArrayView[Expr],
+  values : Array[FormulaValue],
+  _ctx : CalcContext,
+) -> FormulaValue {
+  match values {
+    [v0] =>
+      match value_as_bool(v0) {
+        Ok(cond) => Bool(cond)
+        Err(err) => err
+      }
+    [v0, v1] =>
+      match value_as_bool(v0) {
+        Ok(cond) => if cond { v1 } else { Bool(false) }
+        Err(err) => err
+      }
+    [v0, v1, v2] =>
+      match value_as_bool(v0) {
+        Ok(cond) => if cond { v1 } else { v2 }
+        Err(err) => err
+      }
+    _ => Error(formula_error_value)
+  }
+}
+
+///|
+fn iferror_values(
+  _workbook : Workbook,
+  _sheet_name : String,
+  _name : String,
+  _args : ArrayView[Expr],
+  values : Array[FormulaValue],
+  _ctx : CalcContext,
+) -> FormulaValue {
+  match values {
+    [v0, v1] =>
+      match normalize_scalar(v0) {
+        Error(_) => v1
+        Empty => Number(0.0)
+        _ => v0
+      }
+    _ => Error(formula_error_value)
+  }
+}
+
+///|
+fn ifna_values(
+  _workbook : Workbook,
+  _sheet_name : String,
+  _name : String,
+  _args : ArrayView[Expr],
+  values : Array[FormulaValue],
+  _ctx : CalcContext,
+) -> FormulaValue {
+  match values {
+    [v0, v1] =>
+      match normalize_scalar(v0) {
+        Error(err) => if err == formula_error_na { v1 } else { v0 }
+        _ => v0
+      }
+    _ => Error(formula_error_value)
+  }
+}
+
+///|
+fn ifs_values(
+  _workbook : Workbook,
+  _sheet_name : String,
+  _name : String,
+  _args : ArrayView[Expr],
+  values : Array[FormulaValue],
+  _ctx : CalcContext,
+) -> FormulaValue {
+  if values.length() < 2 || values.length() % 2 != 0 {
+    Error(formula_error_value)
+  } else {
+    for i in 0..<(values.length() / 2) {
+      match value_as_bool(values[i * 2]) {
+        Ok(flag) => if flag { return values[i * 2 + 1] }
+        Err(err) => return err
+      }
+    }
+    Error(formula_error_na)
+  }
+}
+
+///|
+fn switch_values(
+  _workbook : Workbook,
+  _sheet_name : String,
+  _name : String,
+  _args : ArrayView[Expr],
+  values : Array[FormulaValue],
+  _ctx : CalcContext,
+) -> FormulaValue {
+  if values.length() < 3 {
+    Error(formula_error_value)
+  } else {
+    let target = values[0]
+    let arg_count = values.length() - 1
+    let switch_count = arg_count / 2
+    let has_default = arg_count % 2 != 0
+    let mut result = if has_default {
+      values[values.length() - 1]
+    } else {
+      Error(formula_error_na)
+    }
+    for i in 0..<switch_count {
+      let match_value = values[1 + i * 2]
+      match compare_values(target, match_value) {
+        Ok(0) => {
+          result = values[1 + i * 2 + 1]
+          break
+        }
+        Ok(_) => ()
+        Err(err) => return err
+      }
+    }
+    result
+  }
+}
+
+///|
+fn eval_function_unknown(
+  workbook : Workbook,
+  sheet_name : String,
+  name : String,
+  args : ArrayView[Expr],
+  ctx : CalcContext,
+) -> FormulaValue raise XlsxError {
+  if args.length() == 0 {
+    match defined_name_value(workbook, sheet_name, name, ctx) {
+      Some(value) => value
+      None => Error(formula_error_name)
+    }
+  } else {
+    Error(formula_error_name)
   }
 }
 
