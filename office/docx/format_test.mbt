@@ -2435,3 +2435,40 @@ async test "the preflight reads MustUnderstand as a requirement" {
     assert_true(published, msg="the edit publishes")
   })
 }
+
+///|
+/// Round-17 fidelity: reading a part means supporting its dialect, so a
+/// protection behind a path that DEMANDED the dialect unsupported is
+/// nobody's protection.
+async test "the preflight requires the dialect of what it reads" {
+  with_docx_session_test_dir(directory => {
+    let dialect_gap = repackaged_fixture(
+      directory,
+      "dialect-gap",
+      [],
+      [
+        (
+          "word/_rels/document.xml.rels",
+          "<Relationship Id=\"rId3\" Type=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships/settings\" Target=\"settings.xml\"/>",
+          "<mc:AlternateContent xmlns:mc=\"http://schemas.openxmlformats.org/markup-compatibility/2006\" xmlns:wt=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\">" +
+          "<mc:Choice Requires=\"wt\"/>" +
+          "<mc:Fallback><Relationship Id=\"rId3\" Type=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships/settings\" Target=\"settings.xml\"/></mc:Fallback>" +
+          "</mc:AlternateContent>",
+        ),
+        (
+          "word/settings.xml", "</w:settings>", "<w:documentProtection w:edit=\"readOnly\" w:enforcement=\"1\"/></w:settings>",
+        ),
+      ],
+      [],
+    )
+    let (failure, published) = format_input_probe(
+      dialect_gap,
+      directory + "/dialect-gap-out.docx",
+    )
+    assert_true(
+      failure is None,
+      msg="whoever reaches the part cannot read it, and whoever reads it never reaches it: \{failure}",
+    )
+    assert_true(published, msg="the edit publishes")
+  })
+}

@@ -924,7 +924,7 @@ const DOCX_XMLNS_NAMESPACE : String = "http://www.w3.org/2000/xmlns/"
 /// part's compatibility markup.
 fn docx_settings_possible(
   raw : @xml.XmlElement,
-) -> Array[(@xml.XmlElement, DocxCondition)] {
+) -> Array[(@xml.XmlElement, DocxCondition)] raise @transaction.TransactionError {
   // A settings part whose ROOT is compatibility markup resolves to a
   // different root per consumer: every possible settings root's
   // children are possible settings, under the root's own condition
@@ -942,8 +942,13 @@ fn docx_settings_possible(
     } else {
       continue
     }
+    // Reading this part at all means SUPPORTING its dialect, so the
+    // dialect is a positive requirement of every condition returned: a
+    // path that demanded the dialect unsupported cannot lead to a
+    // consumer who then reads this content.
+    let reads_part : DocxCondition = { required: [dialect], refused: [], }
     for entry in docx_mce_possible(root, [dialect]) {
-      let joined = root_condition.conjoin(entry.1)
+      let joined = reads_part.conjoin(root_condition).conjoin(entry.1)
       if joined.satisfiable() {
         collected.push((entry.0, joined))
       }
@@ -963,8 +968,15 @@ fn docx_settings_possible(
 fn docx_mce_possible_roots(
   raw : @xml.XmlElement,
   understood : Array[String],
-) -> Array[(@xml.XmlElement, DocxCondition)] {
+) -> Array[(@xml.XmlElement, DocxCondition)] raise @transaction.TransactionError {
   let roots : Array[(@xml.XmlElement, DocxCondition)] = []
+  let root_work : Array[Int] = [0]
+  fn root_charge(amount : Int) -> Unit raise @transaction.TransactionError {
+    root_work[0] += amount
+    if root_work[0] > 2000000 {
+      raise docx_analysis_refusal()
+    }
+  }
   let scope : Map[String, String] = Map([])
   let process_exact : Map[String, Int] = Map([])
   let process_wildcard : Map[String, Int] = Map([])
@@ -1094,13 +1106,18 @@ fn docx_mce_possible_roots(
     process_wildcard.get("\{generation}\u{1}\{uri}") is Some(_)
   }
 
-  fn root_must_understand(element : @xml.XmlElement) -> Array[String] {
+  fn root_must_understand(
+    element : @xml.XmlElement,
+  ) -> Array[String] raise @transaction.TransactionError {
     let uris : Array[String] = []
+    let seen : Map[String, Bool] = Map([])
     match element.attributes.get("{\{DOCX_MC_NAMESPACE}}MustUnderstand") {
       Some(value) =>
         for token in docx_split_tokens(value) {
+          root_charge(1)
           guard scope.get(token) is Some(uri) else { continue }
-          if !understood.contains(uri) && !uris.contains(uri) {
+          if !understood.contains(uri) && seen.get(uri) is None {
+            seen[uri] = true
             uris.push(uri)
           }
         }
@@ -1129,7 +1146,10 @@ fn docx_mce_possible_roots(
     Some(uris)
   }
 
-  fn collect(element : @xml.XmlElement, arriving : DocxCondition) -> Unit {
+  fn collect(
+    element : @xml.XmlElement,
+    arriving : DocxCondition,
+  ) -> Unit raise @transaction.TransactionError {
     let undo = root_declarations(element)
     let (generation_undo, added) = root_directives(element)
     // Only consumers who support what a `MustUnderstand` names process
@@ -1139,8 +1159,14 @@ fn docx_mce_possible_roots(
       arriving
     } else {
       let stronger = arriving.snapshot()
+      let seen : Map[String, Bool] = Map([])
+      for entry in stronger.required {
+        seen[entry] = true
+      }
       for uri in understand {
-        if !stronger.required.contains(uri) {
+        root_charge(1)
+        if seen.get(uri) is None {
+          seen[uri] = true
           stronger.required.push(uri)
         }
       }
@@ -1169,10 +1195,16 @@ fn docx_mce_possible_roots(
           match requires {
             Some(uris) => {
               decides = true
+              let seen : Map[String, Bool] = Map([])
+              for entry in branch_condition.required {
+                seen[entry] = true
+              }
               for uri in uris {
+                root_charge(1)
                 if !understood.contains(uri) {
                   decides = false
-                  if !branch_condition.required.contains(uri) {
+                  if seen.get(uri) is None {
+                    seen[uri] = true
                     branch_condition.required.push(uri)
                   }
                 }
@@ -1196,8 +1228,11 @@ fn docx_mce_possible_roots(
           match requires {
             Some(uris) => {
               let negatable : Array[String] = []
+              let negatable_set : Map[String, Bool] = Map([])
               for uri in uris {
-                if !understood.contains(uri) && !negatable.contains(uri) {
+                root_charge(1)
+                if !understood.contains(uri) && negatable_set.get(uri) is None {
+                  negatable_set[uri] = true
                   negatable.push(uri)
                 }
               }
@@ -1363,13 +1398,43 @@ fn DocxCondition::satisfiable(self : DocxCondition) -> Bool {
 fn docx_mce_possible(
   raw : @xml.XmlElement,
   understood : Array[String],
-) -> Array[(@xml.XmlElement, DocxCondition)] {
+) -> Array[(@xml.XmlElement, DocxCondition)] raise @transaction.TransactionError {
   let possible : Array[(@xml.XmlElement, DocxCondition)] = []
   // The constraints of the path to the element being walked, kept
   // EXACTLY: the namespaces the taken choices require (positive
   // literals) and one at-least-one-unsupported clause per choice passed
   // over. Satisfiability is decided on the clauses themselves.
   let condition : DocxCondition = DocxCondition::always()
+  // Analysis is METERED: a legal part can declare thousands of
+  // namespaces in one directive, and an analysis that cannot finish in
+  // its budget refuses rather than grinds.
+  let work : Array[Int] = [0]
+  fn charge(amount : Int) -> Unit raise @transaction.TransactionError {
+    work[0] += amount
+    if work[0] > 2000000 {
+      raise docx_analysis_refusal()
+    }
+  }
+
+  // Membership in the path's requirements, as a MAP alongside the
+  // array: `contains` over a wide requirement list is quadratic.
+  let required_set : Map[String, Bool] = Map([])
+  fn require(uri : String) -> Bool {
+    if required_set.get(uri) is Some(_) {
+      return false
+    }
+    required_set[uri] = true
+    true
+  }
+
+  fn unrequire(count : Int) -> Unit {
+    for _ in 0..<count {
+      match condition.required.pop() {
+        Some(uri) => required_set.remove(uri)
+        None => ()
+      }
+    }
+  }
   let scope : Map[String, String] = Map([])
   let process_exact : Map[String, Int] = Map([])
   let process_wildcard : Map[String, Int] = Map([])
@@ -1422,13 +1487,14 @@ fn docx_mce_possible(
   // support what it names process this content at all.
   fn directives(
     element : @xml.XmlElement,
-  ) -> (Array[(String, Int?)], Array[(Bool, String)], Int) {
+  ) -> (Array[(String, Int?)], Array[(Bool, String)], Int) raise @transaction.TransactionError {
     let mut required_added = 0
     match element.attributes.get("{\{DOCX_MC_NAMESPACE}}MustUnderstand") {
       Some(value) =>
         for token in docx_split_tokens(value) {
+          charge(1)
           guard scope.get(token) is Some(uri) else { continue }
-          if !understood.contains(uri) && !condition.required.contains(uri) {
+          if !understood.contains(uri) && require(uri) {
             condition.required.push(uri)
             required_added += 1
           }
@@ -1486,9 +1552,7 @@ fn docx_mce_possible(
     added : Array[(Bool, String)],
     required_added : Int,
   ) -> Unit {
-    for _ in 0..<required_added {
-      condition.required.pop() |> ignore
-    }
+    unrequire(required_added)
     for entry in added {
       if entry.0 {
         count_down(process_wildcard, entry.1)
@@ -1558,7 +1622,9 @@ fn docx_mce_possible(
     }
   }
 
-  fn level(container : @xml.XmlElement) -> Unit {
+  fn level(
+    container : @xml.XmlElement,
+  ) -> Unit raise @transaction.TransactionError {
     for node in container.children {
       guard node is XmlElement(child) else { continue }
       let undo = declarations(child)
@@ -1582,8 +1648,8 @@ fn docx_mce_possible(
             match requires {
               Some(uris) =>
                 for uri in uris {
-                  if !understood.contains(uri) &&
-                    !condition.required.contains(uri) {
+                  charge(1)
+                  if !understood.contains(uri) && require(uri) {
                     condition.required.push(uri)
                     pushed += 1
                   }
@@ -1597,8 +1663,11 @@ fn docx_mce_possible(
             match requires {
               Some(uris) => {
                 let negatable : Array[String] = []
+                let negatable_set : Map[String, Bool] = Map([])
                 for uri in uris {
-                  if !understood.contains(uri) && !negatable.contains(uri) {
+                  charge(1)
+                  if !understood.contains(uri) && negatable_set.get(uri) is None {
+                    negatable_set[uri] = true
                     negatable.push(uri)
                   }
                 }
@@ -1612,9 +1681,7 @@ fn docx_mce_possible(
           } else if branch.name == "{\{DOCX_MC_NAMESPACE}}Fallback" {
             level(branch)
           }
-          for _ in 0..<pushed {
-            condition.required.pop() |> ignore
-          }
+          unrequire(pushed)
           undo_directives(branch_generation_undo, branch_added, branch_required)
           restore(branch_undo)
         }
