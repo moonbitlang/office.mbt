@@ -1988,3 +1988,68 @@ async test "the preflight reads attributes in the element's own dialect" {
     assert_false(enforcement_published, msg="nothing may be published")
   })
 }
+
+///|
+/// A MALFORMED fork refuses too — in whichever typed voice reaches it
+/// first. The invariant is that no fork on a protection surface is ever
+/// edited past; which refusal speaks when the fork is also broken XML
+/// or broken OPC is not part of it.
+async test "malformed forks refuse in some typed voice" {
+  with_docx_session_test_dir(directory => {
+    // An empty alternate in the DOCUMENT rels: MCE-invalid (no branch),
+    // caught by whichever gate reads it first.
+    let empty_fork = repackaged_fixture(
+      directory,
+      "empty-fork",
+      [],
+      [
+        (
+          "word/_rels/document.xml.rels", "</Relationships>", "<mc:AlternateContent xmlns:mc=\"http://schemas.openxmlformats.org/markup-compatibility/2006\"/></Relationships>",
+        ),
+      ],
+      [],
+    )
+    let (fork_failure, fork_published) = format_input_probe(
+      empty_fork,
+      directory + "/empty-fork-out.docx",
+    )
+    guard fork_failure is Some(fork_message) else {
+      fail("a malformed fork still refuses")
+    }
+    assert_true(
+      fork_message.contains("compatibility alternatives") ||
+      fork_message.contains("invalid") ||
+      fork_message.contains("could not be read"),
+      msg=fork_message,
+    )
+    assert_false(fork_published, msg="nothing may be published")
+    // The same shape in the ROOT rels is refused by identification
+    // before any of this runs.
+    let root_fork = repackaged_fixture(
+      directory,
+      "root-fork",
+      [],
+      [
+        (
+          "_rels/.rels", "</Relationships>", "<mc:AlternateContent xmlns:mc=\"http://schemas.openxmlformats.org/markup-compatibility/2006\"/></Relationships>",
+        ),
+      ],
+      [],
+    )
+    let (root_failure, root_published) = format_input_probe(
+      root_fork,
+      directory + "/root-fork-out.docx",
+    )
+    guard root_failure is Some(root_message) else {
+      fail("a malformed root fork still refuses")
+    }
+    assert_true(
+      root_message.contains("compatibility alternatives") ||
+      root_message.contains("invalid") ||
+      root_message.contains("could not be read") ||
+      root_message.contains("identification"),
+      msg=root_message,
+    )
+    assert_false(root_published, msg="nothing may be published")
+  })
+}
