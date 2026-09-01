@@ -656,15 +656,32 @@ fn docx_push_condition(
       return
     }
   }
-  if conditions.length() >= 64 {
+  // The list stays a minimal ANTICHAIN: a weaker newcomer retires what
+  // it subsumes, so whether the bound is met cannot depend on the order
+  // the paths were declared in.
+  let retained : Array[DocxCondition] = []
+  for existing in conditions {
+    if !docx_condition_subsumes(condition, existing) {
+      retained.push(existing)
+    }
+  }
+  if retained.length() >= 64 {
     raise docx_analysis_refusal()
+  }
+  conditions.clear()
+  for existing in retained {
+    conditions.push(existing)
   }
   conditions.push(condition)
 }
 
 ///|
-/// Whether `weaker` admits every consumer `stronger` admits: fewer
-/// positive requirements and fewer clauses, as sets.
+/// Whether `weaker` admits every consumer `stronger` admits: each of
+/// its requirements is one of the stronger's, and each of its clauses
+/// is IMPLIED by one of the stronger's — a clause implies another
+/// exactly when it is a subset of it (if at least one of the few is
+/// unsupported, at least one of the many is). Set logic throughout, so
+/// a prefix bound twice to one namespace changes nothing.
 fn docx_condition_subsumes(
   weaker : DocxCondition,
   stronger : DocxCondition,
@@ -675,21 +692,19 @@ fn docx_condition_subsumes(
     }
   }
   for group in weaker.refused {
-    let mut present = false
+    let mut implied = false
     for candidate in stronger.refused {
-      if candidate.length() == group.length() {
-        let mut same = true
-        for uri in group {
-          if !candidate.contains(uri) {
-            same = false
-          }
-        }
-        if same {
-          present = true
+      let mut subset = true
+      for uri in candidate {
+        if !group.contains(uri) {
+          subset = false
         }
       }
+      if subset {
+        implied = true
+      }
     }
-    if !present {
+    if !implied {
       return false
     }
   }
@@ -986,8 +1001,10 @@ fn docx_mce_possible_roots(
               decides = true
               for uri in uris {
                 if !understood.contains(uri) {
-                  branch_condition.required.push(uri)
                   decides = false
+                  if !branch_condition.required.contains(uri) {
+                    branch_condition.required.push(uri)
+                  }
                 }
               }
             }
@@ -1009,7 +1026,7 @@ fn docx_mce_possible_roots(
             Some(uris) => {
               let negatable : Array[String] = []
               for uri in uris {
-                if !understood.contains(uri) {
+                if !understood.contains(uri) && !negatable.contains(uri) {
                   negatable.push(uri)
                 }
               }
@@ -1092,7 +1109,9 @@ fn DocxCondition::conjoin(
 ) -> DocxCondition {
   let joined = self.snapshot()
   for uri in other.required {
-    joined.required.push(uri)
+    if !joined.required.contains(uri) {
+      joined.required.push(uri)
+    }
   }
   for group in other.refused {
     joined.refused.push(group)
@@ -1339,7 +1358,8 @@ fn docx_mce_possible(
             match requires {
               Some(uris) =>
                 for uri in uris {
-                  if !understood.contains(uri) {
+                  if !understood.contains(uri) &&
+                    !condition.required.contains(uri) {
                     condition.required.push(uri)
                     pushed += 1
                   }
@@ -1354,7 +1374,7 @@ fn docx_mce_possible(
               Some(uris) => {
                 let negatable : Array[String] = []
                 for uri in uris {
-                  if !understood.contains(uri) {
+                  if !understood.contains(uri) && !negatable.contains(uri) {
                     negatable.push(uri)
                   }
                 }

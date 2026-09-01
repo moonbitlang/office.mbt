@@ -2230,3 +2230,90 @@ async test "the preflight keeps many-path reachability exact" {
     assert_true(published, msg="the edit publishes")
   })
 }
+
+///|
+/// Round-14 fidelity: clause logic is SET logic, and the path bound
+/// cannot depend on declaration order.
+async test "the preflight reasons about clauses as sets" {
+  with_docx_session_test_dir(directory => {
+    // Two paths to one settings part whose clauses differ only once the
+    // prefixes are RESOLVED: one passed choice requires w14 twice (two
+    // prefixes, one namespace), the other requires w14 and x. The
+    // consumers who support w14 but not x reach the part through the
+    // second path and see the protection its w14 branch carries.
+    let resolved = repackaged_fixture(
+      directory,
+      "resolved-clauses",
+      [],
+      [
+        (
+          "word/_rels/document.xml.rels",
+          "<Relationship Id=\"rId3\" Type=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships/settings\" Target=\"settings.xml\"/>",
+          "<mc:AlternateContent xmlns:mc=\"http://schemas.openxmlformats.org/markup-compatibility/2006\" xmlns:wa=\"http://schemas.microsoft.com/office/word/2010/wordml\" xmlns:wb=\"http://schemas.microsoft.com/office/word/2010/wordml\">" +
+          "<mc:Choice Requires=\"wa wb\"/>" +
+          "<mc:Fallback><Relationship Id=\"rId3\" Type=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships/settings\" Target=\"settings.xml\"/></mc:Fallback>" +
+          "</mc:AlternateContent>" +
+          "<mc:AlternateContent xmlns:mc=\"http://schemas.openxmlformats.org/markup-compatibility/2006\" xmlns:wc=\"http://schemas.microsoft.com/office/word/2010/wordml\" xmlns:x=\"urn:example:x\">" +
+          "<mc:Choice Requires=\"wc x\"/>" +
+          "<mc:Fallback><Relationship Id=\"rId3b\" Type=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships/settings\" Target=\"settings.xml\"/></mc:Fallback>" +
+          "</mc:AlternateContent>",
+        ),
+        (
+          "word/settings.xml", "</w:settings>", "<mc:AlternateContent xmlns:mc=\"http://schemas.openxmlformats.org/markup-compatibility/2006\"><mc:Choice Requires=\"w14\"><w:documentProtection w:edit=\"readOnly\" w:enforcement=\"1\"/></mc:Choice><mc:Fallback/></mc:AlternateContent></w:settings>",
+        ),
+      ],
+      [],
+    )
+    let (resolved_failure, resolved_published) = format_input_probe(
+      resolved,
+      directory + "/resolved-clauses-out.docx",
+    )
+    guard resolved_failure is Some(resolved_message) else {
+      fail("the w14-but-not-x consumer sees the protection")
+    }
+    assert_true(
+      resolved_message.contains("editing protection") ||
+      resolved_message.contains("compatibility alternatives"),
+      msg=resolved_message,
+    )
+    assert_false(resolved_published, msg="nothing may be published")
+    // Sixty-four conditional paths followed by one UNCONDITIONAL path
+    // to the same part: the weaker newcomer retires them all, so the
+    // bound cannot depend on the order the paths were declared in.
+    let ns_decls = StringBuilder()
+    let alternates = StringBuilder()
+    for index in 0..<64 {
+      ns_decls.write_string(" xmlns:m\{index}=\"urn:m:\{index}\"")
+      alternates.write_string(
+        "<mc:AlternateContent xmlns:mc=\"http://schemas.openxmlformats.org/markup-compatibility/2006\">" +
+        "<mc:Choice Requires=\"m\{index}\"><Relationship Id=\"rIdc\{index}\" Type=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships/settings\" Target=\"settings.xml\"/></mc:Choice>" +
+        "<mc:Fallback/></mc:AlternateContent>",
+      )
+    }
+    let ordered = repackaged_fixture(
+      directory,
+      "ordered-bound",
+      [],
+      [
+        (
+          "word/_rels/document.xml.rels",
+          "<Relationships xmlns=\"http://schemas.openxmlformats.org/package/2006/relationships\">",
+          "<Relationships xmlns=\"http://schemas.openxmlformats.org/package/2006/relationships\"" +
+          ns_decls.to_string() +
+          ">" +
+          alternates.to_string(),
+        ),
+      ],
+      [],
+    )
+    let (ordered_failure, ordered_published) = format_input_probe(
+      ordered,
+      directory + "/ordered-bound-out.docx",
+    )
+    assert_true(
+      ordered_failure is None,
+      msg="the unconditional path retires the bounded ones: \{ordered_failure}",
+    )
+    assert_true(ordered_published, msg="the edit publishes")
+  })
+}
