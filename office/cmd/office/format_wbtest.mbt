@@ -144,3 +144,27 @@ test "format scope validation admits only canonical spellings" {
     assert_true(refused, msg="expected a refusal for '" + bad + "'")
   }
 }
+
+///|
+/// The reserve's boundary: a record that fits inside the ceiling minus
+/// the measured reserve passes, and the reserve itself is a few
+/// kilobytes, not a blanket block of the ceiling.
+test "format report reserve is measured and tight" {
+  let reserve = format_report_transaction_reserve(
+    "a/reasonably/long/input/path/document.docx", "a/reasonably/long/output/path/document-formatted.docx",
+  )
+  assert_true(reserve < 8192, msg="reserve is \{reserve}")
+  assert_true(reserve > 1024, msg="reserve is \{reserve}")
+  // The largest fitting record: just under ceiling minus reserve.
+  let ceiling = 65536
+  let mut filler = "x"
+  while filler.length() < ceiling - reserve - 64 {
+    filler = filler + filler
+  }
+  let fitting : Json = Json::object({
+    "note": Json::string(
+      filler.substring(start=0, end=ceiling - reserve - 64).to_string(),
+    ),
+  })
+  ensure_format_report_budget(fitting, ceiling - reserve)
+}

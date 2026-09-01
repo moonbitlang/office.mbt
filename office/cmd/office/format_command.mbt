@@ -439,57 +439,70 @@ fn format_report_json(
 ///|
 /// The reserve for what the preflight cannot measure yet — the
 /// transaction record and the envelope's warnings — computed by
-/// MEASURING a transaction-shaped stub with the real paths, a
-/// generous part-name allowance, and the fixed warning set, rather
-/// than subtracting a blanket constant: a blanket reserve refuses
-/// reports that would in fact have fit.
+/// MEASURING a schema-accurate stub of the `office.transaction/2`
+/// record this verb's transaction actually emits: the fixed fields with
+/// the real paths, a validator-summary allowance, the one changed part
+/// a format writes plus a small added/removed allowance, preservation's
+/// unchanged COUNT (the record never lists the unchanged names), and an
+/// allowance for the fixed publication warnings. A blanket constant
+/// refused reports that would in fact have fit.
 fn format_report_transaction_reserve(file : String, output : String) -> Int {
-  let part_names : Array[Json] = []
-  for index in 0..<128 {
-    part_names.push(
-      Json::string("word/embeddings/oleObject\{index}-with-a-long-name.bin"),
+  let validator_entries : Array[Json] = []
+  for _ in 0..<6 {
+    validator_entries.push(
+      Json::object({
+        "name": Json::string("office-docx-format-readback-and-longer"),
+        "passed": Json::boolean(true),
+        "finding_count": Json::number(0),
+      }),
     )
   }
   let stub : Json = Json::object({
     "schema": Json::string("office.transaction/2"),
+    "format": Json::string("docx"),
     "input": Json::string(file),
     "output": Json::string(output),
-    "format": Json::string("docx"),
-    "changed": Json::boolean(true),
+    "mode": Json::string("path-based-atomic-replace"),
     "dry_run": Json::boolean(false),
+    "changed": Json::boolean(true),
     "committed": Json::boolean(true),
-    "zip_metadata_policy": Json::string("preserve-required-normalize-rest"),
-    "validations": Json::array(
-      part_names[0:8]
-      .to_array()
-      .map(_ => {
-        Json::object({
-          "name": Json::string("office-docx-format-readback-and-longer"),
-          "passed": Json::boolean(true),
-          "finding_count": Json::number(0),
-        })
-      }),
-    ),
+    "original_size": Json::number(9007199254740991.0),
+    "result_size": Json::number(9007199254740991.0),
+    "replaced_existing": Json::boolean(true),
+    "overwritten_size": Json::number(9007199254740991.0),
+    "validations": Json::array(validator_entries),
     "preservation": Json::object({
+      "whole_file_identical": Json::boolean(false),
+      "manifest_enforced": Json::boolean(true),
       "changed": Json::array([Json::string("word/document.xml")]),
-      "added": Json::array([]),
-      "removed": Json::array([]),
-      "unchanged": Json::array(part_names),
+      "added": Json::array([
+        Json::string("word/an-added-part-allowance.xml"),
+        Json::string("word/another-added-part-allowance.xml"),
+      ]),
+      "removed": Json::array([
+        Json::string("word/a-removed-part-allowance.xml"),
+        Json::string("word/another-removed-part-allowance.xml"),
+      ]),
+      "unchanged_count": Json::number(9007199254740991.0),
+      "zip_metadata_policy": Json::string("preserve-required-normalize-rest"),
     }),
-    "warnings": Json::array(
-      part_names[0:8]
-      .to_array()
-      .map(_ => {
-        Json::object({
-          "code": Json::string("office.transaction.path_based_commit_semantics"),
-          "message": Json::string(
-            "a reasonably long warning message about publication semantics on this platform and its filesystem",
-          ),
-        })
-      }),
-    ),
   })
-  stub.stringify().length() + 8 * 1024
+  let warnings_stub : Json = Json::array([
+    Json::object({
+      "code": Json::string("office.transaction.path_based_commit_semantics"),
+      "message": Json::string(
+        "publication uses path-based commit semantics on this platform: " +
+        output,
+      ),
+    }),
+    Json::object({
+      "code": Json::string("office.transaction.path_based_commit_semantics"),
+      "message": Json::string(
+        "a second allowance entry for a platform publication warning: " + output,
+      ),
+    }),
+  ])
+  stub.stringify().length() + warnings_stub.stringify().length() + 2048
 }
 
 ///|
