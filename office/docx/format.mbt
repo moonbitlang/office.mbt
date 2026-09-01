@@ -486,6 +486,9 @@ fn docx_part_extension(name : String) -> String? {
 }
 
 ///|
+const DOCX_PACKAGE_RELATIONSHIPS_NAMESPACE : String = "http://schemas.openxmlformats.org/package/2006/relationships"
+
+///|
 /// The package's signature relationships: the origin the package points
 /// at, and the signatures the origin points at.
 const DOCX_SIGNATURE_ORIGIN_RELATIONSHIP : String = "http://schemas.openxmlformats.org/package/2006/relationships/digital-signature/origin"
@@ -602,12 +605,14 @@ fn docx_relationship_targets(
   }
   let found : Array[String] = []
   let resolved : Array[String] = []
-  let queue : Array[@xml.XmlElement] = [root]
-  while queue.pop() is Some(relationship) {
-    for node in relationship.children {
-      guard node is XmlElement(child) else { continue }
-      queue.push(child)
-    }
+  // Every OPC consumer understands the relationships vocabulary itself,
+  // so a choice requiring only it decides its alternate, and an element
+  // outside it is looked through only where a `ProcessContent` says a
+  // consumer would.
+  for
+    relationship in docx_mce_possible(root, [
+      DOCX_PACKAGE_RELATIONSHIPS_NAMESPACE,
+    ]) {
     guard relationship.name
       is (DOCX_PACKAGE_RELATIONSHIP_ELEMENT | "relationships:Relationship") else {
       continue
@@ -678,21 +683,49 @@ const DOCX_XMLNS_NAMESPACE : String = "http://www.w3.org/2000/xmlns/"
 /// The settings a DIFFERENT consumer might act on: every element that
 /// could sit at the settings-child level under SOME resolution of the
 /// part's compatibility markup.
-///
-/// This reader resolves markup compatibility understanding WML alone.
-/// Another consumer may understand more, so the walk takes every branch
-/// of every alternate that such a consumer could select — a branch AFTER
-/// the first WML-satisfiable choice is one nothing selects, since every
-/// consumer of this document understands WML and stops there. An element
-/// named by an in-scope `mc:ProcessContent` is looked through, because a
-/// consumer that finds it ignorable processes its content at this level;
-/// an ignorable element nobody asked to process is dropped whole by one
-/// consumer and kept whole by the rest, so its content is never at this
-/// level and is not collected. WML elements are never looked through.
 fn docx_settings_possible(raw : @xml.XmlElement) -> Array[@xml.XmlElement] {
+  docx_mce_possible(raw, [DOCX_WML_NAMESPACE, DOCX_STRICT_WML_NAMESPACE])
+}
+
+///|
+/// Every element that could sit at CHILD level of `raw` under some
+/// consumer's resolution of its compatibility markup.
+///
+/// This walk models what other consumers do, where `understood` is what
+/// EVERY consumer of this vocabulary understands. So it takes every
+/// branch of every alternate — but a choice requiring only understood
+/// namespaces decides its alternate, since every consumer stops there,
+/// and the branches after it are unreachable. An element named by an
+/// in-scope `mc:ProcessContent` is looked through, because a consumer
+/// that finds it ignorable processes its content at this level; an
+/// ignorable element nobody asked to process is dropped whole by one
+/// consumer and kept whole by the rest, so its content is never at this
+/// level. Understood-namespace elements are never looked through.
+/// Re-declaring a namespace ignorable RESETS inherited process-content
+/// rules for it (ECMA-376 Part 3), which the per-namespace generations
+/// carry; matching is by map lookup, so a part with many rules and many
+/// foreign children costs their sum rather than their product.
+fn docx_mce_possible(
+  raw : @xml.XmlElement,
+  understood : Array[String],
+) -> Array[@xml.XmlElement] {
   let possible : Array[@xml.XmlElement] = []
   let scope : Map[String, String] = Map([])
-  let process_content : Array[String] = []
+  let process_exact : Map[String, Int] = Map([])
+  let process_wildcard : Map[String, Int] = Map([])
+  let generations : Map[String, Int] = Map([])
+  fn count_up(counts : Map[String, Int], key : String) -> Unit {
+    counts[key] = counts.get(key).unwrap_or(0) + 1
+  }
+
+  fn count_down(counts : Map[String, Int], key : String) -> Unit {
+    match counts.get(key) {
+      Some(count) if count > 1 => counts[key] = count - 1
+      Some(_) => counts.remove(key)
+      None => ()
+    }
+  }
+
   fn declarations(element : @xml.XmlElement) -> Array[(String, String?)] {
     let undo : Array[(String, String?)] = []
     for attribute in element.attributes {
@@ -718,53 +751,95 @@ fn docx_settings_possible(raw : @xml.XmlElement) -> Array[@xml.XmlElement] {
     }
   }
 
-  // A `ProcessContent` names elements by QName, resolved where the
-  // directive SITS; the resolved names apply to the subtree beneath it.
-  fn directives(element : @xml.XmlElement) -> Int {
-    guard element.attributes.get("{\{DOCX_MC_NAMESPACE}}ProcessContent")
-      is Some(value) else {
-      return 0
+  // The directives an element carries, applied in the order the spec
+  // gives them meaning: `Ignorable` opens a new generation for each of
+  // its namespaces, retiring inherited rules; the element's own
+  // `ProcessContent` then declares rules in the new generation.
+  fn directives(
+    element : @xml.XmlElement,
+  ) -> (Array[(String, Int?)], Array[(Bool, String)]) {
+    let generation_undo : Array[(String, Int?)] = []
+    match element.attributes.get("{\{DOCX_MC_NAMESPACE}}Ignorable") {
+      Some(value) =>
+        for token in docx_split_tokens(value) {
+          guard scope.get(token) is Some(uri) else { continue }
+          let previous = generations.get(uri)
+          generation_undo.push((uri, previous))
+          generations[uri] = previous.unwrap_or(0) + 1
+        }
+      None => ()
     }
-    let mut added = 0
-    for token in docx_split_tokens(value) {
-      let entry = match token.find(":") {
-        Some(colon) => {
-          let prefix = token.substring(start=0, end=colon).to_string()
-          let local = token.substring(start=colon + 1).to_string()
-          match scope.get(prefix) {
-            Some(uri) => "{\{uri}}\{local}"
-            None => continue
+    let added : Array[(Bool, String)] = []
+    match element.attributes.get("{\{DOCX_MC_NAMESPACE}}ProcessContent") {
+      Some(value) =>
+        for token in docx_split_tokens(value) {
+          let (uri, local) = match token.find(":") {
+            Some(colon) => {
+              let prefix = token.substring(start=0, end=colon).to_string()
+              let local = token.substring(start=colon + 1).to_string()
+              match scope.get(prefix) {
+                Some(uri) => (uri, local)
+                None => continue
+              }
+            }
+            None =>
+              match scope.get("") {
+                Some(uri) => (uri, token.to_string())
+                None => continue
+              }
+          }
+          let generation = generations.get(uri).unwrap_or(0)
+          if local == "*" {
+            let key = "\{generation}\u{1}\{uri}"
+            count_up(process_wildcard, key)
+            added.push((true, key))
+          } else {
+            let key = "\{generation}\u{1}{\{uri}}\{local}"
+            count_up(process_exact, key)
+            added.push((false, key))
           }
         }
-        None =>
-          match scope.get("") {
-            Some(uri) => "{\{uri}}\{token}"
-            None => token
-          }
-      }
-      process_content.push(entry)
-      added += 1
+      None => ()
     }
-    added
+    (generation_undo, added)
+  }
+
+  fn undo_directives(
+    generation_undo : Array[(String, Int?)],
+    added : Array[(Bool, String)],
+  ) -> Unit {
+    for entry in added {
+      if entry.0 {
+        count_down(process_wildcard, entry.1)
+      } else {
+        count_down(process_exact, entry.1)
+      }
+    }
+    for entry in generation_undo {
+      match entry.1 {
+        Some(previous) => generations[entry.0] = previous
+        None => generations.remove(entry.0)
+      }
+    }
+  }
+
+  fn element_uri(name : String) -> String {
+    guard name.has_prefix("{") else { return "" }
+    match name.find("}") {
+      Some(close) => name.substring(start=1, end=close).to_string()
+      None => ""
+    }
   }
 
   fn matches_process_content(name : String) -> Bool {
-    for entry in process_content {
-      if entry == name {
-        return true
-      }
-      if entry.has_suffix("}*") &&
-        name.has_prefix(
-          entry.substring(start=0, end=entry.length() - 1).to_string(),
-        ) {
-        return true
-      }
-    }
-    false
+    let uri = element_uri(name)
+    let generation = generations.get(uri).unwrap_or(0)
+    process_exact.get("\{generation}\u{1}\{name}") is Some(_) ||
+    process_wildcard.get("\{generation}\u{1}\{uri}") is Some(_)
   }
 
-  // Every prefix a choice requires resolves to WML exactly when every
-  // consumer of this document satisfies it.
+  // Every prefix a choice requires resolves to an understood namespace
+  // exactly when every consumer of this vocabulary satisfies it.
   fn choice_decides(choice : @xml.XmlElement) -> Bool {
     let requires = match choice.attributes.get("Requires") {
       Some(value) => value
@@ -780,9 +855,7 @@ fn docx_settings_possible(raw : @xml.XmlElement) -> Array[@xml.XmlElement] {
     }
     for token in tokens {
       guard scope.get(token) is Some(uri) else { return false }
-      guard uri == DOCX_WML_NAMESPACE || uri == DOCX_STRICT_WML_NAMESPACE else {
-        return false
-      }
+      guard understood.contains(uri) else { return false }
     }
     true
   }
@@ -791,14 +864,14 @@ fn docx_settings_possible(raw : @xml.XmlElement) -> Array[@xml.XmlElement] {
     for node in container.children {
       guard node is XmlElement(child) else { continue }
       let undo = declarations(child)
-      let added = directives(child)
+      let (generation_undo, added) = directives(child)
       if child.name == "{\{DOCX_MC_NAMESPACE}}AlternateContent" {
         let mut decided = false
         for branch_node in child.children {
           guard branch_node is XmlElement(branch) else { continue }
           guard !decided else { break }
           let branch_undo = declarations(branch)
-          let branch_added = directives(branch)
+          let (branch_generation_undo, branch_added) = directives(branch)
           if branch.name == "{\{DOCX_MC_NAMESPACE}}Choice" {
             level(branch)
             if choice_decides(branch) {
@@ -807,32 +880,25 @@ fn docx_settings_possible(raw : @xml.XmlElement) -> Array[@xml.XmlElement] {
           } else if branch.name == "{\{DOCX_MC_NAMESPACE}}Fallback" {
             level(branch)
           }
-          for _ in 0..<branch_added {
-            process_content.pop() |> ignore
-          }
+          undo_directives(branch_generation_undo, branch_added)
           restore(branch_undo)
         }
       } else {
         possible.push(child)
-        if !child.name.has_prefix("{\{DOCX_WML_NAMESPACE}}") &&
-          !child.name.has_prefix("{\{DOCX_STRICT_WML_NAMESPACE}}") &&
+        if !understood.contains(element_uri(child.name)) &&
           matches_process_content(child.name) {
           level(child)
         }
       }
-      for _ in 0..<added {
-        process_content.pop() |> ignore
-      }
+      undo_directives(generation_undo, added)
       restore(undo)
     }
   }
 
   let root_undo = declarations(raw)
-  let root_added = directives(raw)
+  let (root_generation_undo, root_added) = directives(raw)
   level(raw)
-  for _ in 0..<root_added {
-    process_content.pop() |> ignore
-  }
+  undo_directives(root_generation_undo, root_added)
   restore(root_undo)
   possible
 }

@@ -306,6 +306,7 @@ async fn preflight_fixture(
   settings_body : String,
   extra : Array[(String, String)],
   content_types_insert? : String,
+  settings_root_insert? : String = "",
   runs? : String = "<w:r><w:t>Hello world</w:t></w:r>",
 ) -> String {
   let source = edit_fixture(directory, name + "-source.docx", runs)
@@ -314,8 +315,15 @@ async fn preflight_fixture(
   for entry in archive.entries() {
     let entry_name = entry.name()
     guard archive.get(entry_name) is Some(payload) else { continue }
-    if entry_name == "word/settings.xml" && settings_body != "" {
-      let text = @utf8.decode(payload)
+    if entry_name == "word/settings.xml" &&
+      (settings_body != "" || settings_root_insert != "") {
+      let mut text = @utf8.decode(payload)
+      if settings_root_insert != "" {
+        text = text.replace(
+          old="mc:Ignorable=\"w14\"",
+          new="mc:Ignorable=\"w14\"" + settings_root_insert,
+        )
+      }
       rebuilt.add(
         entry_name,
         @utf8.encode(
@@ -1719,5 +1727,67 @@ async test "the preflight follows relationships in compatibility branches" {
       msg=message,
     )
     assert_false(published, msg="nothing may be published")
+  })
+}
+
+///|
+/// Round-8 fidelity: reachability decides in relationship parts too,
+/// and a nested `mc:Ignorable` retires the inherited process-content
+/// rules for its namespaces.
+async test "the preflight applies reachability and generation resets" {
+  with_docx_session_test_dir(directory => {
+    // A rels choice requiring only the RELATIONSHIPS vocabulary is the
+    // branch every OPC consumer takes: the fallback behind it names a
+    // different settings part, and decides nothing.
+    let decided_rels = repackaged_fixture(
+      directory,
+      "decided-rels",
+      [],
+      [
+        (
+          "word/_rels/document.xml.rels",
+          "<Relationship Id=\"rId3\" Type=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships/settings\" Target=\"settings.xml\"/>",
+          "<mc:AlternateContent xmlns:mc=\"http://schemas.openxmlformats.org/markup-compatibility/2006\" xmlns:r=\"http://schemas.openxmlformats.org/package/2006/relationships\">" +
+          "<mc:Choice Requires=\"r\">" +
+          "<Relationship Id=\"rId3\" Type=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships/settings\" Target=\"settings.xml\"/>" +
+          "</mc:Choice><mc:Fallback>" +
+          "<Relationship Id=\"rId9\" Type=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships/settings\" Target=\"webSettings.xml\"/>" +
+          "</mc:Fallback></mc:AlternateContent>",
+        ),
+      ],
+      [],
+    )
+    let (decided_failure, decided_published) = format_input_probe(
+      decided_rels,
+      directory + "/decided-rels-out.docx",
+    )
+    assert_true(
+      decided_failure is None,
+      msg="a decided rels choice is not a fork: \{decided_failure}",
+    )
+    assert_true(decided_published, msg="the edit publishes")
+    // A nested Ignorable re-declaration RETIRES the inherited
+    // process-content rules for its namespaces: `w14:outer` was
+    // promotable at the root, but beneath the re-declaration it is
+    // ignorable content nobody asked to process, and Word drops it
+    // whole — together with the tracking flag inside it.
+    let retired = preflight_fixture(
+      directory,
+      "retired",
+      "<w14:scope xmlns:mc2=\"http://schemas.openxmlformats.org/markup-compatibility/2006\" mc2:Ignorable=\"w14\" mc2:ProcessContent=\"w14:scope\">" +
+      "<w14:outer><w:trackRevisions/></w14:outer>" +
+      "</w14:scope>",
+      [],
+      settings_root_insert=" mc:ProcessContent=\"w14:scope w14:outer\"",
+    )
+    let (retired_failure, retired_published) = format_input_probe(
+      retired,
+      directory + "/retired-out.docx",
+    )
+    assert_true(
+      retired_failure is None,
+      msg="a retired rule promotes nothing: \{retired_failure}",
+    )
+    assert_true(retired_published, msg="the edit publishes")
   })
 }
