@@ -2706,3 +2706,48 @@ async test "the preflight drops ignorable siblings and dedupes requirements" {
     assert_true(repeated_published, msg="the edit publishes")
   })
 }
+
+///|
+/// Round-21 fidelity: an element that declares ITSELF ignorable is one
+/// some consumer drops, and the root beside it is that consumer's
+/// document.
+async test "the preflight honours self-declared ignorability" {
+  with_docx_session_test_dir(directory => {
+    let self_ignorable = repackaged_fixture(
+      directory,
+      "self-ignorable",
+      [],
+      [
+        (
+          "word/settings.xml",
+          "<w:settings",
+          "<mc0:AlternateContent xmlns:mc0=\"http://schemas.openxmlformats.org/markup-compatibility/2006\" xmlns:y=\"urn:example:y\">" +
+          "<mc0:Choice Requires=\"y\">" +
+          "<x:noise xmlns:x=\"urn:example:x\" mc0:Ignorable=\"x\"/>" +
+          "<w:settings xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\"><w:trackRevisions/></w:settings>" +
+          "</mc0:Choice><mc0:Fallback><w:settings",
+        ),
+        (
+          "word/settings.xml", "</w:settings>", "</w:settings></mc0:Fallback></mc0:AlternateContent>",
+        ),
+      ],
+      [],
+    )
+    let (failure, published) = format_input_probe(
+      self_ignorable,
+      directory + "/self-ignorable-out.docx",
+    )
+    guard failure is Some(message) else {
+      fail(
+        "the consumers who drop the self-ignorable noise read the tracked root",
+      )
+    }
+    assert_true(
+      message.contains("records revisions") ||
+      message.contains("compatibility alternatives") ||
+      message.contains("could not be read"),
+      msg=message,
+    )
+    assert_false(published, msg="nothing may be published")
+  })
+}

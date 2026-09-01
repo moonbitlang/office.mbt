@@ -1195,34 +1195,101 @@ fn docx_mce_possible_roots(
     Some(uris)
   }
 
+  // Whether one element can be DROPPED by some consumer: it is in a
+  // non-understood namespace declared ignorable — inherited, or by the
+  // element's own directive, whose prefixes resolve under the element's
+  // own declarations. An `mc:AlternateContent` can resolve to nothing
+  // for some consumer, so it counts as droppable outright; that
+  // over-approximates who reads a sibling as the sole root, which errs
+  // toward refusal, never past a protection.
+  fn droppable_by(
+    element : @xml.XmlElement,
+  ) -> (Bool, String?) raise @transaction.TransactionError {
+    if element.name == "{\{DOCX_MC_NAMESPACE}}AlternateContent" {
+      return (true, None)
+    }
+    let uri = root_element_uri(element.name)
+    if understood.contains(uri) {
+      return (false, None)
+    }
+    if ignorable_counts.get(uri) is Some(_) {
+      return (true, Some(uri))
+    }
+    let own_undo = root_declarations(element)
+    let mut declared = false
+    match element.attributes.get("{\{DOCX_MC_NAMESPACE}}Ignorable") {
+      Some(value) =>
+        docx_tokens_charged(value, root_charge, token => {
+          if scope.get(token) == Some(uri) {
+            declared = true
+          }
+        })
+      None => ()
+    }
+    root_restore(own_undo)
+    if declared {
+      (true, Some(uri))
+    } else {
+      (false, None)
+    }
+  }
+
   // A branch resolves to a READABLE document for a given consumer only
   // when exactly one element remains after that consumer drops what it
-  // finds ignorable. So each element child is a candidate root for the
-  // consumers who drop every SIBLING: a sibling in an in-scope ignorable
-  // namespace adds a clause demanding that namespace unsupported, and a
-  // sibling nobody drops — understood, or not ignorable — makes the
-  // branch multi-root for everyone who would read this child.
+  // finds ignorable. Each element child is a candidate root for the
+  // consumers who drop every SIBLING, judged in ONE charged pass: a
+  // droppable sibling contributes a clause demanding its namespace
+  // unsupported, and a sibling nobody drops makes the branch multi-root
+  // for everyone who would read this child.
   fn branch_root_candidates(
     container : @xml.XmlElement,
     base : DocxCondition,
     visit : (@xml.XmlElement, DocxCondition) -> Unit raise @transaction.TransactionError,
   ) -> Unit raise @transaction.TransactionError {
-    for index, node in container.children {
+    let children : Array[@xml.XmlElement] = []
+    let clause_uris : Array[String?] = []
+    let clause_counts : Map[String, Int] = Map([])
+    let mut undroppable = 0
+    let mut undroppable_index = -1
+    for node in container.children {
       guard node is XmlElement(child) else { continue }
+      root_charge(1)
+      let (droppable, clause) = droppable_by(child)
+      children.push(child)
+      clause_uris.push(clause)
+      match clause {
+        Some(uri) =>
+          clause_counts[uri] = clause_counts.get(uri).unwrap_or(0) + 1
+        None => ()
+      }
+      if !droppable {
+        undroppable = undroppable + 1
+        undroppable_index = children.length() - 1
+      }
+    }
+    for index, child in children {
+      root_charge(1)
+      // Every sibling must be droppable: at most this child itself may
+      // be the one nobody drops.
+      let siblings_droppable = undroppable == 0 ||
+        (undroppable == 1 && undroppable_index == index)
+      guard siblings_droppable else { continue }
       let condition = base.snapshot()
-      let mut readable = true
-      for sibling_index, sibling_node in container.children {
-        guard sibling_node is XmlElement(sibling) else { continue }
-        guard sibling_index != index else { continue }
-        let sibling_uri = root_element_uri(sibling.name)
-        if understood.contains(sibling_uri) ||
-          ignorable_counts.get(sibling_uri) is None {
-          readable = false
-        } else {
-          condition.refused.push([sibling_uri])
+      for entry in clause_counts {
+        root_charge(1)
+        let (uri, count) = entry
+        let own = match clause_uris[index] {
+          Some(self_uri) => if self_uri == uri { 1 } else { 0 }
+          None => 0
+        }
+        if count - own > 0 {
+          if condition.refused.length() >= 64 {
+            raise docx_analysis_refusal()
+          }
+          condition.refused.push([uri])
         }
       }
-      if readable && condition.satisfiable() {
+      if condition.satisfiable() {
         visit(child, condition)
       }
     }
