@@ -168,18 +168,35 @@ pub fn docx_mutation_preflight(
       "office.docx.signed_package", "this package carries a digital signature, which any edit would invalidate",
     )
   }
-  let (settings_lookup, settings_conditions) = docx_settings_part(
-    archive, parts,
-  )
-  let settings_name = match settings_lookup {
-    Found(name) => name
-    // A document with no settings part declares no protections.
-    Absent => return
-    Ambiguous =>
-      raise @transaction.transaction_failure(
-        "office.docx.settings_ambiguous", "this package names more than one settings part, so its editing protections cannot be checked",
-      )
+  let (forked, settings_parts) = docx_settings_parts(archive, parts)
+  if forked {
+    raise @transaction.transaction_failure(
+      "office.docx.settings_ambiguous", "this package's relationships let one consumer reach more than one settings part, so its editing protections cannot be checked",
+    )
   }
+  // Several parts may remain when they are MUTUALLY EXCLUSIVE — each
+  // consumer sees exactly one — and each is judged under the conditions
+  // of the consumers who see it.
+  for entry in settings_parts {
+    docx_judge_settings_part(
+      archive,
+      parts,
+      entry.part,
+      entry.conditions,
+      tracking_waived~,
+    )
+  }
+}
+
+///|
+/// One settings part, judged for the consumers who can reach it.
+fn docx_judge_settings_part(
+  archive : @zip.Archive,
+  parts : Map[String, (String, String)],
+  settings_name : String,
+  settings_conditions : Array[DocxCondition],
+  tracking_waived~ : Bool,
+) -> Unit raise @transaction.TransactionError {
   // A settings part the package promises but does not contain is a
   // broken package, which the strict validation that opens the session
   // refuses on its own terms.
@@ -189,15 +206,11 @@ pub fn docx_mutation_preflight(
   // A settings part that cannot be READ cannot be cleared: a preflight
   // that cannot see its own evidence refuses rather than proceeds.
   // Both projections from ONE bounded parse: the tree markup
-  // compatibility leaves for a consumer that understands no application
-  // namespace — which is what this toolkit is — and the raw tree it was
-  // selected from.
+  // compatibility leaves for THIS toolkit — it understands WML, in both
+  // dialects — and the raw tree it was selected from.
   let (raw, root) = @xml.read_xml_bytes_strict_mce_with_roots_limited(
     settings,
     candidate_xml_budget(),
-    // This toolkit UNDERSTANDS WML — a `MustUnderstand` naming it, or a
-    // choice requiring it, reads the way it does in Word. Anything else
-    // named by MustUnderstand keeps the unreadable refusal.
     [DOCX_WML_NAMESPACE, DOCX_STRICT_WML_NAMESPACE],
   ) catch {
     _ =>
@@ -211,23 +224,13 @@ pub fn docx_mutation_preflight(
       "office.docx.settings_unreadable", "this document's settings part is not a WML settings part, so its editing protections cannot be checked",
     )
   }
-  // What this toolkit's reader would act on, and what it would pass
-  // over: a protection declared in a branch that is passed over is a
-  // protection this preflight cannot resolve, not one it may ignore.
-  // OUR reading of the part is one consumer's: it supports WML and
-  // nothing else, so it assigns UNSUPPORTED to every namespace the path
-  // conditions name. If no path condition is satisfied by that
-  // assignment, the consumer this projection describes never reaches
+  // OUR reading of the part is one consumer's: it supports both WML
+  // dialects and nothing else. If no path condition is satisfied by
+  // that profile, the consumer this projection describes never reaches
   // the part, and its reading decides nothing.
   let mut profile_reaches = false
   for part_condition in settings_conditions {
-    let mut satisfied = true
-    for capability in part_condition {
-      if capability.supported {
-        satisfied = false
-      }
-    }
-    if satisfied {
+    if docx_profile_satisfies(part_condition) {
       profile_reaches = true
     }
   }
@@ -246,11 +249,7 @@ pub fn docx_mutation_preflight(
     let (element, element_condition) = entry
     let mut reachable = false
     for part_condition in settings_conditions {
-      let joined = part_condition.copy()
-      for capability in element_condition {
-        joined.push(capability)
-      }
-      if docx_capabilities_satisfiable(joined) {
+      if part_condition.conjoin(element_condition).satisfiable() {
         reachable = true
       }
     }
@@ -423,11 +422,7 @@ fn docx_package_declares_signature(
       let mut reachable = false
       for before in origin.conditions {
         for condition in target.conditions {
-          let joined = before.copy()
-          for capability in condition {
-            joined.push(capability)
-          }
-          if docx_capabilities_satisfiable(joined) {
+          if before.conjoin(condition).satisfiable() {
             reachable = true
           }
         }
@@ -572,24 +567,18 @@ const DOCX_SETTINGS_RELATIONSHIP : String = "http://schemas.openxmlformats.org/o
 const DOCX_STRICT_SETTINGS_RELATIONSHIP : String = "http://purl.oclc.org/ooxml/officeDocument/relationships/settings"
 
 ///|
-/// The settings part's name, found by FOLLOWING relationships from the
-/// package root: the main document part is whatever the root
-/// `officeDocument` relationship names, and the settings part is
-/// whatever that part's own settings relationship names. Neither is
-/// `word/…` by rule — OPC part names are the package's to choose, and a
-/// `word/settings.xml` nothing refers to is not this document's
-/// settings.
-fn docx_settings_part(
+/// Every settings part some consumer reaches, with its conditions — and
+/// whether any single consumer could reach TWO of them, which is the
+/// fork nothing downstream would catch.
+///
+/// Mutual exclusivity is not ambiguity: a choice's settings part and
+/// its fallback's are seen by disjoint consumers, and each is judged on
+/// its own terms.
+fn docx_settings_parts(
   archive : @zip.Archive,
   parts : Map[String, (String, String)],
-) -> (DocxPartLookup, Array[Array[DocxCapability]]) {
-  // Several main document parts — including one hidden in a
-  // compatibility branch the strict validation's effective reading does
-  // not take — leave no single settings answer, and are refused rather
-  // than resolved. Conditions CONJOIN across the hops: a settings part
-  // reachable only by a consumer no single capability assignment
-  // describes is reachable by nobody.
-  let (main_lookup, main_conditions) = docx_relationship_target_under(
+) -> (Bool, Array[DocxPossiblePart]) {
+  let mains = docx_reachable_parts(
     archive,
     parts,
     "",
@@ -597,28 +586,106 @@ fn docx_settings_part(
       DOCX_OFFICE_DOCUMENT_RELATIONSHIP,
       DOCX_STRICT_OFFICE_DOCUMENT_RELATIONSHIP,
     ],
-    [[]],
+    [DocxCondition::always()],
   )
-  let document = match main_lookup {
-    Found(name) => name
-    Absent => return (Absent, [])
-    Ambiguous => return (Ambiguous, [])
+  if docx_parts_coexist(mains) {
+    return (true, [])
   }
-  docx_relationship_target_under(
-    archive,
-    parts,
-    document,
-    [DOCX_SETTINGS_RELATIONSHIP, DOCX_STRICT_SETTINGS_RELATIONSHIP],
-    main_conditions,
-  )
+  let by_key : Map[String, DocxPossiblePart] = Map([])
+  let order : Array[String] = []
+  for main in mains {
+    for
+      candidate in docx_reachable_parts(
+        archive,
+        parts,
+        main.part,
+        [DOCX_SETTINGS_RELATIONSHIP, DOCX_STRICT_SETTINGS_RELATIONSHIP],
+        main.conditions,
+      ) {
+      let key = @opc.part_name_key(candidate.part)
+      match by_key.get(key) {
+        Some(known) =>
+          for condition in candidate.conditions {
+            docx_push_condition(known.conditions, condition)
+          }
+        None => {
+          by_key[key] = candidate
+          order.push(key)
+        }
+      }
+    }
+  }
+  let collected : Array[DocxPossiblePart] = []
+  for key in order {
+    guard by_key.get(key) is Some(entry) else { continue }
+    collected.push(entry)
+  }
+  (docx_parts_coexist(collected), collected)
 }
 
 ///|
-/// What following a relationship found.
-priv enum DocxPartLookup {
-  Absent
-  Found(String)
-  Ambiguous
+/// Whether any single consumer could reach two DISTINCT parts at once.
+fn docx_parts_coexist(candidates : Array[DocxPossiblePart]) -> Bool {
+  for first_index, first in candidates {
+    for second_index, second in candidates {
+      guard second_index > first_index else { continue }
+      for condition_a in first.conditions {
+        for condition_b in second.conditions {
+          if condition_a.conjoin(condition_b).satisfiable() {
+            return true
+          }
+        }
+      }
+    }
+  }
+  false
+}
+
+///|
+/// A bounded push: past the bound a part's conditions collapse to
+/// ALWAYS — unconditionally reachable, never missing a path.
+fn docx_push_condition(
+  conditions : Array[DocxCondition],
+  condition : DocxCondition,
+) -> Unit {
+  if conditions is [only] && only.required.is_empty() && only.refused.is_empty() {
+    return
+  }
+  if conditions.length() >= 16 {
+    conditions.clear()
+    conditions.push(DocxCondition::always())
+  } else {
+    conditions.push(condition)
+  }
+}
+
+///|
+/// The parts of `types` reachable from `source` for consumers meeting
+/// some `prior` condition, each with the (conjoined, satisfiable)
+/// conditions of its paths.
+fn docx_reachable_parts(
+  archive : @zip.Archive,
+  parts : Map[String, (String, String)],
+  source : String,
+  types : Array[String],
+  prior : Array[DocxCondition],
+) -> Array[DocxPossiblePart] {
+  let reachable : Array[DocxPossiblePart] = []
+  for candidate in docx_relationship_targets(archive, parts, source, types) {
+    let combined : Array[DocxCondition] = []
+    for before in prior {
+      for condition in candidate.conditions {
+        let joined = before.conjoin(condition)
+        if joined.satisfiable() {
+          docx_push_condition(combined, joined)
+        }
+      }
+    }
+    if !combined.is_empty() {
+      reachable.push({ part: candidate.part, conditions: combined, })
+    }
+  }
+  reachable
 }
 
 ///|
@@ -627,7 +694,7 @@ priv enum DocxPartLookup {
 /// their conditions side by side: reachable under either.
 priv struct DocxPossiblePart {
   part : String
-  conditions : Array[Array[DocxCapability]]
+  conditions : Array[DocxCondition]
 }
 
 ///|
@@ -676,11 +743,8 @@ fn docx_relationship_targets(
       ]) {
       let relationship = entry.0
       // The root's own path condition CONJOINS with the walk's.
-      let condition = root_condition.copy()
-      for capability in entry.1 {
-        condition.push(capability)
-      }
-      guard docx_capabilities_satisfiable(condition) else { continue }
+      let condition = root_condition.conjoin(entry.1)
+      guard condition.satisfiable() else { continue }
       guard relationship.name
         is (DOCX_PACKAGE_RELATIONSHIP_ELEMENT | "relationships:Relationship") else {
         continue
@@ -704,19 +768,7 @@ fn docx_relationship_targets(
       // Two targets that differ only in case name ONE part.
       let key = @opc.part_name_key(part)
       match by_key.get(key) {
-        Some(known) =>
-          // A bounded number of alternative paths is tracked exactly;
-          // past the bound the part becomes UNCONDITIONALLY reachable —
-          // a dropped path could otherwise hide the one a real consumer
-          // walks.
-          if known.conditions is [[]] {
-            ()
-          } else if known.conditions.length() >= 8 {
-            known.conditions.clear()
-            known.conditions.push([])
-          } else {
-            known.conditions.push(condition)
-          }
+        Some(known) => docx_push_condition(known.conditions, condition)
         None => {
           by_key[key] = { part, conditions: [condition], }
           order.push(key)
@@ -730,57 +782,6 @@ fn docx_relationship_targets(
     resolved.push(entry)
   }
   resolved
-}
-
-///|
-/// The single part of `types` reachable from `source` under `prior`
-/// conditions: `Absent`, `Found` with the combined conditions of its
-/// paths, or `Ambiguous` when several DISTINCT parts are each reachable
-/// by some consumer — which no later gate would catch.
-fn docx_relationship_target_under(
-  archive : @zip.Archive,
-  parts : Map[String, (String, String)],
-  source : String,
-  types : Array[String],
-  prior : Array[Array[DocxCapability]],
-) -> (DocxPartLookup, Array[Array[DocxCapability]]) {
-  let reachable : Array[DocxPossiblePart] = []
-  for candidate in docx_relationship_targets(archive, parts, source, types) {
-    let combined : Array[Array[DocxCapability]] = []
-    let mut saturated = false
-    for before in prior {
-      for condition in candidate.conditions {
-        let joined = before.copy()
-        for capability in condition {
-          joined.push(capability)
-        }
-        if docx_capabilities_satisfiable(joined) {
-          if combined.length() >= 8 {
-            // Past the bound the part becomes UNCONDITIONALLY reachable
-            // rather than missing its ninth path.
-            saturated = true
-          } else {
-            combined.push(joined)
-          }
-        }
-      }
-    }
-    if saturated {
-      combined.clear()
-      combined.push([])
-    }
-    if !combined.is_empty() {
-      reachable.push({ part: candidate.part, conditions: combined, })
-    }
-  }
-  match reachable {
-    [] => (Absent, [])
-    [only] => (Found(only.part), only.conditions)
-    // Several relationships of the same type naming different parts is
-    // legal OPC and meaningless WML: nothing downstream would refuse it,
-    // so the preflight must.
-    _ => (Ambiguous, [])
-  }
 }
 
 ///|
@@ -827,32 +828,27 @@ const DOCX_XMLNS_NAMESPACE : String = "http://www.w3.org/2000/xmlns/"
 /// part's compatibility markup.
 fn docx_settings_possible(
   raw : @xml.XmlElement,
-) -> Array[(@xml.XmlElement, Array[DocxCapability])] {
+) -> Array[(@xml.XmlElement, DocxCondition)] {
   // A settings part whose ROOT is compatibility markup resolves to a
   // different root per consumer: every possible settings root's
   // children are possible settings, under the root's own condition
-  // conjoined with theirs.
-  let collected : Array[(@xml.XmlElement, Array[DocxCapability])] = []
-  for
-    possible_root in docx_mce_possible_roots(raw, [
-      DOCX_WML_NAMESPACE,
-      DOCX_STRICT_WML_NAMESPACE,
-    ]) {
+  // conjoined with theirs. What EVERY consumer of the part understands
+  // is the dialect the part's own root is written in — a Transitional
+  // document may be read by a consumer that knows nothing of Strict, so
+  // a choice requiring the OTHER dialect is conditional, not universal.
+  let collected : Array[(@xml.XmlElement, DocxCondition)] = []
+  for possible_root in docx_mce_possible_roots(raw, []) {
     let (root, root_condition) = possible_root
-    guard root.name == "{\{DOCX_WML_NAMESPACE}}settings" ||
-      root.name == "{\{DOCX_STRICT_WML_NAMESPACE}}settings" else {
+    let dialect = if root.name == "{\{DOCX_WML_NAMESPACE}}settings" {
+      DOCX_WML_NAMESPACE
+    } else if root.name == "{\{DOCX_STRICT_WML_NAMESPACE}}settings" {
+      DOCX_STRICT_WML_NAMESPACE
+    } else {
       continue
     }
-    for
-      entry in docx_mce_possible(root, [
-        DOCX_WML_NAMESPACE,
-        DOCX_STRICT_WML_NAMESPACE,
-      ]) {
-      let joined = root_condition.copy()
-      for capability in entry.1 {
-        joined.push(capability)
-      }
-      if docx_capabilities_satisfiable(joined) {
+    for entry in docx_mce_possible(root, [dialect]) {
+      let joined = root_condition.conjoin(entry.1)
+      if joined.satisfiable() {
         collected.push((entry.0, joined))
       }
     }
@@ -871,8 +867,8 @@ fn docx_settings_possible(
 fn docx_mce_possible_roots(
   raw : @xml.XmlElement,
   understood : Array[String],
-) -> Array[(@xml.XmlElement, Array[DocxCapability])] {
-  let roots : Array[(@xml.XmlElement, Array[DocxCapability])] = []
+) -> Array[(@xml.XmlElement, DocxCondition)] {
+  let roots : Array[(@xml.XmlElement, DocxCondition)] = []
   let scope : Map[String, String] = Map([])
   fn root_declarations(element : @xml.XmlElement) -> Array[(String, String?)] {
     let undo : Array[(String, String?)] = []
@@ -920,19 +916,18 @@ fn docx_mce_possible_roots(
     Some(uris)
   }
 
-  fn collect(
-    element : @xml.XmlElement,
-    condition : Array[DocxCapability],
-  ) -> Unit {
+  fn collect(element : @xml.XmlElement, condition : DocxCondition) -> Unit {
     let undo = root_declarations(element)
     if element.name == "{\{DOCX_MC_NAMESPACE}}AlternateContent" {
-      let passed_over : Array[DocxCapability] = []
+      // One CLAUSE per choice passed over: at least one of its
+      // namespaces must be unsupported, whichever one.
+      let passed_over : Array[Array[String]] = []
       for branch_node in element.children {
         guard branch_node is XmlElement(branch) else { continue }
         let branch_undo = root_declarations(branch)
-        let branch_condition = condition.copy()
-        for capability in passed_over {
-          branch_condition.push(capability)
+        let branch_condition = condition.snapshot()
+        for clause in passed_over {
+          branch_condition.refused.push(clause)
         }
         if branch.name == "{\{DOCX_MC_NAMESPACE}}Choice" {
           let requires = branch_requires(branch)
@@ -942,14 +937,14 @@ fn docx_mce_possible_roots(
               decides = true
               for uri in uris {
                 if !understood.contains(uri) {
-                  branch_condition.push({ uri, supported: true, })
+                  branch_condition.required.push(uri)
                   decides = false
                 }
               }
             }
             None => ()
           }
-          if docx_capabilities_satisfiable(branch_condition) {
+          if branch_condition.satisfiable() {
             for node in branch.children {
               guard node is XmlElement(candidate) else { continue }
               collect(candidate, branch_condition)
@@ -962,14 +957,21 @@ fn docx_mce_possible_roots(
             break
           }
           match requires {
-            Some([only]) =>
-              if !understood.contains(only) {
-                passed_over.push({ uri: only, supported: false, })
+            Some(uris) => {
+              let negatable : Array[String] = []
+              for uri in uris {
+                if !understood.contains(uri) {
+                  negatable.push(uri)
+                }
               }
-            _ => ()
+              if !negatable.is_empty() {
+                passed_over.push(negatable)
+              }
+            }
+            None => ()
           }
         } else if branch.name == "{\{DOCX_MC_NAMESPACE}}Fallback" {
-          if docx_capabilities_satisfiable(branch_condition) {
+          if branch_condition.satisfiable() {
             for node in branch.children {
               guard node is XmlElement(candidate) else { continue }
               collect(candidate, branch_condition)
@@ -978,32 +980,91 @@ fn docx_mce_possible_roots(
         }
         root_restore(branch_undo)
       }
-    } else if docx_capabilities_satisfiable(condition) {
+    } else if condition.satisfiable() {
       roots.push((element, condition))
     }
     root_restore(undo)
   }
 
-  collect(raw, [])
+  collect(raw, DocxCondition::always())
   roots
 }
 
 ///|
-/// One consumer-capability constraint: the namespace must (or must not)
-/// be supported for this path to be taken.
-priv struct DocxCapability {
-  uri : String
-  supported : Bool
+/// The consumer capabilities one PATH demands, exactly: namespaces that
+/// must be SUPPORTED (a conjunction of positive literals, from the
+/// choices taken), and groups of which at least one must be UNSUPPORTED
+/// (one negative clause per choice passed over). Such a formula — all
+/// positives plus at-least-one-false clauses — is satisfiable exactly
+/// when no clause is wholly forced true, so satisfiability is a scan,
+/// never an expansion, and nothing is capped or saturated away.
+priv struct DocxCondition {
+  required : Array[String]
+  refused : Array[Array[String]]
 }
 
 ///|
-/// Whether one consumer could satisfy every constraint at once.
-fn docx_capabilities_satisfiable(condition : Array[DocxCapability]) -> Bool {
-  let assignments : Map[String, Bool] = Map([])
-  for capability in condition {
-    match assignments.get(capability.uri) {
-      Some(known) => if known != capability.supported { return false }
-      None => assignments[capability.uri] = capability.supported
+/// Whether THIS toolkit's capability profile — both WML dialects
+/// supported, nothing else — satisfies a path condition.
+fn docx_profile_satisfies(condition : DocxCondition) -> Bool {
+  for uri in condition.required {
+    if uri != DOCX_WML_NAMESPACE && uri != DOCX_STRICT_WML_NAMESPACE {
+      return false
+    }
+  }
+  for group in condition.refused {
+    let mut escapable = false
+    for uri in group {
+      if uri != DOCX_WML_NAMESPACE && uri != DOCX_STRICT_WML_NAMESPACE {
+        escapable = true
+      }
+    }
+    if !escapable {
+      return false
+    }
+  }
+  true
+}
+
+///|
+fn DocxCondition::always() -> DocxCondition {
+  { required: [], refused: [], }
+}
+
+///|
+fn DocxCondition::snapshot(self : DocxCondition) -> DocxCondition {
+  { required: self.required.copy(), refused: self.refused.copy(), }
+}
+
+///|
+fn DocxCondition::conjoin(
+  self : DocxCondition,
+  other : DocxCondition,
+) -> DocxCondition {
+  let joined = self.snapshot()
+  for uri in other.required {
+    joined.required.push(uri)
+  }
+  for group in other.refused {
+    joined.refused.push(group)
+  }
+  joined
+}
+
+///|
+/// Whether one consumer could satisfy every constraint at once: assign
+/// SUPPORTED to exactly the required namespaces, and every clause must
+/// still have a member left unsupported.
+fn DocxCondition::satisfiable(self : DocxCondition) -> Bool {
+  for group in self.refused {
+    let mut escapable = false
+    for uri in group {
+      if !self.required.contains(uri) {
+        escapable = true
+      }
+    }
+    if !escapable {
+      return false
     }
   }
   true
@@ -1030,45 +1091,13 @@ fn docx_capabilities_satisfiable(condition : Array[DocxCapability]) -> Bool {
 fn docx_mce_possible(
   raw : @xml.XmlElement,
   understood : Array[String],
-) -> Array[(@xml.XmlElement, Array[DocxCapability])] {
-  let possible : Array[(@xml.XmlElement, Array[DocxCapability])] = []
-  // The capability constraints of the path to the element being walked:
-  // a choice branch requires its namespaces supported, and the branches
-  // after a SINGLE-requirement choice require it unsupported. (An
-  // unsatisfied multi-requirement choice constrains by disjunction,
-  // which is over-approximated as no constraint: more paths are treated
-  // reachable, never fewer.)
-  let condition : Array[DocxCapability] = []
-  // The choices passed over on the path, each a DISJUNCTION: reaching
-  // what follows one requires at least one of its (non-understood)
-  // namespaces unsupported. Expanded into alternative conjunctions at
-  // the moment an element is recorded.
-  let negation_groups : Array[Array[String]] = []
-  fn reachable_alternatives() -> Array[Array[DocxCapability]] {
-    let mut alternatives : Array[Array[DocxCapability]] = [condition.copy()]
-    for group in negation_groups {
-      let expanded : Array[Array[DocxCapability]] = []
-      for alternative in alternatives {
-        for uri in group {
-          if expanded.length() >= 8 {
-            // Saturate toward REACHABLE: drop the negations rather than
-            // a path a real consumer might walk.
-            return [condition.copy()]
-          }
-          let candidate = alternative.copy()
-          candidate.push({ uri, supported: false, })
-          if docx_capabilities_satisfiable(candidate) {
-            expanded.push(candidate)
-          }
-        }
-      }
-      alternatives = expanded
-      if alternatives.is_empty() {
-        return []
-      }
-    }
-    alternatives
-  }
+) -> Array[(@xml.XmlElement, DocxCondition)] {
+  let possible : Array[(@xml.XmlElement, DocxCondition)] = []
+  // The constraints of the path to the element being walked, kept
+  // EXACTLY: the namespaces the taken choices require (positive
+  // literals) and one at-least-one-unsupported clause per choice passed
+  // over. Satisfiability is decided on the clauses themselves.
+  let condition : DocxCondition = DocxCondition::always()
   let scope : Map[String, String] = Map([])
   let process_exact : Map[String, Int] = Map([])
   let process_wildcard : Map[String, Int] = Map([])
@@ -1246,10 +1275,10 @@ fn docx_mce_possible(
       let (generation_undo, added) = directives(child)
       if child.name == "{\{DOCX_MC_NAMESPACE}}AlternateContent" {
         let mut decided = false
-        // Each choice passed over becomes a NEGATION GROUP for the
-        // branches after it: at least one of its namespaces must be
-        // unsupported to get past it, whichever one.
-        let mut groups_added = 0
+        // Each choice passed over adds one CLAUSE for the branches
+        // after it: at least one of its namespaces must be unsupported
+        // to get past it, whichever one.
+        let mut clauses_added = 0
         for branch_node in child.children {
           guard branch_node is XmlElement(branch) else { continue }
           guard !decided else { break }
@@ -1262,7 +1291,7 @@ fn docx_mce_possible(
               Some(uris) =>
                 for uri in uris {
                   if !understood.contains(uri) {
-                    condition.push({ uri, supported: true, })
+                    condition.required.push(uri)
                     pushed += 1
                   }
                 }
@@ -1281,8 +1310,8 @@ fn docx_mce_possible(
                   }
                 }
                 if !negatable.is_empty() && !decided {
-                  negation_groups.push(negatable)
-                  groups_added += 1
+                  condition.refused.push(negatable)
+                  clauses_added += 1
                 }
               }
               None => ()
@@ -1291,21 +1320,17 @@ fn docx_mce_possible(
             level(branch)
           }
           for _ in 0..<pushed {
-            condition.pop() |> ignore
+            condition.required.pop() |> ignore
           }
           undo_directives(branch_generation_undo, branch_added)
           restore(branch_undo)
         }
-        for _ in 0..<groups_added {
-          negation_groups.pop() |> ignore
+        for _ in 0..<clauses_added {
+          condition.refused.pop() |> ignore
         }
-      } else {
-        let alternatives = reachable_alternatives()
-        for alternative in alternatives {
-          possible.push((child, alternative))
-        }
-        if !alternatives.is_empty() &&
-          !understood.contains(element_uri(child.name)) &&
+      } else if condition.satisfiable() {
+        possible.push((child, condition.snapshot()))
+        if !understood.contains(element_uri(child.name)) &&
           matches_process_content(child.name) {
           level(child)
         }

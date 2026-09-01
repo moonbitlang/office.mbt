@@ -2047,3 +2047,134 @@ async test "the preflight conjoins conditions from relationship to setting" {
     assert_true(nested_published, msg="the edit publishes")
   })
 }
+
+///|
+/// Round-12 fidelity: dialects are capabilities too, mutual exclusion
+/// is not ambiguity, and satisfiability is exact at any width.
+async test "the preflight models dialects and exclusion exactly" {
+  with_docx_session_test_dir(directory => {
+    // In a TRANSITIONAL part, a choice requiring the STRICT dialect is
+    // not universal: a Transitional-only consumer takes the fallback,
+    // and the enforced protection there is real for it.
+    let strict_gate = preflight_fixture(
+      directory,
+      "strict-gate",
+      "<mc:AlternateContent xmlns:mc=\"http://schemas.openxmlformats.org/markup-compatibility/2006\" xmlns:ws=\"http://purl.oclc.org/ooxml/wordprocessingml/main\">" +
+      "<mc:Choice Requires=\"ws\"><w:documentProtection w:edit=\"readOnly\" w:enforcement=\"0\"/></mc:Choice>" +
+      "<mc:Fallback><w:documentProtection w:edit=\"readOnly\" w:enforcement=\"1\"/></mc:Fallback>" +
+      "</mc:AlternateContent>",
+      [],
+    )
+    let (strict_failure, strict_published) = format_input_probe(
+      strict_gate,
+      directory + "/strict-gate-out.docx",
+    )
+    guard strict_failure is Some(strict_message) else {
+      fail("a Transitional-only consumer meets the enforced fallback")
+    }
+    assert_true(
+      strict_message.contains("editing protection") ||
+      strict_message.contains("compatibility alternatives"),
+      msg=strict_message,
+    )
+    assert_false(strict_published, msg="nothing may be published")
+    // A choice's settings part and its fallback's are seen by DISJOINT
+    // consumers: two unprotected parts, each judged alone, refuse
+    // nothing.
+    let exclusive = repackaged_fixture(
+      directory,
+      "exclusive",
+      [],
+      [
+        (
+          "[Content_Types].xml", "<Override PartName=\"/word/settings.xml\"", "<Override PartName=\"/word/settings-b.xml\" ContentType=\"application/vnd.openxmlformats-officedocument.wordprocessingml.settings+xml\"/><Override PartName=\"/word/settings.xml\"",
+        ),
+        (
+          "word/_rels/document.xml.rels",
+          "<Relationship Id=\"rId3\" Type=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships/settings\" Target=\"settings.xml\"/>",
+          "<mc:AlternateContent xmlns:mc=\"http://schemas.openxmlformats.org/markup-compatibility/2006\" xmlns:x=\"urn:example:x\">" +
+          "<mc:Choice Requires=\"x\"><Relationship Id=\"rId3\" Type=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships/settings\" Target=\"settings.xml\"/></mc:Choice>" +
+          "<mc:Fallback><Relationship Id=\"rId3b\" Type=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships/settings\" Target=\"settings-b.xml\"/></mc:Fallback>" +
+          "</mc:AlternateContent>",
+        ),
+      ],
+      [
+        (
+          "word/settings-b.xml", "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?><w:settings xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\"><w:zoom w:percent=\"110\"/></w:settings>",
+        ),
+      ],
+    )
+    let (exclusive_failure, exclusive_published) = format_input_probe(
+      exclusive,
+      directory + "/exclusive-out.docx",
+    )
+    assert_true(
+      exclusive_failure is None,
+      msg="mutually exclusive parts are not a fork: \{exclusive_failure}",
+    )
+    assert_true(exclusive_published, msg="the edit publishes")
+    // And a TRACKED part behind the fallback still refuses: exclusion
+    // narrows who sees it, not whether it counts.
+    let exclusive_tracked = repackaged_fixture(
+      directory,
+      "exclusive-tracked",
+      [],
+      [
+        (
+          "[Content_Types].xml", "<Override PartName=\"/word/settings.xml\"", "<Override PartName=\"/word/settings-b.xml\" ContentType=\"application/vnd.openxmlformats-officedocument.wordprocessingml.settings+xml\"/><Override PartName=\"/word/settings.xml\"",
+        ),
+        (
+          "word/_rels/document.xml.rels",
+          "<Relationship Id=\"rId3\" Type=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships/settings\" Target=\"settings.xml\"/>",
+          "<mc:AlternateContent xmlns:mc=\"http://schemas.openxmlformats.org/markup-compatibility/2006\" xmlns:x=\"urn:example:x\">" +
+          "<mc:Choice Requires=\"x\"><Relationship Id=\"rId3\" Type=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships/settings\" Target=\"settings.xml\"/></mc:Choice>" +
+          "<mc:Fallback><Relationship Id=\"rId3b\" Type=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships/settings\" Target=\"settings-b.xml\"/></mc:Fallback>" +
+          "</mc:AlternateContent>",
+        ),
+      ],
+      [
+        (
+          "word/settings-b.xml", "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?><w:settings xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\"><w:trackRevisions/></w:settings>",
+        ),
+      ],
+    )
+    let (tracked_failure, tracked_published) = format_input_probe(
+      exclusive_tracked,
+      directory + "/exclusive-tracked-out.docx",
+    )
+    guard tracked_failure is Some(tracked_message) else {
+      fail("the consumers who see the tracked part are real")
+    }
+    assert_true(
+      tracked_message.contains("records revisions"),
+      msg=tracked_message,
+    )
+    assert_false(tracked_published, msg="nothing may be published")
+    // Width does not defeat exactness: several passed pair-choices and a
+    // repeated pair leave the repeat's sibling unreachable, however many
+    // clauses are in scope.
+    let wide = preflight_fixture(
+      directory,
+      "wide",
+      "<mc:AlternateContent xmlns:mc=\"http://schemas.openxmlformats.org/markup-compatibility/2006\" " +
+      "xmlns:na=\"urn:x:a\" xmlns:nb=\"urn:x:b\" xmlns:nc=\"urn:x:c\" xmlns:nd=\"urn:x:d\" " +
+      "xmlns:ne=\"urn:x:e\" xmlns:nf=\"urn:x:f\" xmlns:ng=\"urn:x:g\" xmlns:nh=\"urn:x:h\" " +
+      "xmlns:ni=\"urn:x:i\" xmlns:nj=\"urn:x:j\">" +
+      "<mc:Choice Requires=\"na nb\"/><mc:Choice Requires=\"nc nd\"/>" +
+      "<mc:Choice Requires=\"ne nf\"/><mc:Choice Requires=\"ng nh\"/>" +
+      "<mc:Choice Requires=\"ni nj\"/>" +
+      "<mc:Choice Requires=\"ni nj\"><w:trackRevisions/></mc:Choice>" +
+      "<mc:Fallback/></mc:AlternateContent>",
+      [],
+    )
+    let (wide_failure, wide_published) = format_input_probe(
+      wide,
+      directory + "/wide-out.docx",
+    )
+    assert_true(
+      wide_failure is None,
+      msg="the repeated pair's sibling is unreachable at any width: \{wide_failure}",
+    )
+    assert_true(wide_published, msg="the edit publishes")
+  })
+}
