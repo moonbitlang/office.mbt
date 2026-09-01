@@ -240,11 +240,14 @@ fn format_validate_scope(scope : String) -> Unit raise CliFailure {
     }
     return
   }
-  // Only the segment kinds the DOCX scanner EMITS, with canonical
-  // 1-based ordinals: a selector that merely parses can still name a
-  // path no document carries, and `--expect 0` would then bless the
-  // typo as a successful no-op.
+  // Only the PATHS the DOCX scanner emits, as a state machine, not a
+  // segment list: `tr[1]` cannot start a path, `p[1]/p[1]` and
+  // `tbl[1]/tc[1]` order segments no document carries, and `--expect 0`
+  // would bless any such typo as a successful no-op. Body level admits
+  // a paragraph or a table; a table admits rows; a row admits cells; a
+  // cell admits paragraphs or nested tables; a paragraph ends the path.
   let mut valid = true
+  let mut state = "body"
   let mut cursor = 0
   while valid && cursor < scope.length() {
     let mut close = cursor
@@ -252,7 +255,20 @@ fn format_validate_scope(scope : String) -> Unit raise CliFailure {
       close += 1
     }
     let segment = scope.substring(start=cursor, end=close).to_string()
-    valid = format_scope_segment_valid(segment)
+    match format_scope_segment_kind(segment) {
+      Some(kind) =>
+        state = match (state, kind) {
+          ("body", "p") | ("cell", "p") => "terminal"
+          ("body", "tbl") | ("cell", "tbl") => "table"
+          ("table", "tr") => "row"
+          ("row", "tc") => "cell"
+          _ => {
+            valid = false
+            state
+          }
+        }
+      None => valid = false
+    }
     cursor = close + 1
   }
   if scope.has_suffix("/") {
@@ -269,27 +285,30 @@ fn format_validate_scope(scope : String) -> Unit raise CliFailure {
 }
 
 ///|
-/// One scope segment: `kind[N]` where kind is a container the scanner
-/// emits and N is a canonical 1-based ordinal.
-fn format_scope_segment_valid(segment : String) -> Bool {
+/// One scope segment: `kind[N]` with a canonical 1-based ordinal.
+/// Returns the kind for the caller's state machine, or None when the
+/// segment is not of that shape at all.
+fn format_scope_segment_kind(segment : String) -> String? {
   guard segment.find("[") is Some(open) &&
     segment.has_suffix("]") &&
     open > 0 &&
     open + 1 < segment.length() - 1 else {
-    return false
+    return None
   }
   let kind = segment.substring(start=0, end=open).to_string()
-  // Paragraph PATHS end at `p[...]` and pass only through table
-  // containers, so those are the only kinds a scope prefix can match.
-  guard kind is ("p" | "tbl" | "tr" | "tc") else { return false }
+  guard kind is ("p" | "tbl" | "tr" | "tc") else { return None }
   let ordinal = segment
     .substring(start=open + 1, end=segment.length() - 1)
     .to_string()
-  guard ordinal[0] is ('1'..='9') else { return false }
+  guard ordinal[0] is ('1'..='9') else { return None }
   for ch in ordinal {
-    guard ch is ('0'..='9') else { return false }
+    guard ch is ('0'..='9') else { return None }
   }
-  ordinal.length() <= 6
+  if ordinal.length() <= 6 {
+    Some(kind)
+  } else {
+    None
+  }
 }
 
 ///|
@@ -418,11 +437,60 @@ fn format_report_json(
 }
 
 ///|
-/// Slack reserved for what the preflight cannot measure yet: the
-/// transaction fields it records as null, and the publication warnings
-/// the envelope will carry — a fixed set of short typed records. The
-/// same bound the replace verb reserves, for the same shapes.
-let format_report_transaction_slack : Int = 64 * 1024
+/// The reserve for what the preflight cannot measure yet — the
+/// transaction record and the envelope's warnings — computed by
+/// MEASURING a transaction-shaped stub with the real paths, a
+/// generous part-name allowance, and the fixed warning set, rather
+/// than subtracting a blanket constant: a blanket reserve refuses
+/// reports that would in fact have fit.
+fn format_report_transaction_reserve(file : String, output : String) -> Int {
+  let part_names : Array[Json] = []
+  for index in 0..<128 {
+    part_names.push(
+      Json::string("word/embeddings/oleObject\{index}-with-a-long-name.bin"),
+    )
+  }
+  let stub : Json = Json::object({
+    "schema": Json::string("office.transaction/2"),
+    "input": Json::string(file),
+    "output": Json::string(output),
+    "format": Json::string("docx"),
+    "changed": Json::boolean(true),
+    "dry_run": Json::boolean(false),
+    "committed": Json::boolean(true),
+    "zip_metadata_policy": Json::string("preserve-required-normalize-rest"),
+    "validations": Json::array(
+      part_names[0:8]
+      .to_array()
+      .map(_ => {
+        Json::object({
+          "name": Json::string("office-docx-format-readback-and-longer"),
+          "passed": Json::boolean(true),
+          "finding_count": Json::number(0),
+        })
+      }),
+    ),
+    "preservation": Json::object({
+      "changed": Json::array([Json::string("word/document.xml")]),
+      "added": Json::array([]),
+      "removed": Json::array([]),
+      "unchanged": Json::array(part_names),
+    }),
+    "warnings": Json::array(
+      part_names[0:8]
+      .to_array()
+      .map(_ => {
+        Json::object({
+          "code": Json::string("office.transaction.path_based_commit_semantics"),
+          "message": Json::string(
+            "a reasonably long warning message about publication semantics on this platform and its filesystem",
+          ),
+        })
+      }),
+    ),
+  })
+  stub.stringify().length() + 8 * 1024
+}
 
 ///|
 fn ensure_format_report_budget(
@@ -605,7 +673,8 @@ async fn run_format(matches : @argparse.Matches) -> Unit {
             true,
             transaction=Json::null(),
           ),
-          docx_cli_default_max_output_chars - format_report_transaction_slack,
+          docx_cli_default_max_output_chars -
+          format_report_transaction_reserve(file, output),
         )
       })
   }

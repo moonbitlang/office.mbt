@@ -133,7 +133,8 @@ test "format scope validation admits only canonical spellings" {
       "", "p[1", "p[", "p[0]", "p]1[", "p[1]/", "P[1]", "body/p[1]", "p[id=oops",
       "p[id=\"\"]", "p[id=\"AB\"]/r[1]", "p[id=\"A\"B\"]", "p[id=\"\"A\"]", "p[id=\"]X\"]",
       "bogus[1]", "tbl[1]/x[1]", "tbl[1]/p[id=\"1A2B3C4D\"]", "p[01]", "p[]", "r[1]",
-      "hyperlink[1]",
+      "hyperlink[1]", "tr[1]", "tc[1]", "p[1]/p[1]", "tbl[1]/tc[1]", "tbl[1]/tr[1]/p[1]",
+      "p[1]/tbl[1]",
     ] {
     let mut refused = false
     format_validate_scope(bad) catch {
