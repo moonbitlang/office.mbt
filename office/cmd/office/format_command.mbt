@@ -240,16 +240,56 @@ fn format_validate_scope(scope : String) -> Unit raise CliFailure {
     }
     return
   }
-  let full = "/docx/body/" + scope
-  let canonical = @lib.parse_selector(full).render() catch { _ => "" }
-  guard canonical == full else {
+  // Only the segment kinds the DOCX scanner EMITS, with canonical
+  // 1-based ordinals: a selector that merely parses can still name a
+  // path no document carries, and `--expect 0` would then bless the
+  // typo as a successful no-op.
+  let mut valid = true
+  let mut cursor = 0
+  while valid && cursor < scope.length() {
+    let mut close = cursor
+    while close < scope.length() && scope[close] != '/' {
+      close += 1
+    }
+    let segment = scope.substring(start=cursor, end=close).to_string()
+    valid = format_scope_segment_valid(segment)
+    cursor = close + 1
+  }
+  if scope.has_suffix("/") {
+    valid = false
+  }
+  guard valid else {
     raise CliFailure(
       @lib.protocol_error(
         "office.invalid_arguments",
-        "--in '\{bounded_text(scope, 80)}' is not a canonical body-relative path; pass the exact spelling the read surfaces report (p[3], tbl[1]/tr[1]/tc[1]/p[1]) or a stable p[id=\"…\"]",
+        "--in '\{bounded_text(scope, 80)}' is not a body-relative path the reader emits; pass the exact spelling the read surfaces report (p[3], tbl[1]/tr[1]/tc[1]/p[1]) or a stable p[id=\"…\"]",
       ),
     )
   }
+}
+
+///|
+/// One scope segment: `kind[N]` where kind is a container the scanner
+/// emits and N is a canonical 1-based ordinal.
+fn format_scope_segment_valid(segment : String) -> Bool {
+  guard segment.find("[") is Some(open) &&
+    segment.has_suffix("]") &&
+    open > 0 &&
+    open + 1 < segment.length() - 1 else {
+    return false
+  }
+  let kind = segment.substring(start=0, end=open).to_string()
+  // Paragraph PATHS end at `p[...]` and pass only through table
+  // containers, so those are the only kinds a scope prefix can match.
+  guard kind is ("p" | "tbl" | "tr" | "tc") else { return false }
+  let ordinal = segment
+    .substring(start=open + 1, end=segment.length() - 1)
+    .to_string()
+  guard ordinal[0] is ('1'..='9') else { return false }
+  for ch in ordinal {
+    guard ch is ('0'..='9') else { return false }
+  }
+  ordinal.length() <= 6
 }
 
 ///|
