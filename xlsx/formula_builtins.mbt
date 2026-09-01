@@ -65,13 +65,14 @@ fn eval_function(
       for arg in args {
         values.push(eval_expr(workbook, sheet_name, arg, ctx))
       }
+      let call : EvalCall = { workbook, sheet_name, name, args, values, ctx, }
       raising_handlers()
       .get(name)
-      .map(h => h(workbook, sheet_name, name, args, values, ctx))
+      .map(h => h(call))
       .unwrap_or_else(() => {
         plain_handlers()
         .get(name)
-        .map(h => h(workbook, sheet_name, name, args, values, ctx))
+        .map(h => h(call))
         .unwrap_or_else(() => {
           eval_function_unknown(workbook, sheet_name, name, args, ctx)
         })
@@ -81,24 +82,20 @@ fn eval_function(
 }
 
 ///|
-type RaisingHandler = (
-  Workbook,
-  String,
-  String,
-  ArrayView[Expr],
-  Array[FormulaValue],
-  CalcContext,
-) -> FormulaValue raise XlsxError
+priv struct EvalCall {
+  workbook : Workbook
+  sheet_name : String
+  name : String
+  args : ArrayView[Expr]
+  values : Array[FormulaValue]
+  ctx : CalcContext
+}
 
 ///|
-type PlainHandler = (
-  Workbook,
-  String,
-  String,
-  ArrayView[Expr],
-  Array[FormulaValue],
-  CalcContext,
-) -> FormulaValue
+type RaisingHandler = (EvalCall) -> FormulaValue raise XlsxError
+
+///|
+type PlainHandler = (EvalCall) -> FormulaValue
 
 ///|
 let raising_handlers_cached : @ref.Ref[

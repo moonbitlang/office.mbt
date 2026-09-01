@@ -3,43 +3,22 @@
 // one Excel formula to its implementation; eval_function routes to these via a HashMap.
 
 ///|
-fn eval_true(
-  _workbook : Workbook,
-  _sheet_name : String,
-  _name : String,
-  _args : ArrayView[Expr],
-  _values : Array[FormulaValue],
-  _ctx : CalcContext,
-) -> FormulaValue {
+fn eval_true(_call : EvalCall) -> FormulaValue {
   Bool(true)
 }
 
 ///|
-fn eval_false(
-  _workbook : Workbook,
-  _sheet_name : String,
-  _name : String,
-  _args : ArrayView[Expr],
-  _values : Array[FormulaValue],
-  _ctx : CalcContext,
-) -> FormulaValue {
+fn eval_false(_call : EvalCall) -> FormulaValue {
   Bool(false)
 }
 
 ///|
-fn eval_and(
-  _workbook : Workbook,
-  _sheet_name : String,
-  _name : String,
-  _args : ArrayView[Expr],
-  values : Array[FormulaValue],
-  _ctx : CalcContext,
-) -> FormulaValue {
-  if values.length() == 0 || values.length() > 30 {
+fn eval_and(call : EvalCall) -> FormulaValue {
+  if call.values.length() == 0 || call.values.length() > 30 {
     Error(formula_error_value)
   } else {
     let mut result = true
-    for value in values {
+    for value in call.values {
       match value {
         Empty => ()
         Error(err) => return Error(err)
@@ -61,18 +40,11 @@ fn eval_and(
 }
 
 ///|
-fn eval_or(
-  _workbook : Workbook,
-  _sheet_name : String,
-  _name : String,
-  _args : ArrayView[Expr],
-  values : Array[FormulaValue],
-  _ctx : CalcContext,
-) -> FormulaValue {
-  if values.length() == 0 || values.length() > 30 {
+fn eval_or(call : EvalCall) -> FormulaValue {
+  if call.values.length() == 0 || call.values.length() > 30 {
     Error(formula_error_value)
   } else {
-    for value in flatten_values(values) {
+    for value in flatten_values(call.values) {
       match normalize_scalar(value) {
         Error(err) => return Error(err)
         Number(num) => if num != 0.0 { return Bool(true) }
@@ -93,15 +65,8 @@ fn eval_or(
 }
 
 ///|
-fn eval_not(
-  _workbook : Workbook,
-  _sheet_name : String,
-  _name : String,
-  _args : ArrayView[Expr],
-  values : Array[FormulaValue],
-  _ctx : CalcContext,
-) -> FormulaValue {
-  match values {
+fn eval_not(call : EvalCall) -> FormulaValue {
+  match call.values {
     [v0] =>
       match normalize_scalar(v0) {
         Error(err) => Error(err)
@@ -122,20 +87,13 @@ fn eval_not(
 }
 
 ///|
-fn eval_xor(
-  _workbook : Workbook,
-  _sheet_name : String,
-  _name : String,
-  _args : ArrayView[Expr],
-  values : Array[FormulaValue],
-  _ctx : CalcContext,
-) -> FormulaValue {
-  if values.length() == 0 {
+fn eval_xor(call : EvalCall) -> FormulaValue {
+  if call.values.length() == 0 {
     Error(formula_error_value)
   } else {
     let mut count = 0
     let mut ok = false
-    for value in flatten_values(values) {
+    for value in flatten_values(call.values) {
       match normalize_scalar(value) {
         Error(err) => return Error(err)
         Number(num) => {
@@ -163,15 +121,8 @@ fn eval_xor(
 }
 
 ///|
-fn eval_if(
-  _workbook : Workbook,
-  _sheet_name : String,
-  _name : String,
-  _args : ArrayView[Expr],
-  values : Array[FormulaValue],
-  _ctx : CalcContext,
-) -> FormulaValue {
-  match values {
+fn eval_if(call : EvalCall) -> FormulaValue {
+  match call.values {
     [v0] =>
       match value_as_bool(v0) {
         Ok(cond) => Bool(cond)
@@ -192,15 +143,8 @@ fn eval_if(
 }
 
 ///|
-fn eval_iferror(
-  _workbook : Workbook,
-  _sheet_name : String,
-  _name : String,
-  _args : ArrayView[Expr],
-  values : Array[FormulaValue],
-  _ctx : CalcContext,
-) -> FormulaValue {
-  match values {
+fn eval_iferror(call : EvalCall) -> FormulaValue {
+  match call.values {
     [v0, v1] =>
       match normalize_scalar(v0) {
         Error(_) => v1
@@ -212,15 +156,8 @@ fn eval_iferror(
 }
 
 ///|
-fn eval_ifna(
-  _workbook : Workbook,
-  _sheet_name : String,
-  _name : String,
-  _args : ArrayView[Expr],
-  values : Array[FormulaValue],
-  _ctx : CalcContext,
-) -> FormulaValue {
-  match values {
+fn eval_ifna(call : EvalCall) -> FormulaValue {
+  match call.values {
     [v0, v1] =>
       match normalize_scalar(v0) {
         Error(err) => if err == formula_error_na { v1 } else { v0 }
@@ -231,20 +168,13 @@ fn eval_ifna(
 }
 
 ///|
-fn eval_ifs(
-  _workbook : Workbook,
-  _sheet_name : String,
-  _name : String,
-  _args : ArrayView[Expr],
-  values : Array[FormulaValue],
-  _ctx : CalcContext,
-) -> FormulaValue {
-  if values.length() < 2 || values.length() % 2 != 0 {
+fn eval_ifs(call : EvalCall) -> FormulaValue {
+  if call.values.length() < 2 || call.values.length() % 2 != 0 {
     Error(formula_error_value)
   } else {
-    for i in 0..<(values.length() / 2) {
-      match value_as_bool(values[i * 2]) {
-        Ok(flag) => if flag { return values[i * 2 + 1] }
+    for i in 0..<(call.values.length() / 2) {
+      match value_as_bool(call.values[i * 2]) {
+        Ok(flag) => if flag { return call.values[i * 2 + 1] }
         Err(err) => return err
       }
     }
@@ -253,31 +183,24 @@ fn eval_ifs(
 }
 
 ///|
-fn eval_switch(
-  _workbook : Workbook,
-  _sheet_name : String,
-  _name : String,
-  _args : ArrayView[Expr],
-  values : Array[FormulaValue],
-  _ctx : CalcContext,
-) -> FormulaValue {
-  if values.length() < 3 {
+fn eval_switch(call : EvalCall) -> FormulaValue {
+  if call.values.length() < 3 {
     Error(formula_error_value)
   } else {
-    let target = values[0]
-    let arg_count = values.length() - 1
+    let target = call.values[0]
+    let arg_count = call.values.length() - 1
     let switch_count = arg_count / 2
     let has_default = arg_count % 2 != 0
     let mut result = if has_default {
-      values[values.length() - 1]
+      call.values[call.values.length() - 1]
     } else {
       Error(formula_error_na)
     }
     for i in 0..<switch_count {
-      let match_value = values[1 + i * 2]
+      let match_value = call.values[1 + i * 2]
       match compare_values(target, match_value) {
         Ok(0) => {
-          result = values[1 + i * 2 + 1]
+          result = call.values[1 + i * 2 + 1]
           break
         }
         Ok(_) => ()

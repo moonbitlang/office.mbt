@@ -3,22 +3,15 @@
 // one Excel formula to its implementation; eval_function routes to these via a HashMap.
 
 ///|
-fn eval_transpose(
-  workbook : Workbook,
-  sheet_name : String,
-  _name : String,
-  args : ArrayView[Expr],
-  values : Array[FormulaValue],
-  ctx : CalcContext,
-) -> FormulaValue raise XlsxError {
-  match args {
+fn eval_transpose(call : EvalCall) -> FormulaValue raise XlsxError {
+  match call.args {
     [a0] => {
       let base_range = range_from_expr_or_value(
-        workbook,
-        sheet_name,
+        call.workbook,
+        call.sheet_name,
         a0,
-        values[0],
-        ctx,
+        call.values[0],
+        call.ctx,
       )
       List(transpose_range_values(base_range).values)
     }
@@ -27,216 +20,176 @@ fn eval_transpose(
 }
 
 ///|
-fn eval_sequence(
-  _workbook : Workbook,
-  _sheet_name : String,
-  _name : String,
-  _args : ArrayView[Expr],
-  values : Array[FormulaValue],
-  _ctx : CalcContext,
-) -> FormulaValue {
-  sequence_values(values)
+fn eval_sequence(call : EvalCall) -> FormulaValue {
+  sequence_values(call.values)
 }
 
 ///|
-fn eval_take(
-  workbook : Workbook,
-  sheet_name : String,
-  _name : String,
-  args : ArrayView[Expr],
-  values : Array[FormulaValue],
-  ctx : CalcContext,
-) -> FormulaValue raise XlsxError {
-  take_values(workbook, sheet_name, args, values, ctx)
+fn eval_take(call : EvalCall) -> FormulaValue raise XlsxError {
+  take_values(call.workbook, call.sheet_name, call.args, call.values, call.ctx)
 }
 
 ///|
-fn eval_drop(
-  workbook : Workbook,
-  sheet_name : String,
-  _name : String,
-  args : ArrayView[Expr],
-  values : Array[FormulaValue],
-  ctx : CalcContext,
-) -> FormulaValue raise XlsxError {
-  drop_values(workbook, sheet_name, args, values, ctx)
+fn eval_drop(call : EvalCall) -> FormulaValue raise XlsxError {
+  drop_values(call.workbook, call.sheet_name, call.args, call.values, call.ctx)
 }
 
 ///|
-fn eval_choosecols(
-  workbook : Workbook,
-  sheet_name : String,
-  _name : String,
-  args : ArrayView[Expr],
-  values : Array[FormulaValue],
-  ctx : CalcContext,
-) -> FormulaValue raise XlsxError {
-  choosecols_values(workbook, sheet_name, args, values, ctx)
+fn eval_choosecols(call : EvalCall) -> FormulaValue raise XlsxError {
+  choosecols_values(
+    call.workbook,
+    call.sheet_name,
+    call.args,
+    call.values,
+    call.ctx,
+  )
 }
 
 ///|
-fn eval_chooserows(
-  workbook : Workbook,
-  sheet_name : String,
-  _name : String,
-  args : ArrayView[Expr],
-  values : Array[FormulaValue],
-  ctx : CalcContext,
-) -> FormulaValue raise XlsxError {
-  chooserows_values(workbook, sheet_name, args, values, ctx)
+fn eval_chooserows(call : EvalCall) -> FormulaValue raise XlsxError {
+  chooserows_values(
+    call.workbook,
+    call.sheet_name,
+    call.args,
+    call.values,
+    call.ctx,
+  )
 }
 
 ///|
-fn eval_hstack(
-  workbook : Workbook,
-  sheet_name : String,
-  _name : String,
-  args : ArrayView[Expr],
-  values : Array[FormulaValue],
-  ctx : CalcContext,
-) -> FormulaValue raise XlsxError {
-  stack_from_values(workbook, sheet_name, args, values, ctx, true)
+fn eval_hstack(call : EvalCall) -> FormulaValue raise XlsxError {
+  stack_from_values(
+    call.workbook,
+    call.sheet_name,
+    call.args,
+    call.values,
+    call.ctx,
+    true,
+  )
 }
 
 ///|
-fn eval_vstack(
-  workbook : Workbook,
-  sheet_name : String,
-  _name : String,
-  args : ArrayView[Expr],
-  values : Array[FormulaValue],
-  ctx : CalcContext,
-) -> FormulaValue raise XlsxError {
-  stack_from_values(workbook, sheet_name, args, values, ctx, false)
+fn eval_vstack(call : EvalCall) -> FormulaValue raise XlsxError {
+  stack_from_values(
+    call.workbook,
+    call.sheet_name,
+    call.args,
+    call.values,
+    call.ctx,
+    false,
+  )
 }
 
 ///|
-fn eval_expand(
-  workbook : Workbook,
-  sheet_name : String,
-  _name : String,
-  args : ArrayView[Expr],
-  values : Array[FormulaValue],
-  ctx : CalcContext,
-) -> FormulaValue raise XlsxError {
-  expand_values(workbook, sheet_name, args, values, ctx)
+fn eval_expand(call : EvalCall) -> FormulaValue raise XlsxError {
+  expand_values(
+    call.workbook,
+    call.sheet_name,
+    call.args,
+    call.values,
+    call.ctx,
+  )
 }
 
 ///|
-fn eval_wraprows(
-  workbook : Workbook,
-  sheet_name : String,
-  _name : String,
-  args : ArrayView[Expr],
-  values : Array[FormulaValue],
-  ctx : CalcContext,
-) -> FormulaValue raise XlsxError {
-  wrap_values(workbook, sheet_name, args, values, ctx, true)
+fn eval_wraprows(call : EvalCall) -> FormulaValue raise XlsxError {
+  wrap_values(
+    call.workbook,
+    call.sheet_name,
+    call.args,
+    call.values,
+    call.ctx,
+    true,
+  )
 }
 
 ///|
-fn eval_wrapcols(
-  workbook : Workbook,
-  sheet_name : String,
-  _name : String,
-  args : ArrayView[Expr],
-  values : Array[FormulaValue],
-  ctx : CalcContext,
-) -> FormulaValue raise XlsxError {
-  wrap_values(workbook, sheet_name, args, values, ctx, false)
+fn eval_wrapcols(call : EvalCall) -> FormulaValue raise XlsxError {
+  wrap_values(
+    call.workbook,
+    call.sheet_name,
+    call.args,
+    call.values,
+    call.ctx,
+    false,
+  )
 }
 
 ///|
-fn eval_tocol(
-  workbook : Workbook,
-  sheet_name : String,
-  _name : String,
-  args : ArrayView[Expr],
-  values : Array[FormulaValue],
-  ctx : CalcContext,
-) -> FormulaValue raise XlsxError {
-  tocol_torow_values(workbook, sheet_name, args, values, ctx, false)
+fn eval_tocol(call : EvalCall) -> FormulaValue raise XlsxError {
+  tocol_torow_values(
+    call.workbook,
+    call.sheet_name,
+    call.args,
+    call.values,
+    call.ctx,
+    false,
+  )
 }
 
 ///|
-fn eval_torow(
-  workbook : Workbook,
-  sheet_name : String,
-  _name : String,
-  args : ArrayView[Expr],
-  values : Array[FormulaValue],
-  ctx : CalcContext,
-) -> FormulaValue raise XlsxError {
-  tocol_torow_values(workbook, sheet_name, args, values, ctx, false)
+fn eval_torow(call : EvalCall) -> FormulaValue raise XlsxError {
+  tocol_torow_values(
+    call.workbook,
+    call.sheet_name,
+    call.args,
+    call.values,
+    call.ctx,
+    false,
+  )
 }
 
 ///|
-fn eval_sort(
-  workbook : Workbook,
-  sheet_name : String,
-  _name : String,
-  args : ArrayView[Expr],
-  values : Array[FormulaValue],
-  ctx : CalcContext,
-) -> FormulaValue raise XlsxError {
-  sort_values(workbook, sheet_name, args, values, ctx)
+fn eval_sort(call : EvalCall) -> FormulaValue raise XlsxError {
+  sort_values(call.workbook, call.sheet_name, call.args, call.values, call.ctx)
 }
 
 ///|
-fn eval_sortby(
-  workbook : Workbook,
-  sheet_name : String,
-  _name : String,
-  args : ArrayView[Expr],
-  values : Array[FormulaValue],
-  ctx : CalcContext,
-) -> FormulaValue raise XlsxError {
-  sortby_values(workbook, sheet_name, args, values, ctx)
+fn eval_sortby(call : EvalCall) -> FormulaValue raise XlsxError {
+  sortby_values(
+    call.workbook,
+    call.sheet_name,
+    call.args,
+    call.values,
+    call.ctx,
+  )
 }
 
 ///|
-fn eval_filter(
-  workbook : Workbook,
-  sheet_name : String,
-  _name : String,
-  args : ArrayView[Expr],
-  values : Array[FormulaValue],
-  ctx : CalcContext,
-) -> FormulaValue raise XlsxError {
-  filter_values(workbook, sheet_name, args, values, ctx)
+fn eval_filter(call : EvalCall) -> FormulaValue raise XlsxError {
+  filter_values(
+    call.workbook,
+    call.sheet_name,
+    call.args,
+    call.values,
+    call.ctx,
+  )
 }
 
 ///|
-fn eval_unique(
-  workbook : Workbook,
-  sheet_name : String,
-  _name : String,
-  args : ArrayView[Expr],
-  values : Array[FormulaValue],
-  ctx : CalcContext,
-) -> FormulaValue raise XlsxError {
-  if args.length() >= 1 && args.length() <= 3 {
-    let by_col = if args.length() >= 2 {
-      match value_as_bool(values[1]) {
+fn eval_unique(call : EvalCall) -> FormulaValue raise XlsxError {
+  if call.args.length() >= 1 && call.args.length() <= 3 {
+    let by_col = if call.args.length() >= 2 {
+      match value_as_bool(call.values[1]) {
         Ok(flag) => flag
         Err(err) => return err
       }
     } else {
       false
     }
-    let exactly_once = if args.length() == 3 {
-      match value_as_bool(values[2]) {
+    let exactly_once = if call.args.length() == 3 {
+      match value_as_bool(call.values[2]) {
         Ok(flag) => flag
         Err(err) => return err
       }
     } else {
       false
     }
-    let range = match args[0] {
+    let range = match call.args[0] {
       Range(_, _, _) | Cell(_, _) =>
-        eval_range_expr(workbook, sheet_name, args[0], ctx)
+        eval_range_expr(call.workbook, call.sheet_name, call.args[0], call.ctx)
       _ =>
-        match values[0] {
+        match call.values[0] {
           Error(err) => return Error(err)
           List(list) =>
             if list.length() == 0 {
@@ -244,7 +197,7 @@ fn eval_unique(
             } else {
               { rows: 1, cols: list.length(), values: list, }
             }
-          _ => { rows: 1, cols: 1, values: [values[0]], }
+          _ => { rows: 1, cols: 1, values: [call.values[0]], }
         }
     }
     match unique_range_values(range, by_col, exactly_once) {
@@ -257,23 +210,16 @@ fn eval_unique(
 }
 
 ///|
-fn eval_index(
-  workbook : Workbook,
-  sheet_name : String,
-  _name : String,
-  args : ArrayView[Expr],
-  values : Array[FormulaValue],
-  ctx : CalcContext,
-) -> FormulaValue raise XlsxError {
-  match args {
+fn eval_index(call : EvalCall) -> FormulaValue raise XlsxError {
+  match call.args {
     [a0, _] | [a0, _, _] => {
-      let range = eval_range_expr(workbook, sheet_name, a0, ctx)
-      let row_num = match value_as_int(values[1]) {
+      let range = eval_range_expr(call.workbook, call.sheet_name, a0, call.ctx)
+      let row_num = match value_as_int(call.values[1]) {
         Ok(num) => num
         Err(err) => return err
       }
-      let col_num = if args is [_, _, _] {
-        match value_as_int(values[2]) {
+      let col_num = if call.args is [_, _, _] {
+        match value_as_int(call.values[2]) {
           Ok(num) => num
           Err(err) => return err
         }
@@ -294,20 +240,13 @@ fn eval_index(
 }
 
 ///|
-fn eval_match(
-  workbook : Workbook,
-  sheet_name : String,
-  _name : String,
-  args : ArrayView[Expr],
-  values : Array[FormulaValue],
-  ctx : CalcContext,
-) -> FormulaValue raise XlsxError {
-  match args {
+fn eval_match(call : EvalCall) -> FormulaValue raise XlsxError {
+  match call.args {
     [_, a1] | [_, a1, _] => {
-      let lookup = values[0]
-      let range = eval_range_expr(workbook, sheet_name, a1, ctx)
-      let match_type = if args is [_, _, _] {
-        match value_as_int(values[2]) {
+      let lookup = call.values[0]
+      let range = eval_range_expr(call.workbook, call.sheet_name, a1, call.ctx)
+      let match_type = if call.args is [_, _, _] {
+        match value_as_int(call.values[2]) {
           Ok(num) => num
           Err(err) => return err
         }
@@ -321,24 +260,17 @@ fn eval_match(
 }
 
 ///|
-fn eval_vlookup(
-  workbook : Workbook,
-  sheet_name : String,
-  _name : String,
-  args : ArrayView[Expr],
-  values : Array[FormulaValue],
-  ctx : CalcContext,
-) -> FormulaValue raise XlsxError {
-  match args {
+fn eval_vlookup(call : EvalCall) -> FormulaValue raise XlsxError {
+  match call.args {
     [_, a1, _] | [_, a1, _, _] => {
-      let lookup = values[0]
-      let table = eval_range_expr(workbook, sheet_name, a1, ctx)
-      let col_index = match value_as_int(values[2]) {
+      let lookup = call.values[0]
+      let table = eval_range_expr(call.workbook, call.sheet_name, a1, call.ctx)
+      let col_index = match value_as_int(call.values[2]) {
         Ok(num) => num
         Err(err) => return err
       }
-      let range_lookup = if args is [_, _, _, _] {
-        match lookup_range_flag(values[3]) {
+      let range_lookup = if call.args is [_, _, _, _] {
+        match lookup_range_flag(call.values[3]) {
           Ok(flag) => flag
           Err(err) => return err
         }
@@ -352,24 +284,17 @@ fn eval_vlookup(
 }
 
 ///|
-fn eval_hlookup(
-  workbook : Workbook,
-  sheet_name : String,
-  _name : String,
-  args : ArrayView[Expr],
-  values : Array[FormulaValue],
-  ctx : CalcContext,
-) -> FormulaValue raise XlsxError {
-  match args {
+fn eval_hlookup(call : EvalCall) -> FormulaValue raise XlsxError {
+  match call.args {
     [_, a1, _] | [_, a1, _, _] => {
-      let lookup = values[0]
-      let table = eval_range_expr(workbook, sheet_name, a1, ctx)
-      let row_index = match value_as_int(values[2]) {
+      let lookup = call.values[0]
+      let table = eval_range_expr(call.workbook, call.sheet_name, a1, call.ctx)
+      let row_index = match value_as_int(call.values[2]) {
         Ok(num) => num
         Err(err) => return err
       }
-      let range_lookup = if args is [_, _, _, _] {
-        match lookup_range_flag(values[3]) {
+      let range_lookup = if call.args is [_, _, _, _] {
+        match lookup_range_flag(call.values[3]) {
           Ok(flag) => flag
           Err(err) => return err
         }
@@ -383,23 +308,16 @@ fn eval_hlookup(
 }
 
 ///|
-fn eval_lookup(
-  workbook : Workbook,
-  sheet_name : String,
-  _name : String,
-  args : ArrayView[Expr],
-  values : Array[FormulaValue],
-  ctx : CalcContext,
-) -> FormulaValue raise XlsxError {
-  if args.length() == 2 || args.length() == 3 {
-    let lookup = values[0]
-    if args.length() == 2 {
+fn eval_lookup(call : EvalCall) -> FormulaValue raise XlsxError {
+  if call.args.length() == 2 || call.args.length() == 3 {
+    let lookup = call.values[0]
+    if call.args.length() == 2 {
       let array_range = range_from_expr_or_value(
-        workbook,
-        sheet_name,
-        args[1],
-        values[1],
-        ctx,
+        call.workbook,
+        call.sheet_name,
+        call.args[1],
+        call.values[1],
+        call.ctx,
       )
       if array_range.rows == 0 || array_range.cols == 0 {
         return Error(formula_error_value)
@@ -441,18 +359,18 @@ fn eval_lookup(
       }
     } else {
       let lookup_range = range_from_expr_or_value(
-        workbook,
-        sheet_name,
-        args[1],
-        values[1],
-        ctx,
+        call.workbook,
+        call.sheet_name,
+        call.args[1],
+        call.values[1],
+        call.ctx,
       )
       let result_range = range_from_expr_or_value(
-        workbook,
-        sheet_name,
-        args[2],
-        values[2],
-        ctx,
+        call.workbook,
+        call.sheet_name,
+        call.args[2],
+        call.values[2],
+        call.ctx,
       )
       if lookup_range.rows == 0 ||
         lookup_range.cols == 0 ||
@@ -486,45 +404,38 @@ fn eval_lookup(
 }
 
 ///|
-fn eval_xlookup(
-  workbook : Workbook,
-  sheet_name : String,
-  _name : String,
-  args : ArrayView[Expr],
-  values : Array[FormulaValue],
-  ctx : CalcContext,
-) -> FormulaValue raise XlsxError {
-  if args.length() >= 3 && args.length() <= 6 {
-    let lookup = values[0]
+fn eval_xlookup(call : EvalCall) -> FormulaValue raise XlsxError {
+  if call.args.length() >= 3 && call.args.length() <= 6 {
+    let lookup = call.values[0]
     let lookup_range = range_from_expr_or_value(
-      workbook,
-      sheet_name,
-      args[1],
-      values[1],
-      ctx,
+      call.workbook,
+      call.sheet_name,
+      call.args[1],
+      call.values[1],
+      call.ctx,
     )
     let return_range = range_from_expr_or_value(
-      workbook,
-      sheet_name,
-      args[2],
-      values[2],
-      ctx,
+      call.workbook,
+      call.sheet_name,
+      call.args[2],
+      call.values[2],
+      call.ctx,
     )
-    let if_not_found = if args.length() >= 4 {
-      values[3]
+    let if_not_found = if call.args.length() >= 4 {
+      call.values[3]
     } else {
       Error(formula_error_na)
     }
-    let match_mode = if args.length() >= 5 {
-      match value_as_int(values[4]) {
+    let match_mode = if call.args.length() >= 5 {
+      match value_as_int(call.values[4]) {
         Ok(num) => num
         Err(err) => return err
       }
     } else {
       0
     }
-    let search_mode = if args.length() >= 6 {
-      match value_as_int(values[5]) {
+    let search_mode = if call.args.length() >= 6 {
+      match value_as_int(call.values[5]) {
         Ok(num) => num
         Err(err) => return err
       }
@@ -584,32 +495,18 @@ fn eval_xlookup(
 }
 
 ///|
-fn eval_anchorarray(
-  workbook : Workbook,
-  sheet_name : String,
-  _name : String,
-  args : ArrayView[Expr],
-  values : Array[FormulaValue],
-  _ctx : CalcContext,
-) -> FormulaValue {
-  anchorarray_values(workbook, sheet_name, args, values)
+fn eval_anchorarray(call : EvalCall) -> FormulaValue {
+  anchorarray_values(call.workbook, call.sheet_name, call.args, call.values)
 }
 
 ///|
-fn eval_address(
-  _workbook : Workbook,
-  _sheet_name : String,
-  _name : String,
-  _args : ArrayView[Expr],
-  values : Array[FormulaValue],
-  _ctx : CalcContext,
-) -> FormulaValue raise XlsxError {
-  if values.length() >= 2 && values.length() <= 5 {
-    let row_num = match value_as_int(values[0]) {
+fn eval_address(call : EvalCall) -> FormulaValue raise XlsxError {
+  if call.values.length() >= 2 && call.values.length() <= 5 {
+    let row_num = match value_as_int(call.values[0]) {
       Ok(num) => num
       Err(err) => return err
     }
-    let col_num = match value_as_int(values[1]) {
+    let col_num = match value_as_int(call.values[1]) {
       Ok(num) => num
       Err(err) => return err
     }
@@ -619,8 +516,8 @@ fn eval_address(
       col_num > cell_ref_max_cols {
       return Error(formula_error_value)
     }
-    let abs_num = if values.length() >= 3 {
-      match value_as_int(values[2]) {
+    let abs_num = if call.values.length() >= 3 {
+      match value_as_int(call.values[2]) {
         Ok(num) => num
         Err(err) => return err
       }
@@ -630,16 +527,16 @@ fn eval_address(
     if abs_num < 1 || abs_num > 4 {
       return Error(formula_error_value)
     }
-    let a1 = if values.length() >= 4 {
-      match value_as_bool(values[3]) {
+    let a1 = if call.values.length() >= 4 {
+      match value_as_bool(call.values[3]) {
         Ok(flag) => flag
         Err(err) => return err
       }
     } else {
       true
     }
-    let sheet_text = if values.length() == 5 {
-      match value_as_string(values[4]) {
+    let sheet_text = if call.values.length() == 5 {
+      match value_as_string(call.values[4]) {
         Ok(text) => text
         Err(err) => return err
       }
@@ -663,21 +560,14 @@ fn eval_address(
 }
 
 ///|
-fn eval_indirect(
-  workbook : Workbook,
-  sheet_name : String,
-  _name : String,
-  _args : ArrayView[Expr],
-  values : Array[FormulaValue],
-  ctx : CalcContext,
-) -> FormulaValue raise XlsxError {
-  match values {
+fn eval_indirect(call : EvalCall) -> FormulaValue raise XlsxError {
+  match call.values {
     [v0] | [v0, _] => {
       let ref_text = match value_as_string(v0) {
         Ok(text) => text
         Err(err) => return err
       }
-      let a1 = if values is [_, v1] {
+      let a1 = if call.values is [_, v1] {
         match value_as_bool(v1) {
           Ok(flag) => flag
           Err(err) => return err
@@ -686,7 +576,11 @@ fn eval_indirect(
         true
       }
       let (sheet_text, ref_part) = split_sheet_ref(ref_text)
-      let target_sheet = if sheet_text == "" { sheet_name } else { sheet_text }
+      let target_sheet = if sheet_text == "" {
+        call.sheet_name
+      } else {
+        sheet_text
+      }
       if a1 {
         match ref_part.find(":") {
           Some(idx) => {
@@ -703,21 +597,34 @@ fn eval_indirect(
             }
             List(
               collect_range_values(
-                workbook, target_sheet, start_ref, end_ref, ctx,
+                call.workbook,
+                target_sheet,
+                start_ref,
+                end_ref,
+                call.ctx,
               ),
             )
           }
           None =>
             match parse_cell_ref_token(ref_part) {
               Some(reference) =>
-                resolve_cell_value(workbook, target_sheet, reference, ctx)
+                resolve_cell_value(
+                  call.workbook,
+                  target_sheet,
+                  reference,
+                  call.ctx,
+                )
               None => {
                 let (start_ref, end_ref) = parse_range_ref_token(ref_part) catch {
                   _ => return Error(formula_error_ref)
                 }
                 List(
                   collect_range_values(
-                    workbook, target_sheet, start_ref, end_ref, ctx,
+                    call.workbook,
+                    target_sheet,
+                    start_ref,
+                    end_ref,
+                    call.ctx,
                   ),
                 )
               }
@@ -747,7 +654,11 @@ fn eval_indirect(
             }
             List(
               collect_range_values(
-                workbook, target_sheet, start_ref, end_ref, ctx,
+                call.workbook,
+                target_sheet,
+                start_ref,
+                end_ref,
+                call.ctx,
               ),
             )
           }
@@ -757,7 +668,12 @@ fn eval_indirect(
                 let reference = cell_ref_from(row, col) catch {
                   _ => return Error(formula_error_ref)
                 }
-                resolve_cell_value(workbook, target_sheet, reference, ctx)
+                resolve_cell_value(
+                  call.workbook,
+                  target_sheet,
+                  reference,
+                  call.ctx,
+                )
               }
               None => Error(formula_error_ref)
             }
@@ -769,16 +685,9 @@ fn eval_indirect(
 }
 
 ///|
-fn eval_hyperlink(
-  _workbook : Workbook,
-  _sheet_name : String,
-  _name : String,
-  _args : ArrayView[Expr],
-  values : Array[FormulaValue],
-  _ctx : CalcContext,
-) -> FormulaValue {
-  if values.length() == 1 || values.length() == 2 {
-    match value_as_string(values[values.length() - 1]) {
+fn eval_hyperlink(call : EvalCall) -> FormulaValue {
+  if call.values.length() == 1 || call.values.length() == 2 {
+    match value_as_string(call.values[call.values.length() - 1]) {
       Ok(text) => String(text)
       Err(err) => err
     }
@@ -788,28 +697,21 @@ fn eval_hyperlink(
 }
 
 ///|
-fn eval_choose(
-  _workbook : Workbook,
-  _sheet_name : String,
-  _name : String,
-  _args : ArrayView[Expr],
-  values : Array[FormulaValue],
-  _ctx : CalcContext,
-) -> FormulaValue {
-  if values.length() >= 2 {
-    let index_text = match value_as_string(values[0]) {
+fn eval_choose(call : EvalCall) -> FormulaValue {
+  if call.values.length() >= 2 {
+    let index_text = match value_as_string(call.values[0]) {
       Ok(text) => text
       Err(err) => return err
     }
     let idx = @string.parse_int(index_text, base=10) catch {
       _ => return Error(formula_error_value)
     }
-    if values.length() <= idx {
+    if call.values.length() <= idx {
       Error(formula_error_value)
     } else if idx <= 0 {
-      values[0]
+      call.values[0]
     } else {
-      values[idx]
+      call.values[idx]
     }
   } else {
     Error(formula_error_value)

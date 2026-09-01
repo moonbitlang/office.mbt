@@ -3,30 +3,16 @@
 // one Excel formula to its implementation; eval_function routes to these via a HashMap.
 
 ///|
-fn eval_dispimg(
-  _workbook : Workbook,
-  _sheet_name : String,
-  _name : String,
-  _args : ArrayView[Expr],
-  values : Array[FormulaValue],
-  _ctx : CalcContext,
-) -> FormulaValue {
-  match values {
+fn eval_dispimg(call : EvalCall) -> FormulaValue {
+  match call.values {
     [v0, _] => v0
     _ => Error(formula_error_value)
   }
 }
 
 ///|
-fn eval_isblank(
-  _workbook : Workbook,
-  _sheet_name : String,
-  _name : String,
-  _args : ArrayView[Expr],
-  values : Array[FormulaValue],
-  _ctx : CalcContext,
-) -> FormulaValue {
-  match values {
+fn eval_isblank(call : EvalCall) -> FormulaValue {
+  match call.values {
     [v0] =>
       match normalize_scalar(v0) {
         Empty => Bool(true)
@@ -37,15 +23,8 @@ fn eval_isblank(
 }
 
 ///|
-fn eval_iserr(
-  _workbook : Workbook,
-  _sheet_name : String,
-  _name : String,
-  _args : ArrayView[Expr],
-  values : Array[FormulaValue],
-  _ctx : CalcContext,
-) -> FormulaValue {
-  match values {
+fn eval_iserr(call : EvalCall) -> FormulaValue {
+  match call.values {
     [v0] =>
       match normalize_scalar(v0) {
         Error(err) => Bool(is_known_error_code(err) && err != formula_error_na)
@@ -56,15 +35,8 @@ fn eval_iserr(
 }
 
 ///|
-fn eval_iseven(
-  _workbook : Workbook,
-  _sheet_name : String,
-  _name : String,
-  _args : ArrayView[Expr],
-  values : Array[FormulaValue],
-  _ctx : CalcContext,
-) -> FormulaValue {
-  match values {
+fn eval_iseven(call : EvalCall) -> FormulaValue {
+  match call.values {
     [v0] =>
       match normalize_scalar(v0) {
         Empty => Bool(true)
@@ -82,15 +54,8 @@ fn eval_iseven(
 }
 
 ///|
-fn eval_isodd(
-  _workbook : Workbook,
-  _sheet_name : String,
-  _name : String,
-  _args : ArrayView[Expr],
-  values : Array[FormulaValue],
-  _ctx : CalcContext,
-) -> FormulaValue {
-  match values {
+fn eval_isodd(call : EvalCall) -> FormulaValue {
+  match call.values {
     [v0] =>
       match value_as_number(v0) {
         Ok(num) => {
@@ -104,15 +69,8 @@ fn eval_isodd(
 }
 
 ///|
-fn eval_iserror(
-  _workbook : Workbook,
-  _sheet_name : String,
-  _name : String,
-  _args : ArrayView[Expr],
-  values : Array[FormulaValue],
-  _ctx : CalcContext,
-) -> FormulaValue {
-  match values {
+fn eval_iserror(call : EvalCall) -> FormulaValue {
+  match call.values {
     [v0] =>
       match normalize_scalar(v0) {
         Error(err) => Bool(is_known_error_code(err))
@@ -123,15 +81,8 @@ fn eval_iserror(
 }
 
 ///|
-fn eval_islogical(
-  _workbook : Workbook,
-  _sheet_name : String,
-  _name : String,
-  _args : ArrayView[Expr],
-  values : Array[FormulaValue],
-  _ctx : CalcContext,
-) -> FormulaValue {
-  match values {
+fn eval_islogical(call : EvalCall) -> FormulaValue {
+  match call.values {
     [v0] =>
       match normalize_scalar(v0) {
         Bool(_) => Bool(true)
@@ -143,15 +94,8 @@ fn eval_islogical(
 }
 
 ///|
-fn eval_isna(
-  _workbook : Workbook,
-  _sheet_name : String,
-  _name : String,
-  _args : ArrayView[Expr],
-  values : Array[FormulaValue],
-  _ctx : CalcContext,
-) -> FormulaValue {
-  match values {
+fn eval_isna(call : EvalCall) -> FormulaValue {
+  match call.values {
     [v0] =>
       match normalize_scalar(v0) {
         Error(err) => Bool(err == formula_error_na)
@@ -162,15 +106,8 @@ fn eval_isna(
 }
 
 ///|
-fn eval_isnumber(
-  _workbook : Workbook,
-  _sheet_name : String,
-  _name : String,
-  _args : ArrayView[Expr],
-  values : Array[FormulaValue],
-  _ctx : CalcContext,
-) -> FormulaValue {
-  match values {
+fn eval_isnumber(call : EvalCall) -> FormulaValue {
+  match call.values {
     [v0] =>
       match normalize_scalar(v0) {
         Number(_) => Bool(true)
@@ -181,15 +118,8 @@ fn eval_isnumber(
 }
 
 ///|
-fn eval_istext(
-  _workbook : Workbook,
-  _sheet_name : String,
-  _name : String,
-  _args : ArrayView[Expr],
-  values : Array[FormulaValue],
-  _ctx : CalcContext,
-) -> FormulaValue {
-  match values {
+fn eval_istext(call : EvalCall) -> FormulaValue {
+  match call.values {
     [v0] =>
       match normalize_scalar(v0) {
         String(text) =>
@@ -204,15 +134,8 @@ fn eval_istext(
 }
 
 ///|
-fn eval_isnontext(
-  _workbook : Workbook,
-  _sheet_name : String,
-  _name : String,
-  _args : ArrayView[Expr],
-  values : Array[FormulaValue],
-  _ctx : CalcContext,
-) -> FormulaValue {
-  match values {
+fn eval_isnontext(call : EvalCall) -> FormulaValue {
+  match call.values {
     [v0] =>
       match normalize_scalar(v0) {
         String(_) => Bool(false)
@@ -223,35 +146,21 @@ fn eval_isnontext(
 }
 
 ///|
-fn eval_isref(
-  _workbook : Workbook,
-  _sheet_name : String,
-  _name : String,
-  args : ArrayView[Expr],
-  _values : Array[FormulaValue],
-  _ctx : CalcContext,
-) -> FormulaValue {
-  match args {
+fn eval_isref(call : EvalCall) -> FormulaValue {
+  match call.args {
     [a0] => Bool(is_ref_expr(a0))
     _ => Error(formula_error_value)
   }
 }
 
 ///|
-fn eval_isformula(
-  workbook : Workbook,
-  sheet_name : String,
-  _name : String,
-  args : ArrayView[Expr],
-  _values : Array[FormulaValue],
-  _ctx : CalcContext,
-) -> FormulaValue {
-  match args {
+fn eval_isformula(call : EvalCall) -> FormulaValue {
+  match call.args {
     [a0] =>
       match a0 {
         Cell(sheet, reference) => {
-          let target_sheet = if sheet == "" { sheet_name } else { sheet }
-          Bool(cell_has_formula(workbook, target_sheet, reference))
+          let target_sheet = if sheet == "" { call.sheet_name } else { sheet }
+          Bool(cell_has_formula(call.workbook, target_sheet, reference))
         }
         _ => Bool(false)
       }
@@ -260,42 +169,28 @@ fn eval_isformula(
 }
 
 ///|
-fn eval_errordottype(
-  _workbook : Workbook,
-  _sheet_name : String,
-  _name : String,
-  _args : ArrayView[Expr],
-  values : Array[FormulaValue],
-  _ctx : CalcContext,
-) -> FormulaValue {
-  match values {
+fn eval_errordottype(call : EvalCall) -> FormulaValue {
+  match call.values {
     [v0] => error_type_value(v0)
     _ => Error(formula_error_value)
   }
 }
 
 ///|
-fn eval_sheet(
-  workbook : Workbook,
-  sheet_name : String,
-  _name : String,
-  args : ArrayView[Expr],
-  values : Array[FormulaValue],
-  _ctx : CalcContext,
-) -> FormulaValue {
-  match args {
+fn eval_sheet(call : EvalCall) -> FormulaValue {
+  match call.args {
     [] =>
-      match sheet_index_opt(workbook, sheet_name) {
+      match sheet_index_opt(call.workbook, call.sheet_name) {
         Some(index) => Number(Double::from_int(index + 1))
         None => Error(formula_error_na)
       }
     [arg] => {
       let target_sheet = match arg {
-        Cell(sheet, _) => if sheet == "" { sheet_name } else { sheet }
-        Range(sheet, _, _) => if sheet == "" { sheet_name } else { sheet }
-        _ => formula_value_string(values[0])
+        Cell(sheet, _) => if sheet == "" { call.sheet_name } else { sheet }
+        Range(sheet, _, _) => if sheet == "" { call.sheet_name } else { sheet }
+        _ => formula_value_string(call.values[0])
       }
-      match sheet_index_opt(workbook, target_sheet) {
+      match sheet_index_opt(call.workbook, target_sheet) {
         Some(index) => Number(Double::from_int(index + 1))
         None => Error(formula_error_na)
       }
@@ -305,16 +200,9 @@ fn eval_sheet(
 }
 
 ///|
-fn eval_sheets(
-  workbook : Workbook,
-  _sheet_name : String,
-  _name : String,
-  args : ArrayView[Expr],
-  _values : Array[FormulaValue],
-  _ctx : CalcContext,
-) -> FormulaValue {
-  match args {
-    [] => Number(Double::from_int(workbook.sheets().length()))
+fn eval_sheets(call : EvalCall) -> FormulaValue {
+  match call.args {
+    [] => Number(Double::from_int(call.workbook.sheets().length()))
     [arg] =>
       match arg {
         Cell(_, _) | Range(_, _, _) => Number(1.0)
@@ -325,45 +213,24 @@ fn eval_sheets(
 }
 
 ///|
-fn eval_type(
-  _workbook : Workbook,
-  _sheet_name : String,
-  _name : String,
-  _args : ArrayView[Expr],
-  values : Array[FormulaValue],
-  _ctx : CalcContext,
-) -> FormulaValue {
-  match values {
+fn eval_type(call : EvalCall) -> FormulaValue {
+  match call.values {
     [v0] => type_value(v0)
     _ => Error(formula_error_value)
   }
 }
 
 ///|
-fn eval_na(
-  _workbook : Workbook,
-  _sheet_name : String,
-  _name : String,
-  _args : ArrayView[Expr],
-  values : Array[FormulaValue],
-  _ctx : CalcContext,
-) -> FormulaValue {
-  match values {
+fn eval_na(call : EvalCall) -> FormulaValue {
+  match call.values {
     [] => Error(formula_error_na)
     _ => Error(formula_error_value)
   }
 }
 
 ///|
-fn eval_n(
-  _workbook : Workbook,
-  _sheet_name : String,
-  _name : String,
-  _args : ArrayView[Expr],
-  values : Array[FormulaValue],
-  _ctx : CalcContext,
-) -> FormulaValue {
-  match values {
+fn eval_n(call : EvalCall) -> FormulaValue {
+  match call.values {
     [v0] =>
       match normalize_scalar(v0) {
         Error(err) => Error(err)

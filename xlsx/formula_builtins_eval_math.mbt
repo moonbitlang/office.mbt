@@ -3,63 +3,28 @@
 // one Excel formula to its implementation; eval_function routes to these via a HashMap.
 
 ///|
-fn eval_sum(
-  _workbook : Workbook,
-  _sheet_name : String,
-  _name : String,
-  _args : ArrayView[Expr],
-  values : Array[FormulaValue],
-  _ctx : CalcContext,
-) -> FormulaValue {
-  sum_values(values)
+fn eval_sum(call : EvalCall) -> FormulaValue {
+  sum_values(call.values)
 }
 
 ///|
-fn eval_subtotal(
-  _workbook : Workbook,
-  _sheet_name : String,
-  _name : String,
-  _args : ArrayView[Expr],
-  values : Array[FormulaValue],
-  _ctx : CalcContext,
-) -> FormulaValue {
-  subtotal_values(values)
+fn eval_subtotal(call : EvalCall) -> FormulaValue {
+  subtotal_values(call.values)
 }
 
 ///|
-fn eval_aggregate(
-  _workbook : Workbook,
-  _sheet_name : String,
-  _name : String,
-  _args : ArrayView[Expr],
-  values : Array[FormulaValue],
-  _ctx : CalcContext,
-) -> FormulaValue {
-  aggregate_values(values)
+fn eval_aggregate(call : EvalCall) -> FormulaValue {
+  aggregate_values(call.values)
 }
 
 ///|
-fn eval_product(
-  _workbook : Workbook,
-  _sheet_name : String,
-  _name : String,
-  _args : ArrayView[Expr],
-  values : Array[FormulaValue],
-  _ctx : CalcContext,
-) -> FormulaValue {
-  product_values(values)
+fn eval_product(call : EvalCall) -> FormulaValue {
+  product_values(call.values)
 }
 
 ///|
-fn eval_sign(
-  _workbook : Workbook,
-  _sheet_name : String,
-  _name : String,
-  _args : ArrayView[Expr],
-  values : Array[FormulaValue],
-  _ctx : CalcContext,
-) -> FormulaValue {
-  match values {
+fn eval_sign(call : EvalCall) -> FormulaValue {
+  match call.values {
     [v0] =>
       match value_as_number(v0) {
         Ok(num) =>
@@ -71,15 +36,8 @@ fn eval_sign(
 }
 
 ///|
-fn eval_seriessum(
-  _workbook : Workbook,
-  _sheet_name : String,
-  _name : String,
-  _args : ArrayView[Expr],
-  values : Array[FormulaValue],
-  _ctx : CalcContext,
-) -> FormulaValue {
-  match values {
+fn eval_seriessum(call : EvalCall) -> FormulaValue {
+  match call.values {
     [v0, v1, v2, v3] => {
       let x = match value_as_number(v0) {
         Ok(num) => num
@@ -114,54 +72,52 @@ fn eval_seriessum(
 }
 
 ///|
-fn eval_sumif(
-  workbook : Workbook,
-  sheet_name : String,
-  _name : String,
-  args : ArrayView[Expr],
-  values : Array[FormulaValue],
-  ctx : CalcContext,
-) -> FormulaValue raise XlsxError {
-  match args {
+fn eval_sumif(call : EvalCall) -> FormulaValue raise XlsxError {
+  match call.args {
     [a0, _] | [a0, _, _] => {
-      let range_values = eval_range_expr(workbook, sheet_name, a0, ctx)
-      let sum_range = if args is [_, _, a2] {
-        Some(eval_range_expr(workbook, sheet_name, a2, ctx))
+      let range_values = eval_range_expr(
+        call.workbook,
+        call.sheet_name,
+        a0,
+        call.ctx,
+      )
+      let sum_range = if call.args is [_, _, a2] {
+        Some(eval_range_expr(call.workbook, call.sheet_name, a2, call.ctx))
       } else {
         None
       }
-      sumif_values(range_values, values[1], sum_range)
+      sumif_values(range_values, call.values[1], sum_range)
     }
     _ => Error(formula_error_value)
   }
 }
 
 ///|
-fn eval_sumproduct(
-  workbook : Workbook,
-  sheet_name : String,
-  _name : String,
-  args : ArrayView[Expr],
-  values : Array[FormulaValue],
-  ctx : CalcContext,
-) -> FormulaValue raise XlsxError {
-  if args.length() >= 1 {
+fn eval_sumproduct(call : EvalCall) -> FormulaValue raise XlsxError {
+  if call.args.length() >= 1 {
     let ranges : Array[RangeValues] = []
     let scalars : Array[FormulaValue] = []
     let mut has_range = false
     let mut has_scalar = false
-    for i in 0..<args.length() {
-      match args[i] {
+    for i in 0..<call.args.length() {
+      match call.args[i] {
         Range(_, _, _) | Cell(_, _) => {
           has_range = true
-          ranges.push(eval_range_expr(workbook, sheet_name, args[i], ctx))
+          ranges.push(
+            eval_range_expr(
+              call.workbook,
+              call.sheet_name,
+              call.args[i],
+              call.ctx,
+            ),
+          )
         }
         _ =>
-          match values[i] {
+          match call.values[i] {
             Error(err) => return Error(err)
             _ => {
               has_scalar = true
-              scalars.push(values[i])
+              scalars.push(call.values[i])
             }
           }
       }
@@ -179,30 +135,16 @@ fn eval_sumproduct(
 }
 
 ///|
-fn eval_sumsq(
-  _workbook : Workbook,
-  _sheet_name : String,
-  _name : String,
-  _args : ArrayView[Expr],
-  values : Array[FormulaValue],
-  _ctx : CalcContext,
-) -> FormulaValue {
-  sumsq_values(values)
+fn eval_sumsq(call : EvalCall) -> FormulaValue {
+  sumsq_values(call.values)
 }
 
 ///|
-fn eval_sumx2my2(
-  workbook : Workbook,
-  sheet_name : String,
-  _name : String,
-  args : ArrayView[Expr],
-  _values : Array[FormulaValue],
-  ctx : CalcContext,
-) -> FormulaValue raise XlsxError {
-  match args {
+fn eval_sumx2my2(call : EvalCall) -> FormulaValue raise XlsxError {
+  match call.args {
     [a0, a1] => {
-      let left = eval_range_expr(workbook, sheet_name, a0, ctx)
-      let right = eval_range_expr(workbook, sheet_name, a1, ctx)
+      let left = eval_range_expr(call.workbook, call.sheet_name, a0, call.ctx)
+      let right = eval_range_expr(call.workbook, call.sheet_name, a1, call.ctx)
       sumx_values("SUMX2MY2", left, right)
     }
     _ => Error(formula_error_value)
@@ -210,18 +152,11 @@ fn eval_sumx2my2(
 }
 
 ///|
-fn eval_sumx2py2(
-  workbook : Workbook,
-  sheet_name : String,
-  _name : String,
-  args : ArrayView[Expr],
-  _values : Array[FormulaValue],
-  ctx : CalcContext,
-) -> FormulaValue raise XlsxError {
-  match args {
+fn eval_sumx2py2(call : EvalCall) -> FormulaValue raise XlsxError {
+  match call.args {
     [a0, a1] => {
-      let left = eval_range_expr(workbook, sheet_name, a0, ctx)
-      let right = eval_range_expr(workbook, sheet_name, a1, ctx)
+      let left = eval_range_expr(call.workbook, call.sheet_name, a0, call.ctx)
+      let right = eval_range_expr(call.workbook, call.sheet_name, a1, call.ctx)
       sumx_values("SUMX2PY2", left, right)
     }
     _ => Error(formula_error_value)
@@ -229,18 +164,11 @@ fn eval_sumx2py2(
 }
 
 ///|
-fn eval_sumxmy2(
-  workbook : Workbook,
-  sheet_name : String,
-  _name : String,
-  args : ArrayView[Expr],
-  _values : Array[FormulaValue],
-  ctx : CalcContext,
-) -> FormulaValue raise XlsxError {
-  match args {
+fn eval_sumxmy2(call : EvalCall) -> FormulaValue raise XlsxError {
+  match call.args {
     [a0, a1] => {
-      let left = eval_range_expr(workbook, sheet_name, a0, ctx)
-      let right = eval_range_expr(workbook, sheet_name, a1, ctx)
+      let left = eval_range_expr(call.workbook, call.sheet_name, a0, call.ctx)
+      let right = eval_range_expr(call.workbook, call.sheet_name, a1, call.ctx)
       sumx_values("SUMXMY2", left, right)
     }
     _ => Error(formula_error_value)
@@ -248,31 +176,29 @@ fn eval_sumxmy2(
 }
 
 ///|
-fn eval_sumifs(
-  workbook : Workbook,
-  sheet_name : String,
-  _name : String,
-  args : ArrayView[Expr],
-  values : Array[FormulaValue],
-  ctx : CalcContext,
-) -> FormulaValue raise XlsxError {
-  if args.length() >= 3 {
-    if args.length() % 2 != 1 {
+fn eval_sumifs(call : EvalCall) -> FormulaValue raise XlsxError {
+  if call.args.length() >= 3 {
+    if call.args.length() % 2 != 1 {
       Error(formula_error_na)
     } else {
-      let sum_range = eval_range_expr(workbook, sheet_name, args[0], ctx)
+      let sum_range = eval_range_expr(
+        call.workbook,
+        call.sheet_name,
+        call.args[0],
+        call.ctx,
+      )
       let ranges : Array[RangeValues] = []
       let criterias : Array[FormulaCriteria] = []
-      for i in 0..<((args.length() - 1) / 2) {
+      for i in 0..<((call.args.length() - 1) / 2) {
         let offset = 1 + i * 2
         let range_values = eval_range_expr(
-          workbook,
-          sheet_name,
-          args[offset],
-          ctx,
+          call.workbook,
+          call.sheet_name,
+          call.args[offset],
+          call.ctx,
         )
         ranges.push(range_values)
-        criterias.push(parse_formula_criteria(values[offset + 1]))
+        criterias.push(parse_formula_criteria(call.values[offset + 1]))
       }
       let matches = ifs_match(ranges, criterias)
       let mut sum = 0.0
@@ -294,39 +220,18 @@ fn eval_sumifs(
 }
 
 ///|
-fn eval_gcd(
-  _workbook : Workbook,
-  _sheet_name : String,
-  _name : String,
-  _args : ArrayView[Expr],
-  values : Array[FormulaValue],
-  _ctx : CalcContext,
-) -> FormulaValue {
-  gcd_values(values)
+fn eval_gcd(call : EvalCall) -> FormulaValue {
+  gcd_values(call.values)
 }
 
 ///|
-fn eval_lcm(
-  _workbook : Workbook,
-  _sheet_name : String,
-  _name : String,
-  _args : ArrayView[Expr],
-  values : Array[FormulaValue],
-  _ctx : CalcContext,
-) -> FormulaValue {
-  lcm_values(values)
+fn eval_lcm(call : EvalCall) -> FormulaValue {
+  lcm_values(call.values)
 }
 
 ///|
-fn eval_combin(
-  _workbook : Workbook,
-  _sheet_name : String,
-  _name : String,
-  _args : ArrayView[Expr],
-  values : Array[FormulaValue],
-  _ctx : CalcContext,
-) -> FormulaValue {
-  match values {
+fn eval_combin(call : EvalCall) -> FormulaValue {
+  match call.values {
     [v0, v1] =>
       match (value_as_number(v0), value_as_number(v1)) {
         (Ok(num), Ok(chosen)) => combin_values(num, chosen)
@@ -338,15 +243,8 @@ fn eval_combin(
 }
 
 ///|
-fn eval_combina(
-  _workbook : Workbook,
-  _sheet_name : String,
-  _name : String,
-  _args : ArrayView[Expr],
-  values : Array[FormulaValue],
-  _ctx : CalcContext,
-) -> FormulaValue {
-  match values {
+fn eval_combina(call : EvalCall) -> FormulaValue {
+  match call.values {
     [v0, v1] =>
       match (value_as_number(v0), value_as_number(v1)) {
         (Ok(num), Ok(chosen)) => {
@@ -368,20 +266,13 @@ fn eval_combina(
 }
 
 ///|
-fn eval_complex(
-  _workbook : Workbook,
-  _sheet_name : String,
-  _name : String,
-  _args : ArrayView[Expr],
-  values : Array[FormulaValue],
-  _ctx : CalcContext,
-) -> FormulaValue {
-  match values {
+fn eval_complex(call : EvalCall) -> FormulaValue {
+  match call.values {
     [v0, v1] | [v0, v1, _] =>
       match (value_as_number(v0), value_as_number(v1)) {
         (Ok(real), Ok(imag)) => {
           let mut suffix = "i"
-          if values is [_, _, v2] {
+          if call.values is [_, _, v2] {
             match value_as_string(v2) {
               Ok(text) => {
                 let lower = text.to_lower()
@@ -403,15 +294,8 @@ fn eval_complex(
 }
 
 ///|
-fn eval_fact(
-  _workbook : Workbook,
-  _sheet_name : String,
-  _name : String,
-  _args : ArrayView[Expr],
-  values : Array[FormulaValue],
-  _ctx : CalcContext,
-) -> FormulaValue {
-  match values {
+fn eval_fact(call : EvalCall) -> FormulaValue {
+  match call.values {
     [v0] =>
       match value_as_number(v0) {
         Ok(num) =>
@@ -427,15 +311,8 @@ fn eval_fact(
 }
 
 ///|
-fn eval_factdouble(
-  _workbook : Workbook,
-  _sheet_name : String,
-  _name : String,
-  _args : ArrayView[Expr],
-  values : Array[FormulaValue],
-  _ctx : CalcContext,
-) -> FormulaValue {
-  match values {
+fn eval_factdouble(call : EvalCall) -> FormulaValue {
+  match call.values {
     [v0] =>
       match value_as_number(v0) {
         Ok(num) =>
@@ -451,34 +328,20 @@ fn eval_factdouble(
 }
 
 ///|
-fn eval_multinomial(
-  _workbook : Workbook,
-  _sheet_name : String,
-  _name : String,
-  _args : ArrayView[Expr],
-  values : Array[FormulaValue],
-  _ctx : CalcContext,
-) -> FormulaValue {
-  multinomial_values(values)
+fn eval_multinomial(call : EvalCall) -> FormulaValue {
+  multinomial_values(call.values)
 }
 
 ///|
-fn eval_mdeterm(
-  workbook : Workbook,
-  sheet_name : String,
-  _name : String,
-  args : ArrayView[Expr],
-  values : Array[FormulaValue],
-  ctx : CalcContext,
-) -> FormulaValue raise XlsxError {
-  match values {
+fn eval_mdeterm(call : EvalCall) -> FormulaValue raise XlsxError {
+  match call.values {
     [v0] => {
       let range = range_from_expr_or_value(
-        workbook,
-        sheet_name,
-        args[0],
+        call.workbook,
+        call.sheet_name,
+        call.args[0],
         v0,
-        ctx,
+        call.ctx,
       )
       match number_matrix_from_range(range, true) {
         Ok(matrix) => Number(matrix_det(matrix))
@@ -490,22 +353,15 @@ fn eval_mdeterm(
 }
 
 ///|
-fn eval_minverse(
-  workbook : Workbook,
-  sheet_name : String,
-  _name : String,
-  args : ArrayView[Expr],
-  values : Array[FormulaValue],
-  ctx : CalcContext,
-) -> FormulaValue raise XlsxError {
-  match values {
+fn eval_minverse(call : EvalCall) -> FormulaValue raise XlsxError {
+  match call.values {
     [v0] => {
       let range = range_from_expr_or_value(
-        workbook,
-        sheet_name,
-        args[0],
+        call.workbook,
+        call.sheet_name,
+        call.args[0],
         v0,
-        ctx,
+        call.ctx,
       )
       match number_matrix_from_range(range, true) {
         Ok(matrix) => {
@@ -536,32 +392,25 @@ fn eval_minverse(
 }
 
 ///|
-fn eval_mmult(
-  workbook : Workbook,
-  sheet_name : String,
-  _name : String,
-  args : ArrayView[Expr],
-  values : Array[FormulaValue],
-  ctx : CalcContext,
-) -> FormulaValue raise XlsxError {
-  match values {
+fn eval_mmult(call : EvalCall) -> FormulaValue raise XlsxError {
+  match call.values {
     [v0, v1] =>
       match (v0, v1) {
         (Number(lhs), Number(rhs)) => Number(lhs * rhs)
         _ => {
           let left_range = range_from_expr_or_value(
-            workbook,
-            sheet_name,
-            args[0],
+            call.workbook,
+            call.sheet_name,
+            call.args[0],
             v0,
-            ctx,
+            call.ctx,
           )
           let right_range = range_from_expr_or_value(
-            workbook,
-            sheet_name,
-            args[1],
+            call.workbook,
+            call.sheet_name,
+            call.args[1],
             v1,
-            ctx,
+            call.ctx,
           )
           match
             (
@@ -583,15 +432,8 @@ fn eval_mmult(
 }
 
 ///|
-fn eval_munit(
-  _workbook : Workbook,
-  _sheet_name : String,
-  _name : String,
-  _args : ArrayView[Expr],
-  values : Array[FormulaValue],
-  _ctx : CalcContext,
-) -> FormulaValue {
-  match values {
+fn eval_munit(call : EvalCall) -> FormulaValue {
+  match call.values {
     [v0] =>
       match munit_dimension(v0) {
         Ok(dimension) => List(munit_range_values(dimension).values)
@@ -602,15 +444,8 @@ fn eval_munit(
 }
 
 ///|
-fn eval_abs(
-  _workbook : Workbook,
-  _sheet_name : String,
-  _name : String,
-  _args : ArrayView[Expr],
-  values : Array[FormulaValue],
-  _ctx : CalcContext,
-) -> FormulaValue {
-  match values {
+fn eval_abs(call : EvalCall) -> FormulaValue {
+  match call.values {
     [v0] =>
       match value_as_number(v0) {
         Ok(num) => Number(abs_double(num))
@@ -621,15 +456,8 @@ fn eval_abs(
 }
 
 ///|
-fn eval_int(
-  _workbook : Workbook,
-  _sheet_name : String,
-  _name : String,
-  _args : ArrayView[Expr],
-  values : Array[FormulaValue],
-  _ctx : CalcContext,
-) -> FormulaValue {
-  match values {
+fn eval_int(call : EvalCall) -> FormulaValue {
+  match call.values {
     [v0] =>
       match value_as_number(v0) {
         Ok(num) => Number(Double::floor(num))
@@ -640,15 +468,8 @@ fn eval_int(
 }
 
 ///|
-fn eval_ln(
-  _workbook : Workbook,
-  _sheet_name : String,
-  _name : String,
-  _args : ArrayView[Expr],
-  values : Array[FormulaValue],
-  _ctx : CalcContext,
-) -> FormulaValue {
-  match values {
+fn eval_ln(call : EvalCall) -> FormulaValue {
+  match call.values {
     [v0] =>
       match value_as_number(v0) {
         Ok(num) => Number(@math.ln(num))
@@ -659,15 +480,8 @@ fn eval_ln(
 }
 
 ///|
-fn eval_exp(
-  _workbook : Workbook,
-  _sheet_name : String,
-  _name : String,
-  _args : ArrayView[Expr],
-  values : Array[FormulaValue],
-  _ctx : CalcContext,
-) -> FormulaValue {
-  match values {
+fn eval_exp(call : EvalCall) -> FormulaValue {
+  match call.values {
     [v0] =>
       match value_as_number(v0) {
         Ok(num) => Number(@math.exp(num))
@@ -678,15 +492,8 @@ fn eval_exp(
 }
 
 ///|
-fn eval_decimal(
-  _workbook : Workbook,
-  _sheet_name : String,
-  _name : String,
-  _args : ArrayView[Expr],
-  values : Array[FormulaValue],
-  _ctx : CalcContext,
-) -> FormulaValue {
-  match values {
+fn eval_decimal(call : EvalCall) -> FormulaValue {
+  match call.values {
     [v0, v1] =>
       match (value_as_string(v0), value_as_number(v1)) {
         (Ok(text), Ok(radix)) => {
@@ -705,20 +512,13 @@ fn eval_decimal(
 }
 
 ///|
-fn eval_roman(
-  _workbook : Workbook,
-  _sheet_name : String,
-  _name : String,
-  _args : ArrayView[Expr],
-  values : Array[FormulaValue],
-  _ctx : CalcContext,
-) -> FormulaValue {
-  match values {
+fn eval_roman(call : EvalCall) -> FormulaValue {
+  match call.values {
     [v0] | [v0, _] =>
       match value_as_number(v0) {
         Ok(num) => {
           let mut form = 0
-          if values is [_, v1] {
+          if call.values is [_, v1] {
             match value_as_number(v1) {
               Ok(raw) => {
                 let mut mode = Double::to_int(trunc_double(raw))
@@ -741,15 +541,8 @@ fn eval_roman(
 }
 
 ///|
-fn eval_arabic(
-  _workbook : Workbook,
-  _sheet_name : String,
-  _name : String,
-  _args : ArrayView[Expr],
-  values : Array[FormulaValue],
-  _ctx : CalcContext,
-) -> FormulaValue {
-  match values {
+fn eval_arabic(call : EvalCall) -> FormulaValue {
+  match call.values {
     [v0] =>
       match value_as_string(v0) {
         Ok(text) => arabic_string_value(text)
@@ -760,27 +553,13 @@ fn eval_arabic(
 }
 
 ///|
-fn eval_base(
-  _workbook : Workbook,
-  _sheet_name : String,
-  _name : String,
-  _args : ArrayView[Expr],
-  values : Array[FormulaValue],
-  _ctx : CalcContext,
-) -> FormulaValue {
-  base_values(values)
+fn eval_base(call : EvalCall) -> FormulaValue {
+  base_values(call.values)
 }
 
 ///|
-fn eval_bin2dec(
-  _workbook : Workbook,
-  _sheet_name : String,
-  _name : String,
-  _args : ArrayView[Expr],
-  values : Array[FormulaValue],
-  _ctx : CalcContext,
-) -> FormulaValue {
-  match values {
+fn eval_bin2dec(call : EvalCall) -> FormulaValue {
+  match call.values {
     [v0] =>
       match value_as_number(v0) {
         Ok(_) => bin2dec_string(formula_value_string(v0))
@@ -791,15 +570,8 @@ fn eval_bin2dec(
 }
 
 ///|
-fn eval_bin2hex(
-  _workbook : Workbook,
-  _sheet_name : String,
-  _name : String,
-  _args : ArrayView[Expr],
-  values : Array[FormulaValue],
-  _ctx : CalcContext,
-) -> FormulaValue {
-  match values {
+fn eval_bin2hex(call : EvalCall) -> FormulaValue {
+  match call.values {
     [v0] | [v0, _] =>
       match value_as_number(v0) {
         Ok(_) => {
@@ -808,7 +580,7 @@ fn eval_bin2hex(
             Error(_) => decimal
             _ => {
               let new_values : Array[FormulaValue] = [decimal]
-              if values is [_, places] {
+              if call.values is [_, places] {
                 new_values.push(places)
               }
               dec2x_values("BIN2HEX", new_values)
@@ -822,15 +594,8 @@ fn eval_bin2hex(
 }
 
 ///|
-fn eval_bin2oct(
-  _workbook : Workbook,
-  _sheet_name : String,
-  _name : String,
-  _args : ArrayView[Expr],
-  values : Array[FormulaValue],
-  _ctx : CalcContext,
-) -> FormulaValue {
-  match values {
+fn eval_bin2oct(call : EvalCall) -> FormulaValue {
+  match call.values {
     [v0] | [v0, _] =>
       match value_as_number(v0) {
         Ok(_) => {
@@ -839,7 +604,7 @@ fn eval_bin2oct(
             Error(_) => decimal
             _ => {
               let new_values : Array[FormulaValue] = [decimal]
-              if values is [_, places] {
+              if call.values is [_, places] {
                 new_values.push(places)
               }
               dec2x_values("BIN2OCT", new_values)
@@ -853,51 +618,23 @@ fn eval_bin2oct(
 }
 
 ///|
-fn eval_dec2bin(
-  _workbook : Workbook,
-  _sheet_name : String,
-  _name : String,
-  _args : ArrayView[Expr],
-  values : Array[FormulaValue],
-  _ctx : CalcContext,
-) -> FormulaValue {
-  dec2x_values("DEC2BIN", values)
+fn eval_dec2bin(call : EvalCall) -> FormulaValue {
+  dec2x_values("DEC2BIN", call.values)
 }
 
 ///|
-fn eval_dec2hex(
-  _workbook : Workbook,
-  _sheet_name : String,
-  _name : String,
-  _args : ArrayView[Expr],
-  values : Array[FormulaValue],
-  _ctx : CalcContext,
-) -> FormulaValue {
-  dec2x_values("DEC2HEX", values)
+fn eval_dec2hex(call : EvalCall) -> FormulaValue {
+  dec2x_values("DEC2HEX", call.values)
 }
 
 ///|
-fn eval_dec2oct(
-  _workbook : Workbook,
-  _sheet_name : String,
-  _name : String,
-  _args : ArrayView[Expr],
-  values : Array[FormulaValue],
-  _ctx : CalcContext,
-) -> FormulaValue {
-  dec2x_values("DEC2OCT", values)
+fn eval_dec2oct(call : EvalCall) -> FormulaValue {
+  dec2x_values("DEC2OCT", call.values)
 }
 
 ///|
-fn eval_hex2bin(
-  _workbook : Workbook,
-  _sheet_name : String,
-  _name : String,
-  _args : ArrayView[Expr],
-  values : Array[FormulaValue],
-  _ctx : CalcContext,
-) -> FormulaValue {
-  match values {
+fn eval_hex2bin(call : EvalCall) -> FormulaValue {
+  match call.values {
     [v0] | [v0, _] =>
       match value_as_string(v0) {
         Ok(text) => {
@@ -906,7 +643,7 @@ fn eval_hex2bin(
             Error(_) => decimal
             _ => {
               let new_values : Array[FormulaValue] = [decimal]
-              if values is [_, places] {
+              if call.values is [_, places] {
                 new_values.push(places)
               }
               dec2x_values("HEX2BIN", new_values)
@@ -920,15 +657,8 @@ fn eval_hex2bin(
 }
 
 ///|
-fn eval_hex2dec(
-  _workbook : Workbook,
-  _sheet_name : String,
-  _name : String,
-  _args : ArrayView[Expr],
-  values : Array[FormulaValue],
-  _ctx : CalcContext,
-) -> FormulaValue {
-  match values {
+fn eval_hex2dec(call : EvalCall) -> FormulaValue {
+  match call.values {
     [v0] =>
       match value_as_string(v0) {
         Ok(text) => hex2dec_string(text)
@@ -939,15 +669,8 @@ fn eval_hex2dec(
 }
 
 ///|
-fn eval_hex2oct(
-  _workbook : Workbook,
-  _sheet_name : String,
-  _name : String,
-  _args : ArrayView[Expr],
-  values : Array[FormulaValue],
-  _ctx : CalcContext,
-) -> FormulaValue {
-  match values {
+fn eval_hex2oct(call : EvalCall) -> FormulaValue {
+  match call.values {
     [v0] | [v0, _] =>
       match value_as_string(v0) {
         Ok(text) => {
@@ -956,7 +679,7 @@ fn eval_hex2oct(
             Error(_) => decimal
             _ => {
               let new_values : Array[FormulaValue] = [decimal]
-              if values is [_, places] {
+              if call.values is [_, places] {
                 new_values.push(places)
               }
               dec2x_values("HEX2OCT", new_values)
@@ -970,21 +693,14 @@ fn eval_hex2oct(
 }
 
 ///|
-fn eval_oct2bin(
-  _workbook : Workbook,
-  _sheet_name : String,
-  _name : String,
-  _args : ArrayView[Expr],
-  values : Array[FormulaValue],
-  _ctx : CalcContext,
-) -> FormulaValue {
-  match values {
+fn eval_oct2bin(call : EvalCall) -> FormulaValue {
+  match call.values {
     [v0] | [v0, _] =>
       match value_as_number(v0) {
         Ok(_) => {
           let decimal = oct2dec_string(formula_value_string(v0))
           let new_values : Array[FormulaValue] = [decimal]
-          if values is [_, places] {
+          if call.values is [_, places] {
             new_values.push(places)
           }
           dec2x_values("OCT2BIN", new_values)
@@ -996,15 +712,8 @@ fn eval_oct2bin(
 }
 
 ///|
-fn eval_oct2dec(
-  _workbook : Workbook,
-  _sheet_name : String,
-  _name : String,
-  _args : ArrayView[Expr],
-  values : Array[FormulaValue],
-  _ctx : CalcContext,
-) -> FormulaValue {
-  match values {
+fn eval_oct2dec(call : EvalCall) -> FormulaValue {
+  match call.values {
     [v0] =>
       match value_as_number(v0) {
         Ok(_) => oct2dec_string(formula_value_string(v0))
@@ -1015,21 +724,14 @@ fn eval_oct2dec(
 }
 
 ///|
-fn eval_oct2hex(
-  _workbook : Workbook,
-  _sheet_name : String,
-  _name : String,
-  _args : ArrayView[Expr],
-  values : Array[FormulaValue],
-  _ctx : CalcContext,
-) -> FormulaValue {
-  match values {
+fn eval_oct2hex(call : EvalCall) -> FormulaValue {
+  match call.values {
     [v0] | [v0, _] =>
       match value_as_number(v0) {
         Ok(_) => {
           let decimal = oct2dec_string(formula_value_string(v0))
           let new_values : Array[FormulaValue] = [decimal]
-          if values is [_, places] {
+          if call.values is [_, places] {
             new_values.push(places)
           }
           dec2x_values("OCT2HEX", new_values)
@@ -1041,15 +743,8 @@ fn eval_oct2hex(
 }
 
 ///|
-fn eval_besseli(
-  _workbook : Workbook,
-  _sheet_name : String,
-  _name : String,
-  _args : ArrayView[Expr],
-  values : Array[FormulaValue],
-  _ctx : CalcContext,
-) -> FormulaValue {
-  match values {
+fn eval_besseli(call : EvalCall) -> FormulaValue {
+  match call.values {
     [v0, v1] =>
       match (value_as_number(v0), value_as_number(v1)) {
         (Ok(x), Ok(n)) => number_or_num_error(bessel_i(x, n))
@@ -1061,15 +756,8 @@ fn eval_besseli(
 }
 
 ///|
-fn eval_besselj(
-  _workbook : Workbook,
-  _sheet_name : String,
-  _name : String,
-  _args : ArrayView[Expr],
-  values : Array[FormulaValue],
-  _ctx : CalcContext,
-) -> FormulaValue {
-  match values {
+fn eval_besselj(call : EvalCall) -> FormulaValue {
+  match call.values {
     [v0, v1] =>
       match (value_as_number(v0), value_as_number(v1)) {
         (Ok(x), Ok(n)) => number_or_num_error(bessel_j(x, n))
@@ -1081,15 +769,8 @@ fn eval_besselj(
 }
 
 ///|
-fn eval_besselk(
-  _workbook : Workbook,
-  _sheet_name : String,
-  _name : String,
-  _args : ArrayView[Expr],
-  values : Array[FormulaValue],
-  _ctx : CalcContext,
-) -> FormulaValue {
-  match values {
+fn eval_besselk(call : EvalCall) -> FormulaValue {
+  match call.values {
     [v0, v1] =>
       match (value_as_number(v0), value_as_number(v1)) {
         (Ok(x), Ok(n)) =>
@@ -1114,15 +795,8 @@ fn eval_besselk(
 }
 
 ///|
-fn eval_bessely(
-  _workbook : Workbook,
-  _sheet_name : String,
-  _name : String,
-  _args : ArrayView[Expr],
-  values : Array[FormulaValue],
-  _ctx : CalcContext,
-) -> FormulaValue {
-  match values {
+fn eval_bessely(call : EvalCall) -> FormulaValue {
+  match call.values {
     [v0, v1] =>
       match (value_as_number(v0), value_as_number(v1)) {
         (Ok(x), Ok(n)) =>
@@ -1147,21 +821,14 @@ fn eval_bessely(
 }
 
 ///|
-fn eval_delta(
-  _workbook : Workbook,
-  _sheet_name : String,
-  _name : String,
-  _args : ArrayView[Expr],
-  values : Array[FormulaValue],
-  _ctx : CalcContext,
-) -> FormulaValue {
-  match values {
+fn eval_delta(call : EvalCall) -> FormulaValue {
+  match call.values {
     [v0] | [v0, _] => {
       let number1 = match value_as_number(v0) {
         Ok(num) => num
         Err(err) => return err
       }
-      let number2 = if values is [_, v1] {
+      let number2 = if call.values is [_, v1] {
         match value_as_number(v1) {
           Ok(num) => num
           Err(err) => return err
@@ -1176,19 +843,12 @@ fn eval_delta(
 }
 
 ///|
-fn eval_erf(
-  _workbook : Workbook,
-  _sheet_name : String,
-  _name : String,
-  _args : ArrayView[Expr],
-  values : Array[FormulaValue],
-  _ctx : CalcContext,
-) -> FormulaValue {
-  match values {
+fn eval_erf(call : EvalCall) -> FormulaValue {
+  match call.values {
     [v0] | [v0, _] =>
       match value_as_number(v0) {
         Ok(lower) =>
-          if values is [_, v1] {
+          if call.values is [_, v1] {
             match value_as_number(v1) {
               Ok(upper) =>
                 number_or_num_error(erf_double(upper) - erf_double(lower))
@@ -1204,15 +864,8 @@ fn eval_erf(
 }
 
 ///|
-fn eval_erfdotprecise(
-  _workbook : Workbook,
-  _sheet_name : String,
-  _name : String,
-  _args : ArrayView[Expr],
-  values : Array[FormulaValue],
-  _ctx : CalcContext,
-) -> FormulaValue {
-  match values {
+fn eval_erfdotprecise(call : EvalCall) -> FormulaValue {
+  match call.values {
     [v0] =>
       match value_as_number(v0) {
         Ok(value) => number_or_num_error(erf_double(value))
@@ -1223,15 +876,8 @@ fn eval_erfdotprecise(
 }
 
 ///|
-fn eval_erfc(
-  _workbook : Workbook,
-  _sheet_name : String,
-  _name : String,
-  _args : ArrayView[Expr],
-  values : Array[FormulaValue],
-  _ctx : CalcContext,
-) -> FormulaValue {
-  match values {
+fn eval_erfc(call : EvalCall) -> FormulaValue {
+  match call.values {
     [v0] =>
       match value_as_number(v0) {
         Ok(value) => number_or_num_error(erfc_double(value))
@@ -1242,15 +888,8 @@ fn eval_erfc(
 }
 
 ///|
-fn eval_erfcdotprecise(
-  _workbook : Workbook,
-  _sheet_name : String,
-  _name : String,
-  _args : ArrayView[Expr],
-  values : Array[FormulaValue],
-  _ctx : CalcContext,
-) -> FormulaValue {
-  match values {
+fn eval_erfcdotprecise(call : EvalCall) -> FormulaValue {
+  match call.values {
     [v0] =>
       match value_as_number(v0) {
         Ok(value) => number_or_num_error(erfc_double(value))
@@ -1261,45 +900,24 @@ fn eval_erfcdotprecise(
 }
 
 ///|
-fn eval_convert(
-  _workbook : Workbook,
-  _sheet_name : String,
-  _name : String,
-  _args : ArrayView[Expr],
-  values : Array[FormulaValue],
-  _ctx : CalcContext,
-) -> FormulaValue {
-  convert_values(values)
+fn eval_convert(call : EvalCall) -> FormulaValue {
+  convert_values(call.values)
 }
 
 ///|
-fn eval_euroconvert(
-  _workbook : Workbook,
-  _sheet_name : String,
-  _name : String,
-  _args : ArrayView[Expr],
-  values : Array[FormulaValue],
-  _ctx : CalcContext,
-) -> FormulaValue {
-  euroconvert_values(values)
+fn eval_euroconvert(call : EvalCall) -> FormulaValue {
+  euroconvert_values(call.values)
 }
 
 ///|
-fn eval_gestep(
-  _workbook : Workbook,
-  _sheet_name : String,
-  _name : String,
-  _args : ArrayView[Expr],
-  values : Array[FormulaValue],
-  _ctx : CalcContext,
-) -> FormulaValue {
-  match values {
+fn eval_gestep(call : EvalCall) -> FormulaValue {
+  match call.values {
     [v0] | [v0, _] => {
       let number = match value_as_number(v0) {
         Ok(num) => num
         Err(err) => return err
       }
-      let step = if values is [_, v1] {
+      let step = if call.values is [_, v1] {
         match value_as_number(v1) {
           Ok(num) => num
           Err(err) => return err
@@ -1314,75 +932,33 @@ fn eval_gestep(
 }
 
 ///|
-fn eval_bitand(
-  _workbook : Workbook,
-  _sheet_name : String,
-  _name : String,
-  _args : ArrayView[Expr],
-  values : Array[FormulaValue],
-  _ctx : CalcContext,
-) -> FormulaValue {
-  bitwise_values("BITAND", values)
+fn eval_bitand(call : EvalCall) -> FormulaValue {
+  bitwise_values("BITAND", call.values)
 }
 
 ///|
-fn eval_bitlshift(
-  _workbook : Workbook,
-  _sheet_name : String,
-  _name : String,
-  _args : ArrayView[Expr],
-  values : Array[FormulaValue],
-  _ctx : CalcContext,
-) -> FormulaValue {
-  bitwise_values("BITLSHIFT", values)
+fn eval_bitlshift(call : EvalCall) -> FormulaValue {
+  bitwise_values("BITLSHIFT", call.values)
 }
 
 ///|
-fn eval_bitor(
-  _workbook : Workbook,
-  _sheet_name : String,
-  _name : String,
-  _args : ArrayView[Expr],
-  values : Array[FormulaValue],
-  _ctx : CalcContext,
-) -> FormulaValue {
-  bitwise_values("BITOR", values)
+fn eval_bitor(call : EvalCall) -> FormulaValue {
+  bitwise_values("BITOR", call.values)
 }
 
 ///|
-fn eval_bitrshift(
-  _workbook : Workbook,
-  _sheet_name : String,
-  _name : String,
-  _args : ArrayView[Expr],
-  values : Array[FormulaValue],
-  _ctx : CalcContext,
-) -> FormulaValue {
-  bitwise_values("BITRSHIFT", values)
+fn eval_bitrshift(call : EvalCall) -> FormulaValue {
+  bitwise_values("BITRSHIFT", call.values)
 }
 
 ///|
-fn eval_bitxor(
-  _workbook : Workbook,
-  _sheet_name : String,
-  _name : String,
-  _args : ArrayView[Expr],
-  values : Array[FormulaValue],
-  _ctx : CalcContext,
-) -> FormulaValue {
-  bitwise_values("BITXOR", values)
+fn eval_bitxor(call : EvalCall) -> FormulaValue {
+  bitwise_values("BITXOR", call.values)
 }
 
 ///|
-fn eval_acos(
-  _workbook : Workbook,
-  _sheet_name : String,
-  _name : String,
-  _args : ArrayView[Expr],
-  values : Array[FormulaValue],
-  _ctx : CalcContext,
-) -> FormulaValue {
-  match values {
+fn eval_acos(call : EvalCall) -> FormulaValue {
+  match call.values {
     [v0] =>
       match value_as_number(v0) {
         Ok(num) => number_or_num_error(@math.acos(num))
@@ -1393,15 +969,8 @@ fn eval_acos(
 }
 
 ///|
-fn eval_acosh(
-  _workbook : Workbook,
-  _sheet_name : String,
-  _name : String,
-  _args : ArrayView[Expr],
-  values : Array[FormulaValue],
-  _ctx : CalcContext,
-) -> FormulaValue {
-  match values {
+fn eval_acosh(call : EvalCall) -> FormulaValue {
+  match call.values {
     [v0] =>
       match value_as_number(v0) {
         Ok(num) => number_or_num_error(@math.acosh(num))
@@ -1412,15 +981,8 @@ fn eval_acosh(
 }
 
 ///|
-fn eval_acot(
-  _workbook : Workbook,
-  _sheet_name : String,
-  _name : String,
-  _args : ArrayView[Expr],
-  values : Array[FormulaValue],
-  _ctx : CalcContext,
-) -> FormulaValue {
-  match values {
+fn eval_acot(call : EvalCall) -> FormulaValue {
+  match call.values {
     [v0] =>
       match value_as_number(v0) {
         Ok(num) => number_or_num_error(@math.PI / 2.0 - @math.atan(num))
@@ -1431,15 +993,8 @@ fn eval_acot(
 }
 
 ///|
-fn eval_acoth(
-  _workbook : Workbook,
-  _sheet_name : String,
-  _name : String,
-  _args : ArrayView[Expr],
-  values : Array[FormulaValue],
-  _ctx : CalcContext,
-) -> FormulaValue {
-  match values {
+fn eval_acoth(call : EvalCall) -> FormulaValue {
+  match call.values {
     [v0] =>
       match value_as_number(v0) {
         Ok(num) => number_or_num_error(@math.atanh(1.0 / num))
@@ -1450,15 +1005,8 @@ fn eval_acoth(
 }
 
 ///|
-fn eval_asin(
-  _workbook : Workbook,
-  _sheet_name : String,
-  _name : String,
-  _args : ArrayView[Expr],
-  values : Array[FormulaValue],
-  _ctx : CalcContext,
-) -> FormulaValue {
-  match values {
+fn eval_asin(call : EvalCall) -> FormulaValue {
+  match call.values {
     [v0] =>
       match value_as_number(v0) {
         Ok(num) => number_or_num_error(@math.asin(num))
@@ -1469,15 +1017,8 @@ fn eval_asin(
 }
 
 ///|
-fn eval_asinh(
-  _workbook : Workbook,
-  _sheet_name : String,
-  _name : String,
-  _args : ArrayView[Expr],
-  values : Array[FormulaValue],
-  _ctx : CalcContext,
-) -> FormulaValue {
-  match values {
+fn eval_asinh(call : EvalCall) -> FormulaValue {
+  match call.values {
     [v0] =>
       match value_as_number(v0) {
         Ok(num) => number_or_num_error(@math.asinh(num))
@@ -1488,15 +1029,8 @@ fn eval_asinh(
 }
 
 ///|
-fn eval_atan(
-  _workbook : Workbook,
-  _sheet_name : String,
-  _name : String,
-  _args : ArrayView[Expr],
-  values : Array[FormulaValue],
-  _ctx : CalcContext,
-) -> FormulaValue {
-  match values {
+fn eval_atan(call : EvalCall) -> FormulaValue {
+  match call.values {
     [v0] =>
       match value_as_number(v0) {
         Ok(num) => number_or_num_error(@math.atan(num))
@@ -1507,15 +1041,8 @@ fn eval_atan(
 }
 
 ///|
-fn eval_atanh(
-  _workbook : Workbook,
-  _sheet_name : String,
-  _name : String,
-  _args : ArrayView[Expr],
-  values : Array[FormulaValue],
-  _ctx : CalcContext,
-) -> FormulaValue {
-  match values {
+fn eval_atanh(call : EvalCall) -> FormulaValue {
+  match call.values {
     [v0] =>
       match value_as_number(v0) {
         Ok(num) => number_or_num_error(@math.atanh(num))
@@ -1526,15 +1053,8 @@ fn eval_atanh(
 }
 
 ///|
-fn eval_atan2(
-  _workbook : Workbook,
-  _sheet_name : String,
-  _name : String,
-  _args : ArrayView[Expr],
-  values : Array[FormulaValue],
-  _ctx : CalcContext,
-) -> FormulaValue {
-  match values {
+fn eval_atan2(call : EvalCall) -> FormulaValue {
+  match call.values {
     [v0, v1] =>
       match (value_as_number(v0), value_as_number(v1)) {
         (Ok(y), Ok(x)) => number_or_num_error(@math.atan2(x, y))
@@ -1546,15 +1066,8 @@ fn eval_atan2(
 }
 
 ///|
-fn eval_cos(
-  _workbook : Workbook,
-  _sheet_name : String,
-  _name : String,
-  _args : ArrayView[Expr],
-  values : Array[FormulaValue],
-  _ctx : CalcContext,
-) -> FormulaValue {
-  match values {
+fn eval_cos(call : EvalCall) -> FormulaValue {
+  match call.values {
     [v0] =>
       match value_as_number(v0) {
         Ok(num) => number_or_num_error(@math.cos(num))
@@ -1565,15 +1078,8 @@ fn eval_cos(
 }
 
 ///|
-fn eval_cosh(
-  _workbook : Workbook,
-  _sheet_name : String,
-  _name : String,
-  _args : ArrayView[Expr],
-  values : Array[FormulaValue],
-  _ctx : CalcContext,
-) -> FormulaValue {
-  match values {
+fn eval_cosh(call : EvalCall) -> FormulaValue {
+  match call.values {
     [v0] =>
       match value_as_number(v0) {
         Ok(num) => number_or_num_error(@math.cosh(num))
@@ -1584,15 +1090,8 @@ fn eval_cosh(
 }
 
 ///|
-fn eval_sin(
-  _workbook : Workbook,
-  _sheet_name : String,
-  _name : String,
-  _args : ArrayView[Expr],
-  values : Array[FormulaValue],
-  _ctx : CalcContext,
-) -> FormulaValue {
-  match values {
+fn eval_sin(call : EvalCall) -> FormulaValue {
+  match call.values {
     [v0] =>
       match value_as_number(v0) {
         Ok(num) => number_or_num_error(@math.sin(num))
@@ -1603,15 +1102,8 @@ fn eval_sin(
 }
 
 ///|
-fn eval_sinh(
-  _workbook : Workbook,
-  _sheet_name : String,
-  _name : String,
-  _args : ArrayView[Expr],
-  values : Array[FormulaValue],
-  _ctx : CalcContext,
-) -> FormulaValue {
-  match values {
+fn eval_sinh(call : EvalCall) -> FormulaValue {
+  match call.values {
     [v0] =>
       match value_as_number(v0) {
         Ok(num) => number_or_num_error(@math.sinh(num))
@@ -1622,15 +1114,8 @@ fn eval_sinh(
 }
 
 ///|
-fn eval_tan(
-  _workbook : Workbook,
-  _sheet_name : String,
-  _name : String,
-  _args : ArrayView[Expr],
-  values : Array[FormulaValue],
-  _ctx : CalcContext,
-) -> FormulaValue {
-  match values {
+fn eval_tan(call : EvalCall) -> FormulaValue {
+  match call.values {
     [v0] =>
       match value_as_number(v0) {
         Ok(num) => number_or_num_error(@math.tan(num))
@@ -1641,15 +1126,8 @@ fn eval_tan(
 }
 
 ///|
-fn eval_tanh(
-  _workbook : Workbook,
-  _sheet_name : String,
-  _name : String,
-  _args : ArrayView[Expr],
-  values : Array[FormulaValue],
-  _ctx : CalcContext,
-) -> FormulaValue {
-  match values {
+fn eval_tanh(call : EvalCall) -> FormulaValue {
+  match call.values {
     [v0] =>
       match value_as_number(v0) {
         Ok(num) => number_or_num_error(@math.tanh(num))
@@ -1660,15 +1138,8 @@ fn eval_tanh(
 }
 
 ///|
-fn eval_cot(
-  _workbook : Workbook,
-  _sheet_name : String,
-  _name : String,
-  _args : ArrayView[Expr],
-  values : Array[FormulaValue],
-  _ctx : CalcContext,
-) -> FormulaValue {
-  match values {
+fn eval_cot(call : EvalCall) -> FormulaValue {
+  match call.values {
     [v0] =>
       match value_as_number(v0) {
         Ok(num) =>
@@ -1684,15 +1155,8 @@ fn eval_cot(
 }
 
 ///|
-fn eval_coth(
-  _workbook : Workbook,
-  _sheet_name : String,
-  _name : String,
-  _args : ArrayView[Expr],
-  values : Array[FormulaValue],
-  _ctx : CalcContext,
-) -> FormulaValue {
-  match values {
+fn eval_coth(call : EvalCall) -> FormulaValue {
+  match call.values {
     [v0] =>
       match value_as_number(v0) {
         Ok(num) =>
@@ -1710,15 +1174,8 @@ fn eval_coth(
 }
 
 ///|
-fn eval_csc(
-  _workbook : Workbook,
-  _sheet_name : String,
-  _name : String,
-  _args : ArrayView[Expr],
-  values : Array[FormulaValue],
-  _ctx : CalcContext,
-) -> FormulaValue {
-  match values {
+fn eval_csc(call : EvalCall) -> FormulaValue {
+  match call.values {
     [v0] =>
       match value_as_number(v0) {
         Ok(num) =>
@@ -1734,15 +1191,8 @@ fn eval_csc(
 }
 
 ///|
-fn eval_csch(
-  _workbook : Workbook,
-  _sheet_name : String,
-  _name : String,
-  _args : ArrayView[Expr],
-  values : Array[FormulaValue],
-  _ctx : CalcContext,
-) -> FormulaValue {
-  match values {
+fn eval_csch(call : EvalCall) -> FormulaValue {
+  match call.values {
     [v0] =>
       match value_as_number(v0) {
         Ok(num) =>
@@ -1758,15 +1208,8 @@ fn eval_csch(
 }
 
 ///|
-fn eval_sec(
-  _workbook : Workbook,
-  _sheet_name : String,
-  _name : String,
-  _args : ArrayView[Expr],
-  values : Array[FormulaValue],
-  _ctx : CalcContext,
-) -> FormulaValue {
-  match values {
+fn eval_sec(call : EvalCall) -> FormulaValue {
+  match call.values {
     [v0] =>
       match value_as_number(v0) {
         Ok(num) => number_or_num_error(@math.cos(num))
@@ -1777,15 +1220,8 @@ fn eval_sec(
 }
 
 ///|
-fn eval_sech(
-  _workbook : Workbook,
-  _sheet_name : String,
-  _name : String,
-  _args : ArrayView[Expr],
-  values : Array[FormulaValue],
-  _ctx : CalcContext,
-) -> FormulaValue {
-  match values {
+fn eval_sech(call : EvalCall) -> FormulaValue {
+  match call.values {
     [v0] =>
       match value_as_number(v0) {
         Ok(num) => number_or_num_error(1.0 / @math.cosh(num))
@@ -1796,15 +1232,8 @@ fn eval_sech(
 }
 
 ///|
-fn eval_degrees(
-  _workbook : Workbook,
-  _sheet_name : String,
-  _name : String,
-  _args : ArrayView[Expr],
-  values : Array[FormulaValue],
-  _ctx : CalcContext,
-) -> FormulaValue {
-  match values {
+fn eval_degrees(call : EvalCall) -> FormulaValue {
+  match call.values {
     [v0] =>
       match value_as_number(v0) {
         Ok(num) =>
@@ -1820,15 +1249,8 @@ fn eval_degrees(
 }
 
 ///|
-fn eval_radians(
-  _workbook : Workbook,
-  _sheet_name : String,
-  _name : String,
-  _args : ArrayView[Expr],
-  values : Array[FormulaValue],
-  _ctx : CalcContext,
-) -> FormulaValue {
-  match values {
+fn eval_radians(call : EvalCall) -> FormulaValue {
+  match call.values {
     [v0] =>
       match value_as_number(v0) {
         Ok(num) => Number(@math.PI / 180.0 * num)
@@ -1839,42 +1261,21 @@ fn eval_radians(
 }
 
 ///|
-fn eval_rand(
-  _workbook : Workbook,
-  _sheet_name : String,
-  _name : String,
-  _args : ArrayView[Expr],
-  values : Array[FormulaValue],
-  _ctx : CalcContext,
-) -> FormulaValue {
-  match values {
+fn eval_rand(call : EvalCall) -> FormulaValue {
+  match call.values {
     [] => Number(formula_rand().double())
     _ => Error(formula_error_value)
   }
 }
 
 ///|
-fn eval_randarray(
-  _workbook : Workbook,
-  _sheet_name : String,
-  _name : String,
-  _args : ArrayView[Expr],
-  values : Array[FormulaValue],
-  _ctx : CalcContext,
-) -> FormulaValue {
-  randarray_values(values)
+fn eval_randarray(call : EvalCall) -> FormulaValue {
+  randarray_values(call.values)
 }
 
 ///|
-fn eval_randbetween(
-  _workbook : Workbook,
-  _sheet_name : String,
-  _name : String,
-  _args : ArrayView[Expr],
-  values : Array[FormulaValue],
-  _ctx : CalcContext,
-) -> FormulaValue {
-  match values {
+fn eval_randbetween(call : EvalCall) -> FormulaValue {
+  match call.values {
     [v0, v1] =>
       match (value_as_number(v0), value_as_number(v1)) {
         (Ok(bottom), Ok(top)) =>
@@ -1896,30 +1297,16 @@ fn eval_randbetween(
 }
 
 ///|
-fn eval_pi(
-  _workbook : Workbook,
-  _sheet_name : String,
-  _name : String,
-  _args : ArrayView[Expr],
-  values : Array[FormulaValue],
-  _ctx : CalcContext,
-) -> FormulaValue {
-  match values {
+fn eval_pi(call : EvalCall) -> FormulaValue {
+  match call.values {
     [] => Number(@math.PI)
     _ => Error(formula_error_value)
   }
 }
 
 ///|
-fn eval_sqrtpi(
-  _workbook : Workbook,
-  _sheet_name : String,
-  _name : String,
-  _args : ArrayView[Expr],
-  values : Array[FormulaValue],
-  _ctx : CalcContext,
-) -> FormulaValue {
-  match values {
+fn eval_sqrtpi(call : EvalCall) -> FormulaValue {
+  match call.values {
     [v0] =>
       match value_as_number(v0) {
         Ok(num) => Number(@math.pow(num * @math.PI, 0.5))
@@ -1930,20 +1317,13 @@ fn eval_sqrtpi(
 }
 
 ///|
-fn eval_log(
-  _workbook : Workbook,
-  _sheet_name : String,
-  _name : String,
-  _args : ArrayView[Expr],
-  values : Array[FormulaValue],
-  _ctx : CalcContext,
-) -> FormulaValue {
-  match values {
+fn eval_log(call : EvalCall) -> FormulaValue {
+  match call.values {
     [v0] | [v0, _] =>
       match value_as_number(v0) {
         Ok(num) => {
           let mut base = 10.0
-          if values is [_, v1] {
+          if call.values is [_, v1] {
             match value_as_number(v1) {
               Ok(value) => base = value
               Err(err) => return err
@@ -1964,15 +1344,8 @@ fn eval_log(
 }
 
 ///|
-fn eval_log10(
-  _workbook : Workbook,
-  _sheet_name : String,
-  _name : String,
-  _args : ArrayView[Expr],
-  values : Array[FormulaValue],
-  _ctx : CalcContext,
-) -> FormulaValue {
-  match values {
+fn eval_log10(call : EvalCall) -> FormulaValue {
+  match call.values {
     [v0] =>
       match value_as_number(v0) {
         Ok(num) => Number(@math.log10(num))
@@ -1983,15 +1356,8 @@ fn eval_log10(
 }
 
 ///|
-fn eval_imabs(
-  _workbook : Workbook,
-  _sheet_name : String,
-  _name : String,
-  _args : ArrayView[Expr],
-  values : Array[FormulaValue],
-  _ctx : CalcContext,
-) -> FormulaValue {
-  match values {
+fn eval_imabs(call : EvalCall) -> FormulaValue {
+  match call.values {
     [v0] =>
       match parse_complex_value(v0) {
         Ok(num) =>
@@ -2003,15 +1369,8 @@ fn eval_imabs(
 }
 
 ///|
-fn eval_imaginary(
-  _workbook : Workbook,
-  _sheet_name : String,
-  _name : String,
-  _args : ArrayView[Expr],
-  values : Array[FormulaValue],
-  _ctx : CalcContext,
-) -> FormulaValue {
-  match values {
+fn eval_imaginary(call : EvalCall) -> FormulaValue {
+  match call.values {
     [v0] =>
       match parse_complex_value(v0) {
         Ok(num) => number_or_num_error(round_significant_digits(num.imag, 15))
@@ -2022,15 +1381,8 @@ fn eval_imaginary(
 }
 
 ///|
-fn eval_imargument(
-  _workbook : Workbook,
-  _sheet_name : String,
-  _name : String,
-  _args : ArrayView[Expr],
-  values : Array[FormulaValue],
-  _ctx : CalcContext,
-) -> FormulaValue {
-  match values {
+fn eval_imargument(call : EvalCall) -> FormulaValue {
+  match call.values {
     [v0] =>
       match parse_complex_value(v0) {
         Ok(num) =>
@@ -2042,15 +1394,8 @@ fn eval_imargument(
 }
 
 ///|
-fn eval_imconjugate(
-  _workbook : Workbook,
-  _sheet_name : String,
-  _name : String,
-  _args : ArrayView[Expr],
-  values : Array[FormulaValue],
-  _ctx : CalcContext,
-) -> FormulaValue {
-  match values {
+fn eval_imconjugate(call : EvalCall) -> FormulaValue {
+  match call.values {
     [v0] =>
       match parse_complex_value_with_suffix(v0) {
         Ok((num, suffix)) =>
@@ -2062,15 +1407,8 @@ fn eval_imconjugate(
 }
 
 ///|
-fn eval_imcos(
-  _workbook : Workbook,
-  _sheet_name : String,
-  _name : String,
-  _args : ArrayView[Expr],
-  values : Array[FormulaValue],
-  _ctx : CalcContext,
-) -> FormulaValue {
-  match values {
+fn eval_imcos(call : EvalCall) -> FormulaValue {
+  match call.values {
     [v0] =>
       match parse_complex_value_with_suffix(v0) {
         Ok((num, suffix)) => String(complex_to_string(complex_cos(num), suffix))
@@ -2081,15 +1419,8 @@ fn eval_imcos(
 }
 
 ///|
-fn eval_imcosh(
-  _workbook : Workbook,
-  _sheet_name : String,
-  _name : String,
-  _args : ArrayView[Expr],
-  values : Array[FormulaValue],
-  _ctx : CalcContext,
-) -> FormulaValue {
-  match values {
+fn eval_imcosh(call : EvalCall) -> FormulaValue {
+  match call.values {
     [v0] =>
       match parse_complex_value_with_suffix(v0) {
         Ok((num, suffix)) =>
@@ -2101,15 +1432,8 @@ fn eval_imcosh(
 }
 
 ///|
-fn eval_imcot(
-  _workbook : Workbook,
-  _sheet_name : String,
-  _name : String,
-  _args : ArrayView[Expr],
-  values : Array[FormulaValue],
-  _ctx : CalcContext,
-) -> FormulaValue {
-  match values {
+fn eval_imcot(call : EvalCall) -> FormulaValue {
+  match call.values {
     [v0] =>
       match parse_complex_value_with_suffix(v0) {
         Ok((num, suffix)) =>
@@ -2126,15 +1450,8 @@ fn eval_imcot(
 }
 
 ///|
-fn eval_imcsc(
-  _workbook : Workbook,
-  _sheet_name : String,
-  _name : String,
-  _args : ArrayView[Expr],
-  values : Array[FormulaValue],
-  _ctx : CalcContext,
-) -> FormulaValue {
-  match values {
+fn eval_imcsc(call : EvalCall) -> FormulaValue {
+  match call.values {
     [v0] =>
       match parse_complex_value_with_suffix(v0) {
         Ok((num, suffix)) => {
@@ -2152,15 +1469,8 @@ fn eval_imcsc(
 }
 
 ///|
-fn eval_imcsch(
-  _workbook : Workbook,
-  _sheet_name : String,
-  _name : String,
-  _args : ArrayView[Expr],
-  values : Array[FormulaValue],
-  _ctx : CalcContext,
-) -> FormulaValue {
-  match values {
+fn eval_imcsch(call : EvalCall) -> FormulaValue {
+  match call.values {
     [v0] =>
       match parse_complex_value_with_suffix(v0) {
         Ok((num, suffix)) => {
@@ -2178,15 +1488,8 @@ fn eval_imcsch(
 }
 
 ///|
-fn eval_imdiv(
-  _workbook : Workbook,
-  _sheet_name : String,
-  _name : String,
-  _args : ArrayView[Expr],
-  values : Array[FormulaValue],
-  _ctx : CalcContext,
-) -> FormulaValue {
-  match values {
+fn eval_imdiv(call : EvalCall) -> FormulaValue {
+  match call.values {
     [v0, v1] =>
       match (parse_complex_value_with_suffix(v0), parse_complex_value(v1)) {
         (Ok((left, suffix)), Ok(right)) => {
@@ -2205,15 +1508,8 @@ fn eval_imdiv(
 }
 
 ///|
-fn eval_imexp(
-  _workbook : Workbook,
-  _sheet_name : String,
-  _name : String,
-  _args : ArrayView[Expr],
-  values : Array[FormulaValue],
-  _ctx : CalcContext,
-) -> FormulaValue {
-  match values {
+fn eval_imexp(call : EvalCall) -> FormulaValue {
+  match call.values {
     [v0] =>
       match parse_complex_value_with_suffix(v0) {
         Ok((num, suffix)) => String(complex_to_string(complex_exp(num), suffix))
@@ -2224,15 +1520,8 @@ fn eval_imexp(
 }
 
 ///|
-fn eval_imln(
-  _workbook : Workbook,
-  _sheet_name : String,
-  _name : String,
-  _args : ArrayView[Expr],
-  values : Array[FormulaValue],
-  _ctx : CalcContext,
-) -> FormulaValue {
-  match values {
+fn eval_imln(call : EvalCall) -> FormulaValue {
+  match call.values {
     [v0] =>
       match parse_complex_value_with_suffix(v0) {
         Ok((num, suffix)) => {
@@ -2250,15 +1539,8 @@ fn eval_imln(
 }
 
 ///|
-fn eval_imlog10(
-  _workbook : Workbook,
-  _sheet_name : String,
-  _name : String,
-  _args : ArrayView[Expr],
-  values : Array[FormulaValue],
-  _ctx : CalcContext,
-) -> FormulaValue {
-  match values {
+fn eval_imlog10(call : EvalCall) -> FormulaValue {
+  match call.values {
     [v0] =>
       match parse_complex_value_with_suffix(v0) {
         Ok((num, suffix)) => {
@@ -2276,15 +1558,8 @@ fn eval_imlog10(
 }
 
 ///|
-fn eval_imlog2(
-  _workbook : Workbook,
-  _sheet_name : String,
-  _name : String,
-  _args : ArrayView[Expr],
-  values : Array[FormulaValue],
-  _ctx : CalcContext,
-) -> FormulaValue {
-  match values {
+fn eval_imlog2(call : EvalCall) -> FormulaValue {
+  match call.values {
     [v0] =>
       match parse_complex_value_with_suffix(v0) {
         Ok((num, suffix)) => {
@@ -2302,15 +1577,8 @@ fn eval_imlog2(
 }
 
 ///|
-fn eval_impower(
-  _workbook : Workbook,
-  _sheet_name : String,
-  _name : String,
-  _args : ArrayView[Expr],
-  values : Array[FormulaValue],
-  _ctx : CalcContext,
-) -> FormulaValue {
-  match values {
+fn eval_impower(call : EvalCall) -> FormulaValue {
+  match call.values {
     [v0, v1] =>
       match (parse_complex_value_with_suffix(v0), parse_complex_value(v1)) {
         (Ok((base, suffix)), Ok(exponent)) =>
@@ -2335,16 +1603,9 @@ fn eval_impower(
 }
 
 ///|
-fn eval_improduct(
-  _workbook : Workbook,
-  _sheet_name : String,
-  _name : String,
-  _args : ArrayView[Expr],
-  values : Array[FormulaValue],
-  _ctx : CalcContext,
-) -> FormulaValue {
+fn eval_improduct(call : EvalCall) -> FormulaValue {
   let mut product = complex_new(1.0, 0.0)
-  for value in flatten_values(values) {
+  for value in flatten_values(call.values) {
     match value {
       Error(err) => return Error(err)
       Empty => ()
@@ -2369,15 +1630,8 @@ fn eval_improduct(
 }
 
 ///|
-fn eval_imreal(
-  _workbook : Workbook,
-  _sheet_name : String,
-  _name : String,
-  _args : ArrayView[Expr],
-  values : Array[FormulaValue],
-  _ctx : CalcContext,
-) -> FormulaValue {
-  match values {
+fn eval_imreal(call : EvalCall) -> FormulaValue {
+  match call.values {
     [v0] =>
       match parse_complex_value(v0) {
         Ok(num) => String(format_number(num.real))
@@ -2388,15 +1642,8 @@ fn eval_imreal(
 }
 
 ///|
-fn eval_imsec(
-  _workbook : Workbook,
-  _sheet_name : String,
-  _name : String,
-  _args : ArrayView[Expr],
-  values : Array[FormulaValue],
-  _ctx : CalcContext,
-) -> FormulaValue {
-  match values {
+fn eval_imsec(call : EvalCall) -> FormulaValue {
+  match call.values {
     [v0] =>
       match parse_complex_value_with_suffix(v0) {
         Ok((num, suffix)) => {
@@ -2410,15 +1657,8 @@ fn eval_imsec(
 }
 
 ///|
-fn eval_imsech(
-  _workbook : Workbook,
-  _sheet_name : String,
-  _name : String,
-  _args : ArrayView[Expr],
-  values : Array[FormulaValue],
-  _ctx : CalcContext,
-) -> FormulaValue {
-  match values {
+fn eval_imsech(call : EvalCall) -> FormulaValue {
+  match call.values {
     [v0] =>
       match parse_complex_value_with_suffix(v0) {
         Ok((num, suffix)) => {
@@ -2432,15 +1672,8 @@ fn eval_imsech(
 }
 
 ///|
-fn eval_imsin(
-  _workbook : Workbook,
-  _sheet_name : String,
-  _name : String,
-  _args : ArrayView[Expr],
-  values : Array[FormulaValue],
-  _ctx : CalcContext,
-) -> FormulaValue {
-  match values {
+fn eval_imsin(call : EvalCall) -> FormulaValue {
+  match call.values {
     [v0] =>
       match parse_complex_value_with_suffix(v0) {
         Ok((num, suffix)) => String(complex_to_string(complex_sin(num), suffix))
@@ -2451,15 +1684,8 @@ fn eval_imsin(
 }
 
 ///|
-fn eval_imsinh(
-  _workbook : Workbook,
-  _sheet_name : String,
-  _name : String,
-  _args : ArrayView[Expr],
-  values : Array[FormulaValue],
-  _ctx : CalcContext,
-) -> FormulaValue {
-  match values {
+fn eval_imsinh(call : EvalCall) -> FormulaValue {
+  match call.values {
     [v0] =>
       match parse_complex_value_with_suffix(v0) {
         Ok((num, suffix)) =>
@@ -2471,15 +1697,8 @@ fn eval_imsinh(
 }
 
 ///|
-fn eval_imsqrt(
-  _workbook : Workbook,
-  _sheet_name : String,
-  _name : String,
-  _args : ArrayView[Expr],
-  values : Array[FormulaValue],
-  _ctx : CalcContext,
-) -> FormulaValue {
-  match values {
+fn eval_imsqrt(call : EvalCall) -> FormulaValue {
+  match call.values {
     [v0] =>
       match parse_complex_value_with_suffix(v0) {
         Ok((num, suffix)) =>
@@ -2491,15 +1710,8 @@ fn eval_imsqrt(
 }
 
 ///|
-fn eval_imsub(
-  _workbook : Workbook,
-  _sheet_name : String,
-  _name : String,
-  _args : ArrayView[Expr],
-  values : Array[FormulaValue],
-  _ctx : CalcContext,
-) -> FormulaValue {
-  match values {
+fn eval_imsub(call : EvalCall) -> FormulaValue {
+  match call.values {
     [v0, v1] =>
       match (parse_complex_value(v0), parse_complex_value(v1)) {
         (Ok(left), Ok(right)) =>
@@ -2512,18 +1724,11 @@ fn eval_imsub(
 }
 
 ///|
-fn eval_imsum(
-  _workbook : Workbook,
-  _sheet_name : String,
-  _name : String,
-  _args : ArrayView[Expr],
-  values : Array[FormulaValue],
-  _ctx : CalcContext,
-) -> FormulaValue {
-  match values {
+fn eval_imsum(call : EvalCall) -> FormulaValue {
+  match call.values {
     [_, ..] => {
       let mut result = complex_new(0.0, 0.0)
-      for value in flatten_values(values) {
+      for value in flatten_values(call.values) {
         match value {
           Error(err) => return Error(err)
           _ =>
@@ -2540,15 +1745,8 @@ fn eval_imsum(
 }
 
 ///|
-fn eval_imtan(
-  _workbook : Workbook,
-  _sheet_name : String,
-  _name : String,
-  _args : ArrayView[Expr],
-  values : Array[FormulaValue],
-  _ctx : CalcContext,
-) -> FormulaValue {
-  match values {
+fn eval_imtan(call : EvalCall) -> FormulaValue {
+  match call.values {
     [v0] =>
       match parse_complex_value_with_suffix(v0) {
         Ok((num, suffix)) => String(complex_to_string(complex_tan(num), suffix))
@@ -2559,15 +1757,8 @@ fn eval_imtan(
 }
 
 ///|
-fn eval_floor(
-  _workbook : Workbook,
-  _sheet_name : String,
-  _name : String,
-  _args : ArrayView[Expr],
-  values : Array[FormulaValue],
-  _ctx : CalcContext,
-) -> FormulaValue {
-  match values {
+fn eval_floor(call : EvalCall) -> FormulaValue {
+  match call.values {
     [v0, v1] =>
       match (value_as_number(v0), value_as_number(v1)) {
         (Ok(num), Ok(significance)) =>
@@ -2589,20 +1780,13 @@ fn eval_floor(
 }
 
 ///|
-fn eval_ceiling(
-  _workbook : Workbook,
-  _sheet_name : String,
-  _name : String,
-  _args : ArrayView[Expr],
-  values : Array[FormulaValue],
-  _ctx : CalcContext,
-) -> FormulaValue {
-  match values {
+fn eval_ceiling(call : EvalCall) -> FormulaValue {
+  match call.values {
     [v0] | [v0, _] =>
       match value_as_number(v0) {
         Ok(num) => {
           let mut significance = if num < 0.0 { -1.0 } else { 1.0 }
-          if values is [_, v1] {
+          if call.values is [_, v1] {
             match value_as_number(v1) {
               Ok(value) => significance = value
               Err(err) => return err
@@ -2610,7 +1794,7 @@ fn eval_ceiling(
           }
           if significance < 0.0 && num > 0.0 {
             Error(formula_error_value)
-          } else if values is [_] {
+          } else if call.values is [_] {
             Number(Double::ceil(num))
           } else {
             let (whole, frac) = modf_double(num / significance)
@@ -2628,15 +1812,8 @@ fn eval_ceiling(
 }
 
 ///|
-fn eval_ceilingdotmath(
-  _workbook : Workbook,
-  _sheet_name : String,
-  _name : String,
-  _args : ArrayView[Expr],
-  values : Array[FormulaValue],
-  _ctx : CalcContext,
-) -> FormulaValue {
-  match values {
+fn eval_ceilingdotmath(call : EvalCall) -> FormulaValue {
+  match call.values {
     [v0] =>
       match value_as_number(v0) {
         Ok(num) => Number(Double::ceil(num))
@@ -2651,7 +1828,7 @@ fn eval_ceilingdotmath(
             Ok(value) => significance = value
             Err(err) => return err
           }
-          if values is [_, _, v2] {
+          if call.values is [_, _, v2] {
             match value_as_number(v2) {
               Ok(value) => mode = value
               Err(err) => return err
@@ -2675,15 +1852,8 @@ fn eval_ceilingdotmath(
 }
 
 ///|
-fn eval_ceilingdotprecise(
-  _workbook : Workbook,
-  _sheet_name : String,
-  _name : String,
-  _args : ArrayView[Expr],
-  values : Array[FormulaValue],
-  _ctx : CalcContext,
-) -> FormulaValue {
-  match values {
+fn eval_ceilingdotprecise(call : EvalCall) -> FormulaValue {
+  match call.values {
     [v0] =>
       match value_as_number(v0) {
         Ok(num) => Number(Double::ceil(num))
@@ -2715,15 +1885,8 @@ fn eval_ceilingdotprecise(
 }
 
 ///|
-fn eval_floordotmath(
-  _workbook : Workbook,
-  _sheet_name : String,
-  _name : String,
-  _args : ArrayView[Expr],
-  values : Array[FormulaValue],
-  _ctx : CalcContext,
-) -> FormulaValue {
-  match values {
+fn eval_floordotmath(call : EvalCall) -> FormulaValue {
+  match call.values {
     [v0] =>
       match value_as_number(v0) {
         Ok(num) => Number(Double::floor(num))
@@ -2738,7 +1901,7 @@ fn eval_floordotmath(
             Ok(value) => significance = value
             Err(err) => return err
           }
-          if values is [_, _, v2] {
+          if call.values is [_, _, v2] {
             match value_as_number(v2) {
               Ok(value) => mode = value
               Err(err) => return err
@@ -2758,15 +1921,8 @@ fn eval_floordotmath(
 }
 
 ///|
-fn eval_floordotprecise(
-  _workbook : Workbook,
-  _sheet_name : String,
-  _name : String,
-  _args : ArrayView[Expr],
-  values : Array[FormulaValue],
-  _ctx : CalcContext,
-) -> FormulaValue {
-  match values {
+fn eval_floordotprecise(call : EvalCall) -> FormulaValue {
+  match call.values {
     [v0] =>
       match value_as_number(v0) {
         Ok(num) => Number(Double::floor(num))
@@ -2798,15 +1954,8 @@ fn eval_floordotprecise(
 }
 
 ///|
-fn eval_isodotceiling(
-  _workbook : Workbook,
-  _sheet_name : String,
-  _name : String,
-  _args : ArrayView[Expr],
-  values : Array[FormulaValue],
-  _ctx : CalcContext,
-) -> FormulaValue {
-  match values {
+fn eval_isodotceiling(call : EvalCall) -> FormulaValue {
+  match call.values {
     [v0] =>
       match value_as_number(v0) {
         Ok(num) => Number(Double::ceil(num))
@@ -2838,19 +1987,12 @@ fn eval_isodotceiling(
 }
 
 ///|
-fn eval_trunc(
-  _workbook : Workbook,
-  _sheet_name : String,
-  _name : String,
-  _args : ArrayView[Expr],
-  values : Array[FormulaValue],
-  _ctx : CalcContext,
-) -> FormulaValue {
-  match values {
+fn eval_trunc(call : EvalCall) -> FormulaValue {
+  match call.values {
     [v0] | [v0, _] =>
       match value_as_number(v0) {
         Ok(num) => {
-          let digits = if values is [_, v1] {
+          let digits = if call.values is [_, v1] {
             match value_as_number(v1) {
               Ok(value) => Double::to_int(value)
               Err(err) => return err
@@ -2867,15 +2009,8 @@ fn eval_trunc(
 }
 
 ///|
-fn eval_round(
-  _workbook : Workbook,
-  _sheet_name : String,
-  _name : String,
-  _args : ArrayView[Expr],
-  values : Array[FormulaValue],
-  _ctx : CalcContext,
-) -> FormulaValue {
-  match values {
+fn eval_round(call : EvalCall) -> FormulaValue {
+  match call.values {
     [v0, v1] =>
       match (value_as_number(v0), value_as_number(v1)) {
         (Ok(num), Ok(digits)) =>
@@ -2888,15 +2023,8 @@ fn eval_round(
 }
 
 ///|
-fn eval_roundup(
-  _workbook : Workbook,
-  _sheet_name : String,
-  _name : String,
-  _args : ArrayView[Expr],
-  values : Array[FormulaValue],
-  _ctx : CalcContext,
-) -> FormulaValue {
-  match values {
+fn eval_roundup(call : EvalCall) -> FormulaValue {
+  match call.values {
     [v0, v1] =>
       match (value_as_number(v0), value_as_number(v1)) {
         (Ok(num), Ok(digits)) =>
@@ -2909,15 +2037,8 @@ fn eval_roundup(
 }
 
 ///|
-fn eval_rounddown(
-  _workbook : Workbook,
-  _sheet_name : String,
-  _name : String,
-  _args : ArrayView[Expr],
-  values : Array[FormulaValue],
-  _ctx : CalcContext,
-) -> FormulaValue {
-  match values {
+fn eval_rounddown(call : EvalCall) -> FormulaValue {
+  match call.values {
     [v0, v1] =>
       match (value_as_number(v0), value_as_number(v1)) {
         (Ok(num), Ok(digits)) =>
@@ -2930,15 +2051,8 @@ fn eval_rounddown(
 }
 
 ///|
-fn eval_sqrt(
-  _workbook : Workbook,
-  _sheet_name : String,
-  _name : String,
-  _args : ArrayView[Expr],
-  values : Array[FormulaValue],
-  _ctx : CalcContext,
-) -> FormulaValue {
-  match values {
+fn eval_sqrt(call : EvalCall) -> FormulaValue {
+  match call.values {
     [v0] =>
       match value_as_number(v0) {
         Ok(num) =>
@@ -2954,15 +2068,8 @@ fn eval_sqrt(
 }
 
 ///|
-fn eval_power(
-  _workbook : Workbook,
-  _sheet_name : String,
-  _name : String,
-  _args : ArrayView[Expr],
-  values : Array[FormulaValue],
-  _ctx : CalcContext,
-) -> FormulaValue {
-  match values {
+fn eval_power(call : EvalCall) -> FormulaValue {
+  match call.values {
     [v0, v1] =>
       match (value_as_number(v0), value_as_number(v1)) {
         (Ok(lhs), Ok(rhs)) => Number(@math.pow(lhs, rhs))
@@ -2974,15 +2081,8 @@ fn eval_power(
 }
 
 ///|
-fn eval_even(
-  _workbook : Workbook,
-  _sheet_name : String,
-  _name : String,
-  _args : ArrayView[Expr],
-  values : Array[FormulaValue],
-  _ctx : CalcContext,
-) -> FormulaValue {
-  match values {
+fn eval_even(call : EvalCall) -> FormulaValue {
+  match call.values {
     [v0] =>
       match value_as_number(v0) {
         Ok(num) => {
@@ -3005,15 +2105,8 @@ fn eval_even(
 }
 
 ///|
-fn eval_odd(
-  _workbook : Workbook,
-  _sheet_name : String,
-  _name : String,
-  _args : ArrayView[Expr],
-  values : Array[FormulaValue],
-  _ctx : CalcContext,
-) -> FormulaValue {
-  match values {
+fn eval_odd(call : EvalCall) -> FormulaValue {
+  match call.values {
     [v0] =>
       match value_as_number(v0) {
         Ok(num) =>
@@ -3039,15 +2132,8 @@ fn eval_odd(
 }
 
 ///|
-fn eval_mround(
-  _workbook : Workbook,
-  _sheet_name : String,
-  _name : String,
-  _args : ArrayView[Expr],
-  values : Array[FormulaValue],
-  _ctx : CalcContext,
-) -> FormulaValue {
-  match values {
+fn eval_mround(call : EvalCall) -> FormulaValue {
+  match call.values {
     [v0, v1] =>
       match (value_as_number(v0), value_as_number(v1)) {
         (Ok(num), Ok(multiple)) =>
@@ -3072,15 +2158,8 @@ fn eval_mround(
 }
 
 ///|
-fn eval_mod(
-  _workbook : Workbook,
-  _sheet_name : String,
-  _name : String,
-  _args : ArrayView[Expr],
-  values : Array[FormulaValue],
-  _ctx : CalcContext,
-) -> FormulaValue {
-  match values {
+fn eval_mod(call : EvalCall) -> FormulaValue {
+  match call.values {
     [v0, v1] =>
       match (value_as_number(v0), value_as_number(v1)) {
         (Ok(num), Ok(divisor)) =>
@@ -3099,15 +2178,8 @@ fn eval_mod(
 }
 
 ///|
-fn eval_quotient(
-  _workbook : Workbook,
-  _sheet_name : String,
-  _name : String,
-  _args : ArrayView[Expr],
-  values : Array[FormulaValue],
-  _ctx : CalcContext,
-) -> FormulaValue {
-  match values {
+fn eval_quotient(call : EvalCall) -> FormulaValue {
+  match call.values {
     [v0, v1] =>
       match (value_as_number(v0), value_as_number(v1)) {
         (Ok(num), Ok(divisor)) =>

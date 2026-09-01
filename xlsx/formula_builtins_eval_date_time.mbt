@@ -3,15 +3,8 @@
 // one Excel formula to its implementation; eval_function routes to these via a HashMap.
 
 ///|
-fn eval_date(
-  _workbook : Workbook,
-  _sheet_name : String,
-  _name : String,
-  _args : ArrayView[Expr],
-  values : Array[FormulaValue],
-  ctx : CalcContext,
-) -> FormulaValue {
-  match values {
+fn eval_date(call : EvalCall) -> FormulaValue {
+  match call.values {
     [v0, v1, v2] =>
       match (value_as_int(v0), value_as_int(v1), value_as_int(v2)) {
         (Ok(year), Ok(month), Ok(day)) =>
@@ -20,7 +13,7 @@ fn eval_date(
               year,
               month,
               day,
-              use_1904_dates=ctx.use_1904_dates,
+              use_1904_dates=call.ctx.use_1904_dates,
             ) {
             Some(serial) => Number(serial)
             None => Error(formula_error_num)
@@ -34,15 +27,8 @@ fn eval_date(
 }
 
 ///|
-fn eval_time(
-  _workbook : Workbook,
-  _sheet_name : String,
-  _name : String,
-  _args : ArrayView[Expr],
-  values : Array[FormulaValue],
-  _ctx : CalcContext,
-) -> FormulaValue {
-  match values {
+fn eval_time(call : EvalCall) -> FormulaValue {
+  match call.values {
     [v0, v1, v2] =>
       match (value_as_int(v0), value_as_int(v1), value_as_int(v2)) {
         (Ok(hours), Ok(minutes), Ok(seconds)) =>
@@ -59,15 +45,8 @@ fn eval_time(
 }
 
 ///|
-fn eval_datevalue(
-  _workbook : Workbook,
-  _sheet_name : String,
-  _name : String,
-  _args : ArrayView[Expr],
-  values : Array[FormulaValue],
-  ctx : CalcContext,
-) -> FormulaValue {
-  match values {
+fn eval_datevalue(call : EvalCall) -> FormulaValue {
+  match call.values {
     [v0] => {
       let text = match value_as_string(v0) {
         Ok(value) => value
@@ -80,7 +59,7 @@ fn eval_datevalue(
               year,
               month,
               day,
-              use_1904_dates=ctx.use_1904_dates,
+              use_1904_dates=call.ctx.use_1904_dates,
             ) {
             Some(serial) => Number(serial)
             None => Error(formula_error_value)
@@ -93,15 +72,8 @@ fn eval_datevalue(
 }
 
 ///|
-fn eval_timevalue(
-  _workbook : Workbook,
-  _sheet_name : String,
-  _name : String,
-  _args : ArrayView[Expr],
-  values : Array[FormulaValue],
-  _ctx : CalcContext,
-) -> FormulaValue {
-  match values {
+fn eval_timevalue(call : EvalCall) -> FormulaValue {
+  match call.values {
     [v0] => {
       let text = match value_as_string(v0) {
         Ok(value) => value
@@ -119,23 +91,16 @@ fn eval_timevalue(
 }
 
 ///|
-fn eval_datedif(
-  _workbook : Workbook,
-  _sheet_name : String,
-  _name : String,
-  _args : ArrayView[Expr],
-  values : Array[FormulaValue],
-  ctx : CalcContext,
-) -> FormulaValue {
-  match values {
+fn eval_datedif(call : EvalCall) -> FormulaValue {
+  match call.values {
     [v0, v1, v2] => {
       let start_serial = match
-        value_as_date_serial(v0, use_1904_dates=ctx.use_1904_dates) {
+        value_as_date_serial(v0, use_1904_dates=call.ctx.use_1904_dates) {
         Ok(value) => value
         Err(err) => return err
       }
       let end_serial = match
-        value_as_date_serial(v1, use_1904_dates=ctx.use_1904_dates) {
+        value_as_date_serial(v1, use_1904_dates=call.ctx.use_1904_dates) {
         Ok(value) => value
         Err(err) => return err
       }
@@ -151,13 +116,16 @@ fn eval_datedif(
         let (sy, sm, sd) = match
           date_parts_from_serial(
             start_serial,
-            use_1904_dates=ctx.use_1904_dates,
+            use_1904_dates=call.ctx.use_1904_dates,
           ) {
           Some(parts) => parts
           None => return Error(formula_error_num)
         }
         let (ey, em, ed) = match
-          date_parts_from_serial(end_serial, use_1904_dates=ctx.use_1904_dates) {
+          date_parts_from_serial(
+            end_serial,
+            use_1904_dates=call.ctx.use_1904_dates,
+          ) {
           Some(parts) => parts
           None => return Error(formula_error_num)
         }
@@ -196,13 +164,13 @@ fn eval_datedif(
               sy,
               sm,
               sd,
-              use_1904_dates=ctx.use_1904_dates,
+              use_1904_dates=call.ctx.use_1904_dates,
             ).unwrap()
             let end_base = excel_serial_from_date(
               target_year,
               em,
               ed,
-              use_1904_dates=ctx.use_1904_dates,
+              use_1904_dates=call.ctx.use_1904_dates,
             ).unwrap()
             Number(end_base - start_base)
           }
@@ -225,23 +193,16 @@ fn eval_datedif(
 }
 
 ///|
-fn eval_days(
-  _workbook : Workbook,
-  _sheet_name : String,
-  _name : String,
-  _args : ArrayView[Expr],
-  values : Array[FormulaValue],
-  ctx : CalcContext,
-) -> FormulaValue {
-  match values {
+fn eval_days(call : EvalCall) -> FormulaValue {
+  match call.values {
     [v0, v1] => {
       let end_serial = match
-        value_as_date_serial(v0, use_1904_dates=ctx.use_1904_dates) {
+        value_as_date_serial(v0, use_1904_dates=call.ctx.use_1904_dates) {
         Ok(value) => value
         Err(err) => return err
       }
       let start_serial = match
-        value_as_date_serial(v1, use_1904_dates=ctx.use_1904_dates) {
+        value_as_date_serial(v1, use_1904_dates=call.ctx.use_1904_dates) {
         Ok(value) => value
         Err(err) => return err
       }
@@ -252,33 +213,32 @@ fn eval_days(
 }
 
 ///|
-fn eval_days360(
-  _workbook : Workbook,
-  _sheet_name : String,
-  _name : String,
-  _args : ArrayView[Expr],
-  values : Array[FormulaValue],
-  ctx : CalcContext,
-) -> FormulaValue {
-  match values {
+fn eval_days360(call : EvalCall) -> FormulaValue {
+  match call.values {
     [v0, v1] | [v0, v1, _] => {
       let start_serial = match
-        value_as_date_serial(v0, use_1904_dates=ctx.use_1904_dates) {
+        value_as_date_serial(v0, use_1904_dates=call.ctx.use_1904_dates) {
         Ok(value) => value
         Err(err) => return err
       }
       let end_serial = match
-        value_as_date_serial(v1, use_1904_dates=ctx.use_1904_dates) {
+        value_as_date_serial(v1, use_1904_dates=call.ctx.use_1904_dates) {
         Ok(value) => value
         Err(err) => return err
       }
       let (sy, sm, sd) = match
-        date_parts_from_serial(start_serial, use_1904_dates=ctx.use_1904_dates) {
+        date_parts_from_serial(
+          start_serial,
+          use_1904_dates=call.ctx.use_1904_dates,
+        ) {
         Some(parts) => parts
         None => return Error(formula_error_num)
       }
       let (ey, em, ed) = match
-        date_parts_from_serial(end_serial, use_1904_dates=ctx.use_1904_dates) {
+        date_parts_from_serial(
+          end_serial,
+          use_1904_dates=call.ctx.use_1904_dates,
+        ) {
         Some(parts) => parts
         None => return Error(formula_error_num)
       }
@@ -286,7 +246,7 @@ fn eval_days360(
       let mut end_day = ed
       let end_year = ey
       let mut end_month = em
-      let use_european = if values is [_, _, v2] {
+      let use_european = if call.values is [_, _, v2] {
         match value_as_bool(v2) {
           Ok(flag) => flag
           Err(err) => return err
@@ -325,34 +285,27 @@ fn eval_days360(
 }
 
 ///|
-fn eval_isoweeknum(
-  _workbook : Workbook,
-  _sheet_name : String,
-  _name : String,
-  _args : ArrayView[Expr],
-  values : Array[FormulaValue],
-  ctx : CalcContext,
-) -> FormulaValue {
-  match values {
+fn eval_isoweeknum(call : EvalCall) -> FormulaValue {
+  match call.values {
     [v0] => {
       let serial = match
-        value_as_date_serial(v0, use_1904_dates=ctx.use_1904_dates) {
+        value_as_date_serial(v0, use_1904_dates=call.ctx.use_1904_dates) {
         Ok(value) => value
         Err(err) => return err
       }
       // Serial zero is the 1900 system's artificial day before its epoch,
       // but is the real 1904-01-01 epoch in a date-1904 workbook.
-      if !ctx.use_1904_dates && serial < 1.0 {
+      if !call.ctx.use_1904_dates && serial < 1.0 {
         return Error(formula_error_num)
       }
       // Excel assigns the fictitious 1900-02-29 (including its time
       // fraction) to ISO week 9. It cannot pass through the Gregorian helper
       // below because 1900 was not actually a leap year.
-      if is_1900_phantom_date_serial(serial, ctx.use_1904_dates) {
+      if is_1900_phantom_date_serial(serial, call.ctx.use_1904_dates) {
         return Number(9.0)
       }
       let (year, month, day) = match
-        date_parts_from_serial(serial, use_1904_dates=ctx.use_1904_dates) {
+        date_parts_from_serial(serial, use_1904_dates=call.ctx.use_1904_dates) {
         Some(parts) => parts
         None => return Error(formula_error_num)
       }
@@ -366,18 +319,11 @@ fn eval_isoweeknum(
 }
 
 ///|
-fn eval_edate(
-  _workbook : Workbook,
-  _sheet_name : String,
-  _name : String,
-  _args : ArrayView[Expr],
-  values : Array[FormulaValue],
-  ctx : CalcContext,
-) -> FormulaValue {
-  match values {
+fn eval_edate(call : EvalCall) -> FormulaValue {
+  match call.values {
     [v0, v1] => {
       let (year, month, day) = match
-        date_parts_from_value(v0, use_1904_dates=ctx.use_1904_dates) {
+        date_parts_from_value(v0, use_1904_dates=call.ctx.use_1904_dates) {
         Ok(parts) => parts
         Err(err) => return err
       }
@@ -393,7 +339,7 @@ fn eval_edate(
           new_year,
           new_month,
           new_day,
-          use_1904_dates=ctx.use_1904_dates,
+          use_1904_dates=call.ctx.use_1904_dates,
         ) {
         Some(serial) => Number(serial)
         None => Error(formula_error_num)
@@ -404,18 +350,11 @@ fn eval_edate(
 }
 
 ///|
-fn eval_eomonth(
-  _workbook : Workbook,
-  _sheet_name : String,
-  _name : String,
-  _args : ArrayView[Expr],
-  values : Array[FormulaValue],
-  ctx : CalcContext,
-) -> FormulaValue {
-  match values {
+fn eval_eomonth(call : EvalCall) -> FormulaValue {
+  match call.values {
     [v0, v1] => {
       let (year, month, _) = match
-        date_parts_from_value(v0, use_1904_dates=ctx.use_1904_dates) {
+        date_parts_from_value(v0, use_1904_dates=call.ctx.use_1904_dates) {
         Ok(parts) => parts
         Err(err) => return err
       }
@@ -430,7 +369,7 @@ fn eval_eomonth(
           new_year,
           new_month,
           new_day,
-          use_1904_dates=ctx.use_1904_dates,
+          use_1904_dates=call.ctx.use_1904_dates,
         ) {
         Some(serial) => Number(serial)
         None => Error(formula_error_num)
@@ -441,27 +380,20 @@ fn eval_eomonth(
 }
 
 ///|
-fn eval_yearfrac(
-  _workbook : Workbook,
-  _sheet_name : String,
-  _name : String,
-  _args : ArrayView[Expr],
-  values : Array[FormulaValue],
-  ctx : CalcContext,
-) -> FormulaValue {
-  match values {
+fn eval_yearfrac(call : EvalCall) -> FormulaValue {
+  match call.values {
     [v0, v1] | [v0, v1, _] => {
       let start_serial = match
-        value_as_date_serial(v0, use_1904_dates=ctx.use_1904_dates) {
+        value_as_date_serial(v0, use_1904_dates=call.ctx.use_1904_dates) {
         Ok(value) => value
         Err(err) => return err
       }
       let end_serial = match
-        value_as_date_serial(v1, use_1904_dates=ctx.use_1904_dates) {
+        value_as_date_serial(v1, use_1904_dates=call.ctx.use_1904_dates) {
         Ok(value) => value
         Err(err) => return err
       }
-      let basis = if values is [_, _, v2] {
+      let basis = if call.values is [_, _, v2] {
         match value_as_number(v2) {
           Ok(num) => Double::to_int(trunc_double(num))
           Err(err) => return err
@@ -473,7 +405,7 @@ fn eval_yearfrac(
         start_serial,
         end_serial,
         basis,
-        use_1904_dates=ctx.use_1904_dates,
+        use_1904_dates=call.ctx.use_1904_dates,
       )
     }
     _ => Error(formula_error_value)
@@ -481,23 +413,16 @@ fn eval_yearfrac(
 }
 
 ///|
-fn eval_weekday(
-  _workbook : Workbook,
-  _sheet_name : String,
-  _name : String,
-  _args : ArrayView[Expr],
-  values : Array[FormulaValue],
-  ctx : CalcContext,
-) -> FormulaValue {
-  match values {
+fn eval_weekday(call : EvalCall) -> FormulaValue {
+  match call.values {
     [v0] | [v0, _] => {
       let (year, month, day) = match
-        date_parts_from_value(v0, use_1904_dates=ctx.use_1904_dates) {
+        date_parts_from_value(v0, use_1904_dates=call.ctx.use_1904_dates) {
         Ok(parts) => parts
         Err(err) => return err
       }
       let mut return_type = 1
-      if values is [_, v1] {
+      if call.values is [_, v1] {
         return_type = match value_as_number(v1) {
           Ok(num) => Double::to_int(trunc_double(num))
           Err(err) => return err
@@ -524,23 +449,16 @@ fn eval_weekday(
 }
 
 ///|
-fn eval_weeknum(
-  _workbook : Workbook,
-  _sheet_name : String,
-  _name : String,
-  _args : ArrayView[Expr],
-  values : Array[FormulaValue],
-  ctx : CalcContext,
-) -> FormulaValue {
-  match values {
+fn eval_weeknum(call : EvalCall) -> FormulaValue {
+  match call.values {
     [v0] | [v0, _] => {
       let (year, month, day) = match
-        date_parts_from_value(v0, use_1904_dates=ctx.use_1904_dates) {
+        date_parts_from_value(v0, use_1904_dates=call.ctx.use_1904_dates) {
         Ok(parts) => parts
         Err(err) => return err
       }
       let mut return_type = 1
-      if values is [_, v1] {
+      if call.values is [_, v1] {
         return_type = match value_as_number(v1) {
           Ok(num) => Double::to_int(trunc_double(num))
           Err(err) => return err
@@ -583,28 +501,21 @@ fn eval_weeknum(
 }
 
 ///|
-fn eval_networkdays(
-  _workbook : Workbook,
-  _sheet_name : String,
-  _name : String,
-  _args : ArrayView[Expr],
-  values : Array[FormulaValue],
-  ctx : CalcContext,
-) -> FormulaValue {
-  match values {
+fn eval_networkdays(call : EvalCall) -> FormulaValue {
+  match call.values {
     [v0, v1] | [v0, v1, _] => {
       let start_serial = match
-        value_as_date_serial(v0, use_1904_dates=ctx.use_1904_dates) {
+        value_as_date_serial(v0, use_1904_dates=call.ctx.use_1904_dates) {
         Ok(value) => value
         Err(err) => return err
       }
       let end_serial = match
-        value_as_date_serial(v1, use_1904_dates=ctx.use_1904_dates) {
+        value_as_date_serial(v1, use_1904_dates=call.ctx.use_1904_dates) {
         Ok(value) => value
         Err(err) => return err
       }
-      let holidays = if values is [_, _, v2] {
-        collect_holidays(v2, use_1904_dates=ctx.use_1904_dates)
+      let holidays = if call.values is [_, _, v2] {
+        collect_holidays(v2, use_1904_dates=call.ctx.use_1904_dates)
       } else {
         []
       }
@@ -613,7 +524,7 @@ fn eval_networkdays(
         end_serial,
         Number(1.0),
         holidays,
-        use_1904_dates=ctx.use_1904_dates,
+        use_1904_dates=call.ctx.use_1904_dates,
       )
     }
     _ => Error(formula_error_value)
@@ -621,32 +532,31 @@ fn eval_networkdays(
 }
 
 ///|
-fn eval_networkdays_intl(
-  _workbook : Workbook,
-  _sheet_name : String,
-  _name : String,
-  _args : ArrayView[Expr],
-  values : Array[FormulaValue],
-  ctx : CalcContext,
-) -> FormulaValue {
-  if values.length() >= 2 && values.length() <= 4 {
+fn eval_networkdays_intl(call : EvalCall) -> FormulaValue {
+  if call.values.length() >= 2 && call.values.length() <= 4 {
     let start_serial = match
-      value_as_date_serial(values[0], use_1904_dates=ctx.use_1904_dates) {
+      value_as_date_serial(
+        call.values[0],
+        use_1904_dates=call.ctx.use_1904_dates,
+      ) {
       Ok(value) => value
       Err(err) => return err
     }
     let end_serial = match
-      value_as_date_serial(values[1], use_1904_dates=ctx.use_1904_dates) {
+      value_as_date_serial(
+        call.values[1],
+        use_1904_dates=call.ctx.use_1904_dates,
+      ) {
       Ok(value) => value
       Err(err) => return err
     }
-    let weekend_value = if values.length() >= 3 {
-      values[2]
+    let weekend_value = if call.values.length() >= 3 {
+      call.values[2]
     } else {
       Number(1.0)
     }
-    let holidays = if values.length() == 4 {
-      collect_holidays(values[3], use_1904_dates=ctx.use_1904_dates)
+    let holidays = if call.values.length() == 4 {
+      collect_holidays(call.values[3], use_1904_dates=call.ctx.use_1904_dates)
     } else {
       []
     }
@@ -655,7 +565,7 @@ fn eval_networkdays_intl(
       end_serial,
       weekend_value,
       holidays,
-      use_1904_dates=ctx.use_1904_dates,
+      use_1904_dates=call.ctx.use_1904_dates,
     )
   } else {
     Error(formula_error_value)
@@ -663,18 +573,11 @@ fn eval_networkdays_intl(
 }
 
 ///|
-fn eval_workday(
-  _workbook : Workbook,
-  _sheet_name : String,
-  _name : String,
-  _args : ArrayView[Expr],
-  values : Array[FormulaValue],
-  ctx : CalcContext,
-) -> FormulaValue {
-  match values {
+fn eval_workday(call : EvalCall) -> FormulaValue {
+  match call.values {
     [v0, v1] | [v0, v1, _] => {
       let start_serial = match
-        value_as_date_serial(v0, use_1904_dates=ctx.use_1904_dates) {
+        value_as_date_serial(v0, use_1904_dates=call.ctx.use_1904_dates) {
         Ok(value) => value
         Err(err) => return err
       }
@@ -682,8 +585,8 @@ fn eval_workday(
         Ok(num) => num
         Err(err) => return err
       }
-      let holidays = if values is [_, _, v2] {
-        collect_holidays(v2, use_1904_dates=ctx.use_1904_dates)
+      let holidays = if call.values is [_, _, v2] {
+        collect_holidays(v2, use_1904_dates=call.ctx.use_1904_dates)
       } else {
         []
       }
@@ -692,7 +595,7 @@ fn eval_workday(
         days,
         Number(1.0),
         holidays,
-        use_1904_dates=ctx.use_1904_dates,
+        use_1904_dates=call.ctx.use_1904_dates,
       )
     }
     _ => Error(formula_error_value)
@@ -700,31 +603,27 @@ fn eval_workday(
 }
 
 ///|
-fn eval_workday_intl(
-  _workbook : Workbook,
-  _sheet_name : String,
-  _name : String,
-  _args : ArrayView[Expr],
-  values : Array[FormulaValue],
-  ctx : CalcContext,
-) -> FormulaValue {
-  if values.length() >= 2 && values.length() <= 4 {
+fn eval_workday_intl(call : EvalCall) -> FormulaValue {
+  if call.values.length() >= 2 && call.values.length() <= 4 {
     let start_serial = match
-      value_as_date_serial(values[0], use_1904_dates=ctx.use_1904_dates) {
+      value_as_date_serial(
+        call.values[0],
+        use_1904_dates=call.ctx.use_1904_dates,
+      ) {
       Ok(value) => value
       Err(err) => return err
     }
-    let days = match value_as_number(values[1]) {
+    let days = match value_as_number(call.values[1]) {
       Ok(num) => num
       Err(err) => return err
     }
-    let weekend_value = if values.length() >= 3 {
-      values[2]
+    let weekend_value = if call.values.length() >= 3 {
+      call.values[2]
     } else {
       Number(1.0)
     }
-    let holidays = if values.length() == 4 {
-      collect_holidays(values[3], use_1904_dates=ctx.use_1904_dates)
+    let holidays = if call.values.length() == 4 {
+      collect_holidays(call.values[3], use_1904_dates=call.ctx.use_1904_dates)
     } else {
       []
     }
@@ -733,7 +632,7 @@ fn eval_workday_intl(
       days,
       weekend_value,
       holidays,
-      use_1904_dates=ctx.use_1904_dates,
+      use_1904_dates=call.ctx.use_1904_dates,
     )
   } else {
     Error(formula_error_value)
@@ -741,21 +640,14 @@ fn eval_workday_intl(
 }
 
 ///|
-fn eval_now(
-  _workbook : Workbook,
-  _sheet_name : String,
-  _name : String,
-  _args : ArrayView[Expr],
-  values : Array[FormulaValue],
-  ctx : CalcContext,
-) -> FormulaValue {
-  match values {
+fn eval_now(call : EvalCall) -> FormulaValue {
+  match call.values {
     [] => {
       let now_ms = @env.now()
       let total_seconds = UInt64::to_double(now_ms) / 1000.0
       let days = Double::floor(total_seconds / 86400.0)
       let seconds_in_day = total_seconds - days * 86400.0
-      let epoch_serial = if ctx.use_1904_dates { 24107.0 } else { 25569.0 }
+      let epoch_serial = if call.ctx.use_1904_dates { 24107.0 } else { 25569.0 }
       let serial = days + epoch_serial + seconds_in_day / 86400.0
       Number(serial)
     }
@@ -764,20 +656,13 @@ fn eval_now(
 }
 
 ///|
-fn eval_today(
-  _workbook : Workbook,
-  _sheet_name : String,
-  _name : String,
-  _args : ArrayView[Expr],
-  values : Array[FormulaValue],
-  ctx : CalcContext,
-) -> FormulaValue {
-  match values {
+fn eval_today(call : EvalCall) -> FormulaValue {
+  match call.values {
     [] => {
       let now_ms = @env.now()
       let total_seconds = UInt64::to_double(now_ms) / 1000.0
       let days = Double::floor(total_seconds / 86400.0)
-      let epoch_serial = if ctx.use_1904_dates { 24107.0 } else { 25569.0 }
+      let epoch_serial = if call.ctx.use_1904_dates { 24107.0 } else { 25569.0 }
       Number(days + epoch_serial)
     }
     _ => Error(formula_error_value)
@@ -785,17 +670,11 @@ fn eval_today(
 }
 
 ///|
-fn eval_year(
-  _workbook : Workbook,
-  _sheet_name : String,
-  _name : String,
-  _args : ArrayView[Expr],
-  values : Array[FormulaValue],
-  ctx : CalcContext,
-) -> FormulaValue {
-  match values {
+fn eval_year(call : EvalCall) -> FormulaValue {
+  match call.values {
     [v0] =>
-      match excel_serial_date_parts(v0, use_1904_dates=ctx.use_1904_dates) {
+      match
+        excel_serial_date_parts(v0, use_1904_dates=call.ctx.use_1904_dates) {
         Ok((year, _, _)) => Number(Double::from_int(year))
         Err(err) => err
       }
@@ -804,17 +683,11 @@ fn eval_year(
 }
 
 ///|
-fn eval_month(
-  _workbook : Workbook,
-  _sheet_name : String,
-  _name : String,
-  _args : ArrayView[Expr],
-  values : Array[FormulaValue],
-  ctx : CalcContext,
-) -> FormulaValue {
-  match values {
+fn eval_month(call : EvalCall) -> FormulaValue {
+  match call.values {
     [v0] =>
-      match excel_serial_date_parts(v0, use_1904_dates=ctx.use_1904_dates) {
+      match
+        excel_serial_date_parts(v0, use_1904_dates=call.ctx.use_1904_dates) {
         Ok((_, month, _)) => Number(Double::from_int(month))
         Err(err) => err
       }
@@ -823,17 +696,11 @@ fn eval_month(
 }
 
 ///|
-fn eval_day(
-  _workbook : Workbook,
-  _sheet_name : String,
-  _name : String,
-  _args : ArrayView[Expr],
-  values : Array[FormulaValue],
-  ctx : CalcContext,
-) -> FormulaValue {
-  match values {
+fn eval_day(call : EvalCall) -> FormulaValue {
+  match call.values {
     [v0] =>
-      match excel_serial_date_parts(v0, use_1904_dates=ctx.use_1904_dates) {
+      match
+        excel_serial_date_parts(v0, use_1904_dates=call.ctx.use_1904_dates) {
         Ok((_, _, day)) => Number(Double::from_int(day))
         Err(err) => err
       }
@@ -842,17 +709,10 @@ fn eval_day(
 }
 
 ///|
-fn eval_hour(
-  _workbook : Workbook,
-  _sheet_name : String,
-  _name : String,
-  _args : ArrayView[Expr],
-  values : Array[FormulaValue],
-  ctx : CalcContext,
-) -> FormulaValue {
-  match values {
+fn eval_hour(call : EvalCall) -> FormulaValue {
+  match call.values {
     [v0] =>
-      match excel_serial_parts(v0, use_1904_dates=ctx.use_1904_dates) {
+      match excel_serial_parts(v0, use_1904_dates=call.ctx.use_1904_dates) {
         Ok((_, _, _, hour, _, _)) => Number(Double::from_int(hour))
         Err(err) => err
       }
@@ -861,17 +721,10 @@ fn eval_hour(
 }
 
 ///|
-fn eval_minute(
-  _workbook : Workbook,
-  _sheet_name : String,
-  _name : String,
-  _args : ArrayView[Expr],
-  values : Array[FormulaValue],
-  ctx : CalcContext,
-) -> FormulaValue {
-  match values {
+fn eval_minute(call : EvalCall) -> FormulaValue {
+  match call.values {
     [v0] =>
-      match excel_serial_parts(v0, use_1904_dates=ctx.use_1904_dates) {
+      match excel_serial_parts(v0, use_1904_dates=call.ctx.use_1904_dates) {
         Ok((_, _, _, _, minute, _)) => Number(Double::from_int(minute))
         Err(err) => err
       }
@@ -880,17 +733,10 @@ fn eval_minute(
 }
 
 ///|
-fn eval_second(
-  _workbook : Workbook,
-  _sheet_name : String,
-  _name : String,
-  _args : ArrayView[Expr],
-  values : Array[FormulaValue],
-  ctx : CalcContext,
-) -> FormulaValue {
-  match values {
+fn eval_second(call : EvalCall) -> FormulaValue {
+  match call.values {
     [v0] =>
-      match excel_serial_parts(v0, use_1904_dates=ctx.use_1904_dates) {
+      match excel_serial_parts(v0, use_1904_dates=call.ctx.use_1904_dates) {
         Ok((_, _, _, _, _, second)) => Number(Double::from_int(second))
         Err(err) => err
       }
