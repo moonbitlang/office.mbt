@@ -1026,7 +1026,7 @@ pub fn capability_commands() -> Array[CapabilityCommand] {
     {
       name: "format",
       summary: "Apply direct character formatting to selected text in a DOCX, refusing wherever the result could differ from the request",
-      usage: "office format FILE OUT.docx (--text TEXT [--nth K] | --range START:END --in P) [--in PATH] (--bold on|off) (--italic on|off) (--underline on|off) (--color RRGGBB) [--expect N] [--allow-zero] [--dry-run] [--overwrite] [--json]",
+      usage: "office format FILE OUT.docx (--text TEXT [--in PATH] [--nth K] | --range START:END --in P) [--bold on|off] [--italic on|off] [--underline on|off] [--color RRGGBB] [--expect N] [--allow-zero] [--dry-run] [--overwrite] [--json]  (at least one property flag)",
       formats: ["docx"],
       aliases: [],
       inputs: [

@@ -131,7 +131,7 @@ test "format scope validation admits only canonical spellings" {
   for
     bad in [
       "", "p[1", "p[", "p[0]", "p]1[", "p[1]/", "P[1]", "body/p[1]", "p[id=oops",
-      "p[id=\"\"]", "p[id=\"AB\"]/r[1]", "p[id=\"A\"B\"]",
+      "p[id=\"\"]", "p[id=\"AB\"]/r[1]", "p[id=\"A\"B\"]", "p[id=\"\"A\"]", "p[id=\"]X\"]",
     ] {
     let mut refused = false
     format_validate_scope(bad) catch {

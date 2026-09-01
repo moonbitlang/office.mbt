@@ -226,7 +226,8 @@ fn format_validate_scope(scope : String) -> Unit raise CliFailure {
         ),
       )
     }
-    let inner = scope.substring(start=7, end=scope.length() - 2)
+    // `p[id="` is six characters; the payload starts right after it.
+    let inner = scope.substring(start=6, end=scope.length() - 2)
     for ch in inner {
       guard ch != '"' && ch != ']' else {
         raise CliFailure(
@@ -461,12 +462,32 @@ async fn run_format(matches : @argparse.Matches) -> Unit {
       )
     _ => ()
   }
-  if range is Some(_) && within is None {
-    raise CliFailure(
-      @lib.protocol_error(
-        "office.invalid_arguments", "--range needs --in naming the ONE paragraph its units index into",
-      ),
-    )
+  match (range, within) {
+    (Some(_), None) =>
+      raise CliFailure(
+        @lib.protocol_error(
+          "office.invalid_arguments", "--range needs --in naming the ONE paragraph its units index into",
+        ),
+      )
+    (Some(_), Some(scope)) => {
+      // The scope must NAME A PARAGRAPH: a subtree like tbl[1] has no
+      // unit axis for the range to index into, and the contradiction
+      // refuses before any file is read.
+      let last_segment = match scope.rev_find("/") {
+        Some(slash) =>
+          scope.substring(start=slash + 1, end=scope.length()).to_string()
+        None => scope
+      }
+      guard last_segment.has_prefix("p[") else {
+        raise CliFailure(
+          @lib.protocol_error(
+            "office.invalid_arguments",
+            "--range needs --in ending at a paragraph (p[3], tbl[1]/tr[1]/tc[1]/p[1], or p[id=\"…\"]); '\{bounded_text(scope, 80)}' names no paragraph",
+          ),
+        )
+      }
+    }
+    _ => ()
   }
   if range is Some(_) && optional_value(matches, "nth") is Some(_) {
     raise CliFailure(
