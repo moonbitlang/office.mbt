@@ -102,7 +102,7 @@ jq -e '
   (.data.fingerprint | test("^crc32:[0-9a-f]{8}$")) and
   ([.data.records[].name] == [
     "docx", "xlsx", "help", "identify", "outline", "get", "text",
-    "query", "find", "replace", "insert-paragraph", "validate", "dump", "replay", "issues", "preview",
+    "query", "find", "replace", "format", "insert-paragraph", "validate", "dump", "replay", "issues", "preview",
     "render", "create", "template", "edit", "annotate", "batch", "raw"
   ])
 ' >/dev/null <<<"$capabilities" || fail "capability registry"
@@ -280,6 +280,23 @@ printf '%s\n' \
   >"$work/docx-setrun-noop.json"
 json office.docx.edit/2 edit "$work/docx-setrun-base.docx" "$work/docx-setrun-noop.json" --out "$work/docx-setrun-noop.docx" --json >/dev/null
 cmp -s "$work/docx-setrun-base.docx" "$work/docx-setrun-noop.docx" || fail "docx set_run_text no-op bytes"
+
+# Direct formatting (F3): a text-selected span is bolded, the report names the
+# span and the affected paragraph with stable identity, a dry run writes
+# nothing, and a zero-match run refuses without --allow-zero.
+docx_format="$(json office.docx.format/1 format "$work/docx-filled.docx" "$work/docx-formatted.docx" --text "Ada Lovelace" --bold on --json)"
+jq -e '.success == true and .data.mode == "text" and .data.bold == true and .data.italic == null and .data.changed == true and (.data.spans | length) == 1 and .data.spans[0].start >= 0 and (.data.affected | length) == 1 and .data.transaction.preservation.changed == ["word/document.xml"]' >/dev/null <<<"$docx_format" || fail "docx format"
+jq -e '.data.text == "Quarterly report for Ada Lovelace"' >/dev/null <<<"$(json office.docx.element/1 get "$work/docx-formatted.docx" '/docx/body/p[1]' --json)" || fail "docx format projection unchanged"
+jq -e '.data.valid == true and .data.error_count == 0' >/dev/null <<<"$(json office.validate/1 validate "$work/docx-formatted.docx" --json)" || fail "docx format validate"
+json office.docx.format/1 format "$work/docx-filled.docx" "$work/docx-format-dry.docx" --text "Ada Lovelace" --italic on --dry-run --json >/dev/null
+[ ! -e "$work/docx-format-dry.docx" ] || fail "docx format dry run wrote output"
+expect_failure "$work/docx-format-miss.json" format "$work/docx-filled.docx" \
+  "$work/docx-format-never.docx" --text "no such text anywhere" --bold on --json
+jq -e '.error.code == "office.format.no_match"' "$work/docx-format-miss.json" >/dev/null || fail "docx format no-match code"
+[ ! -e "$work/docx-format-never.docx" ] || fail "docx format refusal wrote output"
+expect_failure "$work/docx-format-flagless.json" format "$work/docx-filled.docx" \
+  "$work/docx-format-never2.docx" --text "Ada" --json
+jq -e '.error.code == "office.invalid_arguments"' "$work/docx-format-flagless.json" >/dev/null || fail "docx format propertyless code"
 
 # Tracked-change resolution on the same command: accepting everything keeps the
 # insertion and drops the deletion, rejecting everything does the reverse (which
