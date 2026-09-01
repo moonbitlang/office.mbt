@@ -3,27 +3,13 @@
 // one Excel formula to its implementation; eval_function routes to these via a HashMap.
 
 ///|
-fn eval_dollar(
-  _workbook : Workbook,
-  _sheet_name : String,
-  _name : String,
-  _args : ArrayView[Expr],
-  values : Array[FormulaValue],
-  _ctx : CalcContext,
-) -> FormulaValue {
-  dollar_values(values)
+fn eval_dollar(call : EvalCall) -> FormulaValue {
+  dollar_values(call.values)
 }
 
 ///|
-fn eval_len(
-  _workbook : Workbook,
-  _sheet_name : String,
-  _name : String,
-  _args : ArrayView[Expr],
-  values : Array[FormulaValue],
-  _ctx : CalcContext,
-) -> FormulaValue {
-  match values {
+fn eval_len(call : EvalCall) -> FormulaValue {
+  match call.values {
     [v0] =>
       match value_as_string(v0) {
         Ok(text) => Number(Double::from_int(text.length()))
@@ -34,15 +20,8 @@ fn eval_len(
 }
 
 ///|
-fn eval_lenb(
-  _workbook : Workbook,
-  _sheet_name : String,
-  _name : String,
-  _args : ArrayView[Expr],
-  values : Array[FormulaValue],
-  _ctx : CalcContext,
-) -> FormulaValue {
-  match values {
+fn eval_lenb(call : EvalCall) -> FormulaValue {
+  match call.values {
     [v0] =>
       match value_as_string(v0) {
         Ok(text) => Number(Double::from_int(dbcs_byte_length(text)))
@@ -53,15 +32,8 @@ fn eval_lenb(
 }
 
 ///|
-fn eval_lower(
-  _workbook : Workbook,
-  _sheet_name : String,
-  _name : String,
-  _args : ArrayView[Expr],
-  values : Array[FormulaValue],
-  _ctx : CalcContext,
-) -> FormulaValue {
-  match values {
+fn eval_lower(call : EvalCall) -> FormulaValue {
+  match call.values {
     [v0] =>
       match value_as_string(v0) {
         Ok(text) => String(text.to_lower())
@@ -72,15 +44,8 @@ fn eval_lower(
 }
 
 ///|
-fn eval_upper(
-  _workbook : Workbook,
-  _sheet_name : String,
-  _name : String,
-  _args : ArrayView[Expr],
-  values : Array[FormulaValue],
-  _ctx : CalcContext,
-) -> FormulaValue {
-  match values {
+fn eval_upper(call : EvalCall) -> FormulaValue {
+  match call.values {
     [v0] =>
       match value_as_string(v0) {
         Ok(text) => String(text.to_upper())
@@ -91,15 +56,8 @@ fn eval_upper(
 }
 
 ///|
-fn eval_proper(
-  _workbook : Workbook,
-  _sheet_name : String,
-  _name : String,
-  _args : ArrayView[Expr],
-  values : Array[FormulaValue],
-  _ctx : CalcContext,
-) -> FormulaValue {
-  match values {
+fn eval_proper(call : EvalCall) -> FormulaValue {
+  match call.values {
     [v0] =>
       match value_as_string(v0) {
         Ok(text) => String(proper_case(text))
@@ -110,19 +68,12 @@ fn eval_proper(
 }
 
 ///|
-fn eval_dbcs(
-  workbook : Workbook,
-  _sheet_name : String,
-  _name : String,
-  _args : ArrayView[Expr],
-  values : Array[FormulaValue],
-  _ctx : CalcContext,
-) -> FormulaValue {
-  match values {
+fn eval_dbcs(call : EvalCall) -> FormulaValue {
+  match call.values {
     [v0] =>
       match value_as_string(v0) {
         Ok(text) =>
-          if dbcs_enabled(workbook) {
+          if dbcs_enabled(call.workbook) {
             String(dbcs_convert(text))
           } else {
             String(text)
@@ -134,15 +85,8 @@ fn eval_dbcs(
 }
 
 ///|
-fn eval_trim(
-  _workbook : Workbook,
-  _sheet_name : String,
-  _name : String,
-  _args : ArrayView[Expr],
-  values : Array[FormulaValue],
-  _ctx : CalcContext,
-) -> FormulaValue {
-  match values {
+fn eval_trim(call : EvalCall) -> FormulaValue {
+  match call.values {
     [v0] =>
       match value_as_string(v0) {
         Ok(text) => String(trim_excel_text(text))
@@ -153,21 +97,14 @@ fn eval_trim(
 }
 
 ///|
-fn eval_left(
-  _workbook : Workbook,
-  _sheet_name : String,
-  _name : String,
-  _args : ArrayView[Expr],
-  values : Array[FormulaValue],
-  _ctx : CalcContext,
-) -> FormulaValue {
-  match values {
+fn eval_left(call : EvalCall) -> FormulaValue {
+  match call.values {
     [v0] | [v0, _] => {
       let text = match value_as_string(v0) {
         Ok(text) => text
         Err(err) => return err
       }
-      let count = if values is [_, v1] {
+      let count = if call.values is [_, v1] {
         match value_as_int(v1) {
           Ok(num) => num
           Err(err) => return err
@@ -189,21 +126,14 @@ fn eval_left(
 }
 
 ///|
-fn eval_leftb(
-  _workbook : Workbook,
-  _sheet_name : String,
-  _name : String,
-  _args : ArrayView[Expr],
-  values : Array[FormulaValue],
-  _ctx : CalcContext,
-) -> FormulaValue {
-  match values {
+fn eval_leftb(call : EvalCall) -> FormulaValue {
+  match call.values {
     [v0] | [v0, _] => {
       let text = match value_as_string(v0) {
         Ok(text) => text
         Err(err) => return err
       }
-      let count = if values is [_, v1] {
+      let count = if call.values is [_, v1] {
         match value_as_int(v1) {
           Ok(num) => num
           Err(err) => return err
@@ -227,21 +157,14 @@ fn eval_leftb(
 }
 
 ///|
-fn eval_right(
-  _workbook : Workbook,
-  _sheet_name : String,
-  _name : String,
-  _args : ArrayView[Expr],
-  values : Array[FormulaValue],
-  _ctx : CalcContext,
-) -> FormulaValue {
-  match values {
+fn eval_right(call : EvalCall) -> FormulaValue {
+  match call.values {
     [v0] | [v0, _] => {
       let text = match value_as_string(v0) {
         Ok(text) => text
         Err(err) => return err
       }
-      let count = if values is [_, v1] {
+      let count = if call.values is [_, v1] {
         match value_as_int(v1) {
           Ok(num) => num
           Err(err) => return err
@@ -263,21 +186,14 @@ fn eval_right(
 }
 
 ///|
-fn eval_rightb(
-  _workbook : Workbook,
-  _sheet_name : String,
-  _name : String,
-  _args : ArrayView[Expr],
-  values : Array[FormulaValue],
-  _ctx : CalcContext,
-) -> FormulaValue {
-  match values {
+fn eval_rightb(call : EvalCall) -> FormulaValue {
+  match call.values {
     [v0] | [v0, _] => {
       let text = match value_as_string(v0) {
         Ok(text) => text
         Err(err) => return err
       }
-      let count = if values is [_, v1] {
+      let count = if call.values is [_, v1] {
         match value_as_int(v1) {
           Ok(num) => num
           Err(err) => return err
@@ -301,15 +217,8 @@ fn eval_rightb(
 }
 
 ///|
-fn eval_mid(
-  _workbook : Workbook,
-  _sheet_name : String,
-  _name : String,
-  _args : ArrayView[Expr],
-  values : Array[FormulaValue],
-  _ctx : CalcContext,
-) -> FormulaValue {
-  match values {
+fn eval_mid(call : EvalCall) -> FormulaValue {
+  match call.values {
     [v0, v1, v2] => {
       let text = match value_as_string(v0) {
         Ok(text) => text
@@ -344,15 +253,8 @@ fn eval_mid(
 }
 
 ///|
-fn eval_midb(
-  _workbook : Workbook,
-  _sheet_name : String,
-  _name : String,
-  _args : ArrayView[Expr],
-  values : Array[FormulaValue],
-  _ctx : CalcContext,
-) -> FormulaValue {
-  match values {
+fn eval_midb(call : EvalCall) -> FormulaValue {
+  match call.values {
     [v0, v1, v2] => {
       let text = match value_as_string(v0) {
         Ok(text) => text
@@ -381,15 +283,8 @@ fn eval_midb(
 }
 
 ///|
-fn eval_rept(
-  _workbook : Workbook,
-  _sheet_name : String,
-  _name : String,
-  _args : ArrayView[Expr],
-  values : Array[FormulaValue],
-  _ctx : CalcContext,
-) -> FormulaValue {
-  match values {
+fn eval_rept(call : EvalCall) -> FormulaValue {
+  match call.values {
     [v0, v1] => {
       let text = match value_as_string(v0) {
         Ok(text) => text
@@ -414,15 +309,8 @@ fn eval_rept(
 }
 
 ///|
-fn eval_replace(
-  _workbook : Workbook,
-  _sheet_name : String,
-  _name : String,
-  _args : ArrayView[Expr],
-  values : Array[FormulaValue],
-  _ctx : CalcContext,
-) -> FormulaValue {
-  match values {
+fn eval_replace(call : EvalCall) -> FormulaValue {
+  match call.values {
     [v0, v1, v2, v3] => {
       let text = match value_as_string(v0) {
         Ok(text) => text
@@ -464,15 +352,8 @@ fn eval_replace(
 }
 
 ///|
-fn eval_replaceb(
-  _workbook : Workbook,
-  _sheet_name : String,
-  _name : String,
-  _args : ArrayView[Expr],
-  values : Array[FormulaValue],
-  _ctx : CalcContext,
-) -> FormulaValue {
-  match values {
+fn eval_replaceb(call : EvalCall) -> FormulaValue {
+  match call.values {
     [v0, v1, v2, v3] => {
       let text = match value_as_string(v0) {
         Ok(text) => text
@@ -514,15 +395,8 @@ fn eval_replaceb(
 }
 
 ///|
-fn eval_substitute(
-  _workbook : Workbook,
-  _sheet_name : String,
-  _name : String,
-  _args : ArrayView[Expr],
-  values : Array[FormulaValue],
-  _ctx : CalcContext,
-) -> FormulaValue {
-  match values {
+fn eval_substitute(call : EvalCall) -> FormulaValue {
+  match call.values {
     [v0, v1, v2] | [v0, v1, v2, _] => {
       let text = match value_as_string(v0) {
         Ok(text) => text
@@ -538,7 +412,7 @@ fn eval_substitute(
       }
       if old_text.length() == 0 {
         Error(formula_error_value)
-      } else if values is [_, _, _, v3] {
+      } else if call.values is [_, _, _, v3] {
         let instance = match value_as_int(v3) {
           Ok(num) => num
           Err(err) => return err
@@ -597,15 +471,8 @@ fn eval_substitute(
 }
 
 ///|
-fn eval_find(
-  _workbook : Workbook,
-  _sheet_name : String,
-  _name : String,
-  _args : ArrayView[Expr],
-  values : Array[FormulaValue],
-  _ctx : CalcContext,
-) -> FormulaValue {
-  match values {
+fn eval_find(call : EvalCall) -> FormulaValue {
+  match call.values {
     [v0, v1] | [v0, v1, _] => {
       let find_text = match value_as_string(v0) {
         Ok(text) => text
@@ -615,7 +482,7 @@ fn eval_find(
         Ok(text) => text
         Err(err) => return err
       }
-      let start_num = if values is [_, _, v2] {
+      let start_num = if call.values is [_, _, v2] {
         match value_as_int(v2) {
           Ok(num) => num
           Err(err) => return err
@@ -645,15 +512,8 @@ fn eval_find(
 }
 
 ///|
-fn eval_findb(
-  _workbook : Workbook,
-  _sheet_name : String,
-  _name : String,
-  _args : ArrayView[Expr],
-  values : Array[FormulaValue],
-  _ctx : CalcContext,
-) -> FormulaValue {
-  match values {
+fn eval_findb(call : EvalCall) -> FormulaValue {
+  match call.values {
     [v0, v1] | [v0, v1, _] => {
       let find_text = match value_as_string(v0) {
         Ok(text) => text
@@ -663,7 +523,7 @@ fn eval_findb(
         Ok(text) => text
         Err(err) => return err
       }
-      let start_num = if values is [_, _, v2] {
+      let start_num = if call.values is [_, _, v2] {
         match value_as_int(v2) {
           Ok(num) => num
           Err(err) => return err
@@ -681,15 +541,8 @@ fn eval_findb(
 }
 
 ///|
-fn eval_search(
-  _workbook : Workbook,
-  _sheet_name : String,
-  _name : String,
-  _args : ArrayView[Expr],
-  values : Array[FormulaValue],
-  _ctx : CalcContext,
-) -> FormulaValue {
-  match values {
+fn eval_search(call : EvalCall) -> FormulaValue {
+  match call.values {
     [v0, v1] | [v0, v1, _] => {
       let find_text = match value_as_string(v0) {
         Ok(text) => text
@@ -699,7 +552,7 @@ fn eval_search(
         Ok(text) => text
         Err(err) => return err
       }
-      let start_num = if values is [_, _, v2] {
+      let start_num = if call.values is [_, _, v2] {
         match value_as_int(v2) {
           Ok(num) => num
           Err(err) => return err
@@ -731,15 +584,8 @@ fn eval_search(
 }
 
 ///|
-fn eval_searchb(
-  _workbook : Workbook,
-  _sheet_name : String,
-  _name : String,
-  _args : ArrayView[Expr],
-  values : Array[FormulaValue],
-  _ctx : CalcContext,
-) -> FormulaValue {
-  match values {
+fn eval_searchb(call : EvalCall) -> FormulaValue {
+  match call.values {
     [v0, v1] | [v0, v1, _] => {
       let find_text = match value_as_string(v0) {
         Ok(text) => text
@@ -749,7 +595,7 @@ fn eval_searchb(
         Ok(text) => text
         Err(err) => return err
       }
-      let start_num = if values is [_, _, v2] {
+      let start_num = if call.values is [_, _, v2] {
         match value_as_int(v2) {
           Ok(num) => num
           Err(err) => return err
@@ -769,15 +615,8 @@ fn eval_searchb(
 }
 
 ///|
-fn eval_exact(
-  _workbook : Workbook,
-  _sheet_name : String,
-  _name : String,
-  _args : ArrayView[Expr],
-  values : Array[FormulaValue],
-  _ctx : CalcContext,
-) -> FormulaValue {
-  match values {
+fn eval_exact(call : EvalCall) -> FormulaValue {
+  match call.values {
     [v0, v1] => {
       let left = match value_as_string(v0) {
         Ok(text) => text
@@ -794,23 +633,16 @@ fn eval_exact(
 }
 
 ///|
-fn eval_fixed(
-  _workbook : Workbook,
-  _sheet_name : String,
-  _name : String,
-  _args : ArrayView[Expr],
-  values : Array[FormulaValue],
-  _ctx : CalcContext,
-) -> FormulaValue {
-  if values.length() >= 1 && values.length() <= 3 {
-    let number = match value_as_number(values[0]) {
+fn eval_fixed(call : EvalCall) -> FormulaValue {
+  if call.values.length() >= 1 && call.values.length() <= 3 {
+    let number = match value_as_number(call.values[0]) {
       Ok(num) => num
       Err(err) => return err
     }
-    let mut decimals = if values.length() == 1 {
-      decimal_places_from_text(formula_value_string(values[0]))
+    let mut decimals = if call.values.length() == 1 {
+      decimal_places_from_text(formula_value_string(call.values[0]))
     } else {
-      match value_as_int(values[1]) {
+      match value_as_int(call.values[1]) {
         Ok(num) => num
         Err(err) => return err
       }
@@ -818,8 +650,8 @@ fn eval_fixed(
     if decimals < 0 {
       decimals = 0
     }
-    let no_commas = if values.length() == 3 {
-      match value_as_bool(values[2]) {
+    let no_commas = if call.values.length() == 3 {
+      match value_as_bool(call.values[2]) {
         Ok(flag) => flag
         Err(err) => return err
       }
@@ -833,15 +665,8 @@ fn eval_fixed(
 }
 
 ///|
-fn eval_value(
-  _workbook : Workbook,
-  _sheet_name : String,
-  _name : String,
-  _args : ArrayView[Expr],
-  values : Array[FormulaValue],
-  _ctx : CalcContext,
-) -> FormulaValue {
-  match values {
+fn eval_value(call : EvalCall) -> FormulaValue {
+  match call.values {
     [v0] =>
       match value_as_number_text(v0) {
         Ok(num) => Number(num)
@@ -852,17 +677,10 @@ fn eval_value(
 }
 
 ///|
-fn eval_valuetotext(
-  _workbook : Workbook,
-  _sheet_name : String,
-  _name : String,
-  _args : ArrayView[Expr],
-  values : Array[FormulaValue],
-  _ctx : CalcContext,
-) -> FormulaValue {
-  match values {
+fn eval_valuetotext(call : EvalCall) -> FormulaValue {
+  match call.values {
     [v0] | [v0, _] => {
-      let format = if values is [_, v1] {
+      let format = if call.values is [_, v1] {
         match value_as_int(v1) {
           Ok(num) => num
           Err(err) => return err
@@ -890,15 +708,8 @@ fn eval_valuetotext(
 }
 
 ///|
-fn eval_text(
-  _workbook : Workbook,
-  _sheet_name : String,
-  _name : String,
-  _args : ArrayView[Expr],
-  values : Array[FormulaValue],
-  ctx : CalcContext,
-) -> FormulaValue {
-  match values {
+fn eval_text(call : EvalCall) -> FormulaValue {
+  match call.values {
     [v0, v1] => {
       let format_text = match value_as_string(v1) {
         Ok(text) => text
@@ -910,7 +721,7 @@ fn eval_text(
             format_number(num),
             format_text,
             Options::new(),
-            use_1904_format=ctx.use_1904_dates,
+            use_1904_format=call.ctx.use_1904_dates,
           ) catch {
             _ => return Error(formula_error_value)
           }
@@ -924,17 +735,10 @@ fn eval_text(
 }
 
 ///|
-fn eval_arraytotext(
-  workbook : Workbook,
-  sheet_name : String,
-  _name : String,
-  args : ArrayView[Expr],
-  values : Array[FormulaValue],
-  ctx : CalcContext,
-) -> FormulaValue raise XlsxError {
-  if values.length() == 1 || values.length() == 2 {
-    let format = if values.length() == 2 {
-      match value_as_int(values[1]) {
+fn eval_arraytotext(call : EvalCall) -> FormulaValue raise XlsxError {
+  if call.values.length() == 1 || call.values.length() == 2 {
+    let format = if call.values.length() == 2 {
+      match value_as_int(call.values[1]) {
         Ok(num) => num
         Err(err) => return err
       }
@@ -944,10 +748,10 @@ fn eval_arraytotext(
     if format != 0 && format != 1 {
       return Error(formula_error_value)
     }
-    let range = match args[0] {
+    let range = match call.args[0] {
       Range(_, _, _) | Cell(_, _) =>
-        eval_range_expr(workbook, sheet_name, args[0], ctx)
-      _ => { rows: 1, cols: 1, values: [values[0]], }
+        eval_range_expr(call.workbook, call.sheet_name, call.args[0], call.ctx)
+      _ => { rows: 1, cols: 1, values: [call.values[0]], }
     }
     let rows : Array[String] = []
     for row in 0..<range.rows {
@@ -984,28 +788,21 @@ fn eval_arraytotext(
 }
 
 ///|
-fn eval_textafter(
-  _workbook : Workbook,
-  _sheet_name : String,
-  name : String,
-  _args : ArrayView[Expr],
-  values : Array[FormulaValue],
-  _ctx : CalcContext,
-) -> FormulaValue {
-  if values.length() >= 2 && values.length() <= 6 {
-    let text = match value_as_string(values[0]) {
+fn eval_textafter(call : EvalCall) -> FormulaValue {
+  if call.values.length() >= 2 && call.values.length() <= 6 {
+    let text = match value_as_string(call.values[0]) {
       Ok(value) => value
       Err(err) => return err
     }
-    let delimiter = match value_as_string(values[1]) {
+    let delimiter = match value_as_string(call.values[1]) {
       Ok(value) => value
       Err(err) => return err
     }
     if text == "" {
       return Error(formula_error_na)
     }
-    let instance_num = if values.length() >= 3 {
-      match value_as_int(values[2]) {
+    let instance_num = if call.values.length() >= 3 {
+      match value_as_int(call.values[2]) {
         Ok(num) => num
         Err(err) => return err
       }
@@ -1017,8 +814,8 @@ fn eval_textafter(
       -instance_num > text.length() {
       return Error(formula_error_value)
     }
-    let match_mode = if values.length() >= 4 {
-      match value_as_int(values[3]) {
+    let match_mode = if call.values.length() >= 4 {
+      match value_as_int(call.values[3]) {
         Ok(num) => num
         Err(err) => return err
       }
@@ -1028,15 +825,19 @@ fn eval_textafter(
     if match_mode != 0 && match_mode != 1 {
       return Error(formula_error_value)
     }
-    let match_end = if values.length() >= 5 {
-      match value_as_bool(values[4]) {
+    let match_end = if call.values.length() >= 5 {
+      match value_as_bool(call.values[4]) {
         Ok(flag) => flag
         Err(err) => return err
       }
     } else {
       false
     }
-    let if_not_found = if values.length() == 6 { values[5] } else { Empty }
+    let if_not_found = if call.values.length() == 6 {
+      call.values[5]
+    } else {
+      Empty
+    }
     let idx_opt = text_after_before_index(
       text, delimiter, instance_num, match_mode, match_end,
     )
@@ -1044,7 +845,7 @@ fn eval_textafter(
       Some(value) => value
       None => return if_not_found
     }
-    if name == "TEXTAFTER" || name == "_XLFN.TEXTAFTER" {
+    if call.name == "TEXTAFTER" || call.name == "_XLFN.TEXTAFTER" {
       let start = idx + delimiter.length()
       if start >= text.length() {
         Empty
@@ -1062,42 +863,28 @@ fn eval_textafter(
 }
 
 ///|
-fn eval_textsplit(
-  _workbook : Workbook,
-  _sheet_name : String,
-  _name : String,
-  _args : ArrayView[Expr],
-  values : Array[FormulaValue],
-  _ctx : CalcContext,
-) -> FormulaValue {
-  if values.length() >= 2 && values.length() <= 6 {
-    textsplit_values(values)
+fn eval_textsplit(call : EvalCall) -> FormulaValue {
+  if call.values.length() >= 2 && call.values.length() <= 6 {
+    textsplit_values(call.values)
   } else {
     Error(formula_error_value)
   }
 }
 
 ///|
-fn eval_textjoin(
-  _workbook : Workbook,
-  _sheet_name : String,
-  _name : String,
-  _args : ArrayView[Expr],
-  values : Array[FormulaValue],
-  _ctx : CalcContext,
-) -> FormulaValue {
-  if values.length() >= 3 {
-    let delimiter = match value_as_string(values[0]) {
+fn eval_textjoin(call : EvalCall) -> FormulaValue {
+  if call.values.length() >= 3 {
+    let delimiter = match value_as_string(call.values[0]) {
       Ok(text) => text
       Err(err) => return err
     }
-    let ignore_empty = match value_as_bool(values[1]) {
+    let ignore_empty = match value_as_bool(call.values[1]) {
       Ok(flag) => flag
       Err(err) => return err
     }
     let parts : Array[String] = []
-    for i in 2..<values.length() {
-      match textjoin_collect_value(values[i], ignore_empty, parts) {
+    for i in 2..<call.values.length() {
+      match textjoin_collect_value(call.values[i], ignore_empty, parts) {
         Ok(_) => ()
         Err(err) => return err
       }
@@ -1114,15 +901,8 @@ fn eval_textjoin(
 }
 
 ///|
-fn eval_char(
-  _workbook : Workbook,
-  _sheet_name : String,
-  _name : String,
-  _args : ArrayView[Expr],
-  values : Array[FormulaValue],
-  _ctx : CalcContext,
-) -> FormulaValue {
-  match values {
+fn eval_char(call : EvalCall) -> FormulaValue {
+  match call.values {
     [v0] =>
       match value_as_number(v0) {
         Ok(num) => {
@@ -1140,15 +920,8 @@ fn eval_char(
 }
 
 ///|
-fn eval_unichar(
-  _workbook : Workbook,
-  _sheet_name : String,
-  _name : String,
-  _args : ArrayView[Expr],
-  values : Array[FormulaValue],
-  _ctx : CalcContext,
-) -> FormulaValue {
-  match values {
+fn eval_unichar(call : EvalCall) -> FormulaValue {
+  match call.values {
     [v0] =>
       match value_as_number(v0) {
         Ok(num) =>
@@ -1165,102 +938,53 @@ fn eval_unichar(
 }
 
 ///|
-fn eval_clean(
-  _workbook : Workbook,
-  _sheet_name : String,
-  _name : String,
-  _args : ArrayView[Expr],
-  values : Array[FormulaValue],
-  _ctx : CalcContext,
-) -> FormulaValue {
-  match values {
+fn eval_clean(call : EvalCall) -> FormulaValue {
+  match call.values {
     [v0] => clean_text_value(v0)
     _ => Error(formula_error_value)
   }
 }
 
 ///|
-fn eval_encodeurl(
-  _workbook : Workbook,
-  _sheet_name : String,
-  _name : String,
-  _args : ArrayView[Expr],
-  values : Array[FormulaValue],
-  _ctx : CalcContext,
-) -> FormulaValue {
-  match values {
+fn eval_encodeurl(call : EvalCall) -> FormulaValue {
+  match call.values {
     [v0] => encode_url_value(v0)
     _ => Error(formula_error_value)
   }
 }
 
 ///|
-fn eval_bahttext(
-  _workbook : Workbook,
-  _sheet_name : String,
-  _name : String,
-  _args : ArrayView[Expr],
-  values : Array[FormulaValue],
-  _ctx : CalcContext,
-) -> FormulaValue {
-  match values {
-    [_] => bahttext_values(values)
+fn eval_bahttext(call : EvalCall) -> FormulaValue {
+  match call.values {
+    [_] => bahttext_values(call.values)
     _ => Error(formula_error_value)
   }
 }
 
 ///|
-fn eval_code(
-  _workbook : Workbook,
-  _sheet_name : String,
-  _name : String,
-  _args : ArrayView[Expr],
-  values : Array[FormulaValue],
-  _ctx : CalcContext,
-) -> FormulaValue {
-  match values {
+fn eval_code(call : EvalCall) -> FormulaValue {
+  match call.values {
     [v0] => code_value("CODE", v0)
     _ => Error(formula_error_value)
   }
 }
 
 ///|
-fn eval_unicode(
-  _workbook : Workbook,
-  _sheet_name : String,
-  _name : String,
-  _args : ArrayView[Expr],
-  values : Array[FormulaValue],
-  _ctx : CalcContext,
-) -> FormulaValue {
-  match values {
+fn eval_unicode(call : EvalCall) -> FormulaValue {
+  match call.values {
     [v0] => code_value("UNICODE", v0)
     _ => Error(formula_error_value)
   }
 }
 
 ///|
-fn eval_concat(
-  _workbook : Workbook,
-  _sheet_name : String,
-  _name : String,
-  _args : ArrayView[Expr],
-  values : Array[FormulaValue],
-  _ctx : CalcContext,
-) -> FormulaValue {
-  concat_values(values)
+fn eval_concat(call : EvalCall) -> FormulaValue {
+  concat_values(call.values)
 }
 
 ///|
-fn eval_t(
-  _workbook : Workbook,
-  _sheet_name : String,
-  _name : String,
-  _args : ArrayView[Expr],
-  values : Array[FormulaValue],
-  _ctx : CalcContext,
-) -> FormulaValue {
-  match values {
+fn eval_t(call : EvalCall) -> FormulaValue {
+  match call.values {
     [v0] =>
       match normalize_scalar(v0) {
         Error(err) => Error(err)
