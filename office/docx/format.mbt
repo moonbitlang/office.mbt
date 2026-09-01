@@ -192,7 +192,10 @@ pub fn docx_mutation_preflight(
   let (raw, root) = @xml.read_xml_bytes_strict_mce_with_roots_limited(
     settings,
     candidate_xml_budget(),
-    [],
+    // This toolkit UNDERSTANDS WML — a `MustUnderstand` naming it, or a
+    // choice requiring it, reads the way it does in Word. Anything else
+    // named by MustUnderstand keeps the unreadable refusal.
+    [DOCX_WML_NAMESPACE, DOCX_STRICT_WML_NAMESPACE],
   ) catch {
     _ =>
       raise @transaction.transaction_failure(
@@ -519,16 +522,18 @@ fn docx_settings_part(
   archive : @zip.Archive,
   parts : Map[String, (String, String)],
 ) -> DocxPartLookup {
-  // A package that names several main document parts is refused by the
-  // strict validation that opens the session, in those words; this
-  // preflight leaves that verdict to it rather than reporting the
-  // package's shape as a settings problem.
-  guard docx_relationship_target(archive, parts, "", [
+  // Several main document parts — including one hidden in a
+  // compatibility branch the strict validation's effective reading does
+  // not take — leave no single settings answer, and are refused rather
+  // than resolved.
+  let document = match
+    docx_relationship_target(archive, parts, "", [
       DOCX_OFFICE_DOCUMENT_RELATIONSHIP,
       DOCX_STRICT_OFFICE_DOCUMENT_RELATIONSHIP,
-    ])
-    is Found(document) else {
-    return Absent
+    ]) {
+    Found(name) => name
+    Absent => return Absent
+    Ambiguous => return Ambiguous
   }
   docx_relationship_target(archive, parts, document, [
     DOCX_SETTINGS_RELATIONSHIP,
@@ -581,7 +586,11 @@ fn docx_relationship_targets(
   guard docx_part_bytes(archive, parts, rels_name) is Some(bytes) else {
     return []
   }
-  let root = @opc.read_opc_relationships_xml_limited(
+  // The RAW tree, walked through every branch: a relationship inside an
+  // `mc:Choice` is one some consumer resolves, and a preflight that read
+  // only its own projection would miss a settings part — or a signature
+  // chain — that Word follows.
+  let (root, _effective) = @opc.read_opc_relationships_xml_with_roots_limited(
     bytes,
     candidate_xml_budget(),
   ) catch {
@@ -593,8 +602,12 @@ fn docx_relationship_targets(
   }
   let found : Array[String] = []
   let resolved : Array[String] = []
-  for node in root.children {
-    guard node is XmlElement(relationship) else { continue }
+  let queue : Array[@xml.XmlElement] = [root]
+  while queue.pop() is Some(relationship) {
+    for node in relationship.children {
+      guard node is XmlElement(child) else { continue }
+      queue.push(child)
+    }
     guard relationship.name
       is (DOCX_PACKAGE_RELATIONSHIP_ELEMENT | "relationships:Relationship") else {
       continue
@@ -657,62 +670,191 @@ fn docx_settings_children(root : @xml.XmlElement) -> Array[@xml.XmlElement] {
 }
 
 ///|
+
+///|
+const DOCX_XMLNS_NAMESPACE : String = "http://www.w3.org/2000/xmlns/"
+
+///|
 /// The settings a DIFFERENT consumer might act on: every element that
 /// could sit at the settings-child level under SOME resolution of the
 /// part's compatibility markup.
 ///
-/// This reader resolves markup compatibility one way — no application
-/// namespace is claimed, so every `mc:Choice` is passed over and
-/// ignorable content is dropped. Another consumer resolves it another
-/// way: it may select a choice (at any depth — a nested alternate
-/// inside the fallback this reader took is still a fork), and it may
-/// keep an element this reader promoted, or promote one this reader
-/// kept. So the walk takes EVERY branch of every alternate, and — only
-/// when the part declares `mc:ProcessContent` at all — looks through
-/// non-WML elements, whose content some consumer may process at this
-/// level. WML elements are never looked through: every consumer
-/// understands WML, so nothing promotes their content.
+/// This reader resolves markup compatibility understanding WML alone.
+/// Another consumer may understand more, so the walk takes every branch
+/// of every alternate that such a consumer could select — a branch AFTER
+/// the first WML-satisfiable choice is one nothing selects, since every
+/// consumer of this document understands WML and stops there. An element
+/// named by an in-scope `mc:ProcessContent` is looked through, because a
+/// consumer that finds it ignorable processes its content at this level;
+/// an ignorable element nobody asked to process is dropped whole by one
+/// consumer and kept whole by the rest, so its content is never at this
+/// level and is not collected. WML elements are never looked through.
 fn docx_settings_possible(raw : @xml.XmlElement) -> Array[@xml.XmlElement] {
   let possible : Array[@xml.XmlElement] = []
-  let promotion = docx_process_content_declared(raw)
-  fn level(container : @xml.XmlElement) -> Unit {
-    for node in container.children {
-      guard node is XmlElement(child) else { continue }
-      if child.name == "{\{DOCX_MC_NAMESPACE}}AlternateContent" {
-        for branch in child.children {
-          guard branch is XmlElement(alternative) else { continue }
-          level(alternative)
-        }
-      } else {
-        possible.push(child)
-        if promotion &&
-          !child.name.has_prefix("{\{DOCX_WML_NAMESPACE}}") &&
-          !child.name.has_prefix("{\{DOCX_STRICT_WML_NAMESPACE}}") {
-          level(child)
-        }
+  let scope : Map[String, String] = Map([])
+  let process_content : Array[String] = []
+  fn declarations(element : @xml.XmlElement) -> Array[(String, String?)] {
+    let undo : Array[(String, String?)] = []
+    for attribute in element.attributes {
+      guard attribute.0.has_prefix("{\{DOCX_XMLNS_NAMESPACE}}") else {
+        continue
+      }
+      let local = attribute.0
+        .substring(start=DOCX_XMLNS_NAMESPACE.length() + 2)
+        .to_string()
+      let prefix = if local == "xmlns" { "" } else { local }
+      undo.push((prefix, scope.get(prefix)))
+      scope[prefix] = attribute.1
+    }
+    undo
+  }
+
+  fn restore(undo : Array[(String, String?)]) -> Unit {
+    for entry in undo {
+      match entry.1 {
+        Some(previous) => scope[entry.0] = previous
+        None => scope.remove(entry.0)
       }
     }
   }
 
+  // A `ProcessContent` names elements by QName, resolved where the
+  // directive SITS; the resolved names apply to the subtree beneath it.
+  fn directives(element : @xml.XmlElement) -> Int {
+    guard element.attributes.get("{\{DOCX_MC_NAMESPACE}}ProcessContent")
+      is Some(value) else {
+      return 0
+    }
+    let mut added = 0
+    for token in docx_split_tokens(value) {
+      let entry = match token.find(":") {
+        Some(colon) => {
+          let prefix = token.substring(start=0, end=colon).to_string()
+          let local = token.substring(start=colon + 1).to_string()
+          match scope.get(prefix) {
+            Some(uri) => "{\{uri}}\{local}"
+            None => continue
+          }
+        }
+        None =>
+          match scope.get("") {
+            Some(uri) => "{\{uri}}\{token}"
+            None => token
+          }
+      }
+      process_content.push(entry)
+      added += 1
+    }
+    added
+  }
+
+  fn matches_process_content(name : String) -> Bool {
+    for entry in process_content {
+      if entry == name {
+        return true
+      }
+      if entry.has_suffix("}*") &&
+        name.has_prefix(
+          entry.substring(start=0, end=entry.length() - 1).to_string(),
+        ) {
+        return true
+      }
+    }
+    false
+  }
+
+  // Every prefix a choice requires resolves to WML exactly when every
+  // consumer of this document satisfies it.
+  fn choice_decides(choice : @xml.XmlElement) -> Bool {
+    let requires = match choice.attributes.get("Requires") {
+      Some(value) => value
+      None =>
+        match choice.attributes.get("{\{DOCX_MC_NAMESPACE}}Requires") {
+          Some(value) => value
+          None => return false
+        }
+    }
+    let tokens = docx_split_tokens(requires)
+    if tokens.is_empty() {
+      return false
+    }
+    for token in tokens {
+      guard scope.get(token) is Some(uri) else { return false }
+      guard uri == DOCX_WML_NAMESPACE || uri == DOCX_STRICT_WML_NAMESPACE else {
+        return false
+      }
+    }
+    true
+  }
+
+  fn level(container : @xml.XmlElement) -> Unit {
+    for node in container.children {
+      guard node is XmlElement(child) else { continue }
+      let undo = declarations(child)
+      let added = directives(child)
+      if child.name == "{\{DOCX_MC_NAMESPACE}}AlternateContent" {
+        let mut decided = false
+        for branch_node in child.children {
+          guard branch_node is XmlElement(branch) else { continue }
+          guard !decided else { break }
+          let branch_undo = declarations(branch)
+          let branch_added = directives(branch)
+          if branch.name == "{\{DOCX_MC_NAMESPACE}}Choice" {
+            level(branch)
+            if choice_decides(branch) {
+              decided = true
+            }
+          } else if branch.name == "{\{DOCX_MC_NAMESPACE}}Fallback" {
+            level(branch)
+          }
+          for _ in 0..<branch_added {
+            process_content.pop() |> ignore
+          }
+          restore(branch_undo)
+        }
+      } else {
+        possible.push(child)
+        if !child.name.has_prefix("{\{DOCX_WML_NAMESPACE}}") &&
+          !child.name.has_prefix("{\{DOCX_STRICT_WML_NAMESPACE}}") &&
+          matches_process_content(child.name) {
+          level(child)
+        }
+      }
+      for _ in 0..<added {
+        process_content.pop() |> ignore
+      }
+      restore(undo)
+    }
+  }
+
+  let root_undo = declarations(raw)
+  let root_added = directives(raw)
   level(raw)
+  for _ in 0..<root_added {
+    process_content.pop() |> ignore
+  }
+  restore(root_undo)
   possible
 }
 
 ///|
-/// Whether the part declares `mc:ProcessContent` anywhere. Promotion of
-/// an ignorable element's content requires the declaration, so a part
-/// without one has no promoted content under any consumer.
-fn docx_process_content_declared(element : @xml.XmlElement) -> Bool {
-  if element.attributes.get("{\{DOCX_MC_NAMESPACE}}ProcessContent") is Some(_) {
-    return true
-  }
-  for node in element.children {
-    guard node is XmlElement(child) else { continue }
-    if docx_process_content_declared(child) {
-      return true
+/// XML-whitespace-separated tokens of an attribute value.
+fn docx_split_tokens(value : String) -> Array[String] {
+  let tokens : Array[String] = []
+  let mut start = -1
+  for offset in 0..<=value.length() {
+    let boundary = offset == value.length() ||
+      value[offset] is (' ' | '\t' | '\n' | '\r')
+    if boundary {
+      if start >= 0 {
+        tokens.push(value.substring(start~, end=offset).to_string())
+        start = -1
+      }
+    } else if start < 0 {
+      start = offset
     }
   }
-  false
+  tokens
 }
 
 ///|

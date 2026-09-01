@@ -1590,3 +1590,134 @@ async test "the preflight discovers signatures through their relationships" {
     assert_true(orphan_published, msg="the edit publishes")
   })
 }
+
+///|
+/// Round-7 fidelity: what MCE actually promotes, understands, and
+/// selects — judged the way a WML consumer judges it.
+async test "the preflight reads compatibility markup with WML fidelity" {
+  with_docx_session_test_dir(directory => {
+    // An ignorable wrapper NOBODY asked to process is dropped whole by
+    // one consumer and kept whole by the rest — its content is never at
+    // the settings level, even when an unrelated ProcessContent names a
+    // different wrapper.
+    let opaque = preflight_fixture(
+      directory,
+      "opaque",
+      "<w14:opaque><w:trackRevisions/></w14:opaque>" +
+      "<w14:unwrap mc:ProcessContent=\"w14:unwrap\" xmlns:mc=\"http://schemas.openxmlformats.org/markup-compatibility/2006\"><w:zoom w:percent=\"90\"/></w14:unwrap>",
+      [],
+    )
+    let (opaque_failure, opaque_published) = format_input_probe(
+      opaque,
+      directory + "/opaque-out.docx",
+    )
+    assert_true(
+      opaque_failure is None,
+      msg="an unprocessed wrapper hides nothing at this level: \{opaque_failure}",
+    )
+    assert_true(opaque_published, msg="the edit publishes")
+    // MustUnderstand naming WML names something this toolkit understands.
+    let wml_must = repackaged_fixture(
+      directory,
+      "wml-must",
+      [],
+      [
+        (
+          "word/settings.xml", "mc:Ignorable=\"w14\"", "mc:Ignorable=\"w14\" mc:MustUnderstand=\"w\"",
+        ),
+      ],
+      [],
+    )
+    let (wml_must_failure, wml_must_published) = format_input_probe(
+      wml_must,
+      directory + "/wml-must-out.docx",
+    )
+    assert_true(
+      wml_must_failure is None,
+      msg="WML is understood here: \{wml_must_failure}",
+    )
+    assert_true(wml_must_published, msg="the edit publishes")
+    // A choice REQUIRING WML is the branch every consumer of this
+    // document takes, so the fallback behind it decides nothing.
+    let decided = preflight_fixture(
+      directory,
+      "decided",
+      "<mc:AlternateContent xmlns:mc=\"http://schemas.openxmlformats.org/markup-compatibility/2006\">" +
+      "<mc:Choice Requires=\"w\"><w:trackRevisions w:val=\"false\"/></mc:Choice>" +
+      "<mc:Fallback><w:trackRevisions/></mc:Fallback>" +
+      "</mc:AlternateContent>",
+      [],
+    )
+    let (decided_failure, decided_published) = format_input_probe(
+      decided,
+      directory + "/decided-out.docx",
+    )
+    assert_true(
+      decided_failure is None,
+      msg="a WML choice decides for every consumer: \{decided_failure}",
+    )
+    assert_true(decided_published, msg="the edit publishes")
+    // And the SELECTED WML choice is read: tracking on in the branch
+    // every consumer takes refuses as tracking, not as ambiguity.
+    let selected = preflight_fixture(
+      directory,
+      "selected",
+      "<mc:AlternateContent xmlns:mc=\"http://schemas.openxmlformats.org/markup-compatibility/2006\">" +
+      "<mc:Choice Requires=\"w\"><w:trackRevisions/></mc:Choice>" +
+      "<mc:Fallback><w:trackRevisions w:val=\"false\"/></mc:Fallback>" +
+      "</mc:AlternateContent>",
+      [],
+    )
+    let (selected_failure, selected_published) = format_input_probe(
+      selected,
+      directory + "/selected-out.docx",
+    )
+    guard selected_failure is Some(selected_message) else {
+      fail("the WML branch is what this document says")
+    }
+    assert_true(
+      selected_message.contains("records revisions"),
+      msg=selected_message,
+    )
+    assert_false(selected_published, msg="nothing may be published")
+  })
+}
+
+///|
+/// A relationship inside a compatibility branch is one SOME consumer
+/// resolves: the settings it names must still be read.
+async test "the preflight follows relationships in compatibility branches" {
+  with_docx_session_test_dir(directory => {
+    let forked = repackaged_fixture(
+      directory,
+      "forked-rels",
+      [],
+      [
+        (
+          "word/_rels/document.xml.rels",
+          "<Relationship Id=\"rId3\" Type=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships/settings\" Target=\"settings.xml\"/>",
+          "<mc:AlternateContent xmlns:mc=\"http://schemas.openxmlformats.org/markup-compatibility/2006\">" +
+          "<mc:Choice Requires=\"x\" xmlns:x=\"urn:example:x\">" +
+          "<Relationship Id=\"rId3\" Type=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships/settings\" Target=\"settings.xml\"/>" +
+          "</mc:Choice><mc:Fallback/></mc:AlternateContent>",
+        ),
+        (
+          "word/settings.xml", "</w:settings>", "<w:trackRevisions/></w:settings>",
+        ),
+      ],
+      [],
+    )
+    let (failure, published) = format_input_probe(
+      forked,
+      directory + "/forked-rels-out.docx",
+    )
+    guard failure is Some(message) else {
+      fail("a branch-hidden settings relationship still names the settings")
+    }
+    assert_true(
+      message.contains("records revisions") || message.contains("settings"),
+      msg=message,
+    )
+    assert_false(published, msg="nothing may be published")
+  })
+}

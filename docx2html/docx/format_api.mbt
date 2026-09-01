@@ -1889,6 +1889,12 @@ fn docx_format_binding_digests(
     // applied to the scope with an undo record.
     let undo : Array[(String, String?, UInt?)] = []
     let used : Array[String] = []
+    // Attributes whose VALUES may carry prefixes: markup-compatibility
+    // directives name namespaces and elements by QName, so a prefix can
+    // be load-bearing without appearing in any element or attribute
+    // NAME. They are resolved after the whole tag is read, because a
+    // declaration may follow the directive within the same tag.
+    let directives : Array[(String, String, String)] = []
     let stop = run_surgery_open_tag_end(element)
     let mut at = element.byte_start + 1
     let name_start = at
@@ -1947,8 +1953,49 @@ fn docx_format_binding_digests(
           binding_hash(declared, value)
         }
       } else {
-        let (attribute_prefix, _) = split_qname(attribute)
+        let (attribute_prefix, attribute_local) = split_qname(attribute)
         used.push(attribute_prefix)
+        if attribute_local
+          is ("Requires"
+          | "Ignorable"
+          | "MustUnderstand"
+          | "ProcessContent"
+          | "PreserveElements"
+          | "PreserveAttributes") {
+          directives.push((attribute_prefix, attribute_local, value))
+        }
+      }
+    }
+    // A directive counts when its own name is in the MC namespace, or —
+    // the spelling the spec gives `Requires` — when it sits unprefixed
+    // on an MC element.
+    for directive in directives {
+      let (attribute_prefix, attribute_local, value) = directive
+      let is_mc = scope.get(attribute_prefix) == Some(MC_URI) ||
+        (attribute_prefix == "" && element.uri == MC_URI)
+      guard is_mc else { continue }
+      let listed_prefixes = attribute_local
+        is ("Requires" | "Ignorable" | "MustUnderstand")
+      let mut token_start = -1
+      for offset in 0..<=value.length() {
+        let boundary = offset == value.length() ||
+          value[offset] is (' ' | '\t' | '\n' | '\r')
+        if boundary {
+          if token_start >= 0 {
+            let token = value.substring(start=token_start, end=offset)
+            if listed_prefixes {
+              used.push(token.to_string())
+            } else {
+              match token.find(":") {
+                Some(colon) => used.push(token[:colon].to_string())
+                None => used.push("")
+              }
+            }
+            token_start = -1
+          }
+        } else if token_start < 0 {
+          token_start = offset
+        }
       }
     }
     // This element's own contribution: the ids of the NON-WML bindings

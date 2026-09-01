@@ -433,3 +433,85 @@ async test "the readback sees a rebound prefix behind unchanged bytes" {
     )
   })
 }
+
+///|
+/// Markup-compatibility directives name namespaces and elements in
+/// their VALUES, so a prefix can be load-bearing without appearing in
+/// any element or attribute name. Both sabotages below keep the pPr
+/// bytes identical and shadow a prefix the directives depend on — one
+/// that `Requires` names, one that `Ignorable`/`ProcessContent`/
+/// `PreserveElements`/`PreserveAttributes` name.
+async test "the readback sees rebinding behind compatibility directives" {
+  with_format_readback_dir(directory => {
+    let source = format_readback_fixture(
+      directory,
+      "directives.docx",
+      "</w:p><w:p xmlns:q=\"urn:example:a\" xmlns:q2=\"urn:example:b\"><w:pPr>" +
+      "<mc:AlternateContent " +
+      "mc:Ignorable=\"q2\" mc:ProcessContent=\"q2:junk\" mc:PreserveElements=\"q2:junk\" mc:PreserveAttributes=\"q2:attr\" mc:MustUnderstand=\"w\">" +
+      "<mc:Choice Requires=\"q\"><w:jc w:val=\"center\"/></mc:Choice>" +
+      "<mc:Fallback><w:jc w:val=\"left\"/></mc:Fallback>" +
+      "</mc:AlternateContent>" +
+      "</w:pPr><w:r><w:t>Hello world</w:t></w:r></w:p><w:p>" +
+      "<w:r><w:t>tail</w:t></w:r>",
+    )
+    let format = @word.docx_direct_format(bold=true)
+    let output = directory + "/directives-out.docx"
+    transact_docx_format(
+      @transaction.transaction_options(source, output_path=output),
+      format~,
+      text="world",
+    )
+    |> ignore
+    let candidate = @zip.read(@afs.read_file(output).binary())
+    let before_archive = @zip.read(@afs.read_file(source).binary())
+    let before = @word.read_docx_annotated_archive_limited(
+      before_archive,
+      candidate_xml_budget(),
+    )
+    let (_, receipt) = @word.plan_docx_format(
+      before,
+      before.main_story_source(),
+      format~,
+      text="world",
+    )
+    let snapshot : Ref[FormatReadbackSnapshot?] = Ref(
+      Some({ before, affected: receipt.affected(), spans: receipt.spans(), }),
+    )
+    assert_eq(
+      finding_codes(format_readback_findings(snapshot, format, Docx, candidate)),
+      "",
+    )
+    // `Requires` resolves `q` where the choice sits, and the binding
+    // lives on the PARAGRAPH: rebinding it changes which branch a
+    // consumer selects while the pPr bytes stay identical.
+    assert_eq(
+      finding_codes(
+        format_readback_findings(
+          snapshot,
+          format,
+          Docx,
+          doctored_candidate(
+            candidate, "xmlns:q=\"urn:example:a\"", "xmlns:q=\"urn:example:evil\"",
+          ),
+        ),
+      ),
+      "docx.format.readback_collateral",
+    )
+    // The other directives name `q2`: shadowing it changes what they
+    // ignore, process, and preserve.
+    assert_eq(
+      finding_codes(
+        format_readback_findings(
+          snapshot,
+          format,
+          Docx,
+          doctored_candidate(
+            candidate, "xmlns:q2=\"urn:example:b\"", "xmlns:q2=\"urn:example:evil\"",
+          ),
+        ),
+      ),
+      "docx.format.readback_collateral",
+    )
+  })
+}
