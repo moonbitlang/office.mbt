@@ -377,3 +377,39 @@ async test "replace seven-unit stable scope refuses typed" {
     )
   })
 }
+
+///|
+/// The validator's capture is its OWN: a caller preflight that mutates
+/// what the report hands out must not reach the readback's evidence.
+async test "replace preflight cannot sabotage the readback capture" {
+  @async.with_task_group() <| group => {
+    let directory = @afs.tmpdir(prefix="office-docx-replace-sabotage-")
+    group.add_defer() <| () => {
+      @async.protect_from_cancel(() => @afs.rmdir(directory, recursive=true))
+    }
+    let input = edit_fixture(
+      directory, "sabotage.docx", "<w:r><w:t>Hello world</w:t></w:r>",
+    )
+    let output = directory + "/sabotage-out.docx"
+    let result = @docx.transact_docx_find_replace(
+      @transaction.transaction_options(input, output_path=output),
+      needle="world",
+      replacement="there",
+      preflight=report => {
+        // Emptying every array the report exposes must change nothing
+        // about what the readback compares.
+        report.affected().clear()
+        report.matches().clear()
+        report.selected().clear()
+        report.affected_paths().clear()
+      },
+    )
+    assert_eq(result.report.replaced(), 1)
+    assert_eq(result.report.affected().length(), 1)
+    let published = @zip.read(@afs.read_file(output).binary())
+    guard published.get("word/document.xml") is Some(payload) else {
+      fail("no document part")
+    }
+    assert_true(@utf8.decode(payload).contains("Hello there"))
+  }
+}

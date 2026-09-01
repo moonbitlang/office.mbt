@@ -40,13 +40,26 @@ pub struct DocxReplaceAffected {
 pub fn DocxReplaceReceipt::matches(
   self : DocxReplaceReceipt,
 ) -> Array[DocxMatch] {
-  self.matches
+  // A match carries arrays of its own, so copying only the outer array
+  // would hand the caller a handle back into the receipt.
+  self.matches.map(DocxMatch::copy)
+}
+
+///|
+/// A match that shares nothing with this one.
+pub fn DocxMatch::copy(self : DocxMatch) -> DocxMatch {
+  {
+    ..self,
+    runs: self.runs.copy(),
+    run_kinds: self.run_kinds.copy(),
+    physical_para_ids: self.physical_para_ids.copy(),
+  }
 }
 
 ///|
 /// The candidate ordinals this plan replaces, in document order.
 pub fn DocxReplaceReceipt::selected(self : DocxReplaceReceipt) -> Array[Int] {
-  self.selected
+  self.selected.copy()
 }
 
 ///|
@@ -60,7 +73,7 @@ pub fn DocxReplaceReceipt::replaced(self : DocxReplaceReceipt) -> Int {
 pub fn DocxReplaceReceipt::affected(
   self : DocxReplaceReceipt,
 ) -> Array[DocxReplaceAffected] {
-  self.affected
+  self.affected.copy()
 }
 
 ///|

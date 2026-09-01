@@ -319,6 +319,7 @@ pub fn DocxMatch::actionable(Self) -> Bool
 pub fn DocxMatch::anchor_status(Self) -> String
 pub fn DocxMatch::context_after(Self) -> String
 pub fn DocxMatch::context_before(Self) -> String
+pub fn DocxMatch::copy(Self) -> Self
 pub fn DocxMatch::end(Self) -> Int
 pub fn DocxMatch::ordinal(Self) -> Int
 pub fn DocxMatch::para_id(Self) -> String?

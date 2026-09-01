@@ -1939,7 +1939,7 @@ async test "the replace readback batches across paragraphs" {
       needle="target",
       replacement="done",
     )
-    assert_eq(replaced.report.replaced, 200)
+    assert_eq(replaced.report.replaced(), 200)
   })
 }
 

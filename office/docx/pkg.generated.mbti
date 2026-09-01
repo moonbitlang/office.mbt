@@ -251,12 +251,8 @@ pub fn DocxEditSession::queue_span_edit(Self, String, start~ : Int, end~ : Int, 
 pub fn DocxEditSession::source_part_fingerprints(Self) -> Array[DocxPartFingerprint]
 
 pub struct DocxFindReplaceReport {
-  selected : Array[Int]
-  replaced : Int
-  affected_paths : Array[String]
-  affected : Array[@bobzhang/docx2html/docx.DocxReplaceAffected]
-  matches : Array[@bobzhang/docx2html/docx.DocxMatch]
   resolved_within : String?
+  // private fields
 }
 pub fn DocxFindReplaceReport::affected(Self) -> Array[@bobzhang/docx2html/docx.DocxReplaceAffected]
 pub fn DocxFindReplaceReport::affected_paths(Self) -> Array[String]
