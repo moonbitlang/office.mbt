@@ -913,6 +913,31 @@ pub fn read_xml_bytes_strict_mce_limited(
 }
 
 ///|
+/// Strictly parses UTF-8 XML into the PRESERVATION view alone: namespace
+/// declarations retained as attributes, no markup-compatibility
+/// processing. This is the raw half of the paired-root API, for callers
+/// that must analyze a part's structure without demanding that its
+/// compatibility contract be satisfiable for THIS application.
+pub fn read_xml_bytes_strict_preserving_limited(
+  source : BytesView,
+  budget : XmlReadBudget,
+) -> XmlElement raise DocxError {
+  budget.charge_source(source.length())
+  let text = @utf8.decode(source, ignore_bom=true) catch {
+    _ => raise InvalidXml(message="XML source is not valid UTF-8")
+  }
+  read_xml_string_with_mode(
+    text,
+    Map([]),
+    true,
+    Some(budget),
+    true,
+    Some(Utf8),
+    true,
+  )
+}
+
+///|
 /// Strictly parses UTF-8 XML and returns both the raw document tree and the
 /// single root selected by Markup Compatibility. Mutation callers inspect the
 /// raw tree before changing preserved bytes, while semantic readers consume

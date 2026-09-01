@@ -2472,3 +2472,89 @@ async test "the preflight requires the dialect of what it reads" {
     assert_true(published, msg="the edit publishes")
   })
 }
+
+///|
+/// Round-18 fidelity: a part this toolkit's profile never reaches is
+/// analyzed structurally rather than demanded readable, and each
+/// exclusive part is judged for its own consumers.
+async test "the preflight analyzes unreached parts without demanding them" {
+  with_docx_session_test_dir(directory => {
+    // The w14 choice's settings part declares MustUnderstand="w14":
+    // every consumer reaching it satisfies that, and this toolkit —
+    // which never reaches it — must not refuse over a projection nobody
+    // asked it for. The fallback part is ordinary and unprotected.
+    let unreachable_must = repackaged_fixture(
+      directory,
+      "unreached-must",
+      [],
+      [
+        (
+          "[Content_Types].xml", "<Override PartName=\"/word/settings.xml\"", "<Override PartName=\"/word/settings-w14.xml\" ContentType=\"application/vnd.openxmlformats-officedocument.wordprocessingml.settings+xml\"/><Override PartName=\"/word/settings.xml\"",
+        ),
+        (
+          "word/_rels/document.xml.rels",
+          "<Relationship Id=\"rId3\" Type=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships/settings\" Target=\"settings.xml\"/>",
+          "<mc:AlternateContent xmlns:mc=\"http://schemas.openxmlformats.org/markup-compatibility/2006\" xmlns:w14a=\"http://schemas.microsoft.com/office/word/2010/wordml\">" +
+          "<mc:Choice Requires=\"w14a\"><Relationship Id=\"rId3w\" Type=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships/settings\" Target=\"settings-w14.xml\"/></mc:Choice>" +
+          "<mc:Fallback><Relationship Id=\"rId3\" Type=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships/settings\" Target=\"settings.xml\"/></mc:Fallback>" +
+          "</mc:AlternateContent>",
+        ),
+      ],
+      [
+        (
+          "word/settings-w14.xml", "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?><w:settings xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\" xmlns:mc=\"http://schemas.openxmlformats.org/markup-compatibility/2006\" xmlns:w14=\"http://schemas.microsoft.com/office/word/2010/wordml\" mc:MustUnderstand=\"w14\"><w:zoom w:percent=\"100\"/></w:settings>",
+        ),
+      ],
+    )
+    let (must_failure, must_published) = format_input_probe(
+      unreachable_must,
+      directory + "/unreached-must-out.docx",
+    )
+    assert_true(
+      must_failure is None,
+      msg="a part our profile never reaches is not ours to demand: \{must_failure}",
+    )
+    assert_true(must_published, msg="the edit publishes")
+    // And a TRACKED part behind the same unreachable path still
+    // refuses: structural analysis reads it even though our projection
+    // never would.
+    let tracked_must = repackaged_fixture(
+      directory,
+      "unreached-tracked",
+      [],
+      [
+        (
+          "[Content_Types].xml", "<Override PartName=\"/word/settings.xml\"", "<Override PartName=\"/word/settings-w14.xml\" ContentType=\"application/vnd.openxmlformats-officedocument.wordprocessingml.settings+xml\"/><Override PartName=\"/word/settings.xml\"",
+        ),
+        (
+          "word/_rels/document.xml.rels",
+          "<Relationship Id=\"rId3\" Type=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships/settings\" Target=\"settings.xml\"/>",
+          "<mc:AlternateContent xmlns:mc=\"http://schemas.openxmlformats.org/markup-compatibility/2006\" xmlns:w14a=\"http://schemas.microsoft.com/office/word/2010/wordml\">" +
+          "<mc:Choice Requires=\"w14a\"><Relationship Id=\"rId3w\" Type=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships/settings\" Target=\"settings-w14.xml\"/></mc:Choice>" +
+          "<mc:Fallback><Relationship Id=\"rId3\" Type=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships/settings\" Target=\"settings.xml\"/></mc:Fallback>" +
+          "</mc:AlternateContent>",
+        ),
+      ],
+      [
+        (
+          "word/settings-w14.xml", "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?><w:settings xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\"><w:trackRevisions/></w:settings>",
+        ),
+      ],
+    )
+    let (tracked_failure, tracked_published) = format_input_probe(
+      tracked_must,
+      directory + "/unreached-tracked-out.docx",
+    )
+    guard tracked_failure is Some(tracked_message) else {
+      fail("the consumers who reach the tracked part are real")
+    }
+    // The flag lives behind a path this toolkit cannot take, so the
+    // honest voice is the unresolved-alternatives refusal.
+    assert_true(
+      tracked_message.contains("records revisions") ||
+      tracked_message.contains("compatibility alternatives"),
+      msg=tracked_message,
+    )
+    assert_false(tracked_published, msg="nothing may be published")
+  })
+}

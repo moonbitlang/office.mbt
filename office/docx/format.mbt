@@ -203,41 +203,53 @@ fn docx_judge_settings_part(
   guard docx_part_bytes(archive, parts, settings_name) is Some(settings) else {
     return
   }
-  // A settings part that cannot be READ cannot be cleared: a preflight
-  // that cannot see its own evidence refuses rather than proceeds.
-  // Both projections from ONE bounded parse: the tree markup
-  // compatibility leaves for THIS toolkit — it understands WML, in both
-  // dialects — and the raw tree it was selected from.
-  let (raw, root) = @xml.read_xml_bytes_strict_mce_with_roots_limited(
-    settings,
-    candidate_xml_budget(),
-    [DOCX_WML_NAMESPACE, DOCX_STRICT_WML_NAMESPACE],
-  ) catch {
-    _ =>
-      raise @transaction.transaction_failure(
-        "office.docx.settings_unreadable", "this document's settings part could not be read, so its editing protections cannot be checked",
-      )
-  }
-  guard root.name == "{\{DOCX_WML_NAMESPACE}}settings" ||
-    root.name == "{\{DOCX_STRICT_WML_NAMESPACE}}settings" else {
-    raise @transaction.transaction_failure(
-      "office.docx.settings_unreadable", "this document's settings part is not a WML settings part, so its editing protections cannot be checked",
-    )
-  }
   // OUR reading of the part is one consumer's: it supports both WML
   // dialects and nothing else. If no path condition is satisfied by
   // that profile, the consumer this projection describes never reaches
-  // the part, and its reading decides nothing.
+  // the part — its reading decides nothing, and it is not even DEMANDED:
+  // a part whose MustUnderstand this toolkit fails may still be a part
+  // this toolkit never reaches, and refusing over a projection nobody
+  // asked for would refuse documents Word edits.
   let mut profile_reaches = false
   for part_condition in settings_conditions {
     if docx_profile_satisfies(part_condition) {
       profile_reaches = true
     }
   }
-  let effective = if profile_reaches {
-    docx_settings_children(root)
+  // A settings part that cannot be READ cannot be cleared: a preflight
+  // that cannot see its own evidence refuses rather than proceeds. When
+  // our profile reaches the part, both projections come from ONE
+  // bounded MCE parse; when it does not, the raw structure alone is
+  // parsed, and only the conditioned possible-walk judges it.
+  let (raw, effective) = if profile_reaches {
+    let (raw, root) = @xml.read_xml_bytes_strict_mce_with_roots_limited(
+      settings,
+      candidate_xml_budget(),
+      [DOCX_WML_NAMESPACE, DOCX_STRICT_WML_NAMESPACE],
+    ) catch {
+      _ =>
+        raise @transaction.transaction_failure(
+          "office.docx.settings_unreadable", "this document's settings part could not be read, so its editing protections cannot be checked",
+        )
+    }
+    guard root.name == "{\{DOCX_WML_NAMESPACE}}settings" ||
+      root.name == "{\{DOCX_STRICT_WML_NAMESPACE}}settings" else {
+      raise @transaction.transaction_failure(
+        "office.docx.settings_unreadable", "this document's settings part is not a WML settings part, so its editing protections cannot be checked",
+      )
+    }
+    (raw, docx_settings_children(root))
   } else {
-    []
+    let raw = @xml.read_xml_bytes_strict_preserving_limited(
+      settings,
+      candidate_xml_budget(),
+    ) catch {
+      _ =>
+        raise @transaction.transaction_failure(
+          "office.docx.settings_unreadable", "this document's settings part could not be read, so its editing protections cannot be checked",
+        )
+    }
+    (raw, ([] : Array[@xml.XmlElement]))
   }
   // Everything ANY consumer might read at the settings level — but only
   // consumers who can REACH this settings part count: the conditions of
@@ -828,11 +840,13 @@ fn docx_relationship_targets(
     possible_root in docx_mce_possible_roots(root, [
       DOCX_PACKAGE_RELATIONSHIPS_NAMESPACE,
     ]) {
-    let (root_element, root_condition) = possible_root
+    let (root_element, root_condition, chain) = possible_root
     for
-      entry in docx_mce_possible(root_element, [
-        DOCX_PACKAGE_RELATIONSHIPS_NAMESPACE,
-      ]) {
+      entry in docx_mce_possible(
+        root_element,
+        [DOCX_PACKAGE_RELATIONSHIPS_NAMESPACE],
+        context=chain,
+      ) {
       let relationship = entry.0
       // The root's own path condition CONJOINS with the walk's.
       let condition = root_condition.conjoin(entry.1)
@@ -934,7 +948,7 @@ fn docx_settings_possible(
   // a choice requiring the OTHER dialect is conditional, not universal.
   let collected : Array[(@xml.XmlElement, DocxCondition)] = []
   for possible_root in docx_mce_possible_roots(raw, []) {
-    let (root, root_condition) = possible_root
+    let (root, root_condition, chain) = possible_root
     let dialect = if root.name == "{\{DOCX_WML_NAMESPACE}}settings" {
       DOCX_WML_NAMESPACE
     } else if root.name == "{\{DOCX_STRICT_WML_NAMESPACE}}settings" {
@@ -947,7 +961,7 @@ fn docx_settings_possible(
     // path that demanded the dialect unsupported cannot lead to a
     // consumer who then reads this content.
     let reads_part : DocxCondition = { required: [dialect], refused: [], }
-    for entry in docx_mce_possible(root, [dialect]) {
+    for entry in docx_mce_possible(root, [dialect], context=chain) {
       let joined = reads_part.conjoin(root_condition).conjoin(entry.1)
       if joined.satisfiable() {
         collected.push((entry.0, joined))
@@ -968,8 +982,13 @@ fn docx_settings_possible(
 fn docx_mce_possible_roots(
   raw : @xml.XmlElement,
   understood : Array[String],
-) -> Array[(@xml.XmlElement, DocxCondition)] raise @transaction.TransactionError {
-  let roots : Array[(@xml.XmlElement, DocxCondition)] = []
+) -> Array[(@xml.XmlElement, DocxCondition, Array[@xml.XmlElement])] raise @transaction.TransactionError {
+  let roots : Array[(@xml.XmlElement, DocxCondition, Array[@xml.XmlElement])] = []
+  // The elements whose declarations and directives are IN SCOPE at the
+  // root being collected: the walk that later reads the root's content
+  // must replay them, or an inherited binding or process-content rule
+  // vanishes between the two walks.
+  let trail : Array[@xml.XmlElement] = []
   let root_work : Array[Int] = [0]
   fn root_charge(amount : Int) -> Unit raise @transaction.TransactionError {
     root_work[0] += amount
@@ -1189,6 +1208,8 @@ fn docx_mce_possible_roots(
         for clause in passed_over {
           branch_condition.refused.push(clause)
         }
+        trail.push(element)
+        trail.push(branch)
         if branch.name == "{\{DOCX_MC_NAMESPACE}}Choice" {
           let requires = branch_requires(branch)
           let mut decides = false
@@ -1204,6 +1225,9 @@ fn docx_mce_possible_roots(
                 if !understood.contains(uri) {
                   decides = false
                   if seen.get(uri) is None {
+                    if branch_condition.required.length() >= 64 {
+                      raise docx_analysis_refusal()
+                    }
                     seen[uri] = true
                     branch_condition.required.push(uri)
                   }
@@ -1221,6 +1245,8 @@ fn docx_mce_possible_roots(
           // A choice every consumer of the vocabulary satisfies is the
           // one every consumer selects: nothing after it is a root.
           if decides {
+            trail.pop() |> ignore
+            trail.pop() |> ignore
             root_undo_directives(branch_generation_undo, branch_added)
             root_restore(branch_undo)
             break
@@ -1236,6 +1262,9 @@ fn docx_mce_possible_roots(
                   negatable.push(uri)
                 }
               }
+              if negatable.length() > 64 || passed_over.length() >= 64 {
+                raise docx_analysis_refusal()
+              }
               if !negatable.is_empty() {
                 passed_over.push(negatable)
               }
@@ -1250,11 +1279,13 @@ fn docx_mce_possible_roots(
             }
           }
         }
+        trail.pop() |> ignore
+        trail.pop() |> ignore
         root_undo_directives(branch_generation_undo, branch_added)
         root_restore(branch_undo)
       }
     } else if condition.satisfiable() {
-      roots.push((element, condition))
+      roots.push((element, condition, trail.copy()))
       if !understood.contains(root_element_uri(element.name)) &&
         root_matches_process_content(element.name) {
         // Promotion happens for the consumers who find the wrapper
@@ -1263,10 +1294,12 @@ fn docx_mce_possible_roots(
         // are candidate roots for those consumers.
         let promoted = condition.snapshot()
         promoted.refused.push([root_element_uri(element.name)])
+        trail.push(element)
         for node in element.children {
           guard node is XmlElement(candidate) else { continue }
           collect(candidate, promoted)
         }
+        trail.pop() |> ignore
       }
     }
     root_undo_directives(generation_undo, added)
@@ -1398,6 +1431,7 @@ fn DocxCondition::satisfiable(self : DocxCondition) -> Bool {
 fn docx_mce_possible(
   raw : @xml.XmlElement,
   understood : Array[String],
+  context? : Array[@xml.XmlElement] = [],
 ) -> Array[(@xml.XmlElement, DocxCondition)] raise @transaction.TransactionError {
   let possible : Array[(@xml.XmlElement, DocxCondition)] = []
   // The constraints of the path to the element being walked, kept
@@ -1419,9 +1453,15 @@ fn docx_mce_possible(
   // Membership in the path's requirements, as a MAP alongside the
   // array: `contains` over a wide requirement list is quadratic.
   let required_set : Map[String, Bool] = Map([])
-  fn require(uri : String) -> Bool {
+  fn require(uri : String) -> Bool raise @transaction.TransactionError {
     if required_set.get(uri) is Some(_) {
       return false
+    }
+    // Conditions are kept NARROW as well as few: every later operation
+    // on one — conjoining, normalizing, subsumption — is bounded by
+    // its width, so width past the analysis bound refuses here.
+    if required_set.length() >= 64 {
+      raise docx_analysis_refusal()
     }
     required_set[uri] = true
     true
@@ -1671,6 +1711,9 @@ fn docx_mce_possible(
                     negatable.push(uri)
                   }
                 }
+                if negatable.length() > 64 || condition.refused.length() >= 64 {
+                  raise docx_analysis_refusal()
+                }
                 if !negatable.is_empty() && !decided {
                   condition.refused.push(negatable)
                   clauses_added += 1
@@ -1705,6 +1748,13 @@ fn docx_mce_possible(
     }
   }
 
+  // The scope the root INHERITED — wrapper chains an alternate-rooted
+  // part put above it — replays before the root's own declarations, so
+  // an inherited binding or process-content rule still applies.
+  for ancestor in context {
+    declarations(ancestor) |> ignore
+    directives(ancestor) |> ignore
+  }
   let root_undo = declarations(raw)
   let (root_generation_undo, root_added, root_required) = directives(raw)
   level(raw)
