@@ -1942,3 +1942,49 @@ async test "the replace readback batches across paragraphs" {
     assert_eq(replaced.report.replaced, 200)
   })
 }
+
+///|
+/// Round-24 fidelity: an attribute means what the ELEMENT'S dialect
+/// says. The other dialect's spelling is a foreign attribute, not the
+/// flag.
+async test "the preflight reads attributes in the element's own dialect" {
+  with_docx_session_test_dir(directory => {
+    // A Strict-spelled `val` on a Transitional element leaves the
+    // Transitional flag ABSENT, and an absent on/off flag means on.
+    let cross_val = preflight_fixture(
+      directory,
+      "cross-val",
+      "<w:trackRevisions xmlns:ws=\"http://purl.oclc.org/ooxml/wordprocessingml/main\" ws:val=\"false\"/>",
+      [],
+    )
+    let (cross_failure, cross_published) = format_input_probe(
+      cross_val,
+      directory + "/cross-val-out.docx",
+    )
+    guard cross_failure is Some(cross_message) else {
+      fail("a cross-dialect val does not disable a Transitional flag")
+    }
+    assert_true(cross_message.contains("records revisions"), msg=cross_message)
+    assert_false(cross_published, msg="nothing may be published")
+    // A Strict-spelled `enforcement="0"` cannot switch off a
+    // Transitional element's enforced protection.
+    let cross_enforcement = preflight_fixture(
+      directory,
+      "cross-enforcement",
+      "<w:documentProtection xmlns:ws=\"http://purl.oclc.org/ooxml/wordprocessingml/main\" w:edit=\"readOnly\" w:enforcement=\"1\" ws:enforcement=\"0\"/>",
+      [],
+    )
+    let (enforcement_failure, enforcement_published) = format_input_probe(
+      cross_enforcement,
+      directory + "/cross-enforcement-out.docx",
+    )
+    guard enforcement_failure is Some(enforcement_message) else {
+      fail("a cross-dialect enforcement does not unlock the protection")
+    }
+    assert_true(
+      enforcement_message.contains("editing protection"),
+      msg=enforcement_message,
+    )
+    assert_false(enforcement_published, msg="nothing may be published")
+  })
+}

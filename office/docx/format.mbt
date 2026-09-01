@@ -342,24 +342,23 @@ fn docx_document_protection(
       element.name == "{\{DOCX_STRICT_WML_NAMESPACE}}documentProtection" else {
       continue
     }
+    guard docx_element_dialect(element.name) is Some(dialect) else { continue }
     let mut enforcement : DocxSettingsFlag = Disabled
     let mut formatting : DocxSettingsFlag = Disabled
     let mut edit : String? = None
-    for dialect in [DOCX_WML_NAMESPACE, DOCX_STRICT_WML_NAMESPACE] {
-      match element.attributes.get("{\{dialect}}enforcement") {
-        Some(value) =>
-          enforcement = docx_on_off(@xml.collapse_xml_schema_whitespace(value))
-        None => ()
-      }
-      match element.attributes.get("{\{dialect}}formatting") {
-        Some(value) =>
-          formatting = docx_on_off(@xml.collapse_xml_schema_whitespace(value))
-        None => ()
-      }
-      match element.attributes.get("{\{dialect}}edit") {
-        Some(value) => edit = Some(@xml.collapse_xml_schema_whitespace(value))
-        None => ()
-      }
+    match element.attributes.get("{\{dialect}}enforcement") {
+      Some(value) =>
+        enforcement = docx_on_off(@xml.collapse_xml_schema_whitespace(value))
+      None => ()
+    }
+    match element.attributes.get("{\{dialect}}formatting") {
+      Some(value) =>
+        formatting = docx_on_off(@xml.collapse_xml_schema_whitespace(value))
+      None => ()
+    }
+    match element.attributes.get("{\{dialect}}edit") {
+      Some(value) => edit = Some(@xml.collapse_xml_schema_whitespace(value))
+      None => ()
     }
     let state = match enforcement {
       Enabled => {
@@ -744,6 +743,20 @@ const DOCX_WML_NAMESPACE : String = "http://schemas.openxmlformats.org/wordproce
 const DOCX_STRICT_WML_NAMESPACE : String = "http://purl.oclc.org/ooxml/wordprocessingml/main"
 
 ///|
+/// The WML dialect an element belongs to, from its own expanded name:
+/// attributes mean what THAT dialect's schema says, and an attribute
+/// spelled in the other dialect is a foreign attribute, not the flag.
+fn docx_element_dialect(name : String) -> String? {
+  if name.has_prefix("{\{DOCX_WML_NAMESPACE}}") {
+    Some(DOCX_WML_NAMESPACE)
+  } else if name.has_prefix("{\{DOCX_STRICT_WML_NAMESPACE}}") {
+    Some(DOCX_STRICT_WML_NAMESPACE)
+  } else {
+    None
+  }
+}
+
+///|
 /// What a settings flag says.
 priv enum DocxSettingsFlag {
   Missing
@@ -802,21 +815,14 @@ fn docx_settings_flag(
       element.name == "{\{DOCX_STRICT_WML_NAMESPACE}}\{local_name}" else {
       continue
     }
-    let values : Array[String] = []
-    for dialect in [DOCX_WML_NAMESPACE, DOCX_STRICT_WML_NAMESPACE] {
-      if element.attributes.get("{\{dialect}}\{attribute}") is Some(value) {
-        let text = @xml.collapse_xml_schema_whitespace(value)
-        if !values.contains(text) {
-          values.push(text)
-        }
-      }
-    }
-    if values.length() > 1 {
-      observe(Ambiguous)
-    } else if values.is_empty() {
-      observe(if absent_means_on { Enabled } else { Disabled })
-    } else {
-      observe(docx_on_off(values[0]))
+    guard docx_element_dialect(element.name) is Some(dialect) else { continue }
+    // The attribute in the ELEMENT'S OWN dialect: the other dialect's
+    // spelling is a foreign attribute, and reading it as the flag let
+    // a Strict-spelled `val` switch off a Transitional element.
+    match element.attributes.get("{\{dialect}}\{attribute}") {
+      Some(value) =>
+        observe(docx_on_off(@xml.collapse_xml_schema_whitespace(value)))
+      None => observe(if absent_means_on { Enabled } else { Disabled })
     }
   }
   verdict
@@ -840,14 +846,13 @@ fn docx_write_protection_enforced(elements : Array[@xml.XmlElement]) -> Bool {
       element.name == "{\{DOCX_STRICT_WML_NAMESPACE}}writeProtection" else {
       continue
     }
+    guard docx_element_dialect(element.name) is Some(dialect) else { continue }
     let mut recommended_only = false
     for attribute in element.attributes {
-      for dialect in [DOCX_WML_NAMESPACE, DOCX_STRICT_WML_NAMESPACE] {
-        if attribute.0 == "{\{dialect}}recommended" {
-          recommended_only = true
-        } else if attribute.0.has_prefix("{\{dialect}}") {
-          return true
-        }
+      if attribute.0 == "{\{dialect}}recommended" {
+        recommended_only = true
+      } else if attribute.0.has_prefix("{\{dialect}}") {
+        return true
       }
     }
     if !recommended_only {
