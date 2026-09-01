@@ -1193,6 +1193,31 @@ async test "the preflight reads settings as XML" {
       msg="a nested spelling is not a settings child: \{nested_failure}",
     )
     assert_true(nested_published, msg="the edit publishes")
+    // A settings part that DEMANDS an application namespace this
+    // toolkit does not understand is one it cannot judge.
+    let demanding = repackaged_fixture(
+      directory,
+      "demanding",
+      [],
+      [
+        (
+          "word/settings.xml", "mc:Ignorable=\"w14\"", "mc:Ignorable=\"w14\" mc:MustUnderstand=\"w14\"",
+        ),
+      ],
+      [],
+    )
+    let (demanding_failure, demanding_published) = format_input_probe(
+      demanding,
+      directory + "/demanding-out.docx",
+    )
+    guard demanding_failure is Some(demanding_message) else {
+      fail("a settings part this toolkit cannot read is not evidence")
+    }
+    assert_true(
+      demanding_message.contains("could not be read"),
+      msg=demanding_message,
+    )
+    assert_false(demanding_published, msg="nothing may be published")
     // A settings part that does not parse refuses BEFORE the package
     // validation that would also object, with a code that says why.
     let malformed = repackaged_fixture(
