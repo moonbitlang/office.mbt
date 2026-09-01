@@ -185,9 +185,14 @@ pub fn docx_mutation_preflight(
   }
   // A settings part that cannot be READ cannot be cleared: a preflight
   // that cannot see its own evidence refuses rather than proceeds.
-  let root = @xml.read_xml_bytes_strict_limited(
+  // Both projections from ONE bounded parse: the tree markup
+  // compatibility leaves for a consumer that understands no application
+  // namespace — which is what this toolkit is — and the raw tree it was
+  // selected from.
+  let (raw, root) = @xml.read_xml_bytes_strict_mce_with_roots_limited(
     settings,
     candidate_xml_budget(),
+    [],
   ) catch {
     _ =>
       raise @transaction.transaction_failure(
@@ -203,7 +208,8 @@ pub fn docx_mutation_preflight(
   // What this toolkit's reader would act on, and what it would pass
   // over: a protection declared in a branch that is passed over is a
   // protection this preflight cannot resolve, not one it may ignore.
-  let (effective, suppressed) = docx_settings_partition(root)
+  let effective = docx_settings_children(root)
+  let suppressed = docx_settings_alternatives(raw)
   match
     docx_settings_flag(
       effective,
@@ -629,50 +635,49 @@ priv enum DocxSettingsFlag {
 }
 
 ///|
-/// The settings part split the way this toolkit's reader reads
-/// compatibility markup: the content it would act on, and the content it
-/// would pass over.
+/// The settings a consumer acts on: the element children of the part's
+/// root, after markup compatibility has had its say.
 ///
-/// Everywhere else in this toolkit an `mc:AlternateContent` contributes
-/// its FIRST `mc:Fallback` and every `mc:Choice` is suppressed — this
-/// reader claims support for no application namespace. The preflight
-/// reads settings the same way rather than inventing a second policy,
-/// but it does not discard what it passed over: a suppressed branch that
-/// declares a PROTECTION is a document whose protections depend on a
-/// choice this toolkit cannot resolve, and that is refused rather than
-/// guessed at.
-fn docx_settings_partition(
-  root : @xml.XmlElement,
-) -> (Array[@xml.XmlElement], Array[@xml.XmlElement]) {
-  let effective : Array[@xml.XmlElement] = []
-  let suppressed : Array[@xml.XmlElement] = []
-  fn walk(element : @xml.XmlElement, passed_over : Bool) -> Unit {
-    for node in element.children {
-      guard node is XmlElement(child) else { continue }
-      if child.name == "{\{DOCX_MC_NAMESPACE}}AlternateContent" {
-        let mut fallback_seen = false
-        for branch in child.children {
-          guard branch is XmlElement(alternative) else { continue }
-          let selected = alternative.name == "{\{DOCX_MC_NAMESPACE}}Fallback" &&
-            !fallback_seen
-          if selected {
-            fallback_seen = true
-          }
-          walk(alternative, passed_over || !selected)
-        }
-      } else {
-        if passed_over {
-          suppressed.push(child)
-        } else {
-          effective.push(child)
-        }
-        walk(child, passed_over)
+/// A setting is a CHILD of `w:settings`. Compatibility markup is the one
+/// thing that can stand between the two, and the reader above has
+/// already resolved it — selecting fallbacks, dropping ignorable content
+/// the document did not ask to have processed, and promoting the content
+/// it did.
+fn docx_settings_children(root : @xml.XmlElement) -> Array[@xml.XmlElement] {
+  let children : Array[@xml.XmlElement] = []
+  for node in root.children {
+    guard node is XmlElement(child) else { continue }
+    children.push(child)
+  }
+  children
+}
+
+///|
+/// The settings a DIFFERENT consumer might act on: the children of every
+/// `mc:Choice` this toolkit passed over.
+///
+/// A choice is not ignorable content — it is content another application
+/// selects instead of the fallback. So a protection declared only inside
+/// one is a protection whose effect depends on who opens the document,
+/// and the preflight refuses rather than resolving it in its own favour.
+/// Ignorable content is NOT collected here: every consumer drops it.
+fn docx_settings_alternatives(raw : @xml.XmlElement) -> Array[@xml.XmlElement] {
+  let alternatives : Array[@xml.XmlElement] = []
+  for node in raw.children {
+    guard node is XmlElement(child) else { continue }
+    guard child.name == "{\{DOCX_MC_NAMESPACE}}AlternateContent" else {
+      continue
+    }
+    for branch in child.children {
+      guard branch is XmlElement(alternative) else { continue }
+      guard alternative.name == "{\{DOCX_MC_NAMESPACE}}Choice" else { continue }
+      for node in alternative.children {
+        guard node is XmlElement(candidate) else { continue }
+        alternatives.push(candidate)
       }
     }
   }
-
-  walk(root, false)
-  (effective, suppressed)
+  alternatives
 }
 
 ///|

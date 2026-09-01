@@ -261,3 +261,60 @@ async test "one request formats hundreds of paragraphs" {
     assert_eq(document.split("filler 0 ").collect().length() - 1, paragraphs)
   })
 }
+
+///|
+/// The preservation check compares run properties EXACTLY.
+///
+/// The two font names below are a genuine 32-bit FNV-1a collision of
+/// equal length, so a digest cannot tell the properties apart. An edit
+/// that formats one run while quietly restyling another would then read
+/// as preserved — every other check passes, because the projection is
+/// unchanged and the requested span does carry the request.
+async test "the readback tells apart properties a digest cannot" {
+  with_format_readback_dir(directory => {
+    let source = format_readback_fixture(
+      directory,
+      "collision.docx",
+      "<w:r><w:rPr><w:rFonts w:ascii=\"9I3j5pcgc3pe\"/></w:rPr><w:t xml:space=\"preserve\">keep </w:t></w:r>" +
+      "<w:r><w:t>Hello world</w:t></w:r>",
+    )
+    let format = @word.docx_direct_format(bold=true)
+    let output = directory + "/collision-out.docx"
+    transact_docx_format(
+      @transaction.transaction_options(source, output_path=output),
+      format~,
+      text="world",
+    )
+    |> ignore
+    let candidate = @zip.read(@afs.read_file(output).binary())
+    let before_archive = @zip.read(@afs.read_file(source).binary())
+    let before = @word.read_docx_annotated_archive_limited(
+      before_archive,
+      candidate_xml_budget(),
+    )
+    let (_, receipt) = @word.plan_docx_format(
+      before,
+      before.main_story_source(),
+      format~,
+      text="world",
+    )
+    let snapshot : Ref[FormatReadbackSnapshot?] = Ref(
+      Some({ before, affected: receipt.affected(), spans: receipt.spans(), }),
+    )
+    assert_eq(
+      finding_codes(format_readback_findings(snapshot, format, Docx, candidate)),
+      "",
+    )
+    assert_eq(
+      finding_codes(
+        format_readback_findings(
+          snapshot,
+          format,
+          Docx,
+          doctored_candidate(candidate, "9I3j5pcgc3pe", "mcMjAGhcZAtJ"),
+        ),
+      ),
+      "docx.format.readback_collateral",
+    )
+  })
+}

@@ -834,6 +834,9 @@ pub fn docx_paragraphs_format_preserved(
   }
   let before_index = docx_story_index(before_projection)
   let after_index = docx_story_index(after_projection)
+  // ONE identity table for the whole batch: ids from the two documents
+  // are compared against each other, so they must be minted together.
+  let interner = DocxFormatInterner::new()
   let answers : Array[String?] = []
   for request in requests {
     answers.push(
@@ -847,6 +850,7 @@ pub fn docx_paragraphs_format_preserved(
         request.0,
         request.1,
         format,
+        interner,
       ),
     )
   }
@@ -865,6 +869,7 @@ fn docx_paragraph_format_preserved_at(
   path : String,
   spans : Array[(Int, Int)],
   format : DocxDirectFormat,
+  interner : DocxFormatInterner,
 ) -> String? raise DocxError {
   // Inside a span only the REQUESTED properties may differ: an
   // omitted property means untouched, so a plan that dropped an
@@ -873,13 +878,21 @@ fn docx_paragraph_format_preserved_at(
   let touched = docx_format_touched_properties(format)
   let filtered : Map[String, String] = Map([])
   guard docx_format_paragraph_provenance(
-      before_projection, before_bytes, before_index, path,
+      before_projection,
+      before_bytes,
+      before_index,
+      path,
+      interner~,
     )
     is Some((original_units, original_silent, original_mark)) else {
     return Some("the path '\{path}' names no single paragraph before the edit")
   }
   guard docx_format_paragraph_provenance(
-      after_projection, after_bytes, after_index, path,
+      after_projection,
+      after_bytes,
+      after_index,
+      path,
+      interner~,
     )
     is Some((result_units, result_silent, result_mark)) else {
     return Some("the path '\{path}' names no single paragraph after the edit")
@@ -934,8 +947,15 @@ fn docx_paragraph_format_preserved_at(
           original_key,
           touched,
           filtered~,
+          interner~,
         ) ==
-        docx_format_filtered(result_properties, result_key, touched, filtered~) else {
+        docx_format_filtered(
+          result_properties,
+          result_key,
+          touched,
+          filtered~,
+          interner~,
+        ) else {
         return Some(
           "unit \{unit} of '\{path}' lost or gained a run property the request never named",
         )
@@ -973,6 +993,7 @@ fn docx_format_paragraph_provenance(
   bytes : BytesView,
   index : DocxStoryIndex,
   path : String,
+  interner~ : DocxFormatInterner,
 ) -> (Array[(String, String, String)], Array[String], String)? raise DocxError {
   let elements = projection.scan.elements()
   let (target, found) = index.locate(path)
@@ -1029,7 +1050,7 @@ fn docx_format_paragraph_provenance(
     let properties_key = match keys_by_run.get(run_identity) {
       Some(known) => known
       None => {
-        let read = docx_format_fingerprint(properties)
+        let read = interner.id(properties)
         keys_by_run[run_identity] = read
         read
       }
@@ -1149,6 +1170,7 @@ fn docx_format_paragraph_provenance(
       elements,
       run_identity,
       signatures~,
+      interner~,
     )
     let properties = docx_format_run_properties(
       bytes,
@@ -1186,9 +1208,10 @@ fn docx_format_paragraph_provenance(
       signatures~,
       keys~,
       namespace_tokens~,
+      interner~,
     )
     silent.push(
-      "\{owner_path}\u{1}\{docx_format_fingerprint(format_surgery_decode(bytes[entry.byte_start:entry.byte_end]))}\u{1}\{binding_digests.get(carrier_identity).unwrap_or(0)}",
+      "\{owner_path}\u{1}\{interner.id(format_surgery_decode(bytes[entry.byte_start:entry.byte_end]))}\u{1}\{binding_digests.get(carrier_identity).unwrap_or(0)}",
     )
   }
   // Every pPr in the paragraph's physical subtree, in document order:
@@ -1222,13 +1245,12 @@ fn docx_format_paragraph_provenance(
         signatures~,
         keys~,
         namespace_tokens~,
+        interner~,
       ),
     )
     mark_builder.write_string("=")
     mark_builder.write_string(
-      docx_format_fingerprint(
-        format_surgery_decode(bytes[entry.byte_start:entry.byte_end]),
-      ),
+      interner.id(format_surgery_decode(bytes[entry.byte_start:entry.byte_end])),
     )
     mark_builder.write_string("~")
     mark_builder.write_string(
@@ -1689,6 +1711,7 @@ fn docx_format_carrier_key(
   signatures~ : Map[Int, String],
   keys~ : Map[Int, String],
   namespace_tokens~ : Map[Int, UInt],
+  interner~ : DocxFormatInterner,
 ) -> String raise DocxError {
   if element_identity < 0 ||
     element_identity >= elements.length() ||
@@ -1706,6 +1729,7 @@ fn docx_format_carrier_key(
           elements,
           element_identity,
           signatures~,
+          interner~,
         )
         "r@\{offset}#{\{signature}}"
       } else {
@@ -1720,8 +1744,9 @@ fn docx_format_carrier_key(
         signatures~,
         keys~,
         namespace_tokens~,
+        interner~,
       )
-      let key = docx_format_fingerprint("\{parent}/\{step}")
+      let key = interner.id("\{parent}/\{step}")
       keys[element_identity] = key
       key
     }
@@ -1729,16 +1754,37 @@ fn docx_format_carrier_key(
 }
 
 ///|
-/// A bounded fingerprint: length and an FNV-1a digest. Two texts differ
-/// in this exactly when a collision does not hide it, and the length is
-/// carried alongside so a collision must also match in size.
-fn docx_format_fingerprint(text : String) -> String {
-  let mut hash : UInt = 2166136261
-  for unit in text.code_units() {
-    hash = hash ^ unit.to_uint()
-    hash = hash * 16777619
+/// Dense identities for texts, EXACT by construction.
+///
+/// The comparisons this file makes are equality comparisons, and a
+/// digest answers them only up to its collisions — a 32-bit one is
+/// searchable, and two twelve-character font names that collide are a
+/// candidate whose unrequested change the preservation check would call
+/// preserved. Interning costs the same pass over the text a digest
+/// would, and two ids are equal exactly when the texts are.
+///
+/// The entries themselves stay small, which is what the digest was for:
+/// a unit's entry holds an id rather than the property text, so an
+/// array of them grows with the units and not with their product.
+priv struct DocxFormatInterner {
+  ids : Map[String, Int]
+}
+
+///|
+fn DocxFormatInterner::new() -> DocxFormatInterner {
+  { ids: Map([]), }
+}
+
+///|
+fn DocxFormatInterner::id(self : DocxFormatInterner, text : String) -> String {
+  match self.ids.get(text) {
+    Some(known) => "\{known}"
+    None => {
+      let id = self.ids.length()
+      self.ids[text] = id
+      "\{id}"
+    }
   }
-  "\{text.length()}:\{hash}"
 }
 
 ///|
@@ -1752,12 +1798,13 @@ fn docx_format_run_signature_key(
   elements : Array[ScannedElement],
   run_identity : Int,
   signatures~ : Map[Int, String],
+  interner~ : DocxFormatInterner,
 ) -> String raise DocxError {
   match signatures.get(run_identity) {
     Some(known) => known
     None => {
       let signature = docx_format_run_signature(bytes, elements, run_identity)
-      let key = docx_format_fingerprint(signature)
+      let key = interner.id(signature)
       signatures[run_identity] = key
       key
     }
@@ -1773,15 +1820,14 @@ fn docx_format_filtered(
   properties_key : String,
   touched : Array[String],
   filtered~ : Map[String, String],
+  interner~ : DocxFormatInterner,
 ) -> String raise DocxError {
   // Keyed by the properties' own small fingerprint: keying by the text
   // would hash every byte of it on each lookup.
   match filtered.get(properties_key) {
     Some(known) => known
     None => {
-      let result = docx_format_fingerprint(
-        docx_format_without(properties, touched),
-      )
+      let result = interner.id(docx_format_without(properties, touched))
       filtered[properties_key] = result
       result
     }

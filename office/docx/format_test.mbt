@@ -1137,6 +1137,62 @@ async test "the preflight reads settings as XML" {
       nonsense_message.contains("outside the schema"),
       msg=nonsense_message,
     )
+    // Ignorable content is content EVERY consumer drops, so a setting
+    // inside it is not this document's setting. (The fixture's settings
+    // root declares `mc:Ignorable="w14"` already.)
+    let ignorable = preflight_fixture(
+      directory,
+      "ignorable",
+      "<w14:wrap><w:trackRevisions/></w14:wrap>",
+      [],
+    )
+    let (ignorable_failure, ignorable_published) = format_input_probe(
+      ignorable,
+      directory + "/ignorable-out.docx",
+    )
+    assert_true(
+      ignorable_failure is None,
+      msg="ignorable content is dropped, not obeyed: \{ignorable_failure}",
+    )
+    assert_true(ignorable_published, msg="the edit publishes")
+    // The same wrapper asking for its CONTENT to be processed promotes
+    // what it holds to the settings level, where it counts.
+    let processed = preflight_fixture(
+      directory,
+      "processed",
+      "<w14:wrap mc:ProcessContent=\"w14:wrap\"><w:trackRevisions/></w14:wrap>",
+      [],
+    )
+    let (processed_failure, processed_published) = format_input_probe(
+      processed,
+      directory + "/processed-out.docx",
+    )
+    guard processed_failure is Some(processed_message) else {
+      fail("promoted content is a settings child")
+    }
+    assert_true(
+      processed_message.contains("records revisions"),
+      msg=processed_message,
+    )
+    assert_false(processed_published, msg="nothing may be published")
+    // A settings ELEMENT is a child of `w:settings`. The same spelling
+    // nested inside another element is not this document's setting, and
+    // reading it as one would refuse documents that never asked for it.
+    let nested = preflight_fixture(
+      directory,
+      "nested",
+      "<w:compat><w:trackRevisions/></w:compat>",
+      [],
+    )
+    let (nested_failure, nested_published) = format_input_probe(
+      nested,
+      directory + "/nested-out.docx",
+    )
+    assert_true(
+      nested_failure is None,
+      msg="a nested spelling is not a settings child: \{nested_failure}",
+    )
+    assert_true(nested_published, msg="the edit publishes")
     // A settings part that does not parse refuses BEFORE the package
     // validation that would also object, with a code that says why.
     let malformed = repackaged_fixture(
