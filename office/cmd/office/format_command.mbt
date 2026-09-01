@@ -33,42 +33,55 @@ fn format_command() -> @argparse.Command {
       OptionArg(
         "text",
         long="text",
+        action=Append,
         about="literal text to format — never a regular expression; matched over the reader PROJECTION, so it spans run boundaries. Every occurrence is selected unless --nth narrows it",
       ),
       OptionArg(
         "in",
         long="in",
+        action=Append,
         about="restrict to a body-relative subtree (p[3], tbl[1]) or a stable p[id=\"…\"]; required by --range, which needs ONE paragraph",
       ),
       OptionArg(
         "range",
         long="range",
+        action=Append,
         about="format a paragraph-local unit range START:END (the units `office find` and `office get` report), instead of --text; requires --in naming one paragraph",
       ),
       OptionArg(
         "nth",
         long="nth",
+        action=Append,
         about="select ONE text occurrence by ordinal (1-based, counted over all occurrences)",
       ),
       OptionArg(
         "bold",
         long="bold",
+        action=Append,
         about="on|off — set or clear bold explicitly; omitted properties are left untouched",
       ),
-      OptionArg("italic", long="italic", about="on|off — set or clear italic"),
+      OptionArg(
+        "italic",
+        long="italic",
+        action=Append,
+        about="on|off — set or clear italic",
+      ),
       OptionArg(
         "underline",
         long="underline",
+        action=Append,
         about="on|off — set or clear single underline",
       ),
       OptionArg(
         "color",
         long="color",
+        action=Append,
         about="RRGGBB or #RRGGBB — set an absolute text colour (theme linkage is removed; the engine refuses if it cannot)",
       ),
       OptionArg(
         "expect",
         long="expect",
+        action=Append,
         about="assert exactly N spans are selected; a mismatch refuses before anything is written",
       ),
     ],
@@ -91,6 +104,30 @@ fn format_command() -> @argparse.Command {
       docx_json_flag(),
     ],
   )
+}
+
+///|
+/// A scalar option given twice is a CONTRADICTION, not a preference for
+/// the later spelling: `--bold on --bold off` must refuse, and so must
+/// a duplicated selector or scope that would silently change targets.
+fn format_reject_duplicates(
+  matches : @argparse.Matches,
+) -> Unit raise CliFailure {
+  for
+    name in [
+      "text", "in", "range", "nth", "bold", "italic", "underline", "color", "expect",
+    ] {
+    match matches.values.get(name) {
+      Some(values) if values.length() > 1 =>
+        raise CliFailure(
+          @lib.protocol_error(
+            "office.invalid_arguments",
+            "--\{name} was given \{values.length()} times; pass each option once",
+          ),
+        )
+      _ => ()
+    }
+  }
 }
 
 ///|
@@ -176,6 +213,30 @@ fn format_validate_scope(scope : String) -> Unit raise CliFailure {
     )
   }
   if scope.has_prefix("p[id=") {
+    // Only the EXACT single-segment stable shape goes to the engine's
+    // semantic validation; every other stable-looking spelling is
+    // malformed grammar and refuses here, before any file is read.
+    guard scope.has_prefix("p[id=\"") &&
+      scope.has_suffix("\"]") &&
+      scope.length() > 8 else {
+      raise CliFailure(
+        @lib.protocol_error(
+          "office.invalid_arguments",
+          "--in '\{bounded_text(scope, 80)}' is not the stable shape p[id=\"…\"]; pass the exact para_id spelling the read surfaces report",
+        ),
+      )
+    }
+    let inner = scope.substring(start=7, end=scope.length() - 2)
+    for ch in inner {
+      guard ch != '"' && ch != ']' else {
+        raise CliFailure(
+          @lib.protocol_error(
+            "office.invalid_arguments",
+            "--in '\{bounded_text(scope, 80)}' is not the stable shape p[id=\"…\"]; pass the exact para_id spelling the read surfaces report",
+          ),
+        )
+      }
+    }
     return
   }
   let full = "/docx/body/" + scope
@@ -337,6 +398,7 @@ fn ensure_format_report_budget(
 
 ///|
 async fn run_format(matches : @argparse.Matches) -> Unit {
+  format_reject_duplicates(matches)
   let file = required_value(matches, "file")
   let output = required_value(matches, "out")
   let mode = office_validate_output_mode(matches)
