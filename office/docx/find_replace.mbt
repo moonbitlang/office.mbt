@@ -8,11 +8,11 @@
 ///|
 /// What one replace transaction did.
 pub struct DocxFindReplaceReport {
-  selected : Array[Int]
-  replaced : Int
-  affected_paths : Array[String]
-  affected : Array[@word.DocxReplaceAffected]
-  matches : Array[@word.DocxMatch]
+  priv selected : Array[Int]
+  priv replaced : Int
+  priv affected_paths : Array[String]
+  priv affected : Array[@word.DocxReplaceAffected]
+  priv matches : Array[@word.DocxMatch]
   // The scan path a stable `p[id="…"]` scope resolved to, when the
   // request used one — the receipt names both spellings so an agent
   // can re-anchor.
@@ -23,7 +23,7 @@ pub struct DocxFindReplaceReport {
 pub fn DocxFindReplaceReport::selected(
   self : DocxFindReplaceReport,
 ) -> Array[Int] {
-  self.selected
+  self.selected.copy()
 }
 
 ///|
@@ -35,7 +35,7 @@ pub fn DocxFindReplaceReport::replaced(self : DocxFindReplaceReport) -> Int {
 pub fn DocxFindReplaceReport::affected_paths(
   self : DocxFindReplaceReport,
 ) -> Array[String] {
-  self.affected_paths
+  self.affected_paths.copy()
 }
 
 ///|
@@ -44,7 +44,7 @@ pub fn DocxFindReplaceReport::affected_paths(
 pub fn DocxFindReplaceReport::affected(
   self : DocxFindReplaceReport,
 ) -> Array[@word.DocxReplaceAffected] {
-  self.affected
+  self.affected.copy()
 }
 
 ///|
@@ -61,7 +61,7 @@ pub fn DocxFindReplaceReport::resolved_within(
 pub fn DocxFindReplaceReport::matches(
   self : DocxFindReplaceReport,
 ) -> Array[@word.DocxMatch] {
-  self.matches
+  self.matches.map(@word.DocxMatch::copy)
 }
 
 ///|
@@ -232,9 +232,16 @@ fn replace_readback_validator(
       }
     }
     let story = annotated.main_story_source()
-    for entry in affected.val {
-      match
-        @word.docx_paragraph_projection(annotated, story, path=entry.path()) {
+    // ONE batch for the whole story: resolving a paragraph path costs a
+    // pass over the document, so asking per affected paragraph would
+    // cost the document once per replacement site.
+    let projections = @word.docx_paragraphs_projection(
+      annotated,
+      story,
+      paths=affected.val.map(entry => entry.path()),
+    )
+    for position, entry in affected.val {
+      match projections[position] {
         Some(actual) =>
           if actual != entry.expected() {
             findings.push(

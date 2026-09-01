@@ -486,6 +486,10 @@ pub async fn transact_docx_annotations(
           "annotation transaction received a \{format.name()} package",
         )
       }
+      // The SHARED mutation preflight, on the same terms as every other
+      // verb: this transaction does not open an edit session, so it must
+      // ask for itself.
+      docx_mutation_preflight(archive)
       let result : DocxAnnotationReport = {
         ops_applied: 0,
         results: [],

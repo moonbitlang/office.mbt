@@ -791,14 +791,30 @@ pub fn package_validator(
 }
 
 ///|
-/// Runs a complete async DOCX transaction: bounded read, session construction,
-/// caller edits, strict candidate validation, preservation enforcement, source
-/// conflict detection, and atomic publication. The returned transaction report
-/// is the authoritative preservation report.
+/// Runs a complete async DOCX transaction: the shared mutation preflight,
+/// bounded read, session construction, caller edits, strict candidate
+/// validation, preservation enforcement, source conflict detection, and atomic
+/// publication. The returned transaction report is the authoritative
+/// preservation report.
 pub async fn transact_docx(
   options : @transaction.TransactionOptions,
   edit : (DocxEditSession) -> Unit raise,
   validators? : Array[@transaction.TransactionValidator] = [],
+) -> @transaction.TransactionReport {
+  docx_transaction(options, edit, validators~, tracking_waived=false)
+}
+
+///|
+/// The transaction every DOCX verb runs, with the ONE preflight waiver
+/// this package grants itself. The waiver is not a parameter of the
+/// public entry point: a caller who could ask for it could edit a
+/// document that records revisions by simply saying it was resolving
+/// them.
+async fn docx_transaction(
+  options : @transaction.TransactionOptions,
+  edit : (DocxEditSession) -> Unit raise,
+  validators~ : Array[@transaction.TransactionValidator],
+  tracking_waived~ : Bool,
 ) -> @transaction.TransactionReport {
   let validators = validators.copy()
   let source_para_id_inventory : Ref[Map[String, Array[String]]?] = Ref(None)
@@ -812,6 +828,10 @@ pub async fn transact_docx(
           "DOCX edit transaction received a \{format.name()} package",
         )
       }
+      // The SHARED mutation preflight, before any verb plans anything:
+      // a signed package, an enforced protection, or a document
+      // recording revisions is not edited by this toolkit at all.
+      docx_mutation_preflight(archive, tracking_waived~)
       let session = open_edit_session(archive, budget)
       // The SOURCE's identity inventory, captured before any edit is
       // queued: the candidate gate compares against this, so existing

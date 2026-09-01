@@ -40,13 +40,26 @@ pub struct DocxReplaceAffected {
 pub fn DocxReplaceReceipt::matches(
   self : DocxReplaceReceipt,
 ) -> Array[DocxMatch] {
-  self.matches
+  // A match carries arrays of its own, so copying only the outer array
+  // would hand the caller a handle back into the receipt.
+  self.matches.map(DocxMatch::copy)
+}
+
+///|
+/// A match that shares nothing with this one.
+pub fn DocxMatch::copy(self : DocxMatch) -> DocxMatch {
+  {
+    ..self,
+    runs: self.runs.copy(),
+    run_kinds: self.run_kinds.copy(),
+    physical_para_ids: self.physical_para_ids.copy(),
+  }
 }
 
 ///|
 /// The candidate ordinals this plan replaces, in document order.
 pub fn DocxReplaceReceipt::selected(self : DocxReplaceReceipt) -> Array[Int] {
-  self.selected
+  self.selected.copy()
 }
 
 ///|
@@ -60,7 +73,7 @@ pub fn DocxReplaceReceipt::replaced(self : DocxReplaceReceipt) -> Int {
 pub fn DocxReplaceReceipt::affected(
   self : DocxReplaceReceipt,
 ) -> Array[DocxReplaceAffected] {
-  self.affected
+  self.affected.copy()
 }
 
 ///|
@@ -179,12 +192,22 @@ pub fn plan_docx_replacements(
   // same identity find used to name it.
   let paragraph_paths = find_path_map(projection.scan, "p")
   let elements = projection.scan.elements()
+  // A path CLAIMED BY TWO paragraphs cannot be planned against: the
+  // selection named one of them and a last-wins map could plan against
+  // the other, publishing an edit to a paragraph nobody selected.
   let index_by_path : Map[String, Int] = Map([])
+  let claimants : Map[String, Int] = Map([])
   for paragraph_index, paragraph in projection.paragraphs {
     guard paragraph.sources.length() > 0 else { continue }
     let SourceElementId(head) = paragraph.sources[0].source
     if paragraph_paths.get(elements[head].byte_start) is Some(path) {
-      index_by_path[path] = paragraph_index
+      match claimants.get(path) {
+        Some(count) => claimants[path] = count + 1
+        None => {
+          claimants[path] = 1
+          index_by_path[path] = paragraph_index
+        }
+      }
     }
   }
   // One batch per paragraph, in document order: the partial planner
@@ -206,6 +229,11 @@ pub fn plan_docx_replacements(
     guard index_by_path.get(path) is Some(paragraph_index) else {
       raise Unsupported(
         message="candidate paragraph '\{path}' did not resolve to a projection paragraph",
+      )
+    }
+    guard claimants.get(path) == Some(1) else {
+      raise Unsupported(
+        message="the path '\{path}' names more than one logical paragraph, so the selection cannot be planned against",
       )
     }
     let edits : Array[ParagraphTextEdit] = []
@@ -268,17 +296,32 @@ pub fn docx_paragraph_projection(
   story : DocxStoryPartSource,
   path~ : String,
 ) -> String? {
+  docx_paragraphs_projection(annotated, story, paths=[path])[0]
+}
+
+///|
+/// The projections of many paragraphs of one story, with the path
+/// lookup built once for the whole batch: asking per paragraph costs
+/// the whole story per question. Answers are returned in the order
+/// asked, `None` where the path names no paragraph.
+pub fn docx_paragraphs_projection(
+  annotated : DocxAnnotatedResult,
+  story : DocxStoryPartSource,
+  paths~ : Array[String],
+) -> Array[String?] {
+  guard !paths.is_empty() else { return [] }
   guard annotated.reader_projections.get(story.part()) is Some(projection) else {
-    return None
+    return paths.map(_ => None)
   }
-  let paragraph_paths = find_path_map(projection.scan, "p")
-  let elements = projection.scan.elements()
-  for paragraph in projection.paragraphs {
-    guard paragraph.sources.length() > 0 else { continue }
-    let SourceElementId(head) = paragraph.sources[0].source
-    if paragraph_paths.get(elements[head].byte_start) == Some(path) {
-      return Some(find_paragraph_projection(paragraph))
+  let index = docx_story_index(projection)
+  paths.map(path => {
+    // A collided path cannot be answered for: the planner refuses
+    // these, so seeing one at readback means the document changed
+    // shape under the edit.
+    match index.locate(path) {
+      (target, 1) if target >= 0 =>
+        Some(find_paragraph_projection(projection.paragraphs[target]))
+      _ => None
     }
-  }
-  None
+  })
 }

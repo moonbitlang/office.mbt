@@ -4,6 +4,7 @@ package "bobzhang/office-lib/docx"
 import {
   "bobzhang/docx2html/batch",
   "bobzhang/docx2html/splice",
+  "bobzhang/mbtexcel/zip",
   "bobzhang/office-lib/template",
   "bobzhang/office-lib/transaction",
   "moonbitlang/core/debug",
@@ -53,6 +54,8 @@ pub async fn create_blank_document(@transaction.CreateTransactionOptions) -> Doc
 
 pub fn docx_edit_operation_names_list() -> Array[String]
 
+pub fn docx_mutation_preflight(@zip.Archive, tracking_waived? : Bool) -> Unit raise @transaction.TransactionError
+
 pub fn package_validator(source_para_id_inventory? : @ref.Ref[Map[String, Array[String]]?]) -> @transaction.TransactionValidator raise @transaction.TransactionError
 
 pub fn parse_annotation_batch(String) -> AnnotationBatch raise DocxAnnotationParseError
@@ -68,6 +71,8 @@ pub async fn transact_docx_annotations(@transaction.TransactionOptions, Annotati
 pub async fn transact_docx_edit(@transaction.TransactionOptions, DocxEditScript, allow_unmatched~ : Bool) -> DocxEditResult
 
 pub async fn transact_docx_find_replace(@transaction.TransactionOptions, needle~ : String, replacement~ : String, within? : String, nth? : Int, expect? : Int, allow_zero? : Bool, preflight? : (DocxFindReplaceReport) -> Unit raise) -> DocxFindReplaceResult
+
+pub async fn transact_docx_format(@transaction.TransactionOptions, format~ : @bobzhang/docx2html/docx.DocxDirectFormat, text? : String, within? : String, nth? : Int, range? : (Int, Int), expect? : Int, allow_zero? : Bool, preflight? : (DocxFormatReport) -> Unit raise) -> DocxFormatResult
 
 pub async fn transact_docx_insert_paragraph(@transaction.TransactionOptions, at~ : String, before~ : Bool, content~ : @bobzhang/docx2html/docx.DocxInsertContent) -> DocxInsertParagraphResult
 
@@ -238,6 +243,7 @@ pub fn DocxEditSession::queue_comment_addition(Self, at_relative~ : String, to_r
 pub fn DocxEditSession::queue_comment_reply(Self, parent_id~ : String, @bobzhang/docx2html/docx.CommentSpec) -> String raise @transaction.TransactionError
 pub fn DocxEditSession::queue_comment_resolution(Self, comment_id~ : String, done~ : Bool) -> Unit raise @transaction.TransactionError
 pub fn DocxEditSession::queue_find_replace(Self, needle~ : String, replacement~ : String, within? : String, nth? : Int) -> (@bobzhang/docx2html/docx.DocxReplaceReceipt, String?) raise @transaction.TransactionError
+pub fn DocxEditSession::queue_format(Self, format~ : @bobzhang/docx2html/docx.DocxDirectFormat, text? : String, within? : String, nth? : Int, range? : (Int, Int)) -> (@bobzhang/docx2html/docx.DocxFormatReceipt, String?) raise @transaction.TransactionError
 pub fn DocxEditSession::queue_insert_paragraph(Self, at~ : String, before~ : Bool, content~ : @bobzhang/docx2html/docx.DocxInsertContent) -> @bobzhang/docx2html/docx.DocxInsertReceipt raise @transaction.TransactionError
 pub fn DocxEditSession::queue_plan(Self, @splice.SplicePlan) -> Unit raise @transaction.TransactionError
 pub fn DocxEditSession::queue_run_text_replacement(Self, at_relative~ : String, expect~ : String, text~ : String) -> @bobzhang/docx2html/docx.RunTextReceipt raise @transaction.TransactionError
@@ -245,12 +251,8 @@ pub fn DocxEditSession::queue_span_edit(Self, String, start~ : Int, end~ : Int, 
 pub fn DocxEditSession::source_part_fingerprints(Self) -> Array[DocxPartFingerprint]
 
 pub struct DocxFindReplaceReport {
-  selected : Array[Int]
-  replaced : Int
-  affected_paths : Array[String]
-  affected : Array[@bobzhang/docx2html/docx.DocxReplaceAffected]
-  matches : Array[@bobzhang/docx2html/docx.DocxMatch]
   resolved_within : String?
+  // private fields
 }
 pub fn DocxFindReplaceReport::affected(Self) -> Array[@bobzhang/docx2html/docx.DocxReplaceAffected]
 pub fn DocxFindReplaceReport::affected_paths(Self) -> Array[String]
@@ -265,6 +267,31 @@ pub struct DocxFindReplaceResult {
 }
 pub fn DocxFindReplaceResult::report(Self) -> DocxFindReplaceReport
 pub fn DocxFindReplaceResult::transaction(Self) -> @transaction.TransactionReport
+
+pub struct DocxFormatReport {
+  // private fields
+}
+pub fn DocxFormatReport::affected(Self) -> Array[@bobzhang/docx2html/docx.DocxFormatAffected]
+pub fn DocxFormatReport::affected_paths(Self) -> Array[String]
+pub fn DocxFormatReport::byte_edits(Self) -> Int
+pub fn DocxFormatReport::mode(Self) -> String
+pub fn DocxFormatReport::requested_nth(Self) -> Int?
+pub fn DocxFormatReport::requested_range(Self) -> (Int, Int)?
+pub fn DocxFormatReport::requested_text(Self) -> String?
+pub fn DocxFormatReport::requested_within(Self) -> String?
+pub fn DocxFormatReport::resolved_within(Self) -> String?
+pub fn DocxFormatReport::runs_already_satisfied(Self) -> Int
+pub fn DocxFormatReport::runs_changed(Self) -> Int
+pub fn DocxFormatReport::selected(Self) -> Array[Int]
+pub fn DocxFormatReport::spans(Self) -> Array[@bobzhang/docx2html/docx.DocxFormatSpan]
+pub fn DocxFormatReport::splits(Self) -> Int
+
+pub struct DocxFormatResult {
+  report : DocxFormatReport
+  transaction : @transaction.TransactionReport
+}
+pub fn DocxFormatResult::report(Self) -> DocxFormatReport
+pub fn DocxFormatResult::transaction(Self) -> @transaction.TransactionReport
 
 pub struct DocxInsertParagraphReport {
   // private fields

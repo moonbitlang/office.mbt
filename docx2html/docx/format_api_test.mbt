@@ -2357,3 +2357,67 @@ test "format preservation stays bounded on adversarial shapes" {
     None,
   )
 }
+
+///|
+/// Markup-compatibility directives name namespaces and elements in
+/// their VALUES, so a prefix can be load-bearing without appearing in
+/// any element or attribute name. Both sabotages keep the pPr bytes
+/// identical and rebind a prefix the directives depend on — one that
+/// `Requires` names, one that `Ignorable`/`ProcessContent`/
+/// `PreserveElements`/`PreserveAttributes` name — and only the binding
+/// identity in the preservation check can tell.
+test "format preservation sees rebinding behind compatibility directives" {
+  fn directive_body(q : String, q2 : String) -> String {
+    "<w:p xmlns:q=\"\{q}\" xmlns:q2=\"\{q2}\"><w:pPr>" +
+    "<mc:AlternateContent xmlns:mc=\"http://schemas.openxmlformats.org/markup-compatibility/2006\" " +
+    "mc:Ignorable=\"q2\" mc:ProcessContent=\"q2:junk\" mc:PreserveElements=\"q2:junk\" mc:PreserveAttributes=\"q2:attr\" mc:MustUnderstand=\"w\">" +
+    "<mc:Choice Requires=\"q\"><w:jc w:val=\"center\"/></mc:Choice>" +
+    "<mc:Fallback><w:jc w:val=\"left\"/></mc:Fallback>" +
+    "</mc:AlternateContent>" +
+    "</w:pPr><w:r><w:t>alpha</w:t></w:r></w:p>"
+  }
+
+  let body = directive_body("urn:example:a", "urn:example:b")
+  let annotated = format_fixture(body)
+  let (plan, _) = @docx.plan_docx_format(
+    annotated,
+    annotated.main_story_source(),
+    format=@docx.docx_direct_format(bold=true),
+    within="p[1]",
+    range=(0, 2),
+  )
+  let faithful = format_apply(body, plan)
+  assert_eq(
+    @docx.docx_paragraph_format_preserved(
+      annotated,
+      annotated.main_story_source(),
+      faithful,
+      faithful.main_story_source(),
+      path="p[1]",
+      spans=[(0, 2)],
+      format=@docx.docx_direct_format(bold=true),
+    ),
+    None,
+  )
+  for
+    sabotage in [
+      directive_body("urn:example:evil", "urn:example:b"),
+      directive_body("urn:example:a", "urn:example:evil"),
+    ] {
+    let sabotaged = @docx.read_docx_annotated(
+      fixture_docx(format_fixture_body(sabotage)),
+    )
+    assert_true(
+      @docx.docx_paragraph_format_preserved(
+        annotated,
+        annotated.main_story_source(),
+        sabotaged,
+        sabotaged.main_story_source(),
+        path="p[1]",
+        spans=[(0, 2)],
+        format=@docx.docx_direct_format(bold=true),
+      )
+      is Some(_),
+    )
+  }
+}

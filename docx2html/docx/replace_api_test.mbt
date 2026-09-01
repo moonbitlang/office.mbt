@@ -198,3 +198,22 @@ test "replace plans nothing for an absent needle" {
   assert_eq(receipt.selected().length(), 0)
   assert_eq(receipt.affected().length(), 0)
 }
+
+///|
+/// A tolerated NESTED paragraph makes two logical paragraphs claim one
+/// path. The planner must refuse rather than plan against whichever
+/// claimant a map happened to keep — the selection named the other.
+test "replace refuses a path two paragraphs claim" {
+  let annotated = replace_fixture(
+    "<w:p><w:r><w:t>boo</w:t></w:r><w:p><w:r><w:t>aoo</w:t></w:r></w:p></w:p>",
+  )
+  let outcome = try? @docx.plan_docx_replacements(
+    annotated,
+    annotated.main_story_source(),
+    needle="oo",
+    replacement="ee",
+  )
+  guard outcome is Err(_) else {
+    fail("a collided path cannot be planned against")
+  }
+}

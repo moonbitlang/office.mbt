@@ -184,7 +184,16 @@ pub fn DocxFormatReceipt::selected(self : DocxFormatReceipt) -> Array[Int] {
 pub fn DocxFormatReceipt::spans(
   self : DocxFormatReceipt,
 ) -> Array[DocxFormatSpan] {
-  self.spans.copy()
+  // A span carries an array of its own, so copying only the outer array
+  // would hand the caller a handle back into the receipt.
+  self.spans.map(DocxFormatSpan::copy)
+}
+
+///|
+/// A span that shares nothing with this one, so a caller handed it
+/// cannot reach back into the receipt it came from.
+pub fn DocxFormatSpan::copy(self : DocxFormatSpan) -> DocxFormatSpan {
+  { ..self, source_runs: self.source_runs.copy(), }
 }
 
 ///|
@@ -524,6 +533,56 @@ fn docx_format_source_runs(
 }
 
 ///|
+/// What every question about one story needs to know about it, built
+/// ONCE: which paragraph carries each path and how many claim it, and
+/// which source elements the reader registered as paragraphs.
+///
+/// Both are story-wide facts, and deriving either costs a pass over the
+/// whole document. The readback asks about many paragraphs of the same
+/// story, so deriving them per question would cost the document again
+/// for each one — a thousand formatted paragraphs in a large document
+/// turn a bounded read into a quadratic one.
+priv struct DocxStoryIndex {
+  by_path : Map[String, (Int, Int)]
+  registered : Map[Int, Bool]
+}
+
+///|
+fn docx_story_index(projection : ReaderProjection) -> DocxStoryIndex {
+  let by_path : Map[String, (Int, Int)] = Map([])
+  let registered : Map[Int, Bool] = Map([])
+  let paragraph_paths = find_path_map(projection.scan, "p")
+  let elements = projection.scan.elements()
+  for paragraph_index, paragraph in projection.paragraphs {
+    for source in paragraph.sources {
+      let SourceElementId(head) = source.source
+      registered[head] = true
+    }
+    guard paragraph.sources.length() > 0 else { continue }
+    let SourceElementId(head) = paragraph.sources[0].source
+    guard paragraph_paths.get(elements[head].byte_start) is Some(path) else {
+      continue
+    }
+    match by_path.get(path) {
+      Some((first, count)) => by_path[path] = (first, count + 1)
+      None => by_path[path] = (paragraph_index, 1)
+    }
+  }
+  { by_path, registered, }
+}
+
+///|
+/// The paragraph a path names, and how many paragraphs name it.
+fn DocxStoryIndex::locate(self : DocxStoryIndex, path : String) -> (Int, Int) {
+  match self.by_path.get(path) {
+    Some(entry) => entry
+    None => (-1, 0)
+  }
+}
+
+///|
+
+///|
 /// The readback's direct-format judgment: does every run whose
 /// projected text lies inside `[start, end)` of paragraph `path` carry
 /// every requested property EXPLICITLY?
@@ -540,27 +599,63 @@ pub fn docx_paragraph_direct_format_spans(
   spans~ : Array[(Int, Int)],
   format~ : DocxDirectFormat,
 ) -> String? raise DocxError {
+  docx_paragraphs_direct_format(
+    annotated,
+    story,
+    requests=[(path, spans)],
+    format~,
+  )[0]
+}
+
+///|
+/// The same judgment for many paragraphs of one story, with the path
+/// lookup built once for the whole batch. Answers are returned in the
+/// order asked.
+pub fn docx_paragraphs_direct_format(
+  annotated : DocxAnnotatedResult,
+  story : DocxStoryPartSource,
+  requests~ : Array[(String, Array[(Int, Int)])],
+  format~ : DocxDirectFormat,
+) -> Array[String?] raise DocxError {
+  // An empty batch asks nothing, and building the lookup for it would
+  // charge a pass over the story for no question.
+  guard !requests.is_empty() else { return [] }
   let part = story.part()
   guard annotated.reader_projections.get(part) is Some(projection) else {
-    return Some("the re-read retained no projection for '\{part}'")
+    return requests.map(_ => {
+      Some("the re-read retained no projection for '\{part}'")
+    })
   }
   guard annotated.reader_projection_sources.get(part) is Some(bytes) else {
-    return Some("the re-read retained no source bytes for '\{part}'")
+    return requests.map(_ => {
+      Some("the re-read retained no source bytes for '\{part}'")
+    })
   }
-  let paragraph_paths = find_path_map(projection.scan, "p")
+  let index = docx_story_index(projection)
+  let answers : Array[String?] = []
+  for request in requests {
+    let (path, spans) = request
+    answers.push(
+      docx_paragraph_direct_format_at(
+        projection, bytes, index, path, spans, format,
+      ),
+    )
+  }
+  answers
+}
+
+///|
+/// One paragraph's positive check, against a lookup already built.
+fn docx_paragraph_direct_format_at(
+  projection : ReaderProjection,
+  bytes : BytesView,
+  index : DocxStoryIndex,
+  path : String,
+  spans : Array[(Int, Int)],
+  format : DocxDirectFormat,
+) -> String? raise DocxError {
   let elements = projection.scan.elements()
-  let mut target = -1
-  let mut found = 0
-  for paragraph_index, paragraph in projection.paragraphs {
-    guard paragraph.sources.length() > 0 else { continue }
-    let SourceElementId(head) = paragraph.sources[0].source
-    if paragraph_paths.get(elements[head].byte_start) == Some(path) {
-      found = found + 1
-      if found == 1 {
-        target = paragraph_index
-      }
-    }
-  }
+  let (target, found) = index.locate(path)
   guard target >= 0 else {
     return Some("the path '\{path}' names no paragraph after the edit")
   }
@@ -581,10 +676,10 @@ pub fn docx_paragraph_direct_format_spans(
   // Index the units a run carries ONCE: scanning every contribution
   // per unit is quadratic, and a paragraph of many small runs is legal.
   let width = paragraph.projection_end - base
-  let carrier : Array[Int] = []
-  for _ in 0..<width {
-    carrier.push(-1)
-  }
+  // Ownership as ordered INTERVALS: a paragraph is allowed to be one
+  // enormous run, and a table sized by its units would be sized by the
+  // text.
+  let owned : Array[(Int, Int, Int)] = []
   for contribution in paragraph.contributions {
     guard contribution.kind is ProjectedText(_) else { continue }
     guard contribution.run_source is Some(SourceElementId(run_identity)) else {
@@ -592,19 +687,14 @@ pub fn docx_paragraph_direct_format_spans(
     }
     let from = contribution.projection_start - base
     let to = contribution.projection_end - base
-    for unit in from..<to {
-      if unit >= 0 && unit < width {
-        carrier[unit] = run_identity
-      }
+    if to > from && from >= 0 && to <= width {
+      owned.push((from, to, run_identity))
     }
   }
-  // Mark the selection ONCE: the paragraph lookup and the carrier
-  // index are built once for the whole batch, so verifying a
-  // paragraph's spans costs one pass rather than one per span.
-  let selected : Array[Bool] = []
-  for _ in 0..<width {
-    selected.push(false)
-  }
+  owned.sort_by(fn(left, right) { left.0.compare(right.0) })
+  // The selection, sorted and coalesced ONCE: the sweep below then
+  // costs the contributions and the spans, not the characters.
+  let selection : Array[(Int, Int)] = []
   for span in spans {
     let (start, end) = span
     guard start >= 0 && start < end && end <= width else {
@@ -612,29 +702,43 @@ pub fn docx_paragraph_direct_format_spans(
         "the range \{start}:\{end} is outside the \{width} unit(s) of '\{path}'",
       )
     }
-    for unit in start..<end {
-      selected[unit] = true
-    }
+    selection.push(span)
   }
-  for unit in 0..<width {
-    guard !selected[unit] || carrier[unit] >= 0 else {
-      return Some(
-        "unit \{unit} of '\{path}' is not carried by any run, so it cannot hold direct formatting",
-      )
-    }
-  }
+  selection.sort_by(fn(left, right) { left.0.compare(right.0) })
+  // EVERY selected unit must belong to a run: text the tolerant reader
+  // admits directly under the paragraph has no run to carry direct
+  // formatting, so a range covering it can never be satisfied — and
+  // judging only the runs that happen to exist would call that a pass.
   // Every run holding selected text must carry the properties; a run
   // whose text lies only OUTSIDE the span is none of this check's
   // business.
   let judged : Map[Int, Bool] = Map([])
-  let mut judged_count = 0
-  for unit in 0..<width {
-    guard selected[unit] else { continue }
-    let run_identity = carrier[unit]
-    guard run_identity >= 0 else { continue }
-    guard judged.get(run_identity) is None else { continue }
-    judged[run_identity] = true
-    judged_count = judged_count + 1
+  let judged_runs : Array[Int] = []
+  let mut owned_at = 0
+  for span in selection {
+    let (start, end) = span
+    let mut cursor = start
+    while owned_at < owned.length() && owned[owned_at].1 <= cursor {
+      owned_at += 1
+    }
+    let mut probe = owned_at
+    while cursor < end {
+      guard probe < owned.length() && owned[probe].0 <= cursor else {
+        return Some(
+          "unit \{cursor} of '\{path}' is not carried by any run, so it cannot hold direct formatting",
+        )
+      }
+      let (_, owned_end, run_identity) = owned[probe]
+      if judged.get(run_identity) is None {
+        judged[run_identity] = true
+        judged_runs.push(run_identity)
+      }
+      cursor = owned_end
+      probe += 1
+    }
+  }
+  let judged_count = judged_runs.length()
+  for run_identity in judged_runs {
     let run_element = elements[run_identity]
     let binding = format_surgery_run_binding(
       bytes,
@@ -700,18 +804,106 @@ pub fn docx_paragraph_format_preserved(
   spans~ : Array[(Int, Int)],
   format~ : DocxDirectFormat,
 ) -> String? raise DocxError {
+  docx_paragraphs_format_preserved(
+    before,
+    before_story,
+    after,
+    after_story,
+    requests=[(path, spans)],
+    format~,
+  )[0]
+}
+
+///|
+/// The same judgment for many paragraphs of one story, with each
+/// document's path lookup built once for the whole batch. Answers are
+/// returned in the order asked.
+pub fn docx_paragraphs_format_preserved(
+  before : DocxAnnotatedResult,
+  before_story : DocxStoryPartSource,
+  after : DocxAnnotatedResult,
+  after_story : DocxStoryPartSource,
+  requests~ : Array[(String, Array[(Int, Int)])],
+  format~ : DocxDirectFormat,
+) -> Array[String?] raise DocxError {
+  guard !requests.is_empty() else { return [] }
+  let before_part = before_story.part()
+  let after_part = after_story.part()
+  guard before.reader_projections.get(before_part) is Some(before_projection) &&
+    before.reader_projection_sources.get(before_part) is Some(before_bytes) else {
+    return requests.map(_ => {
+      Some("the source retained no projection for '\{before_part}'")
+    })
+  }
+  guard after.reader_projections.get(after_part) is Some(after_projection) &&
+    after.reader_projection_sources.get(after_part) is Some(after_bytes) else {
+    return requests.map(_ => {
+      Some("the re-read retained no projection for '\{after_part}'")
+    })
+  }
+  let before_index = docx_story_index(before_projection)
+  let after_index = docx_story_index(after_projection)
+  // ONE identity table for the whole batch: ids from the two documents
+  // are compared against each other, so they must be minted together.
+  let interner = DocxFormatInterner::new()
+  let answers : Array[String?] = []
+  for request in requests {
+    answers.push(
+      docx_paragraph_format_preserved_at(
+        before_projection,
+        before_bytes,
+        before_index,
+        after_projection,
+        after_bytes,
+        after_index,
+        request.0,
+        request.1,
+        format,
+        interner,
+      ),
+    )
+  }
+  answers
+}
+
+///|
+/// One paragraph's preservation check, against lookups already built.
+fn docx_paragraph_format_preserved_at(
+  before_projection : ReaderProjection,
+  before_bytes : BytesView,
+  before_index : DocxStoryIndex,
+  after_projection : ReaderProjection,
+  after_bytes : BytesView,
+  after_index : DocxStoryIndex,
+  path : String,
+  spans : Array[(Int, Int)],
+  format : DocxDirectFormat,
+  interner : DocxFormatInterner,
+) -> String? raise DocxError {
   // Inside a span only the REQUESTED properties may differ: an
   // omitted property means untouched, so a plan that dropped an
   // unrelated one while setting bold must be caught even though the
   // positive check passes and the projection is unchanged.
   let touched = docx_format_touched_properties(format)
   let filtered : Map[String, String] = Map([])
-  guard docx_format_paragraph_provenance(before, before_story, path~)
-    is Some((original_units, original_silent, original_mark)) else {
+  guard docx_format_paragraph_provenance(
+      before_projection,
+      before_bytes,
+      before_index,
+      path,
+      interner~,
+    )
+    is Some((original_units, original_width, original_silent, original_mark)) else {
     return Some("the path '\{path}' names no single paragraph before the edit")
   }
-  guard docx_format_paragraph_provenance(after, after_story, path~)
-    is Some((result_units, result_silent, result_mark)) else {
+  guard docx_format_paragraph_provenance(
+      after_projection,
+      after_bytes,
+      after_index,
+      path,
+      interner~,
+    )
+    is Some((result_units, result_width, result_silent, result_mark)) else {
     return Some("the path '\{path}' names no single paragraph after the edit")
   }
   guard original_mark == result_mark else {
@@ -719,33 +911,107 @@ pub fn docx_paragraph_format_preserved(
       "the paragraph mark of '\{path}' changed its formatting, though no span selected it",
     )
   }
-  guard original_units.length() == result_units.length() else {
+  guard original_width == result_width else {
     return Some(
-      "'\{path}' projected \{original_units.length()} unit(s) before the edit and \{result_units.length()} after",
+      "'\{path}' projected \{original_width} unit(s) before the edit and \{result_width} after",
     )
   }
-  // The selection, marked once: testing every span per unit is
-  // quadratic when a paragraph carries many spans.
-  let selected_units : Array[Bool] = []
-  for _ in 0..<original_units.length() {
-    selected_units.push(false)
-  }
+  // The selection as sorted, coalesced INTERVALS, like the ownership:
+  // the comparison sweeps segment boundaries, so a paragraph allowed to
+  // be one enormous run costs its contributions, not its characters.
+  let selection : Array[(Int, Int)] = []
   for span in spans {
     let (from, to) = span
-    for unit in from..<to {
-      if unit >= 0 && unit < selected_units.length() {
-        selected_units[unit] = true
-      }
+    let start = if from < 0 { 0 } else { from }
+    let end = if to > original_width { original_width } else { to }
+    if end > start {
+      selection.push((start, end))
     }
   }
-  for unit in 0..<original_units.length() {
-    let selected = selected_units[unit]
-    let (original_properties, original_key, original_digest) = original_units[unit]
-    let (result_properties, result_key, result_digest) = result_units[unit]
-    // Units of one run share their properties, so both the raw and the
-    // filtered comparisons are made on FINGERPRINTS computed once per
-    // distinct text: comparing or hashing the whole property bytes per
-    // unit would cost the text's length times their size.
+  selection.sort_by(fn(left, right) { left.0.compare(right.0) })
+  let merged_selection : Array[(Int, Int)] = []
+  for span in selection {
+    match merged_selection.last() {
+      Some(last) if span.0 <= last.1 =>
+        if span.1 > last.1 {
+          merged_selection[merged_selection.length() - 1] = (last.0, span.1)
+        }
+      _ => merged_selection.push(span)
+    }
+  }
+  // The piecewise comparison: at every maximal segment on which the
+  // before-owner, after-owner, and selection are all constant, apply
+  // the same three judgments the per-unit loop made.
+  let mut cursor = 0
+  let mut before_at = 0
+  let mut after_at = 0
+  let mut selected_at = 0
+  let unowned : (String, String, String) = ("", "0", "0")
+  while cursor < original_width {
+    while before_at < original_units.length() &&
+          original_units[before_at].end <= cursor {
+      before_at += 1
+    }
+    while after_at < result_units.length() &&
+          result_units[after_at].end <= cursor {
+      after_at += 1
+    }
+    while selected_at < merged_selection.length() &&
+          merged_selection[selected_at].1 <= cursor {
+      selected_at += 1
+    }
+    let mut segment_end = original_width
+    let (original_properties, original_key, original_digest) = if before_at <
+      original_units.length() {
+      let owned = original_units[before_at]
+      if owned.start > cursor {
+        if owned.start < segment_end {
+          segment_end = owned.start
+        }
+        unowned
+      } else {
+        if owned.end < segment_end {
+          segment_end = owned.end
+        }
+        (owned.properties, owned.key, owned.digest)
+      }
+    } else {
+      unowned
+    }
+    let (result_properties, result_key, result_digest) = if after_at <
+      result_units.length() {
+      let owned = result_units[after_at]
+      if owned.start > cursor {
+        if owned.start < segment_end {
+          segment_end = owned.start
+        }
+        unowned
+      } else {
+        if owned.end < segment_end {
+          segment_end = owned.end
+        }
+        (owned.properties, owned.key, owned.digest)
+      }
+    } else {
+      unowned
+    }
+    let selected = if selected_at < merged_selection.length() {
+      let span = merged_selection[selected_at]
+      if span.0 > cursor {
+        if span.0 < segment_end {
+          segment_end = span.0
+        }
+        false
+      } else {
+        if span.1 < segment_end {
+          segment_end = span.1
+        }
+        true
+      }
+    } else {
+      false
+    }
+    let unit = cursor
     // A unit's properties only mean what its namespace bindings say
     // they mean: the same spelling under a rebound prefix is different
     // formatting, and a faithful edit never disturbs it.
@@ -756,27 +1022,35 @@ pub fn docx_paragraph_format_preserved(
     }
     if selected {
       // The properties the request does NOT name must survive. Filtered
-      // results are cached by their text: consecutive units of one run
-      // share properties, and re-filtering them per unit would cost
-      // text times property bytes.
+      // results are cached by their text: segments of one run share
+      // properties, and re-filtering them per segment would cost text
+      // times property bytes.
       guard docx_format_filtered(
           original_properties,
           original_key,
           touched,
           filtered~,
+          interner~,
         ) ==
-        docx_format_filtered(result_properties, result_key, touched, filtered~) else {
+        docx_format_filtered(
+          result_properties,
+          result_key,
+          touched,
+          filtered~,
+          interner~,
+        ) else {
         return Some(
           "unit \{unit} of '\{path}' lost or gained a run property the request never named",
         )
       }
-      continue
+    } else {
+      guard original_key == result_key else {
+        return Some(
+          "unit \{unit} of '\{path}' lies outside every requested span but its run properties changed",
+        )
+      }
     }
-    guard original_key == result_key else {
-      return Some(
-        "unit \{unit} of '\{path}' lies outside every requested span but its run properties changed",
-      )
-    }
+    cursor = segment_end
   }
   guard original_silent.length() == result_silent.length() else {
     return Some(
@@ -794,47 +1068,43 @@ pub fn docx_paragraph_format_preserved(
 }
 
 ///|
+/// One text contribution's provenance: the unit range it claims and the
+/// owning run's properties, key, and binding digest.
+priv struct DocxFormatOwnedSpan {
+  start : Int
+  end : Int
+  properties : String
+  key : String
+  digest : String
+}
+
+///|
 /// One paragraph's provenance: the run properties that apply to each
-/// projection unit, and the properties of the runs that project no text,
-/// in document order. `None` when the path names no paragraph, or names
-/// more than one (a collided path cannot be answered for).
+/// projection unit (as ordered intervals over the units), the
+/// projection width, and the properties of the runs that project no
+/// text, in document order. `None` when the path names no paragraph, or
+/// names more than one (a collided path cannot be answered for).
 fn docx_format_paragraph_provenance(
-  annotated : DocxAnnotatedResult,
-  story : DocxStoryPartSource,
-  path~ : String,
-) -> (Array[(String, String, String)], Array[String], String)? raise DocxError {
-  let part = story.part()
-  guard annotated.reader_projections.get(part) is Some(projection) else {
-    return None
-  }
-  guard annotated.reader_projection_sources.get(part) is Some(bytes) else {
-    return None
-  }
-  let paragraph_paths = find_path_map(projection.scan, "p")
+  projection : ReaderProjection,
+  bytes : BytesView,
+  index : DocxStoryIndex,
+  path : String,
+  interner~ : DocxFormatInterner,
+) -> (Array[DocxFormatOwnedSpan], Int, Array[String], String)? raise DocxError {
   let elements = projection.scan.elements()
-  let mut target = -1
-  let mut found = 0
-  for paragraph_index, paragraph in projection.paragraphs {
-    guard paragraph.sources.length() > 0 else { continue }
-    let SourceElementId(head) = paragraph.sources[0].source
-    if paragraph_paths.get(elements[head].byte_start) == Some(path) {
-      found = found + 1
-      if found == 1 {
-        target = paragraph_index
-      }
-    }
-  }
+  let (target, found) = index.locate(path)
   guard target >= 0 && found == 1 else { return None }
   let paragraph = projection.paragraphs[target]
   let SourceElementId(paragraph_head_identity) = paragraph.sources[0].source
   let base = paragraph.projection_start
   let width = paragraph.projection_end - base
-  let units : Array[(String, String, String)] = []
-  for _ in 0..<width {
-    // A unit no run claims — text the tolerant reader admits directly
-    // under the paragraph — has no properties to preserve, and says so.
-    units.push(("", "0", "0"))
-  }
+  // Ownership as INTERVALS, one per text contribution, in projection
+  // order: a paragraph is allowed to be one enormous run, and a table
+  // sized by its units would be sized by the text. A unit inside no
+  // interval — text the tolerant reader admits directly under the
+  // paragraph — has no properties to preserve, and the comparison
+  // treats the gap as saying so.
+  let units : Array[DocxFormatOwnedSpan] = []
   // Namespace scopes and declaration tables, memoized per element: an
   // ancestor's declarations are read once, and an element that
   // declares nothing shares its parent's scope outright.
@@ -845,6 +1115,7 @@ fn docx_format_paragraph_provenance(
     elements,
     paragraph_head_identity,
     tokens=namespace_tokens,
+    interner~,
   )
   // A run's properties, read ONCE per run: recomputing them for every
   // contribution walks its children again and again, and a run of many
@@ -877,7 +1148,7 @@ fn docx_format_paragraph_provenance(
     let properties_key = match keys_by_run.get(run_identity) {
       Some(known) => known
       None => {
-        let read = docx_format_fingerprint(properties)
+        let read = interner.id(properties)
         keys_by_run[run_identity] = read
         read
       }
@@ -911,12 +1182,17 @@ fn docx_format_paragraph_provenance(
     }
     let from = contribution.projection_start - base
     let to = contribution.projection_end - base
-    for unit in from..<to {
-      if unit >= 0 && unit < width {
-        units[unit] = (properties, properties_key, digest)
-      }
+    if to > from && from >= 0 && to <= width {
+      units.push({
+        start: from,
+        end: to,
+        properties,
+        key: properties_key,
+        digest,
+      })
     }
   }
+  units.sort_by(fn(left, right) { left.start.compare(right.start) })
   // Which runs project text, indexed once: scanning every contribution
   // per run is quadratic, and a paragraph of many small runs is legal.
   let projecting : Map[Int, Bool] = Map([])
@@ -948,15 +1224,11 @@ fn docx_format_paragraph_provenance(
       None => run_offsets[owner] = offset
     }
   }
-  // The paragraphs the reader registered: only these answer for their
-  // own carriers.
-  let registered : Map[Int, Bool] = Map([])
-  for other in projection.paragraphs {
-    for source in other.sources {
-      let SourceElementId(head) = source.source
-      registered[head] = true
-    }
-  }
+  // The paragraphs the reader registered — only these answer for their
+  // own carriers — come from the story index, because deriving them
+  // here would cost a pass over every paragraph in the document for
+  // every paragraph judged.
+  let registered = index.registered
   // What formatting survives outside the per-unit comparison, bound to
   // WHAT IT FORMATS rather than to its position in a list. A carrier's
   // properties alone cannot tell that italic MOVED from a footnote
@@ -1001,6 +1273,7 @@ fn docx_format_paragraph_provenance(
       elements,
       run_identity,
       signatures~,
+      interner~,
     )
     let properties = docx_format_run_properties(
       bytes,
@@ -1038,9 +1311,10 @@ fn docx_format_paragraph_provenance(
       signatures~,
       keys~,
       namespace_tokens~,
+      interner~,
     )
     silent.push(
-      "\{owner_path}\u{1}\{docx_format_fingerprint(format_surgery_decode(bytes[entry.byte_start:entry.byte_end]))}\u{1}\{binding_digests.get(carrier_identity).unwrap_or(0)}",
+      "\{owner_path}\u{1}\{interner.id(format_surgery_decode(bytes[entry.byte_start:entry.byte_end]))}\u{1}\{binding_digests.get(carrier_identity).unwrap_or(0)}",
     )
   }
   // Every pPr in the paragraph's physical subtree, in document order:
@@ -1074,13 +1348,12 @@ fn docx_format_paragraph_provenance(
         signatures~,
         keys~,
         namespace_tokens~,
+        interner~,
       ),
     )
     mark_builder.write_string("=")
     mark_builder.write_string(
-      docx_format_fingerprint(
-        format_surgery_decode(bytes[entry.byte_start:entry.byte_end]),
-      ),
+      interner.id(format_surgery_decode(bytes[entry.byte_start:entry.byte_end])),
     )
     mark_builder.write_string("~")
     mark_builder.write_string(
@@ -1088,7 +1361,7 @@ fn docx_format_paragraph_provenance(
     )
   }
   let mark = mark_builder.to_string()
-  Some((units, silent, mark))
+  Some((units, width, silent, mark))
 }
 
 ///|
@@ -1541,6 +1814,7 @@ fn docx_format_carrier_key(
   signatures~ : Map[Int, String],
   keys~ : Map[Int, String],
   namespace_tokens~ : Map[Int, UInt],
+  interner~ : DocxFormatInterner,
 ) -> String raise DocxError {
   if element_identity < 0 ||
     element_identity >= elements.length() ||
@@ -1558,6 +1832,7 @@ fn docx_format_carrier_key(
           elements,
           element_identity,
           signatures~,
+          interner~,
         )
         "r@\{offset}#{\{signature}}"
       } else {
@@ -1572,8 +1847,9 @@ fn docx_format_carrier_key(
         signatures~,
         keys~,
         namespace_tokens~,
+        interner~,
       )
-      let key = docx_format_fingerprint("\{parent}/\{step}")
+      let key = interner.id("\{parent}/\{step}")
       keys[element_identity] = key
       key
     }
@@ -1581,16 +1857,51 @@ fn docx_format_carrier_key(
 }
 
 ///|
-/// A bounded fingerprint: length and an FNV-1a digest. Two texts differ
-/// in this exactly when a collision does not hide it, and the length is
-/// carried alongside so a collision must also match in size.
-fn docx_format_fingerprint(text : String) -> String {
-  let mut hash : UInt = 2166136261
-  for unit in text.code_units() {
-    hash = hash ^ unit.to_uint()
-    hash = hash * 16777619
+/// Dense identities for texts, EXACT by construction.
+///
+/// The comparisons this file makes are equality comparisons, and a
+/// digest answers them only up to its collisions — a 32-bit one is
+/// searchable, and two twelve-character font names that collide are a
+/// candidate whose unrequested change the preservation check would call
+/// preserved. Interning costs the same pass over the text a digest
+/// would, and two ids are equal exactly when the texts are.
+///
+/// The entries themselves stay small, which is what the digest was for:
+/// a unit's entry holds an id rather than the property text, so an
+/// array of them grows with the units and not with their product.
+priv struct DocxFormatInterner {
+  ids : Map[String, Int]
+}
+
+///|
+fn DocxFormatInterner::new() -> DocxFormatInterner {
+  { ids: Map([]), }
+}
+
+///|
+fn DocxFormatInterner::uid(self : DocxFormatInterner, text : String) -> UInt {
+  match self.ids.get(text) {
+    Some(known) => known.reinterpret_as_uint()
+    None => {
+      let id = self.ids.length() + 1
+      self.ids[text] = id
+      id.reinterpret_as_uint()
+    }
   }
-  "\{text.length()}:\{hash}"
+}
+
+///|
+fn DocxFormatInterner::id(self : DocxFormatInterner, text : String) -> String {
+  match self.ids.get(text) {
+    Some(known) => "\{known}"
+    None => {
+      // Ids start at 1: "0" is the SENTINEL for a unit no run claims,
+      // and the first real property text must not compare equal to it.
+      let id = self.ids.length() + 1
+      self.ids[text] = id
+      "\{id}"
+    }
+  }
 }
 
 ///|
@@ -1604,12 +1915,13 @@ fn docx_format_run_signature_key(
   elements : Array[ScannedElement],
   run_identity : Int,
   signatures~ : Map[Int, String],
+  interner~ : DocxFormatInterner,
 ) -> String raise DocxError {
   match signatures.get(run_identity) {
     Some(known) => known
     None => {
       let signature = docx_format_run_signature(bytes, elements, run_identity)
-      let key = docx_format_fingerprint(signature)
+      let key = interner.id(signature)
       signatures[run_identity] = key
       key
     }
@@ -1625,15 +1937,14 @@ fn docx_format_filtered(
   properties_key : String,
   touched : Array[String],
   filtered~ : Map[String, String],
+  interner~ : DocxFormatInterner,
 ) -> String raise DocxError {
   // Keyed by the properties' own small fingerprint: keying by the text
   // would hash every byte of it on each lookup.
   match filtered.get(properties_key) {
     Some(known) => known
     None => {
-      let result = docx_format_fingerprint(
-        docx_format_without(properties, touched),
-      )
+      let result = interner.id(docx_format_without(properties, touched))
       filtered[properties_key] = result
       result
     }
@@ -1661,20 +1972,18 @@ fn docx_format_binding_digests(
   elements : Array[ScannedElement],
   root_identity : Int,
   tokens~ : Map[Int, UInt],
+  interner~ : DocxFormatInterner,
 ) -> Map[Int, UInt] raise DocxError {
   let digests : Map[Int, UInt] = Map([])
   let scope : Map[String, String] = Map([])
-  // Each binding's contribution, hashed ONCE when it is declared: a
-  // long URI used by many descendants would otherwise be rehashed per
-  // use.
+  // Each binding's identity, interned ONCE when it is declared: a long
+  // URI used by many descendants would otherwise be re-read per use.
+  // These are EXACT — equal ids mean equal prefix=uri pairs — where the
+  // folded hash they replace answered equality only up to collisions,
+  // and a 32-bit collision between two bindings is searchable.
   let scope_hash : Map[String, UInt] = Map([])
   fn binding_hash(prefix : String, uri : String) -> UInt {
-    let mut hash : UInt = 2166136261
-    for unit in "\{prefix}=\{uri}".code_units() {
-      hash = hash ^ unit.to_uint()
-      hash = hash * 16777619
-    }
-    hash
+    interner.uid("b|\{prefix}=\{uri}")
   }
   fn walk(identity : Int) -> UInt raise DocxError {
     let element = elements[identity]
@@ -1682,6 +1991,12 @@ fn docx_format_binding_digests(
     // applied to the scope with an undo record.
     let undo : Array[(String, String?, UInt?)] = []
     let used : Array[String] = []
+    // Attributes whose VALUES may carry prefixes: markup-compatibility
+    // directives name namespaces and elements by QName, so a prefix can
+    // be load-bearing without appearing in any element or attribute
+    // NAME. They are resolved after the whole tag is read, because a
+    // declaration may follow the directive within the same tag.
+    let directives : Array[(String, String, String)] = []
     let stop = run_surgery_open_tag_end(element)
     let mut at = element.byte_start + 1
     let name_start = at
@@ -1720,7 +2035,8 @@ fn docx_format_binding_digests(
       while at < stop && bytes[at] != quote {
         at += 1
       }
-      let value = format_surgery_decode(bytes[value_start:at])
+      // Entity-spelled bindings and directives mean what they decode to.
+      let value = decode_entities(format_surgery_decode(bytes[value_start:at]))
       at += 1
       if attribute == "xmlns" {
         undo.push(("", scope.get(""), scope_hash.get("")))
@@ -1740,38 +2056,103 @@ fn docx_format_binding_digests(
           binding_hash(declared, value)
         }
       } else {
-        let (attribute_prefix, _) = split_qname(attribute)
+        let (attribute_prefix, attribute_local) = split_qname(attribute)
         used.push(attribute_prefix)
+        if attribute_local
+          is ("Requires"
+          | "Ignorable"
+          | "MustUnderstand"
+          | "ProcessContent"
+          | "PreserveElements"
+          | "PreserveAttributes") {
+          directives.push((attribute_prefix, attribute_local, value))
+        }
       }
     }
-    // This element's own contribution: the bindings its own names
-    // depend on, folded order-independently.
-    let mut own : UInt = 0
+    // A directive counts when its own name is in the MC namespace, or —
+    // the spelling the spec gives `Requires` — when it sits unprefixed
+    // on an MC element.
+    for directive in directives {
+      let (attribute_prefix, attribute_local, value) = directive
+      let is_mc = scope.get(attribute_prefix) == Some(MC_URI) ||
+        (attribute_prefix == "" && element.uri == MC_URI)
+      guard is_mc else { continue }
+      let listed_prefixes = attribute_local
+        is ("Requires" | "Ignorable" | "MustUnderstand")
+      let mut token_start = -1
+      for offset in 0..<=value.length() {
+        let boundary = offset == value.length() ||
+          value[offset] is (' ' | '\t' | '\n' | '\r')
+        if boundary {
+          if token_start >= 0 {
+            let token = value.substring(start=token_start, end=offset)
+            if listed_prefixes {
+              used.push(token.to_string())
+            } else {
+              match token.find(":") {
+                Some(colon) => used.push(token[:colon].to_string())
+                None => used.push("")
+              }
+            }
+            token_start = -1
+          }
+        } else if token_start < 0 {
+          token_start = offset
+        }
+      }
+    }
+    // This element's own contribution: the ids of the NON-WML bindings
+    // its own names depend on, in document order. WML uses are omitted
+    // rather than recorded as zeros, so that a surgery which adds a
+    // pure-WML property to a subtree — the one thing a faithful format
+    // edit inserts — leaves the digest of that subtree what it was.
+    let own_builder = StringBuilder()
     for prefix in used {
-      // Declared bindings answer from their precomputed hash; only the
-      // element's own fallback is hashed here, once per element.
-      match scope_hash.get(prefix) {
-        Some(known) => own = own + known
+      // Declared bindings answer from their interned id; only the
+      // element's own fallback is interned here, once per element.
+      let contribution = match scope_hash.get(prefix) {
+        Some(known) => known
         None =>
           if prefix == "xml" {
-            ()
+            0
           } else {
             let uri = if prefix == element_prefix { element.uri } else { "?" }
-            if !is_wml_uri(uri) {
-              own = own + binding_hash(prefix, uri)
+            if is_wml_uri(uri) {
+              0
+            } else {
+              binding_hash(prefix, uri)
             }
           }
       }
+      if contribution != 0 {
+        own_builder.write_string("\{contribution},")
+      }
     }
     // The element's own namespace, as a BOUNDED token: a structural
-    // key that embedded the URI would hash it once per element that
+    // key that embedded the URI would record it once per element that
     // uses it.
     tokens[identity] = scope_hash.get(element_prefix).unwrap_or(0)
-    let mut total = own
+    // The subtree's digest is an interned token over the element's own
+    // contribution and its children's tokens IN ORDER, with the
+    // all-WML token 0 omitted on both sides so a pure-WML subtree — and
+    // an absent one — read as 0 exactly. Equal tokens mean equal
+    // sequences of foreign-binding uses; the sum this replaces could
+    // cancel.
+    let children_builder = StringBuilder()
     let mut child = element.first_child_index
     while child >= 0 {
-      total = total + walk(child)
+      let token = walk(child)
+      if token != 0 {
+        children_builder.write_string("\{token},")
+      }
       child = elements[child].next_sibling_index
+    }
+    let own_part = own_builder.to_string()
+    let children_part = children_builder.to_string()
+    let total : UInt = if own_part == "" && children_part == "" {
+      0
+    } else {
+      interner.uid("s|\{own_part}/\{children_part}")
     }
     digests[identity] = total
     for entry in undo {
@@ -1838,7 +2219,8 @@ fn docx_format_binding_digests(
       while at < stop && bytes[at] != quote {
         at += 1
       }
-      let value = format_surgery_decode(bytes[value_start:at])
+      // Entity-spelled bindings and directives mean what they decode to.
+      let value = decode_entities(format_surgery_decode(bytes[value_start:at]))
       at += 1
       if attribute == "xmlns" {
         scope[""] = value

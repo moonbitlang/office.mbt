@@ -48,6 +48,12 @@ pub fn docx_paragraph_format_preserved(DocxAnnotatedResult, DocxStoryPartSource,
 
 pub fn docx_paragraph_projection(DocxAnnotatedResult, DocxStoryPartSource, path~ : String) -> String?
 
+pub fn docx_paragraphs_direct_format(DocxAnnotatedResult, DocxStoryPartSource, requests~ : Array[(String, Array[(Int, Int)])], format~ : DocxDirectFormat) -> Array[String?] raise @core.DocxError
+
+pub fn docx_paragraphs_format_preserved(DocxAnnotatedResult, DocxStoryPartSource, DocxAnnotatedResult, DocxStoryPartSource, requests~ : Array[(String, Array[(Int, Int)])], format~ : DocxDirectFormat) -> Array[String?] raise @core.DocxError
+
+pub fn docx_paragraphs_projection(DocxAnnotatedResult, DocxStoryPartSource, paths~ : Array[String]) -> Array[String?]
+
 pub fn embed_style_map(BytesView, String) -> Bytes raise @core.DocxError
 
 pub fn extract_raw_text(BytesView, external_file_access? : Bool, read_external_file? : (String) -> Bytes?) -> @core.ConversionResult raise @core.DocxError
@@ -266,6 +272,7 @@ pub struct DocxFormatSpan {
   source_runs : Array[String]
 }
 pub fn DocxFormatSpan::anchor_status(Self) -> String
+pub fn DocxFormatSpan::copy(Self) -> Self
 pub fn DocxFormatSpan::end(Self) -> Int
 pub fn DocxFormatSpan::para_id(Self) -> String?
 pub fn DocxFormatSpan::path(Self) -> String
@@ -312,6 +319,7 @@ pub fn DocxMatch::actionable(Self) -> Bool
 pub fn DocxMatch::anchor_status(Self) -> String
 pub fn DocxMatch::context_after(Self) -> String
 pub fn DocxMatch::context_before(Self) -> String
+pub fn DocxMatch::copy(Self) -> Self
 pub fn DocxMatch::end(Self) -> Int
 pub fn DocxMatch::ordinal(Self) -> Int
 pub fn DocxMatch::para_id(Self) -> String?

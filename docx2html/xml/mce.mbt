@@ -58,6 +58,7 @@ priv struct MceProcessAddition {
 priv struct MceElementScope {
   namespace_changes : Array[MceNamespaceChange]
   ignorable_additions : Array[String]
+  generation_changes : Array[(String, Int?)]
   process_additions : Array[MceProcessAddition]
   must_understand_satisfied : Bool
 }
@@ -70,6 +71,11 @@ priv struct MceProcessor {
   ignorable_namespaces : @sorted_map.SortedMap[String, Int]
   process_exact_names : @sorted_map.SortedMap[String, Int]
   process_wildcard_namespaces : @sorted_map.SortedMap[String, Int]
+  // Re-declaring a namespace ignorable RESETS the inherited
+  // process-content rules for it (ECMA-376 Part 3): each declaration
+  // opens a new generation, and a rule matches only content in the
+  // generation it was declared for.
+  process_generations : @sorted_map.SortedMap[String, Int]
 }
 
 ///|
@@ -230,8 +236,11 @@ fn MceProcessor::element_matches_process_content(
   element_name : String,
   namespace_uri : String,
 ) -> Bool {
-  self.process_exact_names.contains(element_name) ||
-  self.process_wildcard_namespaces.contains(namespace_uri)
+  let generation = self.process_generations.get(namespace_uri).unwrap_or(0)
+  self.process_exact_names.contains("\{generation}\u{1}\{element_name}") ||
+  self.process_wildcard_namespaces.contains(
+    "\{generation}\u{1}\{namespace_uri}",
+  )
 }
 
 ///|
@@ -307,13 +316,16 @@ fn MceProcessor::add_process_content_names(
       mce_mismatch("ProcessContent names a namespace that is not ignorable")
     }
     self.budget.charge_namespace_bindings(1)
+    let generation = self.process_generations.get(namespace_uri).unwrap_or(0)
     if local_name == "*" {
-      increment_mce_count(self.process_wildcard_namespaces, namespace_uri)
-      additions.push({ key: namespace_uri, wildcard: true, })
+      let key = "\{generation}\u{1}\{namespace_uri}"
+      increment_mce_count(self.process_wildcard_namespaces, key)
+      additions.push({ key, wildcard: true, })
     } else {
       let expanded = mce_expanded_name(namespace_uri, local_name, self.budget)
-      increment_mce_count(self.process_exact_names, expanded)
-      additions.push({ key: expanded, wildcard: false, })
+      let key = "\{generation}\u{1}\{expanded}"
+      increment_mce_count(self.process_exact_names, key)
+      additions.push({ key, wildcard: false, })
     }
   }
   additions
@@ -390,6 +402,15 @@ fn MceProcessor::enter_element(
     Some(value) => self.add_ignorable_namespaces(value)
     None => []
   }
+  // The generations open BEFORE the same element's own process-content
+  // is read, so a re-declaration retires inherited rules while the
+  // rules beside it apply.
+  let generation_changes : Array[(String, Int?)] = []
+  for namespace_uri in ignorable_additions {
+    let previous = self.process_generations.get(namespace_uri)
+    generation_changes.push((namespace_uri, previous))
+    self.process_generations[namespace_uri] = previous.unwrap_or(0) + 1
+  }
   let process_additions = match element.attributes.get(MCE_PROCESS_CONTENT) {
     Some(value) => self.add_process_content_names(value)
     None => []
@@ -420,6 +441,7 @@ fn MceProcessor::enter_element(
   {
     namespace_changes,
     ignorable_additions,
+    generation_changes,
     process_additions,
     must_understand_satisfied,
   }
@@ -438,6 +460,15 @@ fn MceProcessor::leave_element(
       decrement_mce_count(self.process_wildcard_namespaces, addition.key)
     } else {
       decrement_mce_count(self.process_exact_names, addition.key)
+    }
+  }
+  for offset in 0..<scope.generation_changes.length() {
+    let change = scope.generation_changes[scope.generation_changes.length() -
+      offset -
+      1]
+    match change.1 {
+      Some(previous) => self.process_generations[change.0] = previous
+      None => self.process_generations.remove(change.0)
     }
   }
   for offset in 0..<scope.ignorable_additions.length() {
@@ -604,6 +635,10 @@ fn MceProcessor::foreign_alternate_content_child_is_ignored(
   element : XmlElement,
 ) -> Bool raise DocxError {
   let scope = self.enter_element(element)
+  // `MustUnderstand` outranks ignorability HERE too: an alternate-content
+  // child that demands understanding is not one this application may
+  // quietly drop.
+  mce_require_must_understand(scope)
   let ignored = match
     mce_namespace_from_expanded_name(element.name, self.budget) {
     Some(namespace_uri) =>
@@ -732,6 +767,9 @@ fn MceProcessor::process_element(
       mce_mismatch("Choice, Fallback, or unknown MCE element is misplaced")
     Some(namespace_uri) if self.namespace_is_ignorable(namespace_uri) &&
       !self.application_understands(namespace_uri) => {
+      // `MustUnderstand` outranks ignorability: an element that DEMANDS
+      // understanding is not one this application may quietly drop.
+      mce_require_must_understand(scope)
       if self.element_matches_process_content(element.name, namespace_uri) {
         if element.attributes.contains(MCE_XML_BASE) ||
           element.attributes.contains(MCE_XML_LANG) ||
@@ -740,7 +778,6 @@ fn MceProcessor::process_element(
             "an unwrapped ProcessContent element has xml:base, xml:lang, or xml:space",
           )
         }
-        mce_require_must_understand(scope)
         let output = self.process_children(element.children)
         self.leave_element(scope)
         return output
@@ -776,6 +813,7 @@ fn process_markup_compatibility(
     ignorable_namespaces: SortedMap([]),
     process_exact_names: SortedMap([]),
     process_wildcard_namespaces: SortedMap([]),
+    process_generations: SortedMap([]),
   }
   let output = processor.process_element(root)
   let mut document_root : XmlElement? = None
@@ -876,6 +914,31 @@ pub fn read_xml_bytes_strict_mce_limited(
     Utf8,
     budget,
     application_namespaces,
+    true,
+  )
+}
+
+///|
+/// Strictly parses UTF-8 XML into the PRESERVATION view alone: namespace
+/// declarations retained as attributes, no markup-compatibility
+/// processing. This is the raw half of the paired-root API, for callers
+/// that must analyze a part's structure without demanding that its
+/// compatibility contract be satisfiable for THIS application.
+pub fn read_xml_bytes_strict_preserving_limited(
+  source : BytesView,
+  budget : XmlReadBudget,
+) -> XmlElement raise DocxError {
+  budget.charge_source(source.length())
+  let text = @utf8.decode(source, ignore_bom=true) catch {
+    _ => raise InvalidXml(message="XML source is not valid UTF-8")
+  }
+  read_xml_string_with_mode(
+    text,
+    Map([]),
+    true,
+    Some(budget),
+    true,
+    Some(Utf8),
     true,
   )
 }
