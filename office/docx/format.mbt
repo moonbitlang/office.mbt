@@ -1006,6 +1006,7 @@ fn docx_mce_possible_roots(
   let process_exact : Map[String, Int] = Map([])
   let process_wildcard : Map[String, Int] = Map([])
   let generations : Map[String, Int] = Map([])
+  let ignorable_counts : Map[String, Int] = Map([])
   fn root_count_up(counts : Map[String, Int], key : String) -> Unit {
     counts[key] = counts.get(key).unwrap_or(0) + 1
   }
@@ -1049,8 +1050,9 @@ fn docx_mce_possible_roots(
   // consumers who find the wrapper ignorable.
   fn root_directives(
     element : @xml.XmlElement,
-  ) -> (Array[(String, Int?)], Array[(Bool, String)]) raise @transaction.TransactionError {
+  ) -> (Array[(String, Int?)], Array[(Bool, String)], Array[String]) raise @transaction.TransactionError {
     let generation_undo : Array[(String, Int?)] = []
+    let ignorable_added : Array[String] = []
     match element.attributes.get("{\{DOCX_MC_NAMESPACE}}Ignorable") {
       Some(value) =>
         docx_tokens_charged(value, root_charge, token => {
@@ -1058,6 +1060,8 @@ fn docx_mce_possible_roots(
           let previous = generations.get(uri)
           generation_undo.push((uri, previous))
           generations[uri] = previous.unwrap_or(0) + 1
+          root_count_up(ignorable_counts, uri)
+          ignorable_added.push(uri)
         })
       None => ()
     }
@@ -1093,13 +1097,17 @@ fn docx_mce_possible_roots(
         })
       None => ()
     }
-    (generation_undo, added)
+    (generation_undo, added, ignorable_added)
   }
 
   fn root_undo_directives(
     generation_undo : Array[(String, Int?)],
     added : Array[(Bool, String)],
+    ignorable_added : Array[String],
   ) -> Unit {
+    for uri in ignorable_added {
+      root_count_down(ignorable_counts, uri)
+    }
     for entry in added {
       if entry.0 {
         root_count_down(process_wildcard, entry.1)
@@ -1165,15 +1173,20 @@ fn docx_mce_possible_roots(
         }
     }
     let uris : Array[String] = []
+    let seen : Map[String, Bool] = Map([])
     let mut resolved = true
     docx_tokens_charged(requires, root_charge, token => {
       guard scope.get(token) is Some(uri) else {
         resolved = false
         return
       }
+      // The width cap counts DISTINCT resolved namespaces: one prefix
+      // repeated a hundred times is one requirement.
+      guard seen.get(uri) is None else { return }
       if uris.length() >= 64 {
         raise docx_analysis_refusal()
       }
+      seen[uri] = true
       uris.push(uri)
     })
     if !resolved || uris.is_empty() {
@@ -1182,19 +1195,37 @@ fn docx_mce_possible_roots(
     Some(uris)
   }
 
-  // A branch resolves to a READABLE document only when it holds exactly
-  // one element: two sibling roots are no document for that consumer,
-  // and nothing inside them is anyone's settings.
-  fn single_element(container : @xml.XmlElement) -> @xml.XmlElement? {
-    let mut found : @xml.XmlElement? = None
-    for node in container.children {
+  // A branch resolves to a READABLE document for a given consumer only
+  // when exactly one element remains after that consumer drops what it
+  // finds ignorable. So each element child is a candidate root for the
+  // consumers who drop every SIBLING: a sibling in an in-scope ignorable
+  // namespace adds a clause demanding that namespace unsupported, and a
+  // sibling nobody drops — understood, or not ignorable — makes the
+  // branch multi-root for everyone who would read this child.
+  fn branch_root_candidates(
+    container : @xml.XmlElement,
+    base : DocxCondition,
+    visit : (@xml.XmlElement, DocxCondition) -> Unit raise @transaction.TransactionError,
+  ) -> Unit raise @transaction.TransactionError {
+    for index, node in container.children {
       guard node is XmlElement(child) else { continue }
-      if found is Some(_) {
-        return None
+      let condition = base.snapshot()
+      let mut readable = true
+      for sibling_index, sibling_node in container.children {
+        guard sibling_node is XmlElement(sibling) else { continue }
+        guard sibling_index != index else { continue }
+        let sibling_uri = root_element_uri(sibling.name)
+        if understood.contains(sibling_uri) ||
+          ignorable_counts.get(sibling_uri) is None {
+          readable = false
+        } else {
+          condition.refused.push([sibling_uri])
+        }
       }
-      found = Some(child)
+      if readable && condition.satisfiable() {
+        visit(child, condition)
+      }
     }
-    found
   }
 
   fn collect(
@@ -1202,7 +1233,7 @@ fn docx_mce_possible_roots(
     arriving : DocxCondition,
   ) -> Unit raise @transaction.TransactionError {
     let undo = root_declarations(element)
-    let (generation_undo, added) = root_directives(element)
+    let (generation_undo, added, ignorable_added) = root_directives(element)
     // Only consumers who support what a `MustUnderstand` names process
     // this content at all.
     let understand = root_must_understand(element)
@@ -1230,7 +1261,9 @@ fn docx_mce_possible_roots(
       for branch_node in element.children {
         guard branch_node is XmlElement(branch) else { continue }
         let branch_undo = root_declarations(branch)
-        let (branch_generation_undo, branch_added) = root_directives(branch)
+        let (branch_generation_undo, branch_added, branch_ignorable) = root_directives(
+          branch,
+        )
         let branch_condition = condition.snapshot()
         for uri in root_must_understand(branch) {
           if !branch_condition.required.contains(uri) {
@@ -1269,17 +1302,19 @@ fn docx_mce_possible_roots(
             None => ()
           }
           if branch_condition.satisfiable() {
-            match single_element(branch) {
-              Some(candidate) => collect(candidate, branch_condition)
-              None => ()
-            }
+            branch_root_candidates(branch, branch_condition, (
+              candidate,
+              candidate_condition,
+            ) => collect(candidate, candidate_condition))
           }
           // A choice every consumer of the vocabulary satisfies is the
           // one every consumer selects: nothing after it is a root.
           if decides {
             trail.pop() |> ignore
             trail.pop() |> ignore
-            root_undo_directives(branch_generation_undo, branch_added)
+            root_undo_directives(
+              branch_generation_undo, branch_added, branch_ignorable,
+            )
             root_restore(branch_undo)
             break
           }
@@ -1305,15 +1340,17 @@ fn docx_mce_possible_roots(
           }
         } else if branch.name == "{\{DOCX_MC_NAMESPACE}}Fallback" {
           if branch_condition.satisfiable() {
-            match single_element(branch) {
-              Some(candidate) => collect(candidate, branch_condition)
-              None => ()
-            }
+            branch_root_candidates(branch, branch_condition, (
+              candidate,
+              candidate_condition,
+            ) => collect(candidate, candidate_condition))
           }
         }
         trail.pop() |> ignore
         trail.pop() |> ignore
-        root_undo_directives(branch_generation_undo, branch_added)
+        root_undo_directives(
+          branch_generation_undo, branch_added, branch_ignorable,
+        )
         root_restore(branch_undo)
       }
     } else if condition.satisfiable() {
@@ -1327,14 +1364,14 @@ fn docx_mce_possible_roots(
         let promoted = condition.snapshot()
         promoted.refused.push([root_element_uri(element.name)])
         trail.push(element)
-        match single_element(element) {
-          Some(candidate) => collect(candidate, promoted)
-          None => ()
-        }
+        branch_root_candidates(element, promoted, (
+          candidate,
+          candidate_condition,
+        ) => collect(candidate, candidate_condition))
         trail.pop() |> ignore
       }
     }
-    root_undo_directives(generation_undo, added)
+    root_undo_directives(generation_undo, added, ignorable_added)
     root_restore(undo)
   }
 
@@ -1672,15 +1709,20 @@ fn docx_mce_possible(
         }
     }
     let uris : Array[String] = []
+    let seen : Map[String, Bool] = Map([])
     let mut resolved = true
     docx_tokens_charged(requires, charge, token => {
       guard scope.get(token) is Some(uri) else {
         resolved = false
         return
       }
+      // The width cap counts DISTINCT resolved namespaces: one prefix
+      // repeated a hundred times is one requirement.
+      guard seen.get(uri) is None else { return }
       if uris.length() >= 64 {
         raise docx_analysis_refusal()
       }
+      seen[uri] = true
       uris.push(uri)
     })
     if !resolved || uris.is_empty() {

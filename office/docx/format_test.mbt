@@ -2633,3 +2633,76 @@ async test "the preflight fails closed on rels and multi-root branches" {
     }
   })
 }
+
+///|
+/// Round-20 fidelity: ignorable siblings do not hide a root, and a
+/// repeated prefix is one requirement.
+async test "the preflight drops ignorable siblings and dedupes requirements" {
+  with_docx_session_test_dir(directory => {
+    // The choice holds ignorable noise BESIDE a tracked settings root:
+    // consumers of the choice who drop the noise read exactly that
+    // tracked root, so the tracking is real and refuses.
+    let noisy = repackaged_fixture(
+      directory,
+      "noisy-branch",
+      [],
+      [
+        (
+          "word/settings.xml",
+          "<w:settings",
+          "<mc0:AlternateContent xmlns:mc0=\"http://schemas.openxmlformats.org/markup-compatibility/2006\" xmlns:y=\"urn:example:y\">" +
+          "<mc0:Choice Requires=\"y\" xmlns:x=\"urn:example:x\" mc0:Ignorable=\"x\">" +
+          "<x:noise/>" +
+          "<w:settings xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\"><w:trackRevisions/></w:settings>" +
+          "</mc0:Choice><mc0:Fallback><w:settings",
+        ),
+        (
+          "word/settings.xml", "</w:settings>", "</w:settings></mc0:Fallback></mc0:AlternateContent>",
+        ),
+      ],
+      [],
+    )
+    let (noisy_failure, noisy_published) = format_input_probe(
+      noisy,
+      directory + "/noisy-branch-out.docx",
+    )
+    guard noisy_failure is Some(noisy_message) else {
+      fail("the consumers who drop the noise read the tracked root")
+    }
+    assert_true(
+      noisy_message.contains("records revisions") ||
+      noisy_message.contains("compatibility alternatives") ||
+      noisy_message.contains("could not be read"),
+      msg=noisy_message,
+    )
+    assert_false(noisy_published, msg="nothing may be published")
+    // One prefix repeated sixty-five times is ONE requirement, not a
+    // complexity refusal.
+    let repeats = StringBuilder()
+    for index in 0..<65 {
+      if index > 0 {
+        repeats.write_string(" ")
+      }
+      repeats.write_string("w14")
+    }
+    let repeated = preflight_fixture(
+      directory,
+      "repeated-requires",
+      "<mc:AlternateContent xmlns:mc=\"http://schemas.openxmlformats.org/markup-compatibility/2006\">" +
+      "<mc:Choice Requires=\"" +
+      repeats.to_string() +
+      "\"><w:zoom w:percent=\"90\"/></mc:Choice>" +
+      "<mc:Fallback/></mc:AlternateContent>",
+      [],
+    )
+    let (repeated_failure, repeated_published) = format_input_probe(
+      repeated,
+      directory + "/repeated-requires-out.docx",
+    )
+    assert_true(
+      repeated_failure is None,
+      msg="a repeated prefix is one requirement: \{repeated_failure}",
+    )
+    assert_true(repeated_published, msg="the edit publishes")
+  })
+}
