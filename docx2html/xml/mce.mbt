@@ -763,6 +763,9 @@ fn MceProcessor::process_element(
       mce_mismatch("Choice, Fallback, or unknown MCE element is misplaced")
     Some(namespace_uri) if self.namespace_is_ignorable(namespace_uri) &&
       !self.application_understands(namespace_uri) => {
+      // `MustUnderstand` outranks ignorability: an element that DEMANDS
+      // understanding is not one this application may quietly drop.
+      mce_require_must_understand(scope)
       if self.element_matches_process_content(element.name, namespace_uri) {
         if element.attributes.contains(MCE_XML_BASE) ||
           element.attributes.contains(MCE_XML_LANG) ||
@@ -771,7 +774,6 @@ fn MceProcessor::process_element(
             "an unwrapped ProcessContent element has xml:base, xml:lang, or xml:space",
           )
         }
-        mce_require_must_understand(scope)
         let output = self.process_children(element.children)
         self.leave_element(scope)
         return output

@@ -254,3 +254,38 @@ test "MCE rejects non-ignorable AlternateContent children and unsafe unwraps" {
     ).contains("an unwrapped ProcessContent element has xml:base"),
   )
 }
+
+///|
+/// `MustUnderstand` outranks ignorability: an ignorable element that
+/// DEMANDS understanding is not one this application may quietly drop.
+test "MustUnderstand on an ignorable element still refuses" {
+  let text = "<root xmlns:mc=\"http://schemas.openxmlformats.org/markup-compatibility/2006\" xmlns:w14=\"urn:example:w14\" mc:Ignorable=\"w14\"><w14:opaque mc:MustUnderstand=\"w14\"/></root>"
+  let outcome = try? @xml.read_xml_string_strict_mce_encoded_limited(
+    text,
+    Utf8,
+    @xml.xml_read_budget(
+      max_source_units=65536,
+      max_tokens=65536,
+      max_materialized_chars=1 << 20,
+      max_token_chars=65536,
+    ),
+    [],
+  )
+  guard outcome is Err(_) else {
+    fail("a demanded namespace is not quietly droppable")
+  }
+  // The same document WITHOUT the demand drops the element quietly.
+  let tolerant = "<root xmlns:mc=\"http://schemas.openxmlformats.org/markup-compatibility/2006\" xmlns:w14=\"urn:example:w14\" mc:Ignorable=\"w14\"><w14:opaque/></root>"
+  let effective = @xml.read_xml_string_strict_mce_encoded_limited(
+    tolerant,
+    Utf8,
+    @xml.xml_read_budget(
+      max_source_units=65536,
+      max_tokens=65536,
+      max_materialized_chars=1 << 20,
+      max_token_chars=65536,
+    ),
+    [],
+  )
+  assert_eq(effective.children.length(), 0)
+}

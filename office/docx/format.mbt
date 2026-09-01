@@ -206,11 +206,24 @@ fn docx_judge_settings_part(
     return
   }
   // A settings part that cannot be READ cannot be cleared: a preflight
-  // that cannot see its own evidence refuses rather than proceeds. Both
-  // projections come from ONE bounded parse: the tree markup
-  // compatibility leaves for THIS toolkit — it understands WML, in both
-  // dialects — and the raw tree it was selected from.
-  let (raw, root) = @xml.read_xml_bytes_strict_mce_with_roots_limited(
+  // that cannot see its own evidence refuses rather than proceeds. The
+  // RAW structure is judged first — the compatibility contract speaks
+  // before any projection resolves a fork, and before a malformed
+  // choice inside one turns the refusal generic.
+  let raw = @xml.read_xml_bytes_strict_preserving_limited(
+    settings,
+    candidate_xml_budget(),
+  ) catch {
+    _ =>
+      raise @transaction.transaction_failure(
+        "office.docx.settings_unreadable", "this document's settings part could not be read, so its editing protections cannot be checked",
+      )
+  }
+  if docx_contains_alternate_content(raw) {
+    raise docx_compatibility_refusal()
+  }
+  // Forkless, so the effective projection IS the one reading.
+  let root = @xml.read_xml_bytes_strict_mce_limited(
     settings,
     candidate_xml_budget(),
     [DOCX_WML_NAMESPACE, DOCX_STRICT_WML_NAMESPACE],
@@ -225,11 +238,6 @@ fn docx_judge_settings_part(
     raise @transaction.transaction_failure(
       "office.docx.settings_unreadable", "this document's settings part is not a WML settings part, so its editing protections cannot be checked",
     )
-  }
-  // The compatibility contract: a fork on a protection surface refuses
-  // rather than being resolved one way or the other.
-  if docx_contains_alternate_content(raw) {
-    raise docx_compatibility_refusal()
   }
   let effective = docx_settings_children(root)
   // Protection is an enforced RESTRICTION: `w:enforcement` alone with
@@ -670,7 +678,9 @@ fn docx_relationship_targets(
   guard docx_part_bytes(archive, parts, rels_name) is Some(bytes) else {
     return []
   }
-  let (raw, effective) = @opc.read_opc_relationships_xml_with_roots_limited(
+  // The RAW structure is judged first: the compatibility contract
+  // speaks before any projection resolves a fork.
+  let raw = @xml.read_xml_bytes_strict_preserving_limited(
     bytes,
     candidate_xml_budget(),
   ) catch {
@@ -681,6 +691,15 @@ fn docx_relationship_targets(
   }
   if docx_contains_alternate_content(raw) {
     raise docx_compatibility_refusal()
+  }
+  let effective = @opc.read_opc_relationships_xml_limited(
+    bytes,
+    candidate_xml_budget(),
+  ) catch {
+    _ =>
+      raise @transaction.transaction_failure(
+        "office.docx.settings_unreadable", "this package's relationships could not be read, so its editing protections cannot be checked",
+      )
   }
   let base = match source.rev_find("/") {
     Some(slash) => source[:slash].to_owned()

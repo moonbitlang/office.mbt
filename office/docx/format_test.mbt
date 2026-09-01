@@ -1573,7 +1573,7 @@ async test "the preflight fails closed on rels and multi-root branches" {
           "<w:settings",
           "<mc0:AlternateContent xmlns:mc0=\"http://schemas.openxmlformats.org/markup-compatibility/2006\" xmlns:x=\"urn:example:x\">" +
           "<mc0:Choice Requires=\"x\">" +
-          "<w:settings xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\"><w:trackRevisions/></w:settings>" +
+          "<w:settings xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\"/>" +
           "<w:settings xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\"/>" +
           "</mc0:Choice><mc0:Fallback><w:settings",
         ),
@@ -1587,16 +1587,16 @@ async test "the preflight fails closed on rels and multi-root branches" {
       twin_roots,
       directory + "/twin-roots-out.docx",
     )
-    // Whichever voice speaks — the single-root rule publishing, or the
-    // MCE reader refusing an alternate-rooted part outright — the twin
-    // roots never refuse AS TRACKING.
-    match twin_failure {
-      Some(message) => {
-        assert_true(message.contains("could not be read"), msg=message)
-        assert_false(twin_published, msg="nothing published on refusal")
-      }
-      None => assert_true(twin_published, msg="the edit publishes")
+    // An alternate-rooted settings part is a FORK on a protection
+    // surface: the contract refuses it in its own voice.
+    guard twin_failure is Some(twin_message) else {
+      fail("a fork on the settings surface refuses")
     }
+    assert_true(
+      twin_message.contains("compatibility alternatives"),
+      msg=twin_message,
+    )
+    assert_false(twin_published, msg="nothing may be published")
   })
 }
 
