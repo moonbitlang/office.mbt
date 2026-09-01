@@ -140,8 +140,8 @@ pub fn DocxFormatResult::transaction(
 
 ///|
 /// The conditions under which this toolkit does not edit a DOCX at all:
-/// the package carries a digital signature, the document enforces
-/// editing protection, or the document records revisions this toolkit
+/// the package carries a digital signature, the document enforces an
+/// editing restriction, or the document records revisions this toolkit
 /// cannot write.
 ///
 /// It runs BEFORE anything is planned, on the request rather than on
@@ -152,6 +152,17 @@ pub fn DocxFormatResult::transaction(
 /// that have nothing to do with the package's protections, and would
 /// make this toolkit plan edits to documents it has already decided not
 /// to touch.
+///
+/// THE COMPATIBILITY CONTRACT: the preflight reads protection surfaces
+/// — the settings part, and the relationship parts that find it and the
+/// signature chain — exactly as a WML consumer reads them, and REFUSES,
+/// typed, whenever those surfaces carry `mc:AlternateContent`. A
+/// compatibility fork there means different consumers can read
+/// different protections, and this preflight does not model other
+/// consumers; it says so and stops. Real producers do not put alternate
+/// content on these surfaces (a 591-document corpus sample has zero),
+/// so the refusal is invisible to real documents while closing every
+/// hide-a-protection-in-a-branch construction at once.
 pub fn docx_mutation_preflight(
   archive : @zip.Archive,
   tracking_waived? : Bool = false,
@@ -168,33 +179,24 @@ pub fn docx_mutation_preflight(
       "office.docx.signed_package", "this package carries a digital signature, which any edit would invalidate",
     )
   }
-  let (forked, settings_parts) = docx_settings_parts(archive, parts)
-  if forked {
-    raise @transaction.transaction_failure(
-      "office.docx.settings_ambiguous", "this package's relationships let one consumer reach more than one settings part, so its editing protections cannot be checked",
-    )
+  let settings_name = match docx_settings_part(archive, parts) {
+    Found(name) => name
+    // A document with no settings part declares no protections.
+    Absent => return
+    Ambiguous =>
+      raise @transaction.transaction_failure(
+        "office.docx.settings_ambiguous", "this package names more than one settings part, so its editing protections cannot be checked",
+      )
   }
-  // Several parts may remain when they are MUTUALLY EXCLUSIVE — each
-  // consumer sees exactly one — and each is judged under the conditions
-  // of the consumers who see it.
-  for entry in settings_parts {
-    docx_judge_settings_part(
-      archive,
-      parts,
-      entry.part,
-      entry.conditions,
-      tracking_waived~,
-    )
-  }
+  docx_judge_settings_part(archive, parts, settings_name, tracking_waived~)
 }
 
 ///|
-/// One settings part, judged for the consumers who can reach it.
+/// The settings part, judged as a WML consumer reads it.
 fn docx_judge_settings_part(
   archive : @zip.Archive,
   parts : Map[String, (String, String)],
   settings_name : String,
-  settings_conditions : Array[DocxCondition],
   tracking_waived~ : Bool,
 ) -> Unit raise @transaction.TransactionError {
   // A settings part the package promises but does not contain is a
@@ -203,79 +205,37 @@ fn docx_judge_settings_part(
   guard docx_part_bytes(archive, parts, settings_name) is Some(settings) else {
     return
   }
-  // OUR reading of the part is one consumer's: it supports both WML
-  // dialects and nothing else. If no path condition is satisfied by
-  // that profile, the consumer this projection describes never reaches
-  // the part — its reading decides nothing, and it is not even DEMANDED:
-  // a part whose MustUnderstand this toolkit fails may still be a part
-  // this toolkit never reaches, and refusing over a projection nobody
-  // asked for would refuse documents Word edits.
-  let mut profile_reaches = false
-  for part_condition in settings_conditions {
-    if docx_profile_satisfies(part_condition) {
-      profile_reaches = true
-    }
-  }
   // A settings part that cannot be READ cannot be cleared: a preflight
-  // that cannot see its own evidence refuses rather than proceeds. When
-  // our profile reaches the part, both projections come from ONE
-  // bounded MCE parse; when it does not, the raw structure alone is
-  // parsed, and only the conditioned possible-walk judges it.
-  let (raw, effective) = if profile_reaches {
-    let (raw, root) = @xml.read_xml_bytes_strict_mce_with_roots_limited(
-      settings,
-      candidate_xml_budget(),
-      [DOCX_WML_NAMESPACE, DOCX_STRICT_WML_NAMESPACE],
-    ) catch {
-      _ =>
-        raise @transaction.transaction_failure(
-          "office.docx.settings_unreadable", "this document's settings part could not be read, so its editing protections cannot be checked",
-        )
-    }
-    guard root.name == "{\{DOCX_WML_NAMESPACE}}settings" ||
-      root.name == "{\{DOCX_STRICT_WML_NAMESPACE}}settings" else {
+  // that cannot see its own evidence refuses rather than proceeds. Both
+  // projections come from ONE bounded parse: the tree markup
+  // compatibility leaves for THIS toolkit — it understands WML, in both
+  // dialects — and the raw tree it was selected from.
+  let (raw, root) = @xml.read_xml_bytes_strict_mce_with_roots_limited(
+    settings,
+    candidate_xml_budget(),
+    [DOCX_WML_NAMESPACE, DOCX_STRICT_WML_NAMESPACE],
+  ) catch {
+    _ =>
       raise @transaction.transaction_failure(
-        "office.docx.settings_unreadable", "this document's settings part is not a WML settings part, so its editing protections cannot be checked",
+        "office.docx.settings_unreadable", "this document's settings part could not be read, so its editing protections cannot be checked",
       )
-    }
-    (raw, docx_settings_children(root))
-  } else {
-    let raw = @xml.read_xml_bytes_strict_preserving_limited(
-      settings,
-      candidate_xml_budget(),
-    ) catch {
-      _ =>
-        raise @transaction.transaction_failure(
-          "office.docx.settings_unreadable", "this document's settings part could not be read, so its editing protections cannot be checked",
-        )
-    }
-    (raw, ([] : Array[@xml.XmlElement]))
   }
-  // Everything ANY consumer might read at the settings level — but only
-  // consumers who can REACH this settings part count: the conditions of
-  // the path that found the part conjoin with each element's own, and
-  // an element only a consumer who never sees the part would read is
-  // nobody's setting.
-  let suppressed : Array[@xml.XmlElement] = []
-  for entry in docx_settings_possible(raw) {
-    let (element, element_condition) = entry
-    let mut reachable = false
-    for part_condition in settings_conditions {
-      if part_condition.conjoin(element_condition).satisfiable() {
-        reachable = true
-      }
-    }
-    if reachable {
-      suppressed.push(element)
-    }
+  guard root.name == "{\{DOCX_WML_NAMESPACE}}settings" ||
+    root.name == "{\{DOCX_STRICT_WML_NAMESPACE}}settings" else {
+    raise @transaction.transaction_failure(
+      "office.docx.settings_unreadable", "this document's settings part is not a WML settings part, so its editing protections cannot be checked",
+    )
   }
-  match
-    docx_settings_flag(
-      effective,
-      "documentProtection",
-      "enforcement",
-      absent_means_on=false,
-    ) {
+  // The compatibility contract: a fork on a protection surface refuses
+  // rather than being resolved one way or the other.
+  if docx_contains_alternate_content(raw) {
+    raise docx_compatibility_refusal()
+  }
+  let effective = docx_settings_children(root)
+  // Protection is an enforced RESTRICTION: `w:enforcement` alone with
+  // `w:edit="none"` and no formatting lock restricts nothing, and Word
+  // edits such a document freely.
+  match docx_document_protection(effective) {
     Enabled =>
       raise @transaction.transaction_failure(
         "office.docx.protected_document", "this document enforces editing protection; unprotect it before editing",
@@ -284,23 +244,11 @@ fn docx_judge_settings_part(
       raise @transaction.transaction_failure(
         "office.docx.settings_ambiguous", "this document's editing protection is declared more than once, or with a value outside the schema, so it cannot be read as enforced or not",
       )
-    Disabled | Missing =>
-      if docx_settings_flag(
-          suppressed,
-          "documentProtection",
-          "enforcement",
-          absent_means_on=false,
-        )
-        is (Enabled | Ambiguous) {
-        raise @transaction.transaction_failure(
-          "office.docx.settings_ambiguous", "this document's editing protection is declared inside compatibility alternatives this toolkit does not resolve",
-        )
-      }
+    Disabled | Missing => ()
   }
   // Write protection that carries a password is enforcement too, and it
   // is a different element from `documentProtection`.
-  if docx_write_protection_enforced(effective) ||
-    docx_write_protection_enforced(suppressed) {
+  if docx_write_protection_enforced(effective) {
     raise @transaction.transaction_failure(
       "office.docx.protected_document", "this document is write protected; remove the write protection before editing",
     )
@@ -331,19 +279,105 @@ fn docx_judge_settings_part(
       raise @transaction.transaction_failure(
         "office.docx.settings_ambiguous", "this document's revision tracking is declared more than once, or with a value outside the schema, so it cannot be read as on or off",
       )
-    Disabled | Missing =>
-      if docx_settings_flag(
-          suppressed,
-          "trackRevisions",
-          "val",
-          absent_means_on=true,
-        )
-        is (Enabled | Ambiguous) {
-        raise @transaction.transaction_failure(
-          "office.docx.settings_ambiguous", "this document's revision tracking is declared inside compatibility alternatives this toolkit does not resolve",
-        )
-      }
+    Disabled | Missing => ()
   }
+}
+
+///|
+/// Whether any element of this tree is an `mc:AlternateContent`: the
+/// one construct that makes a part read differently per consumer.
+fn docx_contains_alternate_content(element : @xml.XmlElement) -> Bool {
+  if element.name == "{\{DOCX_MC_NAMESPACE}}AlternateContent" {
+    return true
+  }
+  for node in element.children {
+    guard node is XmlElement(child) else { continue }
+    if docx_contains_alternate_content(child) {
+      return true
+    }
+  }
+  false
+}
+
+///|
+/// The refusal for a compatibility fork on a protection surface: this
+/// preflight reads as ONE consumer and does not guess what another one
+/// reads.
+fn docx_compatibility_refusal() -> @transaction.TransactionError {
+  @transaction.transaction_failure(
+    "office.docx.settings_ambiguous", "this document's protections sit beside compatibility alternatives this toolkit does not resolve; another consumer may read a different branch",
+  ) catch {
+    error => error
+  }
+}
+
+///|
+/// What `w:documentProtection` says, as an enforced RESTRICTION: on
+/// only when enforcement is on AND the element restricts something —
+/// an edit mode other than `none`, or a formatting lock.
+fn docx_document_protection(
+  elements : Array[@xml.XmlElement],
+) -> DocxSettingsFlag {
+  let mut verdict : DocxSettingsFlag = Missing
+  fn observe(state : DocxSettingsFlag) -> Unit {
+    verdict = match (verdict, state) {
+      (Missing, seen) => seen
+      (_, Ambiguous) | (Ambiguous, _) => Ambiguous
+      (Enabled, Enabled) => Enabled
+      (Disabled, Disabled) => Disabled
+      _ => Ambiguous
+    }
+  }
+
+  for element in elements {
+    guard element.name == "{\{DOCX_WML_NAMESPACE}}documentProtection" ||
+      element.name == "{\{DOCX_STRICT_WML_NAMESPACE}}documentProtection" else {
+      continue
+    }
+    let mut enforcement : DocxSettingsFlag = Disabled
+    let mut formatting : DocxSettingsFlag = Disabled
+    let mut edit : String? = None
+    for dialect in [DOCX_WML_NAMESPACE, DOCX_STRICT_WML_NAMESPACE] {
+      match element.attributes.get("{\{dialect}}enforcement") {
+        Some(value) =>
+          enforcement = docx_on_off(@xml.collapse_xml_schema_whitespace(value))
+        None => ()
+      }
+      match element.attributes.get("{\{dialect}}formatting") {
+        Some(value) =>
+          formatting = docx_on_off(@xml.collapse_xml_schema_whitespace(value))
+        None => ()
+      }
+      match element.attributes.get("{\{dialect}}edit") {
+        Some(value) => edit = Some(@xml.collapse_xml_schema_whitespace(value))
+        None => ()
+      }
+    }
+    let state = match enforcement {
+      Enabled => {
+        // An edit mode other than `none` — or one outside the schema —
+        // restricts; so does a formatting lock.
+        let restricting_edit = match edit {
+          Some(mode) => mode != "none"
+          None => false
+        }
+        match formatting {
+          Ambiguous => DocxSettingsFlag::Ambiguous
+          Enabled => Enabled
+          Disabled | Missing =>
+            if restricting_edit {
+              Enabled
+            } else {
+              Disabled
+            }
+        }
+      }
+      Ambiguous => Ambiguous
+      Disabled | Missing => Disabled
+    }
+    observe(state)
+  }
+  verdict
 }
 
 ///|
@@ -422,26 +456,13 @@ fn docx_package_declares_signature(
     DOCX_SIGNATURE_ORIGIN_RELATIONSHIP,
   ])
   guard !origins.is_empty() else { return false }
-  // Conditions CONJOIN across the chain: an origin reachable only when a
-  // namespace is supported, whose signature relationship is reachable
-  // only when it is not, is a path no consumer walks.
   let signatures : Array[String] = []
   for origin in origins {
     for
-      target in docx_relationship_targets(archive, parts, origin.part, [
+      target in docx_relationship_targets(archive, parts, origin, [
         DOCX_SIGNATURE_RELATIONSHIP,
       ]) {
-      let mut reachable = false
-      for before in origin.conditions {
-        for condition in target.conditions {
-          if before.conjoin(condition).satisfiable() {
-            reachable = true
-          }
-        }
-      }
-      if reachable {
-        signatures.push(target.part)
-      }
+      signatures.push(target)
     }
   }
   guard !signatures.is_empty() else { return false }
@@ -551,9 +572,6 @@ fn docx_part_extension(name : String) -> String? {
 }
 
 ///|
-const DOCX_PACKAGE_RELATIONSHIPS_NAMESPACE : String = "http://schemas.openxmlformats.org/package/2006/relationships"
-
-///|
 /// The package's signature relationships: the origin the package points
 /// at, and the signatures the origin points at.
 const DOCX_SIGNATURE_ORIGIN_RELATIONSHIP : String = "http://schemas.openxmlformats.org/package/2006/relationships/digital-signature/origin"
@@ -579,250 +597,80 @@ const DOCX_SETTINGS_RELATIONSHIP : String = "http://schemas.openxmlformats.org/o
 const DOCX_STRICT_SETTINGS_RELATIONSHIP : String = "http://purl.oclc.org/ooxml/officeDocument/relationships/settings"
 
 ///|
-/// Every settings part some consumer reaches, with its conditions — and
-/// whether any single consumer could reach TWO of them, which is the
-/// fork nothing downstream would catch.
-///
-/// Mutual exclusivity is not ambiguity: a choice's settings part and
-/// its fallback's are seen by disjoint consumers, and each is judged on
-/// its own terms.
-fn docx_settings_parts(
+/// What following a relationship found.
+priv enum DocxPartLookup {
+  Absent
+  Found(String)
+  Ambiguous
+}
+
+///|
+/// The settings part the document's relationships name: the root
+/// `officeDocument` relationship names the main part, and that part's
+/// own settings relationship names the settings. Neither is `word/…` by
+/// rule — OPC part names are the package's to choose, and a
+/// `word/settings.xml` nothing refers to is not this document's
+/// settings.
+fn docx_settings_part(
   archive : @zip.Archive,
   parts : Map[String, (String, String)],
-) -> (Bool, Array[DocxPossiblePart]) raise @transaction.TransactionError {
-  let mains = docx_reachable_parts(
-    archive,
-    parts,
-    "",
-    [
+) -> DocxPartLookup raise @transaction.TransactionError {
+  let document = match
+    docx_relationship_target(archive, parts, "", [
       DOCX_OFFICE_DOCUMENT_RELATIONSHIP,
       DOCX_STRICT_OFFICE_DOCUMENT_RELATIONSHIP,
-    ],
-    [DocxCondition::always()],
-  )
-  if docx_parts_coexist(mains) {
-    return (true, [])
+    ]) {
+    Found(name) => name
+    Absent => return Absent
+    Ambiguous => return Ambiguous
   }
-  let by_key : Map[String, DocxPossiblePart] = Map([])
-  let order : Array[String] = []
-  for main in mains {
-    for
-      candidate in docx_reachable_parts(
-        archive,
-        parts,
-        main.part,
-        [DOCX_SETTINGS_RELATIONSHIP, DOCX_STRICT_SETTINGS_RELATIONSHIP],
-        main.conditions,
-      ) {
-      let key = @opc.part_name_key(candidate.part)
-      let entry = match by_key.get(key) {
-        Some(known) => known
-        None => {
-          // Through the same push, so the FIRST conditions are
-          // normalized and antichain-kept like every later one.
-          let created : DocxPossiblePart = {
-            part: candidate.part,
-            conditions: [],
-          }
-          by_key[key] = created
-          order.push(key)
-          created
-        }
-      }
-      for condition in candidate.conditions {
-        docx_push_condition(entry.conditions, condition)
-      }
-    }
-  }
-  let collected : Array[DocxPossiblePart] = []
-  for key in order {
-    guard by_key.get(key) is Some(entry) else { continue }
-    collected.push(entry)
-  }
-  (docx_parts_coexist(collected), collected)
+  docx_relationship_target(archive, parts, document, [
+    DOCX_SETTINGS_RELATIONSHIP,
+    DOCX_STRICT_SETTINGS_RELATIONSHIP,
+  ])
 }
 
 ///|
-/// Whether any single consumer could reach two DISTINCT parts at once.
-fn docx_parts_coexist(
-  candidates : Array[DocxPossiblePart],
-) -> Bool raise @transaction.TransactionError {
-  // The pairwise test is bounded by WORK, not by shape: a package can
-  // declare thousands of mutually exclusive parts whose conditions grow
-  // along the way, and an analysis that cannot finish within its budget
-  // refuses rather than guesses.
-  let mut work = 0
-  for first_index, first in candidates {
-    for second_index, second in candidates {
-      guard second_index > first_index else { continue }
-      for condition_a in first.conditions {
-        for condition_b in second.conditions {
-          work += condition_a.required.length() +
-            condition_b.required.length() +
-            condition_a.refused.length() +
-            condition_b.refused.length() +
-            1
-          if work > 1000000 {
-            raise docx_analysis_refusal()
-          }
-          if condition_a.conjoin(condition_b).satisfiable() {
-            return true
-          }
-        }
-      }
-    }
-  }
-  false
-}
-
-///|
-/// A bounded push, EXACT below the bound: a redundant condition — one
-/// already subsumed by a weaker condition in the list, which every
-/// consumer it admits already satisfies — is dropped; past the bound
-/// the push raises the analysis refusal, because widening in either
-/// direction manufactures a verdict about consumers nobody modeled.
-fn docx_push_condition(
-  conditions : Array[DocxCondition],
-  condition : DocxCondition,
-) -> Unit raise @transaction.TransactionError {
-  // Normalized first: a clause member the condition already REQUIRES
-  // cannot be the unsupported one, so it drops out — and a clause with
-  // nothing left is the unsatisfiable condition, which no consumer
-  // meets and no list needs.
-  let condition = condition.normalized()
-  guard condition.satisfiable() else { return }
-  for existing in conditions {
-    if docx_condition_subsumes(existing, condition) {
-      return
-    }
-  }
-  // The list stays a minimal ANTICHAIN: a weaker newcomer retires what
-  // it subsumes, so whether the bound is met cannot depend on the order
-  // the paths were declared in.
-  let retained : Array[DocxCondition] = []
-  for existing in conditions {
-    if !docx_condition_subsumes(condition, existing) {
-      retained.push(existing)
-    }
-  }
-  if retained.length() >= 64 {
-    raise docx_analysis_refusal()
-  }
-  conditions.clear()
-  for existing in retained {
-    conditions.push(existing)
-  }
-  conditions.push(condition)
-}
-
-///|
-/// Whether `weaker` admits every consumer `stronger` admits: each of
-/// its requirements is one of the stronger's, and each of its clauses
-/// is IMPLIED by one of the stronger's — a clause implies another
-/// exactly when it is a subset of it (if at least one of the few is
-/// unsupported, at least one of the many is). Set logic throughout, so
-/// a prefix bound twice to one namespace changes nothing.
-fn docx_condition_subsumes(
-  weaker : DocxCondition,
-  stronger : DocxCondition,
-) -> Bool {
-  for uri in weaker.required {
-    if !stronger.required.contains(uri) {
-      return false
-    }
-  }
-  for group in weaker.refused {
-    let mut implied = false
-    for candidate in stronger.refused {
-      let mut subset = true
-      for uri in candidate {
-        if !group.contains(uri) {
-          subset = false
-        }
-      }
-      if subset {
-        implied = true
-      }
-    }
-    if !implied {
-      return false
-    }
-  }
-  true
-}
-
-///|
-/// The refusal for compatibility markup past the analysis bound: this
-/// preflight is EXACT below it and refuses above it, because a widened
-/// answer would be a guess about which consumers see what.
-fn docx_analysis_refusal() -> @transaction.TransactionError {
-  @transaction.transaction_failure(
-    "office.docx.settings_ambiguous", "this package's compatibility markup is too complex to analyze; its editing protections cannot be checked",
-  ) catch {
-    error => error
-  }
-}
-
-///|
-/// The parts of `types` reachable from `source` for consumers meeting
-/// some `prior` condition, each with the (conjoined, satisfiable)
-/// conditions of its paths.
-fn docx_reachable_parts(
+/// The single INTERNAL part named by `source`'s relationships of one of
+/// `types`: `Absent`, `Found`, or `Ambiguous` when several name
+/// different parts — which no later gate would catch.
+fn docx_relationship_target(
   archive : @zip.Archive,
   parts : Map[String, (String, String)],
   source : String,
   types : Array[String],
-  prior : Array[DocxCondition],
-) -> Array[DocxPossiblePart] raise @transaction.TransactionError {
-  let reachable : Array[DocxPossiblePart] = []
-  for candidate in docx_relationship_targets(archive, parts, source, types) {
-    let combined : Array[DocxCondition] = []
-    for before in prior {
-      for condition in candidate.conditions {
-        let joined = before.conjoin(condition)
-        if joined.satisfiable() {
-          docx_push_condition(combined, joined)
-        }
-      }
-    }
-    if !combined.is_empty() {
-      reachable.push({ part: candidate.part, conditions: combined, })
-    }
+) -> DocxPartLookup raise @transaction.TransactionError {
+  match docx_relationship_targets(archive, parts, source, types) {
+    [] => Absent
+    [only] => Found(only)
+    _ => Ambiguous
   }
-  reachable
-}
-
-///|
-/// One part a relationship walk could reach, with the consumer
-/// capabilities each PATH to it demands. Two paths to one part keep
-/// their conditions side by side: reachable under either.
-priv struct DocxPossiblePart {
-  part : String
-  conditions : Array[DocxCondition]
 }
 
 ///|
 /// Every INTERNAL part named by `source`'s relationships of one of
-/// `types`, resolved against `source`'s own location, deduplicated by
-/// part identity, each with the capability conditions of its paths.
+/// `types`, resolved against `source`'s own location and deduplicated
+/// by part identity.
+///
+/// The part is read the way every consumer of the RELATIONSHIPS
+/// vocabulary reads it: the markup-compatibility-effective tree, which
+/// resolves `Ignorable`/`ProcessContent` wrappers the standard way. A
+/// part that carries `mc:AlternateContent` refuses under the
+/// compatibility contract — a fork here can steer which settings part,
+/// or which signature chain, a consumer follows. A PRESENT part that
+/// cannot be read refuses rather than reading as empty: failing open
+/// would let an unparseable rels part hide a signature or a protection.
 fn docx_relationship_targets(
   archive : @zip.Archive,
   parts : Map[String, (String, String)],
   source : String,
   types : Array[String],
-) -> Array[DocxPossiblePart] raise @transaction.TransactionError {
+) -> Array[String] raise @transaction.TransactionError {
   let rels_name = @opc.relationships_part_name_for_source(source)
   guard docx_part_bytes(archive, parts, rels_name) is Some(bytes) else {
     return []
   }
-  // The RAW tree, walked through every branch: a relationship inside an
-  // `mc:Choice` is one some consumer resolves, and a preflight that read
-  // only its own projection would miss a settings part — or a signature
-  // chain — that Word follows.
-  // A PRESENT relationships part that cannot be read is not evidence of
-  // anything: failing open here would let an unparseable rels part hide
-  // a signature chain or a settings part.
-  let (root, _effective) = @opc.read_opc_relationships_xml_with_roots_limited(
+  let (raw, effective) = @opc.read_opc_relationships_xml_with_roots_limited(
     bytes,
     candidate_xml_budget(),
   ) catch {
@@ -831,71 +679,41 @@ fn docx_relationship_targets(
         "office.docx.settings_unreadable", "this package's relationships could not be read, so its editing protections cannot be checked",
       )
   }
+  if docx_contains_alternate_content(raw) {
+    raise docx_compatibility_refusal()
+  }
   let base = match source.rev_find("/") {
     Some(slash) => source[:slash].to_owned()
     None => ""
   }
-  let by_key : Map[String, DocxPossiblePart] = Map([])
-  let order : Array[String] = []
-  // Every OPC consumer understands the relationships vocabulary itself,
-  // so a choice requiring only it decides its alternate, and an element
-  // outside it is looked through only where a `ProcessContent` says a
-  // consumer would. A part whose ROOT is compatibility markup resolves
-  // to a different root per consumer, so every possible root is walked.
-  for
-    possible_root in docx_mce_possible_roots(root, [
-      DOCX_PACKAGE_RELATIONSHIPS_NAMESPACE,
-    ]) {
-    let (root_element, root_condition, chain) = possible_root
-    for
-      entry in docx_mce_possible(
-        root_element,
-        [DOCX_PACKAGE_RELATIONSHIPS_NAMESPACE],
-        context=chain,
-      ) {
-      let relationship = entry.0
-      // The root's own path condition CONJOINS with the walk's.
-      let condition = root_condition.conjoin(entry.1)
-      guard condition.satisfiable() else { continue }
-      guard relationship.name
-        is (DOCX_PACKAGE_RELATIONSHIP_ELEMENT | "relationships:Relationship") else {
-        continue
-      }
-      let kind = @xml.collapse_xml_schema_whitespace(
-        relationship.attributes.get_or_default("Type", ""),
-      )
-      guard types.contains(kind) else { continue }
-      // An EXTERNAL target names something outside the package, which is
-      // not a part and cannot be read.
-      let mode = @xml.collapse_xml_schema_whitespace(
-        relationship.attributes.get_or_default("TargetMode", "Internal"),
-      )
-      guard mode == "Internal" else { continue }
-      let target = @xml.collapse_xml_schema_whitespace(
-        relationship.attributes.get_or_default("Target", ""),
-      )
-      guard @opc.resolve_part_target(base, target) is Some(part) else {
-        continue
-      }
-      // Two targets that differ only in case name ONE part.
-      let key = @opc.part_name_key(part)
-      match by_key.get(key) {
-        Some(known) => docx_push_condition(known.conditions, condition)
-        None => {
-          // Through the same push, so the FIRST condition is normalized
-          // and antichain-kept like every later one.
-          let entry : DocxPossiblePart = { part, conditions: [], }
-          docx_push_condition(entry.conditions, condition)
-          by_key[key] = entry
-          order.push(key)
-        }
-      }
+  let found : Array[String] = []
+  let resolved : Array[String] = []
+  for node in effective.children {
+    guard node is XmlElement(relationship) else { continue }
+    guard relationship.name
+      is (DOCX_PACKAGE_RELATIONSHIP_ELEMENT | "relationships:Relationship") else {
+      continue
     }
-  }
-  let resolved : Array[DocxPossiblePart] = []
-  for key in order {
-    guard by_key.get(key) is Some(entry) else { continue }
-    resolved.push(entry)
+    let kind = @xml.collapse_xml_schema_whitespace(
+      relationship.attributes.get_or_default("Type", ""),
+    )
+    guard types.contains(kind) else { continue }
+    // An EXTERNAL target names something outside the package, which is
+    // not a part and cannot be read.
+    let mode = @xml.collapse_xml_schema_whitespace(
+      relationship.attributes.get_or_default("TargetMode", "Internal"),
+    )
+    guard mode == "Internal" else { continue }
+    let target = @xml.collapse_xml_schema_whitespace(
+      relationship.attributes.get_or_default("Target", ""),
+    )
+    guard @opc.resolve_part_target(base, target) is Some(part) else { continue }
+    // Two targets that differ only in case name ONE part.
+    let key = @opc.part_name_key(part)
+    if !found.contains(key) {
+      found.push(key)
+      resolved.push(part)
+    }
   }
   resolved
 }
@@ -936,1031 +754,6 @@ fn docx_settings_children(root : @xml.XmlElement) -> Array[@xml.XmlElement] {
 ///|
 
 ///|
-const DOCX_XMLNS_NAMESPACE : String = "http://www.w3.org/2000/xmlns/"
-
-///|
-/// The settings a DIFFERENT consumer might act on: every element that
-/// could sit at the settings-child level under SOME resolution of the
-/// part's compatibility markup.
-fn docx_settings_possible(
-  raw : @xml.XmlElement,
-) -> Array[(@xml.XmlElement, DocxCondition)] raise @transaction.TransactionError {
-  // A settings part whose ROOT is compatibility markup resolves to a
-  // different root per consumer: every possible settings root's
-  // children are possible settings, under the root's own condition
-  // conjoined with theirs. What EVERY consumer of the part understands
-  // is the dialect the part's own root is written in — a Transitional
-  // document may be read by a consumer that knows nothing of Strict, so
-  // a choice requiring the OTHER dialect is conditional, not universal.
-  let collected : Array[(@xml.XmlElement, DocxCondition)] = []
-  for possible_root in docx_mce_possible_roots(raw, []) {
-    let (root, root_condition, chain) = possible_root
-    let dialect = if root.name == "{\{DOCX_WML_NAMESPACE}}settings" {
-      DOCX_WML_NAMESPACE
-    } else if root.name == "{\{DOCX_STRICT_WML_NAMESPACE}}settings" {
-      DOCX_STRICT_WML_NAMESPACE
-    } else {
-      continue
-    }
-    // Reading this part at all means SUPPORTING its dialect, so the
-    // dialect is a positive requirement of every condition returned: a
-    // path that demanded the dialect unsupported cannot lead to a
-    // consumer who then reads this content.
-    let reads_part : DocxCondition = { required: [dialect], refused: [], }
-    for entry in docx_mce_possible(root, [dialect], context=chain) {
-      let joined = reads_part.conjoin(root_condition).conjoin(entry.1)
-      if joined.satisfiable() {
-        collected.push((entry.0, joined))
-      }
-    }
-  }
-  collected
-}
-
-///|
-/// Every element that could be the ROOT a consumer reads, with the
-/// capability condition of the path to it: the part's own root, or —
-/// when the root is an alternate — a branch's root, under ordered-choice
-/// semantics. A branch after a single-requirement choice demands that
-/// namespace UNSUPPORTED, so two consecutive choices requiring the same
-/// thing leave the second unreachable, and an unsatisfiable root is not
-/// a root anyone reads.
-fn docx_mce_possible_roots(
-  raw : @xml.XmlElement,
-  understood : Array[String],
-) -> Array[(@xml.XmlElement, DocxCondition, Array[@xml.XmlElement])] raise @transaction.TransactionError {
-  let roots : Array[(@xml.XmlElement, DocxCondition, Array[@xml.XmlElement])] = []
-  // The elements whose declarations and directives are IN SCOPE at the
-  // root being collected: the walk that later reads the root's content
-  // must replay them, or an inherited binding or process-content rule
-  // vanishes between the two walks.
-  let trail : Array[@xml.XmlElement] = []
-  let root_work : Array[Int] = [0]
-  fn root_charge(amount : Int) -> Unit raise @transaction.TransactionError {
-    root_work[0] += amount
-    if root_work[0] > 2000000 {
-      raise docx_analysis_refusal()
-    }
-  }
-  let scope : Map[String, String] = Map([])
-  let process_exact : Map[String, Int] = Map([])
-  let process_wildcard : Map[String, Int] = Map([])
-  let generations : Map[String, Int] = Map([])
-  let ignorable_counts : Map[String, Int] = Map([])
-  fn root_count_up(counts : Map[String, Int], key : String) -> Unit {
-    counts[key] = counts.get(key).unwrap_or(0) + 1
-  }
-
-  fn root_count_down(counts : Map[String, Int], key : String) -> Unit {
-    match counts.get(key) {
-      Some(count) if count > 1 => counts[key] = count - 1
-      Some(_) => counts.remove(key)
-      None => ()
-    }
-  }
-
-  fn root_declarations(element : @xml.XmlElement) -> Array[(String, String?)] {
-    let undo : Array[(String, String?)] = []
-    for attribute in element.attributes {
-      guard attribute.0.has_prefix("{\{DOCX_XMLNS_NAMESPACE}}") else {
-        continue
-      }
-      let local = attribute.0
-        .substring(start=DOCX_XMLNS_NAMESPACE.length() + 2)
-        .to_string()
-      let prefix = if local == "xmlns" { "" } else { local }
-      undo.push((prefix, scope.get(prefix)))
-      scope[prefix] = attribute.1
-    }
-    undo
-  }
-
-  fn root_restore(undo : Array[(String, String?)]) -> Unit {
-    for offset in 0..<undo.length() {
-      let entry = undo[undo.length() - offset - 1]
-      match entry.1 {
-        Some(previous) => scope[entry.0] = previous
-        None => scope.remove(entry.0)
-      }
-    }
-  }
-
-  // The same scoped `Ignorable`/`ProcessContent` reading the child walk
-  // makes: a promoted wrapper's children are candidate ROOTS for the
-  // consumers who find the wrapper ignorable.
-  fn root_directives(
-    element : @xml.XmlElement,
-  ) -> (Array[(String, Int?)], Array[(Bool, String)], Array[String]) raise @transaction.TransactionError {
-    let generation_undo : Array[(String, Int?)] = []
-    let ignorable_added : Array[String] = []
-    match element.attributes.get("{\{DOCX_MC_NAMESPACE}}Ignorable") {
-      Some(value) =>
-        docx_tokens_charged(value, root_charge, token => {
-          guard scope.get(token) is Some(uri) else { return }
-          let previous = generations.get(uri)
-          generation_undo.push((uri, previous))
-          generations[uri] = previous.unwrap_or(0) + 1
-          root_count_up(ignorable_counts, uri)
-          ignorable_added.push(uri)
-        })
-      None => ()
-    }
-    let added : Array[(Bool, String)] = []
-    match element.attributes.get("{\{DOCX_MC_NAMESPACE}}ProcessContent") {
-      Some(value) =>
-        docx_tokens_charged(value, root_charge, token => {
-          let (uri, local) = match token.find(":") {
-            Some(colon) => {
-              let prefix = token.substring(start=0, end=colon).to_string()
-              let local = token.substring(start=colon + 1).to_string()
-              match scope.get(prefix) {
-                Some(uri) => (uri, local)
-                None => return
-              }
-            }
-            None =>
-              match scope.get("") {
-                Some(uri) => (uri, token.to_string())
-                None => return
-              }
-          }
-          let generation = generations.get(uri).unwrap_or(0)
-          if local == "*" {
-            let key = "\{generation}\u{1}\{uri}"
-            root_count_up(process_wildcard, key)
-            added.push((true, key))
-          } else {
-            let key = "\{generation}\u{1}{\{uri}}\{local}"
-            root_count_up(process_exact, key)
-            added.push((false, key))
-          }
-        })
-      None => ()
-    }
-    (generation_undo, added, ignorable_added)
-  }
-
-  fn root_undo_directives(
-    generation_undo : Array[(String, Int?)],
-    added : Array[(Bool, String)],
-    ignorable_added : Array[String],
-  ) -> Unit {
-    for uri in ignorable_added {
-      root_count_down(ignorable_counts, uri)
-    }
-    for entry in added {
-      if entry.0 {
-        root_count_down(process_wildcard, entry.1)
-      } else {
-        root_count_down(process_exact, entry.1)
-      }
-    }
-    for offset in 0..<generation_undo.length() {
-      let entry = generation_undo[generation_undo.length() - offset - 1]
-      match entry.1 {
-        Some(previous) => generations[entry.0] = previous
-        None => generations.remove(entry.0)
-      }
-    }
-  }
-
-  fn root_element_uri(name : String) -> String {
-    guard name.has_prefix("{") else { return "" }
-    match name.find("}") {
-      Some(close) => name.substring(start=1, end=close).to_string()
-      None => ""
-    }
-  }
-
-  fn root_matches_process_content(name : String) -> Bool {
-    let uri = root_element_uri(name)
-    let generation = generations.get(uri).unwrap_or(0)
-    process_exact.get("\{generation}\u{1}\{name}") is Some(_) ||
-    process_wildcard.get("\{generation}\u{1}\{uri}") is Some(_)
-  }
-
-  fn root_must_understand(
-    element : @xml.XmlElement,
-  ) -> Array[String] raise @transaction.TransactionError {
-    let uris : Array[String] = []
-    let seen : Map[String, Bool] = Map([])
-    match element.attributes.get("{\{DOCX_MC_NAMESPACE}}MustUnderstand") {
-      Some(value) =>
-        docx_tokens_charged(value, root_charge, token => {
-          guard scope.get(token) is Some(uri) else { return }
-          if !understood.contains(uri) && seen.get(uri) is None {
-            if uris.length() >= 64 {
-              raise docx_analysis_refusal()
-            }
-            seen[uri] = true
-            uris.push(uri)
-          }
-        })
-      None => ()
-    }
-    uris
-  }
-
-  fn branch_requires(
-    choice : @xml.XmlElement,
-  ) -> Array[String]? raise @transaction.TransactionError {
-    let requires = match choice.attributes.get("Requires") {
-      Some(value) => value
-      None =>
-        match choice.attributes.get("{\{DOCX_MC_NAMESPACE}}Requires") {
-          Some(value) => value
-          None => return None
-        }
-    }
-    let uris : Array[String] = []
-    let seen : Map[String, Bool] = Map([])
-    let mut resolved = true
-    docx_tokens_charged(requires, root_charge, token => {
-      guard scope.get(token) is Some(uri) else {
-        resolved = false
-        return
-      }
-      // The width cap counts DISTINCT resolved namespaces: one prefix
-      // repeated a hundred times is one requirement.
-      guard seen.get(uri) is None else { return }
-      if uris.length() >= 64 {
-        raise docx_analysis_refusal()
-      }
-      seen[uri] = true
-      uris.push(uri)
-    })
-    if !resolved || uris.is_empty() {
-      return None
-    }
-    Some(uris)
-  }
-
-  // Whether one element can be DROPPED by some consumer: it is in a
-  // non-understood namespace declared ignorable — inherited, or by the
-  // element's own directive, whose prefixes resolve under the element's
-  // own declarations. An `mc:AlternateContent` can resolve to nothing
-  // for some consumer, so it counts as droppable outright; that
-  // over-approximates who reads a sibling as the sole root, which errs
-  // toward refusal, never past a protection.
-  fn droppable_by(
-    element : @xml.XmlElement,
-  ) -> (Bool, String?) raise @transaction.TransactionError {
-    if element.name == "{\{DOCX_MC_NAMESPACE}}AlternateContent" {
-      return (true, None)
-    }
-    let uri = root_element_uri(element.name)
-    if understood.contains(uri) {
-      return (false, None)
-    }
-    if ignorable_counts.get(uri) is Some(_) {
-      return (true, Some(uri))
-    }
-    let own_undo = root_declarations(element)
-    let mut declared = false
-    match element.attributes.get("{\{DOCX_MC_NAMESPACE}}Ignorable") {
-      Some(value) =>
-        docx_tokens_charged(value, root_charge, token => {
-          if scope.get(token) == Some(uri) {
-            declared = true
-          }
-        })
-      None => ()
-    }
-    root_restore(own_undo)
-    if declared {
-      (true, Some(uri))
-    } else {
-      (false, None)
-    }
-  }
-
-  // A branch resolves to a READABLE document for a given consumer only
-  // when exactly one element remains after that consumer drops what it
-  // finds ignorable. Each element child is a candidate root for the
-  // consumers who drop every SIBLING, judged in ONE charged pass: a
-  // droppable sibling contributes a clause demanding its namespace
-  // unsupported, and a sibling nobody drops makes the branch multi-root
-  // for everyone who would read this child.
-  fn branch_root_candidates(
-    container : @xml.XmlElement,
-    base : DocxCondition,
-    visit : (@xml.XmlElement, DocxCondition) -> Unit raise @transaction.TransactionError,
-  ) -> Unit raise @transaction.TransactionError {
-    let children : Array[@xml.XmlElement] = []
-    let clause_uris : Array[String?] = []
-    let clause_counts : Map[String, Int] = Map([])
-    let mut undroppable = 0
-    let mut undroppable_index = -1
-    for node in container.children {
-      guard node is XmlElement(child) else { continue }
-      root_charge(1)
-      let (droppable, clause) = droppable_by(child)
-      children.push(child)
-      clause_uris.push(clause)
-      match clause {
-        Some(uri) =>
-          clause_counts[uri] = clause_counts.get(uri).unwrap_or(0) + 1
-        None => ()
-      }
-      if !droppable {
-        undroppable = undroppable + 1
-        undroppable_index = children.length() - 1
-      }
-    }
-    for index, child in children {
-      root_charge(1)
-      // Every sibling must be droppable: at most this child itself may
-      // be the one nobody drops.
-      let siblings_droppable = undroppable == 0 ||
-        (undroppable == 1 && undroppable_index == index)
-      guard siblings_droppable else { continue }
-      let condition = base.snapshot()
-      for entry in clause_counts {
-        root_charge(1)
-        let (uri, count) = entry
-        let own = match clause_uris[index] {
-          Some(self_uri) => if self_uri == uri { 1 } else { 0 }
-          None => 0
-        }
-        if count - own > 0 {
-          if condition.refused.length() >= 64 {
-            raise docx_analysis_refusal()
-          }
-          condition.refused.push([uri])
-        }
-      }
-      if condition.satisfiable() {
-        visit(child, condition)
-      }
-    }
-  }
-
-  fn collect(
-    element : @xml.XmlElement,
-    arriving : DocxCondition,
-  ) -> Unit raise @transaction.TransactionError {
-    let undo = root_declarations(element)
-    let (generation_undo, added, ignorable_added) = root_directives(element)
-    // Only consumers who support what a `MustUnderstand` names process
-    // this content at all.
-    let understand = root_must_understand(element)
-    let condition = if understand.is_empty() {
-      arriving
-    } else {
-      let stronger = arriving.snapshot()
-      let seen : Map[String, Bool] = Map([])
-      for entry in stronger.required {
-        seen[entry] = true
-      }
-      for uri in understand {
-        root_charge(1)
-        if seen.get(uri) is None {
-          seen[uri] = true
-          stronger.required.push(uri)
-        }
-      }
-      stronger
-    }
-    if element.name == "{\{DOCX_MC_NAMESPACE}}AlternateContent" {
-      // One CLAUSE per choice passed over: at least one of its
-      // namespaces must be unsupported, whichever one.
-      let passed_over : Array[Array[String]] = []
-      for branch_node in element.children {
-        guard branch_node is XmlElement(branch) else { continue }
-        let branch_undo = root_declarations(branch)
-        let (branch_generation_undo, branch_added, branch_ignorable) = root_directives(
-          branch,
-        )
-        let branch_condition = condition.snapshot()
-        for uri in root_must_understand(branch) {
-          if !branch_condition.required.contains(uri) {
-            branch_condition.required.push(uri)
-          }
-        }
-        for clause in passed_over {
-          branch_condition.refused.push(clause)
-        }
-        trail.push(element)
-        trail.push(branch)
-        if branch.name == "{\{DOCX_MC_NAMESPACE}}Choice" {
-          let requires = branch_requires(branch)
-          let mut decides = false
-          match requires {
-            Some(uris) => {
-              decides = true
-              let seen : Map[String, Bool] = Map([])
-              for entry in branch_condition.required {
-                seen[entry] = true
-              }
-              for uri in uris {
-                root_charge(1)
-                if !understood.contains(uri) {
-                  decides = false
-                  if seen.get(uri) is None {
-                    if branch_condition.required.length() >= 64 {
-                      raise docx_analysis_refusal()
-                    }
-                    seen[uri] = true
-                    branch_condition.required.push(uri)
-                  }
-                }
-              }
-            }
-            None => ()
-          }
-          if branch_condition.satisfiable() {
-            branch_root_candidates(branch, branch_condition, (
-              candidate,
-              candidate_condition,
-            ) => collect(candidate, candidate_condition))
-          }
-          // A choice every consumer of the vocabulary satisfies is the
-          // one every consumer selects: nothing after it is a root.
-          if decides {
-            trail.pop() |> ignore
-            trail.pop() |> ignore
-            root_undo_directives(
-              branch_generation_undo, branch_added, branch_ignorable,
-            )
-            root_restore(branch_undo)
-            break
-          }
-          match requires {
-            Some(uris) => {
-              let negatable : Array[String] = []
-              let negatable_set : Map[String, Bool] = Map([])
-              for uri in uris {
-                root_charge(1)
-                if !understood.contains(uri) && negatable_set.get(uri) is None {
-                  negatable_set[uri] = true
-                  negatable.push(uri)
-                }
-              }
-              if negatable.length() > 64 || passed_over.length() >= 64 {
-                raise docx_analysis_refusal()
-              }
-              if !negatable.is_empty() {
-                passed_over.push(negatable)
-              }
-            }
-            None => ()
-          }
-        } else if branch.name == "{\{DOCX_MC_NAMESPACE}}Fallback" {
-          if branch_condition.satisfiable() {
-            branch_root_candidates(branch, branch_condition, (
-              candidate,
-              candidate_condition,
-            ) => collect(candidate, candidate_condition))
-          }
-        }
-        trail.pop() |> ignore
-        trail.pop() |> ignore
-        root_undo_directives(
-          branch_generation_undo, branch_added, branch_ignorable,
-        )
-        root_restore(branch_undo)
-      }
-    } else if condition.satisfiable() {
-      roots.push((element, condition, trail.copy()))
-      if !understood.contains(root_element_uri(element.name)) &&
-        root_matches_process_content(element.name) {
-        // Promotion happens for the consumers who find the wrapper
-        // IGNORABLE — the ones who do not support its namespace — and
-        // it puts the wrapper's children where the wrapper stood: they
-        // are candidate roots for those consumers.
-        let promoted = condition.snapshot()
-        promoted.refused.push([root_element_uri(element.name)])
-        trail.push(element)
-        branch_root_candidates(element, promoted, (
-          candidate,
-          candidate_condition,
-        ) => collect(candidate, candidate_condition))
-        trail.pop() |> ignore
-      }
-    }
-    root_undo_directives(generation_undo, added, ignorable_added)
-    root_restore(undo)
-  }
-
-  collect(raw, DocxCondition::always())
-  roots
-}
-
-///|
-/// The consumer capabilities one PATH demands, exactly: namespaces that
-/// must be SUPPORTED (a conjunction of positive literals, from the
-/// choices taken), and groups of which at least one must be UNSUPPORTED
-/// (one negative clause per choice passed over). Such a formula — all
-/// positives plus at-least-one-false clauses — is satisfiable exactly
-/// when no clause is wholly forced true, so satisfiability is a scan,
-/// never an expansion, and nothing is capped or saturated away.
-priv struct DocxCondition {
-  required : Array[String]
-  refused : Array[Array[String]]
-}
-
-///|
-/// Whether THIS toolkit's capability profile — both WML dialects
-/// supported, nothing else — satisfies a path condition.
-fn docx_profile_satisfies(condition : DocxCondition) -> Bool {
-  for uri in condition.required {
-    if uri != DOCX_WML_NAMESPACE && uri != DOCX_STRICT_WML_NAMESPACE {
-      return false
-    }
-  }
-  for group in condition.refused {
-    let mut escapable = false
-    for uri in group {
-      if uri != DOCX_WML_NAMESPACE && uri != DOCX_STRICT_WML_NAMESPACE {
-        escapable = true
-      }
-    }
-    if !escapable {
-      return false
-    }
-  }
-  true
-}
-
-///|
-fn DocxCondition::always() -> DocxCondition {
-  { required: [], refused: [], }
-}
-
-///|
-fn DocxCondition::snapshot(self : DocxCondition) -> DocxCondition {
-  { required: self.required.copy(), refused: self.refused.copy(), }
-}
-
-///|
-/// The same condition with each clause reduced by the namespaces the
-/// condition requires: a required namespace is supported, so it cannot
-/// be a clause's unsupported member.
-fn DocxCondition::normalized(self : DocxCondition) -> DocxCondition {
-  let reduced : Array[Array[String]] = []
-  for group in self.refused {
-    let kept : Array[String] = []
-    for uri in group {
-      if !self.required.contains(uri) {
-        kept.push(uri)
-      }
-    }
-    reduced.push(kept)
-  }
-  { required: self.required.copy(), refused: reduced, }
-}
-
-///|
-fn DocxCondition::conjoin(
-  self : DocxCondition,
-  other : DocxCondition,
-) -> DocxCondition {
-  let joined = self.snapshot()
-  for uri in other.required {
-    if !joined.required.contains(uri) {
-      joined.required.push(uri)
-    }
-  }
-  for group in other.refused {
-    joined.refused.push(group)
-  }
-  joined
-}
-
-///|
-/// Whether one consumer could satisfy every constraint at once: assign
-/// SUPPORTED to exactly the required namespaces, and every clause must
-/// still have a member left unsupported.
-fn DocxCondition::satisfiable(self : DocxCondition) -> Bool {
-  for group in self.refused {
-    let mut escapable = false
-    for uri in group {
-      if !self.required.contains(uri) {
-        escapable = true
-      }
-    }
-    if !escapable {
-      return false
-    }
-  }
-  true
-}
-
-///|
-/// Every element that could sit at CHILD level of `raw` under some
-/// consumer's resolution of its compatibility markup.
-///
-/// This walk models what other consumers do, where `understood` is what
-/// EVERY consumer of this vocabulary understands. So it takes every
-/// branch of every alternate — but a choice requiring only understood
-/// namespaces decides its alternate, since every consumer stops there,
-/// and the branches after it are unreachable. An element named by an
-/// in-scope `mc:ProcessContent` is looked through, because a consumer
-/// that finds it ignorable processes its content at this level; an
-/// ignorable element nobody asked to process is dropped whole by one
-/// consumer and kept whole by the rest, so its content is never at this
-/// level. Understood-namespace elements are never looked through.
-/// Re-declaring a namespace ignorable RESETS inherited process-content
-/// rules for it (ECMA-376 Part 3), which the per-namespace generations
-/// carry; matching is by map lookup, so a part with many rules and many
-/// foreign children costs their sum rather than their product.
-fn docx_mce_possible(
-  raw : @xml.XmlElement,
-  understood : Array[String],
-  context? : Array[@xml.XmlElement] = [],
-) -> Array[(@xml.XmlElement, DocxCondition)] raise @transaction.TransactionError {
-  let possible : Array[(@xml.XmlElement, DocxCondition)] = []
-  // The constraints of the path to the element being walked, kept
-  // EXACTLY: the namespaces the taken choices require (positive
-  // literals) and one at-least-one-unsupported clause per choice passed
-  // over. Satisfiability is decided on the clauses themselves.
-  let condition : DocxCondition = DocxCondition::always()
-  // Analysis is METERED: a legal part can declare thousands of
-  // namespaces in one directive, and an analysis that cannot finish in
-  // its budget refuses rather than grinds.
-  let work : Array[Int] = [0]
-  fn charge(amount : Int) -> Unit raise @transaction.TransactionError {
-    work[0] += amount
-    if work[0] > 2000000 {
-      raise docx_analysis_refusal()
-    }
-  }
-
-  // Membership in the path's requirements, as a MAP alongside the
-  // array: `contains` over a wide requirement list is quadratic.
-  let required_set : Map[String, Bool] = Map([])
-  fn require(uri : String) -> Bool raise @transaction.TransactionError {
-    if required_set.get(uri) is Some(_) {
-      return false
-    }
-    // Conditions are kept NARROW as well as few: every later operation
-    // on one — conjoining, normalizing, subsumption — is bounded by
-    // its width, so width past the analysis bound refuses here.
-    if required_set.length() >= 64 {
-      raise docx_analysis_refusal()
-    }
-    required_set[uri] = true
-    true
-  }
-
-  fn unrequire(count : Int) -> Unit {
-    for _ in 0..<count {
-      match condition.required.pop() {
-        Some(uri) => required_set.remove(uri)
-        None => ()
-      }
-    }
-  }
-  let scope : Map[String, String] = Map([])
-  let process_exact : Map[String, Int] = Map([])
-  let process_wildcard : Map[String, Int] = Map([])
-  let generations : Map[String, Int] = Map([])
-  fn count_up(counts : Map[String, Int], key : String) -> Unit {
-    counts[key] = counts.get(key).unwrap_or(0) + 1
-  }
-
-  fn count_down(counts : Map[String, Int], key : String) -> Unit {
-    match counts.get(key) {
-      Some(count) if count > 1 => counts[key] = count - 1
-      Some(_) => counts.remove(key)
-      None => ()
-    }
-  }
-
-  fn declarations(element : @xml.XmlElement) -> Array[(String, String?)] {
-    let undo : Array[(String, String?)] = []
-    for attribute in element.attributes {
-      guard attribute.0.has_prefix("{\{DOCX_XMLNS_NAMESPACE}}") else {
-        continue
-      }
-      let local = attribute.0
-        .substring(start=DOCX_XMLNS_NAMESPACE.length() + 2)
-        .to_string()
-      let prefix = if local == "xmlns" { "" } else { local }
-      undo.push((prefix, scope.get(prefix)))
-      scope[prefix] = attribute.1
-    }
-    undo
-  }
-
-  fn restore(undo : Array[(String, String?)]) -> Unit {
-    // In REVERSE: two entries about the same key must put back the
-    // older state last.
-    for offset in 0..<undo.length() {
-      let entry = undo[undo.length() - offset - 1]
-      match entry.1 {
-        Some(previous) => scope[entry.0] = previous
-        None => scope.remove(entry.0)
-      }
-    }
-  }
-
-  // The directives an element carries, applied in the order the spec
-  // gives them meaning: `Ignorable` opens a new generation for each of
-  // its namespaces, retiring inherited rules; the element's own
-  // `ProcessContent` then declares rules in the new generation. A
-  // `MustUnderstand` is a POSITIVE requirement: only consumers who
-  // support what it names process this content at all.
-  fn directives(
-    element : @xml.XmlElement,
-  ) -> (Array[(String, Int?)], Array[(Bool, String)], Int) raise @transaction.TransactionError {
-    let required_box : Array[Int] = [0]
-    match element.attributes.get("{\{DOCX_MC_NAMESPACE}}MustUnderstand") {
-      Some(value) =>
-        docx_tokens_charged(value, charge, token => {
-          guard scope.get(token) is Some(uri) else { return }
-          if !understood.contains(uri) && require(uri) {
-            condition.required.push(uri)
-            required_box[0] += 1
-          }
-        })
-      None => ()
-    }
-    let required_added = required_box[0]
-    let generation_undo : Array[(String, Int?)] = []
-    match element.attributes.get("{\{DOCX_MC_NAMESPACE}}Ignorable") {
-      Some(value) =>
-        docx_tokens_charged(value, charge, token => {
-          guard scope.get(token) is Some(uri) else { return }
-          let previous = generations.get(uri)
-          generation_undo.push((uri, previous))
-          generations[uri] = previous.unwrap_or(0) + 1
-        })
-      None => ()
-    }
-    let added : Array[(Bool, String)] = []
-    match element.attributes.get("{\{DOCX_MC_NAMESPACE}}ProcessContent") {
-      Some(value) =>
-        docx_tokens_charged(value, charge, token => {
-          let (uri, local) = match token.find(":") {
-            Some(colon) => {
-              let prefix = token.substring(start=0, end=colon).to_string()
-              let local = token.substring(start=colon + 1).to_string()
-              match scope.get(prefix) {
-                Some(uri) => (uri, local)
-                None => return
-              }
-            }
-            None =>
-              match scope.get("") {
-                Some(uri) => (uri, token.to_string())
-                None => return
-              }
-          }
-          let generation = generations.get(uri).unwrap_or(0)
-          if local == "*" {
-            let key = "\{generation}\u{1}\{uri}"
-            count_up(process_wildcard, key)
-            added.push((true, key))
-          } else {
-            let key = "\{generation}\u{1}{\{uri}}\{local}"
-            count_up(process_exact, key)
-            added.push((false, key))
-          }
-        })
-      None => ()
-    }
-    (generation_undo, added, required_added)
-  }
-
-  fn undo_directives(
-    generation_undo : Array[(String, Int?)],
-    added : Array[(Bool, String)],
-    required_added : Int,
-  ) -> Unit {
-    unrequire(required_added)
-    for entry in added {
-      if entry.0 {
-        count_down(process_wildcard, entry.1)
-      } else {
-        count_down(process_exact, entry.1)
-      }
-    }
-    // In REVERSE: `Ignorable="v v2"` may bind one URI twice, and the
-    // older generation must be what survives the undo.
-    for offset in 0..<generation_undo.length() {
-      let entry = generation_undo[generation_undo.length() - offset - 1]
-      match entry.1 {
-        Some(previous) => generations[entry.0] = previous
-        None => generations.remove(entry.0)
-      }
-    }
-  }
-
-  fn element_uri(name : String) -> String {
-    guard name.has_prefix("{") else { return "" }
-    match name.find("}") {
-      Some(close) => name.substring(start=1, end=close).to_string()
-      None => ""
-    }
-  }
-
-  fn matches_process_content(name : String) -> Bool {
-    let uri = element_uri(name)
-    let generation = generations.get(uri).unwrap_or(0)
-    process_exact.get("\{generation}\u{1}\{name}") is Some(_) ||
-    process_wildcard.get("\{generation}\u{1}\{uri}") is Some(_)
-  }
-
-  // The namespaces a choice requires, resolved where it sits; None for
-  // a choice with no requirement to read.
-  fn choice_requires(
-    choice : @xml.XmlElement,
-  ) -> Array[String]? raise @transaction.TransactionError {
-    let requires = match choice.attributes.get("Requires") {
-      Some(value) => value
-      None =>
-        match choice.attributes.get("{\{DOCX_MC_NAMESPACE}}Requires") {
-          Some(value) => value
-          None => return None
-        }
-    }
-    let uris : Array[String] = []
-    let seen : Map[String, Bool] = Map([])
-    let mut resolved = true
-    docx_tokens_charged(requires, charge, token => {
-      guard scope.get(token) is Some(uri) else {
-        resolved = false
-        return
-      }
-      // The width cap counts DISTINCT resolved namespaces: one prefix
-      // repeated a hundred times is one requirement.
-      guard seen.get(uri) is None else { return }
-      if uris.length() >= 64 {
-        raise docx_analysis_refusal()
-      }
-      seen[uri] = true
-      uris.push(uri)
-    })
-    if !resolved || uris.is_empty() {
-      return None
-    }
-    Some(uris)
-  }
-
-  // Every prefix a choice requires resolves to an understood namespace
-  // exactly when every consumer of this vocabulary satisfies it.
-  fn choice_decides(
-    choice : @xml.XmlElement,
-  ) -> Bool raise @transaction.TransactionError {
-    match choice_requires(choice) {
-      Some(uris) => {
-        for uri in uris {
-          guard understood.contains(uri) else { return false }
-        }
-        true
-      }
-      None => false
-    }
-  }
-
-  fn level(
-    container : @xml.XmlElement,
-  ) -> Unit raise @transaction.TransactionError {
-    for node in container.children {
-      guard node is XmlElement(child) else { continue }
-      let undo = declarations(child)
-      let (generation_undo, added, required_added) = directives(child)
-      if child.name == "{\{DOCX_MC_NAMESPACE}}AlternateContent" {
-        let mut decided = false
-        // Each choice passed over adds one CLAUSE for the branches
-        // after it: at least one of its namespaces must be unsupported
-        // to get past it, whichever one.
-        let mut clauses_added = 0
-        for branch_node in child.children {
-          guard branch_node is XmlElement(branch) else { continue }
-          guard !decided else { break }
-          let branch_undo = declarations(branch)
-          let (branch_generation_undo, branch_added, branch_required) = directives(
-            branch,
-          )
-          let mut pushed = 0
-          if branch.name == "{\{DOCX_MC_NAMESPACE}}Choice" {
-            let requires = choice_requires(branch)
-            match requires {
-              Some(uris) =>
-                for uri in uris {
-                  charge(1)
-                  if !understood.contains(uri) && require(uri) {
-                    condition.required.push(uri)
-                    pushed += 1
-                  }
-                }
-              None => ()
-            }
-            level(branch)
-            if choice_decides(branch) {
-              decided = true
-            }
-            match requires {
-              Some(uris) => {
-                let negatable : Array[String] = []
-                let negatable_set : Map[String, Bool] = Map([])
-                for uri in uris {
-                  charge(1)
-                  if !understood.contains(uri) && negatable_set.get(uri) is None {
-                    negatable_set[uri] = true
-                    negatable.push(uri)
-                  }
-                }
-                if negatable.length() > 64 || condition.refused.length() >= 64 {
-                  raise docx_analysis_refusal()
-                }
-                if !negatable.is_empty() && !decided {
-                  condition.refused.push(negatable)
-                  clauses_added += 1
-                }
-              }
-              None => ()
-            }
-          } else if branch.name == "{\{DOCX_MC_NAMESPACE}}Fallback" {
-            level(branch)
-          }
-          unrequire(pushed)
-          undo_directives(branch_generation_undo, branch_added, branch_required)
-          restore(branch_undo)
-        }
-        for _ in 0..<clauses_added {
-          condition.refused.pop() |> ignore
-        }
-      } else if condition.satisfiable() {
-        possible.push((child, condition.snapshot()))
-        if !understood.contains(element_uri(child.name)) &&
-          matches_process_content(child.name) {
-          // Promotion happens for the consumers who find the wrapper
-          // IGNORABLE — the ones who do not support its namespace; a
-          // consumer who supports it keeps the wrapper as content.
-          condition.refused.push([element_uri(child.name)])
-          level(child)
-          condition.refused.pop() |> ignore
-        }
-      }
-      undo_directives(generation_undo, added, required_added)
-      restore(undo)
-    }
-  }
-
-  // The scope the root INHERITED — wrapper chains an alternate-rooted
-  // part put above it — replays before the root's own declarations, so
-  // an inherited binding or process-content rule still applies.
-  for ancestor in context {
-    declarations(ancestor) |> ignore
-    directives(ancestor) |> ignore
-  }
-  let root_undo = declarations(raw)
-  let (root_generation_undo, root_added, root_required) = directives(raw)
-  level(raw)
-  undo_directives(root_generation_undo, root_added, root_required)
-  restore(root_undo)
-  possible
-}
-
-///|
-/// XML-whitespace-separated tokens of an attribute value.
-fn docx_tokens_charged(
-  value : String,
-  charge : (Int) -> Unit raise @transaction.TransactionError,
-  each : (String) -> Unit raise @transaction.TransactionError,
-) -> Unit raise @transaction.TransactionError {
-  // Charged BEFORE each token is materialized: an attribute is allowed
-  // to be megabytes of whitespace-separated names, and allocating them
-  // all first would spend the memory before any meter could speak.
-  let mut start = -1
-  for offset in 0..<=value.length() {
-    let boundary = offset == value.length() ||
-      value[offset] is (' ' | '\t' | '\n' | '\r')
-    if boundary {
-      if start >= 0 {
-        charge(8)
-        each(value.substring(start~, end=offset).to_string())
-        start = -1
-      }
-    } else if start < 0 {
-      start = offset
-    }
-  }
-}
-
-///|
-fn docx_split_tokens(value : String) -> Array[String] {
-  let tokens : Array[String] = []
-  let mut start = -1
-  for offset in 0..<=value.length() {
-    let boundary = offset == value.length() ||
-      value[offset] is (' ' | '\t' | '\n' | '\r')
-    if boundary {
-      if start >= 0 {
-        tokens.push(value.substring(start~, end=offset).to_string())
-        start = -1
-      }
-    } else if start < 0 {
-      start = offset
-    }
-  }
-  tokens
-}
-
-///|
 /// One WML on/off flag, read from a list of settings elements.
 ///
 /// The answer is about EXPANDED names: `<w:trackRevisions x:val="false"/>`
@@ -1970,7 +763,7 @@ fn docx_split_tokens(value : String) -> Array[String] {
 /// guessing about a document it is refusing to guess about.
 fn docx_settings_flag(
   elements : Array[@xml.XmlElement],
-  local : String,
+  local_name : String,
   attribute : String,
   absent_means_on~ : Bool,
 ) -> DocxSettingsFlag {
@@ -1986,8 +779,8 @@ fn docx_settings_flag(
   }
 
   for element in elements {
-    guard element.name == "{\{DOCX_WML_NAMESPACE}}\{local}" ||
-      element.name == "{\{DOCX_STRICT_WML_NAMESPACE}}\{local}" else {
+    guard element.name == "{\{DOCX_WML_NAMESPACE}}\{local_name}" ||
+      element.name == "{\{DOCX_STRICT_WML_NAMESPACE}}\{local_name}" else {
       continue
     }
     let values : Array[String] = []

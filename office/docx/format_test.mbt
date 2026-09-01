@@ -1116,29 +1116,8 @@ async test "the preflight reads settings as XML" {
       wrapped_message.contains("compatibility alternatives"),
       msg=wrapped_message,
     )
-    // The choice and the fallback DISAGREEING is the same situation:
-    // Word would read one, this toolkit reads the other, and neither
-    // reading is the document's own answer.
-    let disagreeing = preflight_fixture(
-      directory,
-      "disagreeing",
-      "<mc:AlternateContent xmlns:mc=\"http://schemas.openxmlformats.org/markup-compatibility/2006\"><mc:Choice Requires=\"w14\"><w:trackRevisions/></mc:Choice><mc:Fallback><w:trackRevisions w:val=\"false\"/></mc:Fallback></mc:AlternateContent>",
-      [],
-    )
-    let (disagreeing_failure, disagreeing_published) = format_input_probe(
-      disagreeing,
-      directory + "/disagreeing-out.docx",
-    )
-    guard disagreeing_failure is Some(disagreeing_message) else {
-      fail("a protection that depends on the reader is not resolved here")
-    }
-    assert_true(
-      disagreeing_message.contains("compatibility alternatives"),
-      msg=disagreeing_message,
-    )
-    assert_false(disagreeing_published, msg="nothing may be published")
-    // A fallback that turns tracking OFF, with a choice that says the
-    // same, is simply off: agreement is not ambiguity.
+    // Branches that AGREE refuse all the same: the contract is about
+    // the fork being there, not about which way it resolves.
     let agreeing = preflight_fixture(
       directory,
       "agreeing",
@@ -1149,67 +1128,14 @@ async test "the preflight reads settings as XML" {
       agreeing,
       directory + "/agreeing-out.docx",
     )
-    assert_true(
-      agreeing_failure is None,
-      msg="branches that agree decide the question: \{agreeing_failure}",
-    )
-    assert_true(agreeing_published, msg="the edit publishes")
-    // A value the schema does not define is neither on nor off.
-    let nonsense = preflight_fixture(
-      directory,
-      "nonsense",
-      "<w:trackRevisions w:val=\"maybe\"/>",
-      [],
-    )
-    let (nonsense_failure, _) = format_input_probe(
-      nonsense,
-      directory + "/nonsense-out.docx",
-    )
-    guard nonsense_failure is Some(nonsense_message) else {
-      fail("an undefined on/off value is not a verdict")
+    guard agreeing_failure is Some(agreeing_message) else {
+      fail("a fork on the settings surface refuses")
     }
     assert_true(
-      nonsense_message.contains("outside the schema"),
-      msg=nonsense_message,
+      agreeing_message.contains("compatibility alternatives"),
+      msg=agreeing_message,
     )
-    // Ignorable content is content EVERY consumer drops, so a setting
-    // inside it is not this document's setting. (The fixture's settings
-    // root declares `mc:Ignorable="w14"` already.)
-    let ignorable = preflight_fixture(
-      directory,
-      "ignorable",
-      "<w14:wrap><w:trackRevisions/></w14:wrap>",
-      [],
-    )
-    let (ignorable_failure, ignorable_published) = format_input_probe(
-      ignorable,
-      directory + "/ignorable-out.docx",
-    )
-    assert_true(
-      ignorable_failure is None,
-      msg="ignorable content is dropped, not obeyed: \{ignorable_failure}",
-    )
-    assert_true(ignorable_published, msg="the edit publishes")
-    // The same wrapper asking for its CONTENT to be processed promotes
-    // what it holds to the settings level, where it counts.
-    let processed = preflight_fixture(
-      directory,
-      "processed",
-      "<w14:wrap mc:ProcessContent=\"w14:wrap\"><w:trackRevisions/></w14:wrap>",
-      [],
-    )
-    let (processed_failure, processed_published) = format_input_probe(
-      processed,
-      directory + "/processed-out.docx",
-    )
-    guard processed_failure is Some(processed_message) else {
-      fail("promoted content is a settings child")
-    }
-    assert_true(
-      processed_message.contains("records revisions"),
-      msg=processed_message,
-    )
-    assert_false(processed_published, msg="nothing may be published")
+    assert_false(agreeing_published, msg="nothing may be published")
     // A settings ELEMENT is a child of `w:settings`. The same spelling
     // nested inside another element is not this document's setting, and
     // reading it as one would refuse documents that never asked for it.
@@ -1600,966 +1526,6 @@ async test "the preflight discovers signatures through their relationships" {
 }
 
 ///|
-/// Round-7 fidelity: what MCE actually promotes, understands, and
-/// selects — judged the way a WML consumer judges it.
-async test "the preflight reads compatibility markup with WML fidelity" {
-  with_docx_session_test_dir(directory => {
-    // An ignorable wrapper NOBODY asked to process is dropped whole by
-    // one consumer and kept whole by the rest — its content is never at
-    // the settings level, even when an unrelated ProcessContent names a
-    // different wrapper.
-    let opaque = preflight_fixture(
-      directory,
-      "opaque",
-      "<w14:opaque><w:trackRevisions/></w14:opaque>" +
-      "<w14:unwrap mc:ProcessContent=\"w14:unwrap\" xmlns:mc=\"http://schemas.openxmlformats.org/markup-compatibility/2006\"><w:zoom w:percent=\"90\"/></w14:unwrap>",
-      [],
-    )
-    let (opaque_failure, opaque_published) = format_input_probe(
-      opaque,
-      directory + "/opaque-out.docx",
-    )
-    assert_true(
-      opaque_failure is None,
-      msg="an unprocessed wrapper hides nothing at this level: \{opaque_failure}",
-    )
-    assert_true(opaque_published, msg="the edit publishes")
-    // MustUnderstand naming WML names something this toolkit understands.
-    let wml_must = repackaged_fixture(
-      directory,
-      "wml-must",
-      [],
-      [
-        (
-          "word/settings.xml", "mc:Ignorable=\"w14\"", "mc:Ignorable=\"w14\" mc:MustUnderstand=\"w\"",
-        ),
-      ],
-      [],
-    )
-    let (wml_must_failure, wml_must_published) = format_input_probe(
-      wml_must,
-      directory + "/wml-must-out.docx",
-    )
-    assert_true(
-      wml_must_failure is None,
-      msg="WML is understood here: \{wml_must_failure}",
-    )
-    assert_true(wml_must_published, msg="the edit publishes")
-    // A choice REQUIRING WML is the branch every consumer of this
-    // document takes, so the fallback behind it decides nothing.
-    let decided = preflight_fixture(
-      directory,
-      "decided",
-      "<mc:AlternateContent xmlns:mc=\"http://schemas.openxmlformats.org/markup-compatibility/2006\">" +
-      "<mc:Choice Requires=\"w\"><w:trackRevisions w:val=\"false\"/></mc:Choice>" +
-      "<mc:Fallback><w:trackRevisions/></mc:Fallback>" +
-      "</mc:AlternateContent>",
-      [],
-    )
-    let (decided_failure, decided_published) = format_input_probe(
-      decided,
-      directory + "/decided-out.docx",
-    )
-    assert_true(
-      decided_failure is None,
-      msg="a WML choice decides for every consumer: \{decided_failure}",
-    )
-    assert_true(decided_published, msg="the edit publishes")
-    // And the SELECTED WML choice is read: tracking on in the branch
-    // every consumer takes refuses as tracking, not as ambiguity.
-    let selected = preflight_fixture(
-      directory,
-      "selected",
-      "<mc:AlternateContent xmlns:mc=\"http://schemas.openxmlformats.org/markup-compatibility/2006\">" +
-      "<mc:Choice Requires=\"w\"><w:trackRevisions/></mc:Choice>" +
-      "<mc:Fallback><w:trackRevisions w:val=\"false\"/></mc:Fallback>" +
-      "</mc:AlternateContent>",
-      [],
-    )
-    let (selected_failure, selected_published) = format_input_probe(
-      selected,
-      directory + "/selected-out.docx",
-    )
-    guard selected_failure is Some(selected_message) else {
-      fail("the WML branch is what this document says")
-    }
-    assert_true(
-      selected_message.contains("records revisions"),
-      msg=selected_message,
-    )
-    assert_false(selected_published, msg="nothing may be published")
-  })
-}
-
-///|
-/// A relationship inside a compatibility branch is one SOME consumer
-/// resolves: the settings it names must still be read.
-async test "the preflight follows relationships in compatibility branches" {
-  with_docx_session_test_dir(directory => {
-    let forked = repackaged_fixture(
-      directory,
-      "forked-rels",
-      [],
-      [
-        (
-          "word/_rels/document.xml.rels",
-          "<Relationship Id=\"rId3\" Type=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships/settings\" Target=\"settings.xml\"/>",
-          "<mc:AlternateContent xmlns:mc=\"http://schemas.openxmlformats.org/markup-compatibility/2006\">" +
-          "<mc:Choice Requires=\"x\" xmlns:x=\"urn:example:x\">" +
-          "<Relationship Id=\"rId3\" Type=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships/settings\" Target=\"settings.xml\"/>" +
-          "</mc:Choice><mc:Fallback/></mc:AlternateContent>",
-        ),
-        (
-          "word/settings.xml", "</w:settings>", "<w:trackRevisions/></w:settings>",
-        ),
-      ],
-      [],
-    )
-    let (failure, published) = format_input_probe(
-      forked,
-      directory + "/forked-rels-out.docx",
-    )
-    guard failure is Some(message) else {
-      fail("a branch-hidden settings relationship still names the settings")
-    }
-    assert_true(
-      message.contains("records revisions") || message.contains("settings"),
-      msg=message,
-    )
-    assert_false(published, msg="nothing may be published")
-  })
-}
-
-///|
-/// Round-8 fidelity: reachability decides in relationship parts too,
-/// and a nested `mc:Ignorable` retires the inherited process-content
-/// rules for its namespaces.
-async test "the preflight applies reachability and generation resets" {
-  with_docx_session_test_dir(directory => {
-    // A rels choice requiring only the RELATIONSHIPS vocabulary is the
-    // branch every OPC consumer takes: the fallback behind it names a
-    // different settings part, and decides nothing.
-    let decided_rels = repackaged_fixture(
-      directory,
-      "decided-rels",
-      [],
-      [
-        (
-          "word/_rels/document.xml.rels",
-          "<Relationship Id=\"rId3\" Type=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships/settings\" Target=\"settings.xml\"/>",
-          "<mc:AlternateContent xmlns:mc=\"http://schemas.openxmlformats.org/markup-compatibility/2006\" xmlns:r=\"http://schemas.openxmlformats.org/package/2006/relationships\">" +
-          "<mc:Choice Requires=\"r\">" +
-          "<Relationship Id=\"rId3\" Type=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships/settings\" Target=\"settings.xml\"/>" +
-          "</mc:Choice><mc:Fallback>" +
-          "<Relationship Id=\"rId9\" Type=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships/settings\" Target=\"webSettings.xml\"/>" +
-          "</mc:Fallback></mc:AlternateContent>",
-        ),
-      ],
-      [],
-    )
-    let (decided_failure, decided_published) = format_input_probe(
-      decided_rels,
-      directory + "/decided-rels-out.docx",
-    )
-    assert_true(
-      decided_failure is None,
-      msg="a decided rels choice is not a fork: \{decided_failure}",
-    )
-    assert_true(decided_published, msg="the edit publishes")
-    // A nested Ignorable re-declaration RETIRES the inherited
-    // process-content rules for its namespaces: `w14:outer` was
-    // promotable at the root, but beneath the re-declaration it is
-    // ignorable content nobody asked to process, and Word drops it
-    // whole — together with the tracking flag inside it.
-    let retired = preflight_fixture(
-      directory,
-      "retired",
-      "<w14:scope xmlns:mc2=\"http://schemas.openxmlformats.org/markup-compatibility/2006\" mc2:Ignorable=\"w14\" mc2:ProcessContent=\"w14:scope\">" +
-      "<w14:outer><w:trackRevisions/></w14:outer>" +
-      "</w14:scope>",
-      [],
-      settings_root_insert=" mc:ProcessContent=\"w14:scope w14:outer\"",
-    )
-    let (retired_failure, retired_published) = format_input_probe(
-      retired,
-      directory + "/retired-out.docx",
-    )
-    assert_true(
-      retired_failure is None,
-      msg="a retired rule promotes nothing: \{retired_failure}",
-    )
-    assert_true(retired_published, msg="the edit publishes")
-  })
-}
-
-///|
-/// Round-9 fidelity: entity-spelled bindings, alternate-rooted parts,
-/// unsatisfiable chains, and generation undo order.
-async test "the preflight and readback survive round-nine adversaria" {
-  with_docx_session_test_dir(directory => {
-    // An entity-spelled WML binding still MEANS WML: an honest bold
-    // request on such a document must go through, not read back as
-    // foreign collateral.
-    let entity_bound = repackaged_fixture(
-      directory,
-      "entity-bound",
-      [],
-      [
-        (
-          "word/document.xml", "xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\"",
-          "xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/&#x6d;ain\"",
-        ),
-      ],
-      [],
-    )
-    let (entity_failure, entity_published) = format_input_probe(
-      entity_bound,
-      directory + "/entity-bound-out.docx",
-    )
-    assert_true(
-      entity_failure is None,
-      msg="an entity-spelled binding means what it decodes to: \{entity_failure}",
-    )
-    assert_true(entity_published, msg="the edit publishes")
-    // A settings part whose ROOT is an alternate resolves to a different
-    // root per consumer: a protected root in the choice refuses even
-    // when the fallback root is unprotected.
-    let forked_root = repackaged_fixture(
-      directory,
-      "forked-root",
-      [],
-      [
-        (
-          "word/settings.xml",
-          "<w:settings",
-          "<mc0:AlternateContent xmlns:mc0=\"http://schemas.openxmlformats.org/markup-compatibility/2006\" xmlns:x=\"urn:example:x\">" +
-          "<mc0:Choice Requires=\"x\"><w:settings xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\"><w:trackRevisions/></w:settings></mc0:Choice>" +
-          "<mc0:Fallback><w:settings",
-        ),
-        (
-          "word/settings.xml", "</w:settings>", "</w:settings></mc0:Fallback></mc0:AlternateContent>",
-        ),
-      ],
-      [],
-    )
-    let (forked_failure, forked_published) = format_input_probe(
-      forked_root,
-      directory + "/forked-root-out.docx",
-    )
-    guard forked_failure is Some(forked_message) else {
-      fail("a protected possible root is a protection")
-    }
-    // Whichever voice speaks — the possible-roots walk, or the MCE
-    // reader refusing to read an alternate-rooted part at all — the
-    // document is refused, never silently edited.
-    assert_true(
-      forked_message.contains("compatibility alternatives") ||
-      forked_message.contains("records revisions") ||
-      forked_message.contains("could not be read"),
-      msg=forked_message,
-    )
-    assert_false(forked_published, msg="nothing may be published")
-    // A signature chain whose hops demand CONTRADICTORY capabilities is
-    // a path no consumer walks: origin only when `x` is supported, the
-    // signature relationship only when it is not.
-    let contradictory = repackaged_fixture(
-      directory,
-      "contradictory",
-      [],
-      [
-        (
-          "_rels/.rels",
-          "</Relationships>",
-          "<mc:AlternateContent xmlns:mc=\"http://schemas.openxmlformats.org/markup-compatibility/2006\" xmlns:x=\"urn:example:x\">" +
-          "<mc:Choice Requires=\"x\"><Relationship Id=\"rIdSigOrigin\" Type=\"http://schemas.openxmlformats.org/package/2006/relationships/digital-signature/origin\" Target=\"_xmlsignatures/origin.sigs\"/></mc:Choice>" +
-          "<mc:Fallback/></mc:AlternateContent></Relationships>",
-        ),
-        (
-          "[Content_Types].xml", "</Types>", "<Default Extension=\"sigs\" ContentType=\"application/vnd.openxmlformats-package.digital-signature-origin\"/><Override PartName=\"/_xmlsignatures/sig1.xml\" ContentType=\"application/vnd.openxmlformats-package.digital-signature-xmlsignature+xml\"/></Types>",
-        ),
-      ],
-      [
-        ("_xmlsignatures/origin.sigs", "<origin/>"),
-        (
-          "_xmlsignatures/_rels/origin.sigs.rels",
-          "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?><Relationships xmlns=\"http://schemas.openxmlformats.org/package/2006/relationships\" xmlns:mc=\"http://schemas.openxmlformats.org/markup-compatibility/2006\" xmlns:x=\"urn:example:x\">" +
-          "<mc:AlternateContent><mc:Choice Requires=\"x\"/><mc:Fallback><Relationship Id=\"rIdSig1\" Type=\"http://schemas.openxmlformats.org/package/2006/relationships/digital-signature/signature\" Target=\"sig1.xml\"/></mc:Fallback></mc:AlternateContent></Relationships>",
-        ),
-        ("_xmlsignatures/sig1.xml", "<Signature/>"),
-      ],
-    )
-    let (contradictory_failure, contradictory_published) = format_input_probe(
-      contradictory,
-      directory + "/contradictory-out.docx",
-    )
-    assert_true(
-      contradictory_failure is None,
-      msg="an unwalkable chain signs nothing: \{contradictory_failure}",
-    )
-    assert_true(contradictory_published, msg="the edit publishes")
-    // `Ignorable="v v2"` binding one URI twice must UNDO to the outer
-    // generation, so the root's promotion rule applies again after the
-    // scope closes and the tracking flag inside the next wrapper is
-    // seen.
-    let double_bound = preflight_fixture(
-      directory,
-      "double-bound",
-      "<w14:a xmlns:v=\"http://schemas.microsoft.com/office/word/2010/wordml\" xmlns:v2=\"http://schemas.microsoft.com/office/word/2010/wordml\" mc2:Ignorable=\"v v2\" xmlns:mc2=\"http://schemas.openxmlformats.org/markup-compatibility/2006\"><w14:c/></w14:a>" +
-      "<w14:b><w:trackRevisions/></w14:b>",
-      [],
-      settings_root_insert=" mc:ProcessContent=\"w14:*\"",
-    )
-    let (double_failure, double_published) = format_input_probe(
-      double_bound,
-      directory + "/double-bound-out.docx",
-    )
-    guard double_failure is Some(double_message) else {
-      fail("the outer generation must survive the doubled undo")
-    }
-    assert_true(
-      double_message.contains("records revisions") ||
-      double_message.contains("compatibility alternatives"),
-      msg=double_message,
-    )
-    assert_false(double_published, msg="nothing may be published")
-  })
-}
-
-///|
-/// Round-10 fidelity: root branches obey ordered-choice semantics, and
-/// a replacement across many paragraphs is read back in one pass.
-async test "the preflight orders root branches and the replace readback batches" {
-  with_docx_session_test_dir(directory => {
-    // Two consecutive choices requiring the SAME namespace: any
-    // consumer satisfying `x` selects the first, so a settings target
-    // named only by the second is one nothing reaches, and it must not
-    // fork the settings answer. (MCE in the package ROOT rels never
-    // gets this far: identification refuses such a package outright.)
-    let unreachable = repackaged_fixture(
-      directory,
-      "unreachable-branch",
-      [],
-      [
-        (
-          "word/_rels/document.xml.rels",
-          "<Relationship Id=\"rId3\" Type=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships/settings\" Target=\"settings.xml\"/>",
-          "<mc:AlternateContent xmlns:mc=\"http://schemas.openxmlformats.org/markup-compatibility/2006\" xmlns:x=\"urn:example:x\">" +
-          "<mc:Choice Requires=\"x\"/>" +
-          "<mc:Choice Requires=\"x\"><Relationship Id=\"rId3a\" Type=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships/settings\" Target=\"webSettings.xml\"/></mc:Choice>" +
-          "<mc:Fallback><Relationship Id=\"rId3\" Type=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships/settings\" Target=\"settings.xml\"/></mc:Fallback>" +
-          "</mc:AlternateContent>",
-        ),
-      ],
-      [],
-    )
-    let (unreachable_failure, unreachable_published) = format_input_probe(
-      unreachable,
-      directory + "/unreachable-branch-out.docx",
-    )
-    assert_true(
-      unreachable_failure is None,
-      msg="an unreachable branch forks nothing: \{unreachable_failure}",
-    )
-    assert_true(unreachable_published, msg="the edit publishes")
-    // The replace readback across many paragraphs runs in one batch.
-    let builder = StringBuilder()
-    for index in 0..<200 {
-      if index > 0 {
-        builder.write_string("</w:p><w:p>")
-      }
-      builder.write_string("<w:r><w:t>target \{index}</w:t></w:r>")
-    }
-    let many = edit_fixture(directory, "many-replace.docx", builder.to_string())
-    let replaced = @docx.transact_docx_find_replace(
-      @transaction.transaction_options(
-        many,
-        output_path=directory + "/many-replace-out.docx",
-      ),
-      needle="target",
-      replacement="done",
-    )
-    assert_eq(replaced.report.replaced, 200)
-  })
-}
-
-///|
-/// Round-11 fidelity: reachability is one question asked of one
-/// consumer, from the relationship that finds the part to the branch
-/// inside it.
-async test "the preflight conjoins conditions from relationship to setting" {
-  with_docx_session_test_dir(directory => {
-    // The settings part is reachable only under `w14`; the protection
-    // inside it sits in the FALLBACK of a `Requires="w14"` choice. The
-    // consumers who reach the part take the unprotected branch, and the
-    // consumers who would take the fallback never see the part.
-    let disjoint = repackaged_fixture(
-      directory,
-      "disjoint",
-      [],
-      [
-        (
-          "word/_rels/document.xml.rels",
-          "<Relationship Id=\"rId3\" Type=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships/settings\" Target=\"settings.xml\"/>",
-          "<mc:AlternateContent xmlns:mc=\"http://schemas.openxmlformats.org/markup-compatibility/2006\" xmlns:w14x=\"http://schemas.microsoft.com/office/word/2010/wordml\">" +
-          "<mc:Choice Requires=\"w14x\"><Relationship Id=\"rId3\" Type=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships/settings\" Target=\"settings.xml\"/></mc:Choice>" +
-          "<mc:Fallback/></mc:AlternateContent>",
-        ),
-        (
-          "word/settings.xml",
-          "</w:settings>",
-          "<mc:AlternateContent><mc:Choice Requires=\"w14\"><w:zoom w:percent=\"90\"/></mc:Choice>" +
-          "<mc:Fallback><w:trackRevisions/></mc:Fallback></mc:AlternateContent></w:settings>",
-        ),
-      ],
-      [],
-    )
-    let (disjoint_failure, disjoint_published) = format_input_probe(
-      disjoint,
-      directory + "/disjoint-out.docx",
-    )
-    assert_true(
-      disjoint_failure is None,
-      msg="nobody both reaches the part and takes the fallback: \{disjoint_failure}",
-    )
-    assert_true(disjoint_published, msg="the edit publishes")
-    // Passing over a MULTI-requirement choice negates by disjunction: an
-    // inner choice with the same requirements as its outer one leaves
-    // the inner fallback unreachable, and a tracking flag there decides
-    // nothing.
-    let nested_same = preflight_fixture(
-      directory,
-      "nested-same",
-      "<mc:AlternateContent xmlns:mc=\"http://schemas.openxmlformats.org/markup-compatibility/2006\" xmlns:w15=\"http://schemas.microsoft.com/office/word/2012/wordml\">" +
-      "<mc:Choice Requires=\"w14 w15\">" +
-      "<mc:AlternateContent><mc:Choice Requires=\"w14 w15\"><w:zoom w:percent=\"80\"/></mc:Choice>" +
-      "<mc:Fallback><w:trackRevisions/></mc:Fallback></mc:AlternateContent>" +
-      "</mc:Choice><mc:Fallback/></mc:AlternateContent>",
-      [],
-    )
-    let (nested_failure, nested_published) = format_input_probe(
-      nested_same,
-      directory + "/nested-same-out.docx",
-    )
-    assert_true(
-      nested_failure is None,
-      msg="the inner fallback is unreachable: \{nested_failure}",
-    )
-    assert_true(nested_published, msg="the edit publishes")
-  })
-}
-
-///|
-/// Round-12 fidelity: dialects are capabilities too, mutual exclusion
-/// is not ambiguity, and satisfiability is exact at any width.
-async test "the preflight models dialects and exclusion exactly" {
-  with_docx_session_test_dir(directory => {
-    // In a TRANSITIONAL part, a choice requiring the STRICT dialect is
-    // not universal: a Transitional-only consumer takes the fallback,
-    // and the enforced protection there is real for it.
-    let strict_gate = preflight_fixture(
-      directory,
-      "strict-gate",
-      "<mc:AlternateContent xmlns:mc=\"http://schemas.openxmlformats.org/markup-compatibility/2006\" xmlns:ws=\"http://purl.oclc.org/ooxml/wordprocessingml/main\">" +
-      "<mc:Choice Requires=\"ws\"><w:documentProtection w:edit=\"readOnly\" w:enforcement=\"0\"/></mc:Choice>" +
-      "<mc:Fallback><w:documentProtection w:edit=\"readOnly\" w:enforcement=\"1\"/></mc:Fallback>" +
-      "</mc:AlternateContent>",
-      [],
-    )
-    let (strict_failure, strict_published) = format_input_probe(
-      strict_gate,
-      directory + "/strict-gate-out.docx",
-    )
-    guard strict_failure is Some(strict_message) else {
-      fail("a Transitional-only consumer meets the enforced fallback")
-    }
-    assert_true(
-      strict_message.contains("editing protection") ||
-      strict_message.contains("compatibility alternatives"),
-      msg=strict_message,
-    )
-    assert_false(strict_published, msg="nothing may be published")
-    // A choice's settings part and its fallback's are seen by DISJOINT
-    // consumers: two unprotected parts, each judged alone, refuse
-    // nothing.
-    let exclusive = repackaged_fixture(
-      directory,
-      "exclusive",
-      [],
-      [
-        (
-          "[Content_Types].xml", "<Override PartName=\"/word/settings.xml\"", "<Override PartName=\"/word/settings-b.xml\" ContentType=\"application/vnd.openxmlformats-officedocument.wordprocessingml.settings+xml\"/><Override PartName=\"/word/settings.xml\"",
-        ),
-        (
-          "word/_rels/document.xml.rels",
-          "<Relationship Id=\"rId3\" Type=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships/settings\" Target=\"settings.xml\"/>",
-          "<mc:AlternateContent xmlns:mc=\"http://schemas.openxmlformats.org/markup-compatibility/2006\" xmlns:x=\"urn:example:x\">" +
-          "<mc:Choice Requires=\"x\"><Relationship Id=\"rId3\" Type=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships/settings\" Target=\"settings.xml\"/></mc:Choice>" +
-          "<mc:Fallback><Relationship Id=\"rId3b\" Type=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships/settings\" Target=\"settings-b.xml\"/></mc:Fallback>" +
-          "</mc:AlternateContent>",
-        ),
-      ],
-      [
-        (
-          "word/settings-b.xml", "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?><w:settings xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\"><w:zoom w:percent=\"110\"/></w:settings>",
-        ),
-      ],
-    )
-    let (exclusive_failure, exclusive_published) = format_input_probe(
-      exclusive,
-      directory + "/exclusive-out.docx",
-    )
-    assert_true(
-      exclusive_failure is None,
-      msg="mutually exclusive parts are not a fork: \{exclusive_failure}",
-    )
-    assert_true(exclusive_published, msg="the edit publishes")
-    // And a TRACKED part behind the fallback still refuses: exclusion
-    // narrows who sees it, not whether it counts.
-    let exclusive_tracked = repackaged_fixture(
-      directory,
-      "exclusive-tracked",
-      [],
-      [
-        (
-          "[Content_Types].xml", "<Override PartName=\"/word/settings.xml\"", "<Override PartName=\"/word/settings-b.xml\" ContentType=\"application/vnd.openxmlformats-officedocument.wordprocessingml.settings+xml\"/><Override PartName=\"/word/settings.xml\"",
-        ),
-        (
-          "word/_rels/document.xml.rels",
-          "<Relationship Id=\"rId3\" Type=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships/settings\" Target=\"settings.xml\"/>",
-          "<mc:AlternateContent xmlns:mc=\"http://schemas.openxmlformats.org/markup-compatibility/2006\" xmlns:x=\"urn:example:x\">" +
-          "<mc:Choice Requires=\"x\"><Relationship Id=\"rId3\" Type=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships/settings\" Target=\"settings.xml\"/></mc:Choice>" +
-          "<mc:Fallback><Relationship Id=\"rId3b\" Type=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships/settings\" Target=\"settings-b.xml\"/></mc:Fallback>" +
-          "</mc:AlternateContent>",
-        ),
-      ],
-      [
-        (
-          "word/settings-b.xml", "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?><w:settings xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\"><w:trackRevisions/></w:settings>",
-        ),
-      ],
-    )
-    let (tracked_failure, tracked_published) = format_input_probe(
-      exclusive_tracked,
-      directory + "/exclusive-tracked-out.docx",
-    )
-    guard tracked_failure is Some(tracked_message) else {
-      fail("the consumers who see the tracked part are real")
-    }
-    assert_true(
-      tracked_message.contains("records revisions"),
-      msg=tracked_message,
-    )
-    assert_false(tracked_published, msg="nothing may be published")
-    // Width does not defeat exactness: several passed pair-choices and a
-    // repeated pair leave the repeat's sibling unreachable, however many
-    // clauses are in scope.
-    let wide = preflight_fixture(
-      directory,
-      "wide",
-      "<mc:AlternateContent xmlns:mc=\"http://schemas.openxmlformats.org/markup-compatibility/2006\" " +
-      "xmlns:na=\"urn:x:a\" xmlns:nb=\"urn:x:b\" xmlns:nc=\"urn:x:c\" xmlns:nd=\"urn:x:d\" " +
-      "xmlns:ne=\"urn:x:e\" xmlns:nf=\"urn:x:f\" xmlns:ng=\"urn:x:g\" xmlns:nh=\"urn:x:h\" " +
-      "xmlns:ni=\"urn:x:i\" xmlns:nj=\"urn:x:j\">" +
-      "<mc:Choice Requires=\"na nb\"/><mc:Choice Requires=\"nc nd\"/>" +
-      "<mc:Choice Requires=\"ne nf\"/><mc:Choice Requires=\"ng nh\"/>" +
-      "<mc:Choice Requires=\"ni nj\"/>" +
-      "<mc:Choice Requires=\"ni nj\"><w:trackRevisions/></mc:Choice>" +
-      "<mc:Fallback/></mc:AlternateContent>",
-      [],
-    )
-    let (wide_failure, wide_published) = format_input_probe(
-      wide,
-      directory + "/wide-out.docx",
-    )
-    assert_true(
-      wide_failure is None,
-      msg="the repeated pair's sibling is unreachable at any width: \{wide_failure}",
-    )
-    assert_true(wide_published, msg="the edit publishes")
-  })
-}
-
-///|
-/// Round-13 fidelity: many paths to one part stay EXACT — seventeen
-/// ordered choices to settings A above a fallback to settings B give
-/// every consumer exactly one part, and no width of paths turns that
-/// into a fork.
-async test "the preflight keeps many-path reachability exact" {
-  with_docx_session_test_dir(directory => {
-    let ns_decls = StringBuilder()
-    let choices = StringBuilder()
-    for index in 0..<17 {
-      ns_decls.write_string(" xmlns:n\{index}=\"urn:x:\{index}\"")
-      choices.write_string(
-        "<mc:Choice Requires=\"n\{index}\"><Relationship Id=\"rId3\" Type=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships/settings\" Target=\"settings.xml\"/></mc:Choice>",
-      )
-    }
-    let many_paths = repackaged_fixture(
-      directory,
-      "many-paths",
-      [],
-      [
-        (
-          "[Content_Types].xml", "<Override PartName=\"/word/settings.xml\"", "<Override PartName=\"/word/settings-b.xml\" ContentType=\"application/vnd.openxmlformats-officedocument.wordprocessingml.settings+xml\"/><Override PartName=\"/word/settings.xml\"",
-        ),
-        (
-          "word/_rels/document.xml.rels",
-          "<Relationship Id=\"rId3\" Type=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships/settings\" Target=\"settings.xml\"/>",
-          "<mc:AlternateContent xmlns:mc=\"http://schemas.openxmlformats.org/markup-compatibility/2006\"" +
-          ns_decls.to_string() +
-          ">" +
-          choices.to_string() +
-          "<mc:Fallback><Relationship Id=\"rId3b\" Type=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships/settings\" Target=\"settings-b.xml\"/></mc:Fallback>" +
-          "</mc:AlternateContent>",
-        ),
-      ],
-      [
-        (
-          "word/settings-b.xml", "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?><w:settings xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\"><w:zoom w:percent=\"110\"/></w:settings>",
-        ),
-      ],
-    )
-    let (failure, published) = format_input_probe(
-      many_paths,
-      directory + "/many-paths-out.docx",
-    )
-    assert_true(
-      failure is None,
-      msg="seventeen exclusive paths are not a fork: \{failure}",
-    )
-    assert_true(published, msg="the edit publishes")
-  })
-}
-
-///|
-/// Round-14 fidelity: clause logic is SET logic, and the path bound
-/// cannot depend on declaration order.
-async test "the preflight reasons about clauses as sets" {
-  with_docx_session_test_dir(directory => {
-    // Two paths to one settings part whose clauses differ only once the
-    // prefixes are RESOLVED: one passed choice requires w14 twice (two
-    // prefixes, one namespace), the other requires w14 and x. The
-    // consumers who support w14 but not x reach the part through the
-    // second path and see the protection its w14 branch carries.
-    let resolved = repackaged_fixture(
-      directory,
-      "resolved-clauses",
-      [],
-      [
-        (
-          "word/_rels/document.xml.rels",
-          "<Relationship Id=\"rId3\" Type=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships/settings\" Target=\"settings.xml\"/>",
-          "<mc:AlternateContent xmlns:mc=\"http://schemas.openxmlformats.org/markup-compatibility/2006\" xmlns:wa=\"http://schemas.microsoft.com/office/word/2010/wordml\" xmlns:wb=\"http://schemas.microsoft.com/office/word/2010/wordml\">" +
-          "<mc:Choice Requires=\"wa wb\"/>" +
-          "<mc:Fallback><Relationship Id=\"rId3\" Type=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships/settings\" Target=\"settings.xml\"/></mc:Fallback>" +
-          "</mc:AlternateContent>" +
-          "<mc:AlternateContent xmlns:mc=\"http://schemas.openxmlformats.org/markup-compatibility/2006\" xmlns:wc=\"http://schemas.microsoft.com/office/word/2010/wordml\" xmlns:x=\"urn:example:x\">" +
-          "<mc:Choice Requires=\"wc x\"/>" +
-          "<mc:Fallback><Relationship Id=\"rId3b\" Type=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships/settings\" Target=\"settings.xml\"/></mc:Fallback>" +
-          "</mc:AlternateContent>",
-        ),
-        (
-          "word/settings.xml", "</w:settings>", "<mc:AlternateContent xmlns:mc=\"http://schemas.openxmlformats.org/markup-compatibility/2006\"><mc:Choice Requires=\"w14\"><w:documentProtection w:edit=\"readOnly\" w:enforcement=\"1\"/></mc:Choice><mc:Fallback/></mc:AlternateContent></w:settings>",
-        ),
-      ],
-      [],
-    )
-    let (resolved_failure, resolved_published) = format_input_probe(
-      resolved,
-      directory + "/resolved-clauses-out.docx",
-    )
-    guard resolved_failure is Some(resolved_message) else {
-      fail("the w14-but-not-x consumer sees the protection")
-    }
-    assert_true(
-      resolved_message.contains("editing protection") ||
-      resolved_message.contains("compatibility alternatives"),
-      msg=resolved_message,
-    )
-    assert_false(resolved_published, msg="nothing may be published")
-    // Sixty-four conditional paths followed by one UNCONDITIONAL path
-    // to the same part: the weaker newcomer retires them all, so the
-    // bound cannot depend on the order the paths were declared in.
-    let ns_decls = StringBuilder()
-    let alternates = StringBuilder()
-    for index in 0..<64 {
-      ns_decls.write_string(" xmlns:m\{index}=\"urn:m:\{index}\"")
-      alternates.write_string(
-        "<mc:AlternateContent xmlns:mc=\"http://schemas.openxmlformats.org/markup-compatibility/2006\">" +
-        "<mc:Choice Requires=\"m\{index}\"><Relationship Id=\"rIdc\{index}\" Type=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships/settings\" Target=\"settings.xml\"/></mc:Choice>" +
-        "<mc:Fallback/></mc:AlternateContent>",
-      )
-    }
-    let ordered = repackaged_fixture(
-      directory,
-      "ordered-bound",
-      [],
-      [
-        (
-          "word/_rels/document.xml.rels",
-          "<Relationships xmlns=\"http://schemas.openxmlformats.org/package/2006/relationships\">",
-          "<Relationships xmlns=\"http://schemas.openxmlformats.org/package/2006/relationships\"" +
-          ns_decls.to_string() +
-          ">" +
-          alternates.to_string(),
-        ),
-      ],
-      [],
-    )
-    let (ordered_failure, ordered_published) = format_input_probe(
-      ordered,
-      directory + "/ordered-bound-out.docx",
-    )
-    assert_true(
-      ordered_failure is None,
-      msg="the unconditional path retires the bounded ones: \{ordered_failure}",
-    )
-    assert_true(ordered_published, msg="the edit publishes")
-  })
-}
-
-///|
-/// Round-15 fidelity: promotion reaches roots, descent carries the
-/// wrapper's own condition, and normalization keeps the antichain small.
-async test "the preflight promotes roots and normalizes clauses" {
-  with_docx_session_test_dir(directory => {
-    // A rels part whose effective root arrives through a PROMOTED
-    // wrapper: the consumers who find `x` ignorable read the promoted
-    // Relationships, whose settings part enforces protection.
-    let promoted_root = repackaged_fixture(
-      directory,
-      "promoted-root",
-      [],
-      [
-        (
-          "word/_rels/document.xml.rels",
-          "<Relationships xmlns=\"http://schemas.openxmlformats.org/package/2006/relationships\">",
-          "<x:wrap xmlns:x=\"urn:example:x\" xmlns:mc=\"http://schemas.openxmlformats.org/markup-compatibility/2006\" mc:Ignorable=\"x\" mc:ProcessContent=\"x:wrap\">" +
-          "<Relationships xmlns=\"http://schemas.openxmlformats.org/package/2006/relationships\">",
-        ),
-        (
-          "word/_rels/document.xml.rels", "</Relationships>", "</Relationships></x:wrap>",
-        ),
-        (
-          "word/settings.xml", "</w:settings>", "<w:documentProtection w:edit=\"readOnly\" w:enforcement=\"1\"/></w:settings>",
-        ),
-      ],
-      [],
-    )
-    let (promoted_failure, promoted_published) = format_input_probe(
-      promoted_root,
-      directory + "/promoted-root-out.docx",
-    )
-    guard promoted_failure is Some(promoted_message) else {
-      fail("the promoted root's settings are real for its consumers")
-    }
-    assert_true(
-      promoted_message.contains("editing protection") ||
-      promoted_message.contains("could not be read") ||
-      promoted_message.contains("settings"),
-      msg=promoted_message,
-    )
-    assert_false(promoted_published, msg="nothing may be published")
-    // A protection under a wrapper promoted only when `x` is
-    // UNSUPPORTED, inside a part reachable only when `x` IS supported:
-    // no consumer sees both, and the edit publishes.
-    let contradictory_wrap = repackaged_fixture(
-      directory,
-      "contradictory-wrap",
-      [],
-      [
-        (
-          "word/_rels/document.xml.rels",
-          "<Relationship Id=\"rId3\" Type=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships/settings\" Target=\"settings.xml\"/>",
-          "<mc:AlternateContent xmlns:mc=\"http://schemas.openxmlformats.org/markup-compatibility/2006\" xmlns:x=\"urn:example:x\">" +
-          "<mc:Choice Requires=\"x\"><Relationship Id=\"rId3\" Type=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships/settings\" Target=\"settings.xml\"/></mc:Choice>" +
-          "<mc:Fallback/></mc:AlternateContent>",
-        ),
-        (
-          "word/settings.xml", "mc:Ignorable=\"w14\"", "mc:Ignorable=\"w14 x14\" mc:ProcessContent=\"x14:wrap\" xmlns:x14=\"urn:example:x\"",
-        ),
-        (
-          "word/settings.xml", "</w:settings>", "<x14:wrap xmlns:x14=\"urn:example:x\"><w:trackRevisions/></x14:wrap></w:settings>",
-        ),
-      ],
-      [],
-    )
-    let (wrap_failure, wrap_published) = format_input_probe(
-      contradictory_wrap,
-      directory + "/contradictory-wrap-out.docx",
-    )
-    assert_true(
-      wrap_failure is None,
-      msg="no consumer both reaches the part and promotes the wrapper: \{wrap_failure}",
-    )
-    assert_true(wrap_published, msg="the edit publishes")
-  })
-}
-
-///|
-/// Round-16 fidelity: `MustUnderstand` is a positive requirement — a
-/// consumer that processes the branch supports what it names, so nobody
-/// both reaches the part through it and promotes an ignorable wrapper
-/// of that namespace inside it.
-async test "the preflight reads MustUnderstand as a requirement" {
-  with_docx_session_test_dir(directory => {
-    let understood = repackaged_fixture(
-      directory,
-      "must-understand",
-      [],
-      [
-        (
-          "word/_rels/document.xml.rels",
-          "<Relationship Id=\"rId3\" Type=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships/settings\" Target=\"settings.xml\"/>",
-          "<mc:AlternateContent xmlns:mc=\"http://schemas.openxmlformats.org/markup-compatibility/2006\" xmlns:y=\"urn:example:y\" xmlns:x=\"urn:example:x\">" +
-          "<mc:Choice Requires=\"y\" mc:MustUnderstand=\"x\"><Relationship Id=\"rId3\" Type=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships/settings\" Target=\"settings.xml\"/></mc:Choice>" +
-          "<mc:Fallback/></mc:AlternateContent>",
-        ),
-        (
-          "word/settings.xml", "mc:Ignorable=\"w14\"", "mc:Ignorable=\"w14 x14\" mc:ProcessContent=\"x14:wrap\" xmlns:x14=\"urn:example:x\"",
-        ),
-        (
-          "word/settings.xml", "</w:settings>", "<x14:wrap xmlns:x14=\"urn:example:x\"><w:trackRevisions/></x14:wrap></w:settings>",
-        ),
-      ],
-      [],
-    )
-    let (failure, published) = format_input_probe(
-      understood,
-      directory + "/must-understand-out.docx",
-    )
-    assert_true(
-      failure is None,
-      msg="reaching the part means supporting x, and promotion means not: \{failure}",
-    )
-    assert_true(published, msg="the edit publishes")
-  })
-}
-
-///|
-/// Round-17 fidelity: reading a part means supporting its dialect, so a
-/// protection behind a path that DEMANDED the dialect unsupported is
-/// nobody's protection.
-async test "the preflight requires the dialect of what it reads" {
-  with_docx_session_test_dir(directory => {
-    let dialect_gap = repackaged_fixture(
-      directory,
-      "dialect-gap",
-      [],
-      [
-        (
-          "word/_rels/document.xml.rels",
-          "<Relationship Id=\"rId3\" Type=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships/settings\" Target=\"settings.xml\"/>",
-          "<mc:AlternateContent xmlns:mc=\"http://schemas.openxmlformats.org/markup-compatibility/2006\" xmlns:wt=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\">" +
-          "<mc:Choice Requires=\"wt\"/>" +
-          "<mc:Fallback><Relationship Id=\"rId3\" Type=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships/settings\" Target=\"settings.xml\"/></mc:Fallback>" +
-          "</mc:AlternateContent>",
-        ),
-        (
-          "word/settings.xml", "</w:settings>", "<w:documentProtection w:edit=\"readOnly\" w:enforcement=\"1\"/></w:settings>",
-        ),
-      ],
-      [],
-    )
-    let (failure, published) = format_input_probe(
-      dialect_gap,
-      directory + "/dialect-gap-out.docx",
-    )
-    assert_true(
-      failure is None,
-      msg="whoever reaches the part cannot read it, and whoever reads it never reaches it: \{failure}",
-    )
-    assert_true(published, msg="the edit publishes")
-  })
-}
-
-///|
-/// Round-18 fidelity: a part this toolkit's profile never reaches is
-/// analyzed structurally rather than demanded readable, and each
-/// exclusive part is judged for its own consumers.
-async test "the preflight analyzes unreached parts without demanding them" {
-  with_docx_session_test_dir(directory => {
-    // The w14 choice's settings part declares MustUnderstand="w14":
-    // every consumer reaching it satisfies that, and this toolkit —
-    // which never reaches it — must not refuse over a projection nobody
-    // asked it for. The fallback part is ordinary and unprotected.
-    let unreachable_must = repackaged_fixture(
-      directory,
-      "unreached-must",
-      [],
-      [
-        (
-          "[Content_Types].xml", "<Override PartName=\"/word/settings.xml\"", "<Override PartName=\"/word/settings-w14.xml\" ContentType=\"application/vnd.openxmlformats-officedocument.wordprocessingml.settings+xml\"/><Override PartName=\"/word/settings.xml\"",
-        ),
-        (
-          "word/_rels/document.xml.rels",
-          "<Relationship Id=\"rId3\" Type=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships/settings\" Target=\"settings.xml\"/>",
-          "<mc:AlternateContent xmlns:mc=\"http://schemas.openxmlformats.org/markup-compatibility/2006\" xmlns:w14a=\"http://schemas.microsoft.com/office/word/2010/wordml\">" +
-          "<mc:Choice Requires=\"w14a\"><Relationship Id=\"rId3w\" Type=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships/settings\" Target=\"settings-w14.xml\"/></mc:Choice>" +
-          "<mc:Fallback><Relationship Id=\"rId3\" Type=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships/settings\" Target=\"settings.xml\"/></mc:Fallback>" +
-          "</mc:AlternateContent>",
-        ),
-      ],
-      [
-        (
-          "word/settings-w14.xml", "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?><w:settings xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\" xmlns:mc=\"http://schemas.openxmlformats.org/markup-compatibility/2006\" xmlns:w14=\"http://schemas.microsoft.com/office/word/2010/wordml\" mc:MustUnderstand=\"w14\"><w:zoom w:percent=\"100\"/></w:settings>",
-        ),
-      ],
-    )
-    let (must_failure, must_published) = format_input_probe(
-      unreachable_must,
-      directory + "/unreached-must-out.docx",
-    )
-    assert_true(
-      must_failure is None,
-      msg="a part our profile never reaches is not ours to demand: \{must_failure}",
-    )
-    assert_true(must_published, msg="the edit publishes")
-    // And a TRACKED part behind the same unreachable path still
-    // refuses: structural analysis reads it even though our projection
-    // never would.
-    let tracked_must = repackaged_fixture(
-      directory,
-      "unreached-tracked",
-      [],
-      [
-        (
-          "[Content_Types].xml", "<Override PartName=\"/word/settings.xml\"", "<Override PartName=\"/word/settings-w14.xml\" ContentType=\"application/vnd.openxmlformats-officedocument.wordprocessingml.settings+xml\"/><Override PartName=\"/word/settings.xml\"",
-        ),
-        (
-          "word/_rels/document.xml.rels",
-          "<Relationship Id=\"rId3\" Type=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships/settings\" Target=\"settings.xml\"/>",
-          "<mc:AlternateContent xmlns:mc=\"http://schemas.openxmlformats.org/markup-compatibility/2006\" xmlns:w14a=\"http://schemas.microsoft.com/office/word/2010/wordml\">" +
-          "<mc:Choice Requires=\"w14a\"><Relationship Id=\"rId3w\" Type=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships/settings\" Target=\"settings-w14.xml\"/></mc:Choice>" +
-          "<mc:Fallback><Relationship Id=\"rId3\" Type=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships/settings\" Target=\"settings.xml\"/></mc:Fallback>" +
-          "</mc:AlternateContent>",
-        ),
-      ],
-      [
-        (
-          "word/settings-w14.xml", "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?><w:settings xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\"><w:trackRevisions/></w:settings>",
-        ),
-      ],
-    )
-    let (tracked_failure, tracked_published) = format_input_probe(
-      tracked_must,
-      directory + "/unreached-tracked-out.docx",
-    )
-    guard tracked_failure is Some(tracked_message) else {
-      fail("the consumers who reach the tracked part are real")
-    }
-    // The flag lives behind a path this toolkit cannot take, so the
-    // honest voice is the unresolved-alternatives refusal.
-    assert_true(
-      tracked_message.contains("records revisions") ||
-      tracked_message.contains("compatibility alternatives"),
-      msg=tracked_message,
-    )
-    assert_false(tracked_published, msg="nothing may be published")
-  })
-}
-
-///|
 /// Round-19 fidelity: present rels fail closed, and a branch with two
 /// sibling roots is no document.
 async test "the preflight fails closed on rels and multi-root branches" {
@@ -2635,79 +1601,6 @@ async test "the preflight fails closed on rels and multi-root branches" {
 }
 
 ///|
-/// Round-20 fidelity: ignorable siblings do not hide a root, and a
-/// repeated prefix is one requirement.
-async test "the preflight drops ignorable siblings and dedupes requirements" {
-  with_docx_session_test_dir(directory => {
-    // The choice holds ignorable noise BESIDE a tracked settings root:
-    // consumers of the choice who drop the noise read exactly that
-    // tracked root, so the tracking is real and refuses.
-    let noisy = repackaged_fixture(
-      directory,
-      "noisy-branch",
-      [],
-      [
-        (
-          "word/settings.xml",
-          "<w:settings",
-          "<mc0:AlternateContent xmlns:mc0=\"http://schemas.openxmlformats.org/markup-compatibility/2006\" xmlns:y=\"urn:example:y\">" +
-          "<mc0:Choice Requires=\"y\" xmlns:x=\"urn:example:x\" mc0:Ignorable=\"x\">" +
-          "<x:noise/>" +
-          "<w:settings xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\"><w:trackRevisions/></w:settings>" +
-          "</mc0:Choice><mc0:Fallback><w:settings",
-        ),
-        (
-          "word/settings.xml", "</w:settings>", "</w:settings></mc0:Fallback></mc0:AlternateContent>",
-        ),
-      ],
-      [],
-    )
-    let (noisy_failure, noisy_published) = format_input_probe(
-      noisy,
-      directory + "/noisy-branch-out.docx",
-    )
-    guard noisy_failure is Some(noisy_message) else {
-      fail("the consumers who drop the noise read the tracked root")
-    }
-    assert_true(
-      noisy_message.contains("records revisions") ||
-      noisy_message.contains("compatibility alternatives") ||
-      noisy_message.contains("could not be read"),
-      msg=noisy_message,
-    )
-    assert_false(noisy_published, msg="nothing may be published")
-    // One prefix repeated sixty-five times is ONE requirement, not a
-    // complexity refusal.
-    let repeats = StringBuilder()
-    for index in 0..<65 {
-      if index > 0 {
-        repeats.write_string(" ")
-      }
-      repeats.write_string("w14")
-    }
-    let repeated = preflight_fixture(
-      directory,
-      "repeated-requires",
-      "<mc:AlternateContent xmlns:mc=\"http://schemas.openxmlformats.org/markup-compatibility/2006\">" +
-      "<mc:Choice Requires=\"" +
-      repeats.to_string() +
-      "\"><w:zoom w:percent=\"90\"/></mc:Choice>" +
-      "<mc:Fallback/></mc:AlternateContent>",
-      [],
-    )
-    let (repeated_failure, repeated_published) = format_input_probe(
-      repeated,
-      directory + "/repeated-requires-out.docx",
-    )
-    assert_true(
-      repeated_failure is None,
-      msg="a repeated prefix is one requirement: \{repeated_failure}",
-    )
-    assert_true(repeated_published, msg="the edit publishes")
-  })
-}
-
-///|
 /// Round-21 fidelity: an element that declares ITSELF ignorable is one
 /// some consumer drops, and the root beside it is that consumer's
 /// document.
@@ -2749,5 +1642,303 @@ async test "the preflight honours self-declared ignorability" {
       msg=message,
     )
     assert_false(published, msg="nothing may be published")
+  })
+}
+
+///|
+/// THE COMPATIBILITY CONTRACT: `mc:AlternateContent` on a protection
+/// surface — the settings part, or a relationship part the preflight
+/// follows — refuses, typed, whatever the branches say. Different
+/// consumers can read different protections there, and this preflight
+/// reads as one consumer and says so instead of guessing. (A
+/// 591-document corpus sample carries zero such constructs, so the
+/// refusal is invisible to real documents.)
+async test "compatibility alternatives on a protection surface refuse" {
+  with_docx_session_test_dir(directory => {
+    // Even branches that AGREE refuse: the contract is about the fork
+    // being there, not about which way it resolves.
+    let settings_fork = preflight_fixture(
+      directory,
+      "settings-fork",
+      "<mc:AlternateContent xmlns:mc=\"http://schemas.openxmlformats.org/markup-compatibility/2006\">" +
+      "<mc:Choice Requires=\"w14\"><w:trackRevisions w:val=\"0\"/></mc:Choice>" +
+      "<mc:Fallback><w:trackRevisions w:val=\"false\"/></mc:Fallback>" +
+      "</mc:AlternateContent>",
+      [],
+    )
+    let (settings_failure, settings_published) = format_input_probe(
+      settings_fork,
+      directory + "/settings-fork-out.docx",
+    )
+    guard settings_failure is Some(settings_message) else {
+      fail("a fork on the settings surface refuses")
+    }
+    assert_true(
+      settings_message.contains("compatibility alternatives"),
+      msg=settings_message,
+    )
+    assert_false(settings_published, msg="nothing may be published")
+    // The same rule for the document's relationships: a fork can steer
+    // which settings part a consumer follows.
+    let rels_fork = repackaged_fixture(
+      directory,
+      "rels-fork",
+      [],
+      [
+        (
+          "word/_rels/document.xml.rels",
+          "<Relationship Id=\"rId3\" Type=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships/settings\" Target=\"settings.xml\"/>",
+          "<mc:AlternateContent xmlns:mc=\"http://schemas.openxmlformats.org/markup-compatibility/2006\" xmlns:r=\"http://schemas.openxmlformats.org/package/2006/relationships\">" +
+          "<mc:Choice Requires=\"r\"><Relationship Id=\"rId3\" Type=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships/settings\" Target=\"settings.xml\"/></mc:Choice>" +
+          "<mc:Fallback><Relationship Id=\"rId3\" Type=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships/settings\" Target=\"settings.xml\"/></mc:Fallback>" +
+          "</mc:AlternateContent>",
+        ),
+      ],
+      [],
+    )
+    let (rels_failure, rels_published) = format_input_probe(
+      rels_fork,
+      directory + "/rels-fork-out.docx",
+    )
+    guard rels_failure is Some(rels_message) else {
+      fail("a fork on the relationships surface refuses")
+    }
+    assert_true(
+      rels_message.contains("compatibility alternatives"),
+      msg=rels_message,
+    )
+    assert_false(rels_published, msg="nothing may be published")
+    // A protection visible ONLY in a branch is exactly what the
+    // contract closes: refused, never resolved past.
+    let hidden = preflight_fixture(
+      directory,
+      "hidden-protection",
+      "<mc:AlternateContent xmlns:mc=\"http://schemas.openxmlformats.org/markup-compatibility/2006\">" +
+      "<mc:Choice Requires=\"w14\"><w:documentProtection w:edit=\"readOnly\" w:enforcement=\"1\"/></mc:Choice>" +
+      "<mc:Fallback/></mc:AlternateContent>",
+      [],
+    )
+    let (hidden_failure, hidden_published) = format_input_probe(
+      hidden,
+      directory + "/hidden-protection-out.docx",
+    )
+    guard hidden_failure is Some(hidden_message) else {
+      fail("a branch-hidden protection refuses")
+    }
+    assert_true(
+      hidden_message.contains("compatibility alternatives"),
+      msg=hidden_message,
+    )
+    assert_false(hidden_published, msg="nothing may be published")
+  })
+}
+
+///|
+/// MCE WITHOUT forks reads as a WML consumer reads it, and publishes or
+/// refuses on what that reading says — no alternate content, no
+/// contract refusal.
+async test "forkless compatibility markup reads as WML" {
+  with_docx_session_test_dir(directory => {
+    // An ignorable wrapper nobody asked to process is dropped whole.
+    let opaque = preflight_fixture(
+      directory,
+      "opaque",
+      "<w14:opaque><w:trackRevisions/></w14:opaque>",
+      [],
+    )
+    let (opaque_failure, opaque_published) = format_input_probe(
+      opaque,
+      directory + "/opaque-out.docx",
+    )
+    assert_true(
+      opaque_failure is None,
+      msg="an unprocessed wrapper hides nothing at this level: \{opaque_failure}",
+    )
+    assert_true(opaque_published, msg="the edit publishes")
+    // MustUnderstand naming WML names something this toolkit understands.
+    let wml_must = repackaged_fixture(
+      directory,
+      "wml-must",
+      [],
+      [
+        (
+          "word/settings.xml", "mc:Ignorable=\"w14\"", "mc:Ignorable=\"w14\" mc:MustUnderstand=\"w\"",
+        ),
+      ],
+      [],
+    )
+    let (wml_must_failure, wml_must_published) = format_input_probe(
+      wml_must,
+      directory + "/wml-must-out.docx",
+    )
+    assert_true(
+      wml_must_failure is None,
+      msg="WML is understood here: \{wml_must_failure}",
+    )
+    assert_true(wml_must_published, msg="the edit publishes")
+    // A nested Ignorable re-declaration retires the inherited
+    // process-content rule: the wrapper's content is dropped whole, and
+    // the tracking flag inside the NEXT wrapper — where the root's rule
+    // still applies — is seen.
+    let retired = preflight_fixture(
+      directory,
+      "retired",
+      "<w14:scope xmlns:mc2=\"http://schemas.openxmlformats.org/markup-compatibility/2006\" mc2:Ignorable=\"w14\" mc2:ProcessContent=\"w14:scope\">" +
+      "<w14:outer><w:trackRevisions/></w14:outer>" +
+      "</w14:scope>",
+      [],
+      settings_root_insert=" mc:ProcessContent=\"w14:scope w14:outer\"",
+    )
+    let (retired_failure, retired_published) = format_input_probe(
+      retired,
+      directory + "/retired-out.docx",
+    )
+    assert_true(
+      retired_failure is None,
+      msg="a retired rule promotes nothing: \{retired_failure}",
+    )
+    assert_true(retired_published, msg="the edit publishes")
+    // An entity-spelled WML binding still MEANS WML end to end.
+    let entity_bound = repackaged_fixture(
+      directory,
+      "entity-bound",
+      [],
+      [
+        (
+          "word/document.xml", "xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\"",
+          "xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/&#x6d;ain\"",
+        ),
+      ],
+      [],
+    )
+    let (entity_failure, entity_published) = format_input_probe(
+      entity_bound,
+      directory + "/entity-bound-out.docx",
+    )
+    assert_true(
+      entity_failure is None,
+      msg="an entity-spelled binding means what it decodes to: \{entity_failure}",
+    )
+    assert_true(entity_published, msg="the edit publishes")
+    // A wrapper the effective reading PROMOTES surfaces what it holds:
+    // an x-wrapped Relationships in the document rels still names the
+    // settings, and the enforced protection there refuses.
+    let promoted_root = repackaged_fixture(
+      directory,
+      "promoted-root",
+      [],
+      [
+        (
+          "word/_rels/document.xml.rels",
+          "<Relationships xmlns=\"http://schemas.openxmlformats.org/package/2006/relationships\">",
+          "<x:wrap xmlns:x=\"urn:example:x\" xmlns:mc=\"http://schemas.openxmlformats.org/markup-compatibility/2006\" mc:Ignorable=\"x\" mc:ProcessContent=\"x:wrap\">" +
+          "<Relationships xmlns=\"http://schemas.openxmlformats.org/package/2006/relationships\">",
+        ),
+        (
+          "word/_rels/document.xml.rels", "</Relationships>", "</Relationships></x:wrap>",
+        ),
+        (
+          "word/settings.xml", "</w:settings>", "<w:documentProtection w:edit=\"readOnly\" w:enforcement=\"1\"/></w:settings>",
+        ),
+      ],
+      [],
+    )
+    let (promoted_failure, promoted_published) = format_input_probe(
+      promoted_root,
+      directory + "/promoted-root-out.docx",
+    )
+    guard promoted_failure is Some(promoted_message) else {
+      fail("the promoted root's settings are real")
+    }
+    assert_true(
+      promoted_message.contains("editing protection") ||
+      promoted_message.contains("could not be read"),
+      msg=promoted_message,
+    )
+    assert_false(promoted_published, msg="nothing may be published")
+  })
+}
+
+///|
+/// Protection is an enforced RESTRICTION: `w:enforcement` beside
+/// `w:edit="none"` and no formatting lock restricts nothing, and Word
+/// edits such a document freely.
+async test "enforcement without a restriction is not protection" {
+  with_docx_session_test_dir(directory => {
+    let unrestricted = preflight_fixture(
+      directory,
+      "unrestricted",
+      "<w:documentProtection w:edit=\"none\" w:enforcement=\"1\"/>",
+      [],
+    )
+    let (unrestricted_failure, unrestricted_published) = format_input_probe(
+      unrestricted,
+      directory + "/unrestricted-out.docx",
+    )
+    assert_true(
+      unrestricted_failure is None,
+      msg="edit=none restricts nothing: \{unrestricted_failure}",
+    )
+    assert_true(unrestricted_published, msg="the edit publishes")
+    // A formatting lock alone IS a restriction.
+    let formatting_lock = preflight_fixture(
+      directory,
+      "formatting-lock",
+      "<w:documentProtection w:formatting=\"1\" w:enforcement=\"1\"/>",
+      [],
+    )
+    let (formatting_failure, formatting_published) = format_input_probe(
+      formatting_lock,
+      directory + "/formatting-lock-out.docx",
+    )
+    guard formatting_failure is Some(formatting_message) else {
+      fail("an enforced formatting lock restricts formatting")
+    }
+    assert_true(
+      formatting_message.contains("editing protection"),
+      msg=formatting_message,
+    )
+    assert_false(formatting_published, msg="nothing may be published")
+    // Enforcement with NEITHER edit nor formatting restricts nothing.
+    let bare = preflight_fixture(
+      directory,
+      "bare-enforcement",
+      "<w:documentProtection w:enforcement=\"1\"/>",
+      [],
+    )
+    let (bare_failure, bare_published) = format_input_probe(
+      bare,
+      directory + "/bare-enforcement-out.docx",
+    )
+    assert_true(
+      bare_failure is None,
+      msg="enforcement of nothing restricts nothing: \{bare_failure}",
+    )
+    assert_true(bare_published, msg="the edit publishes")
+  })
+}
+
+///|
+/// The replace readback across many paragraphs runs in one batch — the
+/// scale case kept from the batching rounds.
+async test "the replace readback batches across paragraphs" {
+  with_docx_session_test_dir(directory => {
+    let builder = StringBuilder()
+    for index in 0..<200 {
+      if index > 0 {
+        builder.write_string("</w:p><w:p>")
+      }
+      builder.write_string("<w:r><w:t>target \{index}</w:t></w:r>")
+    }
+    let many = edit_fixture(directory, "many-replace.docx", builder.to_string())
+    let replaced = @docx.transact_docx_find_replace(
+      @transaction.transaction_options(
+        many,
+        output_path=directory + "/many-replace-out.docx",
+      ),
+      needle="target",
+      replacement="done",
+    )
+    assert_eq(replaced.report.replaced, 200)
   })
 }
