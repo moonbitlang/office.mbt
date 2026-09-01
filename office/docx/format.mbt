@@ -168,7 +168,10 @@ pub fn docx_mutation_preflight(
       "office.docx.signed_package", "this package carries a digital signature, which any edit would invalidate",
     )
   }
-  let settings_name = match docx_settings_part(archive, parts) {
+  let (settings_lookup, settings_conditions) = docx_settings_part(
+    archive, parts,
+  )
+  let settings_name = match settings_lookup {
     Found(name) => name
     // A document with no settings part declares no protections.
     Absent => return
@@ -211,12 +214,50 @@ pub fn docx_mutation_preflight(
   // What this toolkit's reader would act on, and what it would pass
   // over: a protection declared in a branch that is passed over is a
   // protection this preflight cannot resolve, not one it may ignore.
-  let effective = docx_settings_children(root)
-  // Everything ANY consumer might read at the settings level. Judged as
-  // one set: branches that agree decide the question, and disagreement
-  // anywhere — with the effective reading or between alternatives — is
-  // a protection that depends on who opens the document.
-  let suppressed = docx_settings_possible(raw)
+  // OUR reading of the part is one consumer's: it supports WML and
+  // nothing else, so it assigns UNSUPPORTED to every namespace the path
+  // conditions name. If no path condition is satisfied by that
+  // assignment, the consumer this projection describes never reaches
+  // the part, and its reading decides nothing.
+  let mut profile_reaches = false
+  for part_condition in settings_conditions {
+    let mut satisfied = true
+    for capability in part_condition {
+      if capability.supported {
+        satisfied = false
+      }
+    }
+    if satisfied {
+      profile_reaches = true
+    }
+  }
+  let effective = if profile_reaches {
+    docx_settings_children(root)
+  } else {
+    []
+  }
+  // Everything ANY consumer might read at the settings level — but only
+  // consumers who can REACH this settings part count: the conditions of
+  // the path that found the part conjoin with each element's own, and
+  // an element only a consumer who never sees the part would read is
+  // nobody's setting.
+  let suppressed : Array[@xml.XmlElement] = []
+  for entry in docx_settings_possible(raw) {
+    let (element, element_condition) = entry
+    let mut reachable = false
+    for part_condition in settings_conditions {
+      let joined = part_condition.copy()
+      for capability in element_condition {
+        joined.push(capability)
+      }
+      if docx_capabilities_satisfiable(joined) {
+        reachable = true
+      }
+    }
+    if reachable {
+      suppressed.push(element)
+    }
+  }
   match
     docx_settings_flag(
       effective,
@@ -541,7 +582,7 @@ const DOCX_STRICT_SETTINGS_RELATIONSHIP : String = "http://purl.oclc.org/ooxml/o
 fn docx_settings_part(
   archive : @zip.Archive,
   parts : Map[String, (String, String)],
-) -> DocxPartLookup {
+) -> (DocxPartLookup, Array[Array[DocxCapability]]) {
   // Several main document parts — including one hidden in a
   // compatibility branch the strict validation's effective reading does
   // not take — leave no single settings answer, and are refused rather
@@ -560,17 +601,16 @@ fn docx_settings_part(
   )
   let document = match main_lookup {
     Found(name) => name
-    Absent => return Absent
-    Ambiguous => return Ambiguous
+    Absent => return (Absent, [])
+    Ambiguous => return (Ambiguous, [])
   }
-  let (settings_lookup, _) = docx_relationship_target_under(
+  docx_relationship_target_under(
     archive,
     parts,
     document,
     [DOCX_SETTINGS_RELATIONSHIP, DOCX_STRICT_SETTINGS_RELATIONSHIP],
     main_conditions,
   )
-  settings_lookup
 }
 
 ///|
@@ -625,7 +665,10 @@ fn docx_relationship_targets(
   // outside it is looked through only where a `ProcessContent` says a
   // consumer would. A part whose ROOT is compatibility markup resolves
   // to a different root per consumer, so every possible root is walked.
-  for possible_root in docx_mce_possible_roots(root) {
+  for
+    possible_root in docx_mce_possible_roots(root, [
+      DOCX_PACKAGE_RELATIONSHIPS_NAMESPACE,
+    ]) {
     let (root_element, root_condition) = possible_root
     for
       entry in docx_mce_possible(root_element, [
@@ -782,13 +825,20 @@ const DOCX_XMLNS_NAMESPACE : String = "http://www.w3.org/2000/xmlns/"
 /// The settings a DIFFERENT consumer might act on: every element that
 /// could sit at the settings-child level under SOME resolution of the
 /// part's compatibility markup.
-fn docx_settings_possible(raw : @xml.XmlElement) -> Array[@xml.XmlElement] {
+fn docx_settings_possible(
+  raw : @xml.XmlElement,
+) -> Array[(@xml.XmlElement, Array[DocxCapability])] {
   // A settings part whose ROOT is compatibility markup resolves to a
   // different root per consumer: every possible settings root's
-  // children are possible settings.
-  let collected : Array[@xml.XmlElement] = []
-  for possible_root in docx_mce_possible_roots(raw) {
-    let root = possible_root.0
+  // children are possible settings, under the root's own condition
+  // conjoined with theirs.
+  let collected : Array[(@xml.XmlElement, Array[DocxCapability])] = []
+  for
+    possible_root in docx_mce_possible_roots(raw, [
+      DOCX_WML_NAMESPACE,
+      DOCX_STRICT_WML_NAMESPACE,
+    ]) {
+    let (root, root_condition) = possible_root
     guard root.name == "{\{DOCX_WML_NAMESPACE}}settings" ||
       root.name == "{\{DOCX_STRICT_WML_NAMESPACE}}settings" else {
       continue
@@ -798,7 +848,13 @@ fn docx_settings_possible(raw : @xml.XmlElement) -> Array[@xml.XmlElement] {
         DOCX_WML_NAMESPACE,
         DOCX_STRICT_WML_NAMESPACE,
       ]) {
-      collected.push(entry.0)
+      let joined = root_condition.copy()
+      for capability in entry.1 {
+        joined.push(capability)
+      }
+      if docx_capabilities_satisfiable(joined) {
+        collected.push((entry.0, joined))
+      }
     }
   }
   collected
@@ -814,6 +870,7 @@ fn docx_settings_possible(raw : @xml.XmlElement) -> Array[@xml.XmlElement] {
 /// a root anyone reads.
 fn docx_mce_possible_roots(
   raw : @xml.XmlElement,
+  understood : Array[String],
 ) -> Array[(@xml.XmlElement, Array[DocxCapability])] {
   let roots : Array[(@xml.XmlElement, Array[DocxCapability])] = []
   let scope : Map[String, String] = Map([])
@@ -879,11 +936,17 @@ fn docx_mce_possible_roots(
         }
         if branch.name == "{\{DOCX_MC_NAMESPACE}}Choice" {
           let requires = branch_requires(branch)
+          let mut decides = false
           match requires {
-            Some(uris) =>
+            Some(uris) => {
+              decides = true
               for uri in uris {
-                branch_condition.push({ uri, supported: true, })
+                if !understood.contains(uri) {
+                  branch_condition.push({ uri, supported: true, })
+                  decides = false
+                }
               }
+            }
             None => ()
           }
           if docx_capabilities_satisfiable(branch_condition) {
@@ -892,8 +955,17 @@ fn docx_mce_possible_roots(
               collect(candidate, branch_condition)
             }
           }
+          // A choice every consumer of the vocabulary satisfies is the
+          // one every consumer selects: nothing after it is a root.
+          if decides {
+            root_restore(branch_undo)
+            break
+          }
           match requires {
-            Some([only]) => passed_over.push({ uri: only, supported: false, })
+            Some([only]) =>
+              if !understood.contains(only) {
+                passed_over.push({ uri: only, supported: false, })
+              }
             _ => ()
           }
         } else if branch.name == "{\{DOCX_MC_NAMESPACE}}Fallback" {
@@ -967,6 +1039,36 @@ fn docx_mce_possible(
   // which is over-approximated as no constraint: more paths are treated
   // reachable, never fewer.)
   let condition : Array[DocxCapability] = []
+  // The choices passed over on the path, each a DISJUNCTION: reaching
+  // what follows one requires at least one of its (non-understood)
+  // namespaces unsupported. Expanded into alternative conjunctions at
+  // the moment an element is recorded.
+  let negation_groups : Array[Array[String]] = []
+  fn reachable_alternatives() -> Array[Array[DocxCapability]] {
+    let mut alternatives : Array[Array[DocxCapability]] = [condition.copy()]
+    for group in negation_groups {
+      let expanded : Array[Array[DocxCapability]] = []
+      for alternative in alternatives {
+        for uri in group {
+          if expanded.length() >= 8 {
+            // Saturate toward REACHABLE: drop the negations rather than
+            // a path a real consumer might walk.
+            return [condition.copy()]
+          }
+          let candidate = alternative.copy()
+          candidate.push({ uri, supported: false, })
+          if docx_capabilities_satisfiable(candidate) {
+            expanded.push(candidate)
+          }
+        }
+      }
+      alternatives = expanded
+      if alternatives.is_empty() {
+        return []
+      }
+    }
+    alternatives
+  }
   let scope : Map[String, String] = Map([])
   let process_exact : Map[String, Int] = Map([])
   let process_wildcard : Map[String, Int] = Map([])
@@ -1144,20 +1246,16 @@ fn docx_mce_possible(
       let (generation_undo, added) = directives(child)
       if child.name == "{\{DOCX_MC_NAMESPACE}}AlternateContent" {
         let mut decided = false
-        // What reaching each later branch says about the consumer: every
-        // single-requirement choice passed over required its namespace
-        // UNSUPPORTED.
-        let passed_over : Array[DocxCapability] = []
+        // Each choice passed over becomes a NEGATION GROUP for the
+        // branches after it: at least one of its namespaces must be
+        // unsupported to get past it, whichever one.
+        let mut groups_added = 0
         for branch_node in child.children {
           guard branch_node is XmlElement(branch) else { continue }
           guard !decided else { break }
           let branch_undo = declarations(branch)
           let (branch_generation_undo, branch_added) = directives(branch)
           let mut pushed = 0
-          for capability in passed_over {
-            condition.push(capability)
-            pushed += 1
-          }
           if branch.name == "{\{DOCX_MC_NAMESPACE}}Choice" {
             let requires = choice_requires(branch)
             match requires {
@@ -1175,11 +1273,19 @@ fn docx_mce_possible(
               decided = true
             }
             match requires {
-              Some([only]) =>
-                if !understood.contains(only) {
-                  passed_over.push({ uri: only, supported: false, })
+              Some(uris) => {
+                let negatable : Array[String] = []
+                for uri in uris {
+                  if !understood.contains(uri) {
+                    negatable.push(uri)
+                  }
                 }
-              _ => ()
+                if !negatable.is_empty() && !decided {
+                  negation_groups.push(negatable)
+                  groups_added += 1
+                }
+              }
+              None => ()
             }
           } else if branch.name == "{\{DOCX_MC_NAMESPACE}}Fallback" {
             level(branch)
@@ -1190,11 +1296,16 @@ fn docx_mce_possible(
           undo_directives(branch_generation_undo, branch_added)
           restore(branch_undo)
         }
-      } else {
-        if docx_capabilities_satisfiable(condition) {
-          possible.push((child, condition.copy()))
+        for _ in 0..<groups_added {
+          negation_groups.pop() |> ignore
         }
-        if !understood.contains(element_uri(child.name)) &&
+      } else {
+        let alternatives = reachable_alternatives()
+        for alternative in alternatives {
+          possible.push((child, alternative))
+        }
+        if !alternatives.is_empty() &&
+          !understood.contains(element_uri(child.name)) &&
           matches_process_content(child.name) {
           level(child)
         }

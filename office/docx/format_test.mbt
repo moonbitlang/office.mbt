@@ -1981,3 +1981,69 @@ async test "the preflight orders root branches and the replace readback batches"
     assert_eq(replaced.report.replaced, 200)
   })
 }
+
+///|
+/// Round-11 fidelity: reachability is one question asked of one
+/// consumer, from the relationship that finds the part to the branch
+/// inside it.
+async test "the preflight conjoins conditions from relationship to setting" {
+  with_docx_session_test_dir(directory => {
+    // The settings part is reachable only under `w14`; the protection
+    // inside it sits in the FALLBACK of a `Requires="w14"` choice. The
+    // consumers who reach the part take the unprotected branch, and the
+    // consumers who would take the fallback never see the part.
+    let disjoint = repackaged_fixture(
+      directory,
+      "disjoint",
+      [],
+      [
+        (
+          "word/_rels/document.xml.rels",
+          "<Relationship Id=\"rId3\" Type=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships/settings\" Target=\"settings.xml\"/>",
+          "<mc:AlternateContent xmlns:mc=\"http://schemas.openxmlformats.org/markup-compatibility/2006\" xmlns:w14x=\"http://schemas.microsoft.com/office/word/2010/wordml\">" +
+          "<mc:Choice Requires=\"w14x\"><Relationship Id=\"rId3\" Type=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships/settings\" Target=\"settings.xml\"/></mc:Choice>" +
+          "<mc:Fallback/></mc:AlternateContent>",
+        ),
+        (
+          "word/settings.xml",
+          "</w:settings>",
+          "<mc:AlternateContent><mc:Choice Requires=\"w14\"><w:zoom w:percent=\"90\"/></mc:Choice>" +
+          "<mc:Fallback><w:trackRevisions/></mc:Fallback></mc:AlternateContent></w:settings>",
+        ),
+      ],
+      [],
+    )
+    let (disjoint_failure, disjoint_published) = format_input_probe(
+      disjoint,
+      directory + "/disjoint-out.docx",
+    )
+    assert_true(
+      disjoint_failure is None,
+      msg="nobody both reaches the part and takes the fallback: \{disjoint_failure}",
+    )
+    assert_true(disjoint_published, msg="the edit publishes")
+    // Passing over a MULTI-requirement choice negates by disjunction: an
+    // inner choice with the same requirements as its outer one leaves
+    // the inner fallback unreachable, and a tracking flag there decides
+    // nothing.
+    let nested_same = preflight_fixture(
+      directory,
+      "nested-same",
+      "<mc:AlternateContent xmlns:mc=\"http://schemas.openxmlformats.org/markup-compatibility/2006\" xmlns:w15=\"http://schemas.microsoft.com/office/word/2012/wordml\">" +
+      "<mc:Choice Requires=\"w14 w15\">" +
+      "<mc:AlternateContent><mc:Choice Requires=\"w14 w15\"><w:zoom w:percent=\"80\"/></mc:Choice>" +
+      "<mc:Fallback><w:trackRevisions/></mc:Fallback></mc:AlternateContent>" +
+      "</mc:Choice><mc:Fallback/></mc:AlternateContent>",
+      [],
+    )
+    let (nested_failure, nested_published) = format_input_probe(
+      nested_same,
+      directory + "/nested-same-out.docx",
+    )
+    assert_true(
+      nested_failure is None,
+      msg="the inner fallback is unreachable: \{nested_failure}",
+    )
+    assert_true(nested_published, msg="the edit publishes")
+  })
+}
