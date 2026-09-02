@@ -63,7 +63,7 @@ async test "format transaction publishes and the output carries the request" {
       @word.docx_direct_format(bold=true),
       text="world",
     )
-    assert_true(failure is None, msg="unexpected failure: \{failure}")
+    assert_true(failure is None, msg="unexpected failure: \{Repr(failure)}")
     guard result is Some(outcome) else { fail("expected a result") }
     let report = outcome.report()
     assert_eq(report.mode(), "text")
@@ -115,7 +115,7 @@ async test "format transaction addresses an explicit range" {
       within="p[1]",
       range=(1, 3),
     )
-    assert_true(failure is None, msg="unexpected failure: \{failure}")
+    assert_true(failure is None, msg="unexpected failure: \{Repr(failure)}")
     guard result is Some(outcome) else { fail("expected a result") }
     let report = outcome.report()
     assert_eq(report.mode(), "range")
@@ -150,7 +150,7 @@ async test "format transaction reports a satisfied request as unchanged" {
       @word.docx_direct_format(bold=true),
       text="world",
     )
-    assert_true(failure is None, msg="unexpected failure: \{failure}")
+    assert_true(failure is None, msg="unexpected failure: \{Repr(failure)}")
     guard result is Some(outcome) else { fail("expected a result") }
     let report = outcome.report()
     assert_eq(report.spans().length(), 1)
@@ -188,7 +188,7 @@ async test "format transaction enforces its outcome policies" {
     )
     assert_true(
       allow_failure is None,
-      msg="unexpected failure: \{allow_failure}",
+      msg="unexpected failure: \{Repr(allow_failure)}",
     )
     guard allowed is Some(outcome) else { fail("expected a result") }
     assert_false(outcome.transaction().changed)
@@ -214,7 +214,7 @@ async test "format transaction enforces its outcome policies" {
     )
     assert_true(
       asserted_failure is None,
-      msg="expect 0 must be satisfiable: \{asserted_failure}",
+      msg="expect 0 must be satisfiable: \{Repr(asserted_failure)}",
     )
     assert_true(asserted is Some(_))
   })
@@ -396,7 +396,7 @@ async test "the mutation preflight judges declarations, not paths" {
     )
     assert_true(
       unenforced_failure is None,
-      msg="unenforced protection must not block: \{unenforced_failure}",
+      msg="unenforced protection must not block: \{Repr(unenforced_failure)}",
     )
     // Enforced protection refuses.
     let enforced = preflight_fixture(
@@ -430,7 +430,7 @@ async test "the mutation preflight judges declarations, not paths" {
     )
     assert_true(
       untracked_failure is None,
-      msg="trackRevisions=false must not block: \{untracked_failure}",
+      msg="trackRevisions=false must not block: \{Repr(untracked_failure)}",
     )
     // An entity-spelled ON is still on.
     let entity = preflight_fixture(
@@ -463,7 +463,7 @@ async test "the mutation preflight judges declarations, not paths" {
     )
     assert_true(
       foreign_failure is None,
-      msg="a foreign trackRevisions must not block: \{foreign_failure}",
+      msg="a foreign trackRevisions must not block: \{Repr(foreign_failure)}",
     )
     // And one inside a COMMENT is not an element at all.
     let commented = preflight_fixture(
@@ -478,7 +478,7 @@ async test "the mutation preflight judges declarations, not paths" {
     )
     assert_true(
       commented_failure is None,
-      msg="a commented setting must not block: \{commented_failure}",
+      msg="a commented setting must not block: \{Repr(commented_failure)}",
     )
     // A fork NESTED inside the fallback this toolkit took is still a
     // fork: a consumer that understands the inner vocabulary reads the
@@ -598,7 +598,7 @@ async test "format transaction spans several paragraphs at once" {
       @word.docx_direct_format(bold=true),
       text="world",
     )
-    assert_true(failure is None, msg="\{failure}")
+    assert_true(failure is None, msg="\{Repr(failure)}")
     guard result is Some(value) else { fail("no result") }
     let report = value.report()
     assert_eq(report.spans().length(), 2)
@@ -639,7 +639,7 @@ async test "format transaction honours a stable paragraph scope" {
       text="world",
       within="p[id=\"0A0B0C0D\"]",
     )
-    assert_true(failure is None, msg="\{failure}")
+    assert_true(failure is None, msg="\{Repr(failure)}")
     guard result is Some(value) else { fail("no result") }
     let report = value.report()
     assert_eq(report.spans().length(), 1)
@@ -674,7 +674,7 @@ async test "format transaction dry run publishes nothing" {
       text="world",
       dry_run=true,
     )
-    assert_true(failure is None, msg="\{failure}")
+    assert_true(failure is None, msg="\{Repr(failure)}")
     guard result is Some(value) else { fail("no result") }
     assert_eq(value.report().spans().length(), 1)
     assert_true(published is None, msg="a dry run must not write")
@@ -885,7 +885,7 @@ async test "the preflight reads the settings the package points at" {
     )
     assert_true(
       unrelated_failure is None,
-      msg="an unreferenced settings part must not block: \{unrelated_failure}",
+      msg="an unreferenced settings part must not block: \{Repr(unrelated_failure)}",
     )
     assert_true(unrelated_published, msg="the edit publishes")
   })
@@ -957,7 +957,7 @@ async test "the preflight reads a signature's content type by precedence" {
     )
     assert_true(
       override_failure is None,
-      msg="an overridden part is not a signature: \{override_failure}",
+      msg="an overridden part is not a signature: \{Repr(override_failure)}",
     )
     assert_true(override_published, msg="the edit publishes")
   })
@@ -1151,7 +1151,7 @@ async test "the preflight reads settings as XML" {
     )
     assert_true(
       nested_failure is None,
-      msg="a nested spelling is not a settings child: \{nested_failure}",
+      msg="a nested spelling is not a settings child: \{Repr(nested_failure)}",
     )
     assert_true(nested_published, msg="the edit publishes")
     // A settings part that DEMANDS an application namespace this
@@ -1306,7 +1306,7 @@ async test "the preflight refuses password write protection" {
     )
     assert_true(
       recommended_failure is None,
-      msg="read-only RECOMMENDED is advice: \{recommended_failure}",
+      msg="read-only RECOMMENDED is advice: \{Repr(recommended_failure)}",
     )
     assert_true(recommended_published, msg="the edit publishes")
     let enforced = preflight_fixture(
@@ -1397,7 +1397,7 @@ async test "format transaction reaches a paragraph inside a table" {
       @word.docx_direct_format(italic=true),
       text="cell world",
     )
-    assert_true(failure is None, msg="\{failure}")
+    assert_true(failure is None, msg="\{Repr(failure)}")
     guard result is Some(value) else { fail("no result") }
     let report = value.report()
     assert_eq(report.spans().length(), 1)
@@ -1498,7 +1498,7 @@ async test "the preflight discovers signatures through their relationships" {
     )
     assert_true(
       scaffolding_failure is None,
-      msg="an origin alone is not a signature: \{scaffolding_failure}",
+      msg="an origin alone is not a signature: \{Repr(scaffolding_failure)}",
     )
     assert_true(scaffolding_published, msg="the edit publishes")
     // A signature-typed part nothing relates to is not discoverable.
@@ -1519,7 +1519,7 @@ async test "the preflight discovers signatures through their relationships" {
     )
     assert_true(
       orphan_failure is None,
-      msg="an unreachable signature part is not a package signature: \{orphan_failure}",
+      msg="an unreachable signature part is not a package signature: \{Repr(orphan_failure)}",
     )
     assert_true(orphan_published, msg="the edit publishes")
   })
@@ -1740,19 +1740,19 @@ async test "compatibility alternatives on a protection surface refuse" {
 async test "forkless compatibility markup reads as WML" {
   with_docx_session_test_dir(directory => {
     // An ignorable wrapper nobody asked to process is dropped whole.
-    let opaque = preflight_fixture(
+    let opaque_input = preflight_fixture(
       directory,
       "opaque",
       "<w14:opaque><w:trackRevisions/></w14:opaque>",
       [],
     )
     let (opaque_failure, opaque_published) = format_input_probe(
-      opaque,
+      opaque_input,
       directory + "/opaque-out.docx",
     )
     assert_true(
       opaque_failure is None,
-      msg="an unprocessed wrapper hides nothing at this level: \{opaque_failure}",
+      msg="an unprocessed wrapper hides nothing at this level: \{Repr(opaque_failure)}",
     )
     assert_true(opaque_published, msg="the edit publishes")
     // MustUnderstand naming WML names something this toolkit understands.
@@ -1773,7 +1773,7 @@ async test "forkless compatibility markup reads as WML" {
     )
     assert_true(
       wml_must_failure is None,
-      msg="WML is understood here: \{wml_must_failure}",
+      msg="WML is understood here: \{Repr(wml_must_failure)}",
     )
     assert_true(wml_must_published, msg="the edit publishes")
     // A nested Ignorable re-declaration retires the inherited
@@ -1795,7 +1795,7 @@ async test "forkless compatibility markup reads as WML" {
     )
     assert_true(
       retired_failure is None,
-      msg="a retired rule promotes nothing: \{retired_failure}",
+      msg="a retired rule promotes nothing: \{Repr(retired_failure)}",
     )
     assert_true(retired_published, msg="the edit publishes")
     // An entity-spelled WML binding still MEANS WML end to end.
@@ -1817,7 +1817,7 @@ async test "forkless compatibility markup reads as WML" {
     )
     assert_true(
       entity_failure is None,
-      msg="an entity-spelled binding means what it decodes to: \{entity_failure}",
+      msg="an entity-spelled binding means what it decodes to: \{Repr(entity_failure)}",
     )
     assert_true(entity_published, msg="the edit publishes")
     // A wrapper the effective reading PROMOTES surfaces what it holds:
@@ -1877,7 +1877,7 @@ async test "enforcement without a restriction is not protection" {
     )
     assert_true(
       unrestricted_failure is None,
-      msg="edit=none restricts nothing: \{unrestricted_failure}",
+      msg="edit=none restricts nothing: \{Repr(unrestricted_failure)}",
     )
     assert_true(unrestricted_published, msg="the edit publishes")
     // A formatting lock alone IS a restriction.
@@ -1912,7 +1912,7 @@ async test "enforcement without a restriction is not protection" {
     )
     assert_true(
       bare_failure is None,
-      msg="enforcement of nothing restricts nothing: \{bare_failure}",
+      msg="enforcement of nothing restricts nothing: \{Repr(bare_failure)}",
     )
     assert_true(bare_published, msg="the edit publishes")
   })

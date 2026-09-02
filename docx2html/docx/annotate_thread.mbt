@@ -1594,8 +1594,8 @@ fn self_closing_rewrite_range(
 /// ';', surrounding whitespace trimmed.
 fn media_type_essence(declared : String) -> String {
   let cut = match declared.find(";") {
-    Some(index) => declared.substring(start=0, end=index).to_string()
+    Some(index) => declared[:index].to_owned()
     None => declared
   }
-  cut.trim(chars=" \t").to_string().to_lower()
+  cut.trim(chars=" \t").to_owned().to_lower()
 }

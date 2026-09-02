@@ -2085,12 +2085,12 @@ fn docx_format_binding_digests(
           value[offset] is (' ' | '\t' | '\n' | '\r')
         if boundary {
           if token_start >= 0 {
-            let token = value.substring(start=token_start, end=offset)
+            let token = value[token_start:offset]
             if listed_prefixes {
-              used.push(token.to_string())
+              used.push(token.to_owned())
             } else {
               match token.find(":") {
-                Some(colon) => used.push(token[:colon].to_string())
+                Some(colon) => used.push(token[:colon].to_owned())
                 None => used.push("")
               }
             }

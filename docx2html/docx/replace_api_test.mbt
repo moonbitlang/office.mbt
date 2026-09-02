@@ -207,13 +207,14 @@ test "replace refuses a path two paragraphs claim" {
   let annotated = replace_fixture(
     "<w:p><w:r><w:t>boo</w:t></w:r><w:p><w:r><w:t>aoo</w:t></w:r></w:p></w:p>",
   )
-  let outcome = try? @docx.plan_docx_replacements(
+  try @docx.plan_docx_replacements(
     annotated,
     annotated.main_story_source(),
     needle="oo",
     replacement="ee",
-  )
-  guard outcome is Err(_) else {
-    fail("a collided path cannot be planned against")
+  ) catch {
+    _ => ()
+  } noraise {
+    _ => fail("a collided path cannot be planned against")
   }
 }

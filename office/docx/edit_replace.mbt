@@ -912,8 +912,8 @@ fn resolve_stable_run_address(
 ) -> String raise @transaction.TransactionError {
   guard at.has_prefix("p[id=\"") else { return at }
   guard at.find("\"]") is Some(close) else { return at }
-  let head = at.substring(start=0, end=close + 2).to_string()
-  let rest = at.substring(start=close + 2, end=at.length()).to_string()
+  let head = at[:close + 2].to_owned()
+  let rest = at[close + 2:].to_owned()
   let paragraph = resolve_stable_replace_scope(session, head)
   paragraph + rest
 }

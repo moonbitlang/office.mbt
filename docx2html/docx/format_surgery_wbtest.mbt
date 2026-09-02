@@ -1471,13 +1471,13 @@ test "format: the transparent classifier covers every name it dispatches" {
   )
   let projection = surgery_native_projection(source)
   let elements = projection.scan.elements()
-  fn find(local : String) -> ScannedElement raise {
+  fn find(local_name : String) -> ScannedElement raise {
     for element in elements {
-      if element.local_name == local {
+      if element.local_name == local_name {
         return element
       }
     }
-    fail("fixture is missing " + local)
+    fail("fixture is missing " + local_name)
   }
 
   // Wrappers: the reader walks into them, so their contents speak for

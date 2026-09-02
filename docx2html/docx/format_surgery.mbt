@@ -180,7 +180,7 @@ fn format_surgery_map_rpr_refusal(
 
 ///|
 /// How one touched run was realized.
-#warnings("-unused_constructor")
+#warnings("-unused_value")
 priv enum FormatRunAction {
   FormattedInPlace
   SplitIntoSegments(Int)

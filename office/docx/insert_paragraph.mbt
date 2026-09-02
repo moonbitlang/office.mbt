@@ -265,7 +265,7 @@ fn ParaIdOccupants::admit(self : ParaIdOccupants, value : String) -> Unit {
   if self.members.contains(value) {
     return
   }
-  if self.members.size() >= 131072 {
+  if self.members.length() >= 131072 {
     self.overflowed = true
     return
   }
@@ -296,7 +296,7 @@ fn conservative_para_id_sweep(
   // XML attributes take EITHER quote style; the sweep matches the
   // name+equals and accepts whichever quote follows, closing on the
   // same one.
-  let needle : Bytes = "paraId="
+  let needle : Bytes = b"paraId="
   for entry in archive.entries() {
     let bytes = entry.data()
     let mut at = 0

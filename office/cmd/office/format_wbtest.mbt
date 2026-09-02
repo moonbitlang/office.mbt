@@ -139,7 +139,6 @@ test "format scope validation admits only canonical spellings" {
     let mut refused = false
     format_validate_scope(bad) catch {
       CliFailure(_) => refused = true
-      _ => ()
     }
     assert_true(refused, msg="expected a refusal for '" + bad + "'")
   }
@@ -163,7 +162,7 @@ test "format report reserve is measured and tight" {
   }
   let fitting : Json = Json::object({
     "note": Json::string(
-      filler.substring(start=0, end=ceiling - reserve - 64).to_string(),
+      filler[:ceiling - reserve - 64].to_owned(),
     ),
   })
   ensure_format_report_budget(fitting, ceiling - reserve)

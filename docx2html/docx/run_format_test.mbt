@@ -19,9 +19,9 @@ fn apply_format_plan(
     // byte and char offsets coincide — asserted here so a non-ASCII
     // fixture cannot silently lie.
     assert_eq(bytes.length(), source.length())
-    result = result.substring(start=0, end=edit.start()).to_string() +
+    result = result[:edit.start()].to_owned() +
       edit.replacement() +
-      result.substring(start=edit.end(), end=result.length()).to_string()
+      result[edit.end():].to_owned()
     index -= 1
   }
   result
@@ -37,7 +37,7 @@ fn plan_for(
   extension_prefixes? : Array[String],
 ) -> @docx.RunFormatPlan raise {
   @docx.plan_run_format(
-    @utf8.encode(source)[:],
+    @utf8.encode(source),
     prefix="w",
     extension_prefixes?,
     format=@docx.docx_direct_format(bold?, italic?, underline?, color?),
@@ -263,15 +263,15 @@ test "the oracle agrees with the planner" {
   let source = "<w:r><w:rPr><w:sz w:val=\"28\"/></w:rPr><w:t>x</w:t></w:r>"
   let format = @docx.docx_direct_format(bold=true, color="FF0000")
   assert_true(
-    @docx.verify_run_format(@utf8.encode(source)[:], prefix="w", format~)
+    @docx.verify_run_format(@utf8.encode(source), prefix="w", format~)
     is Some(_),
   )
   let formatted = apply_format_plan(
     source,
-    @docx.plan_run_format(@utf8.encode(source)[:], prefix="w", format~),
+    @docx.plan_run_format(@utf8.encode(source), prefix="w", format~),
   )
   assert_eq(
-    @docx.verify_run_format(@utf8.encode(formatted)[:], prefix="w", format~),
+    @docx.verify_run_format(@utf8.encode(formatted), prefix="w", format~),
     None,
   )
   // And the unrelated size survived byte-for-byte.
@@ -370,9 +370,9 @@ test "format handles a default-namespace document with qualified attributes" {
   let mut index = edits.length() - 1
   while index >= 0 {
     let edit = edits[index]
-    result = result.substring(start=0, end=edit.start()).to_string() +
+    result = result[:edit.start()].to_owned() +
       edit.replacement() +
-      result.substring(start=edit.end(), end=result.length()).to_string()
+      result[edit.end():].to_owned()
     index -= 1
   }
   inspect(

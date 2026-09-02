@@ -17,3 +17,27 @@ pub extend DocxReadResult with @debug.Debug::{to_repr}
 ///|
 #deprecated("implicit trait-method promotion is being removed; call via the trait")
 pub extend DocxReadResult with Eq::{not_equal, equal}
+
+///|
+#deprecated("implicit trait-method promotion is being removed; call via the trait")
+pub extend DocxDirectFormat with @debug.Debug::{to_repr}
+
+///|
+#deprecated("implicit trait-method promotion is being removed; call via the trait")
+pub extend DocxDirectFormat with Eq::{not_equal, equal}
+
+///|
+#deprecated("implicit trait-method promotion is being removed; call via the trait")
+pub extend DocxInsertRun with @debug.Debug::{to_repr}
+
+///|
+#deprecated("implicit trait-method promotion is being removed; call via the trait")
+pub extend DocxInsertRun with Eq::{not_equal, equal}
+
+///|
+#deprecated("implicit trait-method promotion is being removed; call via the trait")
+pub extend DocxInsertContent with @debug.Debug::{to_repr}
+
+///|
+#deprecated("implicit trait-method promotion is being removed; call via the trait")
+pub extend DocxInsertContent with Eq::{not_equal, equal}

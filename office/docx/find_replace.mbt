@@ -144,7 +144,7 @@ fn resolve_stable_replace_scope(
       "office.docx.para_id_invalid", "a stable scope is spelled p[id=\"XXXXXXXX\"]",
     )
   }
-  let raw = scope.substring(start=6, end=scope.length() - 2).to_string()
+  let raw = scope[6:scope.length() - 2].to_owned()
   let anchors = @word.docx_paragraph_anchor_index(
     session.annotated,
     session.annotated.main_story_source(),

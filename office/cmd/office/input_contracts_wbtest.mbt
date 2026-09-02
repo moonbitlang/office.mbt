@@ -204,7 +204,6 @@ test "paragraph payload refuses escaped-equivalent duplicate members" {
       refused = true
       assert_true(error.message.contains("duplicate member"))
     }
-    _ => fail("unexpected failure kind")
   } noraise {
     _ => ()
   }

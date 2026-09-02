@@ -226,9 +226,7 @@ async fn run_docx_find(matches : @argparse.Matches) -> Unit {
       let within = match within {
         Some(scope) =>
           Some(
-            resolve_find_para_id_scope(annotated, scope) catch {
-              error => raise error
-            },
+            resolve_find_para_id_scope(annotated, scope),
           )
         None => None
       }
@@ -280,7 +278,7 @@ fn resolve_find_para_id_scope(
       details=Json::object({ "in": Json::string(bounded_text(scope, 80)) }),
     )
   }
-  let raw = scope.substring(start=6, end=scope.length() - 2).to_string()
+  let raw = scope[6:scope.length() - 2].to_owned()
   let joins = @docx.docx_paragraph_anchor_join_index(
     annotated,
     annotated.main_story_source(),

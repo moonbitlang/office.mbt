@@ -26,21 +26,29 @@ pub struct DocxDirectFormat {
 } derive(Debug, Eq)
 
 ///|
+/// The requested bold state: `Some(true)`/`Some(false)` forces it,
+/// `None` leaves it untouched.
 pub fn DocxDirectFormat::bold(self : DocxDirectFormat) -> Bool? {
   self.bold
 }
 
 ///|
+/// The requested italic state: `Some(true)`/`Some(false)` forces it,
+/// `None` leaves it untouched.
 pub fn DocxDirectFormat::italic(self : DocxDirectFormat) -> Bool? {
   self.italic
 }
 
 ///|
+/// The requested underline state: `Some(true)`/`Some(false)` forces it,
+/// `None` leaves it untouched.
 pub fn DocxDirectFormat::underline(self : DocxDirectFormat) -> Bool? {
   self.underline
 }
 
 ///|
+/// The requested color as canonical uppercase `RRGGBB`, or `None` when
+/// no color was requested.
 pub fn DocxDirectFormat::color(self : DocxDirectFormat) -> String? {
   self.color
 }
@@ -59,7 +67,7 @@ pub fn docx_direct_format(
   let canonical_color : String? = match color {
     Some(raw) => {
       let hex = if raw.has_prefix("#") {
-        raw.substring(start=1, end=raw.length()).to_string()
+        raw[1:].to_owned()
       } else {
         raw
       }
@@ -107,16 +115,19 @@ pub struct RunFormatEdit {
 }
 
 ///|
+/// The byte offset where the edit's replacement begins (slice-relative).
 pub fn RunFormatEdit::start(self : RunFormatEdit) -> Int {
   self.start
 }
 
 ///|
+/// The byte offset just past the text the edit replaces (slice-relative).
 pub fn RunFormatEdit::end(self : RunFormatEdit) -> Int {
   self.end
 }
 
 ///|
+/// The replacement text (encoded as UTF-8 by the consumer).
 pub fn RunFormatEdit::replacement(self : RunFormatEdit) -> String {
   self.replacement
 }
@@ -139,6 +150,8 @@ pub fn RunFormatPlan::edits(self : RunFormatPlan) -> Array[RunFormatEdit] {
 }
 
 ///|
+/// Whether the plan rewrites anything: `false` means every requested
+/// property already holds explicitly.
 pub fn RunFormatPlan::changed(self : RunFormatPlan) -> Bool {
   self.changed
 }
@@ -223,11 +236,11 @@ fn validate_ns_prefix(prefix : String) -> Unit raise DocxError {
 /// The qualified spelling of a WML ELEMENT under the binding:
 /// `element=""` is the default-namespace document (`<r>`, `<rPr>`),
 /// any other prefix spells `prefix:local`.
-fn wml_name(binding : WmlBinding, local : String) -> String {
+fn wml_name(binding : WmlBinding, local_name : String) -> String {
   if binding.element == "" {
-    local
+    local_name
   } else {
-    "\{binding.element}:\{local}"
+    "\{binding.element}:\{local_name}"
   }
 }
 
@@ -239,8 +252,8 @@ fn split_qname(name : String) -> (String, String) {
   for index in 0..<units.length() {
     if units[index].to_int() == ':'.to_int() {
       return (
-        name.substring(start=0, end=index).to_string(),
-        name.substring(start=index + 1, end=name.length()).to_string(),
+        name[:index].to_owned(),
+        name[index + 1:].to_owned(),
       )
     }
   }
@@ -555,9 +568,9 @@ fn validate_xml_name(name : String) -> Unit raise DocxError {
   if colon < 0 {
     validate_ncname_part(name)
   } else {
-    validate_ncname_part(name.substring(start=0, end=colon).to_string())
+    validate_ncname_part(name[:colon].to_owned())
     validate_ncname_part(
-      name.substring(start=colon + 1, end=name.length()).to_string(),
+      name[colon + 1:].to_owned(),
     )
   }
 }
@@ -621,7 +634,7 @@ fn ascii_lossy_slice(bytes : BytesView, start : Int, end : Int) -> String {
 
 ///|
 /// The ECMA-376 CT_RPr child order, by LOCAL name.
-fn rpr_rank(local : String) -> Int? {
+fn rpr_rank(local_name : String) -> Int? {
   let order = [
     "rStyle", "rFonts", "b", "bCs", "i", "iCs", "caps", "smallCaps", "strike", "dstrike",
     "outline", "shadow", "emboss", "imprint", "noProof", "snapToGrid", "vanish",
@@ -630,7 +643,7 @@ fn rpr_rank(local : String) -> Int? {
     "eastAsianLayout", "specVanish", "oMath",
   ]
   for index, name in order {
-    if name == local {
+    if name == local_name {
       return Some(index)
     }
   }
@@ -923,7 +936,7 @@ fn classify_rpr_children(
   let mut last_rank = -1
   let mut extension_block_start : Int? = None
   for child in children {
-    let (child_prefix, local) = split_qname(child.name)
+    let (child_prefix, local_name) = split_qname(child.name)
     if child_prefix != binding.element {
       // A foreign-prefixed child is legal ONLY as part of the trailing
       // extension block, under a prefix the caller vouched for — and
@@ -935,7 +948,7 @@ fn classify_rpr_children(
           message="run formatting refuses the rPr child \{child.name}: its prefix is outside the caller-vouched extension prefixes",
         )
       }
-      guard rpr_rank(local) is None else {
+      guard rpr_rank(local_name) is None else {
         raise Unsupported(
           message="run formatting refuses \{child.name}: a ranked property name under a foreign prefix may be a WML alias",
         )
@@ -943,15 +956,15 @@ fn classify_rpr_children(
       // The unranked WML structural names are alias-suspect too: an
       // aliased tracked change (or nested rPr) must never ride in as
       // an "extension".
-      guard local != "rPrChange" && local != "rPr" else {
+      guard local_name != "rPrChange" && local_name != "rPr" else {
         raise Unsupported(
-          message="run formatting refuses \{child.name}: \{local} under a foreign prefix may be a WML alias",
+          message="run formatting refuses \{child.name}: \{local_name} under a foreign prefix may be a WML alias",
         )
       }
-      guard local != "AlternateContent" &&
-        local != "Choice" &&
-        local != "Fallback" &&
-        local != "ProcessContent" else {
+      guard local_name != "AlternateContent" &&
+        local_name != "Choice" &&
+        local_name != "Fallback" &&
+        local_name != "ProcessContent" else {
         raise Unsupported(
           message="run formatting refuses markup-compatibility content inside rPr",
         )
@@ -972,12 +985,12 @@ fn classify_rpr_children(
       }
       continue
     }
-    if local == "rPrChange" {
+    if local_name == "rPrChange" {
       raise Unsupported(
         message="run formatting refuses a run with an in-flight tracked property change (rPrChange)",
       )
     }
-    match rpr_rank(local) {
+    match rpr_rank(local_name) {
       Some(rank) => {
         guard extension_block_start is None else {
           raise Unsupported(
@@ -1024,17 +1037,17 @@ fn classify_rpr_children(
       }
       Some(tag)
     }
-    if local == "b" {
+    if local_name == "b" {
       seen_b = record(seen_b, child)
-    } else if local == "bCs" {
+    } else if local_name == "bCs" {
       seen_bcs = record(seen_bcs, child)
-    } else if local == "i" {
+    } else if local_name == "i" {
       seen_i = record(seen_i, child)
-    } else if local == "iCs" {
+    } else if local_name == "iCs" {
       seen_ics = record(seen_ics, child)
-    } else if local == "u" {
+    } else if local_name == "u" {
       seen_u = record(seen_u, child)
-    } else if local == "color" {
+    } else if local_name == "color" {
       seen_color = record(seen_color, child)
     }
   }
@@ -1069,21 +1082,21 @@ fn scan_extension_interior(
 ) -> Unit raise DocxError {
   let children = scan_direct_children(bytes, start, end)
   for child in children {
-    let (child_prefix, local) = split_qname(child.name)
+    let (child_prefix, local_name) = split_qname(child.name)
     guard child_prefix != binding.element else {
       raise Unsupported(
         message="run formatting refuses WML content (\{child.name}) inside an extension wrapper",
       )
     }
-    guard rpr_rank(local) is None && local != "rPr" && local != "rPrChange" else {
+    guard rpr_rank(local_name) is None && local_name != "rPr" && local_name != "rPrChange" else {
       raise Unsupported(
         message="run formatting refuses \{child.name} inside an extension wrapper: it may be a WML alias",
       )
     }
-    guard local != "AlternateContent" &&
-      local != "Choice" &&
-      local != "Fallback" &&
-      local != "ProcessContent" else {
+    guard local_name != "AlternateContent" &&
+      local_name != "Choice" &&
+      local_name != "Fallback" &&
+      local_name != "ProcessContent" else {
       raise Unsupported(
         message="run formatting refuses markup-compatibility content inside an extension wrapper",
       )
@@ -1223,12 +1236,12 @@ fn plan_within_rpr(
 /// unique and legal by construction.
 fn rpr_insertion_offset(
   binding : WmlBinding,
-  local : String,
+  local_name : String,
   inventory : RprInventory,
   container : RunChildTag,
 ) -> (Int, Int) raise DocxError {
-  guard rpr_rank(local) is Some(rank) else {
-    raise Unsupported(message="run formatting has no rank for \{local}")
+  guard rpr_rank(local_name) is Some(rank) else {
+    raise Unsupported(message="run formatting has no rank for \{local_name}")
   }
   let mut offset = container.open_end
   for child in inventory.children {
@@ -1251,8 +1264,8 @@ fn rpr_insertion_offset(
 /// The attribute name a WML-namespaced attribute carries — ALWAYS
 /// qualified, because XML default namespaces do not apply to
 /// attributes.
-fn wml_attr(binding : WmlBinding, local : String) -> String {
-  "\{binding.attribute}:\{local}"
+fn wml_attr(binding : WmlBinding, local_name : String) -> String {
+  "\{binding.attribute}:\{local_name}"
 }
 
 ///|
@@ -1288,8 +1301,8 @@ fn refuse_wml_attr_alias(
   locals : Array[String],
 ) -> Unit raise DocxError {
   for attribute in tag.attributes {
-    let (attr_prefix, local) = split_qname(attribute.name)
-    if locals.contains(local) && attr_prefix != binding.attribute {
+    let (attr_prefix, local_name) = split_qname(attribute.name)
+    if locals.contains(local_name) && attr_prefix != binding.attribute {
       raise Unsupported(
         message="run formatting refuses the attribute \{attribute.name} on \{tag.name}",
       )
@@ -1300,7 +1313,7 @@ fn refuse_wml_attr_alias(
 ///|
 fn plan_on_off(
   binding : WmlBinding,
-  local : String,
+  local_name : String,
   requested : Bool,
   existing : RunChildTag?,
   inventory : RprInventory,
@@ -1360,9 +1373,9 @@ fn plan_on_off(
     }
     None => {
       let (offset, rank) = rpr_insertion_offset(
-        binding, local, inventory, container,
+        binding, local_name, inventory, container,
       )
-      let qname = wml_name(binding, local)
+      let qname = wml_name(binding, local_name)
       let rendered = if requested {
         "<\{qname}/>"
       } else {

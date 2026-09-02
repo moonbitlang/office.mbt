@@ -35,11 +35,13 @@ pub struct DocxInsertReceipt {
 }
 
 ///|
+/// The minted paragraph id (canonical uppercase) this insertion received.
 pub fn DocxInsertReceipt::para_id(self : DocxInsertReceipt) -> String {
   self.para_id
 }
 
 ///|
+/// The ordinal path the new paragraph will answer to after publication.
 pub fn DocxInsertReceipt::planned_path(self : DocxInsertReceipt) -> String {
   self.planned_path
 }

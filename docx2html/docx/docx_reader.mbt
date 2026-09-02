@@ -715,7 +715,7 @@ fn DocumentParts::build(
   for key, _info in styles {
     if key.has_prefix("paragraph:") {
       paragraph_style_ids.push(
-        key.substring(start=10, end=key.length()).to_string(),
+        key[10:].to_owned(),
       )
     }
   }

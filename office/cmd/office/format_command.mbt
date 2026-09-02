@@ -169,10 +169,10 @@ fn format_range_option(
     )
   }
   let start = decimal_prefix_value(
-    value.substring(start=0, end=colon).to_string(),
+    value[:colon].to_owned(),
   )
   let end = decimal_prefix_value(
-    value.substring(start=colon + 1, end=value.length()).to_string(),
+    value[colon + 1:].to_owned(),
   )
   guard start is Some(from) && end is Some(to) && from >= 0 && to > from else {
     raise CliFailure(
@@ -227,7 +227,7 @@ fn format_validate_scope(scope : String) -> Unit raise CliFailure {
       )
     }
     // `p[id="` is six characters; the payload starts right after it.
-    let inner = scope.substring(start=6, end=scope.length() - 2)
+    let inner = scope[6:scope.length() - 2]
     for ch in inner {
       guard ch != '"' && ch != ']' else {
         raise CliFailure(
@@ -254,7 +254,7 @@ fn format_validate_scope(scope : String) -> Unit raise CliFailure {
     while close < scope.length() && scope[close] != '/' {
       close += 1
     }
-    let segment = scope.substring(start=cursor, end=close).to_string()
+    let segment = scope[cursor:close].to_owned()
     match format_scope_segment_kind(segment) {
       Some(kind) =>
         state = match (state, kind) {
@@ -295,11 +295,9 @@ fn format_scope_segment_kind(segment : String) -> String? {
     open + 1 < segment.length() - 1 else {
     return None
   }
-  let kind = segment.substring(start=0, end=open).to_string()
+  let kind = segment[:open].to_owned()
   guard kind is ("p" | "tbl" | "tr" | "tc") else { return None }
-  let ordinal = segment
-    .substring(start=open + 1, end=segment.length() - 1)
-    .to_string()
+  let ordinal = segment[open + 1:segment.length() - 1].to_owned()
   guard ordinal[0] is ('1'..='9') else { return None }
   for ch in ordinal {
     guard ch is ('0'..='9') else { return None }
@@ -596,7 +594,7 @@ async fn run_format(matches : @argparse.Matches) -> Unit {
       // refuses before any file is read.
       let last_segment = match scope.rev_find("/") {
         Some(slash) =>
-          scope.substring(start=slash + 1, end=scope.length()).to_string()
+          scope[slash + 1:].to_owned()
         None => scope
       }
       guard last_segment.has_prefix("p[") else {
