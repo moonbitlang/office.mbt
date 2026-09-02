@@ -106,27 +106,41 @@ fn office_read_format_hint(
 }
 
 ///|
+fn zip_limit_kind_name(kind : @zip.LimitKind) -> String {
+  match kind {
+    PackageBytes => "package_bytes"
+    Entries => "entry_count"
+    EntryUncompressedBytes => "entry_uncompressed_bytes"
+    TotalUncompressedBytes => "total_uncompressed_bytes"
+    PreservedSourceBytes => "total_preserved_source_bytes"
+    OutputBytes => "output_bytes"
+  }
+}
+
+///|
 fn office_zip_read_failure(
   error : @zip.ZipError,
   file : String,
   expected : @lib.DocumentFormat,
 ) -> CliFailure {
   match error {
-    ResourceLimitExceeded(kind~, limit~, actual~) =>
+    ZipError(LimitExceeded(OutputBytes, limit, _actual), _) =>
+      format_resource_failure(expected.name(), "ZIP output", limit)
+    ZipError(LimitExceeded(kind, limit, actual), _) =>
       CliFailure(
         @lib.protocol_error(
           "office.\{expected.name()}.resource_limit",
-          "\{expected.name().to_upper()} ZIP \{bounded_text(kind, 80)} exceeds the configured limit",
+          "\{expected.name().to_upper()} ZIP \{bounded_text(zip_limit_kind_name(kind), 80)} exceeds the configured limit",
           details=Json::object({
             "file": Json::string(bounded_text(file, 160)),
-            "resource": Json::string(bounded_text(kind, 80)),
+            "resource": Json::string(
+              bounded_text(zip_limit_kind_name(kind), 80),
+            ),
             "limit": Json::number(limit.to_double()),
             "actual": Json::number(actual.to_double()),
           }),
         ),
       )
-    OutputLimitExceeded(limit~) =>
-      format_resource_failure(expected.name(), "ZIP output", limit)
     _ =>
       CliFailure(
         @lib.protocol_error(
@@ -167,13 +181,14 @@ async fn read_office_package(
     "input package",
     limit_code="office.\{expected.name()}.resource_limit",
   )
-  let archive = @zip.read_limited(
+  let archive = @zip.read(
     data,
-    max_package_bytes=office_read_max_package_bytes,
-    max_entries=office_read_max_zip_entries,
-    max_entry_uncompressed_bytes=office_read_max_zip_entry_bytes,
-    max_total_uncompressed_bytes=office_read_max_zip_total_bytes,
-    max_total_preserved_source_bytes=office_read_max_preserved_source_bytes,
+    limits=@zip.ReadLimits::default()
+      .with_package_limit(office_read_max_package_bytes)
+      .with_entries_limit(office_read_max_zip_entries)
+      .with_entry_limit(office_read_max_zip_entry_bytes)
+      .with_total_limit(office_read_max_zip_total_bytes)
+      .with_preserved_source_limit(office_read_max_preserved_source_bytes),
     cancelled~,
   ) catch {
     error if cancelled() => raise error

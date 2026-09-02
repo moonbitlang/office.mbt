@@ -1,6 +1,6 @@
 import {
   "bobzhang/office-lib" @office,
-  "bobzhang/mbtexcel/zip",
+  "moonbit-community/flate/zip",
   "moonbitlang/async",
   "moonbitlang/async/fs" @afs,
   "moonbitlang/async/os_error",

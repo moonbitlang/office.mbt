@@ -1816,6 +1816,30 @@ fn default_main_target_from_root(
 }
 
 ///|
+fn zip_limit_kind_name(kind : @zip.LimitKind) -> String {
+  match kind {
+    PackageBytes => "package_bytes"
+    Entries => "entry_count"
+    EntryUncompressedBytes => "entry_uncompressed_bytes"
+    TotalUncompressedBytes => "total_uncompressed_bytes"
+    PreservedSourceBytes => "total_preserved_source_bytes"
+    OutputBytes => "output_bytes"
+  }
+}
+
+///|
+/// Size of an entry's OPC Central Directory File Header excluding the
+/// four-byte ZIP signature (ECMA-376 Part 2 §7.3.6). Pristine entries report
+/// their exact preserved record; in-memory entries have no Extra/File Comment
+/// fields yet.
+fn entry_central_directory_file_header_size(entry : @zip.Entry) -> Int {
+  match entry.raw_central_record() {
+    Some(record) => record.length() - 4
+    None => 42 + @utf8.encode(entry.name()).length()
+  }
+}
+
+///|
 fn format_from_archive(
   archive : @zip.Archive,
   part_index : ArchivePartIndex,
@@ -1829,18 +1853,19 @@ fn format_from_archive(
       raise InvalidPackage("duplicate entry name: \{name}")
     }
     physical_names[name] = true
-    if entry.central_directory_file_header_size() >
+    if entry_central_directory_file_header_size(entry) >
       MAX_OPC_CENTRAL_DIRECTORY_FILE_HEADER_BYTES {
       raise InvalidPackage(
         "central-directory file header exceeds the OPC \{MAX_OPC_CENTRAL_DIRECTORY_FILE_HEADER_BYTES}-byte limit: \{name}",
       )
     }
-    let actual_crc = @zip.crc32_cancellable(
-      entry.data(),
-      cancelled=context.cancelled,
-    ) catch {
-      _ if (context.cancelled)() => raise Cancelled
-      _ => raise InvalidPackage("entry CRC-32 verification failed: \{name}")
+    let actual_crc = match
+      @flate_checksum.crc32_cancellable(
+        entry.data(),
+        cancelled=context.cancelled,
+      ) {
+      None => raise Cancelled
+      Some(crc) => crc
     }
     if entry.crc32() != actual_crc {
       raise InvalidPackage(
@@ -1987,17 +2012,18 @@ pub fn detect_format(
   } else {
     max_package_bytes + 65_535
   }
-  let archive = @zip.read_limited(
+  let archive = @zip.read(
     data,
-    max_package_bytes~,
-    max_entries=max_archive_entries,
-    max_entry_uncompressed_bytes~,
-    max_total_uncompressed_bytes~,
-    max_total_preserved_source_bytes=preserved_limit,
+    limits=@zip.ReadLimits::default()
+      .with_package_limit(max_package_bytes)
+      .with_entries_limit(max_archive_entries)
+      .with_entry_limit(max_entry_uncompressed_bytes)
+      .with_total_limit(max_total_uncompressed_bytes)
+      .with_preserved_source_limit(preserved_limit),
     cancelled~,
   ) catch {
-    ResourceLimitExceeded(kind~, limit~, actual~) =>
-      raise ResourceLimit(kind~, limit~, actual~)
+    ZipError(LimitExceeded(kind, limit, actual), _) =>
+      raise ResourceLimit(kind=zip_limit_kind_name(kind), limit~, actual~)
     _ if cancelled() => raise Cancelled
     _ => raise InvalidPackage("archive is not a readable ZIP")
   }

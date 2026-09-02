@@ -1,11 +1,11 @@
 ///|
 fn style_map_embedding_zip(entries : Array[(String, String)]) -> Bytes raise {
-  let archive = @mbtzip.Archive::new()
+  let archive = @mbtzip.Archive()
   for entry in entries {
     let (path, text) = entry
     archive.add(path, @utf8.encode(text), compression=Deflate)
   }
-  @mbtzip.write(archive)
+  @mbtzip.write_preserving(archive)
 }
 
 ///|

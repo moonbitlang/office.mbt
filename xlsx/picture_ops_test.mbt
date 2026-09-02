@@ -79,7 +79,7 @@ test "external drawing relationships are never dereferenced as package parts" {
     ),
   )
   let result : Result[@xlsx.Workbook, Error] = Ok(
-    @xlsx.read(@zip.write(archive)),
+    @xlsx.read(@zip.write_preserving(archive)),
   ) catch {
     error => Err(error)
   }
@@ -114,7 +114,7 @@ test "picture dimension parsing (bmp/tiff/ico)" {
   workbook.add_picture_from_bytes("Sheet1", "C3", ico, ".ico")
   let bytes = @xlsx.write(workbook)
   let archive = @zip.read(bytes) catch {
-    err => fail("zip read failed: \{repr(err)}")
+    ZipError(_, message) => fail("zip read failed: \{message}")
   }
   let drawing_xml = match archive.get("xl/drawings/drawing1.xml") {
     Some(value) =>
@@ -143,7 +143,7 @@ test "picture dimension parsing (svg)" {
   workbook.add_picture_from_bytes("Sheet1", "A1", svg_bytes, ".svg")
   let bytes = @xlsx.write(workbook)
   let archive = @zip.read(bytes) catch {
-    err => fail("zip read failed: \{repr(err)}")
+    ZipError(_, message) => fail("zip read failed: \{message}")
   }
   let drawing_xml = match archive.get("xl/drawings/drawing1.xml") {
     Some(value) =>
@@ -178,7 +178,7 @@ test "picture dimension parsing (emf/wmf)" {
   workbook.add_picture_from_bytes("Sheet1", "B2", wmf, ".wmf")
   let bytes = @xlsx.write(workbook)
   let archive = @zip.read(bytes) catch {
-    err => fail("zip read failed: \{repr(err)}")
+    ZipError(_, message) => fail("zip read failed: \{message}")
   }
   let drawing_xml = match archive.get("xl/drawings/drawing1.xml") {
     Some(value) =>
@@ -207,17 +207,13 @@ test "picture dimension parsing (emz/wmz)" {
     0xD7, 0xCD, 0xC6, 0x9A, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xA0, 0x05, 0xD0,
     0x02, 0xA0, 0x05, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
   ]
-  let emz = @zip.gzip(emf) catch {
-    err => fail("gzip emf failed: \{repr(err)}")
-  }
-  let wmz = @zip.gzip(wmf) catch {
-    err => fail("gzip wmf failed: \{repr(err)}")
-  }
+  let emz = @flate_gzip.gzip_compress(emf)
+  let wmz = @flate_gzip.gzip_compress(wmf)
   workbook.add_picture_from_bytes("Sheet1", "A1", emz, ".emz")
   workbook.add_picture_from_bytes("Sheet1", "B2", wmz, ".wmz")
   let bytes = @xlsx.write(workbook)
   let archive = @zip.read(bytes) catch {
-    err => fail("zip read failed: \{repr(err)}")
+    ZipError(_, message) => fail("zip read failed: \{message}")
   }
   let drawing_xml = match archive.get("xl/drawings/drawing1.xml") {
     Some(value) =>

@@ -4,8 +4,8 @@ version = "0.1.9"
 
 import {
   "moonbitlang/async@0.20.2",
-  "moonbitlang/x@0.5.0",
-  "moonbit-community/flate@0.5.0",
+  "moonbitlang/x@0.5.1",
+  "moonbit-community/flate@0.7.3",
 }
 
 readme = "README.mbt.md"

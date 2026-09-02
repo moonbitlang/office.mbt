@@ -22,7 +22,7 @@ import {
   "bobzhang/pagelayout/paragraph",
   "bobzhang/pdflite",
   "bobzhang/pdflite/core",
-  "bobzhang/mbtexcel/zip",
+  "moonbit-community/flate/zip",
   "moonbitlang/core/encoding/utf8",
   "moonbitlang/core/quickcheck",
 } for "test"

@@ -16,7 +16,7 @@ async fn write_docx_session_file(path : String, bytes : Bytes) -> Unit {
 
 ///|
 fn mixed_case_docx_session_fixture() -> Bytes raise {
-  let archive = @zip.Archive::new()
+  let archive = @zip.Archive()
   archive.add(
     "[Content_Types].xml",
     @utf8.encode(
@@ -41,7 +41,7 @@ fn mixed_case_docx_session_fixture() -> Bytes raise {
       "<Relationships xmlns=\"http://schemas.openxmlformats.org/package/2006/relationships\"/>",
     ),
   )
-  @zip.write(archive)
+  @zip.write_preserving(archive)
 }
 
 ///|
@@ -104,7 +104,7 @@ fn padded_entity_docx_session_fixture(token_units : Int) -> Bytes raise {
   assert_true(
     archive.replace("word/document.xml", @utf8.encode(document.to_string())),
   )
-  @zip.write(archive)
+  @zip.write_preserving(archive)
 }
 
 ///|
@@ -226,7 +226,7 @@ async test "D1 source indexing maps scanner attribute bounds to resource limits"
     let document = "<w:document xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\"><w:body><w:p><w:commentRangeStart w:id=\"&#\{padding}65;\"/></w:p><w:sectPr/></w:body></w:document>"
     let archive = @zip.read(@word_fixture.new_blank_docx())
     assert_true(archive.replace("word/document.xml", @utf8.encode(document)))
-    let original = @zip.write(archive)
+    let original = @zip.write_preserving(archive)
     write_docx_session_file(input, original)
     let callback_called = Ref(false)
     let code = docx_session_error_code(() => {
@@ -247,7 +247,7 @@ async test "D1 package resource status cannot be forged by a part name" {
     let input = "\{directory}/forged-resource-name.docx"
     let archive = @zip.read(@word_fixture.new_blank_docx())
     archive.add("word/XML source budget exceeded.bin", b"ordinary")
-    let original = @zip.write(archive)
+    let original = @zip.write_preserving(archive)
     write_docx_session_file(input, original)
     let callback_called = Ref(false)
     let code = docx_session_error_code(() => {
@@ -270,7 +270,7 @@ async test "D1 source annotation failures cannot forge resource status" {
       #|<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><w:body><w:p/><w:sectPr><w:headerReference w:type="default" r:id="XML source budget exceeded"/></w:sectPr></w:body></w:document>
     let archive = @zip.read(@word_fixture.new_blank_docx())
     assert_true(archive.replace("word/document.xml", @utf8.encode(document)))
-    let original = @zip.write(archive)
+    let original = @zip.write_preserving(archive)
     write_docx_session_file(input, original)
     let callback_called = Ref(false)
     let code = docx_session_error_code(() => {
@@ -755,7 +755,7 @@ async test "D1 session rejects sibling-dense XML before indexing" {
     assert_true(
       archive.replace("word/document.xml", @utf8.encode(document.to_string())),
     )
-    let source = @zip.write(archive)
+    let source = @zip.write_preserving(archive)
     assert_true(source.length() < 1024 * 1024)
     write_docx_session_file(input, source)
     let callback_called = Ref(false)
@@ -868,7 +868,7 @@ async test "D1 semantic planners bound unreferenced relationship stories" {
       "word/unreferenced-header.xml",
       @utf8.encode(header.to_string()),
     )
-    let source = @zip.write(archive)
+    let source = @zip.write_preserving(archive)
     write_docx_session_file(input, source)
     let reply = @word_fixture.comment_spec(author="Bob", from=0, to=0, [
       @word_fixture.paragraph([
@@ -914,7 +914,7 @@ async test "D1 session preserves paraId reread resource classification" {
     let expanded = document.replace(old="Claim", new="x".repeat(4_400_000))
     assert_true(expanded != document)
     assert_true(archive.replace("word/document.xml", @utf8.encode(expanded)))
-    let source = @zip.write(archive)
+    let source = @zip.write_preserving(archive)
     write_docx_session_file(input, source)
     let reply = @word_fixture.comment_spec(author="Bob", from=0, to=0, [
       @word_fixture.paragraph([@word_fixture.run([@word_fixture.text("Reply")])]),
@@ -1557,7 +1557,7 @@ async test "D1 generic plans cannot publish dangling markers in unreferenced sto
     guard document.find(b"Claim") is Some(text_at) else {
       fail("fixture is missing body text")
     }
-    let source = @zip.write(archive)
+    let source = @zip.write_preserving(archive)
     write_docx_session_file(input, source)
     let code = docx_session_error_code(() => {
       @docx.transact_docx(

@@ -166,7 +166,7 @@ fn load_optional_relationship_part(
 
 ///|
 test "read package parts: relationship parts require their fixed manifest identity" {
-  let archive = @zip.Archive::new()
+  let archive = @zip.Archive()
   archive.add("custom/_rels/source.xml.rels", b"<Relationships/>")
   let missing = try! @ooxml.parse_package_content_types(
     "<Types xmlns=\"http://schemas.openxmlformats.org/package/2006/content-types\"><Default Extension=\"xml\" ContentType=\"application/xml\"/></Types>",
@@ -286,7 +286,7 @@ fn resolve_workbook_xml_part_path_for_test(
 
 ///|
 test "read package parts: root relationship is required" {
-  let archive = @zip.Archive::new()
+  let archive = @zip.Archive()
   archive.add(
     content_types_part_path,
     @encoding/utf8.encode(
@@ -303,7 +303,7 @@ test "read package parts: root relationship is required" {
 
 ///|
 test "read package parts: workbook path follows the root relationship" {
-  let archive = @zip.Archive::new()
+  let archive = @zip.Archive()
   let content_types =
     #|<?xml version="1.0" encoding="UTF-8"?>
     #|<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
@@ -327,7 +327,7 @@ test "read package parts: workbook path follows the root relationship" {
 fn workbook_part_from_root_target_for_test(
   target : StringView,
 ) -> String raise XlsxError {
-  let archive = @zip.Archive::new()
+  let archive = @zip.Archive()
   let root_relationships = "<Relationships xmlns=\"http://schemas.openxmlformats.org/package/2006/relationships\">" +
     "<Relationship Id=\"main\" Type=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument\" Target=\"" +
     target.to_owned() +
@@ -371,7 +371,7 @@ test "read package parts: explicit relative and package-absolute root targets re
 
 ///|
 test "read package parts: external workbook relationship is never resolved as a part" {
-  let archive = @zip.Archive::new()
+  let archive = @zip.Archive()
   let content_types =
     #|<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
     #|  <Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>
@@ -394,7 +394,7 @@ test "read package parts: external workbook relationship is never resolved as a 
 
 ///|
 test "read package parts: root target must have a workbook content type" {
-  let archive = @zip.Archive::new()
+  let archive = @zip.Archive()
   let content_types =
     #|<?xml version="1.0" encoding="UTF-8"?>
     #|<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
@@ -419,7 +419,7 @@ test "read package parts: root target must have a workbook content type" {
 
 ///|
 test "read package parts: malformed [Content_Types] raises InvalidXml" {
-  let archive = @zip.Archive::new()
+  let archive = @zip.Archive()
   let malformed =
     #|<?xml version="1.0" encoding="UTF-8"?>
     #|<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
@@ -443,7 +443,7 @@ test "read package parts: malformed [Content_Types] raises InvalidXml" {
 
 ///|
 test "read package parts: invalid root workbook target raises InvalidXml" {
-  let archive = @zip.Archive::new()
+  let archive = @zip.Archive()
   let invalid_part_name =
     #|<?xml version="1.0" encoding="UTF-8"?>
     #|<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
@@ -468,7 +468,7 @@ test "read package parts: invalid root workbook target raises InvalidXml" {
 
 ///|
 test "read package parts: stale workbook override cannot redirect the root relationship" {
-  let archive = @zip.Archive::new()
+  let archive = @zip.Archive()
   let content_types =
     #|<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
     #|  <Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>
@@ -489,7 +489,7 @@ test "read package parts: stale workbook override cannot redirect the root relat
 
 ///|
 test "read package parts: default-declared workbook follows the root relationship" {
-  let archive = @zip.Archive::new()
+  let archive = @zip.Archive()
   let content_types =
     #|<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
     #|  <Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>

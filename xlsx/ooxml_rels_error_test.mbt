@@ -4,7 +4,7 @@ fn rewrite_zip_entry(
   path : String,
   bytes : Bytes,
 ) -> Bytes raise Error {
-  let updated = @zip.Archive::new()
+  let updated = @zip.Archive()
   for entry in archive.entries() {
     if entry.name() != path {
       updated.add(
@@ -16,7 +16,7 @@ fn rewrite_zip_entry(
     }
   }
   updated.add(path, bytes)
-  @zip.write(updated)
+  @zip.write_preserving(updated)
 }
 
 ///|
@@ -65,7 +65,7 @@ test "ooxml rels: relationship tag not closed" {
   ignore(workbook.add_sheet("Sheet1"))
   let bytes = @xlsx.write(workbook)
   let archive = @zip.read(bytes) catch {
-    err => fail("zip read failed: \{repr(err)}")
+    ZipError(_, message) => fail("zip read failed: \{message}")
   }
   let bad = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n" +
     "<Relationships xmlns=\"http://schemas.openxmlformats.org/package/2006/relationships\">\n" +
@@ -88,7 +88,7 @@ test "ooxml rels: relationship id missing" {
   ignore(workbook.add_sheet("Sheet1"))
   let bytes = @xlsx.write(workbook)
   let archive = @zip.read(bytes) catch {
-    err => fail("zip read failed: \{repr(err)}")
+    ZipError(_, message) => fail("zip read failed: \{message}")
   }
   let bad = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n" +
     "<Relationships xmlns=\"http://schemas.openxmlformats.org/package/2006/relationships\">\n" +
@@ -112,7 +112,7 @@ test "ooxml rels: relationship target missing" {
   ignore(workbook.add_sheet("Sheet1"))
   let bytes = @xlsx.write(workbook)
   let archive = @zip.read(bytes) catch {
-    err => fail("zip read failed: \{repr(err)}")
+    ZipError(_, message) => fail("zip read failed: \{message}")
   }
   let bad = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n" +
     "<Relationships xmlns=\"http://schemas.openxmlformats.org/package/2006/relationships\">\n" +
@@ -136,7 +136,7 @@ test "ooxml rels: expanded Relationship tags still read" {
   ignore(workbook.add_sheet("Sheet1"))
   let bytes = @xlsx.write(workbook)
   let archive = @zip.read(bytes) catch {
-    err => fail("zip read failed: \{repr(err)}")
+    ZipError(_, message) => fail("zip read failed: \{message}")
   }
   let rels_bytes = match archive.get("xl/_rels/workbook.xml.rels") {
     Some(value) => value
@@ -161,7 +161,7 @@ test "ooxml rels: workbook targets resolve parent segments from their source" {
   ignore(workbook.add_sheet("Sheet1"))
   let bytes = @xlsx.write(workbook)
   let archive = @zip.read(bytes) catch {
-    err => fail("zip read failed: \{repr(err)}")
+    ZipError(_, message) => fail("zip read failed: \{message}")
   }
   let rels_bytes = match archive.get("xl/_rels/workbook.xml.rels") {
     Some(value) => value
@@ -186,7 +186,7 @@ test "ooxml rels: workbook targets treat xl prefix as source relative" {
   ignore(workbook.add_sheet("Sheet1"))
   let bytes = @xlsx.write(workbook)
   let archive = @zip.read(bytes) catch {
-    err => fail("zip read failed: \{repr(err)}")
+    ZipError(_, message) => fail("zip read failed: \{message}")
   }
   let rels_bytes = match archive.get("xl/_rels/workbook.xml.rels") {
     Some(value) => value
@@ -212,7 +212,7 @@ test "ooxml rels: reader rejects case-equivalent part collisions" {
     fail("missing workbook part")
   }
   archive.add("xl/Workbook.xml", workbook_xml)
-  let bytes = @zip.write(archive)
+  let bytes = @zip.write_preserving(archive)
   let result : Result[@xlsx.Workbook, @xlsx.XlsxError] = Ok(@xlsx.read(bytes)) catch {
     error => Err(error)
   }
@@ -225,7 +225,7 @@ test "ooxml rels: relocated workbook path requires root relationship and content
   ignore(workbook.add_sheet("Sheet1"))
   let bytes = @xlsx.write(workbook)
   let archive = @zip.read(bytes) catch {
-    err => fail("zip read failed: \{repr(err)}")
+    ZipError(_, message) => fail("zip read failed: \{message}")
   }
   let workbook_xml = match archive.get("xl/workbook.xml") {
     Some(value) => value
@@ -257,7 +257,7 @@ test "ooxml rels: relocated workbook path requires root relationship and content
     old="Target=\"xl/workbook.xml\"",
     new="Target=\"xl/workbook2.xml\"",
   )
-  let updated = @zip.Archive::new()
+  let updated = @zip.Archive()
   for entry in archive.entries() {
     if entry.name() == "xl/workbook.xml" ||
       entry.name() == "xl/_rels/workbook.xml.rels" ||
@@ -279,8 +279,8 @@ test "ooxml rels: relocated workbook path requires root relationship and content
     "[Content_Types].xml",
     @encoding/utf8.encode(patched_content_types),
   )
-  let updated_bytes = @zip.write(updated) catch {
-    err => fail("zip write failed: \{repr(err)}")
+  let updated_bytes = @zip.write_preserving(updated) catch {
+    ZipError(_, message) => fail("zip write failed: \{message}")
   }
   let parsed = @xlsx.read(updated_bytes)
   debug_inspect(parsed.get_sheet_list(), content="[\"Sheet1\"]")
@@ -330,7 +330,7 @@ test "ooxml rels: pivot cache rels tolerate stale first entries and mixed target
   )
   let bytes = @xlsx.write(workbook)
   let archive = @zip.read(bytes) catch {
-    err => fail("zip read failed: \{repr(err)}")
+    ZipError(_, message) => fail("zip read failed: \{message}")
   }
   let pivot_rels_path = "xl/pivotTables/_rels/pivotTable1.xml.rels"
   let pivot_rels_xml = decode_zip_entry_utf8(archive, pivot_rels_path)
@@ -349,7 +349,8 @@ test "ooxml rels: pivot cache rels tolerate stale first entries and mixed target
     err => fail("zip rewrite failed: \{err}")
   }
   let archive_after_pivot_rels = @zip.read(bytes_after_pivot_rels) catch {
-    err => fail("zip read after pivot rel rewrite failed: \{repr(err)}")
+    ZipError(_, message) =>
+      fail("zip read after pivot rel rewrite failed: \{message}")
   }
   let cache_rels_path = "xl/pivotCache/_rels/pivotCacheDefinition1.xml.rels"
   let cache_rels_xml = decode_zip_entry_utf8(
@@ -398,7 +399,7 @@ test "ooxml rels: chartsheet binds the chart selected by drawing r:id" {
   ignore(workbook.add_chart_sheet("Chart2", decoy_chart_xml))
   let bytes = @xlsx.write(workbook)
   let archive = @zip.read(bytes) catch {
-    err => fail("zip read failed: \{repr(err)}")
+    ZipError(_, message) => fail("zip read failed: \{message}")
   }
   let drawing_rels_path = first_drawing_rels_path(archive)
   let drawing_rels_xml = decode_zip_entry_utf8(archive, drawing_rels_path)
@@ -461,7 +462,7 @@ test "ooxml rels: chartsheet accepts absoluteAnchor drawings" {
   assert_true(
     archive.replace(drawing_path, @encoding/utf8.encode(absolute_drawing)),
   )
-  let parsed = @xlsx.read(@zip.write(archive))
+  let parsed = @xlsx.read(@zip.write_preserving(archive))
   inspect(parsed.chart_sheets().length(), content="1")
   assert_true(parsed.chart_sheets()[0].chart_xml().contains("ABSOLUTE"))
 }
@@ -485,7 +486,7 @@ test "ooxml rels: chartsheet requires its selected drawing part" {
   guard archive.get(drawing_path) is Some(_) else {
     fail("missing chart-sheet drawing fixture")
   }
-  let without_drawing = @zip.Archive::new()
+  let without_drawing = @zip.Archive()
   for entry in archive.entries() {
     if entry.name() != drawing_path {
       without_drawing.add(
@@ -496,7 +497,7 @@ test "ooxml rels: chartsheet requires its selected drawing part" {
       )
     }
   }
-  let result = Ok(@xlsx.read(@zip.write(without_drawing))) catch {
+  let result = Ok(@xlsx.read(@zip.write_preserving(without_drawing))) catch {
     error => Err(error)
   }
   match result {

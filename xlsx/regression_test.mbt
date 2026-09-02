@@ -8,7 +8,7 @@ test "large workbook regression snapshot" {
     }
   }
   let bytes = @xlsx.write(workbook)
-  inspect(bytes.length(), content="72795")
+  inspect(bytes.length(), content="9984")
   let parsed = @xlsx.read(bytes)
   debug_inspect(parsed.get_cell_rc("Sheet1", 50, 20), content="Some(\"50-20\")")
 }

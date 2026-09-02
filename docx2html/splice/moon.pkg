@@ -1,7 +1,7 @@
 import {
   "bobzhang/docx2html/core",
   "bobzhang/docx2html/xml",
-  "bobzhang/mbtexcel/zip" @mbtzip,
+  "moonbit-community/flate/zip" @mbtzip,
   "moonbitlang/core/encoding/utf8",
   "moonbitlang/core/sorted_map",
   "moonbitlang/core/sorted_set",
@@ -10,6 +10,6 @@ import {
 import {
   "bobzhang/docx2html/core",
   "bobzhang/mbtexcel/testutil/zip_fixture",
-  "bobzhang/mbtexcel/zip" @mbtzip,
+  "moonbit-community/flate/zip" @mbtzip,
   "moonbitlang/core/encoding/utf8",
 } for "test"

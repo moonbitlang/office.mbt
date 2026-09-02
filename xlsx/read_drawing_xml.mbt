@@ -1510,7 +1510,7 @@ test "DrawingML MCE fallback feeds image chart shape and slicer readers" {
       #|</Types>
     ),
   )
-  let archive = @zip.Archive::new()
+  let archive = @zip.Archive()
   archive.add("xl/media/good.png", @encoding/utf8.encode("good-image"))
   archive.add("xl/charts/good.xml", @encoding/utf8.encode("good-chart"))
   let metrics = drawing_metrics_for_sheet(Worksheet::new("Sheet1"))
@@ -2101,7 +2101,7 @@ test "read_drawing_xml wb: parse_drawing_images empty rel map branch" {
     wb_from_xml(),
     "<xdr:ext cx=\"9525\" cy=\"9525\"/>",
   )
-  let archive = @zip.Archive::new()
+  let archive = @zip.Archive()
   let metrics = drawing_metrics_for_sheet(Worksheet::new("Sheet1"))
   let result : Result[Array[Image], Error] = Ok(
     parse_drawing_images(
@@ -2125,7 +2125,7 @@ test "read_drawing_xml wb: parse_drawing_images empty rel map branch" {
 
 ///|
 test "read_drawing_xml wb: signed marker offsets are retained" {
-  let archive = @zip.Archive::new()
+  let archive = @zip.Archive()
   archive.add("xl/media/image1.png", @encoding/utf8.encode("img"))
   let rels_xml = wb_rels_image_target("../media/image1.png")
   let drawing_xml = wb_one_cell_anchor(
@@ -2150,7 +2150,7 @@ test "read_drawing_xml wb: signed marker offsets are retained" {
 
 ///|
 test "read_drawing_xml wb: repeated anchors share one retained media payload" {
-  let archive = @zip.Archive::new()
+  let archive = @zip.Archive()
   archive.add("xl/media/image1.png", @encoding/utf8.encode("shared-image"))
   let rels_xml = wb_rels_image_target("../media/image1.png")
   let anchor = "<xdr:oneCellAnchor>\{wb_from_xml()}<xdr:ext cx=\"9525\" cy=\"9525\"/>\{wb_pic_xml("rId1")}</xdr:oneCellAnchor>"
@@ -2173,7 +2173,7 @@ test "read_drawing_xml wb: repeated anchors share one retained media payload" {
 
 ///|
 test "read_drawing_xml wb: parse_drawing_images anchor/ext validation errors" {
-  let archive = @zip.Archive::new()
+  let archive = @zip.Archive()
   archive.add("xl/media/image1.png", @encoding/utf8.encode("img"))
   let rels_xml = wb_rels_image_target("../media/image1.png")
   let sheet = Worksheet::new("Sheet1")

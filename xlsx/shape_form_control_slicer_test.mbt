@@ -6,7 +6,7 @@ test "shape write" {
   sheet.add_shape(shape)
   let bytes = @xlsx.write(workbook)
   let archive = @zip.read(bytes) catch {
-    err => fail("zip read failed: \{repr(err)}")
+    ZipError(_, message) => fail("zip read failed: \{message}")
   }
   let drawing_xml = match archive.get("xl/drawings/drawing1.xml") {
     Some(value) =>
@@ -85,7 +85,7 @@ test "shape size and rich text paragraphs" {
   sheet.add_shape(shape)
   let bytes = @xlsx.write(workbook)
   let archive = @zip.read(bytes) catch {
-    err => fail("zip read failed: \{repr(err)}")
+    ZipError(_, message) => fail("zip read failed: \{message}")
   }
   let drawing_xml = match archive.get("xl/drawings/drawing1.xml") {
     Some(value) =>
@@ -176,7 +176,7 @@ test "shape fill and line" {
   sheet.add_shape(shape)
   let bytes = @xlsx.write(workbook)
   let archive = @zip.read(bytes) catch {
-    err => fail("zip read failed: \{repr(err)}")
+    ZipError(_, message) => fail("zip read failed: \{message}")
   }
   let drawing_xml = match archive.get("xl/drawings/drawing1.xml") {
     Some(value) =>
@@ -207,7 +207,7 @@ test "shape name, alt text, and clientData flags" {
   sheet.add_shape(shape)
   let bytes = @xlsx.write(workbook)
   let archive = @zip.read(bytes) catch {
-    err => fail("zip read failed: \{repr(err)}")
+    ZipError(_, message) => fail("zip read failed: \{message}")
   }
   let drawing_xml = match archive.get("xl/drawings/drawing1.xml") {
     Some(value) =>
@@ -230,7 +230,7 @@ test "shape positioning twoCell" {
   sheet.add_shape(shape)
   let bytes = @xlsx.write(workbook)
   let archive = @zip.read(bytes) catch {
-    err => fail("zip read failed: \{repr(err)}")
+    ZipError(_, message) => fail("zip read failed: \{message}")
   }
   let drawing_xml = match archive.get("xl/drawings/drawing1.xml") {
     Some(value) =>
@@ -251,7 +251,7 @@ test "shape positioning absolute" {
   sheet.add_shape(shape)
   let bytes = @xlsx.write(workbook)
   let archive = @zip.read(bytes) catch {
-    err => fail("zip read failed: \{repr(err)}")
+    ZipError(_, message) => fail("zip read failed: \{message}")
   }
   let drawing_xml = match archive.get("xl/drawings/drawing1.xml") {
     Some(value) =>
@@ -325,7 +325,7 @@ test "form control add/get/delete and vml" {
   inspect(workbook.get_form_controls("Sheet1").length(), content="4")
   let bytes = @xlsx.write(workbook)
   let archive = @zip.read(bytes) catch {
-    err => fail("zip read failed: \{repr(err)}")
+    ZipError(_, message) => fail("zip read failed: \{message}")
   }
   let vml_xml = match archive.get("xl/drawings/vmlDrawing1.vml") {
     Some(value) =>
@@ -463,7 +463,7 @@ test "slicer add/get/delete and xml" {
   inspect(workbook.get_slicers("Sheet1").length(), content="1")
   let bytes = @xlsx.write(workbook)
   let archive = @zip.read(bytes) catch {
-    err => fail("zip read failed: \{repr(err)}")
+    ZipError(_, message) => fail("zip read failed: \{message}")
   }
   let slicer_xml = match archive.get("xl/slicers/slicer1.xml") {
     Some(value) =>

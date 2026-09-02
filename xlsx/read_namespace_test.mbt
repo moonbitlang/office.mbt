@@ -82,14 +82,14 @@ fn namespace_qualified_xlsx_fixture(
     "</r:Relationships>"
   let worksheet = "<s:worksheet xmlns:s=\"\{spreadsheet_namespace}\"><s:sheetPr codeName=\"QualifiedSheet\"/><s:dimension ref=\"A1:B1\"/><s:sheetViews><s:sheetView workbookViewId=\"0\"/></s:sheetViews><s:sheetData><s:row r=\"1\"><s:c r=\"A1\" t=\"s\"><s:v>0</s:v></s:c></s:row></s:sheetData><s:mergeCells count=\"1\"><s:mergeCell ref=\"A1:B1\"/></s:mergeCells><s:sheetProtection sheet=\"1\"/></s:worksheet>"
   let shared_strings = "<s:sst xmlns:s=\"\{spreadsheet_namespace}\" count=\"1\" uniqueCount=\"1\"><s:si><s:t>qualified-value</s:t></s:si></s:sst>"
-  let archive = @zip.Archive::new()
+  let archive = @zip.Archive()
   archive.add("[Content_Types].xml", @encoding/utf8.encode(content_types))
   archive.add("_rels/.rels", @encoding/utf8.encode(root_relationships))
   archive.add(workbook_path, @encoding/utf8.encode(workbook))
   archive.add(workbook_rels_path, @encoding/utf8.encode(workbook_relationships))
   archive.add(worksheet_path, @encoding/utf8.encode(worksheet))
   archive.add("xl/sharedStrings.xml", @encoding/utf8.encode(shared_strings))
-  @zip.write(archive)
+  @zip.write_preserving(archive)
 }
 
 ///|
@@ -112,7 +112,7 @@ fn unicode_part_name_xlsx_fixture() -> Bytes raise {
   let workbook_relationships = "<Relationships xmlns=\"http://schemas.openxmlformats.org/package/2006/relationships\"><Relationship Id=\"sheet\" Type=\"\{relationship_prefix}worksheet\" Target=\"../xl/worksheets/sheet.xml\"/><Relationship Id=\"strings\" Type=\"\{relationship_prefix}sharedStrings\" Target=\"../xl/sharedStrings.xml\"/></Relationships>"
   let worksheet = "<worksheet xmlns=\"\{spreadsheet_namespace}\"><sheetData><row r=\"1\"><c r=\"A1\" t=\"s\"><v>0</v></c></row></sheetData></worksheet>"
   let shared_strings = "<sst xmlns=\"\{spreadsheet_namespace}\" count=\"1\" uniqueCount=\"1\"><si><t>unicode-part</t></si></sst>"
-  let archive = @zip.Archive::new()
+  let archive = @zip.Archive()
   archive.add("[Content_Types].xml", @encoding/utf8.encode(content_types))
   archive.add("_rels/.rels", @encoding/utf8.encode(root_relationships))
   archive.add("custom/%E6%96%87.xml", @encoding/utf8.encode(workbook))
@@ -122,7 +122,7 @@ fn unicode_part_name_xlsx_fixture() -> Bytes raise {
   )
   archive.add("xl/worksheets/sheet.xml", @encoding/utf8.encode(worksheet))
   archive.add("xl/sharedStrings.xml", @encoding/utf8.encode(shared_strings))
-  @zip.write(archive)
+  @zip.write_preserving(archive)
 }
 
 ///|
@@ -137,7 +137,7 @@ fn mce_fallback_xlsx_fixture() -> Bytes raise {
     #|<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet1.xml"/></Relationships>
   let worksheet =
     #|<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" xmlns:x="urn:vendor" mc:Ignorable="x"><mc:AlternateContent><mc:Choice Requires="x"><x:futureData/></mc:Choice><mc:Fallback><sheetData><row r="1"><c r="A1" t="str"><v>fallback-value</v></c></row></sheetData></mc:Fallback></mc:AlternateContent></worksheet>
-  let archive = @zip.Archive::new()
+  let archive = @zip.Archive()
   archive.add("[Content_Types].xml", @encoding/utf8.encode(content_types))
   archive.add("_rels/.rels", @encoding/utf8.encode(root_relationships))
   archive.add("xl/workbook.xml", @encoding/utf8.encode(workbook))
@@ -146,7 +146,7 @@ fn mce_fallback_xlsx_fixture() -> Bytes raise {
     @encoding/utf8.encode(workbook_relationships),
   )
   archive.add("xl/worksheets/sheet1.xml", @encoding/utf8.encode(worksheet))
-  @zip.write(archive)
+  @zip.write_preserving(archive)
 }
 
 ///|
@@ -182,7 +182,7 @@ test "x14 Choice uses core auto-filter fallback" {
   assert_true(
     archive.replace("xl/worksheets/sheet1.xml", @encoding/utf8.encode(updated)),
   )
-  let parsed = @xlsx.read(@zip.write(archive))
+  let parsed = @xlsx.read(@zip.write_preserving(archive))
   guard parsed.get_auto_filter("Data") is Some(filter) else {
     fail("missing fallback auto filter")
   }
@@ -258,7 +258,7 @@ test "mixed-case workbook media type reads end to end" {
   assert_true(
     archive.replace("[Content_Types].xml", @encoding/utf8.encode(updated)),
   )
-  let parsed = @xlsx.read(@zip.write(archive))
+  let parsed = @xlsx.read(@zip.write_preserving(archive))
   debug_inspect(parsed.get_sheet_list(), content="[\"Qualified\"]")
   debug_inspect(
     parsed.get_cell_value("Qualified", "A1"),
@@ -285,7 +285,7 @@ test "mixed-case content-type PartName matches the workbook part" {
   assert_true(
     archive.replace("[Content_Types].xml", @encoding/utf8.encode(updated)),
   )
-  let parsed = @xlsx.read(@zip.write(archive))
+  let parsed = @xlsx.read(@zip.write_preserving(archive))
   debug_inspect(parsed.get_sheet_list(), content="[\"Qualified\"]")
   debug_inspect(
     parsed.get_cell_value("Qualified", "A1"),
@@ -336,7 +336,7 @@ test "SpreadsheetML-looking extension payload cannot create sheets or cells" {
         @encoding/utf8.encode(worksheet_with_decoy),
       ),
     )
-    let parsed = @xlsx.read(@zip.write(archive))
+    let parsed = @xlsx.read(@zip.write_preserving(archive))
     debug_inspect(parsed.get_sheet_list(), content="[\"Qualified\"]")
     debug_inspect(parsed.get_cell_value("Qualified", "Z99"), content="None")
     debug_inspect(
@@ -365,7 +365,7 @@ test "cell payload cannot escape its element or cross a namespace boundary" {
   assert_true(
     archive.replace("xl/worksheets/sheet.xml", @encoding/utf8.encode(two_cells)),
   )
-  let parsed = @xlsx.read(@zip.write(archive))
+  let parsed = @xlsx.read(@zip.write_preserving(archive))
   debug_inspect(parsed.get_cell_value("Qualified", "A1"), content="Some(\"\")")
   debug_inspect(parsed.get_cell_formula("Qualified", "A1"), content="None")
   debug_inspect(
@@ -387,7 +387,7 @@ test "cell payload cannot escape its element or cross a namespace boundary" {
       @encoding/utf8.encode(foreign_value),
     ),
   )
-  let foreign_parsed = @xlsx.read(@zip.write(archive))
+  let foreign_parsed = @xlsx.read(@zip.write_preserving(archive))
   debug_inspect(
     foreign_parsed.get_cell_value("Qualified", "A1"),
     content="Some(\"\")",
@@ -417,7 +417,7 @@ test "foreign core-looking elements cannot supply XLSX data" {
       @encoding/utf8.encode(with_foreign_merge),
     ),
   )
-  let parsed = @xlsx.read(@zip.write(archive))
+  let parsed = @xlsx.read(@zip.write_preserving(archive))
   assert_eq(parsed.get_merge_cells("Qualified"), ["A1:B1"])
 
   let foreign_conditional = @zip.read(
@@ -441,7 +441,9 @@ test "foreign core-looking elements cannot supply XLSX data" {
       ),
     ),
   )
-  let conditional_parsed = @xlsx.read(@zip.write(foreign_conditional))
+  let conditional_parsed = @xlsx.read(
+    @zip.write_preserving(foreign_conditional),
+  )
   guard conditional_parsed.sheet("Qualified") is Some(conditional_sheet) else {
     fail("missing parsed conditional-format sheet")
   }
@@ -458,7 +460,7 @@ test "foreign core-looking elements cannot supply XLSX data" {
       ),
     ),
   )
-  try @xlsx.read(@zip.write(foreign_strings)) catch {
+  try @xlsx.read(@zip.write_preserving(foreign_strings)) catch {
     @xlsx.InvalidXml(msg~) =>
       inspect(msg, content="sst document element is invalid")
     _ => fail("unexpected foreign shared-string error")
@@ -483,7 +485,7 @@ test "XML whitespace spellings preserve cells values and formulas" {
   assert_true(
     archive.replace("xl/worksheets/sheet.xml", @encoding/utf8.encode(spaced)),
   )
-  let parsed = @xlsx.read(@zip.write(archive))
+  let parsed = @xlsx.read(@zip.write_preserving(archive))
   debug_inspect(
     parsed.get_cell_value("Qualified", "A1"),
     content="Some(\"two\")",
@@ -511,7 +513,7 @@ test "malformed entities fail and phonetic annotations stay out of cell text" {
       ),
     ),
   )
-  try @xlsx.read(@zip.write(malformed)) catch {
+  try @xlsx.read(@zip.write_preserving(malformed)) catch {
     @xlsx.InvalidXml(_) => ()
     _ => fail("unexpected malformed entity error")
   } noraise {
@@ -547,7 +549,7 @@ test "malformed entities fail and phonetic annotations stay out of cell text" {
       ),
     ),
   )
-  let parsed = @xlsx.read(@zip.write(phonetic))
+  let parsed = @xlsx.read(@zip.write_preserving(phonetic))
   debug_inspect(
     parsed.get_cell_value("Qualified", "A1"),
     content="Some(\"漢字\")",

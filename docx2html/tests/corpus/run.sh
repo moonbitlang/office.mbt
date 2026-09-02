@@ -62,7 +62,7 @@ while IFS=$'\t' read -r file want_v want_t want_c want_a class; do
   elif [ "$v" != 0 ]; then msg=$(cat "$work/v.out"); fi
   case "$msg" in
     *"canonical OPC"*)        got_class=opc-noncanonical-entry ;;
-    *MissingEndOfCentral*)    got_class=eocd-trailing-bytes ;;
+    *"end of central directory not found"*) got_class=eocd-trailing-bytes ;;
     *"zip64 extra"*)          got_class=zip64-phantom-field ;;
     *"simple text"*)          got_class=wt-child-element ;;
     *"unexpected '<' in w:t content"*) got_class=wt-child-element ;;

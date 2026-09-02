@@ -23,7 +23,7 @@ fn ensure_rich_value_png_content_type(archive : @zip.Archive) -> Unit raise {
 fn inject_rich_value_image(base : Bytes, media : Bytes) -> Bytes raise {
   let archive = @zip.read(base)
   ensure_rich_value_png_content_type(archive)
-  let patched = @zip.Archive::new()
+  let patched = @zip.Archive()
   for entry in archive.entries() {
     if entry.name() == "xl/worksheets/sheet1.xml" {
       let xml = @encoding/utf8.decode(entry.data())
@@ -95,7 +95,7 @@ fn inject_rich_value_image(base : Bytes, media : Bytes) -> Bytes raise {
     ),
   )
   patched.add("xl/media/rv1.png", media)
-  @zip.write(patched)
+  @zip.write_preserving(patched)
 }
 
 ///|
@@ -137,7 +137,7 @@ test "rich-value image ignored when cell is not a #VALUE! error" {
 fn inject_mismatched_rich_value(base : Bytes) -> Bytes raise {
   let archive = @zip.read(base)
   ensure_rich_value_png_content_type(archive)
-  let patched = @zip.Archive::new()
+  let patched = @zip.Archive()
   for entry in archive.entries() {
     if entry.name() == "xl/worksheets/sheet1.xml" {
       let xml = @encoding/utf8.decode(entry.data())
@@ -193,7 +193,7 @@ fn inject_mismatched_rich_value(base : Bytes) -> Bytes raise {
     ),
   )
   patched.add("xl/media/rv1.png", b"png")
-  @zip.write(patched)
+  @zip.write_preserving(patched)
 }
 
 ///|
@@ -212,7 +212,7 @@ test "rich-value image suppressed when keys and values length mismatch" {
 fn inject_web_image(base : Bytes, media : Bytes) -> Bytes raise {
   let archive = @zip.read(base)
   ensure_rich_value_png_content_type(archive)
-  let patched = @zip.Archive::new()
+  let patched = @zip.Archive()
   for entry in archive.entries() {
     if entry.name() == "xl/worksheets/sheet1.xml" {
       let xml = @encoding/utf8.decode(entry.data())
@@ -269,7 +269,7 @@ fn inject_web_image(base : Bytes, media : Bytes) -> Bytes raise {
     ),
   )
   patched.add("xl/media/web1.png", media)
-  @zip.write(patched)
+  @zip.write_preserving(patched)
 }
 
 ///|
@@ -295,7 +295,7 @@ test "get_pictures resolves an IMAGE() web image" {
 fn inject_local_key_wins(base : Bytes, media : Bytes) -> Bytes raise {
   let archive = @zip.read(base)
   ensure_rich_value_png_content_type(archive)
-  let patched = @zip.Archive::new()
+  let patched = @zip.Archive()
   for entry in archive.entries() {
     if entry.name() == "xl/worksheets/sheet1.xml" {
       let xml = @encoding/utf8.decode(entry.data())
@@ -368,7 +368,7 @@ fn inject_local_key_wins(base : Bytes, media : Bytes) -> Bytes raise {
     ),
   )
   patched.add("xl/media/web1.png", media)
-  @zip.write(patched)
+  @zip.write_preserving(patched)
 }
 
 ///|

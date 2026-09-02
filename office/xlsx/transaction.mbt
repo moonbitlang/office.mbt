@@ -211,7 +211,9 @@ fn xlsx_transaction_validator() -> @transaction.TransactionValidator raise @tran
     }
     // A complete bounded parse catches semantic/package-graph defects the
     // format-neutral portable detector intentionally does not interpret.
-    ignore(read_transaction_workbook(archive.fork(), candidate_validation=true))
+    ignore(
+      read_transaction_workbook(archive.clone(), candidate_validation=true),
+    )
     let problems = @engine.validate_ooxml_bounded_archive(
       archive,
       limits=xlsx_read_limits(),

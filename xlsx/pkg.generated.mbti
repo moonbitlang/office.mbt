@@ -2,7 +2,7 @@
 package "bobzhang/mbtexcel/xlsx"
 
 import {
-  "bobzhang/mbtexcel/zip",
+  "moonbit-community/flate/zip",
   "moonbitlang/async/io",
   "moonbitlang/core/debug",
   "moonbitlang/x/time",
@@ -115,7 +115,6 @@ pub suberror XlsxError {
   UnsupportedEncryption(msg~ : String)
   UnsupportedFeature(msg~ : String)
   InvalidPackage(msg~ : String)
-  UnboundedArchive
   ReadCancelled
   ResourceLimitExceeded(kind~ : String, limit~ : Int, actual~ : Int)
 } derive(@debug.Debug)

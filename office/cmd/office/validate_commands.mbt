@@ -87,7 +87,7 @@ fn office_package_gate_findings(
   let raw = (validator.validate)(
     source.format,
     source.bytes,
-    source.archive.fork(),
+    source.archive.clone(),
   ) catch {
     error if office_async_cancelled() => raise error
     error =>

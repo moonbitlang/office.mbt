@@ -232,7 +232,7 @@ test "parse_cell_images handles unprefixed blip without matching blipFill" {
     #|<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
     #|  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/image" Target="media/u.png"/>
     #|</Relationships>
-  let archive = @zip.Archive::new()
+  let archive = @zip.Archive()
   archive.add("xl/media/u.png", b"\x89PNGunprefixed")
   let images = parse_cell_images(
     cellimages_xml,
@@ -253,7 +253,7 @@ test "parse_cell_images resolves targets relative to its source part" {
     #|<cellImages><cellImage><pic><nvPicPr><cNvPr id="1" name="ID_ROOT"/></nvPicPr><blipFill><blip embed="rId1"/></blipFill></pic></cellImage></cellImages>
   let rels_xml =
     #|<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/image" Target="../decoy.png"/></Relationships>
-  let archive = @zip.Archive::new()
+  let archive = @zip.Archive()
   archive.add("decoy.png", b"root image")
   archive.add("xl/decoy.png", b"wrong image")
   let images = parse_cell_images(

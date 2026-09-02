@@ -33,7 +33,7 @@ test "integration x14 icon-set with sparkline and slicer coexistence" {
 
   let bytes = @xlsx.write(workbook)
   let archive = @zip.read(bytes) catch {
-    err => fail("zip read failed: \{repr(err)}")
+    ZipError(_, message) => fail("zip read failed: \{message}")
   }
   let sheet_xml = match archive.get("xl/worksheets/sheet2.xml") {
     Some(value) => @encoding/utf8.decode(value)
@@ -49,7 +49,7 @@ test "integration x14 icon-set with sparkline and slicer coexistence" {
     fail("expected extLst for sparkline+slicer worksheet")
   }
 
-  let updated_archive = @zip.Archive::new()
+  let updated_archive = @zip.Archive()
   for entry in archive.entries() {
     if entry.name() != "xl/worksheets/sheet2.xml" {
       updated_archive.add(
@@ -64,12 +64,12 @@ test "integration x14 icon-set with sparkline and slicer coexistence" {
     "xl/worksheets/sheet2.xml",
     @encoding/utf8.encode(updated_sheet),
   )
-  let updated_bytes = @zip.write(updated_archive) catch {
-    err => fail("zip write failed: \{repr(err)}")
+  let updated_bytes = @zip.write_preserving(updated_archive) catch {
+    ZipError(_, message) => fail("zip write failed: \{message}")
   }
 
   let updated = @zip.read(updated_bytes) catch {
-    err => fail("zip read failed: \{repr(err)}")
+    ZipError(_, message) => fail("zip read failed: \{message}")
   }
   let updated_sheet_xml = match updated.get("xl/worksheets/sheet2.xml") {
     Some(value) => @encoding/utf8.decode(value)

@@ -1,6 +1,6 @@
 import {
   "bobzhang/mbtexcel/xlsx",
-  "bobzhang/mbtexcel/zip",
+  "moonbit-community/flate/zip",
   "moonbitlang/x/time",
   "moonbitlang/async/io" @async/io,
 }
@@ -11,7 +11,7 @@ import {
   "bobzhang/mbtexcel/demos",
   "moonbitlang/async",
   "moonbitlang/core/encoding/utf8" @encoding/utf8,
-  "bobzhang/mbtexcel/zip",
+  "moonbit-community/flate/zip",
   "moonbitlang/core/test",
 } for "test"
 

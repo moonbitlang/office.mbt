@@ -96,7 +96,7 @@ async test "excelize Book1 iterators match get_rows/get_cols" {
   }
   assert_true(sheet_xml.contains("ref=\"F11:H11\""))
   assert_true(sheet_xml.contains("ref=\"G11:I11\""))
-  let workbook = @xlsx.read(@zip.write(archive))
+  let workbook = @xlsx.read(@zip.write_preserving(archive))
   let total = workbook.get_cell_value("Sheet1", "A19") catch {
     err => fail("get_cell_value failed: \{repr(err)}")
   }

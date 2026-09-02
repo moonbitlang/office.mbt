@@ -18,7 +18,8 @@ trailing garbage.
 
 Microsoft Word refuses to open the files in that state, and so do this
 repository's readers — `docx2html` rejects them with
-`invalid ZIP archive: MissingEndOfCentral`, and the unified `office` CLI with
+`invalid ZIP archive: zip: end of central directory not found`, and the unified
+`office` CLI with
 `archive is not a readable bounded ZIP`. Some readers (Python's `zipfile`, and
 Mammoth) scan backwards for the EOCD signature and tolerate the garbage, which
 is why the run recorded in `../../../StressTesting.md` predates this repair.

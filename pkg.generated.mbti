@@ -3,7 +3,7 @@ package "bobzhang/mbtexcel"
 
 import {
   "bobzhang/mbtexcel/xlsx",
-  "bobzhang/mbtexcel/zip",
+  "moonbit-community/flate/zip",
   "moonbitlang/async/io",
   "moonbitlang/x/time",
 }

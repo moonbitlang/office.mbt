@@ -9,7 +9,7 @@ async fn format_readback_fixture(
     "../docx2html/tests/cram/fixtures/single-paragraph.docx",
   ).binary()
   let archive = @zip.read(source_bytes)
-  let rebuilt = @zip.Archive::new()
+  let rebuilt = @zip.Archive()
   for entry in archive.entries() {
     let entry_name = entry.name()
     guard archive.get(entry_name) is Some(payload) else { continue }
@@ -29,7 +29,7 @@ async fn format_readback_fixture(
   let path = directory + "/" + name
   @afs.write_file(
     path,
-    @zip.write(rebuilt),
+    @zip.write_preserving(rebuilt),
     create_mode=CreateNew,
     permission=0o600,
   )
@@ -56,7 +56,7 @@ fn doctored_candidate(
   old : String,
   new : String,
 ) -> @zip.Archive raise {
-  let rebuilt = @zip.Archive::new()
+  let rebuilt = @zip.Archive()
   for entry in candidate.entries() {
     let name = entry.name()
     guard candidate.get(name) is Some(payload) else { continue }

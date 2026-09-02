@@ -143,7 +143,7 @@ test "reader canonicalizes a merged non-anchor hyperlink identity" {
   sheet.set_cell_hyperlink("A1", "https://legacy.example", External)
   sheet.merge_cells("A1:C3")
   let archive = @zip.read(@xlsx.write(workbook))
-  let patched = @zip.Archive::new()
+  let patched = @zip.Archive()
   for entry in archive.entries() {
     if entry.name() == "xl/worksheets/sheet1.xml" {
       let xml = @encoding/utf8.decode(entry.data())
@@ -156,7 +156,7 @@ test "reader canonicalizes a merged non-anchor hyperlink identity" {
       patched.add(entry.name(), entry.data())
     }
   }
-  let parsed = @xlsx.read(@zip.write(patched))
+  let parsed = @xlsx.read(@zip.write_preserving(patched))
   inspect(parsed.get_hyperlinks("Sheet1").length(), content="1")
   inspect(parsed.get_hyperlinks("Sheet1")[0].reference, content="A1")
   debug_inspect(
@@ -176,7 +176,7 @@ test "reader rejects conflicting hyperlink identities in one merged range" {
   workbook.set_cell_hyperlink("Sheet1", "A1", "https://a.example", External)
   workbook.set_cell_hyperlink("Sheet1", "B2", "https://b.example", External)
   let archive = @zip.read(@xlsx.write(workbook))
-  let patched = @zip.Archive::new()
+  let patched = @zip.Archive()
   for entry in archive.entries() {
     if entry.name() == "xl/worksheets/sheet1.xml" {
       let xml = @encoding/utf8.decode(entry.data())
@@ -190,7 +190,7 @@ test "reader rejects conflicting hyperlink identities in one merged range" {
     }
   }
   let result : Result[@xlsx.Workbook, Error] = Ok(
-    @xlsx.read(@zip.write(patched)),
+    @xlsx.read(@zip.write_preserving(patched)),
   ) catch {
     error => Err(error)
   }
@@ -299,7 +299,7 @@ test "hyperlink opts helper" {
   )
   let bytes = @xlsx.write(workbook)
   let archive = @zip.read(bytes) catch {
-    err => fail("zip read failed: \{repr(err)}")
+    ZipError(_, message) => fail("zip read failed: \{message}")
   }
   let sheet_xml = match archive.get("xl/worksheets/sheet1.xml") {
     Some(value) =>
@@ -470,7 +470,7 @@ test "hyperlink remove clears range reference" {
   )
   let bytes = @xlsx.write(workbook)
   let archive = @zip.read(bytes) catch {
-    err => fail("zip read failed: \{repr(err)}")
+    ZipError(_, message) => fail("zip read failed: \{message}")
   }
   let sheet_xml = match archive.get("xl/worksheets/sheet1.xml") {
     Some(value) =>
@@ -483,7 +483,7 @@ test "hyperlink remove clears range reference" {
     old="<hyperlink ref=\"A1\"",
     new="<hyperlink ref=\"A1:D4\"",
   )
-  let updated_archive = @zip.Archive::new()
+  let updated_archive = @zip.Archive()
   for entry in archive.entries() {
     if entry.name() != "xl/worksheets/sheet1.xml" {
       updated_archive.add(
@@ -498,8 +498,8 @@ test "hyperlink remove clears range reference" {
     "xl/worksheets/sheet1.xml",
     @encoding/utf8.encode(updated_sheet),
   )
-  let updated_bytes = @zip.write(updated_archive) catch {
-    err => fail("zip write failed: \{repr(err)}")
+  let updated_bytes = @zip.write_preserving(updated_archive) catch {
+    ZipError(_, message) => fail("zip write failed: \{message}")
   }
   let parsed = @xlsx.read(updated_bytes)
   debug_inspect(
@@ -534,7 +534,7 @@ test "hyperlink invalid ref rejected on read" {
   )
   let bytes = @xlsx.write(workbook)
   let archive = @zip.read(bytes) catch {
-    err => fail("zip read failed: \{repr(err)}")
+    ZipError(_, message) => fail("zip read failed: \{message}")
   }
   let sheet_xml = match archive.get("xl/worksheets/sheet1.xml") {
     Some(value) =>
@@ -547,7 +547,7 @@ test "hyperlink invalid ref rejected on read" {
     old="<hyperlink ref=\"A1\"",
     new="<hyperlink ref=\"A:A\"",
   )
-  let updated_archive = @zip.Archive::new()
+  let updated_archive = @zip.Archive()
   for entry in archive.entries() {
     if entry.name() != "xl/worksheets/sheet1.xml" {
       updated_archive.add(
@@ -562,8 +562,8 @@ test "hyperlink invalid ref rejected on read" {
     "xl/worksheets/sheet1.xml",
     @encoding/utf8.encode(updated_sheet),
   )
-  let updated_bytes = @zip.write(updated_archive) catch {
-    err => fail("zip write failed: \{repr(err)}")
+  let updated_bytes = @zip.write_preserving(updated_archive) catch {
+    ZipError(_, message) => fail("zip write failed: \{message}")
   }
   let result : Result[@xlsx.Workbook, Error] = Ok(@xlsx.read(updated_bytes)) catch {
     error => Err(error)
@@ -802,7 +802,7 @@ test "hyperlink with both r:id and location matches both filters" {
   workbook.set_cell_hyperlink("Sheet1", "A1", "https://example.com", External)
   let bytes = @xlsx.write(workbook)
   let archive = @zip.read(bytes)
-  let patched = @zip.Archive::new()
+  let patched = @zip.Archive()
   for entry in archive.entries() {
     if entry.name() == "xl/worksheets/sheet1.xml" {
       let xml = @encoding/utf8.decode(entry.data())
@@ -815,7 +815,7 @@ test "hyperlink with both r:id and location matches both filters" {
       patched.add(entry.name(), entry.data())
     }
   }
-  let parsed = @xlsx.read(@zip.write(patched))
+  let parsed = @xlsx.read(@zip.write_preserving(patched))
   let link = match parsed.get_cell_hyperlink("Sheet1", "A1") {
     Some(value) => value
     None => fail("missing hyperlink")

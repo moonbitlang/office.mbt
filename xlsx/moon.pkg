@@ -1,6 +1,8 @@
 import {
   "moonbitlang/core/debug",
-  "bobzhang/mbtexcel/zip",
+  "moonbit-community/flate/zip",
+  "moonbit-community/flate/checksum" @flate_checksum,
+  "moonbit-community/flate/gzip" @flate_gzip,
   "bobzhang/mbtexcel/ooxml",
   "moonbitlang/x/crypto",
   "moonbitlang/core/encoding/base64",

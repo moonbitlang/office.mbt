@@ -57,13 +57,14 @@ async fn open_docx_projection(
   data : BytesView,
   max_elements : Int,
 ) -> DocxProjection {
-  let archive = @zip.read_limited(
+  let archive = @zip.read(
     data,
-    max_package_bytes=office_read_max_package_bytes,
-    max_entries=office_read_max_zip_entries,
-    max_entry_uncompressed_bytes=office_read_max_zip_entry_bytes,
-    max_total_uncompressed_bytes=office_read_max_zip_total_bytes,
-    max_total_preserved_source_bytes=office_read_max_preserved_source_bytes,
+    limits=@zip.ReadLimits::default()
+      .with_package_limit(office_read_max_package_bytes)
+      .with_entries_limit(office_read_max_zip_entries)
+      .with_entry_limit(office_read_max_zip_entry_bytes)
+      .with_total_limit(office_read_max_zip_total_bytes)
+      .with_preserved_source_limit(office_read_max_preserved_source_bytes),
   ) catch {
     error => raise office_zip_read_failure(error, file, Docx)
   }
@@ -172,7 +173,7 @@ async test "DOCX projection joins header and footer paragraph anchors" {
   }
   let projection = open_docx_projection(
     "header-footer-anchors.docx",
-    @zip.write(archive),
+    @zip.write_preserving(archive),
     1000,
   )
   for path in ["/docx/header[1]/p[1]", "/docx/footer[1]/p[1]"] {
@@ -735,13 +736,14 @@ async test "DOCX projection construction yields within its element ceiling" {
 
 ///|
 async test "DOCX validation forwards parser cancellation callbacks" {
-  let archive = @zip.read_limited(
+  let archive = @zip.read(
     docx_read_test_bytes(),
-    max_package_bytes=office_read_max_package_bytes,
-    max_entries=office_read_max_zip_entries,
-    max_entry_uncompressed_bytes=office_read_max_zip_entry_bytes,
-    max_total_uncompressed_bytes=office_read_max_zip_total_bytes,
-    max_total_preserved_source_bytes=office_read_max_preserved_source_bytes,
+    limits=@zip.ReadLimits::default()
+      .with_package_limit(office_read_max_package_bytes)
+      .with_entries_limit(office_read_max_zip_entries)
+      .with_entry_limit(office_read_max_zip_entry_bytes)
+      .with_total_limit(office_read_max_zip_total_bytes)
+      .with_preserved_source_limit(office_read_max_preserved_source_bytes),
   )
   let mut checks = 0
   try
@@ -1387,7 +1389,7 @@ async test "DOCX structured reads accept explicit ZIP directory records" {
   archive.add("word/media/", b"")
   let projection = open_docx_projection(
     "directories.docx",
-    @zip.write(archive),
+    @zip.write_preserving(archive),
     1000,
   )
   assert_true(find_projection_entry(projection, "/docx/body") is Some(_))
@@ -1407,7 +1409,7 @@ async test "DOCX structured reads warn and continue on broken section references
   assert_true(archive.replace("word/document.xml", @utf8.encode(malformed)))
   let projection = open_docx_projection(
     "missing-header-id.docx",
-    @zip.write(archive),
+    @zip.write_preserving(archive),
     1000,
   )
   assert_true(find_projection_entry(projection, "/docx/body") is Some(_))
@@ -1425,7 +1427,9 @@ async test "DOCX preflight rejects foreign-namespace officeDocument relationship
   let root_relationships =
     #|<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships" xmlns:foreign="urn:foreign"><foreign:Relationship Id="main" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/></Relationships>
   assert_true(archive.replace("_rels/.rels", @utf8.encode(root_relationships)))
-  try open_docx_projection("foreign.docx", @zip.write(archive), 1000) catch {
+  try
+    open_docx_projection("foreign.docx", @zip.write_preserving(archive), 1000)
+  catch {
     CliFailure(error) => assert_eq(error.code, "office.invalid_package")
     _ => fail("expected a structured CLI package failure")
   } noraise {

@@ -5,9 +5,9 @@ fn build_non_utf8_workbook_bytes() -> Bytes raise {
   try! workbook.set_cell("Sheet1", "A1", "alpha")
   let raw = try! @xlsx.write(workbook)
   let archive = @zip.read(raw) catch {
-    err => fail("zip read failed: \{repr(err)}")
+    ZipError(_, message) => fail("zip read failed: \{message}")
   }
-  let updated = @zip.Archive::new()
+  let updated = @zip.Archive()
   for entry in archive.entries() {
     let data = if entry.name() == "xl/workbook.xml" {
       let xml = @encoding/utf8.decode(entry.data()) catch {
@@ -28,8 +28,8 @@ fn build_non_utf8_workbook_bytes() -> Bytes raise {
       data_descriptor=entry.data_descriptor(),
     )
   }
-  @zip.write(updated) catch {
-    err => fail("zip write failed: \{repr(err)}")
+  @zip.write_preserving(updated) catch {
+    ZipError(_, message) => fail("zip write failed: \{message}")
   }
 }
 

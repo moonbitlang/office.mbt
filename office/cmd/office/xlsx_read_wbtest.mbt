@@ -68,7 +68,7 @@ test "XLSX projection enforces its documented scan ceiling" {
     file: "malformed.xlsx",
     format: Xlsx,
     bytes: Bytes::new(0),
-    archive: @zip.Archive::new(),
+    archive: Archive(),
   }
   let upfront = xlsx_cli_error(() => {
     ignore(open_xlsx_projection(malformed, xlsx_cli_hard_max_scan_cells + 1))
@@ -94,13 +94,14 @@ fn xlsx_bounded_test_source(
   file : String,
   bytes : BytesView,
 ) -> OfficeReadPackage raise {
-  let archive = @zip.read_limited(
+  let archive = @zip.read(
     bytes,
-    max_package_bytes=office_read_max_package_bytes,
-    max_entries=office_read_max_zip_entries,
-    max_entry_uncompressed_bytes=office_read_max_zip_entry_bytes,
-    max_total_uncompressed_bytes=office_read_max_zip_total_bytes,
-    max_total_preserved_source_bytes=office_read_max_preserved_source_bytes,
+    limits=@zip.ReadLimits::default()
+      .with_package_limit(office_read_max_package_bytes)
+      .with_entries_limit(office_read_max_zip_entries)
+      .with_entry_limit(office_read_max_zip_entry_bytes)
+      .with_total_limit(office_read_max_zip_total_bytes)
+      .with_preserved_source_limit(office_read_max_preserved_source_bytes),
   )
   { file, format: Xlsx, bytes: Bytes::new(0), archive, }
 }
@@ -225,7 +226,7 @@ test "Office format detection probes cancellation before and after validation" {
 
 ///|
 fn xlsx_strict_test_bytes() -> Bytes raise {
-  let archive = @zip.Archive::new()
+  let archive = @zip.Archive()
   let content_types =
     #|<ct:Types xmlns:ct="http://schemas.openxmlformats.org/package/2006/content-types"><ct:Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><ct:Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/><ct:Override PartName="/xl/worksheets/sheet.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/></ct:Types>
   let root_relationships =
@@ -244,12 +245,12 @@ fn xlsx_strict_test_bytes() -> Bytes raise {
     @utf8.encode(workbook_relationships),
   )
   archive.add("xl/worksheets/sheet.xml", @utf8.encode(worksheet))
-  @zip.write(archive)
+  @zip.write_preserving(archive)
 }
 
 ///|
 fn xlsx_relocated_test_bytes() -> Bytes raise {
-  let archive = @zip.Archive::new()
+  let archive = @zip.Archive()
   let content_types =
     #|<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="png" ContentType="image/png"/><Override PartName="/custom/book.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/><Override PartName="/data/first.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/><Override PartName="/data/Strings.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sharedStrings+xml"/><Override PartName="/objects/Table.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.table+xml"/><Override PartName="/pages/Chart.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.chartsheet+xml"/><Override PartName="/art/Drawing.xml" ContentType="application/vnd.openxmlformats-officedocument.drawing+xml"/><Override PartName="/art/SheetDrawing.xml" ContentType="application/vnd.openxmlformats-officedocument.drawing+xml"/><Override PartName="/charts/Chart.xml" ContentType="application/vnd.openxmlformats-officedocument.drawingml.chart+xml"/><Override PartName="/charts/SheetChart.xml" ContentType="application/vnd.openxmlformats-officedocument.drawingml.chart+xml"/></Types>
   let root_relationships =
@@ -315,13 +316,13 @@ fn xlsx_relocated_test_bytes() -> Bytes raise {
   archive.add("art/Drawing.xml", @utf8.encode(drawing))
   archive.add("art/_rels/Drawing.xml.rels", @utf8.encode(drawing_relationships))
   archive.add("charts/Chart.xml", @utf8.encode(chart))
-  @zip.write(archive)
+  @zip.write_preserving(archive)
 }
 
 ///|
 fn xlsx_default_declared_relocated_test_bytes() -> Bytes raise {
   let source = @zip.read(xlsx_relocated_test_bytes())
-  let archive = @zip.Archive::new()
+  let archive = @zip.Archive()
   let workbook_override =
     #|<Override PartName="/custom/book.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/>
   let workbook_default =
@@ -347,7 +348,7 @@ fn xlsx_default_declared_relocated_test_bytes() -> Bytes raise {
       data_descriptor=entry.data_descriptor(),
     )
   }
-  @zip.write(archive)
+  @zip.write_preserving(archive)
 }
 
 ///|
@@ -921,7 +922,7 @@ test "XLSX followers reject oversized shared masters before translation" {
   assert_true(archive.replace(path, @utf8.encode(updated)))
   let source = xlsx_bounded_test_source(
     "oversized-shared-formula.xlsx",
-    @zip.write(archive),
+    @zip.write_preserving(archive),
   )
   let projection = open_xlsx_projection(source, 10)
   guard resolve_xlsx_selector(projection, "/xlsx/sheet[name=\"Data\"]/cell[B1]")
@@ -975,7 +976,7 @@ test "XLSX structured reads reject shared-formula followers without a master" {
   assert_true(archive.replace(path, @utf8.encode(malformed)))
   let source = xlsx_bounded_test_source(
     "missing-shared-master.xlsx",
-    @zip.write(archive),
+    @zip.write_preserving(archive),
   )
   let error = xlsx_cli_error(() => ignore(open_xlsx_projection(source, 10)))
   assert_eq(error.code, "office.invalid_package")
@@ -1248,14 +1249,15 @@ test "XLSX structured reads reject non-finite package numbers" {
       @utf8.encode(sheet_xml.replace(old="<v>1</v>", new="<v>NaN</v>")),
     ),
   )
-  let bytes = @zip.write(archive)
-  let bounded = try! @zip.read_limited(
+  let bytes = @zip.write_preserving(archive)
+  let bounded = try! @zip.read(
     bytes,
-    max_package_bytes=office_read_max_package_bytes,
-    max_entries=office_read_max_zip_entries,
-    max_entry_uncompressed_bytes=office_read_max_zip_entry_bytes,
-    max_total_uncompressed_bytes=office_read_max_zip_total_bytes,
-    max_total_preserved_source_bytes=office_read_max_preserved_source_bytes,
+    limits=@zip.ReadLimits::default()
+      .with_package_limit(office_read_max_package_bytes)
+      .with_entries_limit(office_read_max_zip_entries)
+      .with_entry_limit(office_read_max_zip_entry_bytes)
+      .with_total_limit(office_read_max_zip_total_bytes)
+      .with_preserved_source_limit(office_read_max_preserved_source_bytes),
   )
   let source : OfficeReadPackage = {
     file: "non-finite.xlsx",
@@ -1286,7 +1288,7 @@ test "XLSX parse-time index corruption is classified as an invalid package" {
   )
   let shared_source = xlsx_bounded_test_source(
     "broken-shared.xlsx",
-    @zip.write(shared_archive),
+    @zip.write_preserving(shared_archive),
   )
   let shared = xlsx_cli_error(() => {
     ignore(open_xlsx_projection(shared_source, 10))
@@ -1312,7 +1314,7 @@ test "XLSX parse-time index corruption is classified as an invalid package" {
   )
   let style_source = xlsx_bounded_test_source(
     "broken-style.xlsx",
-    @zip.write(style_archive),
+    @zip.write_preserving(style_archive),
   )
   let style = xlsx_cli_error(() => {
     ignore(open_xlsx_projection(style_source, 10))
@@ -1344,7 +1346,7 @@ test "XLSX style parsing rejects non-finite JSON-facing numbers" {
     ),
   )
   let result : Result[@xlsx.Workbook, Error] = Ok(
-    @xlsx.read(@zip.write(archive)),
+    @xlsx.read(@zip.write_preserving(archive)),
   ) catch {
     error => Err(error)
   }
@@ -1374,7 +1376,7 @@ async test "XLSX displayed text preserves formula results formatted to blank" {
   )
   let projection = make_xlsx_projection(
     "blank-display.xlsx",
-    try! @xlsx.read(@zip.write(archive)),
+    try! @xlsx.read(@zip.write_preserving(archive)),
     10,
   )
   let under = Some(
@@ -1477,7 +1479,7 @@ async test "XLSX cached empty formula results remain distinct from a missing cac
   assert_true(
     archive.replace("xl/worksheets/sheet1.xml", @utf8.encode(cached_xml)),
   )
-  let parsed = @xlsx.read(@zip.write(archive))
+  let parsed = @xlsx.read(@zip.write_preserving(archive))
   guard parsed.sheet("Data") is Some(parsed_sheet) &&
     parsed_sheet.get_cell_formula_info_rc(1, 1) is Some(info) else {
     fail("expected cached formula metadata")
@@ -1508,7 +1510,7 @@ async test "XLSX cached empty formula results remain distinct from a missing cac
       ),
     ),
   )
-  let compact = @xlsx.read(@zip.write(compact_archive))
+  let compact = @xlsx.read(@zip.write_preserving(compact_archive))
   guard compact.sheet("Data") is Some(compact_sheet) &&
     compact_sheet.get_cell_formula_info_rc(1, 1) is Some(compact_info) else {
     fail("expected compact cached formula metadata")

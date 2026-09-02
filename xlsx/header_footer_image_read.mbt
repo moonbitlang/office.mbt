@@ -205,7 +205,7 @@ test "header/footer image read wb: style and extension parsing edge cases" {
 
 ///|
 test "header/footer image read wb: parse images with r:id fallback and duplicate overwrite" {
-  let archive = @zip.Archive::new()
+  let archive = @zip.Archive()
   let image1 = @encoding/utf8.encode("img1")
   let image2 = @encoding/utf8.encode("img2")
   archive.add("xl/media/image1.png", image1)
@@ -248,7 +248,7 @@ test "header/footer image read wb: parse images with r:id fallback and duplicate
 
 ///|
 test "header/footer image read wb: missing target part raises MissingPart" {
-  let archive = @zip.Archive::new()
+  let archive = @zip.Archive()
   let rels_xml =
     #|<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
     #|  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/image" Target="../media/missing.png"/>

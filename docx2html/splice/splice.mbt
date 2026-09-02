@@ -429,10 +429,8 @@ pub fn splice_docx(
   plan : SplicePlan,
 ) -> Bytes raise @core.DocxError {
   let archive = @mbtzip.read(original) catch {
-    err =>
-      raise InvalidZip(
-        message="could not read the original package: \{repr(err)}",
-      )
+    ZipError(_, msg) =>
+      raise InvalidZip(message="could not read the original package: \{msg}")
   }
   let output = build_spliced_archive(archive, plan, false, None)
   // The byte API can preserve a true no-op exactly, including archive bytes
@@ -441,9 +439,9 @@ pub fn splice_docx(
   if plan.is_empty() {
     return original.to_owned()
   }
-  @mbtzip.write(output) catch {
-    err =>
-      raise InvalidZip(message="could not repack the package: \{repr(err)}")
+  @mbtzip.write_preserving(output) catch {
+    ZipError(_, msg) =>
+      raise InvalidZip(message="could not repack the package: \{msg}")
   }
 }
 
@@ -462,13 +460,13 @@ pub fn splice_docx_archive(
     raise Unsupported(message="the splice output limit cannot be negative")
   }
   let output = build_spliced_archive(original, plan, require_pins, limits)
-  @mbtzip.write_limited(output, max_output_bytes~) catch {
-    OutputLimitExceeded(limit~) =>
+  @mbtzip.write_preserving_limited(output, max_output_bytes~) catch {
+    ZipError(LimitExceeded(OutputBytes, limit, _), _) =>
       raise Unsupported(
         message="the spliced package exceeds the output limit of \{limit} bytes",
       )
-    err =>
-      raise InvalidZip(message="could not repack the package: \{repr(err)}")
+    ZipError(_, msg) =>
+      raise InvalidZip(message="could not repack the package: \{msg}")
   }
 }
 
@@ -821,7 +819,7 @@ fn build_spliced_archive(
   for part in prepared {
     edited[part.name] = apply_prepared_span_edits(part, xml_budget)
   }
-  let output = archive.fork()
+  let output = archive.clone()
   for name, bytes in edited {
     if !output.replace(name, bytes) {
       raise Unsupported(

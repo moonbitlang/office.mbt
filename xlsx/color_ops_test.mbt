@@ -47,7 +47,7 @@ test "get base color from theme and indexed colors" {
     old="</styleSheet>",
     new="\{colors_block}</styleSheet>",
   )
-  let updated_archive = @zip.Archive::new()
+  let updated_archive = @zip.Archive()
   for entry in archive.entries() {
     if entry.name() != "xl/theme/theme1.xml" && entry.name() != "xl/styles.xml" {
       updated_archive.add(
@@ -60,15 +60,15 @@ test "get base color from theme and indexed colors" {
   }
   updated_archive.add("xl/theme/theme1.xml", @encoding/utf8.encode(theme_xml))
   updated_archive.add("xl/styles.xml", @encoding/utf8.encode(updated_styles))
-  let updated_bytes = @zip.write(updated_archive) catch {
-    err => fail("zip write failed: \{repr(err)}")
+  let updated_bytes = @zip.write_preserving(updated_archive) catch {
+    ZipError(_, message) => fail("zip write failed: \{message}")
   }
   let parsed = @xlsx.read(updated_bytes)
   inspect(parsed.get_base_color("", 0, theme_color=4), content="ABCDEF")
   inspect(parsed.get_base_color("", 1), content="654321")
   let roundtrip = @xlsx.write(parsed)
   let roundtrip_archive = @zip.read(roundtrip) catch {
-    err => fail("zip read failed: \{repr(err)}")
+    ZipError(_, message) => fail("zip read failed: \{message}")
   }
   let roundtrip_theme = match roundtrip_archive.get("xl/theme/theme1.xml") {
     Some(value) => @encoding/utf8.decode(value)

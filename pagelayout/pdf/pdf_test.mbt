@@ -182,7 +182,7 @@ test "rects are flipped and filled" {
 
 ///|
 fn docx_bytes(body : String) -> Bytes raise {
-  let archive = @zip.Archive::new()
+  let archive = @zip.Archive()
   let document = (
       #|<?xml version="1.0" encoding="UTF-8"?>
       #|<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:body>
@@ -190,7 +190,7 @@ fn docx_bytes(body : String) -> Bytes raise {
     body +
     "</w:body></w:document>"
   archive.add("word/document.xml", @utf8.encode(document))
-  @zip.write(archive)
+  @zip.write_preserving(archive)
 }
 
 ///|

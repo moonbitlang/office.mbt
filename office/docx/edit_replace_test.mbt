@@ -10,7 +10,7 @@ async fn edit_fixture(
     "../docx2html/tests/cram/fixtures/single-paragraph.docx",
   ).binary()
   let archive = @zip.read(source_bytes)
-  let rebuilt = @zip.Archive::new()
+  let rebuilt = @zip.Archive()
   for entry in archive.entries() {
     let entry_name = entry.name()
     guard archive.get(entry_name) is Some(payload) else { continue }
@@ -30,7 +30,7 @@ async fn edit_fixture(
   let path = directory + "/" + name
   @afs.write_file(
     path,
-    @zip.write(rebuilt),
+    @zip.write_preserving(rebuilt),
     create_mode=CreateNew,
     permission=0o600,
   )

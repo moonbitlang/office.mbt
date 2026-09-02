@@ -2,7 +2,7 @@
 package "bobzhang/office-lib"
 
 import {
-  "bobzhang/mbtexcel/zip",
+  "moonbit-community/flate/zip",
   "moonbitlang/core/debug",
 }
 

@@ -170,7 +170,7 @@ test "preset shape tokens keep their case through write and read" {
   }
   let written = @xlsx.write(workbook)
   let archive = @zip.read(written) catch {
-    err => fail("zip read failed: \{repr(err)}")
+    ZipError(_, message) => fail("zip read failed: \{message}")
   }
   let drawing = match archive.get("xl/drawings/drawing1.xml") {
     Some(value) =>

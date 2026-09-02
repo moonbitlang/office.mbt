@@ -5,7 +5,7 @@ fn replace_archive_part(
   replacement : Bytes,
 ) -> Bytes raise {
   let source = @zip.read(data)
-  let result = @zip.Archive::new()
+  let result = @zip.Archive()
   let mut replaced = false
   for entry in source.entries() {
     let entry_data = if entry.name() == name {
@@ -24,7 +24,7 @@ fn replace_archive_part(
   if !replaced {
     fail("test archive did not contain \{name}")
   }
-  @zip.write(result)
+  @zip.write_preserving(result)
 }
 
 ///|
@@ -34,7 +34,7 @@ fn append_archive_part(
   content : Bytes,
 ) -> Bytes raise {
   let source = @zip.read(data)
-  let result = @zip.Archive::new()
+  let result = @zip.Archive()
   for entry in source.entries() {
     if entry.name() == name {
       fail("test archive already contained \{name}")
@@ -47,7 +47,7 @@ fn append_archive_part(
     )
   }
   result.add(name, content)
-  @zip.write(result)
+  @zip.write_preserving(result)
 }
 
 ///|
@@ -130,7 +130,7 @@ fn format_hash_clustered_relationship_names(
 ///|
 fn add_relationship_stress_parts(data : BytesView, count : Int) -> Bytes raise {
   let source = @zip.read(data)
-  let result = @zip.Archive::new()
+  let result = @zip.Archive()
   let mut content_types_updated = false
   for entry in source.entries() {
     let content = if entry.name() == "[Content_Types].xml" {
@@ -168,7 +168,7 @@ fn add_relationship_stress_parts(data : BytesView, count : Int) -> Bytes raise {
     result.add(source_name, b"")
     result.add(relationships_name, relationships)
   }
-  @zip.write(result)
+  @zip.write_preserving(result)
 }
 
 ///|
@@ -178,7 +178,7 @@ fn rename_archive_part(
   new_name : String,
 ) -> Bytes raise {
   let source = @zip.read(data)
-  let result = @zip.Archive::new()
+  let result = @zip.Archive()
   let mut renamed = false
   for entry in source.entries() {
     let name = if entry.name() == old_name {
@@ -197,12 +197,12 @@ fn rename_archive_part(
   if !renamed {
     fail("test archive did not contain \{old_name}")
   }
-  @zip.write(result)
+  @zip.write_preserving(result)
 }
 
 ///|
 fn first_segment_colon_xlsx(target : String) -> Bytes raise {
-  let archive = @zip.Archive::new()
+  let archive = @zip.Archive()
   archive.add(
     "[Content_Types].xml",
     @utf8.encode(
@@ -227,7 +227,7 @@ fn first_segment_colon_xlsx(target : String) -> Bytes raise {
       "<Relationships xmlns=\"http://schemas.openxmlformats.org/package/2006/relationships\"/>",
     ),
   )
-  @zip.write(archive)
+  @zip.write_preserving(archive)
 }
 
 ///|
@@ -266,7 +266,7 @@ fn corrupt_stored_payload(data : Bytes, payload : BytesView) -> Bytes raise {
 ///|
 fn relocate_xlsx_main_part(data : BytesView) -> Bytes raise {
   let source = @zip.read(data)
-  let result = @zip.Archive::new()
+  let result = @zip.Archive()
   for entry in source.entries() {
     let (name, entry_data) = match entry.name() {
       "xl/workbook.xml" => ("xl/customWorkbook.xml", entry.data())
@@ -302,13 +302,13 @@ fn relocate_xlsx_main_part(data : BytesView) -> Bytes raise {
       data_descriptor=entry.data_descriptor(),
     )
   }
-  @zip.write(result)
+  @zip.write_preserving(result)
 }
 
 ///|
 fn add_root_level_relationships(data : BytesView) -> Bytes raise {
   let source = @zip.read(data)
-  let result = @zip.Archive::new()
+  let result = @zip.Archive()
   for entry in source.entries() {
     result.add(
       entry.name(),
@@ -324,13 +324,13 @@ fn add_root_level_relationships(data : BytesView) -> Bytes raise {
       "<Relationships xmlns=\"http://schemas.openxmlformats.org/package/2006/relationships\"><Relationship Id=\"rId1\" Type=\"https://example.com/relationships/workbook\" Target=\"xl/workbook.xml\"/></Relationships>",
     ),
   )
-  @zip.write(result)
+  @zip.write_preserving(result)
 }
 
 ///|
 fn reencode_identification_parts_as_utf16(data : BytesView) -> Bytes raise {
   let source = @zip.read(data)
-  let result = @zip.Archive::new()
+  let result = @zip.Archive()
   for entry in source.entries() {
     let entry_data = if entry.name() == "[Content_Types].xml" ||
       entry.name() == "xl/workbook.xml" ||
@@ -356,7 +356,7 @@ fn reencode_identification_parts_as_utf16(data : BytesView) -> Bytes raise {
       data_descriptor=entry.data_descriptor(),
     )
   }
-  @zip.write(result)
+  @zip.write_preserving(result)
 }
 
 ///|
@@ -394,7 +394,7 @@ fn prefix_xlsx_package_xml(
   dangling_sheet_target : Bool,
 ) -> Bytes raise {
   let source = @zip.read(data)
-  let result = @zip.Archive::new()
+  let result = @zip.Archive()
   for entry in source.entries() {
     let entry_data = if entry.name() == "[Content_Types].xml" {
       let mut text = @utf8.decode(entry.data(), ignore_bom=true)
@@ -442,13 +442,13 @@ fn prefix_xlsx_package_xml(
       data_descriptor=entry.data_descriptor(),
     )
   }
-  @zip.write(result)
+  @zip.write_preserving(result)
 }
 
 ///|
 fn misalign_docx_main_part(data : BytesView) -> Bytes raise {
   let source = @zip.read(data)
-  let result = @zip.Archive::new()
+  let result = @zip.Archive()
   for entry in source.entries() {
     let entry_data = if entry.name() == "_rels/.rels" {
       @utf8.encode(
@@ -475,7 +475,7 @@ fn misalign_docx_main_part(data : BytesView) -> Bytes raise {
       )
     }
   }
-  @zip.write(result)
+  @zip.write_preserving(result)
 }
 
 ///|
@@ -733,7 +733,10 @@ test "detect_format enforces the complete OPC central-header boundary" {
   let mut content_types_header_size = -1
   for entry in exact_archive.entries() {
     if entry.name() == "[Content_Types].xml" {
-      content_types_header_size = entry.central_directory_file_header_size()
+      content_types_header_size = match entry.raw_central_record() {
+        Some(record) => record.length() - 4
+        None => -1
+      }
     }
   }
   if content_types_header_size < 0 {
@@ -760,7 +763,7 @@ test "detect_format enforces the complete OPC central-header boundary" {
 ///|
 test "detect_format treats ZIP directory names as exact physical records" {
   let source = @zip.read(@excel.write(@excel.new_file()))
-  let distinct = @zip.Archive::new()
+  let distinct = @zip.Archive()
   for entry in source.entries() {
     distinct.add(
       entry.name(),
@@ -772,11 +775,11 @@ test "detect_format treats ZIP directory names as exact physical records" {
   distinct.add("word/", b"")
   distinct.add("WORD/", b"")
   inspect(
-    @office.detect_format("book.xlsx", @zip.write(distinct)).name(),
+    @office.detect_format("book.xlsx", @zip.write_preserving(distinct)).name(),
     content="xlsx",
   )
 
-  let duplicate = @zip.Archive::new()
+  let duplicate = @zip.Archive()
   for entry in source.entries() {
     duplicate.add(
       entry.name(),
@@ -787,7 +790,9 @@ test "detect_format treats ZIP directory names as exact physical records" {
   }
   duplicate.add("word/", b"")
   duplicate.add("word/", b"")
-  try @office.detect_format("book.xlsx", @zip.write(duplicate)) catch {
+  try
+    @office.detect_format("book.xlsx", @zip.write_preserving(duplicate))
+  catch {
     err =>
       assert_true(Show::to_string(err).contains("duplicate entry name: word/"))
   } noraise {
@@ -1600,7 +1605,15 @@ test "detect_format requires an XLSX workbook main-part root" {
 test "detect_format rejects CRC-corrupted XLSX entries" {
   let workbook = @excel.new_file()
   workbook.set_cell("Sheet1", "A1", "hello")
-  let corrupted = corrupt_stored_payload(@excel.write(workbook), b"hello")
+  let source = @zip.read(@excel.write(workbook))
+  let stored = @zip.Archive()
+  for entry in source.entries() {
+    stored.add(entry.name(), entry.data(), compression=Store)
+  }
+  let corrupted = corrupt_stored_payload(
+    @zip.write_preserving(stored),
+    b"hello",
+  )
   try @office.detect_format("book.xlsx", corrupted) catch {
     err =>
       inspect(
@@ -1939,7 +1952,7 @@ test "detect_archive_format shares one cumulative XML allocation budget" {
 ///|
 test "detect_archive_format cancels within CRC verification" {
   let source = @zip.read(@excel.write(@excel.new_file()))
-  let archive = @zip.Archive::new()
+  let archive = @zip.Archive()
   archive.add("bulk.bin", Bytes::make(1024 * 1024, b'x'))
   for entry in source.entries() {
     archive.add(
@@ -1982,14 +1995,14 @@ test "detect_format requires exact reserved manifest spelling" {
 
 ///|
 test "detect_format does not accept a content-type marker in an XML comment" {
-  let archive = @zip.Archive::new()
+  let archive = @zip.Archive()
   archive.add(
     "[Content_Types].xml",
     @utf8.encode(
       "<Types xmlns=\"http://schemas.openxmlformats.org/package/2006/content-types\"><!-- application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml --></Types>",
     ),
   )
-  let data = @zip.write(archive)
+  let data = @zip.write_preserving(archive)
   try @office.detect_format("book.xlsx", data) catch {
     err =>
       inspect(

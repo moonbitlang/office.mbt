@@ -24,7 +24,7 @@ fn malformed_shared_formula_package(
     fail("shared-formula corruption marker was not found")
   }
   assert_true(archive.replace(path, @encoding/utf8.encode(updated)))
-  @zip.write(archive)
+  @zip.write_preserving(archive)
 }
 
 ///|
@@ -156,7 +156,7 @@ test "XLSX read accepts a singleton shared-formula ST_Ref" {
   let updated = xml.replace(old="ref=\"A1:A1\"", new="ref=\"A1\"")
   assert_true(updated != xml)
   assert_true(archive.replace(path, @encoding/utf8.encode(updated)))
-  let parsed = @xlsx.read(@zip.write(archive))
+  let parsed = @xlsx.read(@zip.write_preserving(archive))
   guard parsed.sheet("Data") is Some(parsed_sheet) else {
     fail("missing singleton shared-formula worksheet")
   }
@@ -472,7 +472,7 @@ test "XLSX read tolerates overlapping ranges for distinct shared indices" {
   let updated = xml.replace(old="ref=\"A1:A2\"", new="ref=\"A1:C2\"")
   assert_true(updated != xml)
   assert_true(archive.replace(path, @encoding/utf8.encode(updated)))
-  let parsed = @xlsx.read(@zip.write(archive))
+  let parsed = @xlsx.read(@zip.write_preserving(archive))
   guard parsed.sheet("Data") is Some(parsed_sheet) else {
     fail("missing shared-formula worksheet")
   }
@@ -507,7 +507,7 @@ test "XLSX shared-formula indices cover the OOXML unsigned range" {
   let updated = xml.replace_all(old="si=\"0\"", new="si=\"4294967295\"")
   assert_true(updated != xml)
   assert_true(archive.replace(path, @encoding/utf8.encode(updated)))
-  let parsed = @xlsx.read(@zip.write(archive))
+  let parsed = @xlsx.read(@zip.write_preserving(archive))
   guard parsed.sheet("Data") is Some(parsed_sheet) else {
     fail("missing parsed shared-formula worksheet")
   }

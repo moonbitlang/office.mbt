@@ -95,7 +95,7 @@ test "data validation extension read follows namespace identity" {
   ignore(workbook.add_sheet("Sheet1"))
   let bytes = @xlsx.write(workbook)
   let archive = @zip.read(bytes)
-  let out = @zip.Archive::new()
+  let out = @zip.Archive()
   for entry in archive.entries() {
     if entry.name() == "xl/worksheets/sheet1.xml" {
       let xml = @encoding/utf8.decode(entry.data())
@@ -130,7 +130,7 @@ test "data validation extension read follows namespace identity" {
       )
     }
   }
-  let new_bytes = @zip.write(out)
+  let new_bytes = @zip.write_preserving(out)
   let parsed = @xlsx.read(new_bytes)
   let dvs = parsed.get_data_validations("Sheet1")
   inspect(dvs.length(), content="1")

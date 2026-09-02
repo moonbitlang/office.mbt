@@ -12,7 +12,7 @@ import {
   "bobzhang/mbtexcel/batch",
   "bobzhang/mbtexcel/xlsx",
   "bobzhang/mbtexcel/xlsx2html",
-  "bobzhang/mbtexcel/zip",
+  "moonbit-community/flate/zip",
   "bobzhang/pagelayout",
   "bobzhang/pagelayout/docx" @pagelayout_docx,
   "bobzhang/pagelayout/paginate",

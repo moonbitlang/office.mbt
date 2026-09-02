@@ -2917,12 +2917,7 @@ priv struct WriteArchiveBuilder {
 
 ///|
 fn WriteArchiveBuilder::new(limits : WriteLimits?) -> WriteArchiveBuilder {
-  {
-    archive: @zip.Archive::new(),
-    limits,
-    entry_count: 0,
-    total_uncompressed_bytes: 0,
-  }
+  { archive: Archive(), limits, entry_count: 0, total_uncompressed_bytes: 0, }
 }
 
 ///|
@@ -4158,14 +4153,17 @@ fn write_with_io(
   let archive = archive.finish()
   match limits {
     Some(policy) =>
-      @zip.write_limited(archive, max_output_bytes=policy.max_output_bytes) catch {
-        OutputLimitExceeded(limit~) =>
+      @zip.write_preserving_limited(
+        archive,
+        max_output_bytes=policy.max_output_bytes,
+      ) catch {
+        ZipError(LimitExceeded(OutputBytes, limit, _), _) =>
           raise ResourceLimitExceeded(
             kind="output_bytes",
             limit~,
             actual=bounded_actual_above_limit(limit),
           )
-        err => raise UnsupportedFeature(msg=repr(err))
+        ZipError(_, msg) => raise UnsupportedFeature(msg~)
       }
     None =>
       match io_context.zip_writer {
@@ -4174,8 +4172,8 @@ fn write_with_io(
             err => raise UnsupportedFeature(msg=repr(err))
           }
         None =>
-          @zip.write(archive) catch {
-            err => raise UnsupportedFeature(msg=repr(err))
+          @zip.write_preserving(archive) catch {
+            ZipError(_, msg) => raise UnsupportedFeature(msg~)
           }
       }
   }

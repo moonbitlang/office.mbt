@@ -56,7 +56,7 @@ test "integration unknown worksheet ext roundtrip with mixed known ext" {
 
   let bytes = @xlsx.write(workbook)
   let archive = @zip.read(bytes) catch {
-    err => fail("zip read failed: \{repr(err)}")
+    ZipError(_, message) => fail("zip read failed: \{message}")
   }
   let sheet_xml = match archive.get("xl/worksheets/sheet2.xml") {
     Some(value) => @encoding/utf8.decode(value)
@@ -72,7 +72,7 @@ test "integration unknown worksheet ext roundtrip with mixed known ext" {
     fail("expected extLst in worksheet xml")
   }
 
-  let updated_archive = @zip.Archive::new()
+  let updated_archive = @zip.Archive()
   for entry in archive.entries() {
     if entry.name() != "xl/worksheets/sheet2.xml" {
       updated_archive.add(
@@ -87,8 +87,8 @@ test "integration unknown worksheet ext roundtrip with mixed known ext" {
     "xl/worksheets/sheet2.xml",
     @encoding/utf8.encode(updated_sheet),
   )
-  let updated_bytes = @zip.write(updated_archive) catch {
-    err => fail("zip write failed: \{repr(err)}")
+  let updated_bytes = @zip.write_preserving(updated_archive) catch {
+    ZipError(_, message) => fail("zip write failed: \{message}")
   }
 
   let parsed = @xlsx.read(updated_bytes)

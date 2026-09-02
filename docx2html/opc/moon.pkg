@@ -1,13 +1,14 @@
 import {
   "bobzhang/docx2html/core",
   "bobzhang/docx2html/xml",
-  "bobzhang/mbtexcel/zip" @mbtzip,
+  "moonbit-community/flate/zip" @mbtzip,
+  "moonbit-community/flate/checksum" @flate_checksum,
   "moonbitlang/core/encoding/utf8",
   "moonbitlang/core/sorted_map",
   "moonbitlang/core/sorted_set",
 }
 
 import {
-  "bobzhang/mbtexcel/zip" @mbtzip,
+  "moonbit-community/flate/zip" @mbtzip,
   "moonbitlang/core/encoding/utf8",
 } for "test"

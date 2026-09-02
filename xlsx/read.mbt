@@ -3145,14 +3145,27 @@ fn enforce_archive_limits(
         actual=size,
       )
     }
-    let actual_crc = @zip.crc32_cancellable(entry.data(), cancelled~) catch {
-      ReadCancelled => raise ReadCancelled
-      _ => raise InvalidPackage(msg="ZIP entry CRC verification failed")
+    let actual_crc = match
+      @flate_checksum.crc32_cancellable(entry.data(), cancelled~) {
+      None => raise ReadCancelled
+      Some(crc) => crc
     }
     if actual_crc != entry.crc32() {
       raise InvalidPackage(msg="ZIP entry CRC mismatch")
     }
     check_read_cancelled(cancelled)
+  }
+}
+
+///|
+fn zip_limit_kind_name(kind : @zip.LimitKind) -> String {
+  match kind {
+    PackageBytes => "package_bytes"
+    Entries => "entry_count"
+    EntryUncompressedBytes => "entry_uncompressed_bytes"
+    TotalUncompressedBytes => "total_uncompressed_bytes"
+    PreservedSourceBytes => "total_preserved_source_bytes"
+    OutputBytes => "output_bytes"
   }
 }
 
@@ -3163,23 +3176,6 @@ fn require_bounded_archive(
   cancelled? : () -> Bool = () => false,
 ) -> Unit raise XlsxError {
   check_read_cancelled(cancelled)
-  match
-    archive.bounded_source_package_size(
-      max_entries=limits.max_archive_entries,
-      max_entry_uncompressed_bytes=limits.max_entry_uncompressed_bytes,
-      max_total_uncompressed_bytes=limits.max_total_uncompressed_bytes,
-      max_total_preserved_source_bytes=limits.max_total_preserved_source_bytes,
-    ) {
-    Some(package_bytes) =>
-      if package_bytes > limits.max_package_bytes {
-        raise ResourceLimitExceeded(
-          kind="package_bytes",
-          limit=limits.max_package_bytes,
-          actual=package_bytes,
-        )
-      }
-    None => raise UnboundedArchive
-  }
   if archive.entries().length() > limits.max_archive_entries {
     raise ResourceLimitExceeded(
       kind="entry_count",
@@ -3197,20 +3193,22 @@ fn read_limited_archive(
   cancelled? : () -> Bool = () => false,
 ) -> @zip.Archive raise XlsxError {
   check_read_cancelled(cancelled)
-  @zip.read_limited(
-    bytes,
-    max_package_bytes=limits.max_package_bytes,
-    max_entries=limits.max_archive_entries,
-    max_entry_uncompressed_bytes=limits.max_entry_uncompressed_bytes,
-    max_total_uncompressed_bytes=limits.max_total_uncompressed_bytes,
+  let read_limits = @zip.ReadLimits::default()
+    .with_package_limit(limits.max_package_bytes)
+    .with_entries_limit(limits.max_archive_entries)
+    .with_entry_limit(limits.max_entry_uncompressed_bytes)
+    .with_total_limit(limits.max_total_uncompressed_bytes)
     // The ZIP package preserves exact source records for lossless rewrites.
     // Bound that second compressed representation independently from inflation.
-    max_total_preserved_source_bytes=limits.max_total_preserved_source_bytes,
-    cancelled~,
-  ) catch {
-    ResourceLimitExceeded(kind~, limit~, actual~) =>
-      raise ResourceLimitExceeded(kind~, limit~, actual~)
-    ReadCancelled => raise ReadCancelled
+    .with_preserved_source_limit(limits.max_total_preserved_source_bytes)
+  @zip.read(bytes, limits=read_limits, cancelled~) catch {
+    ZipError(LimitExceeded(kind, limit, actual), _) =>
+      raise ResourceLimitExceeded(
+        kind=zip_limit_kind_name(kind),
+        limit~,
+        actual~,
+      )
+    ZipError(Cancelled, _) => raise ReadCancelled
     _ => raise InvalidPackage(msg="unreadable ZIP package")
   }
 }
@@ -3394,7 +3392,7 @@ fn archive_part_name_index(
 
 ///|
 test "read archive index maps physical Unicode OPC names to logical identity" {
-  let archive = @zip.Archive::new()
+  let archive = @zip.Archive()
   archive.add(content_types_part_path, b"manifest")
   archive.add("custom/%E6%96%87.xml", b"workbook")
   let names = archive_part_name_index(archive)
@@ -3406,7 +3404,7 @@ test "read archive index maps physical Unicode OPC names to logical identity" {
 
 ///|
 test "relationship selection recognizes physical Unicode chart parts" {
-  let archive = @zip.Archive::new()
+  let archive = @zip.Archive()
   archive.add(content_types_part_path, b"manifest")
   archive.add("xl/charts/%E6%96%87.xml", b"unicode chart")
   archive.add("xl/charts/chart2.xml", b"other chart")
@@ -3425,7 +3423,7 @@ test "relationship selection recognizes physical Unicode chart parts" {
 
 ///|
 test "read archive index rejects ambiguous and misspelled reserved entries" {
-  let duplicate = @zip.Archive::new()
+  let duplicate = @zip.Archive()
   duplicate.add(content_types_part_path, b"first")
   duplicate.add(content_types_part_path, b"second")
   try archive_part_name_index(duplicate) catch {
@@ -3436,7 +3434,7 @@ test "read archive index rejects ambiguous and misspelled reserved entries" {
     _ => fail("expected duplicate OPC part rejection")
   }
 
-  let misspelled = @zip.Archive::new()
+  let misspelled = @zip.Archive()
   misspelled.add("[content_types].xml", b"manifest")
   try archive_part_name_index(misspelled) catch {
     InvalidPackage(msg~) =>
@@ -3457,7 +3455,7 @@ test "read archive index rejects OPC-derivable parts in either order" {
       ["custom/a.xml", "custom/a.xml/child.xml"],
       ["custom/a.xml/child.xml", "custom/a.xml"],
     ] {
-    let archive = @zip.Archive::new()
+    let archive = @zip.Archive()
     archive.add(content_types_part_path, b"manifest")
     for name in entries {
       archive.add(name, b"part")
@@ -3474,7 +3472,7 @@ test "read archive index rejects OPC-derivable parts in either order" {
 
 ///|
 test "read archive index charges physical OPC name work before decoding" {
-  let archive = @zip.Archive::new()
+  let archive = @zip.Archive()
   archive.add("custom/" + "a".repeat(64) + ".xml", b"part")
   let budget = ReadBudget::new(
     ReadLimits::with_values(max_parser_work_units=32),
@@ -3493,7 +3491,7 @@ test "read archive index charges physical OPC name work before decoding" {
 
 ///|
 test "read archive index charges OPC identity nodes as parser items" {
-  let archive = @zip.Archive::new()
+  let archive = @zip.Archive()
   archive.add("a/b/c.xml", b"part")
   let budget = ReadBudget::new(ReadLimits::with_values(max_parser_items=2))
   try archive_part_name_index(archive, budget~) catch {
@@ -3511,7 +3509,7 @@ test "read archive index charges OPC identity nodes as parser items" {
 
 ///|
 test "read archive index polls cancellation inside long OPC names" {
-  let archive = @zip.Archive::new()
+  let archive = @zip.Archive()
   archive.add("custom/" + "a".repeat(9000) + ".xml", b"part")
   let checks = [0]
   let budget = ReadBudget::new(ReadLimits::new(), cancelled=() => {
@@ -5281,9 +5279,9 @@ fn read_zip_bytes(
 
 ///|
 /// Reads a workbook from an already-inflated ZIP archive without a second
-/// decompression pass. The archive must be pristine and carry non-forgeable
-/// `zip.read_limited` provenance at least as strict as `limits`; constructed,
-/// compatibility-read, or mutated archives fail with `UnboundedArchive`.
+/// decompression pass. Resource limits are enforced on the materialized
+/// archive (entry count, entry size, total size, and per-part XML budget)
+/// before any part is parsed.
 pub fn read_bounded_archive(
   archive : @zip.Archive,
   options? : Options = Options::new(),

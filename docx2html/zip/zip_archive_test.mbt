@@ -1,6 +1,6 @@
 ///|
 test "archive-backed DOCX view rejects duplicate entry names" {
-  let archive = @mbtzip.Archive::new()
+  let archive = @mbtzip.Archive()
   archive.add("word/document.xml", b"first")
   archive.add("word/document.xml", b"second")
   try {
@@ -70,7 +70,7 @@ test "DOCX view rejects case-equivalent aliases at construction" {
 
 ///|
 test "DOCX view treats directory records as exact physical identities" {
-  let archive = @mbtzip.Archive::new()
+  let archive = @mbtzip.Archive()
   archive.add("word/", b"")
   archive.add("WORD/", b"")
   archive.add("word/document.xml", b"document")
@@ -78,7 +78,7 @@ test "DOCX view treats directory records as exact physical identities" {
   assert_false(view.exists("word/"))
   assert_true(view.exists("word/document.xml"))
 
-  let duplicate = @mbtzip.Archive::new()
+  let duplicate = @mbtzip.Archive()
   duplicate.add("word/", b"")
   duplicate.add("word/", b"")
   try @zip.open_zip_archive(duplicate) catch {
@@ -89,7 +89,7 @@ test "DOCX view treats directory records as exact physical identities" {
     _ => fail("expected an exact duplicate directory to be rejected")
   }
 
-  let duplicate_bytes = @mbtzip.write(duplicate)
+  let duplicate_bytes = @mbtzip.write_preserving(duplicate)
   try @zip.open_zip(duplicate_bytes) catch {
     InvalidZip(message~) =>
       inspect(message, content="duplicate ZIP entry name: word/")

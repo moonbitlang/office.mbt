@@ -14,7 +14,7 @@ async test "docx template substitutes body and header stories" {
       "../docx2html/tests/cram/fixtures/header-footer.docx",
     ).binary()
     let archive = @zip.read(source_bytes)
-    let rebuilt = @zip.Archive::new()
+    let rebuilt = @zip.Archive()
     for entry in archive.entries() {
       let name = entry.name()
       guard archive.get(name) is Some(payload) else { continue }
@@ -39,7 +39,7 @@ async test "docx template substitutes body and header stories" {
     let input = directory + "/tpl.docx"
     @afs.write_file(
       input,
-      @zip.write(rebuilt),
+      @zip.write_preserving(rebuilt),
       create_mode=CreateNew,
       permission=0o600,
     )
@@ -94,7 +94,7 @@ async test "docx template refuses missing keys without publishing" {
       "../docx2html/tests/cram/fixtures/single-paragraph.docx",
     ).binary()
     let archive = @zip.read(source_bytes)
-    let rebuilt = @zip.Archive::new()
+    let rebuilt = @zip.Archive()
     for entry in archive.entries() {
       let name = entry.name()
       guard archive.get(name) is Some(payload) else { continue }
@@ -111,7 +111,7 @@ async test "docx template refuses missing keys without publishing" {
     let input = directory + "/tpl.docx"
     @afs.write_file(
       input,
-      @zip.write(rebuilt),
+      @zip.write_preserving(rebuilt),
       create_mode=CreateNew,
       permission=0o600,
     )
@@ -153,7 +153,7 @@ async fn docx_template_bytes_case(
     "../docx2html/tests/cram/fixtures/single-paragraph.docx",
   ).binary()
   let archive = @zip.read(source_bytes)
-  let rebuilt = @zip.Archive::new()
+  let rebuilt = @zip.Archive()
   for entry in archive.entries() {
     let name = entry.name()
     guard archive.get(name) is Some(payload) else { continue }
@@ -173,7 +173,7 @@ async fn docx_template_bytes_case(
   let input = directory + "/bytes-tpl.docx"
   @afs.write_file(
     input,
-    @zip.write(rebuilt),
+    @zip.write_preserving(rebuilt),
     create_mode=CreateNew,
     permission=0o600,
   )

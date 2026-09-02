@@ -43,7 +43,7 @@ fn unzip_write_entries(
   data : BytesView,
 ) -> Array[ZipWriteEntry] raise DocxError {
   let archive = @mbtzip.read(data) catch {
-    err => raise InvalidZip(message="invalid ZIP archive: \{repr(err)}")
+    ZipError(_, msg) => raise InvalidZip(message="invalid ZIP archive: \{msg}")
   }
   let entries : Array[ZipWriteEntry] = []
   for entry in archive.entries() {
@@ -81,12 +81,13 @@ fn replace_or_append_zip_entry(
 
 ///|
 fn zip_write_entries(entries : Array[ZipWriteEntry]) -> Bytes raise DocxError {
-  let archive = @mbtzip.Archive::new()
+  let archive = @mbtzip.Archive()
   for entry in entries {
     archive.add(entry.path, entry.content, compression=Deflate)
   }
-  @mbtzip.write(archive) catch {
-    err => raise InvalidZip(message="failed to write ZIP archive: \{repr(err)}")
+  @mbtzip.write_preserving(archive) catch {
+    ZipError(_, msg) =>
+      raise InvalidZip(message="failed to write ZIP archive: \{msg}")
   }
 }
 
