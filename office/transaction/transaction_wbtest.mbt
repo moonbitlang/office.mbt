@@ -5,7 +5,7 @@ fn wb_rewrite_content_types(
   force_store? : Bool = false,
 ) -> Bytes raise {
   let source = @zip.read(data)
-  let result = @zip.Archive::new()
+  let result = @zip.Archive()
   for entry in source.entries() {
     let payload = if entry.name() == "[Content_Types].xml" {
       let text = @utf8.decode(entry.data(), ignore_bom=true)
@@ -20,7 +20,7 @@ fn wb_rewrite_content_types(
       data_descriptor=entry.data_descriptor(),
     )
   }
-  @zip.write(result)
+  @zip.write_preserving(result)
 }
 
 ///|
@@ -44,13 +44,14 @@ fn wb_large_candidate(data : BytesView) -> Bytes raise {
 
 ///|
 fn wb_archive_retained_cost(bytes : BytesView) -> Int64 raise {
-  let archive = @zip.read_limited(
+  let archive = @zip.read(
     bytes,
-    max_package_bytes=transaction_max_package_bytes,
-    max_entries=transaction_max_archive_entries,
-    max_entry_uncompressed_bytes=transaction_max_entry_uncompressed_bytes,
-    max_total_uncompressed_bytes=transaction_max_total_uncompressed_bytes,
-    max_total_preserved_source_bytes=transaction_max_total_preserved_source_bytes,
+    limits=@zip.ReadLimits::default()
+      .with_package_limit(transaction_max_package_bytes)
+      .with_entries_limit(transaction_max_archive_entries)
+      .with_entry_limit(transaction_max_entry_uncompressed_bytes)
+      .with_total_limit(transaction_max_total_uncompressed_bytes)
+      .with_preserved_source_limit(transaction_max_total_preserved_source_bytes),
   )
   bytes.length().to_int64() +
   archive.retained_size_estimate() +
@@ -71,12 +72,12 @@ fn wb_archive_payload_bytes(bytes : BytesView) -> Int64 raise {
 
 ///|
 test "archive name projections are bounded and charged before indexing" {
-  let oversized = @zip.Archive::new()
+  let oversized = @zip.Archive()
   oversized.add(
     "custom/" + "x".repeat(transaction_max_part_length) + ".xml",
     b"",
   )
-  let oversized_bytes = @zip.write(oversized)
+  let oversized_bytes = @zip.write_preserving(oversized)
   try
     ignore(
       read_transaction_archive(
@@ -103,19 +104,20 @@ test "archive name projections are bounded and charged before indexing" {
   // Many individually legal names exercise aggregate projection accounting.
   // The calibrated limit admits the archive itself and the conservative read
   // preflight, but is one byte short once canonical-name copies are charged.
-  let many = @zip.Archive::new()
+  let many = @zip.Archive()
   let suffix = "n".repeat(980)
   for index in 0..<1_024 {
     many.add("custom/\{index}-\{suffix}.xml", b"")
   }
-  let many_bytes = @zip.write(many)
-  let parsed = @zip.read_limited(
+  let many_bytes = @zip.write_preserving(many)
+  let parsed = @zip.read(
     many_bytes,
-    max_package_bytes=transaction_max_package_bytes,
-    max_entries=transaction_max_archive_entries,
-    max_entry_uncompressed_bytes=transaction_max_entry_uncompressed_bytes,
-    max_total_uncompressed_bytes=transaction_max_total_uncompressed_bytes,
-    max_total_preserved_source_bytes=transaction_max_total_preserved_source_bytes,
+    limits=@zip.ReadLimits::default()
+      .with_package_limit(transaction_max_package_bytes)
+      .with_entries_limit(transaction_max_archive_entries)
+      .with_entry_limit(transaction_max_entry_uncompressed_bytes)
+      .with_total_limit(transaction_max_total_uncompressed_bytes)
+      .with_preserved_source_limit(transaction_max_total_preserved_source_bytes),
   )
   let base_cost = many_bytes.length().to_int64() +
     parsed.retained_size_estimate()
@@ -263,16 +265,22 @@ fn wb_read_transaction_archive_with_limits(
   max_entry_uncompressed_bytes : Int,
   max_total_uncompressed_bytes : Int,
 ) -> @zip.Archive raise TransactionError {
-  @zip.read_limited(
+  @zip.read(
     bytes,
-    max_package_bytes=transaction_max_package_bytes,
-    max_entries~,
-    max_entry_uncompressed_bytes~,
-    max_total_uncompressed_bytes~,
-    max_total_preserved_source_bytes=transaction_max_total_preserved_source_bytes,
+    limits=@zip.ReadLimits::default()
+      .with_package_limit(transaction_max_package_bytes)
+      .with_entries_limit(max_entries)
+      .with_entry_limit(max_entry_uncompressed_bytes)
+      .with_total_limit(max_total_uncompressed_bytes)
+      .with_preserved_source_limit(transaction_max_total_preserved_source_bytes),
   ) catch {
-    ResourceLimitExceeded(kind~, limit~, actual~) =>
-      raise resource_limit_error(phase, kind, limit, actual)
+    ZipError(LimitExceeded(kind, limit, actual), _) =>
+      raise resource_limit_error(
+        phase,
+        zip_limit_kind_name(kind),
+        limit,
+        actual,
+      )
     _ =>
       raise transaction_error(
         invalid_code,
@@ -1084,12 +1092,12 @@ async test "temporary substitution is never published or silently cleaned" {
 
 ///|
 fn wb_archive(entries : Array[(String, Bytes)]) -> Bytes raise {
-  let archive = @zip.Archive::new()
+  let archive = @zip.Archive()
   for entry in entries {
     let (name, bytes) = entry
     archive.add(name, bytes)
   }
-  @zip.write(archive)
+  @zip.write_preserving(archive)
 }
 
 ///|
@@ -1195,7 +1203,7 @@ fn wb_near_splice_limit_docx(token_units : Int) -> (Bytes, Int) raise {
   document.write_string("\r\n&amp;")
   document.write_string(suffix)
   let source = @zip.read(@word.new_blank_docx())
-  let result = @zip.Archive::new()
+  let result = @zip.Archive()
   for entry in source.entries() {
     result.add(
       entry.name(),
@@ -1208,7 +1216,7 @@ fn wb_near_splice_limit_docx(token_units : Int) -> (Bytes, Int) raise {
       data_descriptor=entry.data_descriptor(),
     )
   }
-  (@zip.write(result), prefix.length() + 1)
+  (@zip.write_preserving(result), prefix.length() + 1)
 }
 
 ///|
@@ -1410,12 +1418,13 @@ async test "source-near-envelope budget rejects during ZIP planning" {
             archive.add(
               "near-envelope-growth.bin",
               Bytes::makei(growth_size, index => (index & 0xff).to_byte()),
+              compression=Store,
             )
-            let candidate = @zip.write_limited(
+            let candidate = @zip.write_preserving_limited(
               archive,
               max_output_bytes=budget.max_candidate_package_bytes(),
             ) catch {
-              OutputLimitExceeded(_) => {
+              ZipError(LimitExceeded(OutputBytes, _limit, _actual), _) => {
                 planner_rejected.val = true
                 raise live_materialization_error(
                   "candidate package",

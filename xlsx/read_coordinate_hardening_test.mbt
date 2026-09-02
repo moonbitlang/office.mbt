@@ -6,7 +6,7 @@ fn coordinate_hardening_replace_part(
   replacement : StringView,
 ) -> Bytes raise {
   let source = @zip.read(bytes)
-  let updated = @zip.Archive::new()
+  let updated = @zip.Archive()
   let mut replaced = false
   for entry in source.entries() {
     if entry.name() == part_name {
@@ -35,7 +35,7 @@ fn coordinate_hardening_replace_part(
   if !replaced {
     fail("missing package part \{part_name}")
   }
-  @zip.write(updated)
+  @zip.write_preserving(updated)
 }
 
 ///|
@@ -95,13 +95,14 @@ fn coordinate_hardening_assert_invalid_xml(
 fn coordinate_hardening_bounded_archive(
   bytes : BytesView,
 ) -> @zip.Archive raise {
-  @zip.read_limited(
+  @zip.read(
     bytes,
-    max_package_bytes=128 * 1024 * 1024,
-    max_entries=8192,
-    max_entry_uncompressed_bytes=64 * 1024 * 1024,
-    max_total_uncompressed_bytes=256 * 1024 * 1024,
-    max_total_preserved_source_bytes=128 * 1024 * 1024 + 65_535,
+    limits=@zip.ReadLimits::default()
+      .with_package_limit(128 * 1024 * 1024)
+      .with_entries_limit(8192)
+      .with_entry_limit(64 * 1024 * 1024)
+      .with_total_limit(256 * 1024 * 1024)
+      .with_preserved_source_limit(128 * 1024 * 1024 + 65_535),
   )
 }
 

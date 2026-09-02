@@ -116,7 +116,7 @@ fn hf_package(
   document~ : String,
   extra? : Array[(String, String)] = [],
 ) -> Bytes {
-  let archive = @mbtzip.Archive::new()
+  let archive = @mbtzip.Archive()
   let content_types = StringBuilder()
   content_types.write_string(
     (
@@ -162,7 +162,7 @@ fn hf_package(
     let (name, text) = entry
     archive.add(name, utf8_part(text))
   }
-  try! @mbtzip.write(archive)
+  try! @mbtzip.write_preserving(archive)
 }
 
 ///|

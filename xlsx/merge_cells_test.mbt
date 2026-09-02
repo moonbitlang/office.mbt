@@ -5,7 +5,7 @@ test "merge cells write and dimension" {
   sheet.merge_cells("B2:A1")
   let bytes = @xlsx.write(workbook)
   let archive = @zip.read(bytes) catch {
-    err => fail("zip read failed: \{repr(err)}")
+    ZipError(_, message) => fail("zip read failed: \{message}")
   }
   let sheet_xml = match archive.get("xl/worksheets/sheet1.xml") {
     Some(value) =>

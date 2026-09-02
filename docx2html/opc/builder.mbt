@@ -474,15 +474,18 @@ fn PackageBuilder::build_internal(
     }
     None => ()
   }
-  let archive = @mbtzip.Archive::new()
+  let archive = @mbtzip.Archive()
   for entry in entries {
     let (zip_name, data) = entry
     archive.add(zip_name, data, compression=Deflate)
   }
   match limits {
     Some(l) =>
-      @mbtzip.write_limited(archive, max_output_bytes=l.max_output_bytes) catch {
-        OutputLimitExceeded(limit~) =>
+      @mbtzip.write_preserving_limited(
+        archive,
+        max_output_bytes=l.max_output_bytes,
+      ) catch {
+        ZipError(LimitExceeded(OutputBytes, limit, _), _) =>
           // The zip sizing pass short-circuits at the ceiling (bounded work),
           // so the exact serialized size is not computed; `actual` is the
           // truthful strict lower bound "at least one byte over the limit".
@@ -493,14 +496,14 @@ fn PackageBuilder::build_internal(
           )
         err =>
           raise PackageBuildError(
-            "could not assemble the archive: \{repr(err)}",
+            "could not assemble the archive: \{zip_error_message(err)}",
           )
       }
     None =>
-      @mbtzip.write(archive) catch {
+      @mbtzip.write_preserving(archive) catch {
         err =>
           raise PackageBuildError(
-            "could not assemble the archive: \{repr(err)}",
+            "could not assemble the archive: \{zip_error_message(err)}",
           )
       }
   }

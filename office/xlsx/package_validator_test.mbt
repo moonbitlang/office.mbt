@@ -1,12 +1,13 @@
 ///|
 fn read_validator_archive(bytes : Bytes) -> @zip.Archive raise {
-  @zip.read_limited(
+  @zip.read(
     bytes,
-    max_package_bytes=64 * 1024 * 1024,
-    max_entries=4096,
-    max_entry_uncompressed_bytes=32 * 1024 * 1024,
-    max_total_uncompressed_bytes=128 * 1024 * 1024,
-    max_total_preserved_source_bytes=64 * 1024 * 1024 + 65_535,
+    limits=@zip.ReadLimits::default()
+      .with_package_limit(64 * 1024 * 1024)
+      .with_entries_limit(4096)
+      .with_entry_limit(32 * 1024 * 1024)
+      .with_total_limit(128 * 1024 * 1024)
+      .with_preserved_source_limit(64 * 1024 * 1024 + 65_535),
   )
 }
 
@@ -29,7 +30,7 @@ test "package validator matches the mutation gate verdicts" {
   // provenance (mutated archives are rejected outright by the gate)
   let rebuilt = @zip.read(bytes)
   rebuilt.add("xl/extra.bin", b"\x00\x01")
-  let tampered_bytes = @zip.write(rebuilt)
+  let tampered_bytes = @zip.write_preserving(rebuilt)
   let tampered = read_validator_archive(tampered_bytes)
   let findings = (validator.validate)(Xlsx, tampered_bytes, tampered)
   assert_true(findings.length() > 0)

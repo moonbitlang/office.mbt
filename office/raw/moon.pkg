@@ -1,6 +1,6 @@
 import {
   "bobzhang/office-lib" @office,
-  "bobzhang/mbtexcel/zip",
+  "moonbit-community/flate/zip",
   "bobzhang/docx2html/opc",
   "bobzhang/docx2html/xml",
   "moonbitlang/core/debug",

@@ -1,7 +1,8 @@
 import {
   "bobzhang/office-lib" @office,
   "bobzhang/office-lib/transaction",
-  "bobzhang/mbtexcel/zip",
+  "moonbit-community/flate/zip",
+  "moonbit-community/flate/checksum" @flate_checksum,
   "bobzhang/docx2html/batch" @docxbatch,
   "bobzhang/docx2html/core" @docxcore,
   "bobzhang/docx2html/document",
@@ -17,7 +18,7 @@ import {
 
 import {
   "bobzhang/docx2html" @word_fixture,
-  "bobzhang/mbtexcel/zip",
+  "moonbit-community/flate/zip",
   "bobzhang/office-lib/template",
   "bobzhang/office-lib/transaction",
   "moonbitlang/async",

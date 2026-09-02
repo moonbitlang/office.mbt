@@ -15,11 +15,11 @@ fn inventory_alias_target(
 
 ///|
 fn raw_test_archive(entries : Array[(String, Bytes)]) -> Bytes raise {
-  let archive = @zip.Archive::new()
+  let archive = @zip.Archive()
   for entry in entries {
     archive.add(entry.0, entry.1)
   }
-  @zip.write(archive)
+  @zip.write_preserving(archive)
 }
 
 ///|
@@ -45,7 +45,7 @@ fn raw_test_add_hash_clustered_parts(
   count : Int,
 ) -> Bytes raise {
   let source = @zip.read(data)
-  let output = @zip.Archive::new()
+  let output = @zip.Archive()
   let mut content_types_updated = false
   for entry in source.entries() {
     let payload = if entry.name() == "[Content_Types].xml" {
@@ -76,7 +76,7 @@ fn raw_test_add_hash_clustered_parts(
     assert_eq(name.hash() & 0x3FF, 0)
     output.add(name, b"")
   }
-  @zip.write(output)
+  @zip.write_preserving(output)
 }
 
 ///|
@@ -86,7 +86,7 @@ fn raw_test_replace_entry(
   payload : Bytes,
 ) -> Bytes raise {
   let source = @zip.read(data)
-  let output = @zip.Archive::new()
+  let output = @zip.Archive()
   let mut found = false
   for entry in source.entries() {
     if entry.name() == name {
@@ -109,7 +109,7 @@ fn raw_test_replace_entry(
   if !found {
     fail("raw test fixture is missing entry '\{name}'")
   }
-  @zip.write(output)
+  @zip.write_preserving(output)
 }
 
 ///|
@@ -133,7 +133,7 @@ fn raw_test_add_entry(
   payload : Bytes,
 ) -> Bytes raise {
   let source = @zip.read(data)
-  let output = @zip.Archive::new()
+  let output = @zip.Archive()
   for entry in source.entries() {
     output.add(
       entry.name(),
@@ -143,7 +143,7 @@ fn raw_test_add_entry(
     )
   }
   output.add(name, payload)
-  @zip.write(output)
+  @zip.write_preserving(output)
 }
 
 ///|
@@ -626,7 +626,7 @@ fn alias_budget_xlsx_fixture() -> Bytes raise {
 ///|
 fn colliding_literal_docx_fixture() -> Bytes raise {
   let source = @zip.read(relocated_docx_fixture())
-  let output = @zip.Archive::new()
+  let output = @zip.Archive()
   for entry in source.entries() {
     let data = if entry.name() == "[Content_Types].xml" {
       @utf8.encode(
@@ -641,13 +641,13 @@ fn colliding_literal_docx_fixture() -> Bytes raise {
     output.add(entry.name(), data)
   }
   output.add("document", @utf8.encode("<literal/>"))
-  @zip.write(output)
+  @zip.write_preserving(output)
 }
 
 ///|
 fn raw_reencode_package_xml_as_utf16(data : BytesView) -> Bytes raise {
   let source = @zip.read(data)
-  let result = @zip.Archive::new()
+  let result = @zip.Archive()
   for entry in source.entries() {
     let payload = if entry.name() == "[Content_Types].xml" ||
       entry.name() == "word/document.xml" {
@@ -672,7 +672,7 @@ fn raw_reencode_package_xml_as_utf16(data : BytesView) -> Bytes raise {
       data_descriptor=entry.data_descriptor(),
     )
   }
-  @zip.write(result)
+  @zip.write_preserving(result)
 }
 
 ///|
@@ -904,7 +904,7 @@ test "raw inventory ignores deterministic hash clustering in package names" {
 test "raw inventory excludes ZIP directory markers and mutations preserve them" {
   let original = @word.new_blank_docx()
   let source = @zip.read(original)
-  let archive = @zip.Archive::new()
+  let archive = @zip.Archive()
   // Keep both directory records first so a later Part edit cannot change their
   // local offsets. That lets this test pin their local and central records
   // byte-for-byte, including the otherwise-valid case distinction.
@@ -918,7 +918,7 @@ test "raw inventory excludes ZIP directory markers and mutations preserve them" 
       data_descriptor=entry.data_descriptor(),
     )
   }
-  let with_directory = @zip.write(archive)
+  let with_directory = @zip.write_preserving(archive)
   let baseline = @raw.raw_inventory("baseline.docx", original)
   let inventory = @raw.raw_inventory("directory.docx", with_directory)
   assert_eq(inventory.parts.length(), baseline.parts.length())
@@ -953,7 +953,7 @@ test "raw inventory excludes ZIP directory markers and mutations preserve them" 
     output[after_central:after_central + 102],
   )
 
-  let duplicate = @zip.Archive::new()
+  let duplicate = @zip.Archive()
   duplicate.add("word/", b"", compression=Store, data_descriptor=false)
   duplicate.add("word/", b"", compression=Store, data_descriptor=false)
   for entry in source.entries() {
@@ -966,7 +966,7 @@ test "raw inventory excludes ZIP directory markers and mutations preserve them" 
   }
   let (code, message) = raw_inventory_message_for(
     "duplicate-directory.docx",
-    @zip.write(duplicate),
+    @zip.write_preserving(duplicate),
   )
   assert_eq(code, "office.raw.invalid_package")
   assert_true(message.contains("duplicate directory entry '/word/'"))
@@ -1890,20 +1890,20 @@ test "raw XLSX workbook aliases use the content element budget" {
 
 ///|
 test "raw ZIP expansion limits retain resource codes and details" {
-  let count_archive = @zip.Archive::new()
+  let count_archive = @zip.Archive()
   for index in 0..<8193 {
     count_archive.add("entry-\{index}", b"")
   }
   let (count_code, count_details) = raw_inventory_error(
-    @zip.write(count_archive),
+    @zip.write_preserving(count_archive),
   )
   assert_eq(count_code, "office.raw.resource_limit")
   assert_true(count_details.contains("entry_count"))
 
-  let entry_archive = @zip.Archive::new()
+  let entry_archive = @zip.Archive()
   entry_archive.add("entry", b"")
   let (entry_bytes, entry_records) = forge_raw_test_central_uncompressed_sizes(
-    @zip.write(entry_archive),
+    @zip.write_preserving(entry_archive),
     64 * 1024 * 1024 + 1,
   )
   assert_eq(entry_records, 1)
@@ -1911,12 +1911,12 @@ test "raw ZIP expansion limits retain resource codes and details" {
   assert_eq(entry_code, "office.raw.resource_limit")
   assert_true(entry_details.contains("entry_uncompressed_bytes"))
 
-  let aggregate_archive = @zip.Archive::new()
+  let aggregate_archive = @zip.Archive()
   for index in 0..<5 {
     aggregate_archive.add("aggregate-\{index}", b"")
   }
   let (aggregate_bytes, aggregate_records) = forge_raw_test_central_uncompressed_sizes(
-    @zip.write(aggregate_archive),
+    @zip.write_preserving(aggregate_archive),
     60 * 1024 * 1024,
   )
   assert_eq(aggregate_records, 5)

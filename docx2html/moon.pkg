@@ -19,6 +19,6 @@ import {
   "bobzhang/docx2html/splice",
   "moonbitlang/core/json",
   "bobzhang/docx2html/opc",
-  "bobzhang/mbtexcel/zip" @mbtzip,
+  "moonbit-community/flate/zip" @mbtzip,
   "moonbitlang/core/random",
 } for "test"

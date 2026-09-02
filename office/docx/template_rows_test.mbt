@@ -83,7 +83,7 @@ fn docx_region_fixture_with(
 ) -> Bytes raise {
   let base = docx_region_fixture()
   let archive = @zip.read(base)
-  let rebuilt = @zip.Archive::new()
+  let rebuilt = @zip.Archive()
   let mut replaced = false
   for entry in archive.entries() {
     let name = entry.name()
@@ -103,7 +103,7 @@ fn docx_region_fixture_with(
   if !replaced {
     fail("fixture lacks word/document.xml")
   }
-  @zip.write(rebuilt)
+  @zip.write_preserving(rebuilt)
 }
 
 ///|
@@ -377,7 +377,7 @@ async test "docx region unused keys attribute per region, not globally" {
     // but consumed in region B (tr[3]); region A record 0 must report it
     let two_row = {
       let archive = @zip.read(docx_region_fixture())
-      let rebuilt = @zip.Archive::new()
+      let rebuilt = @zip.Archive()
       for entry in archive.entries() {
         let name = entry.name()
         guard archive.get(name) is Some(payload) else { continue }
@@ -394,7 +394,7 @@ async test "docx region unused keys attribute per region, not globally" {
           rebuilt.add(name, payload.to_owned())
         }
       }
-      @zip.write(rebuilt)
+      @zip.write_preserving(rebuilt)
     }
     let input = directory + "/two-region.docx"
     @afs.write_file(input, two_row, create_mode=CreateNew, permission=0o600)

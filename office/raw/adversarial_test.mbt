@@ -27,8 +27,8 @@ test "raw path parser rejects an adversarial grammar corpus deterministically" {
 }
 
 ///|
-test "archive-backed raw boundary requires provenance and rechecks limits" {
-  let archive = @zip.Archive::new()
+test "archive-backed raw boundary rechecks limits regardless of provenance" {
+  let archive = @zip.Archive()
   for index in 0..<8193 {
     archive.add("entry-\{index}.bin", b"")
   }
@@ -39,24 +39,22 @@ test "archive-backed raw boundary requires provenance and rechecks limits" {
 
   let original = @word.new_blank_docx()
   let unbounded = @zip.read(original)
-  assert_eq(
-    raw_error_code(() => @raw.raw_identify_archive("unbounded.docx", unbounded)),
-    "office.raw.resource_limit",
-  )
-  let bounded = @zip.read_limited(
+  assert_eq(@raw.raw_identify_archive("unbounded.docx", unbounded), Docx)
+  let bounded = @zip.read(
     original,
-    max_package_bytes=original.length(),
-    max_entries=8192,
-    max_entry_uncompressed_bytes=64 * 1024 * 1024,
-    max_total_uncompressed_bytes=256 * 1024 * 1024,
-    max_total_preserved_source_bytes=original.length(),
+    limits=@zip.ReadLimits::default()
+      .with_package_limit(original.length())
+      .with_entries_limit(8192)
+      .with_entry_limit(64 * 1024 * 1024)
+      .with_total_limit(256 * 1024 * 1024)
+      .with_preserved_source_limit(original.length()),
   )
-  assert_eq(@raw.raw_identify_archive("bounded.docx", bounded.fork()), Docx)
-  let changed = bounded.fork()
+  assert_eq(@raw.raw_identify_archive("bounded.docx", bounded.clone()), Docx)
+  let changed = bounded.clone()
   assert_true(changed.replace("[Content_Types].xml", b"changed"))
   assert_eq(
     raw_error_code(() => @raw.raw_identify_archive("changed.docx", changed)),
-    "office.raw.resource_limit",
+    "office.raw.invalid_xml",
   )
 }
 
@@ -304,7 +302,7 @@ test "raw XML node budgets run before strict DOM materialization" {
 
 ///|
 test "raw package metadata fields are bounded before portable validation" {
-  let archive = @zip.Archive::new()
+  let archive = @zip.Archive()
   let oversized_content_type = "application/" + "x".repeat(4096)
   archive.add(
     "[Content_Types].xml",
@@ -324,7 +322,7 @@ test "raw package metadata fields are bounded before portable validation" {
       "<w:document xmlns:w=\"\{word_namespace}\"><w:body/></w:document>",
     ),
   )
-  let package_data = @zip.write(archive)
+  let package_data = @zip.write_preserving(archive)
   assert_eq(
     raw_error_code(() => @raw.raw_inventory("bounded.docx", package_data)),
     "office.raw.resource_limit",

@@ -237,7 +237,7 @@ async test "oversized relationship metadata fails closed before publication" {
         "<Relationships xmlns=\"http://schemas.openxmlformats.org/package/2006/relationships\"><Relationship Id=\"rId1\" Type=\"urn:test\" Target=\"\{target}\"/></Relationships>",
       ),
     )
-    let hostile = @zip.write(archive)
+    let hostile = @zip.write_preserving(archive)
     write_xlsx_transaction_file(input, hostile)
     let plan = @xlsx.parse_batch(
       @utf8.encode("{\"schema\":\"xlsx.batch/1\",\"ops\":[]}"),

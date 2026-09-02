@@ -48,7 +48,7 @@ fn minimal_docx(
   extra? : Array[(String, Bytes)] = [],
   skip? : Array[String] = [],
 ) -> Bytes {
-  let archive = @mbtzip.Archive::new()
+  let archive = @mbtzip.Archive()
   let parts : Array[(String, Bytes)] = [
     (
       "[Content_Types].xml",
@@ -67,7 +67,7 @@ fn minimal_docx(
     let (name, data) = part
     archive.add(name, data)
   }
-  try! @mbtzip.write(archive)
+  try! @mbtzip.write_preserving(archive)
 }
 
 ///|
@@ -468,7 +468,7 @@ test "OPC validation is independent of deterministic string-hash clustering" {
 
 ///|
 test "OPC part lookup preserves spelling while comparing case-insensitively" {
-  let archive = @mbtzip.Archive::new()
+  let archive = @mbtzip.Archive()
   archive.add(
     "[Content_Types].xml",
     utf8_bytes(
@@ -490,11 +490,11 @@ test "OPC part lookup preserves spelling while comparing case-insensitively" {
   )
   archive.add("CUSTOM/comments.xml", utf8_bytes("<comments/>"))
   debug_inspect(
-    @opc.validate_docx_package(try! @mbtzip.write(archive)),
+    @opc.validate_docx_package(try! @mbtzip.write_preserving(archive)),
     content="[]",
   )
 
-  let aliases = @mbtzip.Archive::new()
+  let aliases = @mbtzip.Archive()
   aliases.add("word/document.xml", utf8_bytes("<w:document/>"))
   aliases.add("WORD/DOCUMENT.XML", utf8_bytes("<w:document/>"))
   let (findings, _) = @opc.validate_docx_archive_limited(
@@ -574,7 +574,7 @@ test "archive-backed validation matches byte validation" {
 
 ///|
 test "limited validation bounds findings and messages during production" {
-  let archive = @mbtzip.Archive::new()
+  let archive = @mbtzip.Archive()
   for index in 0..<12 {
     archive.add(
       "very-long-malformed-entry-name-\{index}-\\bad.xml",
@@ -754,7 +754,7 @@ test "garbage bytes and missing required parts are findings" {
   debug_inspect(
     @opc.validate_docx_package(b"not a zip at all"),
     content=(
-      #|["invalid ZIP archive: MissingEndOfCentral"]
+      #|["invalid ZIP archive: zip: end of central directory not found"]
     ),
   )
   debug_inspect(
@@ -782,12 +782,12 @@ test "the main part is found by following the officeDocument relationship" {
   let types =
     #|<?xml version="1.0"?>
     #|<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/custom/main.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/></Types>
-  let archive = @mbtzip.Archive::new()
+  let archive = @mbtzip.Archive()
   archive.add("[Content_Types].xml", utf8_bytes(types))
   archive.add("_rels/.rels", utf8_bytes(rels))
   archive.add("custom/main.xml", utf8_bytes(MINIMAL_DOCUMENT_XML))
   debug_inspect(
-    @opc.validate_docx_package(try! @mbtzip.write(archive)),
+    @opc.validate_docx_package(try! @mbtzip.write_preserving(archive)),
     content="[]",
   )
   // A dangling officeDocument relationship is a finding.
@@ -1212,13 +1212,13 @@ test "malformed entry names are findings" {
 
 ///|
 test "duplicate names and CRC corruption are findings" {
-  let archive = @mbtzip.Archive::new()
+  let archive = @mbtzip.Archive()
   archive.add("[Content_Types].xml", utf8_bytes(MINIMAL_CONTENT_TYPES_XML))
   archive.add("_rels/.rels", utf8_bytes(MINIMAL_ROOT_RELS_XML))
   archive.add("word/document.xml", utf8_bytes(MINIMAL_DOCUMENT_XML))
   archive.add("word/document.xml", utf8_bytes(MINIMAL_DOCUMENT_XML))
   debug_inspect(
-    @opc.validate_docx_package(try! @mbtzip.write(archive)),
+    @opc.validate_docx_package(try! @mbtzip.write_preserving(archive)),
     content=(
       #|["duplicate entry name: word/document.xml"]
     ),
@@ -1226,7 +1226,11 @@ test "duplicate names and CRC corruption are findings" {
   // Flip one byte of the stored (uncompressed) document payload: inflation
   // tolerates it, the stored CRC exposes it. This is the exact corruption
   // class that slipped through review fixtures before (issue #76).
-  let bytes = minimal_docx().to_array()
+  let stored = @mbtzip.Archive()
+  for entry in @mbtzip.read(minimal_docx()).entries() {
+    stored.add(entry.name(), entry.data(), compression=Store)
+  }
+  let bytes = @mbtzip.write_preserving(stored).to_array()
   let marker = utf8_bytes("<w:t>hi</w:t>")
   let mut at = -1
   let haystack = Bytes::from_array(bytes)
@@ -1248,7 +1252,7 @@ test "duplicate names and CRC corruption are findings" {
 
 ///|
 test "archive validation polls cancellation inside long CRC verification" {
-  let archive = @mbtzip.Archive::new()
+  let archive = @mbtzip.Archive()
   archive.add("padding.bin", Bytes::make(16 * 1024, b'x'))
   let checks = [0]
   let report = @opc.validate_docx_archive_report_limited(

@@ -1,7 +1,7 @@
 ///|
 fn sdk_rewrite_content_types(data : BytesView, marker : String) -> Bytes raise {
   let source = @zip.read(data)
-  let result = @zip.Archive::new()
+  let result = @zip.Archive()
   let mut replaced = false
   for entry in source.entries() {
     let payload = if entry.name() == "[Content_Types].xml" {
@@ -25,7 +25,7 @@ fn sdk_rewrite_content_types(data : BytesView, marker : String) -> Bytes raise {
   if !replaced {
     fail("fixture did not contain [Content_Types].xml")
   }
-  @zip.write(result)
+  @zip.write_preserving(result)
 }
 
 ///|

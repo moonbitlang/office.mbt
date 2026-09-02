@@ -126,7 +126,7 @@ async test "save_as sets workbook content type by extension" {
       err => fail("read file failed: \{err}")
     }
     let archive = @zip.read(data.binary()) catch {
-      err => fail("zip read failed: \{repr(err)}")
+      ZipError(_, message) => fail("zip read failed: \{message}")
     }
     match archive.get("[Content_Types].xml") {
       Some(value) =>
@@ -158,7 +158,7 @@ async test "save_as sets workbook content type by extension" {
       err => fail("read file failed: \{err}")
     }
     let archive = @zip.read(data.binary()) catch {
-      err => fail("zip read failed: \{repr(err)}")
+      ZipError(_, message) => fail("zip read failed: \{message}")
     }
     match archive.get("[Content_Types].xml") {
       Some(value) =>
@@ -184,7 +184,7 @@ async test "save_as sets workbook content type by extension" {
       err => fail("read file failed: \{err}")
     }
     let archive = @zip.read(data.binary()) catch {
-      err => fail("zip read failed: \{repr(err)}")
+      ZipError(_, message) => fail("zip read failed: \{message}")
     }
     match archive.get("[Content_Types].xml") {
       Some(value) =>
@@ -216,7 +216,7 @@ async test "save_as sets workbook content type by extension" {
       err => fail("read file failed: \{err}")
     }
     let archive = @zip.read(data.binary()) catch {
-      err => fail("zip read failed: \{repr(err)}")
+      ZipError(_, message) => fail("zip read failed: \{message}")
     }
     match archive.get("[Content_Types].xml") {
       Some(value) =>
@@ -344,7 +344,7 @@ test "custom zip writer used" {
   let called = @ref.new(false)
   workbook.set_zip_writer(archive => {
     called.val = true
-    @zip.write(archive)
+    @zip.write_preserving(archive)
   })
   let bytes = workbook.write_to_buffer()
   guard called.val else { fail("zip writer was not called") }

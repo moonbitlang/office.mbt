@@ -53,6 +53,18 @@ fn transaction_splice_peak_working_bytes(materialized_bytes : Int64) -> Int64 {
 }
 
 ///|
+fn zip_limit_kind_name(kind : @zip.LimitKind) -> String {
+  match kind {
+    PackageBytes => "package_bytes"
+    Entries => "entry_count"
+    EntryUncompressedBytes => "entry_uncompressed_bytes"
+    TotalUncompressedBytes => "total_uncompressed_bytes"
+    PreservedSourceBytes => "total_preserved_source_bytes"
+    OutputBytes => "output_bytes"
+  }
+}
+
+///|
 /// Before inflation, reserve the source buffer, copied local/central records,
 /// decoded names, and bounded entry/runtime bookkeeping. The post-read check
 /// replaces this conservative preflight with `Archive::retained_size_estimate`.
@@ -679,24 +691,29 @@ fn read_transaction_archive(
   } else {
     transaction_max_total_uncompressed_bytes
   }
-  let archive = @zip.read_limited(
+  let archive = @zip.read(
     bytes,
-    max_package_bytes=transaction_max_package_bytes,
-    max_entries=transaction_max_archive_entries,
-    max_entry_uncompressed_bytes=transaction_max_entry_uncompressed_bytes,
-    max_total_uncompressed_bytes=aggregate_limit,
-    max_total_preserved_source_bytes=transaction_max_total_preserved_source_bytes,
+    limits=@zip.ReadLimits::default()
+      .with_package_limit(transaction_max_package_bytes)
+      .with_entries_limit(transaction_max_archive_entries)
+      .with_entry_limit(transaction_max_entry_uncompressed_bytes)
+      .with_total_limit(aggregate_limit)
+      .with_preserved_source_limit(transaction_max_total_preserved_source_bytes),
   ) catch {
-    ResourceLimitExceeded(kind~, limit=_, actual~) if kind ==
-      "total_uncompressed_bytes" &&
-      aggregate_limit < transaction_max_total_uncompressed_bytes =>
+    ZipError(LimitExceeded(TotalUncompressedBytes, _limit, actual), _) if aggregate_limit <
+      transaction_max_total_uncompressed_bytes =>
       raise live_materialization_error(
         phase,
         live_limit,
         retained + preflight_overhead + actual.to_int64(),
       )
-    ResourceLimitExceeded(kind~, limit~, actual~) =>
-      raise resource_limit_error(phase, kind, limit, actual)
+    ZipError(LimitExceeded(kind, limit, actual), _) =>
+      raise resource_limit_error(
+        phase,
+        zip_limit_kind_name(kind),
+        limit,
+        actual,
+      )
     _ =>
       raise transaction_error(
         invalid_code,
@@ -734,7 +751,7 @@ fn identify_input(
   let custom_format = match identifier {
     Some(identifier) =>
       Some(
-        identifier.run(options.input_path, original, archive.fork()) catch {
+        identifier.run(options.input_path, original, archive.clone()) catch {
           TransactionError(..) as error =>
             raise normalize_transaction_error(
               error, "office.transaction.invalid_input", "custom transaction identifier raised an invalid error",
@@ -863,7 +880,7 @@ fn validate_candidate(
       let candidate_format = identifier.run(
         validation_path,
         mutation.bytes,
-        archive.fork(),
+        archive.clone(),
       ) catch {
         TransactionError(..) as error =>
           raise normalize_transaction_error(
@@ -920,7 +937,7 @@ fn validate_candidate(
     )
   }
   for validator in validators {
-    let findings = validator.run(format, mutation.bytes, archive.fork()) catch {
+    let findings = validator.run(format, mutation.bytes, archive.clone()) catch {
       TransactionError(..) as error =>
         raise normalize_transaction_error(
           error, "office.transaction.validation_failed", "validator raised an invalid transaction error",
@@ -1280,7 +1297,7 @@ async fn transact_with_identifier_and_faults(
   let budget = transaction_mutation_budget(
     mutation_retained, materialization_limit, materialization_reserve,
   )
-  let mutation = mutate(format, original, original_archive.fork(), budget) catch {
+  let mutation = mutate(format, original, original_archive.clone(), budget) catch {
     TransactionError(..) as error => raise normalize_mutation_error(error)
     error =>
       raise transaction_error(

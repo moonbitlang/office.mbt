@@ -116,6 +116,36 @@ const DEFAULT_MAX_ZIP_TOTAL_ENTRY_NAME_CHARS : Int = 4 * 1024 * 1024
 const MAX_OPC_CENTRAL_DIRECTORY_FILE_HEADER_BYTES : Int = 65_535
 
 ///|
+fn zip_error_message(error : @mbtzip.ZipError) -> String {
+  match error {
+    ZipError(_, msg) => msg
+  }
+}
+
+///|
+fn zip_limit_kind_name(kind : @mbtzip.LimitKind) -> String {
+  match kind {
+    PackageBytes => "package_bytes"
+    Entries => "entry_count"
+    EntryUncompressedBytes => "entry_uncompressed_bytes"
+    TotalUncompressedBytes => "total_uncompressed_bytes"
+    PreservedSourceBytes => "total_preserved_source_bytes"
+    OutputBytes => "output_bytes"
+  }
+}
+
+///|
+/// Size of an entry's OPC Central Directory File Header excluding the four-byte
+/// ZIP signature (ECMA-376 Part 2 §7.3.6). Pristine entries report their exact
+/// preserved record; in-memory entries have no Extra/File Comment fields yet.
+fn entry_central_directory_file_header_size(entry : @mbtzip.Entry) -> Int {
+  match entry.raw_central_record() {
+    Some(record) => record.length() - 4
+    None => 42 + @utf8.encode(entry.name()).length()
+  }
+}
+
+///|
 const MAX_OPC_ZIP_ENTRY_NAME_BYTES_WITHOUT_METADATA : Int = 65_493
 
 ///|
@@ -633,37 +663,48 @@ pub fn validate_docx_package_report_limited(
     max_xml_token_chars,
     () => false,
   )
-  let archive = @mbtzip.read_limited(
+  let archive = @mbtzip.read(
     data,
-    max_package_bytes=if max_zip_package_bytes > 0 {
-      max_zip_package_bytes
-    } else {
-      0
-    },
-    max_entries=if max_zip_entries > 0 { max_zip_entries } else { 0 },
-    max_entry_uncompressed_bytes=if max_zip_entry_uncompressed_bytes > 0 {
-      max_zip_entry_uncompressed_bytes
-    } else {
-      0
-    },
-    max_total_uncompressed_bytes=if max_zip_total_uncompressed_bytes > 0 {
-      max_zip_total_uncompressed_bytes
-    } else {
-      0
-    },
-    max_total_preserved_source_bytes=if max_zip_total_preserved_source_bytes > 0 {
-      max_zip_total_preserved_source_bytes
-    } else {
-      0
-    },
+    limits=@mbtzip.ReadLimits::default()
+      .with_package_limit(
+        if max_zip_package_bytes > 0 {
+          max_zip_package_bytes
+        } else {
+          0
+        },
+      )
+      .with_entries_limit(if max_zip_entries > 0 { max_zip_entries } else { 0 })
+      .with_entry_limit(
+        if max_zip_entry_uncompressed_bytes > 0 {
+          max_zip_entry_uncompressed_bytes
+        } else {
+          0
+        },
+      )
+      .with_total_limit(
+        if max_zip_total_uncompressed_bytes > 0 {
+          max_zip_total_uncompressed_bytes
+        } else {
+          0
+        },
+      )
+      .with_preserved_source_limit(
+        if max_zip_total_preserved_source_bytes > 0 {
+          max_zip_total_preserved_source_bytes
+        } else {
+          0
+        },
+      ),
   ) catch {
-    ResourceLimitExceeded(kind~, limit=_, actual=_) as err => {
-      findings.mark_zip_resource_limit(kind)
-      findings.add("invalid ZIP archive: \{findings.text(repr(err))}")
+    ZipError(LimitExceeded(kind, _limit, _actual), _) => {
+      findings.mark_zip_resource_limit(zip_limit_kind_name(kind))
+      findings.add("invalid ZIP archive: resource limit exceeded")
       return findings.report()
     }
     err => {
-      findings.add("invalid ZIP archive: \{findings.text(repr(err))}")
+      findings.add(
+        "invalid ZIP archive: \{findings.text(zip_error_message(err))}",
+      )
       return findings.report()
     }
   }
@@ -759,7 +800,7 @@ fn validate_docx_archive_into(
     if !findings.consume_zip_entry_name(name) {
       return
     }
-    if entry.central_directory_file_header_size() >
+    if entry_central_directory_file_header_size(entry) >
       MAX_OPC_CENTRAL_DIRECTORY_FILE_HEADER_BYTES {
       findings.add(
         "central-directory file header exceeds the OPC \{MAX_OPC_CENTRAL_DIRECTORY_FILE_HEADER_BYTES}-byte limit: \{findings.text(name)}",
@@ -771,19 +812,16 @@ fn validate_docx_archive_into(
       seen.add(name)
     }
     let logical_name = check_entry_name(name, findings)
-    let actual_crc = @mbtzip.crc32_cancellable(
-      entry.data(),
-      cancelled=findings.cancelled,
-    ) catch {
-      ReadCancelled => {
+    let actual_crc = match
+      @flate_checksum.crc32_cancellable(
+        entry.data(),
+        cancelled=findings.cancelled,
+      ) {
+      None => {
         findings.stop()
         return
       }
-      _ => {
-        findings.add("entry CRC-32 verification failed: \{findings.text(name)}")
-        findings.stop()
-        return
-      }
+      Some(crc) => crc
     }
     if entry.crc32() != actual_crc {
       findings.add(

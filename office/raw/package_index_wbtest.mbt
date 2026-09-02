@@ -53,7 +53,7 @@ fn wb_raw_archive_limit_kind(run : () -> Unit raise RawError) -> String raise {
 
 ///|
 test "archive boundary checks serialized, entry, and aggregate limits" {
-  let count = @zip.Archive::new()
+  let count = @zip.Archive()
   count.add("a", b"")
   count.add("b", b"")
   count.add("c", b"")
@@ -64,7 +64,7 @@ test "archive boundary checks serialized, entry, and aggregate limits" {
     "entry_count",
   )
 
-  let entry = @zip.Archive::new()
+  let entry = @zip.Archive()
   entry.add("large", b"12345")
   assert_eq(
     wb_raw_archive_limit_kind(() => {
@@ -73,7 +73,7 @@ test "archive boundary checks serialized, entry, and aggregate limits" {
     "entry_uncompressed_bytes",
   )
 
-  let aggregate = @zip.Archive::new()
+  let aggregate = @zip.Archive()
   aggregate.add("left", b"123")
   aggregate.add("right", b"456")
   assert_eq(
@@ -83,61 +83,33 @@ test "archive boundary checks serialized, entry, and aggregate limits" {
     "total_uncompressed_bytes",
   )
 
-  let source_archive = @zip.Archive::new()
+  // `check_bounded_raw_archive_limits` re-checks content limits on any
+  // archive, bounded or not; the ZIP layer no longer tracks read provenance.
+  let source_archive = @zip.Archive()
   source_archive.add("bounded", b"x")
-  let source = @zip.write(source_archive)
-  let bounded = @zip.read_limited(
-    source,
-    max_package_bytes=source.length(),
-    max_entries=1,
-    max_entry_uncompressed_bytes=1,
-    max_total_uncompressed_bytes=1,
-    max_total_preserved_source_bytes=source.length(),
-  )
   assert_eq(
     wb_raw_archive_limit_kind(() => {
-      check_bounded_raw_archive_limits(
-        bounded,
-        source.length() - 1,
-        1,
-        1,
-        1,
-        source.length(),
-      )
+      check_bounded_raw_archive_limits(source_archive, 0, 1, 0, 0, 0)
     }),
-    "package_bytes",
+    "entry_uncompressed_bytes",
   )
-  let changed = bounded.fork()
+  let changed = source_archive.clone()
   assert_true(changed.replace("bounded", b"y"))
   assert_eq(
     wb_raw_archive_limit_kind(() => {
-      check_bounded_raw_archive_limits(
-        changed,
-        source.length(),
-        1,
-        1,
-        1,
-        source.length(),
-      )
+      check_bounded_raw_archive_limits(changed, 0, 1, 0, 0, 0)
     }),
-    "bounded_archive_source",
+    "entry_uncompressed_bytes",
   )
-  let unbounded = @zip.read(source)
+  let unbounded = @zip.read(@zip.write_preserving(source_archive))
   assert_eq(
     wb_raw_archive_limit_kind(() => {
-      check_bounded_raw_archive_limits(
-        unbounded,
-        source.length(),
-        1,
-        1,
-        1,
-        source.length(),
-      )
+      check_bounded_raw_archive_limits(unbounded, 0, 1, 0, 0, 0)
     }),
-    "bounded_archive_source",
+    "entry_uncompressed_bytes",
   )
 
-  let output = @zip.Archive::new()
+  let output = @zip.Archive()
   output.add("payload", b"candidate")
   assert_eq(
     wb_raw_archive_limit_kind(() => {

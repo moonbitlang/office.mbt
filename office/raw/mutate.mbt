@@ -429,8 +429,11 @@ fn write_raw_candidate_archive(
   } else {
     raw_max_package_bytes
   }
-  let bytes = @zip.write_limited(archive, max_output_bytes=enforced_limit) catch {
-    OutputLimitExceeded(limit~) =>
+  let bytes = @zip.write_preserving_limited(
+    archive,
+    max_output_bytes=enforced_limit,
+  ) catch {
+    ZipError(LimitExceeded(OutputBytes, limit, _), _) =>
       raise raw_error(
         "office.raw.resource_limit",
         "candidate package exceeds the \{limit}-byte limit",

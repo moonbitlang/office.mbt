@@ -167,10 +167,18 @@ pub fn open_zip_archive(
 }
 
 ///|
+fn zip_error_message(error : @mbtzip.ZipError) -> String {
+  match error {
+    ZipError(_, msg) => msg
+  }
+}
+
+///|
 /// Opens ZIP bytes into an in-memory archive.
 pub fn open_zip(data : BytesView) -> ZipArchive raise DocxError {
   let archive = @mbtzip.read(data) catch {
-    err => raise InvalidZip(message="invalid ZIP archive: \{repr(err)}")
+    err =>
+      raise InvalidZip(message="invalid ZIP archive: \{zip_error_message(err)}")
   }
   open_zip_archive(archive)
 }

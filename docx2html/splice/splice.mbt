@@ -147,6 +147,13 @@ pub fn SplicePlan::is_empty(self : SplicePlan) -> Bool {
 }
 
 ///|
+fn zip_error_message(error : @mbtzip.ZipError) -> String {
+  match error {
+    ZipError(_, msg) => msg
+  }
+}
+
+///|
 /// Pins an exact source payload for later stale-plan detection. Repeated pins
 /// are allowed only when their bytes are identical.
 pub fn SplicePlan::pin_part(
@@ -431,7 +438,7 @@ pub fn splice_docx(
   let archive = @mbtzip.read(original) catch {
     err =>
       raise InvalidZip(
-        message="could not read the original package: \{repr(err)}",
+        message="could not read the original package: \{zip_error_message(err)}",
       )
   }
   let output = build_spliced_archive(archive, plan, false, None)
@@ -441,9 +448,11 @@ pub fn splice_docx(
   if plan.is_empty() {
     return original.to_owned()
   }
-  @mbtzip.write(output) catch {
+  @mbtzip.write_preserving(output) catch {
     err =>
-      raise InvalidZip(message="could not repack the package: \{repr(err)}")
+      raise InvalidZip(
+        message="could not repack the package: \{zip_error_message(err)}",
+      )
   }
 }
 
@@ -462,13 +471,15 @@ pub fn splice_docx_archive(
     raise Unsupported(message="the splice output limit cannot be negative")
   }
   let output = build_spliced_archive(original, plan, require_pins, limits)
-  @mbtzip.write_limited(output, max_output_bytes~) catch {
-    OutputLimitExceeded(limit~) =>
+  @mbtzip.write_preserving_limited(output, max_output_bytes~) catch {
+    ZipError(LimitExceeded(OutputBytes, limit, _), _) =>
       raise Unsupported(
         message="the spliced package exceeds the output limit of \{limit} bytes",
       )
     err =>
-      raise InvalidZip(message="could not repack the package: \{repr(err)}")
+      raise InvalidZip(
+        message="could not repack the package: \{zip_error_message(err)}",
+      )
   }
 }
 
@@ -821,7 +832,7 @@ fn build_spliced_archive(
   for part in prepared {
     edited[part.name] = apply_prepared_span_edits(part, xml_budget)
   }
-  let output = archive.fork()
+  let output = archive.clone()
   for name, bytes in edited {
     if !output.replace(name, bytes) {
       raise Unsupported(

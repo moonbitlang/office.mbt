@@ -50,7 +50,6 @@ pub suberror XlsxError {
   UnsupportedEncryption(msg~ : String)
   UnsupportedFeature(msg~ : String)
   InvalidPackage(msg~ : String)
-  UnboundedArchive
   ReadCancelled
   ResourceLimitExceeded(kind~ : String, limit~ : Int, actual~ : Int)
 } derive(Debug)

@@ -4,9 +4,9 @@ package "bobzhang/office-lib/docx"
 import {
   "bobzhang/docx2html/batch",
   "bobzhang/docx2html/splice",
-  "bobzhang/mbtexcel/zip",
   "bobzhang/office-lib/template",
   "bobzhang/office-lib/transaction",
+  "moonbit-community/flate/zip",
   "moonbitlang/core/debug",
   "moonbitlang/core/ref",
 }

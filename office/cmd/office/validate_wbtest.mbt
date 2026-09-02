@@ -80,14 +80,14 @@ fn rebuild_package_part(
     Some(value) => @utf8.decode_lossy(value.data())
     None => fail("missing part: \{part}")
   }
-  let rebuilt = @zip.Archive::new()
+  let rebuilt = @zip.Archive()
   for entry in archive.entries() {
     if entry.name() != part {
       rebuilt.add(entry.name(), entry.data())
     }
   }
   rebuilt.add(part, @utf8.encode(transform(text)))
-  @zip.write(rebuilt)
+  @zip.write_preserving(rebuilt)
 }
 
 ///|

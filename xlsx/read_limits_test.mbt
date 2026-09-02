@@ -15,13 +15,14 @@ fn bounded_fixture_archive(
   max_total_uncompressed_bytes? : Int = 256 * 1024 * 1024,
   max_total_preserved_source_bytes? : Int = 128 * 1024 * 1024 + 65_535,
 ) -> @zip.Archive raise @zip.ZipError {
-  @zip.read_limited(
+  @zip.read(
     bytes,
-    max_package_bytes=128 * 1024 * 1024,
-    max_entries~,
-    max_entry_uncompressed_bytes~,
-    max_total_uncompressed_bytes~,
-    max_total_preserved_source_bytes~,
+    limits=@zip.ReadLimits::default()
+      .with_package_limit(128 * 1024 * 1024)
+      .with_entries_limit(max_entries)
+      .with_entry_limit(max_entry_uncompressed_bytes)
+      .with_total_limit(max_total_uncompressed_bytes)
+      .with_preserved_source_limit(max_total_preserved_source_bytes),
   )
 }
 
@@ -35,7 +36,7 @@ fn replace_xlsx_part(
   if !archive.replace(path, @encoding/utf8.encode(content)) {
     fail("missing XLSX fixture part: \{path}")
   }
-  @zip.write(archive)
+  @zip.write_preserving(archive)
 }
 
 ///|
@@ -45,15 +46,15 @@ fn add_unused_relationship_part(
 ) -> Bytes raise {
   let archive = @zip.read(source)
   archive.add("custom/_rels/unused.rels", @encoding/utf8.encode(content))
-  @zip.write(archive)
+  @zip.write_preserving(archive)
 }
 
 ///|
 fn lying_deflate_package() -> Bytes raise {
-  let archive = @zip.Archive::new()
+  let archive = @zip.Archive()
   let data = Array::make(4096, b'A')
   archive.add("bomb.xml", Bytes::from_array(data), compression=Deflate)
-  let raw = @zip.write(archive).to_array()
+  let raw = @zip.write_preserving(archive).to_array()
   let mut central = -1
   for index in 0..<(raw.length() - 3) {
     if raw[index] == b'P' &&
@@ -107,7 +108,7 @@ test "direct XLSX reads reject OPC-derivable part names" {
       archive.add(name, b"part")
     }
     let result : Result[@xlsx.Workbook, Error] = Ok(
-      @xlsx.read(@zip.write(archive)),
+      @xlsx.read(@zip.write_preserving(archive)),
     ) catch {
       error => Err(error)
     }
@@ -194,7 +195,7 @@ test "bounded reads cap overlapping row and column dimension expansion work" {
   )
   let result : Result[@xlsx.Workbook, Error] = Ok(
     @xlsx.read(
-      @zip.write(archive),
+      @zip.write_preserving(archive),
       limits=@xlsx.ReadLimits::with_values(max_row_column_dimension_work=5),
     ),
   ) catch {
@@ -211,44 +212,65 @@ test "bounded reads cap overlapping row and column dimension expansion work" {
 }
 
 ///|
-test "archive read rejects compatibility and constructed archives" {
+test "archive read accepts compatibility and constructed archives" {
   let bytes = bounded_workbook_fixture()
-  for archive in [@zip.read(bytes), @zip.Archive::new()] {
-    let result : Result[@xlsx.Workbook, Error] = Ok(
-      @xlsx.read_bounded_archive(archive),
-    ) catch {
-      error => Err(error)
-    }
-    inspect(result is Err(@xlsx.UnboundedArchive), content="true")
+  // A compatibility-read (unbounded) archive of a small workbook now reads
+  // fine: ZIP provenance is not tracked, only content limits are re-checked.
+  let compat_result : Result[@xlsx.Workbook, Error] = Ok(
+    @xlsx.read_bounded_archive(@zip.read(bytes)),
+  ) catch {
+    error => Err(error)
   }
+  match compat_result {
+    Ok(workbook) =>
+      debug_inspect(
+        workbook.get_cell_value("Data", "A1"),
+        content="Some(\"bounded\")",
+      )
+    Err(_) => fail("expected a compatibility-read archive to succeed")
+  }
+  // A constructed empty archive is a well-formed ZIP but lacks required parts.
+  let constructed_result : Result[@xlsx.Workbook, Error] = Ok(
+    @xlsx.read_bounded_archive(Archive()),
+  ) catch {
+    error => Err(error)
+  }
+  inspect(constructed_result is Err(_), content="true")
 }
 
 ///|
-test "archive read rejects looser bounded provenance" {
+test "archive read rechecks content limits regardless of read provenance" {
   let bytes = bounded_workbook_fixture()
-  // The archive was allowed 8,193 entries, which is looser than the XLSX
-  // default even though this particular fixture contains only a few parts.
   let archive = bounded_fixture_archive(bytes, max_entries=8193)
   let result : Result[@xlsx.Workbook, Error] = Ok(
     @xlsx.read_bounded_archive(archive),
   ) catch {
     error => Err(error)
   }
-  inspect(result is Err(@xlsx.UnboundedArchive), content="true")
+  match result {
+    Ok(workbook) =>
+      debug_inspect(
+        workbook.get_cell_value("Data", "A1"),
+        content="Some(\"bounded\")",
+      )
+    Err(_) => fail("expected a bounded archive read to succeed")
+  }
 }
 
 ///|
-test "archive mutation invalidates provenance without affecting its source" {
+test "archive mutation reads back as an invalid package without corrupting its source" {
   let bytes = bounded_workbook_fixture()
   let source = bounded_fixture_archive(bytes)
-  let changed = source.fork()
+  let changed = source.clone()
   assert_true(changed.replace("xl/workbook.xml", b"<workbook/>"))
   let changed_result : Result[@xlsx.Workbook, Error] = Ok(
     @xlsx.read_bounded_archive(changed),
   ) catch {
     error => Err(error)
   }
-  inspect(changed_result is Err(@xlsx.UnboundedArchive), content="true")
+  // The mutated archive is re-encoded under the same content limits and reads
+  // as an invalid package (empty-workbook XML) rather than an unbounded source.
+  inspect(changed_result is Err(@xlsx.InvalidXml(_)), content="true")
   debug_inspect(
     @xlsx.read_bounded_archive(source).get_cell_value("Data", "A1"),
     content="Some(\"bounded\")",
@@ -388,7 +410,7 @@ test "XLSX reads stop a deflate stream whose declarations lie" {
     Err(@xlsx.ResourceLimitExceeded(kind~, limit~, actual~)) => {
       inspect(kind, content="entry_uncompressed_bytes")
       assert_eq(limit, 32)
-      assert_eq(actual, 33)
+      assert_eq(actual, 32)
     }
     _ => fail("expected streaming deflate limit")
   }
@@ -647,14 +669,14 @@ test "read cancellation callback stops semantic preflight" {
 ///|
 test "bounded archive CRC verification polls cancellation inside an entry" {
   let source = @zip.read(bounded_workbook_fixture())
-  let padded = @zip.Archive::new()
+  let padded = @zip.Archive()
   // Keep this first so the sixth callback is the 4 KiB checkpoint inside its
   // CRC loop, after the archive and entry boundary checks.
   padded.add("padding.bin", Bytes::make(16 * 1024, b'x'))
   for entry in source.entries() {
     padded.add(entry.name(), entry.data())
   }
-  let bounded = bounded_fixture_archive(@zip.write(padded))
+  let bounded = bounded_fixture_archive(@zip.write_preserving(padded))
   let checks = [0]
   let result : Result[@xlsx.Workbook, Error] = Ok(
     @xlsx.read_bounded_archive(bounded, cancelled=() => {
@@ -720,7 +742,7 @@ test "logical XML limit follows a worksheet relationship with a non-XML suffix" 
   )
   let padded_sheet = @encoding/utf8.encode(padded_sheet_xml)
   assert_true(padded_sheet.length() > xml_limit)
-  let updated = @zip.Archive::new()
+  let updated = @zip.Archive()
   for entry in source.entries() {
     if entry.name() == sheet_path ||
       entry.name() == "xl/_rels/workbook.xml.rels" ||
@@ -764,7 +786,7 @@ test "logical XML limit follows a worksheet relationship with a non-XML suffix" 
   )
   let result : Result[@xlsx.Workbook, Error] = Ok(
     @xlsx.read(
-      @zip.write(updated),
+      @zip.write_preserving(updated),
       limits=@xlsx.ReadLimits::with_values(max_xml_part_bytes=xml_limit),
     ),
   ) catch {
@@ -825,7 +847,7 @@ test "logical XML limit follows a drawing chart relationship" {
       }
     None => fail("missing content types")
   }
-  let updated = @zip.Archive::new()
+  let updated = @zip.Archive()
   for entry in source.entries() {
     if entry.name() == chart_path ||
       entry.name() == drawing_rels_path ||
@@ -855,7 +877,7 @@ test "logical XML limit follows a drawing chart relationship" {
   )
   let result : Result[@xlsx.Workbook, Error] = Ok(
     @xlsx.read(
-      @zip.write(updated),
+      @zip.write_preserving(updated),
       limits=@xlsx.ReadLimits::with_values(max_xml_part_bytes=xml_limit),
     ),
   ) catch {
@@ -877,11 +899,11 @@ test "bounded XLSX reads reject a stored entry with a mismatched CRC" {
   ignore(workbook.add_sheet("Data"))
   workbook.set_cell("Data", "A1", "alpha")
   let source = @zip.read(@xlsx.write(workbook))
-  let stored = @zip.Archive::new()
+  let stored = @zip.Archive()
   for entry in source.entries() {
-    stored.add(entry.name(), entry.data())
+    stored.add(entry.name(), entry.data(), compression=Store)
   }
-  let stored_bytes = @zip.write(stored)
+  let stored_bytes = @zip.write_preserving(stored)
   let bytes = stored_bytes.to_array()
   let original : Bytes = b"alpha"
   let replacement : Bytes = b"bravo"

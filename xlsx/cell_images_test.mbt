@@ -45,7 +45,7 @@ fn inject_cell_images(base : Bytes, media : Bytes) -> Bytes raise {
   archive.add("xl/cellimages.xml", @encoding/utf8.encode(cellimages_xml))
   archive.add("xl/_rels/cellimages.xml.rels", @encoding/utf8.encode(rels_xml))
   archive.add("xl/media/cellimage1.png", media)
-  @zip.write(archive)
+  @zip.write_preserving(archive)
 }
 
 ///|

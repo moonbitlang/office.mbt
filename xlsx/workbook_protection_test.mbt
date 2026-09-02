@@ -9,7 +9,7 @@ test "workbook protection roundtrip" {
   workbook.protect_workbook(options=opts)
   let bytes = @xlsx.write(workbook)
   let archive = @zip.read(bytes) catch {
-    err => fail("zip read failed: \{repr(err)}")
+    ZipError(_, message) => fail("zip read failed: \{message}")
   }
   let workbook_xml = match archive.get("xl/workbook.xml") {
     Some(value) =>
@@ -63,7 +63,7 @@ test "workbook protection with explicit algorithm option" {
   workbook.protect_workbook(options=opts)
   let bytes = @xlsx.write(workbook)
   let archive = @zip.read(bytes) catch {
-    err => fail("zip read failed: \{repr(err)}")
+    ZipError(_, message) => fail("zip read failed: \{message}")
   }
   let workbook_xml = match archive.get("xl/workbook.xml") {
     Some(value) =>

@@ -129,7 +129,7 @@ fn parse_rich_value_images(
 
 ///|
 test "rich value image relationships use source-relative OPC resolution" {
-  let archive = @zip.Archive::new()
+  let archive = @zip.Archive()
   archive.add("xl/metadata.xml", b"<metadata/>")
   archive.add("xl/richData/rdrichvalue.xml", b"<rvData/>")
   archive.add(

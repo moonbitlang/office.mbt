@@ -248,7 +248,7 @@ async test "format transaction refuses a revision-tracking document" {
     )
     // Rewrite the fixture's settings to record revisions.
     let archive = @zip.read(@afs.read_file(input).binary())
-    let rebuilt = @zip.Archive::new()
+    let rebuilt = @zip.Archive()
     let mut settings_seen = false
     for entry in archive.entries() {
       let name = entry.name()
@@ -273,7 +273,7 @@ async test "format transaction refuses a revision-tracking document" {
     let tracked = directory + "/tracked.docx"
     @afs.write_file(
       tracked,
-      @zip.write(rebuilt),
+      @zip.write_preserving(rebuilt),
       create_mode=CreateNew,
       permission=0o600,
     )
@@ -311,7 +311,7 @@ async fn preflight_fixture(
 ) -> String {
   let source = edit_fixture(directory, name + "-source.docx", runs)
   let archive = @zip.read(@afs.read_file(source).binary())
-  let rebuilt = @zip.Archive::new()
+  let rebuilt = @zip.Archive()
   for entry in archive.entries() {
     let entry_name = entry.name()
     guard archive.get(entry_name) is Some(payload) else { continue }
@@ -347,7 +347,7 @@ async fn preflight_fixture(
   let path = directory + "/" + name + ".docx"
   @afs.write_file(
     path,
-    @zip.write(rebuilt),
+    @zip.write_preserving(rebuilt),
     create_mode=CreateNew,
     permission=0o600,
   )
@@ -753,7 +753,7 @@ async fn repackaged_fixture(
 ) -> String {
   let source = edit_fixture(directory, name + "-source.docx", runs)
   let archive = @zip.read(@afs.read_file(source).binary())
-  let rebuilt = @zip.Archive::new()
+  let rebuilt = @zip.Archive()
   for entry in archive.entries() {
     let old_name = entry.name()
     guard archive.get(old_name) is Some(payload) else { continue }
@@ -787,7 +787,7 @@ async fn repackaged_fixture(
   let path = directory + "/" + name + ".docx"
   @afs.write_file(
     path,
-    @zip.write(rebuilt),
+    @zip.write_preserving(rebuilt),
     create_mode=CreateNew,
     permission=0o600,
   )

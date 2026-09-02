@@ -2,8 +2,8 @@
 package "bobzhang/office-lib/transaction"
 
 import {
-  "bobzhang/mbtexcel/zip",
   "bobzhang/office-lib",
+  "moonbit-community/flate/zip",
   "moonbitlang/core/debug",
 }
 

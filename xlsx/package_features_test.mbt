@@ -38,7 +38,7 @@ test "package features: injected external-link part raises the flag through read
       "<externalLink xmlns=\"http://schemas.openxmlformats.org/spreadsheetml/2006/main\"/>",
     ),
   )
-  let tampered = @zip.write(archive)
+  let tampered = @zip.write_preserving(archive)
   let parsed = @xlsx.read(tampered)
   let features = parsed.package_features()
   assert_true(features.external_links)

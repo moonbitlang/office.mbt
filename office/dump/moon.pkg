@@ -20,7 +20,7 @@ import {
   "bobzhang/docx2html/docx",
   "bobzhang/mbtexcel/batch",
   "bobzhang/mbtexcel/xlsx",
-  "bobzhang/mbtexcel/zip",
+  "moonbit-community/flate/zip",
   "bobzhang/office-lib/dump",
 } for "test"
 

@@ -8,7 +8,7 @@ fn docx_bytes(
   numbering? : String,
   settings? : String,
 ) -> Bytes raise {
-  let archive = @zip.Archive::new()
+  let archive = @zip.Archive()
   let document = (
       #|<?xml version="1.0" encoding="UTF-8"?>
       #|<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:body>
@@ -64,7 +64,7 @@ fn docx_bytes(
     }
     None => ()
   }
-  @zip.write(archive)
+  @zip.write_preserving(archive)
 }
 
 ///|
@@ -341,9 +341,9 @@ test "tabs, line breaks and hyperlink runs contribute text" {
 
 ///|
 test "missing document part is reported, not panicked" {
-  let archive = @zip.Archive::new()
+  let archive = @zip.Archive()
   archive.add("word/styles.xml", b"<x/>")
-  let bytes = @zip.write(archive)
+  let bytes = @zip.write_preserving(archive)
   try @docx.read_docx(bytes) catch {
     err => inspect(err is @core.DocxError::MissingPart(..), content="true")
   } noraise {
@@ -1100,7 +1100,7 @@ test "a level's firstLine indent is read when there is no hanging" {
 /// A package with a header and footer part wired through _rels, which is
 /// how Word actually references them.
 fn docx_with_furniture(body : String) -> Bytes raise {
-  let archive = @zip.Archive::new()
+  let archive = @zip.Archive()
   let ns =
     #|xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"
   archive.add(
@@ -1140,7 +1140,7 @@ fn docx_with_furniture(body : String) -> Bytes raise {
       "><w:p><w:r><w:t>Page footer</w:t></w:r></w:p></w:ftr>",
     ),
   )
-  @zip.write(archive)
+  @zip.write_preserving(archive)
 }
 
 ///|
@@ -1241,7 +1241,7 @@ fn tiny_png() -> Bytes {
 
 ///|
 fn docx_with_image(drawing : String) -> Bytes raise {
-  let archive = @zip.Archive::new()
+  let archive = @zip.Archive()
   let ns =
     #|xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships" xmlns:wp="http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"
   archive.add(
@@ -1265,7 +1265,7 @@ fn docx_with_image(drawing : String) -> Bytes raise {
     ),
   )
   archive.add("word/media/pic.png", tiny_png())
-  @zip.write(archive)
+  @zip.write_preserving(archive)
 }
 
 ///|
@@ -1350,7 +1350,7 @@ fn docx_with_page_field(footer_body : String) -> Bytes raise {
     #|<w:sectPr><w:footerReference w:type="default" r:id="rF"/><w:pgMar w:top="1440" w:bottom="1440" w:left="1440" w:right="1440" w:header="720" w:footer="720"/></w:sectPr>
   let ns =
     #|xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"
-  let archive = @zip.Archive::new()
+  let archive = @zip.Archive()
   archive.add(
     "word/document.xml",
     @utf8.encode(
@@ -1377,7 +1377,7 @@ fn docx_with_page_field(footer_body : String) -> Bytes raise {
       "<?xml version=\"1.0\"?><w:ftr " + ns + ">" + footer_body + "</w:ftr>",
     ),
   )
-  @zip.write(archive)
+  @zip.write_preserving(archive)
 }
 
 ///|

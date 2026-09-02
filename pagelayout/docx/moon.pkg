@@ -1,7 +1,7 @@
 import {
   "bobzhang/docx2html/core",
   "bobzhang/docx2html/xml",
-  "bobzhang/mbtexcel/zip",
+  "moonbit-community/flate/zip",
   "bobzhang/pagelayout",
   "bobzhang/pagelayout/paginate",
   "bobzhang/pagelayout/paragraph",
@@ -12,7 +12,7 @@ import {
 
 import {
   "bobzhang/docx2html/core",
-  "bobzhang/mbtexcel/zip",
+  "moonbit-community/flate/zip",
   "moonbitlang/core/encoding/utf8",
   "bobzhang/pagelayout",
   "bobzhang/pagelayout/paginate",

@@ -13,7 +13,7 @@ fn corrupt_sheet1(bytes : Bytes, old : String, new : String) -> Bytes raise {
     fail("corruption target not found in sheet1.xml: \{old}")
   }
   let updated = sheet_xml.replace_all(old~, new~)
-  let rebuilt = @zip.Archive::new()
+  let rebuilt = @zip.Archive()
   for entry in archive.entries() {
     if entry.name() != part {
       rebuilt.add(
@@ -25,7 +25,7 @@ fn corrupt_sheet1(bytes : Bytes, old : String, new : String) -> Bytes raise {
     }
   }
   rebuilt.add(part, @encoding/utf8.encode(updated))
-  @zip.write(rebuilt)
+  @zip.write_preserving(rebuilt)
 }
 
 ///|
@@ -196,7 +196,7 @@ test "malformed defined name is rejected" {
   let workbook_xml = @encoding/utf8.decode(archive.get(part).unwrap())
   inspect(workbook_xml.contains("</definedName>"), content="true")
   let updated = workbook_xml.replace_all(old="</definedName>", new="")
-  let rebuilt = @zip.Archive::new()
+  let rebuilt = @zip.Archive()
   for entry in archive.entries() {
     if entry.name() != part {
       rebuilt.add(
@@ -208,5 +208,5 @@ test "malformed defined name is rejected" {
     }
   }
   rebuilt.add(part, @encoding/utf8.encode(updated))
-  expect_invalid_xml(@zip.write(rebuilt))
+  expect_invalid_xml(@zip.write_preserving(rebuilt))
 }

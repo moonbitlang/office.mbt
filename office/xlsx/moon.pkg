@@ -2,7 +2,7 @@ import {
   "bobzhang/mbtexcel" @excel,
   "bobzhang/mbtexcel/batch",
   "bobzhang/mbtexcel/xlsx" @engine,
-  "bobzhang/mbtexcel/zip",
+  "moonbit-community/flate/zip",
   "bobzhang/office-lib" @office,
   "bobzhang/office-lib/template",
   "bobzhang/office-lib/transaction",
@@ -12,7 +12,7 @@ import {
 
 import {
   "bobzhang/mbtexcel/xlsx" @engine,
-  "bobzhang/mbtexcel/zip",
+  "moonbit-community/flate/zip",
   "moonbitlang/async",
   "moonbitlang/async/fs" @afs,
   "moonbitlang/core/encoding/utf8",

@@ -10,7 +10,7 @@ import {
   "bobzhang/docx2html/style_map",
   "bobzhang/docx2html/xml",
   "bobzhang/docx2html/zip",
-  "bobzhang/mbtexcel/zip" @mbtzip,
+  "moonbit-community/flate/zip" @mbtzip,
   "moonbitlang/core/encoding/base64",
   "moonbitlang/core/encoding/utf8",
   "moonbitlang/core/sorted_map",

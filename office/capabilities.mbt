@@ -2501,7 +2501,7 @@ fn capability_fingerprint_source() -> String {
 ///|
 /// Returns the deterministic CRC-32 fingerprint of every registry declaration.
 pub fn capability_fingerprint() -> String {
-  let raw = @zip.crc32(@utf8.encode(capability_fingerprint_source())).to_string(
+  let raw = @flate_checksum.crc32(@utf8.encode(capability_fingerprint_source())).to_string(
     radix=16,
   )
   "crc32:" + "0".repeat(8 - raw.length()) + raw

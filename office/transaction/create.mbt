@@ -213,7 +213,7 @@ async fn transact_create_with_faults(
     format,
     policy.destination_target,
     b"",
-    @zip.Archive::new(),
+    Archive(),
     mutation,
     validators,
     identifier,

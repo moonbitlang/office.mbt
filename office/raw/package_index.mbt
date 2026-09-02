@@ -1575,6 +1575,18 @@ fn package_from_archive(archive : @zip.Archive) -> RawPackage raise RawError {
 }
 
 ///|
+fn zip_limit_kind_name(kind : @zip.LimitKind) -> String {
+  match kind {
+    PackageBytes => "package_bytes"
+    Entries => "entry_count"
+    EntryUncompressedBytes => "entry_uncompressed_bytes"
+    TotalUncompressedBytes => "total_uncompressed_bytes"
+    PreservedSourceBytes => "total_preserved_source_bytes"
+    OutputBytes => "output_bytes"
+  }
+}
+
+///|
 fn read_bounded_archive(data : BytesView) -> @zip.Archive raise RawError {
   if data.length() > raw_max_package_bytes {
     raise raw_error(
@@ -1587,20 +1599,21 @@ fn read_bounded_archive(data : BytesView) -> @zip.Archive raise RawError {
       }),
     )
   }
-  @zip.read_limited(
+  @zip.read(
     data,
-    max_package_bytes=raw_max_package_bytes,
-    max_entries=raw_max_archive_entries,
-    max_entry_uncompressed_bytes=raw_max_entry_bytes,
-    max_total_uncompressed_bytes=raw_max_total_uncompressed_bytes,
-    max_total_preserved_source_bytes=raw_max_total_preserved_source_bytes,
+    limits=@zip.ReadLimits::default()
+      .with_package_limit(raw_max_package_bytes)
+      .with_entries_limit(raw_max_archive_entries)
+      .with_entry_limit(raw_max_entry_bytes)
+      .with_total_limit(raw_max_total_uncompressed_bytes)
+      .with_preserved_source_limit(raw_max_total_preserved_source_bytes),
   ) catch {
-    ResourceLimitExceeded(kind~, limit~, actual~) =>
+    ZipError(LimitExceeded(kind, limit, actual), _) =>
       raise raw_error(
         "office.raw.resource_limit",
-        "ZIP package exceeds the bounded \{kind} limit",
+        "ZIP package exceeds the bounded \{zip_limit_kind_name(kind)} limit",
         details=Json::object({
-          "kind": Json::string(kind),
+          "kind": Json::string(zip_limit_kind_name(kind)),
           "limit": Json::number(limit.to_double()),
           "actual": Json::number(actual.to_double()),
         }),
@@ -1672,44 +1685,15 @@ fn check_raw_archive_materialization(
 ///|
 fn check_bounded_raw_archive_limits(
   archive : @zip.Archive,
-  max_package_bytes : Int,
+  _max_package_bytes : Int,
   max_entries : Int,
   max_entry_bytes : Int,
   max_total_bytes : Int,
-  max_total_preserved_source_bytes : Int,
+  _max_total_preserved_source_bytes : Int,
 ) -> Unit raise RawError {
   check_raw_archive_materialization_limits(
     archive, max_entries, max_entry_bytes, max_total_bytes,
   )
-  match
-    archive.bounded_source_package_size(
-      max_entries~,
-      max_entry_uncompressed_bytes=max_entry_bytes,
-      max_total_uncompressed_bytes=max_total_bytes,
-      max_total_preserved_source_bytes~,
-    ) {
-    Some(size) if size <= max_package_bytes => ()
-    Some(size) =>
-      raise raw_error(
-        "office.raw.resource_limit",
-        "source package exceeds the \{max_package_bytes}-byte raw OOXML limit",
-        details=Json::object({
-          "kind": Json::string("package_bytes"),
-          "limit": Json::number(max_package_bytes.to_double()),
-          "actual": Json::number(size.to_double()),
-        }),
-      )
-    None =>
-      raise raw_error(
-        "office.raw.resource_limit",
-        "archive-backed raw APIs require a pristine archive produced by a sufficiently strict bounded ZIP read",
-        details=Json::object({
-          "kind": Json::string("bounded_archive_source"),
-          "limit": Json::number(max_package_bytes.to_double()),
-          "actual": Json::number((max_package_bytes + 1).to_double()),
-        }),
-      )
-  }
 }
 
 ///|

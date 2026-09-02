@@ -183,7 +183,7 @@ fn source_fingerprints(archive : @zip.Archive) -> Array[DocxPartFingerprint] {
     result.push({
       part: entry.name(),
       byte_length: entry.data().length(),
-      crc32: @zip.crc32(entry.data()),
+      crc32: @flate_checksum.crc32(entry.data()),
     })
   }
   result.sort_by(fn(left, right) { left.part.compare(right.part) })
@@ -199,7 +199,7 @@ fn open_edit_session(
   archive : @zip.Archive,
   budget : @transaction.TransactionBudget,
 ) -> DocxEditSession raise @transaction.TransactionError {
-  let archive = archive.fork()
+  let archive = archive.clone()
   let validation = @opc.validate_docx_archive_report_limited(
     archive,
     max_findings=budget.max_validation_findings(),

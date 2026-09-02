@@ -287,7 +287,7 @@ test "custom chart frame metadata prevents lossy chart op emission" {
   )
   assert_false(customized == drawing)
   assert_true(archive.replace(drawing_path, @utf8.encode(customized)))
-  let file_backed = @xlsx.read(@zip.write(archive))
+  let file_backed = @xlsx.read(@zip.write_preserving(archive))
   guard file_backed.sheet("Data") is Some(sheet) else { fail("missing Data") }
   assert_false(sheet.charts()[0].drawing_frame_is_canonical())
   let envelope = @dump.dump_xlsx_workbook(
@@ -329,7 +329,7 @@ test "unmodeled chart frame content prevents lossy chart op emission" {
     let customized = drawing.replace(old~, new=replacement)
     assert_false(customized == drawing)
     assert_true(archive.replace(drawing_path, @utf8.encode(customized)))
-    let file_backed = @xlsx.read(@zip.write(archive))
+    let file_backed = @xlsx.read(@zip.write_preserving(archive))
     guard file_backed.sheet("Data") is Some(sheet) else { fail("missing Data") }
     assert_false(sheet.charts()[0].drawing_frame_is_canonical())
     let envelope = @dump.dump_xlsx_workbook(

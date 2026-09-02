@@ -115,7 +115,7 @@ test "update linked value removes an explicit empty formula cache" {
       ),
     ),
   )
-  let workbook = @xlsx.read(@zip.write(archive))
+  let workbook = @xlsx.read(@zip.write_preserving(archive))
   guard workbook.sheet("Sheet1") is Some(sheet) &&
     sheet.get_cell_formula_info_rc(1, 1) is Some(before) else {
     fail("expected explicit empty formula cache")

@@ -98,7 +98,7 @@ test "chart sheet MCE selects the supported drawing fallback" {
   )
   assert_true(with_bad != rels)
   assert_true(archive.replace(rels_path, @encoding/utf8.encode(with_bad)))
-  let parsed = @xlsx.read(@zip.write(archive))
+  let parsed = @xlsx.read(@zip.write_preserving(archive))
   assert_eq(parsed.chart_sheets().length(), 2)
   assert_true(parsed.chart_sheets()[0].chart_xml().contains("GOOD"))
   assert_false(parsed.chart_sheets()[0].chart_xml().contains(">BAD<"))

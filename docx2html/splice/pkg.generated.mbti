@@ -3,7 +3,7 @@ package "bobzhang/docx2html/splice"
 
 import {
   "bobzhang/docx2html/core",
-  "bobzhang/mbtexcel/zip",
+  "moonbit-community/flate/zip",
 }
 
 // Values

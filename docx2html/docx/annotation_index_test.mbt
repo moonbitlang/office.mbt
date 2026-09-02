@@ -328,7 +328,7 @@ fn referenced_story_fixture(
       ),
     ),
   )
-  try! @mbtzip.write(archive)
+  try! @mbtzip.write_preserving(archive)
 }
 
 ///|
@@ -374,7 +374,7 @@ fn with_main_relationship(
   } else {
     archive.add("word/_rels/document.xml.rels", @utf8.encode(updated))
   }
-  try! @mbtzip.write(archive)
+  try! @mbtzip.write_preserving(archive)
 }
 
 ///|
@@ -1703,7 +1703,7 @@ test "comment resolution chooses an unshadowed namespace and preserves prefixed 
   assert_true(
     archive.replace("[Content_Types].xml", @utf8.encode(content_types)),
   )
-  let source = @mbtzip.write(archive)
+  let source = @mbtzip.write_preserving(archive)
   let annotated = @docx.read_docx_annotated(source)
   let plan = @docx.plan_comment_resolution(
     annotated,
@@ -1733,7 +1733,7 @@ test "comment resolution chooses an unshadowed namespace and preserves prefixed 
   assert_true(
     types_text.contains("<ct:Override PartName=\"/word/commentsExtended.xml\""),
   )
-  let verified = @docx.read_docx_annotated(@mbtzip.write(result))
+  let verified = @docx.read_docx_annotated(@mbtzip.write_preserving(result))
   debug_inspect(
     verified.annotations().comments()[0].done(),
     content="Some(true)",
@@ -1773,7 +1773,9 @@ test "comment mutation preserves Unicode namespace prefixes" {
   assert_true(actual.contains("δ:paraId=\"ABCD0001\" δ:done=\"1\""))
   assert_false(actual.contains("Î"))
   debug_inspect(
-    @docx.read_docx_annotated(@mbtzip.write(result)).annotations().comments()[0].done(),
+    @docx.read_docx_annotated(@mbtzip.write_preserving(result))
+    .annotations()
+    .comments()[0].done(),
     content="Some(true)",
   )
 }
@@ -2212,7 +2214,7 @@ test "distinct commentsExtended relationship targets fail closed" {
   )
   assert_true(archive.replace("[Content_Types].xml", @utf8.encode(types)))
   archive.add("word/commentsExtended-2.xml", @utf8.encode(extended))
-  let ambiguous = try! @mbtzip.write(archive)
+  let ambiguous = try! @mbtzip.write_preserving(archive)
   try @docx.read_docx_annotated(ambiguous) catch {
     Unsupported(message~) =>
       inspect(

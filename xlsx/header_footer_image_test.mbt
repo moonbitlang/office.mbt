@@ -17,7 +17,7 @@ test "header footer image vml and rels" {
   )
   let bytes = @xlsx.write(workbook)
   let archive = @zip.read(bytes) catch {
-    err => fail("zip read failed: \{repr(err)}")
+    ZipError(_, message) => fail("zip read failed: \{message}")
   }
   let sheet_xml = match archive.get("xl/worksheets/sheet1.xml") {
     Some(value) =>
@@ -258,7 +258,7 @@ test "header footer vml merge preserves existing shapes" {
   )
   let bytes = @xlsx.write(workbook)
   let archive = @zip.read(bytes) catch {
-    err => fail("zip read failed: \{repr(err)}")
+    ZipError(_, message) => fail("zip read failed: \{message}")
   }
   let vml_xml = match archive.get("xl/drawings/vmlDrawing1.vml") {
     Some(value) =>
@@ -465,13 +465,13 @@ test "header footer image read: missing vml relationship errors" {
   )
   let bytes = @xlsx.write(workbook)
   let archive = @zip.read(bytes) catch {
-    err => fail("zip read failed: \{repr(err)}")
+    ZipError(_, message) => fail("zip read failed: \{message}")
   }
   let bad_rels =
     #|<?xml version="1.0" encoding="UTF-8"?>
     #|<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
     #|</Relationships>
-  let updated_archive = @zip.Archive::new()
+  let updated_archive = @zip.Archive()
   for entry in archive.entries() {
     if entry.name() != "xl/drawings/_rels/vmlDrawing1.vml.rels" {
       updated_archive.add(
@@ -486,8 +486,8 @@ test "header footer image read: missing vml relationship errors" {
     "xl/drawings/_rels/vmlDrawing1.vml.rels",
     @encoding/utf8.encode(bad_rels),
   )
-  let updated_bytes = @zip.write(updated_archive) catch {
-    err => fail("zip write failed: \{repr(err)}")
+  let updated_bytes = @zip.write_preserving(updated_archive) catch {
+    ZipError(_, message) => fail("zip write failed: \{message}")
   }
   let result : Result[@xlsx.Workbook, Error] = Ok(@xlsx.read(updated_bytes)) catch {
     e => Err(e)

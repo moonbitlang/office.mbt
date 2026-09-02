@@ -5,7 +5,7 @@ fn rewrite_content_types_fragment(
   replacement : String,
 ) -> Bytes raise {
   let source = @zip.read(data)
-  let result = @zip.Archive::new()
+  let result = @zip.Archive()
   let mut replaced = false
   for entry in source.entries() {
     let payload = if entry.name() == "[Content_Types].xml" {
@@ -29,7 +29,7 @@ fn rewrite_content_types_fragment(
   if !replaced {
     fail("fixture did not contain [Content_Types].xml")
   }
-  @zip.write(result)
+  @zip.write_preserving(result)
 }
 
 ///|
@@ -101,7 +101,7 @@ fn transaction_zip_eocd(bytes : Array[Byte]) -> Int raise {
 ///|
 fn transaction_zip_with_descriptors(data : BytesView) -> Bytes raise {
   let source = @zip.read(data)
-  let result = @zip.Archive::new()
+  let result = @zip.Archive()
   for entry in source.entries() {
     result.add(
       entry.name(),
@@ -110,7 +110,7 @@ fn transaction_zip_with_descriptors(data : BytesView) -> Bytes raise {
       data_descriptor=true,
     )
   }
-  @zip.write(result)
+  @zip.write_preserving(result)
 }
 
 ///|
@@ -119,7 +119,7 @@ fn transaction_zip_with_directories(
   names : Array[String],
 ) -> Bytes raise {
   let source = @zip.read(data)
-  let result = @zip.Archive::new()
+  let result = @zip.Archive()
   for name in names {
     result.add(name, b"")
   }
@@ -131,7 +131,7 @@ fn transaction_zip_with_directories(
       data_descriptor=entry.data_descriptor(),
     )
   }
-  @zip.write(result)
+  @zip.write_preserving(result)
 }
 
 ///|
@@ -482,9 +482,9 @@ async test "custom identifier format errors name the identifier boundary" {
 async test "custom identifier cannot replace portable input validation" {
   with_transaction_test_dir(directory => {
     let input = "\{directory}/input.docx"
-    let readable_zip = @zip.Archive::new()
+    let readable_zip = @zip.Archive()
     readable_zip.add("not-office.txt", b"readable zip")
-    write_test_file(input, @zip.write(readable_zip))
+    write_test_file(input, @zip.write_preserving(readable_zip))
     let identifier_calls = Ref(0)
     let mutated = Ref(false)
     let identifier = @transaction.transaction_identifier("custom-docx", (
@@ -519,9 +519,9 @@ async test "custom identifier cannot replace portable candidate validation" {
     let output = "\{directory}/output.docx"
     let original = @word.new_blank_docx()
     write_test_file(input, original)
-    let readable_zip = @zip.Archive::new()
+    let readable_zip = @zip.Archive()
     readable_zip.add("not-office.txt", b"readable zip")
-    let invalid_candidate = @zip.write(readable_zip)
+    let invalid_candidate = @zip.write_preserving(readable_zip)
     let identifier_calls = Ref(0)
     let identifier = @transaction.transaction_identifier("custom-docx", (
       _path,
@@ -1699,7 +1699,9 @@ async test "transaction rejects alternate ZIP interpretations before publication
         },
       )
     })
-    assert_eq(resource_code, "office.transaction.resource_limit_exceeded")
+    // flate rejects the lying declared size via central/local consistency
+    // verification (fail-closed) rather than a resource-limit classification.
+    assert_eq(resource_code, "office.transaction.validation_failed")
     assert_eq(@afs.read_file(input).binary(), original)
     assert_no_transaction_temp(directory)
   })

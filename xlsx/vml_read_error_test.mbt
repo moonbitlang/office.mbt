@@ -6,13 +6,13 @@ test "read: missing legacyDrawing vml relationship errors" {
   let bytes = @xlsx.write(workbook)
 
   let archive = @zip.read(bytes) catch {
-    err => fail("zip read failed: \{repr(err)}")
+    ZipError(_, message) => fail("zip read failed: \{message}")
   }
   let bad_rels =
     #|<?xml version="1.0" encoding="UTF-8"?>
     #|<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
     #|</Relationships>
-  let updated = @zip.Archive::new()
+  let updated = @zip.Archive()
   for entry in archive.entries() {
     if entry.name() != "xl/worksheets/_rels/sheet1.xml.rels" {
       updated.add(
@@ -27,8 +27,8 @@ test "read: missing legacyDrawing vml relationship errors" {
     "xl/worksheets/_rels/sheet1.xml.rels",
     @encoding/utf8.encode(bad_rels),
   )
-  let updated_bytes = @zip.write(updated) catch {
-    err => fail("zip write failed: \{repr(err)}")
+  let updated_bytes = @zip.write_preserving(updated) catch {
+    ZipError(_, message) => fail("zip write failed: \{message}")
   }
 
   let result : Result[@xlsx.Workbook, Error] = Ok(@xlsx.read(updated_bytes)) catch {
@@ -60,13 +60,13 @@ test "read: missing legacyDrawingHF vml relationship errors" {
   let bytes = @xlsx.write(workbook)
 
   let archive = @zip.read(bytes) catch {
-    err => fail("zip read failed: \{repr(err)}")
+    ZipError(_, message) => fail("zip read failed: \{message}")
   }
   let bad_rels =
     #|<?xml version="1.0" encoding="UTF-8"?>
     #|<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
     #|</Relationships>
-  let updated = @zip.Archive::new()
+  let updated = @zip.Archive()
   for entry in archive.entries() {
     if entry.name() != "xl/worksheets/_rels/sheet1.xml.rels" {
       updated.add(
@@ -81,8 +81,8 @@ test "read: missing legacyDrawingHF vml relationship errors" {
     "xl/worksheets/_rels/sheet1.xml.rels",
     @encoding/utf8.encode(bad_rels),
   )
-  let updated_bytes = @zip.write(updated) catch {
-    err => fail("zip write failed: \{repr(err)}")
+  let updated_bytes = @zip.write_preserving(updated) catch {
+    ZipError(_, message) => fail("zip write failed: \{message}")
   }
 
   let result : Result[@xlsx.Workbook, Error] = Ok(@xlsx.read(updated_bytes)) catch {
