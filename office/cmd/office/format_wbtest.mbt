@@ -161,9 +161,7 @@ test "format report reserve is measured and tight" {
     filler = filler + filler
   }
   let fitting : Json = Json::object({
-    "note": Json::string(
-      filler[:ceiling - reserve - 64].to_owned(),
-    ),
+    "note": Json::string(filler[:ceiling - reserve - 64].to_owned()),
   })
   ensure_format_report_budget(fitting, ceiling - reserve)
 }

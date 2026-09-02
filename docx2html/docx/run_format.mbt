@@ -66,11 +66,7 @@ pub fn docx_direct_format(
 ) -> DocxDirectFormat raise DocxError {
   let canonical_color : String? = match color {
     Some(raw) => {
-      let hex = if raw.has_prefix("#") {
-        raw[1:].to_owned()
-      } else {
-        raw
-      }
+      let hex = if raw.has_prefix("#") { raw[1:].to_owned() } else { raw }
       guard hex.length() == 6 else {
         raise Unsupported(
           message="format color is a six-digit RGB value (RRGGBB or #RRGGBB)",
@@ -251,10 +247,7 @@ fn split_qname(name : String) -> (String, String) {
   let units = name.code_units()
   for index in 0..<units.length() {
     if units[index].to_int() == ':'.to_int() {
-      return (
-        name[:index].to_owned(),
-        name[index + 1:].to_owned(),
-      )
+      return (name[:index].to_owned(), name[index + 1:].to_owned())
     }
   }
   ("", name)
@@ -569,9 +562,7 @@ fn validate_xml_name(name : String) -> Unit raise DocxError {
     validate_ncname_part(name)
   } else {
     validate_ncname_part(name[:colon].to_owned())
-    validate_ncname_part(
-      name[colon + 1:].to_owned(),
-    )
+    validate_ncname_part(name[colon + 1:].to_owned())
   }
 }
 
@@ -1088,7 +1079,9 @@ fn scan_extension_interior(
         message="run formatting refuses WML content (\{child.name}) inside an extension wrapper",
       )
     }
-    guard rpr_rank(local_name) is None && local_name != "rPr" && local_name != "rPrChange" else {
+    guard rpr_rank(local_name) is None &&
+      local_name != "rPr" &&
+      local_name != "rPrChange" else {
       raise Unsupported(
         message="run formatting refuses \{child.name} inside an extension wrapper: it may be a WML alias",
       )

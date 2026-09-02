@@ -224,10 +224,7 @@ async fn run_docx_find(matches : @argparse.Matches) -> Unit {
       // tree-unjoined carrier still has a scan path, which is all find
       // needs.
       let within = match within {
-        Some(scope) =>
-          Some(
-            resolve_find_para_id_scope(annotated, scope),
-          )
+        Some(scope) => Some(resolve_find_para_id_scope(annotated, scope))
         None => None
       }
       let found = @docx.find_docx_matches(

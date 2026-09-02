@@ -260,17 +260,19 @@ test "MCE rejects non-ignorable AlternateContent children and unsafe unwraps" {
 /// DEMANDS understanding is not one this application may quietly drop.
 test "MustUnderstand on an ignorable element still refuses" {
   let text = "<root xmlns:mc=\"http://schemas.openxmlformats.org/markup-compatibility/2006\" xmlns:w14=\"urn:example:w14\" mc:Ignorable=\"w14\"><w14:opaque mc:MustUnderstand=\"w14\"/></root>"
-  try @xml.read_xml_string_strict_mce_encoded_limited(
-    text,
-    Utf8,
-    @xml.xml_read_budget(
-      max_source_units=65536,
-      max_tokens=65536,
-      max_materialized_chars=1 << 20,
-      max_token_chars=65536,
-    ),
-    [],
-  ) catch {
+  try
+    @xml.read_xml_string_strict_mce_encoded_limited(
+      text,
+      Utf8,
+      @xml.xml_read_budget(
+        max_source_units=65536,
+        max_tokens=65536,
+        max_materialized_chars=1 << 20,
+        max_token_chars=65536,
+      ),
+      [],
+    )
+  catch {
     _ => ()
   } noraise {
     _ => fail("a demanded namespace is not quietly droppable")
@@ -278,17 +280,19 @@ test "MustUnderstand on an ignorable element still refuses" {
   // The same demand on an ignorable CHILD of an alternate is equally
   // binding.
   let child_text = "<root xmlns:mc=\"http://schemas.openxmlformats.org/markup-compatibility/2006\" xmlns:w14=\"urn:example:w14\" mc:Ignorable=\"w14\"><mc:AlternateContent><w14:extra mc:MustUnderstand=\"w14\"/><mc:Fallback/></mc:AlternateContent></root>"
-  try @xml.read_xml_string_strict_mce_encoded_limited(
-    child_text,
-    Utf8,
-    @xml.xml_read_budget(
-      max_source_units=65536,
-      max_tokens=65536,
-      max_materialized_chars=1 << 20,
-      max_token_chars=65536,
-    ),
-    [],
-  ) catch {
+  try
+    @xml.read_xml_string_strict_mce_encoded_limited(
+      child_text,
+      Utf8,
+      @xml.xml_read_budget(
+        max_source_units=65536,
+        max_tokens=65536,
+        max_materialized_chars=1 << 20,
+        max_token_chars=65536,
+      ),
+      [],
+    )
+  catch {
     _ => ()
   } noraise {
     _ => fail("a demanded alternate-content child is not quietly droppable")

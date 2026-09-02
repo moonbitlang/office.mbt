@@ -714,9 +714,7 @@ fn DocumentParts::build(
   let paragraph_style_ids : Array[String] = []
   for key, _info in styles {
     if key.has_prefix("paragraph:") {
-      paragraph_style_ids.push(
-        key[10:].to_owned(),
-      )
+      paragraph_style_ids.push(key[10:].to_owned())
     }
   }
   let numbering = match numbering_part {

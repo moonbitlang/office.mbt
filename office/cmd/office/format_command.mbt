@@ -168,12 +168,8 @@ fn format_range_option(
       ),
     )
   }
-  let start = decimal_prefix_value(
-    value[:colon].to_owned(),
-  )
-  let end = decimal_prefix_value(
-    value[colon + 1:].to_owned(),
-  )
+  let start = decimal_prefix_value(value[:colon].to_owned())
+  let end = decimal_prefix_value(value[colon + 1:].to_owned())
   guard start is Some(from) && end is Some(to) && from >= 0 && to > from else {
     raise CliFailure(
       @lib.protocol_error(
@@ -593,8 +589,7 @@ async fn run_format(matches : @argparse.Matches) -> Unit {
       // unit axis for the range to index into, and the contradiction
       // refuses before any file is read.
       let last_segment = match scope.rev_find("/") {
-        Some(slash) =>
-          scope[slash + 1:].to_owned()
+        Some(slash) => scope[slash + 1:].to_owned()
         None => scope
       }
       guard last_segment.has_prefix("p[") else {
