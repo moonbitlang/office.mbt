@@ -147,13 +147,6 @@ pub fn SplicePlan::is_empty(self : SplicePlan) -> Bool {
 }
 
 ///|
-fn zip_error_message(error : @mbtzip.ZipError) -> String {
-  match error {
-    ZipError(_, msg) => msg
-  }
-}
-
-///|
 /// Pins an exact source payload for later stale-plan detection. Repeated pins
 /// are allowed only when their bytes are identical.
 pub fn SplicePlan::pin_part(
@@ -436,9 +429,9 @@ pub fn splice_docx(
   plan : SplicePlan,
 ) -> Bytes raise @core.DocxError {
   let archive = @mbtzip.read(original) catch {
-    err =>
+    ZipError(_, msg) =>
       raise InvalidZip(
-        message="could not read the original package: \{zip_error_message(err)}",
+        message="could not read the original package: \{msg}",
       )
   }
   let output = build_spliced_archive(archive, plan, false, None)
@@ -449,9 +442,9 @@ pub fn splice_docx(
     return original.to_owned()
   }
   @mbtzip.write_preserving(output) catch {
-    err =>
+    ZipError(_, msg) =>
       raise InvalidZip(
-        message="could not repack the package: \{zip_error_message(err)}",
+        message="could not repack the package: \{msg}",
       )
   }
 }
@@ -476,9 +469,9 @@ pub fn splice_docx_archive(
       raise Unsupported(
         message="the spliced package exceeds the output limit of \{limit} bytes",
       )
-    err =>
+    ZipError(_, msg) =>
       raise InvalidZip(
-        message="could not repack the package: \{zip_error_message(err)}",
+        message="could not repack the package: \{msg}",
       )
   }
 }

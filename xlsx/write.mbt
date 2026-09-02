@@ -4163,7 +4163,7 @@ fn write_with_io(
             limit~,
             actual=bounded_actual_above_limit(limit),
           )
-        err => raise UnsupportedFeature(msg=zip_error_message(err))
+        ZipError(_, msg) => raise UnsupportedFeature(msg~)
       }
     None =>
       match io_context.zip_writer {
@@ -4173,7 +4173,7 @@ fn write_with_io(
           }
         None =>
           @zip.write_preserving(archive) catch {
-            err => raise UnsupportedFeature(msg=zip_error_message(err))
+            ZipError(_, msg) => raise UnsupportedFeature(msg~)
           }
       }
   }

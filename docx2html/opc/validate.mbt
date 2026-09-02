@@ -116,13 +116,6 @@ const DEFAULT_MAX_ZIP_TOTAL_ENTRY_NAME_CHARS : Int = 4 * 1024 * 1024
 const MAX_OPC_CENTRAL_DIRECTORY_FILE_HEADER_BYTES : Int = 65_535
 
 ///|
-fn zip_error_message(error : @mbtzip.ZipError) -> String {
-  match error {
-    ZipError(_, msg) => msg
-  }
-}
-
-///|
 fn zip_limit_kind_name(kind : @mbtzip.LimitKind) -> String {
   match kind {
     PackageBytes => "package_bytes"
@@ -701,9 +694,9 @@ pub fn validate_docx_package_report_limited(
       findings.add("invalid ZIP archive: resource limit exceeded")
       return findings.report()
     }
-    err => {
+    ZipError(_, msg) => {
       findings.add(
-        "invalid ZIP archive: \{findings.text(zip_error_message(err))}",
+        "invalid ZIP archive: \{findings.text(msg)}",
       )
       return findings.report()
     }

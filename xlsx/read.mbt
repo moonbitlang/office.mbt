@@ -3158,13 +3158,6 @@ fn enforce_archive_limits(
 }
 
 ///|
-fn zip_error_message(error : @zip.ZipError) -> String {
-  match error {
-    ZipError(_, msg) => msg
-  }
-}
-
-///|
 fn zip_limit_kind_name(kind : @zip.LimitKind) -> String {
   match kind {
     PackageBytes => "package_bytes"

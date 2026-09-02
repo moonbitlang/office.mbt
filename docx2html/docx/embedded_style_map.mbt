@@ -39,19 +39,12 @@ pub fn embed_style_map(
 }
 
 ///|
-fn zip_error_message(error : @mbtzip.ZipError) -> String {
-  match error {
-    ZipError(_, msg) => msg
-  }
-}
-
-///|
 fn unzip_write_entries(
   data : BytesView,
 ) -> Array[ZipWriteEntry] raise DocxError {
   let archive = @mbtzip.read(data) catch {
-    err =>
-      raise InvalidZip(message="invalid ZIP archive: \{zip_error_message(err)}")
+    ZipError(_, msg) =>
+      raise InvalidZip(message="invalid ZIP archive: \{msg}")
   }
   let entries : Array[ZipWriteEntry] = []
   for entry in archive.entries() {
@@ -94,9 +87,9 @@ fn zip_write_entries(entries : Array[ZipWriteEntry]) -> Bytes raise DocxError {
     archive.add(entry.path, entry.content, compression=Deflate)
   }
   @mbtzip.write_preserving(archive) catch {
-    err =>
+    ZipError(_, msg) =>
       raise InvalidZip(
-        message="failed to write ZIP archive: \{zip_error_message(err)}",
+        message="failed to write ZIP archive: \{msg}",
       )
   }
 }
