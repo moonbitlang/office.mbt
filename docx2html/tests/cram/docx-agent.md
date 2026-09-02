@@ -90,7 +90,7 @@ A file that is not a docx package fails with the program-name prefix:
 
 ```mooncram
 $ printf 'not a docx' > bad.docx; docx.exe outline bad.docx
-docx: invalid ZIP archive: MissingEndOfCentral
+docx: invalid ZIP archive: zip: end of central directory not found
 [1]
 ```
 
@@ -162,7 +162,7 @@ read command, this is a gate scripts can trust:
 
 ```mooncram
 $ printf 'garbage' > broken.docx; docx.exe validate broken.docx
-invalid ZIP archive: MissingEndOfCentral
+invalid ZIP archive: zip: end of central directory not found
 docx: invalid package: 1 finding(s)
 [1]
 ```
