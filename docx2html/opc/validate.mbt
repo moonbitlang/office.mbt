@@ -695,9 +695,7 @@ pub fn validate_docx_package_report_limited(
       return findings.report()
     }
     ZipError(_, msg) => {
-      findings.add(
-        "invalid ZIP archive: \{findings.text(msg)}",
-      )
+      findings.add("invalid ZIP archive: \{findings.text(msg)}")
       return findings.report()
     }
   }

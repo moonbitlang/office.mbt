@@ -430,9 +430,7 @@ pub fn splice_docx(
 ) -> Bytes raise @core.DocxError {
   let archive = @mbtzip.read(original) catch {
     ZipError(_, msg) =>
-      raise InvalidZip(
-        message="could not read the original package: \{msg}",
-      )
+      raise InvalidZip(message="could not read the original package: \{msg}")
   }
   let output = build_spliced_archive(archive, plan, false, None)
   // The byte API can preserve a true no-op exactly, including archive bytes
@@ -443,9 +441,7 @@ pub fn splice_docx(
   }
   @mbtzip.write_preserving(output) catch {
     ZipError(_, msg) =>
-      raise InvalidZip(
-        message="could not repack the package: \{msg}",
-      )
+      raise InvalidZip(message="could not repack the package: \{msg}")
   }
 }
 
@@ -470,9 +466,7 @@ pub fn splice_docx_archive(
         message="the spliced package exceeds the output limit of \{limit} bytes",
       )
     ZipError(_, msg) =>
-      raise InvalidZip(
-        message="could not repack the package: \{msg}",
-      )
+      raise InvalidZip(message="could not repack the package: \{msg}")
   }
 }
 

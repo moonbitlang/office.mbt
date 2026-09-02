@@ -495,16 +495,12 @@ fn PackageBuilder::build_internal(
             actual=limit.to_int64() + 1L,
           )
         ZipError(_, msg) =>
-          raise PackageBuildError(
-            "could not assemble the archive: \{msg}",
-          )
+          raise PackageBuildError("could not assemble the archive: \{msg}")
       }
     None =>
       @mbtzip.write_preserving(archive) catch {
         ZipError(_, msg) =>
-          raise PackageBuildError(
-            "could not assemble the archive: \{msg}",
-          )
+          raise PackageBuildError("could not assemble the archive: \{msg}")
       }
   }
 }
