@@ -96,18 +96,6 @@ pub fn DocxEditSession::queue_delete_paragraph(
 }
 
 ///|
-/// Count the DIRECT body paragraphs an anchor index answers for:
-/// probe p[1].. until a path stops resolving. Direct paths are dense
-/// ordinals, so the first gap is the count.
-fn direct_paragraph_count(anchors : @word.DocxParagraphAnchorIndex) -> Int {
-  let mut count = 0
-  while anchors.anchor_at("p[\{count + 1}]") is Some(_) {
-    count += 1
-  }
-  count
-}
-
-///|
 /// The deletion readback: on the candidate, the deleted unique
 /// identity appears NOWHERE in the story, the successor's identity
 /// answers at the deleted path, and the direct-paragraph count is
@@ -197,7 +185,16 @@ fn delete_readback_validator(
       }
       None => ()
     }
-    let count = direct_paragraph_count(anchors)
+    let count = @word.docx_direct_body_paragraph_count(annotated) catch {
+      _ => {
+        findings.push(
+          @transaction.validation_finding(
+            "docx.delete.readback_uncounted", "the candidate's direct paragraphs could not be counted",
+          ),
+        )
+        return findings
+      }
+    }
     if count != old_count - 1 {
       findings.push(
         @transaction.validation_finding(
@@ -234,13 +231,9 @@ pub async fn transact_docx_delete_paragraph(
   let transaction = transact_docx(
     options,
     session => {
-      let source_anchors = @word.docx_paragraph_anchor_index(
-        session.annotated,
-        session.annotated.main_story_source(),
-      ) catch {
+      let old_count = @word.docx_direct_body_paragraph_count(session.annotated) catch {
         error => raise mapped_plan_failure(error)
       }
-      let old_count = direct_paragraph_count(source_anchors)
       let receipt = session.queue_delete_paragraph(at~)
       match expect_text {
         Some(text) =>

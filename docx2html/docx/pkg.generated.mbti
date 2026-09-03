@@ -34,6 +34,8 @@ pub fn convert_to_html(BytesView, style_map? : Array[String], include_default_st
 
 pub fn convert_to_markdown(BytesView, style_map? : Array[String], include_default_style_map? : Bool, include_embedded_style_map? : Bool, ignore_empty_paragraphs? : Bool, id_prefix? : String, convert_image? : (@document.Image) -> @converter.ImageConversion, transform_document? : (@document.DocumentElement) -> @document.DocumentElement, external_file_access? : Bool, read_external_file? : (String) -> Bytes?) -> @core.ConversionResult raise @core.DocxError
 
+pub fn docx_direct_body_paragraph_count(DocxAnnotatedResult) -> Int raise @core.DocxError
+
 pub fn docx_direct_format(bold? : Bool, italic? : Bool, underline? : Bool, color? : String) -> DocxDirectFormat raise @core.DocxError
 
 pub fn docx_paragraph_anchor_index(DocxAnnotatedResult, DocxStoryPartSource) -> DocxParagraphAnchorIndex raise @core.DocxError

@@ -1291,7 +1291,7 @@ pub fn capability_commands() -> Array[CapabilityCommand] {
           "deleted", "object", true, "what left the document: path, para_id (canonical w14:paraId or null), paragraph_anchor_status, and the paragraph's full reader projection (bounded) — readback-verified GONE before publication",
         ),
         capability_field(
-          "successor_para_id", "string", false, "the stable identity now answering at the deleted path, null when the successor carries none — the re-anchor after ordinal paths shift",
+          "successor_para_id", "string", false, "the stable identity now answering at the deleted path, null when the successor carries no UNIQUE identity (absent, duplicated, or invalid ids all report null) — the re-anchor after ordinal paths shift",
         ),
         capability_field(
           "stories_scanned", "array(string)", true, "the stories searched; /body in v1",

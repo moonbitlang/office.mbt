@@ -114,18 +114,7 @@ fn ensure_delete_paragraph_report_budget(
 
 ///|
 async fn run_delete_paragraph(matches : @argparse.Matches) -> Unit {
-  for name in ["at", "expect-text"] {
-    match matches.values.get(name) {
-      Some(values) if values.length() > 1 =>
-        raise CliFailure(
-          @lib.protocol_error(
-            "office.invalid_arguments",
-            "--\{name} was given \{values.length()} times; pass each option once",
-          ),
-        )
-      _ => ()
-    }
-  }
+  reject_duplicate_scalar_options(matches, ["at", "expect-text"])
   let file = required_value(matches, "file")
   let output = required_value(matches, "out")
   let mode = office_validate_output_mode(matches)
@@ -158,24 +147,13 @@ async fn run_delete_paragraph(matches : @argparse.Matches) -> Unit {
   // refuses before any file is read. (The engine re-proves the ordinal
   // against the element tree; the snapshot resolves the stable form.)
   if at.has_prefix("p[id") {
-    guard at.has_prefix("p[id=\"") && at.has_suffix("\"]") && at.length() > 8 else {
+    guard docx_stable_target_shape_valid(at) else {
       raise CliFailure(
         @lib.protocol_error(
           "office.invalid_arguments",
           "--at '\{bounded_text(at, 80)}' is not the stable shape p[id=\"…\"]; pass the exact para_id spelling the read surfaces report",
         ),
       )
-    }
-    let inner = at.substring(start=6, end=at.length() - 2)
-    for ch in inner {
-      guard ch != '"' && ch != ']' else {
-        raise CliFailure(
-          @lib.protocol_error(
-            "office.invalid_arguments",
-            "--at '\{bounded_text(at, 80)}' is not the stable shape p[id=\"…\"]; pass the exact para_id spelling the read surfaces report",
-          ),
-        )
-      }
     }
   } else {
     guard format_scope_segment_kind(at) is Some("p") else {

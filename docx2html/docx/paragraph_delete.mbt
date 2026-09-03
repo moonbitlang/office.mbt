@@ -20,6 +20,7 @@ pub struct DocxDeleteReceipt {
 }
 
 ///|
+/// The direct body path this deletion removes.
 pub fn DocxDeleteReceipt::path(self : DocxDeleteReceipt) -> String {
   self.path
 }
@@ -32,6 +33,7 @@ pub fn DocxDeleteReceipt::para_id(self : DocxDeleteReceipt) -> String? {
 }
 
 ///|
+/// The target's anchor judgment in the planning snapshot.
 pub fn DocxDeleteReceipt::anchor_status(self : DocxDeleteReceipt) -> String {
   self.anchor_status
 }
@@ -53,42 +55,51 @@ pub fn DocxDeleteReceipt::successor_para_id(
 }
 
 ///|
-/// The subtree constructs a v1 deletion refuses, each because the
-/// delete would dangle or destroy document state OUTSIDE the paragraph:
-/// note references orphan definitions; comment machinery orphans
-/// definitions or unbalances ranges; bookmark markers unbalance ranges
-/// or dangle REF fields (the wholly-internal `_GoBack` cursor artifact
-/// alone is exempt — Word plants it everywhere and deletes it freely,
-/// and nothing targets it); `fldChar` pairs are document-order-global
-/// (`fldSimple` is self-contained and permitted); revision content is
-/// history this verb must not silently discard; drawings and objects
-/// need relationship and media surgery. `sectPr` is section layout for
-/// the whole preceding range.
-fn delete_blocked_construct(local_name : String) -> String? {
+/// The subtree hazards a v1 deletion refuses. The model is three
+/// MECHANICALLY CLOSED classes plus the paragraph's own structure —
+/// not a hand-copied vocabulary that rots as WML grows:
+///
+/// 1. REVISION SITES: the reader's own `is_revision_site_name`
+///    judges the whole tracked-revision family (moves, property
+///    changes, the eight customXml range markers included) — deletion
+///    must not silently discard history or unbalance a
+///    document-order-global revision range.
+/// 2. RELATIONSHIP REFERENCES: any element carrying an attribute in
+///    the OPC relationships namespace (r:id, r:embed, r:link, …) is
+///    judged by the scanner's resolved-URI flag — removing it
+///    mechanically touches relationship reachability (drawings,
+///    embedded objects, content parts, movies, anything future).
+///    `w:hyperlink` alone is exempt by design: the relationship a
+///    deleted hyperlink strands is an OPC-legal orphan, and
+///    hyperlink-bearing paragraphs are everyday content.
+/// 3. RANGE AND ANCHOR MACHINERY, enumerated closed by WML itself:
+///    note references (orphan definitions), comment machinery
+///    (orphan definitions, unbalanced ranges), range permissions
+///    (`permStart`/`permEnd` pair across paragraphs), split field
+///    boundaries (`fldChar` pairs are document-order-global;
+///    `fldSimple` is self-contained and permitted), and bookmark
+///    markers — judged as PAIRS by the caller, with the
+///    wholly-internal `_GoBack` cursor artifact alone exempt.
+///
+/// `sectPr` is section layout for the whole preceding range; a nested
+/// `p` means the reader tolerated a paragraph INSIDE the target, and
+/// deleting the physical span would remove more logical paragraphs
+/// than the receipt names. Constructs outside every class — plain
+/// formatting, text, `fldSimple`, ruby, smart tags — die wholly with
+/// the paragraph and dangle nothing.
+fn delete_blocked_construct(uri : String, local_name : String) -> String? {
+  if is_revision_site_name(uri, local_name) {
+    return Some("tracked-revision content")
+  }
   match local_name {
     "sectPr" => Some("a section break (w:sectPr)")
+    "p" => Some("a nested paragraph the reader tolerated")
     "footnoteReference" => Some("a footnote reference")
     "endnoteReference" => Some("an endnote reference")
     "commentReference" | "commentRangeStart" | "commentRangeEnd" =>
       Some("comment machinery")
+    "permStart" | "permEnd" => Some("a range-permission boundary")
     "fldChar" => Some("a split field boundary (w:fldChar)")
-    "ins"
-    | "del"
-    | "moveFrom"
-    | "moveTo"
-    | "moveFromRangeStart"
-    | "moveFromRangeEnd"
-    | "moveToRangeStart"
-    | "moveToRangeEnd"
-    | "rPrChange"
-    | "pPrChange"
-    | "sectPrChange"
-    | "tblPrChange"
-    | "trPrChange"
-    | "tcPrChange"
-    | "numberingChange"
-    | "cellIns"
-    | "cellDel" => Some("tracked-revision content")
     "drawing" | "object" | "pict" => Some("a drawing or embedded object")
     _ => None
   }
@@ -106,7 +117,7 @@ pub fn plan_docx_paragraph_deletion(
   annotated : DocxAnnotatedResult,
   at~ : String,
 ) -> (@splice.SplicePlan, DocxDeleteReceipt) raise DocxError {
-  guard insert_anchor_ordinal(at) is Some(_) else {
+  guard insert_anchor_ordinal(at) is Some(ordinal) else {
     raise Unsupported(
       message="delete-paragraph targets a direct body paragraph (p[N]); '\{at}' is not one",
     )
@@ -168,8 +179,14 @@ pub fn plan_docx_paragraph_deletion(
     }
     if element.byte_start >= span.byte_start() &&
       element.byte_end <= span.byte_end() {
+      if element.references_relationship &&
+        !(is_wml_uri(element.uri) && element.local_name == "hyperlink") {
+        raise Unsupported(
+          message="delete-paragraph target '\{at}' carries an element that references a package relationship; deleting it would touch relationship reachability, so this deletion refuses",
+        )
+      }
       if is_wml_uri(element.uri) {
-        match delete_blocked_construct(element.local_name) {
+        match delete_blocked_construct(element.uri, element.local_name) {
           Some(reason) =>
             raise Unsupported(
               message="delete-paragraph target '\{at}' carries \{reason}; deleting it would dangle or destroy document state outside the paragraph, so this deletion refuses",
@@ -177,17 +194,34 @@ pub fn plan_docx_paragraph_deletion(
           None => ()
         }
         if element.local_name == "bookmarkStart" {
-          let name = element.bookmark_name_raw.or("")
-          let id = element.bookmark_id_raw.or("")
-          guard name == "_GoBack" else {
+          // Only the _GoBack cursor artifact is deletable, and only
+          // with a REAL, unduplicated id: an absent or repeated id
+          // would let this start vouch for an end that balances some
+          // OTHER bookmark's range.
+          guard element.bookmark_name_raw is Some("_GoBack") else {
             raise Unsupported(
-              message="delete-paragraph target '\{at}' carries the bookmark '\{name}'; deleting it would dangle or destroy document state outside the paragraph, so this deletion refuses",
+              message="delete-paragraph target '\{at}' carries a named bookmark; deleting it would dangle or destroy document state outside the paragraph, so this deletion refuses",
             )
           }
-          bookmark_starts[id] = name
+          guard element.bookmark_id_raw is Some(id) && id != "" else {
+            raise Unsupported(
+              message="delete-paragraph target '\{at}' carries a bookmark marker without a usable id; the pairing cannot be judged, so this deletion refuses",
+            )
+          }
+          guard bookmark_starts.get(id) is None else {
+            raise Unsupported(
+              message="delete-paragraph target '\{at}' carries two bookmark starts sharing one id; the pairing cannot be judged, so this deletion refuses",
+            )
+          }
+          bookmark_starts[id] = "_GoBack"
         }
         if element.local_name == "bookmarkEnd" {
-          bookmark_ends.push(element.bookmark_id_raw.or(""))
+          guard element.bookmark_id_raw is Some(id) && id != "" else {
+            raise Unsupported(
+              message="delete-paragraph target '\{at}' carries a bookmark marker without a usable id; the pairing cannot be judged, so this deletion refuses",
+            )
+          }
+          bookmark_ends.push(id)
         }
       }
     } else if element.local_name == "p" &&
@@ -226,14 +260,21 @@ pub fn plan_docx_paragraph_deletion(
   }
   let story = annotated.main_story_source()
   let anchors = docx_paragraph_anchor_index(annotated, story)
-  let (para_id, anchor_status) = match anchors.anchor_at(at) {
-    Some(anchor) => {
-      let id = if anchor.status() == "unique" { anchor.para_id() } else { None }
-      (id, anchor.status())
-    }
-    None => (None, "unanchored")
+  // A path the anchor index tombstoned (a collided head, or the tail
+  // of a revision-joined paragraph) does not address exactly one
+  // whole logical paragraph — refuse rather than delete more or less
+  // than the receipt could name.
+  guard anchors.anchor_at(at) is Some(anchor) else {
+    raise Unsupported(
+      message="delete-paragraph target '\{at}' does not address exactly one whole paragraph in this document, so this deletion refuses",
+    )
   }
-  guard insert_anchor_ordinal(at) is Some(ordinal)
+  let para_id = if anchor.status() == "unique" {
+    anchor.para_id()
+  } else {
+    None
+  }
+  let anchor_status = anchor.status()
   let successor_para_id = match anchors.anchor_at("p[\{ordinal + 1}]") {
     Some(anchor) =>
       if anchor.status() == "unique" {
@@ -243,9 +284,10 @@ pub fn plan_docx_paragraph_deletion(
       }
     None => None
   }
-  let text = match docx_paragraph_projection(annotated, story, path=at) {
-    Some(projection_text) => projection_text
-    None => ""
+  guard docx_paragraph_projection(annotated, story, path=at) is Some(text) else {
+    raise Unsupported(
+      message="delete-paragraph target '\{at}' has no readable projection in this document, so this deletion refuses",
+    )
   }
   let plan = @splice.SplicePlan::new()
   plan.pin_part(part, bytes)
@@ -254,4 +296,34 @@ pub fn plan_docx_paragraph_deletion(
     @splice.span_edit(start=span.byte_start(), end=span.byte_end(), b""),
   )
   (plan, { path: at, para_id, anchor_status, text, successor_para_id, })
+}
+
+///|
+/// The number of DIRECT body paragraphs, counted on the element tree —
+/// the same proof surface the deletion planner trusts. Anchor-index
+/// probing undercounts when a collided or revision-joined path is
+/// tombstoned; the tree does not.
+pub fn docx_direct_body_paragraph_count(
+  annotated : DocxAnnotatedResult,
+) -> Int raise DocxError {
+  let part = annotated.main_story_part()
+  guard annotated.reader_projections.get(part) is Some(projection) else {
+    raise Unsupported(
+      message="counting direct paragraphs requires a mutation-safe read with a retained projection",
+    )
+  }
+  let elements = projection.scan.elements()
+  let mut count = 0
+  for element in elements {
+    if element.local_name == "p" && is_wml_uri(element.uri) {
+      let parent = element.parent_index
+      if parent >= 0 && parent < elements.length() {
+        let holder = elements[parent]
+        if holder.local_name == "body" && is_wml_uri(holder.uri) {
+          count += 1
+        }
+      }
+    }
+  }
+  count
 }

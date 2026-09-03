@@ -10,16 +10,20 @@ fn delete_fixture(body : String) -> @docx.DocxAnnotatedResult raise {
 
 ///|
 fn delete_refusal(body : String, at : String) -> String raise {
-  let annotated = delete_fixture(body)
+  delete_refusal_of(delete_fixture(body), at)
+}
+
+///|
+fn delete_refusal_of(
+  annotated : @docx.DocxAnnotatedResult,
+  at : String,
+) -> String raise {
   try {
     ignore(@docx.plan_docx_paragraph_deletion(annotated, at~))
     "<planned>"
   } catch {
-    error =>
-      match error {
-        @core.DocxError::Unsupported(message~) => message
-        other => raise other
-      }
+    Unsupported(message~) => message
+    other => raise other
   }
 }
 
@@ -121,7 +125,7 @@ test "deletion refusals are typed per construct" {
       "<w:p><w:bookmarkStart w:id=\"0\" w:name=\"b\"/><w:bookmarkEnd w:id=\"0\"/><w:r><w:t>x</w:t></w:r></w:p>" +
       keeper,
       "p[1]",
-    ).contains("the bookmark 'b'"),
+    ).contains("a named bookmark"),
   )
   assert_true(
     delete_refusal(
@@ -136,6 +140,58 @@ test "deletion refusals are typed per construct" {
       "<w:p><w:bookmarkEnd w:id=\"0\"/><w:r><w:t>keeper</w:t></w:r></w:p>",
       "p[2]",
     ).contains("start lies outside"),
+  )
+  // id-less and id-colliding bookmark markers cannot be pair-judged
+  assert_true(
+    delete_refusal(
+      "<w:p><w:bookmarkStart w:name=\"_GoBack\"/><w:bookmarkEnd w:id=\"0\"/><w:r><w:t>x</w:t></w:r></w:p>" +
+      keeper,
+      "p[1]",
+    ).contains("without a usable id"),
+  )
+  assert_true(
+    delete_refusal(
+      "<w:p><w:bookmarkStart w:id=\"0\" w:name=\"_GoBack\"/><w:bookmarkStart w:id=\"0\" w:name=\"_GoBack\"/><w:bookmarkEnd w:id=\"0\"/><w:bookmarkEnd w:id=\"0\"/><w:r><w:t>x</w:t></w:r></w:p>" +
+      keeper,
+      "p[1]",
+    ).contains("sharing one id"),
+  )
+  // range permissions pair across paragraphs
+  for construct in ["permStart", "permEnd"] {
+    assert_true(
+      delete_refusal(
+        "<w:p><w:\{construct} w:id=\"1\"/><w:r><w:t>x</w:t></w:r></w:p>" +
+        keeper,
+        "p[1]",
+      ).contains("range-permission boundary"),
+      msg="expected the permission refusal for \{construct}",
+    )
+  }
+  // the customXml revision range markers come from the reader's own
+  // vocabulary, not a hand copy
+  for
+    construct in [
+      "customXmlInsRangeStart", "customXmlInsRangeEnd", "customXmlDelRangeStart",
+      "customXmlDelRangeEnd", "customXmlMoveFromRangeStart", "customXmlMoveFromRangeEnd",
+      "customXmlMoveToRangeStart", "customXmlMoveToRangeEnd", "cellMerge", "tblGridChange",
+      "tblPrExChange",
+    ] {
+    assert_true(
+      delete_refusal(
+        "<w:p><w:r><w:t>x</w:t></w:r><w:\{construct}/></w:p>" + keeper,
+        "p[1]",
+      ).contains("tracked-revision content"),
+      msg="expected the revision refusal for \{construct}",
+    )
+  }
+  // a nested paragraph the reader tolerated: the physical span holds
+  // more logical paragraphs than the receipt could name
+  assert_true(
+    delete_refusal(
+      "<w:p><w:r><w:t>pre</w:t></w:r><w:p><w:r><w:t>inner</w:t></w:r></w:p></w:p>" +
+      keeper,
+      "p[1]",
+    ).contains("nested paragraph"),
   )
   let goback = delete_fixture(
     "<w:p><w:bookmarkStart w:id=\"0\" w:name=\"_GoBack\"/><w:bookmarkEnd w:id=\"0\"/><w:r><w:t>cursor</w:t></w:r></w:p>" +
@@ -208,26 +264,48 @@ test "deletion refuses a wrapped paragraph the path grammar flattens" {
   let annotated = delete_fixture(
     "<w:sdt><w:sdtContent><w:p><w:r><w:t>wrapped</w:t></w:r></w:p></w:sdtContent></w:sdt><w:p><w:r><w:t>keeper</w:t></w:r></w:p>",
   )
-  try {
-    ignore(@docx.plan_docx_paragraph_deletion(annotated, at="p[1]"))
-    fail("expected the direct-child refusal")
-  } catch {
-    error =>
-      match error {
-        @core.DocxError::Unsupported(message~) =>
-          assert_true(message.contains("DIRECT child of the body"))
-        other => raise other
-      }
-  }
+  assert_true(
+    delete_refusal_of(annotated, "p[1]").contains("DIRECT child of the body"),
+  )
 }
 
 ///|
-/// A hyperlink inside the paragraph deletes with it: the relationship
-/// it leaves behind is an OPC-legal orphan, not dangling state.
-test "deletion permits a hyperlink-bearing paragraph" {
-  let annotated = delete_fixture(
-    "<w:p><w:hyperlink><w:r><w:t>link</w:t></w:r></w:hyperlink></w:p><w:p><w:r><w:t>keeper</w:t></w:r></w:p>",
+/// The relationship-reference class is judged by resolved attribute
+/// URI, mechanically: any element carrying an `r:`-namespace attribute
+/// refuses — `w:contentPart`, or anything future — while a hyperlink
+/// (the one designed exemption) deletes with its OPC-legal orphan rel,
+/// and an `r`-PREFIXED attribute bound to some other namespace does
+/// not trigger the class.
+test "deletion judges relationship references by URI" {
+  let refusal = delete_refusal(
+    "<w:p xmlns:r=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships\"><w:r><w:contentPart r:id=\"rId9\"/></w:r></w:p><w:p><w:r><w:t>keeper</w:t></w:r></w:p>",
+    "p[1]",
   )
-  let (_, receipt) = @docx.plan_docx_paragraph_deletion(annotated, at="p[1]")
+  assert_true(refusal.contains("references a package relationship"))
+  let hyperlinked = delete_fixture(
+    "<w:p xmlns:r=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships\"><w:hyperlink r:id=\"rId5\"><w:r><w:t>link</w:t></w:r></w:hyperlink></w:p><w:p><w:r><w:t>keeper</w:t></w:r></w:p>",
+  )
+  let (_, receipt) = @docx.plan_docx_paragraph_deletion(hyperlinked, at="p[1]")
   assert_eq(receipt.text(), "link")
+  let masquerade = delete_fixture(
+    "<w:p xmlns:r=\"urn:example:not-relationships\"><w:r r:id=\"x\"><w:t>plain</w:t></w:r></w:p><w:p><w:r><w:t>keeper</w:t></w:r></w:p>",
+  )
+  let (_, receipt2) = @docx.plan_docx_paragraph_deletion(masquerade, at="p[1]")
+  assert_eq(receipt2.text(), "plain")
+}
+
+///|
+/// A collided or revision-joined path is tombstoned by the anchor
+/// index; the planner refuses it rather than delete more or less than
+/// the receipt names.
+test "deletion refuses a path that does not address one whole paragraph" {
+  // A revision-joined pair: the second physical paragraph's path is
+  // never claimed, so p[2] must refuse rather than resolve oddly.
+  let annotated = delete_fixture(
+    "<w:p w14:paraId=\"00000001\"><w:r><w:t>a</w:t></w:r></w:p><w:p><w:r><w:t>b</w:t></w:r></w:p><w:p><w:r><w:t>keeper</w:t></w:r></w:p>",
+  )
+  // Sanity: normal paths still plan.
+  ignore(@docx.plan_docx_paragraph_deletion(annotated, at="p[2]"))
+  // The tree count sees every direct paragraph, tombstones or not.
+  assert_eq(@docx.docx_direct_body_paragraph_count(annotated), 3)
 }

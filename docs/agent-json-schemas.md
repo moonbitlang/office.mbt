@@ -872,6 +872,33 @@ uppercase) and verifies it by readback before publication.
 | `para_id` | string | the minted stable identity — immediately addressable as `p[id="…"]` |
 | `transaction` | object | `office.transaction/2` report; nothing is published on any refusal |
 
+### `office.docx.delete-paragraph/1` (`office delete-paragraph FILE OUT.docx --at (p[N] | p[id="…"]) [--expect-text TEXT] [--dry-run] [--overwrite] [--json]`)
+
+The structural inverse of insert-paragraph. `--at` names one DIRECT body
+paragraph — a physical child of `w:body`, proven on the element tree —
+by ordinal path or stable identity; `--expect-text` asserts the target's
+full projection before anything is written (the guard against deleting
+the wrong paragraph by ordinal). Everything the removal could dangle
+refuses typed: section breaks, note references, comment machinery,
+bookmark markers (only a wholly-internal `_GoBack` pair is exempt),
+split field boundaries (`fldSimple` is permitted), the entire
+tracked-revision family, any element referencing a package relationship
+(`w:hyperlink` alone excepted), and the document-final paragraph. The
+readback verifies the deleted identity is GONE, the successor answers
+at the path, and the story is exactly one paragraph shorter.
+
+| key | type | notes |
+| --- | --- | --- |
+| `schema` | string | `"office.docx.delete-paragraph/1"` |
+| `file`, `format`, `output` | string | input path, literal `"docx"`, destination |
+| `at` | string | the target as requested |
+| `expect_text` | string\|null | the asserted projection (bounded), null when not asserted |
+| `dry_run`, `changed` | boolean | request mode and whether bytes changed |
+| `deleted` | object | `{path, para_id, paragraph_anchor_status, text}` — what left, readback-verified gone |
+| `successor_para_id` | string\|null | the stable identity now answering at the deleted path; null when the successor carries no unique identity |
+| `stories_scanned` | array | `["/body"]` in v1 |
+| `transaction` | object | `office.transaction/2` report; nothing is published on any refusal |
+
 ### `office.dump/1` (`office dump FILE [--json|--jsonl]`)
 
 A replayable semantic dump: the document re-expressed as an ordered stream

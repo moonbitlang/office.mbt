@@ -2,6 +2,18 @@
 // readback, publish atomically — and nothing written on any refusal.
 
 ///|
+async fn delete_nothing_written(path : String) -> Unit {
+  let mut published = false
+  try {
+    ignore(@afs.read_file(path))
+    published = true
+  } catch {
+    _ => ()
+  }
+  assert_false(published, msg="a refused delete must write nothing: " + path)
+}
+
+///|
 /// The happy path by stable identity: the published document re-reads
 /// without the deleted identity, the successor answers at the path,
 /// and the story is one paragraph shorter.
@@ -47,16 +59,18 @@ async test "delete-paragraph expect_text guards ordinal addressing" {
       directory, "delex-in.docx", "<w:r><w:t>alpha</w:t></w:r></w:p><w:p><w:r><w:t>omega</w:t></w:r>",
     )
     let refused = directory + "/delex-refused.docx"
-    let outcome = try? @docx.transact_docx_delete_paragraph(
-      @transaction.transaction_options(input, output_path=refused),
-      at="p[1]",
-      expect_text="omega",
-    )
-    guard outcome is Err(error) else {
-      fail("expected the expect_text refusal")
+    let mut refused_code = ""
+    ignore(
+      @docx.transact_docx_delete_paragraph(
+        @transaction.transaction_options(input, output_path=refused),
+        at="p[1]",
+        expect_text="omega",
+      ),
+    ) catch {
+      error => refused_code = "\{error}"
     }
-    assert_true("\{error}".contains("office.delete.expect_text_mismatch"))
-    assert_true((try? @afs.read_file(refused)) is Err(_))
+    assert_true(refused_code.contains("office.delete.expect_text_mismatch"))
+    delete_nothing_written(refused)
     let output = directory + "/delex-out.docx"
     let result = @docx.transact_docx_delete_paragraph(
       @transaction.transaction_options(input, output_path=output),
@@ -84,15 +98,20 @@ async test "delete-paragraph refusals publish nothing" {
       ] {
       let (at, needle) = case
       let output = directory + "/delref-\{at.length()}.docx"
-      let outcome = try? @docx.transact_docx_delete_paragraph(
-        @transaction.transaction_options(input, output_path=output),
-        at~,
-      )
-      guard outcome is Err(error) else {
-        fail("expected a refusal for '\{at}'")
+      let mut refused_code = ""
+      ignore(
+        @docx.transact_docx_delete_paragraph(
+          @transaction.transaction_options(input, output_path=output),
+          at~,
+        ),
+      ) catch {
+        error => refused_code = "\{error}"
       }
-      assert_true("\{error}".contains(needle), msg="'\{at}' -> \{error}")
-      assert_true((try? @afs.read_file(output)) is Err(_))
+      assert_true(
+        refused_code.contains(needle),
+        msg="'\{at}' -> " + refused_code,
+      )
+      delete_nothing_written(output)
     }
   })
 }
@@ -111,20 +130,24 @@ async test "delete-paragraph dry run and preflight write nothing" {
       at="p[1]",
     )
     assert_eq(result.report().text(), "gone")
-    assert_true((try? @afs.read_file(dry)) is Err(_))
+    delete_nothing_written(dry)
     let refused = directory + "/delpre-out.docx"
-    let outcome = try? @docx.transact_docx_delete_paragraph(
-      @transaction.transaction_options(input, output_path=refused),
-      at="p[1]",
-      preflight=report => {
-        assert_eq(report.text(), "gone")
-        raise @transaction.transaction_failure(
-          "office.delete.preflight_probe", "the caller's preflight refuses",
-        )
-      },
-    )
-    guard outcome is Err(error) else { fail("expected the preflight refusal") }
-    assert_true("\{error}".contains("office.delete.preflight_probe"))
-    assert_true((try? @afs.read_file(refused)) is Err(_))
+    let mut refused_code = ""
+    ignore(
+      @docx.transact_docx_delete_paragraph(
+        @transaction.transaction_options(input, output_path=refused),
+        at="p[1]",
+        preflight=report => {
+          assert_eq(report.text(), "gone")
+          raise @transaction.transaction_failure(
+            "office.delete.preflight_probe", "the caller's preflight refuses",
+          )
+        },
+      ),
+    ) catch {
+      error => refused_code = "\{error}"
+    }
+    assert_true(refused_code.contains("office.delete.preflight_probe"))
+    delete_nothing_written(refused)
   })
 }

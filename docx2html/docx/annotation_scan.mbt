@@ -266,6 +266,12 @@ priv struct ScannedElement {
   // judges pairing and the `_GoBack` exemption on these.
   bookmark_name_raw : String?
   bookmark_id_raw : String?
+  // Whether any attribute on this element lives in the OPC
+  // relationships namespace (r:id, r:embed, r:link, …): the element
+  // REFERENCES a package relationship, and removing it mechanically
+  // touches relationship reachability. Judged by resolved URI, never
+  // by prefix.
+  references_relationship : Bool
   parent_index : Int
   mut first_child_index : Int
   mut next_sibling_index : Int
@@ -1461,6 +1467,16 @@ fn scan_story(
         ""
       }
     }
+    let mut references_relationship = false
+    fn note_relationship_prefix(attr_prefix : String) -> Unit {
+      if attr_prefix != "" &&
+        namespaces.get(attr_prefix) is Some(stack) &&
+        stack.length() > 0 &&
+        stack[stack.length() - 1] ==
+        "http://schemas.openxmlformats.org/officeDocument/2006/relationships" {
+        references_relationship = true
+      }
+    }
     match source_budget {
       Some(_) => {
         for attr_name in unretained_attribute_names {
@@ -1473,6 +1489,7 @@ fn scan_story(
               )
             }
           }
+          note_relationship_prefix(split_qualified_name(attr_name).0)
         }
         for pair in attributes {
           let attr_name = pair.0
@@ -1486,10 +1503,19 @@ fn scan_story(
                 )
               }
             }
+            note_relationship_prefix(attr_prefix)
           }
         }
       }
-      None => ()
+      None =>
+        // The lighter scan resolves nothing eagerly; the flag still
+        // judges by resolved URI for whatever the tag walk retained.
+        for pair in attributes {
+          let attr_name = pair.0
+          if attr_name != "xmlns" && !attr_name.has_prefix("xmlns:") {
+            note_relationship_prefix(split_qualified_name(attr_name).0)
+          }
+        }
     }
     let element_index = match source_budget {
       Some(budget) => {
@@ -1539,6 +1565,7 @@ fn scan_story(
           } else {
             None
           },
+          references_relationship,
           parent_index,
           first_child_index: -1,
           next_sibling_index: -1,
@@ -2306,6 +2333,11 @@ fn scan_tag(
     None => ()
   }
   let name = utf8_slice(part, name_start, at)
+  // `:name` retention is scoped to bookmark starts, so the relevance
+  // judgment needs to know which element this tag opens. Lexical here;
+  // the URI-aware judgment stays at capture time.
+  let element_is_bookmark_start = name == "bookmarkStart" ||
+    name.has_suffix(":bookmarkStart")
   match source_budget {
     Some(_) => {
       guard projection_source_is_xml_qname(name) else {
@@ -2373,6 +2405,7 @@ fn scan_tag(
       attr_start,
       attr_end,
       source_budget is Some(_),
+      element_is_bookmark_start,
     )
     let validated_source_name = match source_budget {
       Some(budget) => {
@@ -2434,6 +2467,15 @@ fn scan_tag(
     if relevant_attribute {
       if attr_end - attr_start > max_annotation_relevant_attribute_bytes ||
         at - value_start > max_annotation_relevant_attribute_bytes {
+        // A bookmark NAME over the cap is skipped, never fatal: the
+        // deletion planner (its only consumer) then reads None and
+        // refuses that one deletion, while every read verb keeps
+        // working — a document readable before `:name` retention must
+        // stay readable after it.
+        if bytes_range_has_ascii_suffix(part, attr_start, attr_end, ":name") {
+          at += 1
+          continue
+        }
         raise @core.docx_xml_resource_limit_error(DocxXmlTokenLength)
       }
       match source_budget {
@@ -2517,6 +2559,7 @@ fn annotation_attribute_is_relevant(
   start : Int,
   end : Int,
   retain_projection_attributes : Bool,
+  element_is_bookmark_start : Bool,
 ) -> Bool {
   bytes_range_equals_ascii(part, start, end, "xmlns") ||
   bytes_range_has_ascii_prefix(part, start, end, "xmlns:") ||
@@ -2534,8 +2577,12 @@ fn annotation_attribute_is_relevant(
       // URI-aware lookup at capture time is the namespace judgment.
       bytes_range_has_ascii_suffix(part, start, end, ":paraId") ||
       // Bookmark identity: the deletion planner judges pairing and the
-      // `_GoBack` exemption on `w:name`.
-      bytes_range_has_ascii_suffix(part, start, end, ":name")
+      // `_GoBack` exemption on `w:name` — retained ONLY on bookmark
+      // starts, so no other element's name attribute changes buckets.
+      (
+        element_is_bookmark_start &&
+        bytes_range_has_ascii_suffix(part, start, end, ":name")
+      )
     )
   )
 }
