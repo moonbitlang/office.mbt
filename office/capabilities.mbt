@@ -1240,6 +1240,77 @@ pub fn capability_commands() -> Array[CapabilityCommand] {
       ],
     },
     {
+      name: "delete-paragraph",
+      summary: "Delete one direct body paragraph, refusing wherever the removal would dangle document state",
+      usage: "office delete-paragraph FILE OUT.docx --at (p[N] | p[id=\"…\"]) [--expect-text TEXT] [--dry-run] [--overwrite] [--json]",
+      formats: ["docx"],
+      aliases: [],
+      inputs: [
+        capability_field(
+          "file", "path", true, "existing .docx package (never modified in place)",
+        ),
+        capability_field(
+          "out", "path", true, "destination .docx; created atomically, nothing written on any refusal",
+        ),
+        capability_field(
+          "at", "string", true, "the DIRECT body paragraph to delete: p[3] (proven a physical child of the body on the element tree), or stable p[id=\"…\"] resolved against the transaction snapshot with the typed para_id refusals",
+        ),
+        capability_field(
+          "expect-text", "string", false, "assert the target's full projection equals this text before deleting; a mismatch refuses with nothing written — the guard against deleting the wrong paragraph by ordinal",
+        ),
+        capability_field(
+          "dry-run", "boolean", false, "run the identical resolve/plan/validate pipeline, exit as the real run would, write nothing",
+        ),
+        capability_field(
+          "overwrite", "boolean", false, "replace an existing destination",
+        ),
+        capability_field(
+          "json", "boolean", false, "emit one office.output/1 JSON document",
+        ),
+      ],
+      outputs: [
+        capability_field(
+          "schema", "literal(office.docx.delete-paragraph/1)", true, "deletion result schema",
+        ),
+        capability_field("file", "string", true, "the edited source path"),
+        capability_field(
+          "format", "literal(docx)", true, "edited document format",
+        ),
+        capability_field(
+          "output", "string", true, "the publication destination",
+        ),
+        capability_field("at", "string", true, "the target as requested"),
+        capability_field(
+          "expect_text", "string", false, "the asserted projection (bounded), null when not asserted",
+        ),
+        capability_field(
+          "dry_run", "boolean", true, "whether this run validated without publishing",
+        ),
+        capability_field("changed", "boolean", true, "whether any byte changed"),
+        capability_field(
+          "deleted", "object", true, "what left the document: path, para_id (canonical w14:paraId or null), paragraph_anchor_status, and the paragraph's full reader projection (bounded) — readback-verified GONE before publication",
+        ),
+        capability_field(
+          "successor_para_id", "string", false, "the stable identity now answering at the deleted path, null when the successor carries none — the re-anchor after ordinal paths shift",
+        ),
+        capability_field(
+          "stories_scanned", "array(string)", true, "the stories searched; /body in v1",
+        ),
+        capability_field(
+          "transaction", "object", true, "office.transaction/2 report; the shared mutation preflight refuses before planning, every structural hazard (section breaks, notes, comments, bookmarks, split fields, revisions, drawings, the final paragraph) refuses typed, and nothing is published on any refusal",
+        ),
+      ],
+      output_modes: ["human", "json"],
+      variants: [
+        capability_variant(
+          "docx",
+          "office delete-paragraph FILE OUT.docx --at 'p[id=\"1A2B3C4D\"]'",
+          "office.docx.delete-paragraph/1",
+          ["format=docx"],
+        ),
+      ],
+    },
+    {
       name: "validate",
       summary: "Validate an XLSX or DOCX package with the shared mutation gate",
       usage: "office validate FILE [--json|--jsonl]",

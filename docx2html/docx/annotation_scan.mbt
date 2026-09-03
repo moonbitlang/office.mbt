@@ -261,6 +261,11 @@ priv struct ScannedElement {
   // (never normalized here — validity and canonical case are the
   // identity layer's judgment). None when the attribute is absent.
   para_id_raw : String?
+  // A WML bookmark marker's `w:name` (bookmarkStart) and `w:id`
+  // (bookmarkStart/bookmarkEnd), as spelled — the deletion planner
+  // judges pairing and the `_GoBack` exemption on these.
+  bookmark_name_raw : String?
+  bookmark_id_raw : String?
   parent_index : Int
   mut first_child_index : Int
   mut next_sibling_index : Int
@@ -1523,6 +1528,17 @@ fn scan_story(
           } else {
             None
           },
+          bookmark_name_raw: if is_wml_uri(uri) && local_name == "bookmarkStart" {
+            attribute_value(attributes, "name", namespaces)
+          } else {
+            None
+          },
+          bookmark_id_raw: if is_wml_uri(uri) &&
+            (local_name == "bookmarkStart" || local_name == "bookmarkEnd") {
+            attribute_value(attributes, "id", namespaces)
+          } else {
+            None
+          },
           parent_index,
           first_child_index: -1,
           next_sibling_index: -1,
@@ -2516,7 +2532,10 @@ fn annotation_attribute_is_relevant(
       // Paragraph identity: `w14:paraId` values are retained AS SPELLED
       // for the identity layer. The suffix admits any prefix; the
       // URI-aware lookup at capture time is the namespace judgment.
-      bytes_range_has_ascii_suffix(part, start, end, ":paraId")
+      bytes_range_has_ascii_suffix(part, start, end, ":paraId") ||
+      // Bookmark identity: the deletion planner judges pairing and the
+      // `_GoBack` exemption on `w:name`.
+      bytes_range_has_ascii_suffix(part, start, end, ":name")
     )
   )
 }

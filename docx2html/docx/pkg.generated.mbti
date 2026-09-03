@@ -88,6 +88,8 @@ pub fn plan_comment_resolution_archive(DocxAnnotatedResult, @zip.Archive, commen
 
 pub fn plan_docx_format(DocxAnnotatedResult, DocxStoryPartSource, format~ : DocxDirectFormat, text? : String, within? : String, nth? : Int, range? : (Int, Int)) -> (@splice.SplicePlan, DocxFormatReceipt) raise @core.DocxError
 
+pub fn plan_docx_paragraph_deletion(DocxAnnotatedResult, at~ : String) -> (@splice.SplicePlan, DocxDeleteReceipt) raise @core.DocxError
+
 pub fn plan_docx_paragraph_insertion(DocxAnnotatedResult, at~ : String, before~ : Bool, content~ : DocxInsertContent, used_para_ids~ : Array[String]) -> (@splice.SplicePlan, DocxInsertReceipt) raise @core.DocxError
 
 pub fn plan_docx_replacements(DocxAnnotatedResult, DocxStoryPartSource, needle~ : String, replacement~ : String, within? : String, nth? : Int) -> (@splice.SplicePlan, DocxReplaceReceipt) raise @core.DocxError
@@ -209,6 +211,15 @@ pub fn DocxAnnotatedResult::story_paragraph_span(Self, String, String) -> NodeSp
 pub fn DocxAnnotatedResult::story_root_span(Self, String) -> NodeSpan?
 pub fn DocxAnnotatedResult::story_row_span(Self, String, String) -> NodeSpan?
 pub fn DocxAnnotatedResult::story_run_span(Self, String, String) -> NodeSpan?
+
+pub struct DocxDeleteReceipt {
+  // private fields
+}
+pub fn DocxDeleteReceipt::anchor_status(Self) -> String
+pub fn DocxDeleteReceipt::para_id(Self) -> String?
+pub fn DocxDeleteReceipt::path(Self) -> String
+pub fn DocxDeleteReceipt::successor_para_id(Self) -> String?
+pub fn DocxDeleteReceipt::text(Self) -> String
 
 pub struct DocxDirectFormat {
   // private fields

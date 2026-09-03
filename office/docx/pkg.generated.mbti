@@ -68,6 +68,8 @@ pub async fn transact_docx(@transaction.TransactionOptions, (DocxEditSession) ->
 
 pub async fn transact_docx_annotations(@transaction.TransactionOptions, AnnotationBatch) -> DocxAnnotationBatchResult
 
+pub async fn transact_docx_delete_paragraph(@transaction.TransactionOptions, at~ : String, expect_text? : String, preflight? : (DocxDeleteParagraphReport) -> Unit raise) -> DocxDeleteParagraphResult
+
 pub async fn transact_docx_edit(@transaction.TransactionOptions, DocxEditScript, allow_unmatched~ : Bool) -> DocxEditResult
 
 pub async fn transact_docx_find_replace(@transaction.TransactionOptions, needle~ : String, replacement~ : String, within? : String, nth? : Int, expect? : Int, allow_zero? : Bool, preflight? : (DocxFindReplaceReport) -> Unit raise) -> DocxFindReplaceResult
@@ -174,6 +176,21 @@ pub struct DocxCreateResult {
   transaction : @transaction.TransactionReport
 }
 
+pub struct DocxDeleteParagraphReport {
+  // private fields
+}
+pub fn DocxDeleteParagraphReport::anchor_status(Self) -> String
+pub fn DocxDeleteParagraphReport::para_id(Self) -> String?
+pub fn DocxDeleteParagraphReport::path(Self) -> String
+pub fn DocxDeleteParagraphReport::successor_para_id(Self) -> String?
+pub fn DocxDeleteParagraphReport::text(Self) -> String
+
+pub struct DocxDeleteParagraphResult {
+  // private fields
+}
+pub fn DocxDeleteParagraphResult::report(Self) -> DocxDeleteParagraphReport
+pub fn DocxDeleteParagraphResult::transaction(Self) -> @transaction.TransactionReport
+
 pub(all) struct DocxEditOpResult {
   op : String
   find : String
@@ -242,6 +259,7 @@ pub fn DocxEditSession::queue_added_part(Self, String, Bytes) -> Unit raise @tra
 pub fn DocxEditSession::queue_comment_addition(Self, at_relative~ : String, to_relative~ : String, @bobzhang/docx2html/docx.CommentSpec) -> String raise @transaction.TransactionError
 pub fn DocxEditSession::queue_comment_reply(Self, parent_id~ : String, @bobzhang/docx2html/docx.CommentSpec) -> String raise @transaction.TransactionError
 pub fn DocxEditSession::queue_comment_resolution(Self, comment_id~ : String, done~ : Bool) -> Unit raise @transaction.TransactionError
+pub fn DocxEditSession::queue_delete_paragraph(Self, at~ : String) -> @bobzhang/docx2html/docx.DocxDeleteReceipt raise @transaction.TransactionError
 pub fn DocxEditSession::queue_find_replace(Self, needle~ : String, replacement~ : String, within? : String, nth? : Int) -> (@bobzhang/docx2html/docx.DocxReplaceReceipt, String?) raise @transaction.TransactionError
 pub fn DocxEditSession::queue_format(Self, format~ : @bobzhang/docx2html/docx.DocxDirectFormat, text? : String, within? : String, nth? : Int, range? : (Int, Int)) -> (@bobzhang/docx2html/docx.DocxFormatReceipt, String?) raise @transaction.TransactionError
 pub fn DocxEditSession::queue_insert_paragraph(Self, at~ : String, before~ : Bool, content~ : @bobzhang/docx2html/docx.DocxInsertContent) -> @bobzhang/docx2html/docx.DocxInsertReceipt raise @transaction.TransactionError
