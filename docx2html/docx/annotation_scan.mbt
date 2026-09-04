@@ -1543,16 +1543,20 @@ fn scan_story(
             }
           }
         }
-        // Two attributes that EXPAND to the same (namespace, local
-        // name) are a duplicate attribute — XML forbids it, and every
-        // gate downstream would otherwise have to remember to ask
-        // whether the spelling it read was the only one. Refusing once,
-        // here, is what makes those gates safe by construction.
-        let expanded_names : Map[String, Bool] = Map([])
+        // NOTE on duplicate expanded attribute names: the strict XML
+        // gate every production caller runs first (`read_identity_
+        // story_xml_strict`) already refuses them, so a guard here
+        // would be dead code paying a per-element allocation on the
+        // shared read path. It would ALSO not close the case it looked
+        // like it closed: two WML DIALECTS (transitional and purl) are
+        // different namespaces, so `w:x` beside `ws:x` expands to two
+        // names and no duplicate check fires — which is why the gates
+        // that care read through `unique_attribute_value` and the
+        // fldChar ambiguity flag instead.
         for pair in attributes {
           let attr_name = pair.0
           if attr_name != "xmlns" && !attr_name.has_prefix("xmlns:") {
-            let (attr_prefix, attr_local) = split_qualified_name(attr_name)
+            let (attr_prefix, _) = split_qualified_name(attr_name)
             if attr_prefix != "" {
               guard namespaces.get(attr_prefix) is Some(stack) &&
                 stack.length() > 0 else {
@@ -1564,13 +1568,6 @@ fn scan_story(
               if !references_relationship && is_relationships_uri(attr_uri) {
                 references_relationship = true
               }
-              let expanded = attr_uri + "\u{1}" + attr_local
-              guard expanded_names.get(expanded) is None else {
-                raise Unsupported(
-                  message="the projection source scanner found two spellings of one attribute",
-                )
-              }
-              expanded_names[expanded] = true
             }
           }
         }

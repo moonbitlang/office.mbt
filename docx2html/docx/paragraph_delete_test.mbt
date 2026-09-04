@@ -520,6 +520,22 @@ test "flow sees past the markup Word puts between blocks" {
       msg="a table behind " + shape[0:12].to_owned() + " is still a table",
     )
   }
+  // Tracked block moves and deletions wrap flow content without
+  // contributing layout of their own — a table inside one is still the
+  // table that would merge.
+  for wrapper in ["del", "moveFrom", "moveTo", "ins"] {
+    let wrapped = delete_fixture(
+      table +
+      "<w:p/><w:\{wrapper} w:id=\"1\" w:author=\"a\">" +
+      table +
+      "</w:\{wrapper}>" +
+      keeper,
+    )
+    assert_true(
+      delete_refusal_of(wrapped, "p[1]").contains("separates two tables"),
+      msg="a table inside w:" + wrapper + " is still a table",
+    )
+  }
   // And a marker between blocks is not flow either.
   let marked = delete_fixture(
     table +
@@ -852,17 +868,20 @@ test "the remaining hazard vocabulary is exercised" {
   // The paragraph AFTER a closed field is deletable: `separate` did not
   // leave the region open.
   assert_eq(delete_refusal_of(separated, "p[2]"), "<planned>")
-  // Two spellings of one attribute are a duplicate attribute, refused
-  // once at the reader rather than guessed at by every gate.
-  let document = "<w:document xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\" xmlns:w2=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\"><w:body>" +
-    "<w:p><w:bookmarkStart w:id=\"1\" w:name=\"Chapter\" w2:name=\"_GoBack\"/><w:bookmarkEnd w:id=\"1\"/><w:r><w:t>x</w:t></w:r></w:p>" +
+  // Two spellings of one attribute in ONE namespace are a duplicate
+  // attribute, which the strict XML gate refuses before this planner
+  // ever sees the document. Across two WML DIALECTS they are different
+  // names, no duplicate check fires anywhere, and the gates that care
+  // read through `unique_attribute_value` — which is why a bookmark
+  // whose name is spelled twice reads as unknown and refuses.
+  let dialects = "<w:document xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\" xmlns:s=\"http://purl.oclc.org/ooxml/wordprocessingml/main\"><w:body>" +
+    "<w:p><w:bookmarkStart w:id=\"1\" w:name=\"_GoBack\" s:name=\"Chapter\"/><w:bookmarkEnd w:id=\"1\"/><w:r><w:t>x</w:t></w:r></w:p>" +
     keeper +
     "<w:sectPr/></w:body></w:document>"
-  let mut refused = false
-  ignore(@docx.read_docx_annotated(fixture_docx(document))) catch {
-    _ => refused = true
-  }
-  assert_true(refused, msg="expected the duplicate-attribute refusal")
+  let annotated = @docx.read_docx_annotated(fixture_docx(dialects))
+  assert_true(
+    delete_refusal_of(annotated, "p[1]").contains("could not be read"),
+  )
 }
 
 ///|
@@ -897,14 +916,29 @@ test "every range-hazard arm is reachable" {
   assert_true(
     delete_refusal_of(goback_split, "p[1]").contains("do not pair inside it"),
   )
-  // UNPLACEABLE: a range marker outside the target with no readable id
-  // cannot be paired with anything, so what it covers is unknown.
-  let unplaceable = delete_fixture(
+  // UNPLACEABLE is judged TARGET-RELATIVE: markers this reader cannot
+  // place matter only when an unplaceable pair could straddle the
+  // target. One before it strands nothing…
+  let one_sided = delete_fixture(
     "<w:commentRangeStart/><w:p><w:r><w:t>target</w:t></w:r></w:p>" + keeper,
   )
-  assert_true(
-    delete_refusal_of(unplaceable, "p[1]").contains("whose id cannot be read"),
+  assert_eq(delete_refusal_of(one_sided, "p[1]"), "<planned>")
+  // …while one on each side could cover it, and cannot be judged.
+  let straddling = delete_fixture(
+    "<w:commentRangeStart/><w:p><w:r><w:t>target</w:t></w:r></w:p>" +
+    "<w:commentRangeEnd/>" +
+    keeper,
   )
+  assert_true(delete_refusal_of(straddling, "p[1]").contains("cannot be read"))
+  // Two DISJOINT ranges that reuse one id are two intervals, not one
+  // long one: nothing covers the paragraph between them.
+  let reused_id = delete_fixture(
+    "<w:bookmarkStart w:id=\"1\" w:name=\"A\"/><w:p><w:r><w:t>one</w:t></w:r></w:p><w:bookmarkEnd w:id=\"1\"/>" +
+    "<w:p><w:r><w:t>target</w:t></w:r></w:p>" +
+    "<w:bookmarkStart w:id=\"1\" w:name=\"B\"/><w:p><w:r><w:t>three</w:t></w:r></w:p><w:bookmarkEnd w:id=\"1\"/>" +
+    keeper,
+  )
+  assert_eq(delete_refusal_of(reused_id, "p[2]"), "<planned>")
   // A `separate` BEFORE the target, with the region still open across
   // it: classified as anything but NotABoundary, this shape either
   // refuses every field or permits splicing out of a field's result.

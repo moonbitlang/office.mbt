@@ -177,111 +177,104 @@ pub fn docx_delete_refusal_slug(message : String) -> String? {
 }
 
 ///|
-/// Whether any id-paired RANGE spans the target, or shares markers
-/// across its boundary.
+/// Whether any id-paired RANGE spans the target, or has exactly one of
+/// its ends inside it.
 ///
 /// WML range markers pair by `w:id` and MAY OVERLAP — Word emits
 /// interleaved `_Toc`/`_Ref` bookmarks around every cross-referenced
-/// heading — so they are INTERVALS, not a nesting. Modelling them as a
-/// depth counter, or as a nesting stack, is how earlier rounds of this
-/// function both missed real hazards (a start and an end cancelling
-/// across unrelated ranges) and refused ordinary Word documents. An
-/// interval per id has neither failure mode and needs no assumption
-/// the format does not make.
+/// heading — so they are INTERVALS, not a nesting. Earlier rounds tried
+/// depth counters (an end cancelling a start it never belonged to) and
+/// a nesting stack (which declared ordinary Word documents malformed).
 ///
-/// Two hazards, both stated in terms of one id's markers:
-///   - the id opens BEFORE the target and closes AFTER it, so the
-///     deletion takes content the range anchors; or
-///   - the id has markers both inside the target and outside it, so
-///     the deletion takes half of a pair and strands the rest.
-/// A marker this reader cannot place — no readable id — is refused
-/// rather than guessed at.
+/// And an interval is a PAIR, not an envelope: matching each end to the
+/// most recent open start OF THE SAME ID is what keeps two disjoint
+/// ranges that reuse one id — routine in merged documents, and in
+/// comment ids recycled after a delete — from reading as one long range
+/// that covers everything between them.
 fn open_range_across(
   elements : Array[ScannedElement],
   span : NodeSpan,
 ) -> String? {
-  // Per (family, id): where its markers sit relative to the target.
-  let starts_before : Map[String, Bool] = Map([])
-  let ends_after : Map[String, Bool] = Map([])
-  let inside : Map[String, Bool] = Map([])
-  let outside : Map[String, Bool] = Map([])
+  // Open starts per (family, id), and the concrete intervals they close
+  // into.
+  let open : Map[String, Array[Int]] = Map([])
   let family_of : Map[String, String] = Map([])
-  let unplaceable : Array[String] = []
-  let caret_keys : Array[String] = []
-  let named_keys : Array[String] = []
-  for element in elements {
-    guard range_family_of(element) is Some((family, starts)) else { continue }
-    if element.local_name == "bookmarkStart" &&
-      element.bookmark_id_raw is Some(caret_id) {
-      let caret_key = family + "\u{1}" + range_id_key(family, caret_id)
-      if element.bookmark_name_raw is Some("_GoBack") {
-        if !caret_keys.contains(caret_key) {
-          caret_keys.push(caret_key)
-        }
-      } else if !named_keys.contains(caret_key) {
-        // A NAMED bookmark sharing this id: the exemption is for
-        // Word's caret alone, and an id a real bookmark also uses is
-        // not it.
-        named_keys.push(caret_key)
-      }
-    }
-    guard element.bookmark_id_raw is Some(raw) else {
-      // A marker whose id cannot be read cannot be paired with
-      // anything; refusing is the only honest answer.
-      if !unplaceable.contains(family) {
-        unplaceable.push(family)
-      }
-      continue
-    }
-    // `CT_Perm/@w:id` is `ST_String` (whiteSpace=preserve); every other
-    // family's id is `ST_DecimalNumber`. Canonicalizing a permission id
-    // collapsed distinct permissions onto one key and invented a range
-    // spanning the target.
-    let key = family + "\u{1}" + range_id_key(family, raw)
-    family_of[key] = family
-    let is_inside = element.byte_start >= span.byte_start() &&
-      element.byte_end <= span.byte_end()
-    if is_inside {
-      inside[key] = true
-      continue
-    }
-    outside[key] = true
-    if starts && element.byte_end <= span.byte_start() {
-      starts_before[key] = true
-    }
-    if !starts && element.byte_start >= span.byte_end() {
-      ends_after[key] = true
-    }
-  }
-  if unplaceable.length() > 0 {
-    unplaceable.sort()
-    let family = unplaceable.get(0).unwrap_or("a range")
-    return Some(
-      "this story carries a marker of \{family} whose id cannot be read, so what that range covers cannot be judged",
-    )
-  }
+  let caret : Map[String, Bool] = Map([])
+  let named : Map[String, Bool] = Map([])
   let spanning : Array[String] = []
   let split : Array[String] = []
-  for key, family in family_of {
-    // Word's `_GoBack` caret marks where the cursor was; it anchors
-    // nothing and a multi-paragraph edit leaves one spanning several
-    // paragraphs. Exempt wherever it sits, not only inside the target.
-    if caret_keys.contains(key) && !named_keys.contains(key) {
-      continue
+  let mut unreadable_before = false
+  let mut unreadable_after = false
+  fn note_interval(
+    family : String,
+    key : String,
+    from : Int,
+    to : Int,
+  ) -> Unit {
+    // Word's caret marks where the cursor was; it anchors nothing.
+    // Exempt only when NO named bookmark shares the id.
+    if caret.get(key).unwrap_or(false) && !named.get(key).unwrap_or(false) {
+      return
     }
-    if starts_before.get(key).unwrap_or(false) &&
-      ends_after.get(key).unwrap_or(false) {
+    let starts_before = from <= span.byte_start()
+    let ends_after = to >= span.byte_end()
+    let start_inside = from >= span.byte_start() && from < span.byte_end()
+    let end_inside = to > span.byte_start() && to <= span.byte_end()
+    if starts_before && ends_after {
       if !spanning.contains(family) {
         spanning.push(family)
       }
-    } else if inside.get(key).unwrap_or(false) &&
-      outside.get(key).unwrap_or(false) {
+    } else if start_inside != end_inside {
       if !split.contains(family) {
         split.push(family)
       }
     }
   }
-  // Deterministic: the message must not depend on map order.
+
+  for element in elements {
+    guard range_family_of(element) is Some((family, starts)) else { continue }
+    guard element.bookmark_id_raw is Some(raw) else {
+      // A marker this reader cannot place. It only matters if an
+      // unplaceable pair could straddle the target, so this is judged
+      // target-relative rather than story-globally: a stray marker at
+      // the far end of the document does not take the deletion out.
+      if element.byte_end <= span.byte_start() {
+        unreadable_before = true
+      } else if element.byte_start >= span.byte_end() {
+        unreadable_after = true
+      }
+      continue
+    }
+    let key = family + "\u{1}" + range_id_key(family, raw)
+    family_of[key] = family
+    if starts {
+      if element.bookmark_name_raw is Some("_GoBack") {
+        caret[key] = true
+      } else if element.local_name == "bookmarkStart" {
+        named[key] = true
+      }
+      let pending = open.get(key).unwrap_or([])
+      pending.push(element.byte_start)
+      open[key] = pending
+    } else {
+      let pending = open.get(key).unwrap_or([])
+      match pending.pop() {
+        Some(from) => {
+          open[key] = pending
+          note_interval(family, key, from, element.byte_end)
+        }
+        // An end with no open start of this id pairs with nothing and
+        // covers nothing; an unclosed start likewise. Neither strands
+        // anything this deletion could take.
+        None => ()
+      }
+    }
+  }
+  if unreadable_before && unreadable_after {
+    return Some(
+      "this story carries range markers whose ids cannot be read on both sides of the target, so what they cover cannot be judged",
+    )
+  }
   spanning.sort()
   split.sort()
   match spanning.get(0) {
@@ -482,7 +475,20 @@ fn is_layout_transparent(uri : String, local_name : String) -> Bool {
   // whole block — which is how the table-separator gate was bypassed
   // again.
   (uri != MC_URI && is_transparent_container(uri, local_name)) ||
-  (is_wml_uri(uri) && local_name is ("customXml" | "bdo" | "dir")) ||
+  (
+    is_wml_uri(uri) &&
+    local_name
+    is ("customXml"
+    | "bdo"
+    | "dir"
+    // Tracked block moves and deletions wrap flow content without
+    // contributing layout of their own: a table inside one is still
+    // the table that would merge. (`w:ins` is already in the reader's
+    // transparent set.)
+    | "del"
+    | "moveFrom"
+    | "moveTo")
+  ) ||
   // `mc:Choice` is SUPPRESSED by this reader, not transparent — but a
   // consumer that understands the branch lays its content out, and
   // adjacency is a question about that consumer, not about us. The

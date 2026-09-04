@@ -97,6 +97,18 @@ pub fn DocxEditSession::queue_delete_paragraph(
   self : DocxEditSession,
   at~ : String,
 ) -> @word.DocxDeleteReceipt raise @transaction.TransactionError {
+  // ONE per session. Every structural gate — the trailing-paragraph
+  // guarantee above all — is computed against the UNEDITED snapshot,
+  // which queuing does not change, so two deletions can each satisfy
+  // "a paragraph remains" and jointly leave none. Composition is the
+  // advertised way to use a session, so the limit is enforced rather
+  // than documented.
+  guard !self.delete_queued else {
+    raise @transaction.transaction_failure(
+      "office.delete.already_queued", "a session may queue ONE paragraph deletion: every structural guarantee is judged against the snapshot, so a second deletion would be judged against a document that no longer describes what will be published",
+    )
+  }
+  self.delete_queued = true
   let resolved = resolve_stable_replace_scope(self, at)
   // A STABLE id that resolved to a nested path reaches the planner's
   // grammar guard, but its remediation is the opposite of a mistyped

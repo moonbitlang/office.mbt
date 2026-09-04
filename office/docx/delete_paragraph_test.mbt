@@ -233,3 +233,35 @@ async test "delete-paragraph refusals carry their typed codes" {
     }
   })
 }
+
+///|
+/// The session seam is public and composition is its advertised use, so
+/// the one-deletion limit is ENFORCED: every structural guarantee is
+/// judged against the snapshot, which queuing does not change, and two
+/// deletions can each satisfy "a paragraph remains" while jointly
+/// leaving none.
+async test "a session queues at most one paragraph deletion" {
+  with_docx_session_test_dir(directory => {
+    let input = edit_fixture(
+      directory, "twice-in.docx", "<w:r><w:t>one</w:t></w:r></w:p><w:p><w:r><w:t>two</w:t></w:r>",
+    )
+    let output = directory + "/twice-out.docx"
+    let mut reported = ""
+    ignore(
+      @docx.transact_docx(
+        @transaction.transaction_options(input, output_path=output),
+        session => {
+          ignore(session.queue_delete_paragraph(at="p[1]"))
+          ignore(session.queue_delete_paragraph(at="p[2]"))
+        },
+      ),
+    ) catch {
+      error => reported = "\{error}"
+    }
+    assert_true(
+      reported.contains("office.delete.already_queued"),
+      msg="got: " + reported,
+    )
+    delete_nothing_written(output)
+  })
+}

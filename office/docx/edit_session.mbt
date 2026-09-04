@@ -48,6 +48,10 @@ pub struct DocxEditSession {
   priv xml_budget : @xml.XmlReadBudget
   priv mut plan : @splice.SplicePlan
   priv mut plan_mode : DocxEditPlanMode
+  // A paragraph deletion judges structural guarantees against the
+  // SNAPSHOT, which queuing does not change, so only one may be queued
+  // per session. See `queue_delete_paragraph`.
+  priv mut delete_queued : Bool
 }
 
 ///|
@@ -293,6 +297,7 @@ fn open_edit_session(
     xml_budget,
     plan: @splice.SplicePlan::new(),
     plan_mode: Empty,
+    delete_queued: false,
   }
 }
 
