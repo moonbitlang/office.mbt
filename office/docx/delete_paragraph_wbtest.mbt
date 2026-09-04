@@ -25,12 +25,25 @@ async fn delete_readback_case() -> (
       let entry_name = entry.name()
       guard archive.get(entry_name) is Some(payload) else { continue }
       let replaced = if entry_name == "word/document.xml" {
-        @utf8.encode(
-          @utf8.decode(payload).replace(
-            old="<w:r><w:t>Walking on imported air</w:t></w:r>",
-            new="<w:r><w:t>same</w:t></w:r></w:p><w:p><w:r><w:t>same</w:t></w:r></w:p><w:p><w:r><w:t>keeper</w:t></w:r>",
-          ),
-        )
+        // Replace the fixture's WHOLE paragraph, so the two paragraphs
+        // this test compares are authored here and are byte-for-byte
+        // the SAME LENGTH — they read alike and differ only in markup a
+        // projection cannot see. The length guard therefore decides
+        // nothing, and a `matches` reduced to its length check would
+        // accept the neighbour's cut.
+        let text = @utf8.decode(payload)
+        guard text.find("<w:p ") is Some(open_at) else {
+          fail("fixture has no paragraph")
+        }
+        guard text.find("</w:p>") is Some(close_at) else {
+          fail("fixture has no paragraph end")
+        }
+        let head = text[0:open_at].to_string()
+        let tail = text[close_at + 6:].to_string()
+        let twins = "<w:p><w:r><w:rPr><w:b/></w:rPr><w:t>same</w:t></w:r></w:p>" +
+          "<w:p><w:r><w:rPr><w:i/></w:rPr><w:t>same</w:t></w:r></w:p>" +
+          "<w:p><w:r><w:t>keeper</w:t></w:r></w:p>"
+        @utf8.encode(head + twins + tail)
       } else {
         payload.to_owned()
       }
@@ -93,6 +106,51 @@ async test "the delete readback catches a cut that did not land as planned" {
   )
   assert_eq(wrong_findings.length(), 1)
   assert_eq(wrong_findings[0].code, "docx.delete.readback_cut")
+  // The guard that proves the byte loops ran: the two candidate spans
+  // are the same length, so a `matches` reduced to its length check
+  // would accept the neighbour's cut and this assertion would fail.
+  assert_eq(honest.cut.expected_length(), wrong_paragraph.cut.expected_length())
+  // Every other leg of the readback, driven the same way.
+  let wrong_count = { ..honest, old_count: honest.old_count + 5, }
+  let count_findings = delete_readback_findings(
+    Some(wrong_count),
+    Docx,
+    candidate,
+  )
+  assert_eq(count_findings.length(), 1)
+  assert_eq(count_findings[0].code, "docx.delete.readback_count")
+  let wrong_successor_text = {
+    ..honest,
+    successor_text: Some("not what it says"),
+  }
+  let text_findings = delete_readback_findings(
+    Some(wrong_successor_text),
+    Docx,
+    candidate,
+  )
+  assert_eq(text_findings.length(), 1)
+  assert_eq(text_findings[0].code, "docx.delete.readback_successor_text")
+  let ghost_identity = { ..honest, para_id: Some("00000001"), }
+  let identity_findings = delete_readback_findings(
+    Some(ghost_identity),
+    Docx,
+    candidate,
+  )
+  // The deleted identity must be GONE; a document that never carried it
+  // satisfies that, so this pins the leg runs rather than a violation.
+  assert_eq(identity_findings.length(), 0)
+  let wrong_successor_id = { ..honest, successor_para_id: Some("0000BEEF"), }
+  let successor_findings = delete_readback_findings(
+    Some(wrong_successor_id),
+    Docx,
+    candidate,
+  )
+  assert_eq(successor_findings.length(), 1)
+  assert_eq(successor_findings[0].code, "docx.delete.readback_successor")
+  // A non-DOCX candidate refuses before any leg runs.
+  let wrong_format = delete_readback_findings(Some(honest), Xlsx, candidate)
+  assert_eq(wrong_format.length(), 1)
+  assert_eq(wrong_format[0].code, "docx.delete.wrong_format")
   // A candidate missing the story part entirely.
   let empty = @zip.Archive()
   let missing = delete_readback_findings(Some(honest), Docx, empty)

@@ -146,7 +146,7 @@ test "deletion refusals are typed per construct" {
       "<w:p><w:bookmarkStart w:id=\"0\" w:name=\"_GoBack\"/><w:r><w:t>x</w:t></w:r></w:p>" +
       "<w:p><w:bookmarkEnd w:id=\"0\"/><w:r><w:t>keeper</w:t></w:r></w:p>",
       "p[2]",
-    ).contains("do not pair inside it"),
+    ).contains("sits inside a bookmark range"),
   )
   // id-less and id-colliding bookmark markers cannot be pair-judged
   assert_true(
@@ -165,15 +165,17 @@ test "deletion refusals are typed per construct" {
       "p[1]",
     ).contains("do not pair inside it"),
   )
-  // …and an id another marker OUTSIDE the target also uses refuses,
-  // because this deletion would take that marker's partner.
+  // …and an END inside the target, while a range of that family is
+  // open across it, refuses: whatever the ids say, a consumer could
+  // pair that boundary with the outside start, and taking it strands
+  // the start.
   assert_true(
     delete_refusal(
       "<w:p><w:bookmarkStart w:id=\"7\" w:name=\"Chapter1\"/><w:r><w:t>outside</w:t></w:r></w:p>" +
       "<w:p><w:bookmarkStart w:id=\"7\" w:name=\"_GoBack\"/><w:bookmarkEnd w:id=\"7\"/><w:r><w:t>x</w:t></w:r></w:p>" +
       keeper,
       "p[2]",
-    ).contains("another marker outside it also uses"),
+    ).contains("sits inside a bookmark range"),
   )
   // range permissions pair across paragraphs
   for construct in ["permStart", "permEnd"] {
@@ -388,13 +390,17 @@ test "deletion refuses a paragraph a sibling range brackets" {
     "<w:commentRangeStart w:id=\"1\"/><w:p><w:r><w:t>target</w:t></w:r></w:p><w:commentRangeEnd w:id=\"1\"/>" +
     "<w:p><w:r><w:t>keeper</w:t></w:r></w:p>",
   )
-  assert_true(delete_refusal_of(commented, "p[1]").contains("a comment range"))
+  assert_true(
+    delete_refusal_of(commented, "p[1]").contains("sits inside a comment range"),
+  )
   let permitted = delete_fixture(
     "<w:permStart w:id=\"1\" w:edGrp=\"everyone\"/><w:p><w:r><w:t>target</w:t></w:r></w:p><w:permEnd w:id=\"1\"/>" +
     "<w:p><w:r><w:t>keeper</w:t></w:r></w:p>",
   )
   assert_true(
-    delete_refusal_of(permitted, "p[1]").contains("a range permission"),
+    delete_refusal_of(permitted, "p[1]").contains(
+      "sits inside a range permission",
+    ),
   )
   // A range that CLOSES before the target does not bracket it.
   let closed = delete_fixture(
@@ -488,14 +494,16 @@ test "bracketing ranges do not cross families" {
     "<w:p><w:r><w:t>target</w:t></w:r></w:p><w:commentRangeEnd w:id=\"1\"/>" +
     keeper,
   )
-  assert_true(delete_refusal_of(crossed, "p[1]").contains("a comment range"))
+  assert_true(
+    delete_refusal_of(crossed, "p[1]").contains("sits inside a comment range"),
+  )
   // A cross-family pair is not a range at all.
   let mismatched = delete_fixture(
     "<w:permStart w:id=\"1\" w:edGrp=\"everyone\"/><w:p><w:r><w:t>target</w:t></w:r></w:p><w:commentRangeEnd w:id=\"1\"/>" +
     keeper,
   )
   let mismatched_refusal = delete_refusal_of(mismatched, "p[1]")
-  assert_true(!mismatched_refusal.contains("a comment range"))
+  assert_true(!mismatched_refusal.contains("sits inside a comment range"))
   // Every paired family is judged, not just comments and permissions.
   for
     pair in [
@@ -509,8 +517,8 @@ test "bracketing ranges do not cross families" {
       keeper,
     )
     assert_true(
-      delete_refusal_of(annotated, "p[1]").contains("bracketed by"),
-      msg="expected a bracketing refusal for \{open_name}",
+      delete_refusal_of(annotated, "p[1]").contains("sits inside"),
+      msg="expected an open-range refusal for \{open_name}",
     )
   }
   // A named bookmark bracketing the target refuses; Word's _GoBack
@@ -520,13 +528,29 @@ test "bracketing ranges do not cross families" {
     keeper,
   )
   assert_true(
-    delete_refusal_of(bookmarked, "p[1]").contains("a bookmark range"),
+    delete_refusal_of(bookmarked, "p[1]").contains(
+      "sits inside a bookmark range",
+    ),
   )
+  // A caret that BRACKETS a whole paragraph refuses too. Word collapses
+  // `_GoBack` at the cursor, so a bracketing one is not a shape it
+  // emits, and buying its exemption back would mean reading ids and
+  // names again — the model whose every corner this collapse removed.
+  // Over-refusal in the safe direction, stated plainly.
   let caret = delete_fixture(
     "<w:bookmarkStart w:id=\"1\" w:name=\"_GoBack\"/><w:p><w:r><w:t>target</w:t></w:r></w:p><w:bookmarkEnd w:id=\"1\"/>" +
     keeper,
   )
-  assert_eq(delete_refusal_of(caret, "p[1]"), "<planned>")
+  assert_true(
+    delete_refusal_of(caret, "p[1]").contains("sits inside a bookmark range"),
+  )
+  // The caret INSIDE a paragraph — the shape Word actually emits — is
+  // still deletable with it.
+  let collapsed = delete_fixture(
+    "<w:p><w:bookmarkStart w:id=\"1\" w:name=\"_GoBack\"/><w:bookmarkEnd w:id=\"1\"/><w:r><w:t>target</w:t></w:r></w:p>" +
+    keeper,
+  )
+  assert_eq(delete_refusal_of(collapsed, "p[1]"), "<planned>")
 }
 
 ///|
@@ -542,6 +566,34 @@ test "an unrelated later field does not close an orphan region" {
     "<w:p><w:r><w:t>keeper</w:t></w:r></w:p>",
   )
   assert_eq(delete_refusal_of(annotated, "p[2]"), "<planned>")
+}
+
+///|
+/// A field boundary inside track-DELETED content is not in the story a
+/// consumer projects, so it must not open a region for this judgment.
+test "a deleted field boundary opens no region" {
+  let annotated = delete_fixture(
+    "<w:p><w:del w:id=\"1\" w:author=\"a\"><w:r><w:fldChar w:fldCharType=\"begin\"/></w:r></w:del></w:p>" +
+    "<w:p><w:r><w:t>target</w:t></w:r></w:p>" +
+    "<w:p><w:r><w:fldChar w:fldCharType=\"end\"/></w:r></w:p>" +
+    "<w:p><w:r><w:t>keeper</w:t></w:r></w:p>",
+  )
+  assert_eq(delete_refusal_of(annotated, "p[2]"), "<planned>")
+}
+
+///|
+/// The relationship class judges the target's OWN attributes too, not
+/// only its descendants'.
+test "the target's own relationship attribute is judged" {
+  let annotated = delete_fixture(
+    "<w:p xmlns:r=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships\" r:id=\"rId9\"><w:r><w:t>target</w:t></w:r></w:p>" +
+    "<w:p><w:r><w:t>keeper</w:t></w:r></w:p>",
+  )
+  assert_true(
+    delete_refusal_of(annotated, "p[1]").contains(
+      "references a package relationship",
+    ),
+  )
 }
 
 ///|

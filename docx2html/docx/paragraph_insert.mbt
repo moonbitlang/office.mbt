@@ -218,12 +218,6 @@ fn insert_anchor_ordinal(at : String) -> Int? {
   for index in 2..<(at.length() - 1) {
     let code = units[index].to_int()
     guard code >= '0'.to_int() && code <= '9'.to_int() else { return None }
-    // Ordinals are CANONICAL as the reader spells them: `p[007]` is
-    // not a path any surface emits, and accepting it here would make
-    // the library seam admit addresses the CLI grammar refuses.
-    if index == 2 && code == '0'.to_int() {
-      return None
-    }
     ordinal = ordinal * 10 + (code - '0'.to_int())
     if ordinal > 1_000_000 {
       return None

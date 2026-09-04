@@ -124,6 +124,25 @@ pub fn DocxDeleteReceipt::cut(self : DocxDeleteReceipt) -> DocxDeleteCutWitness 
 }
 
 ///|
+/// Whether an element sits inside track-DELETED content, which the
+/// reader drops from the projected story — so a field boundary there
+/// belongs to no region a consumer sees.
+fn is_inside_deleted_revision(
+  elements : Array[ScannedElement],
+  element : ScannedElement,
+) -> Bool {
+  let mut parent = element.parent_index
+  while parent >= 0 && parent < elements.length() {
+    let holder = elements[parent]
+    if is_wml_uri(holder.uri) && holder.local_name == "del" {
+      return true
+    }
+    parent = holder.parent_index
+  }
+  false
+}
+
+///|
 /// Whether an element is a DIRECT child of `w:body` on the physical
 /// tree. The path grammar flattens wrappers (`w:sdt`, `w:ins`,
 /// `mc:Fallback`…), so a path alone never proves this — every guard
@@ -139,110 +158,87 @@ fn is_direct_body_child(
 }
 
 ///|
-/// Ranges whose START lies before the target and whose END lies after
-/// it: the target sits inside a range anchored by its own siblings, so
-/// the subtree scan cannot see it, and removing the paragraph leaves
-/// that range anchoring nothing.
+/// Whether any paired RANGE is open across the target: a range whose
+/// start lies before it and whose end lies after it, in any of the
+/// families CT_Body admits as a paragraph's own siblings (comments,
+/// range permissions, bookmarks, tracked moves, customXml revision
+/// ranges). Deleting a paragraph such a range spans takes content the
+/// range anchors, and the markers are not inside the span, so the
+/// subtree walk cannot see them.
 ///
-/// Every paired range family CT_Body admits is judged, keyed by
-/// (family, id) — the id spaces are INDEPENDENT, so a permission
-/// numbered 1 must not close a comment range numbered 1 — and a marker
-/// whose id cannot be read fails CLOSED, because outside the span is
-/// exactly where bracketing lives.
-fn bracketing_range_kind(
+/// This counts DEPTH per family and never reads an id or a name. The
+/// pairing model it replaces read both, and every review round found
+/// another way for that to be wrong: ids that repeat, ids spelled `01`
+/// and `1`, ids a producer left unreadable, names resolved from the
+/// wrong marker, and a name lookup that turned the walk quadratic. A
+/// counter has none of those failure modes. It is deliberately
+/// coarser: an unbalanced marker anywhere before the target reads as
+/// an open range and refuses. That is the safe direction for an
+/// irreversible verb, and it is what "this toolkit does not resolve
+/// what it cannot read exactly" already means everywhere else here.
+fn open_range_across(
   elements : Array[ScannedElement],
   span : NodeSpan,
 ) -> String? {
-  let opened : Map[String, String] = Map([])
-  let bracketing : Array[String] = []
+  let depth : Map[String, Int] = Map([])
+  let opened_before : Array[String] = []
   for element in elements {
     guard is_wml_uri(element.uri) else { continue }
     let (family, starts) = match element.local_name {
-      "commentRangeStart" => ("comment", true)
-      "commentRangeEnd" => ("comment", false)
-      "permStart" => ("perm", true)
-      "permEnd" => ("perm", false)
-      "bookmarkStart" => ("bookmark", true)
-      "bookmarkEnd" => ("bookmark", false)
-      "moveFromRangeStart" => ("moveFrom", true)
-      "moveFromRangeEnd" => ("moveFrom", false)
-      "moveToRangeStart" => ("moveTo", true)
-      "moveToRangeEnd" => ("moveTo", false)
-      "customXmlInsRangeStart" => ("customXmlIns", true)
-      "customXmlInsRangeEnd" => ("customXmlIns", false)
-      "customXmlDelRangeStart" => ("customXmlDel", true)
-      "customXmlDelRangeEnd" => ("customXmlDel", false)
-      "customXmlMoveFromRangeStart" => ("customXmlMoveFrom", true)
-      "customXmlMoveFromRangeEnd" => ("customXmlMoveFrom", false)
-      "customXmlMoveToRangeStart" => ("customXmlMoveTo", true)
-      "customXmlMoveToRangeEnd" => ("customXmlMoveTo", false)
+      "commentRangeStart" => ("a comment range", true)
+      "commentRangeEnd" => ("a comment range", false)
+      "permStart" => ("a range permission", true)
+      "permEnd" => ("a range permission", false)
+      "bookmarkStart" => ("a bookmark range", true)
+      "bookmarkEnd" => ("a bookmark range", false)
+      "moveFromRangeStart" => ("a tracked-move range", true)
+      "moveFromRangeEnd" => ("a tracked-move range", false)
+      "moveToRangeStart" => ("a tracked-move range", true)
+      "moveToRangeEnd" => ("a tracked-move range", false)
+      "customXmlInsRangeStart"
+      | "customXmlDelRangeStart"
+      | "customXmlMoveFromRangeStart"
+      | "customXmlMoveToRangeStart" => ("a customXml revision range", true)
+      "customXmlInsRangeEnd"
+      | "customXmlDelRangeEnd"
+      | "customXmlMoveFromRangeEnd"
+      | "customXmlMoveToRangeEnd" => ("a customXml revision range", false)
       _ => continue
     }
-    let inside = element.byte_start >= span.byte_start() &&
-      element.byte_end <= span.byte_end()
-    if inside {
+    // Markers INSIDE the target mostly belong to the subtree walk,
+    // which requires them to pair there with the `_GoBack` caret as
+    // the one deletable bookmark. But an END inside, while a range of
+    // the same family is open ACROSS the target, is a boundary a
+    // consumer could pair with that outside start — removing it strands
+    // the start whatever the ids say.
+    if element.byte_start >= span.byte_start() &&
+      element.byte_end <= span.byte_end() {
+      if !starts && depth.get(family).unwrap_or(0) > 0 {
+        if !opened_before.contains(family) {
+          opened_before.push(family)
+        }
+      }
       continue
     }
-    guard element.bookmark_id_raw is Some(id) else {
-      // Unpairable: a marker outside the target whose id cannot be
-      // read could be the half of a range that brackets it, and this
-      // verb does not guess about ranges it cannot judge.
-      return Some(range_family_label(family))
-    }
-    let key = family + "\u{1}" + id
     if element.byte_end <= span.byte_start() {
-      if starts {
-        opened[key] = family
+      let current = depth.get(family).unwrap_or(0)
+      depth[family] = if starts {
+        current + 1
+      } else if current > 0 {
+        current - 1
       } else {
-        opened.remove(key)
+        0
       }
     } else if element.byte_start >= span.byte_end() && !starts {
-      match opened.get(key) {
-        // A `_GoBack` cursor bookmark bracketing the target is Word's
-        // caret, not an anchor anything references.
-        Some(open_family) =>
-          if !(open_family == "bookmark" &&
-            bookmark_name_at(elements, key, "_GoBack")) {
-            bracketing.push(open_family)
-          }
-        None => ()
+      // An end after the target closes whatever was open across it.
+      if depth.get(family).unwrap_or(0) > 0 && !opened_before.contains(family) {
+        opened_before.push(family)
       }
     }
   }
-  // Deterministic: the message must not depend on hash order.
-  bracketing.sort()
-  match bracketing.get(0) {
-    Some(family) => Some(range_family_label(family))
-    None => None
-  }
-}
-
-///|
-/// Whether the bookmark start keyed by `key` names `expected`.
-fn bookmark_name_at(
-  elements : Array[ScannedElement],
-  key : String,
-  expected : String,
-) -> Bool {
-  for element in elements {
-    if is_wml_uri(element.uri) &&
-      element.local_name == "bookmarkStart" &&
-      element.bookmark_id_raw is Some(id) &&
-      "bookmark\u{1}" + id == key {
-      return element.bookmark_name_raw is Some(name) && name == expected
-    }
-  }
-  false
-}
-
-///|
-fn range_family_label(family : String) -> String {
-  match family {
-    "comment" => "a comment range"
-    "perm" => "a range permission"
-    "bookmark" => "a bookmark range"
-    _ => "a tracked-revision range"
-  }
+  // Deterministic: the message must not depend on map order.
+  opened_before.sort()
+  opened_before.get(0)
 }
 
 ///|
@@ -372,14 +368,19 @@ pub fn plan_docx_paragraph_deletion(
   annotated : DocxAnnotatedResult,
   at~ : String,
 ) -> (@splice.SplicePlan, DocxDeleteReceipt) raise DocxError {
-  guard insert_anchor_ordinal(at) is Some(ordinal) else {
+  // Canonical as the reader spells them: `p[007]` is not a path any
+  // surface emits, and admitting it here would let this seam accept
+  // addresses the CLI grammar refuses. (The rule is the DELETE verb's:
+  // `insert_anchor_ordinal` is shared with the shipped insertion
+  // planner, whose published contract this must not narrow.)
+  guard !at.has_prefix("p[0") && insert_anchor_ordinal(at) is Some(ordinal) else {
     raise Unsupported(
-      message="delete-paragraph targets a direct body paragraph (p[N]); '\{at}' is not one",
+      message="delete-paragraph targets a direct body paragraph (p[N]); this target is not one",
     )
   }
   guard annotated.body_paragraph_span(at) is Some(span) else {
     raise Unsupported(
-      message="delete-paragraph target '\{at}' does not resolve in this document",
+      message="the delete-paragraph target does not resolve in this document",
     )
   }
   let part = annotated.main_story_part()
@@ -410,7 +411,7 @@ pub fn plan_docx_paragraph_deletion(
   }
   guard target_index >= 0 else {
     raise Unsupported(
-      message="delete-paragraph target '\{at}' is not a DIRECT child of the body — paragraphs inside content controls, revisions, or compatibility wrappers are not deletion targets",
+      message="the delete-paragraph target is not a DIRECT child of the body — paragraphs inside content controls, revisions, or compatibility wrappers are not deletion targets",
     )
   }
   // The body's FLOW children in document order: the target's own
@@ -439,7 +440,7 @@ pub fn plan_docx_paragraph_deletion(
     let after = flow_children[target_position + 1]
     if before == "tbl" && after == "tbl" {
       raise Unsupported(
-        message="delete-paragraph target '\{at}' separates two tables; deleting it would merge them into one, so this deletion refuses",
+        message="the target paragraph separates two tables; deleting it would merge them into one, so this deletion refuses",
       )
     }
   }
@@ -453,7 +454,11 @@ pub fn plan_docx_paragraph_deletion(
     if element.byte_start >= span.byte_start() {
       break
     }
-    if is_wml_uri(element.uri) && element.local_name == "fldChar" {
+    // Boundaries inside track-DELETED content are not in the projected
+    // story, so counting them would judge a region no consumer sees.
+    if is_wml_uri(element.uri) &&
+      element.local_name == "fldChar" &&
+      !is_inside_deleted_revision(elements, element) {
       match element.field_char_type {
         Some("begin") => field_depth += 1
         Some("end") => if field_depth > 0 { field_depth -= 1 }
@@ -477,7 +482,9 @@ pub fn plan_docx_paragraph_deletion(
       if element.byte_start < span.byte_end() {
         continue
       }
-      if is_wml_uri(element.uri) && element.local_name == "fldChar" {
+      if is_wml_uri(element.uri) &&
+        element.local_name == "fldChar" &&
+        !is_inside_deleted_revision(elements, element) {
         match element.field_char_type {
           Some("begin") => depth += 1
           Some("end") => {
@@ -493,7 +500,7 @@ pub fn plan_docx_paragraph_deletion(
     }
     guard !closes_after else {
       raise Unsupported(
-        message="delete-paragraph target '\{at}' sits inside a field region whose boundaries lie in other paragraphs; deleting it would truncate the field, so this deletion refuses",
+        message="the target paragraph sits inside a field region whose boundaries lie in other paragraphs; deleting it would truncate the field, so this deletion refuses",
       )
     }
   }
@@ -502,10 +509,10 @@ pub fn plan_docx_paragraph_deletion(
   // follows. The subtree scan below cannot see them — they are not
   // inside the span — and deleting the paragraph empties the range
   // they anchor.
-  match bracketing_range_kind(elements, span) {
+  match open_range_across(elements, span) {
     Some(kind) =>
       raise Unsupported(
-        message="delete-paragraph target '\{at}' is bracketed by \{kind}; deleting it would empty that range, so this deletion refuses",
+        message="the target paragraph sits inside \{kind} opened before it and closed after it; deleting it would take content that range anchors, so this deletion refuses",
       )
     None => ()
   }
@@ -518,44 +525,46 @@ pub fn plan_docx_paragraph_deletion(
   let bookmark_starts : Map[String, Int] = Map([])
   let bookmark_ends : Map[String, Int] = Map([])
   for index, element in elements {
-    if index == target_index {
-      continue
-    }
     if element.byte_start >= span.byte_start() &&
       element.byte_end <= span.byte_end() {
+      // The target element itself is skipped only for the CLASSIFIER
+      // (it would self-refuse as "a nested paragraph"); its own
+      // attributes are judged like any other element's.
       if element.references_relationship &&
         !(is_wml_uri(element.uri) && element.local_name == "hyperlink") {
         raise Unsupported(
-          message="delete-paragraph target '\{at}' carries an element that references a package relationship; deleting it would touch relationship reachability, so this deletion refuses",
+          message="the target paragraph carries an element that references a package relationship; deleting it would touch relationship reachability, so this deletion refuses",
         )
       }
       // The hazard judgment sees EVERY namespace: gating it on WML is
       // how `w14:conflictIns` — revision history by any measure — slid
       // through an earlier round of this same list.
-      match delete_blocked_construct(element.uri, element.local_name) {
-        Some(reason) =>
-          raise Unsupported(
-            message="delete-paragraph target '\{at}' carries \{reason}; deleting it would dangle or destroy document state outside the paragraph, so this deletion refuses",
-          )
-        None => ()
+      if index != target_index {
+        match delete_blocked_construct(element.uri, element.local_name) {
+          Some(reason) =>
+            raise Unsupported(
+              message="the target paragraph carries \{reason}; deleting it would dangle or destroy document state outside the paragraph, so this deletion refuses",
+            )
+          None => ()
+        }
       }
-      if is_wml_uri(element.uri) {
+      if index != target_index && is_wml_uri(element.uri) {
         if element.local_name == "bookmarkStart" {
           // Only the _GoBack cursor artifact is deletable, and only
           // with a REAL id: an absent id cannot be paired at all.
           guard element.bookmark_name_raw is Some(name) else {
             raise Unsupported(
-              message="delete-paragraph target '\{at}' carries a bookmark marker whose name could not be read; the pairing cannot be judged, so this deletion refuses",
+              message="the target paragraph carries a bookmark marker whose name could not be read; the pairing cannot be judged, so this deletion refuses",
             )
           }
           guard name == "_GoBack" else {
             raise Unsupported(
-              message="delete-paragraph target '\{at}' carries a named bookmark; deleting it would dangle or destroy document state outside the paragraph, so this deletion refuses",
+              message="the target paragraph carries a named bookmark; deleting it would dangle or destroy document state outside the paragraph, so this deletion refuses",
             )
           }
           guard element.bookmark_id_raw is Some(id) && id != "" else {
             raise Unsupported(
-              message="delete-paragraph target '\{at}' carries a bookmark marker without a usable id; the pairing cannot be judged, so this deletion refuses",
+              message="the target paragraph carries a bookmark marker without a usable id; the pairing cannot be judged, so this deletion refuses",
             )
           }
           bookmark_starts[id] = bookmark_starts.get(id).unwrap_or(0) + 1
@@ -563,7 +572,7 @@ pub fn plan_docx_paragraph_deletion(
         if element.local_name == "bookmarkEnd" {
           guard element.bookmark_id_raw is Some(id) && id != "" else {
             raise Unsupported(
-              message="delete-paragraph target '\{at}' carries a bookmark marker without a usable id; the pairing cannot be judged, so this deletion refuses",
+              message="the target paragraph carries a bookmark marker without a usable id; the pairing cannot be judged, so this deletion refuses",
             )
           }
           bookmark_ends[id] = bookmark_ends.get(id).unwrap_or(0) + 1
@@ -576,44 +585,20 @@ pub fn plan_docx_paragraph_deletion(
   for id, ends in bookmark_ends {
     guard bookmark_starts.get(id) is Some(starts) && starts == ends else {
       raise Unsupported(
-        message="delete-paragraph target '\{at}' carries bookmark boundaries that do not pair inside it; deleting it would unbalance the range, so this deletion refuses",
+        message="the target paragraph carries bookmark boundaries that do not pair inside it; deleting it would unbalance the range, so this deletion refuses",
       )
     }
   }
   for id, starts in bookmark_starts {
     guard bookmark_ends.get(id) is Some(ends) && ends == starts else {
       raise Unsupported(
-        message="delete-paragraph target '\{at}' carries bookmark boundaries that do not pair inside it; deleting it would unbalance the range, so this deletion refuses",
+        message="the target paragraph carries bookmark boundaries that do not pair inside it; deleting it would unbalance the range, so this deletion refuses",
       )
     }
   }
-  // And no marker OUTSIDE the span may share an id with one inside:
-  // the story would keep a boundary whose partner this deletion takes.
-  if bookmark_starts.length() > 0 {
-    for index, element in elements {
-      if index == target_index ||
-        (
-          element.byte_start >= span.byte_start() &&
-          element.byte_end <= span.byte_end()
-        ) {
-        continue
-      }
-      if is_wml_uri(element.uri) &&
-        (
-          element.local_name == "bookmarkStart" ||
-          element.local_name == "bookmarkEnd"
-        ) &&
-        element.bookmark_id_raw is Some(id) &&
-        bookmark_starts.get(id) is Some(_) {
-        raise Unsupported(
-          message="delete-paragraph target '\{at}' carries a bookmark id another marker outside it also uses; the pairing cannot be judged, so this deletion refuses",
-        )
-      }
-    }
-  }
-  // A successor is a paragraph that ANSWERS at the next path — the
-  // same flattened surface the receipt reports and the readback
-  // re-reads, so the two cannot disagree about whether one exists.
+  // The document-final direct body paragraph is structural: Word keeps
+  // one, and a body whose last flow child is a table still needs its
+  // trailing paragraph. No successor -> refuse.
   // Two different questions, deliberately asked on two surfaces:
   //
   // "Will the body still have a direct paragraph?" is STRUCTURAL, so it
@@ -634,12 +619,9 @@ pub fn plan_docx_paragraph_deletion(
       break
     }
   }
-  // The document-final direct body paragraph is structural: Word keeps
-  // one, and a body whose last flow child is a table still needs its
-  // trailing paragraph. No successor -> refuse.
   guard successor_exists else {
     raise Unsupported(
-      message="delete-paragraph target '\{at}' is the final direct body paragraph; the document keeps it",
+      message="the target is the final direct body paragraph; the document keeps it",
     )
   }
   let story = annotated.main_story_source()
@@ -650,7 +632,7 @@ pub fn plan_docx_paragraph_deletion(
   // than the receipt could name.
   guard anchors.anchor_at(at) is Some(anchor) else {
     raise Unsupported(
-      message="delete-paragraph target '\{at}' does not address exactly one whole paragraph in this document, so this deletion refuses",
+      message="the delete-paragraph target does not address exactly one whole paragraph in this document, so this deletion refuses",
     )
   }
   // A `multi_physical` head is the FIRST half of a paragraph the reader
@@ -671,7 +653,7 @@ pub fn plan_docx_paragraph_deletion(
   // silently publishing half a paragraph.
   guard anchor.status() != "multi_physical" else {
     raise Unsupported(
-      message="delete-paragraph target '\{at}' is one physical half of a paragraph joined across a deleted paragraph mark, so this deletion refuses",
+      message="the delete-paragraph target is one physical half of a paragraph joined across a deleted paragraph mark, so this deletion refuses",
     )
   }
   let para_id = if anchor.status() == "unique" {
@@ -691,7 +673,7 @@ pub fn plan_docx_paragraph_deletion(
   }
   guard docx_paragraph_projection(annotated, story, path=at) is Some(text) else {
     raise Unsupported(
-      message="delete-paragraph target '\{at}' has no readable projection in this document, so this deletion refuses",
+      message="the delete-paragraph target has no readable projection in this document, so this deletion refuses",
     )
   }
   let plan = @splice.SplicePlan::new()

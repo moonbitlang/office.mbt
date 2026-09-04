@@ -307,7 +307,9 @@ priv struct ProjectionSourceBudget {
   // the shared one. Spending shared characters on them would let a
   // bookmark-heavy document exhaust the pool a MANDATORY charge later
   // needs — turning a capture nothing depends on into a read failure
-  // on a package that was readable before it existed.
+  // on a package that was readable before it existed. The allowance is
+  // a FRACTION OF THE CALLER'S ceiling, never a constant: a caller that
+  // tightens the budget must not silently be handed a fixed extra pool.
   mut bookmark_name_chars_left : Int
   max_depth : Int
   text_budget : TokenMapBudget
@@ -320,11 +322,13 @@ let max_projection_source_elements : Int = 1_000_000
 let max_projection_source_attribute_chars : Int = 8 * 1024 * 1024
 
 ///|
-/// The optional bookmark-name allowance, separate from the shared
-/// retained-character pool so the capture cannot cost a document its
-/// readability. Generous for real documents — tens of thousands of
-/// cross-reference bookmarks — and bounded.
-let max_projection_bookmark_name_chars : Int = 2 * 1024 * 1024
+/// The optional bookmark-name allowance is this fraction of the
+/// caller's own attribute ceiling — separate from the shared pool so
+/// the capture cannot cost a document its readability, and derived
+/// from the caller's budget so tightening it tightens this too. A
+/// quarter is generous for real documents (tens of thousands of
+/// cross-reference bookmarks under the default ceiling).
+let bookmark_name_chars_divisor : Int = 4
 
 ///|
 let max_projection_source_retained_tokens : Int = 1_000_000
@@ -360,7 +364,7 @@ fn projection_source_budget(
   {
     elements_left: max_elements,
     retained_chars_left: max_attribute_chars,
-    bookmark_name_chars_left: max_projection_bookmark_name_chars,
+    bookmark_name_chars_left: max_attribute_chars / bookmark_name_chars_divisor,
     retained_tokens_left: max_retained_tokens,
     max_depth,
     text_budget: token_map_budget(max_text_bytes, max_text_tokens) catch {
@@ -1446,14 +1450,9 @@ fn scan_story(
       }
       None => ()
     }
-    let (
-      name,
-      attributes,
-      unretained_attribute_names,
-      self_closing,
-      tag_end,
-      declined_bookmark_name,
-    ) = scan_tag(part, index, length, source_budget)
+    let (name, attributes, unretained_attribute_names, self_closing, tag_end) = scan_tag(
+      part, index, length, source_budget,
+    )
     // Namespace declarations bind before resolving this element's name.
     let declared : Array[String] = []
     let declared_prefixes : StableStringMap[Bool] = SortedMap([])
@@ -1588,10 +1587,14 @@ fn scan_story(
           // A DECLINED name reads as unknown, never as absent: the
           // spelling that was dropped could be the one that makes an
           // exemption ambiguous, and a gate must not be handed a
-          // cheaper answer than the document supports.
+          // cheaper answer than the document supports. Only a decline
+          // of a WML-resolved `:name` counts — a foreign `v:name` is
+          // not the bookmark's name, and dropping it must not erase a
+          // readable `w:name`. The declined QName is recorded in the
+          // unretained list, where the prefix scope resolves it.
           bookmark_name_raw: if is_wml_uri(uri) &&
             local_name == "bookmarkStart" &&
-            !declined_bookmark_name {
+            !declined_wml_name(unretained_attribute_names, namespaces) {
             unique_attribute_value(attributes, "name", namespaces)
           } else {
             None
@@ -2360,7 +2363,7 @@ fn scan_tag(
   start : Int,
   length : Int,
   source_budget : ProjectionSourceBudget?,
-) -> (String, Array[(String, String)], Array[String], Bool, Int, Bool) raise DocxError {
+) -> (String, Array[(String, String)], Array[String], Bool, Int) raise DocxError {
   let mut at = start + 1
   let name_start = at
   while at < length && !is_name_end(part[at]) {
@@ -2393,11 +2396,6 @@ fn scan_tag(
   }
   let attributes : Array[(String, String)] = []
   let unretained_attribute_names : Array[String] = []
-  // Set when a bookmark name was DECLINED (over the per-token cap or
-  // past its allowance). A gate that reads the name must treat that as
-  // "unknown", never as "absent" — a declined spelling could be the one
-  // that makes an exemption ambiguous.
-  let declined_bookmark_name = Ref(false)
   let mut self_closing = false
   while at < length {
     // Skip whitespace.
@@ -2411,14 +2409,7 @@ fn scan_tag(
     }
     if part[at] == b'>' {
       at += 1
-      return (
-        name,
-        attributes,
-        unretained_attribute_names,
-        self_closing,
-        at,
-        declined_bookmark_name.val,
-      )
+      return (name, attributes, unretained_attribute_names, self_closing, at)
     }
     if part[at] == b'/' {
       match source_budget {
@@ -2428,14 +2419,7 @@ fn scan_tag(
               message="the projection source scanner found malformed self-closing-tag content",
             )
           }
-          return (
-            name,
-            attributes,
-            unretained_attribute_names,
-            true,
-            at + 2,
-            declined_bookmark_name.val,
-          )
+          return (name, attributes, unretained_attribute_names, true, at + 2)
         }
         None => ()
       }
@@ -2545,7 +2529,6 @@ fn scan_tag(
           source_budget is Some(_) &&
           !bytes_range_has_ascii_prefix(part, attr_start, attr_end, "xmlns:") &&
           bytes_range_has_ascii_suffix(part, attr_start, attr_end, ":name") {
-          declined_bookmark_name.val = true
           match validated_source_name {
             Some(candidate) => unretained_attribute_names.push(candidate)
             None => ()
@@ -2572,7 +2555,6 @@ fn scan_tag(
             // it) and marks the element, so an ambiguity gate reading
             // this attribute cannot mistake "declined" for "absent".
             if !budget.charge_bookmark_name_chars(at - value_start) {
-              declined_bookmark_name.val = true
               match validated_source_name {
                 Some(candidate) => unretained_attribute_names.push(candidate)
                 None => ()
@@ -2697,6 +2679,28 @@ fn annotation_attribute_is_relevant(
 fn is_relationships_uri(uri : String) -> Bool {
   uri == "http://schemas.openxmlformats.org/officeDocument/2006/relationships" ||
   uri == "http://purl.oclc.org/ooxml/officeDocument/relationships"
+}
+
+///|
+/// Whether any attribute this tag DECLINED to retain was a WML-resolved
+/// `:name` — the very attribute the bookmark capture would have read.
+/// A declined name must read as unknown rather than absent, and a
+/// foreign `v:name` must not count.
+fn declined_wml_name(
+  unretained : Array[String],
+  namespaces : StableStringMap[Array[String]],
+) -> Bool {
+  for qname in unretained {
+    let (prefix, local) = split_qualified_name(qname)
+    if local == "name" && prefix != "" {
+      match namespaces.get(prefix) {
+        Some(stack) if stack.length() > 0 &&
+          is_wml_uri(stack[stack.length() - 1]) => return true
+        _ => ()
+      }
+    }
+  }
+  false
 }
 
 ///|
