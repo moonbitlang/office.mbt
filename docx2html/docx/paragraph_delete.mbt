@@ -124,25 +124,6 @@ pub fn DocxDeleteReceipt::cut(self : DocxDeleteReceipt) -> DocxDeleteCutWitness 
 }
 
 ///|
-/// Whether an element sits inside track-DELETED content, which the
-/// reader drops from the projected story — so a field boundary there
-/// belongs to no region a consumer sees.
-fn is_inside_deleted_revision(
-  elements : Array[ScannedElement],
-  element : ScannedElement,
-) -> Bool {
-  let mut parent = element.parent_index
-  while parent >= 0 && parent < elements.length() {
-    let holder = elements[parent]
-    if is_wml_uri(holder.uri) && holder.local_name == "del" {
-      return true
-    }
-    parent = holder.parent_index
-  }
-  false
-}
-
-///|
 /// Whether an element is a DIRECT child of `w:body` on the physical
 /// tree. The path grammar flattens wrappers (`w:sdt`, `w:ins`,
 /// `mc:Fallback`…), so a path alone never proves this — every guard
@@ -171,89 +152,172 @@ fn is_direct_body_child(
 /// another way for that to be wrong: ids that repeat, ids spelled `01`
 /// and `1`, ids a producer left unreadable, names resolved from the
 /// wrong marker, and a name lookup that turned the walk quadratic. A
-/// counter has none of those failure modes. It is deliberately
-/// coarser: an unbalanced marker anywhere before the target reads as
-/// an open range and refuses. That is the safe direction for an
-/// irreversible verb, and it is what "this toolkit does not resolve
-/// what it cannot read exactly" already means everywhere else here.
+/// counter has none of those failure modes.
+///
+/// The depth walk mirrors the field-region one exactly, and for the
+/// same two reasons. An end with nothing open is UNPAIRABLE — refuse,
+/// rather than let it cancel a range that genuinely is open (clamping
+/// to zero was the unsafe direction). And a range only counts as open
+/// ACROSS the target when the depth after it falls BELOW the depth at
+/// it — otherwise one unclosed start earlier in the story would make
+/// the next end anywhere later refuse every paragraph in between.
 fn open_range_across(
   elements : Array[ScannedElement],
   span : NodeSpan,
 ) -> String? {
   let depth : Map[String, Int] = Map([])
-  let opened_before : Array[String] = []
+  let unbalanced : Array[String] = []
+  let ends_inside : Array[String] = []
+  // Pass zero: does each family BALANCE across the whole story? Depth
+  // counting reads no ids, so it cannot tell which range an end closes
+  // — an end belonging to one bookmark cancels another's start just as
+  // well. That is only possible in a story whose markers do not
+  // balance, so an unbalanced family means "this cannot be judged",
+  // and this verb refuses what it cannot judge. (0 of 591 documents in
+  // the corpus sample carry an unbalanced range marker.)
+  let totals : Map[String, Int] = Map([])
   for element in elements {
-    guard is_wml_uri(element.uri) else { continue }
-    let (family, starts) = match element.local_name {
-      "commentRangeStart" => ("a comment range", true)
-      "commentRangeEnd" => ("a comment range", false)
-      "permStart" => ("a range permission", true)
-      "permEnd" => ("a range permission", false)
-      "bookmarkStart" => ("a bookmark range", true)
-      "bookmarkEnd" => ("a bookmark range", false)
-      "moveFromRangeStart" => ("a tracked-move range", true)
-      "moveFromRangeEnd" => ("a tracked-move range", false)
-      "moveToRangeStart" => ("a tracked-move range", true)
-      "moveToRangeEnd" => ("a tracked-move range", false)
-      "customXmlInsRangeStart"
-      | "customXmlDelRangeStart"
-      | "customXmlMoveFromRangeStart"
-      | "customXmlMoveToRangeStart" => ("a customXml revision range", true)
-      "customXmlInsRangeEnd"
-      | "customXmlDelRangeEnd"
-      | "customXmlMoveFromRangeEnd"
-      | "customXmlMoveToRangeEnd" => ("a customXml revision range", false)
-      _ => continue
+    guard range_family_of(element) is Some((family, starts)) else { continue }
+    let current = totals.get(family).unwrap_or(0)
+    totals[family] = if starts { current + 1 } else { current - 1 }
+  }
+  for family, total in totals {
+    if total != 0 && !unbalanced.contains(family) {
+      unbalanced.push(family)
     }
-    // Markers INSIDE the target mostly belong to the subtree walk,
-    // which requires them to pair there with the `_GoBack` caret as
-    // the one deletable bookmark. But an END inside, while a range of
-    // the same family is open ACROSS the target, is a boundary a
-    // consumer could pair with that outside start — removing it strands
-    // the start whatever the ids say.
-    if element.byte_start >= span.byte_start() &&
-      element.byte_end <= span.byte_end() {
+  }
+  if unbalanced.length() > 0 {
+    unbalanced.sort()
+    guard unbalanced.get(0) is Some(family) else { return None }
+    return Some(
+      "this story's range markers do not balance (\{family}), so which content a range covers cannot be judged",
+    )
+  }
+  // Pass one: the depth each family stands at when the target begins.
+  for element in elements {
+    guard range_family_of(element) is Some((family, starts)) else { continue }
+    let inside = element.byte_start >= span.byte_start() &&
+      element.byte_end <= span.byte_end()
+    if inside {
+      // An END inside, while a range of the same family is open across
+      // the target, is a boundary a consumer could pair with that
+      // outside start: removing it strands the start whatever the ids
+      // say. (Markers that pair wholly inside are the subtree walk's
+      // business.)
       if !starts && depth.get(family).unwrap_or(0) > 0 {
-        if !opened_before.contains(family) {
-          opened_before.push(family)
+        if !ends_inside.contains(family) {
+          ends_inside.push(family)
         }
       }
       continue
     }
     if element.byte_end <= span.byte_start() {
       let current = depth.get(family).unwrap_or(0)
-      depth[family] = if starts {
-        current + 1
-      } else if current > 0 {
-        current - 1
-      } else {
-        0
+      depth[family] = if starts { current + 1 } else { current - 1 }
+    }
+  }
+  if ends_inside.length() > 0 {
+    ends_inside.sort()
+    guard ends_inside.get(0) is Some(family) else { return None }
+    return Some(
+      "the target paragraph carries the end of \{family} opened before it",
+    )
+  }
+  // Pass two: for each family standing open at the target, does it
+  // CLOSE after it? Only then does the range span the target.
+  let closes_after : Array[String] = []
+  for family, entry_depth in depth {
+    if entry_depth <= 0 {
+      continue
+    }
+    let mut current = entry_depth
+    for element in elements {
+      if element.byte_start < span.byte_end() {
+        continue
       }
-    } else if element.byte_start >= span.byte_end() && !starts {
-      // An end after the target closes whatever was open across it.
-      if depth.get(family).unwrap_or(0) > 0 && !opened_before.contains(family) {
-        opened_before.push(family)
+      guard range_family_of(element) is Some((candidate, starts)) else {
+        continue
+      }
+      if candidate != family {
+        continue
+      }
+      if starts {
+        current += 1
+      } else {
+        current -= 1
+        if current < entry_depth {
+          if !closes_after.contains(family) {
+            closes_after.push(family)
+          }
+          break
+        }
       }
     }
   }
   // Deterministic: the message must not depend on map order.
-  opened_before.sort()
-  opened_before.get(0)
+  closes_after.sort()
+  match closes_after.get(0) {
+    Some(family) =>
+      Some(
+        "the target paragraph sits inside \{family} opened before it and closed after it",
+      )
+    None => None
+  }
 }
 
 ///|
-/// The body's FLOW: the blocks a consumer lays out, read the way the
-/// projection reads them. This is an ALLOW-LIST on purpose — exactly
-/// `w:p` and `w:tbl` are flow — because the question it answers is
-/// "what would touch what if this block left", and everything else in
-/// a body (a content control's `w:sdtPr`, a `w:customXml` wrapper, an
-/// `mc:Choice`, every range marker, anything a future WML adds)
-/// occupies no layout space between two blocks that would otherwise be
-/// adjacent. A deny-list here was inert on the very shape Word emits.
-///
-/// Content inside a transparent wrapper IS body flow — the projection
-/// already gives it a body-level path — so the walk to the body climbs
-/// through wrappers.
+/// `w:id` is `ST_DecimalNumber`, so `1`, `01` and `0001` are one id.
+/// Comparing raw spellings would refuse a legal document and pair two
+/// ids a consumer keeps apart.
+fn normalized_decimal_id(id : String) -> String {
+  let negative = id.has_prefix("-")
+  let digits = if negative { id[1:].to_owned() } else { id }
+  let mut first = 0
+  while first + 1 < digits.length() && digits[first] == '0' {
+    first += 1
+  }
+  let trimmed = digits[first:].to_owned()
+  if negative {
+    "-" + trimmed
+  } else {
+    trimmed
+  }
+}
+
+///|
+/// The range family an element belongs to, and whether it opens one.
+/// Families are kept apart because their id spaces are independent and
+/// their hazards are different.
+fn range_family_of(element : ScannedElement) -> (String, Bool)? {
+  guard is_wml_uri(element.uri) else { return None }
+  match element.local_name {
+    "commentRangeStart" => Some(("a comment range", true))
+    "commentRangeEnd" => Some(("a comment range", false))
+    "permStart" => Some(("a range permission", true))
+    "permEnd" => Some(("a range permission", false))
+    "bookmarkStart" => Some(("a bookmark range", true))
+    "bookmarkEnd" => Some(("a bookmark range", false))
+    "moveFromRangeStart" => Some(("a tracked move-from range", true))
+    "moveFromRangeEnd" => Some(("a tracked move-from range", false))
+    "moveToRangeStart" => Some(("a tracked move-to range", true))
+    "moveToRangeEnd" => Some(("a tracked move-to range", false))
+    "customXmlInsRangeStart" => Some(("a customXml insertion range", true))
+    "customXmlInsRangeEnd" => Some(("a customXml insertion range", false))
+    "customXmlDelRangeStart" => Some(("a customXml deletion range", true))
+    "customXmlDelRangeEnd" => Some(("a customXml deletion range", false))
+    "customXmlMoveFromRangeStart" => Some(("a customXml move-from range", true))
+    "customXmlMoveFromRangeEnd" => Some(("a customXml move-from range", false))
+    "customXmlMoveToRangeStart" => Some(("a customXml move-to range", true))
+    "customXmlMoveToRangeEnd" => Some(("a customXml move-to range", false))
+    _ => None
+  }
+}
+
+///|
+/// Whether an element is a DIRECT child of `w:body`/// Whether an element is a DIRECT child of `w:body` on the physical
+/// tree. The path grammar flattens wrappers (`w:sdt`, `w:ins`,
+/// `mc:Fallback`…), so a path alone never proves this — every guard
+/// that must not splice inside a wrapper proves it here.
 fn body_flow_kind(elements : Array[ScannedElement], index : Int) -> String? {
   let element = elements[index]
   guard is_wml_uri(element.uri) else { return None }
@@ -344,7 +408,13 @@ fn delete_blocked_construct(uri : String, local_name : String) -> String? {
   guard is_wml_uri(uri) else { return None }
   match local_name {
     "sectPr" => Some("a section break")
+    // BLOCK-LEVEL content inside a paragraph: the reader tolerates
+    // misnesting, and the span would then hold more logical content
+    // than the receipt names — a table that left with a paragraph is
+    // invisible to every readback leg, since the plan removed exactly
+    // the bytes it said it would.
     "p" => Some("a nested paragraph")
+    "tbl" => Some("a nested table")
     "footnoteReference" => Some("a footnote reference")
     "endnoteReference" => Some("an endnote reference")
     "commentReference" | "commentRangeStart" | "commentRangeEnd" =>
@@ -454,11 +524,15 @@ pub fn plan_docx_paragraph_deletion(
     if element.byte_start >= span.byte_start() {
       break
     }
-    // Boundaries inside track-DELETED content are not in the projected
-    // story, so counting them would judge a region no consumer sees.
-    if is_wml_uri(element.uri) &&
-      element.local_name == "fldChar" &&
-      !is_inside_deleted_revision(elements, element) {
+    // Counted on the PHYSICAL tree, deliberately — including boundaries
+    // inside track-deleted content and unselected compatibility
+    // branches. This verb performs a physical byte splice, and a
+    // `fldChar` the reader suppresses is still THERE in the published
+    // file: a consumer that rejects the tracked deletion, or that
+    // understands the branch this reader does not, gets its field back
+    // around a hole where a paragraph used to be. The projection stance
+    // reads better and is wrong for a physical cut.
+    if is_wml_uri(element.uri) && element.local_name == "fldChar" {
       match element.field_char_type {
         Some("begin") => field_depth += 1
         Some("end") => if field_depth > 0 { field_depth -= 1 }
@@ -482,9 +556,7 @@ pub fn plan_docx_paragraph_deletion(
       if element.byte_start < span.byte_end() {
         continue
       }
-      if is_wml_uri(element.uri) &&
-        element.local_name == "fldChar" &&
-        !is_inside_deleted_revision(elements, element) {
+      if is_wml_uri(element.uri) && element.local_name == "fldChar" {
         match element.field_char_type {
           Some("begin") => depth += 1
           Some("end") => {
@@ -503,18 +575,6 @@ pub fn plan_docx_paragraph_deletion(
         message="the target paragraph sits inside a field region whose boundaries lie in other paragraphs; deleting it would truncate the field, so this deletion refuses",
       )
     }
-  }
-  // Ranges that BRACKET the target: markers CT_Body admits as the
-  // target's own siblings, whose start precedes it and whose end
-  // follows. The subtree scan below cannot see them — they are not
-  // inside the span — and deleting the paragraph empties the range
-  // they anchor.
-  match open_range_across(elements, span) {
-    Some(kind) =>
-      raise Unsupported(
-        message="the target paragraph sits inside \{kind} opened before it and closed after it; deleting it would take content that range anchors, so this deletion refuses",
-      )
-    None => ()
   }
   // Subtree hazards: every element inside the paragraph's byte span is
   // part of what the deletion removes.
@@ -567,7 +627,8 @@ pub fn plan_docx_paragraph_deletion(
               message="the target paragraph carries a bookmark marker without a usable id; the pairing cannot be judged, so this deletion refuses",
             )
           }
-          bookmark_starts[id] = bookmark_starts.get(id).unwrap_or(0) + 1
+          let key = normalized_decimal_id(id)
+          bookmark_starts[key] = bookmark_starts.get(key).unwrap_or(0) + 1
         }
         if element.local_name == "bookmarkEnd" {
           guard element.bookmark_id_raw is Some(id) && id != "" else {
@@ -575,7 +636,8 @@ pub fn plan_docx_paragraph_deletion(
               message="the target paragraph carries a bookmark marker without a usable id; the pairing cannot be judged, so this deletion refuses",
             )
           }
-          bookmark_ends[id] = bookmark_ends.get(id).unwrap_or(0) + 1
+          let key = normalized_decimal_id(id)
+          bookmark_ends[key] = bookmark_ends.get(key).unwrap_or(0) + 1
         }
       }
     }
@@ -595,6 +657,18 @@ pub fn plan_docx_paragraph_deletion(
         message="the target paragraph carries bookmark boundaries that do not pair inside it; deleting it would unbalance the range, so this deletion refuses",
       )
     }
+  }
+  // Ranges that BRACKET the target: markers CT_Body admits as the
+  // target's own siblings, whose start precedes it and whose end
+  // follows. The subtree scan below cannot see them — they are not
+  // inside the span — and deleting the paragraph empties the range
+  // they anchor.
+  match open_range_across(elements, span) {
+    Some(reason) =>
+      raise Unsupported(
+        message="\{reason}; deleting it would take or strand content a range anchors, so this deletion refuses",
+      )
+    None => ()
   }
   // The document-final direct body paragraph is structural: Word keeps
   // one, and a body whose last flow child is a table still needs its
@@ -723,14 +797,10 @@ pub fn docx_direct_body_paragraph_count(
   let elements = projection.scan.elements()
   let mut count = 0
   for element in elements {
-    if element.local_name == "p" && is_wml_uri(element.uri) {
-      let parent = element.parent_index
-      if parent >= 0 && parent < elements.length() {
-        let holder = elements[parent]
-        if holder.local_name == "body" && is_wml_uri(holder.uri) {
-          count += 1
-        }
-      }
+    if element.local_name == "p" &&
+      is_wml_uri(element.uri) &&
+      is_direct_body_child(elements, element) {
+      count += 1
     }
   }
   count

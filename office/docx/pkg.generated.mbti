@@ -183,6 +183,7 @@ pub fn DocxDeleteParagraphReport::anchor_status(Self) -> String
 pub fn DocxDeleteParagraphReport::para_id(Self) -> String?
 pub fn DocxDeleteParagraphReport::path(Self) -> String
 pub fn DocxDeleteParagraphReport::successor_para_id(Self) -> String?
+pub fn DocxDeleteParagraphReport::successor_text(Self) -> String?
 pub fn DocxDeleteParagraphReport::text(Self) -> String
 
 pub struct DocxDeleteParagraphResult {

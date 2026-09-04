@@ -1297,6 +1297,9 @@ pub fn capability_commands() -> Array[CapabilityCommand] {
           "successor_para_id", "string", false, "the stable identity now answering at the deleted path, null when the successor carries no UNIQUE identity (absent, duplicated, or invalid ids all report null) — the re-anchor after ordinal paths shift",
         ),
         capability_field(
+          "successor_text", "string", false, "the projection now reading at the deleted path (bounded at 160 characters), verified against the published candidate; null when nothing follows. The re-anchor that still speaks on documents carrying no unique identities",
+        ),
+        capability_field(
           "stories_scanned", "array(string)", true, "the stories searched; /body in v1",
         ),
         capability_field(

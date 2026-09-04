@@ -317,7 +317,9 @@ cmp -s "$work/docx-filled.docx" "$work/docx-deleted.docx" || fail "docx insert+d
 jq -e '.data.valid == true and .data.error_count == 0' >/dev/null <<<"$(json office.validate/1 validate "$work/docx-deleted.docx" --json)" || fail "docx delete validate"
 expect_failure "$work/docx-del-miss.json" delete-paragraph "$work/docx-filled.docx" \
   "$work/docx-del-never.docx" --at 'p[999]' --json
-jq -e '.error.code == "office.docx.invalid_plan"' "$work/docx-del-miss.json" >/dev/null || fail "docx delete no-target code"
+# Typed per hazard, not one opaque plan failure: an agent must be able to tell
+# a retryable address mistake from a permanent structural refusal.
+jq -e '.error.code == "office.delete.target_not_found"' "$work/docx-del-miss.json" >/dev/null || fail "docx delete no-target code"
 [ ! -e "$work/docx-del-never.docx" ] || fail "docx delete refusal wrote output"
 expect_failure "$work/docx-del-grammar.json" delete-paragraph "$work/docx-filled.docx" \
   "$work/docx-del-never2.docx" --at 'tbl[1]' --json

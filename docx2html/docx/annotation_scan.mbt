@@ -2575,10 +2575,26 @@ fn scan_tag(
         None => utf8_slice(part, attr_start, attr_end)
       }
       let raw_value = @utf8.decode(part[value_start:at]) catch {
-        _ =>
+        _ => {
+          // The THIRD decline path, and the one the other two left
+          // open: a bookmark name is the only attribute this reader
+          // newly decodes, so a mis-encoded byte inside one must cost
+          // the value, never the read. Every other relevant attribute
+          // is load-bearing and still refuses.
+          if element_is_bookmark_start &&
+            !bytes_range_has_ascii_prefix(part, attr_start, attr_end, "xmlns:") &&
+            bytes_range_has_ascii_suffix(part, attr_start, attr_end, ":name") {
+            match validated_source_name {
+              Some(candidate) => unretained_attribute_names.push(candidate)
+              None => ()
+            }
+            at += 1
+            continue
+          }
           raise Unsupported(
             message="the annotation scanner found a non-UTF-8 attribute value",
           )
+        }
       }
       // Attribute values must be entity-decoded: w:id="&#49;" IS id "1"
       // (and namespace URIs may legally carry &amp;).

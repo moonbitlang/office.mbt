@@ -146,7 +146,7 @@ test "deletion refusals are typed per construct" {
       "<w:p><w:bookmarkStart w:id=\"0\" w:name=\"_GoBack\"/><w:r><w:t>x</w:t></w:r></w:p>" +
       "<w:p><w:bookmarkEnd w:id=\"0\"/><w:r><w:t>keeper</w:t></w:r></w:p>",
       "p[2]",
-    ).contains("sits inside a bookmark range"),
+    ).contains("do not pair inside it"),
   )
   // id-less and id-colliding bookmark markers cannot be pair-judged
   assert_true(
@@ -173,9 +173,10 @@ test "deletion refusals are typed per construct" {
     delete_refusal(
       "<w:p><w:bookmarkStart w:id=\"7\" w:name=\"Chapter1\"/><w:r><w:t>outside</w:t></w:r></w:p>" +
       "<w:p><w:bookmarkStart w:id=\"7\" w:name=\"_GoBack\"/><w:bookmarkEnd w:id=\"7\"/><w:r><w:t>x</w:t></w:r></w:p>" +
-      keeper,
+      keeper +
+      "<w:bookmarkEnd w:id=\"7\"/>",
       "p[2]",
-    ).contains("sits inside a bookmark range"),
+    ).contains("carries the end of a bookmark range opened before it"),
   )
   // range permissions pair across paragraphs
   for construct in ["permStart", "permEnd"] {
@@ -205,6 +206,16 @@ test "deletion refusals are typed per construct" {
       msg="expected the revision refusal for \{construct}",
     )
   }
+  // block-level content the reader tolerated inside the paragraph: the
+  // physical span holds more than the receipt could name, and a table
+  // that left with it is invisible to every readback leg
+  assert_true(
+    delete_refusal(
+      "<w:p><w:r><w:t>pre</w:t></w:r><w:tbl><w:tr><w:tc><w:tcPr/></w:tc></w:tr></w:tbl></w:p>" +
+      keeper,
+      "p[1]",
+    ).contains("a nested table"),
+  )
   // a nested paragraph the reader tolerated: the physical span holds
   // more logical paragraphs than the receipt could name
   assert_true(
@@ -554,6 +565,53 @@ test "bracketing ranges do not cross families" {
 }
 
 ///|
+/// The two ways a naive range counter goes wrong, both reproduced by
+/// review before they were fixed.
+test "range counting refuses what it cannot pair and nothing else" {
+  let keeper = "<w:p><w:r><w:t>keeper</w:t></w:r></w:p>"
+  // An ORPHAN END before the target must not cancel a range that is
+  // genuinely open across it. Counting alone cannot tell which range an
+  // end closes, so an unbalanced story is one this verb declines to
+  // judge at all.
+  let orphan_end = delete_fixture(
+    "<w:bookmarkStart w:id=\"1\" w:name=\"Chapter\"/><w:bookmarkEnd w:id=\"7\"/>" +
+    "<w:p><w:r><w:t>target</w:t></w:r></w:p><w:bookmarkEnd w:id=\"1\"/>" +
+    keeper,
+  )
+  assert_true(delete_refusal_of(orphan_end, "p[1]") != "<planned>")
+  // An ORPHAN START before the target must not make a LATER, unrelated
+  // range's end refuse every paragraph in between. Only a range whose
+  // depth falls below its entry level after the target spans it.
+  let orphan_start = delete_fixture(
+    "<w:bookmarkStart w:id=\"1\" w:name=\"Orphan\"/>" +
+    "<w:p><w:r><w:t>one</w:t></w:r></w:p>" +
+    "<w:p><w:r><w:t>two</w:t></w:r></w:p>" +
+    "<w:bookmarkStart w:id=\"2\" w:name=\"Real\"/><w:p><w:r><w:t>bracketed</w:t></w:r></w:p><w:bookmarkEnd w:id=\"2\"/>" +
+    keeper,
+  )
+  // An unbalanced story is one this verb declines to judge AT ALL,
+  // uniformly and with a message that says so — rather than refusing
+  // some paragraphs while naming a range that does not cover them.
+  for path in ["p[1]", "p[2]", "p[3]"] {
+    assert_true(
+      delete_refusal_of(orphan_start, path).contains("do not balance"),
+      msg="expected the balance refusal at " + path,
+    )
+  }
+  // A story whose markers DO balance judges each paragraph on its own:
+  // only the one the range covers refuses.
+  let balanced = delete_fixture(
+    "<w:p><w:r><w:t>one</w:t></w:r></w:p>" +
+    "<w:bookmarkStart w:id=\"2\" w:name=\"Real\"/><w:p><w:r><w:t>covered</w:t></w:r></w:p><w:bookmarkEnd w:id=\"2\"/>" +
+    keeper,
+  )
+  assert_eq(delete_refusal_of(balanced, "p[1]"), "<planned>")
+  assert_true(
+    delete_refusal_of(balanced, "p[2]").contains("sits inside a bookmark range"),
+  )
+}
+
+///|
 /// A field region only truncates if the region open AT the target is
 /// the one that closes after it: an orphan `begin` plus an ordinary
 /// later field (a page number — nearly every document has one) must not
@@ -569,16 +627,22 @@ test "an unrelated later field does not close an orphan region" {
 }
 
 ///|
-/// A field boundary inside track-DELETED content is not in the story a
-/// consumer projects, so it must not open a region for this judgment.
-test "a deleted field boundary opens no region" {
+/// A field boundary inside track-DELETED content STILL COUNTS. The
+/// splice is physical and the boundary is physically there: a consumer
+/// that rejects the tracked deletion gets its field back, and it would
+/// then span a hole where this paragraph used to be. Reading the
+/// projection here would be the more elegant answer to the wrong
+/// question.
+test "a suppressed field boundary still opens a region" {
   let annotated = delete_fixture(
     "<w:p><w:del w:id=\"1\" w:author=\"a\"><w:r><w:fldChar w:fldCharType=\"begin\"/></w:r></w:del></w:p>" +
     "<w:p><w:r><w:t>target</w:t></w:r></w:p>" +
     "<w:p><w:r><w:fldChar w:fldCharType=\"end\"/></w:r></w:p>" +
     "<w:p><w:r><w:t>keeper</w:t></w:r></w:p>",
   )
-  assert_eq(delete_refusal_of(annotated, "p[2]"), "<planned>")
+  assert_true(
+    delete_refusal_of(annotated, "p[2]").contains("inside a field region"),
+  )
 }
 
 ///|

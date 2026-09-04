@@ -15,6 +15,7 @@ pub struct DocxDeleteParagraphReport {
   priv anchor_status : String
   priv text : String
   priv successor_para_id : String?
+  priv successor_text : String?
 }
 
 ///|
@@ -57,6 +58,18 @@ pub fn DocxDeleteParagraphReport::successor_para_id(
 }
 
 ///|
+/// What now reads at the deleted path — verified against the published
+/// candidate before this report was returned. On the many documents
+/// that carry no unique identities, this is the ONLY re-anchoring
+/// evidence there is, so it is reported rather than proved and thrown
+/// away.
+pub fn DocxDeleteParagraphReport::successor_text(
+  self : DocxDeleteParagraphReport,
+) -> String? {
+  self.successor_text
+}
+
+///|
 pub struct DocxDeleteParagraphResult {
   priv report : DocxDeleteParagraphReport
   priv transaction : @transaction.TransactionReport
@@ -89,7 +102,7 @@ pub fn DocxEditSession::queue_delete_paragraph(
     self.annotated,
     at=resolved,
   ) catch {
-    error => raise mapped_plan_failure(error)
+    error => raise delete_plan_failure(error)
   }
   self.queue_plan(plan)
   receipt
@@ -115,6 +128,59 @@ priv struct DeleteReadbackExpectation {
   // read alike — deleting either leaves the same text at the same path
   // — so this is the leg that says WHICH paragraph left.
   cut : @word.DocxDeleteCutWitness
+}
+
+///|
+/// The planner speaks in sentences; an agent needs a CODE it can branch
+/// on — most of all to tell a retryable address mistake (a stale
+/// ordinal after an earlier delete shifted paths) from a permanent
+/// structural refusal. The phrases matched here are OURS: the planner
+/// interpolates no caller text into any of them, so a crafted `--at`
+/// cannot steer the classification.
+fn delete_refusal_code(message : String) -> String {
+  if message.contains("is not one") || message.contains("does not resolve") {
+    "office.delete.target_not_found"
+  } else if message.contains("does not address exactly one whole paragraph") ||
+    message.contains("one physical half") ||
+    message.contains("has no readable projection") {
+    "office.delete.target_not_addressable"
+  } else if message.contains("not a DIRECT child") {
+    "office.delete.target_not_direct"
+  } else if message.contains("final direct body paragraph") {
+    "office.delete.final_paragraph"
+  } else if message.contains("separates two tables") {
+    "office.delete.table_separator"
+  } else if message.contains("field region") {
+    "office.delete.field_region"
+  } else if message.contains("do not balance") ||
+    message.contains("sits inside") ||
+    message.contains("carries the end of") {
+    "office.delete.open_range"
+  } else if message.contains("do not pair inside it") ||
+    message.contains("without a usable id") ||
+    message.contains("whose name could not be read") {
+    "office.delete.bookmark_unpairable"
+  } else if message.contains("references a package relationship") {
+    "office.delete.relationship_reference"
+  } else if message.contains("carries") {
+    "office.delete.blocked_construct"
+  } else {
+    "office.docx.invalid_plan"
+  }
+}
+
+///|
+/// Map a planner refusal to a typed code, falling back to the shared
+/// plan-failure classification for everything that is not a structural
+/// refusal (resource limits, malformed XML, stale plans).
+fn delete_plan_failure(
+  error : @docxcore.DocxError,
+) -> @transaction.TransactionError raise @transaction.TransactionError {
+  match error {
+    Unsupported(message~) =>
+      @transaction.transaction_failure(delete_refusal_code(message), message)
+    _ => mapped_plan_failure(error)
+  }
 }
 
 ///|
@@ -181,6 +247,10 @@ fn delete_readback_findings(
       return findings
     }
   }
+  // `paragraphs_with_para_id` reports ADDRESSABLE carriers only, so a
+  // copy buried inside a revision-joined paragraph would read as gone.
+  // Narrower than the message implies, and stated so rather than
+  // over-claimed; the cut leg is what proves the removal exactly.
   match plan.para_id {
     Some(id) =>
       if anchors.paragraphs_with_para_id(id).length() > 0 {
@@ -355,6 +425,7 @@ pub async fn transact_docx_delete_paragraph(
         anchor_status: receipt.anchor_status(),
         text: receipt.text(),
         successor_para_id: receipt.successor_para_id(),
+        successor_text: receipt.successor_text(),
       }
       match preflight {
         Some(callback) => callback(report)

@@ -882,8 +882,7 @@ the wrong paragraph by ordinal).
 
 Everything the removal could dangle refuses typed. Inside the paragraph:
 section breaks, note references, comment machinery, bookmark markers
-(only a wholly-internal `_GoBack` pair is exempt, and no marker outside
-may share its id), range permissions, split field boundaries
+(only a wholly-internal `_GoBack` pair is exempt), range permissions, split field boundaries
 (`fldSimple` is permitted), the entire tracked-revision family, and any
 element referencing a package relationship (`w:hyperlink` alone
 excepted). Around it: the document-final DIRECT body paragraph, a paragraph
@@ -911,6 +910,7 @@ landed at exactly the bytes the plan named.
 | `dry_run`, `changed` | boolean | request mode and whether bytes changed |
 | `deleted` | object | `{path, para_id, paragraph_anchor_status, text, text_truncated}` — what left, readback-verified gone. `text` is bounded at 160 characters and `text_truncated` says whether that cut it; `--expect-text` compares the FULL projection, so a truncated value is not a round-trippable guard (`office text --json` emits the untruncated projection) |
 | `successor_para_id` | string\|null | the stable identity now answering at the deleted path; null when the successor carries no unique identity |
+| `successor_text` | string\|null | the projection now reading at the deleted path (bounded at 160 characters), verified against the published candidate; null when nothing follows — the re-anchor that still speaks on documents carrying no unique identities |
 | `stories_scanned` | array | `["/body"]` in v1 |
 | `transaction` | object | `office.transaction/2` report; nothing is published on any refusal |
 

@@ -108,6 +108,13 @@ fn delete_paragraph_report_json(
       Some(id) => Json::string(id)
       None => Json::null()
     },
+    // The re-anchor that always speaks: most producers other than Word
+    // emit no paraIds, and this was verified against the published
+    // candidate.
+    "successor_text": match report.successor_text() {
+      Some(text) => Json::string(bounded_text(text, 160))
+      None => Json::null()
+    },
     "stories_scanned": Json::array([Json::string("/body")]),
     "transaction": transaction,
   })
@@ -241,7 +248,11 @@ async fn run_delete_paragraph(matches : @argparse.Matches) -> Unit {
           raise CliFailure(
             @lib.protocol_error(
               "office.delete.report_internal",
-              "internal: the delete report exceeded the output ceiling despite the preflight; the edit itself completed and \{output} is valid",
+              if dry_run {
+                "internal: the delete report exceeded the output ceiling despite the preflight; this was a dry run, so nothing was written"
+              } else {
+                "internal: the delete report exceeded the output ceiling despite the preflight; the edit itself completed and \{output} is valid"
+              },
             ),
           )
       }

@@ -40,8 +40,11 @@ async fn delete_readback_case() -> (
         }
         let head = text[0:open_at].to_string()
         let tail = text[close_at + 6:].to_string()
-        let twins = "<w:p><w:r><w:rPr><w:b/></w:rPr><w:t>same</w:t></w:r></w:p>" +
-          "<w:p><w:r><w:rPr><w:i/></w:rPr><w:t>same</w:t></w:r></w:p>" +
+        // Identical in length, alike in text, each carrying its own
+        // stable identity — so the cut leg has nothing to lean on but
+        // bytes, and the identity leg has something real to check.
+        let twins = "<w:p w14:paraId=\"0000AAA1\"><w:r><w:rPr><w:b/></w:rPr><w:t>same</w:t></w:r></w:p>" +
+          "<w:p w14:paraId=\"0000AAA2\"><w:r><w:rPr><w:i/></w:rPr><w:t>same</w:t></w:r></w:p>" +
           "<w:p><w:r><w:t>keeper</w:t></w:r></w:p>"
         @utf8.encode(head + twins + tail)
       } else {
@@ -130,15 +133,18 @@ async test "the delete readback catches a cut that did not land as planned" {
   )
   assert_eq(text_findings.length(), 1)
   assert_eq(text_findings[0].code, "docx.delete.readback_successor_text")
-  let ghost_identity = { ..honest, para_id: Some("00000001"), }
+  // The identity leg, made FALSIFIABLE: claim the deleted paragraph
+  // carried the id the SURVIVOR still has. Doctoring with an id nothing
+  // carries would pass on any implementation, including one with the
+  // leg deleted.
+  let surviving_identity = { ..honest, para_id: Some("0000AAA2"), }
   let identity_findings = delete_readback_findings(
-    Some(ghost_identity),
+    Some(surviving_identity),
     Docx,
     candidate,
   )
-  // The deleted identity must be GONE; a document that never carried it
-  // satisfies that, so this pins the leg runs rather than a violation.
-  assert_eq(identity_findings.length(), 0)
+  assert_eq(identity_findings.length(), 1)
+  assert_eq(identity_findings[0].code, "docx.delete.readback_identity")
   let wrong_successor_id = { ..honest, successor_para_id: Some("0000BEEF"), }
   let successor_findings = delete_readback_findings(
     Some(wrong_successor_id),
