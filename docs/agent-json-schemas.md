@@ -882,7 +882,9 @@ the wrong paragraph by ordinal).
 
 Everything the removal could dangle refuses typed. Inside the paragraph:
 section breaks, note references, comment machinery, bookmark markers
-(only Word's `_GoBack` caret is exempt, wherever it sits), range permissions, SPLIT field boundaries whose partner lies outside the
+(Word's `_GoBack` caret is exempt where it BRACKETS the paragraph, but a
+caret split across the target — its start inside and its end beyond —
+still refuses, because the deletion would take one half of the pair), range permissions, SPLIT field boundaries whose partner lies outside the
 paragraph (a COMPLETE field — a page number, a DATE, a REF, a TOC entry —
 leaves with its paragraph and dangles nothing; `fldSimple` likewise), the
 entire tracked-revision family, drawings and embedded objects,

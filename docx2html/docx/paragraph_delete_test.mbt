@@ -682,9 +682,7 @@ test "an inverted range pair is not balanced" {
     "<w:bookmarkEnd w:id=\"2\"/><w:bookmarkStart w:id=\"1\" w:name=\"Late\"/>" +
     keeper,
   )
-  assert_true(
-    delete_refusal_of(inverted, "p[1]").contains("sits inside a bookmark range"),
-  )
+  assert_true(delete_refusal_of(inverted, "p[1]").contains("cannot pair"))
   // The shape a running minimum alone cannot see: an inversion NESTED
   // inside another open range of the same family, whose prefix sums
   // never dip below zero. Well-formedness catches it because the
@@ -696,9 +694,7 @@ test "an inverted range pair is not balanced" {
     keeper,
   )
   assert_true(
-    delete_refusal_of(nested_inversion, "p[1]").contains(
-      "sits inside a bookmark range",
-    ),
+    delete_refusal_of(nested_inversion, "p[1]").contains("cannot pair"),
   )
 }
 
@@ -929,7 +925,20 @@ test "every range-hazard arm is reachable" {
     "<w:commentRangeEnd/>" +
     keeper,
   )
-  assert_true(delete_refusal_of(straddling, "p[1]").contains("cannot be read"))
+  assert_true(
+    delete_refusal_of(straddling, "p[1]").contains(
+      "markers of a comment range on both sides",
+    ),
+  )
+  // The MIXED case: one unreadable end and one READABLE partner still
+  // bracket the target, and neither pairs alone. Nothing caught this
+  // while the rule looked only at unreadable ids.
+  let mixed = delete_fixture(
+    "<w:commentRangeStart/><w:p><w:r><w:t>target</w:t></w:r></w:p>" +
+    "<w:commentRangeEnd w:id=\"1\"/>" +
+    keeper,
+  )
+  assert_true(delete_refusal_of(mixed, "p[1]").contains("cannot pair"))
   // Two DISJOINT ranges that reuse one id are two intervals, not one
   // long one: nothing covers the paragraph between them.
   let reused_id = delete_fixture(
@@ -962,6 +971,57 @@ test "every range-hazard arm is reachable" {
     keeper,
   )
   assert_eq(delete_refusal_of(permissions, "p[2]"), "<planned>")
+}
+
+///|
+/// Adjacency and the trailing-paragraph guarantee read OPPOSITE
+/// surfaces, and this pins both — a single surface cannot serve them,
+/// which is how a tracked-deleted paragraph came to satisfy the
+/// guarantee it exists to enforce.
+test "the two flow surfaces have opposite polarity" {
+  let table = "<w:tbl><w:tr><w:tc><w:p><w:r><w:t>cell</w:t></w:r></w:p></w:tc></w:tr></w:tbl>"
+  // GUARANTEE, conservative: a tracked-deleted paragraph vanishes when
+  // the deletion is accepted, so it cannot be the paragraph that keeps
+  // the body's promise.
+  let suppressed_survivor = delete_fixture(
+    "<w:p><w:r><w:t>lead</w:t></w:r></w:p>" +
+    table +
+    "<w:p><w:r><w:t>target</w:t></w:r></w:p>" +
+    "<w:del w:id=\"3\" w:author=\"a\"><w:p><w:r><w:delText>gone</w:delText></w:r></w:p></w:del>",
+  )
+  assert_true(
+    delete_refusal_of(suppressed_survivor, "p[2]").contains(
+      "final direct body paragraph",
+    ),
+  )
+  // ADJACENCY, pessimistic: a tracked-deleted table RETURNS if the
+  // deletion is rejected, and then the tables meet — a merge is
+  // unrecoverable, a refusal is not.
+  let suppressed_neighbour = delete_fixture(
+    table +
+    "<w:p><w:r><w:t>target</w:t></w:r></w:p>" +
+    "<w:del w:id=\"4\" w:author=\"a\">" +
+    table +
+    "</w:del>" +
+    "<w:p><w:r><w:t>keeper</w:t></w:r></w:p>",
+  )
+  assert_true(
+    delete_refusal_of(suppressed_neighbour, "p[1]").contains(
+      "separates two tables",
+    ),
+  )
+  // An alternative-content block whose branches lay out NOTHING is not
+  // a neighbour at all, so it cannot hide a merge.
+  let empty_alternate = delete_fixture(
+    table +
+    "<w:p><w:r><w:t>target</w:t></w:r></w:p>" +
+    "<mc:AlternateContent xmlns:mc=\"http://schemas.openxmlformats.org/markup-compatibility/2006\"><mc:Choice Requires=\"wps\"><w:bookmarkStart w:id=\"9\" w:name=\"z\"/></mc:Choice><mc:Fallback><w:bookmarkEnd w:id=\"9\"/></mc:Fallback></mc:AlternateContent>" +
+    table +
+    "<w:p><w:r><w:t>keeper</w:t></w:r></w:p>",
+  )
+  assert_true(
+    delete_refusal_of(empty_alternate, "p[1]").contains("separates two tables"),
+  )
 }
 
 ///|

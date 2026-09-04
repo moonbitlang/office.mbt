@@ -337,7 +337,7 @@ let max_projection_source_attribute_chars : Int = 8 * 1024 * 1024
 /// explicitly alongside `max_attribute_chars`; total retention is the
 /// two together. Generous for real documents: tens of thousands of
 /// cross-reference bookmark names.
-let max_projection_bookmark_name_chars : Int = 2 * 1024 * 1024
+let bookmark_name_chars_divisor : Int = 4
 
 ///|
 let max_projection_source_retained_tokens : Int = 1_000_000
@@ -365,11 +365,11 @@ fn projection_source_budget(
   // retained-character pool, pinned to the character by the exactness
   // wbtests), and total retention is bounded by the two together. A
   // caller tightening memory tightens both.
-  max_bookmark_name_chars? : Int = max_projection_bookmark_name_chars,
+  max_bookmark_name_chars? : Int = -1,
 ) -> ProjectionSourceBudget raise DocxError {
   guard max_elements >= 0 &&
     max_attribute_chars >= 0 &&
-    max_bookmark_name_chars >= 0 &&
+    max_bookmark_name_chars >= -1 &&
     max_retained_tokens >= 0 &&
     max_depth >= 0 &&
     max_text_bytes >= 0 &&
@@ -381,7 +381,14 @@ fn projection_source_budget(
   {
     elements_left: max_elements,
     retained_chars_left: max_attribute_chars,
-    bookmark_name_chars_left: max_bookmark_name_chars,
+    // A FRACTION of the caller's own ceiling by default, never a fixed
+    // pool: a caller that tightens the budget tightens this too, which
+    // is what the field's contract says and what a memory bound means.
+    bookmark_name_chars_left: if max_bookmark_name_chars >= 0 {
+      max_bookmark_name_chars
+    } else {
+      max_attribute_chars / bookmark_name_chars_divisor
+    },
     retained_tokens_left: max_retained_tokens,
     max_depth,
     text_budget: token_map_budget(max_text_bytes, max_text_tokens) catch {

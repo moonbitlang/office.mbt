@@ -108,7 +108,6 @@ pub fn DocxEditSession::queue_delete_paragraph(
       "office.delete.already_queued", "a session may queue ONE paragraph deletion: every structural guarantee is judged against the snapshot, so a second deletion would be judged against a document that no longer describes what will be published",
     )
   }
-  self.delete_queued = true
   let resolved = resolve_stable_replace_scope(self, at)
   // A STABLE id that resolved to a nested path reaches the planner's
   // grammar guard, but its remediation is the opposite of a mistyped
@@ -136,6 +135,10 @@ pub fn DocxEditSession::queue_delete_paragraph(
     }
   }
   self.queue_plan(plan)
+  // Set only once something was actually QUEUED: a refused deletion
+  // changed nothing, and burning the slot would make the retry the
+  // refusal invites answer "already queued" — a claim that is false.
+  self.delete_queued = true
   receipt
 }
 

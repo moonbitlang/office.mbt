@@ -198,13 +198,17 @@ fn open_range_across(
   // Open starts per (family, id), and the concrete intervals they close
   // into.
   let open : Map[String, Array[Int]] = Map([])
-  let family_of : Map[String, String] = Map([])
   let caret : Map[String, Bool] = Map([])
   let named : Map[String, Bool] = Map([])
   let spanning : Array[String] = []
   let split : Array[String] = []
-  let mut unreadable_before = false
-  let mut unreadable_after = false
+  // "Unresolved" on a side means: a marker there that this walk could
+  // not pair — either its id is unreadable, or it is readable but never
+  // met a partner. An unresolved marker before the target and another
+  // after it MAY be one range bracketing it, and a range this reader
+  // cannot rule out is one it will not edit around.
+  let unresolved_before : Map[String, Bool] = Map([])
+  let unresolved_after : Map[String, Bool] = Map([])
   fn note_interval(
     family : String,
     key : String,
@@ -239,14 +243,13 @@ fn open_range_across(
       // target-relative rather than story-globally: a stray marker at
       // the far end of the document does not take the deletion out.
       if element.byte_end <= span.byte_start() {
-        unreadable_before = true
+        unresolved_before[family] = true
       } else if element.byte_start >= span.byte_end() {
-        unreadable_after = true
+        unresolved_after[family] = true
       }
       continue
     }
     let key = family + "\u{1}" + range_id_key(family, raw)
-    family_of[key] = family
     if starts {
       if element.bookmark_name_raw is Some("_GoBack") {
         caret[key] = true
@@ -263,16 +266,44 @@ fn open_range_across(
           open[key] = pending
           note_interval(family, key, from, element.byte_end)
         }
-        // An end with no open start of this id pairs with nothing and
-        // covers nothing; an unclosed start likewise. Neither strands
-        // anything this deletion could take.
-        None => ()
+        // An end with no open start of this id: unpaired here, but its
+        // partner may be one of the markers whose id could not be read.
+        None =>
+          if element.byte_end <= span.byte_start() {
+            unresolved_before[family] = true
+          } else if element.byte_start >= span.byte_end() {
+            unresolved_after[family] = true
+          }
       }
     }
   }
-  if unreadable_before && unreadable_after {
+  // Starts still open at the end of the walk are unpaired too.
+  for key, pending in open {
+    guard key.find("\u{1}") is Some(cut) else { continue }
+    let family = key[0:cut].to_owned()
+    for position in pending {
+      if position < span.byte_start() {
+        unresolved_before[family] = true
+      } else if position >= span.byte_end() {
+        unresolved_after[family] = true
+      }
+    }
+  }
+  // Per FAMILY: a permission and a comment range are never one pair,
+  // so an unresolved marker of each on opposite sides rules out
+  // nothing.
+  let unpairable : Array[String] = []
+  for family, _ in unresolved_before {
+    if unresolved_after.get(family).unwrap_or(false) &&
+      !unpairable.contains(family) {
+      unpairable.push(family)
+    }
+  }
+  if unpairable.length() > 0 {
+    unpairable.sort()
+    let family = unpairable.get(0).unwrap_or("a range")
     return Some(
-      "this story carries range markers whose ids cannot be read on both sides of the target, so what they cover cannot be judged",
+      "this story carries markers of \{family} on both sides of the target that this reader cannot pair, so what they cover cannot be judged",
     )
   }
   spanning.sort()
@@ -430,11 +461,36 @@ fn range_family_of(element : ScannedElement) -> (String, Bool)? {
 /// direct-child proof — `is_direct_body_child` is that, and it is what
 /// stops a splice inside a wrapper. These are the file's two surfaces,
 /// and confusing them is how a guard goes blind.
-fn body_flow_kind(elements : Array[ScannedElement], index : Int) -> String? {
+/// Two questions, opposite safe answers, so two surfaces.
+///
+/// ADJACENCY ("would these blocks touch?") is PESSIMISTIC: content some
+/// consumer might render counts, because if any of them lays it out the
+/// blocks do not touch. Tracked-deleted and alternative content count
+/// here.
+///
+/// GUARANTEE ("does a paragraph remain?") is CONSERVATIVE: only content
+/// EVERY consumer renders counts, because a paragraph that disappears
+/// when a tracked deletion is accepted cannot be the one keeping the
+/// body's promise.
+///
+/// A single surface cannot serve both — treating `w:del` as transparent
+/// closed a table-hiding bypass and simultaneously let a
+/// tracked-deleted paragraph satisfy the trailing-paragraph guarantee.
+fn body_flow_kind(
+  elements : Array[ScannedElement],
+  index : Int,
+  rendered_by_every_consumer? : Bool = false,
+) -> String? {
   let element = elements[index]
   let kind = if element.uri == MC_URI &&
     element.local_name == "AlternateContent" {
-    alternate_content_flow_kind(elements, index)
+    // A block whose branches lay out NOTHING is not a neighbour: it
+    // occupies no space between two blocks that would otherwise touch,
+    // and counting it as "other" hid a table merge.
+    match alternate_content_flow_kind(elements, index) {
+      "other" => return None
+      other => other
+    }
   } else if is_wml_uri(element.uri) {
     match element.local_name {
       "p" => "p"
@@ -448,6 +504,11 @@ fn body_flow_kind(elements : Array[ScannedElement], index : Int) -> String? {
   while parent >= 0 && parent < elements.length() {
     let holder = elements[parent]
     if is_layout_transparent(holder.uri, holder.local_name) {
+      // Under the CONSERVATIVE question, content a consumer may drop
+      // does not count as remaining.
+      if rendered_by_every_consumer && is_suppressible(holder) {
+        return None
+      }
       parent = holder.parent_index
       continue
     }
@@ -457,6 +518,15 @@ fn body_flow_kind(elements : Array[ScannedElement], index : Int) -> String? {
     return Some(kind)
   }
   None
+}
+
+///|
+/// Whether a wrapper's content may vanish for some consumer: tracked
+/// deletions disappear when accepted, and an alternative branch is
+/// shown only to consumers that understand it.
+fn is_suppressible(holder : ScannedElement) -> Bool {
+  (is_wml_uri(holder.uri) && holder.local_name is ("del" | "moveFrom")) ||
+  (holder.uri == MC_URI && holder.local_name is ("Choice" | "Fallback"))
 }
 
 ///|
@@ -701,6 +771,13 @@ pub fn plan_docx_paragraph_deletion(
   if target_position > 0 && target_position + 1 < flow_children.length() {
     let before = flow_children[target_position - 1]
     let after = flow_children[target_position + 1]
+    // Judged PESSIMISTICALLY, and deliberately. A table inside a
+    // tracked deletion is absent once that deletion is ACCEPTED — but
+    // it returns if the deletion is REJECTED, and then the two tables
+    // meet. A merge is unrecoverable and a refusal is not, so the safe
+    // reading wins here, even though it over-refuses for the
+    // accept-only future. (The trailing-paragraph guarantee reads the
+    // other surface for the mirror-image reason.)
     if before == "tbl" && after == "tbl" {
       raise delete_refusal(
         "table_separator", "the target paragraph separates two tables; deleting it would merge them into one, so this deletion refuses",
@@ -936,12 +1013,35 @@ pub fn plan_docx_paragraph_deletion(
     }
   }
   let keeps_a_paragraph = direct_paragraphs > 0
-  let ended_with_paragraph = flow_children.length() > 0 &&
-    flow_children[flow_children.length() - 1] == "p"
-  let still_ends_with_paragraph = remaining.length() > 0 &&
-    remaining[remaining.length() - 1] == "p"
+  // The GUARANTEE reads the conservative surface: a paragraph that
+  // vanishes when a tracked deletion is accepted, or that only one
+  // branch of a compatibility alternative shows, cannot be the one
+  // keeping the body's promise.
+  let rendered_children : Array[String] = []
+  let mut rendered_target_position = -1
+  for index, _ in elements {
+    guard body_flow_kind(elements, index, rendered_by_every_consumer=true)
+      is Some(kind) else {
+      continue
+    }
+    if index == target_index {
+      rendered_target_position = rendered_children.length()
+    }
+    rendered_children.push(kind)
+  }
+  let rendered_remaining : Array[String] = []
+  for position, kind in rendered_children {
+    if position != rendered_target_position {
+      rendered_remaining.push(kind)
+    }
+  }
+  let ended_with_paragraph = rendered_children.length() > 0 &&
+    rendered_children[rendered_children.length() - 1] == "p"
+  let still_ends_with_paragraph = rendered_remaining.length() > 0 &&
+    rendered_remaining[rendered_remaining.length() - 1] == "p"
   let keeps_trailing_paragraph = keeps_a_paragraph &&
     (still_ends_with_paragraph || !ended_with_paragraph)
+  ignore(remaining)
   guard keeps_trailing_paragraph else {
     raise delete_refusal(
       "final_paragraph", "the target is the final direct body paragraph; the document keeps it",
