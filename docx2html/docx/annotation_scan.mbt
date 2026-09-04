@@ -269,7 +269,10 @@ priv struct ScannedElement {
   // identity layer's judgment). None when the attribute is absent.
   para_id_raw : String?
   // A WML bookmark marker's `w:name` (bookmarkStart), as spelled —
-  // the deletion planner judges the `_GoBack` exemption on it.
+  // the deletion planner judges the `_GoBack` exemption on it. None
+  // when the name is absent, spelled more than one way, or longer than
+  // the relevant-attribute cap: all three mean "not provably `_GoBack`",
+  // and every consumer of this field treats that as a named bookmark.
   bookmark_name_raw : String?
   // A WML range marker's `w:id` (bookmarks, comment ranges, range
   // permissions), as spelled: the deletion planner pairs markers on
@@ -309,15 +312,6 @@ priv struct ProjectionSourceBudget {
   // namespace declarations can otherwise stay under the character budget
   // while multiplying tuples, map entries, scope stacks, and declarations.
   mut retained_tokens_left : Int
-  // Bookmark names are an OPTIONAL capture added after the reader's
-  // ceilings were set, so they draw on their OWN allowance and never
-  // the shared one. Spending shared characters on them would let a
-  // bookmark-heavy document exhaust the pool a MANDATORY charge later
-  // needs — turning a capture nothing depends on into a read failure
-  // on a package that was readable before it existed. The allowance is
-  // a FRACTION OF THE CALLER'S ceiling, never a constant: a caller that
-  // tightens the budget must not silently be handed a fixed extra pool.
-  mut bookmark_name_chars_left : Int
   max_depth : Int
   text_budget : TokenMapBudget
 }
@@ -327,17 +321,6 @@ let max_projection_source_elements : Int = 1_000_000
 
 ///|
 let max_projection_source_attribute_chars : Int = 8 * 1024 * 1024
-
-///|
-/// The default optional bookmark-name allowance: a fixed pool of its
-/// own, so
-/// this capture — added after the reader's ceilings were set — cannot
-/// spend characters a MANDATORY charge later needs and turn a readable
-/// document into a failed read. Callers that bound memory set it
-/// explicitly alongside `max_attribute_chars`; total retention is the
-/// two together. Generous for real documents: tens of thousands of
-/// cross-reference bookmark names.
-let bookmark_name_chars_divisor : Int = 4
 
 ///|
 let max_projection_source_retained_tokens : Int = 1_000_000
@@ -359,17 +342,9 @@ fn projection_source_budget(
   max_depth? : Int = max_projection_source_depth,
   max_text_bytes? : Int = max_projection_source_text_bytes,
   max_text_tokens? : Int = max_projection_source_text_tokens,
-  // The OPTIONAL bookmark-name pool, named separately so it is visible
-  // rather than folded into another ceiling: `max_attribute_chars`
-  // keeps meaning exactly what it has always meant (the shared
-  // retained-character pool, pinned to the character by the exactness
-  // wbtests), and total retention is bounded by the two together. A
-  // caller tightening memory tightens both.
-  max_bookmark_name_chars? : Int = -1,
 ) -> ProjectionSourceBudget raise DocxError {
   guard max_elements >= 0 &&
     max_attribute_chars >= 0 &&
-    max_bookmark_name_chars >= -1 &&
     max_retained_tokens >= 0 &&
     max_depth >= 0 &&
     max_text_bytes >= 0 &&
@@ -381,14 +356,6 @@ fn projection_source_budget(
   {
     elements_left: max_elements,
     retained_chars_left: max_attribute_chars,
-    // A FRACTION of the caller's own ceiling by default, never a fixed
-    // pool: a caller that tightens the budget tightens this too, which
-    // is what the field's contract says and what a memory bound means.
-    bookmark_name_chars_left: if max_bookmark_name_chars >= 0 {
-      max_bookmark_name_chars
-    } else {
-      max_attribute_chars / bookmark_name_chars_divisor
-    },
     retained_tokens_left: max_retained_tokens,
     max_depth,
     text_budget: token_map_budget(max_text_bytes, max_text_tokens) catch {
@@ -409,22 +376,6 @@ fn ProjectionSourceBudget::charge_element(
     raise @core.docx_xml_resource_limit_error(DocxXmlNestingDepth)
   }
   self.elements_left -= 1
-}
-
-///|
-/// Charge an OPTIONAL bookmark name against its own allowance,
-/// answering whether it fit. Declining costs the value and nothing
-/// else: a document readable before this capture existed stays
-/// readable, because the shared pool is never touched.
-fn ProjectionSourceBudget::charge_bookmark_name_chars(
-  self : ProjectionSourceBudget,
-  chars : Int,
-) -> Bool {
-  guard chars >= 0 && chars <= self.bookmark_name_chars_left else {
-    return false
-  }
-  self.bookmark_name_chars_left -= chars
-  true
 }
 
 ///|
@@ -1622,41 +1573,22 @@ fn scan_story(
           } else {
             None
           },
-          // A DECLINED name reads as unknown, never as absent: the
-          // spelling that was dropped could be the one that makes an
-          // exemption ambiguous, and a gate must not be handed a
-          // cheaper answer than the document supports. Only a decline
-          // of a WML-resolved `:name` counts — a foreign `v:name` is
-          // not the bookmark's name, and dropping it must not erase a
-          // readable `w:name`. The declined QName is recorded in the
-          // unretained list, where the prefix scope resolves it.
-          bookmark_name_raw: if is_wml_uri(uri) &&
-            local_name == "bookmarkStart" &&
-            !declined_wml_name(unretained_attribute_names, namespaces) {
+          // `unique_attribute_value` answers None for an absent name AND
+          // for one spelled more than one way: both mean "this reader
+          // cannot say the name is `_GoBack`", which is the only
+          // question a gate asks of it, and every consumer treats that
+          // as an ordinary named bookmark — the conservative answer.
+          bookmark_name_raw: if is_wml_uri(uri) && local_name == "bookmarkStart" {
             unique_attribute_value(attributes, "name", namespaces)
           } else {
             None
           },
+          // The vocabulary lives with the planner that reads it, in ONE
+          // place. Spelled here as well, the two lists drift: a family
+          // added there and not here has no id to pair on, and one
+          // added here and not there is captured and never consulted.
           bookmark_id_raw: if is_wml_uri(uri) &&
-            local_name
-            is ("bookmarkStart"
-            | "bookmarkEnd"
-            | "commentRangeStart"
-            | "commentRangeEnd"
-            | "permStart"
-            | "permEnd"
-            | "moveFromRangeStart"
-            | "moveFromRangeEnd"
-            | "moveToRangeStart"
-            | "moveToRangeEnd"
-            | "customXmlInsRangeStart"
-            | "customXmlInsRangeEnd"
-            | "customXmlDelRangeStart"
-            | "customXmlDelRangeEnd"
-            | "customXmlMoveFromRangeStart"
-            | "customXmlMoveFromRangeEnd"
-            | "customXmlMoveToRangeStart"
-            | "customXmlMoveToRangeEnd") {
+            is_wml_range_marker_name(local_name) {
             unique_attribute_value(attributes, "id", namespaces)
           } else {
             None
@@ -2563,14 +2495,17 @@ fn scan_tag(
     if relevant_attribute {
       if attr_end - attr_start > max_annotation_relevant_attribute_bytes ||
         at - value_start > max_annotation_relevant_attribute_bytes {
-        // A bookmark NAME over the cap is DECLINED, never fatal: the
-        // deletion planner (its only consumer) then reads None and
-        // refuses that one deletion, while every read verb keeps
-        // working — a document readable before `:name` retention must
-        // stay readable after it. Scoped exactly to the rule that
-        // added it: a namespace DECLARATION spelled `xmlns:name` is
-        // not a bookmark name and keeps its hard limit, which the
-        // binding walk and the duplicate-declaration guard rely on.
+        // A bookmark NAME over the cap is DECLINED, never fatal: `:name`
+        // was not a retained attribute before this verb existed, so a
+        // document readable without it must stay readable with it. The
+        // planner then reads None, which it treats exactly as it treats
+        // any other non-`_GoBack` name — an ordinary named bookmark,
+        // which refuses. The decision is the VALUE'S OWN LENGTH and
+        // nothing else, so no earlier content in the story can move it.
+        // Scoped exactly to the rule that added it: a namespace
+        // DECLARATION spelled `xmlns:name` is not a bookmark name and
+        // keeps its hard limit, which the binding walk and the
+        // duplicate-declaration guard rely on.
         //
         // Declining still records the QName as UNRETAINED, so
         // `scan_story`'s unbound-prefix check keeps seeing it: an
@@ -2589,54 +2524,15 @@ fn scan_tag(
         raise @core.docx_xml_resource_limit_error(DocxXmlTokenLength)
       }
       match source_budget {
-        Some(budget) => {
-          // A bookmark NAME is an OPTIONAL capture: if the shared
-          // retained-character budget cannot absorb it, decline the
-          // value rather than fail the read. Every other relevant
-          // attribute is load-bearing for the reader and still
-          // charges — and still refuses when the budget is out.
-          let optional = element_is_bookmark_start &&
-            !bytes_range_has_ascii_prefix(part, attr_start, attr_end, "xmlns:") &&
-            bytes_range_has_ascii_suffix(part, attr_start, attr_end, ":name")
-          if optional {
-            // Its OWN allowance, so the shared pool a later MANDATORY
-            // charge needs is untouched either way. Declining records
-            // the QName as unretained (the namespace guard still sees
-            // it), so an ambiguity gate reading this attribute cannot
-            // mistake "declined" for "absent".
-            //
-            // The pool is charged only for a value this scan actually
-            // KEEPS: charging before the decode below leaked the
-            // allowance on every name that failed to decode, and a
-            // drained pool then declines later, perfectly readable
-            // names — making a refusal depend on unrelated earlier
-            // content.
-            let mut decodable = true
-            ignore(@utf8.decode(part[value_start:at])) catch {
-              _ => decodable = false
-            }
-            if !decodable {
-              match validated_source_name {
-                Some(candidate) => unretained_attribute_names.push(candidate)
-                None => ()
-              }
-              at += 1
-              continue
-            }
-            if !budget.charge_bookmark_name_chars(at - value_start) {
-              match validated_source_name {
-                Some(candidate) => unretained_attribute_names.push(candidate)
-                None => ()
-              }
-              at += 1
-              continue
-            }
-          } else {
-            // The QName and its fixed-size retained slot were charged before
-            // the QName allocation above; only the value remains.
-            budget.charge_retained_chars(at - value_start)
-          }
-        }
+        // The QName and its fixed-size retained slot were charged before
+        // the QName allocation above; only the value remains. A bookmark
+        // `w:name` charges the SAME shared pool as every other attribute
+        // value: an optional per-name allowance was tried and removed,
+        // because a second pool made `max_attribute_chars` stop being the
+        // ceiling for every reader in the toolkit, and declining a name
+        // when that pool ran out made a deletion's refusal depend on how
+        // many bookmarks happened to appear EARLIER in the story.
+        Some(budget) => budget.charge_retained_chars(at - value_start)
         None => ()
       }
       let attr_name = match validated_source_name {
@@ -2644,26 +2540,10 @@ fn scan_tag(
         None => utf8_slice(part, attr_start, attr_end)
       }
       let raw_value = @utf8.decode(part[value_start:at]) catch {
-        _ => {
-          // The THIRD decline path, and the one the other two left
-          // open: a bookmark name is the only attribute this reader
-          // newly decodes, so a mis-encoded byte inside one must cost
-          // the value, never the read. Every other relevant attribute
-          // is load-bearing and still refuses.
-          if element_is_bookmark_start &&
-            !bytes_range_has_ascii_prefix(part, attr_start, attr_end, "xmlns:") &&
-            bytes_range_has_ascii_suffix(part, attr_start, attr_end, ":name") {
-            match validated_source_name {
-              Some(candidate) => unretained_attribute_names.push(candidate)
-              None => ()
-            }
-            at += 1
-            continue
-          }
+        _ =>
           raise Unsupported(
             message="the annotation scanner found a non-UTF-8 attribute value",
           )
-        }
       }
       // Attribute values must be entity-decoded: w:id="&#49;" IS id "1"
       // (and namespace URIs may legally carry &amp;).
@@ -2764,28 +2644,6 @@ fn annotation_attribute_is_relevant(
 fn is_relationships_uri(uri : String) -> Bool {
   uri == "http://schemas.openxmlformats.org/officeDocument/2006/relationships" ||
   uri == "http://purl.oclc.org/ooxml/officeDocument/relationships"
-}
-
-///|
-/// Whether any attribute this tag DECLINED to retain was a WML-resolved
-/// `:name` — the very attribute the bookmark capture would have read.
-/// A declined name must read as unknown rather than absent, and a
-/// foreign `v:name` must not count.
-fn declined_wml_name(
-  unretained : Array[String],
-  namespaces : StableStringMap[Array[String]],
-) -> Bool {
-  for qname in unretained {
-    let (prefix, local_name) = split_qualified_name(qname)
-    if local_name == "name" && prefix != "" {
-      match namespaces.get(prefix) {
-        Some(stack) if stack.length() > 0 &&
-          is_wml_uri(stack[stack.length() - 1]) => return true
-        _ => ()
-      }
-    }
-  }
-  false
 }
 
 ///|

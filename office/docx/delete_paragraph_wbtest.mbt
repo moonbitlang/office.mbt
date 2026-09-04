@@ -79,6 +79,9 @@ async fn delete_readback_case() -> (
         para_id: receipt.para_id(),
         successor_para_id: receipt.successor_para_id(),
         successor_text: receipt.successor_text(),
+        predecessor_path: receipt.predecessor_path(),
+        predecessor_para_id: receipt.predecessor_para_id(),
+        predecessor_text: receipt.predecessor_text(),
         old_count: @word.docx_direct_body_paragraph_count(source),
         cut,
       },
@@ -164,9 +167,118 @@ async test "the delete readback catches a cut that did not land as planned" {
   // neither.
   assert_eq(missing.length(), 1)
   assert_eq(missing[0].code, "docx.delete.readback_unreadable")
-  // No expectation at all is itself a finding: a readback that ran
-  // without a plan verified nothing.
-  let unplanned = delete_readback_findings(None, Docx, candidate)
-  assert_eq(unplanned.length(), 1)
-  assert_eq(unplanned[0].code, "docx.delete.readback_unplanned")
+  // THE PREDECESSOR LEGS. This candidate deleted `p[1]`, so it has no
+  // predecessor of its own; the legs are driven by claiming one. Each
+  // claim is one a real deletion of `p[2]` would have made, and each is
+  // wrong in exactly one way about a paragraph the splice never moved.
+  let claims_wrong_text = {
+    ..honest,
+    predecessor_path: Some("p[1]"),
+    predecessor_text: Some("not what p[1] reads as"),
+  }
+  let predecessor_text_findings = delete_readback_findings(
+    Some(claims_wrong_text),
+    Docx,
+    candidate,
+  )
+  assert_eq(predecessor_text_findings.length(), 1)
+  assert_eq(
+    predecessor_text_findings[0].code,
+    "docx.delete.readback_predecessor_text",
+  )
+  // FALSIFIABLE the same way the deleted-identity leg is: the id
+  // claimed is one the candidate really carries, just not at this path.
+  let claims_wrong_identity = {
+    ..honest,
+    predecessor_path: Some("p[1]"),
+    predecessor_para_id: Some("0000AAA1"),
+  }
+  let predecessor_findings = delete_readback_findings(
+    Some(claims_wrong_identity),
+    Docx,
+    candidate,
+  )
+  assert_eq(predecessor_findings.length(), 1)
+  assert_eq(predecessor_findings[0].code, "docx.delete.readback_predecessor")
+  // A predecessor that is not there at all: silence would mean a
+  // deletion that removed BOTH paragraphs read back as verified.
+  let claims_absent = {
+    ..honest,
+    predecessor_path: Some("p[9]"),
+    predecessor_text: Some("gone"),
+  }
+  let absent_findings = delete_readback_findings(
+    Some(claims_absent),
+    Docx,
+    candidate,
+  )
+  assert_eq(absent_findings.length(), 1)
+  assert_eq(absent_findings[0].code, "docx.delete.readback_predecessor_missing")
+  // NO expectation means no deletion was queued on the session. This
+  // validator is installed on every DOCX transaction — that is what
+  // makes the readback belong to the queuing rather than to one verb —
+  // so having nothing to say about a comment edit or a format run is
+  // the correct answer, not a finding.
+  assert_eq(delete_readback_findings(None, Docx, candidate).length(), 0)
+  // A candidate whose body has NO paragraph left. The planner proved a
+  // paragraph would remain against the SNAPSHOT; only the readback sees
+  // the published body, and a structural guarantee checked solely
+  // before the edit is not a guarantee.
+  let emptied = @zip.Archive()
+  for entry in candidate.entries() {
+    let name = entry.name()
+    guard candidate.get(name) is Some(payload) else { continue }
+    let bytes = if name == "word/document.xml" {
+      let text = @utf8.decode(payload)
+      guard text.find("<w:body>") is Some(open_at) else { fail("no body") }
+      guard text.find("</w:body>") is Some(close_at) else { fail("no /body") }
+      @utf8.encode(
+        text[0:open_at + 8].to_owned() +
+        "<w:sectPr/>" +
+        text[close_at:].to_owned(),
+      )
+    } else {
+      payload.to_owned()
+    }
+    emptied.add(name, bytes)
+  }
+  assert_true(
+    delete_readback_findings(Some(honest), Docx, emptied)
+    .map(finding => finding.code)
+    .contains("docx.delete.readback_no_paragraph"),
+  )
+  // A candidate that RENAMED its story: the relationship and the
+  // content types point at `word/main.xml`, so the re-read succeeds and
+  // every identity leg answers — about a part the plan never cut. Both
+  // legs that exist to notice that fire together, and neither can be
+  // deleted while this passes.
+  let moved = @zip.Archive()
+  for entry in candidate.entries() {
+    let name = entry.name()
+    guard candidate.get(name) is Some(payload) else { continue }
+    let (renamed, bytes) = if name == "word/document.xml" {
+      ("word/main.xml", payload)
+    } else if name == "word/_rels/document.xml.rels" {
+      ("word/_rels/main.xml.rels", payload)
+    } else if name == "_rels/.rels" || name == "[Content_Types].xml" {
+      (
+        name,
+        @utf8.encode(
+          @utf8.decode(payload).replace_all(
+            old="word/document.xml",
+            new="word/main.xml",
+          ),
+        ),
+      )
+    } else {
+      (name, payload)
+    }
+    moved.add(renamed, bytes)
+  }
+  let moved_findings = delete_readback_findings(Some(honest), Docx, moved)
+  // In emission order: which story was judged, then what could not be
+  // verified about the cut.
+  assert_eq(moved_findings.map(finding => finding.code), [
+    "docx.delete.readback_story_moved", "docx.delete.readback_cut_unverifiable",
+  ])
 }

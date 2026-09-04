@@ -18,6 +18,15 @@ pub struct DocxDeleteReceipt {
   priv text : String
   priv successor_para_id : String?
   priv successor_text : String?
+  // The paragraph BEFORE the target, at its own path. Deleting `p[N]`
+  // leaves every path below N where it was, so this is the witness that
+  // still speaks when the target is the last paragraph and the document
+  // carries no unique identities — the shape where every other
+  // content-binding leg goes quiet at once. Not reported to callers:
+  // it is evidence for the readback, not part of the answer.
+  priv predecessor_path : String?
+  priv predecessor_para_id : String?
+  priv predecessor_text : String?
   priv cut : DocxDeleteCutWitness
 }
 
@@ -65,8 +74,16 @@ pub fn DocxDeleteCutWitness::matches(
   // A witness whose span does not lie inside its source describes no
   // possible cut: answer "no", never index past an end. This is public
   // API, and the only caller is a validator whose job is to fail shut.
+  //
+  // EMPTY is not a cut. With `cut_start == cut_end` the two comparisons
+  // below collapse to `candidate == source`, so an UNTOUCHED part would
+  // satisfy the leg documented as the strongest evidence this verb has
+  // — and `queue_plan` returns early on an empty plan, so a degenerate
+  // span publishes an unchanged document while the receipt still names
+  // a path, an identity and text. The planner refuses to build one
+  // (see `plan_docx_paragraph_deletion`); this refuses to believe one.
   guard self.cut_start >= 0 &&
-    self.cut_start <= self.cut_end &&
+    self.cut_start < self.cut_end &&
     self.cut_end <= self.source.length() else {
     return false
   }
@@ -122,6 +139,31 @@ pub fn DocxDeleteReceipt::successor_text(self : DocxDeleteReceipt) -> String? {
 }
 
 ///|
+/// The path the paragraph before the target answers at — unchanged by
+/// the deletion, because a splice at `p[N]` moves no path below N.
+pub fn DocxDeleteReceipt::predecessor_path(self : DocxDeleteReceipt) -> String? {
+  self.predecessor_path
+}
+
+///|
+/// The unique identity of the paragraph immediately BEFORE the target,
+/// when it carries one. A readback witness, not a report field.
+pub fn DocxDeleteReceipt::predecessor_para_id(
+  self : DocxDeleteReceipt,
+) -> String? {
+  self.predecessor_para_id
+}
+
+///|
+/// The projection of the paragraph immediately BEFORE the target. The
+/// deletion does not move it, so it must read the same at the same path
+/// afterwards — the leg that binds address to content on a document
+/// with no identities whose target is the last paragraph.
+pub fn DocxDeleteReceipt::predecessor_text(self : DocxDeleteReceipt) -> String? {
+  self.predecessor_text
+}
+
+///|
 /// What the published part must read like once this plan lands. The
 /// transaction verifies it applied exactly — see the witness for what
 /// that does and does not prove about ADDRESSING.
@@ -140,18 +182,46 @@ fn is_zero_width_body_marker(element : ScannedElement) -> Bool {
 }
 
 ///|
-/// Whether an element is a DIRECT child of `w:body` on the physical
-/// tree. The path grammar flattens wrappers (`w:sdt`, `w:ins`,
-/// `mc:Fallback`…), so a path alone never proves this — every guard
-/// that must not splice inside a wrapper proves it here.
-fn is_direct_body_child(
-  elements : Array[ScannedElement],
-  element : ScannedElement,
-) -> Bool {
-  let parent = element.parent_index
-  guard parent >= 0 && parent < elements.length() else { return false }
-  let holder = elements[parent]
-  holder.local_name == "body" && is_wml_uri(holder.uri)
+/// The index of the story's OWN `w:body`: the one the root
+/// `w:document` holds. Identity by ELEMENT, never by name.
+///
+/// `<w:body>` is not a reserved word — nothing stops a story from
+/// carrying another one somewhere inside itself, and
+/// `read_identity_story_xml_strict` is a well-formedness parser, not a
+/// schema validator, so it admits `<w:sectPr><w:body><w:p/></w:body>`.
+/// Matching on the local name alone made every paragraph under such an
+/// element a "direct body child": phantom neighbours that satisfied the
+/// neighbour precondition, phantom survivors that satisfied the
+/// trailing-paragraph guarantee, and — because the readback counts with
+/// the SAME predicate — a count leg that agreed with the guard it was
+/// meant to check. One nested `<w:body>` could publish a body with no
+/// real paragraph in it.
+fn document_body_index(elements : Array[ScannedElement]) -> Int? {
+  for index, element in elements {
+    guard element.local_name == "body" && is_wml_uri(element.uri) else {
+      continue
+    }
+    let parent = element.parent_index
+    guard parent >= 0 && parent < elements.length() else { continue }
+    let holder = elements[parent]
+    // The root: `w:document` with no parent of its own. A `w:body`
+    // under a NESTED `w:document` is not this story's body either.
+    if holder.local_name == "document" &&
+      is_wml_uri(holder.uri) &&
+      holder.parent_index < 0 {
+      return Some(index)
+    }
+  }
+  None
+}
+
+///|
+/// Whether an element is a DIRECT child of the story's own `w:body`.
+/// The path grammar flattens wrappers (`w:sdt`, `w:ins`, `mc:Fallback`…),
+/// so a path alone never proves this — every guard that must not splice
+/// inside a wrapper proves it here, against the ONE body index.
+fn is_direct_body_child(element : ScannedElement, body : Int) -> Bool {
+  element.parent_index == body
 }
 
 ///|
@@ -207,21 +277,38 @@ fn open_range_across(
 ) -> String? {
   // Open starts per (family, id), and the concrete intervals they close
   // into.
-  let open : Map[String, Array[Int]] = Map([])
-  let caret : Map[String, Bool] = Map([])
-  let named : Map[String, Bool] = Map([])
-  let spanning : Array[String] = []
-  let split : Array[String] = []
+  let open : Map[(RangeFamily, String), Array[Int]] = Map([])
+  let caret : Map[(RangeFamily, String), Bool] = Map([])
+  let named : Map[(RangeFamily, String), Bool] = Map([])
+  let spanning : Array[RangeFamily] = []
+  let split : Array[RangeFamily] = []
   // "Unresolved" on a side means: a marker there that this walk could
   // not pair — either its id is unreadable, or it is readable but never
   // met a partner. An unresolved marker before the target and another
   // after it MAY be one range bracketing it, and a range this reader
   // cannot rule out is one it will not edit around.
-  let unresolved_before : Map[String, Bool] = Map([])
-  let unresolved_after : Map[String, Bool] = Map([])
+  let unresolved_before : Map[RangeFamily, Bool] = Map([])
+  let unresolved_after : Map[RangeFamily, Bool] = Map([])
+  // A marker this walk could not place is unresolved on the side it
+  // sits. One INSIDE the target is unresolved on BOTH: its partner may
+  // lie on either side, and an in-span marker is exactly the shape that
+  // strands a range when the span is spliced out. Every arm below is
+  // written as three branches, never as `before`/`else if after`, so
+  // "inside" cannot fall out of the analysis by omission.
+  fn note_unresolved(family : RangeFamily, from : Int, to : Int) -> Unit {
+    if to <= span.byte_start() {
+      unresolved_before[family] = true
+    } else if from >= span.byte_end() {
+      unresolved_after[family] = true
+    } else {
+      unresolved_before[family] = true
+      unresolved_after[family] = true
+    }
+  }
+
   fn note_interval(
-    family : String,
-    key : String,
+    family : RangeFamily,
+    key : (RangeFamily, String),
     from : Int,
     to : Int,
   ) -> Unit {
@@ -252,14 +339,10 @@ fn open_range_across(
       // unplaceable pair could straddle the target, so this is judged
       // target-relative rather than story-globally: a stray marker at
       // the far end of the document does not take the deletion out.
-      if element.byte_end <= span.byte_start() {
-        unresolved_before[family] = true
-      } else if element.byte_start >= span.byte_end() {
-        unresolved_after[family] = true
-      }
+      note_unresolved(family, element.byte_start, element.byte_end)
       continue
     }
-    let key = family + "\u{1}" + range_id_key(family, raw)
+    let key = (family, range_id_key(family, raw))
     if starts {
       if element.bookmark_name_raw is Some("_GoBack") {
         caret[key] = true
@@ -278,58 +361,52 @@ fn open_range_across(
         }
         // An end with no open start of this id: unpaired here, but its
         // partner may be one of the markers whose id could not be read.
-        None =>
-          if element.byte_end <= span.byte_start() {
-            unresolved_before[family] = true
-          } else if element.byte_start >= span.byte_end() {
-            unresolved_after[family] = true
-          }
+        None => note_unresolved(family, element.byte_start, element.byte_end)
       }
     }
   }
   // Starts still open at the end of the walk are unpaired too.
   for key, pending in open {
-    guard key.find("\u{1}") is Some(cut) else { continue }
-    let family = key[0:cut].to_owned()
+    let (family, _) = key
     for position in pending {
-      if position < span.byte_start() {
-        unresolved_before[family] = true
-      } else if position >= span.byte_end() {
-        unresolved_after[family] = true
-      }
+      note_unresolved(family, position, position)
     }
   }
   // Per FAMILY: a permission and a comment range are never one pair,
   // so an unresolved marker of each on opposite sides rules out
   // nothing.
-  let unpairable : Array[String] = []
+  let unpairable : Array[RangeFamily] = []
   for family, _ in unresolved_before {
     if unresolved_after.get(family).unwrap_or(false) &&
       !unpairable.contains(family) {
       unpairable.push(family)
     }
   }
-  if unpairable.length() > 0 {
-    unpairable.sort()
-    let family = unpairable.get(0).unwrap_or("a range")
-    return Some(
-      "this story carries markers of \{family} on both sides of the target that this reader cannot pair, so what they cover cannot be judged",
-    )
-  }
+  unpairable.sort()
   spanning.sort()
   split.sort()
-  match spanning.get(0) {
+  // One answer per shape, most specific first. Each family list is
+  // sorted, so which family a multi-family hazard names is a property
+  // of the document and not of element order.
+  match unpairable.get(0) {
     Some(family) =>
       Some(
-        "the target paragraph sits inside \{family} opened before it and closed after it",
+        "this story carries markers of \{family.label()} on both sides of the target that this reader cannot pair, so what they cover cannot be judged",
       )
     None =>
-      match split.get(0) {
+      match spanning.get(0) {
         Some(family) =>
           Some(
-            "the target paragraph carries part of \{family} whose other markers lie outside it",
+            "the target paragraph sits inside \{family.label()} opened before it and closed after it",
           )
-        None => None
+        None =>
+          match split.get(0) {
+            Some(family) =>
+              Some(
+                "the target paragraph carries part of \{family.label()} whose other markers lie outside it",
+              )
+            None => None
+          }
       }
   }
 }
@@ -345,7 +422,7 @@ fn normalized_decimal_id(id : String) -> String {
   // schema-validating consumer. Comparing raw spellings let a start and
   // an end of the same bookmark hash to different keys — the fail-open
   // direction on an irreversible verb.
-  let id = collapse_whitespace(id)
+  let id = @xml.collapse_xml_schema_whitespace(id)
   let negative = id.has_prefix("-")
   let signed = negative || id.has_prefix("+")
   let digits = if signed { id[1:].to_owned() } else { id }
@@ -402,63 +479,112 @@ fn field_boundary_of(element : ScannedElement) -> FieldBoundary {
 /// ids, which are compared as written; every other family carries
 /// `ST_DecimalNumber`, where `" 7 "`, `"+7"`, `"07"` and `"7"` are one
 /// id to any schema-validating consumer.
-fn range_id_key(family : String, raw : String) -> String {
-  if family == "a range permission" {
-    raw
-  } else {
-    normalized_decimal_id(raw)
+///
+/// Which id space a family uses is a property of the FAMILY, matched on
+/// the constructor. It was once decided by string-comparing the family
+/// against its own refusal prose, so rewording that sentence — an
+/// edit nothing would flag — moved permission ids onto decimal
+/// canonicalization, hashed `w:id="007"` and `w:id="7"` to one key, and
+/// reported two distinct permissions as one balanced pair.
+fn range_id_key(family : RangeFamily, raw : String) -> String {
+  match family {
+    RangePermission => raw
+    _ => normalized_decimal_id(raw)
   }
 }
 
 ///|
-/// The XML Schema `collapse` facet: strip leading and trailing spaces,
-/// and fold internal runs to one.
-fn collapse_whitespace(value : String) -> String {
-  let builder = StringBuilder()
-  let mut pending_space = false
-  let mut wrote = false
-  for ch in value {
-    if ch is (' ' | '\t' | '\n' | '\r') {
-      if wrote {
-        pending_space = true
-      }
-    } else {
-      if pending_space {
-        builder.write_char(' ')
-        pending_space = false
-      }
-      builder.write_char(ch)
-      wrote = true
-    }
+/// A WML range family. Kept apart because their id spaces are
+/// independent and their hazards are different — and kept as a TYPE
+/// rather than as the sentence each one prints, so no judgment can be
+/// made by string-matching prose.
+///
+/// Declared in the order the families' labels sort, because the
+/// reported family for a target that trips several is the first, and a
+/// refusal message must not change with the order elements happened to
+/// appear in.
+priv enum RangeFamily {
+  BookmarkRange
+  CommentRange
+  CustomXmlDel
+  CustomXmlIns
+  CustomXmlMoveFrom
+  CustomXmlMoveTo
+  RangePermission
+  TrackedMoveFrom
+  TrackedMoveTo
+} derive(Eq, Hash, Compare)
+
+///|
+/// How a family reads in a refusal. Prose only — nothing branches on it.
+fn RangeFamily::label(self : RangeFamily) -> String {
+  match self {
+    BookmarkRange => "a bookmark range"
+    CommentRange => "a comment range"
+    CustomXmlDel => "a customXml deletion range"
+    CustomXmlIns => "a customXml insertion range"
+    CustomXmlMoveFrom => "a customXml move-from range"
+    CustomXmlMoveTo => "a customXml move-to range"
+    RangePermission => "a range permission"
+    TrackedMoveFrom => "a tracked move-from range"
+    TrackedMoveTo => "a tracked move-to range"
   }
-  builder.to_string()
+}
+
+///|
+/// Whether a WML local name is a range marker — the ONE spelling of
+/// this vocabulary. The scanner asks it to decide whose `w:id` to
+/// retain, and `range_family_of` answers with it, so a family cannot be
+/// added to one and forgotten in the other: a marker captured but never
+/// classified is invisible to the pairing walk, which is the fail-open
+/// direction on an irreversible verb.
+fn is_wml_range_marker_name(local_name : String) -> Bool {
+  local_name
+  is ("bookmarkStart"
+  | "bookmarkEnd"
+  | "commentRangeStart"
+  | "commentRangeEnd"
+  | "permStart"
+  | "permEnd"
+  | "moveFromRangeStart"
+  | "moveFromRangeEnd"
+  | "moveToRangeStart"
+  | "moveToRangeEnd"
+  | "customXmlInsRangeStart"
+  | "customXmlInsRangeEnd"
+  | "customXmlDelRangeStart"
+  | "customXmlDelRangeEnd"
+  | "customXmlMoveFromRangeStart"
+  | "customXmlMoveFromRangeEnd"
+  | "customXmlMoveToRangeStart"
+  | "customXmlMoveToRangeEnd")
 }
 
 ///|
 /// The range family an element belongs to, and whether it opens one.
-/// Families are kept apart because their id spaces are independent and
-/// their hazards are different.
-fn range_family_of(element : ScannedElement) -> (String, Bool)? {
+/// Every name `is_wml_range_marker_name` admits has an arm here, and
+/// the escape test below proves it.
+fn range_family_of(element : ScannedElement) -> (RangeFamily, Bool)? {
   guard is_wml_uri(element.uri) else { return None }
   match element.local_name {
-    "commentRangeStart" => Some(("a comment range", true))
-    "commentRangeEnd" => Some(("a comment range", false))
-    "permStart" => Some(("a range permission", true))
-    "permEnd" => Some(("a range permission", false))
-    "bookmarkStart" => Some(("a bookmark range", true))
-    "bookmarkEnd" => Some(("a bookmark range", false))
-    "moveFromRangeStart" => Some(("a tracked move-from range", true))
-    "moveFromRangeEnd" => Some(("a tracked move-from range", false))
-    "moveToRangeStart" => Some(("a tracked move-to range", true))
-    "moveToRangeEnd" => Some(("a tracked move-to range", false))
-    "customXmlInsRangeStart" => Some(("a customXml insertion range", true))
-    "customXmlInsRangeEnd" => Some(("a customXml insertion range", false))
-    "customXmlDelRangeStart" => Some(("a customXml deletion range", true))
-    "customXmlDelRangeEnd" => Some(("a customXml deletion range", false))
-    "customXmlMoveFromRangeStart" => Some(("a customXml move-from range", true))
-    "customXmlMoveFromRangeEnd" => Some(("a customXml move-from range", false))
-    "customXmlMoveToRangeStart" => Some(("a customXml move-to range", true))
-    "customXmlMoveToRangeEnd" => Some(("a customXml move-to range", false))
+    "commentRangeStart" => Some((CommentRange, true))
+    "commentRangeEnd" => Some((CommentRange, false))
+    "permStart" => Some((RangePermission, true))
+    "permEnd" => Some((RangePermission, false))
+    "bookmarkStart" => Some((BookmarkRange, true))
+    "bookmarkEnd" => Some((BookmarkRange, false))
+    "moveFromRangeStart" => Some((TrackedMoveFrom, true))
+    "moveFromRangeEnd" => Some((TrackedMoveFrom, false))
+    "moveToRangeStart" => Some((TrackedMoveTo, true))
+    "moveToRangeEnd" => Some((TrackedMoveTo, false))
+    "customXmlInsRangeStart" => Some((CustomXmlIns, true))
+    "customXmlInsRangeEnd" => Some((CustomXmlIns, false))
+    "customXmlDelRangeStart" => Some((CustomXmlDel, true))
+    "customXmlDelRangeEnd" => Some((CustomXmlDel, false))
+    "customXmlMoveFromRangeStart" => Some((CustomXmlMoveFrom, true))
+    "customXmlMoveFromRangeEnd" => Some((CustomXmlMoveFrom, false))
+    "customXmlMoveToRangeStart" => Some((CustomXmlMoveTo, true))
+    "customXmlMoveToRangeEnd" => Some((CustomXmlMoveTo, false))
     _ => None
   }
 }
@@ -588,6 +714,10 @@ pub fn plan_docx_paragraph_deletion(
     )
   }
   let elements = projection.scan.elements()
+  // The story's own body, resolved ONCE: every direct-child question
+  // below compares against this exact element, so a `<w:body>` nested
+  // anywhere else in the story is not one of them.
+  let body = document_body_index(elements).unwrap_or(-1)
   // The target must be a PHYSICAL direct child of w:body — the path
   // grammar flattens wrappers, so the path alone proves nothing — and
   // its element index is the key to its subtree.
@@ -596,7 +726,7 @@ pub fn plan_docx_paragraph_deletion(
     if element.byte_start == span.byte_start() &&
       element.local_name == "p" &&
       is_wml_uri(element.uri) {
-      if is_direct_body_child(elements, element) {
+      if is_direct_body_child(element, body) {
         target_index = index
       }
       break
@@ -633,7 +763,7 @@ pub fn plan_docx_paragraph_deletion(
   let mut previous_sibling : ScannedElement? = None
   let mut next_sibling : ScannedElement? = None
   for index, element in elements {
-    guard is_direct_body_child(elements, element) &&
+    guard is_direct_body_child(element, body) &&
       !is_zero_width_body_marker(element) else {
       continue
     }
@@ -775,13 +905,11 @@ pub fn plan_docx_paragraph_deletion(
       if index != target_index && is_wml_uri(element.uri) {
         if element.local_name == "bookmarkStart" {
           // Only the _GoBack cursor artifact is deletable, and only
-          // with a REAL id: an absent id cannot be paired at all.
-          guard element.bookmark_name_raw is Some(name) else {
-            raise delete_refusal(
-              "bookmark_unpairable", "the target paragraph carries a bookmark marker whose name could not be read; the pairing cannot be judged, so this deletion refuses",
-            )
-          }
-          guard name == "_GoBack" else {
+          // with a REAL id: an absent id cannot be paired at all. A name
+          // this reader cannot read as `_GoBack` — absent, spelled twice,
+          // or over the retention cap — is a named bookmark here, the
+          // same answer every other consumer gives it.
+          guard element.bookmark_name_raw is Some("_GoBack") else {
             raise delete_refusal(
               "blocked_construct", "the target paragraph carries a named bookmark; deleting it would dangle or destroy document state outside the paragraph, so this deletion refuses",
             )
@@ -865,7 +993,7 @@ pub fn plan_docx_paragraph_deletion(
   for index, element in elements {
     if element.local_name == "p" &&
       is_wml_uri(element.uri) &&
-      is_direct_body_child(elements, element) &&
+      is_direct_body_child(element, body) &&
       index != target_index {
       direct_paragraphs += 1
     }
@@ -914,18 +1042,43 @@ pub fn plan_docx_paragraph_deletion(
     None
   }
   let anchor_status = anchor.status()
-  let successor_para_id = match anchors.anchor_at("p[\{ordinal + 1}]") {
-    Some(anchor) =>
-      if anchor.status() == "unique" {
-        anchor.para_id()
-      } else {
-        None
-      }
-    None => None
+  fn unique_identity_at(path : String) -> String? {
+    match anchors.anchor_at(path) {
+      Some(anchor) =>
+        if anchor.status() == "unique" {
+          anchor.para_id()
+        } else {
+          None
+        }
+      None => None
+    }
+  }
+
+  let successor_para_id = unique_identity_at("p[\{ordinal + 1}]")
+  // The paragraph BEFORE the target keeps its own path across the
+  // splice, so it is a witness the readback can check without any
+  // identity in the document. Absent when the target is `p[1]`.
+  let (predecessor_path, predecessor_para_id, predecessor_text) = if ordinal > 1 {
+    let path = "p[\{ordinal - 1}]"
+    (
+      Some(path),
+      unique_identity_at(path),
+      docx_paragraph_projection(annotated, story, path~),
+    )
+  } else {
+    (None, None, None)
   }
   guard docx_paragraph_projection(annotated, story, path=at) is Some(text) else {
     raise delete_refusal(
       "target_not_addressable", "the delete-paragraph target has no readable projection in this document, so this deletion refuses",
+    )
+  }
+  // A paragraph occupies bytes. A zero-length span would queue nothing
+  // and publish an unchanged document, so it is refused HERE — where
+  // the span is built — rather than left for the readback to notice.
+  guard span.byte_start() < span.byte_end() else {
+    raise delete_refusal(
+      "target_not_addressable", "the delete-paragraph target resolves to an empty byte span, which removes nothing, so this deletion refuses",
     )
   }
   let plan = @splice.SplicePlan::new()
@@ -939,6 +1092,23 @@ pub fn plan_docx_paragraph_deletion(
     story,
     path="p[\{ordinal + 1}]",
   )
+  // AT LEAST ONE WITNESS BINDS THE ADDRESS TO CONTENT.
+  //
+  // The cut leg proves the splice applied as planned and nothing more:
+  // its witness and its edit are built from ONE span, so a mis-resolved
+  // address moves both together. The count leg reads `n - 1` whichever
+  // paragraph left. What actually says WHICH paragraph went is an
+  // identity that must disappear, or a neighbour's text that must still
+  // read the same at its own path — and on a document with no unique
+  // paraIds whose target is the last paragraph, all of those can be
+  // absent at once. A deletion nothing can verify is not published.
+  guard para_id is Some(_) ||
+    successor_text is Some(_) ||
+    predecessor_text is Some(_) else {
+    raise delete_refusal(
+      "unverifiable", "this document offers no identity and no readable neighbour text to verify the deletion against, so what was removed could not be confirmed after the fact and this deletion refuses",
+    )
+  }
   (
     plan,
     {
@@ -948,6 +1118,9 @@ pub fn plan_docx_paragraph_deletion(
       text,
       successor_para_id,
       successor_text,
+      predecessor_path,
+      predecessor_para_id,
+      predecessor_text,
       cut: {
         part,
         source: bytes,
@@ -973,11 +1146,12 @@ pub fn docx_direct_body_paragraph_count(
     )
   }
   let elements = projection.scan.elements()
+  let body = document_body_index(elements).unwrap_or(-1)
   let mut count = 0
   for element in elements {
     if element.local_name == "p" &&
       is_wml_uri(element.uri) &&
-      is_direct_body_child(elements, element) {
+      is_direct_body_child(element, body) {
       count += 1
     }
   }

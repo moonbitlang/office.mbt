@@ -108,7 +108,8 @@ When the callback returns, `transact_docx` finalizes automatically:
   returns `transaction_mutation_with_manifest` with the plan's exact part set;
 - `office-docx-bounded` runs before generic Office identification over both the
   source and candidate, followed by independent portable Office validation and
-  `office-docx-package` candidate validation; findings are capped at 64 and 512
+  `office-docx-package` candidate validation and the silent-unless-used
+  `office-docx-delete-readback`; findings are capped at 64 and 512
   scalars while validation is running, and the DOCX hook uses cumulative
   bounded XML parsing for OPC structure and candidate annotation identities;
   and

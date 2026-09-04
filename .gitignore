@@ -26,3 +26,8 @@ tools/**/bin/
 tools/**/obj/
 docx2html/docx/zz_corpus_shadow_*_wbtest.mbt
 .claude
+
+# Cram failure artifacts: the runner writes these beside the .t file on a
+# mismatch, and one was committed by accident once.
+*.t.new
+*.t.err

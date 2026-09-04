@@ -265,3 +265,166 @@ async test "a session queues at most one paragraph deletion" {
     delete_nothing_written(output)
   })
 }
+
+///|
+/// The readback belongs to the QUEUING, not to the verb: every DOCX
+/// transaction installs it, and a session that queues a deletion is
+/// verified whether or not it went through `office delete-paragraph`.
+/// The story a deletion is planned against is CLOSED for the rest of
+/// the transaction, in both orders — the cut is proved byte-exactly
+/// against the whole part, and the neighbour projections were read from
+/// a snapshot a second edit would invalidate.
+async test "a queued deletion closes its story to other edits" {
+  with_docx_session_test_dir(directory => {
+    let input = edit_fixture(
+      directory,
+      "compose-in.docx",
+      "<w:r><w:t>alpha</w:t></w:r></w:p>" +
+      "<w:p><w:r><w:t>beta</w:t></w:r></w:p>" +
+      "<w:p><w:r><w:t>gamma</w:t></w:r>",
+    )
+    let output = directory + "/compose-out.docx"
+    let source = @utf8.decode(
+      @zip.read(@afs.read_file(input).binary())
+      .get("word/document.xml")
+      .unwrap(),
+    )
+    guard source.find("gamma") is Some(at) else { fail("fixture lost gamma") }
+    async fn compose(
+      name : String,
+      order : (@docx.DocxEditSession) -> Unit raise,
+    ) -> String {
+      let mut reported = ""
+      ignore(
+        @docx.transact_docx(
+          @transaction.transaction_options(
+            input,
+            output_path=directory + "/" + name,
+          ),
+          order,
+        ),
+      ) catch {
+        error => reported = "\{error}"
+      }
+      delete_nothing_written(directory + "/" + name)
+      reported
+    }
+
+    // DELETE THEN EDIT.
+    assert_true(
+      compose("after.docx", session => {
+        ignore(session.queue_delete_paragraph(at="p[2]"))
+        session.queue_span_edit(
+          "word/document.xml",
+          start=at,
+          end=at + 5,
+          @utf8.encode("delta"),
+        )
+      }).contains("office.delete.part_closed"),
+    )
+    // EDIT THEN DELETE — the same invariant read from the other side.
+    // Without this the deletion would be planned against a snapshot the
+    // transaction is already committed to changing.
+    assert_true(
+      compose("before.docx", session => {
+        session.queue_span_edit(
+          "word/document.xml",
+          start=at,
+          end=at + 5,
+          @utf8.encode("delta"),
+        )
+        ignore(session.queue_delete_paragraph(at="p[2]"))
+      }).contains("office.delete.part_closed"),
+    )
+    ignore(output)
+  })
+}
+
+///|
+/// The hole the one-deletion latch did NOT close: a second removal that
+/// is not a `queue_delete_paragraph` never trips it, and the deletion's
+/// structural guarantees were judged against a snapshot where the other
+/// paragraph still existed. Today the part lock refuses it at queue
+/// time; the READBACK is the standing guarantee behind that, and it is
+/// what would catch a future composition the lock did not anticipate.
+async test "a deletion that empties the body cannot be composed" {
+  with_docx_session_test_dir(directory => {
+    let input = edit_fixture(
+      directory, "empty-in.docx", "<w:r><w:t>one</w:t></w:r></w:p><w:p><w:r><w:t>two</w:t></w:r>",
+    )
+    let output = directory + "/empty-out.docx"
+    let source = @utf8.decode(
+      @zip.read(@afs.read_file(input).binary())
+      .get("word/document.xml")
+      .unwrap(),
+    )
+    // The whole second paragraph: from the `<w:p>` that opens it to the
+    // last paragraph close in the story.
+    guard source.find("</w:p><w:p>") is Some(boundary) else {
+      fail("fixture has one paragraph")
+    }
+    guard source.rev_find("</w:p>") is Some(last) else {
+      fail("fixture has no paragraph end")
+    }
+    let at = boundary + 6
+    let stop = last + 6
+    let mut reported = ""
+    ignore(
+      @docx.transact_docx(
+        @transaction.transaction_options(input, output_path=output),
+        session => {
+          ignore(session.queue_delete_paragraph(at="p[1]"))
+          // Splices out the ONLY other paragraph. The one-deletion latch
+          // cannot see this: it is a span edit, not a queued deletion.
+          session.queue_span_edit("word/document.xml", start=at, end=stop, b"")
+        },
+      ),
+    ) catch {
+      error => reported = "\{error}"
+    }
+    assert_true(
+      reported.contains("office.delete.part_closed"),
+      msg="got: " + reported,
+    )
+    delete_nothing_written(output)
+  })
+}
+
+///|
+/// A deletion whose target is NOT the first paragraph, end to end: the
+/// predecessor legs of the readback have something to check here, and
+/// they must pass on an honest deletion.
+async test "deleting a middle paragraph publishes and re-anchors" {
+  with_docx_session_test_dir(directory => {
+    let input = edit_fixture(
+      directory,
+      "middle-in.docx",
+      "<w:r><w:t>alpha</w:t></w:r></w:p>" +
+      "<w:p><w:r><w:t>beta</w:t></w:r></w:p>" +
+      "<w:p><w:r><w:t>gamma</w:t></w:r>",
+    )
+    let output = directory + "/middle-out.docx"
+    let result = @docx.transact_docx_delete_paragraph(
+      @transaction.transaction_options(input, output_path=output),
+      at="p[2]",
+      expect_text="beta",
+    )
+    assert_eq(result.report().text(), "beta")
+    assert_eq(result.report().successor_text(), Some("gamma"))
+    let published = @word.read_docx_annotated(@afs.read_file(output).binary())
+    let story = published.main_story_source()
+    // `alpha` did not move; `gamma` took the deleted path.
+    assert_eq(
+      @word.docx_paragraph_projection(published, story, path="p[1]"),
+      Some("alpha"),
+    )
+    assert_eq(
+      @word.docx_paragraph_projection(published, story, path="p[2]"),
+      Some("gamma"),
+    )
+    assert_eq(
+      @word.docx_paragraph_projection(published, story, path="p[3]"),
+      None,
+    )
+  })
+}

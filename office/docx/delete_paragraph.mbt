@@ -97,15 +97,29 @@ pub fn DocxEditSession::queue_delete_paragraph(
   self : DocxEditSession,
   at~ : String,
 ) -> @word.DocxDeleteReceipt raise @transaction.TransactionError {
+  let old_count = @word.docx_direct_body_paragraph_count(self.annotated) catch {
+    // The planner's own refusal vocabulary, so its slug is stripped and
+    // its code is typed like every other refusal from here.
+    error => raise delete_plan_failure(error)
+  }
   // ONE per session. Every structural gate — the trailing-paragraph
   // guarantee above all — is computed against the UNEDITED snapshot,
   // which queuing does not change, so two deletions can each satisfy
-  // "a paragraph remains" and jointly leave none. Composition is the
-  // advertised way to use a session, so the limit is enforced rather
-  // than documented.
+  // "a paragraph remains" and jointly leave none. Asked BEFORE the part
+  // lock below, which a second deletion would also trip: the specific
+  // answer is the useful one.
   guard !self.delete_queued else {
     raise @transaction.transaction_failure(
       "office.delete.already_queued", "a session may queue ONE paragraph deletion: every structural guarantee is judged against the snapshot, so a second deletion would be judged against a document that no longer describes what will be published",
+    )
+  }
+  // The converse of the part lock in `queue_plan`: a deletion planned
+  // against a story something else already edits is judged against a
+  // snapshot that will not be published either.
+  let story_part = self.annotated.main_story_part()
+  guard !self.pending_parts().contains(story_part) else {
+    raise @transaction.transaction_failure(
+      "office.delete.part_closed", "this transaction already edits the story a paragraph deletion would be planned against; a deletion is judged and verified against the whole part, so it cannot share one",
     )
   }
   let resolved = resolve_stable_replace_scope(self, at)
@@ -139,6 +153,22 @@ pub fn DocxEditSession::queue_delete_paragraph(
   // changed nothing, and burning the slot would make the retry the
   // refusal invites answer "already queued" — a claim that is false.
   self.delete_queued = true
+  // The readback expectation is recorded HERE, by the queuing, so it
+  // holds for any session that queues a deletion — not only for the
+  // verb below. `old_count` is read from the same immutable snapshot
+  // the planner judged, which is what the count leg must compare
+  // against.
+  self.delete_expectation.val = Some({
+    path: receipt.path(),
+    para_id: receipt.para_id(),
+    successor_para_id: receipt.successor_para_id(),
+    successor_text: receipt.successor_text(),
+    predecessor_path: receipt.predecessor_path(),
+    predecessor_para_id: receipt.predecessor_para_id(),
+    predecessor_text: receipt.predecessor_text(),
+    old_count,
+    cut: receipt.cut(),
+  })
   receipt
 }
 
@@ -156,6 +186,14 @@ priv struct DeleteReadbackExpectation {
   // emit none — and a count alone cannot tell WHICH paragraph left.
   // Text is the leg that still speaks there.
   successor_text : String?
+  // The paragraph BEFORE the target, which the splice does not move.
+  // The successor legs are silent when the target is the LAST
+  // paragraph; this one is silent only when it is the first, and the
+  // planner refuses a deletion where both would be silent and no
+  // identity speaks either.
+  predecessor_path : String?
+  predecessor_para_id : String?
+  predecessor_text : String?
   old_count : Int
   // What the published part must be. This leg proves the splice
   // APPLIED as planned; it cannot prove the plan addressed the right
@@ -217,14 +255,9 @@ fn delete_readback_findings(
     )
     return findings
   }
-  guard expectation is Some(plan) else {
-    findings.push(
-      @transaction.validation_finding(
-        "docx.delete.readback_unplanned", "delete readback ran without a planned expectation",
-      ),
-    )
-    return findings
-  }
+  // No deletion was queued on this session: this validator runs on
+  // every DOCX transaction and has nothing to say about the others.
+  guard expectation is Some(plan) else { return findings }
   let annotated = @word.read_docx_annotated_archive_limited(
     archive,
     candidate_xml_budget(),
@@ -325,10 +358,81 @@ fn delete_readback_findings(
     }
     None => ()
   }
+  // The predecessor legs. Deleting `p[N]` leaves every path below N
+  // exactly where it was, so the paragraph before the target must read
+  // back unchanged AT ITS OWN PATH. This is the pair that still speaks
+  // when the target was the last paragraph — where both successor legs
+  // have nothing to compare — and it is what makes "which paragraph
+  // left" a question the readback can answer rather than infer.
+  let predecessor_path = plan.predecessor_path.unwrap_or("")
+  match plan.predecessor_para_id {
+    Some(id) => {
+      let answering = match anchors.anchor_at(predecessor_path) {
+        Some(anchor) => anchor.para_id()
+        None => None
+      }
+      if answering != Some(id) {
+        findings.push(
+          @transaction.validation_finding(
+            "docx.delete.readback_predecessor",
+            docx_validator_message(
+              "the paragraph before the deleted one no longer answers at \{predecessor_path} in the candidate",
+            ),
+          ),
+        )
+      }
+    }
+    None => ()
+  }
+  match plan.predecessor_text {
+    Some(text) =>
+      match
+        @word.docx_paragraph_projection(annotated, story, path=predecessor_path) {
+        Some(actual) =>
+          if actual != text {
+            findings.push(
+              @transaction.validation_finding(
+                "docx.delete.readback_predecessor_text",
+                docx_validator_message(
+                  "the paragraph at \{predecessor_path} does not read as it did before the splice, so the cut did not fall where the address said",
+                ),
+              ),
+            )
+          }
+        None =>
+          findings.push(
+            @transaction.validation_finding(
+              "docx.delete.readback_predecessor_missing",
+              docx_validator_message(
+                "no paragraph reads back at \{predecessor_path}, where the one before the deleted paragraph should still be",
+              ),
+            ),
+          )
+      }
+    None => ()
+  }
   // The cut, verified at the BYTES: the published part must be exactly
   // the source with the planned span removed — the splice applied as
   // planned, nothing else touched the part, and the zip round trip
   // preserved it.
+  //
+  // WHICH story, said explicitly first. Every leg above judges the part
+  // the CANDIDATE resolves as its main document, through the
+  // officeDocument relationship and OPC identity; the cut names the
+  // part the SOURCE snapshot was read from. A candidate that moved its
+  // story means those legs answered about a different part from the one
+  // the plan cut, so it is a finding of its own rather than an
+  // unexplained failure further down.
+  if story.part() != plan.cut.part() {
+    findings.push(
+      @transaction.validation_finding(
+        "docx.delete.readback_story_moved",
+        docx_validator_message(
+          "the candidate resolves its main story at \{story.part()}; the plan cut \{plan.cut.part()}",
+        ),
+      ),
+    )
+  }
   match archive.get(plan.cut.part()) {
     Some(payload) =>
       if !plan.cut.matches(payload[:]) {
@@ -341,11 +445,9 @@ fn delete_readback_findings(
           ),
         )
       }
-    // The re-read above resolves the story part through the
-    // officeDocument relationship and OPC identity; this lookup is an
-    // exact ZIP-entry match on the name the SOURCE snapshot used. A
-    // candidate where those disagree reaches here, and a cut this leg
-    // cannot verify is a finding, not a pass.
+    // An exact ZIP-entry match on the name the SOURCE snapshot used. A
+    // candidate that renamed or dropped that entry reaches here, and a
+    // cut this leg cannot verify is a finding, not a pass.
     None =>
       findings.push(
         @transaction.validation_finding(
@@ -365,6 +467,17 @@ fn delete_readback_findings(
       )
       return findings
     }
+  }
+  // The body still HAS a paragraph. The planner proved this against
+  // the snapshot; a session that queued something else alongside the
+  // deletion could still publish a body with none, and a structural
+  // guarantee judged only before the edit is not a guarantee.
+  if count <= 0 {
+    findings.push(
+      @transaction.validation_finding(
+        "docx.delete.readback_no_paragraph", "the candidate body has no direct paragraph left; the document keeps one",
+      ),
+    )
   }
   if count != plan.old_count - 1 {
     findings.push(
@@ -396,52 +509,35 @@ pub async fn transact_docx_delete_paragraph(
   preflight? : (DocxDeleteParagraphReport) -> Unit raise,
 ) -> DocxDeleteParagraphResult {
   let collected : Ref[DocxDeleteParagraphReport?] = Ref(None)
-  let expected : Ref[DeleteReadbackExpectation?] = Ref(None)
-  let readback = delete_readback_validator(expected)
-  let transaction = transact_docx(
-    options,
-    session => {
-      let old_count = @word.docx_direct_body_paragraph_count(session.annotated) catch {
-        // The planner's own refusal vocabulary, so its slug is stripped
-        // and its code is typed like every other refusal from here.
-        error => raise delete_plan_failure(error)
-      }
-      let receipt = session.queue_delete_paragraph(at~)
-      match expect_text {
-        Some(text) =>
-          if receipt.text() != text {
-            raise @transaction.transaction_failure(
-              "office.delete.expect_text_mismatch",
-              "the paragraph at \{receipt.path()} does not read as the expected text; nothing was deleted — re-run `office find` or address by p[id=\"…\"]",
-            )
-          }
-        None => ()
-      }
-      let cut = receipt.cut()
-      expected.val = Some({
-        path: receipt.path(),
-        para_id: receipt.para_id(),
-        successor_para_id: receipt.successor_para_id(),
-        successor_text: receipt.successor_text(),
-        old_count,
-        cut,
-      })
-      let report : DocxDeleteParagraphReport = {
-        path: receipt.path(),
-        para_id: receipt.para_id(),
-        anchor_status: receipt.anchor_status(),
-        text: receipt.text(),
-        successor_para_id: receipt.successor_para_id(),
-        successor_text: receipt.successor_text(),
-      }
-      match preflight {
-        Some(callback) => callback(report)
-        None => ()
-      }
-      collected.val = Some(report)
-    },
-    validators=[readback],
-  )
+  // No validator is passed here: the readback belongs to the QUEUING,
+  // and every DOCX transaction installs it. A verb that supplied its
+  // own would be the only path that verified anything.
+  let transaction = transact_docx(options, session => {
+    let receipt = session.queue_delete_paragraph(at~)
+    match expect_text {
+      Some(text) =>
+        if receipt.text() != text {
+          raise @transaction.transaction_failure(
+            "office.delete.expect_text_mismatch",
+            "the paragraph at \{receipt.path()} does not read as the expected text; nothing was deleted — re-run `office find` or address by p[id=\"…\"]",
+          )
+        }
+      None => ()
+    }
+    let report : DocxDeleteParagraphReport = {
+      path: receipt.path(),
+      para_id: receipt.para_id(),
+      anchor_status: receipt.anchor_status(),
+      text: receipt.text(),
+      successor_para_id: receipt.successor_para_id(),
+      successor_text: receipt.successor_text(),
+    }
+    match preflight {
+      Some(callback) => callback(report)
+      None => ()
+    }
+    collected.val = Some(report)
+  })
   guard collected.val is Some(report) else {
     raise docx_failure(
       "office.docx.edit_internal", "the delete transaction returned no report",

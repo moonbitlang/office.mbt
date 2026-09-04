@@ -127,19 +127,6 @@ fn delete_paragraph_report_json(
 }
 
 ///|
-fn ensure_delete_paragraph_report_budget(
-  record : Json,
-  maximum : Int,
-) -> Unit raise @transaction.TransactionError {
-  ignore(bounded_docx_payload(record, [], maximum)) catch {
-    _ =>
-      raise @transaction.transaction_failure(
-        "office.delete.report_too_large", "the JSON report for this deletion would exceed the output ceiling, so nothing was written; re-run without --json for the human summary",
-      )
-  }
-}
-
-///|
 async fn run_delete_paragraph(matches : @argparse.Matches) -> Unit {
   reject_duplicate_scalar_options(matches, ["at", "expect-text"])
   let file = required_value(matches, "file")
@@ -202,32 +189,21 @@ async fn run_delete_paragraph(matches : @argparse.Matches) -> Unit {
   ) catch {
     error => raise transaction_failure(error)
   }
-  let preflight : ((@office_docx.DocxDeleteParagraphReport) -> Unit raise)? = match
-    mode {
-    Human => None
-    JsonDocument | JsonLines =>
-      Some((report : @office_docx.DocxDeleteParagraphReport) => {
-        ensure_delete_paragraph_report_budget(
-          delete_paragraph_report_json(
-            file,
-            output,
-            at,
-            expect_text,
-            dry_run,
-            report,
-            true,
-            transaction=Json::null(),
-          ),
-          docx_cli_default_max_output_chars -
-          format_report_transaction_reserve(file, output),
-        )
-      })
-  }
+  // NO in-transaction report preflight for this verb, unlike `format`.
+  // The preflight exists where the record can grow without bound before
+  // publication — format's embeds one entry per match — so refusing
+  // must happen while nothing has been written. Every field of a
+  // deletion record is bounded by construction: two paths, one address,
+  // and three projections capped at 160 characters each. It could not
+  // fire, and it cost a second full JSON build inside every `--json`
+  // transaction. What remains is the ceiling check on the FULL payload
+  // below, where the transaction report — whose preservation manifest
+  // grows with the package's part count — is the part that can actually
+  // be large.
   let result = @office_docx.transact_docx_delete_paragraph(
     options,
     at~,
     expect_text?,
-    preflight?,
   ) catch {
     error => raise map_delete_paragraph_failure(error)
   }
@@ -253,11 +229,11 @@ async fn run_delete_paragraph(matches : @argparse.Matches) -> Unit {
         _ =>
           raise CliFailure(
             @lib.protocol_error(
-              "office.delete.report_internal",
+              "office.delete.report_too_large",
               if dry_run {
-                "internal: the delete report exceeded the output ceiling despite the preflight; this was a dry run, so nothing was written"
+                "the JSON report for this deletion exceeds the output ceiling — its transaction preservation manifest is too large for one document; this was a dry run, so nothing was written. Re-run without --json for the human summary"
               } else {
-                "internal: the delete report exceeded the output ceiling despite the preflight; the edit itself completed and \{output} is valid"
+                "the JSON report for this deletion exceeds the output ceiling — its transaction preservation manifest is too large for one document. The deletion itself completed and \{output} is valid; re-run `office validate` or use the human summary"
               },
             ),
           )

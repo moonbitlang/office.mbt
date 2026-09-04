@@ -124,6 +124,28 @@ pub fn DocxEditSession::queue_find_replace(
 ///|
 /// Resolve a replace scope: stable `p[id="…"]` spellings become the
 /// carrier's CURRENT scan path; ordinal scopes pass through untouched.
+/// The exact single-segment stable spelling: `p[id="…"]` with a
+/// non-empty payload free of quotes and brackets (`p[id="` is six
+/// characters; the payload starts right after it). A shape check only —
+/// whether the id NAMES anything is the anchor index's judgment.
+///
+/// The shortest spelling this admits is nine code units: at eight,
+/// `p[id=""]` carries no id at all, and at seven `p[id="]` satisfies
+/// both the prefix and the suffix with the SAME quote, where slicing
+/// would panic instead of refusing typed.
+pub fn docx_stable_target_shape_valid(value : String) -> Bool {
+  guard value.has_prefix("p[id=\"") &&
+    value.has_suffix("\"]") &&
+    value.length() > 8 else {
+    return false
+  }
+  for ch in value[6:value.length() - 2] {
+    guard ch != '"' && ch != ']' else { return false }
+  }
+  true
+}
+
+///|
 fn resolve_stable_replace_scope(
   session : DocxEditSession,
   scope : String,
@@ -133,13 +155,13 @@ fn resolve_stable_replace_scope(
   // through to the prefix matcher where it matches nothing and an
   // --expect 0 run would publish.
   guard scope.has_prefix("p[id") else { return scope }
-  // length >= 8: the shortest VALID spelling is p[id=""] (eight code
-  // units) — at seven, p[id="] satisfies both the prefix and the
-  // suffix with the SAME quote, and slicing would panic instead of
-  // refusing typed.
-  guard scope.has_prefix("p[id=\"") &&
-    scope.has_suffix("\"]") &&
-    scope.length() >= 8 else {
+  // ONE predicate, shared with the CLI. The two were written
+  // separately and drifted: the request boundary demanded a non-empty
+  // payload while this accepted `p[id=""]`, sliced it to the empty
+  // string and handed that to the carrier lookup — so the same
+  // spelling was a grammar error through `office` and a semantic
+  // lookup through the SDK.
+  guard docx_stable_target_shape_valid(scope) else {
     raise @transaction.transaction_failure(
       "office.docx.para_id_invalid", "a stable scope is spelled p[id=\"XXXXXXXX\"]",
     )

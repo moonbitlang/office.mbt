@@ -101,27 +101,3 @@ async test "delete-paragraph result record declares every field it emits" {
   assert_true(deleted.contains("para_id"))
   assert_true(deleted.contains("paragraph_anchor_status"))
 }
-
-///|
-test "delete-paragraph report budget refuses only over-ceiling records" {
-  let small : Json = Json::object({ "note": Json::string("fits") })
-  ensure_delete_paragraph_report_budget(small, 4096)
-  let mut text = "x"
-  while text.length() < 2048 {
-    text = text + text
-  }
-  let fat : Json = Json::object({ "note": Json::string(text) })
-  try {
-    ensure_delete_paragraph_report_budget(fat, 1024)
-    fail("expected the budget refusal")
-  } catch {
-    error => {
-      let message = "\{error}"
-      assert_true(
-        message.contains("office.delete.report_too_large"),
-        msg="got '" + message + "'",
-      )
-      assert_true(message.contains("nothing was written"))
-    }
-  }
-}

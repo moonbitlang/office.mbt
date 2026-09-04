@@ -52,6 +52,15 @@ pub struct DocxEditSession {
   // SNAPSHOT, which queuing does not change, so only one may be queued
   // per session. See `queue_delete_paragraph`.
   priv mut delete_queued : Bool
+  // What a queued deletion must read back as, shared with the validator
+  // the TRANSACTION installed before this session existed. The readback
+  // travels with the QUEUING, not with the verb that happens to call
+  // it: `queue_delete_paragraph` is public and composable, so a caller
+  // who deletes a paragraph and then edits something else through the
+  // same session gets the identity, neighbour, cut and count legs
+  // exactly as the verb does. Empty on every session that queues no
+  // deletion, where the validator has nothing to say.
+  priv delete_expectation : Ref[DeleteReadbackExpectation?]
 }
 
 ///|
@@ -202,6 +211,7 @@ fn source_fingerprints(archive : @zip.Archive) -> Array[DocxPartFingerprint] {
 fn open_edit_session(
   archive : @zip.Archive,
   budget : @transaction.TransactionBudget,
+  delete_expectation? : Ref[DeleteReadbackExpectation?] = Ref(None),
 ) -> DocxEditSession raise @transaction.TransactionError {
   let archive = archive.clone()
   let validation = @opc.validate_docx_archive_report_limited(
@@ -298,6 +308,7 @@ fn open_edit_session(
     plan: @splice.SplicePlan::new(),
     plan_mode: Empty,
     delete_queued: false,
+    delete_expectation,
   }
 }
 
@@ -484,6 +495,25 @@ pub fn DocxEditSession::queue_plan(
         "office.docx.stale_semantic_state", "generic plans cannot be queued after a semantic comment operation because their byte spans may invalidate the semantic plan's immutable source snapshot",
       )
     Empty | Generic => ()
+  }
+  // A DELETION'S PART IS CLOSED once the deletion is queued. The cut
+  // is verified byte-exactly against the whole part, and the successor
+  // and neighbour projections were read from the same snapshot, so a
+  // second edit anywhere in that story makes every one of those legs
+  // answer about a document the plan never described. Refused HERE,
+  // where the caller can see why, rather than surfacing later as a cut
+  // that "did not land where the plan said" when what actually
+  // happened is that something else landed too.
+  //
+  // The deletion's OWN plan passes: the latch is set after it queues.
+  if self.delete_queued && self.delete_expectation.val is Some(expectation) {
+    let closed = expectation.cut.part()
+    guard !plan.declared_parts().contains(closed) else {
+      raise docx_failure(
+        "office.delete.part_closed",
+        "a queued paragraph deletion is verified byte-exactly against \{bounded_docx_text(closed, 320)}, so nothing else may edit that part in the same transaction",
+      )
+    }
   }
   self.adopt_plan(plan)
   self.plan_mode = Generic
@@ -824,6 +854,13 @@ async fn docx_transaction(
   let validators = validators.copy()
   let source_para_id_inventory : Ref[Map[String, Array[String]]?] = Ref(None)
   validators.insert(0, package_validator(source_para_id_inventory~))
+  // Installed on EVERY docx transaction, silent unless the session
+  // queued a deletion. Passing it as a verb-supplied validator instead
+  // let the one composition the session seam advertises — queue a
+  // deletion, then queue anything else — publish with no delete
+  // readback at all.
+  let delete_expectation : Ref[DeleteReadbackExpectation?] = Ref(None)
+  validators.insert(1, delete_readback_validator(delete_expectation))
   @transaction.transact(
     options,
     (format, _original, archive, budget) => {
@@ -837,7 +874,7 @@ async fn docx_transaction(
       // a signed package, an enforced protection, or a document
       // recording revisions is not edited by this toolkit at all.
       docx_mutation_preflight(archive, tracking_waived~)
-      let session = open_edit_session(archive, budget)
+      let session = open_edit_session(archive, budget, delete_expectation~)
       // The SOURCE's identity inventory, captured before any edit is
       // queued: the candidate gate compares against this, so existing
       // paraId dirt survives a text edit while any inventory CHANGE

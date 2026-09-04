@@ -882,9 +882,12 @@ the wrong paragraph by ordinal).
 
 Everything the removal could dangle refuses typed. Inside the paragraph:
 section breaks, note references, comment machinery, bookmark markers
-(Word's `_GoBack` caret is exempt where it BRACKETS the paragraph, but a
-caret split across the target — its start inside and its end beyond —
-still refuses, because the deletion would take one half of the pair), range permissions, SPLIT field boundaries whose partner lies outside the
+(Word's `_GoBack` caret is exempt BOTH ways — a pair wholly inside the
+paragraph leaves with it, and one that brackets the paragraph anchors
+nothing — but a caret split across the target, its start inside and its
+end beyond, still refuses, because the deletion would take one half of
+the pair; and a name this reader cannot read as exactly `_GoBack` is an
+ordinary named bookmark, which refuses), range permissions, SPLIT field boundaries whose partner lies outside the
 paragraph (a COMPLETE field — a page number, a DATE, a REF, a TOC entry —
 leaves with its paragraph and dangles nothing; `fldSimple` likewise), the
 entire tracked-revision family, drawings and embedded objects,
@@ -894,9 +897,10 @@ paragraphs — a table, a content control, a compatibility alternative —
 because how those blocks would meet once the paragraph between them
 leaves is a question this version does not answer, and answering it
 wrongly merges two tables irreversibly; a deletion that would leave the
-body with NO direct paragraph (deleting it would merge them into one — judged
-on layout flow, so wrappers and zero-width markers between them do not
-hide it), a paragraph inside a field region whose boundaries live in
+body with NO direct paragraph — Word keeps one, and the count is of the
+body's OWN direct children, so a paragraph inside a content control or
+one branch of a compatibility alternative does not keep that promise;
+a paragraph inside a field region whose boundaries live in
 other paragraphs, and a paragraph SPANNED by a range its own siblings
 anchor (a comment, a permission, a bookmark, a tracked move, a customXml
 revision range) — including the case where the story's range markers do
@@ -906,9 +910,17 @@ half of one joined across a deleted paragraph mark — refuses too.
 
 Every STRUCTURAL refusal carries a typed `office.delete.*` code, so an
 agent can tell a retryable address mistake (`target_not_found`) from a
-permanent structural refusal (`table_separator`, `field_region`,
-`open_range`, `final_paragraph`, `blocked_construct`, …) without reading
-prose. Request-grammar problems answer `office.invalid_arguments` and
+permanent structural refusal without reading prose. The complete set:
+`target_grammar`, `target_not_found`, `target_not_direct`,
+`target_not_addressable`, `neighbour_not_paragraph`, `blocked_construct`,
+`field_region`, `open_range`, `bookmark_unpairable`,
+`relationship_reference`, `final_paragraph`, `unverifiable` and
+`engine_unavailable`. Of these only `target_not_found` and
+`target_grammar` invite a different address; the rest say this paragraph
+cannot be deleted by this version. Two more come from the SESSION rather
+than the planner: `already_queued` (one deletion per transaction) and
+`part_closed` (nothing else may edit the story a deletion is verified
+against). Request-grammar problems answer `office.invalid_arguments` and
 stable-identity problems answer `office.docx.para_id_*`, as they do for
 every verb. An `--expect-text` mismatch answers
 `office.delete.expect_text_mismatch` — the one refusal that means "your
@@ -916,17 +928,24 @@ ordinal drifted; re-run `office find` and re-address" rather than "this
 paragraph can never be deleted".
 
 The readback verifies, WHERE THE DOCUMENT SUPPORTS IT, that the deleted
-identity is GONE from the addressable inventory and that the successor
-answers at the path with the text it had before the splice — both
-identity legs are silent on a document carrying no unique `w14:paraId`,
-which is most output from producers other than Word, and the text leg is
-silent when nothing follows. What always runs: the story is exactly one
-paragraph shorter, and the
-published part is the source with exactly the planned span removed —
-which proves the splice APPLIED as planned. It does not prove the plan
-addressed the paragraph you meant: witness and edit share one span, so a
-mis-resolved address moves both. `--expect-text` is what binds an
-address to content.
+identity is GONE from the addressable inventory, that the successor
+answers at the path with the text it had before the splice, and that the
+paragraph BEFORE the target still reads the same at its own path (a
+deletion at `p[N]` moves no path below N). The identity legs are silent
+on a document carrying no unique `w14:paraId`, which is most output from
+producers other than Word; the successor legs are silent when nothing
+follows; the predecessor legs are silent when the target is the first
+paragraph. At least one of those must speak, or the deletion refuses
+`unverifiable` before anything is planned — a removal nothing could
+confirm afterwards is not published.
+
+What always runs: the story is exactly one paragraph shorter, the body
+still has a direct paragraph, and the published part is the source with
+exactly the planned span removed — which proves the splice APPLIED as
+planned. That last one does not by itself prove the plan addressed the
+paragraph you meant: witness and edit share one span, so a mis-resolved
+address moves both. The neighbour legs above, and `--expect-text`, are
+what bind an address to content.
 
 | key | type | notes |
 | --- | --- | --- |

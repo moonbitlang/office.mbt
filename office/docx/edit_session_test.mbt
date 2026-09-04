@@ -163,10 +163,15 @@ async test "D1 session no-op reuses the exact transaction source" {
     assert_false(report.committed)
     assert_true(report.preservation.whole_file_identical)
     assert_true(report.preservation.manifest_enforced)
-    assert_eq(report.validations.length(), 3)
+    assert_eq(report.validations.length(), 4)
     assert_eq(report.validations[0].name, "office-docx-bounded")
     assert_eq(report.validations[1].name, "office-portable-opc")
     assert_eq(report.validations[2].name, "office-docx-package")
+    // Installed on every DOCX transaction and silent unless the session
+    // queued a paragraph deletion: the readback travels with the
+    // QUEUING, not with the verb, so composing a deletion with any
+    // other edit cannot publish unverified.
+    assert_eq(report.validations[3].name, "office-docx-delete-readback")
     assert_eq(@afs.read_file(input).binary(), original)
   })
 }
@@ -1676,7 +1681,7 @@ async test "D1 session adopts annotation plans with an exact preservation manife
     assert_eq(report.preservation.changed.length(), 3)
     assert_eq(report.preservation.added.length(), 1)
     assert_eq(report.preservation.added[0], "word/comments.xml")
-    assert_eq(report.validations.length(), 3)
+    assert_eq(report.validations.length(), 4)
     let candidate = @afs.read_file(output).binary()
     let annotated = @word_fixture.read_docx_annotated(candidate)
     assert_eq(annotated.annotations().comments().length(), 1)

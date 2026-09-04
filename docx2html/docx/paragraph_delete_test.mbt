@@ -630,12 +630,13 @@ test "an ambiguous field boundary refuses" {
 }
 
 ///|
-/// Fields are judged by the SAME well-formedness rule as ranges, and
-/// the message says which: a story carrying an orphan `begin` is one
-/// whose field extents cannot be judged, so a paragraph between that
-/// orphan and a later field refuses — accurately, rather than naming a
-/// region that does not exist. A story whose fields ARE well formed is
-/// judged position by position.
+/// Fields are judged POSITION BY POSITION, not by a story-wide
+/// well-formedness verdict — the opposite of the rule ranges use, and
+/// deliberately so. An orphan `fldChar begin` is something Word
+/// tolerates and real documents carry; refusing every paragraph after
+/// one would make them permanently undeletable while naming a field
+/// that does not exist. What refuses is a paragraph inside a region
+/// that actually CLOSES after it.
 test "field extents are judged only on a well-formed story" {
   let orphaned = delete_fixture(
     "<w:p><w:r><w:fldChar w:fldCharType=\"begin\"/></w:r></w:p>" +
@@ -750,15 +751,19 @@ test "the remaining hazard vocabulary is exercised" {
   // attribute, which the strict XML gate refuses before this planner
   // ever sees the document. Across two WML DIALECTS they are different
   // names, no duplicate check fires anywhere, and the gates that care
-  // read through `unique_attribute_value` — which is why a bookmark
-  // whose name is spelled twice reads as unknown and refuses.
+  // read through `unique_attribute_value`, which answers None. There is
+  // exactly ONE question this planner asks of a bookmark name — is it
+  // Word's `_GoBack` caret? — and a name this reader cannot read as
+  // `_GoBack` is a named bookmark, the answer every other consumer
+  // gives it. So the ambiguity refuses through the ordinary named-
+  // bookmark arm rather than through a state of its own.
   let dialects = "<w:document xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\" xmlns:s=\"http://purl.oclc.org/ooxml/wordprocessingml/main\"><w:body>" +
     "<w:p><w:bookmarkStart w:id=\"1\" w:name=\"_GoBack\" s:name=\"Chapter\"/><w:bookmarkEnd w:id=\"1\"/><w:r><w:t>x</w:t></w:r></w:p>" +
     keeper +
     "<w:sectPr/></w:body></w:document>"
   let annotated = @docx.read_docx_annotated(fixture_docx(dialects))
   assert_true(
-    delete_refusal_of(annotated, "p[1]").contains("could not be read"),
+    delete_refusal_of(annotated, "p[1]").contains("carries a named bookmark"),
   )
 }
 
@@ -1067,6 +1072,25 @@ test "planner refusals carry their slugs" {
         "p[1]",
         "relationship_reference",
       ),
+      // A paragraph the path grammar flattens: physically inside a
+      // content control, so `p[1]` addresses it while the element tree
+      // says it is not the body's child.
+      (
+        "<w:sdt><w:sdtContent><w:p><w:r><w:t>wrapped</w:t></w:r></w:p></w:sdtContent></w:sdt>" +
+        keeper +
+        keeper,
+        "p[1]",
+        "target_not_direct",
+      ),
+      // No identity, no readable neighbour text: nothing the readback
+      // could check afterwards.
+      (
+        "<w:p><w:pPr><w:rPr><w:del w:id=\"1\" w:author=\"A\" w:date=\"2026-01-01T00:00:00Z\"/></w:rPr></w:pPr><w:r><w:t>head</w:t></w:r></w:p>" +
+        "<w:p><w:r><w:t>tail</w:t></w:r></w:p>" +
+        "<w:p><w:r><w:t>target</w:t></w:r></w:p>",
+        "p[3]",
+        "unverifiable",
+      ),
     ] {
     let (body, at, slug) = probe
     let annotated = delete_fixture(body)
@@ -1080,4 +1104,112 @@ test "planner refusals carry their slugs" {
     // machine prefix.
     assert_true(!@docx.docx_delete_refusal_prose(message).has_prefix("delete/"))
   }
+}
+
+///|
+/// `<w:body>` is not a reserved word, and the strict reader that gates
+/// this planner checks well-formedness, not the schema. A story
+/// carrying a SECOND `w:body` anywhere inside it must not lend that
+/// body's children to any question asked about the real one — they are
+/// neither neighbours nor survivors, and a readback that counted with
+/// the same predicate as the guard would agree with it either way.
+test "paragraphs under a nested w:body are neither neighbours nor survivors" {
+  let phantom = "<w:body><w:p><w:r><w:t>phantom</w:t></w:r></w:p></w:body>"
+  // SURVIVOR: the target is the only real direct paragraph, and the
+  // phantom must not keep the trailing-paragraph promise for it.
+  // Inside a `w:sectPr`, which the neighbour walk skips as zero-width,
+  // so this reaches the survivor count with nothing else in the way.
+  assert_true(
+    delete_refusal(
+      "<w:p><w:r><w:t>only</w:t></w:r></w:p><w:sectPr>" +
+      phantom +
+      "</w:sectPr>",
+      "p[1]",
+    ).contains("final direct body paragraph"),
+  )
+  // NEIGHBOUR: a phantom nested inside the table BEFORE the target is a
+  // descendant, and a descendant appears later in the element order
+  // than its ancestor — so a walk that kept the last qualifying element
+  // by global index found the phantom, called the neighbour a
+  // paragraph, and spliced the target out from beside a table.
+  assert_true(
+    delete_refusal(
+      "<w:tbl><w:tr><w:tc>" +
+      phantom +
+      "</w:tc></w:tr></w:tbl><w:p><w:r><w:t>target</w:t></w:r></w:p>" +
+      "<w:p><w:r><w:t>keeper</w:t></w:r></w:p>",
+      "p[1]",
+    ).contains("beside a block that is not a paragraph"),
+  )
+}
+
+///|
+/// The readback has three ways to say WHICH paragraph left — the
+/// deleted identity, the successor at the deleted path, the neighbour
+/// before it at its own path — and a document can silence all three at
+/// once. The cut leg cannot speak for them: its witness and its edit
+/// are built from one span. A deletion nothing could verify refuses.
+test "a deletion no readback leg could verify refuses" {
+  // No identities anywhere; the paragraph before the target is the TAIL
+  // of a revision join, so it has no path of its own to read back at;
+  // the target is last, so nothing succeeds it.
+  let joined = "<w:p><w:pPr><w:rPr><w:del w:id=\"1\" w:author=\"A\" w:date=\"2026-01-01T00:00:00Z\"/></w:rPr></w:pPr><w:r><w:t>head</w:t></w:r></w:p>" +
+    "<w:p><w:r><w:t>tail</w:t></w:r></w:p>" +
+    "<w:p><w:r><w:t>target</w:t></w:r></w:p>"
+  inspect(
+    delete_refusal(joined, "p[3]"),
+    content="delete/unverifiable: this document offers no identity and no readable neighbour text to verify the deletion against, so what was removed could not be confirmed after the fact and this deletion refuses",
+  )
+  // The SAME shape with an identity on the target is verifiable: the
+  // id must be gone from the candidate, so the deletion proceeds. This
+  // pins the guard to the missing witness and not to the fixture.
+  let identified = "<w:p><w:pPr><w:rPr><w:del w:id=\"1\" w:author=\"A\" w:date=\"2026-01-01T00:00:00Z\"/></w:rPr></w:pPr><w:r><w:t>head</w:t></w:r></w:p>" +
+    "<w:p><w:r><w:t>tail</w:t></w:r></w:p>" +
+    "<w:p w14:paraId=\"0000AAA1\"><w:r><w:t>target</w:t></w:r></w:p>"
+  assert_eq(delete_refusal(identified, "p[3]"), "<planned>")
+}
+
+///|
+/// The two halves of the range vocabulary must agree. The scanner
+/// retains a `w:id` for every name `is_wml_range_marker_name` admits,
+/// and the pairing walk consults only what `range_family_of`
+/// classifies — a name in the first and not the second is a marker
+/// captured and then IGNORED, which is how a range bracketing the
+/// target becomes invisible.
+test "every retained range marker has a family" {
+  let keeper = "<w:p><w:r><w:t>keeper</w:t></w:r></w:p>"
+  for
+    name in [
+      "bookmarkStart", "bookmarkEnd", "commentRangeStart", "commentRangeEnd", "permStart",
+      "permEnd", "moveFromRangeStart", "moveFromRangeEnd", "moveToRangeStart", "moveToRangeEnd",
+      "customXmlInsRangeStart", "customXmlInsRangeEnd", "customXmlDelRangeStart",
+      "customXmlDelRangeEnd", "customXmlMoveFromRangeStart", "customXmlMoveFromRangeEnd",
+      "customXmlMoveToRangeStart", "customXmlMoveToRangeEnd",
+    ] {
+    // One marker of this family on each side of the target, sharing an
+    // id: a range that BRACKETS it. Classified, this refuses; ignored,
+    // the paragraph is spliced out from inside the range.
+    let bracketed = "<w:\{name} w:id=\"77\" w:name=\"R\"/>" +
+      "<w:p><w:r><w:t>target</w:t></w:r></w:p>" +
+      "<w:\{name} w:id=\"77\" w:name=\"R\"/>" +
+      keeper
+    assert_not_eq(
+      delete_refusal(bracketed, "p[1]"),
+      "<planned>",
+      msg="\{name} was retained but not classified",
+    )
+  }
+  // THE CONTROL. A body-level element that is NOT a range marker in the
+  // same position plans, so the assertions above are about
+  // classification and not about the fixture shape.
+  assert_eq(
+    delete_refusal(
+      "<w:proofErr w:type=\"spellStart\"/>" +
+      "<w:p><w:r><w:t>target</w:t></w:r></w:p>" +
+      "<w:proofErr w:type=\"spellEnd\"/>" +
+      keeper,
+      "p[1]",
+    ),
+    "<planned>",
+  )
 }

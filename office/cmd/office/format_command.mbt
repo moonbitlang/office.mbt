@@ -129,23 +129,16 @@ fn reject_duplicate_scalar_options(
 }
 
 ///|
-/// The exact single-segment stable spelling, at the request boundary:
-/// `p[id="…"]` with a non-empty payload free of quotes and brackets
-/// (`p[id="` is six characters; the payload starts right after it).
+/// The exact single-segment stable spelling, at the request boundary.
 /// Anything stable-LOOKING that is not exactly this shape refuses
 /// before any file is read; the engine's semantic para_id validation
-/// judges the payload itself. Shared by every verb that accepts
-/// stable paragraph addressing.
+/// judges the payload itself.
+///
+/// The ENGINE owns the predicate, and every verb — here and in the SDK
+/// — asks it the same question. Two hand-written copies of one grammar
+/// disagree eventually, and this pair did.
 fn docx_stable_target_shape_valid(value : String) -> Bool {
-  guard value.has_prefix("p[id=\"") &&
-    value.has_suffix("\"]") &&
-    value.length() > 8 else {
-    return false
-  }
-  for ch in value[6:value.length() - 2] {
-    guard ch != '"' && ch != ']' else { return false }
-  }
-  true
+  @office_docx.docx_stable_target_shape_valid(value)
 }
 
 ///|
