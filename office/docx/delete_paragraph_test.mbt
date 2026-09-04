@@ -168,11 +168,20 @@ async test "delete-paragraph refusals carry their typed codes" {
         ("<w:r><w:t>only</w:t></w:r>", "p[1]", "office.delete.final_paragraph"),
         ("<w:r><w:t>a</w:t></w:r>", "p[9]", "office.delete.target_not_found"),
         (
+          // A raw nested path is a GRAMMAR problem (the CLI blocks it
+          // before the engine sees it)…
           "<w:r><w:t>a</w:t></w:r></w:p>" +
           table +
           "<w:p><w:r><w:t>b</w:t></w:r>",
           "tbl[1]/tr[1]/tc[1]/p[1]",
-          "office.delete.target_not_direct",
+          "office.delete.target_grammar",
+        ),
+        (
+          // …while a STABLE identity naming that same paragraph is a
+          // structural refusal: `office find` just reported it, and it
+          // can never be deleted.
+          "<w:r><w:t>a</w:t></w:r></w:p><w:tbl><w:tr><w:tc><w:p w14:paraId=\"0000C0DE\"><w:r><w:t>cell</w:t></w:r></w:p></w:tc></w:tr></w:tbl><w:p><w:r><w:t>b</w:t></w:r>",
+          "p[id=\"0000C0DE\"]", "office.delete.target_not_direct",
         ),
         (
           "<w:r><w:footnoteReference w:id=\"1\"/></w:r></w:p><w:p><w:r><w:t>b</w:t></w:r>",

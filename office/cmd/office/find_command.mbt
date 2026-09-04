@@ -199,6 +199,13 @@ async fn run_docx_find(matches : @argparse.Matches) -> Unit {
       )
   }
   let within = optional_value(matches, "in")
+  // Same prefix hazard as the mutating verbs: a truncated scope reports
+  // candidates from paragraphs the caller never scoped, and this is the
+  // surface an agent reads BEFORE an irreversible edit.
+  match within {
+    Some(scope) => format_validate_scope(scope)
+    None => ()
+  }
   let limit = bounded_decimal_argument(
     matches,
     "limit",

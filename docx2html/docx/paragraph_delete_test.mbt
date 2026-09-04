@@ -433,14 +433,18 @@ test "deletion refuses a paragraph a sibling range brackets" {
 /// paragraph, and the receipt reports its text, because that is what an
 /// agent must re-anchor on.
 test "the final-paragraph guard is structural, the successor is flattened" {
-  // The rule is what the comment says: the body must still END with a
-  // paragraph. A wrapped paragraph IS the body's last flow child, so
-  // this deletion is fine…
+  // "At least one paragraph remains" is STRUCTURAL, so it counts DIRECT
+  // body paragraphs: a paragraph inside a content control may render
+  // for nobody, and a body with none is the state this refuses.
   let wrapped_only = delete_fixture(
     "<w:p><w:r><w:t>target</w:t></w:r></w:p>" +
     "<w:sdt><w:sdtContent><w:p><w:r><w:t>next</w:t></w:r></w:p></w:sdtContent></w:sdt>",
   )
-  assert_eq(delete_refusal_of(wrapped_only, "p[1]"), "<planned>")
+  assert_true(
+    delete_refusal_of(wrapped_only, "p[1]").contains(
+      "final direct body paragraph",
+    ),
+  )
   // …and deleting the last of two ordinary paragraphs, the commonest
   // deletion there is, leaves a body ending in a paragraph too.
   let pair = delete_fixture(
@@ -537,8 +541,9 @@ test "bracketing ranges do not cross families" {
     "<w:permStart w:id=\"1\" w:edGrp=\"everyone\"/><w:p><w:r><w:t>target</w:t></w:r></w:p><w:commentRangeEnd w:id=\"1\"/>" +
     keeper,
   )
-  let mismatched_refusal = delete_refusal_of(mismatched, "p[1]")
-  assert_true(!mismatched_refusal.contains("sits inside a comment range"))
+  // Asserted POSITIVELY: `!contains(...)` passes on any other outcome,
+  // including the family collapse this case exists to catch.
+  assert_eq(delete_refusal_of(mismatched, "p[1]"), "<planned>")
   // Every paired family is judged, not just comments and permissions.
   for
     pair in [
@@ -567,18 +572,14 @@ test "bracketing ranges do not cross families" {
       "sits inside a bookmark range",
     ),
   )
-  // A caret that BRACKETS a whole paragraph refuses too. Word collapses
-  // `_GoBack` at the cursor, so a bracketing one is not a shape it
-  // emits, and buying its exemption back would mean reading ids and
-  // names again — the model whose every corner this collapse removed.
-  // Over-refusal in the safe direction, stated plainly.
+  // Word's caret anchors nothing, and a multi-paragraph edit leaves one
+  // SPANNING paragraphs — so the exemption follows it outside the
+  // target, not only inside.
   let caret = delete_fixture(
     "<w:bookmarkStart w:id=\"1\" w:name=\"_GoBack\"/><w:p><w:r><w:t>target</w:t></w:r></w:p><w:bookmarkEnd w:id=\"1\"/>" +
     keeper,
   )
-  assert_true(
-    delete_refusal_of(caret, "p[1]").contains("sits inside a bookmark range"),
-  )
+  assert_eq(delete_refusal_of(caret, "p[1]"), "<planned>")
   // The caret INSIDE a paragraph — the shape Word actually emits — is
   // still deletable with it.
   let collapsed = delete_fixture(
@@ -813,6 +814,46 @@ test "deletion refuses w14 conflict revisions" {
 }
 
 ///|
+/// The constructs the registry lists but no test reached — each now
+/// exercised where it is dispatched, so the ledger's citation is true.
+test "the remaining hazard vocabulary is exercised" {
+  let keeper = "<w:p><w:r><w:t>keeper</w:t></w:r></w:p>"
+  // A data-bound content control anchors a customXml island.
+  let bound = delete_fixture(
+    "<w:p><w:sdt><w:sdtPr><w:dataBinding w:xpath=\"/root/customer\" w:storeItemID=\"{X}\"/></w:sdtPr>" +
+    "<w:sdtContent><w:r><w:t>Acme</w:t></w:r></w:sdtContent></w:sdt></w:p>" +
+    keeper,
+  )
+  assert_true(
+    delete_refusal_of(bound, "p[1]").contains("content-control data binding"),
+  )
+  // `separate` divides instruction from result INSIDE a region and
+  // changes no depth — the commonest fldChar spelling in real output,
+  // and the arm whose misclassification would refuse or permit every
+  // field in the document.
+  let separated = delete_fixture(
+    "<w:p><w:r><w:fldChar w:fldCharType=\"begin\"/></w:r><w:r><w:instrText>PAGE</w:instrText></w:r>" +
+    "<w:r><w:fldChar w:fldCharType=\"separate\"/></w:r><w:r><w:t>1</w:t></w:r>" +
+    "<w:r><w:fldChar w:fldCharType=\"end\"/></w:r></w:p>" +
+    "<w:p><w:r><w:t>after</w:t></w:r></w:p>" +
+    keeper,
+  )
+  // The paragraph AFTER a closed field is deletable: `separate` did not
+  // leave the region open.
+  assert_eq(delete_refusal_of(separated, "p[2]"), "<planned>")
+  // Two spellings of one attribute are a duplicate attribute, refused
+  // once at the reader rather than guessed at by every gate.
+  let document = "<w:document xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\" xmlns:w2=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\"><w:body>" +
+    "<w:p><w:bookmarkStart w:id=\"1\" w:name=\"Chapter\" w2:name=\"_GoBack\"/><w:bookmarkEnd w:id=\"1\"/><w:r><w:t>x</w:t></w:r></w:p>" +
+    keeper +
+    "<w:sectPr/></w:body></w:document>"
+  let outcome = try? @docx.read_docx_annotated(fixture_docx(document))
+  guard outcome is Err(_) else {
+    fail("expected the duplicate-attribute refusal")
+  }
+}
+
+///|
 /// The three bypasses round 10 confirmed end to end, each pinned by the
 /// shape that produced it.
 test "the structural gates are not bypassable by wrapping or overlap" {
@@ -944,7 +985,7 @@ test "planner refusals carry their slugs" {
     probe in [
       ("<w:p><w:r><w:t>only</w:t></w:r></w:p>", "p[1]", "final_paragraph"),
       (keeper + keeper, "p[9]", "target_not_found"),
-      (keeper + keeper, "p[0]", "target_not_direct"),
+      (keeper + keeper, "p[0]", "target_grammar"),
       (
         "<w:p><w:r><w:footnoteReference w:id=\"1\"/></w:r></w:p>" + keeper,
         "p[1]",

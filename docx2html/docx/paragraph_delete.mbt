@@ -207,8 +207,24 @@ fn open_range_across(
   let outside : Map[String, Bool] = Map([])
   let family_of : Map[String, String] = Map([])
   let unplaceable : Array[String] = []
+  let caret_keys : Array[String] = []
+  let named_keys : Array[String] = []
   for element in elements {
     guard range_family_of(element) is Some((family, starts)) else { continue }
+    if element.local_name == "bookmarkStart" &&
+      element.bookmark_id_raw is Some(caret_id) {
+      let caret_key = family + "\u{1}" + normalized_decimal_id(caret_id)
+      if element.bookmark_name_raw is Some("_GoBack") {
+        if !caret_keys.contains(caret_key) {
+          caret_keys.push(caret_key)
+        }
+      } else if !named_keys.contains(caret_key) {
+        // A NAMED bookmark sharing this id: the exemption is for
+        // Word's caret alone, and an id a real bookmark also uses is
+        // not it.
+        named_keys.push(caret_key)
+      }
+    }
     guard element.bookmark_id_raw is Some(raw) else {
       // A marker whose id cannot be read cannot be paired with
       // anything; refusing is the only honest answer.
@@ -243,6 +259,12 @@ fn open_range_across(
   let spanning : Array[String] = []
   let split : Array[String] = []
   for key, family in family_of {
+    // Word's `_GoBack` caret marks where the cursor was; it anchors
+    // nothing and a multi-paragraph edit leaves one spanning several
+    // paragraphs. Exempt wherever it sits, not only inside the target.
+    if caret_keys.contains(key) && !named_keys.contains(key) {
+      continue
+    }
     if starts_before.get(key).unwrap_or(false) &&
       ends_after.get(key).unwrap_or(false) {
       if !spanning.contains(family) {
@@ -280,6 +302,12 @@ fn open_range_across(
 /// followed by letters, and collapsing it onto `abc` would pair two
 /// ids a consumer keeps apart.
 fn normalized_decimal_id(id : String) -> String {
+  // `ST_DecimalNumber` derives from `xs:integer`, which carries the
+  // COLLAPSE whitespace facet: `" 7 "` and `"7"` are one id to any
+  // schema-validating consumer. Comparing raw spellings let a start and
+  // an end of the same bookmark hash to different keys — the fail-open
+  // direction on an irreversible verb.
+  let id = collapse_whitespace(id)
   let negative = id.has_prefix("-")
   let signed = negative || id.has_prefix("+")
   let digits = if signed { id[1:].to_owned() } else { id }
@@ -329,6 +357,30 @@ fn field_boundary_of(element : ScannedElement) -> FieldBoundary {
     Some("separate") => NotABoundary
     _ => Unreadable
   }
+}
+
+///|
+/// The XML Schema `collapse` facet: strip leading and trailing spaces,
+/// and fold internal runs to one.
+fn collapse_whitespace(value : String) -> String {
+  let builder = StringBuilder()
+  let mut pending_space = false
+  let mut wrote = false
+  for ch in value {
+    if ch is (' ' | '\t' | '\n' | '\r') {
+      if wrote {
+        pending_space = true
+      }
+    } else {
+      if pending_space {
+        builder.write_char(' ')
+        pending_space = false
+      }
+      builder.write_char(ch)
+      wrote = true
+    }
+  }
+  builder.to_string()
 }
 
 ///|
@@ -405,7 +457,14 @@ fn body_flow_kind(elements : Array[ScannedElement], index : Int) -> String? {
 /// the table that would merge — because the question here is
 /// adjacency, not addressing.
 fn is_layout_transparent(uri : String, local_name : String) -> Bool {
-  is_transparent_container(uri, local_name) ||
+  // NOT the MC containers. `is_transparent_container` includes
+  // `mc:AlternateContent` and `mc:Fallback` because the READER flattens
+  // them; for ADJACENCY they are one block with alternatives, and
+  // treating them as transparent put a Fallback's contents into the
+  // flow a second time, right beside the entry meant to represent the
+  // whole block — which is how the table-separator gate was bypassed
+  // again.
+  (uri != MC_URI && is_transparent_container(uri, local_name)) ||
   (is_wml_uri(uri) && local_name is ("customXml" | "bdo" | "dir")) ||
   // `mc:Choice` is SUPPRESSED by this reader, not transparent — but a
   // consumer that understands the branch lays its content out, and
@@ -429,11 +488,16 @@ fn alternate_content_flow_kind(
 ) -> String {
   let container = elements[index]
   let mut kind = "other"
-  for candidate in elements {
-    guard candidate.byte_start > container.byte_start &&
-      candidate.byte_end <= container.byte_end else {
-      continue
+  // Forward from the container and STOP at its end: elements ascend by
+  // byte_start, so everything inside is contiguous. Scanning the whole
+  // array per container made this quadratic in a document full of
+  // shapes, where every text box carries one.
+  for offset in (index + 1)..<elements.length() {
+    let candidate = elements[offset]
+    if candidate.byte_start >= container.byte_end {
+      break
     }
+    guard candidate.byte_end <= container.byte_end else { continue }
     if is_wml_uri(candidate.uri) {
       if candidate.local_name == "tbl" {
         return "tbl"
@@ -541,8 +605,12 @@ pub fn plan_docx_paragraph_deletion(
   // `insert_anchor_ordinal` is shared with the shipped insertion
   // planner, whose published contract this must not narrow.)
   guard !at.has_prefix("p[0") && insert_anchor_ordinal(at) is Some(ordinal) else {
+    // GRAMMAR, not structure: the caller can reformat and retry. The
+    // structural sibling below (a path that resolves but names a
+    // paragraph inside a wrapper) can never succeed, and sharing one
+    // slug made those indistinguishable.
     raise delete_refusal(
-      "target_not_direct", "delete-paragraph targets a direct body paragraph (p[N]); this target is not one",
+      "target_grammar", "delete-paragraph targets a direct body paragraph (p[N]); this target is not one",
     )
   }
   guard annotated.body_paragraph_span(at) is Some(span) else {
@@ -801,7 +869,20 @@ pub fn plan_docx_paragraph_deletion(
       remaining.push(kind)
     }
   }
-  let keeps_a_paragraph = remaining.contains("p")
+  // "At least one paragraph remains" is a STRUCTURAL guarantee, so it
+  // is counted on direct body children — a paragraph inside a content
+  // control or a compatibility branch may render for nobody, and a
+  // body with no direct paragraph is the state this refuses.
+  let mut direct_paragraphs = 0
+  for index, element in elements {
+    if element.local_name == "p" &&
+      is_wml_uri(element.uri) &&
+      is_direct_body_child(elements, element) &&
+      index != target_index {
+      direct_paragraphs += 1
+    }
+  }
+  let keeps_a_paragraph = direct_paragraphs > 0
   let ended_with_paragraph = flow_children.length() > 0 &&
     flow_children[flow_children.length() - 1] == "p"
   let still_ends_with_paragraph = remaining.length() > 0 &&

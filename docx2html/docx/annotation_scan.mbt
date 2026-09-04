@@ -1543,10 +1543,16 @@ fn scan_story(
             }
           }
         }
+        // Two attributes that EXPAND to the same (namespace, local
+        // name) are a duplicate attribute — XML forbids it, and every
+        // gate downstream would otherwise have to remember to ask
+        // whether the spelling it read was the only one. Refusing once,
+        // here, is what makes those gates safe by construction.
+        let expanded_names : Map[String, Bool] = Map([])
         for pair in attributes {
           let attr_name = pair.0
           if attr_name != "xmlns" && !attr_name.has_prefix("xmlns:") {
-            let (attr_prefix, _) = split_qualified_name(attr_name)
+            let (attr_prefix, attr_local) = split_qualified_name(attr_name)
             if attr_prefix != "" {
               guard namespaces.get(attr_prefix) is Some(stack) &&
                 stack.length() > 0 else {
@@ -1554,10 +1560,17 @@ fn scan_story(
                   message="the projection source scanner found an unbound attribute namespace prefix",
                 )
               }
-              if !references_relationship &&
-                is_relationships_uri(stack[stack.length() - 1]) {
+              let attr_uri = stack[stack.length() - 1]
+              if !references_relationship && is_relationships_uri(attr_uri) {
                 references_relationship = true
               }
+              let expanded = attr_uri + "\u{1}" + attr_local
+              guard expanded_names.get(expanded) is None else {
+                raise Unsupported(
+                  message="the projection source scanner found two spellings of one attribute",
+                )
+              }
+              expanded_names[expanded] = true
             }
           }
         }
@@ -2585,8 +2598,27 @@ fn scan_tag(
             // Its OWN allowance, so the shared pool a later MANDATORY
             // charge needs is untouched either way. Declining records
             // the QName as unretained (the namespace guard still sees
-            // it) and marks the element, so an ambiguity gate reading
-            // this attribute cannot mistake "declined" for "absent".
+            // it), so an ambiguity gate reading this attribute cannot
+            // mistake "declined" for "absent".
+            //
+            // The pool is charged only for a value this scan actually
+            // KEEPS: charging before the decode below leaked the
+            // allowance on every name that failed to decode, and a
+            // drained pool then declines later, perfectly readable
+            // names — making a refusal depend on unrelated earlier
+            // content.
+            let mut decodable = true
+            ignore(@utf8.decode(part[value_start:at])) catch {
+              _ => decodable = false
+            }
+            if !decodable {
+              match validated_source_name {
+                Some(candidate) => unretained_attribute_names.push(candidate)
+                None => ()
+              }
+              at += 1
+              continue
+            }
             if !budget.charge_bookmark_name_chars(at - value_start) {
               match validated_source_name {
                 Some(candidate) => unretained_attribute_names.push(candidate)

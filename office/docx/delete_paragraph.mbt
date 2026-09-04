@@ -98,11 +98,26 @@ pub fn DocxEditSession::queue_delete_paragraph(
   at~ : String,
 ) -> @word.DocxDeleteReceipt raise @transaction.TransactionError {
   let resolved = resolve_stable_replace_scope(self, at)
+  // A STABLE id that resolved to a nested path reaches the planner's
+  // grammar guard, but its remediation is the opposite of a mistyped
+  // ordinal: the paragraph exists, `office find` just reported it, and
+  // it can never be deleted. The session is the only layer that knows
+  // which route was taken, so it is where the distinction is made.
+  let addressed_by_identity = resolved != at
   let (plan, receipt) = @word.plan_docx_paragraph_deletion(
     self.annotated,
     at=resolved,
   ) catch {
-    error => raise delete_plan_failure(error)
+    error => {
+      let failure = delete_plan_failure(error)
+      guard addressed_by_identity &&
+        "\{failure}".contains("office.delete.target_grammar") else {
+        raise failure
+      }
+      raise @transaction.transaction_failure(
+        "office.delete.target_not_direct", "this identity names a paragraph that is not a DIRECT child of the body — paragraphs inside content controls, revisions, table cells, or compatibility wrappers are not deletion targets",
+      )
+    }
   }
   self.queue_plan(plan)
   receipt
