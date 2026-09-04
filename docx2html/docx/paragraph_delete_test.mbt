@@ -40,6 +40,7 @@ test "deletion plans splice and read back without the deleted identity" {
   assert_eq(receipt.anchor_status(), "unique")
   assert_eq(receipt.text(), "second")
   assert_eq(receipt.successor_para_id(), Some("00000003"))
+  assert_eq(receipt.successor_text(), Some("third"))
   let source = fixture_docx(
     "<w:document xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\" xmlns:w14=\"http://schemas.microsoft.com/office/word/2010/wordml\"><w:body>\{body}<w:sectPr/></w:body></w:document>",
   )
@@ -76,6 +77,12 @@ test "deletion of an id-less paragraph reports no identity" {
   let (_, receipt) = @docx.plan_docx_paragraph_deletion(annotated, at="p[1]")
   assert_eq(receipt.para_id(), None)
   assert_eq(receipt.text(), "plain")
+  // Both identity legs of the readback go quiet in this regime — most
+  // producers other than Word emit no paraIds at all — so the receipt
+  // still carries the successor's TEXT, which is what the readback
+  // has left to verify with.
+  assert_eq(receipt.successor_para_id(), None)
+  assert_eq(receipt.successor_text(), Some("keeper"))
 }
 
 ///|
@@ -88,7 +95,7 @@ test "deletion refusals are typed per construct" {
     delete_refusal(
       "<w:p><w:pPr><w:sectPr/></w:pPr><w:r><w:t>x</w:t></w:r></w:p>" + keeper,
       "p[1]",
-    ).contains("section break"),
+    ).contains("a section break"),
   )
   // final direct body paragraph
   assert_true(
@@ -132,14 +139,14 @@ test "deletion refusals are typed per construct" {
       "<w:p><w:bookmarkStart w:id=\"0\" w:name=\"_GoBack\"/><w:r><w:t>x</w:t></w:r></w:p>" +
       "<w:p><w:bookmarkEnd w:id=\"0\"/><w:r><w:t>keeper</w:t></w:r></w:p>",
       "p[1]",
-    ).contains("end lies outside"),
+    ).contains("do not pair inside it"),
   )
   assert_true(
     delete_refusal(
       "<w:p><w:bookmarkStart w:id=\"0\" w:name=\"_GoBack\"/><w:r><w:t>x</w:t></w:r></w:p>" +
       "<w:p><w:bookmarkEnd w:id=\"0\"/><w:r><w:t>keeper</w:t></w:r></w:p>",
       "p[2]",
-    ).contains("start lies outside"),
+    ).contains("do not pair inside it"),
   )
   // id-less and id-colliding bookmark markers cannot be pair-judged
   assert_true(
@@ -149,12 +156,24 @@ test "deletion refusals are typed per construct" {
       "p[1]",
     ).contains("without a usable id"),
   )
+  // Pairing is judged as a MULTISET, so an extra end inside refuses
+  // even though set membership would have called it paired…
   assert_true(
     delete_refusal(
-      "<w:p><w:bookmarkStart w:id=\"0\" w:name=\"_GoBack\"/><w:bookmarkStart w:id=\"0\" w:name=\"_GoBack\"/><w:bookmarkEnd w:id=\"0\"/><w:bookmarkEnd w:id=\"0\"/><w:r><w:t>x</w:t></w:r></w:p>" +
+      "<w:p><w:bookmarkStart w:id=\"0\" w:name=\"_GoBack\"/><w:bookmarkEnd w:id=\"0\"/><w:bookmarkEnd w:id=\"0\"/><w:r><w:t>x</w:t></w:r></w:p>" +
       keeper,
       "p[1]",
-    ).contains("sharing one id"),
+    ).contains("do not pair inside it"),
+  )
+  // …and an id another marker OUTSIDE the target also uses refuses,
+  // because this deletion would take that marker's partner.
+  assert_true(
+    delete_refusal(
+      "<w:p><w:bookmarkStart w:id=\"7\" w:name=\"Chapter1\"/><w:r><w:t>outside</w:t></w:r></w:p>" +
+      "<w:p><w:bookmarkStart w:id=\"7\" w:name=\"_GoBack\"/><w:bookmarkEnd w:id=\"7\"/><w:r><w:t>x</w:t></w:r></w:p>" +
+      keeper,
+      "p[2]",
+    ).contains("another marker outside it also uses"),
   )
   // range permissions pair across paragraphs
   for construct in ["permStart", "permEnd"] {
@@ -191,7 +210,7 @@ test "deletion refusals are typed per construct" {
       "<w:p><w:r><w:t>pre</w:t></w:r><w:p><w:r><w:t>inner</w:t></w:r></w:p></w:p>" +
       keeper,
       "p[1]",
-    ).contains("nested paragraph"),
+    ).contains("a nested paragraph"),
   )
   let goback = delete_fixture(
     "<w:p><w:bookmarkStart w:id=\"0\" w:name=\"_GoBack\"/><w:bookmarkEnd w:id=\"0\"/><w:r><w:t>cursor</w:t></w:r></w:p>" +
@@ -203,7 +222,7 @@ test "deletion refusals are typed per construct" {
     delete_refusal(
       "<w:p><w:r><w:fldChar w:fldCharType=\"begin\"/></w:r></w:p>" + keeper,
       "p[1]",
-    ).contains("split field boundary"),
+    ).contains("a field boundary"),
   )
   let simple = delete_fixture(
     "<w:p><w:fldSimple w:instr=\" PAGE \"><w:r><w:t>1</w:t></w:r></w:fldSimple></w:p>" +
@@ -229,7 +248,7 @@ test "deletion refusals are typed per construct" {
   for construct in ["drawing", "object", "pict"] {
     assert_true(
       delete_refusal("<w:p><w:r><w:\{construct}/></w:r></w:p>" + keeper, "p[1]").contains(
-        "drawing or embedded object",
+        "an embedded object",
       ),
       msg="expected the object refusal for \{construct}",
     )
@@ -287,11 +306,73 @@ test "deletion judges relationship references by URI" {
   )
   let (_, receipt) = @docx.plan_docx_paragraph_deletion(hyperlinked, at="p[1]")
   assert_eq(receipt.text(), "link")
+  // The class judges the resolved URI in BOTH dialects: a Strict
+  // package binds r: to the purl spelling, and the refusal must not
+  // be inert there.
+  let strict = delete_refusal(
+    "<w:p xmlns:r=\"http://purl.oclc.org/ooxml/officeDocument/relationships\"><w:r><w:contentPart r:id=\"rId9\"/></w:r></w:p><w:p><w:r><w:t>keeper</w:t></w:r></w:p>",
+    "p[1]",
+  )
+  assert_true(strict.contains("references a package relationship"))
   let masquerade = delete_fixture(
     "<w:p xmlns:r=\"urn:example:not-relationships\"><w:r r:id=\"x\"><w:t>plain</w:t></w:r></w:p><w:p><w:r><w:t>keeper</w:t></w:r></w:p>",
   )
   let (_, receipt2) = @docx.plan_docx_paragraph_deletion(masquerade, at="p[1]")
   assert_eq(receipt2.text(), "plain")
+}
+
+///|
+/// A paragraph between two tables is the separator that keeps them
+/// apart: to a consumer, two adjacent `w:tbl` elements are ONE table,
+/// so deleting it merges them — structural corruption no readback of
+/// paragraph identity could notice. Neighbours decide this, not the
+/// target's own subtree, and the target is EMPTY in the witness so no
+/// other class could be doing the work.
+test "deletion refuses the separator between two tables" {
+  let table = "<w:tbl><w:tr><w:tc><w:p><w:r><w:t>cell</w:t></w:r></w:p></w:tc></w:tr></w:tbl>"
+  let annotated = delete_fixture(
+    "<w:p><w:r><w:t>lead</w:t></w:r></w:p>" +
+    table +
+    "<w:p/>" +
+    table +
+    "<w:p><w:r><w:t>keeper</w:t></w:r></w:p>",
+  )
+  assert_true(
+    delete_refusal_of(annotated, "p[2]").contains("separates two tables"),
+  )
+  // A paragraph between a table and a PARAGRAPH is ordinary content.
+  let ordinary = delete_fixture(
+    table +
+    "<w:p><w:r><w:t>between</w:t></w:r></w:p>" +
+    "<w:p><w:r><w:t>keeper</w:t></w:r></w:p>",
+  )
+  assert_eq(delete_refusal_of(ordinary, "p[1]"), "<planned>")
+}
+
+///|
+/// A paragraph strictly INSIDE a field region carries part of a field
+/// whose boundaries live in other paragraphs — the instruction or the
+/// result would be truncated with it. The target here carries no
+/// `fldChar` of its own, so only the region judgment can refuse it.
+test "deletion refuses a paragraph inside a field region" {
+  let annotated = delete_fixture(
+    "<w:p><w:r><w:fldChar w:fldCharType=\"begin\"/></w:r></w:p>" +
+    "<w:p><w:r><w:instrText> HYPERLINK \\l \"_Toc12\" </w:instrText></w:r></w:p>" +
+    "<w:p><w:r><w:fldChar w:fldCharType=\"end\"/></w:r></w:p>" +
+    "<w:p><w:r><w:t>keeper</w:t></w:r></w:p>",
+  )
+  assert_true(
+    delete_refusal_of(annotated, "p[2]").contains("inside a field region"),
+  )
+  // After the region closes, ordinary paragraphs delete normally.
+  let after = delete_fixture(
+    "<w:p><w:r><w:fldChar w:fldCharType=\"begin\"/></w:r></w:p>" +
+    "<w:p><w:r><w:fldChar w:fldCharType=\"end\"/></w:r></w:p>" +
+    "<w:p><w:r><w:t>free</w:t></w:r></w:p>" +
+    "<w:p><w:r><w:t>keeper</w:t></w:r></w:p>",
+  )
+  let (_, receipt) = @docx.plan_docx_paragraph_deletion(after, at="p[3]")
+  assert_eq(receipt.text(), "free")
 }
 
 ///|
@@ -332,13 +413,10 @@ test "deletion refuses either half of a revision-joined paragraph" {
   // The physical count is blind to tombstones, which is what the
   // readback needs.
   assert_eq(@docx.docx_direct_body_paragraph_count(joined), 3)
-  // And a `multi_physical` head refuses BY STATUS, proven where no
-  // revision markup sits in the target's own subtree: the second
-  // paragraph of a join whose mark-deletion lives in the first.
-  let deep = delete_fixture(
-    "<w:p><w:pPr><w:rPr><w:del w:id=\"1\" w:author=\"a\"/></w:rPr></w:pPr><w:r><w:t>one</w:t></w:r></w:p>" +
-    "<w:p><w:pPr><w:rPr><w:del w:id=\"2\" w:author=\"a\"/></w:rPr></w:pPr><w:r><w:t>two</w:t></w:r></w:p>" +
-    "<w:p><w:r><w:t>three</w:t></w:r></w:p><w:p><w:r><w:t>keeper</w:t></w:r></w:p>",
-  )
-  assert_true(delete_refusal_of(deep, "p[1]") != "<planned>")
+  // The `multi_physical` guard in the planner is a STANDING guarantee,
+  // not a reachable path: every join today is made by a deleted
+  // paragraph mark whose `w:del` sits in the head's own subtree, so the
+  // revision class always speaks first. This test deliberately does not
+  // claim to exercise it — asserting "some refusal happened" here would
+  // pass on the revision refusal and read as coverage it is not.
 }

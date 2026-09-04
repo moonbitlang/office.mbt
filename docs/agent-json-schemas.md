@@ -894,7 +894,7 @@ at the path, and the story is exactly one paragraph shorter.
 | `at` | string | the target as requested |
 | `expect_text` | string\|null | the asserted projection (bounded), null when not asserted |
 | `dry_run`, `changed` | boolean | request mode and whether bytes changed |
-| `deleted` | object | `{path, para_id, paragraph_anchor_status, text}` — what left, readback-verified gone |
+| `deleted` | object | `{path, para_id, paragraph_anchor_status, text, text_truncated}` — what left, readback-verified gone. `text` is bounded at 160 characters and `text_truncated` says whether that cut it; `--expect-text` compares the FULL projection, so a truncated value is not a round-trippable guard (`office text --json` emits the untruncated projection) |
 | `successor_para_id` | string\|null | the stable identity now answering at the deleted path; null when the successor carries no unique identity |
 | `stories_scanned` | array | `["/body"]` in v1 |
 | `transaction` | object | `office.transaction/2` report; nothing is published on any refusal |

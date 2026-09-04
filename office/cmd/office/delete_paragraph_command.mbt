@@ -86,6 +86,10 @@ fn delete_paragraph_report_json(
       },
       "paragraph_anchor_status": Json::string(report.anchor_status()),
       "text": Json::string(bounded_text(report.text(), 160)),
+      // The record of what was destroyed must never look complete when
+      // it is not: --expect-text compares the FULL projection, so a
+      // caller feeding this field back needs to know it was cut.
+      "text_truncated": Json::boolean(report.text().length() > 160),
     }),
     // Re-anchoring: after this publish the deleted path names the
     // SUCCESSOR — its stable identity, when it has one, is how an

@@ -100,8 +100,21 @@ pub fn DocxEditSession::queue_delete_paragraph(
 /// identity appears NOWHERE in the story, the successor's identity
 /// answers at the deleted path, and the direct-paragraph count is
 /// exactly one less. Anything unreadable or unjudgeable is a finding.
+priv struct DeleteReadbackExpectation {
+  path : String
+  para_id : String?
+  successor_para_id : String?
+  // The successor's projection at plan time. Identity legs go quiet on
+  // a document with no unique paraIds — most producers other than Word
+  // emit none — and a count alone cannot tell WHICH paragraph left.
+  // Text is the leg that still speaks there.
+  successor_text : String?
+  old_count : Int
+}
+
+///|
 fn delete_readback_validator(
-  expected : Ref[(String, String?, String?, Int)?],
+  expected : Ref[DeleteReadbackExpectation?],
 ) -> @transaction.TransactionValidator raise @transaction.TransactionError {
   @transaction.transaction_validator("office-docx-delete-readback", (
     format,
@@ -117,7 +130,7 @@ fn delete_readback_validator(
       )
       return findings
     }
-    guard expected.val is Some((path, para_id, successor_id, old_count)) else {
+    guard expected.val is Some(plan) else {
       findings.push(
         @transaction.validation_finding(
           "docx.delete.readback_unplanned", "delete readback ran without a planned expectation",
@@ -152,7 +165,7 @@ fn delete_readback_validator(
         return findings
       }
     }
-    match para_id {
+    match plan.para_id {
       Some(id) =>
         if anchors.paragraphs_with_para_id(id).length() > 0 {
           findings.push(
@@ -166,9 +179,9 @@ fn delete_readback_validator(
         }
       None => ()
     }
-    match successor_id {
+    match plan.successor_para_id {
       Some(id) => {
-        let answering = match anchors.anchor_at(path) {
+        let answering = match anchors.anchor_at(plan.path) {
           Some(anchor) => anchor.para_id()
           None => None
         }
@@ -177,10 +190,46 @@ fn delete_readback_validator(
             @transaction.validation_finding(
               "docx.delete.readback_successor",
               docx_validator_message(
-                "the successor identity does not answer at \{path} in the candidate",
+                "the successor identity does not answer at \{plan.path} in the candidate",
               ),
             ),
           )
+        }
+      }
+      None => ()
+    }
+    // The text leg: whatever the successor read as before the splice
+    // must be what the deleted path reads as after it. This is the
+    // check that still has something to say when no paragraph in the
+    // document carries a unique identity.
+    match plan.successor_text {
+      Some(text) => {
+        let answering = @word.docx_paragraph_projection(
+          annotated,
+          story,
+          path=plan.path,
+        )
+        match answering {
+          Some(actual) =>
+            if actual != text {
+              findings.push(
+                @transaction.validation_finding(
+                  "docx.delete.readback_successor_text",
+                  docx_validator_message(
+                    "the paragraph now at \{plan.path} does not read as the successor did before the splice",
+                  ),
+                ),
+              )
+            }
+          None =>
+            findings.push(
+              @transaction.validation_finding(
+                "docx.delete.readback_successor_missing",
+                docx_validator_message(
+                  "no paragraph reads back at \{plan.path} where the successor should be",
+                ),
+              ),
+            )
         }
       }
       None => ()
@@ -195,12 +244,12 @@ fn delete_readback_validator(
         return findings
       }
     }
-    if count != old_count - 1 {
+    if count != plan.old_count - 1 {
       findings.push(
         @transaction.validation_finding(
           "docx.delete.readback_count",
           docx_validator_message(
-            "the candidate has \{count} direct paragraph(s); the plan expected \{old_count - 1}",
+            "the candidate has \{count} direct paragraph(s); the plan expected \{plan.old_count - 1}",
           ),
         ),
       )
@@ -226,7 +275,7 @@ pub async fn transact_docx_delete_paragraph(
   preflight? : (DocxDeleteParagraphReport) -> Unit raise,
 ) -> DocxDeleteParagraphResult {
   let collected : Ref[DocxDeleteParagraphReport?] = Ref(None)
-  let expected : Ref[(String, String?, String?, Int)?] = Ref(None)
+  let expected : Ref[DeleteReadbackExpectation?] = Ref(None)
   let readback = delete_readback_validator(expected)
   let transaction = transact_docx(
     options,
@@ -245,14 +294,13 @@ pub async fn transact_docx_delete_paragraph(
           }
         None => ()
       }
-      expected.val = Some(
-        (
-          receipt.path(),
-          receipt.para_id(),
-          receipt.successor_para_id(),
-          old_count,
-        ),
-      )
+      expected.val = Some({
+        path: receipt.path(),
+        para_id: receipt.para_id(),
+        successor_para_id: receipt.successor_para_id(),
+        successor_text: receipt.successor_text(),
+        old_count,
+      })
       let report : DocxDeleteParagraphReport = {
         path: receipt.path(),
         para_id: receipt.para_id(),

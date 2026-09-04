@@ -312,7 +312,7 @@ minted_id="$(jq -r '.data.para_id' <<<"$docx_ins")"
 jq -e '.success == true and .data.path == "p[2]" and (.data.para_id | test("^[0-9A-F]{8}$"))' >/dev/null <<<"$docx_ins" || fail "docx insert-paragraph"
 docx_del="$(json office.docx.delete-paragraph/1 delete-paragraph "$work/docx-inserted.docx" "$work/docx-deleted.docx" --at "p[id=\"$minted_id\"]" --expect-text ephemeral --json)"
 jq -e '.success == true and .data.deleted.path == "p[2]" and .data.deleted.text == "ephemeral" and .data.changed == true and .data.transaction.preservation.changed == ["word/document.xml"]' >/dev/null <<<"$docx_del" || fail "docx delete-paragraph"
-jq -e ".data.deleted.para_id == \"$minted_id\"" >/dev/null <<<"$docx_del" || fail "docx delete-paragraph identity"
+jq -e --arg id "$minted_id" '.data.deleted.para_id == $id and .data.deleted.text_truncated == false' >/dev/null <<<"$docx_del" || fail "docx delete-paragraph identity"
 cmp -s "$work/docx-filled.docx" "$work/docx-deleted.docx" || fail "docx insert+delete round trip bytes"
 jq -e '.data.valid == true and .data.error_count == 0' >/dev/null <<<"$(json office.validate/1 validate "$work/docx-deleted.docx" --json)" || fail "docx delete validate"
 expect_failure "$work/docx-del-miss.json" delete-paragraph "$work/docx-filled.docx" \
@@ -322,9 +322,13 @@ jq -e '.error.code == "office.docx.invalid_plan"' "$work/docx-del-miss.json" >/d
 expect_failure "$work/docx-del-grammar.json" delete-paragraph "$work/docx-filled.docx" \
   "$work/docx-del-never2.docx" --at 'tbl[1]' --json
 jq -e '.error.code == "office.invalid_arguments"' "$work/docx-del-grammar.json" >/dev/null || fail "docx delete grammar code"
+[ ! -e "$work/docx-del-never2.docx" ] || fail "docx delete grammar refusal wrote output"
 expect_failure "$work/docx-del-expect.json" delete-paragraph "$work/docx-inserted.docx" \
   "$work/docx-del-never3.docx" --at 'p[2]' --expect-text "something else" --json
 jq -e '.error.code == "office.delete.expect_text_mismatch"' "$work/docx-del-expect.json" >/dev/null || fail "docx delete expect-text code"
+# The one refusal raised INSIDE the transaction, after the archive is open and
+# the plan is queued: the publication guarantee is exactly what it tests.
+[ ! -e "$work/docx-del-never3.docx" ] || fail "docx delete expect-text refusal wrote output"
 
 # Tracked-change resolution on the same command: accepting everything keeps the
 # insertion and drops the deletion, rejecting everything does the reverse (which

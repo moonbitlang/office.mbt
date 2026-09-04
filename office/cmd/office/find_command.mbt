@@ -267,8 +267,11 @@ fn resolve_find_para_id_scope(
   scope : String,
 ) -> String raise CliFailure {
   guard scope.has_prefix("p[id=") else { return scope }
-  // Accept exactly the selector spelling: p[id="XXXXXXXX"].
-  guard scope.has_prefix("p[id=\"") && scope.has_suffix("\"]") else {
+  // Accept exactly the selector spelling: p[id="XXXXXXXX"]. The shared
+  // shape check carries the length bound the slice below depends on —
+  // at seven units `p[id="]` satisfies prefix and suffix with the SAME
+  // quote, and slicing would abort instead of refusing typed.
+  guard docx_stable_target_shape_valid(scope) else {
     raise docx_cli_failure(
       "office.docx.para_id_invalid",
       "a stable scope is spelled p[id=\"XXXXXXXX\"]",

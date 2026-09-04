@@ -159,7 +159,7 @@ annotation_scan.mbt	vMerge	scan_story	name	annotation_scan:"scanner review round
 annotation_scan.mbt	val	scan_story	name	annotation_scan:"scanner review round 4: reader-exact merge origins, spans, and row deletion"; annotation_scan:"scanner: endnote markers, explicit continuation, deleted instructions"
 annotation_scan.mbt	xml	scan_story,validate_projection_source_namespace	prefix	projection_source_tree_wbtest:"projection source identity seeds the implicit xml namespace"
 annotation_scan.mbt	xmlns	annotation_attribute_is_relevant,scan_story,validate_projection_source_namespace	name	annotation_scan:"scanner: MC selection, named entities, and the default namespace"; annotation_scan:"scanner: alternate namespace prefixes and non-WML lookalikes"
-annotation_scan.mbt	xmlns:	annotation_attribute_is_relevant,scan_story	fragment	annotation_scan:"scanner: alternate namespace prefixes and non-WML lookalikes"
+annotation_scan.mbt	xmlns:	annotation_attribute_is_relevant,scan_story,scan_tag	fragment	annotation_scan:"scanner: alternate namespace prefixes and non-WML lookalikes"
 annotation_spans.mbt	p	DocxAnnotatedResult::body_paragraph_span,DocxAnnotatedResult::story_paragraph_span	name	(external: killed by the office/docx package annotation, edit and template suites -- review-verified. The selector suite alone does not observe these, and cross-package citations are outside this validator)
 annotation_spans.mbt	r	DocxAnnotatedResult::body_run_span,DocxAnnotatedResult::story_run_span	name	(external: killed by the office/docx package annotation, edit and template suites -- review-verified. The selector suite alone does not observe these, and cross-package citations are outside this validator)
 annotation_spans.mbt	tr	DocxAnnotatedResult::story_row_span	name	(external: killed by the office/docx package annotation, edit and template suites -- review-verified. The selector suite alone does not observe these, and cross-package citations are outside this validator)
@@ -677,7 +677,7 @@ annotation_scan.mbt	bookmarkStart	scan_story,scan_tag	name	paragraph_delete_test
 annotation_scan.mbt	bookmarkEnd	scan_story	name	paragraph_delete_test:"deletion refusals are typed per construct"
 annotation_scan.mbt	name	scan_story	name	paragraph_delete_test:"deletion refusals are typed per construct"
 paragraph_delete.mbt	p	delete_blocked_construct,docx_direct_body_paragraph_count,plan_docx_paragraph_deletion	name	paragraph_delete_test:"deletion plans splice and read back without the deleted identity"; paragraph_delete_test:"deletion refuses a wrapped paragraph the path grammar flattens"; paragraph_delete_test:"deletion refusals are typed per construct"
-paragraph_delete.mbt	body	docx_direct_body_paragraph_count,plan_docx_paragraph_deletion	name	paragraph_delete_test:"deletion plans splice and read back without the deleted identity"; paragraph_delete_test:"deletion refuses a wrapped paragraph the path grammar flattens"; paragraph_delete_test:"deletion refuses either half of a revision-joined paragraph"
+paragraph_delete.mbt	body	docx_direct_body_paragraph_count,is_direct_body_child	name	paragraph_delete_test:"deletion plans splice and read back without the deleted identity"; paragraph_delete_test:"deletion refuses a wrapped paragraph the path grammar flattens"; paragraph_delete_test:"deletion refuses either half of a revision-joined paragraph"
 paragraph_delete.mbt	bookmarkStart	plan_docx_paragraph_deletion	name	paragraph_delete_test:"deletion refusals are typed per construct"
 paragraph_delete.mbt	bookmarkEnd	plan_docx_paragraph_deletion	name	paragraph_delete_test:"deletion refusals are typed per construct"
 paragraph_delete.mbt	_GoBack	plan_docx_paragraph_deletion	value	paragraph_delete_test:"deletion refusals are typed per construct"
@@ -688,7 +688,7 @@ paragraph_delete.mbt	endnoteReference	delete_blocked_construct	name	paragraph_de
 paragraph_delete.mbt	commentReference	delete_blocked_construct	name	paragraph_delete_test:"deletion refusals are typed per construct"
 paragraph_delete.mbt	commentRangeStart	delete_blocked_construct	name	paragraph_delete_test:"deletion refusals are typed per construct"
 paragraph_delete.mbt	commentRangeEnd	delete_blocked_construct	name	paragraph_delete_test:"deletion refusals are typed per construct"
-paragraph_delete.mbt	fldChar	delete_blocked_construct	name	paragraph_delete_test:"deletion refusals are typed per construct"
+paragraph_delete.mbt	fldChar	delete_blocked_construct,plan_docx_paragraph_deletion	name	paragraph_delete_test:"deletion refusals are typed per construct"; paragraph_delete_test:"deletion refuses a paragraph inside a field region"
 paragraph_delete.mbt	drawing	delete_blocked_construct	name	paragraph_delete_test:"deletion refusals are typed per construct"
 paragraph_delete.mbt	object	delete_blocked_construct	name	paragraph_delete_test:"deletion refusals are typed per construct"
 paragraph_delete.mbt	pict	delete_blocked_construct	name	paragraph_delete_test:"deletion refusals are typed per construct"
@@ -702,3 +702,10 @@ paragraph_delete.mbt	permStart	delete_blocked_construct	name	paragraph_delete_te
 paragraph_delete.mbt	permEnd	delete_blocked_construct	name	paragraph_delete_test:"deletion refusals are typed per construct"
 paragraph_delete.mbt	hyperlink	plan_docx_paragraph_deletion	name	paragraph_delete_test:"deletion judges relationship references by URI"
 paragraph_delete.mbt	multi_physical	plan_docx_paragraph_deletion	value	paragraph_delete_test:"deletion refuses either half of a revision-joined paragraph"
+paragraph_delete.mbt	tbl	plan_docx_paragraph_deletion	name	paragraph_delete_test:"deletion refuses the separator between two tables"
+paragraph_delete.mbt	begin	plan_docx_paragraph_deletion	value	paragraph_delete_test:"deletion refuses a paragraph inside a field region"
+paragraph_delete.mbt	end	plan_docx_paragraph_deletion	value	paragraph_delete_test:"deletion refuses a paragraph inside a field region"
+paragraph_delete.mbt	a section break	delete_blocked_construct	value	paragraph_delete_test:"deletion refusals are typed per construct"
+paragraph_delete.mbt	a nested paragraph	delete_blocked_construct	value	paragraph_delete_test:"deletion refusals are typed per construct"
+paragraph_delete.mbt	a field boundary	delete_blocked_construct	value	paragraph_delete_test:"deletion refusals are typed per construct"
+paragraph_delete.mbt	an embedded object	delete_blocked_construct	value	paragraph_delete_test:"deletion refusals are typed per construct"

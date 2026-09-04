@@ -1467,16 +1467,11 @@ fn scan_story(
         ""
       }
     }
+    // Whether any attribute here resolves into the OPC relationships
+    // namespace. Only the source-retaining scan stores it (the element
+    // record is built on that path alone), so the lighter scan does
+    // not pay for it.
     let mut references_relationship = false
-    fn note_relationship_prefix(attr_prefix : String) -> Unit {
-      if attr_prefix != "" &&
-        namespaces.get(attr_prefix) is Some(stack) &&
-        stack.length() > 0 &&
-        stack[stack.length() - 1] ==
-        "http://schemas.openxmlformats.org/officeDocument/2006/relationships" {
-        references_relationship = true
-      }
-    }
     match source_budget {
       Some(_) => {
         for attr_name in unretained_attribute_names {
@@ -1488,8 +1483,11 @@ fn scan_story(
                 message="the projection source scanner found an unbound attribute namespace prefix",
               )
             }
+            if !references_relationship &&
+              is_relationships_uri(stack[stack.length() - 1]) {
+              references_relationship = true
+            }
           }
-          note_relationship_prefix(split_qualified_name(attr_name).0)
         }
         for pair in attributes {
           let attr_name = pair.0
@@ -1502,20 +1500,15 @@ fn scan_story(
                   message="the projection source scanner found an unbound attribute namespace prefix",
                 )
               }
+              if !references_relationship &&
+                is_relationships_uri(stack[stack.length() - 1]) {
+                references_relationship = true
+              }
             }
-            note_relationship_prefix(attr_prefix)
           }
         }
       }
-      None =>
-        // The lighter scan resolves nothing eagerly; the flag still
-        // judges by resolved URI for whatever the tag walk retained.
-        for pair in attributes {
-          let attr_name = pair.0
-          if attr_name != "xmlns" && !attr_name.has_prefix("xmlns:") {
-            note_relationship_prefix(split_qualified_name(attr_name).0)
-          }
-        }
+      None => ()
     }
     let element_index = match source_budget {
       Some(budget) => {
@@ -2471,8 +2464,14 @@ fn scan_tag(
         // deletion planner (its only consumer) then reads None and
         // refuses that one deletion, while every read verb keeps
         // working — a document readable before `:name` retention must
-        // stay readable after it.
-        if bytes_range_has_ascii_suffix(part, attr_start, attr_end, ":name") {
+        // stay readable after it. Scoped exactly to the rule that
+        // added it: a namespace DECLARATION spelled `xmlns:name` is
+        // not a bookmark name and keeps its hard limit, which the
+        // binding walk and the duplicate-declaration guard rely on.
+        if element_is_bookmark_start &&
+          source_budget is Some(_) &&
+          !bytes_range_has_ascii_prefix(part, attr_start, attr_end, "xmlns:") &&
+          bytes_range_has_ascii_suffix(part, attr_start, attr_end, ":name") {
           at += 1
           continue
         }
@@ -2585,6 +2584,15 @@ fn annotation_attribute_is_relevant(
       )
     )
   )
+}
+
+///|
+/// The OPC relationships namespace in BOTH OOXML dialects — a Strict
+/// package binds `r:` to the purl spelling, and a class that judges
+/// relationship references must not be inert there.
+fn is_relationships_uri(uri : String) -> Bool {
+  uri == "http://schemas.openxmlformats.org/officeDocument/2006/relationships" ||
+  uri == "http://purl.oclc.org/ooxml/officeDocument/relationships"
 }
 
 ///|

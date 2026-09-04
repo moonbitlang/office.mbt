@@ -3,14 +3,13 @@
 
 ///|
 async fn delete_nothing_written(path : String) -> Unit {
-  let mut published = false
-  try {
-    ignore(@afs.read_file(path))
-    published = true
-  } catch {
-    _ => ()
-  }
-  assert_false(published, msg="a refused delete must write nothing: " + path)
+  // Existence, not readability: a read that fails for ANY reason would
+  // satisfy a naive absence check, so a zero-length or unreadable leak
+  // would read as "nothing written".
+  assert_false(
+    @afs.exists(path),
+    msg="a refused delete must write nothing: " + path,
+  )
 }
 
 ///|
@@ -90,14 +89,16 @@ async test "delete-paragraph refusals publish nothing" {
       directory, "delref-in.docx", "<w:r><w:t>only</w:t></w:r>",
     )
     for
-      case in [
+      index, case in [
         ("p[1]", "final direct body paragraph"),
         ("p[7]", "does not resolve"),
         ("p[id=\"ZZ\"]", "eight hex digits"),
         ("p[id=\"00000009\"]", "no paragraph in the body story"),
       ] {
       let (at, needle) = case
-      let output = directory + "/delref-\{at.length()}.docx"
+      // Distinct per case: two refusals sharing one path would let a
+      // leak from the first hide behind the second's absence.
+      let output = directory + "/delref-\{index}.docx"
       let mut refused_code = ""
       ignore(
         @docx.transact_docx_delete_paragraph(

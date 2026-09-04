@@ -1288,7 +1288,7 @@ pub fn capability_commands() -> Array[CapabilityCommand] {
         ),
         capability_field("changed", "boolean", true, "whether any byte changed"),
         capability_field(
-          "deleted", "object", true, "what left the document: path, para_id (canonical w14:paraId or null), paragraph_anchor_status, and the paragraph's full reader projection (bounded) — readback-verified GONE before publication",
+          "deleted", "object", true, "what left the document: path, para_id (canonical w14:paraId or null), paragraph_anchor_status, text (the reader projection, bounded at 160 characters) and text_truncated saying whether that bound cut it — --expect-text compares the FULL projection, so a truncated value is not a round-trippable guard; `office text --json` emits the untruncated projection. Readback-verified GONE before publication",
         ),
         capability_field(
           "successor_para_id", "string", false, "the stable identity now answering at the deleted path, null when the successor carries no UNIQUE identity (absent, duplicated, or invalid ids all report null) — the re-anchor after ordinal paths shift",
