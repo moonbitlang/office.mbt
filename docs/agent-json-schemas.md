@@ -889,9 +889,12 @@ paragraph (a COMPLETE field — a page number, a DATE, a REF, a TOC entry —
 leaves with its paragraph and dangles nothing; `fldSimple` likewise), the
 entire tracked-revision family, drawings and embedded objects,
 content-control data bindings, nested block content, and any element
-referencing a package relationship (`w:hyperlink` alone excepted). Around it: a deletion that would leave the body with NO direct
-paragraph, or make a body that ended with a paragraph end with a table; a
-paragraph separating two tables (deleting it would merge them into one — judged
+referencing a package relationship (`w:hyperlink` alone excepted). Around it: a target whose immediate block SIBLINGS are not both
+paragraphs — a table, a content control, a compatibility alternative —
+because how those blocks would meet once the paragraph between them
+leaves is a question this version does not answer, and answering it
+wrongly merges two tables irreversibly; a deletion that would leave the
+body with NO direct paragraph (deleting it would merge them into one — judged
 on layout flow, so wrappers and zero-width markers between them do not
 hide it), a paragraph inside a field region whose boundaries live in
 other paragraphs, and a paragraph SPANNED by a range its own siblings

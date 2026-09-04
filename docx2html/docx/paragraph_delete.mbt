@@ -130,6 +130,16 @@ pub fn DocxDeleteReceipt::cut(self : DocxDeleteReceipt) -> DocxDeleteCutWitness 
 }
 
 ///|
+/// Range markers and proofing marks that CT_Body admits between blocks.
+/// They occupy no layout, so they never stand between two blocks that
+/// would otherwise meet — and Word emits them at body level routinely.
+fn is_zero_width_body_marker(element : ScannedElement) -> Bool {
+  guard is_wml_uri(element.uri) else { return false }
+  range_family_of(element) is Some(_) ||
+  element.local_name is ("proofErr" | "sectPr")
+}
+
+///|
 /// Whether an element is a DIRECT child of `w:body` on the physical
 /// tree. The path grammar flattens wrappers (`w:sdt`, `w:ins`,
 /// `mc:Fallback`…), so a path alone never proves this — every guard
@@ -454,156 +464,6 @@ fn range_family_of(element : ScannedElement) -> (String, Bool)? {
 }
 
 ///|
-/// The body FLOW kind an element contributes, read the way a consumer
-/// lays the story out rather than the way the tree nests it: this walks
-/// THROUGH layout-transparent wrappers, so a table inside a content
-/// control answers `Some("tbl")`. It is deliberately NOT the
-/// direct-child proof — `is_direct_body_child` is that, and it is what
-/// stops a splice inside a wrapper. These are the file's two surfaces,
-/// and confusing them is how a guard goes blind.
-/// Two questions, opposite safe answers, so two surfaces.
-///
-/// ADJACENCY ("would these blocks touch?") is PESSIMISTIC: content some
-/// consumer might render counts, because if any of them lays it out the
-/// blocks do not touch. Tracked-deleted and alternative content count
-/// here.
-///
-/// GUARANTEE ("does a paragraph remain?") is CONSERVATIVE: only content
-/// EVERY consumer renders counts, because a paragraph that disappears
-/// when a tracked deletion is accepted cannot be the one keeping the
-/// body's promise.
-///
-/// A single surface cannot serve both — treating `w:del` as transparent
-/// closed a table-hiding bypass and simultaneously let a
-/// tracked-deleted paragraph satisfy the trailing-paragraph guarantee.
-fn body_flow_kind(
-  elements : Array[ScannedElement],
-  index : Int,
-  rendered_by_every_consumer? : Bool = false,
-) -> String? {
-  let element = elements[index]
-  let kind = if element.uri == MC_URI &&
-    element.local_name == "AlternateContent" {
-    // A block whose branches lay out NOTHING is not a neighbour: it
-    // occupies no space between two blocks that would otherwise touch,
-    // and counting it as "other" hid a table merge.
-    match alternate_content_flow_kind(elements, index) {
-      "other" => return None
-      other => other
-    }
-  } else if is_wml_uri(element.uri) {
-    match element.local_name {
-      "p" => "p"
-      "tbl" => "tbl"
-      _ => return None
-    }
-  } else {
-    return None
-  }
-  let mut parent = element.parent_index
-  while parent >= 0 && parent < elements.length() {
-    let holder = elements[parent]
-    if is_layout_transparent(holder.uri, holder.local_name) {
-      // Under the CONSERVATIVE question, content a consumer may drop
-      // does not count as remaining.
-      if rendered_by_every_consumer && is_suppressible(holder) {
-        return None
-      }
-      parent = holder.parent_index
-      continue
-    }
-    guard holder.local_name == "body" && is_wml_uri(holder.uri) else {
-      return None
-    }
-    return Some(kind)
-  }
-  None
-}
-
-///|
-/// Whether a wrapper's content may vanish for some consumer: tracked
-/// deletions disappear when accepted, and an alternative branch is
-/// shown only to consumers that understand it.
-fn is_suppressible(holder : ScannedElement) -> Bool {
-  (is_wml_uri(holder.uri) && holder.local_name is ("del" | "moveFrom")) ||
-  (holder.uri == MC_URI && holder.local_name is ("Choice" | "Fallback"))
-}
-
-///|
-/// Wrappers that contribute no LAYOUT of their own, so the blocks
-/// inside them are the blocks a consumer sees touching. This is a
-/// superset of the reader's transparent containers — `w:customXml`
-/// does not flatten in the path space but a table inside one is still
-/// the table that would merge — because the question here is
-/// adjacency, not addressing.
-fn is_layout_transparent(uri : String, local_name : String) -> Bool {
-  // NOT the MC containers. `is_transparent_container` includes
-  // `mc:AlternateContent` and `mc:Fallback` because the READER flattens
-  // them; for ADJACENCY they are one block with alternatives, and
-  // treating them as transparent put a Fallback's contents into the
-  // flow a second time, right beside the entry meant to represent the
-  // whole block — which is how the table-separator gate was bypassed
-  // again.
-  (uri != MC_URI && is_transparent_container(uri, local_name)) ||
-  (
-    is_wml_uri(uri) &&
-    local_name
-    is ("customXml"
-    | "bdo"
-    | "dir"
-    // Tracked block moves and deletions wrap flow content without
-    // contributing layout of their own: a table inside one is still
-    // the table that would merge. (`w:ins` is already in the reader's
-    // transparent set.)
-    | "del"
-    | "moveFrom"
-    | "moveTo")
-  ) ||
-  // `mc:Choice` is SUPPRESSED by this reader, not transparent — but a
-  // consumer that understands the branch lays its content out, and
-  // adjacency is a question about that consumer, not about us. The
-  // hazard walks read the physical tree for the same reason.
-  // NOT `mc:Choice`/`mc:Fallback`: they are ALTERNATIVES of one block,
-  // and treating both as transparent puts two mutually exclusive
-  // branches into the flow side by side, which is how the
-  // table-separator gate was bypassed. `mc:AlternateContent` answers as
-  // ONE block below, taking the strongest kind any branch contributes.
-  false
-}
-
-///|
-/// The flow kind an `mc:AlternateContent` contributes: the strongest
-/// any branch could show a consumer. If any branch is a table, the
-/// block can be a table to somebody, and adjacency must assume it is.
-fn alternate_content_flow_kind(
-  elements : Array[ScannedElement],
-  index : Int,
-) -> String {
-  let container = elements[index]
-  let mut kind = "other"
-  // Forward from the container and STOP at its end: elements ascend by
-  // byte_start, so everything inside is contiguous. Scanning the whole
-  // array per container made this quadratic in a document full of
-  // shapes, where every text box carries one.
-  for offset in (index + 1)..<elements.length() {
-    let candidate = elements[offset]
-    if candidate.byte_start >= container.byte_end {
-      break
-    }
-    guard candidate.byte_end <= container.byte_end else { continue }
-    if is_wml_uri(candidate.uri) {
-      if candidate.local_name == "tbl" {
-        return "tbl"
-      }
-      if candidate.local_name == "p" {
-        kind = "p"
-      }
-    }
-  }
-  kind
-}
-
-///|
 /// The subtree hazards a v1 deletion refuses. The model is three
 /// MECHANICALLY CLOSED classes plus the paragraph's own structure —
 /// not a hand-copied vocabulary that rots as WML grows:
@@ -747,42 +607,54 @@ pub fn plan_docx_paragraph_deletion(
       "target_not_direct", "the delete-paragraph target is not a DIRECT child of the body — paragraphs inside content controls, revisions, or compatibility wrappers are not deletion targets",
     )
   }
-  // The body's FLOW children in document order: the target's own
-  // neighbours decide whether removing it changes structure, and a
-  // subtree-only judgment cannot see that. "Flow" is what a consumer
-  // lays out, so this reads the story the way the projection does —
-  // through transparent wrappers (`w:sdt`, `w:ins`, `mc:Fallback`…),
-  // which is where the wrapped content actually lives, and past the
-  // zero-width range markers CT_Body admits between blocks, which
-  // occupy no space between two blocks that would otherwise touch.
-  let flow_children : Array[String] = []
-  let mut target_position = -1
-  for index, _ in elements {
-    guard body_flow_kind(elements, index) is Some(kind) else { continue }
-    if index == target_index {
-      target_position = flow_children.length()
+  // THE NEIGHBOUR PRECONDITION.
+  //
+  // What a deletion must not do is change anything except remove its
+  // paragraph, and the ways it can are all about what the target sits
+  // BETWEEN: two tables it keeps apart merge; a block only some
+  // consumers render may or may not be there; a wrapper's contents may
+  // be the real neighbour or may vanish.
+  //
+  // Seven rebuilds of a "flow surface" tried to decide those cases by
+  // modelling which consumer sees what — transparency, suppression,
+  // alternatives, accept-versus-reject — and each version closed one
+  // hole and opened another, because the two questions it had to answer
+  // ("would these blocks touch" and "does a paragraph remain") have
+  // opposite safe answers and one model cannot hold both.
+  //
+  // So v1 does not model it. The target's immediate DIRECT body
+  // siblings must each be a paragraph or nothing at all. That is a
+  // precondition this reader can check exactly, and under it no
+  // adjacency question survives: paragraphs do not merge, and a
+  // paragraph neighbour is a paragraph to every consumer. A target
+  // beside a table, a content control, or a compatibility alternative
+  // refuses — an honest v1 boundary, stated in the message, rather
+  // than a model whose corners keep being found.
+  let mut previous_sibling : ScannedElement? = None
+  let mut next_sibling : ScannedElement? = None
+  for index, element in elements {
+    guard is_direct_body_child(elements, element) &&
+      !is_zero_width_body_marker(element) else {
+      continue
     }
-    flow_children.push(kind)
+    if index < target_index {
+      previous_sibling = Some(element)
+    } else if index > target_index && next_sibling is None {
+      next_sibling = Some(element)
+    }
   }
-  // Two adjacent `w:tbl` elements are ONE table to a consumer. A
-  // paragraph between two tables is the separator that keeps them
-  // apart, and deleting it silently merges them — a structural change
-  // no readback of paragraph identity would notice.
-  if target_position > 0 && target_position + 1 < flow_children.length() {
-    let before = flow_children[target_position - 1]
-    let after = flow_children[target_position + 1]
-    // Judged PESSIMISTICALLY, and deliberately. A table inside a
-    // tracked deletion is absent once that deletion is ACCEPTED — but
-    // it returns if the deletion is REJECTED, and then the two tables
-    // meet. A merge is unrecoverable and a refusal is not, so the safe
-    // reading wins here, even though it over-refuses for the
-    // accept-only future. (The trailing-paragraph guarantee reads the
-    // other surface for the mirror-image reason.)
-    if before == "tbl" && after == "tbl" {
-      raise delete_refusal(
-        "table_separator", "the target paragraph separates two tables; deleting it would merge them into one, so this deletion refuses",
-      )
+  fn sibling_is_paragraph(sibling : ScannedElement?) -> Bool {
+    match sibling {
+      Some(element) => is_wml_uri(element.uri) && element.local_name == "p"
+      None => true
     }
+  }
+
+  guard sibling_is_paragraph(previous_sibling) &&
+    sibling_is_paragraph(next_sibling) else {
+    raise delete_refusal(
+      "neighbour_not_paragraph", "the target paragraph sits beside a block that is not a paragraph (a table, a content control, a compatibility alternative); deleting it could change how those blocks meet, which this version does not judge, so this deletion refuses",
+    )
   }
   // A paragraph strictly INSIDE an open field region carries part of a
   // field whose `fldChar` boundaries live in other paragraphs: the
@@ -980,29 +852,15 @@ pub fn plan_docx_paragraph_deletion(
   // one. (The receipt's successor identity and text are the FLATTENED
   // question, asked below, because that is what re-anchors at the
   // deleted path.)
-  // What the rule actually says: a body whose last flow child is a
-  // TABLE still needs its trailing paragraph. Requiring a later
-  // paragraph instead refused the commonest deletion there is —
-  // removing the last of two paragraphs, which leaves a body ending in
-  // a paragraph and is exactly what Word produces.
-  // Only a deletion that CHANGES the body's last flow child can break
-  // this: removing a middle paragraph leaves the ending exactly as it
-  // was, and a document that already ends with a table is not this
-  // deletion's doing.
-  // Two things the body owes, both computed on what the deletion
-  // LEAVES: at least one paragraph must remain, and a body that ended
-  // with a paragraph must not be made to end with a table. (A body that
-  // already ends with a table is not this deletion's doing.)
-  let remaining : Array[String] = []
-  for position, kind in flow_children {
-    if position != target_position {
-      remaining.push(kind)
-    }
-  }
-  // "At least one paragraph remains" is a STRUCTURAL guarantee, so it
-  // is counted on direct body children — a paragraph inside a content
-  // control or a compatibility branch may render for nobody, and a
-  // body with no direct paragraph is the state this refuses.
+  // THE BODY KEEPS A PARAGRAPH.
+  //
+  // Counted on DIRECT body children, the same surface the neighbour
+  // precondition uses: a paragraph inside a content control, a tracked
+  // deletion, or one branch of a compatibility alternative may render
+  // for nobody, so it cannot be the paragraph that keeps this promise.
+  // With neighbours already required to be paragraphs, the only way a
+  // deletion can end the body with a table is by removing the last
+  // direct paragraph, which this catches.
   let mut direct_paragraphs = 0
   for index, element in elements {
     if element.local_name == "p" &&
@@ -1012,36 +870,7 @@ pub fn plan_docx_paragraph_deletion(
       direct_paragraphs += 1
     }
   }
-  let keeps_a_paragraph = direct_paragraphs > 0
-  // The GUARANTEE reads the conservative surface: a paragraph that
-  // vanishes when a tracked deletion is accepted, or that only one
-  // branch of a compatibility alternative shows, cannot be the one
-  // keeping the body's promise.
-  let rendered_children : Array[String] = []
-  let mut rendered_target_position = -1
-  for index, _ in elements {
-    guard body_flow_kind(elements, index, rendered_by_every_consumer=true)
-      is Some(kind) else {
-      continue
-    }
-    if index == target_index {
-      rendered_target_position = rendered_children.length()
-    }
-    rendered_children.push(kind)
-  }
-  let rendered_remaining : Array[String] = []
-  for position, kind in rendered_children {
-    if position != rendered_target_position {
-      rendered_remaining.push(kind)
-    }
-  }
-  let ended_with_paragraph = rendered_children.length() > 0 &&
-    rendered_children[rendered_children.length() - 1] == "p"
-  let still_ends_with_paragraph = rendered_remaining.length() > 0 &&
-    rendered_remaining[rendered_remaining.length() - 1] == "p"
-  let keeps_trailing_paragraph = keeps_a_paragraph &&
-    (still_ends_with_paragraph || !ended_with_paragraph)
-  ignore(remaining)
+  let keeps_trailing_paragraph = direct_paragraphs > 0
   guard keeps_trailing_paragraph else {
     raise delete_refusal(
       "final_paragraph", "the target is the final direct body paragraph; the document keeps it",

@@ -194,7 +194,7 @@ async test "delete-paragraph refusals carry their typed codes" {
           table +
           "<w:p><w:r><w:t>b</w:t></w:r>",
           "p[2]",
-          "office.delete.table_separator",
+          "office.delete.neighbour_not_paragraph",
         ),
         (
           "<w:r><w:fldChar w:fldCharType=\"begin\"/></w:r></w:p><w:p><w:r><w:t>mid</w:t></w:r></w:p><w:p><w:r><w:fldChar w:fldCharType=\"end\"/></w:r></w:p><w:p><w:r><w:t>b</w:t></w:r>",

@@ -346,63 +346,6 @@ test "deletion judges relationship references by URI" {
 }
 
 ///|
-/// A paragraph between two tables is the separator that keeps them
-/// apart: to a consumer, two adjacent `w:tbl` elements are ONE table,
-/// so deleting it merges them — structural corruption no readback of
-/// paragraph identity could notice. Neighbours decide this, not the
-/// target's own subtree, and the target is EMPTY in the witness so no
-/// other class could be doing the work.
-test "deletion refuses the separator between two tables" {
-  let table = "<w:tbl><w:tr><w:tc><w:p><w:r><w:t>cell</w:t></w:r></w:p></w:tc></w:tr></w:tbl>"
-  let annotated = delete_fixture(
-    "<w:p><w:r><w:t>lead</w:t></w:r></w:p>" +
-    table +
-    "<w:p/>" +
-    table +
-    "<w:p><w:r><w:t>keeper</w:t></w:r></w:p>",
-  )
-  assert_true(
-    delete_refusal_of(annotated, "p[2]").contains("separates two tables"),
-  )
-  // A paragraph between a table and a PARAGRAPH is ordinary content.
-  let ordinary = delete_fixture(
-    table +
-    "<w:p><w:r><w:t>between</w:t></w:r></w:p>" +
-    "<w:p><w:r><w:t>keeper</w:t></w:r></w:p>",
-  )
-  assert_eq(delete_refusal_of(ordinary, "p[1]"), "<planned>")
-}
-
-///|
-/// Neighbours are judged as FLOW, the way the projection reads the
-/// story: a zero-width marker between the paragraph and a table does
-/// not separate them, and a table inside a transparent wrapper is
-/// still the adjacent table. Both shapes are what Word emits.
-test "the table-separator refusal reads neighbours as flow" {
-  let table = "<w:tbl><w:tr><w:tc><w:p><w:r><w:t>cell</w:t></w:r></w:p></w:tc></w:tr></w:tbl>"
-  let keeper = "<w:p><w:r><w:t>keeper</w:t></w:r></w:p>"
-  // A body-level bookmarkEnd between the table and the separator.
-  let marked = delete_fixture(
-    table + "<w:bookmarkEnd w:id=\"0\"/><w:p/>" + table + keeper,
-  )
-  assert_true(
-    delete_refusal_of(marked, "p[1]").contains("separates two tables"),
-  )
-  // The following table wrapped in a content control — the projection
-  // already calls it the adjacent table.
-  let wrapped = delete_fixture(
-    table +
-    "<w:p/><w:sdt><w:sdtContent>" +
-    table +
-    "</w:sdtContent></w:sdt>" +
-    keeper,
-  )
-  assert_true(
-    delete_refusal_of(wrapped, "p[1]").contains("separates two tables"),
-  )
-}
-
-///|
 /// A comment or permission range anchored by the target's own SIBLINGS
 /// brackets it: the markers are not inside the span, so the subtree
 /// scan cannot see them, and deleting the paragraph leaves the range
@@ -451,10 +394,11 @@ test "the final-paragraph guard is structural, the successor is flattened" {
     "<w:p><w:r><w:t>target</w:t></w:r></w:p>" +
     "<w:sdt><w:sdtContent><w:p><w:r><w:t>next</w:t></w:r></w:p></w:sdtContent></w:sdt>",
   )
+  // The content control is not a paragraph, so the PRECONDITION speaks
+  // first — and it is the same answer for the same reason: what this
+  // version will not judge, it will not publish.
   assert_true(
-    delete_refusal_of(wrapped_only, "p[1]").contains(
-      "final direct body paragraph",
-    ),
+    delete_refusal_of(wrapped_only, "p[1]").contains("not a paragraph"),
   )
   // …and deleting the last of two ordinary paragraphs, the commonest
   // deletion there is, leaves a body ending in a paragraph too.
@@ -462,90 +406,28 @@ test "the final-paragraph guard is structural, the successor is flattened" {
     "<w:p><w:r><w:t>one</w:t></w:r></w:p><w:p><w:r><w:t>two</w:t></w:r></w:p>",
   )
   assert_eq(delete_refusal_of(pair, "p[2]"), "<planned>")
-  // What the rule DOES stop: a deletion that MAKES the body end with a
-  // table — the target is the last flow child and a table precedes it.
+  // A target beside a table refuses on the NEIGHBOUR precondition
+  // before the paragraph-count guarantee is reached — the precondition
+  // subsumes every "would the body end with a table" case, because a
+  // deletion can only change what the body ends with if a table is its
+  // neighbour.
   let table_last = delete_fixture(
     "<w:p><w:r><w:t>one</w:t></w:r></w:p>" +
     "<w:tbl><w:tr><w:tc><w:p><w:r><w:t>cell</w:t></w:r></w:p></w:tc></w:tr></w:tbl>" +
     "<w:p><w:r><w:t>target</w:t></w:r></w:p>",
   )
-  assert_true(
-    delete_refusal_of(table_last, "p[2]").contains(
-      "final direct body paragraph",
-    ),
-  )
-  // And what it does NOT stop: a middle deletion in a body that already
-  // ends with a table. That ending is not this deletion's doing.
-  let already_table_last = delete_fixture(
-    "<w:p><w:r><w:t>one</w:t></w:r></w:p><w:p><w:r><w:t>target</w:t></w:r></w:p>" +
-    "<w:tbl><w:tr><w:tc><w:p><w:r><w:t>cell</w:t></w:r></w:p></w:tc></w:tr></w:tbl>",
-  )
-  assert_eq(delete_refusal_of(already_table_last, "p[2]"), "<planned>")
-  // With a direct paragraph further on, the deletion proceeds — and the
-  // receipt names the WRAPPED paragraph as the successor, because that
-  // is the one that answers at the deleted path afterwards.
-  let both = delete_fixture(
+  assert_true(delete_refusal_of(table_last, "p[2]").contains("not a paragraph"))
+  // The receipt's successor is the FLATTENED question — what answers at
+  // the deleted path afterwards — which is a different surface from the
+  // structural ones above, and stays so.
+  let plain = delete_fixture(
     "<w:p><w:r><w:t>target</w:t></w:r></w:p>" +
-    "<w:sdt><w:sdtContent><w:p><w:r><w:t>wrapped</w:t></w:r></w:p></w:sdtContent></w:sdt>" +
+    "<w:p><w:r><w:t>next</w:t></w:r></w:p>" +
     "<w:p><w:r><w:t>keeper</w:t></w:r></w:p>",
   )
-  let (_, receipt) = @docx.plan_docx_paragraph_deletion(both, at="p[1]")
+  let (_, receipt) = @docx.plan_docx_paragraph_deletion(plain, at="p[1]")
   assert_eq(receipt.text(), "target")
-  assert_eq(receipt.successor_text(), Some("wrapped"))
-}
-
-///|
-/// Flow is an ALLOW-LIST, so the shapes Word actually emits cannot slip
-/// between a paragraph and its neighbouring table: a content control
-/// carries `w:sdtPr` before its content, and none of that is flow.
-test "flow sees past the markup Word puts between blocks" {
-  let table = "<w:tbl><w:tr><w:tc><w:p><w:r><w:t>cell</w:t></w:r></w:p></w:tc></w:tr></w:tbl>"
-  let keeper = "<w:p><w:r><w:t>keeper</w:t></w:r></w:p>"
-  let shapes = [
-    // a real content control, properties and all
-    "<w:sdt><w:sdtPr><w:id w:val=\"1\"/></w:sdtPr><w:sdtContent>" +
-    table +
-    "</w:sdtContent></w:sdt>",
-    // a customXml wrapper
-    "<w:customXml w:element=\"x\">" + table + "</w:customXml>",
-    // compatibility alternatives
-    "<mc:AlternateContent xmlns:mc=\"http://schemas.openxmlformats.org/markup-compatibility/2006\"><mc:Fallback>" +
-    table +
-    "</mc:Fallback></mc:AlternateContent>",
-  ]
-  for shape in shapes {
-    let annotated = delete_fixture(table + "<w:p/>" + shape + keeper)
-    assert_true(
-      delete_refusal_of(annotated, "p[1]").contains("separates two tables"),
-      msg="a table behind " + shape[0:12].to_owned() + " is still a table",
-    )
-  }
-  // Tracked block moves and deletions wrap flow content without
-  // contributing layout of their own — a table inside one is still the
-  // table that would merge.
-  for wrapper in ["del", "moveFrom", "moveTo", "ins"] {
-    let wrapped = delete_fixture(
-      table +
-      "<w:p/><w:\{wrapper} w:id=\"1\" w:author=\"a\">" +
-      table +
-      "</w:\{wrapper}>" +
-      keeper,
-    )
-    assert_true(
-      delete_refusal_of(wrapped, "p[1]").contains("separates two tables"),
-      msg="a table inside w:" + wrapper + " is still a table",
-    )
-  }
-  // And a marker between blocks is not flow either.
-  let marked = delete_fixture(
-    table +
-    "<w:customXmlMoveFromRangeStart w:id=\"3\" w:name=\"x\"/><w:p/>" +
-    table +
-    keeper,
-  )
-  assert_true(
-    delete_refusal_of(marked, "p[1]").contains("separates two tables"),
-  )
+  assert_eq(receipt.successor_text(), Some("next"))
 }
 
 ///|
@@ -974,66 +856,15 @@ test "every range-hazard arm is reachable" {
 }
 
 ///|
-/// Adjacency and the trailing-paragraph guarantee read OPPOSITE
-/// surfaces, and this pins both — a single surface cannot serve them,
-/// which is how a tracked-deleted paragraph came to satisfy the
-/// guarantee it exists to enforce.
-test "the two flow surfaces have opposite polarity" {
-  let table = "<w:tbl><w:tr><w:tc><w:p><w:r><w:t>cell</w:t></w:r></w:p></w:tc></w:tr></w:tbl>"
-  // GUARANTEE, conservative: a tracked-deleted paragraph vanishes when
-  // the deletion is accepted, so it cannot be the paragraph that keeps
-  // the body's promise.
-  let suppressed_survivor = delete_fixture(
-    "<w:p><w:r><w:t>lead</w:t></w:r></w:p>" +
-    table +
-    "<w:p><w:r><w:t>target</w:t></w:r></w:p>" +
-    "<w:del w:id=\"3\" w:author=\"a\"><w:p><w:r><w:delText>gone</w:delText></w:r></w:p></w:del>",
-  )
-  assert_true(
-    delete_refusal_of(suppressed_survivor, "p[2]").contains(
-      "final direct body paragraph",
-    ),
-  )
-  // ADJACENCY, pessimistic: a tracked-deleted table RETURNS if the
-  // deletion is rejected, and then the tables meet — a merge is
-  // unrecoverable, a refusal is not.
-  let suppressed_neighbour = delete_fixture(
-    table +
-    "<w:p><w:r><w:t>target</w:t></w:r></w:p>" +
-    "<w:del w:id=\"4\" w:author=\"a\">" +
-    table +
-    "</w:del>" +
-    "<w:p><w:r><w:t>keeper</w:t></w:r></w:p>",
-  )
-  assert_true(
-    delete_refusal_of(suppressed_neighbour, "p[1]").contains(
-      "separates two tables",
-    ),
-  )
-  // An alternative-content block whose branches lay out NOTHING is not
-  // a neighbour at all, so it cannot hide a merge.
-  let empty_alternate = delete_fixture(
-    table +
-    "<w:p><w:r><w:t>target</w:t></w:r></w:p>" +
-    "<mc:AlternateContent xmlns:mc=\"http://schemas.openxmlformats.org/markup-compatibility/2006\"><mc:Choice Requires=\"wps\"><w:bookmarkStart w:id=\"9\" w:name=\"z\"/></mc:Choice><mc:Fallback><w:bookmarkEnd w:id=\"9\"/></mc:Fallback></mc:AlternateContent>" +
-    table +
-    "<w:p><w:r><w:t>keeper</w:t></w:r></w:p>",
-  )
-  assert_true(
-    delete_refusal_of(empty_alternate, "p[1]").contains("separates two tables"),
-  )
-}
-
-///|
 /// The three bypasses round 10 confirmed end to end, each pinned by the
 /// shape that produced it.
 test "the structural gates are not bypassable by wrapping or overlap" {
   let table = "<w:tbl><w:tr><w:tc><w:p><w:r><w:t>cell</w:t></w:r></w:p></w:tc></w:tr></w:tbl>"
   let keeper = "<w:p><w:r><w:t>keeper</w:t></w:r></w:p>"
-  // A body whose ONLY direct paragraph is the target, followed by a
-  // table: deleting it leaves a body with no paragraph at all.
+  // A body whose ONLY direct paragraph is the target: whatever follows,
+  // the deletion would leave none.
   let no_paragraph_left = delete_fixture(
-    "<w:p><w:r><w:t>target</w:t></w:r></w:p>" + table,
+    "<w:p><w:r><w:t>target</w:t></w:r></w:p>",
   )
   assert_true(
     delete_refusal_of(no_paragraph_left, "p[1]").contains(
@@ -1050,9 +881,7 @@ test "the structural gates are not bypassable by wrapping or overlap" {
     "</mc:Fallback></mc:AlternateContent>" +
     keeper,
   )
-  assert_true(
-    delete_refusal_of(alternate, "p[1]").contains("separates two tables"),
-  )
+  assert_true(delete_refusal_of(alternate, "p[1]").contains("not a paragraph"))
   // Overlapping bookmarks are what Word EMITS around cross-referenced
   // headings; they must not make the verb unusable.
   let overlapping = delete_fixture(
@@ -1071,6 +900,55 @@ test "the structural gates are not bypassable by wrapping or overlap" {
     keeper,
   )
   assert_true(delete_refusal_of(typeless, "p[2]").contains("cannot be read"))
+}
+
+///|
+/// THE NEIGHBOUR PRECONDITION, which replaced seven rebuilds of a flow
+/// model. The target's immediate block siblings must be paragraphs;
+/// anything else refuses, because how those blocks would meet is a
+/// question this version does not answer.
+test "a target beside a non-paragraph block refuses" {
+  let table = "<w:tbl><w:tr><w:tc><w:p><w:r><w:t>cell</w:t></w:r></w:p></w:tc></w:tr></w:tbl>"
+  let keeper = "<w:p><w:r><w:t>keeper</w:t></w:r></w:p>"
+  for
+    neighbour in [
+      table,
+      "<w:sdt><w:sdtPr><w:id w:val=\"1\"/></w:sdtPr><w:sdtContent>" +
+      table +
+      "</w:sdtContent></w:sdt>",
+      "<mc:AlternateContent xmlns:mc=\"http://schemas.openxmlformats.org/markup-compatibility/2006\"><mc:Fallback>" +
+      table +
+      "</mc:Fallback></mc:AlternateContent>",
+      "<w:del w:id=\"1\" w:author=\"a\">" + table + "</w:del>",
+      "<w:customXml w:element=\"x\">" + table + "</w:customXml>",
+    ] {
+    // …after the target…
+    let after = delete_fixture(
+      "<w:p><w:r><w:t>target</w:t></w:r></w:p>" + neighbour + keeper,
+    )
+    assert_true(
+      delete_refusal_of(after, "p[1]").contains("not a paragraph"),
+      msg="expected the precondition to refuse beside " +
+        neighbour[0:14].to_owned(),
+    )
+    // …and before it.
+    let before = delete_fixture(
+      keeper + neighbour + "<w:p><w:r><w:t>target</w:t></w:r></w:p>" + keeper,
+    )
+    assert_true(
+      delete_refusal_of(before, "p[2]").contains("not a paragraph"),
+      msg="expected the precondition to refuse after " +
+        neighbour[0:14].to_owned(),
+    )
+  }
+  // Zero-width markers are not blocks: Word emits them at body level
+  // constantly and they stand between nothing.
+  let marked = delete_fixture(
+    "<w:p><w:r><w:t>one</w:t></w:r></w:p><w:bookmarkStart w:id=\"1\" w:name=\"_GoBack\"/><w:bookmarkEnd w:id=\"1\"/>" +
+    "<w:p><w:r><w:t>target</w:t></w:r></w:p>" +
+    keeper,
+  )
+  assert_eq(delete_refusal_of(marked, "p[2]"), "<planned>")
 }
 
 ///|
@@ -1162,7 +1040,7 @@ test "planner refusals carry their slugs" {
         "p[1]",
         "blocked_construct",
       ),
-      (table + "<w:p/>" + table + keeper, "p[1]", "table_separator"),
+      (table + "<w:p/>" + table + keeper, "p[1]", "neighbour_not_paragraph"),
       (
         "<w:p><w:r><w:fldChar w:fldCharType=\"begin\"/></w:r></w:p>" +
         "<w:p><w:r><w:t>x</w:t></w:r></w:p>" +
