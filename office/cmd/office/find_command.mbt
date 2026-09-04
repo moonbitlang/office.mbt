@@ -266,7 +266,12 @@ fn resolve_find_para_id_scope(
   annotated : @docx.DocxAnnotatedResult,
   scope : String,
 ) -> String raise CliFailure {
-  guard scope.has_prefix("p[id=") else { return scope }
+  // `p[id` — not `p[id=` — so a near miss (`p[id"X"]`, `p[idx="X"]`)
+  // refuses typed instead of falling through to the prefix matcher,
+  // where it would match nothing and report an empty, honest-looking
+  // result. This is the discovery surface an agent runs before an
+  // irreversible edit.
+  guard scope.has_prefix("p[id") else { return scope }
   // Accept exactly the selector spelling: p[id="XXXXXXXX"]. The shared
   // shape check carries the length bound the slice below depends on —
   // at seven units `p[id="]` satisfies prefix and suffix with the SAME

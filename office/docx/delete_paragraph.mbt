@@ -289,15 +289,11 @@ fn delete_readback_findings(
           )
         }
       }
-    None =>
-      findings.push(
-        @transaction.validation_finding(
-          "docx.delete.readback_part_missing",
-          docx_validator_message(
-            "the candidate has no \{plan.part} to verify the cut against",
-          ),
-        ),
-      )
+    // A candidate without the main story part cannot reach here: the
+    // annotated re-read above fails first and returns
+    // `readback_unreadable`. Kept as a total match, not as a claim of
+    // coverage — no test asserts this arm, because none can reach it.
+    None => ()
   }
   let count = @word.docx_direct_body_paragraph_count(annotated) catch {
     _ => {

@@ -350,6 +350,93 @@ test "deletion refuses the separator between two tables" {
 }
 
 ///|
+/// Neighbours are judged as FLOW, the way the projection reads the
+/// story: a zero-width marker between the paragraph and a table does
+/// not separate them, and a table inside a transparent wrapper is
+/// still the adjacent table. Both shapes are what Word emits.
+test "the table-separator refusal reads neighbours as flow" {
+  let table = "<w:tbl><w:tr><w:tc><w:p><w:r><w:t>cell</w:t></w:r></w:p></w:tc></w:tr></w:tbl>"
+  let keeper = "<w:p><w:r><w:t>keeper</w:t></w:r></w:p>"
+  // A body-level bookmarkEnd between the table and the separator.
+  let marked = delete_fixture(
+    table + "<w:bookmarkEnd w:id=\"0\"/><w:p/>" + table + keeper,
+  )
+  assert_true(
+    delete_refusal_of(marked, "p[1]").contains("separates two tables"),
+  )
+  // The following table wrapped in a content control — the projection
+  // already calls it the adjacent table.
+  let wrapped = delete_fixture(
+    table +
+    "<w:p/><w:sdt><w:sdtContent>" +
+    table +
+    "</w:sdtContent></w:sdt>" +
+    keeper,
+  )
+  assert_true(
+    delete_refusal_of(wrapped, "p[1]").contains("separates two tables"),
+  )
+}
+
+///|
+/// A comment or permission range anchored by the target's own SIBLINGS
+/// brackets it: the markers are not inside the span, so the subtree
+/// scan cannot see them, and deleting the paragraph leaves the range
+/// anchoring nothing.
+test "deletion refuses a paragraph a sibling range brackets" {
+  let commented = delete_fixture(
+    "<w:commentRangeStart w:id=\"1\"/><w:p><w:r><w:t>target</w:t></w:r></w:p><w:commentRangeEnd w:id=\"1\"/>" +
+    "<w:p><w:r><w:t>keeper</w:t></w:r></w:p>",
+  )
+  assert_true(delete_refusal_of(commented, "p[1]").contains("a comment range"))
+  let permitted = delete_fixture(
+    "<w:permStart w:id=\"1\" w:edGrp=\"everyone\"/><w:p><w:r><w:t>target</w:t></w:r></w:p><w:permEnd w:id=\"1\"/>" +
+    "<w:p><w:r><w:t>keeper</w:t></w:r></w:p>",
+  )
+  assert_true(
+    delete_refusal_of(permitted, "p[1]").contains("a range permission"),
+  )
+  // A range that CLOSES before the target does not bracket it.
+  let closed = delete_fixture(
+    "<w:commentRangeStart w:id=\"1\"/><w:p><w:r><w:t>other</w:t></w:r></w:p><w:commentRangeEnd w:id=\"1\"/>" +
+    "<w:p><w:r><w:t>target</w:t></w:r></w:p><w:p><w:r><w:t>keeper</w:t></w:r></w:p>",
+  )
+  assert_eq(delete_refusal_of(closed, "p[2]"), "<planned>")
+}
+
+///|
+/// The successor is judged on the SAME flattened surface the receipt
+/// reports and the readback re-reads, so a wrapped following paragraph
+/// is a successor — not a reason to call the target document-final.
+test "a wrapped successor is still a successor" {
+  let annotated = delete_fixture(
+    "<w:p><w:r><w:t>target</w:t></w:r></w:p>" +
+    "<w:sdt><w:sdtContent><w:p><w:r><w:t>next</w:t></w:r></w:p></w:sdtContent></w:sdt>",
+  )
+  let (_, receipt) = @docx.plan_docx_paragraph_deletion(annotated, at="p[1]")
+  assert_eq(receipt.text(), "target")
+  assert_eq(receipt.successor_text(), Some("next"))
+}
+
+///|
+/// Co-authoring conflict revisions live in the w14 namespace, which the
+/// WML revision vocabulary does not reach — they are revision history
+/// all the same.
+test "deletion refuses w14 conflict revisions" {
+  let keeper = "<w:p><w:r><w:t>keeper</w:t></w:r></w:p>"
+  for construct in ["conflictIns", "conflictDel"] {
+    let annotated = delete_fixture(
+      "<w:p xmlns:w14=\"http://schemas.microsoft.com/office/word/2010/wordml\"><w14:\{construct}><w:r><w:t>x</w:t></w:r></w14:\{construct}></w:p>" +
+      keeper,
+    )
+    assert_true(
+      delete_refusal_of(annotated, "p[1]").contains("tracked-revision content"),
+      msg="expected the conflict refusal for \{construct}",
+    )
+  }
+}
+
+///|
 /// A paragraph strictly INSIDE a field region carries part of a field
 /// whose boundaries live in other paragraphs — the instruction or the
 /// result would be truncated with it. The target here carries no

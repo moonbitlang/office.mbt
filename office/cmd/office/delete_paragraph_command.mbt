@@ -76,6 +76,13 @@ fn delete_paragraph_report_json(
       Some(text) => Json::string(bounded_text(text, 160))
       None => Json::null()
     },
+    // The assertion is compared in FULL; the echo is bounded like every
+    // other text field, so the record says when replaying it verbatim
+    // would not reproduce the run.
+    "expect_text_truncated": match expect_text {
+      Some(text) => Json::boolean(text.iter().count() > 160)
+      None => Json::boolean(false)
+    },
     "dry_run": Json::boolean(dry_run),
     "changed": Json::boolean(changed),
     "deleted": Json::object({
@@ -89,7 +96,10 @@ fn delete_paragraph_report_json(
       // The record of what was destroyed must never look complete when
       // it is not: --expect-text compares the FULL projection, so a
       // caller feeding this field back needs to know it was cut.
-      "text_truncated": Json::boolean(report.text().length() > 160),
+      // Counted the way `bounded_text` cuts — by Unicode scalars, not
+      // UTF-16 units — so the flag cannot disagree with the string it
+      // describes.
+      "text_truncated": Json::boolean(report.text().iter().count() > 160),
     }),
     // Re-anchoring: after this publish the deleted path names the
     // SUCCESSOR — its stable identity, when it has one, is how an

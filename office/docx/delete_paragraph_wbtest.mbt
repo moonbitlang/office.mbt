@@ -101,14 +101,10 @@ async test "the delete readback catches a cut that did not land as planned" {
   // A candidate missing the story part entirely.
   let empty = @zip.Archive()
   let missing = delete_readback_findings(Some(honest), Docx, empty)
-  assert_true(
-    missing
-    .iter()
-    .any(finding => {
-      finding.code == "docx.delete.readback_part_missing" ||
-      finding.code == "docx.delete.readback_unreadable"
-    }),
-  )
+  // Named exactly: a disjunction would pass on either arm and prove
+  // neither.
+  assert_eq(missing.length(), 1)
+  assert_eq(missing[0].code, "docx.delete.readback_unreadable")
   // No expectation at all is itself a finding: a readback that ran
   // without a plan verified nothing.
   let unplanned = delete_readback_findings(None, Docx, candidate)

@@ -1281,7 +1281,10 @@ pub fn capability_commands() -> Array[CapabilityCommand] {
         ),
         capability_field("at", "string", true, "the target as requested"),
         capability_field(
-          "expect_text", "string", false, "the asserted projection (bounded), null when not asserted",
+          "expect_text", "string", false, "the asserted projection (bounded at 160 characters), null when not asserted",
+        ),
+        capability_field(
+          "expect_text_truncated", "boolean", true, "whether the echoed expect_text was cut by that bound; the assertion itself always compares the FULL projection",
         ),
         capability_field(
           "dry_run", "boolean", true, "whether this run validated without publishing",

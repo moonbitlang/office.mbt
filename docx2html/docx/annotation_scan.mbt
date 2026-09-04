@@ -261,10 +261,12 @@ priv struct ScannedElement {
   // (never normalized here — validity and canonical case are the
   // identity layer's judgment). None when the attribute is absent.
   para_id_raw : String?
-  // A WML bookmark marker's `w:name` (bookmarkStart) and `w:id`
-  // (bookmarkStart/bookmarkEnd), as spelled — the deletion planner
-  // judges pairing and the `_GoBack` exemption on these.
+  // A WML bookmark marker's `w:name` (bookmarkStart), as spelled —
+  // the deletion planner judges the `_GoBack` exemption on it.
   bookmark_name_raw : String?
+  // A WML range marker's `w:id` (bookmarks, comment ranges, range
+  // permissions), as spelled: the deletion planner pairs markers on
+  // it, both inside the target and bracketing it.
   bookmark_id_raw : String?
   // Whether any attribute on this element lives in the OPC
   // relationships namespace (r:id, r:embed, r:link, …): the element
@@ -364,6 +366,17 @@ fn ProjectionSourceBudget::charge_element(
     raise @core.docx_xml_resource_limit_error(DocxXmlNestingDepth)
   }
   self.elements_left -= 1
+}
+
+///|
+/// Whether the retained-character budget could absorb `chars`. An
+/// OPTIONAL capture asks this first and declines when it cannot: a
+/// document readable before that capture existed must stay readable.
+fn ProjectionSourceBudget::can_afford_retained_chars(
+  self : ProjectionSourceBudget,
+  chars : Int,
+) -> Bool {
+  chars >= 0 && chars <= self.retained_chars_left
 }
 
 ///|
@@ -1548,13 +1561,19 @@ fn scan_story(
             None
           },
           bookmark_name_raw: if is_wml_uri(uri) && local_name == "bookmarkStart" {
-            attribute_value(attributes, "name", namespaces)
+            unique_attribute_value(attributes, "name", namespaces)
           } else {
             None
           },
           bookmark_id_raw: if is_wml_uri(uri) &&
-            (local_name == "bookmarkStart" || local_name == "bookmarkEnd") {
-            attribute_value(attributes, "id", namespaces)
+            local_name
+            is ("bookmarkStart"
+            | "bookmarkEnd"
+            | "commentRangeStart"
+            | "commentRangeEnd"
+            | "permStart"
+            | "permEnd") {
+            unique_attribute_value(attributes, "id", namespaces)
           } else {
             None
           },
@@ -2460,7 +2479,7 @@ fn scan_tag(
     if relevant_attribute {
       if attr_end - attr_start > max_annotation_relevant_attribute_bytes ||
         at - value_start > max_annotation_relevant_attribute_bytes {
-        // A bookmark NAME over the cap is skipped, never fatal: the
+        // A bookmark NAME over the cap is DECLINED, never fatal: the
         // deletion planner (its only consumer) then reads None and
         // refuses that one deletion, while every read verb keeps
         // working — a document readable before `:name` retention must
@@ -2468,20 +2487,45 @@ fn scan_tag(
         // added it: a namespace DECLARATION spelled `xmlns:name` is
         // not a bookmark name and keeps its hard limit, which the
         // binding walk and the duplicate-declaration guard rely on.
+        //
+        // Declining still records the QName as UNRETAINED, so
+        // `scan_story`'s unbound-prefix check keeps seeing it: an
+        // optional capture may cost a value, never a validation.
         if element_is_bookmark_start &&
           source_budget is Some(_) &&
           !bytes_range_has_ascii_prefix(part, attr_start, attr_end, "xmlns:") &&
           bytes_range_has_ascii_suffix(part, attr_start, attr_end, ":name") {
+          match validated_source_name {
+            Some(candidate) => unretained_attribute_names.push(candidate)
+            None => ()
+          }
           at += 1
           continue
         }
         raise @core.docx_xml_resource_limit_error(DocxXmlTokenLength)
       }
       match source_budget {
-        Some(budget) =>
+        Some(budget) => {
+          // A bookmark NAME is an OPTIONAL capture: if the shared
+          // retained-character budget cannot absorb it, decline the
+          // value rather than fail the read. Every other relevant
+          // attribute is load-bearing for the reader and still
+          // charges — and still refuses when the budget is out.
+          let optional = element_is_bookmark_start &&
+            !bytes_range_has_ascii_prefix(part, attr_start, attr_end, "xmlns:") &&
+            bytes_range_has_ascii_suffix(part, attr_start, attr_end, ":name")
+          if optional && !budget.can_afford_retained_chars(at - value_start) {
+            match validated_source_name {
+              Some(candidate) => unretained_attribute_names.push(candidate)
+              None => ()
+            }
+            at += 1
+            continue
+          }
           // The QName and its fixed-size retained slot were charged before the
           // QName allocation above; only the value remains.
           budget.charge_retained_chars(at - value_start)
+        }
         None => ()
       }
       let attr_name = match validated_source_name {
@@ -2655,6 +2699,47 @@ fn uri_attribute_value(
     }
   }
   matched
+}
+
+///|
+/// The value of a WML-namespaced attribute, but ONLY when exactly one
+/// spelling of it is present. `attribute_value` keeps the last match,
+/// which is right for a reader and wrong for a GATE: two prefixes
+/// bound to the same URI (`w:name="Chapter"` beside `w2:name="_GoBack"`)
+/// would let the later spelling decide a permission the earlier one
+/// denies. Ambiguity reads as absent, and the caller refuses.
+fn unique_attribute_value(
+  attributes : Array[(String, String)],
+  local_name : String,
+  namespaces : StableStringMap[Array[String]],
+) -> String? {
+  let mut matched : String? = None
+  let mut seen = 0
+  for pair in attributes {
+    let (name, value) = pair
+    match name.find(":") {
+      Some(colon) => {
+        let attr_local = name[colon + 1:].to_owned()
+        if attr_local == local_name {
+          let prefix = name[0:colon].to_owned()
+          match namespaces.get(prefix) {
+            Some(stack) if stack.length() > 0 &&
+              is_wml_uri(stack[stack.length() - 1]) => {
+              matched = Some(value)
+              seen += 1
+            }
+            _ => ()
+          }
+        }
+      }
+      None => ()
+    }
+  }
+  if seen == 1 {
+    matched
+  } else {
+    None
+  }
 }
 
 ///|
