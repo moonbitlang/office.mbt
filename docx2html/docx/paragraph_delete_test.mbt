@@ -230,13 +230,24 @@ test "deletion refusals are typed per construct" {
     keeper,
   )
   ignore(@docx.plan_docx_paragraph_deletion(goback, at="p[1]"))
-  // split field boundary refuses; a self-contained simple field plans
+  // A SPLIT field boundary refuses — its partner lies outside…
   assert_true(
     delete_refusal(
       "<w:p><w:r><w:fldChar w:fldCharType=\"begin\"/></w:r></w:p>" + keeper,
       "p[1]",
-    ).contains("a field boundary"),
+    ).contains("split field boundary"),
   )
+  // …while a COMPLETE field leaves with its paragraph and dangles
+  // nothing. Page numbers, DATE, REF and every TOC entry are this
+  // shape, so refusing it made a large share of real Word paragraphs
+  // undeletable.
+  let complete_field = delete_fixture(
+    "<w:p><w:r><w:fldChar w:fldCharType=\"begin\"/></w:r><w:r><w:instrText>PAGE</w:instrText></w:r>" +
+    "<w:r><w:fldChar w:fldCharType=\"separate\"/></w:r><w:r><w:t>1</w:t></w:r>" +
+    "<w:r><w:fldChar w:fldCharType=\"end\"/></w:r></w:p>" +
+    keeper,
+  )
+  assert_eq(delete_refusal_of(complete_field, "p[1]"), "<planned>")
   let simple = delete_fixture(
     "<w:p><w:fldSimple w:instr=\" PAGE \"><w:r><w:t>1</w:t></w:r></w:fldSimple></w:p>" +
     keeper,
@@ -847,10 +858,76 @@ test "the remaining hazard vocabulary is exercised" {
     "<w:p><w:bookmarkStart w:id=\"1\" w:name=\"Chapter\" w2:name=\"_GoBack\"/><w:bookmarkEnd w:id=\"1\"/><w:r><w:t>x</w:t></w:r></w:p>" +
     keeper +
     "<w:sectPr/></w:body></w:document>"
-  let outcome = try? @docx.read_docx_annotated(fixture_docx(document))
-  guard outcome is Err(_) else {
-    fail("expected the duplicate-attribute refusal")
+  let mut refused = false
+  ignore(@docx.read_docx_annotated(fixture_docx(document))) catch {
+    _ => refused = true
   }
+  assert_true(refused, msg="expected the duplicate-attribute refusal")
+}
+
+///|
+/// The arms of `open_range_across` that no fixture reached: SPLIT (a
+/// range with markers on both sides of the target) and UNPLACEABLE (a
+/// marker whose id cannot be read). Both are fail-open if deleted, and
+/// both were previously invisible because every fixture resolved
+/// through the spanning arm.
+test "every range-hazard arm is reachable" {
+  let keeper = "<w:p><w:r><w:t>keeper</w:t></w:r></w:p>"
+  // SPLIT is DEFENSIVE, not reachable: every id-bearing family placed
+  // inside the target is refused earlier by the subtree walk — a named
+  // bookmark as a blocked construct, comment and permission markers by
+  // name, move and customXml ranges as revision content — and the one
+  // exemption (`_GoBack`) is caught by the multiset when its partner
+  // lies outside. The shape below therefore refuses for the EARLIER
+  // reason, which this pins so a change in that order surfaces here
+  // rather than silently making the arm load-bearing and untested.
+  let split_shape = delete_fixture(
+    "<w:p><w:bookmarkStart w:id=\"5\" w:name=\"Chapter\"/><w:r><w:t>target</w:t></w:r></w:p>" +
+    "<w:p><w:r><w:t>mid</w:t></w:r></w:p><w:bookmarkEnd w:id=\"5\"/>" +
+    keeper,
+  )
+  assert_true(
+    delete_refusal_of(split_shape, "p[1]").contains("a named bookmark"),
+  )
+  let goback_split = delete_fixture(
+    "<w:p><w:bookmarkStart w:id=\"6\" w:name=\"_GoBack\"/><w:r><w:t>target</w:t></w:r></w:p>" +
+    "<w:p><w:r><w:t>mid</w:t></w:r></w:p><w:bookmarkEnd w:id=\"6\"/>" +
+    keeper,
+  )
+  assert_true(
+    delete_refusal_of(goback_split, "p[1]").contains("do not pair inside it"),
+  )
+  // UNPLACEABLE: a range marker outside the target with no readable id
+  // cannot be paired with anything, so what it covers is unknown.
+  let unplaceable = delete_fixture(
+    "<w:commentRangeStart/><w:p><w:r><w:t>target</w:t></w:r></w:p>" + keeper,
+  )
+  assert_true(
+    delete_refusal_of(unplaceable, "p[1]").contains("whose id cannot be read"),
+  )
+  // A `separate` BEFORE the target, with the region still open across
+  // it: classified as anything but NotABoundary, this shape either
+  // refuses every field or permits splicing out of a field's result.
+  let separated_open = delete_fixture(
+    "<w:p><w:r><w:fldChar w:fldCharType=\"begin\"/></w:r><w:r><w:fldChar w:fldCharType=\"separate\"/></w:r></w:p>" +
+    "<w:p><w:r><w:t>target</w:t></w:r></w:p>" +
+    "<w:p><w:r><w:fldChar w:fldCharType=\"end\"/></w:r></w:p>" +
+    keeper,
+  )
+  assert_true(
+    delete_refusal_of(separated_open, "p[2]").contains(
+      "sits inside a field region",
+    ),
+  )
+  // Permission ids are ST_String, so `1` and `01` are DIFFERENT
+  // permissions and neither covers the paragraph between them.
+  let permissions = delete_fixture(
+    "<w:p><w:permStart w:id=\"1\" w:edGrp=\"everyone\"/><w:r><w:t>a</w:t></w:r><w:permEnd w:id=\"1\"/></w:p>" +
+    "<w:p><w:r><w:t>target</w:t></w:r></w:p>" +
+    "<w:p><w:permStart w:id=\"01\" w:edGrp=\"everyone\"/><w:r><w:t>c</w:t></w:r><w:permEnd w:id=\"01\"/></w:p>" +
+    keeper,
+  )
+  assert_eq(delete_refusal_of(permissions, "p[2]"), "<planned>")
 }
 
 ///|

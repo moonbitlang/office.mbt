@@ -882,11 +882,14 @@ the wrong paragraph by ordinal).
 
 Everything the removal could dangle refuses typed. Inside the paragraph:
 section breaks, note references, comment machinery, bookmark markers
-(only a wholly-internal `_GoBack` pair is exempt, and only when it does not itself span the paragraph), range permissions, split field boundaries
-(`fldSimple` is permitted), the entire tracked-revision family, and any
-element referencing a package relationship (`w:hyperlink` alone
-excepted). Around it: the document-final DIRECT body paragraph, a paragraph
-separating two tables (deleting it would merge them into one — judged
+(only Word's `_GoBack` caret is exempt, wherever it sits), range permissions, SPLIT field boundaries whose partner lies outside the
+paragraph (a COMPLETE field — a page number, a DATE, a REF, a TOC entry —
+leaves with its paragraph and dangles nothing; `fldSimple` likewise), the
+entire tracked-revision family, drawings and embedded objects,
+content-control data bindings, nested block content, and any element
+referencing a package relationship (`w:hyperlink` alone excepted). Around it: a deletion that would leave the body with NO direct
+paragraph, or make a body that ended with a paragraph end with a table; a
+paragraph separating two tables (deleting it would merge them into one — judged
 on layout flow, so wrappers and zero-width markers between them do not
 hide it), a paragraph inside a field region whose boundaries live in
 other paragraphs, and a paragraph SPANNED by a range its own siblings
@@ -902,7 +905,10 @@ permanent structural refusal (`table_separator`, `field_region`,
 `open_range`, `final_paragraph`, `blocked_construct`, …) without reading
 prose. Request-grammar problems answer `office.invalid_arguments` and
 stable-identity problems answer `office.docx.para_id_*`, as they do for
-every verb.
+every verb. An `--expect-text` mismatch answers
+`office.delete.expect_text_mismatch` — the one refusal that means "your
+ordinal drifted; re-run `office find` and re-address" rather than "this
+paragraph can never be deleted".
 
 The readback verifies, WHERE THE DOCUMENT SUPPORTS IT, that the deleted
 identity is GONE from the addressable inventory and that the successor

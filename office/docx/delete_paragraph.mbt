@@ -110,8 +110,12 @@ pub fn DocxEditSession::queue_delete_paragraph(
   ) catch {
     error => {
       let failure = delete_plan_failure(error)
+      // Matched on the TYPED code, not on how the error renders: the
+      // rendering includes prose, so a message that merely mentioned a
+      // code would be relabelled, and a formatting change elsewhere
+      // would silently stop this from firing.
       guard addressed_by_identity &&
-        "\{failure}".contains("office.delete.target_grammar") else {
+        failure is TransactionError(code="office.delete.target_grammar", ..) else {
         raise failure
       }
       raise @transaction.transaction_failure(

@@ -213,7 +213,7 @@ fn open_range_across(
     guard range_family_of(element) is Some((family, starts)) else { continue }
     if element.local_name == "bookmarkStart" &&
       element.bookmark_id_raw is Some(caret_id) {
-      let caret_key = family + "\u{1}" + normalized_decimal_id(caret_id)
+      let caret_key = family + "\u{1}" + range_id_key(family, caret_id)
       if element.bookmark_name_raw is Some("_GoBack") {
         if !caret_keys.contains(caret_key) {
           caret_keys.push(caret_key)
@@ -233,7 +233,11 @@ fn open_range_across(
       }
       continue
     }
-    let key = family + "\u{1}" + normalized_decimal_id(raw)
+    // `CT_Perm/@w:id` is `ST_String` (whiteSpace=preserve); every other
+    // family's id is `ST_DecimalNumber`. Canonicalizing a permission id
+    // collapsed distinct permissions onto one key and invented a range
+    // spanning the target.
+    let key = family + "\u{1}" + range_id_key(family, raw)
     family_of[key] = family
     let is_inside = element.byte_start >= span.byte_start() &&
       element.byte_end <= span.byte_end()
@@ -356,6 +360,19 @@ fn field_boundary_of(element : ScannedElement) -> FieldBoundary {
     // changes no depth.
     Some("separate") => NotABoundary
     _ => Unreadable
+  }
+}
+
+///|
+/// The pairing key for one family's id. Permissions carry `ST_String`
+/// ids, which are compared as written; every other family carries
+/// `ST_DecimalNumber`, where `" 7 "`, `"+7"`, `"07"` and `"7"` are one
+/// id to any schema-validating consumer.
+fn range_id_key(family : String, raw : String) -> String {
+  if family == "a range permission" {
+    raw
+  } else {
+    normalized_decimal_id(raw)
   }
 }
 
@@ -581,7 +598,12 @@ fn delete_blocked_construct(uri : String, local_name : String) -> String? {
     // it strands the item and its properties, the same family of hazard
     // as a note, a comment or a relationship.
     "dataBinding" => Some("a content-control data binding")
-    "fldChar" => Some("a field boundary")
+    // NOT "fldChar": a COMPLETE field inside the target — a page
+    // number, a DATE, a REF, any TOC entry — balances within the span
+    // and dangles nothing. Only a SPLIT one refuses, and splitness is
+    // decided by the depth walk, not by the presence of a boundary.
+    // Blanket-refusing here made a large fraction of real Word
+    // paragraphs undeletable while the docs promised otherwise.
     "drawing" | "object" | "pict" => Some("an embedded object")
     _ => None
   }
@@ -750,9 +772,29 @@ pub fn plan_docx_paragraph_deletion(
   // unbalances a range or dangles a reference target.
   let bookmark_starts : Map[String, Int] = Map([])
   let bookmark_ends : Map[String, Int] = Map([])
+  // Field boundaries INSIDE the target must pair there: a complete
+  // field leaves with its paragraph and dangles nothing, while a
+  // begin or end whose partner lies outside is a SPLIT field the
+  // deletion would truncate.
+  let mut inside_field_depth = 0
+  let mut inside_field_split = false
   for index, element in elements {
     if element.byte_start >= span.byte_start() &&
       element.byte_end <= span.byte_end() {
+      match field_boundary_of(element) {
+        Opens => inside_field_depth += 1
+        Closes => {
+          inside_field_depth -= 1
+          if inside_field_depth < 0 {
+            inside_field_split = true
+          }
+        }
+        Unreadable =>
+          raise delete_refusal(
+            "field_region", "the target paragraph carries a field boundary whose type cannot be read, so this deletion refuses",
+          )
+        NotABoundary => ()
+      }
       // The target element itself is skipped only for the CLASSIFIER
       // (it would self-refuse as "a nested paragraph"); its own
       // attributes are judged like any other element's.
@@ -808,6 +850,11 @@ pub fn plan_docx_paragraph_deletion(
         }
       }
     }
+  }
+  if inside_field_split || inside_field_depth != 0 {
+    raise delete_refusal(
+      "field_region", "the target paragraph carries a split field boundary whose partner lies outside it; deleting it would truncate the field, so this deletion refuses",
+    )
   }
   // Balanced as MULTISETS: one start, one end, per id. Counting closes
   // the duplicate-end quadrant that set membership left open.

@@ -270,16 +270,6 @@ async fn run_replace(matches : @argparse.Matches) -> Unit {
   replace_reject_control_text(needle, "--text")
   replace_reject_control_text(replacement, "--with")
   let within = optional_value(matches, "in")
-  // The engine treats `--in` as a PATH PREFIX, and its own comment says
-  // that is safe only because scanner ordinals are bracketed. A
-  // truncated scope like `p[1` therefore matches p[1], p[10]…p[19],
-  // p[100]… — and this verb MUTATES, so a shell-quoting accident would
-  // rewrite paragraphs the caller never scoped, with `--expect`
-  // computed over the widened set and still passing.
-  match within {
-    Some(scope) => format_validate_scope(scope)
-    None => ()
-  }
   let allow_zero = matches.flags.get_or_default("allow-zero", false)
   let dry_run = matches.flags.get_or_default("dry-run", false)
   let nth = match optional_value(matches, "nth") {
