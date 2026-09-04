@@ -701,7 +701,7 @@ paragraph_delete.mbt	a range-permission boundary	delete_blocked_construct	value	
 paragraph_delete.mbt	permStart	delete_blocked_construct	name	paragraph_delete_test:"deletion refusals are typed per construct"
 paragraph_delete.mbt	permEnd	delete_blocked_construct	name	paragraph_delete_test:"deletion refusals are typed per construct"
 paragraph_delete.mbt	hyperlink	plan_docx_paragraph_deletion	name	paragraph_delete_test:"deletion judges relationship references by URI"
-paragraph_delete.mbt	multi_physical	plan_docx_paragraph_deletion	value	paragraph_delete_test:"deletion refuses either half of a revision-joined paragraph"
+paragraph_delete.mbt	multi_physical	plan_docx_paragraph_deletion	value	(unreachable: every join today is made by a deleted paragraph mark whose w:del sits in the head's own subtree, so the revision class refuses first, and the shared-head route needs a nested w:p the same walk refuses -- kept as a standing guarantee for an irreversible verb)
 paragraph_delete.mbt	tbl	plan_docx_paragraph_deletion	name	paragraph_delete_test:"deletion refuses the separator between two tables"
 paragraph_delete.mbt	begin	plan_docx_paragraph_deletion	value	paragraph_delete_test:"deletion refuses a paragraph inside a field region"
 paragraph_delete.mbt	end	plan_docx_paragraph_deletion	value	paragraph_delete_test:"deletion refuses a paragraph inside a field region"

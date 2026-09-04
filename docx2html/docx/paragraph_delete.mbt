@@ -18,6 +18,45 @@ pub struct DocxDeleteReceipt {
   priv text : String
   priv successor_para_id : String?
   priv successor_text : String?
+  priv cut : DocxDeleteCutWitness
+}
+
+///|
+/// What the published story part must read like once the cut lands:
+/// its exact length, and the bytes on either side of the removal made
+/// adjacent (bounded to a window, so a large story costs nothing to
+/// remember). Text and identity both go blind when two adjacent
+/// paragraphs read alike — deleting either leaves the same projection
+/// at the same path — so this is the evidence that says WHICH
+/// paragraph left.
+pub struct DocxDeleteCutWitness {
+  priv part : String
+  priv expected_length : Int
+  priv offset : Int
+  priv joint : Bytes
+}
+
+///|
+pub fn DocxDeleteCutWitness::part(self : DocxDeleteCutWitness) -> String {
+  self.part
+}
+
+///|
+pub fn DocxDeleteCutWitness::expected_length(
+  self : DocxDeleteCutWitness,
+) -> Int {
+  self.expected_length
+}
+
+///|
+/// Byte offset into the published part where `joint` must appear.
+pub fn DocxDeleteCutWitness::offset(self : DocxDeleteCutWitness) -> Int {
+  self.offset
+}
+
+///|
+pub fn DocxDeleteCutWitness::joint(self : DocxDeleteCutWitness) -> Bytes {
+  self.joint
 }
 
 ///|
@@ -61,6 +100,16 @@ pub fn DocxDeleteReceipt::successor_para_id(
 /// document carrying no unique identities still has.
 pub fn DocxDeleteReceipt::successor_text(self : DocxDeleteReceipt) -> String? {
   self.successor_text
+}
+
+///|
+/// The exact byte span this plan removes from the main story part.
+/// Text and identity both go blind when two adjacent paragraphs read
+/// alike — deleting either yields the same projection — so the
+/// transaction verifies the cut landed at these bytes and nowhere
+/// else.
+pub fn DocxDeleteReceipt::cut(self : DocxDeleteReceipt) -> DocxDeleteCutWitness {
+  self.cut
 }
 
 ///|
@@ -395,6 +444,36 @@ pub fn plan_docx_paragraph_deletion(
       message="delete-paragraph target '\{at}' has no readable projection in this document, so this deletion refuses",
     )
   }
+  // The joint the cut creates: the bytes on either side of the removal
+  // made adjacent, in a bounded window. The transaction verifies the
+  // published part reads exactly this way at exactly this offset, which
+  // is the only evidence that survives when adjacent paragraphs read
+  // alike.
+  let window = 64
+  let joint_offset = if span.byte_start() > window {
+    span.byte_start() - window
+  } else {
+    0
+  }
+  let joint_after_end = if span.byte_end() + window < bytes.length() {
+    span.byte_end() + window
+  } else {
+    bytes.length()
+  }
+  let joint_length = span.byte_start() -
+    joint_offset +
+    (joint_after_end - span.byte_end())
+  let joint_buffer = FixedArray::make(joint_length, b'\x00')
+  let mut joint_write = 0
+  for index in joint_offset..<span.byte_start() {
+    joint_buffer[joint_write] = bytes[index]
+    joint_write += 1
+  }
+  for index in span.byte_end()..<joint_after_end {
+    joint_buffer[joint_write] = bytes[index]
+    joint_write += 1
+  }
+  let joint_bytes = Bytes::from_fixedarray(joint_buffer)
   let plan = @splice.SplicePlan::new()
   plan.pin_part(part, bytes)
   plan.edit_part(
@@ -415,6 +494,12 @@ pub fn plan_docx_paragraph_deletion(
       text,
       successor_para_id,
       successor_text,
+      cut: {
+        part,
+        expected_length: bytes.length() - (span.byte_end() - span.byte_start()),
+        offset: joint_offset,
+        joint: joint_bytes,
+      },
     },
   )
 }

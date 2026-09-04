@@ -878,14 +878,26 @@ The structural inverse of insert-paragraph. `--at` names one DIRECT body
 paragraph — a physical child of `w:body`, proven on the element tree —
 by ordinal path or stable identity; `--expect-text` asserts the target's
 full projection before anything is written (the guard against deleting
-the wrong paragraph by ordinal). Everything the removal could dangle
-refuses typed: section breaks, note references, comment machinery,
-bookmark markers (only a wholly-internal `_GoBack` pair is exempt),
-split field boundaries (`fldSimple` is permitted), the entire
-tracked-revision family, any element referencing a package relationship
-(`w:hyperlink` alone excepted), and the document-final paragraph. The
-readback verifies the deleted identity is GONE, the successor answers
-at the path, and the story is exactly one paragraph shorter.
+the wrong paragraph by ordinal).
+
+Everything the removal could dangle refuses typed. Inside the paragraph:
+section breaks, note references, comment machinery, bookmark markers
+(only a wholly-internal `_GoBack` pair is exempt, and no marker outside
+may share its id), range permissions, split field boundaries
+(`fldSimple` is permitted), the entire tracked-revision family, and any
+element referencing a package relationship (`w:hyperlink` alone
+excepted). Around it: the document-final paragraph, a paragraph
+separating two tables (deleting it would merge them into one), and a
+paragraph inside a field region whose boundaries live in other
+paragraphs. A target that is not exactly one whole logical paragraph —
+a collided path, or half of one joined across a deleted paragraph mark
+— refuses too.
+
+The readback verifies the deleted identity is GONE, the successor
+answers at the path with the text it had before the splice, the story
+is exactly one paragraph shorter, and — because projection and identity
+both go blind when two adjacent paragraphs read alike — that the cut
+landed at exactly the bytes the plan named.
 
 | key | type | notes |
 | --- | --- | --- |

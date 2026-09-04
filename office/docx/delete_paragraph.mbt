@@ -110,6 +110,14 @@ priv struct DeleteReadbackExpectation {
   // Text is the leg that still speaks there.
   successor_text : String?
   old_count : Int
+  // Where the cut must land, and what the story must read across it.
+  // Projection and identity both go blind when two adjacent paragraphs
+  // read alike — deleting either leaves the same text at the same path
+  // — so this is the leg that says WHICH paragraph left.
+  part : String
+  expected_part_length : Int
+  joint_offset : Int
+  joint : Bytes
 }
 
 ///|
@@ -120,142 +128,198 @@ fn delete_readback_validator(
     format,
     _bytes,
     archive,
-  ) => {
-    let findings : Array[@transaction.ValidationFinding] = []
-    if format != Docx {
+  ) => delete_readback_findings(expected.val, format, archive))
+}
+
+///|
+/// The readback's judgment, as a named function so tests can drive
+/// DOCTORED expectations against real candidates: a check nothing can
+/// make fail is not a check.
+fn delete_readback_findings(
+  expectation : DeleteReadbackExpectation?,
+  format : @office.DocumentFormat,
+  archive : @zip.Archive,
+) -> Array[@transaction.ValidationFinding] raise {
+  let findings : Array[@transaction.ValidationFinding] = []
+  if format != Docx {
+    findings.push(
+      @transaction.validation_finding(
+        "docx.delete.wrong_format", "delete readback received a non-DOCX candidate",
+      ),
+    )
+    return findings
+  }
+  guard expectation is Some(plan) else {
+    findings.push(
+      @transaction.validation_finding(
+        "docx.delete.readback_unplanned", "delete readback ran without a planned expectation",
+      ),
+    )
+    return findings
+  }
+  let annotated = @word.read_docx_annotated_archive_limited(
+    archive,
+    candidate_xml_budget(),
+  ) catch {
+    error => {
       findings.push(
         @transaction.validation_finding(
-          "docx.delete.wrong_format", "delete readback received a non-DOCX candidate",
+          "docx.delete.readback_unreadable",
+          docx_validator_message(
+            "candidate could not be re-read for the delete readback: \{docx_error_message(error)}",
+          ),
         ),
       )
       return findings
     }
-    guard expected.val is Some(plan) else {
+  }
+  let story = annotated.main_story_source()
+  let anchors = @word.docx_paragraph_anchor_index(annotated, story) catch {
+    _ => {
       findings.push(
         @transaction.validation_finding(
-          "docx.delete.readback_unplanned", "delete readback ran without a planned expectation",
+          "docx.delete.readback_unjudged", "the candidate's paragraph identities could not be judged",
         ),
       )
       return findings
     }
-    let annotated = @word.read_docx_annotated_archive_limited(
-      archive,
-      candidate_xml_budget(),
-    ) catch {
-      error => {
+  }
+  match plan.para_id {
+    Some(id) =>
+      if anchors.paragraphs_with_para_id(id).length() > 0 {
         findings.push(
           @transaction.validation_finding(
-            "docx.delete.readback_unreadable",
+            "docx.delete.readback_identity",
             docx_validator_message(
-              "candidate could not be re-read for the delete readback: \{docx_error_message(error)}",
+              "the deleted paragraph's identity \{id} still appears in the candidate",
             ),
           ),
         )
-        return findings
       }
-    }
-    let story = annotated.main_story_source()
-    let anchors = @word.docx_paragraph_anchor_index(annotated, story) catch {
-      _ => {
+    None => ()
+  }
+  match plan.successor_para_id {
+    Some(id) => {
+      let answering = match anchors.anchor_at(plan.path) {
+        Some(anchor) => anchor.para_id()
+        None => None
+      }
+      if answering != Some(id) {
         findings.push(
           @transaction.validation_finding(
-            "docx.delete.readback_unjudged", "the candidate's paragraph identities could not be judged",
+            "docx.delete.readback_successor",
+            docx_validator_message(
+              "the successor identity does not answer at \{plan.path} in the candidate",
+            ),
           ),
         )
-        return findings
       }
     }
-    match plan.para_id {
-      Some(id) =>
-        if anchors.paragraphs_with_para_id(id).length() > 0 {
-          findings.push(
-            @transaction.validation_finding(
-              "docx.delete.readback_identity",
-              docx_validator_message(
-                "the deleted paragraph's identity \{id} still appears in the candidate",
-              ),
-            ),
-          )
-        }
-      None => ()
-    }
-    match plan.successor_para_id {
-      Some(id) => {
-        let answering = match anchors.anchor_at(plan.path) {
-          Some(anchor) => anchor.para_id()
-          None => None
-        }
-        if answering != Some(id) {
-          findings.push(
-            @transaction.validation_finding(
-              "docx.delete.readback_successor",
-              docx_validator_message(
-                "the successor identity does not answer at \{plan.path} in the candidate",
-              ),
-            ),
-          )
-        }
-      }
-      None => ()
-    }
-    // The text leg: whatever the successor read as before the splice
-    // must be what the deleted path reads as after it. This is the
-    // check that still has something to say when no paragraph in the
-    // document carries a unique identity.
-    match plan.successor_text {
-      Some(text) => {
-        let answering = @word.docx_paragraph_projection(
-          annotated,
-          story,
-          path=plan.path,
-        )
-        match answering {
-          Some(actual) =>
-            if actual != text {
-              findings.push(
-                @transaction.validation_finding(
-                  "docx.delete.readback_successor_text",
-                  docx_validator_message(
-                    "the paragraph now at \{plan.path} does not read as the successor did before the splice",
-                  ),
-                ),
-              )
-            }
-          None =>
+    None => ()
+  }
+  // The text leg: whatever the successor read as before the splice
+  // must be what the deleted path reads as after it. This is the
+  // check that still has something to say when no paragraph in the
+  // document carries a unique identity.
+  match plan.successor_text {
+    Some(text) => {
+      let answering = @word.docx_paragraph_projection(
+        annotated,
+        story,
+        path=plan.path,
+      )
+      match answering {
+        Some(actual) =>
+          if actual != text {
             findings.push(
               @transaction.validation_finding(
-                "docx.delete.readback_successor_missing",
+                "docx.delete.readback_successor_text",
                 docx_validator_message(
-                  "no paragraph reads back at \{plan.path} where the successor should be",
+                  "the paragraph now at \{plan.path} does not read as the successor did before the splice",
                 ),
               ),
             )
-        }
+          }
+        None =>
+          findings.push(
+            @transaction.validation_finding(
+              "docx.delete.readback_successor_missing",
+              docx_validator_message(
+                "no paragraph reads back at \{plan.path} where the successor should be",
+              ),
+            ),
+          )
       }
-      None => ()
     }
-    let count = @word.docx_direct_body_paragraph_count(annotated) catch {
-      _ => {
+    None => ()
+  }
+  // The cut, verified at the bytes: the published part must be
+  // exactly the source with the planned span removed, proven at the
+  // seam the removal creates.
+  match archive.get(plan.part) {
+    Some(payload) =>
+      if payload.length() != plan.expected_part_length {
         findings.push(
           @transaction.validation_finding(
-            "docx.delete.readback_uncounted", "the candidate's direct paragraphs could not be counted",
+            "docx.delete.readback_cut_size",
+            docx_validator_message(
+              "the published story part is \{payload.length()} bytes; removing the planned paragraph leaves \{plan.expected_part_length}",
+            ),
           ),
         )
-        return findings
+      } else if plan.joint.length() > 0 {
+        let mut matched = true
+        for offset in 0..<plan.joint.length() {
+          let at = plan.joint_offset + offset
+          if at < 0 ||
+            at >= payload.length() ||
+            payload[at] != plan.joint[offset] {
+            matched = false
+            break
+          }
+        }
+        if !matched {
+          findings.push(
+            @transaction.validation_finding(
+              "docx.delete.readback_cut_position",
+              docx_validator_message(
+                "the published story part does not read as planned across the cut; the removal did not land where the plan said",
+              ),
+            ),
+          )
+        }
       }
-    }
-    if count != plan.old_count - 1 {
+    None =>
       findings.push(
         @transaction.validation_finding(
-          "docx.delete.readback_count",
+          "docx.delete.readback_part_missing",
           docx_validator_message(
-            "the candidate has \{count} direct paragraph(s); the plan expected \{plan.old_count - 1}",
+            "the candidate has no \{plan.part} to verify the cut against",
           ),
         ),
       )
+  }
+  let count = @word.docx_direct_body_paragraph_count(annotated) catch {
+    _ => {
+      findings.push(
+        @transaction.validation_finding(
+          "docx.delete.readback_uncounted", "the candidate's direct paragraphs could not be counted",
+        ),
+      )
+      return findings
     }
-    findings
-  })
+  }
+  if count != plan.old_count - 1 {
+    findings.push(
+      @transaction.validation_finding(
+        "docx.delete.readback_count",
+        docx_validator_message(
+          "the candidate has \{count} direct paragraph(s); the plan expected \{plan.old_count - 1}",
+        ),
+      ),
+    )
+  }
+  findings
 }
 
 ///|
@@ -294,12 +358,17 @@ pub async fn transact_docx_delete_paragraph(
           }
         None => ()
       }
+      let cut = receipt.cut()
       expected.val = Some({
         path: receipt.path(),
         para_id: receipt.para_id(),
         successor_para_id: receipt.successor_para_id(),
         successor_text: receipt.successor_text(),
         old_count,
+        part: cut.part(),
+        expected_part_length: cut.expected_length(),
+        joint_offset: cut.offset(),
+        joint: cut.joint(),
       })
       let report : DocxDeleteParagraphReport = {
         path: receipt.path(),

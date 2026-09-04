@@ -214,10 +214,19 @@ pub fn DocxAnnotatedResult::story_root_span(Self, String) -> NodeSpan?
 pub fn DocxAnnotatedResult::story_row_span(Self, String, String) -> NodeSpan?
 pub fn DocxAnnotatedResult::story_run_span(Self, String, String) -> NodeSpan?
 
+pub struct DocxDeleteCutWitness {
+  // private fields
+}
+pub fn DocxDeleteCutWitness::expected_length(Self) -> Int
+pub fn DocxDeleteCutWitness::joint(Self) -> Bytes
+pub fn DocxDeleteCutWitness::offset(Self) -> Int
+pub fn DocxDeleteCutWitness::part(Self) -> String
+
 pub struct DocxDeleteReceipt {
   // private fields
 }
 pub fn DocxDeleteReceipt::anchor_status(Self) -> String
+pub fn DocxDeleteReceipt::cut(Self) -> DocxDeleteCutWitness
 pub fn DocxDeleteReceipt::para_id(Self) -> String?
 pub fn DocxDeleteReceipt::path(Self) -> String
 pub fn DocxDeleteReceipt::successor_para_id(Self) -> String?

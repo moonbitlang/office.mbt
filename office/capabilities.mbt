@@ -1297,7 +1297,7 @@ pub fn capability_commands() -> Array[CapabilityCommand] {
           "stories_scanned", "array(string)", true, "the stories searched; /body in v1",
         ),
         capability_field(
-          "transaction", "object", true, "office.transaction/2 report; the shared mutation preflight refuses before planning, every structural hazard (section breaks, notes, comments, bookmarks, split fields, revisions, drawings, the final paragraph) refuses typed, and nothing is published on any refusal",
+          "transaction", "object", true, "office.transaction/2 report; the shared mutation preflight refuses before planning, and every structural hazard refuses typed — inside the paragraph: section breaks, notes, comments, bookmarks (only a wholly-internal _GoBack pair is exempt), range permissions, split fields, revisions, and anything referencing a package relationship (hyperlinks excepted); around it: the document-final paragraph, a paragraph separating two tables (deleting it would merge them), and a paragraph inside a field region whose boundaries lie elsewhere. The readback verifies the cut landed at exactly the planned bytes. Nothing is published on any refusal",
         ),
       ],
       output_modes: ["human", "json"],
