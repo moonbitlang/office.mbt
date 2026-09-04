@@ -295,17 +295,50 @@ test "deletion judges relationship references by URI" {
 }
 
 ///|
-/// A collided or revision-joined path is tombstoned by the anchor
-/// index; the planner refuses it rather than delete more or less than
-/// the receipt names.
-test "deletion refuses a path that does not address one whole paragraph" {
-  // A revision-joined pair: the second physical paragraph's path is
-  // never claimed, so p[2] must refuse rather than resolve oddly.
-  let annotated = delete_fixture(
-    "<w:p w14:paraId=\"00000001\"><w:r><w:t>a</w:t></w:r></w:p><w:p><w:r><w:t>b</w:t></w:r></w:p><w:p><w:r><w:t>keeper</w:t></w:r></w:p>",
+/// A deleted paragraph MARK joins two physical paragraphs into one
+/// logical paragraph. Neither half is a deletable target: the tail's
+/// path is claimed by nobody (tombstoned to None) and the head is
+/// `multi_physical`. Both refuse, and the physical count still sees
+/// all three — the readback compares physical counts on both sides,
+/// so a tombstoned story cannot truncate the walk and falsely refuse
+/// a sound deletion elsewhere.
+test "deletion refuses either half of a revision-joined paragraph" {
+  let joined = delete_fixture(
+    "<w:p><w:pPr><w:rPr><w:del w:id=\"1\" w:author=\"a\"/></w:rPr></w:pPr><w:r><w:t>head</w:t></w:r></w:p>" +
+    "<w:p><w:r><w:t>tail</w:t></w:r></w:p><w:p><w:r><w:t>keeper</w:t></w:r></w:p>",
   )
-  // Sanity: normal paths still plan.
-  ignore(@docx.plan_docx_paragraph_deletion(annotated, at="p[2]"))
-  // The tree count sees every direct paragraph, tombstones or not.
-  assert_eq(@docx.docx_direct_body_paragraph_count(annotated), 3)
+  let index = @docx.docx_paragraph_anchor_index(
+    joined,
+    joined.main_story_source(),
+  )
+  // The shape the refusals stand on, pinned so a reader change that
+  // removes the join surfaces here rather than silently weakening the
+  // tests below.
+  assert_true(index.anchor_at("p[2]") is None)
+  guard index.anchor_at("p[1]") is Some(head) else {
+    fail("expected the joined head to anchor")
+  }
+  assert_eq(head.status(), "multi_physical")
+  assert_true(
+    delete_refusal_of(joined, "p[2]").contains(
+      "does not address exactly one whole paragraph",
+    ),
+  )
+  // The head refuses on its own terms even though its subtree also
+  // carries the revision markup that caused the join.
+  assert_true(
+    delete_refusal_of(joined, "p[1]").contains("tracked-revision content"),
+  )
+  // The physical count is blind to tombstones, which is what the
+  // readback needs.
+  assert_eq(@docx.docx_direct_body_paragraph_count(joined), 3)
+  // And a `multi_physical` head refuses BY STATUS, proven where no
+  // revision markup sits in the target's own subtree: the second
+  // paragraph of a join whose mark-deletion lives in the first.
+  let deep = delete_fixture(
+    "<w:p><w:pPr><w:rPr><w:del w:id=\"1\" w:author=\"a\"/></w:rPr></w:pPr><w:r><w:t>one</w:t></w:r></w:p>" +
+    "<w:p><w:pPr><w:rPr><w:del w:id=\"2\" w:author=\"a\"/></w:rPr></w:pPr><w:r><w:t>two</w:t></w:r></w:p>" +
+    "<w:p><w:r><w:t>three</w:t></w:r></w:p><w:p><w:r><w:t>keeper</w:t></w:r></w:p>",
+  )
+  assert_true(delete_refusal_of(deep, "p[1]") != "<planned>")
 }

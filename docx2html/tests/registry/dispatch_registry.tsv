@@ -677,7 +677,7 @@ annotation_scan.mbt	bookmarkStart	scan_story,scan_tag	name	paragraph_delete_test
 annotation_scan.mbt	bookmarkEnd	scan_story	name	paragraph_delete_test:"deletion refusals are typed per construct"
 annotation_scan.mbt	name	scan_story	name	paragraph_delete_test:"deletion refusals are typed per construct"
 paragraph_delete.mbt	p	delete_blocked_construct,docx_direct_body_paragraph_count,plan_docx_paragraph_deletion	name	paragraph_delete_test:"deletion plans splice and read back without the deleted identity"; paragraph_delete_test:"deletion refuses a wrapped paragraph the path grammar flattens"; paragraph_delete_test:"deletion refusals are typed per construct"
-paragraph_delete.mbt	body	docx_direct_body_paragraph_count,plan_docx_paragraph_deletion	name	paragraph_delete_test:"deletion plans splice and read back without the deleted identity"; paragraph_delete_test:"deletion refuses a wrapped paragraph the path grammar flattens"; paragraph_delete_test:"deletion refuses a path that does not address one whole paragraph"
+paragraph_delete.mbt	body	docx_direct_body_paragraph_count,plan_docx_paragraph_deletion	name	paragraph_delete_test:"deletion plans splice and read back without the deleted identity"; paragraph_delete_test:"deletion refuses a wrapped paragraph the path grammar flattens"; paragraph_delete_test:"deletion refuses either half of a revision-joined paragraph"
 paragraph_delete.mbt	bookmarkStart	plan_docx_paragraph_deletion	name	paragraph_delete_test:"deletion refusals are typed per construct"
 paragraph_delete.mbt	bookmarkEnd	plan_docx_paragraph_deletion	name	paragraph_delete_test:"deletion refusals are typed per construct"
 paragraph_delete.mbt	_GoBack	plan_docx_paragraph_deletion	value	paragraph_delete_test:"deletion refusals are typed per construct"
@@ -701,3 +701,4 @@ paragraph_delete.mbt	a range-permission boundary	delete_blocked_construct	value	
 paragraph_delete.mbt	permStart	delete_blocked_construct	name	paragraph_delete_test:"deletion refusals are typed per construct"
 paragraph_delete.mbt	permEnd	delete_blocked_construct	name	paragraph_delete_test:"deletion refusals are typed per construct"
 paragraph_delete.mbt	hyperlink	plan_docx_paragraph_deletion	name	paragraph_delete_test:"deletion judges relationship references by URI"
+paragraph_delete.mbt	multi_physical	plan_docx_paragraph_deletion	value	paragraph_delete_test:"deletion refuses either half of a revision-joined paragraph"

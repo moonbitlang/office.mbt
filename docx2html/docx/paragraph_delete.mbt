@@ -269,6 +269,17 @@ pub fn plan_docx_paragraph_deletion(
       message="delete-paragraph target '\{at}' does not address exactly one whole paragraph in this document, so this deletion refuses",
     )
   }
+  // A `multi_physical` head is the FIRST half of a paragraph the reader
+  // joined across a deleted paragraph mark: splicing its physical span
+  // would delete part of one logical paragraph while the receipt named
+  // the whole. (The join is revision markup, so the subtree walk
+  // usually refuses first — this stands on its own so the guarantee
+  // does not depend on that coincidence.)
+  guard anchor.status() != "multi_physical" else {
+    raise Unsupported(
+      message="delete-paragraph target '\{at}' is one physical half of a paragraph joined across a deleted paragraph mark, so this deletion refuses",
+    )
+  }
   let para_id = if anchor.status() == "unique" {
     anchor.para_id()
   } else {
