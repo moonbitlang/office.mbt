@@ -302,6 +302,13 @@ priv struct ProjectionSourceBudget {
   // namespace declarations can otherwise stay under the character budget
   // while multiplying tuples, map entries, scope stacks, and declarations.
   mut retained_tokens_left : Int
+  // Bookmark names are an OPTIONAL capture added after the reader's
+  // ceilings were set, so they draw on their OWN allowance and never
+  // the shared one. Spending shared characters on them would let a
+  // bookmark-heavy document exhaust the pool a MANDATORY charge later
+  // needs — turning a capture nothing depends on into a read failure
+  // on a package that was readable before it existed.
+  mut bookmark_name_chars_left : Int
   max_depth : Int
   text_budget : TokenMapBudget
 }
@@ -311,6 +318,13 @@ let max_projection_source_elements : Int = 1_000_000
 
 ///|
 let max_projection_source_attribute_chars : Int = 8 * 1024 * 1024
+
+///|
+/// The optional bookmark-name allowance, separate from the shared
+/// retained-character pool so the capture cannot cost a document its
+/// readability. Generous for real documents — tens of thousands of
+/// cross-reference bookmarks — and bounded.
+let max_projection_bookmark_name_chars : Int = 2 * 1024 * 1024
 
 ///|
 let max_projection_source_retained_tokens : Int = 1_000_000
@@ -346,6 +360,7 @@ fn projection_source_budget(
   {
     elements_left: max_elements,
     retained_chars_left: max_attribute_chars,
+    bookmark_name_chars_left: max_projection_bookmark_name_chars,
     retained_tokens_left: max_retained_tokens,
     max_depth,
     text_budget: token_map_budget(max_text_bytes, max_text_tokens) catch {
@@ -369,14 +384,19 @@ fn ProjectionSourceBudget::charge_element(
 }
 
 ///|
-/// Whether the retained-character budget could absorb `chars`. An
-/// OPTIONAL capture asks this first and declines when it cannot: a
-/// document readable before that capture existed must stay readable.
-fn ProjectionSourceBudget::can_afford_retained_chars(
+/// Charge an OPTIONAL bookmark name against its own allowance,
+/// answering whether it fit. Declining costs the value and nothing
+/// else: a document readable before this capture existed stays
+/// readable, because the shared pool is never touched.
+fn ProjectionSourceBudget::charge_bookmark_name_chars(
   self : ProjectionSourceBudget,
   chars : Int,
 ) -> Bool {
-  chars >= 0 && chars <= self.retained_chars_left
+  guard chars >= 0 && chars <= self.bookmark_name_chars_left else {
+    return false
+  }
+  self.bookmark_name_chars_left -= chars
+  true
 }
 
 ///|
@@ -1426,9 +1446,14 @@ fn scan_story(
       }
       None => ()
     }
-    let (name, attributes, unretained_attribute_names, self_closing, tag_end) = scan_tag(
-      part, index, length, source_budget,
-    )
+    let (
+      name,
+      attributes,
+      unretained_attribute_names,
+      self_closing,
+      tag_end,
+      declined_bookmark_name,
+    ) = scan_tag(part, index, length, source_budget)
     // Namespace declarations bind before resolving this element's name.
     let declared : Array[String] = []
     let declared_prefixes : StableStringMap[Bool] = SortedMap([])
@@ -1560,7 +1585,13 @@ fn scan_story(
           } else {
             None
           },
-          bookmark_name_raw: if is_wml_uri(uri) && local_name == "bookmarkStart" {
+          // A DECLINED name reads as unknown, never as absent: the
+          // spelling that was dropped could be the one that makes an
+          // exemption ambiguous, and a gate must not be handed a
+          // cheaper answer than the document supports.
+          bookmark_name_raw: if is_wml_uri(uri) &&
+            local_name == "bookmarkStart" &&
+            !declined_bookmark_name {
             unique_attribute_value(attributes, "name", namespaces)
           } else {
             None
@@ -2329,7 +2360,7 @@ fn scan_tag(
   start : Int,
   length : Int,
   source_budget : ProjectionSourceBudget?,
-) -> (String, Array[(String, String)], Array[String], Bool, Int) raise DocxError {
+) -> (String, Array[(String, String)], Array[String], Bool, Int, Bool) raise DocxError {
   let mut at = start + 1
   let name_start = at
   while at < length && !is_name_end(part[at]) {
@@ -2362,6 +2393,11 @@ fn scan_tag(
   }
   let attributes : Array[(String, String)] = []
   let unretained_attribute_names : Array[String] = []
+  // Set when a bookmark name was DECLINED (over the per-token cap or
+  // past its allowance). A gate that reads the name must treat that as
+  // "unknown", never as "absent" — a declined spelling could be the one
+  // that makes an exemption ambiguous.
+  let declined_bookmark_name = Ref(false)
   let mut self_closing = false
   while at < length {
     // Skip whitespace.
@@ -2375,7 +2411,14 @@ fn scan_tag(
     }
     if part[at] == b'>' {
       at += 1
-      return (name, attributes, unretained_attribute_names, self_closing, at)
+      return (
+        name,
+        attributes,
+        unretained_attribute_names,
+        self_closing,
+        at,
+        declined_bookmark_name.val,
+      )
     }
     if part[at] == b'/' {
       match source_budget {
@@ -2385,7 +2428,14 @@ fn scan_tag(
               message="the projection source scanner found malformed self-closing-tag content",
             )
           }
-          return (name, attributes, unretained_attribute_names, true, at + 2)
+          return (
+            name,
+            attributes,
+            unretained_attribute_names,
+            true,
+            at + 2,
+            declined_bookmark_name.val,
+          )
         }
         None => ()
       }
@@ -2495,6 +2545,7 @@ fn scan_tag(
           source_budget is Some(_) &&
           !bytes_range_has_ascii_prefix(part, attr_start, attr_end, "xmlns:") &&
           bytes_range_has_ascii_suffix(part, attr_start, attr_end, ":name") {
+          declined_bookmark_name.val = true
           match validated_source_name {
             Some(candidate) => unretained_attribute_names.push(candidate)
             None => ()
@@ -2514,17 +2565,26 @@ fn scan_tag(
           let optional = element_is_bookmark_start &&
             !bytes_range_has_ascii_prefix(part, attr_start, attr_end, "xmlns:") &&
             bytes_range_has_ascii_suffix(part, attr_start, attr_end, ":name")
-          if optional && !budget.can_afford_retained_chars(at - value_start) {
-            match validated_source_name {
-              Some(candidate) => unretained_attribute_names.push(candidate)
-              None => ()
+          if optional {
+            // Its OWN allowance, so the shared pool a later MANDATORY
+            // charge needs is untouched either way. Declining records
+            // the QName as unretained (the namespace guard still sees
+            // it) and marks the element, so an ambiguity gate reading
+            // this attribute cannot mistake "declined" for "absent".
+            if !budget.charge_bookmark_name_chars(at - value_start) {
+              declined_bookmark_name.val = true
+              match validated_source_name {
+                Some(candidate) => unretained_attribute_names.push(candidate)
+                None => ()
+              }
+              at += 1
+              continue
             }
-            at += 1
-            continue
+          } else {
+            // The QName and its fixed-size retained slot were charged before
+            // the QName allocation above; only the value remains.
+            budget.charge_retained_chars(at - value_start)
           }
-          // The QName and its fixed-size retained slot were charged before the
-          // QName allocation above; only the value remains.
-          budget.charge_retained_chars(at - value_start)
         }
         None => ()
       }

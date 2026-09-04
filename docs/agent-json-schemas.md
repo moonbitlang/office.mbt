@@ -886,10 +886,12 @@ section breaks, note references, comment machinery, bookmark markers
 may share its id), range permissions, split field boundaries
 (`fldSimple` is permitted), the entire tracked-revision family, and any
 element referencing a package relationship (`w:hyperlink` alone
-excepted). Around it: the document-final paragraph, a paragraph
-separating two tables (deleting it would merge them into one), and a
-paragraph inside a field region whose boundaries live in other
-paragraphs. A target that is not exactly one whole logical paragraph —
+excepted). Around it: the document-final DIRECT body paragraph, a paragraph
+separating two tables (deleting it would merge them into one — judged
+on layout flow, so wrappers and zero-width markers between them do not
+hide it), a paragraph inside a field region whose boundaries live in
+other paragraphs, and a paragraph bracketed by a range its own siblings
+anchor (a comment, a permission, a tracked move, a named bookmark). A target that is not exactly one whole logical paragraph —
 a collided path, or half of one joined across a deleted paragraph mark
 — refuses too.
 
@@ -904,7 +906,8 @@ landed at exactly the bytes the plan named.
 | `schema` | string | `"office.docx.delete-paragraph/1"` |
 | `file`, `format`, `output` | string | input path, literal `"docx"`, destination |
 | `at` | string | the target as requested |
-| `expect_text` | string\|null | the asserted projection (bounded), null when not asserted |
+| `expect_text` | string\|null | the asserted projection, bounded at 160 characters; null when not asserted |
+| `expect_text_truncated` | boolean | whether that bound cut the echo — the assertion itself always compares the FULL projection |
 | `dry_run`, `changed` | boolean | request mode and whether bytes changed |
 | `deleted` | object | `{path, para_id, paragraph_anchor_status, text, text_truncated}` — what left, readback-verified gone. `text` is bounded at 160 characters and `text_truncated` says whether that cut it; `--expect-text` compares the FULL projection, so a truncated value is not a round-trippable guard (`office text --json` emits the untruncated projection) |
 | `successor_para_id` | string\|null | the stable identity now answering at the deleted path; null when the successor carries no unique identity |

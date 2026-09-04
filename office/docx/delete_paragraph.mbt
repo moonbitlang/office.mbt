@@ -114,10 +114,7 @@ priv struct DeleteReadbackExpectation {
   // Projection and identity both go blind when two adjacent paragraphs
   // read alike — deleting either leaves the same text at the same path
   // — so this is the leg that says WHICH paragraph left.
-  part : String
-  expected_part_length : Int
-  joint_offset : Int
-  joint : Bytes
+  cut : @word.DocxDeleteCutWitness
 }
 
 ///|
@@ -253,47 +250,36 @@ fn delete_readback_findings(
     }
     None => ()
   }
-  // The cut, verified at the bytes: the published part must be
-  // exactly the source with the planned span removed, proven at the
-  // seam the removal creates.
-  match archive.get(plan.part) {
+  // The cut, verified at the BYTES: the published part must be exactly
+  // the source with the planned span removed. Text and identity both go
+  // blind when two adjacent paragraphs read alike, so this is the leg
+  // that says which paragraph left.
+  match archive.get(plan.cut.part()) {
     Some(payload) =>
-      if payload.length() != plan.expected_part_length {
+      if !plan.cut.matches(payload[:]) {
         findings.push(
           @transaction.validation_finding(
-            "docx.delete.readback_cut_size",
+            "docx.delete.readback_cut",
             docx_validator_message(
-              "the published story part is \{payload.length()} bytes; removing the planned paragraph leaves \{plan.expected_part_length}",
+              "the published story part is not the source with the planned paragraph removed; the cut did not land where the plan said",
             ),
           ),
         )
-      } else if plan.joint.length() > 0 {
-        let mut matched = true
-        for offset in 0..<plan.joint.length() {
-          let at = plan.joint_offset + offset
-          if at < 0 ||
-            at >= payload.length() ||
-            payload[at] != plan.joint[offset] {
-            matched = false
-            break
-          }
-        }
-        if !matched {
-          findings.push(
-            @transaction.validation_finding(
-              "docx.delete.readback_cut_position",
-              docx_validator_message(
-                "the published story part does not read as planned across the cut; the removal did not land where the plan said",
-              ),
-            ),
-          )
-        }
       }
-    // A candidate without the main story part cannot reach here: the
-    // annotated re-read above fails first and returns
-    // `readback_unreadable`. Kept as a total match, not as a claim of
-    // coverage — no test asserts this arm, because none can reach it.
-    None => ()
+    // The re-read above resolves the story part through the
+    // officeDocument relationship and OPC identity; this lookup is an
+    // exact ZIP-entry match on the name the SOURCE snapshot used. A
+    // candidate where those disagree reaches here, and a cut this leg
+    // cannot verify is a finding, not a pass.
+    None =>
+      findings.push(
+        @transaction.validation_finding(
+          "docx.delete.readback_cut_unverifiable",
+          docx_validator_message(
+            "the candidate has no \{plan.cut.part()} entry, so the cut could not be verified",
+          ),
+        ),
+      )
   }
   let count = @word.docx_direct_body_paragraph_count(annotated) catch {
     _ => {
@@ -361,10 +347,7 @@ pub async fn transact_docx_delete_paragraph(
         successor_para_id: receipt.successor_para_id(),
         successor_text: receipt.successor_text(),
         old_count,
-        part: cut.part(),
-        expected_part_length: cut.expected_length(),
-        joint_offset: cut.offset(),
-        joint: cut.joint(),
+        cut,
       })
       let report : DocxDeleteParagraphReport = {
         path: receipt.path(),

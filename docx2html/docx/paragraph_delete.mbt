@@ -23,17 +23,18 @@ pub struct DocxDeleteReceipt {
 
 ///|
 /// What the published story part must read like once the cut lands:
-/// its exact length, and the bytes on either side of the removal made
-/// adjacent (bounded to a window, so a large story costs nothing to
-/// remember). Text and identity both go blind when two adjacent
-/// paragraphs read alike — deleting either leaves the same projection
-/// at the same path — so this is the evidence that says WHICH
-/// paragraph left.
+/// the source it is cut from, and the span removed. Text and identity
+/// both go blind when two adjacent paragraphs read alike — deleting
+/// either leaves the same projection at the same path — so this is the
+/// evidence that says WHICH paragraph left, and it is exact: the
+/// published part must equal the source with exactly this span gone,
+/// byte for byte. The source is the snapshot's own bytes, held by
+/// reference, so proving it costs a comparison and no copy.
 pub struct DocxDeleteCutWitness {
   priv part : String
-  priv expected_length : Int
-  priv offset : Int
-  priv joint : Bytes
+  priv source : BytesView
+  priv cut_start : Int
+  priv cut_end : Int
 }
 
 ///|
@@ -47,19 +48,26 @@ pub fn DocxDeleteCutWitness::part(self : DocxDeleteCutWitness) -> String {
 pub fn DocxDeleteCutWitness::expected_length(
   self : DocxDeleteCutWitness,
 ) -> Int {
-  self.expected_length
+  self.source.length() - (self.cut_end - self.cut_start)
 }
 
 ///|
-/// Byte offset into the published part where `joint` must appear.
-pub fn DocxDeleteCutWitness::offset(self : DocxDeleteCutWitness) -> Int {
-  self.offset
-}
-
-///|
-/// The bytes on either side of the removal, made adjacent by it.
-pub fn DocxDeleteCutWitness::joint(self : DocxDeleteCutWitness) -> Bytes {
-  self.joint
+/// Whether `candidate` is exactly the source with the planned span
+/// removed. Compared in place, so a large story costs no copy.
+pub fn DocxDeleteCutWitness::matches(
+  self : DocxDeleteCutWitness,
+  candidate : BytesView,
+) -> Bool {
+  guard candidate.length() == self.expected_length() else { return false }
+  for index in 0..<self.cut_start {
+    guard candidate[index] == self.source[index] else { return false }
+  }
+  let mut write = self.cut_start
+  for index in self.cut_end..<self.source.length() {
+    guard candidate[write] == self.source[index] else { return false }
+    write += 1
+  }
+  true
 }
 
 ///|
@@ -116,6 +124,176 @@ pub fn DocxDeleteReceipt::cut(self : DocxDeleteReceipt) -> DocxDeleteCutWitness 
 }
 
 ///|
+/// Whether an element is a DIRECT child of `w:body` on the physical
+/// tree. The path grammar flattens wrappers (`w:sdt`, `w:ins`,
+/// `mc:Fallback`…), so a path alone never proves this — every guard
+/// that must not splice inside a wrapper proves it here.
+fn is_direct_body_child(
+  elements : Array[ScannedElement],
+  element : ScannedElement,
+) -> Bool {
+  let parent = element.parent_index
+  guard parent >= 0 && parent < elements.length() else { return false }
+  let holder = elements[parent]
+  holder.local_name == "body" && is_wml_uri(holder.uri)
+}
+
+///|
+/// Ranges whose START lies before the target and whose END lies after
+/// it: the target sits inside a range anchored by its own siblings, so
+/// the subtree scan cannot see it, and removing the paragraph leaves
+/// that range anchoring nothing.
+///
+/// Every paired range family CT_Body admits is judged, keyed by
+/// (family, id) — the id spaces are INDEPENDENT, so a permission
+/// numbered 1 must not close a comment range numbered 1 — and a marker
+/// whose id cannot be read fails CLOSED, because outside the span is
+/// exactly where bracketing lives.
+fn bracketing_range_kind(
+  elements : Array[ScannedElement],
+  span : NodeSpan,
+) -> String? {
+  let opened : Map[String, String] = Map([])
+  let bracketing : Array[String] = []
+  for element in elements {
+    guard is_wml_uri(element.uri) else { continue }
+    let (family, starts) = match element.local_name {
+      "commentRangeStart" => ("comment", true)
+      "commentRangeEnd" => ("comment", false)
+      "permStart" => ("perm", true)
+      "permEnd" => ("perm", false)
+      "bookmarkStart" => ("bookmark", true)
+      "bookmarkEnd" => ("bookmark", false)
+      "moveFromRangeStart" => ("moveFrom", true)
+      "moveFromRangeEnd" => ("moveFrom", false)
+      "moveToRangeStart" => ("moveTo", true)
+      "moveToRangeEnd" => ("moveTo", false)
+      "customXmlInsRangeStart" => ("customXmlIns", true)
+      "customXmlInsRangeEnd" => ("customXmlIns", false)
+      "customXmlDelRangeStart" => ("customXmlDel", true)
+      "customXmlDelRangeEnd" => ("customXmlDel", false)
+      "customXmlMoveFromRangeStart" => ("customXmlMoveFrom", true)
+      "customXmlMoveFromRangeEnd" => ("customXmlMoveFrom", false)
+      "customXmlMoveToRangeStart" => ("customXmlMoveTo", true)
+      "customXmlMoveToRangeEnd" => ("customXmlMoveTo", false)
+      _ => continue
+    }
+    let inside = element.byte_start >= span.byte_start() &&
+      element.byte_end <= span.byte_end()
+    if inside {
+      continue
+    }
+    guard element.bookmark_id_raw is Some(id) else {
+      // Unpairable: a marker outside the target whose id cannot be
+      // read could be the half of a range that brackets it, and this
+      // verb does not guess about ranges it cannot judge.
+      return Some(range_family_label(family))
+    }
+    let key = family + "\u{1}" + id
+    if element.byte_end <= span.byte_start() {
+      if starts {
+        opened[key] = family
+      } else {
+        opened.remove(key)
+      }
+    } else if element.byte_start >= span.byte_end() && !starts {
+      match opened.get(key) {
+        // A `_GoBack` cursor bookmark bracketing the target is Word's
+        // caret, not an anchor anything references.
+        Some(open_family) =>
+          if !(open_family == "bookmark" &&
+            bookmark_name_at(elements, key, "_GoBack")) {
+            bracketing.push(open_family)
+          }
+        None => ()
+      }
+    }
+  }
+  // Deterministic: the message must not depend on hash order.
+  bracketing.sort()
+  match bracketing.get(0) {
+    Some(family) => Some(range_family_label(family))
+    None => None
+  }
+}
+
+///|
+/// Whether the bookmark start keyed by `key` names `expected`.
+fn bookmark_name_at(
+  elements : Array[ScannedElement],
+  key : String,
+  expected : String,
+) -> Bool {
+  for element in elements {
+    if is_wml_uri(element.uri) &&
+      element.local_name == "bookmarkStart" &&
+      element.bookmark_id_raw is Some(id) &&
+      "bookmark\u{1}" + id == key {
+      return element.bookmark_name_raw is Some(name) && name == expected
+    }
+  }
+  false
+}
+
+///|
+fn range_family_label(family : String) -> String {
+  match family {
+    "comment" => "a comment range"
+    "perm" => "a range permission"
+    "bookmark" => "a bookmark range"
+    _ => "a tracked-revision range"
+  }
+}
+
+///|
+/// The body's FLOW: the blocks a consumer lays out, read the way the
+/// projection reads them. This is an ALLOW-LIST on purpose — exactly
+/// `w:p` and `w:tbl` are flow — because the question it answers is
+/// "what would touch what if this block left", and everything else in
+/// a body (a content control's `w:sdtPr`, a `w:customXml` wrapper, an
+/// `mc:Choice`, every range marker, anything a future WML adds)
+/// occupies no layout space between two blocks that would otherwise be
+/// adjacent. A deny-list here was inert on the very shape Word emits.
+///
+/// Content inside a transparent wrapper IS body flow — the projection
+/// already gives it a body-level path — so the walk to the body climbs
+/// through wrappers.
+fn body_flow_kind(elements : Array[ScannedElement], index : Int) -> String? {
+  let element = elements[index]
+  guard is_wml_uri(element.uri) else { return None }
+  let kind = match element.local_name {
+    "p" => "p"
+    "tbl" => "tbl"
+    _ => return None
+  }
+  let mut parent = element.parent_index
+  while parent >= 0 && parent < elements.length() {
+    let holder = elements[parent]
+    if is_layout_transparent(holder.uri, holder.local_name) {
+      parent = holder.parent_index
+      continue
+    }
+    guard holder.local_name == "body" && is_wml_uri(holder.uri) else {
+      return None
+    }
+    return Some(kind)
+  }
+  None
+}
+
+///|
+/// Wrappers that contribute no LAYOUT of their own, so the blocks
+/// inside them are the blocks a consumer sees touching. This is a
+/// superset of the reader's transparent containers — `w:customXml`
+/// does not flatten in the path space but a table inside one is still
+/// the table that would merge — because the question here is
+/// adjacency, not addressing.
+fn is_layout_transparent(uri : String, local_name : String) -> Bool {
+  is_transparent_container(uri, local_name) ||
+  (is_wml_uri(uri) && local_name is ("customXml" | "bdo" | "dir"))
+}
+
+///|
 /// The subtree hazards a v1 deletion refuses. The model is three
 /// MECHANICALLY CLOSED classes plus the paragraph's own structure —
 /// not a hand-copied vocabulary that rots as WML grows:
@@ -148,122 +326,6 @@ pub fn DocxDeleteReceipt::cut(self : DocxDeleteReceipt) -> DocxDeleteCutWitness 
 /// than the receipt names. Constructs outside every class — plain
 /// formatting, text, `fldSimple`, ruby, smart tags — die wholly with
 /// the paragraph and dangle nothing.
-fn is_direct_body_child(
-  elements : Array[ScannedElement],
-  element : ScannedElement,
-) -> Bool {
-  let parent = element.parent_index
-  guard parent >= 0 && parent < elements.length() else { return false }
-  let holder = elements[parent]
-  holder.local_name == "body" && is_wml_uri(holder.uri)
-}
-
-///|
-/// Range ids whose START lies before the target and whose END lies
-/// after it: the target sits inside a comment or permission range
-/// anchored by its own siblings, and removing it leaves that range
-/// anchoring nothing.
-fn bracketing_range_ids(
-  elements : Array[ScannedElement],
-  span : NodeSpan,
-) -> Map[String, String] {
-  let opened : Map[String, String] = Map([])
-  let bracketing : Map[String, String] = Map([])
-  for element in elements {
-    guard is_wml_uri(element.uri) else { continue }
-    let kind = match element.local_name {
-      "commentRangeStart" | "commentRangeEnd" => "a comment range"
-      "permStart" | "permEnd" => "a range permission"
-      _ => continue
-    }
-    guard element.bookmark_id_raw is Some(id) else {
-      // An unidentifiable marker cannot be paired; the subtree scan
-      // refuses it when it is inside, and outside it is not ours.
-      continue
-    }
-    let starts = element.local_name is ("commentRangeStart" | "permStart")
-    if element.byte_end <= span.byte_start() {
-      if starts {
-        opened[id] = kind
-      } else {
-        opened.remove(id)
-      }
-    } else if element.byte_start >= span.byte_end() {
-      if !starts && opened.get(id) is Some(open_kind) {
-        bracketing[id] = open_kind
-      }
-    }
-  }
-  bracketing
-}
-
-///|
-/// Whether an element is BODY FLOW: content a consumer lays out, read
-/// the way the projection reads it. A transparent wrapper is not flow
-/// itself — its content is — and the zero-width range markers CT_Body
-/// admits between blocks are not flow either: two blocks separated
-/// only by them still touch.
-fn is_body_flow_element(elements : Array[ScannedElement], index : Int) -> Bool {
-  let element = elements[index]
-  guard is_wml_uri(element.uri) || element.uri == MC_URI else { return false }
-  guard !is_transparent_container(element.uri, element.local_name) else {
-    return false
-  }
-  guard !is_zero_width_body_marker(element.uri, element.local_name) else {
-    return false
-  }
-  // Its nearest non-transparent ancestor must be the body: content
-  // inside a wrapper IS body flow, content inside a table cell is not.
-  let mut parent = element.parent_index
-  while parent >= 0 && parent < elements.length() {
-    let holder = elements[parent]
-    if is_transparent_container(holder.uri, holder.local_name) {
-      parent = holder.parent_index
-      continue
-    }
-    return holder.local_name == "body" && is_wml_uri(holder.uri)
-  }
-  false
-}
-
-///|
-/// The flow kind an element contributes — a paragraph, a table, or
-/// something else this verb does not reason about.
-fn flow_kind(elements : Array[ScannedElement], index : Int) -> String {
-  let element = elements[index]
-  guard is_wml_uri(element.uri) else { return "other" }
-  match element.local_name {
-    "p" => "p"
-    "tbl" => "tbl"
-    _ => "other"
-  }
-}
-
-///|
-/// Range markers CT_Body admits directly between blocks. They occupy
-/// no layout space, so they never separate two blocks that would
-/// otherwise be adjacent.
-fn is_zero_width_body_marker(uri : String, local_name : String) -> Bool {
-  is_wml_uri(uri) &&
-  local_name
-  is ("bookmarkStart"
-  | "bookmarkEnd"
-  | "commentRangeStart"
-  | "commentRangeEnd"
-  | "permStart"
-  | "permEnd"
-  | "proofErr"
-  | "moveFromRangeStart"
-  | "moveFromRangeEnd"
-  | "moveToRangeStart"
-  | "moveToRangeEnd"
-  | "customXmlInsRangeStart"
-  | "customXmlInsRangeEnd"
-  | "customXmlDelRangeStart"
-  | "customXmlDelRangeEnd")
-}
-
-///|
 fn delete_blocked_construct(uri : String, local_name : String) -> String? {
   if is_revision_site_name(uri, local_name) {
     return Some("tracked-revision content")
@@ -279,6 +341,11 @@ fn delete_blocked_construct(uri : String, local_name : String) -> String? {
     | "conflictInsDel") {
     return Some("tracked-revision content")
   }
+  // Gated on WML like every neighbouring judgment: a foreign
+  // `x:object` or `ns:sectPr` is not the construct this class names,
+  // and refusing it would be a false refusal reported with the wrong
+  // reason.
+  guard is_wml_uri(uri) else { return None }
   match local_name {
     "sectPr" => Some("a section break")
     "p" => Some("a nested paragraph")
@@ -354,22 +421,22 @@ pub fn plan_docx_paragraph_deletion(
   // which is where the wrapped content actually lives, and past the
   // zero-width range markers CT_Body admits between blocks, which
   // occupy no space between two blocks that would otherwise touch.
-  let flow_children : Array[Int] = []
+  let flow_children : Array[String] = []
   let mut target_position = -1
   for index, _ in elements {
-    guard is_body_flow_element(elements, index) else { continue }
+    guard body_flow_kind(elements, index) is Some(kind) else { continue }
     if index == target_index {
       target_position = flow_children.length()
     }
-    flow_children.push(index)
+    flow_children.push(kind)
   }
   // Two adjacent `w:tbl` elements are ONE table to a consumer. A
   // paragraph between two tables is the separator that keeps them
   // apart, and deleting it silently merges them — a structural change
   // no readback of paragraph identity would notice.
   if target_position > 0 && target_position + 1 < flow_children.length() {
-    let before = flow_kind(elements, flow_children[target_position - 1])
-    let after = flow_kind(elements, flow_children[target_position + 1])
+    let before = flow_children[target_position - 1]
+    let after = flow_children[target_position + 1]
     if before == "tbl" && after == "tbl" {
       raise Unsupported(
         message="delete-paragraph target '\{at}' separates two tables; deleting it would merge them into one, so this deletion refuses",
@@ -399,16 +466,29 @@ pub fn plan_docx_paragraph_deletion(
     // orphan `begin` — which Word tolerates — would otherwise poison
     // every later paragraph in the story with a refusal naming a
     // field that does not exist.
+    // The region open AT the target must be the one that closes: an
+    // unrelated well-formed field later in the story (a page number, a
+    // TOC — nearly every document has one) is not this region closing,
+    // and treating it as one refuses every paragraph after a stray
+    // `begin` Word tolerates.
     let mut closes_after = false
+    let mut depth = field_depth
     for element in elements {
       if element.byte_start < span.byte_end() {
         continue
       }
-      if is_wml_uri(element.uri) &&
-        element.local_name == "fldChar" &&
-        element.field_char_type is Some("end") {
-        closes_after = true
-        break
+      if is_wml_uri(element.uri) && element.local_name == "fldChar" {
+        match element.field_char_type {
+          Some("begin") => depth += 1
+          Some("end") => {
+            depth -= 1
+            if depth < field_depth {
+              closes_after = true
+              break
+            }
+          }
+          _ => ()
+        }
       }
     }
     guard !closes_after else {
@@ -422,11 +502,12 @@ pub fn plan_docx_paragraph_deletion(
   // follows. The subtree scan below cannot see them — they are not
   // inside the span — and deleting the paragraph empties the range
   // they anchor.
-  for id, kinds in bracketing_range_ids(elements, span) {
-    ignore(id)
-    raise Unsupported(
-      message="delete-paragraph target '\{at}' is bracketed by \{kinds}; deleting it would empty that range, so this deletion refuses",
-    )
+  match bracketing_range_kind(elements, span) {
+    Some(kind) =>
+      raise Unsupported(
+        message="delete-paragraph target '\{at}' is bracketed by \{kind}; deleting it would empty that range, so this deletion refuses",
+      )
+    None => ()
   }
   // Subtree hazards: every element inside the paragraph's byte span is
   // part of what the deletion removes.
@@ -533,12 +614,26 @@ pub fn plan_docx_paragraph_deletion(
   // A successor is a paragraph that ANSWERS at the next path — the
   // same flattened surface the receipt reports and the readback
   // re-reads, so the two cannot disagree about whether one exists.
-  let successor_exists = docx_paragraph_projection(
-      annotated,
-      annotated.main_story_source(),
-      path="p[\{ordinal + 1}]",
-    )
-    is Some(_)
+  // Two different questions, deliberately asked on two surfaces:
+  //
+  // "Will the body still have a direct paragraph?" is STRUCTURAL, so it
+  // is asked of the physical tree — a paragraph nested in a content
+  // control does not keep the body's last direct paragraph company, and
+  // a body whose last flow child is a table still needs its trailing
+  // one. (The receipt's successor identity and text are the FLATTENED
+  // question, asked below, because that is what re-anchors at the
+  // deleted path.)
+  let mut successor_exists = false
+  for index, element in elements {
+    if index != target_index &&
+      element.local_name == "p" &&
+      is_wml_uri(element.uri) &&
+      element.byte_start >= span.byte_end() &&
+      is_direct_body_child(elements, element) {
+      successor_exists = true
+      break
+    }
+  }
   // The document-final direct body paragraph is structural: Word keeps
   // one, and a body whose last flow child is a table still needs its
   // trailing paragraph. No successor -> refuse.
@@ -599,33 +694,6 @@ pub fn plan_docx_paragraph_deletion(
       message="delete-paragraph target '\{at}' has no readable projection in this document, so this deletion refuses",
     )
   }
-  // The joint the cut creates: the bytes on either side of the removal
-  // made adjacent, in a bounded window. The transaction verifies the
-  // published part reads exactly this way at exactly this offset, which
-  // is the only evidence that survives when adjacent paragraphs read
-  // alike.
-  let window = 64
-  let joint_offset = if span.byte_start() > window {
-    span.byte_start() - window
-  } else {
-    0
-  }
-  let joint_after_end = if span.byte_end() + window < bytes.length() {
-    span.byte_end() + window
-  } else {
-    bytes.length()
-  }
-  let joint_length = span.byte_start() -
-    joint_offset +
-    (joint_after_end - span.byte_end())
-  let joint_buffer : Array[Byte] = Array(capacity=joint_length)
-  for index in joint_offset..<span.byte_start() {
-    joint_buffer.push(bytes[index])
-  }
-  for index in span.byte_end()..<joint_after_end {
-    joint_buffer.push(bytes[index])
-  }
-  let joint_bytes = Bytes::from_array(joint_buffer)
   let plan = @splice.SplicePlan::new()
   plan.pin_part(part, bytes)
   plan.edit_part(
@@ -648,9 +716,9 @@ pub fn plan_docx_paragraph_deletion(
       successor_text,
       cut: {
         part,
-        expected_length: bytes.length() - (span.byte_end() - span.byte_start()),
-        offset: joint_offset,
-        joint: joint_bytes,
+        source: bytes,
+        cut_start: span.byte_start(),
+        cut_end: span.byte_end(),
       },
     },
   )

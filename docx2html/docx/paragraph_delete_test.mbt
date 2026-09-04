@@ -405,17 +405,143 @@ test "deletion refuses a paragraph a sibling range brackets" {
 }
 
 ///|
-/// The successor is judged on the SAME flattened surface the receipt
-/// reports and the readback re-reads, so a wrapped following paragraph
-/// is a successor — not a reason to call the target document-final.
-test "a wrapped successor is still a successor" {
-  let annotated = delete_fixture(
+/// Two questions, two surfaces, and the difference matters both ways.
+///
+/// "Will the body still have a direct paragraph?" is STRUCTURAL: a
+/// paragraph nested in a content control does not keep the body's last
+/// direct one company, so deleting the only direct paragraph refuses
+/// even though the flattened path space still shows a successor.
+///
+/// "Who answers at the deleted path?" is FLATTENED: that IS the wrapped
+/// paragraph, and the receipt reports its text, because that is what an
+/// agent must re-anchor on.
+test "the final-paragraph guard is structural, the successor is flattened" {
+  let wrapped_only = delete_fixture(
     "<w:p><w:r><w:t>target</w:t></w:r></w:p>" +
     "<w:sdt><w:sdtContent><w:p><w:r><w:t>next</w:t></w:r></w:p></w:sdtContent></w:sdt>",
   )
-  let (_, receipt) = @docx.plan_docx_paragraph_deletion(annotated, at="p[1]")
+  assert_true(
+    delete_refusal_of(wrapped_only, "p[1]").contains(
+      "final direct body paragraph",
+    ),
+  )
+  // With a direct paragraph further on, the deletion proceeds — and the
+  // receipt names the WRAPPED paragraph as the successor, because that
+  // is the one that answers at the deleted path afterwards.
+  let both = delete_fixture(
+    "<w:p><w:r><w:t>target</w:t></w:r></w:p>" +
+    "<w:sdt><w:sdtContent><w:p><w:r><w:t>wrapped</w:t></w:r></w:p></w:sdtContent></w:sdt>" +
+    "<w:p><w:r><w:t>keeper</w:t></w:r></w:p>",
+  )
+  let (_, receipt) = @docx.plan_docx_paragraph_deletion(both, at="p[1]")
   assert_eq(receipt.text(), "target")
-  assert_eq(receipt.successor_text(), Some("next"))
+  assert_eq(receipt.successor_text(), Some("wrapped"))
+}
+
+///|
+/// Flow is an ALLOW-LIST, so the shapes Word actually emits cannot slip
+/// between a paragraph and its neighbouring table: a content control
+/// carries `w:sdtPr` before its content, and none of that is flow.
+test "flow sees past the markup Word puts between blocks" {
+  let table = "<w:tbl><w:tr><w:tc><w:p><w:r><w:t>cell</w:t></w:r></w:p></w:tc></w:tr></w:tbl>"
+  let keeper = "<w:p><w:r><w:t>keeper</w:t></w:r></w:p>"
+  let shapes = [
+    // a real content control, properties and all
+    "<w:sdt><w:sdtPr><w:id w:val=\"1\"/></w:sdtPr><w:sdtContent>" +
+    table +
+    "</w:sdtContent></w:sdt>",
+    // a customXml wrapper
+    "<w:customXml w:element=\"x\">" + table + "</w:customXml>",
+    // compatibility alternatives
+    "<mc:AlternateContent xmlns:mc=\"http://schemas.openxmlformats.org/markup-compatibility/2006\"><mc:Fallback>" +
+    table +
+    "</mc:Fallback></mc:AlternateContent>",
+  ]
+  for shape in shapes {
+    let annotated = delete_fixture(table + "<w:p/>" + shape + keeper)
+    assert_true(
+      delete_refusal_of(annotated, "p[1]").contains("separates two tables"),
+      msg="a table behind " + shape[0:12].to_owned() + " is still a table",
+    )
+  }
+  // And a marker between blocks is not flow either.
+  let marked = delete_fixture(
+    table +
+    "<w:customXmlMoveFromRangeStart w:id=\"3\" w:name=\"x\"/><w:p/>" +
+    table +
+    keeper,
+  )
+  assert_true(
+    delete_refusal_of(marked, "p[1]").contains("separates two tables"),
+  )
+}
+
+///|
+/// Range families have INDEPENDENT id spaces: a permission numbered 1
+/// must neither close a comment range numbered 1 nor fabricate one.
+test "bracketing ranges do not cross families" {
+  let keeper = "<w:p><w:r><w:t>keeper</w:t></w:r></w:p>"
+  // A permission pair sharing id 1 must not clear the open comment
+  // range that actually brackets the target.
+  let crossed = delete_fixture(
+    "<w:commentRangeStart w:id=\"1\"/><w:permStart w:id=\"1\" w:edGrp=\"everyone\"/><w:permEnd w:id=\"1\"/>" +
+    "<w:p><w:r><w:t>target</w:t></w:r></w:p><w:commentRangeEnd w:id=\"1\"/>" +
+    keeper,
+  )
+  assert_true(delete_refusal_of(crossed, "p[1]").contains("a comment range"))
+  // A cross-family pair is not a range at all.
+  let mismatched = delete_fixture(
+    "<w:permStart w:id=\"1\" w:edGrp=\"everyone\"/><w:p><w:r><w:t>target</w:t></w:r></w:p><w:commentRangeEnd w:id=\"1\"/>" +
+    keeper,
+  )
+  let mismatched_refusal = delete_refusal_of(mismatched, "p[1]")
+  assert_true(!mismatched_refusal.contains("a comment range"))
+  // Every paired family is judged, not just comments and permissions.
+  for
+    pair in [
+      ("moveFromRangeStart", "moveFromRangeEnd"),
+      ("moveToRangeStart", "moveToRangeEnd"),
+      ("customXmlInsRangeStart", "customXmlInsRangeEnd"),
+    ] {
+    let (open_name, close_name) = pair
+    let annotated = delete_fixture(
+      "<w:\{open_name} w:id=\"1\" w:name=\"m\"/><w:p><w:r><w:t>target</w:t></w:r></w:p><w:\{close_name} w:id=\"1\"/>" +
+      keeper,
+    )
+    assert_true(
+      delete_refusal_of(annotated, "p[1]").contains("bracketed by"),
+      msg="expected a bracketing refusal for \{open_name}",
+    )
+  }
+  // A named bookmark bracketing the target refuses; Word's _GoBack
+  // caret does not.
+  let bookmarked = delete_fixture(
+    "<w:bookmarkStart w:id=\"1\" w:name=\"Chapter\"/><w:p><w:r><w:t>target</w:t></w:r></w:p><w:bookmarkEnd w:id=\"1\"/>" +
+    keeper,
+  )
+  assert_true(
+    delete_refusal_of(bookmarked, "p[1]").contains("a bookmark range"),
+  )
+  let caret = delete_fixture(
+    "<w:bookmarkStart w:id=\"1\" w:name=\"_GoBack\"/><w:p><w:r><w:t>target</w:t></w:r></w:p><w:bookmarkEnd w:id=\"1\"/>" +
+    keeper,
+  )
+  assert_eq(delete_refusal_of(caret, "p[1]"), "<planned>")
+}
+
+///|
+/// A field region only truncates if the region open AT the target is
+/// the one that closes after it: an orphan `begin` plus an ordinary
+/// later field (a page number — nearly every document has one) must not
+/// refuse every paragraph in between.
+test "an unrelated later field does not close an orphan region" {
+  let annotated = delete_fixture(
+    "<w:p><w:r><w:fldChar w:fldCharType=\"begin\"/></w:r></w:p>" +
+    "<w:p><w:r><w:t>plain</w:t></w:r></w:p>" +
+    "<w:p><w:r><w:fldChar w:fldCharType=\"begin\"/></w:r><w:r><w:instrText>PAGE</w:instrText></w:r><w:r><w:fldChar w:fldCharType=\"end\"/></w:r></w:p>" +
+    "<w:p><w:r><w:t>keeper</w:t></w:r></w:p>",
+  )
+  assert_eq(delete_refusal_of(annotated, "p[2]"), "<planned>")
 }
 
 ///|
@@ -424,7 +550,10 @@ test "a wrapped successor is still a successor" {
 /// all the same.
 test "deletion refuses w14 conflict revisions" {
   let keeper = "<w:p><w:r><w:t>keeper</w:t></w:r></w:p>"
-  for construct in ["conflictIns", "conflictDel"] {
+  for
+    construct in [
+      "conflictIns", "conflictDel", "conflictInsDel", "conflictMoveFrom", "conflictMoveTo",
+    ] {
     let annotated = delete_fixture(
       "<w:p xmlns:w14=\"http://schemas.microsoft.com/office/word/2010/wordml\"><w14:\{construct}><w:r><w:t>x</w:t></w:r></w14:\{construct}></w:p>" +
       keeper,

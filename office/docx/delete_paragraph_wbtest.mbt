@@ -4,7 +4,11 @@
 ///|
 /// Build a real published candidate and the plan's own expectation,
 /// then hand both to the readback so a test can bend either.
-async fn delete_readback_case() -> (@zip.Archive, DeleteReadbackExpectation) {
+async fn delete_readback_case() -> (
+  @zip.Archive,
+  @word.DocxAnnotatedResult,
+  DeleteReadbackExpectation,
+) {
   @async.with_task_group() <| group => {
     let directory = @afs.tmpdir(prefix="office-delrb-")
     group.add_defer() <| () => {
@@ -53,16 +57,14 @@ async fn delete_readback_case() -> (@zip.Archive, DeleteReadbackExpectation) {
     ignore(result)
     (
       published,
+      source,
       {
         path: receipt.path(),
         para_id: receipt.para_id(),
         successor_para_id: receipt.successor_para_id(),
         successor_text: receipt.successor_text(),
         old_count: @word.docx_direct_body_paragraph_count(source),
-        part: cut.part(),
-        expected_part_length: cut.expected_length(),
-        joint_offset: cut.offset(),
-        joint: cut.joint(),
+        cut,
       },
     )
   }
@@ -73,31 +75,24 @@ async fn delete_readback_case() -> (@zip.Archive, DeleteReadbackExpectation) {
 /// the cut landed is caught — including the one text and identity
 /// cannot see, where the neighbour reads identically.
 async test "the delete readback catches a cut that did not land as planned" {
-  let (candidate, honest) = delete_readback_case()
+  let (candidate, source_snapshot, honest) = delete_readback_case()
   assert_eq(delete_readback_findings(Some(honest), Docx, candidate).length(), 0)
-  // The size leg: a part of the wrong length is a different removal.
-  let wrong_size = {
-    ..honest,
-    expected_part_length: honest.expected_part_length - 1,
-  }
-  let size_findings = delete_readback_findings(
-    Some(wrong_size),
+  // A cut that removed the NEIGHBOUR instead: the same byte count, the
+  // same resulting text at the same path, on a document whose first two
+  // paragraphs read alike. Projection and identity cannot tell these
+  // apart — the bytes can.
+  let (_, neighbour) = @word.plan_docx_paragraph_deletion(
+    source_snapshot,
+    at="p[2]",
+  )
+  let wrong_paragraph = { ..honest, cut: neighbour.cut(), }
+  let wrong_findings = delete_readback_findings(
+    Some(wrong_paragraph),
     Docx,
     candidate,
   )
-  assert_eq(size_findings.length(), 1)
-  assert_eq(size_findings[0].code, "docx.delete.readback_cut_size")
-  // The position leg: the same number of bytes removed from somewhere
-  // else. This is the case the identical-neighbour document makes
-  // invisible to projection and identity alike.
-  let wrong_place = { ..honest, joint_offset: honest.joint_offset + 8, }
-  let place_findings = delete_readback_findings(
-    Some(wrong_place),
-    Docx,
-    candidate,
-  )
-  assert_eq(place_findings.length(), 1)
-  assert_eq(place_findings[0].code, "docx.delete.readback_cut_position")
+  assert_eq(wrong_findings.length(), 1)
+  assert_eq(wrong_findings[0].code, "docx.delete.readback_cut")
   // A candidate missing the story part entirely.
   let empty = @zip.Archive()
   let missing = delete_readback_findings(Some(honest), Docx, empty)

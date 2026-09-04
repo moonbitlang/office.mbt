@@ -218,8 +218,7 @@ pub struct DocxDeleteCutWitness {
   // private fields
 }
 pub fn DocxDeleteCutWitness::expected_length(Self) -> Int
-pub fn DocxDeleteCutWitness::joint(Self) -> Bytes
-pub fn DocxDeleteCutWitness::offset(Self) -> Int
+pub fn DocxDeleteCutWitness::matches(Self, BytesView) -> Bool
 pub fn DocxDeleteCutWitness::part(Self) -> String
 
 pub struct DocxDeleteReceipt {
