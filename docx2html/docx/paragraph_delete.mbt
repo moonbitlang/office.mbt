@@ -145,186 +145,6 @@ fn is_direct_body_child(
 }
 
 ///|
-/// Whether any paired RANGE is open across the target: a range whose
-/// start lies before it and whose end lies after it, in any of the
-/// families CT_Body admits as a paragraph's own siblings (comments,
-/// range permissions, bookmarks, tracked moves, customXml revision
-/// ranges). Deleting a paragraph such a range spans takes content the
-/// range anchors, and the markers are not inside the span, so the
-/// subtree walk cannot see them.
-///
-/// This counts DEPTH per family and never reads an id or a name. The
-/// pairing model it replaces read both, and every review round found
-/// another way for that to be wrong: ids that repeat, ids spelled `01`
-/// and `1`, ids a producer left unreadable, names resolved from the
-/// wrong marker, and a name lookup that turned the walk quadratic. A
-/// counter has none of those failure modes.
-///
-/// The depth walk mirrors the field-region one exactly, and for the
-/// same two reasons. An end with nothing open is UNPAIRABLE — refuse,
-/// rather than let it cancel a range that genuinely is open (clamping
-/// to zero was the unsafe direction). And a range only counts as open
-/// ACROSS the target when the depth after it falls BELOW the depth at
-/// it — otherwise one unclosed start earlier in the story would make
-/// the next end anywhere later refuse every paragraph in between.
-fn open_range_across(
-  elements : Array[ScannedElement],
-  span : NodeSpan,
-) -> String? {
-  let depth : Map[String, Int] = Map([])
-  let unbalanced : Array[String] = []
-  let ends_inside : Array[String] = []
-  // Pass zero: does each family BALANCE across the whole story? Depth
-  // counting reads no ids, so it cannot tell which range an end closes
-  // — an end belonging to one bookmark cancels another's start just as
-  // well. That is only possible in a story whose markers do not
-  // balance, so an unbalanced family means "this cannot be judged",
-  // and this verb refuses what it cannot judge. (0 of 591 documents in
-  // the corpus sample carry an unbalanced range marker.)
-  let totals : Map[String, Int] = Map([])
-  let lowest : Map[String, Int] = Map([])
-  let before_target : Map[String, Bool] = Map([])
-  let after_target : Map[String, Bool] = Map([])
-  for element in elements {
-    guard range_family_of(element) is Some((family, starts)) else { continue }
-    let current = totals.get(family).unwrap_or(0)
-    let next = if starts { current + 1 } else { current - 1 }
-    totals[family] = next
-    // The running MINIMUM catches what a total cannot: an end before
-    // its start nets to zero across the story while genuinely leaving
-    // a range unpairable at the point it matters.
-    if next < lowest.get(family).unwrap_or(0) {
-      lowest[family] = next
-    }
-    if element.byte_end <= span.byte_start() {
-      before_target[family] = true
-    } else if element.byte_start >= span.byte_end() {
-      after_target[family] = true
-    }
-  }
-  for family, total in totals {
-    // Unpairable markers only matter when they could reach the target:
-    // a family whose markers all sit on ONE side of it cannot have a
-    // range spanning it, whatever its totals say. Refusing those too
-    // would take the whole document out over a stray marker nowhere
-    // near the edit.
-    let straddles = before_target.get(family).unwrap_or(false) &&
-      after_target.get(family).unwrap_or(false)
-    let inverted = lowest.get(family).unwrap_or(0) < 0
-    if (total != 0 || inverted) && straddles && !unbalanced.contains(family) {
-      unbalanced.push(family)
-    }
-  }
-  if unbalanced.length() > 0 {
-    unbalanced.sort()
-    // Fail CLOSED: `None` here means "no hazard, proceed with the
-    // irreversible deletion", which is never the right answer from
-    // inside a hazard detector that just found one.
-    let family = unbalanced.get(0).unwrap_or("a range")
-    return Some(
-      "this story's range markers do not balance (\{family}), so which content a range covers cannot be judged",
-    )
-  }
-  // Pass one: the depth each family stands at when the target begins.
-  for element in elements {
-    guard range_family_of(element) is Some((family, starts)) else { continue }
-    let inside = element.byte_start >= span.byte_start() &&
-      element.byte_end <= span.byte_end()
-    if inside {
-      // An END inside, while a range of the same family is open across
-      // the target, is a boundary a consumer could pair with that
-      // outside start: removing it strands the start whatever the ids
-      // say. (Markers that pair wholly inside are the subtree walk's
-      // business.)
-      if !starts && depth.get(family).unwrap_or(0) > 0 {
-        if !ends_inside.contains(family) {
-          ends_inside.push(family)
-        }
-      }
-      continue
-    }
-    if element.byte_end <= span.byte_start() {
-      let current = depth.get(family).unwrap_or(0)
-      depth[family] = if starts { current + 1 } else { current - 1 }
-    }
-  }
-  if ends_inside.length() > 0 {
-    ends_inside.sort()
-    let family = ends_inside.get(0).unwrap_or("a range")
-    return Some(
-      "the target paragraph carries the end of \{family} opened before it",
-    )
-  }
-  // Pass two: for each family standing open at the target, does it
-  // CLOSE after it? Only then does the range span the target.
-  let closes_after : Array[String] = []
-  for family, entry_depth in depth {
-    if entry_depth <= 0 {
-      continue
-    }
-    let mut current = entry_depth
-    for element in elements {
-      if element.byte_start < span.byte_end() {
-        continue
-      }
-      guard range_family_of(element) is Some((candidate, starts)) else {
-        continue
-      }
-      if candidate != family {
-        continue
-      }
-      if starts {
-        current += 1
-      } else {
-        current -= 1
-        if current < entry_depth {
-          if !closes_after.contains(family) {
-            closes_after.push(family)
-          }
-          break
-        }
-      }
-    }
-  }
-  // Deterministic: the message must not depend on map order.
-  closes_after.sort()
-  match closes_after.get(0) {
-    Some(family) =>
-      Some(
-        "the target paragraph sits inside \{family} opened before it and closed after it",
-      )
-    None => None
-  }
-}
-
-///|
-/// `w:id` is `ST_DecimalNumber`, so `1`, `01` and `0001` are one id.
-/// Comparing raw spellings would refuse a legal document and pair two
-/// ids a consumer keeps apart.
-fn normalized_decimal_id(id : String) -> String {
-  let negative = id.has_prefix("-")
-  let digits = if negative { id[1:].to_owned() } else { id }
-  // ONLY a decimal number canonicalizes as one. `0abc` is not the
-  // number zero followed by letters — it is a spelling this reader
-  // does not understand, and collapsing it onto `abc` would pair two
-  // ids a consumer keeps apart.
-  guard digits.length() > 0 else { return id }
-  for ch in digits {
-    guard ch is ('0'..='9') else { return id }
-  }
-  let mut first = 0
-  while first + 1 < digits.length() && digits[first] == '0' {
-    first += 1
-  }
-  let trimmed = digits[first:].to_owned()
-  if negative {
-    "-" + trimmed
-  } else {
-    trimmed
-  }
-}
-
-///|
 /// Every refusal this planner raises, as a STABLE SLUG plus prose. The
 /// slug is the machine's answer and the prose is the reader's; a
 /// consumer that needs to branch reads the slug and never the sentence,
@@ -353,6 +173,213 @@ pub fn docx_delete_refusal_slug(message : String) -> String? {
   match message.find(": ") {
     Some(colon) => Some(message[7:colon].to_owned())
     None => None
+  }
+}
+
+///|
+/// Whether any paired RANGE or FIELD spans the target.
+///
+/// The judgment has two halves, and the first one is the point. A
+/// depth counter is exact ONLY on a story whose markers are properly
+/// nested; on any other, an end can cancel a start it never belonged
+/// to, and no amount of counting recovers which. Four rewrites of this
+/// function each fixed one shape and left another (an orphan end, an
+/// inverted pair, an inversion NESTED inside an open range, an
+/// unbalanced field). So this asks WELL-FORMEDNESS first — every
+/// family's depth stays non-negative and returns to zero, every field
+/// boundary reads unambiguously — and declines to judge a story that
+/// fails it. On a story that passes, a depth walk is provably right,
+/// and that is the entire second half.
+///
+/// Declining is scoped to markers that could REACH the target: a
+/// family whose markers all sit on one side of it cannot span it, so a
+/// stray marker at the far end of the document does not take the
+/// deletion out.
+fn open_range_across(
+  elements : Array[ScannedElement],
+  span : NodeSpan,
+) -> String? {
+  let depth : Map[String, Int] = Map([])
+  let lowest : Map[String, Int] = Map([])
+  let before_target : Map[String, Bool] = Map([])
+  let after_target : Map[String, Bool] = Map([])
+  let malformed : Array[String] = []
+  // Ids are read HERE and only here, to decide whether the story is
+  // well formed — never to decide which range covers what. A per-family
+  // stack answers "properly nested?" exactly: an end must close the
+  // range most recently opened. Counting alone cannot see two ranges
+  // that interleave (7 opens, 9 closes, 9 opens, 7 closes) because the
+  // depths cancel; a stack sees it immediately.
+  let open_ids : Map[String, Array[String]] = Map([])
+  // One pass: per-family nesting, and where each family's markers sit
+  // relative to the target.
+  for element in elements {
+    let entry = match range_family_of(element) {
+      Some(pair) => Some(pair)
+      None =>
+        if is_wml_uri(element.uri) && element.local_name == "fldChar" {
+          if element.field_char_type_ambiguous {
+            if !malformed.contains("a field region") {
+              malformed.push("a field region")
+            }
+            None
+          } else {
+            match element.field_char_type {
+              Some("begin") => Some(("a field region", true))
+              Some("end") => Some(("a field region", false))
+              _ => None
+            }
+          }
+        } else {
+          None
+        }
+    }
+    guard entry is Some((family, starts)) else { continue }
+    let current = depth.get(family).unwrap_or(0)
+    let next = if starts { current + 1 } else { current - 1 }
+    depth[family] = next
+    if next < lowest.get(family).unwrap_or(0) {
+      lowest[family] = next
+    }
+    // Nesting, by id, for the families that carry one.
+    match element.bookmark_id_raw {
+      Some(raw) => {
+        let id = normalized_decimal_id(raw)
+        let stack = open_ids.get(family).unwrap_or([])
+        if starts {
+          stack.push(id)
+          open_ids[family] = stack
+        } else if stack.length() > 0 && stack[stack.length() - 1] == id {
+          ignore(stack.pop())
+          open_ids[family] = stack
+        } else if !malformed.contains(family) {
+          // An end that does not close the innermost open range: this
+          // story's markers interleave or do not pair.
+          malformed.push(family)
+        }
+      }
+      // A marker of a family that pairs by id but carries none is one
+      // this reader cannot place.
+      None =>
+        if range_family_of(element) is Some(_) && !malformed.contains(family) {
+          malformed.push(family)
+        }
+    }
+    if element.byte_end <= span.byte_start() {
+      before_target[family] = true
+    } else if element.byte_start >= span.byte_end() {
+      after_target[family] = true
+    }
+  }
+  for family, stack in open_ids {
+    if stack.length() > 0 && !malformed.contains(family) {
+      malformed.push(family)
+    }
+  }
+  for family, total in depth {
+    if total != 0 || lowest.get(family).unwrap_or(0) < 0 {
+      if !malformed.contains(family) {
+        malformed.push(family)
+      }
+    }
+  }
+  // A family this reader cannot judge, whose markers reach across the
+  // target, stops the deletion.
+  let blocking : Array[String] = []
+  for family in malformed {
+    let straddles = before_target.get(family).unwrap_or(false) &&
+      after_target.get(family).unwrap_or(false)
+    if straddles && !blocking.contains(family) {
+      blocking.push(family)
+    }
+  }
+  if blocking.length() > 0 {
+    blocking.sort()
+    let family = blocking.get(0).unwrap_or("a range")
+    return Some(
+      "this story's markers around the target are not properly nested (\{family}), so what a range or field covers cannot be judged",
+    )
+  }
+  // Second half: on a well-formed story, depth at the target answers
+  // exactly, and an end INSIDE the target while its family is open
+  // across it is a boundary the deletion would take from that range.
+  let entry_depth : Map[String, Int] = Map([])
+  let ends_inside : Array[String] = []
+  for element in elements {
+    let entry = match range_family_of(element) {
+      Some(pair) => Some(pair)
+      None =>
+        if is_wml_uri(element.uri) &&
+          element.local_name == "fldChar" &&
+          !element.field_char_type_ambiguous {
+          match element.field_char_type {
+            Some("begin") => Some(("a field region", true))
+            Some("end") => Some(("a field region", false))
+            _ => None
+          }
+        } else {
+          None
+        }
+    }
+    guard entry is Some((family, starts)) else { continue }
+    if element.byte_start >= span.byte_start() &&
+      element.byte_end <= span.byte_end() {
+      if !starts && entry_depth.get(family).unwrap_or(0) > 0 {
+        if !ends_inside.contains(family) {
+          ends_inside.push(family)
+        }
+      }
+      continue
+    }
+    if element.byte_end <= span.byte_start() {
+      let current = entry_depth.get(family).unwrap_or(0)
+      entry_depth[family] = if starts { current + 1 } else { current - 1 }
+    }
+  }
+  if ends_inside.length() > 0 {
+    ends_inside.sort()
+    let family = ends_inside.get(0).unwrap_or("a range")
+    return Some(
+      "the target paragraph carries the end of \{family} opened before it",
+    )
+  }
+  let spanning : Array[String] = []
+  for family, at_target in entry_depth {
+    if at_target > 0 && !spanning.contains(family) {
+      spanning.push(family)
+    }
+  }
+  spanning.sort()
+  match spanning.get(0) {
+    Some(family) =>
+      Some(
+        "the target paragraph sits inside \{family} opened before it and closed after it",
+      )
+    None => None
+  }
+}
+
+///|
+/// `w:id` is `ST_DecimalNumber`, so `1`, `01` and `0001` are one id.
+/// ONLY a decimal number canonicalizes as one: `0abc` is not zero
+/// followed by letters, and collapsing it onto `abc` would pair two
+/// ids a consumer keeps apart.
+fn normalized_decimal_id(id : String) -> String {
+  let negative = id.has_prefix("-")
+  let digits = if negative { id[1:].to_owned() } else { id }
+  guard digits.length() > 0 else { return id }
+  for ch in digits {
+    guard ch is ('0'..='9') else { return id }
+  }
+  let mut first = 0
+  while first + 1 < digits.length() && digits[first] == '0' {
+    first += 1
+  }
+  let trimmed = digits[first:].to_owned()
+  if negative {
+    "-" + trimmed
+  } else {
+    trimmed
   }
 }
 
@@ -425,7 +452,12 @@ fn body_flow_kind(elements : Array[ScannedElement], index : Int) -> String? {
 /// adjacency, not addressing.
 fn is_layout_transparent(uri : String, local_name : String) -> Bool {
   is_transparent_container(uri, local_name) ||
-  (is_wml_uri(uri) && local_name is ("customXml" | "bdo" | "dir"))
+  (is_wml_uri(uri) && local_name is ("customXml" | "bdo" | "dir")) ||
+  // `mc:Choice` is SUPPRESSED by this reader, not transparent — but a
+  // consumer that understands the branch lays its content out, and
+  // adjacency is a question about that consumer, not about us. The
+  // hazard walks read the physical tree for the same reason.
+  (uri == MC_URI && local_name == "Choice")
 }
 
 ///|
@@ -495,6 +527,10 @@ fn delete_blocked_construct(uri : String, local_name : String) -> String? {
     "commentReference" | "commentRangeStart" | "commentRangeEnd" =>
       Some("comment machinery")
     "permStart" | "permEnd" => Some("a range-permission boundary")
+    // A data-bound content control anchors a customXml island; removing
+    // it strands the item and its properties, the same family of hazard
+    // as a note, a comment or a relationship.
+    "dataBinding" => Some("a content-control data binding")
     "fldChar" => Some("a field boundary")
     "drawing" | "object" | "pict" => Some("an embedded object")
     _ => None
@@ -767,18 +803,23 @@ pub fn plan_docx_paragraph_deletion(
   // one. (The receipt's successor identity and text are the FLATTENED
   // question, asked below, because that is what re-anchors at the
   // deleted path.)
-  let mut successor_exists = false
-  for index, element in elements {
-    if index != target_index &&
-      element.local_name == "p" &&
-      is_wml_uri(element.uri) &&
-      element.byte_start >= span.byte_end() &&
-      is_direct_body_child(elements, element) {
-      successor_exists = true
-      break
-    }
+  // What the rule actually says: a body whose last flow child is a
+  // TABLE still needs its trailing paragraph. Requiring a later
+  // paragraph instead refused the commonest deletion there is —
+  // removing the last of two paragraphs, which leaves a body ending in
+  // a paragraph and is exactly what Word produces.
+  // Only a deletion that CHANGES the body's last flow child can break
+  // this: removing a middle paragraph leaves the ending exactly as it
+  // was, and a document that already ends with a table is not this
+  // deletion's doing.
+  let keeps_trailing_paragraph = if target_position + 1 < flow_children.length() {
+    true
+  } else if target_position > 0 {
+    flow_children[target_position - 1] == "p"
+  } else {
+    false
   }
-  guard successor_exists else {
+  guard keeps_trailing_paragraph else {
     raise delete_refusal(
       "final_paragraph", "the target is the final direct body paragraph; the document keeps it",
     )

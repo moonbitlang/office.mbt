@@ -329,13 +329,14 @@ let max_projection_source_elements : Int = 1_000_000
 let max_projection_source_attribute_chars : Int = 8 * 1024 * 1024
 
 ///|
-/// The optional bookmark-name allowance is this fraction of the
-/// caller's own attribute ceiling — separate from the shared pool so
-/// the capture cannot cost a document its readability, and derived
-/// from the caller's budget so tightening it tightens this too. A
-/// quarter is generous for real documents (tens of thousands of
-/// cross-reference bookmarks under the default ceiling).
-let bookmark_name_chars_divisor : Int = 4
+/// The default optional bookmark-name allowance: a pool of its own, so
+/// this capture — added after the reader's ceilings were set — cannot
+/// spend characters a MANDATORY charge later needs and turn a readable
+/// document into a failed read. Callers that bound memory set it
+/// explicitly alongside `max_attribute_chars`; total retention is the
+/// two together. Generous for real documents: tens of thousands of
+/// cross-reference bookmark names.
+let max_projection_bookmark_name_chars : Int = 2 * 1024 * 1024
 
 ///|
 let max_projection_source_retained_tokens : Int = 1_000_000
@@ -357,9 +358,17 @@ fn projection_source_budget(
   max_depth? : Int = max_projection_source_depth,
   max_text_bytes? : Int = max_projection_source_text_bytes,
   max_text_tokens? : Int = max_projection_source_text_tokens,
+  // The OPTIONAL bookmark-name pool, named separately so it is visible
+  // rather than folded into another ceiling: `max_attribute_chars`
+  // keeps meaning exactly what it has always meant (the shared
+  // retained-character pool, pinned to the character by the exactness
+  // wbtests), and total retention is bounded by the two together. A
+  // caller tightening memory tightens both.
+  max_bookmark_name_chars? : Int = max_projection_bookmark_name_chars,
 ) -> ProjectionSourceBudget raise DocxError {
   guard max_elements >= 0 &&
     max_attribute_chars >= 0 &&
+    max_bookmark_name_chars >= 0 &&
     max_retained_tokens >= 0 &&
     max_depth >= 0 &&
     max_text_bytes >= 0 &&
@@ -371,7 +380,7 @@ fn projection_source_budget(
   {
     elements_left: max_elements,
     retained_chars_left: max_attribute_chars,
-    bookmark_name_chars_left: max_attribute_chars / bookmark_name_chars_divisor,
+    bookmark_name_chars_left: max_bookmark_name_chars,
     retained_tokens_left: max_retained_tokens,
     max_depth,
     text_budget: token_map_budget(max_text_bytes, max_text_tokens) catch {
@@ -1617,7 +1626,19 @@ fn scan_story(
             | "commentRangeStart"
             | "commentRangeEnd"
             | "permStart"
-            | "permEnd") {
+            | "permEnd"
+            | "moveFromRangeStart"
+            | "moveFromRangeEnd"
+            | "moveToRangeStart"
+            | "moveToRangeEnd"
+            | "customXmlInsRangeStart"
+            | "customXmlInsRangeEnd"
+            | "customXmlDelRangeStart"
+            | "customXmlDelRangeEnd"
+            | "customXmlMoveFromRangeStart"
+            | "customXmlMoveFromRangeEnd"
+            | "customXmlMoveToRangeStart"
+            | "customXmlMoveToRangeEnd") {
             unique_attribute_value(attributes, "id", namespaces)
           } else {
             None

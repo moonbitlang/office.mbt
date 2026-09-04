@@ -368,7 +368,9 @@ pub async fn transact_docx_delete_paragraph(
     options,
     session => {
       let old_count = @word.docx_direct_body_paragraph_count(session.annotated) catch {
-        error => raise mapped_plan_failure(error)
+        // The planner's own refusal vocabulary, so its slug is stripped
+        // and its code is typed like every other refusal from here.
+        error => raise delete_plan_failure(error)
       }
       let receipt = session.queue_delete_paragraph(at~)
       match expect_text {

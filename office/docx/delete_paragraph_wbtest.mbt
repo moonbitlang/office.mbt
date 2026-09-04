@@ -38,8 +38,8 @@ async fn delete_readback_case() -> (
         guard text.find("</w:p>") is Some(close_at) else {
           fail("fixture has no paragraph end")
         }
-        let head = text[0:open_at].to_string()
-        let tail = text[close_at + 6:].to_string()
+        let head = text[0:open_at].to_owned()
+        let tail = text[close_at + 6:].to_owned()
         // Identical in length, alike in text, each carrying its own
         // stable identity — so the cut leg has nothing to lean on but
         // bytes, and the identity leg has something real to check.

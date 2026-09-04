@@ -433,15 +433,39 @@ test "deletion refuses a paragraph a sibling range brackets" {
 /// paragraph, and the receipt reports its text, because that is what an
 /// agent must re-anchor on.
 test "the final-paragraph guard is structural, the successor is flattened" {
+  // The rule is what the comment says: the body must still END with a
+  // paragraph. A wrapped paragraph IS the body's last flow child, so
+  // this deletion is fine…
   let wrapped_only = delete_fixture(
     "<w:p><w:r><w:t>target</w:t></w:r></w:p>" +
     "<w:sdt><w:sdtContent><w:p><w:r><w:t>next</w:t></w:r></w:p></w:sdtContent></w:sdt>",
   )
+  assert_eq(delete_refusal_of(wrapped_only, "p[1]"), "<planned>")
+  // …and deleting the last of two ordinary paragraphs, the commonest
+  // deletion there is, leaves a body ending in a paragraph too.
+  let pair = delete_fixture(
+    "<w:p><w:r><w:t>one</w:t></w:r></w:p><w:p><w:r><w:t>two</w:t></w:r></w:p>",
+  )
+  assert_eq(delete_refusal_of(pair, "p[2]"), "<planned>")
+  // What the rule DOES stop: a deletion that MAKES the body end with a
+  // table — the target is the last flow child and a table precedes it.
+  let table_last = delete_fixture(
+    "<w:p><w:r><w:t>one</w:t></w:r></w:p>" +
+    "<w:tbl><w:tr><w:tc><w:p><w:r><w:t>cell</w:t></w:r></w:p></w:tc></w:tr></w:tbl>" +
+    "<w:p><w:r><w:t>target</w:t></w:r></w:p>",
+  )
   assert_true(
-    delete_refusal_of(wrapped_only, "p[1]").contains(
+    delete_refusal_of(table_last, "p[2]").contains(
       "final direct body paragraph",
     ),
   )
+  // And what it does NOT stop: a middle deletion in a body that already
+  // ends with a table. That ending is not this deletion's doing.
+  let already_table_last = delete_fixture(
+    "<w:p><w:r><w:t>one</w:t></w:r></w:p><w:p><w:r><w:t>target</w:t></w:r></w:p>" +
+    "<w:tbl><w:tr><w:tc><w:p><w:r><w:t>cell</w:t></w:r></w:p></w:tc></w:tr></w:tbl>",
+  )
+  assert_eq(delete_refusal_of(already_table_last, "p[2]"), "<planned>")
   // With a direct paragraph further on, the deletion proceeds — and the
   // receipt names the WRAPPED paragraph as the successor, because that
   // is the one that answers at the deleted path afterwards.
@@ -578,7 +602,9 @@ test "range counting refuses what it cannot pair and nothing else" {
     "<w:p><w:r><w:t>target</w:t></w:r></w:p><w:bookmarkEnd w:id=\"1\"/>" +
     keeper,
   )
-  assert_true(delete_refusal_of(orphan_end, "p[1]") != "<planned>")
+  assert_true(
+    delete_refusal_of(orphan_end, "p[1]").contains("not properly nested"),
+  )
   // An ORPHAN START before the target must not make a LATER, unrelated
   // range's end refuse every paragraph in between. Only a range whose
   // depth falls below its entry level after the target spans it.
@@ -594,8 +620,8 @@ test "range counting refuses what it cannot pair and nothing else" {
   // some paragraphs while naming a range that does not cover them.
   for path in ["p[1]", "p[2]", "p[3]"] {
     assert_true(
-      delete_refusal_of(orphan_start, path).contains("do not balance"),
-      msg="expected the balance refusal at " + path,
+      delete_refusal_of(orphan_start, path).contains("not properly nested"),
+      msg="expected the well-formedness refusal at " + path,
     )
   }
   // A story whose markers DO balance judges each paragraph on its own:
@@ -623,7 +649,22 @@ test "an inverted range pair is not balanced" {
     "<w:bookmarkEnd w:id=\"2\"/><w:bookmarkStart w:id=\"1\" w:name=\"Late\"/>" +
     keeper,
   )
-  assert_true(delete_refusal_of(inverted, "p[1]") != "<planned>")
+  assert_true(
+    delete_refusal_of(inverted, "p[1]").contains("not properly nested"),
+  )
+  // The shape a running minimum alone cannot see: an inversion NESTED
+  // inside another open range of the same family, whose prefix sums
+  // never dip below zero. Well-formedness catches it because the
+  // nesting is still wrong.
+  let nested_inversion = delete_fixture(
+    "<w:bookmarkStart w:id=\"7\" w:name=\"Wide\"/><w:bookmarkEnd w:id=\"9\"/>" +
+    "<w:p><w:r><w:t>target</w:t></w:r></w:p>" +
+    "<w:bookmarkStart w:id=\"9\" w:name=\"Late\"/><w:bookmarkEnd w:id=\"7\"/>" +
+    keeper,
+  )
+  assert_true(
+    delete_refusal_of(nested_inversion, "p[1]").contains("not properly nested"),
+  )
 }
 
 ///|
@@ -680,18 +721,35 @@ test "an ambiguous field boundary refuses" {
 }
 
 ///|
-/// A field region only truncates if the region open AT the target is
-/// the one that closes after it: an orphan `begin` plus an ordinary
-/// later field (a page number — nearly every document has one) must not
-/// refuse every paragraph in between.
-test "an unrelated later field does not close an orphan region" {
-  let annotated = delete_fixture(
+/// Fields are judged by the SAME well-formedness rule as ranges, and
+/// the message says which: a story carrying an orphan `begin` is one
+/// whose field extents cannot be judged, so a paragraph between that
+/// orphan and a later field refuses — accurately, rather than naming a
+/// region that does not exist. A story whose fields ARE well formed is
+/// judged position by position.
+test "field extents are judged only on a well-formed story" {
+  let orphaned = delete_fixture(
     "<w:p><w:r><w:fldChar w:fldCharType=\"begin\"/></w:r></w:p>" +
     "<w:p><w:r><w:t>plain</w:t></w:r></w:p>" +
     "<w:p><w:r><w:fldChar w:fldCharType=\"begin\"/></w:r><w:r><w:instrText>PAGE</w:instrText></w:r><w:r><w:fldChar w:fldCharType=\"end\"/></w:r></w:p>" +
     "<w:p><w:r><w:t>keeper</w:t></w:r></w:p>",
   )
-  assert_eq(delete_refusal_of(annotated, "p[2]"), "<planned>")
+  assert_true(
+    delete_refusal_of(orphaned, "p[2]").contains("not properly nested"),
+  )
+  // Well formed: the paragraph beside a self-contained field is
+  // deletable, the one inside a field is not.
+  let sound = delete_fixture(
+    "<w:p><w:r><w:fldChar w:fldCharType=\"begin\"/></w:r></w:p>" +
+    "<w:p><w:r><w:t>inside</w:t></w:r></w:p>" +
+    "<w:p><w:r><w:fldChar w:fldCharType=\"end\"/></w:r></w:p>" +
+    "<w:p><w:r><w:t>outside</w:t></w:r></w:p>" +
+    "<w:p><w:r><w:t>keeper</w:t></w:r></w:p>",
+  )
+  assert_true(
+    delete_refusal_of(sound, "p[2]").contains("sits inside a field region"),
+  )
+  assert_eq(delete_refusal_of(sound, "p[4]"), "<planned>")
 }
 
 ///|
@@ -819,4 +877,63 @@ test "deletion refuses either half of a revision-joined paragraph" {
   // revision class always speaks first. This test deliberately does not
   // claim to exercise it — asserting "some refusal happened" here would
   // pass on the revision refusal and read as coverage it is not.
+}
+
+///|
+/// The refusal SLUG is the wire contract an agent branches on, so the
+/// planner's own suite pins it — asserting prose alone would let a
+/// rename move a hazard's code with every test still green.
+test "planner refusals carry their slugs" {
+  let keeper = "<w:p><w:r><w:t>keeper</w:t></w:r></w:p>"
+  let table = "<w:tbl><w:tr><w:tc><w:p><w:r><w:t>cell</w:t></w:r></w:p></w:tc></w:tr></w:tbl>"
+  for
+    probe in [
+      ("<w:p><w:r><w:t>only</w:t></w:r></w:p>", "p[1]", "final_paragraph"),
+      (keeper + keeper, "p[9]", "target_not_found"),
+      (keeper + keeper, "p[0]", "target_not_direct"),
+      (
+        "<w:p><w:r><w:footnoteReference w:id=\"1\"/></w:r></w:p>" + keeper,
+        "p[1]",
+        "blocked_construct",
+      ),
+      (table + "<w:p/>" + table + keeper, "p[1]", "table_separator"),
+      (
+        "<w:p><w:r><w:fldChar w:fldCharType=\"begin\"/></w:r></w:p>" +
+        "<w:p><w:r><w:t>x</w:t></w:r></w:p>" +
+        "<w:p><w:r><w:fldChar w:fldCharType=\"end\"/></w:r></w:p>" +
+        keeper,
+        "p[2]",
+        "field_region",
+      ),
+      (
+        "<w:bookmarkStart w:id=\"3\" w:name=\"R\"/><w:p><w:r><w:t>x</w:t></w:r></w:p><w:bookmarkEnd w:id=\"3\"/>" +
+        keeper,
+        "p[1]",
+        "open_range",
+      ),
+      (
+        "<w:p><w:bookmarkStart w:id=\"4\" w:name=\"_GoBack\"/><w:r><w:t>x</w:t></w:r></w:p>" +
+        keeper,
+        "p[1]",
+        "bookmark_unpairable",
+      ),
+      (
+        "<w:p xmlns:r=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships\"><w:r><w:contentPart r:id=\"rId9\"/></w:r></w:p>" +
+        keeper,
+        "p[1]",
+        "relationship_reference",
+      ),
+    ] {
+    let (body, at, slug) = probe
+    let annotated = delete_fixture(body)
+    let message = delete_refusal_of(annotated, at)
+    assert_eq(
+      @docx.docx_delete_refusal_slug(message),
+      Some(slug),
+      msg="'\{at}' -> " + message,
+    )
+    // The prose half is what a person reads, and it never carries the
+    // machine prefix.
+    assert_true(!@docx.docx_delete_refusal_prose(message).has_prefix("delete/"))
+  }
 }
