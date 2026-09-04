@@ -23,13 +23,17 @@ pub struct DocxDeleteReceipt {
 
 ///|
 /// What the published story part must read like once the cut lands:
-/// the source it is cut from, and the span removed. Text and identity
-/// both go blind when two adjacent paragraphs read alike — deleting
-/// either leaves the same projection at the same path — so this is the
-/// evidence that says WHICH paragraph left, and it is exact: the
-/// published part must equal the source with exactly this span gone,
-/// byte for byte. The source is the snapshot's own bytes, held by
-/// reference, so proving it costs a comparison and no copy.
+/// the source it is cut from, and the span removed. The published part
+/// must equal the source with exactly this span gone, byte for byte.
+///
+/// WHAT THIS PROVES, precisely: that the splice APPLIED as planned —
+/// no second edit landed on the part, no engine bug moved the cut, no
+/// zip round trip altered it. It does NOT prove the plan addressed the
+/// paragraph the caller meant: the witness is built from the same span
+/// the edit uses, so a mis-resolved address moves both together. The
+/// check that binds an address to content is `--expect-text` against
+/// the receipt's own projection. Held by reference, so proving it
+/// costs a comparison and no copy.
 pub struct DocxDeleteCutWitness {
   priv part : String
   priv source : BytesView
@@ -58,16 +62,20 @@ pub fn DocxDeleteCutWitness::matches(
   self : DocxDeleteCutWitness,
   candidate : BytesView,
 ) -> Bool {
+  // A witness whose span does not lie inside its source describes no
+  // possible cut: answer "no", never index past an end. This is public
+  // API, and the only caller is a validator whose job is to fail shut.
+  guard self.cut_start >= 0 &&
+    self.cut_start <= self.cut_end &&
+    self.cut_end <= self.source.length() else {
+    return false
+  }
   guard candidate.length() == self.expected_length() else { return false }
-  for index in 0..<self.cut_start {
-    guard candidate[index] == self.source[index] else { return false }
-  }
-  let mut write = self.cut_start
-  for index in self.cut_end..<self.source.length() {
-    guard candidate[write] == self.source[index] else { return false }
-    write += 1
-  }
-  true
+  // View equality is a memcmp intrinsic; a hand-rolled per-byte loop
+  // over a multi-megabyte story is millions of guarded iterations for
+  // the same answer.
+  candidate[0:self.cut_start] == self.source[0:self.cut_start] &&
+  candidate[self.cut_start:] == self.source[self.cut_end:]
 }
 
 ///|
@@ -114,11 +122,9 @@ pub fn DocxDeleteReceipt::successor_text(self : DocxDeleteReceipt) -> String? {
 }
 
 ///|
-/// The exact byte span this plan removes from the main story part.
-/// Text and identity both go blind when two adjacent paragraphs read
-/// alike — deleting either yields the same projection — so the
-/// transaction verifies the cut landed at these bytes and nowhere
-/// else.
+/// What the published part must read like once this plan lands. The
+/// transaction verifies it applied exactly — see the witness for what
+/// that does and does not prove about ADDRESSING.
 pub fn DocxDeleteReceipt::cut(self : DocxDeleteReceipt) -> DocxDeleteCutWitness {
   self.cut
 }
@@ -176,19 +182,45 @@ fn open_range_across(
   // and this verb refuses what it cannot judge. (0 of 591 documents in
   // the corpus sample carry an unbalanced range marker.)
   let totals : Map[String, Int] = Map([])
+  let lowest : Map[String, Int] = Map([])
+  let before_target : Map[String, Bool] = Map([])
+  let after_target : Map[String, Bool] = Map([])
   for element in elements {
     guard range_family_of(element) is Some((family, starts)) else { continue }
     let current = totals.get(family).unwrap_or(0)
-    totals[family] = if starts { current + 1 } else { current - 1 }
+    let next = if starts { current + 1 } else { current - 1 }
+    totals[family] = next
+    // The running MINIMUM catches what a total cannot: an end before
+    // its start nets to zero across the story while genuinely leaving
+    // a range unpairable at the point it matters.
+    if next < lowest.get(family).unwrap_or(0) {
+      lowest[family] = next
+    }
+    if element.byte_end <= span.byte_start() {
+      before_target[family] = true
+    } else if element.byte_start >= span.byte_end() {
+      after_target[family] = true
+    }
   }
   for family, total in totals {
-    if total != 0 && !unbalanced.contains(family) {
+    // Unpairable markers only matter when they could reach the target:
+    // a family whose markers all sit on ONE side of it cannot have a
+    // range spanning it, whatever its totals say. Refusing those too
+    // would take the whole document out over a stray marker nowhere
+    // near the edit.
+    let straddles = before_target.get(family).unwrap_or(false) &&
+      after_target.get(family).unwrap_or(false)
+    let inverted = lowest.get(family).unwrap_or(0) < 0
+    if (total != 0 || inverted) && straddles && !unbalanced.contains(family) {
       unbalanced.push(family)
     }
   }
   if unbalanced.length() > 0 {
     unbalanced.sort()
-    guard unbalanced.get(0) is Some(family) else { return None }
+    // Fail CLOSED: `None` here means "no hazard, proceed with the
+    // irreversible deletion", which is never the right answer from
+    // inside a hazard detector that just found one.
+    let family = unbalanced.get(0).unwrap_or("a range")
     return Some(
       "this story's range markers do not balance (\{family}), so which content a range covers cannot be judged",
     )
@@ -218,7 +250,7 @@ fn open_range_across(
   }
   if ends_inside.length() > 0 {
     ends_inside.sort()
-    guard ends_inside.get(0) is Some(family) else { return None }
+    let family = ends_inside.get(0).unwrap_or("a range")
     return Some(
       "the target paragraph carries the end of \{family} opened before it",
     )
@@ -272,6 +304,14 @@ fn open_range_across(
 fn normalized_decimal_id(id : String) -> String {
   let negative = id.has_prefix("-")
   let digits = if negative { id[1:].to_owned() } else { id }
+  // ONLY a decimal number canonicalizes as one. `0abc` is not the
+  // number zero followed by letters — it is a spelling this reader
+  // does not understand, and collapsing it onto `abc` would pair two
+  // ids a consumer keeps apart.
+  guard digits.length() > 0 else { return id }
+  for ch in digits {
+    guard ch is ('0'..='9') else { return id }
+  }
   let mut first = 0
   while first + 1 < digits.length() && digits[first] == '0' {
     first += 1
@@ -281,6 +321,38 @@ fn normalized_decimal_id(id : String) -> String {
     "-" + trimmed
   } else {
     trimmed
+  }
+}
+
+///|
+/// Every refusal this planner raises, as a STABLE SLUG plus prose. The
+/// slug is the machine's answer and the prose is the reader's; a
+/// consumer that needs to branch reads the slug and never the sentence,
+/// so rewording a message cannot silently reclassify a hazard and no
+/// substring can shadow another. The prefix is stripped before the
+/// message reaches a caller.
+fn delete_refusal(slug : String, prose : String) -> DocxError {
+  Unsupported(message="delete/" + slug + ": " + prose)
+}
+
+///|
+/// The prose half of a refusal this planner raised, or the message
+/// unchanged when it came from somewhere else.
+pub fn docx_delete_refusal_prose(message : String) -> String {
+  guard message.has_prefix("delete/") else { return message }
+  match message.find(": ") {
+    Some(colon) => message[colon + 2:].to_owned()
+    None => message
+  }
+}
+
+///|
+/// The slug half, when this planner raised it.
+pub fn docx_delete_refusal_slug(message : String) -> String? {
+  guard message.has_prefix("delete/") else { return None }
+  match message.find(": ") {
+    Some(colon) => Some(message[7:colon].to_owned())
+    None => None
   }
 }
 
@@ -314,10 +386,13 @@ fn range_family_of(element : ScannedElement) -> (String, Bool)? {
 }
 
 ///|
-/// Whether an element is a DIRECT child of `w:body`/// Whether an element is a DIRECT child of `w:body` on the physical
-/// tree. The path grammar flattens wrappers (`w:sdt`, `w:ins`,
-/// `mc:Fallback`…), so a path alone never proves this — every guard
-/// that must not splice inside a wrapper proves it here.
+/// The body FLOW kind an element contributes, read the way a consumer
+/// lays the story out rather than the way the tree nests it: this walks
+/// THROUGH layout-transparent wrappers, so a table inside a content
+/// control answers `Some("tbl")`. It is deliberately NOT the
+/// direct-child proof — `is_direct_body_child` is that, and it is what
+/// stops a splice inside a wrapper. These are the file's two surfaces,
+/// and confusing them is how a guard goes blind.
 fn body_flow_kind(elements : Array[ScannedElement], index : Int) -> String? {
   let element = elements[index]
   guard is_wml_uri(element.uri) else { return None }
@@ -444,24 +519,24 @@ pub fn plan_docx_paragraph_deletion(
   // `insert_anchor_ordinal` is shared with the shipped insertion
   // planner, whose published contract this must not narrow.)
   guard !at.has_prefix("p[0") && insert_anchor_ordinal(at) is Some(ordinal) else {
-    raise Unsupported(
-      message="delete-paragraph targets a direct body paragraph (p[N]); this target is not one",
+    raise delete_refusal(
+      "target_not_direct", "delete-paragraph targets a direct body paragraph (p[N]); this target is not one",
     )
   }
   guard annotated.body_paragraph_span(at) is Some(span) else {
-    raise Unsupported(
-      message="the delete-paragraph target does not resolve in this document",
+    raise delete_refusal(
+      "target_not_found", "the delete-paragraph target does not resolve in this document",
     )
   }
   let part = annotated.main_story_part()
   guard annotated.reader_projection_sources.get(part) is Some(bytes) else {
-    raise Unsupported(
-      message="delete-paragraph requires a mutation-safe read with retained source bytes",
+    raise delete_refusal(
+      "engine_unavailable", "delete-paragraph requires a mutation-safe read with retained source bytes",
     )
   }
   guard annotated.reader_projections.get(part) is Some(projection) else {
-    raise Unsupported(
-      message="delete-paragraph requires a mutation-safe read with a retained projection",
+    raise delete_refusal(
+      "engine_unavailable", "delete-paragraph requires a mutation-safe read with a retained projection",
     )
   }
   let elements = projection.scan.elements()
@@ -480,8 +555,8 @@ pub fn plan_docx_paragraph_deletion(
     }
   }
   guard target_index >= 0 else {
-    raise Unsupported(
-      message="the delete-paragraph target is not a DIRECT child of the body — paragraphs inside content controls, revisions, or compatibility wrappers are not deletion targets",
+    raise delete_refusal(
+      "target_not_direct", "the delete-paragraph target is not a DIRECT child of the body — paragraphs inside content controls, revisions, or compatibility wrappers are not deletion targets",
     )
   }
   // The body's FLOW children in document order: the target's own
@@ -509,8 +584,8 @@ pub fn plan_docx_paragraph_deletion(
     let before = flow_children[target_position - 1]
     let after = flow_children[target_position + 1]
     if before == "tbl" && after == "tbl" {
-      raise Unsupported(
-        message="the target paragraph separates two tables; deleting it would merge them into one, so this deletion refuses",
+      raise delete_refusal(
+        "table_separator", "the target paragraph separates two tables; deleting it would merge them into one, so this deletion refuses",
       )
     }
   }
@@ -533,6 +608,14 @@ pub fn plan_docx_paragraph_deletion(
     // around a hole where a paragraph used to be. The projection stance
     // reads better and is wrong for a physical cut.
     if is_wml_uri(element.uri) && element.local_name == "fldChar" {
+      // An ambiguous boundary is one this reader cannot judge, and a
+      // field whose depth cannot be judged is one this verb will not
+      // edit around.
+      guard !element.field_char_type_ambiguous else {
+        raise delete_refusal(
+          "field_region", "this story carries a field boundary whose type cannot be read unambiguously, so field regions cannot be judged and this deletion refuses",
+        )
+      }
       match element.field_char_type {
         Some("begin") => field_depth += 1
         Some("end") => if field_depth > 0 { field_depth -= 1 }
@@ -571,8 +654,8 @@ pub fn plan_docx_paragraph_deletion(
       }
     }
     guard !closes_after else {
-      raise Unsupported(
-        message="the target paragraph sits inside a field region whose boundaries lie in other paragraphs; deleting it would truncate the field, so this deletion refuses",
+      raise delete_refusal(
+        "field_region", "the target paragraph sits inside a field region whose boundaries lie in other paragraphs; deleting it would truncate the field, so this deletion refuses",
       )
     }
   }
@@ -592,8 +675,8 @@ pub fn plan_docx_paragraph_deletion(
       // attributes are judged like any other element's.
       if element.references_relationship &&
         !(is_wml_uri(element.uri) && element.local_name == "hyperlink") {
-        raise Unsupported(
-          message="the target paragraph carries an element that references a package relationship; deleting it would touch relationship reachability, so this deletion refuses",
+        raise delete_refusal(
+          "relationship_reference", "the target paragraph carries an element that references a package relationship; deleting it would touch relationship reachability, so this deletion refuses",
         )
       }
       // The hazard judgment sees EVERY namespace: gating it on WML is
@@ -602,8 +685,9 @@ pub fn plan_docx_paragraph_deletion(
       if index != target_index {
         match delete_blocked_construct(element.uri, element.local_name) {
           Some(reason) =>
-            raise Unsupported(
-              message="the target paragraph carries \{reason}; deleting it would dangle or destroy document state outside the paragraph, so this deletion refuses",
+            raise delete_refusal(
+              "blocked_construct",
+              "the target paragraph carries \{reason}; deleting it would dangle or destroy document state outside the paragraph, so this deletion refuses",
             )
           None => ()
         }
@@ -613,18 +697,18 @@ pub fn plan_docx_paragraph_deletion(
           // Only the _GoBack cursor artifact is deletable, and only
           // with a REAL id: an absent id cannot be paired at all.
           guard element.bookmark_name_raw is Some(name) else {
-            raise Unsupported(
-              message="the target paragraph carries a bookmark marker whose name could not be read; the pairing cannot be judged, so this deletion refuses",
+            raise delete_refusal(
+              "bookmark_unpairable", "the target paragraph carries a bookmark marker whose name could not be read; the pairing cannot be judged, so this deletion refuses",
             )
           }
           guard name == "_GoBack" else {
-            raise Unsupported(
-              message="the target paragraph carries a named bookmark; deleting it would dangle or destroy document state outside the paragraph, so this deletion refuses",
+            raise delete_refusal(
+              "blocked_construct", "the target paragraph carries a named bookmark; deleting it would dangle or destroy document state outside the paragraph, so this deletion refuses",
             )
           }
           guard element.bookmark_id_raw is Some(id) && id != "" else {
-            raise Unsupported(
-              message="the target paragraph carries a bookmark marker without a usable id; the pairing cannot be judged, so this deletion refuses",
+            raise delete_refusal(
+              "bookmark_unpairable", "the target paragraph carries a bookmark marker without a usable id; the pairing cannot be judged, so this deletion refuses",
             )
           }
           let key = normalized_decimal_id(id)
@@ -632,8 +716,8 @@ pub fn plan_docx_paragraph_deletion(
         }
         if element.local_name == "bookmarkEnd" {
           guard element.bookmark_id_raw is Some(id) && id != "" else {
-            raise Unsupported(
-              message="the target paragraph carries a bookmark marker without a usable id; the pairing cannot be judged, so this deletion refuses",
+            raise delete_refusal(
+              "bookmark_unpairable", "the target paragraph carries a bookmark marker without a usable id; the pairing cannot be judged, so this deletion refuses",
             )
           }
           let key = normalized_decimal_id(id)
@@ -646,15 +730,15 @@ pub fn plan_docx_paragraph_deletion(
   // the duplicate-end quadrant that set membership left open.
   for id, ends in bookmark_ends {
     guard bookmark_starts.get(id) is Some(starts) && starts == ends else {
-      raise Unsupported(
-        message="the target paragraph carries bookmark boundaries that do not pair inside it; deleting it would unbalance the range, so this deletion refuses",
+      raise delete_refusal(
+        "bookmark_unpairable", "the target paragraph carries bookmark boundaries that do not pair inside it; deleting it would unbalance the range, so this deletion refuses",
       )
     }
   }
   for id, starts in bookmark_starts {
     guard bookmark_ends.get(id) is Some(ends) && ends == starts else {
-      raise Unsupported(
-        message="the target paragraph carries bookmark boundaries that do not pair inside it; deleting it would unbalance the range, so this deletion refuses",
+      raise delete_refusal(
+        "bookmark_unpairable", "the target paragraph carries bookmark boundaries that do not pair inside it; deleting it would unbalance the range, so this deletion refuses",
       )
     }
   }
@@ -665,8 +749,9 @@ pub fn plan_docx_paragraph_deletion(
   // they anchor.
   match open_range_across(elements, span) {
     Some(reason) =>
-      raise Unsupported(
-        message="\{reason}; deleting it would take or strand content a range anchors, so this deletion refuses",
+      raise delete_refusal(
+        "open_range",
+        "\{reason}; deleting it would take or strand content a range anchors, so this deletion refuses",
       )
     None => ()
   }
@@ -694,8 +779,8 @@ pub fn plan_docx_paragraph_deletion(
     }
   }
   guard successor_exists else {
-    raise Unsupported(
-      message="the target is the final direct body paragraph; the document keeps it",
+    raise delete_refusal(
+      "final_paragraph", "the target is the final direct body paragraph; the document keeps it",
     )
   }
   let story = annotated.main_story_source()
@@ -705,8 +790,8 @@ pub fn plan_docx_paragraph_deletion(
   // whole logical paragraph — refuse rather than delete more or less
   // than the receipt could name.
   guard anchors.anchor_at(at) is Some(anchor) else {
-    raise Unsupported(
-      message="the delete-paragraph target does not address exactly one whole paragraph in this document, so this deletion refuses",
+    raise delete_refusal(
+      "target_not_addressable", "the delete-paragraph target does not address exactly one whole paragraph in this document, so this deletion refuses",
     )
   }
   // A `multi_physical` head is the FIRST half of a paragraph the reader
@@ -726,8 +811,8 @@ pub fn plan_docx_paragraph_deletion(
   // other mechanism finds this guard already in place rather than
   // silently publishing half a paragraph.
   guard anchor.status() != "multi_physical" else {
-    raise Unsupported(
-      message="the delete-paragraph target is one physical half of a paragraph joined across a deleted paragraph mark, so this deletion refuses",
+    raise delete_refusal(
+      "target_not_addressable", "the delete-paragraph target is one physical half of a paragraph joined across a deleted paragraph mark, so this deletion refuses",
     )
   }
   let para_id = if anchor.status() == "unique" {
@@ -746,8 +831,8 @@ pub fn plan_docx_paragraph_deletion(
     None => None
   }
   guard docx_paragraph_projection(annotated, story, path=at) is Some(text) else {
-    raise Unsupported(
-      message="the delete-paragraph target has no readable projection in this document, so this deletion refuses",
+    raise delete_refusal(
+      "target_not_addressable", "the delete-paragraph target has no readable projection in this document, so this deletion refuses",
     )
   }
   let plan = @splice.SplicePlan::new()
@@ -790,8 +875,8 @@ pub fn docx_direct_body_paragraph_count(
 ) -> Int raise DocxError {
   let part = annotated.main_story_part()
   guard annotated.reader_projections.get(part) is Some(projection) else {
-    raise Unsupported(
-      message="counting direct paragraphs requires a mutation-safe read with a retained projection",
+    raise delete_refusal(
+      "engine_unavailable", "counting direct paragraphs requires a mutation-safe read with a retained projection",
     )
   }
   let elements = projection.scan.elements()

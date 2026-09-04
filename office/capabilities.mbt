@@ -1300,10 +1300,13 @@ pub fn capability_commands() -> Array[CapabilityCommand] {
           "successor_text", "string", false, "the projection now reading at the deleted path (bounded at 160 characters), verified against the published candidate; null when nothing follows. The re-anchor that still speaks on documents carrying no unique identities",
         ),
         capability_field(
+          "successor_text_truncated", "boolean", true, "whether that bound cut successor_text; --expect-text compares the FULL projection",
+        ),
+        capability_field(
           "stories_scanned", "array(string)", true, "the stories searched; /body in v1",
         ),
         capability_field(
-          "transaction", "object", true, "office.transaction/2 report; the shared mutation preflight refuses before planning, and every structural hazard refuses typed — inside the paragraph: section breaks, notes, comments, bookmarks (only a wholly-internal _GoBack pair is exempt), range permissions, split fields, revisions, and anything referencing a package relationship (hyperlinks excepted); around it: the document-final paragraph, a paragraph separating two tables (deleting it would merge them), and a paragraph inside a field region whose boundaries lie elsewhere. The readback verifies the cut landed at exactly the planned bytes. Nothing is published on any refusal",
+          "transaction", "object", true, "office.transaction/2 report; the shared mutation preflight refuses before planning, and every structural hazard refuses typed — inside the paragraph: section breaks, notes, comments, bookmarks (only a wholly-internal _GoBack pair is exempt), range permissions, split fields, revisions, and anything referencing a package relationship (hyperlinks excepted); around it: the document-final DIRECT body paragraph, a paragraph separating two tables (deleting it would merge them), a paragraph inside a field region whose boundaries lie elsewhere, and a paragraph a range its own siblings anchor spans (a comment, a permission, a bookmark, a tracked move — including when the story's range markers do not balance, which cannot be judged). A target that is not exactly one whole logical paragraph refuses too. Every refusal carries a typed office.delete.* code. The readback verifies the published part is the source with exactly the planned span removed. Nothing is published on any refusal",
         ),
       ],
       output_modes: ["human", "json"],

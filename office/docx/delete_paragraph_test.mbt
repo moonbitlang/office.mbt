@@ -152,3 +152,70 @@ async test "delete-paragraph dry run and preflight write nothing" {
     delete_nothing_written(refused)
   })
 }
+
+///|
+/// Every typed refusal code, driven through the transaction that emits
+/// it. A code nothing asserts is a code a rewording can silently move —
+/// and these exist precisely so an agent can tell a retryable address
+/// mistake from a permanent structural refusal.
+async test "delete-paragraph refusals carry their typed codes" {
+  with_docx_session_test_dir(directory => {
+    let table = "<w:tbl><w:tr><w:tc><w:p><w:r><w:t>cell</w:t></w:r></w:p></w:tc></w:tr></w:tbl>"
+    for
+      probe in [
+        // (body runs, target, expected code)
+        ("<w:r><w:t>only</w:t></w:r>", "p[1]", "office.delete.final_paragraph"),
+        ("<w:r><w:t>a</w:t></w:r>", "p[9]", "office.delete.target_not_found"),
+        (
+          "<w:r><w:t>a</w:t></w:r></w:p>" +
+          table +
+          "<w:p><w:r><w:t>b</w:t></w:r>",
+          "tbl[1]/tr[1]/tc[1]/p[1]",
+          "office.delete.target_not_direct",
+        ),
+        (
+          "<w:r><w:footnoteReference w:id=\"1\"/></w:r></w:p><w:p><w:r><w:t>b</w:t></w:r>",
+          "p[1]", "office.delete.blocked_construct",
+        ),
+        (
+          "<w:r><w:t>a</w:t></w:r></w:p>" +
+          table +
+          "<w:p/>" +
+          table +
+          "<w:p><w:r><w:t>b</w:t></w:r>",
+          "p[2]",
+          "office.delete.table_separator",
+        ),
+        (
+          "<w:r><w:fldChar w:fldCharType=\"begin\"/></w:r></w:p><w:p><w:r><w:t>mid</w:t></w:r></w:p><w:p><w:r><w:fldChar w:fldCharType=\"end\"/></w:r></w:p><w:p><w:r><w:t>b</w:t></w:r>",
+          "p[2]", "office.delete.field_region",
+        ),
+        (
+          "<w:r><w:t>a</w:t></w:r></w:p><w:bookmarkStart w:id=\"3\" w:name=\"R\"/><w:p><w:r><w:t>mid</w:t></w:r></w:p><w:bookmarkEnd w:id=\"3\"/><w:p><w:r><w:t>b</w:t></w:r>",
+          "p[2]", "office.delete.open_range",
+        ),
+        (
+          "<w:bookmarkStart w:id=\"4\" w:name=\"_GoBack\"/><w:r><w:t>a</w:t></w:r></w:p><w:p><w:r><w:t>b</w:t></w:r>",
+          "p[1]", "office.delete.bookmark_unpairable",
+        ),
+      ] {
+      let (runs, at, code) = probe
+      let input = edit_fixture(directory, "code-\{code}.docx", runs)
+      let output = directory + "/code-out-\{code}.docx"
+      let mut reported = ""
+      ignore(
+        @docx.transact_docx_delete_paragraph(
+          @transaction.transaction_options(input, output_path=output),
+          at~,
+        ),
+      ) catch {
+        error => reported = "\{error}"
+      }
+      assert_true(
+        reported.contains(code),
+        msg="'\{at}' expected \{code}, got: " + reported,
+      )
+      delete_nothing_written(output)
+    }
+  })
+}

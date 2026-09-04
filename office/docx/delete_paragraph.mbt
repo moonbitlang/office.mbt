@@ -123,62 +123,33 @@ priv struct DeleteReadbackExpectation {
   // Text is the leg that still speaks there.
   successor_text : String?
   old_count : Int
-  // Where the cut must land, and what the story must read across it.
-  // Projection and identity both go blind when two adjacent paragraphs
-  // read alike — deleting either leaves the same text at the same path
-  // — so this is the leg that says WHICH paragraph left.
+  // What the published part must be. This leg proves the splice
+  // APPLIED as planned; it cannot prove the plan addressed the right
+  // paragraph, because the witness and the edit are built from one
+  // span. `--expect-text` is the check that binds address to content.
   cut : @word.DocxDeleteCutWitness
 }
 
 ///|
-/// The planner speaks in sentences; an agent needs a CODE it can branch
-/// on — most of all to tell a retryable address mistake (a stale
-/// ordinal after an earlier delete shifted paths) from a permanent
-/// structural refusal. The phrases matched here are OURS: the planner
-/// interpolates no caller text into any of them, so a crafted `--at`
-/// cannot steer the classification.
-fn delete_refusal_code(message : String) -> String {
-  if message.contains("is not one") || message.contains("does not resolve") {
-    "office.delete.target_not_found"
-  } else if message.contains("does not address exactly one whole paragraph") ||
-    message.contains("one physical half") ||
-    message.contains("has no readable projection") {
-    "office.delete.target_not_addressable"
-  } else if message.contains("not a DIRECT child") {
-    "office.delete.target_not_direct"
-  } else if message.contains("final direct body paragraph") {
-    "office.delete.final_paragraph"
-  } else if message.contains("separates two tables") {
-    "office.delete.table_separator"
-  } else if message.contains("field region") {
-    "office.delete.field_region"
-  } else if message.contains("do not balance") ||
-    message.contains("sits inside") ||
-    message.contains("carries the end of") {
-    "office.delete.open_range"
-  } else if message.contains("do not pair inside it") ||
-    message.contains("without a usable id") ||
-    message.contains("whose name could not be read") {
-    "office.delete.bookmark_unpairable"
-  } else if message.contains("references a package relationship") {
-    "office.delete.relationship_reference"
-  } else if message.contains("carries") {
-    "office.delete.blocked_construct"
-  } else {
-    "office.docx.invalid_plan"
-  }
-}
-
-///|
-/// Map a planner refusal to a typed code, falling back to the shared
-/// plan-failure classification for everything that is not a structural
-/// refusal (resource limits, malformed XML, stale plans).
+/// The planner speaks in sentences AND in slugs; an agent branches on
+/// the slug. Reading the slug rather than matching prose means no arm
+/// can shadow another, no rewording can silently reclassify a hazard,
+/// and a message that interpolates a part name from somewhere deeper
+/// cannot be mistaken for one of ours.
 fn delete_plan_failure(
   error : @docxcore.DocxError,
 ) -> @transaction.TransactionError raise @transaction.TransactionError {
   match error {
     Unsupported(message~) =>
-      @transaction.transaction_failure(delete_refusal_code(message), message)
+      match @word.docx_delete_refusal_slug(message) {
+        Some(slug) =>
+          @transaction.transaction_failure(
+            "office.delete." + slug,
+            @word.docx_delete_refusal_prose(message),
+          )
+        // Not this planner's refusal: the shared classification owns it.
+        None => mapped_plan_failure(error)
+      }
     _ => mapped_plan_failure(error)
   }
 }
@@ -321,9 +292,9 @@ fn delete_readback_findings(
     None => ()
   }
   // The cut, verified at the BYTES: the published part must be exactly
-  // the source with the planned span removed. Text and identity both go
-  // blind when two adjacent paragraphs read alike, so this is the leg
-  // that says which paragraph left.
+  // the source with the planned span removed — the splice applied as
+  // planned, nothing else touched the part, and the zip round trip
+  // preserved it.
   match archive.get(plan.cut.part()) {
     Some(payload) =>
       if !plan.cut.matches(payload[:]) {

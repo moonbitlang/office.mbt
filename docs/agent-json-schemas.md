@@ -882,23 +882,33 @@ the wrong paragraph by ordinal).
 
 Everything the removal could dangle refuses typed. Inside the paragraph:
 section breaks, note references, comment machinery, bookmark markers
-(only a wholly-internal `_GoBack` pair is exempt), range permissions, split field boundaries
+(only a wholly-internal `_GoBack` pair is exempt, and only when it does not itself span the paragraph), range permissions, split field boundaries
 (`fldSimple` is permitted), the entire tracked-revision family, and any
 element referencing a package relationship (`w:hyperlink` alone
 excepted). Around it: the document-final DIRECT body paragraph, a paragraph
 separating two tables (deleting it would merge them into one — judged
 on layout flow, so wrappers and zero-width markers between them do not
 hide it), a paragraph inside a field region whose boundaries live in
-other paragraphs, and a paragraph bracketed by a range its own siblings
-anchor (a comment, a permission, a tracked move, a named bookmark). A target that is not exactly one whole logical paragraph —
-a collided path, or half of one joined across a deleted paragraph mark
-— refuses too.
+other paragraphs, and a paragraph SPANNED by a range its own siblings
+anchor (a comment, a permission, a bookmark, a tracked move, a customXml
+revision range) — including the case where the story's range markers do
+not balance near the target, which cannot be judged at all. A target
+that is not exactly one whole logical paragraph — a collided path, or
+half of one joined across a deleted paragraph mark — refuses too.
 
-The readback verifies the deleted identity is GONE, the successor
-answers at the path with the text it had before the splice, the story
-is exactly one paragraph shorter, and — because projection and identity
-both go blind when two adjacent paragraphs read alike — that the cut
-landed at exactly the bytes the plan named.
+Every refusal carries a typed `office.delete.*` code, so an agent can
+tell a retryable address mistake (`target_not_found`) from a permanent
+structural refusal (`table_separator`, `field_region`, `open_range`,
+`final_paragraph`, `blocked_construct`, …) without reading prose.
+
+The readback verifies the deleted identity is GONE from the addressable
+inventory, the successor answers at the path with the text it had before
+the splice, the story is exactly one paragraph shorter, and the
+published part is the source with exactly the planned span removed —
+which proves the splice APPLIED as planned. It does not prove the plan
+addressed the paragraph you meant: witness and edit share one span, so a
+mis-resolved address moves both. `--expect-text` is what binds an
+address to content.
 
 | key | type | notes |
 | --- | --- | --- |
@@ -911,6 +921,7 @@ landed at exactly the bytes the plan named.
 | `deleted` | object | `{path, para_id, paragraph_anchor_status, text, text_truncated}` — what left, readback-verified gone. `text` is bounded at 160 characters and `text_truncated` says whether that cut it; `--expect-text` compares the FULL projection, so a truncated value is not a round-trippable guard (`office text --json` emits the untruncated projection) |
 | `successor_para_id` | string\|null | the stable identity now answering at the deleted path; null when the successor carries no unique identity |
 | `successor_text` | string\|null | the projection now reading at the deleted path (bounded at 160 characters), verified against the published candidate; null when nothing follows — the re-anchor that still speaks on documents carrying no unique identities |
+| `successor_text_truncated` | boolean | whether that bound cut `successor_text` |
 | `stories_scanned` | array | `["/body"]` in v1 |
 | `transaction` | object | `office.transaction/2` report; nothing is published on any refusal |
 

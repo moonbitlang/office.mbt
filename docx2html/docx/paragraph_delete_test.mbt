@@ -612,6 +612,74 @@ test "range counting refuses what it cannot pair and nothing else" {
 }
 
 ///|
+/// An INVERTED pair — an end before its start — nets to zero across
+/// the story, so a total cannot see it. A running prefix minimum can,
+/// and must, because such a story leaves a real range unpairable.
+test "an inverted range pair is not balanced" {
+  let keeper = "<w:p><w:r><w:t>keeper</w:t></w:r></w:p>"
+  let inverted = delete_fixture(
+    "<w:bookmarkEnd w:id=\"1\"/><w:bookmarkStart w:id=\"2\" w:name=\"Real\"/>" +
+    "<w:p><w:r><w:t>target</w:t></w:r></w:p>" +
+    "<w:bookmarkEnd w:id=\"2\"/><w:bookmarkStart w:id=\"1\" w:name=\"Late\"/>" +
+    keeper,
+  )
+  assert_true(delete_refusal_of(inverted, "p[1]") != "<planned>")
+}
+
+///|
+/// A stray marker that cannot reach the target does not take the whole
+/// document out: the balance refusal applies to families whose markers
+/// STRADDLE the target, not to every family in the story.
+test "an unbalanced family away from the target still permits deletion" {
+  let annotated = delete_fixture(
+    "<w:p><w:r><w:t>target</w:t></w:r></w:p>" +
+    "<w:p><w:r><w:t>keeper</w:t></w:r></w:p>" +
+    "<w:bookmarkStart w:id=\"9\" w:name=\"Orphan\"/>",
+  )
+  assert_eq(delete_refusal_of(annotated, "p[1]"), "<planned>")
+}
+
+///|
+/// `w:id` normalizes as a NUMBER only when it is one: `0abc` is not
+/// zero followed by letters, and collapsing it onto `abc` would pair
+/// two ids a consumer keeps apart.
+test "only decimal ids normalize as decimals" {
+  let keeper = "<w:p><w:r><w:t>keeper</w:t></w:r></w:p>"
+  // `01` and `1` ARE the same id, so this pairs and plans.
+  let numeric = delete_fixture(
+    "<w:p><w:bookmarkStart w:id=\"01\" w:name=\"_GoBack\"/><w:bookmarkEnd w:id=\"1\"/><w:r><w:t>x</w:t></w:r></w:p>" +
+    keeper,
+  )
+  assert_eq(delete_refusal_of(numeric, "p[1]"), "<planned>")
+  // `0abc` and `abc` are NOT, so this cannot pair and refuses.
+  let textual = delete_fixture(
+    "<w:p><w:bookmarkStart w:id=\"0abc\" w:name=\"_GoBack\"/><w:bookmarkEnd w:id=\"abc\"/><w:r><w:t>x</w:t></w:r></w:p>" +
+    keeper,
+  )
+  assert_true(
+    delete_refusal_of(textual, "p[1]").contains("do not pair inside it"),
+  )
+}
+
+///|
+/// A field boundary whose type has two WML-resolved spellings is one
+/// this reader cannot judge — and a field whose depth cannot be judged
+/// is one this verb will not edit around. (The reader's own projection
+/// keeps its last-wins precedence; only the GATE is stricter.)
+test "an ambiguous field boundary refuses" {
+  let document = "<w:document xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\" xmlns:s=\"http://purl.oclc.org/ooxml/wordprocessingml/main\"><w:body>" +
+    "<w:p><w:r><w:fldChar w:fldCharType=\"begin\" s:fldCharType=\"end\"/></w:r></w:p>" +
+    "<w:p><w:r><w:t>target</w:t></w:r></w:p>" +
+    "<w:p><w:r><w:t>keeper</w:t></w:r></w:p><w:sectPr/></w:body></w:document>"
+  let annotated = @docx.read_docx_annotated(fixture_docx(document))
+  assert_true(
+    delete_refusal_of(annotated, "p[2]").contains(
+      "cannot be read unambiguously",
+    ),
+  )
+}
+
+///|
 /// A field region only truncates if the region open AT the target is
 /// the one that closes after it: an orphan `begin` plus an ordinary
 /// later field (a page number — nearly every document has one) must not

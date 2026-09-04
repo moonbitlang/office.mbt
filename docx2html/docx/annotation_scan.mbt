@@ -257,6 +257,13 @@ priv struct ScannedElement {
   local_name : String
   same_name_ordinal : Int
   field_char_type : String?
+  // Whether MORE THAN ONE WML-resolved spelling of `fldCharType` is
+  // present. `field_char_type` follows the READER's last-wins
+  // precedence, which is right for projecting a document and wrong for
+  // a GATE: the deletion planner's field-region judgment treats an
+  // ambiguous boundary as unreadable rather than trusting whichever
+  // spelling came last.
+  field_char_type_ambiguous : Bool
   // A WML `w:p` element's `w14:paraId` value AS SPELLED in the source
   // (never normalized here — validity and canonical case are the
   // identity layer's judgment). None when the attribute is absent.
@@ -1579,6 +1586,10 @@ fn scan_story(
           } else {
             None
           },
+          field_char_type_ambiguous: is_wml_uri(uri) &&
+          local_name == "fldChar" &&
+          attribute_value(attributes, "fldCharType", namespaces) is Some(_) &&
+          unique_attribute_value(attributes, "fldCharType", namespaces) is None,
           para_id_raw: if is_wml_uri(uri) && local_name == "p" {
             uri_attribute_value(attributes, "paraId", namespaces, is_w14_uri)
           } else {
@@ -2707,8 +2718,8 @@ fn declined_wml_name(
   namespaces : StableStringMap[Array[String]],
 ) -> Bool {
   for qname in unretained {
-    let (prefix, local) = split_qualified_name(qname)
-    if local == "name" && prefix != "" {
+    let (prefix, local_name) = split_qualified_name(qname)
+    if local_name == "name" && prefix != "" {
       match namespaces.get(prefix) {
         Some(stack) if stack.length() > 0 &&
           is_wml_uri(stack[stack.length() - 1]) => return true

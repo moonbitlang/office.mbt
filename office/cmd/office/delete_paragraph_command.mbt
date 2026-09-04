@@ -115,6 +115,12 @@ fn delete_paragraph_report_json(
       Some(text) => Json::string(bounded_text(text, 160))
       None => Json::null()
     },
+    // The field an agent feeds to the NEXT --expect-text, so it must
+    // say when feeding it back would not reproduce the run.
+    "successor_text_truncated": match report.successor_text() {
+      Some(text) => Json::boolean(text.iter().count() > 160)
+      None => Json::boolean(false)
+    },
     "stories_scanned": Json::array([Json::string("/body")]),
     "transaction": transaction,
   })
