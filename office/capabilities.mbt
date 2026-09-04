@@ -1240,6 +1240,86 @@ pub fn capability_commands() -> Array[CapabilityCommand] {
       ],
     },
     {
+      name: "delete-paragraph",
+      summary: "Delete one direct body paragraph, refusing wherever the removal would dangle document state",
+      usage: "office delete-paragraph FILE OUT.docx --at (p[N] | p[id=\"…\"]) [--expect-text TEXT] [--dry-run] [--overwrite] [--json]",
+      formats: ["docx"],
+      aliases: [],
+      inputs: [
+        capability_field(
+          "file", "path", true, "existing .docx package (never modified in place)",
+        ),
+        capability_field(
+          "out", "path", true, "destination .docx; created atomically, nothing written on any refusal",
+        ),
+        capability_field(
+          "at", "string", true, "the DIRECT body paragraph to delete: p[3] (proven a physical child of the body on the element tree), or stable p[id=\"…\"] resolved against the transaction snapshot with the typed para_id refusals",
+        ),
+        capability_field(
+          "expect-text", "string", false, "assert the target's full projection equals this text before deleting; a mismatch refuses with nothing written — the guard against deleting the wrong paragraph by ordinal",
+        ),
+        capability_field(
+          "dry-run", "boolean", false, "run the identical resolve/plan/validate pipeline, exit as the real run would, write nothing",
+        ),
+        capability_field(
+          "overwrite", "boolean", false, "replace an existing destination",
+        ),
+        capability_field(
+          "json", "boolean", false, "emit one office.output/1 JSON document",
+        ),
+      ],
+      outputs: [
+        capability_field(
+          "schema", "literal(office.docx.delete-paragraph/1)", true, "deletion result schema",
+        ),
+        capability_field("file", "string", true, "the edited source path"),
+        capability_field(
+          "format", "literal(docx)", true, "edited document format",
+        ),
+        capability_field(
+          "output", "string", true, "the publication destination",
+        ),
+        capability_field("at", "string", true, "the target as requested"),
+        capability_field(
+          "expect_text", "string", false, "the asserted projection (bounded at 160 characters), null when not asserted",
+        ),
+        capability_field(
+          "expect_text_truncated", "boolean", true, "whether the echoed expect_text was cut by that bound; the assertion itself always compares the FULL projection",
+        ),
+        capability_field(
+          "dry_run", "boolean", true, "whether this run validated without publishing",
+        ),
+        capability_field("changed", "boolean", true, "whether any byte changed"),
+        capability_field(
+          "deleted", "object", true, "what left the document: path, para_id (canonical w14:paraId or null — null whenever the anchor is not unique), paragraph_anchor_status, text (the reader projection, bounded at 160 characters) and text_truncated saying whether that bound cut it — --expect-text compares the FULL projection, so a truncated value is not a round-trippable guard; `office text --json` emits the untruncated projection. The readback verifies the identity is gone only when the paragraph HAD a unique one; on a document with duplicated, invalid or absent paraIds that leg is silent and the byte-level cut check carries the verification",
+        ),
+        capability_field(
+          "successor_para_id", "string", false, "the stable identity now answering at the deleted path, null when the successor carries no UNIQUE identity (absent, duplicated, or invalid ids all report null) — the re-anchor after ordinal paths shift",
+        ),
+        capability_field(
+          "successor_text", "string", false, "the projection now reading at the deleted path (bounded at 160 characters), verified against the published candidate; null when nothing follows. The re-anchor that still speaks on documents carrying no unique identities",
+        ),
+        capability_field(
+          "successor_text_truncated", "boolean", true, "whether that bound cut successor_text; --expect-text compares the FULL projection",
+        ),
+        capability_field(
+          "stories_scanned", "array(string)", true, "the stories searched; /body in v1",
+        ),
+        capability_field(
+          "transaction", "object", true, "office.transaction/2 report; the shared mutation preflight refuses before planning, and every structural hazard refuses typed — inside the paragraph: section breaks, notes, comments, bookmarks (Word's _GoBack caret is exempt both ways — a pair wholly inside the paragraph, and one that brackets it — while a caret SPLIT across the target still refuses, and a name this reader cannot read as exactly _GoBack is an ordinary named bookmark), range permissions, SPLIT fields whose partner boundary lies outside (a complete field leaves with its paragraph), revisions, drawings and embedded objects, content-control data bindings, nested block content, and anything referencing a package relationship (hyperlinks excepted); around it: a target whose immediate block SIBLINGS are not both paragraphs (a table, a content control, a compatibility alternative — how those blocks would meet is a question v1 does not judge), a deletion that would leave the body with NO direct paragraph, a paragraph inside a field region whose boundaries lie elsewhere, and a paragraph a range its own siblings anchor spans (a comment, a permission, a bookmark, a tracked move — including when the story's range markers do not balance, which cannot be judged). A target that is not exactly one whole logical paragraph refuses too. Every STRUCTURAL refusal carries a typed office.delete.* code; request-grammar problems answer office.invalid_arguments and stable-identity problems answer office.docx.para_id_*, as they do for every verb. The readback verifies the published part is the source with exactly the planned span removed, that the body still has a direct paragraph, and — wherever the document supports it — that the deleted identity is gone, that the successor answers at the deleted path with the text it had, and that the paragraph BEFORE the target still reads the same at its own path. At least one of those content checks must be available or the deletion refuses office.delete.unverifiable before planning. A deletion also CLOSES its story: nothing else may edit that part in the same transaction (office.delete.part_closed), and one transaction queues at most one deletion (office.delete.already_queued). Nothing is published on any refusal",
+        ),
+      ],
+      output_modes: ["human", "json"],
+      variants: [
+        capability_variant(
+          "docx",
+          "office delete-paragraph FILE OUT.docx --at 'p[id=\"1A2B3C4D\"]'",
+          "office.docx.delete-paragraph/1",
+          ["format=docx"],
+        ),
+      ],
+    },
+    {
       name: "validate",
       summary: "Validate an XLSX or DOCX package with the shared mutation gate",
       usage: "office validate FILE [--json|--jsonl]",

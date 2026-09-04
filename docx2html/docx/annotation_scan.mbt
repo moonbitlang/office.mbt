@@ -257,10 +257,33 @@ priv struct ScannedElement {
   local_name : String
   same_name_ordinal : Int
   field_char_type : String?
+  // Whether MORE THAN ONE WML-resolved spelling of `fldCharType` is
+  // present. `field_char_type` follows the READER's last-wins
+  // precedence, which is right for projecting a document and wrong for
+  // a GATE: the deletion planner's field-region judgment treats an
+  // ambiguous boundary as unreadable rather than trusting whichever
+  // spelling came last.
+  field_char_type_ambiguous : Bool
   // A WML `w:p` element's `w14:paraId` value AS SPELLED in the source
   // (never normalized here — validity and canonical case are the
   // identity layer's judgment). None when the attribute is absent.
   para_id_raw : String?
+  // A WML bookmark marker's `w:name` (bookmarkStart), as spelled —
+  // the deletion planner judges the `_GoBack` exemption on it. None
+  // when the name is absent, spelled more than one way, or longer than
+  // the relevant-attribute cap: all three mean "not provably `_GoBack`",
+  // and every consumer of this field treats that as a named bookmark.
+  bookmark_name_raw : String?
+  // A WML range marker's `w:id` (bookmarks, comment ranges, range
+  // permissions), as spelled: the deletion planner pairs markers on
+  // it, both inside the target and bracketing it.
+  bookmark_id_raw : String?
+  // Whether any attribute on this element lives in the OPC
+  // relationships namespace (r:id, r:embed, r:link, …): the element
+  // REFERENCES a package relationship, and removing it mechanically
+  // touches relationship reachability. Judged by resolved URI, never
+  // by prefix.
+  references_relationship : Bool
   parent_index : Int
   mut first_child_index : Int
   mut next_sibling_index : Int
@@ -1456,6 +1479,11 @@ fn scan_story(
         ""
       }
     }
+    // Whether any attribute here resolves into the OPC relationships
+    // namespace. Only the source-retaining scan stores it (the element
+    // record is built on that path alone), so the lighter scan does
+    // not pay for it.
+    let mut references_relationship = false
     match source_budget {
       Some(_) => {
         for attr_name in unretained_attribute_names {
@@ -1467,8 +1495,22 @@ fn scan_story(
                 message="the projection source scanner found an unbound attribute namespace prefix",
               )
             }
+            if !references_relationship &&
+              is_relationships_uri(stack[stack.length() - 1]) {
+              references_relationship = true
+            }
           }
         }
+        // NOTE on duplicate expanded attribute names: the strict XML
+        // gate every production caller runs first (`read_identity_
+        // story_xml_strict`) already refuses them, so a guard here
+        // would be dead code paying a per-element allocation on the
+        // shared read path. It would ALSO not close the case it looked
+        // like it closed: two WML DIALECTS (transitional and purl) are
+        // different namespaces, so `w:x` beside `ws:x` expands to two
+        // names and no duplicate check fires — which is why the gates
+        // that care read through `unique_attribute_value` and the
+        // fldChar ambiguity flag instead.
         for pair in attributes {
           let attr_name = pair.0
           if attr_name != "xmlns" && !attr_name.has_prefix("xmlns:") {
@@ -1479,6 +1521,10 @@ fn scan_story(
                 raise Unsupported(
                   message="the projection source scanner found an unbound attribute namespace prefix",
                 )
+              }
+              let attr_uri = stack[stack.length() - 1]
+              if !references_relationship && is_relationships_uri(attr_uri) {
+                references_relationship = true
               }
             }
           }
@@ -1518,11 +1564,36 @@ fn scan_story(
           } else {
             None
           },
+          field_char_type_ambiguous: is_wml_uri(uri) &&
+          local_name == "fldChar" &&
+          attribute_value(attributes, "fldCharType", namespaces) is Some(_) &&
+          unique_attribute_value(attributes, "fldCharType", namespaces) is None,
           para_id_raw: if is_wml_uri(uri) && local_name == "p" {
             uri_attribute_value(attributes, "paraId", namespaces, is_w14_uri)
           } else {
             None
           },
+          // `unique_attribute_value` answers None for an absent name AND
+          // for one spelled more than one way: both mean "this reader
+          // cannot say the name is `_GoBack`", which is the only
+          // question a gate asks of it, and every consumer treats that
+          // as an ordinary named bookmark — the conservative answer.
+          bookmark_name_raw: if is_wml_uri(uri) && local_name == "bookmarkStart" {
+            unique_attribute_value(attributes, "name", namespaces)
+          } else {
+            None
+          },
+          // The vocabulary lives with the planner that reads it, in ONE
+          // place. Spelled here as well, the two lists drift: a family
+          // added there and not here has no id to pair on, and one
+          // added here and not there is captured and never consulted.
+          bookmark_id_raw: if is_wml_uri(uri) &&
+            is_wml_range_marker_name(local_name) {
+            unique_attribute_value(attributes, "id", namespaces)
+          } else {
+            None
+          },
+          references_relationship,
           parent_index,
           first_child_index: -1,
           next_sibling_index: -1,
@@ -2290,6 +2361,11 @@ fn scan_tag(
     None => ()
   }
   let name = utf8_slice(part, name_start, at)
+  // `:name` retention is scoped to bookmark starts, so the relevance
+  // judgment needs to know which element this tag opens. Lexical here;
+  // the URI-aware judgment stays at capture time.
+  let element_is_bookmark_start = name == "bookmarkStart" ||
+    name.has_suffix(":bookmarkStart")
   match source_budget {
     Some(_) => {
       guard projection_source_is_xml_qname(name) else {
@@ -2357,6 +2433,7 @@ fn scan_tag(
       attr_start,
       attr_end,
       source_budget is Some(_),
+      element_is_bookmark_start,
     )
     let validated_source_name = match source_budget {
       Some(budget) => {
@@ -2418,13 +2495,44 @@ fn scan_tag(
     if relevant_attribute {
       if attr_end - attr_start > max_annotation_relevant_attribute_bytes ||
         at - value_start > max_annotation_relevant_attribute_bytes {
+        // A bookmark NAME over the cap is DECLINED, never fatal: `:name`
+        // was not a retained attribute before this verb existed, so a
+        // document readable without it must stay readable with it. The
+        // planner then reads None, which it treats exactly as it treats
+        // any other non-`_GoBack` name — an ordinary named bookmark,
+        // which refuses. The decision is the VALUE'S OWN LENGTH and
+        // nothing else, so no earlier content in the story can move it.
+        // Scoped exactly to the rule that added it: a namespace
+        // DECLARATION spelled `xmlns:name` is not a bookmark name and
+        // keeps its hard limit, which the binding walk and the
+        // duplicate-declaration guard rely on.
+        //
+        // Declining still records the QName as UNRETAINED, so
+        // `scan_story`'s unbound-prefix check keeps seeing it: an
+        // optional capture may cost a value, never a validation.
+        if element_is_bookmark_start &&
+          source_budget is Some(_) &&
+          !bytes_range_has_ascii_prefix(part, attr_start, attr_end, "xmlns:") &&
+          bytes_range_has_ascii_suffix(part, attr_start, attr_end, ":name") {
+          match validated_source_name {
+            Some(candidate) => unretained_attribute_names.push(candidate)
+            None => ()
+          }
+          at += 1
+          continue
+        }
         raise @core.docx_xml_resource_limit_error(DocxXmlTokenLength)
       }
       match source_budget {
-        Some(budget) =>
-          // The QName and its fixed-size retained slot were charged before the
-          // QName allocation above; only the value remains.
-          budget.charge_retained_chars(at - value_start)
+        // The QName and its fixed-size retained slot were charged before
+        // the QName allocation above; only the value remains. A bookmark
+        // `w:name` charges the SAME shared pool as every other attribute
+        // value: an optional per-name allowance was tried and removed,
+        // because a second pool made `max_attribute_chars` stop being the
+        // ceiling for every reader in the toolkit, and declining a name
+        // when that pool ran out made a deletion's refusal depend on how
+        // many bookmarks happened to appear EARLIER in the story.
+        Some(budget) => budget.charge_retained_chars(at - value_start)
         None => ()
       }
       let attr_name = match validated_source_name {
@@ -2501,6 +2609,7 @@ fn annotation_attribute_is_relevant(
   start : Int,
   end : Int,
   retain_projection_attributes : Bool,
+  element_is_bookmark_start : Bool,
 ) -> Bool {
   bytes_range_equals_ascii(part, start, end, "xmlns") ||
   bytes_range_has_ascii_prefix(part, start, end, "xmlns:") ||
@@ -2516,9 +2625,25 @@ fn annotation_attribute_is_relevant(
       // Paragraph identity: `w14:paraId` values are retained AS SPELLED
       // for the identity layer. The suffix admits any prefix; the
       // URI-aware lookup at capture time is the namespace judgment.
-      bytes_range_has_ascii_suffix(part, start, end, ":paraId")
+      bytes_range_has_ascii_suffix(part, start, end, ":paraId") ||
+      // Bookmark identity: the deletion planner judges pairing and the
+      // `_GoBack` exemption on `w:name` — retained ONLY on bookmark
+      // starts, so no other element's name attribute changes buckets.
+      (
+        element_is_bookmark_start &&
+        bytes_range_has_ascii_suffix(part, start, end, ":name")
+      )
     )
   )
+}
+
+///|
+/// The OPC relationships namespace in BOTH OOXML dialects — a Strict
+/// package binds `r:` to the purl spelling, and a class that judges
+/// relationship references must not be inert there.
+fn is_relationships_uri(uri : String) -> Bool {
+  uri == "http://schemas.openxmlformats.org/officeDocument/2006/relationships" ||
+  uri == "http://purl.oclc.org/ooxml/officeDocument/relationships"
 }
 
 ///|
@@ -2581,6 +2706,47 @@ fn uri_attribute_value(
     }
   }
   matched
+}
+
+///|
+/// The value of a WML-namespaced attribute, but ONLY when exactly one
+/// spelling of it is present. `attribute_value` keeps the last match,
+/// which is right for a reader and wrong for a GATE: two prefixes
+/// bound to the same URI (`w:name="Chapter"` beside `w2:name="_GoBack"`)
+/// would let the later spelling decide a permission the earlier one
+/// denies. Ambiguity reads as absent, and the caller refuses.
+fn unique_attribute_value(
+  attributes : Array[(String, String)],
+  local_name : String,
+  namespaces : StableStringMap[Array[String]],
+) -> String? {
+  let mut matched : String? = None
+  let mut seen = 0
+  for pair in attributes {
+    let (name, value) = pair
+    match name.find(":") {
+      Some(colon) => {
+        let attr_local = name[colon + 1:].to_owned()
+        if attr_local == local_name {
+          let prefix = name[0:colon].to_owned()
+          match namespaces.get(prefix) {
+            Some(stack) if stack.length() > 0 &&
+              is_wml_uri(stack[stack.length() - 1]) => {
+              matched = Some(value)
+              seen += 1
+            }
+            _ => ()
+          }
+        }
+      }
+      None => ()
+    }
+  }
+  if seen == 1 {
+    matched
+  } else {
+    None
+  }
 }
 
 ///|

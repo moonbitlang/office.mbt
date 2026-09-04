@@ -110,13 +110,11 @@ fn format_command() -> @argparse.Command {
 /// A scalar option given twice is a CONTRADICTION, not a preference for
 /// the later spelling: `--bold on --bold off` must refuse, and so must
 /// a duplicated selector or scope that would silently change targets.
-fn format_reject_duplicates(
+fn reject_duplicate_scalar_options(
   matches : @argparse.Matches,
+  names : Array[String],
 ) -> Unit raise CliFailure {
-  for
-    name in [
-      "text", "in", "range", "nth", "bold", "italic", "underline", "color", "expect",
-    ] {
+  for name in names {
     match matches.values.get(name) {
       Some(values) if values.length() > 1 =>
         raise CliFailure(
@@ -128,6 +126,19 @@ fn format_reject_duplicates(
       _ => ()
     }
   }
+}
+
+///|
+/// The exact single-segment stable spelling, at the request boundary.
+/// Anything stable-LOOKING that is not exactly this shape refuses
+/// before any file is read; the engine's semantic para_id validation
+/// judges the payload itself.
+///
+/// The ENGINE owns the predicate, and every verb — here and in the SDK
+/// — asks it the same question. Two hand-written copies of one grammar
+/// disagree eventually, and this pair did.
+fn docx_stable_target_shape_valid(value : String) -> Bool {
+  @office_docx.docx_stable_target_shape_valid(value)
 }
 
 ///|
@@ -208,31 +219,17 @@ fn format_validate_scope(scope : String) -> Unit raise CliFailure {
       ),
     )
   }
-  if scope.has_prefix("p[id=") {
+  if scope.has_prefix("p[id") {
     // Only the EXACT single-segment stable shape goes to the engine's
     // semantic validation; every other stable-looking spelling is
     // malformed grammar and refuses here, before any file is read.
-    guard scope.has_prefix("p[id=\"") &&
-      scope.has_suffix("\"]") &&
-      scope.length() > 8 else {
+    guard docx_stable_target_shape_valid(scope) else {
       raise CliFailure(
         @lib.protocol_error(
           "office.invalid_arguments",
           "--in '\{bounded_text(scope, 80)}' is not the stable shape p[id=\"…\"]; pass the exact para_id spelling the read surfaces report",
         ),
       )
-    }
-    // `p[id="` is six characters; the payload starts right after it.
-    let inner = scope[6:scope.length() - 2]
-    for ch in inner {
-      guard ch != '"' && ch != ']' else {
-        raise CliFailure(
-          @lib.protocol_error(
-            "office.invalid_arguments",
-            "--in '\{bounded_text(scope, 80)}' is not the stable shape p[id=\"…\"]; pass the exact para_id spelling the read surfaces report",
-          ),
-        )
-      }
     }
     return
   }
@@ -514,7 +511,9 @@ fn ensure_format_report_budget(
 
 ///|
 async fn run_format(matches : @argparse.Matches) -> Unit {
-  format_reject_duplicates(matches)
+  reject_duplicate_scalar_options(matches, [
+    "text", "in", "range", "nth", "bold", "italic", "underline", "color", "expect",
+  ])
   let file = required_value(matches, "file")
   let output = required_value(matches, "out")
   let mode = office_validate_output_mode(matches)

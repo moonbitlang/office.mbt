@@ -17,7 +17,7 @@ and JSONL inventories without deferred PowerPoint or MCP entries.
   $ office.exe help | sed -n '1,8p'
   Office capability registry
     Schema: office.capabilities/2
-    Fingerprint: crc32:98b53952
+    Fingerprint: crc32:ba12aaf6
   Formats:
     docx (aliases: word) — WordprocessingML documents
     xlsx (aliases: excel) — SpreadsheetML workbooks
@@ -41,10 +41,10 @@ and JSONL inventories without deferred PowerPoint or MCP entries.
   {"formats":["xlsx"],"variants":[{"name":"xlsx","result_schema":"office.xlsx.query/1","constraints":["format=xlsx"]}]}
 
   $ office.exe help all --json | jq -c '{schema,success,capability_schema:.data.schema,fingerprint:.data.fingerprint,names:[.data.records[].name]}'
-  {"schema":"office.output/1","success":true,"capability_schema":"office.capabilities/2","fingerprint":"crc32:98b53952","names":["docx","xlsx","help","identify","outline","get","text","query","find","replace","format","insert-paragraph","validate","dump","replay","issues","preview","render","create","template","edit","annotate","batch","raw"]}
+  {"schema":"office.output/1","success":true,"capability_schema":"office.capabilities/2","fingerprint":"crc32:ba12aaf6","names":["docx","xlsx","help","identify","outline","get","text","query","find","replace","format","insert-paragraph","delete-paragraph","validate","dump","replay","issues","preview","render","create","template","edit","annotate","batch","raw"]}
 
   $ office.exe help all --jsonl | jq -s -c 'map({schema,fingerprint,kind,name})'
-  [{"schema":"office.capability/2","fingerprint":"crc32:98b53952","kind":"format","name":"docx"},{"schema":"office.capability/2","fingerprint":"crc32:98b53952","kind":"format","name":"xlsx"},{"schema":"office.capability/2","fingerprint":"crc32:98b53952","kind":"command","name":"help"},{"schema":"office.capability/2","fingerprint":"crc32:98b53952","kind":"command","name":"identify"},{"schema":"office.capability/2","fingerprint":"crc32:98b53952","kind":"command","name":"outline"},{"schema":"office.capability/2","fingerprint":"crc32:98b53952","kind":"command","name":"get"},{"schema":"office.capability/2","fingerprint":"crc32:98b53952","kind":"command","name":"text"},{"schema":"office.capability/2","fingerprint":"crc32:98b53952","kind":"command","name":"query"},{"schema":"office.capability/2","fingerprint":"crc32:98b53952","kind":"command","name":"find"},{"schema":"office.capability/2","fingerprint":"crc32:98b53952","kind":"command","name":"replace"},{"schema":"office.capability/2","fingerprint":"crc32:98b53952","kind":"command","name":"format"},{"schema":"office.capability/2","fingerprint":"crc32:98b53952","kind":"command","name":"insert-paragraph"},{"schema":"office.capability/2","fingerprint":"crc32:98b53952","kind":"command","name":"validate"},{"schema":"office.capability/2","fingerprint":"crc32:98b53952","kind":"command","name":"dump"},{"schema":"office.capability/2","fingerprint":"crc32:98b53952","kind":"command","name":"replay"},{"schema":"office.capability/2","fingerprint":"crc32:98b53952","kind":"command","name":"issues"},{"schema":"office.capability/2","fingerprint":"crc32:98b53952","kind":"command","name":"preview"},{"schema":"office.capability/2","fingerprint":"crc32:98b53952","kind":"command","name":"render"},{"schema":"office.capability/2","fingerprint":"crc32:98b53952","kind":"command","name":"create"},{"schema":"office.capability/2","fingerprint":"crc32:98b53952","kind":"command","name":"template"},{"schema":"office.capability/2","fingerprint":"crc32:98b53952","kind":"command","name":"edit"},{"schema":"office.capability/2","fingerprint":"crc32:98b53952","kind":"command","name":"annotate"},{"schema":"office.capability/2","fingerprint":"crc32:98b53952","kind":"command","name":"batch"},{"schema":"office.capability/2","fingerprint":"crc32:98b53952","kind":"command","name":"raw"}]
+  [{"schema":"office.capability/2","fingerprint":"crc32:ba12aaf6","kind":"format","name":"docx"},{"schema":"office.capability/2","fingerprint":"crc32:ba12aaf6","kind":"format","name":"xlsx"},{"schema":"office.capability/2","fingerprint":"crc32:ba12aaf6","kind":"command","name":"help"},{"schema":"office.capability/2","fingerprint":"crc32:ba12aaf6","kind":"command","name":"identify"},{"schema":"office.capability/2","fingerprint":"crc32:ba12aaf6","kind":"command","name":"outline"},{"schema":"office.capability/2","fingerprint":"crc32:ba12aaf6","kind":"command","name":"get"},{"schema":"office.capability/2","fingerprint":"crc32:ba12aaf6","kind":"command","name":"text"},{"schema":"office.capability/2","fingerprint":"crc32:ba12aaf6","kind":"command","name":"query"},{"schema":"office.capability/2","fingerprint":"crc32:ba12aaf6","kind":"command","name":"find"},{"schema":"office.capability/2","fingerprint":"crc32:ba12aaf6","kind":"command","name":"replace"},{"schema":"office.capability/2","fingerprint":"crc32:ba12aaf6","kind":"command","name":"format"},{"schema":"office.capability/2","fingerprint":"crc32:ba12aaf6","kind":"command","name":"insert-paragraph"},{"schema":"office.capability/2","fingerprint":"crc32:ba12aaf6","kind":"command","name":"delete-paragraph"},{"schema":"office.capability/2","fingerprint":"crc32:ba12aaf6","kind":"command","name":"validate"},{"schema":"office.capability/2","fingerprint":"crc32:ba12aaf6","kind":"command","name":"dump"},{"schema":"office.capability/2","fingerprint":"crc32:ba12aaf6","kind":"command","name":"replay"},{"schema":"office.capability/2","fingerprint":"crc32:ba12aaf6","kind":"command","name":"issues"},{"schema":"office.capability/2","fingerprint":"crc32:ba12aaf6","kind":"command","name":"preview"},{"schema":"office.capability/2","fingerprint":"crc32:ba12aaf6","kind":"command","name":"render"},{"schema":"office.capability/2","fingerprint":"crc32:ba12aaf6","kind":"command","name":"create"},{"schema":"office.capability/2","fingerprint":"crc32:ba12aaf6","kind":"command","name":"template"},{"schema":"office.capability/2","fingerprint":"crc32:ba12aaf6","kind":"command","name":"edit"},{"schema":"office.capability/2","fingerprint":"crc32:ba12aaf6","kind":"command","name":"annotate"},{"schema":"office.capability/2","fingerprint":"crc32:ba12aaf6","kind":"command","name":"batch"},{"schema":"office.capability/2","fingerprint":"crc32:ba12aaf6","kind":"command","name":"raw"}]
 
 Installed help exposes every consumed JSON input contract without requiring
 repository-only documentation. Inventory and individual records are versioned;
@@ -393,6 +393,41 @@ it immediately. Refusals (an undefined style here) publish nothing.
 
   $ test -f ip-ref.docx
   [1]
+
+Its structural inverse (N3b): delete-paragraph removes one direct body
+paragraph, guarded by --expect-text and verified by identity readback —
+the deleted identity is GONE and the successor answers at the path. The
+inverse pair round-trips the document byte-identically. Human mode and
+a CLI dry run behave; refusals publish nothing.
+
+  $ office.exe insert-paragraph "$TESTDIR/../../../../docx2html/tests/cram/fixtures/duplicate-para-id.docx" dp-in.docx --before 'p[1]' --content '{"runs":[{"text":"ephemeral"}]}' --json | jq -c '.data.path'
+  "p[1]"
+
+  $ office.exe delete-paragraph dp-in.docx dp-dry.docx --at 'p[1]' --expect-text ephemeral --dry-run
+  delete-paragraph: would delete p[1] ("ephemeral") -> dp-dry.docx
+
+  $ test -f dp-dry.docx
+  [1]
+
+  $ office.exe delete-paragraph dp-in.docx dp-out.docx --at 'p[1]' --expect-text ephemeral
+  delete-paragraph: deleted p[1] ("ephemeral") -> dp-out.docx
+  warning [office.transaction.path_based_commit_semantics]: publication uses moonbitlang/async path APIs; atomic rename is guaranteed, but hostile concurrent directory-entry replacement is outside the portable contract
+
+  $ unzip -p dp-out.docx word/document.xml > dp-out-doc.xml
+  $ unzip -p "$TESTDIR/../../../../docx2html/tests/cram/fixtures/duplicate-para-id.docx" word/document.xml > dp-base-doc.xml
+  $ cmp dp-base-doc.xml dp-out-doc.xml
+
+  $ office.exe delete-paragraph dp-in.docx dp-ref.docx --at 'p[1]' --expect-text 'something else' --json 2>&1 | jq -c '.error.code'
+  "office.delete.expect_text_mismatch"
+
+  $ test -f dp-ref.docx
+  [1]
+
+  $ office.exe delete-paragraph dp-in.docx dp-ref2.docx --at 'tbl[1]' --json 2>&1 | jq -c '.error.code'
+  "office.invalid_arguments"
+
+  $ office.exe delete-paragraph dp-in.docx dp-ref3.docx --at 'p[1]' --at 'p[2]' --json 2>&1 | jq -c '.error.code'
+  "office.invalid_arguments"
 
 The cross-surface invariant, executable: find agrees with the tree
 surfaces on the same document.

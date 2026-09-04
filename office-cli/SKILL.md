@@ -92,6 +92,11 @@ Replace the `office` token below with the `moonx bobzhang/office` launcher.
 | Resolve one canonical selector | `office get FILE SELECTOR [limits] [--json]` |
 | Extract path-tagged paragraphs/cells | `office text FILE [--under SELECTOR] [--offset N] [--limit N] [limits] [--json]` |
 | Search bounded literal predicates | `office query FILE [CELL_SELECTOR] [--under SELECTOR] [DOCX predicates] [pagination/limits] [--json]` |
+| Locate literal text with editability judgments | `office find FILE --text TEXT [--in PATH] [--limit N] [--context N] [--json]` |
+| Replace literal text transactionally | `office replace FILE OUT.docx --text TEXT --with TEXT [--in PATH] [--nth K] [--expect N] [--allow-zero] [--dry-run] [--overwrite] [--json]` |
+| Apply direct character formatting | `office format FILE OUT.docx (--text TEXT [--in PATH] [--nth K] \| --range START:END --in P) [--bold on\|off] [--italic on\|off] [--underline on\|off] [--color RRGGBB] [--expect N] [--allow-zero] [--dry-run] [--overwrite] [--json]` (at least one property flag) |
+| Insert one paragraph, minting its identity | `office insert-paragraph FILE OUT.docx (--before P\|--after P) --content JSON [--dry-run] [--overwrite] [--json]` |
+| Delete one direct body paragraph | `office delete-paragraph FILE OUT.docx --at (p[N]\|p[id="…"]) [--expect-text TEXT] [--dry-run] [--overwrite] [--json]` |
 | Run the exact mutation validation gate | `office validate FILE [--json\|--jsonl]` |
 | Report validation plus bounded actionable warnings | `office issues FILE [--json\|--jsonl]` |
 | Publish deterministic offline HTML | `office preview FILE --output OUT.html [--overwrite] [--json\|--jsonl]` |

@@ -872,6 +872,96 @@ uppercase) and verifies it by readback before publication.
 | `para_id` | string | the minted stable identity — immediately addressable as `p[id="…"]` |
 | `transaction` | object | `office.transaction/2` report; nothing is published on any refusal |
 
+### `office.docx.delete-paragraph/1` (`office delete-paragraph FILE OUT.docx --at (p[N] | p[id="…"]) [--expect-text TEXT] [--dry-run] [--overwrite] [--json]`)
+
+The structural inverse of insert-paragraph. `--at` names one DIRECT body
+paragraph — a physical child of `w:body`, proven on the element tree —
+by ordinal path or stable identity; `--expect-text` asserts the target's
+full projection before anything is written (the guard against deleting
+the wrong paragraph by ordinal).
+
+Everything the removal could dangle refuses typed. Inside the paragraph:
+section breaks, note references, comment machinery, bookmark markers
+(Word's `_GoBack` caret is exempt BOTH ways — a pair wholly inside the
+paragraph leaves with it, and one that brackets the paragraph anchors
+nothing — but a caret split across the target, its start inside and its
+end beyond, still refuses, because the deletion would take one half of
+the pair; and a name this reader cannot read as exactly `_GoBack` is an
+ordinary named bookmark, which refuses), range permissions, SPLIT field boundaries whose partner lies outside the
+paragraph (a COMPLETE field — a page number, a DATE, a REF, a TOC entry —
+leaves with its paragraph and dangles nothing; `fldSimple` likewise), the
+entire tracked-revision family, drawings and embedded objects,
+content-control data bindings, nested block content, and any element
+referencing a package relationship (`w:hyperlink` alone excepted). Around it: a target whose immediate block SIBLINGS are not both
+paragraphs — a table, a content control, a compatibility alternative —
+because how those blocks would meet once the paragraph between them
+leaves is a question this version does not answer, and answering it
+wrongly merges two tables irreversibly; a deletion that would leave the
+body with NO direct paragraph — Word keeps one, and the count is of the
+body's OWN direct children, so a paragraph inside a content control or
+one branch of a compatibility alternative does not keep that promise;
+a paragraph inside a field region whose boundaries live in
+other paragraphs, and a paragraph SPANNED by a range its own siblings
+anchor (a comment, a permission, a bookmark, a tracked move, a customXml
+revision range) — including the case where the story's range markers do
+not balance near the target, which cannot be judged at all. A target
+that is not exactly one whole logical paragraph — a collided path, or
+half of one joined across a deleted paragraph mark — refuses too.
+
+Every STRUCTURAL refusal carries a typed `office.delete.*` code, so an
+agent can tell a retryable address mistake (`target_not_found`) from a
+permanent structural refusal without reading prose. The complete set:
+`target_grammar`, `target_not_found`, `target_not_direct`,
+`target_not_addressable`, `neighbour_not_paragraph`, `blocked_construct`,
+`field_region`, `open_range`, `bookmark_unpairable`,
+`relationship_reference`, `final_paragraph`, `unverifiable` and
+`engine_unavailable`. Of these only `target_not_found` and
+`target_grammar` invite a different address; the rest say this paragraph
+cannot be deleted by this version. Two more come from the SESSION rather
+than the planner: `already_queued` (one deletion per transaction) and
+`part_closed` (nothing else may edit the story a deletion is verified
+against). Request-grammar problems answer `office.invalid_arguments` and
+stable-identity problems answer `office.docx.para_id_*`, as they do for
+every verb. An `--expect-text` mismatch answers
+`office.delete.expect_text_mismatch` — the one refusal that means "your
+ordinal drifted; re-run `office find` and re-address" rather than "this
+paragraph can never be deleted".
+
+The readback verifies, WHERE THE DOCUMENT SUPPORTS IT, that the deleted
+identity is GONE from the addressable inventory, that the successor
+answers at the path with the text it had before the splice, and that the
+paragraph BEFORE the target still reads the same at its own path (a
+deletion at `p[N]` moves no path below N). The identity legs are silent
+on a document carrying no unique `w14:paraId`, which is most output from
+producers other than Word; the successor legs are silent when nothing
+follows; the predecessor legs are silent when the target is the first
+paragraph. At least one of those must speak, or the deletion refuses
+`unverifiable` before anything is planned — a removal nothing could
+confirm afterwards is not published.
+
+What always runs: the story is exactly one paragraph shorter, the body
+still has a direct paragraph, and the published part is the source with
+exactly the planned span removed — which proves the splice APPLIED as
+planned. That last one does not by itself prove the plan addressed the
+paragraph you meant: witness and edit share one span, so a mis-resolved
+address moves both. The neighbour legs above, and `--expect-text`, are
+what bind an address to content.
+
+| key | type | notes |
+| --- | --- | --- |
+| `schema` | string | `"office.docx.delete-paragraph/1"` |
+| `file`, `format`, `output` | string | input path, literal `"docx"`, destination |
+| `at` | string | the target as requested |
+| `expect_text` | string\|null | the asserted projection, bounded at 160 characters; null when not asserted |
+| `expect_text_truncated` | boolean | whether that bound cut the echo — the assertion itself always compares the FULL projection |
+| `dry_run`, `changed` | boolean | request mode and whether bytes changed |
+| `deleted` | object | `{path, para_id, paragraph_anchor_status, text, text_truncated}` — what left, readback-verified gone. `text` is bounded at 160 characters and `text_truncated` says whether that cut it; `--expect-text` compares the FULL projection, so a truncated value is not a round-trippable guard (`office text --json` emits the untruncated projection) |
+| `successor_para_id` | string\|null | the stable identity now answering at the deleted path; null when the successor carries no unique identity |
+| `successor_text` | string\|null | the projection now reading at the deleted path (bounded at 160 characters), verified against the published candidate; null when nothing follows — the re-anchor that still speaks on documents carrying no unique identities |
+| `successor_text_truncated` | boolean | whether that bound cut `successor_text` |
+| `stories_scanned` | array | `["/body"]` in v1 |
+| `transaction` | object | `office.transaction/2` report; nothing is published on any refusal |
+
 ### `office.dump/1` (`office dump FILE [--json|--jsonl]`)
 
 A replayable semantic dump: the document re-expressed as an ordered stream
