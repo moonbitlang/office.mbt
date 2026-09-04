@@ -176,7 +176,7 @@ test "deletion refusals are typed per construct" {
       keeper +
       "<w:bookmarkEnd w:id=\"7\"/>",
       "p[2]",
-    ).contains("carries the end of a bookmark range opened before it"),
+    ).contains("a bookmark range"),
   )
   // range permissions pair across paragraphs
   for construct in ["permStart", "permEnd"] {
@@ -603,7 +603,9 @@ test "range counting refuses what it cannot pair and nothing else" {
     keeper,
   )
   assert_true(
-    delete_refusal_of(orphan_end, "p[1]").contains("not properly nested"),
+    delete_refusal_of(orphan_end, "p[1]").contains(
+      "sits inside a bookmark range",
+    ),
   )
   // An ORPHAN START before the target must not make a LATER, unrelated
   // range's end refuse every paragraph in between. Only a range whose
@@ -615,15 +617,18 @@ test "range counting refuses what it cannot pair and nothing else" {
     "<w:bookmarkStart w:id=\"2\" w:name=\"Real\"/><w:p><w:r><w:t>bracketed</w:t></w:r></w:p><w:bookmarkEnd w:id=\"2\"/>" +
     keeper,
   )
-  // An unbalanced story is one this verb declines to judge AT ALL,
-  // uniformly and with a message that says so — rather than refusing
-  // some paragraphs while naming a range that does not cover them.
-  for path in ["p[1]", "p[2]", "p[3]"] {
-    assert_true(
-      delete_refusal_of(orphan_start, path).contains("not properly nested"),
-      msg="expected the well-formedness refusal at " + path,
-    )
+  // An unclosed start elsewhere in the story strands nothing when a
+  // paragraph it does not cover is deleted: intervals judge each id on
+  // its own, so the paragraphs outside every range plan…
+  for path in ["p[1]", "p[2]"] {
+    assert_eq(delete_refusal_of(orphan_start, path), "<planned>")
   }
+  // …and only the one a real range covers refuses.
+  assert_true(
+    delete_refusal_of(orphan_start, "p[3]").contains(
+      "sits inside a bookmark range",
+    ),
+  )
   // A story whose markers DO balance judges each paragraph on its own:
   // only the one the range covers refuses.
   let balanced = delete_fixture(
@@ -650,7 +655,7 @@ test "an inverted range pair is not balanced" {
     keeper,
   )
   assert_true(
-    delete_refusal_of(inverted, "p[1]").contains("not properly nested"),
+    delete_refusal_of(inverted, "p[1]").contains("sits inside a bookmark range"),
   )
   // The shape a running minimum alone cannot see: an inversion NESTED
   // inside another open range of the same family, whose prefix sums
@@ -663,7 +668,9 @@ test "an inverted range pair is not balanced" {
     keeper,
   )
   assert_true(
-    delete_refusal_of(nested_inversion, "p[1]").contains("not properly nested"),
+    delete_refusal_of(nested_inversion, "p[1]").contains(
+      "sits inside a bookmark range",
+    ),
   )
 }
 
@@ -713,11 +720,7 @@ test "an ambiguous field boundary refuses" {
     "<w:p><w:r><w:t>target</w:t></w:r></w:p>" +
     "<w:p><w:r><w:t>keeper</w:t></w:r></w:p><w:sectPr/></w:body></w:document>"
   let annotated = @docx.read_docx_annotated(fixture_docx(document))
-  assert_true(
-    delete_refusal_of(annotated, "p[2]").contains(
-      "cannot be read unambiguously",
-    ),
-  )
+  assert_true(delete_refusal_of(annotated, "p[2]").contains("cannot be read"))
 }
 
 ///|
@@ -734,9 +737,11 @@ test "field extents are judged only on a well-formed story" {
     "<w:p><w:r><w:fldChar w:fldCharType=\"begin\"/></w:r><w:r><w:instrText>PAGE</w:instrText></w:r><w:r><w:fldChar w:fldCharType=\"end\"/></w:r></w:p>" +
     "<w:p><w:r><w:t>keeper</w:t></w:r></w:p>",
   )
-  assert_true(
-    delete_refusal_of(orphaned, "p[2]").contains("not properly nested"),
-  )
+  // An orphan `begin` with no later end that closes it opens no region
+  // this deletion can truncate: Word tolerates the stray boundary, and
+  // refusing every paragraph after it would name a field that does not
+  // exist.
+  assert_eq(delete_refusal_of(orphaned, "p[2]"), "<planned>")
   // Well formed: the paragraph beside a self-contained field is
   // deletable, the one inside a field is not.
   let sound = delete_fixture(
@@ -805,6 +810,55 @@ test "deletion refuses w14 conflict revisions" {
       msg="expected the conflict refusal for \{construct}",
     )
   }
+}
+
+///|
+/// The three bypasses round 10 confirmed end to end, each pinned by the
+/// shape that produced it.
+test "the structural gates are not bypassable by wrapping or overlap" {
+  let table = "<w:tbl><w:tr><w:tc><w:p><w:r><w:t>cell</w:t></w:r></w:p></w:tc></w:tr></w:tbl>"
+  let keeper = "<w:p><w:r><w:t>keeper</w:t></w:r></w:p>"
+  // A body whose ONLY direct paragraph is the target, followed by a
+  // table: deleting it leaves a body with no paragraph at all.
+  let no_paragraph_left = delete_fixture(
+    "<w:p><w:r><w:t>target</w:t></w:r></w:p>" + table,
+  )
+  assert_true(
+    delete_refusal_of(no_paragraph_left, "p[1]").contains(
+      "final direct body paragraph",
+    ),
+  )
+  // The two BRANCHES of one AlternateContent are alternatives, not
+  // neighbours: a consumer showing the Fallback sees the tables meet.
+  let alternate = delete_fixture(
+    table +
+    "<w:p><w:r><w:t>target</w:t></w:r></w:p>" +
+    "<mc:AlternateContent xmlns:mc=\"http://schemas.openxmlformats.org/markup-compatibility/2006\"><mc:Choice Requires=\"wps\"><w:p><w:r><w:t>alt</w:t></w:r></w:p></mc:Choice><mc:Fallback>" +
+    table +
+    "</mc:Fallback></mc:AlternateContent>" +
+    keeper,
+  )
+  assert_true(
+    delete_refusal_of(alternate, "p[1]").contains("separates two tables"),
+  )
+  // Overlapping bookmarks are what Word EMITS around cross-referenced
+  // headings; they must not make the verb unusable.
+  let overlapping = delete_fixture(
+    "<w:p><w:bookmarkStart w:id=\"1\" w:name=\"_Toc1\"/><w:bookmarkStart w:id=\"2\" w:name=\"_Ref1\"/>" +
+    "<w:r><w:t>heading</w:t></w:r><w:bookmarkEnd w:id=\"1\"/><w:bookmarkEnd w:id=\"2\"/></w:p>" +
+    "<w:p><w:r><w:t>target</w:t></w:r></w:p>" +
+    keeper,
+  )
+  assert_eq(delete_refusal_of(overlapping, "p[2]"), "<planned>")
+  // A field boundary with no type at all is one this reader cannot
+  // place — schema-required, so its absence is not a shrug.
+  let typeless = delete_fixture(
+    "<w:p><w:r><w:fldChar/></w:r></w:p>" +
+    "<w:p><w:r><w:t>target</w:t></w:r></w:p>" +
+    "<w:p><w:r><w:fldChar w:fldCharType=\"end\"/></w:r></w:p>" +
+    keeper,
+  )
+  assert_true(delete_refusal_of(typeless, "p[2]").contains("cannot be read"))
 }
 
 ///|

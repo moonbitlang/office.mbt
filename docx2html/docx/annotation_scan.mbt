@@ -329,7 +329,8 @@ let max_projection_source_elements : Int = 1_000_000
 let max_projection_source_attribute_chars : Int = 8 * 1024 * 1024
 
 ///|
-/// The default optional bookmark-name allowance: a pool of its own, so
+/// The default optional bookmark-name allowance: a fixed pool of its
+/// own, so
 /// this capture — added after the reader's ceilings were set — cannot
 /// spend characters a MANDATORY charge later needs and turn a readable
 /// document into a failed read. Callers that bound memory set it

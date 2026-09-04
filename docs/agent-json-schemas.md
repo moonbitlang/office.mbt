@@ -896,14 +896,21 @@ not balance near the target, which cannot be judged at all. A target
 that is not exactly one whole logical paragraph — a collided path, or
 half of one joined across a deleted paragraph mark — refuses too.
 
-Every refusal carries a typed `office.delete.*` code, so an agent can
-tell a retryable address mistake (`target_not_found`) from a permanent
-structural refusal (`table_separator`, `field_region`, `open_range`,
-`final_paragraph`, `blocked_construct`, …) without reading prose.
+Every STRUCTURAL refusal carries a typed `office.delete.*` code, so an
+agent can tell a retryable address mistake (`target_not_found`) from a
+permanent structural refusal (`table_separator`, `field_region`,
+`open_range`, `final_paragraph`, `blocked_construct`, …) without reading
+prose. Request-grammar problems answer `office.invalid_arguments` and
+stable-identity problems answer `office.docx.para_id_*`, as they do for
+every verb.
 
-The readback verifies the deleted identity is GONE from the addressable
-inventory, the successor answers at the path with the text it had before
-the splice, the story is exactly one paragraph shorter, and the
+The readback verifies, WHERE THE DOCUMENT SUPPORTS IT, that the deleted
+identity is GONE from the addressable inventory and that the successor
+answers at the path with the text it had before the splice — both
+identity legs are silent on a document carrying no unique `w14:paraId`,
+which is most output from producers other than Word, and the text leg is
+silent when nothing follows. What always runs: the story is exactly one
+paragraph shorter, and the
 published part is the source with exactly the planned span removed —
 which proves the splice APPLIED as planned. It does not prove the plan
 addressed the paragraph you meant: witness and edit share one span, so a

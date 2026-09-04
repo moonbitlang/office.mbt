@@ -160,6 +160,7 @@ async test "delete-paragraph dry run and preflight write nothing" {
 /// mistake from a permanent structural refusal.
 async test "delete-paragraph refusals carry their typed codes" {
   with_docx_session_test_dir(directory => {
+    let index_of_probe = Ref(0)
     let table = "<w:tbl><w:tr><w:tc><w:p><w:r><w:t>cell</w:t></w:r></w:p></w:tc></w:tr></w:tbl>"
     for
       probe in [
@@ -200,8 +201,12 @@ async test "delete-paragraph refusals carry their typed codes" {
         ),
       ] {
       let (runs, at, code) = probe
-      let input = edit_fixture(directory, "code-\{code}.docx", runs)
-      let output = directory + "/code-out-\{code}.docx"
+      // Named by INDEX, never by the expected code: a path carrying the
+      // answer makes any error that echoes a path satisfy the oracle.
+      index_of_probe.val += 1
+      let ordinal = index_of_probe.val
+      let input = edit_fixture(directory, "code-\{ordinal}.docx", runs)
+      let output = directory + "/code-out-\{ordinal}.docx"
       let mut reported = ""
       ignore(
         @docx.transact_docx_delete_paragraph(
