@@ -676,3 +676,97 @@ test "projection source physical paths length-prefix arbitrary namespace URIs" {
     ),
   )
 }
+
+///|
+/// `w:name` is retained for ONE question — is this Word's `_GoBack`
+/// caret? — and `_GoBack` is seven characters, so a longer value is
+/// dropped rather than charged. It matters because the capture charges
+/// the SHARED retained-character pool: an unbounded name would let a
+/// bookmark-heavy story exhaust the ceiling every read verb in the
+/// toolkit depends on, on a document that read fine before this
+/// attribute was retained at all.
+///
+/// Measured, not guessed: the test finds the smallest ceiling each
+/// story scans under, so it pins the CHARGE rather than a number that
+/// drifts with unrelated retention changes.
+test "a bookmark name too long to be _GoBack costs no retained characters" {
+  let head =
+    #|<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:body>
+  let tail = "</w:body></w:document>"
+  fn story(name : (Int) -> String?) -> String {
+    let markers = StringBuilder()
+    for index in 0..<12 {
+      match name(index) {
+        Some(value) =>
+          markers.write_string(
+            "<w:bookmarkStart w:id=\"\{index}\" w:name=\"\{value}\"/>",
+          )
+        None => markers.write_string("<w:bookmarkStart w:id=\"\{index}\"/>")
+      }
+    }
+    head + markers.to_string() + tail
+  }
+
+  // The smallest retained-character ceiling this story scans under.
+  fn minimal_ceiling(source : String) -> Int {
+    for ceiling = 8; ceiling <= 16384; ceiling = ceiling + 8 {
+      let scanned = try? scan_projection_source_tree(
+        @utf8.encode(source),
+        budget=projection_source_budget(
+          max_elements=64,
+          max_attribute_chars=ceiling,
+          max_depth=8,
+          max_text_bytes=64,
+          max_text_tokens=64,
+        ),
+      )
+      if scanned is Ok(_) {
+        return ceiling
+      }
+    }
+    -1
+  }
+
+  let bare = minimal_ceiling(story(_ => None))
+  assert_true(bare > 0)
+  // THE INVARIANT: what a declined name costs does not grow with the
+  // name. Word's real cross-reference names and one two hundred
+  // characters long charge the same, because neither VALUE is retained
+  // — only the attribute's QName and its fixed slot, which were charged
+  // before the value's length was known. Bounded per bookmark, rather
+  // than bounded by the document's longest name.
+  let toc = minimal_ceiling(story(index => Some("_Toc1234567\{index}")))
+  let mut padding = "_Toc"
+  while padding.length() < 200 {
+    padding = padding + "0123456789"
+  }
+  let huge = minimal_ceiling(story(index => Some(padding + "\{index}")))
+  assert_eq(huge, toc)
+  // THE CONTROL. Names AT the cap are retained and charged, so the
+  // equality above is a fact about retention and not a measurement
+  // blind to names altogether.
+  let short = minimal_ceiling(story(index => Some("_GoBac\{index}")))
+  assert_true(
+    short > toc,
+    msg="retained names must cost something: \{short} vs \{toc}",
+  )
+  // And the seven-character caret IS captured — the cap admits exactly
+  // the value the question is about.
+  let scan = scan_projection_source_tree(
+    @utf8.encode(
+      head + "<w:bookmarkStart w:id=\"1\" w:name=\"_GoBack\"/>" + tail,
+    ),
+    budget=projection_source_budget(
+      max_elements=64,
+      max_attribute_chars=4096,
+      max_depth=8,
+      max_text_bytes=64,
+      max_text_tokens=64,
+    ),
+  )
+  let marker = scan
+    .elements()
+    .filter(element => element.local_name == "bookmarkStart")
+  assert_eq(marker.length(), 1)
+  assert_eq(marker[0].bookmark_name_raw, Some("_GoBack"))
+}

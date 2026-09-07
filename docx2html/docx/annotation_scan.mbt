@@ -323,6 +323,16 @@ let max_projection_source_elements : Int = 1_000_000
 let max_projection_source_attribute_chars : Int = 8 * 1024 * 1024
 
 ///|
+/// The longest bookmark `w:name` worth retaining. `_GoBack` is seven
+/// characters and is the only name any gate asks about; a value that
+/// cannot BE it is dropped rather than charged to the shared
+/// retained-character pool. Entity-escaped spellings (`&#95;GoBack`)
+/// exceed this and read as "not provably `_GoBack`" — a named bookmark,
+/// which refuses. That is the safe direction: this bound can only add
+/// refusals, never permit a deletion.
+let max_goback_name_bytes : Int = 7
+
+///|
 let max_projection_source_retained_tokens : Int = 1_000_000
 
 ///|
@@ -2493,27 +2503,44 @@ fn scan_tag(
       )
     }
     if relevant_attribute {
+      // Is this the OPTIONAL bookmark-name capture? A namespace
+      // DECLARATION spelled `xmlns:name` is not a bookmark name and
+      // keeps every hard limit, which the binding walk and the
+      // duplicate-declaration guard rely on.
+      let optional_bookmark_name = element_is_bookmark_start &&
+        source_budget is Some(_) &&
+        !bytes_range_has_ascii_prefix(part, attr_start, attr_end, "xmlns:") &&
+        bytes_range_has_ascii_suffix(part, attr_start, attr_end, ":name")
       if attr_end - attr_start > max_annotation_relevant_attribute_bytes ||
-        at - value_start > max_annotation_relevant_attribute_bytes {
-        // A bookmark NAME over the cap is DECLINED, never fatal: `:name`
-        // was not a retained attribute before this verb existed, so a
-        // document readable without it must stay readable with it. The
-        // planner then reads None, which it treats exactly as it treats
-        // any other non-`_GoBack` name — an ordinary named bookmark,
-        // which refuses. The decision is the VALUE'S OWN LENGTH and
-        // nothing else, so no earlier content in the story can move it.
-        // Scoped exactly to the rule that added it: a namespace
-        // DECLARATION spelled `xmlns:name` is not a bookmark name and
-        // keeps its hard limit, which the binding walk and the
-        // duplicate-declaration guard rely on.
+        at - value_start > max_annotation_relevant_attribute_bytes ||
+        (optional_bookmark_name && at - value_start > max_goback_name_bytes) {
+        // A bookmark NAME over a cap is DECLINED, never fatal, and the
+        // cap that matters is a SHORT one.
         //
-        // Declining still records the QName as UNRETAINED, so
-        // `scan_story`'s unbound-prefix check keeps seeing it: an
-        // optional capture may cost a value, never a validation.
-        if element_is_bookmark_start &&
-          source_budget is Some(_) &&
-          !bytes_range_has_ascii_prefix(part, attr_start, attr_end, "xmlns:") &&
-          bytes_range_has_ascii_suffix(part, attr_start, attr_end, ":name") {
+        // `:name` was not a retained attribute at all before this verb
+        // existed, so its retention must not make a readable document
+        // unreadable — and it charges the SHARED pool, so an unbounded
+        // name would do exactly that on a bookmark-heavy story, for
+        // every read verb in the toolkit. (A private allowance was tried
+        // instead and was worse: it made `max_attribute_chars` stop
+        // being the ceiling, and running it dry made a deletion's
+        // refusal depend on how many bookmarks appeared EARLIER.)
+        //
+        // The bound comes from the QUESTION. There is exactly one asked
+        // of a bookmark name — is it Word's `_GoBack` caret? — and
+        // `_GoBack` is seven characters, so a longer value cannot be it
+        // and is not worth a byte. Word's own `_Toc`/`_Ref` names are
+        // all longer, which is the common case, so the usual charge is
+        // nothing at all. A declined name reads as None, which every
+        // consumer of this field treats as an ordinary named bookmark —
+        // the same answer, and the conservative one.
+        //
+        // The decision is the VALUE'S OWN LENGTH and nothing else, so no
+        // earlier content in the story can move it. Declining still
+        // records the QName as UNRETAINED, so `scan_story`'s
+        // unbound-prefix check keeps seeing it: an optional capture may
+        // cost a value, never a validation.
+        if optional_bookmark_name {
           match validated_source_name {
             Some(candidate) => unretained_attribute_names.push(candidate)
             None => ()
@@ -2526,12 +2553,15 @@ fn scan_tag(
       match source_budget {
         // The QName and its fixed-size retained slot were charged before
         // the QName allocation above; only the value remains. A bookmark
-        // `w:name` charges the SAME shared pool as every other attribute
-        // value: an optional per-name allowance was tried and removed,
-        // because a second pool made `max_attribute_chars` stop being the
-        // ceiling for every reader in the toolkit, and declining a name
-        // when that pool ran out made a deletion's refusal depend on how
-        // many bookmarks happened to appear EARLIER in the story.
+        // `w:name` short enough to BE `_GoBack` charges the SAME shared
+        // pool as every other attribute value — a longer one never
+        // reaches here (see the cap above), so what this capture costs a
+        // document is bounded per bookmark rather than by its longest
+        // name. An optional per-name ALLOWANCE was tried instead and
+        // removed: a second pool made `max_attribute_chars` stop being
+        // the ceiling for every reader in the toolkit, and running it
+        // dry made a deletion's refusal depend on how many bookmarks
+        // happened to appear EARLIER in the story.
         Some(budget) => budget.charge_retained_chars(at - value_start)
         None => ()
       }
