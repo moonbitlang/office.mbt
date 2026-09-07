@@ -391,6 +391,65 @@ async test "a deletion that empties the body cannot be composed" {
 }
 
 ///|
+/// A comment lands `commentRangeStart`/`End` in the main story, so
+/// composing one after a deletion would edit the very part the cut is
+/// verified byte-exactly against. TWO guards forbid it, and the outer
+/// one answers: the semantic queuers refuse to compose with a generic
+/// plan at all, which a queued deletion is.
+///
+/// The part lock is the inner one. It was written in `queue_plan`,
+/// which the span and generic queuers use and the three semantic
+/// comment queuers do NOT — they call `adopt_plan` directly — so it
+/// moved to `adopt_plan`, the one function every queuing path reaches.
+/// That closed no live hole, as this test records; it means a queuer
+/// added later cannot reopen one by taking the same shortcut.
+async test "a comment cannot be queued into a deletion's closed story" {
+  with_docx_session_test_dir(directory => {
+    let input = edit_fixture(
+      directory,
+      "comment-in.docx",
+      "<w:r><w:t>alpha</w:t></w:r></w:p>" +
+      "<w:p><w:r><w:t>beta</w:t></w:r></w:p>" +
+      "<w:p><w:r><w:t>gamma</w:t></w:r>",
+    )
+    let output = directory + "/comment-out.docx"
+    let specification = @word_fixture.comment_spec(
+      author="Reviewer",
+      from=0,
+      to=0,
+      [
+        @word_fixture.paragraph([
+          @word_fixture.run([@word_fixture.text("a note")]),
+        ]),
+      ],
+    )
+    let mut reported = ""
+    ignore(
+      @docx.transact_docx(
+        @transaction.transaction_options(input, output_path=output),
+        session => {
+          ignore(session.queue_delete_paragraph(at="p[2]"))
+          ignore(
+            session.queue_comment_addition(
+              at_relative="p[1]",
+              to_relative="p[1]",
+              specification,
+            ),
+          )
+        },
+      ),
+    ) catch {
+      error => reported = "\{error}"
+    }
+    assert_true(
+      reported.contains("office.docx.stale_semantic_state"),
+      msg="got: " + reported,
+    )
+    delete_nothing_written(output)
+  })
+}
+
+///|
 /// A deletion whose target is NOT the first paragraph, end to end: the
 /// predecessor legs of the readback have something to check here, and
 /// they must pass on an honest deletion.

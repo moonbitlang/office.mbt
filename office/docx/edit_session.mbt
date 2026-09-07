@@ -211,7 +211,10 @@ fn source_fingerprints(archive : @zip.Archive) -> Array[DocxPartFingerprint] {
 fn open_edit_session(
   archive : @zip.Archive,
   budget : @transaction.TransactionBudget,
-  delete_expectation? : Ref[DeleteReadbackExpectation?] = Ref(None),
+  // REQUIRED, not defaulted: a session holding a ref no validator reads
+  // would queue a deletion and publish it unverified, and a default
+  // makes that the quiet outcome of forgetting to wire one up.
+  delete_expectation~ : Ref[DeleteReadbackExpectation?],
 ) -> DocxEditSession raise @transaction.TransactionError {
   let archive = archive.clone()
   let validation = @opc.validate_docx_archive_report_limited(
@@ -330,6 +333,29 @@ fn DocxEditSession::adopt_plan(
   self : DocxEditSession,
   plan : @splice.SplicePlan,
 ) -> Unit raise @transaction.TransactionError {
+  // A DELETION'S PART IS CLOSED once the deletion is queued. The cut is
+  // verified byte-exactly against the whole part, and the successor and
+  // neighbour projections were read from a snapshot a second edit would
+  // invalidate — so every one of those legs would answer about a
+  // document the plan never described.
+  //
+  // Enforced HERE, in the ONE function every queuing path reaches. It
+  // began in `queue_plan`, which the span and generic queuers use — and
+  // the three semantic COMMENT queuers call this directly, so adding a
+  // comment after a deletion walked straight past it and surfaced later
+  // as a cut that "did not land where the plan said" when what actually
+  // happened is that something else landed too.
+  //
+  // The deletion's OWN plan passes: the latch is set after it queues.
+  if self.delete_queued && self.delete_expectation.val is Some(expectation) {
+    let closed = expectation.cut.part()
+    guard !plan.declared_parts().contains(closed) else {
+      raise docx_failure(
+        "office.delete.part_closed",
+        "a queued paragraph deletion is verified byte-exactly against \{bounded_docx_text(closed, 320)}, so nothing else may edit that part in the same transaction",
+      )
+    }
+  }
   // Bound and validate the incoming plan before copying every mutable map and
   // array into session state. Byte payloads can remain shared because MoonBit
   // `Bytes`/`BytesView` are immutable. This also rejects unpinned/stale sources.
@@ -495,25 +521,6 @@ pub fn DocxEditSession::queue_plan(
         "office.docx.stale_semantic_state", "generic plans cannot be queued after a semantic comment operation because their byte spans may invalidate the semantic plan's immutable source snapshot",
       )
     Empty | Generic => ()
-  }
-  // A DELETION'S PART IS CLOSED once the deletion is queued. The cut
-  // is verified byte-exactly against the whole part, and the successor
-  // and neighbour projections were read from the same snapshot, so a
-  // second edit anywhere in that story makes every one of those legs
-  // answer about a document the plan never described. Refused HERE,
-  // where the caller can see why, rather than surfacing later as a cut
-  // that "did not land where the plan said" when what actually
-  // happened is that something else landed too.
-  //
-  // The deletion's OWN plan passes: the latch is set after it queues.
-  if self.delete_queued && self.delete_expectation.val is Some(expectation) {
-    let closed = expectation.cut.part()
-    guard !plan.declared_parts().contains(closed) else {
-      raise docx_failure(
-        "office.delete.part_closed",
-        "a queued paragraph deletion is verified byte-exactly against \{bounded_docx_text(closed, 320)}, so nothing else may edit that part in the same transaction",
-      )
-    }
   }
   self.adopt_plan(plan)
   self.plan_mode = Generic

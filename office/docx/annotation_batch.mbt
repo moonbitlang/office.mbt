@@ -543,7 +543,15 @@ pub async fn transact_docx_annotations(
         } else {
           remaining.to_int()
         }
-        let session = open_edit_session(current, budget)
+        // The annotation batch queues comment operations and nothing
+        // else — no deletion can be queued on this session — so it holds
+        // an expectation no validator reads, and says so rather than
+        // inheriting a default that would hide a missing wire-up.
+        let session = open_edit_session(
+          current,
+          budget,
+          delete_expectation=Ref(None),
+        )
         let op_result = match op {
           Add(anchor_at~, anchor_to~, author~, initials~, date~, body~, label~) => {
             let spec = @word.comment_spec(

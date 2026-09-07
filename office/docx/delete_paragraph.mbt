@@ -247,6 +247,12 @@ fn delete_readback_findings(
   archive : @zip.Archive,
 ) -> Array[@transaction.ValidationFinding] raise {
   let findings : Array[@transaction.ValidationFinding] = []
+  // ASKED FIRST: was a deletion queued at all? This validator runs on
+  // every DOCX transaction, so a session that queued none must be
+  // silent about EVERYTHING — including the candidate's format. Judging
+  // format first made a transaction with no deletion in it capable of
+  // reporting a delete finding, which names the wrong culprit.
+  guard expectation is Some(plan) else { return findings }
   if format != Docx {
     findings.push(
       @transaction.validation_finding(
@@ -255,9 +261,6 @@ fn delete_readback_findings(
     )
     return findings
   }
-  // No deletion was queued on this session: this validator runs on
-  // every DOCX transaction and has nothing to say about the others.
-  guard expectation is Some(plan) else { return findings }
   let annotated = @word.read_docx_annotated_archive_limited(
     archive,
     candidate_xml_budget(),
