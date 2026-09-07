@@ -927,6 +927,16 @@ every verb. An `--expect-text` mismatch answers
 ordinal drifted; re-run `office find` and re-address" rather than "this
 paragraph can never be deleted".
 
+One `office.delete.*` code is NOT a refusal and must not be read as one.
+`office.delete.report_too_large` says the JSON report itself does not fit
+the output ceiling, which happens when the transaction's preservation
+manifest is large — a package with very many parts — and never because
+of anything about the paragraph. On a `--dry-run` nothing was written. On
+a real run **the deletion completed and the output file is valid**; only
+the report could not be rendered. Re-run without `--json` for the human
+summary, or confirm with `office validate`. An agent that retries the
+deletion here deletes a second paragraph.
+
 The readback verifies, WHERE THE DOCUMENT SUPPORTS IT, that the deleted
 identity is GONE from the addressable inventory, that the successor
 answers at the path with the text it had before the splice, and that the

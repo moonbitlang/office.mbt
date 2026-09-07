@@ -1010,7 +1010,7 @@ pub fn capability_commands() -> Array[CapabilityCommand] {
           "stories_scanned", "array(string)", true, "the stories searched; /body in v1",
         ),
         capability_field(
-          "transaction", "object", true, "office.transaction/2 report; preservation is authoritative, candidates are validated strictly, and the replace readback re-reads every affected paragraph before publication. Nothing is published on any refusal",
+          "transaction", "object", true, "office.transaction/2 report; preservation is authoritative, candidates are validated strictly, and the replace readback re-reads every affected paragraph before publication. Nothing is published on any refusal. One code is not a refusal: office.delete.report_too_large says only that the JSON report exceeds the output ceiling (a package with a very large preservation manifest) — on a real run the deletion COMPLETED and the output is valid, so re-run without --json rather than retrying the deletion",
         ),
       ],
       output_modes: ["human", "json"],
