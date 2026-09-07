@@ -499,10 +499,16 @@ fn range_id_key(family : RangeFamily, raw : String) -> String {
 /// rather than as the sentence each one prints, so no judgment can be
 /// made by string-matching prose.
 ///
-/// Declared in the order the families' labels sort, because the
-/// reported family for a target that trips several is the first, and a
-/// refusal message must not change with the order elements happened to
-/// appear in.
+/// The DECLARATION ORDER is what `sort` uses on this type — the derived
+/// `Compare` — and the reported family for a target that trips several
+/// is the first, so a refusal message does not change with the order
+/// elements happened to appear in.
+///
+/// Declared alphabetically by label, for a reader. That is a choice
+/// about this list and NOT a fact about sorting: MoonBit compares
+/// `String` by LENGTH first, so `"aa" < "b"` is false, and a list of
+/// labels put through `sort` comes back ordered by length. Ordering
+/// these by hand is what keeps the two agreeable.
 priv enum RangeFamily {
   BookmarkRange
   CommentRange
