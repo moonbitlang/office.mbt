@@ -42,7 +42,7 @@ fn PdfEncoding::pdf_text_glyphname_of_charcode(
 /// Only codes with a known glyph name are emitted. The table is ordered by
 /// increasing one-byte character code.
 pub fn PdfEncoding::table(self : PdfEncoding) -> Array[(Int, @core.PdfName)] {
-  let output : Array[(Int, @core.PdfName)] = Array::new(capacity=256)
+  let output : Array[(Int, @core.PdfName)] = Array(capacity=256)
   for code in 0..<256 {
     match self.pdf_text_glyphname_of_charcode(code) {
       Some(name) => output.push((code, name))

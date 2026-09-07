@@ -8,7 +8,7 @@ fn PdfDocument::pdf_page_rotate_rewrite(
   pdf_page_box_validate_page_numbers(page_numbers, self.endpage(), label)
   let pages = self.pages_of_pagetree()
   let selected_pages = @core.pdf_number_set(page_numbers)
-  let rewritten : Array[@page.PdfPage] = Array::new(capacity=pages.length())
+  let rewritten : Array[@page.PdfPage] = Array(capacity=pages.length())
   for index in 0..<pages.length() {
     let page_number = index + 1
     let page = pages[index]
@@ -127,8 +127,8 @@ pub fn PdfDocument::rotate_contents(
   )
   let pages = self.pages_of_pagetree()
   let selected_pages = @core.pdf_number_set(page_numbers)
-  let rewritten : Array[@page.PdfPage] = Array::new(capacity=pages.length())
-  let matrices : Array[(Int, @geometry.TransformMatrix)] = Array::new(
+  let rewritten : Array[@page.PdfPage] = Array(capacity=pages.length())
+  let matrices : Array[(Int, @geometry.TransformMatrix)] = Array(
     capacity=page_numbers.length(),
   )
   for index in 0..<pages.length() {

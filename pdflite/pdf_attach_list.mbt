@@ -76,7 +76,7 @@ fn PdfDocument::pdf_attach_document_attachments(
       match self.lookup_direct(pdf_attach_embedded_files_key(), names) {
         Some(tree) => {
           let entries = self.read_name_tree(tree)
-          let output : Array[@attachment.PdfAttachment] = Array::new(
+          let output : Array[@attachment.PdfAttachment] = Array(
             capacity=entries.length(),
           )
           for entry in entries {
@@ -117,9 +117,7 @@ fn PdfDocument::pdf_attach_page_attachments(
   self : PdfDocument,
 ) -> Array[@attachment.PdfAttachment] raise @core.PdfError {
   let pages = self.pages_of_pagetree()
-  let output : Array[@attachment.PdfAttachment] = Array::new(
-    capacity=pages.length(),
-  )
+  let output : Array[@attachment.PdfAttachment] = Array(capacity=pages.length())
   for index, page in pages {
     match self.lookup_direct(pdf_attach_annots_key(), page.rest) {
       Some(PdfArray(annotations)) =>

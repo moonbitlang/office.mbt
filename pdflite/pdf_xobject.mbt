@@ -152,7 +152,7 @@ fn PdfDocument::pdf_xobject_add_page_as_xobject(
   let xobject_number = pdf.add_object(pdf.pdf_xobject_form_object_of_page(page))
   let pages = pdf.pages_of_pagetree()
   let selected_pages = @core.pdf_number_set(range)
-  let rewritten : Array[@page.PdfPage] = Array::new(capacity=pages.length())
+  let rewritten : Array[@page.PdfPage] = Array(capacity=pages.length())
   for index in 0..<pages.length() {
     let page_number = index + 1
     if selected_pages.contains(page_number) {

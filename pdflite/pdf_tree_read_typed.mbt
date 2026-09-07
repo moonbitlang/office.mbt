@@ -9,7 +9,7 @@ pub fn PdfDocument::read_name_tree(
   tree : @syntax.PdfObject,
 ) -> Array[(@core.PdfBytes, @syntax.PdfObject)] {
   let raw_entries = pdf_tree_raw_entries(self, tree)
-  let parsed : Array[(@core.PdfBytes, @syntax.PdfObject)] = Array::new(
+  let parsed : Array[(@core.PdfBytes, @syntax.PdfObject)] = Array(
     capacity=raw_entries.length(),
   )
   let mut malformed = false
@@ -46,7 +46,7 @@ pub fn PdfDocument::read_number_tree(
   tree : @syntax.PdfObject,
 ) -> Array[(Int, @syntax.PdfObject)] {
   let raw_entries = pdf_tree_raw_entries(self, tree)
-  let parsed : Array[(Int, @syntax.PdfObject)] = Array::new(
+  let parsed : Array[(Int, @syntax.PdfObject)] = Array(
     capacity=raw_entries.length(),
   )
   let mut malformed = false
@@ -73,7 +73,7 @@ pub fn pdf_read_number_tree(
   tree : @syntax.PdfObject,
 ) -> Array[(@core.PdfBytes, @syntax.PdfObject)] {
   let number_entries = document.read_number_tree(tree)
-  let output : Array[(@core.PdfBytes, @syntax.PdfObject)] = Array::new(
+  let output : Array[(@core.PdfBytes, @syntax.PdfObject)] = Array(
     capacity=number_entries.length(),
   )
   for entry in number_entries {

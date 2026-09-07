@@ -5,7 +5,7 @@ fn pdf_page_root_entries_without_catalog_keys(
   match object {
     PdfNull => []
     PdfDictionary(entries) => {
-      let output : Array[(@core.PdfName, @syntax.PdfObject)] = Array::new(
+      let output : Array[(@core.PdfName, @syntax.PdfObject)] = Array(
         capacity=entries.length(),
       )
       for entry in entries {

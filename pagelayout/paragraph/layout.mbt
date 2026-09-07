@@ -166,9 +166,7 @@ pub fn layout_paragraph(
     let mut pen = x
     for seg in segments {
       let seg_text = text[seg.start:seg.end].to_owned()
-      let seg_advances : Array[Double] = Array::new(
-        capacity=seg.end - seg.start,
-      )
+      let seg_advances : Array[Double] = Array(capacity=seg.end - seg.start)
       let mut seg_width = 0.0
       for j in seg.start..<seg.end {
         let mut a = advances[j]

@@ -18,7 +18,7 @@ fn PdfDocument::pdf_squeeze_content_stream_numbers(
 ) -> Array[Int] {
   let page = self.lookup_object_or_null(page_number)
   let contents = self.pdf_page_content_list(self.pdf_page_content_object(page))
-  let numbers : Array[Int] = Array::new(capacity=contents.length())
+  let numbers : Array[Int] = Array(capacity=contents.length())
   for content in contents {
     match content {
       PdfIndirect(number) => numbers.push(number)
@@ -33,7 +33,7 @@ fn PdfDocument::pdf_squeeze_all_page_content_numbers(
   self : PdfDocument,
   page_numbers : ArrayView[Int],
 ) -> Array[Int] {
-  let numbers : Array[Int] = Array::new(capacity=page_numbers.length())
+  let numbers : Array[Int] = Array(capacity=page_numbers.length())
   for page_number in page_numbers {
     for number in self.pdf_squeeze_content_stream_numbers(page_number) {
       numbers.push(number)

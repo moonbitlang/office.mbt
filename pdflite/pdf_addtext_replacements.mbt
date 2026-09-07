@@ -150,9 +150,7 @@ pub fn PdfDocument::addtext_bookmark_for_page(
   level : Int,
   page_number : Int,
 ) -> String raise @core.PdfError {
-  let before : Array[@bookmark.PdfBookmark] = Array::new(
-    capacity=bookmarks.length(),
-  )
+  let before : Array[@bookmark.PdfBookmark] = Array(capacity=bookmarks.length())
   for bookmark in bookmarks {
     if self.page_number_of_target(bookmark.target) <= page_number {
       before.push(bookmark)
@@ -160,9 +158,7 @@ pub fn PdfDocument::addtext_bookmark_for_page(
       break
     }
   }
-  let branch : Array[@bookmark.PdfBookmark] = Array::new(
-    capacity=before.length(),
-  )
+  let branch : Array[@bookmark.PdfBookmark] = Array(capacity=before.length())
   let mut before_index = before.length()
   while before_index > 0 {
     before_index -= 1
@@ -173,9 +169,7 @@ pub fn PdfDocument::addtext_bookmark_for_page(
       break
     }
   }
-  let pickfrom : Array[@bookmark.PdfBookmark] = Array::new(
-    capacity=branch.length(),
-  )
+  let pickfrom : Array[@bookmark.PdfBookmark] = Array(capacity=branch.length())
   let mut branch_index = branch.length()
   while branch_index > 0 {
     branch_index -= 1
@@ -219,7 +213,7 @@ pub fn PdfDocument::addtext_replacement_values(
   bates : Int,
   bates_pad : Int?,
 ) -> @addtext.PdfAddTextReplacementValues raise @core.PdfError {
-  let bookmark_values : Array[String] = Array::new(capacity=5)
+  let bookmark_values : Array[String] = Array(capacity=5)
   for level in 0..<5 {
     bookmark_values.push(
       self.addtext_bookmark_for_page(bookmarks, level, page_number),

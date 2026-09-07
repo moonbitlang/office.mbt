@@ -39,7 +39,7 @@ fn pdf_structure_apply_parent_tree_changes(
   changes : ArrayView[(Int, Int)],
 ) -> Array[(Int, @syntax.PdfObject)] {
   let change_map = pdf_merge_parent_tree_change_map(changes)
-  let output : Array[(Int, @syntax.PdfObject)] = Array::new(
+  let output : Array[(Int, @syntax.PdfObject)] = Array(
     capacity=entries.length(),
   )
   for entry in entries {
@@ -106,16 +106,16 @@ pub fn pdf_renumber_parent_trees(
   documents : ArrayView[PdfDocument],
 ) -> Unit raise @core.PdfError {
   if documents.length() > 1 {
-    let all_changes : Array[Array[(Int, Int)]] = Array::new(
+    let all_changes : Array[Array[(Int, Int)]] = Array(
       capacity=documents.length(),
     )
-    let all_entries : Array[Array[(Int, @syntax.PdfObject)]] = Array::new(
+    let all_entries : Array[Array[(Int, @syntax.PdfObject)]] = Array(
       capacity=documents.length(),
     )
     let mut next_key = 0
     for document in documents {
       let entries = document.pdf_structure_root_parent_tree_entries()
-      let changes : Array[(Int, Int)] = Array::new(capacity=entries.length())
+      let changes : Array[(Int, Int)] = Array(capacity=entries.length())
       for entry in entries {
         let (old_key, _) = entry
         changes.push((old_key, next_key))

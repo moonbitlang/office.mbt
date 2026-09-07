@@ -74,7 +74,7 @@ fn PdfDocument::pdf_annotation_number_array(
 ) -> Array[Int] raise @core.PdfError {
   match self.direct(object) {
     PdfArray(items) => {
-      let output : Array[Int] = Array::new(capacity=items.length())
+      let output : Array[Int] = Array(capacity=items.length())
       for item in items {
         output.push(self.get_number(item).to_int())
       }
@@ -170,7 +170,7 @@ fn pdf_annotation_rest(
 ) -> @syntax.PdfObject raise @core.PdfError {
   match annotation {
     PdfDictionary(entries) => {
-      let output : Array[(@core.PdfName, @syntax.PdfObject)] = Array::new(
+      let output : Array[(@core.PdfName, @syntax.PdfObject)] = Array(
         capacity=entries.length(),
       )
       for entry in entries {
@@ -250,7 +250,7 @@ pub fn PdfDocument::annotations_of_page(
 ) -> Array[@annotation.PdfAnnotation] raise @core.PdfError {
   match self.lookup_direct(pdf_annotation_annots_key(), page.rest) {
     Some(PdfArray(annotations)) => {
-      let popup_parents : Array[Int] = Array::new(capacity=annotations.length())
+      let popup_parents : Array[Int] = Array(capacity=annotations.length())
       for annotation in annotations {
         match self.pdf_annotation_popup_parent(annotation) {
           Some(parent) => popup_parents.push(parent)
@@ -258,7 +258,7 @@ pub fn PdfDocument::annotations_of_page(
         }
       }
       let popup_parent_set = @core.pdf_number_set(popup_parents)
-      let output : Array[@annotation.PdfAnnotation] = Array::new(
+      let output : Array[@annotation.PdfAnnotation] = Array(
         capacity=annotations.length(),
       )
       for annotation in annotations {

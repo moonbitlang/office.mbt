@@ -63,9 +63,7 @@ fn ByteCursor::remaining_line_count(self : ByteCursor) -> Int {
 /// Each line view includes the line-ending bytes when they were present in the
 /// input.
 pub fn ByteCursor::read_line_views(self : ByteCursor) -> Array[BytesView] {
-  let lines : Array[BytesView] = Array::new(
-    capacity=self.remaining_line_count(),
-  )
+  let lines : Array[BytesView] = Array(capacity=self.remaining_line_count())
   while self.position < self.data.length() {
     lines.push(try! self.read_line_view())
   }

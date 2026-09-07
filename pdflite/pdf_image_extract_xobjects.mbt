@@ -8,10 +8,8 @@ fn PdfDocument::pdf_image_extract_named_images(
   encoding : @metadata.PdfMetadataEncoding,
   state : PdfImageExtractionRunState,
 ) -> (Array[PdfExtractedImageFile], Array[String]) raise @core.PdfError {
-  let files : Array[PdfExtractedImageFile] = Array::new(
-    capacity=images.length(),
-  )
-  let names : Array[String] = Array::new(capacity=images.length())
+  let files : Array[PdfExtractedImageFile] = Array(capacity=images.length())
+  let names : Array[String] = Array(capacity=images.length())
   for image in images {
     let name = self.pdf_image_extraction_name(
       encoding, stem, page_number, image, state,
@@ -37,12 +35,8 @@ fn PdfDocument::pdf_image_partition_xobjects(
 ) -> (Array[@syntax.PdfObject], Array[@syntax.PdfObject]) {
   match self.lookup_direct(pdf_image_xobject_key(), resources) {
     Some(PdfDictionary(xobjects)) => {
-      let images : Array[@syntax.PdfObject] = Array::new(
-        capacity=xobjects.length(),
-      )
-      let forms : Array[@syntax.PdfObject] = Array::new(
-        capacity=xobjects.length(),
-      )
+      let images : Array[@syntax.PdfObject] = Array(capacity=xobjects.length())
+      let forms : Array[@syntax.PdfObject] = Array(capacity=xobjects.length())
       for entry in xobjects {
         match self.lookup_direct(pdf_image_subtype_key(), entry.1) {
           Some(PdfNameObject(subtype)) if subtype == pdf_image_image_name() =>
@@ -86,7 +80,7 @@ fn PdfDocument::pdf_image_extract_form_xobject_files(
   }
   let resources = self.pdf_image_form_resources(form)
   let (images, forms) = self.pdf_image_partition_xobjects(resources)
-  let files : Array[PdfExtractedImageFile] = Array::new(
+  let files : Array[PdfExtractedImageFile] = Array(
     capacity=forms.length() + images.length(),
   )
   for child_form in forms {
@@ -125,7 +119,7 @@ fn PdfDocument::pdf_image_extract_inline_image_files(
   state : PdfImageExtractionRunState,
 ) -> Array[PdfExtractedImageFile] raise @core.PdfError {
   let ops = self.parse_content_ops_with_resources(resources, content)
-  let files : Array[PdfExtractedImageFile] = Array::new(capacity=ops.length())
+  let files : Array[PdfExtractedImageFile] = Array(capacity=ops.length())
   for op in ops {
     match op {
       Op_InlineImage(dictionary, _, data) => {

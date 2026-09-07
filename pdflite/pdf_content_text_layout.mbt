@@ -120,7 +120,7 @@ pub fn PdfFont::content_text_layout_of_bytes(
   let descent = extra_metrics.1 / divisor
   let vertical = self.content_is_vertical()
   let charcodes = self.content_charcodes_of_bytes(text)
-  let glyphs : Array[PdfContentTextGlyphPlacement] = Array::new(
+  let glyphs : Array[PdfContentTextGlyphPlacement] = Array(
     capacity=charcodes.length(),
   )
   let mut text_matrix = layout.text_matrix
@@ -194,7 +194,7 @@ pub fn PdfFont::content_text_layout_of_tj_array(
   elements : ArrayView[@syntax.PdfObject],
   layout : PdfContentTextLayout,
 ) -> PdfContentTextLayoutResult {
-  let glyphs : Array[PdfContentTextGlyphPlacement] = Array::new(
+  let glyphs : Array[PdfContentTextGlyphPlacement] = Array(
     capacity=elements.length(),
   )
   let vertical = self.content_is_vertical()

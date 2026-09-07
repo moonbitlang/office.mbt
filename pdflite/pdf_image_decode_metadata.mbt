@@ -32,7 +32,7 @@ fn PdfDocument::pdf_image_decode_values(
   match
     self.lookup_direct_or_else(pdf_image_decode_key(), pdf_image_d_key(), image) {
     Some(PdfArray(values)) => {
-      let output : Array[Double] = Array::new(capacity=values.length())
+      let output : Array[Double] = Array(capacity=values.length())
       for value in values {
         output.push(self.get_number(value))
       }
@@ -45,7 +45,7 @@ fn PdfDocument::pdf_image_decode_values(
 
 ///|
 fn pdf_image_decode_identity_components(components : Int) -> Array[Double] {
-  let values : Array[Double] = Array::new(capacity=components * 2)
+  let values : Array[Double] = Array(capacity=components * 2)
   for _ in 0..<components {
     values.push(0.0)
     values.push(1.0)

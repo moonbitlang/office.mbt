@@ -88,7 +88,7 @@ fn pdf_draw_resource_is_used(
 pub fn PdfDrawRenderState::resources(
   self : PdfDrawRenderState,
 ) -> @syntax.PdfObject {
-  let states : Array[(@core.PdfName, @syntax.PdfObject)] = Array::new(
+  let states : Array[(@core.PdfName, @syntax.PdfObject)] = Array(
     capacity=self.extgstates.length(),
   )
   for entry in self.extgstates {
@@ -96,7 +96,7 @@ pub fn PdfDrawRenderState::resources(
       (entry.name, PdfDictionary([(entry.kind, PdfReal(entry.value))])),
     )
   }
-  let xobjects : Array[(@core.PdfName, @syntax.PdfObject)] = Array::new(
+  let xobjects : Array[(@core.PdfName, @syntax.PdfObject)] = Array(
     capacity=self.xobjects.length() + self.form_xobjects.length(),
   )
   for entry in self.xobjects {
@@ -109,7 +109,7 @@ pub fn PdfDrawRenderState::resources(
       xobjects.push((entry.resource_name, PdfIndirect(entry.object_number)))
     }
   }
-  let fonts : Array[(@core.PdfName, @syntax.PdfObject)] = Array::new(
+  let fonts : Array[(@core.PdfName, @syntax.PdfObject)] = Array(
     capacity=self.fonts.length(),
   )
   for entry in self.fonts {
@@ -117,9 +117,7 @@ pub fn PdfDrawRenderState::resources(
       fonts.push((entry.resource_name, PdfIndirect(entry.object_number)))
     }
   }
-  let resources : Array[(@core.PdfName, @syntax.PdfObject)] = Array::new(
-    capacity=3,
-  )
+  let resources : Array[(@core.PdfName, @syntax.PdfObject)] = Array(capacity=3)
   if xobjects.length() > 0 {
     resources.push((pdf_draw_xobject_key(), PdfDictionary(xobjects)))
   }

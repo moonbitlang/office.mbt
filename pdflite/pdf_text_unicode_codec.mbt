@@ -90,7 +90,7 @@ fn pdf_text_utf16be_unit(
 pub fn pdf_codepoints_of_utf16be(
   bytes : BytesView,
 ) -> Array[Int] raise @core.PdfError {
-  let codepoints : Array[Int] = Array::new(capacity=bytes.length() / 2)
+  let codepoints : Array[Int] = Array(capacity=bytes.length() / 2)
   let mut index = 0
   while index < bytes.length() {
     let w1 = pdf_text_utf16be_unit(bytes, index)
@@ -213,7 +213,7 @@ fn pdf_text_push_utf8_codepoint(
 pub fn pdf_codepoints_of_utf8(
   bytes : BytesView,
 ) -> Array[Int] raise @core.PdfError {
-  let output : Array[Int] = Array::new(capacity=bytes.length())
+  let output : Array[Int] = Array(capacity=bytes.length())
   let mut index = 0
   while index < bytes.length() {
     let first = bytes[index].to_int()

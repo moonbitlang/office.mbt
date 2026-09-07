@@ -27,7 +27,7 @@ fn pdf_flate_output_with_header(
   header : ArrayView[Byte],
   body_capacity_hint : Int,
 ) -> Array[Byte] {
-  let output : Array[Byte] = Array::new(
+  let output : Array[Byte] = Array(
     capacity=header.length() + body_capacity_hint,
   )
   for byte in header {

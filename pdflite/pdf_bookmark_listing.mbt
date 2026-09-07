@@ -17,7 +17,7 @@ pub fn PdfDocument::list_bookmarks(
   if json {
     @utf8.encode(self.pdf_bookmark_listing_json(bookmarks).stringify())
   } else {
-    let lines : Array[PdfBookmarkListingTextLine] = Array::new(
+    let lines : Array[PdfBookmarkListingTextLine] = Array(
       capacity=bookmarks.length(),
     )
     let mut length = 0

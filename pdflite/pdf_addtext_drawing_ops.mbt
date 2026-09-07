@@ -40,18 +40,14 @@ fn pdf_addtext_fontpack_text_ops(
   text : String,
 ) -> Array[@content.PdfContentOp] raise @core.PdfError {
   let codepoints = pdf_codepoints_of_utf8(@utf8.encode(text))
-  let triples : Array[(Int, Int, PdfFont)] = Array::new(
-    capacity=codepoints.length(),
-  )
+  let triples : Array[(Int, Int, PdfFont)] = Array(capacity=codepoints.length())
   for codepoint in codepoints {
     match fontpack.get_char(codepoint) {
       Some(triple) => triples.push(triple)
       None => ()
     }
   }
-  let ops : Array[@content.PdfContentOp] = Array::new(
-    capacity=triples.length() * 2,
-  )
+  let ops : Array[@content.PdfContentOp] = Array(capacity=triples.length() * 2)
   for run in pdf_fontpack_collate_runs(triples) {
     guard run.length() > 0 else { continue }
     let font_index = run[0].1

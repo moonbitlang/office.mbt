@@ -77,9 +77,7 @@ pub fn pdf_document_of_json(json : Json) -> PdfDocument raise @core.PdfError {
   }
   let params = Ref::{ val: @syntax.PdfObject::PdfNull, }
   let trailer = Ref::{ val: @syntax.PdfObject::PdfNull, }
-  let objects : Array[(Int, @syntax.PdfObject)] = Array::new(
-    capacity=items.length(),
-  )
+  let objects : Array[(Int, @syntax.PdfObject)] = Array(capacity=items.length())
   for item in items {
     pdf_util_cpdfjson_read_item(item, params, trailer, objects)
   }

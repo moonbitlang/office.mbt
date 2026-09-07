@@ -67,7 +67,7 @@ pub fn PdfObjects::parsed_entries(
   self : PdfObjects,
 ) -> Array[(Int, Int, @syntax.PdfObject)] {
   let numbers = self.object_numbers()
-  let entries : Array[(Int, Int, @syntax.PdfObject)] = Array::new(
+  let entries : Array[(Int, Int, @syntax.PdfObject)] = Array(
     capacity=numbers.length(),
   )
   for number in numbers {
@@ -91,7 +91,7 @@ pub fn PdfObjects::stream_entries(
   self : PdfObjects,
 ) -> Array[(Int, Int, @syntax.PdfStream)] {
   let numbers = self.object_numbers()
-  let entries : Array[(Int, Int, @syntax.PdfStream)] = Array::new(
+  let entries : Array[(Int, Int, @syntax.PdfStream)] = Array(
     capacity=numbers.length(),
   )
   for number in numbers {

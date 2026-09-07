@@ -9,7 +9,7 @@ pub fn pdf_reader_reconstruction_trailers(
   read_trailer_at : (@core.ByteCursor, Int) -> @syntax.PdfObject raise @core.PdfError,
   read_xref_stream_trailer_at : (@core.ByteCursor, Int) -> @syntax.PdfObject raise @core.PdfError,
 ) -> Array[@syntax.PdfObject] {
-  let trailers : Array[@syntax.PdfObject] = Array::new(capacity=1)
+  let trailers : Array[@syntax.PdfObject] = Array(capacity=1)
   let cursor = @core.byte_cursor_of_view(data)
   for position in 0..<data.length() {
     if @core.pdf_view_matches_ascii_at(data, position, [
