@@ -1,11 +1,11 @@
 import {
-  "bobzhang/docx2html" @word,
-  "bobzhang/docx2html/batch" @docx_batch,
-  "bobzhang/docx2html/document",
-  "bobzhang/docx2html/docx",
-  "bobzhang/mbtexcel/batch",
-  "bobzhang/mbtexcel/inspect",
-  "bobzhang/mbtexcel/xlsx",
+  "moonbitlang/docx2html" @word,
+  "moonbitlang/docx2html/batch" @docx_batch,
+  "moonbitlang/docx2html/document",
+  "moonbitlang/docx2html/docx",
+  "moonbitlang/mbtexcel/batch",
+  "moonbitlang/mbtexcel/inspect",
+  "moonbitlang/mbtexcel/xlsx",
   "moonbitlang/core/debug",
   "moonbitlang/core/encoding/base64",
   "moonbitlang/core/encoding/utf8",
@@ -14,14 +14,14 @@ import {
 }
 
 import {
-  "bobzhang/docx2html" @word,
+  "moonbitlang/docx2html" @word,
   "moonbitlang/core/encoding/base64" @b64,
-  "bobzhang/docx2html/document",
-  "bobzhang/docx2html/docx",
-  "bobzhang/mbtexcel/batch",
-  "bobzhang/mbtexcel/xlsx",
+  "moonbitlang/docx2html/document",
+  "moonbitlang/docx2html/docx",
+  "moonbitlang/mbtexcel/batch",
+  "moonbitlang/mbtexcel/xlsx",
   "moonbit-community/flate/zip",
-  "bobzhang/office-lib/dump",
+  "moonbitlang/office-lib/dump",
 } for "test"
 
 supported_targets = "native+js+wasm"

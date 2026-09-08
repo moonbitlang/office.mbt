@@ -1,17 +1,17 @@
 import {
-  "bobzhang/mbtexcel" @excel,
-  "bobzhang/mbtexcel/batch",
-  "bobzhang/mbtexcel/xlsx" @engine,
+  "moonbitlang/mbtexcel" @excel,
+  "moonbitlang/mbtexcel/batch",
+  "moonbitlang/mbtexcel/xlsx" @engine,
   "moonbit-community/flate/zip",
-  "bobzhang/office-lib" @office,
-  "bobzhang/office-lib/template",
-  "bobzhang/office-lib/transaction",
+  "moonbitlang/office-lib" @office,
+  "moonbitlang/office-lib/template",
+  "moonbitlang/office-lib/transaction",
   "moonbitlang/core/debug",
   "moonbitlang/core/json",
 }
 
 import {
-  "bobzhang/mbtexcel/xlsx" @engine,
+  "moonbitlang/mbtexcel/xlsx" @engine,
   "moonbit-community/flate/zip",
   "moonbitlang/async",
   "moonbitlang/async/fs" @afs,

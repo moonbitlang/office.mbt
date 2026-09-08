@@ -1,5 +1,5 @@
 import {
-  "bobzhang/mbtexcel/xlsx",
+  "moonbitlang/mbtexcel/xlsx",
   "moonbit-community/flate/zip",
   "moonbitlang/x/time",
   "moonbitlang/async/io" @async/io,
@@ -8,7 +8,7 @@ import {
 import {
   // TODO(upstream): test deps should not impose on main deps  
   // test deps 
-  "bobzhang/mbtexcel/demos",
+  "moonbitlang/mbtexcel/demos",
   "moonbitlang/async",
   "moonbitlang/core/encoding/utf8" @encoding/utf8,
   "moonbit-community/flate/zip",

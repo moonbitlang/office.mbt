@@ -6,7 +6,7 @@
 //
 // Keeping them in their own `supported_targets = "native"` package is what lets
 // `moonbitlang/async/fs`, `moonbitlang/async/process` and
-// `bobzhang/mbtexcel/batch` be declared where they are actually used -- in the
+// `moonbitlang/mbtexcel/batch` be declared where they are actually used -- in the
 // root package, which also compiles for js, they were reported
 // `unused_package` there because js compiles none of these files.
 //
@@ -14,10 +14,10 @@
 // office facade: a package with no sources of its own, only blackbox tests.
 
 import {
-  "bobzhang/mbtexcel",
-  "bobzhang/mbtexcel/xlsx",
-  "bobzhang/mbtexcel/demos",
-  "bobzhang/mbtexcel/batch",
+  "moonbitlang/mbtexcel",
+  "moonbitlang/mbtexcel/xlsx",
+  "moonbitlang/mbtexcel/demos",
+  "moonbitlang/mbtexcel/batch",
   "moonbitlang/async",
   "moonbitlang/async/fs" @async/fs,
   "moonbitlang/async/process",

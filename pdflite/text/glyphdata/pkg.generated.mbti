@@ -1,5 +1,5 @@
 // Generated using `moon info`, DON'T EDIT IT
-package "bobzhang/pdflite/text/glyphdata"
+package "moonbitlang/pdflite/text/glyphdata"
 
 // Values
 pub fn pdf_text_codepoint_of_agl_base_glyphname(String) -> Int?

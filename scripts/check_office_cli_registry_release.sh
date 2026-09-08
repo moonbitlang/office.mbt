@@ -10,14 +10,14 @@ source "$ROOT/scripts/release_tree_guard.sh"
 mkdir -p "$MODULE"
 cp -R "$ROOT/office-cli/." "$MODULE/"
 
-grep -Fq 'name = "bobzhang/office"' "$MODULE/moon.mod"
-grep -Fq '"bobzhang/office-lib@0.1.0"' "$MODULE/moon.mod"
+grep -Fq 'name = "moonbitlang/office"' "$MODULE/moon.mod"
+grep -Fq '"moonbitlang/office-lib@0.1.0"' "$MODULE/moon.mod"
 
 cd "$MODULE"
 moon update
 dependency_tree="$(moon tree)"
 printf '%s\n' "$dependency_tree"
-assert_selected_dependency "$dependency_tree" "bobzhang/office-lib" "0.1.0"
+assert_selected_dependency "$dependency_tree" "moonbitlang/office-lib" "0.1.0"
 moon check --frozen --target native
 moon check --frozen --target wasm
 moon build --frozen --target native

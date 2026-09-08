@@ -1,8 +1,8 @@
 // Generated using `moon info`, DON'T EDIT IT
-package "bobzhang/pdflite/font/standard14"
+package "moonbitlang/pdflite/font/standard14"
 
 import {
-  "bobzhang/pdflite/font/afm",
+  "moonbitlang/pdflite/font/afm",
   "moonbitlang/core/debug",
 }
 

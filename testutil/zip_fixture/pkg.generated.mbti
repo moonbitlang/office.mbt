@@ -1,5 +1,5 @@
 // Generated using `moon info`, DON'T EDIT IT
-package "bobzhang/mbtexcel/testutil/zip_fixture"
+package "moonbitlang/mbtexcel/testutil/zip_fixture"
 
 // Values
 pub fn classic_central_directory_offset(BytesView) -> Int raise

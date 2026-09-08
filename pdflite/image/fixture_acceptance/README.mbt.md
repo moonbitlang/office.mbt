@@ -1,6 +1,6 @@
 # pdflite/image/fixture_acceptance
 
-`bobzhang/pdflite/image/fixture_acceptance` is a native-only acceptance package
+`moonbitlang/pdflite/image/fixture_acceptance` is a native-only acceptance package
 for image-heavy external PDFs. It checks JPEG, CCITT, indexed color, compressed
 rewrite, and xref reconstruction behavior when optional downloaded fixtures are
 available. It also probes the checked-in `fixtures/cpdf-source` manual-image

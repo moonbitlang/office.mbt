@@ -1,11 +1,11 @@
 import {
-  "bobzhang/pagelayout",
-  "bobzhang/pagelayout/paragraph",
-  "bobzhang/pagelayout/table",
+  "moonbitlang/pagelayout",
+  "moonbitlang/pagelayout/paragraph",
+  "moonbitlang/pagelayout/table",
   "moonbitlang/core/debug",
 }
 
 import {
-  "bobzhang/pagelayout",
-  "bobzhang/pagelayout/paragraph",
+  "moonbitlang/pagelayout",
+  "moonbitlang/pagelayout/paragraph",
 } for "test"

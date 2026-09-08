@@ -1,5 +1,5 @@
 import {
-  "bobzhang/office-lib" @office,
+  "moonbitlang/office-lib" @office,
   "moonbit-community/flate/zip",
   "moonbitlang/async",
   "moonbitlang/async/fs" @afs,
@@ -13,17 +13,17 @@ import {
 }
 
 import {
-  "bobzhang/mbtexcel" @excel,
-  "bobzhang/mbtexcel/testutil/zip_fixture",
-  "bobzhang/docx2html" @word,
+  "moonbitlang/mbtexcel" @excel,
+  "moonbitlang/mbtexcel/testutil/zip_fixture",
+  "moonbitlang/docx2html" @word,
   "moonbitlang/async",
   "moonbitlang/core/encoding/utf8",
 } for "test"
 
 import {
-  "bobzhang/mbtexcel" @excel,
-  "bobzhang/docx2html" @word,
-  "bobzhang/docx2html/splice",
+  "moonbitlang/mbtexcel" @excel,
+  "moonbitlang/docx2html" @word,
+  "moonbitlang/docx2html/splice",
   "moonbitlang/async",
   "moonbitlang/core/encoding/utf8",
 } for "wbtest"

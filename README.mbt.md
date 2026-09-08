@@ -23,14 +23,14 @@ A pure MoonBit library for reading and writing Microsoft Excel (XLSX) files. Thi
 Add the dependency to your module:
 
 ```sh
-moon add bobzhang/mbtexcel
+moon add moonbitlang/mbtexcel
 ```
 
 Then import it in the `moon.pkg` of the package that uses it:
 
 ```
 import {
-  "bobzhang/mbtexcel",
+  "moonbitlang/mbtexcel",
 }
 ```
 
@@ -309,23 +309,23 @@ test "validate output" {
 
 ## Unified Office command
 
-`moonx bobzhang/office` is the agent-oriented facade for DOCX and XLSX packages.
+`moonx moonbitlang/office` is the agent-oriented facade for DOCX and XLSX packages.
 Its registry-driven help, format detection, validated raw OOXML fallback, and
 structured reads use versioned JSON envelopes and explicit resource limits:
 
 ```sh
-moonx bobzhang/office help docx
-moonx bobzhang/office identify report.docx --json
-moonx bobzhang/office outline report.docx --json
-moonx bobzhang/office get report.docx '/docx/body/p[1]' --json
-moonx bobzhang/office text report.docx --under '/docx/comments/comment[id="0"]'
-moonx bobzhang/office query report.docx --kind paragraph --text revenue --ignore-case --json
-moonx bobzhang/office outline book.xlsx --json
-moonx bobzhang/office get book.xlsx '/xlsx/sheet[name="Data"]/range[A1:C12]' --json
-moonx bobzhang/office text book.xlsx --under '/xlsx/sheet[name="Data"]' --json
-moonx bobzhang/office query book.xlsx 'cell[type=formula]' --under '/xlsx/sheet[name="Data"]' --json
-moonx bobzhang/office create xlsx new-book.xlsx --sheet Data --json
-moonx bobzhang/office batch new-book.xlsx changes.json --out revised.xlsx --json
+moonx moonbitlang/office help docx
+moonx moonbitlang/office identify report.docx --json
+moonx moonbitlang/office outline report.docx --json
+moonx moonbitlang/office get report.docx '/docx/body/p[1]' --json
+moonx moonbitlang/office text report.docx --under '/docx/comments/comment[id="0"]'
+moonx moonbitlang/office query report.docx --kind paragraph --text revenue --ignore-case --json
+moonx moonbitlang/office outline book.xlsx --json
+moonx moonbitlang/office get book.xlsx '/xlsx/sheet[name="Data"]/range[A1:C12]' --json
+moonx moonbitlang/office text book.xlsx --under '/xlsx/sheet[name="Data"]' --json
+moonx moonbitlang/office query book.xlsx 'cell[type=formula]' --under '/xlsx/sheet[name="Data"]' --json
+moonx moonbitlang/office create xlsx new-book.xlsx --sheet Data --json
+moonx moonbitlang/office batch new-book.xlsx changes.json --out revised.xlsx --json
 ```
 
 DOCX results use the `office.docx.{outline,element,text,query}/1` family and
@@ -507,10 +507,10 @@ fn describe(bytes : Bytes) -> String {
 ## Package Structure
 
 ```
-bobzhang/mbtexcel              # Facade package (this package)
-  -> bobzhang/mbtexcel/xlsx    # Core implementation
-       -> bobzhang/mbtexcel/ooxml  # OOXML metadata helpers
-       -> bobzhang/mbtexcel/zip    # ZIP archive handling
+moonbitlang/mbtexcel              # Facade package (this package)
+  -> moonbitlang/mbtexcel/xlsx    # Core implementation
+       -> moonbitlang/mbtexcel/ooxml  # OOXML metadata helpers
+       -> moonbitlang/mbtexcel/zip    # ZIP archive handling
 ```
 
 ## License

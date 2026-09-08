@@ -1,5 +1,5 @@
 // Generated using `moon info`, DON'T EDIT IT
-package "bobzhang/office-lib"
+package "moonbitlang/office-lib"
 
 import {
   "moonbit-community/flate/zip",

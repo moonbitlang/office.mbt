@@ -3,7 +3,7 @@ import {
   "moonbit-community/flate/zip",
   "moonbit-community/flate/checksum" @flate_checksum,
   "moonbit-community/flate/gzip" @flate_gzip,
-  "bobzhang/mbtexcel/ooxml",
+  "moonbitlang/mbtexcel/ooxml",
   "moonbitlang/x/crypto",
   "moonbitlang/core/encoding/base64",
   "moonbitlang/core/encoding/utf8" @encoding/utf8,
@@ -27,7 +27,7 @@ import {
 }
 
 import {
-  "bobzhang/mbtexcel/testutil",
+  "moonbitlang/mbtexcel/testutil",
   "moonbitlang/async",
   "moonbitlang/x/time",
   "moonbitlang/core/double",

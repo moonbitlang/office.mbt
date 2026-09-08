@@ -1,8 +1,8 @@
 // Generated using `moon info`, DON'T EDIT IT
-package "bobzhang/pdflite/codec"
+package "moonbitlang/pdflite/codec"
 
 import {
-  "bobzhang/pdflite/core",
+  "moonbitlang/pdflite/core",
 }
 
 // Values

@@ -1,4 +1,4 @@
-# bobzhang/docx2html
+# moonbitlang/docx2html
 
 Native MoonBit DOCX reader and converter, ported from Mammoth. The current
 focus is the common `docx -> html`, `docx -> markdown`, and raw-text paths with
@@ -7,7 +7,7 @@ Mammoth-compatible diagnostics where the JavaScript library exposes them.
 ## Install
 
 ```bash
-moon add bobzhang/docx2html
+moon add moonbitlang/docx2html
 ```
 
 ## Usage

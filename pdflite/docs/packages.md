@@ -4,7 +4,7 @@ This file documents the gap between the directory layout and where code actually
 lives, during the architecture refactor (see `../ARCHITECTURE_PROPOSAL.md` and
 `../EXECUTION_PLAN.md`). It is a working snapshot, not the target design.
 
-Measured 2026-06-20 (root = the top-level `bobzhang/pdflite` package). "Root
+Measured 2026-06-20 (root = the top-level `moonbitlang/pdflite` package). "Root
 files" / "root LOC" count non-test `.mbt` files still in the root package for
 that domain; "Package" shows the sibling package's current non-test LOC.
 

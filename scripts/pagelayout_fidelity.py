@@ -155,7 +155,7 @@ DEFAULT_CLI = (
     / "native"
     / "debug"
     / "build"
-    / "bobzhang"
+    / "moonbitlang"
     / "pagelayout"
     / "cmd"
     / "pagelayout"

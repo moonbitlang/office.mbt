@@ -1,6 +1,6 @@
 # pdflite/draw/fixture_acceptance
 
-`bobzhang/pdflite/draw/fixture_acceptance` is a native-only acceptance package
+`moonbitlang/pdflite/draw/fixture_acceptance` is a native-only acceptance package
 for drawing PDFs copied from the cpdf source corpus. It probes the checked-in
 manual-image PDFs under `fixtures/cpdf-source`.
 

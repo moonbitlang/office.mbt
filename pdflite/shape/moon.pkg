@@ -1,6 +1,6 @@
 import {
   "moonbitlang/core/debug",
-  "bobzhang/pdflite/geometry",
+  "moonbitlang/pdflite/geometry",
   "moonbitlang/core/json",
   "moonbitlang/core/math",
 }

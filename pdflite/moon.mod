@@ -1,16 +1,16 @@
-name = "bobzhang/pdflite"
+name = "moonbitlang/pdflite"
 
 version = "0.1.41"
 
 import {
   "moonbitlang/async@0.20.2",
   "moonbitlang/x@0.4.50",
-  "bobzhang/mbtexcel@0.1.8",
+  "moonbitlang/mbtexcel@0.1.8",
 }
 
 readme = "README.mbt.md"
 
-repository = "https://github.com/bobzhang/pdflite"
+repository = "https://github.com/moonbitlang/pdflite"
 
 license = "Apache-2.0"
 

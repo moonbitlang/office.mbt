@@ -1,5 +1,5 @@
 // Generated using `moon info`, DON'T EDIT IT
-package "bobzhang/pdflite/xref_model"
+package "moonbitlang/pdflite/xref_model"
 
 import {
   "moonbitlang/core/debug",

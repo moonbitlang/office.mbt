@@ -1,9 +1,9 @@
 // Generated using `moon info`, DON'T EDIT IT
-package "bobzhang/docx2html/opc"
+package "moonbitlang/docx2html/opc"
 
 import {
-  "bobzhang/docx2html/core",
-  "bobzhang/docx2html/xml",
+  "moonbitlang/docx2html/core",
+  "moonbitlang/docx2html/xml",
   "moonbit-community/flate/zip",
 }
 

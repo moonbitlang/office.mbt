@@ -1,4 +1,4 @@
 import {
-  "bobzhang/pagelayout",
+  "moonbitlang/pagelayout",
   "moonbitlang/core/debug",
 }

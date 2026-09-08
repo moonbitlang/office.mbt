@@ -18,7 +18,7 @@ here="$root/docx2html/tests/corpus"
 
 if [ -z "${DOCX_CLI:-}" ]; then
   ( cd "$root" && moon build --target native docx2html/cmd/docx >/dev/null 2>&1 )
-  DOCX_CLI="$root/_build/native/debug/build/bobzhang/docx2html/cmd/docx/docx.exe"
+  DOCX_CLI="$root/_build/native/debug/build/moonbitlang/docx2html/cmd/docx/docx.exe"
 fi
 
 fail=0

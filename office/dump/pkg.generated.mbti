@@ -1,9 +1,9 @@
 // Generated using `moon info`, DON'T EDIT IT
-package "bobzhang/office-lib/dump"
+package "moonbitlang/office-lib/dump"
 
 import {
-  "bobzhang/docx2html/docx",
-  "bobzhang/mbtexcel/xlsx",
+  "moonbitlang/docx2html/docx",
+  "moonbitlang/mbtexcel/xlsx",
   "moonbitlang/core/debug",
 }
 

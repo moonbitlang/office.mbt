@@ -1,5 +1,5 @@
 import {
-  "bobzhang/pdflite/core",
+  "moonbitlang/pdflite/core",
   "moonbitlang/core/buffer",
 }
 

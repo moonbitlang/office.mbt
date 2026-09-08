@@ -1,8 +1,8 @@
 // Generated using `moon info`, DON'T EDIT IT
-package "bobzhang/pdflite/writer"
+package "moonbitlang/pdflite/writer"
 
 import {
-  "bobzhang/pdflite/crypt_core",
+  "moonbitlang/pdflite/crypt_core",
   "moonbitlang/core/debug",
 }
 

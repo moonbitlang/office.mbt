@@ -1,8 +1,8 @@
 // Generated using `moon info`, DON'T EDIT IT
-package "bobzhang/pdflite/date"
+package "moonbitlang/pdflite/date"
 
 import {
-  "bobzhang/pdflite/core",
+  "moonbitlang/pdflite/core",
   "moonbitlang/core/debug",
 }
 

@@ -1,6 +1,6 @@
 import {
-  "bobzhang/pdflite",
-  "bobzhang/pdflite/bookmark",
+  "moonbitlang/pdflite",
+  "moonbitlang/pdflite/bookmark",
   "moonbitlang/async",
   "moonbitlang/async/fs",
   "moonbitlang/core/encoding/ascii",

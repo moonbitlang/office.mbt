@@ -1,6 +1,6 @@
 # pdflite/markdown/cmd
 
-`bobzhang/pdflite/markdown/cmd` is the native command-line wrapper around the
+`moonbitlang/pdflite/markdown/cmd` is the native command-line wrapper around the
 Markdown extractor. It reads one PDF path, writes one Markdown path, and keeps
 the executable separate from the library package. Argument parsing is delegated
 to `moonbitlang/core/argparse` so usage, help, and parse errors come from the
@@ -44,7 +44,7 @@ async test "command conversion writes markdown" {
 
 - Run it with `moon run --target native markdown/cmd <input.pdf> <output.md>`.
 - The package is marked `is-main` and `supported_targets = "+native"`.
-- Library users should call `bobzhang/pdflite/markdown` directly instead of
+- Library users should call `moonbitlang/pdflite/markdown` directly instead of
   shelling out to this executable.
 
 ## Pedantic Boundaries
@@ -54,7 +54,7 @@ async test "command conversion writes markdown" {
   Markdown path. Any richer options should be added deliberately and tested as
   command behavior.
 - The argparse command spec is the source of truth for usage and help text.
-- Extraction semantics belong to `bobzhang/pdflite/markdown`; this package
+- Extraction semantics belong to `moonbitlang/pdflite/markdown`; this package
   should not duplicate parser or Markdown logic.
 - The executable reads the whole input file and writes the whole Markdown file.
   It is not a streaming converter.

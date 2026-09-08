@@ -1,6 +1,6 @@
 # pdflite
 
-`bobzhang/pdflite` is a byte-oriented PDF toolkit for MoonBit. The root
+`moonbitlang/pdflite` is a byte-oriented PDF toolkit for MoonBit. The root
 package exposes the public document model, object parser/writer, page tree
 helpers, content operators, text extraction, filters, images, fonts, encryption,
 and high-level read/write entry points.

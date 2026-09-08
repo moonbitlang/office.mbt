@@ -4,14 +4,14 @@ The `office` executable exposes four read-only DOCX commands over one bounded,
 canonical document projection:
 
 ```sh
-moonx bobzhang/office outline report.docx --json
-moonx bobzhang/office get report.docx '/docx/body/p[1]' --json
-moonx bobzhang/office text report.docx --under '/docx/header[1]' --json
-moonx bobzhang/office query report.docx --kind paragraph --text revenue --ignore-case --json
+moonx moonbitlang/office outline report.docx --json
+moonx moonbitlang/office get report.docx '/docx/body/p[1]' --json
+moonx moonbitlang/office text report.docx --under '/docx/header[1]' --json
+moonx moonbitlang/office query report.docx --kind paragraph --text revenue --ignore-case --json
 ```
 
-Run `moonx bobzhang/office help docx` for the installed command catalog and
-`moonx bobzhang/office help <command> --json` for the declared inputs, outputs,
+Run `moonx moonbitlang/office help docx` for the installed command catalog and
+`moonx moonbitlang/office help <command> --json` for the declared inputs, outputs,
 and bounds.
 The file's validated package format selects the result contract. This document
 covers the DOCX branch; passing an XLSX package invokes the corresponding XLSX

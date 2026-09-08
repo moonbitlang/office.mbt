@@ -1,8 +1,8 @@
 import {
-  "bobzhang/office-lib/docx",
-  "bobzhang/office-lib/transaction",
-  "bobzhang/docx2html" @word,
-  "bobzhang/docx2html/docx" @word_impl,
+  "moonbitlang/office-lib/docx",
+  "moonbitlang/office-lib/transaction",
+  "moonbitlang/docx2html" @word,
+  "moonbitlang/docx2html/docx" @word_impl,
   "moonbitlang/async",
   "moonbitlang/async/fs" @afs,
   "moonbitlang/async/process",

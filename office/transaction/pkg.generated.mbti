@@ -1,8 +1,8 @@
 // Generated using `moon info`, DON'T EDIT IT
-package "bobzhang/office-lib/transaction"
+package "moonbitlang/office-lib/transaction"
 
 import {
-  "bobzhang/office-lib",
+  "moonbitlang/office-lib",
   "moonbit-community/flate/zip",
   "moonbitlang/core/debug",
 }

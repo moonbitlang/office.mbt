@@ -1,4 +1,4 @@
-name = "bobzhang/office"
+name = "moonbitlang/office"
 
 version = "0.6.0"
 
@@ -13,7 +13,7 @@ keywords = [ "office", "xlsx", "docx", "ooxml", "cli" ]
 description = "Agent-oriented XLSX and DOCX command-line tooling"
 
 import {
-  "bobzhang/office-lib@0.5.0",
+  "moonbitlang/office-lib@0.5.0",
   "moonbitlang/async@0.20.2",
 }
 

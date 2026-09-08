@@ -1,6 +1,6 @@
 # pdflite/flate
 
-`bobzhang/pdflite/flate` implements the Flate filter used by PDF streams. It
+`moonbitlang/pdflite/flate` implements the Flate filter used by PDF streams. It
 works on `Bytes` and `BytesView`, exposes default and level-controlled encoders,
 and can decode one Flate stream prefix from a larger byte sequence.
 

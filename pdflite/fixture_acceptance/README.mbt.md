@@ -1,6 +1,6 @@
 # pdflite/fixture_acceptance
 
-`bobzhang/pdflite/fixture_acceptance` is a native-only package for checked-in
+`moonbitlang/pdflite/fixture_acceptance` is a native-only package for checked-in
 PDF fixtures that are too concrete for unit tests but too important to leave out
 of acceptance coverage. It focuses on reader and writer boundaries for real PDF
 files committed under `fixtures/`, including the tracked cpdf source-corpus

@@ -1,8 +1,8 @@
 import {
-  "bobzhang/pdflite/codec",
-  "bobzhang/pdflite/flate",
+  "moonbitlang/pdflite/codec",
+  "moonbitlang/pdflite/flate",
 }
 
 import {
-  "bobzhang/pdflite",
+  "moonbitlang/pdflite",
 } for "test"

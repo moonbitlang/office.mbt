@@ -1,6 +1,6 @@
-name = "bobzhang/mbtexcel"
+name = "moonbitlang/mbtexcel"
 
-version = "0.1.9"
+version = "0.1.10"
 
 import {
   "moonbitlang/async@0.20.2",

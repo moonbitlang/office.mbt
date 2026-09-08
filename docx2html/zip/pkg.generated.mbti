@@ -1,8 +1,8 @@
 // Generated using `moon info`, DON'T EDIT IT
-package "bobzhang/docx2html/zip"
+package "moonbitlang/docx2html/zip"
 
 import {
-  "bobzhang/docx2html/core",
+  "moonbitlang/docx2html/core",
   "moonbitlang/core/debug",
 }
 

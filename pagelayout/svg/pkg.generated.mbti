@@ -1,8 +1,8 @@
 // Generated using `moon info`, DON'T EDIT IT
-package "bobzhang/pagelayout/svg"
+package "moonbitlang/pagelayout/svg"
 
 import {
-  "bobzhang/pagelayout",
+  "moonbitlang/pagelayout",
 }
 
 // Values

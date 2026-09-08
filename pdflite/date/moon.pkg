@@ -1,11 +1,11 @@
 import {
   "moonbitlang/core/debug",
-  "bobzhang/pdflite/core",
+  "moonbitlang/pdflite/core",
   "moonbitlang/core/encoding/ascii",
 }
 
 import {
-  "bobzhang/pdflite/core",
+  "moonbitlang/pdflite/core",
   "moonbitlang/core/encoding/ascii",
   "moonbitlang/core/test",
 } for "wbtest"

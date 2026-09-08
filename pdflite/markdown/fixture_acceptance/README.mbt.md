@@ -1,6 +1,6 @@
 # pdflite/markdown/fixture_acceptance
 
-`bobzhang/pdflite/markdown/fixture_acceptance` is a native-only test package for
+`moonbitlang/pdflite/markdown/fixture_acceptance` is a native-only test package for
 Markdown extraction fixtures. It covers checked-in local PDFs, the tracked
 source-corpus subset under `fixtures/cpdf-source`, and optional downloaded external
 PDFs listed under `markdown/external_fixtures`.

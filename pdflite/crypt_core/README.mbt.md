@@ -1,6 +1,6 @@
 # pdflite/crypt_core
 
-`bobzhang/pdflite/crypt_core` contains low-level PDF security-handler
+`moonbitlang/pdflite/crypt_core` contains low-level PDF security-handler
 primitives: ARC4, AES block and object encryption, password padding, digest
 helpers, permission masks, file-key derivation, and object-key derivation. The
 root package builds document-level encryption on top of these primitives.

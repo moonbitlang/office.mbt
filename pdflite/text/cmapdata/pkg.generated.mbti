@@ -1,5 +1,5 @@
 // Generated using `moon info`, DON'T EDIT IT
-package "bobzhang/pdflite/text/cmapdata"
+package "moonbitlang/pdflite/text/cmapdata"
 
 // Values
 pub let pdf_text_b5pc_charcode_table : Array[(Int, Int)]

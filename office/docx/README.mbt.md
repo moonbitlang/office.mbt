@@ -1,9 +1,9 @@
 # Preservation-safe DOCX edit sessions
 
-`bobzhang/office-lib/docx` is the transaction-owned editing boundary for existing
+`moonbitlang/office-lib/docx` is the transaction-owned editing boundary for existing
 WordprocessingML packages.
 
-Use `transact_docx` with normal `bobzhang/office-lib/transaction` options. The edit
+Use `transact_docx` with normal `moonbitlang/office-lib/transaction` options. The edit
 callback receives a `DocxEditSession` over an isolated shallow fork of the
 transaction-owned bounded ZIP archive, one annotation/span index,
 source-part fingerprints, an opaque transaction-derived splice budget, and an
@@ -117,7 +117,7 @@ When the callback returns, `transact_docx` finalizes automatically:
 
 The authoritative preservation result is the returned `TransactionReport`.
 The session's CRC/length fingerprints are descriptive; stale-plan safety uses
-exact byte equality. The lower-level `bobzhang/docx2html/splice` API remains
+exact byte equality. The lower-level `moonbitlang/docx2html/splice` API remains
 available for callers that intentionally do not need the transaction boundary.
 
 Text substitution on an existing document is limited to the `{{key}}` template

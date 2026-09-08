@@ -1,4 +1,4 @@
-// The path grammar moved to `bobzhang/docx2html/paths` (Phase-2 J1: the
+// The path grammar moved to `moonbitlang/docx2html/paths` (Phase-2 J1: the
 // annotation index in `docx` needs it and importing `inspect` from `docx`
 // would cycle). These delegations keep this package's public surface —
 // `PathError` and `resolve_path` — exactly where agents' tooling found it.

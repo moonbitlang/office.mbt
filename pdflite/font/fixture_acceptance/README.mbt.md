@@ -1,6 +1,6 @@
 # pdflite/font/fixture_acceptance
 
-`bobzhang/pdflite/font/fixture_acceptance` is a native-only acceptance package
+`moonbitlang/pdflite/font/fixture_acceptance` is a native-only acceptance package
 for font-heavy external PDFs. It validates Type3 resources, CharProcs, font
 encoding, text extraction, and reconstruction paths when optional downloaded
 fixtures are available.

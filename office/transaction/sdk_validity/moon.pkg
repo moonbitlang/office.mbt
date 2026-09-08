@@ -1,8 +1,8 @@
 import {
-  "bobzhang/office-lib/transaction",
-  "bobzhang/mbtexcel" @excel,
+  "moonbitlang/office-lib/transaction",
+  "moonbitlang/mbtexcel" @excel,
   "moonbit-community/flate/zip",
-  "bobzhang/docx2html" @word,
+  "moonbitlang/docx2html" @word,
   "moonbitlang/async",
   "moonbitlang/async/fs" @afs,
   "moonbitlang/async/process",

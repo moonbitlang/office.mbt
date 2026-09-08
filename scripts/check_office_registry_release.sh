@@ -18,9 +18,9 @@ chmod +x "$SANDBOX/scripts/ensure_dotnet.sh" \
   "$SANDBOX/scripts/validate_docx.sh" \
   "$SANDBOX/scripts/validate_xlsx.sh"
 
-grep -Fq 'name = "bobzhang/office-lib"' "$MODULE/moon.mod"
-grep -Fq '"bobzhang/mbtexcel@0.1.9"' "$MODULE/moon.mod"
-grep -Fq '"bobzhang/docx2html@0.2.0"' "$MODULE/moon.mod"
+grep -Fq 'name = "moonbitlang/office-lib"' "$MODULE/moon.mod"
+grep -Fq '"moonbitlang/mbtexcel@0.1.9"' "$MODULE/moon.mod"
+grep -Fq '"moonbitlang/docx2html@0.2.0"' "$MODULE/moon.mod"
 test -x "$SANDBOX/scripts/validate_docx.sh"
 test -x "$SANDBOX/scripts/validate_xlsx.sh"
 test -f "$SANDBOX/tools/openxml-validator/OpenXmlValidator.csproj"
@@ -29,8 +29,8 @@ cd "$MODULE"
 moon update
 dependency_tree="$(moon tree)"
 printf '%s\n' "$dependency_tree"
-assert_selected_dependency "$dependency_tree" "bobzhang/mbtexcel" "0.1.9"
-assert_selected_dependency "$dependency_tree" "bobzhang/docx2html" "0.2.0"
+assert_selected_dependency "$dependency_tree" "moonbitlang/mbtexcel" "0.1.9"
+assert_selected_dependency "$dependency_tree" "moonbitlang/docx2html" "0.2.0"
 moon check --frozen --target native
 moon check --frozen --target wasm
 # No package filter: the registry-resolved artifact must pass the Office root

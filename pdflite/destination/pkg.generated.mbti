@@ -1,9 +1,9 @@
 // Generated using `moon info`, DON'T EDIT IT
-package "bobzhang/pdflite/destination"
+package "moonbitlang/pdflite/destination"
 
 import {
-  "bobzhang/pdflite/core",
-  "bobzhang/pdflite/syntax",
+  "moonbitlang/pdflite/core",
+  "moonbitlang/pdflite/syntax",
   "moonbitlang/core/debug",
 }
 
