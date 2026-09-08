@@ -12,7 +12,7 @@ pub fn PdfDocument::content_entries_of_ops(
     mediabox.max_x,
     mediabox.max_y,
   )
-  let entries : Array[PdfContentJsonEntry] = Array(capacity=ops.length())
+  let entries : Array[PdfContentJsonEntry] = Array::new(capacity=ops.length())
   for op in ops {
     let result = self.content_apply_resource_op(state, resources, op)
     entries.append(result.entries)
@@ -76,7 +76,7 @@ fn PdfDocument::content_entries_of_ops_recursive_from_state(
   ops : ArrayView[@content.PdfContentOp],
 ) -> PdfContentOperatorResourceResult raise @core.PdfError {
   let mut state = initial
-  let entries : Array[PdfContentJsonEntry] = Array(capacity=ops.length())
+  let entries : Array[PdfContentJsonEntry] = Array::new(capacity=ops.length())
   for op in ops {
     match op {
       Op_Do(name) =>

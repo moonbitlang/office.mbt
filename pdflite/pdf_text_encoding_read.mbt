@@ -65,7 +65,7 @@ fn PdfDocument::read_encoding_differences(
 ) -> Array[PdfEncodingDifference] raise @core.PdfError {
   match self.direct(differences) {
     PdfArray(values) => {
-      let output : Array[PdfEncodingDifference] = Array(
+      let output : Array[PdfEncodingDifference] = Array::new(
         capacity=values.length(),
       )
       let mut next_code : Int? = None

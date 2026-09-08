@@ -47,7 +47,7 @@ fn PdfDocument::pdf_pages_of_branch(
   let rotate = self.pdf_page_inherited_rotation(node, inherited_rotate)
   match self.lookup_direct(pdf_page_kids_key(), node) {
     Some(PdfArray(kids)) => {
-      let pages : Array[@page.PdfPage] = Array(capacity=kids.length())
+      let pages : Array[@page.PdfPage] = Array::new(capacity=kids.length())
       for kid in kids {
         for
           page in self.pdf_pages_of_node(
@@ -89,7 +89,7 @@ fn PdfDocument::pdf_page_content_list(
   self : PdfDocument,
   contents : @syntax.PdfObject?,
 ) -> Array[@syntax.PdfObject] {
-  let output : Array[@syntax.PdfObject] = Array(
+  let output : Array[@syntax.PdfObject] = Array::new(
     capacity=match contents {
       Some(PdfArray(items)) => items.length()
       Some(_) => 1

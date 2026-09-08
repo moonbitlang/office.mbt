@@ -180,7 +180,7 @@ pub fn PdfDocument::dict_entry_values(
   key : @core.PdfName,
 ) -> Array[@syntax.PdfObject] {
   let object_numbers = self.object_numbers()
-  let output : Array[@syntax.PdfObject] = Array(
+  let output : Array[@syntax.PdfObject] = Array::new(
     capacity=object_numbers.length(),
   )
   for number in object_numbers {
@@ -203,7 +203,7 @@ pub fn PdfDocument::dict_entry_rendered_values(
   key : @core.PdfName,
 ) -> Array[@core.PdfBytes] raise @core.PdfError {
   let values = self.dict_entry_values(key)
-  let rendered : Array[@core.PdfBytes] = Array(capacity=values.length())
+  let rendered : Array[@core.PdfBytes] = Array::new(capacity=values.length())
   for value in values {
     rendered.push(pdf_write_object(value))
   }
@@ -218,7 +218,7 @@ pub fn PdfDocument::dict_entries_json(
   utf8? : Bool = false,
 ) -> @core.PdfBytes raise @core.PdfError {
   let entry_values = self.dict_entry_values(key)
-  let values : Array[Json] = Array(capacity=entry_values.length())
+  let values : Array[Json] = Array::new(capacity=entry_values.length())
   for value in entry_values {
     values.push(
       self.pdf_util_json_of_object(value, utf8, false, false, false, false),

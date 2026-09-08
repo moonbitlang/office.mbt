@@ -8,7 +8,7 @@
 pub fn pdf_content_bytes_of_ops(
   ops : ArrayView[@content.PdfContentOp],
 ) -> @core.PdfBytes raise @core.PdfError {
-  let rendered : Array[(@core.PdfBytes, Bool)] = Array(capacity=ops.length())
+  let rendered : Array[(@core.PdfBytes, Bool)] = Array::new(capacity=ops.length())
   let mut length = 0
   for op in ops {
     let bytes = pdf_content_op_bytes(op)

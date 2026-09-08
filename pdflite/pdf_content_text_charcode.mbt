@@ -3,7 +3,7 @@ fn pdf_content_two_byte_charcodes_or_empty(bytes : BytesView) -> Array[Int] {
   if bytes.length() % 2 != 0 {
     []
   } else {
-    let output : Array[Int] = Array(capacity=bytes.length() / 2)
+    let output : Array[Int] = Array::new(capacity=bytes.length() / 2)
     let mut index = 0
     while index < bytes.length() {
       let high = bytes[index].to_int()

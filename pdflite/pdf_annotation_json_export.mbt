@@ -126,7 +126,7 @@ fn PdfDocument::pdf_annotation_json_page(
 ) -> Array[Json] raise @core.PdfError {
   match self.lookup_direct(pdf_annotation_annots_key(), page.rest) {
     Some(PdfArray(annotations)) => {
-      let output : Array[Json] = Array(capacity=annotations.length())
+      let output : Array[Json] = Array::new(capacity=annotations.length())
       for annotation_ref in annotations {
         match annotation_ref {
           PdfIndirect(object_number) => {
@@ -189,12 +189,12 @@ pub fn PdfDocument::annotations_json(
   let page_reference_numbers = self.page_reference_numbers()
   let page_number_lookup = pdf_page_number_lookup(page_reference_numbers)
   let selected_pages = @core.pdf_number_set(page_numbers)
-  let entries : Array[Json] = Array(capacity=page_numbers.length() + 1)
+  let entries : Array[Json] = Array::new(capacity=page_numbers.length() + 1)
   entries.push(pdf_annotation_json_format_header())
-  let extra_roots : Array[@syntax.PdfObject] = Array(
+  let extra_roots : Array[@syntax.PdfObject] = Array::new(
     capacity=page_numbers.length(),
   )
-  let annotation_numbers : Array[Int] = Array(capacity=page_numbers.length())
+  let annotation_numbers : Array[Int] = Array::new(capacity=page_numbers.length())
   for index, page in pages {
     let page_number = index + 1
     if selected_pages.contains(page_number) {

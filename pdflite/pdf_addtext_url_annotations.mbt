@@ -171,7 +171,7 @@ pub fn PdfDocument::addtext_url_annotation_references(
   url_border : Bool,
 ) -> Array[@syntax.PdfObject] raise @core.PdfError {
   let height = pdf_addtext_url_annotation_height(font, fontname, font_size)
-  let annotations : Array[@syntax.PdfObject] = Array(capacity=urls.length())
+  let annotations : Array[@syntax.PdfObject] = Array::new(capacity=urls.length())
   for url in urls {
     let (start_width, end_width) = pdf_addtext_url_annotation_widths_with_measure(
       text, url, measure,

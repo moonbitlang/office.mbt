@@ -51,7 +51,7 @@ fn pdf_text_uni_glyphname_codepoints(base : BytesView) -> Array[Int]? {
     (base.length() - 4) % 4 == 0 else {
     return None
   }
-  let output : Array[Int] = Array(capacity=(base.length() - 4) / 4)
+  let output : Array[Int] = Array::new(capacity=(base.length() - 4) / 4)
   let mut index = 4
   while index < base.length() {
     match pdf_text_parse_hex_codepoint(base, index, index + 4) {

@@ -76,7 +76,7 @@ fn pdf_content_text_font_cache_with(
   name : String,
   font : PdfFont,
 ) -> Array[PdfContentTextFontCacheEntry] {
-  let output : Array[PdfContentTextFontCacheEntry] = Array(
+  let output : Array[PdfContentTextFontCacheEntry] = Array::new(
     capacity=cache.length() + 1,
   )
   let mut found = false

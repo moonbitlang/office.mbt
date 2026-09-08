@@ -5,7 +5,7 @@ pub fn dict_add_entries(
   key : @core.PdfName,
   value : PdfObject,
 ) -> Array[(@core.PdfName, PdfObject)] {
-  let output : Array[(@core.PdfName, PdfObject)] = Array(
+  let output : Array[(@core.PdfName, PdfObject)] = Array::new(
     capacity=entries.length() + 1,
   )
   for i in 0..<entries.length() {
@@ -20,7 +20,7 @@ pub fn dict_add_entries(
       output.push((name, old_value))
     }
   } nobreak {
-    let reversed : Array[(@core.PdfName, PdfObject)] = Array(
+    let reversed : Array[(@core.PdfName, PdfObject)] = Array::new(
       capacity=entries.length() + 1,
     )
     reversed.push((key, value))
@@ -100,7 +100,7 @@ fn dict_replace_entries(
   key : @core.PdfName,
   value : PdfObject,
 ) -> Array[(@core.PdfName, PdfObject)] raise @core.PdfError {
-  let output : Array[(@core.PdfName, PdfObject)] = Array(
+  let output : Array[(@core.PdfName, PdfObject)] = Array::new(
     capacity=entries.length(),
   )
   for i in 0..<entries.length() {
@@ -124,7 +124,7 @@ fn dict_remove_entries(
   entries : ArrayView[(@core.PdfName, PdfObject)],
   key : @core.PdfName,
 ) -> Array[(@core.PdfName, PdfObject)] {
-  let output : Array[(@core.PdfName, PdfObject)] = Array(
+  let output : Array[(@core.PdfName, PdfObject)] = Array::new(
     capacity=entries.length(),
   )
   for entry in entries {

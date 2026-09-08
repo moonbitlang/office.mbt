@@ -25,7 +25,7 @@ fn pdf_reader_reconstruction_classic_xref_entry_capacity(
 pub fn pdf_reader_reconstruction_xref_stream_entries(
   sections : ArrayView[PdfXRefSection],
 ) -> Array[PdfClassicXRefEntry] {
-  let xrefs : Array[PdfClassicXRefEntry] = Array(
+  let xrefs : Array[PdfClassicXRefEntry] = Array::new(
     capacity=pdf_reader_reconstruction_xref_stream_entry_capacity(sections),
   )
   let seen = @core.pdf_number_set([])
@@ -45,7 +45,7 @@ pub fn pdf_reader_reconstruction_xref_stream_entries(
 pub fn pdf_reader_reconstruction_classic_xref_entries(
   sections : ArrayView[(Int, PdfXRefSection)],
 ) -> Array[PdfClassicXRefEntry] {
-  let xrefs : Array[PdfClassicXRefEntry] = Array(
+  let xrefs : Array[PdfClassicXRefEntry] = Array::new(
     capacity=pdf_reader_reconstruction_classic_xref_entry_capacity(sections),
   )
   let seen = @core.pdf_number_set([])
@@ -68,7 +68,7 @@ pub fn pdf_reader_reconstruction_classic_xref_entries(
 pub fn pdf_reader_reconstruction_xref_stream_refs(
   sections : ArrayView[PdfXRefSection],
 ) -> Array[(Int, Int)] raise @core.PdfError {
-  let refs : Array[(Int, Int)] = Array(capacity=sections.length())
+  let refs : Array[(Int, Int)] = Array::new(capacity=sections.length())
   for section in sections {
     guard section.stream_object_number is Some(number) &&
       section.stream_object_offset is Some(offset) else {
@@ -94,7 +94,7 @@ pub fn pdf_reader_reconstruction_object_xrefs(
     PdfClassicXRefIndex,
   ) -> (PdfClassicXRefEntry?, Int?) raise @core.PdfError,
 ) -> Array[PdfClassicXRefEntry] raise @core.PdfError {
-  let xrefs : Array[PdfClassicXRefEntry] = Array(capacity=16)
+  let xrefs : Array[PdfClassicXRefEntry] = Array::new(capacity=16)
   let cursor = @core.byte_cursor_of_view(data)
   let xref_index = pdf_classic_xref_index(xrefs)
   let mut position = 0
@@ -184,7 +184,7 @@ pub fn pdf_reader_reconstruction_xref_coverage(
     PdfClassicXRefEntry,
   ) -> Bool,
 ) -> PdfReconstructedXRefCoverage {
-  let covered : Array[(Int, @core.PdfNumberSet)] = Array(
+  let covered : Array[(Int, @core.PdfNumberSet)] = Array::new(
     capacity=classic_sections.length() + xref_stream_sections.length(),
   )
   let trailer_roots = pdf_reader_reconstruction_trailer_root_numbers(

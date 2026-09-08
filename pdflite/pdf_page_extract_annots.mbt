@@ -11,7 +11,7 @@ fn PdfDocument::pdf_page_annotation_numbers(
   }
   match annots_object {
     PdfArray(items) => {
-      let numbers : Array[Int] = Array(capacity=items.length())
+      let numbers : Array[Int] = Array::new(capacity=items.length())
       for item in items {
         match item {
           PdfIndirect(number) => numbers.push(number)
@@ -73,7 +73,7 @@ fn PdfDocument::pdf_page_fixup_duplicate_annots(
   self : PdfDocument,
 ) -> Unit raise @core.PdfError {
   let page_numbers = self.page_reference_numbers()
-  let existing_annots : Array[Array[Int]] = Array(
+  let existing_annots : Array[Array[Int]] = Array::new(
     capacity=page_numbers.length(),
   )
   for page_number in page_numbers {
@@ -82,9 +82,9 @@ fn PdfDocument::pdf_page_fixup_duplicate_annots(
     )
   }
   let seen = @core.pdf_number_set([])
-  let new_annots : Array[Array[Int]] = Array(capacity=existing_annots.length())
+  let new_annots : Array[Array[Int]] = Array::new(capacity=existing_annots.length())
   for annots in existing_annots {
-    let page_annots : Array[Int] = Array(capacity=annots.length())
+    let page_annots : Array[Int] = Array::new(capacity=annots.length())
     for annotation_number in annots {
       if seen.contains(annotation_number) {
         page_annots.push(

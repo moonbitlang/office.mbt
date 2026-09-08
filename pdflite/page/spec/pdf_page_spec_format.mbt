@@ -59,7 +59,7 @@ pub fn pdf_string_of_pagespec_for_count(
     } else if pdf_pagespec_same_values(sorted, pdf_pagespec_all_pages(end_page)) {
       "all"
     } else {
-      let ranges : Array[(Int, Int)] = Array(capacity=sorted.length())
+      let ranges : Array[(Int, Int)] = Array::new(capacity=sorted.length())
       let mut start = sorted[0]
       let mut previous = sorted[0]
       for index in 1..<sorted.length() {

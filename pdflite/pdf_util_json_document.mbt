@@ -28,7 +28,7 @@ pub fn PdfDocument::json_of_document(
     self
   }
   let reachable_numbers = document.pdf_util_reachable_document_object_numbers()
-  let entries : Array[Json] = Array(capacity=reachable_numbers.length() + 2)
+  let entries : Array[Json] = Array::new(capacity=reachable_numbers.length() + 2)
   entries.push(
     pdf_util_document_json_entry(
       -1,

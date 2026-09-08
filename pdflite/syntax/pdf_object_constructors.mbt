@@ -4,7 +4,7 @@
 /// The outer array is newly allocated, but the contained `PdfObject` values are
 /// copied by value rather than deep-copied.
 pub fn pdf_array(values : ArrayView[PdfObject]) -> PdfObject {
-  let output : Array[PdfObject] = Array(capacity=values.length())
+  let output : Array[PdfObject] = Array::new(capacity=values.length())
   for value in values {
     output.push(value)
   }
@@ -20,7 +20,7 @@ pub fn pdf_array(values : ArrayView[PdfObject]) -> PdfObject {
 pub fn pdf_dictionary(
   entries : ArrayView[(@core.PdfName, PdfObject)],
 ) -> PdfObject {
-  let output : Array[(@core.PdfName, PdfObject)] = Array(
+  let output : Array[(@core.PdfName, PdfObject)] = Array::new(
     capacity=entries.length(),
   )
   for entry in entries {
@@ -39,7 +39,7 @@ pub fn pdf_recurse_array(
   transform : (PdfObject) -> PdfObject,
   values : ArrayView[PdfObject],
 ) -> PdfObject {
-  let output : Array[PdfObject] = Array(capacity=values.length())
+  let output : Array[PdfObject] = Array::new(capacity=values.length())
   for value in values {
     output.push(transform(value))
   }
@@ -57,7 +57,7 @@ pub fn pdf_recurse_dict(
   entries : ArrayView[(@core.PdfName, PdfObject)],
   preserve_order? : Bool = false,
 ) -> PdfObject {
-  let transformed : Array[(@core.PdfName, PdfObject)] = Array(
+  let transformed : Array[(@core.PdfName, PdfObject)] = Array::new(
     capacity=entries.length(),
   )
   for entry in entries {

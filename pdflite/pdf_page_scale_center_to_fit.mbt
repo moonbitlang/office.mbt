@@ -2,7 +2,7 @@
 fn pdf_page_scale_center_target_boxes(
   sizes : ArrayView[(Double, Double)],
 ) -> Array[(Double, Double, Double, Double)] {
-  let boxes : Array[(Double, Double, Double, Double)] = Array(
+  let boxes : Array[(Double, Double, Double, Double)] = Array::new(
     capacity=sizes.length(),
   )
   for size in sizes {
@@ -18,7 +18,7 @@ fn PdfDocument::pdf_page_scale_center_offsets(
   target_height : Double,
 ) -> Array[(Double, Double)] raise @core.PdfError {
   let pages = self.pages_of_pagetree()
-  let offsets : Array[(Double, Double)] = Array(capacity=pages.length())
+  let offsets : Array[(Double, Double)] = Array::new(capacity=pages.length())
   for page in pages {
     let bounds = self.pdf_page_scale_bounds(page)
     offsets.push(

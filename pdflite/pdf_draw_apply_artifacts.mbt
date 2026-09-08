@@ -2,7 +2,7 @@
 fn pdf_draw_fixup_manual_artifacts(
   ops : ArrayView[@content.PdfContentOp],
 ) -> Array[@content.PdfContentOp] {
-  let output : Array[@content.PdfContentOp] = Array(capacity=ops.length())
+  let output : Array[@content.PdfContentOp] = Array::new(capacity=ops.length())
   for op in ops {
     match op {
       Op_BMC(name) if name == pdf_draw_begin_artifact() =>

@@ -125,7 +125,7 @@ fn PdfDocument::pdf_page_prefix_content_ops(
   prefix : String,
   ops : ArrayView[@content.PdfContentOp],
 ) -> Array[@content.PdfContentOp] raise @core.PdfError {
-  let output : Array[@content.PdfContentOp] = Array(capacity=ops.length())
+  let output : Array[@content.PdfContentOp] = Array::new(capacity=ops.length())
   for op in ops {
     output.push(self.pdf_page_prefix_content_op(prefix, op))
   }
@@ -142,7 +142,7 @@ fn PdfDocument::pdf_page_prefix_resource_dictionary(
   for resource_key in pdf_page_resource_keys() {
     match self.lookup_direct(resource_key, resources) {
       Some(PdfDictionary(entries)) => {
-        let new_entries : Array[(@core.PdfName, @syntax.PdfObject)] = Array(
+        let new_entries : Array[(@core.PdfName, @syntax.PdfObject)] = Array::new(
           capacity=entries.length(),
         )
         for entry in entries {

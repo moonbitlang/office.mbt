@@ -43,7 +43,7 @@ pub fn pdf_addtext_allocate_font_names(
   let unique_fontname = fontdict.unique_key("F")
   let mut updated = fontdict
   let unique_fontnames : Array[@core.PdfName] = match fontpack {
-    Some(pack) => Array(capacity=pack.fonts.length())
+    Some(pack) => Array::new(capacity=pack.fonts.length())
     None => []
   }
   match fontpack {

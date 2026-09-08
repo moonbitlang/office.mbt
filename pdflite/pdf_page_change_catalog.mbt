@@ -8,7 +8,7 @@ fn PdfDocument::pdf_page_transform_catalog_destinations_object(
   let lookup = pdf_page_matrix_lookup(matrices, page_reference_numbers)
   match dests {
     PdfDictionary(entries) => {
-      let output : Array[(@core.PdfName, @syntax.PdfObject)] = Array(
+      let output : Array[(@core.PdfName, @syntax.PdfObject)] = Array::new(
         capacity=entries.length(),
       )
       let mut changed = false

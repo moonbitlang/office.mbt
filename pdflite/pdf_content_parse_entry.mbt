@@ -71,7 +71,7 @@ fn PdfDocument::pdf_content_raw_streams(
   self : PdfDocument,
   streams : ArrayView[@syntax.PdfObject],
 ) -> Array[@core.PdfBytes] raise @core.PdfError {
-  let raw_streams : Array[@core.PdfBytes] = Array(capacity=streams.length())
+  let raw_streams : Array[@core.PdfBytes] = Array::new(capacity=streams.length())
   for stream_ref in streams {
     match self.direct(stream_ref) {
       PdfStreamObject(stream) =>

@@ -20,7 +20,7 @@ fn PdfDocument::pdf_page_live_destinations(
   dests_tree : @syntax.PdfObject,
 ) -> Array[(@core.PdfBytes, @syntax.PdfObject)] {
   let entries = self.read_name_tree(dests_tree)
-  let output : Array[(@core.PdfBytes, @syntax.PdfObject)] = Array(
+  let output : Array[(@core.PdfBytes, @syntax.PdfObject)] = Array::new(
     capacity=entries.length(),
   )
   for entry in entries {
@@ -39,7 +39,7 @@ fn PdfDocument::pdf_page_live_catalog_destinations(
 ) -> @syntax.PdfObject {
   match dests {
     PdfDictionary(entries) => {
-      let output : Array[(@core.PdfName, @syntax.PdfObject)] = Array(
+      let output : Array[(@core.PdfName, @syntax.PdfObject)] = Array::new(
         capacity=entries.length(),
       )
       for entry in entries {

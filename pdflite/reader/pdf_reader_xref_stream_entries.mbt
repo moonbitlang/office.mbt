@@ -83,7 +83,7 @@ pub fn pdf_xref_stream_entries(
   let declared_capacity = pdf_xref_stream_entry_capacity(index_pairs)
   let row_width = w0 + w1 + w2
   let max_plausible_rows = data.length() / row_width + 1
-  let entries : Array[PdfClassicXRefEntry] = Array(
+  let entries : Array[PdfClassicXRefEntry] = Array::new(
     capacity=if declared_capacity < max_plausible_rows {
       declared_capacity
     } else {

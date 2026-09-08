@@ -3,7 +3,7 @@ fn PdfDocument::pdf_page_object_numbers_in_map(
   self : PdfDocument,
 ) -> Array[Int] {
   let object_numbers = self.object_numbers()
-  let page_numbers : Array[Int] = Array(capacity=object_numbers.length())
+  let page_numbers : Array[Int] = Array::new(capacity=object_numbers.length())
   for number in object_numbers {
     let object = self.lookup_object_or_null(number)
     match object.lookup_immediate(pdf_page_type_key()) {
@@ -23,14 +23,14 @@ fn pdf_page_nullify_references(
   match object {
     PdfIndirect(number) if deleted_pages.contains(number) => PdfNull
     PdfArray(items) => {
-      let output : Array[@syntax.PdfObject] = Array(capacity=items.length())
+      let output : Array[@syntax.PdfObject] = Array::new(capacity=items.length())
       for item in items {
         output.push(pdf_page_nullify_references(item, deleted_pages))
       }
       PdfArray(output)
     }
     PdfDictionary(entries) => {
-      let output : Array[(@core.PdfName, @syntax.PdfObject)] = Array(
+      let output : Array[(@core.PdfName, @syntax.PdfObject)] = Array::new(
         capacity=entries.length(),
       )
       for entry in entries {
@@ -144,7 +144,7 @@ pub fn PdfDocument::remove_unreferenced(
   }
   self.pdf_referenced_from_object(found, self.trailer_dict())
   let object_numbers = self.object_numbers()
-  let to_remove : Array[Int] = Array(capacity=object_numbers.length())
+  let to_remove : Array[Int] = Array::new(capacity=object_numbers.length())
   for number in object_numbers {
     if !found.contains(number) {
       to_remove.push(number)

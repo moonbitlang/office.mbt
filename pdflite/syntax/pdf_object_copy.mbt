@@ -59,14 +59,14 @@ pub fn PdfStreamData::deep_copy(self : PdfStreamData) -> PdfStreamData {
 pub fn PdfObject::deep_copy(self : PdfObject) -> PdfObject {
   match self {
     PdfArray(values) => {
-      let output : Array[PdfObject] = Array(capacity=values.length())
+      let output : Array[PdfObject] = Array::new(capacity=values.length())
       for value in values {
         output.push(value.deep_copy())
       }
       PdfArray(output)
     }
     PdfDictionary(entries) => {
-      let output : Array[(@core.PdfName, PdfObject)] = Array(
+      let output : Array[(@core.PdfName, PdfObject)] = Array::new(
         capacity=entries.length(),
       )
       for entry in entries {

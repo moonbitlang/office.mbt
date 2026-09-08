@@ -22,7 +22,7 @@ fn PdfImageExtractionRunState::claim_images(
   if !dedup && !dedup_per_page {
     images.to_owned()
   } else {
-    let claimed : Array[@syntax.PdfObject] = Array(capacity=images.length())
+    let claimed : Array[@syntax.PdfObject] = Array::new(capacity=images.length())
     for image in images {
       match image {
         PdfIndirect(number) if self.written.contains(number) => ()

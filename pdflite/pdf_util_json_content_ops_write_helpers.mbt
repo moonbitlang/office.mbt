@@ -10,7 +10,7 @@ fn pdf_util_json_int_object(value : Int) -> Json {
 
 ///|
 fn pdf_util_json_float_objects(values : ArrayView[Double]) -> Array[Json] {
-  let output : Array[Json] = Array(capacity=values.length())
+  let output : Array[Json] = Array::new(capacity=values.length())
   for value in values {
     output.push(pdf_util_json_float_object(value))
   }
@@ -19,7 +19,7 @@ fn pdf_util_json_float_objects(values : ArrayView[Double]) -> Array[Json] {
 
 ///|
 fn pdf_util_json_op_items(items : ArrayView[Json], operator : String) -> Json {
-  let output : Array[Json] = Array(capacity=items.length() + 1)
+  let output : Array[Json] = Array::new(capacity=items.length() + 1)
   for item in items {
     output.push(item)
   }

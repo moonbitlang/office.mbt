@@ -72,7 +72,7 @@ fn PdfDocument::pdf_missing_fonts_on_page(
 ) -> Array[@font.PdfMissingFontEntry] raise @core.PdfError {
   match self.lookup_direct(pdf_page_font_resource_name, resources) {
     Some(PdfDictionary(fonts)) => {
-      let output : Array[@font.PdfMissingFontEntry] = Array(
+      let output : Array[@font.PdfMissingFontEntry] = Array::new(
         capacity=fonts.length(),
       )
       for font_entry in fonts {
@@ -111,7 +111,7 @@ pub fn PdfDocument::missing_fonts(
     "missing_fonts",
   )
   let selected_pages = @core.pdf_number_set(page_numbers)
-  let output : Array[@font.PdfMissingFontEntry] = Array(
+  let output : Array[@font.PdfMissingFontEntry] = Array::new(
     capacity=page_numbers.length(),
   )
   for index, page in pages {

@@ -55,7 +55,7 @@ fn PdfDocument::pdf_text_read_cid_widths(
   self : PdfDocument,
   values : ArrayView[@syntax.PdfObject],
 ) -> Array[(Int, Double)] raise @core.PdfError {
-  let output : Array[(Int, Double)] = Array(capacity=values.length())
+  let output : Array[(Int, Double)] = Array::new(capacity=values.length())
   let mut index = 0
   while index < values.length() {
     match self.direct(values[index]) {
@@ -100,7 +100,7 @@ fn PdfDocument::pdf_text_read_cid_widths2(
   self : PdfDocument,
   values : ArrayView[@syntax.PdfObject],
 ) -> Array[(Int, PdfCIDVerticalWidth)] raise @core.PdfError {
-  let output : Array[(Int, PdfCIDVerticalWidth)] = Array(
+  let output : Array[(Int, PdfCIDVerticalWidth)] = Array::new(
     capacity=values.length(),
   )
   let mut index = 0
@@ -210,7 +210,7 @@ fn PdfDocument::pdf_text_cid_default_width2(
 ) -> Array[Double] raise @core.PdfError {
   match self.lookup_direct(pdf_text_dw2_key_name, dictionary) {
     Some(PdfArray(values)) => {
-      let output : Array[Double] = Array(capacity=values.length())
+      let output : Array[Double] = Array::new(capacity=values.length())
       for value in values {
         output.push(self.pdf_text_cid_number(value, CIDWidths2Expected))
       }

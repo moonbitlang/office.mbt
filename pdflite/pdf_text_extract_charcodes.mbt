@@ -148,7 +148,7 @@ fn pdf_text_predefined_mixed_byte_charcodes(
   name : @core.PdfName,
   text : BytesView,
 ) -> Array[Int] raise @core.PdfError {
-  let output : Array[Int] = Array(capacity=text.length())
+  let output : Array[Int] = Array::new(capacity=text.length())
   let shift_jis = pdf_text_predefined_cmap_uses_shift_jis_charcodes(name)
   let b5pc = pdf_text_predefined_cmap_uses_b5pc_charcodes(name)
   let cns1_b5 = pdf_text_predefined_cmap_uses_cns1_b5_charcodes(name)
@@ -219,7 +219,7 @@ fn pdf_text_predefined_cmap_charcodes_of_text(
   text : BytesView,
 ) -> Array[Int] raise @core.PdfError {
   if pdf_text_predefined_cmap_uses_utf8_charcodes(name) {
-    let output : Array[Int] = Array(capacity=text.length())
+    let output : Array[Int] = Array::new(capacity=text.length())
     let mut index = 0
     while index < text.length() {
       index = pdf_text_push_utf8_charcode(output, text, index)
@@ -227,7 +227,7 @@ fn pdf_text_predefined_cmap_charcodes_of_text(
     output
   } else if pdf_text_predefined_cmap_uses_utf16_charcodes(name) {
     guard text.length() % 2 == 0 else { raise BadText }
-    let output : Array[Int] = Array(capacity=text.length() / 2)
+    let output : Array[Int] = Array::new(capacity=text.length() / 2)
     let mut index = 0
     while index < text.length() {
       index = pdf_text_push_utf16_charcode(output, text, index)
@@ -235,7 +235,7 @@ fn pdf_text_predefined_cmap_charcodes_of_text(
     output
   } else if pdf_text_predefined_cmap_uses_utf32_charcodes(name) {
     guard text.length() % 4 == 0 else { raise BadText }
-    let output : Array[Int] = Array(capacity=text.length() / 4)
+    let output : Array[Int] = Array::new(capacity=text.length() / 4)
     let mut index = 0
     while index < text.length() {
       index = pdf_text_push_utf32_charcode(output, text, index)
@@ -244,7 +244,7 @@ fn pdf_text_predefined_cmap_charcodes_of_text(
   } else if pdf_text_predefined_cmap_uses_mixed_byte_charcodes(name) {
     pdf_text_predefined_mixed_byte_charcodes(name, text)
   } else {
-    let output : Array[Int] = Array(capacity=text.length())
+    let output : Array[Int] = Array::new(capacity=text.length())
     if name == pdf_text_identity_h_name ||
       name == pdf_text_identity_v_name ||
       pdf_text_predefined_cmap_uses_two_byte_charcodes(name) {
@@ -285,7 +285,7 @@ fn PdfFont::pdf_text_fixed_or_single_byte_charcodes_of_text(
   self : PdfFont,
   text : BytesView,
 ) -> Array[Int] raise @core.PdfError {
-  let output : Array[Int] = Array(capacity=text.length())
+  let output : Array[Int] = Array::new(capacity=text.length())
   if self.uses_two_byte_codes() {
     guard text.length() % 2 == 0 else { raise BadText }
     let mut index = 0

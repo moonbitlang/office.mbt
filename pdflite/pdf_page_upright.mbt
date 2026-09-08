@@ -234,8 +234,8 @@ pub fn PdfDocument::upright_pages(
     self
   } else {
     let selected_pages = @core.pdf_number_set(page_numbers)
-    let rewritten : Array[@page.PdfPage] = Array(capacity=pages.length())
-    let matrices : Array[(Int, @geometry.TransformMatrix)] = Array(
+    let rewritten : Array[@page.PdfPage] = Array::new(capacity=pages.length())
+    let matrices : Array[(Int, @geometry.TransformMatrix)] = Array::new(
       capacity=page_numbers.length(),
     )
     for index in 0..<pages.length() {

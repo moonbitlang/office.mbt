@@ -14,7 +14,7 @@ pub fn pdf_object_stream_number_offsets(
   if count > values.length() / 2 {
     raise XRefEntryExpected
   }
-  let pairs : Array[(Int, Int)] = Array(capacity=count)
+  let pairs : Array[(Int, Int)] = Array::new(capacity=count)
   for i in 0..<count {
     match (values[i * 2], values[i * 2 + 1]) {
       (PdfInteger(object_number), PdfInteger(offset)) if object_number > 0 &&
@@ -33,7 +33,7 @@ pub fn pdf_object_stream_end_offsets(
   first : Int,
 ) -> Array[Int] {
   let default_end = data_length - first
-  let sorted : Array[(Int, Int)] = Array(capacity=pairs.length())
+  let sorted : Array[(Int, Int)] = Array::new(capacity=pairs.length())
   for index in 0..<pairs.length() {
     sorted.push((pairs[index].1, index))
   }
@@ -94,7 +94,7 @@ pub fn pdf_reader_object_stream_groups(
   let (counts, group_count) = pdf_reader_object_stream_group_counts(xrefs)
   let groups : Array[
     (Int, Array[(PdfClassicXRefEntry, @xref_model.ObjectStreamReference)]),
-  ] = Array(capacity=group_count)
+  ] = Array::new(capacity=group_count)
   let indexes : @hashmap.HashMap[Int, Int] = HashMap([])
   for xref in xrefs {
     match xref.object_stream {
@@ -106,7 +106,7 @@ pub fn pdf_reader_object_stream_groups(
               indexes[reference.object_stream_number] = groups.length()
               let entries : Array[
                 (PdfClassicXRefEntry, @xref_model.ObjectStreamReference),
-              ] = Array(
+              ] = Array::new(
                 capacity=match counts.get(reference.object_stream_number) {
                   Some(count) => count
                   None => 1

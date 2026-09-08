@@ -119,14 +119,14 @@ pub fn pdf_page_label_complete(
   if labels.length() == 0 {
     [pdf_page_label_basic]
   } else if labels[0].start_page > 1 {
-    let output : Array[PdfPageLabel] = Array(capacity=labels.length() + 1)
+    let output : Array[PdfPageLabel] = Array::new(capacity=labels.length() + 1)
     output.push(pdf_page_label_basic)
     for label in labels {
       output.push(label)
     }
     output
   } else {
-    let output : Array[PdfPageLabel] = Array(capacity=labels.length())
+    let output : Array[PdfPageLabel] = Array::new(capacity=labels.length())
     for label in labels {
       output.push(label)
     }

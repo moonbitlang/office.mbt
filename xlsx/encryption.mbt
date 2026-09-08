@@ -128,7 +128,7 @@ fn aes_ecb_decrypt_cancellable(
   if data.length() % 16 != 0 {
     raise InvalidEncryptionInfo(msg="invalid AES data length")
   }
-  let out : Array[Byte] = Array(capacity=data.length())
+  let out : Array[Byte] = Array::new(capacity=data.length())
   let mut offset = 0
   while offset < data.length() {
     check_read_cancelled(cancelled)
@@ -999,7 +999,7 @@ fn hex_value(ch : Char) -> Int raise XlsxError {
 
 ///|
 fn hex_to_bytes(text : StringView) -> Bytes raise XlsxError {
-  let out : Array[Byte] = Array(capacity=text.length() / 2)
+  let out : Array[Byte] = Array::new(capacity=text.length() / 2)
   let mut pending_hi : Int? = None
   for ch in text {
     let v = hex_value(ch)

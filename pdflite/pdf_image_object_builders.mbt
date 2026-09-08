@@ -328,7 +328,7 @@ pub fn pdf_image_object_of_jbig2_data(
     (pdf_image_width_key(), PdfInteger(width)),
     (pdf_image_height_key(), PdfInteger(height)),
   ]
-  let extra : Array[(Int, @syntax.PdfObject)] = Array(
+  let extra : Array[(Int, @syntax.PdfObject)] = Array::new(
     capacity=match global {
       Some(_) => 1
       None => 0

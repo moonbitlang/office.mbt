@@ -6,7 +6,7 @@
 pub fn pdf_parse_lexemes(
   lexemes : ArrayView[PdfLexeme],
 ) -> Array[PdfObject] raise @core.PdfError {
-  let objects : Array[PdfObject] = Array(capacity=lexemes.length())
+  let objects : Array[PdfObject] = Array::new(capacity=lexemes.length())
   let mut current = 0
   while current < lexemes.length() {
     current = pdf_skip_comments(lexemes, current)

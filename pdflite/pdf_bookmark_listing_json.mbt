@@ -44,7 +44,7 @@ fn PdfDocument::pdf_bookmark_listing_json(
   self : PdfDocument,
   bookmarks : ArrayView[@bookmark.PdfBookmark],
 ) -> Json raise @core.PdfError {
-  let output : Array[Json] = Array(capacity=bookmarks.length())
+  let output : Array[Json] = Array::new(capacity=bookmarks.length())
   for bookmark in bookmarks {
     output.push(self.pdf_bookmark_json_mark(bookmark))
   }

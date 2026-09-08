@@ -170,7 +170,7 @@ pub fn PdfDocument::presentation(
 ) -> PdfDocument raise @core.PdfError {
   let pages = self.pages_of_pagetree()
   let selected_pages = @core.pdf_number_set(range)
-  let rewritten : Array[@page.PdfPage] = Array(capacity=pages.length())
+  let rewritten : Array[@page.PdfPage] = Array::new(capacity=pages.length())
   for index in 0..<pages.length() {
     let page_number = index + 1
     let page = pages[index]

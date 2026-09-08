@@ -14,7 +14,7 @@ fn pdf_page_rest_entries(
 ) -> Array[(@core.PdfName, @syntax.PdfObject)] raise @core.PdfError {
   match rest {
     PdfDictionary(entries) => {
-      let output : Array[(@core.PdfName, @syntax.PdfObject)] = Array(
+      let output : Array[(@core.PdfName, @syntax.PdfObject)] = Array::new(
         capacity=entries.length(),
       )
       for entry in entries {
@@ -35,7 +35,7 @@ fn pdf_page_rest_object_from_page(
 ) -> @syntax.PdfObject raise @core.PdfError {
   match page {
     PdfDictionary(entries) => {
-      let rest : Array[(@core.PdfName, @syntax.PdfObject)] = Array(
+      let rest : Array[(@core.PdfName, @syntax.PdfObject)] = Array::new(
         capacity=entries.length(),
       )
       for entry in entries {

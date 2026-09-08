@@ -134,7 +134,7 @@ fn pdf_deflate_decode_raw_prefix(
   max_output? : Int = pdf_flate_max_output_default,
 ) -> (@core.PdfBytes, Int) raise @core.PdfError {
   let reader = FlateBitReader::new(bytes)
-  let output : Array[Byte] = Array(capacity=bytes.length())
+  let output : Array[Byte] = Array::new(capacity=bytes.length())
   let mut finished = false
   while !finished {
     let final_block = reader.read_bits(1)

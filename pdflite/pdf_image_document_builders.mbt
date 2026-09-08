@@ -98,7 +98,7 @@ fn pdf_image_content_ops(
   width : Int,
   height : Int,
 ) -> Array[@content.PdfContentOp] {
-  let output : Array[@content.PdfContentOp] = Array(
+  let output : Array[@content.PdfContentOp] = Array::new(
     capacity=if structinfo { 4 } else { 2 },
   )
   if structinfo {

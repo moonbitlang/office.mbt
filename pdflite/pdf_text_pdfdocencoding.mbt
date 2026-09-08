@@ -69,7 +69,7 @@ pub fn pdf_codepoint_of_pdfdocencoding_byte(
 pub fn pdf_codepoints_of_pdfdocencoding(
   bytes : BytesView,
 ) -> Array[Int] raise @core.PdfError {
-  let codepoints : Array[Int] = Array(capacity=bytes.length())
+  let codepoints : Array[Int] = Array::new(capacity=bytes.length())
   for byte in bytes {
     codepoints.push(pdf_codepoint_of_pdfdocencoding_byte(byte.to_int()))
   }

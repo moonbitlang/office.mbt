@@ -7,7 +7,7 @@ pub fn pdf_reader_reconstruction_classic_xref_sections(
   data : BytesView,
   read_section_at : (@core.ByteCursor, Int) -> (PdfXRefSection, Int) raise @core.PdfError,
 ) -> Array[(Int, PdfXRefSection)] {
-  let sections : Array[(Int, PdfXRefSection)] = Array(capacity=1)
+  let sections : Array[(Int, PdfXRefSection)] = Array::new(capacity=1)
   let cursor = @core.byte_cursor_of_view(data)
   let mut position = 0
   while position < data.length() {
@@ -42,7 +42,7 @@ pub fn pdf_reader_reconstruction_xref_stream_sections(
   data : BytesView,
   read_section_at : (@core.ByteCursor, Int) -> (PdfXRefSection, Int) raise @core.PdfError,
 ) -> Array[PdfXRefSection] raise @core.PdfError {
-  let sections : Array[PdfXRefSection] = Array(capacity=1)
+  let sections : Array[PdfXRefSection] = Array::new(capacity=1)
   let cursor = @core.byte_cursor_of_view(data)
   let mut position = 0
   while position < data.length() {

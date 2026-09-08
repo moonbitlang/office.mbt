@@ -124,7 +124,7 @@ pub fn pdf_content_end_artifact() -> PdfContentOp {
 pub fn pdf_content_add_artifacts(
   ops : ArrayView[PdfContentOp],
 ) -> Array[PdfContentOp] {
-  let output : Array[PdfContentOp] = Array(capacity=ops.length() + 2)
+  let output : Array[PdfContentOp] = Array::new(capacity=ops.length() + 2)
   let mut in_content = false
   let mut in_artifact = false
   for op in ops {

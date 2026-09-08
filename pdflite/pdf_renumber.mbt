@@ -6,7 +6,7 @@ fn pdf_renumber_document_with_changes(
   let output = document.copy()
   let old_numbers = output.object_numbers()
   let change_map = pdf_page_reference_map(changes)
-  let entries : Array[(Int, PdfObjectEntry)] = Array(
+  let entries : Array[(Int, PdfObjectEntry)] = Array::new(
     capacity=old_numbers.length(),
   )
   let seen : @hashmap.HashMap[Int, Bool] = HashMap([])
@@ -61,7 +61,7 @@ pub fn PdfDocument::renumber_objects_compact(
   self : PdfDocument,
 ) -> PdfDocument raise @core.PdfError {
   let numbers = self.object_numbers()
-  let changes : Array[(Int, Int)] = Array(capacity=numbers.length())
+  let changes : Array[(Int, Int)] = Array::new(capacity=numbers.length())
   for index, number in numbers {
     changes.push((number, index + 1))
   }
@@ -100,11 +100,11 @@ pub fn PdfDocument::renumber_objects_by_offset(
 pub fn pdf_renumber_documents(
   documents : ArrayView[PdfDocument],
 ) -> Array[PdfDocument] raise @core.PdfError {
-  let output : Array[PdfDocument] = Array(capacity=documents.length())
+  let output : Array[PdfDocument] = Array::new(capacity=documents.length())
   let mut base = 1
   for document in documents {
     let numbers = document.object_numbers()
-    let changes : Array[(Int, Int)] = Array(capacity=numbers.length())
+    let changes : Array[(Int, Int)] = Array::new(capacity=numbers.length())
     for index, number in numbers {
       changes.push((number, base + index))
     }

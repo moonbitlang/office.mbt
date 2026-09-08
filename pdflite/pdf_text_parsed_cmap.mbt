@@ -95,7 +95,7 @@ fn pdf_text_parsed_cmap_charcodes_of_text(
       None => return [ for byte in text => byte.to_int() ]
     }
   }
-  let output : Array[Int] = Array(capacity=text.length())
+  let output : Array[Int] = Array::new(capacity=text.length())
   let mut index = 0
   while index < text.length() {
     let next = match pdf_text_parsed_cmap_next_charcode(parsed, text, index) {

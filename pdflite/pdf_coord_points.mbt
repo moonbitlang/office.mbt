@@ -64,7 +64,7 @@ pub fn PdfDocument::parse_coordinates(
 ) -> Array[@geometry.Point2] raise @core.PdfError {
   let source = pdf_coord_preprocess_coordinates(text)
   let pages = self.pages_of_pagetree()
-  let output : Array[@geometry.Point2] = Array(capacity=pages.length())
+  let output : Array[@geometry.Point2] = Array::new(capacity=pages.length())
   for page in pages {
     let values = self.parse_units_string(page, source)
     match values {

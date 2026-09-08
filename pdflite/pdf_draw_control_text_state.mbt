@@ -247,7 +247,7 @@ fn pdf_draw_control_parse_para_spec(
 ///|
 fn pdf_draw_control_split_escaped_newlines(text : String) -> Array[String] {
   let bytes = @utf8.encode(text)
-  let parts : Array[String] = Array(capacity=bytes.length())
+  let parts : Array[String] = Array::new(capacity=bytes.length())
   let mut start = 0
   let mut index = 0
   while index < bytes.length() {

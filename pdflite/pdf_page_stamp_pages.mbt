@@ -69,7 +69,7 @@ pub fn PdfDocument::stamp_pages(
   let overlay_page = merged_pages[merged_pages.length() - 1]
   let under_pages = pdf_page_stamp_all_but_last(merged_pages)
   let selected_pages = @core.pdf_number_set(page_numbers)
-  let new_pages : Array[@page.PdfPage] = Array(capacity=under_pages.length())
+  let new_pages : Array[@page.PdfPage] = Array::new(capacity=under_pages.length())
   for index in 0..<under_pages.length() {
     let page_number = index + 1
     let stamp_page = if selected_pages.contains(page_number) {

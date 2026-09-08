@@ -21,7 +21,7 @@ fn pdf_lzw_decode_code(
   if code < 0 || code >= next_code || code >= prefix_code.length() {
     raise InvalidLZWData
   }
-  let stack : Array[Int] = Array(capacity=16)
+  let stack : Array[Int] = Array::new(capacity=16)
   let mut current = code
   let mut depth = 0
   while current > 255 {
@@ -35,7 +35,7 @@ fn pdf_lzw_decode_code(
   if current < 0 || current > 255 {
     raise InvalidLZWData
   }
-  let output : Array[Int] = Array(capacity=stack.length() + 1)
+  let output : Array[Int] = Array::new(capacity=stack.length() + 1)
   output.push(current)
   if stack.length() > 0 {
     for offset in 0..<stack.length() {
@@ -96,7 +96,7 @@ pub fn pdf_lzw_decode_view_prefix(
   let prefix_code = Array::make(8192, 0)
   let append_character = Array::make(8192, 0)
   let bits = @core.bitstream_of_view(data)
-  let output : Array[Byte] = Array(capacity=data.length())
+  let output : Array[Byte] = Array::new(capacity=data.length())
   let mut code_length = 9
   let mut next_code = 258
   let mut old_code = 256
@@ -182,7 +182,7 @@ pub fn pdf_lzw_decode_view(
   let prefix_code = Array::make(8192, 0)
   let append_character = Array::make(8192, 0)
   let bits = @core.bitstream_of_view(data)
-  let output : Array[Byte] = Array(capacity=data.length())
+  let output : Array[Byte] = Array::new(capacity=data.length())
   let mut code_length = 9
   let mut next_code = 258
   let mut old_code = 256

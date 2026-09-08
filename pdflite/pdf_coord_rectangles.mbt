@@ -74,7 +74,7 @@ pub fn PdfDocument::parse_coordinate_rectangles(
     (text, false)
   }
   let pages = self.pages_of_pagetree()
-  let output : Array[@geometry.PdfCoordRectangle] = Array(
+  let output : Array[@geometry.PdfCoordRectangle] = Array::new(
     capacity=pages.length(),
   )
   for page in pages {

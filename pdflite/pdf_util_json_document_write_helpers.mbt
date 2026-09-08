@@ -3,7 +3,7 @@ fn PdfDocument::pdf_util_precombine_page_content(
   self : PdfDocument,
 ) -> PdfDocument raise @core.PdfError {
   let pages = self.pages_of_pagetree()
-  let rewritten : Array[@page.PdfPage] = Array(capacity=pages.length())
+  let rewritten : Array[@page.PdfPage] = Array::new(capacity=pages.length())
   let mut changed = false
   for page in pages {
     if page.content.length() <= 1 {
@@ -75,7 +75,7 @@ fn PdfDocument::pdf_util_reachable_document_object_numbers(
     referenced[number] = true
   }
   let object_numbers = self.object_numbers()
-  let numbers : Array[Int] = Array(capacity=object_numbers.length())
+  let numbers : Array[Int] = Array::new(capacity=object_numbers.length())
   for number in object_numbers {
     if referenced.contains(number) {
       numbers.push(number)

@@ -17,7 +17,7 @@ fn pdf_tree_raw_entries(
     Some(PdfArray(kids)) => kids.length()
     _ => 0
   }
-  let output : Array[(@syntax.PdfObject, @syntax.PdfObject)] = Array(
+  let output : Array[(@syntax.PdfObject, @syntax.PdfObject)] = Array::new(
     capacity=direct_capacity + child_capacity,
   )
   match direct {
@@ -43,7 +43,7 @@ fn pdf_tree_raw_entries(
 fn pdf_tree_array_pairs(
   items : ArrayView[@syntax.PdfObject],
 ) -> Array[(@syntax.PdfObject, @syntax.PdfObject)] {
-  let output : Array[(@syntax.PdfObject, @syntax.PdfObject)] = Array(
+  let output : Array[(@syntax.PdfObject, @syntax.PdfObject)] = Array::new(
     capacity=items.length() / 2,
   )
   for i in 0..<(items.length() / 2) {
@@ -130,7 +130,7 @@ pub fn PdfDocument::contents_of_name_tree(
     _ =>
       match self.lookup_direct(pdf_tree_kids_key(), tree) {
         Some(PdfArray(kids)) => {
-          let output : Array[(@syntax.PdfObject, @syntax.PdfObject)] = Array(
+          let output : Array[(@syntax.PdfObject, @syntax.PdfObject)] = Array::new(
             capacity=kids.length(),
           )
           for kid in kids {

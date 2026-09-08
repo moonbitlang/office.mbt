@@ -28,8 +28,8 @@ pub fn measure(
     Some(f) => f
     None => @fonts.cjk_fallback()
   }
-  let advances_pt : Array[Double] = Array(capacity=text.length())
-  let fallback : Array[Bool] = Array(capacity=text.length())
+  let advances_pt : Array[Double] = Array::new(capacity=text.length())
+  let fallback : Array[Bool] = Array::new(capacity=text.length())
   let mut i = 0
   while i < text.length() {
     let cp = codepoint_at(text, i)

@@ -117,7 +117,7 @@ fn pdf_text_parse_charset(
   bytes : BytesView,
 ) -> Array[@core.PdfName] raise @core.PdfError {
   let cursor = @core.byte_cursor_of_view(bytes)
-  let names : Array[@core.PdfName] = Array(capacity=bytes.length())
+  let names : Array[@core.PdfName] = Array::new(capacity=bytes.length())
   let mut done = false
   while !done {
     @syntax.pdf_cursor_drop_whitespace(cursor)

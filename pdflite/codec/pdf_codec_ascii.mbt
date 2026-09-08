@@ -239,7 +239,7 @@ pub fn pdf_ascii85_decode_view(
 ) -> @core.PdfBytes raise @core.PdfError {
   let output = Array::make(data.length() * 4, b'\x00')
   let mut position = 0
-  let mut digits : Array[Int] = Array(capacity=5)
+  let mut digits : Array[Int] = Array::new(capacity=5)
   let mut done = false
   for byte in data {
     if !done {
@@ -262,7 +262,7 @@ pub fn pdf_ascii85_decode_view(
         digits.push(value - 33)
         if digits.length() == 5 {
           position = pdf_ascii85_decode_group(digits, output, position, 4)
-          digits = Array(capacity=5)
+          digits = Array::new(capacity=5)
         }
       } else {
         raise InvalidASCII85Data

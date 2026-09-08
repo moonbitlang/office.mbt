@@ -5,7 +5,7 @@ fn pdf_drawops_to_content_ops_internal(
   context : PdfDrawSpecialTextContext?,
   ops : ArrayView[PdfDrawOp],
 ) -> Array[@content.PdfContentOp] raise @core.PdfError {
-  let output : Array[@content.PdfContentOp] = Array(capacity=ops.length())
+  let output : Array[@content.PdfContentOp] = Array::new(capacity=ops.length())
   for op in ops {
     for content_op in op.to_content_ops_internal(state, document, context) {
       output.push(content_op)

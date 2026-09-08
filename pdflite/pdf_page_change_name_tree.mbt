@@ -7,7 +7,7 @@ fn PdfDocument::pdf_page_transform_name_tree_destination_entries(
 ) -> Array[(@core.PdfBytes, @syntax.PdfObject)]? {
   let lookup = pdf_page_matrix_lookup(matrices, page_reference_numbers)
   let entries = self.read_name_tree(dests_tree)
-  let output : Array[(@core.PdfBytes, @syntax.PdfObject)] = Array(
+  let output : Array[(@core.PdfBytes, @syntax.PdfObject)] = Array::new(
     capacity=entries.length(),
   )
   let mut changed = false

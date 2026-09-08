@@ -56,7 +56,7 @@ fn PdfDrawStructureBuildContext::remove_element_info(
   self : PdfDrawStructureBuildContext,
   key : String,
 ) -> Unit {
-  let output : Array[(String, @syntax.PdfObject)] = Array(
+  let output : Array[(String, @syntax.PdfObject)] = Array::new(
     capacity=self.element_info.length(),
   )
   for entry in self.element_info {
@@ -90,7 +90,7 @@ fn pdf_draw_make_structure_tree_items(
   page_object_numbers : ArrayView[Int],
   expect_end_tree : Bool,
 ) -> Array[PdfDrawStructureNode] raise @core.PdfError {
-  let output : Array[PdfDrawStructureNode] = Array(
+  let output : Array[PdfDrawStructureNode] = Array::new(
     capacity=data.length() - index.val,
   )
   while index.val < data.length() {
@@ -259,7 +259,7 @@ fn PdfDocument::pdf_draw_write_structure_node(
           parent_map.add(page_object_number, object_number)
         None => ()
       }
-      let entries : Array[(@core.PdfName, @syntax.PdfObject)] = Array(
+      let entries : Array[(@core.PdfName, @syntax.PdfObject)] = Array::new(
         capacity=item.alt.length() + 4,
       )
       for entry in item.alt {
@@ -279,7 +279,7 @@ fn PdfDocument::pdf_draw_write_structure_node(
       }
       entries.push((pdf_draw_s_key(), PdfNameObject(pdf_draw_name(item.kind))))
       entries.push((pdf_draw_p_key(), PdfIndirect(parent_object_number)))
-      let children : Array[@syntax.PdfObject] = Array(
+      let children : Array[@syntax.PdfObject] = Array::new(
         capacity=item.children.length(),
       )
       for child in item.children {
@@ -306,7 +306,7 @@ fn PdfDocument::pdf_draw_write_structure_tree(
   let namespaces = pdf_draw_namespace_map_new()
   let parent_map = pdf_draw_parent_map_new()
   let root_object_number = self.add_object(PdfNull)
-  let children : Array[@syntax.PdfObject] = Array(capacity=tree.length())
+  let children : Array[@syntax.PdfObject] = Array::new(capacity=tree.length())
   for node in tree {
     children.push(
       self.pdf_draw_write_structure_node(

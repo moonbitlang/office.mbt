@@ -76,7 +76,7 @@ fn PdfDocument::pdf_util_json_of_object(
     PdfNameObject(name) =>
       Json::object(Map([("N", Json::string(pdf_util_string_from_name(name)))]))
     PdfArray(values) => {
-      let json_values : Array[Json] = Array(capacity=values.length())
+      let json_values : Array[Json] = Array::new(capacity=values.length())
       for value in values {
         json_values.push(
           self.pdf_util_json_of_object(
@@ -230,7 +230,7 @@ fn pdf_util_object_of_json_object(
       _ => ()
     }
   }
-  let output : Array[(@core.PdfName, @syntax.PdfObject)] = Array(
+  let output : Array[(@core.PdfName, @syntax.PdfObject)] = Array::new(
     capacity=entries.length(),
   )
   for entry in entries {
@@ -258,7 +258,7 @@ pub fn pdf_object_of_json(
     Number(value, repr=_) => PdfIndirect(pdf_util_json_integral_number(value))
     String(text) => PdfString(pdf_util_pdf_string_from_json_text(text))
     Array(values) => {
-      let output : Array[@syntax.PdfObject] = Array(capacity=values.length())
+      let output : Array[@syntax.PdfObject] = Array::new(capacity=values.length())
       for value in values {
         output.push(pdf_object_of_json(value))
       }

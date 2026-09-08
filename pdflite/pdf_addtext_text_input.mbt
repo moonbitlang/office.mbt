@@ -7,7 +7,7 @@ fn pdf_addtext_replace_all_lazy(
   let search_bytes = @utf8.encode(search)
   guard search_bytes.length() > 0 else { return text }
   let text_bytes = @utf8.encode(text)
-  let output : Array[Byte] = Array(capacity=text_bytes.length())
+  let output : Array[Byte] = Array::new(capacity=text_bytes.length())
   let mut replaced = false
   for index = 0; index < text_bytes.length(); {
     if text_bytes[index:].has_prefix(search_bytes) {
@@ -61,7 +61,7 @@ pub fn pdf_process_text(
 /// `split_at_newline` helper.
 pub fn pdf_addtext_split_at_newline(text : String) -> Array[String] {
   let bytes = @utf8.encode(text)
-  let lines : Array[String] = Array(capacity=bytes.length())
+  let lines : Array[String] = Array::new(capacity=bytes.length())
   let mut line_start = 0
   for index = 0; index < bytes.length(); {
     match bytes[index:] {
@@ -92,7 +92,7 @@ pub fn pdf_addtext_unescape_string(
   text : String,
 ) -> String raise @core.PdfError {
   let bytes = @utf8.encode(text)
-  let output : Array[Byte] = Array(capacity=bytes.length())
+  let output : Array[Byte] = Array::new(capacity=bytes.length())
   for index = 0; index < bytes.length(); {
     match bytes[index:] {
       [b'\\', b'0'..=b'7' as a, b'0'..=b'7' as b, b'0'..=b'7' as c, ..] => {

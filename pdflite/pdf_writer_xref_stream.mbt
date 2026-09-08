@@ -36,7 +36,7 @@ fn pdf_writer_xref_stream_data(
   xref_stream_number : Int,
   xref_stream_offset : Int,
 ) -> @core.PdfBytes {
-  let output : Array[Byte] = Array(capacity=size * 7)
+  let output : Array[Byte] = Array::new(capacity=size * 7)
   let mut xref_index = 0
   for number in 0..<size {
     if number == 0 {
@@ -78,7 +78,7 @@ fn pdf_writer_xref_stream_data_for_numbers(
   xref_stream_number : Int,
   xref_stream_offset : Int,
 ) -> @core.PdfBytes {
-  let output : Array[Byte] = Array(capacity=entry_numbers.length() * 7)
+  let output : Array[Byte] = Array::new(capacity=entry_numbers.length() * 7)
   let mut xref_index = 0
   for number in entry_numbers {
     if number == 0 {
@@ -104,7 +104,7 @@ fn pdf_writer_xref_stream_data_for_numbers(
 fn pdf_writer_xref_stream_index_pairs(
   entry_numbers : ArrayView[Int],
 ) -> Array[(Int, Int)] {
-  let pairs : Array[(Int, Int)] = Array(capacity=entry_numbers.length())
+  let pairs : Array[(Int, Int)] = Array::new(capacity=entry_numbers.length())
   let mut run_start = -1
   let mut run_length = 0
   for number in entry_numbers {
@@ -129,7 +129,7 @@ fn pdf_writer_xref_stream_index_pairs(
 fn pdf_writer_xref_stream_index_object(
   pairs : ArrayView[(Int, Int)],
 ) -> @syntax.PdfObject {
-  let values : Array[@syntax.PdfObject] = Array(capacity=pairs.length() * 2)
+  let values : Array[@syntax.PdfObject] = Array::new(capacity=pairs.length() * 2)
   for pair in pairs {
     let (start, length) = pair
     values.push(PdfInteger(start))
@@ -223,7 +223,7 @@ fn pdf_write_document_incremental_update_with_xref_stream_filter(
   filter : @core.PdfName?,
 ) -> @core.PdfBytes raise @core.PdfError {
   let previous_xref = @reader.pdf_read_startxref_position(original)
-  let output : Array[Byte] = Array(capacity=original.length() + 1)
+  let output : Array[Byte] = Array::new(capacity=original.length() + 1)
   for byte in original {
     output.push(byte)
   }

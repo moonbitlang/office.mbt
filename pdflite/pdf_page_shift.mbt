@@ -39,7 +39,7 @@ fn pdf_page_shift_select_page_indexed_offsets(
   page_numbers : ArrayView[Int],
   offsets : ArrayView[(Double, Double)],
 ) -> Array[(Double, Double)] {
-  let selected : Array[(Double, Double)] = Array(capacity=page_numbers.length())
+  let selected : Array[(Double, Double)] = Array::new(capacity=page_numbers.length())
   for page_number in page_numbers {
     selected.push(offsets[page_number - 1])
   }
@@ -78,8 +78,8 @@ pub fn PdfDocument::shift_pages(
   pdf_page_shift_validate_offsets(page_numbers, offsets)
   let pages = self.pages_of_pagetree()
   let page_indexes = pdf_page_shift_offset_index_map(page_numbers)
-  let rewritten : Array[@page.PdfPage] = Array(capacity=pages.length())
-  let matrices : Array[(Int, @geometry.TransformMatrix)] = Array(
+  let rewritten : Array[@page.PdfPage] = Array::new(capacity=pages.length())
+  let matrices : Array[(Int, @geometry.TransformMatrix)] = Array::new(
     capacity=page_numbers.length(),
   )
   for index in 0..<pages.length() {

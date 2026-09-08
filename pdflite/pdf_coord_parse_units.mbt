@@ -26,7 +26,7 @@ fn pdf_coord_parse_units_tokens(
   source : String,
   tokens : ArrayView[PdfCoordToken],
 ) -> Array[Double] raise @core.PdfError {
-  let numbers : Array[Double] = Array(capacity=tokens.length())
+  let numbers : Array[Double] = Array::new(capacity=tokens.length())
   let mut index = 0
   let mut done = false
   while index < tokens.length() && !done {
