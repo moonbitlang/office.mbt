@@ -257,7 +257,7 @@ pub fn PdfDocument::show_annotation_bounding_boxes(
 ) -> PdfDocument raise @core.PdfError {
   let pages = self.pages_of_pagetree()
   let selected_pages = @core.pdf_number_set(page_numbers)
-  let op_lists : Array[Array[@content.PdfContentOp]] = Array::new(
+  let op_lists : Array[Array[@content.PdfContentOp]] = Array(
     capacity=pages.length(),
   )
   for index in 0..<pages.length() {
@@ -303,7 +303,7 @@ pub fn PdfDocument::show_bounding_boxes(
   )
   let pages = document.pages_of_pagetree()
   let selected_pages = @core.pdf_number_set(page_numbers)
-  let op_lists : Array[Array[@content.PdfContentOp]] = Array::new(
+  let op_lists : Array[Array[@content.PdfContentOp]] = Array(
     capacity=pages.length(),
   )
   for index in 0..<pages.length() {

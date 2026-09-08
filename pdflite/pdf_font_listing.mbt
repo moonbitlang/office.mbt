@@ -23,9 +23,7 @@ fn PdfDocument::pdf_font_list_fonts_dictionary(
   prefix : String,
   fonts : ArrayView[(@core.PdfName, @syntax.PdfObject)],
 ) -> Array[@font.PdfFontListEntry] raise @core.PdfError {
-  let output : Array[@font.PdfFontListEntry] = Array::new(
-    capacity=fonts.length(),
-  )
+  let output : Array[@font.PdfFontListEntry] = Array(capacity=fonts.length())
   for entry in fonts {
     output.push(
       self.pdf_font_list_entry(
@@ -46,9 +44,7 @@ fn PdfDocument::pdf_font_list_xobjects(
   xobjects : ArrayView[(@core.PdfName, @syntax.PdfObject)],
   seen : Array[Int],
 ) -> Array[@font.PdfFontListEntry] raise @core.PdfError {
-  let output : Array[@font.PdfFontListEntry] = Array::new(
-    capacity=xobjects.length(),
-  )
+  let output : Array[@font.PdfFontListEntry] = Array(capacity=xobjects.length())
   for entry in xobjects {
     match entry.1 {
       PdfIndirect(number) =>
@@ -122,10 +118,10 @@ pub fn PdfDocument::list_fonts(
   let pages = self.pages_of_pagetree()
   pdf_page_box_validate_page_numbers(page_numbers, pages.length(), "list_fonts")
   let selected_pages = @core.pdf_number_set(page_numbers)
-  let output : Array[@font.PdfFontListEntry] = Array::new(
+  let output : Array[@font.PdfFontListEntry] = Array(
     capacity=page_numbers.length(),
   )
-  let seen_xobjects : Array[Int] = Array::new(capacity=page_numbers.length())
+  let seen_xobjects : Array[Int] = Array(capacity=page_numbers.length())
   for index, page in pages {
     let page_number = index + 1
     if selected_pages.contains(page_number) {

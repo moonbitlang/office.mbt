@@ -19,7 +19,7 @@ pub fn PdfDocument::select_object_numbers(
   self : PdfDocument,
   predicate : (@syntax.PdfObject) -> Bool,
 ) -> Array[Int] {
-  let selected : Array[Int] = Array::new(capacity=self.object_count())
+  let selected : Array[Int] = Array(capacity=self.object_count())
   for entry in self.parsed_object_entries() {
     if predicate(entry.2) {
       selected.push(entry.0)

@@ -73,7 +73,7 @@ fn[E] pdf_text_parse_cmap_sections_with(
   sections : Array[(String, String, (Array[E], BytesView) -> Unit)],
 ) -> Array[E]? {
   let cursor = @core.byte_cursor_of_view(data)
-  let entries : Array[E] = Array::new(capacity=data.length() / 4)
+  let entries : Array[E] = Array(capacity=data.length() / 4)
   let mut active = -1
   for raw_line in cursor.read_line_views() {
     let uncommented = pdf_text_cmap_line_without_comment(raw_line)

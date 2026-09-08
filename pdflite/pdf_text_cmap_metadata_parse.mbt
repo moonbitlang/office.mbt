@@ -125,9 +125,9 @@ fn pdf_text_parse_cmap_cid_system_value(
 ///|
 fn pdf_text_parse_cmap_cid_system_info(data : BytesView) -> PdfCIDSystemInfo? {
   let cursor = @core.byte_cursor_of_view(data)
-  let registries : Array[@core.PdfBytes] = Array::new(capacity=1)
-  let orderings : Array[@core.PdfBytes] = Array::new(capacity=1)
-  let supplements : Array[Int] = Array::new(capacity=1)
+  let registries : Array[@core.PdfBytes] = Array(capacity=1)
+  let orderings : Array[@core.PdfBytes] = Array(capacity=1)
+  let supplements : Array[Int] = Array(capacity=1)
   let mut seen_cid_system_info = false
   let mut expect_value : PdfTextCMapCIDSystemInfoKey? = None
   for line in cursor.read_line_views() {

@@ -36,9 +36,7 @@ fn pdf_writer_write_document_objects(
   document : PdfDocument,
 ) -> Array[(Int, Int, Int)] raise @core.PdfError {
   let object_numbers = document.object_numbers()
-  let xrefs : Array[(Int, Int, Int)] = Array::new(
-    capacity=object_numbers.length(),
-  )
+  let xrefs : Array[(Int, Int, Int)] = Array(capacity=object_numbers.length())
   for number in object_numbers {
     match document.objects.get_entry(number).unwrap() {
       { data: ObjectParsed(object), generation, }

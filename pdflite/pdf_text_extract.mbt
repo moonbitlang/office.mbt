@@ -23,7 +23,7 @@ fn PdfTextExtractor::pdf_text_external_cmap_codepoints_of_text(
   text : BytesView,
 ) -> Array[Int] raise @core.PdfError {
   let lookup = pdf_text_external_cmap_lookup(parsed)
-  let output : Array[Int] = Array::new(capacity=text.length())
+  let output : Array[Int] = Array(capacity=text.length())
   for code in pdf_text_parsed_cmap_charcodes_of_text(parsed, text) {
     let codepoints = match
       pdf_text_external_cmap_codepoints_from_lookup(font, parsed, lookup, code) {
@@ -44,7 +44,7 @@ fn PdfTextExtractor::pdf_text_tounicode_codepoints_of_text(
   text : BytesView,
 ) -> Array[Int] raise @core.PdfError {
   let lookup = pdf_text_tounicode_codepoints_lookup_map(tounicode)
-  let output : Array[Int] = Array::new(capacity=text.length())
+  let output : Array[Int] = Array(capacity=text.length())
   for code in self.font.pdf_text_charcodes_of_text(text) {
     match lookup.get(code) {
       Some(codepoints) =>
@@ -62,7 +62,7 @@ fn PdfTextExtractor::pdf_text_regular_codepoints_of_text(
   self : PdfTextExtractor,
   text : BytesView,
 ) -> Array[Int] raise @core.PdfError {
-  let output : Array[Int] = Array::new(capacity=text.length())
+  let output : Array[Int] = Array(capacity=text.length())
   for code in self.font.pdf_text_charcodes_of_text(text) {
     for codepoint in self.pdf_text_glyph_of_charcode(code).codepoints {
       output.push(codepoint)

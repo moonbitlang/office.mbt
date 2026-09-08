@@ -102,9 +102,7 @@ fn pdf_page_scale_select_page_indexed_pairs(
   page_numbers : ArrayView[Int],
   values : ArrayView[(Double, Double)],
 ) -> Array[(Double, Double)] {
-  let selected : Array[(Double, Double)] = Array::new(
-    capacity=page_numbers.length(),
-  )
+  let selected : Array[(Double, Double)] = Array(capacity=page_numbers.length())
   for page_number in page_numbers {
     selected.push(values[page_number - 1])
   }

@@ -26,7 +26,7 @@ fn PdfDocument::pdf_draw_page_resource_numbers(
   self : PdfDocument,
   resources : @syntax.PdfObject,
 ) -> Array[Int] {
-  let output : Array[Int] = Array::new(capacity=3)
+  let output : Array[Int] = Array(capacity=3)
   for
     key in [
       pdf_draw_xobject_key(),

@@ -107,7 +107,7 @@ fn PdfDocument::pdf_util_content_stream_numbers(
   self : PdfDocument,
 ) -> Array[Int] {
   let object_numbers = self.object_numbers()
-  let numbers : Array[Int] = Array::new(capacity=object_numbers.length())
+  let numbers : Array[Int] = Array(capacity=object_numbers.length())
   self.pdf_util_collect_content_stream_numbers(self.trailer_dict(), numbers)
   for number in object_numbers {
     self.pdf_util_collect_content_stream_numbers(
@@ -134,7 +134,7 @@ fn PdfDocument::pdf_util_json_of_parsed_content_stream(
       let dictionary = decoded.dictionary
         .remove_dict_entry(@syntax.pdf_object_length_name())
         .remove_dict_entry(pdf_util_cpdfjson_filter_key())
-      let op_jsons : Array[Json] = Array::new(capacity=ops.length())
+      let op_jsons : Array[Json] = Array(capacity=ops.length())
       for op in ops {
         op_jsons.push(self.pdf_util_json_of_content_op(op, utf8))
       }

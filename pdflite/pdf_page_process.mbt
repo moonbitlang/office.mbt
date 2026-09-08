@@ -15,8 +15,8 @@ pub fn PdfDocument::process_pages(
 ) -> PdfDocument raise @core.PdfError {
   let pages = self.pages_of_pagetree()
   let selected_pages = @core.pdf_number_set(page_numbers)
-  let rewritten : Array[@page.PdfPage] = Array::new(capacity=pages.length())
-  let matrices : Array[(Int, @geometry.TransformMatrix)] = Array::new(
+  let rewritten : Array[@page.PdfPage] = Array(capacity=pages.length())
+  let matrices : Array[(Int, @geometry.TransformMatrix)] = Array(
     capacity=pages.length(),
   )
   for index in 0..<pages.length() {
@@ -114,7 +114,7 @@ pub fn[T] PdfDocument::map_pages(
 ) -> Array[T] raise @core.PdfError {
   let pages = self.pages_of_pagetree()
   let selected_pages = @core.pdf_number_set(page_numbers)
-  let output : Array[T] = Array::new(capacity=page_numbers.length())
+  let output : Array[T] = Array(capacity=page_numbers.length())
   for index in 0..<pages.length() {
     let page_number = index + 1
     if selected_pages.contains(page_number) {

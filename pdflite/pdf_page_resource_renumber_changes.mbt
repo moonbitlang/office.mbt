@@ -20,7 +20,7 @@ fn PdfDocument::pdf_page_renumber_resource_changes(
   self : PdfDocument,
   pages : ArrayView[@page.PdfPage],
 ) -> Array[(@core.PdfName, Int, @core.PdfName, @core.PdfName)] {
-  let changes : Array[(@core.PdfName, Int, @core.PdfName, @core.PdfName)] = Array::new(
+  let changes : Array[(@core.PdfName, Int, @core.PdfName, @core.PdfName)] = Array(
     capacity=self.pdf_page_resource_entry_count(pages),
   )
   let mut serial = 1

@@ -65,9 +65,7 @@ fn PdfDocument::pdf_bookmark_listing_bookmarks(
   let range_is_all = pdf_bookmark_listing_is_all_pages(page_numbers, end_page)
   let selected_pages = @core.pdf_number_set(page_numbers)
   let bookmarks = self.read_bookmarks(preserve_actions~)
-  let output : Array[@bookmark.PdfBookmark] = Array::new(
-    capacity=bookmarks.length(),
-  )
+  let output : Array[@bookmark.PdfBookmark] = Array(capacity=bookmarks.length())
   for bookmark in bookmarks {
     if self.pdf_bookmark_listing_in_range(
         bookmark, selected_pages, range_is_all,

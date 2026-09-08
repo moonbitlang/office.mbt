@@ -188,7 +188,7 @@ fn pdf_text_tounicode_bytes(
 ) -> @core.PdfBytes {
   // the simple-font embedder assigns charcodes in subset order from 33,
   // so the entry keys name codepoints rather than codes
-  let charcode_texts : Array[String] = Array::new(capacity=sorted.length())
+  let charcode_texts : Array[String] = Array(capacity=sorted.length())
   let mut charcode = 33
   for _ in sorted {
     charcode_texts.push(pdf_text_hex_int_min2(charcode))
@@ -206,7 +206,7 @@ fn pdf_text_tounicode_cid_bytes(
   sorted : ArrayView[(Int, @core.PdfBytes)],
 ) -> @core.PdfBytes {
   // a composite font's entry key *is* the code the content stream writes
-  let charcode_texts : Array[String] = Array::new(capacity=sorted.length())
+  let charcode_texts : Array[String] = Array(capacity=sorted.length())
   for entry in sorted {
     charcode_texts.push(pdf_text_hex_int4(entry.0))
   }

@@ -39,7 +39,7 @@ fn pdf_flate_huffman_code_lengths(
   max_bits : Int,
 ) -> Array[Int] raise @core.PdfError {
   let lengths : Array[Int] = Array::make(frequencies.length(), 0)
-  let nodes : Array[FlateHuffmanTreeNode] = Array::new(
+  let nodes : Array[FlateHuffmanTreeNode] = Array(
     capacity=frequencies.length() * 2,
   )
   for symbol, frequency in frequencies {
@@ -83,7 +83,7 @@ fn pdf_flate_huffman_code_lengths(
     active -= 1
   }
   let root = pdf_flate_pick_huffman_node(nodes)
-  let stack : Array[(Int, Int)] = Array::new(capacity=nodes.length())
+  let stack : Array[(Int, Int)] = Array(capacity=nodes.length())
   stack.push((root, 0))
   while stack.length() > 0 {
     let (node_index, depth) = stack.pop().unwrap()
@@ -242,7 +242,7 @@ fn pdf_flate_decode_symbol(
 
 ///|
 fn pdf_flate_fixed_literal_lengths() -> Array[Int] {
-  let lengths : Array[Int] = Array::new(capacity=288)
+  let lengths : Array[Int] = Array(capacity=288)
   for i in 0..<=287 {
     if i <= 143 {
       lengths.push(8)
@@ -259,7 +259,7 @@ fn pdf_flate_fixed_literal_lengths() -> Array[Int] {
 
 ///|
 fn pdf_flate_fixed_distance_lengths() -> Array[Int] {
-  let lengths : Array[Int] = Array::new(capacity=32)
+  let lengths : Array[Int] = Array(capacity=32)
   for _ in 0..<=31 {
     lengths.push(5)
   }

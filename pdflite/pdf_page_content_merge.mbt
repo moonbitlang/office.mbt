@@ -51,7 +51,7 @@ fn PdfDocument::pdf_page_merged_content_stream(
   self : PdfDocument,
   contents : ArrayView[@syntax.PdfObject],
 ) -> @syntax.PdfObject raise @core.PdfError {
-  let decoded_streams : Array[@core.PdfBytes] = Array::new(
+  let decoded_streams : Array[@core.PdfBytes] = Array(
     capacity=contents.length(),
   )
   for content in contents {

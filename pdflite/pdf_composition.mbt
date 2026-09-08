@@ -60,7 +60,7 @@ pub fn PdfDocument::composition_json(
   file_size : Int,
 ) -> Json raise @core.PdfError {
   let entries = self.composition(file_size)
-  let values : Array[Json] = Array::new(capacity=entries.length())
+  let values : Array[Json] = Array(capacity=entries.length())
   for entry in entries {
     values.push(entry.to_json())
   }

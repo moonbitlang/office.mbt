@@ -52,7 +52,7 @@ fn PdfDocumentPageSpecContext::resolve_page_labels(
   spec : BytesView,
 ) -> Bytes raise @core.PdfError {
   let labels = self.document.read_page_labels()
-  let output : Array[Byte] = Array::new(capacity=spec.length())
+  let output : Array[Byte] = Array(capacity=spec.length())
   for index = 0; index < spec.length(); {
     match spec[index] {
       b'[' => {

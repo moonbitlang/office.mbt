@@ -73,7 +73,7 @@ pub fn PdfDocument::read_font_metrics(
         raise FontWidthsExpected
       }
       let missingwidth = self.pdf_text_font_missing_width(descriptor)
-      let metrics : Array[Double] = Array::new(capacity=256)
+      let metrics : Array[Double] = Array(capacity=256)
       for _ in 0..<firstchar {
         metrics.push(missingwidth)
       }

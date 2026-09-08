@@ -43,9 +43,7 @@ fn PdfDocument::pdf_bookmarks_for_pages(
       pdf_bookmark_mark_ancestors(bookmarks, keep, index)
     }
   }
-  let output : Array[@bookmark.PdfBookmark] = Array::new(
-    capacity=bookmarks.length(),
-  )
+  let output : Array[@bookmark.PdfBookmark] = Array(capacity=bookmarks.length())
   for index in 0..<bookmarks.length() {
     if keep[index] {
       output.push(bookmarks[index])

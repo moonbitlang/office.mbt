@@ -6,9 +6,7 @@ fn pdf_page_select_pages(
   if page_numbers.length() == 0 {
     raise PageTreeExpected
   }
-  let selected : Array[@page.PdfPage] = Array::new(
-    capacity=page_numbers.length(),
-  )
+  let selected : Array[@page.PdfPage] = Array(capacity=page_numbers.length())
   for page_number in page_numbers {
     if page_number < 1 || page_number > pages.length() {
       raise PageTreeExpected
@@ -26,7 +24,7 @@ fn pdf_page_select_numbers(
   if page_numbers.length() == 0 {
     raise PageTreeExpected
   }
-  let selected : Array[Int] = Array::new(capacity=page_numbers.length())
+  let selected : Array[Int] = Array(capacity=page_numbers.length())
   for page_number in page_numbers {
     if page_number < 1 || page_number > numbers.length() {
       raise PageTreeExpected

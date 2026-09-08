@@ -56,7 +56,7 @@ fn PdfDocument::content_extgstate_dash_array(
 ) -> Array[Double] raise @core.PdfError {
   match self.direct(object) {
     PdfArray(values) => {
-      let output : Array[Double] = Array::new(capacity=values.length())
+      let output : Array[Double] = Array(capacity=values.length())
       for value in values {
         output.push(self.get_number(value))
       }
