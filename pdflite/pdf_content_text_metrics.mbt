@@ -51,7 +51,7 @@ fn pdf_content_afm_header_number(
       let tokens = @core.pdf_split_whitespace_tokens(value)
       if tokens.length() == 1 {
         let parsed : Result[Double, Error] = try
-          @strconv.from_str(@ascii.decode_lossy(tokens[0]))
+          @string.parse_double(@ascii.decode_lossy(tokens[0]))
         catch {
           err => Err(err)
         } noraise {

@@ -31,7 +31,7 @@ fn pdf_ocg_read_json_ocgs(
     Object(entries) => {
       let output : Array[(Int, @ocg.PdfOcg)] = []
       for entry in entries {
-        let number : Int = @strconv.from_str(entry.0) catch {
+        let number : Int = @string.parse_int(entry.0) catch {
           _ =>
             raise SoftError(
               "ocg_read_json: malformed JSON top-level dictionary",

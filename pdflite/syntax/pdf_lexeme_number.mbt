@@ -70,7 +70,7 @@ fn pdf_number_view_real(view : BytesView) -> PdfLexeme {
     _ => LexNone
   } noraise {
     text => {
-      let real : Result[Double, Error] = try @strconv.from_str(text) catch {
+      let real : Result[Double, Error] = try @string.parse_double(text) catch {
         err => Err(err)
       } noraise {
         value => Ok(value)

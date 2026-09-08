@@ -23,7 +23,7 @@ fn pdf_pagespec_parse_nonnegative_int(text : String) -> Int? {
     if !valid {
       None
     } else {
-      let parsed : Result[Int, Error] = try @strconv.from_str(text) catch {
+      let parsed : Result[Int, Error] = try @string.parse_int(text) catch {
         err => Err(err)
       } noraise {
         value => Ok(value)

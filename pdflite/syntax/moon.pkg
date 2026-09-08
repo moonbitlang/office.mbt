@@ -2,5 +2,6 @@ import {
   "moonbitlang/pdflite/core",
   "moonbitlang/pdflite/crypt_core",
   "moonbitlang/core/debug",
+  "moonbitlang/core/string",
   "moonbitlang/core/encoding/ascii",
 }

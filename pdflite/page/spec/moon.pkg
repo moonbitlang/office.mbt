@@ -2,4 +2,5 @@ import {
   "moonbitlang/pdflite/core",
   "moonbitlang/core/encoding/ascii",
   "moonbitlang/core/encoding/utf8",
+  "moonbitlang/core/string",
 }

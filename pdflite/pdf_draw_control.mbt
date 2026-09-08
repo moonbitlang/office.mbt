@@ -135,7 +135,7 @@ fn pdf_draw_control_read_floats(
   let parts = pdf_draw_control_split_on_spaces(text)
   let output : Array[Double] = Array(capacity=parts.length())
   for part in parts {
-    let parsed : Result[Double, Error] = try @strconv.from_str(part) catch {
+    let parsed : Result[Double, Error] = try @string.parse_double(part) catch {
       err => Err(err)
     } noraise {
       value => Ok(value)

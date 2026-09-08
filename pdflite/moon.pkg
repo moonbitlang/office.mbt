@@ -42,6 +42,7 @@ import {
   "moonbitlang/core/json",
   "moonbitlang/core/math",
   "moonbitlang/core/random",
+  "moonbitlang/core/string",
 }
 
 import {
