@@ -2,10 +2,10 @@
 package "moonbitlang/pagelayout/paginate"
 
 import {
+  "moonbitlang/core/debug",
   "moonbitlang/pagelayout",
   "moonbitlang/pagelayout/paragraph",
   "moonbitlang/pagelayout/table",
-  "moonbitlang/core/debug",
 }
 
 // Values

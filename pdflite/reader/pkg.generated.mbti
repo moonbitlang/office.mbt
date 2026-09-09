@@ -2,11 +2,11 @@
 package "moonbitlang/pdflite/reader"
 
 import {
+  "moonbitlang/core/debug",
+  "moonbitlang/core/hashmap",
   "moonbitlang/pdflite/core",
   "moonbitlang/pdflite/syntax",
   "moonbitlang/pdflite/xref_model",
-  "moonbitlang/core/debug",
-  "moonbitlang/core/hashmap",
 }
 
 // Values

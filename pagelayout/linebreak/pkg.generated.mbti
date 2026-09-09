@@ -2,8 +2,8 @@
 package "moonbitlang/pagelayout/linebreak"
 
 import {
-  "moonbitlang/pagelayout/fonts",
   "moonbitlang/core/debug",
+  "moonbitlang/pagelayout/fonts",
 }
 
 // Values

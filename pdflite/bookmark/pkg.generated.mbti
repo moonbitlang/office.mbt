@@ -2,8 +2,8 @@
 package "moonbitlang/pdflite/bookmark"
 
 import {
-  "moonbitlang/pdflite/destination",
   "moonbitlang/core/debug",
+  "moonbitlang/pdflite/destination",
 }
 
 // Values

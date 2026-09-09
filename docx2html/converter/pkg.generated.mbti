@@ -2,10 +2,10 @@
 package "moonbitlang/docx2html/converter"
 
 import {
+  "moonbitlang/core/debug",
   "moonbitlang/docx2html/core",
   "moonbitlang/docx2html/document",
   "moonbitlang/docx2html/html",
-  "moonbitlang/core/debug",
 }
 
 // Values

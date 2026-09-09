@@ -2,8 +2,8 @@
 package "moonbitlang/docx2html/document"
 
 import {
-  "moonbitlang/docx2html/core",
   "moonbitlang/core/debug",
+  "moonbitlang/docx2html/core",
 }
 
 // Values

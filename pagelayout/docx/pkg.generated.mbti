@@ -2,13 +2,13 @@
 package "moonbitlang/pagelayout/docx"
 
 import {
+  "moonbitlang/core/debug",
   "moonbitlang/docx2html/xml",
   "moonbitlang/pagelayout",
   "moonbitlang/pagelayout/numbering",
   "moonbitlang/pagelayout/paginate",
   "moonbitlang/pagelayout/paragraph",
   "moonbitlang/pagelayout/table",
-  "moonbitlang/core/debug",
 }
 
 // Values

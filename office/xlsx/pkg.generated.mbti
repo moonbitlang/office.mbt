@@ -2,10 +2,10 @@
 package "moonbitlang/office-lib/xlsx"
 
 import {
+  "moonbitlang/core/debug",
   "moonbitlang/mbtexcel/batch",
   "moonbitlang/office-lib/template",
   "moonbitlang/office-lib/transaction",
-  "moonbitlang/core/debug",
 }
 
 // Values

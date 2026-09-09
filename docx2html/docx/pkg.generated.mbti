@@ -2,6 +2,8 @@
 package "moonbitlang/docx2html/docx"
 
 import {
+  "moonbit-community/flate/zip",
+  "moonbitlang/core/debug",
   "moonbitlang/docx2html/batch",
   "moonbitlang/docx2html/converter",
   "moonbitlang/docx2html/core",
@@ -9,8 +11,6 @@ import {
   "moonbitlang/docx2html/opc",
   "moonbitlang/docx2html/splice",
   "moonbitlang/docx2html/xml",
-  "moonbit-community/flate/zip",
-  "moonbitlang/core/debug",
 }
 
 // Values

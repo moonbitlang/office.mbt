@@ -2,8 +2,8 @@
 package "moonbitlang/pdflite/font/standard14"
 
 import {
-  "moonbitlang/pdflite/font/afm",
   "moonbitlang/core/debug",
+  "moonbitlang/pdflite/font/afm",
 }
 
 // Values

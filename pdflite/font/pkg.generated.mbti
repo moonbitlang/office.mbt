@@ -2,8 +2,8 @@
 package "moonbitlang/pdflite/font"
 
 import {
-  "moonbitlang/pdflite/syntax",
   "moonbitlang/core/debug",
+  "moonbitlang/pdflite/syntax",
 }
 
 // Values

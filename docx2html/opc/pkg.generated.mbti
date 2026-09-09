@@ -2,9 +2,9 @@
 package "moonbitlang/docx2html/opc"
 
 import {
+  "moonbit-community/flate/zip",
   "moonbitlang/docx2html/core",
   "moonbitlang/docx2html/xml",
-  "moonbit-community/flate/zip",
 }
 
 // Values

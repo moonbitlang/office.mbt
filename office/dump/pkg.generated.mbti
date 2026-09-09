@@ -2,9 +2,9 @@
 package "moonbitlang/office-lib/dump"
 
 import {
+  "moonbitlang/core/debug",
   "moonbitlang/docx2html/docx",
   "moonbitlang/mbtexcel/xlsx",
-  "moonbitlang/core/debug",
 }
 
 // Values

@@ -2,8 +2,8 @@
 package "moonbitlang/pdflite/writer"
 
 import {
-  "moonbitlang/pdflite/crypt_core",
   "moonbitlang/core/debug",
+  "moonbitlang/pdflite/crypt_core",
 }
 
 // Values

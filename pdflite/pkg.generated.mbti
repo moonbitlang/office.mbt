@@ -2,6 +2,9 @@
 package "moonbitlang/pdflite"
 
 import {
+  "moonbitlang/core/buffer",
+  "moonbitlang/core/debug",
+  "moonbitlang/core/hashmap",
   "moonbitlang/pdflite/addtext",
   "moonbitlang/pdflite/annotation",
   "moonbitlang/pdflite/attachment",
@@ -29,9 +32,6 @@ import {
   "moonbitlang/pdflite/text/unicodedata",
   "moonbitlang/pdflite/writer",
   "moonbitlang/pdflite/xref_model",
-  "moonbitlang/core/buffer",
-  "moonbitlang/core/debug",
-  "moonbitlang/core/hashmap",
 }
 
 // Values

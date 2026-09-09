@@ -2,10 +2,10 @@
 package "moonbitlang/pdflite/content/path"
 
 import {
+  "moonbitlang/core/debug",
   "moonbitlang/pdflite/content",
   "moonbitlang/pdflite/geometry",
   "moonbitlang/pdflite/shape",
-  "moonbitlang/core/debug",
 }
 
 // Values

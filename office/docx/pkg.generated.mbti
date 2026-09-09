@@ -2,13 +2,13 @@
 package "moonbitlang/office-lib/docx"
 
 import {
+  "moonbit-community/flate/zip",
+  "moonbitlang/core/debug",
+  "moonbitlang/core/ref",
   "moonbitlang/docx2html/batch",
   "moonbitlang/docx2html/splice",
   "moonbitlang/office-lib/template",
   "moonbitlang/office-lib/transaction",
-  "moonbit-community/flate/zip",
-  "moonbitlang/core/debug",
-  "moonbitlang/core/ref",
 }
 
 // Values

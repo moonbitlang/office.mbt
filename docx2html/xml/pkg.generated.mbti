@@ -2,9 +2,9 @@
 package "moonbitlang/docx2html/xml"
 
 import {
-  "moonbitlang/docx2html/core",
   "moonbitlang/core/debug",
   "moonbitlang/core/sorted_map",
+  "moonbitlang/docx2html/core",
 }
 
 // Values

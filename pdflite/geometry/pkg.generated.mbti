@@ -2,8 +2,8 @@
 package "moonbitlang/pdflite/geometry"
 
 import {
-  "moonbitlang/pdflite/core",
   "moonbitlang/core/debug",
+  "moonbitlang/pdflite/core",
 }
 
 // Values

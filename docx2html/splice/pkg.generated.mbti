@@ -2,8 +2,8 @@
 package "moonbitlang/docx2html/splice"
 
 import {
-  "moonbitlang/docx2html/core",
   "moonbit-community/flate/zip",
+  "moonbitlang/docx2html/core",
 }
 
 // Values

@@ -2,9 +2,9 @@
 package "moonbitlang/pdflite/destination"
 
 import {
+  "moonbitlang/core/debug",
   "moonbitlang/pdflite/core",
   "moonbitlang/pdflite/syntax",
-  "moonbitlang/core/debug",
 }
 
 // Values

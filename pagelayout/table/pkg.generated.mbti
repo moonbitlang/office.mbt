@@ -2,9 +2,9 @@
 package "moonbitlang/pagelayout/table"
 
 import {
+  "moonbitlang/core/debug",
   "moonbitlang/pagelayout",
   "moonbitlang/pagelayout/paragraph",
-  "moonbitlang/core/debug",
 }
 
 // Values

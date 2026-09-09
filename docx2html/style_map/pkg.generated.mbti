@@ -2,9 +2,9 @@
 package "moonbitlang/docx2html/style_map"
 
 import {
+  "moonbitlang/core/debug",
   "moonbitlang/docx2html/core",
   "moonbitlang/docx2html/document",
-  "moonbitlang/core/debug",
 }
 
 // Values

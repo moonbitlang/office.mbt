@@ -2,8 +2,8 @@
 package "moonbitlang/mbtexcel/batch"
 
 import {
-  "moonbitlang/mbtexcel/xlsx",
   "moonbitlang/core/debug",
+  "moonbitlang/mbtexcel/xlsx",
 }
 
 // Values

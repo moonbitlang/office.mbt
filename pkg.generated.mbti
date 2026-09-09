@@ -2,9 +2,9 @@
 package "moonbitlang/mbtexcel"
 
 import {
-  "moonbitlang/mbtexcel/xlsx",
   "moonbit-community/flate/zip",
   "moonbitlang/async/io",
+  "moonbitlang/mbtexcel/xlsx",
   "moonbitlang/x/time",
 }
 

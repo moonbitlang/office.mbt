@@ -2,8 +2,8 @@
 package "moonbitlang/pdflite/text/unicodedata"
 
 import {
-  "moonbitlang/pdflite/core",
   "moonbitlang/core/debug",
+  "moonbitlang/pdflite/core",
 }
 
 // Values

@@ -2,9 +2,9 @@
 package "moonbitlang/office-lib/transaction"
 
 import {
-  "moonbitlang/office-lib",
   "moonbit-community/flate/zip",
   "moonbitlang/core/debug",
+  "moonbitlang/office-lib",
 }
 
 // Values
