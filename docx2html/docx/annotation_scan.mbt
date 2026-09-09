@@ -1609,8 +1609,10 @@ fn scan_story(
           // place. Spelled here as well, the two lists drift: a family
           // added there and not here has no id to pair on, and one
           // added here and not there is captured and never consulted.
-          bookmark_id_raw: if is_wml_uri(uri) &&
-            is_wml_range_marker_name(local_name) {
+          bookmark_id_raw: if (
+              is_wml_uri(uri) && is_wml_range_marker_name(local_name)
+            ) ||
+            (is_w14_uri(uri) && is_w14_conflict_range_name(local_name)) {
             unique_attribute_value(attributes, "id", namespaces)
           } else {
             None

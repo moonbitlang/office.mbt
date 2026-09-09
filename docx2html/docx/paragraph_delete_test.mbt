@@ -665,13 +665,14 @@ test "field extents are judged only on a well-formed story" {
 }
 
 ///|
-/// A field boundary inside track-DELETED content STILL COUNTS. The
-/// splice is physical and the boundary is physically there: a consumer
-/// that rejects the tracked deletion gets its field back, and it would
-/// then span a hole where this paragraph used to be. Reading the
-/// projection here would be the more elegant answer to the wrong
-/// question.
-test "a suppressed field boundary still opens a region" {
+/// A field boundary inside track-DELETED content is there for one
+/// consumer and not another: reject the deletion and the field is back,
+/// spanning a hole where this paragraph was; accept it and the boundary
+/// never existed. Counting it (an earlier stance) let a deleted END
+/// close a live field before the target; ignoring it would let a
+/// deleted BEGIN hide one. Neither depth is judgeable, so it refuses as
+/// exactly that.
+test "a suppressed field boundary cannot be judged" {
   let annotated = delete_fixture(
     "<w:p><w:del w:id=\"1\" w:author=\"a\"><w:r><w:fldChar w:fldCharType=\"begin\"/></w:r></w:del></w:p>" +
     "<w:p><w:r><w:t>target</w:t></w:r></w:p>" +
@@ -679,7 +680,9 @@ test "a suppressed field boundary still opens a region" {
     "<w:p><w:r><w:t>keeper</w:t></w:r></w:p>",
   )
   assert_true(
-    delete_refusal_of(annotated, "p[2]").contains("inside a field region"),
+    delete_refusal_of(annotated, "p[2]").contains(
+      "inside tracked-deleted or compatibility-alternative content",
+    ),
   )
 }
 
@@ -1382,4 +1385,86 @@ test "a shifted ordinal cuts the paragraph the receipt names" {
     .cut()
     .matches(@utf8.encode(document.replace(old=neighbour, new=""))[:]),
   )
+}
+
+///|
+/// Word's co-authoring conflict ranges (`w14:customXmlConflict*Range*`)
+/// pair by id like every WML range and were missing from the hazard
+/// vocabulary entirely: a conflict start inside the target left its end
+/// behind, and one bracketing the target was invisible to the pairing
+/// walk.
+test "w14 conflict ranges are ranges" {
+  let keeper = "<w:p><w:r><w:t>keeper</w:t></w:r></w:p>"
+  let inside = "<w:p><w14:customXmlConflictInsRangeStart w:id=\"4\" w:author=\"a\"/><w:r><w:t>target</w:t></w:r></w:p>" +
+    "<w:p><w:r><w:t>keeper</w:t></w:r><w14:customXmlConflictInsRangeEnd w:id=\"4\"/></w:p>"
+  assert_true(
+    delete_refusal(inside, "p[1]").contains("tracked-revision content"),
+  )
+  let bracketing = "<w14:customXmlConflictDelRangeStart w:id=\"4\" w:author=\"a\"/>" +
+    "<w:p><w:r><w:t>target</w:t></w:r></w:p>" +
+    "<w14:customXmlConflictDelRangeEnd w:id=\"4\"/>" +
+    keeper
+  assert_true(
+    delete_refusal(bracketing, "p[1]").contains(
+      "a co-authoring conflict deletion range opened before it and closed after it",
+    ),
+  )
+}
+
+///|
+/// A field boundary inside a TRACKED DELETION may not be there: once
+/// the deletion is accepted, the `end` vanishes and the field runs on
+/// through the target to the next real end. Counting every physical
+/// boundary let that field close before the target and the deletion
+/// PLANNED — cutting the field's result.
+test "a tracked-deleted field end does not close a live field" {
+  let body = "<w:p><w:r><w:fldChar w:fldCharType=\"begin\"/><w:instrText> TOC </w:instrText><w:fldChar w:fldCharType=\"separate\"/></w:r>" +
+    "<w:del w:id=\"1\" w:author=\"a\" w:date=\"2026-01-01T00:00:00Z\"><w:r><w:fldChar w:fldCharType=\"end\"/></w:r></w:del></w:p>" +
+    "<w:p><w:r><w:t>target</w:t></w:r></w:p>" +
+    "<w:p><w:r><w:fldChar w:fldCharType=\"end\"/><w:t>keeper</w:t></w:r></w:p>"
+  assert_true(delete_refusal(body, "p[2]").has_prefix("delete/field_region"))
+  // THE CONTROL: the same end OUTSIDE the deletion closes the field for
+  // every consumer, and the target beside a closed field plans.
+  let closed = "<w:p><w:r><w:fldChar w:fldCharType=\"begin\"/><w:instrText> TOC </w:instrText><w:fldChar w:fldCharType=\"separate\"/></w:r>" +
+    "<w:r><w:fldChar w:fldCharType=\"end\"/></w:r></w:p>" +
+    "<w:p><w:r><w:t>target</w:t></w:r></w:p>" +
+    "<w:p><w:r><w:fldChar w:fldCharType=\"end\"/><w:t>keeper</w:t></w:r></w:p>"
+  assert_eq(delete_refusal(closed, "p[2]"), "<planned>")
+}
+
+///|
+/// A range marker inside an UNSELECTED compatibility branch is not
+/// there for the consumer that selects the other branch. A `bookmarkEnd`
+/// inside `mc:Fallback` paired with the start and closed the range
+/// before the target; Word, selecting `mc:Choice`, sees the range span
+/// the target — and the deletion PLANNED from inside it.
+test "a marker inside a compatibility branch pairs with nothing" {
+  let body = "<w:p><w:bookmarkStart w:id=\"4\" w:name=\"Chapter\"/>" +
+    "<mc:AlternateContent xmlns:mc=\"http://schemas.openxmlformats.org/markup-compatibility/2006\" xmlns:wps=\"http://schemas.microsoft.com/office/word/2010/wordprocessingShape\">" +
+    "<mc:Choice Requires=\"wps\"><w:r><w:t>before</w:t></w:r></mc:Choice>" +
+    "<mc:Fallback><w:bookmarkEnd w:id=\"4\"/></mc:Fallback></mc:AlternateContent></w:p>" +
+    "<w:p><w:r><w:t>target</w:t></w:r></w:p>" +
+    "<w:p><w:bookmarkEnd w:id=\"4\"/><w:r><w:t>keeper</w:t></w:r></w:p>"
+  assert_true(
+    delete_refusal(body, "p[2]").contains(
+      "a bookmark range opened before it and closed after it",
+    ),
+  )
+}
+
+///|
+/// `w:lock` on a content control is Word's own refusal of this
+/// deletion: `sdtLocked` forbids deleting the control, and
+/// `sdtContentLocked` forbids that and editing its content. The
+/// classifier checked `dataBinding` and never the lock.
+test "a locked content control inside the target refuses" {
+  let body = "<w:p><w:sdt><w:sdtPr><w:id w:val=\"17\"/><w:lock w:val=\"sdtContentLocked\"/></w:sdtPr>" +
+    "<w:sdtContent><w:r><w:t>target</w:t></w:r></w:sdtContent></w:sdt></w:p>" +
+    "<w:p><w:r><w:t>keeper</w:t></w:r></w:p>"
+  assert_true(delete_refusal(body, "p[1]").contains("a content-control lock"))
+  // THE CONTROL: the same control without a lock is deletable.
+  let unlocked = "<w:p><w:sdt><w:sdtPr><w:id w:val=\"17\"/></w:sdtPr>" +
+    "<w:sdtContent><w:r><w:t>target</w:t></w:r></w:sdtContent></w:sdt></w:p>" +
+    "<w:p><w:r><w:t>keeper</w:t></w:r></w:p>"
+  assert_eq(delete_refusal(unlocked, "p[1]"), "<planned>")
 }

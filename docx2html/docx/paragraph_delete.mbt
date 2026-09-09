@@ -176,9 +176,10 @@ pub fn DocxDeleteReceipt::cut(self : DocxDeleteReceipt) -> DocxDeleteCutWitness 
 /// They occupy no layout, so they never stand between two blocks that
 /// would otherwise meet — and Word emits them at body level routinely.
 fn is_zero_width_body_marker(element : ScannedElement) -> Bool {
-  guard is_wml_uri(element.uri) else { return false }
+  // Every range family is zero-width, in whichever namespace it lives
+  // (the w14 conflict ranges included); the two proofing marks are WML.
   range_family_of(element) is Some(_) ||
-  element.local_name is ("proofErr" | "sectPr")
+  (is_wml_uri(element.uri) && element.local_name is ("proofErr" | "sectPr"))
 }
 
 ///|
@@ -213,6 +214,32 @@ fn document_body_index(elements : Array[ScannedElement]) -> Int? {
     }
   }
   None
+}
+
+///|
+/// Whether an element sits inside content some consumer does NOT see:
+/// a tracked deletion (gone once accepted) or ANY branch of a
+/// compatibility alternative (one branch is selected, the rest are
+/// not). A range marker or a field boundary there cannot be trusted to
+/// open or close anything — a `bookmarkEnd` inside an unselected
+/// `mc:Fallback` closed a range prematurely for the consumer that
+/// selects `mc:Choice`, and a tracked-deleted `fldChar end` cancelled a
+/// live field that, once the deletion is accepted, runs on through the
+/// target. Both then PLANNED. Judged on the physical tree, by ancestry.
+fn inside_conditional_content(
+  elements : Array[ScannedElement],
+  element : ScannedElement,
+) -> Bool {
+  let mut parent = element.parent_index
+  while parent >= 0 && parent < elements.length() {
+    let holder = elements[parent]
+    if is_suppressed_container(holder.uri, holder.local_name) ||
+      holder.uri == MC_URI {
+      return true
+    }
+    parent = holder.parent_index
+  }
+  false
 }
 
 ///|
@@ -350,6 +377,16 @@ fn open_range_across(
   }
   for element in elements {
     guard range_family_of(element) is Some((family, starts)) else { continue }
+    // A marker inside conditional content may or may not be there for
+    // the consumer that matters, so it pairs with NOTHING: unresolved
+    // on its side, exactly like a marker whose id cannot be read. Its
+    // partner outside then pairs with the next real marker of the id,
+    // or stays unresolved — and either answer refuses when the target
+    // lies between.
+    if inside_conditional_content(elements, element) {
+      note_unresolved(family, element.byte_start, element.byte_end)
+      continue
+    }
     guard element.bookmark_id_raw is Some(raw) else {
       // A marker this reader cannot place. It only matters if an
       // unplaceable pair could straddle the target, so this is judged
@@ -474,7 +511,32 @@ priv enum FieldBoundary {
   /// or spelled more than one way. Either is a boundary this reader
   /// cannot place.
   Unreadable
+  /// A boundary inside content some consumer does not see — a tracked
+  /// deletion, a compatibility branch. It opens or closes a region for
+  /// one consumer and not another, so no depth can be judged from it.
+  Conditional
   NotABoundary
+}
+
+///|
+/// `field_boundary_of`, with one more way to be unreadable: a boundary
+/// inside conditional content (see `inside_conditional_content`) may
+/// not be there for the consumer that matters, so the depth it would
+/// change cannot be judged. Only real boundaries are re-classified —
+/// ordinary content inside a tracked deletion is still not a boundary.
+fn conditional_field_boundary_of(
+  elements : Array[ScannedElement],
+  element : ScannedElement,
+) -> FieldBoundary {
+  match field_boundary_of(element) {
+    NotABoundary => NotABoundary
+    boundary =>
+      if inside_conditional_content(elements, element) {
+        Conditional
+      } else {
+        boundary
+      }
+  }
 }
 
 ///|
@@ -530,6 +592,8 @@ fn range_id_key(family : RangeFamily, raw : String) -> String {
 /// these by hand is what keeps the two agreeable.
 priv enum RangeFamily {
   BookmarkRange
+  ConflictDel
+  ConflictIns
   CommentRange
   CustomXmlDel
   CustomXmlIns
@@ -545,6 +609,8 @@ priv enum RangeFamily {
 fn RangeFamily::label(self : RangeFamily) -> String {
   match self {
     BookmarkRange => "a bookmark range"
+    ConflictDel => "a co-authoring conflict deletion range"
+    ConflictIns => "a co-authoring conflict insertion range"
     CommentRange => "a comment range"
     CustomXmlDel => "a customXml deletion range"
     CustomXmlIns => "a customXml insertion range"
@@ -586,10 +652,31 @@ fn is_wml_range_marker_name(local_name : String) -> Bool {
 }
 
 ///|
+/// Word's co-authoring conflict ranges live in the w14 namespace, pair
+/// by `w:id` like every WML range, and were missing from the vocabulary
+/// entirely — a conflict start inside the target left its end behind.
+fn is_w14_conflict_range_name(local_name : String) -> Bool {
+  local_name
+  is ("customXmlConflictInsRangeStart"
+  | "customXmlConflictInsRangeEnd"
+  | "customXmlConflictDelRangeStart"
+  | "customXmlConflictDelRangeEnd")
+}
+
+///|
 /// The range family an element belongs to, and whether it opens one.
-/// Every name `is_wml_range_marker_name` admits has an arm here, and
-/// the escape test below proves it.
+/// Every name `is_wml_range_marker_name` or `is_w14_conflict_range_name`
+/// admits has an arm here, and the escape test below proves it.
 fn range_family_of(element : ScannedElement) -> (RangeFamily, Bool)? {
+  if is_w14_uri(element.uri) {
+    return match element.local_name {
+      "customXmlConflictInsRangeStart" => Some((ConflictIns, true))
+      "customXmlConflictInsRangeEnd" => Some((ConflictIns, false))
+      "customXmlConflictDelRangeStart" => Some((ConflictDel, true))
+      "customXmlConflictDelRangeEnd" => Some((ConflictDel, false))
+      _ => None
+    }
+  }
   guard is_wml_uri(element.uri) else { return None }
   match element.local_name {
     "commentRangeStart" => Some((CommentRange, true))
@@ -662,6 +749,9 @@ fn delete_blocked_construct(uri : String, local_name : String) -> String? {
     | "conflictInsDel") {
     return Some("tracked-revision content")
   }
+  if is_w14_uri(uri) && is_w14_conflict_range_name(local_name) {
+    return Some("tracked-revision content")
+  }
   // Gated on WML like every neighbouring judgment: a foreign
   // `x:object` or `ns:sectPr` is not the construct this class names,
   // and refusing it would be a false refusal reported with the wrong
@@ -685,6 +775,12 @@ fn delete_blocked_construct(uri : String, local_name : String) -> String? {
     // it strands the item and its properties, the same family of hazard
     // as a note, a comment or a relationship.
     "dataBinding" => Some("a content-control data binding")
+    // `w:lock` on a content control: `sdtLocked` forbids deleting the
+    // control, `sdtContentLocked` forbids that and editing its content.
+    // Any lock refuses — Word's own answer to the deletion this verb
+    // would perform is "no", and a value this reader does not read
+    // (`unlocked` is rare in practice) errs toward that answer.
+    "lock" => Some("a content-control lock")
     // NOT "fldChar": a COMPLETE field inside the target — a page
     // number, a DATE, a REF, any TOC entry — balances within the span
     // and dangles nothing. Only a SPLIT one refuses, and splitness is
@@ -850,12 +946,16 @@ pub fn plan_docx_paragraph_deletion(
     if element.byte_start >= span.byte_start() {
       break
     }
-    match field_boundary_of(element) {
+    match conditional_field_boundary_of(elements, element) {
       Opens => field_depth += 1
       Closes => if field_depth > 0 { field_depth -= 1 }
       Unreadable =>
         raise delete_refusal(
           "field_region", "this story carries a field boundary whose type cannot be read, so field regions cannot be judged and this deletion refuses",
+        )
+      Conditional =>
+        raise delete_refusal(
+          "field_region", "this story carries a field boundary inside tracked-deleted or compatibility-alternative content, which is there for some consumers and not others, so field regions cannot be judged and this deletion refuses",
         )
       NotABoundary => ()
     }
@@ -872,7 +972,7 @@ pub fn plan_docx_paragraph_deletion(
       if element.byte_start < span.byte_end() {
         continue
       }
-      match field_boundary_of(element) {
+      match conditional_field_boundary_of(elements, element) {
         Opens => depth += 1
         Closes => {
           depth -= 1
@@ -884,6 +984,10 @@ pub fn plan_docx_paragraph_deletion(
         Unreadable =>
           raise delete_refusal(
             "field_region", "this story carries a field boundary whose type cannot be read, so field regions cannot be judged and this deletion refuses",
+          )
+        Conditional =>
+          raise delete_refusal(
+            "field_region", "this story carries a field boundary inside tracked-deleted or compatibility-alternative content, which is there for some consumers and not others, so field regions cannot be judged and this deletion refuses",
           )
         NotABoundary => ()
       }
@@ -911,7 +1015,15 @@ pub fn plan_docx_paragraph_deletion(
   for index, element in elements {
     if element.byte_start >= span.byte_start() &&
       element.byte_end <= span.byte_end() {
-      match field_boundary_of(element) {
+      match conditional_field_boundary_of(elements, element) {
+        // A boundary inside the target that is there for one consumer
+        // and not another: whether the field it belongs to is split
+        // across the target's edge cannot be judged, and the deletion
+        // refuses as exactly that.
+        Conditional =>
+          raise delete_refusal(
+            "field_region", "the target paragraph carries a field boundary inside tracked-deleted or compatibility-alternative content, which is there for some consumers and not others, so field regions cannot be judged and this deletion refuses",
+          )
         Opens => inside_field_depth += 1
         Closes => {
           inside_field_depth -= 1
