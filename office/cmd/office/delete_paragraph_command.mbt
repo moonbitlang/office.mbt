@@ -73,14 +73,14 @@ fn delete_paragraph_report_json(
     "output": Json::string(output),
     "at": Json::string(at),
     "expect_text": match expect_text {
-      Some(text) => Json::string(bounded_text(text, 160))
+      Some(text) => Json::string(bounded_text(text, DELETE_ECHO_LIMIT))
       None => Json::null()
     },
     // The assertion is compared in FULL; the echo is bounded like every
     // other text field, so the record says when replaying it verbatim
     // would not reproduce the run.
     "expect_text_truncated": match expect_text {
-      Some(text) => Json::boolean(text.iter().count() > 160)
+      Some(text) => Json::boolean(echo_truncated(text))
       None => Json::boolean(false)
     },
     "dry_run": Json::boolean(dry_run),
@@ -92,14 +92,14 @@ fn delete_paragraph_report_json(
         None => Json::null()
       },
       "paragraph_anchor_status": Json::string(report.anchor_status()),
-      "text": Json::string(bounded_text(report.text(), 160)),
+      "text": Json::string(bounded_text(report.text(), DELETE_ECHO_LIMIT)),
       // The record of what was destroyed must never look complete when
       // it is not: --expect-text compares the FULL projection, so a
       // caller feeding this field back needs to know it was cut.
       // Counted the way `bounded_text` cuts — by Unicode scalars, not
       // UTF-16 units — so the flag cannot disagree with the string it
       // describes.
-      "text_truncated": Json::boolean(report.text().iter().count() > 160),
+      "text_truncated": Json::boolean(echo_truncated(report.text())),
     }),
     // Re-anchoring: after this publish the deleted path names the
     // SUCCESSOR — its stable identity, when it has one, is how an
@@ -112,18 +112,30 @@ fn delete_paragraph_report_json(
     // emit no paraIds, and this was verified against the published
     // candidate.
     "successor_text": match report.successor_text() {
-      Some(text) => Json::string(bounded_text(text, 160))
+      Some(text) => Json::string(bounded_text(text, DELETE_ECHO_LIMIT))
       None => Json::null()
     },
     // The field an agent feeds to the NEXT --expect-text, so it must
     // say when feeding it back would not reproduce the run.
     "successor_text_truncated": match report.successor_text() {
-      Some(text) => Json::boolean(text.iter().count() > 160)
+      Some(text) => Json::boolean(echo_truncated(text))
       None => Json::boolean(false)
     },
     "stories_scanned": Json::array([Json::string("/body")]),
     "transaction": transaction,
   })
+}
+
+///|
+/// Every text echo in the record is cut at this many Unicode scalars,
+/// and every `_truncated` flag says whether that cut happened — ONE
+/// limit and ONE judgment, so a flag cannot disagree with the string
+/// it describes.
+const DELETE_ECHO_LIMIT : Int = 160
+
+///|
+fn echo_truncated(text : String) -> Bool {
+  text.iter().count() > DELETE_ECHO_LIMIT
 }
 
 ///|

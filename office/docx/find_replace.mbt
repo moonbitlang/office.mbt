@@ -122,8 +122,6 @@ pub fn DocxEditSession::queue_find_replace(
 }
 
 ///|
-/// Resolve a replace scope: stable `p[id="…"]` spellings become the
-/// carrier's CURRENT scan path; ordinal scopes pass through untouched.
 /// The exact single-segment stable spelling: `p[id="…"]` with a
 /// non-empty payload free of quotes and brackets (`p[id="` is six
 /// characters; the payload starts right after it). A shape check only —
@@ -146,6 +144,8 @@ pub fn docx_stable_target_shape_valid(value : String) -> Bool {
 }
 
 ///|
+/// Resolve a replace scope: stable `p[id="…"]` spellings become the
+/// carrier's CURRENT scan path; ordinal scopes pass through untouched.
 fn resolve_stable_replace_scope(
   session : DocxEditSession,
   scope : String,

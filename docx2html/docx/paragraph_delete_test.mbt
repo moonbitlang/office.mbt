@@ -1117,16 +1117,17 @@ test "paragraphs under a nested w:body are neither neighbours nor survivors" {
   let phantom = "<w:body><w:p><w:r><w:t>phantom</w:t></w:r></w:p></w:body>"
   // SURVIVOR: the target is the only real direct paragraph, and the
   // phantom must not keep the trailing-paragraph promise for it.
-  // Inside a `w:sectPr`, which the neighbour walk skips as zero-width,
-  // so this reaches the survivor count with nothing else in the way.
-  assert_true(
-    delete_refusal(
-      "<w:p><w:r><w:t>only</w:t></w:r></w:p><w:sectPr>" +
-      phantom +
-      "</w:sectPr>",
-      "p[1]",
-    ).contains("final direct body paragraph"),
+  // Inside a `w:sectPr`, which the neighbour walk skips as zero-width.
+  // The phantom's own `p[1]` collides with the real one in the scanner's
+  // path space, so the span lookup declines the ambiguous path before
+  // the survivor count is reached and the planner says so — a refusal
+  // either way. The count predicate is then pinned DIRECTLY: the
+  // phantom must not be counted as a survivor.
+  let survivor = delete_fixture(
+    "<w:p><w:r><w:t>only</w:t></w:r></w:p><w:sectPr>" + phantom + "</w:sectPr>",
   )
+  assert_true(delete_refusal_of(survivor, "p[1]").contains("place differently"))
+  assert_eq(@docx.docx_direct_body_paragraph_count(survivor), 1)
   // NEIGHBOUR: a phantom nested inside the table BEFORE the target is a
   // descendant, and a descendant appears later in the element order
   // than its ancestor — so a walk that kept the last qualifying element
@@ -1193,10 +1194,16 @@ test "every retained range marker has a family" {
       "<w:p><w:r><w:t>target</w:t></w:r></w:p>" +
       "<w:\{name} w:id=\"77\" w:name=\"R\"/>" +
       keeper
-    assert_not_eq(
-      delete_refusal(bracketed, "p[1]"),
-      "<planned>",
-      msg="\{name} was retained but not classified",
+    // The exact arm, not merely "not planned": a name dropped from
+    // `range_family_of` stops being zero-width and refuses as
+    // `neighbour_not_paragraph` instead — which a bare inequality
+    // cannot tell from the refusal this test is about.
+    let refusal = delete_refusal(bracketed, "p[1]")
+    assert_true(
+      refusal.contains(
+        "on both sides of the target that this reader cannot pair",
+      ),
+      msg="\{name} was retained but not classified: \{refusal}",
     )
   }
   // THE CONTROL. A body-level element that is NOT a range marker in the
@@ -1211,5 +1218,168 @@ test "every retained range marker has a family" {
       "p[1]",
     ),
     "<planned>",
+  )
+}
+
+///|
+/// A bookmark name is retained only when it could BE `_GoBack`, and the
+/// cap drops the OTHER spelling of a name spelled twice across the two
+/// WML dialects. A declined spelling is still a spelling: the caret
+/// exemption must not be earned by `w:name="_GoBack"` when an
+/// `s:name` this reader chose not to keep says otherwise.
+test "a declined second spelling of a bookmark name still counts" {
+  let keeper = "<w:p><w:r><w:t>keeper</w:t></w:r></w:p>"
+  let head = "<w:document xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\" xmlns:s=\"http://purl.oclc.org/ooxml/wordprocessingml/main\"><w:body>"
+  let tail = "<w:sectPr/></w:body></w:document>"
+  // INSIDE the target: eight bytes, over the cap, declined.
+  let inside = head +
+    "<w:p><w:bookmarkStart w:id=\"1\" w:name=\"_GoBack\" s:name=\"Chapter1\"/><w:bookmarkEnd w:id=\"1\"/><w:r><w:t>x</w:t></w:r></w:p>" +
+    keeper +
+    tail
+  assert_true(
+    delete_refusal_of(@docx.read_docx_annotated(fixture_docx(inside)), "p[1]").contains(
+      "carries a named bookmark",
+    ),
+  )
+  // BRACKETING the target: the exemption that would otherwise let the
+  // deletion through.
+  let bracketing = head +
+    "<w:bookmarkStart w:id=\"1\" w:name=\"_GoBack\" s:name=\"Chapter1\"/><w:p><w:r><w:t>x</w:t></w:r></w:p><w:bookmarkEnd w:id=\"1\"/>" +
+    keeper +
+    tail
+  assert_true(
+    delete_refusal_of(
+      @docx.read_docx_annotated(fixture_docx(bracketing)),
+      "p[1]",
+    ).contains("opened before it and closed after it"),
+  )
+  // THE CONTROL: the same shapes with the second spelling absent are
+  // a genuine caret and plan, so the assertions above are about the
+  // declined spelling and nothing else.
+  let honest = head +
+    "<w:bookmarkStart w:id=\"1\" w:name=\"_GoBack\"/><w:p><w:r><w:t>x</w:t></w:r></w:p><w:bookmarkEnd w:id=\"1\"/>" +
+    keeper +
+    tail
+  assert_eq(
+    delete_refusal_of(@docx.read_docx_annotated(fixture_docx(honest)), "p[1]"),
+    "<planned>",
+  )
+}
+
+///|
+/// Two starts of one id straddling the target, one end after: ECMA-376
+/// makes a start live when ANY later end matches, and the annotation
+/// index pairs FIFO, so the range from the FIRST start spans the
+/// target. Pairing with the most recent start instead let this plan.
+test "an end closes the earliest open start of its id" {
+  let keeper = "<w:p><w:r><w:t>keeper</w:t></w:r></w:p>"
+  let straddle = "<w:bookmarkStart w:id=\"1\" w:name=\"A\"/>" +
+    "<w:p><w:r><w:t>target</w:t></w:r></w:p>" +
+    "<w:bookmarkStart w:id=\"1\" w:name=\"B\"/>" +
+    "<w:p><w:r><w:t>three</w:t></w:r></w:p>" +
+    "<w:bookmarkEnd w:id=\"1\"/>" +
+    keeper
+  assert_true(
+    delete_refusal(straddle, "p[1]").contains(
+      "opened before it and closed after it",
+    ),
+  )
+  // Family-generic: the same shape in the comment family.
+  let comments = "<w:commentRangeStart w:id=\"1\"/>" +
+    "<w:p><w:r><w:t>target</w:t></w:r></w:p>" +
+    "<w:commentRangeStart w:id=\"1\"/>" +
+    "<w:p><w:r><w:t>three</w:t></w:r></w:p>" +
+    "<w:commentRangeEnd w:id=\"1\"/>" +
+    keeper
+  assert_true(
+    delete_refusal(comments, "p[1]").contains(
+      "opened before it and closed after it",
+    ),
+  )
+  // THE CONTROL: distinct ids pair one-to-one and the target sits in
+  // neither range... except it does not: id 1 is still open across it.
+  // So the control is the shape where NOTHING brackets the target.
+  let clear = "<w:p><w:r><w:t>target</w:t></w:r></w:p>" +
+    "<w:bookmarkStart w:id=\"1\" w:name=\"A\"/>" +
+    "<w:p><w:r><w:t>three</w:t></w:r></w:p>" +
+    "<w:bookmarkEnd w:id=\"1\"/>" +
+    keeper
+  assert_eq(delete_refusal(clear, "p[1]"), "<planned>")
+}
+
+///|
+/// A body-level wrapper the reader DROPS but the scanner COUNTS
+/// (`w:customXml`) gives its inner paragraphs the same `p[N]` as the
+/// body's own, so the span lookup and the projection disagree about
+/// which paragraph `p[2]` is. The span lookup now declines the
+/// ambiguous path, and the planner says what happened instead of
+/// "not a direct child" — a remediation that would send the caller
+/// looking for a wrapper around a paragraph that has none.
+test "a path two scan nodes claim refuses honestly" {
+  let collided = delete_fixture(
+    "<w:customXml w:element=\"x\"><w:p><w:r><w:t>X1</w:t></w:r></w:p><w:p><w:r><w:t>X2</w:t></w:r></w:p></w:customXml>" +
+    "<w:p><w:r><w:t>B1</w:t></w:r></w:p>" +
+    "<w:p><w:r><w:t>B2</w:t></w:r></w:p>" +
+    "<w:p><w:r><w:t>B3</w:t></w:r></w:p>",
+  )
+  // The reader says p[2] is B2 — the address is real.
+  assert_eq(
+    @docx.docx_paragraph_projection(
+      collided,
+      collided.main_story_source(),
+      path="p[2]",
+    ),
+    Some("B2"),
+  )
+  let refusal = delete_refusal_of(collided, "p[2]")
+  assert_true(refusal.has_prefix("delete/target_not_addressable"), msg=refusal)
+  assert_true(refusal.contains("place differently"), msg=refusal)
+  // p[3] is claimed by one node only and plans; its predecessor is B2.
+  let (_, receipt) = @docx.plan_docx_paragraph_deletion(collided, at="p[3]")
+  assert_eq(receipt.text(), "B3")
+  assert_eq(receipt.predecessor_text(), Some("B2"))
+}
+
+///|
+/// A flattened wrapper BEFORE the predecessor shifts every ordinal.
+/// Nothing pinned that the receipt's three texts then name the
+/// paragraph actually CUT — under the neighbour precondition a wrapper
+/// beside the target refuses, so this is the one shape that both
+/// shifts ordinals and plans. The bytes removed are checked against
+/// the text the receipt claims for them.
+test "a shifted ordinal cuts the paragraph the receipt names" {
+  let annotated = delete_fixture(
+    "<w:sdt><w:sdtContent><w:p><w:r><w:t>W</w:t></w:r></w:p></w:sdtContent></w:sdt>" +
+    "<w:p><w:r><w:t>one</w:t></w:r></w:p>" +
+    "<w:p><w:r><w:t>target</w:t></w:r></w:p>" +
+    "<w:p><w:r><w:t>keeper</w:t></w:r></w:p>",
+  )
+  let (_, receipt) = @docx.plan_docx_paragraph_deletion(annotated, at="p[3]")
+  assert_eq(receipt.path(), "p[3]")
+  assert_eq(receipt.text(), "target")
+  assert_eq(receipt.predecessor_path(), Some("p[2]"))
+  assert_eq(receipt.predecessor_text(), Some("one"))
+  assert_eq(receipt.successor_text(), Some("keeper"))
+  // The cut itself, at the BYTES: the witness must accept the story
+  // with exactly the target paragraph removed, and refuse the story
+  // with `one` removed instead — the neighbour a shifted ordinal would
+  // have cut.
+  let document = "<w:document xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\" xmlns:w14=\"http://schemas.microsoft.com/office/word/2010/wordml\"><w:body>" +
+    "<w:sdt><w:sdtContent><w:p><w:r><w:t>W</w:t></w:r></w:p></w:sdtContent></w:sdt>" +
+    "<w:p><w:r><w:t>one</w:t></w:r></w:p>" +
+    "<w:p><w:r><w:t>target</w:t></w:r></w:p>" +
+    "<w:p><w:r><w:t>keeper</w:t></w:r></w:p>" +
+    "<w:sectPr/></w:body></w:document>"
+  let same = @docx.read_docx_annotated(fixture_docx(document))
+  let (_, again) = @docx.plan_docx_paragraph_deletion(same, at="p[3]")
+  let target = "<w:p><w:r><w:t>target</w:t></w:r></w:p>"
+  let neighbour = "<w:p><w:r><w:t>one</w:t></w:r></w:p>"
+  assert_true(
+    again.cut().matches(@utf8.encode(document.replace(old=target, new=""))[:]),
+  )
+  assert_false(
+    again
+    .cut()
+    .matches(@utf8.encode(document.replace(old=neighbour, new=""))[:]),
   )
 }

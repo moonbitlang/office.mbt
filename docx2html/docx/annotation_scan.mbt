@@ -1588,7 +1588,19 @@ fn scan_story(
           // cannot say the name is `_GoBack`", which is the only
           // question a gate asks of it, and every consumer treats that
           // as an ordinary named bookmark — the conservative answer.
-          bookmark_name_raw: if is_wml_uri(uri) && local_name == "bookmarkStart" {
+          //
+          // A DECLINED spelling is a spelling. The name cap drops a value
+          // over seven bytes from `attributes` before this lookup, so
+          // `w:name="_GoBack" s:name="Chapter1"` (the second in the
+          // Strict dialect) would otherwise reach here as ONE readable
+          // `_GoBack` and earn the caret exemption — the fail-open
+          // direction on an irreversible verb. The declined QName is
+          // still in the unretained list, where the prefix scope
+          // resolves it; a WML-resolved `:name` there means the name
+          // was spelled more than once, whatever the retained one says.
+          bookmark_name_raw: if is_wml_uri(uri) &&
+            local_name == "bookmarkStart" &&
+            !declined_wml_name(unretained_attribute_names, namespaces) {
             unique_attribute_value(attributes, "name", namespaces)
           } else {
             None
@@ -2674,6 +2686,28 @@ fn annotation_attribute_is_relevant(
 fn is_relationships_uri(uri : String) -> Bool {
   uri == "http://schemas.openxmlformats.org/officeDocument/2006/relationships" ||
   uri == "http://purl.oclc.org/ooxml/officeDocument/relationships"
+}
+
+///|
+/// Whether any attribute this tag DECLINED to retain was a WML-resolved
+/// `:name` — the very attribute the bookmark capture would have read.
+/// A declined name must read as "spelled more than once", never as
+/// absent, and a foreign `v:name` must not count.
+fn declined_wml_name(
+  unretained : Array[String],
+  namespaces : StableStringMap[Array[String]],
+) -> Bool {
+  for qname in unretained {
+    let (prefix, local_name) = split_qualified_name(qname)
+    if local_name == "name" && prefix != "" {
+      match namespaces.get(prefix) {
+        Some(stack) if stack.length() > 0 &&
+          is_wml_uri(stack[stack.length() - 1]) => return true
+        _ => ()
+      }
+    }
+  }
+  false
 }
 
 ///|

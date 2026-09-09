@@ -97,18 +97,13 @@ pub fn DocxEditSession::queue_delete_paragraph(
   self : DocxEditSession,
   at~ : String,
 ) -> @word.DocxDeleteReceipt raise @transaction.TransactionError {
-  let old_count = @word.docx_direct_body_paragraph_count(self.annotated) catch {
-    // The planner's own refusal vocabulary, so its slug is stripped and
-    // its code is typed like every other refusal from here.
-    error => raise delete_plan_failure(error)
-  }
   // ONE per session. Every structural gate — the trailing-paragraph
   // guarantee above all — is computed against the UNEDITED snapshot,
   // which queuing does not change, so two deletions can each satisfy
   // "a paragraph remains" and jointly leave none. Asked BEFORE the part
   // lock below, which a second deletion would also trip: the specific
   // answer is the useful one.
-  guard !self.delete_queued else {
+  guard self.delete_expectation.val is None else {
     raise @transaction.transaction_failure(
       "office.delete.already_queued", "a session may queue ONE paragraph deletion: every structural guarantee is judged against the snapshot, so a second deletion would be judged against a document that no longer describes what will be published",
     )
@@ -121,6 +116,11 @@ pub fn DocxEditSession::queue_delete_paragraph(
     raise @transaction.transaction_failure(
       "office.delete.part_closed", "this transaction already edits the story a paragraph deletion would be planned against; a deletion is judged and verified against the whole part, so it cannot share one",
     )
+  }
+  let old_count = @word.docx_direct_body_paragraph_count(self.annotated) catch {
+    // The planner's own refusal vocabulary, so its slug is stripped and
+    // its code is typed like every other refusal from here.
+    error => raise delete_plan_failure(error)
   }
   let resolved = resolve_stable_replace_scope(self, at)
   // A STABLE id that resolved to a nested path reaches the planner's
@@ -152,7 +152,6 @@ pub fn DocxEditSession::queue_delete_paragraph(
   // Set only once something was actually QUEUED: a refused deletion
   // changed nothing, and burning the slot would make the retry the
   // refusal invites answer "already queued" — a claim that is false.
-  self.delete_queued = true
   // The readback expectation is recorded HERE, by the queuing, so it
   // holds for any session that queues a deletion — not only for the
   // verb below. `old_count` is read from the same immutable snapshot
@@ -223,6 +222,19 @@ fn delete_plan_failure(
         None => mapped_plan_failure(error)
       }
     _ => mapped_plan_failure(error)
+  }
+}
+
+///|
+/// The identity an anchor answers with, when it answers UNIQUELY. The
+/// planner recorded only unique identities, so a candidate where the
+/// same id now appears on two paragraphs must not satisfy the leg with
+/// whichever one the anchor happens to name — the insertion readback
+/// already judged it this way, and the two must not differ.
+fn unique_identity_of(anchor : @word.DocxParagraphAnchor?) -> String? {
+  match anchor {
+    Some(anchor) if anchor.status() == "unique" => anchor.para_id()
+    _ => None
   }
 }
 
@@ -308,10 +320,7 @@ fn delete_readback_findings(
   }
   match plan.successor_para_id {
     Some(id) => {
-      let answering = match anchors.anchor_at(plan.path) {
-        Some(anchor) => anchor.para_id()
-        None => None
-      }
+      let answering = unique_identity_of(anchors.anchor_at(plan.path))
       if answering != Some(id) {
         findings.push(
           @transaction.validation_finding(
@@ -370,10 +379,7 @@ fn delete_readback_findings(
   let predecessor_path = plan.predecessor_path.unwrap_or("")
   match plan.predecessor_para_id {
     Some(id) => {
-      let answering = match anchors.anchor_at(predecessor_path) {
-        Some(anchor) => anchor.para_id()
-        None => None
-      }
+      let answering = unique_identity_of(anchors.anchor_at(predecessor_path))
       if answering != Some(id) {
         findings.push(
           @transaction.validation_finding(

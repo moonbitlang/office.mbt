@@ -444,15 +444,30 @@ fn body_node_span_of_kind(
     if story != "/body" {
       continue
     }
+    // A path TWO nodes claim names nothing. Body-level wrappers the
+    // reader drops (`w:customXml`, `w:txbxContent`, an element it does
+    // not recognise) get their own ordinal counters in the scanner, so
+    // a paragraph inside one can carry the same `p[N]` as a direct body
+    // paragraph — and answering with whichever closed first sent every
+    // verb that resolves through here to a paragraph `office find`
+    // never reported. Declining is the safe direction for all of them;
+    // the collision itself is the scanner's to fix.
+    let mut found : NodeSpan? = None
     for node in scan.nodes() {
       if node.kind == kind && node.path == relative_path {
-        return Some({
+        if found is Some(_) {
+          return None
+        }
+        found = Some({
           byte_start: node.byte_start,
           byte_end: node.byte_end,
           content_start: node.content_start,
           close_tag_start: node.close_tag_start,
         })
       }
+    }
+    if found is Some(_) {
+      return found
     }
   }
   None

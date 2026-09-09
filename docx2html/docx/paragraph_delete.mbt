@@ -332,6 +332,22 @@ fn open_range_across(
     }
   }
 
+  // FIRST PASS: which ids a named bookmark uses, and which a caret
+  // uses. Collected before any pairing so the caret exemption is a fact
+  // about the STORY and not about which marker the walk met first — a
+  // named start sharing the caret's id AFTER the caret's end used to be
+  // invisible to the exemption, which is the over-refusal direction
+  // only, but a rule that depends on marker order is not a rule.
+  for element in elements {
+    guard range_family_of(element) is Some((family, true)) else { continue }
+    guard element.bookmark_id_raw is Some(raw) else { continue }
+    let key = (family, range_id_key(family, raw))
+    if element.bookmark_name_raw is Some("_GoBack") {
+      caret[key] = true
+    } else if element.local_name == "bookmarkStart" {
+      named[key] = true
+    }
+  }
   for element in elements {
     guard range_family_of(element) is Some((family, starts)) else { continue }
     guard element.bookmark_id_raw is Some(raw) else {
@@ -344,17 +360,20 @@ fn open_range_across(
     }
     let key = (family, range_id_key(family, raw))
     if starts {
-      if element.bookmark_name_raw is Some("_GoBack") {
-        caret[key] = true
-      } else if element.local_name == "bookmarkStart" {
-        named[key] = true
-      }
       let pending = open.get(key).unwrap_or([])
       pending.push(element.byte_start)
       open[key] = pending
     } else {
       let pending = open.get(key).unwrap_or([])
-      match pending.pop() {
+      // An end closes the EARLIEST open start of its id. ECMA-376 makes
+      // a start live when ANY later end matches it, and the annotation
+      // index pairs comment ranges the same way (FIFO). Pairing with the
+      // most recent start instead — LIFO — let two starts of one id that
+      // straddle the target pair the after-side one and strand the
+      // before-side one on its own, which is exactly the shape that
+      // plans a deletion from inside a live bookmark.
+      match
+        (if pending.length() > 0 { Some(pending.remove(0)) } else { None }) {
         Some(from) => {
           open[key] = pending
           note_interval(family, key, from, element.byte_end)
@@ -691,9 +710,11 @@ pub fn plan_docx_paragraph_deletion(
 ) -> (@splice.SplicePlan, DocxDeleteReceipt) raise DocxError {
   // Canonical as the reader spells them: `p[007]` is not a path any
   // surface emits, and admitting it here would let this seam accept
-  // addresses the CLI grammar refuses. (The rule is the DELETE verb's:
-  // `insert_anchor_ordinal` is shared with the shipped insertion
-  // planner, whose published contract this must not narrow.)
+  // addresses the CLI grammar refuses. Refused as GRAMMAR here rather
+  // than left to fail as structure below: `body_paragraph_span` matches
+  // the path string exactly, so a zero-padded ordinal can never resolve
+  // for insertion either — the two verbs differ only in which refusal
+  // they give it, and "reformat and retry" is the true one.
   guard !at.has_prefix("p[0") && insert_anchor_ordinal(at) is Some(ordinal) else {
     // GRAMMAR, not structure: the caller can reformat and retry. The
     // structural sibling below (a path that resolves but names a
@@ -704,6 +725,24 @@ pub fn plan_docx_paragraph_deletion(
     )
   }
   guard annotated.body_paragraph_span(at) is Some(span) else {
+    // TWO SURFACES answer "which paragraph is p[N]": the scanner's node
+    // paths, which the splice is cut from, and the reader's projection,
+    // which `office find` reports. A body-level wrapper the reader
+    // drops but the scanner counts (`w:customXml`, an element it does
+    // not know) gives its inner paragraphs the SAME `p[N]` as direct
+    // body paragraphs, and the span lookup declines an ambiguous path.
+    // If the reader still projects one here, the address is real and
+    // the remediation is not "re-address": say what actually happened.
+    if docx_paragraph_projection(
+        annotated,
+        annotated.main_story_source(),
+        path=at,
+      )
+      is Some(_) {
+      raise delete_refusal(
+        "target_not_addressable", "the delete-paragraph target names a paragraph this reader's read and edit surfaces place differently — a block the reader drops but the scanner counts sits before it — so which bytes to cut cannot be settled and this deletion refuses",
+      )
+    }
     raise delete_refusal(
       "target_not_found", "the delete-paragraph target does not resolve in this document",
     )
@@ -925,7 +964,7 @@ pub fn plan_docx_paragraph_deletion(
               "bookmark_unpairable", "the target paragraph carries a bookmark marker without a usable id; the pairing cannot be judged, so this deletion refuses",
             )
           }
-          let key = normalized_decimal_id(id)
+          let key = range_id_key(BookmarkRange, id)
           bookmark_starts[key] = bookmark_starts.get(key).unwrap_or(0) + 1
         }
         if element.local_name == "bookmarkEnd" {
@@ -934,7 +973,7 @@ pub fn plan_docx_paragraph_deletion(
               "bookmark_unpairable", "the target paragraph carries a bookmark marker without a usable id; the pairing cannot be judged, so this deletion refuses",
             )
           }
-          let key = normalized_decimal_id(id)
+          let key = range_id_key(BookmarkRange, id)
           bookmark_ends[key] = bookmark_ends.get(key).unwrap_or(0) + 1
         }
       }
@@ -1004,8 +1043,7 @@ pub fn plan_docx_paragraph_deletion(
       direct_paragraphs += 1
     }
   }
-  let keeps_trailing_paragraph = direct_paragraphs > 0
-  guard keeps_trailing_paragraph else {
+  guard direct_paragraphs > 0 else {
     raise delete_refusal(
       "final_paragraph", "the target is the final direct body paragraph; the document keeps it",
     )
@@ -1060,21 +1098,34 @@ pub fn plan_docx_paragraph_deletion(
     }
   }
 
-  let successor_para_id = unique_identity_at("p[\{ordinal + 1}]")
+  let successor_path = "p[\{ordinal + 1}]"
+  let successor_para_id = unique_identity_at(successor_path)
   // The paragraph BEFORE the target keeps its own path across the
   // splice, so it is a witness the readback can check without any
   // identity in the document. Absent when the target is `p[1]`.
-  let (predecessor_path, predecessor_para_id, predecessor_text) = if ordinal > 1 {
-    let path = "p[\{ordinal - 1}]"
-    (
-      Some(path),
-      unique_identity_at(path),
-      docx_paragraph_projection(annotated, story, path~),
-    )
+  let predecessor_path = if ordinal > 1 {
+    Some("p[\{ordinal - 1}]")
   } else {
-    (None, None, None)
+    None
   }
-  guard docx_paragraph_projection(annotated, story, path=at) is Some(text) else {
+  let predecessor_para_id = match predecessor_path {
+    Some(path) => unique_identity_at(path)
+    None => None
+  }
+  // ONE projection call for the three paths: each single-path call
+  // rebuilds the whole story index, and the batch form exists for
+  // exactly this.
+  let projections = docx_paragraphs_projection(annotated, story, paths=[
+    at,
+    successor_path,
+    predecessor_path.unwrap_or(at),
+  ])
+  let predecessor_text = match predecessor_path {
+    Some(_) => projections.get(2).unwrap_or(None)
+    None => None
+  }
+  let successor_text = projections.get(1).unwrap_or(None)
+  guard projections.get(0).unwrap_or(None) is Some(text) else {
     raise delete_refusal(
       "target_not_addressable", "the delete-paragraph target has no readable projection in this document, so this deletion refuses",
     )
@@ -1092,11 +1143,6 @@ pub fn plan_docx_paragraph_deletion(
   plan.edit_part(
     part,
     @splice.span_edit(start=span.byte_start(), end=span.byte_end(), b""),
-  )
-  let successor_text = docx_paragraph_projection(
-    annotated,
-    story,
-    path="p[\{ordinal + 1}]",
   )
   // AT LEAST ONE WITNESS BINDS THE ADDRESS TO CONTENT.
   //

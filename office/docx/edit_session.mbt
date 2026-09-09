@@ -48,10 +48,6 @@ pub struct DocxEditSession {
   priv xml_budget : @xml.XmlReadBudget
   priv mut plan : @splice.SplicePlan
   priv mut plan_mode : DocxEditPlanMode
-  // A paragraph deletion judges structural guarantees against the
-  // SNAPSHOT, which queuing does not change, so only one may be queued
-  // per session. See `queue_delete_paragraph`.
-  priv mut delete_queued : Bool
   // What a queued deletion must read back as, shared with the validator
   // the TRANSACTION installed before this session existed. The readback
   // travels with the QUEUING, not with the verb that happens to call
@@ -310,7 +306,6 @@ fn open_edit_session(
     xml_budget,
     plan: @splice.SplicePlan::new(),
     plan_mode: Empty,
-    delete_queued: false,
     delete_expectation,
   }
 }
@@ -347,7 +342,7 @@ fn DocxEditSession::adopt_plan(
   // happened is that something else landed too.
   //
   // The deletion's OWN plan passes: the latch is set after it queues.
-  if self.delete_queued && self.delete_expectation.val is Some(expectation) {
+  if self.delete_expectation.val is Some(expectation) {
     let closed = expectation.cut.part()
     guard !plan.declared_parts().contains(closed) else {
       raise docx_failure(

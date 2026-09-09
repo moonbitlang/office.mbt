@@ -710,17 +710,22 @@ test "a bookmark name too long to be _GoBack costs no retained characters" {
   // The smallest retained-character ceiling this story scans under.
   fn minimal_ceiling(source : String) -> Int {
     for ceiling = 8; ceiling <= 16384; ceiling = ceiling + 8 {
-      let scanned = try? scan_projection_source_tree(
-        @utf8.encode(source),
-        budget=projection_source_budget(
-          max_elements=64,
-          max_attribute_chars=ceiling,
-          max_depth=8,
-          max_text_bytes=64,
-          max_text_tokens=64,
+      let mut fits = true
+      ignore(
+        scan_projection_source_tree(
+          @utf8.encode(source),
+          budget=projection_source_budget(
+            max_elements=64,
+            max_attribute_chars=ceiling,
+            max_depth=8,
+            max_text_bytes=64,
+            max_text_tokens=64,
+          ),
         ),
-      )
-      if scanned is Ok(_) {
+      ) catch {
+        _ => fits = false
+      }
+      if fits {
         return ceiling
       }
     }

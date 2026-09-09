@@ -127,7 +127,7 @@ annotation_scan.mbt	moveFromRangeStart	is_revision_site_name	name	annotation_sca
 annotation_scan.mbt	moveTo	is_revision_site_name	name	annotation_scan:"scanner: every revision-site name records a site"
 annotation_scan.mbt	moveToRangeEnd	is_revision_site_name	name	annotation_scan:"scanner: every revision-site name records a site"
 annotation_scan.mbt	moveToRangeStart	is_revision_site_name	name	annotation_scan:"scanner: every revision-site name records a site"
-annotation_scan.mbt	name	scan_story	name	paragraph_delete_test:"deletion refusals are typed per construct"
+annotation_scan.mbt	name	declined_wml_name,scan_story	name	paragraph_delete_test:"deletion refusals are typed per construct"
 annotation_scan.mbt	note	projection_kind	value	annotation_scan:"scanner review round 3: vMerge fail-open, property-container markers, projection kinds"; annotation_scan:"scanner review round 1: plumbing notes are suppressed, user notes counted"
 annotation_scan.mbt	numberingChange	is_revision_site_name	name	annotation_scan:"scanner: every revision-site name records a site"
 annotation_scan.mbt	object	is_transparent_container	name	annotation_scan:"scanner: MC selection, named entities, and the default namespace"
@@ -596,7 +596,6 @@ paragraph_identity.mbt	p	docx_paragraph_anchor_index	name	paragraph_identity_tes
 paragraph_identity.mbt	shared-physical-source	docx_paragraph_anchor_join_index	value	paragraph_identity_test:"anchor join refuses the nested-paragraph shape"
 paragraph_identity.mbt	unique	DocxParagraphAnchorIndex::resolve_para_id_carrier,docx_paragraph_anchor_index	value	paragraph_identity_test:"identity reports unique and missing anchors"; paragraph_identity_test:"para_id resolution refuses every contested identity"
 paragraph_identity.mbt	unjudged-paragraph	docx_paragraph_anchor_join_index	value	(unreachable: projection paragraphs always retain at least one source, so the anchors-array None entry never answers)
-paragraph_insert.mbt	body	plan_docx_paragraph_insertion	name	paragraph_insert_test:"insertion refuses an anchor wrapped by a content control"; paragraph_insert_test:"insertion plans splice and read back with the minted identity"
 paragraph_insert.mbt	mc	plan_docx_paragraph_insertion	name	paragraph_insert_test:"insertion refuses the v1 boundaries"
 paragraph_insert.mbt	p	plan_docx_paragraph_insertion	name	paragraph_insert_test:"insertion refuses an anchor wrapped by a content control"; paragraph_insert_test:"insertion refuses the v1 boundaries"
 paragraph_insert.mbt	run text	plan_docx_paragraph_insertion	noise	paragraph_insert_test:"insertion refuses the v1 boundaries"
