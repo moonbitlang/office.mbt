@@ -3,5 +3,4 @@ import {
   "moonbitlang/pdflite/syntax",
   "moonbitlang/core/debug",
   "moonbitlang/core/encoding/utf8",
-  "moonbitlang/core/json",
 }

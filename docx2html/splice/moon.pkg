@@ -2,7 +2,6 @@ import {
   "moonbitlang/docx2html/core",
   "moonbitlang/docx2html/xml",
   "moonbit-community/flate/zip" @mbtzip,
-  "moonbitlang/core/encoding/utf8",
   "moonbitlang/core/sorted_map",
   "moonbitlang/core/sorted_set",
 }

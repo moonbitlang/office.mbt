@@ -14,7 +14,6 @@ import {
   "moonbitlang/docx2html/core",
   "moonbit-community/flate/zip",
   "moonbitlang/core/encoding/utf8",
-  "moonbitlang/pagelayout",
   "moonbitlang/pagelayout/paginate",
   "moonbitlang/pagelayout/paragraph",
 } for "test"

@@ -3,7 +3,6 @@ import {
   "moonbit-community/flate/zip",
   "moonbitlang/docx2html/opc",
   "moonbitlang/docx2html/xml",
-  "moonbitlang/core/debug",
   "moonbitlang/core/encoding/utf16",
   "moonbitlang/core/encoding/utf8",
   "moonbitlang/core/json",

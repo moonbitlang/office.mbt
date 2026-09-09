@@ -4,7 +4,6 @@ import {
   "moonbitlang/pdflite/syntax",
   "moonbitlang/core/debug",
   "moonbitlang/core/encoding/ascii",
-  "moonbitlang/core/json",
 }
 
 import {

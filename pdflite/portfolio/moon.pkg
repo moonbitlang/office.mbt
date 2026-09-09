@@ -1,9 +1,7 @@
 import {
   "moonbitlang/core/debug",
   "moonbitlang/pdflite/core",
-  "moonbitlang/core/json",
 }
 
 import {
-  "moonbitlang/core/test",
 } for "test"

@@ -4,10 +4,8 @@ import {
   "moonbitlang/async",
   "moonbitlang/async/fs" @afs,
   "moonbitlang/async/os_error",
-  "moonbitlang/core/encoding/utf8",
   "moonbitlang/core/debug",
   "moonbitlang/core/env",
-  "moonbitlang/core/json",
   "moonbitlang/core/sorted_map",
   "moonbitlang/x/path",
 }

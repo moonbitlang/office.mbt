@@ -4,6 +4,5 @@ import {
   "moonbitlang/pdflite/geometry",
   "moonbitlang/pdflite/syntax",
   "moonbitlang/core/encoding/utf8",
-  "moonbitlang/core/json",
   "moonbitlang/core/math",
 }

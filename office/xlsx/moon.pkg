@@ -7,7 +7,6 @@ import {
   "moonbitlang/office-lib/template",
   "moonbitlang/office-lib/transaction",
   "moonbitlang/core/debug",
-  "moonbitlang/core/json",
 }
 
 import {

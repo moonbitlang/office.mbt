@@ -3,7 +3,6 @@ import {
   "moonbitlang/x/crypto",
   "moonbit-community/flate/zip",
   "moonbit-community/flate/checksum" @flate_checksum,
-  "moonbitlang/docx2html/core",
   "moonbitlang/docx2html/opc",
   "moonbitlang/docx2html/paths" @docxpaths,
   "moonbitlang/docx2html/xml",

@@ -3,9 +3,7 @@ import {
   "moonbitlang/pdflite/content",
   "moonbitlang/pdflite/geometry",
   "moonbitlang/pdflite/shape",
-  "moonbitlang/core/json",
 }
 
 import {
-  "moonbitlang/core/test",
 } for "test"

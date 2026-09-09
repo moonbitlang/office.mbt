@@ -3,5 +3,4 @@ import {
   "moonbitlang/docx2html/core",
   "moonbitlang/core/encoding/utf8",
   "moonbitlang/core/sorted_map",
-  "moonbitlang/core/string",
 }

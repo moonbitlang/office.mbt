@@ -7,7 +7,6 @@ import {
   "moonbitlang/pdflite",
   "moonbitlang/pdflite/content",
   "moonbitlang/pdflite/core",
-  "moonbitlang/pdflite/geometry",
   "moonbitlang/pdflite/page",
   "moonbitlang/pdflite/syntax",
   "moonbitlang/core/encoding/utf8",

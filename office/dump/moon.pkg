@@ -9,7 +9,6 @@ import {
   "moonbitlang/core/debug",
   "moonbitlang/core/encoding/base64",
   "moonbitlang/core/encoding/utf8",
-  "moonbitlang/core/json",
   "moonbitlang/x/crypto",
 }
 
@@ -17,7 +16,6 @@ import {
   "moonbitlang/docx2html" @word,
   "moonbitlang/core/encoding/base64" @b64,
   "moonbitlang/docx2html/document",
-  "moonbitlang/docx2html/docx",
   "moonbitlang/mbtexcel/batch",
   "moonbitlang/mbtexcel/xlsx",
   "moonbit-community/flate/zip",
