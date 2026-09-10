@@ -3,6 +3,7 @@ name = "moonbitlang/pdflite"
 version = "0.1.41"
 
 import {
+  "moonbit-community/flate@0.7.3",
   "moonbitlang/async@0.20.2",
   "moonbitlang/x@0.4.50",
   "moonbitlang/mbtexcel@0.1.8",

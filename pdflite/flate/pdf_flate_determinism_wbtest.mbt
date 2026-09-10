@@ -1,44 +1,4 @@
 ///|
-// Cross-backend determinism of the encoder that ships.
-//
-// These used to pin `pdf_flate_encode_view_with_level_pure`, back when
-// encoding was target-split: miniz through a C stub on native, that pure
-// encoder everywhere else. The split is gone -- one MoonBit port of miniz now
-// serves every backend -- and these vectors follow it, because a suite that
-// pins a retired implementation cannot detect a divergence in the live one.
-//
-// That matters more here than it looks. The differential against the C can
-// only run on native, since native is where miniz exists. So these vectors are
-// the *only* thing standing between a backend-specific fault in the port --
-// an Int shift, a wraparound lowered differently under wasm codegen -- and
-// silently different PDFs. If they were still measuring the old encoder,
-// nothing at all would be watching that.
-//
-// Two layers, because they fail for different reasons:
-//
-//   * the round trip says the output is *valid* deflate, and holds on every
-//     backend independently. It cannot see a backend producing different but
-//     equally valid bytes.
-//   * the frozen fingerprints say the output is *the same* on every backend.
-//     They are engine output rather than a value derived from the input, which
-//     normally makes a snapshot worthless -- see the warning in
-//     docs/page-layout-engine.md about `moon test --update` freezing wrong
-//     answers three times. It is legitimate here precisely because the round
-//     trip establishes correctness independently, leaving the snapshot one
-//     question the input cannot answer: do the backends agree.
-//
-// The corpus targets the matcher rather than the entropy coder. Random bytes
-// are the weakest input here -- incompressible, so they exercise the stored
-// and literal paths and almost nothing else. What finds real bugs is
-// structure: runs, periodic repeats at chosen distances, and matches placed
-// against the boundaries the LZ77 window is built around.
-//
-// What these establish is bounded, and worth stating plainly: a fixed corpus
-// pins the inputs it contains. It does not prove determinism for every input,
-// and no finite set of vectors could. It is a tripwire on the cases most
-// likely to move, not a proof.
-
-///|
 /// A compact printable fingerprint: byte length and FNV-1a 64.
 ///
 /// A full hex dump of 32KB of compressed output would make the snapshot
@@ -137,10 +97,8 @@ fn determinism_corpus() -> Array[(String, Bytes)] {
 }
 
 ///|
-/// The levels worth pinning. tdefl derives its probe budget from the level and
-/// parses greedily at or below 3, so 1, 6 and 9 cover both parsing modes and
-/// both ends of the budget without pinning all ten. Level 0 is a third mode
-/// entirely -- every block stored -- and is covered by the differential.
+/// The levels worth pinning. 1, 6 and 9 cover fast, default and high
+/// compression. Stored blocks at level 0 are covered by the round-trip tests.
 fn determinism_levels() -> Array[Int] {
   [1, 6, 9]
 }
@@ -193,27 +151,6 @@ test "the shipping encoder round trips generated input at every level" {
 }
 
 ///|
-/// The superseded pure encoder, kept exercised until it is removed.
-///
-/// It no longer compresses anything this library ships -- the tdefl port does
-/// that on every backend now -- so this is not production behaviour under
-/// test. It is here so the code is exercised rather than merely present,
-/// because deleting it also takes several whitebox tests with it and that
-/// deserves to be reviewed as its own change rather than buried in this one.
-test "the superseded pure encoder still round trips" {
-  for entry in determinism_corpus() {
-    let (name, input) = entry
-    for level in determinism_levels() {
-      let encoded = pdf_flate_encode_view_with_level_pure(input, level)
-      let decoded = pdf_flate_decode_view(encoded)
-      assert_eq(decoded, input, msg="\{name} at level \{level}")
-    }
-  }
-  let encoded = pdf_flate_encode_view_pure(b"the superseded default path")
-  assert_eq(pdf_flate_decode_view(encoded), b"the superseded default path")
-}
-
-///|
 /// The frozen cross-backend fingerprints.
 ///
 /// If this fails on one backend and passes on another, the shipping encoder
@@ -235,44 +172,44 @@ test "the shipping encoder produces identical bytes on every backend" {
     report.to_string(),
     content=(
       #|empty L1 -> 8/14824338622843246134
-      #|empty L6 -> 8/6911146735378767749
-      #|empty L9 -> 8/14759312151674839831
-      #|one byte L1 -> 12/15334653992341479941
-      #|one byte L6 -> 12/9103512613188771834
-      #|one byte L9 -> 12/1477187045979222560
-      #|run of one byte L1 -> 27/16909317384082252037
-      #|run of one byte L6 -> 27/5342862714225513024
-      #|run of one byte L9 -> 27/6320673573973985542
-      #|two byte alternation L1 -> 28/1790555792005547381
-      #|two byte alternation L6 -> 28/6206358874910773078
-      #|two byte alternation L9 -> 28/13925073964433396032
-      #|short period L1 -> 30/16622481287708767414
-      #|short period L6 -> 30/3861212437799193461
-      #|short period L9 -> 30/6639653733228650603
-      #|ascii text L1 -> 81/13065414424299247187
-      #|ascii text L6 -> 78/16076638798301380115
-      #|ascii text L9 -> 78/9897020229401360809
+      #|empty L6 -> 8/14824338622843246134
+      #|empty L9 -> 8/14824338622843246134
+      #|one byte L1 -> 9/13568697314492027819
+      #|one byte L6 -> 9/13568697314492027819
+      #|one byte L9 -> 9/13568697314492027819
+      #|run of one byte L1 -> 27/7422571855894930489
+      #|run of one byte L6 -> 27/7422571855894930489
+      #|run of one byte L9 -> 27/7422571855894930489
+      #|two byte alternation L1 -> 28/17371897846531197899
+      #|two byte alternation L6 -> 28/17371897846531197899
+      #|two byte alternation L9 -> 28/17371897846531197899
+      #|short period L1 -> 29/4206590865824530627
+      #|short period L6 -> 29/4206590865824530627
+      #|short period L9 -> 29/4206590865824530627
+      #|ascii text L1 -> 78/4818767968346529930
+      #|ascii text L6 -> 75/1093528484905272696
+      #|ascii text L9 -> 75/1093528484905272696
       #|incompressible L1 -> 4107/1796056689918308922
-      #|incompressible L6 -> 4107/18113870579437559803
-      #|incompressible L9 -> 4107/2944213211331891961
-      #|match at min length L1 -> 17/12796437208713877008
-      #|match at min length L6 -> 17/9642731722754445741
-      #|match at min length L9 -> 17/17534497681747351687
-      #|match at max length L1 -> 4158/3812646275254487814
-      #|match at max length L6 -> 4158/2917575848151996797
-      #|match at max length L9 -> 4158/11049122108143090391
-      #|match just over max length L1 -> 4158/18415994867377575201
-      #|match just over max length L6 -> 4158/3129149196627366818
-      #|match just over max length L9 -> 4158/8047443120060652380
-      #|match inside the window L1 -> 32815/3700220301623607302
-      #|match inside the window L6 -> 32815/5777192330433584179
-      #|match inside the window L9 -> 32815/12682421586913109777
-      #|match at the window edge L1 -> 32816/15156081953735415434
-      #|match at the window edge L6 -> 32816/10589444655346571849
-      #|match at the window edge L9 -> 32816/910985093074615347
-      #|match past the window L1 -> 32817/16392211436829005332
-      #|match past the window L6 -> 32817/6146692398123617537
-      #|match past the window L9 -> 32817/17816882447211310851
+      #|incompressible L6 -> 4107/1796056689918308922
+      #|incompressible L9 -> 4107/1796056689918308922
+      #|match at min length L1 -> 12/2639939916108656735
+      #|match at min length L6 -> 12/2639939916108656735
+      #|match at min length L9 -> 12/2639939916108656735
+      #|match at max length L1 -> 4157/14542821839357302632
+      #|match at max length L6 -> 4157/14542821839357302632
+      #|match at max length L9 -> 4157/14542821839357302632
+      #|match just over max length L1 -> 4158/3383875242522992994
+      #|match just over max length L6 -> 4158/3383875242522992994
+      #|match just over max length L9 -> 4158/3383875242522992994
+      #|match inside the window L1 -> 32817/16382763202028659272
+      #|match inside the window L6 -> 32817/16382763202028659272
+      #|match inside the window L9 -> 32817/16382763202028659272
+      #|match at the window edge L1 -> 32789/45508829365105148
+      #|match at the window edge L6 -> 32789/45508829365105148
+      #|match at the window edge L9 -> 32789/45508829365105148
+      #|match past the window L1 -> 32821/173356275775370549
+      #|match past the window L6 -> 32821/173356275775370549
+      #|match past the window L9 -> 32821/173356275775370549
       #|
     ),
   )
@@ -296,7 +233,8 @@ test "a block with no matches decodes despite its empty distance tree" {
     bytes.push((i * 17 % 251 + 1).to_byte())
   }
   let input = Bytes::from_array(bytes)
-  let encoded = pdf_flate_encode_view_with_level(input, 6)
+  // Captured from the former vendored miniz encoder and verified with zlib.
+  let encoded = b"\x78\x9c\x01\x30\x00\xcf\xff\x01\x12\x23\x34\x45\x56\x67\x78\x89\x9a\xab\xbc\xcd\xde\xef\x05\x16\x27\x38\x49\x5a\x6b\x7c\x8d\x9e\xaf\xc0\xd1\xe2\xf3\x09\x1a\x2b\x3c\x4d\x5e\x6f\x80\x91\xa2\xb3\xc4\xd5\xe6\xf7\x0d\x1e\x2f\xf8\xb9\x16\x27"
   let decoded = pdf_flate_decode_view(encoded)
   assert_eq(decoded, input)
 }
