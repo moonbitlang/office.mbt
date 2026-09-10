@@ -5,7 +5,10 @@ import {
 }
 
 import {
+  "moonbitlang/core/test",
 } for "wbtest"
+
+warnings = "-unused_package"
 
 options(
   targets: { "pdf_afm_wbtest.mbt": [ "wasm-gc", "js", "native", "llvm" ] },

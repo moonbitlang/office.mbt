@@ -5,7 +5,10 @@ import {
 }
 
 import {
+  "moonbitlang/core/test",
 } for "test"
+
+warnings = "-unused_package"
 
 options(
   targets: {
