@@ -18,7 +18,7 @@ import {
   "moonbitlang/docx2html@0.5.0",
   "moonbitlang/mbtexcel@0.1.9",
   "moonbitlang/pdflite@0.1.41",
-  "moonbit-community/flate@0.7.3",
+  "moonbit-community/flate@0.8.0",
 }
 
 warnings = "+a-unused_optional_argument-unused_default_value-missing_invariant-missing_reasoning"

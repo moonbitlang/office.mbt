@@ -27,7 +27,7 @@ import {
   "moonbitlang/mbtexcel@0.1.9",
   "moonbitlang/x@0.4.50",
   "moonbitlang/async@0.20.2",
-  "moonbit-community/flate@0.7.3",
+  "moonbit-community/flate@0.8.0",
 }
 
 preferred_target = "native"
