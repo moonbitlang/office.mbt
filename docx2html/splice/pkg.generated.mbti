@@ -1,9 +1,9 @@
 // Generated using `moon info`, DON'T EDIT IT
-package "bobzhang/docx2html/splice"
+package "moonbitlang/docx2html/splice"
 
 import {
-  "bobzhang/docx2html/core",
   "moonbit-community/flate/zip",
+  "moonbitlang/docx2html/core",
 }
 
 // Values

@@ -1,6 +1,6 @@
 # pdflite/flate
 
-`bobzhang/pdflite/flate` implements the Flate filter used by PDF streams. It
+`moonbitlang/pdflite/flate` adapts `moonbit-community/flate/zlib` for PDF streams. It
 works on `Bytes` and `BytesView`, exposes default and level-controlled encoders,
 and can decode one Flate stream prefix from a larger byte sequence.
 
@@ -46,16 +46,22 @@ test "prefix decoder reports consumed compressed bytes" {
 
 - Decode failures raise `PdfError::InvalidFlateData`.
 - `BytesView` entry points avoid copying caller-owned stream data before decode.
-- The native zlib stub is configured for the package, while the MoonBit fallback
-  logic and guards remain covered by tests.
+- All targets use the same pure MoonBit community encoder and decoder.
+- Decoding enforces a 1 GiB output limit (`FlateOutputLimitExceeded`).
+- Empty input decodes to empty output. Decode ignores bytes after the first
+  complete zlib stream, retaining the native decoder's PDF repair tolerance.
+  Use the prefix API when the caller also needs the stream's encoded length.
+- Compression levels outside 0–9 raise `InvalidFlateData`.
+- Compressed bytes may differ from older miniz-based releases; the public
+  signatures and decoded content are preserved.
 
 ## Pedantic Boundaries
 
 - This package owns the Flate byte filter only. PDF stream dictionaries,
   predictor parameters, and `/Filter` dispatch live in the root package.
 - Decode APIs must reject malformed zlib/deflate data with
-  `PdfError::InvalidFlateData`; partial success should be exposed only through
-  explicit prefix APIs.
+  `PdfError::InvalidFlateData`. A stream must reach its end and pass checksum
+  validation; bytes following that complete stream are tolerated for PDF repair.
 - Encoding level is an implementation choice except where a caller uses the
   level-controlled APIs. Correctness tests should assert round trips, not a
   particular compressed byte sequence.

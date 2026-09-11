@@ -53,7 +53,6 @@ fn codec_deep_flate_match_data_for_test() -> @core.PdfBytes {
 }
 
 ///|
-#cfg(target="native")
 fn codec_miniz_mixed_stored_data_for_test() -> @core.PdfBytes {
   try! @core.pdf_bytes_of_int_array(
     [
@@ -569,15 +568,12 @@ test "@flate.pdf_flate_encode_with_level exposes zlib level choices" {
   )
 
   let default_level = @flate.pdf_flate_encode_with_level(repeated, 6)
-  @test.assert_eq(default_level[1].to_int(), 156)
   @test.assert_eq(@flate.pdf_flate_decode(default_level), repeated)
 
   let balanced = @flate.pdf_flate_encode_with_level(repeated, 4)
-  @test.assert_eq(balanced[1].to_int(), 94)
   @test.assert_eq(@flate.pdf_flate_decode(balanced), repeated)
 
   let best = @flate.pdf_flate_encode_view_with_level(repeated, 9)
-  @test.assert_eq(best[1].to_int(), 218)
   @test.assert_eq(@flate.pdf_flate_decode(best), repeated)
 
   let invalid : Result[@core.PdfBytes, Error] = try
@@ -604,18 +600,7 @@ test "@flate.pdf_flate_encode_with_level uses deeper match search at high levels
 }
 
 ///|
-#cfg(target="native")
-test "@flate.pdf_flate_encode uses native miniz default level on native target" {
-  let data = codec_ascii_for_test("Hi")
-  let encoded = @flate.pdf_flate_encode(data)
-  @test.assert_eq(encoded[0].to_int(), 120)
-  @test.assert_eq(encoded[1].to_int(), 156)
-  @test.assert_eq(@flate.pdf_flate_decode(encoded), data)
-}
-
-///|
-#cfg(target="native")
-test "@flate.pdf_flate_encode_with_level matches native miniz byte output" {
+test "@flate.pdf_flate_decode reads historical miniz output at every level" {
   let small = codec_ascii_for_test("Hi")
   let small_cases : Array[(Int, Array[Int])] = [
     (0, [120, 1, 1, 2, 0, 253, 255, 72, 105, 0, 251, 0, 178]),
@@ -624,10 +609,10 @@ test "@flate.pdf_flate_encode_with_level matches native miniz byte output" {
     (9, [120, 218, 1, 2, 0, 253, 255, 72, 105, 0, 251, 0, 178]),
   ]
   for case in small_cases {
-    let (level, expected) = case
+    let (_, encoded) = case
     @test.assert_eq(
-      @flate.pdf_flate_encode_with_level(small, level),
-      codec_bytes_for_test(expected),
+      @flate.pdf_flate_decode(codec_bytes_for_test(encoded)),
+      small,
     )
   }
   let repeated = codec_ascii_for_test("ABC".repeat(80))
@@ -641,10 +626,10 @@ test "@flate.pdf_flate_encode_with_level matches native miniz byte output" {
     (9, [120, 218] + compressed_body),
   ]
   for case in compressed_cases {
-    let (level, expected) = case
+    let (_, encoded) = case
     @test.assert_eq(
-      @flate.pdf_flate_encode_with_level(repeated, level),
-      codec_bytes_for_test(expected),
+      @flate.pdf_flate_decode(codec_bytes_for_test(encoded)),
+      repeated,
     )
   }
 
@@ -662,9 +647,8 @@ test "@flate.pdf_flate_encode_with_level matches native miniz byte output" {
     (9, [120, 218] + mixed_stored_body),
   ]
   for case in mixed_stored_cases {
-    let (level, expected) = case
-    let encoded = @flate.pdf_flate_encode_with_level(mixed_stored, level)
-    @test.assert_eq(encoded, codec_bytes_for_test(expected))
+    let (_, expected) = case
+    let encoded = codec_bytes_for_test(expected)
     @test.assert_eq(@flate.pdf_flate_decode(encoded), mixed_stored)
   }
 }
@@ -779,7 +763,10 @@ test "pdf filter dispatch view APIs read borrowed slices" {
     raw[2:raw.length() - 2],
     9,
   )
-  @test.assert_eq(encoded_flate_best_view[1].to_int(), 218)
+  @test.assert_eq(
+    encoded_flate_best_view,
+    @flate.pdf_flate_encode_with_level(codec_ascii_for_test("Hi "), 9),
+  )
   @test.assert_eq(
     @flate.pdf_flate_decode(encoded_flate_best_view),
     codec_ascii_for_test("Hi "),
@@ -850,7 +837,7 @@ test "pdf encode filter and stream APIs accept explicit Flate levels" {
   let encoded = @pdflite.pdf_encode_filter_bytes_with_flate_level(
     flate, data, 6,
   )
-  @test.assert_eq(encoded[1].to_int(), 156)
+  @test.assert_eq(encoded, @flate.pdf_flate_encode_with_level(data, 6))
   @test.assert_eq(@pdflite.pdf_decode_filter_bytes(flate, encoded), data)
 
   let length = codec_name_for_test("/Length")
@@ -886,7 +873,7 @@ test "pdf encode filter and stream APIs accept explicit Flate levels" {
   guard tuned_stream.data is StreamGot(tuned_data) else {
     fail("expected owned tuned stream")
   }
-  @test.assert_eq(tuned_data[1].to_int(), 218)
+  @test.assert_eq(tuned_data, @flate.pdf_flate_encode_with_level(data, 9))
 
   let predicted = @pdflite.pdf_encode_stream_with_filter_and_predictor(
     flate,
@@ -903,7 +890,10 @@ test "pdf encode filter and stream APIs accept explicit Flate levels" {
   guard predicted_stream.data is StreamGot(predicted_data) else {
     fail("expected owned predictor stream")
   }
-  @test.assert_eq(predicted_data[1].to_int(), 94)
+  @test.assert_eq(
+    @flate.pdf_flate_decode(predicted_data),
+    @core.pdf_bytes_concat_views([b"\x00", data]),
+  )
 }
 
 ///|

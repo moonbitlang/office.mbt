@@ -1,5 +1,5 @@
 // Generated using `moon info`, DON'T EDIT IT
-package "bobzhang/pdflite/core"
+package "moonbitlang/pdflite/core"
 
 import {
   "moonbitlang/core/debug",

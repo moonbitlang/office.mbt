@@ -23,7 +23,7 @@ fn pdf_pagespec_parse_nonnegative_int(text : String) -> Int? {
     if !valid {
       None
     } else {
-      let parsed : Result[Int, Error] = try @strconv.from_str(text) catch {
+      let parsed : Result[Int, Error] = try @string.parse_int(text) catch {
         err => Err(err)
       } noraise {
         value => Ok(value)
@@ -60,7 +60,7 @@ fn pdf_pagespec_tokenize(
   context : PdfPageSpecContext,
 ) -> Array[PdfPageSpecToken] raise PdfError {
   let bytes = @utf8.encode(text)
-  let tokens : Array[PdfPageSpecToken] = Array::new(capacity=bytes.length())
+  let tokens : Array[PdfPageSpecToken] = Array(capacity=bytes.length())
   let mut index = 0
   while index < bytes.length() {
     let value = bytes[index].to_int()

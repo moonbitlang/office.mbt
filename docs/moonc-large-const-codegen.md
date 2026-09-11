@@ -48,7 +48,7 @@ other CLI, which does not import the data-heavy packages, generates an
 git clone https://github.com/moonbitlang/mbtexcel
 cd mbtexcel
 moon build --target native pdflite/markdown/cmd   # generates + compiles cmd.c
-ls -lh _build/native/debug/build/bobzhang/pdflite/markdown/cmd/cmd.c   # ~87 MB
+ls -lh _build/native/debug/build/moonbitlang/pdflite/markdown/cmd/cmd.c   # ~87 MB
 ```
 
 The data lives in ordinary `.mbt` sources:

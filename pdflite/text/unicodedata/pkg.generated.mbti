@@ -1,9 +1,9 @@
 // Generated using `moon info`, DON'T EDIT IT
-package "bobzhang/pdflite/text/unicodedata"
+package "moonbitlang/pdflite/text/unicodedata"
 
 import {
-  "bobzhang/pdflite/core",
   "moonbitlang/core/debug",
+  "moonbitlang/pdflite/core",
 }
 
 // Values

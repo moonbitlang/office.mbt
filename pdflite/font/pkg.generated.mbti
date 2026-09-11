@@ -1,9 +1,9 @@
 // Generated using `moon info`, DON'T EDIT IT
-package "bobzhang/pdflite/font"
+package "moonbitlang/pdflite/font"
 
 import {
-  "bobzhang/pdflite/syntax",
   "moonbitlang/core/debug",
+  "moonbitlang/pdflite/syntax",
 }
 
 // Values

@@ -1,5 +1,5 @@
 // Generated using `moon info`, DON'T EDIT IT
-package "bobzhang/mbtexcel/testutil"
+package "moonbitlang/mbtexcel/testutil"
 
 // Values
 pub fn push_bytes(Array[Byte], BytesView) -> Unit

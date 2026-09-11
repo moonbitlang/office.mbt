@@ -1,8 +1,8 @@
 import {
   "moonbitlang/core/debug",
-  "bobzhang/pdflite/core",
-  "bobzhang/pdflite/geometry",
-  "bobzhang/pdflite/syntax",
+  "moonbitlang/pdflite/core",
+  "moonbitlang/pdflite/geometry",
+  "moonbitlang/pdflite/syntax",
 }
 
 import {

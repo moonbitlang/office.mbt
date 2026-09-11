@@ -83,7 +83,7 @@ pub fn PdfDocument::addtext_prepare_line(
     raw,
     parsed.text,
   )
-  let expanded_line_bytes : Array[@core.PdfBytes] = Array::new(
+  let expanded_line_bytes : Array[@core.PdfBytes] = Array(
     capacity=expanded_lines.length(),
   )
   for line in expanded_lines {

@@ -1,11 +1,11 @@
 // Generated using `moon info`, DON'T EDIT IT
-package "bobzhang/pagelayout/paginate"
+package "moonbitlang/pagelayout/paginate"
 
 import {
-  "bobzhang/pagelayout",
-  "bobzhang/pagelayout/paragraph",
-  "bobzhang/pagelayout/table",
   "moonbitlang/core/debug",
+  "moonbitlang/pagelayout",
+  "moonbitlang/pagelayout/paragraph",
+  "moonbitlang/pagelayout/table",
 }
 
 // Values

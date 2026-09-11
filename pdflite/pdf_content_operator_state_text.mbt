@@ -80,7 +80,7 @@ pub fn PdfContentOperatorState::content_apply_text_show_op(
 ) -> PdfContentOperatorTextResult raise @core.PdfError {
   let text_result = self.text_state.content_apply_text_op(font, self.ctm, op)
   let state = { ..self, text_state: text_result.text_state, }
-  let entries : Array[PdfContentJsonEntry] = Array::new(
+  let entries : Array[PdfContentJsonEntry] = Array(
     capacity=text_result.glyphs.length(),
   )
   for glyph in text_result.glyphs {

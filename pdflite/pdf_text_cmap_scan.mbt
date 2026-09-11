@@ -105,7 +105,7 @@ fn pdf_text_cmap_end_marker(line : BytesView, start : Int) -> (Int, Int)? {
 
 ///|
 fn pdf_text_cmap_section_line_views(line : BytesView) -> Array[BytesView] {
-  let views : Array[BytesView] = Array::new(capacity=line.length())
+  let views : Array[BytesView] = Array(capacity=line.length())
   for start = 0; start < line.length(); {
     match pdf_text_cmap_end_marker(line, start) {
       Some((index, length)) => {
@@ -153,7 +153,7 @@ fn pdf_text_cmap_line_without_comment(line : BytesView) -> @core.PdfBytes {
 
 ///|
 fn pdf_text_parse_cmap_hex_groups(line : BytesView) -> Array[@core.PdfBytes]? {
-  let groups : Array[@core.PdfBytes] = Array::new(capacity=line.length() / 2)
+  let groups : Array[@core.PdfBytes] = Array(capacity=line.length() / 2)
   for index = 0; index < line.length(); {
     let start = pdf_text_skip_cmap_whitespace(line, index)
     guard start < line.length() && line[start] is b'<' else { break }
@@ -244,7 +244,7 @@ fn pdf_text_cmap_contains_whitespace(data : BytesView) -> Bool {
 
 ///|
 fn pdf_text_cmap_without_whitespace(data : BytesView) -> @core.PdfBytes {
-  let output : Array[Byte] = Array::new(capacity=data.length())
+  let output : Array[Byte] = Array(capacity=data.length())
   for byte in data {
     if !@core.pdf_is_whitespace_byte(byte.to_int()) {
       output.push(byte)

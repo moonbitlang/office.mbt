@@ -1,9 +1,9 @@
 // Generated using `moon info`, DON'T EDIT IT
-package "bobzhang/pdflite/bookmark"
+package "moonbitlang/pdflite/bookmark"
 
 import {
-  "bobzhang/pdflite/destination",
   "moonbitlang/core/debug",
+  "moonbitlang/pdflite/destination",
 }
 
 // Values

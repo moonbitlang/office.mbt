@@ -18,8 +18,8 @@ pub fn PdfDocument::scale_pages(
   pdf_page_scale_validate_pairs(page_numbers, scales)
   let pages = self.pages_of_pagetree()
   let page_indexes = pdf_page_scale_pair_index_map(page_numbers)
-  let rewritten : Array[@page.PdfPage] = Array::new(capacity=pages.length())
-  let matrices : Array[(Int, @geometry.TransformMatrix)] = Array::new(
+  let rewritten : Array[@page.PdfPage] = Array(capacity=pages.length())
+  let matrices : Array[(Int, @geometry.TransformMatrix)] = Array(
     capacity=page_numbers.length(),
   )
   for index in 0..<pages.length() {

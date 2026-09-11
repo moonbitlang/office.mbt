@@ -4,10 +4,10 @@ The `office` executable exposes four read-only XLSX commands over one bounded
 workbook projection:
 
 ```sh
-moonx bobzhang/office outline book.xlsx --json
-moonx bobzhang/office get book.xlsx '/xlsx/sheet[name="Data"]/range[A1:C12]' --json
-moonx bobzhang/office text book.xlsx --under '/xlsx/sheet[name="Data"]' --json
-moonx bobzhang/office query book.xlsx 'cell[type=formula]' --under '/xlsx/sheet[name="Data"]' --json
+moonx moonbitlang/office outline book.xlsx --json
+moonx moonbitlang/office get book.xlsx '/xlsx/sheet[name="Data"]/range[A1:C12]' --json
+moonx moonbitlang/office text book.xlsx --under '/xlsx/sheet[name="Data"]' --json
+moonx moonbitlang/office query book.xlsx 'cell[type=formula]' --under '/xlsx/sheet[name="Data"]' --json
 ```
 
 The command reads the file once with `moonbitlang/async`, validates the package
@@ -20,8 +20,8 @@ Both Transitional and ISO Strict Office relationship families are accepted.
 The detector and the structured XLSX parser therefore agree on every package
 dialect they admit.
 
-Run `moonx bobzhang/office help xlsx` for the installed command catalog and
-`moonx bobzhang/office help <command> --json` for the declared format variants,
+Run `moonx moonbitlang/office help xlsx` for the installed command catalog and
+`moonx moonbitlang/office help <command> --json` for the declared format variants,
 inputs, outputs, and limits.
 
 ## Output envelope

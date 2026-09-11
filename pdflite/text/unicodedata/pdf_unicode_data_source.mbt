@@ -1354,7 +1354,7 @@ fn pdf_unicode_data_source_validate(
 ///|
 /// Return cpdf's compressed UnicodeData source bytes.
 pub fn pdf_unicode_data_source() -> @core.PdfBytes raise @core.PdfError {
-  let output : Array[Byte] = Array::new(capacity=272286)
+  let output : Array[Byte] = Array(capacity=272286)
   pdf_unicode_data_source_push_view(output, pdf_unicode_data_source_chunk_0())
   pdf_unicode_data_source_push_view(output, pdf_unicode_data_source_chunk_1())
   pdf_unicode_data_source_push_view(output, pdf_unicode_data_source_chunk_2())

@@ -22,9 +22,7 @@ fn PdfDocument::pdf_addtext_used_codepoints_for_pages(
   bates : Int,
   bates_pad : Int?,
 ) -> Array[Int] raise @core.PdfError {
-  let used : Array[Int] = Array::new(
-    capacity=page_numbers.length() * lines.length(),
-  )
+  let used : Array[Int] = Array(capacity=page_numbers.length() * lines.length())
   for page_number in page_numbers {
     let values = self.addtext_replacement_values(
       bookmarks,
@@ -52,7 +50,7 @@ fn PdfDocument::pdf_addtext_write_fontpack_objects(
   fontpack : PdfFontPack?,
 ) -> Array[Int] raise @core.PdfError {
   let objects : Array[Int] = match fontpack {
-    Some(pack) => Array::new(capacity=pack.fonts.length())
+    Some(pack) => Array(capacity=pack.fonts.length())
     None => []
   }
   match fontpack {

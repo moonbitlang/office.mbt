@@ -7,7 +7,7 @@ library API.
 
 ## Goals
 
-- Provide a small `bobzhang/pdflite/markdown` package that converts a parsed
+- Provide a small `moonbitlang/pdflite/markdown` package that converts a parsed
   `PdfDocument` or PDF bytes into deterministic Markdown.
 - Start with locally generated fixtures so tests are reproducible and licensing
   is clear.

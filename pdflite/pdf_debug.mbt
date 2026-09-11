@@ -60,7 +60,7 @@ pub fn PdfDocument::debug_objects(
   self : PdfDocument,
 ) -> @core.PdfBytes raise @core.PdfError {
   let object_entries = self.parsed_object_entries()
-  let chunks : Array[@core.PdfBytes] = Array::new(
+  let chunks : Array[@core.PdfBytes] = Array(
     capacity=object_entries.length() * 3 + 4,
   )
   chunks.push(pdf_debug_object_line("Trailerdict: ", self.trailer_dict()))

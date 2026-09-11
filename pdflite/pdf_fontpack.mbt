@@ -32,7 +32,7 @@ pub fn pdf_fontpack_of_standard_font(
   font : PdfFont,
 ) -> PdfFontPack raise @core.PdfError {
   let extractor = font.text_extractor()
-  let entries : Array[PdfFontPackEntry] = Array::new(capacity=256)
+  let entries : Array[PdfFontPackEntry] = Array(capacity=256)
   for code in 0..<256 {
     let bytes : FixedArray[Byte] = [code.to_byte()]
     let codepoints = extractor.codepoints_of_text(Bytes::from_array(bytes))
@@ -97,7 +97,7 @@ pub fn pdf_embed_get_char(
 pub fn[A, B : Eq, C] pdf_embed_collate_runs(
   runs : ArrayView[(A, B, C)],
 ) -> Array[Array[(A, B, C)]] {
-  let output : Array[Array[(A, B, C)]] = Array::new(capacity=runs.length())
+  let output : Array[Array[(A, B, C)]] = Array(capacity=runs.length())
   for run in runs {
     if output.length() == 0 {
       output.push([run])

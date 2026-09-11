@@ -1,12 +1,12 @@
 // Generated using `moon info`, DON'T EDIT IT
-package "bobzhang/pdflite/reader"
+package "moonbitlang/pdflite/reader"
 
 import {
-  "bobzhang/pdflite/core",
-  "bobzhang/pdflite/syntax",
-  "bobzhang/pdflite/xref_model",
   "moonbitlang/core/debug",
   "moonbitlang/core/hashmap",
+  "moonbitlang/pdflite/core",
+  "moonbitlang/pdflite/syntax",
+  "moonbitlang/pdflite/xref_model",
 }
 
 // Values

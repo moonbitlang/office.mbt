@@ -1,8 +1,8 @@
 import {
-  "bobzhang/pdflite",
-  "bobzhang/pdflite/composition",
-  "bobzhang/pdflite/core",
-  "bobzhang/pdflite/syntax",
+  "moonbitlang/pdflite",
+  "moonbitlang/pdflite/composition",
+  "moonbitlang/pdflite/core",
+  "moonbitlang/pdflite/syntax",
   "moonbitlang/async",
   "moonbitlang/async/fs",
   "moonbitlang/core/encoding/ascii",

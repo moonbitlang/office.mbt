@@ -108,7 +108,7 @@ fn pdf_coord_number_end(bytes : BytesView, start : Int) -> Int {
 ///|
 fn pdf_coord_tokenize(text : String) -> Array[PdfCoordToken] {
   let bytes = @utf8.encode(pdf_coord_space_units(text))
-  let tokens : Array[PdfCoordToken] = Array::new(capacity=bytes.length())
+  let tokens : Array[PdfCoordToken] = Array(capacity=bytes.length())
   let mut index = 0
   while index < bytes.length() {
     let value = bytes[index].to_int()
@@ -119,7 +119,7 @@ fn pdf_coord_tokenize(text : String) -> Array[PdfCoordToken] {
       if end > index {
         let number_text = @ascii.decode_lossy(bytes[index:end])
         let parsed : Result[Double, Error] = try
-          @strconv.from_str(number_text)
+          @string.parse_double(number_text)
         catch {
           err => Err(err)
         } noraise {

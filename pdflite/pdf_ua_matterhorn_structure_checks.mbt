@@ -5,7 +5,7 @@ fn pdf_ua_matterhorn_is_hnum(name : @core.PdfName) -> Bool {
     false
   } else {
     let result : Result[Int, Error] = try
-      @strconv.from_str(text[2:].to_owned())
+      @string.parse_int(text[2:].to_owned())
     catch {
       err => Err(err)
     } noraise {
@@ -18,7 +18,7 @@ fn pdf_ua_matterhorn_is_hnum(name : @core.PdfName) -> Bool {
 ///|
 fn pdf_ua_matterhorn_hnum(name : @core.PdfName) -> Int {
   let text = pdf_ua_matterhorn_name_text(name)
-  @strconv.from_str(text[2:].to_owned()) catch {
+  @string.parse_int(text[2:].to_owned()) catch {
     _ => 0
   }
 }

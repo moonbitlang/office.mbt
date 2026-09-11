@@ -75,7 +75,7 @@ pub fn pdf_addtext_width_of_fontpack(
   font_size : Double,
   text : String,
 ) -> Double raise @core.PdfError {
-  let width_tables : Array[Array[Double]] = Array::new(
+  let width_tables : Array[Array[Double]] = Array(
     capacity=fontpack.fonts.length(),
   )
   for font in fontpack.fonts {
@@ -174,7 +174,7 @@ pub fn PdfDocument::addtext_line_widths(
   let text_width = self.addtext_calc_textwidth(
     page, font, fontpack, fontname, font_size, text,
   )
-  let widths : Array[Double] = Array::new(capacity=expanded_lines.length())
+  let widths : Array[Double] = Array(capacity=expanded_lines.length())
   for line in expanded_lines {
     widths.push(
       self.addtext_calc_textwidth(

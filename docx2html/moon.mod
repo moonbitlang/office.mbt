@@ -9,13 +9,13 @@
 //   "moonbitlang/x@0.4.6",
 // }
 
-name = "bobzhang/docx2html"
+name = "moonbitlang/docx2html"
 
 version = "0.5.0"
 
 readme = "README.mbt.md"
 
-repository = "https://github.com/bobzhang/docx2html"
+repository = "https://github.com/moonbitlang/docx2html"
 
 license = "Apache-2.0"
 
@@ -24,10 +24,10 @@ keywords = [ "docx", "html", "markdown", "mammoth" ]
 description = "Native MoonBit DOCX to HTML/Markdown converter ported from Mammoth"
 
 import {
-  "bobzhang/mbtexcel@0.1.9",
+  "moonbitlang/mbtexcel@0.1.9",
   "moonbitlang/x@0.4.50",
   "moonbitlang/async@0.20.2",
-  "moonbit-community/flate@0.7.3",
+  "moonbit-community/flate@0.8.0",
 }
 
 preferred_target = "native"

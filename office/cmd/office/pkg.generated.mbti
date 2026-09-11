@@ -1,5 +1,5 @@
 // Generated using `moon info`, DON'T EDIT IT
-package "bobzhang/office-lib/cmd/office"
+package "moonbitlang/office-lib/cmd/office"
 
 // Values
 pub async fn run() -> Unit

@@ -12,7 +12,7 @@ pub fn PdfDocument::image_resolution(
 ) -> Array[(Int, String, Int, Int, Double, Double, Int)] raise @core.PdfError {
   let pages = self.pages_of_pagetree()
   pdf_page_box_validate_page_numbers(page_numbers, pages.length(), "images")
-  let results : Array[PdfImageResolutionEntry] = Array::new(
+  let results : Array[PdfImageResolutionEntry] = Array(
     capacity=page_numbers.length(),
   )
   for page_number in page_numbers {
@@ -31,7 +31,7 @@ pub fn PdfDocument::image_resolution(
       )
     }
   }
-  let filtered : Array[PdfImageResolutionEntry] = Array::new(
+  let filtered : Array[PdfImageResolutionEntry] = Array(
     capacity=results.length(),
   )
   for entry in results {

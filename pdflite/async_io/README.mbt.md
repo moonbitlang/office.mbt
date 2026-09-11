@@ -1,6 +1,6 @@
 # pdflite/async_io
 
-`bobzhang/pdflite/async_io` connects the root PDF reader and writer to
+`moonbitlang/pdflite/async_io` connects the root PDF reader and writer to
 `moonbitlang/async/fs`. It is native-only and keeps filesystem concerns out of
 the pure document package.
 
@@ -47,7 +47,7 @@ test "file helpers typecheck in an async round trip" {
 ## Pedantic Boundaries
 
 - This package owns filesystem IO glue only. PDF parsing, writing, repair, and
-  encryption behavior must stay in `bobzhang/pdflite`.
+  encryption behavior must stay in `moonbitlang/pdflite`.
 - The package is native-only because it depends on `moonbitlang/async/fs`.
   Default wasm-gc tests are not the right verification target.
 - Public functions read the entire file before passing bytes to the root reader.

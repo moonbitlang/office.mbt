@@ -1,6 +1,6 @@
 import {
-  "bobzhang/docx2html/core",
-  "bobzhang/docx2html/xml",
+  "moonbitlang/docx2html/core",
+  "moonbitlang/docx2html/xml",
   "moonbit-community/flate/zip" @mbtzip,
   "moonbit-community/flate/checksum" @flate_checksum,
   "moonbitlang/core/encoding/utf8",

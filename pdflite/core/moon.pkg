@@ -8,6 +8,8 @@ import {
   "moonbitlang/core/test",
 } for "test"
 
+warnings = "-unused_package"
+
 options(
   targets: {
     "bitstream_test.mbt": [ "wasm-gc", "js", "native", "llvm" ],

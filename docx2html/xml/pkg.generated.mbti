@@ -1,10 +1,10 @@
 // Generated using `moon info`, DON'T EDIT IT
-package "bobzhang/docx2html/xml"
+package "moonbitlang/docx2html/xml"
 
 import {
-  "bobzhang/docx2html/core",
   "moonbitlang/core/debug",
   "moonbitlang/core/sorted_map",
+  "moonbitlang/docx2html/core",
 }
 
 // Values

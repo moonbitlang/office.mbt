@@ -4,7 +4,7 @@ import {
 }
 
 import {
-  "bobzhang/office-lib/template",
+  "moonbitlang/office-lib/template",
 } for "test"
 
 supported_targets = "native+js+wasm"

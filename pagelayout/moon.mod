@@ -1,4 +1,4 @@
-name = "bobzhang/pagelayout"
+name = "moonbitlang/pagelayout"
 
 version = "0.1.1"
 
@@ -15,10 +15,10 @@ description = "Paginated document layout engine: format-neutral page-model IR wi
 import {
   "moonbitlang/async@0.20.2",
   "moonbitlang/x@0.4.50",
-  "bobzhang/docx2html@0.5.0",
-  "bobzhang/mbtexcel@0.1.9",
-  "bobzhang/pdflite@0.1.41",
-  "moonbit-community/flate@0.7.3",
+  "moonbitlang/docx2html@0.5.0",
+  "moonbitlang/mbtexcel@0.1.9",
+  "moonbitlang/pdflite@0.1.41",
+  "moonbit-community/flate@0.8.0",
 }
 
 warnings = "+a-unused_optional_argument-unused_default_value-missing_invariant-missing_reasoning"

@@ -1,9 +1,9 @@
 // Generated using `moon info`, DON'T EDIT IT
-package "bobzhang/mbtexcel/inspect"
+package "moonbitlang/mbtexcel/inspect"
 
 import {
-  "bobzhang/mbtexcel/xlsx",
   "moonbitlang/core/debug",
+  "moonbitlang/mbtexcel/xlsx",
 }
 
 // Values

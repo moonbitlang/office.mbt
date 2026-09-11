@@ -124,7 +124,7 @@ test "cells on a missing sheet raises" {
       inspect(
         err,
         content=(
-          #|bobzhang/mbtexcel/xlsx.XlsxError.SheetNotFound
+          #|moonbitlang/mbtexcel/xlsx.XlsxError.SheetNotFound
         ),
       )
   } noraise {

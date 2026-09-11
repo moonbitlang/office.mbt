@@ -1,4 +1,4 @@
-name = "bobzhang/office-lib"
+name = "moonbitlang/office-lib"
 
 version = "0.5.0"
 
@@ -13,13 +13,13 @@ keywords = [ "office", "xlsx", "docx", "ooxml", "cli" ]
 description = "Agent-oriented XLSX and DOCX tooling for MoonBit"
 
 import {
-  "bobzhang/mbtexcel@0.1.9",
-  "bobzhang/pagelayout@0.1.1",
-  "bobzhang/docx2html@0.5.0",
+  "moonbitlang/mbtexcel@0.1.9",
+  "moonbitlang/pagelayout@0.1.1",
+  "moonbitlang/docx2html@0.5.0",
   "moonbitlang/async@0.20.2",
   "moonbitlang/x@0.4.50",
   "tonyfettes/unicode@0.3.3",
-  "moonbit-community/flate@0.7.3",
+  "moonbit-community/flate@0.8.0",
 }
 
 preferred_target = "native"

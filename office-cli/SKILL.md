@@ -21,21 +21,21 @@ legacy-only table below names the exact missing capability.
 Nothing to install beyond `moonx`. Run from any directory:
 
 ```
-moonx bobzhang/office help all --json
-moonx bobzhang/office <command> <args...>
+moonx moonbitlang/office help all --json
+moonx moonbitlang/office <command> <args...>
 ```
 
-Arguments after `bobzhang/office` are passed directly to the command; do not
+Arguments after `moonbitlang/office` are passed directly to the command; do not
 insert a `--` separator.
 
 The WebAssembly target is the default and is the right choice for untrusted
 documents. It cannot spawn programs or open network connections, and the CLI
 also applies bounded package, XML, scan, output, and mutation limits. It can
 still read or write the paths supplied to it and consume CPU within those
-limits. For trusted files, `moonx --target native bobzhang/office ...` is a
+limits. For trusted files, `moonx --target native moonbitlang/office ...` is a
 faster drop-in.
 
-Pin a version when reproducibility matters: `moonx bobzhang/office@0.4.0 ...`.
+Pin a version when reproducibility matters: `moonx moonbitlang/office@0.4.0 ...`.
 `@latest` refreshes the registry index before resolving.
 
 ## The CLI describes itself — prefer that over prose
@@ -44,9 +44,9 @@ This file will drift; the binary will not. Three introspection commands are
 normative:
 
 ```
-moonx bobzhang/office help all --json        # every format, command, field, limit
-moonx bobzhang/office help schemas --json    # every consumed JSON contract
-moonx bobzhang/office help schema ID --json  # one contract, e.g. xlsx.batch/2
+moonx moonbitlang/office help all --json        # every format, command, field, limit
+moonx moonbitlang/office help schemas --json    # every consumed JSON contract
+moonx moonbitlang/office help schema ID --json  # one contract, e.g. xlsx.batch/2
 ```
 
 `help all` carries a `crc32:` fingerprint over the capability registry. When
@@ -81,7 +81,7 @@ Ordinary `--json` commands emit one `office.output/1` success/failure envelope.
 
 ## Command map
 
-Replace the `office` token below with the `moonx bobzhang/office` launcher.
+Replace the `office` token below with the `moonx moonbitlang/office` launcher.
 
 | Goal | Command |
 | --- | --- |
@@ -429,8 +429,8 @@ to argue with.
 
 ```bash
 # Two shims so the gate runs as written.
-office()    { moonx bobzhang/office "$@"; }
-xlsx_lint() { moonx bobzhang/mbtexcel/cmd/xlsx lint "$@"; }
+office()    { moonx moonbitlang/office "$@"; }
+xlsx_lint() { moonx moonbitlang/mbtexcel/cmd/xlsx lint "$@"; }
 
 FILE="report.docx"          # the file you are about to hand over
 
@@ -573,13 +573,13 @@ Each is a separately published module, reachable the same way:
 
 | Missing from `office` | Legacy command |
 | --- | --- |
-| Direct CSV import to a new workbook | `moonx bobzhang/mbtexcel/cmd/xlsx csv INPUT.csv OUT.xlsx --sheet Data` |
-| Evaluate one formula locally | `moonx bobzhang/mbtexcel/cmd/xlsx calc BOOK.xlsx Sheet1 B4` |
-| Recompute and lint formula masters, including formulas with no cached result; shared/array slave formulas are not evaluated | `moonx bobzhang/mbtexcel/cmd/xlsx lint BOOK.xlsx [--sheet Sheet1]` |
-| Discover the exact XLSX batch operations, parameters, allowed values, and limits accepted by this build | `moonx bobzhang/mbtexcel/cmd/xlsx capabilities` |
-| Export one sheet as generic CSV (LF-delimited records) | `moonx bobzhang/mbtexcel/cmd/xlsx rows BOOK.xlsx --sheet Sheet1` |
-| Render a selected or bounded XLSX view, suppress images, or calculate uncached formulas | `moonx bobzhang/mbtexcel/cmd/xlsx html BOOK.xlsx --out OUT.html [--sheet Sheet1] [--max-rows N] [--max-cols N] [--no-images] [--calc]` |
-| DOCX to Markdown, custom Mammoth style maps, or extracted-image directories | `moonx bobzhang/docx2html/cmd/docx2html ...` |
+| Direct CSV import to a new workbook | `moonx moonbitlang/mbtexcel/cmd/xlsx csv INPUT.csv OUT.xlsx --sheet Data` |
+| Evaluate one formula locally | `moonx moonbitlang/mbtexcel/cmd/xlsx calc BOOK.xlsx Sheet1 B4` |
+| Recompute and lint formula masters, including formulas with no cached result; shared/array slave formulas are not evaluated | `moonx moonbitlang/mbtexcel/cmd/xlsx lint BOOK.xlsx [--sheet Sheet1]` |
+| Discover the exact XLSX batch operations, parameters, allowed values, and limits accepted by this build | `moonx moonbitlang/mbtexcel/cmd/xlsx capabilities` |
+| Export one sheet as generic CSV (LF-delimited records) | `moonx moonbitlang/mbtexcel/cmd/xlsx rows BOOK.xlsx --sheet Sheet1` |
+| Render a selected or bounded XLSX view, suppress images, or calculate uncached formulas | `moonx moonbitlang/mbtexcel/cmd/xlsx html BOOK.xlsx --out OUT.html [--sheet Sheet1] [--max-rows N] [--max-cols N] [--no-images] [--calc]` |
+| DOCX to Markdown, custom Mammoth style maps, or extracted-image directories | `moonx moonbitlang/docx2html/cmd/docx2html ...` |
 
 The legacy writers do not share the unified transaction contract. CSV import
 truncates an existing output, and XLSX HTML rendering replaces its output. Use

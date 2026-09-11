@@ -1,20 +1,19 @@
 import {
-  "bobzhang/docx2html/core",
-  "bobzhang/docx2html/xml",
+  "moonbitlang/docx2html/core",
+  "moonbitlang/docx2html/xml",
   "moonbit-community/flate/zip",
-  "bobzhang/pagelayout",
-  "bobzhang/pagelayout/paginate",
-  "bobzhang/pagelayout/paragraph",
-  "bobzhang/pagelayout/numbering",
-  "bobzhang/pagelayout/table",
+  "moonbitlang/pagelayout",
+  "moonbitlang/pagelayout/paginate",
+  "moonbitlang/pagelayout/paragraph",
+  "moonbitlang/pagelayout/numbering",
+  "moonbitlang/pagelayout/table",
   "moonbitlang/core/debug",
 }
 
 import {
-  "bobzhang/docx2html/core",
+  "moonbitlang/docx2html/core",
   "moonbit-community/flate/zip",
   "moonbitlang/core/encoding/utf8",
-  "bobzhang/pagelayout",
-  "bobzhang/pagelayout/paginate",
-  "bobzhang/pagelayout/paragraph",
+  "moonbitlang/pagelayout/paginate",
+  "moonbitlang/pagelayout/paragraph",
 } for "test"

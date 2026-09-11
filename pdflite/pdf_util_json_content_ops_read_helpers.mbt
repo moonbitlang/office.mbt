@@ -52,7 +52,7 @@ fn pdf_util_json_op_float_array(
 ) -> Array[Double] raise @core.PdfError {
   match json {
     Array(values) => {
-      let output : Array[Double] = Array::new(capacity=values.length())
+      let output : Array[Double] = Array(capacity=values.length())
       for value in values {
         output.push(pdf_util_json_op_float(value))
       }
@@ -66,7 +66,7 @@ fn pdf_util_json_op_float_array(
 fn pdf_util_json_op_floats(
   values : ArrayView[Json],
 ) -> Array[Double] raise @core.PdfError {
-  let output : Array[Double] = Array::new(capacity=values.length())
+  let output : Array[Double] = Array(capacity=values.length())
   for value in values {
     output.push(pdf_util_json_op_float(value))
   }

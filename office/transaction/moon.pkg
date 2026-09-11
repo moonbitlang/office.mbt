@@ -1,29 +1,27 @@
 import {
-  "bobzhang/office-lib" @office,
+  "moonbitlang/office-lib" @office,
   "moonbit-community/flate/zip",
   "moonbitlang/async",
   "moonbitlang/async/fs" @afs,
   "moonbitlang/async/os_error",
-  "moonbitlang/core/encoding/utf8",
   "moonbitlang/core/debug",
   "moonbitlang/core/env",
-  "moonbitlang/core/json",
   "moonbitlang/core/sorted_map",
   "moonbitlang/x/path",
 }
 
 import {
-  "bobzhang/mbtexcel" @excel,
-  "bobzhang/mbtexcel/testutil/zip_fixture",
-  "bobzhang/docx2html" @word,
+  "moonbitlang/mbtexcel" @excel,
+  "moonbitlang/mbtexcel/testutil/zip_fixture",
+  "moonbitlang/docx2html" @word,
   "moonbitlang/async",
   "moonbitlang/core/encoding/utf8",
 } for "test"
 
 import {
-  "bobzhang/mbtexcel" @excel,
-  "bobzhang/docx2html" @word,
-  "bobzhang/docx2html/splice",
+  "moonbitlang/mbtexcel" @excel,
+  "moonbitlang/docx2html" @word,
+  "moonbitlang/docx2html/splice",
   "moonbitlang/async",
   "moonbitlang/core/encoding/utf8",
 } for "wbtest"

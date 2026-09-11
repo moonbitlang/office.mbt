@@ -1,9 +1,9 @@
 import {
-  "bobzhang/pagelayout",
+  "moonbitlang/pagelayout",
 }
 
 import {
-  "bobzhang/pagelayout",
-  "bobzhang/pagelayout/paragraph",
-  "bobzhang/pagelayout/paginate",
+  "moonbitlang/pagelayout",
+  "moonbitlang/pagelayout/paragraph",
+  "moonbitlang/pagelayout/paginate",
 } for "test"

@@ -1,9 +1,9 @@
 // Generated using `moon info`, DON'T EDIT IT
-package "bobzhang/pdflite/shape"
+package "moonbitlang/pdflite/shape"
 
 import {
-  "bobzhang/pdflite/geometry",
   "moonbitlang/core/debug",
+  "moonbitlang/pdflite/geometry",
 }
 
 // Values

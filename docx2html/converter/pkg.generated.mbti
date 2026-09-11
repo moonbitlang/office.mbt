@@ -1,11 +1,11 @@
 // Generated using `moon info`, DON'T EDIT IT
-package "bobzhang/docx2html/converter"
+package "moonbitlang/docx2html/converter"
 
 import {
-  "bobzhang/docx2html/core",
-  "bobzhang/docx2html/document",
-  "bobzhang/docx2html/html",
   "moonbitlang/core/debug",
+  "moonbitlang/docx2html/core",
+  "moonbitlang/docx2html/document",
+  "moonbitlang/docx2html/html",
 }
 
 // Values

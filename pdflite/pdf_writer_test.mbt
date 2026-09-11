@@ -222,56 +222,56 @@ test "pdf_write_literal_string renders byte strings as PDF literal strings" {
 
 ///|
 test "pdf_write_object renders real numbers without exponent notation" {
-  let tiny : Double = try! @strconv.from_str("1e-10")
+  let tiny : Double = try! @string.parse_double("1e-10")
   @test.assert_eq(
     try! @pdflite.pdf_write_object(PdfReal(tiny)),
     writer_bytes_for_test([48, 46, 48, 48, 48, 48, 48, 48]),
   )
-  let small : Double = try! @strconv.from_str("0.00009")
+  let small : Double = try! @string.parse_double("0.00009")
   @test.assert_eq(
     try! @pdflite.pdf_write_object(PdfReal(small)),
     writer_bytes_for_test([48, 46, 48, 48, 48, 48, 57, 48]),
   )
-  let negative_small : Double = try! @strconv.from_str("-0.00009")
+  let negative_small : Double = try! @string.parse_double("-0.00009")
   @test.assert_eq(
     try! @pdflite.pdf_write_object(PdfReal(negative_small)),
     writer_bytes_for_test([45, 48, 46, 48, 48, 48, 48, 57, 48]),
   )
-  let large : Double = try! @strconv.from_str("1.25e6")
+  let large : Double = try! @string.parse_double("1.25e6")
   @test.assert_eq(
     try! @pdflite.pdf_write_object(PdfReal(large)),
     writer_bytes_for_test([49, 50, 53, 48, 48, 48, 48]),
   )
-  let large_exponent : Double = try! @strconv.from_str("1e21")
+  let large_exponent : Double = try! @string.parse_double("1e21")
   @test.assert_eq(
     try! @pdflite.pdf_write_object(PdfReal(large_exponent)),
     writer_ascii_for_test("1000000000000000000000"),
   )
-  let rounded_large_exponent : Double = try! @strconv.from_str(
+  let rounded_large_exponent : Double = try! @string.parse_double(
     "1.23456789012345e21",
   )
   @test.assert_eq(
     try! @pdflite.pdf_write_object(PdfReal(rounded_large_exponent)),
     writer_ascii_for_test("1234567890120000000000"),
   )
-  let carry_large_exponent : Double = try! @strconv.from_str(
+  let carry_large_exponent : Double = try! @string.parse_double(
     "9.999999999999e21",
   )
   @test.assert_eq(
     try! @pdflite.pdf_write_object(PdfReal(carry_large_exponent)),
     writer_ascii_for_test("10000000000000000000000"),
   )
-  let precise : Double = try! @strconv.from_str("1.23456789012345")
+  let precise : Double = try! @string.parse_double("1.23456789012345")
   @test.assert_eq(
     try! @pdflite.pdf_write_object(PdfReal(precise)),
     writer_ascii_for_test("1.23456789012"),
   )
-  let carry : Double = try! @strconv.from_str("999999.9999999")
+  let carry : Double = try! @string.parse_double("999999.9999999")
   @test.assert_eq(
     try! @pdflite.pdf_write_object(PdfReal(carry)),
     writer_ascii_for_test("1000000"),
   )
-  let fractional : Double = try! @strconv.from_str("0.000123456789012345")
+  let fractional : Double = try! @string.parse_double("0.000123456789012345")
   @test.assert_eq(
     try! @pdflite.pdf_write_object(PdfReal(fractional)),
     writer_ascii_for_test("0.000123456789012"),
@@ -280,12 +280,12 @@ test "pdf_write_object renders real numbers without exponent notation" {
 
 ///|
 test "pdf_write_real exposes the byte-oriented real formatter" {
-  let tiny : Double = try! @strconv.from_str("1e-10")
+  let tiny : Double = try! @string.parse_double("1e-10")
   @test.assert_eq(
     try! @pdflite.pdf_write_real(tiny),
     writer_bytes_for_test([48, 46, 48, 48, 48, 48, 48, 48]),
   )
-  let large : Double = try! @strconv.from_str("1.25e6")
+  let large : Double = try! @string.parse_double("1.25e6")
   @test.assert_eq(
     try! @pdflite.pdf_write_real(large),
     writer_ascii_for_test("1250000"),
@@ -294,7 +294,7 @@ test "pdf_write_real exposes the byte-oriented real formatter" {
     try! @pdflite.pdf_format_real(large),
     writer_ascii_for_test("1250000"),
   )
-  let rounded : Double = try! @strconv.from_str("1.23456789012345e21")
+  let rounded : Double = try! @string.parse_double("1.23456789012345e21")
   @test.assert_eq(
     try! @pdflite.pdf_write_real(rounded),
     writer_ascii_for_test("1234567890120000000000"),

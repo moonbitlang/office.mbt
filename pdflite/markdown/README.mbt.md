@@ -1,6 +1,6 @@
 # pdflite/markdown
 
-`bobzhang/pdflite/markdown` extracts readable Markdown text from PDF documents.
+`moonbitlang/pdflite/markdown` extracts readable Markdown text from PDF documents.
 It parses page resources and content streams through the root package, decodes
 font text where possible, and emits page-oriented Markdown.
 

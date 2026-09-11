@@ -1,6 +1,6 @@
 # Markdown Fixture Sources
 
-These fixtures are small acceptance inputs for `bobzhang/pdflite/markdown`.
+These fixtures are small acceptance inputs for `moonbitlang/pdflite/markdown`.
 They are generated locally with Pandoc and checked in so MoonBit tests do not
 depend on network access, local fonts, or a local Pandoc installation.
 

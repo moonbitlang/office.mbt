@@ -1,5 +1,5 @@
 // Generated using `moon info`, DON'T EDIT IT
-package "bobzhang/pdflite/text/encodingdata"
+package "moonbitlang/pdflite/text/encodingdata"
 
 // Values
 pub fn pdf_text_macexpert_glyphname(Int) -> String?

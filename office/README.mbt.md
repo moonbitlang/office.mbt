@@ -1,8 +1,8 @@
-# bobzhang/office-lib
+# moonbitlang/office-lib
 
-`bobzhang/office-lib` is the implementation module behind the published
-`moonx bobzhang/office` command. It provides the facade for the XLSX engine in
-`bobzhang/mbtexcel` and the DOCX engine in `bobzhang/docx2html`.
+`moonbitlang/office-lib` is the implementation module behind the published
+`moonx moonbitlang/office` command. It provides the facade for the XLSX engine in
+`moonbitlang/mbtexcel` and the DOCX engine in `moonbitlang/docx2html`.
 
 The module is intentionally young and may make breaking changes while the
 major-parity program in `../docs/office-major-parity.md` is underway.
@@ -24,16 +24,16 @@ test "document format names" {
 The canonical executable exposes only implemented capabilities:
 
 ```text
-moonx bobzhang/office help
-moonx bobzhang/office help docx
-moonx bobzhang/office help xlsx
-moonx bobzhang/office help all --json
-moonx bobzhang/office help all --jsonl
-moonx bobzhang/office identify report.docx --json
-moonx bobzhang/office create xlsx report.xlsx --sheet Data --json
-moonx bobzhang/office batch report.xlsx changes.json --out revised.xlsx --json
-moonx bobzhang/office raw list report.docx --json
-moonx bobzhang/office raw read report.docx /document --json
+moonx moonbitlang/office help
+moonx moonbitlang/office help docx
+moonx moonbitlang/office help xlsx
+moonx moonbitlang/office help all --json
+moonx moonbitlang/office help all --jsonl
+moonx moonbitlang/office identify report.docx --json
+moonx moonbitlang/office create xlsx report.xlsx --sheet Data --json
+moonx moonbitlang/office batch report.xlsx changes.json --out revised.xlsx --json
+moonx moonbitlang/office raw list report.docx --json
+moonx moonbitlang/office raw read report.docx /document --json
 ```
 
 `docx`/`word` and `xlsx`/`excel` are the only format names and aliases. The
@@ -43,12 +43,12 @@ the raw record describes every `list`, `read`, `replace`, and `edit` input,
 output, constraint, and output mode. PowerPoint and MCP are intentionally
 absent.
 
-`bobzhang/office-lib/xlsx` provides the bounded mutation SDK behind the canonical
+`moonbitlang/office-lib/xlsx` provides the bounded mutation SDK behind the canonical
 creation and batch commands. It prefers `xlsx.batch/2`, retains exact
 `xlsx.batch/1` behavior and shared resource accounting, validates complete candidates, and publishes through the shared
 async transaction boundary. See `../docs/office-xlsx-mutations.md`.
 
-The `bobzhang/office-lib/docx` package provides the preservation-safe SDK layer for
+The `moonbitlang/office-lib/docx` package provides the preservation-safe SDK layer for
 editing existing DOCX files. Its async `transact_docx` entry point composes the
 A4 bounded read and atomic publisher with exact source-pinned byte-splice plans,
 strict archive-backed DOCX validation, and the authoritative transaction

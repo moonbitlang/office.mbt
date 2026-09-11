@@ -1,11 +1,9 @@
 import {
   "moonbitlang/core/debug",
-  "bobzhang/pdflite/content",
-  "bobzhang/pdflite/geometry",
-  "bobzhang/pdflite/shape",
-  "moonbitlang/core/json",
+  "moonbitlang/pdflite/content",
+  "moonbitlang/pdflite/geometry",
+  "moonbitlang/pdflite/shape",
 }
 
 import {
-  "moonbitlang/core/test",
 } for "test"

@@ -8,7 +8,7 @@ pub fn pdf_addtext_expand_lines_with_time(
   lines : ArrayView[String],
   replacements : ArrayView[(String, () -> String)],
 ) -> Array[String] raise @core.PdfError {
-  let output : Array[String] = Array::new(capacity=lines.length())
+  let output : Array[String] = Array(capacity=lines.length())
   for line in lines {
     let processed = pdf_addtext_process_text_with_time(time, line, replacements)
     output.push(@addtext.pdf_addtext_get_urls_line(processed).text)
@@ -38,7 +38,7 @@ fn pdf_addtext_codepoints_contains(
 pub fn pdf_addtext_used_codepoints(
   lines : ArrayView[String],
 ) -> Array[Int] raise @core.PdfError {
-  let used : Array[Int] = Array::new(capacity=lines.length())
+  let used : Array[Int] = Array(capacity=lines.length())
   for line in lines {
     for codepoint in pdf_codepoints_of_utf8(@utf8.encode(line)) {
       if !pdf_addtext_codepoints_contains(used, codepoint) {

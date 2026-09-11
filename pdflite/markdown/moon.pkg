@@ -1,10 +1,10 @@
 import {
-  "bobzhang/pdflite",
-  "bobzhang/pdflite/content",
-  "bobzhang/pdflite/core",
-  "bobzhang/pdflite/geometry",
-  "bobzhang/pdflite/page",
-  "bobzhang/pdflite/syntax",
+  "moonbitlang/pdflite",
+  "moonbitlang/pdflite/content",
+  "moonbitlang/pdflite/core",
+  "moonbitlang/pdflite/geometry",
+  "moonbitlang/pdflite/page",
+  "moonbitlang/pdflite/syntax",
   "moonbitlang/core/buffer",
   "moonbitlang/core/encoding/ascii",
   "moonbitlang/core/hashmap",
@@ -12,21 +12,21 @@ import {
 }
 
 import {
-  "bobzhang/pdflite",
-  "bobzhang/pdflite/content",
-  "bobzhang/pdflite/core",
-  "bobzhang/pdflite/geometry",
-  "bobzhang/pdflite/markdown",
-  "bobzhang/pdflite/page",
-  "bobzhang/pdflite/syntax",
+  "moonbitlang/pdflite",
+  "moonbitlang/pdflite/content",
+  "moonbitlang/pdflite/core",
+  "moonbitlang/pdflite/geometry",
+  "moonbitlang/pdflite/markdown",
+  "moonbitlang/pdflite/page",
+  "moonbitlang/pdflite/syntax",
   "moonbitlang/core/encoding/ascii",
   "moonbitlang/core/test",
 } for "test"
 
 import {
-  "bobzhang/pdflite/core",
-  "bobzhang/pdflite/geometry",
-  "bobzhang/pdflite/syntax",
+  "moonbitlang/pdflite/core",
+  "moonbitlang/pdflite/geometry",
+  "moonbitlang/pdflite/syntax",
   "moonbitlang/core/encoding/ascii",
   "moonbitlang/core/test",
 } for "wbtest"

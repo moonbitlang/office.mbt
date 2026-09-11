@@ -25,7 +25,7 @@ fn PdfDocument::pdf_page_tree_nodes_not_pages_inner(
     _ =>
       match self.lookup_direct(pdf_page_kids_key(), node) {
         Some(PdfArray(kids)) => {
-          let nodes : Array[Int] = Array::new(capacity=kids.length() + 1)
+          let nodes : Array[Int] = Array(capacity=kids.length() + 1)
           nodes.push(node_number)
           for kid in kids {
             match kid {
@@ -75,7 +75,7 @@ fn PdfDocument::pdf_page_reference_numbers_unordered_inner(
     _ =>
       match self.lookup_direct(pdf_page_kids_key(), node) {
         Some(PdfArray(kids)) => {
-          let numbers : Array[Int] = Array::new(capacity=kids.length())
+          let numbers : Array[Int] = Array(capacity=kids.length())
           for kid in kids {
             match kid {
               PdfIndirect(number) =>
@@ -128,7 +128,7 @@ fn pdf_page_rewrite_first_kid(
   old_number : Int,
   new_number : Int,
 ) -> (Array[@syntax.PdfObject], Bool) {
-  let output : Array[@syntax.PdfObject] = Array::new(capacity=kids.length())
+  let output : Array[@syntax.PdfObject] = Array(capacity=kids.length())
   let mut rewritten = false
   for kid in kids {
     match kid {

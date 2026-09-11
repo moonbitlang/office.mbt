@@ -13,7 +13,7 @@ priv enum PdfCalculatorItem {
 
 ///|
 fn pdf_fun_calculator_number_of_token(text : String) -> PdfCalculatorOp? {
-  let integer : Result[Int, Error] = try @strconv.from_str(text) catch {
+  let integer : Result[Int, Error] = try @string.parse_int(text) catch {
     err => Err(err)
   } noraise {
     value => Ok(value)
@@ -21,7 +21,7 @@ fn pdf_fun_calculator_number_of_token(text : String) -> PdfCalculatorOp? {
   match integer {
     Ok(value) => Some(PdfCalculatorInt(value))
     Err(_) => {
-      let real : Result[Double, Error] = try @strconv.from_str(text) catch {
+      let real : Result[Double, Error] = try @string.parse_double(text) catch {
         err => Err(err)
       } noraise {
         value => Ok(value)

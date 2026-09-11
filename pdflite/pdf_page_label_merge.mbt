@@ -7,7 +7,7 @@
 pub fn pdf_page_label_coalesce(
   labels : ArrayView[@label.PdfPageLabel],
 ) -> Array[@label.PdfPageLabel] {
-  let output : Array[@label.PdfPageLabel] = Array::new(capacity=labels.length())
+  let output : Array[@label.PdfPageLabel] = Array(capacity=labels.length())
   let mut index = 0
   while index < labels.length() {
     let label = labels[index]
@@ -44,7 +44,7 @@ pub fn pdf_page_label_merge(
   for range in ranges {
     total_pages += range.length()
   }
-  let labels : Array[@label.PdfPageLabel] = Array::new(capacity=total_pages)
+  let labels : Array[@label.PdfPageLabel] = Array(capacity=total_pages)
   let mut merged_page = 1
   for index in 0..<pdfs.length() {
     let source_labels = @label.pdf_page_label_complete(

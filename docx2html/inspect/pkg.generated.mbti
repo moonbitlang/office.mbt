@@ -1,11 +1,11 @@
 // Generated using `moon info`, DON'T EDIT IT
-package "bobzhang/docx2html/inspect"
+package "moonbitlang/docx2html/inspect"
 
 import {
-  "bobzhang/docx2html/core",
-  "bobzhang/docx2html/document",
-  "bobzhang/docx2html/docx",
-  "bobzhang/docx2html/paths",
+  "moonbitlang/docx2html/core",
+  "moonbitlang/docx2html/document",
+  "moonbitlang/docx2html/docx",
+  "moonbitlang/docx2html/paths",
 }
 
 // Values

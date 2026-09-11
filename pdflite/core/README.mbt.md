@@ -1,6 +1,6 @@
 # pdflite/core
 
-`bobzhang/pdflite/core` contains the byte primitives and shared error type used
+`moonbitlang/pdflite/core` contains the byte primitives and shared error type used
 by the rest of pdflite. It deliberately treats PDF data as `Bytes` and
 `BytesView`; callers should decode text only at explicit text-decoding
 boundaries.

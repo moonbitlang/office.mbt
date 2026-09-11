@@ -136,8 +136,8 @@ jobs:
   # The three test backends. Previously three serial steps in one job.
   #
   # This repo is a `moon work` workspace with four members: `.`
-  # (bobzhang/mbtexcel), `./docx2html` (bobzhang/docx2html), and `./pdflite`
-  # (bobzhang/pdflite), plus `./office` (the agent-facing facade). An
+  # (moonbitlang/mbtexcel), `./docx2html` (moonbitlang/docx2html), and `./pdflite`
+  # (moonbitlang/pdflite), plus `./office` (the agent-facing facade). An
   # unfiltered `moon test` traverses every member and all of its packages, so
   # new portable child packages are covered automatically instead of silently
   # receiving root-only tests.
@@ -322,15 +322,15 @@ jobs:
       # pdflite's doc takes its CLI and fixture via env.
       - name: Cram tests (xlsx, docx2html, office, pdflite, pagelayout CLIs)
         env:
-          PDFLITE_CLI: ${{ github.workspace }}/_build/native/debug/build/bobzhang/pdflite/cmd/main/main.exe
+          PDFLITE_CLI: ${{ github.workspace }}/_build/native/debug/build/moonbitlang/pdflite/cmd/main/main.exe
           PDFLITE_LOGO_PDF: ${{ github.workspace }}/pdflite/fixtures/camlpdf/logo.pdf
-          PAGELAYOUT_CLI: ${{ github.workspace }}/_build/native/debug/build/bobzhang/pagelayout/cmd/pagelayout/pagelayout.exe
+          PAGELAYOUT_CLI: ${{ github.workspace }}/_build/native/debug/build/moonbitlang/pagelayout/cmd/pagelayout/pagelayout.exe
           PAGELAYOUT_DOCX: ${{ github.workspace }}/pagelayout/docx/fixture_render/single-paragraph.docx
         run: |
           STUB="$RUNNER_TEMP/moon-cram-stub"
           mkdir -p "$STUB"
-          printf 'name = "bobzhang/cramstub"\nversion = "0.1.0"\n' > "$STUB/moon.mod"
-          export PATH="$GITHUB_WORKSPACE/_build/native/debug/build/bobzhang/mbtexcel/cmd/xlsx:$GITHUB_WORKSPACE/_build/native/debug/build/bobzhang/docx2html/cmd/docx2html:$GITHUB_WORKSPACE/_build/native/debug/build/bobzhang/docx2html/cmd/docx:$GITHUB_WORKSPACE/_build/native/debug/build/bobzhang/office:$PATH"
+          printf 'name = "moonbitlang/cramstub"\nversion = "0.1.0"\n' > "$STUB/moon.mod"
+          export PATH="$GITHUB_WORKSPACE/_build/native/debug/build/moonbitlang/mbtexcel/cmd/xlsx:$GITHUB_WORKSPACE/_build/native/debug/build/moonbitlang/docx2html/cmd/docx2html:$GITHUB_WORKSPACE/_build/native/debug/build/moonbitlang/docx2html/cmd/docx:$GITHUB_WORKSPACE/_build/native/debug/build/moonbitlang/office:$PATH"
           cd "$STUB"
           moon cram test "$GITHUB_WORKSPACE/cmd/xlsx/cram"
           moon cram test "$GITHUB_WORKSPACE/docx2html/tests/cram"
@@ -342,7 +342,7 @@ jobs:
       # fixtures cannot cover, with the docx CLI's behaviour on each pinned.
       - name: Corpus smoke (vendored docx-corpus fixtures)
         env:
-          DOCX_CLI: ${{ github.workspace }}/_build/native/debug/build/bobzhang/docx2html/cmd/docx/docx.exe
+          DOCX_CLI: ${{ github.workspace }}/_build/native/debug/build/moonbitlang/docx2html/cmd/docx/docx.exe
         run: bash docx2html/tests/corpus/run.sh
 
       # The mbtexcel library and xlsx CLI also target wasm end to end. Build the

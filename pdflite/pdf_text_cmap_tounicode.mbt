@@ -10,9 +10,7 @@ fn pdf_text_parse_tounicode_sections(
   data : BytesView,
 ) -> Array[(Int, @core.PdfBytes)]? {
   let cursor = @core.byte_cursor_of_view(data)
-  let entries : Array[(Int, @core.PdfBytes)] = Array::new(
-    capacity=data.length() / 4,
-  )
+  let entries : Array[(Int, @core.PdfBytes)] = Array(capacity=data.length() / 4)
   let mut section = PdfTextToUnicodeNone
   let mut pending_bfchar_source : @core.PdfBytes? = None
   let mut pending_bfrange_array : PdfTextCMapBFRangeArray? = None

@@ -1,5 +1,5 @@
 // Generated using `moon info`, DON'T EDIT IT
-package "bobzhang/pdflite/font/truetype"
+package "moonbitlang/pdflite/font/truetype"
 
 import {
   "moonbitlang/core/debug",

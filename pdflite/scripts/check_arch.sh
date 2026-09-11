@@ -4,7 +4,7 @@
 # See ARCHITECTURE_PROPOSAL.md and EXECUTION_PLAN.md (commit A4).
 #
 # Enforces two ratchets so the root monolith cannot regrow during the refactor:
-#   1. No feature package imports the root package "bobzhang/pdflite".
+#   1. No feature package imports the root package "moonbitlang/pdflite".
 #      Entry-point / test / glue packages may (they are the top of the graph).
 #   2. No NEW source file appears in the root package outside the allowlist.
 #      Removing root files (the goal of extraction) is always fine.
@@ -31,10 +31,10 @@ while IFS= read -r pkgfile; do
   pkg="${pkgfile%/moon.pkg}"
   pkg="${pkg#./}"
   { [ "$pkg" = "." ] || [ -z "$pkg" ]; } && continue # root package (path was ".")
-  # Match the exact root import "bobzhang/pdflite" (not a subpackage path).
-  if grep -qE '"bobzhang/pdflite"[[:space:]]*,?' "$pkgfile"; then
+  # Match the exact root import "moonbitlang/pdflite" (not a subpackage path).
+  if grep -qE '"moonbitlang/pdflite"[[:space:]]*,?' "$pkgfile"; then
     if ! is_allowed_importer "$pkg"; then
-      echo "ARCH VIOLATION: package '$pkg' imports the root package 'bobzhang/pdflite'."
+      echo "ARCH VIOLATION: package '$pkg' imports the root package 'moonbitlang/pdflite'."
       echo "  Feature packages must depend downward (document/syntax/core), not on root."
       fail=1
     fi

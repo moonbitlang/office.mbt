@@ -47,8 +47,8 @@ fn pdf_parse_content_ops_from_view_with_context(
 ) -> Array[@content.PdfContentOp] raise @core.PdfError {
   let cursor = @core.byte_cursor_of_view(data)
   let op_capacity = pdf_content_parse_ops_capacity(data)
-  let ops : Array[@content.PdfContentOp] = Array::new(capacity=op_capacity)
-  let operands : Array[@syntax.PdfObject] = Array::new(capacity=8)
+  let ops : Array[@content.PdfContentOp] = Array(capacity=op_capacity)
+  let operands : Array[@syntax.PdfObject] = Array(capacity=8)
   let mut done = false
   while !done {
     let before = cursor.position()

@@ -64,7 +64,7 @@ fn pdf_content_operand_string(
 fn pdf_content_numbers_from_array(object : PdfObject) -> Array[Double]? {
   match object {
     PdfArray(items) => {
-      let output : Array[Double] = Array::new(capacity=items.length())
+      let output : Array[Double] = Array(capacity=items.length())
       for item in items {
         match item {
           PdfReal(value) => output.push(value)
@@ -83,7 +83,7 @@ fn pdf_content_numbers_from_array(object : PdfObject) -> Array[Double]? {
 fn pdf_content_numbers_from_operands(
   operands : ArrayView[PdfObject],
 ) -> Array[Double]? {
-  let output : Array[Double] = Array::new(capacity=operands.length())
+  let output : Array[Double] = Array(capacity=operands.length())
   for operand in operands {
     match operand {
       PdfReal(value) => output.push(value)
@@ -119,7 +119,7 @@ fn pdf_content_named_color_operands(
   } else {
     match operands[operands.length() - 1] {
       PdfNameObject(name) => {
-        let numbers : Array[Double] = Array::new(capacity=operands.length() - 1)
+        let numbers : Array[Double] = Array(capacity=operands.length() - 1)
         for i in 0..<(operands.length() - 1) {
           match operands[i] {
             PdfReal(value) => numbers.push(value)
@@ -158,7 +158,7 @@ fn pdf_content_named_color_operands_or_malformed_fallback(
 fn pdf_content_tj_array_from_operand(object : PdfObject) -> PdfObject? {
   match object {
     PdfArray(items) => {
-      let output : Array[PdfObject] = Array::new(capacity=items.length())
+      let output : Array[PdfObject] = Array(capacity=items.length())
       for item in items {
         match item {
           PdfString(bytes) => output.push(PdfString(bytes))

@@ -1,9 +1,9 @@
 // Generated using `moon info`, DON'T EDIT IT
-package "bobzhang/pagelayout/numbering"
+package "moonbitlang/pagelayout/numbering"
 
 import {
-  "bobzhang/pagelayout",
   "moonbitlang/core/debug",
+  "moonbitlang/pagelayout",
 }
 
 // Values

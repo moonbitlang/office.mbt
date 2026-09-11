@@ -884,8 +884,8 @@ if ! (
   exit 1
 fi
 
-native_artifact="$snapshot/_build/native/release/build/bobzhang/office/office.exe"
-wasm_artifact="$snapshot/_build/wasm/release/build/bobzhang/office/office.wasm"
+native_artifact="$snapshot/_build/native/release/build/moonbitlang/office/office.exe"
+wasm_artifact="$snapshot/_build/wasm/release/build/moonbitlang/office/office.wasm"
 [ -x "$native_artifact" ] ||
   die "native release artifact was not built"
 [ -f "$wasm_artifact" ] ||

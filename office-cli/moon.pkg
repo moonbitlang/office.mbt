@@ -1,5 +1,5 @@
 import {
-  "bobzhang/office-lib/cmd/office" @office_cli,
+  "moonbitlang/office-lib/cmd/office" @office_cli,
   "moonbitlang/async",
 }
 

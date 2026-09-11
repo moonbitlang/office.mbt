@@ -1,5 +1,5 @@
 // Generated using `moon info`, DON'T EDIT IT
-package "bobzhang/docx2html/cmd/docx"
+package "moonbitlang/docx2html/cmd/docx"
 
 // Values
 

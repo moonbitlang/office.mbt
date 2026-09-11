@@ -1,6 +1,6 @@
 # pdflite/date
 
-`bobzhang/pdflite/date` parses and writes PDF date strings. It keeps date fields
+`moonbitlang/pdflite/date` parses and writes PDF date strings. It keeps date fields
 as integers so callers can inspect malformed or boundary data through `PdfError`
 instead of relying on host time-zone behavior.
 

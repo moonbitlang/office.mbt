@@ -1,15 +1,15 @@
 import {
-  "bobzhang/mbtexcel/inspect",
-  "bobzhang/mbtexcel/xlsx",
+  "moonbitlang/mbtexcel/inspect",
+  "moonbitlang/mbtexcel/xlsx",
   "moonbitlang/core/debug",
   "moonbitlang/core/encoding/base64",
   "moonbitlang/core/math",
 }
 
 import {
-  "bobzhang/mbtexcel/xlsx",
+  "moonbitlang/mbtexcel/xlsx",
   "moonbitlang/core/encoding/utf8",
-  "moonbitlang/core/json",
+  // "moonbitlang/core/json",
 } for "test"
 
 supported_targets = "native+js+wasm"

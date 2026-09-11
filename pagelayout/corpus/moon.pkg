@@ -1,14 +1,14 @@
 supported_targets = "native"
 
 import {
-  "bobzhang/pagelayout",
+  "moonbitlang/pagelayout",
 }
 
 import {
   "moonbitlang/async",
   "moonbitlang/async/fs" @afs,
-  "bobzhang/pagelayout",
-  "bobzhang/pagelayout/docx",
-  "bobzhang/pagelayout/fonts",
-  "bobzhang/pagelayout/paginate",
+  "moonbitlang/pagelayout",
+  "moonbitlang/pagelayout/docx",
+  "moonbitlang/pagelayout/fonts",
+  "moonbitlang/pagelayout/paginate",
 } for "test"

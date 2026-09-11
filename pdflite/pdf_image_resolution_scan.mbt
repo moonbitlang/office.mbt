@@ -32,7 +32,7 @@ fn PdfDocument::pdf_image_resolution_candidates(
 ) -> Array[PdfImageResolutionCandidate] raise @core.PdfError {
   match self.lookup_direct(pdf_image_xobject_key(), resources) {
     Some(PdfDictionary(xobjects)) => {
-      let candidates : Array[PdfImageResolutionCandidate] = Array::new(
+      let candidates : Array[PdfImageResolutionCandidate] = Array(
         capacity=xobjects.length(),
       )
       for entry in xobjects {

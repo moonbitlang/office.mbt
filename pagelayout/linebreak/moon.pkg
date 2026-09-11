@@ -1,8 +1,8 @@
 import {
-  "bobzhang/pagelayout/fonts",
+  "moonbitlang/pagelayout/fonts",
   "moonbitlang/core/debug",
 }
 
 import {
-  "bobzhang/pagelayout/fonts",
+  "moonbitlang/pagelayout/fonts",
 } for "test"

@@ -1,6 +1,6 @@
 # pdflite/geometry
 
-`bobzhang/pdflite/geometry` defines PDF units, paper sizes, 2D points, and
+`moonbitlang/pdflite/geometry` defines PDF units, paper sizes, 2D points, and
 affine transform matrices. The root package re-exports these helpers for page
 construction, but this package is the focused place for geometry-only code.
 

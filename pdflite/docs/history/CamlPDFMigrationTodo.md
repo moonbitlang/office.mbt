@@ -1544,10 +1544,10 @@ Current backend snapshot:
   source-listed `/KSCms-UHS-HW-V` remains accepted by `31-006` and `31-008`,
   while the corrected-looking `/KSCms-UHC-HW-V` remains rejected, matching the
   literal `cpdfua.ml` `cmap_names` table. Focused native validation reports
-  `moon test --target native --package bobzhang/pdflite --file
+  `moon test --target native --package moonbitlang/pdflite --file
   pdf_ua_matterhorn_test.mbt --filter '*CMap names*'` at 1/1 tests passing;
   widened native validation reports `moon test --target native --package
-  bobzhang/pdflite --file pdf_ua_matterhorn_test.mbt` at 48/48 tests passing;
+  moonbitlang/pdflite --file pdf_ua_matterhorn_test.mbt` at 48/48 tests passing;
   native full-suite validation reports 2143/2143 tests passing.~~
 - [x] ~~Port the `cpdfua` Matterhorn non-symbolic TrueType encoding dictionary
   slice: the covered Matterhorn surface now includes source checks `31-019`,
@@ -1782,7 +1782,7 @@ Current backend snapshot:
   `apply_redaction_type`/`pdf_apply_redaction_type` helpers. Coverage pins
   no-op content preservation, wrapper parity, invalid-page diagnostics for
   `redact_path`, and no-op apply calls. `moon test --target native --package
-  bobzhang/pdflite --file pdf_redact_test.mbt` reports 4/4 tests passing;
+  moonbitlang/pdflite --file pdf_redact_test.mbt` reports 4/4 tests passing;
   native full-suite validation reports 1760/1760 tests passing.~~
 - [x] ~~Port the JSON side of `cpdfmetadata.output_info` for in-memory
   documents: `info_json` now reports cpdf-style version/page counts, legacy
@@ -1898,7 +1898,7 @@ Current backend snapshot:
   optional inline-image rows, UTF-8 JSON byte output, and compatibility
   wrappers. Coverage pins soft-mask rows, wrapper/blob parity, invalid-page
   handling, and Form XObject inline gating. Native focused validation reports
-  `moon test --target native --package bobzhang/pdflite --file
+  `moon test --target native --package moonbitlang/pdflite --file
   pdf_image_test.mbt` at 41/41 tests passing; native full-suite validation
   reports 1766/1766 tests passing.~~
 - [x] ~~Port `cpdfimage.image_resolution` and JSON reporting with selected-page
@@ -1907,7 +1907,7 @@ Current backend snapshot:
   compatibility wrappers. Coverage pins direct image DPI, threshold filtering,
   inline opt-in behavior, JSON/blob parity, and nested Form XObject transforms.
   Native focused validation reports `moon test --target native --package
-  bobzhang/pdflite --file pdf_image_test.mbt` at 44/44 tests passing; native
+  moonbitlang/pdflite --file pdf_image_test.mbt` at 44/44 tests passing; native
   full-suite validation reports 1769/1769 tests passing.~~
 - [x] ~~Port the standalone `cpdfimage.obj_of_jbig2_data` branch with cpdf's
   byte-offset dimension extraction, `/JBIG2Decode` image dictionaries,
@@ -1950,7 +1950,7 @@ Current backend snapshot:
   removes existing PDF/UA `part`/`rev`/`amd`/`corr` fields before inserting a
   fresh RDF description marker, preserves source documents, and keeps metadata
   streams when removing markers. `moon test --target native --package
-  bobzhang/pdflite --file pdf_create_test.mbt` reports 7/7 tests passing;
+  moonbitlang/pdflite --file pdf_create_test.mbt` reports 7/7 tests passing;
   native full-suite validation reports 1762/1762 tests passing.~~
 - [x] ~~Port the JSON structure-tree helpers from `cpdfua`:
   `extract_struct_tree` exports the cpdf header row plus referenced structure
@@ -1958,7 +1958,7 @@ Current backend snapshot:
   `replace_struct_tree` imports positive object replacements plus nonpositive
   new-object rows with indirect-reference rewriting. UTF-8 JSON byte wrappers
   and cpdf-style compatibility wrappers are included. `moon test --target
-  native --package bobzhang/pdflite --file pdf_structure_test.mbt` reports
+  native --package moonbitlang/pdflite --file pdf_structure_test.mbt` reports
   11/11 tests passing; native full-suite validation reports 1764/1764 tests
   passing.~~
 - [x] ~~Port `cpdfua.print_struct_tree` as byte-returning structure-tree text
@@ -1997,7 +1997,7 @@ Current backend snapshot:
   `pdf_standard_font_substitute_font_name` now expose cpdf's URW substitute
   filename mapping and extension-stripped font names, leaving filesystem loading
   to a later file-IO/native boundary. Focused validation reports `moon test
-  --target native --package bobzhang/pdflite --file pdf_embed_test.mbt` at
+  --target native --package moonbitlang/pdflite --file pdf_embed_test.mbt` at
   5/5 tests passing; native full-suite validation reports 1887/1887 tests
   passing.~~
 - [x] ~~Close the `cpdfembed.load_substitute` file-IO boundary: native
@@ -3689,7 +3689,7 @@ Current backend snapshot:
   colour arguments. Coverage pins case-insensitive CSS colour conversion to
   normalized RGB, one/three/four numeric arities for gray/RGB/CMYK, PDF lexical
   integer/real token handling, and malformed arities/tokens. Native focused
-  validation reports `moon test --target native --package bobzhang/pdflite
+  validation reports `moon test --target native --package moonbitlang/pdflite
   --file pdf_colour_test.mbt` at 4/4 tests passing; native full-suite
   validation reports 1772/1772 tests passing.~~
 - [x] ~~Standalone `cpdfdraw.ml`/`cpdfdrawcontrol.ml` role-map slice now lets
@@ -3862,7 +3862,7 @@ Current backend snapshot:
   named destinations, bookmark structure validation, JSON row shape, colour and
   style flags, malformed-row diagnostics, and add-wrapper behavior. Current
   native focused validation reports `moon test --target native --package
-  bobzhang/pdflite --file pdf_bookmark_test.mbt` at 26/26 tests passing.~~
+  moonbitlang/pdflite --file pdf_bookmark_test.mbt` at 26/26 tests passing.~~
 - [x] ~~Optional-content group management helper slice exposes cpdf-style raw
   OCG name listing, rename, order-all, and same-name coalescing wrappers.
   Coverage pins raw layer-name listing, copy-on-write rename behavior, wrapper
@@ -3909,7 +3909,7 @@ Current backend snapshot:
   collision renumbering, extra-object preservation, wrapper parity, copy parity,
   original-document preservation, and malformed JSON soft errors. Native
   focused validation reports `moon test --target native --package
-  bobzhang/pdflite --file pdf_annotation_test.mbt` at 14/14 tests passing;
+  moonbitlang/pdflite --file pdf_annotation_test.mbt` at 14/14 tests passing;
   native full-suite validation reports 1758/1758 tests passing.~~
 - [x] ~~Standalone utility ports for `cpdfdebug.ml`, `cpdfprinttree.ml`, and
   `cpdfstrftime.ml` expose `PdfDocument::debug_objects`,
@@ -4027,7 +4027,7 @@ Current backend snapshot:
   where parsed function streams are decoded even when `no_stream_data=true`,
   while ordinary stream-data elision and parsed page-content arrays remain
   unchanged. Native focused validation reports `moon test --target native
-  --package bobzhang/pdflite --file pdf_util_test.mbt` at 27/27 tests passing;
+  --package moonbitlang/pdflite --file pdf_util_test.mbt` at 27/27 tests passing;
   native full-suite validation reports 2140/2140 tests passing.~~
 - [x] ~~Standalone `cpdfjson.ml` full-document byte-output slice now exposes
   `PdfDocument::json_of_document_blob` and `pdf_json_of_document_blob` as the
@@ -4110,7 +4110,7 @@ Current backend snapshot:
   `PdfError::SoftError("Unknown presentation type")`, replacing the local typed
   placeholder branch while preserving the public presentation API. Native
   focused validation reports `moon test --target native --package
-  bobzhang/pdflite --file pdf_presentation_test.mbt` at 6/6 tests passing;
+  moonbitlang/pdflite --file pdf_presentation_test.mbt` at 6/6 tests passing;
   native full-suite validation reports 2143/2143 tests passing.~~
 - [x] ~~Standalone `cpdfposition.ml` position helper slice exposes the
   `PdfPosition` model, `pdf_string_of_position`, and
@@ -4124,7 +4124,7 @@ Current backend snapshot:
   `pdf_addtext_justification_offset`, covering cpdf's horizontal and vertical
   position groups, 180/270-degree justification swaps, centered/right/left
   offsets, and diagonal no-op behavior. Native focused validation reports
-  `moon test --target native --package bobzhang/pdflite --file
+  `moon test --target native --package moonbitlang/pdflite --file
   pdf_addtext_test.mbt` at 5/5 tests passing; native full-suite validation
   reports 1777/1777 tests passing.~~
 - [x] ~~Standalone `cpdfaddtext.ml` URL marker helper slice exposes
@@ -4132,20 +4132,20 @@ Current backend snapshot:
   `pdf_addtext_get_urls_line`, covering `%URL[text|url]` stripping, multiple
   ordered URL spans, byte-offset parity for UTF-8 text, and malformed-marker
   soft errors. Native focused validation reports `moon test --target native
-  --package bobzhang/pdflite --file pdf_addtext_test.mbt` at 9/9 tests
+  --package moonbitlang/pdflite --file pdf_addtext_test.mbt` at 9/9 tests
   passing; native full-suite validation reports 1781/1781 tests passing.~~
 - [x] ~~Standalone `cpdfaddtext.ml` replacement processing slice exposes
   `pdf_addtext_process_text_with_time`, covering lazy callback evaluation,
   left-to-right ordered marker replacement, empty-marker no-op behavior, and the
   final cpdf strftime pass. Native focused validation reports `moon test
-  --target native --package bobzhang/pdflite --file pdf_addtext_test.mbt` at
+  --target native --package moonbitlang/pdflite --file pdf_addtext_test.mbt` at
   12/12 tests passing; native full-suite validation reports 1784/1784 tests
   passing.~~
 - [x] ~~Standalone `cpdfaddtext.ml` line expansion slice exposes
   `pdf_addtext_expand_lines_with_time`, covering replacement expansion,
   post-expansion URL stripping for line measurement, strftime integration, and
   malformed URL propagation. Native focused validation reports `moon test
-  --target native --package bobzhang/pdflite --file pdf_addtext_test.mbt` at
+  --target native --package moonbitlang/pdflite --file pdf_addtext_test.mbt` at
   14/14 tests passing; native full-suite validation reports 1786/1786 tests
   passing.~~
 - [x] ~~Standalone `cpdfaddtext.ml` replacement-pair slice exposes
@@ -4153,14 +4153,14 @@ Current backend snapshot:
   `pdf_addtext_replacement_pairs`, covering `%PageDiv2`, `%Page`, roman page
   markers, filename, labels, bookmark levels 0-4, and `%Bates` zero-padding.
   Native focused validation reports `moon test --target native --package
-  bobzhang/pdflite --file pdf_addtext_test.mbt` at 16/16 tests passing; native
+  moonbitlang/pdflite --file pdf_addtext_test.mbt` at 16/16 tests passing; native
   full-suite validation reports 1788/1788 tests passing.~~
 - [x] ~~Standalone `cpdfaddtext.ml` page-label helper slice exposes
   `PdfDocument::addtext_page_label` and `pdf_addtext_page_label`, covering
   decimal fallback labels, existing roman/prefixed labels, the compatibility
   wrapper, and PDFDocString prefix decoding for UTF-8 add-text output. Native
   focused validation reports `moon test --target native --package
-  bobzhang/pdflite --file pdf_addtext_test.mbt` at 19/19 tests passing; native
+  moonbitlang/pdflite --file pdf_addtext_test.mbt` at 19/19 tests passing; native
   full-suite validation reports 1791/1791 tests passing.~~
 - [x] ~~Standalone `cpdfaddtext.ml` bookmark lookup helper slice exposes
   `PdfDocument::addtext_bookmark_for_page` and
@@ -4168,21 +4168,21 @@ Current backend snapshot:
   exact page hits, fallback to the last prior bookmark at the requested level,
   chapter-boundary reset behavior, wrapper parity, and PDFDocString title
   decoding. Native focused validation reports `moon test --target native
-  --package bobzhang/pdflite --file pdf_addtext_test.mbt` at 21/21 tests
+  --package moonbitlang/pdflite --file pdf_addtext_test.mbt` at 21/21 tests
   passing; native full-suite validation reports 1793/1793 tests passing.~~
 - [x] ~~Standalone `cpdfaddtext.ml` document replacement-values slice exposes
   `PdfDocument::addtext_replacement_values` and
   `pdf_addtext_replacement_values`, covering document-derived `%Label`,
   `%EndLabel`, `%Bookmark0`-`%Bookmark4`, Bates inputs, wrapper parity, and
   integration with `pdf_addtext_replacement_pairs`. Native focused validation
-  reports `moon test --target native --package bobzhang/pdflite --file
+  reports `moon test --target native --package moonbitlang/pdflite --file
   pdf_addtext_test.mbt` at 23/23 tests passing; native full-suite validation
   reports 1795/1795 tests passing.~~
 - [x] ~~Standalone `cpdfaddtext.ml` cap-height helper slice exposes
   `pdf_addtext_cap_height`, covering explicit simple-font descriptor
   cap-height, Standard 14 AFM fallback lookup, missing/unknown standard-font
   behavior, and cpdf's slashless font-name convention. Native focused
-  validation reports `moon test --target native --package bobzhang/pdflite
+  validation reports `moon test --target native --package moonbitlang/pdflite
   --file pdf_addtext_test.mbt` at 25/25 tests passing; native full-suite
   validation reports 1797/1797 tests passing.~~
 - [x] ~~Standalone `cpdfaddtext.ml` input preprocessing slice exposes
@@ -4191,13 +4191,13 @@ Current backend snapshot:
   non-splitting, UTF-8 byte preservation, octal byte escapes, doubled-backslash
   collapse, non-newline backslash escapes, and out-of-range octal soft errors.
   Native focused validation reports `moon test --target native --package
-  bobzhang/pdflite --file pdf_addtext_test.mbt` at 28/28 tests passing; native
+  moonbitlang/pdflite --file pdf_addtext_test.mbt` at 28/28 tests passing; native
   full-suite validation reports 1800/1800 tests passing.~~
 - [x] ~~Standalone `cpdfaddtext.ml` colour-operator slice exposes
   `pdf_addtext_colour_op` and `pdf_addtext_colour_op_stroke`, reusing
   `PdfContentColour` for cpdf add-text colours and covering gray/RGB/CMYK fill
   mappings to `g`/`rg`/`k` plus stroke mappings to `G`/`RG`/`K`. Native focused
-  validation reports `moon test --target native --package bobzhang/pdflite
+  validation reports `moon test --target native --package moonbitlang/pdflite
   --file pdf_addtext_test.mbt` at 30/30 tests passing; native full-suite
   validation reports 1802/1802 tests passing.~~
 - [x] ~~Standalone `cpdfaddtext.ml` opacity-resource slice exposes
@@ -4206,20 +4206,20 @@ Current backend snapshot:
   update, unique `/gs*` allocation, fill/stroke alpha dictionary entries,
   existing resource preservation, opaque no-op behavior, and wrapper parity.
   Native focused validation reports `moon test --target native --package
-  bobzhang/pdflite --file pdf_addtext_test.mbt` at 86/86 tests passing; native
+  moonbitlang/pdflite --file pdf_addtext_test.mbt` at 86/86 tests passing; native
   full-suite validation reports 1858/1858 tests passing.~~
 - [x] ~~Standalone `cpdfaddtext.ml` UTF-8 charcode helper slice exposes
   `pdf_addtext_charcodes_of_utf8`, covering cpdf's charcode-string byte output
   as `PdfBytes`, WinAnsi byte mapping for representable codepoints, and
   missing-font-codepoint skipping. Native focused validation reports `moon test
-  --target native --package bobzhang/pdflite --file pdf_addtext_test.mbt` at
+  --target native --package moonbitlang/pdflite --file pdf_addtext_test.mbt` at
   34/34 tests passing; native full-suite validation reports 1806/1806 tests
   passing.~~
 - [x] ~~Standalone `cpdfaddtext.ml` text-width helper slice exposes
   `pdf_addtext_width_of_text`, covering cpdf's simple-font-only metric
   summation over charcode bytes plus zero fallbacks for missing metrics,
   out-of-range charcodes, and non-simple fonts. Native focused validation
-  reports `moon test --target native --package bobzhang/pdflite --file
+  reports `moon test --target native --package moonbitlang/pdflite --file
   pdf_addtext_test.mbt` at 32/32 tests passing; native full-suite validation
   reports 1804/1804 tests passing.~~
 - [x] ~~Standalone `cpdfaddtext.ml` add-rectangle operator slice exposes
@@ -4227,14 +4227,14 @@ Current backend snapshot:
   rectangle content ordering, fill/stroke colour operators, filled versus
   outlined paint operators, optional line width, and optional ExtGState
   selection. Native focused validation reports `moon test --target native
-  --package bobzhang/pdflite --file pdf_addtext_test.mbt` at 36/36 tests
+  --package moonbitlang/pdflite --file pdf_addtext_test.mbt` at 36/36 tests
   passing; native full-suite validation reports 1808/1808 tests passing.~~
 - [x] ~~Standalone `cpdfaddtext.ml` add-rectangle origin slice exposes
   `pdf_addtext_rectangle_origin`, covering cpdf's `calculate_position false`
   placement for rectangle width, top-position y lowering by rectangle height,
   centre/`PosCentre` y lowering by half height, and unchanged bottom/edge
   positions. Native focused validation reports `moon test --target native
-  --package bobzhang/pdflite --file pdf_addtext_test.mbt` at 38/38 tests
+  --package moonbitlang/pdflite --file pdf_addtext_test.mbt` at 38/38 tests
   passing; native full-suite validation reports 1810/1810 tests passing.~~
 - [x] ~~Standalone `cpdfaddtext.ml` add-rectangle document slice exposes
   `PdfDocument::addtext_rectangle` and `pdf_addtext_rectangle`, covering
@@ -4242,7 +4242,7 @@ Current backend snapshot:
   placement with MediaBox fallback, optional opacity `/ExtGState` resources,
   outline/fill behavior, underneath fast insertion, wrapper parity, and invalid
   coordinate/page diagnostics. Native focused validation reports `moon test
-  --target native --package bobzhang/pdflite --file pdf_addtext_test.mbt` at
+  --target native --package moonbitlang/pdflite --file pdf_addtext_test.mbt` at
   42/42 tests passing; native full-suite validation reports 1814/1814 tests
   passing.~~
 - [x] ~~Standalone `cpdfaddtext.ml` text-operator helper slice exposes
@@ -4251,7 +4251,7 @@ Current backend snapshot:
   fill/stroke colour operators, optional opacity graphics state, simple-font
   UTF-8-to-charcode conversion with missing-codepoint skipping, and fontpack
   run switching. Native focused validation reports `moon test --target native
-  --package bobzhang/pdflite --file pdf_addtext_test.mbt` at 44/44 tests
+  --package moonbitlang/pdflite --file pdf_addtext_test.mbt` at 44/44 tests
   passing; native full-suite validation reports 1816/1816 tests passing.~~
 - [x] ~~Standalone `cpdfaddtext.ml` text-placement helper slice exposes
   `pdf_addtext_rotation_radians`, `pdf_addtext_rotation_offsets`, and
@@ -4259,7 +4259,7 @@ Current backend snapshot:
   mapping, position-specific rotated text origin offsets, diagonal/reverse
   diagonal vertical-offset projection, Rot180 text-width backoff, and unchanged
   non-diagonal offsets. Native focused validation reports `moon test --target
-  native --package bobzhang/pdflite --file pdf_addtext_test.mbt` at 47/47
+  native --package moonbitlang/pdflite --file pdf_addtext_test.mbt` at 47/47
   tests passing; native full-suite validation reports 1819/1819 tests
   passing.~~
 - [x] ~~Standalone `cpdfaddtext.ml` multiline text-offset helper slice exposes
@@ -4269,7 +4269,7 @@ Current backend snapshot:
   midline/topline Standard 14 baseline adjustment, simple-font cap-height
   adjustment, diagonal topline behavior, midline precedence, and no-op missing
   font metrics. Native focused validation reports `moon test --target native
-  --package bobzhang/pdflite --file pdf_addtext_test.mbt` at 51/51 tests
+  --package moonbitlang/pdflite --file pdf_addtext_test.mbt` at 51/51 tests
   passing; native full-suite validation reports 1823/1823 tests passing.~~
 - [x] ~~Standalone `cpdfaddtext.ml` line-preparation and encoding helper slice
   exposes `pdf_addtext_lines_for_rotation` and
@@ -4277,7 +4277,7 @@ Current backend snapshot:
   preparation, Rot180/Rot270 line reversal, Rot0/Rot90 order preservation,
   selected Standard/simple font encodings, and the missing-font WinAnsi
   fallback. Native focused validation reports `moon test --target native
-  --package bobzhang/pdflite --file pdf_addtext_test.mbt` at 54/54 tests
+  --package moonbitlang/pdflite --file pdf_addtext_test.mbt` at 54/54 tests
   passing; native full-suite validation reports 1826/1826 tests passing.~~
 - [x] ~~Standalone `cpdfaddtext.ml` page font-dictionary setup slice exposes
   `PdfDocument::addtext_page_font_dictionary` and
@@ -4285,7 +4285,7 @@ Current backend snapshot:
   lookup, empty dictionary fallback for missing resources, indirect resource
   resolution, malformed present value preservation, and wrapper parity. Native
   focused validation reports `moon test --target native --package
-  bobzhang/pdflite --file pdf_addtext_test.mbt` at 89/89 tests passing; native
+  moonbitlang/pdflite --file pdf_addtext_test.mbt` at 89/89 tests passing; native
   full-suite validation reports 1861/1861 tests passing.~~
 - [x] ~~Standalone `cpdfaddtext.ml` font-resource helper slice exposes
   `pdf_addtext_allocate_font_names` and
@@ -4293,7 +4293,7 @@ Current backend snapshot:
   scan, non-fontpack fallback name selection, fontpack placeholder reservation,
   embedded-font indirect resource installation, existing dictionary
   preservation, and mismatched fontpack resource diagnostics. Native focused
-  validation reports `moon test --target native --package bobzhang/pdflite
+  validation reports `moon test --target native --package moonbitlang/pdflite
   --file pdf_addtext_test.mbt` at 57/57 tests passing; native full-suite
   validation reports 1829/1829 tests passing.~~
 - [x] ~~Standalone `cpdfaddtext.ml` text-width calculation slice exposes
@@ -4302,7 +4302,7 @@ Current backend snapshot:
   width branch, simple-font metric scaling, missing simple metrics as zero,
   fontpack width-table summation, missing fontpack codepoint skipping, and
   fontpack missing-metric diagnostics. Native focused validation reports `moon
-  test --target native --package bobzhang/pdflite --file pdf_addtext_test.mbt`
+  test --target native --package moonbitlang/pdflite --file pdf_addtext_test.mbt`
   at 59/59 tests passing; native full-suite validation reports 1831/1831 tests
   passing.~~
 - [x] ~~Standalone `cpdfaddtext.ml` local `calc_textwidth` slice exposes
@@ -4310,7 +4310,7 @@ Current backend snapshot:
   covering cpdf's selected parsed-font branch, fontpack UTF-8/codepoint branch,
   existing page-font branch, malformed fontpack UTF-8 diagnostics, wrapper
   parity, and byte-level PDF text measurement semantics. Native focused
-  validation reports `moon test --target native --package bobzhang/pdflite
+  validation reports `moon test --target native --package moonbitlang/pdflite
   --file pdf_addtext_test.mbt` at 92/92 tests passing; native full-suite
   validation reports 1864/1864 tests passing.~~
 - [x] ~~Standalone `cpdfaddtext.ml` local line-width aggregation slice exposes
@@ -4319,7 +4319,7 @@ Current backend snapshot:
   expanded paragraph width list, longest-width selection, selected-font and
   fontpack branches, empty expanded-line diagnostics, and wrapper parity.
   Native focused validation reports `moon test --target native --package
-  bobzhang/pdflite --file pdf_addtext_test.mbt` at 97/97 tests passing; native
+  moonbitlang/pdflite --file pdf_addtext_test.mbt` at 97/97 tests passing; native
   full-suite validation reports 1869/1869 tests passing.~~
 - [x] ~~Standalone `cpdfaddtext.ml` prepared-line integration slice exposes
   `PdfAddTextPreparedLine`, `pdf_addtext_measurement_bytes`,
@@ -4328,7 +4328,7 @@ Current backend snapshot:
   selected-font/raw/fontpack measurement bytes, expanded-line byte
   materialization, relative-box placement, width aggregation, and wrapper
   parity. Native focused validation reports `moon test --target native
-  --package bobzhang/pdflite --file pdf_addtext_test.mbt` at 100/100 tests
+  --package moonbitlang/pdflite --file pdf_addtext_test.mbt` at 100/100 tests
   passing; native full-suite validation reports 1872/1872 tests passing.~~
 - [x] ~~Standalone `cpdfaddtext.ml` resource-setup integration slice exposes
   `PdfAddTextResourceSetup`, `PdfDocument::addtext_resource_setup`, and
@@ -4337,7 +4337,7 @@ Current backend snapshot:
   `/ExtGState` setup, placeholder font dictionaries, wrapper parity, and
   cpdf's existing-font branch that preserves page resources and suppresses
   opacity selection. Native focused validation reports `moon test --target
-  native --package bobzhang/pdflite --file pdf_addtext_test.mbt` at 103/103
+  native --package moonbitlang/pdflite --file pdf_addtext_test.mbt` at 103/103
   tests passing; native full-suite validation reports 1875/1875 tests
   passing.~~
 - [x] ~~Standalone `cpdfaddtext.ml` single-page line emitter slice exposes
@@ -4346,7 +4346,7 @@ Current backend snapshot:
   selected-font URL annotation insertion, shifted text content, wrapper parity,
   prepend/fast insertion, and cpdf's existing-font opacity suppression. Native
   focused validation reports `moon test --target native --package
-  bobzhang/pdflite --file pdf_addtext_test.mbt` at 105/105 tests passing;
+  moonbitlang/pdflite --file pdf_addtext_test.mbt` at 105/105 tests passing;
   native full-suite validation reports 1877/1877 tests passing.~~
 - [x] ~~Standalone `cpdfaddtext.ml` page-lines integration slice exposes
   `PdfDocument::addtext_page_lines` and `pdf_addtext_page_lines`, covering
@@ -4354,7 +4354,7 @@ Current backend snapshot:
   rotation-dependent line advancement via repeated single-line emission,
   resource accumulation across lines, content isolation wrappers when appending
   to non-empty pages, and wrapper parity. Native focused validation reports
-  `moon test --target native --package bobzhang/pdflite --file
+  `moon test --target native --package moonbitlang/pdflite --file
   pdf_addtext_test.mbt` at 107/107 tests passing; native full-suite validation
   reports 1879/1879 tests passing.~~
 - [x] ~~Standalone `cpdfaddtext.ml` selected-page add-text integration slice
@@ -4363,7 +4363,7 @@ Current backend snapshot:
   one-based page validation, cpdf shift-coordinate parsing, page-local
   replacement values, selected page rewrites through `change_pages`, and
   wrapper parity for already resolved font/fontpack inputs. Native focused
-  validation reports `moon test --target native --package bobzhang/pdflite
+  validation reports `moon test --target native --package moonbitlang/pdflite
   --file pdf_addtext_test.mbt` at 109/109 tests passing; native full-suite
   validation reports 1881/1881 tests passing.~~
 - [x] ~~Standalone `cpdfaddtext.ml` existing-font effective-name slice covers
@@ -4371,14 +4371,14 @@ Current backend snapshot:
   `PdfDocument::addtext_line_page` emits the resolved page resource key while
   preserving existing font dictionaries and leaving selected-font/fontpack
   resource names unchanged. Native focused validation reports `moon test
-  --target native --package bobzhang/pdflite --file pdf_addtext_test.mbt` at
+  --target native --package moonbitlang/pdflite --file pdf_addtext_test.mbt` at
   110/110 tests passing; native full-suite validation reports 1882/1882 tests
   passing.~~
 - [x] ~~Standalone `cpdfaddtext.ml` existing-font text encoding slice covers
   cpdf's non-raw conversion of existing-font add-text through the resolved page
   font before width measurement, URL prefix measurement, and text-operator
   emission, while keeping fontpack/raw UTF-8 paths unchanged. Native focused
-  validation reports `moon test --target native --package bobzhang/pdflite
+  validation reports `moon test --target native --package moonbitlang/pdflite
   --file pdf_addtext_test.mbt` at 111/111 tests passing; native full-suite
   validation reports 1883/1883 tests passing.~~
 - [x] ~~Standalone `cpdfaddtext.ml` outer resolved-font add-text slice exposes
@@ -4387,7 +4387,7 @@ Current backend snapshot:
   scanning, cpdf's empty-visible-text no-op before font writing, selected/fontpack
   font-object writing, and delegation to the selected-page add-text pipeline.
   Native focused validation reports `moon test --target native --package
-  bobzhang/pdflite --file pdf_addtext_test.mbt` at 113/113 tests passing;
+  moonbitlang/pdflite --file pdf_addtext_test.mbt` at 113/113 tests passing;
   native full-suite validation reports 1885/1885 tests passing.~~
 - [x] ~~Standalone `cpdfaddtext.ml` non-embedding font-source slice exposes
   `PdfAddTextFontSource`, `PdfDocument::addtexts_with_source`, and
@@ -4395,7 +4395,7 @@ Current backend snapshot:
   behavior, `ExistingNamedFont` delegation, empty-visible-text no-op before
   source resolution, and empty premade fontpack diagnostics while leaving
   TrueType `EmbedInfo` embedding for a separate slice. Native focused validation
-  reports `moon test --target native --package bobzhang/pdflite --file
+  reports `moon test --target native --package moonbitlang/pdflite --file
   pdf_addtext_test.mbt` at 117/117 tests passing; native full-suite validation
   reports 1891/1891 tests passing.~~
 - [x] ~~Standalone `cpdfaddtext.ml` line-width selection and justification
@@ -4404,7 +4404,7 @@ Current backend snapshot:
   line selection, empty-width diagnostics, horizontal-rotation justification
   addition to `hoffset`, and vertical-rotation justification subtraction from
   `voffset`. Native focused validation reports `moon test --target native
-  --package bobzhang/pdflite --file pdf_addtext_test.mbt` at 61/61 tests
+  --package moonbitlang/pdflite --file pdf_addtext_test.mbt` at 61/61 tests
   passing; native full-suite validation reports 1833/1833 tests passing.~~
 - [x] ~~Standalone `cpdfaddtext.ml` line-placement composition slice exposes
   `PdfAddTextLinePlacement` and `pdf_addtext_line_placement`, covering cpdf's
@@ -4412,7 +4412,7 @@ Current backend snapshot:
   justification offset application, explicit text rotation, rotation-origin
   offsets, and horizontal/vertical rotation branches for one resolved add-text
   line. Native focused validation reports `moon test --target native --package
-  bobzhang/pdflite --file pdf_addtext_test.mbt` at 94/94 tests passing; native
+  moonbitlang/pdflite --file pdf_addtext_test.mbt` at 94/94 tests passing; native
   full-suite validation reports 1866/1866 tests passing.~~
 - [x] ~~Standalone `cpdfaddtext.ml` font resource installation slice exposes
   `pdf_addtext_install_font_resource` and
@@ -4420,7 +4420,7 @@ Current backend snapshot:
   dictionary insertion for selected-font and fontpack paths, existing resource
   preservation, embedded font indirect references, existing font dictionary
   preservation, and the missing-font no-op branch. Native focused validation
-  reports `moon test --target native --package bobzhang/pdflite --file
+  reports `moon test --target native --package moonbitlang/pdflite --file
   pdf_addtext_test.mbt` at 63/63 tests passing; native full-suite validation
   reports 1835/1835 tests passing.~~
 - [x] ~~Standalone `cpdfaddtext.ml` selected-font object slice exposes
@@ -4429,13 +4429,13 @@ Current backend snapshot:
   write path, indirect font object references, existing-named-font no-op mode,
   wrapper parity, and writer-error propagation for unsupported local font
   shapes. Native focused validation reports `moon test --target native
-  --package bobzhang/pdflite --file pdf_addtext_test.mbt` at 84/84 tests
+  --package moonbitlang/pdflite --file pdf_addtext_test.mbt` at 84/84 tests
   passing; native full-suite validation reports 1856/1856 tests passing.~~
 - [x] ~~Standalone `cpdfaddtext.ml` URL annotation object slice exposes
   `pdf_addtext_url_annotation`, covering cpdf's `/Link` subtype dictionary,
   QuadPoints ordering, rectangle serialization, URI action dictionary, and
   URL-border width toggle. Native focused validation reports `moon test
-  --target native --package bobzhang/pdflite --file pdf_addtext_test.mbt` at
+  --target native --package moonbitlang/pdflite --file pdf_addtext_test.mbt` at
   64/64 tests passing; native full-suite validation reports 1836/1836 tests
   passing.~~
 - [x] ~~Standalone `cpdfaddtext.ml` page annotation update slice exposes
@@ -4444,7 +4444,7 @@ Current backend snapshot:
   no-op, direct writeback to `/Annots`, prepending new annotation references
   before resolved existing arrays, and malformed existing annotation handling.
   Native focused validation reports `moon test --target native --package
-  bobzhang/pdflite --file pdf_addtext_test.mbt` at 67/67 tests passing; native
+  moonbitlang/pdflite --file pdf_addtext_test.mbt` at 67/67 tests passing; native
   full-suite validation reports 1839/1839 tests passing.~~
 - [x] ~~Standalone `cpdfaddtext.ml` URL annotation geometry slice exposes
   `PdfAddTextUrlAnnotationGeometry`,
@@ -4453,21 +4453,21 @@ Current backend snapshot:
   fallback, span rectangle construction from measured prefix widths,
   rotate-before-translation transform ordering, quad point ordering, and final
   axis-aligned annotation bounds. Native focused validation reports `moon test
-  --target native --package bobzhang/pdflite --file pdf_addtext_test.mbt` at
+  --target native --package moonbitlang/pdflite --file pdf_addtext_test.mbt` at
   70/70 tests passing; native full-suite validation reports 1842/1842 tests
   passing.~~
 - [x] ~~Standalone `cpdfaddtext.ml` URL annotation prefix-width slice exposes
   `pdf_addtext_url_annotation_widths`, covering cpdf's `annot_coord` behavior
   for start/end URL span offsets, caller-provided text measurement, UTF-8 byte
   offset handling, and malformed span-boundary errors. Native focused validation
-  reports `moon test --target native --package bobzhang/pdflite --file
+  reports `moon test --target native --package moonbitlang/pdflite --file
   pdf_addtext_test.mbt` at 72/72 tests passing; native full-suite validation
   reports 1844/1844 tests passing.~~
 - [x] ~~Standalone `cpdfaddtext.ml` used-codepoint scan slice exposes
   `pdf_addtext_used_codepoints`, covering cpdf's pre-embedding scan over
   expanded visible add-text lines, URL-stripped text, duplicate suppression,
   UTF-8 codepoints, and empty-line behavior. Native focused validation reports
-  `moon test --target native --package bobzhang/pdflite --file
+  `moon test --target native --package moonbitlang/pdflite --file
   pdf_addtext_test.mbt` at 74/74 tests passing; native full-suite validation
   reports 1846/1846 tests passing.~~
 - [x] ~~Standalone `cpdfaddtext.ml` existing-font resource lookup slice exposes
@@ -4476,7 +4476,7 @@ Current backend snapshot:
   branch, direct `/Font` resource-key lookup, `/BaseFont` fallback with returned
   real resource name, indirect font preservation, wrapper parity, and missing
   font errors. Native focused validation reports `moon test --target native
-  --package bobzhang/pdflite --file pdf_addtext_test.mbt` at 77/77 tests
+  --package moonbitlang/pdflite --file pdf_addtext_test.mbt` at 77/77 tests
   passing; native full-suite validation reports 1849/1849 tests passing.~~
 - [x] ~~Standalone `cpdfaddtext.ml` existing-font width slice exposes
   `PdfDocument::addtext_width_of_existing_font_resource` and
@@ -4484,7 +4484,7 @@ Current backend snapshot:
   measurement path, direct resource-key lookup, `/BaseFont` fallback resource
   names, parsed font reading, Standard 14 width scaling, and wrapper parity.
   Native focused validation reports `moon test --target native --package
-  bobzhang/pdflite --file pdf_addtext_test.mbt` at 79/79 tests passing; native
+  moonbitlang/pdflite --file pdf_addtext_test.mbt` at 79/79 tests passing; native
   full-suite validation reports 1851/1851 tests passing.~~
 - [x] ~~Standalone `cpdfaddtext.ml` URL annotation reference slice exposes
   `PdfDocument::addtext_url_annotation_references` and
@@ -4493,7 +4493,7 @@ Current backend snapshot:
   rectangle height, transformed quad/rect creation, indirect annotation object
   insertion, wrapper parity, and typed measurement-error propagation. Native
   focused validation reports `moon test --target native --package
-  bobzhang/pdflite --file pdf_addtext_test.mbt` at 81/81 tests passing; native
+  moonbitlang/pdflite --file pdf_addtext_test.mbt` at 81/81 tests passing; native
   full-suite validation reports 1853/1853 tests passing.~~
 - [x] ~~Standalone `cpdfremovetext.ml` removal slice exposes
   `pdf_remove_added_text_ops`, `pdf_remove_all_text_ops`,
@@ -4518,7 +4518,7 @@ Current backend snapshot:
   multi-subpath path bounds, cpdf's empty-path zero rectangle, segment
   transforms, and whole-path transforms while leaving the full semantic
   content-object filter/JSON walk for later slices. Native focused validation
-  reports `moon test --target native --package bobzhang/pdflite --file
+  reports `moon test --target native --package moonbitlang/pdflite --file
   pdf_shape_test.mbt` at 6/6 tests passing; native full-suite validation
   reports 1911/1911 tests passing.~~
 - [x] ~~Standalone `cpdfcontent.ml` path JSON slice exposes
@@ -4528,7 +4528,7 @@ Current backend snapshot:
   subpath flag, winding strings, stroked/filled flags, and omitted subpath hole
   flag while leaving full semantic content-object extraction for later slices.
   Native focused validation reports `moon test --target native --package
-  bobzhang/pdflite --file pdf_shape_test.mbt` at 7/7 tests passing; native
+  moonbitlang/pdflite --file pdf_shape_test.mbt` at 7/7 tests passing; native
   full-suite validation reports 1912/1912 tests passing.~~
 - [x] ~~Standalone `cpdfcontent.ml` colour-state JSON slice exposes
   `PdfColourSpace::content_json`, `PdfContentColourValues`,
@@ -4536,7 +4536,7 @@ Current backend snapshot:
   cpdf's colour-space discriminator strings and `Floats`/`Named`/`Pattern`
   colour operand JSON while leaving the full path-state object assembly for a
   later slice. Native focused validation reports `moon test --target native
-  --package bobzhang/pdflite --file pdf_space_test.mbt` at 22/22 tests passing;
+  --package moonbitlang/pdflite --file pdf_space_test.mbt` at 22/22 tests passing;
   native full-suite validation reports 1913/1913 tests passing.~~
 - [x] ~~Standalone `cpdfcontent.ml` path-state JSON slice exposes
   `PdfContentDashPattern`, `PdfContentPathState`, their `content_json` methods,
@@ -4544,7 +4544,7 @@ Current backend snapshot:
   colour-space/colour-value fields, line width/cap/join, dash-pattern object,
   and rendering-intent state while leaving operator-driven state extraction for
   later slices. Native focused validation reports `moon test --target native
-  --package bobzhang/pdflite --file pdf_content_state_test.mbt` at 1/1 tests
+  --package moonbitlang/pdflite --file pdf_content_state_test.mbt` at 1/1 tests
   passing; native full-suite validation reports 1914/1914 tests passing.~~
 - [x] ~~Standalone `cpdfcontent.ml` content object/state JSON slice exposes
   `PdfContentClippingState`, `PdfContentGlyphState`, `PdfContentObject`, their
@@ -4553,7 +4553,7 @@ Current backend snapshot:
   image/path/shading object JSON, and precomputed glyph bytes/extracted text
   fields while leaving font-driven glyph extraction and operator-driven content
   traversal for later slices. Native focused validation reports `moon test
-  --target native --package bobzhang/pdflite --file pdf_content_state_test.mbt`
+  --target native --package moonbitlang/pdflite --file pdf_content_state_test.mbt`
   at 3/3 tests passing; native full-suite validation reports 1916/1916 tests
   passing.~~
 - [x] ~~Standalone `cpdfcontent.ml` content entry JSON assembly slice exposes
@@ -4561,7 +4561,7 @@ Current backend snapshot:
   `content_json` methods, and entry-array serialization, matching cpdf's
   `{"object", "state", "bbox"}` entry shape and eight-number bbox array while
   leaving `filter`-driven content discovery for later slices. Native focused
-  validation reports `moon test --target native --package bobzhang/pdflite
+  validation reports `moon test --target native --package moonbitlang/pdflite
   --file pdf_content_state_test.mbt` at 4/4 tests passing; native full-suite
   validation reports 1917/1917 tests passing.~~
 - [x] ~~Standalone `cpdfcontent.ml` raw-text charcode slice exposes
@@ -4570,7 +4570,7 @@ Current backend snapshot:
   behavior for one-byte standard/simple fonts, big-endian two-byte CID-keyed
   fonts, and odd-length CID input returning an empty result while leaving
   `filter`-driven glyph discovery for later slices. Native focused validation
-  reports `moon test --target native --package bobzhang/pdflite --file
+  reports `moon test --target native --package moonbitlang/pdflite --file
   pdf_content_text_test.mbt` at 1/1 tests passing; native full-suite validation
   reports 1918/1918 tests passing.~~
 - [x] ~~Standalone `cpdfcontent.ml` glyph byte-construction slice exposes
@@ -4579,7 +4579,7 @@ Current backend snapshot:
   cpdf's glyph JSON and test extractor paths for one-byte standard/simple
   fonts, big-endian two-byte CID-keyed fonts, and `char_of_int`-style invalid
   byte failures via `PdfError::InvalidByte`. Native focused validation reports
-  `moon test --target native --package bobzhang/pdflite --file
+  `moon test --target native --package moonbitlang/pdflite --file
   pdf_content_text_test.mbt` at 2/2 tests passing; native full-suite validation
   reports 1919/1919 tests passing.~~
 - [x] ~~Standalone `cpdfcontent.ml` text extra-metrics slice exposes
@@ -4588,7 +4588,7 @@ Current backend snapshot:
   fallback for simple and CID fonts, Standard 14 AFM `FontBBox` extraction, and
   missing-simple-descriptor zero fallback while leaving glyph placement in
   `process_tj` for later slices. Native focused validation reports `moon test
-  --target native --package bobzhang/pdflite --file pdf_content_text_test.mbt`
+  --target native --package moonbitlang/pdflite --file pdf_content_text_test.mbt`
   at 3/3 tests passing; native full-suite validation reports 1920/1920 tests
   passing.~~
 - [x] ~~Standalone `cpdfcontent.ml` vertical-text predicate slice exposes
@@ -4597,7 +4597,7 @@ Current backend snapshot:
   `/Identity-H`, parsed external CMap `wmode = 1`, and false fallbacks for
   other fonts and other predefined CMaps while leaving width/placement
   integration for `process_tj` later. Native focused validation reports `moon
-  test --target native --package bobzhang/pdflite --file
+  test --target native --package moonbitlang/pdflite --file
   pdf_content_text_test.mbt` at 4/4 tests passing; native full-suite validation
   reports 1921/1921 tests passing.~~
 - [x] ~~Standalone `cpdfcontent.ml` glyph width slice exposes
@@ -4608,7 +4608,7 @@ Current backend snapshot:
   fallback from `/W`, and zero fallback for missing vertical widths and simple
   fonts without metrics while leaving `process_tj` placement integration for
   later slices. Native focused validation reports `moon test --target native
-  --package bobzhang/pdflite --file pdf_content_text_test.mbt` at 5/5 tests
+  --package moonbitlang/pdflite --file pdf_content_text_test.mbt` at 5/5 tests
   passing; native full-suite validation reports 1922/1922 tests passing.~~
 - [x] ~~Standalone `cpdfcontent.ml` `process_tj` geometry slice exposes
   `PdfContentTextLayout`, `PdfContentTextGlyphPlacement`,
@@ -4618,7 +4618,7 @@ Current backend snapshot:
   vertical advance behavior, CID placement vectors, and final text-matrix
   advance while leaving the operator-driven content filter walk and `TJ`
   array adjustment integration for later slices. Native focused validation
-  reports `moon test --target native --package bobzhang/pdflite --file
+  reports `moon test --target native --package moonbitlang/pdflite --file
   pdf_content_text_test.mbt` at 7/7 tests passing; native full-suite validation
   reports 1924/1924 tests passing.~~
 - [x] ~~Standalone `cpdfcontent.ml` `process_capital_tj` adjustment slice
@@ -4628,7 +4628,7 @@ Current backend snapshot:
   displacement, ignored non-string/non-real operands, and final text-matrix
   threading while leaving the full operator-driven content filter walk for
   later slices. Native focused validation reports `moon test --target native
-  --package bobzhang/pdflite --file pdf_content_text_test.mbt` at 9/9 tests
+  --package moonbitlang/pdflite --file pdf_content_text_test.mbt` at 9/9 tests
   passing; native full-suite validation reports 1926/1926 tests passing.~~
 - [x] ~~Standalone `cpdfcontent.ml` shading/pattern reader slice exposes
   `PdfContentTiling`, `PdfContentFunctionShading`,
@@ -4640,7 +4640,7 @@ Current backend snapshot:
   antialias behavior, tiling-pattern placeholder, and missing-shading error
   while leaving stateful colour/pattern integration for later slices. Native
   focused validation reports `moon test --target native --package
-  bobzhang/pdflite --file pdf_content_shading_test.mbt` at 4/4 tests passing;
+  moonbitlang/pdflite --file pdf_content_shading_test.mbt` at 4/4 tests passing;
   native full-suite validation reports 1930/1930 tests passing.~~
 - [x] ~~Standalone `cpdfcontent.ml` path bounding-box emission slice exposes
   `PdfPath::content_bounding_box` and `pdf_path_content_bounding_box`, matching
@@ -4648,7 +4648,7 @@ Current backend snapshot:
   expansion from the transformed `(line_width, line_width)` vector, and
   eight-point quad assembly while leaving the stateful operator callback wiring
   for later slices. Native focused validation reports `moon test --target
-  native --package bobzhang/pdflite --file pdf_shape_test.mbt` at 8/8 tests
+  native --package moonbitlang/pdflite --file pdf_shape_test.mbt` at 8/8 tests
   passing; native full-suite validation reports 1931/1931 tests passing.~~
 - [x] ~~Standalone `cpdfcontent.ml` path state-machine slice exposes
   `PdfContentPartialPath`, `PdfContentPartialPathState`,
@@ -4661,7 +4661,7 @@ Current backend snapshot:
   `b*` double-close behavior, `n` reset, and non-path operator ignore behavior
   while leaving the full stateful content walker for later slices. Native
   focused validation reports `moon test --target native --package
-  bobzhang/pdflite --file pdf_content_path_machine_test.mbt` at 5/5 tests
+  moonbitlang/pdflite --file pdf_content_path_machine_test.mbt` at 5/5 tests
   passing; native full-suite validation reports 1936/1936 tests passing.~~
 - [x] ~~Standalone `cpdfcontent.ml` clipping path update slice exposes
   `PdfContentClippingOpResult`,
@@ -4672,7 +4672,7 @@ Current backend snapshot:
   clipping-path stack prepending, and cpdf's newest-subpath-first clipping
   order while leaving the full stateful content walker for later slices. Native
   focused validation reports `moon test --target native --package
-  bobzhang/pdflite --file pdf_content_path_machine_test.mbt` at 7/7 tests
+  moonbitlang/pdflite --file pdf_content_path_machine_test.mbt` at 7/7 tests
   passing; native full-suite validation reports 1938/1938 tests passing.~~
 - [x] ~~Standalone `cpdfcontent.ml` initial-state slice exposes
   `pdf_content_initial_clipping_path`, `pdf_content_initial_drawn_path`,
@@ -4682,7 +4682,7 @@ Current backend snapshot:
   colour state, default line/dash/rendering-intent path state, and default
   glyph rendering mode, knockout, font name, and font size while leaving the
   full stateful content walker for later slices. Native focused validation
-  reports `moon test --target native --package bobzhang/pdflite --file
+  reports `moon test --target native --package moonbitlang/pdflite --file
   pdf_content_state_test.mbt` at 5/5 tests passing; native full-suite
   validation reports 1939/1939 tests passing.~~
 - [x] ~~Standalone `cpdfcontent.ml` pure path-state operator slice exposes
@@ -4693,7 +4693,7 @@ Current backend snapshot:
   `SCN`/`scn` named-colour target behavior while leaving resource dictionary
   lookup, graphics-state dictionaries, and the full stateful content walker for
   later slices. Native focused validation reports `moon test --target native
-  --package bobzhang/pdflite --file pdf_content_state_test.mbt` at 7/7 tests
+  --package moonbitlang/pdflite --file pdf_content_state_test.mbt` at 7/7 tests
   passing; native full-suite validation reports 1941/1941 tests passing.~~
 - [x] ~~Standalone `cpdfcontent.ml` pure text-state operator slice exposes
   `PdfContentTextState`, `pdf_content_initial_text_state`,
@@ -4704,7 +4704,7 @@ Current backend snapshot:
   while leaving font resource lookup, text-showing glyph emission, text-matrix
   advance from `Tj`/`TJ`, and the full stateful content walker for later
   slices. Native focused validation reports `moon test --target native
-  --package bobzhang/pdflite --file pdf_content_text_test.mbt` at 11/11 tests
+  --package moonbitlang/pdflite --file pdf_content_text_test.mbt` at 11/11 tests
   passing; native full-suite validation reports 1943/1943 tests passing.~~
 - [x] ~~Standalone `cpdfcontent.ml` text-show operator slice exposes
   `PdfContentTextOpResult`, `PdfContentTextState::content_text_layout`,
@@ -4714,7 +4714,7 @@ Current backend snapshot:
   handling non-array `TJ` operands as empty, and applying quote/double-quote
   shorthands before glyph emission while leaving font resource lookup and the
   full stateful content walker for later slices. Native focused validation
-  reports `moon test --target native --package bobzhang/pdflite --file
+  reports `moon test --target native --package moonbitlang/pdflite --file
   pdf_content_text_test.mbt` at 13/13 tests passing; native full-suite
   validation reports 1945/1945 tests passing.~~
 - [x] ~~Standalone `cpdfcontent.ml` JSON-facing state adapter slice exposes
@@ -4727,7 +4727,7 @@ Current backend snapshot:
   state projection from text rendering mode, knockout, font, and font size
   while leaving the full stateful content walker for later slices. Native
   focused validation reports `moon test --target native --package
-  bobzhang/pdflite --file pdf_content_state_test.mbt` at 8/8 tests passing;
+  moonbitlang/pdflite --file pdf_content_state_test.mbt` at 8/8 tests passing;
   native full-suite validation reports 1946/1946 tests passing.~~
 - [x] ~~Standalone `cpdfcontent.ml` graphics-state stack slice exposes
   `PdfContentOperatorFrame`, `PdfContentOperatorState`,
@@ -4737,7 +4737,7 @@ Current backend snapshot:
   assembly, `q` frame push, `Q` frame restore with underflow no-op behavior,
   and `cm` CTM concatenation while leaving resource dictionaries and the full
   stateful content walker for later slices. Native focused validation reports
-  `moon test --target native --package bobzhang/pdflite --file
+  `moon test --target native --package moonbitlang/pdflite --file
   pdf_content_operator_state_test.mbt` at 3/3 tests passing; native full-suite
   validation reports 1949/1949 tests passing.~~
 - [x] ~~Standalone `cpdfcontent.ml` resource-free operator dispatcher slice
@@ -4747,7 +4747,7 @@ Current backend snapshot:
   already-ported helpers while deliberately leaving font lookup, glyph emission,
   shadings, images/XObjects, marked-content metadata, and graphics-state
   dictionaries for resource-backed slices. Native focused validation reports
-  `moon test --target native --package bobzhang/pdflite --file
+  `moon test --target native --package moonbitlang/pdflite --file
   pdf_content_operator_state_test.mbt` at 5/5 tests passing; native full-suite
   validation reports 1951/1951 tests passing.~~
 - [x] ~~Standalone `cpdfcontent.ml` marked-content state slice adds
@@ -4757,7 +4757,7 @@ Current backend snapshot:
   `pdf_content_apply_marked_content_op`, matching cpdf's MP/DP point assignment,
   BMC/BDC newest-first stack push, EMC pop, underflow no-op, and q/Q
   save/restore behavior. Native focused validation reports `moon test --target
-  native --package bobzhang/pdflite --file pdf_content_operator_state_test.mbt`
+  native --package moonbitlang/pdflite --file pdf_content_operator_state_test.mbt`
   at 6/6 tests passing; native full-suite validation reports 1952/1952 tests
   passing.~~
 - [x] ~~Standalone `cpdfcontent.ml` Type 3 metric-state slice adds
@@ -4767,7 +4767,7 @@ Current backend snapshot:
   `pdf_content_apply_type3_metrics_op`, matching cpdf's `d0` and `d1` state
   assignments and q/Q save/restore behavior while leaving Type 3 resource
   integration for later slices. Native focused validation reports `moon test
-  --target native --package bobzhang/pdflite --file
+  --target native --package moonbitlang/pdflite --file
   pdf_content_operator_state_test.mbt` at 7/7 tests passing; native full-suite
   validation reports 1953/1953 tests passing.~~
 - [x] ~~Standalone `cpdfcontent.ml` direct graphics-parameter slice adds
@@ -4777,7 +4777,7 @@ Current backend snapshot:
   and `i = 1` values, direct `M`/`i` assignment, and q/Q save/restore behavior
   while leaving ExtGState dictionary parsing for a later resource-backed slice.
   Native focused validation reports `moon test --target native --package
-  bobzhang/pdflite --file pdf_content_operator_state_test.mbt` at 8/8 tests
+  moonbitlang/pdflite --file pdf_content_operator_state_test.mbt` at 8/8 tests
   passing; native full-suite validation reports 1954/1954 tests passing.~~
 - [x] ~~Standalone `cpdfcontent.ml` image-entry emission slice exposes
   `PdfContentOperatorState::content_unit_square_bounding_box`,
@@ -4786,7 +4786,7 @@ Current backend snapshot:
   image XObjects plus clipping-only content state while leaving inline-image
   data preservation and XObject resource lookup for later slices. Native
   focused validation reports `moon test --target native --package
-  bobzhang/pdflite --file pdf_content_operator_state_test.mbt` at 9/9 tests
+  moonbitlang/pdflite --file pdf_content_operator_state_test.mbt` at 9/9 tests
   passing; native full-suite validation reports 1955/1955 tests passing.~~
 - [x] ~~Standalone `cpdfcontent.ml` path-entry emission slice exposes
   `PdfContentOperatorState::content_path_entry` and
@@ -4794,7 +4794,7 @@ Current backend snapshot:
   for current drawn paths: CTM-transformed path bounds, stroked line-width
   expansion, clipping-aware path state, and no emitted entry for empty paths.
   Native focused validation reports `moon test --target native --package
-  bobzhang/pdflite --file pdf_content_operator_state_test.mbt` at 10/10 tests
+  moonbitlang/pdflite --file pdf_content_operator_state_test.mbt` at 10/10 tests
   passing; native full-suite validation reports 1956/1956 tests passing.~~
 - [x] ~~Standalone `cpdfcontent.ml` shading-entry emission slice exposes
   `PdfContentOperatorState::content_shading_entry` and
@@ -4802,7 +4802,7 @@ Current backend snapshot:
   explicit shading `/BBox` rectangles and the unbounded-shading fallback to the
   current CTM-transformed clipping path, with clipping-only content state while
   leaving `/Shading` resource lookup for a later slice. Native focused
-  validation reports `moon test --target native --package bobzhang/pdflite
+  validation reports `moon test --target native --package moonbitlang/pdflite
   --file pdf_content_operator_state_test.mbt` at 11/11 tests passing; native
   full-suite validation reports 1957/1957 tests passing.~~
 - [x] ~~Standalone `cpdfcontent.ml` shading resource-entry slice exposes
@@ -4812,7 +4812,7 @@ Current backend snapshot:
   malformed bbox suppression, missing-resource no-op, and unbounded fallback
   to the current clipping path while leaving full operator walking for later
   slices. Native focused validation reports `moon test --target native
-  --package bobzhang/pdflite --file pdf_content_operator_state_test.mbt` at
+  --package moonbitlang/pdflite --file pdf_content_operator_state_test.mbt` at
   12/12 tests passing; native full-suite validation reports 1958/1958 tests
   passing.~~
 - [x] ~~Standalone `cpdfcontent.ml` image XObject resource-entry slice exposes
@@ -4822,7 +4822,7 @@ Current backend snapshot:
   missing names, and unknown XObject kinds, and the no-entry behavior for
   `/Form` XObjects while leaving recursive Form content walking for later
   slices. Native focused validation reports `moon test --target native
-  --package bobzhang/pdflite --file pdf_content_operator_state_test.mbt` at
+  --package moonbitlang/pdflite --file pdf_content_operator_state_test.mbt` at
   13/13 tests passing; native full-suite validation reports 1959/1959 tests
   passing.~~
 - [x] ~~Standalone `cpdfcontent.ml` Form XObject entry-state slice exposes
@@ -4832,7 +4832,7 @@ Current backend snapshot:
   malformed or missing BBox fallback, malformed Matrix propagation, and
   image-XObject no-entry behavior while leaving recursive Form content walking
   for a later slice. Native focused validation reports `moon test --target
-  native --package bobzhang/pdflite --file
+  native --package moonbitlang/pdflite --file
   pdf_content_operator_state_test.mbt` at 14/14 tests passing; native
   full-suite validation reports 1960/1960 tests passing.~~
 - [x] ~~Standalone `cpdfcontent.ml` Form XObject resource-merge slice exposes
@@ -5316,7 +5316,7 @@ Current backend snapshot:
   compatibility wrappers, covering named page-font resolution, cpdf row-format
   rendering, glyph-name slash stripping, `.notdef` filtering, wrapper parity,
   and invalid-page rejection. Native focused validation reports `moon test
-  --target native --package bobzhang/pdflite --file pdf_font_test.mbt` at
+  --target native --package moonbitlang/pdflite --file pdf_font_test.mbt` at
   9/9 tests passing; native full-suite validation reports 1756/1756 tests
   passing.~~
 - [x] ~~Standalone `cpdfunicodedata.ml` row-parser slice now exposes
@@ -5346,7 +5346,7 @@ Current backend snapshot:
   platform/encoding record collection in cpdf's prepended order, non-cmap table
   skipping, malformed-tail tolerance after complete records, and malformed
   header no-op behavior. Native focused validation reports `moon test --target
-  native --package bobzhang/pdflite --file pdf_truetype_test.mbt` at 3/3 tests
+  native --package moonbitlang/pdflite --file pdf_truetype_test.mbt` at 3/3 tests
   passing; native full-suite validation reports 1894/1894 tests passing.~~
 - [x] ~~Standalone `cpdftoc.ml` text-run helper slice exposes
   `pdf_toc_split_title`, `pdf_toc_title_real_newlines`, `pdf_toc_of_utf8`,
@@ -5356,14 +5356,14 @@ Current backend snapshot:
   skipped unrepresentable codepoints, PDFDocString conversion, cpdftype width
   summing, cpdf's final-run ellipsis trimming, and dot-leader remainder glue.
   Native focused validation reports `moon test --target native --package
-  bobzhang/pdflite --file pdf_toc_test.mbt` at 7/7 tests passing; native
+  moonbitlang/pdflite --file pdf_toc_test.mbt` at 7/7 tests passing; native
   full-suite validation reports 1901/1901 tests passing.~~
 - [x] ~~Standalone `cpdftoc.ml` used-codepoint scan slice exposes
   `PdfDocument::toc_used_codepoints` and `pdf_toc_used_codepoints`, covering
   cpdf's pre-embedding dot/title/bookmark/page-label scan, PDFDocString
   decoding, destination-to-page-label lookup, null-target fallback numbering,
   first-occurrence de-duplication, and wrapper parity. Native focused
-  validation reports `moon test --target native --package bobzhang/pdflite
+  validation reports `moon test --target native --package moonbitlang/pdflite
   --file pdf_toc_test.mbt` at 8/8 tests passing; native full-suite validation
   reports 1902/1902 tests passing.~~
 - [x] ~~Standalone `cpdftoc.ml` cpdftype element assembly slice exposes
@@ -5372,7 +5372,7 @@ Current backend snapshot:
   bookmark destination rows, indentation, page-label runs, optional structure
   tags, dot-leader insertion, no-leader glue, and wrapper parity while leaving
   actual typesetting/page insertion for a later slice. Native focused
-  validation reports `moon test --target native --package bobzhang/pdflite
+  validation reports `moon test --target native --package moonbitlang/pdflite
   --file pdf_toc_test.mbt` at 10/10 tests passing; native full-suite validation
   reports 1904/1904 tests passing.~~
 - [x] ~~Standalone `cpdftoc.ml` TOC page typesetting geometry slice exposes
@@ -5382,7 +5382,7 @@ Current backend snapshot:
   generated-TOC cropbox copying, and wrapper parity while leaving TOC page
   insertion, page-label shifting, bookmark addition, and full structure-tree
   rewrites for later slices. Native focused validation reports `moon test
-  --target native --package bobzhang/pdflite --file pdf_toc_test.mbt` at 11/11
+  --target native --package moonbitlang/pdflite --file pdf_toc_test.mbt` at 11/11
   tests passing; native full-suite validation reports 1905/1905 tests
   passing.~~
 - [x] ~~Standalone `cpdftoc.ml` TOC page insertion slice exposes
@@ -5393,7 +5393,7 @@ Current backend snapshot:
   existing page-label ranges, and wrapper parity while leaving font embedding,
   TOC bookmark creation, and structure-tree integration for later slices.
   Native focused validation reports `moon test --target native --package
-  bobzhang/pdflite --file pdf_toc_test.mbt` at 12/12 tests passing; native
+  moonbitlang/pdflite --file pdf_toc_test.mbt` at 12/12 tests passing; native
   full-suite validation reports 1906/1906 tests passing.~~
 - [x] ~~Standalone `cpdftoc.ml` TOC bookmark creation slice exposes
   `pdf_toc_bookmark_text`, `PdfDocument::toc_add_bookmark`, and
@@ -5403,7 +5403,7 @@ Current backend snapshot:
   destination, preserving existing bookmark order/levels, and wrapper parity
   while leaving PDF/UA2 structure-destination actions for a later slice. Native
   focused validation reports `moon test --target native --package
-  bobzhang/pdflite --file pdf_toc_test.mbt` at 13/13 tests passing; native
+  moonbitlang/pdflite --file pdf_toc_test.mbt` at 13/13 tests passing; native
   full-suite validation reports 1907/1907 tests passing.~~
 - [x] ~~Standalone `cpdftoc.ml` composed non-structure TOC slice exposes
   `PdfDocument::toc_with_fontpack` and `pdf_toc_with_fontpack`, covering the
@@ -5413,7 +5413,7 @@ Current backend snapshot:
   TOC bookmark, and validates wrapper parity semantically while leaving TrueType
   embedding/font-source dispatch and PDF/UA structure-tree integration for later
   slices. Native focused validation reports `moon test --target native
-  --package bobzhang/pdflite --file pdf_toc_test.mbt` at 14/14 tests passing;
+  --package moonbitlang/pdflite --file pdf_toc_test.mbt` at 14/14 tests passing;
   native full-suite validation reports 1908/1908 tests passing.~~
 - [x] ~~Standalone `cpdftoc.ml` font-source dispatch slice exposes
   `PdfTocFontSource`, `PdfDocument::toc_with_source`, and
@@ -5421,7 +5421,7 @@ Current backend snapshot:
   TOC path, the cpdf-compatible existing-named-font rejection message, and
   wrapper parity while leaving TrueType `EmbedInfo` font embedding and PDF/UA
   structure-tree integration for later slices. Native focused validation reports
-  `moon test --target native --package bobzhang/pdflite --file
+  `moon test --target native --package moonbitlang/pdflite --file
   pdf_toc_test.mbt` at 15/15 tests passing; native full-suite validation reports
   1909/1909 tests passing.~~
 - [x] ~~Page labels, bookmarks, annotations, duplicate annotation repair,
@@ -5613,7 +5613,7 @@ Current backend snapshot:
   now also covers `/UniCNS-UCS2-H`, `/UniCNS-UTF16-H`, `/UniJIS-UCS2-V`, and
   `/UniJIS-UTF16-V`, including horizontal CNS extraction, vertical JIS
   extraction, surrogate-pair reverse lookup, and compressed write/read/reread
-  stability. `moon test --target native --package bobzhang/pdflite --file
+  stability. `moon test --target native --package moonbitlang/pdflite --file
   pdf_native_acceptance_test.mbt` reports 88/88 tests passing; native
   full-suite validation reports 2143/2143 tests passing.~~
 - [x] ~~The cpdfua-listed `/GBKp-EUC-H` predefined CMap now has direct

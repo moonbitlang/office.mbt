@@ -1,6 +1,6 @@
 import {
-  "bobzhang/office-lib/transaction",
-  "bobzhang/docx2html" @word,
+  "moonbitlang/office-lib/transaction",
+  "moonbitlang/docx2html" @word,
   "moonbitlang/async",
   "moonbitlang/async/fs" @afs,
   "moonbitlang/async/process",

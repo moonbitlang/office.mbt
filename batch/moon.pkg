@@ -1,14 +1,14 @@
 import {
   "moonbitlang/core/string",
-  "bobzhang/mbtexcel/inspect",
-  "bobzhang/mbtexcel/xlsx",
+  "moonbitlang/mbtexcel/inspect",
+  "moonbitlang/mbtexcel/xlsx",
   "moonbitlang/core/debug",
   "moonbitlang/core/encoding/utf8",
   "moonbitlang/core/json",
 }
 
 import {
-  "bobzhang/mbtexcel/xlsx",
+  "moonbitlang/mbtexcel/xlsx",
 } for "test"
 
 import {

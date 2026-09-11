@@ -16,7 +16,7 @@ pub fn PdfDocument::shift_boxes(
   )
   pdf_page_box_validate_offsets(offsets, pages.length())
   let selected_pages = @core.pdf_number_set(page_numbers)
-  let rewritten : Array[@page.PdfPage] = Array::new(capacity=pages.length())
+  let rewritten : Array[@page.PdfPage] = Array(capacity=pages.length())
   for index in 0..<pages.length() {
     let page_number = index + 1
     if selected_pages.contains(page_number) {

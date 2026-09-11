@@ -1,5 +1,5 @@
 // Generated using `moon info`, DON'T EDIT IT
-package "bobzhang/docx2html/cmd/docx2html"
+package "moonbitlang/docx2html/cmd/docx2html"
 
 import {
   "moonbitlang/core/debug",

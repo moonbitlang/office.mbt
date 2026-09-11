@@ -1,9 +1,9 @@
 // Generated using `moon info`, DON'T EDIT IT
-package "bobzhang/office-lib/raw"
+package "moonbitlang/office-lib/raw"
 
 import {
-  "bobzhang/office-lib",
   "moonbit-community/flate/zip",
+  "moonbitlang/office-lib",
 }
 
 // Values

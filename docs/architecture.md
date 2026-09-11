@@ -1,6 +1,6 @@
 # Architecture (as-is)
 
-This document describes the current (Jan 2026) architecture of `bobzhang/mbtexcel`,
+This document describes the current (Jan 2026) architecture of `moonbitlang/mbtexcel`,
 with pointers to the concrete code that implements each piece. It is written as a
 “how it works today” reference before larger refactors.
 
@@ -30,10 +30,10 @@ If you are looking for proposed refactors, see `docs/architecture-improvements.m
 At build time, the MoonBit packages relate like this:
 
 ```
-bobzhang/mbtexcel        (facade)
-  -> bobzhang/mbtexcel/xlsx
-       -> bobzhang/mbtexcel/ooxml
-       -> bobzhang/mbtexcel/zip
+moonbitlang/mbtexcel        (facade)
+  -> moonbitlang/mbtexcel/xlsx
+       -> moonbitlang/mbtexcel/ooxml
+       -> moonbitlang/mbtexcel/zip
 ```
 
 (`excelize/` is a reference only; it is not part of the MoonBit build.)
@@ -42,11 +42,11 @@ bobzhang/mbtexcel        (facade)
 
 There are two layers of “user-facing” API:
 
-1. Root facade package (`bobzhang/mbtexcel`)
+1. Root facade package (`moonbitlang/mbtexcel`)
    - `new_workbook`, `new_file`, `read`, `write`, `open_file`, etc.
    - Implemented in `mbtexcel.mbt` as thin wrappers around `@xlsx`.
 
-2. Core package (`bobzhang/mbtexcel/xlsx`)
+2. Core package (`moonbitlang/mbtexcel/xlsx`)
    - Full workbook/worksheet API surface.
    - The generated public interface is in `xlsx/pkg.generated.mbti`.
 

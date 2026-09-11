@@ -1,8 +1,8 @@
 supported_targets = "native"
 
 import {
-  "bobzhang/pagelayout",
-  "bobzhang/pagelayout/paragraph",
-  "bobzhang/pagelayout/paginate",
-  "bobzhang/pagelayout/svg",
+  "moonbitlang/pagelayout",
+  "moonbitlang/pagelayout/paragraph",
+  "moonbitlang/pagelayout/paginate",
+  "moonbitlang/pagelayout/svg",
 } for "test"

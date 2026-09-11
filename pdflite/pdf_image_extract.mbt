@@ -22,7 +22,7 @@ pub fn PdfDocument::extract_images_files(
     written: [],
     jbig2: { next_jbig2_serial: { val: 0, }, globals: [], },
   }
-  let files : Array[PdfExtractedImageFile] = Array::new(
+  let files : Array[PdfExtractedImageFile] = Array(
     capacity=page_numbers.length(),
   )
   let mut selected_page_number = 1

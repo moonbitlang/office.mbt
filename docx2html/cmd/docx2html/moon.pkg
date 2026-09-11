@@ -1,7 +1,7 @@
 import {
   "moonbitlang/core/debug",
-  "bobzhang/docx2html" @docx,
-  "bobzhang/docx2html/internal/cli",
+  "moonbitlang/docx2html" @docx,
+  "moonbitlang/docx2html/internal/cli",
   "moonbitlang/async",
   "moonbitlang/core/argparse",
   "moonbitlang/core/env",

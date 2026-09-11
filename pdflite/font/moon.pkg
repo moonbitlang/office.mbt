@@ -1,5 +1,4 @@
 import {
   "moonbitlang/core/debug",
-  "bobzhang/pdflite/syntax",
-  "moonbitlang/core/json",
+  "moonbitlang/pdflite/syntax",
 }

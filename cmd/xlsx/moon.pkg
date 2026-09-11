@@ -1,9 +1,9 @@
 import {
-  "bobzhang/mbtexcel" @lib,
-  "bobzhang/mbtexcel/batch",
-  "bobzhang/mbtexcel/inspect",
-  "bobzhang/mbtexcel/xlsx2html",
-  "bobzhang/mbtexcel/xlsx" @xl,
+  "moonbitlang/mbtexcel" @lib,
+  "moonbitlang/mbtexcel/batch",
+  "moonbitlang/mbtexcel/inspect",
+  "moonbitlang/mbtexcel/xlsx2html",
+  "moonbitlang/mbtexcel/xlsx" @xl,
   "moonbitlang/core/argparse",
   "moonbitlang/async",
   "moonbitlang/async/fs" @async/fs,
@@ -11,7 +11,6 @@ import {
   "moonbitlang/core/env",
   "moonbitlang/core/encoding/utf8" @encoding/utf8,
   "moonbitlang/core/string",
-  "moonbitlang/core/json",
 }
 
 supported_targets = "native+wasm"

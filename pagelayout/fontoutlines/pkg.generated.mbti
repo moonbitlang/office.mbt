@@ -1,5 +1,5 @@
 // Generated using `moon info`, DON'T EDIT IT
-package "bobzhang/pagelayout/fontoutlines"
+package "moonbitlang/pagelayout/fontoutlines"
 
 // Values
 pub fn outline_sfnt(String, bold? : Bool, italic? : Bool) -> Bytes?

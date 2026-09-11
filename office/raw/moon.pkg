@@ -1,9 +1,8 @@
 import {
-  "bobzhang/office-lib" @office,
+  "moonbitlang/office-lib" @office,
   "moonbit-community/flate/zip",
-  "bobzhang/docx2html/opc",
-  "bobzhang/docx2html/xml",
-  "moonbitlang/core/debug",
+  "moonbitlang/docx2html/opc",
+  "moonbitlang/docx2html/xml",
   "moonbitlang/core/encoding/utf16",
   "moonbitlang/core/encoding/utf8",
   "moonbitlang/core/json",
@@ -12,9 +11,9 @@ import {
 }
 
 import {
-  "bobzhang/mbtexcel" @excel,
-  "bobzhang/mbtexcel/testutil/zip_fixture",
-  "bobzhang/docx2html" @word,
+  "moonbitlang/mbtexcel" @excel,
+  "moonbitlang/mbtexcel/testutil/zip_fixture",
+  "moonbitlang/docx2html" @word,
   "moonbitlang/core/encoding/utf8",
 } for "test"
 

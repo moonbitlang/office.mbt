@@ -1,11 +1,10 @@
 import {
-  "moonbitlang/core/buffer",
   "moonbitlang/core/debug",
-  "bobzhang/pdflite/core",
+  "moonbitlang/pdflite/core",
   "moonbitlang/x/crypto",
 }
 
 import {
-  "bobzhang/pdflite/core",
+  "moonbitlang/pdflite/core",
   "moonbitlang/core/test",
 } for "wbtest"

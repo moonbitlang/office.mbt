@@ -3,22 +3,21 @@ import {
   "moonbitlang/x/crypto",
   "moonbit-community/flate/zip",
   "moonbit-community/flate/checksum" @flate_checksum,
-  "bobzhang/docx2html/core",
-  "bobzhang/docx2html/opc",
-  "bobzhang/docx2html/paths" @docxpaths,
-  "bobzhang/docx2html/xml",
+  "moonbitlang/docx2html/opc",
+  "moonbitlang/docx2html/paths" @docxpaths,
+  "moonbitlang/docx2html/xml",
   "moonbitlang/core/encoding/utf16",
   "moonbitlang/core/encoding/utf8",
   "moonbitlang/core/json",
   "moonbitlang/core/sorted_map",
-  "bobzhang/mbtexcel/batch",
+  "moonbitlang/mbtexcel/batch",
 }
 
 import {
-  "bobzhang/office-lib" @office,
-  "bobzhang/mbtexcel" @excel,
-  "bobzhang/mbtexcel/testutil/zip_fixture",
-  "bobzhang/docx2html" @word,
+  "moonbitlang/office-lib" @office,
+  "moonbitlang/mbtexcel" @excel,
+  "moonbitlang/mbtexcel/testutil/zip_fixture",
+  "moonbitlang/docx2html" @word,
 } for "test"
 
 supported_targets = "native+wasm"

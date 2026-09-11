@@ -1,9 +1,9 @@
 // Generated using `moon info`, DON'T EDIT IT
-package "bobzhang/mbtexcel/xlsx2html"
+package "moonbitlang/mbtexcel/xlsx2html"
 
 import {
-  "bobzhang/mbtexcel/xlsx",
   "moonbitlang/core/debug",
+  "moonbitlang/mbtexcel/xlsx",
 }
 
 // Values

@@ -1,10 +1,8 @@
 import {
-  "bobzhang/docx2html/document",
-  "moonbitlang/core/json",
+  "moonbitlang/docx2html/document",
   "moonbitlang/core/sorted_set",
 }
 
 import {
-  "bobzhang/docx2html/document",
   "moonbitlang/core/json",
 } for "test"

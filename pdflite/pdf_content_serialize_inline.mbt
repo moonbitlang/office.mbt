@@ -46,7 +46,7 @@ fn pdf_content_inline_image_bytes(
       } else {
         0
       }
-      let rendered_entries : Array[@core.PdfBytes] = Array::new(
+      let rendered_entries : Array[@core.PdfBytes] = Array(
         capacity=entries.length() +
           render_extra_entries.length() +
           decode_parms_entry_count,
