@@ -218,14 +218,19 @@ fn document_body_index(elements : Array[ScannedElement]) -> Int? {
 
 ///|
 /// Whether an element sits inside content some consumer does NOT see:
-/// a tracked deletion (gone once accepted) or ANY branch of a
-/// compatibility alternative (one branch is selected, the rest are
+/// a tracked run (removed by accepting or rejecting its revision) or
+/// ANY branch of a compatibility alternative (one branch is selected, the rest are
 /// not). A range marker or a field boundary there cannot be trusted to
 /// open or close anything — a `bookmarkEnd` inside an unselected
 /// `mc:Fallback` closed a range prematurely for the consumer that
 /// selects `mc:Choice`, and a tracked-deleted `fldChar end` cancelled a
 /// live field that, once the deletion is accepted, runs on through the
-/// target. Both then PLANNED. Judged on the physical tree, by ancestry.
+/// target. Moved runs have the same hazard: accepting a move removes
+/// `moveFrom`, and rejecting it removes `moveTo`. Rejecting an `ins`
+/// removes its boundaries too. The reader's suppressed-container
+/// predicate describes only its chosen projection, so it cannot prove
+/// a boundary is present for every revision view. Judge the physical
+/// ancestry independently here.
 fn inside_conditional_content(
   elements : Array[ScannedElement],
   element : ScannedElement,
@@ -233,7 +238,10 @@ fn inside_conditional_content(
   let mut parent = element.parent_index
   while parent >= 0 && parent < elements.length() {
     let holder = elements[parent]
-    if is_suppressed_container(holder.uri, holder.local_name) ||
+    if (
+        is_wml_uri(holder.uri) &&
+        holder.local_name is ("ins" | "del" | "moveFrom" | "moveTo")
+      ) ||
       holder.uri == MC_URI {
       return true
     }
@@ -933,11 +941,9 @@ pub fn plan_docx_paragraph_deletion(
   //
   // Fields DO nest (they carry no ids and cannot overlap), so depth is
   // the right model here — unlike ranges, which pair by id and may
-  // overlap. Counted on the PHYSICAL tree, deliberately, including
-  // boundaries inside track-deleted content and unselected
-  // compatibility branches: this verb performs a physical byte splice,
-  // and a boundary the reader suppresses is still THERE in the
-  // published file.
+  // overlap. Inspect the physical tree so boundaries in revisions and
+  // compatibility branches are seen and refused as conditional, rather
+  // than letting one projection decide which boundaries exist.
   //
   // Every boundary is classified through ONE function, so a judgment
   // that forgets to handle an unreadable type cannot compile.
@@ -955,7 +961,7 @@ pub fn plan_docx_paragraph_deletion(
         )
       Conditional =>
         raise delete_refusal(
-          "field_region", "this story carries a field boundary inside tracked-deleted or compatibility-alternative content, which is there for some consumers and not others, so field regions cannot be judged and this deletion refuses",
+          "field_region", "this story carries a field boundary inside tracked-revision or compatibility-alternative content, which is there for some consumers and not others, so field regions cannot be judged and this deletion refuses",
         )
       NotABoundary => ()
     }
@@ -987,7 +993,7 @@ pub fn plan_docx_paragraph_deletion(
           )
         Conditional =>
           raise delete_refusal(
-            "field_region", "this story carries a field boundary inside tracked-deleted or compatibility-alternative content, which is there for some consumers and not others, so field regions cannot be judged and this deletion refuses",
+            "field_region", "this story carries a field boundary inside tracked-revision or compatibility-alternative content, which is there for some consumers and not others, so field regions cannot be judged and this deletion refuses",
           )
         NotABoundary => ()
       }
@@ -1022,7 +1028,7 @@ pub fn plan_docx_paragraph_deletion(
         // refuses as exactly that.
         Conditional =>
           raise delete_refusal(
-            "field_region", "the target paragraph carries a field boundary inside tracked-deleted or compatibility-alternative content, which is there for some consumers and not others, so field regions cannot be judged and this deletion refuses",
+            "field_region", "the target paragraph carries a field boundary inside tracked-revision or compatibility-alternative content, which is there for some consumers and not others, so field regions cannot be judged and this deletion refuses",
           )
         Opens => inside_field_depth += 1
         Closes => {

@@ -2,6 +2,42 @@
 // readback, publish atomically — and nothing written on any refusal.
 
 ///|
+async test "moved field end refuses deletion without publishing" {
+  with_docx_session_test_dir(directory => {
+    let runs = "<w:r><w:fldChar w:fldCharType=\"begin\"/><w:instrText> TOC </w:instrText><w:fldChar w:fldCharType=\"separate\"/></w:r>" +
+      "<w:moveFromRangeStart w:id=\"4\" w:name=\"move1\" w:author=\"a\"/><w:moveFrom w:id=\"5\" w:author=\"a\"><w:r><w:fldChar w:fldCharType=\"end\"/></w:r></w:moveFrom><w:moveFromRangeEnd w:id=\"4\"/></w:p>" +
+      "<w:p><w:r><w:t>target</w:t></w:r></w:p>" +
+      "<w:p><w:moveToRangeStart w:id=\"6\" w:name=\"move1\" w:author=\"a\"/><w:moveTo w:id=\"7\" w:author=\"a\"><w:r><w:fldChar w:fldCharType=\"end\"/></w:r></w:moveTo><w:moveToRangeEnd w:id=\"6\"/><w:r><w:t>keeper</w:t></w:r>"
+    let input = edit_fixture(directory, "moved-field-in.docx", runs)
+    let original = @afs.read_file(input).binary()
+    for dry_run in [false, true] {
+      let output = directory + "/moved-field-\{dry_run}.docx"
+      let refused = try {
+        ignore(
+          @docx.transact_docx_delete_paragraph(
+            @transaction.transaction_options(
+              input,
+              output_path=output,
+              dry_run~,
+            ),
+            at="p[2]",
+            expect_text="target",
+          ),
+        )
+        false
+      } catch {
+        @transaction.TransactionError(code="office.delete.field_region", ..) =>
+          true
+        error => raise error
+      }
+      assert_true(refused)
+      delete_nothing_written(output)
+      assert_true(@afs.read_file(input).binary() == original)
+    }
+  })
+}
+
+///|
 async fn delete_nothing_written(path : String) -> Unit {
   // Existence, not readability: a read that fails for ANY reason would
   // satisfy a naive absence check, so a zero-length or unreadable leak

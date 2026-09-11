@@ -679,11 +679,10 @@ test "a suppressed field boundary cannot be judged" {
     "<w:p><w:r><w:fldChar w:fldCharType=\"end\"/></w:r></w:p>" +
     "<w:p><w:r><w:t>keeper</w:t></w:r></w:p>",
   )
-  assert_true(
-    delete_refusal_of(annotated, "p[2]").contains(
-      "inside tracked-deleted or compatibility-alternative content",
-    ),
-  )
+  let error = @test.expect_error(() => {
+    @docx.plan_docx_paragraph_deletion(annotated, at="p[2]")
+  })
+  assert_true(error is Unsupported(_))
 }
 
 ///|

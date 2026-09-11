@@ -18,6 +18,7 @@ import {
 }
 
 import {
+  "moonbitlang/core/test",
   "moonbitlang/docx2html/opc",
   "moonbitlang/docx2html/batch",
   "moonbitlang/core/debug",
