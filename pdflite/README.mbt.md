@@ -39,6 +39,7 @@ _build/native/release/build/cmd/main/main.exe info fixtures/camlpdf/logo.pdf
 _build/native/release/build/cmd/main/main.exe info --json fixtures/camlpdf/logo.pdf
 _build/native/release/build/cmd/main/main.exe validate fixtures/camlpdf/logo.pdf
 _build/native/release/build/cmd/main/main.exe rewrite fixtures/camlpdf/logo.pdf _build/logo-roundtrip.pdf
+_build/native/release/build/cmd/main/main.exe merge _build/combined.pdf cover.pdf chapter-1.pdf appendix.pdf
 ```
 
 Black-box CLI documentation tests live in `tests/cram`. Moon Cram is currently

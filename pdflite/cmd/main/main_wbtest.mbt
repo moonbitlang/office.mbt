@@ -33,6 +33,7 @@ test "pdflite command renders argparse help" {
       #|
       #|Commands:
       #|  info      Print basic metadata for one PDF file.
+      #|  merge     Merge PDF files in the supplied order.
       #|  rewrite   Parse, write, and verify a PDF file.
       #|  validate  Parse and round-trip a PDF without writing a file.
       #|
@@ -62,6 +63,25 @@ test "pdflite command parses info json flag" {
   }
   @test.assert_eq(input_path, "input.pdf")
   @test.assert_eq(json, true)
+}
+
+///|
+test "pdflite command parses merge subcommand in input order" {
+  let parsed = try! pdflite_cmd_parse_args([
+    "merge", "output.pdf", "first.pdf", "second.pdf", "third.pdf",
+  ])
+  guard parsed is PdfliteCmdMerge(output_path, input_paths) else {
+    fail("expected merge subcommand")
+  }
+  @test.assert_eq(output_path, "output.pdf")
+  @test.assert_eq(input_paths, ["first.pdf", "second.pdf", "third.pdf"])
+}
+
+///|
+test "pdflite command requires at least two merge inputs" {
+  @test.assert_raise(() => {
+    ignore(pdflite_cmd_parse_args(["merge", "output.pdf", "input.pdf"]))
+  })
 }
 
 ///|
@@ -100,6 +120,7 @@ test "pdflite command reports missing subcommand with argparse help" {
           #|
           #|Commands:
           #|  info      Print basic metadata for one PDF file.
+          #|  merge     Merge PDF files in the supplied order.
           #|  rewrite   Parse, write, and verify a PDF file.
           #|  validate  Parse and round-trip a PDF without writing a file.
           #|
@@ -163,6 +184,50 @@ async test "pdflite rewrite creates a readable PDF" {
   )
   inspect(try! rewritten.endpage(), content="1")
   pdflite_cmd_remove_if_exists_for_test(output)
+}
+
+///|
+#cfg(target="native")
+async test "pdflite merge preserves input page order" {
+  let first_path = pdflite_cmd_output_path_for_test("merge_first")
+  let second_path = pdflite_cmd_output_path_for_test("merge_second")
+  let output_path = pdflite_cmd_output_path_for_test("merge_output")
+  pdflite_cmd_remove_if_exists_for_test(first_path)
+  pdflite_cmd_remove_if_exists_for_test(second_path)
+  pdflite_cmd_remove_if_exists_for_test(output_path)
+  let first = try! @pdflite.pdf_blank_document(100.0, 200.0, 1)
+  let second = try! @pdflite.pdf_blank_document(300.0, 400.0, 2)
+  @fs.write_file(
+    first_path,
+    try! @pdflite.pdf_write_document(first),
+    create_mode=CreateOrTruncate,
+    permission=0o644,
+  )
+  @fs.write_file(
+    second_path,
+    try! @pdflite.pdf_write_document(second),
+    create_mode=CreateOrTruncate,
+    permission=0o644,
+  )
+  let first_pages = try! (try! @pdflite.pdf_read_document_from_bytes(
+    @fs.read_file(first_path).binary(),
+  )).pages_of_pagetree()
+  let second_pages = try! (try! @pdflite.pdf_read_document_from_bytes(
+    @fs.read_file(second_path).binary(),
+  )).pages_of_pagetree()
+  let result = pdflite_cmd_merge_files(output_path, [second_path, first_path])
+  guard result is Ok(_) else { fail("expected merge to succeed") }
+  let merged = try! @pdflite.pdf_read_document_from_bytes(
+    @fs.read_file(output_path).binary(),
+  )
+  let merged_pages = try! merged.pages_of_pagetree()
+  @test.assert_eq(merged_pages.length(), 3)
+  @test.assert_eq(merged_pages[0].mediabox, second_pages[0].mediabox)
+  @test.assert_eq(merged_pages[1].mediabox, second_pages[1].mediabox)
+  @test.assert_eq(merged_pages[2].mediabox, first_pages[0].mediabox)
+  pdflite_cmd_remove_if_exists_for_test(first_path)
+  pdflite_cmd_remove_if_exists_for_test(second_path)
+  pdflite_cmd_remove_if_exists_for_test(output_path)
 }
 
 ///|

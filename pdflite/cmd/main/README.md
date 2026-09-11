@@ -21,6 +21,7 @@ _build/native/release/build/cmd/main/main.exe info fixtures/camlpdf/logo.pdf
 _build/native/release/build/cmd/main/main.exe info --json fixtures/camlpdf/logo.pdf
 _build/native/release/build/cmd/main/main.exe validate fixtures/camlpdf/logo.pdf
 _build/native/release/build/cmd/main/main.exe rewrite fixtures/camlpdf/logo.pdf _build/logo-roundtrip.pdf
+_build/native/release/build/cmd/main/main.exe merge _build/combined.pdf cover.pdf chapter-1.pdf appendix.pdf
 ```
 
 The black-box CLI documentation tests live in `tests/cram`. Moon Cram is
@@ -42,5 +43,9 @@ moon cram test --shell /bin/bash --timeout-seconds 120 tests/cram
   bytes can be parsed.
 - `rewrite` parses a PDF, writes it back through the library writer, and
   verifies the rewritten bytes before writing the output file.
+- `merge` takes an output path followed by at least two input paths. It copies
+  every page in the supplied input order, verifies the merged bytes and page
+  count before writing the output file, and otherwise uses the root package's
+  default merge-retention settings.
 - Argument parsing, help, version text, and parse errors are owned by the
   declarative argparse command spec.

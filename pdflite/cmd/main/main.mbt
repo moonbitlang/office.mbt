@@ -22,6 +22,7 @@ priv struct PdfliteCmdInfoReport {
 ///|
 priv enum PdfliteCmd {
   PdfliteCmdInfo(String, Bool)
+  PdfliteCmdMerge(String, Array[String])
   PdfliteCmdRewrite(String, String)
   PdfliteCmdValidate(String)
 }
@@ -47,6 +48,18 @@ fn pdflite_cmd_command() -> @argparse.Command {
         ],
         flags=[FlagArg("json", about="Print metadata as JSON.")],
       ),
+      Command("merge", about="Merge PDF files in the supplied order.", positionals=[
+        PositionArg(
+          "output",
+          about="Output PDF path.",
+          num_args=@argparse.ValueRange::single(),
+        ),
+        PositionArg(
+          "inputs",
+          about="Input PDF paths, in output page order.",
+          num_args=ValueRange(lower=2),
+        ),
+      ]),
       Command("rewrite", about="Parse, write, and verify a PDF file.", positionals=[
         PositionArg(
           "input",
@@ -86,6 +99,20 @@ fn pdflite_cmd_single_value(
 }
 
 ///|
+fn pdflite_cmd_multiple_values(
+  matches : @argparse.Matches,
+  name : String,
+) -> Array[String] raise {
+  guard matches.values.get(name) is Some(values) else {
+    fail("argparse did not return multiple values for " + name)
+  }
+  guard values.length() >= 2 else {
+    fail("argparse did not return multiple values for " + name)
+  }
+  values
+}
+
+///|
 fn pdflite_cmd_flag_value(matches : @argparse.Matches, name : String) -> Bool {
   matches.flags.get(name).unwrap_or(false)
 }
@@ -98,6 +125,11 @@ fn pdflite_cmd_parse_args(args : ArrayView[String]) -> PdfliteCmd raise {
       PdfliteCmdInfo(
         pdflite_cmd_single_value(subcommand, "input"),
         pdflite_cmd_flag_value(subcommand, "json"),
+      )
+    Some(("merge", subcommand)) =>
+      PdfliteCmdMerge(
+        pdflite_cmd_single_value(subcommand, "output"),
+        pdflite_cmd_multiple_values(subcommand, "inputs"),
       )
     Some(("rewrite", subcommand)) =>
       PdfliteCmdRewrite(
@@ -131,6 +163,8 @@ async fn pdflite_cmd_run(args : ArrayView[String]) -> Int {
   }
   let result = match command {
     PdfliteCmdInfo(input_path, json) => pdflite_cmd_info_file(input_path, json)
+    PdfliteCmdMerge(output_path, input_paths) =>
+      pdflite_cmd_merge_files(output_path, input_paths)
     PdfliteCmdRewrite(input_path, output_path) =>
       pdflite_cmd_rewrite_file(input_path, output_path)
     PdfliteCmdValidate(input_path) => pdflite_cmd_validate_file(input_path)
@@ -282,6 +316,106 @@ fn pdflite_cmd_verify_rewritten_bytes(
 }
 
 ///|
+fn pdflite_cmd_pages_for_input(
+  input_path : String,
+  document : @pdflite.PdfDocument,
+) -> Result[Array[Int], String] {
+  let page_count = document.endpage() catch {
+    err =>
+      return Err(
+        "cannot read page tree for '" +
+        input_path +
+        "': " +
+        @core.pdf_error_summary(err),
+      )
+  }
+  let pages : Array[Int] = []
+  for page in 1..<=page_count {
+    pages.push(page)
+  }
+  Ok(pages)
+}
+
+///|
+fn pdflite_cmd_verify_merged_bytes(
+  output : Bytes,
+  expected_page_count : Int,
+) -> Result[Unit, String] {
+  let merged = @pdflite.pdf_read_document_from_bytes(output) catch {
+    err =>
+      return Err("merged PDF does not parse: " + @core.pdf_error_summary(err))
+  }
+  let page_count = merged.endpage() catch {
+    err =>
+      return Err(
+        "merged PDF has an unreadable page tree: " +
+        @core.pdf_error_summary(err),
+      )
+  }
+  if page_count == expected_page_count {
+    Ok(())
+  } else {
+    Err(
+      "merged PDF has " +
+      page_count.to_string() +
+      " pages; expected " +
+      expected_page_count.to_string(),
+    )
+  }
+}
+
+///|
+async fn pdflite_cmd_write_output_file(
+  output_path : String,
+  output : Bytes,
+) -> Result[Unit, String] {
+  @fs.write_file(
+    output_path,
+    output,
+    create_mode=CreateOrTruncate,
+    permission=0o644,
+  ) catch {
+    err => return Err("cannot write '" + output_path + "': " + err.to_string())
+  }
+  Ok(())
+}
+
+///|
+async fn pdflite_cmd_merge_files(
+  output_path : String,
+  input_paths : ArrayView[String],
+) -> Result[Unit, String] {
+  let documents : Array[@pdflite.PdfDocument] = []
+  let ranges : Array[Array[Int]] = []
+  let mut expected_page_count = 0
+  for input_path in input_paths {
+    let document = match pdflite_cmd_read_document(input_path) {
+      Ok(value) => value
+      Err(message) => return Err(message)
+    }
+    let pages = match pdflite_cmd_pages_for_input(input_path, document) {
+      Ok(value) => value
+      Err(message) => return Err(message)
+    }
+    expected_page_count = expected_page_count + pages.length()
+    documents.push(document)
+    ranges.push(pages)
+  }
+  let merged = @pdflite.pdf_merge_documents(documents, ranges) catch {
+    err => return Err("cannot merge PDF files: " + @core.pdf_error_summary(err))
+  }
+  let output = @pdflite.pdf_write_document(merged) catch {
+    err =>
+      return Err("cannot write merged PDF: " + @core.pdf_error_summary(err))
+  }
+  match pdflite_cmd_verify_merged_bytes(output, expected_page_count) {
+    Ok(_) => ()
+    Err(message) => return Err(message)
+  }
+  pdflite_cmd_write_output_file(output_path, output)
+}
+
+///|
 async fn pdflite_cmd_rewrite_file(
   input_path : String,
   output_path : String,
@@ -298,15 +432,7 @@ async fn pdflite_cmd_rewrite_file(
     Ok(_) => ()
     Err(message) => return Err(message)
   }
-  @fs.write_file(
-    output_path,
-    output,
-    create_mode=CreateOrTruncate,
-    permission=0o644,
-  ) catch {
-    err => return Err("cannot write '" + output_path + "': " + err.to_string())
-  }
-  Ok(())
+  pdflite_cmd_write_output_file(output_path, output)
 }
 
 ///|
