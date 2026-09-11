@@ -34,6 +34,12 @@ pub fn convert_to_html(BytesView, style_map? : Array[String], include_default_st
 
 pub fn convert_to_markdown(BytesView, style_map? : Array[String], include_default_style_map? : Bool, include_embedded_style_map? : Bool, ignore_empty_paragraphs? : Bool, id_prefix? : String, convert_image? : (@document.Image) -> @converter.ImageConversion, transform_document? : (@document.DocumentElement) -> @document.DocumentElement, external_file_access? : Bool, read_external_file? : (String) -> Bytes?) -> @core.ConversionResult raise @core.DocxError
 
+pub fn docx_delete_refusal_prose(String) -> String
+
+pub fn docx_delete_refusal_slug(String) -> String?
+
+pub fn docx_direct_body_paragraph_count(DocxAnnotatedResult) -> Int raise @core.DocxError
+
 pub fn docx_direct_format(bold? : Bool, italic? : Bool, underline? : Bool, color? : String) -> DocxDirectFormat raise @core.DocxError
 
 pub fn docx_paragraph_anchor_index(DocxAnnotatedResult, DocxStoryPartSource) -> DocxParagraphAnchorIndex raise @core.DocxError
@@ -87,6 +93,8 @@ pub fn plan_comment_resolution(DocxAnnotatedResult, BytesView, comment_id~ : Str
 pub fn plan_comment_resolution_archive(DocxAnnotatedResult, @zip.Archive, comment_id~ : String, done~ : Bool, xml_budget? : @xml.XmlReadBudget) -> @splice.SplicePlan raise @core.DocxError
 
 pub fn plan_docx_format(DocxAnnotatedResult, DocxStoryPartSource, format~ : DocxDirectFormat, text? : String, within? : String, nth? : Int, range? : (Int, Int)) -> (@splice.SplicePlan, DocxFormatReceipt) raise @core.DocxError
+
+pub fn plan_docx_paragraph_deletion(DocxAnnotatedResult, at~ : String) -> (@splice.SplicePlan, DocxDeleteReceipt) raise @core.DocxError
 
 pub fn plan_docx_paragraph_insertion(DocxAnnotatedResult, at~ : String, before~ : Bool, content~ : DocxInsertContent, used_para_ids~ : Array[String]) -> (@splice.SplicePlan, DocxInsertReceipt) raise @core.DocxError
 
@@ -209,6 +217,27 @@ pub fn DocxAnnotatedResult::story_paragraph_span(Self, String, String) -> NodeSp
 pub fn DocxAnnotatedResult::story_root_span(Self, String) -> NodeSpan?
 pub fn DocxAnnotatedResult::story_row_span(Self, String, String) -> NodeSpan?
 pub fn DocxAnnotatedResult::story_run_span(Self, String, String) -> NodeSpan?
+
+pub struct DocxDeleteCutWitness {
+  // private fields
+}
+pub fn DocxDeleteCutWitness::expected_length(Self) -> Int
+pub fn DocxDeleteCutWitness::matches(Self, BytesView) -> Bool
+pub fn DocxDeleteCutWitness::part(Self) -> String
+
+pub struct DocxDeleteReceipt {
+  // private fields
+}
+pub fn DocxDeleteReceipt::anchor_status(Self) -> String
+pub fn DocxDeleteReceipt::cut(Self) -> DocxDeleteCutWitness
+pub fn DocxDeleteReceipt::para_id(Self) -> String?
+pub fn DocxDeleteReceipt::path(Self) -> String
+pub fn DocxDeleteReceipt::predecessor_para_id(Self) -> String?
+pub fn DocxDeleteReceipt::predecessor_path(Self) -> String?
+pub fn DocxDeleteReceipt::predecessor_text(Self) -> String?
+pub fn DocxDeleteReceipt::successor_para_id(Self) -> String?
+pub fn DocxDeleteReceipt::successor_text(Self) -> String?
+pub fn DocxDeleteReceipt::text(Self) -> String
 
 pub struct DocxDirectFormat {
   // private fields

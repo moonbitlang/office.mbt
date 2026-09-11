@@ -269,6 +269,15 @@ async fn run_replace(matches : @argparse.Matches) -> Unit {
   // is exactly the structural mutation v1 forbids from text.
   replace_reject_control_text(needle, "--text")
   replace_reject_control_text(replacement, "--with")
+  // `--in` is NOT run through `format_validate_scope` here, unlike
+  // `format` and `find`. A stable `p[id="…"]` scope still refuses typed
+  // — the engine asks the same shape predicate this file does — but a
+  // non-canonical ORDINAL path (`p[3]/tr[1]`) reaches the prefix
+  // matcher, matches nothing, and with `--allow-zero` publishes a
+  // byte-identical output. Narrowing it here once rejected paths the
+  // reader itself emits and an empty `--in`, so the widening is being
+  // done properly under issue #525 rather than re-attempted inside this
+  // one.
   let within = optional_value(matches, "in")
   let allow_zero = matches.flags.get_or_default("allow-zero", false)
   let dry_run = matches.flags.get_or_default("dry-run", false)

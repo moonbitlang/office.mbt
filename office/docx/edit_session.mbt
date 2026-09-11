@@ -48,6 +48,15 @@ pub struct DocxEditSession {
   priv xml_budget : @xml.XmlReadBudget
   priv mut plan : @splice.SplicePlan
   priv mut plan_mode : DocxEditPlanMode
+  // What a queued deletion must read back as, shared with the validator
+  // the TRANSACTION installed before this session existed. The readback
+  // travels with the QUEUING, not with the verb that happens to call
+  // it: `queue_delete_paragraph` is public and composable, so a caller
+  // who deletes a paragraph and then edits something else through the
+  // same session gets the identity, neighbour, cut and count legs
+  // exactly as the verb does. Empty on every session that queues no
+  // deletion, where the validator has nothing to say.
+  priv delete_expectation : Ref[DeleteReadbackExpectation?]
 }
 
 ///|
@@ -198,6 +207,10 @@ fn source_fingerprints(archive : @zip.Archive) -> Array[DocxPartFingerprint] {
 fn open_edit_session(
   archive : @zip.Archive,
   budget : @transaction.TransactionBudget,
+  // REQUIRED, not defaulted: a session holding a ref no validator reads
+  // would queue a deletion and publish it unverified, and a default
+  // makes that the quiet outcome of forgetting to wire one up.
+  delete_expectation~ : Ref[DeleteReadbackExpectation?],
 ) -> DocxEditSession raise @transaction.TransactionError {
   let archive = archive.clone()
   let validation = @opc.validate_docx_archive_report_limited(
@@ -293,6 +306,7 @@ fn open_edit_session(
     xml_budget,
     plan: @splice.SplicePlan::new(),
     plan_mode: Empty,
+    delete_expectation,
   }
 }
 
@@ -314,6 +328,29 @@ fn DocxEditSession::adopt_plan(
   self : DocxEditSession,
   plan : @splice.SplicePlan,
 ) -> Unit raise @transaction.TransactionError {
+  // A DELETION'S PART IS CLOSED once the deletion is queued. The cut is
+  // verified byte-exactly against the whole part, and the successor and
+  // neighbour projections were read from a snapshot a second edit would
+  // invalidate — so every one of those legs would answer about a
+  // document the plan never described.
+  //
+  // Enforced HERE, in the ONE function every queuing path reaches. It
+  // began in `queue_plan`, which the span and generic queuers use — and
+  // the three semantic COMMENT queuers call this directly, so adding a
+  // comment after a deletion walked straight past it and surfaced later
+  // as a cut that "did not land where the plan said" when what actually
+  // happened is that something else landed too.
+  //
+  // The deletion's OWN plan passes: the latch is set after it queues.
+  if self.delete_expectation.val is Some(expectation) {
+    let closed = expectation.cut.part()
+    guard !plan.declared_parts().contains(closed) else {
+      raise docx_failure(
+        "office.delete.part_closed",
+        "a queued paragraph deletion is verified byte-exactly against \{bounded_docx_text(closed, 320)}, so nothing else may edit that part in the same transaction",
+      )
+    }
+  }
   // Bound and validate the incoming plan before copying every mutable map and
   // array into session state. Byte payloads can remain shared because MoonBit
   // `Bytes`/`BytesView` are immutable. This also rejects unpinned/stale sources.
@@ -819,6 +856,13 @@ async fn docx_transaction(
   let validators = validators.copy()
   let source_para_id_inventory : Ref[Map[String, Array[String]]?] = Ref(None)
   validators.insert(0, package_validator(source_para_id_inventory~))
+  // Installed on EVERY docx transaction, silent unless the session
+  // queued a deletion. Passing it as a verb-supplied validator instead
+  // let the one composition the session seam advertises — queue a
+  // deletion, then queue anything else — publish with no delete
+  // readback at all.
+  let delete_expectation : Ref[DeleteReadbackExpectation?] = Ref(None)
+  validators.insert(1, delete_readback_validator(delete_expectation))
   @transaction.transact(
     options,
     (format, _original, archive, budget) => {
@@ -832,7 +876,7 @@ async fn docx_transaction(
       // a signed package, an enforced protection, or a document
       // recording revisions is not edited by this toolkit at all.
       docx_mutation_preflight(archive, tracking_waived~)
-      let session = open_edit_session(archive, budget)
+      let session = open_edit_session(archive, budget, delete_expectation~)
       // The SOURCE's identity inventory, captured before any edit is
       // queued: the candidate gate compares against this, so existing
       // paraId dirt survives a text edit while any inventory CHANGE

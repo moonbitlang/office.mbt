@@ -157,18 +157,19 @@ pub fn plan_docx_paragraph_insertion(
     )
   }
   let elements = projection.scan.elements()
+  // The story's OWN body, by element — the same identity the deletion
+  // planner uses. Judging "direct child" by the parent's NAME admitted
+  // every paragraph under a nested `<w:body>` (which the strict reader,
+  // a well-formedness parser, accepts inside a `w:sectPr` or a `w:tc`),
+  // and two verbs must not disagree about which paragraphs are the
+  // body's.
+  let body = document_body_index(elements).unwrap_or(-1)
   let mut anchor_is_direct = false
   for element in elements {
     if element.byte_start == span.byte_start() &&
       element.local_name == "p" &&
       is_wml_uri(element.uri) {
-      let parent = element.parent_index
-      if parent >= 0 && parent < elements.length() {
-        let holder = elements[parent]
-        if holder.local_name == "body" && is_wml_uri(holder.uri) {
-          anchor_is_direct = true
-        }
-      }
+      anchor_is_direct = is_direct_body_child(element, body)
       break
     }
   }

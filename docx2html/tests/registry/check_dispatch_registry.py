@@ -71,6 +71,9 @@ FILES = {
     # N3a's insertion planner: reads the anchor element tree (direct-
     # body proof) and RENDERS the namespace-self-contained fragment
     'paragraph_insert.mbt': 'extract',
+    # N3b's deletion planner: reads the target element tree (direct-
+    # body proof, subtree hazard blocklist, bookmark pairing)
+    'paragraph_delete.mbt': 'extract',
     # F0's lexical rPr engine: reads and edits run-property spellings
     # in place, dispatching on the CT_RPr child vocabulary
     'run_format.mbt': 'extract',

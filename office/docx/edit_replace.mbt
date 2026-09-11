@@ -509,7 +509,12 @@ fn parse_docx_run_address(
       // The payload may be structurally empty (p[id=""], eight code
       // units — the minimum where prefix and suffix are DISTINCT
       // quotes) — validity is the TRANSACTION's judgment, refused
-      // there as para_id_invalid.
+      // there as para_id_invalid. This is deliberately LOOSER than
+      // `docx_stable_target_shape_valid`, the one shape predicate the
+      // other verbs and the transaction share: parse time here only
+      // splits the address into segments, and every head that reaches
+      // the session is re-judged by that predicate with the same code
+      // it always had (#512 pins this ordering).
       guard segment.has_prefix("p[id=\"") &&
         segment.has_suffix("\"]") &&
         segment.length() >= 8 else {

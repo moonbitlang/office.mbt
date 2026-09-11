@@ -244,8 +244,12 @@ bypassing a convenience method cannot publish stale semantic state.
 `transact_docx` also installs `office-docx-bounded` as its custom identifier.
 It applies cumulative XML limits to source and candidate OPC metadata before
 the generic portable detector runs. The successful transaction report therefore
-records three independent gates in order: `office-docx-bounded`,
-`office-portable-opc`, and `office-docx-package`.
+records four independent gates in order: `office-docx-bounded`,
+`office-portable-opc`, `office-docx-package`, and
+`office-docx-delete-readback`. The last is installed on every DOCX
+transaction and reports nothing unless the session queued a paragraph
+deletion — the readback belongs to the QUEUING, so composing a deletion
+with any other edit cannot publish unverified.
 
 ## Preservation report
 
