@@ -22,6 +22,8 @@ _build/native/release/build/cmd/main/main.exe info --json fixtures/camlpdf/logo.
 _build/native/release/build/cmd/main/main.exe validate fixtures/camlpdf/logo.pdf
 _build/native/release/build/cmd/main/main.exe rewrite fixtures/camlpdf/logo.pdf _build/logo-roundtrip.pdf
 _build/native/release/build/cmd/main/main.exe merge _build/combined.pdf cover.pdf chapter-1.pdf appendix.pdf
+_build/native/release/build/cmd/main/main.exe extract input.pdf selected.pdf --pages "1-3,5"
+_build/native/release/build/cmd/main/main.exe extract input.pdf reordered.pdf --pages "3,1,3" --retain-numbering --process-struct-tree
 ```
 
 The black-box CLI documentation tests live in `tests/cram`. Moon Cram is
@@ -49,3 +51,25 @@ moon cram test --shell /bin/bash --timeout-seconds 120 tests/cram
   default merge-retention settings.
 - Argument parsing, help, version text, and parse errors are owned by the
   declarative argparse command spec.
+
+## Extract Pages
+
+`pdflite extract <input> <output> --pages <spec>` writes a new PDF containing
+the selected pages. Page numbers start at 1; ranges include both endpoints.
+Order and duplicates are preserved: `3,1,3` copies page 3, page 1, then page 3
+again. The existing count-based page-spec syntax also supports descending
+ranges (`3-1`), `end`, `all`, `reverse`, `odd`, and `even`.
+
+`--pages` is required. Empty specifications, empty selections, malformed
+specifications, and out-of-range endpoints are usage errors (exit 2).
+File IO and PDF processing errors return exit 1. Diagnostics go to stderr;
+successful extraction returns exit 0 without printing to stdout.
+
+`--retain-numbering` preserves original page-label numbering.
+`--process-struct-tree` trims tagged structure references to deleted pages.
+Both flags default to false, matching the library. Bookmarks, destinations,
+and annotations are repaired for retained pages where possible.
+
+The output bytes are reparsed and their page count checked before writing.
+As with `rewrite`, an existing output file is overwritten; failures before
+the write leave it untouched. Write failures may leave a partial output file.

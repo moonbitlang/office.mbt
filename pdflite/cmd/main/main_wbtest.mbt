@@ -32,6 +32,7 @@ test "pdflite command renders argparse help" {
       #|Inspect and rewrite PDF files.
       #|
       #|Commands:
+      #|  extract   Extract selected pages into a new PDF file.
       #|  info      Print basic metadata for one PDF file.
       #|  merge     Merge PDF files in the supplied order.
       #|  rewrite   Parse, write, and verify a PDF file.
@@ -119,6 +120,7 @@ test "pdflite command reports missing subcommand with argparse help" {
           #|Inspect and rewrite PDF files.
           #|
           #|Commands:
+          #|  extract   Extract selected pages into a new PDF file.
           #|  info      Print basic metadata for one PDF file.
           #|  merge     Merge PDF files in the supplied order.
           #|  rewrite   Parse, write, and verify a PDF file.

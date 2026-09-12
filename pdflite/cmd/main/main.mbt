@@ -21,6 +21,7 @@ priv struct PdfliteCmdInfoReport {
 
 ///|
 priv enum PdfliteCmd {
+  PdfliteCmdExtract(String, String, String, Bool, Bool)
   PdfliteCmdInfo(String, Bool)
   PdfliteCmdMerge(String, Array[String])
   PdfliteCmdRewrite(String, String)
@@ -36,6 +37,40 @@ fn pdflite_cmd_command() -> @argparse.Command {
     subcommand_required=true,
     disable_help_subcommand=true,
     subcommands=[
+      Command(
+        "extract",
+        about="Extract selected pages into a new PDF file.",
+        positionals=[
+          PositionArg(
+            "input",
+            about="Input PDF path.",
+            num_args=@argparse.ValueRange::single(),
+          ),
+          PositionArg(
+            "output",
+            about="Output PDF path.",
+            num_args=@argparse.ValueRange::single(),
+          ),
+        ],
+        options=[
+          OptionArg(
+            "pages",
+            long="pages",
+            required=true,
+            about="1-based page specification, e.g. 1-3,5 or 3,1,3.",
+          ),
+        ],
+        flags=[
+          FlagArg(
+            "retain-numbering",
+            about="Preserve original page-label numbering.",
+          ),
+          FlagArg(
+            "process-struct-tree",
+            about="Trim tagged structure references to deleted pages.",
+          ),
+        ],
+      ),
       Command(
         "info",
         about="Print basic metadata for one PDF file.",
@@ -121,6 +156,14 @@ fn pdflite_cmd_flag_value(matches : @argparse.Matches, name : String) -> Bool {
 fn pdflite_cmd_parse_args(args : ArrayView[String]) -> PdfliteCmd raise {
   let matches = pdflite_cmd_command().parse(argv=args, env=Map([]))
   match matches.subcommand {
+    Some(("extract", subcommand)) =>
+      PdfliteCmdExtract(
+        pdflite_cmd_single_value(subcommand, "input"),
+        pdflite_cmd_single_value(subcommand, "output"),
+        pdflite_cmd_single_value(subcommand, "pages"),
+        pdflite_cmd_flag_value(subcommand, "retain-numbering"),
+        pdflite_cmd_flag_value(subcommand, "process-struct-tree"),
+      )
     Some(("info", subcommand)) =>
       PdfliteCmdInfo(
         pdflite_cmd_single_value(subcommand, "input"),
@@ -162,6 +205,16 @@ async fn pdflite_cmd_run(args : ArrayView[String]) -> Int {
     }
   }
   let result = match command {
+    PdfliteCmdExtract(
+      input_path,
+      output_path,
+      pages,
+      retain_numbering,
+      process_struct_tree
+    ) =>
+      return pdflite_cmd_extract_file(
+        input_path, output_path, pages, retain_numbering, process_struct_tree,
+      )
     PdfliteCmdInfo(input_path, json) => pdflite_cmd_info_file(input_path, json)
     PdfliteCmdMerge(output_path, input_paths) =>
       pdflite_cmd_merge_files(output_path, input_paths)

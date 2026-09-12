@@ -14,8 +14,9 @@ pdflite 0.1.38
 ## Help
 
 ```mooncram
-$ "$PDFLITE_CLI" --help | grep -E '^(Usage: pdflite|  info|  merge|  rewrite|  validate|  -V, --version)'
+$ "$PDFLITE_CLI" --help | grep -E '^(Usage: pdflite|  extract|  info|  merge|  rewrite|  validate|  -V, --version)'
 Usage: pdflite <command>
+  extract   Extract selected pages into a new PDF file.
   info      Print basic metadata for one PDF file.
   merge     Merge PDF files in the supplied order.
   rewrite   Parse, write, and verify a PDF file.
