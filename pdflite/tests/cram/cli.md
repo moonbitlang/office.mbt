@@ -14,9 +14,11 @@ pdflite 0.1.38
 ## Help
 
 ```mooncram
-$ "$PDFLITE_CLI" --help | grep -E '^(Usage: pdflite|  info|  rewrite|  validate|  -V, --version)'
+$ "$PDFLITE_CLI" --help | grep -E '^(Usage: pdflite|  extract|  info|  merge|  rewrite|  validate|  -V, --version)'
 Usage: pdflite <command>
+  extract   Extract selected pages into a new PDF file.
   info      Print basic metadata for one PDF file.
+  merge     Merge PDF files in the supplied order.
   rewrite   Parse, write, and verify a PDF file.
   validate  Parse and round-trip a PDF without writing a file.
   -V, --version  Show version information.
@@ -68,6 +70,22 @@ pages: 1
 encrypted: false
 ```
 
+## Merge in Input Order
+
+```mooncram
+$ "$PDFLITE_CLI" merge merged.pdf "$PDFLITE_LOGO_PDF" "$PDFLITE_LOGO_PDF" && "$PDFLITE_CLI" info merged.pdf | grep -E '^(pages|encrypted):'
+pages: 2
+encrypted: false
+```
+
+## Too Few Merge Inputs
+
+```mooncram
+$ set +e; "$PDFLITE_CLI" merge one.pdf "$PDFLITE_LOGO_PDF" > merge-arity.out 2> merge-arity.err; merge_exit=$?; set -e; printf 'exit=%s\n' "$merge_exit"; sed -n '1p' merge-arity.err; test ! -e one.pdf; test ! -s merge-arity.out
+exit=2
+error: 'inputs' requires at least 2 values but only 1 were provided
+```
+
 ## Unknown Option Error
 
 ```mooncram
@@ -80,6 +98,14 @@ error: unexpected argument '--bad' found
 
 ```mooncram
 $ set +e; "$PDFLITE_CLI" info missing.pdf > missing.out 2> missing.err; code=$?; set -e; printf 'exit=%s\n' "$code"; sed -n "s/\\(pdflite: cannot read 'missing.pdf':\\).*/\\1/p" missing.err; test ! -s missing.out
+exit=1
+pdflite: cannot read 'missing.pdf':
+```
+
+## Missing Merge Input Error
+
+```mooncram
+$ set +e; "$PDFLITE_CLI" merge missing-output.pdf "$PDFLITE_LOGO_PDF" missing.pdf > merge-missing.out 2> merge-missing.err; code=$?; set -e; printf 'exit=%s\n' "$code"; sed -n "s/\\(pdflite: cannot read 'missing.pdf':\\).*/\\1/p" merge-missing.err; test ! -e missing-output.pdf; test ! -s merge-missing.out
 exit=1
 pdflite: cannot read 'missing.pdf':
 ```

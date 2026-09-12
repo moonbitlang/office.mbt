@@ -11,6 +11,7 @@ priv struct PdfPageSpecContext {
   end_page : Int
   selectors : PdfPageSpecSelectors?
   source : String
+  strict_bounds : Bool
 }
 
 ///|
