@@ -1380,9 +1380,7 @@ test "a shifted ordinal cuts the paragraph the receipt names" {
     again.cut().matches(@utf8.encode(document.replace(old=target, new=""))),
   )
   assert_false(
-    again
-    .cut()
-    .matches(@utf8.encode(document.replace(old=neighbour, new=""))),
+    again.cut().matches(@utf8.encode(document.replace(old=neighbour, new=""))),
   )
 }
 
