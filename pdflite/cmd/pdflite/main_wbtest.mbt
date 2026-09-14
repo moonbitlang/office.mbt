@@ -141,7 +141,7 @@ test "pdflite command reports missing subcommand with argparse help" {
 #cfg(target="native")
 async test "pdflite info reports fixture metadata" {
   let input = pdflite_cmd_repo_path_for_test("fixtures/camlpdf/logo.pdf")
-  let document = try! @pdflite.pdf_read_document_from_bytes(
+  let document = try! @pdf.pdf_read_document_from_bytes(
     @fs.read_file(input).binary(),
   )
   let report = match pdflite_cmd_info_report(input, document) {
@@ -158,7 +158,7 @@ async test "pdflite info reports fixture metadata" {
 #cfg(target="native")
 async test "pdflite info json reports fixture metadata" {
   let input = pdflite_cmd_repo_path_for_test("fixtures/camlpdf/logo.pdf")
-  let document = try! @pdflite.pdf_read_document_from_bytes(
+  let document = try! @pdf.pdf_read_document_from_bytes(
     @fs.read_file(input).binary(),
   )
   let report = match pdflite_cmd_info_report(input, document) {
@@ -181,7 +181,7 @@ async test "pdflite rewrite creates a readable PDF" {
   pdflite_cmd_remove_if_exists_for_test(output)
   let result = pdflite_cmd_rewrite_file(input, output)
   guard result is Ok(_) else { fail("expected rewrite to succeed") }
-  let rewritten = try! @pdflite.pdf_read_document_from_bytes(
+  let rewritten = try! @pdf.pdf_read_document_from_bytes(
     @fs.read_file(output).binary(),
   )
   inspect(try! rewritten.endpage(), content="1")
@@ -197,29 +197,29 @@ async test "pdflite merge preserves input page order" {
   pdflite_cmd_remove_if_exists_for_test(first_path)
   pdflite_cmd_remove_if_exists_for_test(second_path)
   pdflite_cmd_remove_if_exists_for_test(output_path)
-  let first = try! @pdflite.pdf_blank_document(100.0, 200.0, 1)
-  let second = try! @pdflite.pdf_blank_document(300.0, 400.0, 2)
+  let first = try! @pdf.pdf_blank_document(100.0, 200.0, 1)
+  let second = try! @pdf.pdf_blank_document(300.0, 400.0, 2)
   @fs.write_file(
     first_path,
-    try! @pdflite.pdf_write_document(first),
+    try! @pdf.pdf_write_document(first),
     create_mode=CreateOrTruncate,
     permission=0o644,
   )
   @fs.write_file(
     second_path,
-    try! @pdflite.pdf_write_document(second),
+    try! @pdf.pdf_write_document(second),
     create_mode=CreateOrTruncate,
     permission=0o644,
   )
-  let first_pages = try! (try! @pdflite.pdf_read_document_from_bytes(
+  let first_pages = try! (try! @pdf.pdf_read_document_from_bytes(
     @fs.read_file(first_path).binary(),
   )).pages_of_pagetree()
-  let second_pages = try! (try! @pdflite.pdf_read_document_from_bytes(
+  let second_pages = try! (try! @pdf.pdf_read_document_from_bytes(
     @fs.read_file(second_path).binary(),
   )).pages_of_pagetree()
   let result = pdflite_cmd_merge_files(output_path, [second_path, first_path])
   guard result is Ok(_) else { fail("expected merge to succeed") }
-  let merged = try! @pdflite.pdf_read_document_from_bytes(
+  let merged = try! @pdf.pdf_read_document_from_bytes(
     @fs.read_file(output_path).binary(),
   )
   let merged_pages = try! merged.pages_of_pagetree()

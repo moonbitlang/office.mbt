@@ -234,11 +234,11 @@ async fn pdflite_cmd_run(args : ArrayView[String]) -> Int {
 ///|
 async fn pdflite_cmd_read_document(
   input_path : String,
-) -> Result[@pdflite.PdfDocument, String] {
+) -> Result[@pdf.PdfDocument, String] {
   let bytes = @fs.read_file(input_path).binary() catch {
     err => return Err("cannot read '" + input_path + "': " + err.to_string())
   }
-  let document = @pdflite.pdf_read_document_from_bytes(bytes) catch {
+  let document = @pdf.pdf_read_document_from_bytes(bytes) catch {
     err =>
       return Err(
         "cannot parse PDF '" + input_path + "': " + @core.pdf_error_summary(err),
@@ -250,7 +250,7 @@ async fn pdflite_cmd_read_document(
 ///|
 fn pdflite_cmd_info_report(
   input_path : String,
-  document : @pdflite.PdfDocument,
+  document : @pdf.PdfDocument,
 ) -> Result[PdfliteCmdInfoReport, String] {
   let page_count = document.endpage() catch {
     err =>
@@ -327,10 +327,10 @@ async fn pdflite_cmd_info_file(
 
 ///|
 fn pdflite_cmd_write_document_bytes(
-  document : @pdflite.PdfDocument,
+  document : @pdf.PdfDocument,
   source_path : String,
 ) -> Result[Bytes, String] {
-  let output = @pdflite.pdf_write_document(document) catch {
+  let output = @pdf.pdf_write_document(document) catch {
     err =>
       return Err(
         "cannot rewrite PDF '" +
@@ -347,7 +347,7 @@ fn pdflite_cmd_verify_rewritten_bytes(
   output : Bytes,
   source_path : String,
 ) -> Result[Unit, String] {
-  let rewritten = @pdflite.pdf_read_document_from_bytes(output) catch {
+  let rewritten = @pdf.pdf_read_document_from_bytes(output) catch {
     err =>
       return Err(
         "rewritten PDF from '" +
@@ -371,7 +371,7 @@ fn pdflite_cmd_verify_rewritten_bytes(
 ///|
 fn pdflite_cmd_pages_for_input(
   input_path : String,
-  document : @pdflite.PdfDocument,
+  document : @pdf.PdfDocument,
 ) -> Result[Array[Int], String] {
   let page_count = document.endpage() catch {
     err =>
@@ -394,7 +394,7 @@ fn pdflite_cmd_verify_merged_bytes(
   output : Bytes,
   expected_page_count : Int,
 ) -> Result[Unit, String] {
-  let merged = @pdflite.pdf_read_document_from_bytes(output) catch {
+  let merged = @pdf.pdf_read_document_from_bytes(output) catch {
     err =>
       return Err("merged PDF does not parse: " + @core.pdf_error_summary(err))
   }
@@ -438,7 +438,7 @@ async fn pdflite_cmd_merge_files(
   output_path : String,
   input_paths : ArrayView[String],
 ) -> Result[Unit, String] {
-  let documents : Array[@pdflite.PdfDocument] = []
+  let documents : Array[@pdf.PdfDocument] = []
   let ranges : Array[Array[Int]] = []
   let mut expected_page_count = 0
   for input_path in input_paths {
@@ -454,10 +454,10 @@ async fn pdflite_cmd_merge_files(
     documents.push(document)
     ranges.push(pages)
   }
-  let merged = @pdflite.pdf_merge_documents(documents, ranges) catch {
+  let merged = @pdf.pdf_merge_documents(documents, ranges) catch {
     err => return Err("cannot merge PDF files: " + @core.pdf_error_summary(err))
   }
-  let output = @pdflite.pdf_write_document(merged) catch {
+  let output = @pdf.pdf_write_document(merged) catch {
     err =>
       return Err("cannot write merged PDF: " + @core.pdf_error_summary(err))
   }

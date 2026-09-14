@@ -1,5 +1,5 @@
 import {
-  "moonbitlang/pdflite",
+  "moonbitlang/pdflite" @pdf,
   "moonbitlang/pdflite/core",
   "moonbitlang/pdflite/page/spec" @pagespec,
   "moonbitlang/async",
@@ -11,7 +11,7 @@ import {
 }
 
 import {
-  "moonbitlang/pdflite",
+  "moonbitlang/pdflite" @pdf,
   "moonbitlang/pdflite/core",
   "moonbitlang/async",
   "moonbitlang/async/fs",

@@ -6,7 +6,7 @@ priv suberror PdfliteExtractError {
 
 ///|
 fn pdflite_cmd_extract_bytes(
-  document : @pdflite.PdfDocument,
+  document : @pdf.PdfDocument,
   spec : String,
   retain_numbering : Bool,
   process_struct_tree : Bool,
@@ -41,13 +41,13 @@ fn pdflite_cmd_extract_bytes(
         "cannot extract PDF pages: \{@core.pdf_error_summary(err)}",
       )
   }
-  let output = @pdflite.pdf_write_document(extracted) catch {
+  let output = @pdf.pdf_write_document(extracted) catch {
     err =>
       raise ExtractFailed(
         "cannot write extracted PDF: \{@core.pdf_error_summary(err)}",
       )
   }
-  let verified = @pdflite.pdf_read_document_from_bytes(output) catch {
+  let verified = @pdf.pdf_read_document_from_bytes(output) catch {
     err =>
       raise ExtractFailed(
         "extracted PDF does not parse: \{@core.pdf_error_summary(err)}",
