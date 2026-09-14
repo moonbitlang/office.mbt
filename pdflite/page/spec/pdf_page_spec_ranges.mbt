@@ -139,7 +139,7 @@ fn pdf_pagespec_token_number(
   context : PdfPageSpecContext,
   token : PdfPageSpecToken,
 ) -> Int? raise PdfError {
-  match token {
+  let number = match token {
     PageSpecNumber(value) => Some(value)
     PageSpecWord("end") => Some(context.end_page)
     PageSpecWord(text) if text.has_prefix("~") => {
@@ -154,6 +154,12 @@ fn pdf_pagespec_token_number(
     }
     _ => None
   }
+  if context.strict_bounds &&
+    number is Some(page) &&
+    (page < 1 || page > context.end_page) {
+    context.bad()
+  }
+  number
 }
 
 ///|

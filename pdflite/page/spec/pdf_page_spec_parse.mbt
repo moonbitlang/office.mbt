@@ -169,16 +169,19 @@ pub fn pdf_parse_pagespec_with_selectors(
   if end_page < 1 {
     raise BadPageSpecification(spec)
   }
-  { end_page, selectors, source: spec, }.parse_inner(spec)
+  { end_page, selectors, source: spec, strict_bounds: false, }.parse_inner(spec)
 }
 
 ///|
 /// Parse a cpdf page specification against a document with `end_page` pages.
+/// With `strict_bounds`, reject out-of-range endpoints instead of filtering them.
 pub fn pdf_parse_pagespec_for_count(
   end_page : Int,
   spec : String,
+  strict_bounds? : Bool = false,
 ) -> Array[Int] raise PdfError {
-  pdf_parse_pagespec_with_selectors(end_page, spec, None)
+  guard end_page >= 1 else { raise BadPageSpecification(spec) }
+  { end_page, selectors: None, source: spec, strict_bounds, }.parse_inner(spec)
 }
 
 ///|

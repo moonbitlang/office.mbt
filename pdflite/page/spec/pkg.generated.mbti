@@ -10,7 +10,7 @@ pub fn pdf_invert_page_range(Int, ArrayView[Int]) -> Array[Int]
 
 pub fn pdf_invert_range(Int, ArrayView[Int]) -> Array[Int]
 
-pub fn pdf_parse_pagespec_for_count(Int, String) -> Array[Int] raise @core.PdfError
+pub fn pdf_parse_pagespec_for_count(Int, String, strict_bounds? : Bool) -> Array[Int] raise @core.PdfError
 
 pub fn pdf_parse_pagespec_with_selectors(Int, String, PdfPageSpecSelectors?) -> Array[Int] raise @core.PdfError
 
