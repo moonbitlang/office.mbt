@@ -1,7 +1,6 @@
 import {
   "moonbitlang/pdflite",
   "moonbitlang/pdflite/bookmark",
-  "moonbitlang/pdflite/metadata",
   "moonbitlang/async",
   "moonbitlang/async/fs",
   "moonbitlang/core/encoding/ascii",

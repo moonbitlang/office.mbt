@@ -2,7 +2,6 @@ import {
   "moonbitlang/pdflite/core",
   "moonbitlang/core/buffer",
   "moonbit-community/flate/zlib",
-  "moonbit-community/flate" @_,
 }
 
 import {

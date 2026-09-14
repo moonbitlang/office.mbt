@@ -1,11 +1,9 @@
 import {
   "moonbitlang/pdflite",
-  "moonbitlang/pdflite/content",
   "moonbitlang/pdflite/core",
   "moonbitlang/pdflite/geometry",
   "moonbitlang/pdflite/page",
   "moonbitlang/pdflite/syntax",
-  "moonbitlang/core/buffer",
   "moonbitlang/core/encoding/ascii",
   "moonbitlang/core/hashmap",
   "moonbitlang/core/encoding/utf8",
@@ -13,7 +11,6 @@ import {
 
 import {
   "moonbitlang/pdflite",
-  "moonbitlang/pdflite/content",
   "moonbitlang/pdflite/core",
   "moonbitlang/pdflite/geometry",
   "moonbitlang/pdflite/markdown",

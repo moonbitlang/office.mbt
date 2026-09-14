@@ -9,7 +9,6 @@ import {
   "moonbitlang/pdflite/flate",
   "moonbitlang/pdflite/font",
   "moonbitlang/pdflite/geometry",
-  "moonbitlang/pdflite/metadata",
   "moonbitlang/pdflite/ocg",
   "moonbitlang/pdflite/page",
   "moonbitlang/pdflite/page/label",

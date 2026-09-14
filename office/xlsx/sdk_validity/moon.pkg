@@ -1,5 +1,4 @@
 import {
-  "moonbitlang/office-lib",
   "moonbitlang/office-lib/xlsx",
   "moonbitlang/office-lib/transaction",
   "moonbitlang/mbtexcel" @excel,
