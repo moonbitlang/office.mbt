@@ -24,7 +24,53 @@ test "slicer roundtrip read" {
     ),
   )
   workbook.add_slicer("Sheet1", opts)
-  let parsed = @xlsx.read(@xlsx.write(workbook))
+  let bytes = @xlsx.write(workbook)
+  let archive = @zip.read(bytes)
+  guard archive.get("xl/slicerCaches/slicerCache1.xml") is Some(cache_bytes) else {
+    @test.fail("missing table slicer cache")
+  }
+  let cache_xml = @encoding/utf8.decode(cache_bytes)
+  let scanner = @ooxml.XmlStartTagScanner::new(cache_xml)
+  let x = "http://schemas.openxmlformats.org/spreadsheetml/2006/main"
+  let x14 = "http://schemas.microsoft.com/office/spreadsheetml/2009/9/main"
+  let x15 = "http://schemas.microsoft.com/office/spreadsheetml/2010/11/main"
+  // Check expanded names and nesting, independently of prefix spelling.
+  let elements = [
+    (x14, "slicerCacheDefinition"),
+    (x14, "extLst"),
+    (x, "ext"),
+    (x15, "tableSlicerCache"),
+  ]
+  for depth, element in elements {
+    @test.assert_eq(scanner.next(), true)
+    @test.assert_eq(scanner.namespace_uri().to_owned(), element.0)
+    @test.assert_eq(scanner.local_name().to_owned(), element.1)
+    @test.assert_eq(scanner.depth(), depth + 1)
+    if depth > 0 {
+      @test.assert_eq(
+        scanner.parent_namespace_uri(),
+        Some(elements[depth - 1].0),
+      )
+      @test.assert_eq(
+        scanner.parent_local_name().map(name => name.to_owned()),
+        Some(elements[depth - 1].1),
+      )
+    }
+    if element.1 == "ext" {
+      debug_inspect(
+        scanner.attribute("", "uri"),
+        content="Some(\"{2F2917AC-EB37-4324-AD4E-5DD8C200BD13}\")",
+      )
+    }
+  }
+  debug_inspect(scanner.attribute("", "tableId"), content="Some(\"1\")")
+  debug_inspect(scanner.attribute("", "column"), content="Some(\"1\")")
+  debug_inspect(
+    scanner.attribute("", "sortOrder"),
+    content="Some(\"descending\")",
+  )
+  inspect(scanner.next(), content="false")
+  let parsed = @xlsx.read(bytes)
   let slicers = parsed.get_slicers("Sheet1")
   inspect(slicers.length(), content="1")
   let slicer = slicers[0]
