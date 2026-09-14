@@ -1377,12 +1377,12 @@ test "a shifted ordinal cuts the paragraph the receipt names" {
   let target = "<w:p><w:r><w:t>target</w:t></w:r></w:p>"
   let neighbour = "<w:p><w:r><w:t>one</w:t></w:r></w:p>"
   assert_true(
-    again.cut().matches(@utf8.encode(document.replace(old=target, new=""))[:]),
+    again.cut().matches(@utf8.encode(document.replace(old=target, new=""))),
   )
   assert_false(
     again
     .cut()
-    .matches(@utf8.encode(document.replace(old=neighbour, new=""))[:]),
+    .matches(@utf8.encode(document.replace(old=neighbour, new=""))),
   )
 }
 
