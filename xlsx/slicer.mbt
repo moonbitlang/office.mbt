@@ -67,9 +67,6 @@ pub fn Slicer::new(name : String) -> Slicer raise XlsxError {
 }
 
 ///|
-let slicer_ns_main = "http://schemas.microsoft.com/office/spreadsheetml/2009/9/main"
-
-///|
 let slicer_ns_x = "http://schemas.openxmlformats.org/spreadsheetml/2006/main"
 
 ///|
@@ -92,7 +89,7 @@ fn write_slicers_part_xml(
   let sb = LimitedXmlBuilder::new(budget)
   sb.write_view("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n")
   sb.write_view(
-    "<slicers xmlns=\"\{slicer_ns_main}\" xmlns:mc=\"http://schemas.openxmlformats.org/markup-compatibility/2006\" xmlns:x=\"\{slicer_ns_x}\" xmlns:xr10=\"\{slicer_ns_xr10}\">\n",
+    "<slicers xmlns=\"\{slicer_ns_x14}\" xmlns:mc=\"http://schemas.openxmlformats.org/markup-compatibility/2006\" xmlns:x=\"\{slicer_ns_x}\" xmlns:xr10=\"\{slicer_ns_xr10}\">\n",
   )
   for slicer in slicers {
     sb.write_view("  <slicer name=\"")
@@ -137,7 +134,7 @@ fn write_slicer_cache_xml_pivot(
   let sb = LimitedXmlBuilder::new(budget)
   sb.write_view("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n")
   sb.write_view(
-    "<slicerCacheDefinition xmlns=\"\{slicer_ns_main}\" xmlns:mc=\"http://schemas.openxmlformats.org/markup-compatibility/2006\" xmlns:x=\"\{slicer_ns_x}\" xmlns:x15=\"\{slicer_ns_x15}\" xmlns:xr10=\"\{slicer_ns_xr10}\" name=\"",
+    "<slicerCacheDefinition xmlns=\"\{slicer_ns_x14}\" xmlns:mc=\"http://schemas.openxmlformats.org/markup-compatibility/2006\" xmlns:x=\"\{slicer_ns_x}\" xmlns:x15=\"\{slicer_ns_x15}\" xmlns:xr10=\"\{slicer_ns_xr10}\" name=\"",
   )
   sb.write_xml_attr(cache_name)
   sb.write_view("\" sourceName=\"")
@@ -171,20 +168,21 @@ fn write_slicer_cache_xml_table(
   let sb = LimitedXmlBuilder::new(budget)
   sb.write_view("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n")
   sb.write_view(
-    "<slicerCacheDefinition xmlns=\"\{slicer_ns_main}\" xmlns:mc=\"http://schemas.openxmlformats.org/markup-compatibility/2006\" xmlns:x=\"\{slicer_ns_x}\" xmlns:x15=\"\{slicer_ns_x15}\" xmlns:xr10=\"\{slicer_ns_xr10}\" name=\"",
+    "<slicerCacheDefinition xmlns=\"\{slicer_ns_x14}\" xmlns:mc=\"http://schemas.openxmlformats.org/markup-compatibility/2006\" xmlns:x=\"\{slicer_ns_x}\" xmlns:x15=\"\{slicer_ns_x15}\" xmlns:xr10=\"\{slicer_ns_xr10}\" name=\"",
   )
   sb.write_xml_attr(cache_name)
   sb.write_view("\" sourceName=\"")
   sb.write_xml_attr(source_name)
   sb.write_view("\">\n")
+  // extLst belongs to x14, but its CT_ExtensionList children belong to x.
   sb.write_view("  <extLst>\n")
-  sb.write_view("    <ext uri=\"{2F2917AC-EB37-4324-AD4E-5DD8C200BD13}\">\n")
+  sb.write_view("    <x:ext uri=\"{2F2917AC-EB37-4324-AD4E-5DD8C200BD13}\">\n")
   sb.write_view(
     "      <x15:tableSlicerCache tableId=\"\{table_id}\" column=\"\{column}\"",
   )
   sb.write_view(slicer_sort_order_attr(item_desc))
   sb.write_view("/>\n")
-  sb.write_view("    </ext>\n")
+  sb.write_view("    </x:ext>\n")
   sb.write_view("  </extLst>\n")
   sb.write_view("</slicerCacheDefinition>")
   sb.to_string()

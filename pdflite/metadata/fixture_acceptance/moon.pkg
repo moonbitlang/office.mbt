@@ -2,7 +2,6 @@ import {
   "moonbitlang/pdflite",
   "moonbitlang/pdflite/composition",
   "moonbitlang/pdflite/core",
-  "moonbitlang/pdflite/syntax",
   "moonbitlang/async",
   "moonbitlang/async/fs",
   "moonbitlang/core/encoding/ascii",
