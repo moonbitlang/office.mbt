@@ -1,4 +1,4 @@
-# pdflite/cmd/main
+# pdflite/cmd/pdflite
 
 `moonbitlang/pdflite/cmd/pdflite` is the native command-line wrapper for the root
 PDF package. It uses `moonbitlang/core/argparse` for the public command shape

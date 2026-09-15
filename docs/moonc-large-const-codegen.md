@@ -62,7 +62,7 @@ The data lives in ordinary `.mbt` sources:
 
 `pdflite/markdown/cmd` (a markdown→PDF CLI) transitively imports the full
 text stack, so its generated translation unit contains the expanded tables;
-`pdflite/cmd/main` does not, hence 8.8 MB.
+`pdflite/cmd/pdflite` does not, hence 8.8 MB.
 
 ## Measurements
 

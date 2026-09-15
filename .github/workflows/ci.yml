@@ -313,7 +313,7 @@ jobs:
       # arrays, and the pinned toolchain links debug executables straight to
       # object code. See docs/moonc-large-const-codegen.md.)
       - name: Build CLIs (native)
-        run: moon build --target native cmd/xlsx docx2html/cmd/docx2html docx2html/cmd/docx office-cli pdflite/cmd/main pagelayout/cmd/pagelayout
+        run: moon build --target native cmd/xlsx docx2html/cmd/docx2html docx2html/cmd/docx office-cli pdflite/cmd/pdflite pagelayout/cmd/pagelayout
 
       # Run the cram docs from a stub project so `moon cram test` does not
       # trigger a build of every workspace executable (keeps the job lean;
