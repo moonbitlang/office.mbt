@@ -345,16 +345,6 @@ fn join_reader_element(
 }
 
 ///|
-/// The end-to-end preparation for one story part: strict gate, physical
-/// scan, tolerant parse, join. Each stage's refusal is preserved; there is
-/// deliberately NO fallback to an unjoined read -- a caller that wants the
-/// plain tolerant DOM simply does not call this.
-#warnings("-unused_value")
-fn join_reader_input_story(bytes : BytesView) -> ReaderInputJoinResult {
-  join_reader_input_story_limited(bytes)
-}
-
-///|
 /// The budget-threaded form for production callers: the strict gate and
 /// the tolerant DOM keep SEPARATE budgets because their callers account
 /// differently -- main-document strict validation runs against a local

@@ -184,56 +184,6 @@ fn erase_reader_items_into(
 }
 
 ///|
-/// The effect stream in document order: a tree's own effects come before its
-/// children's (the decision happens at the node), and a paragraph's extras
-/// follow its children, matching the erase order.
-#warnings("-unused_value")
-fn collect_reader_effects(items : Array[ReaderItem]) -> Array[ReaderEffect] {
-  let out : Array[ReaderEffect] = []
-  collect_reader_effects_into(items, out)
-  out
-}
-
-///|
-fn collect_reader_effects_into(
-  items : Array[ReaderItem],
-  out : Array[ReaderEffect],
-) -> Unit {
-  for item in items {
-    match item {
-      Trace(effect) => out.push(effect)
-      New(tree) => {
-        out.append(tree.local_effects)
-        match tree.shape {
-          ReaderParagraph(inputs=_, children~, extras~, properties=_) => {
-            collect_reader_effects_into(children, out)
-            collect_reader_effects_into(extras, out)
-          }
-          ReaderRun(children~, properties=_) =>
-            collect_reader_effects_into(children, out)
-          ReaderHyperlink(children~, ..) =>
-            collect_reader_effects_into(children, out)
-          ReaderTable(children~, properties=_) =>
-            collect_reader_effects_into(children, out)
-          ReaderTableRow(children~, is_header=_) =>
-            collect_reader_effects_into(children, out)
-          ReaderTableCell(children~, ..) =>
-            collect_reader_effects_into(children, out)
-          ReaderText(_)
-          | ReaderTab
-          | ReaderCheckbox(_)
-          | ReaderNoteReference(..)
-          | ReaderCommentReference(_)
-          | ReaderImage(_)
-          | ReaderBreak(_)
-          | ReaderBookmarkStart(_) => ()
-        }
-      }
-    }
-  }
-}
-
-///|
 /// The provenance sidecar for the erase boundary: one record per tree
 /// Paragraph occurrence, in exactly the order the erased tree presents
 /// them to a depth-first walk — paragraph first, its children (nested

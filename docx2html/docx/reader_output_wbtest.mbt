@@ -55,7 +55,7 @@ fn project_flattened_notes(
       )
     }
   }
-  project_reader_items(story.scan, collected)
+  project_reader_item_segments(story.scan, [collected])
 }
 
 ///|

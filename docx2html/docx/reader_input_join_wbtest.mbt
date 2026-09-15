@@ -5,7 +5,7 @@
 
 ///|
 fn join_text_story(source : String) -> ReaderInputJoinResult {
-  join_reader_input_story(@utf8.encode(source))
+  join_reader_input_story_limited(@utf8.encode(source))
 }
 
 ///|
@@ -428,7 +428,9 @@ test "reading a joined story yields effects with physical identities" {
     body.element_children(),
   )
   let labelled : Array[String] = []
-  for effect in collect_reader_effects(items) {
+  let effects : Array[ReaderEffect] = []
+  collect_reader_effects_into(items, effects)
+  for effect in effects {
     let (kind, source) = match effect {
       ProjectsText(source~, kind=_, value~) => ("text=" + value, source)
       ProjectsVisibleNonText(source~) => ("nontext", source)
@@ -473,7 +475,9 @@ test "joined identities survive the rebuilding transforms" {
   // tr=10 tc=11 tcPr=12 vMerge=13 p=14 r=15 t=16
   // p=17 r=18 sdt=19 sdtPr=20 checkbox=21 checked=22 sdtContent=23 t=24
   let labelled : Array[String] = []
-  for effect in collect_reader_effects(items) {
+  let effects : Array[ReaderEffect] = []
+  collect_reader_effects_into(items, effects)
+  for effect in effects {
     let (kind, source) = match effect {
       ProjectsText(source~, kind=_, value~) => ("text=" + value, source)
       ProjectsVisibleNonText(source~) => ("nontext", source)

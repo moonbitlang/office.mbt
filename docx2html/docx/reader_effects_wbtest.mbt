@@ -17,6 +17,49 @@ fn reader_effect_items(source : String) -> Array[ReaderItem] raise DocxError {
 }
 
 ///|
+/// The effect stream in document order: a tree's own effects come before its
+/// children's (the decision happens at the node), and a paragraph's extras
+/// follow its children, matching the erase order. Test-only: production walks
+/// `local_effects` at each decision point (`reader_projection_adapter.mbt`).
+fn collect_reader_effects_into(
+  items : Array[ReaderItem],
+  out : Array[ReaderEffect],
+) -> Unit {
+  for item in items {
+    match item {
+      Trace(effect) => out.push(effect)
+      New(tree) => {
+        out.append(tree.local_effects)
+        match tree.shape {
+          ReaderParagraph(inputs=_, children~, extras~, properties=_) => {
+            collect_reader_effects_into(children, out)
+            collect_reader_effects_into(extras, out)
+          }
+          ReaderRun(children~, properties=_) =>
+            collect_reader_effects_into(children, out)
+          ReaderHyperlink(children~, ..) =>
+            collect_reader_effects_into(children, out)
+          ReaderTable(children~, properties=_) =>
+            collect_reader_effects_into(children, out)
+          ReaderTableRow(children~, is_header=_) =>
+            collect_reader_effects_into(children, out)
+          ReaderTableCell(children~, ..) =>
+            collect_reader_effects_into(children, out)
+          ReaderText(_)
+          | ReaderTab
+          | ReaderCheckbox(_)
+          | ReaderNoteReference(..)
+          | ReaderCommentReference(_)
+          | ReaderImage(_)
+          | ReaderBreak(_)
+          | ReaderBookmarkStart(_) => ()
+        }
+      }
+    }
+  }
+}
+
+///|
 fn effect_summary(effect : ReaderEffect) -> String {
   match effect {
     ProjectsText(source~, kind~, value~) => {
@@ -37,7 +80,9 @@ fn effect_summary(effect : ReaderEffect) -> String {
 
 ///|
 fn effect_summaries(items : Array[ReaderItem]) -> String {
-  collect_reader_effects(items).map(effect_summary).join(" ; ")
+  let effects : Array[ReaderEffect] = []
+  collect_reader_effects_into(items, effects)
+  effects.map(effect_summary).join(" ; ")
 }
 
 ///|
@@ -113,10 +158,13 @@ fn assert_effect_partition_matches_reader(source : String) -> Unit raise {
   assert_eq(trailing, "")
   // the production collector must carry the same text in the same order as
   // the tree walk above -- a dropped or reordered `ProjectsText` in
-  // `collect_reader_effects` would otherwise stay invisible here. (Non-text
-  // kinds are pinned per decision site by the witnesses in this file.)
+  // `collect_reader_effects_into` would otherwise stay invisible here.
+  // (Non-text kinds are pinned per decision site by the witnesses in this
+  // file.)
   let collected = StringBuilder()
-  for effect in collect_reader_effects(items) {
+  let effects : Array[ReaderEffect] = []
+  collect_reader_effects_into(items, effects)
+  for effect in effects {
     if effect is ProjectsText(source=_, kind=_, value~) {
       collected.write_string(value)
     }

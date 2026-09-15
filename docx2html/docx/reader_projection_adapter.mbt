@@ -45,18 +45,6 @@ priv struct ReaderProjectionParagraphFrame {
 }
 
 ///|
-/// Projects one read's items over its story scan. `items` must come from
-/// reading a JOINED story: any node without a physical identity refuses.
-#warnings("-unused_value")
-fn project_reader_items(
-  scan : StoryScan,
-  items : Array[ReaderItem],
-  budget? : ReaderProjectionBudget,
-) -> ReaderProjectionBuildResult raise DocxError {
-  project_reader_item_segments(scan, [items], budget?)
-}
-
-///|
 /// The multi-segment core: every segment's items walk through ONE shared
 /// builder with a segment boundary between them, so ownership is checked
 /// per segment while coordinates and carrier events stay continuous
