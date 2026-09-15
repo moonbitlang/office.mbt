@@ -322,7 +322,7 @@ jobs:
       # pdflite's doc takes its CLI and fixture via env.
       - name: Cram tests (xlsx, docx2html, office, pdflite, pagelayout CLIs)
         env:
-          PDFLITE_CLI: ${{ github.workspace }}/_build/native/debug/build/moonbitlang/pdflite/cmd/pdflite/main.exe
+          PDFLITE_CLI: ${{ github.workspace }}/_build/native/debug/build/moonbitlang/pdflite/cmd/pdflite/pdflite.exe
           PDFLITE_LOGO_PDF: ${{ github.workspace }}/pdflite/fixtures/camlpdf/logo.pdf
           PAGELAYOUT_CLI: ${{ github.workspace }}/_build/native/debug/build/moonbitlang/pagelayout/cmd/pagelayout/pagelayout.exe
           PAGELAYOUT_DOCX: ${{ github.workspace }}/pagelayout/docx/fixture_render/single-paragraph.docx
