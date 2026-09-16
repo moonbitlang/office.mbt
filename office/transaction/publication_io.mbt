@@ -16,32 +16,11 @@ priv struct PublicationTemp {
 }
 
 ///|
-/// The `async` is deliberate signature parity, not an oversight, so it is
-/// suppressed rather than removed. This body does nothing and cannot raise;
-/// the other two `#cfg` bodies call `@afs.chmod`, and the three shared call
-/// sites wrap it in `catch` handlers that must stay live on the targets where
-/// it CAN fail. Dropping `async` here would keep the same handlers but report
-/// them as `unused_try` on this platform instead -- trading one diagnostic for
-/// another rather than removing anything. Note no macOS or Linux scan selects
-/// this declaration at all: native picks the non-Windows body, and every other
-/// backend fails `target="native"`.
-#cfg(all(target="native", platform="windows"))
-#warnings("-unused_async")
-async fn publication_set_permission(_path : String, _permission : Int) -> Unit {
-  // Windows inherits the destination directory ACL; async chmod is unsupported.
-  ()
-}
-
-///|
-#cfg(all(target="native", not(platform="windows")))
 async fn publication_set_permission(path : String, permission : Int) -> Unit {
-  @afs.chmod(path, permission)
-}
-
-///|
-#cfg(target="wasm")
-async fn publication_set_permission(path : String, permission : Int) -> Unit {
-  @afs.chmod(path, permission)
+  // Windows inherits the directory ACL; chmod is unsupported.
+  if !(@async.platform is Windows) {
+    @afs.chmod(path, permission)
+  }
 }
 
 ///|
