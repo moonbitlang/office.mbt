@@ -16,32 +16,22 @@ priv struct PublicationTemp {
 }
 
 ///|
-/// The `async` is deliberate signature parity, not an oversight, so it is
-/// suppressed rather than removed. This body does nothing and cannot raise;
-/// the other two `#cfg` bodies call `@afs.chmod`, and the three shared call
-/// sites wrap it in `catch` handlers that must stay live on the targets where
-/// it CAN fail. Dropping `async` here would keep the same handlers but report
-/// them as `unused_try` on this platform instead -- trading one diagnostic for
-/// another rather than removing anything. Note no macOS or Linux scan selects
-/// this declaration at all: native picks the non-Windows body, and every other
-/// backend fails `target="native"`.
-#cfg(all(target="native", platform="windows"))
-#warnings("-unused_async")
-async fn publication_set_permission(_path : String, _permission : Int) -> Unit {
-  // Windows inherits the destination directory ACL; async chmod is unsupported.
-  ()
-}
+#cfg(target="native")
+extern "C" fn publication_runtime_platform() -> @async_types.Platform = "moonbitlang_async_get_platform"
 
 ///|
-#cfg(all(target="native", not(platform="windows")))
-async fn publication_set_permission(path : String, permission : Int) -> Unit {
-  @afs.chmod(path, permission)
-}
-
-///|
+// async 0.22.0 does not export its platform value on these targets. Use the
+// same Wasm runtime import until the public export is available.
 #cfg(target="wasm")
+#unsafe_skip_stub_check
+fn publication_runtime_platform() -> @async_types.Platform = "moonbitlang/async" "runtime/get_platform"
+
+///|
 async fn publication_set_permission(path : String, permission : Int) -> Unit {
-  @afs.chmod(path, permission)
+  // Windows inherits the directory ACL; chmod is unsupported.
+  if !(publication_runtime_platform() is Windows) {
+    @afs.chmod(path, permission)
+  }
 }
 
 ///|
