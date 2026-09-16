@@ -74,16 +74,24 @@ json() {
 expect_failure() {
   local output_file="$1"
   shift
-  if office "$@" >"$output_file" 2>"$work/stderr.log"; then
+  # async >= 0.21 reports escaping errors on native stderr; wasm still uses
+  # stdout. Keep the streams separate so a future runtime change fails clearly.
+  local stdout_file="$work/failure.other"
+  local stderr_file="$output_file"
+  if [ "$target" = wasm ]; then
+    stdout_file="$output_file"
+    stderr_file="$work/failure.other"
+  fi
+  if office "$@" >"$stdout_file" 2>"$stderr_file"; then
     fail "command unexpectedly succeeded: office $*"
   fi
+  [ ! -s "$work/failure.other" ] || fail "failure used unexpected output stream [$target]: office $*"
   jq -s -e '
     length == 1 and
     .[0].schema == "office.output/1" and
     .[0].success == false
   ' "$output_file" >/dev/null || {
     cat "$output_file" >&2
-    cat "$work/stderr.log" >&2
     fail "failure was not a typed JSON error: office $*"
   }
 }

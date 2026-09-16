@@ -291,18 +291,15 @@ async fn publication_temp_try_create(
   secure_release? : String,
 ) -> PublicationTemp? {
   let path = join_path(directory.path, leaf)
-  let file = @async.protect_from_cancel(
-    () => {
-      @afs.open(
-        path,
-        mode=ReadWrite,
-        create_mode=CreateNew,
-        permission=initial_permission,
-        sync=NoSync,
-      )
-    },
-    resume_on_cancel=true,
-  ) catch {
+  let file = @async.protect_from_cancel(() => {
+    @afs.open(
+      path,
+      mode=ReadWrite,
+      create_mode=CreateNew,
+      permission=initial_permission,
+      sync=NoSync,
+    )
+  }) catch {
     error if @async.is_being_cancelled() => {
       @async.pause()
       raise error
@@ -324,31 +321,28 @@ async fn publication_temp_try_create(
     written: 0,
     final_permission_applied: false,
   }
-  @async.protect_from_cancel(
-    () => {
-      match secure_release {
-        Some(release) => {
-          @afs.write_file(
-            release + ".ready",
-            b"ready",
-            create_mode=CreateNew,
-            permission=0o600,
-          )
-          while !@afs.exists(release) {
-            @async.pause()
-          }
-        }
-        None => ()
-      }
-      if fail_secure_permission {
-        raise transaction_error(
-          "office.transaction.temp_create_failed", "injected staging-permission hardening failure",
+  @async.protect_from_cancel(() => {
+    match secure_release {
+      Some(release) => {
+        @afs.write_file(
+          release + ".ready",
+          b"ready",
+          create_mode=CreateNew,
+          permission=0o600,
         )
+        while !@afs.exists(release) {
+          @async.pause()
+        }
       }
-      publication_set_permission(path, 0o600)
-    },
-    resume_on_cancel=true,
-  ) catch {
+      None => ()
+    }
+    if fail_secure_permission {
+      raise transaction_error(
+        "office.transaction.temp_create_failed", "injected staging-permission hardening failure",
+      )
+    }
+    publication_set_permission(path, 0o600)
+  }) catch {
     error => {
       publication_temp_cleanup(temp, output_path, fail_remove=fail_cleanup)
       if @async.is_being_cancelled() {
@@ -456,57 +450,54 @@ async fn publication_temp_publish(
   // pending cancellation. Once it starts, finish it so callers always know
   // whether the atomic rename committed.
   @async.pause()
-  @async.protect_from_cancel(
-    () => {
-      errdefer {
-        temp.file.close()
-        let restored = try {
-          publication_set_permission(temp.path, 0o600)
-          true
-        } catch {
-          _ => false
-        }
-        if restored {
-          temp.final_permission_applied = false
-        }
-      }
-      publication_set_permission(temp.path, permission) catch {
-        error =>
-          raise transaction_error(
-            "office.transaction.commit_failed",
-            "could not apply destination permissions: \{bounded_text(error.to_string(), 240)}",
-          )
-      }
-      temp.final_permission_applied = true
-      temp.file.sync() catch {
-        error =>
-          raise transaction_error(
-            "office.transaction.sync_failed",
-            "could not sync final package metadata: \{bounded_text(error.to_string(), 240)}",
-          )
-      }
+  @async.protect_from_cancel(() => {
+    errdefer {
       temp.file.close()
-      @afs.rename(temp.path, destination, replace~) catch {
-        @os_error.OSError(_) as error if !replace && error.is_EEXIST() =>
-          raise transaction_error(
-            "office.transaction.output_exists",
-            "destination appeared before the atomic publish completed",
-            details=Json::object({
-              "output": Json::string(bounded_text(output_path, 160)),
-            }),
-          )
-        error =>
-          raise transaction_error(
-            "office.transaction.commit_failed",
-            "could not atomically publish destination: \{bounded_text(error.to_string(), 240)}",
-            details=Json::object({
-              "output": Json::string(bounded_text(output_path, 160)),
-            }),
-          )
+      let restored = try {
+        publication_set_permission(temp.path, 0o600)
+        true
+      } catch {
+        _ => false
       }
-    },
-    resume_on_cancel=true,
-  )
+      if restored {
+        temp.final_permission_applied = false
+      }
+    }
+    publication_set_permission(temp.path, permission) catch {
+      error =>
+        raise transaction_error(
+          "office.transaction.commit_failed",
+          "could not apply destination permissions: \{bounded_text(error.to_string(), 240)}",
+        )
+    }
+    temp.final_permission_applied = true
+    temp.file.sync() catch {
+      error =>
+        raise transaction_error(
+          "office.transaction.sync_failed",
+          "could not sync final package metadata: \{bounded_text(error.to_string(), 240)}",
+        )
+    }
+    temp.file.close()
+    @afs.rename(temp.path, destination, replace~) catch {
+      @os_error.OSError(_) as error if !replace && error.is_EEXIST() =>
+        raise transaction_error(
+          "office.transaction.output_exists",
+          "destination appeared before the atomic publish completed",
+          details=Json::object({
+            "output": Json::string(bounded_text(output_path, 160)),
+          }),
+        )
+      error =>
+        raise transaction_error(
+          "office.transaction.commit_failed",
+          "could not atomically publish destination: \{bounded_text(error.to_string(), 240)}",
+          details=Json::object({
+            "output": Json::string(bounded_text(output_path, 160)),
+          }),
+        )
+    }
+  })
   true
 }
 
@@ -529,65 +520,62 @@ async fn publication_temp_cleanup(
   fail_remove? : Bool = false,
   cleanup_release? : String,
 ) -> Unit {
-  @async.protect_from_cancel(
-    () => {
-      temp.file.close()
-      match cleanup_release {
-        Some(release) => {
-          @afs.write_file(
-            release + ".ready",
-            b"ready",
-            create_mode=CreateNew,
-            permission=0o600,
-          )
-          while !@afs.exists(release) {
-            @async.pause()
-          }
-        }
-        None => ()
-      }
-      if temp.final_permission_applied {
-        publication_set_permission(temp.path, 0o600) catch {
-          error =>
-            raise transaction_error(
-              "office.transaction.cleanup_failed",
-              "could not restore temporary-file staging permissions: \{bounded_text(error.to_string(), 240)}",
-            )
-        }
-        temp.final_permission_applied = false
-      }
-      let matches = publication_temp_identity_matches(temp) catch { _ => false }
-      if !matches {
-        raise transaction_error(
-          "office.transaction.cleanup_failed",
-          "temporary package identity changed; refusing to delete a foreign path",
-          details=Json::object({
-            "output": Json::string(bounded_text(output_path, 160)),
-          }),
+  @async.protect_from_cancel(() => {
+    temp.file.close()
+    match cleanup_release {
+      Some(release) => {
+        @afs.write_file(
+          release + ".ready",
+          b"ready",
+          create_mode=CreateNew,
+          permission=0o600,
         )
+        while !@afs.exists(release) {
+          @async.pause()
+        }
       }
-      if fail_remove {
-        raise transaction_error(
-          "office.transaction.cleanup_failed",
-          "injected temporary-package removal failure",
-          details=Json::object({
-            "output": Json::string(bounded_text(output_path, 160)),
-          }),
-        )
-      }
-      @afs.remove(temp.path) catch {
+      None => ()
+    }
+    if temp.final_permission_applied {
+      publication_set_permission(temp.path, 0o600) catch {
         error =>
           raise transaction_error(
             "office.transaction.cleanup_failed",
-            "could not remove temporary package: \{bounded_text(error.to_string(), 240)}",
-            details=Json::object({
-              "output": Json::string(bounded_text(output_path, 160)),
-            }),
+            "could not restore temporary-file staging permissions: \{bounded_text(error.to_string(), 240)}",
           )
       }
-    },
-    resume_on_cancel=true,
-  )
+      temp.final_permission_applied = false
+    }
+    let matches = publication_temp_identity_matches(temp) catch { _ => false }
+    if !matches {
+      raise transaction_error(
+        "office.transaction.cleanup_failed",
+        "temporary package identity changed; refusing to delete a foreign path",
+        details=Json::object({
+          "output": Json::string(bounded_text(output_path, 160)),
+        }),
+      )
+    }
+    if fail_remove {
+      raise transaction_error(
+        "office.transaction.cleanup_failed",
+        "injected temporary-package removal failure",
+        details=Json::object({
+          "output": Json::string(bounded_text(output_path, 160)),
+        }),
+      )
+    }
+    @afs.remove(temp.path) catch {
+      error =>
+        raise transaction_error(
+          "office.transaction.cleanup_failed",
+          "could not remove temporary package: \{bounded_text(error.to_string(), 240)}",
+          details=Json::object({
+            "output": Json::string(bounded_text(output_path, 160)),
+          }),
+        )
+    }
+  })
 }
 
 ///|

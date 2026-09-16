@@ -58,12 +58,15 @@ $ docx.exe convert --output-dir out "$TESTDIR/fixtures/tiny-picture.docx"; print
 image-written
 ```
 
-## Errors Exit Non-Zero With A Diagnostic On Stdout
+## Errors Exit Non-Zero With A Diagnostic On Stderr
+
+These native CLI tests require errors on stderr, empty stdout, and a nonzero
+exit status (async >= 0.21). The Wasm runtime still reports errors on stdout.
 
 An unknown subcommand is an argument error:
 
 ```mooncram
-$ docx.exe wat > wat.txt; echo "exit=$?"; sed -n '1p' wat.txt
+$ docx.exe wat > wat.out 2> wat.txt; echo "exit=$?"; test ! -s wat.out && sed -n '1p' wat.txt
 exit=1
 error: unexpected value 'wat' found; no more were expected
 ```
@@ -74,7 +77,7 @@ The OS error's human-readable tail is locale/platform-dependent, so the
 assertion pins only the stable prefix and path:
 
 ```mooncram
-$ docx.exe convert no-such-file.docx > missing.txt; echo "exit=$?"; grep -Fc 'docx: OSError("@fs.open(): \"no-such-file.docx\"' missing.txt
+$ docx.exe convert no-such-file.docx > missing.out 2> missing.txt; echo "exit=$?"; test ! -s missing.out && grep -Fc 'docx: OSError("@fs.open(): \"no-such-file.docx\"' missing.txt
 exit=1
 1
 ```
@@ -82,7 +85,7 @@ exit=1
 An output path and `--output-dir` are mutually exclusive:
 
 ```mooncram
-$ docx.exe convert --output-dir out "$TESTDIR/fixtures/single-paragraph.docx" out.html
+$ docx.exe convert --output-dir out "$TESTDIR/fixtures/single-paragraph.docx" out.html > conflict.out 2> conflict.err; echo "exit=$?"; test ! -s conflict.out && cat conflict.err
+exit=1
 error: output path and --output-dir are mutually exclusive
-[1]
 ```

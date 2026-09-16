@@ -6,6 +6,9 @@ versioned agent payloads specified in `docs/agent-json-schemas.md`. The
 snapshot tests in `docx2html/inspect/outline_test.mbt` pin the exact
 serialized shapes; this document shows the payloads an agent actually sees.
 
+Failure examples use `2>&1` to include stderr diagnostics in the displayed
+output. The separate stream contract is checked in `docx-cli.md`.
+
 ## Outline: Document Structure Map (`docx.outline/1`)
 
 `docx outline <file>` prints a metadata-priced map of the document — counts,
@@ -89,7 +92,7 @@ $ docx.exe outline "$TESTDIR/fixtures/tiny-picture.docx" | sed "s|$TESTDIR|TESTD
 A file that is not a docx package fails with the program-name prefix:
 
 ```mooncram
-$ printf 'not a docx' > bad.docx; docx.exe outline bad.docx
+$ printf 'not a docx' > bad.docx; docx.exe outline bad.docx 2>&1
 docx: invalid ZIP archive: zip: end of central directory not found
 [1]
 ```
@@ -131,7 +134,7 @@ $ docx.exe get "$TESTDIR/fixtures/tiny-picture.docx" '/body/p[01]/r[1]/image[1]'
 Path errors are agent-correctable — they say what exists:
 
 ```mooncram
-$ docx.exe get "$TESTDIR/fixtures/single-paragraph.docx" '/body/p[9]'
+$ docx.exe get "$TESTDIR/fixtures/single-paragraph.docx" '/body/p[9]' 2>&1
 error: path '/body/p[9]' not found: '/body' has 1 'p' children (wanted index 9)
 [1]
 ```
@@ -140,7 +143,7 @@ A document with no notes still parses annotation paths; the error is an
 ordinary not-found (the roots went live in Phase 2):
 
 ```mooncram
-$ docx.exe get "$TESTDIR/fixtures/single-paragraph.docx" '/footnotes/note[1]'
+$ docx.exe get "$TESTDIR/fixtures/single-paragraph.docx" '/footnotes/note[1]' 2>&1
 error: path '/footnotes/note[1]' not found: /footnotes has 0 note(s) (wanted index 1)
 [1]
 ```
@@ -157,14 +160,15 @@ $ docx.exe validate "$TESTDIR/fixtures/single-paragraph.docx"
 valid
 ```
 
-Invalid input prints one finding per line and exits non-zero — unlike a
-read command, this is a gate scripts can trust:
+Invalid input prints findings to stdout and a failure summary to stderr,
+then exits nonzero. Capture the streams separately to avoid buffering changing
+their display order:
 
 ```mooncram
-$ printf 'garbage' > broken.docx; docx.exe validate broken.docx
+$ printf 'garbage' > broken.docx; docx.exe validate broken.docx > validate.out 2> validate.err; echo "exit=$?"; cat validate.out; cat validate.err
+exit=1
 invalid ZIP archive: zip: end of central directory not found
 docx: invalid package: 1 finding(s)
-[1]
 ```
 
 ## Headers, Footers, And Sections
@@ -238,7 +242,7 @@ Footer text
 A part index past what the document has is an ordinary not-found:
 
 ```mooncram
-$ docx.exe get "$TESTDIR/fixtures/header-footer.docx" '/header[3]'
+$ docx.exe get "$TESTDIR/fixtures/header-footer.docx" '/header[3]' 2>&1
 error: path '/header[3]' not found: the document has 2 header part(s) (wanted index 3)
 [1]
 ```
@@ -325,19 +329,19 @@ Strict validation names the op index; duplicate keys and an existing
 output fail closed:
 
 ```mooncram
-$ printf '{"schema": "docx.batch/1", "ops": [{"op": "chart", "params": {}}]}' > bad.json; docx.exe batch out2.docx bad.json
+$ printf '{"schema": "docx.batch/1", "ops": [{"op": "chart", "params": {}}]}' > bad.json; docx.exe batch out2.docx bad.json 2>&1
 error: ops[0].op 'chart' is unknown (known ops: paragraph, table, comment, header, footer)
 [1]
 ```
 
 ```mooncram
-$ printf '{"schema": "docx.batch/1", "ops": [{"op": "paragraph", "op": "table", "params": {"text": "x"}}]}' > dup.json; docx.exe batch out3.docx dup.json
+$ printf '{"schema": "docx.batch/1", "ops": [{"op": "paragraph", "op": "table", "params": {"text": "x"}}]}' > dup.json; docx.exe batch out3.docx dup.json 2>&1
 error: ops[0] repeats the key "op" (strict scripts must not rely on last-wins parsing)
 [1]
 ```
 
 ```mooncram
-$ docx.exe batch report.docx report.json
+$ docx.exe batch report.docx report.json 2>&1
 docx: refusing to write 'report.docx': it already exists (batch creates NEW documents only; it cannot preserve parts of an existing file)
 [1]
 ```
@@ -433,13 +437,13 @@ $ docx.exe get thread.docx '/comments/comment[@id=1]' --json | jq -c '{author, d
 A reply cannot also anchor, and must answer a comment op:
 
 ```mooncram
-$ printf '{"schema": "docx.batch/2", "ops": [{"op": "paragraph", "params": {"text": "x"}}, {"op": "comment", "params": {"on": 0, "reply_to": 0, "text": "n", "author": "A"}}]}' > both.json; docx.exe batch outboth.docx both.json
+$ printf '{"schema": "docx.batch/2", "ops": [{"op": "paragraph", "params": {"text": "x"}}, {"op": "comment", "params": {"on": 0, "reply_to": 0, "text": "n", "author": "A"}}]}' > both.json; docx.exe batch outboth.docx both.json 2>&1
 error: ops[1].params: on and reply_to are mutually exclusive (a reply inherits its parent's anchor)
 [1]
 ```
 
 ```mooncram
-$ printf '{"schema": "docx.batch/2", "ops": [{"op": "paragraph", "params": {"text": "x"}}, {"op": "comment", "params": {"reply_to": 0, "text": "n", "author": "A"}}]}' > replyp.json; docx.exe batch outreplyp.docx replyp.json
+$ printf '{"schema": "docx.batch/2", "ops": [{"op": "paragraph", "params": {"text": "x"}}, {"op": "comment", "params": {"reply_to": 0, "text": "n", "author": "A"}}]}' > replyp.json; docx.exe batch outreplyp.docx replyp.json 2>&1
 error: ops[1].params.reply_to targets ops[0], which is not a comment op (replies answer comments; use on to anchor to content)
 [1]
 ```
@@ -495,13 +499,13 @@ $ docx.exe text notes.docx
 Notes need `/2`, and nest in neither comments nor other notes:
 
 ```mooncram
-$ printf '{"schema": "docx.batch/1", "ops": [{"op": "paragraph", "params": {"runs": [{"footnote": {"text": "n"}}]}}]}' > v1n.json; docx.exe batch outv1n.docx v1n.json
+$ printf '{"schema": "docx.batch/1", "ops": [{"op": "paragraph", "params": {"runs": [{"footnote": {"text": "n"}}]}}]}' > v1n.json; docx.exe batch outv1n.docx v1n.json 2>&1
 error: ops[0].params.runs[0].footnote needs "schema": "docx.batch/2"
 [1]
 ```
 
 ```mooncram
-$ printf '{"schema": "docx.batch/2", "ops": [{"op": "paragraph", "params": {"runs": [{"footnote": {"paragraphs": [{"runs": [{"footnote": {"text": "inner"}}]}]}}]}}]}' > nested.json; docx.exe batch outnested.docx nested.json
+$ printf '{"schema": "docx.batch/2", "ops": [{"op": "paragraph", "params": {"runs": [{"footnote": {"paragraphs": [{"runs": [{"footnote": {"text": "inner"}}]}]}}]}}]}' > nested.json; docx.exe batch outnested.docx nested.json 2>&1
 error: ops[0].params.runs[0].footnote.paragraphs[0].runs[0]: notes cannot nest inside comment or note bodies
 [1]
 ```
@@ -510,19 +514,19 @@ Comment ops need the `/2` declaration; anchors must be earlier
 paragraph ops; dates are validated lexically and attributed to the op:
 
 ```mooncram
-$ printf '{"schema": "docx.batch/1", "ops": [{"op": "paragraph", "params": {"text": "x"}}, {"op": "comment", "params": {"on": 0, "text": "n", "author": "A"}}]}' > v1c.json; docx.exe batch outv1.docx v1c.json
+$ printf '{"schema": "docx.batch/1", "ops": [{"op": "paragraph", "params": {"text": "x"}}, {"op": "comment", "params": {"on": 0, "text": "n", "author": "A"}}]}' > v1c.json; docx.exe batch outv1.docx v1c.json 2>&1
 error: ops[1].op 'comment' needs "schema": "docx.batch/2" (this script declares docx.batch/1)
 [1]
 ```
 
 ```mooncram
-$ printf '{"schema": "docx.batch/2", "ops": [{"op": "table", "params": {"rows": [[{"text": "c"}]]}}, {"op": "comment", "params": {"on": 0, "text": "n", "author": "A"}}]}' > tblc.json; docx.exe batch outtbl.docx tblc.json
+$ printf '{"schema": "docx.batch/2", "ops": [{"op": "table", "params": {"rows": [[{"text": "c"}]]}}, {"op": "comment", "params": {"on": 0, "text": "n", "author": "A"}}]}' > tblc.json; docx.exe batch outtbl.docx tblc.json 2>&1
 error: ops[1].params.on targets a table (ops[0]); comment anchors must be paragraph ops
 [1]
 ```
 
 ```mooncram
-$ printf '{"schema": "docx.batch/2", "ops": [{"op": "paragraph", "params": {"text": "x"}}, {"op": "comment", "params": {"on": 0, "text": "n", "author": "A", "date": "2026-02-30T00:00:00Z"}}]}' > baddate.json; docx.exe batch outdate.docx baddate.json
+$ printf '{"schema": "docx.batch/2", "ops": [{"op": "paragraph", "params": {"text": "x"}}, {"op": "comment", "params": {"on": 0, "text": "n", "author": "A", "date": "2026-02-30T00:00:00Z"}}]}' > baddate.json; docx.exe batch outdate.docx baddate.json 2>&1
 error: ops[1]: the comment date '2026-02-30T00:00:00Z' has day 30, which that year's month 2 does not reach (expected an xsd:dateTime like 2026-07-11T09:30:00Z)
 [1]
 ```
@@ -532,7 +536,7 @@ bytes) stay attributed to the right op even with comment ops in
 between:
 
 ```mooncram
-$ printf 'not a png' > bad.png; printf '{"schema": "docx.batch/2", "ops": [{"op": "paragraph", "params": {"text": "target"}}, {"op": "comment", "params": {"on": 0, "text": "note", "author": "A"}}, {"op": "paragraph", "params": {"runs": [{"image": {"path": "bad.png", "content_type": "image/png"}}]}}]}' > interleaved.json; docx.exe batch outbad.docx interleaved.json
+$ printf 'not a png' > bad.png; printf '{"schema": "docx.batch/2", "ops": [{"op": "paragraph", "params": {"text": "target"}}, {"op": "comment", "params": {"on": 0, "text": "note", "author": "A"}}, {"op": "paragraph", "params": {"runs": [{"image": {"path": "bad.png", "content_type": "image/png"}}]}}]}' > interleaved.json; docx.exe batch outbad.docx interleaved.json 2>&1
 error: ops[2]: could not read the image's dimensions from its image/png header
 [1]
 ```
@@ -593,13 +597,13 @@ A section declares each variant at most once, and story content that
 would dangle is refused with the offending op's address:
 
 ```mooncram
-$ printf '{"schema": "docx.batch/2", "ops": [{"op": "footer", "params": {"text": "a"}}, {"op": "footer", "params": {"text": "b"}}]}' > dupvariant.json; docx.exe batch outdup.docx dupvariant.json
+$ printf '{"schema": "docx.batch/2", "ops": [{"op": "footer", "params": {"text": "a"}}, {"op": "footer", "params": {"text": "b"}}]}' > dupvariant.json; docx.exe batch outdup.docx dupvariant.json 2>&1
 error: ops[1].params.variant 'default' was already declared by ops[0]; a section declares each footer variant at most once
 [1]
 ```
 
 ```mooncram
-$ printf '{"schema": "docx.batch/2", "ops": [{"op": "header", "params": {"paragraphs": [{"runs": [{"image": {"path": "logo.png"}}]}]}}]}' > storyimage.json; docx.exe batch outstory.docx storyimage.json
+$ printf '{"schema": "docx.batch/2", "ops": [{"op": "header", "params": {"paragraphs": [{"runs": [{"image": {"path": "logo.png"}}]}]}}]}' > storyimage.json; docx.exe batch outstory.docx storyimage.json 2>&1
 error: ops[0].params.paragraphs[0].runs[0]: images are not allowed in header/footer stories (plain content only)
 [1]
 ```
@@ -668,7 +672,7 @@ annotated reviewed3.docx (comment 2 on /body/p[3])
 ```
 
 ```mooncram
-$ docx.exe annotate add reviewed2.docx never.docx --at '/body/p[3]' --json note.json --author Nope; ls never.docx 2>/dev/null || echo "not written"
+$ docx.exe annotate add reviewed2.docx never.docx --at '/body/p[3]' --json note.json --author Nope 2>&1; ls never.docx 2>/dev/null || echo "not written"
 error: --author/--initials/--date are rejected with --json (the envelope owns all metadata)
 not written
 ```
@@ -677,19 +681,19 @@ Failures always leave ZERO output — bad anchors, bad dates, duplicate
 keys in the envelope:
 
 ```mooncram
-$ docx.exe annotate add existing.docx never2.docx --at '/body/p[9]' --text n --author A; ls never2.docx 2>/dev/null || echo "not written"
+$ docx.exe annotate add existing.docx never2.docx --at '/body/p[9]' --text n --author A 2>&1; ls never2.docx 2>/dev/null || echo "not written"
 error: '/body/p[9]' does not name a body paragraph (the body has 3 top-level paragraph(s))
 not written
 ```
 
 ```mooncram
-$ docx.exe annotate add existing.docx never3.docx --at '/body/p[1]' --text n --author A --date 2026-02-30T00:00:00Z; ls never3.docx 2>/dev/null || echo "not written"
+$ docx.exe annotate add existing.docx never3.docx --at '/body/p[1]' --text n --author A --date 2026-02-30T00:00:00Z 2>&1; ls never3.docx 2>/dev/null || echo "not written"
 error: the comment date '2026-02-30T00:00:00Z' has day 30, which that year's month 2 does not reach (expected an xsd:dateTime like 2026-07-11T09:30:00Z)
 not written
 ```
 
 ```mooncram
-$ printf '{"schema": "docx.annotate/1", "comment": {"author": "A", "author": "B", "paragraphs": [{"text": "x"}]}}' > dupkey.json; docx.exe annotate add existing.docx never4.docx --at '/body/p[1]' --json dupkey.json
+$ printf '{"schema": "docx.annotate/1", "comment": {"author": "A", "author": "B", "paragraphs": [{"text": "x"}]}}' > dupkey.json; docx.exe annotate add existing.docx never4.docx --at '/body/p[1]' --json dupkey.json 2>&1
 error: comment repeats the key "author" (strict scripts must not rely on last-wins parsing)
 [1]
 ```
@@ -735,7 +739,7 @@ annotated reopened.docx (comment 0 done=false)
 Failures leave zero output; replies need an existing DEFINED comment:
 
 ```mooncram
-$ docx.exe annotate reply reviewed.docx never5.docx --comment 9 --text n --author A; ls never5.docx 2>/dev/null || echo "not written"
+$ docx.exe annotate reply reviewed.docx never5.docx --comment 9 --text n --author A 2>&1; ls never5.docx 2>/dev/null || echo "not written"
 error: the document has no comment with id '9'
 not written
 ```
@@ -790,7 +794,7 @@ $ docx.exe get "$TESTDIR/fixtures/commented.docx" '/body/p[2]' --json | jq -c '.
 ```
 
 ```mooncram
-$ docx.exe get "$TESTDIR/fixtures/commented.docx" '/comments/comment[@id=9]'
+$ docx.exe get "$TESTDIR/fixtures/commented.docx" '/comments/comment[@id=9]' 2>&1
 error: path '/comments/comment[@id=9]' not found: no comment has id '9'
 [1]
 ```

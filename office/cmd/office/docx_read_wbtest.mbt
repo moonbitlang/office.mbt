@@ -700,7 +700,7 @@ async test "DOCX large exact predicates yield within one comparison" {
       ignore(task.wait())
       false
     } catch {
-      error => @async.is_cancellation_error(error)
+      error => error is @async.TaskCancelled
     }
     assert_true(cancelled)
   }
@@ -728,7 +728,7 @@ async test "DOCX projection construction yields within its element ceiling" {
       ignore(task.wait())
       false
     } catch {
-      error => @async.is_cancellation_error(error)
+      error => error is @async.TaskCancelled
     }
     assert_true(cancelled)
   }
@@ -1241,7 +1241,7 @@ async test "DOCX text extraction yields within one large text node" {
       ignore(task.wait())
       false
     } catch {
-      error => @async.is_cancellation_error(error)
+      error => error is @async.TaskCancelled
     }
     assert_true(cancelled)
   }

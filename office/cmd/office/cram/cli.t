@@ -77,7 +77,7 @@ an unknown ID fails nonzero with a bounded typed suggestion.
   $ office.exe help schema docx.batch/2 --jsonl | jq -c '{schema,id,example_schema:.examples[0].schema,ops:[.operations[].op],limits:{max_ops:.limits.max_ops,max_table_columns:.limits.max_table_columns}}'
   {"schema":"office.input-contract/1","id":"docx.batch/2","example_schema":"docx.batch/2","ops":["paragraph","table","comment","header","footer"],"limits":{"max_ops":10000,"max_table_columns":63}}
 
-  $ office.exe help schema docx.batc/2 --json > unknown-schema.json; echo $?
+  $ office.exe help schema docx.batc/2 --json > unknown-schema.out 2> unknown-schema.json; echo $?; test ! -s unknown-schema.out
   1
 
   $ jq -c '{schema,success,code:.error.code,suggestions:.error.details.suggestions}' unknown-schema.json
@@ -302,7 +302,7 @@ file is read.
 
   $ office.exe replace "$TESTDIR/../../../../docx2html/tests/cram/fixtures/single-paragraph.docx" fr-zero.docx --text "absent" --with "x" --json 2>&1 | jq -c '{success,code:.error.code}'
   {"success":false,"code":"office.replace.no_match"}
-  $ office.exe replace "$TESTDIR/../../../../docx2html/tests/cram/fixtures/single-paragraph.docx" fr-zero.docx --text "absent" --with "x" 2>/dev/null
+  $ office.exe replace "$TESTDIR/../../../../docx2html/tests/cram/fixtures/single-paragraph.docx" fr-zero.docx --text "absent" --with "x"
   office: no candidate matched the needle; pass allow-zero to treat that as success, or expect 0 to assert it
   [1]
   $ test -f fr-zero.docx || echo "nothing written"
@@ -352,7 +352,7 @@ resolves to the first one.
   $ office.exe get "$TESTDIR/../../../../docx2html/tests/cram/fixtures/duplicate-para-id.docx" "/docx/body/p[id=\"1A2B3C4D\"]" --json 2>&1 | jq -c '{code:.error.code,candidates:.error.details.candidates}'
   {"code":"office.docx.para_id_ambiguous","candidates":["/docx/body/p[1]","/docx/body/p[2]"]}
 
-  $ office.exe get "$TESTDIR/../../../../docx2html/tests/cram/fixtures/duplicate-para-id.docx" "/docx/body/p[id=\"33333333\"]" --json > /dev/null
+  $ office.exe get "$TESTDIR/../../../../docx2html/tests/cram/fixtures/duplicate-para-id.docx" "/docx/body/p[id=\"33333333\"]" --json > /dev/null 2>&1
   [1]
 
   $ office.exe query "$TESTDIR/../../../../docx2html/tests/cram/fixtures/duplicate-para-id.docx" --id 5E5E5E5E --json | jq -c '[.data.matches[] | {path,kind}]'
@@ -457,7 +457,7 @@ selects a candidate while changing nothing.
 A malformed request still refuses: the needle is required, and an empty one
 would name every position.
 
-  $ office.exe find "$TESTDIR/../../../../docx2html/tests/cram/fixtures/single-paragraph.docx" --text "" --json | jq -c '{success,code:.error.code}'
+  $ office.exe find "$TESTDIR/../../../../docx2html/tests/cram/fixtures/single-paragraph.docx" --text "" --json 2>&1 | jq -c '{success,code:.error.code}'
   {"success":false,"code":"office.invalid_arguments"}
 
 The MUTATION reader is stricter than the tolerant projection: it re-resolves

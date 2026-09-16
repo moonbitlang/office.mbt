@@ -56,3 +56,13 @@ $ mkdir out; docx2html.exe --output-dir out "$TESTDIR/fixtures/tiny-picture.docx
 <p><img src="1.png" /></p>
 image-written
 ```
+
+## Error Output Stream
+
+With async >= 0.21, a native CLI failure writes its diagnostic to stderr,
+leaves stdout empty, and exits nonzero.
+
+```mooncram
+$ docx2html.exe no-such-file.docx > missing.out 2> missing.err; echo "exit=$?"; test ! -s missing.out && test -s missing.err
+exit=1
+```

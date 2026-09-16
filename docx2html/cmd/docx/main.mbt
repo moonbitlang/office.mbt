@@ -20,8 +20,8 @@ async fn main {
     // A `CliError` is already a formatted, user-facing message. Reader errors
     // get the `docx:` program prefix; anything else keeps argparse's own
     // `error:` prefix or gains `docx:`. The error escapes `main`, which
-    // prints the message once and exits non-zero on both native and wasm
-    // (wasm has no public exit() and no stderr, so diagnostics go to stdout).
+    // prints once and exits non-zero. Since async 0.21, native uses stderr;
+    // wasm still uses stdout.
     @cli.CliError(_) as err => raise err
     @docx2html.InvalidZip(message~)
     | @docx2html.InvalidXml(message~)

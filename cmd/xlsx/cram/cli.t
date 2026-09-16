@@ -165,9 +165,8 @@ Validate the OOXML package structure (empty problem list prints "valid"):
   $ xlsx.exe validate book.xlsx
   valid
 
-A failing operation prints an `error:` line and exits non-zero, so
-scripts can detect it:
+A failing native operation prints an `error:` line on stderr and exits
+non-zero. Stdout stays empty (async >= 0.21):
 
-  $ xlsx.exe get missing.xlsx Sheet1 A1
-  error: * (glob)
-  [1]
+  $ xlsx.exe get missing.xlsx Sheet1 A1 > missing.out 2> missing.err; echo "exit=$?"; test ! -s missing.out && test -s missing.err
+  exit=1

@@ -36,8 +36,8 @@ while IFS=$'\t' read -r file want_v want_t want_c want_a class; do
   [ -f "$fx" ] || { report "$file: fixture missing"; continue; }
   count=$((count + 1))
 
-  # This CLI reports errors on stdout (see tests/acceptance/run.sh), so the
-  # streams are captured together per command and consulted only on failure.
+  # Capture results and stderr diagnostics together per command; consult
+  # them only on failure.
   set +e
   "$DOCX_CLI" validate "$fx" > "$work/v.out" 2>&1; v=$(norm $?)
   "$DOCX_CLI" text "$fx" > "$work/t.out" 2>&1; t=$(norm $?)

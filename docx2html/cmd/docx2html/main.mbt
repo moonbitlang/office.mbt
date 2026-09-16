@@ -11,8 +11,9 @@ enum CliCommand {
 ///|
 async fn main {
   // Any failure is turned into a `CliError` that escapes `main`: this prints
-  // the message once and exits non-zero on both native and wasm (which has no
-  // `exit()` and no stderr). `CliError` messages already carry their own
+  // the message once and exits non-zero. Since async 0.21, native uses stderr;
+  // wasm still uses stdout.
+  // `CliError` messages already carry their own
   // prefix; everything else is labelled `docx2html:`.
   run_main() catch {
     @cli.CliError(_) as err => raise err

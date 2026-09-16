@@ -31,8 +31,8 @@ async fn main {
     // `--help`/`--version` are handled inside argparse (exit 0). Anything
     // that reaches here is a real failure. Re-raising it as a `CliError`
     // lets it escape `main`, which prints the message once and exits
-    // non-zero (the async runtime exposes no public exit()). Errors go to
-    // stdout on both targets, since the wasm backend has no stderr.
+    // non-zero. Since async 0.21, native errors go to stderr;
+    // wasm errors still go to stdout.
     err => {
       // argparse's own errors already start with "error:"; don't double it.
       let msg = "\{err}"
