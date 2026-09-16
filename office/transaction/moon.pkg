@@ -3,7 +3,6 @@ import {
   "moonbit-community/flate/zip",
   "moonbitlang/async",
   "moonbitlang/async/fs" @afs,
-  "moonbitlang/async/types" @async_types,
   "moonbitlang/async/os_error",
   "moonbitlang/core/debug",
   "moonbitlang/core/env",

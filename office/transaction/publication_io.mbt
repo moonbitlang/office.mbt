@@ -16,20 +16,9 @@ priv struct PublicationTemp {
 }
 
 ///|
-#cfg(target="native")
-extern "C" fn publication_runtime_platform() -> @async_types.Platform = "moonbitlang_async_get_platform"
-
-///|
-// async 0.22.0 does not export its platform value on these targets. Use the
-// same Wasm runtime import until the public export is available.
-#cfg(target="wasm")
-#unsafe_skip_stub_check
-fn publication_runtime_platform() -> @async_types.Platform = "moonbitlang/async" "runtime/get_platform"
-
-///|
 async fn publication_set_permission(path : String, permission : Int) -> Unit {
   // Windows inherits the directory ACL; chmod is unsupported.
-  if !(publication_runtime_platform() is Windows) {
+  if !(@async.platform is Windows) {
     @afs.chmod(path, permission)
   }
 }
