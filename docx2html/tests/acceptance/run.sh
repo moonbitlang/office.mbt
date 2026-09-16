@@ -26,8 +26,8 @@ cp "$here/minutes.json" "$work/minutes.json"
 
 fail() { echo "ACCEPTANCE FAIL: $*" >&2; exit 1; }
 
-# Capture a command's stdout; on failure, surface the diagnostic (wasm has
-# no stderr — failures land on stdout) instead of letting set -e eat it.
+# Capture command output including stderr so failures surface their diagnostic
+# instead of letting set -e eat it.
 must() {
   local __out
   if ! __out="$("$@" 2>&1)"; then

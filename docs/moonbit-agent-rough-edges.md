@@ -108,6 +108,10 @@ an empty/`Show`-carrying sentinel dance.
 
 ---
 
+**Update (async 0.21+).** Escaping errors now print to **stderr on native**;
+Wasm still prints them to stdout. Tests that capture errors must select the
+stream for their target; see [issue #453](https://github.com/moonbitlang/office.mbt/issues/453).
+
 ## 4. `@async/stdio` is native-only — no `stderr` on wasm
 
 **What happened.** `@async/stdio.stderr` (and `stdout`) exist only on the
