@@ -118,7 +118,7 @@ async test "fresh creation cancellation waits for staging cleanup" {
         ignore(task.wait())
         false
       } catch {
-        error => @async.is_cancellation_error(error)
+        error => error is @async.TaskCancelled
       }
       assert_true(propagated)
     }

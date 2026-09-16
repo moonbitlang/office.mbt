@@ -157,7 +157,7 @@ async test "XLSX command cell scans yield before their bounded maximum" {
       ignore(task.wait())
       false
     } catch {
-      error => @async.is_cancellation_error(error)
+      error => error is @async.TaskCancelled
     }
     assert_true(cancelled)
   }
@@ -616,7 +616,7 @@ async test "XLSX outline yields between worksheet summaries" {
       ignore(task.wait())
       false
     } catch {
-      error => @async.is_cancellation_error(error)
+      error => error is @async.TaskCancelled
     }
     assert_true(cancelled)
   }
@@ -852,7 +852,7 @@ async test "XLSX large single-cell predicates yield within the comparison" {
       ignore(task.wait())
       false
     } catch {
-      error => @async.is_cancellation_error(error)
+      error => error is @async.TaskCancelled
     }
     assert_true(cancelled)
   }

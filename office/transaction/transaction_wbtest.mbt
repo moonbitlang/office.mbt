@@ -225,7 +225,7 @@ async fn wb_expect_post_read_cancellation(
       ignore(task.wait())
       false
     } catch {
-      error => @async.is_cancellation_error(error)
+      error => error is @async.TaskCancelled
     }
     assert_true(propagated)
   }
@@ -414,7 +414,7 @@ async test "initial staging cleanup re-observes pending cancellation" {
         ignore(task.wait())
         false
       } catch {
-        error => @async.is_cancellation_error(error)
+        error => error is @async.TaskCancelled
       }
       assert_true(propagated)
     }
@@ -513,7 +513,7 @@ async test "atomic new output cancellation cleans partial staging" {
         ignore(task.wait())
         false
       } catch {
-        error => @async.is_cancellation_error(error)
+        error => error is @async.TaskCancelled
       }
       assert_true(propagated)
     }
@@ -765,7 +765,7 @@ async test "task cancellation waits for temporary-file cleanup" {
         ignore(task.wait())
         false
       } catch {
-        error => @async.is_cancellation_error(error)
+        error => error is @async.TaskCancelled
       }
       assert_true(propagated)
     }
@@ -812,7 +812,7 @@ async test "cancellation during ordinary-failure cleanup is re-observed" {
         ignore(task.wait())
         false
       } catch {
-        error => @async.is_cancellation_error(error)
+        error => error is @async.TaskCancelled
       }
       assert_true(propagated)
     }
