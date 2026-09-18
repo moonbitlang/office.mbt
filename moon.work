@@ -1,7 +1,7 @@
 members = [
-  ".",
+  "./mbtexcel",
   "./docx2html",
-  "./office",
+  "./office-lib",
   "./office-cli",
   "./pagelayout",
   "./pdflite",

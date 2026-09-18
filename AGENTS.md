@@ -5,13 +5,18 @@ This is a [MoonBit](https://docs.moonbitlang.com) project.
 ## References: .repos/mbtpdf contains pdf libraries implemented in MoonBit for references
 ## Project Structure
 
+- The repository root is a workspace described by `moon.work`, with six peer
+  modules: `mbtexcel/`, `docx2html/`, `pdflite/`, `pagelayout/`, `office-lib/`, and
+  `office-cli/`. Each module has its own `moon.mod`; the root has no module.
+
 - MoonBit packages are organized per directory, for each directory, there is a
-  `moon.pkg.json` file listing its dependencies. Each package has its files and
+  `moon.pkg` file listing its dependencies. Each package has its files and
   blackbox test files (common, ending in `_test.mbt`) and whitebox test files
   (ending in `_wbtest.mbt`).
 
-- In the toplevel directory, this is a `moon.mod.json` file listing about the
-  module and some meta information.
+- Run workspace-wide tooling from the repository root. For package-specific
+  commands, use workspace-relative paths such as `mbtexcel/xlsx` or
+  `office-lib/docx`. Published package names remain unchanged.
 
 ## Coding convention
 
@@ -58,4 +63,3 @@ This is a [MoonBit](https://docs.moonbitlang.com) project.
 1. **File issues for remaining work** - Create issues for anything that needs follow-up
 2. **Run quality gates** (if code changed) - Tests, linters, builds
 3. **Update issue status** - Close finished work, update in-progress items
-

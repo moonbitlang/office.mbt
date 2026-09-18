@@ -119,7 +119,7 @@ def main() -> int:
     parser.add_argument(
         "--mbti",
         action="append",
-        default=["pkg.generated.mbti", "xlsx/pkg.generated.mbti"],
+        default=["mbtexcel/pkg.generated.mbti", "mbtexcel/xlsx/pkg.generated.mbti"],
         help="Path to generated MoonBit interface (.mbti); can be repeated",
     )
     parser.add_argument("--out", help="Write markdown report to this path (default: stdout)")

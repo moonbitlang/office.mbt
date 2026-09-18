@@ -35,7 +35,7 @@ This report highlights timeouts, the slowest tests, and percentile-based outlier
 - `8.309s` `xlsx` `blackbox` `workbook_protection_test.mbt:2` `#0` workbook protection roundtrip
 - `6.301s` `xlsx` `blackbox` `sheet_props_test.mbt:91` `#3` sheet protection xor and sha512
 - `4.767s` `xlsx` `blackbox` `io_password_test.mbt:26` `#1` options password used for write_to_buffer and save_as
-- `4.711s` `.` `blackbox` `mbtexcel_test.mbt:157` `#14` mbtexcel workbook protection invalid password
+- `4.711s` `.` `blackbox` `mbtexcel/mbtexcel_test.mbt:157` `#14` mbtexcel workbook protection invalid password
 - `4.180s` `xlsx` `blackbox` `io_password_test.mbt:2` `#0` open file and reader with password
 
 ### Top 30 slowest OK tests
@@ -43,11 +43,11 @@ This report highlights timeouts, the slowest tests, and percentile-based outlier
 - `8.309s` `xlsx` `blackbox` `workbook_protection_test.mbt:2` `#0` workbook protection roundtrip
 - `6.301s` `xlsx` `blackbox` `sheet_props_test.mbt:91` `#3` sheet protection xor and sha512
 - `4.767s` `xlsx` `blackbox` `io_password_test.mbt:26` `#1` options password used for write_to_buffer and save_as
-- `4.711s` `.` `blackbox` `mbtexcel_test.mbt:157` `#14` mbtexcel workbook protection invalid password
+- `4.711s` `.` `blackbox` `mbtexcel/mbtexcel_test.mbt:157` `#14` mbtexcel workbook protection invalid password
 - `4.180s` `xlsx` `blackbox` `io_password_test.mbt:2` `#0` open file and reader with password
 - `2.655s` `xlsx` `whitebox` `encryption_wbtest.mbt:411` `#1` agile verify password
-- `2.653s` `.` `blackbox` `mbtexcel_e2e_test.mbt:375` `#18` mbtexcel e2e workbook protection xml
-- `2.553s` `.` `blackbox` `mbtexcel_e2e_test.mbt:15` `#1` mbtexcel password wrappers
+- `2.653s` `.` `blackbox` `mbtexcel/mbtexcel_e2e_test.mbt:375` `#18` mbtexcel e2e workbook protection xml
+- `2.553s` `.` `blackbox` `mbtexcel/mbtexcel_e2e_test.mbt:15` `#1` mbtexcel password wrappers
 - `2.405s` `xlsx` `blackbox` `calc_test.mbt:732` `#17` calc gcd and lcm functions
 - `2.394s` `xlsx` `blackbox` `calc_test.mbt:3266` `#62` calc drop functions
 - `2.389s` `xlsx` `blackbox` `sheet_management_test.mbt:65` `#6` sheet visibility roundtrip

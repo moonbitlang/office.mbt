@@ -15,7 +15,7 @@ async fn validate_via_sdk(dir : String, name : String, bytes : Bytes) -> Unit {
   }
   let (code, stdout, stderr) = @process.collect_output("bash", [
     "-lc",
-    "scripts/validate_xlsx.sh \"\{path}\"",
+    "../scripts/validate_xlsx.sh \"\{path}\"",
   ])
   if code != 0 {
     let out = stdout.text() catch { _ => "<non-utf8 stdout>" }
@@ -38,14 +38,7 @@ async fn validate_via_sdk(dir : String, name : String, bytes : Bytes) -> Unit {
 /// styles, rich text) that the demo workbooks do not all isolate.
 #cfg(target="native")
 async test "feature matrix is Microsoft OpenXML schema-valid" {
-  let stamp = @env.now()
-    .to_string()
-    .replace(old=":", new="_")
-    .replace(old=" ", new="_")
-  let dir = "_build/feature_sdk_validity/\{stamp}"
-  @async/fs.mkdir(dir, permission=0o755, recursive=true) catch {
-    err => fail("mkdir failed: \{err}")
-  }
+  let dir = @async/fs.tmpdir(prefix="mbtexcel-feature_sdk_validity-")
 
   // three chart kinds in one workbook
   let charts = @xlsx.Workbook::new()
@@ -108,4 +101,5 @@ async test "feature matrix is Microsoft OpenXML schema-valid" {
   ])
   styled.set_defined_name(@xlsx.DefinedName::new("Total", "Sheet1!$A$1"))
   validate_via_sdk(dir, "styles_richtext", @xlsx.write(styled))
+  @async/fs.rmdir(dir, recursive=true)
 }

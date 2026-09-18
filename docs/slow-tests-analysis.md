@@ -11,7 +11,7 @@ This document explains:
 
 1. Generate a baseline report (xlsx package only):
    - `python3 scripts/find_slow_tests.py --package xlsx --timeout 10 --report docs/slow-tests-xlsx.md`
-2. The report previously showed timeouts in `xlsx/calc_test.mbt`:
+2. The report previously showed timeouts in `mbtexcel/xlsx/calc_test.mbt`:
    - `calc database functions`
    - `calc stats functions`
    - `calc stats errors`
@@ -30,7 +30,7 @@ When `array_shape_from_expr` evaluated arguments, it re-evaluated the same range
 
 ## Fix
 
-In `xlsx/formula_eval.mbt`, `array_shape_from_expr` now treats “unknown / scalar” functions as `(1, 1)` *without* evaluating their arguments, and only runs the expensive shape logic for functions that can actually spill (dynamic arrays / array-returning functions such as `SORT`, `FILTER`, `FREQUENCY`, `XLOOKUP`, `TREND`, etc.).
+In `mbtexcel/xlsx/formula_eval.mbt`, `array_shape_from_expr` now treats “unknown / scalar” functions as `(1, 1)` *without* evaluating their arguments, and only runs the expensive shape logic for functions that can actually spill (dynamic arrays / array-returning functions such as `SORT`, `FILTER`, `FREQUENCY`, `XLOOKUP`, `TREND`, etc.).
 
 With this change:
 
@@ -41,9 +41,9 @@ With this change:
 
 The slowest remaining tests are related to password protection and encryption:
 
-- `xlsx/workbook_protection_test.mbt` `workbook protection roundtrip`
-- `xlsx/sheet_props_test.mbt` `sheet protection xor and sha512`
-- `xlsx/io_password_test.mbt` (open/write with password)
+- `mbtexcel/xlsx/workbook_protection_test.mbt` `workbook protection roundtrip`
+- `mbtexcel/xlsx/sheet_props_test.mbt` `sheet protection xor and sha512`
+- `mbtexcel/xlsx/io_password_test.mbt` (open/write with password)
 
 These are expected to be slow because Office protection uses high iteration (“spin count”) password hashing:
 

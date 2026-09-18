@@ -12,7 +12,7 @@ readme = "README.mbt.md"
 
 preferred_target = "native"
 
-repository = "https://github.com/moonbitlang/mbtexcel"
+repository = "https://github.com/moonbitlang/office.mbt"
 
 license = "Apache-2.0"
 

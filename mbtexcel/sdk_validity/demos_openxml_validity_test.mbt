@@ -1,14 +1,7 @@
 ///|
 #cfg(target="native")
 async test "complex demos generate OpenXML-valid packages" {
-  let stamp = @env.now()
-    .to_string()
-    .replace(old=":", new="_")
-    .replace(old=" ", new="_")
-  let out_dir = "_build/xlsx_validate_demos/\{stamp}"
-  @async/fs.mkdir(out_dir, permission=0o755, recursive=true) catch {
-    err => fail("mkdir failed: \{err}")
-  }
+  let out_dir = @async/fs.tmpdir(prefix="mbtexcel-xlsx_validate_demos-")
 
   let combo_path = "\{out_dir}/combo_chart.xlsx"
   @async/fs.write_file(
@@ -21,7 +14,7 @@ async test "complex demos generate OpenXML-valid packages" {
   }
   let (combo_code, combo_stdout, combo_stderr) = @process.collect_output(
     "bash",
-    ["-lc", "scripts/validate_xlsx.sh \"\{combo_path}\""],
+    ["-lc", "../scripts/validate_xlsx.sh \"\{combo_path}\""],
   )
   if combo_code != 0 {
     let out = combo_stdout.text() catch { _ => "<non-utf8 stdout>" }
@@ -45,7 +38,7 @@ async test "complex demos generate OpenXML-valid packages" {
   }
   let (controls_code, controls_stdout, controls_stderr) = @process.collect_output(
     "bash",
-    ["-lc", "scripts/validate_xlsx.sh \"\{controls_path}\""],
+    ["-lc", "../scripts/validate_xlsx.sh \"\{controls_path}\""],
   )
   if controls_code != 0 {
     let out = controls_stdout.text() catch { _ => "<non-utf8 stdout>" }
@@ -69,7 +62,7 @@ async test "complex demos generate OpenXML-valid packages" {
   }
   let (pivot_code, pivot_stdout, pivot_stderr) = @process.collect_output(
     "bash",
-    ["-lc", "scripts/validate_xlsx.sh \"\{pivot_path}\""],
+    ["-lc", "../scripts/validate_xlsx.sh \"\{pivot_path}\""],
   )
   if pivot_code != 0 {
     let out = pivot_stdout.text() catch { _ => "<non-utf8 stdout>" }
@@ -93,7 +86,7 @@ async test "complex demos generate OpenXML-valid packages" {
   }
   let (stream_code, stream_stdout, stream_stderr) = @process.collect_output(
     "bash",
-    ["-lc", "scripts/validate_xlsx.sh \"\{stream_path}\""],
+    ["-lc", "../scripts/validate_xlsx.sh \"\{stream_path}\""],
   )
   if stream_code != 0 {
     let out = stream_stdout.text() catch { _ => "<non-utf8 stdout>" }
@@ -105,4 +98,5 @@ async test "complex demos generate OpenXML-valid packages" {
   @async/fs.remove(stream_path) catch {
     _ => ()
   }
+  @async/fs.rmdir(out_dir, recursive=true)
 }

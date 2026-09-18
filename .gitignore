@@ -5,7 +5,7 @@ target
 .mooncakes/
 .moonagent/
 # Full excelize Go checkout used by developer parity tooling (not the vendored
-# `fixtures/excelize/` test subset, which is committed). Anchored so the bare
+# `mbtexcel/fixtures/excelize/` test subset, which is committed). Anchored so the bare
 # names don't also ignore that subset.
 /.repos
 ..mi
@@ -15,12 +15,12 @@ __pycache__/
 *.pyc
 .tools
 demos*/
-!cmd/demos/
-!cmd/demos/moon.pkg
-!/demos/
-!/demos/**
+!/mbtexcel/cmd/demos/
+!/mbtexcel/cmd/demos/moon.pkg
+!/mbtexcel/demos/
+!/mbtexcel/demos/**
 _mbtexcel_check
-/mbtexcel_*.xlsx
+/mbtexcel/mbtexcel_*.xlsx
 .openseek/
 tools/**/bin/
 tools/**/obj/

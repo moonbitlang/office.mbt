@@ -1,7 +1,7 @@
 The canonical office command identifies structurally valid XLSX and DOCX
 packages in text or JSON mode.
 
-  $ office.exe identify "$TESTDIR/../../../../fixtures/excelize/test/Book1.xlsx"
+  $ office.exe identify "$TESTDIR/../../../../mbtexcel/fixtures/excelize/test/Book1.xlsx"
   xlsx
 
   $ office.exe identify "$TESTDIR/../../../../docx2html/tests/cram/fixtures/single-paragraph.docx"
@@ -524,7 +524,7 @@ and nothing is published.
 Authoring embeds referenced images (bounded per image and in aggregate); the
 authored document reads back with the media in place.
 
-  $ cp "$TESTDIR/../../../../fixtures/excelize/logo.png" d3-logo.png
+  $ cp "$TESTDIR/../../../../mbtexcel/fixtures/excelize/logo.png" d3-logo.png
   $ printf '%s\n' '{"schema":"docx.batch/2","ops":[{"op":"paragraph","params":{"runs":[{"image":{"path":"d3-logo.png","alt":"logo"}}]}}]}' > d3-image.json
   $ office.exe batch --format docx d3-image.docx d3-image.json --json | jq -c '{success,ops:.data.ops}'
   {"success":true,"ops":1}
@@ -672,9 +672,9 @@ The third-party Book1 fixture contains two intersecting shared-formula ranges.
 Normalize that unrelated invalid metadata through the raw transaction surface
 before exercising its original contents with the strict structured reader.
 
-  $ office.exe raw read "$TESTDIR/../../../../fixtures/excelize/test/Book1.xlsx" /Sheet2 --output book1-sheet2.xml >/dev/null
+  $ office.exe raw read "$TESTDIR/../../../../mbtexcel/fixtures/excelize/test/Book1.xlsx" /Sheet2 --output book1-sheet2.xml >/dev/null
   $ sed -e 's/ref="F11:H11"/ref="F11:F11"/' -e 's/<f t="shared" si="0"><\/f>/<f t="shared" si="1"><\/f>/' book1-sheet2.xml > book1-sheet2-valid.xml
-  $ office.exe raw replace "$TESTDIR/../../../../fixtures/excelize/test/Book1.xlsx" /Sheet2 --xml-file book1-sheet2-valid.xml --out Book1-valid.xlsx --json >/dev/null
+  $ office.exe raw replace "$TESTDIR/../../../../mbtexcel/fixtures/excelize/test/Book1.xlsx" /Sheet2 --xml-file book1-sheet2-valid.xml --out Book1-valid.xlsx --json >/dev/null
 
   $ office.exe outline Book1-valid.xlsx --json | jq -c '{success,schema:.data.schema,path:.data.path,sheet_count:.data.sheet_count,active:.data.active_sheet.path,sheets:[.data.sheets[]|{path,kind,state,used:.used_range.reference}]}'
   {"success":true,"schema":"office.xlsx.outline/1","path":"/xlsx/workbook","sheet_count":2,"active":"/xlsx/sheet[name=\"Sheet1\"]","sheets":[{"path":"/xlsx/sheet[name=\"Sheet1\"]","kind":"worksheet","state":"visible","used":"A1:D22"},{"path":"/xlsx/sheet[name=\"Sheet2\"]","kind":"worksheet","state":"visible","used":"A1:I11"}]}
@@ -682,9 +682,9 @@ before exercising its original contents with the strict structured reader.
 Singleton extents retain two endpoints, so every emitted range path parses and
 round-trips through the public selector grammar.
 
-  $ office.exe outline "$TESTDIR/../../../../fixtures/excelize/test/OverflowNumericCell.xlsx" --json | jq -c '{reference:.data.sheets[0].used_range.reference,path:.data.sheets[0].used_range.path}'
+  $ office.exe outline "$TESTDIR/../../../../mbtexcel/fixtures/excelize/test/OverflowNumericCell.xlsx" --json | jq -c '{reference:.data.sheets[0].used_range.reference,path:.data.sheets[0].used_range.path}'
   {"reference":"A1:A1","path":"/xlsx/sheet[name=\"Sheet1\"]/range[A1:A1]"}
-  $ office.exe get "$TESTDIR/../../../../fixtures/excelize/test/OverflowNumericCell.xlsx" '/xlsx/sheet[1]/range[A1:A1]' --json | jq -c '{path:.data.path,reference:.data.reference,refs:[.data.cells[].reference]}'
+  $ office.exe get "$TESTDIR/../../../../mbtexcel/fixtures/excelize/test/OverflowNumericCell.xlsx" '/xlsx/sheet[1]/range[A1:A1]' --json | jq -c '{path:.data.path,reference:.data.reference,refs:[.data.cells[].reference]}'
   {"path":"/xlsx/sheet[name=\"Sheet1\"]/range[A1:A1]","reference":"A1:A1","refs":["A1"]}
 
   $ office.exe get Book1-valid.xlsx '/xlsx/sheet[1]/range[A19:B19]' --json | jq -c '{schema:.data.schema,path:.data.path,kind:.data.kind,refs:[.data.cells[].reference],raw:[.data.cells[].raw],formulas:[.data.cells[]|(.formula // null)],returned:.data.returned}'
@@ -786,7 +786,7 @@ supported formats. Structured output stays inside the shared envelope.
   $ office.exe raw list "$TESTDIR/../../../../docx2html/tests/cram/fixtures/single-paragraph.docx" --json | jq -c '{success,schema:.data.schema,format:.data.format,document:[.data.parts[]|select(.aliases|index("/document"))|.name]}'
   {"success":true,"schema":"office.raw.inventory/1","format":"docx","document":["/word/document.xml"]}
 
-  $ office.exe raw list "$TESTDIR/../../../../fixtures/excelize/test/Book1.xlsx" --json | jq -c '{format:.data.format,sheets:[.data.parts[]|select(.aliases|index("/sheet[1]"))|.name],named:[.data.parts[]|select(.aliases|index("/Sheet1"))|.name]}'
+  $ office.exe raw list "$TESTDIR/../../../../mbtexcel/fixtures/excelize/test/Book1.xlsx" --json | jq -c '{format:.data.format,sheets:[.data.parts[]|select(.aliases|index("/sheet[1]"))|.name],named:[.data.parts[]|select(.aliases|index("/Sheet1"))|.name]}'
   {"format":"xlsx","sheets":["/xl/worksheets/sheet1.xml"],"named":["/xl/worksheets/sheet1.xml"]}
 
   $ office.exe raw read "$TESTDIR/../../../../docx2html/tests/cram/fixtures/single-paragraph.docx" /document --json | jq -c '{success,schema:.data.schema,name:.data.part.name,encoding:.data.encoding,contains:(.data.content|contains("Walking on imported air"))}'
@@ -795,19 +795,19 @@ supported formats. Structured output stays inside the shared envelope.
 Binary reads require an explicit mode. Base64 is machine-safe, while file
 output is exact and create-new.
 
-  $ office.exe raw read "$TESTDIR/../../../../fixtures/excelize/test/Book1.xlsx" /xl/media/image1.jpeg --json > binary.json 2>&1; echo $?
+  $ office.exe raw read "$TESTDIR/../../../../mbtexcel/fixtures/excelize/test/Book1.xlsx" /xl/media/image1.jpeg --json > binary.json 2>&1; echo $?
   1
   $ jq -c '{success,code:.error.code}' binary.json
   {"success":false,"code":"office.raw.binary_requires_explicit_mode"}
 
-  $ office.exe raw read "$TESTDIR/../../../../fixtures/excelize/test/Book1.xlsx" /xl/media/image1.jpeg --base64 --json | jq -c '{success,encoding:.data.encoding,bytes:.data.part.size,nonempty:(.data.content|length>100)}'
+  $ office.exe raw read "$TESTDIR/../../../../mbtexcel/fixtures/excelize/test/Book1.xlsx" /xl/media/image1.jpeg --base64 --json | jq -c '{success,encoding:.data.encoding,bytes:.data.part.size,nonempty:(.data.content|length>100)}'
   {"success":true,"encoding":"base64","bytes":2376,"nonempty":true}
 
-  $ office.exe raw read "$TESTDIR/../../../../fixtures/excelize/test/Book1.xlsx" /xl/media/image1.jpeg --output image.jpeg --json | jq -c '{success,encoding:.data.encoding,output:.data.output}'
+  $ office.exe raw read "$TESTDIR/../../../../mbtexcel/fixtures/excelize/test/Book1.xlsx" /xl/media/image1.jpeg --output image.jpeg --json | jq -c '{success,encoding:.data.encoding,output:.data.output}'
   {"success":true,"encoding":"binary","output":"image.jpeg"}
-  $ unzip -p "$TESTDIR/../../../../fixtures/excelize/test/Book1.xlsx" xl/media/image1.jpeg | cmp - image.jpeg; echo $?
+  $ unzip -p "$TESTDIR/../../../../mbtexcel/fixtures/excelize/test/Book1.xlsx" xl/media/image1.jpeg | cmp - image.jpeg; echo $?
   0
-  $ office.exe raw read "$TESTDIR/../../../../fixtures/excelize/test/Book1.xlsx" /xl/media/image1.jpeg --output image.jpeg --json > exists.json 2>&1; echo $?
+  $ office.exe raw read "$TESTDIR/../../../../mbtexcel/fixtures/excelize/test/Book1.xlsx" /xl/media/image1.jpeg --output image.jpeg --json > exists.json 2>&1; echo $?
   1
   $ jq -c '{success,code:.error.code}' exists.json
   {"success":false,"code":"office.raw.output_write_failed"}
@@ -888,7 +888,7 @@ The cross-format validate command shares the exact pre-commit mutation gate
 and reports a machine-checkable verdict: exit zero with a bounded result for
 valid packages, non-zero with a complete findings envelope otherwise.
 
-  $ office.exe validate "$TESTDIR/../../../../fixtures/excelize/test/Book1.xlsx"
+  $ office.exe validate "$TESTDIR/../../../../mbtexcel/fixtures/excelize/test/Book1.xlsx"
   valid xlsx
 
   $ office.exe validate "$TESTDIR/../../../../docx2html/tests/cram/fixtures/single-paragraph.docx" --json | jq -c '{success,data:{schema:.data.schema,format:.data.format,valid:.data.valid,error_count:.data.error_count}}'
@@ -906,7 +906,7 @@ the strict detector or by the shared parse gate: which layer fires depends
 on the byte layout the local zip tool produced, but the verdict is always a
 deterministic non-zero rejection.
 
-  $ cp "$TESTDIR/../../../../fixtures/excelize/test/Book1.xlsx" tampered.xlsx
+  $ cp "$TESTDIR/../../../../mbtexcel/fixtures/excelize/test/Book1.xlsx" tampered.xlsx
   $ printf 'binary' > extra.bin
   $ zip -q tampered.xlsx extra.bin
   $ office.exe validate tampered.xlsx --json > tampered-validate.json 2>&1; echo $?
@@ -914,7 +914,7 @@ deterministic non-zero rejection.
   $ jq -c '{success,code:.error.code}' tampered-validate.json
   {"success":false,"code":"office.invalid_package"}
 
-  $ cp "$TESTDIR/../../../../fixtures/excelize/test/Book1.xlsx" broken-sheet.xlsx
+  $ cp "$TESTDIR/../../../../mbtexcel/fixtures/excelize/test/Book1.xlsx" broken-sheet.xlsx
   $ mkdir -p xl/worksheets && printf '<worksheet' > xl/worksheets/sheet1.xml
   $ zip -q broken-sheet.xlsx xl/worksheets/sheet1.xml
   $ office.exe validate broken-sheet.xlsx --json > broken-validate.json 2>&1; echo $?
@@ -972,7 +972,7 @@ An existing destination is refused with the shared transaction code unless
 A workbook is refused by name, and a destination whose extension names no
 backend is refused before any work happens.
 
-  $ office.exe render "$TESTDIR/../../../../fixtures/excelize/test/Book1.xlsx" --output book.pdf --json > render-xlsx.json 2>&1; echo $?
+  $ office.exe render "$TESTDIR/../../../../mbtexcel/fixtures/excelize/test/Book1.xlsx" --output book.pdf --json > render-xlsx.json 2>&1; echo $?
   1
   $ jq -c '{success,code:.error.code}' render-xlsx.json
   {"success":false,"code":"office.xlsx.unsupported"}

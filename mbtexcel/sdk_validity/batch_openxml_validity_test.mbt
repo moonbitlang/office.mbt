@@ -57,14 +57,7 @@ async test "mbtexcel batch-built workbook is OpenXML-valid" {
   if problems.length() != 0 {
     fail("structural validation failed: \{repr(problems)}")
   }
-  let stamp = @env.now()
-    .to_string()
-    .replace(old=":", new="_")
-    .replace(old=" ", new="_")
-  let out_dir = "_build/xlsx_validate_batch/\{stamp}"
-  @async/fs.mkdir(out_dir, permission=0o755, recursive=true) catch {
-    err => fail("mkdir failed: \{err}")
-  }
+  let out_dir = @async/fs.tmpdir(prefix="mbtexcel-xlsx_validate_batch-")
   let path = "\{out_dir}/batch_openxml_valid.xlsx"
   @async/fs.write_file(
     path,
@@ -76,7 +69,7 @@ async test "mbtexcel batch-built workbook is OpenXML-valid" {
   }
   let (code, stdout, stderr) = @process.collect_output("bash", [
     "-lc",
-    "scripts/validate_xlsx.sh \"\{path}\"",
+    "../scripts/validate_xlsx.sh \"\{path}\"",
   ])
   if code != 0 {
     let out = stdout.text() catch { _ => "<non-utf8 stdout>" }
@@ -88,4 +81,5 @@ async test "mbtexcel batch-built workbook is OpenXML-valid" {
   @async/fs.remove(path) catch {
     _ => ()
   }
+  @async/fs.rmdir(out_dir, recursive=true)
 }

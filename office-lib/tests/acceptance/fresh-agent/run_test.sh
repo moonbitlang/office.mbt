@@ -1627,7 +1627,7 @@ set -e
 failed_git_root="$test_root/failed-git-root"
 failed_git_toolchain="$test_root/failed-git-toolchain"
 /bin/mkdir -p -m 0700 \
-  "$failed_git_root/office/tests/acceptance/fresh-agent" \
+  "$failed_git_root/office-lib/tests/acceptance/fresh-agent" \
   "$failed_git_root/install-parent" \
   "$failed_git_toolchain/bin"
 for fake_tool in moon moonc moonrun; do
@@ -1635,11 +1635,11 @@ for fake_tool in moon moonc moonrun; do
     "$failed_git_toolchain/bin/$fake_tool"
 done
 /usr/bin/install -m 0500 "$script_dir/prepare.sh" \
-  "$failed_git_root/office/tests/acceptance/fresh-agent/prepare.sh"
+  "$failed_git_root/office-lib/tests/acceptance/fresh-agent/prepare.sh"
 /usr/bin/install -m 0500 "$script_dir/inventory.sh" \
-  "$failed_git_root/office/tests/acceptance/fresh-agent/inventory.sh"
+  "$failed_git_root/office-lib/tests/acceptance/fresh-agent/inventory.sh"
 /usr/bin/install -m 0400 "$script_dir/build-lock.json" \
-  "$failed_git_root/office/tests/acceptance/fresh-agent/build-lock.json"
+  "$failed_git_root/office-lib/tests/acceptance/fresh-agent/build-lock.json"
 /usr/bin/git -C "$failed_git_root" init -q
 /usr/bin/git -C "$failed_git_root" add .
 /usr/bin/git -C "$failed_git_root" \
@@ -1648,7 +1648,7 @@ done
 failed_git_head="$(/usr/bin/git -C "$failed_git_root" rev-parse HEAD)"
 chmod 0000 "$failed_git_root/.git/index"
 expect_failure failed-git-status 1 'could not inspect candidate checkout status' \
-  "$failed_git_root/office/tests/acceptance/fresh-agent/prepare.sh" \
+  "$failed_git_root/office-lib/tests/acceptance/fresh-agent/prepare.sh" \
   "$failed_git_head" "$failed_git_root/install-parent/candidate" \
   "$failed_git_toolchain/bin/moon" \
   "$failed_git_toolchain/bin/moonc" \

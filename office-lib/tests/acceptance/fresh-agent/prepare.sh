@@ -418,8 +418,8 @@ trusted_git -C "$source_root" archive --format=tar "$expected_tree" \
 /usr/bin/env -i PATH=/usr/bin:/bin LANG=C LC_ALL=C \
   /usr/bin/tar -xf "$source_archive" -C "$snapshot"
 
-snapshot_inventory="$snapshot/office/tests/acceptance/fresh-agent/inventory.sh"
-snapshot_build_lock="$snapshot/office/tests/acceptance/fresh-agent/build-lock.json"
+snapshot_inventory="$snapshot/office-lib/tests/acceptance/fresh-agent/inventory.sh"
+snapshot_build_lock="$snapshot/office-lib/tests/acceptance/fresh-agent/build-lock.json"
 [ "$(sha256_file "$snapshot_inventory")" = "$(sha256_file "$inventory_script")" ] ||
   die "exported inventory helper differs from the exact checkout"
 [ "$(sha256_file "$snapshot_build_lock")" = "$build_lock_sha256" ] ||
@@ -523,7 +523,7 @@ case "$build_platform" in
   *) die "no native build-host policy is registered for $build_platform" ;;
 esac
 
-build_host_discovery_policy="$snapshot/office/tests/acceptance/fresh-agent/build_host_discovery.py"
+build_host_discovery_policy="$snapshot/office-lib/tests/acceptance/fresh-agent/build_host_discovery.py"
 [ -f "$build_host_discovery_policy" ] && [ ! -L "$build_host_discovery_policy" ] ||
   die "build-host discovery policy is unavailable from the exported snapshot"
 build_host_discovery_json="$scratch/build-host-discovery.json"
@@ -971,45 +971,45 @@ fi
 mkdir -m 0700 "$stage/bin" "$stage/libexec" "$stage/control"
 install -m 0500 "$native_artifact" "$stage/bin/office-native"
 install -m 0500 \
-  "$snapshot/office/tests/acceptance/fresh-agent/office-wasm" \
+  "$snapshot/office-lib/tests/acceptance/fresh-agent/office-wasm" \
   "$stage/bin/office-wasm"
 install -m 0500 "$moonrun_bin" "$stage/libexec/moonrun"
 install -m 0400 "$wasm_artifact" "$stage/libexec/office.wasm"
 install -m 0500 \
-  "$snapshot/office/tests/acceptance/fresh-agent/run.sh" \
+  "$snapshot/office-lib/tests/acceptance/fresh-agent/run.sh" \
   "$stage/control/run.sh"
 install -m 0400 \
-  "$snapshot/office/tests/acceptance/fresh-agent/prompt.md" \
+  "$snapshot/office-lib/tests/acceptance/fresh-agent/prompt.md" \
   "$stage/control/prompt.md"
 install -m 0400 \
-  "$snapshot/office/tests/acceptance/fresh-agent/final.schema.json" \
+  "$snapshot/office-lib/tests/acceptance/fresh-agent/final.schema.json" \
   "$stage/control/final.schema.json"
 install -m 0500 \
-  "$snapshot/office/tests/acceptance/fresh-agent/permission-canary.sh" \
+  "$snapshot/office-lib/tests/acceptance/fresh-agent/permission-canary.sh" \
   "$stage/control/permission-canary.sh"
 install -m 0400 \
-  "$snapshot/office/tests/acceptance/fresh-agent/attest.py" \
+  "$snapshot/office-lib/tests/acceptance/fresh-agent/attest.py" \
   "$stage/control/attest.py"
 install -m 0400 \
-  "$snapshot/office/tests/acceptance/fresh-agent/argument_policy.py" \
+  "$snapshot/office-lib/tests/acceptance/fresh-agent/argument_policy.py" \
   "$stage/control/argument-policy.py"
 install -m 0400 \
-  "$snapshot/office/tests/acceptance/fresh-agent/auth_guard.py" \
+  "$snapshot/office-lib/tests/acceptance/fresh-agent/auth_guard.py" \
   "$stage/control/auth-guard.py"
 install -m 0400 \
-  "$snapshot/office/tests/acceptance/fresh-agent/command_policy.py" \
+  "$snapshot/office-lib/tests/acceptance/fresh-agent/command_policy.py" \
   "$stage/control/command-policy.py"
 install -m 0400 \
-  "$snapshot/office/tests/acceptance/fresh-agent/opc_policy.py" \
+  "$snapshot/office-lib/tests/acceptance/fresh-agent/opc_policy.py" \
   "$stage/control/opc-policy.py"
 install -m 0400 \
-  "$snapshot/office/tests/acceptance/fresh-agent/transcript_policy.py" \
+  "$snapshot/office-lib/tests/acceptance/fresh-agent/transcript_policy.py" \
   "$stage/control/transcript-policy.py"
 install -m 0400 \
-  "$snapshot/office/tests/acceptance/fresh-agent/scenario_policy.py" \
+  "$snapshot/office-lib/tests/acceptance/fresh-agent/scenario_policy.py" \
   "$stage/control/scenario-policy.py"
 install -m 0400 \
-  "$snapshot/office/tests/acceptance/fresh-agent/evidence_policy.py" \
+  "$snapshot/office-lib/tests/acceptance/fresh-agent/evidence_policy.py" \
   "$stage/control/evidence-policy.py"
 install -m 0500 "$snapshot_inventory" "$stage/control/inventory.sh"
 install -m 0400 "$snapshot_build_lock" "$stage/control/build-lock.json"

@@ -40,7 +40,7 @@ async test "POSIX final permission is exact despite a restrictive umask" {
       with_permission_contract_dir(directory => {
         let script =
           #|umask 077
-          #|test_file=office/transaction/permission_contract/permission_contract_test.mbt
+          #|test_file=office-lib/transaction/permission_contract/permission_contract_test.mbt
           #|if [ ! -f "$test_file" ]; then
           #|  test_file=transaction/permission_contract/permission_contract_test.mbt
           #|fi

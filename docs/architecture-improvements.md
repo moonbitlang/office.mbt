@@ -13,41 +13,41 @@ Companion doc: `docs/architecture.md` (describes the current as-is design).
 This repo has already implemented several items from the roadmap:
 
 - [x] Phase 1: split large IO hub files inside `xlsx/`
-  - `xlsx/read.mbt` helpers extracted into:
-    - `xlsx/read_shared_strings.mbt`
-    - `xlsx/read_styles_xfs.mbt`
-    - `xlsx/read_workbook_xml.mbt`
-    - `xlsx/read_worksheet_xml.mbt`
-    - `xlsx/read_drawing_xml.mbt`
-    - `xlsx/read_sheet_rel_parts.mbt`
-  - `xlsx/write.mbt` helpers extracted into:
-    - `xlsx/write_workbook_xml.mbt`
-    - `xlsx/write_shared_strings.mbt`
-    - `xlsx/write_worksheet_layout_xml.mbt`
-    - `xlsx/write_comments_vml.mbt`
+  - `mbtexcel/xlsx/read.mbt` helpers extracted into:
+    - `mbtexcel/xlsx/read_shared_strings.mbt`
+    - `mbtexcel/xlsx/read_styles_xfs.mbt`
+    - `mbtexcel/xlsx/read_workbook_xml.mbt`
+    - `mbtexcel/xlsx/read_worksheet_xml.mbt`
+    - `mbtexcel/xlsx/read_drawing_xml.mbt`
+    - `mbtexcel/xlsx/read_sheet_rel_parts.mbt`
+  - `mbtexcel/xlsx/write.mbt` helpers extracted into:
+    - `mbtexcel/xlsx/write_workbook_xml.mbt`
+    - `mbtexcel/xlsx/write_shared_strings.mbt`
+    - `mbtexcel/xlsx/write_worksheet_layout_xml.mbt`
+    - `mbtexcel/xlsx/write_comments_vml.mbt`
 - [x] Phase 1: centralize OOXML string + `.rels` helpers
-  - `xlsx/ooxml_utils.mbt`
-  - `xlsx/ooxml_rels.mbt`
+  - `mbtexcel/xlsx/ooxml_utils.mbt`
+  - `mbtexcel/xlsx/ooxml_rels.mbt`
 - [x] Phase 1: extract workbook package-part resolution from read hub
-  - `xlsx/read_package_parts.mbt` now owns workbook part selection from
+  - `mbtexcel/xlsx/read_package_parts.mbt` now owns workbook part selection from
     `[Content_Types].xml` and fallback behavior.
-  - Covered by `xlsx/read_package_parts_wbtest.mbt`.
+  - Covered by `mbtexcel/xlsx/read_package_parts_wbtest.mbt`.
 - [x] Phase 2: extract pure libraries out of `xlsx/`
   - `crypto/` (AES + hashes)
-  - base64: `xlsx/base64.mbt` wraps `moonbitlang/core/encoding/base64` (the
+  - base64: `mbtexcel/xlsx/base64.mbt` wraps `moonbitlang/core/encoding/base64` (the
     in-repo `base64/` package was later removed in favor of core)
 - [x] Phase 3 (partial): reduce IO config coupling in write helpers
   - `Workbook::save_as` does not need to mutate `Workbook.file_path` just to
     select workbook content type during write.
 - [x] Phase 1: start splitting the formula engine for navigability
-  - `xlsx/formula_eval_types.mbt`, `xlsx/formula_parse.mbt`,
-    `xlsx/formula_eval.mbt`, `xlsx/formula_builtins.mbt`
+  - `mbtexcel/xlsx/formula_eval_types.mbt`, `mbtexcel/xlsx/formula_parse.mbt`,
+    `mbtexcel/xlsx/formula_eval.mbt`, `mbtexcel/xlsx/formula_builtins.mbt`
 - [x] Phase 1: extract `Workbook`/`Worksheet` type definitions and accessors
-  into dedicated files (`xlsx/workbook_types.mbt`, `xlsx/worksheet_types.mbt`)
+  into dedicated files (`mbtexcel/xlsx/workbook_types.mbt`, `mbtexcel/xlsx/worksheet_types.mbt`)
 - [x] Phase 4 (partial): add worksheet cell index cache for hot get/set paths
   - `Worksheet` now tracks an internal `cell_index` cache that is lazily built
     and invalidated on structural row/column mutations.
-  - Covered by `xlsx/worksheet_cell_index_wbtest.mbt`.
+  - Covered by `mbtexcel/xlsx/worksheet_cell_index_wbtest.mbt`.
 
 ## Current pain points (why refactor)
 
@@ -61,22 +61,22 @@ This repo has already implemented several items from the roadmap:
 
 2. Model and IO concerns are coupled in `Workbook`
    - `Workbook` stores `file_path`, a ZIP writer override, a charset transcoder,
-     and default options alongside domain state (`xlsx/workbook.mbt`).
+     and default options alongside domain state (`mbtexcel/xlsx/workbook.mbt`).
    - This coupling makes it harder to reason about what is “document data”
      vs “how the document was read/will be written”.
 
 3. “OOXML string plumbing” utilities are scattered
-   - There are multiple XML helpers across `xlsx/xml.mbt`, `xlsx/read.mbt`,
-     `xlsx/worksheet.mbt`, and `ooxml/xml.mbt`.
+   - There are multiple XML helpers across `mbtexcel/xlsx/xml.mbt`, `mbtexcel/xlsx/read.mbt`,
+     `mbtexcel/xlsx/worksheet.mbt`, and `mbtexcel/ooxml/xml.mbt`.
    - Relationship parsing exists only as ad-hoc helpers inside the reader
-     (`xlsx/read.mbt`), while the `ooxml/` package is currently write-only.
+     (`mbtexcel/xlsx/read.mbt`), while the `ooxml/` package is currently write-only.
 
 4. Cell storage is simple but not scalable
    - Cells are stored as `Array[Cell]` per worksheet and many operations scan
      linearly (e.g., `Workbook::get_cell_value` style patterns in
-     `xlsx/workbook.mbt`).
+     `mbtexcel/xlsx/workbook.mbt`).
    - Write-time sorting uses insertion sort (`sort_cells` in
-     `xlsx/worksheet.mbt`), which is fine for small sheets but quadratic for
+     `mbtexcel/xlsx/worksheet.mbt`), which is fine for small sheets but quadratic for
      large data unless stream mode is used.
 
 5. Hybrid “typed + raw XML fragments” is useful, but not explicitly structured
@@ -118,13 +118,13 @@ subsystems and utilities are centralized.
 Suggested actions:
 
 1. Split the hub files by responsibility (no public API change)
-   - Split `xlsx/read.mbt` into multiple files such as:
+   - Split `mbtexcel/xlsx/read.mbt` into multiple files such as:
      - `read_workbook.mbt`, `read_styles.mbt`, `read_worksheet.mbt`,
        `read_drawings.mbt`, `read_tables.mbt`, `read_pivots.mbt`, etc.
-   - Split `xlsx/write.mbt` similarly:
+   - Split `mbtexcel/xlsx/write.mbt` similarly:
      - `write_workbook.mbt`, `write_styles.mbt`, `write_worksheet.mbt`,
        `write_drawings.mbt`, ...
-   - Split `xlsx/formula_eval.mbt` by categories:
+   - Split `mbtexcel/xlsx/formula_eval.mbt` by categories:
      - tokenizer/parser, value model, core eval, function registry,
        financial functions, date/time functions, ...
 
@@ -134,13 +134,13 @@ Suggested actions:
      - “open tag” extraction (`tag_attributes_in`)
      - simple body extraction (`extract_tag_body_from`)
      - fragment rewrite helpers (`replace_attr_value_in_open_tag`)
-   - Move existing implementations from `xlsx/xml.mbt`, `xlsx/read.mbt`, and
-     `xlsx/worksheet.mbt` into that module.
+   - Move existing implementations from `mbtexcel/xlsx/xml.mbt`, `mbtexcel/xlsx/read.mbt`, and
+     `mbtexcel/xlsx/worksheet.mbt` into that module.
    - Add tiny unit tests for edge cases (quotes, spacing, missing attrs).
 
 3. Make relationships parsing a reusable module (still inside `xlsx/`)
    - Extract `parse_relationship_targets`, `rels_path_for`,
-     `resolve_rel_target` helpers from `xlsx/read.mbt`.
+     `resolve_rel_target` helpers from `mbtexcel/xlsx/read.mbt`.
    - Add tests using small inlined `.rels` strings.
 
 4. Normalize part-name constants and path building
@@ -167,11 +167,11 @@ Selection criteria for extraction:
 Good candidates (based on current layout):
 
 - Crypto + hashes
-  - Implemented: moved into `crypto/` and `xlsx/encryption.mbt` imports
+  - Implemented: moved into `crypto/` and `mbtexcel/xlsx/encryption.mbt` imports
     `@crypto`.
 - Base64
   - Implemented, then consolidated onto `moonbitlang/core/encoding/base64`;
-    the in-repo `base64/` package was removed and `xlsx/base64.mbt` keeps the
+    the in-repo `base64/` package was removed and `mbtexcel/xlsx/base64.mbt` keeps the
     `XlsxError` mapping wrappers.
 - XML helpers
   - Either:
@@ -273,7 +273,7 @@ usually pays off.
 
 If you want a low-risk first step that improves architecture immediately:
 
-1. Split `xlsx/read.mbt` and `xlsx/write.mbt` by subsystem (Phase 1.1).
+1. Split `mbtexcel/xlsx/read.mbt` and `mbtexcel/xlsx/write.mbt` by subsystem (Phase 1.1).
 2. Centralize XML/fragment utilities into a single `xlsx/` file (Phase 1.2),
    with small unit tests.
 3. Extract crypto/hashes into a new `crypto/` package (Phase 2), keeping all

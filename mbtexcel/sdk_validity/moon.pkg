@@ -1,5 +1,5 @@
-// The root module's native-only tests. Most shell out to the Microsoft
-// DocumentFormat.OpenXml SDK validator through scripts/validate_xlsx.sh; the
+// The Excel module's native-only tests. Most shell out to the Microsoft
+// DocumentFormat.OpenXml SDK validator through ../scripts/validate_xlsx.sh; the
 // two in open_file_test.mbt only touch the filesystem. Either way they need a
 // real filesystem, and the validator ones a subprocess, so none of them can
 // run on js or wasm.
@@ -10,7 +10,7 @@
 // root package, which also compiles for js, they were reported
 // `unused_package` there because js compiles none of these files.
 //
-// Mirrors office/xlsx/sdk_validity, which is the same arrangement for the
+// Mirrors office-lib/xlsx/sdk_validity, which is the same arrangement for the
 // office facade: a package with no sources of its own, only blackbox tests.
 
 import {

@@ -82,10 +82,10 @@ def main() -> int:
         "--moonbit-formula",
         action="append",
         default=[
-            "xlsx/formula_eval.mbt",
-            "xlsx/formula_builtins.mbt",
-            "xlsx/formula_builtins_financial.mbt",
-            "xlsx/formula_builtins_stats.mbt",
+            "mbtexcel/xlsx/formula_eval.mbt",
+            "mbtexcel/xlsx/formula_builtins.mbt",
+            "mbtexcel/xlsx/formula_builtins_financial.mbt",
+            "mbtexcel/xlsx/formula_builtins_stats.mbt",
         ],
         help=(
             "MoonBit formula implementation file(s) or glob(s). "

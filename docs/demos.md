@@ -8,39 +8,39 @@ Open the generated files in Excel / Numbers / LibreOffice to see the results.
 Run all demos (writes `.xlsx` files into `./demos_out/`):
 
 ```sh
-moon run cmd/demos
+moon run mbtexcel/cmd/demos
 ```
 
 List available demos:
 
 ```sh
-moon run cmd/demos -- --list
+moon run mbtexcel/cmd/demos -- --list
 ```
 
 Run a single demo:
 
 ```sh
-moon run cmd/demos -- dashboard demos_out
-moon run cmd/demos -- invoice demos_out
-moon run cmd/demos -- pivot_slicer demos_out
-moon run cmd/demos -- sparklines demos_out
-moon run cmd/demos -- tracker_heatmap demos_out
-moon run cmd/demos -- interactive_controls demos_out
-moon run cmd/demos -- combo_chart demos_out
-moon run cmd/demos -- ooxml_showcase demos_out
-moon run cmd/demos -- secure demos_out
+moon run mbtexcel/cmd/demos -- dashboard demos_out
+moon run mbtexcel/cmd/demos -- invoice demos_out
+moon run mbtexcel/cmd/demos -- pivot_slicer demos_out
+moon run mbtexcel/cmd/demos -- sparklines demos_out
+moon run mbtexcel/cmd/demos -- tracker_heatmap demos_out
+moon run mbtexcel/cmd/demos -- interactive_controls demos_out
+moon run mbtexcel/cmd/demos -- combo_chart demos_out
+moon run mbtexcel/cmd/demos -- ooxml_showcase demos_out
+moon run mbtexcel/cmd/demos -- secure demos_out
 ```
 
 Streaming demo (third arg = row count, default `20000`):
 
 ```sh
-moon run cmd/demos -- stream_big demos_out 50000
+moon run mbtexcel/cmd/demos -- stream_big demos_out 50000
 ```
 
 Secure demo (third arg = password, default `moonbit`):
 
 ```sh
-moon run cmd/demos -- secure demos_out mypassword
+moon run mbtexcel/cmd/demos -- secure demos_out mypassword
 ```
 
 ## Regression Suite
@@ -52,13 +52,13 @@ scripts/test_demo_roundtrip.sh
 ```
 
 This script runs all `mbtexcel_demo_*_roundtrip_test.mbt` files plus
-`sdk_validity/demos_openxml_validity_test.mbt`. Treat it as the default demo
+`mbtexcel/sdk_validity/demos_openxml_validity_test.mbt`. Treat it as the default demo
 quality gate
 for local verification and CI pipelines.
 
 ## How the demo runner works
 
-Entry point: `cmd/demos/main.mbt`.
+Entry point: `mbtexcel/cmd/demos/main.mbt`.
 
 - `main` reads CLI args via `@env.args()` and decides which demo(s) to run.
 - Each demo is implemented as a function that returns raw XLSX bytes:
@@ -67,22 +67,22 @@ Entry point: `cmd/demos/main.mbt`.
 
 If you want to add your own demo:
 
-1. Create `cmd/demos/demo_mything.mbt` with `pub fn demo_mything_bytes() -> Bytes raise @xlsx.XlsxError`.
-2. Add a new match arm in `cmd/demos/main.mbt` to call it and choose the output filename.
-3. Optionally extend the smoke test in `cmd/demos/main_test.mbt`.
+1. Create `mbtexcel/cmd/demos/demo_mything.mbt` with `pub fn demo_mything_bytes() -> Bytes raise @xlsx.XlsxError`.
+2. Add a new match arm in `mbtexcel/cmd/demos/main.mbt` to call it and choose the output filename.
+3. Optionally extend the smoke test in `mbtexcel/cmd/demos/main_test.mbt`.
 
 ## Demos (what to look for)
 
 ### `dashboard.xlsx`
 
-Source: `cmd/demos/demo_dashboard.mbt`.
+Source: `mbtexcel/cmd/demos/demo_dashboard.mbt`.
 
 Shows a “mini BI dashboard” using:
 
 - **Table** (`Worksheet::add_table`) over `Data!A1:E13`
 - **Conditional formatting** (3-color scale) over `Data!E2:E13`
 - **Chart** (`Workbook::add_chart_with_options`) on `Dashboard!B5` plotting `Data!E2:E13`
-- **Image** (`Workbook::add_image`) + a tiny embedded PNG (`cmd/demos/assets.mbt`)
+- **Image** (`Workbook::add_image`) + a tiny embedded PNG (`mbtexcel/cmd/demos/assets.mbt`)
 - **Shape** (`Workbook::add_shape`) for a callout banner
 - **Frozen header row** via panes (`Worksheet::set_panes`)
 
@@ -92,7 +92,7 @@ Try tweaking:
 
 ### `invoice.xlsx`
 
-Source: `cmd/demos/demo_invoice.mbt`.
+Source: `mbtexcel/cmd/demos/demo_invoice.mbt`.
 
 Shows a template-like sheet:
 
@@ -109,7 +109,7 @@ Try tweaking:
 
 ### `pivot_slicer.xlsx`
 
-Source: `cmd/demos/demo_pivot_slicer.mbt`.
+Source: `mbtexcel/cmd/demos/demo_pivot_slicer.mbt`.
 
 Shows higher-level pivot features:
 
@@ -123,7 +123,7 @@ Try tweaking:
 
 ### `sparklines.xlsx`
 
-Source: `cmd/demos/demo_sparklines.mbt`.
+Source: `mbtexcel/cmd/demos/demo_sparklines.mbt`.
 
 Shows compact “trend” visuals:
 
@@ -137,7 +137,7 @@ Try tweaking:
 
 ### `tracker_heatmap.xlsx`
 
-Source: `cmd/demos/demo_tracker_heatmap.mbt`.
+Source: `mbtexcel/cmd/demos/demo_tracker_heatmap.mbt`.
 
 Shows a dense “habit tracker” style sheet:
 
@@ -153,7 +153,7 @@ Try tweaking:
 
 ### `interactive_controls.xlsx`
 
-Source: `cmd/demos/demo_interactive_controls.mbt`.
+Source: `mbtexcel/cmd/demos/demo_interactive_controls.mbt`.
 
 Shows a “what-if model” driven by Excel form controls:
 
@@ -173,7 +173,7 @@ Try tweaking:
 
 ### `combo_chart.xlsx`
 
-Source: `cmd/demos/demo_combo_chart.mbt`.
+Source: `mbtexcel/cmd/demos/demo_combo_chart.mbt`.
 
 Shows a polished combo chart with styling:
 
@@ -188,7 +188,7 @@ Try tweaking:
 
 ### `ooxml_showcase.xlsx`
 
-Source: `cmd/demos/demo_ooxml_showcase.mbt`.
+Source: `mbtexcel/cmd/demos/demo_ooxml_showcase.mbt`.
 
 Shows “OOXML long-tail” features that matter for real-world spreadsheets:
 
@@ -207,7 +207,7 @@ Try tweaking:
 
 ### `stream_big_*.xlsx`
 
-Source: `cmd/demos/demo_stream_big.mbt`.
+Source: `mbtexcel/cmd/demos/demo_stream_big.mbt`.
 
 Shows how to generate large sheets efficiently:
 
@@ -221,7 +221,7 @@ Notes:
 
 ### `secure_password.xlsx`
 
-Source: `cmd/demos/demo_secure.mbt`.
+Source: `mbtexcel/cmd/demos/demo_secure.mbt`.
 
 Shows workbook encryption:
 

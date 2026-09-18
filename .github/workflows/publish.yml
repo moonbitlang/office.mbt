@@ -38,7 +38,9 @@ jobs:
           moon fmt
           git diff --exit-code
       
+      # This workflow publishes the Excel module; Office has a separate release process.
       - name: publish
+        working-directory: mbtexcel
         run: |
           echo $SECRET > ~/.moon/credentials.json
           moon publish

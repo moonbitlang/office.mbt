@@ -56,14 +56,7 @@ async test "mbtexcel mutation-heavy workbook remains OpenXML-valid" {
   let parsed = @mbtexcel.read(bytes)
   debug_inspect(parsed.get_cell("Data", "A1"), content="Some(\"ref\")")
 
-  let stamp = @env.now()
-    .to_string()
-    .replace(old=":", new="_")
-    .replace(old=" ", new="_")
-  let out_dir = "_build/xlsx_validate_mutations/\{stamp}"
-  @async/fs.mkdir(out_dir, permission=0o755, recursive=true) catch {
-    err => fail("mkdir failed: \{err}")
-  }
+  let out_dir = @async/fs.tmpdir(prefix="mbtexcel-xlsx_validate_mutations-")
   let path = "\{out_dir}/mutations_openxml_valid.xlsx"
   @async/fs.write_file(
     path,
@@ -75,7 +68,7 @@ async test "mbtexcel mutation-heavy workbook remains OpenXML-valid" {
   }
   let (code, stdout, stderr) = @process.collect_output("bash", [
     "-lc",
-    "scripts/validate_xlsx.sh \"\{path}\"",
+    "../scripts/validate_xlsx.sh \"\{path}\"",
   ])
   if code != 0 {
     let out = stdout.text() catch { _ => "<non-utf8 stdout>" }
@@ -87,4 +80,5 @@ async test "mbtexcel mutation-heavy workbook remains OpenXML-valid" {
   @async/fs.remove(path) catch {
     _ => ()
   }
+  @async/fs.rmdir(out_dir, recursive=true)
 }

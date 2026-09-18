@@ -8,12 +8,22 @@ not exist in the registry. A green source CI run is necessary, but it is not
 evidence that `moonx moonbitlang/office` can be installed from published
 artifacts.
 
+## Workspace layout
+
+The repository root contains `moon.work`, not a publishable module. Publish
+from the appropriate module directory: `mbtexcel/`, `docx2html/`, `pdflite/`,
+`pagelayout/`, `office-lib/`, or `office-cli/`. Directory names do not change the
+published module coordinates. The root publish workflow publishes mbtexcel.
+
+The historical release train below documents its original pinned versions;
+consult the current module manifests before preparing a new release.
+
 ## Required order
 
 For the transaction and bounded-DOCX release train introduced by A4 and D2:
 
 1. merge and validate the source changes without publishing Office;
-2. publish `moonbitlang/mbtexcel@0.1.9` from the repository root;
+2. publish `moonbitlang/mbtexcel@0.1.9` from `mbtexcel/`;
 3. wait until that exact immutable version resolves from Mooncakes;
 4. run `scripts/check_docx2html_registry_release.sh` (or the manual
    `docx2html-registry-release-check` GitHub workflow) outside `moon.work` and
@@ -26,7 +36,7 @@ For the transaction and bounded-DOCX release train introduced by A4 and D2:
    Wasm, transaction, raw, DOCX, SDK-validation, and publish-dry-run check to
    pass. Both test commands are unfiltered full-module runs, so the Office root
    integration suite cannot be hidden by green child-package checks;
-8. publish `moonbitlang/office-lib@0.1.0` from `office/` and wait until that exact
+8. publish `moonbitlang/office-lib@0.1.0` from `office-lib/` and wait until that exact
    immutable version resolves from Mooncakes;
 9. run `scripts/check_office_cli_registry_release.sh` outside `moon.work` and
    require its native, Wasm, smoke, and publish-dry-run checks to pass;

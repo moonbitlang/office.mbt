@@ -5,7 +5,7 @@ Goal: Add unit and end-to-end tests to protect key Excelize-like behaviors befor
 ## Scope
 
 Primary focus:
-- Public wrapper API (`mbtexcel.mbt`) surface coverage.
+- Public wrapper API (`mbtexcel/mbtexcel.mbt`) surface coverage.
 - XLSX read/write roundtrips for core workbook features.
 - Regression tests for known tricky parts (styles, formulas, validations, merges, streams, encryption).
 
