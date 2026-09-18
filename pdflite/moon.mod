@@ -4,7 +4,7 @@ version = "0.1.41"
 
 import {
   "moonbit-community/flate@0.8.1",
-  "moonbitlang/async@0.20.2",
+  "moonbitlang/async@0.22.1",
   "moonbitlang/x@0.4.50",
   "moonbitlang/mbtexcel@0.1.8",
 }

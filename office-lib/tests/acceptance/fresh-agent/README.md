@@ -34,7 +34,7 @@ prefix="$install_parent/candidate"
 moon_bin="$(command -v moon)"
 moonc_bin="$(command -v moonc)"
 moonrun_bin="$(command -v moonrun)"
-office/tests/acceptance/fresh-agent/prepare.sh \
+office-lib/tests/acceptance/fresh-agent/prepare.sh \
   "$head" "$prefix" \
   "$moon_bin" "$moonc_bin" "$moonrun_bin"
 ```

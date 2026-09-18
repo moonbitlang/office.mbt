@@ -392,7 +392,7 @@ For every PR:
 2. Run `moon info && moon fmt`, inspect all `.mbti` changes, then run
    `moon check` and the focused tests.
 3. Run the relevant native, Wasm, and JS gates. For Office CLI changes, build
-   the native CLI and run `moon cram test office/cmd/office/cram` from the same
+   the native CLI and run `moon cram test office-lib/cmd/office/cram` from the same
    stub setup used by CI. Mutation work also needs Microsoft
    `DocumentFormat.OpenXml` validation with .NET 8.
    Pin all validation runs to one exact commit. To reduce wall time, use a
@@ -423,7 +423,7 @@ moon test --target js
 moon test --target native
 ```
 
-The workspace currently resolves `moonbitlang/async@0.20.2`. An async upgrade
+The workspace currently resolves `moonbitlang/async@0.22.1`. An async upgrade
 is allowed when it has a concrete benefit, but it must be an isolated dependency
 PR with native/Wasm scheduler and filesystem tests; do not combine it with a
 feature PR.

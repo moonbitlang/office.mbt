@@ -106,7 +106,7 @@ jobs:
           fi
 
       # Regenerate every member's `pkg.generated.mbti` and fail if the committed
-      # interfaces drift from the source (all four members commit their .mbti).
+      # interfaces drift from the source (all six members commit their .mbti).
       # Run `moon info` and commit the result to fix.
       - name: Interface check
         run: |
@@ -135,15 +135,14 @@ jobs:
 
   # The three test backends. Previously three serial steps in one job.
   #
-  # This repo is a `moon work` workspace with four members: `.`
-  # (moonbitlang/mbtexcel), `./docx2html` (moonbitlang/docx2html), and `./pdflite`
-  # (moonbitlang/pdflite), plus `./office` (the agent-facing facade). An
+  # This repo is a workspace with six peer modules: mbtexcel, docx2html,
+  # pdflite, pagelayout, office-lib, and office-cli. An
   # unfiltered `moon test` traverses every member and all of its packages, so
   # new portable child packages are covered automatically instead of silently
   # receiving root-only tests.
   #
   # mbtexcel's parity/fixture tests read a small committed subset of the
-  # excelize test fixtures from `fixtures/excelize/` (see that directory's
+  # excelize test fixtures from `mbtexcel/fixtures/excelize/` (see that directory's
   # README) — no upstream checkout is fetched at test time. (docx2html's own
   # fixtures are likewise committed under docx2html/tests/.)
   #
@@ -313,7 +312,7 @@ jobs:
       # arrays, and the pinned toolchain links debug executables straight to
       # object code. See docs/moonc-large-const-codegen.md.)
       - name: Build CLIs (native)
-        run: moon build --target native cmd/xlsx docx2html/cmd/docx2html docx2html/cmd/docx office-cli pdflite/cmd/pdflite pagelayout/cmd/pagelayout
+        run: moon build --target native mbtexcel/cmd/xlsx docx2html/cmd/docx2html docx2html/cmd/docx office-cli pdflite/cmd/pdflite pagelayout/cmd/pagelayout
 
       # Run the cram docs from a stub project so `moon cram test` does not
       # trigger a build of every workspace executable (keeps the job lean;
@@ -332,9 +331,9 @@ jobs:
           printf 'name = "moonbitlang/cramstub"\nversion = "0.1.0"\n' > "$STUB/moon.mod"
           export PATH="$GITHUB_WORKSPACE/_build/native/debug/build/moonbitlang/mbtexcel/cmd/xlsx:$GITHUB_WORKSPACE/_build/native/debug/build/moonbitlang/docx2html/cmd/docx2html:$GITHUB_WORKSPACE/_build/native/debug/build/moonbitlang/docx2html/cmd/docx:$GITHUB_WORKSPACE/_build/native/debug/build/moonbitlang/office:$PATH"
           cd "$STUB"
-          moon cram test "$GITHUB_WORKSPACE/cmd/xlsx/cram"
+          moon cram test "$GITHUB_WORKSPACE/mbtexcel/cmd/xlsx/cram"
           moon cram test "$GITHUB_WORKSPACE/docx2html/tests/cram"
-          moon cram test "$GITHUB_WORKSPACE/office/cmd/office/cram"
+          moon cram test "$GITHUB_WORKSPACE/office-lib/cmd/office/cram"
           moon cram test "$GITHUB_WORKSPACE/pdflite/tests/cram"
           moon cram test "$GITHUB_WORKSPACE/pagelayout/tests/cram"
 
@@ -349,24 +348,24 @@ jobs:
       # CLI for wasm and drive it (filesystem read/write via the async runtime).
       - name: Wasm build + CLI smoke test
         run: |
-          moon build --target wasm cmd/xlsx
-          moon run --target wasm cmd/xlsx -- create ci.xlsx --sheet Data
-          moon run --target wasm cmd/xlsx -- set ci.xlsx Data A1 Hello
-          got=$(moon run --target wasm cmd/xlsx -- get ci.xlsx Data A1 2>/dev/null)
+          moon build --target wasm mbtexcel/cmd/xlsx
+          moon run --target wasm mbtexcel/cmd/xlsx -- create ci.xlsx --sheet Data
+          moon run --target wasm mbtexcel/cmd/xlsx -- set ci.xlsx Data A1 Hello
+          got=$(moon run --target wasm mbtexcel/cmd/xlsx -- get ci.xlsx Data A1 2>/dev/null)
           echo "get -> $got"; test "$got" = "Hello"
-          moon run --target wasm cmd/xlsx -- view ci.xlsx
+          moon run --target wasm mbtexcel/cmd/xlsx -- view ci.xlsx
           # Agent JSON surface: exercise a styled cell and a chart, then
           # validate the payloads structurally (not by substring).
-          moon run --target wasm cmd/xlsx -- set ci.xlsx Data B1 42
-          moon run --target wasm cmd/xlsx -- style ci.xlsx Data A1 --bold --fill 4472C4
-          moon run --target wasm cmd/xlsx -- chart ci.xlsx Data D2 --categories A1:A1 --values B1:B1 --name S
-          o=$(moon run --target wasm cmd/xlsx -- outline ci.xlsx 2>/dev/null)
+          moon run --target wasm mbtexcel/cmd/xlsx -- set ci.xlsx Data B1 42
+          moon run --target wasm mbtexcel/cmd/xlsx -- style ci.xlsx Data A1 --bold --fill 4472C4
+          moon run --target wasm mbtexcel/cmd/xlsx -- chart ci.xlsx Data D2 --categories A1:A1 --values B1:B1 --name S
+          o=$(moon run --target wasm mbtexcel/cmd/xlsx -- outline ci.xlsx 2>/dev/null)
           echo "$o" | jq -e '.schema == "xlsx.outline/1"
             and (.sheets[0].kind == "worksheet")
             and (.sheets[0].charts | length == 1)
             and (.sheets[0].charts[0].kinds == ["barChart"])
             and (.sheets[0].used_range == "A1:B1")'
-          j=$(moon run --target wasm cmd/xlsx -- get ci.xlsx Data A1:B2 --json 2>/dev/null)
+          j=$(moon run --target wasm mbtexcel/cmd/xlsx -- get ci.xlsx Data A1:B2 --json 2>/dev/null)
           echo "$j" | jq -e '.schema == "xlsx.cells/1"
             and (.cells | length == 2)
             and ([.cells[].ref] == ["A1", "B1"])
@@ -382,16 +381,16 @@ jobs:
           # The bad param name must fail with the op-indexed error, and the
           # file must be byte-identical afterwards (no write on failure).
           cp ci.xlsx ci-before.xlsx
-          out=$(moon run --target wasm cmd/xlsx -- batch ci.xlsx ci-batch.json 2>&1) && { echo "expected the bad script to fail"; exit 1; } || true
+          out=$(moon run --target wasm mbtexcel/cmd/xlsx -- batch ci.xlsx ci-batch.json 2>&1) && { echo "expected the bad script to fail"; exit 1; } || true
           echo "$out" | grep -q "error: op 2 (merge): missing param 'range'"
           cmp ci.xlsx ci-before.xlsx
           sed -i.bak 's/"cell_range"/"range"/' ci-batch.json
           rm ci-batch.json.bak
-          b=$(moon run --target wasm cmd/xlsx -- batch ci.xlsx ci-batch.json 2>/dev/null)
+          b=$(moon run --target wasm mbtexcel/cmd/xlsx -- batch ci.xlsx ci-batch.json 2>/dev/null)
           echo "batch -> $b"; test "$b" = "applied 3 op(s) to ci.xlsx"
-          c=$(moon run --target wasm cmd/xlsx -- calc ci.xlsx Data A3 2>/dev/null)
+          c=$(moon run --target wasm mbtexcel/cmd/xlsx -- calc ci.xlsx Data A3 2>/dev/null)
           echo "calc A3 -> $c"; test "$c" = "15"
-          v=$(moon run --target wasm cmd/xlsx -- validate ci.xlsx 2>/dev/null)
+          v=$(moon run --target wasm mbtexcel/cmd/xlsx -- validate ci.xlsx 2>/dev/null)
           echo "validate -> $v"; test "$v" = "valid"
           # The canonical office CLI dispatches by verified package content,
           # not extension alone. Exercise both supported formats under wasm.
@@ -444,7 +443,7 @@ jobs:
           # The third-party Book1 fixture has intersecting shared-formula ranges;
           # normalize that unrelated invalid metadata through the raw transaction
           # surface before exercising the fixture's original contents.
-          xlsx_source=fixtures/excelize/test/Book1.xlsx
+          xlsx_source=mbtexcel/fixtures/excelize/test/Book1.xlsx
           xlsx_sheet="$RUNNER_TEMP/office-book1-sheet2.xml"
           xlsx_sheet_valid="$RUNNER_TEMP/office-book1-sheet2-valid.xml"
           xlsx_fixture="$RUNNER_TEMP/office-Book1-valid.xlsx"
@@ -456,7 +455,7 @@ jobs:
             and .data.schema == "office.xlsx.outline/1"
             and .data.path == "/xlsx/workbook"
             and [.data.sheets[].path] == ["/xlsx/sheet[name=\"Sheet1\"]", "/xlsx/sheet[name=\"Sheet2\"]"]'
-          singleton_fixture=fixtures/excelize/test/OverflowNumericCell.xlsx
+          singleton_fixture=mbtexcel/fixtures/excelize/test/OverflowNumericCell.xlsx
           xs=$(moon run --target wasm office-cli -- outline "$singleton_fixture" --json 2>office-wasm.err) || { echo "office XLSX singleton outline failed; stderr:"; cat office-wasm.err; exit 1; }
           echo "$xs" | jq -e '.success == true
             and .data.sheets[0].used_range.reference == "A1:A1"
@@ -620,8 +619,8 @@ jobs:
 
       - name: Unified Office acceptance (native + wasm)
         run: |
-          bash office/tests/acceptance/run.sh native
-          bash office/tests/acceptance/run.sh wasm
+          bash office-lib/tests/acceptance/run.sh native
+          bash office-lib/tests/acceptance/run.sh wasm
 
   # The installed Office release: build a prepared candidate from a clean
   # tree, assert its manifest shape, and run acceptance against the installed
@@ -666,7 +665,7 @@ jobs:
         run: |
           manifest="$RUNNER_TEMP/moonbit-f1b-toolchain.manifest"
           test ! -e "$manifest" && test ! -L "$manifest"
-          office/tests/acceptance/fresh-agent/inventory.sh \
+          office-lib/tests/acceptance/fresh-agent/inventory.sh \
             "$MOON_HOME" "$manifest" linux-x86_64 \
             CREDITS.md bin include lib share
           shasum -a 256 "$manifest"
@@ -682,7 +681,7 @@ jobs:
           head="$EXPECTED_HEAD"
           install_parent=$(mktemp -d /var/tmp/office-f1b-install.XXXXXX)
           prefix="$install_parent/candidate"
-          prepare="$PWD/office/tests/acceptance/fresh-agent/prepare.sh"
+          prepare="$PWD/office-lib/tests/acceptance/fresh-agent/prepare.sh"
           moon_bin=$(command -v moon)
           moonc_bin=$(command -v moonc)
           moonrun_bin=$(command -v moonrun)
@@ -696,9 +695,9 @@ jobs:
               "$head" "$prefix" \
               "$moon_bin" "$moonc_bin" "$moonrun_bin"
           )
-          bash office/tests/acceptance/run.sh native \
+          bash office-lib/tests/acceptance/run.sh native \
             "$prefix/bin/office-native"
-          bash office/tests/acceptance/run.sh wasm \
+          bash office-lib/tests/acceptance/run.sh wasm \
             "$prefix/bin/office-wasm"
           jq -e \
             --arg head "$head" \
@@ -906,12 +905,12 @@ jobs:
           test -z "$(git status --porcelain=v1 --untracked-files=all)"
           PERL5OPT=-MOfficeF1BMustNotLoad \
           TAR_OPTIONS=--office-f1b-must-not-be-read \
-          office/tests/acceptance/fresh-agent/prepare.sh \
+          office-lib/tests/acceptance/fresh-agent/prepare.sh \
             "$head" "$prefix" \
             "$moon_bin" "$moonc_bin" "$moonrun_bin"
-          bash office/tests/acceptance/run.sh native \
+          bash office-lib/tests/acceptance/run.sh native \
             "$prefix/bin/office-native"
-          bash office/tests/acceptance/run.sh wasm \
+          bash office-lib/tests/acceptance/run.sh wasm \
             "$prefix/bin/office-wasm"
           candidate_sha=$(/usr/bin/shasum -a 256 "$prefix/CANDIDATE.json" | /usr/bin/awk '{print substr($1, length($1) - 63)}')
           codex_native=$(find "$(npm root -g)/@openai" -type f \
@@ -940,9 +939,9 @@ jobs:
 
       - name: Check transactional editing packages
         run: |
-          moon check --target native office/transaction
-          moon check --target native office/transaction/permission_contract
-          moon check --target native office/docx
+          moon check --target native office-lib/transaction
+          moon check --target native office-lib/transaction/permission_contract
+          moon check --target native office-lib/docx
 
       - name: Test transactional editing packages
         # Keep async-fs temporary fixtures on the checkout volume. The Windows
@@ -954,9 +953,9 @@ jobs:
           TMP: ${{ runner.temp }}
           TMPDIR: ${{ runner.temp }}
         run: |
-          moon test --target native office/transaction
-          moon test --target native office/transaction/permission_contract
-          moon test --target native office/docx
+          moon test --target native office-lib/transaction
+          moon test --target native office-lib/transaction/permission_contract
+          moon test --target native office-lib/docx
 
   # Advisory only. This harness-only contract took 10m13s on macOS and sat in
   # front of that job's real gate; #270 tracks restoring it as a required
@@ -1001,7 +1000,7 @@ jobs:
       - name: Fresh-agent runner contract
         continue-on-error: true
         timeout-minutes: 10
-        run: office/tests/acceptance/fresh-agent/run_test.sh
+        run: office-lib/tests/acceptance/fresh-agent/run_test.sh
 
   # The required check.
   #

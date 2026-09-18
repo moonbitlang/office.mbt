@@ -36,7 +36,7 @@ Building blocks in-repo:
   impossible registry dep).
 - `tools/openxml-validator` — .NET SDK validator, currently opens `SpreadsheetDocument`
   only; the same SDK validates `WordprocessingDocument`.
-- xlsx precedent: `inspect/` + `cmd/xlsx` outline/get JSON with versioned schemas
+- xlsx precedent: `inspect/` + `mbtexcel/cmd/xlsx` outline/get JSON with versioned schemas
   (`docs/agent-json-schemas.md`); `xlsx.batch/1` implemented on the in-flight PR #70.
 
 ## Strategy
@@ -55,7 +55,7 @@ dump/replay, equations (read and write).
 
 ## CLI shape (codex-accepted)
 
-New binary `docx2html/cmd/docx` (subcommand CLI mirroring `cmd/xlsx`; native+wasm;
+New binary `docx2html/cmd/docx` (subcommand CLI mirroring `mbtexcel/cmd/xlsx`; native+wasm;
 CliError-to-nonzero-exit). The published `docx2html` binary stays frozen; its conversion
 runner is extracted into a shared package **preserving all observable quirks** (warning
 placement, output-dir behavior, error prefixes, wasm newline-stdout, exact legacy help).
@@ -99,7 +99,7 @@ header/footer sets:
   meaning — mirroring `xlsx.batch/1`.
 - Schema IDs are declared once per module (docx IDs in a `docx2html/inspect` package);
   docs/agent-json-schemas.md gets a docx section and stops implying all IDs live in root
-  `inspect/schema.mbt`.
+  `mbtexcel/inspect/schema.mbt`.
 
 ## Write-path architecture (codex-corrected)
 

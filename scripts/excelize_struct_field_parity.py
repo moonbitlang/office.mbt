@@ -261,7 +261,7 @@ def main() -> int:
     ap.add_argument(
         "--mbti",
         action="append",
-        default=["pkg.generated.mbti", "xlsx/pkg.generated.mbti"],
+        default=["mbtexcel/pkg.generated.mbti", "mbtexcel/xlsx/pkg.generated.mbti"],
         help="Generated MoonBit interface files (.mbti). Can be repeated.",
     )
     ap.add_argument(

@@ -28,7 +28,7 @@ jobs:
       - name: MoonBit versions
         run: moon version --all
 
-      # This script copies office/ and its SDK validation harness into
+      # This script copies office-lib/ and its SDK validation harness into
       # RUNNER_TEMP, beyond the repository's moon.work boundary. It must
       # resolve and assert exact mbtexcel@0.1.9 and docx2html@0.2.0 tree
       # selections, then run the frozen full-module native and Wasm suites,

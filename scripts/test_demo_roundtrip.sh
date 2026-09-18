@@ -2,7 +2,7 @@
 set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-cd "$ROOT_DIR"
+cd "$ROOT_DIR/mbtexcel"
 
 shopt -s nullglob
 demo_tests=(mbtexcel_demo_*_roundtrip_test.mbt)

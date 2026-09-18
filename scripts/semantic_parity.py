@@ -487,7 +487,7 @@ def main() -> int:
         print(f"- json report: {args.json_report}")
         return 0
 
-    run(["moon", "run", "cmd/parity", "--", str(mbt_out)], cwd=repo_root)
+    run(["moon", "run", "mbtexcel/cmd/parity", "--", str(mbt_out)], cwd=repo_root)
     excelize_source = generate_excelize_outputs(repo_root, fixture_root, excelize_out)
 
     if not args.skip_validate:

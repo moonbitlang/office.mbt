@@ -86,7 +86,7 @@ so scripts can detect it. The async runtime exposes no public
 process-exit, so the only way to set a non-zero exit code is to let an
 error escape `main`.
 
-**Example (the workaround this repo now ships).** `cmd/xlsx` defines a
+**Example (the workaround this repo now ships).** `mbtexcel/cmd/xlsx` defines a
 `CliError(String)` suberror whose `Show` prints the message, and `main`'s
 catch does `raise CliError(...)` purely to force a non-zero exit:
 
@@ -118,7 +118,7 @@ stream for their target; see [issue #453](https://github.com/moonbitlang/office.
 native backend. A CLI that targets both native and wasm cannot write
 errors to stderr uniformly.
 
-**Example.** `moon check --target wasm cmd/xlsx` →
+**Example.** `moon check --target wasm mbtexcel/cmd/xlsx` →
 `Value stderr not found in package async/stdio`. The CLI had to route all
 error output to `println` (stdout) on both targets as a result.
 
@@ -139,7 +139,7 @@ imports are reported as `unused_package` with no clean fix.
 
 **Example.** After enabling the default warning set, `moon check
 --target js` reports 5 residual `unused_package` warnings for
-`moonbitlang/async/fs` and `.../process` in `moon.pkg` / `xlsx/moon.pkg`
+`moonbitlang/async/fs` and `.../process` in `moon.pkg` / `mbtexcel/xlsx/moon.pkg`
 — genuinely used on native+wasm, unused on js, and impossible to silence
 short of dropping the import (which breaks the other targets).
 

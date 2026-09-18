@@ -8,8 +8,8 @@ falling back to the legacy format-specific executables.
 Run both portable targets from the workspace root:
 
 ```sh
-bash office/tests/acceptance/run.sh native
-bash office/tests/acceptance/run.sh wasm
+bash office-lib/tests/acceptance/run.sh native
+bash office-lib/tests/acceptance/run.sh wasm
 ```
 
 The harness covers capability discovery, format identification, fresh

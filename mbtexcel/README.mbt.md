@@ -1,5 +1,8 @@
 # mbtexcel
 
+This module is part of the [Office workspace](../README.md). Run the development
+commands below from this `mbtexcel/` directory.
+
 A pure MoonBit library for reading and writing Microsoft Excel (XLSX) files. This is a port of the popular Go [excelize](https://github.com/xuri/excelize) library.
 
 ## Features
@@ -332,10 +335,10 @@ DOCX results use the `office.docx.{outline,element,text,query}/1` family and
 XLSX reads use `office.xlsx.{outline,element,text,query}/1`; creation and batch
 use `office.xlsx.{create,batch}/1`. Every result is inside `office.output/1`.
 See
-[Unified Office DOCX reads](docs/office-docx-read.md),
-[Unified Office XLSX reads](docs/office-xlsx-read.md),
-[Transactional Office XLSX mutations](docs/office-xlsx-mutations.md), and
-[Canonical Office selectors](docs/office-selectors.md).
+[Unified Office DOCX reads](../docs/office-docx-read.md),
+[Unified Office XLSX reads](../docs/office-xlsx-read.md),
+[Transactional Office XLSX mutations](../docs/office-xlsx-mutations.md), and
+[Canonical Office selectors](../docs/office-selectors.md).
 
 ## XLSX command-line tool
 
@@ -388,32 +391,32 @@ moon run cmd/demos -- stream_big demos_out 50000
 Run the demo roundtrip regression gate (local/CI):
 
 ```sh
-scripts/test_demo_roundtrip.sh
+../scripts/test_demo_roundtrip.sh
 ```
 
 Run the combined parity + demo regression gate:
 
 ```sh
-scripts/test_parity_gates.sh
+../scripts/test_parity_gates.sh
 ```
 
 ## Parity Commands
 
 For semantic parity and CI wrapper usage details, see:
 
-- `docs/excelize-parity.md`
-- `docs/parity-commands.md`
+- `../docs/excelize-parity.md`
+- `../docs/parity-commands.md`
 
 Common commands:
 
 ```sh
-scripts/test_parity_gates.sh
-scripts/test_semantic_parity.sh
-scripts/test_semantic_parity_fast.sh
-scripts/test_semantic_parity_ultrasmoke.sh
+../scripts/test_parity_gates.sh
+../scripts/test_semantic_parity.sh
+../scripts/test_semantic_parity_fast.sh
+../scripts/test_semantic_parity_ultrasmoke.sh
 ```
 
-See `docs/demos.md` for what each demo generates and how the code is structured.
+See `../docs/demos.md` for what each demo generates and how the code is structured.
 
 ## API Reference
 

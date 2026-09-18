@@ -1,9 +1,9 @@
 # Agent JSON schemas (office, xlsx, and docx CLIs)
 
 This is the normative specification of the versioned JSON payloads the
-unified `office` facade, `cmd/xlsx`, and `docx2html/cmd/docx` CLIs exchange
-with agents. The executable examples live in `office/cmd/office/cram/cli.t`,
-`cmd/xlsx/cram/agent.t`, and `docx2html/tests/cram/docx-agent.md`; snapshot
+unified `office` facade, `mbtexcel/cmd/xlsx`, and `docx2html/cmd/docx` CLIs exchange
+with agents. The executable examples live in `office-lib/cmd/office/cram/cli.t`,
+`mbtexcel/cmd/xlsx/cram/agent.t`, and `docx2html/tests/cram/docx-agent.md`; snapshot
 tests pin the exact serialized shapes. If this document and those tests
 disagree, the tests are the source of truth and this document has a bug.
 
@@ -14,7 +14,7 @@ disagree, the tests are the source of truth and this document has a bug.
   facade instead puts the result inside an `office.output/1` envelope; its
   `data.schema` identifies the result, but inner-object key order is not an
   API. Identifiers are declared once per package: xlsx identifiers (including the consumed
-  `xlsx.batch/1` and preferred `xlsx.batch/2`) in `inspect/schema.mbt`, docx read-side identifiers in
+  `xlsx.batch/1` and preferred `xlsx.batch/2`) in `mbtexcel/inspect/schema.mbt`, docx read-side identifiers in
   `docx2html/inspect/schema.mbt`, and the consumed `docx.batch/1` /
   `docx.batch/2` identifiers in `docx2html/batch` (`SCHEMA_BATCH`,
   `SCHEMA_BATCH_V2`), next to their parser.

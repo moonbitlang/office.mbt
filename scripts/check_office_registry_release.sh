@@ -8,7 +8,7 @@ trap 'rm -rf "$SANDBOX"' EXIT
 source "$ROOT/scripts/release_tree_guard.sh"
 
 mkdir -p "$MODULE" "$SANDBOX/scripts" "$SANDBOX/tools/openxml-validator"
-cp -R "$ROOT/office/." "$MODULE/"
+cp -R "$ROOT/office-lib/." "$MODULE/"
 cp "$ROOT/scripts/ensure_dotnet.sh" "$ROOT/scripts/validate_docx.sh" \
   "$ROOT/scripts/validate_xlsx.sh" "$SANDBOX/scripts/"
 cp "$ROOT/tools/openxml-validator/OpenXmlValidator.csproj" \

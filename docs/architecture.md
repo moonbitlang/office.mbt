@@ -6,21 +6,25 @@ with pointers to the concrete code that implements each piece. It is written as 
 
 If you are looking for proposed refactors, see `docs/architecture-improvements.md`.
 
+This is a historical engine-level description. For the current six-module
+workspace layout, see the [root README](../README.md). Existing source references
+below use repository-relative paths.
+
 ## Repository layout
 
-- `mbtexcel.mbt`
+- `mbtexcel/mbtexcel.mbt`
   - Thin “facade” package: exports convenience functions that delegate to `@xlsx`.
-- `xlsx/`
+- `mbtexcel/xlsx/`
   - The core implementation: workbook model + feature APIs + OOXML read/write +
     formula evaluation + encryption helpers (largest package).
-- `ooxml/`
+- `mbtexcel/ooxml/`
   - Small OOXML *package metadata* helpers for writing:
     `[Content_Types].xml` and `.rels` generation.
 - `zip/`
   - ZIP container implementation (read/write/deflate/crc32/etc).
 - `excelize/`
   - Vendored Go Excelize snapshot used as reference (not a MoonBit package).
-- `cmd/main/`
+- `mbtexcel/cmd/main/`
   - Small example CLI.
 - `docs/`
   - Porting / parity documents and analysis notes.
@@ -44,17 +48,17 @@ There are two layers of “user-facing” API:
 
 1. Root facade package (`moonbitlang/mbtexcel`)
    - `new_workbook`, `new_file`, `read`, `write`, `open_file`, etc.
-   - Implemented in `mbtexcel.mbt` as thin wrappers around `@xlsx`.
+   - Implemented in `mbtexcel/mbtexcel.mbt` as thin wrappers around `@xlsx`.
 
 2. Core package (`moonbitlang/mbtexcel/xlsx`)
    - Full workbook/worksheet API surface.
-   - The generated public interface is in `xlsx/pkg.generated.mbti`.
+   - The generated public interface is in `mbtexcel/xlsx/pkg.generated.mbti`.
 
 ## Core in-memory model
 
 ### `xlsx.Workbook`
 
-Defined in `xlsx/workbook.mbt`.
+Defined in `mbtexcel/xlsx/workbook.mbt`.
 
 `Workbook` is the central mutable object; it owns all sheets and global state:
 
@@ -64,7 +68,7 @@ Defined in `xlsx/workbook.mbt`.
   - `sheet_order : Array[SheetEntry]`
     - Preserves user-visible ordering across worksheets and chartsheets.
     - `SheetEntry` is an enum of indices into the `sheets` / `chart_sheets`
-      arrays (`xlsx/workbook.mbt`).
+      arrays (`mbtexcel/xlsx/workbook.mbt`).
 - Global style and names
   - `styles : Array[Style]` (index is the `style_id` stored on cells)
   - `conditional_styles : Array[Style]`
@@ -90,7 +94,7 @@ Important invariants (implicit in the current design):
 
 ### `xlsx.Worksheet`
 
-Defined in `xlsx/worksheet.mbt`.
+Defined in `mbtexcel/xlsx/worksheet.mbt`.
 
 `Worksheet` is a “kitchen sink” mutable record that aggregates many Excel
 features. Key groups:
@@ -141,11 +145,11 @@ Example (data validations):
 - Storage: `Worksheet.data_validations : Array[String]`
 - Typed API:
   - `Worksheet::add_data_validation(dv : DataValidation)` converts to XML and
-    stores the fragment (`xlsx/worksheet.mbt`).
+    stores the fragment (`mbtexcel/xlsx/worksheet.mbt`).
   - `Worksheet::get_data_validations()` parses stored XML fragments back to
-    `Array[DataValidation]` (`xlsx/worksheet.mbt`).
+    `Array[DataValidation]` (`mbtexcel/xlsx/worksheet.mbt`).
   - Range edits (delete/duplicate) modify attributes inside the stored XML
-    fragments via string rewriting (`xlsx/worksheet.mbt`, helpers like
+    fragments via string rewriting (`mbtexcel/xlsx/worksheet.mbt`, helpers like
     `replace_attr_value_in_open_tag`).
 
 This approach is used in a few places to:
@@ -163,21 +167,21 @@ The same “preserve raw XML when practical” idea exists at workbook scope too
 
 ## Read pipeline (XLSX -> Workbook)
 
-The primary sync entrypoint is `@xlsx.read` (implemented in `xlsx/read.mbt`),
-and the async IO wrappers live in `xlsx/io.mbt` (`open_file`, `open_reader`,
+The primary sync entrypoint is `@xlsx.read` (implemented in `mbtexcel/xlsx/read.mbt`),
+and the async IO wrappers live in `mbtexcel/xlsx/io.mbt` (`open_file`, `open_reader`,
 `read_zip_reader`).
 
 The reader is internally split into focused files:
 
-- `xlsx/read_workbook_xml.mbt`: `xl/workbook.xml` parsing
-- `xlsx/read_worksheet_xml.mbt`: `xl/worksheets/sheetN.xml` parsing
-- `xlsx/read_styles_xfs.mbt`: style/xfs parsing helpers
-- `xlsx/read_shared_strings.mbt`: shared strings parsing
+- `mbtexcel/xlsx/read_workbook_xml.mbt`: `xl/workbook.xml` parsing
+- `mbtexcel/xlsx/read_worksheet_xml.mbt`: `xl/worksheets/sheetN.xml` parsing
+- `mbtexcel/xlsx/read_styles_xfs.mbt`: style/xfs parsing helpers
+- `mbtexcel/xlsx/read_shared_strings.mbt`: shared strings parsing
 
-High-level steps inside `read_zip_bytes` (`xlsx/read.mbt`):
+High-level steps inside `read_zip_bytes` (`mbtexcel/xlsx/read.mbt`):
 
 1. Options and unzip limits
-   - `normalize_unzip_limits` (`xlsx/options.mbt`)
+   - `normalize_unzip_limits` (`mbtexcel/xlsx/options.mbt`)
    - `@zip.read(bytes)` to get an in-memory `@zip.Archive`
    - `enforce_unzip_limits(archive, options)` to prevent zip bombs
 
@@ -203,7 +207,7 @@ High-level steps inside `read_zip_bytes` (`xlsx/read.mbt`):
 
 4. Resolve OOXML relationships
    - Load `xl/_rels/workbook.xml.rels`.
-   - Parse relationship targets with helpers from `xlsx/ooxml_rels.mbt` and then
+   - Parse relationship targets with helpers from `mbtexcel/xlsx/ooxml_rels.mbt` and then
      map `rId..` to actual part paths.
    - For each sheet from `workbook.xml`:
      - Determine whether it is a worksheet or chartsheet by checking which rel
@@ -227,20 +231,20 @@ High-level steps inside `read_zip_bytes` (`xlsx/read.mbt`):
 Encryption note:
 
 - `@xlsx.read_with_password` handles encrypted packages by decrypting first and
-  then routing back into the same `read_zip_bytes` pipeline (`xlsx/read.mbt` and
-  `xlsx/encryption.mbt`).
+  then routing back into the same `read_zip_bytes` pipeline (`mbtexcel/xlsx/read.mbt` and
+  `mbtexcel/xlsx/encryption.mbt`).
 
 ## Write pipeline (Workbook -> XLSX)
 
-The primary entrypoint is `@xlsx.write` (`xlsx/write.mbt`).
-Async “save to path / writer” helpers are in `xlsx/io.mbt`.
+The primary entrypoint is `@xlsx.write` (`mbtexcel/xlsx/write.mbt`).
+Async “save to path / writer” helpers are in `mbtexcel/xlsx/io.mbt`.
 
 The writer is internally split into focused files:
 
-- `xlsx/write_workbook_xml.mbt`: `xl/workbook.xml` / workbook rels emission
-- `xlsx/write_shared_strings.mbt`: shared strings collection + `xl/sharedStrings.xml`
+- `mbtexcel/xlsx/write_workbook_xml.mbt`: `xl/workbook.xml` / workbook rels emission
+- `mbtexcel/xlsx/write_shared_strings.mbt`: shared strings collection + `xl/sharedStrings.xml`
 
-High-level steps inside `write(workbook)` (`xlsx/write.mbt`):
+High-level steps inside `write(workbook)` (`mbtexcel/xlsx/write.mbt`):
 
 1. Precompute shared structures
    - Shared strings: `collect_shared_strings` scans all sheets and builds:
@@ -290,17 +294,17 @@ The stream writer API exists to support a write pattern where rows are provided
 in order, avoiding extra sorting work and preventing incompatible worksheet
 mutations while streaming.
 
-- Entry: `Workbook::new_stream_writer(sheet_name)` (`xlsx/workbook.mbt`)
+- Entry: `Workbook::new_stream_writer(sheet_name)` (`mbtexcel/xlsx/workbook.mbt`)
   - Requires the worksheet to be empty and not already in stream mode.
   - Sets `Worksheet.stream_state = Writing`.
-- Usage: `StreamWriter::set_row_cells` (`xlsx/stream.mbt`)
+- Usage: `StreamWriter::set_row_cells` (`mbtexcel/xlsx/stream.mbt`)
   - Appends cells in increasing row order (and increasing col order within a row).
   - Validates `style_id` ranges against the workbook’s `styles`.
 - Close: `StreamWriter::flush`
   - Sets `Worksheet.stream_state = Flushed` and closes the writer.
 - Guardrails:
   - Many worksheet APIs call `Worksheet::ensure_stream_idle` and will error if a
-    stream writer is active (`xlsx/worksheet.mbt`).
+    stream writer is active (`mbtexcel/xlsx/worksheet.mbt`).
 
 Note: this “stream writer” still stores cells in memory (it is not a true
 stream-to-disk writer); its main architectural role is ordering + API safety.
@@ -310,13 +314,13 @@ stream-to-disk writer); its main architectural role is ordering + API safety.
 Several “generic-ish” helpers are currently spread across large files:
 
 - XML escaping and attribute parsing:
-  - `xlsx/xml.mbt` (`escape_xml_text`, `escape_xml_attr`, `attr_value`, ...)
-  - `xlsx/ooxml_utils.mbt` (`tag_attributes_in`, `extract_tag_body_from`, ...)
-  - `ooxml/xml.mbt` (a second `escape_xml_attr`)
+  - `mbtexcel/xlsx/xml.mbt` (`escape_xml_text`, `escape_xml_attr`, `attr_value`, ...)
+  - `mbtexcel/xlsx/ooxml_utils.mbt` (`tag_attributes_in`, `extract_tag_body_from`, ...)
+  - `mbtexcel/ooxml/xml.mbt` (a second `escape_xml_attr`)
 - Relationship parsing and target resolution:
-  - `xlsx/ooxml_rels.mbt` (`parse_relationship_targets`, `rels_path_for`, ...)
+  - `mbtexcel/xlsx/ooxml_rels.mbt` (`parse_relationship_targets`, `rels_path_for`, ...)
 - OOXML fragment rewriting helpers used by worksheet edits:
-  - `xlsx/ooxml_utils.mbt` (`replace_attr_value_in_open_tag`, ...)
+  - `mbtexcel/xlsx/ooxml_utils.mbt` (`replace_attr_value_in_open_tag`, ...)
 
 One motivation for refactoring is to centralize these so that “OOXML string
 plumbing” is consistent and testable in one place.
@@ -327,32 +331,32 @@ The `xlsx/` package is organized by feature files rather than subpackages. A
 few files act as “hubs”:
 
 - Core model and user-facing APIs
-  - `xlsx/workbook_types.mbt`: `Workbook` struct + small shared helpers
-  - `xlsx/workbook.mbt`: most workbook-level operations
-  - `xlsx/worksheet_types.mbt`: `Worksheet`/`Cell`/drawing structs + accessors
-  - `xlsx/worksheet.mbt`: most worksheet-level operations
+  - `mbtexcel/xlsx/workbook_types.mbt`: `Workbook` struct + small shared helpers
+  - `mbtexcel/xlsx/workbook.mbt`: most workbook-level operations
+  - `mbtexcel/xlsx/worksheet_types.mbt`: `Worksheet`/`Cell`/drawing structs + accessors
+  - `mbtexcel/xlsx/worksheet.mbt`: most worksheet-level operations
 - OOXML IO
-  - `xlsx/read.mbt`: parse ZIP+OOXML into a `Workbook`
-  - `xlsx/read_workbook_xml.mbt`: workbook.xml parsing
-  - `xlsx/read_worksheet_xml.mbt`: worksheet xml parsing
-  - `xlsx/write.mbt`: emit OOXML parts + ZIP from a `Workbook`
-  - `xlsx/write_workbook_xml.mbt`: workbook.xml emission
-  - `xlsx/write_shared_strings.mbt`: shared strings collection + emission
-  - `xlsx/io.mbt`: async IO glue (`open_file`, `save_as`, `write_to`, ...)
+  - `mbtexcel/xlsx/read.mbt`: parse ZIP+OOXML into a `Workbook`
+  - `mbtexcel/xlsx/read_workbook_xml.mbt`: workbook.xml parsing
+  - `mbtexcel/xlsx/read_worksheet_xml.mbt`: worksheet xml parsing
+  - `mbtexcel/xlsx/write.mbt`: emit OOXML parts + ZIP from a `Workbook`
+  - `mbtexcel/xlsx/write_workbook_xml.mbt`: workbook.xml emission
+  - `mbtexcel/xlsx/write_shared_strings.mbt`: shared strings collection + emission
+  - `mbtexcel/xlsx/io.mbt`: async IO glue (`open_file`, `save_as`, `write_to`, ...)
 - Heavy feature subsystems (large, relatively self-contained)
-  - `xlsx/formula_eval_types.mbt`: formula constants + core value/AST types
-  - `xlsx/formula_parse.mbt`: formula parsing
-  - `xlsx/formula_eval.mbt`: formula evaluation core (expression + range eval)
-  - `xlsx/formula_builtins.mbt`: built-in function implementations
-  - `xlsx/style.mbt`: style model, style XML read/write, and formatting helpers
-  - `xlsx/chart_options.mbt`: typed chart options -> chart OOXML
-  - `xlsx/conditional_format.mbt`: conditional formatting model + XML helpers
-  - `xlsx/sparkline.mbt`: sparklines model + XML helpers
-  - `xlsx/form_control.mbt`: form controls (VML) model + XML helpers
+  - `mbtexcel/xlsx/formula_eval_types.mbt`: formula constants + core value/AST types
+  - `mbtexcel/xlsx/formula_parse.mbt`: formula parsing
+  - `mbtexcel/xlsx/formula_eval.mbt`: formula evaluation core (expression + range eval)
+  - `mbtexcel/xlsx/formula_builtins.mbt`: built-in function implementations
+  - `mbtexcel/xlsx/style.mbt`: style model, style XML read/write, and formatting helpers
+  - `mbtexcel/xlsx/chart_options.mbt`: typed chart options -> chart OOXML
+  - `mbtexcel/xlsx/conditional_format.mbt`: conditional formatting model + XML helpers
+  - `mbtexcel/xlsx/sparkline.mbt`: sparklines model + XML helpers
+  - `mbtexcel/xlsx/form_control.mbt`: form controls (VML) model + XML helpers
 - Container/security helpers
-  - `xlsx/encryption.mbt`: OOXML package encryption/decryption orchestration
+  - `mbtexcel/xlsx/encryption.mbt`: OOXML package encryption/decryption orchestration
   - `crypto/`: cryptographic primitives (AES + hashes)
-  - `xlsx/base64.mbt`: thin wrappers over `moonbitlang/core/encoding/base64`
+  - `mbtexcel/xlsx/base64.mbt`: thin wrappers over `moonbitlang/core/encoding/base64`
     (mapping errors to `XlsxError`)
 
 Because MoonBit allows `Type::method` blocks to live in any file in a package,

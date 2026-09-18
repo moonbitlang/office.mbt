@@ -1,5 +1,5 @@
 ---
-name: office
+name: office-cli
 description: >-
   Work with non-PowerPoint Office/OOXML documents through the published unified
   office CLI: identify, inspect, query, validate, diagnose, preview, create,
