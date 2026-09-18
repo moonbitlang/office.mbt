@@ -423,7 +423,7 @@ moon test --target js
 moon test --target native
 ```
 
-The workspace currently resolves `moonbitlang/async@0.20.2`. An async upgrade
+The workspace currently resolves `moonbitlang/async@0.22.1`. An async upgrade
 is allowed when it has a concrete benefit, but it must be an isolated dependency
 PR with native/Wasm scheduler and filesystem tests; do not combine it with a
 feature PR.
