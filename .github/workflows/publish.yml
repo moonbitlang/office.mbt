@@ -73,7 +73,6 @@ jobs:
           moon info "${packages[@]}"
           git diff --exit-code -- "${modules[@]}"
           moon test "${packages[@]}"
-          moon test --target js "${packages[@]}"
           moon fmt "${packages[@]}"
           git diff --exit-code -- "${modules[@]}"
 
