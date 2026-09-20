@@ -230,14 +230,6 @@ fn image_dimensions(
 }
 
 ///|
-fn be_u32(data : Bytes, offset : Int) -> Int {
-  (data[offset].to_int() << 24) |
-  (data[offset + 1].to_int() << 16) |
-  (data[offset + 2].to_int() << 8) |
-  data[offset + 3].to_int()
-}
-
-///|
 fn png_dimensions(data : Bytes) -> (Int, Int)? {
   // Full 8-byte signature, then the IHDR chunk: length(4)=13, 'IHDR'(4),
   // width(4), height(4).
@@ -254,7 +246,7 @@ fn png_dimensions(data : Bytes) -> (Int, Int)? {
     data[7] != 0x0A {
     return None
   }
-  if be_u32(data, 8) != 13 {
+  if data.unsafe_read_uint32_be(8).reinterpret_as_int() != 13 {
     return None
   }
   if data[12] != b'I' ||
@@ -263,7 +255,12 @@ fn png_dimensions(data : Bytes) -> (Int, Int)? {
     data[15] != b'R' {
     return None
   }
-  Some((be_u32(data, 16), be_u32(data, 20)))
+  Some(
+    (
+      data.unsafe_read_uint32_be(16).reinterpret_as_int(),
+      data.unsafe_read_uint32_be(20).reinterpret_as_int(),
+    ),
+  )
 }
 
 ///|

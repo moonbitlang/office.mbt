@@ -8,7 +8,7 @@ import {
 
 import {
   "moonbitlang/docx2html/core",
-  "moonbitlang/mbtexcel/testutil/zip_fixture",
+  "moonbitlang/docx2html/testutil/zip_fixture",
   "moonbit-community/flate/zip" @mbtzip,
   "moonbitlang/core/encoding/utf8",
 } for "test"

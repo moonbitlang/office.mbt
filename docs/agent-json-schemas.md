@@ -2,7 +2,7 @@
 
 This is the normative specification of the versioned JSON payloads the
 unified `office` facade, `mbtexcel/cmd/xlsx`, and `docx2html/cmd/docx` CLIs exchange
-with agents. The executable examples live in `office-lib/cmd/office/cram/cli.t`,
+with agents. The executable examples live in `office-cli/cram/cli.t`,
 `mbtexcel/cmd/xlsx/cram/agent.t`, and `docx2html/tests/cram/docx-agent.md`; snapshot
 tests pin the exact serialized shapes. If this document and those tests
 disagree, the tests are the source of truth and this document has a bug.

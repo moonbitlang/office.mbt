@@ -16,7 +16,6 @@ import {
   "moonbitlang/async@0.22.1",
   "moonbitlang/x@0.4.50",
   "moonbitlang/docx2html@0.6.1",
-  "moonbitlang/mbtexcel@0.2.0",
   "moonbitlang/pdflite@0.2.0",
   "moonbit-community/flate@0.8.1",
 }

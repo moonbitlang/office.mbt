@@ -21,7 +21,7 @@ allowlist="scripts/root_files.allow"
 # These packages sit at/above the root and legitimately import it.
 is_allowed_importer() {
   case "$1" in
-    cmd/main | markdown | markdown/cmd | async_io | fixture_acceptance) return 0 ;;
+    cmd/pdflite | markdown | async_io | fixture_acceptance) return 0 ;;
     */fixture_acceptance) return 0 ;;
     *) return 1 ;;
   esac

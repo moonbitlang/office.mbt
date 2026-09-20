@@ -23,31 +23,26 @@ dates, low-level cryptography, async file IO, or Markdown extraction.
 
 ## Native CLI
 
-The native CLI wrapper lives in `cmd/main` and uses
+The native CLI wrapper lives in `cmd/pdflite` and uses
 `moonbitlang/core/argparse` for help, version text, subcommands, and parse
-errors. Build it from this repository with:
+errors. Run it from this module with `moon run`:
 
 ```sh
-moon run --target native --release --build-only cmd/main
+moon run --target native cmd/pdflite -- info fixtures/camlpdf/logo.pdf
+moon run --target native cmd/pdflite -- info --json fixtures/camlpdf/logo.pdf
+moon run --target native cmd/pdflite -- validate fixtures/camlpdf/logo.pdf
+moon run --target native cmd/pdflite -- rewrite fixtures/camlpdf/logo.pdf _build/logo-roundtrip.pdf
+moon run --target native cmd/pdflite -- merge _build/combined.pdf cover.pdf chapter-1.pdf appendix.pdf
 ```
 
-The executable is written to `_build/native/release/build/cmd/main/main.exe`.
-For example:
+Black-box CLI documentation tests live in `tests/cram`. The cram file invokes
+the binary directly, so build it once and point `PDFLITE_CLI` at the
+executable. Moon Cram is currently available in MoonBit nightly, so run them
+with a nightly toolchain:
 
 ```sh
-_build/native/release/build/cmd/main/main.exe info fixtures/camlpdf/logo.pdf
-_build/native/release/build/cmd/main/main.exe info --json fixtures/camlpdf/logo.pdf
-_build/native/release/build/cmd/main/main.exe validate fixtures/camlpdf/logo.pdf
-_build/native/release/build/cmd/main/main.exe rewrite fixtures/camlpdf/logo.pdf _build/logo-roundtrip.pdf
-_build/native/release/build/cmd/main/main.exe merge _build/combined.pdf cover.pdf chapter-1.pdf appendix.pdf
-```
-
-Black-box CLI documentation tests live in `tests/cram`. Moon Cram is currently
-available in MoonBit nightly, so run them with a nightly toolchain:
-
-```sh
-moon run --target native --release --build-only cmd/main
-PDFLITE_CLI="$PWD/_build/native/release/build/cmd/main/main.exe" \
+moon run --target native --release --build-only cmd/pdflite
+PDFLITE_CLI="$PWD/_build/native/release/build/moonbitlang/pdflite/cmd/pdflite/pdflite.exe" \
 PDFLITE_LOGO_PDF="$PWD/fixtures/camlpdf/logo.pdf" \
 moon cram test --shell /bin/bash --timeout-seconds 120 tests/cram
 ```

@@ -16,7 +16,7 @@ import {
 import {
   "moonbitlang/office-lib" @office,
   "moonbitlang/mbtexcel" @excel,
-  "moonbitlang/mbtexcel/testutil/zip_fixture",
+  "moonbitlang/docx2html/testutil/zip_fixture",
   "moonbitlang/docx2html" @word,
 } for "test"
 

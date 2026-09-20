@@ -3,11 +3,7 @@ fn img_read_u32_be(bytes : BytesView, offset : Int) -> Int? {
   if offset < 0 || offset + 4 > bytes.length() {
     return None
   }
-  let b0 = bytes[offset].to_int()
-  let b1 = bytes[offset + 1].to_int()
-  let b2 = bytes[offset + 2].to_int()
-  let b3 = bytes[offset + 3].to_int()
-  Some((b0 << 24) | (b1 << 16) | (b2 << 8) | b3)
+  Some(bytes.unsafe_read_uint32_be(offset).reinterpret_as_int())
 }
 
 ///|
@@ -15,11 +11,7 @@ fn img_read_u32_le(bytes : BytesView, offset : Int) -> Int? {
   if offset < 0 || offset + 4 > bytes.length() {
     return None
   }
-  let b0 = bytes[offset].to_int()
-  let b1 = bytes[offset + 1].to_int()
-  let b2 = bytes[offset + 2].to_int()
-  let b3 = bytes[offset + 3].to_int()
-  Some(b0 | (b1 << 8) | (b2 << 16) | (b3 << 24))
+  Some(bytes.unsafe_read_uint32_le(offset).reinterpret_as_int())
 }
 
 ///|
@@ -27,9 +19,7 @@ fn img_read_u16_be(bytes : BytesView, offset : Int) -> Int? {
   if offset < 0 || offset + 2 > bytes.length() {
     return None
   }
-  let b0 = bytes[offset].to_int()
-  let b1 = bytes[offset + 1].to_int()
-  Some((b0 << 8) | b1)
+  Some(bytes.unsafe_read_uint16_be(offset).to_int())
 }
 
 ///|
@@ -37,9 +27,7 @@ fn img_read_u16_le(bytes : BytesView, offset : Int) -> Int? {
   if offset < 0 || offset + 2 > bytes.length() {
     return None
   }
-  let b0 = bytes[offset].to_int()
-  let b1 = bytes[offset + 1].to_int()
-  Some(b0 | (b1 << 8))
+  Some(bytes.unsafe_read_uint16_le(offset).to_int())
 }
 
 ///|

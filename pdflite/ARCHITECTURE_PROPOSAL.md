@@ -199,7 +199,7 @@ Layer 2  Document core     [ABANDONED] PdfDocument stays in root (facade);
 Layer 3  Codecs/filters    flate, codec, (image codecs), crypt stream policy
 Layer 4  Feature domains   leaf models/algorithms extracted BELOW root; the
                            document-facing feature logic stays in root as methods
-Layer 5  Entry points      cmd/main, markdown/cmd, async_io, fixture_acceptance
+Layer 5  Entry points      cmd/pdflite, markdown, async_io, fixture_acceptance
 ```
 
 Rules (CORRECTED per §0 — the original bullets assumed a `document` layer and a

@@ -2,7 +2,8 @@
 
 `moonbitlang/pdflite/markdown` extracts readable Markdown text from PDF documents.
 It parses page resources and content streams through the root package, decodes
-font text where possible, and emits page-oriented Markdown.
+font text where possible, and emits page-oriented Markdown. The standalone
+command-line wrapper is `moonbitlang/pdf2md`.
 
 ```mermaid
 flowchart LR

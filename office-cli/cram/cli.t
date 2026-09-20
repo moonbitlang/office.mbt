@@ -1,13 +1,13 @@
 The canonical office command identifies structurally valid XLSX and DOCX
 packages in text or JSON mode.
 
-  $ office.exe identify "$TESTDIR/../../../../mbtexcel/fixtures/excelize/test/Book1.xlsx"
+  $ office.exe identify "$TESTDIR/../../mbtexcel/fixtures/excelize/test/Book1.xlsx"
   xlsx
 
-  $ office.exe identify "$TESTDIR/../../../../docx2html/tests/cram/fixtures/single-paragraph.docx"
+  $ office.exe identify "$TESTDIR/../../docx2html/tests/cram/fixtures/single-paragraph.docx"
   docx
 
-  $ office.exe identify "$TESTDIR/../../../../docx2html/tests/cram/fixtures/single-paragraph.docx" --json | jq -c '{schema,success,data:{schema:.data.schema,format:.data.format}}'
+  $ office.exe identify "$TESTDIR/../../docx2html/tests/cram/fixtures/single-paragraph.docx" --json | jq -c '{schema,success,data:{schema:.data.schema,format:.data.format}}'
   {"schema":"office.output/1","success":true,"data":{"schema":"office.identify/1","format":"docx"}}
 
 Help is generated from the same registry that declares the implemented
@@ -254,19 +254,19 @@ paragraph-relative UTF-16 over the reader PROJECTION, so a needle spanning
 run boundaries still matches — the literal need not exist contiguously in
 the XML.
 
-  $ office.exe find "$TESTDIR/../../../../docx2html/tests/cram/fixtures/single-paragraph.docx" --text "on imported"
+  $ office.exe find "$TESTDIR/../../docx2html/tests/cram/fixtures/single-paragraph.docx" --text "on imported"
   1. p[1] [8,19) on imported
-  $ office.exe find "$TESTDIR/../../../../docx2html/tests/cram/fixtures/single-paragraph.docx" --text "on imported" --json | jq -c '{schema:.data.schema,total:.data.matches_total,actionable:.data.actionable_returned,unactionable:.data.unactionable_returned}'
+  $ office.exe find "$TESTDIR/../../docx2html/tests/cram/fixtures/single-paragraph.docx" --text "on imported" --json | jq -c '{schema:.data.schema,total:.data.matches_total,actionable:.data.actionable_returned,unactionable:.data.unactionable_returned}'
   {"schema":"office.docx.matches/1","total":1,"actionable":1,"unactionable":0}
-  $ office.exe find "$TESTDIR/../../../../docx2html/tests/cram/fixtures/single-paragraph.docx" --text "on imported" --json | jq -c '.data.matches[0] | {path,range,runs,source_kinds,actionable,reason,para_id,paragraph_anchor_status,physical_para_ids}'
+  $ office.exe find "$TESTDIR/../../docx2html/tests/cram/fixtures/single-paragraph.docx" --text "on imported" --json | jq -c '.data.matches[0] | {path,range,runs,source_kinds,actionable,reason,para_id,paragraph_anchor_status,physical_para_ids}'
   {"path":"p[1]","range":{"start":8,"end":19,"unit":"utf16"},"runs":["p[1]/r[1]"],"source_kinds":["text"],"actionable":true,"reason":null,"para_id":null,"paragraph_anchor_status":"missing","physical_para_ids":null}
 
 Finding nothing is a fact about the document, not a failed request: a read
 exits 0 with an empty list. Only a mutation fails closed on no match.
 
-  $ office.exe find "$TESTDIR/../../../../docx2html/tests/cram/fixtures/single-paragraph.docx" --text "absent"
+  $ office.exe find "$TESTDIR/../../docx2html/tests/cram/fixtures/single-paragraph.docx" --text "absent"
   no candidates for 'absent'
-  $ office.exe find "$TESTDIR/../../../../docx2html/tests/cram/fixtures/single-paragraph.docx" --text "absent" --json | jq -c '{total:.data.matches_total,matches:.data.matches}'
+  $ office.exe find "$TESTDIR/../../docx2html/tests/cram/fixtures/single-paragraph.docx" --text "absent" --json | jq -c '{total:.data.matches_total,matches:.data.matches}'
   {"total":0,"matches":[]}
 
 v1 searches the body only, which `stories_scanned` states rather than
@@ -281,17 +281,17 @@ ordinals, same verdicts. It publishes atomically to a NEW file, re-reads
 every affected paragraph before publication, and writes nothing on any
 refusal.
 
-  $ office.exe replace "$TESTDIR/../../../../docx2html/tests/cram/fixtures/single-paragraph.docx" fr-out.docx --text "imported" --with "borrowed" --expect 1
+  $ office.exe replace "$TESTDIR/../../docx2html/tests/cram/fixtures/single-paragraph.docx" fr-out.docx --text "imported" --with "borrowed" --expect 1
   replace: replaced 1 occurrence(s) across 1 paragraph(s) -> fr-out.docx
   $ office.exe text fr-out.docx
   /docx/body/p[1]	Walking on borrowed air
-  $ office.exe replace "$TESTDIR/../../../../docx2html/tests/cram/fixtures/single-paragraph.docx" fr-json.docx --text "imported" --with "borrowed" --expect 1 --json | jq -c '{schema:.data.schema,replaced:.data.replaced,selected:.data.selected,affected:.data.affected,affected_paragraphs:.data.affected_paragraphs,changed:.data.changed}'
+  $ office.exe replace "$TESTDIR/../../docx2html/tests/cram/fixtures/single-paragraph.docx" fr-json.docx --text "imported" --with "borrowed" --expect 1 --json | jq -c '{schema:.data.schema,replaced:.data.replaced,selected:.data.selected,affected:.data.affected,affected_paragraphs:.data.affected_paragraphs,changed:.data.changed}'
   {"schema":"office.docx.replace/1","replaced":1,"selected":[1],"affected":["p[1]"],"affected_paragraphs":[{"path":"p[1]","para_id":null,"paragraph_anchor_status":"missing"}],"changed":true}
 
 `--dry-run` runs the identical selection and preflight pipeline, exits as
 the real run would, and writes nothing.
 
-  $ office.exe replace "$TESTDIR/../../../../docx2html/tests/cram/fixtures/single-paragraph.docx" fr-dry.docx --text "imported" --with "borrowed" --dry-run --json | jq -c '{replaced:.data.replaced,dry_run:.data.dry_run}'
+  $ office.exe replace "$TESTDIR/../../docx2html/tests/cram/fixtures/single-paragraph.docx" fr-dry.docx --text "imported" --with "borrowed" --dry-run --json | jq -c '{replaced:.data.replaced,dry_run:.data.dry_run}'
   {"replaced":1,"dry_run":true}
   $ test -f fr-dry.docx || echo "nothing written"
   nothing written
@@ -300,21 +300,21 @@ Zero matches without `--allow-zero` refuses, exits 1, and writes nothing;
 `--expect` with `--allow-zero` is rejected as contradictory before any
 file is read.
 
-  $ office.exe replace "$TESTDIR/../../../../docx2html/tests/cram/fixtures/single-paragraph.docx" fr-zero.docx --text "absent" --with "x" --json 2>&1 | jq -c '{success,code:.error.code}'
+  $ office.exe replace "$TESTDIR/../../docx2html/tests/cram/fixtures/single-paragraph.docx" fr-zero.docx --text "absent" --with "x" --json 2>&1 | jq -c '{success,code:.error.code}'
   {"success":false,"code":"office.replace.no_match"}
-  $ office.exe replace "$TESTDIR/../../../../docx2html/tests/cram/fixtures/single-paragraph.docx" fr-zero.docx --text "absent" --with "x"
+  $ office.exe replace "$TESTDIR/../../docx2html/tests/cram/fixtures/single-paragraph.docx" fr-zero.docx --text "absent" --with "x"
   office: no candidate matched the needle; pass allow-zero to treat that as success, or expect 0 to assert it
   [1]
   $ test -f fr-zero.docx || echo "nothing written"
   nothing written
-  $ office.exe replace "$TESTDIR/../../../../docx2html/tests/cram/fixtures/single-paragraph.docx" fr-contra.docx --text "imported" --with "x" --expect 1 --allow-zero --json 2>&1 | jq -c '{success,code:.error.code}'
+  $ office.exe replace "$TESTDIR/../../docx2html/tests/cram/fixtures/single-paragraph.docx" fr-contra.docx --text "imported" --with "x" --expect 1 --allow-zero --json 2>&1 | jq -c '{success,code:.error.code}'
   {"success":false,"code":"office.invalid_arguments"}
 
 A control character in either flag is a request error: a tab in `--text`
 would match a structural tab ATOM, and replacing that atom is exactly the
 structural mutation v1 forbids from text.
 
-  $ office.exe replace "$TESTDIR/../../../../docx2html/tests/cram/fixtures/single-paragraph.docx" fr-ctl.docx --text "a	b" --with "x"
+  $ office.exe replace "$TESTDIR/../../docx2html/tests/cram/fixtures/single-paragraph.docx" fr-ctl.docx --text "a	b" --with "x"
   office: --text must not contain control characters (found U+9); v1 neither matches nor makes structural breaks and tabs from text — use `office find` to locate atom content
   [1]
 
@@ -325,16 +325,16 @@ duplicate fixture carries the same id twice (differing by case) plus a
 unique heading; both duplicate carriers say so, and neither becomes an
 addressable anchor.
 
-  $ office.exe text "$TESTDIR/../../../../docx2html/tests/cram/fixtures/duplicate-para-id.docx" --json | jq -c '[.data.entries[] | {path,para_id,paragraph_anchor_status}]'
+  $ office.exe text "$TESTDIR/../../docx2html/tests/cram/fixtures/duplicate-para-id.docx" --json | jq -c '[.data.entries[] | {path,para_id,paragraph_anchor_status}]'
   [{"path":"/docx/body/p[1]","para_id":"1A2B3C4D","paragraph_anchor_status":"duplicate"},{"path":"/docx/body/p[2]","para_id":"1A2B3C4D","paragraph_anchor_status":"duplicate"},{"path":"/docx/body/p[3]","para_id":"5E5E5E5E","paragraph_anchor_status":"unique"}]
 
-  $ office.exe get "$TESTDIR/../../../../docx2html/tests/cram/fixtures/duplicate-para-id.docx" "/docx/body/p[1]" --json | jq -c '{path:.data.path,para_id:.data.para_id,status:.data.paragraph_anchor_status}'
+  $ office.exe get "$TESTDIR/../../docx2html/tests/cram/fixtures/duplicate-para-id.docx" "/docx/body/p[1]" --json | jq -c '{path:.data.path,para_id:.data.para_id,status:.data.paragraph_anchor_status}'
   {"path":"/docx/body/p[1]","para_id":"1A2B3C4D","status":"duplicate"}
 
-  $ office.exe query "$TESTDIR/../../../../docx2html/tests/cram/fixtures/duplicate-para-id.docx" --kind p --json | jq -c '[.data.matches[] | {path,para_id,paragraph_anchor_status}]'
+  $ office.exe query "$TESTDIR/../../docx2html/tests/cram/fixtures/duplicate-para-id.docx" --kind p --json | jq -c '[.data.matches[] | {path,para_id,paragraph_anchor_status}]'
   [{"path":"/docx/body/p[1]","para_id":"1A2B3C4D","paragraph_anchor_status":"duplicate"},{"path":"/docx/body/p[2]","para_id":"1A2B3C4D","paragraph_anchor_status":"duplicate"},{"path":"/docx/body/p[3]","para_id":"5E5E5E5E","paragraph_anchor_status":"unique"}]
 
-  $ office.exe outline "$TESTDIR/../../../../docx2html/tests/cram/fixtures/duplicate-para-id.docx" --json | jq -c '.data.headings'
+  $ office.exe outline "$TESTDIR/../../docx2html/tests/cram/fixtures/duplicate-para-id.docx" --json | jq -c '.data.headings'
   [{"path":"/docx/body/p[3]","level":1,"text":"Gamma heading","text_truncated":false,"para_id":"5E5E5E5E","paragraph_anchor_status":"unique","physical_para_ids":null}]
 
 Stable addressing (paraId R2a): a soundly-joined unique id IS an
@@ -343,35 +343,35 @@ address — `get` resolves it (suffix segments stay positional),
 identity refuses typed: an ambiguous id lists its claimants and never
 resolves to the first one.
 
-  $ office.exe get "$TESTDIR/../../../../docx2html/tests/cram/fixtures/duplicate-para-id.docx" "/docx/body/p[id=\"5E5E5E5E\"]" --json | jq -c '{path:.data.path,id:.data.id}'
+  $ office.exe get "$TESTDIR/../../docx2html/tests/cram/fixtures/duplicate-para-id.docx" "/docx/body/p[id=\"5E5E5E5E\"]" --json | jq -c '{path:.data.path,id:.data.id}'
   {"path":"/docx/body/p[3]","id":"5E5E5E5E"}
 
-  $ office.exe get "$TESTDIR/../../../../docx2html/tests/cram/fixtures/duplicate-para-id.docx" "/docx/body/p[id=\"5E5E5E5E\"]/r[1]" --json | jq -c '{path:.data.path,kind:.data.kind}'
+  $ office.exe get "$TESTDIR/../../docx2html/tests/cram/fixtures/duplicate-para-id.docx" "/docx/body/p[id=\"5E5E5E5E\"]/r[1]" --json | jq -c '{path:.data.path,kind:.data.kind}'
   {"path":"/docx/body/p[3]/r[1]","kind":"r"}
 
-  $ office.exe get "$TESTDIR/../../../../docx2html/tests/cram/fixtures/duplicate-para-id.docx" "/docx/body/p[id=\"1A2B3C4D\"]" --json 2>&1 | jq -c '{code:.error.code,candidates:.error.details.candidates}'
+  $ office.exe get "$TESTDIR/../../docx2html/tests/cram/fixtures/duplicate-para-id.docx" "/docx/body/p[id=\"1A2B3C4D\"]" --json 2>&1 | jq -c '{code:.error.code,candidates:.error.details.candidates}'
   {"code":"office.docx.para_id_ambiguous","candidates":["/docx/body/p[1]","/docx/body/p[2]"]}
 
-  $ office.exe get "$TESTDIR/../../../../docx2html/tests/cram/fixtures/duplicate-para-id.docx" "/docx/body/p[id=\"33333333\"]" --json > /dev/null 2>&1
+  $ office.exe get "$TESTDIR/../../docx2html/tests/cram/fixtures/duplicate-para-id.docx" "/docx/body/p[id=\"33333333\"]" --json > /dev/null 2>&1
   [1]
 
-  $ office.exe query "$TESTDIR/../../../../docx2html/tests/cram/fixtures/duplicate-para-id.docx" --id 5E5E5E5E --json | jq -c '[.data.matches[] | {path,kind}]'
+  $ office.exe query "$TESTDIR/../../docx2html/tests/cram/fixtures/duplicate-para-id.docx" --id 5E5E5E5E --json | jq -c '[.data.matches[] | {path,kind}]'
   [{"path":"/docx/body/p[3]","kind":"p"}]
 
-  $ office.exe find "$TESTDIR/../../../../docx2html/tests/cram/fixtures/duplicate-para-id.docx" --text a --in 'p[id="5E5E5E5E"]' --json | jq -c '[.data.matches[].path] | unique'
+  $ office.exe find "$TESTDIR/../../docx2html/tests/cram/fixtures/duplicate-para-id.docx" --text a --in 'p[id="5E5E5E5E"]' --json | jq -c '[.data.matches[].path] | unique'
   ["p[3]"]
 
-  $ office.exe find "$TESTDIR/../../../../docx2html/tests/cram/fixtures/duplicate-para-id.docx" --text a --in 'p[id="1A2B3C4D"]' --json 2>&1 | jq -c '.error.code'
+  $ office.exe find "$TESTDIR/../../docx2html/tests/cram/fixtures/duplicate-para-id.docx" --text a --in 'p[id="1A2B3C4D"]' --json 2>&1 | jq -c '.error.code'
   "office.docx.para_id_ambiguous"
 
 The write verbs accept the same identity (paraId R2b): replace scoped
 by a stable id reports both spellings, and an ambiguous id refuses the
 transaction before anything is planned or written.
 
-  $ office.exe replace "$TESTDIR/../../../../docx2html/tests/cram/fixtures/duplicate-para-id.docx" r2b-out.docx --text "heading" --with "title" --in 'p[id="5E5E5E5E"]' --json | jq -c '{replaced:.data.replaced,in:.data.in,resolved_in:.data.resolved_in,affected:.data.affected}'
+  $ office.exe replace "$TESTDIR/../../docx2html/tests/cram/fixtures/duplicate-para-id.docx" r2b-out.docx --text "heading" --with "title" --in 'p[id="5E5E5E5E"]' --json | jq -c '{replaced:.data.replaced,in:.data.in,resolved_in:.data.resolved_in,affected:.data.affected}'
   {"replaced":1,"in":"p[id=\"5E5E5E5E\"]","resolved_in":"p[3]","affected":["p[3]"]}
 
-  $ office.exe replace "$TESTDIR/../../../../docx2html/tests/cram/fixtures/duplicate-para-id.docx" r2b-dup.docx --text "alpha" --with "x" --in 'p[id="1A2B3C4D"]' --json 2>&1 | jq -c '.error.code'
+  $ office.exe replace "$TESTDIR/../../docx2html/tests/cram/fixtures/duplicate-para-id.docx" r2b-dup.docx --text "alpha" --with "x" --in 'p[id="1A2B3C4D"]' --json 2>&1 | jq -c '.error.code'
   "office.docx.para_id_ambiguous"
 
   $ test -f r2b-dup.docx
@@ -382,13 +382,13 @@ paragraph's stable identity — fresh against the whole package, verified
 by readback before publication — and the published document addresses
 it immediately. Refusals (an undefined style here) publish nothing.
 
-  $ office.exe insert-paragraph "$TESTDIR/../../../../docx2html/tests/cram/fixtures/duplicate-para-id.docx" ip-out.docx --after 'p[3]' --content '{"runs":[{"text":"fresh paragraph","bold":true}]}' --json | jq -c '{schema:.data.schema,path:.data.path,minted:(.data.para_id|test("^[0-9A-F]{8}$")),side:.data.side,changed:.data.changed}'
+  $ office.exe insert-paragraph "$TESTDIR/../../docx2html/tests/cram/fixtures/duplicate-para-id.docx" ip-out.docx --after 'p[3]' --content '{"runs":[{"text":"fresh paragraph","bold":true}]}' --json | jq -c '{schema:.data.schema,path:.data.path,minted:(.data.para_id|test("^[0-9A-F]{8}$")),side:.data.side,changed:.data.changed}'
   {"schema":"office.docx.insert-paragraph/1","path":"p[4]","minted":true,"side":"after","changed":true}
 
   $ office.exe text ip-out.docx --json | jq -c '[.data.entries[] | {path,minted:(.para_id!=null and (.para_id|test("^[0-9A-F]{8}$"))),paragraph_anchor_status}] | last'
   {"path":"/docx/body/p[4]","minted":true,"paragraph_anchor_status":"unique"}
 
-  $ office.exe insert-paragraph "$TESTDIR/../../../../docx2html/tests/cram/fixtures/duplicate-para-id.docx" ip-ref.docx --before 'p[1]' --content '{"style":"Ghost","runs":[{"text":"x"}]}' --json 2>&1 | jq -c '.error.code'
+  $ office.exe insert-paragraph "$TESTDIR/../../docx2html/tests/cram/fixtures/duplicate-para-id.docx" ip-ref.docx --before 'p[1]' --content '{"style":"Ghost","runs":[{"text":"x"}]}' --json 2>&1 | jq -c '.error.code'
   "office.docx.invalid_plan"
 
   $ test -f ip-ref.docx
@@ -400,7 +400,7 @@ the deleted identity is GONE and the successor answers at the path. The
 inverse pair round-trips the document byte-identically. Human mode and
 a CLI dry run behave; refusals publish nothing.
 
-  $ office.exe insert-paragraph "$TESTDIR/../../../../docx2html/tests/cram/fixtures/duplicate-para-id.docx" dp-in.docx --before 'p[1]' --content '{"runs":[{"text":"ephemeral"}]}' --json | jq -c '.data.path'
+  $ office.exe insert-paragraph "$TESTDIR/../../docx2html/tests/cram/fixtures/duplicate-para-id.docx" dp-in.docx --before 'p[1]' --content '{"runs":[{"text":"ephemeral"}]}' --json | jq -c '.data.path'
   "p[1]"
 
   $ office.exe delete-paragraph dp-in.docx dp-dry.docx --at 'p[1]' --expect-text ephemeral --dry-run
@@ -414,7 +414,7 @@ a CLI dry run behave; refusals publish nothing.
   warning [office.transaction.path_based_commit_semantics]: publication uses moonbitlang/async path APIs; atomic rename is guaranteed, but hostile concurrent directory-entry replacement is outside the portable contract
 
   $ unzip -p dp-out.docx word/document.xml > dp-out-doc.xml
-  $ unzip -p "$TESTDIR/../../../../docx2html/tests/cram/fixtures/duplicate-para-id.docx" word/document.xml > dp-base-doc.xml
+  $ unzip -p "$TESTDIR/../../docx2html/tests/cram/fixtures/duplicate-para-id.docx" word/document.xml > dp-base-doc.xml
   $ cmp dp-base-doc.xml dp-out-doc.xml
 
   $ office.exe delete-paragraph dp-in.docx dp-ref.docx --at 'p[1]' --expect-text 'something else' --json 2>&1 | jq -c '.error.code'
@@ -432,7 +432,7 @@ a CLI dry run behave; refusals publish nothing.
 The cross-surface invariant, executable: find agrees with the tree
 surfaces on the same document.
 
-  $ office.exe find "$TESTDIR/../../../../docx2html/tests/cram/fixtures/duplicate-para-id.docx" --text alpha --json | jq -c '[.data.matches[] | {path,para_id,paragraph_anchor_status}]'
+  $ office.exe find "$TESTDIR/../../docx2html/tests/cram/fixtures/duplicate-para-id.docx" --text alpha --json | jq -c '[.data.matches[] | {path,para_id,paragraph_anchor_status}]'
   [{"path":"p[1]","para_id":"1A2B3C4D","paragraph_anchor_status":"duplicate"}]
 
 A tolerated nested paragraph partitions the tree differently than the
@@ -440,7 +440,7 @@ projection, so NO tree paragraph may borrow either projection
 judgment: both occurrences refuse with `unjoined`, never a guessed
 identity.
 
-  $ office.exe text "$TESTDIR/../../../../docx2html/tests/cram/fixtures/nested-paragraph.docx" --json | jq -c '[.data.entries[] | {path,paragraph_anchor_status}]'
+  $ office.exe text "$TESTDIR/../../docx2html/tests/cram/fixtures/nested-paragraph.docx" --json | jq -c '[.data.entries[] | {path,paragraph_anchor_status}]'
   [{"path":"/docx/body/p[1]","paragraph_anchor_status":"unjoined"},{"path":"/docx/body/p[1]/r[1]/p[1]","paragraph_anchor_status":"unjoined"}]
 
 The payload carries the selected candidates in find's own entry shape
@@ -449,15 +449,15 @@ dry-run prints the matches payload rather than a summary; and
 `changed` comes from the TRANSACTION, so replacing text with itself
 selects a candidate while changing nothing.
 
-  $ office.exe replace "$TESTDIR/../../../../docx2html/tests/cram/fixtures/single-paragraph.docx" fr-mp.docx --text "imported" --with "borrowed" --dry-run --json | jq -c '{first:(.data.matches[0] | {ordinal,path,range,text,actionable}),matches_truncated:.data.matches_truncated}'
+  $ office.exe replace "$TESTDIR/../../docx2html/tests/cram/fixtures/single-paragraph.docx" fr-mp.docx --text "imported" --with "borrowed" --dry-run --json | jq -c '{first:(.data.matches[0] | {ordinal,path,range,text,actionable}),matches_truncated:.data.matches_truncated}'
   {"first":{"ordinal":1,"path":"p[1]","range":{"start":11,"end":19,"unit":"utf16"},"text":"imported","actionable":true},"matches_truncated":false}
-  $ office.exe replace "$TESTDIR/../../../../docx2html/tests/cram/fixtures/single-paragraph.docx" fr-id.docx --text "imported" --with "imported" --json | jq -c '{replaced:.data.replaced,changed:.data.changed}'
+  $ office.exe replace "$TESTDIR/../../docx2html/tests/cram/fixtures/single-paragraph.docx" fr-id.docx --text "imported" --with "imported" --json | jq -c '{replaced:.data.replaced,changed:.data.changed}'
   {"replaced":1,"changed":false}
 
 A malformed request still refuses: the needle is required, and an empty one
 would name every position.
 
-  $ office.exe find "$TESTDIR/../../../../docx2html/tests/cram/fixtures/single-paragraph.docx" --text "" --json 2>&1 | jq -c '{success,code:.error.code}'
+  $ office.exe find "$TESTDIR/../../docx2html/tests/cram/fixtures/single-paragraph.docx" --text "" --json 2>&1 | jq -c '{success,code:.error.code}'
   {"success":false,"code":"office.invalid_arguments"}
 
 The MUTATION reader is stricter than the tolerant projection: it re-resolves
@@ -524,7 +524,7 @@ and nothing is published.
 Authoring embeds referenced images (bounded per image and in aggregate); the
 authored document reads back with the media in place.
 
-  $ cp "$TESTDIR/../../../../mbtexcel/fixtures/excelize/logo.png" d3-logo.png
+  $ cp "$TESTDIR/../../mbtexcel/fixtures/excelize/logo.png" d3-logo.png
   $ printf '%s\n' '{"schema":"docx.batch/2","ops":[{"op":"paragraph","params":{"runs":[{"image":{"path":"d3-logo.png","alt":"logo"}}]}}]}' > d3-image.json
   $ office.exe batch --format docx d3-image.docx d3-image.json --json | jq -c '{success,ops:.data.ops}'
   {"success":true,"ops":1}
@@ -578,28 +578,28 @@ Structured DOCX reads share one bounded projection. Outline provides the map,
 get resolves a canonical path, text emits path-tagged paragraphs, and query
 uses deterministic document order and declared predicates.
 
-  $ office.exe outline "$TESTDIR/../../../../docx2html/tests/cram/fixtures/single-paragraph.docx" --json | jq -c '{success,schema:.data.schema,counts:.data.counts,stories:[.data.stories[].path]}'
+  $ office.exe outline "$TESTDIR/../../docx2html/tests/cram/fixtures/single-paragraph.docx" --json | jq -c '{success,schema:.data.schema,counts:.data.counts,stories:[.data.stories[].path]}'
   {"success":true,"schema":"office.docx.outline/1","counts":{"body_stories":1,"headers":0,"footers":0,"footnotes":0,"endnotes":0,"comments":0,"insertions":0,"deletions":0,"paragraphs":1,"runs":1,"tables":0,"rows":0,"cells":0,"hyperlinks":0,"images":0},"stories":["/docx/body","/docx/footnotes","/docx/endnotes","/docx/comments"]}
 
-  $ office.exe get "$TESTDIR/../../../../docx2html/tests/cram/fixtures/single-paragraph.docx" '/docx/body/p[1]'
+  $ office.exe get "$TESTDIR/../../docx2html/tests/cram/fixtures/single-paragraph.docx" '/docx/body/p[1]'
   Walking on imported air
 
-  $ office.exe get "$TESTDIR/../../../../docx2html/tests/cram/fixtures/single-paragraph.docx" '/docx/body/p[1]' --json | jq -c '{schema:.data.schema,path:.data.path,kind:.data.kind,stability:.data.stability,text:.data.text,children:[.data.children[].path]}'
+  $ office.exe get "$TESTDIR/../../docx2html/tests/cram/fixtures/single-paragraph.docx" '/docx/body/p[1]' --json | jq -c '{schema:.data.schema,path:.data.path,kind:.data.kind,stability:.data.stability,text:.data.text,children:[.data.children[].path]}'
   {"schema":"office.docx.element/1","path":"/docx/body/p[1]","kind":"p","stability":"snapshot-relative","text":"Walking on imported air","children":["/docx/body/p[1]/r[1]"]}
 
-  $ office.exe text "$TESTDIR/../../../../docx2html/tests/cram/fixtures/header-footer.docx" --json | jq -c '{schema:.data.schema,paths:[.data.entries[].path],texts:[.data.entries[].text],matched_total:.data.matched_total,returned:.data.returned,truncated:.data.truncated}'
+  $ office.exe text "$TESTDIR/../../docx2html/tests/cram/fixtures/header-footer.docx" --json | jq -c '{schema:.data.schema,paths:[.data.entries[].path],texts:[.data.entries[].text],matched_total:.data.matched_total,returned:.data.returned,truncated:.data.truncated}'
   {"schema":"office.docx.text/1","paths":["/docx/body/p[1]","/docx/body/p[2]","/docx/header[1]/p[1]","/docx/header[2]/p[1]","/docx/footer[1]/p[1]"],"texts":["Body first paragraph","Body second paragraph","Default header text","First page header","Footer text"],"matched_total":5,"returned":5,"truncated":false}
 
-  $ office.exe query "$TESTDIR/../../../../docx2html/tests/cram/fixtures/tiny-picture.docx" --kind picture --json | jq -c '{schema:.data.schema,paths:[.data.matches[].path],kinds:[.data.matches[].kind],matched_total:.data.matched_total,returned:.data.returned,truncated:.data.truncated}'
+  $ office.exe query "$TESTDIR/../../docx2html/tests/cram/fixtures/tiny-picture.docx" --kind picture --json | jq -c '{schema:.data.schema,paths:[.data.matches[].path],kinds:[.data.matches[].kind],matched_total:.data.matched_total,returned:.data.returned,truncated:.data.truncated}'
   {"schema":"office.docx.query/1","paths":["/docx/body/p[1]/r[1]/image[1]"],"kinds":["image"],"matched_total":1,"returned":1,"truncated":false}
 
 Annotation ids are stable when unique; descendants remain snapshot-relative.
 Comment metadata includes canonicalized anchors into the body story.
 
-  $ office.exe get "$TESTDIR/../../../../docx2html/tests/cram/fixtures/commented.docx" '/docx/comments/comment[id="0"]' --json | jq -c '{path:.data.path,stability:.data.stability,id:.data.id,author:.data.metadata.author,done:.data.metadata.done,anchor:.data.metadata.anchors[0].start,text:.data.text}'
+  $ office.exe get "$TESTDIR/../../docx2html/tests/cram/fixtures/commented.docx" '/docx/comments/comment[id="0"]' --json | jq -c '{path:.data.path,stability:.data.stability,id:.data.id,author:.data.metadata.author,done:.data.metadata.done,anchor:.data.metadata.anchors[0].start,text:.data.text}'
   {"path":"/docx/comments/comment[id=\"0\"]","stability":"stable","id":"0","author":"Ada Lovelace","done":false,"anchor":"/docx/body/p[2]","text":"Please cite a source here."}
 
-  $ office.exe text "$TESTDIR/../../../../docx2html/tests/cram/fixtures/commented.docx" --under '/docx/comments/comment[id="0"]' --json | jq -c '{under:.data.under,entries:[.data.entries[]|{path,text}],matched_total:.data.matched_total}'
+  $ office.exe text "$TESTDIR/../../docx2html/tests/cram/fixtures/commented.docx" --under '/docx/comments/comment[id="0"]' --json | jq -c '{under:.data.under,entries:[.data.entries[]|{path,text}],matched_total:.data.matched_total}'
   {"under":"/docx/comments/comment[id=\"0\"]","entries":[{"path":"/docx/comments/comment[id=\"0\"]/p[1]","text":"Please cite a source here."}],"matched_total":1}
 
 Tracked changes have no representation in the document model: the reader
@@ -608,7 +608,7 @@ lost. Outline reports them, and text keeps returning the accepted view — a
 review agent must be able to tell "up 18%" is an unaccepted edit that replaced
 "flat", not settled fact.
 
-  $ cp "$TESTDIR/../../../../docx2html/tests/cram/fixtures/single-paragraph.docx" tracked.docx
+  $ cp "$TESTDIR/../../docx2html/tests/cram/fixtures/single-paragraph.docx" tracked.docx
   $ office.exe raw edit tracked.docx /document --path '/w:document/w:body/w:p[1]' --action replace --xml '<w:p xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:r><w:t xml:space="preserve">The revenue was </w:t></w:r><w:del w:id="1" w:author="Reviewer" w:date="2026-01-01T00:00:00Z"><w:r><w:delText xml:space="preserve">flat</w:delText></w:r></w:del><w:ins w:id="2" w:author="Reviewer"><w:r><w:t xml:space="preserve">up 18%</w:t></w:r></w:ins><w:r><w:t xml:space="preserve"> this quarter.</w:t></w:r></w:p>' --json | jq -c '{success,matches:.data.change.match_count}'
   {"success":true,"matches":1}
   $ office.exe outline tracked.docx --json | jq -c '{insertions:.data.counts.insertions,deletions:.data.counts.deletions,revisions:.data.revisions}'
@@ -619,7 +619,7 @@ review agent must be able to tell "up 18%" is an unaccepted edit that replaced
 The query kind aliases include hyperlinks. This uses the raw editor to make a
 valid internal-anchor hyperlink fixture without relying on an external file.
 
-  $ cp "$TESTDIR/../../../../docx2html/tests/cram/fixtures/single-paragraph.docx" hyperlink.docx
+  $ cp "$TESTDIR/../../docx2html/tests/cram/fixtures/single-paragraph.docx" hyperlink.docx
   $ office.exe raw edit hyperlink.docx /document --path '/w:document/w:body/w:p[1]/w:r[1]' --action replace --xml '<w:hyperlink xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main" w:anchor="target"><w:r><w:t>Jump</w:t></w:r></w:hyperlink>' --json | jq -c '{success,action:.data.change.action,matches:.data.change.match_count}'
   {"success":true,"action":"replace","matches":1}
   $ office.exe query hyperlink.docx --kind link --json | jq -c '{paths:[.data.matches[].path],matched_total:.data.matched_total}'
@@ -628,25 +628,25 @@ valid internal-anchor hyperlink fixture without relying on an external file.
 Pagination and all user-controlled scan/output ceilings are explicit. Selector
 syntax and missing paths retain stable machine-readable codes.
 
-  $ office.exe text "$TESTDIR/../../../../docx2html/tests/cram/fixtures/single-paragraph.docx" --limit 0 --json | jq -c '{matched_total:.data.matched_total,returned:.data.returned,truncated:.data.truncated}'
+  $ office.exe text "$TESTDIR/../../docx2html/tests/cram/fixtures/single-paragraph.docx" --limit 0 --json | jq -c '{matched_total:.data.matched_total,returned:.data.returned,truncated:.data.truncated}'
   {"matched_total":1,"returned":0,"truncated":true}
 
-  $ office.exe get "$TESTDIR/../../../../docx2html/tests/cram/fixtures/single-paragraph.docx" '/docx/body/p[9]' --json > missing-selector.json 2>&1; echo $?
+  $ office.exe get "$TESTDIR/../../docx2html/tests/cram/fixtures/single-paragraph.docx" '/docx/body/p[9]' --json > missing-selector.json 2>&1; echo $?
   1
   $ jq -c '{success,code:.error.code,selector:.error.details.selector}' missing-selector.json
   {"success":false,"code":"office.docx.selector_not_found","selector":"/docx/body/p[9]"}
 
-  $ office.exe get "$TESTDIR/../../../../docx2html/tests/cram/fixtures/single-paragraph.docx" '/docx/body/p[@id=0]' --json > malformed-selector.json 2>&1; echo $?
+  $ office.exe get "$TESTDIR/../../docx2html/tests/cram/fixtures/single-paragraph.docx" '/docx/body/p[@id=0]' --json > malformed-selector.json 2>&1; echo $?
   1
   $ jq -c '{success,code:.error.code}' malformed-selector.json
   {"success":false,"code":"office.selector.unsupported_predicate"}
 
-  $ office.exe outline "$TESTDIR/../../../../docx2html/tests/cram/fixtures/single-paragraph.docx" --max-elements 1 --json > element-limit.json 2>&1; echo $?
+  $ office.exe outline "$TESTDIR/../../docx2html/tests/cram/fixtures/single-paragraph.docx" --max-elements 1 --json > element-limit.json 2>&1; echo $?
   1
   $ jq -c '{success,code:.error.code,resource:.error.details.resource,limit:.error.details.limit}' element-limit.json
   {"success":false,"code":"office.docx.resource_limit","resource":"projection elements","limit":1}
 
-  $ office.exe outline "$TESTDIR/../../../../docx2html/tests/cram/fixtures/single-paragraph.docx" --max-output-chars 40 --json > output-limit.json 2>&1; echo $?
+  $ office.exe outline "$TESTDIR/../../docx2html/tests/cram/fixtures/single-paragraph.docx" --max-output-chars 40 --json > output-limit.json 2>&1; echo $?
   1
   $ jq -c '{success,code:.error.code,resource:.error.details.resource,limit:.error.details.limit}' output-limit.json
   {"success":false,"code":"office.docx.resource_limit","resource":"successful command output characters","limit":40}
@@ -661,7 +661,7 @@ while the larger DOCX ceiling remains available.
   $ jq -c '{success,code:.error.code,maximum:.error.details.maximum}' xlsx-preflight.json
   {"success":false,"code":"office.invalid_arguments","maximum":100000}
 
-  $ office.exe outline "$TESTDIR/../../../../docx2html/tests/cram/fixtures/single-paragraph.docx" --max-elements 100001 --json | jq -c '{success,schema:.data.schema}'
+  $ office.exe outline "$TESTDIR/../../docx2html/tests/cram/fixtures/single-paragraph.docx" --max-elements 100001 --json | jq -c '{success,schema:.data.schema}'
   {"success":true,"schema":"office.docx.outline/1"}
 
 Structured XLSX reads use the same commands and envelope. Positional sheet
@@ -672,9 +672,9 @@ The third-party Book1 fixture contains two intersecting shared-formula ranges.
 Normalize that unrelated invalid metadata through the raw transaction surface
 before exercising its original contents with the strict structured reader.
 
-  $ office.exe raw read "$TESTDIR/../../../../mbtexcel/fixtures/excelize/test/Book1.xlsx" /Sheet2 --output book1-sheet2.xml >/dev/null
+  $ office.exe raw read "$TESTDIR/../../mbtexcel/fixtures/excelize/test/Book1.xlsx" /Sheet2 --output book1-sheet2.xml >/dev/null
   $ sed -e 's/ref="F11:H11"/ref="F11:F11"/' -e 's/<f t="shared" si="0"><\/f>/<f t="shared" si="1"><\/f>/' book1-sheet2.xml > book1-sheet2-valid.xml
-  $ office.exe raw replace "$TESTDIR/../../../../mbtexcel/fixtures/excelize/test/Book1.xlsx" /Sheet2 --xml-file book1-sheet2-valid.xml --out Book1-valid.xlsx --json >/dev/null
+  $ office.exe raw replace "$TESTDIR/../../mbtexcel/fixtures/excelize/test/Book1.xlsx" /Sheet2 --xml-file book1-sheet2-valid.xml --out Book1-valid.xlsx --json >/dev/null
 
   $ office.exe outline Book1-valid.xlsx --json | jq -c '{success,schema:.data.schema,path:.data.path,sheet_count:.data.sheet_count,active:.data.active_sheet.path,sheets:[.data.sheets[]|{path,kind,state,used:.used_range.reference}]}'
   {"success":true,"schema":"office.xlsx.outline/1","path":"/xlsx/workbook","sheet_count":2,"active":"/xlsx/sheet[name=\"Sheet1\"]","sheets":[{"path":"/xlsx/sheet[name=\"Sheet1\"]","kind":"worksheet","state":"visible","used":"A1:D22"},{"path":"/xlsx/sheet[name=\"Sheet2\"]","kind":"worksheet","state":"visible","used":"A1:I11"}]}
@@ -682,9 +682,9 @@ before exercising its original contents with the strict structured reader.
 Singleton extents retain two endpoints, so every emitted range path parses and
 round-trips through the public selector grammar.
 
-  $ office.exe outline "$TESTDIR/../../../../mbtexcel/fixtures/excelize/test/OverflowNumericCell.xlsx" --json | jq -c '{reference:.data.sheets[0].used_range.reference,path:.data.sheets[0].used_range.path}'
+  $ office.exe outline "$TESTDIR/../../mbtexcel/fixtures/excelize/test/OverflowNumericCell.xlsx" --json | jq -c '{reference:.data.sheets[0].used_range.reference,path:.data.sheets[0].used_range.path}'
   {"reference":"A1:A1","path":"/xlsx/sheet[name=\"Sheet1\"]/range[A1:A1]"}
-  $ office.exe get "$TESTDIR/../../../../mbtexcel/fixtures/excelize/test/OverflowNumericCell.xlsx" '/xlsx/sheet[1]/range[A1:A1]' --json | jq -c '{path:.data.path,reference:.data.reference,refs:[.data.cells[].reference]}'
+  $ office.exe get "$TESTDIR/../../mbtexcel/fixtures/excelize/test/OverflowNumericCell.xlsx" '/xlsx/sheet[1]/range[A1:A1]' --json | jq -c '{path:.data.path,reference:.data.reference,refs:[.data.cells[].reference]}'
   {"path":"/xlsx/sheet[name=\"Sheet1\"]/range[A1:A1]","reference":"A1:A1","refs":["A1"]}
 
   $ office.exe get Book1-valid.xlsx '/xlsx/sheet[1]/range[A19:B19]' --json | jq -c '{schema:.data.schema,path:.data.path,kind:.data.kind,refs:[.data.cells[].reference],raw:[.data.cells[].raw],formulas:[.data.cells[]|(.formula // null)],returned:.data.returned}'
@@ -731,7 +731,7 @@ Extension/content mismatches and malformed input fail non-zero.
   $ jq -c '{schema,success,code:.error.code}' missing-file.json
   {"schema":"office.output/1","success":false,"code":"office.invalid_arguments"}
 
-  $ cp "$TESTDIR/../../../../docx2html/tests/cram/fixtures/single-paragraph.docx" report.xlsx
+  $ cp "$TESTDIR/../../docx2html/tests/cram/fixtures/single-paragraph.docx" report.xlsx
   $ office.exe identify report.xlsx
   office: file extension says xlsx, but package content is docx
   [1]
@@ -783,31 +783,31 @@ Help token errors are bounded and include stable codes and suggestions.
 Raw OOXML inventory and reads resolve parts from relationships for both
 supported formats. Structured output stays inside the shared envelope.
 
-  $ office.exe raw list "$TESTDIR/../../../../docx2html/tests/cram/fixtures/single-paragraph.docx" --json | jq -c '{success,schema:.data.schema,format:.data.format,document:[.data.parts[]|select(.aliases|index("/document"))|.name]}'
+  $ office.exe raw list "$TESTDIR/../../docx2html/tests/cram/fixtures/single-paragraph.docx" --json | jq -c '{success,schema:.data.schema,format:.data.format,document:[.data.parts[]|select(.aliases|index("/document"))|.name]}'
   {"success":true,"schema":"office.raw.inventory/1","format":"docx","document":["/word/document.xml"]}
 
-  $ office.exe raw list "$TESTDIR/../../../../mbtexcel/fixtures/excelize/test/Book1.xlsx" --json | jq -c '{format:.data.format,sheets:[.data.parts[]|select(.aliases|index("/sheet[1]"))|.name],named:[.data.parts[]|select(.aliases|index("/Sheet1"))|.name]}'
+  $ office.exe raw list "$TESTDIR/../../mbtexcel/fixtures/excelize/test/Book1.xlsx" --json | jq -c '{format:.data.format,sheets:[.data.parts[]|select(.aliases|index("/sheet[1]"))|.name],named:[.data.parts[]|select(.aliases|index("/Sheet1"))|.name]}'
   {"format":"xlsx","sheets":["/xl/worksheets/sheet1.xml"],"named":["/xl/worksheets/sheet1.xml"]}
 
-  $ office.exe raw read "$TESTDIR/../../../../docx2html/tests/cram/fixtures/single-paragraph.docx" /document --json | jq -c '{success,schema:.data.schema,name:.data.part.name,encoding:.data.encoding,contains:(.data.content|contains("Walking on imported air"))}'
+  $ office.exe raw read "$TESTDIR/../../docx2html/tests/cram/fixtures/single-paragraph.docx" /document --json | jq -c '{success,schema:.data.schema,name:.data.part.name,encoding:.data.encoding,contains:(.data.content|contains("Walking on imported air"))}'
   {"success":true,"schema":"office.raw.part/1","name":"/word/document.xml","encoding":"xml","contains":true}
 
 Binary reads require an explicit mode. Base64 is machine-safe, while file
 output is exact and create-new.
 
-  $ office.exe raw read "$TESTDIR/../../../../mbtexcel/fixtures/excelize/test/Book1.xlsx" /xl/media/image1.jpeg --json > binary.json 2>&1; echo $?
+  $ office.exe raw read "$TESTDIR/../../mbtexcel/fixtures/excelize/test/Book1.xlsx" /xl/media/image1.jpeg --json > binary.json 2>&1; echo $?
   1
   $ jq -c '{success,code:.error.code}' binary.json
   {"success":false,"code":"office.raw.binary_requires_explicit_mode"}
 
-  $ office.exe raw read "$TESTDIR/../../../../mbtexcel/fixtures/excelize/test/Book1.xlsx" /xl/media/image1.jpeg --base64 --json | jq -c '{success,encoding:.data.encoding,bytes:.data.part.size,nonempty:(.data.content|length>100)}'
+  $ office.exe raw read "$TESTDIR/../../mbtexcel/fixtures/excelize/test/Book1.xlsx" /xl/media/image1.jpeg --base64 --json | jq -c '{success,encoding:.data.encoding,bytes:.data.part.size,nonempty:(.data.content|length>100)}'
   {"success":true,"encoding":"base64","bytes":2376,"nonempty":true}
 
-  $ office.exe raw read "$TESTDIR/../../../../mbtexcel/fixtures/excelize/test/Book1.xlsx" /xl/media/image1.jpeg --output image.jpeg --json | jq -c '{success,encoding:.data.encoding,output:.data.output}'
+  $ office.exe raw read "$TESTDIR/../../mbtexcel/fixtures/excelize/test/Book1.xlsx" /xl/media/image1.jpeg --output image.jpeg --json | jq -c '{success,encoding:.data.encoding,output:.data.output}'
   {"success":true,"encoding":"binary","output":"image.jpeg"}
-  $ unzip -p "$TESTDIR/../../../../mbtexcel/fixtures/excelize/test/Book1.xlsx" xl/media/image1.jpeg | cmp - image.jpeg; echo $?
+  $ unzip -p "$TESTDIR/../../mbtexcel/fixtures/excelize/test/Book1.xlsx" xl/media/image1.jpeg | cmp - image.jpeg; echo $?
   0
-  $ office.exe raw read "$TESTDIR/../../../../mbtexcel/fixtures/excelize/test/Book1.xlsx" /xl/media/image1.jpeg --output image.jpeg --json > exists.json 2>&1; echo $?
+  $ office.exe raw read "$TESTDIR/../../mbtexcel/fixtures/excelize/test/Book1.xlsx" /xl/media/image1.jpeg --output image.jpeg --json > exists.json 2>&1; echo $?
   1
   $ jq -c '{success,code:.error.code}' exists.json
   {"success":false,"code":"office.raw.output_write_failed"}
@@ -815,7 +815,7 @@ output is exact and create-new.
 Raw edits use the A4 transaction. Dry runs report the one-part preservation
 manifest without changing the source; separate output commits are validated.
 
-  $ cp "$TESTDIR/../../../../docx2html/tests/cram/fixtures/single-paragraph.docx" input.docx
+  $ cp "$TESTDIR/../../docx2html/tests/cram/fixtures/single-paragraph.docx" input.docx
   $ cp input.docx before.docx
   $ office.exe raw edit input.docx /document --path '/w:document/w:body/w:p[1]' --action set-attribute --attribute w:rsidR --value DEADBEEF --dry-run --json | jq -c '{success,action:.data.change.action,matches:.data.change.match_count,dry_run:.data.transaction.dry_run,committed:.data.transaction.committed,changed:.data.transaction.preservation.changed}'
   {"success":true,"action":"set-attribute","matches":1,"dry_run":true,"committed":false,"changed":["word/document.xml"]}
@@ -888,10 +888,10 @@ The cross-format validate command shares the exact pre-commit mutation gate
 and reports a machine-checkable verdict: exit zero with a bounded result for
 valid packages, non-zero with a complete findings envelope otherwise.
 
-  $ office.exe validate "$TESTDIR/../../../../mbtexcel/fixtures/excelize/test/Book1.xlsx"
+  $ office.exe validate "$TESTDIR/../../mbtexcel/fixtures/excelize/test/Book1.xlsx"
   valid xlsx
 
-  $ office.exe validate "$TESTDIR/../../../../docx2html/tests/cram/fixtures/single-paragraph.docx" --json | jq -c '{success,data:{schema:.data.schema,format:.data.format,valid:.data.valid,error_count:.data.error_count}}'
+  $ office.exe validate "$TESTDIR/../../docx2html/tests/cram/fixtures/single-paragraph.docx" --json | jq -c '{success,data:{schema:.data.schema,format:.data.format,valid:.data.valid,error_count:.data.error_count}}'
   {"success":true,"data":{"schema":"office.validate/1","format":"docx","valid":true,"error_count":0}}
 
   $ printf 'not a zip archive' > corrupt.xlsx
@@ -906,7 +906,7 @@ the strict detector or by the shared parse gate: which layer fires depends
 on the byte layout the local zip tool produced, but the verdict is always a
 deterministic non-zero rejection.
 
-  $ cp "$TESTDIR/../../../../mbtexcel/fixtures/excelize/test/Book1.xlsx" tampered.xlsx
+  $ cp "$TESTDIR/../../mbtexcel/fixtures/excelize/test/Book1.xlsx" tampered.xlsx
   $ printf 'binary' > extra.bin
   $ zip -q tampered.xlsx extra.bin
   $ office.exe validate tampered.xlsx --json > tampered-validate.json 2>&1; echo $?
@@ -914,7 +914,7 @@ deterministic non-zero rejection.
   $ jq -c '{success,code:.error.code}' tampered-validate.json
   {"success":false,"code":"office.invalid_package"}
 
-  $ cp "$TESTDIR/../../../../mbtexcel/fixtures/excelize/test/Book1.xlsx" broken-sheet.xlsx
+  $ cp "$TESTDIR/../../mbtexcel/fixtures/excelize/test/Book1.xlsx" broken-sheet.xlsx
   $ mkdir -p xl/worksheets && printf '<worksheet' > xl/worksheets/sheet1.xml
   $ zip -q broken-sheet.xlsx xl/worksheets/sheet1.xml
   $ office.exe validate broken-sheet.xlsx --json > broken-validate.json 2>&1; echo $?
@@ -926,7 +926,7 @@ The issues command reports bounded actionable findings without conflating
 warnings with fatal invalidity: cached XLSX formula error values are
 warnings with cell locations, and the exit status stays zero.
 
-  $ office.exe issues "$TESTDIR/../../../../docx2html/tests/cram/fixtures/single-paragraph.docx" --json | jq -c '{success,data:{schema:.data.schema,error_count:.data.error_count}}'
+  $ office.exe issues "$TESTDIR/../../docx2html/tests/cram/fixtures/single-paragraph.docx" --json | jq -c '{success,data:{schema:.data.schema,error_count:.data.error_count}}'
   {"success":true,"data":{"schema":"office.issues/1","error_count":0}}
 
   $ office.exe create xlsx issues-probe.xlsx --json > /dev/null
@@ -939,7 +939,7 @@ pages: the report leads with the page counts. The output extension picks the
 backend, publication goes through the same atomic create-new path, and XLSX is
 refused by name rather than rendered blank.
 
-  $ office.exe render "$TESTDIR/../../../../docx2html/tests/cram/fixtures/single-paragraph.docx" --output rendered.pdf --json | jq -c '{success,data:{schema:.data.schema,backend:.data.backend,rendered:.data.pages_rendered,total:.data.pages_total,w:.data.page_width_pt,h:.data.page_height_pt,det:.data.byte_determinism}}'
+  $ office.exe render "$TESTDIR/../../docx2html/tests/cram/fixtures/single-paragraph.docx" --output rendered.pdf --json | jq -c '{success,data:{schema:.data.schema,backend:.data.backend,rendered:.data.pages_rendered,total:.data.pages_total,w:.data.page_width_pt,h:.data.page_height_pt,det:.data.byte_determinism}}'
   {"success":true,"data":{"schema":"office.render/1","backend":"pdf","rendered":1,"total":1,"w":595.3,"h":841.9,"det":"per-runtime"}}
   $ head -c 8 rendered.pdf
   %PDF-1.7 (no-eol)
@@ -947,7 +947,7 @@ refused by name rather than rendered blank.
 SVG is the readable backend: uncompressed, so it is identical on every runtime
 and an agent can read the coordinates a glyph was placed at.
 
-  $ office.exe render "$TESTDIR/../../../../docx2html/tests/cram/fixtures/single-paragraph.docx" --output page.svg --json | jq -c '{backend:.data.backend,det:.data.byte_determinism,outs:[.data.outputs[].path]}'
+  $ office.exe render "$TESTDIR/../../docx2html/tests/cram/fixtures/single-paragraph.docx" --output page.svg --json | jq -c '{backend:.data.backend,det:.data.byte_determinism,outs:[.data.outputs[].path]}'
   {"backend":"svg","det":"cross-runtime","outs":["page.svg"]}
   $ head -c 5 page.svg
   <svg  (no-eol)
@@ -955,28 +955,28 @@ and an agent can read the coordinates a glyph was placed at.
 Rendering the same document twice on one runtime is byte-identical, which is
 the determinism the report advertises.
 
-  $ office.exe render "$TESTDIR/../../../../docx2html/tests/cram/fixtures/single-paragraph.docx" --output again.pdf --json >/dev/null
+  $ office.exe render "$TESTDIR/../../docx2html/tests/cram/fixtures/single-paragraph.docx" --output again.pdf --json >/dev/null
   $ cmp rendered.pdf again.pdf && echo identical
   identical
 
 An existing destination is refused with the shared transaction code unless
 --overwrite is given.
 
-  $ office.exe render "$TESTDIR/../../../../docx2html/tests/cram/fixtures/single-paragraph.docx" --output rendered.pdf --json > render-exists.json 2>&1; echo $?
+  $ office.exe render "$TESTDIR/../../docx2html/tests/cram/fixtures/single-paragraph.docx" --output rendered.pdf --json > render-exists.json 2>&1; echo $?
   1
   $ jq -c '{success,code:.error.code}' render-exists.json
   {"success":false,"code":"office.transaction.output_exists"}
-  $ office.exe render "$TESTDIR/../../../../docx2html/tests/cram/fixtures/single-paragraph.docx" --output rendered.pdf --overwrite --jsonl | jq -c '{success,schema:.data.schema}'
+  $ office.exe render "$TESTDIR/../../docx2html/tests/cram/fixtures/single-paragraph.docx" --output rendered.pdf --overwrite --jsonl | jq -c '{success,schema:.data.schema}'
   {"success":true,"schema":"office.render/1"}
 
 A workbook is refused by name, and a destination whose extension names no
 backend is refused before any work happens.
 
-  $ office.exe render "$TESTDIR/../../../../mbtexcel/fixtures/excelize/test/Book1.xlsx" --output book.pdf --json > render-xlsx.json 2>&1; echo $?
+  $ office.exe render "$TESTDIR/../../mbtexcel/fixtures/excelize/test/Book1.xlsx" --output book.pdf --json > render-xlsx.json 2>&1; echo $?
   1
   $ jq -c '{success,code:.error.code}' render-xlsx.json
   {"success":false,"code":"office.xlsx.unsupported"}
-  $ office.exe render "$TESTDIR/../../../../docx2html/tests/cram/fixtures/single-paragraph.docx" --output rendered.txt --json > render-ext.json 2>&1; echo $?
+  $ office.exe render "$TESTDIR/../../docx2html/tests/cram/fixtures/single-paragraph.docx" --output rendered.txt --json > render-ext.json 2>&1; echo $?
   1
   $ jq -c '{success,code:.error.code}' render-ext.json
   {"success":false,"code":"office.invalid_arguments"}
@@ -986,15 +986,15 @@ duplicates removed, so a page cannot be published twice by writing it twice,
 and SVG names each file after the document page it holds rather than its
 position in the selection.
 
-  $ office.exe render "$TESTDIR/../../../../docx2html/tests/stress/fixtures/docxcorp-reports-en-015012bf8890.docx" --output sel.svg --pages 3,1-2,3 --json | jq -c '{rendered:.data.pages_rendered,total:.data.pages_total,outs:[.data.outputs[].path]}'
+  $ office.exe render "$TESTDIR/../../docx2html/tests/stress/fixtures/docxcorp-reports-en-015012bf8890.docx" --output sel.svg --pages 3,1-2,3 --json | jq -c '{rendered:.data.pages_rendered,total:.data.pages_total,outs:[.data.outputs[].path]}'
   {"rendered":3,"total":11,"outs":["sel-1.svg","sel-2.svg","sel-3.svg"]}
-  $ office.exe render "$TESTDIR/../../../../docx2html/tests/stress/fixtures/docxcorp-reports-en-015012bf8890.docx" --output pair.pdf --pages 2-3 --json | jq -c '{rendered:.data.pages_rendered,total:.data.pages_total,outs:[.data.outputs[].path]}'
+  $ office.exe render "$TESTDIR/../../docx2html/tests/stress/fixtures/docxcorp-reports-en-015012bf8890.docx" --output pair.pdf --pages 2-3 --json | jq -c '{rendered:.data.pages_rendered,total:.data.pages_total,outs:[.data.outputs[].path]}'
   {"rendered":2,"total":11,"outs":["pair.pdf"]}
 
 Page zero, a reversed range, and a page past the end are all refused with the
 same message, because all three are the same mistake from the caller's side.
 
-  $ for spec in 0 5-2 99; do office.exe render "$TESTDIR/../../../../docx2html/tests/stress/fixtures/docxcorp-reports-en-015012bf8890.docx" --output bad.pdf --pages "$spec" --json 2>&1 | jq -c '{code:.error.code}'; done
+  $ for spec in 0 5-2 99; do office.exe render "$TESTDIR/../../docx2html/tests/stress/fixtures/docxcorp-reports-en-015012bf8890.docx" --output bad.pdf --pages "$spec" --json 2>&1 | jq -c '{code:.error.code}'; done
   {"code":"office.invalid_arguments"}
   {"code":"office.invalid_arguments"}
   {"code":"office.invalid_arguments"}
@@ -1033,7 +1033,7 @@ given, and the report is truthful about what was rendered.
 
 DOCX previews inline the shared HTML converter output in one page shell.
 
-  $ office.exe preview "$TESTDIR/../../../../docx2html/tests/cram/fixtures/single-paragraph.docx" --output para.html --json | jq -c '{success,data:{schema:.data.schema,format:.data.format,images_embedded:.data.images_embedded}}'
+  $ office.exe preview "$TESTDIR/../../docx2html/tests/cram/fixtures/single-paragraph.docx" --output para.html --json | jq -c '{success,data:{schema:.data.schema,format:.data.format,images_embedded:.data.images_embedded}}'
   {"success":true,"data":{"schema":"office.preview/1","format":"docx","images_embedded":0}}
   $ grep -c '<!DOCTYPE html>' para.html
   1
@@ -1347,7 +1347,7 @@ and reject_revision are how an agent turns either view into settled text. The
 fixture below is the OOXML worked example: a deletion and the insertion that
 replaced it, side by side in one paragraph.
 
-  $ cp "$TESTDIR/../../../../docx2html/tests/cram/fixtures/single-paragraph.docx" rev-base.docx
+  $ cp "$TESTDIR/../../docx2html/tests/cram/fixtures/single-paragraph.docx" rev-base.docx
   $ office.exe raw edit rev-base.docx /document --path '/w:document/w:body/w:p[1]' --action replace --xml '<w:p xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:r><w:t xml:space="preserve">The revenue was </w:t></w:r><w:del w:id="1" w:author="Reviewer" w:date="2026-01-01T00:00:00Z"><w:r><w:delText xml:space="preserve">flat</w:delText></w:r></w:del><w:ins w:id="2" w:author="Reviewer" w:date="2026-01-01T00:00:00Z"><w:r><w:t xml:space="preserve">up 18%</w:t></w:r></w:ins><w:r><w:t xml:space="preserve"> this quarter.</w:t></w:r></w:p>' >/dev/null
   $ office.exe outline rev-base.docx --json | jq -c '{insertions:.data.counts.insertions,deletions:.data.counts.deletions,ids:[.data.revisions[]|"\(.type)#\(.id)"]}'
   {"insertions":1,"deletions":1,"ids":["del#1","ins#2"]}
@@ -1429,14 +1429,14 @@ selection that reaches one refuses rather than resolving the rest. Leaving a
 paragraph-mark insertion behind would mean "accept everything" quietly
 returned a document still under review.
 
-  $ cp "$TESTDIR/../../../../docx2html/tests/cram/fixtures/single-paragraph.docx" rev-excluded.docx
+  $ cp "$TESTDIR/../../docx2html/tests/cram/fixtures/single-paragraph.docx" rev-excluded.docx
   $ office.exe raw edit rev-excluded.docx /document --path '/w:document/w:body/w:p[1]' --action replace --xml '<w:p xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:pPr><w:rPr><w:ins w:id="4" w:author="Reviewer"/></w:rPr></w:pPr><w:r><w:t>body</w:t></w:r></w:p>' >/dev/null
   $ office.exe edit rev-excluded.docx rev-accept.json --out rev-excluded-out.docx --json 2>&1 | jq -c '{success,code:.error.code,unsupported:[.error.details.unsupported[].detail]}'
   {"success":false,"code":"office.edit.unsupported_revision","unsupported":["w:ins id=\"4\" author=\"Reviewer\": w:ins is a property, move, or structure revision, which this build does not resolve"]}
   $ test -f rev-excluded-out.docx || echo not published
   not published
 
-  $ cp "$TESTDIR/../../../../docx2html/tests/cram/fixtures/single-paragraph.docx" rev-move.docx
+  $ cp "$TESTDIR/../../docx2html/tests/cram/fixtures/single-paragraph.docx" rev-move.docx
   $ office.exe raw edit rev-move.docx /document --path '/w:document/w:body/w:p[1]' --action replace --xml '<w:p xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:moveFrom w:id="5" w:author="Reviewer"><w:r><w:t>moved</w:t></w:r></w:moveFrom></w:p>' >/dev/null
   $ office.exe edit rev-move.docx rev-accept.json --out rev-move-out.docx --json 2>&1 | jq -c '{success,code:.error.code,unsupported:[.error.details.unsupported[].detail]}'
   {"success":false,"code":"office.edit.unsupported_revision","unsupported":["w:moveFrom id=\"5\" author=\"Reviewer\": w:moveFrom is a property, move, or structure revision, which this build does not resolve"]}
@@ -1527,11 +1527,11 @@ digest, for XLSX and DOCX packages alike.
 A DOCX package dumps to docx.batch/2 ops; the writer's default section
 is disclosed as a residual rather than silently regenerated.
 
-  $ office.exe dump "$TESTDIR/../../../../docx2html/tests/cram/fixtures/single-paragraph.docx"
+  $ office.exe dump "$TESTDIR/../../docx2html/tests/cram/fixtures/single-paragraph.docx"
   docx dump: 1 op(s), 1 residual, 0 warning(s)
-  $ office.exe dump "$TESTDIR/../../../../docx2html/tests/cram/fixtures/single-paragraph.docx" --json | jq -c '{schema,format,batch:.replay.batch_schema,ops:[.ops[].op],residual:[.residual[].code]}'
+  $ office.exe dump "$TESTDIR/../../docx2html/tests/cram/fixtures/single-paragraph.docx" --json | jq -c '{schema,format,batch:.replay.batch_schema,ops:[.ops[].op],residual:[.residual[].code]}'
   {"schema":"office.dump/1","format":"docx","batch":"docx.batch/2","ops":["paragraph"],"residual":["docx.sections_not_dumped"]}
-  $ office.exe dump "$TESTDIR/../../../../docx2html/tests/cram/fixtures/single-paragraph.docx" --jsonl | jq -rc 'select(.record=="end") | (.ops_sha256 | test("^[0-9a-f]{64}$"))'
+  $ office.exe dump "$TESTDIR/../../docx2html/tests/cram/fixtures/single-paragraph.docx" --jsonl | jq -rc 'select(.record=="end") | (.ops_sha256 | test("^[0-9a-f]{64}$"))'
   true
 
 Comments become comment ops threaded to their anchors, and pictures ride
@@ -1539,12 +1539,12 @@ as content-addressed assets referenced by their image specs. The replay
 command rebuilds a DOCX from the dump through the same batch build path,
 and dump then replay then dump is stable.
 
-  $ office.exe dump "$TESTDIR/../../../../docx2html/tests/cram/fixtures/commented.docx" --json > commented.dump.json
+  $ office.exe dump "$TESTDIR/../../docx2html/tests/cram/fixtures/commented.docx" --json > commented.dump.json
   $ office.exe replay commented.dump.json --output replayed-comments.docx --json | jq -c '{success,data:{schema:.data.schema,format:.data.format,ops:.data.ops_applied}}'
   {"success":true,"data":{"schema":"office.replay/1","format":"docx","ops":5}}
   $ office.exe dump replayed-comments.docx --json | jq -c '{ops:[.ops[].op]}'
   {"ops":["paragraph","paragraph","paragraph","comment","comment"]}
-  $ office.exe dump "$TESTDIR/../../../../docx2html/tests/cram/fixtures/tiny-picture.docx" --json > picture.dump.json
+  $ office.exe dump "$TESTDIR/../../docx2html/tests/cram/fixtures/tiny-picture.docx" --json > picture.dump.json
   $ office.exe replay picture.dump.json --output replayed-picture.docx >/dev/null
   $ office.exe dump replayed-picture.docx --json | jq -c '{ops:[.ops[].op],assets:(.assets|length)}'
   {"ops":["paragraph"],"assets":1}
@@ -1555,9 +1555,9 @@ and dump then replay then dump is stable.
   $ office.exe replay commented.dump.json --output wrong-extension.xlsx --json 2>&1 | jq -c '{success,code:.error.code}'
   {"success":false,"code":"office.invalid_arguments"}
 
-  $ office.exe dump "$TESTDIR/../../../../docx2html/tests/cram/fixtures/commented.docx" --json | jq -c '{ops:[.ops[].op],residual:[.residual[].code]}'
+  $ office.exe dump "$TESTDIR/../../docx2html/tests/cram/fixtures/commented.docx" --json | jq -c '{ops:[.ops[].op],residual:[.residual[].code]}'
   {"ops":["paragraph","paragraph","paragraph","comment","comment"],"residual":["docx.sections_not_dumped","docx.run_style_dropped"]}
-  $ office.exe dump "$TESTDIR/../../../../docx2html/tests/cram/fixtures/tiny-picture.docx" --json | jq -c '{ops:[.ops[].op],assets:(.assets|length),residual:[.residual[].code]}'
+  $ office.exe dump "$TESTDIR/../../docx2html/tests/cram/fixtures/tiny-picture.docx" --json | jq -c '{ops:[.ops[].op],assets:(.assets|length),residual:[.residual[].code]}'
   {"ops":["paragraph"],"assets":1,"residual":["docx.sections_not_dumped"]}
 
 The replay command reconstructs an XLSX workbook from an office.dump/1

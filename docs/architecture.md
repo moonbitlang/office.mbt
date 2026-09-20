@@ -12,6 +12,10 @@ below use repository-relative paths.
 
 ## Repository layout
 
+This repository is a MoonBit workspace (`moon.work`) of six peer modules:
+`mbtexcel/`, `docx2html/`, `pdflite/`, `pagelayout/`, `office-lib/`, and
+`office-cli/`. Within `mbtexcel/`:
+
 - `mbtexcel/mbtexcel.mbt`
   - Thin “facade” package: exports convenience functions that delegate to `@xlsx`.
 - `mbtexcel/xlsx/`
@@ -20,14 +24,20 @@ below use repository-relative paths.
 - `mbtexcel/ooxml/`
   - Small OOXML *package metadata* helpers for writing:
     `[Content_Types].xml` and `.rels` generation.
-- `zip/`
-  - ZIP container implementation (read/write/deflate/crc32/etc).
-- `excelize/`
-  - Vendored Go Excelize snapshot used as reference (not a MoonBit package).
-- `mbtexcel/cmd/main/`
-  - Small example CLI.
+- `mbtexcel/{batch,inspect,demos,xlsx2html}/`
+  - Auxiliary packages: batch edits, structural inspection, demo programs, and
+    XLSX to HTML conversion.
+- `mbtexcel/cmd/{xlsx,demos,parity}/`
+  - Tooling executables; `cmd/xlsx` is the published CLI.
+- `mbtexcel/fixtures/excelize/`
+  - Committed subset of the Go Excelize test corpus used as a reference (not a
+    MoonBit package).
 - `docs/`
   - Porting / parity documents and analysis notes.
+
+The ZIP container formerly implemented in an in-repo `zip/` package now comes
+from `moonbit-community/flate`; the cryptographic primitives formerly in
+`crypto/` now come from `moonbitlang/x/crypto`.
 
 ## Package dependency graph
 
@@ -37,10 +47,11 @@ At build time, the MoonBit packages relate like this:
 moonbitlang/mbtexcel        (facade)
   -> moonbitlang/mbtexcel/xlsx
        -> moonbitlang/mbtexcel/ooxml
-       -> moonbitlang/mbtexcel/zip
+       -> moonbit-community/flate/zip
+       -> moonbitlang/x/crypto
 ```
 
-(`excelize/` is a reference only; it is not part of the MoonBit build.)
+(`fixtures/excelize/` is a reference only; it is not part of the MoonBit build.)
 
 ## Public entrypoints
 

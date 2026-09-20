@@ -64,7 +64,7 @@ These carry near-zero behavior risk and unblock everything else.
 - Add a script (e.g. `scripts/check_arch.sh`) asserting:
   - **No feature package imports the root package.** Define the set explicitly.
     Entry-point / glue packages legitimately import root TODAY and are excluded:
-    `cmd/main`, `markdown`, `markdown/cmd`, `async_io`, and every
+    `cmd/pdflite`, `markdown`, `async_io`, and every
     `*/fixture_acceptance` package. The guard's deny-list is "all project
     packages MINUS those entry/test packages". As domains are extracted in
     Phase D, remove them from any temporary exclusion.

@@ -99,10 +99,7 @@ fn pdf_clip_read_i32_le(
     raise EndOfInput
   }
   let index = position.val
-  let value = data[index].to_int() |
-    (data[index + 1].to_int() << 8) |
-    (data[index + 2].to_int() << 16) |
-    (data[index + 3].to_int() << 24)
+  let value = data.unsafe_read_uint32_le(index).reinterpret_as_int()
   position.val += 4
   if value < 0 {
     pdf_clip_raise_bad_native_encoding()
@@ -122,10 +119,7 @@ fn pdf_clip_read_u64_le(
     raise EndOfInput
   }
   let index = position.val
-  let mut value : UInt64 = 0
-  for offset in 0..<8 {
-    value = value | (data[index + offset].to_uint64() << (offset * 8))
-  }
+  let value = data.unsafe_read_uint64_le(index)
   position.val += 8
   value
 }

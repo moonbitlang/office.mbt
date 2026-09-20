@@ -1,14 +1,4 @@
 ///|
-fn push_u32_le(out : Array[Byte], value : Int) -> Unit {
-  @testutil.push_u32_le(out, value.reinterpret_as_uint())
-}
-
-///|
-fn push_u32_be(out : Array[Byte], value : Int) -> Unit {
-  @testutil.push_u32_be(out, value.reinterpret_as_uint())
-}
-
-///|
 fn last_image_emu(sheet : @xlsx.Worksheet) -> (Int, Int) {
   let images = sheet.images()
   let last = images[images.length() - 1]
@@ -26,49 +16,41 @@ test "image dimensions: png/gif/jpeg/bmp/ico/tiff/svg/emf/wmf/emz/wmz" {
   let sheet = workbook.add_sheet("Sheet1")
 
   // PNG: signature + IHDR + width/height (big endian).
-  let png : Array[Byte] = []
-  for b in [0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A] {
-    png.push(b.to_byte())
-  }
-  push_u32_be(png, 13)
-  for b in [0x49, 0x48, 0x44, 0x52] {
-    png.push(b.to_byte())
-  }
-  push_u32_be(png, 2)
-  push_u32_be(png, 3)
-  sheet.add_image("A1", Bytes::from_array(png), "png", "image/png")
+  let png = @buffer.Buffer()
+  png.write_bytes(b"\x89\x50\x4E\x47\x0D\x0A\x1A\x0A")
+  png.write_uint_be(13)
+  png.write_bytes(b"\x49\x48\x44\x52")
+  png.write_uint_be(2)
+  png.write_uint_be(3)
+  sheet.add_image("A1", png.to_bytes(), "png", "image/png")
   debug_inspect(
     last_image_emu(sheet),
     content="\{repr(expected_image_emu(2, 3))}",
   )
 
   // GIF: GIF89a + width/height (little endian).
-  let gif : Array[Byte] = []
-  for b in [0x47, 0x49, 0x46, 0x38, 0x39, 0x61] {
-    gif.push(b.to_byte())
-  }
-  @testutil.push_u16_le(gif, 5)
-  @testutil.push_u16_le(gif, 6)
-  sheet.add_image("A2", Bytes::from_array(gif), "gif", "image/gif")
+  let gif = @buffer.Buffer()
+  gif.write_bytes(b"\x47\x49\x46\x38\x39\x61")
+  gif.write_uint16_le(5)
+  gif.write_uint16_le(6)
+  sheet.add_image("A2", gif.to_bytes(), "gif", "image/gif")
   debug_inspect(
     last_image_emu(sheet),
     content="\{repr(expected_image_emu(5, 6))}",
   )
 
   // JPEG: SOI + SOF0 with height/width.
-  let jpg : Array[Byte] = []
-  for b in [0xFF, 0xD8, 0xFF, 0xC0] {
-    jpg.push(b.to_byte())
-  }
-  @testutil.push_u16_be(jpg, 17)
-  jpg.push((8).to_byte()) // precision
-  @testutil.push_u16_be(jpg, 16) // height
-  @testutil.push_u16_be(jpg, 32) // width
+  let jpg = @buffer.Buffer()
+  jpg.write_bytes(b"\xFF\xD8\xFF\xC0")
+  jpg.write_uint16_be(17)
+  jpg.write_byte((8).to_byte()) // precision
+  jpg.write_uint16_be(16) // height
+  jpg.write_uint16_be(32) // width
   // padding
   for _ in 0..<10 {
-    jpg.push((0).to_byte())
+    jpg.write_byte((0).to_byte())
   }
-  sheet.add_image("A3", Bytes::from_array(jpg), "jpg", "image/jpeg")
+  sheet.add_image("A3", jpg.to_bytes(), "jpg", "image/jpeg")
   debug_inspect(
     last_image_emu(sheet),
     content="\{repr(expected_image_emu(32, 16))}",
@@ -120,48 +102,46 @@ test "image dimensions: png/gif/jpeg/bmp/ico/tiff/svg/emf/wmf/emz/wmz" {
   )
 
   // TIFF little-endian with LONG values.
-  let tiff_le : Array[Byte] = []
-  tiff_le.push((0x49).to_byte())
-  tiff_le.push((0x49).to_byte())
-  @testutil.push_u16_le(tiff_le, 42)
-  push_u32_le(tiff_le, 8)
-  @testutil.push_u16_le(tiff_le, 2) // entry count
+  let tiff_le = @buffer.Buffer()
+  tiff_le.write_bytes(b"\x49\x49")
+  tiff_le.write_uint16_le(42)
+  tiff_le.write_uint_le(8)
+  tiff_le.write_uint16_le(2) // entry count
   // tag 256 (width), type 4, count 1, value 300
-  @testutil.push_u16_le(tiff_le, 256)
-  @testutil.push_u16_le(tiff_le, 4)
-  push_u32_le(tiff_le, 1)
-  push_u32_le(tiff_le, 300)
+  tiff_le.write_uint16_le(256)
+  tiff_le.write_uint16_le(4)
+  tiff_le.write_uint_le(1)
+  tiff_le.write_uint_le(300)
   // tag 257 (height), type 4, count 1, value 200
-  @testutil.push_u16_le(tiff_le, 257)
-  @testutil.push_u16_le(tiff_le, 4)
-  push_u32_le(tiff_le, 1)
-  push_u32_le(tiff_le, 200)
-  push_u32_le(tiff_le, 0)
-  sheet.add_image("A7", Bytes::from_array(tiff_le), "tiff", "image/tiff")
+  tiff_le.write_uint16_le(257)
+  tiff_le.write_uint16_le(4)
+  tiff_le.write_uint_le(1)
+  tiff_le.write_uint_le(200)
+  tiff_le.write_uint_le(0)
+  sheet.add_image("A7", tiff_le.to_bytes(), "tiff", "image/tiff")
   debug_inspect(
     last_image_emu(sheet),
     content="\{repr(expected_image_emu(300, 200))}",
   )
 
   // TIFF big-endian with SHORT values stored in high 16 bits.
-  let tiff_be : Array[Byte] = []
-  tiff_be.push((0x4D).to_byte())
-  tiff_be.push((0x4D).to_byte())
-  @testutil.push_u16_be(tiff_be, 42)
-  push_u32_be(tiff_be, 8)
-  @testutil.push_u16_be(tiff_be, 2)
+  let tiff_be = @buffer.Buffer()
+  tiff_be.write_bytes(b"\x4D\x4D")
+  tiff_be.write_uint16_be(42)
+  tiff_be.write_uint_be(8)
+  tiff_be.write_uint16_be(2)
   // tag 256 (width), type 3, count 1, value 10
-  @testutil.push_u16_be(tiff_be, 256)
-  @testutil.push_u16_be(tiff_be, 3)
-  push_u32_be(tiff_be, 1)
-  push_u32_be(tiff_be, 10 << 16)
+  tiff_be.write_uint16_be(256)
+  tiff_be.write_uint16_be(3)
+  tiff_be.write_uint_be(1)
+  tiff_be.write_uint_be(10 << 16)
   // tag 257 (height), type 3, count 1, value 20
-  @testutil.push_u16_be(tiff_be, 257)
-  @testutil.push_u16_be(tiff_be, 3)
-  push_u32_be(tiff_be, 1)
-  push_u32_be(tiff_be, 20 << 16)
-  push_u32_be(tiff_be, 0)
-  sheet.add_image("A8", Bytes::from_array(tiff_be), "tif", "image/tiff")
+  tiff_be.write_uint16_be(257)
+  tiff_be.write_uint16_be(3)
+  tiff_be.write_uint_be(1)
+  tiff_be.write_uint_be(20 << 16)
+  tiff_be.write_uint_be(0)
+  sheet.add_image("A8", tiff_be.to_bytes(), "tif", "image/tiff")
   debug_inspect(
     last_image_emu(sheet),
     content="\{repr(expected_image_emu(10, 20))}",

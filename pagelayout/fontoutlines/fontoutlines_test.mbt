@@ -5,18 +5,13 @@
 // still have to disagree with these.
 
 ///|
-fn read_u16(data : Bytes, offset : Int) -> Int {
-  (data[offset].to_int() << 8) | data[offset + 1].to_int()
-}
-
-///|
 test "the bundled program carries outlines, not just metrics" {
   guard @fontoutlines.outline_sfnt("Noto Sans SC") is Some(sfnt) else {
     fail("Noto Sans SC has no bundled outlines")
   }
   // sfnt version 0x00010000: TrueType outlines
-  inspect(read_u16(sfnt, 0), content="1")
-  inspect(read_u16(sfnt, 2), content="0")
+  inspect(sfnt.unsafe_read_uint16_be(0).to_int(), content="1")
+  inspect(sfnt.unsafe_read_uint16_be(2).to_int(), content="0")
   // the metrics bundle stops at `post`; a program a PDF can embed has to
   // carry the glyph descriptions and the index that finds them
   inspect(@pdflite.pdf_truetype_table(sfnt, "glyf") is Some(_), content="true")
@@ -36,7 +31,7 @@ test "the bundled program is the regular weight, not the thin default" {
     fail("bundled program lacks an OS/2 table")
   }
   // usWeightClass follows version and xAvgCharWidth
-  inspect(read_u16(sfnt, os2.offset + 4), content="400")
+  inspect(sfnt.unsafe_read_uint16_be(os2.offset + 4).to_int(), content="400")
 }
 
 ///|
