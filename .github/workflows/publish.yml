@@ -1,7 +1,30 @@
+name: Publish Mooncakes packages
+
 on:
   workflow_dispatch:
+    inputs:
+      module:
+        description: Module to publish (office-cli publishes moonbitlang/office)
+        type: choice
+        default: all
+        options:
+          - all
+          - mbtexcel
+          - docx2html
+          - pdflite
+          - pagelayout
+          - office-lib
+          - office-cli
   release:
     types: [released]
+
+permissions:
+  contents: read
+
+# Serialize releases, including manual retries, across refs.
+concurrency:
+  group: mooncakes-publish
+  cancel-in-progress: false
 
 jobs:
   publish:
@@ -38,12 +61,27 @@ jobs:
           moon fmt
           git diff --exit-code
       
-      # This workflow publishes the Excel module; Office has a separate release process.
-      - name: publish
-        working-directory: mbtexcel
+      # Dependencies must reach Mooncakes before their consumers.
+      - name: Publish selected modules
+        shell: bash
         run: |
-          echo $SECRET > ~/.moon/credentials.json
-          moon publish
-          rm ~/.moon/credentials.json
+          set -euo pipefail
+          case "$SELECTED_MODULE" in
+            all) modules=(mbtexcel docx2html pdflite pagelayout office-lib office-cli) ;;
+            mbtexcel|docx2html|pdflite|pagelayout|office-lib|office-cli)
+              modules=("$SELECTED_MODULE") ;;
+            *) echo "Unknown module: $SELECTED_MODULE" >&2; exit 1 ;;
+          esac
+          test -n "$SECRET" || { echo "Missing Mooncakes token" >&2; exit 1; }
+          umask 077
+          mkdir -p "$HOME/.moon"
+          trap 'rm -f "$HOME/.moon/credentials.json"' EXIT
+          printf '%s\n' "$SECRET" > "$HOME/.moon/credentials.json"
+          for module in "${modules[@]}"; do
+            echo "::group::Publish $module"
+            (cd "$module" && moon publish)
+            echo "::endgroup::"
+          done
         env:
+          SELECTED_MODULE: ${{ inputs.module || 'all' }}
           SECRET: ${{ secrets.MOONCAKES_MOONBITLANG_TOKEN }}

@@ -13,7 +13,21 @@ artifacts.
 The repository root contains `moon.work`, not a publishable module. Publish
 from the appropriate module directory: `mbtexcel/`, `docx2html/`, `pdflite/`,
 `pagelayout/`, `office-lib/`, or `office-cli/`. Directory names do not change the
-published module coordinates. The root publish workflow publishes mbtexcel.
+published module coordinates.
+
+The `Publish Mooncakes packages` workflow (`.github/workflows/publish.yml`)
+publishes all six modules when a GitHub Release is released. It publishes in
+dependency order: mbtexcel, docx2html, pdflite, pagelayout, office-lib, then
+office-cli (whose published name is `moonbitlang/office`). Every module uses
+the same `MOONCAKES_MOONBITLANG_TOKEN` repository secret.
+
+For a partial release or retry, manually dispatch the workflow and select a
+single module using the `module` input; its default, `all`, publishes the whole
+workspace in that order. Single-module publishing requires its dependencies
+to already be available in Mooncakes. Bump the versions of modules being
+published beforehand: published versions are immutable. If a release fails
+partway through, retry only the remaining modules rather than republishing
+versions that already succeeded.
 
 The historical release train below documents its original pinned versions;
 consult the current module manifests before preparing a new release.
