@@ -6,14 +6,14 @@ covers changes that have landed on `main` but are not yet published.
 
 ### moonbitlang/mbtexcel [0.2.0]
 
-- **BREAKING**: Removed the `moonbitlang/mbtexcel/testutil` package.
-  - Its byte-push helpers (`push_u16_le`, `push_u16_be`, `push_u32_le`,
-    `push_u32_be`, `push_u64_le`, `push_bytes`) duplicated
-    `moonbitlang/core/buffer`; use the core `Buffer` API instead
-    (`write_uint16_le`/`write_uint16_be`, `write_uint_le`/`write_uint_be`,
-    `write_uint64_le`, `write_bytes`, then `Buffer::to_bytes`).
-  - Its `testutil/zip_fixture` ZIP byte fixture moved to
-    `moonbitlang/docx2html/testutil/zip_fixture` (see docx2html below).
+- **BREAKING**: Moved the `testutil/zip_fixture` ZIP byte fixture out of
+  `moonbitlang/mbtexcel/testutil` to
+  `moonbitlang/docx2html/testutil/zip_fixture` (see docx2html below), and
+  dropped the package's byte-push helpers (`push_u16_le`, `push_u16_be`,
+  `push_u32_le`, `push_u32_be`, `push_u64_le`, `push_bytes`), which duplicated
+  `moonbitlang/core/buffer`; use the core `Buffer` API instead
+  (`write_uint16_le`/`write_uint16_be`, `write_uint_le`/`write_uint_be`,
+  `write_uint64_le`, `write_bytes`, then `Buffer::to_bytes`).
 
 ### moonbitlang/docx2html [0.6.1]
 
@@ -24,9 +24,10 @@ covers changes that have landed on `main` but are not yet published.
 
 ### moonbitlang/office-lib [0.6.1]
 
-- **BREAKING**: Removed the `moonbitlang/office-lib/cmd/office` package and its
-  internal `input_contract` helper; the unified CLI implementation moved to
-  `moonbitlang/office` (see below).
+- **BREAKING**: Moved the unified CLI implementation and its internal
+  `input_contract` helper from `moonbitlang/office-lib/cmd/office` to the
+  `moonbitlang/office` module (`office-cli`); importers of
+  `moonbitlang/office-lib/cmd/office` should use the new location (see below).
 - Removed the `moonbitlang/pagelayout` and `tonyfettes/unicode` dependencies,
   which only that CLI used.
 
@@ -39,8 +40,8 @@ covers changes that have landed on `main` but are not yet published.
 
 ### moonbitlang/pdflite [0.2.0]
 
-- **BREAKING**: Removed the `moonbitlang/pdflite/markdown/cmd` package; the
-  standalone PDF→Markdown CLI now lives in the new `moonbitlang/pdf2md` module.
+- **BREAKING**: Moved the standalone PDF→Markdown CLI from
+  `moonbitlang/pdflite/markdown/cmd` to the new `moonbitlang/pdf2md` module.
   The `moonbitlang/pdflite/markdown` library package is unchanged.
 
 ### moonbitlang/pdf2md [0.1.0]
