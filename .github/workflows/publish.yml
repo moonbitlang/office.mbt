@@ -12,6 +12,7 @@ on:
           - mbtexcel
           - docx2html
           - pdflite
+          - pdf2md
           - pagelayout
           - office-lib
           - office-cli
@@ -40,38 +41,48 @@ jobs:
           moon version --all
           moonrun --version
           moon update
-      
-      - name: moon check
-        run: moon check
-        # Temporarily disable this for backward API compatibility
-        # run: moon check --deny-warn
-      
-      - name: moon info
+      - name: Select modules
+        shell: bash
+        env:
+          SELECTED_MODULE: ${{ inputs.module || 'all' }}
         run: |
-          moon info
-          git diff --exit-code
-      
-      - name: moon test
+          set -euo pipefail
+          case "$SELECTED_MODULE" in
+            all) modules="mbtexcel docx2html pdflite pdf2md pagelayout office-lib office-cli" ;;
+            mbtexcel|docx2html|pdflite|pdf2md|pagelayout|office-lib|office-cli)
+              modules="$SELECTED_MODULE" ;;
+            *) echo "Unknown module: $SELECTED_MODULE" >&2; exit 1 ;;
+          esac
+          echo "PUBLISH_MODULES=$modules" >> "$GITHUB_ENV"
+
+      - name: Validate selected modules
+        shell: bash
         run: |
-          moon test
-          moon test --target js
-      
-      - name: format diff
-        run: |
-          moon fmt
-          git diff --exit-code
-      
+          set -euo pipefail
+          read -r -a modules <<< "$PUBLISH_MODULES"
+          packages=()
+          for module in "${modules[@]}"; do
+            # Explicit package paths include every child package in this module
+            # without selecting tests from other workspace modules.
+            while IFS= read -r manifest; do
+              packages+=("${manifest%/moon.pkg}")
+            done < <(git ls-files "$module/moon.pkg" "$module/**/moon.pkg")
+          done
+          test "${#packages[@]}" -gt 0
+          moon check "${packages[@]}"
+          moon info "${packages[@]}"
+          git diff --exit-code -- "${modules[@]}"
+          moon test "${packages[@]}"
+          moon test --target js "${packages[@]}"
+          moon fmt "${packages[@]}"
+          git diff --exit-code -- "${modules[@]}"
+
       # Dependencies must reach Mooncakes before their consumers.
       - name: Publish selected modules
         shell: bash
         run: |
           set -euo pipefail
-          case "$SELECTED_MODULE" in
-            all) modules=(mbtexcel docx2html pdflite pagelayout office-lib office-cli) ;;
-            mbtexcel|docx2html|pdflite|pagelayout|office-lib|office-cli)
-              modules=("$SELECTED_MODULE") ;;
-            *) echo "Unknown module: $SELECTED_MODULE" >&2; exit 1 ;;
-          esac
+          read -r -a modules <<< "$PUBLISH_MODULES"
           test -n "$SECRET" || { echo "Missing Mooncakes token" >&2; exit 1; }
           umask 077
           mkdir -p "$HOME/.moon"
@@ -83,5 +94,4 @@ jobs:
             echo "::endgroup::"
           done
         env:
-          SELECTED_MODULE: ${{ inputs.module || 'all' }}
           SECRET: ${{ secrets.MOONCAKES_MOONBITLANG_TOKEN }}

@@ -12,7 +12,7 @@ import {
 
 import {
   "moonbitlang/mbtexcel" @excel,
-  "moonbitlang/mbtexcel/testutil/zip_fixture",
+  "moonbitlang/docx2html/testutil/zip_fixture",
   "moonbitlang/docx2html" @word,
   "moonbitlang/async",
   "moonbitlang/core/encoding/utf8",

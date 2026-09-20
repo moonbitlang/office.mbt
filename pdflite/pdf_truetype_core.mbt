@@ -3,7 +3,7 @@ fn pdf_truetype_read_u16(data : BytesView, offset : Int) -> Int? {
   if offset < 0 || offset > data.length() - 2 {
     None
   } else {
-    Some(data[offset].to_int() * 256 + data[offset + 1].to_int())
+    Some(data.unsafe_read_uint16_be(offset).to_int())
   }
 }
 
@@ -29,11 +29,7 @@ fn pdf_truetype_read_u32(data : BytesView, offset : Int) -> UInt? {
   if offset < 0 || offset > data.length() - 4 {
     None
   } else {
-    let a = data[offset].to_uint()
-    let b = data[offset + 1].to_uint()
-    let c = data[offset + 2].to_uint()
-    let d = data[offset + 3].to_uint()
-    Some((a << 24) | (b << 16) | (c << 8) | d)
+    Some(data.unsafe_read_uint32_be(offset))
   }
 }
 
@@ -42,14 +38,11 @@ fn pdf_truetype_read_u32_as_int(data : BytesView, offset : Int) -> Int? {
   if offset < 0 || offset > data.length() - 4 {
     None
   } else {
-    let value = data[offset].to_int().to_int64() * 16777216L +
-      data[offset + 1].to_int().to_int64() * 65536L +
-      data[offset + 2].to_int().to_int64() * 256L +
-      data[offset + 3].to_int().to_int64()
-    if value > 2147483647L {
+    let value = data.unsafe_read_uint32_be(offset)
+    if value > 0x7FFFFFFF {
       None
     } else {
-      Some(value.to_int())
+      Some(value.reinterpret_as_int())
     }
   }
 }

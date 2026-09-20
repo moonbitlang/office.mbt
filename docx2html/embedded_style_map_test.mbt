@@ -57,19 +57,6 @@ fn independent_crc32(data : BytesView) -> UInt {
 }
 
 ///|
-fn zip_u16_at(data : BytesView, offset : Int) -> Int {
-  data[offset].to_int() | (data[offset + 1].to_int() << 8)
-}
-
-///|
-fn zip_u32_at(data : BytesView, offset : Int) -> UInt {
-  data[offset].to_uint() |
-  (data[offset + 1].to_uint() << 8) |
-  (data[offset + 2].to_uint() << 16) |
-  (data[offset + 3].to_uint() << 24)
-}
-
-///|
 fn zip_name_at(data : BytesView, offset : Int, length : Int) -> String raise {
   @utf8.decode(data[offset:offset + length].to_owned())
 }
@@ -91,33 +78,37 @@ fn assert_zip_well_formed(
   // End of central directory: signature PK\x05\x06, no comment expected.
   let eocd = data.length() - 22
   assert_true(eocd >= 0)
-  assert_eq(zip_u32_at(data, eocd), 0x06054B50)
-  let entry_count = zip_u16_at(data, eocd + 10)
+  assert_eq(data.unsafe_read_uint32_le(eocd), 0x06054B50)
+  let entry_count = data.unsafe_read_uint16_le(eocd + 10).to_int()
   assert_eq(entry_count, expected_parts.length())
-  let central_size = zip_u32_at(data, eocd + 12).reinterpret_as_int()
-  let central_offset = zip_u32_at(data, eocd + 16).reinterpret_as_int()
+  let central_size = data.unsafe_read_uint32_le(eocd + 12).reinterpret_as_int()
+  let central_offset = data
+    .unsafe_read_uint32_le(eocd + 16)
+    .reinterpret_as_int()
   assert_eq(central_offset + central_size, eocd)
   // Walk the central directory in order.
   let mut cursor = central_offset
   for index in 0..<entry_count {
-    assert_eq(zip_u32_at(data, cursor), 0x02014B50)
-    let compression_method = zip_u16_at(data, cursor + 10)
+    assert_eq(data.unsafe_read_uint32_le(cursor), 0x02014B50)
+    let compression_method = data.unsafe_read_uint16_le(cursor + 10)
     assert_true(compression_method == 0 || compression_method == 8)
-    let crc = zip_u32_at(data, cursor + 16)
-    let name_len = zip_u16_at(data, cursor + 28)
-    let extra_len = zip_u16_at(data, cursor + 30)
-    let comment_len = zip_u16_at(data, cursor + 32)
-    let local_offset = zip_u32_at(data, cursor + 42).reinterpret_as_int()
+    let crc = data.unsafe_read_uint32_le(cursor + 16)
+    let name_len = data.unsafe_read_uint16_le(cursor + 28).to_int()
+    let extra_len = data.unsafe_read_uint16_le(cursor + 30).to_int()
+    let comment_len = data.unsafe_read_uint16_le(cursor + 32).to_int()
+    let local_offset = data
+      .unsafe_read_uint32_le(cursor + 42)
+      .reinterpret_as_int()
     let name = zip_name_at(data, cursor + 46, name_len)
     let (expected_name, expected_text) = expected_parts[index]
     assert_eq(name, expected_name)
     assert_eq(crc, independent_crc32(@utf8.encode(expected_text)))
     // The referenced local header must exist, agree on the name, and use the
     // same compression method.
-    assert_eq(zip_u32_at(data, local_offset), 0x04034B50)
-    let local_name_len = zip_u16_at(data, local_offset + 26)
+    assert_eq(data.unsafe_read_uint32_le(local_offset), 0x04034B50)
+    let local_name_len = data.unsafe_read_uint16_le(local_offset + 26).to_int()
     assert_eq(zip_name_at(data, local_offset + 30, local_name_len), name)
-    assert_eq(zip_u16_at(data, local_offset + 8), compression_method)
+    assert_eq(data.unsafe_read_uint16_le(local_offset + 8), compression_method)
     cursor = cursor + 46 + name_len + extra_len + comment_len
   }
 }

@@ -83,10 +83,20 @@ fn release_check_steps(
       name: "check all targets",
       args: ["check", "--target", "all", "--warn-list", release_check_warn_list],
     },
-    { name: "test native CLI package", args: ["test", "--target", "native", "cmd/main"] },
+    {
+      name: "test native CLI package",
+      args: ["test", "--target", "native", "cmd/pdflite"],
+    },
     {
       name: "build native CLI",
-      args: ["run", "--target", "native", "--release", "--build-only", "cmd/main"],
+      args: [
+        "run",
+        "--target",
+        "native",
+        "--release",
+        "--build-only",
+        "cmd/pdflite",
+      ],
     },
     {
       name: "test native CLI documentation",

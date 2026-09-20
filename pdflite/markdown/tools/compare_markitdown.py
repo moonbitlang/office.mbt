@@ -142,7 +142,7 @@ def convert_with_pdflite(root: Path, pdf: Path, output: Path) -> str | None:
             "run",
             "--target",
             "native",
-            "markdown/cmd",
+            "pdf2md",
             str(pdf),
             str(output),
         ],

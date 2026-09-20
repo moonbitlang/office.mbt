@@ -2,20 +2,21 @@
 
 This repository contains the Office CLI, its integration library, and the
 document engines they use. Each module is published independently; `moon.work`
-connects the six modules for local development.
+connects the seven modules for local development.
 
 | Directory | Published module | Responsibility |
 | --- | --- | --- |
 | [mbtexcel](mbtexcel/README.mbt.md) | `moonbitlang/mbtexcel` | Read and write XLSX spreadsheets |
 | [docx2html](docx2html/README.mbt.md) | `moonbitlang/docx2html` | Parse, convert, and edit DOCX documents |
 | [pdflite](pdflite/README.mbt.md) | `moonbitlang/pdflite` | Read, write, and manipulate PDFs |
+| [pdf2md](pdf2md/README.md) | `moonbitlang/pdf2md` | PDF to Markdown CLI |
 | [pagelayout](pagelayout/README.mbt.md) | `moonbitlang/pagelayout` | Document layout and SVG/PDF rendering |
-| [office-lib](office-lib/README.mbt.md) | `moonbitlang/office-lib` | Office integration, SDK, and command implementations |
-| [office-cli](office-cli/README.md) | `moonbitlang/office` | Executable entry point |
+| [office-lib](office-lib/README.mbt.md) | `moonbitlang/office-lib` | Office integration and SDK |
+| [office-cli](office-cli/README.md) | `moonbitlang/office` | Unified office CLI |
 
-The CLI delegates to `office-lib/cmd/office`, which integrates the document
-engines and layout packages. The command implementation currently lives in
-`office-lib`; `office-cli` is a thin launcher. The repository root is only a
+The CLI implementation lives in `office-cli`, which integrates the
+document engines and layout packages. `office-lib` is the reusable library;
+`office-cli` is the executable entry point. The repository root is only a
 workspace, not a publishable MoonBit module.
 
 ## Use the CLI

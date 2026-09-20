@@ -21,9 +21,9 @@ Two changes fixed this; the report below describes the historical state.
 
 Measured on 2026-08-07 (Apple clang 21, arm64, deps cached):
 
-- `moon build --target native pdflite/markdown/cmd` (debug, what CI runs):
+- `moon build --target native pdf2md` (debug, what CI runs):
   **3.8 s** clean rebuild of all repo packages; no `cmd.c` exists.
-- `moon build --release --target native pdflite/markdown/cmd`: **11.4 s**;
+- `moon build --release --target native pdf2md`: **11.4 s**;
   `cmd.c` is 17 MB / 378 K lines (was 87 MB / 1.93 M), dominated by static
   data arrays, and compiles in seconds under `-O2`.
 - `moon build --target native` (whole workspace, debug): **12.4 s**.
@@ -47,8 +47,8 @@ other CLI, which does not import the data-heavy packages, generates an
 ```
 git clone https://github.com/moonbitlang/mbtexcel
 cd mbtexcel
-moon build --target native pdflite/markdown/cmd   # generates + compiles cmd.c
-ls -lh _build/native/debug/build/moonbitlang/pdflite/markdown/cmd/cmd.c   # ~87 MB
+moon build --target native pdf2md   # generates + compiles cmd.c
+ls -lh _build/native/debug/build/moonbitlang/pdf2md/cmd.c   # ~87 MB
 ```
 
 The data lives in ordinary `.mbt` sources:
@@ -60,7 +60,7 @@ The data lives in ordinary `.mbt` sources:
 | `pdflite/text/cmapdata/pdf_text_cmap_gbk_data.mbt` | 936 KB |
 | …seven more cmapdata files | 400–730 KB each |
 
-`pdflite/markdown/cmd` (a markdown→PDF CLI) transitively imports the full
+`pdf2md` (the PDF→Markdown CLI) transitively imports the full
 text stack, so its generated translation unit contains the expanded tables;
 `pdflite/cmd/pdflite` does not, hence 8.8 MB.
 

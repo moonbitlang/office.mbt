@@ -1,4 +1,19 @@
 ///|
+async fn markdown_fixture_convert_file_for_test(
+  input_path : String,
+  output_path : String,
+) -> Unit {
+  @fs.write_file(
+    output_path,
+    @utf8.encode(
+      @markdown.pdf_bytes_to_markdown(@fs.read_file(input_path).binary()),
+    ),
+    create_mode=CreateOrTruncate,
+    permission=0o644,
+  )
+}
+
+///|
 async fn markdown_cmd_remove_if_exists_for_test(path : String) -> Unit {
   if @fs.exists(path) {
     @fs.remove(path)
@@ -33,77 +48,6 @@ fn markdown_cmd_assert_contains_for_test(
   fragment : String,
 ) -> Unit raise {
   @test.assert_eq(text.contains(fragment), true)
-}
-
-///|
-test "markdown command renders argparse help" {
-  inspect(
-    markdown_cmd_command().render_help(),
-    content=(
-      #|Usage: pdflite-markdown <input> <output>
-      #|
-      #|Extract Markdown text from a PDF file.
-      #|
-      #|Arguments:
-      #|  input   Input PDF path.
-      #|  output  Output Markdown path.
-      #|
-      #|Options:
-      #|  -h, --help  Show help information.
-      #|
-    ),
-  )
-}
-
-///|
-test "markdown command parses required input and output paths" {
-  let (input_path, output_path) = try! markdown_cmd_parse_args([
-    "input.pdf", "output.md",
-  ])
-  @test.assert_eq(input_path, "input.pdf")
-  @test.assert_eq(output_path, "output.md")
-}
-
-///|
-test "markdown command reports missing positional arguments with argparse help" {
-  try markdown_cmd_parse_args([]) catch {
-    err =>
-      inspect(
-        err.to_string(),
-        content=(
-          #|error: 'input' requires at least 1 values but only 0 were provided
-          #|
-          #|Usage: pdflite-markdown <input> <output>
-          #|
-          #|Extract Markdown text from a PDF file.
-          #|
-          #|Arguments:
-          #|  input   Input PDF path.
-          #|  output  Output Markdown path.
-          #|
-          #|Options:
-          #|  -h, --help  Show help information.
-          #|
-        ),
-      )
-  } noraise {
-    _ => fail("expected argparse to reject missing paths")
-  }
-}
-
-///|
-test "markdown command rejects extra positional arguments" {
-  try markdown_cmd_parse_args(["input.pdf", "output.md", "extra"]) catch {
-    err => {
-      let message = err.to_string()
-      markdown_cmd_assert_contains_for_test(message, "unexpected value 'extra'")
-      markdown_cmd_assert_contains_for_test(
-        message, "Usage: pdflite-markdown <input> <output>",
-      )
-    }
-  } noraise {
-    _ => fail("expected argparse to reject extra paths")
-  }
 }
 
 ///|
@@ -996,7 +940,7 @@ async test "markdown command converts generated Latin fixture to UTF-8 file" {
   )
   let output_path = markdown_cmd_output_path_for_test("pandoc_latin")
   markdown_cmd_remove_if_exists_for_test(output_path)
-  markdown_cmd_convert_file(input_path, output_path)
+  markdown_fixture_convert_file_for_test(input_path, output_path)
   let output = @utf8.decode_lossy(@fs.read_file(output_path).binary())
   markdown_cmd_assert_contains_for_test(output, "# Page 1")
   markdown_cmd_assert_contains_for_test(output, "Pandoc Latin Fixture")
@@ -1013,7 +957,7 @@ async test "markdown command converts checked-in CamlPDF introduction fixture" {
   )
   let output_path = markdown_cmd_output_path_for_test("camlpdf_introduction")
   markdown_cmd_remove_if_exists_for_test(output_path)
-  markdown_cmd_convert_file(input_path, output_path)
+  markdown_fixture_convert_file_for_test(input_path, output_path)
   let output = @utf8.decode_lossy(@fs.read_file(output_path).binary())
   markdown_cmd_assert_contains_for_test(
     output, "An Introduction to PDF with CamlPDF",
@@ -1033,7 +977,7 @@ async test "markdown command converts optional cpdf source manual fixture" {
   if @fs.exists(input_path) {
     let output_path = markdown_cmd_output_path_for_test("cpdf_source_manual")
     markdown_cmd_remove_if_exists_for_test(output_path)
-    markdown_cmd_convert_file(input_path, output_path)
+    markdown_fixture_convert_file_for_test(input_path, output_path)
     let output = @utf8.decode_lossy(@fs.read_file(output_path).binary())
     markdown_cmd_assert_contains_for_test(output, "Coherent PDF")
     markdown_cmd_assert_contains_for_test(output, "Command Line Tools")
@@ -1063,7 +1007,7 @@ async test "markdown command reconstructs optional cpdf source manual fixture wi
     markdown_cmd_remove_if_exists_for_test(clean_output_path)
     markdown_cmd_remove_if_exists_for_test(corrupt_input_path)
     markdown_cmd_remove_if_exists_for_test(corrupt_output_path)
-    markdown_cmd_convert_file(input_path, clean_output_path)
+    markdown_fixture_convert_file_for_test(input_path, clean_output_path)
     @fs.write_file(
       corrupt_input_path,
       markdown_cmd_corrupt_startxref_pointer_for_test(
@@ -1072,7 +1016,9 @@ async test "markdown command reconstructs optional cpdf source manual fixture wi
       create_mode=CreateOrTruncate,
       permission=0o644,
     )
-    markdown_cmd_convert_file(corrupt_input_path, corrupt_output_path)
+    markdown_fixture_convert_file_for_test(
+      corrupt_input_path, corrupt_output_path,
+    )
     let clean_output = @utf8.decode_lossy(
       @fs.read_file(clean_output_path).binary(),
     )
@@ -1105,7 +1051,7 @@ async test "markdown command reconstructs optional cpdf source manual fixture wi
       "cpdf_source_manual_xref_metadata_clean",
     )
     markdown_cmd_remove_if_exists_for_test(clean_output_path)
-    markdown_cmd_convert_file(input_path, clean_output_path)
+    markdown_fixture_convert_file_for_test(input_path, clean_output_path)
     let clean_output = @utf8.decode_lossy(
       @fs.read_file(clean_output_path).binary(),
     )
@@ -1131,7 +1077,9 @@ async test "markdown command reconstructs optional cpdf source manual fixture wi
         create_mode=CreateOrTruncate,
         permission=0o644,
       )
-      markdown_cmd_convert_file(corrupt_input_path, corrupt_output_path)
+      markdown_fixture_convert_file_for_test(
+        corrupt_input_path, corrupt_output_path,
+      )
       let corrupt_output = @utf8.decode_lossy(
         @fs.read_file(corrupt_output_path).binary(),
       )
@@ -1167,7 +1115,7 @@ async test "markdown command reconstructs optional cpdf source manual fixture wi
       "cpdf_source_manual_xref_terminators_clean",
     )
     markdown_cmd_remove_if_exists_for_test(clean_output_path)
-    markdown_cmd_convert_file(input_path, clean_output_path)
+    markdown_fixture_convert_file_for_test(input_path, clean_output_path)
     let clean_output = @utf8.decode_lossy(
       @fs.read_file(clean_output_path).binary(),
     )
@@ -1195,7 +1143,9 @@ async test "markdown command reconstructs optional cpdf source manual fixture wi
         create_mode=CreateOrTruncate,
         permission=0o644,
       )
-      markdown_cmd_convert_file(corrupt_input_path, corrupt_output_path)
+      markdown_fixture_convert_file_for_test(
+        corrupt_input_path, corrupt_output_path,
+      )
       let corrupt_output = @utf8.decode_lossy(
         @fs.read_file(corrupt_output_path).binary(),
       )
@@ -1231,7 +1181,7 @@ async test "markdown command reconstructs optional cpdf source manual fixture wi
       "cpdf_source_manual_xref_dictionary_clean",
     )
     markdown_cmd_remove_if_exists_for_test(clean_output_path)
-    markdown_cmd_convert_file(input_path, clean_output_path)
+    markdown_fixture_convert_file_for_test(input_path, clean_output_path)
     let clean_output = @utf8.decode_lossy(
       @fs.read_file(clean_output_path).binary(),
     )
@@ -1269,7 +1219,9 @@ async test "markdown command reconstructs optional cpdf source manual fixture wi
         create_mode=CreateOrTruncate,
         permission=0o644,
       )
-      markdown_cmd_convert_file(corrupt_input_path, corrupt_output_path)
+      markdown_fixture_convert_file_for_test(
+        corrupt_input_path, corrupt_output_path,
+      )
       let corrupt_output = @utf8.decode_lossy(
         @fs.read_file(corrupt_output_path).binary(),
       )
@@ -1305,7 +1257,7 @@ async test "markdown command reconstructs optional cpdf source manual fixture wi
       "cpdf_source_manual_object_stream_clean",
     )
     markdown_cmd_remove_if_exists_for_test(clean_output_path)
-    markdown_cmd_convert_file(input_path, clean_output_path)
+    markdown_fixture_convert_file_for_test(input_path, clean_output_path)
     let clean_output = @utf8.decode_lossy(
       @fs.read_file(clean_output_path).binary(),
     )
@@ -1335,7 +1287,9 @@ async test "markdown command reconstructs optional cpdf source manual fixture wi
         create_mode=CreateOrTruncate,
         permission=0o644,
       )
-      markdown_cmd_convert_file(corrupt_input_path, corrupt_output_path)
+      markdown_fixture_convert_file_for_test(
+        corrupt_input_path, corrupt_output_path,
+      )
       let corrupt_output = @utf8.decode_lossy(
         @fs.read_file(corrupt_output_path).binary(),
       )
@@ -1371,7 +1325,7 @@ async test "markdown command repairs optional cpdf source manual fixture with ma
       "cpdf_source_manual_stream_length_clean",
     )
     markdown_cmd_remove_if_exists_for_test(clean_output_path)
-    markdown_cmd_convert_file(input_path, clean_output_path)
+    markdown_fixture_convert_file_for_test(input_path, clean_output_path)
     let clean_output = @utf8.decode_lossy(
       @fs.read_file(clean_output_path).binary(),
     )
@@ -1399,7 +1353,9 @@ async test "markdown command repairs optional cpdf source manual fixture with ma
         create_mode=CreateOrTruncate,
         permission=0o644,
       )
-      markdown_cmd_convert_file(corrupt_input_path, corrupt_output_path)
+      markdown_fixture_convert_file_for_test(
+        corrupt_input_path, corrupt_output_path,
+      )
       let corrupt_output = @utf8.decode_lossy(
         @fs.read_file(corrupt_output_path).binary(),
       )
@@ -1437,7 +1393,7 @@ async test "markdown command converts optional cpdf source manual image PDF corp
         "cpdf_source_manual_image_" + checked.to_string(),
       )
       markdown_cmd_remove_if_exists_for_test(output_path)
-      markdown_cmd_convert_file(input_path, output_path)
+      markdown_fixture_convert_file_for_test(input_path, output_path)
       let output = @utf8.decode_lossy(@fs.read_file(output_path).binary())
       markdown_cmd_assert_cpdf_manual_image_markdown_for_test(output, path)
       if output != "# Page 1\n\n\n" {
@@ -1467,7 +1423,7 @@ async test "markdown command reconstructs optional cpdf source manual image PDF 
         "cpdf_source_manual_image_clean_" + checked.to_string(),
       )
       markdown_cmd_remove_if_exists_for_test(clean_output_path)
-      markdown_cmd_convert_file(input_path, clean_output_path)
+      markdown_fixture_convert_file_for_test(input_path, clean_output_path)
       let clean_output = @utf8.decode_lossy(
         @fs.read_file(clean_output_path).binary(),
       )
@@ -1528,7 +1484,9 @@ async test "markdown command reconstructs optional cpdf source manual image PDF 
           create_mode=CreateOrTruncate,
           permission=0o644,
         )
-        markdown_cmd_convert_file(corrupt_input_path, corrupt_output_path)
+        markdown_fixture_convert_file_for_test(
+          corrupt_input_path, corrupt_output_path,
+        )
         let corrupt_output = @utf8.decode_lossy(
           @fs.read_file(corrupt_output_path).binary(),
         )
@@ -1563,7 +1521,7 @@ async test "markdown command converts optional cpdf source top-level classic PDF
         "cpdf_source_top_level_classic_" + checked.to_string(),
       )
       markdown_cmd_remove_if_exists_for_test(output_path)
-      markdown_cmd_convert_file(input_path, output_path)
+      markdown_fixture_convert_file_for_test(input_path, output_path)
       let output = @utf8.decode_lossy(@fs.read_file(output_path).binary())
       markdown_cmd_assert_cpdf_top_level_classic_markdown_for_test(output, path)
       if output != "# Page 1\n\n\n" {
@@ -1593,7 +1551,7 @@ async test "markdown command reconstructs optional cpdf source top-level classic
         "cpdf_source_top_level_classic_clean_" + checked.to_string(),
       )
       markdown_cmd_remove_if_exists_for_test(clean_output_path)
-      markdown_cmd_convert_file(input_path, clean_output_path)
+      markdown_fixture_convert_file_for_test(input_path, clean_output_path)
       let clean_output = @utf8.decode_lossy(
         @fs.read_file(clean_output_path).binary(),
       )
@@ -1654,7 +1612,9 @@ async test "markdown command reconstructs optional cpdf source top-level classic
           create_mode=CreateOrTruncate,
           permission=0o644,
         )
-        markdown_cmd_convert_file(corrupt_input_path, corrupt_output_path)
+        markdown_fixture_convert_file_for_test(
+          corrupt_input_path, corrupt_output_path,
+        )
         let corrupt_output = @utf8.decode_lossy(
           @fs.read_file(corrupt_output_path).binary(),
         )
@@ -1685,7 +1645,7 @@ async test "markdown command converts optional external Adobe supplement fixture
   if @fs.exists(input_path) {
     let output_path = markdown_cmd_output_path_for_test("adobe_supplement")
     markdown_cmd_remove_if_exists_for_test(output_path)
-    markdown_cmd_convert_file(input_path, output_path)
+    markdown_fixture_convert_file_for_test(input_path, output_path)
     let output = @utf8.decode_lossy(@fs.read_file(output_path).binary())
     markdown_cmd_assert_contains_for_test(output, "Adobe® Supplement to")
     markdown_cmd_assert_contains_for_test(output, "ISO 32000-1")
@@ -1703,7 +1663,7 @@ async test "markdown command converts optional external Unicode CJK chart fixtur
   if @fs.exists(input_path) {
     let output_path = markdown_cmd_output_path_for_test("unicode_cjk_chart")
     markdown_cmd_remove_if_exists_for_test(output_path)
-    markdown_cmd_convert_file(input_path, output_path)
+    markdown_fixture_convert_file_for_test(input_path, output_path)
     let output = @utf8.decode_lossy(@fs.read_file(output_path).binary())
     markdown_cmd_assert_contains_for_test(output, "CJK Unified Ideographs")
     markdown_cmd_assert_contains_for_test(output, "Range: 4E00")

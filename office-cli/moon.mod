@@ -15,6 +15,12 @@ description = "Agent-oriented XLSX and DOCX command-line tooling"
 import {
   "moonbitlang/office-lib@0.6.1",
   "moonbitlang/async@0.22.1",
+  "moonbitlang/docx2html@0.6.1",
+  "moonbitlang/mbtexcel@0.2.0",
+  "moonbitlang/pagelayout@0.2.0",
+  "moonbitlang/x@0.4.50",
+  "moonbit-community/flate@0.8.1",
+  "tonyfettes/unicode@0.3.3",
 }
 
 preferred_target = "native"

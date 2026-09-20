@@ -106,7 +106,7 @@ jobs:
           fi
 
       # Regenerate every member's `pkg.generated.mbti` and fail if the committed
-      # interfaces drift from the source (all six members commit their .mbti).
+      # interfaces drift from the source (all seven members commit their .mbti).
       # Run `moon info` and commit the result to fix.
       - name: Interface check
         run: |
@@ -135,8 +135,8 @@ jobs:
 
   # The three test backends. Previously three serial steps in one job.
   #
-  # This repo is a workspace with six peer modules: mbtexcel, docx2html,
-  # pdflite, pagelayout, office-lib, and office-cli. An
+  # This repo is a workspace with seven peer modules: mbtexcel, docx2html,
+  # pdflite, pdf2md, pagelayout, office-lib, and office-cli. An
   # unfiltered `moon test` traverses every member and all of its packages, so
   # new portable child packages are covered automatically instead of silently
   # receiving root-only tests.
@@ -312,7 +312,7 @@ jobs:
       # arrays, and the pinned toolchain links debug executables straight to
       # object code. See docs/moonc-large-const-codegen.md.)
       - name: Build CLIs (native)
-        run: moon build --target native mbtexcel/cmd/xlsx docx2html/cmd/docx2html docx2html/cmd/docx office-cli pdflite/cmd/pdflite pagelayout/cmd/pagelayout
+        run: moon build --target native mbtexcel/cmd/xlsx docx2html/cmd/docx2html docx2html/cmd/docx office-cli pdflite/cmd/pdflite pdf2md pagelayout/cmd/pagelayout
 
       # Run the cram docs from a stub project so `moon cram test` does not
       # trigger a build of every workspace executable (keeps the job lean;
@@ -333,7 +333,7 @@ jobs:
           cd "$STUB"
           moon cram test "$GITHUB_WORKSPACE/mbtexcel/cmd/xlsx/cram"
           moon cram test "$GITHUB_WORKSPACE/docx2html/tests/cram"
-          moon cram test "$GITHUB_WORKSPACE/office-lib/cmd/office/cram"
+          moon cram test "$GITHUB_WORKSPACE/office-cli/cram"
           moon cram test "$GITHUB_WORKSPACE/pdflite/tests/cram"
           moon cram test "$GITHUB_WORKSPACE/pagelayout/tests/cram"
 
