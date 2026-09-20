@@ -1,6 +1,6 @@
 name = "moonbitlang/office-lib"
 
-version = "0.5.0"
+version = "0.6.1"
 
 readme = "README.mbt.md"
 
@@ -13,9 +13,9 @@ keywords = [ "office", "xlsx", "docx", "ooxml", "cli" ]
 description = "Agent-oriented XLSX and DOCX tooling for MoonBit"
 
 import {
-  "moonbitlang/mbtexcel@0.1.9",
-  "moonbitlang/pagelayout@0.1.1",
-  "moonbitlang/docx2html@0.5.0",
+  "moonbitlang/mbtexcel@0.2.0",
+  "moonbitlang/pagelayout@0.2.0",
+  "moonbitlang/docx2html@0.6.1",
   "moonbitlang/async@0.22.1",
   "moonbitlang/x@0.4.50",
   "tonyfettes/unicode@0.3.3",
