@@ -21,6 +21,7 @@ priv struct PdfliteCmdInfoReport {
 
 ///|
 priv enum PdfliteCmd {
+  PdfliteCmdFonts(@argparse.Matches)
   PdfliteCmdLabels(@argparse.Matches)
   PdfliteCmdBookmarks(@argparse.Matches)
   PdfliteCmdMetadata(@argparse.Matches)
@@ -87,6 +88,7 @@ fn pdflite_cmd_command() -> @argparse.Command {
         flags=[FlagArg("json", about="Print metadata as JSON.")],
       ),
       pdflite_cmd_merge_command(),
+      pdflite_cmd_fonts_command(),
       pdflite_cmd_labels_command(),
       pdflite_cmd_metadata_command(),
       pdflite_cmd_bookmarks_command(),
@@ -166,6 +168,7 @@ fn pdflite_cmd_parse_args(args : ArrayView[String]) -> PdfliteCmd raise {
       )
     Some(("bookmarks", subcommand)) => PdfliteCmdBookmarks(subcommand)
     Some(("labels", subcommand)) => PdfliteCmdLabels(subcommand)
+    Some(("fonts", subcommand)) => PdfliteCmdFonts(subcommand)
     Some(("metadata", subcommand)) => PdfliteCmdMetadata(subcommand)
     Some(("merge", subcommand)) =>
       PdfliteCmdMerge(
@@ -204,6 +207,7 @@ async fn pdflite_cmd_run(args : ArrayView[String]) -> Int {
     }
   }
   let result = match command {
+    PdfliteCmdFonts(options) => return pdflite_cmd_fonts_run(options)
     PdfliteCmdLabels(options) => return pdflite_cmd_labels_run(options)
     PdfliteCmdBookmarks(options) => return pdflite_cmd_bookmarks_run(options)
     PdfliteCmdMetadata(options) => return pdflite_cmd_metadata_run(options)

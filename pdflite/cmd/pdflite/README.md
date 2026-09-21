@@ -140,3 +140,16 @@ Styles: `DecimalArabic`, `UppercaseRoman`, `LowercaseRoman`, `UppercaseLetters`,
 `LowercaseLetters`, `NoLabelPrefixOnly`. `startpage` is 1-based and must be in the
 document; `startvalue` must be positive. Prefixes are Unicode strings or null.
 These are viewer page labels, not text printed on the page.
+
+## Font diagnostics
+
+```sh
+pdflite fonts input.pdf --pages '1-3' --json
+pdflite fonts input.pdf --missing --json --output missing-fonts.json
+```
+
+Without `--missing`, lists page fonts; `--missing` reports absent embedded font
+programs, not missing fonts installed on the computer. Type 3 fonts are excluded
+from the missing report. The library's missing-font traversal inspects page
+resources and descendant fonts, not fonts nested inside Form XObjects. Finding
+missing fonts still returns exit 0; IO/PDF failures return exit 1.
