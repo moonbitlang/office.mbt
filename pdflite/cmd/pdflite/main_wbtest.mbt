@@ -56,6 +56,7 @@ test "pdflite command renders argparse help" {
       #|  --password-file <password-file>              File containing exact user password bytes.
       #|  --owner-password <owner-password>            Owner password (UTF-8).
       #|  --owner-password-file <owner-password-file>  File containing exact owner password bytes.
+      #|
     ),
   )
 }
@@ -153,6 +154,7 @@ test "pdflite command reports missing subcommand with argparse help" {
           #|  --password-file <password-file>              File containing exact user password bytes.
           #|  --owner-password <owner-password>            Owner password (UTF-8).
           #|  --owner-password-file <owner-password-file>  File containing exact owner password bytes.
+          #|
         ),
       )
   } noraise {
