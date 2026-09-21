@@ -75,10 +75,13 @@ fn pdflite_cmd_metadata_command() -> @argparse.Command {
 }
 
 ///|
-async fn pdflite_cmd_metadata_execute(options : @argparse.Matches) -> Unit {
+async fn pdflite_cmd_metadata_execute(
+  options : @argparse.Matches,
+  passwords? : PdflitePasswords = { user: None, owner: None, },
+) -> Unit {
   let (action, args) = pdflite_cmd_action(options)
   let input = pdflite_cmd_single_value(args, "input")
-  let document = pdflite_cmd_load(input)
+  let document = pdflite_cmd_load(input, passwords~)
   match action {
     "get" => {
       let fields : Map[String, Json] = Map([])
@@ -151,8 +154,11 @@ async fn pdflite_cmd_metadata_execute(options : @argparse.Matches) -> Unit {
 }
 
 ///|
-async fn pdflite_cmd_metadata_run(options : @argparse.Matches) -> Int {
-  pdflite_cmd_metadata_execute(options) catch {
+async fn pdflite_cmd_metadata_run(
+  options : @argparse.Matches,
+  passwords? : PdflitePasswords = { user: None, owner: None, },
+) -> Int {
+  pdflite_cmd_metadata_execute(options, passwords~) catch {
     err => return pdflite_cmd_operation_error(err)
   }
   pdflite_cmd_exit_ok

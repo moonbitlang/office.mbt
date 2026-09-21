@@ -68,6 +68,7 @@ async fn pdflite_cmd_merge_selected(
   output : String,
   inputs : Array[String],
   options : @argparse.Matches,
+  passwords? : PdflitePasswords = { user: None, owner: None, },
 ) -> Unit {
   let specs = options.values.get("pages").unwrap_or([])
   guard specs.is_empty() || specs.length() == inputs.length() else {
@@ -78,7 +79,7 @@ async fn pdflite_cmd_merge_selected(
   let documents : Array[@pdf.PdfDocument] = []
   let ranges : Array[Array[Int]] = []
   for index, input in inputs {
-    let document = pdflite_cmd_load(input)
+    let document = pdflite_cmd_load(input, passwords~)
     let pages = pdflite_cmd_select_pages(
       document,
       if specs.is_empty() {
@@ -136,8 +137,9 @@ async fn pdflite_cmd_merge_run(
   output : String,
   inputs : Array[String],
   options : @argparse.Matches,
+  passwords? : PdflitePasswords = { user: None, owner: None, },
 ) -> Int {
-  pdflite_cmd_merge_selected(output, inputs, options) catch {
+  pdflite_cmd_merge_selected(output, inputs, options, passwords~) catch {
     err => return pdflite_cmd_operation_error(err)
   }
   pdflite_cmd_exit_ok

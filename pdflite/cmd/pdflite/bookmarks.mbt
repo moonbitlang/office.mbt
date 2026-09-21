@@ -42,9 +42,15 @@ fn pdflite_cmd_bookmarks_command() -> @argparse.Command {
 }
 
 ///|
-async fn pdflite_cmd_bookmarks_execute(options : @argparse.Matches) -> Unit {
+async fn pdflite_cmd_bookmarks_execute(
+  options : @argparse.Matches,
+  passwords? : PdflitePasswords = { user: None, owner: None, },
+) -> Unit {
   let (action, args) = pdflite_cmd_action(options)
-  let document = pdflite_cmd_load(pdflite_cmd_single_value(args, "input"))
+  let document = pdflite_cmd_load(
+    pdflite_cmd_single_value(args, "input"),
+    passwords~,
+  )
   match action {
     "export" => {
       let bytes = if pdflite_cmd_flag_value(args, "text") {
@@ -76,8 +82,11 @@ async fn pdflite_cmd_bookmarks_execute(options : @argparse.Matches) -> Unit {
 }
 
 ///|
-async fn pdflite_cmd_bookmarks_run(options : @argparse.Matches) -> Int {
-  pdflite_cmd_bookmarks_execute(options) catch {
+async fn pdflite_cmd_bookmarks_run(
+  options : @argparse.Matches,
+  passwords? : PdflitePasswords = { user: None, owner: None, },
+) -> Int {
+  pdflite_cmd_bookmarks_execute(options, passwords~) catch {
     err => return pdflite_cmd_operation_error(err)
   }
   pdflite_cmd_exit_ok

@@ -28,8 +28,11 @@ fn pdflite_cmd_select_pages(
 }
 
 ///|
-async fn pdflite_cmd_load(input : String) -> @pdf.PdfDocument {
-  match pdflite_cmd_read_document(input) {
+async fn pdflite_cmd_load(
+  input : String,
+  passwords? : PdflitePasswords = { user: None, owner: None, },
+) -> @pdf.PdfDocument {
+  match pdflite_cmd_read_document(input, passwords~) {
     Ok(document) => document
     Err(message) => raise Runtime(message)
   }

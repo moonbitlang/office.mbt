@@ -165,3 +165,23 @@ pdflite pages input.pdf --pages '1-3,5' --json --output pages.json
 the library's full report (Info fields, viewer preferences, forms, tagging,
 page boxes); its JSON uses the library's field names. `pages` emits per-page
 boxes, dimensions and rotation, in points, with optional page selection.
+
+## Passwords and decryption
+
+```sh
+pdflite info locked.pdf --password 'secret' --detailed
+pdflite decrypt locked.pdf unlocked.pdf --password-file password.bin
+pdflite metadata set locked.pdf output.pdf --owner-password 'owner-secret' --title 'Updated'
+```
+
+Global `--password` and `--owner-password` accept UTF-8 text. Alternatively,
+`--password-file` and `--owner-password-file` read exact bytes (no newline
+trimming); each file option conflicts with its corresponding text option.
+Options may appear before or after subcommands. They apply to every input in
+`merge`; inputs with different passwords must first be decrypted separately.
+
+`decrypt` writes an unencrypted PDF and attempts an empty user password when no
+password is specified. Authentication failures return exit 1 without writing the
+output. With explicit credentials, other commands also operate on the decrypted
+document, and edited outputs are unencrypted. `info` then describes that loaded,
+decrypted document. Output bytes are reparsed before writing.

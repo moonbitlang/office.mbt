@@ -25,8 +25,14 @@ fn pdflite_cmd_fonts_command() -> @argparse.Command {
 }
 
 ///|
-async fn pdflite_cmd_fonts_execute(args : @argparse.Matches) -> Unit {
-  let document = pdflite_cmd_load(pdflite_cmd_single_value(args, "input"))
+async fn pdflite_cmd_fonts_execute(
+  args : @argparse.Matches,
+  passwords? : PdflitePasswords = { user: None, owner: None, },
+) -> Unit {
+  let document = pdflite_cmd_load(
+    pdflite_cmd_single_value(args, "input"),
+    passwords~,
+  )
   let pages = pdflite_cmd_select_pages(
     document,
     pdflite_cmd_single_value(args, "pages"),
@@ -46,8 +52,11 @@ async fn pdflite_cmd_fonts_execute(args : @argparse.Matches) -> Unit {
 }
 
 ///|
-async fn pdflite_cmd_fonts_run(options : @argparse.Matches) -> Int {
-  pdflite_cmd_fonts_execute(options) catch {
+async fn pdflite_cmd_fonts_run(
+  options : @argparse.Matches,
+  passwords? : PdflitePasswords = { user: None, owner: None, },
+) -> Int {
+  pdflite_cmd_fonts_execute(options, passwords~) catch {
     err => return pdflite_cmd_operation_error(err)
   }
   pdflite_cmd_exit_ok

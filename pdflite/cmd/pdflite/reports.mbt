@@ -22,8 +22,15 @@ fn pdflite_cmd_pages_command() -> @argparse.Command {
 }
 
 ///|
-async fn pdflite_cmd_report(args : @argparse.Matches, per_page : Bool) -> Unit {
-  let document = pdflite_cmd_load(pdflite_cmd_single_value(args, "input"))
+async fn pdflite_cmd_report(
+  args : @argparse.Matches,
+  per_page : Bool,
+  passwords? : PdflitePasswords = { user: None, owner: None, },
+) -> Unit {
+  let document = pdflite_cmd_load(
+    pdflite_cmd_single_value(args, "input"),
+    passwords~,
+  )
   let json = pdflite_cmd_flag_value(args, "json")
   let bytes = if per_page {
     let pages = pdflite_cmd_select_pages(
@@ -44,16 +51,22 @@ async fn pdflite_cmd_report(args : @argparse.Matches, per_page : Bool) -> Unit {
 }
 
 ///|
-async fn pdflite_cmd_pages_run(options : @argparse.Matches) -> Int {
-  pdflite_cmd_report(options, true) catch {
+async fn pdflite_cmd_pages_run(
+  options : @argparse.Matches,
+  passwords? : PdflitePasswords = { user: None, owner: None, },
+) -> Int {
+  pdflite_cmd_report(options, true, passwords~) catch {
     err => return pdflite_cmd_operation_error(err)
   }
   pdflite_cmd_exit_ok
 }
 
 ///|
-async fn pdflite_cmd_detailed_info_run(options : @argparse.Matches) -> Int {
-  pdflite_cmd_report(options, false) catch {
+async fn pdflite_cmd_detailed_info_run(
+  options : @argparse.Matches,
+  passwords? : PdflitePasswords = { user: None, owner: None, },
+) -> Int {
+  pdflite_cmd_report(options, false, passwords~) catch {
     err => return pdflite_cmd_operation_error(err)
   }
   pdflite_cmd_exit_ok
