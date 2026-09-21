@@ -23,7 +23,7 @@ priv struct PdfliteCmdInfoReport {
 priv enum PdfliteCmd {
   PdfliteCmdExtract(String, String, String, Bool, Bool)
   PdfliteCmdInfo(String, Bool)
-  PdfliteCmdMerge(String, Array[String])
+  PdfliteCmdMerge(String, Array[String], @argparse.Matches)
   PdfliteCmdRewrite(String, String)
   PdfliteCmdValidate(String)
 }
@@ -83,18 +83,7 @@ fn pdflite_cmd_command() -> @argparse.Command {
         ],
         flags=[FlagArg("json", about="Print metadata as JSON.")],
       ),
-      Command("merge", about="Merge PDF files in the supplied order.", positionals=[
-        PositionArg(
-          "output",
-          about="Output PDF path.",
-          num_args=@argparse.ValueRange::single(),
-        ),
-        PositionArg(
-          "inputs",
-          about="Input PDF paths, in output page order.",
-          num_args=ValueRange(lower=2),
-        ),
-      ]),
+      pdflite_cmd_merge_command(),
       Command("rewrite", about="Parse, write, and verify a PDF file.", positionals=[
         PositionArg(
           "input",
@@ -173,6 +162,7 @@ fn pdflite_cmd_parse_args(args : ArrayView[String]) -> PdfliteCmd raise {
       PdfliteCmdMerge(
         pdflite_cmd_single_value(subcommand, "output"),
         pdflite_cmd_multiple_values(subcommand, "inputs"),
+        subcommand,
       )
     Some(("rewrite", subcommand)) =>
       PdfliteCmdRewrite(
@@ -216,8 +206,8 @@ async fn pdflite_cmd_run(args : ArrayView[String]) -> Int {
         input_path, output_path, pages, retain_numbering, process_struct_tree,
       )
     PdfliteCmdInfo(input_path, json) => pdflite_cmd_info_file(input_path, json)
-    PdfliteCmdMerge(output_path, input_paths) =>
-      pdflite_cmd_merge_files(output_path, input_paths)
+    PdfliteCmdMerge(output_path, input_paths, options) =>
+      return pdflite_cmd_merge_run(output_path, input_paths, options)
     PdfliteCmdRewrite(input_path, output_path) =>
       pdflite_cmd_rewrite_file(input_path, output_path)
     PdfliteCmdValidate(input_path) => pdflite_cmd_validate_file(input_path)
@@ -369,27 +359,6 @@ fn pdflite_cmd_verify_rewritten_bytes(
 }
 
 ///|
-fn pdflite_cmd_pages_for_input(
-  input_path : String,
-  document : @pdf.PdfDocument,
-) -> Result[Array[Int], String] {
-  let page_count = document.endpage() catch {
-    err =>
-      return Err(
-        "cannot read page tree for '" +
-        input_path +
-        "': " +
-        @core.pdf_error_summary(err),
-      )
-  }
-  let pages : Array[Int] = []
-  for page in 1..<=page_count {
-    pages.push(page)
-  }
-  Ok(pages)
-}
-
-///|
 fn pdflite_cmd_verify_merged_bytes(
   output : Bytes,
   expected_page_count : Int,
@@ -431,41 +400,6 @@ async fn pdflite_cmd_write_output_file(
     err => return Err("cannot write '" + output_path + "': " + err.to_string())
   }
   Ok(())
-}
-
-///|
-async fn pdflite_cmd_merge_files(
-  output_path : String,
-  input_paths : ArrayView[String],
-) -> Result[Unit, String] {
-  let documents : Array[@pdf.PdfDocument] = []
-  let ranges : Array[Array[Int]] = []
-  let mut expected_page_count = 0
-  for input_path in input_paths {
-    let document = match pdflite_cmd_read_document(input_path) {
-      Ok(value) => value
-      Err(message) => return Err(message)
-    }
-    let pages = match pdflite_cmd_pages_for_input(input_path, document) {
-      Ok(value) => value
-      Err(message) => return Err(message)
-    }
-    expected_page_count = expected_page_count + pages.length()
-    documents.push(document)
-    ranges.push(pages)
-  }
-  let merged = @pdf.pdf_merge_documents(documents, ranges) catch {
-    err => return Err("cannot merge PDF files: " + @core.pdf_error_summary(err))
-  }
-  let output = @pdf.pdf_write_document(merged) catch {
-    err =>
-      return Err("cannot write merged PDF: " + @core.pdf_error_summary(err))
-  }
-  match pdflite_cmd_verify_merged_bytes(output, expected_page_count) {
-    Ok(_) => ()
-    Err(message) => return Err(message)
-  }
-  pdflite_cmd_write_output_file(output_path, output)
 }
 
 ///|

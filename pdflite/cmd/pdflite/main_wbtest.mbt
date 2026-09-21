@@ -71,7 +71,7 @@ test "pdflite command parses merge subcommand in input order" {
   let parsed = try! pdflite_cmd_parse_args([
     "merge", "output.pdf", "first.pdf", "second.pdf", "third.pdf",
   ])
-  guard parsed is PdfliteCmdMerge(output_path, input_paths) else {
+  guard parsed is PdfliteCmdMerge(output_path, input_paths, _) else {
     fail("expected merge subcommand")
   }
   @test.assert_eq(output_path, "output.pdf")
@@ -217,8 +217,8 @@ async test "pdflite merge preserves input page order" {
   let second_pages = try! (try! @pdf.pdf_read_document_from_bytes(
     @fs.read_file(second_path).binary(),
   )).pages_of_pagetree()
-  let result = pdflite_cmd_merge_files(output_path, [second_path, first_path])
-  guard result is Ok(_) else { fail("expected merge to succeed") }
+  let result = pdflite_cmd_run(["merge", output_path, second_path, first_path])
+  @test.assert_eq(result, 0)
   let merged = try! @pdf.pdf_read_document_from_bytes(
     @fs.read_file(output_path).binary(),
   )

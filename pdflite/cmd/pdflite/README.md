@@ -67,3 +67,23 @@ and annotations are repaired for retained pages where possible.
 The output bytes are reparsed and their page count checked before writing.
 As with `rewrite`, an existing output file is overwritten; failures before
 the write leave it untouched. Write failures may leave a partial output file.
+
+## Merge options
+
+```sh
+pdflite merge combined.pdf first.pdf second.pdf --pages '3,1,3' --pages all --retain-numbering
+pdflite merge combined.pdf first.pdf second.pdf --remove-duplicate-fonts --drop-bookmarks
+```
+
+Omit `--pages` to copy every page, or repeat it exactly once per input, in input
+order. Each specification uses the same strict, 1-based syntax as `extract`;
+empty selections and invalid ranges return exit 2 before writing anything.
+
+All library retention controls are available: `--retain-numbering`,
+`--remove-duplicate-fonts`, `--add-toplevel-document`, `--drop-bookmarks`,
+`--drop-optional-content`, `--drop-acroforms`, `--drop-named-destinations`,
+`--drop-name-dictionary`, `--drop-structure-tree`, `--drop-info`, and
+`--drop-catalog-entries`. Defaults are unchanged. `--add-toplevel-document`
+wraps retained tagged structure trees in Document elements; it does not add
+bookmarks or pages. The result is reparsed and its page count checked before
+writing.
