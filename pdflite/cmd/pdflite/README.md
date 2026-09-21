@@ -67,3 +67,121 @@ and annotations are repaired for retained pages where possible.
 The output bytes are reparsed and their page count checked before writing.
 As with `rewrite`, an existing output file is overwritten; failures before
 the write leave it untouched. Write failures may leave a partial output file.
+
+## Merge options
+
+```sh
+pdflite merge combined.pdf first.pdf second.pdf --pages '3,1,3' --pages all --retain-numbering
+pdflite merge combined.pdf first.pdf second.pdf --remove-duplicate-fonts --drop-bookmarks
+```
+
+Omit `--pages` to copy every page, or repeat it exactly once per input, in input
+order. Each specification uses the same strict, 1-based syntax as `extract`;
+empty selections and invalid ranges return exit 2 before writing anything.
+
+All library retention controls are available: `--retain-numbering`,
+`--remove-duplicate-fonts`, `--add-toplevel-document`, `--drop-bookmarks`,
+`--drop-optional-content`, `--drop-acroforms`, `--drop-named-destinations`,
+`--drop-name-dictionary`, `--drop-structure-tree`, `--drop-info`, and
+`--drop-catalog-entries`. Defaults are unchanged. `--add-toplevel-document`
+wraps retained tagged structure trees in Document elements; it does not add
+bookmarks or pages. The result is reparsed and its page count checked before
+writing.
+
+## Metadata
+
+```sh
+pdflite metadata get input.pdf --output info.json
+pdflite metadata set input.pdf output.pdf --title '中文标题' --author 'Author' --xmp-also
+pdflite metadata export input.pdf --output metadata.xml
+pdflite metadata import input.pdf output.pdf metadata.xml
+pdflite metadata remove input.pdf output.pdf --scope all
+```
+
+`get` emits standard Info fields as UTF-8 JSON. `set` accepts any combination of
+`--title`, `--author`, `--subject`, `--keywords`, `--creator`, `--producer`,
+`--creation-date`, and `--modification-date`; dates use PDF date strings such as
+`D:20260921120000+08'00'`. Empty values clear the field's text. `--xmp-also`
+updates XMP too, creating it from Info if absent.
+
+`export` emits catalog XMP XML to stdout unless `--output` is supplied; absent
+XMP is an error. `import` requires parseable XML and replaces catalog XMP;
+it does not synchronize Info. `remove --scope info|xmp|all` defaults to `all`;
+`xmp` removes all parsed Metadata objects, and `info` removes the trailer Info
+entry. These are metadata edits, not secure erasure of old or orphaned bytes.
+
+## Bookmarks
+
+```sh
+pdflite bookmarks export input.pdf --output bookmarks.json
+pdflite bookmarks import input.pdf output.pdf bookmarks.json
+pdflite bookmarks export input.pdf --text --output bookmarks.txt
+pdflite bookmarks import input.pdf output.pdf bookmarks.txt --text
+pdflite bookmarks remove input.pdf output.pdf
+```
+
+JSON is the library's cpdf bookmark array format and preserves actions on export.
+`--text` selects cpdf's line-oriented bookmark format, which is less expressive
+than JSON. Import replaces the outline and verifies bookmark hierarchy and page
+references before writing. Export defaults to stdout.
+
+## Page labels
+
+`labels export input.pdf [--output labels.json]` exports editable JSON.
+`labels import input.pdf output.pdf labels.json` replaces all label ranges;
+`labels remove input.pdf output.pdf` removes them. Import accepts an empty array
+to clear labels. Example:
+
+```json
+[{"labelstyle":"LowercaseRoman","labelprefix":null,"startpage":1,"startvalue":1}]
+```
+
+Styles: `DecimalArabic`, `UppercaseRoman`, `LowercaseRoman`, `UppercaseLetters`,
+`LowercaseLetters`, `NoLabelPrefixOnly`. `startpage` is 1-based and must be in the
+document; `startvalue` must be positive. Prefixes are Unicode strings or null.
+These are viewer page labels, not text printed on the page.
+
+## Font diagnostics
+
+```sh
+pdflite fonts input.pdf --pages '1-3' --json
+pdflite fonts input.pdf --missing --json --output missing-fonts.json
+```
+
+Without `--missing`, lists page fonts; `--missing` reports absent embedded font
+programs, not missing fonts installed on the computer. Type 3 fonts are excluded
+from the missing report. The library's missing-font traversal inspects page
+resources and descendant fonts, not fonts nested inside Form XObjects. Finding
+missing fonts still returns exit 0; IO/PDF failures return exit 1.
+
+## Detailed document and page information
+
+```sh
+pdflite info input.pdf --detailed --json
+pdflite pages input.pdf --pages '1-3,5' --json --output pages.json
+```
+
+`info` keeps its existing compact output and JSON schema. `--detailed` selects
+the library's full report (Info fields, viewer preferences, forms, tagging,
+page boxes); its JSON uses the library's field names. `pages` emits per-page
+boxes, dimensions and rotation, in points, with optional page selection.
+
+## Passwords and decryption
+
+```sh
+pdflite info locked.pdf --password 'secret' --detailed
+pdflite decrypt locked.pdf unlocked.pdf --password-file password.bin
+pdflite metadata set locked.pdf output.pdf --owner-password 'owner-secret' --title 'Updated'
+```
+
+Global `--password` and `--owner-password` accept UTF-8 text. Alternatively,
+`--password-file` and `--owner-password-file` read exact bytes (no newline
+trimming); each file option conflicts with its corresponding text option.
+Options may appear before or after subcommands. They apply to every input in
+`merge`; inputs with different passwords must first be decrypted separately.
+
+`decrypt` writes an unencrypted PDF and attempts an empty user password when no
+password is specified. Authentication failures return exit 1 without writing the
+output. With explicit credentials, other commands also operate on the decrypted
+document, and edited outputs are unencrypted. `info` then describes that loaded,
+decrypted document. Output bytes are reparsed before writing.

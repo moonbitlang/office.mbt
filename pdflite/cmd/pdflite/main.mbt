@@ -21,9 +21,16 @@ priv struct PdfliteCmdInfoReport {
 
 ///|
 priv enum PdfliteCmd {
+  PdfliteCmdDetailedInfo(@argparse.Matches)
+  PdfliteCmdPages(@argparse.Matches)
+  PdfliteCmdFonts(@argparse.Matches)
+  PdfliteCmdLabels(@argparse.Matches)
+  PdfliteCmdBookmarks(@argparse.Matches)
+  PdfliteCmdMetadata(@argparse.Matches)
   PdfliteCmdExtract(String, String, String, Bool, Bool)
   PdfliteCmdInfo(String, Bool)
-  PdfliteCmdMerge(String, Array[String])
+  PdfliteCmdMerge(String, Array[String], @argparse.Matches)
+  PdfliteCmdDecrypt(String, String)
   PdfliteCmdRewrite(String, String)
   PdfliteCmdValidate(String)
 }
@@ -34,6 +41,34 @@ fn pdflite_cmd_command() -> @argparse.Command {
     "pdflite",
     about="Inspect and rewrite PDF files.",
     version="pdflite " + pdflite_cmd_version,
+    options=[
+      OptionArg(
+        "password",
+        long="password",
+        global=true,
+        about="User password (UTF-8).",
+        conflicts_with=["password-file"],
+      ),
+      OptionArg(
+        "password-file",
+        long="password-file",
+        global=true,
+        about="File containing exact user password bytes.",
+      ),
+      OptionArg(
+        "owner-password",
+        long="owner-password",
+        global=true,
+        about="Owner password (UTF-8).",
+        conflicts_with=["owner-password-file"],
+      ),
+      OptionArg(
+        "owner-password-file",
+        long="owner-password-file",
+        global=true,
+        about="File containing exact owner password bytes.",
+      ),
+    ],
     subcommand_required=true,
     disable_help_subcommand=true,
     subcommands=[
@@ -81,20 +116,21 @@ fn pdflite_cmd_command() -> @argparse.Command {
             num_args=@argparse.ValueRange::single(),
           ),
         ],
-        flags=[FlagArg("json", about="Print metadata as JSON.")],
+        flags=[
+          FlagArg("json", about="Print metadata as JSON."),
+          FlagArg("detailed", about="Print full document information."),
+        ],
       ),
-      Command("merge", about="Merge PDF files in the supplied order.", positionals=[
-        PositionArg(
-          "output",
-          about="Output PDF path.",
-          num_args=@argparse.ValueRange::single(),
-        ),
-        PositionArg(
-          "inputs",
-          about="Input PDF paths, in output page order.",
-          num_args=ValueRange(lower=2),
-        ),
+      Command("decrypt", about="Write an unencrypted PDF.", positionals=[
+        pdflite_cmd_path("input"),
+        pdflite_cmd_path("output"),
       ]),
+      pdflite_cmd_merge_command(),
+      pdflite_cmd_pages_command(),
+      pdflite_cmd_fonts_command(),
+      pdflite_cmd_labels_command(),
+      pdflite_cmd_metadata_command(),
+      pdflite_cmd_bookmarks_command(),
       Command("rewrite", about="Parse, write, and verify a PDF file.", positionals=[
         PositionArg(
           "input",
@@ -153,8 +189,7 @@ fn pdflite_cmd_flag_value(matches : @argparse.Matches, name : String) -> Bool {
 }
 
 ///|
-fn pdflite_cmd_parse_args(args : ArrayView[String]) -> PdfliteCmd raise {
-  let matches = pdflite_cmd_command().parse(argv=args, env=Map([]))
+fn pdflite_cmd_from_matches(matches : @argparse.Matches) -> PdfliteCmd raise {
   match matches.subcommand {
     Some(("extract", subcommand)) =>
       PdfliteCmdExtract(
@@ -164,15 +199,28 @@ fn pdflite_cmd_parse_args(args : ArrayView[String]) -> PdfliteCmd raise {
         pdflite_cmd_flag_value(subcommand, "retain-numbering"),
         pdflite_cmd_flag_value(subcommand, "process-struct-tree"),
       )
+    Some(("info", subcommand)) if pdflite_cmd_flag_value(subcommand, "detailed") =>
+      PdfliteCmdDetailedInfo(subcommand)
     Some(("info", subcommand)) =>
       PdfliteCmdInfo(
         pdflite_cmd_single_value(subcommand, "input"),
         pdflite_cmd_flag_value(subcommand, "json"),
       )
+    Some(("bookmarks", subcommand)) => PdfliteCmdBookmarks(subcommand)
+    Some(("labels", subcommand)) => PdfliteCmdLabels(subcommand)
+    Some(("fonts", subcommand)) => PdfliteCmdFonts(subcommand)
+    Some(("pages", subcommand)) => PdfliteCmdPages(subcommand)
+    Some(("metadata", subcommand)) => PdfliteCmdMetadata(subcommand)
     Some(("merge", subcommand)) =>
       PdfliteCmdMerge(
         pdflite_cmd_single_value(subcommand, "output"),
         pdflite_cmd_multiple_values(subcommand, "inputs"),
+        subcommand,
+      )
+    Some(("decrypt", subcommand)) =>
+      PdfliteCmdDecrypt(
+        pdflite_cmd_single_value(subcommand, "input"),
+        pdflite_cmd_single_value(subcommand, "output"),
       )
     Some(("rewrite", subcommand)) =>
       PdfliteCmdRewrite(
@@ -198,13 +246,39 @@ async fn main {
 
 ///|
 async fn pdflite_cmd_run(args : ArrayView[String]) -> Int {
-  let command = pdflite_cmd_parse_args(args) catch {
+  let matches = pdflite_cmd_command().parse(argv=args, env=Map([])) catch {
     err => {
       @stdio.stderr.write(err.to_string() + "\n")
       return pdflite_cmd_exit_usage_error
     }
   }
+  let command = pdflite_cmd_from_matches(matches) catch {
+    err => return pdflite_cmd_operation_error(err)
+  }
+  let passwords = pdflite_cmd_passwords(matches) catch {
+    err => return pdflite_cmd_operation_error(err)
+  }
   let result = match command {
+    PdfliteCmdDecrypt(input, output) => {
+      let passwords = if passwords.user is None && passwords.owner is None {
+        { user: Some(@utf8.encode("")), owner: None, }
+      } else {
+        passwords
+      }
+      pdflite_cmd_rewrite_file(input, output, passwords~)
+    }
+    PdfliteCmdDetailedInfo(options) =>
+      return pdflite_cmd_detailed_info_run(options, passwords~)
+    PdfliteCmdPages(options) =>
+      return pdflite_cmd_pages_run(options, passwords~)
+    PdfliteCmdFonts(options) =>
+      return pdflite_cmd_fonts_run(options, passwords~)
+    PdfliteCmdLabels(options) =>
+      return pdflite_cmd_labels_run(options, passwords~)
+    PdfliteCmdBookmarks(options) =>
+      return pdflite_cmd_bookmarks_run(options, passwords~)
+    PdfliteCmdMetadata(options) =>
+      return pdflite_cmd_metadata_run(options, passwords~)
     PdfliteCmdExtract(
       input_path,
       output_path,
@@ -213,14 +287,26 @@ async fn pdflite_cmd_run(args : ArrayView[String]) -> Int {
       process_struct_tree
     ) =>
       return pdflite_cmd_extract_file(
-        input_path, output_path, pages, retain_numbering, process_struct_tree,
+        input_path,
+        output_path,
+        pages,
+        retain_numbering,
+        process_struct_tree,
+        passwords~,
       )
-    PdfliteCmdInfo(input_path, json) => pdflite_cmd_info_file(input_path, json)
-    PdfliteCmdMerge(output_path, input_paths) =>
-      pdflite_cmd_merge_files(output_path, input_paths)
+    PdfliteCmdInfo(input_path, json) =>
+      pdflite_cmd_info_file(input_path, json, passwords~)
+    PdfliteCmdMerge(output_path, input_paths, options) =>
+      return pdflite_cmd_merge_run(
+        output_path,
+        input_paths,
+        options,
+        passwords~,
+      )
     PdfliteCmdRewrite(input_path, output_path) =>
-      pdflite_cmd_rewrite_file(input_path, output_path)
-    PdfliteCmdValidate(input_path) => pdflite_cmd_validate_file(input_path)
+      pdflite_cmd_rewrite_file(input_path, output_path, passwords~)
+    PdfliteCmdValidate(input_path) =>
+      pdflite_cmd_validate_file(input_path, passwords~)
   }
   match result {
     Ok(_) => pdflite_cmd_exit_ok
@@ -234,11 +320,12 @@ async fn pdflite_cmd_run(args : ArrayView[String]) -> Int {
 ///|
 async fn pdflite_cmd_read_document(
   input_path : String,
+  passwords? : PdflitePasswords = { user: None, owner: None, },
 ) -> Result[@pdf.PdfDocument, String] {
   let bytes = @fs.read_file(input_path).binary() catch {
     err => return Err("cannot read '" + input_path + "': " + err.to_string())
   }
-  let document = @pdf.pdf_read_document_from_bytes(bytes) catch {
+  let document = pdflite_cmd_read_with_passwords(bytes, passwords) catch {
     err =>
       return Err(
         "cannot parse PDF '" + input_path + "': " + @core.pdf_error_summary(err),
@@ -307,8 +394,9 @@ fn pdflite_cmd_info_json_text(report : PdfliteCmdInfoReport) -> String {
 async fn pdflite_cmd_info_file(
   input_path : String,
   json : Bool,
+  passwords? : PdflitePasswords = { user: None, owner: None, },
 ) -> Result[Unit, String] {
-  let document = match pdflite_cmd_read_document(input_path) {
+  let document = match pdflite_cmd_read_document(input_path, passwords~) {
     Ok(value) => value
     Err(message) => return Err(message)
   }
@@ -369,27 +457,6 @@ fn pdflite_cmd_verify_rewritten_bytes(
 }
 
 ///|
-fn pdflite_cmd_pages_for_input(
-  input_path : String,
-  document : @pdf.PdfDocument,
-) -> Result[Array[Int], String] {
-  let page_count = document.endpage() catch {
-    err =>
-      return Err(
-        "cannot read page tree for '" +
-        input_path +
-        "': " +
-        @core.pdf_error_summary(err),
-      )
-  }
-  let pages : Array[Int] = []
-  for page in 1..<=page_count {
-    pages.push(page)
-  }
-  Ok(pages)
-}
-
-///|
 fn pdflite_cmd_verify_merged_bytes(
   output : Bytes,
   expected_page_count : Int,
@@ -434,46 +501,12 @@ async fn pdflite_cmd_write_output_file(
 }
 
 ///|
-async fn pdflite_cmd_merge_files(
-  output_path : String,
-  input_paths : ArrayView[String],
-) -> Result[Unit, String] {
-  let documents : Array[@pdf.PdfDocument] = []
-  let ranges : Array[Array[Int]] = []
-  let mut expected_page_count = 0
-  for input_path in input_paths {
-    let document = match pdflite_cmd_read_document(input_path) {
-      Ok(value) => value
-      Err(message) => return Err(message)
-    }
-    let pages = match pdflite_cmd_pages_for_input(input_path, document) {
-      Ok(value) => value
-      Err(message) => return Err(message)
-    }
-    expected_page_count = expected_page_count + pages.length()
-    documents.push(document)
-    ranges.push(pages)
-  }
-  let merged = @pdf.pdf_merge_documents(documents, ranges) catch {
-    err => return Err("cannot merge PDF files: " + @core.pdf_error_summary(err))
-  }
-  let output = @pdf.pdf_write_document(merged) catch {
-    err =>
-      return Err("cannot write merged PDF: " + @core.pdf_error_summary(err))
-  }
-  match pdflite_cmd_verify_merged_bytes(output, expected_page_count) {
-    Ok(_) => ()
-    Err(message) => return Err(message)
-  }
-  pdflite_cmd_write_output_file(output_path, output)
-}
-
-///|
 async fn pdflite_cmd_rewrite_file(
   input_path : String,
   output_path : String,
+  passwords? : PdflitePasswords = { user: None, owner: None, },
 ) -> Result[Unit, String] {
-  let document = match pdflite_cmd_read_document(input_path) {
+  let document = match pdflite_cmd_read_document(input_path, passwords~) {
     Ok(value) => value
     Err(message) => return Err(message)
   }
@@ -489,8 +522,11 @@ async fn pdflite_cmd_rewrite_file(
 }
 
 ///|
-async fn pdflite_cmd_validate_file(input_path : String) -> Result[Unit, String] {
-  let document = match pdflite_cmd_read_document(input_path) {
+async fn pdflite_cmd_validate_file(
+  input_path : String,
+  passwords? : PdflitePasswords = { user: None, owner: None, },
+) -> Result[Unit, String] {
+  let document = match pdflite_cmd_read_document(input_path, passwords~) {
     Ok(value) => value
     Err(message) => return Err(message)
   }

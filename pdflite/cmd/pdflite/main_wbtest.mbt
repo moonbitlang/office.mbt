@@ -1,4 +1,9 @@
 ///|
+fn pdflite_cmd_parse_args(args : ArrayView[String]) -> PdfliteCmd raise {
+  pdflite_cmd_from_matches(pdflite_cmd_command().parse(argv=args, env=Map([])))
+}
+
+///|
 fn pdflite_cmd_repo_path_for_test(path : String) -> String {
   match @env.current_dir() {
     Some(current_dir) => current_dir + "/" + path
@@ -27,20 +32,30 @@ test "pdflite command renders argparse help" {
   inspect(
     pdflite_cmd_command().render_help(),
     content=(
-      #|Usage: pdflite <command>
+      #|Usage: pdflite [options] <command>
       #|
       #|Inspect and rewrite PDF files.
       #|
       #|Commands:
-      #|  extract   Extract selected pages into a new PDF file.
-      #|  info      Print basic metadata for one PDF file.
-      #|  merge     Merge PDF files in the supplied order.
-      #|  rewrite   Parse, write, and verify a PDF file.
-      #|  validate  Parse and round-trip a PDF without writing a file.
+      #|  extract    Extract selected pages into a new PDF file.
+      #|  info       Print basic metadata for one PDF file.
+      #|  decrypt    Write an unencrypted PDF.
+      #|  merge      Merge PDF files in the supplied order.
+      #|  pages      Print dimensions, boxes, and rotation for selected pages.
+      #|  fonts      List fonts or diagnose missing embedded font programs.
+      #|  labels     Export, replace, or remove page labels.
+      #|  metadata   Read and edit Info fields and XMP metadata.
+      #|  bookmarks  Export, replace, or remove bookmarks.
+      #|  rewrite    Parse, write, and verify a PDF file.
+      #|  validate   Parse and round-trip a PDF without writing a file.
       #|
       #|Options:
-      #|  -h, --help     Show help information.
-      #|  -V, --version  Show version information.
+      #|  -h, --help                                   Show help information.
+      #|  -V, --version                                Show version information.
+      #|  --password <password>                        User password (UTF-8).
+      #|  --password-file <password-file>              File containing exact user password bytes.
+      #|  --owner-password <owner-password>            Owner password (UTF-8).
+      #|  --owner-password-file <owner-password-file>  File containing exact owner password bytes.
       #|
     ),
   )
@@ -71,7 +86,7 @@ test "pdflite command parses merge subcommand in input order" {
   let parsed = try! pdflite_cmd_parse_args([
     "merge", "output.pdf", "first.pdf", "second.pdf", "third.pdf",
   ])
-  guard parsed is PdfliteCmdMerge(output_path, input_paths) else {
+  guard parsed is PdfliteCmdMerge(output_path, input_paths, _) else {
     fail("expected merge subcommand")
   }
   @test.assert_eq(output_path, "output.pdf")
@@ -115,20 +130,30 @@ test "pdflite command reports missing subcommand with argparse help" {
         content=(
           #|error: the following required argument was not provided: 'subcommand'
           #|
-          #|Usage: pdflite <command>
+          #|Usage: pdflite [options] <command>
           #|
           #|Inspect and rewrite PDF files.
           #|
           #|Commands:
-          #|  extract   Extract selected pages into a new PDF file.
-          #|  info      Print basic metadata for one PDF file.
-          #|  merge     Merge PDF files in the supplied order.
-          #|  rewrite   Parse, write, and verify a PDF file.
-          #|  validate  Parse and round-trip a PDF without writing a file.
+          #|  extract    Extract selected pages into a new PDF file.
+          #|  info       Print basic metadata for one PDF file.
+          #|  decrypt    Write an unencrypted PDF.
+          #|  merge      Merge PDF files in the supplied order.
+          #|  pages      Print dimensions, boxes, and rotation for selected pages.
+          #|  fonts      List fonts or diagnose missing embedded font programs.
+          #|  labels     Export, replace, or remove page labels.
+          #|  metadata   Read and edit Info fields and XMP metadata.
+          #|  bookmarks  Export, replace, or remove bookmarks.
+          #|  rewrite    Parse, write, and verify a PDF file.
+          #|  validate   Parse and round-trip a PDF without writing a file.
           #|
           #|Options:
-          #|  -h, --help     Show help information.
-          #|  -V, --version  Show version information.
+          #|  -h, --help                                   Show help information.
+          #|  -V, --version                                Show version information.
+          #|  --password <password>                        User password (UTF-8).
+          #|  --password-file <password-file>              File containing exact user password bytes.
+          #|  --owner-password <owner-password>            Owner password (UTF-8).
+          #|  --owner-password-file <owner-password-file>  File containing exact owner password bytes.
           #|
         ),
       )
@@ -217,8 +242,8 @@ async test "pdflite merge preserves input page order" {
   let second_pages = try! (try! @pdf.pdf_read_document_from_bytes(
     @fs.read_file(second_path).binary(),
   )).pages_of_pagetree()
-  let result = pdflite_cmd_merge_files(output_path, [second_path, first_path])
-  guard result is Ok(_) else { fail("expected merge to succeed") }
+  let result = pdflite_cmd_run(["merge", output_path, second_path, first_path])
+  @test.assert_eq(result, 0)
   let merged = try! @pdf.pdf_read_document_from_bytes(
     @fs.read_file(output_path).binary(),
   )

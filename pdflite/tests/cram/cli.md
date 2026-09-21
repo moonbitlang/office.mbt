@@ -15,13 +15,13 @@ pdflite 0.1.38
 
 ```mooncram
 $ "$PDFLITE_CLI" --help | grep -E '^(Usage: pdflite|  extract|  info|  merge|  rewrite|  validate|  -V, --version)'
-Usage: pdflite <command>
-  extract   Extract selected pages into a new PDF file.
-  info      Print basic metadata for one PDF file.
-  merge     Merge PDF files in the supplied order.
-  rewrite   Parse, write, and verify a PDF file.
-  validate  Parse and round-trip a PDF without writing a file.
-  -V, --version  Show version information.
+Usage: pdflite [options] <command>
+  extract    Extract selected pages into a new PDF file.
+  info       Print basic metadata for one PDF file.
+  merge      Merge PDF files in the supplied order.
+  rewrite    Parse, write, and verify a PDF file.
+  validate   Parse and round-trip a PDF without writing a file.
+  -V, --version                                Show version information.
 ```
 
 ## Info Options
@@ -30,7 +30,7 @@ Usage: pdflite <command>
 $ "$PDFLITE_CLI" info --help | grep -E '^(Usage: pdflite info|  input|  --json)'
 Usage: pdflite info [options] <input>
   input  Input PDF path.
-  --json      Print metadata as JSON.
+  --json                                       Print metadata as JSON.
 ```
 
 ## PDF Metadata
