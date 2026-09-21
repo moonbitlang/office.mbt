@@ -87,3 +87,25 @@ All library retention controls are available: `--retain-numbering`,
 wraps retained tagged structure trees in Document elements; it does not add
 bookmarks or pages. The result is reparsed and its page count checked before
 writing.
+
+## Metadata
+
+```sh
+pdflite metadata get input.pdf --output info.json
+pdflite metadata set input.pdf output.pdf --title '中文标题' --author 'Author' --xmp-also
+pdflite metadata export input.pdf --output metadata.xml
+pdflite metadata import input.pdf output.pdf metadata.xml
+pdflite metadata remove input.pdf output.pdf --scope all
+```
+
+`get` emits standard Info fields as UTF-8 JSON. `set` accepts any combination of
+`--title`, `--author`, `--subject`, `--keywords`, `--creator`, `--producer`,
+`--creation-date`, and `--modification-date`; dates use PDF date strings such as
+`D:20260921120000+08'00'`. Empty values clear the field's text. `--xmp-also`
+updates XMP too, creating it from Info if absent.
+
+`export` emits catalog XMP XML to stdout unless `--output` is supplied; absent
+XMP is an error. `import` requires parseable XML and replaces catalog XMP;
+it does not synchronize Info. `remove --scope info|xmp|all` defaults to `all`;
+`xmp` removes all parsed Metadata objects, and `info` removes the trailer Info
+entry. These are metadata edits, not secure erasure of old or orphaned bytes.

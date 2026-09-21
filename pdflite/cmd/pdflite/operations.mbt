@@ -47,3 +47,51 @@ async fn pdflite_cmd_operation_error(err : Error) -> Int {
   @stdio.stderr.write("pdflite: \{message}\n")
   code
 }
+
+///|
+fn pdflite_cmd_optional_value(
+  matches : @argparse.Matches,
+  name : String,
+) -> String? {
+  matches.values.get(name).bind(values => values.get(0))
+}
+
+///|
+fn pdflite_cmd_path(name : String) -> @argparse.PositionArg {
+  PositionArg(name, about=name, num_args=@argparse.ValueRange::single())
+}
+
+///|
+fn pdflite_cmd_action(
+  options : @argparse.Matches,
+) -> (String, @argparse.Matches) raise {
+  guard options.subcommand is Some(action) else {
+    raise Usage("a subcommand is required")
+  }
+  action
+}
+
+///|
+async fn pdflite_cmd_save(document : @pdf.PdfDocument, output : String) -> Unit {
+  let bytes = @pdf.pdf_write_document(document)
+  match pdflite_cmd_verify_rewritten_bytes(bytes, output) {
+    Ok(_) => ()
+    Err(message) => raise Runtime(message)
+  }
+  match pdflite_cmd_write_output_file(output, bytes) {
+    Ok(_) => ()
+    Err(message) => raise Runtime(message)
+  }
+}
+
+///|
+async fn pdflite_cmd_emit(bytes : Bytes, output : String?) -> Unit {
+  guard output is Some(path) else {
+    @stdio.stdout.write(bytes)
+    return
+  }
+  match pdflite_cmd_write_output_file(path, bytes) {
+    Ok(_) => ()
+    Err(message) => raise Runtime(message)
+  }
+}
