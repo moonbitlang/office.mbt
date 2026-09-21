@@ -109,3 +109,18 @@ XMP is an error. `import` requires parseable XML and replaces catalog XMP;
 it does not synchronize Info. `remove --scope info|xmp|all` defaults to `all`;
 `xmp` removes all parsed Metadata objects, and `info` removes the trailer Info
 entry. These are metadata edits, not secure erasure of old or orphaned bytes.
+
+## Bookmarks
+
+```sh
+pdflite bookmarks export input.pdf --output bookmarks.json
+pdflite bookmarks import input.pdf output.pdf bookmarks.json
+pdflite bookmarks export input.pdf --text --output bookmarks.txt
+pdflite bookmarks import input.pdf output.pdf bookmarks.txt --text
+pdflite bookmarks remove input.pdf output.pdf
+```
+
+JSON is the library's cpdf bookmark array format and preserves actions on export.
+`--text` selects cpdf's line-oriented bookmark format, which is less expressive
+than JSON. Import replaces the outline and verifies bookmark hierarchy and page
+references before writing. Export defaults to stdout.

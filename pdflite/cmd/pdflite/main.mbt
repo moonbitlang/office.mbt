@@ -21,6 +21,7 @@ priv struct PdfliteCmdInfoReport {
 
 ///|
 priv enum PdfliteCmd {
+  PdfliteCmdBookmarks(@argparse.Matches)
   PdfliteCmdMetadata(@argparse.Matches)
   PdfliteCmdExtract(String, String, String, Bool, Bool)
   PdfliteCmdInfo(String, Bool)
@@ -86,6 +87,7 @@ fn pdflite_cmd_command() -> @argparse.Command {
       ),
       pdflite_cmd_merge_command(),
       pdflite_cmd_metadata_command(),
+      pdflite_cmd_bookmarks_command(),
       Command("rewrite", about="Parse, write, and verify a PDF file.", positionals=[
         PositionArg(
           "input",
@@ -160,6 +162,7 @@ fn pdflite_cmd_parse_args(args : ArrayView[String]) -> PdfliteCmd raise {
         pdflite_cmd_single_value(subcommand, "input"),
         pdflite_cmd_flag_value(subcommand, "json"),
       )
+    Some(("bookmarks", subcommand)) => PdfliteCmdBookmarks(subcommand)
     Some(("metadata", subcommand)) => PdfliteCmdMetadata(subcommand)
     Some(("merge", subcommand)) =>
       PdfliteCmdMerge(
@@ -198,6 +201,7 @@ async fn pdflite_cmd_run(args : ArrayView[String]) -> Int {
     }
   }
   let result = match command {
+    PdfliteCmdBookmarks(options) => return pdflite_cmd_bookmarks_run(options)
     PdfliteCmdMetadata(options) => return pdflite_cmd_metadata_run(options)
     PdfliteCmdExtract(
       input_path,
