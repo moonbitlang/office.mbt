@@ -124,3 +124,19 @@ JSON is the library's cpdf bookmark array format and preserves actions on export
 `--text` selects cpdf's line-oriented bookmark format, which is less expressive
 than JSON. Import replaces the outline and verifies bookmark hierarchy and page
 references before writing. Export defaults to stdout.
+
+## Page labels
+
+`labels export input.pdf [--output labels.json]` exports editable JSON.
+`labels import input.pdf output.pdf labels.json` replaces all label ranges;
+`labels remove input.pdf output.pdf` removes them. Import accepts an empty array
+to clear labels. Example:
+
+```json
+[{"labelstyle":"LowercaseRoman","labelprefix":null,"startpage":1,"startvalue":1}]
+```
+
+Styles: `DecimalArabic`, `UppercaseRoman`, `LowercaseRoman`, `UppercaseLetters`,
+`LowercaseLetters`, `NoLabelPrefixOnly`. `startpage` is 1-based and must be in the
+document; `startvalue` must be positive. Prefixes are Unicode strings or null.
+These are viewer page labels, not text printed on the page.
