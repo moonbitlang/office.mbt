@@ -21,6 +21,8 @@ priv struct PdfliteCmdInfoReport {
 
 ///|
 priv enum PdfliteCmd {
+  PdfliteCmdDetailedInfo(@argparse.Matches)
+  PdfliteCmdPages(@argparse.Matches)
   PdfliteCmdFonts(@argparse.Matches)
   PdfliteCmdLabels(@argparse.Matches)
   PdfliteCmdBookmarks(@argparse.Matches)
@@ -85,9 +87,13 @@ fn pdflite_cmd_command() -> @argparse.Command {
             num_args=@argparse.ValueRange::single(),
           ),
         ],
-        flags=[FlagArg("json", about="Print metadata as JSON.")],
+        flags=[
+          FlagArg("json", about="Print metadata as JSON."),
+          FlagArg("detailed", about="Print full document information."),
+        ],
       ),
       pdflite_cmd_merge_command(),
+      pdflite_cmd_pages_command(),
       pdflite_cmd_fonts_command(),
       pdflite_cmd_labels_command(),
       pdflite_cmd_metadata_command(),
@@ -161,6 +167,8 @@ fn pdflite_cmd_parse_args(args : ArrayView[String]) -> PdfliteCmd raise {
         pdflite_cmd_flag_value(subcommand, "retain-numbering"),
         pdflite_cmd_flag_value(subcommand, "process-struct-tree"),
       )
+    Some(("info", subcommand)) if pdflite_cmd_flag_value(subcommand, "detailed") =>
+      PdfliteCmdDetailedInfo(subcommand)
     Some(("info", subcommand)) =>
       PdfliteCmdInfo(
         pdflite_cmd_single_value(subcommand, "input"),
@@ -169,6 +177,7 @@ fn pdflite_cmd_parse_args(args : ArrayView[String]) -> PdfliteCmd raise {
     Some(("bookmarks", subcommand)) => PdfliteCmdBookmarks(subcommand)
     Some(("labels", subcommand)) => PdfliteCmdLabels(subcommand)
     Some(("fonts", subcommand)) => PdfliteCmdFonts(subcommand)
+    Some(("pages", subcommand)) => PdfliteCmdPages(subcommand)
     Some(("metadata", subcommand)) => PdfliteCmdMetadata(subcommand)
     Some(("merge", subcommand)) =>
       PdfliteCmdMerge(
@@ -207,6 +216,9 @@ async fn pdflite_cmd_run(args : ArrayView[String]) -> Int {
     }
   }
   let result = match command {
+    PdfliteCmdDetailedInfo(options) =>
+      return pdflite_cmd_detailed_info_run(options)
+    PdfliteCmdPages(options) => return pdflite_cmd_pages_run(options)
     PdfliteCmdFonts(options) => return pdflite_cmd_fonts_run(options)
     PdfliteCmdLabels(options) => return pdflite_cmd_labels_run(options)
     PdfliteCmdBookmarks(options) => return pdflite_cmd_bookmarks_run(options)

@@ -153,3 +153,15 @@ programs, not missing fonts installed on the computer. Type 3 fonts are excluded
 from the missing report. The library's missing-font traversal inspects page
 resources and descendant fonts, not fonts nested inside Form XObjects. Finding
 missing fonts still returns exit 0; IO/PDF failures return exit 1.
+
+## Detailed document and page information
+
+```sh
+pdflite info input.pdf --detailed --json
+pdflite pages input.pdf --pages '1-3,5' --json --output pages.json
+```
+
+`info` keeps its existing compact output and JSON schema. `--detailed` selects
+the library's full report (Info fields, viewer preferences, forms, tagging,
+page boxes); its JSON uses the library's field names. `pages` emits per-page
+boxes, dimensions and rotation, in points, with optional page selection.
