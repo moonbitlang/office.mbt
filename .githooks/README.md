@@ -13,7 +13,7 @@ one costs a full push/wait/fix cycle. One pull request needed eleven CI
 attempts across nearly four hours, five of them consecutive `Format check`
 failures.
 
-`scripts/ci/local-gate.sh` runs exactly what CI's `lint` job runs, and leaves
+`scripts/ci/local-gate.sh` runs CI's lint checks plus corpus CLI smoke, and leaves
 the corrections applied rather than merely reporting them.
 
 ## Enabling
@@ -38,7 +38,7 @@ unstaged and commit the uncorrected ones.
 Run the gate by hand at any time:
 
 ```bash
-scripts/ci/local-gate.sh          # everything the lint job runs
+scripts/ci/local-gate.sh          # lint checks plus corpus CLI smoke
 scripts/ci/local-gate.sh --fast   # skip the wasm and js type checks
 ```
 

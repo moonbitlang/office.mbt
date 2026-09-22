@@ -55,8 +55,7 @@ runs:
         ln -sfn moon "$toolchain/bin/moonx"
         echo "MOON_HOME=$toolchain" >> "$GITHUB_ENV"
         echo "$toolchain/bin" >> "$GITHUB_PATH"
-        # the official all-target, LLVM and wasm-gc bundle sequence, which the
-        # fresh-agent preparer reproduces from the same core inputs
+        # the official all-target, LLVM and wasm-gc bundle sequence
         "$toolchain/bin/moon" -C "$toolchain/lib/core" bundle --warn-list -a --all
         "$toolchain/bin/moon" -C "$toolchain/lib/core" bundle --warn-list -a --target llvm
         "$toolchain/bin/moon" -C "$toolchain/lib/core" bundle --warn-list -a --target wasm-gc --quiet

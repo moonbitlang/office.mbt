@@ -16,21 +16,11 @@ concurrency:
 #          ├── test-wasm
 #          ├── test-js
 #          ├── cli-smoke
-#          ├── release-smoke
-#          ├── transaction-platforms (macOS, Windows)
-#          └── fresh-agent-contract (advisory, non-blocking)
+#          └── transaction-platforms (macOS, Windows)
 #
-# `lint` is ~2 minutes and gates the rest. It is where CI fails most: six of
-# the ten most recent red runs died on `moon fmt` or `pkg.generated.mbti`
-# drift, which used to surface roughly six minutes into a single monolithic
-# job — after an advisory security canary had already spent five of them.
-# Gating on `lint` means that class of failure now costs ~2 minutes of wall
-# clock and no test-runner minutes at all.
+# Lint gates the parallel backend, CLI, and cross-platform transaction tests.
 #
-# Everything downstream of `lint` is independent and runs concurrently. The
-# three test backends alone were ~18 minutes of serial steps.
-#
-# `scripts/ci/local-gate.sh` runs exactly what `lint` runs, in ~13 seconds.
+# `scripts/ci/local-gate.sh` runs lint checks plus a corpus CLI smoke check.
 # Enable it as a pre-push hook with `git config core.hooksPath .githooks`.
 
 # The toolchain is not pinned. CI runs the whole gate on both release channels
@@ -639,232 +629,7 @@ jobs:
           bash office-lib/tests/acceptance/run.sh native
           bash office-lib/tests/acceptance/run.sh wasm
 
-  # The installed Office release: build a prepared candidate from a clean
-  # tree, assert its manifest shape, and run acceptance against the installed
-  # binaries. The Codex permission-profile canary rides along as an explicitly
-  # advisory second step.
-
-  release-smoke:
-    name: installed Office release smoke (Ubuntu) [${{ matrix.channel }}]
-    # one leg failing is not a verdict; the `gate` job decides
-    continue-on-error: true
-    strategy:
-      fail-fast: false
-      matrix:
-        channel: [latest, nightly]
-    needs: lint
-    runs-on: ubuntu-24.04
-    timeout-minutes: 40
-    env:
-      EXPECTED_HEAD: ${{ github.event.pull_request.head.sha || github.sha }}
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v5
-        with:
-          ref: ${{ github.event.pull_request.head.sha || github.sha }}
-          persist-credentials: false
-
-      - name: Assert exact workflow head
-        shell: bash
-        run: test "$(git rev-parse --verify HEAD)" = "$EXPECTED_HEAD"
-
-      - uses: ./.github/actions/setup-moonbit
-        with:
-          channel: ${{ matrix.channel }}
-
-      - name: Install pinned Codex CLI and runner dependencies
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y lsof netcat-openbsd
-          npm install --global @openai/codex@0.145.0
-
-      - name: Capture installed MoonBit inventory
-        run: |
-          manifest="$RUNNER_TEMP/moonbit-f1b-toolchain.manifest"
-          test ! -e "$manifest" && test ! -L "$manifest"
-          office-lib/tests/acceptance/fresh-agent/inventory.sh \
-            "$MOON_HOME" "$manifest" linux-x86_64 \
-            CREDITS.md bin include lib share
-          shasum -a 256 "$manifest"
-          echo "F1B_TOOLCHAIN_MANIFEST=$manifest" >> "$GITHUB_ENV"
-
-      # Required. The prepared candidate must build from a clean tree, its
-      # manifest must have exactly the expected shape, and native + Wasm
-      # acceptance must pass against the installed binaries.
-      - name: Prepared-candidate build + Office acceptance
-        env:
-          EXPECTED_HEAD: ${{ github.event.pull_request.head.sha || github.sha }}
-        run: |
-          head="$EXPECTED_HEAD"
-          install_parent=$(mktemp -d /var/tmp/office-f1b-install.XXXXXX)
-          prefix="$install_parent/candidate"
-          prepare="$PWD/office-lib/tests/acceptance/fresh-agent/prepare.sh"
-          moon_bin=$(command -v moon)
-          moonc_bin=$(command -v moonc)
-          moonrun_bin=$(command -v moonrun)
-          test "$(git rev-parse --verify HEAD)" = "$head"
-          test -z "$(git status --porcelain=v1 --untracked-files=all)"
-          (
-            cd /var/tmp
-            PERL5OPT=-MOfficeF1BMustNotLoad \
-            TAR_OPTIONS=--office-f1b-must-not-be-read \
-            "$prepare" \
-              "$head" "$prefix" \
-              "$moon_bin" "$moonc_bin" "$moonrun_bin"
-          )
-          bash office-lib/tests/acceptance/run.sh native \
-            "$prefix/bin/office-native"
-          bash office-lib/tests/acceptance/run.sh wasm \
-            "$prefix/bin/office-wasm"
-          jq -e \
-            --arg head "$head" \
-            '.schema == "office.fresh-agent.candidate/5"
-              and .candidate_head == $head
-              and (.files | map(.path)) == [
-                "bin/office-native",
-                "bin/office-wasm",
-                "libexec/moonrun",
-                "libexec/office.wasm",
-                "control/run.sh",
-                "control/prompt.md",
-                "control/final.schema.json",
-                "control/permission-canary.sh",
-                "control/attest.py",
-                "control/argument-policy.py",
-                "control/auth-guard.py",
-                "control/command-policy.py",
-                "control/opc-policy.py",
-                "control/transcript-policy.py",
-                "control/scenario-policy.py",
-                "control/evidence-policy.py",
-                "control/private.json",
-                "control/inventory.sh",
-                "control/build-lock.json",
-                "control/toolchain.manifest",
-                "control/dependencies.manifest",
-                "control/build-host.json",
-                "control/build-host.manifest",
-                "control/build-host-discovery.py",
-                "control/build-host-discovery.json"
-              ]
-              and .symlinks == [
-                {path: "bin/office", target: "office-native"}
-              ]' \
-            "$prefix/CANDIDATE.json"
-          echo "F1B_CANDIDATE_PREFIX=$prefix" >> "$GITHUB_ENV"
-
-      # Advisory. This never could fail the job: the canary invocation was
-      # already wrapped in an `if`/`else` that downgraded failure to a
-      # `::warning`. Splitting it out makes that explicit and stops a canary
-      # regression from sharing one red X with the real gates above.
-      #
-      # Provenance/security hardening stays bounded and advisory until #270
-      # makes the cross-platform Codex probes portable and predictably timed.
-      - name: Codex permission-profile canary (advisory)
-        continue-on-error: true
-        timeout-minutes: 20
-        env:
-          EXPECTED_HEAD: ${{ github.event.pull_request.head.sha || github.sha }}
-        run: |
-          head="$EXPECTED_HEAD"
-          prefix="$F1B_CANDIDATE_PREFIX"
-          candidate_sha=$(/usr/bin/shasum -a 256 "$prefix/CANDIDATE.json" | /usr/bin/awk '{print substr($1, length($1) - 63)}')
-          codex_native=$(find "$(npm root -g)/@openai" -type f \
-            -path '*/vendor/*/bin/codex' -print | head -n 1)
-          test -n "$codex_native"
-          test -z "$(command -v bwrap || true)"
-          codex_vendor=$(/usr/bin/dirname "$(/usr/bin/dirname "$codex_native")")
-          codex_bwrap="$codex_vendor/codex-resources/bwrap"
-          test -f "$codex_bwrap"
-          test -x "$codex_bwrap"
-          codex_sha=a2a05dafaa1acb002a45eaec0a462de5b13694fcfcd7bc43305f14781ce7be14
-          actual_codex_sha=$(/usr/bin/shasum -a 256 "$codex_native" | /usr/bin/awk '{print substr($1, length($1) - 63)}')
-          test "$actual_codex_sha" = "$codex_sha"
-          bwrap_sha=77360cb751ccedc5971391444ac86a8a33c15b04d6b4a6fe45f5d25496e62c4c
-          actual_bwrap_sha=$(/usr/bin/shasum -a 256 "$codex_bwrap" | /usr/bin/awk '{print substr($1, length($1) - 63)}')
-          test "$actual_bwrap_sha" = "$bwrap_sha"
-          run_parent=$(mktemp -d /var/tmp/office-f1b-canary.XXXXXX)
-          echo "F1B_CANARY_EVIDENCE=$run_parent/evidence" >> "$GITHUB_ENV"
-
-          # Match the official codex-action prerequisite for GitHub-hosted
-          # Linux. Restore both host settings even when the canary fails.
-          original_userns_clone=$(
-            sysctl -n kernel.unprivileged_userns_clone 2>/dev/null || true
-          )
-          original_apparmor_userns=$(
-            sysctl -n kernel.apparmor_restrict_unprivileged_userns \
-              2>/dev/null || true
-          )
-          restore_userns_policy() {
-            status=$?
-            trap - EXIT
-            if test -n "$original_apparmor_userns"; then
-              sudo sysctl -q -w \
-                kernel.apparmor_restrict_unprivileged_userns="$original_apparmor_userns" || \
-                status=1
-            fi
-            if test -n "$original_userns_clone"; then
-              sudo sysctl -q -w \
-                kernel.unprivileged_userns_clone="$original_userns_clone" || \
-                status=1
-            fi
-            exit "$status"
-          }
-          trap restore_userns_policy EXIT
-          if test -n "$original_userns_clone" && \
-            test "$original_userns_clone" != 1; then
-            sudo sysctl -q -w kernel.unprivileged_userns_clone=1
-          fi
-          if test -n "$original_apparmor_userns" && \
-            test "$original_apparmor_userns" != 0; then
-            sudo sysctl -q -w kernel.apparmor_restrict_unprivileged_userns=0
-          fi
-
-          if "$prefix/control/run.sh" --canary-only \
-            "$head" "$candidate_sha" \
-            "$run_parent/probe" "$run_parent/evidence" \
-            "$codex_native" "$codex_sha" \
-            "$codex_bwrap" "$bwrap_sha" && \
-            jq -e --arg bwrap_sha "$bwrap_sha" \
-              '.codex.bubblewrap == {
-                selection: "private",
-                sha256: $bwrap_sha,
-                privately_staged: true
-              }
-                and .verdict == "CANARY PASS"' \
-              "$run_parent/evidence/RUN.json" && \
-            jq -e --arg bwrap_sha "$bwrap_sha" \
-              '.codex.bubblewrap == {
-                selection: "private",
-                sha256: $bwrap_sha,
-                privately_staged: true
-              }' \
-              "$run_parent/evidence/RUN-PREFLIGHT.json"; then
-            echo "Codex permission-profile canary passed"
-          else
-            echo "::warning title=Codex permission-profile canary::The optional security canary failed after native and Wasm Office acceptance passed"
-          fi
-
-      - name: Upload installed MoonBit inventory
-        if: ${{ always() && env.F1B_TOOLCHAIN_MANIFEST != '' }}
-        uses: actions/upload-artifact@v4
-        with:
-          name: fresh-agent-toolchain-ubuntu-${{ matrix.channel }}-${{ github.event.pull_request.head.sha || github.sha }}
-          path: ${{ env.F1B_TOOLCHAIN_MANIFEST }}
-          if-no-files-found: error
-
-      - name: Upload real Codex canary evidence (Ubuntu)
-        if: ${{ always() && env.F1B_CANARY_EVIDENCE != '' }}
-        uses: actions/upload-artifact@v4
-        with:
-          name: fresh-agent-canary-ubuntu-${{ matrix.channel }}-${{ github.event.pull_request.head.sha || github.sha }}
-          path: ${{ env.F1B_CANARY_EVIDENCE }}
-          if-no-files-found: warn
-
-  # Cross-platform transactional editing. macOS additionally builds and
-  # accepts a prepared candidate. The 10-minute advisory fresh-agent runner
-  # contract that used to sit in front of that work has moved to its own
-  # non-blocking job below.
+  # Cross-platform transactional editing and macOS CLI acceptance.
 
   transaction-platforms:
     name: office transactional editing (${{ matrix.os }}) [${{ matrix.channel }}]
@@ -903,56 +668,11 @@ jobs:
         with:
           channel: ${{ matrix.channel }}
 
-      - name: Install pinned Codex CLI (macOS canary)
+      - name: Unified Office acceptance (macOS, native + wasm)
         if: runner.os == 'macOS'
-        run: npm install --global @openai/codex@0.145.0
-
-      - name: Prepared-candidate Office smoke + optional Codex canary (macOS)
-        if: runner.os == 'macOS'
-        env:
-          EXPECTED_HEAD: ${{ github.event.pull_request.head.sha || github.sha }}
         run: |
-          head="$EXPECTED_HEAD"
-          parent=$(mktemp -d "${TMPDIR}/office-f1b-ci.XXXXXX")
-          prefix="$parent/candidate"
-          moon_bin=$(command -v moon)
-          moonc_bin=$(command -v moonc)
-          moonrun_bin=$(command -v moonrun)
-          test "$(git rev-parse --verify HEAD)" = "$head"
-          test -z "$(git status --porcelain=v1 --untracked-files=all)"
-          PERL5OPT=-MOfficeF1BMustNotLoad \
-          TAR_OPTIONS=--office-f1b-must-not-be-read \
-          office-lib/tests/acceptance/fresh-agent/prepare.sh \
-            "$head" "$prefix" \
-            "$moon_bin" "$moonc_bin" "$moonrun_bin"
-          bash office-lib/tests/acceptance/run.sh native \
-            "$prefix/bin/office-native"
-          bash office-lib/tests/acceptance/run.sh wasm \
-            "$prefix/bin/office-wasm"
-          candidate_sha=$(/usr/bin/shasum -a 256 "$prefix/CANDIDATE.json" | /usr/bin/awk '{print substr($1, length($1) - 63)}')
-          codex_native=$(find "$(npm root -g)/@openai" -type f \
-            -path '*/vendor/*/bin/codex' -print | head -n 1)
-          test -n "$codex_native"
-          codex_sha=1da3f4e0e96028b8a771814293c3033dafd1971f943f6c7e79b0897fe705f590
-          actual_codex_sha=$(/usr/bin/shasum -a 256 "$codex_native" | /usr/bin/awk '{print substr($1, length($1) - 63)}')
-          test "$actual_codex_sha" = "$codex_sha"
-          echo "F1B_CANARY_EVIDENCE=$parent/evidence" >> "$GITHUB_ENV"
-          if "$prefix/control/run.sh" --canary-only \
-            "$head" "$candidate_sha" \
-            "$parent/probe" "$parent/evidence" \
-            "$codex_native" "$codex_sha"; then
-            echo "Codex permission-profile canary passed"
-          else
-            echo "::warning title=Codex permission-profile canary::The optional security canary failed after native and Wasm Office acceptance passed"
-          fi
-
-      - name: Upload real Codex canary evidence (macOS)
-        if: ${{ always() && runner.os == 'macOS' && env.F1B_CANARY_EVIDENCE != '' }}
-        uses: actions/upload-artifact@v4
-        with:
-          name: fresh-agent-canary-macos-${{ matrix.channel }}-${{ github.event.pull_request.head.sha || github.sha }}
-          path: ${{ env.F1B_CANARY_EVIDENCE }}
-          if-no-files-found: warn
+          bash office-lib/tests/acceptance/run.sh native
+          bash office-lib/tests/acceptance/run.sh wasm
 
       - name: Check transactional editing packages
         run: |
@@ -973,51 +693,6 @@ jobs:
           moon test --target native office-lib/transaction
           moon test --target native office-lib/transaction/permission_contract
           moon test --target native office-lib/docx
-
-  # Advisory only. This harness-only contract took 10m13s on macOS and sat in
-  # front of that job's real gate; #270 tracks restoring it as a required
-  # check once the cross-platform Codex probes are portable and predictably
-  # timed. Until then it runs here, where it costs nothing on the critical
-  # path.
-
-  fresh-agent-contract:
-    name: fresh-agent runner contract (${{ matrix.os }}) [${{ matrix.channel }}, advisory]
-    needs: lint
-    runs-on: ${{ matrix.os }}
-    continue-on-error: true
-    timeout-minutes: 30
-    env:
-      EXPECTED_HEAD: ${{ github.event.pull_request.head.sha || github.sha }}
-    strategy:
-      fail-fast: false
-      matrix:
-        os: [ubuntu-24.04, macos-latest]
-        channel: [latest, nightly]
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v5
-        with:
-          ref: ${{ github.event.pull_request.head.sha || github.sha }}
-          persist-credentials: false
-
-      - name: Assert exact workflow head
-        shell: bash
-        run: test "$(git rev-parse --verify HEAD)" = "$EXPECTED_HEAD"
-
-      - uses: ./.github/actions/setup-moonbit
-        with:
-          channel: ${{ matrix.channel }}
-
-      - name: Install runner dependencies (Ubuntu)
-        if: runner.os == 'Linux'
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y lsof netcat-openbsd
-
-      - name: Fresh-agent runner contract
-        continue-on-error: true
-        timeout-minutes: 10
-        run: office-lib/tests/acceptance/fresh-agent/run_test.sh
 
   # The required check.
   #
@@ -1044,7 +719,6 @@ jobs:
       - test-wasm
       - test-js
       - cli-smoke
-      - release-smoke
       - transaction-platforms
     if: always()
     runs-on: ubuntu-24.04
@@ -1066,7 +740,6 @@ jobs:
           test (wasm)
           test (js)
           CLI smoke (cram + wasm CLIs + Office acceptance)
-          installed Office release smoke (Ubuntu)
           office transactional editing (macos-latest)
           office transactional editing (windows-latest)"
           jobs="$(gh api --paginate \

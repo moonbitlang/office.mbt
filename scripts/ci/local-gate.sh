@@ -1,13 +1,7 @@
 #!/usr/bin/env bash
 #
-# The cheap half of CI, runnable locally in well under a minute.
-#
-# CI's `lint` job runs these checks in this order (the corpus CLI smoke
-# additionally mirrors a `cli-smoke` step). They are also where
-# CI fails most: of the ten most recent red runs on this repository, six died
-# on `moon fmt` drift or `pkg.generated.mbti` drift — both fully reproducible
-# here, both costing a ~15-minute CI round trip when they are discovered
-# remotely instead.
+# Run the CI lint checks and an additional corpus CLI smoke check locally.
+# --fast omits the Wasm and JS type checks, not the corpus checks.
 #
 # Unlike CI, this script leaves the fixes applied: `moon fmt` and `moon info`
 # rewrite the tree in place, so a failure here is usually one `git add -u`
@@ -67,11 +61,19 @@ run() {
   fi
 }
 
-# `moon fmt` and `moon info` rewrite files rather than reporting; the drift is
-# only visible as a dirty tree afterwards. Snapshot first so a dirty tree is
-# attributed to these two commands and not to edits the caller already had.
-dirty_before=$(git status --porcelain=v1)
-
+# Compare content, not status letters: an already-modified file can be
+# rewritten again without changing its `git status` entry. Include untracked
+# MoonBit source/interface files because git diff alone does not report them.
+snapshot_dir=$(mktemp -d)
+trap 'rm -rf "$snapshot_dir"' EXIT
+snapshot_content() {
+  git diff --binary --no-ext-diff --no-textconv HEAD -- || return 1
+  while IFS= read -r -d '' path; do
+    printf '%s\0' "$path"
+    git hash-object -- "$path" || return 1
+  done < <(git ls-files --others --exclude-standard -z -- \
+    '*.mbt' '*.mbt.md' '*.mbti' 'moon.pkg*' 'moon.mod*' 'moon.work')
+}
 run "dispatch registry" python3 docx2html/tests/registry/check_dispatch_registry.py
 run "dispatch escape suite" bash docx2html/tests/registry/escape_suite.sh
 run "corpus projection manifest" python3 docx2html/tests/corpus/projection_check.py
@@ -88,13 +90,14 @@ if [ -n "$legacy_reader_tombstone" ]; then
   echo "$legacy_reader_tombstone"
   fail "legacy reader tombstone"
 fi
+snapshot_content > "$snapshot_dir/before" || exit 1
 run "moon fmt" moon fmt
 run "moon info" moon info
 
-dirty_after=$(git status --porcelain=v1)
-if [ "$dirty_before" != "$dirty_after" ]; then
+snapshot_content > "$snapshot_dir/after" || exit 1
+if ! cmp -s "$snapshot_dir/before" "$snapshot_dir/after"; then
   fail "formatting/interface drift"
-  printf '\n%smoon fmt / moon info rewrote tracked files.%s\n' "$red" "$reset"
+  printf '\n%smoon fmt / moon info changed source or interface content.%s\n' "$red" "$reset"
   printf 'CI rejects this in its "Format check" / "Interface check" steps.\n'
   printf 'The corrections are already applied here — review and stage them:\n\n'
   git --no-pager diff --stat
@@ -115,6 +118,6 @@ fi
 
 printf '%slocal-gate: %d check(s) failed:%s\n' "$red" "$failed_count" "$reset"
 printf '%s' "$failed_list"
-printf '\nThese are the same checks CI runs first. Fix them here rather than\n'
+printf '\nThese include the CI lint checks and corpus smoke. Fix them here rather than\n'
 printf 'spending a CI round trip on them.\n'
 exit 1
