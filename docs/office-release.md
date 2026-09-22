@@ -1,10 +1,6 @@
 # Office release ordering
 
-Current workspace and release-check follow-ups:
-[#542](https://github.com/moonbitlang/office.mbt/issues/542) and
-[#285](https://github.com/moonbitlang/office.mbt/issues/285). The historical
-release train below was tracked in
-[#155](https://github.com/moonbitlang/office.mbt/issues/155).
+Workspace follow-ups: [#542](https://github.com/moonbitlang/office.mbt/issues/542).
 
 The repository is a development workspace, but Mooncakes publishes each module
 independently. Workspace resolution can therefore hide a dependency that does
@@ -52,100 +48,37 @@ versions that already succeeded.
 Use each module's current `moon.mod` for its version and dependency requirements;
 the versions in the historical section below are not current release targets.
 The workflow runs source checks, tests, interface generation, and formatting
-checks in the workspace before publishing. It does not run the isolated
-registry-check scripts: validate registry resolution separately before
-publishing each dependent module.
+checks in the workspace before publishing. `moon publish` packages each module
+and checks a freshly extracted copy against registry dependencies. Use this
+built-in validation rather than maintaining a separate copy-and-test pipeline.
 
-## Current isolated registry checks
+## Publish validation
 
-Run the applicable script from the repository root after its internal dependency
-versions are available in Mooncakes:
+Run `moon publish` from the selected module directory after its required internal
+dependency versions are available in Mooncakes. The publishing workflow handles
+this in the order above; it uses the organization's registry credentials.
 
-```sh
-scripts/check_docx2html_registry_release.sh
-scripts/check_office_registry_release.sh
-scripts/check_office_cli_registry_release.sh
-```
+For a manual preflight without publishing a version, run `moon publish --dry-run`
+from that directory. The extracted package needs to install its dependencies,
+so do not pass `--frozen` to this command. A server dry run requires credentials
+for the module owner. Some Moon versions return exit 255 despite the server
+marker `Dry run completed successfully`; read the result rather than interpreting
+that exit code alone as a failure.
 
-These scripts check `docx2html`, `office-lib`, and `office-cli`, respectively.
-They require Git, Python 3, and the MoonBit toolchain; native SDK tests also use
-.NET 8, which the validator harness installs if it is unavailable. Each script
-stages source files in a fresh temporary directory outside `moon.work`, with
-the required test fixtures and SDK validators. Fixture staging does not copy
-sibling module implementations, so dependencies must resolve from the registry.
-
-The scripts refresh the registry index and run an initial non-frozen native
-check to install dependencies. They then print `moon tree` and verify all
-selected occurrences of the Office modules' direct internal dependencies
-against the exact versions declared in the candidate's `moon.mod`. Subsequent
-native/Wasm checks and full-module tests use `--frozen`; the CLI also runs
-native/Wasm builds and a JSON help smoke check.
-
-Packaging uses `moon package --frozen`. The scripts inspect the actual ZIP and
-reject build/cache entries such as `_build`, `.mooncakes`, and `target` before
-the server dry run. They then run `moon publish --dry-run` without `--frozen`:
-on Moon 0.1.20260920, publish verifies a freshly extracted copy whose dependencies
-must first be installed. The dependency tree must remain unchanged across the
-dry run. Success requires the server marker `Dry run completed successfully`,
-including when Moon exits 255; exit code zero alone is insufficient.
-
-The manual [docx2html registry workflow](../.github/workflows/docx2html-registry-release-check.yml)
-runs the first script. The manual [Office registry workflow](../.github/workflows/office-registry-release-check.yml)
-runs separate jobs for both Office modules. These workflows use the organization
-secret above and remove the temporary credentials when finished. Local server
-dry runs also require credentials authorized for `moonbitlang`; an account
-mismatch returns HTTP 403 even if tests and extracted-package checks pass.
-The scripts perform dry runs only and do not publish a version.
-
-These three scripts do not cover all seven modules. Isolated validation of
-`mbtexcel`, `pdflite`, `pdf2md`, and `pagelayout` must also be arranged when
-releasing those modules; broader coverage remains tracked in #542. Record the
-toolchain version and distinguish local test/package results from authenticated
-server success. Publishing remains an explicit maintainer action.
+Source behavior is tested by normal CI. Packaged-module validation is performed
+by Moon's publish command. There are no additional isolated registry-check
+scripts or dedicated workflows to run.
 
 ## Historical release train: Office 0.1.0 and DOCX 0.2.0
 
-The following records the original A4/D2 release order and pinned versions.
-Script paths identify the gates used for that release; today's scripts read
-current manifests and do not reproduce those historical pins automatically.
+The A4/D2 release published mbtexcel 0.1.9, docx2html 0.2.0, office-lib 0.1.0,
+then office 0.1.0. Its completion record and validation results are in
+[#155](https://github.com/moonbitlang/office.mbt/issues/155#issuecomment-5114580054).
+Those versions are historical, not current release targets. The old isolated
+release-harness problems were tracked in
+[#285](https://github.com/moonbitlang/office.mbt/issues/285); that harness has been
+removed in favor of the built-in publish checks.
 
-For the transaction and bounded-DOCX release train introduced by A4 and D2:
-
-1. merge and validate the source changes without publishing Office;
-2. publish `moonbitlang/mbtexcel@0.1.9` from `mbtexcel/`;
-3. wait until that exact immutable version resolves from Mooncakes;
-4. run `scripts/check_docx2html_registry_release.sh` (or the manual
-   `docx2html-registry-release-check` GitHub workflow) outside `moon.work` and
-   require its native, Wasm, and publish-dry-run checks to pass;
-5. publish `moonbitlang/docx2html@0.2.0` from `docx2html/`;
-6. wait until that exact immutable version resolves from Mooncakes;
-7. with the Office implementation manifest already staged to require
-   `docx2html@0.2.0`, run `scripts/check_office_registry_release.sh` (or the manual
-   `office-registry-release-check` GitHub workflow) and require every native,
-   Wasm, transaction, raw, DOCX, SDK-validation, and publish-dry-run check to
-   pass. Both test commands are unfiltered full-module runs, so the Office root
-   integration suite cannot be hidden by green child-package checks;
-8. publish `moonbitlang/office-lib@0.1.0` from `office-lib/` and wait until that exact
-   immutable version resolves from Mooncakes;
-9. run `scripts/check_office_cli_registry_release.sh` outside `moon.work` and
-   require its native, Wasm, smoke, and publish-dry-run checks to pass;
-10. publish `moonbitlang/office@0.1.0` from `office-cli/`;
-11. wait for registry propagation, then verify the public entry point without
-    an argument separator: `moonx moonbitlang/office help all --json`.
-
-Never publish `office@0.1.0` first. The executable intentionally requires
-`office-lib@0.1.0`; that implementation in turn requires `mbtexcel@0.1.9`,
-which contains the strict bounded ZIP reader used by the transaction gate, and
-`docx2html@0.2.0`, which contains the bounded annotated reader used by DOCX
-commands. Repointing any dependency to a previous version would make a
-workspace build green while producing a broken or materially weaker registry
-artifact.
-
-### Historical source-breaking boundary
-
-`docx2html@0.2.0` is a deliberate pre-1.0 source-breaking release. Bounded XML
-processing adds the machine-readable `ResourceLimit` constructor to the public
-`DocxError` cases, so exhaustive matches written for `0.1.x` must handle the new
-case. The project has no third-party compatibility obligation yet; making the
-break explicit in the version is preferable to hiding it behind a patch release
-or weakening typed resource-limit reporting.
+`docx2html@0.2.0` introduced the `ResourceLimit` constructor in `DocxError`;
+exhaustive matches written against 0.1.x needed to handle it. See
+[CHANGELOG.md](../CHANGELOG.md) for subsequent module and API changes.
