@@ -1,33 +1,32 @@
+# Editor and local tooling files.
 .DS_Store
+*~
+.moonagent/
+.openseek/
+.claude/
+.tools/
+
+# MoonBit build outputs and dependencies.
 _build/
 target/
-target
 .mooncakes/
-.moonagent/
-# Full excelize Go checkout used by developer parity tooling (not the vendored
-# `mbtexcel/fixtures/excelize/` test subset, which is committed). Anchored so the bare
-# names don't also ignore that subset.
-/.repos
-..mi
-*~
-/excelize
+
+# Python and .NET build outputs.
 __pycache__/
 *.pyc
-.tools
-demos*/
-!/mbtexcel/cmd/demos/
-!/mbtexcel/cmd/demos/moon.pkg
-!/mbtexcel/demos/
-!/mbtexcel/demos/**
-_mbtexcel_check
-/mbtexcel/mbtexcel_*.xlsx
-.openseek/
-tools/**/bin/
-tools/**/obj/
-docx2html/docx/zz_corpus_shadow_*_wbtest.mbt
-.claude
+/tools/**/bin/
+/tools/**/obj/
 
-# Cram failure artifacts: the runner writes these beside the .t file on a
-# mismatch, and one was committed by accident once.
+# Local reference checkouts; keep vendored module fixtures visible.
+/.repos/
+/excelize/
+
+# Generated demo workbooks and temporary validation sources.
+demos_out*/
+/_mbtexcel_check/
+/mbtexcel/mbtexcel_*.xlsx
+/docx2html/docx/zz_corpus_shadow_*_wbtest.mbt
+
+# Cram failure artifacts.
 *.t.new
 *.t.err

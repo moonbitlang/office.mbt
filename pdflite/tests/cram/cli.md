@@ -1,6 +1,7 @@
-# Native PDF CLI
+# PDF CLI
 
-These Moon Cram tests exercise the compiled native `pdflite` wrapper. They focus on
+These Moon Cram tests exercise native and Wasm `pdflite` through `PDFLITE_CLI`
+(an executable or a wrapper invoking `moonrun`). They focus on
 shell-visible behavior that unit tests cannot cover directly: argv, file IO,
 stdout, stderr, and process exit codes.
 
@@ -8,7 +9,7 @@ stdout, stderr, and process exit codes.
 
 ```mooncram
 $ "$PDFLITE_CLI" --version
-pdflite 0.1.38
+pdflite 0.2.1
 ```
 
 ## Help

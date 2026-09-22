@@ -38,6 +38,15 @@ covers changes that have landed on `main` but are not yet published.
   `moonbitlang/office/internal/input_contract`; the module now declares the
   CLI's dependencies directly.
 
+### moonbitlang/pdflite [0.2.1]
+
+- Enable the `cmd/pdflite` CLI on Wasm for the default `moonx` launcher, while
+  retaining native support. Run the CLI Cram suite on both backends in CI.
+- Align the CLI version string with the module version and document the
+  published launcher in the README and CLI skill.
+- Remove redundant CLI whitebox tests and their test-only imports; retain
+  command-line coverage in the Cram suite.
+
 ### moonbitlang/pdflite [0.2.0]
 
 - **BREAKING**: Moved the standalone PDF→Markdown CLI from

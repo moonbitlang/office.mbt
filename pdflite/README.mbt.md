@@ -23,7 +23,7 @@ dates, low-level cryptography, async file IO, or Markdown extraction.
 
 ## Native CLI
 
-The native CLI wrapper lives in `cmd/pdflite` and uses
+The native and Wasm CLI wrapper lives in `cmd/pdflite` and uses
 `moonbitlang/core/argparse` for help, version text, subcommands, and parse
 errors. Run it from this module with `moon run`:
 
@@ -47,23 +47,21 @@ PDFLITE_LOGO_PDF="$PWD/fixtures/camlpdf/logo.pdf" \
 moon cram test --shell /bin/bash --timeout-seconds 120 tests/cram
 ```
 
-## Release Check
+## Release checks
 
-Before publishing, run the executable release checklist:
-
-```sh
-moon run --target native scripts/release_check.mbtx
-```
-
-For the slower full native suite and registry dry run:
+Normal CI runs the package tests and native/Wasm CLI checks. From the workspace
+root, run focused checks when changing the PDF engine:
 
 ```sh
-moon run --target native scripts/release_check.mbtx -- --full-native-tests --publish-dry-run
+moon check pdflite
+moon test --target native pdflite
+moon test --target wasm pdflite
 ```
 
-The script runs `moon info`, `moon fmt --check`, all-target checking, focused
-native CLI tests, Moon Cram CLI documentation tests, the checked-in fixture
-round-trip matrix, the large fixture rewrite smoke test, and `moon package`.
+Publish from the `pdflite/` module directory with `moon publish`; the tool checks
+the packaged module before publishing. Use `moon publish --dry-run` for a
+preflight without publishing a version. See the workspace
+[release process](../docs/office-release.md) for module ordering and credentials.
 
 ## What This Package Owns
 

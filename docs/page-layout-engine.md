@@ -94,8 +94,8 @@ the reasoning is worth keeping:
    `#000000` to `#ff0000` yields **zero** differences — font-dependent
    text semantics are outside its supported subset. Text is nearly
    everything this backend emits. It also cost five third-party packages
-   inside the dependency closure that office's fresh-agent release gate
-   reviews and locks, which is how the problem surfaced (that job failed
+   inside the dependency closure that the former fresh-agent release gate
+   reviewed and locked, which is how the problem surfaced (that job failed
    with *resolved dependency inventory does not match the tracked build
    lock*). Dropped; exact snapshots guard the goldens instead.
 

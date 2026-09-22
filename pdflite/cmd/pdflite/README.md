@@ -1,10 +1,26 @@
 # pdflite/cmd/pdflite
 
-`moonbitlang/pdflite/cmd/pdflite` is the native command-line wrapper for the root
-PDF package. It uses `moonbitlang/core/argparse` for the public command shape
-and keeps shell behavior separate from library APIs.
+`moonbitlang/pdflite/cmd/pdflite` is the native and Wasm command-line wrapper for the root PDF package. It uses `moonbitlang/core/argparse` for the public command shape and keeps shell behavior separate from library APIs.
 
-## Native CLI
+## Published CLI
+
+With a published version that includes Wasm support, run from any directory:
+
+```sh
+moonx moonbitlang/pdflite/cmd/pdflite --help
+moonx moonbitlang/pdflite/cmd/pdflite info input.pdf --json
+moonx moonbitlang/pdflite/cmd/pdflite extract input.pdf selected.pdf --pages '1-3,5'
+```
+
+`moonx` defaults to Wasm; do not insert a `--` separator after the package
+coordinate. Older native-only releases need a newer published version. To test
+the checked-out source before publishing, run from the workspace root:
+
+```sh
+moon run --target wasm pdflite/cmd/pdflite -- info input.pdf --json
+```
+
+## Local native CLI
 
 Run it from this module with `moon run`:
 

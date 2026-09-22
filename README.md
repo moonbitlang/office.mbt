@@ -55,10 +55,12 @@ of this directory layout.
 ## Release
 
 Publish from the relevant module directory, following the
-[release process](docs/office-release.md). Validate registry resolution outside
-the workspace before publishing dependents; a successful workspace build alone
-does not verify published dependencies. The root publish workflow publishes
-`mbtexcel` only.
+[release process](docs/office-release.md). CI runs source checks and tests;
+`moon publish` checks the packaged module and its registry dependencies before
+publishing. The root publish workflow publishes all seven modules when a GitHub
+Release is released. Manual runs can select one
+module or `all`; the full order is `mbtexcel`, `docx2html`, `pdflite`, `pdf2md`,
+`pagelayout`, `office-lib`, then `office-cli` (published as `moonbitlang/office`).
 
 Further module-boundary work is tracked in
 [issue #542](https://github.com/moonbitlang/office.mbt/issues/542).
