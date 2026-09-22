@@ -610,9 +610,6 @@ def main() -> int:
                         "SEMANTIC_PARITY_SUMMARY_ARGS"
                     ),
                     "SHOW_PARITY_ENV": os.environ.get("SHOW_PARITY_ENV"),
-                    "SKIP_PARITY_WRAPPER_PREFLIGHT": os.environ.get(
-                        "SKIP_PARITY_WRAPPER_PREFLIGHT"
-                    ),
                     "SKIP_PARITY_FINGERPRINT_CHECK": os.environ.get(
                         "SKIP_PARITY_FINGERPRINT_CHECK"
                     ),

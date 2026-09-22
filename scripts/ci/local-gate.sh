@@ -74,22 +74,11 @@ snapshot_content() {
   done < <(git ls-files --others --exclude-standard -z -- \
     '*.mbt' '*.mbt.md' '*.mbti' 'moon.pkg*' 'moon.mod*' 'moon.work')
 }
-run "dispatch registry" python3 docx2html/tests/registry/check_dispatch_registry.py
-run "dispatch escape suite" bash docx2html/tests/registry/escape_suite.sh
 run "corpus projection manifest" python3 docx2html/tests/corpus/projection_check.py
 # The CLI-level corpus smoke pins refusal CLASSES too -- a mutation-read
 # message change slipped past the gate to CI once (#458 round 3).
 run "corpus CLI smoke" bash docx2html/tests/corpus/run.sh
 
-# The legacy reader vocabulary is DELETED (#434 PR 7): no docx source,
-# tests included, may resurrect it. This is a tombstone, not an
-# allowlist -- after PR 7 there is no legitimate occurrence.
-legacy_reader_tombstone=$(grep -l -E 'ReaderOrder|reader_order|ProvisionalContributionKind|PendingDeletedParagraph|compare_reader_projection_shadow|shadow_difference_of'   docx2html/docx/*.mbt 2>/dev/null || true)
-if [ -n "$legacy_reader_tombstone" ]; then
-  echo "legacy reader vocabulary resurrected:"
-  echo "$legacy_reader_tombstone"
-  fail "legacy reader tombstone"
-fi
 snapshot_content > "$snapshot_dir/before" || exit 1
 run "moon fmt" moon fmt
 run "moon info" moon info

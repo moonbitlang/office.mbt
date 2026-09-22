@@ -29,22 +29,9 @@ python3 scripts/semantic_parity_report_summary.py _build/semantic_parity/report.
 ## Diagnostics helpers
 
 ```sh
-scripts/check_parity_wrappers.sh
-scripts/check_parity_wrappers.sh --json
 scripts/check_parity_docs_refs.sh
-scripts/check_parity_env_helper.sh
-scripts/check_parity_preflight_status_helper.sh
-scripts/check_parity_gate_skip_toggles.sh
-scripts/check_parity_gate_skip_toggles.sh --json
-scripts/check_parity_gate_skip_toggles_contract.sh
-scripts/check_parity_gate_show_toggles.sh
-scripts/check_parity_preflight_matrix_smoke.sh
-scripts/check_parity_preflight_matrix_smoke.sh --json
 scripts/show_parity_env.sh
 scripts/show_parity_env.sh --json
-scripts/show_parity_preflight_status.sh
-scripts/show_parity_preflight_status.sh --json
-scripts/show_parity_preflight_status.sh --json --compact
 python3 scripts/semantic_parity.py --list-scenarios
 python3 scripts/semantic_parity.py --dry-run-config
 ```
@@ -53,22 +40,11 @@ python3 scripts/semantic_parity.py --dry-run-config
 
 ```sh
 PARITY_JSON_REPORT=/path/to/report.json
-SKIP_PARITY_WRAPPER_PREFLIGHT=1
-SKIP_PARITY_ENV_HELPER_PREFLIGHT=1
-SKIP_PARITY_PREFLIGHT_STATUS_HELPER_PREFLIGHT=1
-SKIP_PARITY_GATE_TOGGLE_PREFLIGHT=1
-SKIP_PARITY_GATE_TOGGLE_CONTRACT_PREFLIGHT=1
-SKIP_PARITY_GATE_SHOW_TOGGLE_PREFLIGHT=1
-SKIP_PARITY_PREFLIGHT_MATRIX_SMOKE_PREFLIGHT=1
-SKIP_PARITY_DOCS_PREFLIGHT=1
 SEMANTIC_PARITY_ARGS='--skip-validate'
 SEMANTIC_PARITY_SUMMARY_ARGS='--top-slowest 3'
 REDACT_PARITY_SUMMARY=1
 SHOW_PARITY_ENV=1
 SKIP_PARITY_FINGERPRINT_CHECK=1
-SHOW_PARITY_PREFLIGHT_STATUS=1
-SHOW_PARITY_PREFLIGHT_STATUS=json
-SHOW_PARITY_PREFLIGHT_STATUS_COMPACT=1
 ```
 
 ## Combined env patterns
@@ -81,28 +57,4 @@ scripts/test_semantic_parity_ultrasmoke.sh
 SEMANTIC_PARITY_ARGS='--skip-validate' \
 SEMANTIC_PARITY_SUMMARY_ARGS='--top-slowest 1' \
 scripts/test_semantic_parity_report_compact.sh --scenario cf --scenario controls --sort-scenarios
-
-# Aggregate gate with preflights skipped (when externally guaranteed).
-SKIP_PARITY_WRAPPER_PREFLIGHT=1 \
-SKIP_PARITY_ENV_HELPER_PREFLIGHT=1 \
-SKIP_PARITY_PREFLIGHT_STATUS_HELPER_PREFLIGHT=1 \
-SKIP_PARITY_GATE_TOGGLE_PREFLIGHT=1 \
-SKIP_PARITY_GATE_TOGGLE_CONTRACT_PREFLIGHT=1 \
-SKIP_PARITY_GATE_SHOW_TOGGLE_PREFLIGHT=1 \
-SKIP_PARITY_PREFLIGHT_MATRIX_SMOKE_PREFLIGHT=1 \
-SKIP_PARITY_DOCS_PREFLIGHT=1 \
-SHOW_PARITY_PREFLIGHT_STATUS=json \
-SHOW_PARITY_PREFLIGHT_STATUS_COMPACT=1 \
-scripts/test_parity_gates.sh
-
-# Compact preflight status snapshot for CI logs.
-SKIP_PARITY_WRAPPER_PREFLIGHT=1 \
-SKIP_PARITY_ENV_HELPER_PREFLIGHT=1 \
-SKIP_PARITY_PREFLIGHT_STATUS_HELPER_PREFLIGHT=1 \
-SKIP_PARITY_GATE_TOGGLE_PREFLIGHT=1 \
-SKIP_PARITY_GATE_TOGGLE_CONTRACT_PREFLIGHT=1 \
-SKIP_PARITY_GATE_SHOW_TOGGLE_PREFLIGHT=1 \
-SKIP_PARITY_PREFLIGHT_MATRIX_SMOKE_PREFLIGHT=1 \
-SKIP_PARITY_DOCS_PREFLIGHT=1 \
-scripts/show_parity_preflight_status.sh --json --compact
 ```

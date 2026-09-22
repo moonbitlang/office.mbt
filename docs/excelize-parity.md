@@ -151,12 +151,6 @@ to `scripts/test_semantic_parity.sh` (for example `--skip-validate`).
 Set `REDACT_PARITY_SUMMARY=1` to apply `--redact-sensitive` by default.
 Use `scripts/show_parity_env.sh` to print current override values in CI logs.
 Use `scripts/show_parity_env.sh --json` for machine-readable CI parsing.
-The helper reports active preflight toggles and the
-`SHOW_PARITY_PREFLIGHT_STATUS`/`SHOW_PARITY_PREFLIGHT_STATUS_COMPACT` settings.
-Use `scripts/show_parity_preflight_status.sh` to print the effective preflight
-resolution from current env toggles.
-Use `scripts/show_parity_preflight_status.sh --json --compact` for single-line
-machine-readable output in CI logs.
 Set `SHOW_PARITY_ENV=1` to make `scripts/test_semantic_parity.sh` print env
 overrides automatically before running.
 Set `SKIP_PARITY_FINGERPRINT_CHECK=1` to skip the fingerprint pre-check in
@@ -171,34 +165,8 @@ scripts/test_parity_gates.sh
 By default this also emits a semantic parity JSON artifact at
 `_build/semantic_parity/report.json` and prints its compact summary. Override
 path via `PARITY_JSON_REPORT=/path/to/report.json`.
-It also runs `scripts/check_parity_wrappers.sh` as a preflight step.
-Set `SKIP_PARITY_WRAPPER_PREFLIGHT=1` to bypass this preflight when needed.
-It runs `scripts/check_parity_env_helper.sh` as an env-helper preflight.
-Set `SKIP_PARITY_ENV_HELPER_PREFLIGHT=1` to bypass this preflight when needed.
-It runs `scripts/check_parity_preflight_status_helper.sh` as a preflight-status
-helper preflight.
-Set `SKIP_PARITY_PREFLIGHT_STATUS_HELPER_PREFLIGHT=1` to bypass this preflight.
-It runs `scripts/check_parity_gate_skip_toggles.sh` as a gate-toggle
-consistency preflight.
-Set `SKIP_PARITY_GATE_TOGGLE_PREFLIGHT=1` to bypass this preflight.
-It runs `scripts/check_parity_gate_skip_toggles_contract.sh` as a gate-toggle
-contract preflight.
-Set `SKIP_PARITY_GATE_TOGGLE_CONTRACT_PREFLIGHT=1` to bypass this preflight.
-It runs `scripts/check_parity_gate_show_toggles.sh` as a gate show-toggle
-contract preflight.
-Set `SKIP_PARITY_GATE_SHOW_TOGGLE_PREFLIGHT=1` to bypass this preflight.
-It runs `scripts/check_parity_preflight_matrix_smoke.sh` as a preflight matrix
-smoke preflight.
-Set `SKIP_PARITY_PREFLIGHT_MATRIX_SMOKE_PREFLIGHT=1` to bypass this preflight.
-It runs `scripts/check_parity_docs_refs.sh` as an additional docs preflight.
-Set `SKIP_PARITY_DOCS_PREFLIGHT=1` to bypass docs preflight when needed.
-The script prints active parity-related env toggles at startup.
-Set `SHOW_PARITY_PREFLIGHT_STATUS=1` (or `json`) to print effective preflight
-resolution via `scripts/show_parity_preflight_status.sh` during gate startup.
-Set `SHOW_PARITY_PREFLIGHT_STATUS_COMPACT=1` (with
-`SHOW_PARITY_PREFLIGHT_STATUS=json`) to emit compact one-line JSON status.
-For compact, single-line status logs, run
-`scripts/show_parity_preflight_status.sh --json --compact`.
+The aggregate command runs the semantic comparison and demo roundtrip tests
+directly; it does not run tests of its own diagnostic helpers.
 
 For a fast pre-commit semantic subset (currently `cf` + `controls`):
 
@@ -232,41 +200,21 @@ Use this quick map when choosing a parity command:
 - `scripts/test_parity_gates.sh`:
   - full parity gate: semantic parity + demo roundtrip/openxml checks
 
-Use `scripts/check_parity_wrappers.sh` to verify wrapper script presence and
-execute bits in local/CI environments (`--json` for machine-readable output).
-Use `scripts/check_parity_docs_refs.sh` to verify parity-doc script references
-resolve to existing files.
-Use `scripts/check_parity_env_helper.sh` to run regression checks for
-`scripts/show_parity_env.sh` (`--json` contract + invalid-arg behavior).
-Use `scripts/check_parity_preflight_status_helper.sh` to run regression checks
-for `scripts/show_parity_preflight_status.sh` contract behavior.
-Use `scripts/check_parity_gate_skip_toggles.sh` to enforce skip-toggle key
-consistency across aggregate-gate scripts and helpers.
-Use `scripts/check_parity_gate_skip_toggles.sh --json` for machine-readable
-consistency output in CI pipelines.
-Use `scripts/check_parity_gate_skip_toggles_contract.sh` to validate skip-toggle
-checker CLI contract (`--json` schema + invalid-arg behavior).
-Use `scripts/check_parity_gate_show_toggles.sh` to validate aggregate gate
-show-toggle contract behavior for compact preflight status output.
-Use `scripts/check_parity_preflight_matrix_smoke.sh` to run a small matrix of
-skip/show-toggle combinations against aggregate preflight status resolution.
-Use `scripts/check_parity_preflight_matrix_smoke.sh --json` for
-machine-readable matrix-smoke output in CI.
+Run `scripts/check_parity_docs_refs.sh` separately when changing these docs.
 
 ## CI profiles
 
 Common parity CI command profiles:
 
-- Strict (full gate + preflight + validator):
+- Full gate (semantic parity + demo roundtrips + validator):
 
 ```sh
 scripts/test_parity_gates.sh
 ```
 
-- Fast (skip wrapper preflight + skip validator + compact JSON summary):
+- Fast (skip validator + compact JSON summary):
 
 ```sh
-SKIP_PARITY_WRAPPER_PREFLIGHT=1 \
 SEMANTIC_PARITY_ARGS='--skip-validate' \
 scripts/test_semantic_parity_report_compact.sh --scenario cf --scenario controls --sort-scenarios
 ```
