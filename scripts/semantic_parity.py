@@ -602,13 +602,6 @@ def main() -> int:
                 "argv": sys.argv[1:],
                 "wrapper_env": {
                     "PARITY_JSON_REPORT": os.environ.get("PARITY_JSON_REPORT"),
-                    "SEMANTIC_PARITY_REPORT": os.environ.get(
-                        "SEMANTIC_PARITY_REPORT"
-                    ),
-                    "SEMANTIC_PARITY_ARGS": os.environ.get("SEMANTIC_PARITY_ARGS"),
-                    "SEMANTIC_PARITY_SUMMARY_ARGS": os.environ.get(
-                        "SEMANTIC_PARITY_SUMMARY_ARGS"
-                    ),
                     "SHOW_PARITY_ENV": os.environ.get("SHOW_PARITY_ENV"),
                     "SKIP_PARITY_FINGERPRINT_CHECK": os.environ.get(
                         "SKIP_PARITY_FINGERPRINT_CHECK"

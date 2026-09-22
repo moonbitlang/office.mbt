@@ -1,60 +1,31 @@
-# Parity Command Index
-
-Quick command index for parity-related workflows.
-
-## Core gates
+# Parity commands
 
 ```sh
+# Full comparison and demo roundtrip/OpenXML tests.
 scripts/test_parity_gates.sh
-scripts/test_semantic_parity.sh
+
+# Select the comparison scope and optional report summary.
+scripts/test_semantic_parity.sh --profile full
+scripts/test_semantic_parity.sh --profile fast --summary human
+scripts/test_semantic_parity.sh --profile ultrafast
+scripts/test_semantic_parity.sh --profile smoke --summary json
+
+# Inspect configuration without generating workbooks.
+scripts/test_semantic_parity.sh --list-scenarios
+scripts/test_semantic_parity.sh --profile fast --dry-run-config
+
+# Read an existing report or run demo tests separately.
+python3 scripts/semantic_parity_report_summary.py _build/semantic_parity/report.json --top-slowest 3
 scripts/test_demo_roundtrip.sh
-```
-
-## Fast loops
-
-```sh
-scripts/test_semantic_parity_fast.sh
-scripts/test_semantic_parity_ultrafast.sh
-scripts/test_semantic_parity_ultrasmoke.sh
-```
-
-## Report flows
-
-```sh
-scripts/test_semantic_parity_report.sh
-scripts/test_semantic_parity_report_compact.sh
-python3 scripts/semantic_parity_report_summary.py _build/semantic_parity/report.json
-```
-
-## Diagnostics helpers
-
-```sh
 scripts/check_parity_docs_refs.sh
-scripts/show_parity_env.sh
-scripts/show_parity_env.sh --json
-python3 scripts/semantic_parity.py --list-scenarios
-python3 scripts/semantic_parity.py --dry-run-config
 ```
 
-## Common env toggles
+`fast` selects `cf` and `controls`; `ultrafast` also skips OpenXML validation;
+`smoke` additionally skips fingerprint regression. Prefer `full` for release
+validation. `--json-report PATH` selects the report destination, with
+`PARITY_JSON_REPORT` as its environment default. `--summary human|json` selects
+summary output; advanced summary flags belong to the Python summary command.
 
-```sh
-PARITY_JSON_REPORT=/path/to/report.json
-SEMANTIC_PARITY_ARGS='--skip-validate'
-SEMANTIC_PARITY_SUMMARY_ARGS='--top-slowest 3'
-REDACT_PARITY_SUMMARY=1
-SHOW_PARITY_ENV=1
-SKIP_PARITY_FINGERPRINT_CHECK=1
-```
-
-## Combined env patterns
-
-```sh
-# Fastest local sanity loop.
-scripts/test_semantic_parity_ultrasmoke.sh
-
-# Compact CI JSON output with fast parity options.
-SEMANTIC_PARITY_ARGS='--skip-validate' \
-SEMANTIC_PARITY_SUMMARY_ARGS='--top-slowest 1' \
-scripts/test_semantic_parity_report_compact.sh --scenario cf --scenario controls --sort-scenarios
-```
+`SHOW_PARITY_ENV=1` prints overrides. `SKIP_PARITY_FINGERPRINT_CHECK=1` skips only
+the fingerprint regression. See [Excelize parity](excelize-parity.md) for the
+comparison's coverage and fixture requirements.

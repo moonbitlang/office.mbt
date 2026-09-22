@@ -137,95 +137,34 @@ python3 scripts/semantic_parity_report_summary.py _build/semantic_parity/report.
 python3 scripts/semantic_parity_report_summary.py _build/semantic_parity/report.json --as-json --compact
 ```
 
-For a one-command flow (generate report + print summary):
+## Local profiles and reports
+
+Use one entry point for the different validation scopes:
 
 ```sh
-scripts/test_semantic_parity_report.sh
-scripts/test_semantic_parity_report_compact.sh
+scripts/test_semantic_parity.sh                         # all scenarios
+scripts/test_semantic_parity.sh --profile fast          # cf + controls
+scripts/test_semantic_parity.sh --profile ultrafast     # same, without OpenXML validation
+scripts/test_semantic_parity.sh --profile smoke         # also skip fingerprint regression
+scripts/test_semantic_parity.sh --profile fast --summary json
 ```
 
-Both wrappers accept `SEMANTIC_PARITY_SUMMARY_ARGS` to forward extra flags to
-`semantic_parity_report_summary.py` (for example `--top-slowest 3`).
-Both wrappers also accept `SEMANTIC_PARITY_ARGS` to forward core parity flags
-to `scripts/test_semantic_parity.sh` (for example `--skip-validate`).
-Set `REDACT_PARITY_SUMMARY=1` to apply `--redact-sensitive` by default.
-Use `scripts/show_parity_env.sh` to print current override values in CI logs.
-Use `scripts/show_parity_env.sh --json` for machine-readable CI parsing.
-Set `SHOW_PARITY_ENV=1` to make `scripts/test_semantic_parity.sh` print env
-overrides automatically before running.
-Set `SKIP_PARITY_FINGERPRINT_CHECK=1` to skip the fingerprint pre-check in
-minimal smoke loops.
-
-For the full parity gate (semantic parity + demo roundtrip/openxml suites):
+`--summary human|json` prints the report summary after a successful comparison.
+Use `--json-report PATH` to choose the report file (default:
+`_build/semantic_parity/report.json`, overridable with `PARITY_JSON_REPORT`).
+Other arguments are passed to the semantic comparator. Use
+`--list-scenarios` and `--dry-run-config` to inspect selection without generating
+or deleting workbook outputs. For advanced report filtering:
 
 ```sh
-scripts/test_parity_gates.sh
+python3 scripts/semantic_parity_report_summary.py _build/semantic_parity/report.json --top-slowest 3 --redact-sensitive
 ```
 
-By default this also emits a semantic parity JSON artifact at
-`_build/semantic_parity/report.json` and prints its compact summary. Override
-path via `PARITY_JSON_REPORT=/path/to/report.json`.
-The aggregate command runs the semantic comparison and demo roundtrip tests
-directly; it does not run tests of its own diagnostic helpers.
-
-For a fast pre-commit semantic subset (currently `cf` + `controls`):
-
-```sh
-scripts/test_semantic_parity_fast.sh
-```
-
-For ultra-fast local loops that intentionally skip OOXML validator checks:
-
-```sh
-scripts/test_semantic_parity_ultrafast.sh
-scripts/test_semantic_parity_ultrasmoke.sh
-```
-
-## Wrapper guide
-
-Use this quick map when choosing a parity command:
-
-- `scripts/test_semantic_parity.sh`:
-  - default semantic parity gate (validator + summaries + timings)
-- `scripts/test_semantic_parity_fast.sh`:
-  - fast pre-commit subset (`cf`, `controls`)
-- `scripts/test_semantic_parity_ultrafast.sh`:
-  - fastest local subset loop with `--skip-validate`
-- `scripts/test_semantic_parity_ultrasmoke.sh`:
-  - fastest sanity loop: fast subset + `--skip-validate` + skipped fingerprint pre-check
-- `scripts/test_semantic_parity_report.sh`:
-  - semantic parity + human-readable report summary
-- `scripts/test_semantic_parity_report_compact.sh`:
-  - semantic parity + compact JSON summary (CI parser friendly)
-- `scripts/test_parity_gates.sh`:
-  - full parity gate: semantic parity + demo roundtrip/openxml checks
-
-Run `scripts/check_parity_docs_refs.sh` separately when changing these docs.
-
-## CI profiles
-
-Common parity CI command profiles:
-
-- Full gate (semantic parity + demo roundtrips + validator):
-
-```sh
-scripts/test_parity_gates.sh
-```
-
-- Fast (skip validator + compact JSON summary):
-
-```sh
-SEMANTIC_PARITY_ARGS='--skip-validate' \
-scripts/test_semantic_parity_report_compact.sh --scenario cf --scenario controls --sort-scenarios
-```
-
-- Redacted reports (hide argv/env values in shared logs):
-
-```sh
-REDACT_PARITY_SUMMARY=1 \
-SEMANTIC_PARITY_ARGS='--skip-validate' \
-scripts/test_semantic_parity_report.sh --scenario cf --scenario controls --sort-scenarios
-```
+`scripts/test_parity_gates.sh` runs the full semantic comparison, prints its
+summary, and runs demo roundtrip/OpenXML tests. It does not test its own helpers.
+Use `SHOW_PARITY_ENV=1` to print overrides and
+`SKIP_PARITY_FINGERPRINT_CHECK=1` to skip just the fingerprint regression.
+Run `scripts/check_parity_docs_refs.sh` when changing parity documentation.
 
 ## How to keep this doc up to date
 
