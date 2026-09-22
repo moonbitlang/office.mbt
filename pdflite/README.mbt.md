@@ -23,7 +23,7 @@ dates, low-level cryptography, async file IO, or Markdown extraction.
 
 ## Native CLI
 
-The native CLI wrapper lives in `cmd/pdflite` and uses
+The native and Wasm CLI wrapper lives in `cmd/pdflite` and uses
 `moonbitlang/core/argparse` for help, version text, subcommands, and parse
 errors. Run it from this module with `moon run`:
 

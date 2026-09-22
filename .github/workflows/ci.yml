@@ -317,6 +317,23 @@ jobs:
       - name: Build CLIs (native)
         run: moon build --target native mbtexcel/cmd/xlsx docx2html/cmd/docx2html docx2html/cmd/docx office-cli pdflite/cmd/pdflite pdf2md pagelayout/cmd/pagelayout
 
+      - name: pdflite Wasm CLI checks
+        env:
+          PDFLITE_LOGO_PDF: ${{ github.workspace }}/pdflite/fixtures/camlpdf/logo.pdf
+        run: |
+          moon build --target wasm pdflite/cmd/pdflite
+          STUB="$RUNNER_TEMP/pdflite-wasm-cram"
+          mkdir -p "$STUB"
+          printf 'name = "moonbitlang/cramstub"\nversion = "0.1.0"\n' > "$STUB/moon.mod"
+          cat > "$STUB/pdflite" <<'EOF'
+          #!/usr/bin/env bash
+          exec moonrun -- "$GITHUB_WORKSPACE/_build/wasm/debug/build/moonbitlang/pdflite/cmd/pdflite/pdflite.wasm" "$@"
+          EOF
+          chmod +x "$STUB/pdflite"
+          export PDFLITE_CLI="$STUB/pdflite"
+          cd "$STUB"
+          moon cram test "$GITHUB_WORKSPACE/pdflite/tests/cram"
+
       # Run the cram docs from a stub project so `moon cram test` does not
       # trigger a build of every workspace executable (keeps the job lean;
       # this is also how pdflite's own CI runs its cram). PATH supplies

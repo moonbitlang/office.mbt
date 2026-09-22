@@ -12,17 +12,6 @@ import {
   "moonbitlang/x/sys",
 }
 
-import {
-  "moonbitlang/pdflite" @pdf,
-  "moonbitlang/pdflite/core",
-  "moonbitlang/async",
-  "moonbitlang/async/fs",
-  "moonbitlang/core/argparse",
-  "moonbitlang/core/env",
-  "moonbitlang/core/json",
-  "moonbitlang/core/test",
-} for "wbtest"
-
-supported_targets = "+native"
+supported_targets = "native+wasm"
 
 pkgtype(kind: "executable")
