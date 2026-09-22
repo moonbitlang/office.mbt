@@ -78,6 +78,9 @@ jobs:
         shell: bash
         run: test "$(git rev-parse --verify HEAD)" = "$EXPECTED_HEAD"
 
+      - name: Isolated release script regression tests
+        run: python3 scripts/registry_release_test.py
+
       - uses: ./.github/actions/setup-moonbit
         with:
           channel: ${{ matrix.channel }}

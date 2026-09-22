@@ -29,10 +29,18 @@ jobs:
         run: moon version --all
 
       # This script copies docx2html/ and its SDK validation harness beyond the
-      # repository's moon.work boundary. It must resolve mbtexcel@0.1.9 from
-      # Mooncakes, assert that exact moon tree selection, and freeze every
-      # subsequent build/test/publish-dry-run before docx2html@0.2.0 ships.
+      # repository's moon.work boundary. Hydrate registry dependencies before
+      # frozen checks/tests, then inspect the archive before the publish dry run.
+      # docx2html no longer depends on mbtexcel.
       - name: Verify isolated registry dependencies and publish payload
         env:
           TMPDIR: ${{ runner.temp }}
-        run: scripts/check_docx2html_registry_release.sh
+          REGISTRY_TOKEN: ${{ secrets.MOONCAKES_MOONBITLANG_TOKEN }}
+        run: |
+          set -euo pipefail
+          test -n "$REGISTRY_TOKEN" || { echo "Missing Mooncakes token" >&2; exit 1; }
+          umask 077
+          mkdir -p "$HOME/.moon"
+          trap 'rm -f "$HOME/.moon/credentials.json"' EXIT
+          printf '%s\n' "$REGISTRY_TOKEN" > "$HOME/.moon/credentials.json"
+          scripts/check_docx2html_registry_release.sh
