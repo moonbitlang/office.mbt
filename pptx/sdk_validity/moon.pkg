@@ -1,0 +1,10 @@
+import {
+  "moonbitlang/pptx/demos",
+  "moonbitlang/pptx/opc",
+  "hustcer/fzip",
+  "moonbitlang/async",
+  "moonbitlang/async/fs" @afs,
+  "moonbitlang/async/process",
+} for "test"
+
+supported_targets = "native"

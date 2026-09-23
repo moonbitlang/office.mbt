@@ -1,0 +1,21 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "moonbitlang/pptx/demos"
+
+import {
+  "moonbitlang/pptx/presentation",
+}
+
+// Values
+pub fn build_sample_chart_isolated(Int) -> FixedArray[Byte] raise @presentation.PptxError
+
+pub fn build_sample_deck() -> FixedArray[Byte] raise @presentation.PptxError
+
+pub fn build_sample_isolated(Int) -> FixedArray[Byte] raise @presentation.PptxError
+
+// Errors
+
+// Types and methods
+
+// Type aliases
+
+// Traits

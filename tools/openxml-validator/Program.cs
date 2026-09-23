@@ -11,9 +11,9 @@ public static class Program
 {
     public static int Main(string[] args)
     {
-        if (args.Length != 1)
+        if (args.Length != 1 && (args.Length != 3 || args[1] != "--baseline"))
         {
-            Console.Error.WriteLine("usage: openxml-validator <path-to-xlsx-or-docx>");
+            Console.Error.WriteLine("usage: openxml-validator <path-to-xlsx-docx-or-pptx> [--baseline <path>]");
             return 2;
         }
 
@@ -32,14 +32,29 @@ public static class Program
 
         try
         {
-            // Dispatch on extension: .docx opens as a WordprocessingDocument,
-            // everything else keeps the original spreadsheet behavior.
+            var baseline = args.Length == 3
+                ? File.ReadAllLines(args[2]).Select(line => line.Trim())
+                    .Where(line => line.Length > 0 && !line.StartsWith('#')).ToArray()
+                : Array.Empty<string>();
             var isDocx = filePath.EndsWith(".docx", StringComparison.OrdinalIgnoreCase);
-            using OpenXmlPackage doc = isDocx
-                ? WordprocessingDocument.Open(filePath, false)
-                : SpreadsheetDocument.Open(filePath, false);
-            var validator = new OpenXmlValidator(FileFormatVersions.Office2013);
-            var errors = validator.Validate(doc).ToList();
+            var isPptx = filePath.EndsWith(".pptx", StringComparison.OrdinalIgnoreCase);
+            using OpenXmlPackage doc = isPptx
+                ? PresentationDocument.Open(filePath, false)
+                : isDocx
+                    ? WordprocessingDocument.Open(filePath, false)
+                    : SpreadsheetDocument.Open(filePath, false);
+            var validator = new OpenXmlValidator(isPptx
+                ? FileFormatVersions.Office2021
+                : FileFormatVersions.Office2013);
+            var errors = validator.Validate(doc).Where(error =>
+            {
+                if (!baseline.Any(pattern => error.Description.Contains(pattern, StringComparison.Ordinal)))
+                {
+                    return true;
+                }
+                Console.Error.WriteLine($"baseline: {error.Id} {error.Description}");
+                return false;
+            }).ToList();
             if (errors.Count == 0)
             {
                 return 0;

@@ -4,6 +4,16 @@ Breaking and notable changes for the published modules in this workspace.
 Entries are grouped by module and by the version they ship in; `Unreleased`
 covers changes that have landed on `main` but are not yet published.
 
+### moonbitlang/pptx [Unreleased]
+
+- Add PPTX parsing, building, and writing, derived from t-ujiie-g/moon-pptx
+  0.10.0; retain upstream attribution and Apache-2.0 notices.
+- Organize PPTX as an Office module with direct package directories, shared
+  demos, and `cmd/demos` and `cmd/bench` executables under the root workspace.
+- Integrate root scripts, the shared OpenXML SDK validator, the common CI and
+  release workflow, and Office warning conventions. Existing public library
+  import paths remain `moonbitlang/pptx/...`.
+
 ### moonbitlang/mbtexcel [0.2.0]
 
 - **BREAKING**: Moved the `testutil/zip_fixture` ZIP byte fixture out of

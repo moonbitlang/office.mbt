@@ -283,7 +283,13 @@ jobs:
       # arrays, and the pinned toolchain links debug executables straight to
       # object code. See docs/moonc-large-const-codegen.md.)
       - name: Build CLIs (native)
-        run: moon build --target native mbtexcel/cmd/xlsx docx2html/cmd/docx2html docx2html/cmd/docx office-cli pdflite/cmd/pdflite pdf2md pagelayout/cmd/pagelayout
+        run: moon build --target native mbtexcel/cmd/xlsx docx2html/cmd/docx2html docx2html/cmd/docx office-cli pdflite/cmd/pdflite pdf2md pagelayout/cmd/pagelayout pptx/cmd/demos pptx/cmd/bench
+
+      - name: PPTX demo and OpenXML SDK validation
+        shell: bash
+        run: |
+          bash scripts/generate_pptx_demos.sh "$RUNNER_TEMP/pptx-demos"
+          bash scripts/validate_pptx.sh "$RUNNER_TEMP/pptx-demos/sample.pptx"
 
       - name: pdflite Wasm CLI checks
         env:

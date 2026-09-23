@@ -1,0 +1,156 @@
+#!/usr/bin/env bash
+# Validate PPTX through the shared Office OpenXML SDK tool and .NET setup.
+set -euo pipefail
+
+ROOT="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)"
+
+LOCK_DIR="$ROOT/.tools/openxml-validator/.lock"
+BUILD_STAMP="$ROOT/.tools/openxml-validator/.build-ready"
+
+acquire_lock() {
+  local attempts=0
+  while true; do
+    # Ignore signals only across the atomic mkdir and the flag assignment;
+    # rearm before the retry sleep so lock contention stays cancellable.
+    trap '' INT TERM
+    if mkdir "$LOCK_DIR" 2>/dev/null; then
+      LOCK_HELD=1
+      trap handle_signal INT TERM
+      return
+    fi
+    trap handle_signal INT TERM
+    sleep 0.1
+    attempts=$((attempts + 1))
+    if [[ "$attempts" -ge 600 ]]; then
+      echo "error: timeout waiting for OpenXML validator lock" >&2
+      exit 1
+    fi
+  done
+}
+
+# Lock lifecycle vs catchable signals. Invariants: no double-release (a
+# release IGNORES further INT/TERM for the rest of cleanup — `trap ''`,
+# not `trap -`, which would restore terminating dispositions and let a
+# second signal kill the shell between rmdir and the flag clear), and no
+# catchable-signal strand (signals are ignored only across the atomic
+# mkdir + ownership-flag assignment; the contention retry sleeps stay
+# cancellable). Only an uncatchable KILL can strand the lock.
+LOCK_HELD=0
+release_lock() {
+  trap '' INT TERM
+  if [[ "$LOCK_HELD" == 1 ]]; then
+    rmdir "$LOCK_DIR" >/dev/null 2>&1 || true
+    LOCK_HELD=0
+  fi
+}
+
+validator_build_is_current() {
+  [[ -f "$BUILD_STAMP" ]] &&
+    [[ -f "$VALIDATOR_DLL" ]] &&
+    [[ ! "$DOTNET_PROJECT" -nt "$BUILD_STAMP" ]] &&
+    [[ ! "$VALIDATOR_SOURCE" -nt "$BUILD_STAMP" ]]
+}
+
+# The shared output directory needs serialization only while MSBuild writes it.
+# Validator processes read the completed DLL and distinct Office files, so they
+# can safely run concurrently. Rearm signal handling immediately after the
+# mid-script release; release_lock intentionally ignores signals while it owns
+# the atomic rmdir + flag-clear sequence.
+ensure_validator_built() {
+  if validator_build_is_current; then
+    return
+  fi
+  acquire_lock
+  if ! validator_build_is_current; then
+    "$DOTNET" build "$DOTNET_PROJECT" -p:UseAppHost=false >/dev/null
+    touch "$BUILD_STAMP"
+  fi
+  release_lock
+  trap handle_signal INT TERM
+}
+
+handle_signal() {
+  trap - EXIT
+  release_lock
+  exit 1
+}
+
+mkdir -p "$ROOT/.tools/openxml-validator"
+
+if [[ $# -ne 1 ]]; then
+  echo "usage: scripts/validate_pptx.sh <path-to-pptx>" >&2
+  exit 2
+fi
+
+PPTX="$1"
+if [[ ! -f "$PPTX" ]]; then
+  echo "error: file not found: $PPTX" >&2
+  exit 2
+fi
+
+"$ROOT/scripts/ensure_dotnet.sh"
+
+DOTNET_LOCAL="$ROOT/.tools/dotnet/dotnet"
+DOTNET="$DOTNET_LOCAL"
+if command -v dotnet >/dev/null 2>&1; then
+  # Only use the system `dotnet` if it has the net8 runtime installed.
+  if grep -Eq '^Microsoft\.NETCore\.App 8\.' <<<"$(dotnet --list-runtimes 2>/dev/null)"; then
+    DOTNET="dotnet"
+  fi
+fi
+
+export DOTNET_NOLOGO=1
+export DOTNET_CLI_TELEMETRY_OPTOUT=1
+export DOTNET_CLI_HOME="$ROOT/.tools/dotnet/.cli-home"
+export NUGET_PACKAGES="$ROOT/.tools/dotnet/.nuget/packages"
+
+# Pre-check the ZIP container before SDK validation. The presentation main
+# part is resolved through its relationship rather than a hard-coded path.
+required_parts=(
+  "[Content_Types].xml"
+  "_rels/.rels"
+)
+attempts=5
+missing=""
+for attempt in $(seq 1 "$attempts"); do
+  missing=""
+  if unzip -t "$PPTX" >/dev/null 2>&1; then
+    entries="$(unzip -Z1 "$PPTX")"
+    for part in "${required_parts[@]}"; do
+      # here-string (no pipe) -- a `printf | grep -q` here false-negatives
+      # under pipefail when grep exits early and printf takes SIGPIPE.
+      if ! grep -Fxq "$part" <<<"$entries"; then
+        missing="$part"
+        break
+      fi
+    done
+    if [ -z "$missing" ]; then
+      break
+    fi
+  else
+    missing="<archive not yet readable>"
+  fi
+  if [ "$attempt" -eq "$attempts" ]; then
+    {
+      echo "error: missing required part: $missing (after $attempt attempts)"
+      echo "--- diagnostics for $PPTX ---"
+      ls -la "$PPTX" 2>&1 || true
+      echo "size: $(wc -c <"$PPTX" 2>/dev/null || echo '?') bytes"
+      echo "unzip -t:"
+      unzip -t "$PPTX" 2>&1 | tail -5 || true
+      echo "unzip -l:"
+      unzip -l "$PPTX" 2>&1 | tail -25 || true
+    } >&2
+    exit 1
+  fi
+  sleep 0.2
+done
+
+DOTNET_PROJECT="$ROOT/tools/openxml-validator/OpenXmlValidator.csproj"
+VALIDATOR_SOURCE="$ROOT/tools/openxml-validator/Program.cs"
+VALIDATOR_DLL="$ROOT/tools/openxml-validator/bin/Debug/net8.0/OpenXmlValidator.dll"
+trap release_lock EXIT
+trap handle_signal INT TERM
+ensure_validator_built
+"$DOTNET" "$VALIDATOR_DLL" "$PPTX" \
+  --baseline "$ROOT/tools/openxml-validator/pptx-baseline.txt"

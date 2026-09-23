@@ -1,52 +1,72 @@
-<!-- Modified for office.mbt: replace upstream README with import documentation. -->
 # PPTX for MoonBit Office
 
-A MoonBit library for reading, building, and writing PowerPoint (`.pptx`)
-presentations, imported from [t-ujiie-g/moon-pptx](https://github.com/t-ujiie-g/moon-pptx)
-version **0.10.0**. Thank you to **t-ujiie-g and the original contributors** for
-the architecture, implementation, documentation, and extensive test suite.
-The original Apache-2.0 [LICENSE](LICENSE) is retained.
+`moonbitlang/pptx` reads, builds, and writes PowerPoint (`.pptx`) presentations.
+It is a module of the [Office workspace](../README.md), managed by the root
+`moon.work` and the repository's shared CI, tooling, and release workflow.
 
-## Status and ownership
+Derived from [t-ujiie-g/moon-pptx](https://github.com/t-ujiie-g/moon-pptx).
+Thank you to t-ujiie-g and the original contributors for the architecture,
+implementation, documentation, and extensive tests. See [UPSTREAM.md](UPSTREAM.md)
+for the pinned revision and attribution; the Apache-2.0 [LICENSE](LICENSE) is
+retained. The MoonBit team maintains the official module's API and releases.
+Contributions from the original author are welcome, and the original project
+can continue independently.
 
-This is a first-stage source import, with local module identity `moonbitlang/pptx`
-and initial official version `0.1.0`. It is included in workspace checks and
-tests, but is not integrated into the unified Office CLI or automated release
-workflow. This document does not claim a registry release.
+## Packages
 
-The MoonBit team maintains the official version's roadmap, API evolution, and
-release schedule. Contributions from the original author are welcome. The
-original project can continue independently, and improvements may be shared
-between the projects.
+| Package | Responsibility |
+| --- | --- |
+| `presentation` | Presentation model, building, editing, loading, and saving |
+| `slide`, `slide_master`, `theme` | Slides, layouts, masters, and themes |
+| `chart`, `chart_ex`, `smartart` | Charts and diagrams |
+| `notes`, `comments` | Speaker notes and comments |
+| `oxml`, `xml`, `opc`, `units` | OOXML models, XML, ZIP packages, and typed units |
+| `demos` | Shared sample-deck builders with public-API tests |
+| `cmd/demos`, `cmd/bench` | Demo generation and benchmark executables |
+| `integration` | Cross-package tests, embedded fixtures, and benchmarks |
+| `sdk_validity` | Native tests against the shared OpenXML SDK validator |
 
-## Scope
-
-The imported packages cover presentations, slides, themes, masters, notes,
-comments, charts, SmartArt, typed units, XML, and OPC/ZIP containers. The only
-external module dependency remains `hustcer/fzip@0.8.2`.
-
-Unknown XML element preservation is supported, but arbitrary PPTX input is
-**not guaranteed to round-trip without loss**. Known attribute/namespace
-preservation and malformed-input issues remain. Package decompression has no
-configured resource limits. Test success does not establish PowerPoint display
-or editing compatibility. See [UPSTREAM.md](UPSTREAM.md) for provenance,
-modifications, and the hardening backlog.
+Source packages live directly under this module, matching the other Office
+modules. Examples and benchmarks are packages of `moonbitlang/pptx`, not
+separate modules or workspaces. Import paths such as
+`moonbitlang/pptx/presentation` are unchanged by the directory organization.
 
 ## Develop
 
-From the office.mbt repository root, select the source package directories
-(the imported module retains `source = "src"`):
+Run all commands from the **repository root**:
 
 ```sh
-moon check pptx/src/presentation
-moon test --target native pptx/src/presentation
+moon check --deny-warn
+moon test --target native
+moon info
+moon fmt
 ```
 
-From `pptx/`, `moon test --target native` runs this module's tests. Workspace-wide
-commands from the repository root also include this module. Examples and
-validation tools remain under `examples/` and `tools/`; their nested workspaces
-resolve the local `moonbitlang/pptx` module.
+For focused work, select the relevant package:
 
-The original [README](upstream/README.mbt.md), [roadmap](upstream/ROADMAP.md), and
-[changelog](upstream/CHANGELOG.md) are historical upstream snapshots. Their
-package names, release claims, and roadmap describe the original project.
+```sh
+moon test --deny-warn --target native pptx/presentation pptx/demos pptx/integration
+moon run --target native pptx/cmd/bench -- 10
+bash scripts/generate_pptx_demos.sh
+bash scripts/validate_pptx.sh demos_out_pptx/sample.pptx
+python3 scripts/embed_pptx_corpus.py
+moon fmt pptx/integration
+```
+
+See the [cookbook](../docs/pptx-examples.md), [demo guide](../docs/pptx-demos.md),
+[validation guide](../docs/pptx-validation.md), and
+[benchmark guide](../docs/pptx-benchmarks.md). The shared validator needs .NET 8;
+the wrapper uses Office's existing .NET setup and build cache.
+
+Publishing follows the common [release process](../docs/office-release.md).
+The local module version is not evidence of a registry release. The unified
+`office` CLI currently supports DOCX and XLSX; PPTX uses its library packages
+and dedicated development commands.
+
+## Limits
+
+Unknown XML element preservation is supported, but arbitrary PPTX input is not
+guaranteed to round-trip without loss. Parser robustness, attribute/namespace
+preservation, ZIP resource limits, and PowerPoint display/edit compatibility
+remain tracked in [#549](https://github.com/moonbitlang/office.mbt/issues/549).
+SDK schema validation and parsed-model equality do not establish visual fidelity.

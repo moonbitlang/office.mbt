@@ -4,6 +4,7 @@ name = "moonbitlang/pptx"
 version = "0.1.0"
 
 import {
+  "moonbitlang/async@0.22.1",
   "hustcer/fzip@0.8.2",
 }
 
@@ -24,4 +25,6 @@ keywords = [
 
 description = "Pure-MoonBit library for reading, building, and writing PPTX (OOXML) presentations with a type-safe builder API."
 
-source = "src"
+preferred_target = "native"
+
+warnings = "+result_error_return+prefer_readonly_array+unnecessary_view_op+unnecessary_annotation+test_unqualified_package+implicit_impl_as_method"

@@ -9,7 +9,7 @@ connects the eight modules for local development.
 | [mbtexcel](mbtexcel/README.mbt.md) | `moonbitlang/mbtexcel` | Read and write XLSX spreadsheets |
 | [docx2html](docx2html/README.mbt.md) | `moonbitlang/docx2html` | Parse, convert, and edit DOCX documents |
 | [pdflite](pdflite/README.mbt.md) | `moonbitlang/pdflite` | Read, write, and manipulate PDFs |
-| [pptx](pptx/README.mbt.md) | `moonbitlang/pptx` (source import) | PPTX reading, building, and writing |
+| [pptx](pptx/README.mbt.md) | `moonbitlang/pptx` | PPTX reading, building, and writing |
 | [pdf2md](pdf2md/README.md) | `moonbitlang/pdf2md` | PDF to Markdown CLI |
 | [pagelayout](pagelayout/README.mbt.md) | `moonbitlang/pagelayout` | Document layout and SVG/PDF rendering |
 | [office-lib](office-lib/README.mbt.md) | `moonbitlang/office-lib` | Office integration and SDK |
@@ -58,14 +58,14 @@ of this directory layout.
 Publish from the relevant module directory, following the
 [release process](docs/office-release.md). CI runs source checks and tests;
 `moon publish` checks the packaged module and its registry dependencies before
-publishing. The root publish workflow publishes the seven release-enabled modules
+publishing. The root publish workflow publishes the eight modules
 when a GitHub Release is released. Manual runs can select one
-module or `all`; the full order is `mbtexcel`, `docx2html`, `pdflite`, `pdf2md`,
+module or `all`; the full order is `mbtexcel`, `docx2html`, `pdflite`, `pptx`, `pdf2md`,
 `pagelayout`, `office-lib`, then `office-cli` (published as `moonbitlang/office`).
 
 Further module-boundary work is tracked in
 [issue #542](https://github.com/moonbitlang/office.mbt/issues/542).
 
-The `pptx/` module is a first-stage import of `t-ujiie-g/moon-pptx`. It is
-included in workspace checks and tests but excluded from automated publication
-and Office CLI integration. See [its provenance and scope](pptx/UPSTREAM.md).
+PPTX library packages, demos, and benchmarks are part of the same workspace.
+See the [PPTX module guide](pptx/README.mbt.md) for root-level commands and
+[upstream attribution](pptx/UPSTREAM.md).

@@ -1,0 +1,72 @@
+// Modified for office.mbt: call the shared demo package from the root workspace.
+// Emits PPTX bytes as hex for scripts/generate_pptx_demos.sh.
+// Set split_mode to true to emit isolated feature decks for manual diagnosis.
+
+///|
+fn main {
+  if split_mode {
+    emit_split()
+  } else {
+    let bytes = @demo_api.build_sample_deck() catch {
+      e => {
+        println("build failed: \{e}")
+        return
+      }
+    }
+    println(bytes_to_hex(bytes))
+  }
+}
+
+///|
+/// Compile-time flag. Set to `true` to emit per-feature isolation
+/// files (used for bisecting PowerPoint Online repair triggers);
+/// `false` to emit the full deck. We use a compile-time
+/// constant rather than argv because MoonBit's native CLI args vary
+/// by backend, and the file is short enough that a re-build per
+/// mode is acceptable.
+let split_mode : Bool = false
+
+///|
+fn emit_split() -> Unit {
+  let names : ReadOnlyArray[String] = [
+    "00-title-only", "01-text", "02-shapes", "03-custom-geom", "04-picture", "05-table",
+    "06-charts-bar-line-pie", "07-charts-area-radar-doughnut", "08-charts-scatter-bubble",
+    "09-charts-3d-stock-ofpie", "10-background", "11-combo-chart", "12-svg-image",
+    "13-edit-shapes", "14-media", "15-master-template", "16-smartart", "17-animation",
+    "18-online-video", "19-v06-features", "20-v07-features", "21-closing",
+  ]
+  for i in 0..<names.length() {
+    let bytes = @demo_api.build_sample_isolated(i) catch {
+      e => {
+        println("build failed for feature " + i.to_string() + ": \{e}")
+        continue
+      }
+    }
+    println("===FILE-" + names[i] + "===")
+    println(bytes_to_hex(bytes))
+  }
+  println("===END===")
+}
+
+///|
+/// Encode a byte sequence as a contiguous hex string. Two chars per
+/// byte, lowercase, no spaces or separators — the canonical input
+/// form for `xxd -r -p`.
+fn bytes_to_hex(bytes : FixedArray[Byte]) -> String {
+  let buf = StringBuilder()
+  for b in bytes {
+    let n = b.to_int()
+    buf.write_char(hex_digit(n / 16))
+    buf.write_char(hex_digit(n % 16))
+  }
+  buf.to_string()
+}
+
+///|
+fn hex_digit(n : Int) -> Char {
+  if n < 10 {
+    (n + '0'.to_int()).unsafe_to_char()
+  } else {
+    (n - 10 + 'a'.to_int()).unsafe_to_char()
+  }
+}

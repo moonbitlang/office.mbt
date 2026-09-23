@@ -30,3 +30,8 @@ demos_out*/
 # Cram failure artifacts.
 *.t.new
 *.t.err
+
+# PPTX benchmark dependencies (installed locally for comparative runs).
+/tools/pptx-bench/node_modules/
+/tools/pptx-bench/package-lock.json
+/tools/pptx-bench/package.json

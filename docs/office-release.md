@@ -11,7 +11,7 @@ artifacts.
 ## Workspace layout
 
 The repository root contains `moon.work`, not a publishable module. Publish
-from the appropriate module directory. The seven modules and their dependencies
+from the appropriate module directory. The eight modules and their dependencies
 on other modules in this workspace are:
 
 | Directory | Published module | Direct workspace dependencies |
@@ -19,6 +19,7 @@ on other modules in this workspace are:
 | `mbtexcel/` | `moonbitlang/mbtexcel` | None |
 | `docx2html/` | `moonbitlang/docx2html` | None |
 | `pdflite/` | `moonbitlang/pdflite` | None |
+| `pptx/` | `moonbitlang/pptx` | None |
 | `pdf2md/` | `moonbitlang/pdf2md` | pdflite |
 | `pagelayout/` | `moonbitlang/pagelayout` | docx2html, pdflite |
 | `office-lib/` | `moonbitlang/office-lib` | mbtexcel, docx2html |
@@ -26,14 +27,16 @@ on other modules in this workspace are:
 
 `office-cli` contains the CLI implementation; `office-lib` contains the reusable
 SDK. `pdf2md` is an independent CLI module depending on the PDF library.
+PPTX demo and benchmark packages belong to `pptx/`; they have no separate
+module manifests or release versions.
 Directory names do not change the published module coordinates. See
 [CHANGELOG.md](../CHANGELOG.md) for public package relocations and API changes.
 
 ## Current publishing workflow
 
 The [Publish Mooncakes packages workflow](../.github/workflows/publish.yml)
-publishes all seven modules when a GitHub Release is released. Its full order
-is `mbtexcel`, `docx2html`, `pdflite`, `pdf2md`, `pagelayout`, `office-lib`, then
+publishes all eight modules when a GitHub Release is released. Its full order
+is `mbtexcel`, `docx2html`, `pdflite`, `pptx`, `pdf2md`, `pagelayout`, `office-lib`, then
 `office-cli`. This places each workspace dependency before its consumers.
 Every module uses the same `MOONCAKES_MOONBITLANG_TOKEN` repository secret.
 
