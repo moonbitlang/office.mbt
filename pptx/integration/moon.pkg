@@ -13,7 +13,7 @@ import {
   "moonbitlang/pptx/chart_ex",
   "moonbitlang/pptx/comments",
   "moonbitlang/pptx/notes",
-  "moonbitlang/office-ooxml/opc",
+  "moonbitlang/ooxml/opc",
   "moonbitlang/pptx/oxml",
   "moonbitlang/pptx/presentation",
   "moonbitlang/pptx/slide",
@@ -21,5 +21,5 @@ import {
   "moonbitlang/pptx/smartart",
   "moonbitlang/pptx/theme",
   "moonbitlang/pptx/units",
-  "moonbitlang/office-ooxml/xml",
+  "moonbitlang/ooxml/xml",
 } for "test"

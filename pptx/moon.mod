@@ -6,7 +6,7 @@ version = "0.1.0"
 import {
   "moonbitlang/async@0.22.1",
   "moonbit-community/flate@0.8.1",
-  "moonbitlang/office-ooxml@0.1.0",
+  "moonbitlang/ooxml@0.1.0",
 }
 
 readme = "README.mbt.md"

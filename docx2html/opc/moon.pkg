@@ -1,5 +1,5 @@
 import {
-  "moonbitlang/office-ooxml/uri",
+  "moonbitlang/ooxml/uri",
   "moonbitlang/docx2html/core",
   "moonbitlang/docx2html/xml",
   "moonbit-community/flate/zip" @mbtzip,

@@ -9,7 +9,7 @@ The original Apache-2.0 [LICENSE](LICENSE) is retained without changes.
 No tracked NOTICE file was present in that upstream revision. Imported code,
 samples, corpus-generation code, and comparative benchmark tools retain this
 provenance even where moved to Office's root `scripts/` and `tools/`, or the
-module's `pptx/docs/` and shared `office-ooxml/` foundations.
+module's `pptx/docs/` and shared `ooxml/` foundations.
 
 The MoonBit team owns the official module's maintenance, API evolution, and
 release schedule. Contributions from the original author are welcome. The
@@ -34,7 +34,7 @@ original project remains independent and may follow its own priorities.
   Expose low-level package access through `opc_package()` and return independent
   OPC collection and payload snapshots. Cache slide order by part identity.
 
-- Extract OPC/XML into `office-ooxml`, replace ZIP with flate, and adopt
+- Extract OPC/XML into `ooxml`, replace ZIP with flate, and adopt
   `Milky2018/xml@0.4.1` for XML reading. Keep the namespace-aware Office writer
   to preserve attribute whitespace.
 

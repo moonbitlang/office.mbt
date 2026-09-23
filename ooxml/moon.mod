@@ -1,4 +1,4 @@
-name = "moonbitlang/office-ooxml"
+name = "moonbitlang/ooxml"
 
 version = "0.1.0"
 

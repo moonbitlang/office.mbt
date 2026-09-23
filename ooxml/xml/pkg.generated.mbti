@@ -1,5 +1,5 @@
 // Generated using `moon info`, DON'T EDIT IT
-package "moonbitlang/office-ooxml/xml"
+package "moonbitlang/ooxml/xml"
 
 import {
   "moonbitlang/core/debug",

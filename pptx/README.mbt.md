@@ -21,7 +21,7 @@ can continue independently.
 | `chart`, `chart_ex`, `smartart` | Charts and diagrams |
 | `notes`, `comments` | Speaker notes and comments |
 | `oxml`, `units` | OOXML models and typed units |
-| `office-ooxml/xml`, `office-ooxml/opc` | Shared XML and ZIP package support |
+| `ooxml/xml`, `ooxml/opc` | Shared XML and ZIP package support |
 | `demos` | Shared sample-deck builders with public-API tests |
 | `cmd/demos`, `cmd/bench` | Demo generation and benchmark executables |
 | `integration` | Cross-package tests, embedded fixtures, and benchmarks |
@@ -89,7 +89,7 @@ SDK schema validation and parsed-model equality do not establish visual fidelity
 
 ## Shared OPC and XML
 
-Import `moonbitlang/office-ooxml/opc` and `moonbitlang/office-ooxml/xml` for the
+Import `moonbitlang/ooxml/opc` and `moonbitlang/ooxml/xml` for the
 shared low-level types previously owned by PPTX. See the
-[shared module](../office-ooxml/README.md) for implementation boundaries.
+[shared module](../ooxml/README.md) for implementation boundaries.
 `Presentation::save()` now raises `PptxError` when ZIP writing fails.

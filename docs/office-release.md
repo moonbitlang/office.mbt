@@ -16,11 +16,11 @@ on other modules in this workspace are:
 
 | Directory | Published module | Direct workspace dependencies |
 | --- | --- | --- |
-| `office-ooxml/` | `moonbitlang/office-ooxml` | None |
+| `ooxml/` | `moonbitlang/ooxml` | None |
 | `mbtexcel/` | `moonbitlang/mbtexcel` | None |
-| `docx2html/` | `moonbitlang/docx2html` | office-ooxml |
+| `docx2html/` | `moonbitlang/docx2html` | ooxml |
 | `pdflite/` | `moonbitlang/pdflite` | None |
-| `pptx/` | `moonbitlang/pptx` | office-ooxml |
+| `pptx/` | `moonbitlang/pptx` | ooxml |
 | `pdf2md/` | `moonbitlang/pdf2md` | pdflite |
 | `pagelayout/` | `moonbitlang/pagelayout` | docx2html, pdflite |
 | `office-lib/` | `moonbitlang/office-lib` | mbtexcel, docx2html |
@@ -37,7 +37,7 @@ Directory names do not change the published module coordinates. See
 
 The [Publish Mooncakes packages workflow](../.github/workflows/publish.yml)
 publishes all nine modules when a GitHub Release is released. Its full order
-is `office-ooxml`, `mbtexcel`, `docx2html`, `pdflite`, `pptx`, `pdf2md`, `pagelayout`, `office-lib`, then
+is `ooxml`, `mbtexcel`, `docx2html`, `pdflite`, `pptx`, `pdf2md`, `pagelayout`, `office-lib`, then
 `office-cli`. This places each workspace dependency before its consumers.
 Every module uses the same `MOONCAKES_MOONBITLANG_TOKEN` repository secret.
 

@@ -5,5 +5,5 @@ import {
   "moonbitlang/pptx/slide_master",
   "moonbitlang/pptx/theme",
   "moonbitlang/pptx/units",
-  "moonbitlang/office-ooxml/xml",
+  "moonbitlang/ooxml/xml",
 }

@@ -7,7 +7,7 @@ This is a [MoonBit](https://docs.moonbitlang.com) project.
 
 - The repository root is a workspace described by `moon.work`, with nine peer
   modules: `mbtexcel/`, `docx2html/`, `pdflite/`, `pagelayout/`, `office-lib/`,
-  `office-cli/`, `pdf2md/`, `pptx/`, and `office-ooxml/`. Each module has its own `moon.mod`;
+  `office-cli/`, `pdf2md/`, `pptx/`, and `ooxml/`. Each module has its own `moon.mod`;
   the root has no module.
 
 - MoonBit packages are organized per directory, for each directory, there is a

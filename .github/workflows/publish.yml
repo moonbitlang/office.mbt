@@ -9,7 +9,7 @@ on:
         default: all
         options:
           - all
-          - office-ooxml
+          - ooxml
           - mbtexcel
           - docx2html
           - pdflite
@@ -50,8 +50,8 @@ jobs:
         run: |
           set -euo pipefail
           case "$SELECTED_MODULE" in
-            all) modules="office-ooxml mbtexcel docx2html pdflite pptx pdf2md pagelayout office-lib office-cli" ;;
-            office-ooxml|mbtexcel|docx2html|pdflite|pptx|pdf2md|pagelayout|office-lib|office-cli)
+            all) modules="ooxml mbtexcel docx2html pdflite pptx pdf2md pagelayout office-lib office-cli" ;;
+            ooxml|mbtexcel|docx2html|pdflite|pptx|pdf2md|pagelayout|office-lib|office-cli)
               modules="$SELECTED_MODULE" ;;
             *) echo "Unknown module: $SELECTED_MODULE" >&2; exit 1 ;;
           esac

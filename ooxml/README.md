@@ -1,6 +1,6 @@
 # Office OOXML foundations
 
-`moonbitlang/office-ooxml` is a peer module in the root `moon.work`. It owns
+`moonbitlang/ooxml` is a peer module in the root `moon.work`. It owns
 format-independent OPC packaging and XML support, below the document engines.
 
 - `opc`: named parts, content types, relationships, cloning, and ZIP input/output
@@ -34,7 +34,7 @@ compression bytes and metadata are not promised to remain identical.
 Run from the repository root:
 
 ```sh
-moon test office-ooxml/opc office-ooxml/xml office-ooxml/uri --target native --deny-warn
+moon test ooxml/opc ooxml/xml ooxml/uri --target native --deny-warn
 ```
 
 The OPC container and XML model/writer originated in the PPTX import. See

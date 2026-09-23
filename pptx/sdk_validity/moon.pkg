@@ -1,6 +1,6 @@
 import {
   "moonbitlang/pptx/demos",
-  "moonbitlang/office-ooxml/opc",
+  "moonbitlang/ooxml/opc",
   "moonbitlang/core/encoding/utf8",
   "moonbitlang/async",
   "moonbitlang/async/fs" @afs,

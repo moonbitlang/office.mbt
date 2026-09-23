@@ -3,7 +3,7 @@ import {
   "moonbitlang/core/debug",
   "moonbitlang/pptx/slide",
   "moonbitlang/pptx/slide_master",
-  "moonbitlang/office-ooxml/xml",
+  "moonbitlang/ooxml/xml",
 }
 
 import {

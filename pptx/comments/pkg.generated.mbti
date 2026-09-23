@@ -3,7 +3,7 @@ package "moonbitlang/pptx/comments"
 
 import {
   "moonbitlang/core/debug",
-  "moonbitlang/office-ooxml/xml",
+  "moonbitlang/ooxml/xml",
   "moonbitlang/pptx/units",
 }
 

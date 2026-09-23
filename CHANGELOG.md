@@ -4,7 +4,7 @@ Breaking and notable changes for the published modules in this workspace.
 Entries are grouped by module and by the version they ship in; `Unreleased`
 covers changes that have landed on `main` but are not yet published.
 
-### moonbitlang/office-ooxml [Unreleased]
+### moonbitlang/ooxml [Unreleased]
 
 - Add shared OPC, XML, and URI packages below the document engines. Extract
   DOCX's URI rules and preserve its existing public entry points as re-exports.
@@ -13,13 +13,13 @@ covers changes that have landed on `main` but are not yet published.
 
 ### moonbitlang/docx2html [Unreleased]
 
-- Depend on `office-ooxml/uri` for OPC part names and relationship URI rules.
+- Depend on `ooxml/uri` for OPC part names and relationship URI rules.
   Existing `docx2html/opc` functions and registry types remain available through
   re-exports; DOCX-specific validation and resource budgets remain in DOCX.
 
 ### moonbitlang/pptx [Unreleased]
 
-- Move low-level `opc` and `xml` imports to `moonbitlang/office-ooxml/...`.
+- Move low-level `opc` and `xml` imports to `moonbitlang/ooxml/...`.
   Replace fzip with flate; `Presentation::save()` now raises `PptxError` and
   `Package::to_bytes()` raises `OpcError` on ZIP write failure.
 - Reject malformed XML, empty documents, and DOCTYPE declarations through the

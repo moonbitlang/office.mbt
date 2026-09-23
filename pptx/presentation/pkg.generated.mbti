@@ -3,8 +3,8 @@ package "moonbitlang/pptx/presentation"
 
 import {
   "moonbitlang/core/debug",
-  "moonbitlang/office-ooxml/opc",
-  "moonbitlang/office-ooxml/xml",
+  "moonbitlang/ooxml/opc",
+  "moonbitlang/ooxml/xml",
   "moonbitlang/pptx/chart",
   "moonbitlang/pptx/chart_ex",
   "moonbitlang/pptx/comments",

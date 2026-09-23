@@ -6,7 +6,7 @@ connects the nine modules for local development.
 
 | Directory | Module | Responsibility |
 | --- | --- | --- |
-| [office-ooxml](office-ooxml/README.md) | `moonbitlang/office-ooxml` | Shared OPC and XML foundations |
+| [ooxml](ooxml/README.md) | `moonbitlang/ooxml` | Shared OPC and XML foundations |
 | [mbtexcel](mbtexcel/README.mbt.md) | `moonbitlang/mbtexcel` | Read and write XLSX spreadsheets |
 | [docx2html](docx2html/README.mbt.md) | `moonbitlang/docx2html` | Parse, convert, and edit DOCX documents |
 | [pdflite](pdflite/README.mbt.md) | `moonbitlang/pdflite` | Read, write, and manipulate PDFs |
@@ -61,7 +61,7 @@ Publish from the relevant module directory, following the
 `moon publish` checks the packaged module and its registry dependencies before
 publishing. The root publish workflow publishes the nine modules
 when a GitHub Release is released. Manual runs can select one
-module or `all`; the full order is `office-ooxml`, `mbtexcel`, `docx2html`, `pdflite`, `pptx`, `pdf2md`,
+module or `all`; the full order is `ooxml`, `mbtexcel`, `docx2html`, `pdflite`, `pptx`, `pdf2md`,
 `pagelayout`, `office-lib`, then `office-cli` (published as `moonbitlang/office`).
 
 Further module-boundary work is tracked in

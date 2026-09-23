@@ -14,12 +14,12 @@ below use repository-relative paths.
 
 This repository is a MoonBit workspace (`moon.work`) of nine peer modules:
 `mbtexcel/`, `docx2html/`, `pdflite/`, `pagelayout/`, `office-lib/`,
-`office-cli/`, `pdf2md/`, `pptx/`, and `office-ooxml/`.
+`office-cli/`, `pdf2md/`, `pptx/`, and `ooxml/`.
 
-`office-ooxml` is a shared foundation below the document engines. PPTX uses
+`ooxml` is a shared foundation below the document engines. PPTX uses
 its OPC container and XML adapter; DOCX uses its URI rules while retaining
 DOCX validation and budget-aware XML parsing. It has no dependency on
-`office-lib` or any document engine. See its [module guide](../office-ooxml/README.md).
+`office-lib` or any document engine. See its [module guide](../ooxml/README.md).
 
 Within `mbtexcel/`:
 
