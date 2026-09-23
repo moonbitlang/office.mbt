@@ -8,8 +8,9 @@ covers changes that have landed on `main` but are not yet published.
 
 - Add shared OPC, XML, and URI packages below the document engines. Extract
   DOCX's URI rules and preserve its existing public entry points as re-exports.
-- Use flate for ZIP I/O and `Milky2018/xml@0.4.1` for namespace-aware XML reading.
-  Retain the Office writer's attribute whitespace preservation.
+- Use flate for ZIP I/O and `Milky2018/xml@0.5.0` for namespace-aware XML reading.
+  Version 0.5.0 fixes the reported attribute-whitespace serialization issue;
+  keep the existing Office writer in this dependency upgrade.
 
 ### moonbitlang/docx2html [Unreleased]
 

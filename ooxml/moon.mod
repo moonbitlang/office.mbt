@@ -4,7 +4,7 @@ version = "0.1.0"
 
 import {
   "moonbit-community/flate@0.8.1",
-  "Milky2018/xml@0.4.1",
+  "Milky2018/xml@0.5.0",
 }
 
 readme = "README.md"

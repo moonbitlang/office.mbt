@@ -65,3 +65,17 @@ test "namespace shadowing and predefined xml prefix" {
 test "valid whitespace before an empty-element close" {
   debug_inspect(kinds(drain("<a />")), content="\"SE\"")
 }
+
+///|
+test "XML 0.5 writer preserves attribute whitespace through the Office reader" {
+  for value in ["a\tb\nc\rd", "a\r\nb", "\t", "\n", "\r", " a b "] {
+    let writer = @parser.Writer::new()
+    writer.empty_element("root", [("value", value)])
+    let reader = @xml.XmlReader::new(writer.to_string())
+    match reader.next() {
+      Some(StartElement(_, attributes)) =>
+        debug_inspect(attributes[0].1 == value, content="true")
+      _ => fail("expected root element")
+    }
+  }
+}
