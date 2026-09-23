@@ -1,0 +1,222 @@
+// Chart parser tests — top-level <c:chartSpace> / <c:chart> /
+// <c:plotArea> structure.
+
+///|
+let chart_ns : String = "http://schemas.openxmlformats.org/drawingml/2006/chart"
+
+///|
+let drawing_ns : String = "http://schemas.openxmlformats.org/drawingml/2006/main"
+
+///|
+let r_ns : String = "http://schemas.openxmlformats.org/officeDocument/2006/relationships"
+
+///|
+/// Minimal but spec-shaped `<c:chartSpace>` body — one `<c:chart>` child
+/// carrying an empty plotArea. Captures the structure we need for the
+/// 7a1 round-trip floor; later 7a slices lift the inner pieces.
+fn typical_chart_xml() -> String {
+  "<?xml version=\"1.0\"?>" +
+  "<c:chartSpace xmlns:c=\"" +
+  chart_ns +
+  "\" xmlns:a=\"" +
+  drawing_ns +
+  "\" xmlns:r=\"" +
+  r_ns +
+  "\">" +
+  "<c:chart>" +
+  "<c:plotArea>" +
+  "<c:layout/>" +
+  "<c:barChart>" +
+  "<c:barDir val=\"col\"/>" +
+  "<c:grouping val=\"clustered\"/>" +
+  "</c:barChart>" +
+  "</c:plotArea>" +
+  "</c:chart>" +
+  "</c:chartSpace>"
+}
+
+///|
+test "Chart::parse: root recognised + plotArea typed" {
+  let chart = @chart.Chart::parse(@oxml.string_to_bytes(typical_chart_xml()))
+  // <c:plotArea> is required and typed.
+  // Layout is the first optional child; our fixture has one.
+  assert_true(chart.chart.plot_area.layout is Some(_))
+  // One plot child: <c:barChart>.
+  assert_eq(chart.chart.plot_area.plots.length(), 1)
+  assert_eq(chart.chart.plot_area.plots[0].local_name(), "barChart")
+}
+
+///|
+test "Chart::parse: PlotArea axes are discriminated" {
+  let xml = "<?xml version=\"1.0\"?>" +
+    "<c:chartSpace xmlns:c=\"" +
+    chart_ns +
+    "\">" +
+    "<c:chart>" +
+    "<c:plotArea>" +
+    "<c:layout/>" +
+    "<c:barChart><c:barDir val=\"col\"/></c:barChart>" +
+    "<c:catAx><c:axId val=\"1\"/></c:catAx>" +
+    "<c:valAx><c:axId val=\"2\"/></c:valAx>" +
+    "</c:plotArea>" +
+    "</c:chart>" +
+    "</c:chartSpace>"
+  let chart = @chart.Chart::parse(@oxml.string_to_bytes(xml))
+  assert_eq(chart.chart.plot_area.axes.length(), 2)
+  assert_eq(chart.chart.plot_area.axes[0].local_name(), "catAx")
+  assert_eq(chart.chart.plot_area.axes[1].local_name(), "valAx")
+}
+
+///|
+test "Chart::parse: combination chart with multiple plots" {
+  // A real-world combination chart: a barChart and a lineChart in the
+  // same plot area.
+  let xml = "<?xml version=\"1.0\"?>" +
+    "<c:chartSpace xmlns:c=\"" +
+    chart_ns +
+    "\">" +
+    "<c:chart>" +
+    "<c:plotArea>" +
+    "<c:barChart><c:barDir val=\"col\"/></c:barChart>" +
+    "<c:lineChart><c:grouping val=\"standard\"/></c:lineChart>" +
+    "<c:catAx><c:axId val=\"1\"/></c:catAx>" +
+    "<c:valAx><c:axId val=\"2\"/></c:valAx>" +
+    "</c:plotArea>" +
+    "</c:chart>" +
+    "</c:chartSpace>"
+  let chart = @chart.Chart::parse(@oxml.string_to_bytes(xml))
+  assert_eq(chart.chart.plot_area.plots.length(), 2)
+  assert_eq(chart.chart.plot_area.plots[0].local_name(), "barChart")
+  assert_eq(chart.chart.plot_area.plots[1].local_name(), "lineChart")
+}
+
+///|
+test "Chart::parse: typed chart-body scalar fields" {
+  let chart = @chart.Chart::parse(@oxml.string_to_bytes(typical_chart_xml()))
+  // Our fixture has no `<c:autoTitleDeleted>` so this should be `None`.
+  // Other 7a2 fields likewise.
+  assert_true(chart.chart.auto_title_deleted is None)
+  assert_true(chart.chart.plot_vis_only is None)
+  assert_true(chart.chart.disp_blanks_as is None)
+}
+
+///|
+test "Chart::parse: typed chart-body fields from rich fixture" {
+  // Build a chart that exercises every typed leaf the 7a2 slice lifts.
+  let xml = "<?xml version=\"1.0\"?>" +
+    "<c:chartSpace xmlns:c=\"" +
+    chart_ns +
+    "\">" +
+    "<c:date1904 val=\"0\"/>" +
+    "<c:lang val=\"en-US\"/>" +
+    "<c:roundedCorners val=\"1\"/>" +
+    "<c:style val=\"2\"/>" +
+    "<c:chart>" +
+    "<c:autoTitleDeleted val=\"1\"/>" +
+    "<c:plotArea><c:layout/></c:plotArea>" +
+    "<c:plotVisOnly val=\"1\"/>" +
+    "<c:dispBlanksAs val=\"gap\"/>" +
+    "<c:showDLblsOverMax val=\"0\"/>" +
+    "</c:chart>" +
+    "</c:chartSpace>"
+  let chart = @chart.Chart::parse(@oxml.string_to_bytes(xml))
+  assert_eq(chart.date1904.unwrap(), false)
+  assert_eq(chart.lang.unwrap(), "en-US")
+  assert_eq(chart.rounded_corners.unwrap(), true)
+  assert_eq(chart.style.unwrap(), 2)
+  assert_eq(chart.chart.auto_title_deleted.unwrap(), true)
+  assert_eq(chart.chart.plot_vis_only.unwrap(), true)
+  assert_true(chart.chart.disp_blanks_as is Some(Gap))
+  assert_eq(chart.chart.show_d_lbls_over_max.unwrap(), false)
+}
+
+///|
+test "Chart::parse: rejects non-chart root" {
+  let xml = "<?xml version=\"1.0\"?><c:notChart xmlns:c=\"" + chart_ns + "\"/>"
+  let bytes = @oxml.string_to_bytes(xml)
+  try @chart.Chart::parse(bytes) catch {
+    _ => ()
+  } noraise {
+    _ => fail("expected Malformed for non-chart root")
+  }
+}
+
+///|
+test "Chart::parse: rejects wrong namespace" {
+  // local name matches but uri is wrong → Malformed.
+  let xml = "<?xml version=\"1.0\"?><x:chartSpace xmlns:x=\"http://example.com/x\"/>"
+  let bytes = @oxml.string_to_bytes(xml)
+  try @chart.Chart::parse(bytes) catch {
+    _ => ()
+  } noraise {
+    _ => fail("expected Malformed for wrong-namespace root")
+  }
+}
+
+///|
+test "Chart::serialize: re-parse equals original (round-trip floor)" {
+  let original = @chart.Chart::parse(@oxml.string_to_bytes(typical_chart_xml()))
+  let bytes = original.serialize()
+  let re_parsed = @chart.Chart::parse(bytes)
+  assert_eq(re_parsed, original)
+}
+
+///|
+test "Chart::serialize: minimal chartSpace round-trips" {
+  // The parser raises on missing <c:chart> or missing <c:plotArea>
+  // per the schema. This test confirms the absolute minimum valid
+  // chart (just the required elements) survives parse → serialize
+  // → parse.
+  let xml = "<?xml version=\"1.0\"?><c:chartSpace xmlns:c=\"" +
+    chart_ns +
+    "\">" +
+    "<c:chart><c:plotArea/></c:chart>" +
+    "</c:chartSpace>"
+  let original = @chart.Chart::parse(@oxml.string_to_bytes(xml))
+  let bytes = original.serialize()
+  let re_parsed = @chart.Chart::parse(bytes)
+  assert_eq(re_parsed, original)
+}
+
+///|
+test "Chart::serialize: foreign-namespace extLst children survive" {
+  let xml = "<?xml version=\"1.0\"?><c:chartSpace xmlns:c=\"" +
+    chart_ns +
+    "\" xmlns:a=\"" +
+    drawing_ns +
+    "\">" +
+    "<c:chart>" +
+    "<c:autoTitleDeleted val=\"1\"/>" +
+    "<c:plotArea><c:layout/></c:plotArea>" +
+    "<c:extLst><c:ext uri=\"{ABC}\" xmlns:foo=\"http://example.com/foo\"><foo:bar/></c:ext></c:extLst>" +
+    "</c:chart>" +
+    "</c:chartSpace>"
+  let original = @chart.Chart::parse(@oxml.string_to_bytes(xml))
+  let bytes = original.serialize()
+  let re_parsed = @chart.Chart::parse(bytes)
+  assert_eq(re_parsed, original)
+}
+
+///|
+test "Chart::parse: missing <c:chart> raises Malformed" {
+  let xml = "<?xml version=\"1.0\"?><c:chartSpace xmlns:c=\"" +
+    chart_ns +
+    "\"/>"
+  try @chart.Chart::parse(@oxml.string_to_bytes(xml)) catch {
+    _ => ()
+  } noraise {
+    _ => fail("expected Malformed for chartSpace without chart")
+  }
+}
+
+///|
+test "Chart::parse: missing <c:plotArea> raises Malformed" {
+  let xml = "<?xml version=\"1.0\"?><c:chartSpace xmlns:c=\"" +
+    chart_ns +
+    "\"><c:chart/></c:chartSpace>"
+  try @chart.Chart::parse(@oxml.string_to_bytes(xml)) catch {
+    _ => ()
+  } noraise {
+    _ => fail("expected Malformed for chart without plotArea")
+  }
+}

@@ -116,8 +116,8 @@ jobs:
 
   # The three test backends. Previously three serial steps in one job.
   #
-  # This repo is a workspace with seven peer modules: mbtexcel, docx2html,
-  # pdflite, pdf2md, pagelayout, office-lib, and office-cli. An
+  # This repo is a workspace with eight peer modules: mbtexcel, docx2html,
+  # pdflite, pdf2md, pagelayout, office-lib, office-cli, and pptx. An
   # unfiltered `moon test` traverses every member and all of its packages, so
   # new portable child packages are covered automatically instead of silently
   # receiving root-only tests.

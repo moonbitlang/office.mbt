@@ -1,0 +1,163 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "moonbitlang/pptx/opc"
+
+import {
+  "moonbitlang/core/debug",
+}
+
+// Values
+pub let content_types_ns : String
+
+pub let content_types_part_name : String
+
+pub fn copy_bytes(FixedArray[Byte]) -> FixedArray[Byte]
+
+pub fn opc_name_to_zip(String) -> String
+
+pub let package_root : String
+
+pub let relationships_ns : String
+
+pub let rels_content_type : String
+
+pub fn rels_path_for(String) -> String
+
+pub fn resolve_target(String, String, TargetMode) -> String
+
+pub let rt_audio : String
+
+pub let rt_chart : String
+
+pub let rt_chart_ex : String
+
+pub let rt_comment_authors : String
+
+pub let rt_comments : String
+
+pub let rt_core_properties : String
+
+pub let rt_diagram_colors : String
+
+pub let rt_diagram_data : String
+
+pub let rt_diagram_drawing : String
+
+pub let rt_diagram_layout : String
+
+pub let rt_diagram_quick_style : String
+
+pub let rt_extended_properties : String
+
+pub let rt_hyperlink : String
+
+pub let rt_image : String
+
+pub let rt_media : String
+
+pub let rt_notes_master : String
+
+pub let rt_notes_slide : String
+
+pub let rt_office_document : String
+
+pub let rt_package : String
+
+pub let rt_pres_props : String
+
+pub let rt_slide : String
+
+pub let rt_slide_layout : String
+
+pub let rt_slide_master : String
+
+pub let rt_table_styles : String
+
+pub let rt_theme : String
+
+pub let rt_video : String
+
+pub let rt_view_props : String
+
+pub fn validate_part_name(String) -> Unit raise OpcError
+
+pub fn zip_name_to_opc(String) -> String
+
+// Errors
+pub(all) suberror OpcError {
+  ZipFailure(String, String)
+  MalformedPackage(String)
+  PartNotFound(String)
+} derive(Eq, @debug.Debug)
+pub impl Show for OpcError
+
+// Types and methods
+pub struct ContentTypes {
+  defaults : Array[(String, String)]
+  overrides : Array[(String, String)]
+} derive(Eq, @debug.Debug)
+pub fn ContentTypes::clone(Self) -> Self
+pub fn ContentTypes::new() -> Self
+pub fn ContentTypes::parse(FixedArray[Byte]) -> Self raise OpcError
+pub fn ContentTypes::resolve(Self, String) -> String?
+pub fn ContentTypes::serialize(Self) -> FixedArray[Byte] raise OpcError
+pub fn ContentTypes::with_default(Self, String, String) -> Self
+pub fn ContentTypes::with_override(Self, String, String) -> Self
+pub fn ContentTypes::without_override(Self, String) -> Self
+
+pub struct Package {
+  parts : Array[Part]
+  mut content_types : ContentTypes
+  index : Map[String, Int]
+}
+pub fn Package::add_part(Self, Part) -> Unit raise OpcError
+pub fn Package::clone(Self) -> Self
+pub fn Package::content_types(Self) -> ContentTypes
+pub fn Package::new() -> Self
+pub fn Package::open(FixedArray[Byte]) -> Self raise OpcError
+pub fn Package::part_by_name(Self, String) -> Part?
+pub fn Package::parts(Self) -> Array[Part]
+pub fn Package::regenerate_content_types_part(Self) -> Unit raise OpcError
+pub fn Package::relationships_for(Self, String) -> Relationships raise OpcError
+pub fn Package::remove_part(Self, String) -> Bool
+pub fn Package::replace_part(Self, Part) -> Bool
+pub fn Package::require_part(Self, String) -> Part raise OpcError
+pub fn Package::set_content_types(Self, ContentTypes) -> Unit
+pub fn Package::to_bytes(Self) -> FixedArray[Byte]
+
+pub struct Part {
+  name : String
+  mut content_type : String
+  bytes : FixedArray[Byte]
+} derive(@debug.Debug)
+pub fn Part::clone(Self) -> Self
+pub fn Part::new(String, String, FixedArray[Byte]) -> Self raise OpcError
+pub fn Part::text(Self) -> String raise OpcError
+pub impl Show for Part
+
+pub(all) struct Relationship {
+  id : String
+  rel_type : String
+  target : String
+  target_mode : TargetMode
+} derive(Eq, @debug.Debug)
+pub impl Show for Relationship
+
+pub(all) struct Relationships {
+  source : String
+  items : Array[Relationship]
+} derive(@debug.Debug)
+pub fn Relationships::by_id(Self, String) -> Relationship?
+pub fn Relationships::by_type(Self, String) -> Array[Relationship]
+pub fn Relationships::new(String) -> Self
+pub fn Relationships::parse(String, FixedArray[Byte]) -> Self raise OpcError
+pub fn Relationships::serialize(Self) -> FixedArray[Byte] raise OpcError
+pub fn Relationships::with_relationship(Self, Relationship) -> Self raise OpcError
+
+pub(all) enum TargetMode {
+  Internal
+  External
+} derive(Eq, @debug.Debug)
+
+// Type aliases
+
+// Traits

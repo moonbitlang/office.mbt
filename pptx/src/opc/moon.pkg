@@ -1,0 +1,5 @@
+// Modified for office.mbt: official module namespace and workspace integration.
+import {
+  "hustcer/fzip",
+  "moonbitlang/pptx/xml",
+}

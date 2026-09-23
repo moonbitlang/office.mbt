@@ -1,0 +1,7 @@
+// Modified for office.mbt: official module namespace and workspace integration.
+import {
+  "moonbitlang/core/math",
+  "moonbitlang/pptx/units",
+  "moonbitlang/pptx/xml",
+  "moonbitlang/pptx/oxml",
+}

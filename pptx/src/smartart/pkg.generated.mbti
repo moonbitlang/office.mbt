@@ -1,0 +1,69 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "moonbitlang/pptx/smartart"
+
+import {
+  "moonbitlang/core/debug",
+  "moonbitlang/pptx/units",
+}
+
+// Values
+
+// Errors
+pub(all) suberror SmartArtError {
+  XmlFailure(String, String)
+  Malformed(String)
+} derive(Eq, @debug.Debug)
+pub impl Show for SmartArtError
+
+// Types and methods
+pub struct Node {
+  text : String
+  children : Array[Node]
+  style : NodeStyle?
+} derive(Eq, @debug.Debug)
+pub fn Node::leaf(String) -> Self
+pub fn Node::new(String, Array[Self]) -> Self
+pub fn Node::with_fill(Self, @units.RgbColor) -> Self
+pub fn Node::with_line(Self, @units.RgbColor) -> Self
+pub fn Node::with_text_color(Self, @units.RgbColor) -> Self
+
+pub struct NodeStyle {
+  fill : @units.RgbColor?
+  line : @units.RgbColor?
+  text_color : @units.RgbColor?
+} derive(Eq, @debug.Debug)
+pub fn NodeStyle::new(fill? : @units.RgbColor, line? : @units.RgbColor, text_color? : @units.RgbColor) -> Self
+
+pub struct SmartArt {
+  kind : SmartArtKind
+  nodes : Array[Node]
+} derive(Eq, @debug.Debug)
+pub fn SmartArt::colors_xml(Self) -> FixedArray[Byte]
+pub fn SmartArt::cycle(Array[String]) -> Self
+pub fn SmartArt::data_xml(Self, String) -> FixedArray[Byte] raise SmartArtError
+pub fn SmartArt::drawing_xml(Self, cx~ : @units.Emu, cy~ : @units.Emu) -> FixedArray[Byte] raise SmartArtError
+pub fn SmartArt::hierarchy(Array[Node]) -> Self
+pub fn SmartArt::layout_xml(Self) -> FixedArray[Byte]
+pub fn SmartArt::list(Array[String]) -> Self
+pub fn SmartArt::matrix(Array[String]) -> Self
+pub fn SmartArt::new(SmartArtKind, Array[Node]) -> Self
+pub fn SmartArt::org_chart(Node) -> Self
+pub fn SmartArt::process(Array[String]) -> Self
+pub fn SmartArt::pyramid(Array[String]) -> Self
+pub fn SmartArt::quick_style_xml(Self) -> FixedArray[Byte]
+pub fn SmartArt::relationship(Node, Array[Node]) -> Self
+
+pub(all) enum SmartArtKind {
+  List
+  Process
+  Cycle
+  Pyramid
+  OrgChart
+  Hierarchy
+  Matrix
+  Relationship
+} derive(Eq, @debug.Debug)
+
+// Type aliases
+
+// Traits

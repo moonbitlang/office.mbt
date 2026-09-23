@@ -1,0 +1,47 @@
+// Group shape (`p:grpSp`) model — recursive.
+//
+// A group shape carries its own non-visual props + group-shape props (with
+// the standard `<a:xfrm>` plus `<a:chOff>` / `<a:chExt>` defining the
+// child coordinate space), then nests an arbitrary mix of shape kinds
+// inside — including more group shapes.
+//
+//   <p:grpSp>
+//     <p:nvGrpSpPr>
+//       <p:cNvPr id="10" name="Group 1"/>
+//       <p:cNvGrpSpPr/>
+//       <p:nvPr/>
+//     </p:nvGrpSpPr>
+//     <p:grpSpPr>
+//       <a:xfrm>
+//         <a:off x="…" y="…"/>
+//         <a:ext cx="…" cy="…"/>
+//         <a:chOff x="0" y="0"/>
+//         <a:chExt cx="…" cy="…"/>
+//       </a:xfrm>
+//     </p:grpSpPr>
+//     <p:sp/> | <p:pic/> | <p:cxnSp/> | <p:grpSp/> | <p:graphicFrame/>
+//   </p:grpSp>
+
+///|
+/// `<p:grpSp>` — recursive container.
+///
+/// `transform` is the group's own placement (`<a:off>` + `<a:ext>`).
+/// `child_offset` and `child_extent` together describe the local
+/// coordinate space children are positioned in (`<a:chOff>` + `<a:chExt>`);
+/// applying them is the renderer's job, not the parser's.
+///
+/// - `hyperlink` (`<p:cNvPr><a:hlinkClick>`) — a hyperlink / click action on
+///   the whole group. Build-only: set by `with_hyperlink` /
+///   `with_hyperlink_to_slide`, resolved by `Presentation::update_slide_mut`.
+///   `None` for a parsed group (its `<a:hlinkClick>` round-trips via the
+///   captured `<p:cNvPr>` in `extension`).
+pub(all) struct GroupShape {
+  id : Int
+  name : String
+  transform : Transform?
+  child_offset : Point?
+  child_extent : Size?
+  children : Array[Shape]
+  hyperlink : ShapeHyperlink?
+  extension : Array[@xml.XmlElement]
+} derive(Eq, Debug)

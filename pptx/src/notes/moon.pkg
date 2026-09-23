@@ -1,0 +1,10 @@
+// Modified for office.mbt: official module namespace and workspace integration.
+import {
+  "moonbitlang/pptx/slide",
+  "moonbitlang/pptx/slide_master",
+  "moonbitlang/pptx/xml",
+}
+
+import {
+  "moonbitlang/pptx/oxml",
+} for "test"

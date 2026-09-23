@@ -1,0 +1,24 @@
+// Modified for office.mbt: official module namespace and workspace integration.
+// Test-only package: no source files, only `*_test.mbt`.  Every import
+// is therefore test-scoped — the `for "test"` block keeps `moon check`
+// from flagging them as unused at the package-proper level.
+import {
+} // (no package-level imports — the package has no `.mbt` sources)
+
+import {
+  "moonbitlang/core/bench",
+  "hustcer/fzip",
+  "moonbitlang/pptx/chart",
+  "moonbitlang/pptx/chart_ex",
+  "moonbitlang/pptx/comments",
+  "moonbitlang/pptx/notes",
+  "moonbitlang/pptx/opc",
+  "moonbitlang/pptx/oxml",
+  "moonbitlang/pptx/presentation",
+  "moonbitlang/pptx/slide",
+  "moonbitlang/pptx/slide_master",
+  "moonbitlang/pptx/smartart",
+  "moonbitlang/pptx/theme",
+  "moonbitlang/pptx/units",
+  "moonbitlang/pptx/xml",
+} for "test"

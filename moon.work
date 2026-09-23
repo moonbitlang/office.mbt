@@ -6,4 +6,5 @@ members = [
   "./pagelayout",
   "./pdflite",
   "./pdf2md",
+  "./pptx",
 ]

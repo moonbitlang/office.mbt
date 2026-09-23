@@ -1,0 +1,740 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "moonbitlang/pptx/chart"
+
+import {
+  "moonbitlang/core/debug",
+  "moonbitlang/pptx/xml",
+}
+
+// Values
+
+// Errors
+pub(all) suberror ChartError {
+  XmlFailure(String, String)
+  Malformed(String)
+} derive(Eq, @debug.Debug)
+pub impl Show for ChartError
+
+// Types and methods
+pub(all) struct Area3DChartBody {
+  grouping : Grouping?
+  vary_colors : Bool?
+  series : Array[ChartSeriesCore]
+  d_lbls : DLbls?
+  drop_lines : @xml.XmlElement?
+  gap_depth : Int?
+  ax_ids : Array[Int]
+  extension : Array[@xml.XmlElement]
+} derive(Eq, @debug.Debug)
+pub impl Show for Area3DChartBody
+
+pub(all) struct AreaChartBody {
+  grouping : Grouping?
+  vary_colors : Bool?
+  series : Array[ChartSeriesCore]
+  d_lbls : DLbls?
+  drop_lines : @xml.XmlElement?
+  ax_ids : Array[Int]
+  extension : Array[@xml.XmlElement]
+} derive(Eq, @debug.Debug)
+pub impl Show for AreaChartBody
+
+pub(all) enum AxPos {
+  Bottom
+  Left
+  Right
+  Top
+} derive(Eq, @debug.Debug)
+pub fn AxPos::from_xml(String) -> Self?
+pub fn AxPos::to_xml(Self) -> String
+pub impl Show for AxPos
+
+pub(all) enum Axis {
+  ValAx(AxisCore)
+  CatAx(AxisCore)
+  DateAx(AxisCore)
+  SerAx(AxisCore)
+} derive(Eq, @debug.Debug)
+pub fn Axis::core(Self) -> AxisCore
+pub fn Axis::local_name(Self) -> String
+pub impl Show for Axis
+
+pub(all) struct AxisCore {
+  ax_id : Int
+  scaling : Scaling?
+  delete : Bool?
+  ax_pos : AxPos?
+  major_gridlines : @xml.XmlElement?
+  minor_gridlines : @xml.XmlElement?
+  title : ChartTitle?
+  num_fmt : NumFmt?
+  major_tick_mark : TickMark?
+  minor_tick_mark : TickMark?
+  tick_lbl_pos : TickLblPos?
+  sp_pr : @xml.XmlElement?
+  tx_pr : @xml.XmlElement?
+  cross_ax : Int?
+  crosses : Crosses?
+  crosses_at : String?
+  extension : Array[@xml.XmlElement]
+} derive(Eq, @debug.Debug)
+pub impl Show for AxisCore
+
+pub(all) struct Bar3DChartBody {
+  bar_dir : BarDir
+  grouping : BarGrouping?
+  vary_colors : Bool?
+  series : Array[ChartSeriesCore]
+  d_lbls : DLbls?
+  gap_width : Int?
+  gap_depth : Int?
+  shape : BarShape?
+  ax_ids : Array[Int]
+  extension : Array[@xml.XmlElement]
+} derive(Eq, @debug.Debug)
+pub impl Show for Bar3DChartBody
+
+pub(all) struct BarChartBody {
+  bar_dir : BarDir
+  grouping : BarGrouping?
+  vary_colors : Bool?
+  series : Array[ChartSeriesCore]
+  d_lbls : DLbls?
+  gap_width : Int?
+  overlap : Int?
+  ax_ids : Array[Int]
+  extension : Array[@xml.XmlElement]
+} derive(Eq, @debug.Debug)
+pub impl Show for BarChartBody
+
+pub(all) enum BarDir {
+  Bar
+  Col
+} derive(Eq, @debug.Debug)
+pub fn BarDir::from_xml(String) -> Self?
+pub fn BarDir::to_xml(Self) -> String
+pub impl Show for BarDir
+
+pub(all) enum BarGrouping {
+  PercentStacked
+  Clustered
+  Standard
+  Stacked
+} derive(Eq, @debug.Debug)
+pub fn BarGrouping::from_xml(String) -> Self?
+pub fn BarGrouping::to_xml(Self) -> String
+pub impl Show for BarGrouping
+
+pub(all) enum BarShape {
+  Box
+  Cone
+  ConeToMax
+  Cylinder
+  Pyramid
+  PyramidToMax
+} derive(Eq, @debug.Debug)
+pub fn BarShape::from_xml(String) -> Self?
+pub fn BarShape::to_xml(Self) -> String
+pub impl Show for BarShape
+
+pub(all) struct BubbleChartBody {
+  vary_colors : Bool?
+  series : Array[BubbleSeriesCore]
+  d_lbls : DLbls?
+  bubble_3d : Bool?
+  bubble_scale : Int?
+  show_neg_bubbles : Bool?
+  size_represents : SizeRepresents?
+  ax_ids : Array[Int]
+  extension : Array[@xml.XmlElement]
+} derive(Eq, @debug.Debug)
+pub impl Show for BubbleChartBody
+
+pub struct BubbleData {
+  series : Array[BubbleSeries]
+} derive(Eq, @debug.Debug)
+pub fn BubbleData::is_consistent(Self) -> Bool
+pub fn BubbleData::new() -> Self
+pub fn BubbleData::validate(Self) -> Self raise ChartError
+pub fn BubbleData::with_series(Self, String, Array[Double], Array[Double], Array[Double]) -> Self
+pub impl Show for BubbleData
+
+pub struct BubbleSeries {
+  label : String
+  x : Array[Double]
+  y : Array[Double]
+  size : Array[Double]
+} derive(Eq, @debug.Debug)
+pub impl Show for BubbleSeries
+
+pub(all) struct BubbleSeriesCore {
+  idx : Int
+  order : Int
+  tx : @xml.XmlElement?
+  sp_pr : @xml.XmlElement?
+  trendlines : Array[Trendline]
+  x_val : @xml.XmlElement?
+  y_val : @xml.XmlElement?
+  bubble_size : @xml.XmlElement?
+  extension : Array[@xml.XmlElement]
+} derive(Eq, @debug.Debug)
+pub impl Show for BubbleSeriesCore
+
+pub(all) struct Chart {
+  date1904 : Bool?
+  lang : String?
+  rounded_corners : Bool?
+  style : Int?
+  chart : ChartBody
+  extension : Array[@xml.XmlElement]
+} derive(Eq, @debug.Debug)
+pub fn Chart::is_consistent(Self) -> Bool
+pub fn Chart::of_area(ChartData, grouping? : Grouping) -> Self
+pub fn Chart::of_bar(ChartData, bar_dir? : BarDir, grouping? : BarGrouping) -> Self
+pub fn Chart::of_bar_3d(ChartData, bar_dir? : BarDir, grouping? : BarGrouping, shape? : BarShape) -> Self
+pub fn Chart::of_bubble(BubbleData) -> Self
+pub fn Chart::of_combo(ChartPlot, ChartPlot, secondary_axis? : Bool) -> Self
+pub fn Chart::of_doughnut(ChartData, hole_size? : Int) -> Self
+pub fn Chart::of_line(ChartData, grouping? : Grouping) -> Self
+pub fn Chart::of_line_3d(ChartData, grouping? : Grouping) -> Self
+pub fn Chart::of_of_pie(ChartData, of_pie_type? : OfPieType, split_type? : SplitType) -> Self
+pub fn Chart::of_pie(ChartData) -> Self
+pub fn Chart::of_pie_3d(ChartData) -> Self
+pub fn Chart::of_radar(ChartData, radar_style? : RadarStyle) -> Self
+pub fn Chart::of_scatter(ScatterData, scatter_style? : ScatterStyle) -> Self
+pub fn Chart::of_stock(ChartData, kind? : StockKind) -> Self
+pub fn Chart::of_surface(ChartData, wireframe? : Bool) -> Self
+pub fn Chart::of_surface_3d(ChartData, wireframe? : Bool) -> Self
+pub fn Chart::parse(FixedArray[Byte]) -> Self raise ChartError
+pub fn Chart::serialize(Self) -> FixedArray[Byte] raise ChartError
+pub fn Chart::validate(Self) -> Self raise ChartError
+pub fn Chart::with_options(Self, Array[ChartOption]) -> Self
+pub impl Show for Chart
+
+pub(all) struct ChartBody {
+  title : ChartTitle?
+  auto_title_deleted : Bool?
+  pivot_fmts : @xml.XmlElement?
+  view3d : @xml.XmlElement?
+  floor : @xml.XmlElement?
+  side_wall : @xml.XmlElement?
+  back_wall : @xml.XmlElement?
+  plot_area : PlotArea
+  legend : ChartLegend?
+  plot_vis_only : Bool?
+  disp_blanks_as : DisplayBlanksAs?
+  show_d_lbls_over_max : Bool?
+  extension : Array[@xml.XmlElement]
+} derive(Eq, @debug.Debug)
+pub impl Show for ChartBody
+
+pub struct ChartData {
+  categories : Array[String]
+  series : Array[ChartSeries]
+} derive(Eq, @debug.Debug)
+pub fn ChartData::is_consistent(Self) -> Bool
+pub fn ChartData::new() -> Self
+pub fn ChartData::validate(Self) -> Self raise ChartError
+pub fn ChartData::with_category(Self, String) -> Self
+pub fn ChartData::with_series(Self, String, Array[Double]) -> Self
+pub impl Show for ChartData
+
+pub(all) struct ChartLegend {
+  legend_pos : LegendPos?
+  legend_entries : Array[LegendEntry]
+  layout : Layout?
+  overlay : Bool?
+  sp_pr : @xml.XmlElement?
+  tx_pr : @xml.XmlElement?
+  extension : Array[@xml.XmlElement]
+} derive(Eq, @debug.Debug)
+pub impl Show for ChartLegend
+
+pub(all) enum ChartOption {
+  Title(String)
+  TitleDeleted
+  Legend(LegendPos)
+  LegendHidden
+  DataLabels(DLblPos)
+  DataLabelsHidden
+  DataTable(Bool)
+  Style(Int)
+  RoundedCorners(Bool)
+  PlotVisibleOnly(Bool)
+  DisplayBlanks(DisplayBlanksAs)
+} derive(Eq, @debug.Debug)
+pub impl Show for ChartOption
+
+pub(all) enum ChartPlot {
+  Bar(ChartData)
+  Line(ChartData)
+  Area(ChartData)
+} derive(Eq, @debug.Debug)
+
+pub struct ChartSeries {
+  label : String
+  values : Array[Double]
+} derive(Eq, @debug.Debug)
+pub impl Show for ChartSeries
+
+pub(all) struct ChartSeriesCore {
+  idx : Int
+  order : Int
+  tx : @xml.XmlElement?
+  sp_pr : @xml.XmlElement?
+  trendlines : Array[Trendline]
+  cat : @xml.XmlElement?
+  val : @xml.XmlElement?
+  extension : Array[@xml.XmlElement]
+} derive(Eq, @debug.Debug)
+pub impl Show for ChartSeriesCore
+
+pub(all) struct ChartTitle {
+  tx : @xml.XmlElement?
+  layout : Layout?
+  overlay : Bool?
+  sp_pr : @xml.XmlElement?
+  tx_pr : @xml.XmlElement?
+  extension : Array[@xml.XmlElement]
+} derive(Eq, @debug.Debug)
+pub impl Show for ChartTitle
+
+pub(all) enum Crosses {
+  AutoZero
+  Min
+  Max
+} derive(Eq, @debug.Debug)
+pub fn Crosses::from_xml(String) -> Self?
+pub fn Crosses::to_xml(Self) -> String
+pub impl Show for Crosses
+
+pub(all) struct DLbl {
+  idx : Int
+  delete : Bool?
+  layout : Layout?
+  tx : @xml.XmlElement?
+  num_fmt : NumFmt?
+  sp_pr : @xml.XmlElement?
+  tx_pr : @xml.XmlElement?
+  d_lbl_pos : DLblPos?
+  show_legend_key : Bool?
+  show_val : Bool?
+  show_cat_name : Bool?
+  show_ser_name : Bool?
+  show_percent : Bool?
+  show_bubble_size : Bool?
+  separator : String?
+  extension : Array[@xml.XmlElement]
+} derive(Eq, @debug.Debug)
+pub impl Show for DLbl
+
+pub(all) enum DLblPos {
+  DLblBestFit
+  DLblBottom
+  DLblCenter
+  DLblInBase
+  DLblInEnd
+  DLblLeft
+  DLblOutEnd
+  DLblRight
+  DLblTop
+} derive(Eq, @debug.Debug)
+pub fn DLblPos::from_xml(String) -> Self?
+pub fn DLblPos::to_xml(Self) -> String
+pub impl Show for DLblPos
+
+pub(all) struct DLbls {
+  d_lbl : Array[DLbl]
+  num_fmt : NumFmt?
+  sp_pr : @xml.XmlElement?
+  tx_pr : @xml.XmlElement?
+  d_lbl_pos : DLblPos?
+  show_legend_key : Bool?
+  show_val : Bool?
+  show_cat_name : Bool?
+  show_ser_name : Bool?
+  show_percent : Bool?
+  show_bubble_size : Bool?
+  separator : String?
+  extension : Array[@xml.XmlElement]
+} derive(Eq, @debug.Debug)
+pub impl Show for DLbls
+
+pub(all) enum DisplayBlanksAs {
+  Span
+  Gap
+  Zero
+} derive(Eq, @debug.Debug)
+pub fn DisplayBlanksAs::from_xml(String) -> Self?
+pub fn DisplayBlanksAs::to_xml(Self) -> String
+pub impl Show for DisplayBlanksAs
+
+pub(all) struct DoughnutChartBody {
+  vary_colors : Bool?
+  series : Array[ChartSeriesCore]
+  d_lbls : DLbls?
+  first_slice_ang : Int?
+  hole_size : Int?
+  extension : Array[@xml.XmlElement]
+} derive(Eq, @debug.Debug)
+pub impl Show for DoughnutChartBody
+
+pub(all) enum Grouping {
+  Standard
+  Stacked
+  PercentStacked
+} derive(Eq, @debug.Debug)
+pub fn Grouping::from_xml(String) -> Self?
+pub fn Grouping::to_xml(Self) -> String
+pub impl Show for Grouping
+
+pub(all) struct Layout {
+  manual_layout : ManualLayout?
+  extension : Array[@xml.XmlElement]
+} derive(Eq, @debug.Debug)
+pub impl Show for Layout
+
+pub(all) enum LayoutMode {
+  LayoutEdge
+  LayoutFactor
+} derive(Eq, @debug.Debug)
+pub fn LayoutMode::from_xml(String) -> Self?
+pub fn LayoutMode::to_xml(Self) -> String
+pub impl Show for LayoutMode
+
+pub(all) enum LayoutTarget {
+  LayoutInner
+  LayoutOuter
+} derive(Eq, @debug.Debug)
+pub fn LayoutTarget::from_xml(String) -> Self?
+pub fn LayoutTarget::to_xml(Self) -> String
+pub impl Show for LayoutTarget
+
+pub(all) struct LegendEntry {
+  idx : Int
+  delete : Bool?
+  tx_pr : @xml.XmlElement?
+  extension : Array[@xml.XmlElement]
+} derive(Eq, @debug.Debug)
+pub impl Show for LegendEntry
+
+pub(all) enum LegendPos {
+  LegendBottom
+  LegendTopRight
+  LegendLeft
+  LegendRight
+  LegendTop
+} derive(Eq, @debug.Debug)
+pub fn LegendPos::from_xml(String) -> Self?
+pub fn LegendPos::to_xml(Self) -> String
+pub impl Show for LegendPos
+
+pub(all) struct Line3DChartBody {
+  grouping : Grouping
+  vary_colors : Bool?
+  series : Array[ChartSeriesCore]
+  d_lbls : DLbls?
+  drop_lines : @xml.XmlElement?
+  gap_depth : Int?
+  ax_ids : Array[Int]
+  extension : Array[@xml.XmlElement]
+} derive(Eq, @debug.Debug)
+pub impl Show for Line3DChartBody
+
+pub(all) struct LineChartBody {
+  grouping : Grouping
+  vary_colors : Bool?
+  series : Array[ChartSeriesCore]
+  d_lbls : DLbls?
+  drop_lines : @xml.XmlElement?
+  hi_low_lines : @xml.XmlElement?
+  up_down_bars : @xml.XmlElement?
+  marker : Bool?
+  smooth : Bool?
+  ax_ids : Array[Int]
+  extension : Array[@xml.XmlElement]
+} derive(Eq, @debug.Debug)
+pub impl Show for LineChartBody
+
+pub(all) struct ManualLayout {
+  layout_target : LayoutTarget?
+  x_mode : LayoutMode?
+  y_mode : LayoutMode?
+  w_mode : LayoutMode?
+  h_mode : LayoutMode?
+  x : String?
+  y : String?
+  w : String?
+  h : String?
+  extension : Array[@xml.XmlElement]
+} derive(Eq, @debug.Debug)
+pub impl Show for ManualLayout
+
+pub(all) struct NumFmt {
+  format_code : String
+  source_linked : Bool?
+} derive(Eq, @debug.Debug)
+pub impl Show for NumFmt
+
+pub(all) struct OfPieChartBody {
+  of_pie_type : OfPieType
+  vary_colors : Bool?
+  series : Array[ChartSeriesCore]
+  d_lbls : DLbls?
+  gap_width : Int?
+  split_type : SplitType?
+  split_pos : String?
+  cust_split : @xml.XmlElement?
+  second_pie_size : Int?
+  ser_lines : Array[@xml.XmlElement]
+  extension : Array[@xml.XmlElement]
+} derive(Eq, @debug.Debug)
+pub impl Show for OfPieChartBody
+
+pub(all) enum OfPieType {
+  Pie
+  Bar
+} derive(Eq, @debug.Debug)
+pub fn OfPieType::from_xml(String) -> Self?
+pub fn OfPieType::to_xml(Self) -> String
+pub impl Show for OfPieType
+
+pub(all) enum Orientation {
+  MinMax
+  MaxMin
+} derive(Eq, @debug.Debug)
+pub fn Orientation::from_xml(String) -> Self?
+pub fn Orientation::to_xml(Self) -> String
+pub impl Show for Orientation
+
+pub(all) struct Pie3DChartBody {
+  vary_colors : Bool?
+  series : Array[ChartSeriesCore]
+  d_lbls : DLbls?
+  extension : Array[@xml.XmlElement]
+} derive(Eq, @debug.Debug)
+pub impl Show for Pie3DChartBody
+
+pub(all) struct PieChartBody {
+  vary_colors : Bool?
+  series : Array[ChartSeriesCore]
+  d_lbls : DLbls?
+  first_slice_ang : Int?
+  extension : Array[@xml.XmlElement]
+} derive(Eq, @debug.Debug)
+pub impl Show for PieChartBody
+
+pub(all) enum Plot {
+  AreaChart(AreaChartBody)
+  Area3DChart(Area3DChartBody)
+  LineChart(LineChartBody)
+  Line3DChart(Line3DChartBody)
+  StockChart(StockChartBody)
+  RadarChart(RadarChartBody)
+  ScatterChart(ScatterChartBody)
+  PieChart(PieChartBody)
+  Pie3DChart(Pie3DChartBody)
+  DoughnutChart(DoughnutChartBody)
+  BarChart(BarChartBody)
+  Bar3DChart(Bar3DChartBody)
+  OfPieChart(OfPieChartBody)
+  SurfaceChart(SurfaceChartBody)
+  Surface3DChart(Surface3DChartBody)
+  BubbleChart(BubbleChartBody)
+} derive(Eq, @debug.Debug)
+pub fn Plot::local_name(Self) -> String
+pub impl Show for Plot
+
+pub(all) struct PlotArea {
+  layout : Layout?
+  plots : Array[Plot]
+  axes : Array[Axis]
+  data_table : @xml.XmlElement?
+  sp_pr : @xml.XmlElement?
+  extension : Array[@xml.XmlElement]
+} derive(Eq, @debug.Debug)
+pub impl Show for PlotArea
+
+pub(all) struct RadarChartBody {
+  radar_style : RadarStyle
+  vary_colors : Bool?
+  series : Array[ChartSeriesCore]
+  d_lbls : DLbls?
+  ax_ids : Array[Int]
+  extension : Array[@xml.XmlElement]
+} derive(Eq, @debug.Debug)
+pub impl Show for RadarChartBody
+
+pub(all) enum RadarStyle {
+  Standard
+  Marker
+  Filled
+} derive(Eq, @debug.Debug)
+pub fn RadarStyle::from_xml(String) -> Self?
+pub fn RadarStyle::to_xml(Self) -> String
+pub impl Show for RadarStyle
+
+pub(all) struct Scaling {
+  log_base : String?
+  orientation : Orientation?
+  max : String?
+  min : String?
+  extension : Array[@xml.XmlElement]
+} derive(Eq, @debug.Debug)
+pub impl Show for Scaling
+
+pub(all) struct ScatterChartBody {
+  scatter_style : ScatterStyle
+  vary_colors : Bool?
+  series : Array[ScatterSeriesCore]
+  d_lbls : DLbls?
+  ax_ids : Array[Int]
+  extension : Array[@xml.XmlElement]
+} derive(Eq, @debug.Debug)
+pub impl Show for ScatterChartBody
+
+pub struct ScatterData {
+  series : Array[ScatterSeries]
+} derive(Eq, @debug.Debug)
+pub fn ScatterData::is_consistent(Self) -> Bool
+pub fn ScatterData::new() -> Self
+pub fn ScatterData::validate(Self) -> Self raise ChartError
+pub fn ScatterData::with_series(Self, String, Array[Double], Array[Double]) -> Self
+pub impl Show for ScatterData
+
+pub struct ScatterSeries {
+  label : String
+  x : Array[Double]
+  y : Array[Double]
+} derive(Eq, @debug.Debug)
+pub impl Show for ScatterSeries
+
+pub(all) struct ScatterSeriesCore {
+  idx : Int
+  order : Int
+  tx : @xml.XmlElement?
+  sp_pr : @xml.XmlElement?
+  trendlines : Array[Trendline]
+  x_val : @xml.XmlElement?
+  y_val : @xml.XmlElement?
+  extension : Array[@xml.XmlElement]
+} derive(Eq, @debug.Debug)
+pub impl Show for ScatterSeriesCore
+
+pub(all) enum ScatterStyle {
+  Line
+  LineMarker
+  Marker
+  None_
+  Smooth
+  SmoothMarker
+} derive(Eq, @debug.Debug)
+pub fn ScatterStyle::from_xml(String) -> Self?
+pub fn ScatterStyle::to_xml(Self) -> String
+pub impl Show for ScatterStyle
+
+pub(all) enum SizeRepresents {
+  Area
+  Width
+} derive(Eq, @debug.Debug)
+pub fn SizeRepresents::from_xml(String) -> Self?
+pub fn SizeRepresents::to_xml(Self) -> String
+pub impl Show for SizeRepresents
+
+pub(all) enum SplitType {
+  Auto
+  Cust
+  Percent
+  Pos
+  Val
+} derive(Eq, @debug.Debug)
+pub fn SplitType::from_xml(String) -> Self?
+pub fn SplitType::to_xml(Self) -> String
+pub impl Show for SplitType
+
+pub(all) struct StockChartBody {
+  series : Array[ChartSeriesCore]
+  d_lbls : DLbls?
+  drop_lines : @xml.XmlElement?
+  hi_low_lines : @xml.XmlElement?
+  up_down_bars : @xml.XmlElement?
+  ax_ids : Array[Int]
+  extension : Array[@xml.XmlElement]
+} derive(Eq, @debug.Debug)
+pub impl Show for StockChartBody
+
+pub(all) enum StockKind {
+  HLC
+  OHLC
+} derive(Eq, @debug.Debug)
+pub impl Show for StockKind
+
+pub(all) struct Surface3DChartBody {
+  wireframe : Bool?
+  series : Array[ChartSeriesCore]
+  band_fmts : @xml.XmlElement?
+  ax_ids : Array[Int]
+  extension : Array[@xml.XmlElement]
+} derive(Eq, @debug.Debug)
+pub impl Show for Surface3DChartBody
+
+pub(all) struct SurfaceChartBody {
+  wireframe : Bool?
+  series : Array[ChartSeriesCore]
+  band_fmts : @xml.XmlElement?
+  ax_ids : Array[Int]
+  extension : Array[@xml.XmlElement]
+} derive(Eq, @debug.Debug)
+pub impl Show for SurfaceChartBody
+
+pub(all) enum TickLblPos {
+  High
+  Low
+  NextTo
+  NoLbl
+} derive(Eq, @debug.Debug)
+pub fn TickLblPos::from_xml(String) -> Self?
+pub fn TickLblPos::to_xml(Self) -> String
+pub impl Show for TickLblPos
+
+pub(all) enum TickMark {
+  Cross
+  In
+  NoTick
+  Out
+} derive(Eq, @debug.Debug)
+pub fn TickMark::from_xml(String) -> Self?
+pub fn TickMark::to_xml(Self) -> String
+pub impl Show for TickMark
+
+pub(all) struct Trendline {
+  name : String?
+  sp_pr : @xml.XmlElement?
+  trendline_type : TrendlineType
+  order : Int?
+  period : Int?
+  forward : String?
+  backward : String?
+  intercept : String?
+  disp_r_sqr : Bool?
+  disp_eq : Bool?
+  trendline_lbl : @xml.XmlElement?
+  extension : Array[@xml.XmlElement]
+} derive(Eq, @debug.Debug)
+pub impl Show for Trendline
+
+pub(all) enum TrendlineType {
+  TrendlineExp
+  TrendlineLinear
+  TrendlineLog
+  TrendlineMovingAvg
+  TrendlinePoly
+  TrendlinePower
+} derive(Eq, @debug.Debug)
+pub fn TrendlineType::from_xml(String) -> Self?
+pub fn TrendlineType::to_xml(Self) -> String
+pub impl Show for TrendlineType
+
+// Type aliases
+
+// Traits

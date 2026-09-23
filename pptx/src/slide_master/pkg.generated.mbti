@@ -1,0 +1,117 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "moonbitlang/pptx/slide_master"
+
+import {
+  "moonbitlang/core/debug",
+  "moonbitlang/pptx/oxml",
+  "moonbitlang/pptx/theme",
+  "moonbitlang/pptx/units",
+  "moonbitlang/pptx/xml",
+}
+
+// Values
+pub fn effective_color_mapping(SlideMaster, SlideLayout) -> ColorMapping
+
+pub fn lookup_theme_slot(@units.ThemeColor, @theme.ColorScheme) -> @oxml.Color
+
+pub fn parse_clr_map_attrs(Array[(@xml.QName, String)]) -> ColorMapping raise SlideMasterError
+
+pub fn resolve_slide_color(@units.ThemeColor, SlideMaster, SlideLayout, @theme.ColorScheme) -> @oxml.Color?
+
+pub fn write_clr_map_override(@xml.XmlWriter, ClrMapOverride) -> Unit raise @xml.XmlError
+
+// Errors
+pub(all) suberror SlideMasterError {
+  XmlFailure(String, String)
+  Malformed(String)
+} derive(Eq, @debug.Debug)
+pub impl Show for SlideMasterError
+
+// Types and methods
+pub(all) enum ClrMapOverride {
+  MasterMapping
+  Override(ColorMapping)
+} derive(Eq, @debug.Debug)
+
+pub(all) struct ColorMapping {
+  bg1 : @units.ThemeColor
+  tx1 : @units.ThemeColor
+  bg2 : @units.ThemeColor
+  tx2 : @units.ThemeColor
+  accent1 : @units.ThemeColor
+  accent2 : @units.ThemeColor
+  accent3 : @units.ThemeColor
+  accent4 : @units.ThemeColor
+  accent5 : @units.ThemeColor
+  accent6 : @units.ThemeColor
+  hlink : @units.ThemeColor
+  fol_hlink : @units.ThemeColor
+} derive(Eq, @debug.Debug)
+pub fn ColorMapping::resolve(Self, @units.ThemeColor) -> @units.ThemeColor?
+
+pub(all) struct SlideLayout {
+  name : String
+  layout_type : SlideLayoutType
+  clr_map_override : ClrMapOverride
+  extension : Array[@xml.XmlElement]
+} derive(Eq, @debug.Debug)
+pub fn SlideLayout::parse(FixedArray[Byte]) -> Self raise SlideMasterError
+pub fn SlideLayout::serialize(Self) -> FixedArray[Byte] raise SlideMasterError
+
+pub(all) struct SlideLayoutRef {
+  id : Int64
+  r_id : String
+} derive(Eq, @debug.Debug)
+
+pub(all) enum SlideLayoutType {
+  Title
+  Tx
+  TwoColTx
+  Tbl
+  TxAndChart
+  ChartAndTx
+  Diagram
+  Chart
+  TxAndClipArt
+  ClipArtAndTx
+  TitleOnly
+  Blank
+  TxAndObj
+  ObjAndTx
+  ObjOnly
+  Object
+  TxAndMedia
+  MediaAndTx
+  ObjOverTx
+  TxOverObj
+  TxAndTwoObj
+  TwoObjAndTx
+  TwoObjOverTx
+  FourObj
+  VertTx
+  ClipArtAndVertTx
+  VertTitleAndTx
+  VertTitleAndTxOverChart
+  TwoObj
+  ObjAndTwoObj
+  TwoObjAndObj
+  Custom
+  SecHead
+  TwoTxTwoObj
+  ObjTx
+  PicTx
+} derive(Eq, @debug.Debug)
+pub fn SlideLayoutType::from_xml(String) -> Self raise SlideMasterError
+pub fn SlideLayoutType::to_xml(Self) -> String
+
+pub(all) struct SlideMaster {
+  color_mapping : ColorMapping
+  layout_refs : Array[SlideLayoutRef]
+  extension : Array[@xml.XmlElement]
+} derive(Eq, @debug.Debug)
+pub fn SlideMaster::parse(FixedArray[Byte]) -> Self raise SlideMasterError
+pub fn SlideMaster::serialize(Self) -> FixedArray[Byte] raise SlideMasterError
+
+// Type aliases
+
+// Traits
