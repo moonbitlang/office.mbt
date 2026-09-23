@@ -1,4 +1,4 @@
 import {
-  "moonbitlang/core/encoding/utf8",
+  "moonbitlang/core/encoding/percent",
   "moonbitlang/core/sorted_map",
 }

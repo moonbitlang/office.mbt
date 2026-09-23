@@ -116,14 +116,16 @@ fn opc_decode_percent_scalar(
     return None
   }
   guard opc_utf8_percent_length(first) is Some(length) else { return None }
-  let bytes : Array[Byte] = []
-  for ordinal in 0..<length {
-    guard opc_percent_byte(characters, index + ordinal * 3) is Some(value) else {
+  let end = index + length * 3
+  if end > characters.length() {
+    return None
+  }
+  for ordinal in 1..<length {
+    if characters[index + ordinal * 3] != '%' {
       return None
     }
-    bytes.push(value.to_byte())
   }
-  let decoded = @utf8.decode(Bytes::from_array(bytes)) catch {
+  let decoded = @percent.decode(String::from_array(characters[index:end])) catch {
     _ => return None
   }
   let decoded_characters = decoded.to_array()
@@ -419,18 +421,12 @@ pub fn zip_item_name_from_logical_part_name(name : StringView) -> String? {
       return None
     }
   }
-  let digits = "0123456789ABCDEF".to_array()
   let output = StringBuilder(size_hint=name.length())
   for character in name {
     if character.is_ascii() {
       output.write_char(character)
     } else {
-      for byte in @utf8.encode(character.to_string()) {
-        let value = byte.to_int()
-        output.write_char('%')
-        output.write_char(digits[value / 16])
-        output.write_char(digits[value % 16])
-      }
+      output.write_string(@percent.encode(character.to_string()))
     }
   }
   Some(output.to_string())
