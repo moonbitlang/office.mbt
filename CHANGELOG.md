@@ -10,7 +10,9 @@ covers changes that have landed on `main` but are not yet published.
   DOCX's URI rules and preserve its existing public entry points as re-exports.
 - Use flate for ZIP I/O and `Milky2018/xml@0.5.0` for namespace-aware XML reading.
   Version 0.5.0 fixes the reported attribute-whitespace serialization issue;
-  keep the existing Office writer in this dependency upgrade.
+  delegate writing and escaping to its checked Writer through a QName and
+  incremental-attribute adapter. `XmlWriter::xml_declaration()` now raises
+  `XmlError`; malformed output is rejected through `WriterMisuse`.
 
 ### moonbitlang/docx2html [Unreleased]
 

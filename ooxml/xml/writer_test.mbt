@@ -171,3 +171,136 @@ test "ooxml-style root: presentation with namespaces" {
     "\"><a:theme/></p:presentation>"
   debug_inspect(w.to_string() == expected, content="true")
 }
+
+///|
+test "pending attributes stay with their element and preserve order" {
+  let w = @xml.XmlWriter::new()
+  w.start_element(@xml.QName::unqualified("root"))
+  w.attribute(@xml.QName::unqualified("a"), "1")
+  w.attribute(@xml.QName::unqualified("b"), "2")
+  w.start_element(@xml.QName::unqualified("first"))
+  w.attribute(@xml.QName::unqualified("c"), "3")
+  w.end_element()
+  w.start_element(@xml.QName::unqualified("second"))
+  w.text("")
+  w.end_element()
+  w.end_element()
+  debug_inspect(
+    w.to_string(),
+    content="\"<root a=\\\"1\\\" b=\\\"2\\\"><first c=\\\"3\\\"/><second></second></root>\"",
+  )
+}
+
+///|
+test "backend escaping preserves quotes and whitespace through the reader" {
+  let value = "\"'&<>\t\n\r\r\n"
+  let w = @xml.XmlWriter::new()
+  w.start_element(@xml.QName::unqualified("root"))
+  w.attribute(@xml.QName::unqualified("value"), value)
+  w.text("\"'&<>")
+  w.cdata("raw <text>")
+  w.end_element()
+  let reader = @xml.XmlReader::new(w.to_string())
+  match reader.next() {
+    Some(StartElement(_, attrs)) =>
+      debug_inspect(attrs[0].1 == value, content="true")
+    _ => fail("expected root")
+  }
+  match reader.next() {
+    Some(Text(text)) => debug_inspect(text, content="\"\\\"'&<>\"")
+    _ => fail("expected text")
+  }
+  match reader.next() {
+    Some(CData(text)) => debug_inspect(text, content="\"raw <text>\"")
+    _ => fail("expected CDATA")
+  }
+}
+
+///|
+test "backend validation errors remain typed XML errors" {
+  for
+    (name, attrs) in [
+      ("bad name", []),
+      ("root", [("id", "1"), ("id", "2")]),
+      ("root", [("bad name", "value")]),
+      ("root", [("id", "\u{0}")]),
+    ] {
+    let w = @xml.XmlWriter::new()
+    let rejected = try {
+      w.start_element(@xml.QName::unqualified(name))
+      for (name, value) in attrs {
+        w.attribute(@xml.QName::unqualified(name), value)
+      }
+      w.end_element()
+      false
+    } catch {
+      WriterMisuse(_) => true
+      _ => false
+    }
+    debug_inspect(rejected, content="true")
+  }
+}
+
+///|
+test "declarations must precede all elements and occur only once" {
+  for position in [0, 1, 2] {
+    let w = @xml.XmlWriter::new()
+    if position > 0 {
+      w.start_element(@xml.QName::unqualified("root"))
+      if position == 2 {
+        w.end_element()
+      }
+    } else {
+      w.xml_declaration()
+    }
+    let rejected = try {
+      w.xml_declaration()
+      false
+    } catch {
+      WriterMisuse(_) => true
+      _ => false
+    }
+    debug_inspect(rejected, content="true")
+  }
+}
+
+///|
+test "backend rejects missing and multiple roots" {
+  let w = @xml.XmlWriter::new()
+  let missing = try {
+    ignore(w.to_string())
+    false
+  } catch {
+    WriterMisuse(_) => true
+    _ => false
+  }
+  debug_inspect(missing, content="true")
+  w.start_element(@xml.QName::unqualified("first"))
+  w.end_element()
+  let multiple = try {
+    w.start_element(@xml.QName::unqualified("second"))
+    w.end_element()
+    false
+  } catch {
+    WriterMisuse(_) => true
+    _ => false
+  }
+  debug_inspect(multiple, content="true")
+}
+
+///|
+test "closing tags retain the prefix used when their element was opened" {
+  let w = @xml.XmlWriter::new()
+  w.bind_namespace("p", "urn:test")
+  w.start_element(@xml.QName::new("urn:test", "root"))
+  w.namespace_attr("p", "urn:test")
+  w.bind_namespace("q", "urn:test")
+  w.start_element(@xml.QName::new("urn:test", "child"))
+  w.namespace_attr("q", "urn:test")
+  w.end_element()
+  w.end_element()
+  debug_inspect(
+    w.to_string(),
+    content="\"<p:root xmlns:p=\\\"urn:test\\\"><q:child xmlns:q=\\\"urn:test\\\"/></p:root>\"",
+  )
+}

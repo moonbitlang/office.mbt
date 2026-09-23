@@ -94,7 +94,7 @@ pub fn XmlWriter::new() -> Self
 pub fn XmlWriter::start_element(Self, QName) -> Unit raise XmlError
 pub fn XmlWriter::text(Self, String) -> Unit raise XmlError
 pub fn XmlWriter::to_string(Self) -> String raise XmlError
-pub fn XmlWriter::xml_declaration(Self) -> Unit
+pub fn XmlWriter::xml_declaration(Self) -> Unit raise XmlError
 
 // Type aliases
 

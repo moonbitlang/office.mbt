@@ -35,8 +35,8 @@ original project remains independent and may follow its own priorities.
   OPC collection and payload snapshots. Cache slide order by part identity.
 
 - Extract OPC/XML into `ooxml`, replace ZIP with flate, and adopt
-  `Milky2018/xml@0.5.0` for XML reading. Retain the namespace-aware Office writer;
-  the dependency upgrade also verifies the upstream attribute-whitespace fix.
+  `Milky2018/xml@0.5.0` for XML reading and writing. Keep a thin QName and incremental-attribute
+  adapter, and verify the upstream attribute-whitespace fix.
 
 The original repository's agent overlays, hooks, workflows, roadmap, release
 policy, and benchmark workspace do not govern this module. Historical design

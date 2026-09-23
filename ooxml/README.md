@@ -23,9 +23,13 @@ comments, processing instructions, namespace declaration spelling, or prefixes
 inside attribute values. It buffers the document; it is not an incremental
 byte-stream parser.
 
-The Office writer remains in use. The external writer's attribute-whitespace
-round-trip issue is fixed in 0.5.0 and covered by a dependency regression test;
-this dependency upgrade does not replace the Office writer adapter.
+`XmlWriter` is a thin adapter over `Milky2018/xml@0.5.0`'s checked writer.
+It resolves QNames and buffers incremental attributes until an element can be
+emitted. The backend owns escaping, XML output, and document validation; errors
+map to `XmlError::WriterMisuse`. Attribute whitespace survives round trips.
+`xml_declaration()` now raises `XmlError` for repeated or misplaced declarations.
+Missing roots, multiple roots, invalid XML characters, and duplicate attributes
+are rejected; pending attributes are validated when their start tag is emitted.
 
 `Package::to_bytes()` raises `OpcError` for ZIP write failures. `Package::open()`
 currently uses flate's default read policy; this alone does not introduce package
