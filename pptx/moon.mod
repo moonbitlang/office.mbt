@@ -20,7 +20,6 @@ keywords = [
   "ooxml",
   "office",
   "presentation",
-  "builder",
 ]
 
 description = "Pure-MoonBit library for reading, building, and writing PPTX (OOXML) presentations with a type-safe builder API."
