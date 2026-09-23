@@ -548,7 +548,7 @@ let _ = @chart.Chart::of_bar(data).with_options([DataLabels(DLblOutEnd)]).valida
 
 // …but invalid on a line chart (line labels allow only ctr / l / r / t / b).
 let line = @chart.Chart::of_line(data).with_options([DataLabels(DLblOutEnd)])
-assert_eq(line.is_consistent(), false)   // and `line.validate()` raises Malformed
+debug_inspect(line.is_consistent(), content="false") // and `line.validate()` raises Malformed
 ```
 
 ---
@@ -728,7 +728,7 @@ let slide = prs.slides()[0]
   .with_shape_auto_id(@slide.AutoShape(box))
 prs.update_slide_mut(0, slide)
 
-assert_eq(slide.duplicate_shape_ids().length(), 0)
+debug_inspect(slide.duplicate_shape_ids().length(), content="0")
 let _bytes = prs.save()
 ```
 

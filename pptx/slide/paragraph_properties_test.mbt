@@ -44,13 +44,13 @@ fn ppr_of(s : @slide.Slide) -> @slide.ParagraphProperties {
 ///|
 test "pPr: lvl level captured" {
   let slide = @slide.Slide::parse(slide_with_ppr("<a:pPr lvl=\"2\"/>"))
-  assert_eq(ppr_of(slide).level, 2)
+  debug_inspect(ppr_of(slide).level, content="2")
 }
 
 ///|
 test "pPr: missing lvl defaults to 0" {
   let slide = @slide.Slide::parse(slide_with_ppr("<a:pPr/>"))
-  assert_eq(ppr_of(slide).level, 0)
+  debug_inspect(ppr_of(slide).level, content="0")
 }
 
 ///|
@@ -68,7 +68,7 @@ test "pPr: alignment values map to typed enum" {
     let slide = @slide.Slide::parse(
       slide_with_ppr("<a:pPr algn=\"" + c.0 + "\"/>"),
     )
-    assert_true(ppr_of(slide).alignment.unwrap() == c.1)
+    debug_inspect(ppr_of(slide).alignment.unwrap() == c.1, content="true")
   }
 }
 
@@ -78,8 +78,8 @@ test "pPr: marL and indent (negative supported for hanging)" {
     slide_with_ppr("<a:pPr marL=\"457200\" indent=\"-457200\"/>"),
   )
   let p = ppr_of(slide)
-  assert_eq(p.margin_left.unwrap(), Emu(457200L))
-  assert_eq(p.indent.unwrap(), Emu(-457200L))
+  debug_inspect(p.margin_left.unwrap(), content="Emu(457200)")
+  debug_inspect(p.indent.unwrap(), content="Emu(-457200)")
 }
 
 ///|
@@ -90,7 +90,10 @@ test "pPr: lnSpc percent form (spcPct, 1/1000 %)" {
     ),
   )
   // 120000 OOXML units = 120 % line spacing.
-  assert_true(ppr_of(slide).line_spacing == Some(Percent(Percentage(120.0))))
+  debug_inspect(
+    ppr_of(slide).line_spacing,
+    content="Some(Percent(Percentage(120)))",
+  )
 }
 
 ///|
@@ -98,7 +101,7 @@ test "pPr: lnSpc absolute form (spcPts, 1/100 pt)" {
   let slide = @slide.Slide::parse(
     slide_with_ppr("<a:pPr><a:lnSpc><a:spcPts val=\"1800\"/></a:lnSpc></a:pPr>"),
   )
-  assert_true(ppr_of(slide).line_spacing == Some(Points(Pt(18.0))))
+  debug_inspect(ppr_of(slide).line_spacing, content="Some(Points(Pt(18)))")
 }
 
 ///|
@@ -112,8 +115,8 @@ test "pPr: spcBef points + spcAft percent forms" {
     ),
   )
   let p = ppr_of(slide)
-  assert_true(p.space_before == Some(Points(Pt(60.0))))
-  assert_true(p.space_after == Some(Percent(Percentage(50.0))))
+  debug_inspect(p.space_before, content="Some(Points(Pt(60)))")
+  debug_inspect(p.space_after, content="Some(Percent(Percentage(50)))")
 }
 
 ///|
@@ -127,8 +130,8 @@ test "pPr: spacing round-trips (parse → serialize → parse)" {
   )
   let s1 = @slide.Slide::parse(xml)
   let s2 = @slide.Slide::parse(s1.serialize())
-  assert_true(ppr_of(s2) == ppr_of(s1))
-  assert_true(ppr_of(s2).line_spacing is Some(Percent(_)))
+  debug_inspect(ppr_of(s2) == ppr_of(s1), content="true")
+  debug_inspect(ppr_of(s2).line_spacing is Some(Percent(_)), content="true")
 }
 
 ///|
@@ -154,18 +157,21 @@ test "pPr: spacing builders (with_line_spacing / before / after)" {
     }
   })
   let xml = @oxml.bytes_to_string(slide.serialize())
-  assert_true(
+  debug_inspect(
     xml.find("<a:lnSpc><a:spcPct val=\"120000\"/></a:lnSpc>") is Some(_),
+    content="true",
   )
-  assert_true(
+  debug_inspect(
     xml.find("<a:spcBef><a:spcPts val=\"600\"/></a:spcBef>") is Some(_),
+    content="true",
   )
-  assert_true(
+  debug_inspect(
     xml.find("<a:spcAft><a:spcPct val=\"40000\"/></a:spcAft>") is Some(_),
+    content="true",
   )
   // And the built spacing survives a reparse into the same model.
   let reparsed = @slide.Slide::parse(slide.serialize())
-  assert_true(ppr_of(reparsed) == para.properties)
+  debug_inspect(ppr_of(reparsed) == para.properties, content="true")
 }
 
 // --- bullets ---
@@ -173,7 +179,7 @@ test "pPr: spacing builders (with_line_spacing / before / after)" {
 ///|
 test "pPr: buNone explicit no-bullet" {
   let slide = @slide.Slide::parse(slide_with_ppr("<a:pPr><a:buNone/></a:pPr>"))
-  assert_true(ppr_of(slide).bullet.unwrap() is BulNone)
+  debug_inspect(ppr_of(slide).bullet.unwrap() is BulNone, content="true")
 }
 
 ///|
@@ -182,7 +188,7 @@ test "pPr: buChar carries the character" {
     slide_with_ppr("<a:pPr><a:buChar char=\"•\"/></a:pPr>"),
   )
   match ppr_of(slide).bullet.unwrap() {
-    Char(s) => assert_eq(s, "•")
+    Char(s) => debug_inspect(s, content="\"•\"")
     _ => fail("expected Char bullet")
   }
 }
@@ -196,8 +202,8 @@ test "pPr: buAutoNum captures type and startAt" {
   )
   match ppr_of(slide).bullet.unwrap() {
     AutoNum(t, start) => {
-      assert_true(t is ArabicPeriod)
-      assert_eq(start, 3)
+      debug_inspect(t is ArabicPeriod, content="true")
+      debug_inspect(start, content="3")
     }
     _ => fail("expected AutoNum bullet")
   }
@@ -210,8 +216,8 @@ test "pPr: buAutoNum default startAt is 1" {
   )
   match ppr_of(slide).bullet.unwrap() {
     AutoNum(t, start) => {
-      assert_true(t is RomanLcParenR)
-      assert_eq(start, 1)
+      debug_inspect(t is RomanLcParenR, content="true")
+      debug_inspect(start, content="1")
     }
     _ => fail("expected AutoNum bullet")
   }
@@ -241,7 +247,7 @@ test "pPr: buBlip captures r:id" {
     ),
   )
   match ppr_of(slide).bullet.unwrap() {
-    Picture(rid) => assert_eq(rid, "rId7")
+    Picture(rid) => debug_inspect(rid, content="\"rId7\"")
     _ => fail("expected Picture bullet")
   }
 }
@@ -252,19 +258,19 @@ test "pPr: buBlip captures r:id" {
 test "pPr: missing attributes leave fields None" {
   let slide = @slide.Slide::parse(slide_with_ppr("<a:pPr/>"))
   let p = ppr_of(slide)
-  assert_true(p.alignment is None)
-  assert_true(p.margin_left is None)
-  assert_true(p.indent is None)
-  assert_true(p.line_spacing is None)
-  assert_true(p.space_before is None)
-  assert_true(p.space_after is None)
-  assert_true(p.bullet is None)
+  debug_inspect(p.alignment is None, content="true")
+  debug_inspect(p.margin_left is None, content="true")
+  debug_inspect(p.indent is None, content="true")
+  debug_inspect(p.line_spacing is None, content="true")
+  debug_inspect(p.space_before is None, content="true")
+  debug_inspect(p.space_after is None, content="true")
+  debug_inspect(p.bullet is None, content="true")
 }
 
 ///|
 test "pPr: unknown algn value collapses to None" {
   let slide = @slide.Slide::parse(slide_with_ppr("<a:pPr algn=\"weird\"/>"))
-  assert_true(ppr_of(slide).alignment is None)
+  debug_inspect(ppr_of(slide).alignment is None, content="true")
 }
 
 ///|
@@ -275,7 +281,7 @@ test "pPr: tabLst and other unmodelled children silently skipped" {
     ),
   )
   // Did not raise; bullet stays None since tabLst doesn't define one.
-  assert_true(ppr_of(slide).bullet is None)
+  debug_inspect(ppr_of(slide).bullet is None, content="true")
 }
 
 ///|
@@ -286,9 +292,12 @@ test "AutoNumType::from_xml round-trips a representative spread" {
     "thaiNumParenBoth",
   ]
   for c in cases {
-    assert_true(!(@slide.AutoNumType::from_xml(c) is None))
+    debug_inspect(!(@slide.AutoNumType::from_xml(c) is None), content="true")
   }
-  assert_true(@slide.AutoNumType::from_xml("notAScheme") is None)
+  debug_inspect(
+    @slide.AutoNumType::from_xml("notAScheme") is None,
+    content="true",
+  )
 }
 
 // --- rtl (right-to-left paragraph direction) ---
@@ -299,20 +308,20 @@ test "pPr: rtl accepts both OOXML boolean spellings" {
     let slide = @slide.Slide::parse(
       slide_with_ppr("<a:pPr rtl=\"" + raw + "\"/>"),
     )
-    assert_eq(ppr_of(slide).rtl, Some(true))
+    debug_inspect(ppr_of(slide).rtl, content="Some(true)")
   }
   for raw in ["0", "false"] {
     let slide = @slide.Slide::parse(
       slide_with_ppr("<a:pPr rtl=\"" + raw + "\"/>"),
     )
-    assert_eq(ppr_of(slide).rtl, Some(false))
+    debug_inspect(ppr_of(slide).rtl, content="Some(false)")
   }
 }
 
 ///|
 test "pPr: absent rtl inherits rather than defaulting to LTR" {
   let slide = @slide.Slide::parse(slide_with_ppr("<a:pPr lvl=\"1\"/>"))
-  assert_eq(ppr_of(slide).rtl, None)
+  debug_inspect(ppr_of(slide).rtl, content="None")
 }
 
 ///|
@@ -321,8 +330,8 @@ test "pPr: rtl round-trips (parse → serialize → parse)" {
     let raw = if want { "1" } else { "0" }
     let s1 = @slide.Slide::parse(slide_with_ppr("<a:pPr rtl=\"" + raw + "\"/>"))
     let s2 = @slide.Slide::parse(s1.serialize())
-    assert_eq(ppr_of(s2).rtl, Some(want))
-    assert_true(ppr_of(s2) == ppr_of(s1))
+    debug_inspect(ppr_of(s2).rtl == Some(want), content="true")
+    debug_inspect(ppr_of(s2) == ppr_of(s1), content="true")
   }
 }
 
@@ -331,7 +340,10 @@ test "pPr: rtl alone is enough to emit a <a:pPr>" {
   // Guards `needs_p_pr` — a paragraph whose only non-default property is
   // rtl must still emit the wrapper instead of dropping the attribute.
   let s0 = @slide.Slide::parse(slide_with_ppr(""))
-  assert_true(ppr_of(s0) == @slide.ParagraphProperties::default())
+  debug_inspect(
+    ppr_of(s0) == @slide.ParagraphProperties::default(),
+    content="true",
+  )
   let s1 = s0.map_shapes(sh => {
     match sh {
       AutoShape(sp) => {
@@ -347,19 +359,20 @@ test "pPr: rtl alone is enough to emit a <a:pPr>" {
     }
   })
   let s2 = @slide.Slide::parse(s1.serialize())
-  assert_eq(ppr_of(s2).rtl, Some(true))
+  debug_inspect(ppr_of(s2).rtl, content="Some(true)")
 }
 
 ///|
 test "Paragraph::with_rtl sets only the direction" {
   let p = @slide.Paragraph::of_text("שלום").with_rtl(true)
-  assert_eq(p.properties.rtl, Some(true))
+  debug_inspect(p.properties.rtl, content="Some(true)")
   // Everything else stays at its default so the builder composes.
-  assert_true(
+  debug_inspect(
     p.properties ==
     { ..@slide.ParagraphProperties::default(), rtl: Some(true), },
+    content="true",
   )
-  assert_eq(p.with_rtl(false).properties.rtl, Some(false))
+  debug_inspect(p.with_rtl(false).properties.rtl, content="Some(false)")
 }
 
 // --- endParaRPr (properties of the paragraph mark) ---
@@ -396,19 +409,19 @@ test "endParaRPr: round-trips through serialize with its formatting" {
     ),
   )
   let s2 = @slide.Slide::parse(s1.serialize())
-  assert_true(para_of(s2) == para_of(s1))
+  debug_inspect(para_of(s2) == para_of(s1), content="true")
   let end = para_of(s2).end_run_properties.unwrap()
-  assert_eq(end.lang, "ar-SA")
-  assert_eq(end.font_size, Some(Pt(24.0)))
-  assert_eq(end.bold, Some(true))
+  debug_inspect(end.lang, content="\"ar-SA\"")
+  debug_inspect(end.font_size, content="Some(Pt(24))")
+  debug_inspect(end.bold, content="Some(true)")
 }
 
 ///|
 test "endParaRPr: absent stays None and is not emitted" {
   let s1 = @slide.Slide::parse(slide_with_ppr("<a:pPr/>"))
-  assert_eq(para_of(s1).end_run_properties, None)
+  debug_inspect(para_of(s1).end_run_properties, content="None")
   let s2 = @slide.Slide::parse(s1.serialize())
-  assert_eq(para_of(s2).end_run_properties, None)
+  debug_inspect(para_of(s2).end_run_properties, content="None")
 }
 
 ///|
@@ -430,5 +443,8 @@ test "Paragraph::with_end_run_properties round-trips a built paragraph" {
     }
   })
   let s2 = @slide.Slide::parse(s1.serialize())
-  assert_eq(para_of(s2).end_run_properties.unwrap().font_size, Some(Pt(32.0)))
+  debug_inspect(
+    para_of(s2).end_run_properties.unwrap().font_size,
+    content="Some(Pt(32))",
+  )
 }

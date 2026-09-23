@@ -61,9 +61,9 @@ fn office_like_theme() -> FixedArray[Byte] {
 ///|
 test "parse: top-level name and slot count" {
   let theme = @theme.Theme::parse(office_like_theme())
-  assert_eq(theme.name, "Office Theme")
-  assert_eq(theme.color_scheme.name, "Office")
-  assert_eq(theme.font_scheme.name, "Office")
+  debug_inspect(theme.name, content="\"Office Theme\"")
+  debug_inspect(theme.color_scheme.name, content="\"Office\"")
+  debug_inspect(theme.font_scheme.name, content="\"Office\"")
 }
 
 ///|
@@ -72,14 +72,14 @@ test "parse: srgbClr slots decoded as RGB" {
   let cs = theme.color_scheme
   match cs.accent1.base {
     Srgb(rgb) => {
-      assert_eq(rgb.r, 0x5B)
-      assert_eq(rgb.g, 0x9B)
-      assert_eq(rgb.b, 0xD5)
+      debug_inspect(rgb.r, content="91")
+      debug_inspect(rgb.g, content="155")
+      debug_inspect(rgb.b, content="213")
     }
     _ => fail("expected Srgb for accent1")
   }
   match cs.accent6.base {
-    Srgb(rgb) => assert_eq(rgb.to_hex(), "70AD47")
+    Srgb(rgb) => debug_inspect(rgb.to_hex(), content="\"70AD47\"")
     _ => fail("expected Srgb for accent6")
   }
 }
@@ -89,15 +89,15 @@ test "parse: sysClr slots decoded with lastClr fallback" {
   let theme = @theme.Theme::parse(office_like_theme())
   match theme.color_scheme.dk1.base {
     Sys(s) => {
-      assert_eq(s.val, "windowText")
-      assert_eq(s.last_clr.unwrap().to_hex(), "000000")
+      debug_inspect(s.val, content="\"windowText\"")
+      debug_inspect(s.last_clr.unwrap().to_hex(), content="\"000000\"")
     }
     _ => fail("expected Sys for dk1")
   }
   match theme.color_scheme.lt1.base {
     Sys(s) => {
-      assert_eq(s.val, "window")
-      assert_eq(s.last_clr.unwrap().to_hex(), "FFFFFF")
+      debug_inspect(s.val, content="\"window\"")
+      debug_inspect(s.last_clr.unwrap().to_hex(), content="\"FFFFFF\"")
     }
     _ => fail("expected Sys for lt1")
   }
@@ -109,23 +109,41 @@ test "parse: every named slot is populated" {
   // If any slot was missing, parse() would have raised. Just confirm we
   // don't accidentally collapse two slots into one by spot-checking that
   // dk1 != dk2 and accent1 != accent2.
-  assert_true(theme.color_scheme.dk1 != theme.color_scheme.dk2)
-  assert_true(theme.color_scheme.accent1 != theme.color_scheme.accent2)
-  assert_true(theme.color_scheme.hlink != theme.color_scheme.fol_hlink)
+  debug_inspect(
+    theme.color_scheme.dk1 != theme.color_scheme.dk2,
+    content="true",
+  )
+  debug_inspect(
+    theme.color_scheme.accent1 != theme.color_scheme.accent2,
+    content="true",
+  )
+  debug_inspect(
+    theme.color_scheme.hlink != theme.color_scheme.fol_hlink,
+    content="true",
+  )
 }
 
 ///|
 test "parse: font collection latin/ea/cs and per-script overrides" {
   let theme = @theme.Theme::parse(office_like_theme())
-  assert_eq(theme.font_scheme.major_font.latin, "Calibri Light")
-  assert_eq(theme.font_scheme.major_font.ea, "")
-  assert_eq(theme.font_scheme.major_font.cs, "")
-  assert_eq(theme.font_scheme.major_font.scripts.length(), 2)
-  assert_eq(theme.font_scheme.major_font.scripts[0].script, "Jpan")
-  assert_eq(theme.font_scheme.major_font.scripts[0].typeface, "Yu Gothic Light")
-  assert_eq(theme.font_scheme.major_font.scripts[1].script, "Hans")
-  assert_eq(theme.font_scheme.minor_font.latin, "Calibri")
-  assert_eq(theme.font_scheme.minor_font.scripts.length(), 0)
+  debug_inspect(theme.font_scheme.major_font.latin, content="\"Calibri Light\"")
+  debug_inspect(theme.font_scheme.major_font.ea, content="\"\"")
+  debug_inspect(theme.font_scheme.major_font.cs, content="\"\"")
+  debug_inspect(theme.font_scheme.major_font.scripts.length(), content="2")
+  debug_inspect(
+    theme.font_scheme.major_font.scripts[0].script,
+    content="\"Jpan\"",
+  )
+  debug_inspect(
+    theme.font_scheme.major_font.scripts[0].typeface,
+    content="\"Yu Gothic Light\"",
+  )
+  debug_inspect(
+    theme.font_scheme.major_font.scripts[1].script,
+    content="\"Hans\"",
+  )
+  debug_inspect(theme.font_scheme.minor_font.latin, content="\"Calibri\"")
+  debug_inspect(theme.font_scheme.minor_font.scripts.length(), content="0")
 }
 
 ///|
@@ -214,10 +232,10 @@ test "ADR-004: theme captures fmtScheme/objectDefaults/extraClrSchemeLst" {
   for el in theme.extension {
     names.push(el.name.local_name)
   }
-  assert_true(names.contains("fmtScheme"))
-  assert_true(names.contains("objectDefaults"))
-  assert_true(names.contains("extraClrSchemeLst"))
-  assert_eq(theme.extension.length(), 3)
+  debug_inspect(names.contains("fmtScheme"), content="true")
+  debug_inspect(names.contains("objectDefaults"), content="true")
+  debug_inspect(names.contains("extraClrSchemeLst"), content="true")
+  debug_inspect(theme.extension.length(), content="3")
 }
 
 ///|
@@ -231,14 +249,14 @@ test "ADR-004: fmtScheme subtree is preserved verbatim" {
   }
   let fs = fmt_scheme.unwrap()
   // fmtScheme has a single <a:fillStyleLst> child.
-  assert_eq(fs.attributes.length(), 1)
-  assert_eq(fs.attributes[0].0.local_name, "name")
-  assert_eq(fs.children.length(), 1)
+  debug_inspect(fs.attributes.length(), content="1")
+  debug_inspect(fs.attributes[0].0.local_name, content="\"name\"")
+  debug_inspect(fs.children.length(), content="1")
   match fs.children[0] {
     Element(fl) => {
-      assert_eq(fl.name.local_name, "fillStyleLst")
+      debug_inspect(fl.name.local_name, content="\"fillStyleLst\"")
       // fillStyleLst has two children: solidFill + gradFill.
-      assert_eq(fl.children.length(), 2)
+      debug_inspect(fl.children.length(), content="2")
     }
     _ => fail("expected <a:fillStyleLst> child")
   }
@@ -262,9 +280,12 @@ test "ADR-004: foreign-namespace child of <a:theme> is preserved" {
     "<x:tag flag=\"yes\"/>" +
     "</a:theme>"
   let theme = @theme.Theme::parse(@oxml.string_to_bytes(xml))
-  assert_eq(theme.extension.length(), 1)
-  assert_eq(theme.extension[0].name.uri, "http://example.org/ext")
-  assert_eq(theme.extension[0].name.local_name, "tag")
+  debug_inspect(theme.extension.length(), content="1")
+  debug_inspect(
+    theme.extension[0].name.uri,
+    content="\"http://example.org/ext\"",
+  )
+  debug_inspect(theme.extension[0].name.local_name, content="\"tag\"")
 }
 
 // --- helpers ---

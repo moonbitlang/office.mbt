@@ -217,35 +217,35 @@ test "Presentation::open: malformed package raises OpcFailure" {
 ///|
 test "Presentation accessors return expected counts" {
   let prs = @presentation.Presentation::open(minimal_pptx())
-  assert_eq(prs.slides().length(), 1)
-  assert_eq(prs.themes().length(), 1)
-  assert_eq(prs.slide_masters().length(), 1)
-  assert_eq(prs.slide_layouts().length(), 1)
-  assert_eq(prs.notes_slides().length(), 0)
-  assert_eq(prs.comment_lists().length(), 0)
-  assert_true(prs.comment_authors() is None)
+  debug_inspect(prs.slides().length(), content="1")
+  debug_inspect(prs.themes().length(), content="1")
+  debug_inspect(prs.slide_masters().length(), content="1")
+  debug_inspect(prs.slide_layouts().length(), content="1")
+  debug_inspect(prs.notes_slides().length(), content="0")
+  debug_inspect(prs.comment_lists().length(), content="0")
+  debug_inspect(prs.comment_authors() is None, content="true")
 }
 
 ///|
 test "Presentation::slides returns the expected first slide name" {
   let prs = @presentation.Presentation::open(minimal_pptx())
   let s = prs.slides()[0]
-  assert_eq(s.name, "Slide 1")
+  debug_inspect(s.name, content="\"Slide 1\"")
 }
 
 ///|
 test "Presentation::themes returns the expected theme name" {
   let prs = @presentation.Presentation::open(minimal_pptx())
   let t = prs.themes()[0]
-  assert_eq(t.name, "Office")
+  debug_inspect(t.name, content="\"Office\"")
 }
 
 ///|
 test "Presentation::slide_layouts returns title layout" {
   let prs = @presentation.Presentation::open(minimal_pptx())
   let l = prs.slide_layouts()[0]
-  assert_eq(l.name, "Title")
-  assert_true(l.layout_type is Title)
+  debug_inspect(l.name, content="\"Title\"")
+  debug_inspect(l.layout_type is Title, content="true")
 }
 
 ///|
@@ -256,11 +256,20 @@ test "Presentation::save: byte round-trip preserves accessor outputs" {
   // Each accessor's parsed model should compare equal across save /
   // reopen — anything else would mean silent data loss inside the
   // façade.
-  assert_eq(prs_in.slides().length(), prs_out.slides().length())
-  assert_true(prs_in.slides()[0] == prs_out.slides()[0])
-  assert_true(prs_in.themes()[0] == prs_out.themes()[0])
-  assert_true(prs_in.slide_masters()[0] == prs_out.slide_masters()[0])
-  assert_true(prs_in.slide_layouts()[0] == prs_out.slide_layouts()[0])
+  debug_inspect(
+    prs_in.slides().length() == prs_out.slides().length(),
+    content="true",
+  )
+  debug_inspect(prs_in.slides()[0] == prs_out.slides()[0], content="true")
+  debug_inspect(prs_in.themes()[0] == prs_out.themes()[0], content="true")
+  debug_inspect(
+    prs_in.slide_masters()[0] == prs_out.slide_masters()[0],
+    content="true",
+  )
+  debug_inspect(
+    prs_in.slide_layouts()[0] == prs_out.slide_layouts()[0],
+    content="true",
+  )
 }
 
 ///|
@@ -268,9 +277,9 @@ test "Presentation: notes + comments accessors handle decks that omit them" {
   // The minimal fixture has neither notes nor comments; verify the
   // accessors return empty / None rather than raising.
   let prs = @presentation.Presentation::open(minimal_pptx())
-  assert_eq(prs.notes_slides().length(), 0)
-  assert_eq(prs.comment_lists().length(), 0)
-  assert_true(prs.comment_authors() is None)
+  debug_inspect(prs.notes_slides().length(), content="0")
+  debug_inspect(prs.comment_lists().length(), content="0")
+  debug_inspect(prs.comment_authors() is None, content="true")
 }
 
 // --- presentation.xml + ordered slides ---
@@ -279,19 +288,19 @@ test "Presentation: notes + comments accessors handle decks that omit them" {
 test "PresentationPart::parse: extracts sldMasterId / sldId / sizes" {
   let prs = @presentation.Presentation::open(minimal_pptx())
   let pres = prs.presentation_part().unwrap()
-  assert_eq(pres.sld_master_ids.length(), 1)
-  assert_eq(pres.sld_master_ids[0].id, 2147483648L)
-  assert_eq(pres.sld_master_ids[0].r_id, "rId1")
-  assert_eq(pres.sld_ids.length(), 1)
-  assert_eq(pres.sld_ids[0].id, 256L)
-  assert_eq(pres.sld_ids[0].r_id, "rId2")
+  debug_inspect(pres.sld_master_ids.length(), content="1")
+  debug_inspect(pres.sld_master_ids[0].id, content="2147483648")
+  debug_inspect(pres.sld_master_ids[0].r_id, content="\"rId1\"")
+  debug_inspect(pres.sld_ids.length(), content="1")
+  debug_inspect(pres.sld_ids[0].id, content="256")
+  debug_inspect(pres.sld_ids[0].r_id, content="\"rId2\"")
   let sz = pres.sld_sz.unwrap()
-  assert_eq(sz.cx, Emu(9144000L))
-  assert_eq(sz.cy, Emu(6858000L))
-  assert_eq(sz.size_type, "screen4x3")
+  debug_inspect(sz.cx, content="Emu(9144000)")
+  debug_inspect(sz.cy, content="Emu(6858000)")
+  debug_inspect(sz.size_type, content="\"screen4x3\"")
   let nsz = pres.notes_sz.unwrap()
-  assert_eq(nsz.cx, Emu(6858000L))
-  assert_eq(nsz.cy, Emu(9144000L))
+  debug_inspect(nsz.cx, content="Emu(6858000)")
+  debug_inspect(nsz.cy, content="Emu(9144000)")
 }
 
 ///|
@@ -300,7 +309,7 @@ test "PresentationPart: round-trip parse → serialize → parse" {
   let pres0 = prs.presentation_part().unwrap()
   let bytes = pres0.serialize()
   let pres1 = @presentation.PresentationPart::parse(bytes)
-  assert_true(pres0 == pres1)
+  debug_inspect(pres0 == pres1, content="true")
 }
 
 ///|
@@ -312,11 +321,11 @@ test "Presentation::slides: uses sldIdLst order, not package order" {
   let bytes = two_slide_pptx_reversed_storage()
   let prs = @presentation.Presentation::open(bytes)
   let slides = prs.slides()
-  assert_eq(slides.length(), 2)
+  debug_inspect(slides.length(), content="2")
   // slide1 (first in sldIdLst) carries name="Slide 1" in our fixture;
   // slide2 carries name="Slide 2".
-  assert_eq(slides[0].name, "Slide 1")
-  assert_eq(slides[1].name, "Slide 2")
+  debug_inspect(slides[0].name, content="\"Slide 1\"")
+  debug_inspect(slides[1].name, content="\"Slide 2\"")
 }
 
 ///|
@@ -325,7 +334,7 @@ test "Presentation::slides: missing main-document rel falls back to package orde
   // The fallback path scans by content-type, which gives one slide
   // in this fixture.
   let prs = @presentation.Presentation::open(minimal_pptx_without_pkg_rel())
-  assert_eq(prs.slides().length(), 1)
+  debug_inspect(prs.slides().length(), content="1")
 }
 
 // --- supporting fixtures ---
@@ -412,36 +421,36 @@ fn two_slide_pptx_reversed_storage() -> FixedArray[Byte] {
 ///|
 test "Presentation::new: produces a deck with one master + one layout + zero slides" {
   let prs = @presentation.Presentation::new()
-  assert_eq(prs.themes().length(), 1)
-  assert_eq(prs.slide_masters().length(), 1)
-  assert_eq(prs.slide_layouts().length(), 1)
-  assert_eq(prs.slides().length(), 0)
-  assert_eq(prs.notes_slides().length(), 0)
+  debug_inspect(prs.themes().length(), content="1")
+  debug_inspect(prs.slide_masters().length(), content="1")
+  debug_inspect(prs.slide_layouts().length(), content="1")
+  debug_inspect(prs.slides().length(), content="0")
+  debug_inspect(prs.notes_slides().length(), content="0")
 }
 
 ///|
 test "Presentation::new: theme and master carry the expected names" {
   let prs = @presentation.Presentation::new()
   let t = prs.themes()[0]
-  assert_eq(t.name, "Office")
-  assert_eq(t.color_scheme.name, "Office")
+  debug_inspect(t.name, content="\"Office\"")
+  debug_inspect(t.color_scheme.name, content="\"Office\"")
   let m = prs.slide_masters()[0]
-  assert_true(m.color_mapping.bg1 == Lt1)
-  assert_true(m.color_mapping.tx1 == Dk1)
-  assert_eq(m.layout_refs.length(), 1)
+  debug_inspect(m.color_mapping.bg1, content="Lt1")
+  debug_inspect(m.color_mapping.tx1, content="Dk1")
+  debug_inspect(m.layout_refs.length(), content="1")
 }
 
 ///|
 test "Presentation::new: presentation.xml has one master ref, zero slide refs" {
   let prs = @presentation.Presentation::new()
   let pres = prs.presentation_part().unwrap()
-  assert_eq(pres.sld_master_ids.length(), 1)
-  assert_eq(pres.sld_ids.length(), 0)
+  debug_inspect(pres.sld_master_ids.length(), content="1")
+  debug_inspect(pres.sld_ids.length(), content="0")
   // The blank deck uses screen4x3 by default.
   let sz = pres.sld_sz.unwrap()
-  assert_eq(sz.size_type, "screen4x3")
-  assert_eq(sz.cx, Emu(9144000L))
-  assert_eq(sz.cy, Emu(6858000L))
+  debug_inspect(sz.size_type, content="\"screen4x3\"")
+  debug_inspect(sz.cx, content="Emu(9144000)")
+  debug_inspect(sz.cy, content="Emu(6858000)")
 }
 
 ///|
@@ -451,11 +460,18 @@ test "Presentation::new: save → open round-trips identically" {
   let prs_out = @presentation.Presentation::open(bytes)
   // Each accessor's parsed value should compare equal across the
   // save / reopen boundary.
-  assert_true(prs_in.themes()[0] == prs_out.themes()[0])
-  assert_true(prs_in.slide_masters()[0] == prs_out.slide_masters()[0])
-  assert_true(prs_in.slide_layouts()[0] == prs_out.slide_layouts()[0])
-  assert_true(
+  debug_inspect(prs_in.themes()[0] == prs_out.themes()[0], content="true")
+  debug_inspect(
+    prs_in.slide_masters()[0] == prs_out.slide_masters()[0],
+    content="true",
+  )
+  debug_inspect(
+    prs_in.slide_layouts()[0] == prs_out.slide_layouts()[0],
+    content="true",
+  )
+  debug_inspect(
     prs_in.presentation_part().unwrap() == prs_out.presentation_part().unwrap(),
+    content="true",
   )
 }
 
@@ -463,8 +479,8 @@ test "Presentation::new: save → open round-trips identically" {
 test "Presentation::new: layout type is Blank" {
   let prs = @presentation.Presentation::new()
   let l = prs.slide_layouts()[0]
-  assert_eq(l.name, "Blank")
-  assert_true(l.layout_type is Blank)
+  debug_inspect(l.name, content="\"Blank\"")
+  debug_inspect(l.layout_type is Blank, content="true")
 }
 
 ///|
@@ -504,10 +520,10 @@ test "slide_at parses one slide and agrees with slides()" {
     )
     prs.update_slide_mut(i, prs.slide_at(i).with_shape(AutoShape(tb)))
   }
-  assert_eq(prs.slide_count(), 3)
+  debug_inspect(prs.slide_count(), content="3")
   let all = prs.slides()
   for i in 0..<3 {
-    assert_true(prs.slide_at(i) == all[i])
+    debug_inspect(prs.slide_at(i) == all[i], content="true")
   }
 }
 
@@ -515,7 +531,7 @@ test "slide_at parses one slide and agrees with slides()" {
 test "slide_at raises outside the deck" {
   let prs = @presentation.Presentation::new()
   let _ = prs.add_slide_mut(0)
-  assert_eq(prs.slide_count(), 1)
+  debug_inspect(prs.slide_count(), content="1")
   for bad in [-1, 1, 99] {
     try prs.slide_at(bad) |> ignore catch {
       _ => ()
@@ -533,15 +549,15 @@ test "the memoised slide order survives an update and follows an insert" {
   }
   // Warm the memo, then rewrite a slide: the order is unchanged, and the
   // memo must still be the right one.
-  assert_eq(prs.slide_count(), 3)
+  debug_inspect(prs.slide_count(), content="3")
   prs.update_slide_mut(1, prs.slide_at(1))
-  assert_eq(prs.slide_count(), 3)
+  debug_inspect(prs.slide_count(), content="3")
   // Adding rewrites presentation.xml, so the memo has to be dropped.
   let _ = prs.add_slide_mut(0)
-  assert_eq(prs.slide_count(), 4)
-  assert_eq(prs.slides().length(), 4)
+  debug_inspect(prs.slide_count(), content="4")
+  debug_inspect(prs.slides().length(), content="4")
   // And a removal the same way.
   prs.remove_slide_mut(0)
-  assert_eq(prs.slide_count(), 3)
-  assert_eq(prs.slides().length(), 3)
+  debug_inspect(prs.slide_count(), content="3")
+  debug_inspect(prs.slides().length(), content="3")
 }

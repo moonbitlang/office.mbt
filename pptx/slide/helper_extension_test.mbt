@@ -67,10 +67,10 @@ test "ADR-004: parse_sp_pr captures <a:scene3d> + <a:sp3d>" {
   let scene = find_local_inner(ext, "scene3d").unwrap()
   let sp3d = find_local_inner(ext, "sp3d").unwrap()
   // scene3d body is preserved (two children: camera + lightRig).
-  assert_eq(scene.children.length(), 2)
+  debug_inspect(scene.children.length(), content="2")
   // sp3d attribute survives.
-  assert_eq(sp3d.attributes[0].0.local_name, "prstMaterial")
-  assert_eq(sp3d.attributes[0].1, "matte")
+  debug_inspect(sp3d.attributes[0].0.local_name, content="\"prstMaterial\"")
+  debug_inspect(sp3d.attributes[0].1, content="\"matte\"")
 }
 
 ///|
@@ -81,7 +81,7 @@ test "ADR-004: parse_sp_pr captures <a:extLst>" {
     ),
   )
   let ext_lst = find_local_inner(first_sp_extension(slide), "extLst").unwrap()
-  assert_eq(ext_lst.children.length(), 1)
+  debug_inspect(ext_lst.children.length(), content="1")
 }
 
 ///|
@@ -103,7 +103,7 @@ test "ADR-004: foreign-namespace <p:spPr> child survives" {
     "</p:spTree></p:cSld></p:sld>"
   let slide = @slide.Slide::parse(@oxml.string_to_bytes(xml))
   let wow = find_local_inner(first_sp_extension(slide), "wow").unwrap()
-  assert_eq(wow.name.uri, "http://example.org/zz")
+  debug_inspect(wow.name.uri, content="\"http://example.org/zz\"")
 }
 
 // --- nvSpPr-level captures (cNvPr body, cNvSpPr) ---
@@ -133,19 +133,21 @@ test "ADR-004: cNvPr with <a:hlinkClick> child is preserved" {
   match slide.shapes[0] {
     AutoShape(s) => {
       // id/name still parsed out.
-      assert_eq(s.id, 2)
-      assert_eq(s.name, "Linked")
+      debug_inspect(s.id, content="2")
+      debug_inspect(s.name, content="\"Linked\"")
       // cNvPr with its hlinkClick body is captured wholesale.
       let cnv_pr = find_local_inner(s.extension, "cNvPr").unwrap()
-      assert_eq(cnv_pr.children.length(), 1)
+      debug_inspect(cnv_pr.children.length(), content="1")
       match cnv_pr.children[0] {
-        Element(hlink) => assert_eq(hlink.name.local_name, "hlinkClick")
+        Element(hlink) =>
+          debug_inspect(hlink.name.local_name, content="\"hlinkClick\"")
         _ => fail("expected <a:hlinkClick> inside <p:cNvPr>")
       }
       // cNvSpPr with its spLocks child is captured.
       let cnv_sp_pr = find_local_inner(s.extension, "cNvSpPr").unwrap()
       match cnv_sp_pr.children[0] {
-        Element(locks) => assert_eq(locks.name.local_name, "spLocks")
+        Element(locks) =>
+          debug_inspect(locks.name.local_name, content="\"spLocks\"")
         _ => fail("expected <a:spLocks> inside <p:cNvSpPr>")
       }
     }
@@ -178,7 +180,7 @@ test "ADR-004: <p:nvPr> with <p:custDataLst> is preserved" {
     AutoShape(s) => {
       let cust = find_local_inner(s.extension, "custDataLst").unwrap()
       // <p:tags> survives nested.
-      assert_eq(cust.children.length(), 1)
+      debug_inspect(cust.children.length(), content="1")
     }
     _ => fail("expected AutoShape")
   }
@@ -204,7 +206,10 @@ test "ADR-004: parse_grp_sp_pr captures <a:solidFill> on the group" {
   let slide = @slide.Slide::parse(@oxml.string_to_bytes(xml))
   match slide.shapes[0] {
     Group(g) =>
-      assert_true(find_local_inner(g.extension, "solidFill") is Some(_))
+      debug_inspect(
+        find_local_inner(g.extension, "solidFill") is Some(_),
+        content="true",
+      )
     _ => fail("expected Group")
   }
 }
@@ -219,7 +224,10 @@ test "ADR-004: parse_prst_geom captures <a:extLst> sibling of avLst" {
     ),
   )
   // The extLst sibling of avLst is captured onto the shape's extension.
-  assert_true(find_local_inner(first_sp_extension(slide), "extLst") is Some(_))
+  debug_inspect(
+    find_local_inner(first_sp_extension(slide), "extLst") is Some(_),
+    content="true",
+  )
 }
 
 // --- clrMapOvr-level captures ---
@@ -242,9 +250,9 @@ test "ADR-004: parse_clr_map_ovr captures foreign-namespace sibling" {
   let mut found = false
   for el in slide.extension {
     if el.name.local_name == "tweak" {
-      assert_eq(el.name.uri, "http://example.org/ext")
+      debug_inspect(el.name.uri, content="\"http://example.org/ext\"")
       found = true
     }
   }
-  assert_true(found)
+  debug_inspect(found, content="true")
 }

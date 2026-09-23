@@ -6,62 +6,71 @@
 
 ///|
 test "constants match OOXML reference table" {
-  assert_eq(@units.emu_per_inch, 914_400L)
-  assert_eq(@units.emu_per_pt, 12_700L)
-  assert_eq(@units.emu_per_cm, 360_000L)
+  debug_inspect(@units.emu_per_inch, content="914400")
+  debug_inspect(@units.emu_per_pt, content="12700")
+  debug_inspect(@units.emu_per_cm, content="360000")
   // 1 inch = 72 pt
-  assert_eq(@units.emu_per_inch, @units.emu_per_pt * 72L)
+  debug_inspect(@units.emu_per_inch == @units.emu_per_pt * 72L, content="true")
 }
 
 ///|
 test "Inch -> Emu" {
-  assert_eq(@units.Inch(1.0).to_emu(), Emu(914_400L))
-  assert_eq(@units.Inch(0.5).to_emu(), Emu(457_200L))
-  assert_eq(@units.Inch(10.0).to_emu(), Emu(9_144_000L))
+  debug_inspect(@units.Inch(1.0).to_emu(), content="Emu(914400)")
+  debug_inspect(@units.Inch(0.5).to_emu(), content="Emu(457200)")
+  debug_inspect(@units.Inch(10.0).to_emu(), content="Emu(9144000)")
 }
 
 ///|
 test "Pt -> Emu" {
-  assert_eq(@units.Pt(72.0).to_emu(), Emu(914_400L))
-  assert_eq(@units.Pt(1.0).to_emu(), Emu(12_700L))
-  assert_eq(@units.Pt(36.0).to_emu(), Emu(457_200L))
+  debug_inspect(@units.Pt(72.0).to_emu(), content="Emu(914400)")
+  debug_inspect(@units.Pt(1.0).to_emu(), content="Emu(12700)")
+  debug_inspect(@units.Pt(36.0).to_emu(), content="Emu(457200)")
 }
 
 ///|
 test "Cm -> Emu" {
-  assert_eq(@units.Cm(2.54).to_emu(), Emu(914_400L))
-  assert_eq(@units.Cm(1.0).to_emu(), Emu(360_000L))
-  assert_eq(@units.Cm(10.0).to_emu(), Emu(3_600_000L))
+  debug_inspect(@units.Cm(2.54).to_emu(), content="Emu(914400)")
+  debug_inspect(@units.Cm(1.0).to_emu(), content="Emu(360000)")
+  debug_inspect(@units.Cm(10.0).to_emu(), content="Emu(3600000)")
 }
 
 ///|
 test "Emu -> Inch round trip" {
   let original = @units.Inch(1.5)
   let round = original.to_emu().to_inch()
-  assert_true((round.value() - original.value()).abs() < 1.0e-9)
+  debug_inspect(
+    (round.value() - original.value()).abs() < 1.0e-9,
+    content="true",
+  )
 }
 
 ///|
 test "Emu -> Pt round trip" {
   let original = @units.Pt(36.0)
   let round = original.to_emu().to_pt()
-  assert_true((round.value() - original.value()).abs() < 1.0e-9)
+  debug_inspect(
+    (round.value() - original.value()).abs() < 1.0e-9,
+    content="true",
+  )
 }
 
 ///|
 test "Emu -> Cm round trip" {
   let original = @units.Cm(2.54)
   let round = original.to_emu().to_cm()
-  assert_true((round.value() - original.value()).abs() < 1.0e-9)
+  debug_inspect(
+    (round.value() - original.value()).abs() < 1.0e-9,
+    content="true",
+  )
 }
 
 ///|
 test "Emu compare and equal" {
   let a = @units.Emu(100L)
   let b = @units.Emu(200L)
-  assert_true(a < b)
-  assert_eq(a, Emu(100L))
-  assert_true(a != b)
+  debug_inspect(a < b, content="true")
+  debug_inspect(a, content="Emu(100)")
+  debug_inspect(a != b, content="true")
 }
 
 ///|
@@ -69,10 +78,10 @@ test "Emu arithmetic" {
   let slide_w = @units.Inch(10.0).to_emu() // 9_144_000
   let slide_h = @units.Inch(7.5).to_emu() // 6_858_000
   let total = slide_w.add(slide_h)
-  assert_eq(total, Emu(16_002_000L))
+  debug_inspect(total, content="Emu(16002000)")
   let diff = slide_w.sub(slide_h)
-  assert_eq(diff, Emu(2_286_000L))
-  assert_eq(slide_w.neg(), Emu(-9_144_000L))
+  debug_inspect(diff, content="Emu(2286000)")
+  debug_inspect(slide_w.neg(), content="Emu(-9144000)")
 }
 
 ///|
@@ -82,6 +91,6 @@ test "Emu does not overflow on slide-scale products" {
   let w = @units.Emu(12_192_000L)
   let h = @units.Emu(6_858_000L)
   let area = w.value() * h.value()
-  assert_true(area > 0L)
-  assert_eq(area, 83_612_736_000_000L)
+  debug_inspect(area > 0L, content="true")
+  debug_inspect(area, content="83612736000000")
 }

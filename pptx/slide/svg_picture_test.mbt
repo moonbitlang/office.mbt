@@ -30,12 +30,12 @@ test "Picture::of_svg_image wires fallback embed + svgBlip extension" {
     cy=Emu(914_400L),
   )
   // The blip embeds the raster fallback…
-  assert_eq(pic.blip_fill.embed_id, "rId2")
+  debug_inspect(pic.blip_fill.embed_id, content="\"rId2\"")
   // …and the captured <a:blip> carries the svgBlip extension referencing
   // the SVG relationship.
-  assert_eq(pic.blip_fill.extension.length(), 1)
+  debug_inspect(pic.blip_fill.extension.length(), content="1")
   let blip = pic.blip_fill.extension[0]
-  assert_eq(blip.name.local_name, "blip")
+  debug_inspect(blip.name.local_name, content="\"blip\"")
   // blip → extLst → ext → svgBlip
   let svg_blip = match blip.children[0] {
     Element(ext_lst) =>
@@ -49,9 +49,9 @@ test "Picture::of_svg_image wires fallback embed + svgBlip extension" {
       }
     _ => fail("expected <a:extLst>")
   }
-  assert_eq(svg_blip.name.local_name, "svgBlip")
-  assert_eq(svg_blip.name.uri, @oxml.svg_ns)
-  assert_eq(svg_blip.attributes[0].1, "rId3")
+  debug_inspect(svg_blip.name.local_name, content="\"svgBlip\"")
+  debug_inspect(svg_blip.name.uri == @oxml.svg_ns, content="true")
+  debug_inspect(svg_blip.attributes[0].1, content="\"rId3\"")
 }
 
 ///|
@@ -69,14 +69,14 @@ test "SVG blip serialises with the svg namespace and round-trips" {
   let slide = slide_of_picture(pic)
   let xml = @oxml.bytes_to_string(slide.serialize())
   // The serialised XML must carry the svgBlip and declare the SVG ns.
-  assert_true(xml.contains("svgBlip"))
-  assert_true(xml.contains(@oxml.svg_ns))
+  debug_inspect(xml.contains("svgBlip"), content="true")
+  debug_inspect(xml.contains(@oxml.svg_ns), content="true")
   // And it re-parses with the SVG extension intact.
   let reparsed = @slide.Slide::parse(slide.serialize())
   match reparsed.shapes[0] {
     Picture(p) => {
-      assert_eq(p.blip_fill.embed_id, "rId2")
-      assert_true(p.blip_fill == pic.blip_fill)
+      debug_inspect(p.blip_fill.embed_id, content="\"rId2\"")
+      debug_inspect(p.blip_fill == pic.blip_fill, content="true")
     }
     _ => fail("expected Picture shape")
   }

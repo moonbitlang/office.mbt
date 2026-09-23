@@ -2,10 +2,6 @@
 // Tests for pinpoint shape editing.
 // Reuses `typical_title_slide()` from parser_test.mbt: shapes are
 // AutoShape(id=2, "Title 1"), AutoShape(id=3, "Subtitle 2"), Picture(id=4).
-//
-// `assert_eq` on an `Option` triggers a Show deprecation warning (CI runs
-// `--deny-warn`), so we unwrap first and assert on the inner value — the
-// same convention `parser_test.mbt` uses.
 
 ///|
 /// A slide carrying one unmodelled shape (`<p:contentPart>`), which parses
@@ -30,12 +26,12 @@ fn slide_with_unknown_shape() -> FixedArray[Byte] {
 ///|
 test "Shape::id / name read every typed variant; Unknown is None" {
   let slide = @slide.Slide::parse(typical_title_slide())
-  assert_eq(slide.shapes[0].id().unwrap(), 2)
-  assert_eq(slide.shapes[0].name().unwrap(), "Title 1")
-  assert_eq(slide.shapes[2].id().unwrap(), 4) // the picture
+  debug_inspect(slide.shapes[0].id().unwrap(), content="2")
+  debug_inspect(slide.shapes[0].name().unwrap(), content="\"Title 1\"")
+  debug_inspect(slide.shapes[2].id().unwrap(), content="4") // the picture
   let unknown = @slide.Slide::parse(slide_with_unknown_shape())
-  assert_true(unknown.shapes[0].id() is None)
-  assert_true(unknown.shapes[0].name() is None)
+  debug_inspect(unknown.shapes[0].id() is None, content="true")
+  debug_inspect(unknown.shapes[0].name() is None, content="true")
 }
 
 // --- map_shapes ---
@@ -50,11 +46,11 @@ test "Slide::map_shapes applies f to every shape" {
       other => other
     }
   })
-  assert_eq(renamed.shapes[0].name().unwrap(), "X")
-  assert_eq(renamed.shapes[1].name().unwrap(), "X")
-  assert_eq(renamed.shapes[2].name().unwrap(), "Pic") // picture unchanged
+  debug_inspect(renamed.shapes[0].name().unwrap(), content="\"X\"")
+  debug_inspect(renamed.shapes[1].name().unwrap(), content="\"X\"")
+  debug_inspect(renamed.shapes[2].name().unwrap(), content="\"Pic\"") // picture unchanged
   // Original is untouched (immutable, ADR-003).
-  assert_eq(slide.shapes[0].name().unwrap(), "Title 1")
+  debug_inspect(slide.shapes[0].name().unwrap(), content="\"Title 1\"")
 }
 
 // --- by index ---
@@ -64,8 +60,8 @@ test "Slide::with_shape_at replaces by index" {
   let slide = @slide.Slide::parse(typical_title_slide())
   // Replace shape 0 with a copy of the picture (shape 2).
   let edited = slide.with_shape_at(0, slide.shapes[2])
-  assert_eq(edited.shapes[0].id().unwrap(), 4)
-  assert_eq(edited.shapes.length(), 3)
+  debug_inspect(edited.shapes[0].id().unwrap(), content="4")
+  debug_inspect(edited.shapes.length(), content="3")
 }
 
 ///|
@@ -77,8 +73,8 @@ test "Slide::with_shape_mapped transforms only the indexed shape" {
       other => other
     }
   })
-  assert_eq(edited.shapes[0].name().unwrap(), "Title 1") // untouched
-  assert_eq(edited.shapes[1].name().unwrap(), "Only2")
+  debug_inspect(edited.shapes[0].name().unwrap(), content="\"Title 1\"") // untouched
+  debug_inspect(edited.shapes[1].name().unwrap(), content="\"Only2\"")
 }
 
 ///|
@@ -112,9 +108,9 @@ test "Slide::with_shape_by_id transforms the matching shape only" {
       other => other
     }
   })
-  assert_eq(edited.shapes[0].name().unwrap(), "Title 1") // id 2 untouched
-  assert_eq(edited.shapes[1].name().unwrap(), "ById") // id 3 changed
-  assert_eq(edited.shapes[2].name().unwrap(), "Pic") // id 4 untouched
+  debug_inspect(edited.shapes[0].name().unwrap(), content="\"Title 1\"") // id 2 untouched
+  debug_inspect(edited.shapes[1].name().unwrap(), content="\"ById\"") // id 3 changed
+  debug_inspect(edited.shapes[2].name().unwrap(), content="\"Pic\"") // id 4 untouched
 }
 
 ///|
@@ -133,12 +129,12 @@ test "Slide::with_shape_by_id raises when the id is absent" {
 test "Slide::without_shape / without_shape_by_id drop one shape" {
   let slide = @slide.Slide::parse(typical_title_slide())
   let a = slide.without_shape(1)
-  assert_eq(a.shapes.length(), 2)
-  assert_eq(a.shapes[0].id().unwrap(), 2)
-  assert_eq(a.shapes[1].id().unwrap(), 4)
+  debug_inspect(a.shapes.length(), content="2")
+  debug_inspect(a.shapes[0].id().unwrap(), content="2")
+  debug_inspect(a.shapes[1].id().unwrap(), content="4")
   let b = slide.without_shape_by_id(4)
-  assert_eq(b.shapes.length(), 2)
-  assert_true(b.shapes.iter().all(s => s.id() != Some(4)))
+  debug_inspect(b.shapes.length(), content="2")
+  debug_inspect(b.shapes.iter().all(s => s.id() != Some(4)), content="true")
   try slide.without_shape_by_id(999) catch {
     _ => ()
   } noraise {
@@ -158,7 +154,7 @@ test "an id-targeted rename round-trips through serialize" {
     }
   })
   let reparsed = @slide.Slide::parse(edited.serialize())
-  assert_eq(reparsed.shapes[1].name().unwrap(), "Persisted")
+  debug_inspect(reparsed.shapes[1].name().unwrap(), content="\"Persisted\"")
 }
 
 // --- shape id allocation ---
@@ -191,22 +187,25 @@ fn group_with_child(group_id : Int, child_id : Int) -> @slide.Shape {
 ///|
 test "Shape::with_id sets the id on every typed variant" {
   let slide = @slide.Slide::parse(typical_title_slide())
-  assert_eq(slide.shapes[0].with_id(42).id().unwrap(), 42)
-  assert_eq(slide.shapes[2].with_id(43).id().unwrap(), 43)
-  assert_eq(group_with_child(10, 11).with_id(44).id().unwrap(), 44)
+  debug_inspect(slide.shapes[0].with_id(42).id().unwrap(), content="42")
+  debug_inspect(slide.shapes[2].with_id(43).id().unwrap(), content="43")
+  debug_inspect(
+    group_with_child(10, 11).with_id(44).id().unwrap(),
+    content="44",
+  )
   // Unknown carries no typed id, so it comes back untouched.
   let unknown = @slide.Slide::parse(slide_with_unknown_shape()).shapes[0]
-  assert_eq(unknown.with_id(45), unknown)
+  debug_inspect(unknown.with_id(45) == unknown, content="true")
 }
 
 ///|
 test "Slide::next_shape_id clears the highest id in use" {
   let slide = @slide.Slide::parse(typical_title_slide())
   // ids 2, 3, 4 are taken.
-  assert_eq(slide.next_shape_id(), 5)
+  debug_inspect(slide.next_shape_id(), content="5")
   // A group's child competes for the same id space as its parent.
   let with_group = slide.with_shape(group_with_child(10, 20))
-  assert_eq(with_group.next_shape_id(), 21)
+  debug_inspect(with_group.next_shape_id(), content="21")
 }
 
 ///|
@@ -214,7 +213,7 @@ test "Slide::next_shape_id floors at 2 on an empty slide" {
   let empty = @slide.Slide::parse(typical_title_slide()).map_shapes(s => s)
   let cleared = { ..empty, shapes: [], }
   // id 1 belongs to the root spTree, so the first shape id is 2.
-  assert_eq(cleared.next_shape_id(), 2)
+  debug_inspect(cleared.next_shape_id(), content="2")
 }
 
 ///|
@@ -231,17 +230,17 @@ test "Slide::with_shape_auto_id renumbers a colliding shape" {
       cy=Emu(914_400L),
     ),
   )
-  assert_true(slide.with_shape(clashing).duplicate_shape_ids() == [2])
+  debug_inspect(slide.with_shape(clashing).duplicate_shape_ids(), content="[2]")
   let fixed = slide.with_shape_auto_id(clashing)
-  assert_eq(fixed.shapes[3].id().unwrap(), 5)
-  assert_eq(fixed.shapes[3].name().unwrap(), "Clash")
-  assert_true(fixed.duplicate_shape_ids() == [])
+  debug_inspect(fixed.shapes[3].id().unwrap(), content="5")
+  debug_inspect(fixed.shapes[3].name().unwrap(), content="\"Clash\"")
+  debug_inspect(fixed.duplicate_shape_ids(), content="[]")
 }
 
 ///|
 test "Slide::duplicate_shape_ids reports each clashing id once, ascending" {
   let slide = @slide.Slide::parse(typical_title_slide())
-  assert_true(slide.duplicate_shape_ids() == [])
+  debug_inspect(slide.duplicate_shape_ids(), content="[]")
   // Two shapes on id 4 and three on id 3 — each id is reported once.
   let clashing = slide
     .with_shape(group_with_child(4, 3))
@@ -257,5 +256,5 @@ test "Slide::duplicate_shape_ids reports each clashing id once, ascending" {
         ),
       ),
     )
-  assert_true(clashing.duplicate_shape_ids() == [3, 4])
+  debug_inspect(clashing.duplicate_shape_ids(), content="[3, 4]")
 }

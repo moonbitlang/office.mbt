@@ -9,9 +9,9 @@ test "ADR-004: TextBody captures foreign-namespace child" {
     "<a:p><a:r><a:t>Hi</a:t></a:r></a:p>"
   let slide = @slide.Slide::parse(slide_with_txbody(inner))
   let tb = first_auto_shape(slide).text_body.unwrap()
-  assert_eq(tb.extension.length(), 1)
-  assert_eq(tb.extension[0].name.uri, "http://example.org/ext")
-  assert_eq(tb.extension[0].name.local_name, "ext")
+  debug_inspect(tb.extension.length(), content="1")
+  debug_inspect(tb.extension[0].name.uri, content="\"http://example.org/ext\"")
+  debug_inspect(tb.extension[0].name.local_name, content="\"ext\"")
 }
 
 ///|
@@ -23,13 +23,13 @@ test "ADR-004: BodyProperties captures prstTxWarp / extLst" {
     "<a:p><a:r><a:t>x</a:t></a:r></a:p>"
   let slide = @slide.Slide::parse(slide_with_txbody(inner))
   let bp = first_auto_shape(slide).text_body.unwrap().body_properties.unwrap()
-  assert_eq(bp.extension.length(), 2)
+  debug_inspect(bp.extension.length(), content="2")
   let names = []
   for el in bp.extension {
     names.push(el.name.local_name)
   }
-  assert_true(names.contains("prstTxWarp"))
-  assert_true(names.contains("extLst"))
+  debug_inspect(names.contains("prstTxWarp"), content="true")
+  debug_inspect(names.contains("extLst"), content="true")
 }
 
 ///|
@@ -38,10 +38,10 @@ test "Paragraph models endParaRPr rather than preserving it verbatim" {
   let slide = @slide.Slide::parse(slide_with_txbody(inner))
   let p = first_auto_shape(slide).text_body.unwrap().paragraphs[0]
   // It is typed now, so it no longer lands on the ADR-004 escape hatch.
-  assert_eq(p.extension.length(), 0)
+  debug_inspect(p.extension.length(), content="0")
   let end = p.end_run_properties.unwrap()
-  assert_eq(end.lang, "en-US")
-  assert_eq(end.font_size, Some(Pt(18.0)))
+  debug_inspect(end.lang, content="\"en-US\"")
+  debug_inspect(end.font_size, content="Some(Pt(18))")
 }
 
 ///|
@@ -59,12 +59,15 @@ test "ADR-004: RunProperties captures hlinkMouseOver; effectLst now typed" {
   let p = first_auto_shape(slide).text_body.unwrap().paragraphs[0]
   match p.content[0] {
     RunContent(r) => {
-      assert_eq(r.properties.bold.unwrap(), true)
+      debug_inspect(r.properties.bold.unwrap(), content="true")
       // effectLst lifts into the typed `text_effects` field; only the
       // still-unmodelled hlinkMouseOver remains in `extension`.
-      assert_true(r.properties.text_effects is Some(_))
-      assert_eq(r.properties.extension.length(), 1)
-      assert_eq(r.properties.extension[0].name.local_name, "hlinkMouseOver")
+      debug_inspect(r.properties.text_effects is Some(_), content="true")
+      debug_inspect(r.properties.extension.length(), content="1")
+      debug_inspect(
+        r.properties.extension[0].name.local_name,
+        content="\"hlinkMouseOver\"",
+      )
     }
     _ => fail("expected Run")
   }
@@ -81,14 +84,14 @@ test "ADR-004: ParagraphProperties captures buFont and tabLst" {
     "</a:p>"
   let slide = @slide.Slide::parse(slide_with_txbody(inner))
   let p = first_auto_shape(slide).text_body.unwrap().paragraphs[0]
-  assert_eq(p.properties.level, 1)
-  assert_eq(p.properties.extension.length(), 2)
+  debug_inspect(p.properties.level, content="1")
+  debug_inspect(p.properties.extension.length(), content="2")
   let names = []
   for el in p.properties.extension {
     names.push(el.name.local_name)
   }
-  assert_true(names.contains("buFont"))
-  assert_true(names.contains("tabLst"))
+  debug_inspect(names.contains("buFont"), content="true")
+  debug_inspect(names.contains("tabLst"), content="true")
 }
 
 ///|
@@ -100,8 +103,8 @@ test "ADR-004: ListStyle captures extLst" {
     "<a:p><a:r><a:t>x</a:t></a:r></a:p>"
   let slide = @slide.Slide::parse(slide_with_txbody(inner))
   let ls = first_auto_shape(slide).text_body.unwrap().list_style.unwrap()
-  assert_eq(ls.extension.length(), 1)
-  assert_eq(ls.extension[0].name.local_name, "extLst")
+  debug_inspect(ls.extension.length(), content="1")
+  debug_inspect(ls.extension[0].name.local_name, content="\"extLst\"")
 }
 
 ///|
@@ -114,11 +117,14 @@ test "ADR-004: Field captures rPr extensions" {
   let p = first_auto_shape(slide).text_body.unwrap().paragraphs[0]
   match p.content[0] {
     FieldContent(f) => {
-      assert_eq(f.id, "{F-0}")
-      assert_eq(f.text, "1")
+      debug_inspect(f.id, content="\"{F-0}\"")
+      debug_inspect(f.text, content="\"1\"")
       // The field's rPr extension carries the extLst.
-      assert_eq(f.properties.extension.length(), 1)
-      assert_eq(f.properties.extension[0].name.local_name, "extLst")
+      debug_inspect(f.properties.extension.length(), content="1")
+      debug_inspect(
+        f.properties.extension[0].name.local_name,
+        content="\"extLst\"",
+      )
     }
     _ => fail("expected Field")
   }
@@ -135,8 +141,8 @@ test "ADR-004: Break preserves its rPr (no longer drops it)" {
   let p = first_auto_shape(slide).text_body.unwrap().paragraphs[0]
   match p.content[1] {
     Break(rpr) => {
-      assert_eq(rpr.lang, "en-US")
-      assert_eq(rpr.font_size.unwrap(), Pt(24.0))
+      debug_inspect(rpr.lang, content="\"en-US\"")
+      debug_inspect(rpr.font_size.unwrap(), content="Pt(24)")
     }
     _ => fail("expected Break")
   }

@@ -5,9 +5,9 @@
 test "app_properties: reads the template's Application, absent fields None" {
   let prs = @presentation.Presentation::new()
   let props = prs.app_properties()
-  assert_eq(props.application.unwrap(), "moon-pptx")
-  assert_true(props.company is None)
-  assert_true(props.manager is None)
+  debug_inspect(props.application.unwrap(), content="\"moon-pptx\"")
+  debug_inspect(props.company is None, content="true")
+  debug_inspect(props.manager is None, content="true")
 }
 
 ///|
@@ -19,24 +19,29 @@ test "set_app_properties_mut: merges without disturbing other fields" {
     .with_manager("Coyote"),
   )
   let props = prs.app_properties()
-  assert_eq(props.company.unwrap(), "ACME 株式会社")
-  assert_eq(props.manager.unwrap(), "Coyote")
+  debug_inspect(props.company.unwrap(), content="\"ACME 株式会社\"")
+  debug_inspect(props.manager.unwrap(), content="\"Coyote\"")
   // Untouched fields survive the merge.
-  assert_eq(props.application.unwrap(), "moon-pptx")
+  debug_inspect(props.application.unwrap(), content="\"moon-pptx\"")
   let xml = saved_part_xml(prs, "/docProps/app.xml")
-  assert_true(
+  debug_inspect(
     xml.contains(
       "<PresentationFormat>On-screen Show (4:3)</PresentationFormat>",
     ),
+    content="true",
   )
-  assert_true(xml.contains("<Slides>0</Slides>"))
+  debug_inspect(xml.contains("<Slides>0</Slides>"), content="true")
   // Emitted with the extended-properties namespace as the default —
   // bare element names, no generated prefixes.
-  assert_true(
+  debug_inspect(
     xml.contains("<Properties xmlns=\"" + @oxml.extended_properties_ns + "\""),
+    content="true",
   )
-  assert_true(xml.contains("<Company>ACME 株式会社</Company>"))
-  assert_true(!xml.contains("ext0:"))
+  debug_inspect(
+    xml.contains("<Company>ACME 株式会社</Company>"),
+    content="true",
+  )
+  debug_inspect(!xml.contains("ext0:"), content="true")
 }
 
 ///|
@@ -48,11 +53,14 @@ test "set_app_properties_mut: setting an existing field replaces it once" {
   prs.set_app_properties_mut(
     @presentation.AppProperties::new().with_application("my-tool 2.0"),
   )
-  assert_eq(prs.app_properties().application.unwrap(), "my-tool 2.0")
+  debug_inspect(
+    prs.app_properties().application.unwrap(),
+    content="\"my-tool 2.0\"",
+  )
   let xml = saved_part_xml(prs, "/docProps/app.xml")
   let first = xml.find("<Application>").unwrap()
   let rest = xml[first + 1:].to_owned()
-  assert_true(rest.find("<Application>") is None)
+  debug_inspect(rest.find("<Application>") is None, content="true")
 }
 
 ///|
@@ -62,28 +70,34 @@ test "app properties survive save -> reopen" {
     @presentation.AppProperties::new().with_company("Initech"),
   )
   let reopened = @presentation.Presentation::open(prs.save())
-  assert_eq(reopened.app_properties().company.unwrap(), "Initech")
+  debug_inspect(
+    reopened.app_properties().company.unwrap(),
+    content="\"Initech\"",
+  )
 }
 
 ///|
 test "set_app_properties_mut: recreates a missing part with its package rel" {
   let prs = @presentation.Presentation::new()
   // Simulate a package without docProps/app.xml.
-  assert_true(prs.pkg.remove_part("/docProps/app.xml"))
+  debug_inspect(prs.pkg.remove_part("/docProps/app.xml"), content="true")
   prs.set_app_properties_mut(
     @presentation.AppProperties::new()
     .with_company("Globex")
     .with_app_version("16.0000"),
   )
   let props = prs.app_properties()
-  assert_eq(props.company.unwrap(), "Globex")
-  assert_eq(props.app_version.unwrap(), "16.0000")
+  debug_inspect(props.company.unwrap(), content="\"Globex\"")
+  debug_inspect(props.app_version.unwrap(), content="\"16.0000\"")
   // Exactly one extended-properties relationship on the package.
   let rels = prs.pkg.relationships_for("/")
-  assert_eq(rels.by_type(@opc.rt_extended_properties).length(), 1)
+  debug_inspect(rels.by_type(@opc.rt_extended_properties).length(), content="1")
   // And the whole thing still opens.
   let reopened = @presentation.Presentation::open(prs.save())
-  assert_eq(reopened.app_properties().company.unwrap(), "Globex")
+  debug_inspect(
+    reopened.app_properties().company.unwrap(),
+    content="\"Globex\"",
+  )
 }
 
 ///|
@@ -92,14 +106,14 @@ test "with_app_properties: immutable counterpart leaves the original untouched" 
   let edited = prs.with_app_properties(
     @presentation.AppProperties::new().with_company("Hooli"),
   )
-  assert_true(prs.app_properties().company is None)
-  assert_eq(edited.app_properties().company.unwrap(), "Hooli")
+  debug_inspect(prs.app_properties().company is None, content="true")
+  debug_inspect(edited.app_properties().company.unwrap(), content="\"Hooli\"")
 }
 
 ///|
 test "app_properties: a malformed app.xml raises instead of guessing" {
   let prs = @presentation.Presentation::new()
-  assert_true(prs.pkg.remove_part("/docProps/app.xml"))
+  debug_inspect(prs.pkg.remove_part("/docProps/app.xml"), content="true")
   // A part whose root is not <Properties> in the ep namespace.
   prs.pkg.add_part(
     @opc.Part::new(

@@ -24,9 +24,9 @@ test "DLbl: delete-choice variant lifts" {
     "</c:dLbls>"
   let chart = @chart.Chart::parse(fixture_d_lbl_bar(body))
   let d = first_d_lbl(chart)
-  assert_eq(d.idx, 2)
-  assert_eq(d.delete.unwrap(), true)
-  assert_true(d.show_val is None)
+  debug_inspect(d.idx, content="2")
+  debug_inspect(d.delete.unwrap(), content="true")
+  debug_inspect(d.show_val is None, content="true")
 }
 
 ///|
@@ -47,12 +47,12 @@ test "DLbl: full styling-choice variant lifts" {
     "</c:dLbls>"
   let chart = @chart.Chart::parse(fixture_d_lbl_bar(body))
   let d = first_d_lbl(chart)
-  assert_eq(d.idx, 0)
-  assert_eq(d.num_fmt.unwrap().format_code, "0.00")
-  assert_true(d.d_lbl_pos is Some(DLblOutEnd))
-  assert_eq(d.show_val.unwrap(), true)
-  assert_eq(d.show_cat_name.unwrap(), true)
-  assert_eq(d.separator.unwrap(), ": ")
+  debug_inspect(d.idx, content="0")
+  debug_inspect(d.num_fmt.unwrap().format_code, content="\"0.00\"")
+  debug_inspect(d.d_lbl_pos is Some(DLblOutEnd), content="true")
+  debug_inspect(d.show_val.unwrap(), content="true")
+  debug_inspect(d.show_cat_name.unwrap(), content="true")
+  debug_inspect(d.separator.unwrap(), content="\": \"")
 }
 
 ///|
@@ -67,8 +67,8 @@ test "DLbl: layout and tx captured" {
     "</c:dLbls>"
   let chart = @chart.Chart::parse(fixture_d_lbl_bar(body))
   let d = first_d_lbl(chart)
-  assert_true(d.layout is Some(_))
-  assert_true(d.tx is Some(_))
+  debug_inspect(d.layout is Some(_), content="true")
+  debug_inspect(d.tx is Some(_), content="true")
 }
 
 ///|
@@ -100,14 +100,14 @@ test "DLbl: round-trip preserves both choice branches" {
     "</c:dLbls>"
   let original = @chart.Chart::parse(fixture_d_lbl_bar(body))
   let dl = unwrap_bar_d_lbls(original)
-  assert_eq(dl.d_lbl.length(), 2)
-  assert_eq(dl.d_lbl[0].idx, 0)
-  assert_eq(dl.d_lbl[0].delete.unwrap(), true)
-  assert_eq(dl.d_lbl[1].idx, 3)
-  assert_true(dl.d_lbl[1].d_lbl_pos is Some(DLblCenter))
+  debug_inspect(dl.d_lbl.length(), content="2")
+  debug_inspect(dl.d_lbl[0].idx, content="0")
+  debug_inspect(dl.d_lbl[0].delete.unwrap(), content="true")
+  debug_inspect(dl.d_lbl[1].idx, content="3")
+  debug_inspect(dl.d_lbl[1].d_lbl_pos is Some(DLblCenter), content="true")
   let bytes = original.serialize()
   let re_parsed = @chart.Chart::parse(bytes)
-  assert_eq(re_parsed, original)
+  debug_inspect(re_parsed == original, content="true")
 }
 
 ///|
@@ -121,8 +121,8 @@ test "DLbl: extLst rides on extension" {
     "</c:dLbls>"
   let original = @chart.Chart::parse(fixture_d_lbl_bar(body))
   let d = first_d_lbl(original)
-  assert_eq(d.extension.length(), 1)
+  debug_inspect(d.extension.length(), content="1")
   let bytes = original.serialize()
   let re_parsed = @chart.Chart::parse(bytes)
-  assert_eq(re_parsed, original)
+  debug_inspect(re_parsed == original, content="true")
 }

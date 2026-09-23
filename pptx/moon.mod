@@ -14,13 +14,7 @@ repository = "https://github.com/moonbitlang/office.mbt"
 
 license = "Apache-2.0"
 
-keywords = [
-  "pptx",
-  "powerpoint",
-  "ooxml",
-  "office",
-  "presentation",
-]
+keywords = [ "pptx", "powerpoint", "ooxml", "office", "presentation" ]
 
 description = "Pure-MoonBit library for reading, building, and writing PPTX (OOXML) presentations with a type-safe builder API."
 

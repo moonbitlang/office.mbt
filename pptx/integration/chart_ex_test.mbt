@@ -102,13 +102,13 @@ fn chart_ex_deck() -> FixedArray[Byte] {
 test "chartEx deck opens and Presentation::charts_ex() finds the part" {
   let prs = @presentation.Presentation::open(chart_ex_deck())
   let charts = prs.charts_ex()
-  assert_eq(charts.length(), 1)
+  debug_inspect(charts.length(), content="1")
   let chart = charts[0]
   // The fixture is a sunburst — confirm the typed kind discriminator
   // came through.
   let series = chart.chart.plot_area.plot_area_region.series
-  assert_eq(series.length(), 1)
-  assert_eq(series[0].layout_id, Sunburst)
+  debug_inspect(series.length(), content="1")
+  debug_inspect(series[0].layout_id, content="Sunburst")
 }
 
 ///|
@@ -116,21 +116,21 @@ test "Presentation::charts_ex distinct from Presentation::charts" {
   // Standard `charts()` should be empty when the deck only has
   // chartEx parts (and vice-versa).
   let prs = @presentation.Presentation::open(chart_ex_deck())
-  assert_eq(prs.charts().length(), 0)
-  assert_eq(prs.charts_ex().length(), 1)
+  debug_inspect(prs.charts().length(), content="0")
+  debug_inspect(prs.charts_ex().length(), content="1")
 }
 
 ///|
 test "slide-side chartEx graphicFrame lifts to ChartExContent(rid)" {
   let pkg = @opc.Package::open(chart_ex_deck())
   let slide_parts = parts_of(pkg, ct_slide)
-  assert_eq(slide_parts.length(), 1)
+  debug_inspect(slide_parts.length(), content="1")
   let s = @slide.Slide::parse(slide_parts[0].bytes)
-  assert_eq(s.shapes.length(), 1)
+  debug_inspect(s.shapes.length(), content="1")
   match s.shapes[0] {
     GraphicFrame(gf) =>
       match gf.content {
-        ChartExContent(rid) => assert_eq(rid, "rId2")
+        ChartExContent(rid) => debug_inspect(rid, content="\"rId2\"")
         _ => fail("expected ChartExContent")
       }
     _ => fail("expected GraphicFrame shape")
@@ -144,8 +144,8 @@ test "chartEx deck round-trips through Package::to_bytes" {
   let prs_out = @presentation.Presentation::open(bytes)
   let charts_in = prs_in.charts_ex()
   let charts_out = prs_out.charts_ex()
-  assert_eq(charts_in.length(), charts_out.length())
-  assert_true(charts_in[0] == charts_out[0])
+  debug_inspect(charts_in.length() == charts_out.length(), content="true")
+  debug_inspect(charts_in[0] == charts_out[0], content="true")
 }
 
 ///|
@@ -159,7 +159,7 @@ test "slide-side ChartExContent survives re_serialize_all" {
   match s.shapes[0] {
     GraphicFrame(gf) =>
       match gf.content {
-        ChartExContent(rid) => assert_eq(rid, "rId2")
+        ChartExContent(rid) => debug_inspect(rid, content="\"rId2\"")
         _ => fail("expected ChartExContent post round-trip")
       }
     _ => fail("expected GraphicFrame shape post round-trip")

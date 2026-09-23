@@ -23,33 +23,33 @@ fn typical_authors() -> FixedArray[Byte] {
 ///|
 test "CommentAuthorList::parse: count + first author fields" {
   let list = @comments.CommentAuthorList::parse(typical_authors())
-  assert_eq(list.authors.length(), 2)
+  debug_inspect(list.authors.length(), content="2")
   let alice = list.authors[0]
-  assert_eq(alice.id, 0)
-  assert_eq(alice.name, "Alice")
-  assert_eq(alice.initials, "A")
-  assert_eq(alice.last_idx, 3)
-  assert_eq(alice.clr_idx, 0)
-  assert_eq(alice.extension.length(), 0)
+  debug_inspect(alice.id, content="0")
+  debug_inspect(alice.name, content="\"Alice\"")
+  debug_inspect(alice.initials, content="\"A\"")
+  debug_inspect(alice.last_idx, content="3")
+  debug_inspect(alice.clr_idx, content="0")
+  debug_inspect(alice.extension.length(), content="0")
 }
 
 ///|
 test "CommentAuthorList::parse: per-author extLst is preserved" {
   let list = @comments.CommentAuthorList::parse(typical_authors())
   let bob = list.authors[1]
-  assert_eq(bob.id, 1)
-  assert_eq(bob.name, "Bob")
-  assert_eq(bob.initials, "BB")
-  assert_eq(bob.extension.length(), 1)
-  assert_eq(bob.extension[0].name.local_name, "extLst")
+  debug_inspect(bob.id, content="1")
+  debug_inspect(bob.name, content="\"Bob\"")
+  debug_inspect(bob.initials, content="\"BB\"")
+  debug_inspect(bob.extension.length(), content="1")
+  debug_inspect(bob.extension[0].name.local_name, content="\"extLst\"")
 }
 
 ///|
 test "CommentAuthorList::parse: empty list" {
   let xml = "<?xml version=\"1.0\"?><p:cmAuthorLst xmlns:p=\"" + pml_ns + "\"/>"
   let list = @comments.CommentAuthorList::parse(@oxml.string_to_bytes(xml))
-  assert_eq(list.authors.length(), 0)
-  assert_eq(list.extension.length(), 0)
+  debug_inspect(list.authors.length(), content="0")
+  debug_inspect(list.extension.length(), content="0")
 }
 
 ///|
@@ -61,9 +61,9 @@ test "CommentAuthorList::parse: top-level extLst rides on list extension" {
     "<p:extLst><p:ext uri=\"{X}\"/></p:extLst>" +
     "</p:cmAuthorLst>"
   let list = @comments.CommentAuthorList::parse(@oxml.string_to_bytes(xml))
-  assert_eq(list.authors.length(), 1)
-  assert_eq(list.extension.length(), 1)
-  assert_eq(list.extension[0].name.local_name, "extLst")
+  debug_inspect(list.authors.length(), content="1")
+  debug_inspect(list.extension.length(), content="1")
+  debug_inspect(list.extension[0].name.local_name, content="\"extLst\"")
 }
 
 ///|
@@ -118,41 +118,41 @@ fn typical_comments() -> FixedArray[Byte] {
 ///|
 test "CommentList::parse: count + first comment fields" {
   let list = @comments.CommentList::parse(typical_comments())
-  assert_eq(list.comments.length(), 2)
+  debug_inspect(list.comments.length(), content="2")
   let first = list.comments[0]
-  assert_eq(first.author_id, 0)
-  assert_eq(first.dt.unwrap(), "2026-05-21T10:30:00")
-  assert_eq(first.idx, 1)
-  assert_eq(first.pos.x, Emu(1828800L))
-  assert_eq(first.pos.y, Emu(914400L))
-  assert_eq(first.text, "Looks good to me.")
-  assert_eq(first.extension.length(), 0)
+  debug_inspect(first.author_id, content="0")
+  debug_inspect(first.dt.unwrap(), content="\"2026-05-21T10:30:00\"")
+  debug_inspect(first.idx, content="1")
+  debug_inspect(first.pos.x, content="Emu(1828800)")
+  debug_inspect(first.pos.y, content="Emu(914400)")
+  debug_inspect(first.text, content="\"Looks good to me.\"")
+  debug_inspect(first.extension.length(), content="0")
 }
 
 ///|
 test "CommentList::parse: dt is optional" {
   let list = @comments.CommentList::parse(typical_comments())
   let second = list.comments[1]
-  assert_eq(second.author_id, 1)
-  assert_true(second.dt is None)
-  assert_eq(second.idx, 2)
-  assert_eq(second.text, "Needs a citation.")
+  debug_inspect(second.author_id, content="1")
+  debug_inspect(second.dt is None, content="true")
+  debug_inspect(second.idx, content="2")
+  debug_inspect(second.text, content="\"Needs a citation.\"")
 }
 
 ///|
 test "CommentList::parse: per-comment extLst is preserved" {
   let list = @comments.CommentList::parse(typical_comments())
   let second = list.comments[1]
-  assert_eq(second.extension.length(), 1)
-  assert_eq(second.extension[0].name.local_name, "extLst")
+  debug_inspect(second.extension.length(), content="1")
+  debug_inspect(second.extension[0].name.local_name, content="\"extLst\"")
 }
 
 ///|
 test "CommentList::parse: empty list" {
   let xml = "<?xml version=\"1.0\"?><p:cmLst xmlns:p=\"" + pml_ns + "\"/>"
   let list = @comments.CommentList::parse(@oxml.string_to_bytes(xml))
-  assert_eq(list.comments.length(), 0)
-  assert_eq(list.extension.length(), 0)
+  debug_inspect(list.comments.length(), content="0")
+  debug_inspect(list.extension.length(), content="0")
 }
 
 ///|
@@ -199,8 +199,8 @@ test "CommentList::parse: unknown child of <p:cm> is preserved" {
     "</p:cm></p:cmLst>"
   let list = @comments.CommentList::parse(@oxml.string_to_bytes(xml))
   let c = list.comments[0]
-  assert_eq(c.extension.length(), 1)
-  assert_eq(c.extension[0].name.local_name, "futureSibling")
+  debug_inspect(c.extension.length(), content="1")
+  debug_inspect(c.extension[0].name.local_name, content="\"futureSibling\"")
 }
 
 ///|
@@ -224,5 +224,5 @@ test "CommentList::parse: text with entity references decodes" {
     "<p:text>a &amp; b &lt; c</p:text>" +
     "</p:cm></p:cmLst>"
   let list = @comments.CommentList::parse(@oxml.string_to_bytes(xml))
-  assert_eq(list.comments[0].text, "a & b < c")
+  debug_inspect(list.comments[0].text, content="\"a & b < c\"")
 }

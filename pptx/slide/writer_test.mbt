@@ -14,30 +14,33 @@ test "Slide::serialize: round-trips the typical title slide" {
   let s0 = @slide.Slide::parse(typical_title_slide())
   let s1 = roundtrip_slide(typical_title_slide())
   // Identify which field differs to make failure self-diagnosing.
-  assert_eq(s0.name, s1.name)
-  assert_eq(s0.shapes.length(), s1.shapes.length())
-  assert_eq(s0.extension.length(), s1.extension.length())
+  debug_inspect(s0.name == s1.name, content="true")
+  debug_inspect(s0.shapes.length() == s1.shapes.length(), content="true")
+  debug_inspect(s0.extension.length() == s1.extension.length(), content="true")
   // Compare each shape (where a structural diff surfaces fastest).
   for i, sh in s0.shapes {
-    assert_true(sh == s1.shapes[i])
+    debug_inspect(sh == s1.shapes[i], content="true")
   }
   // Compare extension by local-name + attribute count, since cross-
   // section ordering inside the array isn't part of the contract.
   for i, ex in s0.extension {
-    assert_eq(ex.name.local_name, s1.extension[i].name.local_name)
+    debug_inspect(
+      ex.name.local_name == s1.extension[i].name.local_name,
+      content="true",
+    )
   }
-  assert_true(s0 == s1)
+  debug_inspect(s0 == s1, content="true")
 }
 
 ///|
 test "Slide::serialize: shape count + auto-shape metadata survive" {
   let s1 = roundtrip_slide(typical_title_slide())
-  assert_eq(s1.shapes.length(), 3)
+  debug_inspect(s1.shapes.length(), content="3")
   match s1.shapes[0] {
     AutoShape(sp) => {
-      assert_eq(sp.id, 2)
-      assert_eq(sp.name, "Title 1")
-      assert_eq(sp.placeholder.unwrap().ph_type, "ctrTitle")
+      debug_inspect(sp.id, content="2")
+      debug_inspect(sp.name, content="\"Title 1\"")
+      debug_inspect(sp.placeholder.unwrap().ph_type, content="\"ctrTitle\"")
     }
     _ => fail("expected AutoShape at [0]")
   }
@@ -46,7 +49,7 @@ test "Slide::serialize: shape count + auto-shape metadata survive" {
 ///|
 test "Slide::serialize: clrMapOvr (master mapping) round-trips" {
   let s1 = roundtrip_slide(typical_title_slide())
-  assert_true(s1.clr_map_override is MasterMapping)
+  debug_inspect(s1.clr_map_override is MasterMapping, content="true")
 }
 
 ///|
@@ -54,11 +57,11 @@ test "Slide::serialize: slide-level transition + timing round-trip" {
   let s1 = roundtrip_slide(typical_title_slide())
   // <p:transition> is the typed field now; <p:timing> + the root-group
   // metadata (<p:nvGrpSpPr> + <p:grpSpPr>) still ride on extension.
-  assert_true(s1.transition is Some(_))
+  debug_inspect(s1.transition is Some(_), content="true")
   let names = s1.extension.map(e => e.name.local_name)
-  assert_true(names.contains("timing"))
-  assert_true(names.contains("nvGrpSpPr"))
-  assert_true(names.contains("grpSpPr"))
+  debug_inspect(names.contains("timing"), content="true")
+  debug_inspect(names.contains("nvGrpSpPr"), content="true")
+  debug_inspect(names.contains("grpSpPr"), content="true")
 }
 
 // --- Slide with picture ---
@@ -74,7 +77,7 @@ test "Slide::serialize: picture shape round-trips" {
   let xml = wrap_slide(body)
   let s0 = @slide.Slide::parse(@oxml.string_to_bytes(xml))
   let s1 = roundtrip_slide(@oxml.string_to_bytes(xml))
-  assert_true(s0 == s1)
+  debug_inspect(s0 == s1, content="true")
 }
 
 ///|
@@ -91,7 +94,7 @@ test "Slide::serialize: connector round-trips" {
   let xml = wrap_slide(body)
   let s0 = @slide.Slide::parse(@oxml.string_to_bytes(xml))
   let s1 = roundtrip_slide(@oxml.string_to_bytes(xml))
-  assert_true(s0 == s1)
+  debug_inspect(s0 == s1, content="true")
 }
 
 ///|
@@ -113,7 +116,7 @@ test "Slide::serialize: group shape with one child round-trips" {
   let xml = wrap_slide(body)
   let s0 = @slide.Slide::parse(@oxml.string_to_bytes(xml))
   let s1 = roundtrip_slide(@oxml.string_to_bytes(xml))
-  assert_true(s0 == s1)
+  debug_inspect(s0 == s1, content="true")
 }
 
 ///|
@@ -143,7 +146,7 @@ test "Slide::serialize: AutoShape with custGeom round-trips" {
   // from the second cycle onward.
   let s1 = roundtrip_slide(@oxml.string_to_bytes(xml))
   let s2 = roundtrip_slide(s1.serialize())
-  assert_true(s1 == s2)
+  debug_inspect(s1 == s2, content="true")
 }
 
 ///|
@@ -170,7 +173,7 @@ test "Slide::serialize: AutoShape with text body round-trips" {
   let xml = wrap_slide(body)
   let s0 = @slide.Slide::parse(@oxml.string_to_bytes(xml))
   let s1 = roundtrip_slide(@oxml.string_to_bytes(xml))
-  assert_true(s0 == s1)
+  debug_inspect(s0 == s1, content="true")
 }
 
 ///|
@@ -189,7 +192,7 @@ test "Slide::serialize: empty slide (no shapes) round-trips" {
     "</p:spTree></p:cSld></p:sld>"
   let s0 = @slide.Slide::parse(@oxml.string_to_bytes(xml))
   let s1 = roundtrip_slide(@oxml.string_to_bytes(xml))
-  assert_true(s0 == s1)
+  debug_inspect(s0 == s1, content="true")
 }
 
 ///|

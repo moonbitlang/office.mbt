@@ -35,17 +35,17 @@ test "ADR-004: slide-level timing survives parse; transition lifts to typed fiel
   let slide = @slide.Slide::parse(@oxml.string_to_bytes(xml))
   // `<p:transition>` is now the typed `Slide.transition` field, so it must
   // *not* appear in extension (mirrors the `<p:bg>` lift below).
-  assert_true(find_ext(slide, "transition") is None)
+  debug_inspect(find_ext(slide, "transition") is None, content="true")
   match slide.transition {
     Some(t) => {
-      assert_true(t.speed == Medium)
-      assert_true(t.kind == Fade(false))
+      debug_inspect(t.speed, content="Medium")
+      debug_inspect(t.kind, content="Fade(false)")
     }
     None => fail("expected a typed transition")
   }
   // `<p:timing>` is still unmodelled and round-trips via extension.
   let timing = find_ext(slide, "timing")
-  assert_true(timing is Some(_))
+  debug_inspect(timing is Some(_), content="true")
 }
 
 ///|
@@ -66,9 +66,9 @@ test "<p:cSld><p:bg> lifts into the typed background field, not extension" {
     "</p:cSld>" +
     "</p:sld>"
   let slide = @slide.Slide::parse(@oxml.string_to_bytes(xml))
-  assert_true(find_ext(slide, "bg") is None)
+  debug_inspect(find_ext(slide, "bg") is None, content="true")
   match slide.background {
-    Some(StyleReference(idx, _)) => assert_eq(idx, 1001)
+    Some(StyleReference(idx, _)) => debug_inspect(idx, content="1001")
     _ => fail("expected a typed StyleReference background")
   }
 }
@@ -88,11 +88,11 @@ test "ADR-004: foreign-namespace <p:sld> child is preserved" {
     "</p:sld>"
   let slide = @slide.Slide::parse(@oxml.string_to_bytes(xml))
   let custom = find_ext(slide, "custom")
-  assert_true(custom is Some(_))
+  debug_inspect(custom is Some(_), content="true")
   let c = custom.unwrap()
-  assert_eq(c.name.uri, "http://example.org/ext")
-  assert_eq(c.attributes[0].0.local_name, "payload")
-  assert_eq(c.attributes[0].1, "42")
+  debug_inspect(c.name.uri, content="\"http://example.org/ext\"")
+  debug_inspect(c.attributes[0].0.local_name, content="\"payload\"")
+  debug_inspect(c.attributes[0].1, content="\"42\"")
 }
 
 // --- Shape::GraphicFrame chart content lifts to ChartContent(rid). ---
@@ -127,13 +127,13 @@ test "chart graphicFrame lifts to GraphicFrame(ChartContent)" {
     "</p:spTree></p:cSld>" +
     "</p:sld>"
   let slide = @slide.Slide::parse(@oxml.string_to_bytes(xml))
-  assert_eq(slide.shapes.length(), 1)
+  debug_inspect(slide.shapes.length(), content="1")
   match slide.shapes[0] {
     GraphicFrame(gf) => {
-      assert_eq(gf.id, 5)
-      assert_eq(gf.name, "Chart 1")
+      debug_inspect(gf.id, content="5")
+      debug_inspect(gf.name, content="\"Chart 1\"")
       match gf.content {
-        ChartContent(rid) => assert_eq(rid, "rId7")
+        ChartContent(rid) => debug_inspect(rid, content="\"rId7\"")
         _ => fail("expected ChartContent for chart uri")
       }
     }
@@ -167,9 +167,10 @@ test "ADR-004: AutoShape preserves <p:style> in extension" {
       // <p:cNvPr>, <p:cNvSpPr> etc. from inside <p:nvSpPr>, so there
       // are several entries — assert on the one we care about by name.
       let style = find_local(s.extension, "style").unwrap()
-      assert_eq(style.children.length(), 1)
+      debug_inspect(style.children.length(), content="1")
       match style.children[0] {
-        Element(ln_ref) => assert_eq(ln_ref.name.local_name, "lnRef")
+        Element(ln_ref) =>
+          debug_inspect(ln_ref.name.local_name, content="\"lnRef\"")
         _ => fail("expected <a:lnRef> child of <p:style>")
       }
     }
@@ -215,7 +216,11 @@ test "ADR-004: Picture preserves <p:extLst> in extension" {
     "</p:sld>"
   let slide = @slide.Slide::parse(@oxml.string_to_bytes(xml))
   match slide.shapes[0] {
-    Picture(p) => assert_true(find_local(p.extension, "extLst") is Some(_))
+    Picture(p) =>
+      debug_inspect(
+        find_local(p.extension, "extLst") is Some(_),
+        content="true",
+      )
     _ => fail("expected Picture")
   }
 }
@@ -239,7 +244,8 @@ test "ADR-004: Connector preserves <p:style> in extension" {
     "</p:sld>"
   let slide = @slide.Slide::parse(@oxml.string_to_bytes(xml))
   match slide.shapes[0] {
-    Connector(c) => assert_true(find_local(c.extension, "style") is Some(_))
+    Connector(c) =>
+      debug_inspect(find_local(c.extension, "style") is Some(_), content="true")
     _ => fail("expected Connector")
   }
 }
@@ -265,7 +271,7 @@ test "ADR-004: GroupShape captures foreign-namespace siblings" {
   match slide.shapes[0] {
     Group(g) => {
       let special = find_local(g.extension, "special").unwrap()
-      assert_eq(special.name.uri, "http://example.org/ext")
+      debug_inspect(special.name.uri, content="\"http://example.org/ext\"")
     }
     _ => fail("expected Group")
   }

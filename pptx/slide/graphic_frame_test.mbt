@@ -86,31 +86,31 @@ fn simple_table_graphic_frame_xml() -> String {
 test "parse: graphicFrame with table lifts to GraphicFrame(TableContent)" {
   let bytes = slide_with_shapes_xml(simple_table_graphic_frame_xml())
   let slide = @slide.Slide::parse(bytes)
-  assert_eq(slide.shapes.length(), 1)
+  debug_inspect(slide.shapes.length(), content="1")
   match slide.shapes[0] {
     GraphicFrame(gf) => {
-      assert_eq(gf.id, 7)
-      assert_eq(gf.name, "Table 1")
+      debug_inspect(gf.id, content="7")
+      debug_inspect(gf.name, content="\"Table 1\"")
       // Transform comes from <p:xfrm>.
       let xfrm = gf.transform.unwrap()
-      assert_eq(xfrm.offset.x, Emu(914400L))
-      assert_eq(xfrm.extent.cx, Emu(4572000L))
+      debug_inspect(xfrm.offset.x, content="Emu(914400)")
+      debug_inspect(xfrm.extent.cx, content="Emu(4572000)")
       // Content is typed.
       match gf.content {
         TableContent(t) => {
-          assert_eq(t.grid.length(), 2)
-          assert_eq(t.grid[0], Emu(2286000L))
-          assert_eq(t.rows.length(), 2)
-          assert_eq(t.rows[0].cells.length(), 2)
+          debug_inspect(t.grid.length(), content="2")
+          debug_inspect(t.grid[0], content="Emu(2286000)")
+          debug_inspect(t.rows.length(), content="2")
+          debug_inspect(t.rows[0].cells.length(), content="2")
           // Cell A1 text:
           let a1 = t.rows[0].cells[0]
           let body = a1.text_body.unwrap()
-          assert_eq(body.plain_text(), "A1")
+          debug_inspect(body.plain_text(), content="\"A1\"")
           // Defaults: no merge, span=1.
-          assert_eq(a1.grid_span, 1)
-          assert_eq(a1.row_span, 1)
-          assert_true(!a1.h_merge)
-          assert_true(!a1.v_merge)
+          debug_inspect(a1.grid_span, content="1")
+          debug_inspect(a1.row_span, content="1")
+          debug_inspect(!a1.h_merge, content="true")
+          debug_inspect(!a1.v_merge, content="true")
         }
         _ => fail("expected TableContent")
       }
@@ -148,19 +148,19 @@ test "parse: gridSpan + rowSpan + hMerge + vMerge attributes preserved" {
       match gf.content {
         TableContent(t) => {
           let origin = t.rows[0].cells[0]
-          assert_eq(origin.grid_span, 2)
-          assert_eq(origin.row_span, 2)
-          assert_true(!origin.h_merge)
-          assert_true(!origin.v_merge)
+          debug_inspect(origin.grid_span, content="2")
+          debug_inspect(origin.row_span, content="2")
+          debug_inspect(!origin.h_merge, content="true")
+          debug_inspect(!origin.v_merge, content="true")
           let cov_h = t.rows[0].cells[1]
-          assert_true(cov_h.h_merge)
-          assert_true(!cov_h.v_merge)
+          debug_inspect(cov_h.h_merge, content="true")
+          debug_inspect(!cov_h.v_merge, content="true")
           let cov_v = t.rows[1].cells[0]
-          assert_true(!cov_v.h_merge)
-          assert_true(cov_v.v_merge)
+          debug_inspect(!cov_v.h_merge, content="true")
+          debug_inspect(cov_v.v_merge, content="true")
           let cov_hv = t.rows[1].cells[1]
-          assert_true(cov_hv.h_merge)
-          assert_true(cov_hv.v_merge)
+          debug_inspect(cov_hv.h_merge, content="true")
+          debug_inspect(cov_hv.v_merge, content="true")
         }
         _ => fail("expected TableContent")
       }
@@ -175,7 +175,7 @@ test "Slide::serialize: graphicFrame + table round-trips" {
   let bytes_in = slide_with_shapes_xml(simple_table_graphic_frame_xml())
   let s0 = @slide.Slide::parse(bytes_in)
   let s1 = @slide.Slide::parse(s0.serialize())
-  assert_true(s0 == s1)
+  debug_inspect(s0 == s1, content="true")
 }
 
 ///|
@@ -197,7 +197,7 @@ test "Slide::serialize: chart graphicFrame round-trips via ChartContent" {
   let bytes_in = slide_with_shapes_xml(body)
   let s0 = @slide.Slide::parse(bytes_in)
   let s1 = @slide.Slide::parse(s0.serialize())
-  assert_true(s0 == s1)
+  debug_inspect(s0 == s1, content="true")
 }
 
 ///|
@@ -226,5 +226,5 @@ test "Slide::serialize: merged-cell flags round-trip" {
   let bytes_in = slide_with_shapes_xml(body)
   let s0 = @slide.Slide::parse(bytes_in)
   let s1 = @slide.Slide::parse(s0.serialize())
-  assert_true(s0 == s1)
+  debug_inspect(s0 == s1, content="true")
 }

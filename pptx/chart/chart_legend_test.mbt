@@ -20,9 +20,9 @@ fn fixture_legend_chart_xml(legend_body : String) -> FixedArray[Byte] {
 test "ChartLegend: empty legend parses to empty body" {
   let chart = @chart.Chart::parse(fixture_legend_chart_xml("<c:legend/>"))
   let lg = chart.chart.legend.unwrap()
-  assert_true(lg.legend_pos is None)
-  assert_eq(lg.legend_entries.length(), 0)
-  assert_true(lg.overlay is None)
+  debug_inspect(lg.legend_pos is None, content="true")
+  debug_inspect(lg.legend_entries.length(), content="0")
+  debug_inspect(lg.overlay is None, content="true")
 }
 
 ///|
@@ -33,7 +33,7 @@ test "ChartLegend: legendPos every variant" {
     let original = @chart.Chart::parse(fixture_legend_chart_xml(body))
     let bytes = original.serialize()
     let re_parsed = @chart.Chart::parse(bytes)
-    assert_eq(re_parsed, original)
+    debug_inspect(re_parsed == original, content="true")
   }
 }
 
@@ -45,8 +45,8 @@ test "ChartLegend: typed values lift correctly" {
     "</c:legend>"
   let chart = @chart.Chart::parse(fixture_legend_chart_xml(body))
   let lg = chart.chart.legend.unwrap()
-  assert_true(lg.legend_pos is Some(LegendRight))
-  assert_eq(lg.overlay.unwrap(), false)
+  debug_inspect(lg.legend_pos is Some(LegendRight), content="true")
+  debug_inspect(lg.overlay.unwrap(), content="false")
 }
 
 ///|
@@ -63,11 +63,11 @@ test "ChartLegend: legendEntry collected with idx + delete" {
     "</c:legend>"
   let chart = @chart.Chart::parse(fixture_legend_chart_xml(body))
   let lg = chart.chart.legend.unwrap()
-  assert_eq(lg.legend_entries.length(), 2)
-  assert_eq(lg.legend_entries[0].idx, 0)
-  assert_eq(lg.legend_entries[0].delete.unwrap(), true)
-  assert_eq(lg.legend_entries[1].idx, 2)
-  assert_true(lg.legend_entries[1].delete is None)
+  debug_inspect(lg.legend_entries.length(), content="2")
+  debug_inspect(lg.legend_entries[0].idx, content="0")
+  debug_inspect(lg.legend_entries[0].delete.unwrap(), content="true")
+  debug_inspect(lg.legend_entries[1].idx, content="2")
+  debug_inspect(lg.legend_entries[1].delete is None, content="true")
 }
 
 ///|
@@ -93,12 +93,12 @@ test "ChartLegend: layout / spPr / txPr captured" {
     "</c:legend>"
   let original = @chart.Chart::parse(fixture_legend_chart_xml(body))
   let lg = original.chart.legend.unwrap()
-  assert_true(lg.layout is Some(_))
-  assert_true(lg.sp_pr is Some(_))
-  assert_true(lg.tx_pr is Some(_))
+  debug_inspect(lg.layout is Some(_), content="true")
+  debug_inspect(lg.sp_pr is Some(_), content="true")
+  debug_inspect(lg.tx_pr is Some(_), content="true")
   let bytes = original.serialize()
   let re_parsed = @chart.Chart::parse(bytes)
-  assert_eq(re_parsed, original)
+  debug_inspect(re_parsed == original, content="true")
 }
 
 ///|
@@ -111,10 +111,10 @@ test "ChartLegend: legendEntry txPr captured + round-trips" {
     "</c:legend>"
   let original = @chart.Chart::parse(fixture_legend_chart_xml(body))
   let entry = original.chart.legend.unwrap().legend_entries[0]
-  assert_true(entry.tx_pr is Some(_))
+  debug_inspect(entry.tx_pr is Some(_), content="true")
   let bytes = original.serialize()
   let re_parsed = @chart.Chart::parse(bytes)
-  assert_eq(re_parsed, original)
+  debug_inspect(re_parsed == original, content="true")
 }
 
 ///|
@@ -125,10 +125,10 @@ test "ChartLegend: extLst rides on extension and round-trips" {
     "</c:legend>"
   let original = @chart.Chart::parse(fixture_legend_chart_xml(body))
   let lg = original.chart.legend.unwrap()
-  assert_eq(lg.extension.length(), 1)
+  debug_inspect(lg.extension.length(), content="1")
   let bytes = original.serialize()
   let re_parsed = @chart.Chart::parse(bytes)
-  assert_eq(re_parsed, original)
+  debug_inspect(re_parsed == original, content="true")
 }
 
 ///|
@@ -145,5 +145,5 @@ test "ChartLegend: out-of-source-order children re-emit canonically" {
   let original = @chart.Chart::parse(fixture_legend_chart_xml(body))
   let bytes = original.serialize()
   let re_parsed = @chart.Chart::parse(bytes)
-  assert_eq(re_parsed, original)
+  debug_inspect(re_parsed == original, content="true")
 }

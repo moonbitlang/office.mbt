@@ -121,12 +121,15 @@ fn chart_deck() -> FixedArray[Byte] {
 test "chart deck opens and Presentation::charts() finds the part" {
   let prs = @presentation.Presentation::open(chart_deck())
   let charts = prs.charts()
-  assert_eq(charts.length(), 1)
+  debug_inspect(charts.length(), content="1")
   let chart = charts[0]
   // The fixture's chart is a bar chart; check for the expected
   // typed plot kind.
-  assert_eq(chart.chart.plot_area.plots.length(), 1)
-  assert_eq(chart.chart.plot_area.plots[0].local_name(), "barChart")
+  debug_inspect(chart.chart.plot_area.plots.length(), content="1")
+  debug_inspect(
+    chart.chart.plot_area.plots[0].local_name(),
+    content="\"barChart\"",
+  )
 }
 
 ///|
@@ -137,13 +140,13 @@ test "slide-side chart graphicFrame lifts to ChartContent(rid)" {
   // what we're testing here, not slide-ordering.
   let pkg = @opc.Package::open(chart_deck())
   let slide_parts = parts_of(pkg, ct_slide)
-  assert_eq(slide_parts.length(), 1)
+  debug_inspect(slide_parts.length(), content="1")
   let s = @slide.Slide::parse(slide_parts[0].bytes)
-  assert_eq(s.shapes.length(), 1)
+  debug_inspect(s.shapes.length(), content="1")
   match s.shapes[0] {
     GraphicFrame(gf) =>
       match gf.content {
-        ChartContent(rid) => assert_eq(rid, "rId2")
+        ChartContent(rid) => debug_inspect(rid, content="\"rId2\"")
         _ => fail("expected ChartContent")
       }
     _ => fail("expected GraphicFrame shape")
@@ -157,8 +160,8 @@ test "chart deck round-trips through Package::to_bytes" {
   let prs_out = @presentation.Presentation::open(bytes)
   let charts_in = prs_in.charts()
   let charts_out = prs_out.charts()
-  assert_eq(charts_in.length(), charts_out.length())
-  assert_true(charts_in[0] == charts_out[0])
+  debug_inspect(charts_in.length() == charts_out.length(), content="true")
+  debug_inspect(charts_in[0] == charts_out[0], content="true")
 }
 
 ///|
@@ -174,7 +177,7 @@ test "slide-side ChartContent survives re_serialize_all" {
   match s.shapes[0] {
     GraphicFrame(gf) =>
       match gf.content {
-        ChartContent(rid) => assert_eq(rid, "rId2")
+        ChartContent(rid) => debug_inspect(rid, content="\"rId2\"")
         _ => fail("expected ChartContent post round-trip")
       }
     _ => fail("expected GraphicFrame shape post round-trip")
@@ -196,11 +199,11 @@ test "chart-builder produces valid chart parts" {
   let chart_built = @chart.Chart::of_bar(data)
   let chart_bytes = chart_built.serialize()
   let chart_reparsed = @chart.Chart::parse(chart_bytes)
-  assert_eq(chart_reparsed, chart_built)
+  debug_inspect(chart_reparsed == chart_built, content="true")
   match chart_reparsed.chart.plot_area.plots[0] {
     BarChart(b) => {
-      assert_eq(b.bar_dir, Col)
-      assert_eq(b.series.length(), 1)
+      debug_inspect(b.bar_dir, content="Col")
+      debug_inspect(b.series.length(), content="1")
     }
     _ => fail("expected BarChart")
   }
@@ -252,8 +255,8 @@ test "chart-builder bar / line / pie all round-trip through a package" {
     let pkg_bytes = build_pptx("/ppt/presentation.xml", parts)
     let prs = @presentation.Presentation::open(pkg_bytes)
     let charts = prs.charts()
-    assert_eq(charts.length(), 1)
-    assert_eq(charts[0], chart)
+    debug_inspect(charts.length(), content="1")
+    debug_inspect(charts[0] == chart, content="true")
   }
 }
 
@@ -274,9 +277,9 @@ test "chart_deck re_serialize_all preserves Chart" {
   let pkg_out = @opc.Package::open(pkg_re.to_bytes())
   let parts_in = parts_of(pkg_in, @oxml.ct_chart)
   let parts_out = parts_of(pkg_out, @oxml.ct_chart)
-  assert_eq(parts_in.length(), 1)
-  assert_eq(parts_out.length(), 1)
+  debug_inspect(parts_in.length(), content="1")
+  debug_inspect(parts_out.length(), content="1")
   let c_in = @chart.Chart::parse(parts_in[0].bytes)
   let c_out = @chart.Chart::parse(parts_out[0].bytes)
-  assert_true(c_in == c_out)
+  debug_inspect(c_in == c_out, content="true")
 }

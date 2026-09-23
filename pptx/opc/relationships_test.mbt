@@ -17,18 +17,21 @@ fn rels_xml(body : String) -> String {
 
 ///|
 test "rels_path_for: package root" {
-  assert_eq(@opc.rels_path_for(@opc.package_root), "/_rels/.rels")
+  debug_inspect(
+    @opc.rels_path_for(@opc.package_root),
+    content="\"/_rels/.rels\"",
+  )
 }
 
 ///|
 test "rels_path_for: part" {
-  assert_eq(
+  debug_inspect(
     @opc.rels_path_for("/ppt/presentation.xml"),
-    "/ppt/_rels/presentation.xml.rels",
+    content="\"/ppt/_rels/presentation.xml.rels\"",
   )
-  assert_eq(
+  debug_inspect(
     @opc.rels_path_for("/ppt/slides/slide1.xml"),
-    "/ppt/slides/_rels/slide1.xml.rels",
+    content="\"/ppt/slides/_rels/slide1.xml.rels\"",
   )
 }
 
@@ -36,53 +39,53 @@ test "rels_path_for: part" {
 
 ///|
 test "resolve_target: relative inside same dir" {
-  assert_eq(
+  debug_inspect(
     @opc.resolve_target("/ppt/presentation.xml", "slides/slide1.xml", Internal),
-    "/ppt/slides/slide1.xml",
+    content="\"/ppt/slides/slide1.xml\"",
   )
 }
 
 ///|
 test "resolve_target: walks `..`" {
-  assert_eq(
+  debug_inspect(
     @opc.resolve_target(
       "/ppt/slides/slide1.xml",
       "../media/image1.png",
       Internal,
     ),
-    "/ppt/media/image1.png",
+    content="\"/ppt/media/image1.png\"",
   )
 }
 
 ///|
 test "resolve_target: absolute target unchanged" {
-  assert_eq(
+  debug_inspect(
     @opc.resolve_target(
       "/ppt/slides/slide1.xml",
       "/docProps/core.xml",
       Internal,
     ),
-    "/docProps/core.xml",
+    content="\"/docProps/core.xml\"",
   )
 }
 
 ///|
 test "resolve_target: external target unchanged" {
-  assert_eq(
+  debug_inspect(
     @opc.resolve_target(
       "/ppt/slides/slide1.xml",
       "https://example.org/x.png",
       External,
     ),
-    "https://example.org/x.png",
+    content="\"https://example.org/x.png\"",
   )
 }
 
 ///|
 test "resolve_target: from package root" {
-  assert_eq(
+  debug_inspect(
     @opc.resolve_target(@opc.package_root, "ppt/presentation.xml", Internal),
-    "/ppt/presentation.xml",
+    content="\"/ppt/presentation.xml\"",
   )
 }
 
@@ -94,11 +97,11 @@ test "parse single Internal relationship" {
     "<Relationship Id=\"rId1\" Type=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument\" Target=\"ppt/presentation.xml\"/>",
   )
   let rels = @opc.Relationships::parse(@opc.package_root, @fzip.str_to_u8(xml))
-  assert_eq(rels.items.length(), 1)
+  debug_inspect(rels.items.length(), content="1")
   let r = rels.items[0]
-  assert_eq(r.id, "rId1")
-  assert_eq(r.target, "ppt/presentation.xml")
-  assert_true(r.target_mode is Internal)
+  debug_inspect(r.id, content="\"rId1\"")
+  debug_inspect(r.target, content="\"ppt/presentation.xml\"")
+  debug_inspect(r.target_mode is Internal, content="true")
 }
 
 ///|
@@ -107,7 +110,7 @@ test "parse External TargetMode" {
     "<Relationship Id=\"rId7\" Type=\"http://example/external\" Target=\"https://example.org/x\" TargetMode=\"External\"/>",
   )
   let rels = @opc.Relationships::parse("/foo.xml", @fzip.str_to_u8(xml))
-  assert_true(rels.items[0].target_mode is External)
+  debug_inspect(rels.items[0].target_mode is External, content="true")
 }
 
 ///|
@@ -158,9 +161,9 @@ test "serialize -> parse round trip preserves entries" {
     })
   let bytes = original.serialize()
   let reparsed = @opc.Relationships::parse(@opc.package_root, bytes)
-  assert_eq(reparsed.items.length(), 2)
+  debug_inspect(reparsed.items.length(), content="2")
   for i in 0..<original.items.length() {
-    assert_eq(reparsed.items[i], original.items[i])
+    debug_inspect(reparsed.items[i] == original.items[i], content="true")
   }
 }
 
@@ -208,11 +211,11 @@ test "by_id and by_type lookups" {
       target: "c",
       target_mode: Internal,
     })
-  assert_eq(rels.by_id("rId2").unwrap().target, "b")
-  assert_true(rels.by_id("missing") is None)
-  assert_eq(rels.by_type("type-a").length(), 2)
-  assert_eq(rels.by_type("type-b").length(), 1)
-  assert_eq(rels.by_type("missing").length(), 0)
+  debug_inspect(rels.by_id("rId2").unwrap().target, content="\"b\"")
+  debug_inspect(rels.by_id("missing") is None, content="true")
+  debug_inspect(rels.by_type("type-a").length(), content="2")
+  debug_inspect(rels.by_type("type-b").length(), content="1")
+  debug_inspect(rels.by_type("missing").length(), content="0")
 }
 
 // --- Package integration ---
@@ -247,8 +250,8 @@ test "Package::relationships_for: package root" {
   ])
   let pkg = @opc.Package::open(bytes)
   let rels = pkg.relationships_for(@opc.package_root)
-  assert_eq(rels.items.length(), 1)
-  assert_eq(rels.items[0].id, "rId1")
+  debug_inspect(rels.items.length(), content="1")
+  debug_inspect(rels.items[0].id, content="\"rId1\"")
 }
 
 ///|
@@ -256,7 +259,7 @@ test "Package::relationships_for: missing rels file returns empty" {
   let bytes = make_pkg_with_rels([("ppt/presentation.xml", "<presentation/>")])
   let pkg = @opc.Package::open(bytes)
   let rels = pkg.relationships_for("/ppt/presentation.xml")
-  assert_eq(rels.items.length(), 0)
+  debug_inspect(rels.items.length(), content="0")
 }
 
 ///|
@@ -271,13 +274,13 @@ test "Package::relationships_for: part-level rels" {
   ])
   let pkg = @opc.Package::open(bytes)
   let rels = pkg.relationships_for("/ppt/presentation.xml")
-  assert_eq(rels.items.length(), 1)
+  debug_inspect(rels.items.length(), content="1")
   let target = @opc.resolve_target(
     "/ppt/presentation.xml",
     rels.items[0].target,
     rels.items[0].target_mode,
   )
-  assert_eq(target, "/ppt/slides/slide1.xml")
+  debug_inspect(target, content="\"/ppt/slides/slide1.xml\"")
   // Verify the resolved target is in fact a real part.
-  assert_true(!(pkg.part_by_name(target) is None))
+  debug_inspect(!(pkg.part_by_name(target) is None), content="true")
 }

@@ -28,10 +28,10 @@ test "externalData: round-trips via Chart.extension" {
     "</c:chartSpace>"
   let original = @chart.Chart::parse(@oxml.string_to_bytes(xml))
   // externalData isn't a typed field; it rides on Chart.extension.
-  assert_eq(original.extension.length(), 1)
+  debug_inspect(original.extension.length(), content="1")
   let bytes = original.serialize()
   let re_parsed = @chart.Chart::parse(bytes)
-  assert_eq(re_parsed, original)
+  debug_inspect(re_parsed == original, content="true")
 }
 
 ///|
@@ -47,16 +47,16 @@ test "externalData: rId attribute survives the round-trip" {
     "</c:chartSpace>"
   let original = @chart.Chart::parse(@oxml.string_to_bytes(xml))
   let ext = original.extension[0]
-  assert_eq(ext.name.local_name, "externalData")
+  debug_inspect(ext.name.local_name, content="\"externalData\"")
   // Verify the r:id attribute is captured verbatim.
   let mut found_rid = false
   for kv in ext.attributes {
     if kv.0.local_name == "id" {
-      assert_eq(kv.1, "rId42")
+      debug_inspect(kv.1, content="\"rId42\"")
       found_rid = true
     }
   }
-  assert_true(found_rid)
+  debug_inspect(found_rid, content="true")
 }
 
 ///|
@@ -82,8 +82,8 @@ test "externalData: works alongside a typed chart" {
     "<c:externalData r:id=\"rId1\"/>" +
     "</c:chartSpace>"
   let original = @chart.Chart::parse(@oxml.string_to_bytes(xml))
-  assert_eq(original.extension.length(), 1)
+  debug_inspect(original.extension.length(), content="1")
   let bytes = original.serialize()
   let re_parsed = @chart.Chart::parse(bytes)
-  assert_eq(re_parsed, original)
+  debug_inspect(re_parsed == original, content="true")
 }

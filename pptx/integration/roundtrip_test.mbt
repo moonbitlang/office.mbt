@@ -87,13 +87,13 @@ test "minimal_deck: Package::open succeeds and every parser handles its part" {
   let (themes, masters, layouts, slides, notes, authors, comments) = parse_everything(
     pkg,
   )
-  assert_eq(themes, 1)
-  assert_eq(masters, 1)
-  assert_eq(layouts, 1)
-  assert_eq(slides, 1)
-  assert_eq(notes, 0)
-  assert_eq(authors, 0)
-  assert_eq(comments, 0)
+  debug_inspect(themes, content="1")
+  debug_inspect(masters, content="1")
+  debug_inspect(layouts, content="1")
+  debug_inspect(slides, content="1")
+  debug_inspect(notes, content="0")
+  debug_inspect(authors, content="0")
+  debug_inspect(comments, content="0")
 }
 
 ///|
@@ -101,10 +101,13 @@ test "minimal_deck: slide carries the encoded title text" {
   let pkg = @opc.Package::open(minimal_deck())
   let part = pkg.require_part("/ppt/slides/slide1.xml")
   let slide = @slide.Slide::parse(part.bytes)
-  assert_eq(slide.shapes.length(), 1)
+  debug_inspect(slide.shapes.length(), content="1")
   match slide.shapes[0] {
     AutoShape(s) =>
-      assert_eq(s.text_body.unwrap().plain_text(), "Hello, MoonBit")
+      debug_inspect(
+        s.text_body.unwrap().plain_text(),
+        content="\"Hello, MoonBit\"",
+      )
     _ => fail("expected AutoShape")
   }
 }
@@ -114,8 +117,8 @@ test "minimal_deck: theme carries Office colour-scheme name" {
   let pkg = @opc.Package::open(minimal_deck())
   let part = pkg.require_part("/ppt/theme/theme1.xml")
   let t = @theme.Theme::parse(part.bytes)
-  assert_eq(t.name, "Office")
-  assert_eq(t.color_scheme.name, "Office")
+  debug_inspect(t.name, content="\"Office\"")
+  debug_inspect(t.color_scheme.name, content="\"Office\"")
 }
 
 ///|
@@ -123,8 +126,8 @@ test "minimal_deck: master clrMap resolves bg1 -> lt1" {
   let pkg = @opc.Package::open(minimal_deck())
   let part = pkg.require_part("/ppt/slideMasters/slideMaster1.xml")
   let m = @slide_master.SlideMaster::parse(part.bytes)
-  assert_true(m.color_mapping.bg1 == Lt1)
-  assert_true(m.color_mapping.tx1 == Dk1)
+  debug_inspect(m.color_mapping.bg1, content="Lt1")
+  debug_inspect(m.color_mapping.tx1, content="Dk1")
 }
 
 ///|
@@ -136,7 +139,7 @@ test "minimal_deck: round-trip via to_bytes yields identical parsed results" {
   // Same set of parts, same content types, same byte payload per part.
   let names_in = pkg_in.parts().map(p => p.name)
   let names_out = pkg_out.parts().map(p => p.name)
-  assert_eq(names_in.length(), names_out.length())
+  debug_inspect(names_in.length() == names_out.length(), content="true")
   // Every parsed structure equals on both sides — Eq is derived on
   // every model node so this catches any silent data loss.
   let slide_in = @slide.Slide::parse(
@@ -145,14 +148,14 @@ test "minimal_deck: round-trip via to_bytes yields identical parsed results" {
   let slide_out = @slide.Slide::parse(
     pkg_out.require_part("/ppt/slides/slide1.xml").bytes,
   )
-  assert_true(slide_in == slide_out)
+  debug_inspect(slide_in == slide_out, content="true")
   let theme_in = @theme.Theme::parse(
     pkg_in.require_part("/ppt/theme/theme1.xml").bytes,
   )
   let theme_out = @theme.Theme::parse(
     pkg_out.require_part("/ppt/theme/theme1.xml").bytes,
   )
-  assert_true(theme_in == theme_out)
+  debug_inspect(theme_in == theme_out, content="true")
 }
 
 // --- rich_deck ---
@@ -162,7 +165,7 @@ test "rich_deck: every parser handles its part (no panics)" {
   let pkg = @opc.Package::open(rich_deck())
   let (_, _, _, slides, _, _, _) = parse_everything(pkg)
   // Minimal deck has 1 slide; rich adds a second.
-  assert_eq(slides, 2)
+  debug_inspect(slides, content="2")
 }
 
 ///|
@@ -172,7 +175,7 @@ test "rich_deck: rich slide contains every shape kind" {
     pkg.require_part("/ppt/slides/slide2.xml").bytes,
   )
   // AutoShape(body) + Picture + AutoShape(custGeom) + Connector + Group
-  assert_eq(slide.shapes.length(), 5)
+  debug_inspect(slide.shapes.length(), content="5")
   let mut autoshape_count = 0
   let mut picture_count = 0
   let mut connector_count = 0
@@ -187,10 +190,10 @@ test "rich_deck: rich slide contains every shape kind" {
       Unknown(_) => fail("rich deck should not produce Unknown shapes")
     }
   }
-  assert_eq(autoshape_count, 2)
-  assert_eq(picture_count, 1)
-  assert_eq(connector_count, 1)
-  assert_eq(group_count, 1)
+  debug_inspect(autoshape_count, content="2")
+  debug_inspect(picture_count, content="1")
+  debug_inspect(connector_count, content="1")
+  debug_inspect(group_count, content="1")
 }
 
 ///|
@@ -204,10 +207,10 @@ test "rich_deck: custGeom AutoShape lifts to typed CustomGeometry" {
     AutoShape(s) =>
       match s.geometry.unwrap() {
         Custom(cg) => {
-          assert_eq(cg.paths.length(), 1)
+          debug_inspect(cg.paths.length(), content="1")
           // moveTo + lnTo + lnTo + close
-          assert_eq(cg.paths[0].commands.length(), 4)
-          assert_true(cg.rect is Some(_))
+          debug_inspect(cg.paths[0].commands.length(), content="4")
+          debug_inspect(cg.rect is Some(_), content="true")
         }
         _ => fail("expected Custom geometry")
       }
@@ -225,7 +228,7 @@ test "rich_deck: round-trip via to_bytes preserves the rich slide" {
   let slide_out = @slide.Slide::parse(
     pkg_out.require_part("/ppt/slides/slide2.xml").bytes,
   )
-  assert_true(slide_in == slide_out)
+  debug_inspect(slide_in == slide_out, content="true")
 }
 
 // --- notes_and_comments_deck ---
@@ -234,10 +237,10 @@ test "rich_deck: round-trip via to_bytes preserves the rich slide" {
 test "notes_and_comments_deck: notes + commentAuthors + comments all parse" {
   let pkg = @opc.Package::open(notes_and_comments_deck())
   let (_, _, _, slides, notes, authors, comments) = parse_everything(pkg)
-  assert_eq(slides, 1)
-  assert_eq(notes, 1)
-  assert_eq(authors, 1)
-  assert_eq(comments, 1)
+  debug_inspect(slides, content="1")
+  debug_inspect(notes, content="1")
+  debug_inspect(authors, content="1")
+  debug_inspect(comments, content="1")
 }
 
 ///|
@@ -247,12 +250,12 @@ test "notes_and_comments_deck: notes slide carries the encoded paragraph" {
     pkg.require_part("/ppt/notesSlides/notesSlide1.xml").bytes,
   )
   // sldImg-style first placeholder isn't in this fixture; just the body.
-  assert_eq(n.shapes.length(), 1)
+  debug_inspect(n.shapes.length(), content="1")
   match n.shapes[0] {
     AutoShape(s) =>
-      assert_eq(
+      debug_inspect(
         s.text_body.unwrap().plain_text(),
-        "Remember to mention pricing.",
+        content="\"Remember to mention pricing.\"",
       )
     _ => fail("expected AutoShape with notes body")
   }
@@ -267,14 +270,20 @@ test "notes_and_comments_deck: comment authors and comments cross-reference" {
   let cms = @comments.CommentList::parse(
     pkg.require_part("/ppt/comments/comment1.xml").bytes,
   )
-  assert_eq(authors.authors.length(), 2)
-  assert_eq(cms.comments.length(), 2)
+  debug_inspect(authors.authors.length(), content="2")
+  debug_inspect(cms.comments.length(), content="2")
   // First comment is by author 0 (Alice); second by author 1 (Bob).
   // Verify the join works.
-  assert_eq(cms.comments[0].author_id, authors.authors[0].id)
-  assert_eq(cms.comments[1].author_id, authors.authors[1].id)
-  assert_eq(authors.authors[0].name, "Alice")
-  assert_eq(cms.comments[0].text, "Looks great!")
+  debug_inspect(
+    cms.comments[0].author_id == authors.authors[0].id,
+    content="true",
+  )
+  debug_inspect(
+    cms.comments[1].author_id == authors.authors[1].id,
+    content="true",
+  )
+  debug_inspect(authors.authors[0].name, content="\"Alice\"")
+  debug_inspect(cms.comments[0].text, content="\"Looks great!\"")
 }
 
 ///|
@@ -287,14 +296,14 @@ test "notes_and_comments_deck: round-trip preserves notes + comments" {
   let n_out = @notes.NotesSlide::parse(
     pkg_out.require_part("/ppt/notesSlides/notesSlide1.xml").bytes,
   )
-  assert_true(n_in == n_out)
+  debug_inspect(n_in == n_out, content="true")
   let cms_in = @comments.CommentList::parse(
     pkg_in.require_part("/ppt/comments/comment1.xml").bytes,
   )
   let cms_out = @comments.CommentList::parse(
     pkg_out.require_part("/ppt/comments/comment1.xml").bytes,
   )
-  assert_true(cms_in == cms_out)
+  debug_inspect(cms_in == cms_out, content="true")
 }
 
 // --- cross-fixture sanity ---

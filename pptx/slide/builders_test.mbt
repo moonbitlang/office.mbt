@@ -11,21 +11,21 @@ test "AutoShape::rect: produces expected preset + transform" {
     cx=Emu(300L),
     cy=Emu(400L),
   )
-  assert_eq(s.id, 42)
-  assert_eq(s.name, "MyRect")
+  debug_inspect(s.id, content="42")
+  debug_inspect(s.name, content="\"MyRect\"")
   let xfrm = s.transform.unwrap()
-  assert_eq(xfrm.offset.x, Emu(100L))
-  assert_eq(xfrm.offset.y, Emu(200L))
-  assert_eq(xfrm.extent.cx, Emu(300L))
-  assert_eq(xfrm.extent.cy, Emu(400L))
+  debug_inspect(xfrm.offset.x, content="Emu(100)")
+  debug_inspect(xfrm.offset.y, content="Emu(200)")
+  debug_inspect(xfrm.extent.cx, content="Emu(300)")
+  debug_inspect(xfrm.extent.cy, content="Emu(400)")
   match s.geometry.unwrap() {
     Preset(p, adj) => {
-      assert_true(p == Rect)
-      assert_eq(adj.length(), 0)
+      debug_inspect(p, content="Rect")
+      debug_inspect(adj.length(), content="0")
     }
     _ => fail("expected Preset geometry")
   }
-  assert_true(s.text_body is None)
+  debug_inspect(s.text_body is None, content="true")
 }
 
 ///|
@@ -39,7 +39,7 @@ test "AutoShape::ellipse / round_rect: vary only the preset enum" {
     cy=Emu(1L),
   )
   match e.geometry.unwrap() {
-    Preset(p, _) => assert_true(p == Ellipse)
+    Preset(p, _) => debug_inspect(p, content="Ellipse")
     _ => fail("expected Ellipse")
   }
   let r = @slide.AutoShape::round_rect(
@@ -51,7 +51,7 @@ test "AutoShape::ellipse / round_rect: vary only the preset enum" {
     cy=Emu(1L),
   )
   match r.geometry.unwrap() {
-    Preset(p, _) => assert_true(p == RoundRect)
+    Preset(p, _) => debug_inspect(p, content="RoundRect")
     _ => fail("expected RoundRect")
   }
 }
@@ -68,19 +68,19 @@ test "AutoShape::textbox: rect geometry + text body" {
     "Hello",
   )
   match tb.geometry.unwrap() {
-    Preset(p, _) => assert_true(p == Rect)
+    Preset(p, _) => debug_inspect(p, content="Rect")
     _ => fail("expected Rect geometry on text box")
   }
   let body = tb.text_body.unwrap()
-  assert_eq(body.plain_text(), "Hello")
+  debug_inspect(body.plain_text(), content="\"Hello\"")
 }
 
 ///|
 test "TextBody::of_text: single paragraph with one run" {
   let body = @slide.TextBody::of_text("Hi there")
-  assert_eq(body.paragraphs.length(), 1)
-  assert_eq(body.paragraphs[0].content.length(), 1)
-  assert_eq(body.plain_text(), "Hi there")
+  debug_inspect(body.paragraphs.length(), content="1")
+  debug_inspect(body.paragraphs[0].content.length(), content="1")
+  debug_inspect(body.plain_text(), content="\"Hi there\"")
 }
 
 ///|
@@ -91,37 +91,37 @@ test "RunProperties: fluent setters chain" {
     .with_italic()
     .with_font("Helvetica")
     .with_color(@units.RgbColor::new(0x10, 0x20, 0x30))
-  assert_eq(rp.font_size.unwrap(), Pt(24.0))
-  assert_eq(rp.bold.unwrap(), true)
-  assert_eq(rp.italic.unwrap(), true)
-  assert_eq(rp.latin.unwrap(), "Helvetica")
-  assert_true(rp.fill is Some(_))
+  debug_inspect(rp.font_size.unwrap(), content="Pt(24)")
+  debug_inspect(rp.bold.unwrap(), content="true")
+  debug_inspect(rp.italic.unwrap(), content="true")
+  debug_inspect(rp.latin.unwrap(), content="\"Helvetica\"")
+  debug_inspect(rp.fill is Some(_), content="true")
 }
 
 ///|
 test "RunProperties: fluent setters do not mutate the original" {
   let base = @slide.RunProperties::default()
   let bigger = base.with_font_size(Pt(36.0))
-  assert_true(base.font_size is None)
-  assert_eq(bigger.font_size.unwrap(), Pt(36.0))
+  debug_inspect(base.font_size is None, content="true")
+  debug_inspect(bigger.font_size.unwrap(), content="Pt(36)")
 }
 
 ///|
 test "Paragraph::with_alignment: lifts to alignment field" {
   let p = @slide.Paragraph::of_text("Centred").with_alignment(AlignCenter)
-  assert_true(p.properties.alignment is Some(AlignCenter))
+  debug_inspect(p.properties.alignment is Some(AlignCenter), content="true")
 }
 
 ///|
 test "TextBody::of_styled_text: run carries the styling" {
   let rp = @slide.RunProperties::default().with_font_size(Pt(18.0)).with_bold()
   let body = @slide.TextBody::of_styled_text("Bold 18", rp)
-  assert_eq(body.paragraphs.length(), 1)
+  debug_inspect(body.paragraphs.length(), content="1")
   match body.paragraphs[0].content[0] {
     RunContent(r) => {
-      assert_eq(r.text, "Bold 18")
-      assert_eq(r.properties.font_size.unwrap(), Pt(18.0))
-      assert_eq(r.properties.bold.unwrap(), true)
+      debug_inspect(r.text, content="\"Bold 18\"")
+      debug_inspect(r.properties.font_size.unwrap(), content="Pt(18)")
+      debug_inspect(r.properties.bold.unwrap(), content="true")
     }
     _ => fail("expected RunContent")
   }
@@ -132,8 +132,8 @@ test "TextBody::of_paragraphs: passes through" {
   let p0 = @slide.Paragraph::of_text("one")
   let p1 = @slide.Paragraph::of_text("two")
   let body = @slide.TextBody::of_paragraphs([p0, p1])
-  assert_eq(body.paragraphs.length(), 2)
-  assert_eq(body.plain_text(), "one\ntwo")
+  debug_inspect(body.paragraphs.length(), content="2")
+  debug_inspect(body.plain_text(), content="\"one\\ntwo\"")
 }
 
 ///|
@@ -148,8 +148,8 @@ test "AutoShape::with_fill / with_stroke / with_no_fill chain" {
   )
   // rect ships with default fill + stroke; with_no_fill explicitly opts out.
   let bare = s.with_no_fill().with_no_stroke()
-  assert_true(bare.fill is Some(_)) // NoFill, not None — explicit
-  assert_true(bare.stroke is None)
+  debug_inspect(bare.fill is Some(_), content="true") // NoFill, not None — explicit
+  debug_inspect(bare.stroke is None, content="true")
   // with_fill overrides the default.
   let yellow = @units.RgbColor::new(0xFF, 0xCC, 0x00)
   let painted = s.with_fill(SolidFill(@oxml.Color::srgb(yellow)))
@@ -174,8 +174,8 @@ test "AutoShape::with_text_body: attaches styled body" {
     @slide.RunProperties::default().with_font_size(Pt(28.0)).with_bold(),
   )
   let styled = s.with_text_body(body)
-  assert_true(styled.text_body is Some(_))
-  assert_eq(styled.text_body.unwrap().plain_text(), "Header")
+  debug_inspect(styled.text_body is Some(_), content="true")
+  debug_inspect(styled.text_body.unwrap().plain_text(), content="\"Header\"")
 }
 
 ///|
@@ -191,7 +191,7 @@ test "Slide::with_shape: appends shape; original unchanged" {
     "<p:grpSpPr/>" +
     "</p:spTree></p:cSld></p:sld>"
   let original = @slide.Slide::parse(@oxml.string_to_bytes(xml))
-  assert_eq(original.shapes.length(), 0)
+  debug_inspect(original.shapes.length(), content="0")
   let rect = @slide.AutoShape::rect(
     id=2,
     name="R",
@@ -201,10 +201,10 @@ test "Slide::with_shape: appends shape; original unchanged" {
     cy=Emu(100L),
   )
   let modified = original.with_shape(AutoShape(rect))
-  assert_eq(modified.shapes.length(), 1)
+  debug_inspect(modified.shapes.length(), content="1")
   // The original slide's shapes array stays empty — `with_shape`
   // copies before pushing.
-  assert_eq(original.shapes.length(), 0)
+  debug_inspect(original.shapes.length(), content="0")
 }
 
 ///|
@@ -240,16 +240,16 @@ test "AutoShape: structural fields survive Slide::serialize" {
   let s = base.with_shape(AutoShape(rect))
   let bytes = s.serialize()
   let s_reparsed = @slide.Slide::parse(bytes)
-  assert_eq(s_reparsed.shapes.length(), 1)
+  debug_inspect(s_reparsed.shapes.length(), content="1")
   match s_reparsed.shapes[0] {
     AutoShape(a) => {
-      assert_eq(a.id, 2)
-      assert_eq(a.name, "R")
+      debug_inspect(a.id, content="2")
+      debug_inspect(a.name, content="\"R\"")
       let xfrm = a.transform.unwrap()
-      assert_eq(xfrm.offset.x, Emu(100L))
-      assert_eq(xfrm.extent.cx, Emu(300L))
+      debug_inspect(xfrm.offset.x, content="Emu(100)")
+      debug_inspect(xfrm.extent.cx, content="Emu(300)")
       match a.geometry.unwrap() {
-        Preset(p, _) => assert_true(p == Rect)
+        Preset(p, _) => debug_inspect(p, content="Rect")
         _ => fail("expected Rect preset")
       }
     }
@@ -285,7 +285,7 @@ test "AutoShape: second round-trip is Eq-stable" {
     base.with_shape(AutoShape(rect)).serialize(),
   )
   let s_second = @slide.Slide::parse(s_first.serialize())
-  assert_true(s_first == s_second)
+  debug_inspect(s_first == s_second, content="true")
 }
 
 ///|
@@ -305,10 +305,10 @@ test "Picture::with_crop: applies SrcRect with the given percentages" {
     bottom=Percentage(20.0),
   )
   let rect = pic.blip_fill.src_rect.unwrap()
-  assert_eq(rect.left, Percentage(5.0))
-  assert_eq(rect.top, Percentage(10.0))
-  assert_eq(rect.right, Percentage(15.0))
-  assert_eq(rect.bottom, Percentage(20.0))
+  debug_inspect(rect.left, content="Percentage(5)")
+  debug_inspect(rect.top, content="Percentage(10)")
+  debug_inspect(rect.right, content="Percentage(15)")
+  debug_inspect(rect.bottom, content="Percentage(20)")
 }
 
 ///|
@@ -323,10 +323,10 @@ test "Picture::with_crop: defaults to 0% on all edges" {
     cy=Emu(100L),
   ).with_crop(left=Percentage(10.0))
   let rect = pic.blip_fill.src_rect.unwrap()
-  assert_eq(rect.left, Percentage(10.0))
-  assert_eq(rect.top, Percentage(0.0))
-  assert_eq(rect.right, Percentage(0.0))
-  assert_eq(rect.bottom, Percentage(0.0))
+  debug_inspect(rect.left, content="Percentage(10)")
+  debug_inspect(rect.top, content="Percentage(0)")
+  debug_inspect(rect.right, content="Percentage(0)")
+  debug_inspect(rect.bottom, content="Percentage(0)")
 }
 
 ///|
@@ -344,10 +344,10 @@ test "Picture::with_crop: idempotent — second call replaces, not merges" {
     .with_crop(top=Percentage(10.0))
   let rect = pic.blip_fill.src_rect.unwrap()
   // Only `top` survives — the earlier left+right crop was replaced.
-  assert_eq(rect.left, Percentage(0.0))
-  assert_eq(rect.top, Percentage(10.0))
-  assert_eq(rect.right, Percentage(0.0))
-  assert_eq(rect.bottom, Percentage(0.0))
+  debug_inspect(rect.left, content="Percentage(0)")
+  debug_inspect(rect.top, content="Percentage(10)")
+  debug_inspect(rect.right, content="Percentage(0)")
+  debug_inspect(rect.bottom, content="Percentage(0)")
 }
 
 ///|
@@ -361,15 +361,15 @@ test "AutoShape::of_preset: carries the chosen preset geometry" {
     cx=Emu(30L),
     cy=Emu(40L),
   )
-  assert_eq(s.id, 7)
-  assert_eq(s.name, "Star")
+  debug_inspect(s.id, content="7")
+  debug_inspect(s.name, content="\"Star\"")
   let xfrm = s.transform.unwrap()
-  assert_eq(xfrm.offset.x, Emu(10L))
-  assert_eq(xfrm.extent.cy, Emu(40L))
+  debug_inspect(xfrm.offset.x, content="Emu(10)")
+  debug_inspect(xfrm.extent.cy, content="Emu(40)")
   match s.geometry.unwrap() {
     Preset(p, adj) => {
-      assert_true(p == Star5)
-      assert_eq(adj.length(), 0)
+      debug_inspect(p, content="Star5")
+      debug_inspect(adj.length(), content="0")
     }
     _ => fail("expected Preset geometry")
   }
@@ -402,9 +402,9 @@ test "AutoShape::with_stroke sets the outline; other fields untouched" {
     cy=Emu(10L),
   )
   let styled = base.with_stroke(stroke)
-  assert_true(styled.stroke == Some(stroke))
-  assert_true(base.stroke is None) // immutable builder (ADR-003)
-  assert_eq(styled.id, base.id)
+  debug_inspect(styled.stroke == Some(stroke), content="true")
+  debug_inspect(base.stroke is None, content="true") // immutable builder (ADR-003)
+  debug_inspect(styled.id == base.id, content="true")
 }
 
 ///|
@@ -413,14 +413,14 @@ test "Paragraph::of_styled_text + with_properties" {
   let para = @slide.Paragraph::of_styled_text("hi", rp)
   match para.content[0] {
     RunContent(r) => {
-      assert_eq(r.text, "hi")
-      assert_eq(r.properties.bold.unwrap(), true)
+      debug_inspect(r.text, content="\"hi\"")
+      debug_inspect(r.properties.bold.unwrap(), content="true")
     }
     _ => fail("expected a run")
   }
   // with_properties replaces the paragraph-level properties wholesale.
   let props = { ..@slide.ParagraphProperties::default(), level: 2, }
   let levelled = para.with_properties(props)
-  assert_eq(levelled.properties.level, 2)
-  assert_eq(para.properties.level, 0) // original unchanged
+  debug_inspect(levelled.properties.level, content="2")
+  debug_inspect(para.properties.level, content="0") // original unchanged
 }

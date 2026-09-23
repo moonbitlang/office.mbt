@@ -27,9 +27,9 @@ test "SurfaceChart: wireframe + ax_ids" {
   let chart = @chart.Chart::parse(fixture_surface_chart_xml(body))
   match chart.chart.plot_area.plots[0] {
     SurfaceChart(b) => {
-      assert_eq(b.wireframe.unwrap(), true)
-      assert_eq(b.series.length(), 1)
-      assert_eq(b.ax_ids.length(), 3)
+      debug_inspect(b.wireframe.unwrap(), content="true")
+      debug_inspect(b.series.length(), content="1")
+      debug_inspect(b.ax_ids.length(), content="3")
     }
     _ => fail("expected SurfaceChart plot")
   }
@@ -45,7 +45,7 @@ test "SurfaceChart: round-trip" {
   let original = @chart.Chart::parse(fixture_surface_chart_xml(body))
   let bytes = original.serialize()
   let re_parsed = @chart.Chart::parse(bytes)
-  assert_eq(re_parsed, original)
+  debug_inspect(re_parsed == original, content="true")
 }
 
 ///|
@@ -59,8 +59,8 @@ test "Surface3DChart: three axIds" {
   let chart = @chart.Chart::parse(fixture_surface_chart_xml(body))
   match chart.chart.plot_area.plots[0] {
     Surface3DChart(b) => {
-      assert_eq(b.wireframe.unwrap(), true)
-      assert_eq(b.ax_ids.length(), 3)
+      debug_inspect(b.wireframe.unwrap(), content="true")
+      debug_inspect(b.ax_ids.length(), content="3")
     }
     _ => fail("expected Surface3DChart plot")
   }
@@ -76,5 +76,5 @@ test "Surface3DChart: round-trip" {
   let original = @chart.Chart::parse(fixture_surface_chart_xml(body))
   let bytes = original.serialize()
   let re_parsed = @chart.Chart::parse(bytes)
-  assert_eq(re_parsed, original)
+  debug_inspect(re_parsed == original, content="true")
 }

@@ -31,14 +31,14 @@ fn reparse_effect_list(el : @oxml.EffectList) -> @oxml.EffectList raise {
 ///|
 test "Blur / Glow / SoftEdge constructors set their fields" {
   let blur = @oxml.Blur::new(Emu(50_800L))
-  assert_eq(blur.rad, Emu(50_800L))
-  assert_true(blur.grow is None)
-  assert_eq(@oxml.Blur::new(Emu(1L), grow=true).grow, Some(true))
+  debug_inspect(blur.rad, content="Emu(50800)")
+  debug_inspect(blur.grow is None, content="true")
+  debug_inspect(@oxml.Blur::new(Emu(1L), grow=true).grow, content="Some(true)")
   let red = @oxml.Color::srgb(@units.RgbColor::new(0xFF, 0x00, 0x00))
   let glow = @oxml.Glow::new(Emu(63_500L), red)
-  assert_eq(glow.rad, Emu(63_500L))
-  assert_true(glow.color == red)
-  assert_eq(@oxml.SoftEdge::new(Emu(12_700L)).rad, Emu(12_700L))
+  debug_inspect(glow.rad, content="Emu(63500)")
+  debug_inspect(glow.color == red, content="true")
+  debug_inspect(@oxml.SoftEdge::new(Emu(12_700L)).rad, content="Emu(12700)")
 }
 
 ///|
@@ -50,18 +50,18 @@ test "InnerShadow / PresetShadow constructors set every required attribute" {
     dir=@units.Angle::from_ooxml(2_700_000),
     color=black,
   )
-  assert_eq(inner.blur_rad, Emu(50_800L))
-  assert_eq(inner.dist, Emu(25_400L))
-  assert_eq(inner.dir.to_ooxml(), 2_700_000)
+  debug_inspect(inner.blur_rad, content="Emu(50800)")
+  debug_inspect(inner.dist, content="Emu(25400)")
+  debug_inspect(inner.dir.to_ooxml(), content="2700000")
   let preset = @oxml.PresetShadow::new(
     "shdw4",
     dist=Emu(38_100L),
     dir=@units.Angle::from_ooxml(5_400_000),
     color=black,
   )
-  assert_eq(preset.preset, "shdw4")
-  assert_eq(preset.dist, Emu(38_100L))
-  assert_eq(preset.dir.to_ooxml(), 5_400_000)
+  debug_inspect(preset.preset, content="\"shdw4\"")
+  debug_inspect(preset.dist, content="Emu(38100)")
+  debug_inspect(preset.dir.to_ooxml(), content="5400000")
 }
 
 ///|
@@ -73,8 +73,11 @@ test "OuterShadow::new leaves the optionals unset; with_* fill them" {
     dir=@units.Angle::from_ooxml(2_700_000),
     color=black,
   )
-  assert_true(base.sx is None && base.kx is None)
-  assert_true(base.alignment is None && base.rotate_with_shape is None)
+  debug_inspect(base.sx is None && base.kx is None, content="true")
+  debug_inspect(
+    base.alignment is None && base.rotate_with_shape is None,
+    content="true",
+  )
   let full = base
     .with_scale(sx=Percentage(90.0), sy=Percentage(80.0))
     .with_skew(
@@ -83,20 +86,23 @@ test "OuterShadow::new leaves the optionals unset; with_* fill them" {
     )
     .with_alignment(RectBottomLeft)
     .with_rotate_with_shape(false)
-  assert_eq(full.sx, Some(Percentage(90.0)))
-  assert_eq(full.sy, Some(Percentage(80.0)))
-  assert_eq(full.kx.unwrap().to_ooxml(), 60_000)
-  assert_eq(full.ky.unwrap().to_ooxml(), 120_000)
-  assert_true(full.alignment is Some(RectBottomLeft))
-  assert_eq(full.rotate_with_shape, Some(false))
+  debug_inspect(full.sx, content="Some(Percentage(90))")
+  debug_inspect(full.sy, content="Some(Percentage(80))")
+  debug_inspect(full.kx.unwrap().to_ooxml(), content="60000")
+  debug_inspect(full.ky.unwrap().to_ooxml(), content="120000")
+  debug_inspect(full.alignment is Some(RectBottomLeft), content="true")
+  debug_inspect(full.rotate_with_shape, content="Some(false)")
   // The base is untouched — builders are immutable (ADR-003).
-  assert_true(base.sx is None)
+  debug_inspect(base.sx is None, content="true")
 }
 
 ///|
 test "Reflection::default is empty; with_* set every attribute" {
   let r = @oxml.Reflection::default()
-  assert_true(r.blur_rad is None && r.st_a is None && r.dir is None)
+  debug_inspect(
+    r.blur_rad is None && r.st_a is None && r.dir is None,
+    content="true",
+  )
   let full = r
     .with_blur_rad(Emu(6_350L))
     .with_alpha(start=Percentage(60.0), end=Percentage(0.0))
@@ -111,20 +117,20 @@ test "Reflection::default is empty; with_* set every attribute" {
     )
     .with_alignment(RectBottomLeft)
     .with_rotate_with_shape(false)
-  assert_eq(full.blur_rad, Some(Emu(6_350L)))
-  assert_eq(full.st_a, Some(Percentage(60.0)))
-  assert_eq(full.end_a, Some(Percentage(0.0)))
-  assert_eq(full.st_pos, Some(Percentage(0.0)))
-  assert_eq(full.end_pos, Some(Percentage(55.0)))
-  assert_eq(full.dist, Some(Emu(50_800L)))
-  assert_eq(full.dir.unwrap().to_ooxml(), 5_400_000)
-  assert_eq(full.fade_dir.unwrap().to_ooxml(), 5_400_000)
-  assert_eq(full.sx, Some(Percentage(100.0)))
-  assert_eq(full.sy, Some(Percentage(-100.0)))
-  assert_eq(full.kx.unwrap().to_ooxml(), 0)
-  assert_eq(full.ky.unwrap().to_ooxml(), 30_000)
-  assert_true(full.alignment is Some(RectBottomLeft))
-  assert_eq(full.rotate_with_shape, Some(false))
+  debug_inspect(full.blur_rad, content="Some(Emu(6350))")
+  debug_inspect(full.st_a, content="Some(Percentage(60))")
+  debug_inspect(full.end_a, content="Some(Percentage(0))")
+  debug_inspect(full.st_pos, content="Some(Percentage(0))")
+  debug_inspect(full.end_pos, content="Some(Percentage(55))")
+  debug_inspect(full.dist, content="Some(Emu(50800))")
+  debug_inspect(full.dir.unwrap().to_ooxml(), content="5400000")
+  debug_inspect(full.fade_dir.unwrap().to_ooxml(), content="5400000")
+  debug_inspect(full.sx, content="Some(Percentage(100))")
+  debug_inspect(full.sy, content="Some(Percentage(-100))")
+  debug_inspect(full.kx.unwrap().to_ooxml(), content="0")
+  debug_inspect(full.ky.unwrap().to_ooxml(), content="30000")
+  debug_inspect(full.alignment is Some(RectBottomLeft), content="true")
+  debug_inspect(full.rotate_with_shape, content="Some(false)")
 }
 
 ///|
@@ -132,8 +138,11 @@ test "EffectList::empty + with_* build a list the writer round-trips" {
   let black = @oxml.Color::srgb(@units.RgbColor::new(0, 0, 0))
   let red = @oxml.Color::srgb(@units.RgbColor::new(0xFF, 0x00, 0x00))
   let empty = @oxml.EffectList::empty()
-  assert_true(empty.blur is None && empty.outer_shadow is None)
-  assert_eq(empty.extension.length(), 0)
+  debug_inspect(
+    empty.blur is None && empty.outer_shadow is None,
+    content="true",
+  )
+  debug_inspect(empty.extension.length(), content="0")
   let el = empty
     .with_blur(@oxml.Blur::new(Emu(50_800L), grow=true))
     .with_glow(@oxml.Glow::new(Emu(63_500L), red))
@@ -164,9 +173,15 @@ test "EffectList::empty + with_* build a list the writer round-trips" {
     .with_reflection(@oxml.Reflection::default().with_blur_rad(Emu(6_350L)))
     .with_soft_edge(@oxml.SoftEdge::new(Emu(12_700L)))
   // Every slot is set, and the whole list survives write -> parse.
-  assert_true(el.blur is Some(_) && el.glow is Some(_))
-  assert_true(el.inner_shadow is Some(_) && el.outer_shadow is Some(_))
-  assert_true(el.preset_shadow is Some(_) && el.reflection is Some(_))
-  assert_true(el.soft_edge is Some(_))
-  assert_true(reparse_effect_list(el) == el)
+  debug_inspect(el.blur is Some(_) && el.glow is Some(_), content="true")
+  debug_inspect(
+    el.inner_shadow is Some(_) && el.outer_shadow is Some(_),
+    content="true",
+  )
+  debug_inspect(
+    el.preset_shadow is Some(_) && el.reflection is Some(_),
+    content="true",
+  )
+  debug_inspect(el.soft_edge is Some(_), content="true")
+  debug_inspect(reparse_effect_list(el) == el, content="true")
 }

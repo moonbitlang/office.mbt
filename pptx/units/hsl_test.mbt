@@ -12,47 +12,53 @@ fn rgb_close(a : @units.RgbColor, b : @units.RgbColor, tol : Int) -> Bool {
 
 ///|
 test "primary colors HSL -> RGB" {
-  assert_eq(
-    @units.HslColor::new(0.0, 100.0, 50.0).to_rgb(),
+  debug_inspect(
+    @units.HslColor::new(0.0, 100.0, 50.0).to_rgb() ==
     @units.RgbColor::new(255, 0, 0),
+    content="true",
   )
-  assert_eq(
-    @units.HslColor::new(120.0, 100.0, 50.0).to_rgb(),
+  debug_inspect(
+    @units.HslColor::new(120.0, 100.0, 50.0).to_rgb() ==
     @units.RgbColor::new(0, 255, 0),
+    content="true",
   )
-  assert_eq(
-    @units.HslColor::new(240.0, 100.0, 50.0).to_rgb(),
+  debug_inspect(
+    @units.HslColor::new(240.0, 100.0, 50.0).to_rgb() ==
     @units.RgbColor::new(0, 0, 255),
+    content="true",
   )
 }
 
 ///|
 test "grayscale HSL -> RGB" {
-  assert_eq(
-    @units.HslColor::new(0.0, 0.0, 0.0).to_rgb(),
+  debug_inspect(
+    @units.HslColor::new(0.0, 0.0, 0.0).to_rgb() ==
     @units.RgbColor::new(0, 0, 0),
+    content="true",
   )
-  assert_eq(
-    @units.HslColor::new(0.0, 0.0, 100.0).to_rgb(),
+  debug_inspect(
+    @units.HslColor::new(0.0, 0.0, 100.0).to_rgb() ==
     @units.RgbColor::new(255, 255, 255),
+    content="true",
   )
   // 50% gray rounds to 128
-  assert_eq(
-    @units.HslColor::new(0.0, 0.0, 50.0).to_rgb(),
+  debug_inspect(
+    @units.HslColor::new(0.0, 0.0, 50.0).to_rgb() ==
     @units.RgbColor::new(128, 128, 128),
+    content="true",
   )
 }
 
 ///|
 test "primary colors RGB -> HSL" {
   let red_hsl = @units.RgbColor::new(255, 0, 0).to_hsl()
-  assert_true(approx_eq(red_hsl.hue, 0.0, 1.0e-9))
-  assert_true(approx_eq(red_hsl.saturation, 100.0, 1.0e-9))
-  assert_true(approx_eq(red_hsl.lightness, 50.0, 1.0e-9))
+  debug_inspect(approx_eq(red_hsl.hue, 0.0, 1.0e-9), content="true")
+  debug_inspect(approx_eq(red_hsl.saturation, 100.0, 1.0e-9), content="true")
+  debug_inspect(approx_eq(red_hsl.lightness, 50.0, 1.0e-9), content="true")
   let green_hsl = @units.RgbColor::new(0, 255, 0).to_hsl()
-  assert_true(approx_eq(green_hsl.hue, 120.0, 1.0e-9))
+  debug_inspect(approx_eq(green_hsl.hue, 120.0, 1.0e-9), content="true")
   let blue_hsl = @units.RgbColor::new(0, 0, 255).to_hsl()
-  assert_true(approx_eq(blue_hsl.hue, 240.0, 1.0e-9))
+  debug_inspect(approx_eq(blue_hsl.hue, 240.0, 1.0e-9), content="true")
 }
 
 ///|
@@ -72,7 +78,7 @@ test "RGB -> HSL -> RGB round trip is within ±1 per channel" {
   ]
   for c in cases {
     let round = c.to_hsl().to_rgb()
-    assert_true(rgb_close(c, round, 1))
+    debug_inspect(rgb_close(c, round, 1), content="true")
   }
 }
 
@@ -80,5 +86,5 @@ test "RGB -> HSL -> RGB round trip is within ±1 per channel" {
 test "wrap_hue: HSL accepts out-of-range hue (e.g. -120 = 240)" {
   let a = @units.HslColor::new(-120.0, 100.0, 50.0).to_rgb()
   let b = @units.HslColor::new(240.0, 100.0, 50.0).to_rgb()
-  assert_eq(a, b)
+  debug_inspect(a == b, content="true")
 }

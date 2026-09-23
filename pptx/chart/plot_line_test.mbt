@@ -28,10 +28,10 @@ test "LineChart: minimum (grouping + axIds) types correctly" {
   let chart = @chart.Chart::parse(fixture_line_chart_xml(body))
   match chart.chart.plot_area.plots[0] {
     LineChart(b) => {
-      assert_eq(b.grouping, Standard)
-      assert_eq(b.ax_ids.length(), 2)
-      assert_eq(b.ax_ids[0], 1)
-      assert_eq(b.ax_ids[1], 2)
+      debug_inspect(b.grouping, content="Standard")
+      debug_inspect(b.ax_ids.length(), content="2")
+      debug_inspect(b.ax_ids[0], content="1")
+      debug_inspect(b.ax_ids[1], content="2")
     }
     _ => fail("expected LineChart plot")
   }
@@ -51,11 +51,11 @@ test "LineChart: marker + smooth round-trip" {
   let chart = @chart.Chart::parse(fixture_line_chart_xml(body))
   match chart.chart.plot_area.plots[0] {
     LineChart(b) => {
-      assert_eq(b.grouping, Stacked)
-      assert_eq(b.vary_colors.unwrap(), true)
-      assert_eq(b.marker.unwrap(), true)
-      assert_eq(b.smooth.unwrap(), false)
-      assert_eq(b.series.length(), 1)
+      debug_inspect(b.grouping, content="Stacked")
+      debug_inspect(b.vary_colors.unwrap(), content="true")
+      debug_inspect(b.marker.unwrap(), content="true")
+      debug_inspect(b.smooth.unwrap(), content="false")
+      debug_inspect(b.series.length(), content="1")
     }
     _ => fail("expected LineChart plot")
   }
@@ -74,15 +74,15 @@ test "LineChart: dropLines / hiLowLines / upDownBars round-trip via capture" {
   let original = @chart.Chart::parse(fixture_line_chart_xml(body))
   match original.chart.plot_area.plots[0] {
     LineChart(b) => {
-      assert_true(b.drop_lines is Some(_))
-      assert_true(b.hi_low_lines is Some(_))
-      assert_true(b.up_down_bars is Some(_))
+      debug_inspect(b.drop_lines is Some(_), content="true")
+      debug_inspect(b.hi_low_lines is Some(_), content="true")
+      debug_inspect(b.up_down_bars is Some(_), content="true")
     }
     _ => fail("expected LineChart plot")
   }
   let bytes = original.serialize()
   let re_parsed = @chart.Chart::parse(bytes)
-  assert_eq(re_parsed, original)
+  debug_inspect(re_parsed == original, content="true")
 }
 
 ///|
@@ -114,15 +114,21 @@ test "LineChart: combined with BarChart in one plotArea" {
     "<c:axId val=\"2\"/>" +
     "</c:lineChart>"
   let chart = @chart.Chart::parse(fixture_line_chart_xml(body))
-  assert_eq(chart.chart.plot_area.plots.length(), 2)
-  assert_true(chart.chart.plot_area.plots[0] is BarChart(_))
-  assert_true(chart.chart.plot_area.plots[1] is LineChart(_))
+  debug_inspect(chart.chart.plot_area.plots.length(), content="2")
+  debug_inspect(chart.chart.plot_area.plots[0] is BarChart(_), content="true")
+  debug_inspect(chart.chart.plot_area.plots[1] is LineChart(_), content="true")
 }
 
 ///|
 test "Grouping enum round-trips" {
   for g in [@chart.Grouping::Standard, Stacked, PercentStacked] {
-    assert_true(@chart.Grouping::from_xml(g.to_xml()) is Some(_))
-    assert_eq(@chart.Grouping::from_xml(g.to_xml()).unwrap(), g)
+    debug_inspect(
+      @chart.Grouping::from_xml(g.to_xml()) is Some(_),
+      content="true",
+    )
+    debug_inspect(
+      @chart.Grouping::from_xml(g.to_xml()).unwrap() == g,
+      content="true",
+    )
   }
 }

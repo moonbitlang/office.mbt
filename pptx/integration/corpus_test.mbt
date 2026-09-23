@@ -70,37 +70,46 @@ fn assert_reader_lossless(
   let pkg_out = @opc.Package::open(pkg_re.to_bytes())
   for p in parts_of(pkg_in, ct_theme) {
     let re = @theme.Theme::parse(pkg_out.require_part(p.name).bytes)
-    assert_true(@theme.Theme::parse(p.bytes) == re)
+    debug_inspect(@theme.Theme::parse(p.bytes) == re, content="true")
   }
   for p in parts_of(pkg_in, ct_slide_master) {
     let re = @slide_master.SlideMaster::parse(
       pkg_out.require_part(p.name).bytes,
     )
-    assert_true(@slide_master.SlideMaster::parse(p.bytes) == re)
+    debug_inspect(
+      @slide_master.SlideMaster::parse(p.bytes) == re,
+      content="true",
+    )
   }
   for p in parts_of(pkg_in, ct_slide_layout) {
     let re = @slide_master.SlideLayout::parse(
       pkg_out.require_part(p.name).bytes,
     )
-    assert_true(@slide_master.SlideLayout::parse(p.bytes) == re)
+    debug_inspect(
+      @slide_master.SlideLayout::parse(p.bytes) == re,
+      content="true",
+    )
   }
   for p in parts_of(pkg_in, ct_slide) {
     let re = @slide.Slide::parse(pkg_out.require_part(p.name).bytes)
-    assert_true(@slide.Slide::parse(p.bytes) == re)
+    debug_inspect(@slide.Slide::parse(p.bytes) == re, content="true")
   }
   for p in parts_of(pkg_in, ct_notes_slide) {
     let re = @notes.NotesSlide::parse(pkg_out.require_part(p.name).bytes)
-    assert_true(@notes.NotesSlide::parse(p.bytes) == re)
+    debug_inspect(@notes.NotesSlide::parse(p.bytes) == re, content="true")
   }
   for p in parts_of(pkg_in, ct_comment_authors) {
     let re = @comments.CommentAuthorList::parse(
       pkg_out.require_part(p.name).bytes,
     )
-    assert_true(@comments.CommentAuthorList::parse(p.bytes) == re)
+    debug_inspect(
+      @comments.CommentAuthorList::parse(p.bytes) == re,
+      content="true",
+    )
   }
   for p in parts_of(pkg_in, ct_comments) {
     let re = @comments.CommentList::parse(pkg_out.require_part(p.name).bytes)
-    assert_true(@comments.CommentList::parse(p.bytes) == re)
+    debug_inspect(@comments.CommentList::parse(p.bytes) == re, content="true")
   }
   counts
 }
@@ -112,10 +121,10 @@ test "corpus testPPT: parse → serialise → re-parse is lossless" {
   let (themes, masters, layouts, slides, _, _, _) = assert_reader_lossless(
     corpus_testppt(),
   )
-  assert_eq(themes, 1)
-  assert_eq(masters, 1)
-  assert_eq(layouts, 11)
-  assert_eq(slides, 3)
+  debug_inspect(themes, content="1")
+  debug_inspect(masters, content="1")
+  debug_inspect(layouts, content="11")
+  debug_inspect(slides, content="3")
 }
 
 ///|
@@ -136,7 +145,7 @@ test "corpus testPPT: real slide text survives the round-trip" {
       _ => ()
     }
   }
-  assert_true(text.contains("Attachment Test"))
+  debug_inspect(text.contains("Attachment Test"), content="true")
 }
 
 // --- table_test.pptx: a real Office table ---
@@ -144,7 +153,7 @@ test "corpus testPPT: real slide text survives the round-trip" {
 ///|
 test "corpus table_test: parse → serialise → re-parse is lossless" {
   let (_, _, _, slides, _, _, _) = assert_reader_lossless(corpus_table_test())
-  assert_eq(slides, 1)
+  debug_inspect(slides, content="1")
 }
 
 ///|
@@ -168,8 +177,8 @@ test "corpus table_test: the table lifts to the typed model" {
       _ => ()
     }
   }
-  assert_eq(cols, 3)
-  assert_eq(rows, 6)
+  debug_inspect(cols, content="3")
+  debug_inspect(rows, content="6")
 }
 
 // --- with_japanese.pptx: CJK + astral-plane (surrogate pair) text ---
@@ -179,7 +188,7 @@ test "corpus with_japanese: parse → serialise → re-parse is lossless" {
   let (_, _, _, slides, _, _, _) = assert_reader_lossless(
     corpus_with_japanese(),
   )
-  assert_eq(slides, 1)
+  debug_inspect(slides, content="1")
 }
 
 ///|
@@ -206,10 +215,13 @@ test "corpus with_japanese: CJK and surrogate-pair text survive UTF round-trips"
 
   collect(reparsed.shapes)
   // Real Japanese content (CJK, BMP)…
-  assert_true(text.contains("ゾルゲと尾崎、淡々と最期"))
+  debug_inspect(
+    text.contains("ゾルゲと尾崎、淡々と最期"),
+    content="true",
+  )
   // …and Gothic script (U+10330 block — UTF-16 surrogate pairs), the
   // hardest case for the UTF-8 ↔ UTF-16 boundary in the XML layer.
-  assert_true(text.contains("𐌲𐌿𐍄𐌹𐍃𐌺"))
+  debug_inspect(text.contains("𐌲𐌿𐍄𐌹𐍃𐌺"), content="true")
 }
 
 ///|
@@ -223,18 +235,24 @@ test "corpus with_japanese: the theme names the font CJK actually renders in" {
     pkg.require_part("/ppt/theme/theme1.xml").bytes,
   )
   let scheme = theme.font_scheme
-  assert_eq(scheme.minor_font.ea, "")
-  assert_eq(
+  debug_inspect(scheme.minor_font.ea, content="\"\"")
+  debug_inspect(
     scheme.minor_font.typeface_for_script("Jpan"),
-    "ＭＳ Ｐゴシック",
+    content="\"ＭＳ Ｐゴシック\"",
   )
-  assert_eq(scheme.minor_font.typeface_for_script("Hans"), "宋体")
+  debug_inspect(
+    scheme.minor_font.typeface_for_script("Hans"),
+    content="\"宋体\"",
+  )
   // A run following the theme resolves through it rather than yielding "+mn-lt".
   let themed = @slide.RunProperties::default().with_font("+mn-lt")
-  assert_eq(@slide.resolve_run_fonts(themed, scheme).latin, "Calibri")
-  assert_eq(
+  debug_inspect(
+    @slide.resolve_run_fonts(themed, scheme).latin,
+    content="\"Calibri\"",
+  )
+  debug_inspect(
     @slide.resolve_run_font_for_script(themed, scheme, "Jpan"),
-    "ＭＳ Ｐゴシック",
+    content="\"ＭＳ Ｐゴシック\"",
   )
 }
 
@@ -243,19 +261,34 @@ test "corpus testPPT: app.xml merge preserves the vt subtrees" {
   let prs = @presentation.Presentation::open(corpus_testppt())
   // The real Office part carries statistics and vt: vectors we must
   // not disturb when editing the typed fields.
-  assert_eq(prs.app_properties().company.unwrap(), "Pegasystems")
+  debug_inspect(
+    prs.app_properties().company.unwrap(),
+    content="\"Pegasystems\"",
+  )
   prs.set_app_properties_mut(
     @presentation.AppProperties::new().with_company("moon-pptx tests"),
   )
   let reopened = @presentation.Presentation::open(prs.save())
-  assert_eq(reopened.app_properties().company.unwrap(), "moon-pptx tests")
+  debug_inspect(
+    reopened.app_properties().company.unwrap(),
+    content="\"moon-pptx tests\"",
+  )
   let xml = @oxml.bytes_to_string(
     @opc.Package::open(prs.save()).require_part("/docProps/app.xml").bytes,
   )
   // Office's statistics and both vt: vectors are still intact.
-  assert_true(xml.contains("<TotalTime>1</TotalTime>"))
-  assert_true(xml.contains("<vt:lpstr>Attachment Test</vt:lpstr>"))
-  assert_true(xml.contains("<vt:vector size=\"4\" baseType=\"variant\">"))
-  assert_true(xml.contains("<AppVersion>12.0000</AppVersion>"))
-  assert_true(!xml.contains("Pegasystems"))
+  debug_inspect(xml.contains("<TotalTime>1</TotalTime>"), content="true")
+  debug_inspect(
+    xml.contains("<vt:lpstr>Attachment Test</vt:lpstr>"),
+    content="true",
+  )
+  debug_inspect(
+    xml.contains("<vt:vector size=\"4\" baseType=\"variant\">"),
+    content="true",
+  )
+  debug_inspect(
+    xml.contains("<AppVersion>12.0000</AppVersion>"),
+    content="true",
+  )
+  debug_inspect(!xml.contains("Pegasystems"), content="true")
 }

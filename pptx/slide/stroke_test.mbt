@@ -44,13 +44,13 @@ test "shape stroke: a:ln on spPr lifts to AutoShape.stroke" {
     "</a:ln>"
   let slide = @slide.Slide::parse(slide_with_sp_body(body))
   let s = shape_stroke(slide).unwrap()
-  assert_eq(s.width.unwrap(), Emu(9525L))
-  assert_true(s.cap.unwrap() is CapFlat)
-  assert_true(s.dash.unwrap() is DashDash)
+  debug_inspect(s.width.unwrap(), content="Emu(9525)")
+  debug_inspect(s.cap.unwrap() is CapFlat, content="true")
+  debug_inspect(s.dash.unwrap() is DashDash, content="true")
   match s.fill.unwrap() {
     SolidFill(c) =>
       match c.base {
-        Srgb(rgb) => assert_eq(rgb.to_hex(), "123456")
+        Srgb(rgb) => debug_inspect(rgb.to_hex(), content="\"123456\"")
         _ => fail("expected Srgb")
       }
     _ => fail("expected SolidFill")
@@ -61,7 +61,7 @@ test "shape stroke: a:ln on spPr lifts to AutoShape.stroke" {
 test "shape stroke: shape without a:ln leaves stroke = None" {
   let body = "<a:prstGeom prst=\"rect\"><a:avLst/></a:prstGeom>"
   let slide = @slide.Slide::parse(slide_with_sp_body(body))
-  assert_true(shape_stroke(slide) is None)
+  debug_inspect(shape_stroke(slide) is None, content="true")
 }
 
 ///|
@@ -72,10 +72,10 @@ test "shape stroke: a:ln with arrows lands on the right ends" {
     "</a:ln>"
   let slide = @slide.Slide::parse(slide_with_sp_body(body))
   let s = shape_stroke(slide).unwrap()
-  assert_true(s.head_end.unwrap().arrow_type is ArrowOval)
+  debug_inspect(s.head_end.unwrap().arrow_type is ArrowOval, content="true")
   let t = s.tail_end.unwrap()
-  assert_true(t.arrow_type is ArrowTriangle)
-  assert_true(t.width.unwrap() is SizeLarge)
+  debug_inspect(t.arrow_type is ArrowTriangle, content="true")
+  debug_inspect(t.width.unwrap() is SizeLarge, content="true")
 }
 
 ///|

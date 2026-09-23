@@ -11,7 +11,7 @@ fn roundtrip_notes(bytes : FixedArray[Byte]) -> @notes.NotesSlide raise {
 test "NotesSlide::serialize: round-trips the typical notes slide" {
   let n0 = @notes.NotesSlide::parse(typical_notes())
   let n1 = roundtrip_notes(typical_notes())
-  assert_true(n0 == n1)
+  debug_inspect(n0 == n1, content="true")
 }
 
 ///|
@@ -19,7 +19,10 @@ test "NotesSlide::serialize: body placeholder text preserved" {
   let n1 = roundtrip_notes(typical_notes())
   match n1.shapes[1] {
     AutoShape(s) =>
-      assert_eq(s.text_body.unwrap().plain_text(), "Speaker notes here.")
+      debug_inspect(
+        s.text_body.unwrap().plain_text(),
+        content="\"Speaker notes here.\"",
+      )
     _ => fail("expected AutoShape with body")
   }
 }

@@ -37,17 +37,17 @@ fn parse_inner_color(inner : String) -> @oxml.Color raise @oxml.ColorError {
 test "Color: srgbClr base" {
   let c = parse_inner_color("<a:srgbClr val=\"FF0000\"/>")
   match c.base {
-    Srgb(rgb) => assert_eq(rgb.to_hex(), "FF0000")
+    Srgb(rgb) => debug_inspect(rgb.to_hex(), content="\"FF0000\"")
     _ => fail("expected Srgb")
   }
-  assert_eq(c.transforms.length(), 0)
+  debug_inspect(c.transforms.length(), content="0")
 }
 
 ///|
 test "Color: schemeClr base" {
   let c = parse_inner_color("<a:schemeClr val=\"accent3\"/>")
   match c.base {
-    Scheme(t) => assert_true(t is Accent3)
+    Scheme(t) => debug_inspect(t is Accent3, content="true")
     _ => fail("expected Scheme")
   }
 }
@@ -57,8 +57,8 @@ test "Color: sysClr base with lastClr fallback" {
   let c = parse_inner_color("<a:sysClr val=\"windowText\" lastClr=\"000000\"/>")
   match c.base {
     Sys(s) => {
-      assert_eq(s.val, "windowText")
-      assert_eq(s.last_clr.unwrap().to_hex(), "000000")
+      debug_inspect(s.val, content="\"windowText\"")
+      debug_inspect(s.last_clr.unwrap().to_hex(), content="\"000000\"")
     }
     _ => fail("expected Sys")
   }
@@ -73,9 +73,9 @@ test "Color: hslClr base" {
   // 7_200_000 = 120 deg, 50_000 OOXML = 50%
   match c.base {
     Hsl(h) => {
-      assert_eq(h.hue, 120.0)
-      assert_eq(h.saturation, 50.0)
-      assert_eq(h.lightness, 60.0)
+      debug_inspect(h.hue, content="120")
+      debug_inspect(h.saturation, content="50")
+      debug_inspect(h.lightness, content="60")
     }
     _ => fail("expected Hsl")
   }
@@ -85,7 +85,7 @@ test "Color: hslClr base" {
 test "Color: prstClr base preserves the preset name" {
   let c = parse_inner_color("<a:prstClr val=\"slateGray\"/>")
   match c.base {
-    Preset(s) => assert_eq(s, "slateGray")
+    Preset(s) => debug_inspect(s, content="\"slateGray\"")
     _ => fail("expected Preset")
   }
 }
@@ -96,9 +96,9 @@ test "Color: scrgbClr base reads three percentages" {
   let c = parse_inner_color("<a:scrgbClr r=\"100000\" g=\"0\" b=\"50000\"/>")
   match c.base {
     Scrgb(r, g, b) => {
-      assert_eq(r, Percentage(100.0))
-      assert_eq(g, Percentage(0.0))
-      assert_eq(b, Percentage(50.0))
+      debug_inspect(r, content="Percentage(100)")
+      debug_inspect(g, content="Percentage(0)")
+      debug_inspect(b, content="Percentage(50)")
     }
     _ => fail("expected Scrgb")
   }
@@ -111,13 +111,13 @@ test "Color: tint + shade transforms preserved in source order" {
   let c = parse_inner_color(
     "<a:schemeClr val=\"accent1\"><a:tint val=\"40000\"/><a:shade val=\"20000\"/></a:schemeClr>",
   )
-  assert_eq(c.transforms.length(), 2)
+  debug_inspect(c.transforms.length(), content="2")
   match c.transforms[0] {
-    Tint(p) => assert_eq(p, Percentage(40.0))
+    Tint(p) => debug_inspect(p, content="Percentage(40)")
     _ => fail("expected Tint")
   }
   match c.transforms[1] {
-    Shade(p) => assert_eq(p, Percentage(20.0))
+    Shade(p) => debug_inspect(p, content="Percentage(20)")
     _ => fail("expected Shade")
   }
 }
@@ -133,12 +133,12 @@ test "Color: every supported transform variant" {
     "<a:alpha val=\"80000\"/>" +
     "</a:srgbClr>",
   )
-  assert_eq(c.transforms.length(), 5)
-  assert_true(c.transforms[0] is Tint(_))
-  assert_true(c.transforms[1] is Shade(_))
-  assert_true(c.transforms[2] is SatMod(_))
-  assert_true(c.transforms[3] is LumMod(_))
-  assert_true(c.transforms[4] is Alpha(_))
+  debug_inspect(c.transforms.length(), content="5")
+  debug_inspect(c.transforms[0] is Tint(_), content="true")
+  debug_inspect(c.transforms[1] is Shade(_), content="true")
+  debug_inspect(c.transforms[2] is SatMod(_), content="true")
+  debug_inspect(c.transforms[3] is LumMod(_), content="true")
+  debug_inspect(c.transforms[4] is Alpha(_), content="true")
 }
 
 ///|
@@ -152,7 +152,7 @@ test "Color: long-tail modifiers (hueMod, redMod, comp) silently dropped" {
     "<a:comp/>" +
     "</a:srgbClr>",
   )
-  assert_eq(c.transforms.length(), 0)
+  debug_inspect(c.transforms.length(), content="0")
 }
 
 // --- error paths ---
@@ -202,8 +202,8 @@ test "Color: schemeClr with unknown val rejected" {
 ///|
 test "Color::srgb / Color::scheme constructors" {
   let c1 = @oxml.Color::srgb(@units.RgbColor::parse_hex("ABCDEF"))
-  assert_true(c1.base is Srgb(_))
-  assert_eq(c1.transforms.length(), 0)
+  debug_inspect(c1.base is Srgb(_), content="true")
+  debug_inspect(c1.transforms.length(), content="0")
   let c2 = @oxml.Color::scheme(Accent4)
-  assert_true(c2.base is Scheme(_))
+  debug_inspect(c2.base is Scheme(_), content="true")
 }

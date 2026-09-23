@@ -73,14 +73,14 @@ fn typical_title_slide() -> FixedArray[Byte] {
 ///|
 test "parse: slide name and shape count" {
   let slide = @slide.Slide::parse(typical_title_slide())
-  assert_eq(slide.name, "Title Slide")
-  assert_eq(slide.shapes.length(), 3) // two p:sp + one p:pic
+  debug_inspect(slide.name, content="\"Title Slide\"")
+  debug_inspect(slide.shapes.length(), content="3") // two p:sp + one p:pic
 }
 
 ///|
 test "parse: clrMapOvr defaults to MasterMapping" {
   let slide = @slide.Slide::parse(typical_title_slide())
-  assert_true(slide.clr_map_override is MasterMapping)
+  debug_inspect(slide.clr_map_override is MasterMapping, content="true")
 }
 
 // --- AutoShape ---
@@ -90,16 +90,16 @@ test "parse: AutoShape carries id/name/placeholder/transform" {
   let slide = @slide.Slide::parse(typical_title_slide())
   match slide.shapes[0] {
     AutoShape(s) => {
-      assert_eq(s.id, 2)
-      assert_eq(s.name, "Title 1")
+      debug_inspect(s.id, content="2")
+      debug_inspect(s.name, content="\"Title 1\"")
       let ph = s.placeholder.unwrap()
-      assert_eq(ph.ph_type, "ctrTitle")
-      assert_eq(ph.idx, 0) // missing idx defaults to 0
+      debug_inspect(ph.ph_type, content="\"ctrTitle\"")
+      debug_inspect(ph.idx, content="0") // missing idx defaults to 0
       let xfrm = s.transform.unwrap()
-      assert_eq(xfrm.offset.x, Emu(838200L))
-      assert_eq(xfrm.offset.y, Emu(365125L))
-      assert_eq(xfrm.extent.cx, Emu(10515600L))
-      assert_eq(xfrm.extent.cy, Emu(1325563L))
+      debug_inspect(xfrm.offset.x, content="Emu(838200)")
+      debug_inspect(xfrm.offset.y, content="Emu(365125)")
+      debug_inspect(xfrm.extent.cx, content="Emu(10515600)")
+      debug_inspect(xfrm.extent.cy, content="Emu(1325563)")
     }
     _ => fail("expected AutoShape at index 0")
   }
@@ -111,8 +111,8 @@ test "parse: AutoShape with explicit placeholder idx" {
   match slide.shapes[1] {
     AutoShape(s) => {
       let ph = s.placeholder.unwrap()
-      assert_eq(ph.ph_type, "subTitle")
-      assert_eq(ph.idx, 1)
+      debug_inspect(ph.ph_type, content="\"subTitle\"")
+      debug_inspect(ph.idx, content="1")
     }
     _ => fail("expected AutoShape at index 1")
   }
@@ -123,17 +123,17 @@ test "parse: shape order is preserved" {
   let slide = @slide.Slide::parse(typical_title_slide())
   // shapes[0] = title sp, shapes[1] = subtitle sp, shapes[2] = picture
   match slide.shapes[0] {
-    AutoShape(s) => assert_eq(s.id, 2)
+    AutoShape(s) => debug_inspect(s.id, content="2")
     _ => fail("expected AutoShape at index 0")
   }
   match slide.shapes[1] {
-    AutoShape(s) => assert_eq(s.id, 3)
+    AutoShape(s) => debug_inspect(s.id, content="3")
     _ => fail("expected AutoShape at index 1")
   }
   match slide.shapes[2] {
     Picture(p) => {
-      assert_eq(p.id, 4)
-      assert_eq(p.blip_fill.embed_id, "rId2")
+      debug_inspect(p.id, content="4")
+      debug_inspect(p.blip_fill.embed_id, content="\"rId2\"")
     }
     _ => fail("expected Picture at index 2")
   }
@@ -160,8 +160,8 @@ test "parse: clrMapOvr with overrideClrMapping carries through" {
   let slide = @slide.Slide::parse(@oxml.string_to_bytes(xml))
   match slide.clr_map_override {
     Override(cm) => {
-      assert_true(cm.bg1 is Dk1)
-      assert_true(cm.accent1 is Accent2)
+      debug_inspect(cm.bg1 is Dk1, content="true")
+      debug_inspect(cm.accent1 is Accent2, content="true")
     }
     _ => fail("expected Override")
   }
@@ -246,9 +246,9 @@ test "parse: shape with no placeholder leaves field None" {
   let slide = @slide.Slide::parse(@oxml.string_to_bytes(xml))
   match slide.shapes[0] {
     AutoShape(s) => {
-      assert_true(s.placeholder is None)
-      assert_eq(s.id, 5)
-      assert_eq(s.name, "Rect")
+      debug_inspect(s.placeholder is None, content="true")
+      debug_inspect(s.id, content="5")
+      debug_inspect(s.name, content="\"Rect\"")
     }
     _ => fail("expected AutoShape")
   }

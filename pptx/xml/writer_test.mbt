@@ -11,7 +11,7 @@ test "single empty element self-closes" {
   let w = @xml.XmlWriter::new()
   w.start_element(@xml.QName::unqualified("foo"))
   w.end_element()
-  assert_eq(w.to_string(), "<foo/>")
+  debug_inspect(w.to_string(), content="\"<foo/>\"")
 }
 
 ///|
@@ -20,7 +20,7 @@ test "element with text" {
   w.start_element(@xml.QName::unqualified("foo"))
   w.text("hello")
   w.end_element()
-  assert_eq(w.to_string(), "<foo>hello</foo>")
+  debug_inspect(w.to_string(), content="\"<foo>hello</foo>\"")
 }
 
 ///|
@@ -29,7 +29,7 @@ test "element with attribute" {
   w.start_element(@xml.QName::unqualified("foo"))
   w.attribute(@xml.QName::unqualified("id"), "42")
   w.end_element()
-  assert_eq(w.to_string(), "<foo id=\"42\"/>")
+  debug_inspect(w.to_string(), content="\"<foo id=\\\"42\\\"/>\"")
 }
 
 ///|
@@ -40,7 +40,7 @@ test "nested elements" {
   w.text("x")
   w.end_element()
   w.end_element()
-  assert_eq(w.to_string(), "<a><b>x</b></a>")
+  debug_inspect(w.to_string(), content="\"<a><b>x</b></a>\"")
 }
 
 ///|
@@ -52,7 +52,7 @@ test "namespace prefix lookup" {
   w.attribute(@xml.QName::unqualified("id"), "1")
   w.end_element()
   let expected = "<a:rect xmlns:a=\"" + a_uri + "\" id=\"1\"/>"
-  assert_eq(w.to_string(), expected)
+  debug_inspect(w.to_string() == expected, content="true")
 }
 
 ///|
@@ -61,7 +61,10 @@ test "attribute escaping" {
   w.start_element(@xml.QName::unqualified("foo"))
   w.attribute(@xml.QName::unqualified("v"), "a&b<c>d\"e\nf")
   w.end_element()
-  assert_eq(w.to_string(), "<foo v=\"a&amp;b&lt;c&gt;d&quot;e&#10;f\"/>")
+  debug_inspect(
+    w.to_string(),
+    content="\"<foo v=\\\"a&amp;b&lt;c&gt;d&quot;e&#10;f\\\"/>\"",
+  )
 }
 
 ///|
@@ -70,7 +73,10 @@ test "text escaping" {
   w.start_element(@xml.QName::unqualified("foo"))
   w.text("if a < b && c > 0")
   w.end_element()
-  assert_eq(w.to_string(), "<foo>if a &lt; b &amp;&amp; c &gt; 0</foo>")
+  debug_inspect(
+    w.to_string(),
+    content="\"<foo>if a &lt; b &amp;&amp; c &gt; 0</foo>\"",
+  )
 }
 
 ///|
@@ -79,7 +85,10 @@ test "CDATA section" {
   w.start_element(@xml.QName::unqualified("foo"))
   w.cdata("raw <stuff> & things")
   w.end_element()
-  assert_eq(w.to_string(), "<foo><![CDATA[raw <stuff> & things]]></foo>")
+  debug_inspect(
+    w.to_string(),
+    content="\"<foo><![CDATA[raw <stuff> & things]]></foo>\"",
+  )
 }
 
 ///|
@@ -136,9 +145,9 @@ test "xml declaration prelude" {
   w.xml_declaration()
   w.start_element(@xml.QName::unqualified("doc"))
   w.end_element()
-  assert_eq(
+  debug_inspect(
     w.to_string(),
-    "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?><doc/>",
+    content="\"<?xml version=\\\"1.0\\\" encoding=\\\"UTF-8\\\" standalone=\\\"yes\\\"?><doc/>\"",
   )
 }
 
@@ -160,5 +169,5 @@ test "ooxml-style root: presentation with namespaces" {
     "\" xmlns:a=\"" +
     a_uri +
     "\"><a:theme/></p:presentation>"
-  assert_eq(w.to_string(), expected)
+  debug_inspect(w.to_string() == expected, content="true")
 }

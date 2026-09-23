@@ -52,14 +52,14 @@ test "TableProperties: style-hint attributes lift into typed flags" {
     "</a:tbl>"
   let t = extract_table(slide_with_table_xml(body))
   let p = t.properties.unwrap()
-  assert_true(p.first_row == Some(true))
-  assert_true(p.last_col == Some(false))
-  assert_true(p.band_row == Some(true))
-  assert_true(p.rtl == Some(false))
+  debug_inspect(p.first_row, content="Some(true)")
+  debug_inspect(p.last_col, content="Some(false)")
+  debug_inspect(p.band_row, content="Some(true)")
+  debug_inspect(p.rtl, content="Some(false)")
   // Absent attributes stay None.
-  assert_true(p.first_col is None)
-  assert_true(p.last_row is None)
-  assert_true(p.band_col is None)
+  debug_inspect(p.first_col is None, content="true")
+  debug_inspect(p.last_row is None, content="true")
+  debug_inspect(p.band_col is None, content="true")
 }
 
 ///|
@@ -70,9 +70,9 @@ test "TableProperties: <a:tableStyleId> lifts to typed string" {
     "<a:tr h=\"50\"><a:tc><a:txBody><a:bodyPr/><a:lstStyle/><a:p/></a:txBody><a:tcPr/></a:tc></a:tr>" +
     "</a:tbl>"
   let t = extract_table(slide_with_table_xml(body))
-  assert_eq(
+  debug_inspect(
     t.properties.unwrap().table_style_id.unwrap(),
-    "{5C22544A-7EE6-4342-B048-85BDC9FD1C3A}",
+    content="\"{5C22544A-7EE6-4342-B048-85BDC9FD1C3A}\"",
   )
 }
 
@@ -91,11 +91,11 @@ test "TableCellProperties: margins + anchor lift to typed fields" {
     "</a:tr></a:tbl>"
   let t = extract_table(slide_with_table_xml(body))
   let p = t.rows[0].cells[0].properties.unwrap()
-  assert_eq(p.margin_l.unwrap(), Emu(45720L))
-  assert_eq(p.margin_r.unwrap(), Emu(45720L))
-  assert_eq(p.margin_t.unwrap(), Emu(30480L))
-  assert_eq(p.margin_b.unwrap(), Emu(30480L))
-  assert_true(p.anchor == Some(AnchorCenter))
+  debug_inspect(p.margin_l.unwrap(), content="Emu(45720)")
+  debug_inspect(p.margin_r.unwrap(), content="Emu(45720)")
+  debug_inspect(p.margin_t.unwrap(), content="Emu(30480)")
+  debug_inspect(p.margin_b.unwrap(), content="Emu(30480)")
+  debug_inspect(p.anchor, content="Some(AnchorCenter)")
 }
 
 ///|
@@ -113,11 +113,11 @@ test "TableCellProperties: borders lift to typed Stroke values" {
   let t = extract_table(slide_with_table_xml(body))
   let p = t.rows[0].cells[0].properties.unwrap()
   let left = p.border_left.unwrap()
-  assert_eq(left.width.unwrap(), Emu(12700L))
+  debug_inspect(left.width.unwrap(), content="Emu(12700)")
   let bottom = p.border_bottom.unwrap()
-  assert_eq(bottom.width.unwrap(), Emu(25400L))
-  assert_true(p.border_right is None)
-  assert_true(p.border_top is None)
+  debug_inspect(bottom.width.unwrap(), content="Emu(25400)")
+  debug_inspect(p.border_right is None, content="true")
+  debug_inspect(p.border_top is None, content="true")
 }
 
 ///|
@@ -133,7 +133,7 @@ test "TableCellProperties: fill choice lifts to typed Fill" {
     "</a:tc></a:tr></a:tbl>"
   let t = extract_table(slide_with_table_xml(body))
   let p = t.rows[0].cells[0].properties.unwrap()
-  assert_true(p.fill is Some(SolidFill(_)))
+  debug_inspect(p.fill is Some(SolidFill(_)), content="true")
 }
 
 // --- Round-trip ---
@@ -156,7 +156,7 @@ test "tblPr + tcPr round-trip preserves typed fields" {
   let bytes = slide_with_table_xml(body)
   let s0 = @slide.Slide::parse(bytes)
   let s1 = @slide.Slide::parse(s0.serialize())
-  assert_true(s0 == s1)
+  debug_inspect(s0 == s1, content="true")
 }
 
 // --- Builders with typed properties ---
@@ -169,10 +169,10 @@ test "TableCellProperties::with_margins / with_fill / with_anchor: fluent set" {
       SolidFill(@oxml.Color::srgb(@units.RgbColor::parse_hex("FFFF00"))),
     )
     .with_anchor(AnchorCenter)
-  assert_eq(p.margin_l.unwrap(), Emu(45720L))
-  assert_eq(p.margin_r.unwrap(), Emu(45720L))
-  assert_true(p.fill is Some(SolidFill(_)))
-  assert_true(p.anchor == Some(AnchorCenter))
+  debug_inspect(p.margin_l.unwrap(), content="Emu(45720)")
+  debug_inspect(p.margin_r.unwrap(), content="Emu(45720)")
+  debug_inspect(p.fill is Some(SolidFill(_)), content="true")
+  debug_inspect(p.anchor, content="Some(AnchorCenter)")
 }
 
 ///|
@@ -229,12 +229,12 @@ test "TableCellProperties: builder-produced values survive serialize → reparse
       match parsed_gf.content {
         TableContent(parsed_t) => {
           let p = parsed_t.rows[0].cells[0].properties.unwrap()
-          assert_eq(p.margin_l.unwrap(), Emu(45720L))
-          assert_eq(p.margin_r.unwrap(), Emu(45720L))
-          assert_eq(p.margin_t.unwrap(), Emu(30480L))
-          assert_eq(p.margin_b.unwrap(), Emu(30480L))
-          assert_true(p.anchor == Some(AnchorCenter))
-          assert_true(p.fill is Some(SolidFill(_)))
+          debug_inspect(p.margin_l.unwrap(), content="Emu(45720)")
+          debug_inspect(p.margin_r.unwrap(), content="Emu(45720)")
+          debug_inspect(p.margin_t.unwrap(), content="Emu(30480)")
+          debug_inspect(p.margin_b.unwrap(), content="Emu(30480)")
+          debug_inspect(p.anchor, content="Some(AnchorCenter)")
+          debug_inspect(p.fill is Some(SolidFill(_)), content="true")
         }
         _ => fail("expected TableContent")
       }
@@ -264,10 +264,10 @@ fn minimal_stroke() -> @oxml.Stroke {
 test "TableCellProperties::with_borders: applies only the Some edges" {
   let s = minimal_stroke()
   let p = @slide.TableCellProperties::default().with_borders(left=s, top=s)
-  assert_true(p.border_left is Some(_))
-  assert_true(p.border_right is None)
-  assert_true(p.border_top is Some(_))
-  assert_true(p.border_bottom is None)
+  debug_inspect(p.border_left is Some(_), content="true")
+  debug_inspect(p.border_right is None, content="true")
+  debug_inspect(p.border_top is Some(_), content="true")
+  debug_inspect(p.border_bottom is None, content="true")
 }
 
 ///|
@@ -276,52 +276,53 @@ test "TableCellProperties::with_borders: None args leave existing borders alone"
   let p = @slide.TableCellProperties::default()
     .with_border_all(s)
     .with_borders(top=s) // leaves left/right/bottom intact
-  assert_true(p.border_left is Some(_))
-  assert_true(p.border_right is Some(_))
-  assert_true(p.border_top is Some(_))
-  assert_true(p.border_bottom is Some(_))
+  debug_inspect(p.border_left is Some(_), content="true")
+  debug_inspect(p.border_right is Some(_), content="true")
+  debug_inspect(p.border_top is Some(_), content="true")
+  debug_inspect(p.border_bottom is Some(_), content="true")
 }
 
 ///|
 test "TableCellProperties::with_border_left/right/top/bottom set one edge each" {
   let s = minimal_stroke()
   let l = @slide.TableCellProperties::default().with_border_left(s)
-  assert_true(l.border_left is Some(_))
-  assert_true(
+  debug_inspect(l.border_left is Some(_), content="true")
+  debug_inspect(
     l.border_right is None && l.border_top is None && l.border_bottom is None,
+    content="true",
   )
   let r = @slide.TableCellProperties::default().with_border_right(s)
-  assert_true(r.border_right is Some(_))
-  assert_true(r.border_left is None)
+  debug_inspect(r.border_right is Some(_), content="true")
+  debug_inspect(r.border_left is None, content="true")
   let t = @slide.TableCellProperties::default().with_border_top(s)
-  assert_true(t.border_top is Some(_))
-  assert_true(t.border_bottom is None)
+  debug_inspect(t.border_top is Some(_), content="true")
+  debug_inspect(t.border_bottom is None, content="true")
   let b = @slide.TableCellProperties::default().with_border_bottom(s)
-  assert_true(b.border_bottom is Some(_))
-  assert_true(b.border_top is None)
+  debug_inspect(b.border_bottom is Some(_), content="true")
+  debug_inspect(b.border_top is None, content="true")
 }
 
 ///|
 test "TableProperties::default: every field is the inherit sentinel" {
   let p = @slide.TableProperties::default()
-  assert_true(p.first_row is None)
-  assert_true(p.first_col is None)
-  assert_true(p.last_row is None)
-  assert_true(p.last_col is None)
-  assert_true(p.band_row is None)
-  assert_true(p.band_col is None)
-  assert_true(p.rtl is None)
-  assert_true(p.fill is None)
-  assert_true(p.table_style_id is None)
-  assert_eq(p.extension.length(), 0)
+  debug_inspect(p.first_row is None, content="true")
+  debug_inspect(p.first_col is None, content="true")
+  debug_inspect(p.last_row is None, content="true")
+  debug_inspect(p.last_col is None, content="true")
+  debug_inspect(p.band_row is None, content="true")
+  debug_inspect(p.band_col is None, content="true")
+  debug_inspect(p.rtl is None, content="true")
+  debug_inspect(p.fill is None, content="true")
+  debug_inspect(p.table_style_id is None, content="true")
+  debug_inspect(p.extension.length(), content="0")
 }
 
 ///|
 test "TableCell::empty: an of_text(\"\") cell with no spans or merges" {
   let c = @slide.TableCell::empty()
-  assert_true(c == @slide.TableCell::of_text(""))
-  assert_eq(c.grid_span, 1)
-  assert_eq(c.row_span, 1)
-  assert_eq(c.h_merge, false)
-  assert_eq(c.v_merge, false)
+  debug_inspect(c == @slide.TableCell::of_text(""), content="true")
+  debug_inspect(c.grid_span, content="1")
+  debug_inspect(c.row_span, content="1")
+  debug_inspect(c.h_merge, content="false")
+  debug_inspect(c.v_merge, content="false")
 }

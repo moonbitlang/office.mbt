@@ -33,24 +33,24 @@ test "Stroke: attributes (width / cap / cmpd / algn)" {
   let s = parse_stroke_inner(
     "<a:ln w=\"9525\" cap=\"rnd\" cmpd=\"dbl\" algn=\"ctr\"/>",
   )
-  assert_eq(s.width.unwrap(), Emu(9525L))
-  assert_true(s.cap.unwrap() is CapRound)
-  assert_true(s.compound.unwrap() is CmpdDouble)
-  assert_true(s.alignment.unwrap() is AlignPenCenter)
+  debug_inspect(s.width.unwrap(), content="Emu(9525)")
+  debug_inspect(s.cap.unwrap() is CapRound, content="true")
+  debug_inspect(s.compound.unwrap() is CmpdDouble, content="true")
+  debug_inspect(s.alignment.unwrap() is AlignPenCenter, content="true")
 }
 
 ///|
 test "Stroke: missing attributes leave fields None" {
   let s = parse_stroke_inner("<a:ln/>")
-  assert_true(s.width is None)
-  assert_true(s.cap is None)
-  assert_true(s.compound is None)
-  assert_true(s.alignment is None)
-  assert_true(s.fill is None)
-  assert_true(s.dash is None)
-  assert_true(s.join is None)
-  assert_true(s.head_end is None)
-  assert_true(s.tail_end is None)
+  debug_inspect(s.width is None, content="true")
+  debug_inspect(s.cap is None, content="true")
+  debug_inspect(s.compound is None, content="true")
+  debug_inspect(s.alignment is None, content="true")
+  debug_inspect(s.fill is None, content="true")
+  debug_inspect(s.dash is None, content="true")
+  debug_inspect(s.join is None, content="true")
+  debug_inspect(s.head_end is None, content="true")
+  debug_inspect(s.tail_end is None, content="true")
 }
 
 // --- fill child ---
@@ -63,7 +63,7 @@ test "Stroke: solidFill colour child" {
   match s.fill.unwrap() {
     SolidFill(c) =>
       match c.base {
-        Srgb(rgb) => assert_eq(rgb.to_hex(), "FF0000")
+        Srgb(rgb) => debug_inspect(rgb.to_hex(), content="\"FF0000\"")
         _ => fail("expected Srgb base")
       }
     _ => fail("expected SolidFill")
@@ -73,7 +73,7 @@ test "Stroke: solidFill colour child" {
 ///|
 test "Stroke: noFill child" {
   let s = parse_stroke_inner("<a:ln><a:noFill/></a:ln>")
-  assert_true(s.fill.unwrap() is NoFill)
+  debug_inspect(s.fill.unwrap() is NoFill, content="true")
 }
 
 // --- dash / join / arrows ---
@@ -81,18 +81,18 @@ test "Stroke: noFill child" {
 ///|
 test "Stroke: prstDash carries enum" {
   let s = parse_stroke_inner("<a:ln><a:prstDash val=\"dashDot\"/></a:ln>")
-  assert_true(s.dash.unwrap() is DashDashDot)
+  debug_inspect(s.dash.unwrap() is DashDashDot, content="true")
 }
 
 ///|
 test "Stroke: round / bevel / miter line joins" {
   let r = parse_stroke_inner("<a:ln><a:round/></a:ln>")
-  assert_true(r.join.unwrap() is JoinRound)
+  debug_inspect(r.join.unwrap() is JoinRound, content="true")
   let b = parse_stroke_inner("<a:ln><a:bevel/></a:ln>")
-  assert_true(b.join.unwrap() is JoinBevel)
+  debug_inspect(b.join.unwrap() is JoinBevel, content="true")
   let m = parse_stroke_inner("<a:ln><a:miter lim=\"800000\"/></a:ln>")
   match m.join.unwrap() {
-    JoinMiter(Some(p)) => assert_eq(p, Percentage(800.0))
+    JoinMiter(Some(p)) => debug_inspect(p, content="Percentage(800)")
     _ => fail("expected JoinMiter with limit")
   }
 }
@@ -113,20 +113,20 @@ test "Stroke: head + tail arrowheads" {
     "<a:tailEnd type=\"arrow\" w=\"sm\"/></a:ln>",
   )
   let h = s.head_end.unwrap()
-  assert_true(h.arrow_type is ArrowTriangle)
-  assert_true(h.width.unwrap() is SizeMedium)
-  assert_true(h.length.unwrap() is SizeLarge)
+  debug_inspect(h.arrow_type is ArrowTriangle, content="true")
+  debug_inspect(h.width.unwrap() is SizeMedium, content="true")
+  debug_inspect(h.length.unwrap() is SizeLarge, content="true")
   let t = s.tail_end.unwrap()
-  assert_true(t.arrow_type is ArrowArrow)
-  assert_true(t.width.unwrap() is SizeSmall)
-  assert_true(t.length is None)
+  debug_inspect(t.arrow_type is ArrowArrow, content="true")
+  debug_inspect(t.width.unwrap() is SizeSmall, content="true")
+  debug_inspect(t.length is None, content="true")
 }
 
 ///|
 test "Stroke: arrowhead with missing type defaults to None" {
   let s = parse_stroke_inner("<a:ln><a:headEnd w=\"med\"/></a:ln>")
   let h = s.head_end.unwrap()
-  assert_true(h.arrow_type is ArrowNone)
+  debug_inspect(h.arrow_type is ArrowNone, content="true")
 }
 
 // --- combined ---
@@ -140,12 +140,12 @@ test "Stroke: realistic outline (width + solid colour + dash + arrows)" {
     "<a:tailEnd type=\"stealth\" w=\"med\" len=\"med\"/>" +
     "</a:ln>"
   let s = parse_stroke_inner(inner)
-  assert_eq(s.width.unwrap(), Emu(9525L))
-  assert_true(s.cap.unwrap() is CapFlat)
-  assert_true(s.dash.unwrap() is DashSysDash)
-  assert_true(s.join.unwrap() is JoinRound)
-  assert_true(s.head_end is None)
-  assert_true(s.tail_end.unwrap().arrow_type is ArrowStealth)
+  debug_inspect(s.width.unwrap(), content="Emu(9525)")
+  debug_inspect(s.cap.unwrap() is CapFlat, content="true")
+  debug_inspect(s.dash.unwrap() is DashSysDash, content="true")
+  debug_inspect(s.join.unwrap() is JoinRound, content="true")
+  debug_inspect(s.head_end is None, content="true")
+  debug_inspect(s.tail_end.unwrap().arrow_type is ArrowStealth, content="true")
 }
 
 ///|
@@ -153,15 +153,15 @@ test "Stroke: unknown enum values collapse to None (graceful)" {
   let s = parse_stroke_inner(
     "<a:ln cap=\"weirdo\"><a:prstDash val=\"alsoUnknown\"/></a:ln>",
   )
-  assert_true(s.cap is None)
-  assert_true(s.dash is None)
+  debug_inspect(s.cap is None, content="true")
+  debug_inspect(s.dash is None, content="true")
 }
 
 ///|
 test "Stroke: custDash is silently skipped" {
   let inner = "<a:ln><a:custDash><a:ds d=\"100\" sp=\"50\"/></a:custDash></a:ln>"
   let s = parse_stroke_inner(inner)
-  assert_true(s.dash is None)
+  debug_inspect(s.dash is None, content="true")
 }
 
 // --- error / fill-failure ---

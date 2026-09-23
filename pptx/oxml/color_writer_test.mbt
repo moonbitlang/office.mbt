@@ -29,14 +29,14 @@ fn roundtrip_color(input_inner : String) -> @oxml.Color raise {
 test "write_color: srgbClr round-trips" {
   let c0 = parse_inner_color("<a:srgbClr val=\"FF8800\"/>")
   let c1 = roundtrip_color("<a:srgbClr val=\"FF8800\"/>")
-  assert_true(c0 == c1)
+  debug_inspect(c0 == c1, content="true")
 }
 
 ///|
 test "write_color: schemeClr round-trips" {
   let c0 = parse_inner_color("<a:schemeClr val=\"accent3\"/>")
   let c1 = roundtrip_color("<a:schemeClr val=\"accent3\"/>")
-  assert_true(c0 == c1)
+  debug_inspect(c0 == c1, content="true")
 }
 
 ///|
@@ -44,7 +44,7 @@ test "write_color: sysClr with lastClr round-trips" {
   let xml = "<a:sysClr val=\"windowText\" lastClr=\"112233\"/>"
   let c0 = parse_inner_color(xml)
   let c1 = roundtrip_color(xml)
-  assert_true(c0 == c1)
+  debug_inspect(c0 == c1, content="true")
 }
 
 ///|
@@ -52,7 +52,7 @@ test "write_color: sysClr without lastClr round-trips" {
   let xml = "<a:sysClr val=\"window\"/>"
   let c0 = parse_inner_color(xml)
   let c1 = roundtrip_color(xml)
-  assert_true(c0 == c1)
+  debug_inspect(c0 == c1, content="true")
 }
 
 ///|
@@ -60,7 +60,7 @@ test "write_color: hslClr round-trips" {
   let xml = "<a:hslClr hue=\"7200000\" sat=\"50000\" lum=\"60000\"/>"
   let c0 = parse_inner_color(xml)
   let c1 = roundtrip_color(xml)
-  assert_true(c0 == c1)
+  debug_inspect(c0 == c1, content="true")
 }
 
 ///|
@@ -68,7 +68,7 @@ test "write_color: prstClr round-trips" {
   let xml = "<a:prstClr val=\"slateGray\"/>"
   let c0 = parse_inner_color(xml)
   let c1 = roundtrip_color(xml)
-  assert_true(c0 == c1)
+  debug_inspect(c0 == c1, content="true")
 }
 
 ///|
@@ -76,7 +76,7 @@ test "write_color: scrgbClr round-trips" {
   let xml = "<a:scrgbClr r=\"25000\" g=\"50000\" b=\"75000\"/>"
   let c0 = parse_inner_color(xml)
   let c1 = roundtrip_color(xml)
-  assert_true(c0 == c1)
+  debug_inspect(c0 == c1, content="true")
 }
 
 // --- modifiers ---
@@ -90,8 +90,8 @@ test "write_color: modeled transforms preserved in source order" {
     "</a:srgbClr>"
   let c0 = parse_inner_color(xml)
   let c1 = roundtrip_color(xml)
-  assert_true(c0 == c1)
-  assert_eq(c1.transforms.length(), 3)
+  debug_inspect(c0 == c1, content="true")
+  debug_inspect(c1.transforms.length(), content="3")
 }
 
 ///|
@@ -105,7 +105,7 @@ test "write_color: every modeled transform variant" {
     "</a:schemeClr>"
   let c0 = parse_inner_color(xml)
   let c1 = roundtrip_color(xml)
-  assert_true(c0 == c1)
+  debug_inspect(c0 == c1, content="true")
 }
 
 ///|
@@ -118,9 +118,9 @@ test "write_color: unmodelled tail modifier rides on extension" {
     "</a:schemeClr>"
   let c0 = parse_inner_color(xml)
   let c1 = roundtrip_color(xml)
-  assert_true(c0 == c1)
-  assert_eq(c1.extension.length(), 1)
-  assert_eq(c1.extension[0].name.local_name, "hueMod")
+  debug_inspect(c0 == c1, content="true")
+  debug_inspect(c1.extension.length(), content="1")
+  debug_inspect(c1.extension[0].name.local_name, content="\"hueMod\"")
 }
 
 ///|
@@ -131,5 +131,5 @@ test "write_color: modeled transform + unmodelled modifier coexist" {
     "</a:srgbClr>"
   let c0 = parse_inner_color(xml)
   let c1 = roundtrip_color(xml)
-  assert_true(c0 == c1)
+  debug_inspect(c0 == c1, content="true")
 }

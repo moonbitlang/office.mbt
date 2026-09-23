@@ -1,9 +1,4 @@
 // Tests for the typed slide transition (`<p:transition>`).
-//
-// Whole-value equality on the transition types goes through `assert_true(a ==
-// b)` (they derive `Eq, Debug`, and `assert_eq` would additionally require
-// `Show`), matching the `background_test.mbt` convention. Primitive fields use
-// `assert_eq` directly.
 
 ///|
 /// Wrap a `<p:transition>` string into a parseable `<p:sld>`. The transition
@@ -41,11 +36,17 @@ fn roundtrip_transition(
 test "transition enums: from_xml round-trips every to_xml value" {
   let speeds : Array[@slide.TransitionSpeed] = [Slow, Medium, Fast]
   for v in speeds {
-    assert_true(@slide.TransitionSpeed::from_xml(v.to_xml()) == v)
+    debug_inspect(
+      @slide.TransitionSpeed::from_xml(v.to_xml()) == v,
+      content="true",
+    )
   }
   let sides : Array[@slide.TransitionSide] = [Left, Up, Right, Down]
   for v in sides {
-    assert_true(@slide.TransitionSide::from_xml(v.to_xml()) == v)
+    debug_inspect(
+      @slide.TransitionSide::from_xml(v.to_xml()) == v,
+      content="true",
+    )
   }
   let dirs : Array[@slide.TransitionDirection] = [
     Left,
@@ -58,15 +59,24 @@ test "transition enums: from_xml round-trips every to_xml value" {
     RightDown,
   ]
   for v in dirs {
-    assert_true(@slide.TransitionDirection::from_xml(v.to_xml()) == v)
+    debug_inspect(
+      @slide.TransitionDirection::from_xml(v.to_xml()) == v,
+      content="true",
+    )
   }
   let orients : Array[@slide.TransitionOrientation] = [Horizontal, Vertical]
   for v in orients {
-    assert_true(@slide.TransitionOrientation::from_xml(v.to_xml()) == v)
+    debug_inspect(
+      @slide.TransitionOrientation::from_xml(v.to_xml()) == v,
+      content="true",
+    )
   }
   let inouts : Array[@slide.TransitionInOut] = [In, Out]
   for v in inouts {
-    assert_true(@slide.TransitionInOut::from_xml(v.to_xml()) == v)
+    debug_inspect(
+      @slide.TransitionInOut::from_xml(v.to_xml()) == v,
+      content="true",
+    )
   }
   let corners : Array[@slide.TransitionCorner] = [
     LeftUp,
@@ -75,7 +85,10 @@ test "transition enums: from_xml round-trips every to_xml value" {
     RightDown,
   ]
   for v in corners {
-    assert_true(@slide.TransitionCorner::from_xml(v.to_xml()) == v)
+    debug_inspect(
+      @slide.TransitionCorner::from_xml(v.to_xml()) == v,
+      content="true",
+    )
   }
 }
 
@@ -90,10 +103,10 @@ test "transition: parse spd / advClick / advTm attributes" {
   )
   match slide.transition {
     Some(t) => {
-      assert_true(t.kind == Push(Right))
-      assert_true(t.speed == Slow)
-      assert_eq(t.advance_on_click, false)
-      assert_true(t.advance_after == Some(5000))
+      debug_inspect(t.kind, content="Push(Right)")
+      debug_inspect(t.speed, content="Slow")
+      debug_inspect(t.advance_on_click, content="false")
+      debug_inspect(t.advance_after, content="Some(5000)")
     }
     None => fail("expected a transition")
   }
@@ -106,10 +119,10 @@ test "transition: absent attributes fall back to schema defaults" {
   )
   match slide.transition {
     Some(t) => {
-      assert_true(t.kind == Fade(false))
-      assert_true(t.speed == Fast)
-      assert_eq(t.advance_on_click, true)
-      assert_true(t.advance_after is None)
+      debug_inspect(t.kind, content="Fade(false)")
+      debug_inspect(t.speed, content="Fast")
+      debug_inspect(t.advance_on_click, content="true")
+      debug_inspect(t.advance_after is None, content="true")
     }
     None => fail("expected a transition")
   }
@@ -118,7 +131,7 @@ test "transition: absent attributes fall back to schema defaults" {
 ///|
 test "transition: a slide with no <p:transition> has None" {
   let slide = @slide.Slide::parse(slide_with_transition(""))
-  assert_true(slide.transition is None)
+  debug_inspect(slide.transition is None, content="true")
 }
 
 // --- parse: per-kind attribute decoding ---
@@ -131,7 +144,7 @@ test "transition: fade thruBlk decodes" {
     ),
   )
   match slide.transition {
-    Some(t) => assert_true(t.kind == Fade(true))
+    Some(t) => debug_inspect(t.kind, content="Fade(true)")
     None => fail("expected a transition")
   }
 }
@@ -144,7 +157,7 @@ test "transition: split orient + dir decode" {
     ),
   )
   match slide.transition {
-    Some(t) => assert_true(t.kind == Split(Vertical, In))
+    Some(t) => debug_inspect(t.kind, content="Split(Vertical, In)")
     None => fail("expected a transition")
   }
 }
@@ -157,14 +170,14 @@ test "transition: wheel spokes decode (explicit + default)" {
     ),
   )
   match eight.transition {
-    Some(t) => assert_true(t.kind == Wheel(8))
+    Some(t) => debug_inspect(t.kind, content="Wheel(8)")
     None => fail("expected a transition")
   }
   let dflt = @slide.Slide::parse(
     slide_with_transition("<p:transition><p:wheel/></p:transition>"),
   )
   match dflt.transition {
-    Some(t) => assert_true(t.kind == Wheel(4))
+    Some(t) => debug_inspect(t.kind, content="Wheel(4)")
     None => fail("expected a transition")
   }
 }
@@ -175,7 +188,7 @@ test "transition: cover eight-direction decodes corner value" {
     slide_with_transition("<p:transition><p:cover dir=\"ru\"/></p:transition>"),
   )
   match slide.transition {
-    Some(t) => assert_true(t.kind == Cover(RightUp))
+    Some(t) => debug_inspect(t.kind, content="Cover(RightUp)")
     None => fail("expected a transition")
   }
 }
@@ -210,7 +223,7 @@ test "transition: round-trip across every kind" {
   ]
   for k in kinds {
     let t = @slide.Transition::of_kind(k)
-    assert_true(roundtrip_transition(t) == Some(t))
+    debug_inspect(roundtrip_transition(t) == Some(t), content="true")
   }
 }
 
@@ -220,7 +233,7 @@ test "transition: round-trip preserves speed + advance timing" {
     .with_speed(Medium)
     .with_on_click(false)
     .with_advance_after(3000)
-  assert_true(roundtrip_transition(t) == Some(t))
+  debug_inspect(roundtrip_transition(t) == Some(t), content="true")
 }
 
 // --- builders ---
@@ -228,26 +241,30 @@ test "transition: round-trip preserves speed + advance timing" {
 ///|
 test "transition: of_kind applies schema defaults" {
   let t = @slide.Transition::of_kind(Dissolve)
-  assert_true(t.kind == Dissolve)
-  assert_true(t.speed == Fast)
-  assert_eq(t.advance_on_click, true)
-  assert_true(t.advance_after is None)
+  debug_inspect(t.kind, content="Dissolve")
+  debug_inspect(t.speed, content="Fast")
+  debug_inspect(t.advance_on_click, content="true")
+  debug_inspect(t.advance_after is None, content="true")
 }
 
 ///|
 test "transition: convenience constructors" {
-  assert_true(@slide.Transition::fade().kind == Fade(false))
-  assert_true(@slide.Transition::fade(through_black=true).kind == Fade(true))
-  assert_true(@slide.Transition::cut().kind == Cut(false))
-  assert_true(@slide.Transition::push(Right).kind == Push(Right))
-  assert_true(@slide.Transition::wipe(Up).kind == Wipe(Up))
-  assert_true(@slide.Transition::cover(LeftUp).kind == Cover(LeftUp))
-  assert_true(
-    @slide.Transition::split(Vertical, In).kind == Split(Vertical, In),
+  debug_inspect(@slide.Transition::fade().kind, content="Fade(false)")
+  debug_inspect(
+    @slide.Transition::fade(through_black=true).kind,
+    content="Fade(true)",
   )
-  assert_true(@slide.Transition::zoom(Out).kind == Zoom(Out))
-  assert_true(@slide.Transition::dissolve().kind == Dissolve)
-  assert_true(@slide.Transition::none().kind == NoEffect)
+  debug_inspect(@slide.Transition::cut().kind, content="Cut(false)")
+  debug_inspect(@slide.Transition::push(Right).kind, content="Push(Right)")
+  debug_inspect(@slide.Transition::wipe(Up).kind, content="Wipe(Up)")
+  debug_inspect(@slide.Transition::cover(LeftUp).kind, content="Cover(LeftUp)")
+  debug_inspect(
+    @slide.Transition::split(Vertical, In).kind,
+    content="Split(Vertical, In)",
+  )
+  debug_inspect(@slide.Transition::zoom(Out).kind, content="Zoom(Out)")
+  debug_inspect(@slide.Transition::dissolve().kind, content="Dissolve")
+  debug_inspect(@slide.Transition::none().kind, content="NoEffect")
 }
 
 ///|
@@ -256,10 +273,10 @@ test "transition: timing builders" {
     .with_advance_after(2000)
     .with_on_click(false)
     .with_speed(Slow)
-  assert_true(t.advance_after == Some(2000))
-  assert_eq(t.advance_on_click, false)
-  assert_true(t.speed == Slow)
-  assert_true(t.without_advance_after().advance_after is None)
+  debug_inspect(t.advance_after, content="Some(2000)")
+  debug_inspect(t.advance_on_click, content="false")
+  debug_inspect(t.speed, content="Slow")
+  debug_inspect(t.without_advance_after().advance_after is None, content="true")
 }
 
 // --- Slide builders ---
@@ -268,11 +285,17 @@ test "transition: timing builders" {
 test "Slide::with_transition / without_transition" {
   let base = @slide.Slide::parse(slide_with_transition(""))
   let with_t = base.with_transition(@slide.Transition::wipe(Right))
-  assert_true(with_t.transition == Some(@slide.Transition::wipe(Right)))
-  assert_true(with_t.without_transition().transition is None)
+  debug_inspect(
+    with_t.transition == Some(@slide.Transition::wipe(Right)),
+    content="true",
+  )
+  debug_inspect(with_t.without_transition().transition is None, content="true")
   // with_transition replaces rather than stacks.
   let replaced = with_t.with_transition(@slide.Transition::fade())
-  assert_true(replaced.transition == Some(@slide.Transition::fade()))
+  debug_inspect(
+    replaced.transition == Some(@slide.Transition::fade()),
+    content="true",
+  )
 }
 
 // --- attribute omission (canonical output) ---
@@ -284,9 +307,9 @@ test "transition: default attributes are omitted on serialise" {
   let xml = @oxml.bytes_to_string(
     base.with_transition(@slide.Transition::fade()).serialize(),
   )
-  assert_true(xml.contains("<p:transition>"))
-  assert_false(xml.contains("spd="))
-  assert_false(xml.contains("advClick="))
+  debug_inspect(xml.contains("<p:transition>"), content="true")
+  debug_inspect(xml.contains("spd="), content="false")
+  debug_inspect(xml.contains("advClick="), content="false")
   // Non-default values are emitted.
   let xml2 = @oxml.bytes_to_string(
     base
@@ -295,8 +318,8 @@ test "transition: default attributes are omitted on serialise" {
     )
     .serialize(),
   )
-  assert_true(xml2.contains("spd=\"slow\""))
-  assert_true(xml2.contains("advClick=\"0\""))
+  debug_inspect(xml2.contains("spd=\"slow\""), content="true")
+  debug_inspect(xml2.contains("advClick=\"0\""), content="true")
 }
 
 // --- lossless preservation (ADR-004) ---
@@ -310,13 +333,13 @@ test "transition: <p:sndAc> sound child preserved via extension" {
   )
   match slide.transition {
     Some(t) => {
-      assert_true(t.kind == Fade(false))
-      assert_eq(t.extension.length(), 1)
-      assert_eq(t.extension[0].name.local_name, "sndAc")
+      debug_inspect(t.kind, content="Fade(false)")
+      debug_inspect(t.extension.length(), content="1")
+      debug_inspect(t.extension[0].name.local_name, content="\"sndAc\"")
     }
     None => fail("expected a transition")
   }
   // And it survives a full round-trip.
   let again = @slide.Slide::parse(slide.serialize())
-  assert_true(again.transition == slide.transition)
+  debug_inspect(again.transition == slide.transition, content="true")
 }

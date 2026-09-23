@@ -27,12 +27,12 @@ test "shape with_hyperlink: external URL → rel + <a:hlinkClick> on cNvPr" {
   // A TargetMode::External hyperlink rel is registered on the slide.
   let rels = prs.pkg.relationships_for(slide_name)
   let hl = rels.by_type(@opc.rt_hyperlink)[0]
-  assert_eq(hl.target, "https://example.com")
-  assert_true(hl.target_mode is External)
+  debug_inspect(hl.target, content="\"https://example.com\"")
+  debug_inspect(hl.target_mode is External, content="true")
   // The slide XML carries an <a:hlinkClick> referencing that rId.
   let xml = slide_xml_of(prs, slide_name)
-  assert_true(xml.contains("hlinkClick"))
-  assert_true(xml.contains("r:id=\"" + hl.id + "\""))
+  debug_inspect(xml.contains("hlinkClick"), content="true")
+  debug_inspect(xml.contains("r:id=\"" + hl.id + "\""), content="true")
 }
 
 ///|
@@ -51,10 +51,10 @@ test "shape with_hyperlink_to_slide: rt_slide rel + ppaction jump" {
   prs.update_slide_mut(0, prs.slides()[0].with_shape(AutoShape(box)))
   let rels = prs.pkg.relationships_for(slide_name)
   let jump = rels.by_type(@opc.rt_slide)[0]
-  assert_true(jump.target_mode is Internal)
+  debug_inspect(jump.target_mode is Internal, content="true")
   let xml = slide_xml_of(prs, slide_name)
-  assert_true(xml.contains("ppaction://hlinksldjump"))
-  assert_true(xml.contains("r:id=\"" + jump.id + "\""))
+  debug_inspect(xml.contains("ppaction://hlinksldjump"), content="true")
+  debug_inspect(xml.contains("r:id=\"" + jump.id + "\""), content="true")
 }
 
 ///|
@@ -73,10 +73,10 @@ test "picture with_hyperlink: external URL → rel + hlinkClick" {
   prs.update_slide_mut(0, prs.slides()[0].with_shape(Picture(pic)))
   let rels = prs.pkg.relationships_for(slide_name)
   let hl = rels.by_type(@opc.rt_hyperlink)[0]
-  assert_eq(hl.target, "https://pics.example")
+  debug_inspect(hl.target, content="\"https://pics.example\"")
   let xml = slide_xml_of(prs, slide_name)
-  assert_true(xml.contains("hlinkClick"))
-  assert_true(xml.contains("r:id=\"" + hl.id + "\""))
+  debug_inspect(xml.contains("hlinkClick"), content="true")
+  debug_inspect(xml.contains("r:id=\"" + hl.id + "\""), content="true")
 }
 
 ///|
@@ -94,9 +94,15 @@ test "shape with_hyperlink: survives save → reopen" {
   prs.update_slide_mut(0, prs.slides()[0].with_shape(AutoShape(box)))
   let prs2 = @presentation.Presentation::open(prs.save())
   let rels = prs2.pkg.relationships_for(slide_name)
-  assert_eq(rels.by_type(@opc.rt_hyperlink)[0].target, "https://saved.example")
+  debug_inspect(
+    rels.by_type(@opc.rt_hyperlink)[0].target,
+    content="\"https://saved.example\"",
+  )
   // The reopened slide still has the hlinkClick (round-trips via captured cNvPr).
-  assert_true(slide_xml_of(prs2, slide_name).contains("hlinkClick"))
+  debug_inspect(
+    slide_xml_of(prs2, slide_name).contains("hlinkClick"),
+    content="true",
+  )
 }
 
 ///|
@@ -113,18 +119,24 @@ test "shape without hyperlink: no hyperlink rel, no hlinkClick" {
   )
   prs.update_slide_mut(0, prs.slides()[0].with_shape(AutoShape(box)))
   let rels = prs.pkg.relationships_for(slide_name)
-  assert_eq(rels.by_type(@opc.rt_hyperlink).length(), 0)
-  assert_false(slide_xml_of(prs, slide_name).contains("hlinkClick"))
+  debug_inspect(rels.by_type(@opc.rt_hyperlink).length(), content="0")
+  debug_inspect(
+    slide_xml_of(prs, slide_name).contains("hlinkClick"),
+    content="false",
+  )
 }
 
 ///|
 test "ShapeHyperlink::external / to_slide constructors carry the target" {
   let ext = @slide.ShapeHyperlink::external("https://example.com")
-  assert_true(ext.target == Some(ExternalUrl("https://example.com")))
-  assert_true(ext.click is None && ext.action is None)
+  debug_inspect(
+    ext.target,
+    content="Some(ExternalUrl(\"https://example.com\"))",
+  )
+  debug_inspect(ext.click is None && ext.action is None, content="true")
   let jump = @slide.ShapeHyperlink::to_slide(3)
-  assert_true(jump.target == Some(InternalSlide(3)))
-  assert_true(jump.click is None && jump.action is None)
+  debug_inspect(jump.target, content="Some(InternalSlide(3))")
+  debug_inspect(jump.click is None && jump.action is None, content="true")
 }
 
 // --- whole-shape hyperlinks on the remaining kinds (Connector / Group / GraphicFrame) ---
@@ -160,11 +172,11 @@ test "connector with_hyperlink: external URL → rel + hlinkClick on cNvPr" {
   prs.update_slide_mut(0, prs.slides()[0].with_shape(Connector(conn)))
   let rels = prs.pkg.relationships_for(slide_name)
   let hl = rels.by_type(@opc.rt_hyperlink)[0]
-  assert_eq(hl.target, "https://conn.example")
-  assert_true(hl.target_mode is External)
+  debug_inspect(hl.target, content="\"https://conn.example\"")
+  debug_inspect(hl.target_mode is External, content="true")
   let xml = slide_xml_of(prs, slide_name)
-  assert_true(xml.contains("hlinkClick"))
-  assert_true(xml.contains("r:id=\"" + hl.id + "\""))
+  debug_inspect(xml.contains("hlinkClick"), content="true")
+  debug_inspect(xml.contains("r:id=\"" + hl.id + "\""), content="true")
 }
 
 ///|
@@ -193,10 +205,10 @@ test "group with_hyperlink_to_slide: rt_slide rel + ppaction jump" {
   )
   let rels = prs.pkg.relationships_for(slide_name)
   let jump = rels.by_type(@opc.rt_slide)[0]
-  assert_true(jump.target_mode is Internal)
+  debug_inspect(jump.target_mode is Internal, content="true")
   let xml = slide_xml_of(prs, slide_name)
-  assert_true(xml.contains("ppaction://hlinksldjump"))
-  assert_true(xml.contains("r:id=\"" + jump.id + "\""))
+  debug_inspect(xml.contains("ppaction://hlinksldjump"), content="true")
+  debug_inspect(xml.contains("r:id=\"" + jump.id + "\""), content="true")
 }
 
 ///|
@@ -220,12 +232,18 @@ test "graphic frame with_hyperlink: a clickable table survives save → reopen" 
   ).with_hyperlink(url="https://table.example")
   prs.update_slide_mut(0, prs.slides()[0].with_shape(GraphicFrame(frame)))
   let rels = prs.pkg.relationships_for(slide_name)
-  assert_eq(rels.by_type(@opc.rt_hyperlink)[0].target, "https://table.example")
+  debug_inspect(
+    rels.by_type(@opc.rt_hyperlink)[0].target,
+    content="\"https://table.example\"",
+  )
   let xml = slide_xml_of(prs, slide_name)
-  assert_true(xml.contains("hlinkClick"))
+  debug_inspect(xml.contains("hlinkClick"), content="true")
   // Save → reopen: the hlinkClick round-trips via the captured cNvPr.
   let prs2 = @presentation.Presentation::open(prs.save())
-  assert_true(slide_xml_of(prs2, slide_name).contains("hlinkClick"))
+  debug_inspect(
+    slide_xml_of(prs2, slide_name).contains("hlinkClick"),
+    content="true",
+  )
 }
 
 ///|
@@ -233,11 +251,15 @@ test "shape hyperlink builders set the unresolved target and leave the original 
   let conn = test_connector(9)
   let conn_ext = conn.with_hyperlink(url="https://a.example")
   let conn_jump = conn.with_hyperlink_to_slide(slide_idx=2)
-  assert_true(conn.hyperlink is None) // ADR-003 immutability
-  assert_true(
-    conn_ext.hyperlink.unwrap().target == Some(ExternalUrl("https://a.example")),
+  debug_inspect(conn.hyperlink is None, content="true") // ADR-003 immutability
+  debug_inspect(
+    conn_ext.hyperlink.unwrap().target,
+    content="Some(ExternalUrl(\"https://a.example\"))",
   )
-  assert_true(conn_jump.hyperlink.unwrap().target == Some(InternalSlide(2)))
+  debug_inspect(
+    conn_jump.hyperlink.unwrap().target,
+    content="Some(InternalSlide(2))",
+  )
   let frame = @slide.GraphicFrame::of_table(
     id=1,
     name="t",
@@ -247,15 +269,15 @@ test "shape hyperlink builders set the unresolved target and leave the original 
     cy=Emu(1L),
     @slide.Table::of_grid(rows=1, cols=1, col_width=Emu(1L), row_height=Emu(1L)),
   )
-  assert_true(
-    frame.with_hyperlink(url="https://f.example").hyperlink.unwrap().target ==
-    Some(ExternalUrl("https://f.example")),
+  debug_inspect(
+    frame.with_hyperlink(url="https://f.example").hyperlink.unwrap().target,
+    content="Some(ExternalUrl(\"https://f.example\"))",
   )
-  assert_true(
-    frame.with_hyperlink_to_slide(slide_idx=1).hyperlink.unwrap().target ==
-    Some(InternalSlide(1)),
+  debug_inspect(
+    frame.with_hyperlink_to_slide(slide_idx=1).hyperlink.unwrap().target,
+    content="Some(InternalSlide(1))",
   )
-  assert_true(frame.hyperlink is None)
+  debug_inspect(frame.hyperlink is None, content="true")
   let g : @slide.GroupShape = {
     id: 3,
     name: "g",
@@ -266,11 +288,11 @@ test "shape hyperlink builders set the unresolved target and leave the original 
     hyperlink: None,
     extension: [],
   }
-  assert_true(
-    g.with_hyperlink(url="https://g.example").hyperlink.unwrap().target ==
-    Some(ExternalUrl("https://g.example")),
+  debug_inspect(
+    g.with_hyperlink(url="https://g.example").hyperlink.unwrap().target,
+    content="Some(ExternalUrl(\"https://g.example\"))",
   )
-  assert_true(g.hyperlink is None)
+  debug_inspect(g.hyperlink is None, content="true")
 }
 
 ///|
@@ -298,10 +320,10 @@ test "picture with_hyperlink_to_slide: rt_slide rel + ppaction jump" {
   let xml = @oxml.bytes_to_string(
     prs.pkg.part_by_name("/ppt/slides/slide1.xml").unwrap().bytes,
   )
-  assert_true(xml.find("ppaction://hlinksldjump") is Some(_))
+  debug_inspect(xml.find("ppaction://hlinksldjump") is Some(_), content="true")
   // The slide rels carry an rt_slide relationship at slide2.
   let rels = @oxml.bytes_to_string(
     prs.pkg.part_by_name("/ppt/slides/_rels/slide1.xml.rels").unwrap().bytes,
   )
-  assert_true(rels.find("slide2.xml") is Some(_))
+  debug_inspect(rels.find("slide2.xml") is Some(_), content="true")
 }

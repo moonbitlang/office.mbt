@@ -84,7 +84,7 @@ fn build_fixture() -> FixedArray[Byte] {
 ///|
 test "fixture: opens with all parts present" {
   let pkg = @opc.Package::open(build_fixture())
-  assert_eq(pkg.parts().length(), 6)
+  debug_inspect(pkg.parts().length(), content="6")
   let names = [
     "/[Content_Types].xml", "/_rels/.rels", "/ppt/presentation.xml", "/ppt/_rels/presentation.xml.rels",
     "/ppt/slides/slide1.xml", "/ppt/media/image1.png",
@@ -98,21 +98,24 @@ test "fixture: opens with all parts present" {
 test "fixture: content types resolve correctly per part" {
   let pkg = @opc.Package::open(build_fixture())
   // Override on the presentation part
-  assert_eq(
+  debug_inspect(
     pkg.require_part("/ppt/presentation.xml").content_type,
-    "application/vnd.openxmlformats-officedocument.presentationml.presentation.main+xml",
+    content="\"application/vnd.openxmlformats-officedocument.presentationml.presentation.main+xml\"",
   )
   // Override on the slide part
-  assert_eq(
+  debug_inspect(
     pkg.require_part("/ppt/slides/slide1.xml").content_type,
-    "application/vnd.openxmlformats-officedocument.presentationml.slide+xml",
+    content="\"application/vnd.openxmlformats-officedocument.presentationml.slide+xml\"",
   )
   // Default by extension `.png`
-  assert_eq(pkg.require_part("/ppt/media/image1.png").content_type, "image/png")
+  debug_inspect(
+    pkg.require_part("/ppt/media/image1.png").content_type,
+    content="\"image/png\"",
+  )
   // Default by extension `.rels`
-  assert_eq(
+  debug_inspect(
     pkg.require_part("/_rels/.rels").content_type,
-    "application/vnd.openxmlformats-package.relationships+xml",
+    content="\"application/vnd.openxmlformats-package.relationships+xml\"",
   )
 }
 
@@ -120,12 +123,12 @@ test "fixture: content types resolve correctly per part" {
 test "fixture: package-level rels point at the presentation" {
   let pkg = @opc.Package::open(build_fixture())
   let rels = pkg.relationships_for(@opc.package_root)
-  assert_eq(rels.items.length(), 1)
+  debug_inspect(rels.items.length(), content="1")
   let r = rels.by_type(rt_office_doc)
-  assert_eq(r.length(), 1)
-  assert_eq(
+  debug_inspect(r.length(), content="1")
+  debug_inspect(
     @opc.resolve_target(@opc.package_root, r[0].target, r[0].target_mode),
-    "/ppt/presentation.xml",
+    content="\"/ppt/presentation.xml\"",
   )
 }
 
@@ -133,15 +136,15 @@ test "fixture: package-level rels point at the presentation" {
 test "fixture: presentation rels resolve to real parts (incl. `..` walk)" {
   let pkg = @opc.Package::open(build_fixture())
   let rels = pkg.relationships_for("/ppt/presentation.xml")
-  assert_eq(rels.items.length(), 2)
+  debug_inspect(rels.items.length(), content="2")
   let slide_rel = rels.by_id("rId1").unwrap()
   let slide_path = @opc.resolve_target(
     "/ppt/presentation.xml",
     slide_rel.target,
     slide_rel.target_mode,
   )
-  assert_eq(slide_path, "/ppt/slides/slide1.xml")
-  assert_true(!(pkg.part_by_name(slide_path) is None))
+  debug_inspect(slide_path, content="\"/ppt/slides/slide1.xml\"")
+  debug_inspect(!(pkg.part_by_name(slide_path) is None), content="true")
   // rId2 → image (relative target, no `..` here but exercises lookup)
   let img_rel = rels.by_id("rId2").unwrap()
   let img_path = @opc.resolve_target(
@@ -149,24 +152,24 @@ test "fixture: presentation rels resolve to real parts (incl. `..` walk)" {
     img_rel.target,
     img_rel.target_mode,
   )
-  assert_eq(img_path, "/ppt/media/image1.png")
-  assert_true(!(pkg.part_by_name(img_path) is None))
+  debug_inspect(img_path, content="\"/ppt/media/image1.png\"")
+  debug_inspect(!(pkg.part_by_name(img_path) is None), content="true")
 }
 
 ///|
 test "round trip: open -> to_bytes -> open preserves shape" {
   let pkg1 = @opc.Package::open(build_fixture())
   let pkg2 = @opc.Package::open(pkg1.to_bytes())
-  assert_eq(pkg2.parts().length(), pkg1.parts().length())
+  debug_inspect(pkg2.parts().length() == pkg1.parts().length(), content="true")
   for p in pkg1.parts() {
     let other = pkg2.require_part(p.name)
-    assert_eq(other.content_type, p.content_type)
-    assert_eq(other.bytes.length(), p.bytes.length())
+    debug_inspect(other.content_type == p.content_type, content="true")
+    debug_inspect(other.bytes.length() == p.bytes.length(), content="true")
   }
   // Rels survive too.
   let r1 = pkg1.relationships_for("/ppt/presentation.xml")
   let r2 = pkg2.relationships_for("/ppt/presentation.xml")
-  assert_eq(r2.items.length(), r1.items.length())
+  debug_inspect(r2.items.length() == r1.items.length(), content="true")
 }
 
 ///|
@@ -189,9 +192,9 @@ test "mutate: add a slide part + register override + save + reopen" {
   // Save and reopen.
   let pkg2 = @opc.Package::open(pkg.to_bytes())
   let p = pkg2.require_part("/ppt/slides/slide2.xml")
-  assert_eq(
+  debug_inspect(
     p.content_type,
-    "application/vnd.openxmlformats-officedocument.presentationml.slide+xml",
+    content="\"application/vnd.openxmlformats-officedocument.presentationml.slide+xml\"",
   )
 }
 
@@ -209,5 +212,5 @@ test "mutate: replace a part's bytes survives round trip" {
   let pkg2 = @opc.Package::open(pkg.to_bytes())
   let p = pkg2.require_part("/ppt/slides/slide1.xml")
   let s = p.text()
-  assert_true(s.contains("<edited/>"))
+  debug_inspect(s.contains("<edited/>"), content="true")
 }

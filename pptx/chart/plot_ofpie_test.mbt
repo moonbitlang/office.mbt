@@ -30,10 +30,10 @@ test "OfPieChart: pie-of-pie variant" {
   let chart = @chart.Chart::parse(fixture_ofpie_chart_xml(body))
   match chart.chart.plot_area.plots[0] {
     OfPieChart(b) => {
-      assert_eq(b.of_pie_type, Pie)
-      assert_true(b.split_type is Some(Percent))
-      assert_eq(b.split_pos.unwrap(), "10")
-      assert_eq(b.second_pie_size.unwrap(), 75)
+      debug_inspect(b.of_pie_type, content="Pie")
+      debug_inspect(b.split_type is Some(Percent), content="true")
+      debug_inspect(b.split_pos.unwrap(), content="\"10\"")
+      debug_inspect(b.second_pie_size.unwrap(), content="75")
     }
     _ => fail("expected OfPieChart plot")
   }
@@ -51,10 +51,10 @@ test "OfPieChart: bar-of-pie + custSplit" {
   let chart = @chart.Chart::parse(fixture_ofpie_chart_xml(body))
   match chart.chart.plot_area.plots[0] {
     OfPieChart(b) => {
-      assert_eq(b.of_pie_type, Bar)
-      assert_true(b.split_type is Some(Cust))
-      assert_true(b.cust_split is Some(_))
-      assert_eq(b.ser_lines.length(), 1)
+      debug_inspect(b.of_pie_type, content="Bar")
+      debug_inspect(b.split_type is Some(Cust), content="true")
+      debug_inspect(b.cust_split is Some(_), content="true")
+      debug_inspect(b.ser_lines.length(), content="1")
     }
     _ => fail("expected OfPieChart plot")
   }
@@ -83,15 +83,21 @@ test "OfPieChart: round-trip" {
   let original = @chart.Chart::parse(fixture_ofpie_chart_xml(body))
   let bytes = original.serialize()
   let re_parsed = @chart.Chart::parse(bytes)
-  assert_eq(re_parsed, original)
+  debug_inspect(re_parsed == original, content="true")
 }
 
 ///|
 test "OfPieType + SplitType enums round-trip" {
   for t in [@chart.OfPieType::Pie, Bar] {
-    assert_eq(@chart.OfPieType::from_xml(t.to_xml()).unwrap(), t)
+    debug_inspect(
+      @chart.OfPieType::from_xml(t.to_xml()).unwrap() == t,
+      content="true",
+    )
   }
   for s in [@chart.SplitType::Auto, Cust, Percent, Pos, Val] {
-    assert_eq(@chart.SplitType::from_xml(s.to_xml()).unwrap(), s)
+    debug_inspect(
+      @chart.SplitType::from_xml(s.to_xml()).unwrap() == s,
+      content="true",
+    )
   }
 }

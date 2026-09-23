@@ -94,8 +94,8 @@ test "MasterMapping → master's clrMap" {
     fixture_master(),
     layout_inheriting(),
   )
-  assert_true(cm.bg1 is Lt1)
-  assert_true(cm.tx1 is Dk1)
+  debug_inspect(cm.bg1 is Lt1, content="true")
+  debug_inspect(cm.tx1 is Dk1, content="true")
 }
 
 ///|
@@ -104,8 +104,8 @@ test "Override → layout's explicit mapping" {
     fixture_master(),
     layout_overriding(),
   )
-  assert_true(cm.bg1 is Dk1)
-  assert_true(cm.tx1 is Lt1)
+  debug_inspect(cm.bg1 is Dk1, content="true")
+  debug_inspect(cm.tx1 is Lt1, content="true")
 }
 
 // --- resolve_slide_color ---
@@ -120,7 +120,7 @@ test "resolve_slide_color: through inherited mapping then theme" {
     fixture_scheme(),
   )
   match result.unwrap().base {
-    Srgb(rgb) => assert_eq(rgb.to_hex(), "FFFFF1")
+    Srgb(rgb) => debug_inspect(rgb.to_hex(), content="\"FFFFF1\"")
     _ => fail("expected Srgb")
   }
 }
@@ -136,7 +136,7 @@ test "resolve_slide_color: layout override takes precedence" {
     fixture_scheme(),
   )
   match result.unwrap().base {
-    Srgb(rgb) => assert_eq(rgb.to_hex(), "000001")
+    Srgb(rgb) => debug_inspect(rgb.to_hex(), content="\"000001\"")
     _ => fail("expected Srgb")
   }
 }
@@ -151,7 +151,7 @@ test "resolve_slide_color: accent passthrough" {
     fixture_scheme(),
   )
   match result.unwrap().base {
-    Srgb(rgb) => assert_eq(rgb.to_hex(), "AAAA03")
+    Srgb(rgb) => debug_inspect(rgb.to_hex(), content="\"AAAA03\"")
     _ => fail("expected Srgb")
   }
 }
@@ -165,7 +165,7 @@ test "resolve_slide_color: master-level slot has no slide mapping" {
     layout_inheriting(),
     fixture_scheme(),
   )
-  assert_true(none is None)
+  debug_inspect(none is None, content="true")
 }
 
 // --- lookup_theme_slot ---
@@ -175,7 +175,7 @@ test "lookup_theme_slot: bg1 and lt1 resolve to the same slot" {
   let scheme = fixture_scheme()
   let bg1_choice = @slide_master.lookup_theme_slot(Bg1, scheme)
   let lt1_choice = @slide_master.lookup_theme_slot(Lt1, scheme)
-  assert_eq(bg1_choice, lt1_choice)
+  debug_inspect(bg1_choice == lt1_choice, content="true")
 }
 
 ///|
@@ -183,19 +183,21 @@ test "lookup_theme_slot: tx1 and dk1 resolve to the same slot" {
   let scheme = fixture_scheme()
   let tx1_choice = @slide_master.lookup_theme_slot(Tx1, scheme)
   let dk1_choice = @slide_master.lookup_theme_slot(Dk1, scheme)
-  assert_eq(tx1_choice, dk1_choice)
+  debug_inspect(tx1_choice == dk1_choice, content="true")
 }
 
 ///|
 test "lookup_theme_slot: each accent maps distinctly" {
   let s = fixture_scheme()
   // Spot-check: accent1 != accent2, accent5 != accent6
-  assert_true(
+  debug_inspect(
     @slide_master.lookup_theme_slot(Accent1, s) !=
     @slide_master.lookup_theme_slot(Accent2, s),
+    content="true",
   )
-  assert_true(
+  debug_inspect(
     @slide_master.lookup_theme_slot(Accent5, s) !=
     @slide_master.lookup_theme_slot(Accent6, s),
+    content="true",
   )
 }

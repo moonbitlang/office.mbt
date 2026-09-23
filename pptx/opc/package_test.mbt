@@ -45,11 +45,11 @@ fn make_pkg_bytes(entries : Array[(String, String)]) -> FixedArray[Byte] {
 test "Package::open round-trips a tiny zip" {
   let bytes = make_pkg_bytes([("ppt/presentation.xml", "<presentation/>")])
   let pkg = @opc.Package::open(bytes)
-  assert_eq(pkg.parts().length(), 2)
+  debug_inspect(pkg.parts().length(), content="2")
   let p1 = pkg.require_part("/[Content_Types].xml")
-  assert_true(!p1.text().is_empty())
+  debug_inspect(!p1.text().is_empty(), content="true")
   let p2 = pkg.require_part("/ppt/presentation.xml")
-  assert_eq(p2.text(), "<presentation/>")
+  debug_inspect(p2.text(), content="\"<presentation/>\"")
 }
 
 ///|
@@ -57,9 +57,9 @@ test "open populates content_type from [Content_Types].xml" {
   let bytes = make_pkg_bytes([("ppt/presentation.xml", "<presentation/>")])
   let pkg = @opc.Package::open(bytes)
   let p = pkg.require_part("/ppt/presentation.xml")
-  assert_eq(
+  debug_inspect(
     p.content_type,
-    "application/vnd.openxmlformats-officedocument.presentationml.presentation.main+xml",
+    content="\"application/vnd.openxmlformats-officedocument.presentationml.presentation.main+xml\"",
   )
 }
 
@@ -69,7 +69,7 @@ test "open falls back to Default extension for content type" {
   let pkg = @opc.Package::open(bytes)
   // No Override for slide1.xml — falls back to Default Extension="xml".
   let p = pkg.require_part("/ppt/slides/slide1.xml")
-  assert_eq(p.content_type, "application/xml")
+  debug_inspect(p.content_type, content="\"application/xml\"")
 }
 
 ///|
@@ -81,10 +81,10 @@ test "round trip: open -> to_bytes -> open" {
   let pkg1 = @opc.Package::open(original)
   let repacked = pkg1.to_bytes()
   let pkg2 = @opc.Package::open(repacked)
-  assert_eq(pkg2.parts().length(), pkg1.parts().length())
+  debug_inspect(pkg2.parts().length() == pkg1.parts().length(), content="true")
   for p in pkg1.parts() {
     let other = pkg2.require_part(p.name)
-    assert_eq(other.bytes.length(), p.bytes.length())
+    debug_inspect(other.bytes.length() == p.bytes.length(), content="true")
   }
 }
 
@@ -92,8 +92,8 @@ test "round trip: open -> to_bytes -> open" {
 test "part_by_name returns None for missing parts" {
   let bytes = make_pkg_bytes([("a.xml", "<a/>")])
   let pkg = @opc.Package::open(bytes)
-  assert_true(pkg.part_by_name("/missing") is None)
-  assert_true(!(pkg.part_by_name("/a.xml") is None))
+  debug_inspect(pkg.part_by_name("/missing") is None, content="true")
+  debug_inspect(!(pkg.part_by_name("/a.xml") is None), content="true")
 }
 
 ///|
@@ -123,11 +123,11 @@ test "add_part / remove_part" {
   let pkg = @opc.Package::new()
   let p = @opc.Part::new("/a.xml", "application/xml", @fzip.str_to_u8("<a/>"))
   pkg.add_part(p)
-  assert_eq(pkg.parts().length(), 1)
+  debug_inspect(pkg.parts().length(), content="1")
   let removed = pkg.remove_part("/a.xml")
-  assert_true(removed)
-  assert_eq(pkg.parts().length(), 0)
-  assert_true(!pkg.remove_part("/a.xml"))
+  debug_inspect(removed, content="true")
+  debug_inspect(pkg.parts().length(), content="0")
+  debug_inspect(!pkg.remove_part("/a.xml"), content="true")
 }
 
 ///|
@@ -161,8 +161,8 @@ test "Part::new validates names" {
 test "name conversion helpers are inverses" {
   let zip = "ppt/slides/slide1.xml"
   let opc = @opc.zip_name_to_opc(zip)
-  assert_eq(opc, "/ppt/slides/slide1.xml")
-  assert_eq(@opc.opc_name_to_zip(opc), zip)
+  debug_inspect(opc, content="\"/ppt/slides/slide1.xml\"")
+  debug_inspect(@opc.opc_name_to_zip(opc) == zip, content="true")
 }
 
 ///|
@@ -187,7 +187,7 @@ test "regenerate_content_types_part replaces in-place" {
   // Round trip and verify the new content_type is resolved on reopen.
   let pkg2 = @opc.Package::open(pkg.to_bytes())
   let p = pkg2.require_part("/a.xml")
-  assert_eq(p.content_type, "application/custom+xml")
+  debug_inspect(p.content_type, content="\"application/custom+xml\"")
 }
 
 ///|
@@ -217,15 +217,15 @@ test "Package::replace_part swaps bytes in place and keeps the order" {
   let replaced = pkg.replace_part(
     @opc.Part::new("/b.xml", "application/xml", FixedArray::make(9, b'y')),
   )
-  assert_true(replaced)
+  debug_inspect(replaced, content="true")
   // Position is preserved — remove-then-add used to move the part last.
   let names = []
   for p in pkg.parts() {
     names.push(p.name)
   }
-  assert_true(names == ["/a.xml", "/b.xml", "/c.xml"])
+  debug_inspect(names, content="[\"/a.xml\", \"/b.xml\", \"/c.xml\"]")
   // The replacement's bytes, not the original's.
-  assert_eq(pkg.part_by_name("/b.xml").unwrap().bytes.length(), 9)
+  debug_inspect(pkg.part_by_name("/b.xml").unwrap().bytes.length(), content="9")
 }
 
 ///|
@@ -237,8 +237,8 @@ test "Package::replace_part reports a missing part and changes nothing" {
   let replaced = pkg.replace_part(
     @opc.Part::new("/gone.xml", "application/xml", FixedArray::make(9, b'y')),
   )
-  assert_false(replaced)
-  assert_eq(pkg.parts().length(), 1)
+  debug_inspect(replaced, content="false")
+  debug_inspect(pkg.parts().length(), content="1")
 }
 
 ///|
@@ -249,9 +249,9 @@ test "Package::part_by_name still resolves after a removal shifts positions" {
       @opc.Part::new(name, "application/xml", FixedArray::make(4, b'x')),
     )
   }
-  assert_true(pkg.remove_part("/a.xml"))
+  debug_inspect(pkg.remove_part("/a.xml"), content="true")
   // The name index is rebuilt on removal; a stale one would point at /c.
-  assert_eq(pkg.part_by_name("/b.xml").unwrap().name, "/b.xml")
-  assert_eq(pkg.part_by_name("/c.xml").unwrap().name, "/c.xml")
-  assert_true(pkg.part_by_name("/a.xml") is None)
+  debug_inspect(pkg.part_by_name("/b.xml").unwrap().name, content="\"/b.xml\"")
+  debug_inspect(pkg.part_by_name("/c.xml").unwrap().name, content="\"/c.xml\"")
+  debug_inspect(pkg.part_by_name("/a.xml") is None, content="true")
 }

@@ -71,14 +71,18 @@ test "editing one slide leaves every other part byte-for-byte identical" {
       "/ppt/presentation.xml", // slide order unchanged → not rewritten
        "/ppt/presProps.xml",
     ] {
-    assert_true(bytes_eq(part_bytes(o, name), part_bytes(e, name)))
+    debug_inspect(
+      bytes_eq(part_bytes(o, name), part_bytes(e, name)),
+      content="true",
+    )
   }
   // The edited slide genuinely changed:
-  assert_false(
+  debug_inspect(
     bytes_eq(
       part_bytes(o, "/ppt/slides/slide2.xml"),
       part_bytes(e, "/ppt/slides/slide2.xml"),
     ),
+    content="false",
   )
 }
 
@@ -96,6 +100,9 @@ test "open → save with no edits preserves every part byte-for-byte" {
       "/ppt/slides/slide1.xml", "/ppt/theme/theme1.xml", "/ppt/slideMasters/slideMaster1.xml",
       "/ppt/presentation.xml", "/[Content_Types].xml",
     ] {
-    assert_true(bytes_eq(part_bytes(o, name), part_bytes(r, name)))
+    debug_inspect(
+      bytes_eq(part_bytes(o, name), part_bytes(r, name)),
+      content="true",
+    )
   }
 }

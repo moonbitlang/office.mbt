@@ -5,28 +5,28 @@
 test "pct_w / pct_h on a fresh deck (4:3 default)" {
   let prs = @presentation.Presentation::new()
   // 4:3 defaults: 9_144_000 × 6_858_000 EMU.
-  assert_eq(prs.pct_w(0.0), Emu(0L))
-  assert_eq(prs.pct_w(100.0), Emu(9_144_000L))
-  assert_eq(prs.pct_w(50.0), Emu(4_572_000L))
-  assert_eq(prs.pct_h(100.0), Emu(6_858_000L))
-  assert_eq(prs.pct_h(50.0), Emu(3_429_000L))
+  debug_inspect(prs.pct_w(0.0), content="Emu(0)")
+  debug_inspect(prs.pct_w(100.0), content="Emu(9144000)")
+  debug_inspect(prs.pct_w(50.0), content="Emu(4572000)")
+  debug_inspect(prs.pct_h(100.0), content="Emu(6858000)")
+  debug_inspect(prs.pct_h(50.0), content="Emu(3429000)")
 }
 
 ///|
 test "slide_w / slide_h on a fresh deck" {
   let prs = @presentation.Presentation::new()
-  assert_eq(prs.slide_w(), Emu(9_144_000L))
-  assert_eq(prs.slide_h(), Emu(6_858_000L))
+  debug_inspect(prs.slide_w(), content="Emu(9144000)")
+  debug_inspect(prs.slide_h(), content="Emu(6858000)")
 }
 
 ///|
 test "pct_w / pct_h follow slide-size changes" {
   let prs = @presentation.Presentation::new()
   prs.set_slide_size_mut(Widescreen) // 12_192_000 × 6_858_000
-  assert_eq(prs.pct_w(100.0), Emu(12_192_000L))
-  assert_eq(prs.pct_w(25.0), Emu(3_048_000L))
+  debug_inspect(prs.pct_w(100.0), content="Emu(12192000)")
+  debug_inspect(prs.pct_w(25.0), content="Emu(3048000)")
   // Height unchanged for widescreen.
-  assert_eq(prs.pct_h(100.0), Emu(6_858_000L))
+  debug_inspect(prs.pct_h(100.0), content="Emu(6858000)")
 }
 
 ///|
@@ -53,8 +53,8 @@ test "pct_w / pct_h compose with shape builders" {
   // For 4:3 defaults (9_144_000 × 6_858_000):
   //   10% × 9_144_000 = 914_400 ; 5% × 6_858_000 = 342_900
   //   80% × 9_144_000 = 7_315_200 ; 15% × 6_858_000 = 1_028_700
-  assert_eq(xfrm.offset.x, Emu(914_400L))
-  assert_eq(xfrm.offset.y, Emu(342_900L))
-  assert_eq(xfrm.extent.cx, Emu(7_315_200L))
-  assert_eq(xfrm.extent.cy, Emu(1_028_700L))
+  debug_inspect(xfrm.offset.x, content="Emu(914400)")
+  debug_inspect(xfrm.offset.y, content="Emu(342900)")
+  debug_inspect(xfrm.extent.cx, content="Emu(7315200)")
+  debug_inspect(xfrm.extent.cy, content="Emu(1028700)")
 }

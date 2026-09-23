@@ -10,11 +10,11 @@ test "duplicate_slide_mut: appends an identical copy" {
   let _ = prs.add_slide_mut(0)
   stamp_slide(prs, 0, "Orig")
   let new_name = prs.duplicate_slide_mut(0)
-  assert_eq(new_name, "/ppt/slides/slide2.xml")
+  debug_inspect(new_name, content="\"/ppt/slides/slide2.xml\"")
   let slides = prs.slides()
-  assert_eq(slides.length(), 2)
-  assert_eq(marker_of(slides[0]), "Orig")
-  assert_eq(marker_of(slides[1]), "Orig")
+  debug_inspect(slides.length(), content="2")
+  debug_inspect(marker_of(slides[0]), content="\"Orig\"")
+  debug_inspect(marker_of(slides[1]), content="\"Orig\"")
 }
 
 ///|
@@ -23,11 +23,11 @@ test "duplicate_slide_mut: new sldId + presentation rel are wired" {
   let _ = prs.add_slide_mut(0)
   let _ = prs.duplicate_slide_mut(0)
   let pres = prs.presentation_part().unwrap()
-  assert_eq(pres.sld_ids.length(), 2)
+  debug_inspect(pres.sld_ids.length(), content="2")
   // Distinct slide ids.
-  assert_true(pres.sld_ids[0].id != pres.sld_ids[1].id)
+  debug_inspect(pres.sld_ids[0].id != pres.sld_ids[1].id, content="true")
   let pres_rels = prs.pkg.relationships_for("/ppt/presentation.xml")
-  assert_eq(pres_rels.by_type(@opc.rt_slide).length(), 2)
+  debug_inspect(pres_rels.by_type(@opc.rt_slide).length(), content="2")
 }
 
 ///|
@@ -44,16 +44,26 @@ test "duplicate_slide_mut: clone re-references the source's parts" {
   )
   let new_name = prs.duplicate_slide_mut(0)
   // Only one image part exists — the clone shares it (Q12: re-reference).
-  assert_true(prs.pkg.part_by_name("/ppt/media/image1.png") is Some(_))
-  assert_true(prs.pkg.part_by_name("/ppt/media/image2.png") is None)
+  debug_inspect(
+    prs.pkg.part_by_name("/ppt/media/image1.png") is Some(_),
+    content="true",
+  )
+  debug_inspect(
+    prs.pkg.part_by_name("/ppt/media/image2.png") is None,
+    content="true",
+  )
   // Both slides' .rels point at the same image target.
   let orig_rels = prs.pkg.relationships_for("/ppt/slides/slide1.xml")
   let clone_rels = prs.pkg.relationships_for(new_name)
-  assert_eq(
-    orig_rels.by_type(@opc.rt_image).length(),
+  debug_inspect(
+    orig_rels.by_type(@opc.rt_image).length() ==
     clone_rels.by_type(@opc.rt_image).length(),
+    content="true",
   )
-  assert_eq(clone_rels.by_type(@opc.rt_image)[0].target, "../media/image1.png")
+  debug_inspect(
+    clone_rels.by_type(@opc.rt_image)[0].target,
+    content="\"../media/image1.png\"",
+  )
 }
 
 ///|
@@ -64,9 +74,9 @@ test "duplicate_slide_mut: save → reopen round-trips both slides" {
   let _ = prs.duplicate_slide_mut(0)
   let reopened = @presentation.Presentation::open(prs.save())
   let slides = reopened.slides()
-  assert_eq(slides.length(), 2)
-  assert_eq(marker_of(slides[0]), "dupme")
-  assert_eq(marker_of(slides[1]), "dupme")
+  debug_inspect(slides.length(), content="2")
+  debug_inspect(marker_of(slides[0]), content="\"dupme\"")
+  debug_inspect(marker_of(slides[1]), content="\"dupme\"")
 }
 
 ///|
@@ -85,9 +95,12 @@ test "duplicate_slide_mut: shared image survives deleting the original" {
   )
   let _ = prs.duplicate_slide_mut(0)
   prs.remove_slide_mut(0)
-  assert_eq(prs.slides().length(), 1)
+  debug_inspect(prs.slides().length(), content="1")
   // The clone still references image1.png, so it must NOT be collected.
-  assert_true(prs.pkg.part_by_name("/ppt/media/image1.png") is Some(_))
+  debug_inspect(
+    prs.pkg.part_by_name("/ppt/media/image1.png") is Some(_),
+    content="true",
+  )
 }
 
 ///|
@@ -107,7 +120,7 @@ test "with_duplicated_slide: immutable — original unchanged" {
   let prs = @presentation.Presentation::new()
   let _ = prs.add_slide_mut(0)
   let (bigger, name) = prs.with_duplicated_slide(0)
-  assert_eq(name, "/ppt/slides/slide2.xml")
-  assert_eq(prs.slides().length(), 1)
-  assert_eq(bigger.slides().length(), 2)
+  debug_inspect(name, content="\"/ppt/slides/slide2.xml\"")
+  debug_inspect(prs.slides().length(), content="1")
+  debug_inspect(bigger.slides().length(), content="2")
 }

@@ -25,8 +25,8 @@ test "with_footer: adds a footer placeholder carrying the text" {
     "Confidential",
   )
   let ftr = find_ph(slide, Ftr).unwrap()
-  assert_eq(ftr.placeholder.unwrap().ph_type, "ftr")
-  assert_eq(ftr.text_body.unwrap().plain_text(), "Confidential")
+  debug_inspect(ftr.placeholder.unwrap().ph_type, content="\"ftr\"")
+  debug_inspect(ftr.text_body.unwrap().plain_text(), content="\"Confidential\"")
 }
 
 ///|
@@ -45,36 +45,42 @@ test "with_footer: is idempotent (replaces, not duplicates)" {
       _ => ()
     }
   }
-  assert_eq(count, 1)
-  assert_eq(find_ph(slide, Ftr).unwrap().text_body.unwrap().plain_text(), "B")
+  debug_inspect(count, content="1")
+  debug_inspect(
+    find_ph(slide, Ftr).unwrap().text_body.unwrap().plain_text(),
+    content="\"B\"",
+  )
 }
 
 ///|
 test "with_slide_number: true adds a sldNum field; false removes it" {
   let on = @slide.Slide::parse(typical_title_slide()).with_slide_number(true)
   let sp = find_ph(on, SldNum).unwrap()
-  assert_eq(sp.placeholder.unwrap().ph_type, "sldNum")
-  assert_eq(sp.placeholder.unwrap().idx, 12)
+  debug_inspect(sp.placeholder.unwrap().ph_type, content="\"sldNum\"")
+  debug_inspect(sp.placeholder.unwrap().idx, content="12")
   // The body holds a slidenum field — serialised as <a:fld type="slidenum">.
   let xml = @oxml.bytes_to_string(on.serialize())
-  assert_true(xml.contains("type=\"slidenum\""))
+  debug_inspect(xml.contains("type=\"slidenum\""), content="true")
   // Toggling off removes it.
   let off = on.with_slide_number(false)
-  assert_true(find_ph(off, SldNum) is None)
+  debug_inspect(find_ph(off, SldNum) is None, content="true")
 }
 
 ///|
 test "with_date: Auto emits a datetime field; Fixed emits literal text" {
   let auto = @slide.Slide::parse(typical_title_slide()).with_date(Auto)
-  assert_eq(find_ph(auto, Dt).unwrap().placeholder.unwrap().ph_type, "dt")
+  debug_inspect(
+    find_ph(auto, Dt).unwrap().placeholder.unwrap().ph_type,
+    content="\"dt\"",
+  )
   let auto_xml = @oxml.bytes_to_string(auto.serialize())
-  assert_true(auto_xml.contains("type=\"datetime1\""))
+  debug_inspect(auto_xml.contains("type=\"datetime1\""), content="true")
   let fixed = @slide.Slide::parse(typical_title_slide()).with_date(
     Fixed("2026-05-29"),
   )
-  assert_eq(
+  debug_inspect(
     find_ph(fixed, Dt).unwrap().text_body.unwrap().plain_text(),
-    "2026-05-29",
+    content="\"2026-05-29\"",
   )
 }
 
@@ -85,13 +91,13 @@ test "header/footer placeholders round-trip through serialize" {
     .with_slide_number(true)
     .with_date(Fixed("Today"))
   let reparsed = @slide.Slide::parse(slide.serialize())
-  assert_eq(
+  debug_inspect(
     find_ph(reparsed, Ftr).unwrap().text_body.unwrap().plain_text(),
-    "Footer",
+    content="\"Footer\"",
   )
-  assert_true(find_ph(reparsed, SldNum) is Some(_))
-  assert_eq(
+  debug_inspect(find_ph(reparsed, SldNum) is Some(_), content="true")
+  debug_inspect(
     find_ph(reparsed, Dt).unwrap().text_body.unwrap().plain_text(),
-    "Today",
+    content="\"Today\"",
   )
 }

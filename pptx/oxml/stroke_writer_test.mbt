@@ -42,7 +42,7 @@ test "write_stroke: empty <a:ln> round-trips" {
   let xml = "<a:ln/>"
   let s0 = parse_stroke_inner(xml)
   let s1 = roundtrip_stroke(xml)
-  assert_true(s0 == s1)
+  debug_inspect(s0 == s1, content="true")
 }
 
 ///|
@@ -50,7 +50,7 @@ test "write_stroke: width + cap + cmpd + algn round-trips" {
   let xml = "<a:ln w=\"12700\" cap=\"flat\" cmpd=\"sng\" algn=\"ctr\"/>"
   let s0 = parse_stroke_inner(xml)
   let s1 = roundtrip_stroke(xml)
-  assert_true(s0 == s1)
+  debug_inspect(s0 == s1, content="true")
 }
 
 ///|
@@ -58,7 +58,7 @@ test "write_stroke: solidFill child round-trips" {
   let xml = "<a:ln w=\"6350\"><a:solidFill><a:srgbClr val=\"000000\"/></a:solidFill></a:ln>"
   let s0 = parse_stroke_inner(xml)
   let s1 = roundtrip_stroke(xml)
-  assert_true(s0 == s1)
+  debug_inspect(s0 == s1, content="true")
 }
 
 ///|
@@ -66,7 +66,7 @@ test "write_stroke: prstDash round-trips" {
   let xml = "<a:ln><a:prstDash val=\"dash\"/></a:ln>"
   let s0 = parse_stroke_inner(xml)
   let s1 = roundtrip_stroke(xml)
-  assert_true(s0 == s1)
+  debug_inspect(s0 == s1, content="true")
 }
 
 ///|
@@ -78,7 +78,7 @@ test "write_stroke: round/bevel/miter joins round-trip" {
   for xml in cases {
     let s0 = parse_stroke_inner(xml)
     let s1 = roundtrip_stroke(xml)
-    assert_true(s0 == s1)
+    debug_inspect(s0 == s1, content="true")
   }
 }
 
@@ -90,7 +90,7 @@ test "write_stroke: headEnd + tailEnd with size attrs round-trip" {
     "</a:ln>"
   let s0 = parse_stroke_inner(xml)
   let s1 = roundtrip_stroke(xml)
-  assert_true(s0 == s1)
+  debug_inspect(s0 == s1, content="true")
 }
 
 ///|
@@ -98,8 +98,8 @@ test "write_stroke: extLst sibling preserved via extension" {
   let xml = "<a:ln><a:extLst><a:ext uri=\"{X}\"/></a:extLst></a:ln>"
   let s0 = parse_stroke_inner(xml)
   let s1 = roundtrip_stroke(xml)
-  assert_true(s0 == s1)
-  assert_eq(s1.extension.length(), 1)
+  debug_inspect(s0 == s1, content="true")
+  debug_inspect(s1.extension.length(), content="1")
 }
 
 ///|
@@ -119,5 +119,5 @@ test "write_stroke: full kitchen-sink line round-trips" {
     "</a:ln>"
   let s0 = parse_stroke_inner(xml)
   let s1 = roundtrip_stroke(xml)
-  assert_true(s0 == s1)
+  debug_inspect(s0 == s1, content="true")
 }

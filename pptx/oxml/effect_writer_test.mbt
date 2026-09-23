@@ -39,7 +39,7 @@ fn roundtrip_effect_list(input_inner : String) -> @oxml.EffectList raise {
 test "write_effect_list: empty <a:effectLst/> round-trips" {
   let el0 = parse_effect_list_inner("")
   let el1 = roundtrip_effect_list("")
-  assert_true(el0 == el1)
+  debug_inspect(el0 == el1, content="true")
 }
 
 ///|
@@ -47,7 +47,7 @@ test "write_effect_list: blur round-trips" {
   let xml = "<a:blur rad=\"50800\" grow=\"1\"/>"
   let el0 = parse_effect_list_inner(xml)
   let el1 = roundtrip_effect_list(xml)
-  assert_true(el0 == el1)
+  debug_inspect(el0 == el1, content="true")
 }
 
 ///|
@@ -55,7 +55,7 @@ test "write_effect_list: glow round-trips" {
   let xml = "<a:glow rad=\"63500\"><a:srgbClr val=\"FF0000\"/></a:glow>"
   let el0 = parse_effect_list_inner(xml)
   let el1 = roundtrip_effect_list(xml)
-  assert_true(el0 == el1)
+  debug_inspect(el0 == el1, content="true")
 }
 
 ///|
@@ -65,7 +65,7 @@ test "write_effect_list: innerShdw round-trips" {
     "</a:innerShdw>"
   let el0 = parse_effect_list_inner(xml)
   let el1 = roundtrip_effect_list(xml)
-  assert_true(el0 == el1)
+  debug_inspect(el0 == el1, content="true")
 }
 
 ///|
@@ -77,7 +77,7 @@ test "write_effect_list: outerShdw full attribute soup round-trips" {
     "</a:outerShdw>"
   let el0 = parse_effect_list_inner(xml)
   let el1 = roundtrip_effect_list(xml)
-  assert_true(el0 == el1)
+  debug_inspect(el0 == el1, content="true")
 }
 
 ///|
@@ -87,7 +87,7 @@ test "write_effect_list: prstShdw round-trips" {
     "</a:prstShdw>"
   let el0 = parse_effect_list_inner(xml)
   let el1 = roundtrip_effect_list(xml)
-  assert_true(el0 == el1)
+  debug_inspect(el0 == el1, content="true")
 }
 
 ///|
@@ -95,7 +95,7 @@ test "write_effect_list: softEdge round-trips" {
   let xml = "<a:softEdge rad=\"31750\"/>"
   let el0 = parse_effect_list_inner(xml)
   let el1 = roundtrip_effect_list(xml)
-  assert_true(el0 == el1)
+  debug_inspect(el0 == el1, content="true")
 }
 
 ///|
@@ -105,7 +105,7 @@ test "write_effect_list: reflection round-trips" {
     " sy=\"-100000\" algn=\"bl\" rotWithShape=\"0\"/>"
   let el0 = parse_effect_list_inner(xml)
   let el1 = roundtrip_effect_list(xml)
-  assert_true(el0 == el1)
+  debug_inspect(el0 == el1, content="true")
 }
 
 ///|
@@ -113,8 +113,8 @@ test "write_effect_list: fillOverlay sibling preserved via extension" {
   let xml = "<a:fillOverlay blend=\"over\"><a:solidFill><a:srgbClr val=\"000000\"/></a:solidFill></a:fillOverlay>"
   let el0 = parse_effect_list_inner(xml)
   let el1 = roundtrip_effect_list(xml)
-  assert_true(el0 == el1)
-  assert_eq(el1.extension.length(), 1)
+  debug_inspect(el0 == el1, content="true")
+  debug_inspect(el1.extension.length(), content="1")
 }
 
 ///|
@@ -126,5 +126,5 @@ test "write_effect_list: combined effects round-trip" {
     "</a:outerShdw>"
   let el0 = parse_effect_list_inner(xml)
   let el1 = roundtrip_effect_list(xml)
-  assert_true(el0 == el1)
+  debug_inspect(el0 == el1, content="true")
 }

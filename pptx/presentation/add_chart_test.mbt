@@ -23,14 +23,14 @@ test "add_chart_mut: bar chart lands as /ppt/charts/chart1.xml" {
     cy=Emu(4_572_000L),
   )
   let chart_part = prs.pkg.part_by_name("/ppt/charts/chart1.xml").unwrap()
-  assert_eq(chart_part.content_type, @oxml.ct_chart)
+  debug_inspect(chart_part.content_type == @oxml.ct_chart, content="true")
   // Slide tree gains a GraphicFrame with ChartContent.
   let slide = prs.slides()[0]
-  assert_eq(slide.shapes.length(), 1)
+  debug_inspect(slide.shapes.length(), content="1")
   match slide.shapes[0] {
     GraphicFrame(gf) =>
       match gf.content {
-        ChartContent(rid) => assert_eq(rid, "rId2")
+        ChartContent(rid) => debug_inspect(rid, content="\"rId2\"")
         _ => fail("expected ChartContent")
       }
     _ => fail("expected GraphicFrame shape")
@@ -53,7 +53,7 @@ test "add_chart_mut: content_types gains Override for the chart part" {
   let has_chart_override = cts.overrides
     .iter()
     .any(kv => kv.0 == "/ppt/charts/chart1.xml" && kv.1 == @oxml.ct_chart)
-  assert_true(has_chart_override)
+  debug_inspect(has_chart_override, content="true")
 }
 
 ///|
@@ -76,10 +76,16 @@ test "add_chart_mut: second chart gets chart2 and a fresh rId" {
     cx=Emu(100L),
     cy=Emu(100L),
   )
-  assert_true(prs.pkg.part_by_name("/ppt/charts/chart1.xml") is Some(_))
-  assert_true(prs.pkg.part_by_name("/ppt/charts/chart2.xml") is Some(_))
+  debug_inspect(
+    prs.pkg.part_by_name("/ppt/charts/chart1.xml") is Some(_),
+    content="true",
+  )
+  debug_inspect(
+    prs.pkg.part_by_name("/ppt/charts/chart2.xml") is Some(_),
+    content="true",
+  )
   let slide = prs.slides()[0]
-  assert_eq(slide.shapes.length(), 2)
+  debug_inspect(slide.shapes.length(), content="2")
 }
 
 ///|
@@ -96,12 +102,12 @@ test "add_chart_mut: round-trips through save → open" {
   )
   let bytes = prs.save()
   let prs2 = @presentation.Presentation::open(bytes)
-  assert_eq(prs2.charts().length(), 1)
+  debug_inspect(prs2.charts().length(), content="1")
   let slide = prs2.slides()[0]
   match slide.shapes[0] {
     GraphicFrame(gf) =>
       match gf.content {
-        ChartContent(rid) => assert_eq(rid, "rId2")
+        ChartContent(rid) => debug_inspect(rid, content="\"rId2\"")
         _ => fail("expected ChartContent")
       }
     _ => fail("expected GraphicFrame")
@@ -160,21 +166,25 @@ test "add_chart_ex_mut: chartEx part + rels + content type + reopen" {
     cy=Emu(3_000_000L),
   )
   // The chartEx part exists with its content-type override.
-  assert_true(prs.pkg.part_by_name("/ppt/charts/chartEx1.xml") is Some(_))
+  debug_inspect(
+    prs.pkg.part_by_name("/ppt/charts/chartEx1.xml") is Some(_),
+    content="true",
+  )
   let ct = @oxml.bytes_to_string(
     prs.pkg.part_by_name("/[Content_Types].xml").unwrap().bytes,
   )
-  assert_true(ct.find("chartex") is Some(_))
+  debug_inspect(ct.find("chartex") is Some(_), content="true")
   // The slide references it and the deck survives save → reopen.
   let slide_xml = @oxml.bytes_to_string(
     prs.pkg.part_by_name("/ppt/slides/slide1.xml").unwrap().bytes,
   )
-  assert_true(
+  debug_inspect(
     slide_xml.find("chartEx") is Some(_) ||
     slide_xml.find("graphicFrame") is Some(_),
+    content="true",
   )
   let prs2 = @presentation.Presentation::open(prs.save())
-  assert_eq(prs2.slides()[0].shapes.length(), 1)
+  debug_inspect(prs2.slides()[0].shapes.length(), content="1")
 }
 
 // --- embedded data workbook (embed_data) ---
@@ -201,25 +211,29 @@ test "add_chart_mut embed_data: chart gains externalData + workbook part" {
   let chart_xml = @oxml.bytes_to_string(
     prs.pkg.require_part("/ppt/charts/chart1.xml").bytes,
   )
-  assert_true(
+  debug_inspect(
     chart_xml.contains(
       "<c:externalData r:id=\"rId1\"><c:autoUpdate val=\"0\"/></c:externalData>",
     ),
+    content="true",
   )
   // Its rels resolve rId1 to the embedded package.
   let rels = prs.pkg.relationships_for("/ppt/charts/chart1.xml")
   let rel = rels.by_id("rId1").unwrap()
-  assert_eq(rel.rel_type, @opc.rt_package)
-  assert_eq(rel.target, "../embeddings/Microsoft_Excel_Worksheet1.xlsx")
+  debug_inspect(rel.rel_type == @opc.rt_package, content="true")
+  debug_inspect(
+    rel.target,
+    content="\"../embeddings/Microsoft_Excel_Worksheet1.xlsx\"",
+  )
   // The part exists with the xlsx content type and a Default entry.
   let emb = prs.pkg
     .part_by_name("/ppt/embeddings/Microsoft_Excel_Worksheet1.xlsx")
     .unwrap()
-  assert_eq(emb.content_type, @oxml.ct_xlsx_sheet)
+  debug_inspect(emb.content_type == @oxml.ct_xlsx_sheet, content="true")
   let has_default = prs.pkg.content_types().defaults
     .iter()
     .any(kv => kv.0 == "xlsx" && kv.1 == @oxml.ct_xlsx_sheet)
-  assert_true(has_default)
+  debug_inspect(has_default, content="true")
 }
 
 ///|
@@ -233,23 +247,25 @@ test "add_chart_mut embed_data: the workbook is a valid OPC package with the dat
   let xlsx = @opc.Package::open(emb.bytes)
   // Root rels reach the workbook; workbook rels reach the sheet.
   let wb_rel = xlsx.relationships_for("/").by_id("rId1").unwrap()
-  assert_eq(wb_rel.target, "xl/workbook.xml")
+  debug_inspect(wb_rel.target, content="\"xl/workbook.xml\"")
   let sheet_rel = xlsx
     .relationships_for("/xl/workbook.xml")
     .by_id("rId1")
     .unwrap()
-  assert_eq(sheet_rel.target, "worksheets/sheet1.xml")
+  debug_inspect(sheet_rel.target, content="\"worksheets/sheet1.xml\"")
   // The sheet mirrors the ChartData layout.
   let sheet = @oxml.bytes_to_string(
     xlsx.require_part("/xl/worksheets/sheet1.xml").bytes,
   )
-  assert_true(
+  debug_inspect(
     sheet.contains("<c r=\"B1\" t=\"inlineStr\"><is><t>Revenue</t></is></c>"),
+    content="true",
   )
-  assert_true(
+  debug_inspect(
     sheet.contains("<c r=\"A2\" t=\"inlineStr\"><is><t>Q1</t></is></c>"),
+    content="true",
   )
-  assert_true(sheet.contains("<c r=\"B3\"><v>200</v></c>"))
+  debug_inspect(sheet.contains("<c r=\"B3\"><v>200</v></c>"), content="true")
 }
 
 ///|
@@ -259,9 +275,10 @@ test "add_chart_mut embed_data: survives save -> reopen, rides extension" {
   add_bar_with_embed(prs)
   let reopened = @presentation.Presentation::open(prs.save())
   // The workbook part is still there…
-  assert_true(
+  debug_inspect(
     reopened.pkg.part_by_name("/ppt/embeddings/Microsoft_Excel_Worksheet1.xlsx")
     is Some(_),
+    content="true",
   )
   // …and the parsed chart carries <c:externalData> in its extension
   // (ADR-004), so a second embed attempt is rejected.
@@ -274,7 +291,7 @@ test "add_chart_mut embed_data: survives save -> reopen, rides extension" {
       found = true
     }
   }
-  assert_true(found)
+  debug_inspect(found, content="true")
   let _ = reopened.add_slide_mut(0)
   try
     reopened.add_chart_mut(
@@ -300,17 +317,19 @@ test "add_chart_mut embed_data: two embedded charts get separate workbooks" {
   let _ = prs.add_slide_mut(0)
   add_bar_with_embed(prs)
   add_bar_with_embed(prs)
-  assert_true(
+  debug_inspect(
     prs.pkg.part_by_name("/ppt/embeddings/Microsoft_Excel_Worksheet1.xlsx")
     is Some(_),
+    content="true",
   )
-  assert_true(
+  debug_inspect(
     prs.pkg.part_by_name("/ppt/embeddings/Microsoft_Excel_Worksheet2.xlsx")
     is Some(_),
+    content="true",
   )
-  assert_eq(
+  debug_inspect(
     prs.pkg.relationships_for("/ppt/charts/chart2.xml").by_id("rId1").unwrap().target,
-    "../embeddings/Microsoft_Excel_Worksheet2.xlsx",
+    content="\"../embeddings/Microsoft_Excel_Worksheet2.xlsx\"",
   )
 }
 
@@ -326,14 +345,15 @@ test "add_chart_mut without embed_data: no workbook, no externalData" {
     cx=Emu(100L),
     cy=Emu(100L),
   )
-  assert_true(
+  debug_inspect(
     prs.pkg.part_by_name("/ppt/embeddings/Microsoft_Excel_Worksheet1.xlsx")
     is None,
+    content="true",
   )
   let chart_xml = @oxml.bytes_to_string(
     prs.pkg.require_part("/ppt/charts/chart1.xml").bytes,
   )
-  assert_true(!chart_xml.contains("externalData"))
+  debug_inspect(!chart_xml.contains("externalData"), content="true")
 }
 
 ///|
@@ -361,11 +381,13 @@ test "add_chart_mut embed_data: 26+ series spill into double-letter columns" {
   )
   // Column A is the category column, so series 24 (0-based) lands in
   // Z and series 25 wraps to AA.
-  assert_true(
+  debug_inspect(
     sheet.contains("<c r=\"Z1\" t=\"inlineStr\"><is><t>S24</t></is></c>"),
+    content="true",
   )
-  assert_true(
+  debug_inspect(
     sheet.contains("<c r=\"AA1\" t=\"inlineStr\"><is><t>S25</t></is></c>"),
+    content="true",
   )
-  assert_true(sheet.contains("<c r=\"AA2\"><v>25</v></c>"))
+  debug_inspect(sheet.contains("<c r=\"AA2\"><v>25</v></c>"), content="true")
 }

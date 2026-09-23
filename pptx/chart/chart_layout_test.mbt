@@ -20,8 +20,8 @@ fn fixture_layout_in_title(layout_body : String) -> FixedArray[Byte] {
 test "Layout: empty <c:layout/> parses to empty body" {
   let chart = @chart.Chart::parse(fixture_layout_in_title("<c:layout/>"))
   let lay = chart.chart.title.unwrap().layout.unwrap()
-  assert_true(lay.manual_layout is None)
-  assert_eq(lay.extension.length(), 0)
+  debug_inspect(lay.manual_layout is None, content="true")
+  debug_inspect(lay.extension.length(), content="0")
 }
 
 ///|
@@ -41,18 +41,18 @@ test "Layout: manualLayout with every leaf round-trips" {
     "</c:layout>"
   let original = @chart.Chart::parse(fixture_layout_in_title(body))
   let ml = original.chart.title.unwrap().layout.unwrap().manual_layout.unwrap()
-  assert_true(ml.layout_target is Some(LayoutInner))
-  assert_true(ml.x_mode is Some(LayoutEdge))
-  assert_true(ml.y_mode is Some(LayoutFactor))
-  assert_true(ml.w_mode is Some(LayoutEdge))
-  assert_true(ml.h_mode is Some(LayoutFactor))
-  assert_eq(ml.x.unwrap(), "0.1")
-  assert_eq(ml.y.unwrap(), "0.2")
-  assert_eq(ml.w.unwrap(), "0.5")
-  assert_eq(ml.h.unwrap(), "0.4")
+  debug_inspect(ml.layout_target is Some(LayoutInner), content="true")
+  debug_inspect(ml.x_mode is Some(LayoutEdge), content="true")
+  debug_inspect(ml.y_mode is Some(LayoutFactor), content="true")
+  debug_inspect(ml.w_mode is Some(LayoutEdge), content="true")
+  debug_inspect(ml.h_mode is Some(LayoutFactor), content="true")
+  debug_inspect(ml.x.unwrap(), content="\"0.1\"")
+  debug_inspect(ml.y.unwrap(), content="\"0.2\"")
+  debug_inspect(ml.w.unwrap(), content="\"0.5\"")
+  debug_inspect(ml.h.unwrap(), content="\"0.4\"")
   let bytes = original.serialize()
   let re_parsed = @chart.Chart::parse(bytes)
-  assert_eq(re_parsed, original)
+  debug_inspect(re_parsed == original, content="true")
 }
 
 ///|
@@ -64,7 +64,7 @@ test "Layout: layoutTarget enum every variant" {
     let original = @chart.Chart::parse(fixture_layout_in_title(body))
     let bytes = original.serialize()
     let re_parsed = @chart.Chart::parse(bytes)
-    assert_eq(re_parsed, original)
+    debug_inspect(re_parsed == original, content="true")
   }
 }
 
@@ -77,7 +77,7 @@ test "Layout: layoutMode enum every variant" {
     let original = @chart.Chart::parse(fixture_layout_in_title(body))
     let bytes = original.serialize()
     let re_parsed = @chart.Chart::parse(bytes)
-    assert_eq(re_parsed, original)
+    debug_inspect(re_parsed == original, content="true")
   }
 }
 
@@ -89,10 +89,10 @@ test "Layout: extLst rides on extension" {
     "</c:layout>"
   let original = @chart.Chart::parse(fixture_layout_in_title(body))
   let lay = original.chart.title.unwrap().layout.unwrap()
-  assert_eq(lay.extension.length(), 1)
+  debug_inspect(lay.extension.length(), content="1")
   let bytes = original.serialize()
   let re_parsed = @chart.Chart::parse(bytes)
-  assert_eq(re_parsed, original)
+  debug_inspect(re_parsed == original, content="true")
 }
 
 ///|
@@ -116,11 +116,11 @@ test "Layout: plotArea-level layout lifts" {
   let original = @chart.Chart::parse(@oxml.string_to_bytes(xml))
   let lay = original.chart.plot_area.layout.unwrap()
   let ml = lay.manual_layout.unwrap()
-  assert_true(ml.layout_target is Some(LayoutOuter))
-  assert_eq(ml.x.unwrap(), "0")
+  debug_inspect(ml.layout_target is Some(LayoutOuter), content="true")
+  debug_inspect(ml.x.unwrap(), content="\"0\"")
   let bytes = original.serialize()
   let re_parsed = @chart.Chart::parse(bytes)
-  assert_eq(re_parsed, original)
+  debug_inspect(re_parsed == original, content="true")
 }
 
 ///|
@@ -144,10 +144,10 @@ test "Layout: legend-level layout lifts" {
     "</c:chartSpace>"
   let original = @chart.Chart::parse(@oxml.string_to_bytes(xml))
   let lay = original.chart.legend.unwrap().layout.unwrap()
-  assert_eq(lay.manual_layout.unwrap().x.unwrap(), "0.8")
+  debug_inspect(lay.manual_layout.unwrap().x.unwrap(), content="\"0.8\"")
   let bytes = original.serialize()
   let re_parsed = @chart.Chart::parse(bytes)
-  assert_eq(re_parsed, original)
+  debug_inspect(re_parsed == original, content="true")
 }
 
 ///|
@@ -178,7 +178,7 @@ test "Layout: per-data-point dLbl layout lifts" {
   let original = @chart.Chart::parse(@oxml.string_to_bytes(xml))
   let bytes = original.serialize()
   let re_parsed = @chart.Chart::parse(bytes)
-  assert_eq(re_parsed, original)
+  debug_inspect(re_parsed == original, content="true")
 }
 
 ///|
@@ -190,9 +190,9 @@ test "Layout: no manualLayout, only extLst" {
     "</c:layout>"
   let original = @chart.Chart::parse(fixture_layout_in_title(body))
   let lay = original.chart.title.unwrap().layout.unwrap()
-  assert_true(lay.manual_layout is None)
-  assert_eq(lay.extension.length(), 1)
+  debug_inspect(lay.manual_layout is None, content="true")
+  debug_inspect(lay.extension.length(), content="1")
   let bytes = original.serialize()
   let re_parsed = @chart.Chart::parse(bytes)
-  assert_eq(re_parsed, original)
+  debug_inspect(re_parsed == original, content="true")
 }

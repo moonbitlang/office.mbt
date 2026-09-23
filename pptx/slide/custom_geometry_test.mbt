@@ -37,13 +37,13 @@ test "PathFillMode: round-trip every variant via to_xml -> from_xml" {
   ]
   for c in cases {
     let xml = c.to_xml()
-    assert_true(@slide.PathFillMode::from_xml(xml) == c)
+    debug_inspect(@slide.PathFillMode::from_xml(xml) == c, content="true")
   }
 }
 
 ///|
 test "PathFillMode::from_xml: unknown value defaults to PathFillNorm" {
-  assert_true(@slide.PathFillMode::from_xml("bogus") == PathFillNorm)
+  debug_inspect(@slide.PathFillMode::from_xml("bogus"), content="PathFillNorm")
 }
 
 // --- Empty / minimal custGeom ---
@@ -51,18 +51,18 @@ test "PathFillMode::from_xml: unknown value defaults to PathFillNorm" {
 ///|
 test "parse: empty custGeom (no children) yields all-empty AST" {
   let cg = extract_custom_geometry("<a:custGeom/>")
-  assert_eq(cg.adjust_values.length(), 0)
-  assert_eq(cg.guides.length(), 0)
-  assert_eq(cg.connection_sites.length(), 0)
-  assert_true(cg.rect is None)
-  assert_eq(cg.paths.length(), 0)
-  assert_eq(cg.extension.length(), 0)
+  debug_inspect(cg.adjust_values.length(), content="0")
+  debug_inspect(cg.guides.length(), content="0")
+  debug_inspect(cg.connection_sites.length(), content="0")
+  debug_inspect(cg.rect is None, content="true")
+  debug_inspect(cg.paths.length(), content="0")
+  debug_inspect(cg.extension.length(), content="0")
 }
 
 ///|
 test "parse: custGeom with empty pathLst yields zero-path CustomGeometry" {
   let cg = extract_custom_geometry("<a:custGeom><a:pathLst/></a:custGeom>")
-  assert_eq(cg.paths.length(), 0)
+  debug_inspect(cg.paths.length(), content="0")
 }
 
 // --- avLst / gdLst ---
@@ -80,13 +80,13 @@ test "parse: avLst and gdLst populate independently in source order" {
     "<a:pathLst/>" +
     "</a:custGeom>"
   let cg = extract_custom_geometry(body)
-  assert_eq(cg.adjust_values.length(), 2)
-  assert_eq(cg.adjust_values[0].name, "adj1")
-  assert_eq(cg.adjust_values[0].fmla, "val 25000")
-  assert_eq(cg.adjust_values[1].name, "adj2")
-  assert_eq(cg.guides.length(), 1)
-  assert_eq(cg.guides[0].name, "x1")
-  assert_eq(cg.guides[0].fmla, "*/ w adj1 100000")
+  debug_inspect(cg.adjust_values.length(), content="2")
+  debug_inspect(cg.adjust_values[0].name, content="\"adj1\"")
+  debug_inspect(cg.adjust_values[0].fmla, content="\"val 25000\"")
+  debug_inspect(cg.adjust_values[1].name, content="\"adj2\"")
+  debug_inspect(cg.guides.length(), content="1")
+  debug_inspect(cg.guides[0].name, content="\"x1\"")
+  debug_inspect(cg.guides[0].fmla, content="\"*/ w adj1 100000\"")
 }
 
 // --- Path commands ---
@@ -102,18 +102,18 @@ test "parse: moveTo + lnTo + close" {
     "</a:pathLst></a:custGeom>"
   let cg = extract_custom_geometry(body)
   let p = cg.paths[0]
-  assert_eq(p.commands.length(), 3)
+  debug_inspect(p.commands.length(), content="3")
   match p.commands[0] {
     MoveTo(pt) => {
-      assert_true(pt.x == Literal(Emu(0L)))
-      assert_true(pt.y == Literal(Emu(0L)))
+      debug_inspect(pt.x, content="Literal(Emu(0))")
+      debug_inspect(pt.y, content="Literal(Emu(0))")
     }
     _ => fail("expected MoveTo")
   }
   match p.commands[1] {
     LnTo(pt) => {
-      assert_true(pt.x == Literal(Emu(100L)))
-      assert_true(pt.y == Literal(Emu(100L)))
+      debug_inspect(pt.x, content="Literal(Emu(100))")
+      debug_inspect(pt.y, content="Literal(Emu(100))")
     }
     _ => fail("expected LnTo")
   }
@@ -135,9 +135,9 @@ test "parse: cubicBezTo carries three points in source order" {
   let cg = extract_custom_geometry(body)
   match cg.paths[0].commands[0] {
     CubicBezTo(c1, c2, end) => {
-      assert_true(c1.x == Literal(Emu(10L)))
-      assert_true(c2.x == Literal(Emu(30L)))
-      assert_true(end.x == Literal(Emu(50L)))
+      debug_inspect(c1.x, content="Literal(Emu(10))")
+      debug_inspect(c2.x, content="Literal(Emu(30))")
+      debug_inspect(end.x, content="Literal(Emu(50))")
     }
     _ => fail("expected CubicBezTo")
   }
@@ -153,8 +153,8 @@ test "parse: quadBezTo carries two points" {
   let cg = extract_custom_geometry(body)
   match cg.paths[0].commands[0] {
     QuadBezTo(c, end) => {
-      assert_true(c.x == Literal(Emu(1L)))
-      assert_true(end.y == Literal(Emu(4L)))
+      debug_inspect(c.x, content="Literal(Emu(1))")
+      debug_inspect(end.y, content="Literal(Emu(4))")
     }
     _ => fail("expected QuadBezTo")
   }
@@ -168,10 +168,13 @@ test "parse: arcTo carries wR/hR/stAng/swAng" {
   let cg = extract_custom_geometry(body)
   match cg.paths[0].commands[0] {
     ArcTo(w_r, h_r, st, sw) => {
-      assert_true(w_r == Literal(Emu(500L)))
-      assert_true(h_r == Literal(Emu(600L)))
-      assert_true(st == Literal(@units.Angle::from_ooxml(0)))
-      assert_true(sw == Literal(@units.Angle::from_ooxml(5400000)))
+      debug_inspect(w_r, content="Literal(Emu(500))")
+      debug_inspect(h_r, content="Literal(Emu(600))")
+      debug_inspect(st == Literal(@units.Angle::from_ooxml(0)), content="true")
+      debug_inspect(
+        sw == Literal(@units.Angle::from_ooxml(5400000)),
+        content="true",
+      )
     }
     _ => fail("expected ArcTo")
   }
@@ -200,8 +203,8 @@ test "parse: guide-name in coordinate becomes GuideRef" {
   let cg = extract_custom_geometry(body)
   match cg.paths[0].commands[0] {
     MoveTo(pt) => {
-      assert_true(pt.x == GuideRef("adj1"))
-      assert_true(pt.y == Literal(Emu(0L)))
+      debug_inspect(pt.x, content="GuideRef(\"adj1\")")
+      debug_inspect(pt.y, content="Literal(Emu(0))")
     }
     _ => fail("expected MoveTo")
   }
@@ -215,8 +218,8 @@ test "parse: guide-name in arcTo angle becomes AdjAngle::GuideRef" {
   let cg = extract_custom_geometry(body)
   match cg.paths[0].commands[0] {
     ArcTo(_, _, st, sw) => {
-      assert_true(st == GuideRef("startAng"))
-      assert_true(sw == GuideRef("swA"))
+      debug_inspect(st, content="GuideRef(\"startAng\")")
+      debug_inspect(sw, content="GuideRef(\"swA\")")
     }
     _ => fail("expected ArcTo")
   }
@@ -230,8 +233,8 @@ test "parse: negative coordinate parses as Literal Emu" {
   let cg = extract_custom_geometry(body)
   match cg.paths[0].commands[0] {
     MoveTo(pt) => {
-      assert_true(pt.x == Literal(Emu(-100L)))
-      assert_true(pt.y == Literal(Emu(-200L)))
+      debug_inspect(pt.x, content="Literal(Emu(-100))")
+      debug_inspect(pt.y, content="Literal(Emu(-200))")
     }
     _ => fail("expected MoveTo")
   }
@@ -245,11 +248,11 @@ test "parse: path without w/h/fill/stroke/extrusionOk uses defaults" {
     "<a:custGeom><a:pathLst><a:path/></a:pathLst></a:custGeom>",
   )
   let p = cg.paths[0]
-  assert_eq(p.w, Emu(0L))
-  assert_eq(p.h, Emu(0L))
-  assert_true(p.fill == PathFillNorm)
-  assert_eq(p.stroke, true)
-  assert_eq(p.extrusion_ok, true)
+  debug_inspect(p.w, content="Emu(0)")
+  debug_inspect(p.h, content="Emu(0)")
+  debug_inspect(p.fill, content="PathFillNorm")
+  debug_inspect(p.stroke, content="true")
+  debug_inspect(p.extrusion_ok, content="true")
 }
 
 ///|
@@ -259,11 +262,11 @@ test "parse: path explicit fill / stroke=0 / extrusionOk=0" {
     "</a:pathLst></a:custGeom>"
   let cg = extract_custom_geometry(body)
   let p = cg.paths[0]
-  assert_eq(p.w, Emu(500L))
-  assert_eq(p.h, Emu(800L))
-  assert_true(p.fill == PathFillLighten)
-  assert_eq(p.stroke, false)
-  assert_eq(p.extrusion_ok, false)
+  debug_inspect(p.w, content="Emu(500)")
+  debug_inspect(p.h, content="Emu(800)")
+  debug_inspect(p.fill, content="PathFillLighten")
+  debug_inspect(p.stroke, content="false")
+  debug_inspect(p.extrusion_ok, content="false")
 }
 
 // --- cxnLst / rect ---
@@ -275,12 +278,12 @@ test "parse: cxnLst with two connection sites" {
     "<a:cxn ang=\"5400000\"><a:pos x=\"100\" y=\"200\"/></a:cxn>" +
     "</a:cxnLst><a:pathLst/></a:custGeom>"
   let cg = extract_custom_geometry(body)
-  assert_eq(cg.connection_sites.length(), 2)
+  debug_inspect(cg.connection_sites.length(), content="2")
   let s0 = cg.connection_sites[0]
-  assert_true(s0.ang == Literal(@units.Angle::from_ooxml(0)))
-  assert_true(s0.pos.x == Literal(Emu(0L)))
+  debug_inspect(s0.ang == Literal(@units.Angle::from_ooxml(0)), content="true")
+  debug_inspect(s0.pos.x, content="Literal(Emu(0))")
   let s1 = cg.connection_sites[1]
-  assert_true(s1.pos.y == Literal(Emu(200L)))
+  debug_inspect(s1.pos.y, content="Literal(Emu(200))")
 }
 
 ///|
@@ -303,10 +306,10 @@ test "parse: rect with literal corners + guide refs" {
     "<a:pathLst/></a:custGeom>"
   let cg = extract_custom_geometry(body)
   let r = cg.rect.unwrap()
-  assert_true(r.l == Literal(Emu(0L)))
-  assert_true(r.t == Literal(Emu(0L)))
-  assert_true(r.r == GuideRef("w"))
-  assert_true(r.b == GuideRef("h"))
+  debug_inspect(r.l, content="Literal(Emu(0))")
+  debug_inspect(r.t, content="Literal(Emu(0))")
+  debug_inspect(r.r, content="GuideRef(\"w\")")
+  debug_inspect(r.b, content="GuideRef(\"h\")")
 }
 
 // --- Lossless preservation ---
@@ -317,8 +320,8 @@ test "parse: <a:ahLst> is preserved on CustomGeometry.extension" {
     "<a:ahLst><a:ahXY gdRefX=\"adj1\" minX=\"0\" maxX=\"100\"><a:pos x=\"0\" y=\"0\"/></a:ahXY></a:ahLst>" +
     "<a:pathLst/></a:custGeom>"
   let cg = extract_custom_geometry(body)
-  assert_eq(cg.extension.length(), 1)
-  assert_eq(cg.extension[0].name.local_name, "ahLst")
+  debug_inspect(cg.extension.length(), content="1")
+  debug_inspect(cg.extension[0].name.local_name, content="\"ahLst\"")
 }
 
 ///|
@@ -327,8 +330,8 @@ test "parse: foreign-namespace child of custGeom is preserved" {
     "<x:future foo=\"bar\"/>" +
     "<a:pathLst/></a:custGeom>"
   let cg = extract_custom_geometry(body)
-  assert_eq(cg.extension.length(), 1)
-  assert_eq(cg.extension[0].name.local_name, "future")
+  debug_inspect(cg.extension.length(), content="1")
+  debug_inspect(cg.extension[0].name.local_name, content="\"future\"")
 }
 
 ///|
@@ -338,9 +341,9 @@ test "parse: unknown child of <a:path> is preserved on Path.extension" {
     "</a:pathLst></a:custGeom>"
   let cg = extract_custom_geometry(body)
   let p = cg.paths[0]
-  assert_eq(p.commands.length(), 0)
-  assert_eq(p.extension.length(), 1)
-  assert_eq(p.extension[0].name.local_name, "futureCmd")
+  debug_inspect(p.commands.length(), content="0")
+  debug_inspect(p.extension.length(), content="1")
+  debug_inspect(p.extension[0].name.local_name, content="\"futureCmd\"")
 }
 
 // --- Multiple paths ---
@@ -352,7 +355,7 @@ test "parse: multiple <a:path> children land in source order" {
     "<a:path w=\"200\" h=\"200\"><a:moveTo><a:pt x=\"10\" y=\"10\"/></a:moveTo></a:path>" +
     "</a:pathLst></a:custGeom>"
   let cg = extract_custom_geometry(body)
-  assert_eq(cg.paths.length(), 2)
-  assert_eq(cg.paths[0].w, Emu(100L))
-  assert_eq(cg.paths[1].w, Emu(200L))
+  debug_inspect(cg.paths.length(), content="2")
+  debug_inspect(cg.paths[0].w, content="Emu(100)")
+  debug_inspect(cg.paths[1].w, content="Emu(200)")
 }

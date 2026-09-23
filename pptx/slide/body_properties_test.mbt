@@ -40,9 +40,9 @@ test "bodyPr: anchor, wrap, vertical text" {
     "<a:p><a:r><a:t>x</a:t></a:r></a:p>"
   let tb = txbody_of(@slide.Slide::parse(slide_with_txbody_inner(body)))
   let bp = tb.body_properties.unwrap()
-  assert_true(bp.wrap.unwrap() is WrapSquare)
-  assert_true(bp.anchor.unwrap() is AnchorCenter)
-  assert_true(bp.vertical_text.unwrap() is VertVert)
+  debug_inspect(bp.wrap.unwrap() is WrapSquare, content="true")
+  debug_inspect(bp.anchor.unwrap() is AnchorCenter, content="true")
+  debug_inspect(bp.vertical_text.unwrap() is VertVert, content="true")
 }
 
 ///|
@@ -52,12 +52,12 @@ test "bodyPr: insets and rotation" {
     "<a:p/>"
   let tb = txbody_of(@slide.Slide::parse(slide_with_txbody_inner(body)))
   let bp = tb.body_properties.unwrap()
-  assert_eq(bp.left_inset.unwrap(), Emu(91440L))
-  assert_eq(bp.top_inset.unwrap(), Emu(45720L))
-  assert_eq(bp.right_inset.unwrap(), Emu(91440L))
-  assert_eq(bp.bottom_inset.unwrap(), Emu(45720L))
+  debug_inspect(bp.left_inset.unwrap(), content="Emu(91440)")
+  debug_inspect(bp.top_inset.unwrap(), content="Emu(45720)")
+  debug_inspect(bp.right_inset.unwrap(), content="Emu(91440)")
+  debug_inspect(bp.bottom_inset.unwrap(), content="Emu(45720)")
   // 5_400_000 = 90 degrees (60000 per degree)
-  assert_eq(bp.rotation.unwrap(), Angle(90.0))
+  debug_inspect(bp.rotation.unwrap(), content="Angle(90)")
 }
 
 ///|
@@ -72,7 +72,10 @@ test "bodyPr: all 5 anchor values map distinctly" {
   for c in cases {
     let body = "<a:bodyPr anchor=\"" + c.0 + "\"/><a:p/>"
     let tb = txbody_of(@slide.Slide::parse(slide_with_txbody_inner(body)))
-    assert_true(tb.body_properties.unwrap().anchor.unwrap() == c.1)
+    debug_inspect(
+      tb.body_properties.unwrap().anchor.unwrap() == c.1,
+      content="true",
+    )
   }
 }
 
@@ -81,15 +84,18 @@ test "bodyPr: noAutofit / normAutofit / spAutoFit" {
   // noAutofit
   let b1 = "<a:bodyPr><a:noAutofit/></a:bodyPr><a:p/>"
   let tb1 = txbody_of(@slide.Slide::parse(slide_with_txbody_inner(b1)))
-  assert_true(tb1.body_properties.unwrap().auto_fit.unwrap() is NoAutoFit)
+  debug_inspect(
+    tb1.body_properties.unwrap().auto_fit.unwrap() is NoAutoFit,
+    content="true",
+  )
 
   // normAutofit with both attributes
   let b2 = "<a:bodyPr><a:normAutofit fontScale=\"90000\" lnSpcReduction=\"20000\"/></a:bodyPr><a:p/>"
   let tb2 = txbody_of(@slide.Slide::parse(slide_with_txbody_inner(b2)))
   match tb2.body_properties.unwrap().auto_fit.unwrap() {
     NormAutoFit(fs, lr) => {
-      assert_eq(fs, Percentage(90.0))
-      assert_eq(lr, Percentage(20.0))
+      debug_inspect(fs, content="Percentage(90)")
+      debug_inspect(lr, content="Percentage(20)")
     }
     _ => fail("expected NormAutoFit")
   }
@@ -97,7 +103,10 @@ test "bodyPr: noAutofit / normAutofit / spAutoFit" {
   // spAutoFit
   let b3 = "<a:bodyPr><a:spAutoFit/></a:bodyPr><a:p/>"
   let tb3 = txbody_of(@slide.Slide::parse(slide_with_txbody_inner(b3)))
-  assert_true(tb3.body_properties.unwrap().auto_fit.unwrap() is SpAutoFit)
+  debug_inspect(
+    tb3.body_properties.unwrap().auto_fit.unwrap() is SpAutoFit,
+    content="true",
+  )
 }
 
 ///|
@@ -106,8 +115,8 @@ test "bodyPr: normAutofit with missing attributes defaults to 100% / 0%" {
   let tb = txbody_of(@slide.Slide::parse(slide_with_txbody_inner(b)))
   match tb.body_properties.unwrap().auto_fit.unwrap() {
     NormAutoFit(fs, lr) => {
-      assert_eq(fs, Percentage(100.0))
-      assert_eq(lr, Percentage(0.0))
+      debug_inspect(fs, content="Percentage(100)")
+      debug_inspect(lr, content="Percentage(0)")
     }
     _ => fail("expected NormAutoFit")
   }
@@ -120,7 +129,7 @@ test "bodyPr: absent leaves text body's body_properties = None" {
       slide_with_txbody_inner("<a:p><a:r><a:t>x</a:t></a:r></a:p>"),
     ),
   )
-  assert_true(tb.body_properties is None)
+  debug_inspect(tb.body_properties is None, content="true")
 }
 
 ///|
@@ -129,7 +138,7 @@ test "bodyPr: prstTxWarp and other unmodelled children skipped" {
     "<a:p/>"
   let tb = txbody_of(@slide.Slide::parse(slide_with_txbody_inner(body)))
   // Parsed without raising; warp body intentionally not yet modelled.
-  assert_true(tb.body_properties.unwrap().auto_fit is None)
+  debug_inspect(tb.body_properties.unwrap().auto_fit is None, content="true")
 }
 
 // --- lstStyle ---
@@ -145,11 +154,20 @@ test "lstStyle: defPPr and lvl1pPr through lvl9pPr in order" {
     "<a:p/>"
   let tb = txbody_of(@slide.Slide::parse(slide_with_txbody_inner(body)))
   let ls = tb.list_style.unwrap()
-  assert_eq(ls.level_props.length(), 9)
-  assert_true(ls.level_props[0].unwrap().alignment.unwrap() is AlignLeft)
-  assert_true(ls.level_props[1] is None) // lvl2pPr absent
-  assert_true(ls.level_props[2].unwrap().alignment.unwrap() is AlignCenter)
-  assert_true(ls.level_props[8].unwrap().alignment.unwrap() is AlignRight)
+  debug_inspect(ls.level_props.length(), content="9")
+  debug_inspect(
+    ls.level_props[0].unwrap().alignment.unwrap() is AlignLeft,
+    content="true",
+  )
+  debug_inspect(ls.level_props[1] is None, content="true") // lvl2pPr absent
+  debug_inspect(
+    ls.level_props[2].unwrap().alignment.unwrap() is AlignCenter,
+    content="true",
+  )
+  debug_inspect(
+    ls.level_props[8].unwrap().alignment.unwrap() is AlignRight,
+    content="true",
+  )
 }
 
 ///|
@@ -157,11 +175,11 @@ test "lstStyle: empty body yields nine None level slots" {
   let body = "<a:lstStyle/><a:p/>"
   let tb = txbody_of(@slide.Slide::parse(slide_with_txbody_inner(body)))
   let ls = tb.list_style.unwrap()
-  assert_eq(ls.level_props.length(), 9)
+  debug_inspect(ls.level_props.length(), content="9")
   for slot in ls.level_props {
-    assert_true(slot is None)
+    debug_inspect(slot is None, content="true")
   }
-  assert_true(ls.default_props is None)
+  debug_inspect(ls.default_props is None, content="true")
 }
 
 ///|
@@ -171,7 +189,7 @@ test "lstStyle: absent leaves list_style = None" {
       slide_with_txbody_inner("<a:p><a:r><a:t>x</a:t></a:r></a:p>"),
     ),
   )
-  assert_true(tb.list_style is None)
+  debug_inspect(tb.list_style is None, content="true")
 }
 
 ///|
@@ -183,7 +201,7 @@ test "lstStyle: lvl-level pPr carries bullet config" {
   let tb = txbody_of(@slide.Slide::parse(slide_with_txbody_inner(body)))
   let p1 = tb.list_style.unwrap().level_props[0].unwrap()
   match p1.bullet.unwrap() {
-    Char(s) => assert_eq(s, "-")
+    Char(s) => debug_inspect(s, content="\"-\"")
     _ => fail("expected Char bullet at lvl1")
   }
 }
@@ -197,11 +215,15 @@ test "txBody: bodyPr + lstStyle + paragraphs coexist in source order" {
     "<a:p><a:r><a:t>One</a:t></a:r></a:p>" +
     "<a:p><a:r><a:t>Two</a:t></a:r></a:p>"
   let tb = txbody_of(@slide.Slide::parse(slide_with_txbody_inner(body)))
-  assert_true(tb.body_properties.unwrap().anchor.unwrap() is AnchorTop)
-  assert_true(
+  debug_inspect(
+    tb.body_properties.unwrap().anchor.unwrap() is AnchorTop,
+    content="true",
+  )
+  debug_inspect(
     tb.list_style.unwrap().level_props[0].unwrap().alignment.unwrap()
     is AlignCenter,
+    content="true",
   )
-  assert_eq(tb.paragraphs.length(), 2)
-  assert_eq(tb.plain_text(), "One\nTwo")
+  debug_inspect(tb.paragraphs.length(), content="2")
+  debug_inspect(tb.plain_text(), content="\"One\\nTwo\"")
 }

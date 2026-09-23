@@ -136,8 +136,7 @@ fn integrity_issues(pkg : @opc.Package) -> Array[IntegrityIssue] {
 }
 
 ///|
-/// Render issues into a stable multi-line string so a failing `assert_eq`
-/// against `""` prints exactly what broke.
+/// Render issues into a stable multi-line string for snapshot diagnostics.
 fn format_issues(issues : Array[IntegrityIssue]) -> String {
   let sb = StringBuilder()
   for it in issues {
@@ -164,7 +163,7 @@ test "structural integrity: presentation-builder output is repair-clean" {
   )
   prs.update_slide_mut(0, s.with_shape(AutoShape(tb)))
   let pkg = @opc.Package::open(prs.save())
-  assert_eq(format_issues(integrity_issues(pkg)), "")
+  debug_inspect(format_issues(integrity_issues(pkg)), content="\"\"")
 }
 
 ///|
@@ -194,7 +193,7 @@ test "structural integrity: deck with picture + chart is repair-clean" {
     cy=Emu(3_429_000L),
   )
   let pkg = @opc.Package::open(prs.save())
-  assert_eq(format_issues(integrity_issues(pkg)), "")
+  debug_inspect(format_issues(integrity_issues(pkg)), content="\"\"")
 }
 
 ///|
@@ -205,7 +204,7 @@ test "structural integrity: open -> save -> reopen stays repair-clean" {
   let _ = prs.add_slide_mut(0)
   let once = @opc.Package::open(prs.save())
   let twice = @opc.Package::open(once.to_bytes())
-  assert_eq(format_issues(integrity_issues(twice)), "")
+  debug_inspect(format_issues(integrity_issues(twice)), content="\"\"")
 }
 
 ///|
@@ -233,13 +232,16 @@ test "structural integrity: a duplicate shape id is reported" {
   prs.update_slide_mut(0, base.with_shape(clash(2)).with_shape(clash(2)))
   let pkg = @opc.Package::open(prs.save())
   let issues = integrity_issues(pkg)
-  assert_true(issues.length() == 1)
-  assert_eq(issues[0].kind, "duplicate-shape-id")
-  assert_eq(issues[0].part, "/ppt/slides/slide1.xml")
+  debug_inspect(issues.length(), content="1")
+  debug_inspect(issues[0].kind, content="\"duplicate-shape-id\"")
+  debug_inspect(issues[0].part, content="\"/ppt/slides/slide1.xml\"")
   // And `with_shape_auto_id` is the fix: the same shape, renumbered.
   prs.update_slide_mut(
     0,
     base.with_shape(clash(2)).with_shape_auto_id(clash(2)),
   )
-  assert_eq(format_issues(integrity_issues(@opc.Package::open(prs.save()))), "")
+  debug_inspect(
+    format_issues(integrity_issues(@opc.Package::open(prs.save()))),
+    content="\"\"",
+  )
 }

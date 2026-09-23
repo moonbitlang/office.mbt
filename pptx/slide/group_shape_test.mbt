@@ -46,22 +46,22 @@ test "parse: group shape with two child auto-shapes" {
   let slide = @slide.Slide::parse(slide_with_grp(inner))
   match slide.shapes[0] {
     Group(g) => {
-      assert_eq(g.id, 10)
-      assert_eq(g.name, "Group 1")
+      debug_inspect(g.id, content="10")
+      debug_inspect(g.name, content="\"Group 1\"")
       let xfrm = g.transform.unwrap()
-      assert_eq(xfrm.extent.cx, Emu(1000000L))
+      debug_inspect(xfrm.extent.cx, content="Emu(1000000)")
       let cho = g.child_offset.unwrap()
-      assert_eq(cho.x, Emu(0L))
+      debug_inspect(cho.x, content="Emu(0)")
       let che = g.child_extent.unwrap()
-      assert_eq(che.cx, Emu(1000000L))
-      assert_eq(g.children.length(), 2)
+      debug_inspect(che.cx, content="Emu(1000000)")
+      debug_inspect(g.children.length(), content="2")
       // Children are AutoShapes in source order
       match g.children[0] {
-        AutoShape(s) => assert_eq(s.id, 11)
+        AutoShape(s) => debug_inspect(s.id, content="11")
         _ => fail("expected AutoShape at child 0")
       }
       match g.children[1] {
-        AutoShape(s) => assert_eq(s.id, 12)
+        AutoShape(s) => debug_inspect(s.id, content="12")
         _ => fail("expected AutoShape at child 1")
       }
     }
@@ -84,14 +84,14 @@ test "parse: nested group shape (group inside group)" {
   let slide = @slide.Slide::parse(slide_with_grp(inner))
   match slide.shapes[0] {
     Group(outer) => {
-      assert_eq(outer.id, 20)
-      assert_eq(outer.children.length(), 1)
+      debug_inspect(outer.id, content="20")
+      debug_inspect(outer.children.length(), content="1")
       match outer.children[0] {
         Group(inner_g) => {
-          assert_eq(inner_g.id, 21)
-          assert_eq(inner_g.children.length(), 1)
+          debug_inspect(inner_g.id, content="21")
+          debug_inspect(inner_g.children.length(), content="1")
           match inner_g.children[0] {
-            AutoShape(s) => assert_eq(s.id, 22)
+            AutoShape(s) => debug_inspect(s.id, content="22")
             _ => fail("expected leaf AutoShape")
           }
         }
@@ -120,10 +120,10 @@ test "parse: group shape with mixed child kinds (sp + pic + cxnSp)" {
   let slide = @slide.Slide::parse(slide_with_grp(inner))
   match slide.shapes[0] {
     Group(g) => {
-      assert_eq(g.children.length(), 3)
-      assert_true(g.children[0] is AutoShape(_))
-      assert_true(g.children[1] is Picture(_))
-      assert_true(g.children[2] is Connector(_))
+      debug_inspect(g.children.length(), content="3")
+      debug_inspect(g.children[0] is AutoShape(_), content="true")
+      debug_inspect(g.children[1] is Picture(_), content="true")
+      debug_inspect(g.children[2] is Connector(_), content="true")
     }
     _ => fail("expected Group")
   }
@@ -136,11 +136,11 @@ test "parse: empty group shape (no child shapes)" {
   let slide = @slide.Slide::parse(slide_with_grp(inner))
   match slide.shapes[0] {
     Group(g) => {
-      assert_eq(g.id, 40)
-      assert_eq(g.children.length(), 0)
-      assert_true(g.transform is None)
-      assert_true(g.child_offset is None)
-      assert_true(g.child_extent is None)
+      debug_inspect(g.id, content="40")
+      debug_inspect(g.children.length(), content="0")
+      debug_inspect(g.transform is None, content="true")
+      debug_inspect(g.child_offset is None, content="true")
+      debug_inspect(g.child_extent is None, content="true")
     }
     _ => fail("expected Group")
   }
@@ -157,11 +157,11 @@ test "parse: group with chOff/chExt but no off/ext" {
   let slide = @slide.Slide::parse(slide_with_grp(inner))
   match slide.shapes[0] {
     Group(g) => {
-      assert_true(g.transform is None) // off + ext both missing
+      debug_inspect(g.transform is None, content="true") // off + ext both missing
       let cho = g.child_offset.unwrap()
-      assert_eq(cho.x, Emu(100L))
+      debug_inspect(cho.x, content="Emu(100)")
       let che = g.child_extent.unwrap()
-      assert_eq(che.cx, Emu(300L))
+      debug_inspect(che.cx, content="Emu(300)")
     }
     _ => fail("expected Group")
   }

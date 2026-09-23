@@ -27,12 +27,12 @@ test "title slide: title + subtitle round-trip + layout synthesised" {
     .title("Welcome")
     .subtitle("Q3 review")
     .finish_mut()
-  assert_true(has_layout_of(prs, Title))
+  debug_inspect(has_layout_of(prs, Title), content="true")
   let prs2 = @presentation.Presentation::open(prs.save())
-  assert_eq(prs2.slides().length(), 1)
+  debug_inspect(prs2.slides().length(), content="1")
   let s = prs2.slides()[0]
-  assert_true(s.title() is Some(_)) // ctrTitle matches title()
-  assert_true(s.placeholder(SubTitle) is Some(_))
+  debug_inspect(s.title() is Some(_), content="true") // ctrTitle matches title()
+  debug_inspect(s.placeholder(SubTitle) is Some(_), content="true")
 }
 
 ///|
@@ -43,10 +43,10 @@ test "title-and-content slide: title + body" {
     .title("Agenda")
     .body("First point")
     .finish_mut()
-  assert_true(has_layout_of(prs, Object))
+  debug_inspect(has_layout_of(prs, Object), content="true")
   let s = @presentation.Presentation::open(prs.save()).slides()[0]
-  assert_true(s.title() is Some(_))
-  assert_true(s.body() is Some(_))
+  debug_inspect(s.title() is Some(_), content="true")
+  debug_inspect(s.body() is Some(_), content="true")
 }
 
 ///|
@@ -57,20 +57,20 @@ test "section header: title + body" {
     .title("Part II")
     .body("The deep dive")
     .finish_mut()
-  assert_true(has_layout_of(prs, SecHead))
+  debug_inspect(has_layout_of(prs, SecHead), content="true")
   let s = @presentation.Presentation::open(prs.save()).slides()[0]
-  assert_true(s.title() is Some(_))
-  assert_true(s.body() is Some(_))
+  debug_inspect(s.title() is Some(_), content="true")
+  debug_inspect(s.body() is Some(_), content="true")
 }
 
 ///|
 test "title-only: just a title" {
   let prs = @presentation.Presentation::new()
   let _ = prs.add_title_only_slide_mut().title("Section break").finish_mut()
-  assert_true(has_layout_of(prs, TitleOnly))
+  debug_inspect(has_layout_of(prs, TitleOnly), content="true")
   let s = @presentation.Presentation::open(prs.save()).slides()[0]
-  assert_true(s.title() is Some(_))
-  assert_eq(s.placeholders().length(), 1)
+  debug_inspect(s.title() is Some(_), content="true")
+  debug_inspect(s.placeholders().length(), content="1")
 }
 
 ///|
@@ -78,7 +78,7 @@ test "blank typed slide: no placeholders" {
   let prs = @presentation.Presentation::new()
   let _ = prs.add_blank_typed_slide_mut().finish_mut()
   let s = @presentation.Presentation::open(prs.save()).slides()[0]
-  assert_eq(s.placeholders().length(), 0)
+  debug_inspect(s.placeholders().length(), content="0")
 }
 
 ///|
@@ -93,8 +93,11 @@ test "layout synthesis is idempotent across same-type slides" {
       title_layouts = title_layouts + 1
     }
   }
-  assert_eq(title_layouts, 1)
-  assert_eq(@presentation.Presentation::open(prs.save()).slides().length(), 2)
+  debug_inspect(title_layouts, content="1")
+  debug_inspect(
+    @presentation.Presentation::open(prs.save()).slides().length(),
+    content="2",
+  )
 }
 
 ///|
@@ -116,7 +119,7 @@ test "successive typed layouts attach to the same (main) master" {
       max_layouts = m.layout_refs.length()
     }
   }
-  assert_eq(max_layouts, 3)
+  debug_inspect(max_layouts, content="3")
 }
 
 ///|
@@ -130,8 +133,8 @@ test "mixed deck: several typed layouts coexist and reopen" {
     .body("Body text")
     .finish_mut()
   let prs2 = @presentation.Presentation::open(prs.save())
-  assert_eq(prs2.slides().length(), 3)
-  assert_true(has_layout_of(prs2, Title))
-  assert_true(has_layout_of(prs2, SecHead))
-  assert_true(has_layout_of(prs2, Object))
+  debug_inspect(prs2.slides().length(), content="3")
+  debug_inspect(has_layout_of(prs2, Title), content="true")
+  debug_inspect(has_layout_of(prs2, SecHead), content="true")
+  debug_inspect(has_layout_of(prs2, Object), content="true")
 }

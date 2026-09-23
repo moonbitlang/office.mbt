@@ -4,11 +4,11 @@
 test "core_properties: blank deck reads the template defaults" {
   let prs = @presentation.Presentation::new()
   let cp = prs.core_properties()
-  assert_eq(cp.creator.unwrap(), "moon-pptx")
-  assert_eq(cp.last_modified_by.unwrap(), "moon-pptx")
-  assert_eq(cp.revision.unwrap(), "1")
-  assert_eq(cp.title.unwrap(), "") // blank emits an empty <dc:title>
-  assert_true(cp.subject is None)
+  debug_inspect(cp.creator.unwrap(), content="\"moon-pptx\"")
+  debug_inspect(cp.last_modified_by.unwrap(), content="\"moon-pptx\"")
+  debug_inspect(cp.revision.unwrap(), content="\"1\"")
+  debug_inspect(cp.title.unwrap(), content="\"\"") // blank emits an empty <dc:title>
+  debug_inspect(cp.subject is None, content="true")
 }
 
 ///|
@@ -31,7 +31,7 @@ test "core_properties: set then read round-trips every field" {
     .with_language("en-US")
     .with_version("1.2")
   prs.set_core_properties_mut(props)
-  assert_true(prs.core_properties() == props)
+  debug_inspect(prs.core_properties() == props, content="true")
 }
 
 ///|
@@ -44,10 +44,10 @@ test "core_properties: read → edit → write preserves untouched fields, survi
   )
   let reopened = @presentation.Presentation::open(prs.save())
   let cp = reopened.core_properties()
-  assert_eq(cp.title.unwrap(), "Saved")
-  assert_eq(cp.creator.unwrap(), "Ada")
+  debug_inspect(cp.title.unwrap(), content="\"Saved\"")
+  debug_inspect(cp.creator.unwrap(), content="\"Ada\"")
   // the untouched template field survived because we edited from a read
-  assert_eq(cp.revision.unwrap(), "1")
+  debug_inspect(cp.revision.unwrap(), content="\"1\"")
 }
 
 ///|
@@ -56,17 +56,17 @@ test "core_properties: with_core_properties is immutable" {
   let prs2 = prs.with_core_properties(
     @presentation.CoreProperties::new().with_title("New"),
   )
-  assert_eq(prs2.core_properties().title.unwrap(), "New")
+  debug_inspect(prs2.core_properties().title.unwrap(), content="\"New\"")
   // the original is untouched (still the blank template's empty title)
-  assert_eq(prs.core_properties().title.unwrap(), "")
+  debug_inspect(prs.core_properties().title.unwrap(), content="\"\"")
 }
 
 ///|
 test "core_properties: with_author aliases with_creator" {
   let a = @presentation.CoreProperties::new().with_author("X")
   let b = @presentation.CoreProperties::new().with_creator("X")
-  assert_true(a == b)
-  assert_eq(a.creator.unwrap(), "X")
+  debug_inspect(a == b, content="true")
+  debug_inspect(a.creator.unwrap(), content="\"X\"")
 }
 
 ///|
@@ -76,20 +76,20 @@ test "core_properties: to_xml emits prefixes + xsi:type, omits None fields" {
     .with_keywords("k")
     .with_created("2026-01-01T00:00:00Z")
     .to_xml()
-  assert_true(xml.contains("<dc:title>Hi</dc:title>"))
-  assert_true(xml.contains("<cp:keywords>k</cp:keywords>"))
-  assert_true(xml.contains("<dcterms:created"))
-  assert_true(xml.contains("xsi:type=\"dcterms:W3CDTF\""))
+  debug_inspect(xml.contains("<dc:title>Hi</dc:title>"), content="true")
+  debug_inspect(xml.contains("<cp:keywords>k</cp:keywords>"), content="true")
+  debug_inspect(xml.contains("<dcterms:created"), content="true")
+  debug_inspect(xml.contains("xsi:type=\"dcterms:W3CDTF\""), content="true")
   // a None field is omitted entirely
-  assert_false(xml.contains("<dc:subject"))
+  debug_inspect(xml.contains("<dc:subject"), content="false")
 }
 
 ///|
 test "core_properties: empty new() emits the root but no field elements" {
   let xml = @presentation.CoreProperties::new().to_xml()
-  assert_true(xml.contains("coreProperties"))
-  assert_false(xml.contains("<dc:title"))
-  assert_false(xml.contains("<cp:revision"))
+  debug_inspect(xml.contains("coreProperties"), content="true")
+  debug_inspect(xml.contains("<dc:title"), content="false")
+  debug_inspect(xml.contains("<cp:revision"), content="false")
 }
 
 ///|
@@ -99,8 +99,8 @@ test "core_properties: special characters are XML-escaped + decode back" {
     @presentation.CoreProperties::new().with_title("R&D <plan>"),
   )
   // parse decodes the entities back to the original string
-  assert_eq(prs.core_properties().title.unwrap(), "R&D <plan>")
+  debug_inspect(prs.core_properties().title.unwrap(), content="\"R&D <plan>\"")
   // the serialised form carries the escaped entity
   let raw = @presentation.CoreProperties::new().with_title("R&D").to_xml()
-  assert_true(raw.contains("R&amp;D"))
+  debug_inspect(raw.contains("R&amp;D"), content="true")
 }

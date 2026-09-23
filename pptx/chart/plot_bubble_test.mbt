@@ -31,11 +31,11 @@ test "BubbleChart: full attribute set" {
   let chart = @chart.Chart::parse(fixture_bubble_chart_xml(body))
   match chart.chart.plot_area.plots[0] {
     BubbleChart(b) => {
-      assert_eq(b.bubble_3d.unwrap(), true)
-      assert_eq(b.bubble_scale.unwrap(), 100)
-      assert_eq(b.show_neg_bubbles.unwrap(), false)
-      assert_true(b.size_represents is Some(Area))
-      assert_eq(b.ax_ids.length(), 2)
+      debug_inspect(b.bubble_3d.unwrap(), content="true")
+      debug_inspect(b.bubble_scale.unwrap(), content="100")
+      debug_inspect(b.show_neg_bubbles.unwrap(), content="false")
+      debug_inspect(b.size_represents is Some(Area), content="true")
+      debug_inspect(b.ax_ids.length(), content="2")
     }
     _ => fail("expected BubbleChart plot")
   }
@@ -52,12 +52,15 @@ test "BubbleChart: round-trip" {
   let original = @chart.Chart::parse(fixture_bubble_chart_xml(body))
   let bytes = original.serialize()
   let re_parsed = @chart.Chart::parse(bytes)
-  assert_eq(re_parsed, original)
+  debug_inspect(re_parsed == original, content="true")
 }
 
 ///|
 test "SizeRepresents enum round-trips" {
   for s in [@chart.SizeRepresents::Area, Width] {
-    assert_eq(@chart.SizeRepresents::from_xml(s.to_xml()).unwrap(), s)
+    debug_inspect(
+      @chart.SizeRepresents::from_xml(s.to_xml()).unwrap() == s,
+      content="true",
+    )
   }
 }

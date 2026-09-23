@@ -26,8 +26,8 @@ test "DoughnutChart: holeSize lifts" {
   let chart = @chart.Chart::parse(fixture_doughnut_chart_xml(body))
   match chart.chart.plot_area.plots[0] {
     DoughnutChart(b) => {
-      assert_eq(b.hole_size.unwrap(), 50)
-      assert_eq(b.first_slice_ang.unwrap(), 0)
+      debug_inspect(b.hole_size.unwrap(), content="50")
+      debug_inspect(b.first_slice_ang.unwrap(), content="0")
     }
     _ => fail("expected DoughnutChart plot")
   }
@@ -42,5 +42,5 @@ test "DoughnutChart: round-trip" {
   let original = @chart.Chart::parse(fixture_doughnut_chart_xml(body))
   let bytes = original.serialize()
   let re_parsed = @chart.Chart::parse(bytes)
-  assert_eq(re_parsed, original)
+  debug_inspect(re_parsed == original, content="true")
 }

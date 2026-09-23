@@ -5,10 +5,10 @@
 test "with_added_slide: original presentation untouched" {
   let prs0 = @presentation.Presentation::new()
   let (prs1, name) = prs0.with_added_slide(layout_index=0)
-  assert_eq(name, "/ppt/slides/slide1.xml")
+  debug_inspect(name, content="\"/ppt/slides/slide1.xml\"")
   // Original has no slides; new value has one.
-  assert_eq(prs0.slides().length(), 0)
-  assert_eq(prs1.slides().length(), 1)
+  debug_inspect(prs0.slides().length(), content="0")
+  debug_inspect(prs1.slides().length(), content="1")
 }
 
 ///|
@@ -16,9 +16,9 @@ test "with_added_slide: chained calls accumulate independently" {
   let prs0 = @presentation.Presentation::new()
   let (prs1, _) = prs0.with_added_slide(layout_index=0)
   let (prs2, _) = prs1.with_added_slide(layout_index=0)
-  assert_eq(prs0.slides().length(), 0)
-  assert_eq(prs1.slides().length(), 1)
-  assert_eq(prs2.slides().length(), 2)
+  debug_inspect(prs0.slides().length(), content="0")
+  debug_inspect(prs1.slides().length(), content="1")
+  debug_inspect(prs2.slides().length(), content="2")
 }
 
 ///|
@@ -26,7 +26,7 @@ test "with_slide_updated: original presentation's slide untouched" {
   let prs0 = @presentation.Presentation::new()
   let (prs1, _) = prs0.with_added_slide(layout_index=0)
   // The added slide is empty.
-  assert_eq(prs1.slides()[0].shapes.length(), 0)
+  debug_inspect(prs1.slides()[0].shapes.length(), content="0")
   let tb = @slide.AutoShape::textbox(
     id=2,
     name="T",
@@ -39,8 +39,8 @@ test "with_slide_updated: original presentation's slide untouched" {
   let s = prs1.slides()[0]
   let prs2 = prs1.with_slide_updated(0, s.with_shape(AutoShape(tb)))
   // prs1's slide is still empty; prs2's has the textbox.
-  assert_eq(prs1.slides()[0].shapes.length(), 0)
-  assert_eq(prs2.slides()[0].shapes.length(), 1)
+  debug_inspect(prs1.slides()[0].shapes.length(), content="0")
+  debug_inspect(prs2.slides()[0].shapes.length(), content="1")
 }
 
 ///|
@@ -61,9 +61,10 @@ test "with_added_slide + with_slide_updated: save + reopen round-trips" {
   let bytes = prs.save()
   let reopened = @presentation.Presentation::open(bytes)
   let slides = reopened.slides()
-  assert_eq(slides.length(), 1)
+  debug_inspect(slides.length(), content="1")
   match slides[0].shapes[0] {
-    AutoShape(a) => assert_eq(a.text_body.unwrap().plain_text(), "Immutable!")
+    AutoShape(a) =>
+      debug_inspect(a.text_body.unwrap().plain_text(), content="\"Immutable!\"")
     _ => fail("expected AutoShape")
   }
 }
@@ -74,8 +75,8 @@ test "Presentation::clone: cloned package mutation doesn't reach original" {
   let prs1 = prs0.clone()
   // Mutate the clone via the existing `_mut` API.
   let _ = prs1.add_slide_mut(0)
-  assert_eq(prs0.slides().length(), 0)
-  assert_eq(prs1.slides().length(), 1)
+  debug_inspect(prs0.slides().length(), content="0")
+  debug_inspect(prs1.slides().length(), content="1")
 }
 
 ///|

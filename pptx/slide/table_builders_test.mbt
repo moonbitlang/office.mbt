@@ -4,37 +4,37 @@
 ///|
 test "TableCell::of_text: carries text + default span / merge" {
   let c = @slide.TableCell::of_text("Hello")
-  assert_eq(c.text_body.unwrap().plain_text(), "Hello")
-  assert_eq(c.grid_span, 1)
-  assert_eq(c.row_span, 1)
-  assert_true(!c.h_merge)
-  assert_true(!c.v_merge)
+  debug_inspect(c.text_body.unwrap().plain_text(), content="\"Hello\"")
+  debug_inspect(c.grid_span, content="1")
+  debug_inspect(c.row_span, content="1")
+  debug_inspect(!c.h_merge, content="true")
+  debug_inspect(!c.v_merge, content="true")
   // Synthesises an empty <a:tcPr/>.
-  assert_true(c.properties is Some(_))
+  debug_inspect(c.properties is Some(_), content="true")
 }
 
 ///|
 test "TableCell::merged_origin: spans columns and rows" {
   let c = @slide.TableCell::merged_origin("Joined", grid_span=3, row_span=2)
-  assert_eq(c.grid_span, 3)
-  assert_eq(c.row_span, 2)
+  debug_inspect(c.grid_span, content="3")
+  debug_inspect(c.row_span, content="2")
   // The origin cell itself is NOT covered — only the cells it
   // spans into are.
-  assert_true(!c.h_merge)
-  assert_true(!c.v_merge)
+  debug_inspect(!c.h_merge, content="true")
+  debug_inspect(!c.v_merge, content="true")
 }
 
 ///|
 test "TableCell::*_merge_covered: carry the right flags" {
   let h = @slide.TableCell::h_merge_covered()
-  assert_true(h.h_merge)
-  assert_true(!h.v_merge)
+  debug_inspect(h.h_merge, content="true")
+  debug_inspect(!h.v_merge, content="true")
   let v = @slide.TableCell::v_merge_covered()
-  assert_true(!v.h_merge)
-  assert_true(v.v_merge)
+  debug_inspect(!v.h_merge, content="true")
+  debug_inspect(v.v_merge, content="true")
   let hv = @slide.TableCell::hv_merge_covered()
-  assert_true(hv.h_merge)
-  assert_true(hv.v_merge)
+  debug_inspect(hv.h_merge, content="true")
+  debug_inspect(hv.v_merge, content="true")
 }
 
 ///|
@@ -45,15 +45,15 @@ test "Table::of_grid: produces correctly-sized empty grid" {
     col_width=Emu(914400L),
     row_height=Emu(457200L),
   )
-  assert_eq(t.grid.length(), 4)
-  assert_eq(t.rows.length(), 3)
+  debug_inspect(t.grid.length(), content="4")
+  debug_inspect(t.rows.length(), content="3")
   for row in t.rows {
-    assert_eq(row.cells.length(), 4)
-    assert_eq(row.height, Emu(457200L))
+    debug_inspect(row.cells.length(), content="4")
+    debug_inspect(row.height, content="Emu(457200)")
   }
   // Each column gets the requested width.
   for col_w in t.grid {
-    assert_eq(col_w, Emu(914400L))
+    debug_inspect(col_w, content="Emu(914400)")
   }
 }
 
@@ -74,9 +74,9 @@ test "Table::of_rows: custom cell mix" {
     Emu(914400L),
     Emu(914400L),
   ])
-  assert_eq(t.rows.length(), 2)
-  assert_eq(t.rows[1].cells[0].grid_span, 2)
-  assert_true(t.rows[1].cells[1].h_merge)
+  debug_inspect(t.rows.length(), content="2")
+  debug_inspect(t.rows[1].cells[0].grid_span, content="2")
+  debug_inspect(t.rows[1].cells[1].h_merge, content="true")
 }
 
 ///|
@@ -96,11 +96,11 @@ test "GraphicFrame::of_table: id / name / transform / content" {
     cy=Emu(400L),
     t,
   )
-  assert_eq(gf.id, 42)
-  assert_eq(gf.name, "Grid 1")
+  debug_inspect(gf.id, content="42")
+  debug_inspect(gf.name, content="\"Grid 1\"")
   let xfrm = gf.transform.unwrap()
-  assert_eq(xfrm.offset.x, Emu(100L))
-  assert_eq(xfrm.extent.cy, Emu(400L))
+  debug_inspect(xfrm.offset.x, content="Emu(100)")
+  debug_inspect(xfrm.extent.cy, content="Emu(400)")
   match gf.content {
     TableContent(_) => ()
     _ => fail("expected TableContent")
@@ -142,15 +142,15 @@ test "GraphicFrame::of_table: round-trips via Slide::serialize" {
   )
   let s = base.with_shape(GraphicFrame(gf))
   let s_reparsed = @slide.Slide::parse(s.serialize())
-  assert_eq(s_reparsed.shapes.length(), 1)
+  debug_inspect(s_reparsed.shapes.length(), content="1")
   match s_reparsed.shapes[0] {
     GraphicFrame(parsed_gf) => {
-      assert_eq(parsed_gf.id, 7)
-      assert_eq(parsed_gf.name, "Table 1")
+      debug_inspect(parsed_gf.id, content="7")
+      debug_inspect(parsed_gf.name, content="\"Table 1\"")
       match parsed_gf.content {
         TableContent(parsed_t) => {
-          assert_eq(parsed_t.grid.length(), 2)
-          assert_eq(parsed_t.rows.length(), 2)
+          debug_inspect(parsed_t.grid.length(), content="2")
+          debug_inspect(parsed_t.rows.length(), content="2")
         }
         _ => fail("expected TableContent")
       }
@@ -190,5 +190,5 @@ test "GraphicFrame::of_table: second round-trip is Eq-stable" {
   let base = @slide.Slide::parse(@oxml.string_to_bytes(base_xml))
   let s1 = @slide.Slide::parse(base.with_shape(GraphicFrame(gf)).serialize())
   let s2 = @slide.Slide::parse(s1.serialize())
-  assert_true(s1 == s2)
+  debug_inspect(s1 == s2, content="true")
 }

@@ -34,13 +34,13 @@ fn parse_effect_list_inner(
 ///|
 test "EffectList: empty list parses to all-None" {
   let fx = parse_effect_list_inner("")
-  assert_true(fx.blur is None)
-  assert_true(fx.glow is None)
-  assert_true(fx.inner_shadow is None)
-  assert_true(fx.outer_shadow is None)
-  assert_true(fx.preset_shadow is None)
-  assert_true(fx.reflection is None)
-  assert_true(fx.soft_edge is None)
+  debug_inspect(fx.blur is None, content="true")
+  debug_inspect(fx.glow is None, content="true")
+  debug_inspect(fx.inner_shadow is None, content="true")
+  debug_inspect(fx.outer_shadow is None, content="true")
+  debug_inspect(fx.preset_shadow is None, content="true")
+  debug_inspect(fx.reflection is None, content="true")
+  debug_inspect(fx.soft_edge is None, content="true")
 }
 
 // --- blur ---
@@ -49,14 +49,14 @@ test "EffectList: empty list parses to all-None" {
 test "EffectList: blur with rad + grow" {
   let fx = parse_effect_list_inner("<a:blur rad=\"50800\" grow=\"1\"/>")
   let b = fx.blur.unwrap()
-  assert_eq(b.rad, Emu(50800L))
-  assert_eq(b.grow.unwrap(), true)
+  debug_inspect(b.rad, content="Emu(50800)")
+  debug_inspect(b.grow.unwrap(), content="true")
 }
 
 ///|
 test "EffectList: blur missing rad defaults to 0 (ECMA-376 default)" {
   let fx = parse_effect_list_inner("<a:blur/>")
-  assert_eq(fx.blur.unwrap().rad, Emu(0L))
+  debug_inspect(fx.blur.unwrap().rad, content="Emu(0)")
 }
 
 ///|
@@ -65,9 +65,9 @@ test "EffectList: minimal outerShdw (blurRad only) parses with dist/dir = 0" {
     "<a:outerShdw blurRad=\"40000\"><a:srgbClr val=\"000000\"/></a:outerShdw>",
   )
   let s = fx.outer_shadow.unwrap()
-  assert_eq(s.blur_rad, Emu(40000L))
-  assert_eq(s.dist, Emu(0L))
-  assert_eq(s.dir, Angle(0.0))
+  debug_inspect(s.blur_rad, content="Emu(40000)")
+  debug_inspect(s.dist, content="Emu(0)")
+  debug_inspect(s.dir, content="Angle(0)")
 }
 
 // --- glow ---
@@ -78,9 +78,9 @@ test "EffectList: glow with srgb colour" {
     "<a:glow rad=\"63500\"><a:srgbClr val=\"FFC000\"/></a:glow>",
   )
   let g = fx.glow.unwrap()
-  assert_eq(g.rad, Emu(63500L))
+  debug_inspect(g.rad, content="Emu(63500)")
   match g.color.base {
-    Srgb(rgb) => assert_eq(rgb.to_hex(), "FFC000")
+    Srgb(rgb) => debug_inspect(rgb.to_hex(), content="\"FFC000\"")
     _ => fail("expected Srgb base")
   }
 }
@@ -102,11 +102,11 @@ test "EffectList: innerShdw full" {
     "<a:innerShdw blurRad=\"50800\" dist=\"38100\" dir=\"2700000\"><a:srgbClr val=\"000000\"/></a:innerShdw>",
   )
   let s = fx.inner_shadow.unwrap()
-  assert_eq(s.blur_rad, Emu(50800L))
-  assert_eq(s.dist, Emu(38100L))
-  assert_eq(s.dir, @units.Angle::from_ooxml(2700000))
+  debug_inspect(s.blur_rad, content="Emu(50800)")
+  debug_inspect(s.dist, content="Emu(38100)")
+  debug_inspect(s.dir == @units.Angle::from_ooxml(2700000), content="true")
   match s.color.base {
-    Srgb(rgb) => assert_eq(rgb.to_hex(), "000000")
+    Srgb(rgb) => debug_inspect(rgb.to_hex(), content="\"000000\"")
     _ => fail("expected Srgb base")
   }
 }
@@ -132,13 +132,19 @@ test "EffectList: outerShdw with optionals" {
     "<a:outerShdw blurRad=\"50800\" dist=\"38100\" dir=\"5400000\" sx=\"100000\" sy=\"100000\" algn=\"b\" rotWithShape=\"0\"><a:srgbClr val=\"333333\"/></a:outerShdw>",
   )
   let s = fx.outer_shadow.unwrap()
-  assert_eq(s.blur_rad, Emu(50800L))
-  assert_eq(s.dist, Emu(38100L))
-  assert_eq(s.dir, @units.Angle::from_ooxml(5400000))
-  assert_eq(s.sx.unwrap(), @units.Percentage::from_ooxml(100000))
-  assert_eq(s.sy.unwrap(), @units.Percentage::from_ooxml(100000))
-  assert_true(s.alignment.unwrap() is RectBottom)
-  assert_eq(s.rotate_with_shape.unwrap(), false)
+  debug_inspect(s.blur_rad, content="Emu(50800)")
+  debug_inspect(s.dist, content="Emu(38100)")
+  debug_inspect(s.dir == @units.Angle::from_ooxml(5400000), content="true")
+  debug_inspect(
+    s.sx.unwrap() == @units.Percentage::from_ooxml(100000),
+    content="true",
+  )
+  debug_inspect(
+    s.sy.unwrap() == @units.Percentage::from_ooxml(100000),
+    content="true",
+  )
+  debug_inspect(s.alignment.unwrap() is RectBottom, content="true")
+  debug_inspect(s.rotate_with_shape.unwrap(), content="false")
 }
 
 ///|
@@ -147,12 +153,12 @@ test "EffectList: outerShdw minimal (no optionals)" {
     "<a:outerShdw blurRad=\"40000\" dist=\"20000\" dir=\"2700000\"><a:srgbClr val=\"808080\"/></a:outerShdw>",
   )
   let s = fx.outer_shadow.unwrap()
-  assert_true(s.sx is None)
-  assert_true(s.sy is None)
-  assert_true(s.kx is None)
-  assert_true(s.ky is None)
-  assert_true(s.alignment is None)
-  assert_true(s.rotate_with_shape is None)
+  debug_inspect(s.sx is None, content="true")
+  debug_inspect(s.sy is None, content="true")
+  debug_inspect(s.kx is None, content="true")
+  debug_inspect(s.ky is None, content="true")
+  debug_inspect(s.alignment is None, content="true")
+  debug_inspect(s.rotate_with_shape is None, content="true")
 }
 
 // --- prstShdw ---
@@ -163,10 +169,10 @@ test "EffectList: prstShdw" {
     "<a:prstShdw prst=\"shdw17\" dist=\"38100\" dir=\"2700000\"><a:srgbClr val=\"AABBCC\"/></a:prstShdw>",
   )
   let s = fx.preset_shadow.unwrap()
-  assert_eq(s.preset, "shdw17")
-  assert_eq(s.dist, Emu(38100L))
+  debug_inspect(s.preset, content="\"shdw17\"")
+  debug_inspect(s.dist, content="Emu(38100)")
   match s.color.base {
-    Srgb(rgb) => assert_eq(rgb.to_hex(), "AABBCC")
+    Srgb(rgb) => debug_inspect(rgb.to_hex(), content="\"AABBCC\"")
     _ => fail("expected Srgb base")
   }
 }
@@ -190,7 +196,7 @@ test "EffectList: prstShdw missing prst attribute raises" {
 test "EffectList: softEdge with rad" {
   let fx = parse_effect_list_inner("<a:softEdge rad=\"31750\"/>")
   let s = fx.soft_edge.unwrap()
-  assert_eq(s.rad, Emu(31750L))
+  debug_inspect(s.rad, content="Emu(31750)")
 }
 
 // --- reflection ---
@@ -201,21 +207,24 @@ test "EffectList: reflection with several attrs" {
     "<a:reflection blurRad=\"6350\" stA=\"60000\" stPos=\"0\" endA=\"300\" endPos=\"60000\" dist=\"50800\" dir=\"5400000\" sy=\"-100000\" algn=\"bl\" rotWithShape=\"0\"/>",
   )
   let r = fx.reflection.unwrap()
-  assert_eq(r.blur_rad.unwrap(), Emu(6350L))
-  assert_eq(r.dist.unwrap(), Emu(50800L))
-  assert_eq(r.sy.unwrap(), @units.Percentage::from_ooxml(-100000))
-  assert_true(r.alignment.unwrap() is RectBottomLeft)
-  assert_eq(r.rotate_with_shape.unwrap(), false)
+  debug_inspect(r.blur_rad.unwrap(), content="Emu(6350)")
+  debug_inspect(r.dist.unwrap(), content="Emu(50800)")
+  debug_inspect(
+    r.sy.unwrap() == @units.Percentage::from_ooxml(-100000),
+    content="true",
+  )
+  debug_inspect(r.alignment.unwrap() is RectBottomLeft, content="true")
+  debug_inspect(r.rotate_with_shape.unwrap(), content="false")
 }
 
 ///|
 test "EffectList: reflection bare (all attrs optional)" {
   let fx = parse_effect_list_inner("<a:reflection/>")
   let r = fx.reflection.unwrap()
-  assert_true(r.blur_rad is None)
-  assert_true(r.dist is None)
-  assert_true(r.dir is None)
-  assert_true(r.alignment is None)
+  debug_inspect(r.blur_rad is None, content="true")
+  debug_inspect(r.dist is None, content="true")
+  debug_inspect(r.dir is None, content="true")
+  debug_inspect(r.alignment is None, content="true")
 }
 
 // --- combined ---
@@ -226,9 +235,9 @@ test "EffectList: glow + outerShdw together" {
     "<a:glow rad=\"63500\"><a:srgbClr val=\"FFC000\"/></a:glow>" +
     "<a:outerShdw blurRad=\"40000\" dist=\"20000\" dir=\"2700000\"><a:srgbClr val=\"000000\"/></a:outerShdw>",
   )
-  assert_true(!(fx.glow is None))
-  assert_true(!(fx.outer_shadow is None))
-  assert_true(fx.blur is None)
+  debug_inspect(!(fx.glow is None), content="true")
+  debug_inspect(!(fx.outer_shadow is None), content="true")
+  debug_inspect(fx.blur is None, content="true")
 }
 
 // --- unknown / skipped children ---
@@ -240,15 +249,24 @@ test "EffectList: unknown child is skipped, others still parse" {
     "<a:softEdge rad=\"12700\"/>",
   )
   let s = fx.soft_edge.unwrap()
-  assert_eq(s.rad, Emu(12700L))
+  debug_inspect(s.rad, content="Emu(12700)")
 }
 
 // --- RectAlignment::from_xml ---
 
 ///|
 test "RectAlignment::from_xml round-trips known values" {
-  assert_true(@oxml.RectAlignment::from_xml("tl").unwrap() is RectTopLeft)
-  assert_true(@oxml.RectAlignment::from_xml("ctr").unwrap() is RectCenter)
-  assert_true(@oxml.RectAlignment::from_xml("br").unwrap() is RectBottomRight)
-  assert_true(@oxml.RectAlignment::from_xml("bogus") is None)
+  debug_inspect(
+    @oxml.RectAlignment::from_xml("tl").unwrap() is RectTopLeft,
+    content="true",
+  )
+  debug_inspect(
+    @oxml.RectAlignment::from_xml("ctr").unwrap() is RectCenter,
+    content="true",
+  )
+  debug_inspect(
+    @oxml.RectAlignment::from_xml("br").unwrap() is RectBottomRight,
+    content="true",
+  )
+  debug_inspect(@oxml.RectAlignment::from_xml("bogus") is None, content="true")
 }

@@ -23,7 +23,7 @@ test "example 1: title slide with styled text" {
   ).with_text_body(body)
   prs.update_slide_mut(0, prs.slides()[0].with_shape(AutoShape(title)))
   let _bytes = prs.save()
-  assert_eq(prs.slides()[0].shapes.length(), 1)
+  debug_inspect(prs.slides()[0].shapes.length(), content="1")
 }
 
 ///|
@@ -31,9 +31,9 @@ test "example 2: widescreen slide-size" {
   let prs = @presentation.Presentation::new()
   prs.set_slide_size_mut(Widescreen)
   let sz = prs.presentation_part().unwrap().sld_sz.unwrap()
-  assert_eq(sz.cx, Emu(12_192_000L))
+  debug_inspect(sz.cx, content="Emu(12192000)")
   // pct_w now resolves against the widescreen width.
-  assert_eq(prs.pct_w(100.0), Emu(12_192_000L))
+  debug_inspect(prs.pct_w(100.0), content="Emu(12192000)")
 }
 
 ///|
@@ -80,8 +80,8 @@ test "example 3: external + internal hyperlinks" {
       int_count = int_count + rels.by_type(@opc.rt_slide).length()
     }
   }
-  assert_eq(ext_count, 1)
-  assert_eq(int_count, 1)
+  debug_inspect(ext_count, content="1")
+  debug_inspect(int_count, content="1")
 }
 
 ///|
@@ -91,12 +91,12 @@ test "example 4: speaker notes" {
   prs.set_notes_mut(
     0, "Remember to thank the team — XML-special chars like <&> are escaped automatically.",
   )
-  assert_eq(prs.notes_slides().length(), 1)
+  debug_inspect(prs.notes_slides().length(), content="1")
   match prs.notes_slides()[0].shapes[0] {
     AutoShape(a) =>
-      assert_eq(
+      debug_inspect(
         a.text_body.unwrap().paragraphs[0].plain_text(),
-        "Remember to thank the team — XML-special chars like <&> are escaped automatically.",
+        content="\"Remember to thank the team — XML-special chars like <&> are escaped automatically.\"",
       )
     _ => fail("expected notes AutoShape")
   }
@@ -155,10 +155,11 @@ test "example 6: tables with merged cells and styled borders" {
     GraphicFrame(g) =>
       match g.content {
         TableContent(t) => {
-          assert_eq(t.rows.length(), 2)
-          assert_eq(
-            t.properties.unwrap().table_style_id.unwrap(),
+          debug_inspect(t.rows.length(), content="2")
+          debug_inspect(
+            t.properties.unwrap().table_style_id.unwrap() ==
             @slide.TableStylePreset::MediumStyle2Accent1.guid(),
+            content="true",
           )
         }
         _ => fail("expected TableContent")
@@ -190,10 +191,11 @@ test "example 7: bar chart from data" {
     cy=prs.pct_h(70.0),
     embed_data=data,
   )
-  assert_eq(prs.charts().length(), 1)
-  assert_true(
+  debug_inspect(prs.charts().length(), content="1")
+  debug_inspect(
     prs.pkg.part_by_name("/ppt/embeddings/Microsoft_Excel_Worksheet1.xlsx")
     is Some(_),
+    content="true",
   )
 }
 
@@ -249,9 +251,9 @@ test "example 8: 3-slide pitch deck with widescreen + notes + chart + link" {
   let bytes = prs.save()
   // Reopen — round-trip survives.
   let prs2 = @presentation.Presentation::open(bytes)
-  assert_eq(prs2.slides().length(), 3)
-  assert_eq(prs2.charts().length(), 1)
-  assert_eq(prs2.notes_slides().length(), 1)
+  debug_inspect(prs2.slides().length(), content="3")
+  debug_inspect(prs2.charts().length(), content="1")
+  debug_inspect(prs2.notes_slides().length(), content="1")
 }
 
 ///|
@@ -271,9 +273,9 @@ test "example 9: typed layout slides (compile-time placeholder schema)" {
     .body("Results · Outlook · Q&A")
     .finish_mut()
   let prs2 = @presentation.Presentation::open(prs.save())
-  assert_eq(prs2.slides().length(), 2)
-  assert_true(prs2.slides()[0].title() is Some(_))
-  assert_true(prs2.slides()[1].body() is Some(_))
+  debug_inspect(prs2.slides().length(), content="2")
+  debug_inspect(prs2.slides()[0].title() is Some(_), content="true")
+  debug_inspect(prs2.slides()[1].body() is Some(_), content="true")
 }
 
 ///|
@@ -286,7 +288,7 @@ test "example 10: slide transitions" {
   )
   prs.update_slide_mut(0, s)
   let prs2 = @presentation.Presentation::open(prs.save())
-  assert_true(prs2.slides()[0].transition is Some(_))
+  debug_inspect(prs2.slides()[0].transition is Some(_), content="true")
 }
 
 ///|
@@ -310,8 +312,8 @@ test "example 11: ADT-driven chart options" {
     cx=prs.pct_w(80.0),
     cy=prs.pct_h(70.0),
   )
-  assert_eq(prs.charts().length(), 1)
-  assert_true(prs.charts()[0].chart.title is Some(_))
+  debug_inspect(prs.charts().length(), content="1")
+  debug_inspect(prs.charts()[0].chart.title is Some(_), content="true")
 }
 
 ///|
@@ -341,8 +343,8 @@ test "example 12: typed picture builder pipeline" {
     .with_crop(left=Percentage(10.0), right=Percentage(10.0))
     .with_effects(outline~)
     .build()
-  assert_true(pic.blip_fill.src_rect is Some(_))
-  assert_true(pic.stroke is Some(_))
+  debug_inspect(pic.blip_fill.src_rect is Some(_), content="true")
+  debug_inspect(pic.stroke is Some(_), content="true")
 }
 
 ///|
@@ -358,7 +360,7 @@ test "example 13: chart-data validation" {
     .with_category("Q1")
     .with_category("Q2")
     .with_series("Revenue", [10.0])
-  assert_eq(bad.is_consistent(), false)
+  debug_inspect(bad.is_consistent(), content="false")
   try bad.validate() |> ignore catch {
     _ => ()
   } noraise {
@@ -387,7 +389,7 @@ test "example 14: entrance animations" {
     .on_click(Entrance(FlyIn(Left)), 2)
     .on_click(Emphasis(Spin(360)), 2)
   let animated = slide.with_animations(timeline)
-  assert_true(animated.timing is Some(_))
+  debug_inspect(animated.timing is Some(_), content="true")
   prs.update_slide_mut(0, animated)
   // `save()` emits the full canonical `<p:timing>` tree.
   let _bytes = prs.save()
@@ -434,13 +436,13 @@ test "example 15: SmartArt diagram" {
   // a save → reopen round-trip.
   let saved = prs.save()
   let prs2 = @presentation.Presentation::open(saved)
-  assert_eq(prs2.slides()[0].shapes.length(), 1)
-  assert_eq(prs2.slides()[1].shapes.length(), 1)
+  debug_inspect(prs2.slides()[0].shapes.length(), content="1")
+  debug_inspect(prs2.slides()[1].shapes.length(), content="1")
   // The node's colour overrides reach the saved diagram data part.
   let data = @oxml.bytes_to_string(
     @opc.Package::open(saved).require_part("/ppt/diagrams/data1.xml").bytes,
   )
-  assert_true(data.contains("<a:srgbClr val=\"C00000\""))
+  debug_inspect(data.contains("<a:srgbClr val=\"C00000\""), content="true")
 }
 
 ///|
@@ -459,7 +461,7 @@ test "example 16: YouTube / online video" {
     cx=prs.pct_w(80.0),
     cy=prs.pct_h(80.0),
   )
-  assert_eq(prs.slides()[0].shapes.length(), 1)
+  debug_inspect(prs.slides()[0].shapes.length(), content="1")
   // `add_online_video_mut(slide, url, poster, x=…)` is the general form for any
   // streaming URL.
   let _bytes = prs.save()
@@ -477,7 +479,7 @@ test "example 17: plot-type-aware chart validation" {
   // …but invalid on a line chart — `validate` catches it before PowerPoint
   // would run its repair pass.
   let line = @chart.Chart::of_line(data).with_options([DataLabels(DLblOutEnd)])
-  assert_eq(line.is_consistent(), false)
+  debug_inspect(line.is_consistent(), content="false")
   try line.validate() |> ignore catch {
     _ => ()
   } noraise {
@@ -500,12 +502,12 @@ test "example 18: slide sections" {
   // Sections partition the deck in slide order and survive save → reopen.
   let reopened = @presentation.Presentation::open(prs.save())
   let sections = reopened.sections()
-  assert_eq(sections.length(), 4)
-  assert_true(sections[1] == { title: "Content", start: 1, })
-  assert_true(sections[2] == { title: "Details", start: 2, })
+  debug_inspect(sections.length(), content="4")
+  debug_inspect(sections[1] == { title: "Content", start: 1, }, content="true")
+  debug_inspect(sections[2] == { title: "Details", start: 2, }, content="true")
   // Removal:
   prs.set_sections_mut([])
-  assert_eq(prs.sections().length(), 0)
+  debug_inspect(prs.sections().length(), content="0")
 }
 
 ///|
@@ -539,13 +541,16 @@ test "example 19: document properties (core + app)" {
     .with_manager("Grace"),
   )
   let reopened = @presentation.Presentation::open(prs.save())
-  assert_eq(reopened.core_properties().title.unwrap(), "Q3 Review")
-  assert_eq(reopened.core_properties().creator.unwrap(), "Ada")
+  debug_inspect(
+    reopened.core_properties().title.unwrap(),
+    content="\"Q3 Review\"",
+  )
+  debug_inspect(reopened.core_properties().creator.unwrap(), content="\"Ada\"")
   let app = reopened.app_properties()
-  assert_eq(app.company.unwrap(), "ACME Corp")
-  assert_eq(app.manager.unwrap(), "Grace")
+  debug_inspect(app.company.unwrap(), content="\"ACME Corp\"")
+  debug_inspect(app.manager.unwrap(), content="\"Grace\"")
   // The merge kept the template's own Application field.
-  assert_eq(app.application.unwrap(), "moon-pptx")
+  debug_inspect(app.application.unwrap(), content="\"moon-pptx\"")
 }
 
 ///|
@@ -576,10 +581,13 @@ test "example 20: right-to-left text and paragraph-mark formatting" {
     AutoShape(sp) => sp.text_body.unwrap().paragraphs
     _ => abort("expected the AutoShape back")
   }
-  assert_eq(paras[0].properties.rtl, Some(true))
-  assert_eq(paras[1].end_run_properties.unwrap().font_size, Some(Pt(12.0)))
+  debug_inspect(paras[0].properties.rtl, content="Some(true)")
+  debug_inspect(
+    paras[1].end_run_properties.unwrap().font_size,
+    content="Some(Pt(12))",
+  )
   // Unset direction stays unset rather than becoming left-to-right.
-  assert_eq(paras[1].properties.rtl, None)
+  debug_inspect(paras[1].properties.rtl, content="None")
 }
 
 ///|
@@ -611,14 +619,14 @@ test "example 21: Japanese / CJK text and font resolution" {
   }
   // All three slots survive the round-trip, which is what makes the CJK
   // characters render in Meiryo rather than the theme default.
-  assert_eq(run_props.latin, Some("Meiryo"))
-  assert_eq(run_props.east_asian, Some("Meiryo"))
-  assert_eq(run_props.complex_script, Some("Meiryo"))
+  debug_inspect(run_props.latin, content="Some(\"Meiryo\")")
+  debug_inspect(run_props.east_asian, content="Some(\"Meiryo\")")
+  debug_inspect(run_props.complex_script, content="Some(\"Meiryo\")")
   // And the resolver agrees, against the deck's own theme.
   let scheme = reopened.themes()[0].font_scheme
-  assert_eq(
+  debug_inspect(
     @slide.resolve_run_font_for_script(run_props, scheme, "Jpan"),
-    "Meiryo",
+    content="\"Meiryo\"",
   )
 }
 
@@ -639,10 +647,10 @@ test "example 22: shape ids without keeping a counter" {
     .with_shape_auto_id(AutoShape(box))
     .with_shape_auto_id(AutoShape(box))
   prs.update_slide_mut(0, slide)
-  assert_eq(slide.duplicate_shape_ids().length(), 0)
+  debug_inspect(slide.duplicate_shape_ids().length(), content="0")
   // Both copies were built with id 1; the appends renumbered them.
-  assert_eq(slide.shapes[0].id().unwrap(), 2)
-  assert_eq(slide.shapes[1].id().unwrap(), 3)
+  debug_inspect(slide.shapes[0].id().unwrap(), content="2")
+  debug_inspect(slide.shapes[1].id().unwrap(), content="3")
   let _bytes = prs.save()
 }
 
@@ -681,9 +689,12 @@ test "example 23: shape effects (shadow, glow, reflection)" {
     AutoShape(sp) => sp.effects.unwrap()
     _ => abort("expected the AutoShape back")
   }
-  assert_eq(fx.outer_shadow.unwrap().blur_rad, Emu(76_200L))
-  assert_true(fx.outer_shadow.unwrap().alignment is Some(RectTopLeft))
-  assert_eq(fx.glow.unwrap().rad, Emu(63_500L))
+  debug_inspect(fx.outer_shadow.unwrap().blur_rad, content="Emu(76200)")
+  debug_inspect(
+    fx.outer_shadow.unwrap().alignment is Some(RectTopLeft),
+    content="true",
+  )
+  debug_inspect(fx.glow.unwrap().rad, content="Emu(63500)")
 }
 
 ///|
@@ -703,9 +714,9 @@ test "example 24: generating a large deck" {
     )
     prs.update_slide_mut(i, s.with_shape(AutoShape(tb)))
   }
-  assert_eq(prs.slide_count(), 500)
+  debug_inspect(prs.slide_count(), content="500")
   // Every slide survives the round-trip, so the batched sldIdLst, rels and
   // content-type overrides all agree.
   let reopened = @presentation.Presentation::open(prs.save())
-  assert_eq(reopened.slides().length(), 500)
+  debug_inspect(reopened.slides().length(), content="500")
 }

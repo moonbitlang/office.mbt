@@ -27,9 +27,9 @@ test "ScatterChart: scatterStyle is required" {
   let chart = @chart.Chart::parse(fixture_scatter_chart_xml(body))
   match chart.chart.plot_area.plots[0] {
     ScatterChart(b) => {
-      assert_eq(b.scatter_style, LineMarker)
-      assert_eq(b.series.length(), 1)
-      assert_eq(b.ax_ids.length(), 2)
+      debug_inspect(b.scatter_style, content="LineMarker")
+      debug_inspect(b.series.length(), content="1")
+      debug_inspect(b.ax_ids.length(), content="2")
     }
     _ => fail("expected ScatterChart plot")
   }
@@ -59,7 +59,7 @@ test "ScatterChart: round-trip" {
   let original = @chart.Chart::parse(fixture_scatter_chart_xml(body))
   let bytes = original.serialize()
   let re_parsed = @chart.Chart::parse(bytes)
-  assert_eq(re_parsed, original)
+  debug_inspect(re_parsed == original, content="true")
 }
 
 ///|
@@ -73,6 +73,9 @@ test "ScatterStyle enum round-trips" {
       Smooth,
       SmoothMarker,
     ] {
-    assert_eq(@chart.ScatterStyle::from_xml(s.to_xml()).unwrap(), s)
+    debug_inspect(
+      @chart.ScatterStyle::from_xml(s.to_xml()).unwrap() == s,
+      content="true",
+    )
   }
 }

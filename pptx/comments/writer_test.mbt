@@ -15,7 +15,7 @@ test "CommentAuthorList::serialize: round-trips a 2-author list" {
   let list_in = @comments.CommentAuthorList::parse(typical_authors())
   let bytes_out = list_in.serialize()
   let list_out = @comments.CommentAuthorList::parse(bytes_out)
-  assert_true(list_in == list_out)
+  debug_inspect(list_in == list_out, content="true")
 }
 
 ///|
@@ -23,7 +23,7 @@ test "CommentAuthorList::serialize: round-trips empty list" {
   let xml = "<?xml version=\"1.0\"?><p:cmAuthorLst xmlns:p=\"" + pml_ns + "\"/>"
   let list_in = @comments.CommentAuthorList::parse(@oxml.string_to_bytes(xml))
   let list_out = @comments.CommentAuthorList::parse(list_in.serialize())
-  assert_true(list_in == list_out)
+  debug_inspect(list_in == list_out, content="true")
 }
 
 ///|
@@ -32,8 +32,11 @@ test "CommentAuthorList::serialize: preserves per-author extLst" {
   // Bob (authors[1]) carries an <p:extLst> child captured into
   // CommentAuthor.extension. Round-trip must keep it.
   let list_out = @comments.CommentAuthorList::parse(list_in.serialize())
-  assert_eq(list_out.authors[1].extension.length(), 1)
-  assert_eq(list_out.authors[1].extension[0].name.local_name, "extLst")
+  debug_inspect(list_out.authors[1].extension.length(), content="1")
+  debug_inspect(
+    list_out.authors[1].extension[0].name.local_name,
+    content="\"extLst\"",
+  )
 }
 
 ///|
@@ -46,9 +49,9 @@ test "CommentAuthorList::serialize: preserves list-level extLst" {
     "</p:cmAuthorLst>"
   let list_in = @comments.CommentAuthorList::parse(@oxml.string_to_bytes(xml))
   let list_out = @comments.CommentAuthorList::parse(list_in.serialize())
-  assert_true(list_in == list_out)
-  assert_eq(list_out.extension.length(), 1)
-  assert_eq(list_out.extension[0].name.local_name, "extLst")
+  debug_inspect(list_in == list_out, content="true")
+  debug_inspect(list_out.extension.length(), content="1")
+  debug_inspect(list_out.extension[0].name.local_name, content="\"extLst\"")
 }
 
 // --- CommentList ---
@@ -57,7 +60,7 @@ test "CommentAuthorList::serialize: preserves list-level extLst" {
 test "CommentList::serialize: round-trips a 2-comment list" {
   let list_in = @comments.CommentList::parse(typical_comments())
   let list_out = @comments.CommentList::parse(list_in.serialize())
-  assert_true(list_in == list_out)
+  debug_inspect(list_in == list_out, content="true")
 }
 
 ///|
@@ -65,8 +68,11 @@ test "CommentList::serialize: preserves the optional dt attribute" {
   let list_in = @comments.CommentList::parse(typical_comments())
   let list_out = @comments.CommentList::parse(list_in.serialize())
   // Comment 0 has dt, comment 1 doesn't — both must survive intact.
-  assert_eq(list_out.comments[0].dt.unwrap(), "2026-05-21T10:30:00")
-  assert_true(list_out.comments[1].dt is None)
+  debug_inspect(
+    list_out.comments[0].dt.unwrap(),
+    content="\"2026-05-21T10:30:00\"",
+  )
+  debug_inspect(list_out.comments[1].dt is None, content="true")
 }
 
 ///|
@@ -74,8 +80,11 @@ test "CommentList::serialize: preserves per-comment extLst" {
   let list_in = @comments.CommentList::parse(typical_comments())
   let list_out = @comments.CommentList::parse(list_in.serialize())
   // Comment 1 carries an extLst sibling captured into its extension.
-  assert_eq(list_out.comments[1].extension.length(), 1)
-  assert_eq(list_out.comments[1].extension[0].name.local_name, "extLst")
+  debug_inspect(list_out.comments[1].extension.length(), content="1")
+  debug_inspect(
+    list_out.comments[1].extension[0].name.local_name,
+    content="\"extLst\"",
+  )
 }
 
 ///|
@@ -90,7 +99,7 @@ test "CommentList::serialize: escapes text with XML metacharacters" {
   let list_in = @comments.CommentList::parse(@oxml.string_to_bytes(xml))
   let list_out = @comments.CommentList::parse(list_in.serialize())
   // After round-trip the text is still the decoded "a & b < c".
-  assert_eq(list_out.comments[0].text, "a & b < c")
+  debug_inspect(list_out.comments[0].text, content="\"a & b < c\"")
 }
 
 ///|
@@ -104,8 +113,8 @@ test "CommentList::serialize: preserves pos coordinates verbatim" {
     "</p:cm></p:cmLst>"
   let list_in = @comments.CommentList::parse(@oxml.string_to_bytes(xml))
   let list_out = @comments.CommentList::parse(list_in.serialize())
-  assert_eq(list_out.comments[0].pos.x, Emu(123456789L))
-  assert_eq(list_out.comments[0].pos.y, Emu(-987L))
+  debug_inspect(list_out.comments[0].pos.x, content="Emu(123456789)")
+  debug_inspect(list_out.comments[0].pos.y, content="Emu(-987)")
 }
 
 ///|
@@ -113,7 +122,7 @@ test "CommentList::serialize: round-trips empty list" {
   let xml = "<?xml version=\"1.0\"?><p:cmLst xmlns:p=\"" + pml_ns + "\"/>"
   let list_in = @comments.CommentList::parse(@oxml.string_to_bytes(xml))
   let list_out = @comments.CommentList::parse(list_in.serialize())
-  assert_true(list_in == list_out)
+  debug_inspect(list_in == list_out, content="true")
 }
 
 ///|
@@ -128,7 +137,10 @@ test "CommentList::serialize: round-trips unknown <p:cm> child via extension" {
     "</p:cm></p:cmLst>"
   let list_in = @comments.CommentList::parse(@oxml.string_to_bytes(xml))
   let list_out = @comments.CommentList::parse(list_in.serialize())
-  assert_eq(list_out.comments[0].extension.length(), 1)
-  assert_eq(list_out.comments[0].extension[0].name.local_name, "futureSibling")
-  assert_true(list_in == list_out)
+  debug_inspect(list_out.comments[0].extension.length(), content="1")
+  debug_inspect(
+    list_out.comments[0].extension[0].name.local_name,
+    content="\"futureSibling\"",
+  )
+  debug_inspect(list_in == list_out, content="true")
 }

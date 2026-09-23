@@ -24,9 +24,9 @@ test "PieChart: empty body parses successfully (no required children)" {
   let chart = @chart.Chart::parse(fixture_pie_chart_xml(body))
   match chart.chart.plot_area.plots[0] {
     PieChart(b) => {
-      assert_true(b.vary_colors is None)
-      assert_eq(b.series.length(), 0)
-      assert_true(b.first_slice_ang is None)
+      debug_inspect(b.vary_colors is None, content="true")
+      debug_inspect(b.series.length(), content="0")
+      debug_inspect(b.first_slice_ang is None, content="true")
     }
     _ => fail("expected PieChart plot")
   }
@@ -42,9 +42,9 @@ test "PieChart: full field set" {
   let chart = @chart.Chart::parse(fixture_pie_chart_xml(body))
   match chart.chart.plot_area.plots[0] {
     PieChart(b) => {
-      assert_eq(b.vary_colors.unwrap(), true)
-      assert_eq(b.series.length(), 1)
-      assert_eq(b.first_slice_ang.unwrap(), 90)
+      debug_inspect(b.vary_colors.unwrap(), content="true")
+      debug_inspect(b.series.length(), content="1")
+      debug_inspect(b.first_slice_ang.unwrap(), content="90")
     }
     _ => fail("expected PieChart plot")
   }
@@ -61,5 +61,5 @@ test "PieChart: parse → serialize → parse round-trip" {
   let original = @chart.Chart::parse(fixture_pie_chart_xml(body))
   let bytes = original.serialize()
   let re_parsed = @chart.Chart::parse(bytes)
-  assert_eq(re_parsed, original)
+  debug_inspect(re_parsed == original, content="true")
 }

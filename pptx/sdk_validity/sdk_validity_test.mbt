@@ -27,14 +27,18 @@ async test "demo and Apache POI corpus pass the shared OpenXML SDK gate" {
       create_mode=CreateNew,
     )
     let (code, diagnostic) = validate_pptx(path)
-    assert_eq(code, 0, msg=diagnostic)
+    debug_inspect(code, content="0") catch {
+      _ => fail(diagnostic)
+    }
     let fixtures : ReadOnlyArray[String] = [
       "SmartArt.pptx", "layouts.pptx", "sample.pptx", "shapes.pptx", "table_test.pptx",
       "testPPT.pptx", "with_japanese.pptx",
     ]
     for name in fixtures {
       let (code, diagnostic) = validate_pptx("fixtures/poi/\{name}")
-      assert_eq(code, 0, msg="\{name}: \{diagnostic}")
+      debug_inspect(code, content="0") catch {
+        _ => fail("\{name}: \{diagnostic}")
+      }
     }
   }
 }
@@ -45,12 +49,13 @@ async test "SmartArt baseline does not hide unrelated presentation schema errors
     let archive = @opc.Package::open(@demos.build_sample_deck())
     let part = archive.require_part("/ppt/presentation.xml")
     let xml = part.text()
-    assert_true(xml.contains("<p:sldSz "))
+    debug_inspect(xml.contains("<p:sldSz "), content="true")
     let invalid = xml.replace(old="<p:sldSz ", new="<p:sldSz invalid=\"true\" ")
-    assert_true(
+    debug_inspect(
       archive.replace_part(
         @opc.Part::new(part.name, part.content_type, @fzip.str_to_u8(invalid)),
       ),
+      content="true",
     )
     let path = "\{directory}/invalid.pptx"
     @afs.write_file(
@@ -59,8 +64,14 @@ async test "SmartArt baseline does not hide unrelated presentation schema errors
       create_mode=CreateNew,
     )
     let (code, diagnostic) = validate_pptx(path)
-    assert_eq(code, 1, msg=diagnostic)
-    assert_true(diagnostic.contains("invalid"), msg=diagnostic)
-    assert_true(diagnostic.contains("validation failed"), msg=diagnostic)
+    debug_inspect(code, content="1") catch {
+      _ => fail(diagnostic)
+    }
+    debug_inspect(diagnostic.contains("invalid"), content="true") catch {
+      _ => fail(diagnostic)
+    }
+    debug_inspect(diagnostic.contains("validation failed"), content="true") catch {
+      _ => fail(diagnostic)
+    }
   }
 }

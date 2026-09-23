@@ -30,9 +30,9 @@ test "resolve_run_fonts: a run with no fonts takes the theme's" {
     @slide.RunProperties::default(),
     office_scheme(),
   )
-  assert_eq(r.latin, "Calibri")
-  assert_eq(r.east_asian, "")
-  assert_eq(r.complex_script, "")
+  debug_inspect(r.latin, content="\"Calibri\"")
+  debug_inspect(r.east_asian, content="\"\"")
+  debug_inspect(r.complex_script, content="\"\"")
 }
 
 ///|
@@ -42,7 +42,7 @@ test "resolve_run_fonts: major picks the heading collection" {
     office_scheme(),
     major=true,
   )
-  assert_eq(r.latin, "Calibri Light")
+  debug_inspect(r.latin, content="\"Calibri Light\"")
 }
 
 ///|
@@ -52,12 +52,12 @@ test "resolve_run_fonts: theme references are followed, literals are not" {
     .with_font("+mn-lt")
     .with_east_asian_font("+mj-lt")
   let r = @slide.resolve_run_fonts(themed, office_scheme())
-  assert_eq(r.latin, "Calibri")
-  assert_eq(r.east_asian, "Calibri Light")
+  debug_inspect(r.latin, content="\"Calibri\"")
+  debug_inspect(r.east_asian, content="\"Calibri Light\"")
   let literal = @slide.RunProperties::default().with_font("Meiryo UI")
-  assert_eq(
+  debug_inspect(
     @slide.resolve_run_fonts(literal, office_scheme()).latin,
-    "Meiryo UI",
+    content="\"Meiryo UI\"",
   )
 }
 
@@ -67,36 +67,36 @@ test "resolve_run_font_for_script: Japanese resolves through the script entry" {
   // run or in `ea` names the font this text actually renders with.
   let scheme = office_scheme()
   let plain = @slide.RunProperties::default()
-  assert_eq(
+  debug_inspect(
     @slide.resolve_run_font_for_script(plain, scheme, "Jpan"),
-    "ＭＳ Ｐゴシック",
+    content="\"ＭＳ Ｐゴシック\"",
   )
-  assert_eq(
+  debug_inspect(
     @slide.resolve_run_font_for_script(plain, scheme, "Jpan", major=true),
-    "ＭＳ Ｐ明朝",
+    content="\"ＭＳ Ｐ明朝\"",
   )
-  assert_eq(
+  debug_inspect(
     @slide.resolve_run_font_for_script(plain, scheme, "Arab"),
-    "Times New Roman",
+    content="\"Times New Roman\"",
   )
   // A script with neither an entry nor a slot falls back to latin.
-  assert_eq(
+  debug_inspect(
     @slide.resolve_run_font_for_script(plain, scheme, "Hang"),
-    "Calibri",
+    content="\"Calibri\"",
   )
 }
 
 ///|
 test "resolve_run_font_for_script: an explicit run font overrides the theme" {
   let rp = @slide.RunProperties::default().with_east_asian_font("Meiryo")
-  assert_eq(
+  debug_inspect(
     @slide.resolve_run_font_for_script(rp, office_scheme(), "Jpan"),
-    "Meiryo",
+    content="\"Meiryo\"",
   )
   // …but a Latin script still uses the Latin slot, not the override.
-  assert_eq(
+  debug_inspect(
     @slide.resolve_run_font_for_script(rp, office_scheme(), "Grek"),
-    "Calibri",
+    content="\"Calibri\"",
   )
 }
 
@@ -104,9 +104,9 @@ test "resolve_run_font_for_script: an explicit run font overrides the theme" {
 test "resolve_run_font_for_script: a reference resolving to empty keeps falling back" {
   // `+mn-ea` points at the theme's empty `ea`; the script entry must still win.
   let rp = @slide.RunProperties::default().with_east_asian_font("+mn-ea")
-  assert_eq(
+  debug_inspect(
     @slide.resolve_run_font_for_script(rp, office_scheme(), "Jpan"),
-    "ＭＳ Ｐゴシック",
+    content="\"ＭＳ Ｐゴシック\"",
   )
 }
 
@@ -118,20 +118,20 @@ test "with_east_asian_font / with_complex_script_font set only their slot" {
     .with_font("Calibri")
     .with_east_asian_font("Meiryo")
     .with_complex_script_font("Arial")
-  assert_eq(rp.latin, Some("Calibri"))
-  assert_eq(rp.east_asian, Some("Meiryo"))
-  assert_eq(rp.complex_script, Some("Arial"))
+  debug_inspect(rp.latin, content="Some(\"Calibri\")")
+  debug_inspect(rp.east_asian, content="Some(\"Meiryo\")")
+  debug_inspect(rp.complex_script, content="Some(\"Arial\")")
 }
 
 ///|
 test "with_font_for_all_scripts sets all three slots" {
   let rp = @slide.RunProperties::default().with_font_for_all_scripts("Meiryo")
-  assert_eq(rp.latin, Some("Meiryo"))
-  assert_eq(rp.east_asian, Some("Meiryo"))
-  assert_eq(rp.complex_script, Some("Meiryo"))
+  debug_inspect(rp.latin, content="Some(\"Meiryo\")")
+  debug_inspect(rp.east_asian, content="Some(\"Meiryo\")")
+  debug_inspect(rp.complex_script, content="Some(\"Meiryo\")")
   // And that is enough for CJK to render in it whatever the theme says.
-  assert_eq(
+  debug_inspect(
     @slide.resolve_run_font_for_script(rp, office_scheme(), "Jpan"),
-    "Meiryo",
+    content="\"Meiryo\"",
   )
 }

@@ -39,16 +39,16 @@ test "parse: typical picture with embed and stretch" {
   let slide = @slide.Slide::parse(slide_with_pic(inner))
   match slide.shapes[0] {
     Picture(p) => {
-      assert_eq(p.id, 5)
-      assert_eq(p.name, "Pic1")
-      assert_eq(p.blip_fill.embed_id, "rId7")
-      assert_eq(p.blip_fill.link_id, "")
-      assert_true(p.blip_fill.src_rect is None)
+      debug_inspect(p.id, content="5")
+      debug_inspect(p.name, content="\"Pic1\"")
+      debug_inspect(p.blip_fill.embed_id, content="\"rId7\"")
+      debug_inspect(p.blip_fill.link_id, content="\"\"")
+      debug_inspect(p.blip_fill.src_rect is None, content="true")
       let xfrm = p.transform.unwrap()
-      assert_eq(xfrm.offset.x, Emu(100L))
-      assert_eq(xfrm.extent.cy, Emu(400L))
+      debug_inspect(xfrm.offset.x, content="Emu(100)")
+      debug_inspect(xfrm.extent.cy, content="Emu(400)")
       match p.geometry.unwrap() {
-        Preset(kind, _) => assert_true(kind is Rect)
+        Preset(kind, _) => debug_inspect(kind is Rect, content="true")
         _ => fail("expected Preset")
       }
     }
@@ -64,8 +64,8 @@ test "parse: picture with linked rId (no embed)" {
   let slide = @slide.Slide::parse(slide_with_pic(inner))
   match slide.shapes[0] {
     Picture(p) => {
-      assert_eq(p.blip_fill.embed_id, "")
-      assert_eq(p.blip_fill.link_id, "rId9")
+      debug_inspect(p.blip_fill.embed_id, content="\"\"")
+      debug_inspect(p.blip_fill.link_id, content="\"rId9\"")
     }
     _ => fail("expected Picture")
   }
@@ -85,10 +85,10 @@ test "parse: picture with srcRect crop" {
     Picture(p) => {
       let sr = p.blip_fill.src_rect.unwrap()
       // l=10000 = 10% (1000ths-of-percent)
-      assert_eq(sr.left, Percentage(10.0))
-      assert_eq(sr.top, Percentage(20.0))
-      assert_eq(sr.right, Percentage(5.0))
-      assert_eq(sr.bottom, Percentage(5.0))
+      debug_inspect(sr.left, content="Percentage(10)")
+      debug_inspect(sr.top, content="Percentage(20)")
+      debug_inspect(sr.right, content="Percentage(5)")
+      debug_inspect(sr.bottom, content="Percentage(5)")
     }
     _ => fail("expected Picture")
   }
@@ -103,10 +103,10 @@ test "parse: srcRect with no attributes defaults to zeros" {
   match slide.shapes[0] {
     Picture(p) => {
       let sr = p.blip_fill.src_rect.unwrap()
-      assert_eq(sr.left, Percentage(0.0))
-      assert_eq(sr.top, Percentage(0.0))
-      assert_eq(sr.right, Percentage(0.0))
-      assert_eq(sr.bottom, Percentage(0.0))
+      debug_inspect(sr.left, content="Percentage(0)")
+      debug_inspect(sr.top, content="Percentage(0)")
+      debug_inspect(sr.right, content="Percentage(0)")
+      debug_inspect(sr.bottom, content="Percentage(0)")
     }
     _ => fail("expected Picture")
   }
@@ -141,7 +141,7 @@ test "parse: blip with image effects nested children skipped cleanly" {
     "<p:spPr/>"
   let slide = @slide.Slide::parse(slide_with_pic(inner))
   match slide.shapes[0] {
-    Picture(p) => assert_eq(p.blip_fill.embed_id, "rId1")
+    Picture(p) => debug_inspect(p.blip_fill.embed_id, content="\"rId1\"")
     _ => fail("expected Picture")
   }
 }

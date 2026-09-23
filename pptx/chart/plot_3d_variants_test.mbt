@@ -32,12 +32,12 @@ test "Bar3DChart: shape enum + three axIds" {
   let chart = @chart.Chart::parse(fixture_3d_chart_xml(body))
   match chart.chart.plot_area.plots[0] {
     Bar3DChart(b) => {
-      assert_eq(b.bar_dir, Col)
-      assert_true(b.grouping is Some(Clustered))
-      assert_eq(b.gap_width.unwrap(), 150)
-      assert_eq(b.gap_depth.unwrap(), 100)
-      assert_true(b.shape is Some(Cylinder))
-      assert_eq(b.ax_ids.length(), 3)
+      debug_inspect(b.bar_dir, content="Col")
+      debug_inspect(b.grouping is Some(Clustered), content="true")
+      debug_inspect(b.gap_width.unwrap(), content="150")
+      debug_inspect(b.gap_depth.unwrap(), content="100")
+      debug_inspect(b.shape is Some(Cylinder), content="true")
+      debug_inspect(b.ax_ids.length(), content="3")
     }
     _ => fail("expected Bar3DChart plot")
   }
@@ -69,7 +69,7 @@ test "Bar3DChart: round-trip" {
   let original = @chart.Chart::parse(fixture_3d_chart_xml(body))
   let bytes = original.serialize()
   let re_parsed = @chart.Chart::parse(bytes)
-  assert_eq(re_parsed, original)
+  debug_inspect(re_parsed == original, content="true")
 }
 
 // --- Line3DChart ---
@@ -86,9 +86,9 @@ test "Line3DChart: grouping is required" {
   let chart = @chart.Chart::parse(fixture_3d_chart_xml(body))
   match chart.chart.plot_area.plots[0] {
     Line3DChart(b) => {
-      assert_eq(b.grouping, Standard)
-      assert_eq(b.gap_depth.unwrap(), 150)
-      assert_eq(b.ax_ids.length(), 3)
+      debug_inspect(b.grouping, content="Standard")
+      debug_inspect(b.gap_depth.unwrap(), content="150")
+      debug_inspect(b.ax_ids.length(), content="3")
     }
     _ => fail("expected Line3DChart plot")
   }
@@ -105,7 +105,7 @@ test "Line3DChart: round-trip" {
   let original = @chart.Chart::parse(fixture_3d_chart_xml(body))
   let bytes = original.serialize()
   let re_parsed = @chart.Chart::parse(bytes)
-  assert_eq(re_parsed, original)
+  debug_inspect(re_parsed == original, content="true")
 }
 
 // --- Pie3DChart ---
@@ -119,8 +119,8 @@ test "Pie3DChart: minimal body — no firstSliceAng (2-D pie only)" {
   let chart = @chart.Chart::parse(fixture_3d_chart_xml(body))
   match chart.chart.plot_area.plots[0] {
     Pie3DChart(b) => {
-      assert_eq(b.vary_colors.unwrap(), true)
-      assert_eq(b.series.length(), 1)
+      debug_inspect(b.vary_colors.unwrap(), content="true")
+      debug_inspect(b.series.length(), content="1")
     }
     _ => fail("expected Pie3DChart plot")
   }
@@ -135,5 +135,5 @@ test "Pie3DChart: round-trip" {
   let original = @chart.Chart::parse(fixture_3d_chart_xml(body))
   let bytes = original.serialize()
   let re_parsed = @chart.Chart::parse(bytes)
-  assert_eq(re_parsed, original)
+  debug_inspect(re_parsed == original, content="true")
 }

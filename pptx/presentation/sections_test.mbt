@@ -31,18 +31,24 @@ test "set_sections_mut: partitions the deck and reads back" {
     { title: "Conclusion", start: 3, },
   ])
   let sections = prs.sections()
-  assert_eq(sections.length(), 3)
-  assert_true(sections[0] == { title: "Introduction", start: 0, })
-  assert_true(sections[1] == { title: "Content", start: 1, })
-  assert_true(sections[2] == { title: "Conclusion", start: 3, })
+  debug_inspect(sections.length(), content="3")
+  debug_inspect(
+    sections[0] == { title: "Introduction", start: 0, },
+    content="true",
+  )
+  debug_inspect(sections[1] == { title: "Content", start: 1, }, content="true")
+  debug_inspect(
+    sections[2] == { title: "Conclusion", start: 3, },
+    content="true",
+  )
   // The raw XML carries the fixed ext URI, the p14 section list, and
   // one sldId per slide, matching <p:sldIdLst>.
   let xml = saved_part_xml(prs, "/ppt/presentation.xml")
-  assert_true(xml.contains(@oxml.section_list_ext_uri))
-  assert_true(xml.contains("name=\"Introduction\""))
-  assert_true(xml.contains("name=\"Conclusion\""))
+  debug_inspect(xml.contains(@oxml.section_list_ext_uri), content="true")
+  debug_inspect(xml.contains("name=\"Introduction\""), content="true")
+  debug_inspect(xml.contains("name=\"Conclusion\""), content="true")
   let ids = prs.presentation_part().unwrap().sld_ids
-  assert_eq(ids.length(), 4)
+  debug_inspect(ids.length(), content="4")
   // Slide 3 (index) belongs to "Conclusion": its sldId appears twice —
   // once in <p:sldIdLst>, once in the section's list.
   let mut hits = 0
@@ -52,7 +58,7 @@ test "set_sections_mut: partitions the deck and reads back" {
     hits = hits + 1
     rest = rest[off + needle.length():].to_owned()
   }
-  assert_eq(hits, 2)
+  debug_inspect(hits, content="2")
 }
 
 ///|
@@ -64,9 +70,9 @@ test "sections survive save -> reopen" {
   ])
   let reopened = @presentation.Presentation::open(prs.save())
   let sections = reopened.sections()
-  assert_eq(sections.length(), 2)
-  assert_eq(sections[0].title, "冒頭")
-  assert_eq(sections[1].start, 1)
+  debug_inspect(sections.length(), content="2")
+  debug_inspect(sections[0].title, content="\"冒頭\"")
+  debug_inspect(sections[1].start, content="1")
 }
 
 ///|
@@ -75,14 +81,14 @@ test "set_sections_mut: setting again replaces, never duplicates" {
   prs.set_sections_mut([{ title: "First", start: 0, }])
   prs.set_sections_mut([{ title: "Second", start: 0, }])
   let sections = prs.sections()
-  assert_eq(sections.length(), 1)
-  assert_eq(sections[0].title, "Second")
+  debug_inspect(sections.length(), content="1")
+  debug_inspect(sections[0].title, content="\"Second\"")
   let xml = saved_part_xml(prs, "/ppt/presentation.xml")
-  assert_true(!xml.contains("First"))
+  debug_inspect(!xml.contains("First"), content="true")
   // Exactly one section ext in the file.
   let first = xml.find(@oxml.section_list_ext_uri).unwrap()
   let rest = xml[first + 1:].to_owned()
-  assert_true(rest.find(@oxml.section_list_ext_uri) is None)
+  debug_inspect(rest.find(@oxml.section_list_ext_uri) is None, content="true")
 }
 
 ///|
@@ -90,12 +96,13 @@ test "set_sections_mut: empty array removes all sections" {
   let prs = deck_with_slides(2)
   prs.set_sections_mut([{ title: "All", start: 0, }])
   prs.set_sections_mut([])
-  assert_eq(prs.sections().length(), 0)
-  assert_true(
+  debug_inspect(prs.sections().length(), content="0")
+  debug_inspect(
     saved_part_xml(prs, "/ppt/presentation.xml").find(
       @oxml.section_list_ext_uri,
     )
     is None,
+    content="true",
   )
 }
 
@@ -107,9 +114,12 @@ test "set_sections_mut: an empty section (equal starts) is representable" {
     { title: "Everything", start: 0, },
   ])
   let sections = prs.sections()
-  assert_eq(sections.length(), 2)
-  assert_true(sections[0] == { title: "Empty", start: 0, })
-  assert_true(sections[1] == { title: "Everything", start: 0, })
+  debug_inspect(sections.length(), content="2")
+  debug_inspect(sections[0] == { title: "Empty", start: 0, }, content="true")
+  debug_inspect(
+    sections[1] == { title: "Everything", start: 0, },
+    content="true",
+  )
 }
 
 ///|
@@ -119,10 +129,10 @@ test "add_section_mut: inserts in slide order" {
   prs.add_section_mut(title="Late", start=2)
   prs.add_section_mut(title="Middle", start=1)
   let sections = prs.sections()
-  assert_eq(sections.length(), 3)
-  assert_eq(sections[0].title, "Intro")
-  assert_eq(sections[1].title, "Middle")
-  assert_eq(sections[2].title, "Late")
+  debug_inspect(sections.length(), content="3")
+  debug_inspect(sections[0].title, content="\"Intro\"")
+  debug_inspect(sections[1].title, content="\"Middle\"")
+  debug_inspect(sections[2].title, content="\"Late\"")
 }
 
 ///|
@@ -158,13 +168,13 @@ test "set_sections_mut: validation errors" {
     _ => fail("expected Malformed for an out-of-range start")
   }
   // Nothing was written by the failed calls.
-  assert_eq(prs.sections().length(), 0)
+  debug_inspect(prs.sections().length(), content="0")
 }
 
 ///|
 test "with_sections: immutable counterpart leaves the original untouched" {
   let prs = deck_with_slides(1)
   let sectioned = prs.with_sections([{ title: "Only", start: 0, }])
-  assert_eq(prs.sections().length(), 0)
-  assert_eq(sectioned.sections().length(), 1)
+  debug_inspect(prs.sections().length(), content="0")
+  debug_inspect(sectioned.sections().length(), content="1")
 }

@@ -58,17 +58,17 @@ test "add_picture_mut: PNG path lands in /ppt/media as image/png" {
   // The package now has a /ppt/media/image1.png part.
   let pkg = prs.pkg
   let img = pkg.part_by_name("/ppt/media/image1.png").unwrap()
-  assert_eq(img.content_type, "image/png")
+  debug_inspect(img.content_type, content="\"image/png\"")
   // The slide's shape tree now contains a Picture referencing rId2
   // (rId1 is the layout link).
   let slide = prs.slides()[0]
-  assert_eq(slide.shapes.length(), 1)
+  debug_inspect(slide.shapes.length(), content="1")
   match slide.shapes[0] {
     Picture(p) => {
-      assert_eq(p.blip_fill.embed_id, "rId2")
+      debug_inspect(p.blip_fill.embed_id, content="\"rId2\"")
       let xfrm = p.transform.unwrap()
-      assert_eq(xfrm.offset.x, Emu(914_400L))
-      assert_eq(xfrm.extent.cx, Emu(2_286_000L))
+      debug_inspect(xfrm.offset.x, content="Emu(914400)")
+      debug_inspect(xfrm.extent.cx, content="Emu(2286000)")
     }
     _ => fail("expected Picture shape")
   }
@@ -87,7 +87,7 @@ test "add_picture_mut: JPEG path uses .jpeg extension + image/jpeg" {
     cy=Emu(100L),
   )
   let img = prs.pkg.part_by_name("/ppt/media/image1.jpeg").unwrap()
-  assert_eq(img.content_type, "image/jpeg")
+  debug_inspect(img.content_type, content="\"image/jpeg\"")
 }
 
 ///|
@@ -106,7 +106,7 @@ test "add_picture_mut: content_types gains a Default for the extension" {
   let has_png_default = cts.defaults
     .iter()
     .any(kv => kv.0 == "png" && kv.1 == "image/png")
-  assert_true(has_png_default)
+  debug_inspect(has_png_default, content="true")
 }
 
 ///|
@@ -129,10 +129,16 @@ test "add_picture_mut: second image gets image2 + a fresh rId" {
     cx=Emu(100L),
     cy=Emu(100L),
   )
-  assert_true(prs.pkg.part_by_name("/ppt/media/image1.png") is Some(_))
-  assert_true(prs.pkg.part_by_name("/ppt/media/image2.png") is Some(_))
+  debug_inspect(
+    prs.pkg.part_by_name("/ppt/media/image1.png") is Some(_),
+    content="true",
+  )
+  debug_inspect(
+    prs.pkg.part_by_name("/ppt/media/image2.png") is Some(_),
+    content="true",
+  )
   let slide = prs.slides()[0]
-  assert_eq(slide.shapes.length(), 2)
+  debug_inspect(slide.shapes.length(), content="2")
 }
 
 ///|
@@ -205,15 +211,15 @@ test "add_picture_auto_mut: PNG dimensions derive from header" {
   let _ = prs.add_slide_mut(0)
   prs.add_picture_auto_mut(0, png_96x192(), x=Emu(914_400L), y=Emu(0L))
   let slide = prs.slides()[0]
-  assert_eq(slide.shapes.length(), 1)
+  debug_inspect(slide.shapes.length(), content="1")
   match slide.shapes[0] {
     Picture(p) => {
       let xfrm = p.transform.unwrap()
       // 96 px @ 96 dpi → 1 inch = 914_400 EMU
-      assert_eq(xfrm.extent.cx, Emu(914_400L))
-      assert_eq(xfrm.extent.cy, Emu(1_828_800L))
-      assert_eq(xfrm.offset.x, Emu(914_400L))
-      assert_eq(xfrm.offset.y, Emu(0L))
+      debug_inspect(xfrm.extent.cx, content="Emu(914400)")
+      debug_inspect(xfrm.extent.cy, content="Emu(1828800)")
+      debug_inspect(xfrm.offset.x, content="Emu(914400)")
+      debug_inspect(xfrm.offset.y, content="Emu(0)")
     }
     _ => fail("expected Picture")
   }
@@ -247,14 +253,14 @@ test "add_picture_mut: produced bytes reopen and round-trip" {
   let bytes = prs.save()
   let prs2 = @presentation.Presentation::open(bytes)
   let slide = prs2.slides()[0]
-  assert_eq(slide.shapes.length(), 1)
+  debug_inspect(slide.shapes.length(), content="1")
   match slide.shapes[0] {
-    Picture(p) => assert_eq(p.blip_fill.embed_id, "rId2")
+    Picture(p) => debug_inspect(p.blip_fill.embed_id, content="\"rId2\"")
     _ => fail("expected Picture after reopen")
   }
   // Image bytes survived.
   let img = prs2.pkg.part_by_name("/ppt/media/image1.png").unwrap()
-  assert_eq(img.bytes.length(), fake_png().length())
+  debug_inspect(img.bytes.length() == fake_png().length(), content="true")
 }
 
 // --- add_svg_picture_mut ---
@@ -289,24 +295,25 @@ test "add_svg_picture_mut: wires svg + fallback parts, rels, content types" {
   // Two media parts: the raster fallback (image1.png) and the SVG
   // (image2.svg), each with the right content type.
   let png = prs.pkg.part_by_name("/ppt/media/image1.png").unwrap()
-  assert_eq(png.content_type, "image/png")
+  debug_inspect(png.content_type, content="\"image/png\"")
   let svg = prs.pkg.part_by_name("/ppt/media/image2.svg").unwrap()
-  assert_eq(svg.content_type, "image/svg+xml")
+  debug_inspect(svg.content_type, content="\"image/svg+xml\"")
   // Both content-type Defaults are declared.
   let cts = prs.pkg.content_types()
-  assert_true(cts.defaults.iter().any(kv => kv.0 == "png"))
-  assert_true(
+  debug_inspect(cts.defaults.iter().any(kv => kv.0 == "png"), content="true")
+  debug_inspect(
     cts.defaults.iter().any(kv => kv.0 == "svg" && kv.1 == "image/svg+xml"),
+    content="true",
   )
   // The slide carries one SVG picture: blip embeds the fallback (rId2),
   // svgBlip references the SVG (rId3).
   let slide = prs.slides()[0]
-  assert_eq(slide.shapes.length(), 1)
+  debug_inspect(slide.shapes.length(), content="1")
   match slide.shapes[0] {
     Picture(p) => {
-      assert_eq(p.blip_fill.embed_id, "rId2")
+      debug_inspect(p.blip_fill.embed_id, content="\"rId2\"")
       let blip = p.blip_fill.extension[0]
-      assert_eq(blip.name.local_name, "blip")
+      debug_inspect(blip.name.local_name, content="\"blip\"")
     }
     _ => fail("expected SVG Picture shape")
   }
@@ -327,12 +334,15 @@ test "add_svg_picture_mut: survives save + reopen" {
   )
   let prs2 = @presentation.Presentation::open(prs.save())
   // Both media parts survived the zip round-trip.
-  assert_true(prs2.pkg.part_by_name("/ppt/media/image1.png") is Some(_))
+  debug_inspect(
+    prs2.pkg.part_by_name("/ppt/media/image1.png") is Some(_),
+    content="true",
+  )
   let svg = prs2.pkg.part_by_name("/ppt/media/image2.svg").unwrap()
-  assert_eq(svg.bytes.length(), fake_svg().length())
+  debug_inspect(svg.bytes.length() == fake_svg().length(), content="true")
   // And the picture's svgBlip extension is intact.
   match prs2.slides()[0].shapes[0] {
-    Picture(p) => assert_eq(p.blip_fill.embed_id, "rId2")
+    Picture(p) => debug_inspect(p.blip_fill.embed_id, content="\"rId2\"")
     _ => fail("expected SVG Picture after reopen")
   }
 }
@@ -403,10 +413,13 @@ test "add_video_mut: wires media + poster parts, three rels, content types" {
   )
   // Media + poster parts with the right content types.
   let media = prs.pkg.part_by_name("/ppt/media/media1.mp4").unwrap()
-  assert_eq(media.content_type, "video/mp4")
-  assert_true(prs.pkg.part_by_name("/ppt/media/image1.png") is Some(_))
+  debug_inspect(media.content_type, content="\"video/mp4\"")
+  debug_inspect(
+    prs.pkg.part_by_name("/ppt/media/image1.png") is Some(_),
+    content="true",
+  )
   let cts = prs.pkg.content_types()
-  assert_true(cts.defaults.iter().any(kv => kv.0 == "mp4"))
+  debug_inspect(cts.defaults.iter().any(kv => kv.0 == "mp4"), content="true")
   // The slide holds one media picture: poster (rId2), link (rId3), embed (rId4).
   // The slide holds one picture whose poster is rId2. On re-parse `media` is
   // None — the videoFile / p14:media references round-trip through
@@ -414,9 +427,9 @@ test "add_video_mut: wires media + poster parts, three rels, content types" {
   // asserted in the slide-package tests; here the media plumbing is proven by
   // the media part + content type + the successful save→reopen test below.
   let slide = prs.slides()[0]
-  assert_eq(slide.shapes.length(), 1)
+  debug_inspect(slide.shapes.length(), content="1")
   match slide.shapes[0] {
-    Picture(p) => assert_eq(p.blip_fill.embed_id, "rId2")
+    Picture(p) => debug_inspect(p.blip_fill.embed_id, content="\"rId2\"")
     _ => fail("expected media Picture")
   }
 }
@@ -436,8 +449,8 @@ test "add_video_mut: survives save → reopen with media bytes intact" {
   )
   let prs2 = @presentation.Presentation::open(prs.save())
   let media = prs2.pkg.part_by_name("/ppt/media/media1.mp4").unwrap()
-  assert_eq(media.bytes.length(), fake_mp4().length())
-  assert_eq(prs2.slides()[0].shapes.length(), 1)
+  debug_inspect(media.bytes.length() == fake_mp4().length(), content="true")
+  debug_inspect(prs2.slides()[0].shapes.length(), content="1")
 }
 
 ///|
@@ -454,7 +467,7 @@ test "add_audio_mut: mp3 lands as audio/mpeg" {
     cy=Emu(100L),
   )
   let media = prs.pkg.part_by_name("/ppt/media/media1.mp3").unwrap()
-  assert_eq(media.content_type, "audio/mpeg")
+  debug_inspect(media.content_type, content="\"audio/mpeg\"")
 }
 
 ///|
@@ -522,5 +535,5 @@ test "add video + audio on one slide → both <p14:media> namespaces stay in sco
   )
   // The deck must reopen without an unbound-prefix XML error.
   let reopened = @presentation.Presentation::open(prs.save())
-  assert_eq(reopened.slides()[0].shapes.length(), 2)
+  debug_inspect(reopened.slides()[0].shapes.length(), content="2")
 }

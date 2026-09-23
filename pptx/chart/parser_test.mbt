@@ -40,10 +40,13 @@ test "Chart::parse: root recognised + plotArea typed" {
   let chart = @chart.Chart::parse(@oxml.string_to_bytes(typical_chart_xml()))
   // <c:plotArea> is required and typed.
   // Layout is the first optional child; our fixture has one.
-  assert_true(chart.chart.plot_area.layout is Some(_))
+  debug_inspect(chart.chart.plot_area.layout is Some(_), content="true")
   // One plot child: <c:barChart>.
-  assert_eq(chart.chart.plot_area.plots.length(), 1)
-  assert_eq(chart.chart.plot_area.plots[0].local_name(), "barChart")
+  debug_inspect(chart.chart.plot_area.plots.length(), content="1")
+  debug_inspect(
+    chart.chart.plot_area.plots[0].local_name(),
+    content="\"barChart\"",
+  )
 }
 
 ///|
@@ -62,9 +65,9 @@ test "Chart::parse: PlotArea axes are discriminated" {
     "</c:chart>" +
     "</c:chartSpace>"
   let chart = @chart.Chart::parse(@oxml.string_to_bytes(xml))
-  assert_eq(chart.chart.plot_area.axes.length(), 2)
-  assert_eq(chart.chart.plot_area.axes[0].local_name(), "catAx")
-  assert_eq(chart.chart.plot_area.axes[1].local_name(), "valAx")
+  debug_inspect(chart.chart.plot_area.axes.length(), content="2")
+  debug_inspect(chart.chart.plot_area.axes[0].local_name(), content="\"catAx\"")
+  debug_inspect(chart.chart.plot_area.axes[1].local_name(), content="\"valAx\"")
 }
 
 ///|
@@ -85,9 +88,15 @@ test "Chart::parse: combination chart with multiple plots" {
     "</c:chart>" +
     "</c:chartSpace>"
   let chart = @chart.Chart::parse(@oxml.string_to_bytes(xml))
-  assert_eq(chart.chart.plot_area.plots.length(), 2)
-  assert_eq(chart.chart.plot_area.plots[0].local_name(), "barChart")
-  assert_eq(chart.chart.plot_area.plots[1].local_name(), "lineChart")
+  debug_inspect(chart.chart.plot_area.plots.length(), content="2")
+  debug_inspect(
+    chart.chart.plot_area.plots[0].local_name(),
+    content="\"barChart\"",
+  )
+  debug_inspect(
+    chart.chart.plot_area.plots[1].local_name(),
+    content="\"lineChart\"",
+  )
 }
 
 ///|
@@ -95,9 +104,9 @@ test "Chart::parse: typed chart-body scalar fields" {
   let chart = @chart.Chart::parse(@oxml.string_to_bytes(typical_chart_xml()))
   // Our fixture has no `<c:autoTitleDeleted>` so this should be `None`.
   // Other 7a2 fields likewise.
-  assert_true(chart.chart.auto_title_deleted is None)
-  assert_true(chart.chart.plot_vis_only is None)
-  assert_true(chart.chart.disp_blanks_as is None)
+  debug_inspect(chart.chart.auto_title_deleted is None, content="true")
+  debug_inspect(chart.chart.plot_vis_only is None, content="true")
+  debug_inspect(chart.chart.disp_blanks_as is None, content="true")
 }
 
 ///|
@@ -120,14 +129,14 @@ test "Chart::parse: typed chart-body fields from rich fixture" {
     "</c:chart>" +
     "</c:chartSpace>"
   let chart = @chart.Chart::parse(@oxml.string_to_bytes(xml))
-  assert_eq(chart.date1904.unwrap(), false)
-  assert_eq(chart.lang.unwrap(), "en-US")
-  assert_eq(chart.rounded_corners.unwrap(), true)
-  assert_eq(chart.style.unwrap(), 2)
-  assert_eq(chart.chart.auto_title_deleted.unwrap(), true)
-  assert_eq(chart.chart.plot_vis_only.unwrap(), true)
-  assert_true(chart.chart.disp_blanks_as is Some(Gap))
-  assert_eq(chart.chart.show_d_lbls_over_max.unwrap(), false)
+  debug_inspect(chart.date1904.unwrap(), content="false")
+  debug_inspect(chart.lang.unwrap(), content="\"en-US\"")
+  debug_inspect(chart.rounded_corners.unwrap(), content="true")
+  debug_inspect(chart.style.unwrap(), content="2")
+  debug_inspect(chart.chart.auto_title_deleted.unwrap(), content="true")
+  debug_inspect(chart.chart.plot_vis_only.unwrap(), content="true")
+  debug_inspect(chart.chart.disp_blanks_as is Some(Gap), content="true")
+  debug_inspect(chart.chart.show_d_lbls_over_max.unwrap(), content="false")
 }
 
 ///|
@@ -158,7 +167,7 @@ test "Chart::serialize: re-parse equals original (round-trip floor)" {
   let original = @chart.Chart::parse(@oxml.string_to_bytes(typical_chart_xml()))
   let bytes = original.serialize()
   let re_parsed = @chart.Chart::parse(bytes)
-  assert_eq(re_parsed, original)
+  debug_inspect(re_parsed == original, content="true")
 }
 
 ///|
@@ -175,7 +184,7 @@ test "Chart::serialize: minimal chartSpace round-trips" {
   let original = @chart.Chart::parse(@oxml.string_to_bytes(xml))
   let bytes = original.serialize()
   let re_parsed = @chart.Chart::parse(bytes)
-  assert_eq(re_parsed, original)
+  debug_inspect(re_parsed == original, content="true")
 }
 
 ///|
@@ -194,7 +203,7 @@ test "Chart::serialize: foreign-namespace extLst children survive" {
   let original = @chart.Chart::parse(@oxml.string_to_bytes(xml))
   let bytes = original.serialize()
   let re_parsed = @chart.Chart::parse(bytes)
-  assert_eq(re_parsed, original)
+  debug_inspect(re_parsed == original, content="true")
 }
 
 ///|

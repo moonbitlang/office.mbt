@@ -49,9 +49,9 @@ test "parse: xfrm rot/flipH/flipV populate Transform" {
   match slide.shapes[0] {
     AutoShape(s) => {
       let xfrm = s.transform.unwrap()
-      assert_eq(xfrm.rotation.unwrap(), Angle(90.0))
-      assert_eq(xfrm.flip_h, true)
-      assert_eq(xfrm.flip_v, true)
+      debug_inspect(xfrm.rotation.unwrap(), content="Angle(90)")
+      debug_inspect(xfrm.flip_h, content="true")
+      debug_inspect(xfrm.flip_v, content="true")
     }
     _ => fail("expected AutoShape")
   }
@@ -67,9 +67,9 @@ test "parse: xfrm without orientation defaults to unrotated / un-flipped" {
   match slide.shapes[0] {
     AutoShape(s) => {
       let xfrm = s.transform.unwrap()
-      assert_true(xfrm.rotation is None)
-      assert_eq(xfrm.flip_h, false)
-      assert_eq(xfrm.flip_v, false)
+      debug_inspect(xfrm.rotation is None, content="true")
+      debug_inspect(xfrm.flip_h, content="false")
+      debug_inspect(xfrm.flip_v, content="false")
     }
     _ => fail("expected AutoShape")
   }
@@ -81,15 +81,15 @@ test "Transform::new defaults + with_rotation / with_flip" {
     cx: Emu(1L),
     cy: Emu(1L),
   })
-  assert_true(t.rotation is None)
-  assert_eq(t.flip_h, false)
-  assert_eq(t.flip_v, false)
+  debug_inspect(t.rotation is None, content="true")
+  debug_inspect(t.flip_h, content="false")
+  debug_inspect(t.flip_v, content="false")
   let t2 = t.with_rotation(Angle(30.0)).with_flip(h=true, v=true)
-  assert_eq(t2.rotation.unwrap(), Angle(30.0))
-  assert_eq(t2.flip_h, true)
-  assert_eq(t2.flip_v, true)
+  debug_inspect(t2.rotation.unwrap(), content="Angle(30)")
+  debug_inspect(t2.flip_h, content="true")
+  debug_inspect(t2.flip_v, content="true")
   // with_flip() with no args clears both.
-  assert_eq(t2.with_flip().flip_h, false)
+  debug_inspect(t2.with_flip().flip_h, content="false")
 }
 
 ///|
@@ -107,17 +107,17 @@ test "AutoShape::with_rotation + with_flip emit attrs and round-trip" {
     .with_flip(h=true)
   let s = base.with_shape(AutoShape(rect))
   let xml = @oxml.bytes_to_string(s.serialize())
-  assert_true(xml.contains("rot=\"2700000\""))
-  assert_true(xml.contains("flipH=\"1\""))
+  debug_inspect(xml.contains("rot=\"2700000\""), content="true")
+  debug_inspect(xml.contains("flipH=\"1\""), content="true")
   // flipV not set → no attribute emitted.
-  assert_true(!xml.contains("flipV"))
+  debug_inspect(!xml.contains("flipV"), content="true")
   let reparsed = @slide.Slide::parse(s.serialize())
   match reparsed.shapes[0] {
     AutoShape(a) => {
       let xfrm = a.transform.unwrap()
-      assert_eq(xfrm.rotation.unwrap(), Angle(45.0))
-      assert_eq(xfrm.flip_h, true)
-      assert_eq(xfrm.flip_v, false)
+      debug_inspect(xfrm.rotation.unwrap(), content="Angle(45)")
+      debug_inspect(xfrm.flip_h, content="true")
+      debug_inspect(xfrm.flip_v, content="false")
     }
     _ => fail("expected AutoShape")
   }
@@ -136,9 +136,9 @@ test "writer: un-rotated transform emits no rot / flipH / flipV" {
   )
   let s = base.with_shape(AutoShape(rect))
   let xml = @oxml.bytes_to_string(s.serialize())
-  assert_true(!xml.contains("rot="))
-  assert_true(!xml.contains("flipH"))
-  assert_true(!xml.contains("flipV"))
+  debug_inspect(!xml.contains("rot="), content="true")
+  debug_inspect(!xml.contains("flipH"), content="true")
+  debug_inspect(!xml.contains("flipV"), content="true")
 }
 
 ///|
@@ -160,9 +160,9 @@ test "Picture::with_rotation + with_flip round-trip" {
   match reparsed.shapes[0] {
     Picture(p) => {
       let xfrm = p.transform.unwrap()
-      assert_eq(xfrm.rotation.unwrap(), Angle(90.0))
-      assert_eq(xfrm.flip_h, false)
-      assert_eq(xfrm.flip_v, true)
+      debug_inspect(xfrm.rotation.unwrap(), content="Angle(90)")
+      debug_inspect(xfrm.flip_h, content="false")
+      debug_inspect(xfrm.flip_v, content="true")
     }
     _ => fail("expected Picture")
   }
@@ -187,9 +187,9 @@ test "GroupShape::with_rotation + with_flip set the transform" {
   }
   let g2 = g.with_rotation(Angle(60.0)).with_flip(h=true)
   let xfrm = g2.transform.unwrap()
-  assert_eq(xfrm.rotation.unwrap(), Angle(60.0))
-  assert_eq(xfrm.flip_h, true)
-  assert_eq(xfrm.flip_v, false)
+  debug_inspect(xfrm.rotation.unwrap(), content="Angle(60)")
+  debug_inspect(xfrm.flip_h, content="true")
+  debug_inspect(xfrm.flip_v, content="false")
 }
 
 ///|
@@ -214,15 +214,15 @@ test "GroupShape: rotated group emits orientation and round-trips" {
   }
   let s = base.with_shape(Group(g.with_rotation(Angle(90.0)).with_flip(h=true)))
   let xml = @oxml.bytes_to_string(s.serialize())
-  assert_true(xml.contains("rot=\"5400000\""))
-  assert_true(xml.contains("flipH=\"1\""))
+  debug_inspect(xml.contains("rot=\"5400000\""), content="true")
+  debug_inspect(xml.contains("flipH=\"1\""), content="true")
   let reparsed = @slide.Slide::parse(s.serialize())
   match reparsed.shapes[0] {
     Group(rg) => {
       let xfrm = rg.transform.unwrap()
-      assert_eq(xfrm.rotation.unwrap(), Angle(90.0))
-      assert_eq(xfrm.flip_h, true)
-      assert_eq(xfrm.flip_v, false)
+      debug_inspect(xfrm.rotation.unwrap(), content="Angle(90)")
+      debug_inspect(xfrm.flip_h, content="true")
+      debug_inspect(xfrm.flip_v, content="false")
     }
     _ => fail("expected GroupShape")
   }
@@ -241,9 +241,9 @@ test "graphicFrame: <p:xfrm> rot/flip round-trips losslessly" {
   match slide.shapes[0] {
     GraphicFrame(f) => {
       let xfrm = f.transform.unwrap()
-      assert_eq(xfrm.rotation.unwrap(), Angle(90.0))
-      assert_eq(xfrm.flip_h, true)
-      assert_eq(xfrm.flip_v, false)
+      debug_inspect(xfrm.rotation.unwrap(), content="Angle(90)")
+      debug_inspect(xfrm.flip_h, content="true")
+      debug_inspect(xfrm.flip_v, content="false")
     }
     _ => fail("expected GraphicFrame")
   }
@@ -252,8 +252,8 @@ test "graphicFrame: <p:xfrm> rot/flip round-trips losslessly" {
   match reparsed.shapes[0] {
     GraphicFrame(f) => {
       let xfrm = f.transform.unwrap()
-      assert_eq(xfrm.rotation.unwrap(), Angle(90.0))
-      assert_eq(xfrm.flip_h, true)
+      debug_inspect(xfrm.rotation.unwrap(), content="Angle(90)")
+      debug_inspect(xfrm.flip_h, content="true")
     }
     _ => fail("expected GraphicFrame")
   }

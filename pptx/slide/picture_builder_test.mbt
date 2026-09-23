@@ -49,7 +49,7 @@ test "Picture::builder: build with no crop/effects equals of_image" {
     cx=Emu(100L),
     cy=Emu(100L),
   )
-  assert_true(built == flat)
+  debug_inspect(built == flat, content="true")
 }
 
 ///|
@@ -59,8 +59,8 @@ test "Picture::builder: with_crop sets the source rectangle" {
     .build()
   match pic.blip_fill.src_rect {
     Some(rect) => {
-      assert_true(rect.left == Percentage(10.0))
-      assert_true(rect.right == Percentage(5.0))
+      debug_inspect(rect.left, content="Percentage(10)")
+      debug_inspect(rect.right, content="Percentage(5)")
     }
     None => fail("expected a crop rectangle")
   }
@@ -71,15 +71,15 @@ test "Picture::builder: with_effects sets outline + effect list" {
   let stroke = thin_stroke()
   let effects = @oxml.EffectList::empty()
   let pic = pic_builder().with_effects(outline=stroke, effects~).build()
-  assert_true(pic.stroke == Some(stroke))
-  assert_true(pic.effects == Some(effects))
+  debug_inspect(pic.stroke == Some(stroke), content="true")
+  debug_inspect(pic.effects == Some(effects), content="true")
 }
 
 ///|
 test "Picture::builder: with_effects leaves omitted fields unset" {
   let pic = pic_builder().with_effects(outline=thin_stroke()).build()
-  assert_true(pic.stroke is Some(_))
-  assert_true(pic.effects is None)
+  debug_inspect(pic.stroke is Some(_), content="true")
+  debug_inspect(pic.effects is None, content="true")
 }
 
 ///|
@@ -88,16 +88,16 @@ test "Picture::builder: crop then effects keeps both" {
     .with_crop(top=Percentage(8.0))
     .with_effects(outline=thin_stroke())
     .build()
-  assert_true(pic.blip_fill.src_rect is Some(_))
-  assert_true(pic.stroke is Some(_))
+  debug_inspect(pic.blip_fill.src_rect is Some(_), content="true")
+  debug_inspect(pic.stroke is Some(_), content="true")
 }
 
 ///|
 test "Picture::builder: build straight after crop (no effects)" {
   let pic = pic_builder().with_crop(bottom=Percentage(3.0)).build()
-  assert_true(pic.blip_fill.src_rect is Some(_))
-  assert_true(pic.stroke is None)
-  assert_true(pic.effects is None)
+  debug_inspect(pic.blip_fill.src_rect is Some(_), content="true")
+  debug_inspect(pic.stroke is None, content="true")
+  debug_inspect(pic.effects is None, content="true")
 }
 
 // --- round-trip ---
@@ -111,8 +111,8 @@ test "Picture::builder: built picture round-trips through a slide" {
   let reparsed = @slide.Slide::parse(slide_of_picture(pic).serialize())
   match reparsed.shapes[0] {
     Picture(p) => {
-      assert_true(p.blip_fill.src_rect is Some(_))
-      assert_true(p.stroke is Some(_))
+      debug_inspect(p.blip_fill.src_rect is Some(_), content="true")
+      debug_inspect(p.stroke is Some(_), content="true")
     }
     _ => fail("expected a picture shape")
   }

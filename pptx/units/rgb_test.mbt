@@ -3,9 +3,9 @@
 ///|
 test "RgbColor::new accessors" {
   let c = @units.RgbColor::new(255, 128, 0)
-  assert_eq(c.r, 255)
-  assert_eq(c.g, 128)
-  assert_eq(c.b, 0)
+  debug_inspect(c.r, content="255")
+  debug_inspect(c.g, content="128")
+  debug_inspect(c.b, content="0")
 }
 
 ///|
@@ -15,17 +15,17 @@ test "parse_hex / to_hex round trip" {
   ]
   for hex in cases {
     let c = @units.RgbColor::parse_hex(hex)
-    assert_eq(c.to_hex(), hex)
+    debug_inspect(c.to_hex() == hex, content="true")
   }
 }
 
 ///|
 test "parse_hex accepts both # prefix and lowercase" {
   let a = @units.RgbColor::parse_hex("#ff8800")
-  assert_eq(a, @units.RgbColor::new(255, 136, 0))
-  assert_eq(a.to_hex(), "FF8800")
+  debug_inspect(a == @units.RgbColor::new(255, 136, 0), content="true")
+  debug_inspect(a.to_hex(), content="\"FF8800\"")
   let b = @units.RgbColor::parse_hex("ff8800")
-  assert_eq(a, b)
+  debug_inspect(a == b, content="true")
 }
 
 ///|
@@ -52,7 +52,10 @@ test "parse_hex rejects malformed input" {
 
 ///|
 test "to_hex always produces uppercase, no #" {
-  assert_eq(@units.RgbColor::new(0, 0, 0).to_hex(), "000000")
-  assert_eq(@units.RgbColor::new(255, 255, 255).to_hex(), "FFFFFF")
-  assert_eq(@units.RgbColor::new(10, 11, 12).to_hex(), "0A0B0C")
+  debug_inspect(@units.RgbColor::new(0, 0, 0).to_hex(), content="\"000000\"")
+  debug_inspect(
+    @units.RgbColor::new(255, 255, 255).to_hex(),
+    content="\"FFFFFF\"",
+  )
+  debug_inspect(@units.RgbColor::new(10, 11, 12).to_hex(), content="\"0A0B0C\"")
 }

@@ -81,7 +81,7 @@ test "minimal_deck: parse → serialize → reopen → re-parse preserves Slide"
   let s_out = @slide.Slide::parse(
     pkg_out.require_part("/ppt/slides/slide1.xml").bytes,
   )
-  assert_true(s_in == s_out)
+  debug_inspect(s_in == s_out, content="true")
 }
 
 ///|
@@ -95,21 +95,21 @@ test "minimal_deck: round-trip preserves Theme + SlideMaster + SlideLayout" {
   let t_out = @theme.Theme::parse(
     pkg_out.require_part("/ppt/theme/theme1.xml").bytes,
   )
-  assert_true(t_in == t_out)
+  debug_inspect(t_in == t_out, content="true")
   let m_in = @slide_master.SlideMaster::parse(
     pkg_in.require_part("/ppt/slideMasters/slideMaster1.xml").bytes,
   )
   let m_out = @slide_master.SlideMaster::parse(
     pkg_out.require_part("/ppt/slideMasters/slideMaster1.xml").bytes,
   )
-  assert_true(m_in == m_out)
+  debug_inspect(m_in == m_out, content="true")
   let l_in = @slide_master.SlideLayout::parse(
     pkg_in.require_part("/ppt/slideLayouts/slideLayout1.xml").bytes,
   )
   let l_out = @slide_master.SlideLayout::parse(
     pkg_out.require_part("/ppt/slideLayouts/slideLayout1.xml").bytes,
   )
-  assert_true(l_in == l_out)
+  debug_inspect(l_in == l_out, content="true")
 }
 
 // --- rich deck ---
@@ -129,7 +129,7 @@ test "rich_deck: every shape kind survives parse → serialize → re-parse" {
   let s_b = @slide.Slide::parse(
     pkg_re3.require_part("/ppt/slides/slide2.xml").bytes,
   )
-  assert_true(s_a == s_b)
+  debug_inspect(s_a == s_b, content="true")
   // Use `s_out = s_b` for the spot-check below.
   let pkg_out = pkg_re3
   let s_out = s_b
@@ -139,7 +139,7 @@ test "rich_deck: every shape kind survives parse → serialize → re-parse" {
   match s_out.shapes[2] {
     AutoShape(sp) =>
       match sp.geometry.unwrap() {
-        Custom(cg) => assert_eq(cg.paths[0].commands.length(), 4)
+        Custom(cg) => debug_inspect(cg.paths[0].commands.length(), content="4")
         _ => fail("expected Custom geometry on shape[2]")
       }
     _ => fail("expected AutoShape with custGeom")
@@ -159,21 +159,21 @@ test "notes_and_comments_deck: NotesSlide + CommentList round-trip" {
   let n_out = @notes.NotesSlide::parse(
     pkg_out.require_part("/ppt/notesSlides/notesSlide1.xml").bytes,
   )
-  assert_true(n_in == n_out)
+  debug_inspect(n_in == n_out, content="true")
   let cms_in = @comments.CommentList::parse(
     pkg_in.require_part("/ppt/comments/comment1.xml").bytes,
   )
   let cms_out = @comments.CommentList::parse(
     pkg_out.require_part("/ppt/comments/comment1.xml").bytes,
   )
-  assert_true(cms_in == cms_out)
+  debug_inspect(cms_in == cms_out, content="true")
   let authors_in = @comments.CommentAuthorList::parse(
     pkg_in.require_part("/ppt/commentAuthors.xml").bytes,
   )
   let authors_out = @comments.CommentAuthorList::parse(
     pkg_out.require_part("/ppt/commentAuthors.xml").bytes,
   )
-  assert_true(authors_in == authors_out)
+  debug_inspect(authors_in == authors_out, content="true")
 }
 
 // --- blanket guarantee across all three decks ---
@@ -190,12 +190,12 @@ test "all decks: serialize → reopen → re-parse changes no parsed value" {
     let counts_out = parse_everything(pkg_out)
     // Tuple equality without falling back to the deprecated Show impl
     // — assert each slot individually.
-    assert_eq(counts_in.0, counts_out.0)
-    assert_eq(counts_in.1, counts_out.1)
-    assert_eq(counts_in.2, counts_out.2)
-    assert_eq(counts_in.3, counts_out.3)
-    assert_eq(counts_in.4, counts_out.4)
-    assert_eq(counts_in.5, counts_out.5)
-    assert_eq(counts_in.6, counts_out.6)
+    debug_inspect(counts_in.0 == counts_out.0, content="true")
+    debug_inspect(counts_in.1 == counts_out.1, content="true")
+    debug_inspect(counts_in.2 == counts_out.2, content="true")
+    debug_inspect(counts_in.3 == counts_out.3, content="true")
+    debug_inspect(counts_in.4 == counts_out.4, content="true")
+    debug_inspect(counts_in.5 == counts_out.5, content="true")
+    debug_inspect(counts_in.6 == counts_out.6, content="true")
   }
 }

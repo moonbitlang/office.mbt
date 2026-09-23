@@ -17,8 +17,8 @@ test "readme: build a one-slide deck from scratch" {
   )
   prs.update_slide_mut(0, s.with_shape(AutoShape(tb)))
   let bytes : FixedArray[Byte] = prs.save()
-  assert_eq(prs.slides()[0].shapes.length(), 1)
-  assert_true(bytes.length() > 0)
+  debug_inspect(prs.slides()[0].shapes.length(), content="1")
+  debug_inspect(bytes.length() > 0, content="true")
 }
 
 ///|
@@ -62,9 +62,9 @@ test "readme: tables" {
       }
     _ => abort("expected a GraphicFrame")
   }
-  assert_eq(table.rows.length(), 2)
-  assert_eq(table.grid.length(), 2)
-  assert_eq(table.rows[0].cells[0].grid_span, 2)
+  debug_inspect(table.rows.length(), content="2")
+  debug_inspect(table.grid.length(), content="2")
+  debug_inspect(table.rows[0].cells[0].grid_span, content="2")
 }
 
 ///|
@@ -87,12 +87,12 @@ test "readme: charts" {
     cx=Emu(4_572_000L),
     cy=Emu(3_429_000L),
   )
-  assert_eq(prs.slides()[0].shapes.length(), 1)
+  debug_inspect(prs.slides()[0].shapes.length(), content="1")
   // The alternate one-liners the README lists next to `of_bar`.
   let _ = @chart.Chart::of_line(data, grouping=Stacked)
   let _ = @chart.Chart::of_pie(data)
   let _ = @chart.Chart::of_doughnut(data, hole_size=60)
-  assert_true(prs.save().length() > 0)
+  debug_inspect(prs.save().length() > 0, content="true")
 }
 
 ///|
@@ -128,6 +128,6 @@ test "readme: scatter and bubble" {
     cx=Emu(4_572_000L),
     cy=Emu(3_429_000L),
   )
-  assert_eq(prs.slides()[0].shapes.length(), 2)
-  assert_true(prs.save().length() > 0)
+  debug_inspect(prs.slides()[0].shapes.length(), content="2")
+  debug_inspect(prs.save().length() > 0, content="true")
 }

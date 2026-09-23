@@ -13,13 +13,13 @@ fn roundtrip_theme(bytes : FixedArray[Byte]) -> @theme.Theme raise {
 test "Theme::serialize: round-trips the office-like fixture" {
   let t0 = @theme.Theme::parse(office_like_theme())
   let t1 = roundtrip_theme(office_like_theme())
-  assert_true(t0 == t1)
+  debug_inspect(t0 == t1, content="true")
 }
 
 ///|
 test "Theme::serialize: preserves the theme name attribute" {
   let t1 = roundtrip_theme(office_like_theme())
-  assert_eq(t1.name, "Office Theme")
+  debug_inspect(t1.name, content="\"Office Theme\"")
 }
 
 ///|
@@ -29,17 +29,17 @@ test "Theme::serialize: every clrScheme slot round-trips" {
   // dk1 / lt1 are sysClr; the rest are srgbClr.
   match cs.dk1.base {
     Sys(s) => {
-      assert_eq(s.val, "windowText")
-      assert_eq(s.last_clr.unwrap().to_hex(), "000000")
+      debug_inspect(s.val, content="\"windowText\"")
+      debug_inspect(s.last_clr.unwrap().to_hex(), content="\"000000\"")
     }
     _ => fail("expected Sys for dk1")
   }
   match cs.accent1.base {
-    Srgb(rgb) => assert_eq(rgb.to_hex(), "5B9BD5")
+    Srgb(rgb) => debug_inspect(rgb.to_hex(), content="\"5B9BD5\"")
     _ => fail("expected Srgb for accent1")
   }
   match cs.fol_hlink.base {
-    Srgb(rgb) => assert_eq(rgb.to_hex(), "954F72")
+    Srgb(rgb) => debug_inspect(rgb.to_hex(), content="\"954F72\"")
     _ => fail("expected Srgb for folHlink")
   }
 }
@@ -48,14 +48,14 @@ test "Theme::serialize: every clrScheme slot round-trips" {
 test "Theme::serialize: fontScheme major/minor + script overrides preserved" {
   let t1 = roundtrip_theme(office_like_theme())
   let major = t1.font_scheme.major_font
-  assert_eq(major.latin, "Calibri Light")
-  assert_eq(major.ea, "")
-  assert_eq(major.scripts.length(), 2)
-  assert_eq(major.scripts[0].script, "Jpan")
-  assert_eq(major.scripts[0].typeface, "Yu Gothic Light")
+  debug_inspect(major.latin, content="\"Calibri Light\"")
+  debug_inspect(major.ea, content="\"\"")
+  debug_inspect(major.scripts.length(), content="2")
+  debug_inspect(major.scripts[0].script, content="\"Jpan\"")
+  debug_inspect(major.scripts[0].typeface, content="\"Yu Gothic Light\"")
   let minor = t1.font_scheme.minor_font
-  assert_eq(minor.latin, "Calibri")
-  assert_eq(minor.scripts.length(), 0)
+  debug_inspect(minor.latin, content="\"Calibri\"")
+  debug_inspect(minor.scripts.length(), content="0")
 }
 
 ///|
@@ -69,9 +69,9 @@ test "Theme::serialize: theme-level extensions preserved" {
   // Order isn't guaranteed across the read/write boundary; check
   // presence by local-name membership.
   let names = t1.extension.map(e => e.name.local_name)
-  assert_true(names.contains("fmtScheme"))
-  assert_true(names.contains("objectDefaults"))
-  assert_true(names.contains("extraClrSchemeLst"))
+  debug_inspect(names.contains("fmtScheme"), content="true")
+  debug_inspect(names.contains("objectDefaults"), content="true")
+  debug_inspect(names.contains("extraClrSchemeLst"), content="true")
 }
 
 ///|
@@ -101,6 +101,6 @@ test "Theme::serialize: srgbClr slot with modeled transform round-trips" {
     "</a:themeElements></a:theme>"
   let t0 = @theme.Theme::parse(@oxml.string_to_bytes(xml))
   let t1 = roundtrip_theme(@oxml.string_to_bytes(xml))
-  assert_true(t0 == t1)
-  assert_eq(t1.color_scheme.accent1.transforms.length(), 1)
+  debug_inspect(t0 == t1, content="true")
+  debug_inspect(t1.color_scheme.accent1.transforms.length(), content="1")
 }

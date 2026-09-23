@@ -29,42 +29,63 @@ fn anim_base_slide() -> @slide.Slide raise {
 
 ///|
 test "AnimDirection / AnimOrientation map to their filter words" {
-  assert_eq(@slide.AnimDirection::Up.to_filter(), "up")
-  assert_eq(@slide.AnimDirection::Down.to_filter(), "down")
-  assert_eq(@slide.AnimDirection::Left.to_filter(), "left")
-  assert_eq(@slide.AnimDirection::Right.to_filter(), "right")
-  assert_eq(@slide.AnimOrientation::Horizontal.to_filter(), "horizontal")
-  assert_eq(@slide.AnimOrientation::Vertical.to_filter(), "vertical")
+  debug_inspect(@slide.AnimDirection::Up.to_filter(), content="\"up\"")
+  debug_inspect(@slide.AnimDirection::Down.to_filter(), content="\"down\"")
+  debug_inspect(@slide.AnimDirection::Left.to_filter(), content="\"left\"")
+  debug_inspect(@slide.AnimDirection::Right.to_filter(), content="\"right\"")
+  debug_inspect(
+    @slide.AnimOrientation::Horizontal.to_filter(),
+    content="\"horizontal\"",
+  )
+  debug_inspect(
+    @slide.AnimOrientation::Vertical.to_filter(),
+    content="\"vertical\"",
+  )
 }
 
 // --- VisualEffect metadata ---
 
 ///|
 test "VisualEffect::filter maps each effect to its DrawingML filter" {
-  assert_eq(@slide.VisualEffect::Fade.filter().unwrap(), "fade")
-  assert_eq(@slide.VisualEffect::Wipe(Up).filter().unwrap(), "wipe(up)")
-  assert_eq(@slide.VisualEffect::Wipe(Right).filter().unwrap(), "wipe(right)")
-  assert_eq(
+  debug_inspect(@slide.VisualEffect::Fade.filter().unwrap(), content="\"fade\"")
+  debug_inspect(
+    @slide.VisualEffect::Wipe(Up).filter().unwrap(),
+    content="\"wipe(up)\"",
+  )
+  debug_inspect(
+    @slide.VisualEffect::Wipe(Right).filter().unwrap(),
+    content="\"wipe(right)\"",
+  )
+  debug_inspect(
     @slide.VisualEffect::Blinds(Vertical).filter().unwrap(),
-    "blinds(vertical)",
+    content="\"blinds(vertical)\"",
   )
-  assert_eq(
+  debug_inspect(
     @slide.VisualEffect::RandomBars(Horizontal).filter().unwrap(),
-    "randombar(horizontal)",
+    content="\"randombar(horizontal)\"",
   )
-  assert_eq(@slide.VisualEffect::Dissolve.filter().unwrap(), "dissolve")
-  assert_eq(@slide.VisualEffect::Wedge.filter().unwrap(), "wedge")
-  assert_eq(@slide.VisualEffect::Wheel(8).filter().unwrap(), "wheel(8)")
+  debug_inspect(
+    @slide.VisualEffect::Dissolve.filter().unwrap(),
+    content="\"dissolve\"",
+  )
+  debug_inspect(
+    @slide.VisualEffect::Wedge.filter().unwrap(),
+    content="\"wedge\"",
+  )
+  debug_inspect(
+    @slide.VisualEffect::Wheel(8).filter().unwrap(),
+    content="\"wheel(8)\"",
+  )
   // Appear is a bare <p:set> — no animEffect filter.
-  assert_true(@slide.VisualEffect::Appear.filter() is None)
+  debug_inspect(@slide.VisualEffect::Appear.filter() is None, content="true")
 }
 
 ///|
 test "VisualEffect::preset_id matches the entrance preset numbering" {
-  assert_eq(@slide.VisualEffect::Appear.preset_id(), 1)
-  assert_eq(@slide.VisualEffect::Fade.preset_id(), 10)
-  assert_eq(@slide.VisualEffect::Wipe(Up).preset_id(), 22)
-  assert_eq(@slide.VisualEffect::Wheel(4).preset_id(), 21)
+  debug_inspect(@slide.VisualEffect::Appear.preset_id(), content="1")
+  debug_inspect(@slide.VisualEffect::Fade.preset_id(), content="10")
+  debug_inspect(@slide.VisualEffect::Wipe(Up).preset_id(), content="22")
+  debug_inspect(@slide.VisualEffect::Wheel(4).preset_id(), content="21")
 }
 
 // --- Slide builders ---
@@ -73,15 +94,19 @@ test "VisualEffect::preset_id matches the entrance preset numbering" {
 test "Slide::with_animations sets the typed field and strips extension timing" {
   let base = anim_base_slide()
   // The fixture parsed its <p:timing> into extension; the typed field is None.
-  assert_true(base.timing is None)
-  assert_true(base.extension.map(e => e.name.local_name).contains("timing"))
+  debug_inspect(base.timing is None, content="true")
+  debug_inspect(
+    base.extension.map(e => e.name.local_name).contains("timing"),
+    content="true",
+  )
   let animated = base.with_animations(
     @slide.Timeline::new().on_click(Entrance(Fade), 2),
   )
-  assert_true(animated.timing is Some(_))
+  debug_inspect(animated.timing is Some(_), content="true")
   // The captured <p:timing> is gone — the typed timeline is the single source.
-  assert_false(
+  debug_inspect(
     animated.extension.map(e => e.name.local_name).contains("timing"),
+    content="false",
   )
 }
 
@@ -91,8 +116,11 @@ test "Slide::without_animations clears the typed field and extension timing" {
   let cleared = base
     .with_animations(@slide.Timeline::new().on_click(Entrance(Fade), 2))
     .without_animations()
-  assert_true(cleared.timing is None)
-  assert_false(cleared.extension.map(e => e.name.local_name).contains("timing"))
+  debug_inspect(cleared.timing is None, content="true")
+  debug_inspect(
+    cleared.extension.map(e => e.name.local_name).contains("timing"),
+    content="false",
+  )
 }
 
 ///|
@@ -102,7 +130,7 @@ test "Slide::with_animations emits exactly one <p:timing> (no double-emit)" {
     @slide.Timeline::new().on_click(Entrance(Fade), 2),
   )
   let xml = anim_xml(animated)
-  assert_eq(count(xml, "<p:timing>"), 1)
+  debug_inspect(count(xml, "<p:timing>"), content="1")
 }
 
 // --- Generated structure ---
@@ -113,20 +141,20 @@ test "timing: entrance emits the canonical main-sequence scaffold" {
   let xml = anim_xml(
     base.with_animations(@slide.Timeline::new().on_click(Entrance(Fade), 7)),
   )
-  assert_true(xml.contains("nodeType=\"tmRoot\""))
-  assert_true(xml.contains("nodeType=\"mainSeq\""))
-  assert_true(xml.contains("nodeType=\"clickEffect\""))
-  assert_true(xml.contains("presetClass=\"entr\""))
-  assert_true(xml.contains("presetID=\"10\""))
-  assert_true(xml.contains("filter=\"fade\""))
-  assert_true(xml.contains("transition=\"in\""))
+  debug_inspect(xml.contains("nodeType=\"tmRoot\""), content="true")
+  debug_inspect(xml.contains("nodeType=\"mainSeq\""), content="true")
+  debug_inspect(xml.contains("nodeType=\"clickEffect\""), content="true")
+  debug_inspect(xml.contains("presetClass=\"entr\""), content="true")
+  debug_inspect(xml.contains("presetID=\"10\""), content="true")
+  debug_inspect(xml.contains("filter=\"fade\""), content="true")
+  debug_inspect(xml.contains("transition=\"in\""), content="true")
   // Entrance reveals the shape.
-  assert_true(xml.contains("<p:strVal val=\"visible\"/>"))
+  debug_inspect(xml.contains("<p:strVal val=\"visible\"/>"), content="true")
   // Targets the requested shape id.
-  assert_true(xml.contains("<p:spTgt spid=\"7\"/>"))
+  debug_inspect(xml.contains("<p:spTgt spid=\"7\"/>"), content="true")
   // The sequence navigation conditions are present.
-  assert_true(xml.contains("<p:prevCondLst>"))
-  assert_true(xml.contains("<p:nextCondLst>"))
+  debug_inspect(xml.contains("<p:prevCondLst>"), content="true")
+  debug_inspect(xml.contains("<p:nextCondLst>"), content="true")
 }
 
 ///|
@@ -135,11 +163,11 @@ test "timing: exit plays out and hides the shape" {
   let xml = anim_xml(
     base.with_animations(@slide.Timeline::new().on_click(Exit(Wipe(Down)), 3)),
   )
-  assert_true(xml.contains("presetClass=\"exit\""))
-  assert_true(xml.contains("transition=\"out\""))
-  assert_true(xml.contains("filter=\"wipe(down)\""))
+  debug_inspect(xml.contains("presetClass=\"exit\""), content="true")
+  debug_inspect(xml.contains("transition=\"out\""), content="true")
+  debug_inspect(xml.contains("filter=\"wipe(down)\""), content="true")
   // Exit hides the shape at the end.
-  assert_true(xml.contains("<p:strVal val=\"hidden\"/>"))
+  debug_inspect(xml.contains("<p:strVal val=\"hidden\"/>"), content="true")
 }
 
 ///|
@@ -148,8 +176,8 @@ test "timing: Appear is a bare <p:set> with no <p:animEffect>" {
   let xml = anim_xml(
     base.with_animations(@slide.Timeline::new().on_click(Entrance(Appear), 2)),
   )
-  assert_true(xml.contains("<p:strVal val=\"visible\"/>"))
-  assert_false(xml.contains("<p:animEffect"))
+  debug_inspect(xml.contains("<p:strVal val=\"visible\"/>"), content="true")
+  debug_inspect(xml.contains("<p:animEffect"), content="false")
 }
 
 ///|
@@ -160,12 +188,12 @@ test "timing: start modes map to clickEffect / afterEffect / withEffect" {
     .after_previous(Entrance(Fade), 3)
     .with_previous(Entrance(Fade), 4)
   let xml = anim_xml(base.with_animations(tl))
-  assert_true(xml.contains("nodeType=\"clickEffect\""))
-  assert_true(xml.contains("nodeType=\"afterEffect\""))
-  assert_true(xml.contains("nodeType=\"withEffect\""))
+  debug_inspect(xml.contains("nodeType=\"clickEffect\""), content="true")
+  debug_inspect(xml.contains("nodeType=\"afterEffect\""), content="true")
+  debug_inspect(xml.contains("nodeType=\"withEffect\""), content="true")
   // The click group waits for a click (delay indefinite); the after-previous
   // group auto-starts (delay 0).
-  assert_true(xml.contains("<p:cond delay=\"indefinite\"/>"))
+  debug_inspect(xml.contains("<p:cond delay=\"indefinite\"/>"), content="true")
 }
 
 ///|
@@ -177,19 +205,19 @@ test "timing: a leading with_previous step behaves like on_click" {
       @slide.Timeline::new().with_previous(Entrance(Fade), 2),
     ),
   )
-  assert_true(xml.contains("nodeType=\"clickEffect\""))
-  assert_false(xml.contains("nodeType=\"withEffect\""))
+  debug_inspect(xml.contains("nodeType=\"clickEffect\""), content="true")
+  debug_inspect(xml.contains("nodeType=\"withEffect\""), content="false")
 }
 
 // --- Emphasis effects ---
 
 ///|
 test "EmphasisEffect::preset_id classifies each emphasis" {
-  assert_eq(@slide.EmphasisEffect::Spin(360).preset_id(), 8)
-  assert_eq(@slide.EmphasisEffect::GrowShrink(150).preset_id(), 6)
-  assert_eq(
+  debug_inspect(@slide.EmphasisEffect::Spin(360).preset_id(), content="8")
+  debug_inspect(@slide.EmphasisEffect::GrowShrink(150).preset_id(), content="6")
+  debug_inspect(
     @slide.EmphasisEffect::ChangeFillColor(@units.RgbColor::new(0, 0, 0)).preset_id(),
-    4,
+    content="4",
   )
 }
 
@@ -201,13 +229,13 @@ test "timing: Spin emphasis emits <p:animRot> on the rotation attribute" {
       @slide.Timeline::new().on_click(Emphasis(Spin(360)), 2, duration_ms=2000),
     ),
   )
-  assert_true(xml.contains("presetClass=\"emph\""))
+  debug_inspect(xml.contains("presetClass=\"emph\""), content="true")
   // 360° in 60000ths of a degree.
-  assert_true(xml.contains("<p:animRot by=\"21600000\">"))
-  assert_true(xml.contains("<p:attrName>r</p:attrName>"))
-  assert_true(xml.contains("dur=\"2000\""))
+  debug_inspect(xml.contains("<p:animRot by=\"21600000\">"), content="true")
+  debug_inspect(xml.contains("<p:attrName>r</p:attrName>"), content="true")
+  debug_inspect(xml.contains("dur=\"2000\""), content="true")
   // Emphasis does not toggle visibility.
-  assert_false(xml.contains("style.visibility"))
+  debug_inspect(xml.contains("style.visibility"), content="false")
 }
 
 ///|
@@ -218,10 +246,13 @@ test "timing: GrowShrink emphasis emits <p:animScale> with a <p:by>" {
       @slide.Timeline::new().on_click(Emphasis(GrowShrink(150)), 5),
     ),
   )
-  assert_true(xml.contains("<p:animScale>"))
+  debug_inspect(xml.contains("<p:animScale>"), content="true")
   // 150% in 1000ths of a percent.
-  assert_true(xml.contains("<p:by x=\"150000\" y=\"150000\"/>"))
-  assert_true(xml.contains("<p:spTgt spid=\"5\"/>"))
+  debug_inspect(
+    xml.contains("<p:by x=\"150000\" y=\"150000\"/>"),
+    content="true",
+  )
+  debug_inspect(xml.contains("<p:spTgt spid=\"5\"/>"), content="true")
 }
 
 ///|
@@ -235,9 +266,12 @@ test "timing: ChangeFillColor emphasis emits <p:animClr> to an <a:srgbClr>" {
       ),
     ),
   )
-  assert_true(xml.contains("<p:animClr clrSpc=\"rgb\">"))
-  assert_true(xml.contains("<a:srgbClr val=\"FF0000\"/>"))
-  assert_true(xml.contains("<p:attrName>fillColor</p:attrName>"))
+  debug_inspect(xml.contains("<p:animClr clrSpc=\"rgb\">"), content="true")
+  debug_inspect(xml.contains("<a:srgbClr val=\"FF0000\"/>"), content="true")
+  debug_inspect(
+    xml.contains("<p:attrName>fillColor</p:attrName>"),
+    content="true",
+  )
 }
 
 ///|
@@ -247,21 +281,30 @@ test "timing: emphasis composes with entrance in one timeline" {
     .on_click(Entrance(Fade), 2)
     .after_previous(Emphasis(Spin(720)), 2, duration_ms=1500)
   let xml = anim_xml(base.with_animations(tl))
-  assert_true(xml.contains("presetClass=\"entr\""))
-  assert_true(xml.contains("presetClass=\"emph\""))
+  debug_inspect(xml.contains("presetClass=\"entr\""), content="true")
+  debug_inspect(xml.contains("presetClass=\"emph\""), content="true")
   // 720° = two turns.
-  assert_true(xml.contains("<p:animRot by=\"43200000\">"))
+  debug_inspect(xml.contains("<p:animRot by=\"43200000\">"), content="true")
 }
 
 // --- Fly In / Fly Out ---
 
 ///|
 test "VisualEffect: FlyIn classifies as a fly, not a filter" {
-  assert_true(@slide.VisualEffect::FlyIn(Left).fly_direction() is Some(Left))
-  assert_true(@slide.VisualEffect::FlyIn(Left).filter() is None)
-  assert_eq(@slide.VisualEffect::FlyIn(Up).preset_id(), 2)
+  debug_inspect(
+    @slide.VisualEffect::FlyIn(Left).fly_direction() is Some(Left),
+    content="true",
+  )
+  debug_inspect(
+    @slide.VisualEffect::FlyIn(Left).filter() is None,
+    content="true",
+  )
+  debug_inspect(@slide.VisualEffect::FlyIn(Up).preset_id(), content="2")
   // A filter effect has no fly direction.
-  assert_true(@slide.VisualEffect::Fade.fly_direction() is None)
+  debug_inspect(
+    @slide.VisualEffect::Fade.fly_direction() is None,
+    content="true",
+  )
 }
 
 ///|
@@ -272,14 +315,17 @@ test "timing: FlyIn entrance moves ppt_x from off-slide to home" {
       @slide.Timeline::new().on_click(Entrance(FlyIn(Left)), 5),
     ),
   )
-  assert_true(xml.contains("presetClass=\"entr\""))
+  debug_inspect(xml.contains("presetClass=\"entr\""), content="true")
   // Reveal + a positional <p:anim> on ppt_x (no <p:animEffect> filter).
-  assert_true(xml.contains("<p:strVal val=\"visible\"/>"))
-  assert_true(xml.contains("<p:anim calcmode=\"lin\" valueType=\"num\">"))
-  assert_true(xml.contains("<p:attrName>ppt_x</p:attrName>"))
-  assert_true(xml.contains("<p:strVal val=\"0-#ppt_w/2\"/>"))
-  assert_true(xml.contains("<p:strVal val=\"#ppt_x\"/>"))
-  assert_false(xml.contains("<p:animEffect"))
+  debug_inspect(xml.contains("<p:strVal val=\"visible\"/>"), content="true")
+  debug_inspect(
+    xml.contains("<p:anim calcmode=\"lin\" valueType=\"num\">"),
+    content="true",
+  )
+  debug_inspect(xml.contains("<p:attrName>ppt_x</p:attrName>"), content="true")
+  debug_inspect(xml.contains("<p:strVal val=\"0-#ppt_w/2\"/>"), content="true")
+  debug_inspect(xml.contains("<p:strVal val=\"#ppt_x\"/>"), content="true")
+  debug_inspect(xml.contains("<p:animEffect"), content="false")
 }
 
 ///|
@@ -288,12 +334,12 @@ test "timing: FlyOut exit moves home to off-slide then hides" {
   let xml = anim_xml(
     base.with_animations(@slide.Timeline::new().on_click(Exit(FlyIn(Down)), 5)),
   )
-  assert_true(xml.contains("presetClass=\"exit\""))
-  assert_true(xml.contains("<p:attrName>ppt_y</p:attrName>"))
+  debug_inspect(xml.contains("presetClass=\"exit\""), content="true")
+  debug_inspect(xml.contains("<p:attrName>ppt_y</p:attrName>"), content="true")
   // Off-slide value at the END (tm=100000) for a fly-out below the slide.
-  assert_true(xml.contains("<p:strVal val=\"1+#ppt_h/2\"/>"))
+  debug_inspect(xml.contains("<p:strVal val=\"1+#ppt_h/2\"/>"), content="true")
   // Exit hides the shape afterwards.
-  assert_true(xml.contains("<p:strVal val=\"hidden\"/>"))
+  debug_inspect(xml.contains("<p:strVal val=\"hidden\"/>"), content="true")
 }
 
 ///|
@@ -307,10 +353,22 @@ test "timing: each fly direction targets the right axis + off-slide value" {
     )
   }
 
-  assert_true(fly_xml(Right).contains("<p:strVal val=\"1+#ppt_w/2\"/>"))
-  assert_true(fly_xml(Right).contains("<p:attrName>ppt_x</p:attrName>"))
-  assert_true(fly_xml(Up).contains("<p:strVal val=\"0-#ppt_h/2\"/>"))
-  assert_true(fly_xml(Up).contains("<p:attrName>ppt_y</p:attrName>"))
+  debug_inspect(
+    fly_xml(Right).contains("<p:strVal val=\"1+#ppt_w/2\"/>"),
+    content="true",
+  )
+  debug_inspect(
+    fly_xml(Right).contains("<p:attrName>ppt_x</p:attrName>"),
+    content="true",
+  )
+  debug_inspect(
+    fly_xml(Up).contains("<p:strVal val=\"0-#ppt_h/2\"/>"),
+    content="true",
+  )
+  debug_inspect(
+    fly_xml(Up).contains("<p:attrName>ppt_y</p:attrName>"),
+    content="true",
+  )
 }
 
 // --- Motion paths ---
@@ -323,14 +381,17 @@ test "MotionPath::to_path_string formats the animMotion mini-language" {
     .line_to(0.3, 0.1)
     .curve_to(0.4, 0.2, 0.5, 0.0, 0.6, 0.1)
     .close()
-  assert_eq(p.to_path_string(), "M 0 0 L 0.3 0.1 C 0.4 0.2 0.5 0 0.6 0.1 Z E")
+  debug_inspect(
+    p.to_path_string(),
+    content="\"M 0 0 L 0.3 0.1 C 0.4 0.2 0.5 0 0.6 0.1 Z E\"",
+  )
 }
 
 ///|
 test "MotionPath::line is a one-segment relative move" {
-  assert_eq(
+  debug_inspect(
     @slide.MotionPath::line(0.25, -0.1).to_path_string(),
-    "M 0 0 L 0.25 -0.1 E",
+    content="\"M 0 0 L 0.25 -0.1 E\"",
   )
 }
 
@@ -346,17 +407,18 @@ test "timing: motion emits <p:animMotion> with the path + ppt_x/ppt_y" {
       ),
     ),
   )
-  assert_true(xml.contains("presetClass=\"path\""))
-  assert_true(
+  debug_inspect(xml.contains("presetClass=\"path\""), content="true")
+  debug_inspect(
     xml.contains(
       "<p:animMotion origin=\"layout\" path=\"M 0 0 L 0.3 0.1 E\" pathEditMode=\"relative\">",
     ),
+    content="true",
   )
-  assert_true(xml.contains("<p:attrName>ppt_x</p:attrName>"))
-  assert_true(xml.contains("<p:attrName>ppt_y</p:attrName>"))
-  assert_true(xml.contains("<p:spTgt spid=\"5\"/>"))
+  debug_inspect(xml.contains("<p:attrName>ppt_x</p:attrName>"), content="true")
+  debug_inspect(xml.contains("<p:attrName>ppt_y</p:attrName>"), content="true")
+  debug_inspect(xml.contains("<p:spTgt spid=\"5\"/>"), content="true")
   // Motion does not toggle visibility.
-  assert_false(xml.contains("style.visibility"))
+  debug_inspect(xml.contains("style.visibility"), content="false")
 }
 
 ///|
@@ -373,9 +435,9 @@ test "timing: motion composes after an entrance in one timeline" {
       2,
     )
   let xml = anim_xml(base.with_animations(tl))
-  assert_true(xml.contains("presetClass=\"entr\""))
-  assert_true(xml.contains("presetClass=\"path\""))
-  assert_true(xml.contains("C 0.1 0.1 0.2 -0.1 0.3 0"))
+  debug_inspect(xml.contains("presetClass=\"entr\""), content="true")
+  debug_inspect(xml.contains("presetClass=\"path\""), content="true")
+  debug_inspect(xml.contains("C 0.1 0.1 0.2 -0.1 0.3 0"), content="true")
 }
 
 // --- By-paragraph text builds ---
@@ -388,11 +450,20 @@ test "timing: a paragraph-targeted effect emits a <p:pRg> + a <p:bldP>" {
     .on_click(Entrance(Fade), 3, paragraph=1)
   let xml = anim_xml(base.with_animations(tl))
   // Each effect targets a paragraph range, not the whole shape.
-  assert_true(xml.contains("<p:txEl><p:pRg st=\"0\" end=\"0\"/></p:txEl>"))
-  assert_true(xml.contains("<p:txEl><p:pRg st=\"1\" end=\"1\"/></p:txEl>"))
+  debug_inspect(
+    xml.contains("<p:txEl><p:pRg st=\"0\" end=\"0\"/></p:txEl>"),
+    content="true",
+  )
+  debug_inspect(
+    xml.contains("<p:txEl><p:pRg st=\"1\" end=\"1\"/></p:txEl>"),
+    content="true",
+  )
   // The shape is declared as a by-paragraph build.
-  assert_true(xml.contains("<p:bldLst>"))
-  assert_true(xml.contains("<p:bldP spid=\"3\" grpId=\"1\" build=\"p\"/>"))
+  debug_inspect(xml.contains("<p:bldLst>"), content="true")
+  debug_inspect(
+    xml.contains("<p:bldP spid=\"3\" grpId=\"1\" build=\"p\"/>"),
+    content="true",
+  )
 }
 
 ///|
@@ -401,8 +472,8 @@ test "timing: a whole-shape effect has no <p:pRg> and no <p:bldLst>" {
   let xml = anim_xml(
     base.with_animations(@slide.Timeline::new().on_click(Entrance(Fade), 2)),
   )
-  assert_false(xml.contains("<p:pRg"))
-  assert_false(xml.contains("<p:bldLst>"))
+  debug_inspect(xml.contains("<p:pRg"), content="false")
+  debug_inspect(xml.contains("<p:bldLst>"), content="false")
 }
 
 ///|
@@ -415,13 +486,19 @@ test "timing: build-group ids match between paragraph effects and their <p:bldP>
     .on_click(Entrance(Wipe(Up)), 4, paragraph=0)
     .with_previous(Emphasis(Spin(360)), 2)
   let xml = anim_xml(base.with_animations(tl))
-  assert_true(xml.contains("<p:bldP spid=\"3\" grpId=\"1\" build=\"p\"/>"))
-  assert_true(xml.contains("<p:bldP spid=\"4\" grpId=\"2\" build=\"p\"/>"))
+  debug_inspect(
+    xml.contains("<p:bldP spid=\"3\" grpId=\"1\" build=\"p\"/>"),
+    content="true",
+  )
+  debug_inspect(
+    xml.contains("<p:bldP spid=\"4\" grpId=\"2\" build=\"p\"/>"),
+    content="true",
+  )
   // The paragraph effects carry their shape's build grpId on the cTn.
-  assert_true(xml.contains("grpId=\"1\""))
-  assert_true(xml.contains("grpId=\"2\""))
+  debug_inspect(xml.contains("grpId=\"1\""), content="true")
+  debug_inspect(xml.contains("grpId=\"2\""), content="true")
   // The whole-shape emphasis stays in the default group 0.
-  assert_true(xml.contains("grpId=\"0\""))
+  debug_inspect(xml.contains("grpId=\"0\""), content="true")
 }
 
 // --- Build-only round-trip ---
@@ -440,19 +517,22 @@ test "timing: built timeline re-serialises stably (build-only round-trip)" {
   let xml1 = anim_xml(animated)
   // Parsing re-captures <p:timing> into extension; the typed field is None.
   let reparsed = @slide.Slide::parse(animated.serialize())
-  assert_true(reparsed.timing is None)
-  assert_true(reparsed.extension.map(e => e.name.local_name).contains("timing"))
+  debug_inspect(reparsed.timing is None, content="true")
+  debug_inspect(
+    reparsed.extension.map(e => e.name.local_name).contains("timing"),
+    content="true",
+  )
   // …but the bytes are stable across the round trip.
   let xml2 = anim_xml(reparsed)
-  assert_eq(xml1, xml2)
+  debug_inspect(xml1 == xml2, content="true")
 }
 
 ///|
 test "timing: a slide with no animations emits no <p:timing> from the field" {
   // Fresh built slide (no fixture timing); ensure we don't emit an empty tree.
   let base = anim_base_slide().without_animations()
-  assert_true(base.timing is None)
+  debug_inspect(base.timing is None, content="true")
   // (Fixture timing was stripped by without_animations.)
   let xml = anim_xml(base)
-  assert_false(xml.contains("<p:timing>"))
+  debug_inspect(xml.contains("<p:timing>"), content="false")
 }

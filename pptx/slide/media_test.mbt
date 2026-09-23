@@ -18,12 +18,12 @@ test "Picture::of_media: builds a video reference + poster blip" {
     cy=Emu(914_400L),
   )
   // Poster is the blipFill embed.
-  assert_eq(pic.blip_fill.embed_id, "rId2")
+  debug_inspect(pic.blip_fill.embed_id, content="\"rId2\"")
   match pic.media {
     Some(m) => {
-      assert_true(m.kind is Video)
-      assert_eq(m.link_id, "rId3")
-      assert_eq(m.embed_id, "rId4")
+      debug_inspect(m.kind is Video, content="true")
+      debug_inspect(m.link_id, content="\"rId3\"")
+      debug_inspect(m.embed_id, content="\"rId4\"")
     }
     None => fail("expected media info")
   }
@@ -44,11 +44,11 @@ test "media picture serialises videoFile + p14:media + media action" {
     cy=Emu(100L),
   )
   let xml = @oxml.bytes_to_string(slide_of_picture(pic).serialize())
-  assert_true(xml.contains("<a:videoFile"))
-  assert_true(xml.contains("media")) // p14:media
-  assert_true(xml.contains("ppaction://media"))
-  assert_true(xml.contains(@oxml.media_ext_uri))
-  assert_true(xml.contains(@oxml.powerpoint_2010_ns))
+  debug_inspect(xml.contains("<a:videoFile"), content="true")
+  debug_inspect(xml.contains("media"), content="true") // p14:media
+  debug_inspect(xml.contains("ppaction://media"), content="true")
+  debug_inspect(xml.contains(@oxml.media_ext_uri), content="true")
+  debug_inspect(xml.contains(@oxml.powerpoint_2010_ns), content="true")
 }
 
 ///|
@@ -66,7 +66,7 @@ test "audio media emits audioFile" {
     cy=Emu(100L),
   )
   let xml = @oxml.bytes_to_string(slide_of_picture(pic).serialize())
-  assert_true(xml.contains("<a:audioFile"))
+  debug_inspect(xml.contains("<a:audioFile"), content="true")
 }
 
 ///|
@@ -89,9 +89,9 @@ test "media XML round-trips losslessly (re-serialise is stable)" {
   let bytes1 = slide_of_picture(pic).serialize()
   let reparsed = @slide.Slide::parse(bytes1)
   let xml2 = @oxml.bytes_to_string(reparsed.serialize())
-  assert_true(xml2.contains("<a:videoFile"))
-  assert_true(xml2.contains("ppaction://media"))
-  assert_true(xml2.contains(@oxml.media_ext_uri))
+  debug_inspect(xml2.contains("<a:videoFile"), content="true")
+  debug_inspect(xml2.contains("ppaction://media"), content="true")
+  debug_inspect(xml2.contains(@oxml.media_ext_uri), content="true")
 }
 
 ///|
@@ -122,11 +122,11 @@ test "issue #11: media nv-children stay inside <p:nvPr> after round-trip" {
   // `<p:nvPr/>`, so `<p:nvPr>` with a `>` would be absent).
   let nvpr_open = xml.find("<p:nvPr>").unwrap()
   let nvpr_close = xml.find("</p:nvPr>").unwrap()
-  assert_true(nvpr_open >= 0)
-  assert_true(nvpr_close > nvpr_open)
+  debug_inspect(nvpr_open >= 0, content="true")
+  debug_inspect(nvpr_close > nvpr_open, content="true")
   // Both the media reference and the p14:media extLst live between them.
   let video = xml.find("<a:videoFile").unwrap()
   let media_ext = xml.find(@oxml.media_ext_uri).unwrap()
-  assert_true(video > nvpr_open && video < nvpr_close)
-  assert_true(media_ext > nvpr_open && media_ext < nvpr_close)
+  debug_inspect(video > nvpr_open && video < nvpr_close, content="true")
+  debug_inspect(media_ext > nvpr_open && media_ext < nvpr_close, content="true")
 }

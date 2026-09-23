@@ -56,7 +56,7 @@ fn reparse_fill(f : @oxml.Fill) -> @oxml.Fill raise {
 test "write_fill: noFill round-trips" {
   let f0 = parse_inner_fill("<a:noFill/>")
   let f1 = roundtrip_fill("<a:noFill/>")
-  assert_true(f0 == f1)
+  debug_inspect(f0 == f1, content="true")
 }
 
 ///|
@@ -64,7 +64,7 @@ test "write_fill: solidFill round-trips" {
   let xml = "<a:solidFill><a:srgbClr val=\"FF0000\"/></a:solidFill>"
   let f0 = parse_inner_fill(xml)
   let f1 = roundtrip_fill(xml)
-  assert_true(f0 == f1)
+  debug_inspect(f0 == f1, content="true")
 }
 
 ///|
@@ -78,7 +78,7 @@ test "write_fill: gradFill with two stops + linear direction round-trips" {
     "</a:gradFill>"
   let f0 = parse_inner_fill(xml)
   let f1 = roundtrip_fill(xml)
-  assert_true(f0 == f1)
+  debug_inspect(f0 == f1, content="true")
 }
 
 ///|
@@ -92,7 +92,7 @@ test "write_fill: gradFill with path-rect direction round-trips" {
     "</a:gradFill>"
   let f0 = parse_inner_fill(xml)
   let f1 = roundtrip_fill(xml)
-  assert_true(f0 == f1)
+  debug_inspect(f0 == f1, content="true")
 }
 
 ///|
@@ -103,7 +103,7 @@ test "write_fill: pattFill with preset round-trips" {
     "</a:pattFill>"
   let f0 = parse_inner_fill(xml)
   let f1 = roundtrip_fill(xml)
-  assert_true(f0 == f1)
+  debug_inspect(f0 == f1, content="true")
 }
 
 ///|
@@ -114,7 +114,7 @@ test "write_fill: blipFill with stretch round-trips" {
     "</a:blipFill>"
   let f0 = parse_inner_fill(xml)
   let f1 = roundtrip_fill(xml)
-  assert_true(f0 == f1)
+  debug_inspect(f0 == f1, content="true")
 }
 
 ///|
@@ -126,7 +126,7 @@ test "write_fill: blipFill with srcRect crop round-trips" {
     "</a:blipFill>"
   let f0 = parse_inner_fill(xml)
   let f1 = roundtrip_fill(xml)
-  assert_true(f0 == f1)
+  debug_inspect(f0 == f1, content="true")
 }
 
 ///|
@@ -137,7 +137,7 @@ test "write_fill: blipFill with tile round-trips" {
     "</a:blipFill>"
   let f0 = parse_inner_fill(xml)
   let f1 = roundtrip_fill(xml)
-  assert_true(f0 == f1)
+  debug_inspect(f0 == f1, content="true")
 }
 
 ///|
@@ -156,7 +156,7 @@ test "write_fill: blipFill preserves <a:blip> children via extension" {
     "</a:blipFill>"
   let f0 = parse_inner_fill(xml)
   let f1 = roundtrip_fill(xml)
-  assert_true(f0 == f1)
+  debug_inspect(f0 == f1, content="true")
 }
 
 // --- convenience constructors ---
@@ -164,8 +164,9 @@ test "write_fill: blipFill preserves <a:blip> children via extension" {
 ///|
 test "Fill::solid builds SolidFill(srgb)" {
   let f = @oxml.Fill::solid(@units.RgbColor::new(0x11, 0x22, 0x33))
-  assert_true(
+  debug_inspect(
     f == SolidFill(@oxml.Color::srgb(@units.RgbColor::new(0x11, 0x22, 0x33))),
+    content="true",
   )
 }
 
@@ -176,14 +177,14 @@ test "Fill::linear_gradient: endpoints at 0/100, via evenly spaced" {
   let blue = @units.RgbColor::new(0x00, 0x00, 0xFF)
   match @oxml.Fill::linear_gradient(red, blue, via=[green]) {
     GradientFill(g) => {
-      assert_eq(g.stops.length(), 3)
-      assert_true(g.stops[0].position == Percentage(0.0))
-      assert_true(g.stops[1].position == Percentage(50.0))
-      assert_true(g.stops[2].position == Percentage(100.0))
-      assert_true(g.stops[0].color == @oxml.Color::srgb(red))
-      assert_true(g.stops[2].color == @oxml.Color::srgb(blue))
+      debug_inspect(g.stops.length(), content="3")
+      debug_inspect(g.stops[0].position, content="Percentage(0)")
+      debug_inspect(g.stops[1].position, content="Percentage(50)")
+      debug_inspect(g.stops[2].position, content="Percentage(100)")
+      debug_inspect(g.stops[0].color == @oxml.Color::srgb(red), content="true")
+      debug_inspect(g.stops[2].color == @oxml.Color::srgb(blue), content="true")
       // Default direction: top -> bottom, scaled (what PowerPoint emits).
-      assert_true(g.direction == Linear(Angle(90.0), true))
+      debug_inspect(g.direction, content="Linear(Angle(90), true)")
     }
     _ => fail("expected GradientFill")
   }
@@ -197,10 +198,11 @@ test "Fill::linear_gradient: custom angle + write -> parse round-trip" {
     angle=Angle(45.0),
   )
   match f {
-    GradientFill(g) => assert_true(g.direction == Linear(Angle(45.0), true))
+    GradientFill(g) =>
+      debug_inspect(g.direction, content="Linear(Angle(45), true)")
     _ => fail("expected GradientFill")
   }
-  assert_true(reparse_fill(f) == f)
+  debug_inspect(reparse_fill(f) == f, content="true")
 }
 
 ///|
@@ -212,15 +214,17 @@ test "Fill::pattern: fields set + write -> parse round-trip" {
   )
   match f {
     PatternFill(p) => {
-      assert_eq(p.preset, "pct50")
-      assert_true(
+      debug_inspect(p.preset, content="\"pct50\"")
+      debug_inspect(
         p.fg == @oxml.Color::srgb(@units.RgbColor::new(0xFF, 0xFF, 0xFF)),
+        content="true",
       )
-      assert_true(
+      debug_inspect(
         p.bg == @oxml.Color::srgb(@units.RgbColor::new(0x00, 0x00, 0x00)),
+        content="true",
       )
     }
     _ => fail("expected PatternFill")
   }
-  assert_true(reparse_fill(f) == f)
+  debug_inspect(reparse_fill(f) == f, content="true")
 }

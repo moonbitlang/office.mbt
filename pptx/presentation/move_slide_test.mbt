@@ -41,9 +41,9 @@ test "move_slide_mut: sends the first slide to the end" {
   stamp_slide(prs, 2, "S2")
   prs.move_slide_mut(0, 2)
   let slides = prs.slides()
-  assert_eq(marker_of(slides[0]), "S1")
-  assert_eq(marker_of(slides[1]), "S2")
-  assert_eq(marker_of(slides[2]), "S0")
+  debug_inspect(marker_of(slides[0]), content="\"S1\"")
+  debug_inspect(marker_of(slides[1]), content="\"S2\"")
+  debug_inspect(marker_of(slides[2]), content="\"S0\"")
 }
 
 ///|
@@ -57,9 +57,9 @@ test "move_slide_mut: moves a later slide forward" {
   stamp_slide(prs, 2, "S2")
   prs.move_slide_mut(2, 0)
   let slides = prs.slides()
-  assert_eq(marker_of(slides[0]), "S2")
-  assert_eq(marker_of(slides[1]), "S0")
-  assert_eq(marker_of(slides[2]), "S1")
+  debug_inspect(marker_of(slides[0]), content="\"S2\"")
+  debug_inspect(marker_of(slides[1]), content="\"S0\"")
+  debug_inspect(marker_of(slides[2]), content="\"S1\"")
 }
 
 ///|
@@ -71,8 +71,8 @@ test "move_slide_mut: from == to is a no-op" {
   stamp_slide(prs, 1, "S1")
   prs.move_slide_mut(1, 1)
   let slides = prs.slides()
-  assert_eq(marker_of(slides[0]), "S0")
-  assert_eq(marker_of(slides[1]), "S1")
+  debug_inspect(marker_of(slides[0]), content="\"S0\"")
+  debug_inspect(marker_of(slides[1]), content="\"S1\"")
 }
 
 ///|
@@ -85,11 +85,17 @@ test "move_slide_mut: order survives save → reopen, no part renaming" {
   prs.move_slide_mut(0, 1)
   let reopened = @presentation.Presentation::open(prs.save())
   let slides = reopened.slides()
-  assert_eq(marker_of(slides[0]), "second")
-  assert_eq(marker_of(slides[1]), "first")
+  debug_inspect(marker_of(slides[0]), content="\"second\"")
+  debug_inspect(marker_of(slides[1]), content="\"first\"")
   // Reordering is pure sldIdLst — the parts keep their names.
-  assert_true(reopened.pkg.part_by_name("/ppt/slides/slide1.xml") is Some(_))
-  assert_true(reopened.pkg.part_by_name("/ppt/slides/slide2.xml") is Some(_))
+  debug_inspect(
+    reopened.pkg.part_by_name("/ppt/slides/slide1.xml") is Some(_),
+    content="true",
+  )
+  debug_inspect(
+    reopened.pkg.part_by_name("/ppt/slides/slide2.xml") is Some(_),
+    content="true",
+  )
 }
 
 ///|
@@ -119,6 +125,6 @@ test "with_slide_moved: immutable — original order preserved" {
   stamp_slide(prs, 0, "A")
   stamp_slide(prs, 1, "B")
   let moved = prs.with_slide_moved(0, 1)
-  assert_eq(marker_of(prs.slides()[0]), "A")
-  assert_eq(marker_of(moved.slides()[0]), "B")
+  debug_inspect(marker_of(prs.slides()[0]), content="\"A\"")
+  debug_inspect(marker_of(moved.slides()[0]), content="\"B\"")
 }

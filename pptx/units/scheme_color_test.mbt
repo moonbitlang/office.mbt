@@ -8,7 +8,7 @@ test "ThemeColor xml round trip for every variant" {
   ]
   for n in names {
     let parsed = @units.ThemeColor::from_xml(n)
-    assert_eq(parsed.to_xml(), n)
+    debug_inspect(parsed.to_xml() == n, content="true")
   }
 }
 
@@ -27,24 +27,24 @@ test "ThemeColor::from_xml rejects unknown names" {
 ///|
 test "ThemeColor variants are distinct" {
   // A handful of equality checks confirm the enum tags are not collapsed.
-  assert_true(@units.ThemeColor::Accent1 != Accent2)
-  assert_true(@units.ThemeColor::Bg1 != Tx1)
-  assert_true(@units.ThemeColor::Dk1 != Lt1)
-  assert_true(@units.ThemeColor::Hlink != FolHlink)
+  debug_inspect(@units.ThemeColor::Accent1 != Accent2, content="true")
+  debug_inspect(@units.ThemeColor::Bg1 != Tx1, content="true")
+  debug_inspect(@units.ThemeColor::Dk1 != Lt1, content="true")
+  debug_inspect(@units.ThemeColor::Hlink != FolHlink, content="true")
 }
 
 ///|
 test "SchemeColor builder is immutable" {
   let base = @units.SchemeColor::new(Accent1)
-  assert_eq(base.transforms.length(), 0)
+  debug_inspect(base.transforms.length(), content="0")
   let lighter = base.with_transform(Tint(Percentage(40.0)))
   // original unchanged
-  assert_eq(base.transforms.length(), 0)
-  assert_eq(lighter.transforms.length(), 1)
+  debug_inspect(base.transforms.length(), content="0")
+  debug_inspect(lighter.transforms.length(), content="1")
   // chained build
   let chained = lighter.with_transform(LumMod(Percentage(75.0)))
-  assert_eq(chained.transforms.length(), 2)
-  assert_eq(lighter.transforms.length(), 1)
+  debug_inspect(chained.transforms.length(), content="2")
+  debug_inspect(lighter.transforms.length(), content="1")
 }
 
 ///|
@@ -53,8 +53,8 @@ test "SchemeColor preserves transform order" {
     .with_transform(Tint(Percentage(20.0)))
     .with_transform(Alpha(Percentage(80.0)))
     .with_transform(SatMod(Percentage(150.0)))
-  assert_eq(c.transforms.length(), 3)
-  assert_true(c.transforms[0] is Tint(_))
-  assert_true(c.transforms[1] is Alpha(_))
-  assert_true(c.transforms[2] is SatMod(_))
+  debug_inspect(c.transforms.length(), content="3")
+  debug_inspect(c.transforms[0] is Tint(_), content="true")
+  debug_inspect(c.transforms[1] is Alpha(_), content="true")
+  debug_inspect(c.transforms[2] is SatMod(_), content="true")
 }

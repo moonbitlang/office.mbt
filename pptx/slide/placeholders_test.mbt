@@ -47,18 +47,22 @@ fn slide_with_placeholders() -> FixedArray[Byte] {
 
 ///|
 test "PlaceholderType::from_xml maps known + default + unknown" {
-  // PlaceholderType derives (Eq, Debug) but not Show, so compare with == and
-  // assert_true (the codebase convention for these typed enums).
-  assert_true(@slide.PlaceholderType::from_xml("title") == Title)
-  assert_true(@slide.PlaceholderType::from_xml("ctrTitle") == CtrTitle)
-  assert_true(@slide.PlaceholderType::from_xml("body") == Body)
-  assert_true(@slide.PlaceholderType::from_xml("sldNum") == SldNum)
-  assert_true(@slide.PlaceholderType::from_xml("pic") == Pic)
+  debug_inspect(@slide.PlaceholderType::from_xml("title"), content="Title")
+  debug_inspect(
+    @slide.PlaceholderType::from_xml("ctrTitle"),
+    content="CtrTitle",
+  )
+  debug_inspect(@slide.PlaceholderType::from_xml("body"), content="Body")
+  debug_inspect(@slide.PlaceholderType::from_xml("sldNum"), content="SldNum")
+  debug_inspect(@slide.PlaceholderType::from_xml("pic"), content="Pic")
   // Explicit "obj" and an absent attribute both read as Obj.
-  assert_true(@slide.PlaceholderType::from_xml("obj") == Obj)
-  assert_true(@slide.PlaceholderType::from_xml("") == Obj)
+  debug_inspect(@slide.PlaceholderType::from_xml("obj"), content="Obj")
+  debug_inspect(@slide.PlaceholderType::from_xml(""), content="Obj")
   // Unmodelled value is preserved verbatim.
-  assert_true(@slide.PlaceholderType::from_xml("foo") == Other("foo"))
+  debug_inspect(
+    @slide.PlaceholderType::from_xml("foo"),
+    content="Other(\"foo\")",
+  )
 }
 
 ///|
@@ -82,10 +86,16 @@ test "PlaceholderType::to_xml round-trips every modelled value" {
     Pic,
   ]
   for k in kinds {
-    assert_true(@slide.PlaceholderType::from_xml(k.to_xml()) == k)
+    debug_inspect(
+      @slide.PlaceholderType::from_xml(k.to_xml()) == k,
+      content="true",
+    )
   }
   // Other carries its raw string through to_xml.
-  assert_eq((Other("custom") : @slide.PlaceholderType).to_xml(), "custom")
+  debug_inspect(
+    (Other("custom") : @slide.PlaceholderType).to_xml(),
+    content="\"custom\"",
+  )
 }
 
 ///|
@@ -94,8 +104,8 @@ test "Placeholder::kind reads the raw ph_type" {
   match slide.shapes[4] {
     AutoShape(s) => {
       let ph = s.placeholder.unwrap()
-      assert_eq(ph.ph_type, "") // attribute was absent
-      assert_true(ph.kind() == Obj) // …and reads as the spec default
+      debug_inspect(ph.ph_type, content="\"\"") // attribute was absent
+      debug_inspect(ph.kind(), content="Obj") // …and reads as the spec default
     }
     _ => fail("expected AutoShape at index 4")
   }
@@ -107,14 +117,14 @@ test "Placeholder::kind reads the raw ph_type" {
 test "Slide::placeholders lists kinds in source order, skips non-placeholders" {
   let slide = @slide.Slide::parse(slide_with_placeholders())
   let kinds = slide.placeholders().map(pair => pair.0)
-  assert_true(kinds == [CtrTitle, Body, Ftr, SldNum, Obj])
+  debug_inspect(kinds, content="[CtrTitle, Body, Ftr, SldNum, Obj]")
 }
 
 ///|
 test "Slide::title matches ctrTitle" {
   let slide = @slide.Slide::parse(slide_with_placeholders())
   match slide.title() {
-    Some(AutoShape(s)) => assert_eq(s.id, 2)
+    Some(AutoShape(s)) => debug_inspect(s.id, content="2")
     _ => fail("expected the ctrTitle placeholder")
   }
 }
@@ -133,7 +143,7 @@ test "Slide::title also matches a plain title placeholder" {
     "</p:spTree></p:cSld></p:sld>"
   let slide = @slide.Slide::parse(@oxml.string_to_bytes(xml))
   match slide.title() {
-    Some(AutoShape(s)) => assert_eq(s.id, 9)
+    Some(AutoShape(s)) => debug_inspect(s.id, content="9")
     _ => fail("expected the title placeholder")
   }
 }
@@ -142,7 +152,7 @@ test "Slide::title also matches a plain title placeholder" {
 test "Slide::body matches body, not content/obj" {
   let slide = @slide.Slide::parse(slide_with_placeholders())
   match slide.body() {
-    Some(AutoShape(s)) => assert_eq(s.id, 3)
+    Some(AutoShape(s)) => debug_inspect(s.id, content="3")
     _ => fail("expected the body placeholder")
   }
 }
@@ -152,14 +162,14 @@ test "Slide::placeholder finds a specific kind by index" {
   let slide = @slide.Slide::parse(slide_with_placeholders())
   match slide.placeholder(SldNum) {
     Some(AutoShape(s)) => {
-      assert_eq(s.id, 5)
-      assert_eq(s.placeholder.unwrap().idx, 10)
+      debug_inspect(s.id, content="5")
+      debug_inspect(s.placeholder.unwrap().idx, content="10")
     }
     _ => fail("expected the slide-number placeholder")
   }
   // The no-type content placeholder is reachable as Obj.
   match slide.placeholder(Obj) {
-    Some(AutoShape(s)) => assert_eq(s.id, 6)
+    Some(AutoShape(s)) => debug_inspect(s.id, content="6")
     _ => fail("expected the content placeholder via Obj")
   }
 }
@@ -167,8 +177,8 @@ test "Slide::placeholder finds a specific kind by index" {
 ///|
 test "Slide accessors return None when the kind is absent" {
   let slide = @slide.Slide::parse(slide_with_placeholders())
-  assert_true(slide.placeholder(Chart) is None)
-  assert_true(slide.placeholder(SubTitle) is None)
+  debug_inspect(slide.placeholder(Chart) is None, content="true")
+  debug_inspect(slide.placeholder(SubTitle) is None, content="true")
   // A slide with no placeholders at all.
   let bare = "<?xml version=\"1.0\"?><p:sld xmlns:p=\"" +
     pml_ns +
@@ -176,7 +186,7 @@ test "Slide accessors return None when the kind is absent" {
     "<p:nvGrpSpPr><p:cNvPr id=\"1\" name=\"\"/><p:cNvGrpSpPr/><p:nvPr/></p:nvGrpSpPr>" +
     "<p:grpSpPr/></p:spTree></p:cSld></p:sld>"
   let empty = @slide.Slide::parse(@oxml.string_to_bytes(bare))
-  assert_eq(empty.placeholders().length(), 0)
-  assert_true(empty.title() is None)
-  assert_true(empty.body() is None)
+  debug_inspect(empty.placeholders().length(), content="0")
+  debug_inspect(empty.title() is None, content="true")
+  debug_inspect(empty.body() is None, content="true")
 }

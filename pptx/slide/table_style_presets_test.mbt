@@ -4,21 +4,21 @@
 ///|
 test "TableStylePreset: gallery spot-checks against MS-OE376" {
   // PowerPoint's insert-table default.
-  assert_eq(
+  debug_inspect(
     @slide.TableStylePreset::MediumStyle2Accent1.guid(),
-    "{5C22544A-7EE6-4342-B048-85BDC9FD1C3A}",
+    content="\"{5C22544A-7EE6-4342-B048-85BDC9FD1C3A}\"",
   )
-  assert_eq(
+  debug_inspect(
     @slide.TableStylePreset::NoStyleNoGrid.guid(),
-    "{2D5ABB26-0587-4C30-8999-92F81FD0307C}",
+    content="\"{2D5ABB26-0587-4C30-8999-92F81FD0307C}\"",
   )
-  assert_eq(
+  debug_inspect(
     @slide.TableStylePreset::LightStyle1.guid(),
-    "{9D7B26C5-4107-4FEC-AEDC-1716B250A1EF}",
+    content="\"{9D7B26C5-4107-4FEC-AEDC-1716B250A1EF}\"",
   )
-  assert_eq(
+  debug_inspect(
     @slide.TableStylePreset::DarkStyle2Accent5And6.guid(),
-    "{46F890A9-2807-4EBB-B81D-B2AA78EC7F39}",
+    content="\"{46F890A9-2807-4EBB-B81D-B2AA78EC7F39}\"",
   )
 }
 
@@ -106,13 +106,13 @@ fn all_table_style_presets() -> Array[@slide.TableStylePreset] {
 ///|
 test "TableStylePreset: 74 styles, distinct well-formed GUIDs" {
   let presets = all_table_style_presets()
-  assert_eq(presets.length(), 74)
+  debug_inspect(presets.length(), content="74")
   let seen : Array[String] = []
   for p in presets {
     let g = p.guid()
-    assert_eq(g.length(), 38)
-    assert_true(g.has_prefix("{") && g.has_suffix("}"))
-    assert_true(!seen.contains(g))
+    debug_inspect(g.length(), content="38")
+    debug_inspect(g.has_prefix("{") && g.has_suffix("}"), content="true")
+    debug_inspect(!seen.contains(g), content="true")
     seen.push(g)
   }
 }
@@ -121,12 +121,13 @@ test "TableStylePreset: 74 styles, distinct well-formed GUIDs" {
 test "TableProperties::with_style: sets the id, keeps everything else" {
   let p = @slide.TableProperties::default()
   let styled = { ..p, first_row: Some(true), }.with_style(LightStyle2Accent3)
-  assert_eq(
-    styled.table_style_id.unwrap(),
+  debug_inspect(
+    styled.table_style_id.unwrap() ==
     @slide.TableStylePreset::LightStyle2Accent3.guid(),
+    content="true",
   )
-  assert_true(styled.first_row == Some(true))
-  assert_true(styled.fill is None)
+  debug_inspect(styled.first_row, content="Some(true)")
+  debug_inspect(styled.fill is None, content="true")
 }
 
 ///|
@@ -139,14 +140,17 @@ test "Table::with_style: default flags on, existing properties kept" {
   )
   let styled = t.with_style(MediumStyle2Accent1)
   let p = styled.properties.unwrap()
-  assert_eq(p.table_style_id.unwrap(), "{5C22544A-7EE6-4342-B048-85BDC9FD1C3A}")
-  assert_true(p.first_row == Some(true))
-  assert_true(p.band_row == Some(true))
+  debug_inspect(
+    p.table_style_id.unwrap(),
+    content="\"{5C22544A-7EE6-4342-B048-85BDC9FD1C3A}\"",
+  )
+  debug_inspect(p.first_row, content="Some(true)")
+  debug_inspect(p.band_row, content="Some(true)")
   // Flags are opt-outable.
   let plain = t.with_style(MediumStyle2Accent1, first_row=false, band_row=false)
-  assert_true(plain.properties.unwrap().first_row == Some(false))
+  debug_inspect(plain.properties.unwrap().first_row, content="Some(false)")
   // The original table is untouched (immutable builder).
-  assert_true(t.properties.unwrap().table_style_id is None)
+  debug_inspect(t.properties.unwrap().table_style_id is None, content="true")
 }
 
 ///|
@@ -185,12 +189,13 @@ test "Table::with_style: styled table survives serialize -> reparse" {
       match parsed_gf.content {
         TableContent(parsed_t) => {
           let p = parsed_t.properties.unwrap()
-          assert_eq(
-            p.table_style_id.unwrap(),
+          debug_inspect(
+            p.table_style_id.unwrap() ==
             @slide.TableStylePreset::DarkStyle1Accent3.guid(),
+            content="true",
           )
-          assert_true(p.first_row == Some(true))
-          assert_true(p.band_row == Some(true))
+          debug_inspect(p.first_row, content="Some(true)")
+          debug_inspect(p.band_row, content="Some(true)")
         }
         _ => fail("expected TableContent")
       }
@@ -208,9 +213,10 @@ test "Table::with_style: creates properties when the table has none" {
   }
   let styled = bare.with_style(NoStyleTableGrid)
   let p = styled.properties.unwrap()
-  assert_eq(
-    p.table_style_id.unwrap(),
+  debug_inspect(
+    p.table_style_id.unwrap() ==
     @slide.TableStylePreset::NoStyleTableGrid.guid(),
+    content="true",
   )
-  assert_true(p.first_row == Some(true))
+  debug_inspect(p.first_row, content="Some(true)")
 }

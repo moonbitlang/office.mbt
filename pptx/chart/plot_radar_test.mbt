@@ -27,8 +27,8 @@ test "RadarChart: radarStyle is required" {
   let chart = @chart.Chart::parse(fixture_radar_chart_xml(body))
   match chart.chart.plot_area.plots[0] {
     RadarChart(b) => {
-      assert_eq(b.radar_style, Filled)
-      assert_eq(b.ax_ids.length(), 2)
+      debug_inspect(b.radar_style, content="Filled")
+      debug_inspect(b.ax_ids.length(), content="2")
     }
     _ => fail("expected RadarChart plot")
   }
@@ -57,13 +57,16 @@ test "RadarChart: round-trip" {
   let original = @chart.Chart::parse(fixture_radar_chart_xml(body))
   let bytes = original.serialize()
   let re_parsed = @chart.Chart::parse(bytes)
-  assert_eq(re_parsed, original)
+  debug_inspect(re_parsed == original, content="true")
 }
 
 ///|
 test "RadarStyle enum round-trips" {
   for s in [@chart.RadarStyle::Standard, Marker, Filled] {
-    assert_eq(@chart.RadarStyle::from_xml(s.to_xml()).unwrap(), s)
+    debug_inspect(
+      @chart.RadarStyle::from_xml(s.to_xml()).unwrap() == s,
+      content="true",
+    )
   }
 }
 
@@ -81,6 +84,9 @@ test "BarShape enum round-trips" {
       Pyramid,
       PyramidToMax,
     ] {
-    assert_eq(@chart.BarShape::from_xml(s.to_xml()).unwrap(), s)
+    debug_inspect(
+      @chart.BarShape::from_xml(s.to_xml()).unwrap() == s,
+      content="true",
+    )
   }
 }

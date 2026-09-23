@@ -54,34 +54,34 @@ fn master_xml_with_default_clr_map() -> FixedArray[Byte] {
 test "SlideMaster::serialize: round-trips a default-clrMap master" {
   let m0 = @slide_master.SlideMaster::parse(master_xml_with_default_clr_map())
   let m1 = roundtrip_master(master_xml_with_default_clr_map())
-  assert_true(m0 == m1)
+  debug_inspect(m0 == m1, content="true")
 }
 
 ///|
 test "SlideMaster::serialize: preserves layout refs in source order" {
   let m1 = roundtrip_master(master_xml_with_default_clr_map())
-  assert_eq(m1.layout_refs.length(), 2)
-  assert_eq(m1.layout_refs[0].id, 2147483649L)
-  assert_eq(m1.layout_refs[0].r_id, "rId1")
-  assert_eq(m1.layout_refs[1].r_id, "rId2")
+  debug_inspect(m1.layout_refs.length(), content="2")
+  debug_inspect(m1.layout_refs[0].id, content="2147483649")
+  debug_inspect(m1.layout_refs[0].r_id, content="\"rId1\"")
+  debug_inspect(m1.layout_refs[1].r_id, content="\"rId2\"")
 }
 
 ///|
 test "SlideMaster::serialize: preserves the 12-slot color mapping" {
   let m1 = roundtrip_master(master_xml_with_default_clr_map())
-  assert_true(m1.color_mapping.bg1 == Lt1)
-  assert_true(m1.color_mapping.tx1 == Dk1)
-  assert_true(m1.color_mapping.accent6 == Accent6)
-  assert_true(m1.color_mapping.fol_hlink == FolHlink)
+  debug_inspect(m1.color_mapping.bg1, content="Lt1")
+  debug_inspect(m1.color_mapping.tx1, content="Dk1")
+  debug_inspect(m1.color_mapping.accent6, content="Accent6")
+  debug_inspect(m1.color_mapping.fol_hlink, content="FolHlink")
 }
 
 ///|
 test "SlideMaster::serialize: preserves cSld + txStyles + hf via extension" {
   let m1 = roundtrip_master(master_xml_with_default_clr_map())
   let names = m1.extension.map(e => e.name.local_name)
-  assert_true(names.contains("cSld"))
-  assert_true(names.contains("txStyles"))
-  assert_true(names.contains("hf"))
+  debug_inspect(names.contains("cSld"), content="true")
+  debug_inspect(names.contains("txStyles"), content="true")
+  debug_inspect(names.contains("hf"), content="true")
 }
 
 ///|
@@ -101,8 +101,8 @@ test "SlideMaster::serialize: non-default clrMap (bg1=dk1) round-trips" {
     "</p:sldMaster>"
   let m0 = @slide_master.SlideMaster::parse(@oxml.string_to_bytes(xml))
   let m1 = roundtrip_master(@oxml.string_to_bytes(xml))
-  assert_true(m0 == m1)
-  assert_true(m1.color_mapping.bg1 == Dk1)
+  debug_inspect(m0 == m1, content="true")
+  debug_inspect(m1.color_mapping.bg1, content="Dk1")
 }
 
 // --- SlideLayout ---
@@ -128,14 +128,14 @@ fn layout_xml_title() -> FixedArray[Byte] {
 test "SlideLayout::serialize: round-trips a title layout" {
   let l0 = @slide_master.SlideLayout::parse(layout_xml_title())
   let l1 = roundtrip_layout(layout_xml_title())
-  assert_true(l0 == l1)
+  debug_inspect(l0 == l1, content="true")
 }
 
 ///|
 test "SlideLayout::serialize: preserves name and type" {
   let l1 = roundtrip_layout(layout_xml_title())
-  assert_eq(l1.name, "Title Slide")
-  assert_true(l1.layout_type == Title)
+  debug_inspect(l1.name, content="\"Title Slide\"")
+  debug_inspect(l1.layout_type, content="Title")
 }
 
 ///|
@@ -153,8 +153,8 @@ test "SlideLayout::serialize: Blank layout (absent type attr) round-trips" {
     "</p:sldLayout>"
   let l0 = @slide_master.SlideLayout::parse(@oxml.string_to_bytes(xml))
   let l1 = roundtrip_layout(@oxml.string_to_bytes(xml))
-  assert_true(l0 == l1)
-  assert_true(l1.layout_type == Blank)
+  debug_inspect(l0 == l1, content="true")
+  debug_inspect(l1.layout_type, content="Blank")
 }
 
 ///|
@@ -177,9 +177,9 @@ test "SlideLayout::serialize: overrideClrMapping with custom slots" {
     "</p:sldLayout>"
   let l0 = @slide_master.SlideLayout::parse(@oxml.string_to_bytes(xml))
   let l1 = roundtrip_layout(@oxml.string_to_bytes(xml))
-  assert_true(l0 == l1)
+  debug_inspect(l0 == l1, content="true")
   match l1.clr_map_override {
-    Override(cm) => assert_true(cm.bg1 == Dk1)
+    Override(cm) => debug_inspect(cm.bg1, content="Dk1")
     _ => fail("expected Override")
   }
 }
@@ -199,6 +199,6 @@ test "SlideLayoutType: round-trip every variant via to_xml -> from_xml" {
   for c in cases {
     let xml = c.to_xml()
     let parsed = @slide_master.SlideLayoutType::from_xml(xml)
-    assert_true(parsed == c)
+    debug_inspect(parsed == c, content="true")
   }
 }

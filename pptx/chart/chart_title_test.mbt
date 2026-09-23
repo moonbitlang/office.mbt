@@ -20,12 +20,12 @@ fn fixture_title_chart_xml(title_body : String) -> FixedArray[Byte] {
 test "ChartTitle: empty title parses to empty body" {
   let chart = @chart.Chart::parse(fixture_title_chart_xml("<c:title/>"))
   let title = chart.chart.title.unwrap()
-  assert_true(title.tx is None)
-  assert_true(title.layout is None)
-  assert_true(title.overlay is None)
-  assert_true(title.sp_pr is None)
-  assert_true(title.tx_pr is None)
-  assert_eq(title.extension.length(), 0)
+  debug_inspect(title.tx is None, content="true")
+  debug_inspect(title.layout is None, content="true")
+  debug_inspect(title.overlay is None, content="true")
+  debug_inspect(title.sp_pr is None, content="true")
+  debug_inspect(title.tx_pr is None, content="true")
+  debug_inspect(title.extension.length(), content="0")
 }
 
 ///|
@@ -33,7 +33,7 @@ test "ChartTitle: overlay leaf lifts" {
   let body = "<c:title>" + "<c:overlay val=\"1\"/>" + "</c:title>"
   let chart = @chart.Chart::parse(fixture_title_chart_xml(body))
   let title = chart.chart.title.unwrap()
-  assert_eq(title.overlay.unwrap(), true)
+  debug_inspect(title.overlay.unwrap(), content="true")
 }
 
 ///|
@@ -47,11 +47,11 @@ test "ChartTitle: tx / layout / spPr / txPr captured" {
     "</c:title>"
   let chart = @chart.Chart::parse(fixture_title_chart_xml(body))
   let title = chart.chart.title.unwrap()
-  assert_true(title.tx is Some(_))
-  assert_true(title.layout is Some(_))
-  assert_eq(title.overlay.unwrap(), false)
-  assert_true(title.sp_pr is Some(_))
-  assert_true(title.tx_pr is Some(_))
+  debug_inspect(title.tx is Some(_), content="true")
+  debug_inspect(title.layout is Some(_), content="true")
+  debug_inspect(title.overlay.unwrap(), content="false")
+  debug_inspect(title.sp_pr is Some(_), content="true")
+  debug_inspect(title.tx_pr is Some(_), content="true")
 }
 
 ///|
@@ -66,7 +66,7 @@ test "ChartTitle: chart-level title round-trips" {
   let original = @chart.Chart::parse(fixture_title_chart_xml(body))
   let bytes = original.serialize()
   let re_parsed = @chart.Chart::parse(bytes)
-  assert_eq(re_parsed, original)
+  debug_inspect(re_parsed == original, content="true")
 }
 
 ///|
@@ -93,11 +93,11 @@ test "ChartTitle: axis-level title parses + round-trips" {
     "</c:chartSpace>"
   let original = @chart.Chart::parse(@oxml.string_to_bytes(xml))
   let axis_title = original.chart.plot_area.axes[0].core().title.unwrap()
-  assert_true(axis_title.tx is Some(_))
-  assert_eq(axis_title.overlay.unwrap(), false)
+  debug_inspect(axis_title.tx is Some(_), content="true")
+  debug_inspect(axis_title.overlay.unwrap(), content="false")
   let bytes = original.serialize()
   let re_parsed = @chart.Chart::parse(bytes)
-  assert_eq(re_parsed, original)
+  debug_inspect(re_parsed == original, content="true")
 }
 
 ///|
@@ -109,10 +109,10 @@ test "ChartTitle: unknown chart-namespace children land on extension" {
     "</c:title>"
   let original = @chart.Chart::parse(fixture_title_chart_xml(body))
   let title = original.chart.title.unwrap()
-  assert_eq(title.extension.length(), 1)
+  debug_inspect(title.extension.length(), content="1")
   let bytes = original.serialize()
   let re_parsed = @chart.Chart::parse(bytes)
-  assert_eq(re_parsed, original)
+  debug_inspect(re_parsed == original, content="true")
 }
 
 ///|
@@ -123,10 +123,10 @@ test "ChartTitle: foreign-namespace children survive on extension" {
     "</c:title>"
   let original = @chart.Chart::parse(fixture_title_chart_xml(body))
   let title = original.chart.title.unwrap()
-  assert_eq(title.extension.length(), 1)
+  debug_inspect(title.extension.length(), content="1")
   let bytes = original.serialize()
   let re_parsed = @chart.Chart::parse(bytes)
-  assert_eq(re_parsed, original)
+  debug_inspect(re_parsed == original, content="true")
 }
 
 ///|
@@ -144,5 +144,5 @@ test "ChartTitle: child-order is canonical on emit" {
   let original = @chart.Chart::parse(fixture_title_chart_xml(body))
   let bytes = original.serialize()
   let re_parsed = @chart.Chart::parse(bytes)
-  assert_eq(re_parsed, original)
+  debug_inspect(re_parsed == original, content="true")
 }

@@ -40,12 +40,12 @@ test "ChartEx::parse: root recognised + chart body lifted" {
     @oxml.string_to_bytes(typical_waterfall_xml()),
   )
   // <cx:chartData> is captured as XmlElement, <cx:chart> is typed.
-  assert_true(chart.chart_data is Some(_))
+  debug_inspect(chart.chart_data is Some(_), content="true")
   // The waterfall fixture has exactly one plot-area region with one
   // typed series.
   let region = chart.chart.plot_area.plot_area_region
-  assert_eq(region.series.length(), 1)
-  assert_eq(region.series[0].layout_id, Waterfall)
+  debug_inspect(region.series.length(), content="1")
+  debug_inspect(region.series[0].layout_id, content="Waterfall")
 }
 
 ///|
@@ -65,9 +65,9 @@ test "ChartEx::parse: layoutId discriminates chart kind" {
     "</cx:chart>" +
     "</cx:chartSpace>"
   let chart = @chart_ex.ChartEx::parse(@oxml.string_to_bytes(xml))
-  assert_eq(
+  debug_inspect(
     chart.chart.plot_area.plot_area_region.series[0].layout_id,
-    Sunburst,
+    content="Sunburst",
   )
 }
 
@@ -87,7 +87,7 @@ test "ChartEx::parse: unknown layoutId routes to Other" {
     "</cx:chartSpace>"
   let chart = @chart_ex.ChartEx::parse(@oxml.string_to_bytes(xml))
   match chart.chart.plot_area.plot_area_region.series[0].layout_id {
-    Other(name) => assert_eq(name, "futurePlot2030")
+    Other(name) => debug_inspect(name, content="\"futurePlot2030\"")
     _ => fail("expected Other(futurePlot2030)")
   }
 }
@@ -110,9 +110,9 @@ test "ChartEx::parse: series carry attribute payload" {
     "</cx:chartSpace>"
   let chart = @chart_ex.ChartEx::parse(@oxml.string_to_bytes(xml))
   let s = chart.chart.plot_area.plot_area_region.series[0]
-  assert_eq(s.format_idx.unwrap(), 3)
-  assert_eq(s.hidden.unwrap(), true)
-  assert_eq(s.owner_idx.unwrap(), 2)
+  debug_inspect(s.format_idx.unwrap(), content="3")
+  debug_inspect(s.hidden.unwrap(), content="true")
+  debug_inspect(s.owner_idx.unwrap(), content="2")
 }
 
 ///|
@@ -163,11 +163,17 @@ test "ChartExKind enum round-trips through from_xml/to_xml" {
       Waterfall,
       Histogram,
     ] {
-    assert_eq(@chart_ex.ChartExKind::from_xml(k.to_xml()), k)
+    debug_inspect(
+      @chart_ex.ChartExKind::from_xml(k.to_xml()) == k,
+      content="true",
+    )
   }
   // Other variants round-trip too.
   let unknown = @chart_ex.ChartExKind::Other("xyz")
-  assert_eq(@chart_ex.ChartExKind::from_xml(unknown.to_xml()), unknown)
+  debug_inspect(
+    @chart_ex.ChartExKind::from_xml(unknown.to_xml()) == unknown,
+    content="true",
+  )
 }
 
 ///|
@@ -204,7 +210,7 @@ test "ChartEx::serialize: round-trips through parse → serialize → parse" {
   )
   let bytes = original.serialize()
   let re_parsed = @chart_ex.ChartEx::parse(bytes)
-  assert_eq(re_parsed, original)
+  debug_inspect(re_parsed == original, content="true")
 }
 
 ///|
@@ -221,7 +227,7 @@ test "ChartEx::serialize: minimal chartSpace round-trips" {
   let original = @chart_ex.ChartEx::parse(@oxml.string_to_bytes(xml))
   let bytes = original.serialize()
   let re_parsed = @chart_ex.ChartEx::parse(bytes)
-  assert_eq(re_parsed, original)
+  debug_inspect(re_parsed == original, content="true")
 }
 
 ///|
@@ -237,5 +243,5 @@ test "ChartEx::serialize: foreign-namespace siblings survive" {
   let original = @chart_ex.ChartEx::parse(@oxml.string_to_bytes(xml))
   let bytes = original.serialize()
   let re_parsed = @chart_ex.ChartEx::parse(bytes)
-  assert_eq(re_parsed, original)
+  debug_inspect(re_parsed == original, content="true")
 }

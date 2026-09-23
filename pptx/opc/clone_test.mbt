@@ -17,8 +17,8 @@ test "Package::clone: clones share no mutable state" {
     @fzip.str_to_u8("<b/>"),
   )
   cloned.add_part(p2)
-  assert_eq(pkg.parts().length(), 1)
-  assert_eq(cloned.parts().length(), 2)
+  debug_inspect(pkg.parts().length(), content="1")
+  debug_inspect(cloned.parts().length(), content="2")
 }
 
 ///|
@@ -29,8 +29,8 @@ test "Part::clone: bytes buffer is independent" {
   // Mutating p1's bytes (via the underlying FixedArray) doesn't
   // change p2's bytes.
   p1.bytes[0] = b'H'
-  assert_eq(p1.bytes[0], b'H')
-  assert_eq(p2.bytes[0], b'h')
+  debug_inspect(p1.bytes[0] == b'H', content="true")
+  debug_inspect(p2.bytes[0] == b'h', content="true")
 }
 
 ///|
@@ -42,11 +42,11 @@ test "ContentTypes::clone: builder mutations don't cross over" {
   // Extend the clone with another default. The original's defaults
   // array stays at one entry.
   let _ = cloned.with_default("rels", "type/rels")
-  assert_eq(ct.defaults.length(), 1)
+  debug_inspect(ct.defaults.length(), content="1")
   // The clone is structurally equal to the original by Eq (the
   // chained .with_default isn't applied to the clone in place — it
   // returns a new value).
-  assert_true(ct == cloned)
+  debug_inspect(ct == cloned, content="true")
 }
 
 ///|
@@ -65,6 +65,6 @@ test "Package::clone: content-types catalog is independent" {
   )
   // Original's content_types still has only the one override and
   // no defaults.
-  assert_eq(pkg.content_types().defaults.length(), 0)
-  assert_eq(cloned.content_types().defaults.length(), 1)
+  debug_inspect(pkg.content_types().defaults.length(), content="0")
+  debug_inspect(cloned.content_types().defaults.length(), content="1")
 }

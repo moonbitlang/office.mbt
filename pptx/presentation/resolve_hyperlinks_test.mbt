@@ -53,8 +53,8 @@ test "with_hyperlink: external URL registers a TargetMode::External rel" {
     .unwrap().name
   let rels = prs.pkg.relationships_for(slide_name)
   let hl = rels.by_type(@opc.rt_hyperlink)[0]
-  assert_eq(hl.target, "https://example.com")
-  assert_true(hl.target_mode is External)
+  debug_inspect(hl.target, content="\"https://example.com\"")
+  debug_inspect(hl.target_mode is External, content="true")
 }
 
 ///|
@@ -73,8 +73,8 @@ test "with_hyperlink: rId surfaces in re-parsed run's hyperlink_click" {
   }
   // hyperlink_click is set (rId) and hyperlink_target is gone after
   // a parse cycle — the parser doesn't reconstruct unresolved targets.
-  assert_true(r0.properties.hyperlink_click is Some(_))
-  assert_true(r0.properties.hyperlink_target is None)
+  debug_inspect(r0.properties.hyperlink_click is Some(_), content="true")
+  debug_inspect(r0.properties.hyperlink_target is None, content="true")
 }
 
 ///|
@@ -92,7 +92,10 @@ test "with_hyperlink: tooltip survives round-trip" {
     RunContent(r) => r
     _ => fail("expected RunContent")
   }
-  assert_true(r0.properties.hyperlink_tooltip is Some("See more"))
+  debug_inspect(
+    r0.properties.hyperlink_tooltip is Some("See more"),
+    content="true",
+  )
 }
 
 ///|
@@ -112,9 +115,9 @@ test "with_hyperlink_to_slide: registers Internal rel pointing at target slide" 
     }
   }
   let to_slide = to_slide.unwrap()
-  assert_true(to_slide.target_mode is Internal)
+  debug_inspect(to_slide.target_mode is Internal, content="true")
   // Target is the other slide's filename (relative-target math).
-  assert_true(to_slide.target.has_suffix("slide2.xml"))
+  debug_inspect(to_slide.target.has_suffix("slide2.xml"), content="true")
 }
 
 ///|
@@ -143,7 +146,7 @@ test "no hyperlinks → no rels mutation, no extra relationship lookups" {
   ).with_text_body(tb)
   prs.update_slide_mut(0, prs.slides()[0].with_shape(AutoShape(box)))
   let after = prs.pkg.relationships_for(slide_name).items.length()
-  assert_eq(before, after)
+  debug_inspect(before == after, content="true")
 }
 
 ///|
@@ -187,7 +190,7 @@ test "with_hyperlink: full save → reopen → rels survive" {
     .unwrap().name
   let rels = prs2.pkg.relationships_for(slide_name)
   let hl = rels.by_type(@opc.rt_hyperlink)[0]
-  assert_eq(hl.target, "https://moonbitlang.com")
+  debug_inspect(hl.target, content="\"https://moonbitlang.com\"")
   // Tooltip on `<a:hlinkClick tooltip="…">` round-trips.
   let r0 = match prs2.slides()[0].shapes[0] {
     AutoShape(a) =>
@@ -197,5 +200,5 @@ test "with_hyperlink: full save → reopen → rels survive" {
       }
     _ => fail("expected AutoShape")
   }
-  assert_true(r0.properties.hyperlink_tooltip is Some("docs"))
+  debug_inspect(r0.properties.hyperlink_tooltip is Some("docs"), content="true")
 }

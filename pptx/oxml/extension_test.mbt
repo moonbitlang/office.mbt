@@ -30,14 +30,14 @@ test "ADR-004: Color captures hueMod / redMod modifiers" {
     _ => fail("not a start element")
   }
   // tint was modelled → in transforms; hueMod + redMod fell through → in extension.
-  assert_eq(color.transforms.length(), 1)
-  assert_eq(color.extension.length(), 2)
+  debug_inspect(color.transforms.length(), content="1")
+  debug_inspect(color.extension.length(), content="2")
   let names = []
   for el in color.extension {
     names.push(el.name.local_name)
   }
-  assert_true(names.contains("hueMod"))
-  assert_true(names.contains("redMod"))
+  debug_inspect(names.contains("hueMod"), content="true")
+  debug_inspect(names.contains("redMod"), content="true")
 }
 
 // --- BlipFill.extension: <a:blip> colour-mod children survive ---
@@ -53,17 +53,17 @@ test "ADR-004: BlipFill captures <a:blip> with nested duotone" {
   let f = parse_inner_fill(inner)
   match f {
     BlipFillVariant(bf) => {
-      assert_eq(bf.embed_id, "rId7")
+      debug_inspect(bf.embed_id, content="\"rId7\"")
       // The <a:blip> subtree is captured wholesale.
-      assert_eq(bf.extension.length(), 1)
+      debug_inspect(bf.extension.length(), content="1")
       let blip = bf.extension[0]
-      assert_eq(blip.name.local_name, "blip")
-      assert_eq(blip.children.length(), 1)
+      debug_inspect(blip.name.local_name, content="\"blip\"")
+      debug_inspect(blip.children.length(), content="1")
       match blip.children[0] {
         Element(duo) => {
-          assert_eq(duo.name.local_name, "duotone")
+          debug_inspect(duo.name.local_name, content="\"duotone\"")
           // duotone has two srgbClr children.
-          assert_eq(duo.children.length(), 2)
+          debug_inspect(duo.children.length(), content="2")
         }
         _ => fail("expected duotone")
       }
@@ -85,9 +85,9 @@ test "ADR-004: Gradient captures <a:tileRect>" {
   let f = parse_inner_fill(inner)
   match f {
     GradientFill(g) => {
-      assert_eq(g.stops.length(), 2)
-      assert_eq(g.extension.length(), 1)
-      assert_eq(g.extension[0].name.local_name, "tileRect")
+      debug_inspect(g.stops.length(), content="2")
+      debug_inspect(g.extension.length(), content="1")
+      debug_inspect(g.extension[0].name.local_name, content="\"tileRect\"")
     }
     _ => fail("expected GradientFill")
   }
@@ -116,13 +116,13 @@ test "ADR-004: Stroke captures custDash and extLst" {
       }
     _ => fail("not a start element")
   }
-  assert_eq(stroke.extension.length(), 2)
+  debug_inspect(stroke.extension.length(), content="2")
   let names = []
   for el in stroke.extension {
     names.push(el.name.local_name)
   }
-  assert_true(names.contains("custDash"))
-  assert_true(names.contains("extLst"))
+  debug_inspect(names.contains("custDash"), content="true")
+  debug_inspect(names.contains("extLst"), content="true")
 }
 
 // --- EffectList.extension: <a:fillOverlay> survives ---
@@ -141,9 +141,9 @@ test "ADR-004: EffectList captures fillOverlay" {
   let _ = r.next() catch { _ => fail("wrapper open") }
   let _ev = r.next() catch { _ => fail("read effectLst") }
   let el = @oxml.parse_effect_list(r) catch { _ => fail("parse_effect_list") }
-  assert_true(el.blur is Some(_))
-  assert_eq(el.extension.length(), 1)
-  assert_eq(el.extension[0].name.local_name, "fillOverlay")
-  assert_eq(el.extension[0].attributes[0].0.local_name, "blend")
-  assert_eq(el.extension[0].attributes[0].1, "over")
+  debug_inspect(el.blur is Some(_), content="true")
+  debug_inspect(el.extension.length(), content="1")
+  debug_inspect(el.extension[0].name.local_name, content="\"fillOverlay\"")
+  debug_inspect(el.extension[0].attributes[0].0.local_name, content="\"blend\"")
+  debug_inspect(el.extension[0].attributes[0].1, content="\"over\"")
 }

@@ -24,12 +24,12 @@ fn fixture_axis_chart_xml(axis_body : String) -> FixedArray[Byte] {
 test "AxisCore: minimal catAx with only axId parses" {
   let body = "<c:catAx><c:axId val=\"1\"/></c:catAx>"
   let chart = @chart.Chart::parse(fixture_axis_chart_xml(body))
-  assert_eq(chart.chart.plot_area.axes.length(), 1)
+  debug_inspect(chart.chart.plot_area.axes.length(), content="1")
   let core = chart.chart.plot_area.axes[0].core()
-  assert_eq(core.ax_id, 1)
-  assert_true(core.scaling is None)
-  assert_true(core.ax_pos is None)
-  assert_true(core.cross_ax is None)
+  debug_inspect(core.ax_id, content="1")
+  debug_inspect(core.scaling is None, content="true")
+  debug_inspect(core.ax_pos is None, content="true")
+  debug_inspect(core.cross_ax is None, content="true")
 }
 
 ///|
@@ -48,17 +48,20 @@ test "AxisCore: full catAx fields lift to typed values" {
     "</c:catAx>"
   let chart = @chart.Chart::parse(fixture_axis_chart_xml(body))
   let core = chart.chart.plot_area.axes[0].core()
-  assert_eq(core.ax_id, 10)
-  assert_true(core.scaling.unwrap().orientation is Some(MinMax))
-  assert_eq(core.delete.unwrap(), false)
-  assert_true(core.ax_pos is Some(Bottom))
-  assert_eq(core.num_fmt.unwrap().format_code, "General")
-  assert_eq(core.num_fmt.unwrap().source_linked.unwrap(), true)
-  assert_true(core.major_tick_mark is Some(Out))
-  assert_true(core.minor_tick_mark is Some(NoTick))
-  assert_true(core.tick_lbl_pos is Some(NextTo))
-  assert_eq(core.cross_ax.unwrap(), 20)
-  assert_true(core.crosses is Some(AutoZero))
+  debug_inspect(core.ax_id, content="10")
+  debug_inspect(
+    core.scaling.unwrap().orientation is Some(MinMax),
+    content="true",
+  )
+  debug_inspect(core.delete.unwrap(), content="false")
+  debug_inspect(core.ax_pos is Some(Bottom), content="true")
+  debug_inspect(core.num_fmt.unwrap().format_code, content="\"General\"")
+  debug_inspect(core.num_fmt.unwrap().source_linked.unwrap(), content="true")
+  debug_inspect(core.major_tick_mark is Some(Out), content="true")
+  debug_inspect(core.minor_tick_mark is Some(NoTick), content="true")
+  debug_inspect(core.tick_lbl_pos is Some(NextTo), content="true")
+  debug_inspect(core.cross_ax.unwrap(), content="20")
+  debug_inspect(core.crosses is Some(AutoZero), content="true")
 }
 
 ///|
@@ -77,10 +80,10 @@ test "AxisCore: valAx with scaling max/min and crossesAt" {
   let chart = @chart.Chart::parse(fixture_axis_chart_xml(body))
   let core = chart.chart.plot_area.axes[0].core()
   let scaling = core.scaling.unwrap()
-  assert_eq(scaling.max.unwrap(), "100")
-  assert_eq(scaling.min.unwrap(), "-50")
-  assert_true(core.ax_pos is Some(Left))
-  assert_eq(core.crosses_at.unwrap(), "0")
+  debug_inspect(scaling.max.unwrap(), content="\"100\"")
+  debug_inspect(scaling.min.unwrap(), content="\"-50\"")
+  debug_inspect(core.ax_pos is Some(Left), content="true")
+  debug_inspect(core.crosses_at.unwrap(), content="\"0\"")
 }
 
 ///|
@@ -93,9 +96,9 @@ test "AxisCore: scaling logBase round-trips" {
   let original = @chart.Chart::parse(fixture_axis_chart_xml(body))
   let bytes = original.serialize()
   let re_parsed = @chart.Chart::parse(bytes)
-  assert_eq(re_parsed, original)
+  debug_inspect(re_parsed == original, content="true")
   let core = re_parsed.chart.plot_area.axes[0].core()
-  assert_eq(core.scaling.unwrap().log_base.unwrap(), "10")
+  debug_inspect(core.scaling.unwrap().log_base.unwrap(), content="\"10\"")
 }
 
 ///|
@@ -109,7 +112,7 @@ test "AxisCore: tickMark variants round-trip" {
   let original = @chart.Chart::parse(fixture_axis_chart_xml(body))
   let bytes = original.serialize()
   let re_parsed = @chart.Chart::parse(bytes)
-  assert_eq(re_parsed, original)
+  debug_inspect(re_parsed == original, content="true")
 }
 
 ///|
@@ -127,7 +130,7 @@ test "AxisCore: tickLblPos every variant" {
     let original = @chart.Chart::parse(fixture_axis_chart_xml(body))
     let bytes = original.serialize()
     let re_parsed = @chart.Chart::parse(bytes)
-    assert_eq(re_parsed, original)
+    debug_inspect(re_parsed == original, content="true")
   }
 }
 
@@ -145,7 +148,7 @@ test "AxisCore: crosses every variant" {
     let original = @chart.Chart::parse(fixture_axis_chart_xml(body))
     let bytes = original.serialize()
     let re_parsed = @chart.Chart::parse(bytes)
-    assert_eq(re_parsed, original)
+    debug_inspect(re_parsed == original, content="true")
   }
 }
 
@@ -163,7 +166,7 @@ test "AxisCore: axPos every variant" {
     let original = @chart.Chart::parse(fixture_axis_chart_xml(body))
     let bytes = original.serialize()
     let re_parsed = @chart.Chart::parse(bytes)
-    assert_eq(re_parsed, original)
+    debug_inspect(re_parsed == original, content="true")
   }
 }
 
@@ -177,9 +180,12 @@ test "AxisCore: orientation maxMin round-trips" {
   let original = @chart.Chart::parse(fixture_axis_chart_xml(body))
   let bytes = original.serialize()
   let re_parsed = @chart.Chart::parse(bytes)
-  assert_eq(re_parsed, original)
+  debug_inspect(re_parsed == original, content="true")
   let core = re_parsed.chart.plot_area.axes[0].core()
-  assert_true(core.scaling.unwrap().orientation is Some(MaxMin))
+  debug_inspect(
+    core.scaling.unwrap().orientation is Some(MaxMin),
+    content="true",
+  )
 }
 
 ///|
@@ -192,10 +198,10 @@ test "AxisCore: numFmt without sourceLinked attribute" {
   let original = @chart.Chart::parse(fixture_axis_chart_xml(body))
   let bytes = original.serialize()
   let re_parsed = @chart.Chart::parse(bytes)
-  assert_eq(re_parsed, original)
+  debug_inspect(re_parsed == original, content="true")
   let core = re_parsed.chart.plot_area.axes[0].core()
-  assert_eq(core.num_fmt.unwrap().format_code, "0.00%")
-  assert_true(core.num_fmt.unwrap().source_linked is None)
+  debug_inspect(core.num_fmt.unwrap().format_code, content="\"0.00%\"")
+  debug_inspect(core.num_fmt.unwrap().source_linked is None, content="true")
 }
 
 ///|
@@ -222,9 +228,9 @@ test "AxisCore: per-axis-kind extras ride on extension (CT_ValAx)" {
   let original = @chart.Chart::parse(fixture_axis_chart_xml(body))
   let bytes = original.serialize()
   let re_parsed = @chart.Chart::parse(bytes)
-  assert_eq(re_parsed, original)
+  debug_inspect(re_parsed == original, content="true")
   let core = re_parsed.chart.plot_area.axes[0].core()
-  assert_eq(core.extension.length(), 2)
+  debug_inspect(core.extension.length(), content="2")
 }
 
 ///|
@@ -244,13 +250,13 @@ test "AxisCore: gridlines and styling subtrees captured" {
   let original = @chart.Chart::parse(fixture_axis_chart_xml(body))
   let bytes = original.serialize()
   let re_parsed = @chart.Chart::parse(bytes)
-  assert_eq(re_parsed, original)
+  debug_inspect(re_parsed == original, content="true")
   let core = re_parsed.chart.plot_area.axes[0].core()
-  assert_true(core.major_gridlines is Some(_))
-  assert_true(core.minor_gridlines is Some(_))
-  assert_true(core.title is Some(_))
-  assert_true(core.sp_pr is Some(_))
-  assert_true(core.tx_pr is Some(_))
+  debug_inspect(core.major_gridlines is Some(_), content="true")
+  debug_inspect(core.minor_gridlines is Some(_), content="true")
+  debug_inspect(core.title is Some(_), content="true")
+  debug_inspect(core.sp_pr is Some(_), content="true")
+  debug_inspect(core.tx_pr is Some(_), content="true")
 }
 
 ///|
@@ -263,16 +269,19 @@ test "AxisCore: builder-produced of_bar embeds typed axes" {
     .with_series("Revenue", [100.0, 200.0])
   let chart = @chart.Chart::of_bar(data)
   let axes = chart.chart.plot_area.axes
-  assert_eq(axes.length(), 2)
+  debug_inspect(axes.length(), content="2")
   let cat = axes[0].core()
-  assert_eq(cat.ax_id, 1)
-  assert_true(cat.ax_pos is Some(Bottom))
-  assert_eq(cat.cross_ax.unwrap(), 2)
-  assert_true(cat.scaling.unwrap().orientation is Some(MinMax))
+  debug_inspect(cat.ax_id, content="1")
+  debug_inspect(cat.ax_pos is Some(Bottom), content="true")
+  debug_inspect(cat.cross_ax.unwrap(), content="2")
+  debug_inspect(
+    cat.scaling.unwrap().orientation is Some(MinMax),
+    content="true",
+  )
   let val = axes[1].core()
-  assert_eq(val.ax_id, 2)
-  assert_true(val.ax_pos is Some(Left))
-  assert_eq(val.cross_ax.unwrap(), 1)
+  debug_inspect(val.ax_id, content="2")
+  debug_inspect(val.ax_pos is Some(Left), content="true")
+  debug_inspect(val.cross_ax.unwrap(), content="1")
 }
 
 ///|
@@ -283,7 +292,7 @@ test "AxisCore: builder of_bar serialized → re-parsed yields typed axes" {
   let chart = @chart.Chart::of_bar(data)
   let bytes = chart.serialize()
   let re_parsed = @chart.Chart::parse(bytes)
-  assert_eq(re_parsed, chart)
+  debug_inspect(re_parsed == chart, content="true")
 }
 
 ///|
@@ -297,13 +306,13 @@ test "AxisCore: dateAx and serAx variants discriminated" {
     "<c:crossAx val=\"1\"/>" +
     "</c:serAx>"
   let chart = @chart.Chart::parse(fixture_axis_chart_xml(body))
-  assert_eq(chart.chart.plot_area.axes.length(), 2)
+  debug_inspect(chart.chart.plot_area.axes.length(), content="2")
   match chart.chart.plot_area.axes[0] {
-    DateAx(c) => assert_eq(c.ax_id, 1)
+    DateAx(c) => debug_inspect(c.ax_id, content="1")
     _ => fail("expected DateAx at index 0")
   }
   match chart.chart.plot_area.axes[1] {
-    SerAx(c) => assert_eq(c.ax_id, 3)
+    SerAx(c) => debug_inspect(c.ax_id, content="3")
     _ => fail("expected SerAx at index 1")
   }
 }

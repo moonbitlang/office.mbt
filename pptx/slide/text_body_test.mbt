@@ -38,14 +38,14 @@ test "parse: single paragraph with a single run" {
   let inner = "<a:bodyPr/><a:lstStyle/><a:p><a:r><a:t>Hello</a:t></a:r></a:p>"
   let slide = @slide.Slide::parse(slide_with_txbody(inner))
   let tb = first_auto_shape(slide).text_body.unwrap()
-  assert_eq(tb.paragraphs.length(), 1)
+  debug_inspect(tb.paragraphs.length(), content="1")
   let p = tb.paragraphs[0]
-  assert_eq(p.content.length(), 1)
+  debug_inspect(p.content.length(), content="1")
   match p.content[0] {
-    RunContent(r) => assert_eq(r.text, "Hello")
+    RunContent(r) => debug_inspect(r.text, content="\"Hello\"")
     _ => fail("expected Run")
   }
-  assert_eq(tb.plain_text(), "Hello")
+  debug_inspect(tb.plain_text(), content="\"Hello\"")
 }
 
 ///|
@@ -54,8 +54,8 @@ test "parse: two paragraphs join with newline in plain_text" {
     "<a:p><a:r><a:t>Line 2</a:t></a:r></a:p>"
   let slide = @slide.Slide::parse(slide_with_txbody(inner))
   let tb = first_auto_shape(slide).text_body.unwrap()
-  assert_eq(tb.paragraphs.length(), 2)
-  assert_eq(tb.plain_text(), "Line 1\nLine 2")
+  debug_inspect(tb.paragraphs.length(), content="2")
+  debug_inspect(tb.plain_text(), content="\"Line 1\\nLine 2\"")
 }
 
 ///|
@@ -67,8 +67,8 @@ test "parse: paragraph with multiple runs concatenates text in source order" {
     "</a:p>"
   let slide = @slide.Slide::parse(slide_with_txbody(inner))
   let tb = first_auto_shape(slide).text_body.unwrap()
-  assert_eq(tb.paragraphs[0].content.length(), 3)
-  assert_eq(tb.plain_text(), "Hello, World!")
+  debug_inspect(tb.paragraphs[0].content.length(), content="3")
+  debug_inspect(tb.plain_text(), content="\"Hello, World!\"")
 }
 
 ///|
@@ -84,7 +84,7 @@ test "parse: run with rPr is consumed without losing text" {
     "</a:p>"
   let slide = @slide.Slide::parse(slide_with_txbody(inner))
   match first_auto_shape(slide).text_body.unwrap().paragraphs[0].content[0] {
-    RunContent(r) => assert_eq(r.text, "Formatted")
+    RunContent(r) => debug_inspect(r.text, content="\"Formatted\"")
     _ => fail("expected Run")
   }
 }
@@ -98,8 +98,8 @@ test "parse: br between runs inserts newline in plain_text" {
     "</a:p>"
   let slide = @slide.Slide::parse(slide_with_txbody(inner))
   let tb = first_auto_shape(slide).text_body.unwrap()
-  assert_eq(tb.paragraphs[0].content.length(), 3)
-  assert_eq(tb.plain_text(), "A\nB")
+  debug_inspect(tb.paragraphs[0].content.length(), content="3")
+  debug_inspect(tb.plain_text(), content="\"A\\nB\"")
 }
 
 ///|
@@ -113,9 +113,9 @@ test "parse: fld captures id, type, and body text" {
   let p = first_auto_shape(slide).text_body.unwrap().paragraphs[0]
   match p.content[0] {
     FieldContent(f) => {
-      assert_eq(f.id, "{F7021451-1387-4CA6-816F-3879F97B5CBC}")
-      assert_eq(f.field_type, "slidenum")
-      assert_eq(f.text, "1")
+      debug_inspect(f.id, content="\"{F7021451-1387-4CA6-816F-3879F97B5CBC}\"")
+      debug_inspect(f.field_type, content="\"slidenum\"")
+      debug_inspect(f.text, content="\"1\"")
     }
     _ => fail("expected FieldContent")
   }
@@ -128,9 +128,9 @@ test "parse: empty paragraph is preserved (gives blank line in plain_text)" {
     "<a:p><a:r><a:t>B</a:t></a:r></a:p>"
   let slide = @slide.Slide::parse(slide_with_txbody(inner))
   let tb = first_auto_shape(slide).text_body.unwrap()
-  assert_eq(tb.paragraphs.length(), 3)
-  assert_eq(tb.paragraphs[1].content.length(), 0)
-  assert_eq(tb.plain_text(), "A\n\nB")
+  debug_inspect(tb.paragraphs.length(), content="3")
+  debug_inspect(tb.paragraphs[1].content.length(), content="0")
+  debug_inspect(tb.plain_text(), content="\"A\\n\\nB\"")
 }
 
 ///|
@@ -140,7 +140,7 @@ test "parse: bodyPr and lstStyle are silently skipped (3d4 will model them)" {
     "<a:p><a:r><a:t>X</a:t></a:r></a:p>"
   let slide = @slide.Slide::parse(slide_with_txbody(inner))
   let tb = first_auto_shape(slide).text_body.unwrap()
-  assert_eq(tb.plain_text(), "X")
+  debug_inspect(tb.plain_text(), content="\"X\"")
 }
 
 ///|
@@ -159,7 +159,7 @@ test "parse: shape with no txBody leaves field None" {
     "</p:sp>" +
     "</p:spTree></p:cSld></p:sld>"
   let slide = @slide.Slide::parse(@oxml.string_to_bytes(xml))
-  assert_true(first_auto_shape(slide).text_body is None)
+  debug_inspect(first_auto_shape(slide).text_body is None, content="true")
 }
 
 ///|
@@ -167,7 +167,7 @@ test "parse: text with XML-escaped characters round-trips" {
   let inner = "<a:p><a:r><a:t>&lt;a &amp; b&gt;</a:t></a:r></a:p>"
   let slide = @slide.Slide::parse(slide_with_txbody(inner))
   match first_auto_shape(slide).text_body.unwrap().paragraphs[0].content[0] {
-    RunContent(r) => assert_eq(r.text, "<a & b>")
+    RunContent(r) => debug_inspect(r.text, content="\"<a & b>\"")
     _ => fail("expected Run")
   }
 }

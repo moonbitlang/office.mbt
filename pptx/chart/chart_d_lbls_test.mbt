@@ -33,9 +33,9 @@ fn unwrap_bar_d_lbls(chart : @chart.Chart) -> @chart.DLbls {
 test "DLbls: empty dLbls parses to empty body" {
   let chart = @chart.Chart::parse(fixture_d_lbls_bar_chart_xml("<c:dLbls/>"))
   let dl = unwrap_bar_d_lbls(chart)
-  assert_true(dl.d_lbl_pos is None)
-  assert_true(dl.show_val is None)
-  assert_eq(dl.d_lbl.length(), 0)
+  debug_inspect(dl.d_lbl_pos is None, content="true")
+  debug_inspect(dl.show_val is None, content="true")
+  debug_inspect(dl.d_lbl.length(), content="0")
 }
 
 ///|
@@ -51,13 +51,13 @@ test "DLbls: typed scalar / Bool leaves lift" {
     "</c:dLbls>"
   let chart = @chart.Chart::parse(fixture_d_lbls_bar_chart_xml(body))
   let dl = unwrap_bar_d_lbls(chart)
-  assert_true(dl.d_lbl_pos is Some(DLblCenter))
-  assert_eq(dl.show_legend_key.unwrap(), false)
-  assert_eq(dl.show_val.unwrap(), true)
-  assert_eq(dl.show_cat_name.unwrap(), false)
-  assert_eq(dl.show_ser_name.unwrap(), true)
-  assert_eq(dl.show_percent.unwrap(), false)
-  assert_eq(dl.show_bubble_size.unwrap(), false)
+  debug_inspect(dl.d_lbl_pos is Some(DLblCenter), content="true")
+  debug_inspect(dl.show_legend_key.unwrap(), content="false")
+  debug_inspect(dl.show_val.unwrap(), content="true")
+  debug_inspect(dl.show_cat_name.unwrap(), content="false")
+  debug_inspect(dl.show_ser_name.unwrap(), content="true")
+  debug_inspect(dl.show_percent.unwrap(), content="false")
+  debug_inspect(dl.show_bubble_size.unwrap(), content="false")
 }
 
 ///|
@@ -70,7 +70,7 @@ test "DLbls: dLblPos every variant round-trips" {
     let original = @chart.Chart::parse(fixture_d_lbls_bar_chart_xml(body))
     let bytes = original.serialize()
     let re_parsed = @chart.Chart::parse(bytes)
-    assert_eq(re_parsed, original)
+    debug_inspect(re_parsed == original, content="true")
   }
 }
 
@@ -82,8 +82,8 @@ test "DLbls: numFmt lifts to typed NumFmt" {
     "</c:dLbls>"
   let chart = @chart.Chart::parse(fixture_d_lbls_bar_chart_xml(body))
   let dl = unwrap_bar_d_lbls(chart)
-  assert_eq(dl.num_fmt.unwrap().format_code, "0.00%")
-  assert_eq(dl.num_fmt.unwrap().source_linked.unwrap(), false)
+  debug_inspect(dl.num_fmt.unwrap().format_code, content="\"0.00%\"")
+  debug_inspect(dl.num_fmt.unwrap().source_linked.unwrap(), content="false")
 }
 
 ///|
@@ -91,7 +91,7 @@ test "DLbls: separator text content round-trips" {
   let body = "<c:dLbls>" + "<c:separator>; </c:separator>" + "</c:dLbls>"
   let chart = @chart.Chart::parse(fixture_d_lbls_bar_chart_xml(body))
   let dl = unwrap_bar_d_lbls(chart)
-  assert_eq(dl.separator.unwrap(), "; ")
+  debug_inspect(dl.separator.unwrap(), content="\"; \"")
 }
 
 ///|
@@ -103,7 +103,7 @@ test "DLbls: per-data-point <c:dLbl> overrides captured" {
     "</c:dLbls>"
   let chart = @chart.Chart::parse(fixture_d_lbls_bar_chart_xml(body))
   let dl = unwrap_bar_d_lbls(chart)
-  assert_eq(dl.d_lbl.length(), 2)
+  debug_inspect(dl.d_lbl.length(), content="2")
 }
 
 ///|
@@ -123,7 +123,7 @@ test "DLbls: full body round-trips" {
   let original = @chart.Chart::parse(fixture_d_lbls_bar_chart_xml(body))
   let bytes = original.serialize()
   let re_parsed = @chart.Chart::parse(bytes)
-  assert_eq(re_parsed, original)
+  debug_inspect(re_parsed == original, content="true")
 }
 
 ///|
@@ -134,10 +134,10 @@ test "DLbls: extLst rides on extension" {
     "</c:dLbls>"
   let original = @chart.Chart::parse(fixture_d_lbls_bar_chart_xml(body))
   let dl = unwrap_bar_d_lbls(original)
-  assert_eq(dl.extension.length(), 1)
+  debug_inspect(dl.extension.length(), content="1")
   let bytes = original.serialize()
   let re_parsed = @chart.Chart::parse(bytes)
-  assert_eq(re_parsed, original)
+  debug_inspect(re_parsed == original, content="true")
 }
 
 ///|
@@ -166,10 +166,10 @@ test "DLbls: pie-only showLeaderLines rides on extension" {
   }
   // showLeaderLines is not in CT_DLbls's typed leaves — it rides
   // on extension per ADR-004.
-  assert_eq(dl.extension.length(), 1)
+  debug_inspect(dl.extension.length(), content="1")
   let bytes = original.serialize()
   let re_parsed = @chart.Chart::parse(bytes)
-  assert_eq(re_parsed, original)
+  debug_inspect(re_parsed == original, content="true")
 }
 
 ///|
@@ -195,5 +195,5 @@ test "DLbls: dLbls survives across multiple plot families" {
   let original = @chart.Chart::parse(@oxml.string_to_bytes(line_xml))
   let bytes = original.serialize()
   let re_parsed = @chart.Chart::parse(bytes)
-  assert_eq(re_parsed, original)
+  debug_inspect(re_parsed == original, content="true")
 }

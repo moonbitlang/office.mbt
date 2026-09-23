@@ -49,14 +49,14 @@ fn office_like_master() -> FixedArray[Byte] {
 test "parse: clrMap maps every slide-level slot to a theme color" {
   let m = @slide_master.SlideMaster::parse(office_like_master())
   let cm = m.color_mapping
-  assert_true(cm.bg1 is Lt1)
-  assert_true(cm.tx1 is Dk1)
-  assert_true(cm.bg2 is Lt2)
-  assert_true(cm.tx2 is Dk2)
-  assert_true(cm.accent1 is Accent1)
-  assert_true(cm.accent6 is Accent6)
-  assert_true(cm.hlink is Hlink)
-  assert_true(cm.fol_hlink is FolHlink)
+  debug_inspect(cm.bg1 is Lt1, content="true")
+  debug_inspect(cm.tx1 is Dk1, content="true")
+  debug_inspect(cm.bg2 is Lt2, content="true")
+  debug_inspect(cm.tx2 is Dk2, content="true")
+  debug_inspect(cm.accent1 is Accent1, content="true")
+  debug_inspect(cm.accent6 is Accent6, content="true")
+  debug_inspect(cm.hlink is Hlink, content="true")
+  debug_inspect(cm.fol_hlink is FolHlink, content="true")
 }
 
 ///|
@@ -64,12 +64,12 @@ test "ColorMapping::resolve looks up slide-level slots" {
   let m = @slide_master.SlideMaster::parse(office_like_master())
   let cm = m.color_mapping
   // bg1 → lt1 per fixture
-  assert_true(cm.resolve(Bg1).unwrap() is Lt1)
+  debug_inspect(cm.resolve(Bg1).unwrap() is Lt1, content="true")
   // accent3 → accent3 (identity)
-  assert_true(cm.resolve(Accent3).unwrap() is Accent3)
+  debug_inspect(cm.resolve(Accent3).unwrap() is Accent3, content="true")
   // master-level slot is not a mapping key
-  assert_true(cm.resolve(Dk1) is None)
-  assert_true(cm.resolve(PhClr) is None)
+  debug_inspect(cm.resolve(Dk1) is None, content="true")
+  debug_inspect(cm.resolve(PhClr) is None, content="true")
 }
 
 // --- SlideLayoutRef ---
@@ -77,14 +77,14 @@ test "ColorMapping::resolve looks up slide-level slots" {
 ///|
 test "parse: layout id list preserves order and unsigned ids" {
   let m = @slide_master.SlideMaster::parse(office_like_master())
-  assert_eq(m.layout_refs.length(), 3)
+  debug_inspect(m.layout_refs.length(), content="3")
   // OOXML uses xsd:unsignedInt for sldLayoutId/@id; values often exceed
   // 2^31. Verify Int64 storage carries them correctly.
-  assert_eq(m.layout_refs[0].id, 2147483649L)
-  assert_eq(m.layout_refs[0].r_id, "rId1")
-  assert_eq(m.layout_refs[1].id, 2147483650L)
-  assert_eq(m.layout_refs[2].id, 2147483651L)
-  assert_eq(m.layout_refs[2].r_id, "rId3")
+  debug_inspect(m.layout_refs[0].id, content="2147483649")
+  debug_inspect(m.layout_refs[0].r_id, content="\"rId1\"")
+  debug_inspect(m.layout_refs[1].id, content="2147483650")
+  debug_inspect(m.layout_refs[2].id, content="2147483651")
+  debug_inspect(m.layout_refs[2].r_id, content="\"rId3\"")
 }
 
 // --- skip behaviour ---

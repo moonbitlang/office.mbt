@@ -52,7 +52,7 @@ test "PresetShape: round-trip every variant via to_xml -> from_xml" {
   for c in cases {
     let xml = c.to_xml()
     let parsed = @slide.PresetShape::from_xml(xml)
-    assert_true(parsed == c)
+    debug_inspect(parsed == c, content="true")
   }
 }
 
@@ -78,8 +78,8 @@ test "parse: prstGeom rect with no adjustments" {
     AutoShape(s) =>
       match s.geometry.unwrap() {
         Preset(kind, adj) => {
-          assert_true(kind is Rect)
-          assert_eq(adj.length(), 0)
+          debug_inspect(kind is Rect, content="true")
+          debug_inspect(adj.length(), content="0")
         }
         _ => fail("expected Preset")
       }
@@ -100,12 +100,12 @@ test "parse: prstGeom roundRect carries adjustment values in source order" {
     AutoShape(s) =>
       match s.geometry.unwrap() {
         Preset(kind, adj) => {
-          assert_true(kind is RoundRect)
-          assert_eq(adj.length(), 2)
-          assert_eq(adj[0].name, "adj")
-          assert_eq(adj[0].fmla, "val 16667")
-          assert_eq(adj[1].name, "adj2")
-          assert_eq(adj[1].fmla, "val 25000")
+          debug_inspect(kind is RoundRect, content="true")
+          debug_inspect(adj.length(), content="2")
+          debug_inspect(adj[0].name, content="\"adj\"")
+          debug_inspect(adj[0].fmla, content="\"val 16667\"")
+          debug_inspect(adj[1].name, content="\"adj2\"")
+          debug_inspect(adj[1].fmla, content="\"val 25000\"")
         }
         _ => fail("expected Preset")
       }
@@ -123,13 +123,17 @@ test "parse: custGeom lifts into typed CustomGeometry" {
     AutoShape(s) =>
       match s.geometry.unwrap() {
         Custom(cg) => {
-          assert_eq(cg.paths.length(), 1)
+          debug_inspect(cg.paths.length(), content="1")
           let p = cg.paths[0]
-          assert_eq(p.w, Emu(100L))
-          assert_eq(p.h, Emu(100L))
-          assert_eq(p.commands.length(), 1)
+          debug_inspect(p.w, content="Emu(100)")
+          debug_inspect(p.h, content="Emu(100)")
+          debug_inspect(p.commands.length(), content="1")
           match p.commands[0] {
-            MoveTo(pt) => assert_true(pt.x is Literal(_) && pt.y is Literal(_))
+            MoveTo(pt) =>
+              debug_inspect(
+                pt.x is Literal(_) && pt.y is Literal(_),
+                content="true",
+              )
             _ => fail("expected MoveTo command")
           }
         }
@@ -146,7 +150,7 @@ test "parse: missing geometry leaves field None (permissive)" {
   )
   let slide = @slide.Slide::parse(bytes)
   match slide.shapes[0] {
-    AutoShape(s) => assert_true(s.geometry is None)
+    AutoShape(s) => debug_inspect(s.geometry is None, content="true")
     _ => fail("expected AutoShape")
   }
 }
@@ -170,9 +174,9 @@ test "parse: xfrm + prstGeom coexist on the same shape" {
   match slide.shapes[0] {
     AutoShape(s) => {
       let xfrm = s.transform.unwrap()
-      assert_eq(xfrm.offset.x, Emu(100L))
+      debug_inspect(xfrm.offset.x, content="Emu(100)")
       match s.geometry.unwrap() {
-        Preset(kind, _) => assert_true(kind is Ellipse)
+        Preset(kind, _) => debug_inspect(kind is Ellipse, content="true")
         _ => fail("expected Preset")
       }
     }

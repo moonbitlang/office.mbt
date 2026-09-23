@@ -37,17 +37,26 @@ test "ThemeFontRef round-trips all six references" {
     MinorComplexScript,
   ]
   for r in all {
-    assert_true(@theme.ThemeFontRef::from_xml(r.to_xml()) == Some(r))
+    debug_inspect(
+      @theme.ThemeFontRef::from_xml(r.to_xml()) == Some(r),
+      content="true",
+    )
   }
-  assert_eq(@theme.ThemeFontRef::MinorEastAsian.to_xml(), "+mn-ea")
+  debug_inspect(
+    @theme.ThemeFontRef::MinorEastAsian.to_xml(),
+    content="\"+mn-ea\"",
+  )
 }
 
 ///|
 test "ThemeFontRef: a literal typeface is not a reference" {
-  assert_true(@theme.ThemeFontRef::from_xml("Calibri") is None)
-  assert_true(@theme.ThemeFontRef::from_xml("") is None)
+  debug_inspect(
+    @theme.ThemeFontRef::from_xml("Calibri") is None,
+    content="true",
+  )
+  debug_inspect(@theme.ThemeFontRef::from_xml("") is None, content="true")
   // Close but not one of the six.
-  assert_true(@theme.ThemeFontRef::from_xml("+mn-xx") is None)
+  debug_inspect(@theme.ThemeFontRef::from_xml("+mn-xx") is None, content="true")
 }
 
 ///|
@@ -62,35 +71,44 @@ test "FontScheme::resolve_typeface follows references and passes literals" {
     },
     { latin: "Calibri", ea: "Meiryo", cs: "Arial", scripts: [], extension: [], },
   )
-  assert_eq(scheme.resolve_typeface("+mj-lt"), "Calibri Light")
-  assert_eq(scheme.resolve_typeface("+mj-ea"), "Yu Gothic")
-  assert_eq(scheme.resolve_typeface("+mn-lt"), "Calibri")
-  assert_eq(scheme.resolve_typeface("+mn-ea"), "Meiryo")
-  assert_eq(scheme.resolve_typeface("+mn-cs"), "Arial")
+  debug_inspect(scheme.resolve_typeface("+mj-lt"), content="\"Calibri Light\"")
+  debug_inspect(scheme.resolve_typeface("+mj-ea"), content="\"Yu Gothic\"")
+  debug_inspect(scheme.resolve_typeface("+mn-lt"), content="\"Calibri\"")
+  debug_inspect(scheme.resolve_typeface("+mn-ea"), content="\"Meiryo\"")
+  debug_inspect(scheme.resolve_typeface("+mn-cs"), content="\"Arial\"")
   // Literals pass straight through.
-  assert_eq(scheme.resolve_typeface("Meiryo UI"), "Meiryo UI")
+  debug_inspect(scheme.resolve_typeface("Meiryo UI"), content="\"Meiryo UI\"")
 }
 
 ///|
 test "ScriptSlot::of_script splits east-asian from complex from latin" {
   for s in ["Jpan", "Hans", "Hant", "Hang", "Bopo"] {
-    assert_true(@theme.ScriptSlot::of_script(s) is EastAsianSlot)
+    debug_inspect(
+      @theme.ScriptSlot::of_script(s) is EastAsianSlot,
+      content="true",
+    )
   }
   for s in ["Arab", "Hebr", "Thai", "Deva", "Tibt"] {
-    assert_true(@theme.ScriptSlot::of_script(s) is ComplexScriptSlot)
+    debug_inspect(
+      @theme.ScriptSlot::of_script(s) is ComplexScriptSlot,
+      content="true",
+    )
   }
   // Alphabetic scripts and unknown tags both use the Latin slot.
   for s in ["Cyrl", "Grek", "Zzzz"] {
-    assert_true(@theme.ScriptSlot::of_script(s) is LatinSlot)
+    debug_inspect(@theme.ScriptSlot::of_script(s) is LatinSlot, content="true")
   }
 }
 
 ///|
 test "typeface_for_script: a script entry beats the slot" {
   let c = office_shaped_collection()
-  assert_eq(c.typeface_for_script("Jpan"), "ＭＳ Ｐゴシック")
-  assert_eq(c.typeface_for_script("Hans"), "宋体")
-  assert_eq(c.typeface_for_script("Arab"), "Times New Roman")
+  debug_inspect(
+    c.typeface_for_script("Jpan"),
+    content="\"ＭＳ Ｐゴシック\"",
+  )
+  debug_inspect(c.typeface_for_script("Hans"), content="\"宋体\"")
+  debug_inspect(c.typeface_for_script("Arab"), content="\"Times New Roman\"")
 }
 
 ///|
@@ -98,8 +116,8 @@ test "typeface_for_script: an empty slot falls back to latin, not to nothing" {
   // This is the Office default shape — `<a:ea typeface=""/>` — so a script
   // with no entry must not resolve to the empty string.
   let c = office_shaped_collection()
-  assert_eq(c.typeface_for_script("Hang"), "Calibri")
-  assert_eq(c.typeface_for_script("Cyrl"), "Calibri")
+  debug_inspect(c.typeface_for_script("Hang"), content="\"Calibri\"")
+  debug_inspect(c.typeface_for_script("Cyrl"), content="\"Calibri\"")
 }
 
 ///|
@@ -111,8 +129,8 @@ test "typeface_for_script: a populated slot serves scripts with no entry" {
     scripts: [],
     extension: [],
   }
-  assert_eq(c.typeface_for_script("Jpan"), "Meiryo")
-  assert_eq(c.typeface_for_script("Hang"), "Meiryo")
-  assert_eq(c.typeface_for_script("Arab"), "Arial")
-  assert_eq(c.typeface_for_script("Grek"), "Calibri")
+  debug_inspect(c.typeface_for_script("Jpan"), content="\"Meiryo\"")
+  debug_inspect(c.typeface_for_script("Hang"), content="\"Meiryo\"")
+  debug_inspect(c.typeface_for_script("Arab"), content="\"Arial\"")
+  debug_inspect(c.typeface_for_script("Grek"), content="\"Calibri\"")
 }

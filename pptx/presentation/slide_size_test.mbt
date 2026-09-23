@@ -4,30 +4,36 @@
 ///|
 test "SlideSizeKind: dimensions of common presets" {
   let (cx, cy) = @presentation.SlideSizeKind::ScreenFourByThree.dimensions()
-  assert_eq(cx, Emu(9_144_000L))
-  assert_eq(cy, Emu(6_858_000L))
+  debug_inspect(cx, content="Emu(9144000)")
+  debug_inspect(cy, content="Emu(6858000)")
   let (cx, cy) = @presentation.SlideSizeKind::Widescreen.dimensions()
-  assert_eq(cx, Emu(12_192_000L))
-  assert_eq(cy, Emu(6_858_000L))
+  debug_inspect(cx, content="Emu(12192000)")
+  debug_inspect(cy, content="Emu(6858000)")
   let (cx, cy) = @presentation.SlideSizeKind::A4.dimensions()
-  assert_eq(cx, Emu(10_692_000L))
-  assert_eq(cy, Emu(7_560_000L))
+  debug_inspect(cx, content="Emu(10692000)")
+  debug_inspect(cy, content="Emu(7560000)")
 }
 
 ///|
 test "SlideSizeKind: size_type strings match ST_SlideSizeType" {
-  assert_eq(
+  debug_inspect(
     @presentation.SlideSizeKind::ScreenFourByThree.size_type(),
-    "screen4x3",
+    content="\"screen4x3\"",
   )
-  assert_eq(
+  debug_inspect(
     @presentation.SlideSizeKind::ScreenSixteenByNine.size_type(),
-    "screen16x9",
+    content="\"screen16x9\"",
   )
   // Widescreen omits the `type` attribute entirely — see size_type's doc.
-  assert_eq(@presentation.SlideSizeKind::Widescreen.size_type(), "")
-  assert_eq(@presentation.SlideSizeKind::Letter.size_type(), "letter")
-  assert_eq(@presentation.SlideSizeKind::A4.size_type(), "A4")
+  debug_inspect(
+    @presentation.SlideSizeKind::Widescreen.size_type(),
+    content="\"\"",
+  )
+  debug_inspect(
+    @presentation.SlideSizeKind::Letter.size_type(),
+    content="\"letter\"",
+  )
+  debug_inspect(@presentation.SlideSizeKind::A4.size_type(), content="\"A4\"")
 }
 
 ///|
@@ -37,10 +43,10 @@ test "SlideSizeKind::Custom honours user-supplied EMU dimensions" {
     Emu(2_222_222L),
   )
   let (cx, cy) = kind.dimensions()
-  assert_eq(cx, Emu(11_111_111L))
-  assert_eq(cy, Emu(2_222_222L))
+  debug_inspect(cx, content="Emu(11111111)")
+  debug_inspect(cy, content="Emu(2222222)")
   // Custom dimensions omit the type attribute.
-  assert_eq(kind.size_type(), "")
+  debug_inspect(kind.size_type(), content="\"\"")
 }
 
 ///|
@@ -49,10 +55,10 @@ test "set_slide_size_mut: switches a fresh deck to 16:9 widescreen" {
   prs.set_slide_size_mut(Widescreen)
   let pres = prs.presentation_part().unwrap()
   let sz = pres.sld_sz.unwrap()
-  assert_eq(sz.cx, Emu(12_192_000L))
-  assert_eq(sz.cy, Emu(6_858_000L))
+  debug_inspect(sz.cx, content="Emu(12192000)")
+  debug_inspect(sz.cy, content="Emu(6858000)")
   // Widescreen → no `type` attribute (PowerPoint convention).
-  assert_eq(sz.size_type, "")
+  debug_inspect(sz.size_type, content="\"\"")
 }
 
 ///|
@@ -62,9 +68,9 @@ test "set_slide_size_mut: survives save → reopen" {
   let bytes = prs.save()
   let prs2 = @presentation.Presentation::open(bytes)
   let sz = prs2.presentation_part().unwrap().sld_sz.unwrap()
-  assert_eq(sz.cx, Emu(10_692_000L))
-  assert_eq(sz.cy, Emu(7_560_000L))
-  assert_eq(sz.size_type, "A4")
+  debug_inspect(sz.cx, content="Emu(10692000)")
+  debug_inspect(sz.cy, content="Emu(7560000)")
+  debug_inspect(sz.size_type, content="\"A4\"")
 }
 
 ///|
@@ -74,10 +80,10 @@ test "set_slide_size_mut: Custom EMU pair survives save → reopen" {
   let bytes = prs.save()
   let prs2 = @presentation.Presentation::open(bytes)
   let sz = prs2.presentation_part().unwrap().sld_sz.unwrap()
-  assert_eq(sz.cx, Emu(8_000_000L))
-  assert_eq(sz.cy, Emu(4_500_000L))
+  debug_inspect(sz.cx, content="Emu(8000000)")
+  debug_inspect(sz.cy, content="Emu(4500000)")
   // Custom dimensions omit the `type` attribute (PowerPoint convention).
-  assert_eq(sz.size_type, "")
+  debug_inspect(sz.size_type, content="\"\"")
 }
 
 ///|
@@ -90,8 +96,8 @@ test "SlideSizeKind::to_slide_size mirrors dimensions + size_type" {
     ] {
     let size = kind.to_slide_size()
     let (cx, cy) = kind.dimensions()
-    assert_eq(size.cx, cx)
-    assert_eq(size.cy, cy)
-    assert_eq(size.size_type, kind.size_type())
+    debug_inspect(size.cx == cx, content="true")
+    debug_inspect(size.cy == cy, content="true")
+    debug_inspect(size.size_type == kind.size_type(), content="true")
   }
 }

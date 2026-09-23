@@ -37,16 +37,17 @@ test "parse: bound connector with both stCxn and endCxn" {
   let slide = @slide.Slide::parse(slide_with_cxn(inner))
   match slide.shapes[0] {
     Connector(c) => {
-      assert_eq(c.id, 6)
-      assert_eq(c.name, "Straight Connector 5")
+      debug_inspect(c.id, content="6")
+      debug_inspect(c.name, content="\"Straight Connector 5\"")
       let st = c.start.unwrap()
-      assert_eq(st.shape_id, 2)
-      assert_eq(st.idx, 3)
+      debug_inspect(st.shape_id, content="2")
+      debug_inspect(st.idx, content="3")
       let en = c.end.unwrap()
-      assert_eq(en.shape_id, 3)
-      assert_eq(en.idx, 1)
+      debug_inspect(en.shape_id, content="3")
+      debug_inspect(en.idx, content="1")
       match c.geometry.unwrap() {
-        Preset(kind, _) => assert_true(kind is StraightConnector1)
+        Preset(kind, _) =>
+          debug_inspect(kind is StraightConnector1, content="true")
         _ => fail("expected Preset")
       }
     }
@@ -65,9 +66,9 @@ test "parse: free-floating connector (no stCxn / endCxn)" {
   let slide = @slide.Slide::parse(slide_with_cxn(inner))
   match slide.shapes[0] {
     Connector(c) => {
-      assert_true(c.start is None)
-      assert_true(c.end is None)
-      assert_eq(c.id, 7)
+      debug_inspect(c.start is None, content="true")
+      debug_inspect(c.end is None, content="true")
+      debug_inspect(c.id, content="7")
     }
     _ => fail("expected Connector")
   }
@@ -84,8 +85,8 @@ test "parse: connector with only stCxn" {
   let slide = @slide.Slide::parse(slide_with_cxn(inner))
   match slide.shapes[0] {
     Connector(c) => {
-      assert_true(!(c.start is None))
-      assert_true(c.end is None)
+      debug_inspect(!(c.start is None), content="true")
+      debug_inspect(c.end is None, content="true")
     }
     _ => fail("expected Connector")
   }

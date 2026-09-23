@@ -14,57 +14,63 @@ fn bytes_of(values : Array[Int]) -> FixedArray[Byte] {
 ///|
 test "detect_image_format: PNG signature" {
   let b = bytes_of([0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A])
-  assert_true(@oxml.detect_image_format(b) is Some(Png))
+  debug_inspect(@oxml.detect_image_format(b) is Some(Png), content="true")
 }
 
 ///|
 test "detect_image_format: JPEG signature" {
   let b = bytes_of([0xFF, 0xD8, 0xFF, 0xE0])
-  assert_true(@oxml.detect_image_format(b) is Some(Jpeg))
+  debug_inspect(@oxml.detect_image_format(b) is Some(Jpeg), content="true")
 }
 
 ///|
 test "detect_image_format: GIF signature" {
   let b = bytes_of([0x47, 0x49, 0x46, 0x38, 0x39, 0x61])
-  assert_true(@oxml.detect_image_format(b) is Some(Gif))
+  debug_inspect(@oxml.detect_image_format(b) is Some(Gif), content="true")
 }
 
 ///|
 test "detect_image_format: BMP signature" {
   let b = bytes_of([0x42, 0x4D, 0x00, 0x00])
-  assert_true(@oxml.detect_image_format(b) is Some(Bmp))
+  debug_inspect(@oxml.detect_image_format(b) is Some(Bmp), content="true")
 }
 
 ///|
 test "detect_image_format: TIFF little-endian signature" {
   let b = bytes_of([0x49, 0x49, 0x2A, 0x00])
-  assert_true(@oxml.detect_image_format(b) is Some(Tiff))
+  debug_inspect(@oxml.detect_image_format(b) is Some(Tiff), content="true")
 }
 
 ///|
 test "detect_image_format: TIFF big-endian signature" {
   let b = bytes_of([0x4D, 0x4D, 0x00, 0x2A])
-  assert_true(@oxml.detect_image_format(b) is Some(Tiff))
+  debug_inspect(@oxml.detect_image_format(b) is Some(Tiff), content="true")
 }
 
 ///|
 test "detect_image_format: unknown bytes return None" {
   let b = bytes_of([0x00, 0x01, 0x02, 0x03])
-  assert_true(@oxml.detect_image_format(b) is None)
+  debug_inspect(@oxml.detect_image_format(b) is None, content="true")
 }
 
 ///|
 test "ImageFormat content_type + extension" {
-  assert_eq(@oxml.ImageFormat::Png.content_type(), "image/png")
-  assert_eq(@oxml.ImageFormat::Jpeg.content_type(), "image/jpeg")
-  assert_eq(@oxml.ImageFormat::Gif.content_type(), "image/gif")
-  assert_eq(@oxml.ImageFormat::Bmp.content_type(), "image/bmp")
-  assert_eq(@oxml.ImageFormat::Tiff.content_type(), "image/tiff")
-  assert_eq(@oxml.ImageFormat::Png.extension(), "png")
-  assert_eq(@oxml.ImageFormat::Jpeg.extension(), "jpeg")
-  assert_eq(@oxml.ImageFormat::Gif.extension(), "gif")
-  assert_eq(@oxml.ImageFormat::Bmp.extension(), "bmp")
-  assert_eq(@oxml.ImageFormat::Tiff.extension(), "tiff")
+  debug_inspect(@oxml.ImageFormat::Png.content_type(), content="\"image/png\"")
+  debug_inspect(
+    @oxml.ImageFormat::Jpeg.content_type(),
+    content="\"image/jpeg\"",
+  )
+  debug_inspect(@oxml.ImageFormat::Gif.content_type(), content="\"image/gif\"")
+  debug_inspect(@oxml.ImageFormat::Bmp.content_type(), content="\"image/bmp\"")
+  debug_inspect(
+    @oxml.ImageFormat::Tiff.content_type(),
+    content="\"image/tiff\"",
+  )
+  debug_inspect(@oxml.ImageFormat::Png.extension(), content="\"png\"")
+  debug_inspect(@oxml.ImageFormat::Jpeg.extension(), content="\"jpeg\"")
+  debug_inspect(@oxml.ImageFormat::Gif.extension(), content="\"gif\"")
+  debug_inspect(@oxml.ImageFormat::Bmp.extension(), content="\"bmp\"")
+  debug_inspect(@oxml.ImageFormat::Tiff.extension(), content="\"tiff\"")
 }
 
 // --- PNG dimension tests ---
@@ -88,11 +94,11 @@ fn png_2x3_no_phys() -> FixedArray[Byte] {
 ///|
 test "detect_image_dimensions: PNG 2×3, no pHYs → 96 dpi" {
   let d = @oxml.detect_image_dimensions(png_2x3_no_phys()).unwrap()
-  assert_true(d.format is Png)
-  assert_eq(d.width_px, 2)
-  assert_eq(d.height_px, 3)
-  assert_eq(d.dpi_x, 96.0)
-  assert_eq(d.dpi_y, 96.0)
+  debug_inspect(d.format is Png, content="true")
+  debug_inspect(d.width_px, content="2")
+  debug_inspect(d.height_px, content="3")
+  debug_inspect(d.dpi_x, content="96")
+  debug_inspect(d.dpi_y, content="96")
 }
 
 ///|
@@ -120,11 +126,11 @@ fn png_10x20_phys_300dpi() -> FixedArray[Byte] {
 ///|
 test "detect_image_dimensions: PNG with pHYs lifts DPI" {
   let d = @oxml.detect_image_dimensions(png_10x20_phys_300dpi()).unwrap()
-  assert_eq(d.width_px, 10)
-  assert_eq(d.height_px, 20)
+  debug_inspect(d.width_px, content="10")
+  debug_inspect(d.height_px, content="20")
   // 11811 ppm × 0.0254 = 299.9994 — within rounding tolerance of 300.
-  assert_true(d.dpi_x > 299.9 && d.dpi_x < 300.1)
-  assert_true(d.dpi_y > 299.9 && d.dpi_y < 300.1)
+  debug_inspect(d.dpi_x > 299.9 && d.dpi_x < 300.1, content="true")
+  debug_inspect(d.dpi_y > 299.9 && d.dpi_y < 300.1, content="true")
 }
 
 // --- JPEG dimension tests ---
@@ -147,11 +153,11 @@ fn jpeg_4x7_jfif_96dpi() -> FixedArray[Byte] {
 ///|
 test "detect_image_dimensions: JPEG 4×7 @ 96dpi via SOF0+APP0" {
   let d = @oxml.detect_image_dimensions(jpeg_4x7_jfif_96dpi()).unwrap()
-  assert_true(d.format is Jpeg)
-  assert_eq(d.width_px, 4)
-  assert_eq(d.height_px, 7)
-  assert_eq(d.dpi_x, 96.0)
-  assert_eq(d.dpi_y, 96.0)
+  debug_inspect(d.format is Jpeg, content="true")
+  debug_inspect(d.width_px, content="4")
+  debug_inspect(d.height_px, content="7")
+  debug_inspect(d.dpi_x, content="96")
+  debug_inspect(d.dpi_y, content="96")
 }
 
 // --- GIF dimension tests ---
@@ -165,12 +171,12 @@ test "detect_image_dimensions: GIF 5×9" {
      0x00, 0x00,
   ])
   let d = @oxml.detect_image_dimensions(b).unwrap()
-  assert_true(d.format is Gif)
-  assert_eq(d.width_px, 5)
-  assert_eq(d.height_px, 9)
+  debug_inspect(d.format is Gif, content="true")
+  debug_inspect(d.width_px, content="5")
+  debug_inspect(d.height_px, content="9")
   // GIF has no DPI; defaults stick.
-  assert_eq(d.dpi_x, 96.0)
-  assert_eq(d.dpi_y, 96.0)
+  debug_inspect(d.dpi_x, content="96")
+  debug_inspect(d.dpi_y, content="96")
 }
 
 // --- BMP dimension tests ---
@@ -196,11 +202,11 @@ test "detect_image_dimensions: BMP 6×4 with BITMAPINFOHEADER" {
      0x00, 0x00, 0x00, 0x00, // important colors
   ])
   let d = @oxml.detect_image_dimensions(b).unwrap()
-  assert_true(d.format is Bmp)
-  assert_eq(d.width_px, 6)
-  assert_eq(d.height_px, 4)
+  debug_inspect(d.format is Bmp, content="true")
+  debug_inspect(d.width_px, content="6")
+  debug_inspect(d.height_px, content="4")
   // 2835 ppm × 0.0254 ≈ 72.009
-  assert_true(d.dpi_x > 71.9 && d.dpi_x < 72.1)
+  debug_inspect(d.dpi_x > 71.9 && d.dpi_x < 72.1, content="true")
 }
 
 // --- TIFF dimension tests ---
@@ -222,12 +228,12 @@ test "detect_image_dimensions: TIFF little-endian 8×9 (no DPI)" {
     0x00, 0x00, 0x00, // next IFD = 0
   ])
   let d = @oxml.detect_image_dimensions(b).unwrap()
-  assert_true(d.format is Tiff)
-  assert_eq(d.width_px, 8)
-  assert_eq(d.height_px, 9)
+  debug_inspect(d.format is Tiff, content="true")
+  debug_inspect(d.width_px, content="8")
+  debug_inspect(d.height_px, content="9")
   // resolution unit = no unit → defaults preserved
-  assert_eq(d.dpi_x, 96.0)
-  assert_eq(d.dpi_y, 96.0)
+  debug_inspect(d.dpi_x, content="96")
+  debug_inspect(d.dpi_y, content="96")
 }
 
 // --- to_emu ---
@@ -243,8 +249,8 @@ test "ImageDimensions::to_emu @ 96 dpi" {
   }
   let (cx, cy) = d.to_emu()
   // 96 px @ 96 dpi = 1 inch = 914_400 EMU.
-  assert_eq(cx, 914_400L)
-  assert_eq(cy, 1_828_800L)
+  debug_inspect(cx, content="914400")
+  debug_inspect(cy, content="1828800")
 }
 
 ///|
@@ -258,12 +264,12 @@ test "ImageDimensions::to_emu @ 300 dpi shrinks output" {
   }
   let (cx, cy) = d.to_emu()
   // 300 px @ 300 dpi = 1 inch = 914_400 EMU.
-  assert_eq(cx, 914_400L)
-  assert_eq(cy, 1_828_800L)
+  debug_inspect(cx, content="914400")
+  debug_inspect(cy, content="1828800")
 }
 
 ///|
 test "detect_image_dimensions: too-short bytes return None" {
   let b = bytes_of([0x89, 0x50])
-  assert_true(@oxml.detect_image_dimensions(b) is None)
+  debug_inspect(@oxml.detect_image_dimensions(b) is None, content="true")
 }

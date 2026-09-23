@@ -7,7 +7,7 @@ test "update_slide_mut: adding a shape survives save → reopen" {
   let _ = prs.add_slide_mut(0)
   // Get the new (empty) slide.
   let slide = prs.slides()[0]
-  assert_eq(slide.shapes.length(), 0)
+  debug_inspect(slide.shapes.length(), content="0")
   // Append a rectangle.
   let rect = @slide.AutoShape::rect(
     id=2,
@@ -21,19 +21,19 @@ test "update_slide_mut: adding a shape survives save → reopen" {
   prs.update_slide_mut(0, modified)
   // After write-back, the in-memory accessor sees the modified slide.
   let slide_after = prs.slides()[0]
-  assert_eq(slide_after.shapes.length(), 1)
+  debug_inspect(slide_after.shapes.length(), content="1")
   // Round-trip through save → reopen.
   let bytes = prs.save()
   let reopened = @presentation.Presentation::open(bytes)
   let s = reopened.slides()[0]
-  assert_eq(s.shapes.length(), 1)
+  debug_inspect(s.shapes.length(), content="1")
   match s.shapes[0] {
     AutoShape(a) => {
-      assert_eq(a.id, 2)
-      assert_eq(a.name, "MyRect")
+      debug_inspect(a.id, content="2")
+      debug_inspect(a.name, content="\"MyRect\"")
       let xfrm = a.transform.unwrap()
-      assert_eq(xfrm.offset.x, Emu(100L))
-      assert_eq(xfrm.extent.cy, Emu(400L))
+      debug_inspect(xfrm.offset.x, content="Emu(100)")
+      debug_inspect(xfrm.extent.cy, content="Emu(400)")
     }
     _ => fail("expected AutoShape")
   }
@@ -60,7 +60,7 @@ test "update_slide_mut: textbox round-trips with its text content" {
   match s.shapes[0] {
     AutoShape(a) => {
       let body = a.text_body.unwrap()
-      assert_eq(body.plain_text(), "Hello, MoonBit!")
+      debug_inspect(body.plain_text(), content="\"Hello, MoonBit!\"")
     }
     _ => fail("expected AutoShape with textbox")
   }
@@ -71,7 +71,7 @@ test "update_slide_mut: out-of-range index raises Malformed" {
   let prs = @presentation.Presentation::new()
   // No slides added — index 0 is out of range.
   let blank = @presentation.Presentation::new().slides()
-  assert_eq(blank.length(), 0)
+  debug_inspect(blank.length(), content="0")
   let dummy_xml = "<?xml version=\"1.0\"?><p:sld xmlns:p=\"" +
     "http://schemas.openxmlformats.org/presentationml/2006/main" +
     "\"><p:cSld><p:spTree>" +
@@ -118,11 +118,15 @@ test "Presentation::new + add_slide_mut + update_slide_mut: end-to-end builder" 
   let bytes = prs.save()
   let reopened = @presentation.Presentation::open(bytes)
   let slides = reopened.slides()
-  assert_eq(slides.length(), 2)
-  assert_eq(slides[0].shapes.length(), 1)
-  assert_eq(slides[1].shapes.length(), 1)
+  debug_inspect(slides.length(), content="2")
+  debug_inspect(slides[0].shapes.length(), content="1")
+  debug_inspect(slides[1].shapes.length(), content="1")
   match slides[1].shapes[0] {
-    AutoShape(a) => assert_eq(a.text_body.unwrap().plain_text(), "Slide 2 text")
+    AutoShape(a) =>
+      debug_inspect(
+        a.text_body.unwrap().plain_text(),
+        content="\"Slide 2 text\"",
+      )
     _ => fail("expected AutoShape textbox on slide 1")
   }
 }
@@ -157,7 +161,7 @@ test "update_shape_by_id_mut: renames the targeted shape, survives reopen" {
   })
   let reopened = @presentation.Presentation::open(prs.save())
   match reopened.slides()[0].shapes[0] {
-    AutoShape(a) => assert_eq(a.name, "Renamed")
+    AutoShape(a) => debug_inspect(a.name, content="\"Renamed\"")
     _ => fail("expected AutoShape")
   }
 }
@@ -182,10 +186,10 @@ test "map_slide_shapes_mut: applies to every shape on the slide" {
     }
   })
   let slide = prs.slides()[0]
-  assert_eq(slide.shapes.length(), 2)
+  debug_inspect(slide.shapes.length(), content="2")
   for sh in slide.shapes {
     match sh {
-      AutoShape(a) => assert_eq(a.name, "All")
+      AutoShape(a) => debug_inspect(a.name, content="\"All\"")
       _ => fail("expected AutoShape")
     }
   }

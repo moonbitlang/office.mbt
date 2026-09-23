@@ -33,7 +33,7 @@ fn parse_inner_fill(inner : String) -> @oxml.Fill raise @oxml.FillError {
 ///|
 test "Fill: noFill" {
   let f = parse_inner_fill("<a:noFill/>")
-  assert_true(f is NoFill)
+  debug_inspect(f is NoFill, content="true")
 }
 
 ///|
@@ -44,7 +44,7 @@ test "Fill: solidFill with srgbClr" {
   match f {
     SolidFill(c) =>
       match c.base {
-        Srgb(rgb) => assert_eq(rgb.to_hex(), "FF0000")
+        Srgb(rgb) => debug_inspect(rgb.to_hex(), content="\"FF0000\"")
         _ => fail("expected Srgb")
       }
     _ => fail("expected SolidFill")
@@ -75,18 +75,18 @@ test "Fill: linear gradient with two stops" {
   let f = parse_inner_fill(inner)
   match f {
     GradientFill(g) => {
-      assert_eq(g.stops.length(), 2)
-      assert_eq(g.stops[0].position, Percentage(0.0))
-      assert_eq(g.stops[1].position, Percentage(100.0))
+      debug_inspect(g.stops.length(), content="2")
+      debug_inspect(g.stops[0].position, content="Percentage(0)")
+      debug_inspect(g.stops[1].position, content="Percentage(100)")
       match g.direction {
         Linear(ang, scaled) => {
-          assert_eq(ang, Angle(90.0))
-          assert_true(scaled)
+          debug_inspect(ang, content="Angle(90)")
+          debug_inspect(scaled, content="true")
         }
         _ => fail("expected Linear direction")
       }
-      assert_eq(g.rotate_with_shape.unwrap(), true)
-      assert_true(g.flip.unwrap() is FlipNone)
+      debug_inspect(g.rotate_with_shape.unwrap(), content="true")
+      debug_inspect(g.flip.unwrap() is FlipNone, content="true")
     }
     _ => fail("expected GradientFill")
   }
@@ -100,7 +100,7 @@ test "Fill: path gradient" {
     "</a:gradFill>"
   let f = parse_inner_fill(inner)
   match f {
-    GradientFill(g) => assert_true(g.direction is PathCircle)
+    GradientFill(g) => debug_inspect(g.direction is PathCircle, content="true")
     _ => fail("expected GradientFill")
   }
 }
@@ -128,13 +128,13 @@ test "Fill: pattFill with fgClr and bgClr" {
   let f = parse_inner_fill(inner)
   match f {
     PatternFill(p) => {
-      assert_eq(p.preset, "dkUpDiag")
+      debug_inspect(p.preset, content="\"dkUpDiag\"")
       match p.fg.base {
-        Srgb(rgb) => assert_eq(rgb.to_hex(), "000000")
+        Srgb(rgb) => debug_inspect(rgb.to_hex(), content="\"000000\"")
         _ => fail("expected Srgb fg")
       }
       match p.bg.base {
-        Srgb(rgb) => assert_eq(rgb.to_hex(), "FFFFFF")
+        Srgb(rgb) => debug_inspect(rgb.to_hex(), content="\"FFFFFF\"")
         _ => fail("expected Srgb bg")
       }
     }
@@ -166,12 +166,12 @@ test "Fill: blipFill with stretch + fillRect" {
   let f = parse_inner_fill(inner)
   match f {
     BlipFillVariant(b) => {
-      assert_eq(b.embed_id, "rId7")
-      assert_eq(b.link_id, "")
+      debug_inspect(b.embed_id, content="\"rId7\"")
+      debug_inspect(b.link_id, content="\"\"")
       match b.fill_mode {
         Stretch(rect) => {
           let r = rect.unwrap()
-          assert_eq(r.left, Percentage(0.0))
+          debug_inspect(r.left, content="Percentage(0)")
         }
         _ => fail("expected Stretch")
       }
@@ -191,15 +191,15 @@ test "Fill: blipFill with srcRect crop and tile mode" {
   match f {
     BlipFillVariant(b) => {
       let sr = b.src_rect.unwrap()
-      assert_eq(sr.left, Percentage(10.0))
-      assert_eq(sr.top, Percentage(20.0))
+      debug_inspect(sr.left, content="Percentage(10)")
+      debug_inspect(sr.top, content="Percentage(20)")
       match b.fill_mode {
         Tile(t) => {
-          assert_eq(t.tx.unwrap(), Emu(100L))
-          assert_eq(t.ty.unwrap(), Emu(200L))
-          assert_eq(t.sx.unwrap(), Percentage(50.0))
-          assert_true(t.flip.unwrap() is FlipXy)
-          assert_true(t.alignment.unwrap() is AlignCenter)
+          debug_inspect(t.tx.unwrap(), content="Emu(100)")
+          debug_inspect(t.ty.unwrap(), content="Emu(200)")
+          debug_inspect(t.sx.unwrap(), content="Percentage(50)")
+          debug_inspect(t.flip.unwrap() is FlipXy, content="true")
+          debug_inspect(t.alignment.unwrap() is AlignCenter, content="true")
         }
         _ => fail("expected Tile")
       }
@@ -214,8 +214,8 @@ test "Fill: blipFill with linked rId only" {
   let f = parse_inner_fill(inner)
   match f {
     BlipFillVariant(b) => {
-      assert_eq(b.embed_id, "")
-      assert_eq(b.link_id, "rId9")
+      debug_inspect(b.embed_id, content="\"\"")
+      debug_inspect(b.link_id, content="\"rId9\"")
     }
     _ => fail("expected BlipFill")
   }

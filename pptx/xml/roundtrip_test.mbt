@@ -109,7 +109,7 @@ test "round trip: simple element" {
   let e1 = drain_again(original)
   let s2 = replay(e1)
   let e2 = drain_again(s2)
-  assert_true(events_equal(e1, e2))
+  debug_inspect(events_equal(e1, e2), content="true")
 }
 
 ///|
@@ -118,7 +118,7 @@ test "round trip: nested with text and entities" {
   let e1 = drain_again(original)
   let s2 = replay(e1)
   let e2 = drain_again(s2)
-  assert_true(events_equal(e1, e2))
+  debug_inspect(events_equal(e1, e2), content="true")
 }
 
 ///|
@@ -135,7 +135,7 @@ test "round trip: namespaced ooxml-like document" {
   let e1 = drain_again(original)
   let s2 = replay(e1)
   let e2 = drain_again(s2)
-  assert_true(events_equal(e1, e2))
+  debug_inspect(events_equal(e1, e2), content="true")
 }
 
 ///|
@@ -145,7 +145,7 @@ test "round trip: namespaced attribute" {
   let e1 = drain_again(original)
   let s2 = replay(e1)
   let e2 = drain_again(s2)
-  assert_true(events_equal(e1, e2))
+  debug_inspect(events_equal(e1, e2), content="true")
 }
 
 ///|
@@ -154,7 +154,7 @@ test "round trip: CDATA payload preserved" {
   let e1 = drain_again(original)
   let s2 = replay(e1)
   let e2 = drain_again(s2)
-  assert_true(events_equal(e1, e2))
+  debug_inspect(events_equal(e1, e2), content="true")
 }
 
 ///|
@@ -170,7 +170,7 @@ test "round trip: deep nesting" {
   let e1 = drain_again(original)
   let s2 = replay(e1)
   let e2 = drain_again(s2)
-  assert_true(events_equal(e1, e2))
+  debug_inspect(events_equal(e1, e2), content="true")
 }
 
 ///|
@@ -179,5 +179,5 @@ test "round trip: many attributes preserved in order" {
   let e1 = drain_again(original)
   let s2 = replay(e1)
   let e2 = drain_again(s2)
-  assert_true(events_equal(e1, e2))
+  debug_inspect(events_equal(e1, e2), content="true")
 }

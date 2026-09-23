@@ -65,14 +65,14 @@ fn typical_notes() -> FixedArray[Byte] {
 ///|
 test "parse: notes name and shape count" {
   let notes = @notes.NotesSlide::parse(typical_notes())
-  assert_eq(notes.name, "Slide 1 Notes")
-  assert_eq(notes.shapes.length(), 2) // sldImg + body placeholders
+  debug_inspect(notes.name, content="\"Slide 1 Notes\"")
+  debug_inspect(notes.shapes.length(), content="2") // sldImg + body placeholders
 }
 
 ///|
 test "parse: clrMapOvr defaults to MasterMapping" {
   let notes = @notes.NotesSlide::parse(typical_notes())
-  assert_true(notes.clr_map_override is MasterMapping)
+  debug_inspect(notes.clr_map_override is MasterMapping, content="true")
 }
 
 ///|
@@ -80,11 +80,11 @@ test "parse: slide-image placeholder metadata" {
   let notes = @notes.NotesSlide::parse(typical_notes())
   match notes.shapes[0] {
     AutoShape(s) => {
-      assert_eq(s.id, 2)
-      assert_eq(s.name, "Slide Image Placeholder 1")
+      debug_inspect(s.id, content="2")
+      debug_inspect(s.name, content="\"Slide Image Placeholder 1\"")
       let ph = s.placeholder.unwrap()
-      assert_eq(ph.ph_type, "sldImg")
-      assert_eq(ph.idx, 0) // missing idx defaults to 0
+      debug_inspect(ph.ph_type, content="\"sldImg\"")
+      debug_inspect(ph.idx, content="0") // missing idx defaults to 0
     }
     _ => panic()
   }
@@ -96,10 +96,10 @@ test "parse: body placeholder carries the notes paragraph text" {
   match notes.shapes[1] {
     AutoShape(s) => {
       let ph = s.placeholder.unwrap()
-      assert_eq(ph.ph_type, "body")
-      assert_eq(ph.idx, 1)
+      debug_inspect(ph.ph_type, content="\"body\"")
+      debug_inspect(ph.idx, content="1")
       let body = s.text_body.unwrap()
-      assert_eq(body.plain_text(), "Speaker notes here.")
+      debug_inspect(body.plain_text(), content="\"Speaker notes here.\"")
     }
     _ => panic()
   }
@@ -115,9 +115,9 @@ test "parse: <p:custDataLst> rides on the slide-level extension" {
   // sibling of `<p:cSld>` / `<p:clrMapOvr>` — three elements in source
   // order.  Cross-section ordering inside `extension` is not part of the
   // contract; the lookup uses local-name membership instead.
-  assert_eq(notes.extension.length(), 3)
+  debug_inspect(notes.extension.length(), content="3")
   let names = notes.extension.map(e => e.name.local_name)
-  assert_true(names.contains("custDataLst"))
+  debug_inspect(names.contains("custDataLst"), content="true")
 }
 
 ///|
@@ -135,11 +135,11 @@ test "parse: <p:extLst> alongside <p:clrMapOvr> is preserved" {
     "<p:extLst><p:ext uri=\"{ABCD}\"/></p:extLst>" +
     "</p:notes>"
   let notes = @notes.NotesSlide::parse(@oxml.string_to_bytes(xml))
-  assert_eq(notes.shapes.length(), 0)
+  debug_inspect(notes.shapes.length(), content="0")
   // 3 = nvGrpSpPr + grpSpPr (root-group metadata) + extLst sibling.
-  assert_eq(notes.extension.length(), 3)
+  debug_inspect(notes.extension.length(), content="3")
   let names = notes.extension.map(e => e.name.local_name)
-  assert_true(names.contains("extLst"))
+  debug_inspect(names.contains("extLst"), content="true")
 }
 
 // --- error paths ---

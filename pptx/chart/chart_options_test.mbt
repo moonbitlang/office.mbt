@@ -13,14 +13,14 @@ fn opt_data() -> @chart.ChartData {
 ///|
 test "ChartOption Title: sets a rich-text title and serialises the text" {
   let chart = @chart.Chart::of_bar(opt_data()).with_options([Title("Revenue")])
-  assert_true(chart.chart.title is Some(_))
-  assert_true(chart.chart.auto_title_deleted is None)
+  debug_inspect(chart.chart.title is Some(_), content="true")
+  debug_inspect(chart.chart.auto_title_deleted is None, content="true")
   // The text reaches the serialised XML inside <c:title>.
   let xml = @oxml.bytes_to_string(chart.serialize())
-  assert_true(xml.contains("<c:title>"))
-  assert_true(xml.contains("Revenue"))
+  debug_inspect(xml.contains("<c:title>"), content="true")
+  debug_inspect(xml.contains("Revenue"), content="true")
   // And the whole thing round-trips structurally.
-  assert_eq(@chart.Chart::parse(chart.serialize()), chart)
+  debug_inspect(@chart.Chart::parse(chart.serialize()) == chart, content="true")
 }
 
 ///|
@@ -29,8 +29,8 @@ test "ChartOption TitleDeleted: clears title + sets autoTitleDeleted" {
     Title("X"),
     TitleDeleted,
   ])
-  assert_true(chart.chart.title is None)
-  assert_true(chart.chart.auto_title_deleted == Some(true))
+  debug_inspect(chart.chart.title is None, content="true")
+  debug_inspect(chart.chart.auto_title_deleted, content="Some(true)")
 }
 
 // --- legend ---
@@ -41,10 +41,10 @@ test "ChartOption Legend: sets the legend position" {
     Legend(LegendBottom),
   ])
   match chart.chart.legend {
-    Some(lg) => assert_true(lg.legend_pos == Some(LegendBottom))
+    Some(lg) => debug_inspect(lg.legend_pos, content="Some(LegendBottom)")
     None => fail("expected a legend")
   }
-  assert_eq(@chart.Chart::parse(chart.serialize()), chart)
+  debug_inspect(@chart.Chart::parse(chart.serialize()) == chart, content="true")
 }
 
 ///|
@@ -54,11 +54,11 @@ test "ChartOption Legend: later option wins; LegendHidden clears" {
     Legend(LegendTop),
   ])
   match chart.chart.legend {
-    Some(lg) => assert_true(lg.legend_pos == Some(LegendTop))
+    Some(lg) => debug_inspect(lg.legend_pos, content="Some(LegendTop)")
     None => fail("expected a legend")
   }
   let hidden = chart.with_options([LegendHidden])
-  assert_true(hidden.chart.legend is None)
+  debug_inspect(hidden.chart.legend is None, content="true")
 }
 
 // --- data labels ---
@@ -72,14 +72,14 @@ test "ChartOption DataLabels: sets value labels on the bar plot" {
     BarChart(b) =>
       match b.d_lbls {
         Some(d) => {
-          assert_true(d.d_lbl_pos == Some(DLblOutEnd))
-          assert_true(d.show_val == Some(true))
+          debug_inspect(d.d_lbl_pos, content="Some(DLblOutEnd)")
+          debug_inspect(d.show_val, content="Some(true)")
         }
         None => fail("expected d_lbls")
       }
     _ => fail("expected BarChart")
   }
-  assert_eq(@chart.Chart::parse(chart.serialize()), chart)
+  debug_inspect(@chart.Chart::parse(chart.serialize()) == chart, content="true")
 }
 
 ///|
@@ -88,7 +88,7 @@ test "ChartOption DataLabels: applies to a pie plot too" {
     DataLabels(DLblCenter),
   ])
   match chart.chart.plot_area.plots[0] {
-    PieChart(b) => assert_true(b.d_lbls is Some(_))
+    PieChart(b) => debug_inspect(b.d_lbls is Some(_), content="true")
     _ => fail("expected PieChart")
   }
 }
@@ -100,7 +100,7 @@ test "ChartOption DataLabelsHidden: clears data labels" {
     DataLabelsHidden,
   ])
   match chart.chart.plot_area.plots[0] {
-    BarChart(b) => assert_true(b.d_lbls is None)
+    BarChart(b) => debug_inspect(b.d_lbls is None, content="true")
     _ => fail("expected BarChart")
   }
 }
@@ -110,7 +110,7 @@ test "ChartOption DataLabels: surface charts are left untouched (no-op)" {
   let base = @chart.Chart::of_surface(opt_data())
   let labelled = base.with_options([DataLabels(DLblOutEnd)])
   // Surface has no <c:dLbls>; the option must not change anything.
-  assert_eq(labelled, base)
+  debug_inspect(labelled == base, content="true")
 }
 
 // --- data table ---
@@ -118,10 +118,10 @@ test "ChartOption DataLabels: surface charts are left untouched (no-op)" {
 ///|
 test "ChartOption DataTable: toggles the plot-area data table" {
   let on = @chart.Chart::of_bar(opt_data()).with_options([DataTable(true)])
-  assert_true(on.chart.plot_area.data_table is Some(_))
+  debug_inspect(on.chart.plot_area.data_table is Some(_), content="true")
   let off = on.with_options([DataTable(false)])
-  assert_true(off.chart.plot_area.data_table is None)
-  assert_eq(@chart.Chart::parse(on.serialize()), on)
+  debug_inspect(off.chart.plot_area.data_table is None, content="true")
+  debug_inspect(@chart.Chart::parse(on.serialize()) == on, content="true")
 }
 
 // --- scalar chartSpace / chart toggles ---
@@ -134,11 +134,11 @@ test "ChartOption scalar toggles set their fields" {
     PlotVisibleOnly(true),
     DisplayBlanks(Gap),
   ])
-  assert_true(chart.style == Some(7))
-  assert_true(chart.rounded_corners == Some(false))
-  assert_true(chart.chart.plot_vis_only == Some(true))
-  assert_true(chart.chart.disp_blanks_as == Some(Gap))
-  assert_eq(@chart.Chart::parse(chart.serialize()), chart)
+  debug_inspect(chart.style, content="Some(7)")
+  debug_inspect(chart.rounded_corners, content="Some(false)")
+  debug_inspect(chart.chart.plot_vis_only, content="Some(true)")
+  debug_inspect(chart.chart.disp_blanks_as, content="Some(Gap)")
+  debug_inspect(@chart.Chart::parse(chart.serialize()) == chart, content="true")
 }
 
 // --- composition + immutability ---
@@ -155,21 +155,21 @@ test "with_options: applies many options and round-trips" {
     PlotVisibleOnly(true),
     DisplayBlanks(Zero),
   ])
-  assert_true(chart.chart.title is Some(_))
-  assert_true(chart.chart.legend is Some(_))
-  assert_eq(@chart.Chart::parse(chart.serialize()), chart)
+  debug_inspect(chart.chart.title is Some(_), content="true")
+  debug_inspect(chart.chart.legend is Some(_), content="true")
+  debug_inspect(@chart.Chart::parse(chart.serialize()) == chart, content="true")
 }
 
 ///|
 test "with_options: does not mutate the original chart" {
   let base = @chart.Chart::of_bar(opt_data())
   let _ = base.with_options([Title("X"), Legend(LegendTop)])
-  assert_true(base.chart.title is None)
-  assert_true(base.chart.legend is None)
+  debug_inspect(base.chart.title is None, content="true")
+  debug_inspect(base.chart.legend is None, content="true")
 }
 
 ///|
 test "with_options: empty list is the identity" {
   let base = @chart.Chart::of_bar(opt_data())
-  assert_eq(base.with_options([]), base)
+  debug_inspect(base.with_options([]) == base, content="true")
 }

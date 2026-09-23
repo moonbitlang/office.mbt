@@ -18,39 +18,39 @@ fn collect_first(xml : String) -> @xml.XmlElement raise @oxml.XmlReadError {
 ///|
 test "collect_subtree captures a single empty element" {
   let e = collect_first("<root/>")
-  assert_eq(e.name.local_name, "root")
-  assert_eq(e.attributes.length(), 0)
-  assert_eq(e.children.length(), 0)
+  debug_inspect(e.name.local_name, content="\"root\"")
+  debug_inspect(e.attributes.length(), content="0")
+  debug_inspect(e.children.length(), content="0")
 }
 
 ///|
 test "collect_subtree preserves attributes in source order" {
   let e = collect_first("<root a=\"1\" b=\"2\" c=\"3\"/>")
-  assert_eq(e.attributes.length(), 3)
-  assert_eq(e.attributes[0].0.local_name, "a")
-  assert_eq(e.attributes[0].1, "1")
-  assert_eq(e.attributes[1].0.local_name, "b")
-  assert_eq(e.attributes[2].0.local_name, "c")
+  debug_inspect(e.attributes.length(), content="3")
+  debug_inspect(e.attributes[0].0.local_name, content="\"a\"")
+  debug_inspect(e.attributes[0].1, content="\"1\"")
+  debug_inspect(e.attributes[1].0.local_name, content="\"b\"")
+  debug_inspect(e.attributes[2].0.local_name, content="\"c\"")
 }
 
 ///|
 test "collect_subtree captures nested elements" {
   let xml = "<root><a><b/></a><c/></root>"
   let e = collect_first(xml)
-  assert_eq(e.children.length(), 2)
+  debug_inspect(e.children.length(), content="2")
   match e.children[0] {
     Element(a) => {
-      assert_eq(a.name.local_name, "a")
-      assert_eq(a.children.length(), 1)
+      debug_inspect(a.name.local_name, content="\"a\"")
+      debug_inspect(a.children.length(), content="1")
       match a.children[0] {
-        Element(b) => assert_eq(b.name.local_name, "b")
+        Element(b) => debug_inspect(b.name.local_name, content="\"b\"")
         _ => fail("expected <b> inside <a>")
       }
     }
     _ => fail("expected first child to be <a>")
   }
   match e.children[1] {
-    Element(c) => assert_eq(c.name.local_name, "c")
+    Element(c) => debug_inspect(c.name.local_name, content="\"c\"")
     _ => fail("expected second child to be <c>")
   }
 }
@@ -58,9 +58,9 @@ test "collect_subtree captures nested elements" {
 ///|
 test "collect_subtree captures text content" {
   let e = collect_first("<root>hello</root>")
-  assert_eq(e.children.length(), 1)
+  debug_inspect(e.children.length(), content="1")
   match e.children[0] {
-    Text(s) => assert_eq(s, "hello")
+    Text(s) => debug_inspect(s, content="\"hello\"")
     _ => fail("expected text child")
   }
 }
@@ -69,11 +69,11 @@ test "collect_subtree captures text content" {
 test "collect_subtree preserves namespaces on names" {
   let xml = "<root xmlns=\"http://x\" xmlns:y=\"http://y\"><y:leaf/></root>"
   let e = collect_first(xml)
-  assert_eq(e.name.uri, "http://x")
+  debug_inspect(e.name.uri, content="\"http://x\"")
   match e.children[0] {
     Element(c) => {
-      assert_eq(c.name.uri, "http://y")
-      assert_eq(c.name.local_name, "leaf")
+      debug_inspect(c.name.uri, content="\"http://y\"")
+      debug_inspect(c.name.local_name, content="\"leaf\"")
     }
     _ => fail("expected element child")
   }
@@ -83,17 +83,17 @@ test "collect_subtree preserves namespaces on names" {
 test "collect_subtree handles mixed content (text + element + text)" {
   let xml = "<root>before<mid/>after</root>"
   let e = collect_first(xml)
-  assert_eq(e.children.length(), 3)
+  debug_inspect(e.children.length(), content="3")
   match e.children[0] {
-    Text(s) => assert_eq(s, "before")
+    Text(s) => debug_inspect(s, content="\"before\"")
     _ => fail("first child should be text")
   }
   match e.children[1] {
-    Element(m) => assert_eq(m.name.local_name, "mid")
+    Element(m) => debug_inspect(m.name.local_name, content="\"mid\"")
     _ => fail("middle child should be element")
   }
   match e.children[2] {
-    Text(s) => assert_eq(s, "after")
+    Text(s) => debug_inspect(s, content="\"after\"")
     _ => fail("last child should be text")
   }
 }
@@ -102,9 +102,9 @@ test "collect_subtree handles mixed content (text + element + text)" {
 test "collect_subtree captures CDATA verbatim" {
   let xml = "<root><![CDATA[<not-an-element>]]></root>"
   let e = collect_first(xml)
-  assert_eq(e.children.length(), 1)
+  debug_inspect(e.children.length(), content="1")
   match e.children[0] {
-    CData(s) => assert_eq(s, "<not-an-element>")
+    CData(s) => debug_inspect(s, content="\"<not-an-element>\"")
     _ => fail("expected CDATA child")
   }
 }
@@ -118,13 +118,13 @@ test "collect_subtree leaves reader positioned after the matching EndElement" {
   match a_ev {
     StartElement(name, attrs) => {
       let captured = @oxml.collect_subtree(r, name, attrs)
-      assert_eq(captured.name.local_name, "a")
+      debug_inspect(captured.name.local_name, content="\"a\"")
     }
     _ => fail("expected <a> start")
   }
   let b_ev = @oxml.next_event(r)
   match b_ev {
-    StartElement(name, _) => assert_eq(name.local_name, "b")
+    StartElement(name, _) => debug_inspect(name.local_name, content="\"b\"")
     _ => fail("expected <b> after capturing <a>")
   }
 }
@@ -149,6 +149,6 @@ test "collect_subtree on a deeply nested subtree round-trips structure" {
   let b = unwrap_only_child(a)
   let c = unwrap_only_child(b)
   let d = unwrap_only_child(c)
-  assert_eq(d.name.local_name, "d")
-  assert_eq(d.children.length(), 0)
+  debug_inspect(d.name.local_name, content="\"d\"")
+  debug_inspect(d.children.length(), content="0")
 }

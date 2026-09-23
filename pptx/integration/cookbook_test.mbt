@@ -194,13 +194,13 @@ test "cookbook: pitch deck builds and round-trips" {
   let bytes = build_pitch_deck()
   let prs = @presentation.Presentation::open(bytes)
   let slides = prs.slides()
-  assert_eq(slides.length(), 5)
+  debug_inspect(slides.length(), content="5")
   // Slides 1, 2, 3, 5 carry one body shape each (a textbox).
-  assert_eq(slides[0].shapes.length(), 1)
-  assert_eq(slides[1].shapes.length(), 2) // textbox + red rect
-  assert_eq(slides[2].shapes.length(), 2) // textbox + ellipse
-  assert_eq(slides[3].shapes.length(), 4) // textbox + 3 rects
-  assert_eq(slides[4].shapes.length(), 1) // textbox
+  debug_inspect(slides[0].shapes.length(), content="1")
+  debug_inspect(slides[1].shapes.length(), content="2") // textbox + red rect
+  debug_inspect(slides[2].shapes.length(), content="2") // textbox + ellipse
+  debug_inspect(slides[3].shapes.length(), content="4") // textbox + 3 rects
+  debug_inspect(slides[4].shapes.length(), content="1") // textbox
 }
 
 ///|
@@ -208,10 +208,10 @@ test "cookbook: presentation.xml has 5 slide ID entries" {
   let bytes = build_pitch_deck()
   let prs = @presentation.Presentation::open(bytes)
   let pres = prs.presentation_part().unwrap()
-  assert_eq(pres.sld_ids.length(), 5)
+  debug_inspect(pres.sld_ids.length(), content="5")
   // IDs start at 256 and increment.
   for i in 0..<pres.sld_ids.length() {
-    assert_eq(pres.sld_ids[i].id, 256L + i.to_int64())
+    debug_inspect(pres.sld_ids[i].id == 256L + i.to_int64(), content="true")
   }
 }
 
@@ -222,9 +222,9 @@ test "cookbook: title slide carries the expected text" {
   let s = prs.slides()[0]
   match s.shapes[0] {
     AutoShape(a) =>
-      assert_eq(
+      debug_inspect(
         a.text_body.unwrap().plain_text(),
-        "MoonBit PPTX — a tiny pitch deck",
+        content="\"MoonBit PPTX — a tiny pitch deck\"",
       )
     _ => fail("expected title textbox on slide 1")
   }
@@ -249,5 +249,5 @@ test "cookbook: demo slide has the three labelled rectangles" {
       _ => ()
     }
   }
-  assert_eq(rect_count, 3)
+  debug_inspect(rect_count, content="3")
 }

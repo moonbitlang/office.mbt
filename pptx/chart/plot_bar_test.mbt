@@ -28,12 +28,12 @@ test "BarChart: minimum (barDir + axIds) types correctly" {
   let chart = @chart.Chart::parse(fixture_bar_chart_xml(body))
   match chart.chart.plot_area.plots[0] {
     BarChart(b) => {
-      assert_eq(b.bar_dir, Col)
-      assert_true(b.grouping is None)
-      assert_eq(b.ax_ids.length(), 2)
-      assert_eq(b.ax_ids[0], 1)
-      assert_eq(b.ax_ids[1], 2)
-      assert_eq(b.series.length(), 0)
+      debug_inspect(b.bar_dir, content="Col")
+      debug_inspect(b.grouping is None, content="true")
+      debug_inspect(b.ax_ids.length(), content="2")
+      debug_inspect(b.ax_ids[0], content="1")
+      debug_inspect(b.ax_ids[1], content="2")
+      debug_inspect(b.series.length(), content="0")
     }
     _ => fail("expected BarChart plot")
   }
@@ -53,13 +53,13 @@ test "BarChart: full scalar field set" {
   let chart = @chart.Chart::parse(fixture_bar_chart_xml(body))
   match chart.chart.plot_area.plots[0] {
     BarChart(b) => {
-      assert_eq(b.bar_dir, Bar)
-      assert_true(b.grouping is Some(Stacked))
-      assert_eq(b.vary_colors.unwrap(), true)
-      assert_eq(b.gap_width.unwrap(), 150)
-      assert_eq(b.overlap.unwrap(), -25)
-      assert_eq(b.ax_ids[0], 10)
-      assert_eq(b.ax_ids[1], 20)
+      debug_inspect(b.bar_dir, content="Bar")
+      debug_inspect(b.grouping is Some(Stacked), content="true")
+      debug_inspect(b.vary_colors.unwrap(), content="true")
+      debug_inspect(b.gap_width.unwrap(), content="150")
+      debug_inspect(b.overlap.unwrap(), content="-25")
+      debug_inspect(b.ax_ids[0], content="10")
+      debug_inspect(b.ax_ids[1], content="20")
     }
     _ => fail("expected BarChart plot")
   }
@@ -99,7 +99,7 @@ test "BarChart: <c:ser> children captured verbatim until typed" {
     "</c:barChart>"
   let chart = @chart.Chart::parse(fixture_bar_chart_xml(body))
   match chart.chart.plot_area.plots[0] {
-    BarChart(b) => assert_eq(b.series.length(), 2)
+    BarChart(b) => debug_inspect(b.series.length(), content="2")
     _ => fail("expected BarChart plot")
   }
 }
@@ -119,7 +119,7 @@ test "BarChart: parse → serialize → parse round-trip" {
   let original = @chart.Chart::parse(fixture_bar_chart_xml(body))
   let serialized = original.serialize()
   let re_parsed = @chart.Chart::parse(serialized)
-  assert_eq(re_parsed, original)
+  debug_inspect(re_parsed == original, content="true")
 }
 
 ///|
@@ -127,11 +127,23 @@ test "BarDir / BarGrouping enum round-trips" {
   // Direct enum check — every `to_xml` value must round-trip through
   // `from_xml` to the same value.
   for d in [@chart.BarDir::Bar, Col] {
-    assert_true(@chart.BarDir::from_xml(d.to_xml()) is Some(_))
-    assert_eq(@chart.BarDir::from_xml(d.to_xml()).unwrap(), d)
+    debug_inspect(
+      @chart.BarDir::from_xml(d.to_xml()) is Some(_),
+      content="true",
+    )
+    debug_inspect(
+      @chart.BarDir::from_xml(d.to_xml()).unwrap() == d,
+      content="true",
+    )
   }
   for g in [@chart.BarGrouping::PercentStacked, Clustered, Standard, Stacked] {
-    assert_true(@chart.BarGrouping::from_xml(g.to_xml()) is Some(_))
-    assert_eq(@chart.BarGrouping::from_xml(g.to_xml()).unwrap(), g)
+    debug_inspect(
+      @chart.BarGrouping::from_xml(g.to_xml()) is Some(_),
+      content="true",
+    )
+    debug_inspect(
+      @chart.BarGrouping::from_xml(g.to_xml()).unwrap() == g,
+      content="true",
+    )
   }
 }

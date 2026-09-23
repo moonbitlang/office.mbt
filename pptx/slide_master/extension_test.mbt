@@ -11,9 +11,9 @@ test "ADR-004: master captures cSld / txStyles / hf" {
   for el in m.extension {
     names.push(el.name.local_name)
   }
-  assert_true(names.contains("cSld"))
-  assert_true(names.contains("txStyles"))
-  assert_true(names.contains("hf"))
+  debug_inspect(names.contains("cSld"), content="true")
+  debug_inspect(names.contains("txStyles"), content="true")
+  debug_inspect(names.contains("hf"), content="true")
 }
 
 ///|
@@ -27,7 +27,7 @@ test "ADR-004: master cSld subtree preserves nested shape tree" {
   }
   let c = cSld.unwrap()
   // <p:bg>…</p:bg> + <p:spTree>…</p:spTree>
-  assert_eq(c.children.length(), 2)
+  debug_inspect(c.children.length(), content="2")
 }
 
 ///|
@@ -40,10 +40,10 @@ test "ADR-004: master hf attributes round-trip" {
     }
   }
   let h = hf.unwrap()
-  assert_eq(h.attributes.length(), 4)
+  debug_inspect(h.attributes.length(), content="4")
   // First attribute is `sldNum="0"` per the fixture.
-  assert_eq(h.attributes[0].0.local_name, "sldNum")
-  assert_eq(h.attributes[0].1, "0")
+  debug_inspect(h.attributes[0].0.local_name, content="\"sldNum\"")
+  debug_inspect(h.attributes[0].1, content="\"0\"")
 }
 
 // --- SlideLayout.extension ---
@@ -62,15 +62,15 @@ test "ADR-004: layout captures cSld + transition + extLst" {
     "<p:extLst><p:ext uri=\"{a}\"/></p:extLst>" +
     "</p:sldLayout>"
   let layout = @slide_master.SlideLayout::parse(@oxml.string_to_bytes(xml))
-  assert_eq(layout.name, "Title")
+  debug_inspect(layout.name, content="\"Title\"")
   let names = []
   for el in layout.extension {
     names.push(el.name.local_name)
   }
-  assert_true(names.contains("cSld"))
-  assert_true(names.contains("transition"))
-  assert_true(names.contains("extLst"))
-  assert_eq(layout.extension.length(), 3)
+  debug_inspect(names.contains("cSld"), content="true")
+  debug_inspect(names.contains("transition"), content="true")
+  debug_inspect(names.contains("extLst"), content="true")
+  debug_inspect(layout.extension.length(), content="3")
 }
 
 ///|
@@ -85,12 +85,12 @@ test "ADR-004: layout cSld preserves both name attribute and shape tree" {
     "</p:sldLayout>"
   let layout = @slide_master.SlideLayout::parse(@oxml.string_to_bytes(xml))
   // The name was pulled out:
-  assert_eq(layout.name, "My Layout")
+  debug_inspect(layout.name, content="\"My Layout\"")
   // …and the full <p:cSld> body is in extension:
-  assert_eq(layout.extension.length(), 1)
+  debug_inspect(layout.extension.length(), content="1")
   let cSld = layout.extension[0]
-  assert_eq(cSld.name.local_name, "cSld")
-  assert_eq(cSld.attributes[0].0.local_name, "name")
-  assert_eq(cSld.attributes[0].1, "My Layout")
-  assert_eq(cSld.children.length(), 1)
+  debug_inspect(cSld.name.local_name, content="\"cSld\"")
+  debug_inspect(cSld.attributes[0].0.local_name, content="\"name\"")
+  debug_inspect(cSld.attributes[0].1, content="\"My Layout\"")
+  debug_inspect(cSld.children.length(), content="1")
 }

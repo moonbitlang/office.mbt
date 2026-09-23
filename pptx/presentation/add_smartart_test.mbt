@@ -44,12 +44,13 @@ test "add_smartart_mut: wires five diagram parts with content types" {
   ]
   for c in cases {
     let part = prs.pkg.part_by_name(c.0).unwrap()
-    assert_eq(part.content_type, c.1)
+    debug_inspect(part.content_type == c.1, content="true")
     // Each part is registered as an Override.
-    assert_true(
+    debug_inspect(
       prs.pkg.content_types().overrides
       .iter()
       .any(kv => kv.0 == c.0 && kv.1 == c.1),
+      content="true",
     )
   }
 }
@@ -67,12 +68,12 @@ test "add_smartart_mut: graphicFrame carries the four diagram relIds" {
     cy=Emu(2_000_000L),
   )
   let slide = prs.slides()[0]
-  assert_eq(slide.shapes.length(), 1)
+  debug_inspect(slide.shapes.length(), content="1")
   let captured = match slide.shapes[0] {
     GraphicFrame(gf) =>
       match gf.content {
         OtherGraphic(uri, el) => {
-          assert_eq(uri, @oxml.graphic_data_diagram_uri)
+          debug_inspect(uri == @oxml.graphic_data_diagram_uri, content="true")
           el
         }
         _ => fail("expected OtherGraphic (SmartArt) content")
@@ -83,13 +84,19 @@ test "add_smartart_mut: graphicFrame carries the four diagram relIds" {
   let rels = prs.pkg.relationships_for(slide_name)
   for lname in ["dm", "lo", "qs", "cs"] {
     let rid = rel_ids_attr(captured, lname).unwrap()
-    assert_true(rels.by_id(rid) is Some(_))
+    debug_inspect(rels.by_id(rid) is Some(_), content="true")
   }
   // dm points at the data part, cs at the colors part.
   let dm = rel_ids_attr(captured, "dm").unwrap()
-  assert_eq(rels.by_id(dm).unwrap().rel_type, @opc.rt_diagram_data)
+  debug_inspect(
+    rels.by_id(dm).unwrap().rel_type == @opc.rt_diagram_data,
+    content="true",
+  )
   let cs = rel_ids_attr(captured, "cs").unwrap()
-  assert_eq(rels.by_id(cs).unwrap().rel_type, @opc.rt_diagram_colors)
+  debug_inspect(
+    rels.by_id(cs).unwrap().rel_type == @opc.rt_diagram_colors,
+    content="true",
+  )
 }
 
 ///|
@@ -110,12 +117,15 @@ test "add_smartart_mut: data part references the cached drawing" {
     .iter()
     .find_first(r => r.rel_type == @opc.rt_diagram_drawing)
     .unwrap()
-  assert_true(drawing_rel.target.contains("drawing1.xml"))
+  debug_inspect(drawing_rel.target.contains("drawing1.xml"), content="true")
   // And the data model records that relId inside <dsp:dataModelExt>.
   let data_part = prs.pkg.part_by_name("/ppt/diagrams/data1.xml").unwrap()
   let xml = @oxml.bytes_to_string(data_part.bytes)
-  assert_true(xml.find("dataModelExt") is Some(_))
-  assert_true(xml.find("relId=\"" + drawing_rel.id + "\"") is Some(_))
+  debug_inspect(xml.find("dataModelExt") is Some(_), content="true")
+  debug_inspect(
+    xml.find("relId=\"" + drawing_rel.id + "\"") is Some(_),
+    content="true",
+  )
 }
 
 ///|
@@ -137,15 +147,16 @@ test "add_smartart_mut: survives save -> reopen" {
       "/ppt/diagrams/data1.xml", "/ppt/diagrams/layout1.xml", "/ppt/diagrams/quickStyle1.xml",
       "/ppt/diagrams/colors1.xml", "/ppt/drawings/drawing1.xml",
     ] {
-    assert_true(prs2.pkg.part_by_name(name) is Some(_))
+    debug_inspect(prs2.pkg.part_by_name(name) is Some(_), content="true")
   }
   // The graphicFrame survives as SmartArt content.
   let slide = prs2.slides()[0]
-  assert_eq(slide.shapes.length(), 1)
+  debug_inspect(slide.shapes.length(), content="1")
   match slide.shapes[0] {
     GraphicFrame(gf) =>
       match gf.content {
-        OtherGraphic(uri, _) => assert_eq(uri, @oxml.graphic_data_diagram_uri)
+        OtherGraphic(uri, _) =>
+          debug_inspect(uri == @oxml.graphic_data_diagram_uri, content="true")
         _ => fail("expected OtherGraphic after reopen")
       }
     _ => fail("expected GraphicFrame after reopen")
@@ -166,9 +177,9 @@ test "add_smartart_mut: escapes node text in data + drawing parts" {
   )
   let data = prs.pkg.part_by_name("/ppt/diagrams/data1.xml").unwrap()
   let xml = @oxml.bytes_to_string(data.bytes)
-  assert_true(xml.find("A &lt; B &amp; C") is Some(_))
+  debug_inspect(xml.find("A &lt; B &amp; C") is Some(_), content="true")
   // The raw unescaped form must not appear as element text.
-  assert_true(xml.find("A < B & C") is None)
+  debug_inspect(xml.find("A < B & C") is None, content="true")
 }
 
 ///|
@@ -191,9 +202,15 @@ test "add_smartart_mut: second diagram gets index 2 across all parts" {
     cx=Emu(100L),
     cy=Emu(100L),
   )
-  assert_true(prs.pkg.part_by_name("/ppt/diagrams/data2.xml") is Some(_))
-  assert_true(prs.pkg.part_by_name("/ppt/drawings/drawing2.xml") is Some(_))
-  assert_eq(prs.slides()[0].shapes.length(), 2)
+  debug_inspect(
+    prs.pkg.part_by_name("/ppt/diagrams/data2.xml") is Some(_),
+    content="true",
+  )
+  debug_inspect(
+    prs.pkg.part_by_name("/ppt/drawings/drawing2.xml") is Some(_),
+    content="true",
+  )
+  debug_inspect(prs.slides()[0].shapes.length(), content="2")
 }
 
 ///|
@@ -214,9 +231,15 @@ test "add_smartart_mut: cycle + pyramid wire end-to-end and reopen" {
       cy=Emu(3_000_000L),
     )
     let prs2 = @presentation.Presentation::open(prs.save())
-    assert_true(prs2.pkg.part_by_name("/ppt/diagrams/data1.xml") is Some(_))
-    assert_true(prs2.pkg.part_by_name("/ppt/drawings/drawing1.xml") is Some(_))
-    assert_eq(prs2.slides()[0].shapes.length(), 1)
+    debug_inspect(
+      prs2.pkg.part_by_name("/ppt/diagrams/data1.xml") is Some(_),
+      content="true",
+    )
+    debug_inspect(
+      prs2.pkg.part_by_name("/ppt/drawings/drawing1.xml") is Some(_),
+      content="true",
+    )
+    debug_inspect(prs2.slides()[0].shapes.length(), content="1")
   }
 }
 
@@ -247,9 +270,9 @@ test "add_smartart_mut: org_chart with nested children wires + reopens" {
     sp = sp + 1
     rest = rest[off + 8:].to_owned()
   }
-  assert_eq(sp, 7)
+  debug_inspect(sp, content="7")
   let prs2 = @presentation.Presentation::open(prs.save())
-  assert_eq(prs2.slides()[0].shapes.length(), 1)
+  debug_inspect(prs2.slides()[0].shapes.length(), content="1")
 }
 
 ///|
@@ -273,8 +296,11 @@ test "add_smartart_mut: matrix + relationship wire end-to-end and reopen" {
       cy=Emu(5_000_000L),
     )
     let prs2 = @presentation.Presentation::open(prs.save())
-    assert_true(prs2.pkg.part_by_name("/ppt/diagrams/data1.xml") is Some(_))
-    assert_eq(prs2.slides()[0].shapes.length(), 1)
+    debug_inspect(
+      prs2.pkg.part_by_name("/ppt/diagrams/data1.xml") is Some(_),
+      content="true",
+    )
+    debug_inspect(prs2.slides()[0].shapes.length(), content="1")
   }
 }
 

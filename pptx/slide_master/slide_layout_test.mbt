@@ -48,8 +48,8 @@ test "parse: layout type and name" {
   let layout = @slide_master.SlideLayout::parse(
     layout_xml_with_master_mapping(),
   )
-  assert_true(layout.layout_type is Title)
-  assert_eq(layout.name, "Title Slide")
+  debug_inspect(layout.layout_type is Title, content="true")
+  debug_inspect(layout.name, content="\"Title Slide\"")
 }
 
 ///|
@@ -58,7 +58,7 @@ test "parse: missing type attribute defaults to Blank" {
     pl_ns +
     "\"><p:cSld name=\"x\"/></p:sldLayout>"
   let layout = @slide_master.SlideLayout::parse(@oxml.string_to_bytes(xml))
-  assert_true(layout.layout_type is Blank)
+  debug_inspect(layout.layout_type is Blank, content="true")
 }
 
 // --- ClrMapOverride ---
@@ -68,7 +68,7 @@ test "parse: clrMapOvr with masterClrMapping inherits from master" {
   let layout = @slide_master.SlideLayout::parse(
     layout_xml_with_master_mapping(),
   )
-  assert_true(layout.clr_map_override is MasterMapping)
+  debug_inspect(layout.clr_map_override is MasterMapping, content="true")
 }
 
 ///|
@@ -79,9 +79,9 @@ test "parse: clrMapOvr with overrideClrMapping carries explicit mapping" {
   match layout.clr_map_override {
     Override(cm) => {
       // Verify a couple of distinctive entries from the fixture
-      assert_true(cm.bg1 is Dk1)
-      assert_true(cm.accent1 is Accent2)
-      assert_true(cm.hlink is FolHlink)
+      debug_inspect(cm.bg1 is Dk1, content="true")
+      debug_inspect(cm.accent1 is Accent2, content="true")
+      debug_inspect(cm.hlink is FolHlink, content="true")
     }
     _ => fail("expected Override")
   }
@@ -93,7 +93,7 @@ test "parse: missing clrMapOvr defaults to MasterMapping" {
     pl_ns +
     "\" type=\"blank\"><p:cSld name=\"x\"/></p:sldLayout>"
   let layout = @slide_master.SlideLayout::parse(@oxml.string_to_bytes(xml))
-  assert_true(layout.clr_map_override is MasterMapping)
+  debug_inspect(layout.clr_map_override is MasterMapping, content="true")
 }
 
 // --- layout type coverage ---
@@ -115,9 +115,7 @@ test "parse: layout types map to typed enum (spot check)" {
       c.0 +
       "\"><p:cSld name=\"x\"/></p:sldLayout>"
     let layout = @slide_master.SlideLayout::parse(@oxml.string_to_bytes(xml))
-    // SlideLayoutType doesn't impl Show; assert_true on equality so the
-    // failure message stays readable.
-    assert_true(layout.layout_type == c.1)
+    debug_inspect(layout.layout_type == c.1, content="true")
   }
 }
 

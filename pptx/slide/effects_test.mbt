@@ -39,10 +39,10 @@ test "shape effects: effectLst lifts to AutoShape.effects" {
   let slide = @slide.Slide::parse(slide_with_sp_pr_for_effects(body))
   let fx = shape_effects(slide).unwrap()
   let s = fx.outer_shadow.unwrap()
-  assert_eq(s.blur_rad, Emu(50800L))
-  assert_eq(s.dist, Emu(38100L))
+  debug_inspect(s.blur_rad, content="Emu(50800)")
+  debug_inspect(s.dist, content="Emu(38100)")
   match s.color.base {
-    Srgb(rgb) => assert_eq(rgb.to_hex(), "000000")
+    Srgb(rgb) => debug_inspect(rgb.to_hex(), content="\"000000\"")
     _ => fail("expected Srgb")
   }
 }
@@ -51,7 +51,7 @@ test "shape effects: effectLst lifts to AutoShape.effects" {
 test "shape effects: no effectLst leaves effects = None" {
   let body = "<a:prstGeom prst=\"rect\"><a:avLst/></a:prstGeom>"
   let slide = @slide.Slide::parse(slide_with_sp_pr_for_effects(body))
-  assert_true(shape_effects(slide) is None)
+  debug_inspect(shape_effects(slide) is None, content="true")
 }
 
 ///|
