@@ -28,21 +28,18 @@ let ns_r : String = "http://schemas.openxmlformats.org/officeDocument/2006/relat
 /// layout + one slide. The presentation.xml carries a real
 /// `<p:sldIdLst>` so the ordered-slide path resolves the slide via
 /// its relationship instead of falling back to package order.
-fn minimal_pptx() -> FixedArray[Byte] {
+fn minimal_pptx() -> FixedArray[Byte] raise {
   let entries : Array[(String, FixedArray[Byte])] = [
-    ("[Content_Types].xml", @fzip.str_to_u8(content_types_xml())),
-    ("_rels/.rels", @fzip.str_to_u8(pkg_rels_xml())),
-    ("ppt/presentation.xml", @fzip.str_to_u8(presentation_xml())),
-    (
-      "ppt/_rels/presentation.xml.rels",
-      @fzip.str_to_u8(presentation_rels_xml()),
-    ),
-    ("ppt/theme/theme1.xml", @fzip.str_to_u8(theme_xml())),
-    ("ppt/slideMasters/slideMaster1.xml", @fzip.str_to_u8(master_xml())),
-    ("ppt/slideLayouts/slideLayout1.xml", @fzip.str_to_u8(layout_xml())),
-    ("ppt/slides/slide1.xml", @fzip.str_to_u8(slide_xml())),
+    ("[Content_Types].xml", utf8_bytes(content_types_xml())),
+    ("_rels/.rels", utf8_bytes(pkg_rels_xml())),
+    ("ppt/presentation.xml", utf8_bytes(presentation_xml())),
+    ("ppt/_rels/presentation.xml.rels", utf8_bytes(presentation_rels_xml())),
+    ("ppt/theme/theme1.xml", utf8_bytes(theme_xml())),
+    ("ppt/slideMasters/slideMaster1.xml", utf8_bytes(master_xml())),
+    ("ppt/slideLayouts/slideLayout1.xml", utf8_bytes(layout_xml())),
+    ("ppt/slides/slide1.xml", utf8_bytes(slide_xml())),
   ]
-  @fzip.zip_sync(entries)
+  fixture_zip(entries)
 }
 
 ///|
@@ -342,7 +339,7 @@ test "Presentation::slides: missing main-document rel falls back to package orde
 ///|
 /// Build a 2-slide deck where ZIP storage order is slide2 → slide1 but
 /// presentation.xml's `<p:sldIdLst>` lists rId2 (→ slide1) first.
-fn two_slide_pptx_reversed_storage() -> FixedArray[Byte] {
+fn two_slide_pptx_reversed_storage() -> FixedArray[Byte] raise {
   let pres_xml = "<?xml version=\"1.0\"?>" +
     "<p:presentation xmlns:p=\"" +
     ns_p +
@@ -403,17 +400,17 @@ fn two_slide_pptx_reversed_storage() -> FixedArray[Byte] {
   // Note: slide2 is inserted into the zip BEFORE slide1 so package
   // storage order is reversed relative to sldIdLst.
   let entries : Array[(String, FixedArray[Byte])] = [
-    ("[Content_Types].xml", @fzip.str_to_u8(ct_xml)),
-    ("_rels/.rels", @fzip.str_to_u8(pkg_rels_xml())),
-    ("ppt/presentation.xml", @fzip.str_to_u8(pres_xml)),
-    ("ppt/_rels/presentation.xml.rels", @fzip.str_to_u8(rels)),
-    ("ppt/theme/theme1.xml", @fzip.str_to_u8(theme_xml())),
-    ("ppt/slideMasters/slideMaster1.xml", @fzip.str_to_u8(master_xml())),
-    ("ppt/slideLayouts/slideLayout1.xml", @fzip.str_to_u8(layout_xml())),
-    ("ppt/slides/slide2.xml", @fzip.str_to_u8(slide2_xml)),
-    ("ppt/slides/slide1.xml", @fzip.str_to_u8(slide_xml())),
+    ("[Content_Types].xml", utf8_bytes(ct_xml)),
+    ("_rels/.rels", utf8_bytes(pkg_rels_xml())),
+    ("ppt/presentation.xml", utf8_bytes(pres_xml)),
+    ("ppt/_rels/presentation.xml.rels", utf8_bytes(rels)),
+    ("ppt/theme/theme1.xml", utf8_bytes(theme_xml())),
+    ("ppt/slideMasters/slideMaster1.xml", utf8_bytes(master_xml())),
+    ("ppt/slideLayouts/slideLayout1.xml", utf8_bytes(layout_xml())),
+    ("ppt/slides/slide2.xml", utf8_bytes(slide2_xml)),
+    ("ppt/slides/slide1.xml", utf8_bytes(slide_xml())),
   ]
-  @fzip.zip_sync(entries)
+  fixture_zip(entries)
 }
 
 // --- Presentation::new ---
@@ -487,21 +484,21 @@ test "Presentation::new: layout type is Blank" {
 /// Same as `minimal_pptx` but the package-level rels file is empty,
 /// so `main_document_part_name` returns `None` and `slides()` falls
 /// back to package order.
-fn minimal_pptx_without_pkg_rel() -> FixedArray[Byte] {
+fn minimal_pptx_without_pkg_rel() -> FixedArray[Byte] raise {
   let empty_pkg_rels = "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>" +
     "<Relationships xmlns=\"" +
     ns_pkg_rels +
     "\"/>"
   let entries : Array[(String, FixedArray[Byte])] = [
-    ("[Content_Types].xml", @fzip.str_to_u8(content_types_xml())),
-    ("_rels/.rels", @fzip.str_to_u8(empty_pkg_rels)),
-    ("ppt/presentation.xml", @fzip.str_to_u8(presentation_xml())),
-    ("ppt/theme/theme1.xml", @fzip.str_to_u8(theme_xml())),
-    ("ppt/slideMasters/slideMaster1.xml", @fzip.str_to_u8(master_xml())),
-    ("ppt/slideLayouts/slideLayout1.xml", @fzip.str_to_u8(layout_xml())),
-    ("ppt/slides/slide1.xml", @fzip.str_to_u8(slide_xml())),
+    ("[Content_Types].xml", utf8_bytes(content_types_xml())),
+    ("_rels/.rels", utf8_bytes(empty_pkg_rels)),
+    ("ppt/presentation.xml", utf8_bytes(presentation_xml())),
+    ("ppt/theme/theme1.xml", utf8_bytes(theme_xml())),
+    ("ppt/slideMasters/slideMaster1.xml", utf8_bytes(master_xml())),
+    ("ppt/slideLayouts/slideLayout1.xml", utf8_bytes(layout_xml())),
+    ("ppt/slides/slide1.xml", utf8_bytes(slide_xml())),
   ]
-  @fzip.zip_sync(entries)
+  fixture_zip(entries)
 }
 
 ///|

@@ -400,7 +400,7 @@ fn fixture_presentation_xml() -> String {
 fn build_pptx(
   main_document_part : String,
   parts : Array[(String, String, String)],
-) -> FixedArray[Byte] {
+) -> FixedArray[Byte] raise {
   let mut ct = "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>" +
     "<Types xmlns=\"" +
     ns_ct +
@@ -422,20 +422,20 @@ fn build_pptx(
     "\"/>" +
     "</Relationships>"
   let entries : Array[(String, FixedArray[Byte])] = [
-    ("[Content_Types].xml", @fzip.str_to_u8(ct)),
-    ("_rels/.rels", @fzip.str_to_u8(pkg_rels)),
+    ("[Content_Types].xml", utf8_bytes(ct)),
+    ("_rels/.rels", utf8_bytes(pkg_rels)),
   ]
   for p in parts {
-    entries.push((p.0.trim_start(chars="/").to_owned(), @fzip.str_to_u8(p.2)))
+    entries.push((p.0.trim_start(chars="/").to_owned(), utf8_bytes(p.2)))
   }
-  @fzip.zip_sync(entries)
+  fixture_zip(entries)
 }
 
 // --- the three fixtures ---
 
 ///|
 /// Minimal valid deck: theme + master + layout + one slide.
-fn minimal_deck() -> FixedArray[Byte] {
+fn minimal_deck() -> FixedArray[Byte] raise {
   build_pptx("/ppt/presentation.xml", [
     ("/ppt/presentation.xml", ct_presentation, fixture_presentation_xml()),
     ("/ppt/theme/theme1.xml", ct_theme, fixture_theme_xml()),
@@ -457,7 +457,7 @@ fn minimal_deck() -> FixedArray[Byte] {
 /// Rich deck: same base parts as the minimal deck plus a second slide
 /// that exercises auto-shape with text/fill/stroke/effects, picture,
 /// custGeom, connector, and group shape.
-fn rich_deck() -> FixedArray[Byte] {
+fn rich_deck() -> FixedArray[Byte] raise {
   build_pptx("/ppt/presentation.xml", [
     ("/ppt/presentation.xml", ct_presentation, fixture_presentation_xml()),
     ("/ppt/theme/theme1.xml", ct_theme, fixture_theme_xml()),
@@ -479,7 +479,7 @@ fn rich_deck() -> FixedArray[Byte] {
 ///|
 /// Annotated deck: minimal deck plus a notes slide, commentAuthors, and
 /// comments parts.
-fn notes_and_comments_deck() -> FixedArray[Byte] {
+fn notes_and_comments_deck() -> FixedArray[Byte] raise {
   build_pptx("/ppt/presentation.xml", [
     ("/ppt/presentation.xml", ct_presentation, fixture_presentation_xml()),
     ("/ppt/theme/theme1.xml", ct_theme, fixture_theme_xml()),

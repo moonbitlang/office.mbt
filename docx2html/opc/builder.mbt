@@ -197,13 +197,13 @@ pub fn PackageBuilder::add_relationship(
     )
   }
   check_metadata("relationship Type", normalized_type)
-  if !is_absolute_relationship_type(normalized_type) {
+  if !@uri.is_absolute_relationship_type(normalized_type) {
     raise PackageBuildError(
       "relationship Type must be an absolute IRI without a fragment: \{normalized_type}",
     )
   }
   check_metadata("relationship Target", normalized_target)
-  if external && !is_valid_external_relationship_target(normalized_target) {
+  if external && !@uri.is_valid_external_relationship_target(normalized_target) {
     raise PackageBuildError(
       "external relationship Target is not a valid IRI reference: \{normalized_target}",
     )
@@ -301,14 +301,14 @@ fn PackageBuilder::build_internal(
         )
       }
       check_metadata("relationship Type", relationship.relationship_type)
-      if !is_absolute_relationship_type(relationship.relationship_type) {
+      if !@uri.is_absolute_relationship_type(relationship.relationship_type) {
         raise PackageBuildError(
           "relationship Type must be an absolute IRI without a fragment: \{relationship.relationship_type}",
         )
       }
       check_metadata("relationship Target", relationship.target)
       if relationship.external &&
-        !is_valid_external_relationship_target(relationship.target) {
+        !@uri.is_valid_external_relationship_target(relationship.target) {
         raise PackageBuildError(
           "external relationship Target is not a valid IRI reference: \{relationship.target}",
         )

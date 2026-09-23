@@ -100,8 +100,12 @@ pub fn Presentation::new() -> Presentation raise PptxError {
 /// part mutations callers made via the lower-level `@opc` API are
 /// included; typed model edits via `update_slide_mut` /
 /// `with_slide_updated` re-encode the affected parts before saving.
-pub fn Presentation::save(self : Presentation) -> FixedArray[Byte] {
-  self.pkg.to_bytes()
+pub fn Presentation::save(
+  self : Presentation,
+) -> FixedArray[Byte] raise PptxError {
+  self.pkg.to_bytes() catch {
+    e => raise OpcFailure(e.to_string())
+  }
 }
 
 // --- typed accessors ---

@@ -3,17 +3,17 @@ package "moonbitlang/pptx/presentation"
 
 import {
   "moonbitlang/core/debug",
+  "moonbitlang/office-ooxml/opc",
+  "moonbitlang/office-ooxml/xml",
   "moonbitlang/pptx/chart",
   "moonbitlang/pptx/chart_ex",
   "moonbitlang/pptx/comments",
   "moonbitlang/pptx/notes",
-  "moonbitlang/pptx/opc",
   "moonbitlang/pptx/slide",
   "moonbitlang/pptx/slide_master",
   "moonbitlang/pptx/smartart",
   "moonbitlang/pptx/theme",
   "moonbitlang/pptx/units",
-  "moonbitlang/pptx/xml",
 }
 
 // Values
@@ -173,7 +173,7 @@ pub fn Presentation::pct_h(Self, Double) -> @units.Emu
 pub fn Presentation::pct_w(Self, Double) -> @units.Emu
 pub fn Presentation::presentation_part(Self) -> PresentationPart? raise PptxError
 pub fn Presentation::remove_slide_mut(Self, Int) -> Unit raise PptxError
-pub fn Presentation::save(Self) -> FixedArray[Byte]
+pub fn Presentation::save(Self) -> FixedArray[Byte] raise PptxError
 pub fn Presentation::sections(Self) -> Array[Section] raise PptxError
 pub fn Presentation::set_app_properties_mut(Self, AppProperties) -> Unit raise PptxError
 pub fn Presentation::set_core_properties_mut(Self, CoreProperties) -> Unit raise PptxError

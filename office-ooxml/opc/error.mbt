@@ -3,9 +3,7 @@
 ///|
 /// Errors raised while reading or writing an OPC package.
 ///
-/// `ZipFailure` carries the underlying `@fzip` error code and message as
-/// strings (the `FzipError` type itself does not implement `Debug`/`Show`,
-/// so we flatten at the boundary).
+/// `ZipFailure` carries the ZIP error kind and message.
 /// `MalformedPackage` covers OPC-spec violations detected on top of a
 /// successfully unzipped container.
 pub(all) suberror OpcError {
@@ -29,11 +27,9 @@ pub extend OpcError with Eq::{not_equal, equal}
 pub extend OpcError with Show::{to_string, output}
 
 ///|
-/// Wrap a `@fzip.FzipError` as an `OpcError::ZipFailure`. Used at every call
-/// site that bridges the `@fzip` and OPC layers.
-fn wrap_fzip(e : @fzip.FzipError) -> OpcError {
-  let FzipError(code~, message~) = e
-  ZipFailure(code.to_string(), message)
+fn wrap_zip(e : @zip.ZipError) -> OpcError {
+  let ZipError(kind, message) = e
+  ZipFailure(@debug.to_string(kind), message)
 }
 
 ///|

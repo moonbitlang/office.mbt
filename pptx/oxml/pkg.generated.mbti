@@ -3,8 +3,8 @@ package "moonbitlang/pptx/oxml"
 
 import {
   "moonbitlang/core/debug",
+  "moonbitlang/office-ooxml/xml",
   "moonbitlang/pptx/units",
-  "moonbitlang/pptx/xml",
 }
 
 // Values

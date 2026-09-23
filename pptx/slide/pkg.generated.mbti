@@ -3,11 +3,11 @@ package "moonbitlang/pptx/slide"
 
 import {
   "moonbitlang/core/debug",
+  "moonbitlang/office-ooxml/xml",
   "moonbitlang/pptx/oxml",
   "moonbitlang/pptx/slide_master",
   "moonbitlang/pptx/theme",
   "moonbitlang/pptx/units",
-  "moonbitlang/pptx/xml",
 }
 
 // Values

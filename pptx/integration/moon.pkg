@@ -7,12 +7,13 @@ import {
 
 import {
   "moonbitlang/core/bench",
-  "hustcer/fzip",
+  "moonbitlang/core/encoding/utf8",
+  "moonbit-community/flate/zip",
   "moonbitlang/pptx/chart",
   "moonbitlang/pptx/chart_ex",
   "moonbitlang/pptx/comments",
   "moonbitlang/pptx/notes",
-  "moonbitlang/pptx/opc",
+  "moonbitlang/office-ooxml/opc",
   "moonbitlang/pptx/oxml",
   "moonbitlang/pptx/presentation",
   "moonbitlang/pptx/slide",
@@ -20,5 +21,5 @@ import {
   "moonbitlang/pptx/smartart",
   "moonbitlang/pptx/theme",
   "moonbitlang/pptx/units",
-  "moonbitlang/pptx/xml",
+  "moonbitlang/office-ooxml/xml",
 } for "test"

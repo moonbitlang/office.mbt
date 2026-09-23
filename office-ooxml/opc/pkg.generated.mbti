@@ -1,5 +1,5 @@
 // Generated using `moon info`, DON'T EDIT IT
-package "moonbitlang/pptx/opc"
+package "moonbitlang/office-ooxml/opc"
 
 import {
   "moonbitlang/core/debug",
@@ -119,7 +119,7 @@ pub fn Package::remove_part(Self, String) -> Bool
 pub fn Package::replace_part(Self, Part) -> Bool
 pub fn Package::require_part(Self, String) -> Part raise OpcError
 pub fn Package::set_content_types(Self, ContentTypes) -> Unit
-pub fn Package::to_bytes(Self) -> FixedArray[Byte]
+pub fn Package::to_bytes(Self) -> FixedArray[Byte] raise OpcError
 
 pub struct Part {
   name : String

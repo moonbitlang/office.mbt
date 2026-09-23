@@ -3,9 +3,9 @@ package "moonbitlang/pptx/notes"
 
 import {
   "moonbitlang/core/debug",
+  "moonbitlang/office-ooxml/xml",
   "moonbitlang/pptx/slide",
   "moonbitlang/pptx/slide_master",
-  "moonbitlang/pptx/xml",
 }
 
 // Values

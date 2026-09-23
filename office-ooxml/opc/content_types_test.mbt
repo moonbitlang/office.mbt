@@ -20,7 +20,7 @@ test "parse simple Default + Override" {
     "<Default Extension=\"png\" ContentType=\"image/png\"/>" +
     "<Override PartName=\"/ppt/p.xml\" ContentType=\"application/special+xml\"/>",
   )
-  let ct = @opc.ContentTypes::parse(@fzip.str_to_u8(xml))
+  let ct = @opc.ContentTypes::parse(utf8_bytes(xml))
   debug_inspect(ct.defaults().length(), content="2")
   debug_inspect(ct.overrides().length(), content="1")
 }
@@ -58,7 +58,7 @@ test "resolve: unknown extension returns None" {
 ///|
 test "parse rejects elements outside the content-types namespace" {
   let xml = "<?xml version=\"1.0\"?><Types><Default Extension=\"xml\" ContentType=\"x\"/></Types>"
-  try @opc.ContentTypes::parse(@fzip.str_to_u8(xml)) catch {
+  try @opc.ContentTypes::parse(utf8_bytes(xml)) catch {
     MalformedPackage(_) => ()
     _ => fail("expected MalformedPackage")
   } noraise {
@@ -69,7 +69,7 @@ test "parse rejects elements outside the content-types namespace" {
 ///|
 test "parse rejects missing required attribute" {
   let xml = ct_xml("<Default Extension=\"xml\"/>")
-  try @opc.ContentTypes::parse(@fzip.str_to_u8(xml)) catch {
+  try @opc.ContentTypes::parse(utf8_bytes(xml)) catch {
     MalformedPackage(_) => ()
     _ => fail("expected MalformedPackage")
   } noraise {

@@ -1,5 +1,5 @@
 // Modified for office.mbt: update deprecated array constructors.
-// Test fixtures: build minimal valid OPC packages in memory via fzip.
+// Test fixtures: build minimal valid OPC packages in memory via flate.
 
 ///|
 let ct_ns : String = "http://schemas.openxmlformats.org/package/2006/content-types"
@@ -21,7 +21,7 @@ fn minimal_content_types_xml() -> String {
 ///|
 /// Pack a list of `(zip-name, text)` entries; always inserts a valid
 /// `[Content_Types].xml` first unless the caller already supplied one.
-fn make_pkg_bytes(entries : Array[(String, String)]) -> FixedArray[Byte] {
+fn make_pkg_bytes(entries : Array[(String, String)]) -> FixedArray[Byte] raise {
   let raw : Array[(String, FixedArray[Byte])] = Array(
     capacity=entries.length() + 1,
   )
@@ -30,15 +30,15 @@ fn make_pkg_bytes(entries : Array[(String, String)]) -> FixedArray[Byte] {
     if kv.0 == "[Content_Types].xml" {
       has_ct = true
     }
-    raw.push((kv.0, @fzip.str_to_u8(kv.1)))
+    raw.push((kv.0, utf8_bytes(kv.1)))
   }
   if !has_ct {
     raw.insert(
       0,
-      ("[Content_Types].xml", @fzip.str_to_u8(minimal_content_types_xml())),
+      ("[Content_Types].xml", utf8_bytes(minimal_content_types_xml())),
     )
   }
-  @fzip.zip_sync(raw)
+  fixture_zip(raw)
 }
 
 ///|
@@ -98,7 +98,7 @@ test "part_by_name returns None for missing parts" {
 
 ///|
 test "open raises when [Content_Types].xml is missing" {
-  let bytes = @fzip.zip_sync([("foo.xml", @fzip.str_to_u8("<foo/>"))])
+  let bytes = fixture_zip([("foo.xml", utf8_bytes("<foo/>"))])
   try @opc.Package::open(bytes) catch {
     MalformedPackage(_) => ()
     _ => fail("expected MalformedPackage")
@@ -121,7 +121,7 @@ test "require_part raises PartNotFound" {
 ///|
 test "add_part / remove_part" {
   let pkg = @opc.Package::new()
-  let p = @opc.Part::new("/a.xml", "application/xml", @fzip.str_to_u8("<a/>"))
+  let p = @opc.Part::new("/a.xml", "application/xml", utf8_bytes("<a/>"))
   pkg.add_part(p)
   debug_inspect(pkg.parts().length(), content="1")
   let removed = pkg.remove_part("/a.xml")
@@ -133,8 +133,8 @@ test "add_part / remove_part" {
 ///|
 test "add_part rejects duplicate names" {
   let pkg = @opc.Package::new()
-  let p1 = @opc.Part::new("/x.xml", "", @fzip.str_to_u8("<x/>"))
-  let p2 = @opc.Part::new("/x.xml", "", @fzip.str_to_u8("<x2/>"))
+  let p1 = @opc.Part::new("/x.xml", "", utf8_bytes("<x/>"))
+  let p2 = @opc.Part::new("/x.xml", "", utf8_bytes("<x2/>"))
   pkg.add_part(p1)
   try pkg.add_part(p2) catch {
     MalformedPackage(_) => ()
@@ -146,7 +146,7 @@ test "add_part rejects duplicate names" {
 
 ///|
 test "Part::new validates names" {
-  let bytes = @fzip.str_to_u8("x")
+  let bytes = utf8_bytes("x")
   for bad in ["", "foo.xml", "/foo/", "/a//b.xml"] {
     try @opc.Part::new(bad, "", bytes) catch {
       MalformedPackage(_) => ()
@@ -166,15 +166,18 @@ test "package round trip converts ZIP names to OPC names" {
     pkg.require_part("/ppt/slides/slide1.xml").name,
     content="\"/ppt/slides/slide1.xml\"",
   )
-  let entries = @fzip.unzip_sync(pkg.to_bytes())
+  let entries = @zip.read(Bytes::from_array(pkg.to_bytes())).entries()
   debug_inspect(
-    entries.map(entry => entry.0).contains("ppt/slides/slide1.xml"),
+    entries
+    .to_owned()
+    .map(entry => entry.name())
+    .contains("ppt/slides/slide1.xml"),
     content="true",
   )
 }
 
 ///|
-test "open propagates fzip failures as ZipFailure" {
+test "open propagates ZIP failures as ZipFailure" {
   let bytes : FixedArray[Byte] = FixedArray::make(8, b'\xFF')
   try @opc.Package::open(bytes) catch {
     ZipFailure(_, _) => ()

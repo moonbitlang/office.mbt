@@ -5,9 +5,9 @@ This is a [MoonBit](https://docs.moonbitlang.com) project.
 ## References: .repos/mbtpdf contains pdf libraries implemented in MoonBit for references
 ## Project Structure
 
-- The repository root is a workspace described by `moon.work`, with eight peer
+- The repository root is a workspace described by `moon.work`, with nine peer
   modules: `mbtexcel/`, `docx2html/`, `pdflite/`, `pagelayout/`, `office-lib/`,
-  `office-cli/`, `pdf2md/`, and `pptx/`. Each module has its own `moon.mod`;
+  `office-cli/`, `pdf2md/`, `pptx/`, and `office-ooxml/`. Each module has its own `moon.mod`;
   the root has no module.
 
 - MoonBit packages are organized per directory, for each directory, there is a

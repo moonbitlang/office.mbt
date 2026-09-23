@@ -78,7 +78,7 @@ test "update_slide_mut: out-of-range index raises Malformed" {
     "<p:nvGrpSpPr><p:cNvPr id=\"1\" name=\"\"/><p:cNvGrpSpPr/><p:nvPr/></p:nvGrpSpPr>" +
     "<p:grpSpPr/>" +
     "</p:spTree></p:cSld></p:sld>"
-  let dummy = @slide.Slide::parse(@fzip.str_to_u8(dummy_xml))
+  let dummy = @slide.Slide::parse(utf8_bytes(dummy_xml))
   try prs.update_slide_mut(0, dummy) catch {
     Malformed(_) => ()
     _ => fail("expected Malformed")

@@ -55,3 +55,19 @@ test "raw OPC replacements invalidate slide order while byte snapshots cannot" {
     content="\"first\"",
   )
 }
+
+///|
+test "save wraps ZIP write errors in PptxError" {
+  let presentation = @presentation.Presentation::new()
+  presentation
+  .opc_package()
+  .add_part(@opc.Part::new("/" + "a".repeat(65536), "", []))
+  let rejected = try {
+    ignore(presentation.save())
+    false
+  } catch {
+    OpcFailure(_) => true
+    _ => false
+  }
+  debug_inspect(rejected, content="true")
+}

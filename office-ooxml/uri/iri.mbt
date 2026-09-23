@@ -561,14 +561,14 @@ fn office_windows_file_iri_valid(value : StringView) -> Bool {
 }
 
 ///|
-fn is_absolute_relationship_type(value : StringView) -> Bool {
+pub fn is_absolute_relationship_type(value : StringView) -> Bool {
   relationship_has_uri_scheme(value) &&
   relationship_identifier_reference_valid(value, true) &&
   !value.contains("#")
 }
 
 ///|
-fn is_valid_external_relationship_target(value : StringView) -> Bool {
+pub fn is_valid_external_relationship_target(value : StringView) -> Bool {
   relationship_identifier_reference_valid(value, true) ||
   office_windows_file_iri_valid(value)
 }

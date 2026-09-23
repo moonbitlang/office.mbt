@@ -3,6 +3,6 @@ import {
   "moonbitlang/core/debug",
   "moonbitlang/core/math",
   "moonbitlang/pptx/units",
-  "moonbitlang/pptx/xml",
+  "moonbitlang/office-ooxml/xml",
   "moonbitlang/pptx/oxml",
 }

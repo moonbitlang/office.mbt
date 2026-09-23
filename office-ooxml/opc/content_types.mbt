@@ -66,7 +66,7 @@ pub fn ContentTypes::overrides(self : ContentTypes) -> Array[(String, String)] {
 pub fn ContentTypes::parse(
   bytes : FixedArray[Byte],
 ) -> ContentTypes raise OpcError {
-  let text = @fzip.str_from_u8(bytes) catch { e => raise wrap_fzip(e) }
+  let text = decode_part_text(bytes)
   parse_content_types_xml(text)
 }
 
@@ -78,7 +78,7 @@ pub fn ContentTypes::serialize(
   let xml = serialize_content_types_xml(self) catch {
     e => raise MalformedPackage("content types writer error: " + e.to_string())
   }
-  @fzip.str_to_u8(xml)
+  @utf8.encode(xml).to_fixedarray()
 }
 
 ///|

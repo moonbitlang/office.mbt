@@ -6,7 +6,7 @@ test "Package::clone: clones share no mutable state" {
   let p1 = @opc.Part::new(
     "/ppt/test.xml",
     "application/xml",
-    @fzip.str_to_u8("<a/>"),
+    utf8_bytes("<a/>"),
   )
   pkg.add_part(p1)
   let cloned = pkg.clone()
@@ -14,7 +14,7 @@ test "Package::clone: clones share no mutable state" {
   let p2 = @opc.Part::new(
     "/ppt/other.xml",
     "application/xml",
-    @fzip.str_to_u8("<b/>"),
+    utf8_bytes("<b/>"),
   )
   cloned.add_part(p2)
   debug_inspect(pkg.parts().length(), content="1")
@@ -23,7 +23,7 @@ test "Package::clone: clones share no mutable state" {
 
 ///|
 test "Part::clone: bytes buffer is independent" {
-  let bytes = @fzip.str_to_u8("hello")
+  let bytes = utf8_bytes("hello")
   let p1 = @opc.Part::new("/x.xml", "application/xml", bytes)
   let p2 = p1.clone()
   // Neither input buffers nor returned snapshots can mutate either part.
@@ -53,7 +53,7 @@ test "ContentTypes::clone: builder mutations don't cross over" {
 ///|
 test "Package::clone: content-types catalog is independent" {
   let pkg = @opc.Package::new()
-  let p = @opc.Part::new("/x.xml", "type/x", @fzip.str_to_u8("<x/>"))
+  let p = @opc.Part::new("/x.xml", "type/x", utf8_bytes("<x/>"))
   pkg.add_part(p)
   pkg.set_content_types(
     @opc.ContentTypes::new().with_override("/x.xml", "type/x"),

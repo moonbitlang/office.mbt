@@ -65,20 +65,17 @@ fn fixture_presentation_rels() -> String {
 }
 
 ///|
-fn build_fixture() -> FixedArray[Byte] {
+fn build_fixture() -> FixedArray[Byte] raise {
   let entries : Array[(String, FixedArray[Byte])] = [
-    ("[Content_Types].xml", @fzip.str_to_u8(fixture_content_types())),
-    ("_rels/.rels", @fzip.str_to_u8(fixture_pkg_rels())),
-    ("ppt/presentation.xml", @fzip.str_to_u8("<p:presentation xmlns:p=\"x\"/>")),
-    (
-      "ppt/_rels/presentation.xml.rels",
-      @fzip.str_to_u8(fixture_presentation_rels()),
-    ),
-    ("ppt/slides/slide1.xml", @fzip.str_to_u8("<p:sld xmlns:p=\"x\"/>")),
+    ("[Content_Types].xml", utf8_bytes(fixture_content_types())),
+    ("_rels/.rels", utf8_bytes(fixture_pkg_rels())),
+    ("ppt/presentation.xml", utf8_bytes("<p:presentation xmlns:p=\"x\"/>")),
+    ("ppt/_rels/presentation.xml.rels", utf8_bytes(fixture_presentation_rels())),
+    ("ppt/slides/slide1.xml", utf8_bytes("<p:sld xmlns:p=\"x\"/>")),
     // pretend PNG payload — the OPC layer doesn't care about validity
-    ("ppt/media/image1.png", @fzip.str_to_u8("FAKEPNG")),
+    ("ppt/media/image1.png", utf8_bytes("FAKEPNG")),
   ]
-  @fzip.zip_sync(entries)
+  fixture_zip(entries)
 }
 
 ///|
@@ -178,7 +175,7 @@ test "mutate: add a slide part + register override + save + reopen" {
   let new_slide = @opc.Part::new(
     "/ppt/slides/slide2.xml",
     "",
-    @fzip.str_to_u8("<p:sld xmlns:p=\"x\"/>"),
+    utf8_bytes("<p:sld xmlns:p=\"x\"/>"),
   )
   pkg.add_part(new_slide)
   // Register the Override for it.
@@ -206,7 +203,7 @@ test "mutate: replace a part's bytes survives round trip" {
   let updated = @opc.Part::new(
     "/ppt/slides/slide1.xml",
     "",
-    @fzip.str_to_u8("<p:sld xmlns:p=\"x\"><edited/></p:sld>"),
+    utf8_bytes("<p:sld xmlns:p=\"x\"><edited/></p:sld>"),
   )
   pkg.add_part(updated)
   let pkg2 = @opc.Package::open(pkg.to_bytes())

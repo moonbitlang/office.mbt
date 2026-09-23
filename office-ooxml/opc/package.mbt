@@ -9,7 +9,7 @@
 /// An OPC package — a collection of named parts that round-trips through ZIP.
 ///
 /// The `parts` array preserves the order of entries in the underlying ZIP
-/// for stable byte-near-equal round-trip, even though OPC itself does not
+/// for stable enumeration and serialization, even though OPC itself does not
 /// give meaning to entry order.
 ///
 /// `content_types` mirrors the parsed `[Content_Types].xml` for fast lookup.
@@ -30,16 +30,23 @@ pub struct Package {
 // callers cannot desynchronise the index by changing the enumeration.
 
 ///|
-/// Open a package from raw `.pptx` bytes.
+/// Open a package from raw OPC ZIP bytes.
 ///
-/// Wraps every fzip failure in `OpcError::ZipFailure` so callers don't
+/// Wraps every ZIP failure in `OpcError::ZipFailure` so callers don't
 /// have to mix two error types.
 pub fn Package::open(bytes : FixedArray[Byte]) -> Package raise OpcError {
-  let entries = @fzip.unzip_sync(bytes) catch { e => raise wrap_fzip(e) }
+  let archive = @zip.read(Bytes::from_array(bytes)) catch {
+    e => raise wrap_zip(e)
+  }
+  let entries = archive.entries()
   let parts : Array[Part] = Array(capacity=entries.length())
   for entry in entries {
-    let name = zip_name_to_opc(entry.0)
-    parts.push({ name, content_type: "", bytes: entry.1, })
+    let name = zip_name_to_opc(entry.name())
+    parts.push({
+      name,
+      content_type: "",
+      bytes: entry.data().to_owned().to_fixedarray(),
+    })
   }
   let index = build_part_index(parts)
   // Locate [Content_Types].xml and parse it.
@@ -122,14 +129,13 @@ pub fn Package::regenerate_content_types_part(
 
 ///|
 /// Pack the package back to ZIP bytes.
-pub fn Package::to_bytes(self : Package) -> FixedArray[Byte] {
-  let entries : Array[(String, FixedArray[Byte])] = Array(
-    capacity=self.parts.length(),
-  )
-  for p in self.parts {
-    entries.push((opc_name_to_zip(p.name), p.bytes))
+pub fn Package::to_bytes(self : Package) -> FixedArray[Byte] raise OpcError {
+  let archive = @zip.Archive::Archive()
+  for part in self.parts {
+    archive.add(opc_name_to_zip(part.name), Bytes::from_array(part.bytes))
   }
-  @fzip.zip_sync(entries)
+  let bytes = @zip.write(archive) catch { e => raise wrap_zip(e) }
+  bytes.to_fixedarray()
 }
 
 ///|

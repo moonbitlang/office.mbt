@@ -6,15 +6,22 @@ with pointers to the concrete code that implements each piece. It is written as 
 
 If you are looking for proposed refactors, see `docs/architecture-improvements.md`.
 
-This is a historical engine-level description. For the current eight-module
+This is a historical engine-level description. For the current nine-module
 workspace layout, see the [root README](../README.md). Existing source references
 below use repository-relative paths.
 
 ## Repository layout
 
-This repository is a MoonBit workspace (`moon.work`) of eight peer modules:
+This repository is a MoonBit workspace (`moon.work`) of nine peer modules:
 `mbtexcel/`, `docx2html/`, `pdflite/`, `pagelayout/`, `office-lib/`,
-`office-cli/`, `pdf2md/`, and `pptx/`. Within `mbtexcel/`:
+`office-cli/`, `pdf2md/`, `pptx/`, and `office-ooxml/`.
+
+`office-ooxml` is a shared foundation below the document engines. PPTX uses
+its OPC container and XML adapter; DOCX uses its URI rules while retaining
+DOCX validation and budget-aware XML parsing. It has no dependency on
+`office-lib` or any document engine. See its [module guide](../office-ooxml/README.md).
+
+Within `mbtexcel/`:
 
 - `mbtexcel/mbtexcel.mbt`
   - Thin “facade” package: exports convenience functions that delegate to `@xlsx`.

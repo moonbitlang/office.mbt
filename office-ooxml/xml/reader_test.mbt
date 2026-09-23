@@ -202,9 +202,15 @@ test "unexpected EOF raises" {
 }
 
 ///|
-test "empty input returns no events" {
-  let events = drain("")
-  debug_inspect(events.length(), content="0")
+test "empty input is rejected" {
+  let rejected = try {
+    ignore(drain(""))
+    false
+  } catch {
+    Malformed(_) => true
+    _ => false
+  }
+  debug_inspect(rejected, content="true")
 }
 
 ///|

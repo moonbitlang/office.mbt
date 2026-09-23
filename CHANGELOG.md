@@ -4,7 +4,26 @@ Breaking and notable changes for the published modules in this workspace.
 Entries are grouped by module and by the version they ship in; `Unreleased`
 covers changes that have landed on `main` but are not yet published.
 
+### moonbitlang/office-ooxml [Unreleased]
+
+- Add shared OPC, XML, and URI packages below the document engines. Extract
+  DOCX's URI rules and preserve its existing public entry points as re-exports.
+- Use flate for ZIP I/O and `Milky2018/xml@0.4.1` for namespace-aware XML reading.
+  Retain the Office writer's attribute whitespace preservation.
+
+### moonbitlang/docx2html [Unreleased]
+
+- Depend on `office-ooxml/uri` for OPC part names and relationship URI rules.
+  Existing `docx2html/opc` functions and registry types remain available through
+  re-exports; DOCX-specific validation and resource budgets remain in DOCX.
+
 ### moonbitlang/pptx [Unreleased]
+
+- Move low-level `opc` and `xml` imports to `moonbitlang/office-ooxml/...`.
+  Replace fzip with flate; `Presentation::save()` now raises `PptxError` and
+  `Package::to_bytes()` raises `OpcError` on ZIP write failure.
+- Reject malformed XML, empty documents, and DOCTYPE declarations through the
+  shared XML reader.
 
 - Add PPTX parsing, building, and writing, derived from t-ujiie-g/moon-pptx
   0.10.0; retain upstream attribution and Apache-2.0 notices.
@@ -12,7 +31,7 @@ covers changes that have landed on `main` but are not yet published.
   demos, and `cmd/demos` and `cmd/bench` executables under the root workspace.
 - Integrate root scripts, the shared OpenXML SDK validator, the common CI and
   release workflow, and Office warning conventions. Existing public library
-  import paths remain `moonbitlang/pptx/...`.
+  document-model import paths remain `moonbitlang/pptx/...`.
 - Restrict imported implementation fields and helpers to their owning packages.
   Use `Presentation::opc_package()` for raw OPC edits, and `Part::bytes()`,
   `ContentTypes::defaults()` / `overrides()`, and `Relationships::items()` for

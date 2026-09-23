@@ -46,9 +46,7 @@ pub fn Part::bytes(self : Part) -> FixedArray[Byte] {
 /// Decode the payload as UTF-8 text. Raises `MalformedPackage` if the bytes
 /// are not valid UTF-8. Convenience for the many OPC parts that hold XML.
 pub fn Part::text(self : Part) -> String raise OpcError {
-  @fzip.str_from_u8(self.bytes) catch {
-    e => raise wrap_fzip(e)
-  }
+  decode_part_text(self.bytes)
 }
 
 // --- name helpers (shared with Package) ---
@@ -107,4 +105,11 @@ pub impl Show for Part with fn output(self, logger) {
   logger.write_string(", ")
   logger.write_object(self.bytes.length())
   logger.write_string(" bytes)")
+}
+
+///|
+fn decode_part_text(bytes : FixedArray[Byte]) -> String raise OpcError {
+  @utf8.decode(Bytes::from_array(bytes)) catch {
+    _ => raise MalformedPackage("part contains invalid UTF-8")
+  }
 }

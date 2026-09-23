@@ -1,18 +1,16 @@
 ///|
 test "part enumeration cannot corrupt package storage or its index" {
   let pkg = @opc.Package::new()
-  pkg.add_part(
-    @opc.Part::new("/a.xml", "application/xml", @fzip.str_to_u8("a")),
-  )
+  pkg.add_part(@opc.Part::new("/a.xml", "application/xml", utf8_bytes("a")))
   let parts = pkg.parts()
   parts.clear()
-  parts.push(@opc.Part::new("/b.xml", "application/xml", @fzip.str_to_u8("b")))
+  parts.push(@opc.Part::new("/b.xml", "application/xml", utf8_bytes("b")))
   debug_inspect(pkg.parts().map(part => part.name), content="[\"/a.xml\"]")
   debug_inspect(pkg.part_by_name("/b.xml") is None, content="true")
   debug_inspect(pkg.require_part("/a.xml").text(), content="\"a\"")
   debug_inspect(
     pkg.replace_part(
-      @opc.Part::new("/a.xml", "application/xml", @fzip.str_to_u8("new")),
+      @opc.Part::new("/a.xml", "application/xml", utf8_bytes("new")),
     ),
     content="true",
   )

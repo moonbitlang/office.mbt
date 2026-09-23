@@ -3,7 +3,7 @@ package "moonbitlang/pptx/chart"
 
 import {
   "moonbitlang/core/debug",
-  "moonbitlang/pptx/xml",
+  "moonbitlang/office-ooxml/xml",
 }
 
 // Values

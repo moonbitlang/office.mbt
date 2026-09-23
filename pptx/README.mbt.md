@@ -20,7 +20,8 @@ can continue independently.
 | `slide`, `slide_master`, `theme` | Slides, layouts, masters, and themes |
 | `chart`, `chart_ex`, `smartart` | Charts and diagrams |
 | `notes`, `comments` | Speaker notes and comments |
-| `oxml`, `xml`, `opc`, `units` | OOXML models, XML, ZIP packages, and typed units |
+| `oxml`, `units` | OOXML models and typed units |
+| `office-ooxml/xml`, `office-ooxml/opc` | Shared XML and ZIP package support |
 | `demos` | Shared sample-deck builders with public-API tests |
 | `cmd/demos`, `cmd/bench` | Demo generation and benchmark executables |
 | `integration` | Cross-package tests, embedded fixtures, and benchmarks |
@@ -85,3 +86,10 @@ guaranteed to round-trip without loss. Parser robustness, attribute/namespace
 preservation, ZIP resource limits, and PowerPoint display/edit compatibility
 remain tracked in [#549](https://github.com/moonbitlang/office.mbt/issues/549).
 SDK schema validation and parsed-model equality do not establish visual fidelity.
+
+## Shared OPC and XML
+
+Import `moonbitlang/office-ooxml/opc` and `moonbitlang/office-ooxml/xml` for the
+shared low-level types previously owned by PPTX. See the
+[shared module](../office-ooxml/README.md) for implementation boundaries.
+`Presentation::save()` now raises `PptxError` when ZIP writing fails.

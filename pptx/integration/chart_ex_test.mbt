@@ -70,7 +70,7 @@ fn fixture_chart_ex_slide_rels_xml() -> String {
 
 ///|
 /// Build a PPTX whose slide carries a chartEx-bearing graphic frame.
-fn chart_ex_deck() -> FixedArray[Byte] {
+fn chart_ex_deck() -> FixedArray[Byte] raise {
   let ct_rels = "application/vnd.openxmlformats-package.relationships+xml"
   let parts : Array[(String, String, String)] = [
     ("/ppt/presentation.xml", ct_presentation, fixture_presentation_xml()),

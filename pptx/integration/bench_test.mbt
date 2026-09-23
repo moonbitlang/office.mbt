@@ -127,19 +127,19 @@ test "bench build 1000 (hoisted)" (it : @bench.T) {
 ///|
 test "bench save 10" (it : @bench.T) {
   let prs = deck(10)
-  it.bench(() => it.keep(prs.save()))
+  it.bench(() => it.keep(try! prs.save()))
 }
 
 ///|
 test "bench save 100" (it : @bench.T) {
   let prs = deck(100)
-  it.bench(() => it.keep(prs.save()), count=20)
+  it.bench(() => it.keep(try! prs.save()), count=20)
 }
 
 ///|
 test "bench save 1000" (it : @bench.T) {
   let prs = deck(1000)
-  it.bench(() => it.keep(prs.save()), count=5)
+  it.bench(() => it.keep(try! prs.save()), count=5)
 }
 
 // --- parse ---

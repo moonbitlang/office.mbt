@@ -1,4 +1,5 @@
 members = [
+  "./office-ooxml",
   "./mbtexcel",
   "./docx2html",
   "./office-lib",

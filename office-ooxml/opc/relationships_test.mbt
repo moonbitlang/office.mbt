@@ -96,7 +96,7 @@ test "parse single Internal relationship" {
   let xml = rels_xml(
     "<Relationship Id=\"rId1\" Type=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument\" Target=\"ppt/presentation.xml\"/>",
   )
-  let rels = @opc.Relationships::parse(@opc.package_root, @fzip.str_to_u8(xml))
+  let rels = @opc.Relationships::parse(@opc.package_root, utf8_bytes(xml))
   debug_inspect(rels.items().length(), content="1")
   let r = rels.items()[0]
   debug_inspect(r.id, content="\"rId1\"")
@@ -109,23 +109,21 @@ test "parse External TargetMode" {
   let xml = rels_xml(
     "<Relationship Id=\"rId7\" Type=\"http://example/external\" Target=\"https://example.org/x\" TargetMode=\"External\"/>",
   )
-  let rels = @opc.Relationships::parse("/foo.xml", @fzip.str_to_u8(xml))
+  let rels = @opc.Relationships::parse("/foo.xml", utf8_bytes(xml))
   debug_inspect(rels.items()[0].target_mode is External, content="true")
 }
 
 ///|
 test "parse rejects malformed input" {
   let bad = "<?xml version=\"1.0\"?><Relationships><Relationship/></Relationships>"
-  try @opc.Relationships::parse(@opc.package_root, @fzip.str_to_u8(bad)) catch {
+  try @opc.Relationships::parse(@opc.package_root, utf8_bytes(bad)) catch {
     MalformedPackage(_) => ()
     _ => fail("expected MalformedPackage")
   } noraise {
     _ => fail("expected MalformedPackage")
   }
   let bad2 = rels_xml("<Relationship Id=\"rId1\" Type=\"x\"/>") // no Target
-  try
-    @opc.Relationships::parse(@opc.package_root, @fzip.str_to_u8(bad2))
-  catch {
+  try @opc.Relationships::parse(@opc.package_root, utf8_bytes(bad2)) catch {
     MalformedPackage(_) => ()
     _ => fail("expected MalformedPackage")
   } noraise {
@@ -134,9 +132,7 @@ test "parse rejects malformed input" {
   let bad3 = rels_xml(
     "<Relationship Id=\"rId1\" Type=\"x\" Target=\"y\" TargetMode=\"Weird\"/>",
   )
-  try
-    @opc.Relationships::parse(@opc.package_root, @fzip.str_to_u8(bad3))
-  catch {
+  try @opc.Relationships::parse(@opc.package_root, utf8_bytes(bad3)) catch {
     MalformedPackage(_) => ()
     _ => fail("expected MalformedPackage")
   } noraise {
@@ -224,7 +220,9 @@ test "by_id and by_type lookups" {
 let ct_ns_rt : String = "http://schemas.openxmlformats.org/package/2006/content-types"
 
 ///|
-fn make_pkg_with_rels(extra : Array[(String, String)]) -> FixedArray[Byte] {
+fn make_pkg_with_rels(
+  extra : Array[(String, String)],
+) -> FixedArray[Byte] raise {
   let entries : Array[(String, FixedArray[Byte])] = []
   let ct_xml = "<?xml version=\"1.0\"?><Types xmlns=\"" +
     ct_ns_rt +
@@ -232,11 +230,11 @@ fn make_pkg_with_rels(extra : Array[(String, String)]) -> FixedArray[Byte] {
     "<Default Extension=\"rels\" ContentType=\"application/vnd.openxmlformats-package.relationships+xml\"/>" +
     "<Default Extension=\"xml\" ContentType=\"application/xml\"/>" +
     "</Types>"
-  entries.push(("[Content_Types].xml", @fzip.str_to_u8(ct_xml)))
+  entries.push(("[Content_Types].xml", utf8_bytes(ct_xml)))
   for kv in extra {
-    entries.push((kv.0, @fzip.str_to_u8(kv.1)))
+    entries.push((kv.0, utf8_bytes(kv.1)))
   }
-  @fzip.zip_sync(entries)
+  fixture_zip(entries)
 }
 
 ///|

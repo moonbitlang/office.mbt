@@ -9,7 +9,7 @@ The original Apache-2.0 [LICENSE](LICENSE) is retained without changes.
 No tracked NOTICE file was present in that upstream revision. Imported code,
 samples, corpus-generation code, and comparative benchmark tools retain this
 provenance even where moved to Office's root `scripts/` and `tools/`, or the
-module's `pptx/docs/`.
+module's `pptx/docs/` and shared `office-ooxml/` foundations.
 
 The MoonBit team owns the official module's maintenance, API evolution, and
 release schedule. Contributions from the original author are welcome. The
@@ -28,11 +28,15 @@ original project remains independent and may follow its own priorities.
 - Preserve existing trait-method calls with explicit extensions, use current
   array constructors, and adopt the same warning policy as `mbtexcel` and
   `office-lib`. Qualify test symbols where needed and remove redundant type
-  qualifiers where inferred. Parser/serializer algorithms are unchanged.
+  qualifiers where inferred.
 - Make execution state, caches, storage, and construction handles private;
   remove internal copy, name-conversion, and validation helpers from the API.
   Expose low-level package access through `opc_package()` and return independent
   OPC collection and payload snapshots. Cache slide order by part identity.
+
+- Extract OPC/XML into `office-ooxml`, replace ZIP with flate, and adopt
+  `Milky2018/xml@0.4.1` for XML reading. Keep the namespace-aware Office writer
+  to preserve attribute whitespace.
 
 The original repository's agent overlays, hooks, workflows, roadmap, release
 policy, and benchmark workspace do not govern this module. Historical design

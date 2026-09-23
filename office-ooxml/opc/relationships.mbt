@@ -110,7 +110,7 @@ pub fn Relationships::parse(
   source : String,
   bytes : FixedArray[Byte],
 ) -> Relationships raise OpcError {
-  let text = @fzip.str_from_u8(bytes) catch { e => raise wrap_fzip(e) }
+  let text = decode_part_text(bytes)
   parse_relationships_xml(source, text)
 }
 
@@ -122,7 +122,7 @@ pub fn Relationships::serialize(
   let xml = serialize_relationships_xml(self) catch {
     e => raise MalformedPackage("relationships writer error: " + e.to_string())
   }
-  @fzip.str_to_u8(xml)
+  @utf8.encode(xml).to_fixedarray()
 }
 
 ///|
@@ -236,22 +236,10 @@ pub fn resolve_target(
 /// * `package_root` (`"/"`) → `"/_rels/.rels"`
 /// * `"/foo/bar.xml"`       → `"/foo/_rels/bar.xml.rels"`
 pub fn rels_path_for(source : String) -> String {
-  if source == package_root {
-    return "/_rels/.rels"
-  }
-  // Split at the last `/`: the directory prefix gains a `_rels/` level and the
-  // basename gains a `.rels` suffix.
-  let segs = source.split("/").collect()
-  guard segs.length() > 1 else { return "/_rels/" + source + ".rels" }
-  let buf = StringBuilder(size_hint=source.length() + 12)
-  for i in 0..<(segs.length() - 1) {
-    buf..write_view(segs[i]).write_char('/')
-  }
-  buf
-  ..write_string("_rels/")
-  ..write_view(segs[segs.length() - 1])
-  .write_string(".rels")
-  buf.to_string()
+  "/" +
+  @uri.relationships_part_name_for_source(
+    source.trim_start(chars="/").to_owned(),
+  )
 }
 
 // --- internal ---

@@ -53,7 +53,7 @@ async test "SmartArt baseline does not hide unrelated presentation schema errors
     let invalid = xml.replace(old="<p:sldSz ", new="<p:sldSz invalid=\"true\" ")
     debug_inspect(
       archive.replace_part(
-        @opc.Part::new(part.name, part.content_type, @fzip.str_to_u8(invalid)),
+        @opc.Part::new(part.name, part.content_type, utf8_bytes(invalid)),
       ),
       content="true",
     )

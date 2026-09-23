@@ -89,7 +89,7 @@ fn fixture_chart_slide_rels_xml() -> String {
 ///|
 /// Build a PPTX with one chart-bearing slide. We need the slide `.rels`
 /// part too because chart resolution goes through the rId.
-fn chart_deck() -> FixedArray[Byte] {
+fn chart_deck() -> FixedArray[Byte] raise {
   let ct_rels = "application/vnd.openxmlformats-package.relationships+xml"
   let parts : Array[(String, String, String)] = [
     ("/ppt/presentation.xml", ct_presentation, fixture_presentation_xml()),
