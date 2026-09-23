@@ -1,0 +1,6 @@
+// Modified for office.mbt: explicit trait-method imports.
+
+import {
+  "Milky2018/xml" @parser,
+  "moonbitlang/core/debug",
+}

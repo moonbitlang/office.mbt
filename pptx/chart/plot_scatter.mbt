@@ -1,0 +1,103 @@
+// Scatter-chart family.
+//
+// `<c:scatterChart>` (ECMA-376 §21.2.2.161, `CT_ScatterChart`):
+//
+//   <c:scatterStyle> (REQUIRED, CT_ScatterStyle —
+//                     line|lineMarker|marker|none|smooth|smoothMarker)
+//   <c:varyColors>   (optional Bool)
+//   <c:ser>*         (zero or more series — CT_ScatterSer)
+//   <c:dLbls>        (optional)
+//   <c:axId>{2}      (REQUIRED — two value axes)
+//   <c:extLst>       (optional)
+//
+// Scatter charts use two value axes (`<c:valAx>` × 2), distinct from
+// the category-axis + value-axis pair every other 2-D chart uses.
+
+///|
+/// Body of `<c:scatterChart>` (CT_ScatterChart). Scatter charts
+/// use two value axes (`<c:valAx>` × 2) instead of the category +
+/// value pair every other 2-D chart uses.
+pub(all) struct ScatterChartBody {
+  scatter_style : ScatterStyle
+  vary_colors : Bool?
+  series : Array[ScatterSeriesCore]
+  d_lbls : DLbls?
+  ax_ids : Array[Int]
+  extension : Array[@xml.XmlElement]
+} derive(Eq, Debug)
+
+///|
+pub extend ScatterChartBody with @debug.Debug::{to_repr}
+
+///|
+pub extend ScatterChartBody with Eq::{not_equal, equal}
+
+///|
+pub extend ScatterChartBody with Show::{to_string, output}
+
+///|
+pub impl Show for ScatterChartBody with fn output(self, logger) {
+  logger.write_string("ScatterChartBody(")
+  logger.write_string(self.scatter_style.to_xml())
+  logger.write_string(")")
+}
+
+///|
+/// `<c:scatterStyle val="…"/>` (CT_ScatterStyle). Six-value enum.
+///
+/// - `Line` (`val="line"`) — connecting lines, no markers.
+/// - `LineMarker` (`val="lineMarker"`) — connecting lines plus markers.
+/// - `Marker` (`val="marker"`) — markers only.
+/// - `None_` (`val="none"`) — neither lines nor markers (rare).
+/// - `Smooth` (`val="smooth"`) — smoothed connecting lines.
+/// - `SmoothMarker` (`val="smoothMarker"`) — smoothed lines plus markers.
+pub(all) enum ScatterStyle {
+  Line
+  LineMarker
+  Marker
+  None_
+  Smooth
+  SmoothMarker
+} derive(Eq, Debug)
+
+///|
+pub extend ScatterStyle with @debug.Debug::{to_repr}
+
+///|
+pub extend ScatterStyle with Eq::{not_equal, equal}
+
+///|
+pub extend ScatterStyle with Show::{to_string, output}
+
+///|
+pub impl Show for ScatterStyle with fn output(self, logger) {
+  logger.write_string(self.to_xml())
+}
+
+///|
+/// Parse `ScatterStyle` from its OOXML attribute string. Unknown
+/// values return `None`.
+pub fn ScatterStyle::from_xml(s : String) -> ScatterStyle? {
+  match s {
+    "line" => Some(Line)
+    "lineMarker" => Some(LineMarker)
+    "marker" => Some(Marker)
+    "none" => Some(None_)
+    "smooth" => Some(Smooth)
+    "smoothMarker" => Some(SmoothMarker)
+    _ => None
+  }
+}
+
+///|
+/// Serialise `ScatterStyle` back to the OOXML attribute string.
+pub fn ScatterStyle::to_xml(self : ScatterStyle) -> String {
+  match self {
+    Line => "line"
+    LineMarker => "lineMarker"
+    Marker => "marker"
+    None_ => "none"
+    Smooth => "smooth"
+    SmoothMarker => "smoothMarker"
+  }
+}

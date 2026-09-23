@@ -1,0 +1,81 @@
+// Radar-chart family.
+//
+// `<c:radarChart>` (ECMA-376 §21.2.2.153, `CT_RadarChart`):
+//   radarStyle (REQUIRED, enum) ; varyColors? ; ser* ; dLbls? ;
+//   axId{2} ; extLst?
+
+///|
+/// Body of `<c:radarChart>` (CT_RadarChart).
+pub(all) struct RadarChartBody {
+  radar_style : RadarStyle
+  vary_colors : Bool?
+  series : Array[ChartSeriesCore]
+  d_lbls : DLbls?
+  ax_ids : Array[Int]
+  extension : Array[@xml.XmlElement]
+} derive(Eq, Debug)
+
+///|
+pub extend RadarChartBody with @debug.Debug::{to_repr}
+
+///|
+pub extend RadarChartBody with Eq::{not_equal, equal}
+
+///|
+pub extend RadarChartBody with Show::{to_string, output}
+
+///|
+pub impl Show for RadarChartBody with fn output(self, logger) {
+  logger.write_string("RadarChartBody(")
+  logger.write_string(self.radar_style.to_xml())
+  logger.write_string(")")
+}
+
+///|
+/// `<c:radarStyle val="…"/>` (CT_RadarStyle). Three-value enum.
+///
+/// - `Standard` (`val="standard"`) — unfilled lines connecting category
+///   points.
+/// - `Marker` (`val="marker"`) — same as standard plus markers at points.
+/// - `Filled` (`val="filled"`) — filled-area radar.
+pub(all) enum RadarStyle {
+  Standard
+  Marker
+  Filled
+} derive(Eq, Debug)
+
+///|
+pub extend RadarStyle with @debug.Debug::{to_repr}
+
+///|
+pub extend RadarStyle with Eq::{not_equal, equal}
+
+///|
+pub extend RadarStyle with Show::{to_string, output}
+
+///|
+pub impl Show for RadarStyle with fn output(self, logger) {
+  logger.write_string(self.to_xml())
+}
+
+///|
+/// Parse `RadarStyle` from its OOXML attribute string. Unknown
+/// values return `None`.
+pub fn RadarStyle::from_xml(s : String) -> RadarStyle? {
+  match s {
+    "standard" => Some(Standard)
+    "marker" => Some(Marker)
+    "filled" => Some(Filled)
+    _ => None
+  }
+}
+
+///|
+/// Serialise `RadarStyle` back to the OOXML attribute string.
+pub fn RadarStyle::to_xml(self : RadarStyle) -> String {
+  match self {
+    Standard => "standard"
+    Marker => "marker"
+    Filled => "filled"
+  }
+}

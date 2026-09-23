@@ -1,0 +1,9 @@
+// Modified for office.mbt: official module namespace and workspace integration.
+import {
+  "moonbitlang/core/env",
+  "moonbitlang/core/string",
+  "moonbitlang/pptx/presentation",
+  "moonbitlang/pptx/slide",
+}
+
+pkgtype(kind: "executable")

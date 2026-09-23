@@ -1,0 +1,5 @@
+import {
+  "moonbitlang/pptx/demos" @demo_api,
+}
+
+pkgtype(kind: "executable")

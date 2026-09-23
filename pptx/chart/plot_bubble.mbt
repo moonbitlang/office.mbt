@@ -1,0 +1,95 @@
+// Bubble-chart family.
+//
+// `<c:bubbleChart>` (ECMA-376 §21.2.2.20, `CT_BubbleChart`):
+//
+//   <c:varyColors>     (optional Bool)
+//   <c:ser>*           (zero or more series — CT_BubbleSer)
+//   <c:dLbls>          (optional)
+//   <c:bubble3D>       (optional Bool — render bubbles with 3-D effect)
+//   <c:bubbleScale>    (optional, 0..300 percentage)
+//   <c:showNegBubbles> (optional Bool)
+//   <c:sizeRepresents> (optional, enum area|w)
+//   <c:axId>{2}        (REQUIRED — two value axes)
+//   <c:extLst>         (optional)
+
+///|
+/// Body of `<c:bubbleChart>` (CT_BubbleChart). Bubble charts
+/// pair XY coordinates with a bubble-size dimension.
+///
+/// - `bubble_scale` (`<c:bubbleScale val="…"/>`) — integer percentage 0..300.
+/// - `show_neg_bubbles` (`<c:showNegBubbles val="…"/>`) — whether to render
+///   bubbles for negative size values.
+/// - `size_represents` (`<c:sizeRepresents val="…"/>`) — how the numeric size
+///   maps to the bubble's drawn dimension (`area` or `w`idth).
+pub(all) struct BubbleChartBody {
+  vary_colors : Bool?
+  series : Array[BubbleSeriesCore]
+  d_lbls : DLbls?
+  bubble_3d : Bool?
+  bubble_scale : Int?
+  show_neg_bubbles : Bool?
+  size_represents : SizeRepresents?
+  ax_ids : Array[Int]
+  extension : Array[@xml.XmlElement]
+} derive(Eq, Debug)
+
+///|
+pub extend BubbleChartBody with @debug.Debug::{to_repr}
+
+///|
+pub extend BubbleChartBody with Eq::{not_equal, equal}
+
+///|
+pub extend BubbleChartBody with Show::{to_string, output}
+
+///|
+pub impl Show for BubbleChartBody with fn output(self, logger) {
+  logger.write_string("BubbleChartBody(")
+  logger.write_string(self.series.length().to_string())
+  logger.write_string(" series)")
+}
+
+///|
+/// `<c:sizeRepresents val="…"/>` (CT_SizeRepresents). Two-value enum.
+///
+/// - `Area` (`val="area"`) — bubble area is proportional to the size value
+///   (the default).
+/// - `Width` (`val="w"`) — bubble width (diameter) is proportional to size.
+pub(all) enum SizeRepresents {
+  Area
+  Width
+} derive(Eq, Debug)
+
+///|
+pub extend SizeRepresents with @debug.Debug::{to_repr}
+
+///|
+pub extend SizeRepresents with Eq::{not_equal, equal}
+
+///|
+pub extend SizeRepresents with Show::{to_string, output}
+
+///|
+pub impl Show for SizeRepresents with fn output(self, logger) {
+  logger.write_string(self.to_xml())
+}
+
+///|
+/// Parse `SizeRepresents` from its OOXML attribute string. Unknown
+/// values return `None`.
+pub fn SizeRepresents::from_xml(s : String) -> SizeRepresents? {
+  match s {
+    "area" => Some(Area)
+    "w" => Some(Width)
+    _ => None
+  }
+}
+
+///|
+/// Serialise `SizeRepresents` back to the OOXML attribute string.
+pub fn SizeRepresents::to_xml(self : SizeRepresents) -> String {
+  match self {
+    Area => "area"
+    Width => "w"
+  }
+}

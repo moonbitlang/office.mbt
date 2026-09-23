@@ -1,4 +1,5 @@
 members = [
+  "./ooxml",
   "./mbtexcel",
   "./docx2html",
   "./office-lib",
@@ -6,4 +7,5 @@ members = [
   "./pagelayout",
   "./pdflite",
   "./pdf2md",
+  "./pptx",
 ]

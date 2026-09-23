@@ -1,0 +1,334 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "moonbitlang/pptx/presentation"
+
+import {
+  "moonbitlang/core/debug",
+  "moonbitlang/ooxml/opc",
+  "moonbitlang/ooxml/xml",
+  "moonbitlang/pptx/chart",
+  "moonbitlang/pptx/chart_ex",
+  "moonbitlang/pptx/comments",
+  "moonbitlang/pptx/notes",
+  "moonbitlang/pptx/slide",
+  "moonbitlang/pptx/slide_master",
+  "moonbitlang/pptx/smartart",
+  "moonbitlang/pptx/theme",
+  "moonbitlang/pptx/units",
+}
+
+// Values
+
+// Errors
+pub(all) suberror PptxError {
+  OpcFailure(String)
+  ThemeFailure(String)
+  SlideMasterFailure(String)
+  SlideFailure(String)
+  NotesFailure(String)
+  CommentsFailure(String)
+  ChartFailure(String)
+  ChartExFailure(String)
+  SmartArtFailure(String)
+  Malformed(String)
+} derive(Eq, @debug.Debug)
+pub fn PptxError::equal(Self, Self) -> Bool
+pub fn PptxError::not_equal(Self, Self) -> Bool
+pub fn PptxError::output(Self, &Logger) -> Unit
+pub fn PptxError::to_repr(Self) -> @debug.Repr
+pub fn PptxError::to_string(Self) -> String
+pub impl Show for PptxError
+
+// Types and methods
+pub struct AppProperties {
+  company : String?
+  manager : String?
+  application : String?
+  app_version : String?
+} derive(Eq, @debug.Debug)
+pub fn AppProperties::equal(Self, Self) -> Bool
+pub fn AppProperties::new() -> Self
+pub fn AppProperties::not_equal(Self, Self) -> Bool
+pub fn AppProperties::to_repr(Self) -> @debug.Repr
+pub fn AppProperties::with_app_version(Self, String) -> Self
+pub fn AppProperties::with_application(Self, String) -> Self
+pub fn AppProperties::with_company(Self, String) -> Self
+pub fn AppProperties::with_manager(Self, String) -> Self
+
+pub struct BlankSlide {
+}
+pub fn BlankSlide::layout_type(Self) -> @slide_master.SlideLayoutType
+pub fn BlankSlide::placeholders(Self) -> Array[PlaceholderSpec]
+pub impl LayoutPlaceholders for BlankSlide
+pub impl LayoutType for BlankSlide
+
+pub struct CoreProperties {
+  title : String?
+  creator : String?
+  subject : String?
+  keywords : String?
+  description : String?
+  category : String?
+  content_status : String?
+  created : String?
+  modified : String?
+  last_printed : String?
+  last_modified_by : String?
+  revision : String?
+  identifier : String?
+  language : String?
+  version : String?
+} derive(Eq, @debug.Debug)
+pub fn CoreProperties::equal(Self, Self) -> Bool
+pub fn CoreProperties::new() -> Self
+pub fn CoreProperties::not_equal(Self, Self) -> Bool
+pub fn CoreProperties::to_repr(Self) -> @debug.Repr
+pub fn CoreProperties::to_xml(Self) -> String raise @xml.XmlError
+pub fn CoreProperties::with_author(Self, String) -> Self
+pub fn CoreProperties::with_category(Self, String) -> Self
+pub fn CoreProperties::with_content_status(Self, String) -> Self
+pub fn CoreProperties::with_created(Self, String) -> Self
+pub fn CoreProperties::with_creator(Self, String) -> Self
+pub fn CoreProperties::with_description(Self, String) -> Self
+pub fn CoreProperties::with_identifier(Self, String) -> Self
+pub fn CoreProperties::with_keywords(Self, String) -> Self
+pub fn CoreProperties::with_language(Self, String) -> Self
+pub fn CoreProperties::with_last_modified_by(Self, String) -> Self
+pub fn CoreProperties::with_last_printed(Self, String) -> Self
+pub fn CoreProperties::with_modified(Self, String) -> Self
+pub fn CoreProperties::with_revision(Self, String) -> Self
+pub fn CoreProperties::with_subject(Self, String) -> Self
+pub fn CoreProperties::with_title(Self, String) -> Self
+pub fn CoreProperties::with_version(Self, String) -> Self
+
+pub struct LayoutSlide[L] {
+  // private fields
+}
+pub fn[L : HasBody] LayoutSlide::body(Self[L], String) -> Self[L]
+pub fn[L] LayoutSlide::finish_mut(Self[L]) -> String raise PptxError
+pub fn[L : HasSubtitle] LayoutSlide::subtitle(Self[L], String) -> Self[L]
+pub fn[L : HasTitle] LayoutSlide::title(Self[L], String) -> Self[L]
+
+pub struct MasterDefinition {
+  name : String
+  // private fields
+}
+pub fn MasterDefinition::new(String) -> Self
+pub fn MasterDefinition::with_background(Self, @slide.Background) -> Self
+pub fn MasterDefinition::with_date(Self, Bool) -> Self
+pub fn MasterDefinition::with_footer(Self, String) -> Self
+pub fn MasterDefinition::with_placeholder(Self, @slide.PlaceholderType, @slide.Transform, default_text? : String) -> Self
+pub fn MasterDefinition::with_slide_number(Self, Bool) -> Self
+
+pub(all) struct NotesSize {
+  cx : @units.Emu
+  cy : @units.Emu
+} derive(Eq, @debug.Debug)
+pub fn NotesSize::equal(Self, Self) -> Bool
+pub fn NotesSize::not_equal(Self, Self) -> Bool
+pub fn NotesSize::to_repr(Self) -> @debug.Repr
+
+pub struct PlaceholderSpec {
+  kind : @slide.PlaceholderType
+  idx : Int
+  position : @slide.Transform
+}
+
+pub struct Presentation {
+  // private fields
+}
+pub fn Presentation::add_audio_mut(Self, Int, audio_bytes~ : FixedArray[Byte], poster_bytes~ : FixedArray[Byte], x~ : @units.Emu, y~ : @units.Emu, cx~ : @units.Emu, cy~ : @units.Emu) -> Unit raise PptxError
+pub fn Presentation::add_blank_typed_slide_mut(Self) -> LayoutSlide[BlankSlide] raise PptxError
+pub fn Presentation::add_chart_ex_mut(Self, Int, @chart_ex.ChartEx, x~ : @units.Emu, y~ : @units.Emu, cx~ : @units.Emu, cy~ : @units.Emu) -> Unit raise PptxError
+pub fn Presentation::add_chart_mut(Self, Int, @chart.Chart, x~ : @units.Emu, y~ : @units.Emu, cx~ : @units.Emu, cy~ : @units.Emu, embed_data? : @chart.ChartData) -> Unit raise PptxError
+pub fn Presentation::add_online_video_mut(Self, Int, String, FixedArray[Byte], x~ : @units.Emu, y~ : @units.Emu, cx~ : @units.Emu, cy~ : @units.Emu) -> Unit raise PptxError
+pub fn Presentation::add_picture_auto_mut(Self, Int, FixedArray[Byte], x~ : @units.Emu, y~ : @units.Emu) -> Unit raise PptxError
+pub fn Presentation::add_picture_mut(Self, Int, FixedArray[Byte], x~ : @units.Emu, y~ : @units.Emu, cx~ : @units.Emu, cy~ : @units.Emu) -> Unit raise PptxError
+pub fn Presentation::add_section_header_slide_mut(Self) -> LayoutSlide[SectionHeader] raise PptxError
+pub fn Presentation::add_section_mut(Self, title~ : String, start~ : Int) -> Unit raise PptxError
+pub fn Presentation::add_slide_mut(Self, Int) -> String raise PptxError
+pub fn Presentation::add_slides_mut(Self, Int, Int) -> Array[String] raise PptxError
+pub fn Presentation::add_smartart_mut(Self, Int, @smartart.SmartArt, x~ : @units.Emu, y~ : @units.Emu, cx~ : @units.Emu, cy~ : @units.Emu) -> Unit raise PptxError
+pub fn Presentation::add_svg_picture_mut(Self, Int, svg_bytes~ : FixedArray[Byte], fallback_bytes~ : FixedArray[Byte], x~ : @units.Emu, y~ : @units.Emu, cx~ : @units.Emu, cy~ : @units.Emu) -> Unit raise PptxError
+pub fn Presentation::add_title_content_slide_mut(Self) -> LayoutSlide[TitleAndContent] raise PptxError
+pub fn Presentation::add_title_only_slide_mut(Self) -> LayoutSlide[TitleOnly] raise PptxError
+pub fn Presentation::add_title_slide_mut(Self) -> LayoutSlide[TitleSlide] raise PptxError
+pub fn Presentation::add_video_mut(Self, Int, video_bytes~ : FixedArray[Byte], poster_bytes~ : FixedArray[Byte], x~ : @units.Emu, y~ : @units.Emu, cx~ : @units.Emu, cy~ : @units.Emu) -> Unit raise PptxError
+pub fn Presentation::add_youtube_video_mut(Self, Int, String, FixedArray[Byte], x~ : @units.Emu, y~ : @units.Emu, cx~ : @units.Emu, cy~ : @units.Emu) -> Unit raise PptxError
+pub fn Presentation::app_properties(Self) -> AppProperties raise PptxError
+pub fn Presentation::charts(Self) -> Array[@chart.Chart] raise PptxError
+pub fn Presentation::charts_ex(Self) -> Array[@chart_ex.ChartEx] raise PptxError
+pub fn Presentation::clone(Self) -> Self
+pub fn Presentation::comment_authors(Self) -> @comments.CommentAuthorList? raise PptxError
+pub fn Presentation::comment_lists(Self) -> Array[@comments.CommentList] raise PptxError
+pub fn Presentation::core_properties(Self) -> CoreProperties raise PptxError
+pub fn Presentation::define_master(Self, MasterDefinition) -> Int raise PptxError
+pub fn Presentation::duplicate_slide_mut(Self, Int) -> String raise PptxError
+pub fn Presentation::map_slide_shapes_mut(Self, Int, (@slide.Shape) -> @slide.Shape) -> Unit raise PptxError
+pub fn Presentation::move_slide_mut(Self, Int, Int) -> Unit raise PptxError
+pub fn Presentation::new() -> Self raise PptxError
+pub fn Presentation::notes_slides(Self) -> Array[@notes.NotesSlide] raise PptxError
+pub fn Presentation::opc_package(Self) -> @opc.Package
+pub fn Presentation::open(FixedArray[Byte]) -> Self raise PptxError
+pub fn Presentation::pct_h(Self, Double) -> @units.Emu
+pub fn Presentation::pct_w(Self, Double) -> @units.Emu
+pub fn Presentation::presentation_part(Self) -> PresentationPart? raise PptxError
+pub fn Presentation::remove_slide_mut(Self, Int) -> Unit raise PptxError
+pub fn Presentation::save(Self) -> FixedArray[Byte] raise PptxError
+pub fn Presentation::sections(Self) -> Array[Section] raise PptxError
+pub fn Presentation::set_app_properties_mut(Self, AppProperties) -> Unit raise PptxError
+pub fn Presentation::set_core_properties_mut(Self, CoreProperties) -> Unit raise PptxError
+pub fn Presentation::set_notes_mut(Self, Int, String) -> Unit raise PptxError
+pub fn Presentation::set_sections_mut(Self, Array[Section]) -> Unit raise PptxError
+pub fn Presentation::set_slide_size_mut(Self, SlideSizeKind) -> Unit raise PptxError
+pub fn Presentation::slide_at(Self, Int) -> @slide.Slide raise PptxError
+pub fn Presentation::slide_count(Self) -> Int raise PptxError
+pub fn Presentation::slide_h(Self) -> @units.Emu
+pub fn Presentation::slide_layouts(Self) -> Array[@slide_master.SlideLayout] raise PptxError
+pub fn Presentation::slide_masters(Self) -> Array[@slide_master.SlideMaster] raise PptxError
+pub fn Presentation::slide_w(Self) -> @units.Emu
+pub fn Presentation::slides(Self) -> Array[@slide.Slide] raise PptxError
+pub fn Presentation::themes(Self) -> Array[@theme.Theme] raise PptxError
+pub fn Presentation::update_shape_by_id_mut(Self, Int, Int, (@slide.Shape) -> @slide.Shape) -> Unit raise PptxError
+pub fn Presentation::update_slide_mut(Self, Int, @slide.Slide) -> Unit raise PptxError
+pub fn Presentation::with_added_slide(Self, layout_index~ : Int) -> (Self, String) raise PptxError
+pub fn Presentation::with_app_properties(Self, AppProperties) -> Self raise PptxError
+pub fn Presentation::with_core_properties(Self, CoreProperties) -> Self raise PptxError
+pub fn Presentation::with_duplicated_slide(Self, Int) -> (Self, String) raise PptxError
+pub fn Presentation::with_sections(Self, Array[Section]) -> Self raise PptxError
+pub fn Presentation::with_slide_moved(Self, Int, Int) -> Self raise PptxError
+pub fn Presentation::with_slide_updated(Self, Int, @slide.Slide) -> Self raise PptxError
+pub fn Presentation::without_slide(Self, Int) -> Self raise PptxError
+
+pub(all) struct PresentationPart {
+  sld_master_ids : Array[SlideMasterIdRef]
+  sld_ids : Array[SlideIdRef]
+  notes_master_id : SlideIdRef?
+  handout_master_id : SlideIdRef?
+  sld_sz : SlideSize?
+  notes_sz : NotesSize?
+  extension : Array[@xml.XmlElement]
+} derive(Eq, @debug.Debug)
+pub fn PresentationPart::equal(Self, Self) -> Bool
+pub fn PresentationPart::not_equal(Self, Self) -> Bool
+pub fn PresentationPart::parse(FixedArray[Byte]) -> Self raise PptxError
+pub fn PresentationPart::serialize(Self) -> FixedArray[Byte] raise PptxError
+pub fn PresentationPart::to_repr(Self) -> @debug.Repr
+
+pub(all) struct Section {
+  title : String
+  start : Int
+} derive(Eq, @debug.Debug)
+pub fn Section::equal(Self, Self) -> Bool
+pub fn Section::not_equal(Self, Self) -> Bool
+pub fn Section::to_repr(Self) -> @debug.Repr
+
+pub struct SectionHeader {
+}
+pub fn SectionHeader::body_spec(Self) -> PlaceholderSpec
+pub fn SectionHeader::layout_type(Self) -> @slide_master.SlideLayoutType
+pub fn SectionHeader::placeholders(Self) -> Array[PlaceholderSpec]
+pub fn SectionHeader::title_spec(Self) -> PlaceholderSpec
+pub impl HasBody for SectionHeader
+pub impl HasTitle for SectionHeader
+pub impl LayoutPlaceholders for SectionHeader
+pub impl LayoutType for SectionHeader
+
+pub(all) struct SlideIdRef {
+  id : Int64
+  r_id : String
+} derive(Eq, @debug.Debug)
+pub fn SlideIdRef::equal(Self, Self) -> Bool
+pub fn SlideIdRef::not_equal(Self, Self) -> Bool
+pub fn SlideIdRef::to_repr(Self) -> @debug.Repr
+
+pub(all) struct SlideMasterIdRef {
+  id : Int64
+  r_id : String
+} derive(Eq, @debug.Debug)
+pub fn SlideMasterIdRef::equal(Self, Self) -> Bool
+pub fn SlideMasterIdRef::not_equal(Self, Self) -> Bool
+pub fn SlideMasterIdRef::to_repr(Self) -> @debug.Repr
+
+pub(all) struct SlideSize {
+  cx : @units.Emu
+  cy : @units.Emu
+  size_type : String
+} derive(Eq, @debug.Debug)
+pub fn SlideSize::equal(Self, Self) -> Bool
+pub fn SlideSize::not_equal(Self, Self) -> Bool
+pub fn SlideSize::to_repr(Self) -> @debug.Repr
+
+pub(all) enum SlideSizeKind {
+  ScreenFourByThree
+  ScreenSixteenByNine
+  ScreenSixteenByTen
+  Widescreen
+  Letter
+  A4
+  ThirtyFiveMm
+  Banner
+  Custom(@units.Emu, @units.Emu)
+} derive(Eq, @debug.Debug)
+pub fn SlideSizeKind::dimensions(Self) -> (@units.Emu, @units.Emu)
+pub fn SlideSizeKind::equal(Self, Self) -> Bool
+pub fn SlideSizeKind::not_equal(Self, Self) -> Bool
+pub fn SlideSizeKind::output(Self, &Logger) -> Unit
+pub fn SlideSizeKind::size_type(Self) -> String
+pub fn SlideSizeKind::to_repr(Self) -> @debug.Repr
+pub fn SlideSizeKind::to_slide_size(Self) -> SlideSize
+pub fn SlideSizeKind::to_string(Self) -> String
+pub impl Show for SlideSizeKind
+
+pub struct TitleAndContent {
+}
+pub fn TitleAndContent::body_spec(Self) -> PlaceholderSpec
+pub fn TitleAndContent::layout_type(Self) -> @slide_master.SlideLayoutType
+pub fn TitleAndContent::placeholders(Self) -> Array[PlaceholderSpec]
+pub fn TitleAndContent::title_spec(Self) -> PlaceholderSpec
+pub impl HasBody for TitleAndContent
+pub impl HasTitle for TitleAndContent
+pub impl LayoutPlaceholders for TitleAndContent
+pub impl LayoutType for TitleAndContent
+
+pub struct TitleOnly {
+}
+pub fn TitleOnly::layout_type(Self) -> @slide_master.SlideLayoutType
+pub fn TitleOnly::placeholders(Self) -> Array[PlaceholderSpec]
+pub fn TitleOnly::title_spec(Self) -> PlaceholderSpec
+pub impl HasTitle for TitleOnly
+pub impl LayoutPlaceholders for TitleOnly
+pub impl LayoutType for TitleOnly
+
+pub struct TitleSlide {
+}
+pub fn TitleSlide::layout_type(Self) -> @slide_master.SlideLayoutType
+pub fn TitleSlide::placeholders(Self) -> Array[PlaceholderSpec]
+pub fn TitleSlide::subtitle_spec(Self) -> PlaceholderSpec
+pub fn TitleSlide::title_spec(Self) -> PlaceholderSpec
+pub impl HasSubtitle for TitleSlide
+pub impl HasTitle for TitleSlide
+pub impl LayoutPlaceholders for TitleSlide
+pub impl LayoutType for TitleSlide
+
+// Type aliases
+
+// Traits
+pub trait HasBody {
+  fn body_spec(Self) -> PlaceholderSpec
+}
+
+pub trait HasSubtitle {
+  fn subtitle_spec(Self) -> PlaceholderSpec
+}
+
+pub trait HasTitle {
+  fn title_spec(Self) -> PlaceholderSpec
+}
+
+pub trait LayoutPlaceholders {
+  fn placeholders(Self) -> Array[PlaceholderSpec]
+}
+
+pub trait LayoutType {
+  fn layout_type(Self) -> @slide_master.SlideLayoutType
+}

@@ -1,0 +1,79 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "moonbitlang/pptx/comments"
+
+import {
+  "moonbitlang/core/debug",
+  "moonbitlang/ooxml/xml",
+  "moonbitlang/pptx/units",
+}
+
+// Values
+
+// Errors
+pub(all) suberror CommentsError {
+  XmlFailure(String, String)
+  Malformed(String)
+} derive(Eq, @debug.Debug)
+pub fn CommentsError::equal(Self, Self) -> Bool
+pub fn CommentsError::not_equal(Self, Self) -> Bool
+pub fn CommentsError::output(Self, &Logger) -> Unit
+pub fn CommentsError::to_repr(Self) -> @debug.Repr
+pub fn CommentsError::to_string(Self) -> String
+pub impl Show for CommentsError
+
+// Types and methods
+pub(all) struct Comment {
+  author_id : Int
+  dt : String?
+  idx : Int
+  pos : CommentPos
+  text : String
+  extension : Array[@xml.XmlElement]
+} derive(Eq, @debug.Debug)
+pub fn Comment::equal(Self, Self) -> Bool
+pub fn Comment::not_equal(Self, Self) -> Bool
+pub fn Comment::to_repr(Self) -> @debug.Repr
+
+pub(all) struct CommentAuthor {
+  id : Int
+  name : String
+  initials : String
+  last_idx : Int
+  clr_idx : Int
+  extension : Array[@xml.XmlElement]
+} derive(Eq, @debug.Debug)
+pub fn CommentAuthor::equal(Self, Self) -> Bool
+pub fn CommentAuthor::not_equal(Self, Self) -> Bool
+pub fn CommentAuthor::to_repr(Self) -> @debug.Repr
+
+pub(all) struct CommentAuthorList {
+  authors : Array[CommentAuthor]
+  extension : Array[@xml.XmlElement]
+} derive(Eq, @debug.Debug)
+pub fn CommentAuthorList::equal(Self, Self) -> Bool
+pub fn CommentAuthorList::not_equal(Self, Self) -> Bool
+pub fn CommentAuthorList::parse(FixedArray[Byte]) -> Self raise CommentsError
+pub fn CommentAuthorList::serialize(Self) -> FixedArray[Byte] raise CommentsError
+pub fn CommentAuthorList::to_repr(Self) -> @debug.Repr
+
+pub(all) struct CommentList {
+  comments : Array[Comment]
+  extension : Array[@xml.XmlElement]
+} derive(Eq, @debug.Debug)
+pub fn CommentList::equal(Self, Self) -> Bool
+pub fn CommentList::not_equal(Self, Self) -> Bool
+pub fn CommentList::parse(FixedArray[Byte]) -> Self raise CommentsError
+pub fn CommentList::serialize(Self) -> FixedArray[Byte] raise CommentsError
+pub fn CommentList::to_repr(Self) -> @debug.Repr
+
+pub(all) struct CommentPos {
+  x : @units.Emu
+  y : @units.Emu
+} derive(Eq, @debug.Debug)
+pub fn CommentPos::equal(Self, Self) -> Bool
+pub fn CommentPos::not_equal(Self, Self) -> Bool
+pub fn CommentPos::to_repr(Self) -> @debug.Repr
+
+// Type aliases
+
+// Traits

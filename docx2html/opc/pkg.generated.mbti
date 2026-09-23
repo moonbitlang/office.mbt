@@ -5,6 +5,7 @@ import {
   "moonbit-community/flate/zip",
   "moonbitlang/docx2html/core",
   "moonbitlang/docx2html/xml",
+  "moonbitlang/ooxml/uri",
 }
 
 // Values
@@ -104,17 +105,9 @@ pub(all) struct PackageLimits {
   max_total_uncompressed_bytes : Int
 }
 
-pub(all) enum PartNameConflict {
-  Equivalent(String)
-  Derivable(String)
-}
-
-pub struct PartNameRegistry {
-  // private fields
-}
-pub fn PartNameRegistry::new() -> Self
-pub fn PartNameRegistry::register(Self, StringView, String) -> PartNameConflict?
-
 // Type aliases
+pub using @uri {type PartNameConflict}
+
+pub using @uri {type PartNameRegistry}
 
 // Traits

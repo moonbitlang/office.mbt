@@ -212,7 +212,7 @@ Source: `mbtexcel/cmd/demos/demo_stream_big.mbt`.
 Shows how to generate large sheets efficiently:
 
 - Uses `Workbook::new_stream_writer("Big")`
-- Writes rows with `StreamWriter::set_row` (so you don’t keep all cell data in memory)
+- Writes rows in order with `StreamWriter::set_row`; cell data remains in memory
 - Adds a table at the end and flushes
 
 Notes:

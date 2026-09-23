@@ -1,0 +1,255 @@
+// Modified for office.mbt: follow the workspace warning conventions.
+// Slide parser tests.
+
+///|
+fn typical_title_slide() -> FixedArray[Byte] {
+  // A trimmed-down but realistic title slide: spTree with the implicit
+  // root group + two placeholders, plus a body picture stand-in to verify
+  // Unknown-shape preservation.
+  let xml = "<?xml version=\"1.0\"?>" +
+    "<p:sld xmlns:p=\"" +
+    pml_ns +
+    "\" xmlns:a=\"" +
+    dml_ns +
+    "\" xmlns:r=\"" +
+    off_rel_ns +
+    "\">" +
+    "<p:cSld name=\"Title Slide\">" +
+    "<p:spTree>" +
+    "<p:nvGrpSpPr>" +
+    "<p:cNvPr id=\"1\" name=\"\"/>" +
+    "<p:cNvGrpSpPr/>" +
+    "<p:nvPr/>" +
+    "</p:nvGrpSpPr>" +
+    "<p:grpSpPr><a:xfrm><a:off x=\"0\" y=\"0\"/><a:ext cx=\"0\" cy=\"0\"/>" +
+    "<a:chOff x=\"0\" y=\"0\"/><a:chExt cx=\"0\" cy=\"0\"/></a:xfrm></p:grpSpPr>" +
+    // Title placeholder shape
+    "<p:sp>" +
+    "<p:nvSpPr>" +
+    "<p:cNvPr id=\"2\" name=\"Title 1\"/>" +
+    "<p:cNvSpPr><a:spLocks noGrp=\"1\"/></p:cNvSpPr>" +
+    "<p:nvPr><p:ph type=\"ctrTitle\"/></p:nvPr>" +
+    "</p:nvSpPr>" +
+    "<p:spPr>" +
+    "<a:xfrm>" +
+    "<a:off x=\"838200\" y=\"365125\"/>" +
+    "<a:ext cx=\"10515600\" cy=\"1325563\"/>" +
+    "</a:xfrm>" +
+    "<a:prstGeom prst=\"rect\"><a:avLst/></a:prstGeom>" +
+    "</p:spPr>" +
+    "<p:txBody><a:bodyPr/><a:lstStyle/><a:p/></p:txBody>" +
+    "</p:sp>" +
+    // Body placeholder shape
+    "<p:sp>" +
+    "<p:nvSpPr>" +
+    "<p:cNvPr id=\"3\" name=\"Subtitle 2\"/>" +
+    "<p:cNvSpPr/>" +
+    "<p:nvPr><p:ph type=\"subTitle\" idx=\"1\"/></p:nvPr>" +
+    "</p:nvSpPr>" +
+    "<p:spPr>" +
+    "<a:xfrm>" +
+    "<a:off x=\"1700213\" y=\"3886200\"/>" +
+    "<a:ext cx=\"8791575\" cy=\"1752600\"/>" +
+    "</a:xfrm>" +
+    "</p:spPr>" +
+    "</p:sp>" +
+    // Picture placeholder — should land as Unknown(\"pic\")
+    "<p:pic>" +
+    "<p:nvPicPr><p:cNvPr id=\"4\" name=\"Pic\"/><p:cNvPicPr/><p:nvPr/></p:nvPicPr>" +
+    "<p:blipFill><a:blip r:embed=\"rId2\"/><a:stretch><a:fillRect/></a:stretch></p:blipFill>" +
+    "<p:spPr/>" +
+    "</p:pic>" +
+    "</p:spTree>" +
+    "</p:cSld>" +
+    "<p:clrMapOvr><a:masterClrMapping/></p:clrMapOvr>" +
+    "<p:transition><p:fade/></p:transition>" +
+    "<p:timing/>" +
+    "</p:sld>"
+  @oxml.string_to_bytes(xml)
+}
+
+// --- happy path ---
+
+///|
+test "parse: slide name and shape count" {
+  let slide = @slide.Slide::parse(typical_title_slide())
+  debug_inspect(slide.name, content="\"Title Slide\"")
+  debug_inspect(slide.shapes.length(), content="3") // two p:sp + one p:pic
+}
+
+///|
+test "parse: clrMapOvr defaults to MasterMapping" {
+  let slide = @slide.Slide::parse(typical_title_slide())
+  debug_inspect(slide.clr_map_override is MasterMapping, content="true")
+}
+
+// --- AutoShape ---
+
+///|
+test "parse: AutoShape carries id/name/placeholder/transform" {
+  let slide = @slide.Slide::parse(typical_title_slide())
+  match slide.shapes[0] {
+    AutoShape(s) => {
+      debug_inspect(s.id, content="2")
+      debug_inspect(s.name, content="\"Title 1\"")
+      let ph = s.placeholder.unwrap()
+      debug_inspect(ph.ph_type, content="\"ctrTitle\"")
+      debug_inspect(ph.idx, content="0") // missing idx defaults to 0
+      let xfrm = s.transform.unwrap()
+      debug_inspect(xfrm.offset.x, content="Emu(838200)")
+      debug_inspect(xfrm.offset.y, content="Emu(365125)")
+      debug_inspect(xfrm.extent.cx, content="Emu(10515600)")
+      debug_inspect(xfrm.extent.cy, content="Emu(1325563)")
+    }
+    _ => fail("expected AutoShape at index 0")
+  }
+}
+
+///|
+test "parse: AutoShape with explicit placeholder idx" {
+  let slide = @slide.Slide::parse(typical_title_slide())
+  match slide.shapes[1] {
+    AutoShape(s) => {
+      let ph = s.placeholder.unwrap()
+      debug_inspect(ph.ph_type, content="\"subTitle\"")
+      debug_inspect(ph.idx, content="1")
+    }
+    _ => fail("expected AutoShape at index 1")
+  }
+}
+
+///|
+test "parse: shape order is preserved" {
+  let slide = @slide.Slide::parse(typical_title_slide())
+  // shapes[0] = title sp, shapes[1] = subtitle sp, shapes[2] = picture
+  match slide.shapes[0] {
+    AutoShape(s) => debug_inspect(s.id, content="2")
+    _ => fail("expected AutoShape at index 0")
+  }
+  match slide.shapes[1] {
+    AutoShape(s) => debug_inspect(s.id, content="3")
+    _ => fail("expected AutoShape at index 1")
+  }
+  match slide.shapes[2] {
+    Picture(p) => {
+      debug_inspect(p.id, content="4")
+      debug_inspect(p.blip_fill.embed_id, content="\"rId2\"")
+    }
+    _ => fail("expected Picture at index 2")
+  }
+}
+
+// --- override mapping ---
+
+///|
+test "parse: clrMapOvr with overrideClrMapping carries through" {
+  let xml = "<?xml version=\"1.0\"?>" +
+    "<p:sld xmlns:p=\"" +
+    pml_ns +
+    "\" xmlns:a=\"" +
+    dml_ns +
+    "\">" +
+    "<p:cSld><p:spTree><p:nvGrpSpPr><p:cNvPr id=\"1\" name=\"\"/><p:cNvGrpSpPr/><p:nvPr/></p:nvGrpSpPr><p:grpSpPr/></p:spTree></p:cSld>" +
+    "<p:clrMapOvr>" +
+    "<a:overrideClrMapping bg1=\"dk1\" tx1=\"lt1\" bg2=\"dk2\" tx2=\"lt2\"" +
+    " accent1=\"accent2\" accent2=\"accent3\" accent3=\"accent4\"" +
+    " accent4=\"accent5\" accent5=\"accent6\" accent6=\"accent1\"" +
+    " hlink=\"folHlink\" folHlink=\"hlink\"/>" +
+    "</p:clrMapOvr>" +
+    "</p:sld>"
+  let slide = @slide.Slide::parse(@oxml.string_to_bytes(xml))
+  match slide.clr_map_override {
+    Override(cm) => {
+      debug_inspect(cm.bg1 is Dk1, content="true")
+      debug_inspect(cm.accent1 is Accent2, content="true")
+    }
+    _ => fail("expected Override")
+  }
+}
+
+// --- error cases ---
+
+///|
+test "parse: missing xfrm components is rejected" {
+  let xml = "<?xml version=\"1.0\"?>" +
+    "<p:sld xmlns:p=\"" +
+    pml_ns +
+    "\" xmlns:a=\"" +
+    dml_ns +
+    "\">" +
+    "<p:cSld><p:spTree>" +
+    "<p:nvGrpSpPr><p:cNvPr id=\"1\" name=\"\"/><p:cNvGrpSpPr/><p:nvPr/></p:nvGrpSpPr><p:grpSpPr/>" +
+    "<p:sp>" +
+    "<p:nvSpPr><p:cNvPr id=\"2\" name=\"x\"/><p:cNvSpPr/><p:nvPr/></p:nvSpPr>" +
+    "<p:spPr><a:xfrm><a:off x=\"0\" y=\"0\"/></a:xfrm></p:spPr>" + // ext missing
+    "</p:sp>" +
+    "</p:spTree></p:cSld>" +
+    "</p:sld>"
+  try @slide.Slide::parse(@oxml.string_to_bytes(xml)) catch {
+    Malformed(_) => ()
+    _ => fail("expected Malformed")
+  } noraise {
+    _ => fail("expected Malformed")
+  }
+}
+
+///|
+test "parse: non-integer offset attribute is rejected" {
+  let xml = "<?xml version=\"1.0\"?>" +
+    "<p:sld xmlns:p=\"" +
+    pml_ns +
+    "\" xmlns:a=\"" +
+    dml_ns +
+    "\">" +
+    "<p:cSld><p:spTree>" +
+    "<p:nvGrpSpPr><p:cNvPr id=\"1\" name=\"\"/><p:cNvGrpSpPr/><p:nvPr/></p:nvGrpSpPr><p:grpSpPr/>" +
+    "<p:sp>" +
+    "<p:nvSpPr><p:cNvPr id=\"2\" name=\"x\"/><p:cNvSpPr/><p:nvPr/></p:nvSpPr>" +
+    "<p:spPr><a:xfrm><a:off x=\"abc\" y=\"0\"/><a:ext cx=\"1\" cy=\"1\"/></a:xfrm></p:spPr>" +
+    "</p:sp>" +
+    "</p:spTree></p:cSld>" +
+    "</p:sld>"
+  try @slide.Slide::parse(@oxml.string_to_bytes(xml)) catch {
+    Malformed(_) => ()
+    _ => fail("expected Malformed")
+  } noraise {
+    _ => fail("expected Malformed")
+  }
+}
+
+///|
+test "parse: malformed XML wraps as XmlFailure" {
+  try @slide.Slide::parse(@oxml.string_to_bytes("<p:sld")) catch {
+    XmlFailure(_, _) => ()
+    _ => fail("expected XmlFailure")
+  } noraise {
+    _ => fail("expected XmlFailure")
+  }
+}
+
+///|
+test "parse: shape with no placeholder leaves field None" {
+  let xml = "<?xml version=\"1.0\"?>" +
+    "<p:sld xmlns:p=\"" +
+    pml_ns +
+    "\" xmlns:a=\"" +
+    dml_ns +
+    "\">" +
+    "<p:cSld><p:spTree>" +
+    "<p:nvGrpSpPr><p:cNvPr id=\"1\" name=\"\"/><p:cNvGrpSpPr/><p:nvPr/></p:nvGrpSpPr><p:grpSpPr/>" +
+    "<p:sp>" +
+    "<p:nvSpPr><p:cNvPr id=\"5\" name=\"Rect\"/><p:cNvSpPr/><p:nvPr/></p:nvSpPr>" +
+    "<p:spPr><a:xfrm><a:off x=\"100\" y=\"200\"/><a:ext cx=\"300\" cy=\"400\"/></a:xfrm></p:spPr>" +
+    "</p:sp>" +
+    "</p:spTree></p:cSld>" +
+    "</p:sld>"
+  let slide = @slide.Slide::parse(@oxml.string_to_bytes(xml))
+  match slide.shapes[0] {
+    AutoShape(s) => {
+      debug_inspect(s.placeholder is None, content="true")
+      debug_inspect(s.id, content="5")
+      debug_inspect(s.name, content="\"Rect\"")
+    }
+    _ => fail("expected AutoShape")
+  }
+}

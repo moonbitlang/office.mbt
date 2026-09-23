@@ -1,0 +1,7 @@
+// Modified for office.mbt: official namespace and explicit trait-method imports.
+import {
+  "moonbitlang/core/debug",
+  "moonbitlang/pptx/oxml",
+  "moonbitlang/pptx/units",
+  "moonbitlang/ooxml/xml",
+}

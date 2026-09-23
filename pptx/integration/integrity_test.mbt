@@ -1,0 +1,246 @@
+// Modified for office.mbt: follow the workspace warning conventions.
+// Structural-integrity checks over an assembled OPC package — the
+// *OPC-level* class of "PowerPoint repair" triggers, caught in pure MoonBit on
+// every backend.
+//
+// These checks run in `moon test` without PowerPoint. They complement the
+// shared OpenXML SDK validator (`tools/openxml-validator/`), which checks
+// schema and semantic validity. Here we check four integrity
+// invariants whose violation reliably makes PowerPoint repair a file:
+//
+//   1. every content part resolves to a content type (Default/Override);
+//   2. every Internal relationship target points at a part that exists;
+//   3. every `r:`-namespaced attribute value (r:id / r:embed / r:link /
+//      r:dm / … — all relationship references) resolves to a relationship id
+//      declared in that part's `.rels`;
+//   4. no two shapes in a slide share a `<p:cNvPr id>`.
+//
+// (3) is the dangling-`rId` bug that bit the multi-media slide
+// (foreign-namespace prefix scoping) and the kind of reference breakage that a
+// future writer change could silently reintroduce.
+//
+// These tests assert on the library's own **builder / save output** — that is
+// what must be repair-clean. The synthetic read-path fixtures in
+// `fixtures_test.mbt` are deliberately not asserted here: `build_pptx`
+// documents that it does not emit per-part `.rels` (the parsers don't need
+// them), so those fixtures are valid parser scaffolds but not valid OPC
+// packages, and integrity-checking them would test the fixtures, not the code.
+
+///|
+/// One structural-integrity problem. `kind` is a short machine-readable tag;
+/// `detail` explains it for the assertion message.
+struct IntegrityIssue {
+  part : String
+  kind : String
+  detail : String
+}
+
+///|
+/// Collect every relationship-reference id (`r:`-namespaced attribute value)
+/// in an XML part. Parse errors are swallowed — XML well-formedness / schema is
+/// the external validator's job; here we only care about reference integrity.
+fn collect_rel_refs(xml : String) -> Array[String] {
+  let ids : Array[String] = []
+  let reader = @xml.XmlReader::new(xml)
+  let mut go = true
+  while go {
+    let ev = reader.next() catch {
+      _ => {
+        go = false
+        None
+      }
+    }
+    match ev {
+      Some(StartElement(_, attrs)) =>
+        for kv in attrs {
+          let (qname, value) = kv
+          if qname.uri == @oxml.office_relationships_ns && value != "" {
+            ids.push(value)
+          }
+        }
+      Some(_) => ()
+      None => go = false
+    }
+  }
+  ids
+}
+
+///|
+/// Run the four integrity invariants over an opened package and return every
+/// violation (empty array = clean).
+fn integrity_issues(pkg : @opc.Package) -> Array[IntegrityIssue] {
+  let issues : Array[IntegrityIssue] = []
+  let ct = pkg.content_types()
+  for part in pkg.parts() {
+    let name = part.name
+    // The `.rels` parts and `[Content_Types].xml` are package plumbing, not
+    // content parts — they carry no content-type Override and own no rels.
+    if name.has_suffix(".rels") || name == @opc.content_types_part_name {
+      continue
+    }
+    // (1) content-type coverage
+    if ct.resolve(name) is None {
+      issues.push({
+        part: name,
+        kind: "no-content-type",
+        detail: "no Default/Override content type resolves this part",
+      })
+    }
+    // This part's relationships (empty if it has no `.rels`).
+    let rels = pkg.relationships_for(name) catch {
+      _ => @opc.Relationships::new(name)
+    }
+    // (2) relationship targets resolve to a part that exists
+    for rel in rels.items() {
+      if rel.target_mode is Internal {
+        let resolved = @opc.resolve_target(name, rel.target, rel.target_mode)
+        if pkg.part_by_name(resolved) is None {
+          issues.push({
+            part: name,
+            kind: "dangling-rel-target",
+            detail: "relationship \{rel.id} -> \{rel.target} resolves to \{resolved}, which has no part",
+          })
+        }
+      }
+    }
+    // (3) every r:-reference in the XML resolves to a declared relationship
+    if name.has_suffix(".xml") {
+      let text = part.text() catch { _ => "" }
+      for ref_id in collect_rel_refs(text) {
+        if rels.by_id(ref_id) is None {
+          issues.push({
+            part: name,
+            kind: "dangling-rel-id",
+            detail: "r:* attribute references \{ref_id}, absent from the part's .rels",
+          })
+        }
+      }
+    }
+    // (4) shape ids are unique within a slide. Parse failures are swallowed
+    // for the same reason as (3): schema is the external validator's job.
+    if name.has_prefix("/ppt/slides/slide") && name.has_suffix(".xml") {
+      let dups = @slide.Slide::parse(part.bytes()).duplicate_shape_ids() catch {
+        _ => []
+      }
+      for id in dups {
+        issues.push({
+          part: name,
+          kind: "duplicate-shape-id",
+          detail: "<p:cNvPr id=\"\{id}\"> is claimed by more than one shape",
+        })
+      }
+    }
+  }
+  issues
+}
+
+///|
+/// Render issues into a stable multi-line string for snapshot diagnostics.
+fn format_issues(issues : Array[IntegrityIssue]) -> String {
+  let sb = StringBuilder()
+  for it in issues {
+    sb.write_string("[\{it.kind}] \{it.part}: \{it.detail}\n")
+  }
+  sb.to_string()
+}
+
+// --- tests ---
+
+///|
+test "structural integrity: presentation-builder output is repair-clean" {
+  let prs = @presentation.Presentation::new()
+  let _ = prs.add_slide_mut(0)
+  let s = prs.slides()[0]
+  let tb = @slide.AutoShape::textbox(
+    id=2,
+    name="Title",
+    x=Emu(457_200L),
+    y=Emu(2_438_400L),
+    cx=Emu(8_229_600L),
+    cy=Emu(914_400L),
+    "Integrity check",
+  )
+  prs.update_slide_mut(0, s.with_shape(AutoShape(tb)))
+  let pkg = @opc.Package::open(prs.save())
+  debug_inspect(format_issues(integrity_issues(pkg)), content="\"\"")
+}
+
+///|
+test "structural integrity: deck with picture + chart is repair-clean" {
+  // Pictures and charts add real `r:embed` / chart relationships, so this is
+  // where a dangling-`rId` regression would actually show up.
+  let prs = @presentation.Presentation::new()
+  let _ = prs.add_slide_mut(0)
+  prs.add_picture_mut(
+    0,
+    minimal_png(),
+    x=Emu(914_400L),
+    y=Emu(914_400L),
+    cx=Emu(1_828_800L),
+    cy=Emu(1_828_800L),
+  )
+  let data = @chart.ChartData::new()
+    .with_category("Q1")
+    .with_category("Q2")
+    .with_series("Revenue", [100.0, 200.0])
+  prs.add_chart_mut(
+    0,
+    @chart.Chart::of_bar(data),
+    x=Emu(3_657_600L),
+    y=Emu(914_400L),
+    cx=Emu(4_572_000L),
+    cy=Emu(3_429_000L),
+  )
+  let pkg = @opc.Package::open(prs.save())
+  debug_inspect(format_issues(integrity_issues(pkg)), content="\"\"")
+}
+
+///|
+test "structural integrity: open -> save -> reopen stays repair-clean" {
+  // Round-trip a built deck through save/open twice; the reopened package must
+  // still satisfy every invariant (no rels/content-type drift on re-emit).
+  let prs = @presentation.Presentation::new()
+  let _ = prs.add_slide_mut(0)
+  let once = @opc.Package::open(prs.save())
+  let twice = @opc.Package::open(once.to_bytes())
+  debug_inspect(format_issues(integrity_issues(twice)), content="\"\"")
+}
+
+///|
+test "structural integrity: a duplicate shape id is reported" {
+  // A clean run of invariant (4) proves nothing unless the check can fail, so
+  // this builds the violation on purpose: two shapes sharing `<p:cNvPr id=2>`.
+  let prs = @presentation.Presentation::new()
+  let _ = prs.add_slide_mut(0)
+  let clash = id => {
+    @slide.AutoShape(
+      @slide.AutoShape::textbox(
+        id~,
+        name="Box \{id}",
+        x=Emu(457_200L),
+        y=Emu(457_200L),
+        cx=Emu(914_400L),
+        cy=Emu(914_400L),
+        "x",
+      ),
+    )
+  }
+  // `base` stays pristine — `Slide` is immutable, so both arms
+  // below build from the same starting point.
+  let base = prs.slides()[0]
+  prs.update_slide_mut(0, base.with_shape(clash(2)).with_shape(clash(2)))
+  let pkg = @opc.Package::open(prs.save())
+  let issues = integrity_issues(pkg)
+  debug_inspect(issues.length(), content="1")
+  debug_inspect(issues[0].kind, content="\"duplicate-shape-id\"")
+  debug_inspect(issues[0].part, content="\"/ppt/slides/slide1.xml\"")
+  // And `with_shape_auto_id` is the fix: the same shape, renumbered.
+  prs.update_slide_mut(
+    0,
+    base.with_shape(clash(2)).with_shape_auto_id(clash(2)),
+  )
+  debug_inspect(
+    format_issues(integrity_issues(@opc.Package::open(prs.save()))),
+    content="\"\"",
+  )
+}

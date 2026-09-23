@@ -1,0 +1,112 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "moonbitlang/pptx/chart_ex"
+
+import {
+  "moonbitlang/core/debug",
+  "moonbitlang/ooxml/xml",
+}
+
+// Values
+
+// Errors
+pub(all) suberror ChartExError {
+  XmlFailure(String, String)
+  Malformed(String)
+} derive(Eq, @debug.Debug)
+pub fn ChartExError::equal(Self, Self) -> Bool
+pub fn ChartExError::not_equal(Self, Self) -> Bool
+pub fn ChartExError::output(Self, &Logger) -> Unit
+pub fn ChartExError::to_repr(Self) -> @debug.Repr
+pub fn ChartExError::to_string(Self) -> String
+pub impl Show for ChartExError
+
+// Types and methods
+pub(all) struct ChartEx {
+  chart_data : @xml.XmlElement?
+  chart : ChartExBody
+  extension : Array[@xml.XmlElement]
+} derive(Eq, @debug.Debug)
+pub fn ChartEx::equal(Self, Self) -> Bool
+pub fn ChartEx::not_equal(Self, Self) -> Bool
+pub fn ChartEx::output(Self, &Logger) -> Unit
+pub fn ChartEx::parse(FixedArray[Byte]) -> Self raise ChartExError
+pub fn ChartEx::serialize(Self) -> FixedArray[Byte] raise ChartExError
+pub fn ChartEx::to_repr(Self) -> @debug.Repr
+pub fn ChartEx::to_string(Self) -> String
+pub impl Show for ChartEx
+
+pub(all) struct ChartExBody {
+  title : @xml.XmlElement?
+  plot_area : ChartExPlotArea
+  legend : @xml.XmlElement?
+  extension : Array[@xml.XmlElement]
+} derive(Eq, @debug.Debug)
+pub fn ChartExBody::equal(Self, Self) -> Bool
+pub fn ChartExBody::not_equal(Self, Self) -> Bool
+pub fn ChartExBody::output(Self, &Logger) -> Unit
+pub fn ChartExBody::to_repr(Self) -> @debug.Repr
+pub fn ChartExBody::to_string(Self) -> String
+pub impl Show for ChartExBody
+
+pub(all) enum ChartExKind {
+  BoxWhisker
+  ClusteredColumn
+  Funnel
+  ParetoLine
+  RegionMap
+  Sunburst
+  Treemap
+  Waterfall
+  Histogram
+  Other(String)
+} derive(Eq, @debug.Debug)
+pub fn ChartExKind::equal(Self, Self) -> Bool
+pub fn ChartExKind::from_xml(String) -> Self
+pub fn ChartExKind::not_equal(Self, Self) -> Bool
+pub fn ChartExKind::output(Self, &Logger) -> Unit
+pub fn ChartExKind::to_repr(Self) -> @debug.Repr
+pub fn ChartExKind::to_string(Self) -> String
+pub fn ChartExKind::to_xml(Self) -> String
+pub impl Show for ChartExKind
+
+pub(all) struct ChartExPlotArea {
+  plot_area_region : ChartExPlotAreaRegion
+  axes : Array[@xml.XmlElement]
+  extension : Array[@xml.XmlElement]
+} derive(Eq, @debug.Debug)
+pub fn ChartExPlotArea::equal(Self, Self) -> Bool
+pub fn ChartExPlotArea::not_equal(Self, Self) -> Bool
+pub fn ChartExPlotArea::output(Self, &Logger) -> Unit
+pub fn ChartExPlotArea::to_repr(Self) -> @debug.Repr
+pub fn ChartExPlotArea::to_string(Self) -> String
+pub impl Show for ChartExPlotArea
+
+pub(all) struct ChartExPlotAreaRegion {
+  plot_surface : @xml.XmlElement?
+  series : Array[ChartExSeries]
+  extension : Array[@xml.XmlElement]
+} derive(Eq, @debug.Debug)
+pub fn ChartExPlotAreaRegion::equal(Self, Self) -> Bool
+pub fn ChartExPlotAreaRegion::not_equal(Self, Self) -> Bool
+pub fn ChartExPlotAreaRegion::output(Self, &Logger) -> Unit
+pub fn ChartExPlotAreaRegion::to_repr(Self) -> @debug.Repr
+pub fn ChartExPlotAreaRegion::to_string(Self) -> String
+pub impl Show for ChartExPlotAreaRegion
+
+pub(all) struct ChartExSeries {
+  layout_id : ChartExKind
+  format_idx : Int?
+  hidden : Bool?
+  owner_idx : Int?
+  body : @xml.XmlElement
+} derive(Eq, @debug.Debug)
+pub fn ChartExSeries::equal(Self, Self) -> Bool
+pub fn ChartExSeries::not_equal(Self, Self) -> Bool
+pub fn ChartExSeries::output(Self, &Logger) -> Unit
+pub fn ChartExSeries::to_repr(Self) -> @debug.Repr
+pub fn ChartExSeries::to_string(Self) -> String
+pub impl Show for ChartExSeries
+
+// Type aliases
+
+// Traits

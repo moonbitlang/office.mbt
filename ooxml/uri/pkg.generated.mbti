@@ -1,0 +1,43 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "moonbitlang/ooxml/uri"
+
+// Values
+pub fn is_absolute_relationship_type(StringView) -> Bool
+
+pub fn is_relationship_part_name(String) -> Bool
+
+pub fn is_valid_external_relationship_target(StringView) -> Bool
+
+pub fn is_valid_part_segment(StringView) -> Bool
+
+pub fn logical_part_name_from_zip_item_name(StringView) -> String?
+
+pub fn part_name_key(StringView) -> String
+
+pub fn relationship_source_part_name(String) -> String?
+
+pub fn relationships_part_name_for_source(String) -> String
+
+pub fn resolve_part_target(String, StringView) -> String?
+
+pub fn resolve_target(String, String) -> String?
+
+pub fn zip_item_name_from_logical_part_name(StringView) -> String?
+
+// Errors
+
+// Types and methods
+pub(all) enum PartNameConflict {
+  Equivalent(String)
+  Derivable(String)
+}
+
+pub struct PartNameRegistry {
+  // private fields
+}
+pub fn PartNameRegistry::new() -> Self
+pub fn PartNameRegistry::register(Self, StringView, String) -> PartNameConflict?
+
+// Type aliases
+
+// Traits

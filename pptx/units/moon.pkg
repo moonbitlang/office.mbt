@@ -1,0 +1,5 @@
+// Modified for office.mbt: explicit trait-method imports.
+
+import {
+  "moonbitlang/core/debug",
+}

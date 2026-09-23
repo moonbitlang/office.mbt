@@ -1,0 +1,71 @@
+// @opc clone tests.
+
+///|
+test "Package::clone: clones share no mutable state" {
+  let pkg = @opc.Package::new()
+  let p1 = @opc.Part::new(
+    "/ppt/test.xml",
+    "application/xml",
+    utf8_bytes("<a/>"),
+  )
+  pkg.add_part(p1)
+  let cloned = pkg.clone()
+  // Adding a part to the clone doesn't show up in the original.
+  let p2 = @opc.Part::new(
+    "/ppt/other.xml",
+    "application/xml",
+    utf8_bytes("<b/>"),
+  )
+  cloned.add_part(p2)
+  debug_inspect(pkg.parts().length(), content="1")
+  debug_inspect(cloned.parts().length(), content="2")
+}
+
+///|
+test "Part::clone: bytes buffer is independent" {
+  let bytes = utf8_bytes("hello")
+  let p1 = @opc.Part::new("/x.xml", "application/xml", bytes)
+  let p2 = p1.clone()
+  // Neither input buffers nor returned snapshots can mutate either part.
+  bytes[0] = b'H'
+  let copied = p1.bytes()
+  copied[1] = b'A'
+  debug_inspect(p1.text(), content="\"hello\"")
+  debug_inspect(p2.text(), content="\"hello\"")
+}
+
+///|
+test "ContentTypes::clone: builder mutations don't cross over" {
+  let ct = @opc.ContentTypes::new()
+    .with_default("xml", "application/xml")
+    .with_override("/a.xml", "type/a")
+  let cloned = ct.clone()
+  // Extend the clone with another default. The original's defaults
+  // array stays at one entry.
+  let _ = cloned.with_default("rels", "type/rels")
+  debug_inspect(ct.defaults().length(), content="1")
+  // The clone is structurally equal to the original by Eq (the
+  // chained .with_default isn't applied to the clone in place — it
+  // returns a new value).
+  debug_inspect(ct == cloned, content="true")
+}
+
+///|
+test "Package::clone: content-types catalog is independent" {
+  let pkg = @opc.Package::new()
+  let p = @opc.Part::new("/x.xml", "type/x", utf8_bytes("<x/>"))
+  pkg.add_part(p)
+  pkg.set_content_types(
+    @opc.ContentTypes::new().with_override("/x.xml", "type/x"),
+  )
+  let cloned = pkg.clone()
+  cloned.set_content_types(
+    @opc.ContentTypes::new()
+    .with_default("xml", "type/xml")
+    .with_override("/x.xml", "type/x"),
+  )
+  // Original's content_types still has only the one override and
+  // no defaults.
+  debug_inspect(pkg.content_types().defaults().length(), content="0")
+  debug_inspect(cloned.content_types().defaults().length(), content="1")
+}
