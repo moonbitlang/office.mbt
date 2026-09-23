@@ -1,4 +1,4 @@
-<!-- Adapted from moon-pptx for the Office workspace; see ../pptx/UPSTREAM.md. -->
+<!-- Adapted from moon-pptx for the Office workspace; see ../UPSTREAM.md. -->
 # PPTX demos
 
 The `pptx/demos` package builds a 26-slide presentation covering text, shapes,
@@ -17,7 +17,7 @@ bash scripts/validate_pptx.sh demos_out_pptx/sample.pptx
 The generator decodes the executable's hex output into a PPTX. The default
 output directory is `demos_out_pptx/`; an explicit directory may be passed to
 the script. To diagnose one feature, set `split_mode` in
-[pptx/cmd/demos/main.mbt](../pptx/cmd/demos/main.mbt) to `true` and run the
+[pptx/cmd/demos/main.mbt](../cmd/demos/main.mbt) to `true` and run the
 executable directly. Its labeled hex streams contain one isolated deck each.
 
 Schema checks complement opening, displaying, editing, and reopening the

@@ -39,7 +39,7 @@ fn main {
 /// N slides, one text box each, serialised to bytes. This is the shape the
 /// library recommends for generating a deck: one batched `add_slides_mut`
 /// rather than an add per slide, and one `slides()` rather than one per
-/// slide (see docs/pptx-benchmarks.md).
+/// slide (see pptx/docs/pptx-benchmarks.md).
 fn build_and_save(n : Int) -> FixedArray[Byte] raise {
   let prs = @presentation.Presentation::new()
   let _ = prs.add_slides_mut(0, n)

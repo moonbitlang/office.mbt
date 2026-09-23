@@ -22,4 +22,4 @@ Install `python-pptx` in the Python environment and `pptxgenjs` in
 `tools/pptx-bench/` before running that comparison. The root script builds
 `pptx/cmd/bench` through the Office workspace and uses the comparative drivers
 under `tools/pptx-bench/`. Optional third-party benchmarks are not CI gates.
-The drivers originate from moon-pptx; see [provenance](../pptx/UPSTREAM.md).
+The drivers originate from moon-pptx; see [provenance](../UPSTREAM.md).

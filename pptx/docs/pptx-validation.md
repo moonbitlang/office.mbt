@@ -33,5 +33,5 @@ moon fmt pptx/integration
 
 Neither model equality nor SDK validation establishes preservation of every
 source attribute or PowerPoint display/edit compatibility. See
-[PPTX limits](../pptx/README.mbt.md#limits) and the
-[fixture provenance](../pptx/fixtures/poi/SOURCES.md).
+[PPTX limits](../README.mbt.md#limits) and the
+[fixture provenance](../fixtures/poi/SOURCES.md).

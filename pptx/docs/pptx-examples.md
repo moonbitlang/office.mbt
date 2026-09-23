@@ -1,12 +1,12 @@
-<!-- Adapted from moon-pptx for the Office workspace; see ../pptx/UPSTREAM.md. -->
+<!-- Adapted from moon-pptx for the Office workspace; see ../UPSTREAM.md. -->
 # PPTX examples
 
 These recipes use the `moonbitlang/pptx` public packages. Their matching tests
-live in [pptx/integration/examples_test.mbt](../pptx/integration/examples_test.mbt).
-The complete [sample-deck builders](../pptx/demos/build.mbt) and
+live in [pptx/integration/examples_test.mbt](../integration/examples_test.mbt).
+The complete [sample-deck builders](../demos/build.mbt) and
 [demo guide](pptx-demos.md) show how the features fit together.
 
-See the [module README](../pptx/README.mbt.md) for package organization and
+See the [module README](../README.mbt.md) for package organization and
 root-workspace commands. The code below can also be used in a downstream
 project that imports the corresponding `moonbitlang/pptx` packages.
 
@@ -818,6 +818,6 @@ already have, or `prs.slide_at(i)` for a single slide.
 ## Where to next?
 
 - [Benchmarks](pptx-benchmarks.md) — workspace benchmarks and optional cross-library comparisons.
-- [PPTX limitations](../pptx/README.mbt.md#limits) — current hardening work.
-- [CHANGELOG.md](../CHANGELOG.md) — what changed in this version.
-- [Module README](../pptx/README.mbt.md) — package overview and development commands.
+- [PPTX limitations](../README.mbt.md#limits) — current hardening work.
+- [CHANGELOG.md](../../CHANGELOG.md) — what changed in this version.
+- [Module README](../README.mbt.md) — package overview and development commands.

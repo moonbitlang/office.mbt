@@ -53,9 +53,9 @@ python3 scripts/embed_pptx_corpus.py
 moon fmt pptx/integration
 ```
 
-See the [cookbook](../docs/pptx-examples.md), [demo guide](../docs/pptx-demos.md),
-[validation guide](../docs/pptx-validation.md), and
-[benchmark guide](../docs/pptx-benchmarks.md). The shared validator needs .NET 8;
+See the [cookbook](docs/pptx-examples.md), [demo guide](docs/pptx-demos.md),
+[validation guide](docs/pptx-validation.md), and
+[benchmark guide](docs/pptx-benchmarks.md). The shared validator needs .NET 8;
 the wrapper uses Office's existing .NET setup and build cache.
 
 Publishing follows the common [release process](../docs/office-release.md).

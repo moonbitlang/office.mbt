@@ -1,5 +1,5 @@
 // Examples originating in the upstream README, retained as API regressions.
-// Current Office documentation lives in pptx/README.mbt.md and docs/pptx-*.md.
+// Current Office documentation lives in pptx/README.mbt.md and pptx/docs/pptx-*.md.
 
 ///|
 test "readme: build a one-slide deck from scratch" {

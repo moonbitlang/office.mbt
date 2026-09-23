@@ -13,7 +13,7 @@
 # other two serialise to an in-memory buffer to keep the comparison level.
 #
 # Requires: python3 with python-pptx, node, and `npm install pptxgenjs`
-# inside tools/pptx-bench. See docs/pptx-benchmarks.md.
+# inside tools/pptx-bench. See pptx/docs/pptx-benchmarks.md.
 #
 # Usage:  scripts/bench_pptx.sh [reps] [sizes...]      (default: 3, 10 100 1000)
 set -euo pipefail

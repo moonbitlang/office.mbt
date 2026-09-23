@@ -8,7 +8,8 @@ imported on 2026-09-23. Thank you to t-ujiie-g and the original contributors.
 The original Apache-2.0 [LICENSE](LICENSE) is retained without changes.
 No tracked NOTICE file was present in that upstream revision. Imported code,
 samples, corpus-generation code, and comparative benchmark tools retain this
-provenance even where moved to Office's root `scripts/`, `tools/`, and `docs/`.
+provenance even where moved to Office's root `scripts/` and `tools/`, or the
+module's `pptx/docs/`.
 
 The MoonBit team owns the official module's maintenance, API evolution, and
 release schedule. Contributions from the original author are welcome. The
@@ -21,8 +22,9 @@ original project remains independent and may follow its own priorities.
 - Use Office's root `moon.work`; remove nested example/benchmark modules.
 - Place source packages directly under `pptx/`; organize shared demos under
   `demos/`, executables under `cmd/`, and Apache POI fixtures under `fixtures/poi/`.
-- Use root scripts, the shared OpenXML SDK validator, root documentation and
-  changelog, and the normal Office CI and release workflow.
+- Use root scripts, the shared OpenXML SDK validator, and the normal Office CI
+  and release workflow. Keep project documentation in root `docs/`, PPTX guides
+  in `pptx/docs/`, and release notes in the root changelog.
 - Preserve existing trait-method calls with explicit extensions, use current
   array constructors, and adopt the same warning policy as `mbtexcel` and
   `office-lib`. Qualify test symbols where needed and remove redundant type

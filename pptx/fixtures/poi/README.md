@@ -21,4 +21,4 @@ source byte lengths and SHA-256 hashes. The generated files live in
 
 Model round-trips cannot detect information discarded on the first parse, and
 SDK validity does not establish display fidelity. See
-[the validation guide](../../../docs/pptx-validation.md).
+[the validation guide](../../docs/pptx-validation.md).
