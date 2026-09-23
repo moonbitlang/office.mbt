@@ -38,9 +38,3 @@ AGENTS.md
 /tests/
 cram/
 /scripts/
-
-# Module-relative generated outputs and test fixtures.
-/_mbtexcel_check
-/mbtexcel_*.xlsx
-/fixtures/
-/sdk_validity/

@@ -1,3 +1,12 @@
+.DS_Store
+_build/
+target/
+.mooncakes/
+.moonagent/
+.repos/
+*~
+
+# Shared workspace ignore rules.
 # Editor and local tooling files.
 .DS_Store
 *~
@@ -39,8 +48,10 @@ AGENTS.md
 cram/
 /scripts/
 
-# Module-relative generated outputs and test fixtures.
-/_mbtexcel_check
-/mbtexcel_*.xlsx
-/fixtures/
+# Migration notes, test plans, and test-only packages.
+/Js2MoonBit.md
+/MammothParity.md
+/OCaml2Mbt.md
+/StressTesting.md
 /sdk_validity/
+/docx/zz_corpus_shadow_*_wbtest.mbt

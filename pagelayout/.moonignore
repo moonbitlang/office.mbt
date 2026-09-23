@@ -39,8 +39,6 @@ AGENTS.md
 cram/
 /scripts/
 
-# Module-relative generated outputs and test fixtures.
-/_mbtexcel_check
-/mbtexcel_*.xlsx
-/fixtures/
-/sdk_validity/
+# Test-only corpus and fixture rendering packages.
+/corpus/
+/docx/fixture_render/
