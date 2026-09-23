@@ -1,3 +1,4 @@
+// Modified for office.mbt: keep executable-package tests in the supported white-box target.
 // Guards that the sample deck is structurally sound — the library must be
 // able to re-open the bytes it just produced, and the deck must carry the
 // expected slide count + the second (defined) master.

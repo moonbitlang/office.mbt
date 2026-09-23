@@ -31,6 +31,11 @@ pub(all) suberror PptxError {
   SmartArtFailure(String)
   Malformed(String)
 } derive(Eq, @debug.Debug)
+pub fn PptxError::equal(Self, Self) -> Bool
+pub fn PptxError::not_equal(Self, Self) -> Bool
+pub fn PptxError::output(Self, &Logger) -> Unit
+pub fn PptxError::to_repr(Self) -> @debug.Repr
+pub fn PptxError::to_string(Self) -> String
 pub impl Show for PptxError
 
 // Types and methods
@@ -40,7 +45,10 @@ pub struct AppProperties {
   application : String?
   app_version : String?
 } derive(Eq, @debug.Debug)
+pub fn AppProperties::equal(Self, Self) -> Bool
 pub fn AppProperties::new() -> Self
+pub fn AppProperties::not_equal(Self, Self) -> Bool
+pub fn AppProperties::to_repr(Self) -> @debug.Repr
 pub fn AppProperties::with_app_version(Self, String) -> Self
 pub fn AppProperties::with_application(Self, String) -> Self
 pub fn AppProperties::with_company(Self, String) -> Self
@@ -48,6 +56,8 @@ pub fn AppProperties::with_manager(Self, String) -> Self
 
 pub struct BlankSlide {
 }
+pub fn BlankSlide::layout_type(Self) -> @slide_master.SlideLayoutType
+pub fn BlankSlide::placeholders(Self) -> Array[PlaceholderSpec]
 pub impl LayoutPlaceholders for BlankSlide
 pub impl LayoutType for BlankSlide
 
@@ -68,7 +78,10 @@ pub struct CoreProperties {
   language : String?
   version : String?
 } derive(Eq, @debug.Debug)
+pub fn CoreProperties::equal(Self, Self) -> Bool
 pub fn CoreProperties::new() -> Self
+pub fn CoreProperties::not_equal(Self, Self) -> Bool
+pub fn CoreProperties::to_repr(Self) -> @debug.Repr
 pub fn CoreProperties::to_xml(Self) -> String raise @xml.XmlError
 pub fn CoreProperties::with_author(Self, String) -> Self
 pub fn CoreProperties::with_category(Self, String) -> Self
@@ -117,6 +130,9 @@ pub(all) struct NotesSize {
   cx : @units.Emu
   cy : @units.Emu
 } derive(Eq, @debug.Debug)
+pub fn NotesSize::equal(Self, Self) -> Bool
+pub fn NotesSize::not_equal(Self, Self) -> Bool
+pub fn NotesSize::to_repr(Self) -> @debug.Repr
 
 pub struct PlaceholderDef {
   kind : @slide.PlaceholderType
@@ -205,16 +221,26 @@ pub(all) struct PresentationPart {
   notes_sz : NotesSize?
   extension : Array[@xml.XmlElement]
 } derive(Eq, @debug.Debug)
+pub fn PresentationPart::equal(Self, Self) -> Bool
+pub fn PresentationPart::not_equal(Self, Self) -> Bool
 pub fn PresentationPart::parse(FixedArray[Byte]) -> Self raise PptxError
 pub fn PresentationPart::serialize(Self) -> FixedArray[Byte] raise PptxError
+pub fn PresentationPart::to_repr(Self) -> @debug.Repr
 
 pub(all) struct Section {
   title : String
   start : Int
 } derive(Eq, @debug.Debug)
+pub fn Section::equal(Self, Self) -> Bool
+pub fn Section::not_equal(Self, Self) -> Bool
+pub fn Section::to_repr(Self) -> @debug.Repr
 
 pub struct SectionHeader {
 }
+pub fn SectionHeader::body_spec(Self) -> PlaceholderSpec
+pub fn SectionHeader::layout_type(Self) -> @slide_master.SlideLayoutType
+pub fn SectionHeader::placeholders(Self) -> Array[PlaceholderSpec]
+pub fn SectionHeader::title_spec(Self) -> PlaceholderSpec
 pub impl HasBody for SectionHeader
 pub impl HasTitle for SectionHeader
 pub impl LayoutPlaceholders for SectionHeader
@@ -224,17 +250,26 @@ pub(all) struct SlideIdRef {
   id : Int64
   r_id : String
 } derive(Eq, @debug.Debug)
+pub fn SlideIdRef::equal(Self, Self) -> Bool
+pub fn SlideIdRef::not_equal(Self, Self) -> Bool
+pub fn SlideIdRef::to_repr(Self) -> @debug.Repr
 
 pub(all) struct SlideMasterIdRef {
   id : Int64
   r_id : String
 } derive(Eq, @debug.Debug)
+pub fn SlideMasterIdRef::equal(Self, Self) -> Bool
+pub fn SlideMasterIdRef::not_equal(Self, Self) -> Bool
+pub fn SlideMasterIdRef::to_repr(Self) -> @debug.Repr
 
 pub(all) struct SlideSize {
   cx : @units.Emu
   cy : @units.Emu
   size_type : String
 } derive(Eq, @debug.Debug)
+pub fn SlideSize::equal(Self, Self) -> Bool
+pub fn SlideSize::not_equal(Self, Self) -> Bool
+pub fn SlideSize::to_repr(Self) -> @debug.Repr
 
 pub(all) enum SlideSizeKind {
   ScreenFourByThree
@@ -248,12 +283,21 @@ pub(all) enum SlideSizeKind {
   Custom(@units.Emu, @units.Emu)
 } derive(Eq, @debug.Debug)
 pub fn SlideSizeKind::dimensions(Self) -> (@units.Emu, @units.Emu)
+pub fn SlideSizeKind::equal(Self, Self) -> Bool
+pub fn SlideSizeKind::not_equal(Self, Self) -> Bool
+pub fn SlideSizeKind::output(Self, &Logger) -> Unit
 pub fn SlideSizeKind::size_type(Self) -> String
+pub fn SlideSizeKind::to_repr(Self) -> @debug.Repr
 pub fn SlideSizeKind::to_slide_size(Self) -> SlideSize
+pub fn SlideSizeKind::to_string(Self) -> String
 pub impl Show for SlideSizeKind
 
 pub struct TitleAndContent {
 }
+pub fn TitleAndContent::body_spec(Self) -> PlaceholderSpec
+pub fn TitleAndContent::layout_type(Self) -> @slide_master.SlideLayoutType
+pub fn TitleAndContent::placeholders(Self) -> Array[PlaceholderSpec]
+pub fn TitleAndContent::title_spec(Self) -> PlaceholderSpec
 pub impl HasBody for TitleAndContent
 pub impl HasTitle for TitleAndContent
 pub impl LayoutPlaceholders for TitleAndContent
@@ -261,12 +305,19 @@ pub impl LayoutType for TitleAndContent
 
 pub struct TitleOnly {
 }
+pub fn TitleOnly::layout_type(Self) -> @slide_master.SlideLayoutType
+pub fn TitleOnly::placeholders(Self) -> Array[PlaceholderSpec]
+pub fn TitleOnly::title_spec(Self) -> PlaceholderSpec
 pub impl HasTitle for TitleOnly
 pub impl LayoutPlaceholders for TitleOnly
 pub impl LayoutType for TitleOnly
 
 pub struct TitleSlide {
 }
+pub fn TitleSlide::layout_type(Self) -> @slide_master.SlideLayoutType
+pub fn TitleSlide::placeholders(Self) -> Array[PlaceholderSpec]
+pub fn TitleSlide::subtitle_spec(Self) -> PlaceholderSpec
+pub fn TitleSlide::title_spec(Self) -> PlaceholderSpec
 pub impl HasSubtitle for TitleSlide
 pub impl HasTitle for TitleSlide
 pub impl LayoutPlaceholders for TitleSlide

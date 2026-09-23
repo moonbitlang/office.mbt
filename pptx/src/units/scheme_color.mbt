@@ -1,3 +1,4 @@
+// Modified for office.mbt: update deprecated array constructors.
 // Scheme color (theme reference + modifiers).
 //
 // OOXML's `CT_SchemeColor` references one of 17 named theme color slots and
@@ -142,7 +143,7 @@ pub fn SchemeColor::with_transform(
   self : SchemeColor,
   t : ColorTransform,
 ) -> SchemeColor {
-  let combined = Array::new(capacity=self.transforms.length() + 1)
+  let combined = Array(capacity=self.transforms.length() + 1)
   for x in self.transforms {
     combined.push(x)
   }

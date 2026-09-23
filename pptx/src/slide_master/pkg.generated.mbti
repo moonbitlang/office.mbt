@@ -25,6 +25,11 @@ pub(all) suberror SlideMasterError {
   XmlFailure(String, String)
   Malformed(String)
 } derive(Eq, @debug.Debug)
+pub fn SlideMasterError::equal(Self, Self) -> Bool
+pub fn SlideMasterError::not_equal(Self, Self) -> Bool
+pub fn SlideMasterError::output(Self, &Logger) -> Unit
+pub fn SlideMasterError::to_repr(Self) -> @debug.Repr
+pub fn SlideMasterError::to_string(Self) -> String
 pub impl Show for SlideMasterError
 
 // Types and methods
@@ -32,6 +37,9 @@ pub(all) enum ClrMapOverride {
   MasterMapping
   Override(ColorMapping)
 } derive(Eq, @debug.Debug)
+pub fn ClrMapOverride::equal(Self, Self) -> Bool
+pub fn ClrMapOverride::not_equal(Self, Self) -> Bool
+pub fn ClrMapOverride::to_repr(Self) -> @debug.Repr
 
 pub(all) struct ColorMapping {
   bg1 : @units.ThemeColor
@@ -47,7 +55,10 @@ pub(all) struct ColorMapping {
   hlink : @units.ThemeColor
   fol_hlink : @units.ThemeColor
 } derive(Eq, @debug.Debug)
+pub fn ColorMapping::equal(Self, Self) -> Bool
+pub fn ColorMapping::not_equal(Self, Self) -> Bool
 pub fn ColorMapping::resolve(Self, @units.ThemeColor) -> @units.ThemeColor?
+pub fn ColorMapping::to_repr(Self) -> @debug.Repr
 
 pub(all) struct SlideLayout {
   name : String
@@ -55,13 +66,19 @@ pub(all) struct SlideLayout {
   clr_map_override : ClrMapOverride
   extension : Array[@xml.XmlElement]
 } derive(Eq, @debug.Debug)
+pub fn SlideLayout::equal(Self, Self) -> Bool
+pub fn SlideLayout::not_equal(Self, Self) -> Bool
 pub fn SlideLayout::parse(FixedArray[Byte]) -> Self raise SlideMasterError
 pub fn SlideLayout::serialize(Self) -> FixedArray[Byte] raise SlideMasterError
+pub fn SlideLayout::to_repr(Self) -> @debug.Repr
 
 pub(all) struct SlideLayoutRef {
   id : Int64
   r_id : String
 } derive(Eq, @debug.Debug)
+pub fn SlideLayoutRef::equal(Self, Self) -> Bool
+pub fn SlideLayoutRef::not_equal(Self, Self) -> Bool
+pub fn SlideLayoutRef::to_repr(Self) -> @debug.Repr
 
 pub(all) enum SlideLayoutType {
   Title
@@ -101,7 +118,10 @@ pub(all) enum SlideLayoutType {
   ObjTx
   PicTx
 } derive(Eq, @debug.Debug)
+pub fn SlideLayoutType::equal(Self, Self) -> Bool
 pub fn SlideLayoutType::from_xml(String) -> Self raise SlideMasterError
+pub fn SlideLayoutType::not_equal(Self, Self) -> Bool
+pub fn SlideLayoutType::to_repr(Self) -> @debug.Repr
 pub fn SlideLayoutType::to_xml(Self) -> String
 
 pub(all) struct SlideMaster {
@@ -109,8 +129,11 @@ pub(all) struct SlideMaster {
   layout_refs : Array[SlideLayoutRef]
   extension : Array[@xml.XmlElement]
 } derive(Eq, @debug.Debug)
+pub fn SlideMaster::equal(Self, Self) -> Bool
+pub fn SlideMaster::not_equal(Self, Self) -> Bool
 pub fn SlideMaster::parse(FixedArray[Byte]) -> Self raise SlideMasterError
 pub fn SlideMaster::serialize(Self) -> FixedArray[Byte] raise SlideMasterError
+pub fn SlideMaster::to_repr(Self) -> @debug.Repr
 
 // Type aliases
 

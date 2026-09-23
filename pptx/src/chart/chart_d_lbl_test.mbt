@@ -1,3 +1,4 @@
+// Modified for office.mbt: qualify test types.
 // DLbl per-point override typed parser / writer tests.
 
 ///|
@@ -6,7 +7,7 @@ fn fixture_d_lbl_bar(d_lbls_body : String) -> FixedArray[Byte] {
 }
 
 ///|
-fn first_d_lbl(chart : @chart.Chart) -> DLbl {
+fn first_d_lbl(chart : @chart.Chart) -> @chart.DLbl {
   let dl = unwrap_bar_d_lbls(chart)
   dl.d_lbl[0]
 }

@@ -20,6 +20,11 @@ pub(all) suberror SlideError {
   XmlFailure(String, String)
   Malformed(String)
 } derive(Eq, @debug.Debug)
+pub fn SlideError::equal(Self, Self) -> Bool
+pub fn SlideError::not_equal(Self, Self) -> Bool
+pub fn SlideError::output(Self, &Logger) -> Unit
+pub fn SlideError::to_repr(Self) -> @debug.Repr
+pub fn SlideError::to_string(Self) -> String
 pub impl Show for SlideError
 
 // Types and methods
@@ -27,11 +32,17 @@ pub(all) enum AdjAngle {
   Literal(@units.Angle)
   GuideRef(String)
 } derive(Eq, @debug.Debug)
+pub fn AdjAngle::equal(Self, Self) -> Bool
+pub fn AdjAngle::not_equal(Self, Self) -> Bool
+pub fn AdjAngle::to_repr(Self) -> @debug.Repr
 
 pub(all) enum AdjCoordinate {
   Literal(@units.Emu)
   GuideRef(String)
 } derive(Eq, @debug.Debug)
+pub fn AdjCoordinate::equal(Self, Self) -> Bool
+pub fn AdjCoordinate::not_equal(Self, Self) -> Bool
+pub fn AdjCoordinate::to_repr(Self) -> @debug.Repr
 
 pub(all) enum Anchor {
   AnchorTop
@@ -40,7 +51,10 @@ pub(all) enum Anchor {
   AnchorJustify
   AnchorDistributed
 } derive(Eq, @debug.Debug)
+pub fn Anchor::equal(Self, Self) -> Bool
 pub fn Anchor::from_xml(String) -> Self?
+pub fn Anchor::not_equal(Self, Self) -> Bool
+pub fn Anchor::to_repr(Self) -> @debug.Repr
 
 pub(all) enum AnimDirection {
   Up
@@ -48,7 +62,10 @@ pub(all) enum AnimDirection {
   Left
   Right
 } derive(Eq, @debug.Debug)
+pub fn AnimDirection::equal(Self, Self) -> Bool
+pub fn AnimDirection::not_equal(Self, Self) -> Bool
 pub fn AnimDirection::to_filter(Self) -> String
+pub fn AnimDirection::to_repr(Self) -> @debug.Repr
 
 pub(all) enum AnimEffect {
   Entrance(VisualEffect)
@@ -56,18 +73,27 @@ pub(all) enum AnimEffect {
   Emphasis(EmphasisEffect)
   Motion(MotionPath)
 } derive(Eq, @debug.Debug)
+pub fn AnimEffect::equal(Self, Self) -> Bool
+pub fn AnimEffect::not_equal(Self, Self) -> Bool
+pub fn AnimEffect::to_repr(Self) -> @debug.Repr
 
 pub(all) enum AnimOrientation {
   Horizontal
   Vertical
 } derive(Eq, @debug.Debug)
+pub fn AnimOrientation::equal(Self, Self) -> Bool
+pub fn AnimOrientation::not_equal(Self, Self) -> Bool
 pub fn AnimOrientation::to_filter(Self) -> String
+pub fn AnimOrientation::to_repr(Self) -> @debug.Repr
 
 pub(all) enum AnimStart {
   OnClick
   WithPrevious
   AfterPrevious
 } derive(Eq, @debug.Debug)
+pub fn AnimStart::equal(Self, Self) -> Bool
+pub fn AnimStart::not_equal(Self, Self) -> Bool
+pub fn AnimStart::to_repr(Self) -> @debug.Repr
 
 pub struct AnimStep {
   effect : AnimEffect
@@ -76,12 +102,18 @@ pub struct AnimStep {
   duration_ms : Int
   paragraph : Int?
 } derive(Eq, @debug.Debug)
+pub fn AnimStep::equal(Self, Self) -> Bool
+pub fn AnimStep::not_equal(Self, Self) -> Bool
+pub fn AnimStep::to_repr(Self) -> @debug.Repr
 
 pub(all) enum AutoFit {
   NoAutoFit
   NormAutoFit(@units.Percentage, @units.Percentage)
   SpAutoFit
 } derive(Eq, @debug.Debug)
+pub fn AutoFit::equal(Self, Self) -> Bool
+pub fn AutoFit::not_equal(Self, Self) -> Bool
+pub fn AutoFit::to_repr(Self) -> @debug.Repr
 
 pub(all) enum AutoNumType {
   ArabicPeriod
@@ -124,7 +156,10 @@ pub(all) enum AutoNumType {
   HindiNumParenR
   HindiAlpha1Period
 } derive(Eq, @debug.Debug)
+pub fn AutoNumType::equal(Self, Self) -> Bool
 pub fn AutoNumType::from_xml(String) -> Self?
+pub fn AutoNumType::not_equal(Self, Self) -> Bool
+pub fn AutoNumType::to_repr(Self) -> @debug.Repr
 
 pub(all) struct AutoShape {
   id : Int
@@ -140,10 +175,13 @@ pub(all) struct AutoShape {
   extension : Array[@xml.XmlElement]
 } derive(Eq, @debug.Debug)
 pub fn AutoShape::ellipse(id~ : Int, name~ : String, x~ : @units.Emu, y~ : @units.Emu, cx~ : @units.Emu, cy~ : @units.Emu) -> Self
+pub fn AutoShape::equal(Self, Self) -> Bool
+pub fn AutoShape::not_equal(Self, Self) -> Bool
 pub fn AutoShape::of_preset(id~ : Int, name~ : String, PresetShape, x~ : @units.Emu, y~ : @units.Emu, cx~ : @units.Emu, cy~ : @units.Emu) -> Self
 pub fn AutoShape::rect(id~ : Int, name~ : String, x~ : @units.Emu, y~ : @units.Emu, cx~ : @units.Emu, cy~ : @units.Emu) -> Self
 pub fn AutoShape::round_rect(id~ : Int, name~ : String, x~ : @units.Emu, y~ : @units.Emu, cx~ : @units.Emu, cy~ : @units.Emu) -> Self
 pub fn AutoShape::textbox(id~ : Int, name~ : String, x~ : @units.Emu, y~ : @units.Emu, cx~ : @units.Emu, cy~ : @units.Emu, String) -> Self
+pub fn AutoShape::to_repr(Self) -> @debug.Repr
 pub fn AutoShape::with_effects(Self, @oxml.EffectList) -> Self
 pub fn AutoShape::with_fill(Self, @oxml.Fill) -> Self
 pub fn AutoShape::with_flip(Self, h? : Bool, v? : Bool) -> Self
@@ -159,6 +197,9 @@ pub(all) enum Background {
   Properties(BackgroundProperties)
   StyleReference(Int, @oxml.Color)
 } derive(Eq, @debug.Debug)
+pub fn Background::equal(Self, Self) -> Bool
+pub fn Background::not_equal(Self, Self) -> Bool
+pub fn Background::to_repr(Self) -> @debug.Repr
 
 pub struct BackgroundProperties {
   fill : @oxml.Fill?
@@ -166,7 +207,10 @@ pub struct BackgroundProperties {
   effects : @oxml.EffectList?
   extension : Array[@xml.XmlElement]
 } derive(Eq, @debug.Debug)
+pub fn BackgroundProperties::equal(Self, Self) -> Bool
+pub fn BackgroundProperties::not_equal(Self, Self) -> Bool
 pub fn BackgroundProperties::of_fill(@oxml.Fill) -> Self
+pub fn BackgroundProperties::to_repr(Self) -> @debug.Repr
 
 pub struct BodyProperties {
   rotation : @units.Angle?
@@ -181,6 +225,9 @@ pub struct BodyProperties {
   extension : Array[@xml.XmlElement]
 } derive(Eq, @debug.Debug)
 pub fn BodyProperties::default() -> Self
+pub fn BodyProperties::equal(Self, Self) -> Bool
+pub fn BodyProperties::not_equal(Self, Self) -> Bool
+pub fn BodyProperties::to_repr(Self) -> @debug.Repr
 
 pub(all) enum Bullet {
   BulNone
@@ -188,24 +235,36 @@ pub(all) enum Bullet {
   AutoNum(AutoNumType, Int)
   Picture(String)
 } derive(Eq, @debug.Debug)
+pub fn Bullet::equal(Self, Self) -> Bool
+pub fn Bullet::not_equal(Self, Self) -> Bool
+pub fn Bullet::to_repr(Self) -> @debug.Repr
 
 pub(all) enum CapsKind {
   CapsNone
   CapsSmall
   CapsAll
 } derive(Eq, @debug.Debug)
+pub fn CapsKind::equal(Self, Self) -> Bool
 pub fn CapsKind::from_xml(String) -> Self?
+pub fn CapsKind::not_equal(Self, Self) -> Bool
+pub fn CapsKind::to_repr(Self) -> @debug.Repr
 
 pub(all) struct ConnectionEnd {
   shape_id : Int
   idx : Int
 } derive(Eq, @debug.Debug)
+pub fn ConnectionEnd::equal(Self, Self) -> Bool
+pub fn ConnectionEnd::not_equal(Self, Self) -> Bool
+pub fn ConnectionEnd::to_repr(Self) -> @debug.Repr
 
 pub(all) struct ConnectionSite {
   ang : AdjAngle
   pos : PathPoint
   extension : Array[@xml.XmlElement]
 } derive(Eq, @debug.Debug)
+pub fn ConnectionSite::equal(Self, Self) -> Bool
+pub fn ConnectionSite::not_equal(Self, Self) -> Bool
+pub fn ConnectionSite::to_repr(Self) -> @debug.Repr
 
 pub(all) struct Connector {
   id : Int
@@ -219,6 +278,9 @@ pub(all) struct Connector {
   hyperlink : ShapeHyperlink?
   extension : Array[@xml.XmlElement]
 } derive(Eq, @debug.Debug)
+pub fn Connector::equal(Self, Self) -> Bool
+pub fn Connector::not_equal(Self, Self) -> Bool
+pub fn Connector::to_repr(Self) -> @debug.Repr
 pub fn Connector::with_hyperlink(Self, url~ : String) -> Self
 pub fn Connector::with_hyperlink_to_slide(Self, slide_idx~ : Int) -> Self
 
@@ -230,18 +292,27 @@ pub(all) struct CustomGeometry {
   paths : Array[Path]
   extension : Array[@xml.XmlElement]
 } derive(Eq, @debug.Debug)
+pub fn CustomGeometry::equal(Self, Self) -> Bool
+pub fn CustomGeometry::not_equal(Self, Self) -> Bool
+pub fn CustomGeometry::to_repr(Self) -> @debug.Repr
 
 pub(all) enum DateMode {
   Auto
   Fixed(String)
 } derive(Eq, @debug.Debug)
+pub fn DateMode::equal(Self, Self) -> Bool
+pub fn DateMode::not_equal(Self, Self) -> Bool
+pub fn DateMode::to_repr(Self) -> @debug.Repr
 
 pub(all) enum EmphasisEffect {
   Spin(Int)
   GrowShrink(Int)
   ChangeFillColor(@units.RgbColor)
 } derive(Eq, @debug.Debug)
+pub fn EmphasisEffect::equal(Self, Self) -> Bool
+pub fn EmphasisEffect::not_equal(Self, Self) -> Bool
 pub fn EmphasisEffect::preset_id(Self) -> Int
+pub fn EmphasisEffect::to_repr(Self) -> @debug.Repr
 
 pub(all) struct Field {
   id : String
@@ -250,6 +321,9 @@ pub(all) struct Field {
   text : String
   extension : Array[@xml.XmlElement]
 } derive(Eq, @debug.Debug)
+pub fn Field::equal(Self, Self) -> Bool
+pub fn Field::not_equal(Self, Self) -> Bool
+pub fn Field::to_repr(Self) -> @debug.Repr
 
 pub(all) struct GeomRect {
   l : AdjCoordinate
@@ -257,11 +331,17 @@ pub(all) struct GeomRect {
   r : AdjCoordinate
   b : AdjCoordinate
 } derive(Eq, @debug.Debug)
+pub fn GeomRect::equal(Self, Self) -> Bool
+pub fn GeomRect::not_equal(Self, Self) -> Bool
+pub fn GeomRect::to_repr(Self) -> @debug.Repr
 
 pub(all) enum Geometry {
   Preset(PresetShape, Array[ShapeAdjustValue])
   Custom(CustomGeometry)
 } derive(Eq, @debug.Debug)
+pub fn Geometry::equal(Self, Self) -> Bool
+pub fn Geometry::not_equal(Self, Self) -> Bool
+pub fn Geometry::to_repr(Self) -> @debug.Repr
 
 pub(all) struct GraphicFrame {
   id : Int
@@ -271,10 +351,13 @@ pub(all) struct GraphicFrame {
   hyperlink : ShapeHyperlink?
   extension : Array[@xml.XmlElement]
 } derive(Eq, @debug.Debug)
+pub fn GraphicFrame::equal(Self, Self) -> Bool
+pub fn GraphicFrame::not_equal(Self, Self) -> Bool
 pub fn GraphicFrame::of_chart_ex_ref(id~ : Int, name~ : String, x~ : @units.Emu, y~ : @units.Emu, cx~ : @units.Emu, cy~ : @units.Emu, String) -> Self
 pub fn GraphicFrame::of_chart_ref(id~ : Int, name~ : String, x~ : @units.Emu, y~ : @units.Emu, cx~ : @units.Emu, cy~ : @units.Emu, String) -> Self
 pub fn GraphicFrame::of_diagram_ref(id~ : Int, name~ : String, x~ : @units.Emu, y~ : @units.Emu, cx~ : @units.Emu, cy~ : @units.Emu, dm~ : String, lo~ : String, qs~ : String, cs~ : String) -> Self
 pub fn GraphicFrame::of_table(id~ : Int, name~ : String, x~ : @units.Emu, y~ : @units.Emu, cx~ : @units.Emu, cy~ : @units.Emu, Table) -> Self
+pub fn GraphicFrame::to_repr(Self) -> @debug.Repr
 pub fn GraphicFrame::with_hyperlink(Self, url~ : String) -> Self
 pub fn GraphicFrame::with_hyperlink_to_slide(Self, slide_idx~ : Int) -> Self
 
@@ -284,6 +367,9 @@ pub(all) enum GraphicFrameContent {
   ChartExContent(String)
   OtherGraphic(String, @xml.XmlElement)
 } derive(Eq, @debug.Debug)
+pub fn GraphicFrameContent::equal(Self, Self) -> Bool
+pub fn GraphicFrameContent::not_equal(Self, Self) -> Bool
+pub fn GraphicFrameContent::to_repr(Self) -> @debug.Repr
 
 pub(all) struct GroupShape {
   id : Int
@@ -295,6 +381,9 @@ pub(all) struct GroupShape {
   hyperlink : ShapeHyperlink?
   extension : Array[@xml.XmlElement]
 } derive(Eq, @debug.Debug)
+pub fn GroupShape::equal(Self, Self) -> Bool
+pub fn GroupShape::not_equal(Self, Self) -> Bool
+pub fn GroupShape::to_repr(Self) -> @debug.Repr
 pub fn GroupShape::with_flip(Self, h? : Bool, v? : Bool) -> Self
 pub fn GroupShape::with_hyperlink(Self, url~ : String) -> Self
 pub fn GroupShape::with_hyperlink_to_slide(Self, slide_idx~ : Int) -> Self
@@ -304,6 +393,11 @@ pub(all) enum HyperlinkTarget {
   ExternalUrl(String)
   InternalSlide(Int)
 } derive(Eq, @debug.Debug)
+pub fn HyperlinkTarget::equal(Self, Self) -> Bool
+pub fn HyperlinkTarget::not_equal(Self, Self) -> Bool
+pub fn HyperlinkTarget::output(Self, &Logger) -> Unit
+pub fn HyperlinkTarget::to_repr(Self) -> @debug.Repr
+pub fn HyperlinkTarget::to_string(Self) -> String
 pub impl Show for HyperlinkTarget
 
 pub struct ListStyle {
@@ -312,17 +406,26 @@ pub struct ListStyle {
   extension : Array[@xml.XmlElement]
 } derive(Eq, @debug.Debug)
 pub fn ListStyle::empty() -> Self
+pub fn ListStyle::equal(Self, Self) -> Bool
+pub fn ListStyle::not_equal(Self, Self) -> Bool
+pub fn ListStyle::to_repr(Self) -> @debug.Repr
 
 pub(all) struct MediaInfo {
   kind : MediaKind
   link_id : String
   embed_id : String
 } derive(Eq, @debug.Debug)
+pub fn MediaInfo::equal(Self, Self) -> Bool
+pub fn MediaInfo::not_equal(Self, Self) -> Bool
+pub fn MediaInfo::to_repr(Self) -> @debug.Repr
 
 pub(all) enum MediaKind {
   Video
   Audio
 } derive(Eq, @debug.Debug)
+pub fn MediaKind::equal(Self, Self) -> Bool
+pub fn MediaKind::not_equal(Self, Self) -> Bool
+pub fn MediaKind::to_repr(Self) -> @debug.Repr
 
 pub(all) enum MotionCommand {
   MoveTo(MotionPoint)
@@ -330,22 +433,31 @@ pub(all) enum MotionCommand {
   CurveTo(MotionPoint, MotionPoint, MotionPoint)
   Close
 } derive(Eq, @debug.Debug)
+pub fn MotionCommand::equal(Self, Self) -> Bool
+pub fn MotionCommand::not_equal(Self, Self) -> Bool
+pub fn MotionCommand::to_repr(Self) -> @debug.Repr
 
 pub struct MotionPath {
   commands : Array[MotionCommand]
 } derive(Eq, @debug.Debug)
 pub fn MotionPath::close(Self) -> Self
 pub fn MotionPath::curve_to(Self, Double, Double, Double, Double, Double, Double) -> Self
+pub fn MotionPath::equal(Self, Self) -> Bool
 pub fn MotionPath::line(Double, Double) -> Self
 pub fn MotionPath::line_to(Self, Double, Double) -> Self
 pub fn MotionPath::move_to(Self, Double, Double) -> Self
 pub fn MotionPath::new() -> Self
+pub fn MotionPath::not_equal(Self, Self) -> Bool
 pub fn MotionPath::to_path_string(Self) -> String
+pub fn MotionPath::to_repr(Self) -> @debug.Repr
 
 pub(all) struct MotionPoint {
   x : Double
   y : Double
 } derive(Eq, @debug.Debug)
+pub fn MotionPoint::equal(Self, Self) -> Bool
+pub fn MotionPoint::not_equal(Self, Self) -> Bool
+pub fn MotionPoint::to_repr(Self) -> @debug.Repr
 
 pub(all) struct Paragraph {
   properties : ParagraphProperties
@@ -353,9 +465,12 @@ pub(all) struct Paragraph {
   end_run_properties : RunProperties?
   extension : Array[@xml.XmlElement]
 } derive(Eq, @debug.Debug)
+pub fn Paragraph::equal(Self, Self) -> Bool
+pub fn Paragraph::not_equal(Self, Self) -> Bool
 pub fn Paragraph::of_styled_text(String, RunProperties) -> Self
 pub fn Paragraph::of_text(String) -> Self
 pub fn Paragraph::plain_text(Self) -> String
+pub fn Paragraph::to_repr(Self) -> @debug.Repr
 pub fn Paragraph::with_alignment(Self, TextAlignment) -> Self
 pub fn Paragraph::with_end_run_properties(Self, RunProperties) -> Self
 pub fn Paragraph::with_line_spacing(Self, TextSpacing) -> Self
@@ -369,6 +484,9 @@ pub(all) enum ParagraphContent {
   Break(RunProperties)
   FieldContent(Field)
 } derive(Eq, @debug.Debug)
+pub fn ParagraphContent::equal(Self, Self) -> Bool
+pub fn ParagraphContent::not_equal(Self, Self) -> Bool
+pub fn ParagraphContent::to_repr(Self) -> @debug.Repr
 
 pub(all) struct ParagraphProperties {
   level : Int
@@ -383,6 +501,9 @@ pub(all) struct ParagraphProperties {
   extension : Array[@xml.XmlElement]
 } derive(Eq, @debug.Debug)
 pub fn ParagraphProperties::default() -> Self
+pub fn ParagraphProperties::equal(Self, Self) -> Bool
+pub fn ParagraphProperties::not_equal(Self, Self) -> Bool
+pub fn ParagraphProperties::to_repr(Self) -> @debug.Repr
 
 pub(all) struct Path {
   w : @units.Emu
@@ -393,6 +514,9 @@ pub(all) struct Path {
   commands : Array[PathCommand]
   extension : Array[@xml.XmlElement]
 } derive(Eq, @debug.Debug)
+pub fn Path::equal(Self, Self) -> Bool
+pub fn Path::not_equal(Self, Self) -> Bool
+pub fn Path::to_repr(Self) -> @debug.Repr
 
 pub(all) enum PathCommand {
   MoveTo(PathPoint)
@@ -402,6 +526,9 @@ pub(all) enum PathCommand {
   ArcTo(AdjCoordinate, AdjCoordinate, AdjAngle, AdjAngle)
   Close
 } derive(Eq, @debug.Debug)
+pub fn PathCommand::equal(Self, Self) -> Bool
+pub fn PathCommand::not_equal(Self, Self) -> Bool
+pub fn PathCommand::to_repr(Self) -> @debug.Repr
 
 pub(all) enum PathFillMode {
   PathFillNone
@@ -411,13 +538,19 @@ pub(all) enum PathFillMode {
   PathFillDarken
   PathFillDarkenLess
 } derive(Eq, @debug.Debug)
+pub fn PathFillMode::equal(Self, Self) -> Bool
 pub fn PathFillMode::from_xml(String) -> Self
+pub fn PathFillMode::not_equal(Self, Self) -> Bool
+pub fn PathFillMode::to_repr(Self) -> @debug.Repr
 pub fn PathFillMode::to_xml(Self) -> String
 
 pub(all) struct PathPoint {
   x : AdjCoordinate
   y : AdjCoordinate
 } derive(Eq, @debug.Debug)
+pub fn PathPoint::equal(Self, Self) -> Bool
+pub fn PathPoint::not_equal(Self, Self) -> Bool
+pub fn PathPoint::to_repr(Self) -> @debug.Repr
 
 pub(all) struct Picture {
   id : Int
@@ -432,9 +565,12 @@ pub(all) struct Picture {
   extension : Array[@xml.XmlElement]
 } derive(Eq, @debug.Debug)
 pub fn Picture::builder(id~ : Int, name~ : String, String, x~ : @units.Emu, y~ : @units.Emu, cx~ : @units.Emu, cy~ : @units.Emu) -> PictureUncropped
+pub fn Picture::equal(Self, Self) -> Bool
+pub fn Picture::not_equal(Self, Self) -> Bool
 pub fn Picture::of_image(id~ : Int, name~ : String, String, x~ : @units.Emu, y~ : @units.Emu, cx~ : @units.Emu, cy~ : @units.Emu) -> Self
 pub fn Picture::of_media(id~ : Int, name~ : String, MediaKind, link_id~ : String, media_embed_id~ : String, poster_embed_id~ : String, x~ : @units.Emu, y~ : @units.Emu, cx~ : @units.Emu, cy~ : @units.Emu) -> Self
 pub fn Picture::of_svg_image(id~ : Int, name~ : String, png_embed_id~ : String, svg_embed_id~ : String, x~ : @units.Emu, y~ : @units.Emu, cx~ : @units.Emu, cy~ : @units.Emu) -> Self
+pub fn Picture::to_repr(Self) -> @debug.Repr
 pub fn Picture::with_crop(Self, left? : @units.Percentage, top? : @units.Percentage, right? : @units.Percentage, bottom? : @units.Percentage) -> Self
 pub fn Picture::with_flip(Self, h? : Bool, v? : Bool) -> Self
 pub fn Picture::with_hyperlink(Self, url~ : String) -> Self
@@ -463,7 +599,10 @@ pub(all) struct Placeholder {
   ph_type : String
   idx : Int
 } derive(Eq, @debug.Debug)
+pub fn Placeholder::equal(Self, Self) -> Bool
 pub fn Placeholder::kind(Self) -> PlaceholderType
+pub fn Placeholder::not_equal(Self, Self) -> Bool
+pub fn Placeholder::to_repr(Self) -> @debug.Repr
 
 pub(all) enum PlaceholderType {
   Title
@@ -484,13 +623,19 @@ pub(all) enum PlaceholderType {
   Pic
   Other(String)
 } derive(Eq, @debug.Debug)
+pub fn PlaceholderType::equal(Self, Self) -> Bool
 pub fn PlaceholderType::from_xml(String) -> Self
+pub fn PlaceholderType::not_equal(Self, Self) -> Bool
+pub fn PlaceholderType::to_repr(Self) -> @debug.Repr
 pub fn PlaceholderType::to_xml(Self) -> String
 
 pub(all) struct Point {
   x : @units.Emu
   y : @units.Emu
 } derive(Eq, @debug.Debug)
+pub fn Point::equal(Self, Self) -> Bool
+pub fn Point::not_equal(Self, Self) -> Bool
+pub fn Point::to_repr(Self) -> @debug.Repr
 
 pub(all) enum PresetShape {
   Line
@@ -680,7 +825,10 @@ pub(all) enum PresetShape {
   ChartStar
   ChartPlus
 } derive(Eq, @debug.Debug)
+pub fn PresetShape::equal(Self, Self) -> Bool
 pub fn PresetShape::from_xml(String) -> Self raise SlideError
+pub fn PresetShape::not_equal(Self, Self) -> Bool
+pub fn PresetShape::to_repr(Self) -> @debug.Repr
 pub fn PresetShape::to_xml(Self) -> String
 
 pub struct ResolvedFonts {
@@ -688,12 +836,18 @@ pub struct ResolvedFonts {
   east_asian : String
   complex_script : String
 } derive(Eq, @debug.Debug)
+pub fn ResolvedFonts::equal(Self, Self) -> Bool
+pub fn ResolvedFonts::not_equal(Self, Self) -> Bool
+pub fn ResolvedFonts::to_repr(Self) -> @debug.Repr
 
 pub(all) struct Run {
   properties : RunProperties
   text : String
   extension : Array[@xml.XmlElement]
 } derive(Eq, @debug.Debug)
+pub fn Run::equal(Self, Self) -> Bool
+pub fn Run::not_equal(Self, Self) -> Bool
+pub fn Run::to_repr(Self) -> @debug.Repr
 
 pub(all) struct RunProperties {
   lang : String
@@ -720,6 +874,9 @@ pub(all) struct RunProperties {
   extension : Array[@xml.XmlElement]
 } derive(Eq, @debug.Debug)
 pub fn RunProperties::default() -> Self
+pub fn RunProperties::equal(Self, Self) -> Bool
+pub fn RunProperties::not_equal(Self, Self) -> Bool
+pub fn RunProperties::to_repr(Self) -> @debug.Repr
 pub fn RunProperties::with_bold(Self) -> Self
 pub fn RunProperties::with_character_spacing(Self, @units.Pt) -> Self
 pub fn RunProperties::with_color(Self, @units.RgbColor) -> Self
@@ -745,27 +902,39 @@ pub(all) enum Shape {
   GraphicFrame(GraphicFrame)
   Unknown(@xml.XmlElement)
 } derive(Eq, @debug.Debug)
+pub fn Shape::equal(Self, Self) -> Bool
 pub fn Shape::id(Self) -> Int?
 pub fn Shape::name(Self) -> String?
+pub fn Shape::not_equal(Self, Self) -> Bool
+pub fn Shape::to_repr(Self) -> @debug.Repr
 pub fn Shape::with_id(Self, Int) -> Self
 
 pub(all) struct ShapeAdjustValue {
   name : String
   fmla : String
 } derive(Eq, @debug.Debug)
+pub fn ShapeAdjustValue::equal(Self, Self) -> Bool
+pub fn ShapeAdjustValue::not_equal(Self, Self) -> Bool
+pub fn ShapeAdjustValue::to_repr(Self) -> @debug.Repr
 
 pub(all) struct ShapeHyperlink {
   target : HyperlinkTarget?
   click : String?
   action : String?
 } derive(Eq, @debug.Debug)
+pub fn ShapeHyperlink::equal(Self, Self) -> Bool
 pub fn ShapeHyperlink::external(String) -> Self
+pub fn ShapeHyperlink::not_equal(Self, Self) -> Bool
+pub fn ShapeHyperlink::to_repr(Self) -> @debug.Repr
 pub fn ShapeHyperlink::to_slide(Int) -> Self
 
 pub(all) struct Size {
   cx : @units.Emu
   cy : @units.Emu
 } derive(Eq, @debug.Debug)
+pub fn Size::equal(Self, Self) -> Bool
+pub fn Size::not_equal(Self, Self) -> Bool
+pub fn Size::to_repr(Self) -> @debug.Repr
 
 pub(all) struct Slide {
   name : String
@@ -778,8 +947,10 @@ pub(all) struct Slide {
 } derive(Eq, @debug.Debug)
 pub fn Slide::body(Self) -> Shape?
 pub fn Slide::duplicate_shape_ids(Self) -> Array[Int]
+pub fn Slide::equal(Self, Self) -> Bool
 pub fn Slide::map_shapes(Self, (Shape) -> Shape) -> Self
 pub fn Slide::next_shape_id(Self) -> Int
+pub fn Slide::not_equal(Self, Self) -> Bool
 pub fn Slide::parse(FixedArray[Byte]) -> Self raise SlideError
 pub fn Slide::parse_with_root(FixedArray[Byte], String) -> Self raise SlideError
 pub fn Slide::placeholder(Self, PlaceholderType) -> Shape?
@@ -787,6 +958,7 @@ pub fn Slide::placeholders(Self) -> Array[(PlaceholderType, Shape)]
 pub fn Slide::serialize(Self) -> FixedArray[Byte] raise SlideError
 pub fn Slide::serialize_with_root(Self, String) -> FixedArray[Byte] raise SlideError
 pub fn Slide::title(Self) -> Shape?
+pub fn Slide::to_repr(Self) -> @debug.Repr
 pub fn Slide::with_animations(Self, Timeline) -> Self
 pub fn Slide::with_background(Self, @oxml.Fill) -> Self
 pub fn Slide::with_background_ref(Self, Int, @oxml.Color) -> Self
@@ -811,7 +983,10 @@ pub(all) enum StrikeKind {
   StSingle
   StDouble
 } derive(Eq, @debug.Debug)
+pub fn StrikeKind::equal(Self, Self) -> Bool
 pub fn StrikeKind::from_xml(String) -> Self?
+pub fn StrikeKind::not_equal(Self, Self) -> Bool
+pub fn StrikeKind::to_repr(Self) -> @debug.Repr
 
 pub(all) struct Table {
   properties : TableProperties?
@@ -819,8 +994,11 @@ pub(all) struct Table {
   rows : Array[TableRow]
   extension : Array[@xml.XmlElement]
 } derive(Eq, @debug.Debug)
+pub fn Table::equal(Self, Self) -> Bool
+pub fn Table::not_equal(Self, Self) -> Bool
 pub fn Table::of_grid(rows~ : Int, cols~ : Int, col_width~ : @units.Emu, row_height~ : @units.Emu) -> Self
 pub fn Table::of_rows(Array[TableRow], col_widths~ : Array[@units.Emu]) -> Self
+pub fn Table::to_repr(Self) -> @debug.Repr
 pub fn Table::with_style(Self, TableStylePreset, first_row? : Bool, band_row? : Bool) -> Self
 
 pub(all) struct TableCell {
@@ -833,10 +1011,13 @@ pub(all) struct TableCell {
   extension : Array[@xml.XmlElement]
 } derive(Eq, @debug.Debug)
 pub fn TableCell::empty() -> Self
+pub fn TableCell::equal(Self, Self) -> Bool
 pub fn TableCell::h_merge_covered() -> Self
 pub fn TableCell::hv_merge_covered() -> Self
 pub fn TableCell::merged_origin(String, grid_span? : Int, row_span? : Int) -> Self
+pub fn TableCell::not_equal(Self, Self) -> Bool
 pub fn TableCell::of_text(String) -> Self
+pub fn TableCell::to_repr(Self) -> @debug.Repr
 pub fn TableCell::v_merge_covered() -> Self
 
 pub struct TableCellProperties {
@@ -857,6 +1038,9 @@ pub struct TableCellProperties {
   extension : Array[@xml.XmlElement]
 } derive(Eq, @debug.Debug)
 pub fn TableCellProperties::default() -> Self
+pub fn TableCellProperties::equal(Self, Self) -> Bool
+pub fn TableCellProperties::not_equal(Self, Self) -> Bool
+pub fn TableCellProperties::to_repr(Self) -> @debug.Repr
 pub fn TableCellProperties::with_anchor(Self, Anchor) -> Self
 pub fn TableCellProperties::with_border_all(Self, @oxml.Stroke) -> Self
 pub fn TableCellProperties::with_border_bottom(Self, @oxml.Stroke) -> Self
@@ -880,6 +1064,9 @@ pub(all) struct TableProperties {
   extension : Array[@xml.XmlElement]
 } derive(Eq, @debug.Debug)
 pub fn TableProperties::default() -> Self
+pub fn TableProperties::equal(Self, Self) -> Bool
+pub fn TableProperties::not_equal(Self, Self) -> Bool
+pub fn TableProperties::to_repr(Self) -> @debug.Repr
 pub fn TableProperties::with_style(Self, TableStylePreset) -> Self
 
 pub struct TableRow {
@@ -887,7 +1074,10 @@ pub struct TableRow {
   cells : Array[TableCell]
   extension : Array[@xml.XmlElement]
 } derive(Eq, @debug.Debug)
+pub fn TableRow::equal(Self, Self) -> Bool
+pub fn TableRow::not_equal(Self, Self) -> Bool
 pub fn TableRow::of_cells(Array[TableCell], height~ : @units.Emu) -> Self
+pub fn TableRow::to_repr(Self) -> @debug.Repr
 
 pub(all) enum TableStylePreset {
   NoStyleNoGrid
@@ -965,7 +1155,10 @@ pub(all) enum TableStylePreset {
   DarkStyle2Accent3And4
   DarkStyle2Accent5And6
 } derive(Eq, @debug.Debug)
+pub fn TableStylePreset::equal(Self, Self) -> Bool
 pub fn TableStylePreset::guid(Self) -> String
+pub fn TableStylePreset::not_equal(Self, Self) -> Bool
+pub fn TableStylePreset::to_repr(Self) -> @debug.Repr
 
 pub(all) enum TextAlignment {
   AlignLeft
@@ -976,7 +1169,10 @@ pub(all) enum TextAlignment {
   AlignDistributed
   AlignThaiDistributed
 } derive(Eq, @debug.Debug)
+pub fn TextAlignment::equal(Self, Self) -> Bool
 pub fn TextAlignment::from_xml(String) -> Self?
+pub fn TextAlignment::not_equal(Self, Self) -> Bool
+pub fn TextAlignment::to_repr(Self) -> @debug.Repr
 
 pub(all) struct TextBody {
   body_properties : BodyProperties?
@@ -984,22 +1180,31 @@ pub(all) struct TextBody {
   paragraphs : Array[Paragraph]
   extension : Array[@xml.XmlElement]
 } derive(Eq, @debug.Debug)
+pub fn TextBody::equal(Self, Self) -> Bool
+pub fn TextBody::not_equal(Self, Self) -> Bool
 pub fn TextBody::of_paragraphs(Array[Paragraph]) -> Self
 pub fn TextBody::of_styled_text(String, RunProperties) -> Self
 pub fn TextBody::of_text(String) -> Self
 pub fn TextBody::plain_text(Self) -> String
+pub fn TextBody::to_repr(Self) -> @debug.Repr
 
 pub(all) enum TextSpacing {
   Percent(@units.Percentage)
   Points(@units.Pt)
 } derive(Eq, @debug.Debug)
+pub fn TextSpacing::equal(Self, Self) -> Bool
+pub fn TextSpacing::not_equal(Self, Self) -> Bool
+pub fn TextSpacing::to_repr(Self) -> @debug.Repr
 
 pub struct Timeline {
   steps : Array[AnimStep]
 } derive(Eq, @debug.Debug)
 pub fn Timeline::after_previous(Self, AnimEffect, Int, paragraph? : Int, duration_ms? : Int) -> Self
+pub fn Timeline::equal(Self, Self) -> Bool
 pub fn Timeline::new() -> Self
+pub fn Timeline::not_equal(Self, Self) -> Bool
 pub fn Timeline::on_click(Self, AnimEffect, Int, paragraph? : Int, duration_ms? : Int) -> Self
+pub fn Timeline::to_repr(Self) -> @debug.Repr
 pub fn Timeline::with_previous(Self, AnimEffect, Int, paragraph? : Int, duration_ms? : Int) -> Self
 
 pub struct Transform {
@@ -1009,7 +1214,10 @@ pub struct Transform {
   flip_h : Bool
   flip_v : Bool
 } derive(Eq, @debug.Debug)
+pub fn Transform::equal(Self, Self) -> Bool
 pub fn Transform::new(offset~ : Point, extent~ : Size, rotation? : @units.Angle?, flip_h? : Bool, flip_v? : Bool) -> Self
+pub fn Transform::not_equal(Self, Self) -> Bool
+pub fn Transform::to_repr(Self) -> @debug.Repr
 pub fn Transform::with_flip(Self, h? : Bool, v? : Bool) -> Self
 pub fn Transform::with_rotation(Self, @units.Angle) -> Self
 
@@ -1023,11 +1231,14 @@ pub struct Transition {
 pub fn Transition::cover(TransitionDirection) -> Self
 pub fn Transition::cut(through_black? : Bool) -> Self
 pub fn Transition::dissolve() -> Self
+pub fn Transition::equal(Self, Self) -> Bool
 pub fn Transition::fade(through_black? : Bool) -> Self
 pub fn Transition::none() -> Self
+pub fn Transition::not_equal(Self, Self) -> Bool
 pub fn Transition::of_kind(TransitionKind) -> Self
 pub fn Transition::push(TransitionSide) -> Self
 pub fn Transition::split(TransitionOrientation, TransitionInOut) -> Self
+pub fn Transition::to_repr(Self) -> @debug.Repr
 pub fn Transition::wipe(TransitionSide) -> Self
 pub fn Transition::with_advance_after(Self, Int) -> Self
 pub fn Transition::with_on_click(Self, Bool) -> Self
@@ -1041,7 +1252,10 @@ pub(all) enum TransitionCorner {
   LeftDown
   RightDown
 } derive(Eq, @debug.Debug)
+pub fn TransitionCorner::equal(Self, Self) -> Bool
 pub fn TransitionCorner::from_xml(String) -> Self
+pub fn TransitionCorner::not_equal(Self, Self) -> Bool
+pub fn TransitionCorner::to_repr(Self) -> @debug.Repr
 pub fn TransitionCorner::to_xml(Self) -> String
 
 pub(all) enum TransitionDirection {
@@ -1054,14 +1268,20 @@ pub(all) enum TransitionDirection {
   LeftDown
   RightDown
 } derive(Eq, @debug.Debug)
+pub fn TransitionDirection::equal(Self, Self) -> Bool
 pub fn TransitionDirection::from_xml(String) -> Self
+pub fn TransitionDirection::not_equal(Self, Self) -> Bool
+pub fn TransitionDirection::to_repr(Self) -> @debug.Repr
 pub fn TransitionDirection::to_xml(Self) -> String
 
 pub(all) enum TransitionInOut {
   In
   Out
 } derive(Eq, @debug.Debug)
+pub fn TransitionInOut::equal(Self, Self) -> Bool
 pub fn TransitionInOut::from_xml(String) -> Self
+pub fn TransitionInOut::not_equal(Self, Self) -> Bool
+pub fn TransitionInOut::to_repr(Self) -> @debug.Repr
 pub fn TransitionInOut::to_xml(Self) -> String
 
 pub(all) enum TransitionKind {
@@ -1088,12 +1308,18 @@ pub(all) enum TransitionKind {
   Wipe(TransitionSide)
   Zoom(TransitionInOut)
 } derive(Eq, @debug.Debug)
+pub fn TransitionKind::equal(Self, Self) -> Bool
+pub fn TransitionKind::not_equal(Self, Self) -> Bool
+pub fn TransitionKind::to_repr(Self) -> @debug.Repr
 
 pub(all) enum TransitionOrientation {
   Horizontal
   Vertical
 } derive(Eq, @debug.Debug)
+pub fn TransitionOrientation::equal(Self, Self) -> Bool
 pub fn TransitionOrientation::from_xml(String) -> Self
+pub fn TransitionOrientation::not_equal(Self, Self) -> Bool
+pub fn TransitionOrientation::to_repr(Self) -> @debug.Repr
 pub fn TransitionOrientation::to_xml(Self) -> String
 
 pub(all) enum TransitionSide {
@@ -1102,7 +1328,10 @@ pub(all) enum TransitionSide {
   Right
   Down
 } derive(Eq, @debug.Debug)
+pub fn TransitionSide::equal(Self, Self) -> Bool
 pub fn TransitionSide::from_xml(String) -> Self
+pub fn TransitionSide::not_equal(Self, Self) -> Bool
+pub fn TransitionSide::to_repr(Self) -> @debug.Repr
 pub fn TransitionSide::to_xml(Self) -> String
 
 pub(all) enum TransitionSpeed {
@@ -1110,7 +1339,10 @@ pub(all) enum TransitionSpeed {
   Medium
   Fast
 } derive(Eq, @debug.Debug)
+pub fn TransitionSpeed::equal(Self, Self) -> Bool
 pub fn TransitionSpeed::from_xml(String) -> Self
+pub fn TransitionSpeed::not_equal(Self, Self) -> Bool
+pub fn TransitionSpeed::to_repr(Self) -> @debug.Repr
 pub fn TransitionSpeed::to_xml(Self) -> String
 
 pub(all) enum UnderlineKind {
@@ -1133,7 +1365,10 @@ pub(all) enum UnderlineKind {
   UlWavyHeavy
   UlWavyDouble
 } derive(Eq, @debug.Debug)
+pub fn UnderlineKind::equal(Self, Self) -> Bool
 pub fn UnderlineKind::from_xml(String) -> Self?
+pub fn UnderlineKind::not_equal(Self, Self) -> Bool
+pub fn UnderlineKind::to_repr(Self) -> @debug.Repr
 
 pub(all) enum VerticalText {
   VertHorz
@@ -1144,7 +1379,10 @@ pub(all) enum VerticalText {
   VertMongolianVert
   VertWordArtVertRtl
 } derive(Eq, @debug.Debug)
+pub fn VerticalText::equal(Self, Self) -> Bool
 pub fn VerticalText::from_xml(String) -> Self?
+pub fn VerticalText::not_equal(Self, Self) -> Bool
+pub fn VerticalText::to_repr(Self) -> @debug.Repr
 
 pub(all) enum VisualEffect {
   Appear
@@ -1157,15 +1395,21 @@ pub(all) enum VisualEffect {
   Wedge
   Wheel(Int)
 } derive(Eq, @debug.Debug)
+pub fn VisualEffect::equal(Self, Self) -> Bool
 pub fn VisualEffect::filter(Self) -> String?
 pub fn VisualEffect::fly_direction(Self) -> AnimDirection?
+pub fn VisualEffect::not_equal(Self, Self) -> Bool
 pub fn VisualEffect::preset_id(Self) -> Int
+pub fn VisualEffect::to_repr(Self) -> @debug.Repr
 
 pub(all) enum WrapKind {
   WrapNone
   WrapSquare
 } derive(Eq, @debug.Debug)
+pub fn WrapKind::equal(Self, Self) -> Bool
 pub fn WrapKind::from_xml(String) -> Self?
+pub fn WrapKind::not_equal(Self, Self) -> Bool
+pub fn WrapKind::to_repr(Self) -> @debug.Repr
 
 // Type aliases
 

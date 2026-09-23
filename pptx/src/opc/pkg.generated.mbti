@@ -88,6 +88,11 @@ pub(all) suberror OpcError {
   MalformedPackage(String)
   PartNotFound(String)
 } derive(Eq, @debug.Debug)
+pub fn OpcError::equal(Self, Self) -> Bool
+pub fn OpcError::not_equal(Self, Self) -> Bool
+pub fn OpcError::output(Self, &Logger) -> Unit
+pub fn OpcError::to_repr(Self) -> @debug.Repr
+pub fn OpcError::to_string(Self) -> String
 pub impl Show for OpcError
 
 // Types and methods
@@ -96,10 +101,13 @@ pub struct ContentTypes {
   overrides : Array[(String, String)]
 } derive(Eq, @debug.Debug)
 pub fn ContentTypes::clone(Self) -> Self
+pub fn ContentTypes::equal(Self, Self) -> Bool
 pub fn ContentTypes::new() -> Self
+pub fn ContentTypes::not_equal(Self, Self) -> Bool
 pub fn ContentTypes::parse(FixedArray[Byte]) -> Self raise OpcError
 pub fn ContentTypes::resolve(Self, String) -> String?
 pub fn ContentTypes::serialize(Self) -> FixedArray[Byte] raise OpcError
+pub fn ContentTypes::to_repr(Self) -> @debug.Repr
 pub fn ContentTypes::with_default(Self, String, String) -> Self
 pub fn ContentTypes::with_override(Self, String, String) -> Self
 pub fn ContentTypes::without_override(Self, String) -> Self
@@ -131,7 +139,10 @@ pub struct Part {
 } derive(@debug.Debug)
 pub fn Part::clone(Self) -> Self
 pub fn Part::new(String, String, FixedArray[Byte]) -> Self raise OpcError
+pub fn Part::output(Self, &Logger) -> Unit
 pub fn Part::text(Self) -> String raise OpcError
+pub fn Part::to_repr(Self) -> @debug.Repr
+pub fn Part::to_string(Self) -> String
 pub impl Show for Part
 
 pub(all) struct Relationship {
@@ -140,6 +151,11 @@ pub(all) struct Relationship {
   target : String
   target_mode : TargetMode
 } derive(Eq, @debug.Debug)
+pub fn Relationship::equal(Self, Self) -> Bool
+pub fn Relationship::not_equal(Self, Self) -> Bool
+pub fn Relationship::output(Self, &Logger) -> Unit
+pub fn Relationship::to_repr(Self) -> @debug.Repr
+pub fn Relationship::to_string(Self) -> String
 pub impl Show for Relationship
 
 pub(all) struct Relationships {
@@ -151,12 +167,16 @@ pub fn Relationships::by_type(Self, String) -> Array[Relationship]
 pub fn Relationships::new(String) -> Self
 pub fn Relationships::parse(String, FixedArray[Byte]) -> Self raise OpcError
 pub fn Relationships::serialize(Self) -> FixedArray[Byte] raise OpcError
+pub fn Relationships::to_repr(Self) -> @debug.Repr
 pub fn Relationships::with_relationship(Self, Relationship) -> Self raise OpcError
 
 pub(all) enum TargetMode {
   Internal
   External
 } derive(Eq, @debug.Debug)
+pub fn TargetMode::equal(Self, Self) -> Bool
+pub fn TargetMode::not_equal(Self, Self) -> Bool
+pub fn TargetMode::to_repr(Self) -> @debug.Repr
 
 // Type aliases
 

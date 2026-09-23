@@ -1,3 +1,4 @@
+// Modified for office.mbt: update deprecated array constructors.
 // `[Content_Types].xml` — the OPC content-type catalog.
 //
 // Schema (excerpt) per ISO/IEC 29500-2 §10.1.2.2:
@@ -96,7 +97,7 @@ pub fn ContentTypes::with_default(
   extension : String,
   content_type : String,
 ) -> ContentTypes {
-  let next : Array[(String, String)] = Array::new(
+  let next : Array[(String, String)] = Array(
     capacity=self.defaults.length() + 1,
   )
   for kv in self.defaults {
@@ -114,7 +115,7 @@ pub fn ContentTypes::with_override(
   part_name : String,
   content_type : String,
 ) -> ContentTypes {
-  let next : Array[(String, String)] = Array::new(
+  let next : Array[(String, String)] = Array(
     capacity=self.overrides.length() + 1,
   )
   for kv in self.overrides {
@@ -134,9 +135,7 @@ pub fn ContentTypes::without_override(
   self : ContentTypes,
   part_name : String,
 ) -> ContentTypes {
-  let next : Array[(String, String)] = Array::new(
-    capacity=self.overrides.length(),
-  )
+  let next : Array[(String, String)] = Array(capacity=self.overrides.length())
   for kv in self.overrides {
     if kv.0 != part_name {
       next.push(kv)

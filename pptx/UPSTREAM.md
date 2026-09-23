@@ -28,7 +28,8 @@ Module references were changed from `t-ujiie-g/moon-pptx` to
 `moonbitlang/pptx`. The official module starts at `0.1.0`; example/benchmark
 manifests resolve that module through their local workspaces. This is a local
 version declaration, not a publication announcement. Generated interfaces were
-regenerated; their API changes are limited to the module namespace.
+regenerated for the namespace migration. The subsequent warning cleanup also
+records previously implicit trait methods explicitly, as described below.
 
 The root README was replaced with import-specific documentation. Unchanged
 upstream README, roadmap, and changelog snapshots are retained in `upstream/`;
@@ -40,7 +41,7 @@ The workspace includes PPTX checks and tests. Unified Office commands and the
 seven-module release allowlist remain unchanged. Enabling those integrations
 requires separate implementation and validation.
 
-Modified imported files (relative to this directory):
+Modified imported files, including warning cleanup (relative to this directory):
 
 - `README.mbt.md`
 - `README.md`
@@ -51,6 +52,9 @@ Modified imported files (relative to this directory):
 - `examples/sample-deck/main/showcase.mbt`
 - `examples/sample-deck/moon.mod`
 - `moon.mod`
+- `src/chart/chart_d_lbl_test.mbt`
+- `src/chart/chart_d_lbls_test.mbt`
+- `src/chart/chart_trendline_test.mbt`
 - `src/chart/moon.pkg`
 - `src/chart/pkg.generated.mbti`
 - `src/chart_ex/moon.pkg`
@@ -62,13 +66,22 @@ Modified imported files (relative to this directory):
 - `src/integration/pkg.generated.mbti`
 - `src/notes/moon.pkg`
 - `src/notes/pkg.generated.mbti`
+- `src/opc/content_types.mbt`
 - `src/opc/moon.pkg`
+- `src/opc/package.mbt`
+- `src/opc/package_test.mbt`
 - `src/opc/pkg.generated.mbti`
+- `src/opc/relationships.mbt`
+- `src/oxml/color.mbt`
+- `src/oxml/fill.mbt`
 - `src/oxml/moon.pkg`
 - `src/oxml/pkg.generated.mbti`
+- `src/oxml/xml_helpers.mbt`
 - `src/pkg.generated.mbti`
 - `src/presentation/moon.pkg`
 - `src/presentation/pkg.generated.mbti`
+- `src/presentation/presentation.mbt`
+- `src/slide/custom_geometry_test.mbt`
 - `src/slide/moon.pkg`
 - `src/slide/pkg.generated.mbti`
 - `src/slide_master/moon.pkg`
@@ -77,16 +90,42 @@ Modified imported files (relative to this directory):
 - `src/smartart/pkg.generated.mbti`
 - `src/theme/moon.pkg`
 - `src/theme/pkg.generated.mbti`
+- `src/units/moon.pkg`
 - `src/units/pkg.generated.mbti`
+- `src/units/scheme_color.mbt`
+- `src/xml/moon.pkg`
 - `src/xml/pkg.generated.mbti`
+- `src/xml/reader.mbt`
 - `tools/bench/moonbit/main/moon.pkg`
 - `tools/bench/moonbit/moon.mod`
 - `tools/bench/run.sh`
 - `tools/pptx-validate/gen-pptx.sh`
 
-`pkg.generated.mbti` files are compiler-generated; their module identity records
-the namespace migration. Hand-edited code/configuration files carry modification
-notices. Other imported source and fixture contents match the pinned revision.
+`pkg.generated.mbti` files are compiler-generated. Hand-edited imported files
+carry modification notices. Other imported source and fixture contents match
+the pinned revision.
+
+### Current-toolchain warning cleanup
+
+The initial import exposed 660 warnings on MoonBit 0.1.20260920. The follow-up
+cleanup keeps runtime behavior and existing method-call compatibility:
+
+- Add `trait_methods.mbt` in 13 packages and explicit core debug imports. These
+  declarations preserve the existing Eq, Compare, Hash, Show, and Debug method
+  calls without deprecated implicit trait-method promotion (641 diagnostics).
+- Make three existing private Show extensions public, matching the visibility
+  previously provided by their public trait implementations.
+- Replace 11 deprecated `Array::new(capacity=...)` calls with `Array(capacity=...)`.
+- Qualify eight black-box test type references with their package names.
+- Rename the sample executable's `showcase_test.mbt` to `showcase_wbtest.mbt`
+  without changing test bodies. Current MoonBit deprecates executable-package
+  black-box tests; the supported same-package target also resolves its two
+  implicit helper-reference warnings.
+
+The generated interface diff adds exactly 1007 explicit trait-method signatures,
+all matched against the extension declarations. It removes or changes no existing
+interface declarations. No warning categories were disabled. Parser and
+serializer algorithms are unchanged.
 
 ## Apache POI fixtures
 
@@ -105,8 +144,9 @@ Source notices:
 
 Tracked in [office.mbt #549](https://github.com/moonbitlang/office.mbt/issues/549):
 malformed XML panic handling, slide root attribute retention, namespace
-references in attribute values, ZIP resource limits, current-toolchain warnings,
-and real PowerPoint compatibility checks. The three parser/preservation cases
+references in attribute values, ZIP resource limits, and real PowerPoint
+compatibility checks. The current-toolchain warning item is completed. The three
+parser/preservation cases
 were reported by the source-project review handed to this import task; they
 were not fixed or independently reproduced during the import.
 
@@ -114,20 +154,21 @@ The existing corpus checks compare parsed models, which cannot detect
 information lost during the first parse. Neither those tests nor this import
 establish arbitrary lossless round-trips, visual fidelity, or a security audit.
 
-## Import validation
+## Validation after warning cleanup
 
-With `moon 0.1.20260920`, all 15 source packages were selected explicitly:
+With `moon 0.1.20260920`, all 15 source packages were selected explicitly.
+Checks and tests below use `--deny-warn`:
 
 - Native: 1231 passed, 0 failed.
 - Wasm: 1231 passed, 0 failed.
 - JavaScript: 1231 passed, 0 failed.
 - Wasm-GC: 1231 passed, 0 failed.
-- `moon check`: passed with 660 inherited warnings; warning-free validation is
-  still outstanding and tracked in #549.
-- Workspace type checks: native, Wasm, and JavaScript passed (same inherited warnings).
+- `moon check --deny-warn`: passed with zero warnings.
+- Workspace type checks: native, Wasm, and JavaScript passed with zero warnings.
 - Sample-deck nested workspace: native tests passed, 1233 total (1231 library
   tests plus 2 example tests).
-- `moon info` and `moon fmt`: completed; generated interfaces match upstream
-  after module namespace replacement.
+- Benchmark nested workspace: strict type check passed.
+- `moon info` and `moon fmt`: completed; the interface changes are limited to
+  the namespace migration and explicit trait methods described above.
 
 No actual PowerPoint display/edit/reopen verification was performed.

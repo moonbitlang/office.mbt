@@ -1,3 +1,4 @@
+// Modified for office.mbt: expose the existing promoted Show method explicitly.
 // Unified DrawingML fill model.
 //
 // `EG_FillProperties` (ECMA-376 §20.1.10.31) is the choice group that
@@ -352,7 +353,7 @@ pub impl Show for FillError with fn output(self, logger) {
 }
 
 ///|
-extend FillError with Show::{to_string}
+pub extend FillError with Show::{to_string}
 
 ///|
 /// Parse a fill-choice element. `name` is the consumed StartElement's

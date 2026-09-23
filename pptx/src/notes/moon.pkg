@@ -1,5 +1,6 @@
-// Modified for office.mbt: official module namespace and workspace integration.
+// Modified for office.mbt: official namespace and explicit trait-method imports.
 import {
+  "moonbitlang/core/debug",
   "moonbitlang/pptx/slide",
   "moonbitlang/pptx/slide_master",
   "moonbitlang/pptx/xml",

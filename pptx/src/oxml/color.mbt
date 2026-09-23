@@ -1,3 +1,4 @@
+// Modified for office.mbt: expose the existing promoted Show method explicitly.
 // Unified DrawingML color model.
 //
 // Every OOXML "color choice" — the `EG_ColorChoice` group in ECMA-376
@@ -271,7 +272,7 @@ pub impl Show for ColorError with fn output(self, logger) {
 }
 
 ///|
-extend ColorError with Show::{to_string}
+pub extend ColorError with Show::{to_string}
 
 ///|
 /// Parse one colour-element start tag (e.g. `<a:srgbClr val="FF0000"`)

@@ -1,3 +1,4 @@
+// Modified for office.mbt: update deprecated array constructors.
 // High-level Presentation façade.
 //
 // Wraps an `@opc.Package` and surfaces typed views of its OOXML parts
@@ -165,7 +166,7 @@ fn Presentation::ordered_slide_parts(
   self : Presentation,
 ) -> Array[@opc.Part] raise PptxError {
   let names = self.ordered_slide_part_names()
-  let out : Array[@opc.Part] = Array::new(capacity=names.length())
+  let out : Array[@opc.Part] = Array(capacity=names.length())
   for n in names {
     match self.pkg.part_by_name(n) {
       Some(p) => out.push(p)
@@ -217,7 +218,7 @@ fn Presentation::ordered_slide_part_names(
   let rels = self.pkg.relationships_for(main_part_name) catch {
     e => raise OpcFailure(e.to_string())
   }
-  let names : Array[String] = Array::new(capacity=pres.sld_ids.length())
+  let names : Array[String] = Array(capacity=pres.sld_ids.length())
   for s in pres.sld_ids {
     let rel = match rels.by_id(s.r_id) {
       Some(r) => r

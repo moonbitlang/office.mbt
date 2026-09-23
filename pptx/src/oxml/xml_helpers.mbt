@@ -1,3 +1,4 @@
+// Modified for office.mbt: expose the existing promoted Show method explicitly.
 // Shared XML / attribute helpers for OOXML parsers.
 //
 // Before this module existed, every typed parser (`@theme`, `@slide_master`,
@@ -42,7 +43,7 @@ pub impl Show for XmlReadError with fn output(self, logger) {
 }
 
 ///|
-extend XmlReadError with Show::{to_string}
+pub extend XmlReadError with Show::{to_string}
 
 // --- event helpers ---
 
