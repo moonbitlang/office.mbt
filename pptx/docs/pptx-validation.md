@@ -12,8 +12,20 @@ for file in pptx/fixtures/poi/*.pptx; do
 done
 ```
 
-The native `pptx/sdk_validity` tests validate the demo and seven Apache POI
-fixtures, and check that unrelated schema errors still fail with the SmartArt
+To run all OOXML and PPTX packages, enumerate their package manifests;
+`moon test pptx` alone selects only the root package:
+
+```bash
+packages=$(git ls-files 'ooxml/moon.pkg' 'ooxml/**/moon.pkg' 'pptx/moon.pkg' 'pptx/**/moon.pkg' | sed 's@/moon.pkg$@@')
+for target in native wasm js wasm-gc; do
+  moon test $packages --target "$target" --deny-warn
+done
+```
+
+Run this block with `bash` so the package list expands to separate arguments.
+The XML tests cover upstream writer delegation, attribute whitespace, namespace
+handling, and typed errors. The native `pptx/sdk_validity` tests validate the
+demo and seven Apache POI fixtures, and check that unrelated schema errors still fail with the SmartArt
 baseline enabled. The CI CLI smoke job also generates and validates the demo
 through the executable. The validator uses Office2021 for PPTX; DOCX/XLSX retain Office2013.
 

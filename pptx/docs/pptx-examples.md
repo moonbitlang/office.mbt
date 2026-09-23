@@ -9,6 +9,9 @@ The complete [sample-deck builders](../demos/build.mbt) and
 See the [module README](../README.mbt.md) for package organization and
 root-workspace commands. The code below can also be used in a downstream
 project that imports the corresponding `moonbitlang/pptx` packages.
+The snippets are function or test bodies; propagate errors with `raise` or
+handle them with `try`/`catch`. In particular, `Presentation::save()` raises
+`PptxError` when ZIP serialization fails.
 
 > All paths and sizes below use `@units.Emu` for type safety — confusing
 > Emu with Pt is a compile error. Use `prs.pct_w(N)` / `prs.pct_h(N)`

@@ -21,13 +21,15 @@ can continue independently.
 | `chart`, `chart_ex`, `smartart` | Charts and diagrams |
 | `notes`, `comments` | Speaker notes and comments |
 | `oxml`, `units` | OOXML models and typed units |
-| `ooxml/xml`, `ooxml/opc` | Shared XML and ZIP package support |
 | `demos` | Shared sample-deck builders with public-API tests |
 | `cmd/demos`, `cmd/bench` | Demo generation and benchmark executables |
 | `integration` | Cross-package tests, embedded fixtures, and benchmarks |
 | `sdk_validity` | Native tests against the shared OpenXML SDK validator |
 
-Source packages live directly under this module, matching the other Office
+Shared XML and ZIP support comes from the separate `moonbitlang/ooxml`
+module through `moonbitlang/ooxml/xml` and `moonbitlang/ooxml/opc`.
+
+PPTX source packages live directly under this module, matching the other Office
 modules. Examples and benchmarks are packages of `moonbitlang/pptx`, not
 separate modules or workspaces. Import paths such as
 `moonbitlang/pptx/presentation` are unchanged by the directory organization.
@@ -82,9 +84,9 @@ and dedicated development commands.
 ## Limits
 
 Unknown XML element preservation is supported, but arbitrary PPTX input is not
-guaranteed to round-trip without loss. Parser robustness, attribute/namespace
-preservation, ZIP resource limits, and PowerPoint display/edit compatibility
-remain tracked in [#549](https://github.com/moonbitlang/office.mbt/issues/549).
+guaranteed to round-trip without loss. Attribute/namespace preservation, ZIP
+resource limits, and PowerPoint display/edit compatibility remain tracked in
+[#549](https://github.com/moonbitlang/office.mbt/issues/549).
 SDK schema validation and parsed-model equality do not establish visual fidelity.
 
 ## Shared OPC and XML
