@@ -318,18 +318,18 @@ fn sample_online_video_slide(
 }
 
 ///|
-/// v0.6 features — non-solid *text* fills (the run fill is the full
+/// Text fills and spacing — non-solid *text* fills (the run fill is the full
 /// `@oxml.Fill` ADT — gradient / pattern shown here) and paragraph spacing
 /// (`TextSpacing { Percent | Points }` on line height + space
 /// before/after). The recursive SmartArt layout is on the SmartArt slide.
-fn sample_v06_features_slide(
+fn sample_text_fills_slide(
   prs : @presentation.Presentation,
   idx : Int,
 ) -> Unit raise @presentation.PptxError {
   let navy = @units.RgbColor::new(0x1F, 0x4E, 0x79)
   let teal = @units.RgbColor::new(0x2C, 0x9C, 0x9C)
   let mut s = prs.slides()[idx].with_shape(
-    AutoShape(heading(prs, 2, "v0.6 — text fills & paragraph spacing")),
+    AutoShape(heading(prs, 2, "Text fills & paragraph spacing")),
   )
 
   // Gradient text fill: navy → teal, top-to-bottom.
@@ -419,10 +419,10 @@ fn sample_v06_features_slide(
 }
 
 ///|
-/// v0.5.2 features — fidelity & fine-grained formatting: shape rotation /
+/// Formatting — fidelity & fine-grained formatting: shape rotation /
 /// flip, run-level highlight / kerning / text outline / text effects, and
 /// shape-level hyperlinks.
-fn sample_v052_features_slide(
+fn sample_formatting_slide(
   prs : @presentation.Presentation,
   idx : Int,
 ) -> Unit raise @presentation.PptxError {
@@ -430,7 +430,7 @@ fn sample_v052_features_slide(
   let teal = @units.RgbColor::new(0x2C, 0x9C, 0x9C)
   let white = @units.RgbColor::new(0xFF, 0xFF, 0xFF)
   let mut s = prs.slides()[idx].with_shape(
-    AutoShape(heading(prs, 2, "v0.5.2 — fidelity & formatting")),
+    AutoShape(heading(prs, 2, "Fidelity & formatting")),
   )
 
   // A rectangle rotated 25° and a right-arrow flipped to point left.
@@ -632,14 +632,14 @@ fn sample_typed_layout_slides(
 }
 
 ///|
-/// v0.7 features — a gallery-styled table (`TableStylePreset`, no
+/// Table styles and fills — a gallery-styled table (`TableStylePreset`, no
 /// hand-styled cells) and the fill convenience constructors
-/// (`Fill::solid` / `linear_gradient` / `pattern`). The deck-level v0.7
+/// (`Fill::solid` / `linear_gradient` / `pattern`). The deck-level
 /// features live elsewhere: slide sections (the groups in the slide
 /// panel), app.xml document properties (File ▸ Info), the combo chart's
 /// embedded data workbook ("Edit Data"), and the SmartArt slide's
 /// per-node colours.
-fn sample_v07_features_slide(
+fn sample_table_styles_slide(
   prs : @presentation.Presentation,
   idx : Int,
 ) -> Unit raise @presentation.PptxError {
@@ -647,7 +647,7 @@ fn sample_v07_features_slide(
   let teal = @units.RgbColor::new(0x2C, 0x9C, 0x9C)
   let white = @units.RgbColor::new(0xFF, 0xFF, 0xFF)
   let mut s = prs.slides()[idx].with_shape(
-    AutoShape(heading(prs, 2, "v0.7 — table styles & fill shortcuts")),
+    AutoShape(heading(prs, 2, "Table styles & fill shortcuts")),
   )
 
   // A gallery-styled table: one call applies PowerPoint's built-in
@@ -735,7 +735,7 @@ fn sample_v07_features_slide(
     .with_shape(AutoShape(grad_box))
     .with_shape(AutoShape(patt_box))
 
-  // Point at the v0.7 features that live on other slides / deck level.
+  // Point at the features that live on other slides / deck level.
   let note = @slide.AutoShape::textbox(
     id=14,
     name="Note",
@@ -743,7 +743,7 @@ fn sample_v07_features_slide(
     y=prs.pct_h(66.0),
     cx=prs.pct_w(88.0),
     cy=prs.pct_h(26.0),
-    "Also in this deck from v0.7: slide sections (see the groups in the slide panel), company / manager document properties (File ▸ Info), an embedded data workbook behind the combo chart's Edit Data button, and the red CEO node on the SmartArt slide.",
+    "Also in this deck: slide sections (see the groups in the slide panel), company / manager document properties (File ▸ Info), an embedded data workbook behind the combo chart's Edit Data button, and the red CEO node on the SmartArt slide.",
   )
   s = s.with_shape(AutoShape(note))
   prs.update_slide_mut(idx, s)

@@ -27,16 +27,27 @@ pub(all) struct ShapeAdjustValue {
 } derive(Eq, Debug)
 
 ///|
+pub extend ShapeAdjustValue with @debug.Debug::{to_repr}
+
+///|
+pub extend ShapeAdjustValue with Eq::{not_equal, equal}
+
+///|
 /// A shape's geometry. `Preset(kind, adj)` covers `<a:prstGeom>` (with
 /// its `<a:avLst>` adjustment list); `Custom(cg)` carries the typed
 /// `<a:custGeom>` body (`avLst`, `gdLst`, `cxnLst`, `rect`, `pathLst`)
 /// — see `CustomGeometry` for the field-by-field breakdown. Adjust
-/// handles (`<a:ahLst>`) round-trip via `CustomGeometry.extension`
-/// per ADR-004.
+/// handles (`<a:ahLst>`) round-trip via `CustomGeometry.extension`.
 pub(all) enum Geometry {
   Preset(PresetShape, Array[ShapeAdjustValue])
   Custom(CustomGeometry)
 } derive(Eq, Debug)
+
+///|
+pub extend Geometry with @debug.Debug::{to_repr}
+
+///|
+pub extend Geometry with Eq::{not_equal, equal}
 
 ///|
 /// One of the named preset shape kinds (`ST_ShapeType`).
@@ -234,6 +245,12 @@ pub(all) enum PresetShape {
   ChartStar
   ChartPlus
 } derive(Eq, Debug)
+
+///|
+pub extend PresetShape with @debug.Debug::{to_repr}
+
+///|
+pub extend PresetShape with Eq::{not_equal, equal}
 
 ///|
 /// Parse the `prst` attribute value into a `PresetShape`. Unknown values

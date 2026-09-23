@@ -11,6 +11,15 @@ pub(all) suberror SlideError {
 } derive(Eq, Debug)
 
 ///|
+pub extend SlideError with @debug.Debug::{to_repr}
+
+///|
+pub extend SlideError with Eq::{not_equal, equal}
+
+///|
+pub extend SlideError with Show::{to_string, output}
+
+///|
 /// Lift an XML reader/writer error into a `SlideError::XmlFailure`.
 fn wrap_xml(e : @xml.XmlError) -> SlideError {
   match e {

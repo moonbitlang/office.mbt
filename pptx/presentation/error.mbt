@@ -35,6 +35,15 @@ pub(all) suberror PptxError {
 } derive(Eq, Debug)
 
 ///|
+pub extend PptxError with @debug.Debug::{to_repr}
+
+///|
+pub extend PptxError with Eq::{not_equal, equal}
+
+///|
+pub extend PptxError with Show::{to_string, output}
+
+///|
 pub impl Show for PptxError with fn output(self, logger) {
   match self {
     OpcFailure(s) => {

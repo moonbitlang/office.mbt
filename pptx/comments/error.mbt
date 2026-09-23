@@ -11,6 +11,15 @@ pub(all) suberror CommentsError {
 } derive(Eq, Debug)
 
 ///|
+pub extend CommentsError with @debug.Debug::{to_repr}
+
+///|
+pub extend CommentsError with Eq::{not_equal, equal}
+
+///|
+pub extend CommentsError with Show::{to_string, output}
+
+///|
 /// Lift an XML reader/writer error into a `CommentsError::XmlFailure`.
 fn wrap_xml(e : @xml.XmlError) -> CommentsError {
   match e {

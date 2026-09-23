@@ -1,11 +1,11 @@
-// Lossless preservation tests (ADR-004) for the slide master / layout
+// Lossless preservation tests for the slide master / layout
 // parsers. The fixture in slide_master_test.mbt is dense enough to
 // drive most assertions: it has <p:cSld>, <p:txStyles>, and <p:hf>
 // siblings of the elements we model, all of which should land on
 // `SlideMaster.extension`.
 
 ///|
-test "ADR-004: master captures cSld / txStyles / hf" {
+test "master captures cSld / txStyles / hf" {
   let m = @slide_master.SlideMaster::parse(office_like_master())
   let names = []
   for el in m.extension {
@@ -17,7 +17,7 @@ test "ADR-004: master captures cSld / txStyles / hf" {
 }
 
 ///|
-test "ADR-004: master cSld subtree preserves nested shape tree" {
+test "master cSld subtree preserves nested shape tree" {
   let m = @slide_master.SlideMaster::parse(office_like_master())
   let mut cSld : @xml.XmlElement? = None
   for el in m.extension {
@@ -31,7 +31,7 @@ test "ADR-004: master cSld subtree preserves nested shape tree" {
 }
 
 ///|
-test "ADR-004: master hf attributes round-trip" {
+test "master hf attributes round-trip" {
   let m = @slide_master.SlideMaster::parse(office_like_master())
   let mut hf : @xml.XmlElement? = None
   for el in m.extension {
@@ -49,7 +49,7 @@ test "ADR-004: master hf attributes round-trip" {
 // --- SlideLayout.extension ---
 
 ///|
-test "ADR-004: layout captures cSld + transition + extLst" {
+test "layout captures cSld + transition + extLst" {
   let xml = "<?xml version=\"1.0\"?>" +
     "<p:sldLayout xmlns:p=\"" +
     p_ns +
@@ -74,7 +74,7 @@ test "ADR-004: layout captures cSld + transition + extLst" {
 }
 
 ///|
-test "ADR-004: layout cSld preserves both name attribute and shape tree" {
+test "layout cSld preserves both name attribute and shape tree" {
   let xml = "<?xml version=\"1.0\"?>" +
     "<p:sldLayout xmlns:p=\"" +
     p_ns +

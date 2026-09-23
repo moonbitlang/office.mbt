@@ -1,9 +1,8 @@
 // Recursive hierarchy + radial layout definitions.
 //
 // PowerPoint re-lays-out SmartArt from the `<dgm:layoutDef>` on open (it does
-// not honour the cached `<dsp:drawing>` — the 2026-06-16 verification finding,
-// ADR-010 status update), so the nesting families need a layout definition
-// that actually walks the tree. These templates are minimal simplifications
+// not honour the cached `<dsp:drawing>`), so nesting families need a layout
+// definition that walks the tree. These templates are minimal simplifications
 // of the corresponding built-in Microsoft layouts, structurally verified
 // against real Office-emitted `layout1.xml` parts:
 //

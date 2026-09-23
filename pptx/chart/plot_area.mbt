@@ -22,6 +22,15 @@ pub(all) struct AreaChartBody {
 } derive(Eq, Debug)
 
 ///|
+pub extend AreaChartBody with @debug.Debug::{to_repr}
+
+///|
+pub extend AreaChartBody with Eq::{not_equal, equal}
+
+///|
+pub extend AreaChartBody with Show::{to_string, output}
+
+///|
 pub impl Show for AreaChartBody with fn output(self, logger) {
   logger.write_string("AreaChartBody(")
   logger.write_string(self.series.length().to_string())
@@ -44,6 +53,15 @@ pub(all) struct Area3DChartBody {
   ax_ids : Array[Int]
   extension : Array[@xml.XmlElement]
 } derive(Eq, Debug)
+
+///|
+pub extend Area3DChartBody with @debug.Debug::{to_repr}
+
+///|
+pub extend Area3DChartBody with Eq::{not_equal, equal}
+
+///|
+pub extend Area3DChartBody with Show::{to_string, output}
 
 ///|
 pub impl Show for Area3DChartBody with fn output(self, logger) {

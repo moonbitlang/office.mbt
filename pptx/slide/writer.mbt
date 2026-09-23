@@ -61,7 +61,7 @@ fn write_bg(
         Some(e) => @oxml.write_effect_list(w, ctx, e)
         None => ()
       }
-      // grpFill / effectDag / extLst captured per ADR-004.
+      // grpFill / effectDag / extLst captured.
       for ext in p.extension {
         @oxml.write_xml_element(w, ctx, ext)
       }
@@ -99,7 +99,7 @@ fn write_transition(
     None => ()
   }
   write_transition_kind(w, t.kind)
-  // <p:sndAc> / <p:extLst> captured per ADR-004.
+  // <p:sndAc> / <p:extLst> captured.
   for ext in t.extension {
     @oxml.write_xml_element(w, ctx, ext)
   }

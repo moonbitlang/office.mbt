@@ -52,6 +52,12 @@ pub struct CoreProperties {
 } derive(Eq, Debug)
 
 ///|
+pub extend CoreProperties with @debug.Debug::{to_repr}
+
+///|
+pub extend CoreProperties with Eq::{not_equal, equal}
+
+///|
 /// An empty `CoreProperties` — every field `None`. Start here and chain the
 /// `with_*` builders, or read the current values via
 /// `Presentation::core_properties`.
@@ -416,7 +422,7 @@ pub fn Presentation::set_core_properties_mut(
 }
 
 ///|
-/// Immutable counterpart of `set_core_properties_mut` (ADR-003): returns a
+/// Immutable counterpart of `set_core_properties_mut`: returns a
 /// new `Presentation` with the core properties replaced; the original is
 /// untouched.
 pub fn Presentation::with_core_properties(

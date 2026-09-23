@@ -1,4 +1,4 @@
-// Lossless preservation tests (ADR-004) for slide-level + shape-level
+// Lossless preservation tests for slide-level + shape-level
 // `extension` arrays. The fixtures intentionally pack in elements the
 // typed parsers do *not* model (transition / timing / style / extLst /
 // graphicFrame / foreign-namespace nodes) and assert that every one
@@ -19,7 +19,7 @@ fn find_ext(slide : @slide.Slide, local_name : String) -> @xml.XmlElement? {
 // --- Slide.extension captures the top-level non-shape children. ---
 
 ///|
-test "ADR-004: slide-level timing survives parse; transition lifts to typed field" {
+test "slide-level timing survives parse; transition lifts to typed field" {
   let xml = "<?xml version=\"1.0\"?>" +
     "<p:sld xmlns:p=\"" +
     pml_ns +
@@ -74,7 +74,7 @@ test "<p:cSld><p:bg> lifts into the typed background field, not extension" {
 }
 
 ///|
-test "ADR-004: foreign-namespace <p:sld> child is preserved" {
+test "foreign-namespace <p:sld> child is preserved" {
   let xml = "<?xml version=\"1.0\"?>" +
     "<p:sld xmlns:p=\"" +
     pml_ns +
@@ -144,7 +144,7 @@ test "chart graphicFrame lifts to GraphicFrame(ChartContent)" {
 // --- AutoShape.extension captures sibling elements like <p:style>. ---
 
 ///|
-test "ADR-004: AutoShape preserves <p:style> in extension" {
+test "AutoShape preserves <p:style> in extension" {
   let xml = "<?xml version=\"1.0\"?>" +
     "<p:sld xmlns:p=\"" +
     pml_ns +
@@ -195,7 +195,7 @@ fn find_local(
 // --- Picture.extension and Connector.extension behave the same way. ---
 
 ///|
-test "ADR-004: Picture preserves <p:extLst> in extension" {
+test "Picture preserves <p:extLst> in extension" {
   let xml = "<?xml version=\"1.0\"?>" +
     "<p:sld xmlns:p=\"" +
     pml_ns +
@@ -226,7 +226,7 @@ test "ADR-004: Picture preserves <p:extLst> in extension" {
 }
 
 ///|
-test "ADR-004: Connector preserves <p:style> in extension" {
+test "Connector preserves <p:style> in extension" {
   let xml = "<?xml version=\"1.0\"?>" +
     "<p:sld xmlns:p=\"" +
     pml_ns +
@@ -251,7 +251,7 @@ test "ADR-004: Connector preserves <p:style> in extension" {
 }
 
 ///|
-test "ADR-004: GroupShape captures foreign-namespace siblings" {
+test "GroupShape captures foreign-namespace siblings" {
   let xml = "<?xml version=\"1.0\"?>" +
     "<p:sld xmlns:p=\"" +
     pml_ns +

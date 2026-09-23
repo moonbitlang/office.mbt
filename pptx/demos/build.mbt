@@ -25,10 +25,10 @@
 //   14. SVG image.                   15. In-place shape editing (map_shapes).
 //   16. Embedded video + audio.      17. SmartArt org chart (per-node colours).
 //   18. Animations.                  19. YouTube / online video.
-//   20. v0.5.2 features — shape rotation/flip, run highlight / kerning /
+//   20. Formatting — shape rotation/flip, run highlight / kerning /
 //       text outline / text effects, shape hyperlinks.
-//   21. v0.6 features — gradient/pattern text fills, paragraph spacing.
-//   22. v0.7 features — gallery table styles, fill convenience constructors.
+//   21. Text fills and spacing — gradient/pattern text fills, paragraph spacing.
+//   22. Table styles and fills — gallery table styles, fill convenience constructors.
 //   23. Master / template slide (footer / date / slide number).
 //   24–25. Typed layout slides (compile-time placeholder schema).
 //   26. Closing — hyperlink back to slide 1.
@@ -74,8 +74,8 @@ pub fn build_sample_deck() -> FixedArray[Byte] raise @presentation.PptxError {
     sample_custom_geom_slide, sample_picture_slide, sample_table_slide, sample_charts_1_slide,
     sample_charts_2_slide, sample_charts_3_slide, sample_charts_4_slide, sample_background_slide,
     sample_combo_chart_slide, sample_svg_slide, sample_edit_slide, sample_media_slide,
-    sample_smartart_slide, sample_animation_slide, sample_online_video_slide, sample_v052_features_slide,
-    sample_v06_features_slide, sample_v07_features_slide,
+    sample_smartart_slide, sample_animation_slide, sample_online_video_slide, sample_formatting_slide,
+    sample_text_fills_slide, sample_table_styles_slide,
   ]
   for _ in 0..<builders.length() {
     let _ = prs.add_slide_mut(0)
@@ -209,8 +209,8 @@ pub fn build_sample_chart_isolated(
 ///   16 — SmartArt org chart
 ///   17 — animations
 ///   18 — YouTube / online video
-///   19 — v0.6 features (text fills + paragraph spacing)
-///   20 — v0.7 features (table styles + fill shortcuts)
+///   19 — Text fills and paragraph spacing
+///   20 — Table styles and fill shortcuts
 ///   21+ — closing (with back-link hyperlink)
 ///
 /// The TOC slide is intentionally excluded — its internal hyperlinks
@@ -252,8 +252,8 @@ pub fn build_sample_isolated(
     16 => sample_smartart_slide(prs, 1)
     17 => sample_animation_slide(prs, 1)
     18 => sample_online_video_slide(prs, 1)
-    19 => sample_v06_features_slide(prs, 1)
-    20 => sample_v07_features_slide(prs, 1)
+    19 => sample_text_fills_slide(prs, 1)
+    20 => sample_table_styles_slide(prs, 1)
     _ => sample_closing_slide(prs, 1)
   }
   prs.save()
@@ -705,7 +705,7 @@ fn sample_picture_slide(
   )
 
   // Add a second picture with an explicit larger extent and a 15 % crop on
-  // each edge — via the typed picture builder (v0.4 D4). The pipeline
+  // each edge — via the typed picture builder. The pipeline
   // builder → with_crop → build is compile-time-checked: cropping twice, or
   // applying effects after build, wouldn't compile.
   let cropped = @slide.Picture::builder(
@@ -728,7 +728,7 @@ fn sample_picture_slide(
 
   // Speaker notes describing what the slide demonstrates.
   prs.set_notes_mut(
-    idx, "Left: original 16x16 BMP, size auto-derived from the header. Right: same image with a 15% crop on each edge — typed Picture::builder pipeline (D4).",
+    idx, "Left: original 16x16 BMP, size auto-derived from the header. Right: same image with a 15% crop on each edge — typed Picture::builder pipeline.",
   )
 }
 

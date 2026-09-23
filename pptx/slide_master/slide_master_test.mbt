@@ -93,7 +93,7 @@ test "parse: layout id list preserves order and unsigned ids" {
 test "parse: cSld and txStyles and hf are skipped without error" {
   // The fixture's cSld has nested elements, txStyles has three children,
   // hf has four attributes. None of these are modelled by SlideMaster;
-  // they all round-trip via `extension` per ADR-004. If subtree skipping
+  // they all round-trip via `extension`. If subtree skipping
   // leaked state, parse() would raise — this test asserts the
   // tolerant-skip contract by name.
   let _ = @slide_master.SlideMaster::parse(office_like_master())

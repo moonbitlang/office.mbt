@@ -20,6 +20,15 @@ pub(all) struct ScriptFont {
 } derive(Eq, Debug)
 
 ///|
+pub extend ScriptFont with @debug.Debug::{to_repr}
+
+///|
+pub extend ScriptFont with Eq::{not_equal, equal}
+
+///|
+pub extend ScriptFont with Show::{to_string, output}
+
+///|
 pub impl Show for ScriptFont with fn output(self, logger) {
   logger.write_string("ScriptFont(")
   logger.write_object(self.script)
@@ -46,6 +55,12 @@ pub(all) struct FontCollection {
 } derive(Eq, Debug)
 
 ///|
+pub extend FontCollection with @debug.Debug::{to_repr}
+
+///|
+pub extend FontCollection with Eq::{not_equal, equal}
+
+///|
 /// The major (heading) and minor (body) font families.
 ///
 /// - `extension` — `<a:extLst>` etc. on `<a:fontScheme>`.
@@ -55,6 +70,12 @@ pub(all) struct FontScheme {
   minor_font : FontCollection
   extension : Array[@xml.XmlElement]
 } derive(Eq, Debug)
+
+///|
+pub extend FontScheme with @debug.Debug::{to_repr}
+
+///|
+pub extend FontScheme with Eq::{not_equal, equal}
 
 ///|
 /// Which of the six theme fonts a `typeface="+mj-lt"`-style reference names.
@@ -69,6 +90,12 @@ pub(all) enum ThemeFontRef {
   MinorEastAsian
   MinorComplexScript
 } derive(Eq, Debug)
+
+///|
+pub extend ThemeFontRef with @debug.Debug::{to_repr}
+
+///|
+pub extend ThemeFontRef with Eq::{not_equal, equal}
 
 ///|
 /// Parse a `typeface` attribute value as a theme reference. `None` for a
@@ -122,6 +149,12 @@ pub(all) enum ScriptSlot {
   EastAsianSlot
   ComplexScriptSlot
 } derive(Eq, Debug)
+
+///|
+pub extend ScriptSlot with @debug.Debug::{to_repr}
+
+///|
+pub extend ScriptSlot with Eq::{not_equal, equal}
 
 ///|
 /// Classify an ISO-15924 script tag. Unknown tags map to `LatinSlot`, which

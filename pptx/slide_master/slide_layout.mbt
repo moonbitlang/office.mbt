@@ -61,6 +61,12 @@ pub(all) enum SlideLayoutType {
 } derive(Eq, Debug)
 
 ///|
+pub extend SlideLayoutType with @debug.Debug::{to_repr}
+
+///|
+pub extend SlideLayoutType with Eq::{not_equal, equal}
+
+///|
 /// Convert a `ST_SlideLayoutType` attribute value to the typed enum.
 pub fn SlideLayoutType::from_xml(
   s : String,
@@ -162,6 +168,12 @@ pub(all) enum ClrMapOverride {
 } derive(Eq, Debug)
 
 ///|
+pub extend ClrMapOverride with @debug.Debug::{to_repr}
+
+///|
+pub extend ClrMapOverride with Eq::{not_equal, equal}
+
+///|
 /// A parsed slide layout.
 ///
 /// - `name` — `name` from `<p:cSld name="…">`. May be empty if absent.
@@ -175,6 +187,12 @@ pub(all) struct SlideLayout {
   clr_map_override : ClrMapOverride
   extension : Array[@xml.XmlElement]
 } derive(Eq, Debug)
+
+///|
+pub extend SlideLayout with @debug.Debug::{to_repr}
+
+///|
+pub extend SlideLayout with Eq::{not_equal, equal}
 
 ///|
 /// Parse a slide layout part from raw XML bytes.

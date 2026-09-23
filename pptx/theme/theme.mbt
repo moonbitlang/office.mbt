@@ -7,7 +7,7 @@
 //
 // Modelled: `clrScheme` and `fontScheme`. Everything else (`fmtScheme`,
 // `objectDefaults`, `extraClrSchemeLst`, `custClrLst`, `extLst`)
-// round-trips via `Theme.extension` per ADR-004.
+// round-trips via `Theme.extension`.
 
 ///|
 /// Parsed `<a:theme>` document. The `name` attribute mirrors the OOXML
@@ -25,3 +25,9 @@ pub(all) struct Theme {
   font_scheme : FontScheme
   extension : Array[@xml.XmlElement]
 } derive(Eq, Debug)
+
+///|
+pub extend Theme with @debug.Debug::{to_repr}
+
+///|
+pub extend Theme with Eq::{not_equal, equal}

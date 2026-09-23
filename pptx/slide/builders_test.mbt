@@ -403,7 +403,7 @@ test "AutoShape::with_stroke sets the outline; other fields untouched" {
   )
   let styled = base.with_stroke(stroke)
   debug_inspect(styled.stroke == Some(stroke), content="true")
-  debug_inspect(base.stroke is None, content="true") // immutable builder (ADR-003)
+  debug_inspect(base.stroke is None, content="true") // immutable builder
   debug_inspect(styled.id == base.id, content="true")
 }
 

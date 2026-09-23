@@ -1,4 +1,4 @@
-// Lossless preservation tests (ADR-004) for the helper-level skip
+// Lossless preservation tests for the helper-level skip
 // points inside @slide.parser.mbt. Each test wires a helper-internal
 // extension element (scene3d / sp3d / extLst / spLocks / hlinkClick /
 // custDataLst / audioFile / overrideClrMapping siblings) into a
@@ -56,7 +56,7 @@ fn find_local_inner(
 // --- spPr-level captures ---
 
 ///|
-test "ADR-004: parse_sp_pr captures <a:scene3d> + <a:sp3d>" {
+test "parse_sp_pr captures <a:scene3d> + <a:sp3d>" {
   let slide = @slide.Slide::parse(
     slide_with_sp_pr_body(
       "<a:scene3d><a:camera prst=\"orthographicFront\"/><a:lightRig rig=\"threePt\" dir=\"t\"/></a:scene3d>" +
@@ -74,7 +74,7 @@ test "ADR-004: parse_sp_pr captures <a:scene3d> + <a:sp3d>" {
 }
 
 ///|
-test "ADR-004: parse_sp_pr captures <a:extLst>" {
+test "parse_sp_pr captures <a:extLst>" {
   let slide = @slide.Slide::parse(
     slide_with_sp_pr_body(
       "<a:extLst><a:ext uri=\"{ABC}\"><a:custom flag=\"1\"/></a:ext></a:extLst>",
@@ -85,7 +85,7 @@ test "ADR-004: parse_sp_pr captures <a:extLst>" {
 }
 
 ///|
-test "ADR-004: foreign-namespace <p:spPr> child survives" {
+test "foreign-namespace <p:spPr> child survives" {
   let xml = "<?xml version=\"1.0\"?>" +
     "<p:sld xmlns:p=\"" +
     pml_ns +
@@ -109,7 +109,7 @@ test "ADR-004: foreign-namespace <p:spPr> child survives" {
 // --- nvSpPr-level captures (cNvPr body, cNvSpPr) ---
 
 ///|
-test "ADR-004: cNvPr with <a:hlinkClick> child is preserved" {
+test "cNvPr with <a:hlinkClick> child is preserved" {
   let xml = "<?xml version=\"1.0\"?>" +
     "<p:sld xmlns:p=\"" +
     pml_ns +
@@ -158,7 +158,7 @@ test "ADR-004: cNvPr with <a:hlinkClick> child is preserved" {
 // --- nvPr-level captures (custDataLst / audioFile etc.) ---
 
 ///|
-test "ADR-004: <p:nvPr> with <p:custDataLst> is preserved" {
+test "<p:nvPr> with <p:custDataLst> is preserved" {
   let xml = "<?xml version=\"1.0\"?>" +
     "<p:sld xmlns:p=\"" +
     pml_ns +
@@ -189,7 +189,7 @@ test "ADR-004: <p:nvPr> with <p:custDataLst> is preserved" {
 // --- grpSpPr-level captures (fill on a group shape) ---
 
 ///|
-test "ADR-004: parse_grp_sp_pr captures <a:solidFill> on the group" {
+test "parse_grp_sp_pr captures <a:solidFill> on the group" {
   let xml = "<?xml version=\"1.0\"?>" +
     "<p:sld xmlns:p=\"" +
     pml_ns +
@@ -217,7 +217,7 @@ test "ADR-004: parse_grp_sp_pr captures <a:solidFill> on the group" {
 // --- prstGeom-level captures ---
 
 ///|
-test "ADR-004: parse_prst_geom captures <a:extLst> sibling of avLst" {
+test "parse_prst_geom captures <a:extLst> sibling of avLst" {
   let slide = @slide.Slide::parse(
     slide_with_sp_pr_body(
       "<a:prstGeom prst=\"rect\"><a:avLst/><a:extLst><a:ext uri=\"{X}\"/></a:extLst></a:prstGeom>",
@@ -233,7 +233,7 @@ test "ADR-004: parse_prst_geom captures <a:extLst> sibling of avLst" {
 // --- clrMapOvr-level captures ---
 
 ///|
-test "ADR-004: parse_clr_map_ovr captures foreign-namespace sibling" {
+test "parse_clr_map_ovr captures foreign-namespace sibling" {
   let xml = "<?xml version=\"1.0\"?>" +
     "<p:sld xmlns:p=\"" +
     pml_ns +

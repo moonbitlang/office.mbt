@@ -27,6 +27,15 @@ pub(all) struct SurfaceChartBody {
 } derive(Eq, Debug)
 
 ///|
+pub extend SurfaceChartBody with @debug.Debug::{to_repr}
+
+///|
+pub extend SurfaceChartBody with Eq::{not_equal, equal}
+
+///|
+pub extend SurfaceChartBody with Show::{to_string, output}
+
+///|
 pub impl Show for SurfaceChartBody with fn output(self, logger) {
   logger.write_string("SurfaceChartBody(")
   logger.write_string(self.series.length().to_string())
@@ -42,6 +51,15 @@ pub(all) struct Surface3DChartBody {
   ax_ids : Array[Int]
   extension : Array[@xml.XmlElement]
 } derive(Eq, Debug)
+
+///|
+pub extend Surface3DChartBody with @debug.Debug::{to_repr}
+
+///|
+pub extend Surface3DChartBody with Eq::{not_equal, equal}
+
+///|
+pub extend Surface3DChartBody with Show::{to_string, output}
 
 ///|
 pub impl Show for Surface3DChartBody with fn output(self, logger) {

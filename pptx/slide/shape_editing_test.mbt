@@ -49,7 +49,7 @@ test "Slide::map_shapes applies f to every shape" {
   debug_inspect(renamed.shapes[0].name().unwrap(), content="\"X\"")
   debug_inspect(renamed.shapes[1].name().unwrap(), content="\"X\"")
   debug_inspect(renamed.shapes[2].name().unwrap(), content="\"Pic\"") // picture unchanged
-  // Original is untouched (immutable, ADR-003).
+  // Original is untouched (immutable).
   debug_inspect(slide.shapes[0].name().unwrap(), content="\"Title 1\"")
 }
 

@@ -5,7 +5,7 @@
 // every `parse_*` helper is called *just after* its element's StartElement
 // has been consumed and consumes events through the matching EndElement.
 //
-// ADR-004 lossless preservation: unknown children (`<p:extLst>`,
+// Lossless preservation: unknown children (`<p:extLst>`,
 // foreign-namespace siblings, future schema additions) are captured into
 // the enclosing node's `extension : Array[XmlElement]` via
 // `collect_subtree_unknown` rather than discarded.
@@ -64,7 +64,7 @@ fn parse_comment_author(
     let ev = next_event(r)
     match ev {
       // <p:cmAuthor> body — the schema defines only <p:extLst> here; we
-      // capture everything verbatim per ADR-004.
+      // capture everything verbatim.
       StartElement(child, child_attrs) =>
         extension.push(collect_subtree_unknown(r, child, child_attrs))
       EndElement(_) => break

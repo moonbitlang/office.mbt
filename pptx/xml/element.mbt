@@ -1,10 +1,9 @@
 // Ad-hoc XML DOM for lossless preservation of unknown subtrees.
 //
-// `XmlReader` is event-based by design (ADR-008). For most parsing paths we
+// `XmlReader` is event-based by design. For most parsing paths we
 // only need to recognise the elements we model and skip the rest cheaply.
-// But ADR-004 promises that unknown OOXML chunks survive read → write
-// verbatim, which means at the skip points we instead want to *capture* the
-// subtree as a small DOM and stash it on the surrounding model node.
+// To preserve unknown OOXML chunks through read → write, skip points
+// instead capture the subtree as a small DOM on the surrounding model node.
 //
 // `XmlElement` / `XmlNode` are that capture format. They mirror the event
 // stream exactly: an element has a qualified name, attributes in source
@@ -24,6 +23,15 @@ pub(all) struct XmlElement {
 } derive(Eq, Debug)
 
 ///|
+pub extend XmlElement with @debug.Debug::{to_repr}
+
+///|
+pub extend XmlElement with Eq::{not_equal, equal}
+
+///|
+pub extend XmlElement with Show::{to_string, output}
+
+///|
 /// One child of an `XmlElement`. The four reader events
 /// (`StartElement`/`EndElement`/`Text`/`CData`) compress to three node
 /// kinds — `EndElement` is implicit in the parent boundary.
@@ -32,6 +40,15 @@ pub(all) enum XmlNode {
   Text(String)
   CData(String)
 } derive(Eq, Debug)
+
+///|
+pub extend XmlNode with @debug.Debug::{to_repr}
+
+///|
+pub extend XmlNode with Eq::{not_equal, equal}
+
+///|
+pub extend XmlNode with Show::{to_string, output}
 
 ///|
 /// Convenience constructor. Intended for tests / hand-built fixtures; real

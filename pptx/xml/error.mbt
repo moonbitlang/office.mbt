@@ -22,6 +22,15 @@ pub(all) suberror XmlError {
 } derive(Eq, Debug)
 
 ///|
+pub extend XmlError with @debug.Debug::{to_repr}
+
+///|
+pub extend XmlError with Eq::{not_equal, equal}
+
+///|
+pub extend XmlError with Show::{to_string, output}
+
+///|
 pub impl Show for XmlError with fn output(self, logger) {
   match self {
     Malformed(s) => {

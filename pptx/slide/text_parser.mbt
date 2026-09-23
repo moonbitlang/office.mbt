@@ -368,7 +368,7 @@ fn parse_run(r : @xml.XmlReader) -> Run raise SlideError {
 /// via the shared `@oxml.parse_fill` — `<a:effectLst>`,
 /// `<a:highlight>`, `<a:latin>`, `<a:ea>`, `<a:cs>`, `<a:hlinkClick>`).
 /// Other children (`<a:grpFill>`, underline fills, east-asian list,
-/// `<a:rtl>`) ride on the run's `extension` per ADR-004.
+/// `<a:rtl>`) ride on the run's `extension`.
 fn parse_run_properties(
   r : @xml.XmlReader,
   attrs : Array[(@xml.QName, String)],

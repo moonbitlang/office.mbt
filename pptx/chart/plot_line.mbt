@@ -50,6 +50,15 @@ pub(all) struct LineChartBody {
 } derive(Eq, Debug)
 
 ///|
+pub extend LineChartBody with @debug.Debug::{to_repr}
+
+///|
+pub extend LineChartBody with Eq::{not_equal, equal}
+
+///|
+pub extend LineChartBody with Show::{to_string, output}
+
+///|
 pub impl Show for LineChartBody with fn output(self, logger) {
   logger.write_string("LineChartBody(")
   logger.write_string(self.grouping.to_xml())
@@ -73,6 +82,15 @@ pub(all) enum Grouping {
   Stacked
   PercentStacked
 } derive(Eq, Debug)
+
+///|
+pub extend Grouping with @debug.Debug::{to_repr}
+
+///|
+pub extend Grouping with Eq::{not_equal, equal}
+
+///|
+pub extend Grouping with Show::{to_string, output}
 
 ///|
 pub impl Show for Grouping with fn output(self, logger) {

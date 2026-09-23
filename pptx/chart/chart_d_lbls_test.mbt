@@ -165,7 +165,7 @@ test "DLbls: pie-only showLeaderLines rides on extension" {
     _ => abort("expected PieChart")
   }
   // showLeaderLines is not in CT_DLbls's typed leaves — it rides
-  // on extension per ADR-004.
+  // on extension.
   debug_inspect(dl.extension.length(), content="1")
   let bytes = original.serialize()
   let re_parsed = @chart.Chart::parse(bytes)

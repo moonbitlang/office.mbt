@@ -18,6 +18,15 @@ pub(all) enum MediaFormat {
 } derive(Eq, Debug)
 
 ///|
+pub extend MediaFormat with @debug.Debug::{to_repr}
+
+///|
+pub extend MediaFormat with Eq::{not_equal, equal}
+
+///|
+pub extend MediaFormat with Show::{to_string, output}
+
+///|
 pub impl Show for MediaFormat with fn output(self, logger) {
   logger.write_string(
     match self {

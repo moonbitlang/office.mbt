@@ -26,6 +26,15 @@ pub(all) struct SysColor {
 } derive(Eq, Debug)
 
 ///|
+pub extend SysColor with @debug.Debug::{to_repr}
+
+///|
+pub extend SysColor with Eq::{not_equal, equal}
+
+///|
+pub extend SysColor with Show::{to_string, output}
+
+///|
 pub impl Show for SysColor with fn output(self, logger) {
   logger.write_string("SysColor(")
   logger.write_object(self.val)
@@ -61,6 +70,15 @@ pub(all) enum ColorBase {
   Preset(String)
   Scrgb(@units.Percentage, @units.Percentage, @units.Percentage)
 } derive(Eq, Debug)
+
+///|
+pub extend ColorBase with @debug.Debug::{to_repr}
+
+///|
+pub extend ColorBase with Eq::{not_equal, equal}
+
+///|
+pub extend ColorBase with Show::{to_string, output}
 
 ///|
 pub impl Show for ColorBase with fn output(self, logger) {
@@ -124,6 +142,15 @@ pub struct Color {
   transforms : Array[@units.ColorTransform]
   extension : Array[@xml.XmlElement]
 } derive(Eq, Debug)
+
+///|
+pub extend Color with @debug.Debug::{to_repr}
+
+///|
+pub extend Color with Eq::{not_equal, equal}
+
+///|
+pub extend Color with Show::{to_string, output}
 
 ///|
 pub impl Show for Color with fn output(self, logger) {
@@ -256,6 +283,15 @@ pub(all) suberror ColorError {
 } derive(Eq, Debug)
 
 ///|
+pub extend ColorError with @debug.Debug::{to_repr}
+
+///|
+pub extend ColorError with Eq::{not_equal, equal}
+
+///|
+pub extend ColorError with Show::{output}
+
+///|
 pub impl Show for ColorError with fn output(self, logger) {
   match self {
     UnknownColorElement(s) => {
@@ -366,7 +402,7 @@ pub fn parse_color_element(
   // Walk the body looking for colour-modifier children. Modeled
   // modifiers (tint / shade / satMod / lumMod / alpha) fold into
   // `transforms`; everything else (hueMod / redMod / comp / inv /
-  // gamma / gray / foreign-namespace) lands on `extension` per ADR-004
+  // gamma / gray / foreign-namespace) lands on `extension`
   // so it round-trips.
   let transforms : Array[@units.ColorTransform] = []
   let extension : Array[@xml.XmlElement] = []

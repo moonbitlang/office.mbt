@@ -3,10 +3,9 @@
 // *OPC-level* class of "PowerPoint repair" triggers, caught in pure MoonBit on
 // every backend.
 //
-// This is **Tier 1** of the verification pyramid (ADR-011): it does
-// not need a real PowerPoint and runs in `moon test`. It is complementary to
-// the external Open XML SDK validator (Tier 2, `tools/openxml-validator/`), which
-// owns the deeper *schema/semantic* class. Here we check the three integrity
+// These checks run in `moon test` without PowerPoint. They complement the
+// shared OpenXML SDK validator (`tools/openxml-validator/`), which checks
+// schema and semantic validity. Here we check four integrity
 // invariants whose violation reliably makes PowerPoint repair a file:
 //
 //   1. every content part resolves to a content type (Default/Override);
@@ -226,7 +225,7 @@ test "structural integrity: a duplicate shape id is reported" {
       ),
     )
   }
-  // `base` stays pristine — `Slide` is immutable (ADR-003), so both arms
+  // `base` stays pristine — `Slide` is immutable, so both arms
   // below build from the same starting point.
   let base = prs.slides()[0]
   prs.update_slide_mut(0, base.with_shape(clash(2)).with_shape(clash(2)))

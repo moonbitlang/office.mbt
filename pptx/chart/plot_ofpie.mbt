@@ -51,6 +51,15 @@ pub(all) struct OfPieChartBody {
 } derive(Eq, Debug)
 
 ///|
+pub extend OfPieChartBody with @debug.Debug::{to_repr}
+
+///|
+pub extend OfPieChartBody with Eq::{not_equal, equal}
+
+///|
+pub extend OfPieChartBody with Show::{to_string, output}
+
+///|
 pub impl Show for OfPieChartBody with fn output(self, logger) {
   logger.write_string("OfPieChartBody(")
   logger.write_string(self.of_pie_type.to_xml())
@@ -66,6 +75,15 @@ pub(all) enum OfPieType {
   Pie
   Bar
 } derive(Eq, Debug)
+
+///|
+pub extend OfPieType with @debug.Debug::{to_repr}
+
+///|
+pub extend OfPieType with Eq::{not_equal, equal}
+
+///|
+pub extend OfPieType with Show::{to_string, output}
 
 ///|
 pub impl Show for OfPieType with fn output(self, logger) {
@@ -109,6 +127,15 @@ pub(all) enum SplitType {
   Pos
   Val
 } derive(Eq, Debug)
+
+///|
+pub extend SplitType with @debug.Debug::{to_repr}
+
+///|
+pub extend SplitType with Eq::{not_equal, equal}
+
+///|
+pub extend SplitType with Show::{to_string, output}
 
 ///|
 pub impl Show for SplitType with fn output(self, logger) {

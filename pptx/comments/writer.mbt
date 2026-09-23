@@ -6,7 +6,7 @@
 // byte stream that, when parsed back through `::parse`, yields a value
 // equal to the original (round-trip equality is the writer floor).
 //
-// Lossless preservation per ADR-004: every node's `extension`
+// Lossless preservation: every node's `extension`
 // `Array[XmlElement]` is replayed verbatim via
 // `@oxml.write_xml_element`, so unknown children survive the
 // read → write cycle.

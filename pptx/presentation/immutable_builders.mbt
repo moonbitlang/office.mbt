@@ -1,11 +1,10 @@
 // Immutable builder variants.
 //
-// Per ADR-003 the default builder style is `with_*` returning a new
+// The default builder style is `with_*` returning a new
 // value. The mutating `add_slide_mut` / `update_slide_mut` exist
 // because they let users edit an opened deck in place — sometimes
 // the right shape for batch edits. The immutable wrappers below
-// close the ADR-003 story for the create-from-scratch / one-shot
-// flow:
+// support the create-from-scratch / one-shot flow:
 //
 //   let prs = Presentation::new()
 //   let (prs, _new_slide_name) = prs.with_added_slide(layout_index=0)
@@ -14,13 +13,9 @@
 //   let prs = prs.with_slide_updated(0, s.with_shape(AutoShape(tb)))
 //   let bytes = prs.save()
 //
-// All three operations clone the underlying `@opc.Package` first
-// (via `Package::clone`) and then run the same internal mutation
-// the `_mut` form would. That's not the cheapest possible
-// implementation — a copy-on-write package or persistent map would
-// avoid the up-front allocation — but it's the simplest, and the
-// contract here is ADR-003 compliance for builder users rather than
-// peak throughput. Profile-and-tune later if needed.
+// These wrappers clone the underlying `@opc.Package` first, then run
+// the same mutation as the `_mut` form. The copy keeps the original
+// presentation independent of the returned value.
 
 ///|
 /// Deep-clone a `Presentation`. The clone owns its own

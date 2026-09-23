@@ -34,6 +34,15 @@ pub(all) struct BubbleChartBody {
 } derive(Eq, Debug)
 
 ///|
+pub extend BubbleChartBody with @debug.Debug::{to_repr}
+
+///|
+pub extend BubbleChartBody with Eq::{not_equal, equal}
+
+///|
+pub extend BubbleChartBody with Show::{to_string, output}
+
+///|
 pub impl Show for BubbleChartBody with fn output(self, logger) {
   logger.write_string("BubbleChartBody(")
   logger.write_string(self.series.length().to_string())
@@ -50,6 +59,15 @@ pub(all) enum SizeRepresents {
   Area
   Width
 } derive(Eq, Debug)
+
+///|
+pub extend SizeRepresents with @debug.Debug::{to_repr}
+
+///|
+pub extend SizeRepresents with Eq::{not_equal, equal}
+
+///|
+pub extend SizeRepresents with Show::{to_string, output}
 
 ///|
 pub impl Show for SizeRepresents with fn output(self, logger) {

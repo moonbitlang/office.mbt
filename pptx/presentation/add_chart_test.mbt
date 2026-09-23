@@ -291,8 +291,8 @@ test "add_chart_mut embed_data: survives save -> reopen, rides extension" {
     is Some(_),
     content="true",
   )
-  // …and the parsed chart carries <c:externalData> in its extension
-  // (ADR-004), so a second embed attempt is rejected.
+  // …and the parsed chart carries <c:externalData> in its extension,
+  // so a second embed attempt is rejected.
   let chart = @chart.Chart::parse(
     reopened.opc_package().require_part("/ppt/charts/chart1.xml").bytes(),
   )

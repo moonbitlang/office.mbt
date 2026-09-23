@@ -31,6 +31,12 @@ pub struct AppProperties {
 } derive(Eq, Debug)
 
 ///|
+pub extend AppProperties with @debug.Debug::{to_repr}
+
+///|
+pub extend AppProperties with Eq::{not_equal, equal}
+
+///|
 /// An `AppProperties` with every field `None`. Start here and chain
 /// the `with_*` builders, or read the current values via
 /// `Presentation::app_properties`.
@@ -270,7 +276,7 @@ pub fn Presentation::set_app_properties_mut(
 }
 
 ///|
-/// Immutable counterpart of `set_app_properties_mut` (ADR-003):
+/// Immutable counterpart of `set_app_properties_mut`:
 /// returns a new `Presentation` with the merge applied; the original
 /// is untouched.
 pub fn Presentation::with_app_properties(

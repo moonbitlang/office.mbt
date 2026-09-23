@@ -35,6 +35,15 @@ pub(all) suberror XmlReadError {
 } derive(Eq, Debug)
 
 ///|
+pub extend XmlReadError with @debug.Debug::{to_repr}
+
+///|
+pub extend XmlReadError with Eq::{not_equal, equal}
+
+///|
+pub extend XmlReadError with Show::{output}
+
+///|
 pub impl Show for XmlReadError with fn output(self, logger) {
   let XmlReadError(s) = self
   logger.write_string("XmlReadError(")
@@ -77,8 +86,8 @@ pub fn skip_subtree(r : @xml.XmlReader) -> Unit raise XmlReadError {
 
 ///|
 /// Like `skip_subtree`, but instead of discarding events captures the
-/// subtree into an ad-hoc `@xml.XmlElement` for lossless preservation
-/// (ADR-004). Call this when the enclosing parser does not model the
+/// subtree into an ad-hoc `@xml.XmlElement` for lossless preservation.
+/// Call this when the enclosing parser does not model the
 /// element kind and wants to round-trip it verbatim.
 ///
 /// Call site contract: the caller has already consumed the StartElement

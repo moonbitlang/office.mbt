@@ -3,8 +3,7 @@
 // Consumes events from `xml::XmlReader` to build a `Theme`. The parser is
 // strict on the parts it knows (`clrScheme`, `fontScheme`) and lenient on
 // the rest: unmodelled elements (`fmtScheme`, `objectDefaults`, …) are
-// silently skipped via `skip_subtree`. Lossless preservation of the skipped
-// sections (ADR-004) will be added in a later phase.
+// captured as XML subtrees in `extension` for preservation on write.
 //
 // Recursive-descent contract: every `parse_*` function is called *just
 // after* the corresponding StartElement has been consumed, and must consume

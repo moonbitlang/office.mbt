@@ -32,6 +32,15 @@ pub(all) struct PieChartBody {
 } derive(Eq, Debug)
 
 ///|
+pub extend PieChartBody with @debug.Debug::{to_repr}
+
+///|
+pub extend PieChartBody with Eq::{not_equal, equal}
+
+///|
+pub extend PieChartBody with Show::{to_string, output}
+
+///|
 pub impl Show for PieChartBody with fn output(self, logger) {
   logger.write_string("PieChartBody(")
   logger.write_string(self.series.length().to_string())

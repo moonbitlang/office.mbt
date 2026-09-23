@@ -48,6 +48,15 @@ pub(all) struct BarChartBody {
 } derive(Eq, Debug)
 
 ///|
+pub extend BarChartBody with @debug.Debug::{to_repr}
+
+///|
+pub extend BarChartBody with Eq::{not_equal, equal}
+
+///|
+pub extend BarChartBody with Show::{to_string, output}
+
+///|
 pub impl Show for BarChartBody with fn output(self, logger) {
   logger.write_string("BarChartBody(")
   logger.write_string(self.bar_dir.to_xml())
@@ -67,6 +76,15 @@ pub(all) enum BarDir {
   Bar
   Col
 } derive(Eq, Debug)
+
+///|
+pub extend BarDir with @debug.Debug::{to_repr}
+
+///|
+pub extend BarDir with Eq::{not_equal, equal}
+
+///|
+pub extend BarDir with Show::{to_string, output}
 
 ///|
 pub impl Show for BarDir with fn output(self, logger) {
@@ -106,6 +124,15 @@ pub(all) enum BarGrouping {
   Standard
   Stacked
 } derive(Eq, Debug)
+
+///|
+pub extend BarGrouping with @debug.Debug::{to_repr}
+
+///|
+pub extend BarGrouping with Eq::{not_equal, equal}
+
+///|
+pub extend BarGrouping with Show::{to_string, output}
 
 ///|
 pub impl Show for BarGrouping with fn output(self, logger) {

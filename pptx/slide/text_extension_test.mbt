@@ -1,10 +1,10 @@
 // Modified for office.mbt: follow the workspace warning conventions.
-// Lossless preservation tests (ADR-004) for the text-side parsers.
+// Lossless preservation tests for the text-side parsers.
 // Targets the `extension` fields on TextBody, Paragraph, Run, Field,
 // BodyProperties, ParagraphProperties, RunProperties, and ListStyle.
 
 ///|
-test "ADR-004: TextBody captures foreign-namespace child" {
+test "TextBody captures foreign-namespace child" {
   let inner = "<a:bodyPr/><x:ext xmlns:x=\"http://example.org/ext\"/>" +
     "<a:p><a:r><a:t>Hi</a:t></a:r></a:p>"
   let slide = @slide.Slide::parse(slide_with_txbody(inner))
@@ -15,7 +15,7 @@ test "ADR-004: TextBody captures foreign-namespace child" {
 }
 
 ///|
-test "ADR-004: BodyProperties captures prstTxWarp / extLst" {
+test "BodyProperties captures prstTxWarp / extLst" {
   let inner = "<a:bodyPr>" +
     "<a:prstTxWarp prst=\"textArchUp\"><a:avLst/></a:prstTxWarp>" +
     "<a:extLst><a:ext uri=\"{x}\"/></a:extLst>" +
@@ -37,7 +37,7 @@ test "Paragraph models endParaRPr rather than preserving it verbatim" {
   let inner = "<a:p><a:r><a:t>hello</a:t></a:r><a:endParaRPr lang=\"en-US\" sz=\"1800\"/></a:p>"
   let slide = @slide.Slide::parse(slide_with_txbody(inner))
   let p = first_auto_shape(slide).text_body.unwrap().paragraphs[0]
-  // It is typed now, so it no longer lands on the ADR-004 escape hatch.
+  // It is typed now, so it no longer lands on the extension array.
   debug_inspect(p.extension.length(), content="0")
   let end = p.end_run_properties.unwrap()
   debug_inspect(end.lang, content="\"en-US\"")
@@ -45,7 +45,7 @@ test "Paragraph models endParaRPr rather than preserving it verbatim" {
 }
 
 ///|
-test "ADR-004: RunProperties captures hlinkMouseOver; effectLst now typed" {
+test "RunProperties captures hlinkMouseOver; effectLst now typed" {
   let inner = "<a:p><a:r>" +
     "<a:rPr lang=\"en-US\" b=\"1\">" +
     "<a:effectLst><a:outerShdw blurRad=\"40000\"><a:srgbClr val=\"000000\"/></a:outerShdw></a:effectLst>" +
@@ -74,7 +74,7 @@ test "ADR-004: RunProperties captures hlinkMouseOver; effectLst now typed" {
 }
 
 ///|
-test "ADR-004: ParagraphProperties captures buFont and tabLst" {
+test "ParagraphProperties captures buFont and tabLst" {
   let inner = "<a:p>" +
     "<a:pPr lvl=\"1\">" +
     "<a:buFont typeface=\"Symbol\" panose=\"05050102010706020507\"/>" +
@@ -95,7 +95,7 @@ test "ADR-004: ParagraphProperties captures buFont and tabLst" {
 }
 
 ///|
-test "ADR-004: ListStyle captures extLst" {
+test "ListStyle captures extLst" {
   let inner = "<a:lstStyle>" +
     "<a:defPPr><a:defRPr/></a:defPPr>" +
     "<a:extLst><a:ext uri=\"{x}\"><a:placeholder/></a:ext></a:extLst>" +
@@ -108,7 +108,7 @@ test "ADR-004: ListStyle captures extLst" {
 }
 
 ///|
-test "ADR-004: Field captures rPr extensions" {
+test "Field captures rPr extensions" {
   let inner = "<a:p><a:fld id=\"{F-0}\" type=\"slidenum\">" +
     "<a:rPr lang=\"en-US\"><a:extLst><a:ext uri=\"{x}\"/></a:extLst></a:rPr>" +
     "<a:t>1</a:t>" +
@@ -131,7 +131,7 @@ test "ADR-004: Field captures rPr extensions" {
 }
 
 ///|
-test "ADR-004: Break preserves its rPr (no longer drops it)" {
+test "Break preserves its rPr (no longer drops it)" {
   let inner = "<a:p>" +
     "<a:r><a:t>one</a:t></a:r>" +
     "<a:br><a:rPr lang=\"en-US\" sz=\"2400\"/></a:br>" +

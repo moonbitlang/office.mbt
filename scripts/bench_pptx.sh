@@ -5,11 +5,11 @@
 #
 # Measures the whole process — start-up included — because that is what a
 # user waits for, plus peak RSS, which no in-process timer can see. The
-# per-phase breakdown for moon-pptx alone comes from `moon bench` instead:
+# per-phase breakdown for the PPTX module alone comes from `moon bench` instead:
 #
 #   moon bench pptx/integration --target native --release
 #
-# Nothing is written to disk: moon-pptx has no file I/O (ADR-002), so the
+# Nothing is written to disk: the PPTX library has no file I/O, so the
 # other two serialise to an in-memory buffer to keep the comparison level.
 #
 # Requires: python3 with python-pptx, node, and `npm install pptxgenjs`

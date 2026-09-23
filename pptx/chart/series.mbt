@@ -30,7 +30,7 @@
 // children that we don't lift (`<c:dPt>`, `<c:dLbls>`, `<c:trendline>`,
 // `<c:errBars>`, `<c:marker>`, `<c:smooth>`, `<c:explosion>`,
 // `<c:invertIfNegative>`, `<c:pictureOptions>`, `<c:bubble3D>`,
-// `<c:shape>`) ride on `extension` per ADR-004.
+// `<c:shape>`) ride on `extension`.
 
 ///|
 /// The body of a `<c:ser>` element for chart families that use
@@ -68,6 +68,15 @@ pub(all) struct ChartSeriesCore {
 } derive(Eq, Debug)
 
 ///|
+pub extend ChartSeriesCore with @debug.Debug::{to_repr}
+
+///|
+pub extend ChartSeriesCore with Eq::{not_equal, equal}
+
+///|
+pub extend ChartSeriesCore with Show::{to_string, output}
+
+///|
 pub impl Show for ChartSeriesCore with fn output(self, logger) {
   logger.write_string("ChartSeriesCore(idx=")
   logger.write_string(self.idx.to_string())
@@ -91,6 +100,15 @@ pub(all) struct ScatterSeriesCore {
   y_val : @xml.XmlElement?
   extension : Array[@xml.XmlElement]
 } derive(Eq, Debug)
+
+///|
+pub extend ScatterSeriesCore with @debug.Debug::{to_repr}
+
+///|
+pub extend ScatterSeriesCore with Eq::{not_equal, equal}
+
+///|
+pub extend ScatterSeriesCore with Show::{to_string, output}
 
 ///|
 pub impl Show for ScatterSeriesCore with fn output(self, logger) {
@@ -118,6 +136,15 @@ pub(all) struct BubbleSeriesCore {
   bubble_size : @xml.XmlElement?
   extension : Array[@xml.XmlElement]
 } derive(Eq, Debug)
+
+///|
+pub extend BubbleSeriesCore with @debug.Debug::{to_repr}
+
+///|
+pub extend BubbleSeriesCore with Eq::{not_equal, equal}
+
+///|
+pub extend BubbleSeriesCore with Show::{to_string, output}
 
 ///|
 pub impl Show for BubbleSeriesCore with fn output(self, logger) {

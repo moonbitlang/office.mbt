@@ -74,6 +74,15 @@ pub(all) struct Trendline {
 } derive(Eq, Debug)
 
 ///|
+pub extend Trendline with @debug.Debug::{to_repr}
+
+///|
+pub extend Trendline with Eq::{not_equal, equal}
+
+///|
+pub extend Trendline with Show::{to_string, output}
+
+///|
 pub impl Show for Trendline with fn output(self, logger) {
   logger.write_string("Trendline(")
   logger.write_string(self.trendline_type.to_xml())
@@ -98,6 +107,15 @@ pub(all) enum TrendlineType {
   TrendlinePoly
   TrendlinePower
 } derive(Eq, Debug)
+
+///|
+pub extend TrendlineType with @debug.Debug::{to_repr}
+
+///|
+pub extend TrendlineType with Eq::{not_equal, equal}
+
+///|
+pub extend TrendlineType with Show::{to_string, output}
 
 ///|
 pub impl Show for TrendlineType with fn output(self, logger) {

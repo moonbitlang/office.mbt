@@ -4,7 +4,7 @@
 // `<a:graphicData uri="…/diagram">` carries a single `<dgm:relIds>` element —
 // four relationship ids (data / layout / quickStyle / colors) pointing at the
 // diagram parts. We reuse the existing `OtherGraphic` round-trip path (the
-// same way a *parsed* SmartArt round-trips, ADR-004) rather than adding a new
+// same way a *parsed* SmartArt round-trips) rather than adding a new
 // typed `GraphicFrameContent` variant: the writer already re-emits an
 // `OtherGraphic`'s `<a:graphicData>` children verbatim, so building the
 // `<dgm:relIds>` element by hand needs no parser/writer changes. The four

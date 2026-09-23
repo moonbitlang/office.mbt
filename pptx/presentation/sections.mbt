@@ -21,6 +21,12 @@ pub(all) struct Section {
 } derive(Eq, Debug)
 
 ///|
+pub extend Section with @debug.Debug::{to_repr}
+
+///|
+pub extend Section with Eq::{not_equal, equal}
+
+///|
 /// Deterministic section id — sections need a `{GUID}`-shaped id, but
 /// nothing keys off its value outside this file, so a counter-derived
 /// one keeps builds reproducible (no RNG / clock in the library).

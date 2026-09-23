@@ -30,16 +30,55 @@ pub let emu_per_cm : Int64 = 360_000L
 pub(all) struct Emu(Int64) derive(Eq, Compare, Debug)
 
 ///|
+pub extend Emu with @debug.Debug::{to_repr}
+
+///|
+pub extend Emu with Compare::{op_lt, op_le, op_ge, compare, op_gt}
+
+///|
+pub extend Emu with Eq::{not_equal, equal}
+
+///|
+pub extend Emu with Show::{to_string, output}
+
+///|
 /// Length expressed in points (1/72 inch). Constructor accepts fractional values.
 pub(all) struct Pt(Double) derive(Eq, Debug)
+
+///|
+pub extend Pt with @debug.Debug::{to_repr}
+
+///|
+pub extend Pt with Eq::{not_equal, equal}
+
+///|
+pub extend Pt with Show::{to_string, output}
 
 ///|
 /// Length expressed in inches. Constructor accepts fractional values.
 pub(all) struct Inch(Double) derive(Eq, Debug)
 
 ///|
+pub extend Inch with @debug.Debug::{to_repr}
+
+///|
+pub extend Inch with Eq::{not_equal, equal}
+
+///|
+pub extend Inch with Show::{to_string, output}
+
+///|
 /// Length expressed in centimetres. Constructor accepts fractional values.
 pub(all) struct Cm(Double) derive(Eq, Debug)
+
+///|
+pub extend Cm with @debug.Debug::{to_repr}
+
+///|
+pub extend Cm with Eq::{not_equal, equal}
+
+///|
+pub extend Cm with Show::{to_string, output}
 
 // --- accessors ---
 

@@ -31,3 +31,9 @@ pub(all) struct ColorScheme {
   fol_hlink : @oxml.Color
   extension : Array[@xml.XmlElement]
 } derive(Eq, Debug)
+
+///|
+pub extend ColorScheme with @debug.Debug::{to_repr}
+
+///|
+pub extend ColorScheme with Eq::{not_equal, equal}

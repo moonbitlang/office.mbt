@@ -38,6 +38,15 @@ pub(all) struct Layout {
 } derive(Eq, Debug)
 
 ///|
+pub extend Layout with @debug.Debug::{to_repr}
+
+///|
+pub extend Layout with Eq::{not_equal, equal}
+
+///|
+pub extend Layout with Show::{to_string, output}
+
+///|
 pub impl Show for Layout with fn output(self, logger) {
   logger.write_string("Layout { … }")
   let _ = self
@@ -72,6 +81,15 @@ pub(all) struct ManualLayout {
 } derive(Eq, Debug)
 
 ///|
+pub extend ManualLayout with @debug.Debug::{to_repr}
+
+///|
+pub extend ManualLayout with Eq::{not_equal, equal}
+
+///|
+pub extend ManualLayout with Show::{to_string, output}
+
+///|
 pub impl Show for ManualLayout with fn output(self, logger) {
   logger.write_string("ManualLayout { … }")
   let _ = self
@@ -88,6 +106,15 @@ pub(all) enum LayoutTarget {
   LayoutInner
   LayoutOuter
 } derive(Eq, Debug)
+
+///|
+pub extend LayoutTarget with @debug.Debug::{to_repr}
+
+///|
+pub extend LayoutTarget with Eq::{not_equal, equal}
+
+///|
+pub extend LayoutTarget with Show::{to_string, output}
 
 ///|
 pub impl Show for LayoutTarget with fn output(self, logger) {
@@ -129,6 +156,15 @@ pub(all) enum LayoutMode {
   LayoutEdge
   LayoutFactor
 } derive(Eq, Debug)
+
+///|
+pub extend LayoutMode with @debug.Debug::{to_repr}
+
+///|
+pub extend LayoutMode with Eq::{not_equal, equal}
+
+///|
+pub extend LayoutMode with Show::{to_string, output}
 
 ///|
 pub impl Show for LayoutMode with fn output(self, logger) {

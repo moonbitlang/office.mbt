@@ -4,7 +4,7 @@
 // PowerPoint's "Edit Data" button opens the chart's source rows in
 // Excel via a `<c:externalData r:id>` reference to an embedded
 // `.xlsx` part. Our built charts render from inline `<c:strLit>` /
-// `<c:numLit>` literals alone (ADR-009), so the workbook is a pure
+// `<c:numLit>` literals alone, so the workbook is a pure
 // UX add-on: a minimal-but-valid SpreadsheetML package mirroring the
 // `ChartData` layout Excel would show — categories down column A,
 // one series per column from B, series names in row 1.
@@ -202,7 +202,7 @@ fn chart_data_xlsx(data : @chart.ChartData) -> FixedArray[Byte] raise PptxError 
 ///|
 /// The `<c:externalData r:id="…"><c:autoUpdate val="0"/></c:externalData>`
 /// element pointing a chart at its embedded workbook. Rides the
-/// chart's ADR-004 `extension` array, which the chartSpace writer
+/// chart's `extension` array, which the chartSpace writer
 /// emits in exactly this element's schema slot (after `</c:chart>`).
 fn external_data_element(r_id : String) -> @xml.XmlElement {
   @xml.XmlElement::new(

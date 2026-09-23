@@ -5,7 +5,7 @@
 // Provenance: Apache POI test data, Apache-2.0 — see
 // pptx/fixtures/poi/SOURCES.md. Decoded at test time by
 // `corpus_bytes` (corpus_test.mbt) so `moon test` exercises the read
-// path on real Office output on every backend (ADR-011 Tier 1).
+// path on real Office output on every backend.
 
 ///|
 /// Byte length of the original `testPPT.pptx`.

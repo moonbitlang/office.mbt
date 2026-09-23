@@ -46,9 +46,9 @@ output in PowerPoint, Keynote, or LibreOffice; they do not replace those checks.
 | 17 | SmartArt | Org chart synthesised into the five-part DiagramML graphic; the whole tree lays out via the recursive layoutDef; the CEO node carries per-node colour overrides |
 | 18 | Animations | Fly-in entrance + spin emphasis on click (`with_animations` / `Timeline`) |
 | 19 | Online video | YouTube clip embedded by URL (`add_youtube_video_mut`) |
-| 20 | v0.5.2 features | Shape rotation / flip, run highlight + kerning + outline + glow, shape-level hyperlinks |
-| 21 | v0.6 features | Gradient + pattern **text fills** (`with_text_fill`) and paragraph spacing — 150 % / absolute 28 pt line height, 18 pt space-before (`TextSpacing`) |
-| 22 | v0.7 features | A gallery-styled table (`Table::with_style(MediumStyle2Accent1)`) + the `Fill::solid` / `linear_gradient` / `pattern` convenience constructors |
+| 20 | Formatting | Shape rotation / flip, run highlight + kerning + outline + glow, shape-level hyperlinks |
+| 21 | Text fills and spacing | Gradient + pattern **text fills** (`with_text_fill`) and paragraph spacing — 150 % / absolute 28 pt line height, 18 pt space-before (`TextSpacing`) |
+| 22 | Table styles and fills | A gallery-styled table (`Table::with_style(MediumStyle2Accent1)`) + the `Fill::solid` / `linear_gradient` / `pattern` convenience constructors |
 | 23 | Master / template | Defined master + footer, auto date, slide number |
 | 24–25 | Typed layouts | Compile-time placeholder schema (`add_section_header_slide_mut` / `add_title_content_slide_mut`) |
 | 26 | Closing | Back-link hyperlink + speaker notes |

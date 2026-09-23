@@ -16,6 +16,15 @@ pub let ooxml_per_degree : Int = 60_000
 pub(all) struct Angle(Double) derive(Eq, Debug)
 
 ///|
+pub extend Angle with @debug.Debug::{to_repr}
+
+///|
+pub extend Angle with Eq::{not_equal, equal}
+
+///|
+pub extend Angle with Show::{to_string, output}
+
+///|
 /// Unwrap the angle value as `Double` degrees.
 pub fn Angle::degrees(self : Angle) -> Double {
   self.0

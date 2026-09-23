@@ -111,7 +111,7 @@ test "write_color: every modeled transform variant" {
 ///|
 test "write_color: unmodelled tail modifier rides on extension" {
   // <a:hueMod> is recognised by the parser but currently dropped into
-  // `extension` for forward-compat per ADR-004.  Round-trip must keep
+  // `extension` for forward-compat.  Round-trip must keep
   // it.
   let xml = "<a:schemeClr val=\"accent2\">" +
     "<a:hueMod val=\"50000\"/>" +

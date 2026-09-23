@@ -9,7 +9,7 @@
 // implements. Accessing a placeholder the layout doesn't have — e.g. `.body()`
 // on a title slide — is a *compile error*, not a runtime check.
 //
-// Design (Q7 resolved → hybrid):
+// Layout representation:
 //   * One generic builder `LayoutSlide[L]` carrying a marker value of the
 //     layout type `L`, so each accessor is defined once and gated via
 //     `fn[L : HasTitle] …`. Carrying the marker instance (rather than a pure
@@ -205,6 +205,18 @@ fn spec_body() -> PlaceholderSpec {
 pub struct TitleSlide {}
 
 ///|
+pub extend TitleSlide with HasSubtitle::{subtitle_spec}
+
+///|
+pub extend TitleSlide with HasTitle::{title_spec}
+
+///|
+pub extend TitleSlide with LayoutPlaceholders::{placeholders}
+
+///|
+pub extend TitleSlide with LayoutType::{layout_type}
+
+///|
 pub impl LayoutType for TitleSlide with fn layout_type(_) {
   Title
 }
@@ -227,6 +239,18 @@ pub impl HasSubtitle for TitleSlide with fn subtitle_spec(_) {
 ///|
 /// Title-and-content layout (`type="obj"`): a title + a body/content area.
 pub struct TitleAndContent {}
+
+///|
+pub extend TitleAndContent with HasBody::{body_spec}
+
+///|
+pub extend TitleAndContent with HasTitle::{title_spec}
+
+///|
+pub extend TitleAndContent with LayoutPlaceholders::{placeholders}
+
+///|
+pub extend TitleAndContent with LayoutType::{layout_type}
 
 ///|
 pub impl LayoutType for TitleAndContent with fn layout_type(_) {
@@ -253,6 +277,18 @@ pub impl HasBody for TitleAndContent with fn body_spec(_) {
 pub struct SectionHeader {}
 
 ///|
+pub extend SectionHeader with HasBody::{body_spec}
+
+///|
+pub extend SectionHeader with HasTitle::{title_spec}
+
+///|
+pub extend SectionHeader with LayoutPlaceholders::{placeholders}
+
+///|
+pub extend SectionHeader with LayoutType::{layout_type}
+
+///|
 pub impl LayoutType for SectionHeader with fn layout_type(_) {
   SecHead
 }
@@ -277,6 +313,15 @@ pub impl HasBody for SectionHeader with fn body_spec(_) {
 pub struct TitleOnly {}
 
 ///|
+pub extend TitleOnly with HasTitle::{title_spec}
+
+///|
+pub extend TitleOnly with LayoutPlaceholders::{placeholders}
+
+///|
+pub extend TitleOnly with LayoutType::{layout_type}
+
+///|
 pub impl LayoutType for TitleOnly with fn layout_type(_) {
   TitleOnly
 }
@@ -294,6 +339,12 @@ pub impl HasTitle for TitleOnly with fn title_spec(_) {
 ///|
 /// Blank layout (`type="blank"`): no placeholders.
 pub struct BlankSlide {}
+
+///|
+pub extend BlankSlide with LayoutPlaceholders::{placeholders}
+
+///|
+pub extend BlankSlide with LayoutType::{layout_type}
 
 ///|
 pub impl LayoutType for BlankSlide with fn layout_type(_) {

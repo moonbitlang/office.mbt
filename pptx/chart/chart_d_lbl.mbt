@@ -61,6 +61,15 @@ pub(all) struct DLbl {
 } derive(Eq, Debug)
 
 ///|
+pub extend DLbl with @debug.Debug::{to_repr}
+
+///|
+pub extend DLbl with Eq::{not_equal, equal}
+
+///|
+pub extend DLbl with Show::{to_string, output}
+
+///|
 pub impl Show for DLbl with fn output(self, logger) {
   logger.write_string("DLbl(idx=")
   logger.write_string(self.idx.to_string())

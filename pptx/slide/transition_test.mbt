@@ -322,7 +322,7 @@ test "transition: default attributes are omitted on serialise" {
   debug_inspect(xml2.contains("advClick=\"0\""), content="true")
 }
 
-// --- lossless preservation (ADR-004) ---
+// --- lossless preservation ---
 
 ///|
 test "transition: <p:sndAc> sound child preserved via extension" {

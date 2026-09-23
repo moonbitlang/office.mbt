@@ -13,6 +13,15 @@ pub(all) suberror SmartArtError {
 } derive(Eq, Debug)
 
 ///|
+pub extend SmartArtError with @debug.Debug::{to_repr}
+
+///|
+pub extend SmartArtError with Eq::{not_equal, equal}
+
+///|
+pub extend SmartArtError with Show::{to_string, output}
+
+///|
 /// Lift an XML writer error into a `SmartArtError::XmlFailure`.
 fn wrap_xml(e : @xml.XmlError) -> SmartArtError {
   match e {

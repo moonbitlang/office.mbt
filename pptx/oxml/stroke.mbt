@@ -20,6 +20,12 @@ pub(all) enum LineCap {
 } derive(Eq, Debug)
 
 ///|
+pub extend LineCap with @debug.Debug::{to_repr}
+
+///|
+pub extend LineCap with Eq::{not_equal, equal}
+
+///|
 /// Parse `LineCap` from its OOXML attribute string. Unknown
 /// values return `None`.
 pub fn LineCap::from_xml(s : String) -> LineCap? {
@@ -42,6 +48,12 @@ pub(all) enum CompoundLine {
 } derive(Eq, Debug)
 
 ///|
+pub extend CompoundLine with @debug.Debug::{to_repr}
+
+///|
+pub extend CompoundLine with Eq::{not_equal, equal}
+
+///|
 /// Parse `CompoundLine` from its OOXML attribute string. Unknown
 /// values return `None`.
 pub fn CompoundLine::from_xml(s : String) -> CompoundLine? {
@@ -62,6 +74,12 @@ pub(all) enum PenAlignment {
   AlignPenCenter // "ctr"
   AlignPenInset // "in"
 } derive(Eq, Debug)
+
+///|
+pub extend PenAlignment with @debug.Debug::{to_repr}
+
+///|
+pub extend PenAlignment with Eq::{not_equal, equal}
 
 ///|
 /// Parse `PenAlignment` from its OOXML attribute string. Unknown
@@ -91,6 +109,12 @@ pub(all) enum DashStyle {
   DashSysDashDot // "sysDashDot"
   DashSysDashDotDot // "sysDashDotDot"
 } derive(Eq, Debug)
+
+///|
+pub extend DashStyle with @debug.Debug::{to_repr}
+
+///|
+pub extend DashStyle with Eq::{not_equal, equal}
 
 ///|
 /// Parse `DashStyle` from its OOXML attribute string. Unknown
@@ -123,6 +147,12 @@ pub(all) enum LineJoin {
 } derive(Eq, Debug)
 
 ///|
+pub extend LineJoin with @debug.Debug::{to_repr}
+
+///|
+pub extend LineJoin with Eq::{not_equal, equal}
+
+///|
 /// Arrowhead shape (`ST_LineEndType`, §20.1.10.27).
 pub(all) enum ArrowType {
   ArrowNone // "none"
@@ -132,6 +162,12 @@ pub(all) enum ArrowType {
   ArrowOval // "oval"
   ArrowArrow // "arrow"
 } derive(Eq, Debug)
+
+///|
+pub extend ArrowType with @debug.Debug::{to_repr}
+
+///|
+pub extend ArrowType with Eq::{not_equal, equal}
 
 ///|
 /// Parse `ArrowType` from its OOXML attribute string. Unknown
@@ -158,6 +194,12 @@ pub(all) enum ArrowSize {
 } derive(Eq, Debug)
 
 ///|
+pub extend ArrowSize with @debug.Debug::{to_repr}
+
+///|
+pub extend ArrowSize with Eq::{not_equal, equal}
+
+///|
 /// Parse `ArrowSize` from its OOXML attribute string. Unknown
 /// values return `None`.
 pub fn ArrowSize::from_xml(s : String) -> ArrowSize? {
@@ -179,6 +221,12 @@ pub(all) struct ArrowEnd {
   width : ArrowSize?
   length : ArrowSize?
 } derive(Eq, Debug)
+
+///|
+pub extend ArrowEnd with @debug.Debug::{to_repr}
+
+///|
+pub extend ArrowEnd with Eq::{not_equal, equal}
 
 ///|
 /// Parsed `<a:ln>` line definition.
@@ -214,11 +262,26 @@ pub(all) struct Stroke {
 } derive(Eq, Debug)
 
 ///|
+pub extend Stroke with @debug.Debug::{to_repr}
+
+///|
+pub extend Stroke with Eq::{not_equal, equal}
+
+///|
 /// Errors raised by `parse_stroke`.
 pub(all) suberror StrokeError {
   MalformedStroke(String)
   FillFailure(String)
 } derive(Eq, Debug)
+
+///|
+pub extend StrokeError with @debug.Debug::{to_repr}
+
+///|
+pub extend StrokeError with Eq::{not_equal, equal}
+
+///|
+pub extend StrokeError with Show::{to_string, output}
 
 ///|
 pub impl Show for StrokeError with fn output(self, logger) {
@@ -313,7 +376,7 @@ pub fn parse_stroke(
               }
             }
             // custDash, extLst, and any other unmodelled child get
-            // captured verbatim per ADR-004.
+            // captured verbatim.
             _ =>
               extension.push(
                 collect_subtree(r, child, child_attrs) catch {

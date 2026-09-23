@@ -63,7 +63,7 @@ test "resolve_run_fonts: theme references are followed, literals are not" {
 
 ///|
 test "resolve_run_font_for_script: Japanese resolves through the script entry" {
-  // The whole point of G2 — the theme's `ea` slot is empty, so nothing on the
+  // The theme's `ea` slot is empty, so nothing on the
   // run or in `ea` names the font this text actually renders with.
   let scheme = office_scheme()
   let plain = @slide.RunProperties::default()

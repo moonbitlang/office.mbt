@@ -16,6 +16,15 @@ pub(all) struct RadarChartBody {
 } derive(Eq, Debug)
 
 ///|
+pub extend RadarChartBody with @debug.Debug::{to_repr}
+
+///|
+pub extend RadarChartBody with Eq::{not_equal, equal}
+
+///|
+pub extend RadarChartBody with Show::{to_string, output}
+
+///|
 pub impl Show for RadarChartBody with fn output(self, logger) {
   logger.write_string("RadarChartBody(")
   logger.write_string(self.radar_style.to_xml())
@@ -34,6 +43,15 @@ pub(all) enum RadarStyle {
   Marker
   Filled
 } derive(Eq, Debug)
+
+///|
+pub extend RadarStyle with @debug.Debug::{to_repr}
+
+///|
+pub extend RadarStyle with Eq::{not_equal, equal}
+
+///|
+pub extend RadarStyle with Show::{to_string, output}
 
 ///|
 pub impl Show for RadarStyle with fn output(self, logger) {

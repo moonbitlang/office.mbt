@@ -45,3 +45,9 @@ pub(all) struct GroupShape {
   hyperlink : ShapeHyperlink?
   extension : Array[@xml.XmlElement]
 } derive(Eq, Debug)
+
+///|
+pub extend GroupShape with @debug.Debug::{to_repr}
+
+///|
+pub extend GroupShape with Eq::{not_equal, equal}

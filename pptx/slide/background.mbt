@@ -1,7 +1,7 @@
 // Slide background — typed `<p:bg>`.
 //
-// `<p:bg>` (CT_Background) was previously captured into `Slide.extension`
-// (ADR-004). This lifts it into a typed `Slide.background` field while keeping
+// `<p:bg>` (CT_Background) was previously captured into `Slide.extension`.
+// This lifts it into a typed `Slide.background` field while keeping
 // full round-trip fidelity: both the `<p:bgPr>` (explicit fill) and
 // `<p:bgRef>` (theme style-matrix reference) forms are modelled, and any
 // unmodelled `<p:bgPr>` children survive via `BackgroundProperties.extension`.
@@ -22,6 +22,12 @@ pub(all) enum Background {
 } derive(Eq, Debug)
 
 ///|
+pub extend Background with @debug.Debug::{to_repr}
+
+///|
+pub extend Background with Eq::{not_equal, equal}
+
+///|
 /// `<p:bgPr>` body (CT_BackgroundProperties, ECMA-376 §19.3.1.2).
 ///
 /// - `fill` — The fill — `<a:solidFill>` / `<a:gradFill>` / `<a:blipFill>` /
@@ -39,13 +45,19 @@ pub struct BackgroundProperties {
 } derive(Eq, Debug)
 
 ///|
+pub extend BackgroundProperties with @debug.Debug::{to_repr}
+
+///|
+pub extend BackgroundProperties with Eq::{not_equal, equal}
+
+///|
 /// Build a `<p:bgPr>` background from a fill (no effects, `shadeToTitle`
 /// unset) — the common case behind `Slide::with_background`.
 pub fn BackgroundProperties::of_fill(fill : @oxml.Fill) -> BackgroundProperties {
   { fill: Some(fill), shade_to_title: false, effects: None, extension: [], }
 }
 
-// --- Slide builders (immutable, ADR-003) ---
+// --- Slide builders (immutable) ---
 
 ///|
 /// Return a new `Slide` with a solid-fill background of the given colour.

@@ -2,7 +2,7 @@
 // Streaming, event-based XML reader.
 //
 // `XmlReader::next()` returns one event at a time, lazily walking the input.
-// We chose events over a DOM (ADR-008) because:
+// We chose events over a DOM because:
 //   * OOXML files are large; a DOM holds the whole tree in memory.
 //   * Most readers care about a small subset of element kinds and benefit
 //     from skipping the rest cheaply.
@@ -28,6 +28,12 @@ pub(all) enum XmlEvent {
   Text(String)
   CData(String)
 } derive(Debug)
+
+///|
+pub extend XmlEvent with @debug.Debug::{to_repr}
+
+///|
+pub extend XmlEvent with Show::{to_string, output}
 
 ///|
 pub impl Show for XmlEvent with fn output(self, logger) {

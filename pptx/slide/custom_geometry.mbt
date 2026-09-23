@@ -39,7 +39,7 @@
 // `CT_PolarAdjustHandle`, each with min/max guide refs, etc.). Real-
 // world files use them only inside Office-shipped preset families; for
 // the rare custGeom that carries one, we preserve the subtree on
-// `CustomGeometry.extension` per ADR-004 instead of typing it now.
+// `CustomGeometry.extension` instead of typing it now.
 
 ///|
 /// One coordinate inside a custom-geometry path point or rectangle bound.
@@ -58,6 +58,12 @@ pub(all) enum AdjCoordinate {
 } derive(Eq, Debug)
 
 ///|
+pub extend AdjCoordinate with @debug.Debug::{to_repr}
+
+///|
+pub extend AdjCoordinate with Eq::{not_equal, equal}
+
+///|
 /// One angle attribute (`stAng` / `swAng` on `<a:arcTo>`, `ang` on
 /// `<a:cxn>`). Same union shape as `AdjCoordinate` but with `Angle` as
 /// the literal type — the spec calls this `ST_AdjAngle`.
@@ -67,12 +73,24 @@ pub(all) enum AdjAngle {
 } derive(Eq, Debug)
 
 ///|
+pub extend AdjAngle with @debug.Debug::{to_repr}
+
+///|
+pub extend AdjAngle with Eq::{not_equal, equal}
+
+///|
 /// One `<a:pt x="…" y="…"/>` point inside a path command. Both axes
 /// independently use `ST_AdjCoordinate`.
 pub(all) struct PathPoint {
   x : AdjCoordinate
   y : AdjCoordinate
 } derive(Eq, Debug)
+
+///|
+pub extend PathPoint with @debug.Debug::{to_repr}
+
+///|
+pub extend PathPoint with Eq::{not_equal, equal}
 
 ///|
 /// One draw command inside `<a:path>`. Order matters — paths replay
@@ -102,6 +120,12 @@ pub(all) enum PathCommand {
 } derive(Eq, Debug)
 
 ///|
+pub extend PathCommand with @debug.Debug::{to_repr}
+
+///|
+pub extend PathCommand with Eq::{not_equal, equal}
+
+///|
 /// `<a:path>` fill behaviour (`ST_PathFillMode`). `norm` is the common
 /// case — fill with the shape's fill style. The `lighten*` / `darken*`
 /// variants tint the fill, used by some preset shapes for highlights /
@@ -122,6 +146,12 @@ pub(all) enum PathFillMode {
   PathFillDarken
   PathFillDarkenLess
 } derive(Eq, Debug)
+
+///|
+pub extend PathFillMode with @debug.Debug::{to_repr}
+
+///|
+pub extend PathFillMode with Eq::{not_equal, equal}
 
 ///|
 /// Parse the `fill` attribute on `<a:path>`. Unknown values fall back
@@ -178,6 +208,12 @@ pub(all) struct Path {
 } derive(Eq, Debug)
 
 ///|
+pub extend Path with @debug.Debug::{to_repr}
+
+///|
+pub extend Path with Eq::{not_equal, equal}
+
+///|
 /// `<a:rect>` — the text-fit rectangle inside a custom shape. Each
 /// edge is an `ST_AdjCoordinate`, so corners can reference guide
 /// formulas (`l="l"`, `t="t"`, `r="r"`, `b="b"` is the common case for
@@ -188,6 +224,12 @@ pub(all) struct GeomRect {
   r : AdjCoordinate
   b : AdjCoordinate
 } derive(Eq, Debug)
+
+///|
+pub extend GeomRect with @debug.Debug::{to_repr}
+
+///|
+pub extend GeomRect with Eq::{not_equal, equal}
 
 ///|
 /// `<a:cxn>` — one connection site on a custom shape. Connectors that
@@ -202,6 +244,12 @@ pub(all) struct ConnectionSite {
   pos : PathPoint
   extension : Array[@xml.XmlElement]
 } derive(Eq, Debug)
+
+///|
+pub extend ConnectionSite with @debug.Debug::{to_repr}
+
+///|
+pub extend ConnectionSite with Eq::{not_equal, equal}
 
 ///|
 /// A parsed `<a:custGeom>` body — the typed counterpart to the prior
@@ -234,3 +282,9 @@ pub(all) struct CustomGeometry {
   paths : Array[Path]
   extension : Array[@xml.XmlElement]
 } derive(Eq, Debug)
+
+///|
+pub extend CustomGeometry with @debug.Debug::{to_repr}
+
+///|
+pub extend CustomGeometry with Eq::{not_equal, equal}

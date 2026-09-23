@@ -10,7 +10,7 @@
 //
 // Build-only, like media and animations: a *parsed* shape's
 // `<a:hlinkClick>` round-trips losslessly through the captured `<p:cNvPr>`
-// in `extension` (ADR-004), so the parser leaves `hyperlink = None`; the
+// in `extension`, so the parser leaves `hyperlink = None`; the
 // typed field is set only by the builders.
 
 ///|
@@ -28,6 +28,12 @@ pub(all) struct ShapeHyperlink {
   click : String?
   action : String?
 } derive(Eq, Debug)
+
+///|
+pub extend ShapeHyperlink with @debug.Debug::{to_repr}
+
+///|
+pub extend ShapeHyperlink with Eq::{not_equal, equal}
 
 ///|
 /// A shape hyperlink to an external URL (`https://`, `mailto:`, …).

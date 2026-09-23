@@ -218,10 +218,10 @@ test "parse: unsupported color element rejected" {
   }
 }
 
-// --- ADR-004 lossless preservation ---
+// --- Lossless preservation ---
 
 ///|
-test "ADR-004: theme captures fmtScheme/objectDefaults/extraClrSchemeLst" {
+test "theme captures fmtScheme/objectDefaults/extraClrSchemeLst" {
   let theme = @theme.Theme::parse(office_like_theme())
   // The fixture has:
   //   <a:fmtScheme> inside <a:themeElements> → folded onto Theme.extension
@@ -239,7 +239,7 @@ test "ADR-004: theme captures fmtScheme/objectDefaults/extraClrSchemeLst" {
 }
 
 ///|
-test "ADR-004: fmtScheme subtree is preserved verbatim" {
+test "fmtScheme subtree is preserved verbatim" {
   let theme = @theme.Theme::parse(office_like_theme())
   let mut fmt_scheme : @xml.XmlElement? = None
   for el in theme.extension {
@@ -263,7 +263,7 @@ test "ADR-004: fmtScheme subtree is preserved verbatim" {
 }
 
 ///|
-test "ADR-004: foreign-namespace child of <a:theme> is preserved" {
+test "foreign-namespace child of <a:theme> is preserved" {
   let xml = "<?xml version=\"1.0\"?>" +
     "<a:theme xmlns:a=\"" +
     drawing +

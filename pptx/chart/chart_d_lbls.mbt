@@ -25,13 +25,11 @@
 //
 // Pie-family variants (`pieChart` / `doughnutChart` / `ofPieChart`)
 // additionally allow `<c:showLeaderLines>` and `<c:leaderLines>`
-// (CT_PieChartDLbls extension). These ride on `DLbls.extension` per
-// ADR-004 — they're family-specific and we don't surface them on the
-// base type today.
+// (CT_PieChartDLbls extension). These ride on `DLbls.extension` because
+// they are family-specific and are not represented on the base type.
 //
-// Per-data-point overrides (`<c:dLbl>` ▸ CT_DLbl) keep round-tripping
-// as captured `XmlElement` in `DLbls.d_lbl` until a later slice types
-// CT_DLbl. The remaining EG_DLbls fields all lift to typed Bool /
+// Per-data-point overrides (`<c:dLbl>` ▸ CT_DLbl) are represented by
+// typed `DLbl` values in `DLbls.d_lbl`. The remaining EG_DLbls fields all lift to typed Bool /
 // String / enum values.
 
 ///|
@@ -76,6 +74,15 @@ pub(all) struct DLbls {
 } derive(Eq, Debug)
 
 ///|
+pub extend DLbls with @debug.Debug::{to_repr}
+
+///|
+pub extend DLbls with Eq::{not_equal, equal}
+
+///|
+pub extend DLbls with Show::{to_string, output}
+
+///|
 pub impl Show for DLbls with fn output(self, logger) {
   logger.write_string("DLbls(")
   logger.write_string(self.d_lbl.length().to_string())
@@ -105,6 +112,15 @@ pub(all) enum DLblPos {
   DLblRight
   DLblTop
 } derive(Eq, Debug)
+
+///|
+pub extend DLblPos with @debug.Debug::{to_repr}
+
+///|
+pub extend DLblPos with Eq::{not_equal, equal}
+
+///|
+pub extend DLblPos with Show::{to_string, output}
 
 ///|
 pub impl Show for DLblPos with fn output(self, logger) {

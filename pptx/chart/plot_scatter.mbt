@@ -27,6 +27,15 @@ pub(all) struct ScatterChartBody {
 } derive(Eq, Debug)
 
 ///|
+pub extend ScatterChartBody with @debug.Debug::{to_repr}
+
+///|
+pub extend ScatterChartBody with Eq::{not_equal, equal}
+
+///|
+pub extend ScatterChartBody with Show::{to_string, output}
+
+///|
 pub impl Show for ScatterChartBody with fn output(self, logger) {
   logger.write_string("ScatterChartBody(")
   logger.write_string(self.scatter_style.to_xml())
@@ -50,6 +59,15 @@ pub(all) enum ScatterStyle {
   Smooth
   SmoothMarker
 } derive(Eq, Debug)
+
+///|
+pub extend ScatterStyle with @debug.Debug::{to_repr}
+
+///|
+pub extend ScatterStyle with Eq::{not_equal, equal}
+
+///|
+pub extend ScatterStyle with Show::{to_string, output}
 
 ///|
 pub impl Show for ScatterStyle with fn output(self, logger) {

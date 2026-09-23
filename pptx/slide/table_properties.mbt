@@ -18,7 +18,7 @@
 //     diagonal borders (`lnTlToBr` / `lnBlToTr`), and the optional
 //     fill choice.  Cell-3D + headers + extLst ride on `extension`.
 //
-// Both records keep an `extension : Array[XmlElement]` for ADR-004
+// Both records keep an `extension : Array[XmlElement]` for
 // preservation of anything unmodelled.
 
 ///|
@@ -49,6 +49,12 @@ pub(all) struct TableProperties {
   table_style_id : String?
   extension : Array[@xml.XmlElement]
 } derive(Eq, Debug)
+
+///|
+pub extend TableProperties with @debug.Debug::{to_repr}
+
+///|
+pub extend TableProperties with Eq::{not_equal, equal}
 
 ///|
 /// Construct an empty TableProperties — every field None / empty.
@@ -106,6 +112,12 @@ pub struct TableCellProperties {
   fill : @oxml.Fill?
   extension : Array[@xml.XmlElement]
 } derive(Eq, Debug)
+
+///|
+pub extend TableCellProperties with @debug.Debug::{to_repr}
+
+///|
+pub extend TableCellProperties with Eq::{not_equal, equal}
 
 ///|
 /// Construct an empty TableCellProperties — every field None.

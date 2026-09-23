@@ -33,6 +33,15 @@ pub(all) enum ImageFormat {
 } derive(Eq, Debug)
 
 ///|
+pub extend ImageFormat with @debug.Debug::{to_repr}
+
+///|
+pub extend ImageFormat with Eq::{not_equal, equal}
+
+///|
+pub extend ImageFormat with Show::{to_string, output}
+
+///|
 pub impl Show for ImageFormat with fn output(self, logger) {
   logger.write_string(
     match self {
@@ -136,6 +145,15 @@ pub(all) struct ImageDimensions {
   dpi_x : Double
   dpi_y : Double
 } derive(Eq, Debug)
+
+///|
+pub extend ImageDimensions with @debug.Debug::{to_repr}
+
+///|
+pub extend ImageDimensions with Eq::{not_equal, equal}
+
+///|
+pub extend ImageDimensions with Show::{to_string, output}
 
 ///|
 pub impl Show for ImageDimensions with fn output(self, logger) {

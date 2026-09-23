@@ -1,7 +1,7 @@
 // Modified for office.mbt: root workspace tooling and fixture paths.
-// Tier-1 reader-losslessness on real Office output (ADR-011).
+// Reader round-trip checks on real Office output.
 //
-// The Tier-2 Open XML SDK validator proves the corpus files are
+// The OpenXML SDK validator checks that the corpus files are
 // schema-valid, but not that *our reader* preserves them. These tests
 // close that gap on every backend, without file I/O: a few
 // `pptx/fixtures/poi/` files are embedded as generated base64
@@ -12,7 +12,7 @@
 //
 // asserting model equality between the two parses — any field the
 // reader silently drops (instead of typing or capturing into
-// `extension`, ADR-004) breaks equality here.
+// `extension`) breaks equality here.
 
 // --- base64 decoding of the embedded corpus ---
 
@@ -229,7 +229,7 @@ test "corpus with_japanese: the theme names the font CJK actually renders in" {
   // The file's runs carry `<a:latin typeface="+mn-lt"/>`-style theme
   // references and an empty `<a:ea typeface=""/>`, so neither the run nor the
   // `ea` slot names the face Japanese text uses — only the `script="Jpan"`
-  // entry does. This is the case G2 exists for, checked against a real file.
+  // entry does. Verify this font fallback against a real file.
   let pkg = @opc.Package::open(corpus_with_japanese())
   let theme = @theme.Theme::parse(
     pkg.require_part("/ppt/theme/theme1.xml").bytes(),

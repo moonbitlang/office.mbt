@@ -38,6 +38,12 @@ pub struct ContentTypes {
 } derive(Eq, Debug)
 
 ///|
+pub extend ContentTypes with @debug.Debug::{to_repr}
+
+///|
+pub extend ContentTypes with Eq::{not_equal, equal}
+
+///|
 /// An empty catalog with no Default or Override entries.
 pub fn ContentTypes::new() -> ContentTypes {
   { defaults: [], overrides: [], }

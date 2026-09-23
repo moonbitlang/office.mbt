@@ -8,7 +8,7 @@
 // spaces. Everything else (`<p:defaultTextStyle>`, `<p:custShowLst>`,
 // `<p:photoAlbum>`, `<p:kinsoku>`, `<p:custDataLst>`, `<p:extLst>`,
 // and per-presentation attributes like `saveSubsetFonts`) rides on
-// `extension` per ADR-004 so it round-trips through parse / serialize
+// `extension` so it round-trips through parse / serialize
 // even though we don't expose it as typed fields yet.
 
 ///|
@@ -24,6 +24,12 @@ pub(all) struct SlideMasterIdRef {
 } derive(Eq, Debug)
 
 ///|
+pub extend SlideMasterIdRef with @debug.Debug::{to_repr}
+
+///|
+pub extend SlideMasterIdRef with Eq::{not_equal, equal}
+
+///|
 /// One entry in `<p:sldIdLst>` — a slide ID + a rId pointing to the
 /// slide part via `presentation.xml.rels`. Source order of these
 /// entries is the actual on-screen slide order.
@@ -34,6 +40,12 @@ pub(all) struct SlideIdRef {
   id : Int64
   r_id : String
 } derive(Eq, Debug)
+
+///|
+pub extend SlideIdRef with @debug.Debug::{to_repr}
+
+///|
+pub extend SlideIdRef with Eq::{not_equal, equal}
 
 ///|
 /// Slide-coordinate-space size with the spec's `type` enum baked in
@@ -49,12 +61,24 @@ pub(all) struct SlideSize {
 } derive(Eq, Debug)
 
 ///|
+pub extend SlideSize with @debug.Debug::{to_repr}
+
+///|
+pub extend SlideSize with Eq::{not_equal, equal}
+
+///|
 /// Notes-coordinate-space size. Same `cx` / `cy` semantics as
 /// `SlideSize` but no `type` attribute on the spec.
 pub(all) struct NotesSize {
   cx : @units.Emu
   cy : @units.Emu
 } derive(Eq, Debug)
+
+///|
+pub extend NotesSize with @debug.Debug::{to_repr}
+
+///|
+pub extend NotesSize with Eq::{not_equal, equal}
 
 ///|
 /// Parsed `<p:presentation>` part.
@@ -85,6 +109,12 @@ pub(all) struct PresentationPart {
   notes_sz : NotesSize?
   extension : Array[@xml.XmlElement]
 } derive(Eq, Debug)
+
+///|
+pub extend PresentationPart with @debug.Debug::{to_repr}
+
+///|
+pub extend PresentationPart with Eq::{not_equal, equal}
 
 // --- parser ---
 

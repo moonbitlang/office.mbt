@@ -1,7 +1,7 @@
 // Placeholder named accessors.
 //
 // The parsed `Placeholder` keeps `ph_type` as the raw `ST_PlaceholderType`
-// attribute string for lossless round-trip (ADR-004) — a body/content
+// attribute string for lossless round-trip — a body/content
 // placeholder commonly *omits* the `type` attribute, which the model
 // preserves as `ph_type == ""` and the writer round-trips by omitting it.
 // We must not collapse that distinction into the struct, so the typed lift
@@ -36,6 +36,12 @@ pub(all) enum PlaceholderType {
   Pic // "pic"
   Other(String)
 } derive(Eq, Debug)
+
+///|
+pub extend PlaceholderType with @debug.Debug::{to_repr}
+
+///|
+pub extend PlaceholderType with Eq::{not_equal, equal}
 
 ///|
 /// Map a raw `ST_PlaceholderType` attribute value to the typed enum. The empty

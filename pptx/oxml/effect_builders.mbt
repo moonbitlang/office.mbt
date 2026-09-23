@@ -5,7 +5,7 @@
 // one — which is why nothing in the tree passed that argument.
 //
 // Required attributes are constructor parameters; optional ones are
-// `with_*` builders, immutable per ADR-003. The `dist` / `dir` pair on the
+// `with_*` builders, immutable. The `dist` / `dir` pair on the
 // shadow family is labelled because `blur_rad` and `dist` are both `Emu`
 // and would otherwise swap silently.
 

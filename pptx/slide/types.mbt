@@ -6,7 +6,7 @@
 // Connector, Group, GraphicFrame (table / chart / chartEx / OLE).
 // `Unknown(XmlElement)` catches any unmodelled shape kind (mostly
 // `<p:contentPart>`) so the shape tree survives a read → write
-// round-trip verbatim per ADR-004.
+// round-trip verbatim.
 
 ///|
 /// A 2D point in EMU coordinates. Both axes use `@units.Emu` so slide-
@@ -17,11 +17,23 @@ pub(all) struct Point {
 } derive(Eq, Debug)
 
 ///|
+pub extend Point with @debug.Debug::{to_repr}
+
+///|
+pub extend Point with Eq::{not_equal, equal}
+
+///|
 /// A 2D size in EMU coordinates.
 pub(all) struct Size {
   cx : @units.Emu
   cy : @units.Emu
 } derive(Eq, Debug)
+
+///|
+pub extend Size with @debug.Debug::{to_repr}
+
+///|
+pub extend Size with Eq::{not_equal, equal}
 
 ///|
 /// Position + size + orientation, mirroring `<a:xfrm>`.
@@ -43,6 +55,12 @@ pub struct Transform {
   flip_h : Bool
   flip_v : Bool
 } derive(Eq, Debug)
+
+///|
+pub extend Transform with @debug.Debug::{to_repr}
+
+///|
+pub extend Transform with Eq::{not_equal, equal}
 
 ///|
 /// Construct a `Transform` from a position + size, defaulting to no
@@ -95,9 +113,15 @@ pub(all) struct Placeholder {
 } derive(Eq, Debug)
 
 ///|
+pub extend Placeholder with @debug.Debug::{to_repr}
+
+///|
+pub extend Placeholder with Eq::{not_equal, equal}
+
+///|
 /// One shape in a `p:spTree`. Every spec'd shape kind has a typed
 /// variant; `Unknown` catches anything unmodelled (mostly
-/// `<p:contentPart>` extension shapes). Per ADR-004 the variant
+/// `<p:contentPart>` extension shapes). The variant
 /// carries the full captured element so unknown shapes survive a
 /// read → write round-trip verbatim.
 ///
@@ -115,6 +139,12 @@ pub(all) enum Shape {
   GraphicFrame(GraphicFrame)
   Unknown(@xml.XmlElement)
 } derive(Eq, Debug)
+
+///|
+pub extend Shape with @debug.Debug::{to_repr}
+
+///|
+pub extend Shape with Eq::{not_equal, equal}
 
 ///|
 /// `<p:sp>` — auto-shape. Covers id, name, placeholder metadata,
@@ -154,6 +184,12 @@ pub(all) struct AutoShape {
 } derive(Eq, Debug)
 
 ///|
+pub extend AutoShape with @debug.Debug::{to_repr}
+
+///|
+pub extend AutoShape with Eq::{not_equal, equal}
+
+///|
 /// A parsed slide.
 ///
 /// - `name` — `name` from `<p:cSld name="…">`. Empty if the attribute is
@@ -174,7 +210,7 @@ pub(all) struct AutoShape {
 /// - `timing` (`<p:timing>`) — the slide's animation timeline. `None` means
 ///   the slide has no animations (the common case). **Build-only**: set by
 ///   `with_animations` and emitted by the writer; on *parse* an existing
-///   `<p:timing>` round-trips through `extension` (ADR-004) and this stays
+///   `<p:timing>` round-trips through `extension` and this stays
 ///   `None`. See `animation.mbt` / `animation_writer.mbt`.
 pub(all) struct Slide {
   name : String
@@ -185,3 +221,9 @@ pub(all) struct Slide {
   timing : Timeline?
   extension : Array[@xml.XmlElement]
 } derive(Eq, Debug)
+
+///|
+pub extend Slide with @debug.Debug::{to_repr}
+
+///|
+pub extend Slide with Eq::{not_equal, equal}

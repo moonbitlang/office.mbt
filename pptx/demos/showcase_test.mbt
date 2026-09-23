@@ -8,7 +8,7 @@ test "sample deck reopens with all feature slides + a defined master" {
   let prs = @presentation.Presentation::open(@demos.build_sample_deck())
   // 26 slides: title, toc, text, shapes, custom-geom, picture, table,
   // 4 chart slides, background, combo, svg, edit, media, smartart,
-  // animation, online-video, v0.5.2 / v0.6 / v0.7 feature slides,
+  // animation, online-video, formatting, text-fill, and table-style slides,
   // master, 2 typed-layout slides, closing.
   debug_inspect(prs.slides().length(), content="26")
   // The deck's own master + the one added by sample_master_slide.

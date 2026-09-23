@@ -17,6 +17,15 @@ pub(all) suberror ThemeError {
 } derive(Eq, Debug)
 
 ///|
+pub extend ThemeError with @debug.Debug::{to_repr}
+
+///|
+pub extend ThemeError with Eq::{not_equal, equal}
+
+///|
+pub extend ThemeError with Show::{to_string, output}
+
+///|
 /// Wrap an `xml::XmlError` as a `ThemeError::XmlFailure`. Used at every
 /// call site that bridges the `@xml` and theme layers.
 fn wrap_xml(e : @xml.XmlError) -> ThemeError {

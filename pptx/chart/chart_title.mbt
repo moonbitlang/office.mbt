@@ -20,7 +20,7 @@
 // (rich text body in `<c:tx>`, the layout positioning, and the shape
 // / text properties) stay as captured `XmlElement` until later slices
 // type them. Foreign-namespace siblings and `<c:extLst>` ride on
-// `extension` per ADR-004.
+// `extension`.
 
 ///|
 /// Body of a `<c:title>` element. Used by both `ChartBody.title`
@@ -43,6 +43,15 @@ pub(all) struct ChartTitle {
   tx_pr : @xml.XmlElement?
   extension : Array[@xml.XmlElement]
 } derive(Eq, Debug)
+
+///|
+pub extend ChartTitle with @debug.Debug::{to_repr}
+
+///|
+pub extend ChartTitle with Eq::{not_equal, equal}
+
+///|
+pub extend ChartTitle with Show::{to_string, output}
 
 ///|
 pub impl Show for ChartTitle with fn output(self, logger) {

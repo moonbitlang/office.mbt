@@ -26,6 +26,12 @@ pub(all) struct ConnectionEnd {
 } derive(Eq, Debug)
 
 ///|
+pub extend ConnectionEnd with @debug.Debug::{to_repr}
+
+///|
+pub extend ConnectionEnd with Eq::{not_equal, equal}
+
+///|
 /// `<p:cxnSp>` — connector shape.
 ///
 /// `start` and `end` are present only when the connector is bound to
@@ -52,3 +58,9 @@ pub(all) struct Connector {
   hyperlink : ShapeHyperlink?
   extension : Array[@xml.XmlElement]
 } derive(Eq, Debug)
+
+///|
+pub extend Connector with @debug.Debug::{to_repr}
+
+///|
+pub extend Connector with Eq::{not_equal, equal}

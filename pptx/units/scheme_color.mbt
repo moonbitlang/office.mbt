@@ -5,7 +5,7 @@
 // applies an ordered list of color transforms (tint, shade, modulation, etc).
 // The full transform set in ECMA-376 is large; we model the ones used in
 // nearly every real-world PPTX. The long tail (hueMod / redMod / comp /
-// inv / gamma / gray / …) rides on `@oxml.Color.extension` per ADR-004.
+// inv / gamma / gray / …) rides on `@oxml.Color.extension`.
 
 ///|
 /// One of the named OOXML theme color slots (ST_SchemeColorVal).
@@ -35,6 +35,15 @@ pub(all) enum ThemeColor {
   FolHlink
   PhClr
 } derive(Eq, Debug)
+
+///|
+pub extend ThemeColor with @debug.Debug::{to_repr}
+
+///|
+pub extend ThemeColor with Eq::{not_equal, equal}
+
+///|
+pub extend ThemeColor with Show::{to_string, output}
 
 ///|
 /// Render to the OOXML `val` attribute string (`accent1`, `bg1`, …).
@@ -113,6 +122,15 @@ pub(all) enum ColorTransform {
 } derive(Eq, Debug)
 
 ///|
+pub extend ColorTransform with @debug.Debug::{to_repr}
+
+///|
+pub extend ColorTransform with Eq::{not_equal, equal}
+
+///|
+pub extend ColorTransform with Show::{to_string, output}
+
+///|
 pub impl Show for ColorTransform with fn output(self, logger) {
   match self {
     Tint(p) => logger.write_string("Tint(\{p.value()}%)")
@@ -129,6 +147,12 @@ pub struct SchemeColor {
   base : ThemeColor
   transforms : Array[ColorTransform]
 } derive(Debug)
+
+///|
+pub extend SchemeColor with @debug.Debug::{to_repr}
+
+///|
+pub extend SchemeColor with Show::{to_string, output}
 
 ///|
 /// Construct a scheme color reference with no transforms.

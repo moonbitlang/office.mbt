@@ -12,7 +12,7 @@
 // Tables and charts (standard `<c:chart>` + extended `<cx:chart>`)
 // lift to typed `GraphicFrameContent` variants. SmartArt and any
 // other unmodelled URI round-trip via the `OtherGraphic(uri, captured)`
-// variant per ADR-004.
+// variant.
 //
 // Shape of the frame:
 //
@@ -55,6 +55,12 @@ pub(all) struct GraphicFrame {
 } derive(Eq, Debug)
 
 ///|
+pub extend GraphicFrame with @debug.Debug::{to_repr}
+
+///|
+pub extend GraphicFrame with Eq::{not_equal, equal}
+
+///|
 /// The body of `<a:graphicData>`. Tables get a typed AST; chart /
 /// SmartArt / OLE / future content kinds keep round-tripping via the
 /// captured `<a:graphicData>` payload until a typed parser arrives.
@@ -81,6 +87,12 @@ pub(all) enum GraphicFrameContent {
   OtherGraphic(String, @xml.XmlElement)
 } derive(Eq, Debug)
 
+///|
+pub extend GraphicFrameContent with @debug.Debug::{to_repr}
+
+///|
+pub extend GraphicFrameContent with Eq::{not_equal, equal}
+
 // --- table ---
 
 ///|
@@ -102,6 +114,12 @@ pub(all) struct Table {
 } derive(Eq, Debug)
 
 ///|
+pub extend Table with @debug.Debug::{to_repr}
+
+///|
+pub extend Table with Eq::{not_equal, equal}
+
+///|
 /// `<a:tr h="…">` — one table row.
 ///
 /// - `height` — `h` attribute — row height in EMU. The spec marks `h` as
@@ -113,6 +131,12 @@ pub struct TableRow {
   cells : Array[TableCell]
   extension : Array[@xml.XmlElement]
 } derive(Eq, Debug)
+
+///|
+pub extend TableRow with @debug.Debug::{to_repr}
+
+///|
+pub extend TableRow with Eq::{not_equal, equal}
 
 ///|
 /// `<a:tc>` — one cell.
@@ -143,3 +167,9 @@ pub(all) struct TableCell {
   properties : TableCellProperties?
   extension : Array[@xml.XmlElement]
 } derive(Eq, Debug)
+
+///|
+pub extend TableCell with @debug.Debug::{to_repr}
+
+///|
+pub extend TableCell with Eq::{not_equal, equal}

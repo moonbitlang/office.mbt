@@ -3,7 +3,7 @@
 // Walks `<c:chartSpace>` → `<c:chart>` → `<c:plotArea>` → plot family
 // bodies / axes. Each level peels off the scalar / enum leaves it
 // knows about and either captures the substantial subtrees as
-// `XmlElement` (lossless preservation per ADR-004) or descends into
+// `XmlElement` (lossless preservation) or descends into
 // a typed body parser when the family has been lifted.
 //
 // The per-family parsers (`parse_bar_chart`, `parse_line_chart`, …)

@@ -28,7 +28,7 @@
 //     standard click-driven main sequence.
 //   * **Build-only** (like media): a typed `Slide.timing` is emitted by the
 //     writer; on parse, an existing `<p:timing>` still round-trips losslessly
-//     through `Slide.extension` (ADR-004) and `timing` stays `None`. So a built
+//     through `Slide.extension` and `timing` stays `None`. So a built
 //     timeline re-serialises stably rather than round-tripping to an equal
 //     model — the established build-only deviation.
 //
@@ -49,6 +49,12 @@ pub(all) enum AnimDirection {
 } derive(Eq, Debug)
 
 ///|
+pub extend AnimDirection with @debug.Debug::{to_repr}
+
+///|
+pub extend AnimDirection with Eq::{not_equal, equal}
+
+///|
 /// The `filter` argument word for this direction (`wipe(<word>)`).
 pub fn AnimDirection::to_filter(self : AnimDirection) -> String {
   match self {
@@ -66,6 +72,12 @@ pub(all) enum AnimOrientation {
   Horizontal
   Vertical
 } derive(Eq, Debug)
+
+///|
+pub extend AnimOrientation with @debug.Debug::{to_repr}
+
+///|
+pub extend AnimOrientation with Eq::{not_equal, equal}
 
 ///|
 pub fn AnimOrientation::to_filter(self : AnimOrientation) -> String {
@@ -106,6 +118,12 @@ pub(all) enum VisualEffect {
   Wedge
   Wheel(Int)
 } derive(Eq, Debug)
+
+///|
+pub extend VisualEffect with @debug.Debug::{to_repr}
+
+///|
+pub extend VisualEffect with Eq::{not_equal, equal}
 
 ///|
 /// The PowerPoint `presetID` for this effect (the entrance-class numbering;
@@ -177,6 +195,12 @@ pub(all) enum EmphasisEffect {
 } derive(Eq, Debug)
 
 ///|
+pub extend EmphasisEffect with @debug.Debug::{to_repr}
+
+///|
+pub extend EmphasisEffect with Eq::{not_equal, equal}
+
+///|
 /// The PowerPoint `presetID` for this emphasis (a cosmetic UI hint — the render
 /// is driven by the behaviour element). Exhaustive over `EmphasisEffect`.
 pub fn EmphasisEffect::preset_id(self : EmphasisEffect) -> Int {
@@ -199,6 +223,12 @@ pub(all) struct MotionPoint {
 } derive(Eq, Debug)
 
 ///|
+pub extend MotionPoint with @debug.Debug::{to_repr}
+
+///|
+pub extend MotionPoint with Eq::{not_equal, equal}
+
+///|
 /// One command of a motion path — the `<p:animMotion path="…">` mini-language
 /// (`M` move, `L` line, `C` cubic curve, `Z` close). Coordinates are
 /// slide-fraction `MotionPoint`s.
@@ -208,6 +238,12 @@ pub(all) enum MotionCommand {
   CurveTo(MotionPoint, MotionPoint, MotionPoint)
   Close
 } derive(Eq, Debug)
+
+///|
+pub extend MotionCommand with @debug.Debug::{to_repr}
+
+///|
+pub extend MotionCommand with Eq::{not_equal, equal}
 
 ///|
 /// A custom motion path — the route a shape travels, as an ordered list of
@@ -228,6 +264,12 @@ pub struct MotionPath {
 } derive(Eq, Debug)
 
 ///|
+pub extend MotionPath with @debug.Debug::{to_repr}
+
+///|
+pub extend MotionPath with Eq::{not_equal, equal}
+
+///|
 /// An empty motion path. Add segments with `move_to` / `line_to` / `curve_to` /
 /// `close`.
 pub fn MotionPath::new() -> MotionPath {
@@ -235,7 +277,7 @@ pub fn MotionPath::new() -> MotionPath {
 }
 
 ///|
-/// Append a command. Immutable (ADR-003).
+/// Append a command. Immutable.
 fn MotionPath::add(self : MotionPath, cmd : MotionCommand) -> MotionPath {
   let commands = self.commands.copy()
   commands.push(cmd)
@@ -333,6 +375,12 @@ pub(all) enum AnimEffect {
 } derive(Eq, Debug)
 
 ///|
+pub extend AnimEffect with @debug.Debug::{to_repr}
+
+///|
+pub extend AnimEffect with Eq::{not_equal, equal}
+
+///|
 /// When an effect starts, relative to the timeline.
 ///
 /// - `OnClick` — Waits for a mouse click — starts a new click group in the
@@ -348,6 +396,12 @@ pub(all) enum AnimStart {
 } derive(Eq, Debug)
 
 ///|
+pub extend AnimStart with @debug.Debug::{to_repr}
+
+///|
+pub extend AnimStart with Eq::{not_equal, equal}
+
+///|
 /// One step of a slide's animation timeline: an `effect` applied to the shape
 /// with id `target_shape_id` (see `Shape::id`), starting per `start`, lasting
 /// `duration_ms` milliseconds. When `paragraph` is `Some(i)` the effect targets
@@ -361,6 +415,12 @@ pub struct AnimStep {
   duration_ms : Int
   paragraph : Int?
 } derive(Eq, Debug)
+
+///|
+pub extend AnimStep with @debug.Debug::{to_repr}
+
+///|
+pub extend AnimStep with Eq::{not_equal, equal}
 
 ///|
 /// A slide's animation timeline — the typed form of `<p:timing>`. An ordered
@@ -379,6 +439,12 @@ pub struct Timeline {
 } derive(Eq, Debug)
 
 ///|
+pub extend Timeline with @debug.Debug::{to_repr}
+
+///|
+pub extend Timeline with Eq::{not_equal, equal}
+
+///|
 /// The default effect duration PowerPoint uses for most animations (0.5 s).
 let anim_default_duration_ms : Int = 500
 
@@ -390,7 +456,7 @@ pub fn Timeline::new() -> Timeline {
 }
 
 ///|
-/// Append a step. Immutable (ADR-003) — returns a new `Timeline`.
+/// Append a step. Immutable — returns a new `Timeline`.
 fn Timeline::add(
   self : Timeline,
   effect : AnimEffect,
@@ -443,7 +509,7 @@ pub fn Timeline::after_previous(
   self.add(effect, target_shape_id, AfterPrevious, duration_ms, paragraph)
 }
 
-// --- Slide builders (immutable, ADR-003) ---
+// --- Slide builders (immutable) ---
 
 ///|
 /// Return a new `Slide` with the given animation timeline. Replaces any

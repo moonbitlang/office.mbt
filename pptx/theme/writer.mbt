@@ -4,7 +4,7 @@
 // `@xml.XmlWriter` positioned just after the parent's StartElement and
 // emits this element + its children + the matching EndElement.
 //
-// Extension preservation per ADR-004: every captured `extension` array
+// Extension preservation: every captured `extension` array
 // is replayed via `@oxml.write_xml_element`. The slot-level
 // `<a:clrScheme>` ordering matches `parse_color_scheme`'s output order
 // (dk1 → lt1 → dk2 → lt2 → accent1..6 → hlink → folHlink), which is

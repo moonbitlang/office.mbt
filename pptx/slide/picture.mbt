@@ -33,7 +33,7 @@
 ///   `<a:videoFile>` / `<a:audioFile>` + `<p14:media>` inside `<p:nvPr>` plus
 ///   a `ppaction://media` hyperlink on `<p:cNvPr>`. `None` for an ordinary
 ///   picture. The parser leaves this `None` and round-trips existing media
-///   references through `extension` (ADR-004); builders set it via
+///   references through `extension`; builders set it via
 ///   `Picture::of_media`.
 /// - `hyperlink` (`<p:cNvPr><a:hlinkClick>`) — a hyperlink / click action on
 ///   the whole picture. Build-only: set by `with_hyperlink` /
@@ -51,3 +51,9 @@ pub(all) struct Picture {
   hyperlink : ShapeHyperlink?
   extension : Array[@xml.XmlElement]
 } derive(Eq, Debug)
+
+///|
+pub extend Picture with @debug.Debug::{to_repr}
+
+///|
+pub extend Picture with Eq::{not_equal, equal}

@@ -1,7 +1,7 @@
 // Shared XML write helpers for OOXML serialisers.
 //
 // Every typed model node carries an `extension : Array[@xml.XmlElement]`
-// for unmodelled children per ADR-004; the serialisers in turn need a
+// for unmodelled children; the serialisers in turn need a
 // counterpart that emits those captured subtrees back to the wire
 // without loss. `write_xml_element` walks the captured DOM recursively
 // and feeds events into a `@xml.XmlWriter`.

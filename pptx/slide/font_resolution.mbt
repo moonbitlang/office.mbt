@@ -21,6 +21,12 @@ pub struct ResolvedFonts {
 } derive(Eq, Debug)
 
 ///|
+pub extend ResolvedFonts with @debug.Debug::{to_repr}
+
+///|
+pub extend ResolvedFonts with Eq::{not_equal, equal}
+
+///|
 /// Resolve every typeface slot of `rp` against `scheme`.
 ///
 /// A slot takes the run's own `<a:latin>` / `<a:ea>` / `<a:cs>` when it has

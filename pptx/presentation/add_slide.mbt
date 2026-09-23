@@ -9,7 +9,7 @@
 // a new `slideN.xml.rels` linking the slide back to its layout, and
 // an `<Override>` in `[Content_Types].xml`.
 //
-// Per ADR-003 the default builder style is immutable, but the deck-
+// The default builder style is immutable, but the deck-
 // editing path explicitly allows `_mut` variants. We start with the
 // mutating one because every immutable variant has to clone the
 // underlying `@opc.Package` first; cloning isn't exposed yet, so
@@ -340,7 +340,7 @@ fn Presentation::replace_part_bytes(
   }
   // In place when the part already exists: remove-then-add was two linear
   // scans plus an array shift per call, which is most of why building a
-  // deck a slide at a time scaled badly (ROADMAP.md G13). It also keeps
+  // deck a slide at a time scaled badly. It also keeps
   // package order stable across a rewrite.
   if !self.pkg.replace_part(part) {
     self.pkg.add_part(part) catch {
@@ -371,7 +371,7 @@ fn Presentation::write_rels_for_part(
 /// and `[Content_Types].xml` as it goes, and all three grow an entry per
 /// slide — so adding a thousand slides one at a time re-parses and
 /// re-serialises three growing documents a thousand times. This does that
-/// work once for the whole batch (`ROADMAP.md` G13).
+/// work once for the whole batch.
 ///
 /// `count` of zero or less adds nothing and returns an empty array.
 pub fn Presentation::add_slides_mut(

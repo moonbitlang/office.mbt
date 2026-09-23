@@ -32,6 +32,12 @@ pub(all) enum TargetMode {
 } derive(Eq, Debug)
 
 ///|
+pub extend TargetMode with @debug.Debug::{to_repr}
+
+///|
+pub extend TargetMode with Eq::{not_equal, equal}
+
+///|
 /// A single typed link from one part (or the package) to another resource.
 ///
 /// `id` is the local key (`"rId1"`, `"rId7"`). `rel_type` is the
@@ -45,6 +51,15 @@ pub(all) struct Relationship {
   target : String
   target_mode : TargetMode
 } derive(Eq, Debug)
+
+///|
+pub extend Relationship with @debug.Debug::{to_repr}
+
+///|
+pub extend Relationship with Eq::{not_equal, equal}
+
+///|
+pub extend Relationship with Show::{to_string, output}
 
 ///|
 pub impl Show for Relationship with fn output(self, logger) {
@@ -71,6 +86,9 @@ pub struct Relationships {
   source : String
   priv items : Array[Relationship]
 } derive(Debug)
+
+///|
+pub extend Relationships with @debug.Debug::{to_repr}
 
 ///|
 /// Construct an empty `Relationships` set for `source` (the

@@ -32,6 +32,12 @@ pub(all) struct ColorMapping {
 } derive(Eq, Debug)
 
 ///|
+pub extend ColorMapping with @debug.Debug::{to_repr}
+
+///|
+pub extend ColorMapping with Eq::{not_equal, equal}
+
+///|
 /// Look up the effective theme color for a slide-level slot reference.
 /// Returns `None` only if the requested slot name isn't one of the twelve
 /// known mapping keys.

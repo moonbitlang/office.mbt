@@ -69,7 +69,7 @@ test "background: shadeToTitle attribute is read" {
 }
 
 ///|
-test "background: unmodelled grpFill is preserved (ADR-004), fill stays None" {
+test "background: unmodelled grpFill is preserved, fill stays None" {
   let slide = @slide.Slide::parse(
     slide_with_bg("<p:bg><p:bgPr><a:grpFill/></p:bgPr></p:bg>"),
   )

@@ -44,6 +44,15 @@ pub(all) enum SlideSizeKind {
 } derive(Eq, Debug)
 
 ///|
+pub extend SlideSizeKind with @debug.Debug::{to_repr}
+
+///|
+pub extend SlideSizeKind with Eq::{not_equal, equal}
+
+///|
+pub extend SlideSizeKind with Show::{to_string, output}
+
+///|
 pub impl Show for SlideSizeKind with fn output(self, logger) {
   let (cx, cy) = self.dimensions()
   let cx_v = cx.value().to_string()

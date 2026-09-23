@@ -17,6 +17,18 @@ pub struct QName {
 } derive(Eq, Hash, Debug)
 
 ///|
+pub extend QName with @debug.Debug::{to_repr}
+
+///|
+pub extend QName with Eq::{not_equal, equal}
+
+///|
+pub extend QName with Hash::{hash, hash_combine}
+
+///|
+pub extend QName with Show::{to_string, output}
+
+///|
 /// Construct a qualified name in `uri`.
 pub fn QName::new(uri : String, local_name : String) -> QName {
   { uri, local_name, }

@@ -27,7 +27,7 @@
 /// contributes a numeric value per category.
 ///
 /// `ChartData` is immutable: every `with_*` call returns a new
-/// value (matching ADR-003 throughout the codebase). The arrays are
+/// value. The arrays are
 /// not deep-cloned on each call — callers shouldn't mutate the
 /// arrays they pass in.
 ///
@@ -38,6 +38,15 @@ pub struct ChartData {
   categories : Array[String]
   series : Array[ChartSeries]
 } derive(Eq, Debug)
+
+///|
+pub extend ChartData with @debug.Debug::{to_repr}
+
+///|
+pub extend ChartData with Eq::{not_equal, equal}
+
+///|
+pub extend ChartData with Show::{to_string, output}
 
 ///|
 pub impl Show for ChartData with fn output(self, logger) {
@@ -59,6 +68,15 @@ pub struct ChartSeries {
   label : String
   values : Array[Double]
 } derive(Eq, Debug)
+
+///|
+pub extend ChartSeries with @debug.Debug::{to_repr}
+
+///|
+pub extend ChartSeries with Eq::{not_equal, equal}
+
+///|
+pub extend ChartSeries with Show::{to_string, output}
 
 ///|
 pub impl Show for ChartSeries with fn output(self, logger) {
@@ -115,6 +133,15 @@ pub struct ScatterData {
 } derive(Eq, Debug)
 
 ///|
+pub extend ScatterData with @debug.Debug::{to_repr}
+
+///|
+pub extend ScatterData with Eq::{not_equal, equal}
+
+///|
+pub extend ScatterData with Show::{to_string, output}
+
+///|
 pub impl Show for ScatterData with fn output(self, logger) {
   logger.write_string("ScatterData(")
   logger.write_string(self.series.length().to_string())
@@ -129,6 +156,15 @@ pub struct ScatterSeries {
   x : Array[Double]
   y : Array[Double]
 } derive(Eq, Debug)
+
+///|
+pub extend ScatterSeries with @debug.Debug::{to_repr}
+
+///|
+pub extend ScatterSeries with Eq::{not_equal, equal}
+
+///|
+pub extend ScatterSeries with Show::{to_string, output}
 
 ///|
 pub impl Show for ScatterSeries with fn output(self, logger) {
@@ -169,6 +205,15 @@ pub struct BubbleData {
 } derive(Eq, Debug)
 
 ///|
+pub extend BubbleData with @debug.Debug::{to_repr}
+
+///|
+pub extend BubbleData with Eq::{not_equal, equal}
+
+///|
+pub extend BubbleData with Show::{to_string, output}
+
+///|
 pub impl Show for BubbleData with fn output(self, logger) {
   logger.write_string("BubbleData(")
   logger.write_string(self.series.length().to_string())
@@ -184,6 +229,15 @@ pub struct BubbleSeries {
   y : Array[Double]
   size : Array[Double]
 } derive(Eq, Debug)
+
+///|
+pub extend BubbleSeries with @debug.Debug::{to_repr}
+
+///|
+pub extend BubbleSeries with Eq::{not_equal, equal}
+
+///|
+pub extend BubbleSeries with Show::{to_string, output}
 
 ///|
 pub impl Show for BubbleSeries with fn output(self, logger) {
@@ -227,6 +281,12 @@ pub(all) enum ChartPlot {
   Line(ChartData)
   Area(ChartData)
 } derive(Eq, Debug)
+
+///|
+pub extend ChartPlot with @debug.Debug::{to_repr}
+
+///|
+pub extend ChartPlot with Eq::{not_equal, equal}
 
 ///|
 /// Construct a combo chart overlaying two plots (e.g. columns + a line) on a
@@ -791,6 +851,15 @@ pub(all) enum StockKind {
   HLC
   OHLC
 } derive(Eq, Debug)
+
+///|
+pub extend StockKind with @debug.Debug::{to_repr}
+
+///|
+pub extend StockKind with Eq::{not_equal, equal}
+
+///|
+pub extend StockKind with Show::{to_string, output}
 
 ///|
 pub impl Show for StockKind with fn output(self, logger) {

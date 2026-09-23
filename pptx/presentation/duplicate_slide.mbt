@@ -7,7 +7,7 @@
 // `<p:sldId>`, and a content-type `<Override>`. The duplicate is appended
 // to the end of the deck; pair with `move_slide_mut` to position it.
 //
-// Q12 decision (shared media): the clone *re-references* the source slide's
+// Shared media: the clone re-references the source slide's
 // relationship targets rather than deep-copying each image / chart / media /
 // notes part. The slide's `.rels` is slide-local, so the copy's `.rels`
 // carries the same relative targets (both slides live in `/ppt/slides/`),
@@ -25,7 +25,7 @@
 ///
 /// The copy shares the source slide's referenced parts (layout, images,
 /// charts, media, notes) by re-referencing them rather than deep-copying
-/// — see the module note on Q12. Raises `Malformed` if `slide_index` is
+/// — see the shared-media note above. Raises `Malformed` if `slide_index` is
 /// out of range or the package has no parseable `presentation.xml`.
 pub fn Presentation::duplicate_slide_mut(
   self : Presentation,

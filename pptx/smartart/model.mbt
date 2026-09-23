@@ -41,6 +41,12 @@ pub(all) enum SmartArtKind {
 } derive(Eq, Debug)
 
 ///|
+pub extend SmartArtKind with @debug.Debug::{to_repr}
+
+///|
+pub extend SmartArtKind with Eq::{not_equal, equal}
+
+///|
 /// Per-node colour overrides on top of the diagram's quick style. Absent
 /// fields keep the styleLbl defaults (accent-1 boxes, light outlines). The
 /// overrides go into both the data model (the point's `<dgm:spPr>` /
@@ -55,6 +61,12 @@ pub struct NodeStyle {
   line : @units.RgbColor?
   text_color : @units.RgbColor?
 } derive(Eq, Debug)
+
+///|
+pub extend NodeStyle with @debug.Debug::{to_repr}
+
+///|
+pub extend NodeStyle with Eq::{not_equal, equal}
 
 ///|
 /// A style overriding only the given aspects (omitted ones keep the
@@ -79,6 +91,12 @@ pub struct Node {
   children : Array[Node]
   style : NodeStyle?
 } derive(Eq, Debug)
+
+///|
+pub extend Node with @debug.Debug::{to_repr}
+
+///|
+pub extend Node with Eq::{not_equal, equal}
 
 ///|
 /// A leaf node carrying just `text` (no children).
@@ -119,3 +137,9 @@ pub struct SmartArt {
   kind : SmartArtKind
   nodes : Array[Node]
 } derive(Eq, Debug)
+
+///|
+pub extend SmartArt with @debug.Debug::{to_repr}
+
+///|
+pub extend SmartArt with Eq::{not_equal, equal}

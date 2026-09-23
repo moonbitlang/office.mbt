@@ -31,6 +31,15 @@ pub(all) struct Bar3DChartBody {
 } derive(Eq, Debug)
 
 ///|
+pub extend Bar3DChartBody with @debug.Debug::{to_repr}
+
+///|
+pub extend Bar3DChartBody with Eq::{not_equal, equal}
+
+///|
+pub extend Bar3DChartBody with Show::{to_string, output}
+
+///|
 pub impl Show for Bar3DChartBody with fn output(self, logger) {
   logger.write_string("Bar3DChartBody(")
   logger.write_string(self.bar_dir.to_xml())
@@ -51,6 +60,15 @@ pub(all) struct Line3DChartBody {
 } derive(Eq, Debug)
 
 ///|
+pub extend Line3DChartBody with @debug.Debug::{to_repr}
+
+///|
+pub extend Line3DChartBody with Eq::{not_equal, equal}
+
+///|
+pub extend Line3DChartBody with Show::{to_string, output}
+
+///|
 pub impl Show for Line3DChartBody with fn output(self, logger) {
   logger.write_string("Line3DChartBody(")
   logger.write_string(self.grouping.to_xml())
@@ -66,6 +84,15 @@ pub(all) struct Pie3DChartBody {
   d_lbls : DLbls?
   extension : Array[@xml.XmlElement]
 } derive(Eq, Debug)
+
+///|
+pub extend Pie3DChartBody with @debug.Debug::{to_repr}
+
+///|
+pub extend Pie3DChartBody with Eq::{not_equal, equal}
+
+///|
+pub extend Pie3DChartBody with Show::{to_string, output}
 
 ///|
 pub impl Show for Pie3DChartBody with fn output(self, logger) {
@@ -93,6 +120,15 @@ pub(all) enum BarShape {
   Pyramid
   PyramidToMax
 } derive(Eq, Debug)
+
+///|
+pub extend BarShape with @debug.Debug::{to_repr}
+
+///|
+pub extend BarShape with Eq::{not_equal, equal}
+
+///|
+pub extend BarShape with Show::{to_string, output}
 
 ///|
 pub impl Show for BarShape with fn output(self, logger) {

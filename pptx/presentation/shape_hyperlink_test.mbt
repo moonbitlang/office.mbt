@@ -251,7 +251,7 @@ test "shape hyperlink builders set the unresolved target and leave the original 
   let conn = test_connector(9)
   let conn_ext = conn.with_hyperlink(url="https://a.example")
   let conn_jump = conn.with_hyperlink_to_slide(slide_idx=2)
-  debug_inspect(conn.hyperlink is None, content="true") // ADR-003 immutability
+  debug_inspect(conn.hyperlink is None, content="true") // Immutability
   debug_inspect(
     conn_ext.hyperlink.unwrap().target,
     content="Some(ExternalUrl(\"https://a.example\"))",

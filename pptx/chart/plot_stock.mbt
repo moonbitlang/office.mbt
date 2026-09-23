@@ -33,6 +33,15 @@ pub(all) struct StockChartBody {
 } derive(Eq, Debug)
 
 ///|
+pub extend StockChartBody with @debug.Debug::{to_repr}
+
+///|
+pub extend StockChartBody with Eq::{not_equal, equal}
+
+///|
+pub extend StockChartBody with Show::{to_string, output}
+
+///|
 pub impl Show for StockChartBody with fn output(self, logger) {
   logger.write_string("StockChartBody(")
   logger.write_string(self.series.length().to_string())

@@ -24,6 +24,15 @@ pub(all) struct DoughnutChartBody {
 } derive(Eq, Debug)
 
 ///|
+pub extend DoughnutChartBody with @debug.Debug::{to_repr}
+
+///|
+pub extend DoughnutChartBody with Eq::{not_equal, equal}
+
+///|
+pub extend DoughnutChartBody with Show::{to_string, output}
+
+///|
 pub impl Show for DoughnutChartBody with fn output(self, logger) {
   logger.write_string("DoughnutChartBody(")
   logger.write_string(self.series.length().to_string())

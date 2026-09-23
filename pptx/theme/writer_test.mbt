@@ -65,7 +65,7 @@ test "Theme::serialize: theme-level extensions preserved" {
   // `serialize` → `parse` keeps them.
   let t1 = roundtrip_theme(office_like_theme())
   // The fixture has all three plus the fmtScheme captured inside
-  // themeElements (which goes into theme.extension per ADR-004).
+  // themeElements (which goes into theme.extension).
   // Order isn't guaranteed across the read/write boundary; check
   // presence by local-name membership.
   let names = t1.extension.map(e => e.name.local_name)

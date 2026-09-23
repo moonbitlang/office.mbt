@@ -19,6 +19,15 @@ pub(all) suberror Utf8Error {
 } derive(Eq, Debug)
 
 ///|
+pub extend Utf8Error with @debug.Debug::{to_repr}
+
+///|
+pub extend Utf8Error with Eq::{not_equal, equal}
+
+///|
+pub extend Utf8Error with Show::{to_string, output}
+
+///|
 pub impl Show for Utf8Error with fn output(self, logger) {
   match self {
     StrayContinuation(off) => {

@@ -464,7 +464,7 @@ fn Presentation::max_part_index(self : Presentation, prefix : String) -> Int {
   for p in self.pkg.parts() {
     // `has_prefix` rather than slicing: the old form allocated a String
     // for the prefix of *every* part in the package on every call, and
-    // this runs once per added slide (ROADMAP.md G13).
+    // this runs once per added slide.
     if p.name.length() > prefix.length() && p.name.has_prefix(prefix) {
       let rest = p.name[prefix.length():]
       let digits = match rest.find(".") {

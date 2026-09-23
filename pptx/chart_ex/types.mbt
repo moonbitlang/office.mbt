@@ -38,6 +38,15 @@ pub(all) struct ChartEx {
 } derive(Eq, Debug)
 
 ///|
+pub extend ChartEx with @debug.Debug::{to_repr}
+
+///|
+pub extend ChartEx with Eq::{not_equal, equal}
+
+///|
+pub extend ChartEx with Show::{to_string, output}
+
+///|
 pub impl Show for ChartEx with fn output(self, logger) {
   logger.write_string("ChartEx { … }")
   let _ = self
@@ -56,6 +65,15 @@ pub(all) struct ChartExBody {
   legend : @xml.XmlElement?
   extension : Array[@xml.XmlElement]
 } derive(Eq, Debug)
+
+///|
+pub extend ChartExBody with @debug.Debug::{to_repr}
+
+///|
+pub extend ChartExBody with Eq::{not_equal, equal}
+
+///|
+pub extend ChartExBody with Show::{to_string, output}
 
 ///|
 pub impl Show for ChartExBody with fn output(self, logger) {
@@ -79,6 +97,15 @@ pub(all) struct ChartExPlotArea {
 } derive(Eq, Debug)
 
 ///|
+pub extend ChartExPlotArea with @debug.Debug::{to_repr}
+
+///|
+pub extend ChartExPlotArea with Eq::{not_equal, equal}
+
+///|
+pub extend ChartExPlotArea with Show::{to_string, output}
+
+///|
 pub impl Show for ChartExPlotArea with fn output(self, logger) {
   logger.write_string("ChartExPlotArea { … }")
   let _ = self
@@ -98,6 +125,15 @@ pub(all) struct ChartExPlotAreaRegion {
   series : Array[ChartExSeries]
   extension : Array[@xml.XmlElement]
 } derive(Eq, Debug)
+
+///|
+pub extend ChartExPlotAreaRegion with @debug.Debug::{to_repr}
+
+///|
+pub extend ChartExPlotAreaRegion with Eq::{not_equal, equal}
+
+///|
+pub extend ChartExPlotAreaRegion with Show::{to_string, output}
 
 ///|
 pub impl Show for ChartExPlotAreaRegion with fn output(self, logger) {
@@ -128,6 +164,15 @@ pub(all) struct ChartExSeries {
   owner_idx : Int?
   body : @xml.XmlElement
 } derive(Eq, Debug)
+
+///|
+pub extend ChartExSeries with @debug.Debug::{to_repr}
+
+///|
+pub extend ChartExSeries with Eq::{not_equal, equal}
+
+///|
+pub extend ChartExSeries with Show::{to_string, output}
 
 ///|
 pub impl Show for ChartExSeries with fn output(self, logger) {
@@ -166,6 +211,15 @@ pub(all) enum ChartExKind {
   Histogram
   Other(String)
 } derive(Eq, Debug)
+
+///|
+pub extend ChartExKind with @debug.Debug::{to_repr}
+
+///|
+pub extend ChartExKind with Eq::{not_equal, equal}
+
+///|
+pub extend ChartExKind with Show::{to_string, output}
 
 ///|
 pub impl Show for ChartExKind with fn output(self, logger) {

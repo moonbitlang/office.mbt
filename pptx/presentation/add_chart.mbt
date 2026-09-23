@@ -31,7 +31,7 @@
 /// chart gains a `<c:externalData>` reference to a generated
 /// SpreadsheetML part mirroring the given `ChartData`, so
 /// PowerPoint's "Edit Data" opens real rows instead of a blank
-/// sheet (ADR-009's degraded-UX fix). The chart still renders from
+/// sheet. The chart still renders from
 /// its inline literals; pass the same `ChartData` the chart was
 /// built from.
 pub fn Presentation::add_chart_mut(

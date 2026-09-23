@@ -3,7 +3,7 @@
 //
 // Builds N slides with one text box each and serialises the package to
 // bytes, matching `bench_pptx.py` and `bench_pptxgenjs.js`. Nothing is
-// written to disk: the library has no file I/O (ADR-002), and the other
+// written to disk: the library has no file I/O, and the other
 // two serialise to an in-memory buffer for the same reason — disk noise
 // is not what the comparison is about.
 //

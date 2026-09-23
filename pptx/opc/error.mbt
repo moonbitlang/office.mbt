@@ -20,6 +20,15 @@ pub(all) suberror OpcError {
 } derive(Eq, Debug)
 
 ///|
+pub extend OpcError with @debug.Debug::{to_repr}
+
+///|
+pub extend OpcError with Eq::{not_equal, equal}
+
+///|
+pub extend OpcError with Show::{to_string, output}
+
+///|
 /// Wrap a `@fzip.FzipError` as an `OpcError::ZipFailure`. Used at every call
 /// site that bridges the `@fzip` and OPC layers.
 fn wrap_fzip(e : @fzip.FzipError) -> OpcError {

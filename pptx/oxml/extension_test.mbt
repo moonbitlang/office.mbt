@@ -1,4 +1,4 @@
-// Lossless preservation tests (ADR-004) for the @oxml ADTs. Color,
+// Lossless preservation tests for the @oxml ADTs. Color,
 // Fill (Gradient / Pattern / BlipFill), Stroke, and EffectList all
 // carry an `extension : Array[@xml.XmlElement]` field; these tests
 // assert that the unmodelled long-tail children round-trip.
@@ -9,7 +9,7 @@
 // --- Color.extension: unmodelled colour modifiers ---
 
 ///|
-test "ADR-004: Color captures hueMod / redMod modifiers" {
+test "Color captures hueMod / redMod modifiers" {
   let xml = "<wrapper xmlns:a=\"" +
     @oxml.drawing_ns +
     "\">" +
@@ -43,7 +43,7 @@ test "ADR-004: Color captures hueMod / redMod modifiers" {
 // --- BlipFill.extension: <a:blip> colour-mod children survive ---
 
 ///|
-test "ADR-004: BlipFill captures <a:blip> with nested duotone" {
+test "BlipFill captures <a:blip> with nested duotone" {
   let inner = "<a:blipFill>" +
     "<a:blip r:embed=\"rId7\">" +
     "<a:duotone><a:srgbClr val=\"FF0000\"/><a:srgbClr val=\"00FF00\"/></a:duotone>" +
@@ -75,7 +75,7 @@ test "ADR-004: BlipFill captures <a:blip> with nested duotone" {
 // --- Gradient.extension: tileRect survives ---
 
 ///|
-test "ADR-004: Gradient captures <a:tileRect>" {
+test "Gradient captures <a:tileRect>" {
   let inner = "<a:gradFill>" +
     "<a:gsLst><a:gs pos=\"0\"><a:srgbClr val=\"FF0000\"/></a:gs>" +
     "<a:gs pos=\"100000\"><a:srgbClr val=\"00FF00\"/></a:gs></a:gsLst>" +
@@ -96,7 +96,7 @@ test "ADR-004: Gradient captures <a:tileRect>" {
 // --- Stroke.extension: <a:custDash> and <a:extLst> survive ---
 
 ///|
-test "ADR-004: Stroke captures custDash and extLst" {
+test "Stroke captures custDash and extLst" {
   let xml = "<wrapper xmlns:a=\"" +
     @oxml.drawing_ns +
     "\">" +
@@ -128,7 +128,7 @@ test "ADR-004: Stroke captures custDash and extLst" {
 // --- EffectList.extension: <a:fillOverlay> survives ---
 
 ///|
-test "ADR-004: EffectList captures fillOverlay" {
+test "EffectList captures fillOverlay" {
   let xml = "<wrapper xmlns:a=\"" +
     @oxml.drawing_ns +
     "\">" +

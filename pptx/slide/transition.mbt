@@ -1,7 +1,7 @@
 // Slide transition — typed `<p:transition>`.
 //
 // `<p:transition>` (CT_SlideTransition, ECMA-376 §19.3.1.50) was previously
-// captured into `Slide.extension` (ADR-004). This lifts it into a typed
+// captured into `Slide.extension`. This lifts it into a typed
 // `Slide.transition` field, mirroring the `<p:bg>` lift. The effect is a
 // choice of one transition-type child element (each carrying its own direction
 // /orientation attribute); the wrapper carries the `spd` (speed), `advClick`
@@ -22,6 +22,12 @@ pub(all) enum TransitionSpeed {
   Medium
   Fast
 } derive(Eq, Debug)
+
+///|
+pub extend TransitionSpeed with @debug.Debug::{to_repr}
+
+///|
+pub extend TransitionSpeed with Eq::{not_equal, equal}
 
 ///|
 /// Parse a `spd` value; anything unrecognised (including absent) falls back to
@@ -52,6 +58,12 @@ pub(all) enum TransitionSide {
   Right
   Down
 } derive(Eq, Debug)
+
+///|
+pub extend TransitionSide with @debug.Debug::{to_repr}
+
+///|
+pub extend TransitionSide with Eq::{not_equal, equal}
 
 ///|
 pub fn TransitionSide::from_xml(s : String) -> TransitionSide {
@@ -86,6 +98,12 @@ pub(all) enum TransitionDirection {
   LeftDown
   RightDown
 } derive(Eq, Debug)
+
+///|
+pub extend TransitionDirection with @debug.Debug::{to_repr}
+
+///|
+pub extend TransitionDirection with Eq::{not_equal, equal}
 
 ///|
 pub fn TransitionDirection::from_xml(s : String) -> TransitionDirection {
@@ -125,6 +143,12 @@ pub(all) enum TransitionOrientation {
 } derive(Eq, Debug)
 
 ///|
+pub extend TransitionOrientation with @debug.Debug::{to_repr}
+
+///|
+pub extend TransitionOrientation with Eq::{not_equal, equal}
+
+///|
 pub fn TransitionOrientation::from_xml(s : String) -> TransitionOrientation {
   match s {
     "vert" => Vertical
@@ -147,6 +171,12 @@ pub(all) enum TransitionInOut {
   In
   Out
 } derive(Eq, Debug)
+
+///|
+pub extend TransitionInOut with @debug.Debug::{to_repr}
+
+///|
+pub extend TransitionInOut with Eq::{not_equal, equal}
 
 ///|
 pub fn TransitionInOut::from_xml(s : String) -> TransitionInOut {
@@ -173,6 +203,12 @@ pub(all) enum TransitionCorner {
   LeftDown
   RightDown
 } derive(Eq, Debug)
+
+///|
+pub extend TransitionCorner with @debug.Debug::{to_repr}
+
+///|
+pub extend TransitionCorner with Eq::{not_equal, equal}
 
 ///|
 pub fn TransitionCorner::from_xml(s : String) -> TransitionCorner {
@@ -235,6 +271,12 @@ pub(all) enum TransitionKind {
 } derive(Eq, Debug)
 
 ///|
+pub extend TransitionKind with @debug.Debug::{to_repr}
+
+///|
+pub extend TransitionKind with Eq::{not_equal, equal}
+
+///|
 /// A slide transition, lifted from `<p:transition>` (CT_SlideTransition). A
 /// slide with no transition is `Slide.transition == None` (the common case —
 /// most slides have no entrance effect).
@@ -252,6 +294,12 @@ pub struct Transition {
   advance_after : Int?
   extension : Array[@xml.XmlElement]
 } derive(Eq, Debug)
+
+///|
+pub extend Transition with @debug.Debug::{to_repr}
+
+///|
+pub extend Transition with Eq::{not_equal, equal}
 
 ///|
 /// Wrap a transition `kind` with the schema defaults: `Fast` speed, advance on
@@ -365,7 +413,7 @@ pub fn Transition::without_advance_after(self : Transition) -> Transition {
   { ..self, advance_after: None, }
 }
 
-// --- Slide builders (immutable, ADR-003) ---
+// --- Slide builders (immutable) ---
 
 ///|
 /// Return a new `Slide` with the given transition. Replaces any existing one.

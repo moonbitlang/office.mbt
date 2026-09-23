@@ -15,6 +15,15 @@ pub(all) suberror NotesError {
 } derive(Eq, Debug)
 
 ///|
+pub extend NotesError with @debug.Debug::{to_repr}
+
+///|
+pub extend NotesError with Eq::{not_equal, equal}
+
+///|
+pub extend NotesError with Show::{to_string, output}
+
+///|
 pub impl Show for NotesError with fn output(self, logger) {
   match self {
     XmlFailure(kind, msg) => {

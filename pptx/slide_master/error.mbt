@@ -18,6 +18,15 @@ pub(all) suberror SlideMasterError {
 } derive(Eq, Debug)
 
 ///|
+pub extend SlideMasterError with @debug.Debug::{to_repr}
+
+///|
+pub extend SlideMasterError with Eq::{not_equal, equal}
+
+///|
+pub extend SlideMasterError with Show::{to_string, output}
+
+///|
 /// Wrap an `xml::XmlError` as a `SlideMasterError::XmlFailure`. Used at every
 /// call site that bridges the `@xml` and slide-master layers.
 fn wrap_xml(e : @xml.XmlError) -> SlideMasterError {

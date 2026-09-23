@@ -25,7 +25,7 @@
 // 3-D wrappers, clrMapOvr, pivotSource, protection, spPr, txPr,
 // externalData, printSettings, userShapes, extLst, plus foreign-
 // namespace children) ride on their enclosing element's `extension`
-// array per ADR-004.
+// array.
 
 ///|
 /// A parsed chart part (`/ppt/charts/chartN.xml`).
@@ -45,6 +45,15 @@ pub(all) struct Chart {
   chart : ChartBody
   extension : Array[@xml.XmlElement]
 } derive(Eq, Debug)
+
+///|
+pub extend Chart with @debug.Debug::{to_repr}
+
+///|
+pub extend Chart with Eq::{not_equal, equal}
+
+///|
+pub extend Chart with Show::{to_string, output}
 
 ///|
 pub impl Show for Chart with fn output(self, logger) {
@@ -104,6 +113,15 @@ pub(all) struct ChartBody {
 } derive(Eq, Debug)
 
 ///|
+pub extend ChartBody with @debug.Debug::{to_repr}
+
+///|
+pub extend ChartBody with Eq::{not_equal, equal}
+
+///|
+pub extend ChartBody with Show::{to_string, output}
+
+///|
 pub impl Show for ChartBody with fn output(self, logger) {
   logger.write_string("ChartBody { … }")
   let _ = self
@@ -121,6 +139,15 @@ pub(all) enum DisplayBlanksAs {
   Gap
   Zero
 } derive(Eq, Debug)
+
+///|
+pub extend DisplayBlanksAs with @debug.Debug::{to_repr}
+
+///|
+pub extend DisplayBlanksAs with Eq::{not_equal, equal}
+
+///|
+pub extend DisplayBlanksAs with Show::{to_string, output}
 
 ///|
 pub impl Show for DisplayBlanksAs with fn output(self, logger) {
@@ -199,6 +226,15 @@ pub(all) struct PlotArea {
 } derive(Eq, Debug)
 
 ///|
+pub extend PlotArea with @debug.Debug::{to_repr}
+
+///|
+pub extend PlotArea with Eq::{not_equal, equal}
+
+///|
+pub extend PlotArea with Show::{to_string, output}
+
+///|
 pub impl Show for PlotArea with fn output(self, logger) {
   logger.write_string("PlotArea { … }")
   let _ = self
@@ -247,6 +283,15 @@ pub(all) enum Plot {
 } derive(Eq, Debug)
 
 ///|
+pub extend Plot with @debug.Debug::{to_repr}
+
+///|
+pub extend Plot with Eq::{not_equal, equal}
+
+///|
+pub extend Plot with Show::{to_string, output}
+
+///|
 pub impl Show for Plot with fn output(self, logger) {
   logger.write_string("Plot(")
   logger.write_string(self.local_name())
@@ -293,6 +338,15 @@ pub(all) enum Axis {
   DateAx(AxisCore)
   SerAx(AxisCore)
 } derive(Eq, Debug)
+
+///|
+pub extend Axis with @debug.Debug::{to_repr}
+
+///|
+pub extend Axis with Eq::{not_equal, equal}
+
+///|
+pub extend Axis with Show::{to_string, output}
 
 ///|
 pub impl Show for Axis with fn output(self, logger) {

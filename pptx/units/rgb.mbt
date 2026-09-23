@@ -14,6 +14,15 @@ pub struct RgbColor {
 } derive(Eq, Debug)
 
 ///|
+pub extend RgbColor with @debug.Debug::{to_repr}
+
+///|
+pub extend RgbColor with Eq::{not_equal, equal}
+
+///|
+pub extend RgbColor with Show::{to_string, output}
+
+///|
 /// Construct an `RgbColor` from three 0–255 channel values.
 /// Each channel is clamped to `[0, 255]`.
 pub fn RgbColor::new(r : Int, g : Int, b : Int) -> RgbColor {

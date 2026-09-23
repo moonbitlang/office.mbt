@@ -8,7 +8,7 @@
 // The `<a:graphicData uri="…">` URI discriminates the embedded
 // content kind. We type the table case; everything else is captured
 // wholesale into `GraphicFrameContent::OtherGraphic(uri, element)`
-// so charts / SmartArt / OLE round-trip through ADR-004 until their
+// so charts / SmartArt / OLE round-trip through captured XML until their
 // own phases arrive.
 
 ///|
@@ -76,7 +76,7 @@ fn parse_graphic_frame(r : @xml.XmlReader) -> GraphicFrame raise SlideError {
     transform,
     content: c,
     // Build-only (like AutoShape's): a parsed `<a:hlinkClick>` round-trips
-    // via the captured `<p:cNvPr>` in `extension` (ADR-004).
+    // via the captured `<p:cNvPr>` in `extension`.
     hyperlink: None,
     extension,
   }

@@ -6,7 +6,7 @@ corpus file, holding the file's bytes as fixed-width base64 chunks plus
 an accessor decoding them via `corpus_bytes` (hand-written in
 `corpus_test.mbt`). Embedding real Office output into the blackbox test
 package lets `moon test` exercise reader/model round-trips on every backend
-without file I/O (Tier 1 of the ADR-011 verification pyramid).
+without file I/O.
 
 Run from the repo root (no arguments; stdlib only):
 
@@ -45,7 +45,7 @@ HEADER = """\
 // Provenance: Apache POI test data, Apache-2.0 — see
 // pptx/fixtures/poi/SOURCES.md. Decoded at test time by
 // `corpus_bytes` (corpus_test.mbt) so `moon test` exercises the read
-// path on real Office output on every backend (ADR-011 Tier 1).
+// path on real Office output on every backend.
 
 ///|
 /// Byte length of the original `{name}`.

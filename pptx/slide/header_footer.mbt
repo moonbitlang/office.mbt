@@ -16,6 +16,12 @@ pub(all) enum DateMode {
 } derive(Eq, Debug)
 
 ///|
+pub extend DateMode with @debug.Debug::{to_repr}
+
+///|
+pub extend DateMode with Eq::{not_equal, equal}
+
+///|
 /// Conventional slide-level placeholder indices, matching PowerPoint's own
 /// output: date = 10, footer = 11, slide number = 12.
 let ph_idx_date : Int = 10

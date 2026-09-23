@@ -34,6 +34,12 @@ pub(all) enum RectAlignment {
 } derive(Eq, Debug)
 
 ///|
+pub extend RectAlignment with @debug.Debug::{to_repr}
+
+///|
+pub extend RectAlignment with Eq::{not_equal, equal}
+
+///|
 /// Parse `RectAlignment` from its OOXML attribute string. Unknown
 /// values return `None`.
 pub fn RectAlignment::from_xml(s : String) -> RectAlignment? {
@@ -59,11 +65,23 @@ pub struct Blur {
 } derive(Eq, Debug)
 
 ///|
+pub extend Blur with @debug.Debug::{to_repr}
+
+///|
+pub extend Blur with Eq::{not_equal, equal}
+
+///|
 /// `<a:glow rad="…">…color…</a:glow>` — outer glow.
 pub struct Glow {
   rad : @units.Emu
   color : Color
 } derive(Eq, Debug)
+
+///|
+pub extend Glow with @debug.Debug::{to_repr}
+
+///|
+pub extend Glow with Eq::{not_equal, equal}
 
 ///|
 /// `<a:innerShdw blurRad="…" dist="…" dir="…">…color…</a:innerShdw>`
@@ -73,6 +91,12 @@ pub struct InnerShadow {
   dir : @units.Angle
   color : Color
 } derive(Eq, Debug)
+
+///|
+pub extend InnerShadow with @debug.Debug::{to_repr}
+
+///|
+pub extend InnerShadow with Eq::{not_equal, equal}
 
 ///|
 /// `<a:outerShdw blurRad="…" dist="…" dir="…" sx="…" sy="…" kx="…"
@@ -91,6 +115,12 @@ pub struct OuterShadow {
 } derive(Eq, Debug)
 
 ///|
+pub extend OuterShadow with @debug.Debug::{to_repr}
+
+///|
+pub extend OuterShadow with Eq::{not_equal, equal}
+
+///|
 /// `<a:prstShdw prst="…" dist="…" dir="…">…color…</a:prstShdw>` — a
 /// preset-named shadow. PowerPoint exposes 20 named presets in
 /// `ST_PresetShadowVal`. Kept as a `String` so unknown presets
@@ -103,10 +133,22 @@ pub struct PresetShadow {
 } derive(Eq, Debug)
 
 ///|
+pub extend PresetShadow with @debug.Debug::{to_repr}
+
+///|
+pub extend PresetShadow with Eq::{not_equal, equal}
+
+///|
 /// `<a:softEdge rad="…"/>` — fades the shape edge inward.
 pub struct SoftEdge {
   rad : @units.Emu
 } derive(Eq, Debug)
+
+///|
+pub extend SoftEdge with @debug.Debug::{to_repr}
+
+///|
+pub extend SoftEdge with Eq::{not_equal, equal}
 
 ///|
 /// `<a:reflection …/>` — mirrored reflection beneath the shape. Many
@@ -129,6 +171,12 @@ pub struct Reflection {
 } derive(Eq, Debug)
 
 ///|
+pub extend Reflection with @debug.Debug::{to_repr}
+
+///|
+pub extend Reflection with Eq::{not_equal, equal}
+
+///|
 /// Parsed `<a:effectLst>` — every child is optional; absent → `None`.
 /// The `<a:fillOverlay>` element is recognised but not currently
 /// modelled (it carries a nested `Fill` plus a blend mode); we drop it
@@ -146,6 +194,12 @@ pub struct EffectList {
 } derive(Eq, Debug)
 
 ///|
+pub extend EffectList with @debug.Debug::{to_repr}
+
+///|
+pub extend EffectList with Eq::{not_equal, equal}
+
+///|
 /// Errors raised by `parse_effect_list`.
 pub(all) suberror EffectError {
   /// Schema violated — missing required attribute or required colour.
@@ -153,6 +207,15 @@ pub(all) suberror EffectError {
   /// A nested colour child raised `ColorError`.
   EffectColorFailure(String)
 } derive(Eq, Debug)
+
+///|
+pub extend EffectError with @debug.Debug::{to_repr}
+
+///|
+pub extend EffectError with Eq::{not_equal, equal}
+
+///|
+pub extend EffectError with Show::{to_string, output}
 
 ///|
 pub impl Show for EffectError with fn output(self, logger) {

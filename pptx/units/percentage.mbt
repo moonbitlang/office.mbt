@@ -18,6 +18,15 @@ pub let ooxml_per_percent : Int = 1000
 pub(all) struct Percentage(Double) derive(Eq, Debug)
 
 ///|
+pub extend Percentage with @debug.Debug::{to_repr}
+
+///|
+pub extend Percentage with Eq::{not_equal, equal}
+
+///|
+pub extend Percentage with Show::{to_string, output}
+
+///|
 /// Unwrap the percentage value as a `Double` percent (e.g.
 /// `50.0` for 50 %).
 pub fn Percentage::value(self : Percentage) -> Double {

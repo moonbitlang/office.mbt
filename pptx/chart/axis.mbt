@@ -25,8 +25,8 @@
 // `auto`, CT_ValAx's `crossBetween` / `majorUnit` / `dispUnits`,
 // CT_DateAx's `baseTimeUnit` / `majorTimeUnit`, CT_SerAx's
 // `tickLblSkip` / `tickMarkSkip`, plus `<c:extLst>` and any
-// foreign-namespace siblings) ride on `AxisCore.extension` per
-// ADR-004 — they round-trip verbatim until later slices type them.
+// foreign-namespace siblings) ride on `AxisCore.extension` so they
+// round-trip without needing a typed representation.
 //
 // Schema-required fields are stored as `Option` on the model: the
 // parser is lenient (defaults to `None` if absent) so minimal-but-
@@ -91,6 +91,15 @@ pub(all) struct AxisCore {
 } derive(Eq, Debug)
 
 ///|
+pub extend AxisCore with @debug.Debug::{to_repr}
+
+///|
+pub extend AxisCore with Eq::{not_equal, equal}
+
+///|
+pub extend AxisCore with Show::{to_string, output}
+
+///|
 pub impl Show for AxisCore with fn output(self, logger) {
   logger.write_string("AxisCore(axId=")
   logger.write_string(self.ax_id.to_string())
@@ -117,6 +126,15 @@ pub(all) struct Scaling {
 } derive(Eq, Debug)
 
 ///|
+pub extend Scaling with @debug.Debug::{to_repr}
+
+///|
+pub extend Scaling with Eq::{not_equal, equal}
+
+///|
+pub extend Scaling with Show::{to_string, output}
+
+///|
 pub impl Show for Scaling with fn output(self, logger) {
   logger.write_string("Scaling { … }")
   let _ = self
@@ -132,6 +150,15 @@ pub(all) enum Orientation {
   MinMax
   MaxMin
 } derive(Eq, Debug)
+
+///|
+pub extend Orientation with @debug.Debug::{to_repr}
+
+///|
+pub extend Orientation with Eq::{not_equal, equal}
+
+///|
+pub extend Orientation with Show::{to_string, output}
 
 ///|
 pub impl Show for Orientation with fn output(self, logger) {
@@ -173,6 +200,15 @@ pub(all) enum AxPos {
   Right
   Top
 } derive(Eq, Debug)
+
+///|
+pub extend AxPos with @debug.Debug::{to_repr}
+
+///|
+pub extend AxPos with Eq::{not_equal, equal}
+
+///|
+pub extend AxPos with Show::{to_string, output}
 
 ///|
 pub impl Show for AxPos with fn output(self, logger) {
@@ -224,6 +260,15 @@ pub(all) enum TickMark {
 } derive(Eq, Debug)
 
 ///|
+pub extend TickMark with @debug.Debug::{to_repr}
+
+///|
+pub extend TickMark with Eq::{not_equal, equal}
+
+///|
+pub extend TickMark with Show::{to_string, output}
+
+///|
 pub impl Show for TickMark with fn output(self, logger) {
   match self {
     Cross => logger.write_string("Cross")
@@ -272,6 +317,15 @@ pub(all) enum TickLblPos {
 } derive(Eq, Debug)
 
 ///|
+pub extend TickLblPos with @debug.Debug::{to_repr}
+
+///|
+pub extend TickLblPos with Eq::{not_equal, equal}
+
+///|
+pub extend TickLblPos with Show::{to_string, output}
+
+///|
 pub impl Show for TickLblPos with fn output(self, logger) {
   match self {
     High => logger.write_string("High")
@@ -318,6 +372,15 @@ pub(all) enum Crosses {
 } derive(Eq, Debug)
 
 ///|
+pub extend Crosses with @debug.Debug::{to_repr}
+
+///|
+pub extend Crosses with Eq::{not_equal, equal}
+
+///|
+pub extend Crosses with Show::{to_string, output}
+
+///|
 pub impl Show for Crosses with fn output(self, logger) {
   match self {
     AutoZero => logger.write_string("AutoZero")
@@ -362,6 +425,15 @@ pub(all) struct NumFmt {
   format_code : String
   source_linked : Bool?
 } derive(Eq, Debug)
+
+///|
+pub extend NumFmt with @debug.Debug::{to_repr}
+
+///|
+pub extend NumFmt with Eq::{not_equal, equal}
+
+///|
+pub extend NumFmt with Show::{to_string, output}
 
 ///|
 pub impl Show for NumFmt with fn output(self, logger) {

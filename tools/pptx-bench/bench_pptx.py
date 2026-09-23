@@ -3,7 +3,7 @@
 
 Same workload as `pptx/cmd/bench` and `bench_pptxgenjs.js`: N slides,
 one text box each, serialised to an in-memory buffer. Nothing touches the
-disk — moon-pptx has no file I/O by design (ADR-002), so writing a file
+disk — the PPTX library has no file I/O by design, so writing a file
 would time the host, not the library.
 
 Prints the byte count so the work cannot be optimised away.

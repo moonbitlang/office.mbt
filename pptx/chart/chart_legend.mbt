@@ -18,7 +18,7 @@
 //
 // Substantial subtrees (layout, spPr, txPr) keep round-tripping as
 // captured XmlElement until later slices type them. Foreign-namespace
-// + `<c:extLst>` ride on `ChartLegend.extension` per ADR-004.
+// + `<c:extLst>` ride on `ChartLegend.extension`.
 //
 // `<c:legendEntry>` (CT_LegendEntry, §21.2.2.94) carries a required
 // `<c:idx>` plus an EG_LegendEntryData group whose only members in
@@ -51,6 +51,15 @@ pub(all) struct ChartLegend {
 } derive(Eq, Debug)
 
 ///|
+pub extend ChartLegend with @debug.Debug::{to_repr}
+
+///|
+pub extend ChartLegend with Eq::{not_equal, equal}
+
+///|
+pub extend ChartLegend with Show::{to_string, output}
+
+///|
 pub impl Show for ChartLegend with fn output(self, logger) {
   logger.write_string("ChartLegend(")
   logger.write_string(self.legend_entries.length().to_string())
@@ -72,6 +81,15 @@ pub(all) enum LegendPos {
   LegendRight
   LegendTop
 } derive(Eq, Debug)
+
+///|
+pub extend LegendPos with @debug.Debug::{to_repr}
+
+///|
+pub extend LegendPos with Eq::{not_equal, equal}
+
+///|
+pub extend LegendPos with Show::{to_string, output}
 
 ///|
 pub impl Show for LegendPos with fn output(self, logger) {
@@ -132,6 +150,15 @@ pub(all) struct LegendEntry {
   tx_pr : @xml.XmlElement?
   extension : Array[@xml.XmlElement]
 } derive(Eq, Debug)
+
+///|
+pub extend LegendEntry with @debug.Debug::{to_repr}
+
+///|
+pub extend LegendEntry with Eq::{not_equal, equal}
+
+///|
+pub extend LegendEntry with Show::{to_string, output}
 
 ///|
 pub impl Show for LegendEntry with fn output(self, logger) {

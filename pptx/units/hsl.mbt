@@ -20,6 +20,15 @@ pub struct HslColor {
 } derive(Eq, Debug)
 
 ///|
+pub extend HslColor with @debug.Debug::{to_repr}
+
+///|
+pub extend HslColor with Eq::{not_equal, equal}
+
+///|
+pub extend HslColor with Show::{to_string, output}
+
+///|
 /// Construct an `HslColor` from hue (degrees, auto-wrapped),
 /// saturation (`[0.0, 1.0]`), and lightness (`[0.0, 1.0]`).
 pub fn HslColor::new(

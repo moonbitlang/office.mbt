@@ -62,6 +62,15 @@ pub(all) enum ChartOption {
 } derive(Eq, Debug)
 
 ///|
+pub extend ChartOption with @debug.Debug::{to_repr}
+
+///|
+pub extend ChartOption with Eq::{not_equal, equal}
+
+///|
+pub extend ChartOption with Show::{to_string, output}
+
+///|
 pub impl Show for ChartOption with fn output(self, logger) {
   logger.write_string("ChartOption(")
   let tag = match self {
@@ -83,7 +92,7 @@ pub impl Show for ChartOption with fn output(self, logger) {
 
 ///|
 /// Apply a list of options to a chart, left to right (later options of the
-/// same kind win). Immutable (ADR-003) — returns a new `Chart`.
+/// same kind win). Immutable — returns a new `Chart`.
 ///
 /// ```
 /// let chart = Chart::of_bar(data).with_options([

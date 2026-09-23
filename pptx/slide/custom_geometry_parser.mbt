@@ -46,7 +46,7 @@ fn parse_custom_geometry(r : @xml.XmlReader) -> CustomGeometry raise SlideError 
             }
             "pathLst" => parse_path_lst(r, paths, extension)
             // <a:ahLst> (adjust handles) and any future siblings — keep
-            // verbatim per ADR-004.
+            // verbatim.
             _ => extension.push(collect_subtree_unknown(r, child, attrs))
           }
         }

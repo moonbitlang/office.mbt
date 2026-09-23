@@ -88,6 +88,12 @@ pub(all) enum TableStylePreset {
 } derive(Eq, Debug)
 
 ///|
+pub extend TableStylePreset with @debug.Debug::{to_repr}
+
+///|
+pub extend TableStylePreset with Eq::{not_equal, equal}
+
+///|
 /// The style's `<a:tableStyleId>` GUID (MS-OE376 Part 4 §5.1.6.10).
 pub fn TableStylePreset::guid(self : TableStylePreset) -> String {
   match self {

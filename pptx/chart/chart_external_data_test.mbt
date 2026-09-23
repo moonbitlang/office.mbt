@@ -10,8 +10,7 @@
 // the reference to the xlsx part survives a parse → serialize cycle.
 //
 // The xlsx part itself rides through @opc.Package as an opaque part
-// keyed by content type — no SpreadsheetML parsing happens. This is
-// formalised in ADR-009.
+// keyed by content type — no SpreadsheetML parsing happens.
 
 ///|
 test "externalData: round-trips via Chart.extension" {

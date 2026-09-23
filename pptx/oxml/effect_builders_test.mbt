@@ -92,7 +92,7 @@ test "OuterShadow::new leaves the optionals unset; with_* fill them" {
   debug_inspect(full.ky.unwrap().to_ooxml(), content="120000")
   debug_inspect(full.alignment is Some(RectBottomLeft), content="true")
   debug_inspect(full.rotate_with_shape, content="Some(false)")
-  // The base is untouched — builders are immutable (ADR-003).
+  // The base is untouched — builders are immutable.
   debug_inspect(base.sx is None, content="true")
 }
 

@@ -17,6 +17,12 @@ pub(all) enum MediaKind {
 } derive(Eq, Debug)
 
 ///|
+pub extend MediaKind with @debug.Debug::{to_repr}
+
+///|
+pub extend MediaKind with Eq::{not_equal, equal}
+
+///|
 /// The media references attached to a media `<p:pic>`.
 ///
 /// - `link_id` — `r:link` on `<a:videoFile>` / `<a:audioFile>` — the media
@@ -29,6 +35,12 @@ pub(all) struct MediaInfo {
   link_id : String
   embed_id : String
 } derive(Eq, Debug)
+
+///|
+pub extend MediaInfo with @debug.Debug::{to_repr}
+
+///|
+pub extend MediaInfo with Eq::{not_equal, equal}
 
 ///|
 /// Construct a media `Picture`. `link_id` is the `r:link` of the

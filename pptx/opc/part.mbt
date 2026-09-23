@@ -20,6 +20,12 @@ pub struct Part {
 } derive(Debug)
 
 ///|
+pub extend Part with @debug.Debug::{to_repr}
+
+///|
+pub extend Part with Show::{to_string, output}
+
+///|
 /// Construct a part with explicit fields. Name is validated.
 pub fn Part::new(
   name : String,

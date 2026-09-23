@@ -31,6 +31,12 @@ pub(all) struct FillRect {
 } derive(Eq, Debug)
 
 ///|
+pub extend FillRect with @debug.Debug::{to_repr}
+
+///|
+pub extend FillRect with Eq::{not_equal, equal}
+
+///|
 /// Source rectangle (`<a:srcRect>`) — the crop inside the source image
 /// for a blip fill. Same `Percentage` scale as `FillRect`. Distinct
 /// type so the parser can keep src-vs-dst rectangles unambiguous.
@@ -42,6 +48,12 @@ pub(all) struct SrcRect {
 } derive(Eq, Debug)
 
 ///|
+pub extend SrcRect with @debug.Debug::{to_repr}
+
+///|
+pub extend SrcRect with Eq::{not_equal, equal}
+
+///|
 /// Tile flip mode (`ST_TileFlipMode`). `FlipNone` is the spec default.
 pub(all) enum TileFlip {
   FlipNone // "none"
@@ -49,6 +61,12 @@ pub(all) enum TileFlip {
   FlipY // "y"
   FlipXy // "xy"
 } derive(Eq, Debug)
+
+///|
+pub extend TileFlip with @debug.Debug::{to_repr}
+
+///|
+pub extend TileFlip with Eq::{not_equal, equal}
 
 ///|
 /// Parse `TileFlip` from its OOXML attribute string. Unknown
@@ -77,6 +95,12 @@ pub(all) enum TileAlignment {
   AlignBottom // "b"
   AlignBottomRight // "br"
 } derive(Eq, Debug)
+
+///|
+pub extend TileAlignment with @debug.Debug::{to_repr}
+
+///|
+pub extend TileAlignment with Eq::{not_equal, equal}
 
 ///|
 /// Parse `TileAlignment` from its OOXML attribute string. Unknown
@@ -109,6 +133,12 @@ pub(all) struct TileSpec {
 } derive(Eq, Debug)
 
 ///|
+pub extend TileSpec with @debug.Debug::{to_repr}
+
+///|
+pub extend TileSpec with Eq::{not_equal, equal}
+
+///|
 /// Blip fill mode — either stretch with an optional clip rectangle, or
 /// tile with positioning + scaling + flip + alignment.
 ///
@@ -118,6 +148,12 @@ pub(all) enum BlipFillMode {
   Stretch(FillRect?)
   Tile(TileSpec)
 } derive(Eq, Debug)
+
+///|
+pub extend BlipFillMode with @debug.Debug::{to_repr}
+
+///|
+pub extend BlipFillMode with Eq::{not_equal, equal}
 
 ///|
 /// `<a:blipFill>` — picture / texture fill.
@@ -141,6 +177,12 @@ pub(all) struct BlipFill {
   fill_mode : BlipFillMode
   extension : Array[@xml.XmlElement]
 } derive(Eq, Debug)
+
+///|
+pub extend BlipFill with @debug.Debug::{to_repr}
+
+///|
+pub extend BlipFill with Eq::{not_equal, equal}
 
 ///|
 /// The `<a:ext>` URI that keys the SVG-blip extension inside an
@@ -201,6 +243,12 @@ pub(all) struct GradientStop {
 } derive(Eq, Debug)
 
 ///|
+pub extend GradientStop with @debug.Debug::{to_repr}
+
+///|
+pub extend GradientStop with Eq::{not_equal, equal}
+
+///|
 /// Gradient direction. `Linear(angle, scaled)` mirrors `<a:lin>`;
 /// `Path*` mirror `<a:path path="…">` for the three accepted shapes.
 ///
@@ -212,6 +260,12 @@ pub(all) enum GradientDirection {
   PathCircle
   PathShape
 } derive(Eq, Debug)
+
+///|
+pub extend GradientDirection with @debug.Debug::{to_repr}
+
+///|
+pub extend GradientDirection with Eq::{not_equal, equal}
 
 ///|
 /// `<a:gradFill>` — gradient fill.
@@ -230,6 +284,12 @@ pub(all) struct Gradient {
 } derive(Eq, Debug)
 
 ///|
+pub extend Gradient with @debug.Debug::{to_repr}
+
+///|
+pub extend Gradient with Eq::{not_equal, equal}
+
+///|
 /// `<a:pattFill>` — pattern fill (cross-hatch, dot, etc.).
 ///
 /// - `preset` (`prst`) — one of ~48 preset names per `ST_PresetPatternVal`.
@@ -242,6 +302,12 @@ pub(all) struct Pattern {
 } derive(Eq, Debug)
 
 ///|
+pub extend Pattern with @debug.Debug::{to_repr}
+
+///|
+pub extend Pattern with Eq::{not_equal, equal}
+
+///|
 /// Top-level fill choice. Every OOXML fill site decomposes to one of
 /// these five variants.
 pub(all) enum Fill {
@@ -251,6 +317,12 @@ pub(all) enum Fill {
   PatternFill(Pattern)
   BlipFillVariant(BlipFill)
 } derive(Eq, Debug)
+
+///|
+pub extend Fill with @debug.Debug::{to_repr}
+
+///|
+pub extend Fill with Eq::{not_equal, equal}
 
 // The ADT above is fully buildable by hand but verbose for the common
 // cases; the constructors below cover them. Anything they don't expose
@@ -330,6 +402,15 @@ pub(all) suberror FillError {
   /// description.
   ColorFailure(String)
 } derive(Eq, Debug)
+
+///|
+pub extend FillError with @debug.Debug::{to_repr}
+
+///|
+pub extend FillError with Eq::{not_equal, equal}
+
+///|
+pub extend FillError with Show::{output}
 
 ///|
 pub impl Show for FillError with fn output(self, logger) {

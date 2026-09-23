@@ -5,7 +5,7 @@
 // `parse_*` helper is called *just after* its element's StartElement has
 // been consumed and consumes events through the matching EndElement.
 //
-// ADR-004 lossless preservation: helpers that walk a body and would
+// Lossless preservation: helpers that walk a body and would
 // otherwise drop unknown children take a `parent_extension` argument —
 // the surrounding shape's (or slide's) `extension : Array[XmlElement]`.
 // Unknown children land on that array via `collect_subtree_unknown` so
@@ -96,7 +96,7 @@ fn parse_slide_xml(
 /// `advTm` attributes plus the optional single transition-effect child. Lifts
 /// the transition out of `extension` into the typed `Slide.transition`
 /// field. `<p:sndAc>` / `<p:extLst>` and any unmodelled children are
-/// preserved per ADR-004.
+/// preserved.
 fn parse_transition(
   r : @xml.XmlReader,
   attrs : Array[(@xml.QName, String)],
@@ -257,7 +257,7 @@ fn parse_bg(r : @xml.XmlReader) -> Background raise SlideError {
 ///|
 /// Parse `<p:bgPr>` (CT_BackgroundProperties): a required fill, optional
 /// `<a:effectLst>`, the `shadeToTitle` attribute, and any unmodelled
-/// children preserved per ADR-004.
+/// children preserved.
 fn parse_bg_pr(
   r : @xml.XmlReader,
   attrs : Array[(@xml.QName, String)],
@@ -345,7 +345,7 @@ fn parse_sp_tree(
 ) -> Unit raise SlideError {
   // The first two children of every spTree are nvGrpSpPr + grpSpPr —
   // metadata for the implicit root group. We don't model them as part
-  // of the shape list, but per ADR-004 they round-trip through the
+  // of the shape list, but they round-trip through the
   // slide-level `extension` so writers can re-emit them.
   while true {
     let ev = next_event(r)
@@ -449,7 +449,7 @@ fn parse_connector(r : @xml.XmlReader) -> Connector raise SlideError {
     start,
     end,
     // Build-only (like AutoShape's): a parsed `<a:hlinkClick>` round-trips
-    // via the captured `<p:cNvPr>` in `extension` (ADR-004).
+    // via the captured `<p:cNvPr>` in `extension`.
     hyperlink: None,
     extension,
   }
@@ -598,7 +598,7 @@ fn parse_group_shape(r : @xml.XmlReader) -> GroupShape raise SlideError {
     child_extent,
     children,
     // Build-only (like AutoShape's): a parsed `<a:hlinkClick>` round-trips
-    // via the captured `<p:cNvPr>` in `extension` (ADR-004).
+    // via the captured `<p:cNvPr>` in `extension`.
     hyperlink: None,
     extension,
   }
@@ -782,10 +782,10 @@ fn parse_picture(r : @xml.XmlReader) -> Picture raise SlideError {
     effects,
     blip_fill: bf,
     // Media is lifted only by builders; parsed media refs round-trip via
-    // `extension` (ADR-004). See `media.mbt`.
+    // `extension`. See `media.mbt`.
     media: None,
     // Hyperlink is build-only too; a parsed `<a:hlinkClick>` round-trips via
-    // the captured `<p:cNvPr>` in `extension` (ADR-004). See `shape_hyperlink.mbt`.
+    // the captured `<p:cNvPr>` in `extension`. See `shape_hyperlink.mbt`.
     hyperlink: None,
     extension,
   }
@@ -850,7 +850,7 @@ fn parse_auto_shape(
     effects,
     text_body,
     // Build-only (like media): a parsed `<a:hlinkClick>` round-trips via the
-    // captured `<p:cNvPr>` in `extension` (ADR-004).
+    // captured `<p:cNvPr>` in `extension`.
     hyperlink: None,
     extension,
   }
@@ -1023,7 +1023,7 @@ fn parse_nv_pr(
 /// (`<a:solidFill>` / `<a:gradFill>` / `<a:pattFill>` / `<a:blipFill>`
 /// / `<a:noFill>`), `<a:ln>`, and `<a:effectLst>`. Other children
 /// (`<a:scene3d>`, `<a:sp3d>`, `<a:extLst>`, foreign-namespace) land
-/// on `parent_extension` so they round-trip per ADR-004.
+/// on `parent_extension` so they round-trip.
 fn parse_sp_pr(
   r : @xml.XmlReader,
   parent_extension : Array[@xml.XmlElement],
@@ -1048,7 +1048,7 @@ fn parse_sp_pr(
               // Typed `<a:custGeom>` parser. Path commands, guides,
               // connection sites, and rect lift into the
               // `CustomGeometry` AST; unknown siblings round-trip via
-              // its own `extension` per ADR-004.
+              // its own `extension`.
               geometry = Some(Custom(parse_custom_geometry(r)))
             // EG_FillProperties choice — at most one fires.
             "noFill"
@@ -1078,7 +1078,7 @@ fn parse_sp_pr(
               effects = Some(e)
             }
             // scene3d / sp3d / extLst / effectDag / fillOverlay etc. —
-            // not yet modelled, preserved per ADR-004.
+            // not yet modelled, preserved.
             _ => parent_extension.push(collect_subtree_unknown(r, child, attrs))
           }
         }

@@ -17,7 +17,7 @@
 // Both schemas are small and self-contained — no shape tree, no theme
 // resolution — so they live in a stand-alone `@comments` package rather
 // than getting folded into `@slide`. The lossless-extension array is
-// retained on every node per ADR-004 so future Office variants (e.g.
+// retained on every node so future Office variants (e.g.
 // modernComments, threadedComments) round-trip through writers even
 // before we model them.
 
@@ -47,6 +47,12 @@ pub(all) struct CommentAuthor {
 } derive(Eq, Debug)
 
 ///|
+pub extend CommentAuthor with @debug.Debug::{to_repr}
+
+///|
+pub extend CommentAuthor with Eq::{not_equal, equal}
+
+///|
 /// The full author list parsed from `commentAuthors.xml`. The package
 /// holds at most one such part; presentations without any review
 /// comments simply omit the part entirely.
@@ -58,6 +64,12 @@ pub(all) struct CommentAuthorList {
   authors : Array[CommentAuthor]
   extension : Array[@xml.XmlElement]
 } derive(Eq, Debug)
+
+///|
+pub extend CommentAuthorList with @debug.Debug::{to_repr}
+
+///|
+pub extend CommentAuthorList with Eq::{not_equal, equal}
 
 // --- Comments ---
 
@@ -71,6 +83,12 @@ pub(all) struct CommentPos {
   x : @units.Emu
   y : @units.Emu
 } derive(Eq, Debug)
+
+///|
+pub extend CommentPos with @debug.Debug::{to_repr}
+
+///|
+pub extend CommentPos with Eq::{not_equal, equal}
 
 ///|
 /// One review comment parsed from `<p:cm>` in `commentsN.xml`. The
@@ -100,6 +118,12 @@ pub(all) struct Comment {
 } derive(Eq, Debug)
 
 ///|
+pub extend Comment with @debug.Debug::{to_repr}
+
+///|
+pub extend Comment with Eq::{not_equal, equal}
+
+///|
 /// The full per-slide comment list parsed from `commentsN.xml`.
 ///
 /// - `comments` — Comments in source order. Mid-thread reordering is rare but
@@ -108,3 +132,9 @@ pub(all) struct CommentList {
   comments : Array[Comment]
   extension : Array[@xml.XmlElement]
 } derive(Eq, Debug)
+
+///|
+pub extend CommentList with @debug.Debug::{to_repr}
+
+///|
+pub extend CommentList with Eq::{not_equal, equal}

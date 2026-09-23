@@ -8,7 +8,7 @@
 //
 // Modelled: `clrMap` and `sldLayoutIdLst`. The shape tree, text
 // styles, header/footer toggles, transitions, and extension lists
-// round-trip via `extension` per ADR-004 until a consumer typed
+// round-trip via `extension` until a consumer typed
 // model needs them.
 
 ///|
@@ -21,6 +21,12 @@ pub(all) struct SlideLayoutRef {
   id : Int64
   r_id : String
 } derive(Eq, Debug)
+
+///|
+pub extend SlideLayoutRef with @debug.Debug::{to_repr}
+
+///|
+pub extend SlideLayoutRef with Eq::{not_equal, equal}
 
 ///|
 /// A parsed slide master.
@@ -37,6 +43,12 @@ pub(all) struct SlideMaster {
   layout_refs : Array[SlideLayoutRef]
   extension : Array[@xml.XmlElement]
 } derive(Eq, Debug)
+
+///|
+pub extend SlideMaster with @debug.Debug::{to_repr}
+
+///|
+pub extend SlideMaster with Eq::{not_equal, equal}
 
 ///|
 /// Parse a slide master part from raw XML bytes.

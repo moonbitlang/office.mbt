@@ -43,7 +43,7 @@ test "duplicate_slide_mut: clone re-references the source's parts" {
     cy=Emu(100L),
   )
   let new_name = prs.duplicate_slide_mut(0)
-  // Only one image part exists — the clone shares it (Q12: re-reference).
+  // Only one image part exists — the clone shares it (shared media reference).
   debug_inspect(
     prs.opc_package().part_by_name("/ppt/media/image1.png") is Some(_),
     content="true",

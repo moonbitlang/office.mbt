@@ -20,7 +20,7 @@
 // orphaned part bloats the file slightly but never trips a repair
 // prompt, whereas deleting a still-referenced part does.
 //
-// Per ADR-003 the immutable counterpart is `without_slide(index) -> Self`.
+// The immutable counterpart is `without_slide(index) -> Self`.
 
 ///|
 /// Remove the slide at `slide_index` (in `<p:sldIdLst>` / `slides()`

@@ -4,7 +4,7 @@
 // replace (`@presentation.update_slide_mut`). These helpers close the gap:
 // locate an *existing* shape (by position, by stable id, or via the placeholder
 // placeholder accessors) and overwrite it in place, all without rebuilding
-// the `shapes` array by hand. Immutable per ADR-003 — every builder returns
+// the `shapes` array by hand. Immutable — every builder returns
 // a new `Slide`; the original is untouched. Lookups that can't resolve their
 // target raise `SlideError` (mirroring `update_slide_mut`'s out-of-range
 // behaviour) rather than silently doing nothing — use `map_shapes` for
@@ -96,7 +96,7 @@ pub fn Slide::with_shape_auto_id(self : Slide, shape : Shape) -> Slide {
 ///
 /// This is a query and not a `serialize` failure on purpose: a deck parsed
 /// from a third-party file can arrive with duplicates already in it, and
-/// refusing to write it back would cost the lossless round-trip (ADR-004).
+/// refusing to write it back would cost the lossless round-trip.
 /// Check it on decks you assemble; leave the ones you are only passing
 /// through alone.
 pub fn Slide::duplicate_shape_ids(self : Slide) -> Array[Int] {

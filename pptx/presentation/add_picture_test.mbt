@@ -424,7 +424,7 @@ test "add_video_mut: wires media + poster parts, three rels, content types" {
   // The slide holds one media picture: poster (rId2), link (rId3), embed (rId4).
   // The slide holds one picture whose poster is rId2. On re-parse `media` is
   // None — the videoFile / p14:media references round-trip through
-  // `extension` (ADR-004), not the typed field — so the typed-media shape is
+  // `extension`, not the typed field — so the typed-media shape is
   // asserted in the slide-package tests; here the media plumbing is proven by
   // the media part + content type + the successful save→reopen test below.
   let slide = prs.slides()[0]

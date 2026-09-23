@@ -48,6 +48,12 @@ pub(all) enum UnderlineKind {
 } derive(Eq, Debug)
 
 ///|
+pub extend UnderlineKind with @debug.Debug::{to_repr}
+
+///|
+pub extend UnderlineKind with Eq::{not_equal, equal}
+
+///|
 /// Strikethrough style (`ST_TextStrikeType`, §20.1.10.78).
 pub(all) enum StrikeKind {
   StNoStrike // "noStrike"
@@ -56,12 +62,24 @@ pub(all) enum StrikeKind {
 } derive(Eq, Debug)
 
 ///|
+pub extend StrikeKind with @debug.Debug::{to_repr}
+
+///|
+pub extend StrikeKind with Eq::{not_equal, equal}
+
+///|
 /// Capitalisation style (`ST_TextCapsType`, §20.1.10.7).
 pub(all) enum CapsKind {
   CapsNone // "none"
   CapsSmall // "small"
   CapsAll // "all"
 } derive(Eq, Debug)
+
+///|
+pub extend CapsKind with @debug.Debug::{to_repr}
+
+///|
+pub extend CapsKind with Eq::{not_equal, equal}
 
 ///|
 /// Run property record. Every field is `Option` because OOXML rPr is
@@ -88,8 +106,7 @@ pub(all) enum CapsKind {
 /// - `fill` — The text fill — the full shape-level `@oxml.Fill` ADT
 ///   (`<a:noFill>` / `<a:solidFill>` / `<a:gradFill>` / `<a:pattFill>` /
 ///   `<a:blipFill>`), so gradient / pattern text is typed. Only `<a:grpFill>`
-///   (not modelled by `@oxml.Fill`) still rides on the run's `extension` per
-///   ADR-004.
+///   (not modelled by `@oxml.Fill`) still rides on the run's `extension`.
 /// - `outline` (`<a:ln>`) — the text *outline* (a `CT_LineProperties`,
 ///   reusing the shape-level `@oxml.Stroke`). `None` = no outline.
 /// - `text_effects` (`<a:effectLst>`) — text effects (glow / shadow /
@@ -133,6 +150,12 @@ pub(all) struct RunProperties {
 } derive(Eq, Debug)
 
 ///|
+pub extend RunProperties with @debug.Debug::{to_repr}
+
+///|
+pub extend RunProperties with Eq::{not_equal, equal}
+
+///|
 /// Unresolved hyperlink target carried on a `RunProperties` value
 /// while it's being built. Resolved into a slide-rels relationship
 /// + `hyperlink_click` rId by `Presentation::update_slide_mut`.
@@ -147,6 +170,15 @@ pub(all) enum HyperlinkTarget {
   ExternalUrl(String)
   InternalSlide(Int)
 } derive(Eq, Debug)
+
+///|
+pub extend HyperlinkTarget with @debug.Debug::{to_repr}
+
+///|
+pub extend HyperlinkTarget with Eq::{not_equal, equal}
+
+///|
+pub extend HyperlinkTarget with Show::{to_string, output}
 
 ///|
 pub impl Show for HyperlinkTarget with fn output(self, logger) {
@@ -259,6 +291,12 @@ pub(all) enum TextAlignment {
 } derive(Eq, Debug)
 
 ///|
+pub extend TextAlignment with @debug.Debug::{to_repr}
+
+///|
+pub extend TextAlignment with Eq::{not_equal, equal}
+
+///|
 /// Parse `TextAlignment` from its OOXML attribute string. Unknown
 /// values return `None`.
 pub fn TextAlignment::from_xml(s : String) -> TextAlignment? {
@@ -322,6 +360,12 @@ pub(all) enum AutoNumType {
   HindiNumParenR // "hindiNumParenR"
   HindiAlpha1Period // "hindiAlpha1Period"
 } derive(Eq, Debug)
+
+///|
+pub extend AutoNumType with @debug.Debug::{to_repr}
+
+///|
+pub extend AutoNumType with Eq::{not_equal, equal}
 
 ///|
 /// Parse `AutoNumType` from its OOXML attribute string. Unknown
@@ -392,6 +436,12 @@ pub(all) enum Bullet {
 } derive(Eq, Debug)
 
 ///|
+pub extend Bullet with @debug.Debug::{to_repr}
+
+///|
+pub extend Bullet with Eq::{not_equal, equal}
+
+///|
 /// Paragraph property record. Covers every `<a:pPr>` attribute and
 /// bullet child PowerPoint emits in practice.
 ///
@@ -423,6 +473,12 @@ pub(all) struct ParagraphProperties {
 } derive(Eq, Debug)
 
 ///|
+pub extend ParagraphProperties with @debug.Debug::{to_repr}
+
+///|
+pub extend ParagraphProperties with Eq::{not_equal, equal}
+
+///|
 /// `CT_TextSpacing` — the spacing choice shared by `<a:lnSpc>` /
 /// `<a:spcBef>` / `<a:spcAft>`: a percentage of the line
 /// (`<a:spcPct>`, stored as 1/1000 % in XML) or absolute points
@@ -435,6 +491,12 @@ pub(all) enum TextSpacing {
   Percent(@units.Percentage)
   Points(@units.Pt)
 } derive(Eq, Debug)
+
+///|
+pub extend TextSpacing with @debug.Debug::{to_repr}
+
+///|
+pub extend TextSpacing with Eq::{not_equal, equal}
 
 ///|
 /// Empty paragraph properties — every field is `None` except
@@ -470,6 +532,12 @@ pub(all) struct Run {
 } derive(Eq, Debug)
 
 ///|
+pub extend Run with @debug.Debug::{to_repr}
+
+///|
+pub extend Run with Eq::{not_equal, equal}
+
+///|
 /// An auto-generated field whose body text is computed at render time
 /// (slide number, date, etc.). The `id` is a GUID stored verbatim;
 /// `field_type` is the spec's `ST_TextFieldType` value (`slidenum`,
@@ -482,6 +550,12 @@ pub(all) struct Field {
   text : String
   extension : Array[@xml.XmlElement]
 } derive(Eq, Debug)
+
+///|
+pub extend Field with @debug.Debug::{to_repr}
+
+///|
+pub extend Field with Eq::{not_equal, equal}
 
 ///|
 /// One child of `<a:p>`. `<a:r>` → `Run`, `<a:br>` → `Break`,
@@ -497,6 +571,12 @@ pub(all) enum ParagraphContent {
 } derive(Eq, Debug)
 
 ///|
+pub extend ParagraphContent with @debug.Debug::{to_repr}
+
+///|
+pub extend ParagraphContent with Eq::{not_equal, equal}
+
+///|
 /// One paragraph inside a text body.
 ///
 /// - `end_run_properties` (`<a:endParaRPr>`) — the character properties the
@@ -509,6 +589,12 @@ pub(all) struct Paragraph {
   end_run_properties : RunProperties?
   extension : Array[@xml.XmlElement]
 } derive(Eq, Debug)
+
+///|
+pub extend Paragraph with @debug.Debug::{to_repr}
+
+///|
+pub extend Paragraph with Eq::{not_equal, equal}
 
 ///|
 /// Convenience: concatenate every run/field text inside a paragraph,
@@ -537,6 +623,12 @@ pub(all) enum Anchor {
 } derive(Eq, Debug)
 
 ///|
+pub extend Anchor with @debug.Debug::{to_repr}
+
+///|
+pub extend Anchor with Eq::{not_equal, equal}
+
+///|
 /// Parse `Anchor` from its OOXML attribute string. Unknown
 /// values return `None`.
 pub fn Anchor::from_xml(s : String) -> Anchor? {
@@ -556,6 +648,12 @@ pub(all) enum WrapKind {
   WrapNone // "none"
   WrapSquare // "square"
 } derive(Eq, Debug)
+
+///|
+pub extend WrapKind with @debug.Debug::{to_repr}
+
+///|
+pub extend WrapKind with Eq::{not_equal, equal}
 
 ///|
 /// Parse `WrapKind` from its OOXML attribute string. Unknown
@@ -579,6 +677,12 @@ pub(all) enum VerticalText {
   VertMongolianVert // "mongolianVert"
   VertWordArtVertRtl // "wordArtVertRtl"
 } derive(Eq, Debug)
+
+///|
+pub extend VerticalText with @debug.Debug::{to_repr}
+
+///|
+pub extend VerticalText with Eq::{not_equal, equal}
 
 ///|
 /// Parse `VerticalText` from its OOXML attribute string. Unknown
@@ -607,6 +711,12 @@ pub(all) enum AutoFit {
 } derive(Eq, Debug)
 
 ///|
+pub extend AutoFit with @debug.Debug::{to_repr}
+
+///|
+pub extend AutoFit with Eq::{not_equal, equal}
+
+///|
 /// Parsed `<a:bodyPr>` body properties for a text frame.
 ///
 /// All fields are `Option`. `None` everywhere means "inherit / use spec
@@ -625,6 +735,12 @@ pub struct BodyProperties {
   auto_fit : AutoFit?
   extension : Array[@xml.XmlElement]
 } derive(Eq, Debug)
+
+///|
+pub extend BodyProperties with @debug.Debug::{to_repr}
+
+///|
+pub extend BodyProperties with Eq::{not_equal, equal}
 
 ///|
 /// Empty body properties — every optional field is `None`.
@@ -655,6 +771,12 @@ pub struct ListStyle {
   level_props : Array[ParagraphProperties?]
   extension : Array[@xml.XmlElement]
 } derive(Eq, Debug)
+
+///|
+pub extend ListStyle with @debug.Debug::{to_repr}
+
+///|
+pub extend ListStyle with Eq::{not_equal, equal}
 
 ///|
 /// Construct an empty `ListStyle` with nine `None` level slots.
@@ -690,6 +812,12 @@ pub(all) struct TextBody {
   paragraphs : Array[Paragraph]
   extension : Array[@xml.XmlElement]
 } derive(Eq, Debug)
+
+///|
+pub extend TextBody with @debug.Debug::{to_repr}
+
+///|
+pub extend TextBody with Eq::{not_equal, equal}
 
 ///|
 /// Plain-text concatenation across every paragraph, joining paragraphs

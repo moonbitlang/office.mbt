@@ -34,3 +34,9 @@ pub(all) struct NotesSlide {
   clr_map_override : @slide_master.ClrMapOverride
   extension : Array[@xml.XmlElement]
 } derive(Eq, Debug)
+
+///|
+pub extend NotesSlide with @debug.Debug::{to_repr}
+
+///|
+pub extend NotesSlide with Eq::{not_equal, equal}

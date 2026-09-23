@@ -12,6 +12,15 @@ pub(all) suberror ChartError {
 } derive(Eq, Debug)
 
 ///|
+pub extend ChartError with @debug.Debug::{to_repr}
+
+///|
+pub extend ChartError with Eq::{not_equal, equal}
+
+///|
+pub extend ChartError with Show::{to_string, output}
+
+///|
 /// Lift an XML reader/writer error into a `ChartError::XmlFailure`.
 fn wrap_xml(e : @xml.XmlError) -> ChartError {
   match e {
