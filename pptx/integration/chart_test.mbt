@@ -141,7 +141,7 @@ test "slide-side chart graphicFrame lifts to ChartContent(rid)" {
   let pkg = @opc.Package::open(chart_deck())
   let slide_parts = parts_of(pkg, ct_slide)
   debug_inspect(slide_parts.length(), content="1")
-  let s = @slide.Slide::parse(slide_parts[0].bytes)
+  let s = @slide.Slide::parse(slide_parts[0].bytes())
   debug_inspect(s.shapes.length(), content="1")
   match s.shapes[0] {
     GraphicFrame(gf) =>
@@ -173,7 +173,7 @@ test "slide-side ChartContent survives re_serialize_all" {
   let pkg_re = re_serialize_all(@opc.Package::open(chart_deck()))
   let pkg_out = @opc.Package::open(pkg_re.to_bytes())
   let slide_parts = parts_of(pkg_out, ct_slide)
-  let s = @slide.Slide::parse(slide_parts[0].bytes)
+  let s = @slide.Slide::parse(slide_parts[0].bytes())
   match s.shapes[0] {
     GraphicFrame(gf) =>
       match gf.content {
@@ -279,7 +279,7 @@ test "chart_deck re_serialize_all preserves Chart" {
   let parts_out = parts_of(pkg_out, @oxml.ct_chart)
   debug_inspect(parts_in.length(), content="1")
   debug_inspect(parts_out.length(), content="1")
-  let c_in = @chart.Chart::parse(parts_in[0].bytes)
-  let c_out = @chart.Chart::parse(parts_out[0].bytes)
+  let c_in = @chart.Chart::parse(parts_in[0].bytes())
+  let c_out = @chart.Chart::parse(parts_out[0].bytes())
   debug_inspect(c_in == c_out, content="true")
 }

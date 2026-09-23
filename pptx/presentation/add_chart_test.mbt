@@ -22,7 +22,10 @@ test "add_chart_mut: bar chart lands as /ppt/charts/chart1.xml" {
     cx=Emu(6_858_000L),
     cy=Emu(4_572_000L),
   )
-  let chart_part = prs.pkg.part_by_name("/ppt/charts/chart1.xml").unwrap()
+  let chart_part = prs
+    .opc_package()
+    .part_by_name("/ppt/charts/chart1.xml")
+    .unwrap()
   debug_inspect(chart_part.content_type == @oxml.ct_chart, content="true")
   // Slide tree gains a GraphicFrame with ChartContent.
   let slide = prs.slides()[0]
@@ -49,8 +52,9 @@ test "add_chart_mut: content_types gains Override for the chart part" {
     cx=Emu(100L),
     cy=Emu(100L),
   )
-  let cts = prs.pkg.content_types()
-  let has_chart_override = cts.overrides
+  let cts = prs.opc_package().content_types()
+  let has_chart_override = cts
+    .overrides()
     .iter()
     .any(kv => kv.0 == "/ppt/charts/chart1.xml" && kv.1 == @oxml.ct_chart)
   debug_inspect(has_chart_override, content="true")
@@ -77,11 +81,11 @@ test "add_chart_mut: second chart gets chart2 and a fresh rId" {
     cy=Emu(100L),
   )
   debug_inspect(
-    prs.pkg.part_by_name("/ppt/charts/chart1.xml") is Some(_),
+    prs.opc_package().part_by_name("/ppt/charts/chart1.xml") is Some(_),
     content="true",
   )
   debug_inspect(
-    prs.pkg.part_by_name("/ppt/charts/chart2.xml") is Some(_),
+    prs.opc_package().part_by_name("/ppt/charts/chart2.xml") is Some(_),
     content="true",
   )
   let slide = prs.slides()[0]
@@ -167,16 +171,16 @@ test "add_chart_ex_mut: chartEx part + rels + content type + reopen" {
   )
   // The chartEx part exists with its content-type override.
   debug_inspect(
-    prs.pkg.part_by_name("/ppt/charts/chartEx1.xml") is Some(_),
+    prs.opc_package().part_by_name("/ppt/charts/chartEx1.xml") is Some(_),
     content="true",
   )
   let ct = @oxml.bytes_to_string(
-    prs.pkg.part_by_name("/[Content_Types].xml").unwrap().bytes,
+    prs.opc_package().part_by_name("/[Content_Types].xml").unwrap().bytes(),
   )
   debug_inspect(ct.find("chartex") is Some(_), content="true")
   // The slide references it and the deck survives save → reopen.
   let slide_xml = @oxml.bytes_to_string(
-    prs.pkg.part_by_name("/ppt/slides/slide1.xml").unwrap().bytes,
+    prs.opc_package().part_by_name("/ppt/slides/slide1.xml").unwrap().bytes(),
   )
   debug_inspect(
     slide_xml.find("chartEx") is Some(_) ||
@@ -209,7 +213,7 @@ test "add_chart_mut embed_data: chart gains externalData + workbook part" {
   add_bar_with_embed(prs)
   // The chart XML references the workbook, autoUpdate off.
   let chart_xml = @oxml.bytes_to_string(
-    prs.pkg.require_part("/ppt/charts/chart1.xml").bytes,
+    prs.opc_package().require_part("/ppt/charts/chart1.xml").bytes(),
   )
   debug_inspect(
     chart_xml.contains(
@@ -218,7 +222,7 @@ test "add_chart_mut embed_data: chart gains externalData + workbook part" {
     content="true",
   )
   // Its rels resolve rId1 to the embedded package.
-  let rels = prs.pkg.relationships_for("/ppt/charts/chart1.xml")
+  let rels = prs.opc_package().relationships_for("/ppt/charts/chart1.xml")
   let rel = rels.by_id("rId1").unwrap()
   debug_inspect(rel.rel_type == @opc.rt_package, content="true")
   debug_inspect(
@@ -226,11 +230,15 @@ test "add_chart_mut embed_data: chart gains externalData + workbook part" {
     content="\"../embeddings/Microsoft_Excel_Worksheet1.xlsx\"",
   )
   // The part exists with the xlsx content type and a Default entry.
-  let emb = prs.pkg
+  let emb = prs
+    .opc_package()
     .part_by_name("/ppt/embeddings/Microsoft_Excel_Worksheet1.xlsx")
     .unwrap()
   debug_inspect(emb.content_type == @oxml.ct_xlsx_sheet, content="true")
-  let has_default = prs.pkg.content_types().defaults
+  let has_default = prs
+    .opc_package()
+    .content_types()
+    .defaults()
     .iter()
     .any(kv => kv.0 == "xlsx" && kv.1 == @oxml.ct_xlsx_sheet)
   debug_inspect(has_default, content="true")
@@ -241,10 +249,11 @@ test "add_chart_mut embed_data: the workbook is a valid OPC package with the dat
   let prs = @presentation.Presentation::new()
   let _ = prs.add_slide_mut(0)
   add_bar_with_embed(prs)
-  let emb = prs.pkg
+  let emb = prs
+    .opc_package()
     .part_by_name("/ppt/embeddings/Microsoft_Excel_Worksheet1.xlsx")
     .unwrap()
-  let xlsx = @opc.Package::open(emb.bytes)
+  let xlsx = @opc.Package::open(emb.bytes())
   // Root rels reach the workbook; workbook rels reach the sheet.
   let wb_rel = xlsx.relationships_for("/").by_id("rId1").unwrap()
   debug_inspect(wb_rel.target, content="\"xl/workbook.xml\"")
@@ -255,7 +264,7 @@ test "add_chart_mut embed_data: the workbook is a valid OPC package with the dat
   debug_inspect(sheet_rel.target, content="\"worksheets/sheet1.xml\"")
   // The sheet mirrors the ChartData layout.
   let sheet = @oxml.bytes_to_string(
-    xlsx.require_part("/xl/worksheets/sheet1.xml").bytes,
+    xlsx.require_part("/xl/worksheets/sheet1.xml").bytes(),
   )
   debug_inspect(
     sheet.contains("<c r=\"B1\" t=\"inlineStr\"><is><t>Revenue</t></is></c>"),
@@ -276,14 +285,16 @@ test "add_chart_mut embed_data: survives save -> reopen, rides extension" {
   let reopened = @presentation.Presentation::open(prs.save())
   // The workbook part is still there…
   debug_inspect(
-    reopened.pkg.part_by_name("/ppt/embeddings/Microsoft_Excel_Worksheet1.xlsx")
+    reopened
+    .opc_package()
+    .part_by_name("/ppt/embeddings/Microsoft_Excel_Worksheet1.xlsx")
     is Some(_),
     content="true",
   )
   // …and the parsed chart carries <c:externalData> in its extension
   // (ADR-004), so a second embed attempt is rejected.
   let chart = @chart.Chart::parse(
-    reopened.pkg.require_part("/ppt/charts/chart1.xml").bytes,
+    reopened.opc_package().require_part("/ppt/charts/chart1.xml").bytes(),
   )
   let mut found = false
   for ext in chart.extension {
@@ -318,17 +329,25 @@ test "add_chart_mut embed_data: two embedded charts get separate workbooks" {
   add_bar_with_embed(prs)
   add_bar_with_embed(prs)
   debug_inspect(
-    prs.pkg.part_by_name("/ppt/embeddings/Microsoft_Excel_Worksheet1.xlsx")
+    prs
+    .opc_package()
+    .part_by_name("/ppt/embeddings/Microsoft_Excel_Worksheet1.xlsx")
     is Some(_),
     content="true",
   )
   debug_inspect(
-    prs.pkg.part_by_name("/ppt/embeddings/Microsoft_Excel_Worksheet2.xlsx")
+    prs
+    .opc_package()
+    .part_by_name("/ppt/embeddings/Microsoft_Excel_Worksheet2.xlsx")
     is Some(_),
     content="true",
   )
   debug_inspect(
-    prs.pkg.relationships_for("/ppt/charts/chart2.xml").by_id("rId1").unwrap().target,
+    prs
+    .opc_package()
+    .relationships_for("/ppt/charts/chart2.xml")
+    .by_id("rId1")
+    .unwrap().target,
     content="\"../embeddings/Microsoft_Excel_Worksheet2.xlsx\"",
   )
 }
@@ -346,12 +365,14 @@ test "add_chart_mut without embed_data: no workbook, no externalData" {
     cy=Emu(100L),
   )
   debug_inspect(
-    prs.pkg.part_by_name("/ppt/embeddings/Microsoft_Excel_Worksheet1.xlsx")
+    prs
+    .opc_package()
+    .part_by_name("/ppt/embeddings/Microsoft_Excel_Worksheet1.xlsx")
     is None,
     content="true",
   )
   let chart_xml = @oxml.bytes_to_string(
-    prs.pkg.require_part("/ppt/charts/chart1.xml").bytes,
+    prs.opc_package().require_part("/ppt/charts/chart1.xml").bytes(),
   )
   debug_inspect(!chart_xml.contains("externalData"), content="true")
 }
@@ -373,11 +394,14 @@ test "add_chart_mut embed_data: 26+ series spill into double-letter columns" {
     cy=Emu(100L),
     embed_data=data,
   )
-  let emb = prs.pkg
+  let emb = prs
+    .opc_package()
     .part_by_name("/ppt/embeddings/Microsoft_Excel_Worksheet1.xlsx")
     .unwrap()
   let sheet = @oxml.bytes_to_string(
-    @opc.Package::open(emb.bytes).require_part("/xl/worksheets/sheet1.xml").bytes,
+    @opc.Package::open(emb.bytes())
+    .require_part("/xl/worksheets/sheet1.xml")
+    .bytes(),
   )
   // Column A is the category column, so series 24 (0-based) lands in
   // Z and series 25 wraps to AA.

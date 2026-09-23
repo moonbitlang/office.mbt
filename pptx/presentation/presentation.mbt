@@ -21,17 +21,18 @@
 /// serialises a snapshot, and immutable mutation APIs return a new
 /// `Presentation` rather than modify in place.
 ///
-/// - `pkg` — The OPC package backing this presentation. Public so consumers
-///   who need raw part access can drop down without waiting for a typed
-///   wrapper. Named `pkg` because `package` is a reserved keyword in MoonBit.
-/// - `slide_order` — internal memo, not part of the API: the slide part
-///   names in `<p:sldIdLst>` order, together with the `presentation.xml`
-///   and `.rels` byte arrays they were derived from. Reused only while
-///   both are still those same objects, so any rewrite drops it without
-///   anything having to say so. Visible only because the struct is `pub`.
+/// Use `opc_package()` for low-level OPC edits. Package mutations remain behind
+/// the OPC API; the slide-order cache is private to this presentation.
 pub struct Presentation {
-  pkg : @opc.Package
-  mut slide_order : (FixedArray[Byte], FixedArray[Byte], Array[String])?
+  priv pkg : @opc.Package
+  priv mut slide_order : (@opc.Part, @opc.Part, Array[String])?
+}
+
+///|
+/// Access the backing OPC package for edits unsupported by the typed APIs.
+/// Use its mutation methods to replace parts; readers observe those edits.
+pub fn Presentation::opc_package(self : Presentation) -> @opc.Package {
+  self.pkg
 }
 
 ///|
@@ -117,7 +118,7 @@ pub fn Presentation::slides(
   let ordered_parts = self.ordered_slide_parts()
   let out : Array[@slide.Slide] = []
   for p in ordered_parts {
-    let s = @slide.Slide::parse(p.bytes) catch {
+    let s = @slide.Slide::parse(p.bytes()) catch {
       e => raise SlideFailure(p.name + ": " + e.to_string())
     }
     out.push(s)
@@ -144,7 +145,7 @@ pub fn Presentation::slide_at(
   let part = self.pkg.require_part(name) catch {
     e => raise OpcFailure(e.to_string())
   }
-  @slide.Slide::parse(part.bytes) catch {
+  @slide.Slide::parse(part.bytes()) catch {
     e => raise SlideFailure(name + ": " + e.to_string())
   }
 }
@@ -179,14 +180,8 @@ fn Presentation::ordered_slide_parts(
 ///|
 /// The slide part *names* in `<p:sldIdLst>` order.
 ///
-/// Memoised, because resolving the order means parsing `presentation.xml`
-/// and its `.rels` — both of which grow with the deck — and callers do it
-/// once per mutation. The memo validates itself: the order is a pure
-/// function of those two byte arrays, so the cache is reused only while
-/// both are the *same objects* it was computed from. Every write goes
-/// through a fresh `FixedArray[Byte]`, so adding, removing or reordering a
-/// slide invalidates it with no bookkeeping at the ~25 sites that mutate
-/// the package (ROADMAP.md G13).
+/// Memoised against the main part and its relationships part. Part payloads
+/// cannot be changed in place, so replacing either part invalidates the cache.
 fn Presentation::ordered_slide_part_names(
   self : Presentation,
 ) -> Array[String] raise PptxError {
@@ -203,18 +198,14 @@ fn Presentation::ordered_slide_part_names(
   let part = self.pkg.require_part(main_part_name) catch {
     e => raise OpcFailure(e.to_string())
   }
-  let rels_bytes = match
-    self.pkg.part_by_name(@opc.rels_path_for(main_part_name)) {
-    Some(p) => Some(p.bytes)
-    None => None
-  }
-  if self.slide_order is Some((pres_bytes, cached_rels, names)) &&
-    rels_bytes is Some(rb) &&
-    physical_equal(pres_bytes, part.bytes) &&
-    physical_equal(cached_rels, rb) {
+  let rels_part = self.pkg.part_by_name(@opc.rels_path_for(main_part_name))
+  if self.slide_order is Some((pres_part, cached_rels, names)) &&
+    rels_part is Some(rp) &&
+    physical_equal(pres_part, part) &&
+    physical_equal(cached_rels, rp) {
     return names
   }
-  let pres = PresentationPart::parse(part.bytes)
+  let pres = PresentationPart::parse(part.bytes())
   let rels = self.pkg.relationships_for(main_part_name) catch {
     e => raise OpcFailure(e.to_string())
   }
@@ -229,8 +220,8 @@ fn Presentation::ordered_slide_part_names(
     }
     names.push(@opc.resolve_target(main_part_name, rel.target, rel.target_mode))
   }
-  if rels_bytes is Some(rb) {
-    self.slide_order = Some((part.bytes, rb, names))
+  if rels_part is Some(rp) {
+    self.slide_order = Some((part, rp, names))
   }
   names
 }
@@ -274,7 +265,7 @@ pub fn Presentation::presentation_part(
       let part = self.pkg.require_part(name) catch {
         e => raise OpcFailure(e.to_string())
       }
-      Some(PresentationPart::parse(part.bytes))
+      Some(PresentationPart::parse(part.bytes()))
     }
     None => None
   }
@@ -290,7 +281,7 @@ pub fn Presentation::themes(
   let out : Array[@theme.Theme] = []
   for p in self.pkg.parts() {
     if p.content_type == @oxml.ct_theme {
-      let t = @theme.Theme::parse(p.bytes) catch {
+      let t = @theme.Theme::parse(p.bytes()) catch {
         e => raise ThemeFailure(p.name + ": " + e.to_string())
       }
       out.push(t)
@@ -307,7 +298,7 @@ pub fn Presentation::slide_masters(
   let out : Array[@slide_master.SlideMaster] = []
   for p in self.pkg.parts() {
     if p.content_type == @oxml.ct_slide_master {
-      let m = @slide_master.SlideMaster::parse(p.bytes) catch {
+      let m = @slide_master.SlideMaster::parse(p.bytes()) catch {
         e => raise SlideMasterFailure(p.name + ": " + e.to_string())
       }
       out.push(m)
@@ -324,7 +315,7 @@ pub fn Presentation::slide_layouts(
   let out : Array[@slide_master.SlideLayout] = []
   for p in self.pkg.parts() {
     if p.content_type == @oxml.ct_slide_layout {
-      let l = @slide_master.SlideLayout::parse(p.bytes) catch {
+      let l = @slide_master.SlideLayout::parse(p.bytes()) catch {
         e => raise SlideMasterFailure(p.name + ": " + e.to_string())
       }
       out.push(l)
@@ -342,7 +333,7 @@ pub fn Presentation::notes_slides(
   let out : Array[@notes.NotesSlide] = []
   for p in self.pkg.parts() {
     if p.content_type == @oxml.ct_notes_slide {
-      let n = @notes.NotesSlide::parse(p.bytes) catch {
+      let n = @notes.NotesSlide::parse(p.bytes()) catch {
         e => raise NotesFailure(p.name + ": " + e.to_string())
       }
       out.push(n)
@@ -360,7 +351,7 @@ pub fn Presentation::comment_authors(
 ) -> @comments.CommentAuthorList? raise PptxError {
   for p in self.pkg.parts() {
     if p.content_type == @oxml.ct_comment_authors {
-      let cl = @comments.CommentAuthorList::parse(p.bytes) catch {
+      let cl = @comments.CommentAuthorList::parse(p.bytes()) catch {
         e => raise CommentsFailure(p.name + ": " + e.to_string())
       }
       return Some(cl)
@@ -379,7 +370,7 @@ pub fn Presentation::comment_lists(
   let out : Array[@comments.CommentList] = []
   for p in self.pkg.parts() {
     if p.content_type == @oxml.ct_comments {
-      let cl = @comments.CommentList::parse(p.bytes) catch {
+      let cl = @comments.CommentList::parse(p.bytes()) catch {
         e => raise CommentsFailure(p.name + ": " + e.to_string())
       }
       out.push(cl)
@@ -401,7 +392,7 @@ pub fn Presentation::charts(
   let out : Array[@chart.Chart] = []
   for p in self.pkg.parts() {
     if p.content_type == @oxml.ct_chart {
-      let c = @chart.Chart::parse(p.bytes) catch {
+      let c = @chart.Chart::parse(p.bytes()) catch {
         e => raise ChartFailure(p.name + ": " + e.to_string())
       }
       out.push(c)
@@ -423,7 +414,7 @@ pub fn Presentation::charts_ex(
   let out : Array[@chart_ex.ChartEx] = []
   for p in self.pkg.parts() {
     if p.content_type == @oxml.ct_chart_ex {
-      let c = @chart_ex.ChartEx::parse(p.bytes) catch {
+      let c = @chart_ex.ChartEx::parse(p.bytes()) catch {
         e => raise ChartExFailure(p.name + ": " + e.to_string())
       }
       out.push(c)

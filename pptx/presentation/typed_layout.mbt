@@ -77,10 +77,10 @@ pub trait HasBody {
 /// gated by `L`'s capability traits. Build with a `Presentation::add_*_mut`
 /// constructor, set placeholders, then `finish_mut()`.
 pub struct LayoutSlide[L] {
-  prs : Presentation
-  slide_name : String
-  slide : @slide.Slide
-  marker : L
+  priv prs : Presentation
+  priv slide_name : String
+  priv slide : @slide.Slide
+  priv marker : L
 }
 
 ///|
@@ -141,7 +141,7 @@ fn[L : LayoutType + LayoutPlaceholders] Presentation::add_typed_slide(
   let part = self.pkg.require_part(slide_name) catch {
     e => raise OpcFailure(e.to_string())
   }
-  let slide = @slide.Slide::parse(part.bytes) catch {
+  let slide = @slide.Slide::parse(part.bytes()) catch {
     e => raise SlideFailure(e.to_string())
   }
   { prs: self, slide_name, slide, marker, }

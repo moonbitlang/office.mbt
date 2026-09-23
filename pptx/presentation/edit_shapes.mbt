@@ -51,7 +51,7 @@ fn Presentation::parse_slide_part_at(
   if slide_idx < 0 || slide_idx >= parts.length() {
     raise Malformed("slide index " + slide_idx.to_string() + " is out of range")
   }
-  @slide.Slide::parse(parts[slide_idx].bytes) catch {
+  @slide.Slide::parse(parts[slide_idx].bytes()) catch {
     e => raise SlideFailure(e.to_string())
   }
 }

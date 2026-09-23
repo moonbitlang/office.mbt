@@ -89,11 +89,11 @@ test "move_slide_mut: order survives save → reopen, no part renaming" {
   debug_inspect(marker_of(slides[1]), content="\"first\"")
   // Reordering is pure sldIdLst — the parts keep their names.
   debug_inspect(
-    reopened.pkg.part_by_name("/ppt/slides/slide1.xml") is Some(_),
+    reopened.opc_package().part_by_name("/ppt/slides/slide1.xml") is Some(_),
     content="true",
   )
   debug_inspect(
-    reopened.pkg.part_by_name("/ppt/slides/slide2.xml") is Some(_),
+    reopened.opc_package().part_by_name("/ppt/slides/slide2.xml") is Some(_),
     content="true",
   )
 }

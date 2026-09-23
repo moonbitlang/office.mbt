@@ -13,6 +13,11 @@ covers changes that have landed on `main` but are not yet published.
 - Integrate root scripts, the shared OpenXML SDK validator, the common CI and
   release workflow, and Office warning conventions. Existing public library
   import paths remain `moonbitlang/pptx/...`.
+- Restrict imported implementation fields and helpers to their owning packages.
+  Use `Presentation::opc_package()` for raw OPC edits, and `Part::bytes()`,
+  `ContentTypes::defaults()` / `overrides()`, and `Relationships::items()` for
+  snapshots. Package enumeration and part payloads no longer expose writable
+  backing storage.
 
 ### moonbitlang/mbtexcel [0.2.0]
 

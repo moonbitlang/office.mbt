@@ -462,7 +462,7 @@ pub fn Presentation::add_slides_mut(
 /// is this plus one, formatted; the batch path steps the number instead.
 fn extract_max_rid_index(rels : @opc.Relationships) -> Int {
   let mut max_seen = 0
-  for r in rels.items {
+  for r in rels.items() {
     let n = extract_rid_index(r.id)
     if n > max_seen {
       max_seen = n

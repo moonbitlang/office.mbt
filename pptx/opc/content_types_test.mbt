@@ -21,8 +21,8 @@ test "parse simple Default + Override" {
     "<Override PartName=\"/ppt/p.xml\" ContentType=\"application/special+xml\"/>",
   )
   let ct = @opc.ContentTypes::parse(@fzip.str_to_u8(xml))
-  debug_inspect(ct.defaults.length(), content="2")
-  debug_inspect(ct.overrides.length(), content="1")
+  debug_inspect(ct.defaults().length(), content="2")
+  debug_inspect(ct.overrides().length(), content="1")
 }
 
 ///|
@@ -90,22 +90,22 @@ test "serialize -> parse round trip preserves entries" {
   let bytes = original.serialize()
   let reparsed = @opc.ContentTypes::parse(bytes)
   debug_inspect(
-    reparsed.defaults.length() == original.defaults.length(),
+    reparsed.defaults().length() == original.defaults().length(),
     content="true",
   )
   debug_inspect(
-    reparsed.overrides.length() == original.overrides.length(),
+    reparsed.overrides().length() == original.overrides().length(),
     content="true",
   )
-  for i in 0..<original.defaults.length() {
-    let (ext_r, ct_r) = reparsed.defaults[i]
-    let (ext_o, ct_o) = original.defaults[i]
+  for i in 0..<original.defaults().length() {
+    let (ext_r, ct_r) = reparsed.defaults()[i]
+    let (ext_o, ct_o) = original.defaults()[i]
     debug_inspect(ext_r == ext_o, content="true")
     debug_inspect(ct_r == ct_o, content="true")
   }
-  for i in 0..<original.overrides.length() {
-    let (pn_r, ct_r) = reparsed.overrides[i]
-    let (pn_o, ct_o) = original.overrides[i]
+  for i in 0..<original.overrides().length() {
+    let (pn_r, ct_r) = reparsed.overrides()[i]
+    let (pn_o, ct_o) = original.overrides()[i]
     debug_inspect(pn_r == pn_o, content="true")
     debug_inspect(ct_r == ct_o, content="true")
   }
@@ -116,9 +116,9 @@ test "with_default and with_override are immutable" {
   let base = @opc.ContentTypes::new()
   let plus_default = base.with_default("xml", "application/xml")
   // base unchanged
-  debug_inspect(base.defaults.length(), content="0")
-  debug_inspect(plus_default.defaults.length(), content="1")
+  debug_inspect(base.defaults().length(), content="0")
+  debug_inspect(plus_default.defaults().length(), content="1")
   let plus_both = plus_default.with_override("/p.xml", "x/y")
-  debug_inspect(plus_default.overrides.length(), content="0")
-  debug_inspect(plus_both.overrides.length(), content="1")
+  debug_inspect(plus_default.overrides().length(), content="0")
+  debug_inspect(plus_both.overrides().length(), content="1")
 }

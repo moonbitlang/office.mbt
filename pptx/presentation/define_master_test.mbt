@@ -38,10 +38,11 @@ test "define_master: appends a master, registered in sldMasterIdLst" {
 test "define_master: master part carries placeholders + footer text" {
   let prs = @presentation.Presentation::new()
   let _ = prs.define_master(brand_master())
-  let master = prs.pkg
+  let master = prs
+    .opc_package()
     .part_by_name("/ppt/slideMasters/slideMaster2.xml")
     .unwrap()
-  let xml = @oxml.bytes_to_string(master.bytes)
+  let xml = @oxml.bytes_to_string(master.bytes())
   debug_inspect(xml.contains("type=\"title\""), content="true")
   debug_inspect(xml.contains("type=\"body\""), content="true")
   debug_inspect(xml.contains("type=\"ftr\""), content="true")
@@ -61,14 +62,16 @@ test "define_master: layout part exists and references the master" {
   let prs = @presentation.Presentation::new()
   let _ = prs.define_master(brand_master())
   debug_inspect(
-    prs.pkg.part_by_name("/ppt/slideLayouts/slideLayout2.xml") is Some(_),
+    prs.opc_package().part_by_name("/ppt/slideLayouts/slideLayout2.xml")
+    is Some(_),
     content="true",
   )
   // The layout's .rels points back at the master.
-  let rels = prs.pkg
+  let rels = prs
+    .opc_package()
     .part_by_name("/ppt/slideLayouts/_rels/slideLayout2.xml.rels")
     .unwrap()
-  let rels_xml = @oxml.bytes_to_string(rels.bytes)
+  let rels_xml = @oxml.bytes_to_string(rels.bytes())
   debug_inspect(rels_xml.contains("slideMaster2.xml"), content="true")
 }
 
@@ -80,11 +83,13 @@ test "define_master: deck saves and reopens with both masters" {
   debug_inspect(reopened.slide_masters().length(), content="2")
   // The new master + layout survived the zip round-trip.
   debug_inspect(
-    reopened.pkg.part_by_name("/ppt/slideMasters/slideMaster2.xml") is Some(_),
+    reopened.opc_package().part_by_name("/ppt/slideMasters/slideMaster2.xml")
+    is Some(_),
     content="true",
   )
   debug_inspect(
-    reopened.pkg.part_by_name("/ppt/slideLayouts/slideLayout2.xml") is Some(_),
+    reopened.opc_package().part_by_name("/ppt/slideLayouts/slideLayout2.xml")
+    is Some(_),
     content="true",
   )
 }
@@ -112,14 +117,18 @@ test "define_master: new master gets its own theme (repair-clean)" {
   debug_inspect(count_theme_parts(prs) == themes_before + 1, content="true")
   // The new master references a theme other than the original master's.
   let m1 = @oxml.bytes_to_string(
-    prs.pkg
+    prs
+    .opc_package()
     .part_by_name("/ppt/slideMasters/_rels/slideMaster1.xml.rels")
-    .unwrap().bytes,
+    .unwrap()
+    .bytes(),
   )
   let m2 = @oxml.bytes_to_string(
-    prs.pkg
+    prs
+    .opc_package()
     .part_by_name("/ppt/slideMasters/_rels/slideMaster2.xml.rels")
-    .unwrap().bytes,
+    .unwrap()
+    .bytes(),
   )
   // slideMaster1 uses theme1; slideMaster2 must not.
   debug_inspect(m1.contains("theme1.xml"), content="true")
@@ -133,7 +142,11 @@ test "define_master: layout declares the placeholders so slides inherit geometry
   // The generated layout carries the footer / date / number placeholders
   // (with positions) — without them a slide's footer renders unpositioned.
   let layout = @oxml.bytes_to_string(
-    prs.pkg.part_by_name("/ppt/slideLayouts/slideLayout2.xml").unwrap().bytes,
+    prs
+    .opc_package()
+    .part_by_name("/ppt/slideLayouts/slideLayout2.xml")
+    .unwrap()
+    .bytes(),
   )
   debug_inspect(layout.contains("type=\"ftr\""), content="true")
   debug_inspect(layout.contains("type=\"dt\""), content="true")
@@ -145,7 +158,7 @@ test "define_master: layout declares the placeholders so slides inherit geometry
 ///|
 fn count_theme_parts(prs : @presentation.Presentation) -> Int {
   let mut n = 0
-  for p in prs.pkg.parts() {
+  for p in prs.opc_package().parts() {
     if p.name.contains("/ppt/theme/theme") {
       n = n + 1
     }
@@ -177,7 +190,11 @@ test "MasterDefinition::with_background: master cSld carries the fill" {
   let idx = prs.define_master(def)
   debug_inspect(idx, content="1") // second master, after the template's own
   let xml = @oxml.bytes_to_string(
-    prs.pkg.part_by_name("/ppt/slideMasters/slideMaster2.xml").unwrap().bytes,
+    prs
+    .opc_package()
+    .part_by_name("/ppt/slideMasters/slideMaster2.xml")
+    .unwrap()
+    .bytes(),
   )
   debug_inspect(xml.find("<p:bg>") is Some(_), content="true")
   debug_inspect(xml.find("0A1B2C") is Some(_), content="true")

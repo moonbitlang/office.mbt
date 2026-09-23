@@ -33,7 +33,9 @@ test "sample deck reopens with all feature slides + a defined master" {
   )
   // The combo chart's embedded data workbook is in the package.
   debug_inspect(
-    prs.pkg.part_by_name("/ppt/embeddings/Microsoft_Excel_Worksheet1.xlsx")
+    prs
+    .opc_package()
+    .part_by_name("/ppt/embeddings/Microsoft_Excel_Worksheet1.xlsx")
     is Some(_),
     content="true",
   )

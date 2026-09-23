@@ -26,11 +26,12 @@ test "Part::clone: bytes buffer is independent" {
   let bytes = @fzip.str_to_u8("hello")
   let p1 = @opc.Part::new("/x.xml", "application/xml", bytes)
   let p2 = p1.clone()
-  // Mutating p1's bytes (via the underlying FixedArray) doesn't
-  // change p2's bytes.
-  p1.bytes[0] = b'H'
-  debug_inspect(p1.bytes[0] == b'H', content="true")
-  debug_inspect(p2.bytes[0] == b'h', content="true")
+  // Neither input buffers nor returned snapshots can mutate either part.
+  bytes[0] = b'H'
+  let copied = p1.bytes()
+  copied[1] = b'A'
+  debug_inspect(p1.text(), content="\"hello\"")
+  debug_inspect(p2.text(), content="\"hello\"")
 }
 
 ///|
@@ -42,7 +43,7 @@ test "ContentTypes::clone: builder mutations don't cross over" {
   // Extend the clone with another default. The original's defaults
   // array stays at one entry.
   let _ = cloned.with_default("rels", "type/rels")
-  debug_inspect(ct.defaults.length(), content="1")
+  debug_inspect(ct.defaults().length(), content="1")
   // The clone is structurally equal to the original by Eq (the
   // chained .with_default isn't applied to the clone in place — it
   // returns a new value).
@@ -65,6 +66,6 @@ test "Package::clone: content-types catalog is independent" {
   )
   // Original's content_types still has only the one override and
   // no defaults.
-  debug_inspect(pkg.content_types().defaults.length(), content="0")
-  debug_inspect(cloned.content_types().defaults.length(), content="1")
+  debug_inspect(pkg.content_types().defaults().length(), content="0")
+  debug_inspect(cloned.content_types().defaults().length(), content="1")
 }

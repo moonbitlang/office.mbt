@@ -15,39 +15,39 @@
 /// package so callers can chain `to_bytes` / reopen.
 fn re_serialize_all(pkg : @opc.Package) -> @opc.Package raise {
   for p in parts_of(pkg, ct_theme) {
-    let parsed = @theme.Theme::parse(p.bytes)
+    let parsed = @theme.Theme::parse(p.bytes())
     replace_part_bytes(pkg, p.name, parsed.serialize())
   }
   for p in parts_of(pkg, ct_slide_master) {
-    let parsed = @slide_master.SlideMaster::parse(p.bytes)
+    let parsed = @slide_master.SlideMaster::parse(p.bytes())
     replace_part_bytes(pkg, p.name, parsed.serialize())
   }
   for p in parts_of(pkg, ct_slide_layout) {
-    let parsed = @slide_master.SlideLayout::parse(p.bytes)
+    let parsed = @slide_master.SlideLayout::parse(p.bytes())
     replace_part_bytes(pkg, p.name, parsed.serialize())
   }
   for p in parts_of(pkg, ct_slide) {
-    let parsed = @slide.Slide::parse(p.bytes)
+    let parsed = @slide.Slide::parse(p.bytes())
     replace_part_bytes(pkg, p.name, parsed.serialize())
   }
   for p in parts_of(pkg, ct_notes_slide) {
-    let parsed = @notes.NotesSlide::parse(p.bytes)
+    let parsed = @notes.NotesSlide::parse(p.bytes())
     replace_part_bytes(pkg, p.name, parsed.serialize())
   }
   for p in parts_of(pkg, ct_comment_authors) {
-    let parsed = @comments.CommentAuthorList::parse(p.bytes)
+    let parsed = @comments.CommentAuthorList::parse(p.bytes())
     replace_part_bytes(pkg, p.name, parsed.serialize())
   }
   for p in parts_of(pkg, ct_comments) {
-    let parsed = @comments.CommentList::parse(p.bytes)
+    let parsed = @comments.CommentList::parse(p.bytes())
     replace_part_bytes(pkg, p.name, parsed.serialize())
   }
   for p in parts_of(pkg, @oxml.ct_chart) {
-    let parsed = @chart.Chart::parse(p.bytes)
+    let parsed = @chart.Chart::parse(p.bytes())
     replace_part_bytes(pkg, p.name, parsed.serialize())
   }
   for p in parts_of(pkg, @oxml.ct_chart_ex) {
-    let parsed = @chart_ex.ChartEx::parse(p.bytes)
+    let parsed = @chart_ex.ChartEx::parse(p.bytes())
     replace_part_bytes(pkg, p.name, parsed.serialize())
   }
   pkg
@@ -76,10 +76,10 @@ test "minimal_deck: parse → serialize → reopen → re-parse preserves Slide"
   let pkg_re = re_serialize_all(@opc.Package::open(minimal_deck()))
   let pkg_out = @opc.Package::open(pkg_re.to_bytes())
   let s_in = @slide.Slide::parse(
-    pkg_in.require_part("/ppt/slides/slide1.xml").bytes,
+    pkg_in.require_part("/ppt/slides/slide1.xml").bytes(),
   )
   let s_out = @slide.Slide::parse(
-    pkg_out.require_part("/ppt/slides/slide1.xml").bytes,
+    pkg_out.require_part("/ppt/slides/slide1.xml").bytes(),
   )
   debug_inspect(s_in == s_out, content="true")
 }
@@ -90,24 +90,24 @@ test "minimal_deck: round-trip preserves Theme + SlideMaster + SlideLayout" {
   let pkg_re = re_serialize_all(@opc.Package::open(minimal_deck()))
   let pkg_out = @opc.Package::open(pkg_re.to_bytes())
   let t_in = @theme.Theme::parse(
-    pkg_in.require_part("/ppt/theme/theme1.xml").bytes,
+    pkg_in.require_part("/ppt/theme/theme1.xml").bytes(),
   )
   let t_out = @theme.Theme::parse(
-    pkg_out.require_part("/ppt/theme/theme1.xml").bytes,
+    pkg_out.require_part("/ppt/theme/theme1.xml").bytes(),
   )
   debug_inspect(t_in == t_out, content="true")
   let m_in = @slide_master.SlideMaster::parse(
-    pkg_in.require_part("/ppt/slideMasters/slideMaster1.xml").bytes,
+    pkg_in.require_part("/ppt/slideMasters/slideMaster1.xml").bytes(),
   )
   let m_out = @slide_master.SlideMaster::parse(
-    pkg_out.require_part("/ppt/slideMasters/slideMaster1.xml").bytes,
+    pkg_out.require_part("/ppt/slideMasters/slideMaster1.xml").bytes(),
   )
   debug_inspect(m_in == m_out, content="true")
   let l_in = @slide_master.SlideLayout::parse(
-    pkg_in.require_part("/ppt/slideLayouts/slideLayout1.xml").bytes,
+    pkg_in.require_part("/ppt/slideLayouts/slideLayout1.xml").bytes(),
   )
   let l_out = @slide_master.SlideLayout::parse(
-    pkg_out.require_part("/ppt/slideLayouts/slideLayout1.xml").bytes,
+    pkg_out.require_part("/ppt/slideLayouts/slideLayout1.xml").bytes(),
   )
   debug_inspect(l_in == l_out, content="true")
 }
@@ -124,10 +124,10 @@ test "rich_deck: every shape kind survives parse → serialize → re-parse" {
   let pkg_re2 = re_serialize_all(@opc.Package::open(pkg_re1.to_bytes()))
   let pkg_re3 = re_serialize_all(@opc.Package::open(pkg_re2.to_bytes()))
   let s_a = @slide.Slide::parse(
-    pkg_re2.require_part("/ppt/slides/slide2.xml").bytes,
+    pkg_re2.require_part("/ppt/slides/slide2.xml").bytes(),
   )
   let s_b = @slide.Slide::parse(
-    pkg_re3.require_part("/ppt/slides/slide2.xml").bytes,
+    pkg_re3.require_part("/ppt/slides/slide2.xml").bytes(),
   )
   debug_inspect(s_a == s_b, content="true")
   // Use `s_out = s_b` for the spot-check below.
@@ -154,24 +154,24 @@ test "notes_and_comments_deck: NotesSlide + CommentList round-trip" {
   let pkg_re = re_serialize_all(@opc.Package::open(notes_and_comments_deck()))
   let pkg_out = @opc.Package::open(pkg_re.to_bytes())
   let n_in = @notes.NotesSlide::parse(
-    pkg_in.require_part("/ppt/notesSlides/notesSlide1.xml").bytes,
+    pkg_in.require_part("/ppt/notesSlides/notesSlide1.xml").bytes(),
   )
   let n_out = @notes.NotesSlide::parse(
-    pkg_out.require_part("/ppt/notesSlides/notesSlide1.xml").bytes,
+    pkg_out.require_part("/ppt/notesSlides/notesSlide1.xml").bytes(),
   )
   debug_inspect(n_in == n_out, content="true")
   let cms_in = @comments.CommentList::parse(
-    pkg_in.require_part("/ppt/comments/comment1.xml").bytes,
+    pkg_in.require_part("/ppt/comments/comment1.xml").bytes(),
   )
   let cms_out = @comments.CommentList::parse(
-    pkg_out.require_part("/ppt/comments/comment1.xml").bytes,
+    pkg_out.require_part("/ppt/comments/comment1.xml").bytes(),
   )
   debug_inspect(cms_in == cms_out, content="true")
   let authors_in = @comments.CommentAuthorList::parse(
-    pkg_in.require_part("/ppt/commentAuthors.xml").bytes,
+    pkg_in.require_part("/ppt/commentAuthors.xml").bytes(),
   )
   let authors_out = @comments.CommentAuthorList::parse(
-    pkg_out.require_part("/ppt/commentAuthors.xml").bytes,
+    pkg_out.require_part("/ppt/commentAuthors.xml").bytes(),
   )
   debug_inspect(authors_in == authors_out, content="true")
 }

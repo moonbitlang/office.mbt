@@ -691,9 +691,9 @@ pub fn TileSpec::not_equal(Self, Self) -> Bool
 pub fn TileSpec::to_repr(Self) -> @debug.Repr
 
 pub struct WriteCtx {
-  known_prefixes : Map[String, String]
-  mut next_ext : Int
+  // private fields
 }
+pub fn WriteCtx::bind_namespace(Self, String, String) -> Unit
 pub fn WriteCtx::with_well_known_prefixes() -> Self
 
 // Type aliases

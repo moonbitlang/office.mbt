@@ -21,10 +21,10 @@
 /// True while we are inside a just-opened start tag (the `>` has not yet been
 /// emitted, so attributes are still allowed and the element can self-close).
 pub struct XmlWriter {
-  buf : StringBuilder
-  prefix_for_uri : Map[String, String]
-  stack : Array[QName]
-  mut in_start_tag : Bool
+  priv buf : StringBuilder
+  priv prefix_for_uri : Map[String, String]
+  priv stack : Array[QName]
+  priv mut in_start_tag : Bool
 }
 
 ///|

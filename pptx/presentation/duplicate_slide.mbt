@@ -62,7 +62,7 @@ pub fn Presentation::duplicate_slide_mut(
   let slide_part = @opc.Part::new(
     new_slide_name,
     @oxml.ct_slide,
-    @opc.copy_bytes(source.bytes),
+    source.bytes(),
   ) catch {
     e => raise OpcFailure(e.to_string())
   }
@@ -76,13 +76,11 @@ pub fn Presentation::duplicate_slide_mut(
   let source_rels = self.pkg.relationships_for(source_name) catch {
     e => raise OpcFailure(e.to_string())
   }
-  let cloned_items : Array[@opc.Relationship] = []
-  for r in source_rels.items {
-    cloned_items.push(r)
-  }
-  let clone_rels = @opc.Relationships::{
-    source: new_slide_name,
-    items: cloned_items,
+  let mut clone_rels = @opc.Relationships::new(new_slide_name)
+  for r in source_rels.items() {
+    clone_rels = clone_rels.with_relationship(r) catch {
+      e => raise OpcFailure(e.to_string())
+    }
   }
   self.write_rels_for_part(new_slide_name, clone_rels)
 

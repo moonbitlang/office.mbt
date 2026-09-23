@@ -78,7 +78,7 @@ fn write_graphic_body(
       // doesn't bind the chart namespace itself (only `p` / `a` /
       // `r`), so we declare `xmlns:c` directly on this element.
       w.bind_namespace("c", @oxml.chart_ns)
-      ctx.known_prefixes[@oxml.chart_ns] = "c"
+      ctx.bind_namespace("c", @oxml.chart_ns)
       w.start_element(@xml.QName::new(@oxml.chart_ns, "chart"))
       w.namespace_attr("c", @oxml.chart_ns)
       w.attribute(@xml.QName::new(@oxml.office_relationships_ns, "id"), rid)
@@ -92,7 +92,7 @@ fn write_graphic_body(
       // <cx:chart xmlns:cx="…/chartex" r:id="rIdN"/>. Same shape as
       // ChartContent but with the extended-chart namespace.
       w.bind_namespace("cx", @oxml.chart_ex_ns)
-      ctx.known_prefixes[@oxml.chart_ex_ns] = "cx"
+      ctx.bind_namespace("cx", @oxml.chart_ex_ns)
       w.start_element(@xml.QName::new(@oxml.chart_ex_ns, "chart"))
       w.namespace_attr("cx", @oxml.chart_ex_ns)
       w.attribute(@xml.QName::new(@oxml.office_relationships_ns, "id"), rid)

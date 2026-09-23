@@ -101,10 +101,7 @@ pub fn CoreProperties::with_title(Self, String) -> Self
 pub fn CoreProperties::with_version(Self, String) -> Self
 
 pub struct LayoutSlide[L] {
-  prs : Presentation
-  slide_name : String
-  slide : @slide.Slide
-  marker : L
+  // private fields
 }
 pub fn[L : HasBody] LayoutSlide::body(Self[L], String) -> Self[L]
 pub fn[L] LayoutSlide::finish_mut(Self[L]) -> String raise PptxError
@@ -113,11 +110,7 @@ pub fn[L : HasTitle] LayoutSlide::title(Self[L], String) -> Self[L]
 
 pub struct MasterDefinition {
   name : String
-  background : @slide.Background?
-  placeholders : Array[PlaceholderDef]
-  slide_number : Bool
-  footer_text : String?
-  date : Bool
+  // private fields
 }
 pub fn MasterDefinition::new(String) -> Self
 pub fn MasterDefinition::with_background(Self, @slide.Background) -> Self
@@ -134,12 +127,6 @@ pub fn NotesSize::equal(Self, Self) -> Bool
 pub fn NotesSize::not_equal(Self, Self) -> Bool
 pub fn NotesSize::to_repr(Self) -> @debug.Repr
 
-pub struct PlaceholderDef {
-  kind : @slide.PlaceholderType
-  position : @slide.Transform
-  default_text : String?
-}
-
 pub struct PlaceholderSpec {
   kind : @slide.PlaceholderType
   idx : Int
@@ -147,8 +134,7 @@ pub struct PlaceholderSpec {
 }
 
 pub struct Presentation {
-  pkg : @opc.Package
-  mut slide_order : (FixedArray[Byte], FixedArray[Byte], Array[String])?
+  // private fields
 }
 pub fn Presentation::add_audio_mut(Self, Int, audio_bytes~ : FixedArray[Byte], poster_bytes~ : FixedArray[Byte], x~ : @units.Emu, y~ : @units.Emu, cx~ : @units.Emu, cy~ : @units.Emu) -> Unit raise PptxError
 pub fn Presentation::add_blank_typed_slide_mut(Self) -> LayoutSlide[BlankSlide] raise PptxError
@@ -181,6 +167,7 @@ pub fn Presentation::map_slide_shapes_mut(Self, Int, (@slide.Shape) -> @slide.Sh
 pub fn Presentation::move_slide_mut(Self, Int, Int) -> Unit raise PptxError
 pub fn Presentation::new() -> Self raise PptxError
 pub fn Presentation::notes_slides(Self) -> Array[@notes.NotesSlide] raise PptxError
+pub fn Presentation::opc_package(Self) -> @opc.Package
 pub fn Presentation::open(FixedArray[Byte]) -> Self raise PptxError
 pub fn Presentation::pct_h(Self, Double) -> @units.Emu
 pub fn Presentation::pct_w(Self, Double) -> @units.Emu

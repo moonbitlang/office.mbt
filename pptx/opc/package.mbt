@@ -18,17 +18,16 @@
 /// (or a higher layer) is responsible for keeping `[Content_Types].xml` in
 /// sync via `set_content_types`.
 pub struct Package {
-  parts : Array[Part]
-  mut content_types : ContentTypes
-  index : Map[String, Int]
+  priv parts : Array[Part]
+  priv mut content_types : ContentTypes
+  priv index : Map[String, Int]
 }
 
 // `index` maps a part name to its position in `parts`, so `part_by_name`
 // and `add_part`'s duplicate check do not scan the array. It is
 // maintained by every mutator here and rebuilt by `remove_part`, whose
-// removal shifts later positions. `parts()` hands out the live array:
-// pushing or removing through it directly would desync the map, so
-// package mutation goes through this API.
+// removal shifts later positions. `parts()` returns a separate array so
+// callers cannot desynchronise the index by changing the enumeration.
 
 ///|
 /// Open a package from raw `.pptx` bytes.
@@ -134,9 +133,10 @@ pub fn Package::to_bytes(self : Package) -> FixedArray[Byte] {
 }
 
 ///|
-/// Return all parts in source / construction order.
+/// Return all parts in source / construction order in a separate array.
+/// Adding or removing entries in this array does not modify the package.
 pub fn Package::parts(self : Package) -> Array[Part] {
-  self.parts
+  self.parts.copy()
 }
 
 ///|

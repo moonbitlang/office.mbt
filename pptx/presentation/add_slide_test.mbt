@@ -43,7 +43,7 @@ test "add_slide_mut: presentation.xml.rels gains a rel per slide" {
   let prs = @presentation.Presentation::new()
   let _ = prs.add_slide_mut(0)
   let _ = prs.add_slide_mut(0)
-  let pres_rels = prs.pkg.relationships_for("/ppt/presentation.xml")
+  let pres_rels = prs.opc_package().relationships_for("/ppt/presentation.xml")
   let slide_rels = pres_rels.by_type(@opc.rt_slide)
   debug_inspect(slide_rels.length(), content="2")
 }
@@ -52,15 +52,15 @@ test "add_slide_mut: presentation.xml.rels gains a rel per slide" {
 test "add_slide_mut: new slide.xml.rels points at the layout" {
   let prs = @presentation.Presentation::new()
   let _ = prs.add_slide_mut(0)
-  let slide_rels = prs.pkg.relationships_for("/ppt/slides/slide1.xml")
-  debug_inspect(slide_rels.items.length(), content="1")
+  let slide_rels = prs.opc_package().relationships_for("/ppt/slides/slide1.xml")
+  debug_inspect(slide_rels.items().length(), content="1")
   debug_inspect(
-    slide_rels.items[0].rel_type == @opc.rt_slide_layout,
+    slide_rels.items()[0].rel_type == @opc.rt_slide_layout,
     content="true",
   )
   // Relative, not absolute: OPC resolves it against /ppt/slides/.
   debug_inspect(
-    slide_rels.items[0].target,
+    slide_rels.items()[0].target,
     content="\"../slideLayouts/slideLayout1.xml\"",
   )
 }

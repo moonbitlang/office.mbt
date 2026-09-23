@@ -32,8 +32,8 @@
 ///   Updated in place as `write_xml_element` discovers foreign URIs.
 /// Next free `extN` counter.
 pub struct WriteCtx {
-  known_prefixes : Map[String, String]
-  mut next_ext : Int
+  priv known_prefixes : Map[String, String]
+  priv mut next_ext : Int
 }
 
 ///|
@@ -48,6 +48,16 @@ pub fn WriteCtx::with_well_known_prefixes() -> WriteCtx {
   m[presentation_ns] = "p"
   m[office_relationships_ns] = "r"
   { known_prefixes: m, next_ext: 0, }
+}
+
+///|
+/// Register a namespace already bound on the associated XML writer.
+pub fn WriteCtx::bind_namespace(
+  self : WriteCtx,
+  prefix : String,
+  uri : String,
+) -> Unit {
+  self.known_prefixes[uri] = prefix
 }
 
 ///|

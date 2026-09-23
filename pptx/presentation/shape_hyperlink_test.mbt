@@ -6,7 +6,7 @@
 ///|
 /// Decoded XML of the named slide part.
 fn slide_xml_of(prs : @presentation.Presentation, name : String) -> String {
-  @oxml.bytes_to_string(prs.pkg.part_by_name(name).unwrap().bytes) catch {
+  @oxml.bytes_to_string(prs.opc_package().part_by_name(name).unwrap().bytes()) catch {
     _ => abort("slide part is not valid UTF-8")
   }
 }
@@ -25,7 +25,7 @@ test "shape with_hyperlink: external URL → rel + <a:hlinkClick> on cNvPr" {
   ).with_hyperlink(url="https://example.com")
   prs.update_slide_mut(0, prs.slides()[0].with_shape(AutoShape(box)))
   // A TargetMode::External hyperlink rel is registered on the slide.
-  let rels = prs.pkg.relationships_for(slide_name)
+  let rels = prs.opc_package().relationships_for(slide_name)
   let hl = rels.by_type(@opc.rt_hyperlink)[0]
   debug_inspect(hl.target, content="\"https://example.com\"")
   debug_inspect(hl.target_mode is External, content="true")
@@ -49,7 +49,7 @@ test "shape with_hyperlink_to_slide: rt_slide rel + ppaction jump" {
     cy=Emu(1_000_000L),
   ).with_hyperlink_to_slide(slide_idx=1)
   prs.update_slide_mut(0, prs.slides()[0].with_shape(AutoShape(box)))
-  let rels = prs.pkg.relationships_for(slide_name)
+  let rels = prs.opc_package().relationships_for(slide_name)
   let jump = rels.by_type(@opc.rt_slide)[0]
   debug_inspect(jump.target_mode is Internal, content="true")
   let xml = slide_xml_of(prs, slide_name)
@@ -71,7 +71,7 @@ test "picture with_hyperlink: external URL → rel + hlinkClick" {
     cy=Emu(914_400L),
   ).with_hyperlink(url="https://pics.example")
   prs.update_slide_mut(0, prs.slides()[0].with_shape(Picture(pic)))
-  let rels = prs.pkg.relationships_for(slide_name)
+  let rels = prs.opc_package().relationships_for(slide_name)
   let hl = rels.by_type(@opc.rt_hyperlink)[0]
   debug_inspect(hl.target, content="\"https://pics.example\"")
   let xml = slide_xml_of(prs, slide_name)
@@ -93,7 +93,7 @@ test "shape with_hyperlink: survives save → reopen" {
   ).with_hyperlink(url="https://saved.example")
   prs.update_slide_mut(0, prs.slides()[0].with_shape(AutoShape(box)))
   let prs2 = @presentation.Presentation::open(prs.save())
-  let rels = prs2.pkg.relationships_for(slide_name)
+  let rels = prs2.opc_package().relationships_for(slide_name)
   debug_inspect(
     rels.by_type(@opc.rt_hyperlink)[0].target,
     content="\"https://saved.example\"",
@@ -118,7 +118,7 @@ test "shape without hyperlink: no hyperlink rel, no hlinkClick" {
     cy=Emu(1_000_000L),
   )
   prs.update_slide_mut(0, prs.slides()[0].with_shape(AutoShape(box)))
-  let rels = prs.pkg.relationships_for(slide_name)
+  let rels = prs.opc_package().relationships_for(slide_name)
   debug_inspect(rels.by_type(@opc.rt_hyperlink).length(), content="0")
   debug_inspect(
     slide_xml_of(prs, slide_name).contains("hlinkClick"),
@@ -170,7 +170,7 @@ test "connector with_hyperlink: external URL → rel + hlinkClick on cNvPr" {
   let slide_name = prs.add_slide_mut(0)
   let conn = test_connector(2).with_hyperlink(url="https://conn.example")
   prs.update_slide_mut(0, prs.slides()[0].with_shape(Connector(conn)))
-  let rels = prs.pkg.relationships_for(slide_name)
+  let rels = prs.opc_package().relationships_for(slide_name)
   let hl = rels.by_type(@opc.rt_hyperlink)[0]
   debug_inspect(hl.target, content="\"https://conn.example\"")
   debug_inspect(hl.target_mode is External, content="true")
@@ -203,7 +203,7 @@ test "group with_hyperlink_to_slide: rt_slide rel + ppaction jump" {
     0,
     prs.slides()[0].with_shape(Group(g.with_hyperlink_to_slide(slide_idx=1))),
   )
-  let rels = prs.pkg.relationships_for(slide_name)
+  let rels = prs.opc_package().relationships_for(slide_name)
   let jump = rels.by_type(@opc.rt_slide)[0]
   debug_inspect(jump.target_mode is Internal, content="true")
   let xml = slide_xml_of(prs, slide_name)
@@ -231,7 +231,7 @@ test "graphic frame with_hyperlink: a clickable table survives save → reopen" 
     table,
   ).with_hyperlink(url="https://table.example")
   prs.update_slide_mut(0, prs.slides()[0].with_shape(GraphicFrame(frame)))
-  let rels = prs.pkg.relationships_for(slide_name)
+  let rels = prs.opc_package().relationships_for(slide_name)
   debug_inspect(
     rels.by_type(@opc.rt_hyperlink)[0].target,
     content="\"https://table.example\"",
@@ -318,12 +318,16 @@ test "picture with_hyperlink_to_slide: rt_slide rel + ppaction jump" {
     }),
   )
   let xml = @oxml.bytes_to_string(
-    prs.pkg.part_by_name("/ppt/slides/slide1.xml").unwrap().bytes,
+    prs.opc_package().part_by_name("/ppt/slides/slide1.xml").unwrap().bytes(),
   )
   debug_inspect(xml.find("ppaction://hlinksldjump") is Some(_), content="true")
   // The slide rels carry an rt_slide relationship at slide2.
   let rels = @oxml.bytes_to_string(
-    prs.pkg.part_by_name("/ppt/slides/_rels/slide1.xml.rels").unwrap().bytes,
+    prs
+    .opc_package()
+    .part_by_name("/ppt/slides/_rels/slide1.xml.rels")
+    .unwrap()
+    .bytes(),
   )
   debug_inspect(rels.find("slide2.xml") is Some(_), content="true")
 }

@@ -10,8 +10,8 @@ fn first_rel_of_type(
   part_name : String,
   rel_type : String,
 ) -> @opc.Relationship? raise {
-  let rels = prs.pkg.relationships_for(part_name)
-  for r in rels.items {
+  let rels = prs.opc_package().relationships_for(part_name)
+  for r in rels.items() {
     if r.rel_type == rel_type {
       return Some(r)
     }
@@ -34,11 +34,11 @@ test "add_online_video_mut: poster part + external video/media rels, no media pa
   )
   // Poster image part exists; no /ppt/media part is created.
   debug_inspect(
-    prs.pkg.part_by_name("/ppt/media/image1.png") is Some(_),
+    prs.opc_package().part_by_name("/ppt/media/image1.png") is Some(_),
     content="true",
   )
   debug_inspect(
-    prs.pkg.part_by_name("/ppt/media/media1.mp4") is None,
+    prs.opc_package().part_by_name("/ppt/media/media1.mp4") is None,
     content="true",
   )
   // The video + media rels are External and point at the URL.

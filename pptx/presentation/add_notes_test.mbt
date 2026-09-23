@@ -8,14 +8,16 @@ test "set_notes_mut: first call creates the notesSlide part + slide rel" {
   prs.set_notes_mut(0, "Hello from the notes pane")
 
   // The notes part landed.
-  let notes_part = prs.pkg.part_by_name("/ppt/notesSlides/notesSlide1.xml")
+  let notes_part = prs
+    .opc_package()
+    .part_by_name("/ppt/notesSlides/notesSlide1.xml")
   debug_inspect(notes_part is Some(_), content="true")
 
   // The source slide gained a rt_notes_slide relationship pointing at it.
   let mut found_rt_notes = false
-  for p in prs.pkg.parts() {
+  for p in prs.opc_package().parts() {
     if p.name.has_prefix("/ppt/slides/") && p.name.has_suffix(".xml") {
-      let rels = prs.pkg.relationships_for(p.name)
+      let rels = prs.opc_package().relationships_for(p.name)
       if !rels.by_type(@opc.rt_notes_slide).is_empty() {
         found_rt_notes = true
       }
@@ -53,8 +55,9 @@ test "set_notes_mut: Override content type registered" {
   let prs = @presentation.Presentation::new()
   let _ = prs.add_slide_mut(0)
   prs.set_notes_mut(0, "notes")
-  let cts = prs.pkg.content_types()
-  let has_notes_override = cts.overrides
+  let cts = prs.opc_package().content_types()
+  let has_notes_override = cts
+    .overrides()
     .iter()
     .any(kv => {
       kv.0 == "/ppt/notesSlides/notesSlide1.xml" && kv.1 == @oxml.ct_notes_slide
@@ -67,7 +70,9 @@ test "set_notes_mut: notesSlide.rels points back at source slide" {
   let prs = @presentation.Presentation::new()
   let _ = prs.add_slide_mut(0)
   prs.set_notes_mut(0, "x")
-  let notes_rels = prs.pkg.relationships_for("/ppt/notesSlides/notesSlide1.xml")
+  let notes_rels = prs
+    .opc_package()
+    .relationships_for("/ppt/notesSlides/notesSlide1.xml")
   let back = notes_rels.by_type(@opc.rt_slide)
   debug_inspect(back.length(), content="1")
   debug_inspect(back[0].target.has_suffix(".xml"), content="true")
@@ -81,7 +86,8 @@ test "set_notes_mut: second call replaces bytes, doesn't create a new part" {
   prs.set_notes_mut(0, "first version")
   prs.set_notes_mut(0, "second version")
   // Still exactly one notesSlide part.
-  let notes_parts = prs.pkg
+  let notes_parts = prs
+    .opc_package()
     .parts()
     .iter()
     .filter(p => p.content_type == @oxml.ct_notes_slide)
@@ -153,7 +159,8 @@ test "set_notes_mut: synthesises a notesMaster on first call" {
   let prs = @presentation.Presentation::new()
   let _ = prs.add_slide_mut(0)
   // Before: no notes master in the package.
-  let before = prs.pkg
+  let before = prs
+    .opc_package()
     .parts()
     .iter()
     .filter(p => p.content_type == @oxml.ct_notes_master)
@@ -161,7 +168,8 @@ test "set_notes_mut: synthesises a notesMaster on first call" {
   debug_inspect(before, content="0")
   prs.set_notes_mut(0, "first")
   // After: exactly one notesMaster part.
-  let after = prs.pkg
+  let after = prs
+    .opc_package()
     .parts()
     .iter()
     .filter(p => p.content_type == @oxml.ct_notes_master)
@@ -174,7 +182,9 @@ test "set_notes_mut: notesMaster references a duplicate theme (theme2)" {
   let prs = @presentation.Presentation::new()
   let _ = prs.add_slide_mut(0)
   prs.set_notes_mut(0, "x")
-  let nm_rels = prs.pkg.relationships_for("/ppt/notesMasters/notesMaster1.xml")
+  let nm_rels = prs
+    .opc_package()
+    .relationships_for("/ppt/notesMasters/notesMaster1.xml")
   let theme_rels = nm_rels.by_type(@opc.rt_theme)
   debug_inspect(theme_rels.length(), content="1")
   // Points at theme2.xml — a duplicate of theme1 that PowerPoint
@@ -183,7 +193,7 @@ test "set_notes_mut: notesMaster references a duplicate theme (theme2)" {
   debug_inspect(theme_rels[0].target.has_suffix("theme2.xml"), content="true")
   // And the duplicate theme part is actually present.
   debug_inspect(
-    prs.pkg.part_by_name("/ppt/theme/theme2.xml") is Some(_),
+    prs.opc_package().part_by_name("/ppt/theme/theme2.xml") is Some(_),
     content="true",
   )
 }
@@ -205,7 +215,8 @@ test "set_notes_mut: second call reuses the existing notesMaster" {
   prs.set_notes_mut(0, "first")
   prs.set_notes_mut(1, "second")
   // Still exactly one notesMaster part.
-  let nm_count = prs.pkg
+  let nm_count = prs
+    .opc_package()
     .parts()
     .iter()
     .filter(p => p.content_type == @oxml.ct_notes_master)
@@ -218,7 +229,8 @@ test "set_notes_mut: notesSlide.rels also points at the notesMaster" {
   let prs = @presentation.Presentation::new()
   let _ = prs.add_slide_mut(0)
   prs.set_notes_mut(0, "x")
-  let nm_in_notes = prs.pkg
+  let nm_in_notes = prs
+    .opc_package()
     .relationships_for("/ppt/notesSlides/notesSlide1.xml")
     .by_type(@opc.rt_notes_master)
   debug_inspect(nm_in_notes.length(), content="1")

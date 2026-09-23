@@ -29,6 +29,10 @@ original project remains independent and may follow its own priorities.
   array constructors, and adopt the same warning policy as `mbtexcel` and
   `office-lib`. Qualify test symbols where needed and remove redundant type
   qualifiers where inferred. Parser/serializer algorithms are unchanged.
+- Make execution state, caches, storage, and construction handles private;
+  remove internal copy, name-conversion, and validation helpers from the API.
+  Expose low-level package access through `opc_package()` and return independent
+  OPC collection and payload snapshots. Cache slide order by part identity.
 
 The original repository's agent overlays, hooks, workflows, roadmap, release
 policy, and benchmark workspace do not govern this module. Historical design

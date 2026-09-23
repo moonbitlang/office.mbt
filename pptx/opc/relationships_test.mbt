@@ -97,8 +97,8 @@ test "parse single Internal relationship" {
     "<Relationship Id=\"rId1\" Type=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument\" Target=\"ppt/presentation.xml\"/>",
   )
   let rels = @opc.Relationships::parse(@opc.package_root, @fzip.str_to_u8(xml))
-  debug_inspect(rels.items.length(), content="1")
-  let r = rels.items[0]
+  debug_inspect(rels.items().length(), content="1")
+  let r = rels.items()[0]
   debug_inspect(r.id, content="\"rId1\"")
   debug_inspect(r.target, content="\"ppt/presentation.xml\"")
   debug_inspect(r.target_mode is Internal, content="true")
@@ -110,7 +110,7 @@ test "parse External TargetMode" {
     "<Relationship Id=\"rId7\" Type=\"http://example/external\" Target=\"https://example.org/x\" TargetMode=\"External\"/>",
   )
   let rels = @opc.Relationships::parse("/foo.xml", @fzip.str_to_u8(xml))
-  debug_inspect(rels.items[0].target_mode is External, content="true")
+  debug_inspect(rels.items()[0].target_mode is External, content="true")
 }
 
 ///|
@@ -161,9 +161,9 @@ test "serialize -> parse round trip preserves entries" {
     })
   let bytes = original.serialize()
   let reparsed = @opc.Relationships::parse(@opc.package_root, bytes)
-  debug_inspect(reparsed.items.length(), content="2")
-  for i in 0..<original.items.length() {
-    debug_inspect(reparsed.items[i] == original.items[i], content="true")
+  debug_inspect(reparsed.items().length(), content="2")
+  for i in 0..<original.items().length() {
+    debug_inspect(reparsed.items()[i] == original.items()[i], content="true")
   }
 }
 
@@ -250,8 +250,8 @@ test "Package::relationships_for: package root" {
   ])
   let pkg = @opc.Package::open(bytes)
   let rels = pkg.relationships_for(@opc.package_root)
-  debug_inspect(rels.items.length(), content="1")
-  debug_inspect(rels.items[0].id, content="\"rId1\"")
+  debug_inspect(rels.items().length(), content="1")
+  debug_inspect(rels.items()[0].id, content="\"rId1\"")
 }
 
 ///|
@@ -259,7 +259,7 @@ test "Package::relationships_for: missing rels file returns empty" {
   let bytes = make_pkg_with_rels([("ppt/presentation.xml", "<presentation/>")])
   let pkg = @opc.Package::open(bytes)
   let rels = pkg.relationships_for("/ppt/presentation.xml")
-  debug_inspect(rels.items.length(), content="0")
+  debug_inspect(rels.items().length(), content="0")
 }
 
 ///|
@@ -274,11 +274,11 @@ test "Package::relationships_for: part-level rels" {
   ])
   let pkg = @opc.Package::open(bytes)
   let rels = pkg.relationships_for("/ppt/presentation.xml")
-  debug_inspect(rels.items.length(), content="1")
+  debug_inspect(rels.items().length(), content="1")
   let target = @opc.resolve_target(
     "/ppt/presentation.xml",
-    rels.items[0].target,
-    rels.items[0].target_mode,
+    rels.items()[0].target,
+    rels.items()[0].target_mode,
   )
   debug_inspect(target, content="\"/ppt/slides/slide1.xml\"")
   // Verify the resolved target is in fact a real part.

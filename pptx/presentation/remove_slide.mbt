@@ -112,13 +112,15 @@ pub fn Presentation::remove_slide_mut(
   )
 
   // 4. Rewrite presentation.xml.rels without the target relationship.
-  let kept_rels : Array[@opc.Relationship] = []
-  for r in pres_rels.items {
+  let mut kept_rels = @opc.Relationships::new(pres_rels.source)
+  for r in pres_rels.items() {
     if r.id != target_rid {
-      kept_rels.push(r)
+      kept_rels = kept_rels.with_relationship(r) catch {
+        e => raise OpcFailure(e.to_string())
+      }
     }
   }
-  self.write_rels_for_part(pres_name, { ..pres_rels, items: kept_rels, })
+  self.write_rels_for_part(pres_name, kept_rels)
 
   // 5. Drop the slide part, its .rels, and its content-type Override.
   let _ = self.pkg.remove_part(target_name)
@@ -179,7 +181,7 @@ fn Presentation::internal_rel_targets(
   let rels = self.pkg.relationships_for(source_part) catch {
     e => raise OpcFailure(e.to_string())
   }
-  for r in rels.items {
+  for r in rels.items() {
     match r.target_mode {
       Internal => {
         let abs = @opc.resolve_target(source_part, r.target, r.target_mode)

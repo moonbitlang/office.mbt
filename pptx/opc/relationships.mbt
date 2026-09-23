@@ -67,9 +67,9 @@ pub impl Show for Relationship with fn output(self, logger) {
 /// `source` is the OPC name of the originating part, or `"/"` for the
 /// package-level relationships. Lookup helpers (`by_id` / `by_type`) and an
 /// immutable builder (`with_relationship`) are provided.
-pub(all) struct Relationships {
+pub struct Relationships {
   source : String
-  items : Array[Relationship]
+  priv items : Array[Relationship]
 } derive(Debug)
 
 ///|
@@ -77,6 +77,12 @@ pub(all) struct Relationships {
 /// part the relationships belong to).
 pub fn Relationships::new(source : String) -> Relationships {
   { source, items: [], }
+}
+
+///|
+/// Return the relationships in source order in a separate array.
+pub fn Relationships::items(self : Relationships) -> Array[Relationship] {
+  self.items.copy()
 }
 
 ///|

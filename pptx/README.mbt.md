@@ -31,6 +31,21 @@ modules. Examples and benchmarks are packages of `moonbitlang/pptx`, not
 separate modules or workspaces. Import paths such as
 `moonbitlang/pptx/presentation` are unchanged by the directory organization.
 
+## API boundaries
+
+Parser and writer state, package storage and indexes, presentation caches,
+and staged construction handles have private fields. Construct and edit them
+through their methods. OOXML value models retain the fields needed to inspect,
+construct, and preserve document content, including unknown XML extensions.
+
+Use `Presentation::opc_package()` for low-level edits that the typed APIs do
+not cover. `Package::parts()`, `Part::bytes()`, `ContentTypes::defaults()` and
+`overrides()`, and `Relationships::items()` return independent buffers or
+arrays. Editing these snapshots does not edit the document: replace a part
+with `Package::replace_part`, or build and install an updated catalog.
+`Part::new` also copies its input buffer. Slide-order caches refresh when the
+presentation or relationship part is replaced.
+
 ## Develop
 
 Run all commands from the **repository root**:

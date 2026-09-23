@@ -27,7 +27,7 @@ fn part_bytes(
   prs : @presentation.Presentation,
   name : String,
 ) -> FixedArray[Byte] {
-  prs.pkg.part_by_name(name).unwrap().bytes
+  prs.opc_package().part_by_name(name).unwrap().bytes()
 }
 
 ///|

@@ -70,11 +70,11 @@ pub impl Show for XmlEvent with fn output(self, logger) {
 /// - `pending` — Queued events from a previous step (e.g. EndElement after a
 ///   self-close, or both StartElement and EndElement of an empty self-close).
 pub struct XmlReader {
-  chars : Array[Char]
-  mut pos : Int
-  ns_stack : Array[Map[String, String]]
-  element_stack : Array[QName]
-  pending : Array[XmlEvent]
+  priv chars : Array[Char]
+  priv mut pos : Int
+  priv ns_stack : Array[Map[String, String]]
+  priv element_stack : Array[QName]
+  priv pending : Array[XmlEvent]
 }
 
 ///|

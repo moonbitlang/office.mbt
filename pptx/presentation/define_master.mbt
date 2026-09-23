@@ -13,7 +13,7 @@
 /// One placeholder declared on a master. `kind` is the
 /// `ST_PlaceholderType`; `position` is its rectangle on the master;
 /// `default_text` is prompt text shown until a slide overrides it.
-pub struct PlaceholderDef {
+priv struct PlaceholderDef {
   kind : @slide.PlaceholderType
   position : @slide.Transform
   default_text : String?
@@ -21,7 +21,8 @@ pub struct PlaceholderDef {
 
 ///|
 /// A high-level master definition. Build with
-/// `MasterDefinition::new` then the `with_*` helpers, or as a struct literal.
+/// `MasterDefinition::new` then the `with_*` helpers. The name is a readable
+/// label; construction state remains private.
 ///
 /// - `slide_number` — Declare a slide-number (`sldNum`) placeholder on the
 ///   master.
@@ -31,11 +32,11 @@ pub struct PlaceholderDef {
 ///   `@slide.Slide::with_date`).
 pub struct MasterDefinition {
   name : String
-  background : @slide.Background?
-  placeholders : Array[PlaceholderDef]
-  slide_number : Bool
-  footer_text : String?
-  date : Bool
+  priv background : @slide.Background?
+  priv placeholders : Array[PlaceholderDef]
+  priv slide_number : Bool
+  priv footer_text : String?
+  priv date : Bool
 }
 
 ///|
@@ -140,7 +141,7 @@ pub fn Presentation::define_master(
   let theme_part = @opc.Part::new(
     theme_name,
     @oxml.ct_theme,
-    src_theme_bytes.bytes,
+    src_theme_bytes.bytes(),
   ) catch {
     e => raise OpcFailure(e.to_string())
   }
@@ -493,7 +494,7 @@ fn Presentation::max_slide_layout_id(self : Presentation) -> Int64 {
       p.name[0:prefix.length()].to_owned() != prefix {
       continue
     }
-    let xml = @oxml.bytes_to_string(p.bytes) catch { _ => continue }
+    let xml = @oxml.bytes_to_string(p.bytes()) catch { _ => continue }
     let mut from = 0
     while true {
       guard xml[from:].find(marker) is Some(rel_at) else { break }

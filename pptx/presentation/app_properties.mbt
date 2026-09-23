@@ -165,8 +165,8 @@ fn serialize_app_root(
     w.default_namespace_attr(@oxml.extended_properties_ns)
     w.namespace_attr("vt", @oxml.doc_props_vtypes_ns)
     let ctx = @oxml.WriteCtx::with_well_known_prefixes()
-    ctx.known_prefixes[@oxml.extended_properties_ns] = ""
-    ctx.known_prefixes[@oxml.doc_props_vtypes_ns] = "vt"
+    ctx.bind_namespace("", @oxml.extended_properties_ns)
+    ctx.bind_namespace("vt", @oxml.doc_props_vtypes_ns)
     for c in root.children {
       match c {
         Element(el) => @oxml.write_xml_element(w, ctx, el)
@@ -191,7 +191,7 @@ pub fn Presentation::app_properties(
   self : Presentation,
 ) -> AppProperties raise PptxError {
   let root = match self.pkg.part_by_name(app_part_name) {
-    Some(p) => parse_app_root(p.bytes)
+    Some(p) => parse_app_root(p.bytes())
     None => return AppProperties::new()
   }
   let mut props = AppProperties::new()
@@ -222,7 +222,7 @@ pub fn Presentation::set_app_properties_mut(
   props : AppProperties,
 ) -> Unit raise PptxError {
   let mut root = match self.pkg.part_by_name(app_part_name) {
-    Some(p) => parse_app_root(p.bytes)
+    Some(p) => parse_app_root(p.bytes())
     None =>
       @xml.XmlElement::new(
         @xml.QName::new(@oxml.extended_properties_ns, "Properties"),

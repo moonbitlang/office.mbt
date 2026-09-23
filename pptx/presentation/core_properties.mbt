@@ -388,7 +388,7 @@ pub fn Presentation::core_properties(
 ) -> CoreProperties raise PptxError {
   match self.pkg.part_by_name("/docProps/core.xml") {
     Some(p) => {
-      let xml = @oxml.bytes_to_string(p.bytes) catch {
+      let xml = @oxml.bytes_to_string(p.bytes()) catch {
         e => raise OpcFailure(e.to_string())
       }
       parse_core_properties(xml)

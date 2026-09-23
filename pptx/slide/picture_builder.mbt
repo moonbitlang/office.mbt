@@ -26,7 +26,7 @@
 /// Stage 1 — a freshly-created picture with no crop applied yet.
 /// Offers `with_crop`, `with_effects` (skipping the crop), and `build`.
 pub struct PictureUncropped {
-  pic : Picture
+  priv pic : Picture
 }
 
 ///|
@@ -34,13 +34,13 @@ pub struct PictureUncropped {
 /// available (cropping twice is a compile error); offers `with_effects`
 /// and `build`.
 pub struct PictureCropped {
-  pic : Picture
+  priv pic : Picture
 }
 
 ///|
 /// Stage 3 — effects have been applied. Only `build` remains.
 pub struct PictureFinal {
-  pic : Picture
+  priv pic : Picture
 }
 
 ///|

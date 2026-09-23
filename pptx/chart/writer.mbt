@@ -186,6 +186,6 @@ fn write_plot(
 /// well-known OOXML prefixes.
 fn make_chart_ctx() -> @oxml.WriteCtx {
   let ctx = @oxml.WriteCtx::with_well_known_prefixes()
-  ctx.known_prefixes[@oxml.chart_ns] = "c"
+  ctx.bind_namespace("c", @oxml.chart_ns)
   ctx
 }

@@ -14,7 +14,7 @@
 
 ///|
 /// Namespace URI of `[Content_Types].xml`.
-pub let content_types_ns : String = "http://schemas.openxmlformats.org/package/2006/content-types"
+let content_types_ns : String = "http://schemas.openxmlformats.org/package/2006/content-types"
 
 ///|
 /// OPC part name that holds the content-type catalog. Always `/[Content_Types].xml`.
@@ -33,14 +33,26 @@ pub let content_types_part_name : String = "/[Content_Types].xml"
 /// - `overrides` — `(part_name, content_type)` pairs. Part names are
 ///   case-sensitive.
 pub struct ContentTypes {
-  defaults : Array[(String, String)]
-  overrides : Array[(String, String)]
+  priv defaults : Array[(String, String)]
+  priv overrides : Array[(String, String)]
 } derive(Eq, Debug)
 
 ///|
 /// An empty catalog with no Default or Override entries.
 pub fn ContentTypes::new() -> ContentTypes {
   { defaults: [], overrides: [], }
+}
+
+///|
+/// Return the default content-type entries in a separate array.
+pub fn ContentTypes::defaults(self : ContentTypes) -> Array[(String, String)] {
+  self.defaults.copy()
+}
+
+///|
+/// Return the override entries in a separate array.
+pub fn ContentTypes::overrides(self : ContentTypes) -> Array[(String, String)] {
+  self.overrides.copy()
 }
 
 ///|

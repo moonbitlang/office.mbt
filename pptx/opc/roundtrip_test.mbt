@@ -123,7 +123,7 @@ test "fixture: content types resolve correctly per part" {
 test "fixture: package-level rels point at the presentation" {
   let pkg = @opc.Package::open(build_fixture())
   let rels = pkg.relationships_for(@opc.package_root)
-  debug_inspect(rels.items.length(), content="1")
+  debug_inspect(rels.items().length(), content="1")
   let r = rels.by_type(rt_office_doc)
   debug_inspect(r.length(), content="1")
   debug_inspect(
@@ -136,7 +136,7 @@ test "fixture: package-level rels point at the presentation" {
 test "fixture: presentation rels resolve to real parts (incl. `..` walk)" {
   let pkg = @opc.Package::open(build_fixture())
   let rels = pkg.relationships_for("/ppt/presentation.xml")
-  debug_inspect(rels.items.length(), content="2")
+  debug_inspect(rels.items().length(), content="2")
   let slide_rel = rels.by_id("rId1").unwrap()
   let slide_path = @opc.resolve_target(
     "/ppt/presentation.xml",
@@ -164,12 +164,12 @@ test "round trip: open -> to_bytes -> open preserves shape" {
   for p in pkg1.parts() {
     let other = pkg2.require_part(p.name)
     debug_inspect(other.content_type == p.content_type, content="true")
-    debug_inspect(other.bytes.length() == p.bytes.length(), content="true")
+    debug_inspect(other.bytes().length() == p.bytes().length(), content="true")
   }
   // Rels survive too.
   let r1 = pkg1.relationships_for("/ppt/presentation.xml")
   let r2 = pkg2.relationships_for("/ppt/presentation.xml")
-  debug_inspect(r2.items.length() == r1.items.length(), content="true")
+  debug_inspect(r2.items().length() == r1.items().length(), content="true")
 }
 
 ///|

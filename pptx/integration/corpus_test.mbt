@@ -69,47 +69,47 @@ fn assert_reader_lossless(
   let pkg_re = re_serialize_all(@opc.Package::open(bytes))
   let pkg_out = @opc.Package::open(pkg_re.to_bytes())
   for p in parts_of(pkg_in, ct_theme) {
-    let re = @theme.Theme::parse(pkg_out.require_part(p.name).bytes)
-    debug_inspect(@theme.Theme::parse(p.bytes) == re, content="true")
+    let re = @theme.Theme::parse(pkg_out.require_part(p.name).bytes())
+    debug_inspect(@theme.Theme::parse(p.bytes()) == re, content="true")
   }
   for p in parts_of(pkg_in, ct_slide_master) {
     let re = @slide_master.SlideMaster::parse(
-      pkg_out.require_part(p.name).bytes,
+      pkg_out.require_part(p.name).bytes(),
     )
     debug_inspect(
-      @slide_master.SlideMaster::parse(p.bytes) == re,
+      @slide_master.SlideMaster::parse(p.bytes()) == re,
       content="true",
     )
   }
   for p in parts_of(pkg_in, ct_slide_layout) {
     let re = @slide_master.SlideLayout::parse(
-      pkg_out.require_part(p.name).bytes,
+      pkg_out.require_part(p.name).bytes(),
     )
     debug_inspect(
-      @slide_master.SlideLayout::parse(p.bytes) == re,
+      @slide_master.SlideLayout::parse(p.bytes()) == re,
       content="true",
     )
   }
   for p in parts_of(pkg_in, ct_slide) {
-    let re = @slide.Slide::parse(pkg_out.require_part(p.name).bytes)
-    debug_inspect(@slide.Slide::parse(p.bytes) == re, content="true")
+    let re = @slide.Slide::parse(pkg_out.require_part(p.name).bytes())
+    debug_inspect(@slide.Slide::parse(p.bytes()) == re, content="true")
   }
   for p in parts_of(pkg_in, ct_notes_slide) {
-    let re = @notes.NotesSlide::parse(pkg_out.require_part(p.name).bytes)
-    debug_inspect(@notes.NotesSlide::parse(p.bytes) == re, content="true")
+    let re = @notes.NotesSlide::parse(pkg_out.require_part(p.name).bytes())
+    debug_inspect(@notes.NotesSlide::parse(p.bytes()) == re, content="true")
   }
   for p in parts_of(pkg_in, ct_comment_authors) {
     let re = @comments.CommentAuthorList::parse(
-      pkg_out.require_part(p.name).bytes,
+      pkg_out.require_part(p.name).bytes(),
     )
     debug_inspect(
-      @comments.CommentAuthorList::parse(p.bytes) == re,
+      @comments.CommentAuthorList::parse(p.bytes()) == re,
       content="true",
     )
   }
   for p in parts_of(pkg_in, ct_comments) {
-    let re = @comments.CommentList::parse(pkg_out.require_part(p.name).bytes)
-    debug_inspect(@comments.CommentList::parse(p.bytes) == re, content="true")
+    let re = @comments.CommentList::parse(pkg_out.require_part(p.name).bytes())
+    debug_inspect(@comments.CommentList::parse(p.bytes()) == re, content="true")
   }
   counts
 }
@@ -131,7 +131,7 @@ test "corpus testPPT: parse → serialise → re-parse is lossless" {
 test "corpus testPPT: real slide text survives the round-trip" {
   let pkg = @opc.Package::open(corpus_testppt())
   let slide = @slide.Slide::parse(
-    pkg.require_part("/ppt/slides/slide1.xml").bytes,
+    pkg.require_part("/ppt/slides/slide1.xml").bytes(),
   )
   let reparsed = @slide.Slide::parse(slide.serialize())
   let mut text = ""
@@ -160,7 +160,7 @@ test "corpus table_test: parse → serialise → re-parse is lossless" {
 test "corpus table_test: the table lifts to the typed model" {
   let pkg = @opc.Package::open(corpus_table_test())
   let slide = @slide.Slide::parse(
-    pkg.require_part("/ppt/slides/slide1.xml").bytes,
+    pkg.require_part("/ppt/slides/slide1.xml").bytes(),
   )
   let mut cols = 0
   let mut rows = 0
@@ -195,7 +195,7 @@ test "corpus with_japanese: parse → serialise → re-parse is lossless" {
 test "corpus with_japanese: CJK and surrogate-pair text survive UTF round-trips" {
   let pkg = @opc.Package::open(corpus_with_japanese())
   let slide = @slide.Slide::parse(
-    pkg.require_part("/ppt/slides/slide1.xml").bytes,
+    pkg.require_part("/ppt/slides/slide1.xml").bytes(),
   )
   let reparsed = @slide.Slide::parse(slide.serialize())
   let mut text = ""
@@ -232,7 +232,7 @@ test "corpus with_japanese: the theme names the font CJK actually renders in" {
   // entry does. This is the case G2 exists for, checked against a real file.
   let pkg = @opc.Package::open(corpus_with_japanese())
   let theme = @theme.Theme::parse(
-    pkg.require_part("/ppt/theme/theme1.xml").bytes,
+    pkg.require_part("/ppt/theme/theme1.xml").bytes(),
   )
   let scheme = theme.font_scheme
   debug_inspect(scheme.minor_font.ea, content="\"\"")
@@ -274,7 +274,7 @@ test "corpus testPPT: app.xml merge preserves the vt subtrees" {
     content="\"moon-pptx tests\"",
   )
   let xml = @oxml.bytes_to_string(
-    @opc.Package::open(prs.save()).require_part("/docProps/app.xml").bytes,
+    @opc.Package::open(prs.save()).require_part("/docProps/app.xml").bytes(),
   )
   // Office's statistics and both vt: vectors are still intact.
   debug_inspect(xml.contains("<TotalTime>1</TotalTime>"), content="true")

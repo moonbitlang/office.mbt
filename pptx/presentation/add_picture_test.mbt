@@ -56,7 +56,7 @@ test "add_picture_mut: PNG path lands in /ppt/media as image/png" {
     cy=Emu(2_286_000L),
   )
   // The package now has a /ppt/media/image1.png part.
-  let pkg = prs.pkg
+  let pkg = prs.opc_package()
   let img = pkg.part_by_name("/ppt/media/image1.png").unwrap()
   debug_inspect(img.content_type, content="\"image/png\"")
   // The slide's shape tree now contains a Picture referencing rId2
@@ -86,7 +86,7 @@ test "add_picture_mut: JPEG path uses .jpeg extension + image/jpeg" {
     cx=Emu(100L),
     cy=Emu(100L),
   )
-  let img = prs.pkg.part_by_name("/ppt/media/image1.jpeg").unwrap()
+  let img = prs.opc_package().part_by_name("/ppt/media/image1.jpeg").unwrap()
   debug_inspect(img.content_type, content="\"image/jpeg\"")
 }
 
@@ -102,8 +102,9 @@ test "add_picture_mut: content_types gains a Default for the extension" {
     cx=Emu(100L),
     cy=Emu(100L),
   )
-  let cts = prs.pkg.content_types()
-  let has_png_default = cts.defaults
+  let cts = prs.opc_package().content_types()
+  let has_png_default = cts
+    .defaults()
     .iter()
     .any(kv => kv.0 == "png" && kv.1 == "image/png")
   debug_inspect(has_png_default, content="true")
@@ -130,11 +131,11 @@ test "add_picture_mut: second image gets image2 + a fresh rId" {
     cy=Emu(100L),
   )
   debug_inspect(
-    prs.pkg.part_by_name("/ppt/media/image1.png") is Some(_),
+    prs.opc_package().part_by_name("/ppt/media/image1.png") is Some(_),
     content="true",
   )
   debug_inspect(
-    prs.pkg.part_by_name("/ppt/media/image2.png") is Some(_),
+    prs.opc_package().part_by_name("/ppt/media/image2.png") is Some(_),
     content="true",
   )
   let slide = prs.slides()[0]
@@ -259,8 +260,8 @@ test "add_picture_mut: produced bytes reopen and round-trip" {
     _ => fail("expected Picture after reopen")
   }
   // Image bytes survived.
-  let img = prs2.pkg.part_by_name("/ppt/media/image1.png").unwrap()
-  debug_inspect(img.bytes.length() == fake_png().length(), content="true")
+  let img = prs2.opc_package().part_by_name("/ppt/media/image1.png").unwrap()
+  debug_inspect(img.bytes().length() == fake_png().length(), content="true")
 }
 
 // --- add_svg_picture_mut ---
@@ -294,15 +295,15 @@ test "add_svg_picture_mut: wires svg + fallback parts, rels, content types" {
   )
   // Two media parts: the raster fallback (image1.png) and the SVG
   // (image2.svg), each with the right content type.
-  let png = prs.pkg.part_by_name("/ppt/media/image1.png").unwrap()
+  let png = prs.opc_package().part_by_name("/ppt/media/image1.png").unwrap()
   debug_inspect(png.content_type, content="\"image/png\"")
-  let svg = prs.pkg.part_by_name("/ppt/media/image2.svg").unwrap()
+  let svg = prs.opc_package().part_by_name("/ppt/media/image2.svg").unwrap()
   debug_inspect(svg.content_type, content="\"image/svg+xml\"")
   // Both content-type Defaults are declared.
-  let cts = prs.pkg.content_types()
-  debug_inspect(cts.defaults.iter().any(kv => kv.0 == "png"), content="true")
+  let cts = prs.opc_package().content_types()
+  debug_inspect(cts.defaults().iter().any(kv => kv.0 == "png"), content="true")
   debug_inspect(
-    cts.defaults.iter().any(kv => kv.0 == "svg" && kv.1 == "image/svg+xml"),
+    cts.defaults().iter().any(kv => kv.0 == "svg" && kv.1 == "image/svg+xml"),
     content="true",
   )
   // The slide carries one SVG picture: blip embeds the fallback (rId2),
@@ -335,11 +336,11 @@ test "add_svg_picture_mut: survives save + reopen" {
   let prs2 = @presentation.Presentation::open(prs.save())
   // Both media parts survived the zip round-trip.
   debug_inspect(
-    prs2.pkg.part_by_name("/ppt/media/image1.png") is Some(_),
+    prs2.opc_package().part_by_name("/ppt/media/image1.png") is Some(_),
     content="true",
   )
-  let svg = prs2.pkg.part_by_name("/ppt/media/image2.svg").unwrap()
-  debug_inspect(svg.bytes.length() == fake_svg().length(), content="true")
+  let svg = prs2.opc_package().part_by_name("/ppt/media/image2.svg").unwrap()
+  debug_inspect(svg.bytes().length() == fake_svg().length(), content="true")
   // And the picture's svgBlip extension is intact.
   match prs2.slides()[0].shapes[0] {
     Picture(p) => debug_inspect(p.blip_fill.embed_id, content="\"rId2\"")
@@ -412,14 +413,14 @@ test "add_video_mut: wires media + poster parts, three rels, content types" {
     cy=Emu(914_400L),
   )
   // Media + poster parts with the right content types.
-  let media = prs.pkg.part_by_name("/ppt/media/media1.mp4").unwrap()
+  let media = prs.opc_package().part_by_name("/ppt/media/media1.mp4").unwrap()
   debug_inspect(media.content_type, content="\"video/mp4\"")
   debug_inspect(
-    prs.pkg.part_by_name("/ppt/media/image1.png") is Some(_),
+    prs.opc_package().part_by_name("/ppt/media/image1.png") is Some(_),
     content="true",
   )
-  let cts = prs.pkg.content_types()
-  debug_inspect(cts.defaults.iter().any(kv => kv.0 == "mp4"), content="true")
+  let cts = prs.opc_package().content_types()
+  debug_inspect(cts.defaults().iter().any(kv => kv.0 == "mp4"), content="true")
   // The slide holds one media picture: poster (rId2), link (rId3), embed (rId4).
   // The slide holds one picture whose poster is rId2. On re-parse `media` is
   // None — the videoFile / p14:media references round-trip through
@@ -448,8 +449,8 @@ test "add_video_mut: survives save → reopen with media bytes intact" {
     cy=Emu(100L),
   )
   let prs2 = @presentation.Presentation::open(prs.save())
-  let media = prs2.pkg.part_by_name("/ppt/media/media1.mp4").unwrap()
-  debug_inspect(media.bytes.length() == fake_mp4().length(), content="true")
+  let media = prs2.opc_package().part_by_name("/ppt/media/media1.mp4").unwrap()
+  debug_inspect(media.bytes().length() == fake_mp4().length(), content="true")
   debug_inspect(prs2.slides()[0].shapes.length(), content="1")
 }
 
@@ -466,7 +467,7 @@ test "add_audio_mut: mp3 lands as audio/mpeg" {
     cx=Emu(100L),
     cy=Emu(100L),
   )
-  let media = prs.pkg.part_by_name("/ppt/media/media1.mp3").unwrap()
+  let media = prs.opc_package().part_by_name("/ppt/media/media1.mp3").unwrap()
   debug_inspect(media.content_type, content="\"audio/mpeg\"")
 }
 

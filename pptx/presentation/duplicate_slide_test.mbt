@@ -26,7 +26,7 @@ test "duplicate_slide_mut: new sldId + presentation rel are wired" {
   debug_inspect(pres.sld_ids.length(), content="2")
   // Distinct slide ids.
   debug_inspect(pres.sld_ids[0].id != pres.sld_ids[1].id, content="true")
-  let pres_rels = prs.pkg.relationships_for("/ppt/presentation.xml")
+  let pres_rels = prs.opc_package().relationships_for("/ppt/presentation.xml")
   debug_inspect(pres_rels.by_type(@opc.rt_slide).length(), content="2")
 }
 
@@ -45,16 +45,16 @@ test "duplicate_slide_mut: clone re-references the source's parts" {
   let new_name = prs.duplicate_slide_mut(0)
   // Only one image part exists — the clone shares it (Q12: re-reference).
   debug_inspect(
-    prs.pkg.part_by_name("/ppt/media/image1.png") is Some(_),
+    prs.opc_package().part_by_name("/ppt/media/image1.png") is Some(_),
     content="true",
   )
   debug_inspect(
-    prs.pkg.part_by_name("/ppt/media/image2.png") is None,
+    prs.opc_package().part_by_name("/ppt/media/image2.png") is None,
     content="true",
   )
   // Both slides' .rels point at the same image target.
-  let orig_rels = prs.pkg.relationships_for("/ppt/slides/slide1.xml")
-  let clone_rels = prs.pkg.relationships_for(new_name)
+  let orig_rels = prs.opc_package().relationships_for("/ppt/slides/slide1.xml")
+  let clone_rels = prs.opc_package().relationships_for(new_name)
   debug_inspect(
     orig_rels.by_type(@opc.rt_image).length() ==
     clone_rels.by_type(@opc.rt_image).length(),
@@ -98,7 +98,7 @@ test "duplicate_slide_mut: shared image survives deleting the original" {
   debug_inspect(prs.slides().length(), content="1")
   // The clone still references image1.png, so it must NOT be collected.
   debug_inspect(
-    prs.pkg.part_by_name("/ppt/media/image1.png") is Some(_),
+    prs.opc_package().part_by_name("/ppt/media/image1.png") is Some(_),
     content="true",
   )
 }

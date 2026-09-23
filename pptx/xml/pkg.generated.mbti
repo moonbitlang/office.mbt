@@ -76,20 +76,13 @@ pub fn XmlNode::to_string(Self) -> String
 pub impl Show for XmlNode
 
 pub struct XmlReader {
-  chars : Array[Char]
-  mut pos : Int
-  ns_stack : Array[Map[String, String]]
-  element_stack : Array[QName]
-  pending : Array[XmlEvent]
+  // private fields
 }
 pub fn XmlReader::new(String) -> Self
 pub fn XmlReader::next(Self) -> XmlEvent? raise XmlError
 
 pub struct XmlWriter {
-  buf : StringBuilder
-  prefix_for_uri : Map[String, String]
-  stack : Array[QName]
-  mut in_start_tag : Bool
+  // private fields
 }
 pub fn XmlWriter::attribute(Self, QName, String) -> Unit raise XmlError
 pub fn XmlWriter::bind_namespace(Self, String, String) -> Unit

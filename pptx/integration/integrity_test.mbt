@@ -92,7 +92,7 @@ fn integrity_issues(pkg : @opc.Package) -> Array[IntegrityIssue] {
       _ => @opc.Relationships::new(name)
     }
     // (2) relationship targets resolve to a part that exists
-    for rel in rels.items {
+    for rel in rels.items() {
       if rel.target_mode is Internal {
         let resolved = @opc.resolve_target(name, rel.target, rel.target_mode)
         if pkg.part_by_name(resolved) is None {
@@ -120,7 +120,7 @@ fn integrity_issues(pkg : @opc.Package) -> Array[IntegrityIssue] {
     // (4) shape ids are unique within a slide. Parse failures are swallowed
     // for the same reason as (3): schema is the external validator's job.
     if name.has_prefix("/ppt/slides/slide") && name.has_suffix(".xml") {
-      let dups = @slide.Slide::parse(part.bytes).duplicate_shape_ids() catch {
+      let dups = @slide.Slide::parse(part.bytes()).duplicate_shape_ids() catch {
         _ => []
       }
       for id in dups {

@@ -15,14 +15,17 @@ test "remove_slide_mut: drops the targeted slide and its sldId" {
   debug_inspect(pres.sld_ids.length(), content="2")
   // The slide2 part + its rels + content-type override are gone.
   debug_inspect(
-    prs.pkg.part_by_name("/ppt/slides/slide2.xml") is None,
+    prs.opc_package().part_by_name("/ppt/slides/slide2.xml") is None,
     content="true",
   )
   debug_inspect(
-    prs.pkg.part_by_name("/ppt/slides/_rels/slide2.xml.rels") is None,
+    prs.opc_package().part_by_name("/ppt/slides/_rels/slide2.xml.rels") is None,
     content="true",
   )
-  let has_override = prs.pkg.content_types().overrides
+  let has_override = prs
+    .opc_package()
+    .content_types()
+    .overrides()
     .iter()
     .any(kv => kv.0 == "/ppt/slides/slide2.xml")
   debug_inspect(has_override, content="false")
@@ -34,7 +37,7 @@ test "remove_slide_mut: presentation.xml.rels loses exactly one slide rel" {
   let _ = prs.add_slide_mut(0)
   let _ = prs.add_slide_mut(0)
   prs.remove_slide_mut(0)
-  let pres_rels = prs.pkg.relationships_for("/ppt/presentation.xml")
+  let pres_rels = prs.opc_package().relationships_for("/ppt/presentation.xml")
   debug_inspect(pres_rels.by_type(@opc.rt_slide).length(), content="1")
 }
 
@@ -53,15 +56,17 @@ test "remove_slide_mut: save → reopen round-trips the smaller deck" {
   )
   // Shared structural parts survive.
   debug_inspect(
-    reopened.pkg.part_by_name("/ppt/slideLayouts/slideLayout1.xml") is Some(_),
+    reopened.opc_package().part_by_name("/ppt/slideLayouts/slideLayout1.xml")
+    is Some(_),
     content="true",
   )
   debug_inspect(
-    reopened.pkg.part_by_name("/ppt/slideMasters/slideMaster1.xml") is Some(_),
+    reopened.opc_package().part_by_name("/ppt/slideMasters/slideMaster1.xml")
+    is Some(_),
     content="true",
   )
   debug_inspect(
-    reopened.pkg.part_by_name("/ppt/theme/theme1.xml") is Some(_),
+    reopened.opc_package().part_by_name("/ppt/theme/theme1.xml") is Some(_),
     content="true",
   )
 }
@@ -96,13 +101,13 @@ test "remove_slide_mut: garbage-collects a slide-private image" {
     cy=Emu(100L),
   )
   debug_inspect(
-    prs.pkg.part_by_name("/ppt/media/image1.png") is Some(_),
+    prs.opc_package().part_by_name("/ppt/media/image1.png") is Some(_),
     content="true",
   )
   prs.remove_slide_mut(0)
   // The image was reachable only from the removed slide → collected.
   debug_inspect(
-    prs.pkg.part_by_name("/ppt/media/image1.png") is None,
+    prs.opc_package().part_by_name("/ppt/media/image1.png") is None,
     content="true",
   )
 }
@@ -134,11 +139,11 @@ test "remove_slide_mut: keeps an image still referenced by another slide" {
   // slide1 → image1, slide2 → image2.
   prs.remove_slide_mut(0)
   debug_inspect(
-    prs.pkg.part_by_name("/ppt/media/image1.png") is None,
+    prs.opc_package().part_by_name("/ppt/media/image1.png") is None,
     content="true",
   )
   debug_inspect(
-    prs.pkg.part_by_name("/ppt/media/image2.png") is Some(_),
+    prs.opc_package().part_by_name("/ppt/media/image2.png") is Some(_),
     content="true",
   )
 }
@@ -151,17 +156,19 @@ test "remove_slide_mut: garbage-collects the slide's notes" {
   let _ = prs.add_slide_mut(0)
   prs.set_notes_mut(0, "speaker notes")
   debug_inspect(
-    prs.pkg.part_by_name("/ppt/notesSlides/notesSlide1.xml") is Some(_),
+    prs.opc_package().part_by_name("/ppt/notesSlides/notesSlide1.xml")
+    is Some(_),
     content="true",
   )
   prs.remove_slide_mut(0)
   debug_inspect(
-    prs.pkg.part_by_name("/ppt/notesSlides/notesSlide1.xml") is None,
+    prs.opc_package().part_by_name("/ppt/notesSlides/notesSlide1.xml") is None,
     content="true",
   )
   // The shared notes master is structural — it stays.
   debug_inspect(
-    prs.pkg.part_by_name("/ppt/notesMasters/notesMaster1.xml") is Some(_),
+    prs.opc_package().part_by_name("/ppt/notesMasters/notesMaster1.xml")
+    is Some(_),
     content="true",
   )
 }

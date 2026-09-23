@@ -11,11 +11,12 @@
 /// `name` is the OPC-style part name (always starts with `/`).
 /// `content_type` is the MIME-like content type from `[Content_Types].xml`;
 /// `Package::open` populates it via the ContentTypes resolver.
-/// `bytes` is the raw payload (XML or binary).
+/// Read the raw payload through `bytes()` or `text()`. The part owns its
+/// storage; changing an input or returned buffer does not change the part.
 pub struct Part {
   name : String
   mut content_type : String
-  bytes : FixedArray[Byte]
+  priv bytes : FixedArray[Byte]
 } derive(Debug)
 
 ///|
@@ -26,7 +27,13 @@ pub fn Part::new(
   bytes : FixedArray[Byte],
 ) -> Part raise OpcError {
   validate_part_name(name)
-  { name, content_type, bytes, }
+  { name, content_type, bytes: copy_bytes(bytes), }
+}
+
+///|
+/// Return a copy of the payload. Use `Package::replace_part` to publish edits.
+pub fn Part::bytes(self : Part) -> FixedArray[Byte] {
+  copy_bytes(self.bytes)
 }
 
 ///|
@@ -43,7 +50,7 @@ pub fn Part::text(self : Part) -> String raise OpcError {
 ///|
 /// Convert an OPC part name (`/ppt/presentation.xml`) to its ZIP entry name
 /// (`ppt/presentation.xml`).
-pub fn opc_name_to_zip(name : String) -> String {
+fn opc_name_to_zip(name : String) -> String {
   match name {
     ['/', .. rest] => rest.to_owned()
     _ => name
@@ -53,7 +60,7 @@ pub fn opc_name_to_zip(name : String) -> String {
 ///|
 /// Convert a ZIP entry name (`ppt/presentation.xml`) to an OPC part name
 /// (`/ppt/presentation.xml`).
-pub fn zip_name_to_opc(zip_name : String) -> String {
+fn zip_name_to_opc(zip_name : String) -> String {
   if zip_name is ['/', ..] {
     zip_name
   } else {
@@ -64,7 +71,7 @@ pub fn zip_name_to_opc(zip_name : String) -> String {
 ///|
 /// Validate that an OPC part name conforms to the basic shape required by
 /// the spec: non-empty, starts with `/`, no trailing `/`, no empty segments.
-pub fn validate_part_name(name : String) -> Unit raise OpcError {
+fn validate_part_name(name : String) -> Unit raise OpcError {
   guard name is ['/', .. rest] else {
     if name.is_empty() {
       raise MalformedPackage("part name is empty")

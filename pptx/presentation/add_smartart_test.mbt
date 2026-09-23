@@ -43,11 +43,14 @@ test "add_smartart_mut: wires five diagram parts with content types" {
     ("/ppt/drawings/drawing1.xml", @oxml.ct_diagram_drawing),
   ]
   for c in cases {
-    let part = prs.pkg.part_by_name(c.0).unwrap()
+    let part = prs.opc_package().part_by_name(c.0).unwrap()
     debug_inspect(part.content_type == c.1, content="true")
     // Each part is registered as an Override.
     debug_inspect(
-      prs.pkg.content_types().overrides
+      prs
+      .opc_package()
+      .content_types()
+      .overrides()
       .iter()
       .any(kv => kv.0 == c.0 && kv.1 == c.1),
       content="true",
@@ -81,7 +84,7 @@ test "add_smartart_mut: graphicFrame carries the four diagram relIds" {
     _ => fail("expected GraphicFrame")
   }
   // The four relIds reference real slide relationships.
-  let rels = prs.pkg.relationships_for(slide_name)
+  let rels = prs.opc_package().relationships_for(slide_name)
   for lname in ["dm", "lo", "qs", "cs"] {
     let rid = rel_ids_attr(captured, lname).unwrap()
     debug_inspect(rels.by_id(rid) is Some(_), content="true")
@@ -112,15 +115,19 @@ test "add_smartart_mut: data part references the cached drawing" {
     cy=Emu(100L),
   )
   // The data part's rels point at the drawing via the diagramDrawing rel.
-  let data_rels = prs.pkg.relationships_for("/ppt/diagrams/data1.xml")
-  let drawing_rel = data_rels.items
+  let data_rels = prs.opc_package().relationships_for("/ppt/diagrams/data1.xml")
+  let drawing_rel = data_rels
+    .items()
     .iter()
     .find_first(r => r.rel_type == @opc.rt_diagram_drawing)
     .unwrap()
   debug_inspect(drawing_rel.target.contains("drawing1.xml"), content="true")
   // And the data model records that relId inside <dsp:dataModelExt>.
-  let data_part = prs.pkg.part_by_name("/ppt/diagrams/data1.xml").unwrap()
-  let xml = @oxml.bytes_to_string(data_part.bytes)
+  let data_part = prs
+    .opc_package()
+    .part_by_name("/ppt/diagrams/data1.xml")
+    .unwrap()
+  let xml = @oxml.bytes_to_string(data_part.bytes())
   debug_inspect(xml.find("dataModelExt") is Some(_), content="true")
   debug_inspect(
     xml.find("relId=\"" + drawing_rel.id + "\"") is Some(_),
@@ -147,7 +154,10 @@ test "add_smartart_mut: survives save -> reopen" {
       "/ppt/diagrams/data1.xml", "/ppt/diagrams/layout1.xml", "/ppt/diagrams/quickStyle1.xml",
       "/ppt/diagrams/colors1.xml", "/ppt/drawings/drawing1.xml",
     ] {
-    debug_inspect(prs2.pkg.part_by_name(name) is Some(_), content="true")
+    debug_inspect(
+      prs2.opc_package().part_by_name(name) is Some(_),
+      content="true",
+    )
   }
   // The graphicFrame survives as SmartArt content.
   let slide = prs2.slides()[0]
@@ -175,8 +185,8 @@ test "add_smartart_mut: escapes node text in data + drawing parts" {
     cx=Emu(100L),
     cy=Emu(100L),
   )
-  let data = prs.pkg.part_by_name("/ppt/diagrams/data1.xml").unwrap()
-  let xml = @oxml.bytes_to_string(data.bytes)
+  let data = prs.opc_package().part_by_name("/ppt/diagrams/data1.xml").unwrap()
+  let xml = @oxml.bytes_to_string(data.bytes())
   debug_inspect(xml.find("A &lt; B &amp; C") is Some(_), content="true")
   // The raw unescaped form must not appear as element text.
   debug_inspect(xml.find("A < B & C") is None, content="true")
@@ -203,11 +213,11 @@ test "add_smartart_mut: second diagram gets index 2 across all parts" {
     cy=Emu(100L),
   )
   debug_inspect(
-    prs.pkg.part_by_name("/ppt/diagrams/data2.xml") is Some(_),
+    prs.opc_package().part_by_name("/ppt/diagrams/data2.xml") is Some(_),
     content="true",
   )
   debug_inspect(
-    prs.pkg.part_by_name("/ppt/drawings/drawing2.xml") is Some(_),
+    prs.opc_package().part_by_name("/ppt/drawings/drawing2.xml") is Some(_),
     content="true",
   )
   debug_inspect(prs.slides()[0].shapes.length(), content="2")
@@ -232,11 +242,11 @@ test "add_smartart_mut: cycle + pyramid wire end-to-end and reopen" {
     )
     let prs2 = @presentation.Presentation::open(prs.save())
     debug_inspect(
-      prs2.pkg.part_by_name("/ppt/diagrams/data1.xml") is Some(_),
+      prs2.opc_package().part_by_name("/ppt/diagrams/data1.xml") is Some(_),
       content="true",
     )
     debug_inspect(
-      prs2.pkg.part_by_name("/ppt/drawings/drawing1.xml") is Some(_),
+      prs2.opc_package().part_by_name("/ppt/drawings/drawing1.xml") is Some(_),
       content="true",
     )
     debug_inspect(prs2.slides()[0].shapes.length(), content="1")
@@ -262,7 +272,11 @@ test "add_smartart_mut: org_chart with nested children wires + reopens" {
   // The cached drawing draws all four nodes plus one connector line per
   // parent→child edge.
   let drawing = @oxml.bytes_to_string(
-    prs.pkg.part_by_name("/ppt/drawings/drawing1.xml").unwrap().bytes,
+    prs
+    .opc_package()
+    .part_by_name("/ppt/drawings/drawing1.xml")
+    .unwrap()
+    .bytes(),
   )
   let mut sp = 0
   let mut rest = drawing
@@ -297,7 +311,7 @@ test "add_smartart_mut: matrix + relationship wire end-to-end and reopen" {
     )
     let prs2 = @presentation.Presentation::open(prs.save())
     debug_inspect(
-      prs2.pkg.part_by_name("/ppt/diagrams/data1.xml") is Some(_),
+      prs2.opc_package().part_by_name("/ppt/diagrams/data1.xml") is Some(_),
       content="true",
     )
     debug_inspect(prs2.slides()[0].shapes.length(), content="1")

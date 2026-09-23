@@ -19,7 +19,7 @@ fn saved_part_xml(
   name : String,
 ) -> String raise {
   let pkg = @opc.Package::open(prs.save())
-  @oxml.bytes_to_string(pkg.require_part(name).bytes)
+  @oxml.bytes_to_string(pkg.require_part(name).bytes())
 }
 
 ///|

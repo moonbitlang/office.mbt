@@ -578,18 +578,18 @@ pub fn Picture::with_hyperlink_to_slide(Self, slide_idx~ : Int) -> Self
 pub fn Picture::with_rotation(Self, @units.Angle) -> Self
 
 pub struct PictureCropped {
-  pic : Picture
+  // private fields
 }
 pub fn PictureCropped::build(Self) -> Picture
 pub fn PictureCropped::with_effects(Self, outline? : @oxml.Stroke, effects? : @oxml.EffectList) -> PictureFinal
 
 pub struct PictureFinal {
-  pic : Picture
+  // private fields
 }
 pub fn PictureFinal::build(Self) -> Picture
 
 pub struct PictureUncropped {
-  pic : Picture
+  // private fields
 }
 pub fn PictureUncropped::build(Self) -> Picture
 pub fn PictureUncropped::with_crop(Self, left? : @units.Percentage, top? : @units.Percentage, right? : @units.Percentage, bottom? : @units.Percentage) -> PictureCropped

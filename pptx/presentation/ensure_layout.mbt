@@ -23,7 +23,7 @@ fn Presentation::ensure_layout_of_type(
   // 1. Resolve an existing layout of this type.
   for p in self.pkg.parts() {
     if p.content_type == @oxml.ct_slide_layout {
-      let l = @slide_master.SlideLayout::parse(p.bytes) catch {
+      let l = @slide_master.SlideLayout::parse(p.bytes()) catch {
         e => raise SlideMasterFailure(p.name + ": " + e.to_string())
       }
       if l.layout_type == layout_type {
@@ -76,7 +76,7 @@ fn Presentation::ensure_layout_of_type(
   let master_part = self.pkg.require_part(master_name) catch {
     e => raise OpcFailure(e.to_string())
   }
-  let master = @slide_master.SlideMaster::parse(master_part.bytes) catch {
+  let master = @slide_master.SlideMaster::parse(master_part.bytes()) catch {
     e => raise SlideMasterFailure(e.to_string())
   }
   master.layout_refs.push({ id: self.next_layout_id(), r_id: layout_rid, })

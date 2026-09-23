@@ -100,7 +100,7 @@ pub fn Presentation::add_picture_mut(
     cy~,
   )
   // Re-parse the slide, append, write back.
-  let slide_obj = @slide.Slide::parse(slide_part.bytes) catch {
+  let slide_obj = @slide.Slide::parse(slide_part.bytes()) catch {
     e => raise SlideFailure(e.to_string())
   }
   let updated_slide = slide_obj.with_shape(Picture(pic))
@@ -231,7 +231,7 @@ pub fn Presentation::add_svg_picture_mut(
     cx~,
     cy~,
   )
-  let slide_obj = @slide.Slide::parse(slide_part.bytes) catch {
+  let slide_obj = @slide.Slide::parse(slide_part.bytes()) catch {
     e => raise SlideFailure(e.to_string())
   }
   let updated_slide = slide_obj.with_shape(Picture(pic))
@@ -250,7 +250,7 @@ fn Presentation::ensure_default_content_type(
   ct : String,
 ) -> Unit raise PptxError {
   let cur = self.pkg.content_types()
-  if !cur.defaults.iter().any(kv => kv.0 == ext) {
+  if !cur.defaults().iter().any(kv => kv.0 == ext) {
     self.pkg.set_content_types(cur.with_default(ext, ct))
     self.pkg.regenerate_content_types_part() catch {
       e => raise OpcFailure(e.to_string())
@@ -281,7 +281,7 @@ fn next_picture_shape_id(slide_part : @opc.Part) -> Int {
   // no shapes exist; collisions on the slide are not catastrophic
   // (PowerPoint warns but doesn't reject), but avoiding them keeps
   // us closer to what real apps emit.
-  let bytes = slide_part.bytes
+  let bytes = slide_part.bytes()
   let mut max_id = 0
   let needle = "<p:cNvPr id=\""
   let needle_len = needle.length()

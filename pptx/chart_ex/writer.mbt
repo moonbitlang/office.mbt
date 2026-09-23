@@ -114,6 +114,6 @@ fn write_plot_area_region(
 /// plus the `cx:` extended-chart prefix.
 fn make_chart_ex_ctx() -> @oxml.WriteCtx {
   let ctx = @oxml.WriteCtx::with_well_known_prefixes()
-  ctx.known_prefixes[@oxml.chart_ex_ns] = "cx"
+  ctx.bind_namespace("cx", @oxml.chart_ex_ns)
   ctx
 }

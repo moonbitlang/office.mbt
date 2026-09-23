@@ -20,10 +20,8 @@
 // the rest of the API.
 
 ///|
-/// Copy a byte buffer. Used internally by `Part::clone`; exposed
-/// publicly because higher-level wrappers (`Presentation::clone`)
-/// occasionally want to duplicate a buffer directly.
-pub fn copy_bytes(bytes : FixedArray[Byte]) -> FixedArray[Byte] {
+/// Copy a byte buffer without sharing mutable storage.
+fn copy_bytes(bytes : FixedArray[Byte]) -> FixedArray[Byte] {
   let out = FixedArray::make(bytes.length(), b'\x00')
   for i in 0..<bytes.length() {
     out[i] = bytes[i]

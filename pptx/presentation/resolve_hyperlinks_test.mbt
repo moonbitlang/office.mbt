@@ -45,13 +45,14 @@ fn build_with_hyperlink(
 test "with_hyperlink: external URL registers a TargetMode::External rel" {
   let prs = build_with_hyperlink(ExternalUrl("https://example.com"))
   // The slide rels should now carry exactly one new hyperlink rel.
-  let slide_name = prs.pkg
+  let slide_name = prs
+    .opc_package()
     .parts()
     .iter()
     .filter(p => p.name.has_prefix("/ppt/slides/") && p.name.has_suffix(".xml"))
     .head()
     .unwrap().name
-  let rels = prs.pkg.relationships_for(slide_name)
+  let rels = prs.opc_package().relationships_for(slide_name)
   let hl = rels.by_type(@opc.rt_hyperlink)[0]
   debug_inspect(hl.target, content="\"https://example.com\"")
   debug_inspect(hl.target_mode is External, content="true")
@@ -105,9 +106,12 @@ test "with_hyperlink_to_slide: registers Internal rel pointing at target slide" 
   // updated slide_idx=0 → its part's `.rels` must own one rt_slide
   // entry, no matter the package's part-storage order.)
   let mut to_slide : @opc.Relationship? = None
-  for p in prs.pkg.parts() {
+  for p in prs.opc_package().parts() {
     if p.name.has_prefix("/ppt/slides/") && p.name.has_suffix(".xml") {
-      let arr = prs.pkg.relationships_for(p.name).by_type(@opc.rt_slide)
+      let arr = prs
+        .opc_package()
+        .relationships_for(p.name)
+        .by_type(@opc.rt_slide)
       if !arr.is_empty() {
         to_slide = Some(arr[0])
         break
@@ -126,13 +130,14 @@ test "no hyperlinks → no rels mutation, no extra relationship lookups" {
   // short-circuit; the rels should match the freshly-added-slide state.
   let prs = @presentation.Presentation::new()
   let _ = prs.add_slide_mut(0)
-  let slide_name = prs.pkg
+  let slide_name = prs
+    .opc_package()
     .parts()
     .iter()
     .filter(p => p.name.has_prefix("/ppt/slides/") && p.name.has_suffix(".xml"))
     .head()
     .unwrap().name
-  let before = prs.pkg.relationships_for(slide_name).items.length()
+  let before = prs.opc_package().relationships_for(slide_name).items().length()
   let rp = @slide.RunProperties::default().with_font_size(Pt(20.0))
   let tb = @slide.TextBody::of_styled_text("hello", rp)
   let box = @slide.AutoShape::textbox(
@@ -145,7 +150,7 @@ test "no hyperlinks → no rels mutation, no extra relationship lookups" {
     "",
   ).with_text_body(tb)
   prs.update_slide_mut(0, prs.slides()[0].with_shape(AutoShape(box)))
-  let after = prs.pkg.relationships_for(slide_name).items.length()
+  let after = prs.opc_package().relationships_for(slide_name).items().length()
   debug_inspect(before == after, content="true")
 }
 
@@ -182,13 +187,14 @@ test "with_hyperlink: full save → reopen → rels survive" {
   )
   let bytes = prs.save()
   let prs2 = @presentation.Presentation::open(bytes)
-  let slide_name = prs2.pkg
+  let slide_name = prs2
+    .opc_package()
     .parts()
     .iter()
     .filter(p => p.name.has_prefix("/ppt/slides/") && p.name.has_suffix(".xml"))
     .head()
     .unwrap().name
-  let rels = prs2.pkg.relationships_for(slide_name)
+  let rels = prs2.opc_package().relationships_for(slide_name)
   let hl = rels.by_type(@opc.rt_hyperlink)[0]
   debug_inspect(hl.target, content="\"https://moonbitlang.com\"")
   // Tooltip on `<a:hlinkClick tooltip="…">` round-trips.

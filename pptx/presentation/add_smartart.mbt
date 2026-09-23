@@ -139,7 +139,7 @@ pub fn Presentation::add_smartart_mut(
     qs=qs_rid,
     cs=cs_rid,
   )
-  let slide_obj = @slide.Slide::parse(slide_part.bytes) catch {
+  let slide_obj = @slide.Slide::parse(slide_part.bytes()) catch {
     e => raise SlideFailure(e.to_string())
   }
   self.update_slide_mut(slide_idx, slide_obj.with_shape(GraphicFrame(gf)))

@@ -125,7 +125,7 @@ test "slide-side chartEx graphicFrame lifts to ChartExContent(rid)" {
   let pkg = @opc.Package::open(chart_ex_deck())
   let slide_parts = parts_of(pkg, ct_slide)
   debug_inspect(slide_parts.length(), content="1")
-  let s = @slide.Slide::parse(slide_parts[0].bytes)
+  let s = @slide.Slide::parse(slide_parts[0].bytes())
   debug_inspect(s.shapes.length(), content="1")
   match s.shapes[0] {
     GraphicFrame(gf) =>
@@ -155,7 +155,7 @@ test "slide-side ChartExContent survives re_serialize_all" {
   let pkg_re = re_serialize_all(@opc.Package::open(chart_ex_deck()))
   let pkg_out = @opc.Package::open(pkg_re.to_bytes())
   let slide_parts = parts_of(pkg_out, ct_slide)
-  let s = @slide.Slide::parse(slide_parts[0].bytes)
+  let s = @slide.Slide::parse(slide_parts[0].bytes())
   match s.shapes[0] {
     GraphicFrame(gf) =>
       match gf.content {

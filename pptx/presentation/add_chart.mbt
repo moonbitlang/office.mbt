@@ -249,7 +249,7 @@ fn insert_chart_internal(
       new_rid,
     )
   }
-  let slide_obj = @slide.Slide::parse(slide_part.bytes) catch {
+  let slide_obj = @slide.Slide::parse(slide_part.bytes()) catch {
     e => raise SlideFailure(e.to_string())
   }
   prs.update_slide_mut(slide_idx, slide_obj.with_shape(GraphicFrame(gf)))

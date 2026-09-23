@@ -418,7 +418,7 @@ fn build_pptx(
     "<Relationship Id=\"rId1\" Type=\"" +
     "http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" +
     "\" Target=\"" +
-    @opc.opc_name_to_zip(main_document_part) +
+    main_document_part.trim_start(chars="/").to_owned() +
     "\"/>" +
     "</Relationships>"
   let entries : Array[(String, FixedArray[Byte])] = [
@@ -426,7 +426,7 @@ fn build_pptx(
     ("_rels/.rels", @fzip.str_to_u8(pkg_rels)),
   ]
   for p in parts {
-    entries.push((@opc.opc_name_to_zip(p.0), @fzip.str_to_u8(p.2)))
+    entries.push((p.0.trim_start(chars="/").to_owned(), @fzip.str_to_u8(p.2)))
   }
   @fzip.zip_sync(entries)
 }

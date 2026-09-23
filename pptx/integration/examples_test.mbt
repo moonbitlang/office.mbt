@@ -73,9 +73,9 @@ test "example 3: external + internal hyperlinks" {
   // External + internal hyperlink rels each landed once.
   let mut ext_count = 0
   let mut int_count = 0
-  for p in prs.pkg.parts() {
+  for p in prs.opc_package().parts() {
     if p.name.has_prefix("/ppt/slides/") && p.name.has_suffix(".xml") {
-      let rels = prs.pkg.relationships_for(p.name)
+      let rels = prs.opc_package().relationships_for(p.name)
       ext_count = ext_count + rels.by_type(@opc.rt_hyperlink).length()
       int_count = int_count + rels.by_type(@opc.rt_slide).length()
     }
@@ -193,7 +193,9 @@ test "example 7: bar chart from data" {
   )
   debug_inspect(prs.charts().length(), content="1")
   debug_inspect(
-    prs.pkg.part_by_name("/ppt/embeddings/Microsoft_Excel_Worksheet1.xlsx")
+    prs
+    .opc_package()
+    .part_by_name("/ppt/embeddings/Microsoft_Excel_Worksheet1.xlsx")
     is Some(_),
     content="true",
   )
@@ -440,7 +442,7 @@ test "example 15: SmartArt diagram" {
   debug_inspect(prs2.slides()[1].shapes.length(), content="1")
   // The node's colour overrides reach the saved diagram data part.
   let data = @oxml.bytes_to_string(
-    @opc.Package::open(saved).require_part("/ppt/diagrams/data1.xml").bytes,
+    @opc.Package::open(saved).require_part("/ppt/diagrams/data1.xml").bytes(),
   )
   debug_inspect(data.contains("<a:srgbClr val=\"C00000\""), content="true")
 }

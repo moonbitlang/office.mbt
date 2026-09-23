@@ -161,7 +161,7 @@ fn Presentation::ensure_notes_master(
   let theme2_part = @opc.Part::new(
     theme2_name,
     @oxml.ct_theme,
-    main_theme_bytes.bytes,
+    main_theme_bytes.bytes(),
   ) catch {
     e => raise OpcFailure(e.to_string())
   }

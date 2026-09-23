@@ -84,7 +84,7 @@ test "round trip: open -> to_bytes -> open" {
   debug_inspect(pkg2.parts().length() == pkg1.parts().length(), content="true")
   for p in pkg1.parts() {
     let other = pkg2.require_part(p.name)
-    debug_inspect(other.bytes.length() == p.bytes.length(), content="true")
+    debug_inspect(other.bytes().length() == p.bytes().length(), content="true")
   }
 }
 
@@ -158,11 +158,19 @@ test "Part::new validates names" {
 }
 
 ///|
-test "name conversion helpers are inverses" {
-  let zip = "ppt/slides/slide1.xml"
-  let opc = @opc.zip_name_to_opc(zip)
-  debug_inspect(opc, content="\"/ppt/slides/slide1.xml\"")
-  debug_inspect(@opc.opc_name_to_zip(opc) == zip, content="true")
+test "package round trip converts ZIP names to OPC names" {
+  let pkg = @opc.Package::open(
+    make_pkg_bytes([("ppt/slides/slide1.xml", "<slide/>")]),
+  )
+  debug_inspect(
+    pkg.require_part("/ppt/slides/slide1.xml").name,
+    content="\"/ppt/slides/slide1.xml\"",
+  )
+  let entries = @fzip.unzip_sync(pkg.to_bytes())
+  debug_inspect(
+    entries.map(entry => entry.0).contains("ppt/slides/slide1.xml"),
+    content="true",
+  )
 }
 
 ///|
@@ -191,13 +199,13 @@ test "regenerate_content_types_part replaces in-place" {
 }
 
 ///|
-test "validate_part_name: accepts canonical names, rejects malformed" {
+test "Part::new accepts canonical names and rejects malformed names" {
   // Valid OPC part names pass silently.
-  @opc.validate_part_name("/ppt/slides/slide1.xml")
-  @opc.validate_part_name("/[Content_Types].xml")
+  ignore(@opc.Part::new("/ppt/slides/slide1.xml", "", []))
+  ignore(@opc.Part::new("/[Content_Types].xml", "", []))
   // Empty, missing leading slash, and trailing slash all raise.
   for bad in ["", "ppt/slides/slide1.xml", "/ppt/slides/"] {
-    try @opc.validate_part_name(bad) catch {
+    try @opc.Part::new(bad, "", []) catch {
       MalformedPackage(_) => ()
       _ => fail("expected MalformedPackage for " + bad)
     } noraise {
@@ -225,7 +233,10 @@ test "Package::replace_part swaps bytes in place and keeps the order" {
   }
   debug_inspect(names, content="[\"/a.xml\", \"/b.xml\", \"/c.xml\"]")
   // The replacement's bytes, not the original's.
-  debug_inspect(pkg.part_by_name("/b.xml").unwrap().bytes.length(), content="9")
+  debug_inspect(
+    pkg.part_by_name("/b.xml").unwrap().bytes().length(),
+    content="9",
+  )
 }
 
 ///|

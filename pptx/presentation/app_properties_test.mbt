@@ -80,7 +80,10 @@ test "app properties survive save -> reopen" {
 test "set_app_properties_mut: recreates a missing part with its package rel" {
   let prs = @presentation.Presentation::new()
   // Simulate a package without docProps/app.xml.
-  debug_inspect(prs.pkg.remove_part("/docProps/app.xml"), content="true")
+  debug_inspect(
+    prs.opc_package().remove_part("/docProps/app.xml"),
+    content="true",
+  )
   prs.set_app_properties_mut(
     @presentation.AppProperties::new()
     .with_company("Globex")
@@ -90,7 +93,7 @@ test "set_app_properties_mut: recreates a missing part with its package rel" {
   debug_inspect(props.company.unwrap(), content="\"Globex\"")
   debug_inspect(props.app_version.unwrap(), content="\"16.0000\"")
   // Exactly one extended-properties relationship on the package.
-  let rels = prs.pkg.relationships_for("/")
+  let rels = prs.opc_package().relationships_for("/")
   debug_inspect(rels.by_type(@opc.rt_extended_properties).length(), content="1")
   // And the whole thing still opens.
   let reopened = @presentation.Presentation::open(prs.save())
@@ -113,9 +116,14 @@ test "with_app_properties: immutable counterpart leaves the original untouched" 
 ///|
 test "app_properties: a malformed app.xml raises instead of guessing" {
   let prs = @presentation.Presentation::new()
-  debug_inspect(prs.pkg.remove_part("/docProps/app.xml"), content="true")
+  debug_inspect(
+    prs.opc_package().remove_part("/docProps/app.xml"),
+    content="true",
+  )
   // A part whose root is not <Properties> in the ep namespace.
-  prs.pkg.add_part(
+  prs
+  .opc_package()
+  .add_part(
     @opc.Part::new(
       "/docProps/app.xml",
       @oxml.ct_extended_properties,

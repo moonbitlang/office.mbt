@@ -49,31 +49,31 @@ fn parse_everything(
   let mut author_lists = 0
   let mut comment_lists = 0
   for p in parts_of(pkg, ct_theme) {
-    let _ = @theme.Theme::parse(p.bytes)
+    let _ = @theme.Theme::parse(p.bytes())
     themes = themes + 1
   }
   for p in parts_of(pkg, ct_slide_master) {
-    let _ = @slide_master.SlideMaster::parse(p.bytes)
+    let _ = @slide_master.SlideMaster::parse(p.bytes())
     masters = masters + 1
   }
   for p in parts_of(pkg, ct_slide_layout) {
-    let _ = @slide_master.SlideLayout::parse(p.bytes)
+    let _ = @slide_master.SlideLayout::parse(p.bytes())
     layouts = layouts + 1
   }
   for p in parts_of(pkg, ct_slide) {
-    let _ = @slide.Slide::parse(p.bytes)
+    let _ = @slide.Slide::parse(p.bytes())
     slides = slides + 1
   }
   for p in parts_of(pkg, ct_notes_slide) {
-    let _ = @notes.NotesSlide::parse(p.bytes)
+    let _ = @notes.NotesSlide::parse(p.bytes())
     notes = notes + 1
   }
   for p in parts_of(pkg, ct_comment_authors) {
-    let _ = @comments.CommentAuthorList::parse(p.bytes)
+    let _ = @comments.CommentAuthorList::parse(p.bytes())
     author_lists = author_lists + 1
   }
   for p in parts_of(pkg, ct_comments) {
-    let _ = @comments.CommentList::parse(p.bytes)
+    let _ = @comments.CommentList::parse(p.bytes())
     comment_lists = comment_lists + 1
   }
   (themes, masters, layouts, slides, notes, author_lists, comment_lists)
@@ -100,7 +100,7 @@ test "minimal_deck: Package::open succeeds and every parser handles its part" {
 test "minimal_deck: slide carries the encoded title text" {
   let pkg = @opc.Package::open(minimal_deck())
   let part = pkg.require_part("/ppt/slides/slide1.xml")
-  let slide = @slide.Slide::parse(part.bytes)
+  let slide = @slide.Slide::parse(part.bytes())
   debug_inspect(slide.shapes.length(), content="1")
   match slide.shapes[0] {
     AutoShape(s) =>
@@ -116,7 +116,7 @@ test "minimal_deck: slide carries the encoded title text" {
 test "minimal_deck: theme carries Office colour-scheme name" {
   let pkg = @opc.Package::open(minimal_deck())
   let part = pkg.require_part("/ppt/theme/theme1.xml")
-  let t = @theme.Theme::parse(part.bytes)
+  let t = @theme.Theme::parse(part.bytes())
   debug_inspect(t.name, content="\"Office\"")
   debug_inspect(t.color_scheme.name, content="\"Office\"")
 }
@@ -125,7 +125,7 @@ test "minimal_deck: theme carries Office colour-scheme name" {
 test "minimal_deck: master clrMap resolves bg1 -> lt1" {
   let pkg = @opc.Package::open(minimal_deck())
   let part = pkg.require_part("/ppt/slideMasters/slideMaster1.xml")
-  let m = @slide_master.SlideMaster::parse(part.bytes)
+  let m = @slide_master.SlideMaster::parse(part.bytes())
   debug_inspect(m.color_mapping.bg1, content="Lt1")
   debug_inspect(m.color_mapping.tx1, content="Dk1")
 }
@@ -143,17 +143,17 @@ test "minimal_deck: round-trip via to_bytes yields identical parsed results" {
   // Every parsed structure equals on both sides — Eq is derived on
   // every model node so this catches any silent data loss.
   let slide_in = @slide.Slide::parse(
-    pkg_in.require_part("/ppt/slides/slide1.xml").bytes,
+    pkg_in.require_part("/ppt/slides/slide1.xml").bytes(),
   )
   let slide_out = @slide.Slide::parse(
-    pkg_out.require_part("/ppt/slides/slide1.xml").bytes,
+    pkg_out.require_part("/ppt/slides/slide1.xml").bytes(),
   )
   debug_inspect(slide_in == slide_out, content="true")
   let theme_in = @theme.Theme::parse(
-    pkg_in.require_part("/ppt/theme/theme1.xml").bytes,
+    pkg_in.require_part("/ppt/theme/theme1.xml").bytes(),
   )
   let theme_out = @theme.Theme::parse(
-    pkg_out.require_part("/ppt/theme/theme1.xml").bytes,
+    pkg_out.require_part("/ppt/theme/theme1.xml").bytes(),
   )
   debug_inspect(theme_in == theme_out, content="true")
 }
@@ -172,7 +172,7 @@ test "rich_deck: every parser handles its part (no panics)" {
 test "rich_deck: rich slide contains every shape kind" {
   let pkg = @opc.Package::open(rich_deck())
   let slide = @slide.Slide::parse(
-    pkg.require_part("/ppt/slides/slide2.xml").bytes,
+    pkg.require_part("/ppt/slides/slide2.xml").bytes(),
   )
   // AutoShape(body) + Picture + AutoShape(custGeom) + Connector + Group
   debug_inspect(slide.shapes.length(), content="5")
@@ -200,7 +200,7 @@ test "rich_deck: rich slide contains every shape kind" {
 test "rich_deck: custGeom AutoShape lifts to typed CustomGeometry" {
   let pkg = @opc.Package::open(rich_deck())
   let slide = @slide.Slide::parse(
-    pkg.require_part("/ppt/slides/slide2.xml").bytes,
+    pkg.require_part("/ppt/slides/slide2.xml").bytes(),
   )
   // shapes[2] is the custGeom AutoShape (id=4).
   match slide.shapes[2] {
@@ -223,10 +223,10 @@ test "rich_deck: round-trip via to_bytes preserves the rich slide" {
   let pkg_in = @opc.Package::open(rich_deck())
   let pkg_out = @opc.Package::open(pkg_in.to_bytes())
   let slide_in = @slide.Slide::parse(
-    pkg_in.require_part("/ppt/slides/slide2.xml").bytes,
+    pkg_in.require_part("/ppt/slides/slide2.xml").bytes(),
   )
   let slide_out = @slide.Slide::parse(
-    pkg_out.require_part("/ppt/slides/slide2.xml").bytes,
+    pkg_out.require_part("/ppt/slides/slide2.xml").bytes(),
   )
   debug_inspect(slide_in == slide_out, content="true")
 }
@@ -247,7 +247,7 @@ test "notes_and_comments_deck: notes + commentAuthors + comments all parse" {
 test "notes_and_comments_deck: notes slide carries the encoded paragraph" {
   let pkg = @opc.Package::open(notes_and_comments_deck())
   let n = @notes.NotesSlide::parse(
-    pkg.require_part("/ppt/notesSlides/notesSlide1.xml").bytes,
+    pkg.require_part("/ppt/notesSlides/notesSlide1.xml").bytes(),
   )
   // sldImg-style first placeholder isn't in this fixture; just the body.
   debug_inspect(n.shapes.length(), content="1")
@@ -265,10 +265,10 @@ test "notes_and_comments_deck: notes slide carries the encoded paragraph" {
 test "notes_and_comments_deck: comment authors and comments cross-reference" {
   let pkg = @opc.Package::open(notes_and_comments_deck())
   let authors = @comments.CommentAuthorList::parse(
-    pkg.require_part("/ppt/commentAuthors.xml").bytes,
+    pkg.require_part("/ppt/commentAuthors.xml").bytes(),
   )
   let cms = @comments.CommentList::parse(
-    pkg.require_part("/ppt/comments/comment1.xml").bytes,
+    pkg.require_part("/ppt/comments/comment1.xml").bytes(),
   )
   debug_inspect(authors.authors.length(), content="2")
   debug_inspect(cms.comments.length(), content="2")
@@ -291,17 +291,17 @@ test "notes_and_comments_deck: round-trip preserves notes + comments" {
   let pkg_in = @opc.Package::open(notes_and_comments_deck())
   let pkg_out = @opc.Package::open(pkg_in.to_bytes())
   let n_in = @notes.NotesSlide::parse(
-    pkg_in.require_part("/ppt/notesSlides/notesSlide1.xml").bytes,
+    pkg_in.require_part("/ppt/notesSlides/notesSlide1.xml").bytes(),
   )
   let n_out = @notes.NotesSlide::parse(
-    pkg_out.require_part("/ppt/notesSlides/notesSlide1.xml").bytes,
+    pkg_out.require_part("/ppt/notesSlides/notesSlide1.xml").bytes(),
   )
   debug_inspect(n_in == n_out, content="true")
   let cms_in = @comments.CommentList::parse(
-    pkg_in.require_part("/ppt/comments/comment1.xml").bytes,
+    pkg_in.require_part("/ppt/comments/comment1.xml").bytes(),
   )
   let cms_out = @comments.CommentList::parse(
-    pkg_out.require_part("/ppt/comments/comment1.xml").bytes,
+    pkg_out.require_part("/ppt/comments/comment1.xml").bytes(),
   )
   debug_inspect(cms_in == cms_out, content="true")
 }
