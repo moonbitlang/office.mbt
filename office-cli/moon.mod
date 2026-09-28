@@ -20,7 +20,7 @@ import {
   "moonbitlang/pagelayout@0.2.0",
   "moonbitlang/x@0.4.50",
   "moonbit-community/flate@0.8.1",
-  "tonyfettes/unicode@0.3.3",
+  "moonbit-community/unicode@0.5.2",
 }
 
 preferred_target = "native"
