@@ -490,13 +490,14 @@ async test "atomic new output cancellation cleans partial staging" {
             ) catch {
               _ => continue
             }
-            let size = file.size() catch {
-              _ => {
-                file.close()
-                continue
-              }
+            // `defer` (not the handler) closes the probe handle, so it is
+            // released on cancellation too.
+            let size = try {
+              defer file.close()
+              file.size()
+            } catch {
+              _ => continue
             }
-            file.close()
             if size >= (1024 * 1024).to_int64() {
               observed_partial_write = true
             }
@@ -742,13 +743,14 @@ async test "task cancellation waits for temporary-file cleanup" {
             ) catch {
               _ => continue
             }
-            let size = file.size() catch {
-              _ => {
-                file.close()
-                continue
-              }
+            // `defer` (not the handler) closes the probe handle, so it is
+            // released on cancellation too.
+            let size = try {
+              defer file.close()
+              file.size()
+            } catch {
+              _ => continue
             }
-            file.close()
             if size >= (1024 * 1024).to_int64() {
               observed_partial_write = true
             }

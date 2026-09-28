@@ -252,24 +252,29 @@ async fn write_atomically(output : String, bytes : Bytes) -> Unit {
           "docx: could not create a temporary file '\{temp}': \{err}",
         )
     }
-    file.write(bytes) catch {
-      err => {
+    // The temp is ours from here on: any failure *or cancellation* must
+    // close the handle and remove the temp. `catch` no longer observes
+    // cancellation, so the cleanup lives in `errdefer`; each block bounds
+    // it to the region that still owns the handle / the temp path.
+    {
+      errdefer {
         file.close()
         @afs.remove(temp) catch {
           _ => ()
         }
-        raise @cli.CliError("docx: could not write '\{temp}': \{err}")
+      }
+      file.write(bytes) catch {
+        err => raise @cli.CliError("docx: could not write '\{temp}': \{err}")
       }
     }
     file.close()
-    @afs.rename(temp, output, replace=false) catch {
-      err => {
-        @afs.remove(temp) catch {
-          _ => ()
-        }
-        raise @cli.CliError(
-          "docx: could not write '\{output}' (did it appear concurrently?): \{err}",
-        )
+    {
+      errdefer (@afs.remove(temp) catch { _ => () })
+      @afs.rename(temp, output, replace=false) catch {
+        err =>
+          raise @cli.CliError(
+            "docx: could not write '\{output}' (did it appear concurrently?): \{err}",
+          )
       }
     }
     return
