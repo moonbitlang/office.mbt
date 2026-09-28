@@ -14,7 +14,7 @@ description = "Agent-oriented XLSX and DOCX command-line tooling"
 
 import {
   "moonbitlang/office-lib@0.6.1",
-  "moonbitlang/async@0.22.1",
+  "moonbitlang/async@0.22.4",
   "moonbitlang/docx2html@0.6.1",
   "moonbitlang/mbtexcel@0.2.0",
   "moonbitlang/pagelayout@0.2.0",
