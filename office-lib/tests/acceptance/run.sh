@@ -74,14 +74,11 @@ json() {
 expect_failure() {
   local output_file="$1"
   shift
-  # async >= 0.21 reports escaping errors on native stderr; wasm still uses
-  # stdout. Keep the streams separate so a future runtime change fails clearly.
+  # async >= 0.21 reports escaping errors on native stderr, and async >= 0.22.2
+  # does the same on wasm (core `eprintln`). Keep the streams separate so a
+  # future runtime change fails clearly.
   local stdout_file="$work/failure.other"
   local stderr_file="$output_file"
-  if [ "$target" = wasm ]; then
-    stdout_file="$output_file"
-    stderr_file="$work/failure.other"
-  fi
   if office "$@" >"$stdout_file" 2>"$stderr_file"; then
     fail "command unexpectedly succeeded: office $*"
   fi

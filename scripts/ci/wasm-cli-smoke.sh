@@ -79,8 +79,15 @@ hc=$(moon run --target wasm office-cli -- help schema docx.batch/2 --json 2>offi
 echo "$hc" | jq -e '.success == true and .data.schema == "office.input-contract/1" and .data.id == "docx.batch/2"'
 moon run --target wasm office-cli -- help schema docx.batch/2 --jsonl 2>office-wasm.err \
   | jq -e '.schema == "office.input-contract/1" and .id == "docx.batch/2"'
-if moon run --target wasm office-cli -- help xlxs --json >office-wasm-error.json 2>office-wasm.err; then
+# An escaping error is reported on stderr (async >= 0.22.2 uses core
+# `eprintln` on wasm too). Run the built module directly so `moon run`'s own
+# diagnostics cannot mix into the captured stream.
+if moonrun -- _build/wasm/debug/build/moonbitlang/office/office.wasm help xlxs --json >office-wasm.out 2>office-wasm-error.json; then
   echo "expected unknown office help format to fail"
+  exit 1
+fi
+if [ -s office-wasm.out ]; then
+  echo "unknown office help format wrote to stdout:"; cat office-wasm.out
   exit 1
 fi
 jq -e '.schema == "office.output/1"

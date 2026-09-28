@@ -225,7 +225,7 @@ async fn wb_expect_post_read_cancellation(
       ignore(task.wait())
       false
     } catch {
-      error => error is @async.TaskCancelled
+      error => error is @async.WaitedTaskAlreadyCancelled
     }
     assert_true(propagated)
   }
@@ -414,7 +414,7 @@ async test "initial staging cleanup re-observes pending cancellation" {
         ignore(task.wait())
         false
       } catch {
-        error => error is @async.TaskCancelled
+        error => error is @async.WaitedTaskAlreadyCancelled
       }
       assert_true(propagated)
     }
@@ -490,13 +490,14 @@ async test "atomic new output cancellation cleans partial staging" {
             ) catch {
               _ => continue
             }
-            let size = file.size() catch {
-              _ => {
-                file.close()
-                continue
-              }
+            // `defer` (not the handler) closes the probe handle, so it is
+            // released on cancellation too.
+            let size = try {
+              defer file.close()
+              file.size()
+            } catch {
+              _ => continue
             }
-            file.close()
             if size >= (1024 * 1024).to_int64() {
               observed_partial_write = true
             }
@@ -513,7 +514,7 @@ async test "atomic new output cancellation cleans partial staging" {
         ignore(task.wait())
         false
       } catch {
-        error => error is @async.TaskCancelled
+        error => error is @async.WaitedTaskAlreadyCancelled
       }
       assert_true(propagated)
     }
@@ -742,13 +743,14 @@ async test "task cancellation waits for temporary-file cleanup" {
             ) catch {
               _ => continue
             }
-            let size = file.size() catch {
-              _ => {
-                file.close()
-                continue
-              }
+            // `defer` (not the handler) closes the probe handle, so it is
+            // released on cancellation too.
+            let size = try {
+              defer file.close()
+              file.size()
+            } catch {
+              _ => continue
             }
-            file.close()
             if size >= (1024 * 1024).to_int64() {
               observed_partial_write = true
             }
@@ -765,7 +767,7 @@ async test "task cancellation waits for temporary-file cleanup" {
         ignore(task.wait())
         false
       } catch {
-        error => error is @async.TaskCancelled
+        error => error is @async.WaitedTaskAlreadyCancelled
       }
       assert_true(propagated)
     }
@@ -812,7 +814,7 @@ async test "cancellation during ordinary-failure cleanup is re-observed" {
         ignore(task.wait())
         false
       } catch {
-        error => error is @async.TaskCancelled
+        error => error is @async.WaitedTaskAlreadyCancelled
       }
       assert_true(propagated)
     }

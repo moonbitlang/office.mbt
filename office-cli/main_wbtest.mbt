@@ -183,7 +183,7 @@ async test "bounded raw read completion observes pending cancellation" {
       ignore(task.wait())
       false
     } catch {
-      error => error is @async.TaskCancelled
+      error => error is @async.WaitedTaskAlreadyCancelled
     }
     assert_true(cancelled)
   }
