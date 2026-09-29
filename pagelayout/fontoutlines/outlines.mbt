@@ -49,11 +49,15 @@ fn load_outlines() -> Unit {
 ///|
 /// The bundled font program for a *resolved* family name (see
 /// `@fonts.resolve_family`), as a complete sfnt ready to subset and embed.
+/// Faces a caller registers carry their program with them
+/// (`@fonts.RegisteredFace`) and never come through here.
 ///
 /// Falls back to the family's regular face when the exact bold/italic face
 /// is not bundled, matching `@fonts.face`. Unlike that function it does not
 /// fall back across families: a caller that gets `None` should embed
-/// nothing rather than embed the wrong typeface under the right name.
+/// nothing rather than embed the wrong typeface under the right name. To
+/// embed exactly the face that was measured, pass the `family`, `bold` and
+/// `italic` of the `@fonts.FaceMetrics` that `@fonts.face` returned.
 pub fn outline_sfnt(
   family : String,
   bold? : Bool = false,

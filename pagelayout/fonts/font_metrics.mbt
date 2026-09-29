@@ -1,12 +1,25 @@
 ///|
-// Deterministic font metrics for the layout engine, parsed from the bundled
-// metrics-only sfnt data in data_*.mbt (regenerate with
-// tools/font-metrics/gen_font_metrics.py). Only metric tables are bundled;
-// glyph outlines arrive with the PDF backend milestone, behind this same API.
+// Deterministic font metrics for the layout engine. The bundled faces are
+// parsed from the metrics-only sfnt data in data_*.mbt (regenerate with
+// tools/font-metrics/gen_font_metrics.py); their glyph outlines, which only
+// the PDF backend needs, live apart in `pagelayout/fontoutlines`.
+//
+// A caller's own faces come in through a `FontRegistry` (registry.mbt), an
+// explicit value shared by whatever measures and whatever renders. The
+// package-level functions here (`face`, `resolve_family`, `cjk_fallback`,
+// `uncovered`) only ever see the bundled faces. The one process-wide state is
+// the lazily filled cache of those bundled faces, which is written once, from
+// constant data, and never replaced.
 
 ///|
-/// Metrics of one bundled face. Vertical metrics come from `hhea`; advances
-/// are raw font units scaled by `units_per_em` on lookup.
+/// Metrics of one face, bundled or registered. Vertical metrics come from
+/// `hhea`; advances are raw font units scaled by `units_per_em` on lookup.
+///
+/// A face is immutable. Its glyph tables are private and read through
+/// `glyph_id`, `cmap_entries` and `advance_pt`, because the same value is
+/// shared by every lookup — the bundled cache, a `FontRegistry`, the layout
+/// that measured with it and the renderer that draws with it — and a
+/// change made through one of them would silently reach all the others.
 pub struct FaceMetrics {
   family : String
   bold : Bool
@@ -15,8 +28,24 @@ pub struct FaceMetrics {
   ascender : Int
   descender : Int
   line_gap : Int
-  advances : Array[Int]
-  cmap : Map[Int, Int]
+  priv advances : Array[Int]
+  priv cmap : Map[Int, Int]
+}
+
+///|
+/// The glyph `codepoint` maps to in the face's `cmap`, or None when it maps
+/// to none. A mapping to glyph 0 (`.notdef`) is reported as it is; see
+/// `has_char` for whether the face can really draw the character.
+pub fn FaceMetrics::glyph_id(self : FaceMetrics, codepoint : Int) -> Int? {
+  self.cmap.get(codepoint)
+}
+
+///|
+/// Every (codepoint, glyph) pair of the face's `cmap`, in no particular
+/// order. The pairs are read from the face; nothing done with them can
+/// reach it.
+pub fn FaceMetrics::cmap_entries(self : FaceMetrics) -> Iter2[Int, Int] {
+  self.cmap.iter2()
 }
 
 ///|
@@ -78,6 +107,16 @@ fn parse_face(
     joined.write_bytes(chunk)
   }
   let data : Bytes = @flate.pdf_flate_decode_view(joined.contents())
+  parse_sfnt(family, bold, italic, data)
+}
+
+///|
+fn parse_sfnt(
+  family : String,
+  bold : Bool,
+  italic : Bool,
+  data : Bytes,
+) -> FaceMetrics raise {
   let metrics = @pdflite.pdf_truetype_metrics(data)
   let cmap : Map[Int, Int] = Map([])
   // later subtables replace earlier mappings, matching cpdf's reader
@@ -85,7 +124,7 @@ fn parse_face(
     cmap[entry.codepoint] = entry.glyph_index
   }
   guard @pdflite.pdf_truetype_table(data, "hhea") is Some(hhea) else {
-    fail("bundled face \{family} lacks an hhea table")
+    fail("face \{family} lacks an hhea table")
   }
   let ascender = read_i16(data, hhea.offset + 4)
   let descender = read_i16(data, hhea.offset + 6)
@@ -153,7 +192,10 @@ pub fn bundled_families() -> Array[String] {
 ///|
 /// The bundled face for a *resolved* family name (see `resolve_family`).
 /// Falls back to the family's regular face when the exact bold/italic face
-/// is not bundled (Noto Sans SC ships regular only), then to Carlito.
+/// is not bundled (Noto Sans SC ships regular only), then to Carlito. The
+/// face returned says which one it is (`family`, `bold`, `italic`), so a
+/// caller that needs the matching font program can ask for exactly that
+/// face. For registered faces see `FontRegistry::face`.
 pub fn face(
   family : String,
   bold? : Bool = false,
@@ -204,8 +246,21 @@ pub fn uncovered(
   italic? : Bool = false,
 ) -> Array[(Int, Int)] {
   load_faces()
-  let requested = face(resolve_family(family), bold~, italic~)
-  let fallback = cjk_fallback()
+  uncovered_by(
+    text,
+    face(resolve_family(family), bold~, italic~),
+    cjk_fallback(),
+  )
+}
+
+///|
+/// Codepoints in `text` that neither `requested` nor `fallback` can draw,
+/// counted, in order of first appearance.
+fn uncovered_by(
+  text : String,
+  requested : FaceMetrics,
+  fallback : FaceMetrics,
+) -> Array[(Int, Int)] {
   let counts : Map[Int, Int] = Map([])
   let order : Array[Int] = []
   let mut i = 0

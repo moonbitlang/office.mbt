@@ -157,3 +157,15 @@ pub extend PageModel with Eq::{not_equal, equal}
 ///|
 #deprecated("implicit trait-method promotion is being removed; call via the trait")
 pub extend PageModel with ToJson::{to_json}
+
+///|
+#deprecated("implicit trait-method promotion is being removed; call via the trait")
+pub extend AnchorItem with @debug.Debug::{to_repr}
+
+///|
+#deprecated("implicit trait-method promotion is being removed; call via the trait")
+pub extend AnchorItem with Eq::{not_equal, equal}
+
+///|
+#deprecated("implicit trait-method promotion is being removed; call via the trait")
+pub extend AnchorItem with ToJson::{to_json}

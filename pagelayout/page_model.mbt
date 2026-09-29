@@ -113,6 +113,8 @@ pub(all) struct ImageItem {
 
 ///|
 /// An interactive region (hyperlink); geometry only, painted by nothing.
+/// A `target` of the form `#name` jumps to the `AnchorItem` named `name`
+/// (a named destination in PDF); anything else is a URI.
 pub(all) struct LinkRegion {
   x_pt : Double
   y_pt : Double
@@ -122,12 +124,23 @@ pub(all) struct LinkRegion {
 } derive(Eq, Debug, ToJson)
 
 ///|
+/// A named position on a page that `#name` links and outlines jump to;
+/// `(x_pt, y_pt)` is the point a viewer brings to the top-left of the
+/// window. Non-visual.
+pub(all) struct AnchorItem {
+  name : String
+  x_pt : Double
+  y_pt : Double
+} derive(Eq, Debug, ToJson)
+
+///|
 /// One positioned item on a page, in painter's order.
 pub(all) enum PageItem {
   Text(GlyphRun)
   Rect(RectItem)
   Image(ImageItem)
   Link(LinkRegion)
+  Anchor(AnchorItem)
 } derive(Eq, Debug, ToJson)
 
 ///|

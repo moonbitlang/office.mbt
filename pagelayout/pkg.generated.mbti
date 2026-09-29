@@ -11,6 +11,20 @@ pub let black : Color
 // Errors
 
 // Types and methods
+pub(all) struct AnchorItem {
+  name : String
+  x_pt : Double
+  y_pt : Double
+} derive(Eq, ToJson, @debug.Debug)
+#deprecated
+pub fn AnchorItem::equal(Self, Self) -> Bool
+#deprecated
+pub fn AnchorItem::not_equal(Self, Self) -> Bool
+#deprecated
+pub fn AnchorItem::to_json(Self) -> Json
+#deprecated
+pub fn AnchorItem::to_repr(Self) -> @debug.Repr
+
 pub(all) struct Color {
   r : Int
   g : Int
@@ -145,6 +159,7 @@ pub(all) enum PageItem {
   Rect(RectItem)
   Image(ImageItem)
   Link(LinkRegion)
+  Anchor(AnchorItem)
 } derive(Eq, ToJson, @debug.Debug)
 #deprecated
 pub fn PageItem::equal(Self, Self) -> Bool

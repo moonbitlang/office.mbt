@@ -4,6 +4,55 @@ Breaking and notable changes for the published modules in this workspace.
 Entries are grouped by module and by the version they ship in; `Unreleased`
 covers changes that have landed on `main` but are not yet published.
 
+### moonbitlang/pagelayout [Unreleased]
+
+- **BREAKING**: `PageItem` has a new variant, `Anchor(AnchorItem)`: a named,
+  non-visual position that `#name` link targets and outline entries jump to
+  (a PDF named destination). Code that matches `PageItem` exhaustively must
+  handle it; the SVG backend and `PageModel::validate` do (anchors draw
+  nothing). Migration: add an `Anchor(_) => ()` arm, or a wildcard arm.
+- **BREAKING**: `@fonts.FaceMetrics` no longer exposes its glyph tables:
+  `advances` and `cmap` are private, because one face value is shared by
+  every lookup (the bundled cache, a `FontRegistry`, layout and renderer),
+  and writing to a table changed what every later document drew. Read them
+  through `FaceMetrics::glyph_id(codepoint)` (was `cmap.get(codepoint)`),
+  `FaceMetrics::cmap_entries()` (was iterating `cmap`), and `advance_pt` /
+  `has_char` as before.
+- `@pdf.render_pdf(model, options?)`: an optional `RenderOptions`
+  (`RenderOptions::new(...)`, or `RenderOptions::default()`) adds a document
+  outline (`OutlineEntry` with an `OutlineDest`: a `Named` anchor or an
+  explicit `Position`), typed document information (`DocumentInfo`, with
+  `Trapped` written as a name, dates checked field by field as PDF dates
+  per ISO 32000-1 §7.9.4 — `is_pdf_date` is that check — and custom keys
+  that must be unique), the initial
+  zoom (`InitialZoom`), the page mode (`PageMode`), `DisplayDocTitle`,
+  explicit page boxes, literal page labels (one per page) and Prawn-style
+  truncated glyph widths. `render_pdf(model)` keeps its signature and uses
+  the bundled fonts. It raises `RenderOptionError` for options it cannot
+  honour.
+- PDF output changes for existing callers: glyph runs whose advances differ
+  from the declared widths (justified spaces) are shown with `TJ`
+  displacements; simple WinAnsi fonts declare the width of the character a
+  code stands for (0x92 is U+2019) and carry a `/ToUnicode` map; embedded
+  fonts are named by their PostScript name when the program has one.
+- `LinkRegion`s become link annotations, written as indirect objects: a
+  `#name` target jumps to the anchor's named destination, any other target
+  is a URI action whose target is written as an ASCII URI (non-ASCII
+  percent-encoded as UTF-8, RFC 3987 §3.1; existing escapes kept).
+- `@fonts.FontRegistry`: faces of the caller's own, registered from sfnt
+  bytes that supply both the metrics layout measures with and the program
+  the PDF embeds. A registry is an explicit value shared by measurement
+  (`FontRegistry::face`, `@paragraph.layout_paragraph(..., fonts=)`) and
+  rendering (`RenderOptions::fonts`); it is sealed by its first lookup and
+  never replaces a face, so a laid-out model cannot change typeface
+  underneath. Nothing about it is process-wide. The package-level `@fonts`
+  functions and `@fontoutlines.outline_sfnt` keep serving the bundled faces
+  only. The CJK fallback resolves through the registry as well
+  (`FontRegistry::cjk_fallback`): a registered Noto Sans SC is the face
+  fallback characters are measured, sized and drawn in, and
+  `FontRegistry::uncovered` reports what neither the run's face nor that
+  fallback can draw.
+
 ### moonbitlang/ooxml [Unreleased]
 
 - Add shared OPC, XML, and URI packages below the document engines. Extract

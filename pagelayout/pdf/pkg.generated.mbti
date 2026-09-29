@@ -2,17 +2,129 @@
 package "moonbitlang/pagelayout/pdf"
 
 import {
+  "moonbitlang/core/debug",
   "moonbitlang/pagelayout",
+  "moonbitlang/pagelayout/fonts",
 }
 
 // Values
-pub fn render_pdf(@pagelayout.PageModel) -> Bytes raise
+pub fn is_pdf_date(String) -> Bool
+
+pub fn pdf_date(Int64, offset_seconds? : Int) -> String
+
+pub fn render_pdf(@pagelayout.PageModel, options? : RenderOptions) -> Bytes raise
 
 pub fn unembeddable_images(@pagelayout.PageModel) -> Array[(String, Int)]
 
 // Errors
+pub(all) suberror RenderOptionError {
+  RenderOptionError(String)
+} derive(Eq)
+pub fn RenderOptionError::equal(Self, Self) -> Bool
+pub fn RenderOptionError::not_equal(Self, Self) -> Bool
+pub fn RenderOptionError::output(Self, &Logger) -> Unit
+pub fn RenderOptionError::to_string(Self) -> String
+pub impl Show for RenderOptionError
 
 // Types and methods
+pub struct DocumentInfo {
+  title : String?
+  author : String?
+  subject : String?
+  keywords : String?
+  creator : String?
+  producer : String?
+  creation_date : String?
+  mod_date : String?
+  trapped : Trapped?
+  custom : Array[(String, String)]
+} derive(Eq, @debug.Debug)
+#deprecated
+pub fn DocumentInfo::equal(Self, Self) -> Bool
+pub fn DocumentInfo::new(title? : String, author? : String, subject? : String, keywords? : String, creator? : String, producer? : String, creation_date? : String, mod_date? : String, trapped? : Trapped, custom? : Array[(String, String)]) -> Self
+#deprecated
+pub fn DocumentInfo::not_equal(Self, Self) -> Bool
+#deprecated
+pub fn DocumentInfo::to_repr(Self) -> @debug.Repr
+
+pub(all) enum InitialZoom {
+  Fit
+  FitH
+  FitV
+} derive(Eq, @debug.Debug)
+#deprecated
+pub fn InitialZoom::equal(Self, Self) -> Bool
+#deprecated
+pub fn InitialZoom::not_equal(Self, Self) -> Bool
+#deprecated
+pub fn InitialZoom::to_repr(Self) -> @debug.Repr
+
+pub(all) enum OutlineDest {
+  Named(String)
+  Position(page~ : Int, x~ : Double, y~ : Double)
+} derive(Eq, @debug.Debug)
+#deprecated
+pub fn OutlineDest::equal(Self, Self) -> Bool
+#deprecated
+pub fn OutlineDest::not_equal(Self, Self) -> Bool
+#deprecated
+pub fn OutlineDest::to_repr(Self) -> @debug.Repr
+
+pub(all) struct OutlineEntry {
+  title : String
+  level : Int
+  dest : OutlineDest
+  open : Bool
+} derive(Eq, @debug.Debug)
+#deprecated
+pub fn OutlineEntry::equal(Self, Self) -> Bool
+#deprecated
+pub fn OutlineEntry::not_equal(Self, Self) -> Bool
+#deprecated
+pub fn OutlineEntry::to_repr(Self) -> @debug.Repr
+
+pub(all) enum PageMode {
+  UseNone
+  UseOutlines
+  UseThumbs
+  FullScreen
+  UseOC
+  UseAttachments
+} derive(Eq, @debug.Debug)
+#deprecated
+pub fn PageMode::equal(Self, Self) -> Bool
+#deprecated
+pub fn PageMode::not_equal(Self, Self) -> Bool
+#deprecated
+pub fn PageMode::to_repr(Self) -> @debug.Repr
+
+pub struct RenderOptions {
+  fonts : @fonts.FontRegistry
+  outline : Array[OutlineEntry]
+  info : DocumentInfo
+  initial_zoom : InitialZoom?
+  page_mode : PageMode?
+  display_doc_title : Bool
+  page_boxes : Bool
+  page_labels : Array[String]
+  truncate_widths : Bool
+}
+#deprecated
+pub fn RenderOptions::default() -> Self
+pub fn RenderOptions::new(fonts? : @fonts.FontRegistry, outline? : Array[OutlineEntry], info? : DocumentInfo, initial_zoom? : InitialZoom, page_mode? : PageMode, display_doc_title? : Bool, page_boxes? : Bool, page_labels? : Array[String], truncate_widths? : Bool) -> Self
+pub impl Default for RenderOptions
+
+pub(all) enum Trapped {
+  Yes
+  No
+  Unknown
+} derive(Eq, @debug.Debug)
+#deprecated
+pub fn Trapped::equal(Self, Self) -> Bool
+#deprecated
+pub fn Trapped::not_equal(Self, Self) -> Bool
+#deprecated
+pub fn Trapped::to_repr(Self) -> @debug.Repr
 
 // Type aliases
 
