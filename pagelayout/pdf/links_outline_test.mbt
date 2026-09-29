@@ -75,7 +75,7 @@ test "links, anchors and the outline reach the pdf" {
   )
   let bytes = @pdf.render_pdf(
     model,
-    outline=[{ title: "Target", level: 0, anchor: "target", }],
+    outline=[{ title: "Target", level: 0, anchor: "target", open: false, }],
     info=[("Title", "Links")],
   )
   let document = @pdflite.pdf_read_document_from_bytes(bytes)

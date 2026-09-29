@@ -270,11 +270,27 @@ fn emit_rect(
 /// named destination the `AnchorItem` called `name` defines, anything else
 /// opens as a URI. `outline` becomes the document outline (bookmarks), and
 /// `info` entries (`("Title", ...)`, `("Author", ...)`) the document
-/// information dictionary.
+/// information dictionary; a date entry (`CreationDate`, `ModDate`) is
+/// written as given, so pass it in PDF date form (`D:YYYYMMDDHHmmSS+HH'mm'`,
+/// see `pdf_date`).
+///
+/// The rest shape the catalog and pages the way a viewer first sees them:
+/// `initial_zoom` becomes an `/OpenAction` on the first page, `page_mode`
+/// the `/PageMode` (by default `/UseOutlines` when there is an outline),
+/// `display_doc_title` forces `/ViewerPreferences /DisplayDocTitle` (always
+/// written when there is a title), `page_boxes` writes every page's crop,
+/// bleed, trim and art boxes explicitly (equal to its media box) instead of
+/// leaving them to their defaults, and a non-empty `page_labels` gives page
+/// `i` the literal label `page_labels[i]`.
 pub fn render_pdf(
   model : @pagelayout.PageModel,
   outline? : Array[OutlineEntry] = [],
   info? : Array[(String, String)] = [],
+  initial_zoom? : InitialZoom,
+  page_mode? : String,
+  display_doc_title? : Bool = false,
+  page_boxes? : Bool = false,
+  page_labels? : Array[String] = [],
 ) -> Bytes raise {
   let document = @pdflite.pdf_document_empty()
   document.set_version(1, 7)
@@ -399,29 +415,114 @@ pub fn render_pdf(
         ),
       ]
     }
-    pages.push({
-      content,
-      mediabox: PdfArray([
+    let box = fn() {
+      @syntax.PdfArray([
         PdfReal(0.0),
         PdfReal(0.0),
         PdfReal(model_page.width_pt),
         PdfReal(model_page.height_pt),
-      ]),
+      ])
+    }
+    let rest : Array[(@core.PdfName, @syntax.PdfObject)] = []
+    if page_boxes {
+      for key in ["/CropBox", "/BleedBox", "/TrimBox", "/ArtBox"] {
+        rest.push((name(key), box()))
+      }
+    }
+    if !annots.is_empty() {
+      rest.push((name("/Annots"), PdfArray(annots)))
+    }
+    pages.push({
+      content,
+      mediabox: box(),
       resources: resources_of(used, images),
       rotate: Rotate0,
-      rest: if annots.is_empty() {
-        PdfDictionary([])
-      } else {
-        PdfDictionary([(name("/Annots"), PdfArray(annots))])
-      },
+      rest: PdfDictionary(rest),
     })
   }
   let page_root = document.add_pagetree(pages)
   ignore(document.add_root(page_root, []))
   let document = add_navigation(
-    document, model, page_root, anchors, outline, info,
+    document,
+    model,
+    page_root,
+    anchors,
+    outline,
+    info,
+    { initial_zoom, page_mode, display_doc_title, page_labels, },
   )
   @pdflite.pdf_write_document(document)
+}
+
+///|
+/// How the first page fits the window when the document opens (the
+/// `/OpenAction` destination): the whole page, its width, or its height.
+pub(all) enum InitialZoom {
+  Fit
+  FitH
+  FitV
+}
+
+///|
+/// The catalog settings of `render_pdf` beyond navigation proper.
+priv struct CatalogOptions {
+  initial_zoom : InitialZoom?
+  page_mode : String?
+  display_doc_title : Bool
+  page_labels : Array[String]
+}
+
+///|
+/// A PDF date string (PDF 32000-1 §7.9.4), `D:YYYYMMDDHHmmSS+HH'mm'`, for
+/// `epoch_seconds` shown at `offset_seconds` from UTC.
+pub fn pdf_date(epoch_seconds : Int64, offset_seconds? : Int = 0) -> String {
+  let secs = epoch_seconds + offset_seconds.to_int64()
+  let mut days = secs / 86400L
+  let mut rem = secs % 86400L
+  if rem < 0L {
+    rem += 86400L
+    days -= 1L
+  }
+  // civil from days (Howard Hinnant)
+  let z = days.to_int() + 719468
+  let era = (if z >= 0 { z } else { z - 146096 }) / 146097
+  let doe = z - era * 146097
+  let yoe = (doe - doe / 1460 + doe / 36524 - doe / 146096) / 365
+  let doy = doe - (365 * yoe + yoe / 4 - yoe / 100)
+  let mp = (5 * doy + 2) / 153
+  let day = doy - (153 * mp + 2) / 5 + 1
+  let month = if mp < 10 { mp + 3 } else { mp - 9 }
+  let year = yoe + era * 400 + (if month <= 2 { 1 } else { 0 })
+  let rem = rem.to_int()
+  let pad = fn(n : Int, width : Int) {
+    let text = n.to_string()
+    "0".repeat(width - text.length()) + text
+  }
+  // written as an explicit offset even at UTC (`+00'00'`), as Prawn does
+  let sign = if offset_seconds < 0 { "-" } else { "+" }
+  let minutes = offset_seconds.abs() / 60
+  let zone = "\{sign}\{pad(minutes / 60, 2)}'\{pad(minutes % 60, 2)}'"
+  "D:\{pad(year, 4)}\{pad(month, 2)}\{pad(day, 2)}\{pad(rem / 3600, 2)}\{pad(rem % 3600 / 60, 2)}\{pad(rem % 60, 2)}\{zone}"
+}
+
+///|
+/// Byte-wise lexical order, the order PDF name trees keep their keys in
+/// (PDF 32000-1 §7.9.6): the first differing byte decides, and a key that
+/// is a prefix of another sorts first. `Bytes::compare` is not this order —
+/// it compares lengths first, putting every short key before every long one.
+fn lexical_compare(left : Bytes, right : Bytes) -> Int {
+  let n = if left.length() < right.length() {
+    left.length()
+  } else {
+    right.length()
+  }
+  for i in 0..<n {
+    let c = left[i].compare(right[i])
+    if c != 0 {
+      return c
+    }
+  }
+  left.length().compare(right.length())
 }
 
 ///|
@@ -436,8 +537,15 @@ fn add_navigation(
   anchors : Array[(String, Int, Double, Double)],
   outline : Array[OutlineEntry],
   info : Array[(String, String)],
+  options : CatalogOptions,
 ) -> @pdflite.PdfDocument raise {
-  if anchors.is_empty() && outline.is_empty() && info.is_empty() {
+  if anchors.is_empty() &&
+    outline.is_empty() &&
+    info.is_empty() &&
+    options.initial_zoom is None &&
+    options.page_mode is None &&
+    !options.display_doc_title &&
+    options.page_labels.is_empty() {
     return document
   }
   // destinations name page objects, which pdflite enumerates only once a
@@ -463,10 +571,11 @@ fn add_navigation(
   }
   let catalog : Array[(@core.PdfName, @syntax.PdfObject)] = []
   if !destinations.is_empty() {
-    // a single-leaf name tree: /Names must be sorted by key bytes
+    // a single-leaf name tree: /Names must be in lexical order of the key
+    // bytes
     let keys = destinations.keys().collect()
     keys.sort_by(fn(left, right) {
-      @utf8.encode(left).compare(@utf8.encode(right))
+      lexical_compare(@utf8.encode(left), @utf8.encode(right))
     })
     let names : Array[@syntax.PdfObject] = []
     for key in keys {
@@ -498,15 +607,48 @@ fn add_navigation(
         Some(_) => DestString(@utf8.encode(entry.anchor))
         None => DestNull
       },
-      is_open: false,
+      is_open: entry.open,
       colour: @bookmark.pdf_bookmark_black,
       flags: 0,
     })
   }
-  if !bookmarks.is_empty() {
-    catalog.push((name("/PageMode"), PdfNameObject(name("/UseOutlines"))))
+  match options.page_mode {
+    Some(mode) =>
+      catalog.push((name("/PageMode"), PdfNameObject(name("/" + mode))))
+    None =>
+      if !bookmarks.is_empty() {
+        catalog.push((name("/PageMode"), PdfNameObject(name("/UseOutlines"))))
+      }
   }
-  if info.iter().any(fn(entry) { entry.0 == "Title" }) {
+  match (options.initial_zoom, page_objects.get(0)) {
+    (Some(zoom), Some(first)) => {
+      let height = model.pages[0].height_pt
+      let fit : Array[@syntax.PdfObject] = match zoom {
+        Fit => [PdfNameObject(name("/Fit"))]
+        FitH => [PdfNameObject(name("/FitH")), PdfReal(height)]
+        FitV => [PdfNameObject(name("/FitV")), PdfReal(0.0)]
+      }
+      catalog.push((name("/OpenAction"), PdfArray([PdfIndirect(first), ..fit])))
+    }
+    _ => ()
+  }
+  if !options.page_labels.is_empty() {
+    let nums : Array[@syntax.PdfObject] = []
+    for index, label in options.page_labels {
+      nums.push(PdfInteger(index))
+      nums.push(PdfDictionary([(name("/P"), PdfString(text_string(label)))]))
+    }
+    catalog.push(
+      (
+        name("/PageLabels"),
+        PdfIndirect(
+          document.add_object(PdfDictionary([(name("/Nums"), PdfArray(nums))])),
+        ),
+      ),
+    )
+  }
+  if options.display_doc_title ||
+    info.iter().any(fn(entry) { entry.0 == "Title" }) {
     catalog.push(
       (
         name("/ViewerPreferences"),
@@ -538,11 +680,14 @@ fn add_navigation(
 ///|
 /// One entry of the document outline (bookmarks). `level` 0 is the top
 /// level, and each entry nests under the nearest preceding entry of a
-/// lower level; `anchor` names the `AnchorItem` it jumps to.
+/// lower level; `anchor` names the `AnchorItem` it jumps to. An `open`
+/// entry shows its children when the document opens (a positive `/Count`);
+/// otherwise they start collapsed.
 pub(all) struct OutlineEntry {
   title : String
   level : Int
   anchor : String
+  open : Bool
 }
 
 ///|

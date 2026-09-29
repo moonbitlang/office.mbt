@@ -172,7 +172,10 @@ fn composite_font_object(
   // /W wants ascending CIDs so consecutive ones group into runs
   widths.sort_by(fn(left, right) { left.0.compare(right.0) })
   let basefont = name(
-    "/" + subset_tag(index) + "+" + pdf_name_body(face.spec.family),
+    "/" +
+    subset_tag(index) +
+    "+" +
+    postscript_name(program).unwrap_or(pdf_name_body(face.spec.family)),
   )
   let descriptor = font_descriptor(
     face,
@@ -300,14 +303,15 @@ fn font_object(
           "/" +
           subset_tag(index) +
           "+" +
-          pdf_name_body(face.spec.family) +
-          style_suffix(face.spec),
+          postscript_name(program).unwrap_or(
+            pdf_name_body(face.spec.family) + style_suffix(face.spec),
+          ),
         ),
       )
     None => (None, name(base_font_name(face.spec)))
   }
   let descriptor = font_descriptor(face, fontfile, None)
-  document.write_font(
+  let number = document.write_font(
     PdfFontSimple({
       fonttype: PdfTrueType,
       basefont: Some(basefont),
@@ -319,6 +323,155 @@ fn font_object(
       encoding: PdfWinAnsiEncoding,
     }),
   )
+  // `/Encoding /WinAnsiEncoding` already names the characters, but only a
+  // reader that knows WinAnsi and the standard glyph names can use that;
+  // a `/ToUnicode` map states them outright. (pdflite's own simple-font
+  // ToUnicode writer numbers codes for its re-encoding embedder and drops
+  // `/Encoding`, so the map is added to the written dictionary here.)
+  let cmap = document.add_object(
+    @pdflite.pdf_encode_stream_with_filter(
+      @pdflite.PdfStreamFlate.filter_name(),
+      simple_tounicode_stream(codepoints),
+      only_if_smaller=true,
+    ),
+  )
+  document.add_object_given_number(
+    number,
+    document
+    .lookup_object_or_null(number)
+    .add_dict_entry(name("/ToUnicode"), PdfIndirect(cmap)),
+  )
+  number
+}
+
+///|
+/// A ToUnicode CMap for a simple WinAnsi font: every code the document
+/// shows in it, mapped to the character that code stands for.
+fn simple_tounicode_stream(codepoints : Array[Int]) -> @syntax.PdfObject {
+  let codes : Array[Int] = []
+  for codepoint in codepoints {
+    match winansi_code(codepoint) {
+      Some(code) => if !codes.contains(code) { codes.push(code) }
+      None => ()
+    }
+  }
+  codes.sort()
+  let hex = fn(value : Int, digits : Int) {
+    let text = value.to_string(radix=16).to_upper()
+    "0".repeat(digits - text.length()) + text
+  }
+  let sb = StringBuilder()
+  sb.write_string(
+    "/CIDInit /ProcSet findresource begin\n12 dict begin\nbegincmap\n" +
+    "/CIDSystemInfo << /Registry (Adobe) /Ordering (UCS) /Supplement 0 >> def\n" +
+    "/CMapName /Adobe-Identity-UCS def\n/CMapType 2 def\n" +
+    "1 begincodespacerange\n<00> <FF>\nendcodespacerange\n",
+  )
+  // at most 100 entries per bfchar section
+  let mut start = 0
+  while start < codes.length() {
+    let stop = if start + 100 < codes.length() {
+      start + 100
+    } else {
+      codes.length()
+    }
+    sb.write_string("\{stop - start} beginbfchar\n")
+    for i in start..<stop {
+      let code = codes[i]
+      sb.write_string("<\{hex(code, 2)}> <\{hex(winansi_unicode(code), 4)}>\n")
+    }
+    sb.write_string("endbfchar\n")
+    start = stop
+  }
+  sb.write_string(
+    "endcmap\nCMapName currentdict /CMap defineresource pop\nend\nend\n",
+  )
+  let bytes = @utf8.encode(sb.to_string())
+  @syntax.pdf_stream(
+    PdfDictionary([(name("/Length"), PdfInteger(bytes.length()))]),
+    StreamGot(bytes),
+  )
+}
+
+///|
+/// The PostScript name (`name` table, name ID 6) of an sfnt font program,
+/// which is what a PDF's `/BaseFont` should carry: `NotoSerif-Bold`,
+/// `mplus1mn-regular`. None when the program has no usable one.
+fn postscript_name(program : Bytes) -> String? {
+  let u16 = fn(offset : Int) -> Int {
+    if offset < 0 || offset + 2 > program.length() {
+      -1
+    } else {
+      (program[offset].to_int() << 8) | program[offset + 1].to_int()
+    }
+  }
+  let u32 = fn(offset : Int) -> Int {
+    if offset < 0 || offset + 4 > program.length() {
+      -1
+    } else {
+      (u16(offset) << 16) | u16(offset + 2)
+    }
+  }
+  let tables = u16(4)
+  let mut table = -1
+  for i in 0..<tables {
+    let record = 12 + i * 16
+    if u32(record) == 0x6E616D65 { // 'name'
+      table = u32(record + 8)
+      break
+    }
+  }
+  if table < 0 {
+    return None
+  }
+  let count = u16(table + 2)
+  let strings = table + u16(table + 4)
+  let mut windows : String? = None
+  let mut mac : String? = None
+  for i in 0..<count {
+    let record = table + 6 + i * 12
+    if u16(record + 6) != 6 {
+      continue
+    }
+    let platform = u16(record)
+    let length = u16(record + 8)
+    let offset = strings + u16(record + 10)
+    if offset < 0 || length < 0 || offset + length > program.length() {
+      continue
+    }
+    let sb = StringBuilder()
+    if platform == 3 && windows is None {
+      for j = 0; j + 1 < length; j = j + 2 {
+        sb.write_char(u16(offset + j).unsafe_to_char())
+      }
+      windows = Some(sb.to_string())
+    } else if platform == 1 && mac is None {
+      for j in 0..<length {
+        sb.write_char(program[offset + j].to_int().unsafe_to_char())
+      }
+      mac = Some(sb.to_string())
+    }
+  }
+  guard (match windows {
+      Some(w) => Some(w)
+      None => mac
+    })
+    is Some(raw) else {
+    return None
+  }
+  // a PDF name keeps to printable ASCII without delimiters
+  let sb = StringBuilder()
+  for c in raw {
+    if c > ' ' && c <= '~' && !"()<>[]{}/%#".contains_char(c) {
+      sb.write_char(c)
+    }
+  }
+  let cleaned = sb.to_string()
+  if cleaned.is_empty() {
+    None
+  } else {
+    Some(cleaned)
+  }
 }
 
 ///|
