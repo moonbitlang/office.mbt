@@ -660,7 +660,27 @@ fn add_navigation(
   let document = if bookmarks.is_empty() {
     document
   } else {
-    document.add_bookmarks(bookmarks)
+    let document = document.add_bookmarks(bookmarks)
+    // The outline dictionary's /Count is the number of visible items
+    // (PDF 32000-1 §12.3.3). pdflite leaves it out when no item is
+    // open, which a reader may take for an empty outline; readers and
+    // Prawn count the top level as visible, so write it always.
+    match document.catalog().lookup_immediate(name("/Outlines")) {
+      Some(PdfIndirect(number)) => {
+        let root = document.lookup_object_or_null(number)
+        if root.lookup_immediate(name("/Count")) is None {
+          document.add_object_given_number(
+            number,
+            root.add_dict_entry(
+              name("/Count"),
+              PdfInteger(visible_outline_entries(outline)),
+            ),
+          )
+        }
+      }
+      _ => ()
+    }
+    document
   }
   if !info.is_empty() {
     let entries : Array[(@core.PdfName, @syntax.PdfObject)] = []
@@ -675,6 +695,29 @@ fn add_navigation(
     )
   }
   document
+}
+
+///|
+/// How many outline entries show when the document opens: the top level,
+/// and the children of entries that are open and themselves showing.
+fn visible_outline_entries(outline : Array[OutlineEntry]) -> Int {
+  // (level, showing, open) of the entries enclosing the current one
+  let stack : Array[(Int, Bool, Bool)] = []
+  let mut count = 0
+  for entry in outline {
+    while stack.length() > 0 && stack[stack.length() - 1].0 >= entry.level {
+      ignore(stack.pop())
+    }
+    let showing = match stack.last() {
+      None => true
+      Some((_, parent_showing, parent_open)) => parent_showing && parent_open
+    }
+    if showing {
+      count += 1
+    }
+    stack.push((entry.level, showing, entry.open))
+  }
+  count
 }
 
 ///|
@@ -694,6 +737,12 @@ pub(all) struct OutlineEntry {
 /// A PDF text string: PDFDocEncoding when the text is ASCII, else
 /// UTF-16BE behind a byte order mark.
 fn text_string(text : String) -> Bytes {
+  // An empty string is written as a bare byte order mark, the empty
+  // UTF-16 string: poppler (25.x) aborts `pdftotext -bbox` on an empty
+  // literal in the information dictionary, and Prawn writes it this way.
+  if text.is_empty() {
+    return b"\xFE\xFF"
+  }
   if text.iter().all(fn(c) { c.to_int() < 0x80 }) {
     return @utf8.encode(text)
   }

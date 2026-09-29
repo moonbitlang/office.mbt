@@ -96,6 +96,27 @@ test "outline entries keep their open or closed state" {
 }
 
 ///|
+test "the outline root counts its visible entries even when none is open" {
+  let model = text_model("x")
+  model.pages[0].items.push(Anchor({ name: "a", x_pt: 0, y_pt: 0, }))
+  let document = @pdflite.pdf_read_document_from_bytes(
+    @pdf.render_pdf(model, outline=[
+      { title: "Only", level: 0, anchor: "a", open: false, },
+      { title: "Also", level: 0, anchor: "a", open: false, },
+      { title: "Hidden", level: 1, anchor: "a", open: false, },
+    ]),
+  )
+  guard document.lookup_chain(document.catalog(), [
+      @core.pdf_name_of_bytes(b"/Outlines"),
+      @core.pdf_name_of_bytes(b"/Count"),
+    ])
+    is Some(PdfInteger(count)) else {
+    fail("no /Count on the outline root")
+  }
+  inspect(count, content="2")
+}
+
+///|
 test "pdf dates are written with an explicit zone offset" {
   inspect(@pdf.pdf_date(0L), content="D:19700101000000+00'00'")
   inspect(
@@ -116,6 +137,7 @@ test "information entries, open action, page mode, boxes and labels" {
     model,
     info=[
       ("Creator", "Jane Doe"),
+      ("Subject", ""),
       ("CreationDate", @pdf.pdf_date(0L)),
       ("ModDate", @pdf.pdf_date(0L)),
     ],
@@ -127,6 +149,9 @@ test "information entries, open action, page mode, boxes and labels" {
   )
   let text = decompressed(bytes)
   assert_true(text.contains("(Jane Doe)"))
+  // an empty text string is the bare byte order mark, not `()`
+  assert_false(text.contains("/Subject ()"))
+  assert_true(text.contains("/Subject (\\376\\377)"))
   assert_true(text.contains("/CreationDate (D:19700101000000+00'00')"))
   assert_true(text.contains("/ModDate"))
   assert_true(text.contains("/OpenAction"))
