@@ -425,6 +425,80 @@ test "trapped is a name and dates are checked" {
 }
 
 ///|
+/// What `render_pdf` makes of `info`: "ok", or the error it raises.
+fn info_outcome(info : @pdf.DocumentInfo) -> String {
+  try {
+    ignore(
+      @pdf.render_pdf(text_model("x"), options=@pdf.RenderOptions::new(info~)),
+    )
+    "ok"
+  } catch {
+    e => e.to_string()
+  }
+}
+
+///|
+test "custom information keys are unique" {
+  // a PDF dictionary cannot hold a key twice (PDF 32000-1, §7.3.7)
+  inspect(
+    info_outcome(
+      @pdf.DocumentInfo::new(custom=[("Tag", "one"), ("Tag", "two")]),
+    ),
+    content="invalid PDF render options: info key Tag appears more than once",
+  )
+  inspect(
+    info_outcome(
+      @pdf.DocumentInfo::new(custom=[("Tag", "one"), ("tag", "two")]),
+    ),
+    content="ok",
+  )
+}
+
+///|
+test "pdf dates are checked field by field" {
+  // the reviewer's case: month 13, day 32, hour 25, minute and second 60,
+  // zone +99'99'
+  inspect(
+    info_outcome(@pdf.DocumentInfo::new(mod_date="D:20261332256061+99'99'")),
+    content="invalid PDF render options: info ModDate is not a PDF date (D:YYYYMMDDHHmmSS+HH'mm'): D:20261332256061+99'99'",
+  )
+  let accepted = [
+    "D:0000", "D:9999", "D:202601", "D:202612", "D:20260131", "D:20260228", "D:20240229",
+    "D:20000229", "D:20260430", "D:2026093000", "D:2026093023", "D:202609302359",
+    "D:20260930235959", "D:20260930235959Z", "D:20260930235959Z00'00'", "D:20260930235959+23'59'",
+    "D:20260930235959-00'00'", "D:20260930235959+05'30", "D:20260930235959+05'",
+    "D:20260930235959+05", "D:20260930Z", "D:2026+08'00'",
+  ]
+  for date in accepted {
+    assert_eq(info_outcome(@pdf.DocumentInfo::new(creation_date=date)), "ok")
+    assert_true(@pdf.is_pdf_date(date))
+  }
+  // what pdf_date writes is always accepted
+  for offset in [0, 8 * 3600, -(5 * 3600 + 30 * 60), 23 * 3600 + 59 * 60] {
+    assert_true(
+      @pdf.is_pdf_date(@pdf.pdf_date(1790665948L, offset_seconds=offset)),
+    )
+  }
+  let rejected = [
+    // month, day (per month and leap year), hour, minute, second
+    "D:202600", "D:202613", "D:20260100", "D:20260132", "D:20260229", "D:21000229",
+    "D:20260431", "D:2026093024", "D:202609302360", "D:20260930235960",
+    // zone: hours and minutes out of range, missing, or not separated
+     "D:20260930235959+24'00'", "D:20260930235959+05'60'", "D:20260930235959+0530",
+    "D:20260930235959+05''", "D:20260930235959+05'3", "D:20260930235959Z05'00'",
+    "D:20260930235959ZZ", "D:20260930235959-", "D:20260930235959+5'00'",
+    // trailing text, lower-case zone, wrong prefix
+     "D:20260930235959+05'30'x", "D:20260930235959z", "d:2026", "20260930",
+  ]
+  for date in rejected {
+    let outcome = info_outcome(@pdf.DocumentInfo::new(creation_date=date))
+    if !outcome.has_prefix("invalid") || @pdf.is_pdf_date(date) {
+      fail("accepted \{date}")
+    }
+  }
+}
+
+///|
 test "outline entries resolve named, positioned and missing destinations" {
   let model = pages_model(2)
   model.pages[1].items.push(Anchor({ name: "there", x_pt: 5, y_pt: 20, }))

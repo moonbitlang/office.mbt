@@ -37,6 +37,8 @@ pub(all) struct ParagraphLayout {
 priv struct FlatRun {
   style : RunStyle
   face : @fonts.FaceMetrics
+  /// The face characters `face` lacks are measured, sized and drawn in.
+  fallback_face : @fonts.FaceMetrics
   end : Int // global code-unit offset one past this run's text
 }
 
@@ -45,7 +47,10 @@ priv struct FlatRun {
 ///
 /// Runs are measured with the bundled faces, or, given `fonts`, with that
 /// registry's faces first — pass the same registry to the renderer so the
-/// document is drawn with the faces it was measured with.
+/// document is drawn with the faces it was measured with. That holds for
+/// the CJK fallback too: a character the run's face lacks is measured, and
+/// its line sized, in the registry's `cjk_fallback`, the face a renderer
+/// given the registry draws the fallback run with.
 pub fn layout_paragraph(
   input : ParagraphInput,
   width_pt : Double,
@@ -58,25 +63,39 @@ pub fn layout_paragraph(
   let flat_runs : Array[FlatRun] = []
   let mut offset = 0
   for run in input.runs {
-    let face = match fonts {
+    let bold = run.style.bold
+    let italic = run.style.italic
+    let (face, fallback_face) = match fonts {
       Some(registry) =>
-        registry.face(
-          registry.resolve_family(run.style.family),
-          bold=run.style.bold,
-          italic=run.style.italic,
+        (
+          registry.face(
+            registry.resolve_family(run.style.family),
+            bold~,
+            italic~,
+          ),
+          registry.cjk_fallback(bold~, italic~),
         )
       None =>
-        @fonts.face(
-          @fonts.resolve_family(run.style.family),
-          bold=run.style.bold,
-          italic=run.style.italic,
+        (
+          @fonts.face(@fonts.resolve_family(run.style.family), bold~, italic~),
+          @fonts.cjk_fallback(),
         )
     }
-    let measured = @linebreak.measure(run.text, face, run.style.size_pt)
+    let measured = @linebreak.measure(
+      run.text,
+      face,
+      run.style.size_pt,
+      fallback_face~,
+    )
     sb.write_string(run.text)
     advances.append(measured.advances_pt)
     fallback.append(measured.fallback)
-    flat_runs.push({ style: run.style, face, end: offset + run.text.length(), })
+    flat_runs.push({
+      style: run.style,
+      face,
+      fallback_face,
+      end: offset + run.text.length(),
+    })
     offset += run.text.length()
   }
   let text = sb.to_string()
@@ -141,7 +160,12 @@ pub fn layout_paragraph(
       // the first run's style, or a bare default when there are no runs
       let (face, size) = match flat_runs.get(0) {
         Some(r) => (r.face, r.style.size_pt)
-        None => (@fonts.face("Carlito"), 12.0)
+        None =>
+          match fonts {
+            Some(registry) =>
+              (registry.face(registry.resolve_family("Carlito")), 12.0)
+            None => (@fonts.face("Carlito"), 12.0)
+          }
       }
       ascent = face.ascent_pt(size)
       natural = face.line_height_pt(size)
@@ -295,15 +319,17 @@ fn has_tab(text : String, from : Int, to : Int) -> Bool {
 priv struct Segment {
   style : RunStyle
   face : @fonts.FaceMetrics
+  fallback_face : @fonts.FaceMetrics
   used_fallback : Bool
   start : Int
   end : Int
 }
 
 ///|
+/// The face the segment was measured in, and is drawn in.
 fn segment_face(seg : Segment) -> @fonts.FaceMetrics {
   if seg.used_fallback {
-    @fonts.cjk_fallback()
+    seg.fallback_face
   } else {
     seg.face
   }
@@ -311,11 +337,7 @@ fn segment_face(seg : Segment) -> @fonts.FaceMetrics {
 
 ///|
 fn segment_family(seg : Segment) -> String {
-  if seg.used_fallback {
-    @fonts.cjk_fallback().family
-  } else {
-    seg.face.family
-  }
+  segment_face(seg).family
 }
 
 ///|
@@ -345,6 +367,7 @@ fn split_segments(
     segments.push({
       style: run.style,
       face: run.face,
+      fallback_face: run.fallback_face,
       used_fallback: seg_fallback,
       start: i,
       end: j,

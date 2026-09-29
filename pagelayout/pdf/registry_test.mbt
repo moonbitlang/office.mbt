@@ -215,7 +215,7 @@ test "a missing style is measured and drawn with the regular face" {
   inspect(shown, content="AΩ")
   // Identity-H codes are the regular program's glyph ids
   let hex = fn(cp : Int) {
-    regular.cmap.get(cp).unwrap().to_string(radix=16).pad_start(4, '0')
+    regular.glyph_id(cp).unwrap().to_string(radix=16).pad_start(4, '0')
   }
   assert_eq(codes, hex('A'.to_int()) + hex(0x3A9))
 }
@@ -352,4 +352,207 @@ test "paragraph layout measures with the registry it is given" {
     bundled,
     Array::make(4, @fonts.face("Carlito").advance_pt('i'.to_int(), 10)),
   )
+}
+
+///|
+/// `program` with its `head` table's unitsPerEm replaced: every advance of
+/// the face then measures `old / units_per_em` times as wide.
+fn with_units_per_em(program : Bytes, units_per_em : Int) -> Bytes {
+  let bytes = program.to_array()
+  let tables = (bytes[4].to_int() << 8) | bytes[5].to_int()
+  for i in 0..<tables {
+    let record = 12 + i * 16
+    let tag = Bytes::from_array(bytes[record:record + 4].to_owned())
+    if tag == b"head" {
+      let offset = (bytes[record + 8].to_int() << 24) |
+        (bytes[record + 9].to_int() << 16) |
+        (bytes[record + 10].to_int() << 8) |
+        bytes[record + 11].to_int()
+      bytes[offset + 18] = (units_per_em >> 8).to_byte()
+      bytes[offset + 19] = (units_per_em & 0xFF).to_byte()
+    }
+  }
+  Bytes::from_array(bytes)
+}
+
+///|
+/// A paragraph of one run of `text` in `family` at 10pt.
+fn one_run(family : String, text : String) -> @paragraph.ParagraphInput {
+  {
+    runs: [
+      {
+        text,
+        style: {
+          family,
+          size_pt: 10,
+          bold: false,
+          italic: false,
+          color: @pagelayout.black,
+        },
+        field: NotAField,
+      },
+    ],
+    style: @paragraph.ParagraphStyle::default(),
+  }
+}
+
+///|
+/// Checks that every placed run is measured with the face the renderer
+/// draws its font with — the registry's face for the run's family and
+/// style — and returns the runs as `family:text`.
+fn drawn_as_measured(
+  layout : @paragraph.ParagraphLayout,
+  registry : @fonts.FontRegistry,
+) -> String raise {
+  let runs : Array[String] = []
+  for line in layout.lines {
+    for run in line.runs {
+      let face = registry.face(
+        registry.resolve_family(run.font.family),
+        bold=run.font.bold,
+        italic=run.font.italic,
+      )
+      for i in 0..<run.text.length() {
+        let expected = face.advance_pt(run.text[i].to_int(), run.size_pt)
+        if run.advances_pt[i] != expected {
+          fail(
+            "\{run.font.family} run measures code unit \{i} at \{run.advances_pt[i]}, draws it at \{expected}",
+          )
+        }
+      }
+      if line.height_pt < face.line_height_pt(run.size_pt) - 1.0e-9 {
+        fail("line shorter than its \{run.font.family} run")
+      }
+      runs.push("\{run.font.family}:\{run.text}")
+    }
+  }
+  runs.join(" ")
+}
+
+///|
+test "fallback characters are measured with the registry's fallback face" {
+  // a Noto Sans SC of the caller's own, twice as wide as the bundled one
+  let noto = @fontoutlines.outline_sfnt("Noto Sans SC").unwrap()
+  let registry = @fonts.FontRegistry::new()
+  let wide = registry.register("Noto Sans SC", with_units_per_em(noto, 500))
+  inspect(wide.advance_pt(0x4E2D, 10), content="20")
+  let direct = @paragraph.layout_paragraph(
+    one_run("Noto Sans SC", "中"),
+    400,
+    fonts=registry,
+  )
+  let fallback = @paragraph.layout_paragraph(
+    one_run("Arial", "中"),
+    400,
+    fonts=registry,
+  )
+  // both name the same font, so both are measured in it
+  inspect(drawn_as_measured(direct, registry), content="Noto Sans SC:中")
+  inspect(drawn_as_measured(fallback, registry), content="Noto Sans SC:中")
+  assert_eq(fallback.lines[0].runs[0].advances_pt, [20.0])
+  assert_eq(fallback.lines[0].height_pt, direct.lines[0].height_pt)
+  // and drawn in it: the declared width (2000/1000 em) is the advance, so
+  // no displacement corrects it
+  let run = fallback.lines[0].runs[0]
+  let model = @pagelayout.PageModel::new()
+  let font = model.add_font(run.font)
+  model.pages.push({
+    width_pt: 200,
+    height_pt: 100,
+    items: [
+      Text({
+        font,
+        size_pt: run.size_pt,
+        x_pt: 10,
+        baseline_pt: 20,
+        text: run.text,
+        advances_pt: run.advances_pt,
+        color: @pagelayout.black,
+      }),
+    ],
+  })
+  let bytes = @pdf.render_pdf(
+    model,
+    options=@pdf.RenderOptions::new(fonts=registry),
+  )
+  assert_false(decompressed(bytes).contains(" TJ"))
+  let (shown, _) = extracted(bytes)
+  inspect(shown, content="中")
+}
+
+///|
+test "a registered fallback family without a glyph is not measured with the bundled one" {
+  // "Noto Sans SC" is shadowed by a face with no ideographs at all
+  let registry = @fonts.FontRegistry::new()
+  ignore(registry.register("Noto Sans SC", sans()))
+  let layout = @paragraph.layout_paragraph(
+    one_run("Arial", "A中"),
+    400,
+    fonts=registry,
+  )
+  // 中 is not measured at the bundled ideograph's width and then drawn in
+  // a face that lacks it: nothing the registry resolves covers it, so it
+  // stays in the run's own face, measured and drawn as that face's .notdef
+  inspect(drawn_as_measured(layout, registry), content="Liberation Sans:A中")
+  // and the loss is reported by the registry that causes it, where the
+  // bundle alone has nothing to report
+  assert_eq(registry.uncovered("A中", "Arial"), [(0x4E2D, 1)])
+  assert_eq(@fonts.uncovered("A中", "Arial"), [])
+  // the registry's fallback is the registered face, in every style
+  assert_true(
+    physical_equal(
+      registry.cjk_fallback(bold=true),
+      registry.face("Noto Sans SC"),
+    ),
+  )
+}
+
+///|
+test "metrics handed out by a sealed registry cannot change its output" {
+  let registry = @fonts.FontRegistry::new()
+  let face = registry.register("Own Sans", sans())
+  let model = family_model("Own Sans", "AΩ", face)
+  let render = fn() raise {
+    @pdf.render_pdf(model, options=@pdf.RenderOptions::new(fonts=registry))
+  }
+  let before = render()
+  let (_, codes) = extracted(before)
+  inspect(codes, content="0024035b")
+  // Writing `face.cmap['A'] = 0x25`, which turned these codes into
+  // 0025035b and lost the A, no longer compiles: the glyph tables are
+  // private. What every exposure path hands out reads the face...
+  let exposed = [
+    face,
+    registry.face("Own Sans"),
+    registry.face("Own Sans", bold=true),
+    registry.registered_face("Own Sans").unwrap().metrics,
+  ]
+  for metrics in exposed {
+    assert_true(physical_equal(metrics, face))
+    assert_eq(metrics.glyph_id('A'.to_int()), Some(0x24))
+    // ...and whatever is built from what it reads is the caller's own
+    let copy : Map[Int, Int] = Map([])
+    for codepoint, glyph in metrics.cmap_entries() {
+      copy[codepoint] = glyph
+    }
+    copy['A'.to_int()] = 0x25
+    assert_eq(metrics.glyph_id('A'.to_int()), Some(0x24))
+  }
+  // the bundled faces are shared the same way, process-wide
+  let bundled = @fonts.face("Liberation Sans")
+  let bundled_before = @pdf.render_pdf(
+    family_model("Liberation Sans", "AΩ", bundled),
+  )
+  let copy : Map[Int, Int] = Map([])
+  for codepoint, glyph in bundled.cmap_entries() {
+    copy[codepoint] = glyph + 1
+  }
+  assert_true(
+    @pdf.render_pdf(family_model("Liberation Sans", "AΩ", bundled)) ==
+    bundled_before,
+  )
+  let after = render()
+  assert_true(after == before)
+  let (_, codes) = extracted(after)
+  inspect(codes, content="0024035b")
 }

@@ -423,7 +423,7 @@ test "metrics and outline programs agree on glyph ids" {
   }
   let metrics = @fonts.face("Noto Sans SC")
   let mut compared = 0
-  for codepoint, glyph in metrics.cmap {
+  for codepoint, glyph in metrics.cmap_entries() {
     match from_program.get(codepoint) {
       Some(other) => {
         assert_eq(glyph, other)

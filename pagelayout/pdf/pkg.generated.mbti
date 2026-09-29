@@ -8,6 +8,8 @@ import {
 }
 
 // Values
+pub fn is_pdf_date(String) -> Bool
+
 pub fn pdf_date(Int64, offset_seconds? : Int) -> String
 
 pub fn render_pdf(@pagelayout.PageModel, options? : RenderOptions) -> Bytes raise

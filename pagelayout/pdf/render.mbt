@@ -183,7 +183,7 @@ fn emit_run_composite(
   while i < run.text.length() {
     let (codepoint, next) = codepoint_at(run.text, i)
     // Identity-H: the code is the glyph index itself
-    let glyph = face.metrics.cmap.get(codepoint).unwrap_or(0)
+    let glyph = face.metrics.glyph_id(codepoint).unwrap_or(0)
     let mut advance = 0.0
     for j in i..<next {
       advance += run.advances_pt[j]
@@ -312,7 +312,7 @@ fn pdf_face(
 /// `RenderOptions`); `render_pdf(model)` uses the bundled fonts and writes
 /// none of them. Raises `RenderOptionError` for options it cannot honour:
 /// page labels that do not match the page count, malformed dates, custom
-/// metadata keys that name a standard entry.
+/// metadata keys that are empty, repeated or name a standard entry.
 pub fn render_pdf(
   model : @pagelayout.PageModel,
   options? : RenderOptions = RenderOptions::new(),

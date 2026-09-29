@@ -14,6 +14,12 @@
 ///|
 /// Metrics of one face, bundled or registered. Vertical metrics come from
 /// `hhea`; advances are raw font units scaled by `units_per_em` on lookup.
+///
+/// A face is immutable. Its glyph tables are private and read through
+/// `glyph_id`, `cmap_entries` and `advance_pt`, because the same value is
+/// shared by every lookup — the bundled cache, a `FontRegistry`, the layout
+/// that measured with it and the renderer that draws with it — and a
+/// change made through one of them would silently reach all the others.
 pub struct FaceMetrics {
   family : String
   bold : Bool
@@ -22,8 +28,24 @@ pub struct FaceMetrics {
   ascender : Int
   descender : Int
   line_gap : Int
-  advances : Array[Int]
-  cmap : Map[Int, Int]
+  priv advances : Array[Int]
+  priv cmap : Map[Int, Int]
+}
+
+///|
+/// The glyph `codepoint` maps to in the face's `cmap`, or None when it maps
+/// to none. A mapping to glyph 0 (`.notdef`) is reported as it is; see
+/// `has_char` for whether the face can really draw the character.
+pub fn FaceMetrics::glyph_id(self : FaceMetrics, codepoint : Int) -> Int? {
+  self.cmap.get(codepoint)
+}
+
+///|
+/// Every (codepoint, glyph) pair of the face's `cmap`, in no particular
+/// order. The pairs are read from the face; nothing done with them can
+/// reach it.
+pub fn FaceMetrics::cmap_entries(self : FaceMetrics) -> Iter2[Int, Int] {
+  self.cmap.iter2()
 }
 
 ///|
@@ -224,8 +246,21 @@ pub fn uncovered(
   italic? : Bool = false,
 ) -> Array[(Int, Int)] {
   load_faces()
-  let requested = face(resolve_family(family), bold~, italic~)
-  let fallback = cjk_fallback()
+  uncovered_by(
+    text,
+    face(resolve_family(family), bold~, italic~),
+    cjk_fallback(),
+  )
+}
+
+///|
+/// Codepoints in `text` that neither `requested` nor `fallback` can draw,
+/// counted, in order of first appearance.
+fn uncovered_by(
+  text : String,
+  requested : FaceMetrics,
+  fallback : FaceMetrics,
+) -> Array[(Int, Int)] {
   let counts : Map[Int, Int] = Map([])
   let order : Array[Int] = []
   let mut i = 0

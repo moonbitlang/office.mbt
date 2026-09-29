@@ -191,7 +191,7 @@ fn composite_font_object(
   let tounicode : Array[(Int, @core.PdfBytes)] = []
   let seen : Map[Int, Unit] = Map([])
   for codepoint in codepoints {
-    let glyph = metrics.cmap.get(codepoint).unwrap_or(0)
+    let glyph = metrics.glyph_id(codepoint).unwrap_or(0)
     if glyph == 0 || seen.contains(glyph) {
       continue
     }

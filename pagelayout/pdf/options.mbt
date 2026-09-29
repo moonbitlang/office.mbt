@@ -171,10 +171,12 @@ pub(all) enum Trapped {
 /// standard requires: text strings, dates and the `/Trapped` name. Absent
 /// fields are not written.
 ///
-/// Dates are PDF date strings (`D:YYYYMMDDHHmmSS+HH'mm'`, see `pdf_date`);
-/// `render_pdf` rejects any other form. `custom` holds further entries,
-/// written as text strings; a custom key naming a standard entry is
-/// rejected (set the typed field instead), as is an empty key.
+/// Dates are PDF date strings (`D:YYYYMMDDHHmmSS+HH'mm'`, see `pdf_date`),
+/// any prefix of that from the year on, optionally with a zone, and every
+/// field in range; `render_pdf` rejects any other form. `custom` holds
+/// further entries, written as text strings; a custom key naming a standard
+/// entry is rejected (set the typed field instead), as are an empty key and
+/// a key given twice.
 pub struct DocumentInfo {
   title : String?
   author : String?
@@ -281,6 +283,9 @@ fn DocumentInfo::entries(
     }
     None => ()
   }
+  // a dictionary's keys are unique (PDF 32000-1, §7.3.7), and keeping one
+  // of two values would silently drop the caller's other one
+  let seen : Map[String, Unit] = Map([])
   for entry in self.custom {
     let (key, value) = entry
     if key.is_empty() {
@@ -291,39 +296,76 @@ fn DocumentInfo::entries(
         "info key \{key} is a standard entry; set DocumentInfo's field instead",
       )
     }
+    if seen.contains(key) {
+      raise RenderOptionError("info key \{key} appears more than once")
+    }
+    seen[key] = ()
     entries.push((name("/" + key), PdfString(text_string(value))))
   }
   entries
 }
 
 ///|
-/// Whether `text` is a PDF date string (PDF 32000-1, §7.9.4):
-/// `D:YYYY`, then optionally `MM`, `DD`, `HH`, `mm`, `SS` in turn, then
-/// optionally a zone — `Z`, or `+`/`-` with `HH`, optionally `'mm`, and
-/// optionally a trailing apostrophe.
-fn is_pdf_date(text : String) -> Bool {
+/// Whether `text` is a PDF date string (PDF 32000-1, §7.9.4,
+/// `D:YYYYMMDDHHmmSSOHH'mm`), with every field in range:
+///
+/// - `D:` and a four-digit year `YYYY`;
+/// - then optionally, each only after the one before it, the month `MM`
+///   (01–12), the day `DD` (01 to the month's length, leap years
+///   included), the hour `HH` (00–23), the minute `mm` (00–59) and the
+///   second `SS` (00–59);
+/// - then optionally the relationship to UT `O`: `+` or `-` followed by the
+///   offset's hours `HH` (00–23), optionally an apostrophe, and after it
+///   optionally the offset's minutes `mm` (00–59) and a trailing apostrophe
+///   (the form PDF 1.7 and earlier wrote, and `pdf_date` writes). `Z`
+///   (UT) may carry the same fields only as a zero offset.
+///
+/// Anything else is rejected: out-of-range fields, an offset without its
+/// hours, minutes not separated from the hours by an apostrophe, trailing
+/// text. This is the check `render_pdf` applies to `DocumentInfo`'s dates,
+/// for a caller that would rather drop a date than fail the render.
+pub fn is_pdf_date(text : String) -> Bool {
   let bytes = @utf8.encode(text)
-  let digit = fn(i : Int) {
-    i < bytes.length() && bytes[i] >= b'0' && bytes[i] <= b'9'
+  let length = bytes.length()
+  let digit = fn(i : Int) { i < length && bytes[i] >= b'0' && bytes[i] <= b'9' }
+  // the two-digit field at `i`, if there is one
+  let field = fn(i : Int) -> Int? {
+    if digit(i) && digit(i + 1) {
+      Some(
+        (bytes[i].to_int() - '0'.to_int()) * 10 +
+        (bytes[i + 1].to_int() - '0'.to_int()),
+      )
+    } else {
+      None
+    }
   }
-  if bytes.length() < 6 || bytes[0] != b'D' || bytes[1] != b':' {
+  if length < 6 || bytes[0] != b'D' || bytes[1] != b':' {
     return false
   }
-  for i in 2..<6 {
-    if !digit(i) {
+  guard field(2) is Some(century) && field(4) is Some(year_in_century) else {
+    return false
+  }
+  let year = century * 100 + year_in_century
+  let mut i = 6
+  // MM DD HH mm SS, each optional but only in order, each within its range
+  let mut month = 0
+  for index in 0..<5 {
+    guard field(i) is Some(value) else { break }
+    let valid = match index {
+      0 => value >= 1 && value <= 12
+      1 => value >= 1 && value <= days_in_month(year, month)
+      2 => value <= 23
+      _ => value <= 59
+    }
+    if !valid {
       return false
     }
-  }
-  let mut i = 6
-  // MM DD HH mm SS, each optional but only in order
-  for _ in 0..<5 {
-    if digit(i) && digit(i + 1) {
-      i += 2
-    } else {
-      break
+    if index == 0 {
+      month = value
     }
+    i += 2
   }
-  if i == bytes.length() {
+  if i == length {
     return true
   }
   let zone = bytes[i]
@@ -331,21 +373,46 @@ fn is_pdf_date(text : String) -> Bool {
     return false
   }
   i += 1
-  let apostrophe = fn(i : Int) { i < bytes.length() && bytes[i] == b'\'' }
-  if digit(i) && digit(i + 1) {
-    i += 2
-    if apostrophe(i) {
-      i += 1
-    }
-    if digit(i) && digit(i + 1) {
+  let apostrophe = fn(i : Int) { i < length && bytes[i] == b'\'' }
+  match field(i) {
+    Some(hours) => {
+      if hours > 23 || (zone == b'Z' && hours != 0) {
+        return false
+      }
       i += 2
       if apostrophe(i) {
         i += 1
+        match field(i) {
+          Some(minutes) => {
+            if minutes > 59 || (zone == b'Z' && minutes != 0) {
+              return false
+            }
+            i += 2
+            if apostrophe(i) {
+              i += 1
+            }
+          }
+          None => ()
+        }
       }
     }
-  } else if zone != b'Z' {
-    // an offset needs its hours
-    return false
+    // an offset needs its hours; UT needs nothing
+    None => if zone != b'Z' { return false }
   }
-  i == bytes.length()
+  i == length
+}
+
+///|
+/// The number of days in `month` (1–12) of the proleptic Gregorian `year`.
+fn days_in_month(year : Int, month : Int) -> Int {
+  match month {
+    2 =>
+      if (year % 4 == 0 && year % 100 != 0) || year % 400 == 0 {
+        29
+      } else {
+        28
+      }
+    4 | 6 | 9 | 11 => 30
+    _ => 31
+  }
 }

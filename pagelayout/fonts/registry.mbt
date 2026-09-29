@@ -93,7 +93,8 @@ pub impl Default for FontRegistry with fn default() {
 /// together, from the same bytes.
 ///
 /// A registered family resolves to itself (matched exactly, case and all)
-/// and shadows a bundled family of the same name. Raises
+/// and shadows a bundled family of the same name — Noto Sans SC, the CJK
+/// fallback, included (see `cjk_fallback`). Raises
 /// `FontRegistryError` when the registry is sealed or the face is already
 /// registered, and a parse error when the bytes are not a usable sfnt.
 pub fn FontRegistry::register(
@@ -215,4 +216,42 @@ pub fn FontRegistry::face(
     Some(registered) => registered.metrics
     None => face(family, bold~, italic~)
   }
+}
+
+///|
+/// The face for CJK codepoints the requested face lacks, as this registry
+/// resolves it: the fallback family (Noto Sans SC) through `face`, so a
+/// registered face of that family is the fallback — style fallback
+/// included — and shadows the bundled one entirely. Seals.
+///
+/// This is exactly the face a renderer resolves for a run the layout
+/// placed in the fallback family with this style, so a fallback character
+/// is measured with the metrics it is drawn with. When the registered
+/// fallback lacks a character, the bundled one is *not* consulted: a run
+/// cannot name it apart from the registered face. See `uncovered`.
+pub fn FontRegistry::cjk_fallback(
+  self : FontRegistry,
+  bold? : Bool = false,
+  italic? : Bool = false,
+) -> FaceMetrics {
+  let family = cjk_fallback().family
+  self.face(self.resolve_family(family), bold~, italic~)
+}
+
+///|
+/// The package-level `uncovered`, asked of this registry's faces: the
+/// requested face as `face` resolves it, then `cjk_fallback` in the same
+/// style — the two faces layout measures with. Seals.
+pub fn FontRegistry::uncovered(
+  self : FontRegistry,
+  text : String,
+  family : String,
+  bold? : Bool = false,
+  italic? : Bool = false,
+) -> Array[(Int, Int)] {
+  uncovered_by(
+    text,
+    self.face(self.resolve_family(family), bold~, italic~),
+    self.cjk_fallback(bold~, italic~),
+  )
 }

@@ -32,18 +32,20 @@ pub struct FaceMetrics {
   ascender : Int
   descender : Int
   line_gap : Int
-  advances : Array[Int]
-  cmap : Map[Int, Int]
+  // private fields
 }
 pub fn FaceMetrics::advance_pt(Self, Int, Double) -> Double
 pub fn FaceMetrics::ascent_pt(Self, Double) -> Double
+pub fn FaceMetrics::cmap_entries(Self) -> Iter2[Int, Int]
 pub fn FaceMetrics::descent_pt(Self, Double) -> Double
+pub fn FaceMetrics::glyph_id(Self, Int) -> Int?
 pub fn FaceMetrics::has_char(Self, Int) -> Bool
 pub fn FaceMetrics::line_height_pt(Self, Double) -> Double
 
 pub struct FontRegistry {
   // private fields
 }
+pub fn FontRegistry::cjk_fallback(Self, bold? : Bool, italic? : Bool) -> FaceMetrics
 #deprecated
 pub fn FontRegistry::default() -> Self
 pub fn FontRegistry::face(Self, String, bold? : Bool, italic? : Bool) -> FaceMetrics
@@ -54,6 +56,7 @@ pub fn FontRegistry::register(Self, String, Bytes, bold? : Bool, italic? : Bool)
 pub fn FontRegistry::registered_face(Self, String, bold? : Bool, italic? : Bool) -> RegisteredFace?
 pub fn FontRegistry::resolve_family(Self, String) -> String
 pub fn FontRegistry::seal(Self) -> Unit
+pub fn FontRegistry::uncovered(Self, String, String, bold? : Bool, italic? : Bool) -> Array[(Int, Int)]
 pub impl Default for FontRegistry
 
 pub struct RegisteredFace {
