@@ -74,11 +74,11 @@ test "outline entries keep their open or closed state" {
   let model = text_model("x")
   model.pages[0].items.push(Anchor({ name: "a", x_pt: 0, y_pt: 0, }))
   let entries : Array[@pdf.OutlineEntry] = [
-    { title: "Open", level: 0, anchor: "a", open: true, },
-    { title: "Child 1", level: 1, anchor: "a", open: false, },
-    { title: "Child 2", level: 1, anchor: "a", open: false, },
-    { title: "Closed", level: 0, anchor: "a", open: false, },
-    { title: "Hidden", level: 1, anchor: "a", open: false, },
+    { title: "Open", level: 0, anchor: "a", dest: None, open: true, },
+    { title: "Child 1", level: 1, anchor: "a", dest: None, open: false, },
+    { title: "Child 2", level: 1, anchor: "a", dest: None, open: false, },
+    { title: "Closed", level: 0, anchor: "a", dest: None, open: false, },
+    { title: "Hidden", level: 1, anchor: "a", dest: None, open: false, },
   ]
   let document = @pdflite.pdf_read_document_from_bytes(
     @pdf.render_pdf(model, outline=entries),
@@ -101,9 +101,9 @@ test "the outline root counts its visible entries even when none is open" {
   model.pages[0].items.push(Anchor({ name: "a", x_pt: 0, y_pt: 0, }))
   let document = @pdflite.pdf_read_document_from_bytes(
     @pdf.render_pdf(model, outline=[
-      { title: "Only", level: 0, anchor: "a", open: false, },
-      { title: "Also", level: 0, anchor: "a", open: false, },
-      { title: "Hidden", level: 1, anchor: "a", open: false, },
+      { title: "Only", level: 0, anchor: "a", dest: None, open: false, },
+      { title: "Also", level: 0, anchor: "a", dest: None, open: false, },
+      { title: "Hidden", level: 1, anchor: "a", dest: None, open: false, },
     ]),
   )
   guard document.lookup_chain(document.catalog(), [

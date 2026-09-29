@@ -91,6 +91,21 @@ priv struct PdfFace {
   /// simple TrueType font. Decided from the characters the document
   /// actually uses, not from the family — see `needs_composite`.
   composite : Bool
+  /// Whether `/Widths` truncates glyph widths to whole thousandths of an em
+  /// (as Prawn does) rather than rounding them.
+  truncate_widths : Bool
+}
+
+///|
+/// The width the font dictionary declares for `codepoint`, in thousandths
+/// of an em: rounded, or truncated when `truncate_widths`.
+fn PdfFace::declared_width(self : PdfFace, codepoint : Int) -> Double {
+  let width = self.metrics.advance_pt(codepoint, 1000.0)
+  if self.truncate_widths {
+    (width + 1.0e-9).floor()
+  } else {
+    width.round()
+  }
 }
 
 ///|
@@ -166,7 +181,7 @@ fn composite_font_object(
       continue
     }
     seen[glyph] = ()
-    widths.push((glyph, metrics.advance_pt(codepoint, 1000.0).round()))
+    widths.push((glyph, face.declared_width(codepoint)))
     tounicode.push((glyph, utf16be(codepoint)))
   }
   // /W wants ascending CIDs so consecutive ones group into runs
@@ -280,15 +295,12 @@ fn font_object(
   index : Int,
   codepoints : Array[Int],
 ) -> Int raise {
-  let metrics = face.metrics
   let first = 32
   let last = 255
   let widths : Array[Int] = []
   for code = first; code <= last; code = code + 1 {
     // advance_pt at 1000pt is exactly the 1/1000-em width PDF wants
-    widths.push(
-      metrics.advance_pt(winansi_unicode(code), 1000.0).round().to_int(),
-    )
+    widths.push(face.declared_width(winansi_unicode(code)).to_int())
   }
   // A face with a bundled program is embedded so the page renders the
   // shapes it was laid out with. Without one the font is only declared,

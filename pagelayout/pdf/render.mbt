@@ -83,9 +83,7 @@ fn declared_simple_width(
   code : Int,
   size_pt : Double,
 ) -> Double {
-  face.metrics.advance_pt(winansi_unicode(code), 1000.0).round() *
-  size_pt /
-  1000.0
+  face.declared_width(winansi_unicode(code)) * size_pt / 1000.0
 }
 
 ///|
@@ -195,7 +193,7 @@ fn emit_run_composite(
     let declared = if glyph == 0 {
       run.size_pt
     } else {
-      face.metrics.advance_pt(codepoint, 1000.0).round() * run.size_pt / 1000.0
+      face.declared_width(codepoint) * run.size_pt / 1000.0
     }
     show.push(
       [(glyph >> 8).to_byte(), (glyph & 0xFF).to_byte()],
@@ -281,7 +279,10 @@ fn emit_rect(
 /// written when there is a title), `page_boxes` writes every page's crop,
 /// bleed, trim and art boxes explicitly (equal to its media box) instead of
 /// leaving them to their defaults, and a non-empty `page_labels` gives page
-/// `i` the literal label `page_labels[i]`.
+/// `i` the literal label `page_labels[i]`. `truncate_widths` declares glyph
+/// widths truncated to whole thousandths of an em, as Prawn does, instead of
+/// rounded: a layout that places glyphs by Prawn's widths then needs no
+/// displacements.
 pub fn render_pdf(
   model : @pagelayout.PageModel,
   outline? : Array[OutlineEntry] = [],
@@ -291,6 +292,7 @@ pub fn render_pdf(
   display_doc_title? : Bool = false,
   page_boxes? : Bool = false,
   page_labels? : Array[String] = [],
+  truncate_widths? : Bool = false,
 ) -> Bytes raise {
   let document = @pdflite.pdf_document_empty()
   document.set_version(1, 7)
@@ -307,6 +309,7 @@ pub fn render_pdf(
       ),
       // decided below, once the document's character set is known
       composite: false,
+      truncate_widths,
     })
   }
 
@@ -603,9 +606,23 @@ fn add_navigation(
     bookmarks.push({
       level: entry.level,
       text: text_string(entry.title),
-      target: match destinations.get(entry.anchor) {
-        Some(_) => DestString(@utf8.encode(entry.anchor))
-        None => DestNull
+      target: match entry.dest {
+        Some((page_index, x, y)) =>
+          match page_objects.get(page_index) {
+            Some(page_object) =>
+              DestXYZ(
+                TargetPageObject(page_object),
+                Some(x),
+                Some(flip(model.pages[page_index].height_pt, y)),
+                None,
+              )
+            None => DestNull
+          }
+        None =>
+          match destinations.get(entry.anchor) {
+            Some(_) => DestString(@utf8.encode(entry.anchor))
+            None => DestNull
+          }
       },
       is_open: entry.open,
       colour: @bookmark.pdf_bookmark_black,
@@ -723,13 +740,17 @@ fn visible_outline_entries(outline : Array[OutlineEntry]) -> Int {
 ///|
 /// One entry of the document outline (bookmarks). `level` 0 is the top
 /// level, and each entry nests under the nearest preceding entry of a
-/// lower level; `anchor` names the `AnchorItem` it jumps to. An `open`
-/// entry shows its children when the document opens (a positive `/Count`);
-/// otherwise they start collapsed.
+/// lower level; `anchor` names the `AnchorItem` it jumps to, unless `dest`
+/// gives an explicit destination: a page index and the point (x, y down
+/// from the page top, points) to show at the window's top left, for a place
+/// no named destination marks (the top of a page). An `open` entry shows
+/// its children when the document opens (a positive `/Count`); otherwise
+/// they start collapsed.
 pub(all) struct OutlineEntry {
   title : String
   level : Int
   anchor : String
+  dest : (Int, Double, Double)?
   open : Bool
 }
 

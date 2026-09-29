@@ -47,6 +47,32 @@ test "winansi codes above 0x7f declare the width of the character they encode" {
 }
 
 ///|
+test "truncated widths declare what Prawn measures" {
+  let face = @fonts.face("Carlito")
+  // a letter whose width in thousandths of an em has a fraction above one
+  // half, so truncating and rounding differ
+  let mut letter = 'A'
+  for c in 'A'.to_int()..<='Z'.to_int() {
+    let w = face.advance_pt(c, 1000.0)
+    if w.round() != w.floor() {
+      letter = c.unsafe_to_char()
+      break
+    }
+  }
+  let w = face.advance_pt(letter.to_int(), 1000.0)
+  assert_true(w.round() != w.floor())
+  let model = run_model([w.floor() / 100.0, w.floor() / 100.0])
+  guard model.pages[0].items[0] is Text(run) else { fail("expected text") }
+  model.pages[0].items[0] = Text({ ..run, text: "\{letter}\{letter}", })
+  // placed by truncated widths: a plain Tj when they are declared,
+  // displacements when the declared widths are rounded
+  let truncated = as_decoded_text(@pdf.render_pdf(model, truncate_widths=true))
+  assert_false(truncated.contains("TJ"))
+  let rounded = as_decoded_text(@pdf.render_pdf(model))
+  assert_true(rounded.contains("TJ"))
+}
+
+///|
 test "an advance the layout widened becomes a TJ displacement" {
   let face = @fonts.face("Carlito")
   let a = face.advance_pt('A'.to_int(), 1000.0).round() / 100.0
@@ -75,7 +101,9 @@ test "links, anchors and the outline reach the pdf" {
   )
   let bytes = @pdf.render_pdf(
     model,
-    outline=[{ title: "Target", level: 0, anchor: "target", open: false, }],
+    outline=[
+      { title: "Target", level: 0, anchor: "target", dest: None, open: false, },
+    ],
     info=[("Title", "Links")],
   )
   let document = @pdflite.pdf_read_document_from_bytes(bytes)
@@ -90,6 +118,31 @@ test "links, anchors and the outline reach the pdf" {
   assert_true(text.contains("/Outlines"))
   assert_true(text.contains("(Target)"))
   assert_true(text.contains("(Links)"))
+}
+
+///|
+test "an outline entry can jump to an explicit destination" {
+  let model = run_model([5.0, 5.0])
+  let bytes = @pdf.render_pdf(model, outline=[
+    { title: "Top", level: 0, anchor: "", dest: Some((0, 0, 0)), open: false, },
+    {
+      title: "Nowhere",
+      level: 0,
+      anchor: "",
+      dest: Some((9, 0, 0)),
+      open: false,
+    },
+  ])
+  let text = as_text(
+    @pdflite.pdf_write_document(
+      @pdflite.pdf_decompress_pdf(@pdflite.pdf_read_document_from_bytes(bytes)),
+    ),
+  )
+  // the top of the first page (100pt tall), with no named destination
+  assert_true(text.contains("/XYZ 0 100 null"))
+  assert_false(text.contains("/Dests"))
+  // an entry whose page does not exist goes nowhere, but is kept
+  assert_true(text.contains("(Nowhere)"))
 }
 
 ///|

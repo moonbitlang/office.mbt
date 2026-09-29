@@ -8,7 +8,7 @@ import {
 // Values
 pub fn pdf_date(Int64, offset_seconds? : Int) -> String
 
-pub fn render_pdf(@pagelayout.PageModel, outline? : Array[OutlineEntry], info? : Array[(String, String)], initial_zoom? : InitialZoom, page_mode? : String, display_doc_title? : Bool, page_boxes? : Bool, page_labels? : Array[String]) -> Bytes raise
+pub fn render_pdf(@pagelayout.PageModel, outline? : Array[OutlineEntry], info? : Array[(String, String)], initial_zoom? : InitialZoom, page_mode? : String, display_doc_title? : Bool, page_boxes? : Bool, page_labels? : Array[String], truncate_widths? : Bool) -> Bytes raise
 
 pub fn unembeddable_images(@pagelayout.PageModel) -> Array[(String, Int)]
 
@@ -25,6 +25,7 @@ pub(all) struct OutlineEntry {
   title : String
   level : Int
   anchor : String
+  dest : (Int, Double, Double)?
   open : Bool
 }
 
