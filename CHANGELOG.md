@@ -4,6 +4,22 @@ Breaking and notable changes for the published modules in this workspace.
 Entries are grouped by module and by the version they ship in; `Unreleased`
 covers changes that have landed on `main` but are not yet published.
 
+### moonbitlang/pagelayout [Unreleased]
+
+- `RenderOptions::new(notdef_text=true)`: a character the face has no
+  glyph for is drawn as its `.notdef` glyph and kept in the text layer, as
+  Prawn does, instead of being left out of the page (its advance is kept
+  either way). A font that needs this goes composite even when the face
+  cannot draw the character, and each such character gets a code of its
+  own past the program's glyphs, mapped to glyph 0 by a `/CIDToGIDMap`
+  stream and to the character by `/ToUnicode`, so extraction and search
+  find it. Off by default; output without it is unchanged.
+- `RenderOptions::new(typo_metrics=true)`: font descriptors declare
+  `/Ascent`, `/Descent` and `/CapHeight` from the OS/2 typographic metrics
+  when the program has them (nonzero), truncated to thousandths of an em,
+  as ttfunk and Prawn do, instead of from `hhea`. Readers size selection
+  and extracted word boxes by these. Off by default.
+
 ### moonbitlang/pagelayout [0.3.0]
 
 - **BREAKING**: `PageItem` has a new variant, `Anchor(AnchorItem)`: a named,

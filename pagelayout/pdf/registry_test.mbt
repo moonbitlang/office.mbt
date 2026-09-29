@@ -556,3 +556,70 @@ test "metrics handed out by a sealed registry cannot change its output" {
   let (_, codes) = extracted(after)
   inspect(codes, content="0024035b")
 }
+
+///|
+test "notdef_text keeps characters the face lacks in the text layer" {
+  // Carlito has neither a han glyph nor a check mark
+  let face = @fonts.face("Carlito")
+  let model = family_model("Carlito", "ab中✔cd", face)
+  // by default they are left out of the page, their advance kept
+  let (plain, _) = extracted(@pdf.render_pdf(model))
+  inspect(plain, content="abcd")
+  let bytes = @pdf.render_pdf(
+    model,
+    options=@pdf.RenderOptions::new(notdef_text=true),
+  )
+  // with the option the font goes composite and each missing character
+  // gets a code of its own past the program's glyphs, drawn with glyph 0
+  let text = as_text(bytes)
+  assert_true(text.contains("/Type0"))
+  assert_true(text.contains("/CIDToGIDMap"))
+  let (kept, codes) = extracted(bytes)
+  inspect(kept, content="ab中✔cd")
+  // two-byte codes: Carlito's glyphs for a and b, then the new codes in
+  // the order of their characters (✔ U+2714 before 中 U+4E2D)
+  assert_eq(codes.length(), 6 * 4)
+  let a = face.glyph_id('a'.to_int()).unwrap()
+  assert_eq(codes[0:4].to_owned(), a.to_string(radix=16).pad_start(4, '0'))
+  let hex = fn(digits : String) {
+    digits.fold(init=0, (value, c) => {
+      value * 16 +
+      (if c >= 'a' {
+        c.to_int() - 'a'.to_int() + 10
+      } else {
+        c.to_int() - '0'.to_int()
+      })
+    })
+  }
+  assert_eq(hex(codes[12:16].to_owned()) + 1, hex(codes[8:12].to_owned()))
+}
+
+///|
+test "notdef_text leaves a font that needs no new codes as it was" {
+  let face = @fonts.face("Carlito")
+  let model = family_model("Carlito", "plain Latin", face)
+  assert_eq(
+    @pdf.render_pdf(model, options=@pdf.RenderOptions::new(notdef_text=true)),
+    @pdf.render_pdf(model),
+  )
+}
+
+///|
+test "typo_metrics declares the OS/2 typographic ascent and descent" {
+  let registry = @fonts.FontRegistry::new()
+  let face = registry.register("Own", sans())
+  let model = family_model("Own", "Hi", face)
+  let hhea = as_text(
+    @pdf.render_pdf(model, options=@pdf.RenderOptions::new(fonts=registry)),
+  )
+  let typo = as_text(
+    @pdf.render_pdf(
+      model,
+      options=@pdf.RenderOptions::new(fonts=registry, typo_metrics=true),
+    ),
+  )
+  inspect(hhea.contains("/Ascent 905"), content="true")
+  inspect(typo.contains("/Ascent 728"), content="true")
+  inspect(typo.contains("/Descent -210"), content="true")
+  inspect(typo.contains("/CapHeight 728"), content="true")
+}

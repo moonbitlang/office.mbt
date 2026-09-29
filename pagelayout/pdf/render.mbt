@@ -182,21 +182,27 @@ fn emit_run_composite(
   let mut i = 0
   while i < run.text.length() {
     let (codepoint, next) = codepoint_at(run.text, i)
-    // Identity-H: the code is the glyph index itself
+    // Identity-H: the code is the glyph index itself, or for a character
+    // the face lacks, its own code drawn with glyph 0 (`notdef_cids`)
     let glyph = face.metrics.glyph_id(codepoint).unwrap_or(0)
+    let code = if glyph == 0 {
+      face.notdef_cids.get(codepoint).unwrap_or(0)
+    } else {
+      glyph
+    }
     let mut advance = 0.0
     for j in i..<next {
       advance += run.advances_pt[j]
     }
     // the width `composite_font_object` declares: `/W` for glyphs the
-    // face has, the 1000-unit default for .notdef
-    let declared = if glyph == 0 {
+    // face has and for `notdef_cids`, the 1000-unit default for .notdef
+    let declared = if code == 0 {
       run.size_pt
     } else {
       face.declared_width(codepoint) * run.size_pt / 1000.0
     }
     show.push(
-      [(glyph >> 8).to_byte(), (glyph & 0xFF).to_byte()],
+      [(code >> 8).to_byte(), (code & 0xFF).to_byte()],
       advance - declared,
       run.size_pt,
     )
@@ -258,14 +264,11 @@ fn emit_rect(
 
 ///|
 /// The face, metrics and program together, that draws `spec`: a face
-/// registered in `fonts`, else the bundled one. Metrics and program always
+/// registered in `options.fonts`, else the bundled one. Metrics and program always
 /// come from one and the same face — the one layout measured with — so the
 /// font dictionary and the codes shown in it cannot disagree.
-fn pdf_face(
-  fonts : @fonts.FontRegistry,
-  spec : @pagelayout.FontSpec,
-  truncate_widths : Bool,
-) -> PdfFace {
+fn pdf_face(spec : @pagelayout.FontSpec, options : RenderOptions) -> PdfFace {
+  let fonts = options.fonts
   let family = fonts.resolve_family(spec.family)
   let (metrics, program) = match
     fonts.registered_face(family, bold=spec.bold, italic=spec.italic) {
@@ -287,7 +290,10 @@ fn pdf_face(
     program,
     // decided once the document's character set is known
     composite: false,
-    truncate_widths,
+    truncate_widths: options.truncate_widths,
+    notdef_text: options.notdef_text,
+    typo_metrics: options.typo_metrics,
+    notdef_cids: Map([]),
   }
 }
 
@@ -327,7 +333,7 @@ pub fn render_pdf(
   document.set_version(1, 7)
   let faces : Array[PdfFace] = []
   for spec in model.fonts {
-    faces.push(pdf_face(options.fonts, spec, options.truncate_widths))
+    faces.push(pdf_face(spec, options))
   }
 
   // one XObject per distinct image, for this document only. Keyed by
@@ -347,7 +353,16 @@ pub fn render_pdf(
   // rather than a `/W` array governing spacing.
   for index, codepoints in used_codepoints {
     let face = faces[index]
-    faces[index] = { ..face, composite: needs_composite(face, codepoints), }
+    let composite = needs_composite(face, codepoints)
+    faces[index] = {
+      ..face,
+      composite,
+      notdef_cids: if composite && face.notdef_text {
+        notdef_cids(face, codepoints)
+      } else {
+        Map([])
+      },
+    }
   }
 
   // one PDF font object per interned IR font, shared by every page

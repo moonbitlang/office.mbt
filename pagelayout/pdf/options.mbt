@@ -36,6 +36,19 @@ pub struct RenderOptions {
   /// does, instead of rounded: a layout that places glyphs by Prawn's widths
   /// then needs no displacements.
   truncate_widths : Bool
+  /// Draw a character the face has no glyph for as its `.notdef` glyph and
+  /// keep the character in the text layer, as Prawn does, instead of
+  /// leaving it out of the page (its advance is kept either way). A font
+  /// that needs this goes composite, and each such character gets a code
+  /// of its own, drawn with glyph 0 and mapped to the character by
+  /// `/ToUnicode`, so text extraction and search find it.
+  notdef_text : Bool
+  /// Declare each embedded font's ascent and descent (`/Ascent`,
+  /// `/Descent`, `/CapHeight`) from the OS/2 typographic metrics when the
+  /// font has them, truncated to thousandths of an em, as Prawn (ttfunk)
+  /// does, instead of from `hhea`. Readers size text selection and
+  /// extracted word boxes by these.
+  typo_metrics : Bool
 }
 
 ///|
@@ -50,6 +63,8 @@ pub fn RenderOptions::new(
   page_boxes? : Bool = false,
   page_labels? : Array[String] = [],
   truncate_widths? : Bool = false,
+  notdef_text? : Bool = false,
+  typo_metrics? : Bool = false,
 ) -> RenderOptions {
   {
     fonts,
@@ -61,6 +76,8 @@ pub fn RenderOptions::new(
     page_boxes,
     page_labels,
     truncate_widths,
+    notdef_text,
+    typo_metrics,
   }
 }
 
