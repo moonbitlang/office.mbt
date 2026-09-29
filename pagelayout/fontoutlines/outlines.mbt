@@ -47,46 +47,22 @@ fn load_outlines() -> Unit {
 }
 
 ///|
-/// Font programs registered at run time, keyed like `outline_cache`.
-let registered_outlines : Map[String, Bytes] = Map([])
-
-///|
-/// Register a complete, uncompressed sfnt (a `.ttf` file's bytes) as the
-/// program to embed for `family`, shadowing any bundled one. Register the
-/// same bytes with `@fonts.register_face` so layout measures with the face
-/// the PDF draws.
-pub fn register_outline(
-  family : String,
-  sfnt : Bytes,
-  bold? : Bool = false,
-  italic? : Bool = false,
-) -> Unit {
-  registered_outlines[outline_key(family, bold, italic)] = sfnt
-}
-
-///|
-/// The font program (registered, else bundled) for a *resolved* family name (see
+/// The bundled font program for a *resolved* family name (see
 /// `@fonts.resolve_family`), as a complete sfnt ready to subset and embed.
+/// Faces a caller registers carry their program with them
+/// (`@fonts.RegisteredFace`) and never come through here.
 ///
 /// Falls back to the family's regular face when the exact bold/italic face
 /// is not bundled, matching `@fonts.face`. Unlike that function it does not
 /// fall back across families: a caller that gets `None` should embed
-/// nothing rather than embed the wrong typeface under the right name.
+/// nothing rather than embed the wrong typeface under the right name. To
+/// embed exactly the face that was measured, pass the `family`, `bold` and
+/// `italic` of the `@fonts.FaceMetrics` that `@fonts.face` returned.
 pub fn outline_sfnt(
   family : String,
   bold? : Bool = false,
   italic? : Bool = false,
 ) -> Bytes? {
-  // a registered family never touches the bundle, whose CJK program alone
-  // is megabytes to inflate
-  match registered_outlines.get(outline_key(family, bold, italic)) {
-    Some(found) => return Some(found)
-    None =>
-      if registered_outlines.get(outline_key(family, false, false))
-        is Some(regular) {
-        return Some(regular)
-      }
-  }
   load_outlines()
   match outline_cache.get(outline_key(family, bold, italic)) {
     Some(found) => Some(found)

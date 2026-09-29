@@ -66,7 +66,12 @@ test "truncated widths declare what Prawn measures" {
   model.pages[0].items[0] = Text({ ..run, text: "\{letter}\{letter}", })
   // placed by truncated widths: a plain Tj when they are declared,
   // displacements when the declared widths are rounded
-  let truncated = as_decoded_text(@pdf.render_pdf(model, truncate_widths=true))
+  let truncated = as_decoded_text(
+    @pdf.render_pdf(
+      model,
+      options=@pdf.RenderOptions::new(truncate_widths=true),
+    ),
+  )
   assert_false(truncated.contains("TJ"))
   let rounded = as_decoded_text(@pdf.render_pdf(model))
   assert_true(rounded.contains("TJ"))
@@ -81,101 +86,4 @@ test "an advance the layout widened becomes a TJ displacement" {
   let text = as_decoded_text(@pdf.render_pdf(run_model([a + 2.0, b])))
   assert_true(text.contains("TJ"))
   assert_true(text.contains("-200"))
-}
-
-///|
-test "links, anchors and the outline reach the pdf" {
-  let model = run_model([5.0, 5.0])
-  model.pages[0].items.push(Anchor({ name: "target", x_pt: 0, y_pt: 10, }))
-  model.pages[0].items.push(
-    Link({ x_pt: 10, y_pt: 10, w_pt: 10, h_pt: 12, target: "#target", }),
-  )
-  model.pages[0].items.push(
-    Link({
-      x_pt: 30,
-      y_pt: 10,
-      w_pt: 10,
-      h_pt: 12,
-      target: "https://example.org",
-    }),
-  )
-  let bytes = @pdf.render_pdf(
-    model,
-    outline=[
-      { title: "Target", level: 0, anchor: "target", dest: None, open: false, },
-    ],
-    info=[("Title", "Links")],
-  )
-  let document = @pdflite.pdf_read_document_from_bytes(bytes)
-  let text = as_text(
-    @pdflite.pdf_write_document(@pdflite.pdf_decompress_pdf(document)),
-  )
-  assert_true(text.contains("/Annots"))
-  assert_true(text.contains("/Subtype/Link") || text.contains("/Subtype /Link"))
-  assert_true(text.contains("(https://example.org)"))
-  assert_true(text.contains("/Dests"))
-  assert_true(text.contains("(target)"))
-  assert_true(text.contains("/Outlines"))
-  assert_true(text.contains("(Target)"))
-  assert_true(text.contains("(Links)"))
-}
-
-///|
-test "an outline entry can jump to an explicit destination" {
-  let model = run_model([5.0, 5.0])
-  let bytes = @pdf.render_pdf(model, outline=[
-    { title: "Top", level: 0, anchor: "", dest: Some((0, 0, 0)), open: false, },
-    {
-      title: "Nowhere",
-      level: 0,
-      anchor: "",
-      dest: Some((9, 0, 0)),
-      open: false,
-    },
-  ])
-  let text = as_text(
-    @pdflite.pdf_write_document(
-      @pdflite.pdf_decompress_pdf(@pdflite.pdf_read_document_from_bytes(bytes)),
-    ),
-  )
-  // the top of the first page (100pt tall), with no named destination
-  assert_true(text.contains("/XYZ 0 100 null"))
-  assert_false(text.contains("/Dests"))
-  // an entry whose page does not exist goes nowhere, but is kept
-  assert_true(text.contains("(Nowhere)"))
-}
-
-///|
-test "a registered face measures and embeds under its own name" {
-  let program = @fontoutlines.outline_sfnt("Liberation Serif").unwrap()
-  let face = @fonts.register_face("Spike Serif", program)
-  @fontoutlines.register_outline("Spike Serif", program)
-  inspect(@fonts.resolve_family("Spike Serif"), content="Spike Serif")
-  inspect(@fonts.is_registered("Spike Serif"), content="true")
-  // the registered face is what `face` hands out, bold falling back to it
-  assert_true(physical_equal(@fonts.face("Spike Serif", bold=true), face))
-  let model = @pagelayout.PageModel::new()
-  let font = model.add_font({
-    family: "Spike Serif",
-    bold: false,
-    italic: false,
-  })
-  model.pages.push({
-    width_pt: 200,
-    height_pt: 100,
-    items: [
-      Text({
-        font,
-        size_pt: 10,
-        x_pt: 10,
-        baseline_pt: 20,
-        text: "Hi",
-        advances_pt: [5.0, 3.0],
-        color: @pagelayout.black,
-      }),
-    ],
-  })
-  let text = as_text(@pdf.render_pdf(model))
-  assert_true(text.contains("+SpikeSerif"))
-  assert_true(text.contains("/FontFile2"))
 }

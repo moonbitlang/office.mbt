@@ -42,9 +42,14 @@ priv struct FlatRun {
 
 ///|
 /// Lay out one paragraph into `width_pt` of available horizontal space.
+///
+/// Runs are measured with the bundled faces, or, given `fonts`, with that
+/// registry's faces first — pass the same registry to the renderer so the
+/// document is drawn with the faces it was measured with.
 pub fn layout_paragraph(
   input : ParagraphInput,
   width_pt : Double,
+  fonts? : @fonts.FontRegistry,
 ) -> ParagraphLayout {
   // 1. concatenate runs; measure each with its resolved face
   let sb = StringBuilder()
@@ -53,11 +58,20 @@ pub fn layout_paragraph(
   let flat_runs : Array[FlatRun] = []
   let mut offset = 0
   for run in input.runs {
-    let face = @fonts.face(
-      @fonts.resolve_family(run.style.family),
-      bold=run.style.bold,
-      italic=run.style.italic,
-    )
+    let face = match fonts {
+      Some(registry) =>
+        registry.face(
+          registry.resolve_family(run.style.family),
+          bold=run.style.bold,
+          italic=run.style.italic,
+        )
+      None =>
+        @fonts.face(
+          @fonts.resolve_family(run.style.family),
+          bold=run.style.bold,
+          italic=run.style.italic,
+        )
+    }
     let measured = @linebreak.measure(run.text, face, run.style.size_pt)
     sb.write_string(run.text)
     advances.append(measured.advances_pt)

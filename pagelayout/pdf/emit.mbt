@@ -8,26 +8,33 @@
 // (the IR is y-down from the page's top-left, PDF is y-up from the
 // bottom-left) and font resources.
 //
-// Fonts come out one of two ways, depending on whether the family has a
-// bundled font program in `pagelayout/fontoutlines`.
+// Every font is one face — bundled, or registered in a `@fonts.FontRegistry`
+// — whose metrics the layout measured with and whose program, when it has
+// one, is embedded. Both come from that single face (`pdf_face`), so what
+// the dictionary declares and what the content stream shows agree.
 //
-// Families without one — the Latin faces, whose metrics-only sfnts carry
-// no `glyf` or `loca` — are written as simple TrueType dictionaries with
-// a descriptor, a `/Widths` array from the same metrics the layout used,
-// and no font file. Viewers substitute the glyphs. That costs glyph
-// *shapes*, not layout: every run is positioned explicitly with `Tm`, and
-// `/Widths` governs spacing per the spec, so line breaks and page
-// geometry match the SVG backend regardless of what the viewer picks.
+// A font comes out one of three ways.
 //
-// Families with a bundled program are written as Type0 composite fonts
-// with Identity-H encoding over a CIDFontType2 descendant, embedding a
-// subset of that program. This is the only path that renders CJK at all,
-// for two reasons. A simple font's WinAnsi encoding is 8-bit, so it
-// cannot address more than 256 codes. And substitution, which is
-// harmless for Latin, is fatal here: under Identity-H a code *is* a
-// glyph index into the embedded program, so a reader that picked a
-// different face would draw whatever glyphs happened to sit at those
-// indices — mojibake, not a near miss.
+// A face with a TrueType program (every bundled face; a registered face
+// whose bytes carry `glyf` and `loca`) whose text stays within WinAnsi is a
+// simple TrueType font: WinAnsi encoding, `/Widths` from the same metrics
+// the layout used, a `/ToUnicode` map, and a subset of the program. That is
+// the smaller, more widely understood shape.
+//
+// The same face, once its text needs a character WinAnsi cannot encode
+// that the face can draw (CJK, Greek, most symbols), is a Type0 composite
+// font with Identity-H encoding over a CIDFontType2 descendant, again
+// embedding a subset. A simple font's 8-bit encoding cannot address more
+// than 256 codes, and under Identity-H a code *is* a glyph index into the
+// embedded program — so this shape exists only with a program, since a
+// reader that substituted a different face would draw whatever glyphs sat
+// at those indices: mojibake, not a near miss.
+//
+// A face without a program (a registered metrics-only sfnt) is a simple
+// TrueType font declared by name, with `/Widths` and no font file; the
+// viewer substitutes the glyphs and characters outside WinAnsi are dropped.
+// That costs glyph *shapes*, not layout: every run is positioned
+// explicitly with `Tm`, and `/Widths` governs spacing per the spec.
 
 ///|
 /// WinAnsi is an 8-bit encoding: a simple font can only address 256
@@ -79,13 +86,14 @@ fn winansi_unicode(code : Int) -> Int {
 }
 
 ///|
-/// A font as the PDF needs it: which bundled face, and the font program
-/// to embed when the family has one bundled.
+/// A font as the PDF needs it: the face that draws it, and that face's
+/// program when it has one (see `pdf_face`).
 priv struct PdfFace {
   spec : @pagelayout.FontSpec
   metrics : @fonts.FaceMetrics
-  /// The complete bundled sfnt, for families that ship outlines. A face
-  /// without one is declared and not embedded, and the viewer substitutes.
+  /// The complete sfnt of the face `metrics` describes, when it has
+  /// TrueType outlines. A face without one is declared and not embedded,
+  /// and the viewer substitutes.
   program : Bytes?
   /// Whether this font is written as a Type0 composite rather than a
   /// simple TrueType font. Decided from the characters the document
@@ -127,7 +135,14 @@ fn PdfFace::is_composite(self : PdfFace) -> Bool {
 /// for a character it renders as `.notdef` anyway, and the run would then
 /// be spaced by that glyph's width instead of being broken around it at
 /// the advance the layout chose.
+///
+/// And a face without a program never goes composite, whatever it can
+/// draw: Identity-H codes are glyph indices into an embedded program, and
+/// there is none to index.
 fn needs_composite(face : PdfFace, codepoints : Array[Int]) -> Bool {
+  if face.program is None {
+    return false
+  }
   for codepoint in codepoints {
     if winansi_code(codepoint) is None && face.metrics.has_char(codepoint) {
       return true
@@ -155,7 +170,7 @@ fn subset_tag(index : Int) -> String {
 
 ///|
 /// A composite font: a Type0 with Identity-H encoding over a
-/// CIDFontType2 descendant that embeds a subset of the bundled program.
+/// CIDFontType2 descendant that embeds a subset of the face's program.
 ///
 /// Identity-H means a code *is* a glyph index, which is why the program
 /// has to travel with the document — the indices are meaningless against
@@ -286,9 +301,10 @@ fn name(text : String) -> @core.PdfName {
 }
 
 ///|
-/// The font object for one interned IR font: a simple TrueType font with
-/// a descriptor and a `/Widths` array from the same metrics the layout
-/// measured with, and no embedded program.
+/// The font object for one interned IR font: a simple WinAnsi TrueType
+/// font with a descriptor, a `/Widths` array from the same metrics the
+/// layout measured with, a `/ToUnicode` map, and a subset of the face's
+/// program when it has one.
 fn font_object(
   document : @pdflite.PdfDocument,
   face : PdfFace,
@@ -302,8 +318,8 @@ fn font_object(
     // advance_pt at 1000pt is exactly the 1/1000-em width PDF wants
     widths.push(face.declared_width(winansi_unicode(code)).to_int())
   }
-  // A face with a bundled program is embedded so the page renders the
-  // shapes it was laid out with. Without one the font is only declared,
+  // A face with a program is embedded so the page renders the shapes it
+  // was laid out with. Without one the font is only declared,
   // and the viewer substitutes — harmless for Latin, since every run is
   // positioned explicitly and `/Widths` governs spacing.
   let (fontfile, basefont) : (@pdflite.PdfFontFile?, @core.PdfName) = match
@@ -487,7 +503,7 @@ fn postscript_name(program : Bytes) -> String? {
 }
 
 ///|
-/// Subset a bundled program to the characters used and add it as a
+/// Subset a font program to the characters used and add it as a
 /// flate-compressed `/FontFile2` stream. `/Length1` is the *uncompressed*
 /// program length, so it is taken before the stream is encoded.
 fn embedded_program(

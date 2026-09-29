@@ -10,6 +10,7 @@ import {
   "moonbitlang/pdflite/core",
   "moonbitlang/pdflite/page",
   "moonbitlang/pdflite/syntax",
+  "moonbitlang/core/debug",
   "moonbitlang/core/encoding/utf8",
 }
 
@@ -22,6 +23,7 @@ import {
   "moonbitlang/pagelayout/paragraph",
   "moonbitlang/pdflite",
   "moonbitlang/pdflite/core",
+  "moonbitlang/pdflite/syntax",
   "moonbit-community/flate/zip",
   "moonbitlang/core/encoding/utf8",
   "moonbitlang/core/quickcheck",

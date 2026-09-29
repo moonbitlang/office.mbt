@@ -1,18 +1,17 @@
 ///|
-// Document font families → bundled metric-compatible families. The layout
-// engine never sees a family it does not bundle: unknown names resolve by
-// this table, then by default to Carlito (Word's default Calibri).
+// Document font families → bundled metric-compatible families. Unless a
+// `FontRegistry` supplies the family, the layout engine never sees a family
+// it does not bundle: unknown names resolve by this table, then by default
+// to Carlito (Word's default Calibri).
 
 ///|
 /// Map a document-authored family name to a bundled family. Matching is
 /// case-insensitive. Metric-compatible pairs: Calibri→Carlito,
 /// Arial→Liberation Sans, Times New Roman→Liberation Serif,
-/// Courier New→Liberation Mono. CJK families map to Noto Sans SC. A family
-/// registered with `register_face` resolves to itself (matched exactly).
+/// Courier New→Liberation Mono. CJK families map to Noto Sans SC. Only
+/// bundled families come out; `FontRegistry::resolve_family` also passes a
+/// registered family through.
 pub fn resolve_family(name : String) -> String {
-  if is_registered(name) {
-    return name
-  }
   match name.to_lower() {
     "carlito" | "calibri" | "calibri light" => "Carlito"
     "liberation sans" | "arial" | "helvetica" | "helvetica neue" | "segoe ui" =>

@@ -4,12 +4,13 @@ package "moonbitlang/pagelayout/paragraph"
 import {
   "moonbitlang/core/debug",
   "moonbitlang/pagelayout",
+  "moonbitlang/pagelayout/fonts",
 }
 
 // Values
 pub fn field_kind(String) -> FieldKind
 
-pub fn layout_paragraph(ParagraphInput, Double) -> ParagraphLayout
+pub fn layout_paragraph(ParagraphInput, Double, fonts? : @fonts.FontRegistry) -> ParagraphLayout
 
 // Errors
 

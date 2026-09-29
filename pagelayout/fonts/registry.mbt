@@ -1,0 +1,218 @@
+///|
+// Fonts of the caller's own, beside the bundled ones.
+//
+// A `FontRegistry` is an explicit value: a frontend creates one per
+// document (or per set of documents sharing a font catalog), registers its
+// faces, and hands the same value to whatever measures text and to the
+// renderer that embeds the fonts (`@pdf.RenderOptions`). Nothing about it
+// is process-wide, so two documents with different faces under the same
+// family name cannot see each other's.
+//
+// Its lifetime has two phases. While it is *open*, faces can be added. The
+// first lookup of any kind *seals* it, and from then on registration
+// raises `FontRegistryError::Sealed`. That is what keeps measurement and
+// rendering in step: once layout has asked for a face, the answer can no
+// longer change underneath a laid-out model — a bold face registered after
+// the layout measured bold with the regular fallback would otherwise be
+// drawn at widths nobody measured. Registering the same family and style
+// twice raises `FontRegistryError::Duplicate` for the same reason; nothing
+// is ever replaced.
+//
+// A registry is a plain mutable value with no locking. Register from one
+// task; once sealed it is read-only and may be shared freely.
+
+///|
+/// Why a `FontRegistry` refused a face.
+pub(all) suberror FontRegistryError {
+  /// The registry was already consulted, so its answers are fixed. The
+  /// payload names the face (`family|bold|italic`) that came too late.
+  Sealed(String)
+  /// A face of this family and style (`family|bold|italic`) is already
+  /// registered.
+  Duplicate(String)
+} derive(Eq)
+
+///|
+pub extend FontRegistryError with Eq::{not_equal, equal}
+
+///|
+pub extend FontRegistryError with Show::{to_string, output}
+
+///|
+pub impl Show for FontRegistryError with fn output(self, logger) {
+  match self {
+    Sealed(face) =>
+      logger.write_string(
+        "font registry already in use; cannot register \{face}",
+      )
+    Duplicate(face) => logger.write_string("font already registered: \{face}")
+  }
+}
+
+///|
+/// One registered face: the metrics layout measures with and the program a
+/// PDF embeds, both taken from the same sfnt bytes so that they cannot
+/// disagree about glyph ids or widths.
+pub struct RegisteredFace {
+  metrics : FaceMetrics
+  /// The complete sfnt to embed, or None when the bytes carry no TrueType
+  /// outlines (no `glyf`/`loca`, as in a metrics-only sfnt or a CFF-flavoured
+  /// OpenType font). A face without a program is declared in a PDF by name
+  /// and drawn by whatever the viewer substitutes.
+  program : Bytes?
+}
+
+///|
+/// A set of faces registered by the caller, consulted before the bundled
+/// ones. See the module comment for its open/sealed lifetime.
+pub struct FontRegistry {
+  priv faces : Map[String, RegisteredFace]
+  priv mut closed : Bool
+}
+
+///|
+/// An empty, open registry. With nothing registered it resolves exactly
+/// as the package-level functions do: bundled faces only.
+pub fn FontRegistry::new() -> FontRegistry {
+  { faces: Map([]), closed: false, }
+}
+
+///|
+#deprecated("implicit trait-method promotion is being removed; call via the trait")
+pub extend FontRegistry with Default::{default}
+
+///|
+/// Same as `FontRegistry::new`.
+pub impl Default for FontRegistry with fn default() {
+  FontRegistry::new()
+}
+
+///|
+/// Register a face from a complete, uncompressed sfnt (a `.ttf` file's
+/// bytes) and return its metrics. Metrics and program are registered
+/// together, from the same bytes.
+///
+/// A registered family resolves to itself (matched exactly, case and all)
+/// and shadows a bundled family of the same name. Raises
+/// `FontRegistryError` when the registry is sealed or the face is already
+/// registered, and a parse error when the bytes are not a usable sfnt.
+pub fn FontRegistry::register(
+  self : FontRegistry,
+  family : String,
+  sfnt : Bytes,
+  bold? : Bool = false,
+  italic? : Bool = false,
+) -> FaceMetrics raise {
+  let key = face_key(family, bold, italic)
+  if self.closed {
+    raise FontRegistryError::Sealed(key)
+  }
+  if self.faces.contains(key) {
+    raise FontRegistryError::Duplicate(key)
+  }
+  let metrics = parse_sfnt(family, bold, italic, sfnt)
+  let program = if @pdflite.pdf_truetype_table(sfnt, "glyf") is Some(_) &&
+    @pdflite.pdf_truetype_table(sfnt, "loca") is Some(_) {
+    Some(sfnt)
+  } else {
+    None
+  }
+  self.faces[key] = { metrics, program, }
+  metrics
+}
+
+///|
+/// Stop accepting faces. Every lookup does this implicitly; calling it
+/// makes the point explicit (before sharing the registry, say).
+pub fn FontRegistry::seal(self : FontRegistry) -> Unit {
+  self.closed = true
+}
+
+///|
+/// Whether the registry has stopped accepting faces.
+pub fn FontRegistry::is_sealed(self : FontRegistry) -> Bool {
+  self.closed
+}
+
+///|
+/// Whether any face of `family` (matched exactly) is registered. Seals.
+pub fn FontRegistry::is_registered(
+  self : FontRegistry,
+  family : String,
+) -> Bool {
+  self.closed = true
+  self.has_family(family)
+}
+
+///|
+fn FontRegistry::has_family(self : FontRegistry, family : String) -> Bool {
+  self.faces.contains(face_key(family, false, false)) ||
+  self.faces.contains(face_key(family, true, false)) ||
+  self.faces.contains(face_key(family, false, true)) ||
+  self.faces.contains(face_key(family, true, true))
+}
+
+///|
+/// `resolve_family`, with registered families passed through unchanged.
+/// Seals.
+pub fn FontRegistry::resolve_family(
+  self : FontRegistry,
+  name : String,
+) -> String {
+  self.closed = true
+  if self.has_family(name) {
+    name
+  } else {
+    resolve_family(name)
+  }
+}
+
+///|
+/// The registered face that stands for `family` in the requested style, or
+/// None when no face of `family` is registered. Seals.
+///
+/// A missing style falls back within the family, never outside it: the
+/// exact face, then the face without italic, then without bold, then the
+/// regular face, then whichever face the family does have. Metrics and
+/// program always come from that one face, so a document asking for a
+/// style the catalog lacks is measured and drawn in the same substitute.
+pub fn FontRegistry::registered_face(
+  self : FontRegistry,
+  family : String,
+  bold? : Bool = false,
+  italic? : Bool = false,
+) -> RegisteredFace? {
+  self.closed = true
+  let candidates = [
+    (bold, italic),
+    (bold, false),
+    (false, italic),
+    (false, false),
+    (true, false),
+    (false, true),
+    (true, true),
+  ]
+  for candidate in candidates {
+    match self.faces.get(face_key(family, candidate.0, candidate.1)) {
+      Some(found) => return Some(found)
+      None => ()
+    }
+  }
+  None
+}
+
+///|
+/// The metrics for a family name as `resolve_family` returns it: the
+/// registered face (see `registered_face` for style fallback), else the
+/// bundled one (see the package-level `face`). Seals.
+pub fn FontRegistry::face(
+  self : FontRegistry,
+  family : String,
+  bold? : Bool = false,
+  italic? : Bool = false,
+) -> FaceMetrics {
+  match self.registered_face(family, bold~, italic~) {
+    Some(registered) => registered.metrics
+    None => face(family, bold~, italic~)
+  }
+}

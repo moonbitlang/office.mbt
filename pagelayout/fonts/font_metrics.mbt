@@ -1,12 +1,19 @@
 ///|
-// Deterministic font metrics for the layout engine, parsed from the bundled
-// metrics-only sfnt data in data_*.mbt (regenerate with
-// tools/font-metrics/gen_font_metrics.py). Only metric tables are bundled;
-// glyph outlines arrive with the PDF backend milestone, behind this same API.
+// Deterministic font metrics for the layout engine. The bundled faces are
+// parsed from the metrics-only sfnt data in data_*.mbt (regenerate with
+// tools/font-metrics/gen_font_metrics.py); their glyph outlines, which only
+// the PDF backend needs, live apart in `pagelayout/fontoutlines`.
+//
+// A caller's own faces come in through a `FontRegistry` (registry.mbt), an
+// explicit value shared by whatever measures and whatever renders. The
+// package-level functions here (`face`, `resolve_family`, `cjk_fallback`,
+// `uncovered`) only ever see the bundled faces. The one process-wide state is
+// the lazily filled cache of those bundled faces, which is written once, from
+// constant data, and never replaced.
 
 ///|
-/// Metrics of one bundled face. Vertical metrics come from `hhea`; advances
-/// are raw font units scaled by `units_per_em` on lookup.
+/// Metrics of one face, bundled or registered. Vertical metrics come from
+/// `hhea`; advances are raw font units scaled by `units_per_em` on lookup.
 pub struct FaceMetrics {
   family : String
   bold : Bool
@@ -134,55 +141,6 @@ fn face_key(family : String, bold : Bool, italic : Bool) -> String {
 }
 
 ///|
-/// Faces registered at run time, keyed like `face_cache`. They are kept
-/// apart from the bundled faces so that a caller that only uses its own
-/// fonts never pays for inflating the bundle.
-let registered_faces : Map[String, FaceMetrics] = Map([])
-
-///|
-/// Register a face from a complete, uncompressed sfnt (a `.ttf` file's
-/// bytes), so that `resolve_family` passes `family` through unchanged and
-/// `face` measures with it. Pair it with `@fontoutlines.register_outline`
-/// to have the PDF backend embed the same program.
-///
-/// This is how a frontend with its own font catalog (a theme naming
-/// exact files, say) gets identical measurement and rendering instead of
-/// a metric-compatible substitute. Registering a family name that is also
-/// bundled shadows the bundled face.
-pub fn register_face(
-  family : String,
-  sfnt : Bytes,
-  bold? : Bool = false,
-  italic? : Bool = false,
-) -> FaceMetrics raise {
-  let face = parse_sfnt(family, bold, italic, sfnt)
-  registered_faces[face_key(family, bold, italic)] = face
-  face
-}
-
-///|
-/// Whether any face of `family` was registered with `register_face`.
-pub fn is_registered(family : String) -> Bool {
-  registered_faces.contains(face_key(family, false, false)) ||
-  registered_faces.contains(face_key(family, true, false)) ||
-  registered_faces.contains(face_key(family, false, true)) ||
-  registered_faces.contains(face_key(family, true, true))
-}
-
-///|
-fn registered_face(family : String, bold : Bool, italic : Bool) -> FaceMetrics? {
-  match registered_faces.get(face_key(family, bold, italic)) {
-    Some(found) => Some(found)
-    None =>
-      if is_registered(family) {
-        registered_faces.get(face_key(family, false, false))
-      } else {
-        None
-      }
-  }
-}
-
-///|
 fn load_faces() -> Unit {
   if face_cache.is_empty() {
     for entry in bundled_faces() {
@@ -210,18 +168,17 @@ pub fn bundled_families() -> Array[String] {
 }
 
 ///|
-/// The face for a *resolved* family name (see `resolve_family`): a face
-/// registered with `register_face`, else a bundled one. Falls back to the
-/// family's regular face when the exact bold/italic face is not available
-/// (Noto Sans SC ships regular only), then to Carlito.
+/// The bundled face for a *resolved* family name (see `resolve_family`).
+/// Falls back to the family's regular face when the exact bold/italic face
+/// is not bundled (Noto Sans SC ships regular only), then to Carlito. The
+/// face returned says which one it is (`family`, `bold`, `italic`), so a
+/// caller that needs the matching font program can ask for exactly that
+/// face. For registered faces see `FontRegistry::face`.
 pub fn face(
   family : String,
   bold? : Bool = false,
   italic? : Bool = false,
 ) -> FaceMetrics {
-  if registered_face(family, bold, italic) is Some(registered) {
-    return registered
-  }
   load_faces()
   match face_cache.get(face_key(family, bold, italic)) {
     Some(found) => found

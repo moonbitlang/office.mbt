@@ -257,60 +257,77 @@ fn emit_rect(
 }
 
 ///|
+/// The face, metrics and program together, that draws `spec`: a face
+/// registered in `fonts`, else the bundled one. Metrics and program always
+/// come from one and the same face — the one layout measured with — so the
+/// font dictionary and the codes shown in it cannot disagree.
+fn pdf_face(
+  fonts : @fonts.FontRegistry,
+  spec : @pagelayout.FontSpec,
+  truncate_widths : Bool,
+) -> PdfFace {
+  let family = fonts.resolve_family(spec.family)
+  let (metrics, program) = match
+    fonts.registered_face(family, bold=spec.bold, italic=spec.italic) {
+    Some(registered) => (registered.metrics, registered.program)
+    None => {
+      let metrics = @fonts.face(family, bold=spec.bold, italic=spec.italic)
+      // exactly the bundled face `face` settled on, fallbacks included
+      let program = @fontoutlines.outline_sfnt(
+        metrics.family,
+        bold=metrics.bold,
+        italic=metrics.italic,
+      )
+      (metrics, program)
+    }
+  }
+  {
+    spec,
+    metrics,
+    program,
+    // decided once the document's character set is known
+    composite: false,
+    truncate_widths,
+  }
+}
+
+///|
 /// Render a page model to PDF bytes.
 ///
-/// Families with bundled outlines are embedded as Type0 composite fonts
-/// subset to the characters the document uses; the rest are declared with
-/// widths from the bundled metrics but not embedded. See the module
-/// comment in emit.mbt for why, and for what each choice costs.
+/// Every face with a TrueType program — the bundled ones, and registered
+/// ones whose bytes carry outlines — is embedded, subset to the characters
+/// the document uses: as a simple WinAnsi font while the text stays within
+/// that encoding, as a Type0 composite font when it needs more. A face
+/// without a program is declared by name with widths from its metrics and
+/// drawn by whatever the viewer substitutes; characters outside WinAnsi are
+/// dropped from its text. See the module comment in emit.mbt for why, and
+/// for what each choice costs.
 ///
 /// Link regions become link annotations: a `#name` target jumps to the
-/// named destination the `AnchorItem` called `name` defines, anything else
-/// opens as a URI. `outline` becomes the document outline (bookmarks), and
-/// `info` entries (`("Title", ...)`, `("Author", ...)`) the document
-/// information dictionary; a date entry (`CreationDate`, `ModDate`) is
-/// written as given, so pass it in PDF date form (`D:YYYYMMDDHHmmSS+HH'mm'`,
-/// see `pdf_date`).
+/// named destination the `AnchorItem` called `name` defines (the first
+/// anchor of a name wins; a name no anchor defines leaves a dead link),
+/// anything else opens as a URI, written as ASCII (see `uri_bytes`).
 ///
-/// The rest shape the catalog and pages the way a viewer first sees them:
-/// `initial_zoom` becomes an `/OpenAction` on the first page, `page_mode`
-/// the `/PageMode` (by default `/UseOutlines` when there is an outline),
-/// `display_doc_title` forces `/ViewerPreferences /DisplayDocTitle` (always
-/// written when there is a title), `page_boxes` writes every page's crop,
-/// bleed, trim and art boxes explicitly (equal to its media box) instead of
-/// leaving them to their defaults, and a non-empty `page_labels` gives page
-/// `i` the literal label `page_labels[i]`. `truncate_widths` declares glyph
-/// widths truncated to whole thousandths of an em, as Prawn does, instead of
-/// rounded: a layout that places glyphs by Prawn's widths then needs no
-/// displacements.
+/// `options` adds the outline, metadata and catalog settings (see
+/// `RenderOptions`); `render_pdf(model)` uses the bundled fonts and writes
+/// none of them. Raises `RenderOptionError` for options it cannot honour:
+/// page labels that do not match the page count, malformed dates, custom
+/// metadata keys that name a standard entry.
 pub fn render_pdf(
   model : @pagelayout.PageModel,
-  outline? : Array[OutlineEntry] = [],
-  info? : Array[(String, String)] = [],
-  initial_zoom? : InitialZoom,
-  page_mode? : String,
-  display_doc_title? : Bool = false,
-  page_boxes? : Bool = false,
-  page_labels? : Array[String] = [],
-  truncate_widths? : Bool = false,
+  options? : RenderOptions = RenderOptions::new(),
 ) -> Bytes raise {
+  if !options.page_labels.is_empty() &&
+    options.page_labels.length() != model.pages.length() {
+    raise RenderOptionError(
+      "\{options.page_labels.length()} page labels for \{model.pages.length()} pages",
+    )
+  }
   let document = @pdflite.pdf_document_empty()
   document.set_version(1, 7)
   let faces : Array[PdfFace] = []
   for spec in model.fonts {
-    let family = @fonts.resolve_family(spec.family)
-    faces.push({
-      spec,
-      metrics: @fonts.face(family, bold=spec.bold, italic=spec.italic),
-      program: @fontoutlines.outline_sfnt(
-        family,
-        bold=spec.bold,
-        italic=spec.italic,
-      ),
-      // decided below, once the document's character set is known
-      composite: false,
-      truncate_widths,
-    })
+    faces.push(pdf_face(options.fonts, spec, options.truncate_widths))
   }
 
   // one XObject per distinct image, for this document only. Keyed by
@@ -337,22 +354,19 @@ pub fn render_pdf(
   let font_objects : Array[Int] = []
   for index, face in faces {
     font_objects.push(
-      if face.is_composite() {
-        // guaranteed by needs_composite: a font only goes composite when
-        // it has a program to address glyphs in
-        match face.program {
-          Some(program) =>
-            composite_font_object(
-              document,
-              face,
-              program,
-              index,
-              used_codepoints[index],
-            )
-          None => font_object(document, face, index, used_codepoints[index])
-        }
-      } else {
-        font_object(document, face, index, used_codepoints[index])
+      match (face.composite, face.program) {
+        // needs_composite only says yes with a program to address glyphs in,
+        // and `emit_run` encodes by the same flag, so the dictionary written
+        // here and the codes shown in it always agree
+        (true, Some(program)) =>
+          composite_font_object(
+            document,
+            face,
+            program,
+            index,
+            used_codepoints[index],
+          )
+        _ => font_object(document, face, index, used_codepoints[index])
       },
     )
   }
@@ -398,7 +412,13 @@ pub fn render_pdf(
             // written as something a reader would reject
             None => ()
           }
-        Link(link) => annots.push(link_annotation(link, model_page.height_pt))
+        // an annotation must be an indirect object (PDF 32000-1, Table 30)
+        Link(link) =>
+          annots.push(
+            PdfIndirect(
+              document.add_object(link_annotation(link, model_page.height_pt)),
+            ),
+          )
         Anchor(anchor) =>
           anchors.push((anchor.name, page_index, anchor.x_pt, anchor.y_pt))
       }
@@ -427,7 +447,7 @@ pub fn render_pdf(
       ])
     }
     let rest : Array[(@core.PdfName, @syntax.PdfObject)] = []
-    if page_boxes {
+    if options.page_boxes {
       for key in ["/CropBox", "/BleedBox", "/TrimBox", "/ArtBox"] {
         rest.push((name(key), box()))
       }
@@ -445,34 +465,8 @@ pub fn render_pdf(
   }
   let page_root = document.add_pagetree(pages)
   ignore(document.add_root(page_root, []))
-  let document = add_navigation(
-    document,
-    model,
-    page_root,
-    anchors,
-    outline,
-    info,
-    { initial_zoom, page_mode, display_doc_title, page_labels, },
-  )
+  let document = add_navigation(document, model, page_root, anchors, options)
   @pdflite.pdf_write_document(document)
-}
-
-///|
-/// How the first page fits the window when the document opens (the
-/// `/OpenAction` destination): the whole page, its width, or its height.
-pub(all) enum InitialZoom {
-  Fit
-  FitH
-  FitV
-}
-
-///|
-/// The catalog settings of `render_pdf` beyond navigation proper.
-priv struct CatalogOptions {
-  initial_zoom : InitialZoom?
-  page_mode : String?
-  display_doc_title : Bool
-  page_labels : Array[String]
 }
 
 ///|
@@ -538,10 +532,10 @@ fn add_navigation(
   model : @pagelayout.PageModel,
   page_root : Int,
   anchors : Array[(String, Int, Double, Double)],
-  outline : Array[OutlineEntry],
-  info : Array[(String, String)],
-  options : CatalogOptions,
+  options : RenderOptions,
 ) -> @pdflite.PdfDocument raise {
+  let outline = options.outline
+  let info = options.info
   if anchors.is_empty() &&
     outline.is_empty() &&
     info.is_empty() &&
@@ -607,20 +601,20 @@ fn add_navigation(
       level: entry.level,
       text: text_string(entry.title),
       target: match entry.dest {
-        Some((page_index, x, y)) =>
-          match page_objects.get(page_index) {
+        Position(page~, x~, y~) =>
+          match page_objects.get(page) {
             Some(page_object) =>
               DestXYZ(
                 TargetPageObject(page_object),
                 Some(x),
-                Some(flip(model.pages[page_index].height_pt, y)),
+                Some(flip(model.pages[page].height_pt, y)),
                 None,
               )
             None => DestNull
           }
-        None =>
-          match destinations.get(entry.anchor) {
-            Some(_) => DestString(@utf8.encode(entry.anchor))
+        Named(anchor) =>
+          match destinations.get(anchor) {
+            Some(_) => DestString(@utf8.encode(anchor))
             None => DestNull
           }
       },
@@ -631,7 +625,7 @@ fn add_navigation(
   }
   match options.page_mode {
     Some(mode) =>
-      catalog.push((name("/PageMode"), PdfNameObject(name("/" + mode))))
+      catalog.push((name("/PageMode"), PdfNameObject(name(mode.pdf_name()))))
     None =>
       if !bookmarks.is_empty() {
         catalog.push((name("/PageMode"), PdfNameObject(name("/UseOutlines"))))
@@ -664,8 +658,7 @@ fn add_navigation(
       ),
     )
   }
-  if options.display_doc_title ||
-    info.iter().any(fn(entry) { entry.0 == "Title" }) {
+  if options.display_doc_title || info.title is Some(_) {
     catalog.push(
       (
         name("/ViewerPreferences"),
@@ -700,11 +693,7 @@ fn add_navigation(
     document
   }
   if !info.is_empty() {
-    let entries : Array[(@core.PdfName, @syntax.PdfObject)] = []
-    for entry in info {
-      entries.push((name("/" + entry.0), PdfString(text_string(entry.1))))
-    }
-    let info_object = document.add_object(PdfDictionary(entries))
+    let info_object = document.add_object(PdfDictionary(info.entries()))
     document.set_trailer_dict(
       document
       .trailer_dict()
@@ -738,25 +727,19 @@ fn visible_outline_entries(outline : Array[OutlineEntry]) -> Int {
 }
 
 ///|
-/// One entry of the document outline (bookmarks). `level` 0 is the top
-/// level, and each entry nests under the nearest preceding entry of a
-/// lower level; `anchor` names the `AnchorItem` it jumps to, unless `dest`
-/// gives an explicit destination: a page index and the point (x, y down
-/// from the page top, points) to show at the window's top left, for a place
-/// no named destination marks (the top of a page). An `open` entry shows
-/// its children when the document opens (a positive `/Count`); otherwise
-/// they start collapsed.
-pub(all) struct OutlineEntry {
-  title : String
-  level : Int
-  anchor : String
-  dest : (Int, Double, Double)?
-  open : Bool
+/// Whether PDFDocEncoding writes `c` as the byte ASCII would. Not every
+/// ASCII character qualifies: PDFDocEncoding puts breve, caron and other
+/// spacing accents at 0x18–0x1F, leaves 0x7F and the remaining controls
+/// undefined, and keeps only tab, line feed and carriage return.
+fn pdfdoc_same_as_ascii(c : Char) -> Bool {
+  let code = c.to_int()
+  (code >= 0x20 && code <= 0x7E) || code == 0x09 || code == 0x0A || code == 0x0D
 }
 
 ///|
-/// A PDF text string: PDFDocEncoding when the text is ASCII, else
-/// UTF-16BE behind a byte order mark.
+/// A PDF text string: PDFDocEncoding when every character means the same
+/// there as in ASCII, else UTF-16BE behind a byte order mark. Either way it
+/// decodes back to `text` exactly.
 fn text_string(text : String) -> Bytes {
   // An empty string is written as a bare byte order mark, the empty
   // UTF-16 string: poppler (25.x) aborts `pdftotext -bbox` on an empty
@@ -764,7 +747,7 @@ fn text_string(text : String) -> Bytes {
   if text.is_empty() {
     return b"\xFE\xFF"
   }
-  if text.iter().all(fn(c) { c.to_int() < 0x80 }) {
+  if text.iter().all(pdfdoc_same_as_ascii) {
     return @utf8.encode(text)
   }
   let buffer = Buffer()
@@ -796,7 +779,7 @@ fn link_annotation(
       PdfDictionary([
         (name("/Type"), PdfNameObject(name("/Action"))),
         (name("/S"), PdfNameObject(name("/URI"))),
-        (name("/URI"), PdfString(@utf8.encode(link.target))),
+        (name("/URI"), PdfString(uri_bytes(link.target))),
       ]),
     )
   }
@@ -815,6 +798,54 @@ fn link_annotation(
     (name("/Border"), PdfArray([PdfInteger(0), PdfInteger(0), PdfInteger(0)])),
     target,
   ])
+}
+
+///|
+/// A URI action's target as the 7-bit ASCII URI a PDF requires (PDF
+/// 32000-1, §12.6.4.7 and Table 206). An IRI maps to a URI as RFC 3987 §3.1
+/// has it: every character outside ASCII is written as its UTF-8 bytes,
+/// each percent-encoded (`café` → `caf%C3%A9`). ASCII that RFC 3986 never
+/// allows in a URI — controls, space, DEL and `"<>\^`{|}` — is
+/// percent-encoded the same way. A `%` that begins an escape is kept, so
+/// input that is already encoded comes out unchanged; a stray `%` becomes
+/// `%25`. Host names are percent-encoded like the rest rather than
+/// converted to punycode, which RFC 3986 §3.2.2 permits.
+///
+/// Prawn, behind Ruby asciidoctor-pdf, writes such a target as raw UTF-8
+/// (text links) or as a UTF-16 text string (image links); neither is an
+/// ASCII URI, and both mean the URI this function writes.
+///
+/// Named destinations (`#name` targets) are byte-string identifiers, not
+/// URIs, and keep their UTF-8 bytes.
+fn uri_bytes(target : String) -> Bytes {
+  let bytes = @utf8.encode(target)
+  let out = Buffer()
+  let hex = b"0123456789ABCDEF"
+  let is_hex = fn(i : Int) {
+    if i >= bytes.length() {
+      return false
+    }
+    let b = bytes[i]
+    (b >= b'0' && b <= b'9') ||
+    (b >= b'A' && b <= b'F') ||
+    (b >= b'a' && b <= b'f')
+  }
+  for i in 0..<bytes.length() {
+    let b = bytes[i]
+    let keep = match b {
+      b'%' => is_hex(i + 1) && is_hex(i + 2)
+      b'"' | b'<' | b'>' | b'\\' | b'^' | b'`' | b'{' | b'|' | b'}' => false
+      _ => b > b' ' && b < b'\x7F'
+    }
+    if keep {
+      out.write_byte(b)
+    } else {
+      out.write_byte(b'%')
+      out.write_byte(hex[b.to_int() >> 4])
+      out.write_byte(hex[b.to_int() & 0xF])
+    }
+  }
+  out.contents()
 }
 
 ///|
