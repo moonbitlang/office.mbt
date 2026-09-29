@@ -4,7 +4,7 @@ Breaking and notable changes for the published modules in this workspace.
 Entries are grouped by module and by the version they ship in; `Unreleased`
 covers changes that have landed on `main` but are not yet published.
 
-### moonbitlang/pagelayout [Unreleased]
+### moonbitlang/pagelayout [0.3.0]
 
 - **BREAKING**: `PageItem` has a new variant, `Anchor(AnchorItem)`: a named,
   non-visual position that `#name` link targets and outline entries jump to
