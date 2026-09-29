@@ -5,6 +5,7 @@ import {
   "moonbitlang/pagelayout/fonts",
   "moonbitlang/pagelayout/fontoutlines",
   "moonbitlang/pdflite",
+  "moonbitlang/pdflite/bookmark",
   "moonbitlang/pdflite/content",
   "moonbitlang/pdflite/core",
   "moonbitlang/pdflite/page",

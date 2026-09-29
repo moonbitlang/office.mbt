@@ -7,8 +7,12 @@
 /// Map a document-authored family name to a bundled family. Matching is
 /// case-insensitive. Metric-compatible pairs: Calibri→Carlito,
 /// Arial→Liberation Sans, Times New Roman→Liberation Serif,
-/// Courier New→Liberation Mono. CJK families map to Noto Sans SC.
+/// Courier New→Liberation Mono. CJK families map to Noto Sans SC. A family
+/// registered with `register_face` resolves to itself (matched exactly).
 pub fn resolve_family(name : String) -> String {
+  if is_registered(name) {
+    return name
+  }
   match name.to_lower() {
     "carlito" | "calibri" | "calibri light" => "Carlito"
     "liberation sans" | "arial" | "helvetica" | "helvetica neue" | "segoe ui" =>

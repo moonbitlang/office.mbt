@@ -211,7 +211,8 @@ pub fn render_page(model : @pagelayout.PageModel, page_index : Int) -> String {
       Text(run) => emit_text(sb, model, run)
       Rect(rect) => emit_rect(sb, rect)
       Image(image) => emit_image(sb, image)
-      Link(_) => () // non-visual; hyperlink regions belong to the PDF backend
+      // non-visual; link regions and anchors belong to the PDF backend
+      Link(_) | Anchor(_) => ()
     }
   }
   sb.write_string("</svg>\n")

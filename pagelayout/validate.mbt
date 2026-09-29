@@ -85,6 +85,10 @@ pub fn PageModel::validate(self : PageModel) -> Array[String] {
           if link.w_pt < 0 || link.h_pt < 0 {
             violations.push("\{where_}: negative link extent")
           }
+        Anchor(anchor) =>
+          if anchor.name.is_empty() {
+            violations.push("\{where_}: anchor without a name")
+          }
       }
     }
   }

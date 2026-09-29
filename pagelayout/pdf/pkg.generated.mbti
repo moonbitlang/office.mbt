@@ -6,13 +6,18 @@ import {
 }
 
 // Values
-pub fn render_pdf(@pagelayout.PageModel) -> Bytes raise
+pub fn render_pdf(@pagelayout.PageModel, outline? : Array[OutlineEntry], info? : Array[(String, String)]) -> Bytes raise
 
 pub fn unembeddable_images(@pagelayout.PageModel) -> Array[(String, Int)]
 
 // Errors
 
 // Types and methods
+pub(all) struct OutlineEntry {
+  title : String
+  level : Int
+  anchor : String
+}
 
 // Type aliases
 

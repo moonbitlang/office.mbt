@@ -8,6 +8,10 @@ pub fn cjk_fallback() -> FaceMetrics
 
 pub fn face(String, bold? : Bool, italic? : Bool) -> FaceMetrics
 
+pub fn is_registered(String) -> Bool
+
+pub fn register_face(String, Bytes, bold? : Bool, italic? : Bool) -> FaceMetrics raise
+
 pub fn resolve_family(String) -> String
 
 pub fn uncovered(String, String, bold? : Bool, italic? : Bool) -> Array[(Int, Int)]

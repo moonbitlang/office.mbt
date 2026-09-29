@@ -14,10 +14,85 @@ fn colour_of(c : @pagelayout.Color) -> (Double, Double, Double) {
 }
 
 ///|
+/// The operand of one text-showing operator under construction: codes,
+/// split by displacements wherever the IR's advance for a glyph differs
+/// from the width the font dictionary declares for it.
+///
+/// Without the displacements a viewer spaces every glyph by its declared
+/// width, so any layout that moves glyphs apart — justification widens
+/// the spaces, most visibly — would be measured one way and painted
+/// another. A run whose advances all match comes out as a plain `Tj`.
+priv struct ShowText {
+  parts : Array[@syntax.PdfObject]
+  codes : Array[Byte]
+  mut adjusted : Bool
+}
+
+///|
+fn ShowText::new() -> ShowText {
+  { parts: [], codes: [], adjusted: false, }
+}
+
+///|
+/// Append one glyph's code, then move the pen by `extra_pt` beyond the
+/// declared width (text space, points at `size_pt`).
+fn ShowText::push(
+  self : ShowText,
+  code : Array[Byte],
+  extra_pt : Double,
+  size_pt : Double,
+) -> Unit {
+  self.codes.append(code)
+  // TJ displacements are thousandths of text space; negative moves right
+  let adjust = -extra_pt * 1000.0 / size_pt
+  if adjust.abs() >= 0.005 {
+    self.parts.push(PdfString(Bytes::from_array(self.codes)))
+    self.codes.clear()
+    self.parts.push(PdfReal(adjust))
+    self.adjusted = true
+  }
+}
+
+///|
+fn ShowText::is_empty(self : ShowText) -> Bool {
+  self.codes.length() == 0 && !self.adjusted
+}
+
+///|
+/// The operator showing everything pushed so far; empties the builder.
+fn ShowText::take(self : ShowText) -> @content.PdfContentOp {
+  let op : @content.PdfContentOp = if self.adjusted {
+    if self.codes.length() > 0 {
+      self.parts.push(PdfString(Bytes::from_array(self.codes)))
+    }
+    Op_TJ(PdfArray(self.parts.copy()))
+  } else {
+    Op_Tj(Bytes::from_array(self.codes))
+  }
+  self.parts.clear()
+  self.codes.clear()
+  self.adjusted = false
+  op
+}
+
+///|
+/// The width, in points at `size_pt`, that a simple font's `/Widths`
+/// declares for WinAnsi `code` — the same rounding `font_object` writes.
+fn declared_simple_width(
+  face : PdfFace,
+  code : Int,
+  size_pt : Double,
+) -> Double {
+  face.metrics.advance_pt(winansi_unicode(code), 1000.0).round() *
+  size_pt /
+  1000.0
+}
+
+///|
 /// Emit one glyph run. The run is placed with `Tm` at its own origin and
-/// drawn as a single string: `/Widths` in the font dictionary already
-/// carries the advances the layout used, so the viewer reproduces the
-/// same spacing without per-character positioning.
+/// drawn as a single string: `/Widths` in the font dictionary carries the
+/// natural advances, and a `TJ` displacement corrects any glyph the layout
+/// moved (see `ShowText`).
 ///
 /// Characters WinAnsi cannot encode are dropped from the string but
 /// still counted, so everything after them keeps its position.
@@ -32,22 +107,21 @@ fn emit_run(
     emit_run_composite(ops, run, face, resource, page_height)
     return
   }
-  let codes : Array[Byte] = []
+  let show = ShowText::new()
   let mut segment_x = run.x_pt
   let mut pending_x = run.x_pt
   let baseline = flip(page_height, run.baseline_pt)
   let (r, g, b) = colour_of(run.color)
   fn flush(x : Double) -> Unit {
-    if codes.length() == 0 {
+    if show.is_empty() {
       return
     }
     ops.push(Op_BT)
     ops.push(Op_Tf(resource, run.size_pt))
     ops.push(Op_rg(r, g, b))
     ops.push(Op_Tm({ a: 1, b: 0, c: 0, d: 1, e: x, f: baseline, }))
-    ops.push(Op_Tj(Bytes::from_array(codes)))
+    ops.push(show.take())
     ops.push(Op_ET)
-    codes.clear()
   }
 
   let mut i = 0
@@ -57,10 +131,14 @@ fn emit_run(
     let advance = run.advances_pt[i]
     match winansi_code(unit) {
       Some(code) => {
-        if codes.length() == 0 {
+        if show.is_empty() {
           segment_x = pending_x
         }
-        codes.push(code.to_byte())
+        show.push(
+          [code.to_byte()],
+          advance - declared_simple_width(face, code, run.size_pt),
+          run.size_pt,
+        )
       }
       None => {
         // an unencodable character breaks the string; resume after it
@@ -93,8 +171,8 @@ fn codepoint_at(text : String, i : Int) -> (Int, Int) {
 ///|
 /// Emit one glyph run in a composite font. Every character encodes — a
 /// codepoint the face lacks maps to glyph 0 rather than breaking the
-/// string — so the whole run is one `Tj` of two-byte CIDs placed by a
-/// single `Tm`.
+/// string — so the whole run is one `Tj` (or `TJ`, see `ShowText`) of
+/// two-byte CIDs placed by a single `Tm`.
 fn emit_run_composite(
   ops : Array[@content.PdfContentOp],
   run : @pagelayout.GlyphRun,
@@ -102,17 +180,31 @@ fn emit_run_composite(
   resource : @core.PdfName,
   page_height : Double,
 ) -> Unit {
-  let codes : Array[Byte] = []
+  let show = ShowText::new()
   let mut i = 0
   while i < run.text.length() {
     let (codepoint, next) = codepoint_at(run.text, i)
     // Identity-H: the code is the glyph index itself
     let glyph = face.metrics.cmap.get(codepoint).unwrap_or(0)
-    codes.push((glyph >> 8).to_byte())
-    codes.push((glyph & 0xFF).to_byte())
+    let mut advance = 0.0
+    for j in i..<next {
+      advance += run.advances_pt[j]
+    }
+    // the width `composite_font_object` declares: `/W` for glyphs the
+    // face has, the 1000-unit default for .notdef
+    let declared = if glyph == 0 {
+      run.size_pt
+    } else {
+      face.metrics.advance_pt(codepoint, 1000.0).round() * run.size_pt / 1000.0
+    }
+    show.push(
+      [(glyph >> 8).to_byte(), (glyph & 0xFF).to_byte()],
+      advance - declared,
+      run.size_pt,
+    )
     i = next
   }
-  if codes.length() == 0 {
+  if show.is_empty() {
     return
   }
   let (r, g, b) = colour_of(run.color)
@@ -129,7 +221,7 @@ fn emit_run_composite(
       f: flip(page_height, run.baseline_pt),
     }),
   )
-  ops.push(Op_Tj(Bytes::from_array(codes)))
+  ops.push(show.take())
   ops.push(Op_ET)
 }
 
@@ -173,7 +265,17 @@ fn emit_rect(
 /// subset to the characters the document uses; the rest are declared with
 /// widths from the bundled metrics but not embedded. See the module
 /// comment in emit.mbt for why, and for what each choice costs.
-pub fn render_pdf(model : @pagelayout.PageModel) -> Bytes raise {
+///
+/// Link regions become link annotations: a `#name` target jumps to the
+/// named destination the `AnchorItem` called `name` defines, anything else
+/// opens as a URI. `outline` becomes the document outline (bookmarks), and
+/// `info` entries (`("Title", ...)`, `("Author", ...)`) the document
+/// information dictionary.
+pub fn render_pdf(
+  model : @pagelayout.PageModel,
+  outline? : Array[OutlineEntry] = [],
+  info? : Array[(String, String)] = [],
+) -> Bytes raise {
   let document = @pdflite.pdf_document_empty()
   document.set_version(1, 7)
   let faces : Array[PdfFace] = []
@@ -236,10 +338,13 @@ pub fn render_pdf(model : @pagelayout.PageModel) -> Bytes raise {
     )
   }
   let pages : Array[@page.PdfPage] = []
-  for model_page in model.pages {
+  // (name, page index, x, y) of every anchor, in document order
+  let anchors : Array[(String, Int, Double, Double)] = []
+  for page_index, model_page in model.pages {
     let ops : Array[@content.PdfContentOp] = []
     let used : Array[Int] = []
     let images : Array[Int] = []
+    let annots : Array[@syntax.PdfObject] = []
     for item in model_page.items {
       match item {
         Text(run) => {
@@ -274,8 +379,9 @@ pub fn render_pdf(model : @pagelayout.PageModel) -> Bytes raise {
             // written as something a reader would reject
             None => ()
           }
-        // link regions are geometry only; PDF annotations come later
-        Link(_) => ()
+        Link(link) => annots.push(link_annotation(link, model_page.height_pt))
+        Anchor(anchor) =>
+          anchors.push((anchor.name, page_index, anchor.x_pt, anchor.y_pt))
       }
     }
     let content = if ops.length() == 0 {
@@ -303,12 +409,197 @@ pub fn render_pdf(model : @pagelayout.PageModel) -> Bytes raise {
       ]),
       resources: resources_of(used, images),
       rotate: Rotate0,
-      rest: PdfDictionary([]),
+      rest: if annots.is_empty() {
+        PdfDictionary([])
+      } else {
+        PdfDictionary([(name("/Annots"), PdfArray(annots))])
+      },
     })
   }
   let page_root = document.add_pagetree(pages)
   ignore(document.add_root(page_root, []))
+  let document = add_navigation(
+    document, model, page_root, anchors, outline, info,
+  )
   @pdflite.pdf_write_document(document)
+}
+
+///|
+/// Named destinations for `anchors` (name, page index, x, y), the outline
+/// and the information dictionary, on a document whose catalog already
+/// points at its page tree. Returns the document to write, which is a new
+/// one when an outline was added.
+fn add_navigation(
+  document : @pdflite.PdfDocument,
+  model : @pagelayout.PageModel,
+  page_root : Int,
+  anchors : Array[(String, Int, Double, Double)],
+  outline : Array[OutlineEntry],
+  info : Array[(String, String)],
+) -> @pdflite.PdfDocument raise {
+  if anchors.is_empty() && outline.is_empty() && info.is_empty() {
+    return document
+  }
+  // destinations name page objects, which pdflite enumerates only once a
+  // catalog points at the tree; the catalog is rewritten below with the
+  // entries that need them
+  let page_objects = document.page_reference_numbers()
+  let destinations : Map[String, @syntax.PdfObject] = Map([])
+  for anchor in anchors {
+    let (anchor_name, page_index, x, y) = anchor
+    // the first anchor of a name wins, as an HTML fragment would
+    if destinations.contains(anchor_name) {
+      continue
+    }
+    guard page_objects.get(page_index) is Some(page_object) else { continue }
+    let height = model.pages[page_index].height_pt
+    destinations[anchor_name] = PdfArray([
+      PdfIndirect(page_object),
+      PdfNameObject(name("/XYZ")),
+      PdfReal(x),
+      PdfReal(flip(height, y)),
+      PdfNull,
+    ])
+  }
+  let catalog : Array[(@core.PdfName, @syntax.PdfObject)] = []
+  if !destinations.is_empty() {
+    // a single-leaf name tree: /Names must be sorted by key bytes
+    let keys = destinations.keys().collect()
+    keys.sort_by(fn(left, right) {
+      @utf8.encode(left).compare(@utf8.encode(right))
+    })
+    let names : Array[@syntax.PdfObject] = []
+    for key in keys {
+      names.push(PdfString(@utf8.encode(key)))
+      names.push(destinations.get(key).unwrap())
+    }
+    catalog.push(
+      (
+        name("/Names"),
+        PdfDictionary([
+          (
+            name("/Dests"),
+            PdfIndirect(
+              document.add_object(
+                PdfDictionary([(name("/Names"), PdfArray(names))]),
+              ),
+            ),
+          ),
+        ]),
+      ),
+    )
+  }
+  let bookmarks : Array[@bookmark.PdfBookmark] = []
+  for entry in outline {
+    bookmarks.push({
+      level: entry.level,
+      text: text_string(entry.title),
+      target: match destinations.get(entry.anchor) {
+        Some(_) => DestString(@utf8.encode(entry.anchor))
+        None => DestNull
+      },
+      is_open: false,
+      colour: @bookmark.pdf_bookmark_black,
+      flags: 0,
+    })
+  }
+  if !bookmarks.is_empty() {
+    catalog.push((name("/PageMode"), PdfNameObject(name("/UseOutlines"))))
+  }
+  if info.iter().any(fn(entry) { entry.0 == "Title" }) {
+    catalog.push(
+      (
+        name("/ViewerPreferences"),
+        PdfDictionary([(name("/DisplayDocTitle"), PdfBoolean(true))]),
+      ),
+    )
+  }
+  ignore(document.add_root(page_root, catalog))
+  let document = if bookmarks.is_empty() {
+    document
+  } else {
+    document.add_bookmarks(bookmarks)
+  }
+  if !info.is_empty() {
+    let entries : Array[(@core.PdfName, @syntax.PdfObject)] = []
+    for entry in info {
+      entries.push((name("/" + entry.0), PdfString(text_string(entry.1))))
+    }
+    let info_object = document.add_object(PdfDictionary(entries))
+    document.set_trailer_dict(
+      document
+      .trailer_dict()
+      .add_dict_entry(name("/Info"), PdfIndirect(info_object)),
+    )
+  }
+  document
+}
+
+///|
+/// One entry of the document outline (bookmarks). `level` 0 is the top
+/// level, and each entry nests under the nearest preceding entry of a
+/// lower level; `anchor` names the `AnchorItem` it jumps to.
+pub(all) struct OutlineEntry {
+  title : String
+  level : Int
+  anchor : String
+}
+
+///|
+/// A PDF text string: PDFDocEncoding when the text is ASCII, else
+/// UTF-16BE behind a byte order mark.
+fn text_string(text : String) -> Bytes {
+  if text.iter().all(fn(c) { c.to_int() < 0x80 }) {
+    return @utf8.encode(text)
+  }
+  let buffer = Buffer()
+  buffer.write_byte(0xFE)
+  buffer.write_byte(0xFF)
+  for i in 0..<text.length() {
+    let unit = text[i].to_int()
+    buffer.write_byte((unit >> 8).to_byte())
+    buffer.write_byte((unit & 0xFF).to_byte())
+  }
+  buffer.contents()
+}
+
+///|
+/// A link annotation over `link`'s box: a named-destination jump for a
+/// `#name` target, a URI action otherwise. Borderless, as a link in
+/// running text is expected to be.
+fn link_annotation(
+  link : @pagelayout.LinkRegion,
+  page_height : Double,
+) -> @syntax.PdfObject {
+  let target : (@core.PdfName, @syntax.PdfObject) = if link.target.has_prefix(
+      "#",
+    ) {
+    (name("/Dest"), PdfString(@utf8.encode(link.target[1:].to_owned())))
+  } else {
+    (
+      name("/A"),
+      PdfDictionary([
+        (name("/Type"), PdfNameObject(name("/Action"))),
+        (name("/S"), PdfNameObject(name("/URI"))),
+        (name("/URI"), PdfString(@utf8.encode(link.target))),
+      ]),
+    )
+  }
+  PdfDictionary([
+    (name("/Type"), PdfNameObject(name("/Annot"))),
+    (name("/Subtype"), PdfNameObject(name("/Link"))),
+    (
+      name("/Rect"),
+      PdfArray([
+        PdfReal(link.x_pt),
+        PdfReal(flip(page_height, link.y_pt + link.h_pt)),
+        PdfReal(link.x_pt + link.w_pt),
+        PdfReal(flip(page_height, link.y_pt)),
+      ]),
+    ),
+    (name("/Border"), PdfArray([PdfInteger(0), PdfInteger(0), PdfInteger(0)])),
+    target,
+  ])
 }
 
 ///|

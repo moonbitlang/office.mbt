@@ -59,6 +59,26 @@ fn winansi_code(codepoint : Int) -> Int? {
 }
 
 ///|
+/// The codepoint WinAnsi `code` stands for — the inverse of
+/// `winansi_code` over the codes it produces. `/Widths` is indexed by code,
+/// but the face measures codepoints, and the two differ in 0x80–0x9F:
+/// looking up 0x92 itself would declare the width of a C1 control (the
+/// face's .notdef) for a right single quote.
+fn winansi_unicode(code : Int) -> Int {
+  match code {
+    0x85 => 0x2026
+    0x91 => 0x2018
+    0x92 => 0x2019
+    0x93 => 0x201C
+    0x94 => 0x201D
+    0x95 => 0x2022
+    0x96 => 0x2013
+    0x97 => 0x2014
+    _ => code
+  }
+}
+
+///|
 /// A font as the PDF needs it: which bundled face, and the font program
 /// to embed when the family has one bundled.
 priv struct PdfFace {
@@ -263,7 +283,9 @@ fn font_object(
   let widths : Array[Int] = []
   for code = first; code <= last; code = code + 1 {
     // advance_pt at 1000pt is exactly the 1/1000-em width PDF wants
-    widths.push(metrics.advance_pt(code, 1000.0).round().to_int())
+    widths.push(
+      metrics.advance_pt(winansi_unicode(code), 1000.0).round().to_int(),
+    )
   }
   // A face with a bundled program is embedded so the page renders the
   // shapes it was laid out with. Without one the font is only declared,

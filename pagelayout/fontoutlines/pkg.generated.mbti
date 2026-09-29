@@ -6,6 +6,8 @@ pub fn outline_sfnt(String, bold? : Bool, italic? : Bool) -> Bytes?
 
 pub fn outlined_families() -> Array[String]
 
+pub fn register_outline(String, Bytes, bold? : Bool, italic? : Bool) -> Unit
+
 // Errors
 
 // Types and methods
