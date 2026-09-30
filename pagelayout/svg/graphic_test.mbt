@@ -466,7 +466,7 @@ let degenerate_gradients : Array[@pagelayout.Gradient] = [
 test "a gradient without extent paints its last stop's colour" {
   let model = text_graphic(_ => {
     degenerate_gradients.map(gradient => {
-      @pagelayout.GraphicOp::Path({
+      Path({
         segments: [Rectangle(0, 0, 10, 10)],
         fill: Some(GradientPaint(gradient)),
         fill_rule: NonZero,
