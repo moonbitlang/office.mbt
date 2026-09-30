@@ -382,9 +382,33 @@ fn add_cid_to_gid_map(
 }
 
 ///|
+/// The signed 16-bit field at byte `at` of `program`'s OS/2 table, when the
+/// table has it: a table of at least `version` (the field first appears in
+/// that version; ttfunk reads none of a version's fields from an earlier
+/// one) that is long enough to hold it, by its declared length as well as
+/// by the file's. A version 0 table may end at byte 68, before the
+/// typographic metrics, and whatever follows it there belongs to another
+/// table.
+fn os2_int16(program : Bytes, at : Int, version~ : Int) -> Int? {
+  guard @pdflite.pdf_truetype_table(program, "OS/2") is Some(os2) &&
+    os2.offset >= 0 &&
+    os2.length >= at + 2 &&
+    os2.offset + at + 2 <= program.length() else {
+    return None
+  }
+  let u16 = fn(offset : Int) {
+    (program[offset].to_int() << 8) | program[offset + 1].to_int()
+  }
+  guard u16(os2.offset) >= version else { return None }
+  let value = u16(os2.offset + at)
+  Some(if value >= 0x8000 { value - 0x10000 } else { value })
+}
+
+///|
 /// The ascent and descent a font descriptor declares, in thousandths of an
 /// em: `hhea`'s; with `typo_metrics`, the OS/2 typographic ones where
-/// the program has them (nonzero), truncated, as ttfunk and Prawn take them.
+/// the program has them (a version 1 or later table, nonzero values),
+/// truncated, as ttfunk and Prawn take them.
 fn descriptor_extent(face : PdfFace) -> (Double, Double) {
   let metrics = face.metrics
   let scale = 1000.0 / metrics.units_per_em.to_double()
@@ -393,30 +417,16 @@ fn descriptor_extent(face : PdfFace) -> (Double, Double) {
   if !face.typo_metrics {
     return (ascent.to_double() * scale, descent.to_double() * scale)
   }
-  match face.program {
-    Some(program) =>
-      match @pdflite.pdf_truetype_table(program, "OS/2") {
-        Some(os2) if os2.offset + 72 <= program.length() => {
-          let int16 = fn(at : Int) {
-            let value = (program[at].to_int() << 8) | program[at + 1].to_int()
-            if value >= 0x8000 {
-              value - 0x10000
-            } else {
-              value
-            }
-          }
-          let typo_ascent = int16(os2.offset + 68)
-          let typo_descent = int16(os2.offset + 70)
-          if typo_ascent != 0 {
-            ascent = typo_ascent
-          }
-          if typo_descent != 0 {
-            descent = typo_descent
-          }
-        }
-        _ => ()
-      }
-    None => ()
+  if face.program is Some(program) {
+    // sTypoAscender and sTypoDescender
+    if os2_int16(program, 68, version=1) is Some(typo_ascent) &&
+      typo_ascent != 0 {
+      ascent = typo_ascent
+    }
+    if os2_int16(program, 70, version=1) is Some(typo_descent) &&
+      typo_descent != 0 {
+      descent = typo_descent
+    }
   }
   // Ruby's Integer(): toward zero
   let truncate = fn(value : Double) {

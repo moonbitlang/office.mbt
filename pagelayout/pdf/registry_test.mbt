@@ -888,3 +888,79 @@ test "notdef_text spells out characters past the codespace as ActualText" {
   // (this reader ignores /ActualText and sees glyph 0's code)
   assert_eq(kept[with_codes:].iter().map(Char::to_int).collect(), [0, 0])
 }
+
+///|
+/// `program` with its `OS/2` table's declared length and version replaced
+/// (the bytes stay where they are).
+fn with_os2(program : Bytes, length? : Int, version? : Int) -> Bytes {
+  let bytes = program.to_array()
+  let tables = (bytes[4].to_int() << 8) | bytes[5].to_int()
+  for i in 0..<tables {
+    let record = 12 + i * 16
+    if Bytes::from_array(bytes[record:record + 4].to_owned()) != b"OS/2" {
+      continue
+    }
+    if length is Some(length) {
+      bytes[record + 12] = 0
+      bytes[record + 13] = 0
+      bytes[record + 14] = (length >> 8).to_byte()
+      bytes[record + 15] = (length & 0xFF).to_byte()
+    }
+    if version is Some(version) {
+      let offset = (bytes[record + 8].to_int() << 24) |
+        (bytes[record + 9].to_int() << 16) |
+        (bytes[record + 10].to_int() << 8) |
+        bytes[record + 11].to_int()
+      bytes[offset] = (version >> 8).to_byte()
+      bytes[offset + 1] = (version & 0xFF).to_byte()
+    }
+  }
+  Bytes::from_array(bytes)
+}
+
+///|
+/// The `/Ascent`, `/Descent` and `/CapHeight` the (only) font descriptor
+/// of a PDF declares.
+fn descriptor_metrics(bytes : Bytes) -> String {
+  let text = as_text(bytes)
+  ["/Ascent", "/Descent", "/CapHeight"]
+  .map(key => {
+    guard text.find(key + " ") is Some(at) else { return "\{key} ?" }
+    let value = StringBuilder()
+    for c in text[at + key.length() + 1:] {
+      if c != '-' && c != '.' && (c < '0' || c > '9') {
+        break
+      }
+      value.write_char(c)
+    }
+    "\{key} \{value}"
+  })
+  .join(" ")
+}
+
+///|
+test "typo_metrics reads the OS/2 metrics only where the table has them" {
+  let render = fn(program : Bytes) raise {
+    let registry = @fonts.FontRegistry::new()
+    let face = registry.register("Own", program)
+    descriptor_metrics(
+      @pdf.render_pdf(
+        family_model("Own", "Hi", face),
+        options=@pdf.RenderOptions::new(fonts=registry, typo_metrics=true),
+      ),
+    )
+  }
+  // Liberation Sans: hhea 1854/-434, OS/2 typographic 1491/-431 (2048/em)
+  assert_true(render(sans()).has_prefix("/Ascent 728 /Descent -210"))
+  // a table that ends at byte 68, as a version 0 table may, has no
+  // sTypoAscender or sTypoDescender: hhea's, truncated, as ttfunk does
+  inspect(
+    render(with_os2(sans(), length=68)),
+    content="/Ascent 905 /Descent -211 /CapHeight 905",
+  )
+  // nor does ttfunk read them from a version 0 table of any length
+  inspect(
+    render(with_os2(sans(), version=0)),
+    content="/Ascent 905 /Descent -211 /CapHeight 905",
+  )
+}
