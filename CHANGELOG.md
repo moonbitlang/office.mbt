@@ -203,6 +203,18 @@ covers changes that have landed on `main` but are not yet published.
   `moonbitlang/office/internal/input_contract`; the module now declares the
   CLI's dependencies directly.
 
+### moonbitlang/pdflite [Unreleased]
+
+- Reading a TrueType `cmap` (`pdf_truetype_cmap_glyphs`) now finds an earlier
+  mapping of each codepoint through an index instead of scanning all mappings
+  so far: expected linear work in the decoded mappings (overlapping and
+  repeated ranges included), where it was quadratic. Results and their order
+  are unchanged. Measured with native release office-cli on the 11-page
+  `docxcorp-reports-en-015012bf8890.docx` fixture (macOS ARM64, medians of 15
+  interleaved runs on an otherwise idle machine, wall time including I/O):
+  DOCX to PDF about 0.97 s -> 0.50 s and DOCX to SVG about 0.54 s -> 0.06 s;
+  the scan dominated both profiles (loading the fonts' faces during layout).
+
 ### moonbitlang/pdflite [0.2.1]
 
 - Enable the `cmd/pdflite` CLI on Wasm for the default `moonx` launcher, while

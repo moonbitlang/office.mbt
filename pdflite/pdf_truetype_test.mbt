@@ -1044,6 +1044,55 @@ test "pdf_truetype_cmap_glyphs reads source-supported format 6 tables" {
 }
 
 ///|
+test "pdf_truetype_cmap_glyphs merges large overlapping tables in place" {
+  // a later table replaces an earlier one's mapping where it stands, and
+  // adds the rest after; thousands of codepoints, as in a real font
+  let first = Array::makei(20000, i => i + 1)
+  let second = Array::makei(20000, i => i + 2)
+  let font = truetype_cmap_font_for_test([
+    (3, 1, truetype_format6_subtable_for_test(0, first)),
+    (3, 10, truetype_format6_subtable_for_test(10000, second)),
+  ])
+  let entries = @pdflite.pdf_truetype_cmap_glyphs(font)
+  @test.assert_eq(entries.length(), 30000)
+  for codepoint, entry in entries {
+    @test.assert_eq(entry.codepoint, codepoint)
+    let expected = if codepoint < 10000 {
+      codepoint + 1
+    } else {
+      codepoint - 10000 + 2
+    }
+    @test.assert_eq(entry.glyph_index, expected)
+  }
+}
+
+///|
+test "pdf_truetype_cmap_glyphs keeps encounter order when later tables add lower codepoints" {
+  // not sorted: a later table's lower codepoints come after the earlier
+  // table's, across formats, and a replaced mapping keeps its place
+  let font = truetype_cmap_font_for_test([
+    (3, 1, truetype_format6_subtable_for_test(100, [1, 2, 3])),
+    (3, 10, truetype_format4_range_offset_subtable_for_test()),
+  ])
+  @test.assert_eq(@pdflite.pdf_truetype_cmap_glyphs(font), [
+    { codepoint: 100, glyph_index: 1, },
+    { codepoint: 101, glyph_index: 2, },
+    { codepoint: 102, glyph_index: 3, },
+    { codepoint: 70, glyph_index: 15, },
+    { codepoint: 71, glyph_index: 16, },
+  ])
+  let replaced = truetype_cmap_font_for_test([
+    (3, 1, truetype_format6_subtable_for_test(69, [5, 6, 7])),
+    (3, 10, truetype_format4_range_offset_subtable_for_test()),
+  ])
+  @test.assert_eq(@pdflite.pdf_truetype_cmap_glyphs(replaced), [
+    { codepoint: 69, glyph_index: 5, },
+    { codepoint: 70, glyph_index: 15, },
+    { codepoint: 71, glyph_index: 16, },
+  ])
+}
+
+///|
 test "pdf_truetype_cmap_glyphs reads format 4 range-offset glyph arrays" {
   let font = truetype_cmap_font_for_test([
     (3, 1, truetype_format4_range_offset_subtable_for_test()),
