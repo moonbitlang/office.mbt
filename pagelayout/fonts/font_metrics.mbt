@@ -12,8 +12,10 @@
 // constant data, and never replaced.
 
 ///|
-/// Metrics of one face, bundled or registered. Vertical metrics come from
-/// `hhea`; advances are raw font units scaled by `units_per_em` on lookup.
+/// Metrics of one face, bundled or registered. For a face parsed from an
+/// sfnt the vertical metrics come from `hhea`; one built with
+/// `FaceMetrics::new` carries what it was given (an AFM's, say). Advances
+/// are raw font units scaled by `units_per_em` on lookup.
 ///
 /// A face is immutable. Its glyph tables are private and read through
 /// `glyph_id`, `cmap_entries` and `advance_pt`, because the same value is
@@ -33,10 +35,47 @@ pub struct FaceMetrics {
 }
 
 ///|
+/// Why `FaceMetrics::new` refused its arguments.
+pub(all) suberror FaceMetricsError {
+  /// The metrics break an invariant every face keeps (see
+  /// `FaceMetrics::new`). The payload names the family and the fault.
+  InvalidFaceMetrics(String)
+} derive(Eq)
+
+///|
+pub extend FaceMetricsError with Eq::{not_equal, equal}
+
+///|
+pub extend FaceMetricsError with Show::{to_string, output}
+
+///|
+pub impl Show for FaceMetricsError with fn output(self, logger) {
+  match self {
+    InvalidFaceMetrics(message) =>
+      logger.write_string("invalid face metrics for \{message}")
+  }
+}
+
+///|
 /// Metrics given outright rather than parsed from an sfnt: for a face whose
 /// metrics come from elsewhere, such as the AFM metrics of a PDF standard
 /// font (see `FontRegistry::register_standard`). `advances` are indexed by
 /// glyph, in units of `units_per_em`; `cmap` maps codepoints to glyphs.
+/// Both tables are copied, so changing them afterwards cannot reach the
+/// face.
+///
+/// Preconditions, checked (raising `FaceMetricsError` when one fails), so
+/// that every measurement of the face is a finite number and no lookup can
+/// fall outside a table:
+///
+/// - `units_per_em` is positive;
+/// - `advances` is not empty, and no advance is negative;
+/// - every `cmap` key is a codepoint (0 to 0x10FFFF), and every glyph it
+///   maps to indexes `advances` (0 ≤ glyph < `advances.length()`).
+///
+/// A character the `cmap` lacks measures as glyph 0 (`.notdef`), as in any
+/// face; `has_char` reports it missing. The vertical metrics are taken as
+/// given (font units, `descender` negative below the baseline).
 pub fn FaceMetrics::new(
   family~ : String,
   bold? : Bool = false,
@@ -47,7 +86,31 @@ pub fn FaceMetrics::new(
   line_gap~ : Int,
   advances~ : Array[Int],
   cmap~ : Map[Int, Int],
-) -> FaceMetrics {
+) -> FaceMetrics raise FaceMetricsError {
+  let invalid = fn(fault : String) -> FaceMetricsError {
+    InvalidFaceMetrics("\{family}: \{fault}")
+  }
+  if units_per_em <= 0 {
+    raise invalid("units_per_em \{units_per_em} is not positive")
+  }
+  if advances.is_empty() {
+    raise invalid("no advances")
+  }
+  for glyph, advance in advances {
+    if advance < 0 {
+      raise invalid("glyph \{glyph} advances by \{advance}")
+    }
+  }
+  for codepoint, glyph in cmap {
+    if codepoint < 0 || codepoint > 0x10FFFF {
+      raise invalid("\{codepoint} is not a codepoint")
+    }
+    if glyph < 0 || glyph >= advances.length() {
+      raise invalid(
+        "\{codepoint_label(codepoint)} maps to glyph \{glyph}, outside the \{advances.length()} advances",
+      )
+    }
+  }
   {
     family,
     bold,
@@ -59,6 +122,12 @@ pub fn FaceMetrics::new(
     advances: advances.copy(),
     cmap: cmap.copy(),
   }
+}
+
+///|
+/// `U+0041` and the like.
+fn codepoint_label(codepoint : Int) -> String {
+  "U+" + codepoint.to_string(radix=16).to_upper().pad_start(4, '0')
 }
 
 ///|

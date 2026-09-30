@@ -13,7 +13,7 @@
 // one, is embedded. Both come from that single face (`pdf_face`), so what
 // the dictionary declares and what the content stream shows agree.
 //
-// A font comes out one of three ways.
+// A font comes out one of four ways.
 //
 // A face with a TrueType program (every bundled face; a registered face
 // whose bytes carry `glyf` and `loca`) whose text stays within WinAnsi is a
@@ -35,6 +35,17 @@
 // viewer substitutes the glyphs and characters outside WinAnsi are dropped.
 // That costs glyph *shapes*, not layout: every run is positioned
 // explicitly with `Tm`, and `/Widths` governs spacing per the spec.
+//
+// A registered PDF standard font (`@fonts.FontRegistry::register_standard`,
+// one of the twelve Latin faces of Helvetica, Times and Courier) is a Type1
+// font declared by its name with `/WinAnsiEncoding` and nothing else: no
+// `/Widths`, descriptor, program or `/ToUnicode`, all of which PDF 1.7
+// lets a standard font omit. The viewer draws it with its own copy and
+// that copy's widths, which the registered metrics must match (they are the
+// font's AFM widths); its text is encoded over the whole of WinAnsi,
+// 0x80–0x9F included, and characters outside WinAnsi are dropped. The
+// symbolic standard fonts (`Symbol`, `ZapfDingbats`) are refused at
+// registration: their text would need each font's built-in encoding.
 
 ///|
 /// WinAnsi is an 8-bit encoding: a simple font can only address 256
@@ -116,7 +127,7 @@ priv struct PdfFace {
   /// The PDF standard font the face is (`Helvetica`, ...), when it is one
   /// (`@fonts.FontRegistry::register_standard`): a Type1 font declared by
   /// name, whose text is encoded in the whole of WinAnsi.
-  standard : String?
+  standard : @pdflite.PdfStandardFont?
 }
 
 ///|
@@ -586,28 +597,24 @@ fn name(text : String) -> @core.PdfName {
 }
 
 ///|
-/// The font object for one interned IR font: a simple WinAnsi TrueType
-/// font with a descriptor, a `/Widths` array from the same metrics the
-/// layout measured with, a `/ToUnicode` map, and a subset of the face's
-/// program when it has one.
+/// The font object for one interned IR font that is not composite: a
+/// standard font declared by name (see the module comment), or else a
+/// simple WinAnsi TrueType font with a descriptor, a `/Widths` array from
+/// the same metrics the layout measured with, a `/ToUnicode` map, and a
+/// subset of the face's program when it has one.
 fn font_object(
   document : @pdflite.PdfDocument,
   face : PdfFace,
   index : Int,
   codepoints : Array[Int],
 ) -> Int raise {
-  // a standard font: declared by name, WinAnsi-encoded, nothing embedded
-  // (its metrics are the viewer's own)
-  match face.standard {
-    Some(standard) =>
-      match @pdflite.pdf_standard_font_of_name("/" + standard) {
-        Some(font) =>
-          return document.write_font(
-            PdfFontStandard({ font, encoding: PdfWinAnsiEncoding, }),
-          )
-        None => ()
-      }
-    None => ()
+  // a standard font: declared by name, explicitly WinAnsi-encoded (its
+  // built-in encoding is StandardEncoding, which differs), nothing
+  // embedded; its widths are the viewer's own
+  if face.standard is Some(font) {
+    return document.write_font(
+      PdfFontStandard({ font, encoding: PdfWinAnsiEncoding, }),
+    )
   }
   let first = 32
   let last = 255

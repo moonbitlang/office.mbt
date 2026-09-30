@@ -10,12 +10,24 @@ pub fn face(String, bold? : Bool, italic? : Bool) -> FaceMetrics
 
 pub fn resolve_family(String) -> String
 
+pub fn standard_fonts() -> Array[String]
+
 pub fn uncovered(String, String, bold? : Bool, italic? : Bool) -> Array[(Int, Int)]
 
 // Errors
+pub(all) suberror FaceMetricsError {
+  InvalidFaceMetrics(String)
+} derive(Eq)
+pub fn FaceMetricsError::equal(Self, Self) -> Bool
+pub fn FaceMetricsError::not_equal(Self, Self) -> Bool
+pub fn FaceMetricsError::output(Self, &Logger) -> Unit
+pub fn FaceMetricsError::to_string(Self) -> String
+pub impl Show for FaceMetricsError
+
 pub(all) suberror FontRegistryError {
   Sealed(String)
   Duplicate(String)
+  UnsupportedStandard(String)
 } derive(Eq)
 pub fn FontRegistryError::equal(Self, Self) -> Bool
 pub fn FontRegistryError::not_equal(Self, Self) -> Bool
@@ -41,7 +53,7 @@ pub fn FaceMetrics::descent_pt(Self, Double) -> Double
 pub fn FaceMetrics::glyph_id(Self, Int) -> Int?
 pub fn FaceMetrics::has_char(Self, Int) -> Bool
 pub fn FaceMetrics::line_height_pt(Self, Double) -> Double
-pub fn FaceMetrics::new(family~ : String, bold? : Bool, italic? : Bool, units_per_em~ : Int, ascender~ : Int, descender~ : Int, line_gap~ : Int, advances~ : Array[Int], cmap~ : Map[Int, Int]) -> Self
+pub fn FaceMetrics::new(family~ : String, bold? : Bool, italic? : Bool, units_per_em~ : Int, ascender~ : Int, descender~ : Int, line_gap~ : Int, advances~ : Array[Int], cmap~ : Map[Int, Int]) -> Self raise FaceMetricsError
 
 pub struct FontRegistry {
   // private fields
@@ -54,7 +66,7 @@ pub fn FontRegistry::is_registered(Self, String) -> Bool
 pub fn FontRegistry::is_sealed(Self) -> Bool
 pub fn FontRegistry::new() -> Self
 pub fn FontRegistry::register(Self, String, Bytes, bold? : Bool, italic? : Bool) -> FaceMetrics raise
-pub fn FontRegistry::register_standard(Self, String, FaceMetrics, standard~ : String, bold? : Bool, italic? : Bool) -> Unit raise
+pub fn FontRegistry::register_standard(Self, String, FaceMetrics, standard~ : String, bold? : Bool, italic? : Bool) -> FaceMetrics raise FontRegistryError
 pub fn FontRegistry::registered_face(Self, String, bold? : Bool, italic? : Bool) -> RegisteredFace?
 pub fn FontRegistry::resolve_family(Self, String) -> String
 pub fn FontRegistry::seal(Self) -> Unit

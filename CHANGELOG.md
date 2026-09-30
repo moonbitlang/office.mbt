@@ -7,15 +7,35 @@ covers changes that have landed on `main` but are not yet published.
 ### moonbitlang/pagelayout [Unreleased]
 
 - `FontRegistry::register_standard(family, metrics, standard=name)`
-  registers a PDF standard (base 14) font, such as `Helvetica-Bold`: the
-  PDF declares it by name as a Type1 font with `/WinAnsiEncoding` and
-  embeds nothing (no `/FontFile`, no `/ToUnicode`), and its text is encoded
-  over the whole of WinAnsi, 0x80–0x9F included (`€`, `’`, `™`, ...);
-  characters WinAnsi lacks are dropped, their advances kept. Its metrics
-  (typically from the font's AFM) come from the new
-  `FaceMetrics::new(family~, units_per_em~, ascender~, descender~,
-  line_gap~, advances~, cmap~)`, which builds metrics outright instead of
-  parsing an sfnt. `RegisteredFace` gains a `standard` field.
+  registers a PDF standard font and returns the metrics layout measures it
+  with. The supported fonts are the twelve Latin faces listed by the new
+  `standard_fonts()`: `Helvetica`, `Times-Roman` and `Courier` with their
+  bold, italic/oblique and bold italic faces. The PDF declares one by name
+  as a Type1 font with an explicit `/WinAnsiEncoding` and embeds nothing
+  (no `/FontFile`, `/Widths`, descriptor or `/ToUnicode`, all optional for
+  a standard font in PDF 1.7), and its text is encoded over the whole of
+  WinAnsi, 0x80–0x9F included (`€`, `’`, `™`, ...); characters WinAnsi
+  lacks are dropped, their advances kept. Any other name — a misspelling,
+  an alias such as `Arial`, or the symbolic `Symbol` and `ZapfDingbats`,
+  whose built-in encodings the renderer does not implement — raises the
+  new `FontRegistryError::UnsupportedStandard`. Like `register`, the face
+  takes the registered family and style as its identity (the returned
+  metrics carry them), so a run laid out in it names the registered family
+  and is drawn in this face. The viewer draws the font with its own widths,
+  so the metrics must be the font's AFM widths (conventionally each
+  character WinAnsi encodes mapped to its code, advances by code, 1000
+  units per em); kerning goes into the runs' advances, which the renderer
+  shows as displacements. The AFM data is the caller's: pagelayout ships
+  none. `RegisteredFace` gains a `standard` field.
+- `FaceMetrics::new(family~, units_per_em~, ascender~, descender~,
+  line_gap~, advances~, cmap~)` builds metrics outright (from an AFM, say)
+  instead of parsing an sfnt, copying its tables. It raises the new
+  `FaceMetricsError::InvalidFaceMetrics` unless `units_per_em` is
+  positive, `advances` is non-empty with no negative advance, and every
+  `cmap` entry maps a codepoint to a glyph that indexes `advances`, so
+  that no measurement of the face can abort or be infinite.
+- `FontRegistryError` gains the `UnsupportedStandard` variant; a match on
+  it that lists every variant needs the new case.
 
 ### moonbitlang/pagelayout [0.4.0]
 

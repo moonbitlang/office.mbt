@@ -30,6 +30,12 @@ pub(all) suberror FontRegistryError {
   /// A face of this family and style (`family|bold|italic`) is already
   /// registered.
   Duplicate(String)
+  /// `register_standard` was given a name that is not one of the twelve
+  /// Latin standard fonts it supports (`standard_fonts`): a misspelling,
+  /// an alias such as `Arial`, or one of the symbolic `Symbol` and
+  /// `ZapfDingbats`, whose built-in encodings are not WinAnsi. The payload
+  /// is the name.
+  UnsupportedStandard(String)
 } derive(Eq)
 
 ///|
@@ -46,13 +52,45 @@ pub impl Show for FontRegistryError with fn output(self, logger) {
         "font registry already in use; cannot register \{face}",
       )
     Duplicate(face) => logger.write_string("font already registered: \{face}")
+    UnsupportedStandard("Symbol" | "ZapfDingbats" as standard) =>
+      logger.write_string(
+        "unsupported PDF standard font: \{standard} (a symbolic font, not WinAnsi-encoded)",
+      )
+    UnsupportedStandard(standard) => {
+      let names = standard_fonts()
+      let expected = names[:names.length() - 1].join(", ") +
+        " or " +
+        names[names.length() - 1]
+      logger.write_string(
+        "not a PDF standard font: \{standard} (expected \{expected})",
+      )
+    }
   }
 }
 
 ///|
-/// One registered face: the metrics layout measures with and the program a
-/// PDF embeds, both taken from the same sfnt bytes so that they cannot
-/// disagree about glyph ids or widths.
+/// The PDF standard fonts `FontRegistry::register_standard` accepts, by
+/// PostScript name: the twelve Latin faces of Helvetica, Times and Courier,
+/// all declared with `/WinAnsiEncoding`. The two symbolic standard fonts,
+/// `Symbol` and `ZapfDingbats`, are not among them: their text would be
+/// encoded in each font's own built-in encoding (Prawn omits `/Encoding`
+/// for them), which the renderer does not implement.
+pub fn standard_fonts() -> Array[String] {
+  [
+    "Helvetica", "Helvetica-Bold", "Helvetica-Oblique", "Helvetica-BoldOblique",
+    "Times-Roman", "Times-Bold", "Times-Italic", "Times-BoldItalic", "Courier", "Courier-Bold",
+    "Courier-Oblique", "Courier-BoldOblique",
+  ]
+}
+
+///|
+/// One registered face: the metrics layout measures with and how a PDF
+/// draws it. A face registered from an sfnt (`register`) takes both its
+/// metrics and its program from the same bytes, so that they cannot
+/// disagree about glyph ids or widths. A standard font
+/// (`register_standard`) has no program: the viewer draws it with its own
+/// copy of the font, whose widths the metrics must be (see
+/// `register_standard`).
 pub struct RegisteredFace {
   metrics : FaceMetrics
   /// The complete sfnt to embed, or None when the bytes carry no TrueType
@@ -60,9 +98,10 @@ pub struct RegisteredFace {
   /// OpenType font). A face without a program is declared in a PDF by name
   /// and drawn by whatever the viewer substitutes.
   program : Bytes?
-  /// The PDF standard (base 14) font the face is (`Helvetica`,
-  /// `Times-Bold`, ...), when it is one: declared by that name as a Type1
-  /// font with no program, its text encoded in WinAnsi.
+  /// The PDF standard font the face is, when it is one: one of the twelve
+  /// Latin faces of `standard_fonts` (`Helvetica`, `Times-Bold`, ...),
+  /// declared by that name as a Type1 font with `/WinAnsiEncoding` and no
+  /// program.
   standard : String?
 }
 
@@ -127,14 +166,33 @@ pub fn FontRegistry::register(
 }
 
 ///|
-/// Register a PDF standard (base 14) font under `family`: `standard` is its
-/// PostScript name (`Helvetica`, `Helvetica-Bold`, `Times-Roman`,
-/// `Courier-Oblique`, ...) and `metrics` its metrics, typically built from
-/// its AFM with `FaceMetrics::new`, mapping each character WinAnsi encodes
-/// to its code (so a glyph is a WinAnsi code). A PDF declares the font by
-/// name as a Type1 font with WinAnsi encoding and embeds no program;
-/// characters WinAnsi lacks are dropped from its text. Raises as `register`
-/// does.
+/// Register a PDF standard font under `family` and return the metrics
+/// layout will measure it with. `standard` is its PostScript name, one of
+/// the twelve Latin faces of `standard_fonts` (`Helvetica`,
+/// `Helvetica-Bold`, `Times-Roman`, `Courier-Oblique`, ...); `metrics` are
+/// its metrics, built with `FaceMetrics::new` from the font's AFM.
+///
+/// A PDF declares the font by name as a Type1 font with `/WinAnsiEncoding`
+/// and embeds nothing, so a viewer draws it with its own copy of the font
+/// and advances each glyph by that copy's width. Its text is encoded over
+/// the whole of WinAnsi (0x80–0x9F included: `€`, `’`, `™`, ...);
+/// characters WinAnsi lacks are dropped, their advances kept. For glyphs to
+/// land where the layout put them, `metrics` must measure each character
+/// WinAnsi encodes with the font's AFM width: conventionally a `cmap` from
+/// each such character to its WinAnsi code and `advances` indexed by code,
+/// at 1000 units per em. Kerning is not part of the metrics; a caller that
+/// kerns puts the kerned advances in its runs (`GlyphRun::advances_pt`) and
+/// the renderer shows the difference as a displacement.
+///
+/// Like `register`, the face is registered under `family` and the style
+/// given: the returned metrics are `metrics` with that family, bold and
+/// italic (the tables unchanged), so that a run laid out with them names
+/// the registered family and is drawn in this face — not in whatever
+/// `metrics.family` (say `Helvetica`) would otherwise resolve to.
+///
+/// Raises `FontRegistryError` when the registry is sealed, the face is
+/// already registered, or `standard` is not a supported name
+/// (`UnsupportedStandard`).
 pub fn FontRegistry::register_standard(
   self : FontRegistry,
   family : String,
@@ -142,15 +200,22 @@ pub fn FontRegistry::register_standard(
   standard~ : String,
   bold? : Bool = false,
   italic? : Bool = false,
-) -> Unit raise {
+) -> FaceMetrics raise FontRegistryError {
   let key = face_key(family, bold, italic)
   if self.closed {
-    raise FontRegistryError::Sealed(key)
+    raise Sealed(key)
   }
   if self.faces.contains(key) {
-    raise FontRegistryError::Duplicate(key)
+    raise Duplicate(key)
   }
+  if !standard_fonts().contains(standard) {
+    raise UnsupportedStandard(standard)
+  }
+  // the face's identity is its registration, as `register` gives it; the
+  // tables are immutable and shared
+  let metrics = { ..metrics, family, bold, italic, }
   self.faces[key] = { metrics, program: None, standard: Some(standard), }
+  metrics
 }
 
 ///|
