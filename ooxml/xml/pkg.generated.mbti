@@ -6,6 +6,7 @@ import {
 }
 
 // Values
+pub fn decode_xml_bytes(BytesView) -> String raise XmlError
 
 // Errors
 pub(all) suberror XmlError {

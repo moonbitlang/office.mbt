@@ -2,5 +2,7 @@
 
 import {
   "Milky2018/xml" @parser,
+  "moonbitlang/core/encoding/utf8",
+  "moonbitlang/core/encoding/utf16",
   "moonbitlang/core/debug",
 }
