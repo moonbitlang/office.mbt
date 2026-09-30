@@ -581,17 +581,61 @@ test "notdef_text keeps characters the face lacks in the text layer" {
   assert_eq(codes.length(), 6 * 4)
   let a = face.glyph_id('a'.to_int()).unwrap()
   assert_eq(codes[0:4].to_owned(), a.to_string(radix=16).pad_start(4, '0'))
-  let hex = fn(digits : String) {
-    digits.fold(init=0, (value, c) => {
-      value * 16 +
-      (if c >= 'a' {
-        c.to_int() - 'a'.to_int() + 10
-      } else {
-        c.to_int() - '0'.to_int()
-      })
-    })
+  assert_eq(code_at(codes, 3) + 1, code_at(codes, 2))
+  // the CIDToGIDMap draws both new codes with glyph 0, and each glyph the
+  // page shows (a, b, c, d) with itself
+  let gids = cid_to_gid(bytes)
+  for i in [2, 3] {
+    assert_eq(gids[code_at(codes, i)], 0)
   }
-  assert_eq(hex(codes[12:16].to_owned()) + 1, hex(codes[8:12].to_owned()))
+  for i in [0, 1, 4, 5] {
+    let glyph = code_at(codes, i)
+    assert_true(glyph != 0)
+    assert_eq(gids[glyph], glyph)
+  }
+}
+
+///|
+/// The `i`th two-byte code of `codes` (hex, as `extracted` gives them).
+fn code_at(codes : String, i : Int) -> Int {
+  codes[i * 4:i * 4 + 4].fold(init=0, (value, c) => {
+    value * 16 +
+    (if c >= 'a' {
+      c.to_int() - 'a'.to_int() + 10
+    } else {
+      c.to_int() - '0'.to_int()
+    })
+  })
+}
+
+///|
+/// The glyph each CID shows through the `/CIDToGIDMap` stream of the only
+/// composite font on the first page of `bytes`, decoded: two bytes per CID,
+/// from CID 0.
+fn cid_to_gid(bytes : Bytes) -> Array[Int] raise {
+  let document = @pdflite.pdf_read_document_from_bytes(bytes)
+  let page = document.pages_of_pagetree()[0]
+  guard document.lookup_direct(name("/Font"), page.resources)
+    is Some(PdfDictionary(fonts)) else {
+    fail("no font resources")
+  }
+  let maps = fonts.filter_map(entry => {
+    guard document.lookup_direct(name("/DescendantFonts"), entry.1)
+      is Some(PdfArray(descendants)) &&
+      descendants.get(0) is Some(cidfont) else {
+      return None
+    }
+    document.lookup_direct(name("/CIDToGIDMap"), cidfont)
+  })
+  guard maps is [map] else { fail("\{maps.length()} CIDToGIDMaps") }
+  guard document.pdf_decode_stream(map) is PdfStreamObject(stream) else {
+    fail("/CIDToGIDMap is not a stream")
+  }
+  let data = @syntax.pdf_stream_data_bytes(stream.data)
+  assert_eq(data.length() % 2, 0)
+  Array::makei(data.length() / 2, cid => {
+    (data[cid * 2].to_int() << 8) | data[cid * 2 + 1].to_int()
+  })
 }
 
 ///|
@@ -821,6 +865,28 @@ test "notdef_text keeps codes within the two-byte codespace of a full font" {
   assert_eq(codes.length(), 16)
   assert_false(shown.contains("0000"))
   assert_eq(Set::from_array(shown).length(), 4)
+  // ✔ (the lower character) takes the one code past the last glyph, and
+  // 中 a code below it that no glyph shown takes
+  assert_eq(code_at(codes, 2), 0xFFFF)
+  let reclaimed = code_at(codes, 1)
+  assert_true(reclaimed < 0xFFFF)
+  // the CIDToGIDMap draws both with glyph 0, a and b with their own
+  // glyphs, and every other code as Identity would
+  let gids = cid_to_gid(bytes)
+  assert_eq(gids.length(), 0x10000)
+  assert_eq(gids[0xFFFF], 0)
+  assert_eq(gids[reclaimed], 0)
+  let a = face.glyph_id('a'.to_int()).unwrap()
+  let b = face.glyph_id('b'.to_int()).unwrap()
+  assert_eq(code_at(codes, 0), a)
+  assert_eq(code_at(codes, 3), b)
+  assert_eq(gids[a], a)
+  assert_eq(gids[b], b)
+  for cid, gid in gids {
+    if cid != 0xFFFF && cid != reclaimed {
+      assert_eq(gid, cid, msg="CID \{cid}")
+    }
+  }
   // and the ToUnicode map names no code outside <0000><FFFF>
   let cmap = tounicode_codes(decompressed(bytes))
   assert_false(cmap.is_empty())
