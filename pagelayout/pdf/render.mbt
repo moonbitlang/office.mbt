@@ -83,7 +83,7 @@ fn declared_simple_width(
   code : Int,
   size_pt : Double,
 ) -> Double {
-  face.declared_width(winansi_unicode(code)) * size_pt / 1000.0
+  face.declared_width(face.simple_unicode(code)) * size_pt / 1000.0
 }
 
 ///|
@@ -127,7 +127,7 @@ fn emit_run(
     let unit = run.text[i].to_int()
     // surrogate pairs are outside WinAnsi by definition
     let advance = run.advances_pt[i]
-    match winansi_code(unit) {
+    match face.simple_code(unit) {
       Some(code) => {
         if show.is_empty() {
           segment_x = pending_x
@@ -307,9 +307,19 @@ fn emit_rect(
 fn pdf_face(spec : @pagelayout.FontSpec, options : RenderOptions) -> PdfFace {
   let fonts = options.fonts
   let family = fonts.resolve_family(spec.family)
-  let (metrics, program) = match
+  let (metrics, program, standard) = match
     fonts.registered_face(family, bold=spec.bold, italic=spec.italic) {
-    Some(registered) => (registered.metrics, registered.program)
+    Some(registered) => {
+      // the registry admits only the names of `@fonts.standard_fonts`,
+      // every one of which pdflite knows
+      let standard = registered.standard.map(name => {
+        guard @pdflite.pdf_standard_font_of_name("/" + name) is Some(font) else {
+          abort("not a PDF standard font: \{name}")
+        }
+        font
+      })
+      (registered.metrics, registered.program, standard)
+    }
     None => {
       let metrics = @fonts.face(family, bold=spec.bold, italic=spec.italic)
       // exactly the bundled face `face` settled on, fallbacks included
@@ -318,7 +328,7 @@ fn pdf_face(spec : @pagelayout.FontSpec, options : RenderOptions) -> PdfFace {
         bold=metrics.bold,
         italic=metrics.italic,
       )
-      (metrics, program)
+      (metrics, program, None)
     }
   }
   {
@@ -331,6 +341,7 @@ fn pdf_face(spec : @pagelayout.FontSpec, options : RenderOptions) -> PdfFace {
     notdef_text: options.notdef_text,
     typo_metrics: options.typo_metrics,
     notdef_cids: Map([]),
+    standard,
   }
 }
 
@@ -340,11 +351,14 @@ fn pdf_face(spec : @pagelayout.FontSpec, options : RenderOptions) -> PdfFace {
 /// Every face with a TrueType program — the bundled ones, and registered
 /// ones whose bytes carry outlines — is embedded, subset to the characters
 /// the document uses: as a simple WinAnsi font while the text stays within
-/// that encoding, as a Type0 composite font when it needs more. A face
-/// without a program is declared by name with widths from its metrics and
-/// drawn by whatever the viewer substitutes; characters outside WinAnsi are
-/// dropped from its text. See the module comment in emit.mbt for why, and
-/// for what each choice costs.
+/// that encoding, as a Type0 composite font when it needs more. Any other
+/// registered face is declared by name and not embedded: a PDF standard
+/// font (`@fonts.FontRegistry::register_standard`) as a WinAnsi Type1
+/// font the viewer draws with its own copy and widths, a face without a
+/// program as a TrueType font with `/Widths` from its metrics, drawn by
+/// whatever the viewer substitutes. Either way characters outside WinAnsi
+/// are dropped from its text, their advances kept. See the module comment
+/// in emit.mbt for why, and for what each choice costs.
 ///
 /// Link regions become link annotations: a `Named(name)` target jumps to
 /// the named destination the `AnchorItem` called `name` defines (the first
