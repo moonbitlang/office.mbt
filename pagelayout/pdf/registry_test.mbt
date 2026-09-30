@@ -683,3 +683,208 @@ test "notdef_text keeps a WinAnsi character the face lacks in a composite font" 
   )
   inspect(kept, content="a\u{2026}中b")
 }
+
+///|
+/// `program` grown to `count` glyphs, as a font with that many would carry
+/// them: the new glyphs are empty (`loca` repeats the end of `glyf`) and
+/// take the last advance (`hmtx` gains only left side bearings). The tables
+/// are laid out afresh; their checksums go stale, which nothing here reads.
+fn with_glyph_count(program : Bytes, count : Int) -> Bytes {
+  let u16 = fn(bytes : ArrayView[Byte], at : Int) {
+    (bytes[at].to_int() << 8) | bytes[at + 1].to_int()
+  }
+  let source = program.to_array()
+  let u32 = fn(at : Int) { (u16(source, at) << 16) | u16(source, at + 2) }
+  let table_count = u16(source, 4)
+  let tags : Array[Bytes] = []
+  let bodies : Array[Array[Byte]] = []
+  for i in 0..<table_count {
+    let record = 12 + i * 16
+    tags.push(Bytes::from_array(source[record:record + 4].to_owned()))
+    let offset = u32(record + 8)
+    bodies.push(source[offset:offset + u32(record + 12)].to_owned())
+  }
+  let body = fn(tag : Bytes) {
+    for i, t in tags {
+      if t == tag {
+        return bodies[i]
+      }
+    }
+    abort("no \{tag} table")
+  }
+  let maxp = body(b"maxp")
+  let glyphs = u16(maxp, 4)
+  maxp[4] = (count >> 8).to_byte()
+  maxp[5] = (count & 0xFF).to_byte()
+  let entry = if u16(body(b"head"), 50) == 0 { 2 } else { 4 }
+  let loca = body(b"loca")
+  let last = loca[glyphs * entry:(glyphs + 1) * entry].to_owned()
+  loca.truncate((glyphs + 1) * entry)
+  for _ in glyphs..<count {
+    loca.append(last)
+  }
+  let long_metrics = u16(body(b"hhea"), 34)
+  let hmtx = body(b"hmtx")
+  hmtx.truncate(long_metrics * 4 + (glyphs - long_metrics) * 2)
+  for _ in 0..<((count - glyphs) * 2) {
+    hmtx.push(b'\x00')
+  }
+  let out = source[0:12 + table_count * 16].to_owned()
+  let put32 = fn(at : Int, value : Int) {
+    for k in 0..<4 {
+      out[at + k] = ((value >> (24 - 8 * k)) & 0xFF).to_byte()
+    }
+  }
+  for i, table in bodies {
+    let record = 12 + i * 16
+    put32(record + 8, out.length())
+    put32(record + 12, table.length())
+    out.append(table)
+    while out.length() % 4 != 0 {
+      out.push(b'\x00')
+    }
+  }
+  Bytes::from_array(out)
+}
+
+///|
+/// The source codes of every `bfchar` and `bfrange` entry in the
+/// `/ToUnicode` maps of `text` (a decompressed PDF), as written in hex.
+fn tounicode_codes(text : String) -> Array[String] {
+  let codes : Array[String] = []
+  let mut inside = false
+  for line in text.split("\n") {
+    let line = line.trim()
+    if line.has_suffix("beginbfchar") || line.has_suffix("beginbfrange") {
+      inside = true
+    } else if line == "endbfchar" || line == "endbfrange" {
+      inside = false
+    } else if inside && line.has_prefix("<") {
+      guard line.find(">") is Some(end) else { continue }
+      codes.push(line[1:end].to_owned())
+    }
+  }
+  codes
+}
+
+///|
+test "notdef_text keeps codes within the two-byte codespace of a full font" {
+  // a font with 65,535 glyphs, the most there can be: the codes past its
+  // last glyph run out after one (0xFFFF), so the second missing character
+  // takes a code the document leaves unused
+  let registry = @fonts.FontRegistry::new()
+  let face = registry.register("Full", with_glyph_count(sans(), 65535))
+  assert_false(face.has_char(0x4E2D))
+  assert_false(face.has_char(0x2714))
+  let bytes = @pdf.render_pdf(
+    family_model("Full", "a中✔b", face),
+    options=@pdf.RenderOptions::new(fonts=registry, notdef_text=true),
+  )
+  let (kept, codes) = extracted(bytes)
+  inspect(kept, content="a中✔b")
+  // four distinct two-byte codes, none of them glyph 0
+  let shown = [codes[0:4], codes[4:8], codes[8:12], codes[12:16]].map(code => {
+    code.to_owned()
+  })
+  assert_eq(codes.length(), 16)
+  assert_false(shown.contains("0000"))
+  assert_eq(Set::from_array(shown).length(), 4)
+  // and the ToUnicode map names no code outside <0000><FFFF>
+  let cmap = tounicode_codes(decompressed(bytes))
+  assert_false(cmap.is_empty())
+  for code in cmap {
+    assert_true(code.length() <= 4, msg="ToUnicode code <\{code}>")
+  }
+}
+
+///|
+test "notdef_text spells out characters past the codespace as ActualText" {
+  // 65,536 characters Liberation Sans lacks and one it has: the 65,535
+  // codes besides 0 less the one `a` uses leave the last two (U+30000 and
+  // U+30001) with none
+  let face = @fonts.face("Liberation Sans")
+  let model = @pagelayout.PageModel::new()
+  let font = model.add_font({
+    family: "Liberation Sans",
+    bold: false,
+    italic: false,
+  })
+  let text = StringBuilder()
+  let advances : Array[Double] = []
+  text.write_char('a')
+  advances.push(face.advance_pt('a'.to_int(), 10))
+  for codepoint in 0x20002..<0x30002 {
+    assert_false(face.has_char(codepoint))
+    text.write_char(codepoint.unsafe_to_char())
+    advances.push(face.advance_pt(codepoint, 10))
+    advances.push(0)
+  }
+  model.pages.push({
+    width_pt: 200,
+    height_pt: 100,
+    items: [
+      Text({
+        font,
+        size_pt: 10,
+        x_pt: 10,
+        baseline_pt: 20,
+        text: text.to_string(),
+        advances_pt: advances,
+        color: @pagelayout.black,
+      }),
+    ],
+  })
+  let bytes = @pdf.render_pdf(
+    model,
+    options=@pdf.RenderOptions::new(notdef_text=true),
+  )
+  // every code the map names is a two-byte one
+  for code in tounicode_codes(decompressed(bytes)) {
+    assert_true(code.length() <= 4, msg="ToUnicode code <\{code}>")
+  }
+  // the two left without a code show glyph 0 inside a marked-content span
+  // whose /ActualText carries the character
+  let document = @pdflite.pdf_decompress_pdf(
+    @pdflite.pdf_read_document_from_bytes(bytes),
+  )
+  let page = document.pages_of_pagetree()[0]
+  let spans : Array[String] = []
+  let mut open = false
+  for op in document.parse_content_ops(page.content) {
+    match op {
+      Op_BDC(tag, PdfDictionary(_) as properties) => {
+        guard document.lookup_direct(name("/ActualText"), properties)
+          is Some(PdfString(actual)) else {
+          fail("span without /ActualText")
+        }
+        spans.push("\{name_text(tag)} \{actual}")
+        open = true
+      }
+      Op_Tj(shown) if open => spans.push("Tj \{shown}")
+      Op_TJ(PdfArray(parts)) if open =>
+        for part in parts {
+          if part is PdfString(shown) {
+            spans.push("TJ \{shown}")
+          }
+        }
+      Op_EMC => {
+        spans.push("EMC")
+        open = false
+      }
+      _ => ()
+    }
+  }
+  inspect(
+    spans.join("; "),
+    content=(
+      #|/Span b"\xfe\xff\xd8\x80\xdc\x00"; TJ b"\x00\x00"; EMC; /Span b"\xfe\xff\xd8\x80\xdc\x01"; TJ b"\x00\x00"; EMC
+    ),
+  )
+  // everything else keeps its own code and its text
+  let (kept, _) = extracted(bytes)
+  let expected = text.to_string()
+  let with_codes = 1 + 65534 * 2
+  assert_true(kept[:with_codes] == expected[:with_codes])
+  // (this reader ignores /ActualText and sees glyph 0's code)
+  assert_eq(kept[with_codes:].iter().map(Char::to_int).collect(), [0, 0])
+}

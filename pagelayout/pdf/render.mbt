@@ -171,6 +171,11 @@ fn codepoint_at(text : String, i : Int) -> (Int, Int) {
 /// codepoint the face lacks maps to glyph 0 rather than breaking the
 /// string — so the whole run is one `Tj` (or `TJ`, see `ShowText`) of
 /// two-byte CIDs placed by a single `Tm`.
+///
+/// With `notdef_text`, a character the face lacks shows its own code (see
+/// `notdef_cids`); one left without a code, because the font's text has
+/// used up the codespace, shows glyph 0 inside a marked-content span whose
+/// `/ActualText` is the character, so that it still extracts.
 fn emit_run_composite(
   ops : Array[@content.PdfContentOp],
   run : @pagelayout.GlyphRun,
@@ -179,36 +184,68 @@ fn emit_run_composite(
   page_height : Double,
 ) -> Unit {
   let show = ShowText::new()
+  // the text-showing operators, and the spans around them
+  let body : Array[@content.PdfContentOp] = []
   let mut i = 0
   while i < run.text.length() {
     let (codepoint, next) = codepoint_at(run.text, i)
     // Identity-H: the code is the glyph index itself, or for a character
     // the face lacks, its own code drawn with glyph 0 (`notdef_cids`)
     let glyph = face.metrics.glyph_id(codepoint).unwrap_or(0)
-    let code = if glyph == 0 {
-      face.notdef_cids.get(codepoint).unwrap_or(0)
+    let code = if glyph != 0 {
+      Some(glyph)
     } else {
-      glyph
+      match face.notdef_cids.get(codepoint) {
+        Some(cid) => Some(cid)
+        None if face.notdef_text => None
+        None => Some(0)
+      }
     }
     let mut advance = 0.0
     for j in i..<next {
       advance += run.advances_pt[j]
     }
-    // the width `composite_font_object` declares: `/W` for glyphs the
-    // face has and for `notdef_cids`, the 1000-unit default for .notdef
-    let declared = if code == 0 {
-      run.size_pt
-    } else {
-      face.declared_width(codepoint) * run.size_pt / 1000.0
+    match code {
+      Some(code) => {
+        // the width `composite_font_object` declares: `/W` for glyphs the
+        // face has and for `notdef_cids`, the 1000-unit default for .notdef
+        let declared = if code == 0 {
+          run.size_pt
+        } else {
+          face.declared_width(codepoint) * run.size_pt / 1000.0
+        }
+        show.push(
+          [(code >> 8).to_byte(), (code & 0xFF).to_byte()],
+          advance - declared,
+          run.size_pt,
+        )
+      }
+      None => {
+        if !show.is_empty() {
+          body.push(show.take())
+        }
+        body.push(
+          Op_BDC(
+            name("/Span"),
+            PdfDictionary([
+              (
+                name("/ActualText"),
+                PdfString(text_string(run.text[i:next].to_owned())),
+              ),
+            ]),
+          ),
+        )
+        show.push([b'\x00', b'\x00'], advance - run.size_pt, run.size_pt)
+        body.push(show.take())
+        body.push(Op_EMC)
+      }
     }
-    show.push(
-      [(code >> 8).to_byte(), (code & 0xFF).to_byte()],
-      advance - declared,
-      run.size_pt,
-    )
     i = next
   }
-  if show.is_empty() {
+  if !show.is_empty() {
+    body.push(show.take())
+  }
+  if body.is_empty() {
     return
   }
   let (r, g, b) = colour_of(run.color)
@@ -225,7 +262,7 @@ fn emit_run_composite(
       f: flip(page_height, run.baseline_pt),
     }),
   )
-  ops.push(show.take())
+  ops.append(body)
   ops.push(Op_ET)
 }
 

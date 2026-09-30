@@ -109,8 +109,9 @@ priv struct PdfFace {
   /// (`RenderOptions::typo_metrics`).
   typo_metrics : Bool
   /// With `notdef_text`, in a composite font: the code (CID) of each
-  /// character the face lacks, past the program's glyphs, drawn with glyph 0
-  /// (see `notdef_cids`). Decided with the document's character set.
+  /// character the face lacks, one no glyph the document shows takes, drawn
+  /// with glyph 0 (see `notdef_cids`). Decided with the document's
+  /// character set.
   notdef_cids : Map[Int, Int]
 }
 
@@ -275,45 +276,82 @@ fn glyph_count(program : Bytes) -> Int {
 
 ///|
 /// With `notdef_text`: a code for each character a composite font's face
-/// lacks, numbered on from the program's last glyph, so that each keeps its
-/// own `/ToUnicode` entry while drawing glyph 0 (`/CIDToGIDMap`, see
-/// `add_cid_to_gid_map`). Characters in ascending order, so the codes are a
-/// function of the character set. A character WinAnsi has counts too: a
-/// composite font shows glyph indices, not WinAnsi codes, so without a code
-/// of its own it would be glyph 0 with no text.
+/// lacks, so that each keeps its own `/ToUnicode` entry while drawing glyph
+/// 0 (`/CIDToGIDMap`, see `add_cid_to_gid_map`). A character WinAnsi has
+/// counts too: a composite font shows glyph indices, not WinAnsi codes, so
+/// without a code of its own it would be glyph 0 with no text.
+///
+/// Identity-H codes are two bytes, so every code stays within
+/// 0x0001–0xFFFF. They are numbered on from the program's last glyph and,
+/// once those run out (a font can have 65,535 glyphs), carry on from 1
+/// among the codes below it that no glyph the document shows takes: the
+/// map sends those to glyph 0, and nothing else addresses them. Only a font
+/// showing more than 65,535 distinct characters can use every code up; the
+/// characters left over get none, and `emit_run_composite` spells them out
+/// with `/ActualText` instead.
+///
+/// Characters in ascending order, so the codes are a function of the
+/// character set.
 fn notdef_cids(face : PdfFace, codepoints : Array[Int]) -> Map[Int, Int] {
   let cids : Map[Int, Int] = Map([])
   guard face.program is Some(program) else { return cids }
   let missing = codepoints.filter(codepoint => !face.metrics.has_char(codepoint))
   missing.sort()
-  let mut next = glyph_count(program)
-  for codepoint in missing {
-    if !cids.contains(codepoint) {
-      cids[codepoint] = next
-      next += 1
+  // the codes the document's own glyphs take (Identity: a code is a glyph)
+  let taken : Set[Int] = Set([])
+  for codepoint in codepoints {
+    match face.metrics.glyph_id(codepoint) {
+      Some(glyph) if glyph != 0 => taken.add(glyph)
+      _ => ()
     }
+  }
+  let glyphs = glyph_count(program)
+  let first = if glyphs < 1 { 1 } else { glyphs }
+  // the `k`th candidate code: `first` up to 0xFFFF, then 1 up to `first`
+  let candidate = fn(k : Int) {
+    if first + k <= 0xFFFF {
+      first + k
+    } else {
+      k - (0x10000 - first) + 1
+    }
+  }
+  let mut k = 0
+  for codepoint in missing {
+    if cids.contains(codepoint) {
+      continue
+    }
+    while k < 0xFFFF && taken.contains(candidate(k)) {
+      k += 1
+    }
+    if k >= 0xFFFF {
+      break
+    }
+    cids[codepoint] = candidate(k)
+    k += 1
   }
   cids
 }
 
 ///|
-/// Give a composite font's CIDFont a `/CIDToGIDMap` stream: a CID below
-/// the program's glyph count is its glyph (as `/Identity` would have it),
-/// one of `notdef_cids` is glyph 0.
+/// Give a composite font's CIDFont a `/CIDToGIDMap` stream: a code of
+/// `notdef_cids` is glyph 0, any other code its own glyph (as `/Identity`
+/// would have it).
 fn add_cid_to_gid_map(
   document : @pdflite.PdfDocument,
   font : Int,
   notdef_cids : Map[Int, Int],
 ) -> Unit raise {
+  let notdef : Set[Int] = Set([])
   let mut last = 0
   for _, cid in notdef_cids {
+    notdef.add(cid)
     if cid > last {
       last = cid
     }
   }
   let map = Buffer()
   for cid in 0..<=last {
-    let glyph = if notdef_cids.values().any(c => c == cid) { 0 } else { cid }
+    let glyph = if notdef.contains(cid) { 0 } else { cid }
     map.write_byte((glyph >> 8).to_byte())
     map.write_byte((glyph & 0xFF).to_byte())
   }
