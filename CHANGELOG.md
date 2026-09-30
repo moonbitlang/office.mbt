@@ -12,7 +12,7 @@ Breaking and notable changes for the published modules in this workspace.
 Entries are grouped by module and by the version they ship in; `Unreleased`
 covers changes that have landed on `main` but are not yet published.
 
-### moonbitlang/pagelayout [Unreleased]
+### moonbitlang/pagelayout [0.6.0]
 
 - **BREAKING**: `PageItem` has a new variant, `Graphic(GraphicItem)`: vector
   graphics, a display list of `GraphicOp`s drawn in a space of its own whose
@@ -100,8 +100,8 @@ covers changes that have landed on `main` but are not yet published.
 
   Code that matches `PageItem` exhaustively must handle the new variant (a
   wildcard arm, or `Graphic(_) => ()`). The PDF backend uses pdflite's
-  `PdfExactReal` (unreleased; see below), so this release of pagelayout
-  needs the pdflite release that has it.
+  `PdfExactReal`, so this release of pagelayout requires
+  moonbitlang/pdflite 0.3.0.
 
 ### moonbitlang/pagelayout [0.5.0]
 
@@ -294,7 +294,7 @@ covers changes that have landed on `main` but are not yet published.
   `moonbitlang/office/internal/input_contract`; the module now declares the
   CLI's dependencies directly.
 
-### moonbitlang/pdflite [Unreleased]
+### moonbitlang/pdflite [0.3.0]
 
 - **BREAKING**: `PdfObject` has a new variant, `PdfExactReal(Double)`, a real
   written exactly: the shortest decimal that reads back as the value,

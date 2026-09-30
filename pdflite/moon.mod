@@ -1,6 +1,6 @@
 name = "moonbitlang/pdflite"
 
-version = "0.2.2"
+version = "0.3.0"
 
 import {
   "moonbit-community/flate@0.8.1",
