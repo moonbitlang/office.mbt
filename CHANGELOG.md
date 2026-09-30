@@ -4,7 +4,7 @@ Breaking and notable changes for the published modules in this workspace.
 Entries are grouped by module and by the version they ship in; `Unreleased`
 covers changes that have landed on `main` but are not yet published.
 
-### moonbitlang/pagelayout [Unreleased]
+### moonbitlang/pagelayout [0.5.0]
 
 - `FontRegistry::register_standard(family, metrics, standard=name)`
   registers a PDF standard font and returns the metrics layout measures it
