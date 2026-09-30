@@ -94,9 +94,36 @@ fn colour_array(c : @pagelayout.Color) -> @syntax.PdfObject {
 }
 
 ///|
+/// The interpolations of a gradient's colours: from `.1` to `.2` over the
+/// offsets from `.0` to the next one's `.0` (or 1). Stops at the same
+/// offset make no interpolation of their own, only a sharp change from
+/// the one before them to the one after; at offset 0 that leaves the last
+/// of them to start from, and at offset 1 the first to end at (see
+/// `@pagelayout.Gradient`). PDF's stitching function needs exactly this:
+/// its bounds, the starts after the first, must strictly increase (PDF
+/// 32000-1, 7.10.4).
+fn gradient_pieces(
+  stops : Array[@pagelayout.GradientStop],
+) -> Array[(Double, @pagelayout.Color, @pagelayout.Color)] {
+  let pieces = []
+  for i in 1..<stops.length() {
+    if stops[i].offset > stops[i - 1].offset {
+      pieces.push((stops[i - 1].offset, stops[i - 1].color, stops[i].color))
+    }
+  }
+  // stops that do not span an interval (see `PageModel::validate`): the
+  // last colour throughout
+  if pieces.is_empty() && !stops.is_empty() {
+    let last = stops[stops.length() - 1].color
+    pieces.push((0.0, last, last))
+  }
+  pieces
+}
+
+///|
 /// The shading of a gradient in gradient space: axial or radial, with an
-/// exponential interpolation function per pair of adjacent stops (stitched
-/// together when there are more than two), extended past both ends.
+/// exponential interpolation function per interval between stops (stitched
+/// together when there is more than one), extended past both ends.
 fn GraphicResources::shading(
   self : GraphicResources,
   gradient : @pagelayout.Gradient,
@@ -109,15 +136,16 @@ fn GraphicResources::shading(
     Some(number) => return number
     None => ()
   }
-  let stops = gradient.stops
+  let intervals = gradient_pieces(gradient.stops)
   let pieces : Array[@syntax.PdfObject] = []
-  for i in 1..<stops.length() {
+  for piece in intervals {
+    let (_, from, to) = piece
     pieces.push(
       PdfDictionary([
         (name("/FunctionType"), PdfInteger(2)),
         (name("/Domain"), PdfArray([PdfReal(0.0), PdfReal(1.0)])),
-        (name("/C0"), colour_array(stops[i - 1].color)),
-        (name("/C1"), colour_array(stops[i].color)),
+        (name("/C0"), colour_array(from)),
+        (name("/C1"), colour_array(to)),
         (name("/N"), PdfReal(1.0)),
       ]),
     )
@@ -127,8 +155,8 @@ fn GraphicResources::shading(
   } else {
     let bounds : Array[@syntax.PdfObject] = []
     let encode : Array[@syntax.PdfObject] = []
-    for i in 1..<(stops.length() - 1) {
-      bounds.push(PdfReal(stops[i].offset))
+    for i in 1..<intervals.length() {
+      bounds.push(PdfReal(intervals[i].0))
     }
     for _ in pieces {
       encode.push(PdfReal(0.0))

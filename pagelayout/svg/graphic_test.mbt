@@ -175,3 +175,45 @@ test "a hairline is a non-scaling stroke one pixel wide" {
     ),
   )
 }
+
+///|
+test "gradient stops at the ends: only the one nearer the middle is written" {
+  let colours = [
+    @pagelayout.Color::rgb(255, 255, 255),
+    @pagelayout.Color::rgb(255, 0, 0),
+    @pagelayout.Color::rgb(0, 0, 255),
+    @pagelayout.Color::rgb(0, 255, 0),
+    @pagelayout.Color::rgb(0, 0, 0),
+  ]
+  let offsets : Array[Double] = [0, 0, 0.5, 1, 1]
+  let model = text_graphic(_ => {
+    [
+      Path({
+        segments: [Rectangle(0, 0, 10, 10)],
+        fill: Some(
+          GradientPaint({
+            shape: Radial(x1=5, y1=5, r1=0, x2=5, y2=5, r2=5),
+            stops: offsets.mapi((i, offset) => { offset, color: colours[i], }),
+            transform: @pagelayout.identity,
+          }),
+        ),
+        fill_rule: NonZero,
+        stroke: None,
+        stroke_style: @pagelayout.StrokeStyle::default(),
+      }),
+    ]
+  })
+  let svg = @svg.render_page(model, 0)
+  let start = svg.find("<radialGradient").unwrap()
+  let end = svg.find("</radialGradient>").unwrap()
+  inspect(
+    svg[start:end],
+    content=(
+      #|<radialGradient id="g1" gradientUnits="userSpaceOnUse" gradientTransform="matrix(1 0 0 1 0 0)" fx="5" fy="5" fr="0" cx="5" cy="5" r="5">
+      #|    <stop offset="0" stop-color="#ff0000"/>
+      #|    <stop offset="0.5" stop-color="#0000ff"/>
+      #|    <stop offset="1" stop-color="#00ff00"/>
+      #|  
+    ),
+  )
+}

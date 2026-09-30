@@ -109,6 +109,70 @@ test "a gradient is a shading pattern placed by the current transformation" {
 }
 
 ///|
+/// A page with a 10 by 10 square filled with a horizontal gradient
+/// through `colours` at `offsets`.
+fn gradient_square(
+  offsets : Array[Double],
+  colours : Array[@pagelayout.Color],
+) -> @pagelayout.PageModel {
+  let stops = offsets.mapi((i, offset) => @pagelayout.GradientStop::{
+    offset,
+    color: colours[i],
+  })
+  graphic_model([
+    Path({
+      segments: [Rectangle(0, 0, 10, 10)],
+      fill: Some(
+        GradientPaint({
+          shape: Linear(x1=0, y1=0, x2=10, y2=0),
+          stops,
+          transform: @pagelayout.identity,
+        }),
+      ),
+      fill_rule: NonZero,
+      stroke: None,
+      stroke_style: @pagelayout.StrokeStyle::default(),
+    }),
+  ])
+}
+
+///|
+let white : @pagelayout.Color = @pagelayout.Color::rgb(255, 255, 255)
+
+///|
+let red : @pagelayout.Color = @pagelayout.Color::rgb(255, 0, 0)
+
+///|
+let blue : @pagelayout.Color = @pagelayout.Color::rgb(0, 0, 255)
+
+///|
+test "repeated gradient stops make strictly increasing stitching bounds" {
+  let model = gradient_square([0, 0.5, 0.5, 1], [
+    white, red, blue, @pagelayout.black,
+  ])
+  assert_true(model.validate().is_empty())
+  let file = as_text(@pdf.render_pdf(model))
+  assert_false(file.contains("/Bounds [0.5 0.5]"))
+  // two interpolations, white to red below 0.5 and blue to black from it:
+  // the colour jumps at 0.5
+  assert_true(file.contains("/Bounds [0.5]"))
+  assert_eq(occurrences(file, "/FunctionType 2"), 2)
+  assert_true(file.contains("/C0 [1 1 1] /C1 [1 0 0]"))
+  assert_true(file.contains("/C0 [0 0 1] /C1 [0 0 0]"))
+}
+
+///|
+test "at a gradient's ends only the stop nearer the middle counts" {
+  let model = gradient_square([0, 0, 0.25, 1, 1], [white, red, blue, red, white])
+  assert_true(model.validate().is_empty())
+  let file = as_text(@pdf.render_pdf(model))
+  assert_true(file.contains("/Bounds [0.25]"))
+  assert_eq(occurrences(file, "/FunctionType 2"), 2)
+  assert_true(file.contains("/C0 [1 0 0] /C1 [0 0 1]"))
+  assert_true(file.contains("/C0 [0 0 1] /C1 [1 0 0]"))
+}
+
+///|
 test "text in a graphic is drawn upright and its font embedded" {
   let model = @pagelayout.PageModel::new()
   let font = model.add_font({

@@ -62,7 +62,19 @@ fn paint_attr(
           "radialGradient"
         }
       }
-      for stop in g.stops {
+      // at offset 0 only the last stop there counts, at offset 1 only the
+      // first (see `@pagelayout.Gradient`), where SVG would pad with the
+      // outermost
+      let stops = g.stops
+      for i, stop in stops {
+        if stop.offset <= 0.0 &&
+          i + 1 < stops.length() &&
+          stops[i + 1].offset <= 0.0 {
+          continue
+        }
+        if stop.offset >= 1.0 && i > 0 && stops[i - 1].offset >= 1.0 {
+          continue
+        }
         sb.write_string(
           "    <stop offset=\"\{fmt_num(stop.offset)}\" stop-color=\"\{stop.color.to_hex()}\"/>\n",
         )
