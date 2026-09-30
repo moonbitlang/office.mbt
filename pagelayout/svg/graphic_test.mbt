@@ -178,7 +178,7 @@ test "a hairline is a non-scaling stroke one pixel wide" {
 
 ///|
 test "gradient stops at the ends: only the one nearer the middle is written" {
-  let colours = [
+  let colours : ReadOnlyArray[@pagelayout.Color] = [
     @pagelayout.Color::rgb(255, 255, 255),
     @pagelayout.Color::rgb(255, 0, 0),
     @pagelayout.Color::rgb(0, 0, 255),

@@ -53,8 +53,8 @@ test "validate requires a current point before lines, curves and closes" {
 
 ///|
 test "validate rejects non-finite numbers, bad dashes and bad alphas" {
-  let nan = @double.not_a_number
-  let inf = @double.infinity
+  let nan = 0.0 / 0.0
+  let inf = 1.0 / 0.0
   let style = @pagelayout.StrokeStyle::default()
   let line = [@pagelayout.PathSegment::MoveTo(0, 0), LineTo(1, 1)]
   let model = graphic_page(x_pt=inf, [
@@ -128,9 +128,9 @@ test "validate rejects non-finite text positions in graphics" {
       x_pt: 0,
       y_pt: 0,
       ops: [
-        Text({ ..run, x_pt: @double.not_a_number, }),
-        Text({ ..run, advances_pt: [6, @double.infinity], }),
-        Text({ ..run, size_pt: @double.infinity, }),
+        Text({ ..run, x_pt: 0.0 / 0.0, }),
+        Text({ ..run, advances_pt: [6, 1.0 / 0.0], }),
+        Text({ ..run, size_pt: 1.0 / 0.0, }),
         Text(run),
       ],
     }),
@@ -168,7 +168,7 @@ test "validate rejects non-finite gradients and stops outside 0..=1" {
       stroke_style: @pagelayout.StrokeStyle::default(),
     })
   }
-  let nan = @double.not_a_number
+  let nan = 0.0 / 0.0
   let model = graphic_page([
     filled({ ..gradient, shape: Linear(x1=0, y1=0, x2=nan, y2=0), }),
     filled({ ..gradient, shape: Radial(x1=0, y1=0, r1=0, x2=0, y2=0, r2=nan), }),
