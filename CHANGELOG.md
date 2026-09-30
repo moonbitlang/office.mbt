@@ -210,10 +210,10 @@ covers changes that have landed on `main` but are not yet published.
   so far: expected linear work in the decoded mappings (overlapping and
   repeated ranges included), where it was quadratic. Results and their order
   are unchanged. Measured with native release office-cli on the 11-page
-  `docxcorp-reports-en-015012bf8890.docx` fixture (macOS ARM64, medians of 12
-  alternating runs after warm-up, wall time including I/O): DOCX to SVG
-  0.565 s -> 0.094 s, DOCX to PDF 3.989 s -> 3.539 s. The scan dominated the
-  SVG conversion's profile (loading the fonts' faces during layout).
+  `docxcorp-reports-en-015012bf8890.docx` fixture (macOS ARM64, medians of 15
+  interleaved runs on an otherwise idle machine, wall time including I/O):
+  DOCX to PDF about 0.97 s -> 0.50 s and DOCX to SVG about 0.54 s -> 0.06 s;
+  the scan dominated both profiles (loading the fonts' faces during layout).
 
 ### moonbitlang/pdflite [0.2.1]
 
