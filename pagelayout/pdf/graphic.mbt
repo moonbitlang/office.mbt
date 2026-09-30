@@ -16,11 +16,13 @@
 // Numbers in a graphic's content are written exactly (`exact_real`), not
 // rounded as pdflite writes reals (to six decimals below 0.0001, else to
 // twelve significant digits): a graphic's own transformations can scale
-// them by any factor. Dictionaries are written by pdflite, so what goes
-// into them is kept within its precision instead: a shading's geometry is
-// canonical (a linear one runs from (0, 0) to (1, 0)), the pattern matrix
-// carrying it to the gradient's place on the page, and stitching bounds
-// that would be written equal are merged.
+// them by any factor. So are a pattern's matrix and its shading's
+// coordinates (`PdfExactReal`): a shading's geometry is canonical (a
+// linear one runs from (0, 0) to (1, 0)), the pattern matrix carrying it
+// to the gradient's place on the page at whatever size it has there
+// (within what renderers draw; see `drawable`). Stitching bounds and
+// colours, within 0..=1, keep pdflite's precision, and bounds that would
+// be written equal are merged.
 
 ///|
 /// The paint and stroke parameters in effect, so each is written only
@@ -59,15 +61,16 @@ fn GraphicResources::new(document : @pdflite.PdfDocument) -> GraphicResources {
 
 ///|
 /// The resources one page draws with, beyond fonts and images, in the
-/// order of first use.
+/// order of first use; and the page's centre, in its default space.
 priv struct PageGraphics {
   gstates : Map[Int, Unit]
   patterns : Map[Int, Unit]
+  centre : (Double, Double)
 }
 
 ///|
-fn PageGraphics::new() -> PageGraphics {
-  { gstates: Map([]), patterns: Map([]), }
+fn PageGraphics::new(centre? : (Double, Double) = (0, 0)) -> PageGraphics {
+  { gstates: Map([]), patterns: Map([]), centre, }
 }
 
 ///|
@@ -177,11 +180,10 @@ fn written_real(v : Double) -> Double {
 /// line; a radial one ends on the unit circle. The shading type and
 /// coordinates follow the transformation.
 ///
-/// Only numbers of ordinary size are left to the shading, whose
-/// coordinates pdflite writes to limited precision; the gradient's own
-/// size goes into the pattern matrix, where it meets the transformations
-/// that scale it back to the page. The shape has extent (a gradient
-/// without is painted as its colour; see `set_paint`).
+/// The gradient's own size goes into the pattern matrix, where it meets
+/// the transformations that scale it to the page, so the matrix gives its
+/// size there (see `drawable`). The shape has extent (a gradient without
+/// is painted as its colour; see `set_paint`).
 fn canonical_shape(
   shape : @pagelayout.GradientShape,
 ) -> (Int, Array[Double], @pagelayout.Matrix) {
@@ -262,7 +264,7 @@ fn GraphicResources::shading(
     PdfDictionary([
       (name("/ShadingType"), PdfInteger(shading_type)),
       (name("/ColorSpace"), PdfNameObject(name("/DeviceRGB"))),
-      (name("/Coords"), PdfArray(coords.map(x => PdfReal(x)))),
+      (name("/Coords"), PdfArray(coords.map(x => PdfExactReal(x)))),
       (name("/Function"), function),
       (name("/Extend"), PdfArray([PdfBoolean(true), PdfBoolean(true)])),
     ]),
@@ -275,15 +277,20 @@ fn GraphicResources::shading(
 /// A shading pattern painting `gradient` where the current transformation
 /// is `ctm` (from the gradient's user space to the page's default space),
 /// one per shading and effective matrix: the matrix maps the shading's
-/// canonical space through gradient space to the page.
+/// canonical space through gradient space to the page (or, for a gradient
+/// too small or large there to draw, see `drawable`), `centre`
+/// the page's centre. Its numbers are written exactly (`PdfExactReal`):
+/// they carry the gradient's own size, which may be anything.
 fn GraphicResources::pattern(
   self : GraphicResources,
   gradient : @pagelayout.Gradient,
   ctm : @pagelayout.Matrix,
+  centre : (Double, Double),
 ) -> Int {
   let (shading_type, coords, canonical) = canonical_shape(gradient.shape)
   let shading = self.shading(gradient, shading_type, coords)
   let m = ctm.after(gradient.transform).after(canonical)
+  let m = drawable(m, linear=shading_type == 2, centre)
   let key = "\{shading} \{m.a} \{m.b} \{m.c} \{m.d} \{m.e} \{m.f}"
   match self.patterns.get(key) {
     Some(number) => return number
@@ -297,12 +304,12 @@ fn GraphicResources::pattern(
       (
         name("/Matrix"),
         PdfArray([
-          PdfReal(m.a),
-          PdfReal(m.b),
-          PdfReal(m.c),
-          PdfReal(m.d),
-          PdfReal(m.e),
-          PdfReal(m.f),
+          PdfExactReal(m.a),
+          PdfExactReal(m.b),
+          PdfExactReal(m.c),
+          PdfExactReal(m.d),
+          PdfExactReal(m.e),
+          PdfExactReal(m.f),
         ]),
       ),
     ]),
@@ -445,7 +452,7 @@ fn set_paint(
       }
     }
     GradientPaint(gradient) => {
-      let number = resources.pattern(gradient, state.ctm)
+      let number = resources.pattern(gradient, state.ctm, page.centre)
       page.patterns[number] = ()
       // a pattern's key cannot be a colour's, which starts with `#`
       let key = "/P\{number}"
@@ -756,4 +763,61 @@ fn emit_graphic(
   for i in start..<ops.length() {
     ops[i] = exact_op(ops[i])
   }
+}
+
+///|
+/// The shortest a gradient is drawn on the page, in points: a linear one's
+/// length, a radial one's end radius (see `drawable`).
+const SHORTEST_GRADIENT : Double = 1.0e-3
+
+///|
+/// The longest a linear gradient is drawn on the page, in points (see
+/// `drawable`).
+const LONGEST_GRADIENT : Double = 1.0e12
+
+///|
+/// The pattern matrix `m` of a gradient (from its canonical space, see
+/// `canonical_shape`, to the page), or one drawing it within the sizes
+/// renderers draw: a gradient shorter on the page than
+/// `SHORTEST_GRADIENT` is drawn that long, grown about the middle of a
+/// linear one's line or a radial one's end centre; a linear gradient
+/// longer than `LONGEST_GRADIENT`, that long, shrunk about the page's
+/// `centre` along its line.
+///
+/// Its numbers are written exactly, so Poppler's Splash paints gradients
+/// of any size; but Cairo (Poppler's other renderer, Evince's) paints
+/// nothing for a gradient much below 1e-4 points, and both paint nothing
+/// where a linear gradient's parameter varies across the page by less than
+/// a double resolves (a gradient about 1e18 points long on a page a
+/// hundred wide). Either way the change is out of sight: grown, a
+/// gradient's colours move by less than a thousandth of a point; shrunk,
+/// the parameter takes the same value at the centre and varies across a
+/// page (at most 14400 points wide) by less than 1e-7, too little to
+/// change a colour visibly.
+fn drawable(
+  m : @pagelayout.Matrix,
+  linear~ : Bool,
+  centre : (Double, Double),
+) -> @pagelayout.Matrix {
+  let first = (m.a * m.a + m.b * m.b).sqrt()
+  let second = (m.c * m.c + m.d * m.d).sqrt()
+  let size = if linear || first >= second { first } else { second }
+  if size > 0.0 && size < SHORTEST_GRADIENT {
+    let k = SHORTEST_GRADIENT / size
+    // the point that stays, in canonical space and on the page
+    let u = if linear { 0.5 } else { 0.0 }
+    let (x, y) = m.apply(u, 0)
+    let (a, b, c, d) = (m.a * k, m.b * k, m.c * k, m.d * k)
+    return { a, b, c, d, e: x - a * u, f: y - b * u, }
+  }
+  guard linear && size > LONGEST_GRADIENT else { return m }
+  let det = m.a * m.d - m.b * m.c
+  guard det != 0.0 else { return m }
+  // the centre in canonical space
+  let (x, y) = centre
+  let u = ((x - m.e) * m.d - (y - m.f) * m.c) / det
+  let v = ((y - m.f) * m.a - (x - m.e) * m.b) / det
+  let k = LONGEST_GRADIENT / size
+  let (a, b, c, d) = (m.a * k, m.b * k, m.c * k, m.d * k)
+  { a, b, c, d, e: x - (a * u + c * v), f: y - (b * u + d * v), }
 }

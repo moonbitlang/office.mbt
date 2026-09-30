@@ -344,21 +344,85 @@ fn Defs::next(self : Defs, prefix : String) -> String {
 }
 
 ///|
+/// The shortest a gradient is drawn on the page, in points: a linear one's
+/// length, a radial one's end radius. As the PDF backend draws it (see its
+/// `drawable`): Cairo, and so librsvg, paints nothing for a gradient much
+/// below 1e-4 points on the page.
+const SHORTEST_GRADIENT : Double = 1.0e-3
+
+///|
+/// `g` as drawn where the transformation from its user space to the page
+/// is `ctm`: when it is smaller there than `SHORTEST_GRADIENT`, grown to
+/// that size about the middle of a linear one's line or a radial one's end
+/// centre (its focal circle with it), which moves its colours by less than
+/// a thousandth of a point.
+fn drawable(
+  g : @pagelayout.Gradient,
+  ctm : @pagelayout.Matrix,
+) -> @pagelayout.Gradient {
+  let m = ctm.after(g.transform)
+  // the length on the page of a vector in gradient space
+  let length = fn(x : Double, y : Double) {
+    let (px, py) = (m.a * x + m.c * y, m.b * x + m.d * y)
+    (px * px + py * py).sqrt()
+  }
+  let size = match g.shape {
+    Linear(x1~, y1~, x2~, y2~) => length(x2 - x1, y2 - y1)
+    Radial(r2~, ..) => {
+      let first = length(r2, 0)
+      let second = length(0, r2)
+      if first >= second {
+        first
+      } else {
+        second
+      }
+    }
+  }
+  guard size > 0.0 && size < SHORTEST_GRADIENT else { return g }
+  let k = SHORTEST_GRADIENT / size
+  let shape : @pagelayout.GradientShape = match g.shape {
+    Linear(x1~, y1~, x2~, y2~) => {
+      let (mx, my) = ((x1 + x2) / 2, (y1 + y2) / 2)
+      Linear(
+        x1=mx + (x1 - mx) * k,
+        y1=my + (y1 - my) * k,
+        x2=mx + (x2 - mx) * k,
+        y2=my + (y2 - my) * k,
+      )
+    }
+    Radial(x1~, y1~, r1~, x2~, y2~, r2~) =>
+      Radial(
+        x1=x2 + (x1 - x2) * k,
+        y1=y2 + (y1 - y2) * k,
+        r1=r1 * k,
+        x2~,
+        y2~,
+        r2=r2 * k,
+      )
+  }
+  { ..g, shape, }
+}
+
+///|
 /// The value of a `fill` or `stroke` attribute for `paint`, writing a
 /// gradient's definition first unless the page has it already. A
 /// gradient's coordinates are in the user space of what it paints
 /// (`userSpaceOnUse`), so one definition serves wherever it is used. A
 /// gradient without extent is its colour (see
-/// `@pagelayout.Gradient::degenerate_color`).
+/// `@pagelayout.Gradient::degenerate_color`); one too small on the page to
+/// draw is grown (see `drawable`), where `ctm` is the transformation from
+/// the user space to the page.
 fn paint_attr(
   sb : StringBuilder,
   paint : @pagelayout.Paint,
   defs : Defs,
+  ctm : @pagelayout.Matrix,
 ) -> String {
   match paint {
     Solid(color) => color.to_hex()
     GradientPaint(g) if g.degenerate_color() is Some(color) => color.to_hex()
     GradientPaint(g) => {
+      let g = drawable(g, ctm)
       // the definition after its id
       let def = StringBuilder()
       let transform = matrix_attr(g.transform)
@@ -460,12 +524,13 @@ fn emit_path(
   defs : Defs,
   fill_alpha : Double,
   stroke_alpha : Double,
+  ctm : @pagelayout.Matrix,
 ) -> Unit {
   let fill = match path.fill {
-    Some(paint) => paint_attr(sb, paint, defs)
+    Some(paint) => paint_attr(sb, paint, defs, ctm)
     None => "none"
   }
-  let stroke = path.stroke.map(paint => paint_attr(sb, paint, defs))
+  let stroke = path.stroke.map(paint => paint_attr(sb, paint, defs, ctm))
   sb.write_string("  <path d=\"\{path_data(path.segments)}\" fill=\"\{fill}\"")
   if path.fill is Some(_) && path.fill_rule is EvenOdd {
     sb.write_string(" fill-rule=\"evenodd\"")
@@ -493,32 +558,36 @@ fn emit_graphic(
   sb.write_string(
     "  <g transform=\"translate(\{num(graphic.x_pt)} \{num(graphic.y_pt)})\">\n",
   )
-  // per Save level: the groups opened at that level, and the alphas
+  // per Save level: the groups opened at that level, the alphas, and the
+  // transformation from the graphic's space (scaled as the page)
   let mut open = 0
   let mut fill_alpha = 1.0
   let mut stroke_alpha = 1.0
-  let stack : Array[(Int, Double, Double)] = []
+  let mut ctm = @pagelayout.identity
+  let stack : Array[(Int, Double, Double, @pagelayout.Matrix)] = []
   for op in graphic.ops {
     match op {
       Save => {
-        stack.push((open, fill_alpha, stroke_alpha))
+        stack.push((open, fill_alpha, stroke_alpha, ctm))
         open = 0
       }
       Restore =>
         match stack.pop() {
-          Some((outer, fill, stroke)) => {
+          Some((outer, fill, stroke, saved)) => {
             for _ in 0..<open {
               sb.write_string("  </g>\n")
             }
             open = outer
             fill_alpha = fill
             stroke_alpha = stroke
+            ctm = saved
           }
           None => ()
         }
       Transform(m) => {
         sb.write_string("  <g transform=\"\{matrix_attr(m)}\">\n")
         open += 1
+        ctm = ctm.after(m)
       }
       Clip(segments, rule) => {
         let id = defs.next("c")
@@ -551,6 +620,7 @@ fn emit_graphic(
             defs,
             fill_alpha,
             stroke_alpha,
+            ctm,
           )
         }
         emit_path(
@@ -564,9 +634,10 @@ fn emit_graphic(
           defs,
           fill_alpha,
           stroke_alpha,
+          ctm,
         )
       }
-      Path(path) => emit_path(sb, path, defs, fill_alpha, stroke_alpha)
+      Path(path) => emit_path(sb, path, defs, fill_alpha, stroke_alpha, ctm)
       Text(run) | PaintedText(run, _) => {
         // the paint goes on the text itself: its fill in the run's colour
         // (or none), its outline, each with its own opacity
@@ -605,7 +676,7 @@ fn emit_graphic(
     }
   }
   // close whatever an unbalanced graphic left open
-  while stack.pop() is Some((outer, _, _)) {
+  while stack.pop() is Some((outer, _, _, _)) {
     for _ in 0..<open {
       sb.write_string("  </g>\n")
     }

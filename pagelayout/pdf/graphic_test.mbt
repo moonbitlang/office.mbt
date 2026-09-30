@@ -529,12 +529,14 @@ test "a dashed hairline is dashed in the graphic's space" {
 }
 
 ///|
-/// The numbers of every `/Bounds` array in `file`, one array each.
-fn bounds_arrays(file : String) -> Array[Array[Double]] raise {
+/// The numbers of every array after `key` (`/Bounds`, say) in `file`, one
+/// array each.
+fn number_arrays(file : String, key : String) -> Array[Array[Double]] raise {
   let arrays = []
   let mut rest = file[:]
-  while rest.find("/Bounds [") is Some(i) {
-    rest = rest[i + "/Bounds [".length():]
+  let key = key + " ["
+  while rest.find(key) is Some(i) {
+    rest = rest[i + key.length():]
     let end = rest.find("]").unwrap()
     let numbers = []
     for word in rest[:end].split(" ") {
@@ -557,7 +559,7 @@ test "stitching bounds strictly increase as written, however close the stops" {
   assert_true(near_half.validate().is_empty())
   let file = as_text(@pdf.render_pdf(near_half))
   // the interval too narrow to write is dropped: the colour jumps at 0.5
-  assert_eq(bounds_arrays(file), [[0.5]])
+  assert_eq(number_arrays(file, "/Bounds"), [[0.5]])
   assert_eq(occurrences(file, "/FunctionType 2"), 2)
   assert_true(file.contains("/C0 [1 1 1] /C1 [1 0 0]"))
   assert_true(file.contains("/C0 [0 0 1] /C1 [0 0 0]"))
@@ -567,7 +569,7 @@ test "stitching bounds strictly increase as written, however close the stops" {
   ])
   assert_true(near_zero.validate().is_empty())
   let file = as_text(@pdf.render_pdf(near_zero))
-  assert_eq(bounds_arrays(file), [])
+  assert_eq(number_arrays(file, "/Bounds"), [])
   assert_eq(occurrences(file, "/FunctionType 2"), 1)
   assert_true(file.contains("/C0 [0 0 1] /C1 [0 0 0]"))
   // and near 1, only the first
@@ -575,7 +577,7 @@ test "stitching bounds strictly increase as written, however close the stops" {
     white, red, blue, @pagelayout.black,
   ])
   let file = as_text(@pdf.render_pdf(near_one))
-  assert_eq(bounds_arrays(file), [[0.25]])
+  assert_eq(number_arrays(file, "/Bounds"), [[0.25]])
   assert_true(file.contains("/C0 [1 1 1] /C1 [1 0 0]"))
   assert_true(file.contains("/C0 [1 0 0] /C1 [0 0 1]"))
 }
@@ -635,4 +637,97 @@ test "a gradient's pattern matrix survives a small transformation" {
       "q 16777216 0 0 16777216 0 0 cm /Pattern cs /P2 scn 0 35.762786865234375 59.604644775390625 -35.762786865234375 re f Q",
     ),
   )
+}
+
+///|
+/// A 100 by 60 rectangle filled with `gradient`, red to blue.
+fn gradient_rectangle(
+  shape : @pagelayout.GradientShape,
+  transform? : @pagelayout.Matrix = @pagelayout.identity,
+) -> @pagelayout.PageModel {
+  graphic_model([
+    Path({
+      segments: [Rectangle(0, 0, 100, 60)],
+      fill: Some(
+        GradientPaint({
+          shape,
+          stops: [{ offset: 0, color: red, }, { offset: 1, color: blue, }],
+          transform,
+        }),
+      ),
+      fill_rule: NonZero,
+      stroke: None,
+      stroke_style: @pagelayout.StrokeStyle::default(),
+    }),
+  ])
+}
+
+///|
+/// Whether `a` is within `tolerance` of `b`, relative to `b` (or absolute
+/// when `b` is 0).
+fn near(a : Double, b : Double, tolerance : Double) -> Bool {
+  (a - b).abs() <= tolerance * (if b == 0.0 { 1.0 } else { b.abs() })
+}
+
+///|
+test "pattern matrices are written exactly" {
+  // a hundredth of a point long, turned by a millionth of a radian: the
+  // turn is in coefficients that a rounded real would write as 0
+  let model = gradient_rectangle(Linear(x1=0, y1=0, x2=0.01, y2=1.0e-8))
+  assert_true(model.validate().is_empty())
+  let file = as_text(@pdf.render_pdf(model))
+  assert_true(file.contains("/Coords [0 0 1 0]"))
+  assert_true(
+    file.contains("/Matrix [0.01 -0.00000001 -0.00000001 -0.01 10 80]"),
+  )
+}
+
+///|
+test "a gradient too small to draw is drawn a thousandth of a point long" {
+  // a ten-millionth of a point long: Poppler's Cairo renderer paints
+  // nothing for it, and rounded reals made its matrix singular
+  let model = gradient_rectangle(Linear(x1=0, y1=0, x2=1.0e-7, y2=0))
+  assert_true(model.validate().is_empty())
+  let file = as_text(@pdf.render_pdf(model))
+  assert_true(file.contains("/Coords [0 0 1 0]"))
+  guard number_arrays(file, "/Matrix") is [[a, b, c, d, e, f]] else {
+    fail("expected one pattern matrix")
+  }
+  // grown about its middle, (10 + 5e-8, 80) on the page
+  assert_true(near(a, 0.001, 1.0e-12) && near(d, -0.001, 1.0e-12))
+  assert_eq((b, c), (0, 0))
+  assert_true(near(e + a / 2, 10 + 5.0e-8, 1.0e-15) && f == 80)
+  // a radial one ending on a circle as small, about its centre
+  let model = gradient_rectangle(
+    Radial(x1=50, y1=30, r1=0, x2=50, y2=30, r2=1.0e-7),
+  )
+  assert_true(model.validate().is_empty())
+  let file = as_text(@pdf.render_pdf(model))
+  assert_true(file.contains("/Coords [0 0 0 0 0 1]"))
+  guard number_arrays(file, "/Matrix") is [[a, b, c, d, e, f]] else {
+    fail("expected one pattern matrix")
+  }
+  assert_true(near(a, 0.001, 1.0e-12) && near(d, -0.001, 1.0e-12))
+  assert_eq((b, c, e, f), (0, 0, 60, 50))
+}
+
+///|
+test "a linear gradient too long to draw is shrunk about the page's centre" {
+  // 1e18 points long, its middle at x = 50: Poppler paints nothing where
+  // the gradient's parameter varies across the page by less than a double
+  // resolves
+  let model = gradient_rectangle(
+    Linear(x1=50 - 5.0e17, y1=0, x2=50 + 5.0e17, y2=0),
+  )
+  assert_true(model.validate().is_empty())
+  let file = as_text(@pdf.render_pdf(model))
+  guard number_arrays(file, "/Matrix") is [[a, b, c, d, e, f]] else {
+    fail("expected one pattern matrix")
+  }
+  // 1e12 long, and at the page's centre (100, 50) the parameter is what it
+  // was, 0.5 + 4e-17 (that is, 0.5 as a double)
+  assert_true(near(a, 1.0e12, 1.0e-12) && near(d, -1.0e12, 1.0e-12))
+  assert_eq((b, c), (0, 0))
+  assert_true(near((100 - e) / a, 0.5, 1.0e-15))
+  ignore(f)
 }
