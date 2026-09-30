@@ -270,11 +270,14 @@ fn subpaths(segments : Array[@pagelayout.PathSegment]) -> Array[Subpath] {
 /// subpath, joined there. A dash of length 0 is a subpath of length 0 (a
 /// dot, with round or square caps) wherever the pattern has one, at a
 /// subpath's start too (at phase 0) but not at its end, where nothing
-/// starts. A closed subpath keeps its closing join: the one dash of a
-/// subpath dashed all round is closed, and a dash running to its end is
-/// continued by the one starting at its start, one subpath through the
-/// start corner. A path none of which is drawn, all at one point, is a
-/// dot.
+/// starts. A path none of which is drawn, all at one point, is a dot.
+///
+/// One exception to the Splash reference: a closed subpath keeps its
+/// closing join, as SVG's `closepath` requires, where Splash caps the
+/// dashes meeting at the seam. The one dash of a subpath dashed all round
+/// is closed (drawn as the undashed path is), and a dash running to its
+/// end is continued by the one starting at its start, one subpath through
+/// the start corner.
 fn dashed(
   segments : Array[@pagelayout.PathSegment],
   dash : Array[Double],
