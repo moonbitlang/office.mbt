@@ -218,7 +218,7 @@ test "a dashed hairline keeps its dashes in the graphic's space" {
 }
 
 ///|
-test "dashed hairlines restart at each subpath, from the phase, and follow curves" {
+test "dashed hairlines restart at each subpath, from the phase" {
   let hairline = {
     ..@pagelayout.StrokeStyle::default(),
     width: Hairline,
@@ -238,12 +238,7 @@ test "dashed hairlines restart at each subpath, from the phase, and follow curve
       // a quarter of the way into the pattern [2 2] at 1: one unit on,
       // then two off, two on; again for the second subpath
       stroked(
-        [
-          MoveTo(0, 10),
-          LineTo(6, 10),
-          MoveTo(0, 20),
-          CurveTo(2, 20, 4, 20, 6, 20),
-        ],
+        [MoveTo(0, 10), LineTo(6, 10), MoveTo(0, 20), LineTo(6, 20)],
         hairline,
       ),
     ]
@@ -251,49 +246,164 @@ test "dashed hairlines restart at each subpath, from the phase, and follow curve
   let svg = @svg.render_page(model, 0)
   assert_true(svg.contains("<path d=\"M0 4h4v-4h-4Z\" fill=\"#000000\"/>"))
   // around the square from its bottom-left corner, 16 long: on 0-1, 3-5,
-  // 7-9, 11-13, 15-16, the dashes turning its corners
+  // 7-9, 11-13, 15-16, the dashes turning its corners; the last runs on
+  // through the start into the first, joined there as the closed square
+  // is, not capped
   assert_true(
     svg.contains(
-      "<path d=\"M0 4L1 4M3 4L4 4L4 3M4 1L4 0L3 0M1 0L0 0L0 1M0 3L0 4\" fill=\"none\"",
+      "<path d=\"M3 4L4 4L4 3M4 1L4 0L3 0M1 0L0 0L0 1M0 3L0 4L1 4\" fill=\"none\"",
     ),
   )
-  // the curve (straight, its parameter in step with its length) split
-  // where the lines are
-  let start = svg.find("<path d=\"M0 10").unwrap() + "<path d=\"".length()
+  assert_true(
+    svg.contains("<path d=\"M0 10L1 10M3 10L5 10M0 20L1 20M3 20L5 20\""),
+  )
+}
+
+///|
+test "dashed hairlines follow curves" {
+  // an arch: x = 6t, y = 20 + 18t(1 - t)
+  let curve = @pagelayout.PathSegment::CurveTo(2, 26, 4, 26, 6, 20)
+  let model = text_graphic(_ => {
+    [
+      stroked([MoveTo(0, 20), curve], {
+        ..@pagelayout.StrokeStyle::default(),
+        width: Hairline,
+        dash: [2],
+        dash_phase: 1,
+      }),
+    ]
+  })
+  let svg = @svg.render_page(model, 0)
+  let start = svg.find("<path d=\"M0 20").unwrap() + "<path d=\"".length()
   let d = svg[start:]
-  let d = d[:d.find("\"").unwrap()]
-  let (letters, numbers) = path_parts(d)
-  assert_eq(letters, "MLMLMCMC")
-  let expected : ReadOnlyArray[Double] = [
-    0.0,
-    10,
-    1,
-    10,
-    3,
-    10,
-    5,
-    10,
-    0,
-    20,
-    1.0 / 3,
-    20,
-    2.0 / 3,
-    20,
-    1,
-    20,
-    3,
-    20,
-    11.0 / 3,
-    20,
-    13.0 / 3,
-    20,
-    5,
-    20,
-  ]
-  assert_eq(numbers.length(), expected.length())
-  for i, n in numbers {
-    assert_true((n - expected[i]).abs() < 1.0e-9)
+  let (letters, numbers) = path_parts(d[:d.find("\"").unwrap()])
+  // the arch's length along it up to parameter t, finely
+  let at = fn(t : Double) -> (Double, Double) {
+    (6.0 * t, 20.0 + 18.0 * t * (1.0 - t))
   }
+  let length = fn(t : Double) {
+    let mut sum = 0.0
+    let steps = 100000
+    for i in 0..<steps {
+      let (x0, y0) = at(t * i.to_double() / steps.to_double())
+      let (x1, y1) = at(t * (i + 1).to_double() / steps.to_double())
+      sum += ((x1 - x0) * (x1 - x0) + (y1 - y0) * (y1 - y0)).sqrt()
+    }
+    sum
+  }
+  let total = length(1)
+  // dashes on from 0 to 1, 3 to 5, 7 to 9, 11 to 13 (the arch is about
+  // 13.2 long), each a part of the curve
+  let dashes = ((total + 1) / 4).ceil().to_int()
+  assert_eq(letters, "MC".repeat(dashes))
+  for i in 0..<dashes {
+    let n = numbers[i * 8:i * 8 + 8]
+    // its ends are on the arch where the dash starts and ends along it
+    let t0 = n[0] / 6
+    let t1 = n[6] / 6
+    let (_, y0) = at(t0)
+    let (_, y1) = at(t1)
+    assert_true((n[1] - y0).abs() < 1.0e-9 && (n[7] - y1).abs() < 1.0e-9)
+    let from = if i == 0 { 0.0 } else { 4.0 * i.to_double() - 1 }
+    let to = if 4.0 * i.to_double() + 1 > total {
+      total
+    } else {
+      4.0 * i.to_double() + 1
+    }
+    assert_true((length(t0) - from).abs() < 0.01)
+    assert_true((length(t1) - to).abs() < 0.01)
+    // and it is the arch between them: its middle is the arch's
+    let mx = (n[0] + 3 * n[2] + 3 * n[4] + n[6]) / 8
+    let my = (n[1] + 3 * n[3] + 3 * n[5] + n[7]) / 8
+    let (ax, ay) = at((t0 + t1) / 2)
+    assert_true((mx - ax).abs() < 1.0e-9 && (my - ay).abs() < 1.0e-9)
+  }
+}
+
+///|
+test "a dotted hairline has its dots where PDF draws them" {
+  let dotted = {
+    ..@pagelayout.StrokeStyle::default(),
+    width: Hairline,
+    cap: RoundCap,
+    dash: [0, 10],
+  }
+  let d = fn(segments : Array[@pagelayout.PathSegment]) {
+    let svg = @svg.render_page(
+      text_graphic(_ => [stroked(segments, dotted)]),
+      0,
+    )
+    let start = svg.find("<path d=\"").unwrap() + "<path d=\"".length()
+    let rest = svg[start:]
+    rest[:rest.find("\"").unwrap()].to_owned()
+  }
+  // a dot where the line starts, as PDF's dash of length 0 at phase 0
+  assert_eq(d([MoveTo(20, 20), LineTo(25, 20)]), "M20 20L20 20")
+  // every ten points on, but none where the line ends
+  assert_eq(
+    d([MoveTo(20, 20), LineTo(60, 20)]),
+    "M20 20L20 20M30 20L30 20M40 20L40 20M50 20L50 20",
+  )
+  // at a corner
+  assert_eq(
+    d([MoveTo(0, 0), LineTo(10, 0), LineTo(10, 10)]),
+    "M0 0L0 0M10 0L10 0",
+  )
+  // round a square: at its corners, once at its start
+  assert_eq(
+    d([Rectangle(0, 0, 10, 10)]),
+    "M0 10L0 10M10 10L10 10M10 0L10 0M0 0L0 0",
+  )
+  // a path all at one point is a dot
+  assert_eq(d([MoveTo(5, 5), LineTo(5, 5)]), "M5 5L5 5")
+}
+
+///|
+test "a dash round a closed subpath is closed, and one across its start joins there" {
+  let dashed = fn(
+    segments : Array[@pagelayout.PathSegment],
+    dash : Array[Double],
+    phase : Double,
+  ) {
+    let style = {
+      ..@pagelayout.StrokeStyle::default(),
+      width: Hairline,
+      dash,
+      dash_phase: phase,
+    }
+    let svg = @svg.render_page(text_graphic(_ => [stroked(segments, style)]), 0)
+    let start = svg.find("<path d=\"").unwrap() + "<path d=\"".length()
+    let rest = svg[start:]
+    rest[:rest.find("\"").unwrap()].to_owned()
+  }
+  // one dash all round: the triangle closed, its start corner joined
+  assert_eq(
+    dashed(
+      [MoveTo(20, 60), LineTo(60, 60), LineTo(40, 20), Close],
+      [1000, 1],
+      0,
+    ),
+    "M20 60L60 60L40 20Z",
+  )
+  // 120 round, dashed on 0-50 and 70-130: the second dash runs through the
+  // start into the first, one subpath joined at the start corner
+  let triangle : Array[@pagelayout.PathSegment] = [
+    MoveTo(0, 0),
+    LineTo(40, 0),
+    LineTo(40, 30),
+    Close,
+  ]
+  assert_eq(dashed(triangle, [60, 20], 10), "M40 30L0 0L40 0L40 10")
+  // a subpath that only ends where it starts is not closed: its dashes
+  // meet there, capped
+  assert_eq(
+    dashed(
+      [MoveTo(0, 0), LineTo(40, 0), LineTo(40, 30), LineTo(0, 0)],
+      [60, 20],
+      10,
+    ),
+    "M0 0L40 0L40 10M40 30L0 0",
+  )
 }
 
 ///|

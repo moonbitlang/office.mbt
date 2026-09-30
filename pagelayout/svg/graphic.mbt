@@ -146,11 +146,14 @@ fn Measured::parameter(self : Measured, s : Double) -> Double {
 }
 
 ///|
-/// The point at length `s` along the piece.
+/// The point at length `s` along the piece (its ends exactly at 0 and at
+/// its length).
 fn Measured::point(self : Measured, s : Double) -> (Double, Double) {
   match self.piece {
+    Line(x0, y0, _, _) if s <= 0.0 => (x0, y0)
+    Line(_, _, x1, y1) if s >= self.length => (x1, y1)
     Line(x0, y0, x1, y1) => {
-      let f = if self.length > 0.0 { s / self.length } else { 0.0 }
+      let f = s / self.length
       (x0 + (x1 - x0) * f, y0 + (y1 - y0) * f)
     }
     Curve(x0, y0, x1, y1, x2, y2, x3, y3) => {
@@ -184,10 +187,18 @@ fn Measured::part(
 }
 
 ///|
-/// A path's subpaths as pieces, a `Close` (or a `Rectangle`'s end)
-/// closing its own with a line back to its start.
-fn subpaths(segments : Array[@pagelayout.PathSegment]) -> Array[Array[Piece]] {
-  let result : Array[Array[Piece]] = []
+/// A subpath as pieces, and whether it is closed: a `Close` (or a
+/// `Rectangle`'s end) closes it with a line back to its start, its last
+/// piece (of length 0 when the subpath is back there already).
+priv struct Subpath {
+  pieces : Array[Piece]
+  closed : Bool
+}
+
+///|
+/// A path's subpaths, those with a piece.
+fn subpaths(segments : Array[@pagelayout.PathSegment]) -> Array[Subpath] {
+  let result : Array[Subpath] = []
   let mut pieces : Array[Piece] = []
   let mut x = 0.0
   let mut y = 0.0
@@ -197,7 +208,7 @@ fn subpaths(segments : Array[@pagelayout.PathSegment]) -> Array[Array[Piece]] {
     match segment {
       MoveTo(mx, my) => {
         if !pieces.is_empty() {
-          result.push(pieces)
+          result.push({ pieces, closed: false, })
         }
         pieces = []
         x = mx
@@ -217,22 +228,25 @@ fn subpaths(segments : Array[@pagelayout.PathSegment]) -> Array[Array[Piece]] {
       }
       Close => {
         pieces.push(Line(x, y, start_x, start_y))
-        result.push(pieces)
+        result.push({ pieces, closed: true, })
         pieces = []
         x = start_x
         y = start_y
       }
       Rectangle(rx, ry, w, h) => {
         if !pieces.is_empty() {
-          result.push(pieces)
+          result.push({ pieces, closed: false, })
         }
         // the winding of `PathSegment::Rectangle`
-        result.push([
-          Line(rx, ry + h, rx + w, ry + h),
-          Line(rx + w, ry + h, rx + w, ry),
-          Line(rx + w, ry, rx, ry),
-          Line(rx, ry, rx, ry + h),
-        ])
+        result.push({
+          pieces: [
+            Line(rx, ry + h, rx + w, ry + h),
+            Line(rx + w, ry + h, rx + w, ry),
+            Line(rx + w, ry, rx, ry),
+            Line(rx, ry, rx, ry + h),
+          ],
+          closed: true,
+        })
         pieces = []
         x = rx
         y = ry + h
@@ -242,18 +256,25 @@ fn subpaths(segments : Array[@pagelayout.PathSegment]) -> Array[Array[Piece]] {
     }
   }
   if !pieces.is_empty() {
-    result.push(pieces)
+    result.push({ pieces, closed: false, })
   }
   result
 }
 
 ///|
 /// The dashes of a path dashed by `dash` from `phase` (see
-/// `@pagelayout.StrokeStyle`), as PDF dashes it: the pattern (twice over
-/// when its length is odd) runs along each subpath in the path's own
-/// space, restarting from the phase at each; a dash turning a corner is
-/// one subpath, joined there; a dash of length 0 is a subpath of length 0
-/// (a dot, with round or square caps).
+/// `@pagelayout.StrokeStyle`), as PDF dashes it (Poppler's Splash as the
+/// reference): the pattern (twice over when its length is odd) runs along
+/// each subpath in the path's own space, restarting from the phase at
+/// each and skipping pieces of length 0. A dash turning a corner is one
+/// subpath, joined there. A dash of length 0 is a subpath of length 0 (a
+/// dot, with round or square caps) wherever the pattern has one, at a
+/// subpath's start too (at phase 0) but not at its end, where nothing
+/// starts. A closed subpath keeps its closing join: the one dash of a
+/// subpath dashed all round is closed, and a dash running to its end is
+/// continued by the one starting at its start, one subpath through the
+/// start corner. A path none of which is drawn, all at one point, is a
+/// dot.
 fn dashed(
   segments : Array[@pagelayout.PathSegment],
   dash : Array[Double],
@@ -263,59 +284,131 @@ fn dashed(
   let period = pattern.fold(init=0.0, (sum, d) => sum + d)
   // at least one length is positive (see `PageModel::validate`)
   guard period > 0.0 else { return segments }
-  let out : Array[@pagelayout.PathSegment] = []
-  for pieces in subpaths(segments) {
-    // where in the pattern the subpath starts, and how much of that
-    // length is left
-    let mut index = 0
-    let mut left = pattern[0]
-    let mut into = phase - (phase / period).floor() * period
-    while into >= left {
-      into -= left
-      index = (index + 1) % pattern.length()
-      left = pattern[index]
+  // where in the pattern each subpath starts, and how much of that length
+  // is left: from the phase, lengths it reaches the end of are passed
+  // (unless it is 0, so that a dash of length 0 first is drawn)
+  let mut first = 0
+  let mut into = phase - (phase / period).floor() * period
+  if into > 0.0 {
+    while first < pattern.length() && into >= pattern[first] {
+      into -= pattern[first]
+      first += 1
     }
-    left -= into
-    // whether a dash is being drawn, and whether it has a segment yet
-    let mut open = false
-    let mut drawn = false
-    for piece in pieces {
-      let m = measure(piece)
-      let mut s = 0.0
-      while true {
-        let on = index % 2 == 0
-        if on && !open {
-          let (x, y) = m.point(s)
-          out.push(MoveTo(x, y))
-          open = true
-          drawn = false
-        }
-        let step = if left < m.length - s { left } else { m.length - s }
-        if on && step > 0.0 {
-          out.push(m.part(s, s + step))
-          drawn = true
-        }
-        s += step
-        left -= step
-        guard left <= 0.0 else { break }
-        // this length of the pattern ends here
-        if on {
-          if !drawn {
-            let (x, y) = m.point(s)
-            out.push(LineTo(x, y))
-          }
-          open = false
-        }
-        index = (index + 1) % pattern.length()
-        left = pattern[index]
-      }
-    }
-    // a dash that would start where the subpath ends is not drawn
-    if open && !drawn {
-      let _ = out.pop()
+    if first == pattern.length() {
+      first = 0
+      into = 0
     }
   }
+  let first_left = pattern[first] - into
+  let out : Array[@pagelayout.PathSegment] = []
+  for subpath in subpaths(segments) {
+    let mut index = first
+    let mut left = first_left
+    // the subpath's dashes, each from its `MoveTo`
+    let dashes : Array[Array[@pagelayout.PathSegment]] = []
+    let mut open = false
+    // whether the first dash starts at the subpath's start, and the last
+    // runs to its end
+    let mut from_start = false
+    let mut to_end = false
+    let mut at_start = true
+    for piece in subpath.pieces {
+      let m = measure(piece)
+      let mut s = 0.0
+      while m.length - s > 0.0 {
+        let on = index % 2 == 0
+        let rest = m.length - s
+        let step = if left >= rest { rest } else { left }
+        if on {
+          if !open {
+            let (x, y) = m.point(s)
+            dashes.push([MoveTo(x, y)])
+            open = true
+            if dashes.length() == 1 {
+              from_start = at_start
+            }
+          }
+          let current = dashes[dashes.length() - 1]
+          if step > 0.0 {
+            current.push(m.part(s, s + step))
+          } else {
+            let (x, y) = m.point(s)
+            current.push(LineTo(x, y))
+          }
+        }
+        to_end = on && left >= rest
+        at_start = false
+        s += step
+        left -= step
+        if left <= 0.0 {
+          index = (index + 1) % pattern.length()
+          left = pattern[index]
+          open = false
+        }
+      }
+    }
+    if subpath.closed && from_start && to_end {
+      let last = dashes.pop().unwrap()
+      if dashes.is_empty() {
+        // all round: closed, by `Close` rather than the closing line
+        if subpath.pieces[subpath.pieces.length() - 1] is Line(x0, y0, x1, y1) &&
+          (x0 != x1 || y0 != y1) &&
+          last[last.length() - 1] is LineTo(_, _) &&
+          last.length() > 2 {
+          let _ = last.pop()
+        }
+        last.push(Close)
+        dashes.push(last)
+      } else {
+        dashes[0] = last + dashes[0][1:].to_owned()
+        dashes.push(dashes.remove(0))
+      }
+    }
+    for d in dashes {
+      out.append(d)
+    }
+  }
+  // nothing drawn of a path all at one point: a dot there
+  if out.is_empty() && one_point(segments) is Some((x, y)) {
+    out.push(MoveTo(x, y))
+    out.push(LineTo(x, y))
+  }
   out
+}
+
+///|
+/// The point a path is all at, when it has a segment other than `MoveTo`
+/// and every point it names is the same.
+fn one_point(segments : Array[@pagelayout.PathSegment]) -> (Double, Double)? {
+  let points : Array[(Double, Double)] = []
+  let mut drawn = false
+  for segment in segments {
+    match segment {
+      MoveTo(x, y) => points.push((x, y))
+      LineTo(x, y) => {
+        points.push((x, y))
+        drawn = true
+      }
+      CurveTo(x1, y1, x2, y2, x, y) => {
+        points.push((x1, y1))
+        points.push((x2, y2))
+        points.push((x, y))
+        drawn = true
+      }
+      Rectangle(x, y, w, h) => {
+        points.push((x, y))
+        points.push((x + w, y + h))
+        drawn = true
+      }
+      Close => drawn = true
+    }
+  }
+  guard drawn && points is [first, ..] else { return None }
+  if points.iter().all(p => p == first) {
+    Some(first)
+  } else {
+    None
+  }
 }
 
 ///|
