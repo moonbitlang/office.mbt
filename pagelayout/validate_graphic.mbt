@@ -130,9 +130,10 @@ fn check_stroke_style(
 /// balance (never more restores than saves so far, as many in all);
 /// transformations are finite; paths and clips are well-formed (see
 /// `check_segments`); alphas are within 0..=1; the strokes painted are
-/// valid (see `check_stroke_style`) and so is every paint (`check_paint`);
-/// glyph runs and images are well-formed as page items are, and placed at
-/// finite positions.
+/// valid (see `check_stroke_style`), and text is not outlined with a
+/// dashed hairline; every paint is valid (`check_paint`); glyph runs and
+/// images are well-formed as page items are, and placed at finite
+/// positions.
 fn PageModel::check_graphic(
   self : PageModel,
   violations : Array[String],
@@ -184,6 +185,13 @@ fn PageModel::check_graphic(
               Some(color) => {
                 check_color(violations, at, color)
                 check_stroke_style(violations, at, paint.stroke_style)
+                // SVG can dash a path's hairline in the graphic's space
+                // only by drawing the dashes itself, which it cannot do
+                // to glyph outlines (see `StrokeWidth`)
+                if paint.stroke_style.width is Hairline &&
+                  !paint.stroke_style.dash.is_empty() {
+                  violations.push("\{at}: dashed hairline outlining text")
+                }
               }
               None => ()
             }

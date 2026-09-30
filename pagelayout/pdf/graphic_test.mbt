@@ -465,6 +465,34 @@ test "an image in a graphic is drawn upright and shares its XObject" {
 }
 
 ///|
+test "a dashed hairline is dashed in the graphic's space" {
+  // PDF measures dashes in user space whatever the line width: ten units
+  // scaled by ten, one on and one off, are five dashes ten points long,
+  // which SVG draws dash by dash
+  let model = graphic_model([
+    Transform({ a: 10, b: 0, c: 0, d: 10, e: 0, f: 0, }),
+    Path({
+      segments: [MoveTo(0, 0), LineTo(10, 0)],
+      fill: None,
+      fill_rule: NonZero,
+      stroke: Some(Solid(@pagelayout.black)),
+      stroke_style: {
+        ..@pagelayout.StrokeStyle::default(),
+        width: Hairline,
+        dash: [1, 1],
+      },
+    }),
+  ])
+  assert_true(model.validate().is_empty())
+  let text = try! as_decoded_text(@pdf.render_pdf(model))
+  assert_true(
+    text.contains(
+      "10 0 0 10 0 0 cm 0 0 0 RG 0 w 0 J 0 j 10 M [1 1] 0 d 0 0 m 10 0 l S",
+    ),
+  )
+}
+
+///|
 /// The numbers of every `/Bounds` array in `file`, one array each.
 fn bounds_arrays(file : String) -> Array[Array[Double]] raise {
   let arrays = []

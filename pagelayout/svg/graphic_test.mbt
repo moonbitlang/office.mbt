@@ -177,6 +177,152 @@ test "a hairline is a non-scaling stroke one pixel wide" {
 }
 
 ///|
+/// A stroke-only path in `style`, black.
+fn stroked(
+  segments : Array[@pagelayout.PathSegment],
+  style : @pagelayout.StrokeStyle,
+) -> @pagelayout.GraphicOp {
+  Path({
+    segments,
+    fill: None,
+    fill_rule: NonZero,
+    stroke: Some(Solid(@pagelayout.black)),
+    stroke_style: style,
+  })
+}
+
+///|
+test "a dashed hairline keeps its dashes in the graphic's space" {
+  // ten units scaled by ten, dashed one on, one off: five dashes ten
+  // points long, as PDF draws `[1 1] 0 d` with `0 w` there
+  let hairline = {
+    ..@pagelayout.StrokeStyle::default(),
+    width: Hairline,
+    dash: [1, 1],
+  }
+  let model = text_graphic(_ => {
+    [
+      Transform({ a: 10, b: 0, c: 0, d: 10, e: 0, f: 0, }),
+      stroked([MoveTo(0, 0), LineTo(10, 0)], hairline),
+    ]
+  })
+  let svg = @svg.render_page(model, 0)
+  // the dashes are drawn as subpaths of a solid non-scaling stroke, since
+  // a non-scaling stroke's dash lengths would not be in the graphic's space
+  assert_true(
+    svg.contains(
+      "<path d=\"M0 0L1 0M2 0L3 0M4 0L5 0M6 0L7 0M8 0L9 0\" fill=\"none\" stroke=\"#000000\" stroke-width=\"1\" vector-effect=\"non-scaling-stroke\" stroke-miterlimit=\"10\"/>",
+    ),
+  )
+  assert_false(svg.contains("stroke-dasharray"))
+}
+
+///|
+test "dashed hairlines restart at each subpath, from the phase, and follow curves" {
+  let hairline = {
+    ..@pagelayout.StrokeStyle::default(),
+    width: Hairline,
+    dash: [2],
+    dash_phase: 1,
+  }
+  let model = text_graphic(_ => {
+    [
+      // a filled square keeps its fill, whole
+      Path({
+        segments: [Rectangle(0, 0, 4, 4)],
+        fill: Some(Solid(@pagelayout.black)),
+        fill_rule: NonZero,
+        stroke: Some(Solid(@pagelayout.black)),
+        stroke_style: hairline,
+      }),
+      // a quarter of the way into the pattern [2 2] at 1: one unit on,
+      // then two off, two on; again for the second subpath
+      stroked(
+        [
+          MoveTo(0, 10),
+          LineTo(6, 10),
+          MoveTo(0, 20),
+          CurveTo(2, 20, 4, 20, 6, 20),
+        ],
+        hairline,
+      ),
+    ]
+  })
+  let svg = @svg.render_page(model, 0)
+  assert_true(svg.contains("<path d=\"M0 4h4v-4h-4Z\" fill=\"#000000\"/>"))
+  // around the square from its bottom-left corner, 16 long: on 0-1, 3-5,
+  // 7-9, 11-13, 15-16, the dashes turning its corners
+  assert_true(
+    svg.contains(
+      "<path d=\"M0 4L1 4M3 4L4 4L4 3M4 1L4 0L3 0M1 0L0 0L0 1M0 3L0 4\" fill=\"none\"",
+    ),
+  )
+  // the curve (straight, its parameter in step with its length) split
+  // where the lines are
+  let start = svg.find("<path d=\"M0 10").unwrap() + "<path d=\"".length()
+  let d = svg[start:]
+  let d = d[:d.find("\"").unwrap()]
+  let (letters, numbers) = path_parts(d)
+  assert_eq(letters, "MLMLMCMC")
+  let expected : ReadOnlyArray[Double] = [
+    0.0,
+    10,
+    1,
+    10,
+    3,
+    10,
+    5,
+    10,
+    0,
+    20,
+    1.0 / 3,
+    20,
+    2.0 / 3,
+    20,
+    1,
+    20,
+    3,
+    20,
+    11.0 / 3,
+    20,
+    13.0 / 3,
+    20,
+    5,
+    20,
+  ]
+  assert_eq(numbers.length(), expected.length())
+  for i, n in numbers {
+    assert_true((n - expected[i]).abs() < 1.0e-9)
+  }
+}
+
+///|
+/// Path data's command letters, and its numbers.
+fn path_parts(d : StringView) -> (String, Array[Double]) raise {
+  let letters = StringBuilder()
+  let numbers = []
+  let word = StringBuilder()
+  let flush = fn() raise {
+    if word.to_string() != "" {
+      numbers.push(@string.parse_double(word.to_string()))
+      word.reset()
+    }
+  }
+  for c in d {
+    if c is ('A'..='Z' | 'a'..='z') && c != 'e' {
+      flush()
+      letters.write_char(c)
+    } else if c == ' ' {
+      flush()
+    } else {
+      word.write_char(c)
+    }
+  }
+  flush()
+  (letters.to_string(), numbers)
+}
+
+///|
 test "gradient stops at the ends: only the one nearer the middle is written" {
   let colours : ReadOnlyArray[@pagelayout.Color] = [
     @pagelayout.Color::rgb(255, 255, 255),

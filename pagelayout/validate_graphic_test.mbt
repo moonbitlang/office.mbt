@@ -263,3 +263,55 @@ test "validate rejects zero-width strokes, of paths and of text" {
     ),
   )
 }
+
+///|
+test "validate rejects dashed hairline outlines of text, not of paths" {
+  let model = @pagelayout.PageModel::new()
+  let font = model.add_font({ family: "Sans", bold: false, italic: false, })
+  let run = @pagelayout.GlyphRun::{
+    font,
+    size_pt: 10,
+    x_pt: 0,
+    baseline_pt: 10,
+    text: "A",
+    advances_pt: [6],
+    color: @pagelayout.black,
+  }
+  let style = @pagelayout.StrokeStyle::default()
+  let dashed_hairline = { ..style, width: Hairline, dash: [1, 1], }
+  let line = [@pagelayout.PathSegment::MoveTo(0, 0), LineTo(1, 1)]
+  let page = @pagelayout.Page::{ width_pt: 200, height_pt: 100, items: [], }
+  page.items.push(
+    Graphic({
+      x_pt: 0,
+      y_pt: 0,
+      ops: [
+        PaintedText(run, {
+          fill: false,
+          stroke: Some(@pagelayout.black),
+          stroke_style: dashed_hairline,
+        }),
+        // fine: a path's dashed hairline, a text outline's solid one or its
+        // dashed stroke of a width
+        stroked(line, dashed_hairline),
+        PaintedText(run, {
+          fill: false,
+          stroke: Some(@pagelayout.black),
+          stroke_style: { ..dashed_hairline, dash: [], },
+        }),
+        PaintedText(run, {
+          fill: false,
+          stroke: Some(@pagelayout.black),
+          stroke_style: { ..dashed_hairline, width: Width(1), },
+        }),
+      ],
+    }),
+  )
+  model.pages.push(page)
+  debug_inspect(
+    model.validate(),
+    content=(
+      #|["page 0 item 0 op 0: dashed hairline outlining text"]
+    ),
+  )
+}

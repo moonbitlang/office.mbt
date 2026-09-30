@@ -98,7 +98,11 @@ pub(all) enum StrokeWidth {
   /// This many units of the space the stroke is drawn in.
   Width(Double)
   /// The thinnest line the device can draw, whatever the transformation:
-  /// PDF's line width 0; in SVG a non-scaling stroke one CSS pixel wide.
+  /// PDF's line width 0; in SVG a non-scaling stroke one pixel wide. Its
+  /// dashes, like any stroke's, are measured in the space it is drawn in
+  /// (not the device's), so SVG draws a dashed hairline as its dashes,
+  /// each a solid hairline; glyph outlines cannot be drawn so, and text is
+  /// not outlined with a dashed hairline (checked by `PageModel::validate`).
   Hairline
 } derive(Eq, Debug, ToJson)
 

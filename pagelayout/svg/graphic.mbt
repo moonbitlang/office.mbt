@@ -40,6 +40,285 @@ fn path_data(segments : Array[@pagelayout.PathSegment]) -> String {
 }
 
 ///|
+/// A straight or curved piece of a subpath, from its first point.
+priv enum Piece {
+  Line(Double, Double, Double, Double)
+  Curve(Double, Double, Double, Double, Double, Double, Double, Double)
+}
+
+///|
+/// How finely a curve is divided to measure its length.
+const CURVE_STEPS : Int = 64
+
+///|
+fn bezier(
+  p0 : Double,
+  p1 : Double,
+  p2 : Double,
+  p3 : Double,
+  t : Double,
+) -> Double {
+  let u = 1.0 - t
+  u * u * u * p0 + 3.0 * u * u * t * p1 + 3.0 * u * t * t * p2 + t * t * t * p3
+}
+
+///|
+/// The first (`left`) or second part of the cubic `q` split at `t` (de
+/// Casteljau), its four control values.
+fn bezier_split(q : Array[Double], t : Double, left~ : Bool) -> Array[Double] {
+  let a = q[0] + (q[1] - q[0]) * t
+  let b = q[1] + (q[2] - q[1]) * t
+  let c = q[2] + (q[3] - q[2]) * t
+  let d = a + (b - a) * t
+  let e = b + (c - b) * t
+  let mid = d + (e - d) * t
+  if left {
+    [q[0], a, d, mid]
+  } else {
+    [mid, e, c, q[3]]
+  }
+}
+
+///|
+/// The part of the cubic `q` from `t0` to `t1`.
+fn bezier_part(q : Array[Double], t0 : Double, t1 : Double) -> Array[Double] {
+  let head = if t1 < 1.0 { bezier_split(q, t1, left=true) } else { q }
+  if t0 <= 0.0 || t1 <= 0.0 {
+    head
+  } else {
+    bezier_split(head, t0 / t1, left=false)
+  }
+}
+
+///|
+/// A piece measured: its length, and for a curve the length up to each of
+/// `CURVE_STEPS` equal steps of its parameter, to find where a length
+/// along it falls.
+priv struct Measured {
+  piece : Piece
+  length : Double
+  lengths : Array[Double]
+}
+
+///|
+fn measure(piece : Piece) -> Measured {
+  match piece {
+    Line(x0, y0, x1, y1) => {
+      let length = ((x1 - x0) * (x1 - x0) + (y1 - y0) * (y1 - y0)).sqrt()
+      { piece, length, lengths: [], }
+    }
+    Curve(x0, y0, x1, y1, x2, y2, x3, y3) => {
+      let lengths = [0.0]
+      let mut px = x0
+      let mut py = y0
+      let mut total = 0.0
+      for i in 1..<=CURVE_STEPS {
+        let t = i.to_double() / CURVE_STEPS.to_double()
+        let x = bezier(x0, x1, x2, x3, t)
+        let y = bezier(y0, y1, y2, y3, t)
+        total += ((x - px) * (x - px) + (y - py) * (y - py)).sqrt()
+        lengths.push(total)
+        px = x
+        py = y
+      }
+      { piece, length: total, lengths, }
+    }
+  }
+}
+
+///|
+/// The parameter of a curve at length `s` along it.
+fn Measured::parameter(self : Measured, s : Double) -> Double {
+  if s <= 0.0 || self.length <= 0.0 {
+    return 0.0
+  }
+  if s >= self.length {
+    return 1.0
+  }
+  let lengths = self.lengths
+  let mut i = 1
+  while i < CURVE_STEPS && lengths[i] < s {
+    i += 1
+  }
+  let span = lengths[i] - lengths[i - 1]
+  let within = if span > 0.0 { (s - lengths[i - 1]) / span } else { 0.0 }
+  (i.to_double() - 1.0 + within) / CURVE_STEPS.to_double()
+}
+
+///|
+/// The point at length `s` along the piece.
+fn Measured::point(self : Measured, s : Double) -> (Double, Double) {
+  match self.piece {
+    Line(x0, y0, x1, y1) => {
+      let f = if self.length > 0.0 { s / self.length } else { 0.0 }
+      (x0 + (x1 - x0) * f, y0 + (y1 - y0) * f)
+    }
+    Curve(x0, y0, x1, y1, x2, y2, x3, y3) => {
+      let t = self.parameter(s)
+      (bezier(x0, x1, x2, x3, t), bezier(y0, y1, y2, y3, t))
+    }
+  }
+}
+
+///|
+/// The segment drawing the piece from length `s0` to `s1` along it, from
+/// the point at `s0`.
+fn Measured::part(
+  self : Measured,
+  s0 : Double,
+  s1 : Double,
+) -> @pagelayout.PathSegment {
+  match self.piece {
+    Line(_, _, _, _) => {
+      let (x, y) = self.point(s1)
+      LineTo(x, y)
+    }
+    Curve(x0, y0, x1, y1, x2, y2, x3, y3) => {
+      let t0 = self.parameter(s0)
+      let t1 = self.parameter(s1)
+      let xs = bezier_part([x0, x1, x2, x3], t0, t1)
+      let ys = bezier_part([y0, y1, y2, y3], t0, t1)
+      CurveTo(xs[1], ys[1], xs[2], ys[2], xs[3], ys[3])
+    }
+  }
+}
+
+///|
+/// A path's subpaths as pieces, a `Close` (or a `Rectangle`'s end)
+/// closing its own with a line back to its start.
+fn subpaths(segments : Array[@pagelayout.PathSegment]) -> Array[Array[Piece]] {
+  let result : Array[Array[Piece]] = []
+  let mut pieces : Array[Piece] = []
+  let mut x = 0.0
+  let mut y = 0.0
+  let mut start_x = 0.0
+  let mut start_y = 0.0
+  for segment in segments {
+    match segment {
+      MoveTo(mx, my) => {
+        if !pieces.is_empty() {
+          result.push(pieces)
+        }
+        pieces = []
+        x = mx
+        y = my
+        start_x = mx
+        start_y = my
+      }
+      LineTo(lx, ly) => {
+        pieces.push(Line(x, y, lx, ly))
+        x = lx
+        y = ly
+      }
+      CurveTo(x1, y1, x2, y2, cx, cy) => {
+        pieces.push(Curve(x, y, x1, y1, x2, y2, cx, cy))
+        x = cx
+        y = cy
+      }
+      Close => {
+        pieces.push(Line(x, y, start_x, start_y))
+        result.push(pieces)
+        pieces = []
+        x = start_x
+        y = start_y
+      }
+      Rectangle(rx, ry, w, h) => {
+        if !pieces.is_empty() {
+          result.push(pieces)
+        }
+        // the winding of `PathSegment::Rectangle`
+        result.push([
+          Line(rx, ry + h, rx + w, ry + h),
+          Line(rx + w, ry + h, rx + w, ry),
+          Line(rx + w, ry, rx, ry),
+          Line(rx, ry, rx, ry + h),
+        ])
+        pieces = []
+        x = rx
+        y = ry + h
+        start_x = x
+        start_y = y
+      }
+    }
+  }
+  if !pieces.is_empty() {
+    result.push(pieces)
+  }
+  result
+}
+
+///|
+/// The dashes of a path dashed by `dash` from `phase` (see
+/// `@pagelayout.StrokeStyle`), as PDF dashes it: the pattern (twice over
+/// when its length is odd) runs along each subpath in the path's own
+/// space, restarting from the phase at each; a dash turning a corner is
+/// one subpath, joined there; a dash of length 0 is a subpath of length 0
+/// (a dot, with round or square caps).
+fn dashed(
+  segments : Array[@pagelayout.PathSegment],
+  dash : Array[Double],
+  phase : Double,
+) -> Array[@pagelayout.PathSegment] {
+  let pattern = if dash.length() % 2 == 1 { dash + dash } else { dash }
+  let period = pattern.fold(init=0.0, (sum, d) => sum + d)
+  // at least one length is positive (see `PageModel::validate`)
+  guard period > 0.0 else { return segments }
+  let out : Array[@pagelayout.PathSegment] = []
+  for pieces in subpaths(segments) {
+    // where in the pattern the subpath starts, and how much of that
+    // length is left
+    let mut index = 0
+    let mut left = pattern[0]
+    let mut into = phase - (phase / period).floor() * period
+    while into >= left {
+      into -= left
+      index = (index + 1) % pattern.length()
+      left = pattern[index]
+    }
+    left -= into
+    // whether a dash is being drawn, and whether it has a segment yet
+    let mut open = false
+    let mut drawn = false
+    for piece in pieces {
+      let m = measure(piece)
+      let mut s = 0.0
+      while true {
+        let on = index % 2 == 0
+        if on && !open {
+          let (x, y) = m.point(s)
+          out.push(MoveTo(x, y))
+          open = true
+          drawn = false
+        }
+        let step = if left < m.length - s { left } else { m.length - s }
+        if on && step > 0.0 {
+          out.push(m.part(s, s + step))
+          drawn = true
+        }
+        s += step
+        left -= step
+        guard left <= 0.0 else { break }
+        // this length of the pattern ends here
+        if on {
+          if !drawn {
+            let (x, y) = m.point(s)
+            out.push(LineTo(x, y))
+          }
+          open = false
+        }
+        index = (index + 1) % pattern.length()
+        left = pattern[index]
+      }
+    }
+    // a dash that would start where the subpath ends is not drawn
+    if open && !drawn {
+      let _ = out.pop()
+    }
+  }
+  out
+}
+
+///|
 fn matrix_attr(m : @pagelayout.Matrix) -> String {
   "matrix(\{num(m.a)} \{num(m.b)} \{num(m.c)} \{num(m.d)} \{num(m.e)} \{num(m.f)})"
 }
@@ -170,6 +449,38 @@ fn write_stroke_style(
 }
 
 ///|
+/// A path as `<path>`, its fill and stroke `fill_alpha` and `stroke_alpha`
+/// opaque.
+fn emit_path(
+  sb : StringBuilder,
+  path : @pagelayout.PathItem,
+  defs : Defs,
+  fill_alpha : Double,
+  stroke_alpha : Double,
+) -> Unit {
+  let fill = match path.fill {
+    Some(paint) => paint_attr(sb, paint, defs)
+    None => "none"
+  }
+  let stroke = path.stroke.map(paint => paint_attr(sb, paint, defs))
+  sb.write_string("  <path d=\"\{path_data(path.segments)}\" fill=\"\{fill}\"")
+  if path.fill is Some(_) && path.fill_rule is EvenOdd {
+    sb.write_string(" fill-rule=\"evenodd\"")
+  }
+  if fill_alpha != 1.0 {
+    sb.write_string(" fill-opacity=\"\{num(fill_alpha)}\"")
+  }
+  match stroke {
+    Some(stroke) => {
+      sb.write_string(" stroke=\"\{stroke}\"")
+      write_stroke_style(sb, path.stroke_style, stroke_alpha)
+    }
+    None => ()
+  }
+  sb.write_string("/>\n")
+}
+
+///|
 fn emit_graphic(
   sb : StringBuilder,
   model : @pagelayout.PageModel,
@@ -222,30 +533,37 @@ fn emit_graphic(
         fill_alpha = fill
         stroke_alpha = stroke
       }
-      Path(path) => {
-        let fill = match path.fill {
-          Some(paint) => paint_attr(sb, paint, defs)
-          None => "none"
+      // a non-scaling stroke's dashes are measured in the host's space, not
+      // the graphic's (in device pixels by some renderers, CSS pixels by
+      // others), so a dashed hairline is drawn dashed already: a fill of
+      // its own, then its dashes as a solid hairline
+      Path(path) if path.stroke is Some(_) &&
+        path.stroke_style.width is Hairline &&
+        !path.stroke_style.dash.is_empty() => {
+        let style = path.stroke_style
+        if path.fill is Some(_) {
+          emit_path(
+            sb,
+            { ..path, stroke: None, },
+            defs,
+            fill_alpha,
+            stroke_alpha,
+          )
         }
-        let stroke = path.stroke.map(paint => paint_attr(sb, paint, defs))
-        sb.write_string(
-          "  <path d=\"\{path_data(path.segments)}\" fill=\"\{fill}\"",
+        emit_path(
+          sb,
+          {
+            ..path,
+            segments: dashed(path.segments, style.dash, style.dash_phase),
+            fill: None,
+            stroke_style: { ..style, dash: [], dash_phase: 0, },
+          },
+          defs,
+          fill_alpha,
+          stroke_alpha,
         )
-        if path.fill is Some(_) && path.fill_rule is EvenOdd {
-          sb.write_string(" fill-rule=\"evenodd\"")
-        }
-        if fill_alpha != 1.0 {
-          sb.write_string(" fill-opacity=\"\{num(fill_alpha)}\"")
-        }
-        match stroke {
-          Some(stroke) => {
-            sb.write_string(" stroke=\"\{stroke}\"")
-            write_stroke_style(sb, path.stroke_style, stroke_alpha)
-          }
-          None => ()
-        }
-        sb.write_string("/>\n")
       }
+      Path(path) => emit_path(sb, path, defs, fill_alpha, stroke_alpha)
       Text(run) | PaintedText(run, _) => {
         // the paint goes on the text itself: its fill in the run's colour
         // (or none), its outline, each with its own opacity
