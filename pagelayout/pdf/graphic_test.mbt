@@ -551,35 +551,70 @@ fn number_arrays(file : String, key : String) -> Array[Array[Double]] raise {
 }
 
 ///|
-test "stitching bounds strictly increase as written, however close the stops" {
-  // offsets apart by less than a written real resolves
+test "stitching bounds are written exactly, however close the stops" {
+  // offsets apart by less than a rounded real resolves: each interval
+  // keeps its own bound, distinct and increasing as written
   let near_half = gradient_square([0, 0.5, 0.50000000000001, 1], [
     white, red, blue, @pagelayout.black,
   ])
   assert_true(near_half.validate().is_empty())
   let file = as_text(@pdf.render_pdf(near_half))
-  // the interval too narrow to write is dropped: the colour jumps at 0.5
-  assert_eq(number_arrays(file, "/Bounds"), [[0.5]])
-  assert_eq(occurrences(file, "/FunctionType 2"), 2)
+  assert_true(file.contains("/Bounds [0.5 0.50000000000001]"))
+  assert_eq(occurrences(file, "/FunctionType 2"), 3)
   assert_true(file.contains("/C0 [1 1 1] /C1 [1 0 0]"))
+  assert_true(file.contains("/C0 [1 0 0] /C1 [0 0 1]"))
   assert_true(file.contains("/C0 [0 0 1] /C1 [0 0 0]"))
-  // stops so near 0 that they are written as 0: only the last counts
+  // near 0 and near 1 alike
   let near_zero = gradient_square([0, 1.0e-8, 2.0e-8, 1], [
     white, red, blue, @pagelayout.black,
   ])
-  assert_true(near_zero.validate().is_empty())
   let file = as_text(@pdf.render_pdf(near_zero))
-  assert_eq(number_arrays(file, "/Bounds"), [])
-  assert_eq(occurrences(file, "/FunctionType 2"), 1)
-  assert_true(file.contains("/C0 [0 0 1] /C1 [0 0 0]"))
-  // and near 1, only the first
+  assert_true(file.contains("/Bounds [0.00000001 0.00000002]"))
+  assert_eq(occurrences(file, "/FunctionType 2"), 3)
   let near_one = gradient_square([0, 0.25, 1 - 1.0e-14, 1], [
     white, red, blue, @pagelayout.black,
   ])
   let file = as_text(@pdf.render_pdf(near_one))
-  assert_eq(number_arrays(file, "/Bounds"), [[0.25]])
-  assert_true(file.contains("/C0 [1 1 1] /C1 [1 0 0]"))
-  assert_true(file.contains("/C0 [1 0 0] /C1 [0 0 1]"))
+  assert_true(file.contains("/Bounds [0.25 0.99999999999999]"))
+  assert_eq(occurrences(file, "/FunctionType 2"), 3)
+}
+
+///|
+test "a gradient keeps colour regions of any width its stops give" {
+  // 1e9 points long, stops at 1e-8 and 2e-8: ten points of red, then ten
+  // of red turning black. Rounded, the bounds were both 0.000000 and the
+  // red interval was dropped, the gradient black throughout.
+  let model = graphic_model([
+    Path({
+      segments: [Rectangle(0, 0, 100, 60)],
+      fill: Some(
+        GradientPaint({
+          shape: Linear(x1=0, y1=0, x2=1.0e9, y2=0),
+          stops: [
+            { offset: 0, color: red, },
+            { offset: 1.0e-8, color: red, },
+            { offset: 2.0e-8, color: @pagelayout.black, },
+            { offset: 1, color: @pagelayout.black, },
+          ],
+          transform: @pagelayout.identity,
+        }),
+      ),
+      fill_rule: NonZero,
+      stroke: None,
+      stroke_style: @pagelayout.StrokeStyle::default(),
+    }),
+  ])
+  assert_true(model.validate().is_empty())
+  let file = as_text(@pdf.render_pdf(model))
+  assert_true(file.contains("/Bounds [0.00000001 0.00000002]"))
+  assert_true(
+    file.contains(
+      "/Functions [<< /FunctionType 2 /Domain [0 1] /C0 [1 0 0] /C1 [1 0 0] /N 1 >> << /FunctionType 2 /Domain [0 1] /C0 [1 0 0] /C1 [0 0 0] /N 1 >> << /FunctionType 2 /Domain [0 1] /C0 [0 0 0] /C1 [0 0 0] /N 1 >>]",
+    ),
+  )
+  // the whole 1e9 points in the pattern matrix: red from x = 10 to 20 on
+  // the page, turning black by 30
+  assert_true(file.contains("/Matrix [1000000000 0 0 -1000000000 10 80]"))
 }
 
 ///|

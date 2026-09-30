@@ -20,9 +20,9 @@
 // coordinates (`PdfExactReal`): a shading's geometry is canonical (a
 // linear one runs from (0, 0) to (1, 0)), the pattern matrix carrying it
 // to the gradient's place on the page at whatever size it has there
-// (within what renderers draw; see `drawable`). Stitching bounds and
-// colours, within 0..=1, keep pdflite's precision, and bounds that would
-// be written equal are merged.
+// (within what renderers draw; see `drawable`). So are the stitching
+// bounds, whose distinct offsets stay distinct as written. Colours, from
+// bytes, keep pdflite's precision.
 
 ///|
 /// The paint and stroke parameters in effect, so each is written only
@@ -121,34 +121,16 @@ fn colour_array(c : @pagelayout.Color) -> @syntax.PdfObject {
 /// of them to start from, and at offset 1 the first to end at (see
 /// `@pagelayout.Gradient`). PDF's stitching function needs exactly this:
 /// its bounds, the starts after the first, must strictly increase (PDF
-/// 32000-1, 7.10.4).
-///
-/// Strictly increasing offsets are not enough: the bounds must increase as
-/// written, where offsets nearer than a written real resolves come out
-/// equal (0.5 and 0.50000000000001 both as 0.5, 1e-8 and 2e-8 both as
-/// 0.000000). So an interval that would be written without width is
-/// dropped as a zero-width one is, the next taking over at its start, and
-/// one that would be written to start at 1 is dropped with all after it.
+/// 32000-1, 7.10.4). They are written exactly (`PdfExactReal`), as the
+/// shortest decimals that read back as themselves, so offsets however
+/// near stay distinct, and increasing, as written.
 fn gradient_pieces(
   stops : Array[@pagelayout.GradientStop],
 ) -> Array[(Double, @pagelayout.Color, @pagelayout.Color)] {
   let pieces : Array[(Double, @pagelayout.Color, @pagelayout.Color)] = []
-  // where the last piece starts, as written
-  let mut last = 0.0
   for i in 1..<stops.length() {
-    guard stops[i].offset > stops[i - 1].offset else { continue }
-    let start = stops[i - 1].offset
-    let at = written_real(start)
-    if pieces.is_empty() {
-      pieces.push((start, stops[i - 1].color, stops[i].color))
-    } else if at >= 1.0 {
-      break
-    } else if at <= last {
-      let (kept, _, _) = pieces[pieces.length() - 1]
-      pieces[pieces.length() - 1] = (kept, stops[i - 1].color, stops[i].color)
-    } else {
-      pieces.push((start, stops[i - 1].color, stops[i].color))
-      last = at
+    if stops[i].offset > stops[i - 1].offset {
+      pieces.push((stops[i - 1].offset, stops[i - 1].color, stops[i].color))
     }
   }
   // stops that do not span an interval (see `PageModel::validate`): the
@@ -158,19 +140,6 @@ fn gradient_pieces(
     pieces.push((0.0, last, last))
   }
   pieces
-}
-
-///|
-/// The value of `v` as pdflite writes it in a dictionary.
-fn written_real(v : Double) -> Double {
-  let bytes = @pdflite.pdf_write_real(v) catch { _ => return v }
-  let sb = StringBuilder()
-  for byte in bytes {
-    sb.write_char(byte.to_int().unsafe_to_char())
-  }
-  @string.parse_double(sb.to_string()) catch {
-    _ => v
-  }
 }
 
 ///|
@@ -246,7 +215,7 @@ fn GraphicResources::shading(
     let bounds : Array[@syntax.PdfObject] = []
     let encode : Array[@syntax.PdfObject] = []
     for i in 1..<intervals.length() {
-      bounds.push(PdfReal(intervals[i].0))
+      bounds.push(PdfExactReal(intervals[i].0))
     }
     for _ in pieces {
       encode.push(PdfReal(0.0))
