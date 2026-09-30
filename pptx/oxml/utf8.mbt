@@ -1,4 +1,4 @@
-// Shared UTF-8 decoding helper.
+// Shared XML text decoding helper.
 //
 // Every OOXML content-XML parser (theme, slide_master, slide, …) receives
 // part bytes from the OPC layer and needs to feed a `String` to
@@ -10,10 +10,10 @@
 // a tiny `try ... catch` so the public API surface stays domain-typed.
 
 ///|
-/// Errors raised by `bytes_to_string`. Each variant captures the byte
-/// offset where decoding failed, so callers can surface a precise
-/// position when reporting "malformed part bytes".
+/// Errors raised by `bytes_to_string`. UTF-8 errors retain their byte
+/// offsets; malformed UTF-16 is reported separately.
 pub(all) suberror Utf8Error {
+  InvalidUtf16
   StrayContinuation(Int)
   TruncatedSequence(Int)
 } derive(Eq, Debug)
@@ -30,6 +30,7 @@ pub extend Utf8Error with Show::{to_string, output}
 ///|
 pub impl Show for Utf8Error with fn output(self, logger) {
   match self {
+    InvalidUtf16 => logger.write_string("InvalidUtf16")
     StrayContinuation(off) => {
       logger.write_string("StrayContinuation(offset=")
       logger.write_object(off)
@@ -44,14 +45,21 @@ pub impl Show for Utf8Error with fn output(self, logger) {
 }
 
 ///|
-/// Decode UTF-8 bytes to a `String`. Accepts the full BMP and supplementary
+/// Decode UTF-8 or UTF-16 XML bytes to a `String`. Accepts the full BMP and supplementary
 /// planes (1- to 4-byte sequences).
 ///
-/// Raises `Utf8Error` on stray continuation bytes or truncated sequences.
+/// Raises `Utf8Error` on malformed UTF-16, stray UTF-8 continuation bytes,
+/// or truncated UTF-8 sequences.
 /// Does NOT validate overlong encodings or surrogate code points — readers
 /// further up the stack expect to receive whatever bytes the underlying
 /// OPC package gave us; tighter validation is a future hardening pass.
 pub fn bytes_to_string(bytes : FixedArray[Byte]) -> String raise Utf8Error {
+  let source = Bytes::from_array(bytes)
+  match source {
+    [0xff, 0xfe, ..] | [0xfe, 0xff, ..] | [b'<', 0x00, ..] | [0x00, b'<', ..] =>
+      return @xml.decode_xml_bytes(source) catch { _ => raise InvalidUtf16 }
+    _ => ()
+  }
   let buf = StringBuilder(size_hint=bytes.length())
   let mut i = 0
   while i < bytes.length() {

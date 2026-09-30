@@ -109,7 +109,7 @@ pub impl Show for Part with fn output(self, logger) {
 
 ///|
 fn decode_part_text(bytes : FixedArray[Byte]) -> String raise OpcError {
-  @utf8.decode(Bytes::from_array(bytes)) catch {
-    _ => raise MalformedPackage("part contains invalid UTF-8")
+  @xml.decode_xml_bytes(Bytes::from_array(bytes)) catch {
+    _ => raise MalformedPackage("part contains invalid UTF-8 or UTF-16 XML")
   }
 }

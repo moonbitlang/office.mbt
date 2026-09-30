@@ -201,6 +201,7 @@ pub fn StrokeError::to_string(Self) -> String
 pub impl Show for StrokeError
 
 pub(all) suberror Utf8Error {
+  InvalidUtf16
   StrayContinuation(Int)
   TruncatedSequence(Int)
 } derive(Eq, @debug.Debug)
