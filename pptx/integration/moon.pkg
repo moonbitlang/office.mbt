@@ -8,6 +8,7 @@ import {
 import {
   "moonbitlang/core/bench",
   "moonbitlang/core/encoding/utf8",
+  "moonbitlang/core/encoding/utf16",
   "moonbit-community/flate/zip",
   "moonbitlang/pptx/chart",
   "moonbitlang/pptx/chart_ex",
