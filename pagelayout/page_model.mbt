@@ -165,6 +165,8 @@ pub(all) enum PageItem {
   Image(ImageItem)
   Link(LinkRegion)
   Anchor(AnchorItem)
+  /// Vector graphics: paths, clips and transformations (see `GraphicItem`).
+  Graphic(GraphicItem)
 } derive(Eq, Debug, ToJson)
 
 ///|

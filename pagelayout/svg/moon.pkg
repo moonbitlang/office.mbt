@@ -6,4 +6,5 @@ import {
   "moonbitlang/pagelayout",
   "moonbitlang/pagelayout/paragraph",
   "moonbitlang/pagelayout/paginate",
+  "moonbitlang/core/string",
 } for "test"

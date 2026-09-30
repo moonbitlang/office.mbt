@@ -12,6 +12,97 @@ Breaking and notable changes for the published modules in this workspace.
 Entries are grouped by module and by the version they ship in; `Unreleased`
 covers changes that have landed on `main` but are not yet published.
 
+### moonbitlang/pagelayout [Unreleased]
+
+- **BREAKING**: `PageItem` has a new variant, `Graphic(GraphicItem)`: vector
+  graphics, a display list of `GraphicOp`s drawn in a space of its own whose
+  origin is the item's `(x_pt, y_pt)` (points, y down). The ops are `Save` /
+  `Restore` (transformation, clip and alpha, like PDF's `q`/`Q`),
+  `Transform(Matrix)`, `Clip(segments, rule)`, `Alpha(fill, stroke)`,
+  `Path(PathItem)` (move/line/cubic curve/rectangle/close segments, filled by
+  the nonzero or even-odd rule and/or stroked with a `StrokeStyle`: width,
+  cap, join, miter limit, dash), and glyph runs (`Text`, or `PaintedText`
+  with a `TextPaint`: filled, outlined in a whole `StrokeStyle` of its own,
+  both, or invisible but extractable, PDF's text rendering modes) and images
+  (`Image`, stretched to their rectangle) placed in the graphic's space.
+  A `Rectangle` segment is a closed subpath from its bottom-left corner,
+  counter-clockwise on the page, like PDF's `re`.
+  - Stroke widths are a `StrokeWidth`: `Width(w)` with `w` positive, or
+    `Hairline`, the thinnest line the device draws (PDF's `0 w`, an SVG
+    non-scaling stroke one pixel wide). Width 0 is rejected by `validate`,
+    since PDF draws it as a hairline and SVG not at all. Dashes are
+    measured in the space a stroke is drawn in, a hairline's too, as PDF
+    does: SVG draws a dashed hairline path as its dashes, each a solid
+    non-scaling stroke (a non-scaling stroke's own dashes would be
+    measured in device or CSS pixels), and `validate` rejects text
+    outlined with a dashed hairline, which SVG cannot dash so. The dashes
+    are cut as PDF (Poppler) dashes: a dash of length 0 is a dot, at a
+    subpath's start too (at phase 0), and none starts at its end; a
+    closed subpath keeps its closing join, its one dash closed when it
+    runs all round, and a dash running to its end continuing through the
+    start into the first.
+  - A path's fill and stroke are a `Paint`: a solid `Color` or a
+    `Gradient { shape, stops, transform }`, whose `GradientShape` is
+    `Linear(x1~, y1~, x2~, y2~)` or `Radial(x1~, y1~, r1~, x2~, y2~, r2~)`
+    (from the first circle to the second), padded past its ends. Stops at
+    one offset make a sharp colour change there; at offset 0 only the last
+    of them counts, at 1 only the first. A gradient without extent (a
+    linear one whose ends coincide, a radial one whose end circle has
+    radius 0 or whose circles coincide) paints its last stop's colour, as
+    SVG specifies for the first two; `Gradient::degenerate_color` gives it.
+  - The PDF backend writes content operators, `/ExtGState` alpha resources
+    and shading patterns (axial or radial, an exponential function per
+    non-empty interval between stops, stitched), placing a pattern by the
+    transformation current where it paints. Alpha states, shadings and
+    patterns (by shading and effective matrix) are shared by value across
+    the document. Text in a graphic embeds and subsets its fonts like page
+    text. Numbers in a graphic's content, pattern matrices, shading
+    coordinates and stitching bounds are written exactly (shortest
+    round-trip, without an exponent, and an integral number beyond
+    2147483647 with a decimal point: pdflite's new `PdfExactReal`); page
+    items outside graphics keep pdflite's rounding, so their output is
+    unchanged. A shading is built in a canonical space (a linear one from
+    (0, 0) to (1, 0), a radial one centred on its end circle and scaled
+    by the largest of its radii and its centres' separation), the pattern
+    matrix placing it on the page. Distinct stop offsets, however near,
+    stay distinct `/Bounds`, strictly increasing as written. A path
+    painted with a gradient where the transformation shrinks areas below
+    1e-4 is drawn with its numbers scaled down by a power of two and the
+    transformation scaled up as much, since Poppler refuses patterns under
+    a tiny determinant.
+  - The SVG backend writes nested groups, `<clipPath>`s, paths, text with
+    independent fill and stroke opacities, and gradient definitions (one
+    per distinct gradient on a page). Numbers in graphics are written
+    exactly (shortest round-trip), as their transformations may scale them
+    arbitrarily; page items outside graphics keep three decimals.
+  - `PageModel::validate` checks that saves and restores balance; that
+    every number in a graphic is finite and within ±3.403e38, the range a
+    PDF reader is sure to hold (PDF 32000-1, Annex C), as are the
+    transformations composed from the page and where each gradient lands
+    on it; that each gradient with extent is from 0.001 to 1e12 points in
+    size on the page (a linear one's length; a radial one's largest radius
+    or separation of its centres, both circles counted), since renderers
+    draw gradients outside that range wrongly or not at all (Cairo, and so
+    pdftocairo, Evince and librsvg, paints nothing below about 1e-4
+    points; Poppler nothing for a linear gradient about 1e18 points long)
+    and the backends draw a gradient's geometry as it is rather than
+    reshape it (this is the supported range, not a promise that every
+    renderer draws an accepted gradient the same: Cairo, and so librsvg,
+    resolves a gradient's parameter to about 1/65536 of its size, so it
+    merges or moves colour changes closer than that, which Poppler's
+    Splash draws where they are; see `Gradient`); that `LineTo`, `CurveTo` and `Close` have a current
+    point; that alphas are within 0..=1, stroke widths positive, miter
+    limits from 1, dashes empty or non-negative with a positive length;
+    that text is not outlined with a dashed hairline; that gradient stops
+    are ascending within 0..=1 from 0 to 1; and that glyph runs and images
+    are well-formed. `unembeddable_images` reports images inside graphics
+    too.
+
+  Code that matches `PageItem` exhaustively must handle the new variant (a
+  wildcard arm, or `Graphic(_) => ()`). The PDF backend uses pdflite's
+  `PdfExactReal` (unreleased; see below), so this release of pagelayout
+  needs the pdflite release that has it.
+
 ### moonbitlang/pagelayout [0.5.0]
 
 - `FontRegistry::register_standard(family, metrics, standard=name)`
@@ -205,6 +296,16 @@ covers changes that have landed on `main` but are not yet published.
 
 ### moonbitlang/pdflite [Unreleased]
 
+- **BREAKING**: `PdfObject` has a new variant, `PdfExactReal(Double)`, a real
+  written exactly: the shortest decimal that reads back as the value,
+  without an exponent, where `PdfReal` rounds (to six decimals below 1e-4 in
+  magnitude, otherwise to twelve significant digits). It serves numbers no
+  fixed precision does, such as pattern matrices; `pdf_write_exact_real`
+  formats one on its own. An integral value is written as an integer up to
+  2147483647 in magnitude and with a decimal point beyond, where a PDF
+  integer may overflow (PDF 32000-1, Annex C). The parser never produces it;
+  `get_number` and the content, ExtGState and JSON helpers read it as a
+  real. Code that matches `PdfObject` exhaustively must handle it.
 - Reading a TrueType `cmap` (`pdf_truetype_cmap_glyphs`) now finds an earlier
   mapping of each codepoint through an index instead of scanning all mappings
   so far: expected linear work in the decoded mappings (overlapping and

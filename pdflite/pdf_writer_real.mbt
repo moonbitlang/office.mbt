@@ -247,3 +247,97 @@ pub fn pdf_write_real(value : Double) -> @core.PdfBytes raise @core.PdfError {
 pub fn pdf_format_real(value : Double) -> @core.PdfBytes raise @core.PdfError {
   pdf_write_real(value)
 }
+
+///|
+/// The largest magnitude a PDF integer is sure to have (PDF 32000-1,
+/// Annex C): an integral real beyond it is written with a decimal point,
+/// so that a reader does not take it for an integer that overflows.
+const PDF_WRITER_INTEGER_LIMIT : Double = 2147483647.0
+
+///|
+fn pdf_writer_push_exact_real(
+  output : Array[Byte],
+  value : Double,
+) -> Unit raise @core.PdfError {
+  // NaN and the infinities have no PDF form
+  guard value - value == 0.0 else { raise NumberExpected }
+  if value == 0.0 {
+    pdf_writer_push_byte(output, '0')
+    return
+  }
+  // the shortest decimal that reads back as `value`, perhaps with an
+  // exponent, which PDF's number syntax does not have
+  let text = @ascii.encode(value.to_string())
+  let negative = text[0] is b'-'
+  let start = if negative { 1 } else { 0 }
+  let exponent_at = pdf_writer_exponent_marker(text)
+  let mantissa_end = if exponent_at < 0 { text.length() } else { exponent_at }
+  let exponent = if exponent_at < 0 {
+    0
+  } else {
+    pdf_writer_parse_signed_int(text, exponent_at + 1)
+  }
+  // the significant digits, and where the point falls among them
+  let digits : Array[Byte] = []
+  let mut point = -1
+  for i in start..<mantissa_end {
+    match text[i] {
+      b'.' => point = digits.length()
+      b'0'..=b'9' => digits.push(text[i])
+      _ => raise NumberExpected
+    }
+  }
+  if point < 0 {
+    point = digits.length()
+  }
+  point += exponent
+  if negative {
+    pdf_writer_push_byte(output, '-')
+  }
+  if point <= 0 {
+    pdf_writer_push_ascii(output, "0.")
+    for _ in 0..<-point {
+      pdf_writer_push_byte(output, '0')
+    }
+    for digit in digits {
+      output.push(digit)
+    }
+  } else if point >= digits.length() {
+    for digit in digits {
+      output.push(digit)
+    }
+    for _ in 0..<(point - digits.length()) {
+      pdf_writer_push_byte(output, '0')
+    }
+    if value.abs() > PDF_WRITER_INTEGER_LIMIT {
+      pdf_writer_push_ascii(output, ".0")
+    }
+  } else {
+    for digit in digits[:point] {
+      output.push(digit)
+    }
+    pdf_writer_push_byte(output, '.')
+    for digit in digits[point:] {
+      output.push(digit)
+    }
+  }
+}
+
+///|
+/// Format a PDF real number exactly: the shortest decimal that reads back
+/// as `value`, spelt out without an exponent (PDF 32000-1, 7.3.3), as
+/// `PdfExactReal` is written. An integral value is written as an integer
+/// where a PDF integer is sure to hold it (up to 2147483647 in magnitude,
+/// Annex C) and with a decimal point beyond. `-0` is written as `0`.
+/// Non-finite values raise `@core.PdfError`.
+///
+/// Annex C also bounds what a reader is sure to hold as a real (about
+/// ±3.403e38, and values nearer 0 than about 1.175e-38 read as 0); values
+/// beyond are written, but are the caller's to avoid.
+pub fn pdf_write_exact_real(
+  value : Double,
+) -> @core.PdfBytes raise @core.PdfError {
+  let output : Array[Byte] = []
+  pdf_writer_push_exact_real(output, value)
+  Bytes::from_array(output)
+}

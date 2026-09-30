@@ -1,7 +1,7 @@
 ///|
 fn pdf_content_extgstate_number(object : @syntax.PdfObject) -> Double? {
   match object {
-    PdfReal(value) => Some(value)
+    PdfReal(value) | PdfExactReal(value) => Some(value)
     PdfInteger(value) => Some(value.to_double())
     _ => None
   }

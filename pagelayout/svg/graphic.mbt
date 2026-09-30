@@ -1,0 +1,714 @@
+///|
+// Vector graphics (`GraphicItem`) to SVG. A graphic becomes a group
+// translated to its origin; `Save`/`Restore` bracket nested groups, and a
+// transformation or a clip opens one more group that the matching
+// `Restore` (or the graphic's end) closes. Alphas become fill and stroke
+// opacities on what follows them, gradients `<linearGradient>` and
+// `<radialGradient>` definitions in user space. Clip, gradient ids count up
+// in `Defs` so they stay unique on the page.
+//
+// Numbers in a graphic are written exactly (`num`), not rounded to three
+// decimals as page items are: a graphic's own transformations can scale
+// what follows them by any factor, so no fixed precision is enough.
+
+///|
+/// The shortest decimal that reads back as `v` (with an exponent for very
+/// large and small magnitudes, which SVG's number syntax allows). `v` is
+/// finite (see `PageModel::validate`).
+fn num(v : Double) -> String {
+  v.to_string()
+}
+
+///|
+fn path_data(segments : Array[@pagelayout.PathSegment]) -> String {
+  let parts : Array[String] = []
+  for segment in segments {
+    match segment {
+      MoveTo(x, y) => parts.push("M\{num(x)} \{num(y)}")
+      LineTo(x, y) => parts.push("L\{num(x)} \{num(y)}")
+      CurveTo(x1, y1, x2, y2, x, y) =>
+        parts.push(
+          "C\{num(x1)} \{num(y1)} \{num(x2)} \{num(y2)} \{num(x)} \{num(y)}",
+        )
+      // the winding of PDF's `re` (see `PathSegment::Rectangle`)
+      Rectangle(x, y, w, h) =>
+        parts.push("M\{num(x)} \{num(y + h)}h\{num(w)}v\{num(-h)}h\{num(-w)}Z")
+      Close => parts.push("Z")
+    }
+  }
+  parts.join("")
+}
+
+///|
+/// A straight or curved piece of a subpath, from its first point.
+priv enum Piece {
+  Line(Double, Double, Double, Double)
+  Curve(Double, Double, Double, Double, Double, Double, Double, Double)
+}
+
+///|
+/// How finely a curve is divided to measure its length.
+const CURVE_STEPS : Int = 64
+
+///|
+fn bezier(
+  p0 : Double,
+  p1 : Double,
+  p2 : Double,
+  p3 : Double,
+  t : Double,
+) -> Double {
+  let u = 1.0 - t
+  u * u * u * p0 + 3.0 * u * u * t * p1 + 3.0 * u * t * t * p2 + t * t * t * p3
+}
+
+///|
+/// The first (`left`) or second part of the cubic `q` split at `t` (de
+/// Casteljau), its four control values.
+fn bezier_split(q : Array[Double], t : Double, left~ : Bool) -> Array[Double] {
+  let a = q[0] + (q[1] - q[0]) * t
+  let b = q[1] + (q[2] - q[1]) * t
+  let c = q[2] + (q[3] - q[2]) * t
+  let d = a + (b - a) * t
+  let e = b + (c - b) * t
+  let mid = d + (e - d) * t
+  if left {
+    [q[0], a, d, mid]
+  } else {
+    [mid, e, c, q[3]]
+  }
+}
+
+///|
+/// The part of the cubic `q` from `t0` to `t1`.
+fn bezier_part(q : Array[Double], t0 : Double, t1 : Double) -> Array[Double] {
+  let head = if t1 < 1.0 { bezier_split(q, t1, left=true) } else { q }
+  if t0 <= 0.0 || t1 <= 0.0 {
+    head
+  } else {
+    bezier_split(head, t0 / t1, left=false)
+  }
+}
+
+///|
+/// A piece measured: its length, and for a curve the length up to each of
+/// `CURVE_STEPS` equal steps of its parameter, to find where a length
+/// along it falls.
+priv struct Measured {
+  piece : Piece
+  length : Double
+  lengths : Array[Double]
+}
+
+///|
+fn measure(piece : Piece) -> Measured {
+  match piece {
+    Line(x0, y0, x1, y1) => {
+      let length = ((x1 - x0) * (x1 - x0) + (y1 - y0) * (y1 - y0)).sqrt()
+      { piece, length, lengths: [], }
+    }
+    Curve(x0, y0, x1, y1, x2, y2, x3, y3) => {
+      let lengths = [0.0]
+      let mut px = x0
+      let mut py = y0
+      let mut total = 0.0
+      for i in 1..<=CURVE_STEPS {
+        let t = i.to_double() / CURVE_STEPS.to_double()
+        let x = bezier(x0, x1, x2, x3, t)
+        let y = bezier(y0, y1, y2, y3, t)
+        total += ((x - px) * (x - px) + (y - py) * (y - py)).sqrt()
+        lengths.push(total)
+        px = x
+        py = y
+      }
+      { piece, length: total, lengths, }
+    }
+  }
+}
+
+///|
+/// The parameter of a curve at length `s` along it.
+fn Measured::parameter(self : Measured, s : Double) -> Double {
+  if s <= 0.0 || self.length <= 0.0 {
+    return 0.0
+  }
+  if s >= self.length {
+    return 1.0
+  }
+  let lengths = self.lengths
+  let mut i = 1
+  while i < CURVE_STEPS && lengths[i] < s {
+    i += 1
+  }
+  let span = lengths[i] - lengths[i - 1]
+  let within = if span > 0.0 { (s - lengths[i - 1]) / span } else { 0.0 }
+  (i.to_double() - 1.0 + within) / CURVE_STEPS.to_double()
+}
+
+///|
+/// The point at length `s` along the piece (its ends exactly at 0 and at
+/// its length).
+fn Measured::point(self : Measured, s : Double) -> (Double, Double) {
+  match self.piece {
+    Line(x0, y0, _, _) if s <= 0.0 => (x0, y0)
+    Line(_, _, x1, y1) if s >= self.length => (x1, y1)
+    Line(x0, y0, x1, y1) => {
+      let f = s / self.length
+      (x0 + (x1 - x0) * f, y0 + (y1 - y0) * f)
+    }
+    Curve(x0, y0, x1, y1, x2, y2, x3, y3) => {
+      let t = self.parameter(s)
+      (bezier(x0, x1, x2, x3, t), bezier(y0, y1, y2, y3, t))
+    }
+  }
+}
+
+///|
+/// The segment drawing the piece from length `s0` to `s1` along it, from
+/// the point at `s0`.
+fn Measured::part(
+  self : Measured,
+  s0 : Double,
+  s1 : Double,
+) -> @pagelayout.PathSegment {
+  match self.piece {
+    Line(_, _, _, _) => {
+      let (x, y) = self.point(s1)
+      LineTo(x, y)
+    }
+    Curve(x0, y0, x1, y1, x2, y2, x3, y3) => {
+      let t0 = self.parameter(s0)
+      let t1 = self.parameter(s1)
+      let xs = bezier_part([x0, x1, x2, x3], t0, t1)
+      let ys = bezier_part([y0, y1, y2, y3], t0, t1)
+      CurveTo(xs[1], ys[1], xs[2], ys[2], xs[3], ys[3])
+    }
+  }
+}
+
+///|
+/// A subpath as pieces, and whether it is closed: a `Close` (or a
+/// `Rectangle`'s end) closes it with a line back to its start, its last
+/// piece (of length 0 when the subpath is back there already).
+priv struct Subpath {
+  pieces : Array[Piece]
+  closed : Bool
+}
+
+///|
+/// A path's subpaths, those with a piece.
+fn subpaths(segments : Array[@pagelayout.PathSegment]) -> Array[Subpath] {
+  let result : Array[Subpath] = []
+  let mut pieces : Array[Piece] = []
+  let mut x = 0.0
+  let mut y = 0.0
+  let mut start_x = 0.0
+  let mut start_y = 0.0
+  for segment in segments {
+    match segment {
+      MoveTo(mx, my) => {
+        if !pieces.is_empty() {
+          result.push({ pieces, closed: false, })
+        }
+        pieces = []
+        x = mx
+        y = my
+        start_x = mx
+        start_y = my
+      }
+      LineTo(lx, ly) => {
+        pieces.push(Line(x, y, lx, ly))
+        x = lx
+        y = ly
+      }
+      CurveTo(x1, y1, x2, y2, cx, cy) => {
+        pieces.push(Curve(x, y, x1, y1, x2, y2, cx, cy))
+        x = cx
+        y = cy
+      }
+      Close => {
+        pieces.push(Line(x, y, start_x, start_y))
+        result.push({ pieces, closed: true, })
+        pieces = []
+        x = start_x
+        y = start_y
+      }
+      Rectangle(rx, ry, w, h) => {
+        if !pieces.is_empty() {
+          result.push({ pieces, closed: false, })
+        }
+        // the winding of `PathSegment::Rectangle`
+        result.push({
+          pieces: [
+            Line(rx, ry + h, rx + w, ry + h),
+            Line(rx + w, ry + h, rx + w, ry),
+            Line(rx + w, ry, rx, ry),
+            Line(rx, ry, rx, ry + h),
+          ],
+          closed: true,
+        })
+        pieces = []
+        x = rx
+        y = ry + h
+        start_x = x
+        start_y = y
+      }
+    }
+  }
+  if !pieces.is_empty() {
+    result.push({ pieces, closed: false, })
+  }
+  result
+}
+
+///|
+/// The dashes of a path dashed by `dash` from `phase` (see
+/// `@pagelayout.StrokeStyle`), as PDF dashes it (Poppler's Splash as the
+/// reference): the pattern (twice over when its length is odd) runs along
+/// each subpath in the path's own space, restarting from the phase at
+/// each and skipping pieces of length 0. A dash turning a corner is one
+/// subpath, joined there. A dash of length 0 is a subpath of length 0 (a
+/// dot, with round or square caps) wherever the pattern has one, at a
+/// subpath's start too (at phase 0) but not at its end, where nothing
+/// starts. A path none of which is drawn, all at one point, is a dot.
+///
+/// One exception to the Splash reference: a closed subpath keeps its
+/// closing join, as SVG's `closepath` requires, where Splash caps the
+/// dashes meeting at the seam. The one dash of a subpath dashed all round
+/// is closed (drawn as the undashed path is), and a dash running to its
+/// end is continued by the one starting at its start, one subpath through
+/// the start corner.
+fn dashed(
+  segments : Array[@pagelayout.PathSegment],
+  dash : Array[Double],
+  phase : Double,
+) -> Array[@pagelayout.PathSegment] {
+  let pattern = if dash.length() % 2 == 1 { dash + dash } else { dash }
+  let period = pattern.fold(init=0.0, (sum, d) => sum + d)
+  // at least one length is positive (see `PageModel::validate`)
+  guard period > 0.0 else { return segments }
+  // where in the pattern each subpath starts, and how much of that length
+  // is left: from the phase, lengths it reaches the end of are passed
+  // (unless it is 0, so that a dash of length 0 first is drawn)
+  let mut first = 0
+  let mut into = phase - (phase / period).floor() * period
+  if into > 0.0 {
+    while first < pattern.length() && into >= pattern[first] {
+      into -= pattern[first]
+      first += 1
+    }
+    if first == pattern.length() {
+      first = 0
+      into = 0
+    }
+  }
+  let first_left = pattern[first] - into
+  let out : Array[@pagelayout.PathSegment] = []
+  for subpath in subpaths(segments) {
+    let mut index = first
+    let mut left = first_left
+    // the subpath's dashes, each from its `MoveTo`
+    let dashes : Array[Array[@pagelayout.PathSegment]] = []
+    let mut open = false
+    // whether the first dash starts at the subpath's start, and the last
+    // runs to its end
+    let mut from_start = false
+    let mut to_end = false
+    let mut at_start = true
+    for piece in subpath.pieces {
+      let m = measure(piece)
+      let mut s = 0.0
+      while m.length - s > 0.0 {
+        let on = index % 2 == 0
+        let rest = m.length - s
+        let step = if left >= rest { rest } else { left }
+        if on {
+          if !open {
+            let (x, y) = m.point(s)
+            dashes.push([MoveTo(x, y)])
+            open = true
+            if dashes.length() == 1 {
+              from_start = at_start
+            }
+          }
+          let current = dashes[dashes.length() - 1]
+          if step > 0.0 {
+            current.push(m.part(s, s + step))
+          } else {
+            let (x, y) = m.point(s)
+            current.push(LineTo(x, y))
+          }
+        }
+        to_end = on && left >= rest
+        at_start = false
+        s += step
+        left -= step
+        if left <= 0.0 {
+          index = (index + 1) % pattern.length()
+          left = pattern[index]
+          open = false
+        }
+      }
+    }
+    if subpath.closed && from_start && to_end {
+      let last = dashes.pop().unwrap()
+      if dashes.is_empty() {
+        // all round: closed, by `Close` rather than the closing line
+        if subpath.pieces[subpath.pieces.length() - 1] is Line(x0, y0, x1, y1) &&
+          (x0 != x1 || y0 != y1) &&
+          last[last.length() - 1] is LineTo(_, _) &&
+          last.length() > 2 {
+          let _ = last.pop()
+        }
+        last.push(Close)
+        dashes.push(last)
+      } else {
+        dashes[0] = last + dashes[0][1:].to_owned()
+        dashes.push(dashes.remove(0))
+      }
+    }
+    for d in dashes {
+      out.append(d)
+    }
+  }
+  // nothing drawn of a path all at one point: a dot there
+  if out.is_empty() && one_point(segments) is Some((x, y)) {
+    out.push(MoveTo(x, y))
+    out.push(LineTo(x, y))
+  }
+  out
+}
+
+///|
+/// The point a path is all at, when it has a segment other than `MoveTo`
+/// and every point it names is the same.
+fn one_point(segments : Array[@pagelayout.PathSegment]) -> (Double, Double)? {
+  let points : Array[(Double, Double)] = []
+  let mut drawn = false
+  for segment in segments {
+    match segment {
+      MoveTo(x, y) => points.push((x, y))
+      LineTo(x, y) => {
+        points.push((x, y))
+        drawn = true
+      }
+      CurveTo(x1, y1, x2, y2, x, y) => {
+        points.push((x1, y1))
+        points.push((x2, y2))
+        points.push((x, y))
+        drawn = true
+      }
+      Rectangle(x, y, w, h) => {
+        points.push((x, y))
+        points.push((x + w, y + h))
+        drawn = true
+      }
+      Close => drawn = true
+    }
+  }
+  guard drawn && points is [first, ..] else { return None }
+  if points.iter().all(p => p == first) {
+    Some(first)
+  } else {
+    None
+  }
+}
+
+///|
+fn matrix_attr(m : @pagelayout.Matrix) -> String {
+  "matrix(\{num(m.a)} \{num(m.b)} \{num(m.c)} \{num(m.d)} \{num(m.e)} \{num(m.f)})"
+}
+
+///|
+/// The ids of a page's definitions: clip paths and gradients count up
+/// from 1, and a gradient already defined on the page (its definition
+/// the same but for the id) is referred to again rather than repeated.
+priv struct Defs {
+  mut last : Int
+  gradients : Map[String, String]
+}
+
+///|
+fn Defs::new() -> Defs {
+  { last: 0, gradients: Map([]), }
+}
+
+///|
+fn Defs::next(self : Defs, prefix : String) -> String {
+  self.last += 1
+  "\{prefix}\{self.last}"
+}
+
+///|
+/// The value of a `fill` or `stroke` attribute for `paint`, writing a
+/// gradient's definition first unless the page has it already. A
+/// gradient's coordinates are in the user space of what it paints
+/// (`userSpaceOnUse`), so one definition serves wherever it is used. A
+/// gradient without extent is its colour (see
+/// `@pagelayout.Gradient::degenerate_color`).
+fn paint_attr(
+  sb : StringBuilder,
+  paint : @pagelayout.Paint,
+  defs : Defs,
+) -> String {
+  match paint {
+    Solid(color) => color.to_hex()
+    GradientPaint(g) if g.degenerate_color() is Some(color) => color.to_hex()
+    GradientPaint(g) => {
+      // the definition after its id
+      let def = StringBuilder()
+      let transform = matrix_attr(g.transform)
+      let element = match g.shape {
+        Linear(x1~, y1~, x2~, y2~) => {
+          def.write_string(
+            " gradientUnits=\"userSpaceOnUse\" gradientTransform=\"\{transform}\" x1=\"\{num(x1)}\" y1=\"\{num(y1)}\" x2=\"\{num(x2)}\" y2=\"\{num(y2)}\">\n",
+          )
+          "linearGradient"
+        }
+        Radial(x1~, y1~, r1~, x2~, y2~, r2~) => {
+          def.write_string(
+            " gradientUnits=\"userSpaceOnUse\" gradientTransform=\"\{transform}\" fx=\"\{num(x1)}\" fy=\"\{num(y1)}\" fr=\"\{num(r1)}\" cx=\"\{num(x2)}\" cy=\"\{num(y2)}\" r=\"\{num(r2)}\">\n",
+          )
+          "radialGradient"
+        }
+      }
+      // at offset 0 only the last stop there counts, at offset 1 only the
+      // first (see `@pagelayout.Gradient`), where SVG would pad with the
+      // outermost
+      let stops = g.stops
+      for i, stop in stops {
+        if stop.offset <= 0.0 &&
+          i + 1 < stops.length() &&
+          stops[i + 1].offset <= 0.0 {
+          continue
+        }
+        if stop.offset >= 1.0 && i > 0 && stops[i - 1].offset >= 1.0 {
+          continue
+        }
+        def.write_string(
+          "    <stop offset=\"\{num(stop.offset)}\" stop-color=\"\{stop.color.to_hex()}\"/>\n",
+        )
+      }
+      def.write_string("  </\{element}>\n")
+      let def = def.to_string()
+      let key = element + def
+      let id = match defs.gradients.get(key) {
+        Some(id) => id
+        None => {
+          let id = defs.next("g")
+          defs.gradients[key] = id
+          sb.write_string("  <\{element} id=\"\{id}\"")
+          sb.write_string(def)
+          id
+        }
+      }
+      "url(#\{id})"
+    }
+  }
+}
+
+///|
+/// The attributes of a stroke in `style` (after its `stroke`), `alpha`
+/// opaque. A hairline is a non-scaling stroke one CSS pixel wide, the
+/// nearest SVG has to PDF's thinnest line.
+fn write_stroke_style(
+  sb : StringBuilder,
+  style : @pagelayout.StrokeStyle,
+  alpha : Double,
+) -> Unit {
+  match style.width {
+    Width(width) => sb.write_string(" stroke-width=\"\{num(width)}\"")
+    Hairline =>
+      sb.write_string(
+        " stroke-width=\"1\" vector-effect=\"non-scaling-stroke\"",
+      )
+  }
+  match style.cap {
+    ButtCap => ()
+    RoundCap => sb.write_string(" stroke-linecap=\"round\"")
+    SquareCap => sb.write_string(" stroke-linecap=\"square\"")
+  }
+  match style.join {
+    MiterJoin => ()
+    RoundJoin => sb.write_string(" stroke-linejoin=\"round\"")
+    BevelJoin => sb.write_string(" stroke-linejoin=\"bevel\"")
+  }
+  if style.miter_limit != 4.0 {
+    sb.write_string(" stroke-miterlimit=\"\{num(style.miter_limit)}\"")
+  }
+  if !style.dash.is_empty() {
+    sb.write_string(" stroke-dasharray=\"\{style.dash.map(num).join(" ")}\"")
+    if style.dash_phase != 0.0 {
+      sb.write_string(" stroke-dashoffset=\"\{num(style.dash_phase)}\"")
+    }
+  }
+  if alpha != 1.0 {
+    sb.write_string(" stroke-opacity=\"\{num(alpha)}\"")
+  }
+}
+
+///|
+/// A path as `<path>`, its fill and stroke `fill_alpha` and `stroke_alpha`
+/// opaque.
+fn emit_path(
+  sb : StringBuilder,
+  path : @pagelayout.PathItem,
+  defs : Defs,
+  fill_alpha : Double,
+  stroke_alpha : Double,
+) -> Unit {
+  let fill = match path.fill {
+    Some(paint) => paint_attr(sb, paint, defs)
+    None => "none"
+  }
+  let stroke = path.stroke.map(paint => paint_attr(sb, paint, defs))
+  sb.write_string("  <path d=\"\{path_data(path.segments)}\" fill=\"\{fill}\"")
+  if path.fill is Some(_) && path.fill_rule is EvenOdd {
+    sb.write_string(" fill-rule=\"evenodd\"")
+  }
+  if fill_alpha != 1.0 {
+    sb.write_string(" fill-opacity=\"\{num(fill_alpha)}\"")
+  }
+  match stroke {
+    Some(stroke) => {
+      sb.write_string(" stroke=\"\{stroke}\"")
+      write_stroke_style(sb, path.stroke_style, stroke_alpha)
+    }
+    None => ()
+  }
+  sb.write_string("/>\n")
+}
+
+///|
+fn emit_graphic(
+  sb : StringBuilder,
+  model : @pagelayout.PageModel,
+  graphic : @pagelayout.GraphicItem,
+  defs : Defs,
+) -> Unit {
+  sb.write_string(
+    "  <g transform=\"translate(\{num(graphic.x_pt)} \{num(graphic.y_pt)})\">\n",
+  )
+  // per Save level: the groups opened at that level, and the alphas
+  let mut open = 0
+  let mut fill_alpha = 1.0
+  let mut stroke_alpha = 1.0
+  let stack : Array[(Int, Double, Double)] = []
+  for op in graphic.ops {
+    match op {
+      Save => {
+        stack.push((open, fill_alpha, stroke_alpha))
+        open = 0
+      }
+      Restore =>
+        match stack.pop() {
+          Some((outer, fill, stroke)) => {
+            for _ in 0..<open {
+              sb.write_string("  </g>\n")
+            }
+            open = outer
+            fill_alpha = fill
+            stroke_alpha = stroke
+          }
+          None => ()
+        }
+      Transform(m) => {
+        sb.write_string("  <g transform=\"\{matrix_attr(m)}\">\n")
+        open += 1
+      }
+      Clip(segments, rule) => {
+        let id = defs.next("c")
+        let clip_rule = match rule {
+          NonZero => "nonzero"
+          EvenOdd => "evenodd"
+        }
+        sb.write_string(
+          "  <clipPath id=\"\{id}\"><path d=\"\{path_data(segments)}\" clip-rule=\"\{clip_rule}\"/></clipPath>\n",
+        )
+        sb.write_string("  <g clip-path=\"url(#\{id})\">\n")
+        open += 1
+      }
+      Alpha(fill, stroke) => {
+        fill_alpha = fill
+        stroke_alpha = stroke
+      }
+      // a non-scaling stroke's dashes are measured in the host's space, not
+      // the graphic's (in device pixels by some renderers, CSS pixels by
+      // others), so a dashed hairline is drawn dashed already: a fill of
+      // its own, then its dashes as a solid hairline
+      Path(path) if path.stroke is Some(_) &&
+        path.stroke_style.width is Hairline &&
+        !path.stroke_style.dash.is_empty() => {
+        let style = path.stroke_style
+        if path.fill is Some(_) {
+          emit_path(
+            sb,
+            { ..path, stroke: None, },
+            defs,
+            fill_alpha,
+            stroke_alpha,
+          )
+        }
+        emit_path(
+          sb,
+          {
+            ..path,
+            segments: dashed(path.segments, style.dash, style.dash_phase),
+            fill: None,
+            stroke_style: { ..style, dash: [], dash_phase: 0, },
+          },
+          defs,
+          fill_alpha,
+          stroke_alpha,
+        )
+      }
+      Path(path) => emit_path(sb, path, defs, fill_alpha, stroke_alpha)
+      Text(run) | PaintedText(run, _) => {
+        // the paint goes on the text itself: its fill in the run's colour
+        // (or none), its outline, each with its own opacity
+        let paint = StringBuilder()
+        let (filled, outline) = match op {
+          PaintedText(_, paint) =>
+            (paint.fill, paint.stroke.map(c => (c, paint.stroke_style)))
+          _ => (true, None)
+        }
+        if filled {
+          paint.write_string(" fill=\"\{run.color.to_hex()}\"")
+          if fill_alpha != 1.0 {
+            paint.write_string(" fill-opacity=\"\{num(fill_alpha)}\"")
+          }
+        } else {
+          paint.write_string(" fill=\"none\"")
+        }
+        match outline {
+          Some((color, style)) => {
+            paint.write_string(" stroke=\"\{color.to_hex()}\"")
+            write_stroke_style(paint, style, stroke_alpha)
+          }
+          None => ()
+        }
+        emit_text(sb, model, run, paint=paint.to_string(), num~)
+      }
+      Image(image) => {
+        if fill_alpha != 1.0 {
+          sb.write_string("  <g opacity=\"\{num(fill_alpha)}\">\n")
+        }
+        emit_image(sb, image, num~, fill=true)
+        if fill_alpha != 1.0 {
+          sb.write_string("  </g>\n")
+        }
+      }
+    }
+  }
+  // close whatever an unbalanced graphic left open
+  while stack.pop() is Some((outer, _, _)) {
+    for _ in 0..<open {
+      sb.write_string("  </g>\n")
+    }
+    open = outer
+  }
+  for _ in 0..<open {
+    sb.write_string("  </g>\n")
+  }
+  sb.write_string("  </g>\n")
+}

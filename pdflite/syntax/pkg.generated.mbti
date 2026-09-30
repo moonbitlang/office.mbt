@@ -133,6 +133,7 @@ pub(all) enum PdfObject {
   PdfBoolean(Bool)
   PdfInteger(Int)
   PdfReal(Double)
+  PdfExactReal(Double)
   PdfString(Bytes)
   PdfNameObject(@core.PdfName)
   PdfArray(Array[PdfObject])

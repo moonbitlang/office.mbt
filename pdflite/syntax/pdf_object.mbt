@@ -53,11 +53,19 @@ pub(all) struct PdfStream {
 /// Strings and names are byte-oriented PDF values, not MoonBit Unicode strings.
 /// `PdfIndirect(number)` is an unresolved reference by object number; callers
 /// that need the referenced object should resolve it through a `PdfDocument`.
+///
+/// `PdfReal` is written rounded (to six decimals below 0.0001 in magnitude,
+/// otherwise to twelve significant digits); `PdfExactReal` is written exactly,
+/// as the shortest decimal that reads back as the value (see
+/// `pdf_write_exact_real`), for numbers such as transformation coefficients
+/// that no fixed precision serves. The parser never produces `PdfExactReal`:
+/// what it writes reads back as `PdfReal` (or `PdfInteger`).
 pub(all) enum PdfObject {
   PdfNull
   PdfBoolean(Bool)
   PdfInteger(Int)
   PdfReal(Double)
+  PdfExactReal(Double)
   PdfString(@core.PdfBytes)
   PdfNameObject(@core.PdfName)
   PdfArray(Array[PdfObject])

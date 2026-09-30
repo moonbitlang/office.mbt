@@ -8,6 +8,8 @@ import {
 // Values
 pub let black : Color
 
+pub let identity : Matrix
+
 // Errors
 
 // Types and methods
@@ -63,6 +65,19 @@ pub fn Emu::to_pt(Self) -> Double
 #deprecated
 pub fn Emu::to_repr(Self) -> @debug.Repr
 
+pub(all) enum FillRule {
+  NonZero
+  EvenOdd
+} derive(Eq, ToJson, @debug.Debug)
+#deprecated
+pub fn FillRule::equal(Self, Self) -> Bool
+#deprecated
+pub fn FillRule::not_equal(Self, Self) -> Bool
+#deprecated
+pub fn FillRule::to_json(Self) -> Json
+#deprecated
+pub fn FillRule::to_repr(Self) -> @debug.Repr
+
 pub(all) struct FontSpec {
   family : String
   bold : Bool
@@ -96,6 +111,81 @@ pub fn GlyphRun::to_json(Self) -> Json
 pub fn GlyphRun::to_repr(Self) -> @debug.Repr
 pub fn GlyphRun::width_pt(Self) -> Double
 
+pub(all) struct Gradient {
+  shape : GradientShape
+  stops : Array[GradientStop]
+  transform : Matrix
+} derive(Eq, ToJson, @debug.Debug)
+pub fn Gradient::degenerate_color(Self) -> Color?
+#deprecated
+pub fn Gradient::equal(Self, Self) -> Bool
+#deprecated
+pub fn Gradient::not_equal(Self, Self) -> Bool
+#deprecated
+pub fn Gradient::to_json(Self) -> Json
+#deprecated
+pub fn Gradient::to_repr(Self) -> @debug.Repr
+
+pub(all) enum GradientShape {
+  Linear(x1~ : Double, y1~ : Double, x2~ : Double, y2~ : Double)
+  Radial(x1~ : Double, y1~ : Double, r1~ : Double, x2~ : Double, y2~ : Double, r2~ : Double)
+} derive(Eq, ToJson, @debug.Debug)
+#deprecated
+pub fn GradientShape::equal(Self, Self) -> Bool
+#deprecated
+pub fn GradientShape::not_equal(Self, Self) -> Bool
+#deprecated
+pub fn GradientShape::to_json(Self) -> Json
+#deprecated
+pub fn GradientShape::to_repr(Self) -> @debug.Repr
+
+pub(all) struct GradientStop {
+  offset : Double
+  color : Color
+} derive(Eq, ToJson, @debug.Debug)
+#deprecated
+pub fn GradientStop::equal(Self, Self) -> Bool
+#deprecated
+pub fn GradientStop::not_equal(Self, Self) -> Bool
+#deprecated
+pub fn GradientStop::to_json(Self) -> Json
+#deprecated
+pub fn GradientStop::to_repr(Self) -> @debug.Repr
+
+pub(all) struct GraphicItem {
+  x_pt : Double
+  y_pt : Double
+  ops : Array[GraphicOp]
+} derive(Eq, ToJson, @debug.Debug)
+#deprecated
+pub fn GraphicItem::equal(Self, Self) -> Bool
+#deprecated
+pub fn GraphicItem::not_equal(Self, Self) -> Bool
+#deprecated
+pub fn GraphicItem::to_json(Self) -> Json
+#deprecated
+pub fn GraphicItem::to_repr(Self) -> @debug.Repr
+
+pub(all) enum GraphicOp {
+  Save
+  Restore
+  Transform(Matrix)
+  Clip(Array[PathSegment], FillRule)
+  Alpha(Double, Double)
+  Path(PathItem)
+  Text(GlyphRun)
+  PaintedText(GlyphRun, TextPaint)
+  Image(ImageItem)
+} derive(Eq, ToJson, @debug.Debug)
+#deprecated
+pub fn GraphicOp::equal(Self, Self) -> Bool
+#deprecated
+pub fn GraphicOp::not_equal(Self, Self) -> Bool
+#deprecated
+pub fn GraphicOp::to_json(Self) -> Json
+#deprecated
+pub fn GraphicOp::to_repr(Self) -> @debug.Repr
+
 pub(all) struct HalfPoints(Int) derive(Eq, ToJson, @debug.Debug)
 #deprecated
 pub fn HalfPoints::equal(Self, Self) -> Bool
@@ -123,6 +213,34 @@ pub fn ImageItem::not_equal(Self, Self) -> Bool
 pub fn ImageItem::to_json(Self) -> Json
 #deprecated
 pub fn ImageItem::to_repr(Self) -> @debug.Repr
+
+pub(all) enum LineCap {
+  ButtCap
+  RoundCap
+  SquareCap
+} derive(Eq, ToJson, @debug.Debug)
+#deprecated
+pub fn LineCap::equal(Self, Self) -> Bool
+#deprecated
+pub fn LineCap::not_equal(Self, Self) -> Bool
+#deprecated
+pub fn LineCap::to_json(Self) -> Json
+#deprecated
+pub fn LineCap::to_repr(Self) -> @debug.Repr
+
+pub(all) enum LineJoin {
+  MiterJoin
+  RoundJoin
+  BevelJoin
+} derive(Eq, ToJson, @debug.Debug)
+#deprecated
+pub fn LineJoin::equal(Self, Self) -> Bool
+#deprecated
+pub fn LineJoin::not_equal(Self, Self) -> Bool
+#deprecated
+pub fn LineJoin::to_json(Self) -> Json
+#deprecated
+pub fn LineJoin::to_repr(Self) -> @debug.Repr
 
 pub(all) struct LinkRegion {
   x_pt : Double
@@ -154,6 +272,25 @@ pub fn LinkTarget::to_json(Self) -> Json
 #deprecated
 pub fn LinkTarget::to_repr(Self) -> @debug.Repr
 
+pub(all) struct Matrix {
+  a : Double
+  b : Double
+  c : Double
+  d : Double
+  e : Double
+  f : Double
+} derive(Eq, ToJson, @debug.Debug)
+pub fn Matrix::after(Self, Self) -> Self
+pub fn Matrix::apply(Self, Double, Double) -> (Double, Double)
+#deprecated
+pub fn Matrix::equal(Self, Self) -> Bool
+#deprecated
+pub fn Matrix::not_equal(Self, Self) -> Bool
+#deprecated
+pub fn Matrix::to_json(Self) -> Json
+#deprecated
+pub fn Matrix::to_repr(Self) -> @debug.Repr
+
 pub(all) struct Page {
   width_pt : Double
   height_pt : Double
@@ -174,6 +311,7 @@ pub(all) enum PageItem {
   Image(ImageItem)
   Link(LinkRegion)
   Anchor(AnchorItem)
+  Graphic(GraphicItem)
 } derive(Eq, ToJson, @debug.Debug)
 #deprecated
 pub fn PageItem::equal(Self, Self) -> Bool
@@ -200,6 +338,51 @@ pub fn PageModel::to_json(Self) -> Json
 pub fn PageModel::to_repr(Self) -> @debug.Repr
 pub fn PageModel::validate(Self) -> Array[String]
 
+pub(all) enum Paint {
+  Solid(Color)
+  GradientPaint(Gradient)
+} derive(Eq, ToJson, @debug.Debug)
+#deprecated
+pub fn Paint::equal(Self, Self) -> Bool
+#deprecated
+pub fn Paint::not_equal(Self, Self) -> Bool
+#deprecated
+pub fn Paint::to_json(Self) -> Json
+#deprecated
+pub fn Paint::to_repr(Self) -> @debug.Repr
+
+pub(all) struct PathItem {
+  segments : Array[PathSegment]
+  fill : Paint?
+  fill_rule : FillRule
+  stroke : Paint?
+  stroke_style : StrokeStyle
+} derive(Eq, ToJson, @debug.Debug)
+#deprecated
+pub fn PathItem::equal(Self, Self) -> Bool
+#deprecated
+pub fn PathItem::not_equal(Self, Self) -> Bool
+#deprecated
+pub fn PathItem::to_json(Self) -> Json
+#deprecated
+pub fn PathItem::to_repr(Self) -> @debug.Repr
+
+pub(all) enum PathSegment {
+  MoveTo(Double, Double)
+  LineTo(Double, Double)
+  CurveTo(Double, Double, Double, Double, Double, Double)
+  Rectangle(Double, Double, Double, Double)
+  Close
+} derive(Eq, ToJson, @debug.Debug)
+#deprecated
+pub fn PathSegment::equal(Self, Self) -> Bool
+#deprecated
+pub fn PathSegment::not_equal(Self, Self) -> Bool
+#deprecated
+pub fn PathSegment::to_json(Self) -> Json
+#deprecated
+pub fn PathSegment::to_repr(Self) -> @debug.Repr
+
 pub(all) struct RectItem {
   x_pt : Double
   y_pt : Double
@@ -217,6 +400,51 @@ pub fn RectItem::not_equal(Self, Self) -> Bool
 pub fn RectItem::to_json(Self) -> Json
 #deprecated
 pub fn RectItem::to_repr(Self) -> @debug.Repr
+
+pub(all) struct StrokeStyle {
+  width : StrokeWidth
+  cap : LineCap
+  join : LineJoin
+  miter_limit : Double
+  dash : Array[Double]
+  dash_phase : Double
+} derive(Eq, ToJson, @debug.Debug)
+pub fn StrokeStyle::default() -> Self
+#deprecated
+pub fn StrokeStyle::equal(Self, Self) -> Bool
+#deprecated
+pub fn StrokeStyle::not_equal(Self, Self) -> Bool
+#deprecated
+pub fn StrokeStyle::to_json(Self) -> Json
+#deprecated
+pub fn StrokeStyle::to_repr(Self) -> @debug.Repr
+
+pub(all) enum StrokeWidth {
+  Width(Double)
+  Hairline
+} derive(Eq, ToJson, @debug.Debug)
+#deprecated
+pub fn StrokeWidth::equal(Self, Self) -> Bool
+#deprecated
+pub fn StrokeWidth::not_equal(Self, Self) -> Bool
+#deprecated
+pub fn StrokeWidth::to_json(Self) -> Json
+#deprecated
+pub fn StrokeWidth::to_repr(Self) -> @debug.Repr
+
+pub(all) struct TextPaint {
+  fill : Bool
+  stroke : Color?
+  stroke_style : StrokeStyle
+} derive(Eq, ToJson, @debug.Debug)
+#deprecated
+pub fn TextPaint::equal(Self, Self) -> Bool
+#deprecated
+pub fn TextPaint::not_equal(Self, Self) -> Bool
+#deprecated
+pub fn TextPaint::to_json(Self) -> Json
+#deprecated
+pub fn TextPaint::to_repr(Self) -> @debug.Repr
 
 pub(all) struct Twips(Int) derive(Eq, ToJson, @debug.Debug)
 #deprecated

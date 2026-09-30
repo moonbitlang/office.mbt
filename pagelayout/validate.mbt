@@ -89,6 +89,7 @@ pub fn PageModel::validate(self : PageModel) -> Array[String] {
           if anchor.name.is_empty() {
             violations.push("\{where_}: anchor without a name")
           }
+        Graphic(graphic) => self.check_graphic(violations, where_, graphic)
       }
     }
   }
