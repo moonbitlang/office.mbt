@@ -86,7 +86,11 @@ covers changes that have landed on `main` but are not yet published.
     pdftocairo, Evince and librsvg, paints nothing below about 1e-4
     points; Poppler nothing for a linear gradient about 1e18 points long)
     and the backends draw a gradient's geometry as it is rather than
-    reshape it; that `LineTo`, `CurveTo` and `Close` have a current
+    reshape it (this is the supported range, not a promise that every
+    renderer draws an accepted gradient the same: Cairo, and so librsvg,
+    resolves a gradient's parameter to about 1/65536 of its size, so it
+    merges or moves colour changes closer than that, which Poppler's
+    Splash draws where they are; see `Gradient`); that `LineTo`, `CurveTo` and `Close` have a current
     point; that alphas are within 0..=1, stroke widths positive, miter
     limits from 1, dashes empty or non-negative with a positive length;
     that text is not outlined with a dashed hairline; that gradient stops
