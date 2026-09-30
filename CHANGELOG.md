@@ -35,7 +35,12 @@ covers changes that have landed on `main` but are not yet published.
     does: SVG draws a dashed hairline path as its dashes, each a solid
     non-scaling stroke (a non-scaling stroke's own dashes would be
     measured in device or CSS pixels), and `validate` rejects text
-    outlined with a dashed hairline, which SVG cannot dash so.
+    outlined with a dashed hairline, which SVG cannot dash so. The dashes
+    are cut as PDF (Poppler) dashes: a dash of length 0 is a dot, at a
+    subpath's start too (at phase 0), and none starts at its end; a
+    closed subpath keeps its closing join, its one dash closed when it
+    runs all round, and a dash running to its end continuing through the
+    start into the first.
   - A path's fill and stroke are a `Paint`: a solid `Color` or a
     `Gradient { shape, stops, transform }`, whose `GradientShape` is
     `Linear(x1~, y1~, x2~, y2~)` or `Radial(x1~, y1~, r1~, x2~, y2~, r2~)`
@@ -51,33 +56,47 @@ covers changes that have landed on `main` but are not yet published.
     transformation current where it paints. Alpha states, shadings and
     patterns (by shading and effective matrix) are shared by value across
     the document. Text in a graphic embeds and subsets its fonts like page
-    text. Numbers in a graphic's content are written exactly (shortest
-    round-trip, without an exponent); page items outside graphics keep
-    pdflite's rounding, so their output is unchanged. Dictionaries keep
-    pdflite's precision, so a shading is built in a canonical space (a
-    linear one from (0, 0) to (1, 0), a radial one ending on the unit
-    circle) with the gradient's geometry in the pattern matrix, and
-    stitching intervals whose bounds would be written equal are merged:
-    `/Bounds` strictly increase as written. A path painted with a gradient
-    where the transformation shrinks areas below 1e-4 is drawn with its
-    numbers scaled down by a power of two and the transformation scaled
-    up as much, since Poppler refuses patterns under a tiny determinant.
+    text. Numbers in a graphic's content, pattern matrices and shading
+    coordinates are written exactly (shortest round-trip, without an
+    exponent, and an integral number beyond 2147483647 with a decimal
+    point: pdflite's new `PdfExactReal`); page items outside graphics keep
+    pdflite's rounding, so their output is unchanged. A shading is built
+    in a canonical space (a linear one from (0, 0) to (1, 0), a radial one
+    ending on the unit circle), the pattern matrix placing it on the page.
+    Stitching bounds keep pdflite's precision, and intervals whose bounds
+    would be written equal are merged: `/Bounds` strictly increase as
+    written. Renderers draw gradients only within some sizes on the page,
+    so a gradient smaller than 1e-3 points there (a linear one's length, a
+    radial one's end radius) is drawn that size, grown about the middle of
+    its line or its end centre (Cairo, and so pdftocairo, Evince and
+    librsvg, paints nothing below about 1e-4 points; the SVG backend grows
+    it too), and a linear gradient longer than 1e12 points is drawn that
+    long, shrunk about the page's centre (Poppler paints nothing for one
+    about 1e18 points long); neither moves a colour visibly. A path
+    painted with a gradient where the transformation shrinks areas below
+    1e-4 is drawn with its numbers scaled down by a power of two and the
+    transformation scaled up as much, since Poppler refuses patterns under
+    a tiny determinant.
   - The SVG backend writes nested groups, `<clipPath>`s, paths, text with
     independent fill and stroke opacities, and gradient definitions (one
     per distinct gradient on a page). Numbers in graphics are written
     exactly (shortest round-trip), as their transformations may scale them
     arbitrarily; page items outside graphics keep three decimals.
   - `PageModel::validate` checks that saves and restores balance; that
-    every number in a graphic is finite; that `LineTo`, `CurveTo` and
-    `Close` have a current point; that alphas are within 0..=1, stroke
-    widths positive, miter limits from 1, dashes empty or non-negative
-    with a positive length; that text is not outlined with a dashed
-    hairline; that gradient stops are ascending within 0..=1 from 0 to 1;
-    and that glyph runs and images are well-formed.
-    `unembeddable_images` reports images inside graphics too.
+    every number in a graphic is finite and within ±3.403e38, the range a
+    PDF reader is sure to hold (PDF 32000-1, Annex C), as are the
+    transformations composed from the page and where each gradient lands
+    on it; that `LineTo`, `CurveTo` and `Close` have a current point; that
+    alphas are within 0..=1, stroke widths positive, miter limits from 1,
+    dashes empty or non-negative with a positive length; that text is not
+    outlined with a dashed hairline; that gradient stops are ascending
+    within 0..=1 from 0 to 1; and that glyph runs and images are
+    well-formed. `unembeddable_images` reports images inside graphics too.
 
   Code that matches `PageItem` exhaustively must handle the new variant (a
-  wildcard arm, or `Graphic(_) => ()`).
+  wildcard arm, or `Graphic(_) => ()`). The PDF backend uses pdflite's
+  `PdfExactReal` (unreleased; see below), so this release of pagelayout
+  needs the pdflite release that has it.
 
 ### moonbitlang/pagelayout [0.5.0]
 
