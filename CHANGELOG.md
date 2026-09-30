@@ -56,23 +56,16 @@ covers changes that have landed on `main` but are not yet published.
     transformation current where it paints. Alpha states, shadings and
     patterns (by shading and effective matrix) are shared by value across
     the document. Text in a graphic embeds and subsets its fonts like page
-    text. Numbers in a graphic's content, pattern matrices and shading
-    coordinates are written exactly (shortest round-trip, without an
-    exponent, and an integral number beyond 2147483647 with a decimal
-    point: pdflite's new `PdfExactReal`); page items outside graphics keep
-    pdflite's rounding, so their output is unchanged. A shading is built
-    in a canonical space (a linear one from (0, 0) to (1, 0), a radial one
-    ending on the unit circle), the pattern matrix placing it on the page.
-    Stitching bounds keep pdflite's precision, and intervals whose bounds
-    would be written equal are merged: `/Bounds` strictly increase as
-    written. Renderers draw gradients only within some sizes on the page,
-    so a gradient smaller than 1e-3 points there (a linear one's length, a
-    radial one's end radius) is drawn that size, grown about the middle of
-    its line or its end centre (Cairo, and so pdftocairo, Evince and
-    librsvg, paints nothing below about 1e-4 points; the SVG backend grows
-    it too), and a linear gradient longer than 1e12 points is drawn that
-    long, shrunk about the page's centre (Poppler paints nothing for one
-    about 1e18 points long); neither moves a colour visibly. A path
+    text. Numbers in a graphic's content, pattern matrices, shading
+    coordinates and stitching bounds are written exactly (shortest
+    round-trip, without an exponent, and an integral number beyond
+    2147483647 with a decimal point: pdflite's new `PdfExactReal`); page
+    items outside graphics keep pdflite's rounding, so their output is
+    unchanged. A shading is built in a canonical space (a linear one from
+    (0, 0) to (1, 0), a radial one centred on its end circle and scaled
+    by the largest of its radii and its centres' separation), the pattern
+    matrix placing it on the page. Distinct stop offsets, however near,
+    stay distinct `/Bounds`, strictly increasing as written. A path
     painted with a gradient where the transformation shrinks areas below
     1e-4 is drawn with its numbers scaled down by a power of two and the
     transformation scaled up as much, since Poppler refuses patterns under
@@ -86,12 +79,20 @@ covers changes that have landed on `main` but are not yet published.
     every number in a graphic is finite and within ±3.403e38, the range a
     PDF reader is sure to hold (PDF 32000-1, Annex C), as are the
     transformations composed from the page and where each gradient lands
-    on it; that `LineTo`, `CurveTo` and `Close` have a current point; that
-    alphas are within 0..=1, stroke widths positive, miter limits from 1,
-    dashes empty or non-negative with a positive length; that text is not
-    outlined with a dashed hairline; that gradient stops are ascending
-    within 0..=1 from 0 to 1; and that glyph runs and images are
-    well-formed. `unembeddable_images` reports images inside graphics too.
+    on it; that each gradient with extent is from 0.001 to 1e12 points in
+    size on the page (a linear one's length; a radial one's largest radius
+    or separation of its centres, both circles counted), since renderers
+    draw gradients outside that range wrongly or not at all (Cairo, and so
+    pdftocairo, Evince and librsvg, paints nothing below about 1e-4
+    points; Poppler nothing for a linear gradient about 1e18 points long)
+    and the backends draw a gradient's geometry as it is rather than
+    reshape it; that `LineTo`, `CurveTo` and `Close` have a current
+    point; that alphas are within 0..=1, stroke widths positive, miter
+    limits from 1, dashes empty or non-negative with a positive length;
+    that text is not outlined with a dashed hairline; that gradient stops
+    are ascending within 0..=1 from 0 to 1; and that glyph runs and images
+    are well-formed. `unembeddable_images` reports images inside graphics
+    too.
 
   Code that matches `PageItem` exhaustively must handle the new variant (a
   wildcard arm, or `Graphic(_) => ()`). The PDF backend uses pdflite's
