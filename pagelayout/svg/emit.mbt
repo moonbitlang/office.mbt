@@ -85,10 +85,13 @@ fn base64_encode(data : Bytes) -> String {
 }
 
 ///|
+/// A glyph run as `<text>`, filled in its colour, or painted by the
+/// attributes in `paint` (written as they are) instead.
 fn emit_text(
   sb : StringBuilder,
   model : @pagelayout.PageModel,
   run : @pagelayout.GlyphRun,
+  paint? : String,
 ) -> Unit {
   if run.text.length() == 0 {
     return
@@ -127,9 +130,15 @@ fn emit_text(
   if font.italic {
     sb.write_string(" font-style=\"italic\"")
   }
-  sb.write_string(" fill=\"")
-  sb.write_string(run.color.to_hex())
-  sb.write_string("\">")
+  match paint {
+    Some(attributes) => sb.write_string(attributes)
+    None => {
+      sb.write_string(" fill=\"")
+      sb.write_string(run.color.to_hex())
+      sb.write_string("\"")
+    }
+  }
+  sb.write_string(">")
   sb.write_string(escape_xml(run.text))
   sb.write_string("</text>\n")
 }

@@ -18,7 +18,7 @@ fn path_data(segments : Array[@pagelayout.PathSegment]) -> String {
         parts.push(
           "C\{fmt_num(x1)} \{fmt_num(y1)} \{fmt_num(x2)} \{fmt_num(y2)} \{fmt_num(x)} \{fmt_num(y)}",
         )
-      // the winding of PDF's `re` (see the PDF backend)
+      // the winding of PDF's `re` (see `PathSegment::Rectangle`)
       Rectangle(x, y, w, h) =>
         parts.push(
           "M\{fmt_num(x)} \{fmt_num(y + h)}h\{fmt_num(w)}v\{fmt_num(-h)}h\{fmt_num(-w)}Z",
@@ -47,29 +47,71 @@ fn paint_attr(
     GradientPaint(g) => {
       ids.val += 1
       let id = "g\{ids.val}"
-      if g.radial {
-        sb.write_string(
-          "  <radialGradient id=\"\{id}\" gradientUnits=\"userSpaceOnUse\" gradientTransform=\"\{matrix_attr(g.transform)}\" fx=\"\{fmt_num(g.x1)}\" fy=\"\{fmt_num(g.y1)}\" fr=\"\{fmt_num(g.r1)}\" cx=\"\{fmt_num(g.x2)}\" cy=\"\{fmt_num(g.y2)}\" r=\"\{fmt_num(g.r2)}\">\n",
-        )
-      } else {
-        sb.write_string(
-          "  <linearGradient id=\"\{id}\" gradientUnits=\"userSpaceOnUse\" gradientTransform=\"\{matrix_attr(g.transform)}\" x1=\"\{fmt_num(g.x1)}\" y1=\"\{fmt_num(g.y1)}\" x2=\"\{fmt_num(g.x2)}\" y2=\"\{fmt_num(g.y2)}\">\n",
-        )
+      let transform = matrix_attr(g.transform)
+      let element = match g.shape {
+        Linear(x1~, y1~, x2~, y2~) => {
+          sb.write_string(
+            "  <linearGradient id=\"\{id}\" gradientUnits=\"userSpaceOnUse\" gradientTransform=\"\{transform}\" x1=\"\{fmt_num(x1)}\" y1=\"\{fmt_num(y1)}\" x2=\"\{fmt_num(x2)}\" y2=\"\{fmt_num(y2)}\">\n",
+          )
+          "linearGradient"
+        }
+        Radial(x1~, y1~, r1~, x2~, y2~, r2~) => {
+          sb.write_string(
+            "  <radialGradient id=\"\{id}\" gradientUnits=\"userSpaceOnUse\" gradientTransform=\"\{transform}\" fx=\"\{fmt_num(x1)}\" fy=\"\{fmt_num(y1)}\" fr=\"\{fmt_num(r1)}\" cx=\"\{fmt_num(x2)}\" cy=\"\{fmt_num(y2)}\" r=\"\{fmt_num(r2)}\">\n",
+          )
+          "radialGradient"
+        }
       }
       for stop in g.stops {
         sb.write_string(
           "    <stop offset=\"\{fmt_num(stop.offset)}\" stop-color=\"\{stop.color.to_hex()}\"/>\n",
         )
       }
-      sb.write_string(
-        if g.radial {
-          "  </radialGradient>\n"
-        } else {
-          "  </linearGradient>\n"
-        },
-      )
+      sb.write_string("  </\{element}>\n")
       "url(#\{id})"
     }
+  }
+}
+
+///|
+/// The attributes of a stroke in `style` (after its `stroke`), `alpha`
+/// opaque. A hairline is a non-scaling stroke one CSS pixel wide, the
+/// nearest SVG has to PDF's thinnest line.
+fn write_stroke_style(
+  sb : StringBuilder,
+  style : @pagelayout.StrokeStyle,
+  alpha : Double,
+) -> Unit {
+  match style.width {
+    Width(width) => sb.write_string(" stroke-width=\"\{fmt_num(width)}\"")
+    Hairline =>
+      sb.write_string(
+        " stroke-width=\"1\" vector-effect=\"non-scaling-stroke\"",
+      )
+  }
+  match style.cap {
+    ButtCap => ()
+    RoundCap => sb.write_string(" stroke-linecap=\"round\"")
+    SquareCap => sb.write_string(" stroke-linecap=\"square\"")
+  }
+  match style.join {
+    MiterJoin => ()
+    RoundJoin => sb.write_string(" stroke-linejoin=\"round\"")
+    BevelJoin => sb.write_string(" stroke-linejoin=\"bevel\"")
+  }
+  if style.miter_limit != 4.0 {
+    sb.write_string(" stroke-miterlimit=\"\{fmt_num(style.miter_limit)}\"")
+  }
+  if !style.dash.is_empty() {
+    sb.write_string(
+      " stroke-dasharray=\"\{style.dash.map(fmt_num).join(" ")}\"",
+    )
+    if style.dash_phase != 0.0 {
+      sb.write_string(" stroke-dashoffset=\"\{fmt_num(style.dash_phase)}\"")
+    }
+  }
+  if alpha != 1.0 {
+    sb.write_string(" stroke-opacity=\"\{fmt_num(alpha)}\"")
   }
 }
 
@@ -144,68 +186,38 @@ fn emit_graphic(
         }
         match stroke {
           Some(stroke) => {
-            let style = path.stroke_style
-            sb.write_string(
-              " stroke=\"\{stroke}\" stroke-width=\"\{fmt_num(style.width)}\"",
-            )
-            match style.cap {
-              ButtCap => ()
-              RoundCap => sb.write_string(" stroke-linecap=\"round\"")
-              SquareCap => sb.write_string(" stroke-linecap=\"square\"")
-            }
-            match style.join {
-              MiterJoin => ()
-              RoundJoin => sb.write_string(" stroke-linejoin=\"round\"")
-              BevelJoin => sb.write_string(" stroke-linejoin=\"bevel\"")
-            }
-            if style.miter_limit != 4.0 {
-              sb.write_string(
-                " stroke-miterlimit=\"\{fmt_num(style.miter_limit)}\"",
-              )
-            }
-            if !style.dash.is_empty() {
-              sb.write_string(
-                " stroke-dasharray=\"\{style.dash.map(fmt_num).join(" ")}\"",
-              )
-              if style.dash_phase != 0.0 {
-                sb.write_string(
-                  " stroke-dashoffset=\"\{fmt_num(style.dash_phase)}\"",
-                )
-              }
-            }
-            if stroke_alpha != 1.0 {
-              sb.write_string(" stroke-opacity=\"\{fmt_num(stroke_alpha)}\"")
-            }
+            sb.write_string(" stroke=\"\{stroke}\"")
+            write_stroke_style(sb, path.stroke_style, stroke_alpha)
           }
           None => ()
         }
         sb.write_string("/>\n")
       }
-      Text(run) => {
-        if fill_alpha != 1.0 {
-          sb.write_string("  <g opacity=\"\{fmt_num(fill_alpha)}\">\n")
+      Text(run) | PaintedText(run, _) => {
+        // the paint goes on the text itself: its fill in the run's colour
+        // (or none), its outline, each with its own opacity
+        let paint = StringBuilder()
+        let (filled, outline) = match op {
+          PaintedText(_, paint) =>
+            (paint.fill, paint.stroke.map(c => (c, paint.stroke_style)))
+          _ => (true, None)
         }
-        emit_text(sb, model, run)
-        if fill_alpha != 1.0 {
-          sb.write_string("  </g>\n")
-        }
-      }
-      PaintedText(run, paint) => {
-        // a group carries the paint: the run's own `fill` is its colour
-        let fill = if paint.fill { "" } else { " fill-opacity=\"0\"" }
-        let stroke = match paint.stroke {
-          Some(color) =>
-            " stroke=\"\{color.to_hex()}\" stroke-width=\"\{fmt_num(paint.stroke_width)}\""
-          None => ""
-        }
-        let opacity = if fill_alpha != 1.0 {
-          " opacity=\"\{fmt_num(fill_alpha)}\""
+        if filled {
+          paint.write_string(" fill=\"\{run.color.to_hex()}\"")
+          if fill_alpha != 1.0 {
+            paint.write_string(" fill-opacity=\"\{fmt_num(fill_alpha)}\"")
+          }
         } else {
-          ""
+          paint.write_string(" fill=\"none\"")
         }
-        sb.write_string("  <g\{fill}\{stroke}\{opacity}>\n")
-        emit_text(sb, model, run)
-        sb.write_string("  </g>\n")
+        match outline {
+          Some((color, style)) => {
+            paint.write_string(" stroke=\"\{color.to_hex()}\"")
+            write_stroke_style(paint, style, stroke_alpha)
+          }
+          None => ()
+        }
+        emit_text(sb, model, run, paint=paint.to_string())
       }
       Image(image) => {
         if fill_alpha != 1.0 {

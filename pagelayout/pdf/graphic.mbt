@@ -19,7 +19,7 @@
 priv struct PaintState {
   mut fill : String?
   mut stroke : String?
-  mut width : Double?
+  mut width : @pagelayout.StrokeWidth?
   mut cap : @pagelayout.LineCap?
   mut join : @pagelayout.LineJoin?
   mut miter : Double?
@@ -142,28 +142,15 @@ fn GraphicResources::shading(
       (name("/Encode"), PdfArray(encode)),
     ])
   }
-  let coords : Array[@syntax.PdfObject] = if gradient.radial {
-    [
-      PdfReal(gradient.x1),
-      PdfReal(gradient.y1),
-      PdfReal(gradient.r1),
-      PdfReal(gradient.x2),
-      PdfReal(gradient.y2),
-      PdfReal(gradient.r2),
-    ]
-  } else {
-    [
-      PdfReal(gradient.x1),
-      PdfReal(gradient.y1),
-      PdfReal(gradient.x2),
-      PdfReal(gradient.y2),
-    ]
+  let (shading_type, coords) : (Int, Array[Double]) = match gradient.shape {
+    Linear(x1~, y1~, x2~, y2~) => (2, [x1, y1, x2, y2])
+    Radial(x1~, y1~, r1~, x2~, y2~, r2~) => (3, [x1, y1, r1, x2, y2, r2])
   }
   let number = self.document.add_object(
     PdfDictionary([
-      (name("/ShadingType"), PdfInteger(if gradient.radial { 3 } else { 2 })),
+      (name("/ShadingType"), PdfInteger(shading_type)),
       (name("/ColorSpace"), PdfNameObject(name("/DeviceRGB"))),
-      (name("/Coords"), PdfArray(coords)),
+      (name("/Coords"), PdfArray(coords.map(x => PdfReal(x)))),
       (name("/Function"), function),
       (name("/Extend"), PdfArray([PdfBoolean(true), PdfBoolean(true)])),
     ]),
@@ -270,13 +257,23 @@ fn set_paint(
 }
 
 ///|
+/// The stroke parameters of `style`, those `state` does not already have
+/// (all of them for a state that knows nothing). A hairline is PDF's line
+/// width 0.
 fn set_stroke_style(
   ops : Array[@content.PdfContentOp],
   state : PaintState,
   style : @pagelayout.StrokeStyle,
 ) -> Unit {
   if state.width != Some(style.width) {
-    ops.push(Op_w(style.width))
+    ops.push(
+      Op_w(
+        match style.width {
+          Width(width) => width
+          Hairline => 0.0
+        },
+      ),
+    )
     state.width = Some(style.width)
   }
   if state.cap != Some(style.cap) {
@@ -315,6 +312,22 @@ fn set_stroke_style(
 }
 
 ///|
+/// A state that knows nothing of the paint and stroke parameters in effect,
+/// where the transformation is `ctm`.
+fn PaintState::unknown(ctm : @pagelayout.Matrix) -> PaintState {
+  {
+    fill: None,
+    stroke: None,
+    width: None,
+    cap: None,
+    join: None,
+    miter: None,
+    dash: None,
+    ctm,
+  }
+}
+
+///|
 /// Draw a graphic whose space's origin is at `(x_pt, y_pt)` on a page
 /// `page_height` tall. Glyph runs go through `text`, which draws a run in
 /// PDF's y-up terms on a page of height 0, and records the font it used;
@@ -340,16 +353,7 @@ fn emit_graphic(
   let upright = @pagelayout.Matrix::{ a: 1, b: 0, c: 0, d: -1, e: 0, f: 0, }
   ops.push(Op_q)
   ops.push(cm_op(origin))
-  let mut state = PaintState::{
-    fill: None,
-    stroke: None,
-    width: None,
-    cap: None,
-    join: None,
-    miter: None,
-    dash: None,
-    ctm: origin,
-  }
+  let mut state = PaintState::unknown(origin)
   let stack : Array[PaintState] = []
   for op in graphic.ops {
     match op {
@@ -426,7 +430,14 @@ fn emit_graphic(
           Some(colour) => {
             let (r, g, b) = colour_of(colour)
             ops.push(Op_RG(r, g, b))
-            ops.push(Op_w(paint.stroke_width))
+            // the whole stroke style, inside the text's own `q`: whatever
+            // the paths before it left in effect does not carry over, and
+            // what is set here does not carry out
+            set_stroke_style(
+              ops,
+              PaintState::unknown(state.ctm),
+              paint.stroke_style,
+            )
           }
           None => ()
         }

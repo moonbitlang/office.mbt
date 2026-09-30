@@ -256,6 +256,30 @@ pub extend StrokeStyle with ToJson::{to_json}
 
 ///|
 #deprecated("implicit trait-method promotion is being removed; call via the trait")
+pub extend StrokeWidth with @debug.Debug::{to_repr}
+
+///|
+#deprecated("implicit trait-method promotion is being removed; call via the trait")
+pub extend StrokeWidth with Eq::{not_equal, equal}
+
+///|
+#deprecated("implicit trait-method promotion is being removed; call via the trait")
+pub extend StrokeWidth with ToJson::{to_json}
+
+///|
+#deprecated("implicit trait-method promotion is being removed; call via the trait")
+pub extend GradientShape with @debug.Debug::{to_repr}
+
+///|
+#deprecated("implicit trait-method promotion is being removed; call via the trait")
+pub extend GradientShape with Eq::{not_equal, equal}
+
+///|
+#deprecated("implicit trait-method promotion is being removed; call via the trait")
+pub extend GradientShape with ToJson::{to_json}
+
+///|
+#deprecated("implicit trait-method promotion is being removed; call via the trait")
 pub extend GradientStop with @debug.Debug::{to_repr}
 
 ///|

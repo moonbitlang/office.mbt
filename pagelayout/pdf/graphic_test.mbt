@@ -37,7 +37,7 @@ test "a graphic's space is flipped onto the page at its origin" {
 test "strokes, rules, clips, transforms and alpha reach the content stream" {
   let style = @pagelayout.StrokeStyle::{
     ..@pagelayout.StrokeStyle::default(),
-    width: 2,
+    width: Width(2),
     cap: RoundCap,
     join: BevelJoin,
     dash: [3, 1],
@@ -78,13 +78,7 @@ test "strokes, rules, clips, transforms and alpha reach the content stream" {
 ///|
 test "a gradient is a shading pattern placed by the current transformation" {
   let gradient = @pagelayout.Gradient::{
-    radial: false,
-    x1: 0,
-    y1: 0,
-    r1: 0,
-    x2: 10,
-    y2: 0,
-    r2: 0,
+    shape: Linear(x1=0, y1=0, x2=10, y2=0),
     stops: [
       { offset: 0, color: @pagelayout.Color::rgb(255, 255, 255), },
       { offset: 0.5, color: @pagelayout.Color::rgb(255, 0, 0), },
@@ -152,14 +146,13 @@ test "text in a graphic is drawn upright and its font embedded" {
 }
 
 ///|
-test "painted text sets the stroke and the text rendering mode" {
-  let model = @pagelayout.PageModel::new()
+fn hi_run(model : @pagelayout.PageModel) -> @pagelayout.GlyphRun {
   let font = model.add_font({
     family: "Liberation Sans",
     bold: false,
     italic: false,
   })
-  let run = @pagelayout.GlyphRun::{
+  {
     font,
     size_pt: 12,
     x_pt: 1,
@@ -168,26 +161,105 @@ test "painted text sets the stroke and the text rendering mode" {
     advances_pt: [8.664, 2.664],
     color: @pagelayout.black,
   }
+}
+
+///|
+fn one_graphic(
+  model : @pagelayout.PageModel,
+  ops : Array[@pagelayout.GraphicOp],
+) -> @pagelayout.PageModel {
   let page = @pagelayout.Page::{ width_pt: 200, height_pt: 100, items: [], }
-  page.items.push(
-    Graphic({
-      x_pt: 0,
-      y_pt: 0,
-      ops: [
-        PaintedText(run, {
-          fill: true,
-          stroke: Some(@pagelayout.Color::rgb(255, 0, 0)),
-          stroke_width: 0.5,
-        }),
-        PaintedText(run, { fill: false, stroke: None, stroke_width: 0, }),
-      ],
-    }),
-  )
+  page.items.push(Graphic({ x_pt: 0, y_pt: 0, ops, }))
   model.pages.push(page)
+  model
+}
+
+///|
+/// How often `needle` occurs in `haystack`.
+fn occurrences(haystack : String, needle : String) -> Int {
+  let mut n = 0
+  let mut rest = haystack[:]
+  while rest.find(needle) is Some(i) {
+    n += 1
+    rest = rest[i + needle.length():]
+  }
+  n
+}
+
+///|
+test "painted text sets the stroke and the text rendering mode" {
+  let model = @pagelayout.PageModel::new()
+  let run = hi_run(model)
+  let style = @pagelayout.StrokeStyle::default()
+  let model = one_graphic(model, [
+    PaintedText(run, {
+      fill: true,
+      stroke: Some(@pagelayout.Color::rgb(255, 0, 0)),
+      stroke_style: { ..style, width: Width(0.5), },
+    }),
+    PaintedText(run, { fill: false, stroke: None, stroke_style: style, }),
+  ])
   assert_true(model.validate().is_empty())
   let text = try! as_decoded_text(@pdf.render_pdf(model))
-  assert_true(text.contains("1 0 0 RG 0.5 w 2 Tr"))
+  assert_true(text.contains("1 0 0 RG 0.5 w 0 J 0 j 10 M [] 0 d 2 Tr"))
   assert_true(text.contains("3 Tr"))
+}
+
+///|
+test "outlined text does not inherit the previous path's stroke style" {
+  let model = @pagelayout.PageModel::new()
+  let run = hi_run(model)
+  let model = one_graphic(model, [
+    Path({
+      segments: [MoveTo(0, 0), LineTo(10, 0)],
+      fill: None,
+      fill_rule: NonZero,
+      stroke: Some(Solid(@pagelayout.black)),
+      stroke_style: {
+        width: Width(0.5),
+        cap: RoundCap,
+        join: BevelJoin,
+        miter_limit: 3,
+        dash: [1, 4],
+        dash_phase: 0,
+      },
+    }),
+    PaintedText(run, {
+      fill: false,
+      stroke: Some(@pagelayout.black),
+      stroke_style: @pagelayout.StrokeStyle::default(),
+    }),
+  ])
+  assert_true(model.validate().is_empty())
+  let text = try! as_decoded_text(@pdf.render_pdf(model))
+  // the outline is solid, one point wide, butt-capped and miter-joined
+  // (limit 10), whatever the path before it used
+  let start = text.find("1 0 0 -1 0 0 cm").unwrap()
+  assert_true(text[start:].contains("0 0 0 RG 1 w 0 J 0 j 10 M [] 0 d 1 Tr"))
+}
+
+///|
+test "a hairline is PDF's line width 0, for paths and text outlines" {
+  let model = @pagelayout.PageModel::new()
+  let run = hi_run(model)
+  let hairline = { ..@pagelayout.StrokeStyle::default(), width: Hairline, }
+  let model = one_graphic(model, [
+    Path({
+      segments: [MoveTo(0, 0), LineTo(10, 0)],
+      fill: None,
+      fill_rule: NonZero,
+      stroke: Some(Solid(@pagelayout.black)),
+      stroke_style: hairline,
+    }),
+    PaintedText(run, {
+      fill: false,
+      stroke: Some(@pagelayout.black),
+      stroke_style: hairline,
+    }),
+  ])
+  assert_true(model.validate().is_empty())
+  let text = try! as_decoded_text(@pdf.render_pdf(model))
+  assert_eq(occurrences(text, "0 w"), 2)
 }
 
 ///|

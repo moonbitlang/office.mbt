@@ -112,13 +112,7 @@ pub fn GlyphRun::to_repr(Self) -> @debug.Repr
 pub fn GlyphRun::width_pt(Self) -> Double
 
 pub(all) struct Gradient {
-  radial : Bool
-  x1 : Double
-  y1 : Double
-  r1 : Double
-  x2 : Double
-  y2 : Double
-  r2 : Double
+  shape : GradientShape
   stops : Array[GradientStop]
   transform : Matrix
 } derive(Eq, ToJson, @debug.Debug)
@@ -130,6 +124,19 @@ pub fn Gradient::not_equal(Self, Self) -> Bool
 pub fn Gradient::to_json(Self) -> Json
 #deprecated
 pub fn Gradient::to_repr(Self) -> @debug.Repr
+
+pub(all) enum GradientShape {
+  Linear(x1~ : Double, y1~ : Double, x2~ : Double, y2~ : Double)
+  Radial(x1~ : Double, y1~ : Double, r1~ : Double, x2~ : Double, y2~ : Double, r2~ : Double)
+} derive(Eq, ToJson, @debug.Debug)
+#deprecated
+pub fn GradientShape::equal(Self, Self) -> Bool
+#deprecated
+pub fn GradientShape::not_equal(Self, Self) -> Bool
+#deprecated
+pub fn GradientShape::to_json(Self) -> Json
+#deprecated
+pub fn GradientShape::to_repr(Self) -> @debug.Repr
 
 pub(all) struct GradientStop {
   offset : Double
@@ -394,7 +401,7 @@ pub fn RectItem::to_json(Self) -> Json
 pub fn RectItem::to_repr(Self) -> @debug.Repr
 
 pub(all) struct StrokeStyle {
-  width : Double
+  width : StrokeWidth
   cap : LineCap
   join : LineJoin
   miter_limit : Double
@@ -411,10 +418,23 @@ pub fn StrokeStyle::to_json(Self) -> Json
 #deprecated
 pub fn StrokeStyle::to_repr(Self) -> @debug.Repr
 
+pub(all) enum StrokeWidth {
+  Width(Double)
+  Hairline
+} derive(Eq, ToJson, @debug.Debug)
+#deprecated
+pub fn StrokeWidth::equal(Self, Self) -> Bool
+#deprecated
+pub fn StrokeWidth::not_equal(Self, Self) -> Bool
+#deprecated
+pub fn StrokeWidth::to_json(Self) -> Json
+#deprecated
+pub fn StrokeWidth::to_repr(Self) -> @debug.Repr
+
 pub(all) struct TextPaint {
   fill : Bool
   stroke : Color?
-  stroke_width : Double
+  stroke_style : StrokeStyle
 } derive(Eq, ToJson, @debug.Debug)
 #deprecated
 pub fn TextPaint::equal(Self, Self) -> Bool

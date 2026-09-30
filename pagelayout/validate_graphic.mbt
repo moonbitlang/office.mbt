@@ -21,7 +21,7 @@ fn check_paint(
           violations.push("\{where_}: gradient stops out of order")
         }
       }
-      if gradient.radial && (gradient.r1 < 0.0 || gradient.r2 < 0.0) {
+      if gradient.shape is Radial(r1~, r2~, ..) && (r1 < 0.0 || r2 < 0.0) {
         violations.push("\{where_}: negative gradient radius")
       }
     }
@@ -29,10 +29,28 @@ fn check_paint(
 }
 
 ///|
+/// A stroke style's invariants: a `Width` is positive (a hairline is
+/// `Hairline`, not width 0, on which PDF and SVG disagree) and dash lengths
+/// are non-negative.
+fn check_stroke_style(
+  violations : Array[String],
+  where_ : String,
+  style : StrokeStyle,
+) -> Unit {
+  if style.width is Width(width) && !(width > 0.0) {
+    violations.push("\{where_}: stroke width not positive and finite")
+  }
+  if style.dash.iter().any(d => d < 0.0) {
+    violations.push("\{where_}: negative dash length")
+  }
+}
+
+///|
 /// The invariants of a graphic's ops: `Save` and `Restore` balance (never
 /// more restores than saves so far, as many in all), glyph runs and images
-/// are well-formed as page items are, alphas are within 0..=1, stroke
-/// widths and dash lengths are non-negative and every paint is valid.
+/// are well-formed as page items are, alphas are within 0..=1, the
+/// strokes painted are valid (see `check_stroke_style`) and so is every
+/// paint.
 fn PageModel::check_graphic(
   self : PageModel,
   violations : Array[String],
@@ -64,27 +82,21 @@ fn PageModel::check_graphic(
         match path.stroke {
           Some(paint) => {
             check_paint(violations, at, paint)
-            if path.stroke_style.width < 0.0 {
-              violations.push("\{at}: negative stroke width")
-            }
-            if path.stroke_style.dash.iter().any(d => d < 0.0) {
-              violations.push("\{at}: negative dash length")
-            }
+            check_stroke_style(violations, at, path.stroke_style)
           }
           None => ()
         }
       }
       Text(run) | PaintedText(run, _) => {
         match op {
-          PaintedText(_, paint) => {
+          PaintedText(_, paint) =>
             match paint.stroke {
-              Some(color) => check_color(violations, at, color)
+              Some(color) => {
+                check_color(violations, at, color)
+                check_stroke_style(violations, at, paint.stroke_style)
+              }
               None => ()
             }
-            if paint.stroke_width < 0.0 {
-              violations.push("\{at}: negative stroke width")
-            }
-          }
           _ => ()
         }
         if run.advances_pt.length() != run.text.length() {

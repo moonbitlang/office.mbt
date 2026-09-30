@@ -3,13 +3,7 @@ test "a graphic renders as nested groups, clips, paths and gradients" {
   let model = @pagelayout.PageModel::new()
   let page = @pagelayout.Page::{ width_pt: 100, height_pt: 50, items: [], }
   let gradient = @pagelayout.Gradient::{
-    radial: false,
-    x1: 0,
-    y1: 0,
-    r1: 0,
-    x2: 10,
-    y2: 0,
-    r2: 0,
+    shape: Linear(x1=0, y1=0, x2=10, y2=0),
     stops: [
       { offset: 0, color: @pagelayout.Color::rgb(255, 255, 255), },
       { offset: 1, color: @pagelayout.Color::rgb(0, 0, 0), },
@@ -56,6 +50,128 @@ test "a graphic renders as nested groups, clips, paths and gradients" {
       #|  </g>
       #|</svg>
       #|
+    ),
+  )
+}
+
+///|
+/// A page with one graphic whose ops are made from a one-letter run.
+fn text_graphic(
+  ops : (@pagelayout.GlyphRun) -> Array[@pagelayout.GraphicOp],
+) -> @pagelayout.PageModel {
+  let model = @pagelayout.PageModel::new()
+  let font = model.add_font({ family: "Sans", bold: false, italic: false, })
+  let run = @pagelayout.GlyphRun::{
+    font,
+    size_pt: 10,
+    x_pt: 0,
+    baseline_pt: 10,
+    text: "A",
+    advances_pt: [6],
+    color: @pagelayout.black,
+  }
+  let page = @pagelayout.Page::{ width_pt: 100, height_pt: 50, items: [], }
+  page.items.push(Graphic({ x_pt: 0, y_pt: 0, ops: ops(run), }))
+  model.pages.push(page)
+  model
+}
+
+///|
+test "painted text takes its fill and stroke opacities separately" {
+  let red = @pagelayout.Color::rgb(255, 0, 0)
+  let style = @pagelayout.StrokeStyle::default()
+  let model = text_graphic(run => {
+    [
+      Alpha(0, 1),
+      PaintedText(run, { fill: false, stroke: Some(red), stroke_style: style, }),
+      Alpha(1, 0),
+      PaintedText(run, { fill: true, stroke: Some(red), stroke_style: style, }),
+      Alpha(0.5, 0.25),
+      Text(run),
+    ]
+  })
+  inspect(
+    @svg.render_page(model, 0),
+    content=(
+      #|<svg xmlns="http://www.w3.org/2000/svg" width="100pt" height="50pt" viewBox="0 0 100 50">
+      #|  <rect x="0" y="0" width="100" height="50" fill="#ffffff"/>
+      #|  <g transform="translate(0 0)">
+      #|  <text x="0" y="10" font-family="Sans" font-size="10" fill="none" stroke="#ff0000" stroke-width="1" stroke-miterlimit="10">A</text>
+      #|  <text x="0" y="10" font-family="Sans" font-size="10" fill="#000000" stroke="#ff0000" stroke-width="1" stroke-miterlimit="10" stroke-opacity="0">A</text>
+      #|  <text x="0" y="10" font-family="Sans" font-size="10" fill="#000000" fill-opacity="0.5">A</text>
+      #|  </g>
+      #|</svg>
+      #|
+    ),
+  )
+}
+
+///|
+test "text outlines are stroked in their own whole style" {
+  let red = @pagelayout.Color::rgb(255, 0, 0)
+  let model = text_graphic(run => {
+    [
+      Path({
+        segments: [MoveTo(0, 0), LineTo(10, 0)],
+        fill: None,
+        fill_rule: NonZero,
+        stroke: Some(Solid(red)),
+        stroke_style: {
+          ..@pagelayout.StrokeStyle::default(),
+          cap: RoundCap,
+          dash: [1, 4],
+        },
+      }),
+      PaintedText(run, {
+        fill: false,
+        stroke: Some(red),
+        stroke_style: {
+          ..@pagelayout.StrokeStyle::default(),
+          width: Width(0.5),
+          join: RoundJoin,
+          dash: [2, 1],
+          dash_phase: 1,
+        },
+      }),
+    ]
+  })
+  let svg = @svg.render_page(model, 0)
+  assert_true(
+    svg.contains(
+      "fill=\"none\" stroke=\"#ff0000\" stroke-width=\"0.5\" stroke-linejoin=\"round\" stroke-miterlimit=\"10\" stroke-dasharray=\"2 1\" stroke-dashoffset=\"1\">A</text>",
+    ),
+  )
+}
+
+///|
+test "a hairline is a non-scaling stroke one pixel wide" {
+  let hairline = { ..@pagelayout.StrokeStyle::default(), width: Hairline, }
+  let model = text_graphic(run => {
+    [
+      Transform({ a: 10, b: 0, c: 0, d: 10, e: 0, f: 0, }),
+      Path({
+        segments: [MoveTo(0, 0), LineTo(10, 0)],
+        fill: None,
+        fill_rule: NonZero,
+        stroke: Some(Solid(@pagelayout.black)),
+        stroke_style: hairline,
+      }),
+      PaintedText(run, {
+        fill: false,
+        stroke: Some(@pagelayout.black),
+        stroke_style: hairline,
+      }),
+    ]
+  })
+  let svg = @svg.render_page(model, 0)
+  assert_true(
+    svg.contains(
+      "<path d=\"M0 0L10 0\" fill=\"none\" stroke=\"#000000\" stroke-width=\"1\" vector-effect=\"non-scaling-stroke\" stroke-miterlimit=\"10\"/>",
+    ),
+  )
+  assert_true(
+    svg.contains(
+      "fill=\"none\" stroke=\"#000000\" stroke-width=\"1\" vector-effect=\"non-scaling-stroke\" stroke-miterlimit=\"10\">A</text>",
     ),
   )
 }

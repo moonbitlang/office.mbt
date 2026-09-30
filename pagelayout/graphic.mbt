@@ -47,13 +47,21 @@ pub fn Matrix::apply(self : Matrix, x : Double, y : Double) -> (Double, Double) 
 
 ///|
 /// One segment of a path. A path is a sequence of subpaths, each starting
-/// with `MoveTo`; `Close` joins a subpath's end to its start.
+/// with `MoveTo` or `Rectangle`; `LineTo`, `CurveTo` and `Close` continue
+/// from the current point, so they need one before them (checked by
+/// `PageModel::validate`). `Close` joins a subpath's end to its start, which
+/// becomes the current point.
 pub(all) enum PathSegment {
   MoveTo(Double, Double)
   LineTo(Double, Double)
   /// A cubic Bézier curve: two control points, then the end point.
   CurveTo(Double, Double, Double, Double, Double, Double)
-  /// An axis-aligned rectangle subpath: x, y (top-left), width, height.
+  /// An axis-aligned rectangle, a closed subpath of its own: x, y (its
+  /// top-left corner), width, height. It starts at the bottom-left corner
+  /// `(x, y + height)` and runs to the bottom-right, top-right and top-left
+  /// corners before closing, counter-clockwise as seen on the page when
+  /// the width and height are positive (as PDF's `re` does with positive
+  /// extents in its y-up space). Its start is the current point after it.
   Rectangle(Double, Double, Double, Double)
   Close
 } derive(Eq, Debug, ToJson)
@@ -82,10 +90,24 @@ pub(all) enum LineJoin {
 } derive(Eq, Debug, ToJson)
 
 ///|
+/// How wide a stroke is. PDF and SVG disagree about a width of 0 (the
+/// thinnest line a device can draw in PDF, nothing at all in SVG), so a
+/// `Width` must be positive (checked by `PageModel::validate`) and the
+/// thinnest line is asked for explicitly.
+pub(all) enum StrokeWidth {
+  /// This many units of the space the stroke is drawn in.
+  Width(Double)
+  /// The thinnest line the device can draw, whatever the transformation:
+  /// PDF's line width 0; in SVG a non-scaling stroke one CSS pixel wide.
+  Hairline
+} derive(Eq, Debug, ToJson)
+
+///|
 /// How a path is stroked. `dash` is the dash pattern (lengths of dashes and
-/// gaps, alternately; empty for a solid line) starting `dash_phase` into it.
+/// gaps, alternately, at least one of them positive; empty for a solid
+/// line) starting `dash_phase` into it. The miter limit is at least 1.
 pub(all) struct StrokeStyle {
-  width : Double
+  width : StrokeWidth
   cap : LineCap
   join : LineJoin
   miter_limit : Double
@@ -98,7 +120,7 @@ pub(all) struct StrokeStyle {
 /// the initial stroke state of PDF.
 pub fn StrokeStyle::default() -> StrokeStyle {
   {
-    width: 1.0,
+    width: Width(1.0),
     cap: ButtCap,
     join: MiterJoin,
     miter_limit: 10.0,
@@ -115,20 +137,36 @@ pub(all) struct GradientStop {
 } derive(Eq, Debug, ToJson)
 
 ///|
-/// A gradient: its colours vary along the line from `(x1, y1)` to
-/// `(x2, y2)` (`Linear`), or between the circle of radius `r1` around
-/// `(x1, y1)` and the one of radius `r2` around `(x2, y2)` (`Radial`); in
-/// gradient space, which `transform` maps to the painted path's space.
-/// Beyond its ends it keeps its end colours (SVG's `pad`). Stops are in
-/// ascending order of offset, the first at 0 and the last at 1.
+/// Where a gradient's colours vary, in gradient space: offset 0 is at its
+/// start and offset 1 at its end.
+pub(all) enum GradientShape {
+  /// Along the line from `(x1, y1)` to `(x2, y2)`, constant across it
+  /// (PDF's axial shading, SVG's `<linearGradient>`).
+  Linear(x1~ : Double, y1~ : Double, x2~ : Double, y2~ : Double)
+  /// From the circle of radius `r1` around `(x1, y1)` to the one of radius
+  /// `r2` around `(x2, y2)` (PDF's radial shading; SVG's `<radialGradient>`
+  /// with focal circle `fx fy fr` = `x1 y1 r1` and end circle `cx cy r` =
+  /// `x2 y2 r2`).
+  Radial(
+    x1~ : Double,
+    y1~ : Double,
+    r1~ : Double,
+    x2~ : Double,
+    y2~ : Double,
+    r2~ : Double
+  )
+} derive(Eq, Debug, ToJson)
+
+///|
+/// A gradient: its colours vary over `shape`, in gradient space, which
+/// `transform` maps to the painted path's space. Beyond its ends it keeps
+/// its end colours (SVG's `pad`). Stops are in ascending order of offset,
+/// the first at 0 and the last at 1. Stops at the same offset change the
+/// colour sharply there, the later one taking over at the offset itself;
+/// at offset 0 that leaves only the last of them to count, and at offset
+/// 1 only the first.
 pub(all) struct Gradient {
-  radial : Bool
-  x1 : Double
-  y1 : Double
-  r1 : Double
-  x2 : Double
-  y2 : Double
-  r2 : Double
+  shape : GradientShape
   stops : Array[GradientStop]
   transform : Matrix
 } derive(Eq, Debug, ToJson)
@@ -154,13 +192,14 @@ pub(all) struct PathItem {
 
 ///|
 /// How `PaintedText` paints its glyphs (PDF's text rendering modes): filled
-/// in the run's colour or not, and outlined `stroke_width` wide in
-/// `stroke` or not. A run neither filled nor stroked is invisible but
-/// still text (it extracts and searches).
+/// in the run's colour or not, and outlined in `stroke` or not. An outline
+/// is stroked in `stroke_style` as a path would be, wholly: nothing of the
+/// stroke style of the paths before it carries over. A run neither filled
+/// nor stroked is invisible but still text (it extracts and searches).
 pub(all) struct TextPaint {
   fill : Bool
   stroke : Color?
-  stroke_width : Double
+  stroke_style : StrokeStyle
 } derive(Eq, Debug, ToJson)
 
 ///|
@@ -176,7 +215,7 @@ pub(all) enum GraphicOp {
   /// Clip the ops that follow to the inside of the path.
   Clip(Array[PathSegment], FillRule)
   /// Constant opacity (0 to 1) of the fills and of the strokes that
-  /// follow, text and images counting as fills.
+  /// follow; text and images count as fills, text outlines as strokes.
   Alpha(Double, Double)
   Path(PathItem)
   /// A glyph run in the graphic's space (its baseline running along the
@@ -192,7 +231,8 @@ pub(all) enum GraphicOp {
 ///|
 /// A vector graphic whose space has its origin at `(x_pt, y_pt)` on the
 /// page. Its ops draw in painter's order. Every `Save` has a matching
-/// `Restore` (checked by `PageModel::validate`).
+/// `Restore`, and every number is finite (checked, with the rest of the
+/// ops' requirements, by `PageModel::validate`).
 pub(all) struct GraphicItem {
   x_pt : Double
   y_pt : Double
