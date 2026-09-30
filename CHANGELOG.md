@@ -13,7 +13,8 @@ covers changes that have landed on `main` but are not yet published.
   cannot draw the character, and each such character gets a code of its
   own past the program's glyphs, mapped to glyph 0 by a `/CIDToGIDMap`
   stream and to the character by `/ToUnicode`, so extraction and search
-  find it. Off by default; output without it is unchanged.
+  find it. This also covers characters WinAnsi has (such as `…`) once the
+  font is composite. Off by default; output without it is unchanged.
 - `RenderOptions::new(typo_metrics=true)`: font descriptors declare
   `/Ascent`, `/Descent` and `/CapHeight` from the OS/2 typographic metrics
   when the program has them (nonzero), truncated to thousandths of an em,

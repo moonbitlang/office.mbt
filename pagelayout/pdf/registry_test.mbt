@@ -623,3 +623,63 @@ test "typo_metrics declares the OS/2 typographic ascent and descent" {
   inspect(typo.contains("/Descent -210"), content="true")
   inspect(typo.contains("/CapHeight 728"), content="true")
 }
+
+///|
+/// `program` with `codepoint` unmapped (mapped to glyph 0) in its format 4
+/// `cmap` subtables, where it must be a segment of its own that maps by
+/// `idDelta`, as U+2026 is in Liberation Sans.
+fn without_char(program : Bytes, codepoint : Int) -> Bytes {
+  let bytes = program.to_array()
+  let u16 = fn(at : Int) { (bytes[at].to_int() << 8) | bytes[at + 1].to_int() }
+  let u32 = fn(at : Int) { (u16(at) << 16) | u16(at + 2) }
+  for i in 0..<u16(4) {
+    let record = 12 + i * 16
+    if Bytes::from_array(bytes[record:record + 4].to_owned()) != b"cmap" {
+      continue
+    }
+    let cmap = u32(record + 8)
+    for k in 0..<u16(cmap + 2) {
+      let subtable = cmap + u32(cmap + 4 + k * 8 + 4)
+      if u16(subtable) != 4 {
+        continue
+      }
+      let seg_x2 = u16(subtable + 6)
+      for s in 0..<(seg_x2 / 2) {
+        let end = subtable + 14 + s * 2
+        let start = subtable + 16 + seg_x2 + s * 2
+        let delta = subtable + 16 + 2 * seg_x2 + s * 2
+        if u16(start) == codepoint && u16(end) == codepoint {
+          // (codepoint + idDelta) mod 65536 = 0
+          let value = (0x10000 - codepoint) & 0xFFFF
+          bytes[delta] = (value >> 8).to_byte()
+          bytes[delta + 1] = (value & 0xFF).to_byte()
+        }
+      }
+    }
+  }
+  Bytes::from_array(bytes)
+}
+
+///|
+test "notdef_text keeps a WinAnsi character the face lacks in a composite font" {
+  // the face lacks the ellipsis (a WinAnsi character) and the han glyph
+  // (which is not, and makes the font composite): both keep codes of their
+  // own and their text
+  let registry = @fonts.FontRegistry::new()
+  let face = registry.register("Own", without_char(sans(), 0x2026))
+  assert_false(face.has_char(0x2026))
+  let model = family_model("Own", "a\u{2026}中b", face)
+  let (plain, _) = extracted(
+    @pdf.render_pdf(model, options=@pdf.RenderOptions::new(fonts=registry)),
+  )
+  // by default the font stays simple, which keeps the ellipsis through
+  // its WinAnsi code
+  inspect(plain, content="a\u{2026}b")
+  let (kept, _) = extracted(
+    @pdf.render_pdf(
+      model,
+      options=@pdf.RenderOptions::new(fonts=registry, notdef_text=true),
+    ),
+  )
+  inspect(kept, content="a\u{2026}中b")
+}

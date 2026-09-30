@@ -278,13 +278,13 @@ fn glyph_count(program : Bytes) -> Int {
 /// lacks, numbered on from the program's last glyph, so that each keeps its
 /// own `/ToUnicode` entry while drawing glyph 0 (`/CIDToGIDMap`, see
 /// `add_cid_to_gid_map`). Characters in ascending order, so the codes are a
-/// function of the character set.
+/// function of the character set. A character WinAnsi has counts too: a
+/// composite font shows glyph indices, not WinAnsi codes, so without a code
+/// of its own it would be glyph 0 with no text.
 fn notdef_cids(face : PdfFace, codepoints : Array[Int]) -> Map[Int, Int] {
   let cids : Map[Int, Int] = Map([])
   guard face.program is Some(program) else { return cids }
-  let missing = codepoints.filter(codepoint => {
-    !face.metrics.has_char(codepoint) && winansi_code(codepoint) is None
-  })
+  let missing = codepoints.filter(codepoint => !face.metrics.has_char(codepoint))
   missing.sort()
   let mut next = glyph_count(program)
   for codepoint in missing {
