@@ -70,6 +70,7 @@ async fn run_dump(matches : @argparse.Matches) -> Unit {
   let mode = office_validate_output_mode(matches)
   let source = read_office_package(file, cancelled=office_async_cancelled)
   let envelope = match source.format {
+    Pptx => raise pptx_unsupported("dump")
     Xlsx => {
       let workbook = open_xlsx_read_package(
         source,

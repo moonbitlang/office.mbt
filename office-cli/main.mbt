@@ -43,12 +43,13 @@ fn identify_error(
     UnsupportedFileExtension(_) =>
       @lib.protocol_error(
         "office.unsupported_extension",
-        "unsupported file extension for '\{bounded_file}' (expected .xlsx or .docx)",
+        "unsupported file extension for '\{bounded_file}' (expected .xlsx, .docx, or .pptx)",
         details=Json::object({
           "file": Json::string(bounded_file),
           "expected_extensions": Json::array([
             Json::string("docx"),
             Json::string("xlsx"),
+            Json::string("pptx"),
           ]),
         }),
       )
@@ -108,7 +109,7 @@ async fn run_identify(matches : @argparse.Matches) -> Unit {
 fn identify_command() -> @argparse.Command {
   let summary = match @lib.find_capability_command("identify") {
     Some(command) => command.summary
-    None => "Identify a structurally valid XLSX or DOCX package"
+    None => "Identify a structurally valid XLSX, DOCX, or PPTX package"
   }
   Command(
     "identify",
@@ -116,7 +117,7 @@ fn identify_command() -> @argparse.Command {
     positionals=[
       PositionArg(
         "file",
-        about="path to an .xlsx or .docx file",
+        about="path to an .xlsx, .docx, or .pptx file",
         num_args=@argparse.ValueRange::single(),
       ),
     ],
@@ -128,7 +129,7 @@ fn identify_command() -> @argparse.Command {
 fn build_command() -> @argparse.Command {
   Command(
     "office",
-    about="Create, inspect, and edit XLSX and DOCX documents",
+    about="Create and inspect Office documents; edit supported DOCX/XLSX content",
     disable_help_subcommand=true,
     subcommand_required=true,
     subcommands=[

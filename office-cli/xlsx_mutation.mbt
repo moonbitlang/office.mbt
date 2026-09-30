@@ -197,6 +197,7 @@ fn create_command() -> @argparse.Command {
     about="Create a validated Office document atomically",
     subcommand_required=true,
     subcommands=[
+      pptx_create_command(),
       Command(
         "xlsx",
         about="Create a validated workbook with one worksheet",
@@ -323,6 +324,7 @@ async fn run_create(matches : @argparse.Matches) -> Unit {
   match matches.subcommand {
     Some(("xlsx", values)) => run_create_xlsx(values)
     Some(("docx", values)) => run_create_docx(values)
+    Some(("pptx", values)) => run_create_pptx(values)
     _ =>
       raise CliFailure(
         @lib.protocol_error(

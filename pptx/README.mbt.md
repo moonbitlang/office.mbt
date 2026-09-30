@@ -78,8 +78,10 @@ the wrapper uses Office's existing .NET setup and build cache.
 
 Publishing follows the common [release process](../docs/office-release.md).
 The local module version is not evidence of a registry release. The unified
-`office` CLI currently supports DOCX and XLSX; PPTX uses its library packages
-and dedicated development commands.
+`office` CLI integrates PPTX identification, outline, slide/notes
+text extraction, and fresh one-slide creation through `office-lib/pptx`. See
+[Office PPTX integration](../docs/office-pptx.md) for scope and limitations.
+The library and dedicated development commands expose additional functionality.
 
 ## Limits
 

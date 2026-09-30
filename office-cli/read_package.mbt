@@ -100,6 +100,8 @@ fn office_read_format_hint(
     Xlsx
   } else if lower.has_suffix(".docx") {
     Docx
+  } else if lower.has_suffix(".pptx") {
+    Pptx
   } else {
     raise CliFailure(identify_error(UnsupportedFileExtension(file), file))
   }

@@ -385,6 +385,7 @@ fn standard_raw_namespaces(
     namespaces["a"] = "http://schemas.openxmlformats.org/drawingml/2006/main"
   }
   match format {
+    Pptx => ()
     Docx => {
       if strict {
         namespaces["w"] = "http://purl.oclc.org/ooxml/wordprocessingml/main"

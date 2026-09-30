@@ -1,0 +1,32 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "moonbitlang/office-lib/pptx"
+
+import {
+  "moonbitlang/office-lib/transaction",
+}
+
+// Values
+pub async fn create_presentation(@transaction.CreateTransactionOptions, title? : String) -> @transaction.TransactionReport
+
+pub fn read_presentation(Bytes, max_elements? : Int, max_text_chars? : Int, cancelled? : () -> Bool) -> PresentationSummary raise
+
+// Errors
+
+// Types and methods
+pub struct PresentationSummary {
+  width_emu : Int64
+  height_emu : Int64
+  slides : ReadOnlyArray[SlideSummary]
+}
+
+pub struct SlideSummary {
+  index : Int
+  part : String
+  text : String
+  notes : String
+  shape_count : Int
+}
+
+// Type aliases
+
+// Traits

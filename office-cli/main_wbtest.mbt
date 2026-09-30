@@ -12,12 +12,12 @@ test "capability registry claims only wired commands" {
 }
 
 ///|
-test "create and batch help expose both document formats and bounded controls" {
+test "create exposes PPTX while batch retains its supported formats" {
   let create = create_command().render_help()
   assert_true(create.contains("xlsx"))
   // docx is a first-class create subcommand (D3), unsupported formats are not
   assert_true(create.to_lower().contains("docx"))
-  assert_false(create.to_lower().contains("ppt"))
+  debug_inspect(create.contains("pptx"), content="true")
   let batch = batch_command().render_help()
   assert_true(batch.contains("--out"))
   assert_true(batch.contains("--format"))
@@ -124,12 +124,12 @@ test "help suggestions are deterministic and useful" {
 }
 
 ///|
-test "human help contains no deferred PowerPoint or MCP surface" {
+test "human help includes PPTX and excludes deferred MCP" {
   let output = render_overview(true)
   assert_true(output.contains("docx"))
   assert_true(output.contains("xlsx"))
   assert_true(output.contains("identify"))
-  assert_false(output.to_lower().contains("ppt"))
+  debug_inspect(output.contains("pptx"), content="true")
   assert_false(output.to_lower().contains("mcp"))
 }
 

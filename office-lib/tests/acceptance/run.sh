@@ -106,11 +106,21 @@ jq -e '
   .data.schema == "office.capabilities/2" and
   (.data.fingerprint | test("^crc32:[0-9a-f]{8}$")) and
   ([.data.records[].name] == [
-    "docx", "xlsx", "help", "identify", "outline", "get", "text",
+    "docx", "xlsx", "pptx", "help", "identify", "outline", "get", "text",
     "query", "find", "replace", "format", "insert-paragraph", "delete-paragraph", "validate", "dump", "replay", "issues", "preview",
     "render", "create", "template", "edit", "annotate", "batch", "raw"
   ])
 ' >/dev/null <<<"$capabilities" || fail "capability registry"
+
+# PPTX: exercise the advertised first slice on both native and Wasm.
+pptx_create="$(json office.pptx.create/1 create pptx "$work/deck.pptx" --title 'Office acceptance' --json)"
+jq -e '.data.format == "pptx" and .data.slide_count == 1 and .data.transaction.committed == true' >/dev/null <<<"$pptx_create" || fail "pptx create"
+pptx_identity="$(json office.identify/1 identify "$work/deck.pptx" --json)"
+jq -e '.data.format == "pptx"' >/dev/null <<<"$pptx_identity" || fail "pptx identify"
+pptx_outline="$(json office.pptx.outline/1 outline "$work/deck.pptx" --json)"
+jq -e '.data.slide_count == 1 and .data.slides[0].index == 1 and .data.slides[0].shape_count == 1' >/dev/null <<<"$pptx_outline" || fail "pptx outline"
+pptx_text="$(json office.pptx.text/1 text "$work/deck.pptx" --json)"
+jq -e '.data.returned == 1 and .data.truncated == false and .data.slides[0].text == "Office acceptance" and .data.slides[0].notes == ""' >/dev/null <<<"$pptx_text" || fail "pptx text"
 
 # XLSX: create, author/mutate, inspect, template, validate, preview, dump/replay.
 xlsx_create="$(json office.xlsx.create/1 create xlsx "$work/xlsx-blank.xlsx" --sheet Data --json)"
@@ -412,4 +422,4 @@ jq -S 'del(.source)' "$work/docx.replayed-2.dump.json" >"$work/docx.fixpoint-2.j
 cmp -s "$work/docx.fixpoint-1.json" "$work/docx.fixpoint-2.json" || fail "docx complete dump/replay fixpoint"
 jq -e '.data.format == "docx" and (.data.content | contains("Quarterly report"))' >/dev/null <<<"$(json office.raw.part/1 raw read "$work/docx-reviewed.docx" /document --json)" || fail "docx raw read"
 
-echo "OFFICE ACCEPTANCE PASS [$target]: unified XLSX and DOCX workflows"
+echo "OFFICE ACCEPTANCE PASS [$target]: unified XLSX, DOCX, and PPTX workflows"

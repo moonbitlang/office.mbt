@@ -277,6 +277,7 @@ async fn run_preview(matches : @argparse.Matches) -> Unit {
   }
   let source = read_office_package(file, cancelled=office_async_cancelled)
   let (html, stats) = match source.format {
+    Pptx => raise pptx_unsupported("preview")
     Xlsx => office_preview_render_xlsx(source)
     Docx => office_preview_render_docx(source)
   }

@@ -151,6 +151,8 @@ async fn run_docx_outline(matches : @argparse.Matches) -> Unit {
     @async.is_being_cancelled()
   })
   match source.format {
+    Pptx =>
+      run_pptx_read(matches, source, false, max_elements, max_output, 0, 0)
     Docx => {
       let projection = open_docx_projection_archive(
         file,
@@ -207,6 +209,7 @@ async fn run_docx_get(matches : @argparse.Matches) -> Unit {
     @async.is_being_cancelled()
   })
   match source.format {
+    Pptx => raise pptx_unsupported("get")
     Docx => {
       let projection = open_docx_projection_archive(
         file,
@@ -284,6 +287,10 @@ async fn run_docx_text(matches : @argparse.Matches) -> Unit {
     @async.is_being_cancelled()
   })
   match source.format {
+    Pptx =>
+      run_pptx_read(
+        matches, source, true, max_elements, max_output, offset, limit,
+      )
     Docx => {
       let projection = open_docx_projection_archive(
         file,
@@ -554,6 +561,7 @@ async fn run_docx_query(matches : @argparse.Matches) -> Unit {
     @async.is_being_cancelled()
   })
   match source.format {
+    Pptx => raise pptx_unsupported("query")
     Docx => {
       reject_docx_content_selector(matches)
       let text = optional_value(matches, "text")

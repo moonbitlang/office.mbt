@@ -23,7 +23,7 @@ on other modules in this workspace are:
 | `pptx/` | `moonbitlang/pptx` | ooxml |
 | `pdf2md/` | `moonbitlang/pdf2md` | pdflite |
 | `pagelayout/` | `moonbitlang/pagelayout` | docx2html, pdflite |
-| `office-lib/` | `moonbitlang/office-lib` | mbtexcel, docx2html |
+| `office-lib/` | `moonbitlang/office-lib` | mbtexcel, docx2html, pptx, ooxml |
 | `office-cli/` | `moonbitlang/office` | office-lib, docx2html, mbtexcel, pagelayout |
 
 `office-cli` contains the CLI implementation; `office-lib` contains the reusable

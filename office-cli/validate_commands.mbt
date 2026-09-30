@@ -68,6 +68,7 @@ fn office_package_gate_findings(
 ) -> Array[OfficeFinding] raise {
   let validator = try {
     match source.format {
+      Pptx => raise pptx_unsupported("validate/issues")
       Xlsx => @office_xlsx.package_validator()
       Docx => @office_docx.package_validator()
     }
@@ -362,6 +363,7 @@ async fn run_issues(matches : @argparse.Matches) -> Unit {
   // collected only when the shared gate accepted the package
   if findings.is_empty() {
     match source.format {
+      Pptx => raise pptx_unsupported("validate/issues")
       Xlsx => office_xlsx_formula_findings(source, findings)
       Docx => office_docx_reader_findings(source, findings)
     }

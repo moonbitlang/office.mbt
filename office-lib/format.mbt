@@ -3,6 +3,7 @@
 pub(all) enum DocumentFormat {
   Xlsx
   Docx
+  Pptx
 } derive(Debug, Eq)
 
 ///|
@@ -11,6 +12,7 @@ pub fn DocumentFormat::name(self : DocumentFormat) -> String {
   match self {
     Xlsx => "xlsx"
     Docx => "docx"
+    Pptx => "pptx"
   }
 }
 
@@ -34,7 +36,7 @@ pub impl Show for OfficeError with fn output(self, logger) {
   match self {
     UnsupportedFileExtension(path) =>
       logger.write_string(
-        "unsupported file extension for '\{path}' (expected .xlsx or .docx)",
+        "unsupported file extension for '\{path}' (expected .xlsx, .docx, or .pptx)",
       )
     InvalidPackage(message) =>
       logger.write_string("invalid Office package: " + message)
@@ -73,6 +75,15 @@ const XLSX_MAIN_CONTENT_TYPE : String = "application/vnd.openxmlformats-officedo
 
 ///|
 const DOCX_MAIN_CONTENT_TYPE : String = "application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"
+
+///|
+const PPTX_MAIN_CONTENT_TYPE : String = "application/vnd.openxmlformats-officedocument.presentationml.presentation.main+xml"
+
+///|
+const TRANSITIONAL_PRESENTATION_ROOT : String = "{http://schemas.openxmlformats.org/presentationml/2006/main}presentation"
+
+///|
+const STRICT_PRESENTATION_ROOT : String = "{http://purl.oclc.org/ooxml/presentationml/main}presentation"
 
 ///|
 const CONTENT_TYPES_ROOT : String = "{http://schemas.openxmlformats.org/package/2006/content-types}Types"
@@ -243,6 +254,8 @@ fn main_format_from_content_type(content_type : StringView) -> DocumentFormat? {
     Some(Xlsx)
   } else if media_type_equal(content_type, DOCX_MAIN_CONTENT_TYPE) {
     Some(Docx)
+  } else if media_type_equal(content_type, PPTX_MAIN_CONTENT_TYPE) {
+    Some(Pptx)
   } else {
     None
   }
@@ -273,6 +286,8 @@ fn format_from_extension(path : StringView) -> DocumentFormat raise OfficeError 
     Xlsx
   } else if lower.has_suffix(".docx") {
     Docx
+  } else if lower.has_suffix(".pptx") {
+    Pptx
   } else {
     raise UnsupportedFileExtension(path.to_owned())
   }
@@ -1696,7 +1711,7 @@ fn validate_main_identity(
   declared_main_part : String,
   context : OfficeFormatContext,
 ) -> Unit raise OfficeError {
-  let label = if format is Xlsx { "XLSX" } else { "DOCX" }
+  let label = format.name().to_upper()
   let root_rels = read_relationships_part(part_index, "_rels/.rels", context)
   if root_rels.name != RELATIONSHIPS_ROOT {
     raise InvalidPackage("_rels/.rels root element is not Relationships")
@@ -1757,15 +1772,22 @@ fn validate_main_identity(
   }
   let main = read_xml_part(part_index, main_target, context)
   let expected_main_relationship = match (format, main.name) {
-    (Xlsx, TRANSITIONAL_WORKBOOK_ROOT) | (Docx, TRANSITIONAL_DOCUMENT_ROOT) =>
+    (Xlsx, TRANSITIONAL_WORKBOOK_ROOT)
+    | (Docx, TRANSITIONAL_DOCUMENT_ROOT)
+    | (Pptx, TRANSITIONAL_PRESENTATION_ROOT) =>
       Some(TRANSITIONAL_OFFICE_DOCUMENT_REL)
-    (Xlsx, STRICT_WORKBOOK_ROOT) | (Docx, STRICT_DOCUMENT_ROOT) =>
-      Some(STRICT_OFFICE_DOCUMENT_REL)
+    (Xlsx, STRICT_WORKBOOK_ROOT)
+    | (Docx, STRICT_DOCUMENT_ROOT)
+    | (Pptx, STRICT_PRESENTATION_ROOT) => Some(STRICT_OFFICE_DOCUMENT_REL)
     _ => None
   }
   match expected_main_relationship {
     None => {
-      let expected = if format is Xlsx { "workbook" } else { "document" }
+      let expected = match format {
+        Xlsx => "workbook"
+        Docx => "document"
+        Pptx => "presentation"
+      }
       raise InvalidPackage("\{label} main part root element is not \{expected}")
     }
     Some(expected) if main_relationship_type != expected =>
@@ -1879,6 +1901,7 @@ fn format_from_archive(
   }
   let xlsx_main_parts : Array[String] = []
   let docx_main_parts : Array[String] = []
+  let pptx_main_parts : Array[String] = []
   let overridden_parts : StableStringMap[Bool] = SortedMap([])
   let main_defaults : StableStringMap[DocumentFormat] = SortedMap([])
   for child in content_types.children {
@@ -1926,6 +1949,7 @@ fn format_from_archive(
         match format {
           Some(Xlsx) => xlsx_main_parts.push(normalized)
           Some(Docx) => docx_main_parts.push(normalized)
+          Some(Pptx) => pptx_main_parts.push(normalized)
           None => ()
         }
       }
@@ -1940,6 +1964,7 @@ fn format_from_archive(
             match main_defaults.get(extension) {
               Some(Xlsx) => xlsx_main_parts.push(target)
               Some(Docx) => docx_main_parts.push(target)
+              Some(Pptx) => pptx_main_parts.push(target)
               None => ()
             }
           None => ()
@@ -1947,21 +1972,27 @@ fn format_from_archive(
       _ => ()
     }
   }
-  let (format, main_part) = match (xlsx_main_parts, docx_main_parts) {
-    ([xlsx], []) => (Xlsx, xlsx)
-    ([], [docx]) => (Docx, docx)
-    ([], []) =>
+  let (format, main_part) = match
+    (xlsx_main_parts, docx_main_parts, pptx_main_parts) {
+    ([xlsx], [], []) => (Xlsx, xlsx)
+    ([], [docx], []) => (Docx, docx)
+    ([], [], [pptx]) => (Pptx, pptx)
+    ([], [], []) =>
       raise InvalidPackage(
-        "content types do not declare an XLSX or DOCX main part",
+        "content types do not declare an XLSX, DOCX, or PPTX main part",
       )
-    ([_, ..], [_, ..]) =>
+    ([_, ..], [_, ..], []) =>
       raise InvalidPackage(
         "content types declare both XLSX and DOCX main parts",
       )
-    ([_, _, ..], []) =>
+    ([_, _, ..], [], []) =>
       raise InvalidPackage("content types declare multiple XLSX main parts")
-    ([], [_, _, ..]) =>
+    ([], [_, _, ..], []) =>
       raise InvalidPackage("content types declare multiple DOCX main parts")
+    _ =>
+      raise InvalidPackage(
+        "content types declare multiple or conflicting Office main parts",
+      )
   }
   (format, main_part)
 }

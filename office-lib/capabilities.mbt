@@ -228,6 +228,18 @@ pub fn capability_formats() -> Array[CapabilityFormat] {
         description: "bounded canonical resolution for workbook, sheet, cell, and range selectors across outline, get, text, and cell queries",
       },
     },
+    {
+      name: "pptx",
+      aliases: ["powerpoint"],
+      description: "PresentationML presentations (identify, outline, text, and fresh creation)",
+      selector: {
+        schema: "office.selector/1",
+        root: "/pptx",
+        status: "unsupported",
+        examples: [],
+        description: "PPTX selectors are not implemented; text pagination uses one-based slide order with zero-based offset",
+      },
+    },
   ]
 }
 
@@ -437,13 +449,13 @@ pub fn capability_commands() -> Array[CapabilityCommand] {
     },
     {
       name: "identify",
-      summary: "Identify a structurally valid XLSX or DOCX package",
+      summary: "Identify a structurally valid XLSX, DOCX, or PPTX package",
       usage: "office identify <file> [--json]",
-      formats: ["docx", "xlsx"],
+      formats: ["docx", "xlsx", "pptx"],
       aliases: [],
       inputs: [
         capability_field(
-          "file", "path", true, "path to an XLSX or DOCX package",
+          "file", "path", true, "path to an XLSX, DOCX, or PPTX package",
         ),
         capability_field(
           "json", "boolean", false, "emit one office.output/1 JSON document",
@@ -454,7 +466,7 @@ pub fn capability_commands() -> Array[CapabilityCommand] {
           "file", "path", true, "the input path exactly as supplied",
         ),
         capability_field(
-          "format", "enum(docx|xlsx)", true, "the structurally verified package format",
+          "format", "enum(docx|xlsx|pptx)", true, "the structurally verified package format",
         ),
       ],
       output_modes: ["human", "json"],
@@ -462,9 +474,9 @@ pub fn capability_commands() -> Array[CapabilityCommand] {
     },
     {
       name: "outline",
-      summary: "Summarize bounded XLSX or DOCX structure using canonical selectors",
+      summary: "Summarize XLSX, DOCX, or PPTX structure with bounded output",
       usage: "office outline FILE [--max-elements N] [--max-output-chars N] [--json]",
-      formats: ["docx", "xlsx"],
+      formats: ["docx", "xlsx", "pptx"],
       aliases: [],
       inputs: [
         capability_field("file", "path", true, "existing XLSX or DOCX package"),
@@ -539,6 +551,7 @@ pub fn capability_commands() -> Array[CapabilityCommand] {
         capability_variant("xlsx", "office outline FILE", SCHEMA_XLSX_OUTLINE, [
           "format=xlsx",
         ]),
+        pptx_capability_variant("outline"),
       ],
     },
     {
@@ -662,9 +675,9 @@ pub fn capability_commands() -> Array[CapabilityCommand] {
     },
     {
       name: "text",
-      summary: "Extract bounded path-tagged XLSX cell or DOCX paragraph text",
+      summary: "Extract bounded XLSX cell, DOCX paragraph, or PPTX slide and notes text",
       usage: "office text FILE [--under SELECTOR] [--offset N] [--limit N] [--max-elements N] [--max-output-chars N] [--json]",
-      formats: ["docx", "xlsx"],
+      formats: ["docx", "xlsx", "pptx"],
       aliases: [],
       inputs: [
         capability_field("file", "path", true, "existing XLSX or DOCX package"),
@@ -735,6 +748,7 @@ pub fn capability_commands() -> Array[CapabilityCommand] {
           SCHEMA_XLSX_TEXT,
           ["format=xlsx"],
         ),
+        pptx_capability_variant("text"),
       ],
     },
     {
@@ -1614,12 +1628,12 @@ pub fn capability_commands() -> Array[CapabilityCommand] {
     {
       name: "create",
       summary: "Create a validated Office document atomically",
-      usage: "office create (xlsx OUTPUT [--sheet NAME] | docx OUTPUT) [--dry-run] [--overwrite] [--json]",
-      formats: ["xlsx", "docx"],
+      usage: "office create (xlsx OUTPUT [--sheet NAME] | docx OUTPUT | pptx OUTPUT [--title TEXT]) [--dry-run] [--overwrite] [--json]",
+      formats: ["xlsx", "docx", "pptx"],
       aliases: [],
       inputs: [
         capability_field(
-          "format", "literal(xlsx|docx)", true, "document format subcommand",
+          "format", "literal(xlsx|docx|pptx)", true, "document format subcommand",
         ),
       ],
       outputs: [],
@@ -1700,6 +1714,7 @@ pub fn capability_commands() -> Array[CapabilityCommand] {
           actions: [],
           output_modes: ["human", "json"],
         },
+        pptx_capability_variant("create"),
       ],
     },
     {
@@ -2288,11 +2303,12 @@ pub fn capability_commands() -> Array[CapabilityCommand] {
 
 ///|
 /// Resolves a canonical format name or supported alias. Matching is ASCII
-/// case-insensitive; PowerPoint aliases are deliberately absent.
+/// case-insensitive.
 pub fn resolve_format_alias(value : StringView) -> DocumentFormat? {
   match value.to_owned().to_lower() {
     "docx" | "word" => Some(Docx)
     "xlsx" | "excel" => Some(Xlsx)
+    "pptx" | "powerpoint" => Some(Pptx)
     _ => None
   }
 }
@@ -2603,6 +2619,7 @@ fn capability_variant_document_format(
     match constraint {
       "format=docx" => return Some(Docx)
       "format=xlsx" => return Some(Xlsx)
+      "format=pptx" => return Some(Pptx)
       _ => ()
     }
   }

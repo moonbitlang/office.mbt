@@ -1895,7 +1895,9 @@ test "detect_format rejects unsupported extension before reading content" {
     err =>
       inspect(
         Show::to_string(err),
-        content="unsupported file extension for 'report.pdf' (expected .xlsx or .docx)",
+        content=(
+          #|unsupported file extension for 'report.pdf' (expected .xlsx, .docx, or .pptx)
+        ),
       )
   } noraise {
     _ => fail("expected unsupported extension")
@@ -2007,7 +2009,9 @@ test "detect_format does not accept a content-type marker in an XML comment" {
     err =>
       inspect(
         Show::to_string(err),
-        content="invalid Office package: content types do not declare an XLSX or DOCX main part",
+        content=(
+          #|invalid Office package: content types do not declare an XLSX, DOCX, or PPTX main part
+        ),
       )
   } noraise {
     _ => fail("expected invalid package")
