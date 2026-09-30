@@ -261,6 +261,17 @@ pub(all) enum GraphicOp {
 /// page. Its ops draw in painter's order. Every `Save` has a matching
 /// `Restore`, and every number is finite (checked, with the rest of the
 /// ops' requirements, by `PageModel::validate`).
+///
+/// Every number is also within the range a PDF reader is sure to hold in
+/// a real, ±3.403e38 (PDF 32000-1, Annex C), and so are the
+/// transformations as they compose from the page and where each gradient
+/// lands on it (also checked by `validate`). Annex C has more limits a
+/// graphic cannot be checked against: reals nearer 0 than about 1.175e-38
+/// read as 0, older readers keep only about five significant digits, and
+/// integers are sure only up to 2147483647 in magnitude. The PDF backend
+/// writes a graphic's numbers exactly (an integral one beyond 2147483647
+/// with a decimal point, so that it reads as a real), leaving precision
+/// beyond five digits to the readers that keep it.
 pub(all) struct GraphicItem {
   x_pt : Double
   y_pt : Double

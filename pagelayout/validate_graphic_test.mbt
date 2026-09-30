@@ -315,3 +315,68 @@ test "validate rejects dashed hairline outlines of text, not of paths" {
     ),
   )
 }
+
+///|
+test "validate keeps a graphic's numbers within PDF's portable range" {
+  // PDF 32000-1, Annex C: reals are sure to hold about ±3.403e38
+  let big = 1.0e39
+  let style = @pagelayout.StrokeStyle::default()
+  let line = [@pagelayout.PathSegment::MoveTo(0, 0), LineTo(1, 1)]
+  let scale = fn(s : Double) -> @pagelayout.GraphicOp {
+    Transform({ ..@pagelayout.identity, a: s, d: s, })
+  }
+  let fill = fn(shape : @pagelayout.GradientShape) -> @pagelayout.GraphicOp {
+    Path({
+      segments: [Rectangle(0, 0, 10, 10)],
+      fill: Some(
+        GradientPaint({
+          shape,
+          stops: [
+            { offset: 0, color: @pagelayout.black, },
+            { offset: 1, color: @pagelayout.black, },
+          ],
+          transform: @pagelayout.identity,
+        }),
+      ),
+      fill_rule: NonZero,
+      stroke: None,
+      stroke_style: style,
+    })
+  }
+  let model = graphic_page([
+    stroked([MoveTo(0, 0), LineTo(big, 1)], style),
+    stroked(line, { ..style, dash: [1, big], }),
+    Save,
+    scale(big),
+    Restore,
+    // each within the range, but not once composed
+    Save,
+    scale(1.0e20),
+    scale(1.0e20),
+    Restore,
+    // a gradient within the range, placed on the page beyond it
+    Save,
+    scale(1.0e20),
+    fill(Linear(x1=0, y1=0, x2=1.0e20, y2=0)),
+    Restore,
+    // its focal circle 1e40 end radii from its end centre
+    fill(Radial(x1=1.0e20, y1=0, r1=0, x2=0, y2=0, r2=1.0e-20)),
+    // fine: at the range's edges
+    stroked(line, { ..style, width: Width(3.4e38), }),
+    fill(Linear(x1=0, y1=0, x2=1.0e-30, y2=0)),
+    fill(Radial(x1=5, y1=5, r1=0, x2=5, y2=5, r2=3.0e38)),
+  ])
+  debug_inspect(
+    model.validate(),
+    content=(
+      #|[
+      #|  "page 0 item 0 op 0: number beyond ±3.403e38, PDF's portable range",
+      #|  "page 0 item 0 op 1: number beyond ±3.403e38, PDF's portable range",
+      #|  "page 0 item 0 op 3: number beyond ±3.403e38, PDF's portable range",
+      #|  "page 0 item 0 op 7: transformation beyond PDF's portable range once composed",
+      #|  "page 0 item 0 op 11: gradient placed beyond PDF's portable range on the page",
+      #|  "page 0 item 0 op 13: gradient placed beyond PDF's portable range on the page",
+      #|]
+    ),
+  )
+}

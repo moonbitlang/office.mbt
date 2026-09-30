@@ -319,45 +319,17 @@ fn GraphicResources::pattern(
 }
 
 ///|
-/// `v` written exactly as a PDF real: the shortest decimal that reads back
+/// `v` written exactly as a PDF real, as pdflite writes `PdfExactReal`
+/// (`@pdflite.pdf_write_exact_real`): the shortest decimal that reads back
 /// as `v`, spelt out without an exponent, which PDF's number syntax does
-/// not have (PDF 32000-1, 7.3.3). `v` is finite (see
-/// `PageModel::validate`).
+/// not have (PDF 32000-1, 7.3.3), and with a decimal point when integral
+/// beyond what a PDF integer surely holds (Annex C). `v` is finite and
+/// within PDF's portable range (see `PageModel::validate`).
 fn exact_real(v : Double) -> String {
-  let text = v.to_string()
-  guard text.find("e") is Some(e) else { return text }
-  let negative = text.has_prefix("-")
-  let mantissa = if negative { text[1:e] } else { text[:e] }
-  let exponent = match text[e + 1:] {
-    [.. "+", .. rest] => @string.parse_int(rest) catch { _ => 0 }
-    [.. "-", .. rest] => -(@string.parse_int(rest) catch { _ => 0 })
-    rest => @string.parse_int(rest) catch { _ => 0 }
-  }
-  // the significant digits, and where the point falls among them
-  let (digits, point) = match mantissa.find(".") {
-    Some(i) => (mantissa[:i].to_owned() + mantissa[i + 1:].to_owned(), i)
-    None => (mantissa.to_owned(), mantissa.length())
-  }
-  let point = point + exponent
+  let bytes = @pdflite.pdf_write_exact_real(v) catch { _ => return "0" }
   let sb = StringBuilder()
-  if negative {
-    sb.write_char('-')
-  }
-  if point <= 0 {
-    sb.write_string("0.")
-    for _ in 0..<-point {
-      sb.write_char('0')
-    }
-    sb.write_string(digits)
-  } else if point >= digits.length() {
-    sb.write_string(digits)
-    for _ in 0..<(point - digits.length()) {
-      sb.write_char('0')
-    }
-  } else {
-    sb.write_string(digits[:point].to_owned())
-    sb.write_char('.')
-    sb.write_string(digits[point:].to_owned())
+  for byte in bytes {
+    sb.write_char(byte.to_int().unsafe_to_char())
   }
   sb.to_string()
 }

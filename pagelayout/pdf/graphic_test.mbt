@@ -599,8 +599,10 @@ test "graphic numbers are written exactly in the content stream" {
   assert_true(text.contains("0.0000001 0 0 0.0000001 0 0 cm"))
   assert_true(text.contains("0 600000000 1000000000 -600000000 re"))
   assert_true(text.contains("0.123456789012345 0.000000001 m"))
-  assert_true(text.contains("0.000025 1000000000000000000000 l"))
-  assert_true(text.contains("-0.00000015 -12500000000000000000000 l"))
+  // integral values beyond what a PDF integer surely holds (2147483647,
+  // PDF 32000-1, Annex C) with a decimal point, as reals
+  assert_true(text.contains("0.000025 1000000000000000000000.0 l"))
+  assert_true(text.contains("-0.00000015 -12500000000000000000000.0 l"))
 }
 
 ///|
