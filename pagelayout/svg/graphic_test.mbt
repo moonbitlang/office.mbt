@@ -207,13 +207,48 @@ test "gradient stops at the ends: only the one nearer the middle is written" {
   let start = svg.find("<radialGradient").unwrap()
   let end = svg.find("</radialGradient>").unwrap()
   inspect(
-    svg[start:end],
+    svg[start:end + "</radialGradient>".length()],
     content=(
       #|<radialGradient id="g1" gradientUnits="userSpaceOnUse" gradientTransform="matrix(1 0 0 1 0 0)" fx="5" fy="5" fr="0" cx="5" cy="5" r="5">
       #|    <stop offset="0" stop-color="#ff0000"/>
       #|    <stop offset="0.5" stop-color="#0000ff"/>
       #|    <stop offset="1" stop-color="#00ff00"/>
-      #|  
+      #|  </radialGradient>
+    ),
+  )
+}
+
+///|
+test "small transformations and fine coordinates survive in SVG" {
+  let model = text_graphic(run => {
+    [
+      Transform({ a: 0.0001, b: 0, c: 0, d: 0.0001, e: 0, f: 0, }),
+      Path({
+        segments: [Rectangle(0, 0, 1000000, 600000.25)],
+        fill: Some(Solid(@pagelayout.black)),
+        fill_rule: NonZero,
+        stroke: None,
+        stroke_style: @pagelayout.StrokeStyle::default(),
+      }),
+      Transform({ a: 1.0e-7, b: 0, c: 0, d: 1.0e-7, e: 0.00025, f: 0, }),
+      Text({ ..run, x_pt: 1234.0005, size_pt: 1.0e8, }),
+    ]
+  })
+  inspect(
+    @svg.render_page(model, 0),
+    content=(
+      #|<svg xmlns="http://www.w3.org/2000/svg" width="100pt" height="50pt" viewBox="0 0 100 50">
+      #|  <rect x="0" y="0" width="100" height="50" fill="#ffffff"/>
+      #|  <g transform="translate(0 0)">
+      #|  <g transform="matrix(0.0001 0 0 0.0001 0 0)">
+      #|  <path d="M0 600000.25h1000000v-600000.25h-1000000Z" fill="#000000"/>
+      #|  <g transform="matrix(1e-7 0 0 1e-7 0.00025 0)">
+      #|  <text x="1234.0005" y="10" font-family="Sans" font-size="100000000" fill="#000000">A</text>
+      #|  </g>
+      #|  </g>
+      #|  </g>
+      #|</svg>
+      #|
     ),
   )
 }

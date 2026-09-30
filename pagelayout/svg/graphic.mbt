@@ -6,23 +6,33 @@
 // opacities on what follows them, gradients `<linearGradient>` and
 // `<radialGradient>` definitions in user space. Clip, gradient ids count up
 // from `ids` so they stay unique on the page.
+//
+// Numbers in a graphic are written exactly (`num`), not rounded to three
+// decimals as page items are: a graphic's own transformations can scale
+// what follows them by any factor, so no fixed precision is enough.
+
+///|
+/// The shortest decimal that reads back as `v` (with an exponent for very
+/// large and small magnitudes, which SVG's number syntax allows). `v` is
+/// finite (see `PageModel::validate`).
+fn num(v : Double) -> String {
+  v.to_string()
+}
 
 ///|
 fn path_data(segments : Array[@pagelayout.PathSegment]) -> String {
   let parts : Array[String] = []
   for segment in segments {
     match segment {
-      MoveTo(x, y) => parts.push("M\{fmt_num(x)} \{fmt_num(y)}")
-      LineTo(x, y) => parts.push("L\{fmt_num(x)} \{fmt_num(y)}")
+      MoveTo(x, y) => parts.push("M\{num(x)} \{num(y)}")
+      LineTo(x, y) => parts.push("L\{num(x)} \{num(y)}")
       CurveTo(x1, y1, x2, y2, x, y) =>
         parts.push(
-          "C\{fmt_num(x1)} \{fmt_num(y1)} \{fmt_num(x2)} \{fmt_num(y2)} \{fmt_num(x)} \{fmt_num(y)}",
+          "C\{num(x1)} \{num(y1)} \{num(x2)} \{num(y2)} \{num(x)} \{num(y)}",
         )
       // the winding of PDF's `re` (see `PathSegment::Rectangle`)
       Rectangle(x, y, w, h) =>
-        parts.push(
-          "M\{fmt_num(x)} \{fmt_num(y + h)}h\{fmt_num(w)}v\{fmt_num(-h)}h\{fmt_num(-w)}Z",
-        )
+        parts.push("M\{num(x)} \{num(y + h)}h\{num(w)}v\{num(-h)}h\{num(-w)}Z")
       Close => parts.push("Z")
     }
   }
@@ -31,7 +41,7 @@ fn path_data(segments : Array[@pagelayout.PathSegment]) -> String {
 
 ///|
 fn matrix_attr(m : @pagelayout.Matrix) -> String {
-  "matrix(\{fmt_num(m.a)} \{fmt_num(m.b)} \{fmt_num(m.c)} \{fmt_num(m.d)} \{fmt_num(m.e)} \{fmt_num(m.f)})"
+  "matrix(\{num(m.a)} \{num(m.b)} \{num(m.c)} \{num(m.d)} \{num(m.e)} \{num(m.f)})"
 }
 
 ///|
@@ -51,13 +61,13 @@ fn paint_attr(
       let element = match g.shape {
         Linear(x1~, y1~, x2~, y2~) => {
           sb.write_string(
-            "  <linearGradient id=\"\{id}\" gradientUnits=\"userSpaceOnUse\" gradientTransform=\"\{transform}\" x1=\"\{fmt_num(x1)}\" y1=\"\{fmt_num(y1)}\" x2=\"\{fmt_num(x2)}\" y2=\"\{fmt_num(y2)}\">\n",
+            "  <linearGradient id=\"\{id}\" gradientUnits=\"userSpaceOnUse\" gradientTransform=\"\{transform}\" x1=\"\{num(x1)}\" y1=\"\{num(y1)}\" x2=\"\{num(x2)}\" y2=\"\{num(y2)}\">\n",
           )
           "linearGradient"
         }
         Radial(x1~, y1~, r1~, x2~, y2~, r2~) => {
           sb.write_string(
-            "  <radialGradient id=\"\{id}\" gradientUnits=\"userSpaceOnUse\" gradientTransform=\"\{transform}\" fx=\"\{fmt_num(x1)}\" fy=\"\{fmt_num(y1)}\" fr=\"\{fmt_num(r1)}\" cx=\"\{fmt_num(x2)}\" cy=\"\{fmt_num(y2)}\" r=\"\{fmt_num(r2)}\">\n",
+            "  <radialGradient id=\"\{id}\" gradientUnits=\"userSpaceOnUse\" gradientTransform=\"\{transform}\" fx=\"\{num(x1)}\" fy=\"\{num(y1)}\" fr=\"\{num(r1)}\" cx=\"\{num(x2)}\" cy=\"\{num(y2)}\" r=\"\{num(r2)}\">\n",
           )
           "radialGradient"
         }
@@ -76,7 +86,7 @@ fn paint_attr(
           continue
         }
         sb.write_string(
-          "    <stop offset=\"\{fmt_num(stop.offset)}\" stop-color=\"\{stop.color.to_hex()}\"/>\n",
+          "    <stop offset=\"\{num(stop.offset)}\" stop-color=\"\{stop.color.to_hex()}\"/>\n",
         )
       }
       sb.write_string("  </\{element}>\n")
@@ -95,7 +105,7 @@ fn write_stroke_style(
   alpha : Double,
 ) -> Unit {
   match style.width {
-    Width(width) => sb.write_string(" stroke-width=\"\{fmt_num(width)}\"")
+    Width(width) => sb.write_string(" stroke-width=\"\{num(width)}\"")
     Hairline =>
       sb.write_string(
         " stroke-width=\"1\" vector-effect=\"non-scaling-stroke\"",
@@ -112,18 +122,16 @@ fn write_stroke_style(
     BevelJoin => sb.write_string(" stroke-linejoin=\"bevel\"")
   }
   if style.miter_limit != 4.0 {
-    sb.write_string(" stroke-miterlimit=\"\{fmt_num(style.miter_limit)}\"")
+    sb.write_string(" stroke-miterlimit=\"\{num(style.miter_limit)}\"")
   }
   if !style.dash.is_empty() {
-    sb.write_string(
-      " stroke-dasharray=\"\{style.dash.map(fmt_num).join(" ")}\"",
-    )
+    sb.write_string(" stroke-dasharray=\"\{style.dash.map(num).join(" ")}\"")
     if style.dash_phase != 0.0 {
-      sb.write_string(" stroke-dashoffset=\"\{fmt_num(style.dash_phase)}\"")
+      sb.write_string(" stroke-dashoffset=\"\{num(style.dash_phase)}\"")
     }
   }
   if alpha != 1.0 {
-    sb.write_string(" stroke-opacity=\"\{fmt_num(alpha)}\"")
+    sb.write_string(" stroke-opacity=\"\{num(alpha)}\"")
   }
 }
 
@@ -135,7 +143,7 @@ fn emit_graphic(
   ids : Ref[Int],
 ) -> Unit {
   sb.write_string(
-    "  <g transform=\"translate(\{fmt_num(graphic.x_pt)} \{fmt_num(graphic.y_pt)})\">\n",
+    "  <g transform=\"translate(\{num(graphic.x_pt)} \{num(graphic.y_pt)})\">\n",
   )
   // per Save level: the groups opened at that level, and the alphas
   let mut open = 0
@@ -194,7 +202,7 @@ fn emit_graphic(
           sb.write_string(" fill-rule=\"evenodd\"")
         }
         if fill_alpha != 1.0 {
-          sb.write_string(" fill-opacity=\"\{fmt_num(fill_alpha)}\"")
+          sb.write_string(" fill-opacity=\"\{num(fill_alpha)}\"")
         }
         match stroke {
           Some(stroke) => {
@@ -217,7 +225,7 @@ fn emit_graphic(
         if filled {
           paint.write_string(" fill=\"\{run.color.to_hex()}\"")
           if fill_alpha != 1.0 {
-            paint.write_string(" fill-opacity=\"\{fmt_num(fill_alpha)}\"")
+            paint.write_string(" fill-opacity=\"\{num(fill_alpha)}\"")
           }
         } else {
           paint.write_string(" fill=\"none\"")
@@ -229,13 +237,13 @@ fn emit_graphic(
           }
           None => ()
         }
-        emit_text(sb, model, run, paint=paint.to_string())
+        emit_text(sb, model, run, paint=paint.to_string(), num~)
       }
       Image(image) => {
         if fill_alpha != 1.0 {
-          sb.write_string("  <g opacity=\"\{fmt_num(fill_alpha)}\">\n")
+          sb.write_string("  <g opacity=\"\{num(fill_alpha)}\">\n")
         }
-        emit_image(sb, image)
+        emit_image(sb, image, num~)
         if fill_alpha != 1.0 {
           sb.write_string("  </g>\n")
         }

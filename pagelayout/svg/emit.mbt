@@ -86,12 +86,14 @@ fn base64_encode(data : Bytes) -> String {
 
 ///|
 /// A glyph run as `<text>`, filled in its colour, or painted by the
-/// attributes in `paint` (written as they are) instead.
+/// attributes in `paint` (written as they are) instead; its numbers
+/// formatted by `num`.
 fn emit_text(
   sb : StringBuilder,
   model : @pagelayout.PageModel,
   run : @pagelayout.GlyphRun,
   paint? : String,
+  num? : (Double) -> String = fmt_num,
 ) -> Unit {
   if run.text.length() == 0 {
     return
@@ -109,7 +111,7 @@ fn emit_text(
       if !first {
         xs.write_string(" ")
       }
-      xs.write_string(fmt_num(x))
+      xs.write_string(num(x))
       first = false
     }
     x += run.advances_pt[i]
@@ -118,11 +120,11 @@ fn emit_text(
   sb.write_string("  <text x=\"")
   sb.write_string(xs.to_string())
   sb.write_string("\" y=\"")
-  sb.write_string(fmt_num(run.baseline_pt))
+  sb.write_string(num(run.baseline_pt))
   sb.write_string("\" font-family=\"")
   sb.write_string(escape_xml(font.family))
   sb.write_string("\" font-size=\"")
-  sb.write_string(fmt_num(run.size_pt))
+  sb.write_string(num(run.size_pt))
   sb.write_string("\"")
   if font.bold {
     sb.write_string(" font-weight=\"bold\"")
@@ -173,15 +175,20 @@ fn emit_rect(sb : StringBuilder, rect : @pagelayout.RectItem) -> Unit {
 }
 
 ///|
-fn emit_image(sb : StringBuilder, image : @pagelayout.ImageItem) -> Unit {
+/// An image as `<image>`, its numbers formatted by `num`.
+fn emit_image(
+  sb : StringBuilder,
+  image : @pagelayout.ImageItem,
+  num? : (Double) -> String = fmt_num,
+) -> Unit {
   sb.write_string("  <image x=\"")
-  sb.write_string(fmt_num(image.x_pt))
+  sb.write_string(num(image.x_pt))
   sb.write_string("\" y=\"")
-  sb.write_string(fmt_num(image.y_pt))
+  sb.write_string(num(image.y_pt))
   sb.write_string("\" width=\"")
-  sb.write_string(fmt_num(image.w_pt))
+  sb.write_string(num(image.w_pt))
   sb.write_string("\" height=\"")
-  sb.write_string(fmt_num(image.h_pt))
+  sb.write_string(num(image.h_pt))
   sb.write_string("\" href=\"data:")
   sb.write_string(image.mime)
   sb.write_string(";base64,")
