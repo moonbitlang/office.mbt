@@ -20,7 +20,7 @@
 // coordinates (`PdfExactReal`): a shading's geometry is canonical (a
 // linear one runs from (0, 0) to (1, 0)), the pattern matrix carrying it
 // to the gradient's place on the page at whatever size it has there
-// (within what renderers draw; see `drawable`). So are the stitching
+// (within the range `PageModel::validate` accepts). So are the stitching
 // bounds, whose distinct offsets stay distinct as written. Colours, from
 // bytes, keep pdflite's precision.
 
@@ -61,16 +61,15 @@ fn GraphicResources::new(document : @pdflite.PdfDocument) -> GraphicResources {
 
 ///|
 /// The resources one page draws with, beyond fonts and images, in the
-/// order of first use; and the page's centre, in its default space.
+/// order of first use.
 priv struct PageGraphics {
   gstates : Map[Int, Unit]
   patterns : Map[Int, Unit]
-  centre : (Double, Double)
 }
 
 ///|
-fn PageGraphics::new(centre? : (Double, Double) = (0, 0)) -> PageGraphics {
-  { gstates: Map([]), patterns: Map([]), centre, }
+fn PageGraphics::new() -> PageGraphics {
+  { gstates: Map([]), patterns: Map([]), }
 }
 
 ///|
@@ -146,13 +145,18 @@ fn gradient_pieces(
 /// A gradient's shape in a space of its own where its geometry is simple,
 /// and the transformation from there to gradient space: a linear gradient
 /// runs from (0, 0) to (1, 0), the unit square turned and scaled onto its
-/// line; a radial one ends on the unit circle. The shading type and
-/// coordinates follow the transformation.
+/// line; a radial one is centred on its end circle and scaled by its
+/// extent (see `radial_extent`), so that the larger of its circles and
+/// their separation is of size 1. The shading type and coordinates follow
+/// the transformation.
 ///
 /// The gradient's own size goes into the pattern matrix, where it meets
 /// the transformations that scale it to the page, so the matrix gives its
-/// size there (see `drawable`). The shape has extent (a gradient without
-/// is painted as its colour; see `set_paint`).
+/// size there, as `PageModel::validate` measures it. (Scaled by the end
+/// radius alone, a gradient from a 30-point circle to a 1e-7-point one
+/// had a matrix a ten-millionth of a point in scale, which Cairo does not
+/// paint.) The shape has extent (a gradient without is painted as its
+/// colour; see `set_paint`).
 fn canonical_shape(
   shape : @pagelayout.GradientShape,
 ) -> (Int, Array[Double], @pagelayout.Matrix) {
@@ -162,13 +166,36 @@ fn canonical_shape(
       let dy = y2 - y1
       (2, [0, 0, 1, 0], { a: dx, b: dy, c: -dy, d: dx, e: x1, f: y1, })
     }
-    Radial(x1~, y1~, r1~, x2~, y2~, r2~) =>
+    Radial(x1~, y1~, r1~, x2~, y2~, r2~) => {
+      let s = radial_extent(x1~, y1~, r1~, x2~, y2~, r2~)
       (
         3,
-        [(x1 - x2) / r2, (y1 - y2) / r2, r1 / r2, 0, 0, 1],
-        { a: r2, b: 0, c: 0, d: r2, e: x2, f: y2, },
+        [(x1 - x2) / s, (y1 - y2) / s, r1 / s, 0, 0, r2 / s],
+        { a: s, b: 0, c: 0, d: s, e: x2, f: y2, },
       )
+    }
   }
+}
+
+///|
+/// The size of a radial gradient in gradient space: the largest of its
+/// radii and of its centres' separation along either axis (as
+/// `PageModel::validate` measures it).
+fn radial_extent(
+  x1~ : Double,
+  y1~ : Double,
+  r1~ : Double,
+  x2~ : Double,
+  y2~ : Double,
+  r2~ : Double,
+) -> Double {
+  [r1, r2, (x1 - x2).abs(), (y1 - y2).abs()].fold(init=0.0, (m, v) => {
+    if v > m {
+      v
+    } else {
+      m
+    }
+  })
 }
 
 ///|
@@ -246,20 +273,17 @@ fn GraphicResources::shading(
 /// A shading pattern painting `gradient` where the current transformation
 /// is `ctm` (from the gradient's user space to the page's default space),
 /// one per shading and effective matrix: the matrix maps the shading's
-/// canonical space through gradient space to the page (or, for a gradient
-/// too small or large there to draw, see `drawable`), `centre`
-/// the page's centre. Its numbers are written exactly (`PdfExactReal`):
-/// they carry the gradient's own size, which may be anything.
+/// canonical space through gradient space to the page. Its numbers are
+/// written exactly (`PdfExactReal`): they carry the gradient's own size,
+/// which may be anything within the range `PageModel::validate` accepts.
 fn GraphicResources::pattern(
   self : GraphicResources,
   gradient : @pagelayout.Gradient,
   ctm : @pagelayout.Matrix,
-  centre : (Double, Double),
 ) -> Int {
   let (shading_type, coords, canonical) = canonical_shape(gradient.shape)
   let shading = self.shading(gradient, shading_type, coords)
   let m = ctm.after(gradient.transform).after(canonical)
-  let m = drawable(m, linear=shading_type == 2, centre)
   let key = "\{shading} \{m.a} \{m.b} \{m.c} \{m.d} \{m.e} \{m.f}"
   match self.patterns.get(key) {
     Some(number) => return number
@@ -393,7 +417,7 @@ fn set_paint(
       }
     }
     GradientPaint(gradient) => {
-      let number = resources.pattern(gradient, state.ctm, page.centre)
+      let number = resources.pattern(gradient, state.ctm)
       page.patterns[number] = ()
       // a pattern's key cannot be a colour's, which starts with `#`
       let key = "/P\{number}"
@@ -704,61 +728,4 @@ fn emit_graphic(
   for i in start..<ops.length() {
     ops[i] = exact_op(ops[i])
   }
-}
-
-///|
-/// The shortest a gradient is drawn on the page, in points: a linear one's
-/// length, a radial one's end radius (see `drawable`).
-const SHORTEST_GRADIENT : Double = 1.0e-3
-
-///|
-/// The longest a linear gradient is drawn on the page, in points (see
-/// `drawable`).
-const LONGEST_GRADIENT : Double = 1.0e12
-
-///|
-/// The pattern matrix `m` of a gradient (from its canonical space, see
-/// `canonical_shape`, to the page), or one drawing it within the sizes
-/// renderers draw: a gradient shorter on the page than
-/// `SHORTEST_GRADIENT` is drawn that long, grown about the middle of a
-/// linear one's line or a radial one's end centre; a linear gradient
-/// longer than `LONGEST_GRADIENT`, that long, shrunk about the page's
-/// `centre` along its line.
-///
-/// Its numbers are written exactly, so Poppler's Splash paints gradients
-/// of any size; but Cairo (Poppler's other renderer, Evince's) paints
-/// nothing for a gradient much below 1e-4 points, and both paint nothing
-/// where a linear gradient's parameter varies across the page by less than
-/// a double resolves (a gradient about 1e18 points long on a page a
-/// hundred wide). Either way the change is out of sight: grown, a
-/// gradient's colours move by less than a thousandth of a point; shrunk,
-/// the parameter takes the same value at the centre and varies across a
-/// page (at most 14400 points wide) by less than 1e-7, too little to
-/// change a colour visibly.
-fn drawable(
-  m : @pagelayout.Matrix,
-  linear~ : Bool,
-  centre : (Double, Double),
-) -> @pagelayout.Matrix {
-  let first = (m.a * m.a + m.b * m.b).sqrt()
-  let second = (m.c * m.c + m.d * m.d).sqrt()
-  let size = if linear || first >= second { first } else { second }
-  if size > 0.0 && size < SHORTEST_GRADIENT {
-    let k = SHORTEST_GRADIENT / size
-    // the point that stays, in canonical space and on the page
-    let u = if linear { 0.5 } else { 0.0 }
-    let (x, y) = m.apply(u, 0)
-    let (a, b, c, d) = (m.a * k, m.b * k, m.c * k, m.d * k)
-    return { a, b, c, d, e: x - a * u, f: y - b * u, }
-  }
-  guard linear && size > LONGEST_GRADIENT else { return m }
-  let det = m.a * m.d - m.b * m.c
-  guard det != 0.0 else { return m }
-  // the centre in canonical space
-  let (x, y) = centre
-  let u = ((x - m.e) * m.d - (y - m.f) * m.c) / det
-  let v = ((y - m.f) * m.a - (x - m.e) * m.b) / det
-  let k = LONGEST_GRADIENT / size
-  let (a, b, c, d) = (m.a * k, m.b * k, m.c * k, m.d * k)
-  { a, b, c, d, e: x - (a * u + c * v), f: y - (b * u + d * v), }
 }

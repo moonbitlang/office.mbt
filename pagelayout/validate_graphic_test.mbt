@@ -359,12 +359,16 @@ test "validate keeps a graphic's numbers within PDF's portable range" {
     scale(1.0e20),
     fill(Linear(x1=0, y1=0, x2=1.0e20, y2=0)),
     Restore,
-    // its focal circle 1e40 end radii from its end centre
+    // its focal circle 1e40 end radii from its end centre: placed within
+    // the range (the PDF backend scales it by its extent, 1e20), but
+    // beyond the sizes renderers draw (see `Gradient`)
     fill(Radial(x1=1.0e20, y1=0, r1=0, x2=0, y2=0, r2=1.0e-20)),
     // fine: at the range's edges
     stroked(line, { ..style, width: Width(3.4e38), }),
-    fill(Linear(x1=0, y1=0, x2=1.0e-30, y2=0)),
-    fill(Radial(x1=5, y1=5, r1=0, x2=5, y2=5, r2=3.0e38)),
+    Save,
+    Transform({ ..@pagelayout.identity, e: 3.0e38, }),
+    fill(Linear(x1=0, y1=0, x2=10, y2=0)),
+    Restore,
   ])
   debug_inspect(
     model.validate(),
@@ -375,7 +379,7 @@ test "validate keeps a graphic's numbers within PDF's portable range" {
       #|  "page 0 item 0 op 3: number beyond ±3.403e38, PDF's portable range",
       #|  "page 0 item 0 op 7: transformation beyond PDF's portable range once composed",
       #|  "page 0 item 0 op 11: gradient placed beyond PDF's portable range on the page",
-      #|  "page 0 item 0 op 13: gradient placed beyond PDF's portable range on the page",
+      #|  "page 0 item 0 op 13: gradient larger than 1e12 points on the page, beyond what renderers draw",
       #|]
     ),
   )

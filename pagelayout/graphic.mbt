@@ -172,6 +172,22 @@ pub(all) enum GradientShape {
 ///
 /// A gradient whose shape has no extent paints its last stop's colour
 /// everywhere (see `Gradient::degenerate_color`).
+///
+/// Any other gradient is from 0.001 to 1e12 points in size on the page
+/// (checked by `PageModel::validate`): a linear one's length from its
+/// start to its end; a radial one's largest radius or separation of its
+/// centres along either axis of gradient space, measured on the page
+/// along whichever axis is the longer there. Renderers draw gradients
+/// outside that range wrongly or not at all (Cairo paints nothing for one
+/// much below 1e-4 points, Poppler nothing for a linear one about 1e18
+/// points long across a page), and the backends do not reshape them to
+/// fit. Within it, both backends write a gradient's geometry and stop
+/// offsets exactly. Renderers resolve a gradient's parameter to their own
+/// precision: Poppler's Splash draws stops 1e-8 apart on a gradient 1e9
+/// points long, or a sharp change on one 1e12 points long, where they
+/// are; Cairo (and so librsvg) resolves the parameter to about 1/65536,
+/// so it merges or moves colour changes nearer than that fraction of a
+/// gradient's size.
 pub(all) struct Gradient {
   shape : GradientShape
   stops : Array[GradientStop]
@@ -265,7 +281,8 @@ pub(all) enum GraphicOp {
 /// Every number is also within the range a PDF reader is sure to hold in
 /// a real, ±3.403e38 (PDF 32000-1, Annex C), and so are the
 /// transformations as they compose from the page and where each gradient
-/// lands on it (also checked by `validate`). Annex C has more limits a
+/// lands on it (also checked by `validate`, as are the sizes on the page
+/// `Gradient` requires). Annex C has more limits a
 /// graphic cannot be checked against: reals nearer 0 than about 1.175e-38
 /// read as 0, older readers keep only about five significant digits, and
 /// integers are sure only up to 2147483647 in magnitude. The PDF backend

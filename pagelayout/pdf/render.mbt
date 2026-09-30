@@ -449,9 +449,7 @@ pub fn render_pdf(
     let images : Array[Int] = []
     let images_set : Map[Int, Unit] = Map([])
     let annots : Array[@syntax.PdfObject] = []
-    let page_graphics = PageGraphics::new(
-      centre=(model_page.width_pt / 2, model_page.height_pt / 2),
-    )
+    let page_graphics = PageGraphics::new()
     let text = fn(run : @pagelayout.GlyphRun, page_height : Double) {
       guard font_objects.get(run.font) is Some(number) else { return }
       if !used_set.contains(number) {

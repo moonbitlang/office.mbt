@@ -133,7 +133,8 @@ fn check_stroke_style(
 /// valid (see `check_stroke_style`), and text is not outlined with a
 /// dashed hairline; every paint is valid (`check_paint`); glyph runs and
 /// images are well-formed as page items are, and placed at finite
-/// positions; and its numbers are within PDF's portable range (see
+/// positions; and its numbers are within PDF's portable range, its
+/// gradients within the sizes on the page renderers draw (see
 /// `check_portable`).
 fn PageModel::check_graphic(
   self : PageModel,
@@ -324,33 +325,91 @@ fn op_numbers(op : GraphicOp) -> Array[Double] {
 }
 
 ///|
+/// The size of a radial gradient in gradient space: the largest of its
+/// radii and of its centres' separation along either axis.
+fn radial_extent(
+  x1~ : Double,
+  y1~ : Double,
+  r1~ : Double,
+  x2~ : Double,
+  y2~ : Double,
+  r2~ : Double,
+) -> Double {
+  [r1, r2, (x1 - x2).abs(), (y1 - y2).abs()].fold(init=0.0, (m, v) => {
+    if v > m {
+      v
+    } else {
+      m
+    }
+  })
+}
+
+///|
 /// Where a gradient painting in the space `ctm` maps to the page is,
 /// within PDF's portable range: the pattern matrix taking the PDF
-/// backend's canonical shading (a linear gradient from (0, 0) to (1, 0), a
-/// radial one ending on the unit circle) there, and the canonical
-/// shading's own coordinates.
+/// backend's canonical shading there (a linear gradient from (0, 0) to
+/// (1, 0); a radial one centred on its end circle and scaled by its
+/// `radial_extent`, its coordinates then within ±1).
 fn portable_placement(gradient : Gradient, ctm : Matrix) -> Bool {
-  let (canonical, coords) : (Matrix, Array[Double]) = match gradient.shape {
+  let canonical : Matrix = match gradient.shape {
     Linear(x1~, y1~, x2~, y2~) => {
       let dx = x2 - x1
       let dy = y2 - y1
-      ({ a: dx, b: dy, c: -dy, d: dx, e: x1, f: y1, }, [])
+      { a: dx, b: dy, c: -dy, d: dx, e: x1, f: y1, }
     }
-    Radial(x1~, y1~, r1~, x2~, y2~, r2~) =>
-      (
-        { a: r2, b: 0, c: 0, d: r2, e: x2, f: y2, },
-        [(x1 - x2) / r2, (y1 - y2) / r2, r1 / r2],
-      )
+    Radial(x1~, y1~, r1~, x2~, y2~, r2~) => {
+      let s = radial_extent(x1~, y1~, r1~, x2~, y2~, r2~)
+      { a: s, b: 0, c: 0, d: s, e: x2, f: y2, }
+    }
   }
-  coords.iter().all(portable) &&
   portable_matrix(ctm.after(gradient.transform).after(canonical))
+}
+
+///|
+/// The smallest a gradient may be on the page, in points (see
+/// `gradient_page_size`): Cairo (Poppler's pdftocairo, Evince, librsvg)
+/// paints nothing for a gradient much below 1e-4 points.
+const SMALLEST_GRADIENT_PT : Double = 1.0e-3
+
+///|
+/// The largest a gradient may be on the page, in points (see
+/// `gradient_page_size`): Poppler paints nothing for a linear gradient
+/// about 1e18 points long, whose parameter varies across the page by less
+/// than a double resolves.
+const LARGEST_GRADIENT_PT : Double = 1.0e12
+
+///|
+/// The size on the page of a gradient painting in the space `ctm` maps to
+/// the page: a linear gradient's length there, from its start to its end;
+/// a radial one's `radial_extent` there, along whichever axis of gradient
+/// space it is the longer.
+fn gradient_page_size(gradient : Gradient, ctm : Matrix) -> Double {
+  let m = ctm.after(gradient.transform)
+  let length = fn(x : Double, y : Double) {
+    let (px, py) = (m.a * x + m.c * y, m.b * x + m.d * y)
+    (px * px + py * py).sqrt()
+  }
+  match gradient.shape {
+    Linear(x1~, y1~, x2~, y2~) => length(x2 - x1, y2 - y1)
+    Radial(x1~, y1~, r1~, x2~, y2~, r2~) => {
+      let s = radial_extent(x1~, y1~, r1~, x2~, y2~, r2~)
+      let (first, second) = (length(s, 0), length(0, s))
+      if first >= second {
+        first
+      } else {
+        second
+      }
+    }
+  }
 }
 
 ///|
 /// That a graphic whose numbers are finite (as `check_graphic` checks) is
 /// within PDF's portable range (PDF 32000-1, Annex C): every number, the
 /// transformations as they compose from the page, and where each gradient
-/// is placed on the page (see `portable_placement`) are within ±3.403e38.
+/// is placed on the page (see `portable_placement`) are within ±3.403e38;
+/// and each gradient's size on the page (`gradient_page_size`) is from
+/// `SMALLEST_GRADIENT_PT` to `LARGEST_GRADIENT_PT`.
 fn check_portable(
   violations : Array[String],
   where_ : String,
@@ -398,16 +457,29 @@ fn check_portable(
         }
       }
       Path(path) => {
-        let misplaced = [path.fill, path.stroke]
-          .iter()
-          .any(paint => {
-            paint is Some(GradientPaint(gradient)) &&
-            gradient.degenerate_color() is None &&
-            !portable_placement(gradient, ctm)
-          })
-        if misplaced {
+        let gradients = [path.fill, path.stroke].filter_map(paint => {
+          guard paint is Some(GradientPaint(gradient)) &&
+            gradient.degenerate_color() is None else {
+            None
+          }
+          Some(gradient)
+        })
+        if gradients.iter().any(g => !portable_placement(g, ctm)) {
           violations.push(
             "\{at}: gradient placed beyond PDF's portable range on the page",
+          )
+          continue
+        }
+        let sizes = gradients.map(g => gradient_page_size(g, ctm))
+        if sizes.iter().any(size => size < SMALLEST_GRADIENT_PT) {
+          violations.push(
+            "\{at}: gradient smaller than 0.001 points on the page, below what renderers draw",
+          )
+        }
+        // NaN, from an overflow, counts as too large
+        if sizes.iter().any(size => !(size <= LARGEST_GRADIENT_PT)) {
+          violations.push(
+            "\{at}: gradient larger than 1e12 points on the page, beyond what renderers draw",
           )
         }
       }

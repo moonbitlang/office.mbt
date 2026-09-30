@@ -624,63 +624,34 @@ fn attribute(svg : String, name : String) -> Double raise {
 }
 
 ///|
-test "a gradient too small to draw is drawn a thousandth of a point long" {
-  // a ten-millionth of a point long on the page (librsvg paints nothing
-  // for it), grown about its middle as the PDF backend grows it; under a
-  // transformation, measured on the page
-  let fill = fn(shape : @pagelayout.GradientShape) -> @pagelayout.GraphicOp {
-    Path({
-      segments: [Rectangle(0, 0, 100, 60)],
-      fill: Some(
-        GradientPaint({
-          shape,
-          stops: [
-            { offset: 0, color: @pagelayout.Color::rgb(255, 0, 0), },
-            { offset: 1, color: @pagelayout.Color::rgb(0, 0, 255), },
-          ],
-          transform: @pagelayout.identity,
-        }),
-      ),
-      fill_rule: NonZero,
-      stroke: None,
-      stroke_style: @pagelayout.StrokeStyle::default(),
-    })
-  }
-  let svg = @svg.render_page(
-    text_graphic(_ => [fill(Linear(x1=0, y1=0, x2=1.0e-7, y2=0))]),
-    0,
-  )
-  let near = fn(a : Double, b : Double) { (a - b).abs() <= 1.0e-12 * b.abs() }
-  assert_true(near(attribute(svg, "x1"), 5.0e-8 - 0.0005))
-  assert_true(near(attribute(svg, "x2"), 5.0e-8 + 0.0005))
-  assert_eq(attribute(svg, "y1"), 0)
-  assert_eq(attribute(svg, "y2"), 0)
-  let svg = @svg.render_page(
-    text_graphic(_ => {
-      [
-        Transform({ ..@pagelayout.identity, a: 1.0e-4, d: 1.0e-4, }),
-        fill(Linear(x1=0, y1=0, x2=1.0e-3, y2=0)),
-      ]
-    }),
-    0,
-  )
-  assert_true(near(attribute(svg, "x1"), 0.0005 - 5))
-  assert_true(near(attribute(svg, "x2"), 0.0005 + 5))
-  // a radial one about its end centre, its focal circle with it
-  let svg = @svg.render_page(
-    text_graphic(_ => {
-      [fill(Radial(x1=50 + 1.0e-8, y1=30, r1=1.0e-8, x2=50, y2=30, r2=1.0e-7))]
-    }),
-    0,
-  )
-  assert_true(near(attribute(svg, "fx"), 50.0001))
-  assert_true(near(attribute(svg, "fr"), 0.0001))
+test "a gradient is written at its size, however small a part of it" {
+  // a 30-point radial gradient ending on a circle 1e-7 points across: its
+  // size counts both circles (see `PageModel::validate`), and it is
+  // written as it is, not grown
+  let model = text_graphic(_ => {
+    [
+      Path({
+        segments: [Rectangle(0, 0, 100, 60)],
+        fill: Some(
+          GradientPaint({
+            shape: Radial(x1=50, y1=30, r1=30, x2=50, y2=30, r2=1.0e-7),
+            stops: [
+              { offset: 0, color: @pagelayout.Color::rgb(255, 0, 0), },
+              { offset: 1, color: @pagelayout.Color::rgb(0, 0, 255), },
+            ],
+            transform: @pagelayout.identity,
+          }),
+        ),
+        fill_rule: NonZero,
+        stroke: None,
+        stroke_style: @pagelayout.StrokeStyle::default(),
+      }),
+    ]
+  })
+  assert_true(model.validate().is_empty())
+  let svg = @svg.render_page(model, 0)
+  assert_eq(attribute(svg, "fx"), 50)
+  assert_eq(attribute(svg, "fr"), 30)
   assert_eq(attribute(svg, "cx"), 50)
-  assert_true(near(attribute(svg, "r"), 0.001))
-  // one of ordinary size is written as it is
-  let svg = @svg.render_page(
-    text_graphic(_ => [fill(Linear(x1=0, y1=0, x2=0.01, y2=0))]),
-    0,
-  )
-  assert_eq(attribute(svg, "x2"), 0.01)
+  assert_eq(attribute(svg, "r"), 1.0e-7)
 }

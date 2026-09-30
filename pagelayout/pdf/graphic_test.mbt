@@ -529,28 +529,6 @@ test "a dashed hairline is dashed in the graphic's space" {
 }
 
 ///|
-/// The numbers of every array after `key` (`/Bounds`, say) in `file`, one
-/// array each.
-fn number_arrays(file : String, key : String) -> Array[Array[Double]] raise {
-  let arrays = []
-  let mut rest = file[:]
-  let key = key + " ["
-  while rest.find(key) is Some(i) {
-    rest = rest[i + key.length():]
-    let end = rest.find("]").unwrap()
-    let numbers = []
-    for word in rest[:end].split(" ") {
-      if !word.is_empty() {
-        numbers.push(@string.parse_double(word))
-      }
-    }
-    arrays.push(numbers)
-    rest = rest[end:]
-  }
-  arrays
-}
-
-///|
 test "stitching bounds are written exactly, however close the stops" {
   // offsets apart by less than a rounded real resolves: each interval
   // keeps its own bound, distinct and increasing as written
@@ -700,13 +678,6 @@ fn gradient_rectangle(
 }
 
 ///|
-/// Whether `a` is within `tolerance` of `b`, relative to `b` (or absolute
-/// when `b` is 0).
-fn near(a : Double, b : Double, tolerance : Double) -> Bool {
-  (a - b).abs() <= tolerance * (if b == 0.0 { 1.0 } else { b.abs() })
-}
-
-///|
 test "pattern matrices are written exactly" {
   // a hundredth of a point long, turned by a millionth of a radian: the
   // turn is in coefficients that a rounded real would write as 0
@@ -720,51 +691,84 @@ test "pattern matrices are written exactly" {
 }
 
 ///|
-test "a gradient too small to draw is drawn a thousandth of a point long" {
-  // a ten-millionth of a point long: Poppler's Cairo renderer paints
-  // nothing for it, and rounded reals made its matrix singular
-  let model = gradient_rectangle(Linear(x1=0, y1=0, x2=1.0e-7, y2=0))
-  assert_true(model.validate().is_empty())
-  let file = as_text(@pdf.render_pdf(model))
-  assert_true(file.contains("/Coords [0 0 1 0]"))
-  guard number_arrays(file, "/Matrix") is [[a, b, c, d, e, f]] else {
-    fail("expected one pattern matrix")
-  }
-  // grown about its middle, (10 + 5e-8, 80) on the page
-  assert_true(near(a, 0.001, 1.0e-12) && near(d, -0.001, 1.0e-12))
-  assert_eq((b, c), (0, 0))
-  assert_true(near(e + a / 2, 10 + 5.0e-8, 1.0e-15) && f == 80)
-  // a radial one ending on a circle as small, about its centre
+test "a radial gradient is drawn at its size, both circles counted" {
+  // from a 30-point circle to a 1e-7-point one at its centre: 30 points on
+  // the page, and drawn so. Scaled by its end radius alone, its pattern
+  // matrix was a ten-millionth of a point in scale (which Cairo does not
+  // paint), and grown to a thousandth of a point that radius took the
+  // first circle to 300,000 points, the 30-point gradient almost all blue.
   let model = gradient_rectangle(
-    Radial(x1=50, y1=30, r1=0, x2=50, y2=30, r2=1.0e-7),
+    Radial(x1=50, y1=30, r1=30, x2=50, y2=30, r2=1.0e-7),
   )
   assert_true(model.validate().is_empty())
   let file = as_text(@pdf.render_pdf(model))
-  assert_true(file.contains("/Coords [0 0 0 0 0 1]"))
-  guard number_arrays(file, "/Matrix") is [[a, b, c, d, e, f]] else {
-    fail("expected one pattern matrix")
-  }
-  assert_true(near(a, 0.001, 1.0e-12) && near(d, -0.001, 1.0e-12))
-  assert_eq((b, c, e, f), (0, 0, 60, 50))
+  assert_true(file.contains("/Coords [0 0 1 0 0 0.000000003333333333333333]"))
+  assert_true(file.contains("/Matrix [30 0 0 -30 60 50]"))
 }
 
 ///|
-test "a linear gradient too long to draw is shrunk about the page's centre" {
-  // 1e18 points long, its middle at x = 50: Poppler paints nothing where
-  // the gradient's parameter varies across the page by less than a double
-  // resolves
-  let model = gradient_rectangle(
-    Linear(x1=50 - 5.0e17, y1=0, x2=50 + 5.0e17, y2=0),
+test "validate rejects gradients too small or too large on the page to draw" {
+  let long = fn(half : Double) -> @pagelayout.GraphicOp {
+    Path({
+      segments: [Rectangle(0, 0, 100, 60)],
+      fill: Some(
+        GradientPaint({
+          shape: Linear(x1=50 - half, y1=0, x2=50 + half, y2=0),
+          stops: [
+            { offset: 0, color: red, },
+            { offset: 0.5, color: red, },
+            { offset: 0.5, color: blue, },
+            { offset: 1, color: blue, },
+          ],
+          transform: @pagelayout.identity,
+        }),
+      ),
+      fill_rule: NonZero,
+      stroke: None,
+      stroke_style: @pagelayout.StrokeStyle::default(),
+    })
+  }
+  // red turning blue at x = 60 on the page, along a gradient 1e14 points
+  // long: shrunk to 1e12 about the page's centre, the change moved to
+  // about x = 99.6
+  let model = graphic_model([long(5.0e13)])
+  debug_inspect(
+    model.validate(),
+    content=(
+      #|["page 0 item 0 op 0: gradient larger than 1e12 points on the page, beyond what renderers draw"]
+    ),
   )
+  // at the limit, drawn exactly: the change at the gradient's middle
+  let model = graphic_model([long(5.0e11)])
   assert_true(model.validate().is_empty())
   let file = as_text(@pdf.render_pdf(model))
-  guard number_arrays(file, "/Matrix") is [[a, b, c, d, e, f]] else {
-    fail("expected one pattern matrix")
-  }
-  // 1e12 long, and at the page's centre (100, 50) the parameter is what it
-  // was, 0.5 + 4e-17 (that is, 0.5 as a double)
-  assert_true(near(a, 1.0e12, 1.0e-12) && near(d, -1.0e12, 1.0e-12))
-  assert_eq((b, c), (0, 0))
-  assert_true(near((100 - e) / a, 0.5, 1.0e-15))
-  ignore(f)
+  assert_true(
+    file.contains(
+      "/Matrix [1000000000000.0 0 0 -1000000000000.0 -499999999940.0 80]",
+    ),
+  )
+  // a ten-millionth of a point long, linear or radial, or so small on the
+  // page by a transformation
+  let model = graphic_model([
+    gradient_fill({ ..linear, shape: Linear(x1=0, y1=0, x2=1.0e-7, y2=0), }),
+    gradient_fill({
+      ..linear,
+      shape: Radial(x1=50, y1=30, r1=0, x2=50, y2=30, r2=1.0e-7),
+    }),
+    Transform({ ..@pagelayout.identity, a: 1.0e-5, d: 1.0e-5, }),
+    gradient_fill(linear),
+    // fine: a thousandth of a point
+    Transform({ ..@pagelayout.identity, a: 10, d: 10, }),
+    gradient_fill(linear),
+  ])
+  debug_inspect(
+    model.validate(),
+    content=(
+      #|[
+      #|  "page 0 item 0 op 0: gradient smaller than 0.001 points on the page, below what renderers draw",
+      #|  "page 0 item 0 op 1: gradient smaller than 0.001 points on the page, below what renderers draw",
+      #|  "page 0 item 0 op 3: gradient smaller than 0.001 points on the page, below what renderers draw",
+      #|]
+    ),
+  )
 }
