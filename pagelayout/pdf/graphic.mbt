@@ -522,6 +522,58 @@ fn set_stroke_style(
 }
 
 ///|
+/// Whether a path is painted with a pattern (a gradient with extent).
+fn uses_pattern(path : @pagelayout.PathItem) -> Bool {
+  [path.fill, path.stroke]
+  .iter()
+  .any(paint => paint is Some(GradientPaint(g)) && g.degenerate_color() is None)
+}
+
+///|
+/// For a transformation that shrinks areas below 1e-4 (but not to
+/// nothing), the power of two `s` whose square is at most its determinant
+/// and more than a quarter of it: scaling it up by `1 / s` brings its
+/// determinant to between 1 and 4.
+fn shrink(m : @pagelayout.Matrix) -> Double? {
+  let det = (m.a * m.d - m.b * m.c).abs()
+  guard det > 0.0 && det < 1.0e-4 else { return None }
+  let mut s = 1.0
+  while s * s > det {
+    s = s * 0.5
+  }
+  Some(s)
+}
+
+///|
+/// A path's numbers, and its stroke's, multiplied by `s`.
+fn scaled_path(path : @pagelayout.PathItem, s : Double) -> @pagelayout.PathItem {
+  let segments = path.segments.map(fn(segment) -> @pagelayout.PathSegment {
+    match segment {
+      MoveTo(x, y) => MoveTo(x * s, y * s)
+      LineTo(x, y) => LineTo(x * s, y * s)
+      CurveTo(x1, y1, x2, y2, x, y) =>
+        CurveTo(x1 * s, y1 * s, x2 * s, y2 * s, x * s, y * s)
+      Rectangle(x, y, w, h) => Rectangle(x * s, y * s, w * s, h * s)
+      Close => Close
+    }
+  })
+  let style = path.stroke_style
+  {
+    ..path,
+    segments,
+    stroke_style: {
+      ..style,
+      width: match style.width {
+        Width(w) => Width(w * s)
+        Hairline => Hairline
+      },
+      dash: style.dash.map(d => d * s),
+      dash_phase: style.dash_phase * s,
+    },
+  }
+}
+
+///|
 /// A state that knows nothing of the paint and stroke parameters in effect,
 /// where the transformation is `ctm`.
 fn PaintState::unknown(ctm : @pagelayout.Matrix) -> PaintState {
@@ -601,6 +653,23 @@ fn emit_graphic(
         ops.push(Op_gs(gstate_resource_name(number)))
       }
       Path(path) => {
+        // Poppler will not paint a pattern where the transformation's
+        // determinant is below 1e-6 ("singular matrix"), so a path painted
+        // with a gradient where the transformation shrinks it that far is
+        // drawn under a transformation scaled up by a power of two, its
+        // numbers scaled down by as much (exactly). The pattern still comes
+        // from `state.ctm`, the space the gradient is in.
+        let shrunk = if uses_pattern(path) { shrink(state.ctm) } else { None }
+        let saved = state
+        let path = match shrunk {
+          Some(s) => {
+            state = state.copy()
+            ops.push(Op_q)
+            ops.push(cm_op({ a: 1.0 / s, b: 0, c: 0, d: 1.0 / s, e: 0, f: 0, }))
+            scaled_path(path, s)
+          }
+          None => path
+        }
         let fill = path.fill
         let stroke = path.stroke
         match fill {
@@ -625,6 +694,10 @@ fn emit_graphic(
             (None, None) => Op_n
           },
         )
+        if shrunk is Some(_) {
+          ops.push(Op_Q)
+          state = saved
+        }
       }
       Text(run) => {
         ops.push(Op_q)

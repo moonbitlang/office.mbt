@@ -620,9 +620,19 @@ test "a gradient's pattern matrix survives a small transformation" {
     }),
   ])
   assert_true(model.validate().is_empty())
-  let file = as_text(@pdf.render_pdf(model))
+  let bytes = @pdf.render_pdf(model)
+  let file = as_text(bytes)
   // the shading runs along the unit x axis, which the pattern matrix maps
   // onto the gradient's hundred points on the page
   assert_true(file.contains("/Coords [0 0 1 0]"))
   assert_true(file.contains("/Matrix [100 0 0 -100 10 80]"))
+  // and the path is painted where the transformation is scaled up by
+  // 2^24 (Poppler refuses patterns under a determinant below 1e-6), its
+  // numbers scaled down as much
+  let text = try! as_decoded_text(bytes)
+  assert_true(
+    text.contains(
+      "q 16777216 0 0 16777216 0 0 cm /Pattern cs /P2 scn 0 35.762786865234375 59.604644775390625 -35.762786865234375 re f Q",
+    ),
+  )
 }
