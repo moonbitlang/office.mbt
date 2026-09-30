@@ -83,7 +83,7 @@ fn declared_simple_width(
   code : Int,
   size_pt : Double,
 ) -> Double {
-  face.declared_width(winansi_unicode(code)) * size_pt / 1000.0
+  face.declared_width(face.simple_unicode(code)) * size_pt / 1000.0
 }
 
 ///|
@@ -127,7 +127,7 @@ fn emit_run(
     let unit = run.text[i].to_int()
     // surrogate pairs are outside WinAnsi by definition
     let advance = run.advances_pt[i]
-    match winansi_code(unit) {
+    match face.simple_code(unit) {
       Some(code) => {
         if show.is_empty() {
           segment_x = pending_x
@@ -307,9 +307,10 @@ fn emit_rect(
 fn pdf_face(spec : @pagelayout.FontSpec, options : RenderOptions) -> PdfFace {
   let fonts = options.fonts
   let family = fonts.resolve_family(spec.family)
-  let (metrics, program) = match
+  let (metrics, program, standard) = match
     fonts.registered_face(family, bold=spec.bold, italic=spec.italic) {
-    Some(registered) => (registered.metrics, registered.program)
+    Some(registered) =>
+      (registered.metrics, registered.program, registered.standard)
     None => {
       let metrics = @fonts.face(family, bold=spec.bold, italic=spec.italic)
       // exactly the bundled face `face` settled on, fallbacks included
@@ -318,7 +319,7 @@ fn pdf_face(spec : @pagelayout.FontSpec, options : RenderOptions) -> PdfFace {
         bold=metrics.bold,
         italic=metrics.italic,
       )
-      (metrics, program)
+      (metrics, program, None)
     }
   }
   {
@@ -331,6 +332,7 @@ fn pdf_face(spec : @pagelayout.FontSpec, options : RenderOptions) -> PdfFace {
     notdef_text: options.notdef_text,
     typo_metrics: options.typo_metrics,
     notdef_cids: Map([]),
+    standard,
   }
 }
 

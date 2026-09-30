@@ -60,6 +60,10 @@ pub struct RegisteredFace {
   /// OpenType font). A face without a program is declared in a PDF by name
   /// and drawn by whatever the viewer substitutes.
   program : Bytes?
+  /// The PDF standard (base 14) font the face is (`Helvetica`,
+  /// `Times-Bold`, ...), when it is one: declared by that name as a Type1
+  /// font with no program, its text encoded in WinAnsi.
+  standard : String?
 }
 
 ///|
@@ -118,8 +122,35 @@ pub fn FontRegistry::register(
   } else {
     None
   }
-  self.faces[key] = { metrics, program, }
+  self.faces[key] = { metrics, program, standard: None, }
   metrics
+}
+
+///|
+/// Register a PDF standard (base 14) font under `family`: `standard` is its
+/// PostScript name (`Helvetica`, `Helvetica-Bold`, `Times-Roman`,
+/// `Courier-Oblique`, ...) and `metrics` its metrics, typically built from
+/// its AFM with `FaceMetrics::new`, mapping each character WinAnsi encodes
+/// to its code (so a glyph is a WinAnsi code). A PDF declares the font by
+/// name as a Type1 font with WinAnsi encoding and embeds no program;
+/// characters WinAnsi lacks are dropped from its text. Raises as `register`
+/// does.
+pub fn FontRegistry::register_standard(
+  self : FontRegistry,
+  family : String,
+  metrics : FaceMetrics,
+  standard~ : String,
+  bold? : Bool = false,
+  italic? : Bool = false,
+) -> Unit raise {
+  let key = face_key(family, bold, italic)
+  if self.closed {
+    raise FontRegistryError::Sealed(key)
+  }
+  if self.faces.contains(key) {
+    raise FontRegistryError::Duplicate(key)
+  }
+  self.faces[key] = { metrics, program: None, standard: Some(standard), }
 }
 
 ///|

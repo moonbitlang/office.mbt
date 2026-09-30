@@ -33,6 +33,35 @@ pub struct FaceMetrics {
 }
 
 ///|
+/// Metrics given outright rather than parsed from an sfnt: for a face whose
+/// metrics come from elsewhere, such as the AFM metrics of a PDF standard
+/// font (see `FontRegistry::register_standard`). `advances` are indexed by
+/// glyph, in units of `units_per_em`; `cmap` maps codepoints to glyphs.
+pub fn FaceMetrics::new(
+  family~ : String,
+  bold? : Bool = false,
+  italic? : Bool = false,
+  units_per_em~ : Int,
+  ascender~ : Int,
+  descender~ : Int,
+  line_gap~ : Int,
+  advances~ : Array[Int],
+  cmap~ : Map[Int, Int],
+) -> FaceMetrics {
+  {
+    family,
+    bold,
+    italic,
+    units_per_em,
+    ascender,
+    descender,
+    line_gap,
+    advances: advances.copy(),
+    cmap: cmap.copy(),
+  }
+}
+
+///|
 /// The glyph `codepoint` maps to in the face's `cmap`, or None when it maps
 /// to none. A mapping to glyph 0 (`.notdef`) is reported as it is; see
 /// `has_char` for whether the face can really draw the character.

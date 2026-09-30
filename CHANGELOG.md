@@ -4,6 +4,19 @@ Breaking and notable changes for the published modules in this workspace.
 Entries are grouped by module and by the version they ship in; `Unreleased`
 covers changes that have landed on `main` but are not yet published.
 
+### moonbitlang/pagelayout [Unreleased]
+
+- `FontRegistry::register_standard(family, metrics, standard=name)`
+  registers a PDF standard (base 14) font, such as `Helvetica-Bold`: the
+  PDF declares it by name as a Type1 font with `/WinAnsiEncoding` and
+  embeds nothing (no `/FontFile`, no `/ToUnicode`), and its text is encoded
+  over the whole of WinAnsi, 0x80–0x9F included (`€`, `’`, `™`, ...);
+  characters WinAnsi lacks are dropped, their advances kept. Its metrics
+  (typically from the font's AFM) come from the new
+  `FaceMetrics::new(family~, units_per_em~, ascender~, descender~,
+  line_gap~, advances~, cmap~)`, which builds metrics outright instead of
+  parsing an sfnt. `RegisteredFace` gains a `standard` field.
+
 ### moonbitlang/pagelayout [0.4.0]
 
 - **BREAKING**: `LinkRegion::target` is a `LinkTarget` instead of a string:

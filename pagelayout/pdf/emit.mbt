@@ -113,6 +113,64 @@ priv struct PdfFace {
   /// with glyph 0 (see `notdef_cids`). Decided with the document's
   /// character set.
   notdef_cids : Map[Int, Int]
+  /// The PDF standard font the face is (`Helvetica`, ...), when it is one
+  /// (`@fonts.FontRegistry::register_standard`): a Type1 font declared by
+  /// name, whose text is encoded in the whole of WinAnsi.
+  standard : String?
+}
+
+///|
+/// The characters of WinAnsi's 0x80–0x9F range, by code (0: unused).
+let winansi_high : Array[Int] = [
+  0x20AC, 0, 0x201A, 0x0192, 0x201E, 0x2026, 0x2020, 0x2021, 0x02C6, 0x2030, 0x0160,
+  0x2039, 0x0152, 0, 0x017D, 0, 0, 0x2018, 0x2019, 0x201C, 0x201D, 0x2022, 0x2013,
+  0x2014, 0x02DC, 0x2122, 0x0161, 0x203A, 0x0153, 0, 0x017E, 0x0178,
+]
+
+///|
+/// The WinAnsi code of `codepoint` over the whole encoding (a standard
+/// font's text): ASCII, Latin-1 and the characters of 0x80–0x9F.
+fn winansi_code_full(codepoint : Int) -> Int? {
+  if (codepoint >= 0x20 && codepoint <= 0x7E) ||
+    (codepoint >= 0xA0 && codepoint <= 0xFF) {
+    return Some(codepoint)
+  }
+  for i, c in winansi_high {
+    if c != 0 && c == codepoint {
+      return Some(0x80 + i)
+    }
+  }
+  None
+}
+
+///|
+/// The character WinAnsi `code` stands for, over the whole encoding.
+fn winansi_unicode_full(code : Int) -> Int {
+  if code >= 0x80 && code <= 0x9F && winansi_high[code - 0x80] != 0 {
+    winansi_high[code - 0x80]
+  } else {
+    code
+  }
+}
+
+///|
+/// The WinAnsi code of `codepoint` in `face`'s simple font.
+fn PdfFace::simple_code(self : PdfFace, codepoint : Int) -> Int? {
+  if self.standard is Some(_) {
+    winansi_code_full(codepoint)
+  } else {
+    winansi_code(codepoint)
+  }
+}
+
+///|
+/// The character `code` stands for in `face`'s simple font.
+fn PdfFace::simple_unicode(self : PdfFace, code : Int) -> Int {
+  if self.standard is Some(_) {
+    winansi_unicode_full(code)
+  } else {
+    winansi_unicode(code)
+  }
 }
 
 ///|
@@ -538,6 +596,19 @@ fn font_object(
   index : Int,
   codepoints : Array[Int],
 ) -> Int raise {
+  // a standard font: declared by name, WinAnsi-encoded, nothing embedded
+  // (its metrics are the viewer's own)
+  match face.standard {
+    Some(standard) =>
+      match @pdflite.pdf_standard_font_of_name("/" + standard) {
+        Some(font) =>
+          return document.write_font(
+            PdfFontStandard({ font, encoding: PdfWinAnsiEncoding, }),
+          )
+        None => ()
+      }
+    None => ()
+  }
   let first = 32
   let last = 255
   let widths : Array[Int] = []
