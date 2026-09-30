@@ -108,10 +108,12 @@ pub struct RenderOptions {
   page_boxes : Bool
   page_labels : Array[String]
   truncate_widths : Bool
+  notdef_text : Bool
+  typo_metrics : Bool
 }
 #deprecated
 pub fn RenderOptions::default() -> Self
-pub fn RenderOptions::new(fonts? : @fonts.FontRegistry, outline? : Array[OutlineEntry], info? : DocumentInfo, initial_zoom? : InitialZoom, page_mode? : PageMode, display_doc_title? : Bool, page_boxes? : Bool, page_labels? : Array[String], truncate_widths? : Bool) -> Self
+pub fn RenderOptions::new(fonts? : @fonts.FontRegistry, outline? : Array[OutlineEntry], info? : DocumentInfo, initial_zoom? : InitialZoom, page_mode? : PageMode, display_doc_title? : Bool, page_boxes? : Bool, page_labels? : Array[String], truncate_widths? : Bool, notdef_text? : Bool, typo_metrics? : Bool) -> Self
 pub impl Default for RenderOptions
 
 pub(all) enum Trapped {

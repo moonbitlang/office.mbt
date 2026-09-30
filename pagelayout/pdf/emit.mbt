@@ -102,6 +102,17 @@ priv struct PdfFace {
   /// Whether `/Widths` truncates glyph widths to whole thousandths of an em
   /// (as Prawn does) rather than rounding them.
   truncate_widths : Bool
+  /// Whether characters the face lacks are drawn as `.notdef` and kept in
+  /// the text layer (`RenderOptions::notdef_text`).
+  notdef_text : Bool
+  /// Whether the descriptor takes the OS/2 typographic metrics
+  /// (`RenderOptions::typo_metrics`).
+  typo_metrics : Bool
+  /// With `notdef_text`, in a composite font: the code (CID) of each
+  /// character the face lacks, one no glyph the document shows takes, drawn
+  /// with glyph 0 (see `notdef_cids`). Decided with the document's
+  /// character set.
+  notdef_cids : Map[Int, Int]
 }
 
 ///|
@@ -136,6 +147,10 @@ fn PdfFace::is_composite(self : PdfFace) -> Bool {
 /// be spaced by that glyph's width instead of being broken around it at
 /// the advance the layout chose.
 ///
+/// With `notdef_text` the glyph test is dropped: a character the face
+/// lacks is then drawn as `.notdef` under a code of its own (see
+/// `notdef_cids`), placed by a displacement, so that it stays in the text.
+///
 /// And a face without a program never goes composite, whatever it can
 /// draw: Identity-H codes are glyph indices into an embedded program, and
 /// there is none to index.
@@ -144,7 +159,8 @@ fn needs_composite(face : PdfFace, codepoints : Array[Int]) -> Bool {
     return false
   }
   for codepoint in codepoints {
-    if winansi_code(codepoint) is None && face.metrics.has_char(codepoint) {
+    if winansi_code(codepoint) is None &&
+      (face.metrics.has_char(codepoint) || face.notdef_text) {
       return true
     }
   }
@@ -199,6 +215,12 @@ fn composite_font_object(
     widths.push((glyph, face.declared_width(codepoint)))
     tounicode.push((glyph, utf16be(codepoint)))
   }
+  // the characters the face lacks, each under a code of its own (see
+  // `notdef_cids`): its `.notdef` width and its character
+  for codepoint, cid in face.notdef_cids {
+    widths.push((cid, face.declared_width(codepoint)))
+    tounicode.push((cid, utf16be(codepoint)))
+  }
   // /W wants ascending CIDs so consecutive ones group into runs
   widths.sort_by(fn(left, right) { left.0.compare(right.0) })
   let basefont = name(
@@ -212,7 +234,7 @@ fn composite_font_object(
     Some(PdfFontFile2(fontfile)),
     Some(tounicode),
   )
-  document.write_font(
+  let number = document.write_font(
     PdfFontCIDKeyed({
       basefont,
       composite: {
@@ -234,6 +256,212 @@ fn composite_font_object(
       encoding: PdfPredefinedCMap(name("/Identity-H")),
     }),
   )
+  if !face.notdef_cids.is_empty() {
+    add_cid_to_gid_map(document, number, face.notdef_cids)
+  }
+  number
+}
+
+///|
+/// The number of glyphs in a TrueType program (`maxp.numGlyphs`), or 0 when
+/// it has no `maxp`.
+fn glyph_count(program : Bytes) -> Int {
+  match @pdflite.pdf_truetype_table(program, "maxp") {
+    Some(maxp) if maxp.offset + 6 <= program.length() =>
+      (program[maxp.offset + 4].to_int() << 8) |
+      program[maxp.offset + 5].to_int()
+    _ => 0
+  }
+}
+
+///|
+/// With `notdef_text`: a code for each character a composite font's face
+/// lacks, so that each keeps its own `/ToUnicode` entry while drawing glyph
+/// 0 (`/CIDToGIDMap`, see `add_cid_to_gid_map`). A character WinAnsi has
+/// counts too: a composite font shows glyph indices, not WinAnsi codes, so
+/// without a code of its own it would be glyph 0 with no text.
+///
+/// Identity-H codes are two bytes, so every code stays within
+/// 0x0001–0xFFFF. They are numbered on from the program's last glyph and,
+/// once those run out (a font can have 65,535 glyphs), carry on from 1
+/// among the codes below it that no glyph the document shows takes: the
+/// map sends those to glyph 0, and nothing else addresses them. Only a font
+/// showing more than 65,535 distinct characters can use every code up; the
+/// characters left over get none, and `emit_run_composite` spells them out
+/// with `/ActualText` instead.
+///
+/// Characters in ascending order, so the codes are a function of the
+/// character set.
+fn notdef_cids(face : PdfFace, codepoints : Array[Int]) -> Map[Int, Int] {
+  let cids : Map[Int, Int] = Map([])
+  guard face.program is Some(program) else { return cids }
+  let missing = codepoints.filter(codepoint => !face.metrics.has_char(codepoint))
+  missing.sort()
+  // the codes the document's own glyphs take (Identity: a code is a glyph)
+  let taken : Set[Int] = Set([])
+  for codepoint in codepoints {
+    match face.metrics.glyph_id(codepoint) {
+      Some(glyph) if glyph != 0 => taken.add(glyph)
+      _ => ()
+    }
+  }
+  let glyphs = glyph_count(program)
+  let first = if glyphs < 1 { 1 } else { glyphs }
+  // the `k`th candidate code: `first` up to 0xFFFF, then 1 up to `first`
+  let candidate = fn(k : Int) {
+    if first + k <= 0xFFFF {
+      first + k
+    } else {
+      k - (0x10000 - first) + 1
+    }
+  }
+  let mut k = 0
+  for codepoint in missing {
+    if cids.contains(codepoint) {
+      continue
+    }
+    while k < 0xFFFF && taken.contains(candidate(k)) {
+      k += 1
+    }
+    if k >= 0xFFFF {
+      break
+    }
+    cids[codepoint] = candidate(k)
+    k += 1
+  }
+  cids
+}
+
+///|
+/// Give a composite font's CIDFont a `/CIDToGIDMap` stream: a code of
+/// `notdef_cids` is glyph 0, any other code its own glyph (as `/Identity`
+/// would have it).
+fn add_cid_to_gid_map(
+  document : @pdflite.PdfDocument,
+  font : Int,
+  notdef_cids : Map[Int, Int],
+) -> Unit raise {
+  let notdef : Set[Int] = Set([])
+  let mut last = 0
+  for _, cid in notdef_cids {
+    notdef.add(cid)
+    if cid > last {
+      last = cid
+    }
+  }
+  let map = Buffer()
+  for cid in 0..<=last {
+    let glyph = if notdef.contains(cid) { 0 } else { cid }
+    map.write_byte((glyph >> 8).to_byte())
+    map.write_byte((glyph & 0xFF).to_byte())
+  }
+  let bytes = map.contents()
+  let stream = document.add_object(
+    @pdflite.pdf_encode_stream_with_filter(
+      @pdflite.PdfStreamFlate.filter_name(),
+      @syntax.pdf_stream(
+        PdfDictionary([(name("/Length"), PdfInteger(bytes.length()))]),
+        StreamGot(bytes),
+      ),
+      only_if_smaller=true,
+    ),
+  )
+  let type0 = document.lookup_object_or_null(font)
+  guard type0.lookup_immediate(name("/DescendantFonts"))
+    is Some(PdfArray(descendants)) &&
+    descendants.get(0) is Some(PdfIndirect(cidfont)) else {
+    return
+  }
+  let dictionary = document.lookup_object_or_null(cidfont)
+  let updated = if dictionary.lookup_immediate(name("/CIDToGIDMap")) is Some(_) {
+    dictionary.replace_dict_entry(name("/CIDToGIDMap"), PdfIndirect(stream))
+  } else {
+    dictionary.add_dict_entry(name("/CIDToGIDMap"), PdfIndirect(stream))
+  }
+  document.add_object_given_number(cidfont, updated)
+}
+
+///|
+/// The signed 16-bit field at byte `at` of `program`'s OS/2 table, when the
+/// table has it: a table of at least `version` (the field first appears in
+/// that version; ttfunk reads none of a version's fields from an earlier
+/// one) that is long enough to hold it, by its declared length as well as
+/// by the file's. A version 0 table may end at byte 68, before the
+/// typographic metrics, and whatever follows it there belongs to another
+/// table.
+fn os2_int16(program : Bytes, at : Int, version~ : Int) -> Int? {
+  guard @pdflite.pdf_truetype_table(program, "OS/2") is Some(os2) &&
+    os2.offset >= 0 &&
+    os2.length >= at + 2 &&
+    os2.offset + at + 2 <= program.length() else {
+    return None
+  }
+  let u16 = fn(offset : Int) {
+    (program[offset].to_int() << 8) | program[offset + 1].to_int()
+  }
+  guard u16(os2.offset) >= version else { return None }
+  let value = u16(os2.offset + at)
+  Some(if value >= 0x8000 { value - 0x10000 } else { value })
+}
+
+///|
+/// The ascent, descent and cap height a font descriptor declares, in
+/// thousandths of an em.
+///
+/// By default: `hhea`'s ascent and descent, and the ascent again for the
+/// cap height.
+///
+/// With `typo_metrics`, as Prawn takes them through ttfunk: the OS/2
+/// typographic ascent and descent where the program has them (a version 1
+/// or later table, nonzero values), else `hhea`'s; and OS/2 `sCapHeight`
+/// where the program has it (a version 2 or later table, a nonzero value),
+/// else that ascent. All three are truncated toward zero, as Prawn's
+/// `Integer()` does. (Prawn 2.4 declares `sCapHeight` in the font's own
+/// units, unscaled; this scales it to thousandths of an em like every other
+/// descriptor metric, as PDF 32000-1 Table 122 requires.)
+fn descriptor_metrics(face : PdfFace) -> (Double, Double, Double) {
+  let metrics = face.metrics
+  let scale = 1000.0 / metrics.units_per_em.to_double()
+  let mut ascent = metrics.ascender
+  let mut descent = metrics.descender
+  if !face.typo_metrics {
+    let ascent = ascent.to_double() * scale
+    return (ascent, descent.to_double() * scale, ascent)
+  }
+  let mut cap_height = None
+  if face.program is Some(program) {
+    // sTypoAscender and sTypoDescender
+    if os2_int16(program, 68, version=1) is Some(typo_ascent) &&
+      typo_ascent != 0 {
+      ascent = typo_ascent
+    }
+    if os2_int16(program, 70, version=1) is Some(typo_descent) &&
+      typo_descent != 0 {
+      descent = typo_descent
+    }
+    // sCapHeight
+    if os2_int16(program, 88, version=2) is Some(height) && height != 0 {
+      cap_height = Some(height)
+    }
+  }
+  // Ruby's Integer(): toward zero
+  let truncate = fn(value : Int) {
+    let value = value.to_double() * scale
+    if value < 0.0 {
+      -(-value).floor()
+    } else {
+      value.floor()
+    }
+  }
+  let ascent = truncate(ascent)
+  (
+    ascent,
+    truncate(descent),
+    match cap_height {
+      Some(height) => truncate(height)
+      None => ascent
+    },
+  )
 }
 
 ///|
@@ -245,11 +473,10 @@ fn font_descriptor(
   fontfile : @pdflite.PdfFontFile?,
   tounicode : Array[(Int, @core.PdfBytes)]?,
 ) -> @pdflite.PdfFontDescriptor {
-  let metrics = face.metrics
-  let scale = 1000.0 / metrics.units_per_em.to_double()
+  let (ascent, descent, capheight) = descriptor_metrics(face)
   {
-    ascent: metrics.ascender.to_double() * scale,
-    descent: metrics.descender.to_double() * scale,
+    ascent,
+    descent,
     avgwidth: 0,
     maxwidth: 0,
     // nonsymbolic (bit 6); italic adds bit 7
@@ -264,7 +491,7 @@ fn font_descriptor(
     } else {
       0.0
     },
-    capheight: metrics.ascender.to_double() * scale,
+    capheight,
     xheight: 0,
     stemv: if face.spec.bold {
       160.0

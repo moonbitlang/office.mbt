@@ -171,6 +171,11 @@ fn codepoint_at(text : String, i : Int) -> (Int, Int) {
 /// codepoint the face lacks maps to glyph 0 rather than breaking the
 /// string — so the whole run is one `Tj` (or `TJ`, see `ShowText`) of
 /// two-byte CIDs placed by a single `Tm`.
+///
+/// With `notdef_text`, a character the face lacks shows its own code (see
+/// `notdef_cids`); one left without a code, because the font's text has
+/// used up the codespace, shows glyph 0 inside a marked-content span whose
+/// `/ActualText` is the character, so that it still extracts.
 fn emit_run_composite(
   ops : Array[@content.PdfContentOp],
   run : @pagelayout.GlyphRun,
@@ -179,30 +184,68 @@ fn emit_run_composite(
   page_height : Double,
 ) -> Unit {
   let show = ShowText::new()
+  // the text-showing operators, and the spans around them
+  let body : Array[@content.PdfContentOp] = []
   let mut i = 0
   while i < run.text.length() {
     let (codepoint, next) = codepoint_at(run.text, i)
-    // Identity-H: the code is the glyph index itself
+    // Identity-H: the code is the glyph index itself, or for a character
+    // the face lacks, its own code drawn with glyph 0 (`notdef_cids`)
     let glyph = face.metrics.glyph_id(codepoint).unwrap_or(0)
+    let code = if glyph != 0 {
+      Some(glyph)
+    } else {
+      match face.notdef_cids.get(codepoint) {
+        Some(cid) => Some(cid)
+        None if face.notdef_text => None
+        None => Some(0)
+      }
+    }
     let mut advance = 0.0
     for j in i..<next {
       advance += run.advances_pt[j]
     }
-    // the width `composite_font_object` declares: `/W` for glyphs the
-    // face has, the 1000-unit default for .notdef
-    let declared = if glyph == 0 {
-      run.size_pt
-    } else {
-      face.declared_width(codepoint) * run.size_pt / 1000.0
+    match code {
+      Some(code) => {
+        // the width `composite_font_object` declares: `/W` for glyphs the
+        // face has and for `notdef_cids`, the 1000-unit default for .notdef
+        let declared = if code == 0 {
+          run.size_pt
+        } else {
+          face.declared_width(codepoint) * run.size_pt / 1000.0
+        }
+        show.push(
+          [(code >> 8).to_byte(), (code & 0xFF).to_byte()],
+          advance - declared,
+          run.size_pt,
+        )
+      }
+      None => {
+        if !show.is_empty() {
+          body.push(show.take())
+        }
+        body.push(
+          Op_BDC(
+            name("/Span"),
+            PdfDictionary([
+              (
+                name("/ActualText"),
+                PdfString(text_string(run.text[i:next].to_owned())),
+              ),
+            ]),
+          ),
+        )
+        show.push([b'\x00', b'\x00'], advance - run.size_pt, run.size_pt)
+        body.push(show.take())
+        body.push(Op_EMC)
+      }
     }
-    show.push(
-      [(glyph >> 8).to_byte(), (glyph & 0xFF).to_byte()],
-      advance - declared,
-      run.size_pt,
-    )
     i = next
   }
-  if show.is_empty() {
+  if !show.is_empty() {
+    body.push(show.take())
+  }
+  if body.is_empty() {
     return
   }
   let (r, g, b) = colour_of(run.color)
@@ -219,7 +262,7 @@ fn emit_run_composite(
       f: flip(page_height, run.baseline_pt),
     }),
   )
-  ops.push(show.take())
+  ops.append(body)
   ops.push(Op_ET)
 }
 
@@ -258,14 +301,11 @@ fn emit_rect(
 
 ///|
 /// The face, metrics and program together, that draws `spec`: a face
-/// registered in `fonts`, else the bundled one. Metrics and program always
+/// registered in `options.fonts`, else the bundled one. Metrics and program always
 /// come from one and the same face — the one layout measured with — so the
 /// font dictionary and the codes shown in it cannot disagree.
-fn pdf_face(
-  fonts : @fonts.FontRegistry,
-  spec : @pagelayout.FontSpec,
-  truncate_widths : Bool,
-) -> PdfFace {
+fn pdf_face(spec : @pagelayout.FontSpec, options : RenderOptions) -> PdfFace {
+  let fonts = options.fonts
   let family = fonts.resolve_family(spec.family)
   let (metrics, program) = match
     fonts.registered_face(family, bold=spec.bold, italic=spec.italic) {
@@ -287,7 +327,10 @@ fn pdf_face(
     program,
     // decided once the document's character set is known
     composite: false,
-    truncate_widths,
+    truncate_widths: options.truncate_widths,
+    notdef_text: options.notdef_text,
+    typo_metrics: options.typo_metrics,
+    notdef_cids: Map([]),
   }
 }
 
@@ -303,10 +346,10 @@ fn pdf_face(
 /// dropped from its text. See the module comment in emit.mbt for why, and
 /// for what each choice costs.
 ///
-/// Link regions become link annotations: a `#name` target jumps to the
-/// named destination the `AnchorItem` called `name` defines (the first
-/// anchor of a name wins; a name no anchor defines leaves a dead link),
-/// anything else opens as a URI, written as ASCII (see `uri_bytes`).
+/// Link regions become link annotations: a `Named(name)` target jumps to
+/// the named destination the `AnchorItem` called `name` defines (the first
+/// anchor of a name wins; a name no anchor defines leaves a dead link), a
+/// `Uri` target opens as a URI, written as ASCII (see `uri_bytes`).
 ///
 /// `options` adds the outline, metadata and catalog settings (see
 /// `RenderOptions`); `render_pdf(model)` uses the bundled fonts and writes
@@ -327,7 +370,7 @@ pub fn render_pdf(
   document.set_version(1, 7)
   let faces : Array[PdfFace] = []
   for spec in model.fonts {
-    faces.push(pdf_face(options.fonts, spec, options.truncate_widths))
+    faces.push(pdf_face(spec, options))
   }
 
   // one XObject per distinct image, for this document only. Keyed by
@@ -347,7 +390,16 @@ pub fn render_pdf(
   // rather than a `/W` array governing spacing.
   for index, codepoints in used_codepoints {
     let face = faces[index]
-    faces[index] = { ..face, composite: needs_composite(face, codepoints), }
+    let composite = needs_composite(face, codepoints)
+    faces[index] = {
+      ..face,
+      composite,
+      notdef_cids: if composite && face.notdef_text {
+        notdef_cids(face, codepoints)
+      } else {
+        Map([])
+      },
+    }
   }
 
   // one PDF font object per interned IR font, shared by every page
@@ -763,25 +815,23 @@ fn text_string(text : String) -> Bytes {
 
 ///|
 /// A link annotation over `link`'s box: a named-destination jump for a
-/// `#name` target, a URI action otherwise. Borderless, as a link in
-/// running text is expected to be.
+/// `Named` target, a URI action for a `Uri` one (even one that is only a
+/// `#fragment`). Borderless, as a link in running text is expected to be.
 fn link_annotation(
   link : @pagelayout.LinkRegion,
   page_height : Double,
 ) -> @syntax.PdfObject {
-  let target : (@core.PdfName, @syntax.PdfObject) = if link.target.has_prefix(
-      "#",
-    ) {
-    (name("/Dest"), PdfString(@utf8.encode(link.target[1:].to_owned())))
-  } else {
-    (
-      name("/A"),
-      PdfDictionary([
-        (name("/Type"), PdfNameObject(name("/Action"))),
-        (name("/S"), PdfNameObject(name("/URI"))),
-        (name("/URI"), PdfString(uri_bytes(link.target))),
-      ]),
-    )
+  let target : (@core.PdfName, @syntax.PdfObject) = match link.target {
+    Named(destination) => (name("/Dest"), PdfString(@utf8.encode(destination)))
+    Uri(uri) =>
+      (
+        name("/A"),
+        PdfDictionary([
+          (name("/Type"), PdfNameObject(name("/Action"))),
+          (name("/S"), PdfNameObject(name("/URI"))),
+          (name("/URI"), PdfString(uri_bytes(uri))),
+        ]),
+      )
   }
   PdfDictionary([
     (name("/Type"), PdfNameObject(name("/Annot"))),
@@ -815,7 +865,7 @@ fn link_annotation(
 /// (text links) or as a UTF-16 text string (image links); neither is an
 /// ASCII URI, and both mean the URI this function writes.
 ///
-/// Named destinations (`#name` targets) are byte-string identifiers, not
+/// Named destinations (`Named` targets) are byte-string identifiers, not
 /// URIs, and keep their UTF-8 bytes.
 fn uri_bytes(target : String) -> Bytes {
   let bytes = @utf8.encode(target)

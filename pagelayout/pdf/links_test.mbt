@@ -1,7 +1,16 @@
 ///|
 /// A one-page model (100pt tall) whose only items are link regions to
-/// `targets`, each 10×12pt, one after another along y = 10.
+/// `targets` (link strings, read by `LinkTarget::parse`), each 10×12pt, one
+/// after another along y = 10.
 fn links_model(targets : Array[String]) -> @pagelayout.PageModel {
+  links_model_to(targets.map(@pagelayout.LinkTarget::parse))
+}
+
+///|
+/// `links_model` with the targets given as they are.
+fn links_model_to(
+  targets : Array[@pagelayout.LinkTarget],
+) -> @pagelayout.PageModel {
   let model = run_model([5.0, 5.0])
   model.pages[0].items.push(Anchor({ name: "target", x_pt: 0, y_pt: 10, }))
   for i, target in targets {
@@ -16,6 +25,30 @@ fn links_model(targets : Array[String]) -> @pagelayout.PageModel {
     )
   }
   model
+}
+
+///|
+test "a uri target that is only a fragment opens as a uri" {
+  // Ruby asciidoctor-pdf writes `link:#target[]` as a URI action and an
+  // xref to `target` as a jump to its named destination; both are
+  // `#target` as a link string, so the target type says which
+  let bytes = @pdf.render_pdf(
+    links_model_to([
+      Named("target"),
+      Uri("#target"),
+      @pagelayout.LinkTarget::parse("#target"),
+      @pagelayout.LinkTarget::parse("https://example.org/#target"),
+    ]),
+  )
+  inspect(
+    annotations(bytes).join("\n"),
+    content=(
+      #|indirect /Annot/Link [10 78 20 90] [0 0 0] dest target
+      #|indirect /Annot/Link [30 78 40 90] [0 0 0] /URI #target
+      #|indirect /Annot/Link [50 78 60 90] [0 0 0] dest target
+      #|indirect /Annot/Link [70 78 80 90] [0 0 0] /URI https://example.org/#target
+    ),
+  )
 }
 
 ///|

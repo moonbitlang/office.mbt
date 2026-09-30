@@ -4,6 +4,44 @@ Breaking and notable changes for the published modules in this workspace.
 Entries are grouped by module and by the version they ship in; `Unreleased`
 covers changes that have landed on `main` but are not yet published.
 
+### moonbitlang/pagelayout [Unreleased]
+
+- **BREAKING**: `LinkRegion::target` is a `LinkTarget` instead of a string:
+  `Named(name)` jumps to the anchor `name` (a PDF named destination), and
+  `Uri(uri)` opens `uri` as a URI action, even one that is only a fragment
+  such as `#name`, which a string target could not express (Ruby
+  asciidoctor-pdf writes `link:#name[]` that way, and an xref to `name` as
+  a jump). `LinkTarget::parse(string)` reads a string by the old
+  convention: `#name` is `Named(name)`, anything else `Uri`. A link region
+  serializes its target as `["Named", name]` or `["Uri", uri]`. Migration:
+  `target: s` becomes `target: LinkTarget::parse(s)`, which renders exactly
+  as before, or `target: Named(...)` / `target: Uri(...)`; code reading
+  `link.target` as a string matches on the two variants.
+- `RenderOptions::new(notdef_text=true)`: a character the face has no
+  glyph for is drawn as its `.notdef` glyph and kept in the text layer, as
+  Prawn does, instead of being left out of the page (its advance is kept
+  either way). A font that needs this goes composite even when the face
+  cannot draw the character, and each such character gets a two-byte code
+  of its own that no glyph the document shows uses (past the program's
+  glyphs, then below them), mapped to glyph 0 by a `/CIDToGIDMap` stream
+  and to the character by `/ToUnicode`, so extraction and search find it.
+  A font whose text uses up all 65,535 codes shows the characters left
+  over as glyph 0 with the character as `/ActualText`. This also covers
+  characters WinAnsi has (such as `…`) once the font is composite. It
+  needs the face's program embedded: a face registered metrics-only is a
+  simple font declared by name and still drops the characters it lacks.
+  Off by default; output without it is unchanged.
+- `RenderOptions::new(typo_metrics=true)`: font descriptors declare
+  `/Ascent` and `/Descent` from the OS/2 typographic metrics where the
+  program has them (a version 1 or later table long enough to hold them,
+  nonzero values) instead of from `hhea`, and `/CapHeight` from OS/2
+  `sCapHeight` (version 2 on, nonzero) instead of the ascent, falling back
+  to the ascent as Prawn does. All three are truncated to thousandths of
+  an em, as ttfunk and Prawn read them (Prawn 2.4 declares `sCapHeight`
+  unscaled; it is scaled here like the other metrics). Readers size
+  selection and extracted word boxes by these. Off by default; output
+  without it is unchanged.
+
 ### moonbitlang/pagelayout [0.3.0]
 
 - **BREAKING**: `PageItem` has a new variant, `Anchor(AnchorItem)`: a named,

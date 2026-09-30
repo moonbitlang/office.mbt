@@ -36,6 +36,28 @@ pub struct RenderOptions {
   /// does, instead of rounded: a layout that places glyphs by Prawn's widths
   /// then needs no displacements.
   truncate_widths : Bool
+  /// Draw a character the face has no glyph for as its `.notdef` glyph and
+  /// keep the character in the text layer, as Prawn does, instead of
+  /// leaving it out of the page (its advance is kept either way). A font
+  /// that needs this goes composite, and each such character gets a code
+  /// of its own, drawn with glyph 0 and mapped to the character by
+  /// `/ToUnicode`, so text extraction and search find it. (Should a font's
+  /// text use up all 65,535 codes, the characters left over are shown as
+  /// glyph 0 with the character as `/ActualText`.)
+  ///
+  /// This needs the face's program embedded: a face registered without
+  /// outlines (metrics only) is a simple font declared by name, and still
+  /// drops the characters it lacks, as it drops everything outside WinAnsi.
+  notdef_text : Bool
+  /// Declare each embedded font's ascent, descent and cap height
+  /// (`/Ascent`, `/Descent`, `/CapHeight`) from its OS/2 table, as Prawn
+  /// (through ttfunk) does: the typographic ascent and descent where the
+  /// table has them (version 1 on, nonzero), else `hhea`'s; `sCapHeight`
+  /// where the table has it (version 2 on, nonzero), else that ascent. Each
+  /// is truncated to thousandths of an em. By default the descriptor
+  /// declares `hhea`'s ascent and descent, and the ascent as the cap
+  /// height. Readers size text selection and extracted word boxes by these.
+  typo_metrics : Bool
 }
 
 ///|
@@ -50,6 +72,8 @@ pub fn RenderOptions::new(
   page_boxes? : Bool = false,
   page_labels? : Array[String] = [],
   truncate_widths? : Bool = false,
+  notdef_text? : Bool = false,
+  typo_metrics? : Bool = false,
 ) -> RenderOptions {
   {
     fonts,
@@ -61,6 +85,8 @@ pub fn RenderOptions::new(
     page_boxes,
     page_labels,
     truncate_widths,
+    notdef_text,
+    typo_metrics,
   }
 }
 
