@@ -104,8 +104,10 @@ test "a gradient is a shading pattern placed by the current transformation" {
   assert_true(file.contains("/ShadingType 2"))
   assert_true(file.contains("/FunctionType 3"))
   assert_true(file.contains("/Bounds [0.5]"))
-  // the pattern matrix: the graphic's flip, then the gradient's shift
-  assert_true(file.contains("/Matrix [1 0 0 -1 13 80]"))
+  // the shading runs along the unit x axis; the pattern matrix: the
+  // graphic's flip, then the gradient's shift, then the gradient's line
+  assert_true(file.contains("/Coords [0 0 1 0]"))
+  assert_true(file.contains("/Matrix [10 0 0 -10 13 80]"))
 }
 
 ///|
@@ -395,8 +397,8 @@ test "a gradient under another transformation shares the shading only" {
   )
   assert_eq(occurrences(file, "/PatternType 2"), 2)
   assert_eq(occurrences(file, "/ShadingType 2"), 1)
-  assert_true(file.contains("/Matrix [1 0 0 -1 10 80]"))
-  assert_true(file.contains("/Matrix [2 0 0 -1 10 80]"))
+  assert_true(file.contains("/Matrix [10 0 0 -10 10 80]"))
+  assert_true(file.contains("/Matrix [20 0 0 -10 10 80]"))
 }
 
 ///|
@@ -422,7 +424,10 @@ test "a radial gradient is a radial shading from its first circle" {
   assert_true(model.validate().is_empty())
   let file = as_text(@pdf.render_pdf(model))
   assert_true(file.contains("/ShadingType 3"))
-  assert_true(file.contains("/Coords [1 2 0.5 3 4 5]"))
+  // from the first circle to the unit one, which the pattern matrix scales
+  // and moves to the second: centre (3, 4), radius 5
+  assert_true(file.contains("/Coords [-0.4 -0.4 0.1 0 0 1]"))
+  assert_true(file.contains("/Matrix [5 0 0 -5 13 76]"))
   assert_true(file.contains("/Extend [true true]"))
 }
 
@@ -457,4 +462,103 @@ test "an image in a graphic is drawn upright and shares its XObject" {
   assert_eq(occurrences(text, " Do"), 2)
   assert_eq(occurrences(as_text(bytes), "/Subtype /Image"), 1)
   assert_true(@pdf.unembeddable_images(model).is_empty())
+}
+
+///|
+/// The numbers of every `/Bounds` array in `file`, one array each.
+fn bounds_arrays(file : String) -> Array[Array[Double]] raise {
+  let arrays = []
+  let mut rest = file[:]
+  while rest.find("/Bounds [") is Some(i) {
+    rest = rest[i + "/Bounds [".length():]
+    let end = rest.find("]").unwrap()
+    let numbers = []
+    for word in rest[:end].split(" ") {
+      if !word.is_empty() {
+        numbers.push(@string.parse_double(word))
+      }
+    }
+    arrays.push(numbers)
+    rest = rest[end:]
+  }
+  arrays
+}
+
+///|
+test "stitching bounds strictly increase as written, however close the stops" {
+  // offsets apart by less than a written real resolves
+  let near_half = gradient_square([0, 0.5, 0.50000000000001, 1], [
+    white, red, blue, @pagelayout.black,
+  ])
+  assert_true(near_half.validate().is_empty())
+  let file = as_text(@pdf.render_pdf(near_half))
+  // the interval too narrow to write is dropped: the colour jumps at 0.5
+  assert_eq(bounds_arrays(file), [[0.5]])
+  assert_eq(occurrences(file, "/FunctionType 2"), 2)
+  assert_true(file.contains("/C0 [1 1 1] /C1 [1 0 0]"))
+  assert_true(file.contains("/C0 [0 0 1] /C1 [0 0 0]"))
+  // stops so near 0 that they are written as 0: only the last counts
+  let near_zero = gradient_square([0, 1.0e-8, 2.0e-8, 1], [
+    white, red, blue, @pagelayout.black,
+  ])
+  assert_true(near_zero.validate().is_empty())
+  let file = as_text(@pdf.render_pdf(near_zero))
+  assert_eq(bounds_arrays(file), [])
+  assert_eq(occurrences(file, "/FunctionType 2"), 1)
+  assert_true(file.contains("/C0 [0 0 1] /C1 [0 0 0]"))
+  // and near 1, only the first
+  let near_one = gradient_square([0, 0.25, 1 - 1.0e-14, 1], [
+    white, red, blue, @pagelayout.black,
+  ])
+  let file = as_text(@pdf.render_pdf(near_one))
+  assert_eq(bounds_arrays(file), [[0.25]])
+  assert_true(file.contains("/C0 [1 1 1] /C1 [1 0 0]"))
+  assert_true(file.contains("/C0 [1 0 0] /C1 [0 0 1]"))
+}
+
+///|
+test "graphic numbers are written exactly in the content stream" {
+  // a hundred by sixty points on the page, as SVG draws it
+  let model = graphic_model([
+    Transform({ a: 1.0e-7, b: 0, c: 0, d: 1.0e-7, e: 0, f: 0, }),
+    red_path([Rectangle(0, 0, 1.0e9, 6.0e8)]),
+    red_path([
+      MoveTo(0.123456789012345, 1.0e-9),
+      LineTo(2.5e-5, 1.0e21),
+      LineTo(-1.5e-7, -1.25e22),
+    ]),
+  ])
+  assert_true(model.validate().is_empty())
+  let text = try! as_decoded_text(@pdf.render_pdf(model))
+  assert_true(text.contains("0.0000001 0 0 0.0000001 0 0 cm"))
+  assert_true(text.contains("0 600000000 1000000000 -600000000 re"))
+  assert_true(text.contains("0.123456789012345 0.000000001 m"))
+  assert_true(text.contains("0.000025 1000000000000000000000 l"))
+  assert_true(text.contains("-0.00000015 -12500000000000000000000 l"))
+}
+
+///|
+test "a gradient's pattern matrix survives a small transformation" {
+  let model = graphic_model([
+    Transform({ a: 1.0e-7, b: 0, c: 0, d: 1.0e-7, e: 0, f: 0, }),
+    Path({
+      segments: [Rectangle(0, 0, 1.0e9, 6.0e8)],
+      fill: Some(
+        GradientPaint({
+          shape: Linear(x1=0, y1=0, x2=1.0e9, y2=0),
+          stops: two_stops,
+          transform: @pagelayout.identity,
+        }),
+      ),
+      fill_rule: NonZero,
+      stroke: None,
+      stroke_style: @pagelayout.StrokeStyle::default(),
+    }),
+  ])
+  assert_true(model.validate().is_empty())
+  let file = as_text(@pdf.render_pdf(model))
+  // the shading runs along the unit x axis, which the pattern matrix maps
+  // onto the gradient's hundred points on the page
+  assert_true(file.contains("/Coords [0 0 1 0]"))
+  assert_true(file.contains("/Matrix [100 0 0 -100 10 80]"))
 }

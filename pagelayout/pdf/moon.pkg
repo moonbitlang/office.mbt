@@ -12,6 +12,7 @@ import {
   "moonbitlang/pdflite/syntax",
   "moonbitlang/core/debug",
   "moonbitlang/core/encoding/utf8",
+  "moonbitlang/core/string",
 }
 
 import {
@@ -27,4 +28,5 @@ import {
   "moonbit-community/flate/zip",
   "moonbitlang/core/encoding/utf8",
   "moonbitlang/core/quickcheck",
+  "moonbitlang/core/string",
 } for "test"

@@ -12,6 +12,15 @@
 // maps pattern space to the page's default space rather than to the
 // current one, so the emitter tracks the current transformation and bakes
 // it into the pattern.
+//
+// Numbers in a graphic's content are written exactly (`exact_real`), not
+// rounded as pdflite writes reals (to six decimals below 0.0001, else to
+// twelve significant digits): a graphic's own transformations can scale
+// them by any factor. Dictionaries are written by pdflite, so what goes
+// into them is kept within its precision instead: a shading's geometry is
+// canonical (a linear one runs from (0, 0) to (1, 0)), the pattern matrix
+// carrying it to the gradient's place on the page, and stitching bounds
+// that would be written equal are merged.
 
 ///|
 /// The paint and stroke parameters in effect, so each is written only
@@ -110,13 +119,33 @@ fn colour_array(c : @pagelayout.Color) -> @syntax.PdfObject {
 /// `@pagelayout.Gradient`). PDF's stitching function needs exactly this:
 /// its bounds, the starts after the first, must strictly increase (PDF
 /// 32000-1, 7.10.4).
+///
+/// Strictly increasing offsets are not enough: the bounds must increase as
+/// written, where offsets nearer than a written real resolves come out
+/// equal (0.5 and 0.50000000000001 both as 0.5, 1e-8 and 2e-8 both as
+/// 0.000000). So an interval that would be written without width is
+/// dropped as a zero-width one is, the next taking over at its start, and
+/// one that would be written to start at 1 is dropped with all after it.
 fn gradient_pieces(
   stops : Array[@pagelayout.GradientStop],
 ) -> Array[(Double, @pagelayout.Color, @pagelayout.Color)] {
-  let pieces = []
+  let pieces : Array[(Double, @pagelayout.Color, @pagelayout.Color)] = []
+  // where the last piece starts, as written
+  let mut last = 0.0
   for i in 1..<stops.length() {
-    if stops[i].offset > stops[i - 1].offset {
-      pieces.push((stops[i - 1].offset, stops[i - 1].color, stops[i].color))
+    guard stops[i].offset > stops[i - 1].offset else { continue }
+    let start = stops[i - 1].offset
+    let at = written_real(start)
+    if pieces.is_empty() {
+      pieces.push((start, stops[i - 1].color, stops[i].color))
+    } else if at >= 1.0 {
+      break
+    } else if at <= last {
+      let (kept, _, _) = pieces[pieces.length() - 1]
+      pieces[pieces.length() - 1] = (kept, stops[i - 1].color, stops[i].color)
+    } else {
+      pieces.push((start, stops[i - 1].color, stops[i].color))
+      last = at
     }
   }
   // stops that do not span an interval (see `PageModel::validate`): the
@@ -129,30 +158,75 @@ fn gradient_pieces(
 }
 
 ///|
-/// What identifies a gradient's shading: its shape and stops (numbers
-/// exactly, as their shortest round-trip decimals), not its transform.
-fn shading_key(gradient : @pagelayout.Gradient) -> String {
+/// The value of `v` as pdflite writes it in a dictionary.
+fn written_real(v : Double) -> Double {
+  let bytes = @pdflite.pdf_write_real(v) catch { _ => return v }
   let sb = StringBuilder()
-  match gradient.shape {
-    Linear(x1~, y1~, x2~, y2~) => sb.write_string("L \{x1} \{y1} \{x2} \{y2}")
-    Radial(x1~, y1~, r1~, x2~, y2~, r2~) =>
-      sb.write_string("R \{x1} \{y1} \{r1} \{x2} \{y2} \{r2}")
+  for byte in bytes {
+    sb.write_char(byte.to_int().unsafe_to_char())
+  }
+  @string.parse_double(sb.to_string()) catch {
+    _ => v
+  }
+}
+
+///|
+/// A gradient's shape in a space of its own where its geometry is simple,
+/// and the transformation from there to gradient space: a linear gradient
+/// runs from (0, 0) to (1, 0), the unit square turned and scaled onto its
+/// line; a radial one ends on the unit circle. The shading type and
+/// coordinates follow the transformation.
+///
+/// Only numbers of ordinary size are left to the shading, whose
+/// coordinates pdflite writes to limited precision; the gradient's own
+/// size goes into the pattern matrix, where it meets the transformations
+/// that scale it back to the page. A gradient without extent, which has
+/// no such space, keeps its own.
+fn canonical_shape(
+  shape : @pagelayout.GradientShape,
+) -> (Int, Array[Double], @pagelayout.Matrix) {
+  match shape {
+    Linear(x1~, y1~, x2~, y2~) => {
+      let dx = x2 - x1
+      let dy = y2 - y1
+      if dx == 0.0 && dy == 0.0 {
+        return (2, [x1, y1, x2, y2], @pagelayout.identity)
+      }
+      (2, [0, 0, 1, 0], { a: dx, b: dy, c: -dy, d: dx, e: x1, f: y1, })
+    }
+    Radial(x1~, y1~, r1~, x2~, y2~, r2~) => {
+      if r2 == 0.0 {
+        return (3, [x1, y1, r1, x2, y2, r2], @pagelayout.identity)
+      }
+      (
+        3,
+        [(x1 - x2) / r2, (y1 - y2) / r2, r1 / r2, 0, 0, 1],
+        { a: r2, b: 0, c: 0, d: r2, e: x2, f: y2, },
+      )
+    }
+  }
+}
+
+///|
+/// The shading of a gradient in its canonical space (see
+/// `canonical_shape`): axial or radial, with an exponential interpolation
+/// function per interval between stops (stitched together when there is
+/// more than one), extended past both ends. Shared by shape and stops.
+fn GraphicResources::shading(
+  self : GraphicResources,
+  gradient : @pagelayout.Gradient,
+  shading_type : Int,
+  coords : Array[Double],
+) -> Int {
+  let sb = StringBuilder()
+  sb.write_string("\{shading_type}")
+  for x in coords {
+    sb.write_string(" \{x}")
   }
   for stop in gradient.stops {
     sb.write_string(" \{stop.offset}\{stop.color.to_hex()}")
   }
-  sb.to_string()
-}
-
-///|
-/// The shading of a gradient in gradient space: axial or radial, with an
-/// exponential interpolation function per interval between stops (stitched
-/// together when there is more than one), extended past both ends.
-fn GraphicResources::shading(
-  self : GraphicResources,
-  gradient : @pagelayout.Gradient,
-) -> Int {
-  let key = shading_key(gradient)
+  let key = sb.to_string()
   match self.shadings.get(key) {
     Some(number) => return number
     None => ()
@@ -191,10 +265,6 @@ fn GraphicResources::shading(
       (name("/Encode"), PdfArray(encode)),
     ])
   }
-  let (shading_type, coords) : (Int, Array[Double]) = match gradient.shape {
-    Linear(x1~, y1~, x2~, y2~) => (2, [x1, y1, x2, y2])
-    Radial(x1~, y1~, r1~, x2~, y2~, r2~) => (3, [x1, y1, r1, x2, y2, r2])
-  }
   let number = self.document.add_object(
     PdfDictionary([
       (name("/ShadingType"), PdfInteger(shading_type)),
@@ -211,14 +281,16 @@ fn GraphicResources::shading(
 ///|
 /// A shading pattern painting `gradient` where the current transformation
 /// is `ctm` (from the gradient's user space to the page's default space),
-/// one per shading and effective matrix.
+/// one per shading and effective matrix: the matrix maps the shading's
+/// canonical space through gradient space to the page.
 fn GraphicResources::pattern(
   self : GraphicResources,
   gradient : @pagelayout.Gradient,
   ctm : @pagelayout.Matrix,
 ) -> Int {
-  let shading = self.shading(gradient)
-  let m = ctm.after(gradient.transform)
+  let (shading_type, coords, canonical) = canonical_shape(gradient.shape)
+  let shading = self.shading(gradient, shading_type, coords)
+  let m = ctm.after(gradient.transform).after(canonical)
   let key = "\{shading} \{m.a} \{m.b} \{m.c} \{m.d} \{m.e} \{m.f}"
   match self.patterns.get(key) {
     Some(number) => return number
@@ -244,6 +316,84 @@ fn GraphicResources::pattern(
   )
   self.patterns[key] = number
   number
+}
+
+///|
+/// `v` written exactly as a PDF real: the shortest decimal that reads back
+/// as `v`, spelt out without an exponent, which PDF's number syntax does
+/// not have (PDF 32000-1, 7.3.3). `v` is finite (see
+/// `PageModel::validate`).
+fn exact_real(v : Double) -> String {
+  let text = v.to_string()
+  guard text.find("e") is Some(e) else { return text }
+  let negative = text.has_prefix("-")
+  let mantissa = if negative { text[1:e] } else { text[:e] }
+  let exponent = match text[e + 1:] {
+    [.. "+", .. rest] => @string.parse_int(rest) catch { _ => 0 }
+    [.. "-", .. rest] => -(@string.parse_int(rest) catch { _ => 0 })
+    rest => @string.parse_int(rest) catch { _ => 0 }
+  }
+  // the significant digits, and where the point falls among them
+  let (digits, point) = match mantissa.find(".") {
+    Some(i) => (mantissa[:i].to_owned() + mantissa[i + 1:].to_owned(), i)
+    None => (mantissa.to_owned(), mantissa.length())
+  }
+  let point = point + exponent
+  let sb = StringBuilder()
+  if negative {
+    sb.write_char('-')
+  }
+  if point <= 0 {
+    sb.write_string("0.")
+    for _ in 0..<-point {
+      sb.write_char('0')
+    }
+    sb.write_string(digits)
+  } else if point >= digits.length() {
+    sb.write_string(digits)
+    for _ in 0..<(point - digits.length()) {
+      sb.write_char('0')
+    }
+  } else {
+    sb.write_string(digits[:point].to_owned())
+    sb.write_char('.')
+    sb.write_string(digits[point:].to_owned())
+  }
+  sb.to_string()
+}
+
+///|
+/// `op` with its numbers written exactly (see `exact_real`), for the
+/// operators a graphic's content uses that take numbers of any size:
+/// coordinates, transformations, stroke parameters, text positions and
+/// sizes. Colours and alphas, which lie in 0..=1 and come from bytes,
+/// and text strings are left to pdflite.
+fn exact_op(op : @content.PdfContentOp) -> @content.PdfContentOp {
+  let (numbers, operator) : (Array[Double], String) = match op {
+    Op_cm(m) => ([m.a, m.b, m.c, m.d, m.e, m.f], "cm")
+    Op_Tm(m) => ([m.a, m.b, m.c, m.d, m.e, m.f], "Tm")
+    Op_m(x, y) => ([x, y], "m")
+    Op_l(x, y) => ([x, y], "l")
+    Op_c(x1, y1, x2, y2, x, y) => ([x1, y1, x2, y2, x, y], "c")
+    Op_re(x, y, w, h) => ([x, y, w, h], "re")
+    Op_w(width) => ([width], "w")
+    Op_M(limit) => ([limit], "M")
+    Op_Td(x, y) => ([x, y], "Td")
+    Op_d(dash, phase) => {
+      let text = "[\{dash.map(exact_real).join(" ")}] \{exact_real(phase)} d"
+      return Op_Unknown(@utf8.encode(text))
+    }
+    Op_Tf(font, size) => {
+      let sb = StringBuilder()
+      for byte in @pdflite.pdf_write_name(font) {
+        sb.write_char(byte.to_int().unsafe_to_char())
+      }
+      sb.write_string(" \{exact_real(size)} Tf")
+      return Op_Unknown(@utf8.encode(sb.to_string()))
+    }
+    _ => return op
+  }
+  Op_Unknown(@utf8.encode("\{numbers.map(exact_real).join(" ")} \{operator}"))
 }
 
 ///|
@@ -412,6 +562,7 @@ fn emit_graphic(
   }
   // the flip back to y-up that text and images are drawn in
   let upright = @pagelayout.Matrix::{ a: 1, b: 0, c: 0, d: -1, e: 0, f: 0, }
+  let start = ops.length()
   ops.push(Op_q)
   ops.push(cm_op(origin))
   let mut state = PaintState::unknown(origin)
@@ -528,4 +679,9 @@ fn emit_graphic(
     ops.push(Op_Q)
   }
   ops.push(Op_Q)
+  // everything the graphic drew, its text and images too, is in a space
+  // its transformations may have scaled by any factor
+  for i in start..<ops.length() {
+    ops[i] = exact_op(ops[i])
+  }
 }
