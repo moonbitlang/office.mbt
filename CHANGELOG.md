@@ -22,21 +22,43 @@ covers changes that have landed on `main` but are not yet published.
   `Path(PathItem)` (move/line/cubic curve/rectangle/close segments, filled by
   the nonzero or even-odd rule and/or stroked with a `StrokeStyle`: width,
   cap, join, miter limit, dash), and glyph runs (`Text`, or `PaintedText`
-  with a `TextPaint`: filled, outlined, both, or invisible but extractable,
-  PDF's text rendering modes) and images (`Image`) placed in the graphic's
-  space. A path's fill and stroke are a
-  `Paint`: a solid `Color` or a linear or radial `Gradient` (stops, pad
-  extension, a gradient-space transform). The PDF backend writes them as
-  content operators, `/ExtGState` alpha resources (shared by value) and
-  shading patterns (axial or radial, exponential functions stitched per
-  pair of stops), placing a pattern by the transformation current where it
-  paints; text in a graphic embeds and subsets its fonts like page text.
-  The SVG backend writes nested groups, `<clipPath>`s, paths and gradient
-  definitions. `PageModel::validate` checks that saves and restores balance
-  and that alphas, stroke widths, dashes, gradient stops, glyph runs and
-  images are well-formed. `unembeddable_images` reports images inside
-  graphics too. Code that matches `PageItem` exhaustively must handle the
-  new variant (a wildcard arm, or `Graphic(_) => ()`).
+  with a `TextPaint`: filled, outlined in a whole `StrokeStyle` of its own,
+  both, or invisible but extractable, PDF's text rendering modes) and images
+  (`Image`, stretched to their rectangle) placed in the graphic's space.
+  A `Rectangle` segment is a closed subpath from its bottom-left corner,
+  counter-clockwise on the page, like PDF's `re`.
+  - Stroke widths are a `StrokeWidth`: `Width(w)` with `w` positive, or
+    `Hairline`, the thinnest line the device draws (PDF's `0 w`, an SVG
+    non-scaling stroke one CSS pixel wide). Width 0 is rejected by
+    `validate`, since PDF draws it as a hairline and SVG not at all.
+  - A path's fill and stroke are a `Paint`: a solid `Color` or a
+    `Gradient { shape, stops, transform }`, whose `GradientShape` is
+    `Linear(x1~, y1~, x2~, y2~)` or `Radial(x1~, y1~, r1~, x2~, y2~, r2~)`
+    (from the first circle to the second), padded past its ends. Stops at
+    one offset make a sharp colour change there; at offset 0 only the last
+    of them counts, at 1 only the first.
+  - The PDF backend writes content operators, `/ExtGState` alpha resources
+    and shading patterns (axial or radial, an exponential function per
+    non-empty interval between stops, stitched with strictly increasing
+    bounds), placing a pattern by the transformation current where it
+    paints. Alpha states, shadings and patterns (by shading and effective
+    matrix) are shared by value across the document. Text in a graphic
+    embeds and subsets its fonts like page text.
+  - The SVG backend writes nested groups, `<clipPath>`s, paths, text with
+    independent fill and stroke opacities, and gradient definitions (one
+    per distinct gradient on a page). Numbers in graphics are written
+    exactly (shortest round-trip), as their transformations may scale them
+    arbitrarily; page items outside graphics keep three decimals.
+  - `PageModel::validate` checks that saves and restores balance; that
+    every number in a graphic is finite; that `LineTo`, `CurveTo` and
+    `Close` have a current point; that alphas are within 0..=1, stroke
+    widths positive, miter limits from 1, dashes empty or non-negative
+    with a positive length; that gradient stops are ascending within 0..=1
+    from 0 to 1; and that glyph runs and images are well-formed.
+    `unembeddable_images` reports images inside graphics too.
+
+  Code that matches `PageItem` exhaustively must handle the new variant (a
+  wildcard arm, or `Graphic(_) => ()`).
 
 ### moonbitlang/pagelayout [0.5.0]
 
