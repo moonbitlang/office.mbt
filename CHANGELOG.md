@@ -29,21 +29,39 @@ covers changes that have landed on `main` but are not yet published.
   counter-clockwise on the page, like PDF's `re`.
   - Stroke widths are a `StrokeWidth`: `Width(w)` with `w` positive, or
     `Hairline`, the thinnest line the device draws (PDF's `0 w`, an SVG
-    non-scaling stroke one CSS pixel wide). Width 0 is rejected by
-    `validate`, since PDF draws it as a hairline and SVG not at all.
+    non-scaling stroke one pixel wide). Width 0 is rejected by `validate`,
+    since PDF draws it as a hairline and SVG not at all. Dashes are
+    measured in the space a stroke is drawn in, a hairline's too, as PDF
+    does: SVG draws a dashed hairline path as its dashes, each a solid
+    non-scaling stroke (a non-scaling stroke's own dashes would be
+    measured in device or CSS pixels), and `validate` rejects text
+    outlined with a dashed hairline, which SVG cannot dash so.
   - A path's fill and stroke are a `Paint`: a solid `Color` or a
     `Gradient { shape, stops, transform }`, whose `GradientShape` is
     `Linear(x1~, y1~, x2~, y2~)` or `Radial(x1~, y1~, r1~, x2~, y2~, r2~)`
     (from the first circle to the second), padded past its ends. Stops at
     one offset make a sharp colour change there; at offset 0 only the last
-    of them counts, at 1 only the first.
+    of them counts, at 1 only the first. A gradient without extent (a
+    linear one whose ends coincide, a radial one whose end circle has
+    radius 0 or whose circles coincide) paints its last stop's colour, as
+    SVG specifies for the first two; `Gradient::degenerate_color` gives it.
   - The PDF backend writes content operators, `/ExtGState` alpha resources
     and shading patterns (axial or radial, an exponential function per
-    non-empty interval between stops, stitched with strictly increasing
-    bounds), placing a pattern by the transformation current where it
-    paints. Alpha states, shadings and patterns (by shading and effective
-    matrix) are shared by value across the document. Text in a graphic
-    embeds and subsets its fonts like page text.
+    non-empty interval between stops, stitched), placing a pattern by the
+    transformation current where it paints. Alpha states, shadings and
+    patterns (by shading and effective matrix) are shared by value across
+    the document. Text in a graphic embeds and subsets its fonts like page
+    text. Numbers in a graphic's content are written exactly (shortest
+    round-trip, without an exponent); page items outside graphics keep
+    pdflite's rounding, so their output is unchanged. Dictionaries keep
+    pdflite's precision, so a shading is built in a canonical space (a
+    linear one from (0, 0) to (1, 0), a radial one ending on the unit
+    circle) with the gradient's geometry in the pattern matrix, and
+    stitching intervals whose bounds would be written equal are merged:
+    `/Bounds` strictly increase as written. A path painted with a gradient
+    where the transformation shrinks areas below 1e-4 is drawn with its
+    numbers scaled down by a power of two and the transformation scaled
+    up as much, since Poppler refuses patterns under a tiny determinant.
   - The SVG backend writes nested groups, `<clipPath>`s, paths, text with
     independent fill and stroke opacities, and gradient definitions (one
     per distinct gradient on a page). Numbers in graphics are written
@@ -53,8 +71,9 @@ covers changes that have landed on `main` but are not yet published.
     every number in a graphic is finite; that `LineTo`, `CurveTo` and
     `Close` have a current point; that alphas are within 0..=1, stroke
     widths positive, miter limits from 1, dashes empty or non-negative
-    with a positive length; that gradient stops are ascending within 0..=1
-    from 0 to 1; and that glyph runs and images are well-formed.
+    with a positive length; that text is not outlined with a dashed
+    hairline; that gradient stops are ascending within 0..=1 from 0 to 1;
+    and that glyph runs and images are well-formed.
     `unembeddable_images` reports images inside graphics too.
 
   Code that matches `PageItem` exhaustively must handle the new variant (a
