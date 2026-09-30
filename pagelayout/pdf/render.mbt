@@ -437,6 +437,7 @@ pub fn render_pdf(
     )
   }
   let pages : Array[@page.PdfPage] = []
+  let graphic_resources = GraphicResources::new(document)
   // (name, page index, x, y) of every anchor, in document order
   let anchors : Array[(String, Int, Double, Double)] = []
   for page_index, model_page in model.pages {
@@ -444,40 +445,43 @@ pub fn render_pdf(
     let used : Array[Int] = []
     let images : Array[Int] = []
     let annots : Array[@syntax.PdfObject] = []
+    let page_graphics = PageGraphics::{ gstates: [], patterns: [], }
+    let text = fn(run : @pagelayout.GlyphRun, page_height : Double) {
+      guard font_objects.get(run.font) is Some(number) else { return }
+      if !used.contains(number) {
+        used.push(number)
+      }
+      guard faces.get(run.font) is Some(face) else { return }
+      emit_run(ops, run, face, font_resource_name(number), page_height)
+    }
+    let image = fn(image : @pagelayout.ImageItem, page_height : Double) {
+      match image_object(document, image, image_cache) {
+        Some(number) => {
+          if !images.contains(number) {
+            images.push(number)
+          }
+          emit_image(ops, image, image_resource_name(number), page_height)
+        }
+        // a format pdflite cannot embed is skipped rather than
+        // written as something a reader would reject
+        None => ()
+      }
+    }
     for item in model_page.items {
       match item {
-        Text(run) => {
-          guard font_objects.get(run.font) is Some(number) else { continue }
-          if !used.contains(number) {
-            used.push(number)
-          }
-          guard faces.get(run.font) is Some(face) else { continue }
-          emit_run(
-            ops,
-            run,
-            face,
-            font_resource_name(number),
-            model_page.height_pt,
-          )
-        }
+        Text(run) => text(run, model_page.height_pt)
         Rect(rect) => emit_rect(ops, rect, model_page.height_pt)
-        Image(image) =>
-          match image_object(document, image, image_cache) {
-            Some(number) => {
-              if !images.contains(number) {
-                images.push(number)
-              }
-              emit_image(
-                ops,
-                image,
-                image_resource_name(number),
-                model_page.height_pt,
-              )
-            }
-            // a format pdflite cannot embed is skipped rather than
-            // written as something a reader would reject
-            None => ()
-          }
+        Image(item) => image(item, model_page.height_pt)
+        Graphic(graphic) =>
+          emit_graphic(
+            ops,
+            graphic,
+            model_page.height_pt,
+            graphic_resources,
+            page_graphics,
+            text=run => text(run, 0.0),
+            image=item => image(item, 0.0),
+          )
         // an annotation must be an indirect object (PDF 32000-1, Table 30)
         Link(link) =>
           annots.push(
@@ -524,7 +528,7 @@ pub fn render_pdf(
     pages.push({
       content,
       mediabox: box(),
-      resources: resources_of(used, images),
+      resources: resources_of(used, images, graphics=page_graphics),
       rotate: Rotate0,
       rest: PdfDictionary(rest),
     })
@@ -928,20 +932,31 @@ fn collect_codepoints(
     used.push([])
     seen.push(Map([]))
   }
+  let collect = fn(run : @pagelayout.GlyphRun) {
+    if run.font < 0 || run.font >= font_count {
+      return
+    }
+    let mut i = 0
+    while i < run.text.length() {
+      let (codepoint, next) = codepoint_at(run.text, i)
+      if !seen[run.font].contains(codepoint) {
+        seen[run.font][codepoint] = ()
+        used[run.font].push(codepoint)
+      }
+      i = next
+    }
+  }
   for page in model.pages {
     for item in page.items {
-      guard item is Text(run) else { continue }
-      if run.font < 0 || run.font >= font_count {
-        continue
-      }
-      let mut i = 0
-      while i < run.text.length() {
-        let (codepoint, next) = codepoint_at(run.text, i)
-        if !seen[run.font].contains(codepoint) {
-          seen[run.font][codepoint] = ()
-          used[run.font].push(codepoint)
-        }
-        i = next
+      match item {
+        Text(run) => collect(run)
+        Graphic(graphic) =>
+          for op in graphic.ops {
+            if op is (Text(run) | PaintedText(run, _)) {
+              collect(run)
+            }
+          }
+        _ => ()
       }
     }
   }
@@ -960,6 +975,7 @@ fn font_resource_name(number : Int) -> @core.PdfName {
 fn resources_of(
   font_objects : Array[Int],
   image_objects : Array[Int],
+  graphics? : PageGraphics = { gstates: [], patterns: [], },
 ) -> @syntax.PdfObject {
   let fonts : Array[(@core.PdfName, @syntax.PdfObject)] = []
   for number in font_objects {
@@ -974,6 +990,26 @@ fn resources_of(
       xobjects.push((image_resource_name(number), PdfIndirect(number)))
     }
     entries.push((name("/XObject"), PdfDictionary(xobjects)))
+  }
+  if graphics.gstates.length() > 0 {
+    entries.push(
+      (
+        name("/ExtGState"),
+        PdfDictionary(
+          graphics.gstates.map(n => (gstate_resource_name(n), PdfIndirect(n))),
+        ),
+      ),
+    )
+  }
+  if graphics.patterns.length() > 0 {
+    entries.push(
+      (
+        name("/Pattern"),
+        PdfDictionary(
+          graphics.patterns.map(n => (pattern_resource_name(n), PdfIndirect(n))),
+        ),
+      ),
+    )
   }
   PdfDictionary(entries)
 }
@@ -1061,29 +1097,41 @@ pub fn unembeddable_images(
   // the same bytes can appear under two media types, and the reader that
   // rejects them as one may accept them as the other.
   let verdict : Map[(Bytes, String), String?] = Map([])
+  let placed : Array[@pagelayout.ImageItem] = []
   for page in model.pages {
     for item in page.items {
-      guard item is Image(image) else { continue }
-      let key = (image.data, image.mime)
-      let why = match verdict.get(key) {
-        Some(cached) => cached
-        None => {
-          let computed = image_verdict(document, image)
-          verdict[key] = computed
-          computed
-        }
-      }
-      match why {
-        Some(message) =>
-          match counts.get(message) {
-            Some(n) => counts[message] = n + 1
-            None => {
-              counts[message] = 1
-              reasons.push(message)
+      match item {
+        Image(image) => placed.push(image)
+        Graphic(graphic) =>
+          for op in graphic.ops {
+            if op is Image(image) {
+              placed.push(image)
             }
           }
-        None => ()
+        _ => ()
       }
+    }
+  }
+  for image in placed {
+    let key = (image.data, image.mime)
+    let why = match verdict.get(key) {
+      Some(cached) => cached
+      None => {
+        let computed = image_verdict(document, image)
+        verdict[key] = computed
+        computed
+      }
+    }
+    match why {
+      Some(message) =>
+        match counts.get(message) {
+          Some(n) => counts[message] = n + 1
+          None => {
+            counts[message] = 1
+            reasons.push(message)
+          }
+        }
+      None => ()
     }
   }
   [..reasons.map(fn(r) { (r, counts.get(r).unwrap_or(0)) })]

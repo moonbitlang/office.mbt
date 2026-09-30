@@ -181,3 +181,159 @@ pub extend LinkTarget with Eq::{not_equal, equal}
 ///|
 #deprecated("implicit trait-method promotion is being removed; call via the trait")
 pub extend LinkTarget with ToJson::{to_json}
+
+///|
+#deprecated("implicit trait-method promotion is being removed; call via the trait")
+pub extend Matrix with @debug.Debug::{to_repr}
+
+///|
+#deprecated("implicit trait-method promotion is being removed; call via the trait")
+pub extend Matrix with Eq::{not_equal, equal}
+
+///|
+#deprecated("implicit trait-method promotion is being removed; call via the trait")
+pub extend Matrix with ToJson::{to_json}
+
+///|
+#deprecated("implicit trait-method promotion is being removed; call via the trait")
+pub extend PathSegment with @debug.Debug::{to_repr}
+
+///|
+#deprecated("implicit trait-method promotion is being removed; call via the trait")
+pub extend PathSegment with Eq::{not_equal, equal}
+
+///|
+#deprecated("implicit trait-method promotion is being removed; call via the trait")
+pub extend PathSegment with ToJson::{to_json}
+
+///|
+#deprecated("implicit trait-method promotion is being removed; call via the trait")
+pub extend FillRule with @debug.Debug::{to_repr}
+
+///|
+#deprecated("implicit trait-method promotion is being removed; call via the trait")
+pub extend FillRule with Eq::{not_equal, equal}
+
+///|
+#deprecated("implicit trait-method promotion is being removed; call via the trait")
+pub extend FillRule with ToJson::{to_json}
+
+///|
+#deprecated("implicit trait-method promotion is being removed; call via the trait")
+pub extend LineCap with @debug.Debug::{to_repr}
+
+///|
+#deprecated("implicit trait-method promotion is being removed; call via the trait")
+pub extend LineCap with Eq::{not_equal, equal}
+
+///|
+#deprecated("implicit trait-method promotion is being removed; call via the trait")
+pub extend LineCap with ToJson::{to_json}
+
+///|
+#deprecated("implicit trait-method promotion is being removed; call via the trait")
+pub extend LineJoin with @debug.Debug::{to_repr}
+
+///|
+#deprecated("implicit trait-method promotion is being removed; call via the trait")
+pub extend LineJoin with Eq::{not_equal, equal}
+
+///|
+#deprecated("implicit trait-method promotion is being removed; call via the trait")
+pub extend LineJoin with ToJson::{to_json}
+
+///|
+#deprecated("implicit trait-method promotion is being removed; call via the trait")
+pub extend StrokeStyle with @debug.Debug::{to_repr}
+
+///|
+#deprecated("implicit trait-method promotion is being removed; call via the trait")
+pub extend StrokeStyle with Eq::{not_equal, equal}
+
+///|
+#deprecated("implicit trait-method promotion is being removed; call via the trait")
+pub extend StrokeStyle with ToJson::{to_json}
+
+///|
+#deprecated("implicit trait-method promotion is being removed; call via the trait")
+pub extend GradientStop with @debug.Debug::{to_repr}
+
+///|
+#deprecated("implicit trait-method promotion is being removed; call via the trait")
+pub extend GradientStop with Eq::{not_equal, equal}
+
+///|
+#deprecated("implicit trait-method promotion is being removed; call via the trait")
+pub extend GradientStop with ToJson::{to_json}
+
+///|
+#deprecated("implicit trait-method promotion is being removed; call via the trait")
+pub extend Gradient with @debug.Debug::{to_repr}
+
+///|
+#deprecated("implicit trait-method promotion is being removed; call via the trait")
+pub extend Gradient with Eq::{not_equal, equal}
+
+///|
+#deprecated("implicit trait-method promotion is being removed; call via the trait")
+pub extend Gradient with ToJson::{to_json}
+
+///|
+#deprecated("implicit trait-method promotion is being removed; call via the trait")
+pub extend Paint with @debug.Debug::{to_repr}
+
+///|
+#deprecated("implicit trait-method promotion is being removed; call via the trait")
+pub extend Paint with Eq::{not_equal, equal}
+
+///|
+#deprecated("implicit trait-method promotion is being removed; call via the trait")
+pub extend Paint with ToJson::{to_json}
+
+///|
+#deprecated("implicit trait-method promotion is being removed; call via the trait")
+pub extend PathItem with @debug.Debug::{to_repr}
+
+///|
+#deprecated("implicit trait-method promotion is being removed; call via the trait")
+pub extend PathItem with Eq::{not_equal, equal}
+
+///|
+#deprecated("implicit trait-method promotion is being removed; call via the trait")
+pub extend PathItem with ToJson::{to_json}
+
+///|
+#deprecated("implicit trait-method promotion is being removed; call via the trait")
+pub extend GraphicOp with @debug.Debug::{to_repr}
+
+///|
+#deprecated("implicit trait-method promotion is being removed; call via the trait")
+pub extend GraphicOp with Eq::{not_equal, equal}
+
+///|
+#deprecated("implicit trait-method promotion is being removed; call via the trait")
+pub extend GraphicOp with ToJson::{to_json}
+
+///|
+#deprecated("implicit trait-method promotion is being removed; call via the trait")
+pub extend GraphicItem with @debug.Debug::{to_repr}
+
+///|
+#deprecated("implicit trait-method promotion is being removed; call via the trait")
+pub extend GraphicItem with Eq::{not_equal, equal}
+
+///|
+#deprecated("implicit trait-method promotion is being removed; call via the trait")
+pub extend GraphicItem with ToJson::{to_json}
+
+///|
+#deprecated("implicit trait-method promotion is being removed; call via the trait")
+pub extend TextPaint with @debug.Debug::{to_repr}
+
+///|
+#deprecated("implicit trait-method promotion is being removed; call via the trait")
+pub extend TextPaint with Eq::{not_equal, equal}
+
+///|
+#deprecated("implicit trait-method promotion is being removed; call via the trait")
+pub extend TextPaint with ToJson::{to_json}

@@ -206,11 +206,13 @@ pub fn render_page(model : @pagelayout.PageModel, page_index : Int) -> String {
     fmt_num(page.height_pt) +
     "\" fill=\"#ffffff\"/>\n",
   )
+  let ids : Ref[Int] = Ref(0)
   for item in page.items {
     match item {
       Text(run) => emit_text(sb, model, run)
       Rect(rect) => emit_rect(sb, rect)
       Image(image) => emit_image(sb, image)
+      Graphic(graphic) => emit_graphic(sb, model, graphic, ids)
       // non-visual; link regions and anchors belong to the PDF backend
       Link(_) | Anchor(_) => ()
     }
