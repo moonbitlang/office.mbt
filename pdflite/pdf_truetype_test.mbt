@@ -1044,6 +1044,29 @@ test "pdf_truetype_cmap_glyphs reads source-supported format 6 tables" {
 }
 
 ///|
+test "pdf_truetype_cmap_glyphs merges large overlapping tables in place" {
+  // a later table replaces an earlier one's mapping where it stands, and
+  // adds the rest after; thousands of codepoints, as in a real font
+  let first = Array::makei(20000, i => i + 1)
+  let second = Array::makei(20000, i => i + 2)
+  let font = truetype_cmap_font_for_test([
+    (3, 1, truetype_format6_subtable_for_test(0, first)),
+    (3, 10, truetype_format6_subtable_for_test(10000, second)),
+  ])
+  let entries = @pdflite.pdf_truetype_cmap_glyphs(font)
+  @test.assert_eq(entries.length(), 30000)
+  for codepoint, entry in entries {
+    @test.assert_eq(entry.codepoint, codepoint)
+    let expected = if codepoint < 10000 {
+      codepoint + 1
+    } else {
+      codepoint - 10000 + 2
+    }
+    @test.assert_eq(entry.glyph_index, expected)
+  }
+}
+
+///|
 test "pdf_truetype_cmap_glyphs reads format 4 range-offset glyph arrays" {
   let font = truetype_cmap_font_for_test([
     (3, 1, truetype_format4_range_offset_subtable_for_test()),
