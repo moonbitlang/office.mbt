@@ -252,3 +252,71 @@ test "small transformations and fine coordinates survive in SVG" {
     ),
   )
 }
+
+///|
+test "a gradient used again on the page is defined once" {
+  let gradient = @pagelayout.Gradient::{
+    shape: Linear(x1=0, y1=0, x2=10, y2=0),
+    stops: [
+      { offset: 0, color: @pagelayout.Color::rgb(255, 255, 255), },
+      { offset: 1, color: @pagelayout.black, },
+    ],
+    transform: @pagelayout.identity,
+  }
+  let fill = @pagelayout.GraphicOp::Path({
+    segments: [Rectangle(0, 0, 10, 10)],
+    fill: Some(GradientPaint(gradient)),
+    fill_rule: NonZero,
+    stroke: Some(GradientPaint(gradient)),
+    stroke_style: @pagelayout.StrokeStyle::default(),
+  })
+  let other = @pagelayout.GraphicOp::Path({
+    segments: [Rectangle(0, 0, 10, 10)],
+    fill: Some(
+      GradientPaint({
+        ..gradient,
+        transform: { ..@pagelayout.identity, e: 1, },
+      }),
+    ),
+    fill_rule: NonZero,
+    stroke: None,
+    stroke_style: @pagelayout.StrokeStyle::default(),
+  })
+  let model = text_graphic(_ => {
+    [
+      fill,
+      Transform({ ..@pagelayout.identity, a: 2, }),
+      Clip([Rectangle(0, 0, 5, 5)], NonZero),
+      fill,
+      other,
+    ]
+  })
+  let svg = @svg.render_page(model, 0)
+  assert_eq(svg.split("<linearGradient").count() - 1, 2)
+  assert_eq(svg.split("url(#g1)").count() - 1, 4)
+  assert_true(svg.contains("<clipPath id=\"c2\">"))
+  assert_true(svg.contains("fill=\"url(#g3)\""))
+}
+
+///|
+test "an image in a graphic is stretched to its rectangle" {
+  let model = text_graphic(_ => {
+    [
+      Alpha(0.5, 1),
+      Image({
+        x_pt: 1,
+        y_pt: 2,
+        w_pt: 30,
+        h_pt: 4,
+        data: b"\x89PNG",
+        mime: "image/png",
+      }),
+    ]
+  })
+  let svg = @svg.render_page(model, 0)
+  assert_true(
+    svg.contains(
+      "  <g opacity=\"0.5\">\n  <image x=\"1\" y=\"2\" width=\"30\" height=\"4\" preserveAspectRatio=\"none\" href=\"data:image/png;base64,iVBORw==\"/>\n  </g>\n",
+    ),
+  )
+}

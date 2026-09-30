@@ -223,8 +223,9 @@ pub(all) enum GraphicOp {
   Text(GlyphRun)
   /// A glyph run painted otherwise: see `TextPaint`.
   PaintedText(GlyphRun, TextPaint)
-  /// An image filling the rectangle at `(x_pt, y_pt)` (its top-left
-  /// corner) `w_pt` by `h_pt` in the graphic's space.
+  /// An image stretched to fill the rectangle at `(x_pt, y_pt)` (its
+  /// top-left corner) `w_pt` by `h_pt` in the graphic's space, whatever
+  /// its own aspect ratio.
   Image(ImageItem)
 } derive(Eq, Debug, ToJson)
 

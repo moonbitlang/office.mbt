@@ -340,3 +340,121 @@ test "validate reports unbalanced saves and bad alphas in graphics" {
     ),
   )
 }
+
+///|
+fn gradient_fill(gradient : @pagelayout.Gradient) -> @pagelayout.GraphicOp {
+  Path({
+    segments: [Rectangle(0, 0, 10, 10)],
+    fill: Some(GradientPaint(gradient)),
+    fill_rule: NonZero,
+    stroke: None,
+    stroke_style: @pagelayout.StrokeStyle::default(),
+  })
+}
+
+///|
+let two_stops : Array[@pagelayout.GradientStop] = [
+  { offset: 0, color: white, },
+  { offset: 1, color: @pagelayout.black, },
+]
+
+///|
+let linear : @pagelayout.Gradient = {
+  shape: Linear(x1=0, y1=0, x2=10, y2=0),
+  stops: two_stops,
+  transform: @pagelayout.identity,
+}
+
+///|
+test "identical gradient fills share one pattern and one shading" {
+  let fill = gradient_fill(linear)
+  let bytes = @pdf.render_pdf(graphic_model([fill, fill, fill]))
+  let file = as_text(bytes)
+  assert_eq(occurrences(file, "/PatternType 2"), 1)
+  assert_eq(occurrences(file, "/ShadingType 2"), 1)
+  // and the pattern is set once, the paint staying in effect
+  let text = try! as_decoded_text(bytes)
+  assert_eq(occurrences(text, "/Pattern cs"), 1)
+  assert_eq(occurrences(text, " f"), 3)
+}
+
+///|
+test "a gradient under another transformation shares the shading only" {
+  let fill = gradient_fill(linear)
+  let file = as_text(
+    @pdf.render_pdf(
+      graphic_model([
+        fill,
+        Save,
+        Transform({ ..@pagelayout.identity, a: 2, }),
+        fill,
+        Restore,
+        fill,
+      ]),
+    ),
+  )
+  assert_eq(occurrences(file, "/PatternType 2"), 2)
+  assert_eq(occurrences(file, "/ShadingType 2"), 1)
+  assert_true(file.contains("/Matrix [1 0 0 -1 10 80]"))
+  assert_true(file.contains("/Matrix [2 0 0 -1 10 80]"))
+}
+
+///|
+test "alpha states and patterns are shared across pages" {
+  let model = graphic_model([Alpha(0.5, 0.5), gradient_fill(linear)])
+  model.pages.push(model.pages[0])
+  let file = as_text(@pdf.render_pdf(model))
+  assert_eq(occurrences(file, "/Type /ExtGState"), 1)
+  assert_eq(occurrences(file, "/PatternType 2"), 1)
+  // each page's resources name them
+  assert_eq(occurrences(file, "/ExtGState <<"), 2)
+  assert_eq(occurrences(file, "/Pattern <<"), 2)
+}
+
+///|
+test "a radial gradient is a radial shading from its first circle" {
+  let model = graphic_model([
+    gradient_fill({
+      ..linear,
+      shape: Radial(x1=1, y1=2, r1=0.5, x2=3, y2=4, r2=5),
+    }),
+  ])
+  assert_true(model.validate().is_empty())
+  let file = as_text(@pdf.render_pdf(model))
+  assert_true(file.contains("/ShadingType 3"))
+  assert_true(file.contains("/Coords [1 2 0.5 3 4 5]"))
+  assert_true(file.contains("/Extend [true true]"))
+}
+
+///|
+let pixel : Bytes = b"\x89\x50\x4e\x47\x0d\x0a\x1a\x0a\x00\x00\x00\x0d\x49\x48\x44\x52\x00\x00\x00\x01\x00\x00\x00\x01\x08\x02\x00\x00\x00\x90\x77\x53\xde\x00\x00\x00\x0c\x49\x44\x41\x54\x08\xd7\x63\xf8\xcf\xc0\x00\x00\x03\x01\x01\x00\x18\xdd\x8d\xb0\x00\x00\x00\x00\x49\x45\x4e\x44\xae\x42\x60\x82"
+
+///|
+test "an image in a graphic is drawn upright and shares its XObject" {
+  let image = @pagelayout.ImageItem::{
+    x_pt: 2,
+    y_pt: 3,
+    w_pt: 4,
+    h_pt: 5,
+    data: pixel,
+    mime: "image/png",
+  }
+  let model = graphic_model([
+    Save,
+    Transform({ ..@pagelayout.identity, a: 2, }),
+    Image(image),
+    Restore,
+  ])
+  model.pages[0].items.push(Image(image))
+  assert_true(model.validate().is_empty())
+  let bytes = @pdf.render_pdf(model)
+  let text = try! as_decoded_text(bytes)
+  // flipped back upright, then the image's own rectangle, y up from its
+  // bottom edge at y = 3 + 5
+  assert_true(
+    text.contains("2 0 0 1 0 0 cm q 1 0 0 -1 0 0 cm q 4 0 0 5 2 -8 cm"),
+  )
+  assert_eq(occurrences(text, " Do"), 2)
+  assert_eq(occurrences(as_text(bytes), "/Subtype /Image"), 1)
+  assert_true(@pdf.unembeddable_images(model).is_empty())
+}

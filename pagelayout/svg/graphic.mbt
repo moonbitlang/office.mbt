@@ -5,7 +5,7 @@
 // `Restore` (or the graphic's end) closes. Alphas become fill and stroke
 // opacities on what follows them, gradients `<linearGradient>` and
 // `<radialGradient>` definitions in user space. Clip, gradient ids count up
-// from `ids` so they stay unique on the page.
+// in `Defs` so they stay unique on the page.
 //
 // Numbers in a graphic are written exactly (`num`), not rounded to three
 // decimals as page items are: a graphic's own transformations can scale
@@ -45,29 +45,51 @@ fn matrix_attr(m : @pagelayout.Matrix) -> String {
 }
 
 ///|
+/// The ids of a page's definitions: clip paths and gradients count up
+/// from 1, and a gradient already defined on the page (its definition
+/// the same but for the id) is referred to again rather than repeated.
+priv struct Defs {
+  mut last : Int
+  gradients : Map[String, String]
+}
+
+///|
+fn Defs::new() -> Defs {
+  { last: 0, gradients: Map([]), }
+}
+
+///|
+fn Defs::next(self : Defs, prefix : String) -> String {
+  self.last += 1
+  "\{prefix}\{self.last}"
+}
+
+///|
 /// The value of a `fill` or `stroke` attribute for `paint`, writing a
-/// gradient's definition first.
+/// gradient's definition first unless the page has it already. A
+/// gradient's coordinates are in the user space of what it paints
+/// (`userSpaceOnUse`), so one definition serves wherever it is used.
 fn paint_attr(
   sb : StringBuilder,
   paint : @pagelayout.Paint,
-  ids : Ref[Int],
+  defs : Defs,
 ) -> String {
   match paint {
     Solid(color) => color.to_hex()
     GradientPaint(g) => {
-      ids.val += 1
-      let id = "g\{ids.val}"
+      // the definition after its id
+      let def = StringBuilder()
       let transform = matrix_attr(g.transform)
       let element = match g.shape {
         Linear(x1~, y1~, x2~, y2~) => {
-          sb.write_string(
-            "  <linearGradient id=\"\{id}\" gradientUnits=\"userSpaceOnUse\" gradientTransform=\"\{transform}\" x1=\"\{num(x1)}\" y1=\"\{num(y1)}\" x2=\"\{num(x2)}\" y2=\"\{num(y2)}\">\n",
+          def.write_string(
+            " gradientUnits=\"userSpaceOnUse\" gradientTransform=\"\{transform}\" x1=\"\{num(x1)}\" y1=\"\{num(y1)}\" x2=\"\{num(x2)}\" y2=\"\{num(y2)}\">\n",
           )
           "linearGradient"
         }
         Radial(x1~, y1~, r1~, x2~, y2~, r2~) => {
-          sb.write_string(
-            "  <radialGradient id=\"\{id}\" gradientUnits=\"userSpaceOnUse\" gradientTransform=\"\{transform}\" fx=\"\{num(x1)}\" fy=\"\{num(y1)}\" fr=\"\{num(r1)}\" cx=\"\{num(x2)}\" cy=\"\{num(y2)}\" r=\"\{num(r2)}\">\n",
+          def.write_string(
+            " gradientUnits=\"userSpaceOnUse\" gradientTransform=\"\{transform}\" fx=\"\{num(x1)}\" fy=\"\{num(y1)}\" fr=\"\{num(r1)}\" cx=\"\{num(x2)}\" cy=\"\{num(y2)}\" r=\"\{num(r2)}\">\n",
           )
           "radialGradient"
         }
@@ -85,11 +107,23 @@ fn paint_attr(
         if stop.offset >= 1.0 && i > 0 && stops[i - 1].offset >= 1.0 {
           continue
         }
-        sb.write_string(
+        def.write_string(
           "    <stop offset=\"\{num(stop.offset)}\" stop-color=\"\{stop.color.to_hex()}\"/>\n",
         )
       }
-      sb.write_string("  </\{element}>\n")
+      def.write_string("  </\{element}>\n")
+      let def = def.to_string()
+      let key = element + def
+      let id = match defs.gradients.get(key) {
+        Some(id) => id
+        None => {
+          let id = defs.next("g")
+          defs.gradients[key] = id
+          sb.write_string("  <\{element} id=\"\{id}\"")
+          sb.write_string(def)
+          id
+        }
+      }
       "url(#\{id})"
     }
   }
@@ -140,7 +174,7 @@ fn emit_graphic(
   sb : StringBuilder,
   model : @pagelayout.PageModel,
   graphic : @pagelayout.GraphicItem,
-  ids : Ref[Int],
+  defs : Defs,
 ) -> Unit {
   sb.write_string(
     "  <g transform=\"translate(\{num(graphic.x_pt)} \{num(graphic.y_pt)})\">\n",
@@ -173,8 +207,7 @@ fn emit_graphic(
         open += 1
       }
       Clip(segments, rule) => {
-        ids.val += 1
-        let id = "c\{ids.val}"
+        let id = defs.next("c")
         let clip_rule = match rule {
           NonZero => "nonzero"
           EvenOdd => "evenodd"
@@ -191,10 +224,10 @@ fn emit_graphic(
       }
       Path(path) => {
         let fill = match path.fill {
-          Some(paint) => paint_attr(sb, paint, ids)
+          Some(paint) => paint_attr(sb, paint, defs)
           None => "none"
         }
-        let stroke = path.stroke.map(paint => paint_attr(sb, paint, ids))
+        let stroke = path.stroke.map(paint => paint_attr(sb, paint, defs))
         sb.write_string(
           "  <path d=\"\{path_data(path.segments)}\" fill=\"\{fill}\"",
         )
@@ -243,7 +276,7 @@ fn emit_graphic(
         if fill_alpha != 1.0 {
           sb.write_string("  <g opacity=\"\{num(fill_alpha)}\">\n")
         }
-        emit_image(sb, image, num~)
+        emit_image(sb, image, num~, fill=true)
         if fill_alpha != 1.0 {
           sb.write_string("  </g>\n")
         }

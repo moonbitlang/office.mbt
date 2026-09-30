@@ -442,13 +442,18 @@ pub fn render_pdf(
   let anchors : Array[(String, Int, Double, Double)] = []
   for page_index, model_page in model.pages {
     let ops : Array[@content.PdfContentOp] = []
+    // the fonts and images the page uses, in the order of first use, with
+    // sets to look them up in (a page can hold many thousand runs)
     let used : Array[Int] = []
+    let used_set : Map[Int, Unit] = Map([])
     let images : Array[Int] = []
+    let images_set : Map[Int, Unit] = Map([])
     let annots : Array[@syntax.PdfObject] = []
-    let page_graphics = PageGraphics::{ gstates: [], patterns: [], }
+    let page_graphics = PageGraphics::new()
     let text = fn(run : @pagelayout.GlyphRun, page_height : Double) {
       guard font_objects.get(run.font) is Some(number) else { return }
-      if !used.contains(number) {
+      if !used_set.contains(number) {
+        used_set[number] = ()
         used.push(number)
       }
       guard faces.get(run.font) is Some(face) else { return }
@@ -457,7 +462,8 @@ pub fn render_pdf(
     let image = fn(image : @pagelayout.ImageItem, page_height : Double) {
       match image_object(document, image, image_cache) {
         Some(number) => {
-          if !images.contains(number) {
+          if !images_set.contains(number) {
+            images_set[number] = ()
             images.push(number)
           }
           emit_image(ops, image, image_resource_name(number), page_height)
@@ -975,7 +981,7 @@ fn font_resource_name(number : Int) -> @core.PdfName {
 fn resources_of(
   font_objects : Array[Int],
   image_objects : Array[Int],
-  graphics? : PageGraphics = { gstates: [], patterns: [], },
+  graphics? : PageGraphics = PageGraphics::new(),
 ) -> @syntax.PdfObject {
   let fonts : Array[(@core.PdfName, @syntax.PdfObject)] = []
   for number in font_objects {
@@ -992,24 +998,18 @@ fn resources_of(
     entries.push((name("/XObject"), PdfDictionary(xobjects)))
   }
   if graphics.gstates.length() > 0 {
-    entries.push(
-      (
-        name("/ExtGState"),
-        PdfDictionary(
-          graphics.gstates.map(n => (gstate_resource_name(n), PdfIndirect(n))),
-        ),
-      ),
-    )
+    let gstates : Array[(@core.PdfName, @syntax.PdfObject)] = []
+    for n, _ in graphics.gstates {
+      gstates.push((gstate_resource_name(n), PdfIndirect(n)))
+    }
+    entries.push((name("/ExtGState"), PdfDictionary(gstates)))
   }
   if graphics.patterns.length() > 0 {
-    entries.push(
-      (
-        name("/Pattern"),
-        PdfDictionary(
-          graphics.patterns.map(n => (pattern_resource_name(n), PdfIndirect(n))),
-        ),
-      ),
-    )
+    let patterns : Array[(@core.PdfName, @syntax.PdfObject)] = []
+    for n, _ in graphics.patterns {
+      patterns.push((pattern_resource_name(n), PdfIndirect(n)))
+    }
+    entries.push((name("/Pattern"), PdfDictionary(patterns)))
   }
   PdfDictionary(entries)
 }

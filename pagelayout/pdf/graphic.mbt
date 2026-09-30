@@ -33,24 +33,32 @@ fn PaintState::copy(self : PaintState) -> PaintState {
 }
 
 ///|
-/// What a document's graphics share: the alpha states and shadings
-/// written so far, by value.
+/// What a document's graphics share: the alpha states, shadings and
+/// patterns written so far, by value (a pattern by its shading and matrix),
+/// so that a gradient painted many times is written once.
 priv struct GraphicResources {
   document : @pdflite.PdfDocument
   gstates : Map[String, Int]
   shadings : Map[String, Int]
+  patterns : Map[String, Int]
 }
 
 ///|
 fn GraphicResources::new(document : @pdflite.PdfDocument) -> GraphicResources {
-  { document, gstates: Map([]), shadings: Map([]), }
+  { document, gstates: Map([]), shadings: Map([]), patterns: Map([]), }
 }
 
 ///|
-/// The resources one page draws with, beyond fonts and images.
+/// The resources one page draws with, beyond fonts and images, in the
+/// order of first use.
 priv struct PageGraphics {
-  gstates : Array[Int]
-  patterns : Array[Int]
+  gstates : Map[Int, Unit]
+  patterns : Map[Int, Unit]
+}
+
+///|
+fn PageGraphics::new() -> PageGraphics {
+  { gstates: Map([]), patterns: Map([]), }
 }
 
 ///|
@@ -121,6 +129,22 @@ fn gradient_pieces(
 }
 
 ///|
+/// What identifies a gradient's shading: its shape and stops (numbers
+/// exactly, as their shortest round-trip decimals), not its transform.
+fn shading_key(gradient : @pagelayout.Gradient) -> String {
+  let sb = StringBuilder()
+  match gradient.shape {
+    Linear(x1~, y1~, x2~, y2~) => sb.write_string("L \{x1} \{y1} \{x2} \{y2}")
+    Radial(x1~, y1~, r1~, x2~, y2~, r2~) =>
+      sb.write_string("R \{x1} \{y1} \{r1} \{x2} \{y2} \{r2}")
+  }
+  for stop in gradient.stops {
+    sb.write_string(" \{stop.offset}\{stop.color.to_hex()}")
+  }
+  sb.to_string()
+}
+
+///|
 /// The shading of a gradient in gradient space: axial or radial, with an
 /// exponential interpolation function per interval between stops (stitched
 /// together when there is more than one), extended past both ends.
@@ -128,10 +152,7 @@ fn GraphicResources::shading(
   self : GraphicResources,
   gradient : @pagelayout.Gradient,
 ) -> Int {
-  let key = ToJson::to_json(@pagelayout.Gradient::{
-    ..gradient,
-    transform: @pagelayout.identity,
-  }).stringify()
+  let key = shading_key(gradient)
   match self.shadings.get(key) {
     Some(number) => return number
     None => ()
@@ -189,7 +210,8 @@ fn GraphicResources::shading(
 
 ///|
 /// A shading pattern painting `gradient` where the current transformation
-/// is `ctm` (from the gradient's user space to the page's default space).
+/// is `ctm` (from the gradient's user space to the page's default space),
+/// one per shading and effective matrix.
 fn GraphicResources::pattern(
   self : GraphicResources,
   gradient : @pagelayout.Gradient,
@@ -197,7 +219,12 @@ fn GraphicResources::pattern(
 ) -> Int {
   let shading = self.shading(gradient)
   let m = ctm.after(gradient.transform)
-  self.document.add_object(
+  let key = "\{shading} \{m.a} \{m.b} \{m.c} \{m.d} \{m.e} \{m.f}"
+  match self.patterns.get(key) {
+    Some(number) => return number
+    None => ()
+  }
+  let number = self.document.add_object(
     PdfDictionary([
       (name("/Type"), PdfNameObject(name("/Pattern"))),
       (name("/PatternType"), PdfInteger(2)),
@@ -215,6 +242,8 @@ fn GraphicResources::pattern(
       ),
     ]),
   )
+  self.patterns[key] = number
+  number
 }
 
 ///|
@@ -268,17 +297,21 @@ fn set_paint(
     }
     GradientPaint(gradient) => {
       let number = resources.pattern(gradient, state.ctm)
-      if !page.patterns.contains(number) {
-        page.patterns.push(number)
+      page.patterns[number] = ()
+      // a pattern's key cannot be a colour's, which starts with `#`
+      let key = "/P\{number}"
+      let current = if stroke { state.stroke } else { state.fill }
+      if current == Some(key) {
+        return
       }
       if stroke {
         ops.push(Op_CS(name("/Pattern")))
         ops.push(Op_SCNName(pattern_resource_name(number), []))
-        state.stroke = None
+        state.stroke = Some(key)
       } else {
         ops.push(Op_cs(name("/Pattern")))
         ops.push(Op_scnName(pattern_resource_name(number), []))
-        state.fill = None
+        state.fill = Some(key)
       }
     }
   }
@@ -414,9 +447,7 @@ fn emit_graphic(
       }
       Alpha(fill, stroke) => {
         let number = resources.gstate(fill, stroke)
-        if !page.gstates.contains(number) {
-          page.gstates.push(number)
-        }
+        page.gstates[number] = ()
         ops.push(Op_gs(gstate_resource_name(number)))
       }
       Path(path) => {
