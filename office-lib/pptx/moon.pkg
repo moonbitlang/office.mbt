@@ -8,11 +8,14 @@ import {
   "moonbitlang/ooxml/opc",
   "moonbitlang/docx2html/xml",
   "moonbitlang/pptx/oxml",
+  "moonbitlang/ooxml/xml" @ooxml_xml,
 }
 
 import {
   "moonbitlang/office-lib/pptx",
+  "moonbitlang/docx2html/core" @docx_core,
   "moonbitlang/core/encoding/utf8",
+  "moonbitlang/core/encoding/utf16",
   "moonbitlang/async",
   "moonbitlang/async/fs" @afs,
 } for "test"

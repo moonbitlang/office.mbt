@@ -135,7 +135,12 @@ test "PPTX reading rejects a slide relationship with the wrong type" {
   )
   let pkg = presentation.opc_package()
   let original = pkg.require_part("/ppt/_rels/presentation.xml.rels")
-  let text = original.text().replace(old=@opc.rt_slide, new=@opc.rt_image)
+  let text = original
+    .text()
+    .replace(
+      old="Type=\"" + @opc.rt_slide + "\"",
+      new="Type=\"" + @opc.rt_image + "\"",
+    )
   let encoded = @utf8.encode(text)
   pkg.replace_part(
     @opc.Part::new(
@@ -148,14 +153,12 @@ test "PPTX reading rejects a slide relationship with the wrong type" {
   debug_inspect(
     try {
       @pptx.read_presentation(Bytes::from_array(presentation.save())) |> ignore
-      false
+      "accepted"
     } catch {
-      @office.InvalidPackage(_) => true
-      _ => false
+      @office.InvalidPackage(message) => message
+      _ => "unexpected"
     },
-    content=(
-      #|false
-    ),
+    content="\"PPTX slide relationship must be an internal slide\"",
   )
 }
 
@@ -170,5 +173,90 @@ test "PPTX extraction has an aggregate text budget independent of XML size" {
       _ => "unexpected"
     },
     content="\"pptx_text_chars\"",
+  )
+}
+
+///|
+fn reencode_parts(bytes : Bytes, big : Bool, bom : Bool) -> Bytes raise {
+  let presentation = @presentation.Presentation::open(bytes.to_fixedarray())
+  let pkg = presentation.opc_package()
+  for part in pkg.parts() {
+    if part.name.has_suffix(".xml") || part.name.has_suffix(".rels") {
+      let encoding = if bom {
+        "UTF-16"
+      } else if big {
+        "UTF-16BE"
+      } else {
+        "UTF-16LE"
+      }
+      let text = part
+        .text()
+        .replace(old="UTF-8", new=encoding)
+        .replace(old="First", new="第一 😀")
+      let encoded = @utf16.encode(
+        text,
+        endianness=if big { Big } else { Little },
+        bom~,
+      )
+      pkg.replace_part(
+        @opc.Part::new(part.name, part.content_type, encoded.to_fixedarray()),
+      )
+      |> ignore
+    }
+  }
+  Bytes::from_array(presentation.save())
+}
+
+///|
+test "PPTX reads UTF-16 XML across manifest, relationships, slides and notes" {
+  let bytes = deck_bytes()
+  let expected = @pptx.read_presentation(bytes)
+  for big in [false, true] {
+    for bom in [false, true] {
+      let encoded = reencode_parts(bytes, big, bom)
+      let result = @pptx.read_presentation(encoded)
+      debug_inspect(
+        @office.detect_format("encoded.pptx", encoded),
+        content="Pptx",
+      )
+      debug_inspect(
+        result.slides.map(s => (s.index, s.text, s.notes)),
+        content=(
+          #|<ReadOnlyArray:
+          #|  [(1, "Second", "Second notes"), (2, "第一 😀", "第一 😀 notes")]>
+        ),
+      )
+      debug_inspect(
+        (
+          result.width_emu == expected.width_emu,
+          result.height_emu == expected.height_emu,
+        ),
+        content="(true, true)",
+      )
+    }
+  }
+}
+
+///|
+test "PPTX rejects an XML declaration that disagrees with UTF-16 bytes" {
+  let presentation = @presentation.Presentation::open(
+    deck_bytes().to_fixedarray(),
+  )
+  let pkg = presentation.opc_package()
+  let part = pkg.require_part("/ppt/slides/slide1.xml")
+  let bytes = @utf16.encode(part.text(), bom=true)
+  pkg.replace_part(
+    @opc.Part::new(part.name, part.content_type, bytes.to_fixedarray()),
+  )
+  |> ignore
+  debug_inspect(
+    try {
+      @pptx.read_presentation(Bytes::from_array(presentation.save())) |> ignore
+      "accepted"
+    } catch {
+      @docx_core.InvalidXml(..) => "invalid XML"
+      _ => "unexpected"
+    },
+    content="\"invalid XML\"",
   )
 }

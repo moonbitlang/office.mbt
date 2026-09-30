@@ -48,7 +48,8 @@ visual reading order. `shape_count` counts top-level shapes only.
 Read commands use the Office ZIP/OPC resource checks, followed by a shared XML
 budget before typed PPTX parsing. `--max-elements` bounds XML tokens across XML
 parts and bounds the text projection separately; default 50000, maximum 200000.
-XML nesting is bounded by the shared strict parser. The SDK separately bounds
+XML nesting is bounded by the shared strict parser. XML parts support UTF-8 and
+UTF-16 (both byte orders); encoding declarations must agree with the bytes. The SDK separately bounds
 aggregate extracted text to 16 Mi UTF-16 code units (including paragraph
 separator accounting), configurable downward through `max_text_chars`. CLI text
 reads use the output ceiling as this extraction budget, before pagination. `--max-output-chars` bounds

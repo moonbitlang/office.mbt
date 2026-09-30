@@ -151,8 +151,17 @@ pub fn read_presentation(
     if content_type.has_suffix("+xml") ||
       content_type == "application/xml" ||
       content_type == "text/xml" {
-      @xml.read_xml_bytes_strict_limited(
-        Bytes::from_array(entry.bytes()),
+      let bytes = Bytes::from_array(entry.bytes())
+      let encoding : @xml.XmlSourceEncoding = match bytes {
+        [0xff, 0xfe, ..] => Utf16LittleEndianWithBom
+        [0xfe, 0xff, ..] => Utf16BigEndianWithBom
+        [b'<', 0x00, ..] => Utf16LittleEndian
+        [0x00, b'<', ..] => Utf16BigEndian
+        _ => Utf8
+      }
+      @xml.read_xml_string_strict_encoded_limited(
+        @ooxml_xml.decode_xml_bytes(bytes),
+        encoding,
         xml_budget,
       )
       |> ignore
