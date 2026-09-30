@@ -996,3 +996,19 @@ test "typo_metrics reads the OS/2 metrics only where the table has them" {
     content="/Ascent 905 /Descent -211 /CapHeight 905",
   )
 }
+
+///|
+test "notdef_text needs an embedded program" {
+  // a metrics-only face is a simple font declared by name: it has no glyph
+  // indices to give codes past, so characters it lacks are still dropped,
+  // and the characters outside WinAnsi it has too
+  let registry = @fonts.FontRegistry::new()
+  let face = registry.register("Metrics Only", metrics_only(sans()))
+  let bytes = @pdf.render_pdf(
+    family_model("Metrics Only", "a中✔Ωb", face),
+    options=@pdf.RenderOptions::new(fonts=registry, notdef_text=true),
+  )
+  assert_false(as_text(bytes).contains("/Type0"))
+  let (shown, _) = extracted(bytes)
+  inspect(shown, content="ab")
+}

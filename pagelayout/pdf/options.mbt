@@ -41,13 +41,22 @@ pub struct RenderOptions {
   /// leaving it out of the page (its advance is kept either way). A font
   /// that needs this goes composite, and each such character gets a code
   /// of its own, drawn with glyph 0 and mapped to the character by
-  /// `/ToUnicode`, so text extraction and search find it.
+  /// `/ToUnicode`, so text extraction and search find it. (Should a font's
+  /// text use up all 65,535 codes, the characters left over are shown as
+  /// glyph 0 with the character as `/ActualText`.)
+  ///
+  /// This needs the face's program embedded: a face registered without
+  /// outlines (metrics only) is a simple font declared by name, and still
+  /// drops the characters it lacks, as it drops everything outside WinAnsi.
   notdef_text : Bool
-  /// Declare each embedded font's ascent and descent (`/Ascent`,
-  /// `/Descent`, `/CapHeight`) from the OS/2 typographic metrics when the
-  /// font has them, truncated to thousandths of an em, as Prawn (ttfunk)
-  /// does, instead of from `hhea`. Readers size text selection and
-  /// extracted word boxes by these.
+  /// Declare each embedded font's ascent, descent and cap height
+  /// (`/Ascent`, `/Descent`, `/CapHeight`) from its OS/2 table, as Prawn
+  /// (through ttfunk) does: the typographic ascent and descent where the
+  /// table has them (version 1 on, nonzero), else `hhea`'s; `sCapHeight`
+  /// where the table has it (version 2 on, nonzero), else that ascent. Each
+  /// is truncated to thousandths of an em. By default the descriptor
+  /// declares `hhea`'s ascent and descent, and the ascent as the cap
+  /// height. Readers size text selection and extracted word boxes by these.
   typo_metrics : Bool
 }
 
