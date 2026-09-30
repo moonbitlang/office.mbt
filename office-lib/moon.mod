@@ -13,6 +13,8 @@ keywords = [ "office", "xlsx", "docx", "ooxml", "cli" ]
 description = "Agent-oriented XLSX and DOCX tooling for MoonBit"
 
 import {
+  "moonbitlang/pptx@0.1.0",
+  "moonbitlang/ooxml@0.1.0",
   "moonbitlang/mbtexcel@0.2.1",
   "moonbitlang/docx2html@0.6.1",
   "moonbitlang/async@0.22.4",

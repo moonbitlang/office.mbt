@@ -1,4 +1,5 @@
 import {
+  "moonbitlang/office-lib/pptx" @office_pptx,
   "moonbitlang/docx2html" @word,
   "moonbitlang/docx2html/batch" @docx_batch,
   "moonbitlang/docx2html/core" @docx_core,

@@ -19,9 +19,9 @@ connects the nine modules for local development.
 The CLI implementation lives in `office-cli`, which integrates the
 document engines and layout packages. `office-lib` is the reusable library;
 `office-cli` is the executable entry point. The repository root is only a
-workspace, not a publishable MoonBit module. PPTX currently has library packages
-and dedicated demo/benchmark commands; it is not yet integrated into
-`office-lib` or the unified CLI.
+workspace, not a publishable MoonBit module. PPTX is integrated through `office-lib/pptx` for identification, outline,
+text extraction, and fresh one-slide creation. See the
+[PPTX integration guide](docs/office-pptx.md) for commands and limits.
 
 ## Use the CLI
 

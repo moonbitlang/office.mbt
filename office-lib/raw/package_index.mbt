@@ -1421,6 +1421,7 @@ fn raw_path_for_format(format : @office.DocumentFormat) -> String {
   match format {
     Docx => "raw.docx"
     Xlsx => "raw.xlsx"
+    Pptx => "raw.pptx"
   }
 }
 
@@ -1565,6 +1566,10 @@ fn package_from_archive(archive : @zip.Archive) -> RawPackage raise RawError {
   match format {
     Docx => add_docx_aliases(pkg)
     Xlsx => add_xlsx_aliases(pkg)
+    Pptx =>
+      raise raw_error(
+        "office.raw.unsupported_format", "PPTX raw operations are not supported",
+      )
   }
   let inventory_parts : Array[RawPartInfo] = []
   for _, name in pkg.names {

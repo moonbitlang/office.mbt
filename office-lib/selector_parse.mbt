@@ -678,6 +678,10 @@ pub fn parse_selector(source : String) -> OfficeSelector raise SelectorError {
   let stability = match format {
     Docx => validate_docx_selector(parser, segments, coordinate)
     Xlsx => validate_xlsx_selector(parser, segments, coordinate)
+    Pptx =>
+      raise parser.fail(
+        "office.selector.invalid_format", "PPTX selectors are not supported",
+      )
   }
   {
     format,

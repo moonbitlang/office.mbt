@@ -1,5 +1,13 @@
 # Changelog
 
+## Unreleased: PPTX Office integration
+
+- Add PPTX identification, slide outlines, slide/notes text extraction, and
+  transactional one-slide creation to the unified Office CLI.
+- Add the `moonbitlang/office-lib/pptx` SDK package. Existing-deck mutation,
+  batch authoring, selectors, and rendering remain outside this initial scope.
+
+
 Breaking and notable changes for the published modules in this workspace.
 Entries are grouped by module and by the version they ship in; `Unreleased`
 covers changes that have landed on `main` but are not yet published.

@@ -3,16 +3,20 @@ name: office-cli
 description: >-
   Inspect, create, edit, validate, and preview DOCX and XLSX files through the
   unified Office CLI, including comments, tracked changes, transactional edits,
-  and DOCX rendering to PDF or SVG. Use when working with this CLI or when a
+  DOCX rendering to PDF or SVG, and PPTX identification, slide/notes text reads,
+  and fresh one-slide creation. Use when working with this CLI or when a
   portable command-line workflow fits the document task. Does not edit existing
   PDFs or PowerPoint files.
 ---
 
 # Office documents through the CLI
 
-Prefer the unified `office` command for its supported DOCX/XLSX operations.
+Prefer the unified `office` command for its supported DOCX/XLSX operations
+and the PPTX capabilities listed by `office help pptx --json`.
 Honor an explicit user choice of another tool. Use the format-specific fallbacks
 below when the task needs a capability absent from `office`.
+
+For PPTX command scope and read limits, consult [PPTX integration](../docs/office-pptx.md).
 
 ## Launch and discover
 

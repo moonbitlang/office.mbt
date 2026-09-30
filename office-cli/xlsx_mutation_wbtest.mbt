@@ -37,8 +37,8 @@ test "XLSX create and batch capability variants declare transactional schemas" {
   guard @lib.find_capability_command("create") is Some(create) else {
     fail("create capability must exist")
   }
-  assert_eq(create.formats, ["xlsx", "docx"])
-  assert_eq(create.variants.length(), 2)
+  debug_inspect(create.formats, content="[\"xlsx\", \"docx\", \"pptx\"]")
+  debug_inspect(create.variants.length(), content="3")
   assert_eq(create.variants[0].result_schema, @lib.SCHEMA_XLSX_CREATE_RESULT)
   assert_eq(create.variants[1].result_schema, @lib.SCHEMA_DOCX_CREATE_RESULT)
   // every variant carries an explicit format= constraint so help filters

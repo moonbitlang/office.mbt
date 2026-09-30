@@ -1496,3 +1496,11 @@ Multi-paragraph or formatted comment bodies use the `--json` envelope
 ALL metadata. New documents with built-in discussions are authored in
 one shot via `docx batch` with `docx.batch/2` `comment` ops
 (`reply_to`/`done` included) — see that section.
+
+## PPTX integration results
+
+The initial PPTX integration adds `office.pptx.outline/1`, `office.pptx.text/1`,
+and `office.pptx.create/1` inside the existing `office.output/1` envelope.
+See [PPTX integration](office-pptx.md) for result fields and extraction limits.
+`office help pptx --json` exposes the implemented command variants; PPTX does
+not yet consume a batch input schema or resolve Office selectors.

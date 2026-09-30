@@ -217,6 +217,7 @@ pub fn CellAddress::row(Self) -> Int
 pub(all) enum DocumentFormat {
   Xlsx
   Docx
+  Pptx
 } derive(Eq, @debug.Debug)
 #deprecated
 pub fn DocumentFormat::equal(Self, Self) -> Bool

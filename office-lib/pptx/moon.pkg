@@ -1,0 +1,20 @@
+import {
+  "moonbitlang/office-lib" @office,
+  "moonbitlang/office-lib/transaction",
+  "moonbitlang/pptx/presentation",
+  "moonbitlang/pptx/slide",
+  "moonbitlang/pptx/notes",
+  "moonbitlang/pptx/units",
+  "moonbitlang/ooxml/opc",
+  "moonbitlang/docx2html/xml",
+  "moonbitlang/pptx/oxml",
+}
+
+import {
+  "moonbitlang/office-lib/pptx",
+  "moonbitlang/core/encoding/utf8",
+  "moonbitlang/async",
+  "moonbitlang/async/fs" @afs,
+} for "test"
+
+supported_targets = "native+wasm"

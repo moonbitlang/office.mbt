@@ -2,7 +2,8 @@
 
 `moonbitlang/office-lib` is the implementation module behind the published
 `moonx moonbitlang/office` command. It provides the facade for the XLSX engine in
-`moonbitlang/mbtexcel` and the DOCX engine in `moonbitlang/docx2html`.
+`moonbitlang/mbtexcel`, the DOCX engine in `moonbitlang/docx2html`, and the PPTX
+engine in `moonbitlang/pptx`.
 
 The module is intentionally young and may make breaking changes while the
 major-parity program in `../docs/office-major-parity.md` is underway.
@@ -36,12 +37,13 @@ moonx moonbitlang/office raw list report.docx --json
 moonx moonbitlang/office raw read report.docx /document --json
 ```
 
-`docx`/`word` and `xlsx`/`excel` are the only format names and aliases. The
+The format names and aliases are `docx`/`word`, `xlsx`/`excel`, and
+`pptx`/`powerpoint`. The
 capability inventory carries a deterministic CRC-32 fingerprint so automation
 can detect contract drift. Command families publish explicit variant schemas;
 the raw record describes every `list`, `read`, `replace`, and `edit` input,
-output, constraint, and output mode. PowerPoint and MCP are intentionally
-absent.
+output, constraint, and output mode. PPTX advertises identification, outline, text extraction, and fresh creation
+only; MCP remains absent. See [PPTX integration](../docs/office-pptx.md).
 
 `moonbitlang/office-lib/xlsx` provides the bounded mutation SDK behind the canonical
 creation and batch commands. It prefers `xlsx.batch/2`, retains exact
