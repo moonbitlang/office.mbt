@@ -70,8 +70,9 @@ fn pdf_markdown_extracted_codepoints_of_text_array(
           pending_word_space = false
         }
       }
-      PdfReal(value) if pdf_markdown_tj_adjustment_is_word_space(value) =>
-        pending_word_space = true
+      PdfReal(value) | PdfExactReal(value) if pdf_markdown_tj_adjustment_is_word_space(
+          value,
+        ) => pending_word_space = true
       PdfInteger(value) if pdf_markdown_tj_adjustment_is_word_space(
           value.to_double(),
         ) => pending_word_space = true

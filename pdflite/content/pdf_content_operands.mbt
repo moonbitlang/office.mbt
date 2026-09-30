@@ -7,7 +7,7 @@ fn pdf_content_operand_number(
     None
   } else {
     match operands[index] {
-      PdfReal(value) => Some(value)
+      PdfReal(value) | PdfExactReal(value) => Some(value)
       PdfInteger(value) => Some(value.to_double())
       _ => None
     }
@@ -24,7 +24,7 @@ fn pdf_content_operand_int(
   } else {
     match operands[index] {
       PdfInteger(value) => Some(value)
-      PdfReal(value) => Some(value.to_int())
+      PdfReal(value) | PdfExactReal(value) => Some(value.to_int())
       _ => None
     }
   }
@@ -67,7 +67,7 @@ fn pdf_content_numbers_from_array(object : PdfObject) -> Array[Double]? {
       let output : Array[Double] = Array(capacity=items.length())
       for item in items {
         match item {
-          PdfReal(value) => output.push(value)
+          PdfReal(value) | PdfExactReal(value) => output.push(value)
           PdfInteger(value) => output.push(value.to_double())
           _ => break None
         }
@@ -86,7 +86,7 @@ fn pdf_content_numbers_from_operands(
   let output : Array[Double] = Array(capacity=operands.length())
   for operand in operands {
     match operand {
-      PdfReal(value) => output.push(value)
+      PdfReal(value) | PdfExactReal(value) => output.push(value)
       PdfInteger(value) => output.push(value.to_double())
       _ => break None
     }
@@ -122,7 +122,7 @@ fn pdf_content_named_color_operands(
         let numbers : Array[Double] = Array(capacity=operands.length() - 1)
         for i in 0..<(operands.length() - 1) {
           match operands[i] {
-            PdfReal(value) => numbers.push(value)
+            PdfReal(value) | PdfExactReal(value) => numbers.push(value)
             PdfInteger(value) => numbers.push(value.to_double())
             _ => break None
           }
@@ -163,7 +163,7 @@ fn pdf_content_tj_array_from_operand(object : PdfObject) -> PdfObject? {
         match item {
           PdfString(bytes) => output.push(PdfString(bytes))
           PdfInteger(value) => output.push(PdfReal(value.to_double()))
-          PdfReal(value) => output.push(PdfReal(value))
+          PdfReal(value) | PdfExactReal(value) => output.push(PdfReal(value))
           _ => ()
         }
       }

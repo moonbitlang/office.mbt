@@ -1353,3 +1353,78 @@ test "pdf_write_real keeps magnitude for wide plain reals" {
     ),
   )
 }
+
+///|
+test "PdfExactReal is written exactly, without an exponent" {
+  let write = fn(value : Double) -> String raise {
+    let bytes = @pdflite.pdf_write_object(PdfExactReal(value))
+    let sb = StringBuilder()
+    for byte in bytes {
+      sb.write_char(byte.to_int().unsafe_to_char())
+    }
+    sb.to_string()
+  }
+  // where PdfReal rounds to six decimals or twelve significant digits
+  assert_eq(write(1.0e-7), "0.0000001")
+  assert_eq(write(-1.5e-7), "-0.00000015")
+  assert_eq(write(1.0e-10), "0.0000000001")
+  assert_eq(write(0.1 + 0.2), "0.30000000000000004")
+  assert_eq(write(0.123456789012345), "0.123456789012345")
+  assert_eq(write(12.5), "12.5")
+  // integral values: integers while a PDF integer surely holds them (PDF
+  // 32000-1, Annex C), reals with a decimal point beyond
+  assert_eq(write(10.0), "10")
+  assert_eq(write(-0.0), "0")
+  assert_eq(write(2147483647.0), "2147483647")
+  assert_eq(write(-2147483647.0), "-2147483647")
+  assert_eq(write(2147483648.0), "2147483648.0")
+  assert_eq(write(-1.0e21), "-1000000000000000000000.0")
+  assert_eq(write(1.5e21), "1500000000000000000000.0")
+  // PdfReal alongside, for contrast
+  assert_eq(
+    @pdflite.pdf_write_object(PdfArray([PdfExactReal(1.0e-7), PdfReal(1.0e-7)])),
+    writer_ascii_for_test("[0.0000001 0.000000]"),
+  )
+  // every written value reads back as itself
+  let values : Array[Double] = [
+    5.0e-324,
+    2.2250738585072014e-308,
+    1.1754943508222875e-38,
+    3.4028234663852886e38,
+    1.7976931348623157e308,
+    123456.789e-20,
+    9.999999999999999e22,
+    0.000123456789012345,
+    -7.0e-5,
+    1.0 / 3.0,
+  ]
+  for value in values {
+    let text = write(value)
+    assert_false(text.contains("e"))
+    assert_false(text.contains("E"))
+    assert_eq(@string.parse_double(text), value)
+  }
+  assert_eq(write(5.0e-324), "0." + "0".repeat(323) + "5")
+  // non-finite values have no PDF form
+  let zero = 0.0
+  for value in [zero / zero, 1.0 / zero, -1.0 / zero] {
+    let result : Result[Bytes, Error] = try
+      @pdflite.pdf_write_exact_real(value)
+    catch {
+      err => Err(err)
+    } noraise {
+      bytes => Ok(bytes)
+    }
+    guard result is Err(@core.PdfError::NumberExpected) else {
+      fail("expected @core.PdfError::NumberExpected")
+    }
+  }
+}
+
+///|
+test "PdfExactReal is a number to pdflite's readers" {
+  let doc = @pdflite.pdf_document_empty()
+  doc.add_object_given_number(3, PdfExactReal(1.0e-7))
+  assert_eq(doc.get_number(PdfIndirect(3)), 1.0e-7)
+  assert_eq(doc.get_number(PdfExactReal(-2.5)), -2.5)
+}

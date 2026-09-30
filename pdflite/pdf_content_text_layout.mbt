@@ -211,7 +211,7 @@ pub fn PdfFont::content_text_layout_of_tj_array(
         }
         text_matrix = result.text_matrix
       }
-      PdfReal(value) => {
+      PdfReal(value) | PdfExactReal(value) => {
         let advance = pdf_content_text_tj_adjustment(vertical, value, {
           ..layout,
           text_matrix,

@@ -24,7 +24,7 @@ pub fn PdfDocument::get_number(
   object : @syntax.PdfObject,
 ) -> Double raise @core.PdfError {
   match self.direct(object) {
-    PdfReal(value) => value
+    PdfReal(value) | PdfExactReal(value) => value
     PdfInteger(value) => value.to_double()
     _ => raise NumberExpected
   }

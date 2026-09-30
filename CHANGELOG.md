@@ -272,6 +272,16 @@ covers changes that have landed on `main` but are not yet published.
 
 ### moonbitlang/pdflite [Unreleased]
 
+- **BREAKING**: `PdfObject` has a new variant, `PdfExactReal(Double)`, a real
+  written exactly: the shortest decimal that reads back as the value,
+  without an exponent, where `PdfReal` rounds (to six decimals below 1e-4 in
+  magnitude, otherwise to twelve significant digits). It serves numbers no
+  fixed precision does, such as pattern matrices; `pdf_write_exact_real`
+  formats one on its own. An integral value is written as an integer up to
+  2147483647 in magnitude and with a decimal point beyond, where a PDF
+  integer may overflow (PDF 32000-1, Annex C). The parser never produces it;
+  `get_number` and the content, ExtGState and JSON helpers read it as a
+  real. Code that matches `PdfObject` exhaustively must handle it.
 - Reading a TrueType `cmap` (`pdf_truetype_cmap_glyphs`) now finds an earlier
   mapping of each codepoint through an index instead of scanning all mappings
   so far: expected linear work in the decoded mappings (overlapping and

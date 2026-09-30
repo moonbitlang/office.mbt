@@ -58,7 +58,8 @@ fn PdfDocument::pdf_util_json_of_object(
     PdfNull => Json::null()
     PdfBoolean(value) => Json::boolean(value)
     PdfInteger(value) => Json::object(Map([("I", pdf_util_json_number(value))]))
-    PdfReal(value) => Json::object(Map([("F", Json::number(value))]))
+    PdfReal(value) | PdfExactReal(value) =>
+      Json::object(Map([("F", Json::number(value))]))
     PdfString(bytes) =>
       if utf8 {
         let utf8_bytes = pdf_utf8_of_pdfdocstring(bytes) catch {

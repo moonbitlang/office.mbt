@@ -27,6 +27,7 @@ fn pdf_write_object_to(
     PdfBoolean(false) => pdf_writer_push_ascii(output, "false")
     PdfInteger(value) => pdf_writer_push_ascii(output, value.to_string())
     PdfReal(value) => pdf_writer_push_real(output, value)
+    PdfExactReal(value) => pdf_writer_push_exact_real(output, value)
     PdfString(bytes) => pdf_write_string_to(output, bytes)
     PdfNameObject(name) => pdf_write_name_to(output, name)
     PdfArray(values) => {
