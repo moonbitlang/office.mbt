@@ -4,7 +4,7 @@ Breaking and notable changes for the published modules in this workspace.
 Entries are grouped by module and by the version they ship in; `Unreleased`
 covers changes that have landed on `main` but are not yet published.
 
-### moonbitlang/pagelayout [Unreleased]
+### moonbitlang/pagelayout [0.4.0]
 
 - **BREAKING**: `LinkRegion::target` is a `LinkTarget` instead of a string:
   `Named(name)` jumps to the anchor `name` (a PDF named destination), and
