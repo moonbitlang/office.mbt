@@ -605,23 +605,55 @@ test "notdef_text leaves a font that needs no new codes as it was" {
 }
 
 ///|
-test "typo_metrics declares the OS/2 typographic ascent and descent" {
+test "typo_metrics declares the OS/2 typographic ascent, descent and cap height" {
   let registry = @fonts.FontRegistry::new()
   let face = registry.register("Own", sans())
   let model = family_model("Own", "Hi", face)
-  let hhea = as_text(
-    @pdf.render_pdf(model, options=@pdf.RenderOptions::new(fonts=registry)),
+  let hhea = @pdf.render_pdf(
+    model,
+    options=@pdf.RenderOptions::new(fonts=registry),
   )
-  let typo = as_text(
-    @pdf.render_pdf(
-      model,
-      options=@pdf.RenderOptions::new(fonts=registry, typo_metrics=true),
-    ),
+  let typo = @pdf.render_pdf(
+    model,
+    options=@pdf.RenderOptions::new(fonts=registry, typo_metrics=true),
   )
-  inspect(hhea.contains("/Ascent 905"), content="true")
-  inspect(typo.contains("/Ascent 728"), content="true")
-  inspect(typo.contains("/Descent -210"), content="true")
-  inspect(typo.contains("/CapHeight 728"), content="true")
+  // by default: hhea's ascent and descent (1854 and -434 of 2048 units),
+  // and the ascent again for the cap height
+  inspect(
+    descriptor_metrics(hhea),
+    content="/Ascent 905 /Descent -211 /CapHeight 905",
+  )
+  // Liberation Sans's OS/2 table: sTypoAscender 1491, sTypoDescender -431,
+  // sCapHeight 1409, each truncated to thousandths of an em
+  inspect(
+    descriptor_metrics(typo),
+    content="/Ascent 728 /Descent -210 /CapHeight 687",
+  )
+}
+
+///|
+test "typo_metrics takes the ascent for the cap height where OS/2 has none" {
+  let render = fn(program : Bytes) raise {
+    let registry = @fonts.FontRegistry::new()
+    let face = registry.register("Own", program)
+    descriptor_metrics(
+      @pdf.render_pdf(
+        family_model("Own", "Hi", face),
+        options=@pdf.RenderOptions::new(fonts=registry, typo_metrics=true),
+      ),
+    )
+  }
+  // sCapHeight first appears in version 2 (as Prawn reads it, through
+  // ttfunk): a version 1 table has the typographic ascent, not a cap height
+  inspect(
+    render(with_os2(sans(), version=1)),
+    content="/Ascent 728 /Descent -210 /CapHeight 728",
+  )
+  // nor does a version 2 table that ends before it
+  inspect(
+    render(with_os2(sans(), length=88)),
+    content="/Ascent 728 /Descent -210 /CapHeight 728",
+  )
 }
 
 ///|

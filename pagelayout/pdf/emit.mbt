@@ -405,18 +405,30 @@ fn os2_int16(program : Bytes, at : Int, version~ : Int) -> Int? {
 }
 
 ///|
-/// The ascent and descent a font descriptor declares, in thousandths of an
-/// em: `hhea`'s; with `typo_metrics`, the OS/2 typographic ones where
-/// the program has them (a version 1 or later table, nonzero values),
-/// truncated, as ttfunk and Prawn take them.
-fn descriptor_extent(face : PdfFace) -> (Double, Double) {
+/// The ascent, descent and cap height a font descriptor declares, in
+/// thousandths of an em.
+///
+/// By default: `hhea`'s ascent and descent, and the ascent again for the
+/// cap height.
+///
+/// With `typo_metrics`, as Prawn takes them through ttfunk: the OS/2
+/// typographic ascent and descent where the program has them (a version 1
+/// or later table, nonzero values), else `hhea`'s; and OS/2 `sCapHeight`
+/// where the program has it (a version 2 or later table, a nonzero value),
+/// else that ascent. All three are truncated toward zero, as Prawn's
+/// `Integer()` does. (Prawn 2.4 declares `sCapHeight` in the font's own
+/// units, unscaled; this scales it to thousandths of an em like every other
+/// descriptor metric, as PDF 32000-1 Table 122 requires.)
+fn descriptor_metrics(face : PdfFace) -> (Double, Double, Double) {
   let metrics = face.metrics
   let scale = 1000.0 / metrics.units_per_em.to_double()
   let mut ascent = metrics.ascender
   let mut descent = metrics.descender
   if !face.typo_metrics {
-    return (ascent.to_double() * scale, descent.to_double() * scale)
+    let ascent = ascent.to_double() * scale
+    return (ascent, descent.to_double() * scale, ascent)
   }
+  let mut cap_height = None
   if face.program is Some(program) {
     // sTypoAscender and sTypoDescender
     if os2_int16(program, 68, version=1) is Some(typo_ascent) &&
@@ -427,16 +439,29 @@ fn descriptor_extent(face : PdfFace) -> (Double, Double) {
       typo_descent != 0 {
       descent = typo_descent
     }
+    // sCapHeight
+    if os2_int16(program, 88, version=2) is Some(height) && height != 0 {
+      cap_height = Some(height)
+    }
   }
   // Ruby's Integer(): toward zero
-  let truncate = fn(value : Double) {
+  let truncate = fn(value : Int) {
+    let value = value.to_double() * scale
     if value < 0.0 {
       -(-value).floor()
     } else {
       value.floor()
     }
   }
-  (truncate(ascent.to_double() * scale), truncate(descent.to_double() * scale))
+  let ascent = truncate(ascent)
+  (
+    ascent,
+    truncate(descent),
+    match cap_height {
+      Some(height) => truncate(height)
+      None => ascent
+    },
+  )
 }
 
 ///|
@@ -448,7 +473,7 @@ fn font_descriptor(
   fontfile : @pdflite.PdfFontFile?,
   tounicode : Array[(Int, @core.PdfBytes)]?,
 ) -> @pdflite.PdfFontDescriptor {
-  let (ascent, descent) = descriptor_extent(face)
+  let (ascent, descent, capheight) = descriptor_metrics(face)
   {
     ascent,
     descent,
@@ -466,7 +491,7 @@ fn font_descriptor(
     } else {
       0.0
     },
-    capheight: ascent,
+    capheight,
     xheight: 0,
     stemv: if face.spec.bold {
       160.0
