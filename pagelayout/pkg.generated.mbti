@@ -116,6 +116,7 @@ pub(all) struct Gradient {
   stops : Array[GradientStop]
   transform : Matrix
 } derive(Eq, ToJson, @debug.Debug)
+pub fn Gradient::degenerate_color(Self) -> Color?
 #deprecated
 pub fn Gradient::equal(Self, Self) -> Bool
 #deprecated

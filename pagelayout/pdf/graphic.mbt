@@ -180,8 +180,8 @@ fn written_real(v : Double) -> Double {
 /// Only numbers of ordinary size are left to the shading, whose
 /// coordinates pdflite writes to limited precision; the gradient's own
 /// size goes into the pattern matrix, where it meets the transformations
-/// that scale it back to the page. A gradient without extent, which has
-/// no such space, keeps its own.
+/// that scale it back to the page. The shape has extent (a gradient
+/// without is painted as its colour; see `set_paint`).
 fn canonical_shape(
   shape : @pagelayout.GradientShape,
 ) -> (Int, Array[Double], @pagelayout.Matrix) {
@@ -189,21 +189,14 @@ fn canonical_shape(
     Linear(x1~, y1~, x2~, y2~) => {
       let dx = x2 - x1
       let dy = y2 - y1
-      if dx == 0.0 && dy == 0.0 {
-        return (2, [x1, y1, x2, y2], @pagelayout.identity)
-      }
       (2, [0, 0, 1, 0], { a: dx, b: dy, c: -dy, d: dx, e: x1, f: y1, })
     }
-    Radial(x1~, y1~, r1~, x2~, y2~, r2~) => {
-      if r2 == 0.0 {
-        return (3, [x1, y1, r1, x2, y2, r2], @pagelayout.identity)
-      }
+    Radial(x1~, y1~, r1~, x2~, y2~, r2~) =>
       (
         3,
         [(x1 - x2) / r2, (y1 - y2) / r2, r1 / r2, 0, 0, 1],
         { a: r2, b: 0, c: 0, d: r2, e: x2, f: y2, },
       )
-    }
   }
 }
 
@@ -421,6 +414,8 @@ fn emit_segments(
 
 ///|
 /// Set the fill (or stroke) paint, when it differs from the current one.
+/// A gradient without extent is its colour (see
+/// `@pagelayout.Gradient::degenerate_color`).
 fn set_paint(
   ops : Array[@content.PdfContentOp],
   state : PaintState,
@@ -429,6 +424,10 @@ fn set_paint(
   resources : GraphicResources,
   page : PageGraphics,
 ) -> Unit {
+  let paint : @pagelayout.Paint = match paint {
+    GradientPaint(g) if g.degenerate_color() is Some(colour) => Solid(colour)
+    paint => paint
+  }
   match paint {
     Solid(colour) => {
       let key = colour.to_hex()

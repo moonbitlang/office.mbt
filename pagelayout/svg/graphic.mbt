@@ -347,7 +347,9 @@ fn Defs::next(self : Defs, prefix : String) -> String {
 /// The value of a `fill` or `stroke` attribute for `paint`, writing a
 /// gradient's definition first unless the page has it already. A
 /// gradient's coordinates are in the user space of what it paints
-/// (`userSpaceOnUse`), so one definition serves wherever it is used.
+/// (`userSpaceOnUse`), so one definition serves wherever it is used. A
+/// gradient without extent is its colour (see
+/// `@pagelayout.Gradient::degenerate_color`).
 fn paint_attr(
   sb : StringBuilder,
   paint : @pagelayout.Paint,
@@ -355,6 +357,7 @@ fn paint_attr(
 ) -> String {
   match paint {
     Solid(color) => color.to_hex()
+    GradientPaint(g) if g.degenerate_color() is Some(color) => color.to_hex()
     GradientPaint(g) => {
       // the definition after its id
       let def = StringBuilder()

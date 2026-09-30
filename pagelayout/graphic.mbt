@@ -169,11 +169,34 @@ pub(all) enum GradientShape {
 /// colour sharply there, the later one taking over at the offset itself;
 /// at offset 0 that leaves only the last of them to count, and at offset
 /// 1 only the first.
+///
+/// A gradient whose shape has no extent paints its last stop's colour
+/// everywhere (see `Gradient::degenerate_color`).
 pub(all) struct Gradient {
   shape : GradientShape
   stops : Array[GradientStop]
   transform : Matrix
 } derive(Eq, Debug, ToJson)
+
+///|
+/// The one colour a gradient without extent paints, its last stop's: a
+/// linear gradient whose ends coincide, a radial one whose end circle has
+/// radius 0 (both as SVG specifies), or one whose circles coincide. `None`
+/// for any other gradient (or one without stops). PDF's shadings leave
+/// such shapes undefined, and renderers disagree about them, so both
+/// backends paint the colour, not a shading.
+pub fn Gradient::degenerate_color(self : Gradient) -> Color? {
+  let degenerate = match self.shape {
+    Linear(x1~, y1~, x2~, y2~) => x1 == x2 && y1 == y2
+    Radial(x1~, y1~, r1~, x2~, y2~, r2~) =>
+      r2 == 0.0 || (x1 == x2 && y1 == y2 && r1 == r2)
+  }
+  if degenerate && !self.stops.is_empty() {
+    Some(self.stops[self.stops.length() - 1].color)
+  } else {
+    None
+  }
+}
 
 ///|
 /// What fills or strokes a path.

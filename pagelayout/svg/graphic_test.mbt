@@ -445,6 +445,43 @@ test "a gradient used again on the page is defined once" {
 }
 
 ///|
+/// Gradients without extent, white to red to blue: a linear one whose ends
+/// coincide, a radial one whose end circle has radius 0, and one whose
+/// circles coincide.
+let degenerate_gradients : Array[@pagelayout.Gradient] = [
+  @pagelayout.GradientShape::Linear(x1=5, y1=5, x2=5, y2=5),
+  Radial(x1=1, y1=1, r1=2, x2=5, y2=5, r2=0),
+  Radial(x1=5, y1=5, r1=3, x2=5, y2=5, r2=3),
+].map(shape => {
+  shape,
+  stops: [
+    { offset: 0, color: @pagelayout.Color::rgb(255, 255, 255), },
+    { offset: 0.5, color: @pagelayout.Color::rgb(255, 0, 0), },
+    { offset: 1, color: @pagelayout.Color::rgb(0, 0, 255), },
+  ],
+  transform: @pagelayout.identity,
+})
+
+///|
+test "a gradient without extent paints its last stop's colour" {
+  let model = text_graphic(_ => {
+    degenerate_gradients.map(gradient => {
+      @pagelayout.GraphicOp::Path({
+        segments: [Rectangle(0, 0, 10, 10)],
+        fill: Some(GradientPaint(gradient)),
+        fill_rule: NonZero,
+        stroke: Some(GradientPaint(gradient)),
+        stroke_style: @pagelayout.StrokeStyle::default(),
+      })
+    })
+  })
+  assert_true(model.validate().is_empty())
+  let svg = @svg.render_page(model, 0)
+  assert_false(svg.contains("Gradient"))
+  assert_eq(svg.split("fill=\"#0000ff\" stroke=\"#0000ff\"").count() - 1, 3)
+}
+
+///|
 test "an image in a graphic is stretched to its rectangle" {
   let model = text_graphic(_ => {
     [

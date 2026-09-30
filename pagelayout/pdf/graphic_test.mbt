@@ -465,6 +465,42 @@ test "an image in a graphic is drawn upright and shares its XObject" {
 }
 
 ///|
+test "a gradient without extent paints its last stop's colour" {
+  let stops : Array[@pagelayout.GradientStop] = [
+    { offset: 0, color: white, },
+    { offset: 0.5, color: red, },
+    { offset: 1, color: blue, },
+  ]
+  let shapes : Array[@pagelayout.GradientShape] = [
+    Linear(x1=5, y1=5, x2=5, y2=5),
+    Radial(x1=1, y1=1, r1=2, x2=5, y2=5, r2=0),
+    Radial(x1=5, y1=5, r1=3, x2=5, y2=5, r2=3),
+  ]
+  for shape in shapes {
+    let gradient = @pagelayout.Gradient::{
+      shape,
+      stops,
+      transform: @pagelayout.identity,
+    }
+    let model = graphic_model([
+      Path({
+        segments: [Rectangle(0, 0, 10, 10)],
+        fill: Some(GradientPaint(gradient)),
+        fill_rule: NonZero,
+        stroke: Some(GradientPaint(gradient)),
+        stroke_style: @pagelayout.StrokeStyle::default(),
+      }),
+    ])
+    assert_true(model.validate().is_empty())
+    let bytes = @pdf.render_pdf(model)
+    assert_false(as_text(bytes).contains("/Shading"))
+    let text = try! as_decoded_text(bytes)
+    assert_true(text.contains("0 0 1 rg 0 0 1 RG"))
+    assert_false(text.contains("/Pattern"))
+  }
+}
+
+///|
 test "a dashed hairline is dashed in the graphic's space" {
   // PDF measures dashes in user space whatever the line width: ten units
   // scaled by ten, one on and one off, are five dashes ten points long,
