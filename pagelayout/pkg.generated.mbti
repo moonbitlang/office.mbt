@@ -129,7 +129,7 @@ pub(all) struct LinkRegion {
   y_pt : Double
   w_pt : Double
   h_pt : Double
-  target : String
+  target : LinkTarget
 } derive(Eq, ToJson, @debug.Debug)
 #deprecated
 pub fn LinkRegion::equal(Self, Self) -> Bool
@@ -139,6 +139,20 @@ pub fn LinkRegion::not_equal(Self, Self) -> Bool
 pub fn LinkRegion::to_json(Self) -> Json
 #deprecated
 pub fn LinkRegion::to_repr(Self) -> @debug.Repr
+
+pub(all) enum LinkTarget {
+  Named(String)
+  Uri(String)
+} derive(Eq, ToJson, @debug.Debug)
+#deprecated
+pub fn LinkTarget::equal(Self, Self) -> Bool
+#deprecated
+pub fn LinkTarget::not_equal(Self, Self) -> Bool
+pub fn LinkTarget::parse(String) -> Self
+#deprecated
+pub fn LinkTarget::to_json(Self) -> Json
+#deprecated
+pub fn LinkTarget::to_repr(Self) -> @debug.Repr
 
 pub(all) struct Page {
   width_pt : Double

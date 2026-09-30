@@ -6,6 +6,17 @@ covers changes that have landed on `main` but are not yet published.
 
 ### moonbitlang/pagelayout [Unreleased]
 
+- **BREAKING**: `LinkRegion::target` is a `LinkTarget` instead of a string:
+  `Named(name)` jumps to the anchor `name` (a PDF named destination), and
+  `Uri(uri)` opens `uri` as a URI action, even one that is only a fragment
+  such as `#name`, which a string target could not express (Ruby
+  asciidoctor-pdf writes `link:#name[]` that way, and an xref to `name` as
+  a jump). `LinkTarget::parse(string)` reads a string by the old
+  convention: `#name` is `Named(name)`, anything else `Uri`. A link region
+  serializes its target as `["Named", name]` or `["Uri", uri]`. Migration:
+  `target: s` becomes `target: LinkTarget::parse(s)`, which renders exactly
+  as before, or `target: Named(...)` / `target: Uri(...)`; code reading
+  `link.target` as a string matches on the two variants.
 - `RenderOptions::new(notdef_text=true)`: a character the face has no
   glyph for is drawn as its `.notdef` glyph and kept in the text layer, as
   Prawn does, instead of being left out of the page (its advance is kept

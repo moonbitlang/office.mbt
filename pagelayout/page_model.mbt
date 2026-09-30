@@ -112,19 +112,43 @@ pub(all) struct ImageItem {
 } derive(Eq, Debug, ToJson)
 
 ///|
+/// Where a `LinkRegion` leads.
+pub(all) enum LinkTarget {
+  /// The `AnchorItem` of this name (a named destination in PDF). A name no
+  /// anchor defines leaves a dead link.
+  Named(String)
+  /// A URI, opened as written. That includes one that is only a fragment,
+  /// `#name`: a viewer resolves it against the document's own location
+  /// rather than jumping to an anchor (Ruby asciidoctor-pdf writes
+  /// `link:#name[]` this way).
+  Uri(String)
+} derive(Eq, Debug, ToJson)
+
+///|
+/// The target a link string names by the convention `LinkRegion` targets
+/// were strings under: `#name` is the anchor `name`, anything else a URI.
+pub fn LinkTarget::parse(target : String) -> LinkTarget {
+  if target.has_prefix("#") {
+    Named(target[1:].to_owned())
+  } else {
+    Uri(target)
+  }
+}
+
+///|
 /// An interactive region (hyperlink); geometry only, painted by nothing.
-/// A `target` of the form `#name` jumps to the `AnchorItem` named `name`
-/// (a named destination in PDF); anything else is a URI.
+/// `LinkTarget::parse` reads a link string the way `target` was read when
+/// it was one.
 pub(all) struct LinkRegion {
   x_pt : Double
   y_pt : Double
   w_pt : Double
   h_pt : Double
-  target : String
+  target : LinkTarget
 } derive(Eq, Debug, ToJson)
 
 ///|
-/// A named position on a page that `#name` links and outlines jump to;
+/// A named position on a page that `Named(name)` links and outlines jump to;
 /// `(x_pt, y_pt)` is the point a viewer brings to the top-left of the
 /// window. Non-visual.
 pub(all) struct AnchorItem {

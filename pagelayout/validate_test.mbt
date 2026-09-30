@@ -17,8 +17,11 @@ test "image and link variants serialize to json" {
       y_pt: 20,
       w_pt: 30,
       h_pt: 12,
-      target: "https://a.example",
+      target: Uri("https://a.example"),
     }),
+  )
+  page.items.push(
+    Link({ x_pt: 10, y_pt: 40, w_pt: 30, h_pt: 12, target: Named("intro"), }),
   )
   json_inspect(page.items, content=[
     [
@@ -39,7 +42,17 @@ test "image and link variants serialize to json" {
         "y_pt": 20,
         "w_pt": 30,
         "h_pt": 12,
-        "target": "https://a.example",
+        "target": ["Uri", "https://a.example"],
+      },
+    ],
+    [
+      "Link",
+      {
+        "x_pt": 10,
+        "y_pt": 40,
+        "w_pt": 30,
+        "h_pt": 12,
+        "target": ["Named", "intro"],
       },
     ],
   ])

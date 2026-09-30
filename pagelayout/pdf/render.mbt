@@ -346,10 +346,10 @@ fn pdf_face(spec : @pagelayout.FontSpec, options : RenderOptions) -> PdfFace {
 /// dropped from its text. See the module comment in emit.mbt for why, and
 /// for what each choice costs.
 ///
-/// Link regions become link annotations: a `#name` target jumps to the
-/// named destination the `AnchorItem` called `name` defines (the first
-/// anchor of a name wins; a name no anchor defines leaves a dead link),
-/// anything else opens as a URI, written as ASCII (see `uri_bytes`).
+/// Link regions become link annotations: a `Named(name)` target jumps to
+/// the named destination the `AnchorItem` called `name` defines (the first
+/// anchor of a name wins; a name no anchor defines leaves a dead link), a
+/// `Uri` target opens as a URI, written as ASCII (see `uri_bytes`).
 ///
 /// `options` adds the outline, metadata and catalog settings (see
 /// `RenderOptions`); `render_pdf(model)` uses the bundled fonts and writes
@@ -815,25 +815,23 @@ fn text_string(text : String) -> Bytes {
 
 ///|
 /// A link annotation over `link`'s box: a named-destination jump for a
-/// `#name` target, a URI action otherwise. Borderless, as a link in
-/// running text is expected to be.
+/// `Named` target, a URI action for a `Uri` one (even one that is only a
+/// `#fragment`). Borderless, as a link in running text is expected to be.
 fn link_annotation(
   link : @pagelayout.LinkRegion,
   page_height : Double,
 ) -> @syntax.PdfObject {
-  let target : (@core.PdfName, @syntax.PdfObject) = if link.target.has_prefix(
-      "#",
-    ) {
-    (name("/Dest"), PdfString(@utf8.encode(link.target[1:].to_owned())))
-  } else {
-    (
-      name("/A"),
-      PdfDictionary([
-        (name("/Type"), PdfNameObject(name("/Action"))),
-        (name("/S"), PdfNameObject(name("/URI"))),
-        (name("/URI"), PdfString(uri_bytes(link.target))),
-      ]),
-    )
+  let target : (@core.PdfName, @syntax.PdfObject) = match link.target {
+    Named(destination) => (name("/Dest"), PdfString(@utf8.encode(destination)))
+    Uri(uri) =>
+      (
+        name("/A"),
+        PdfDictionary([
+          (name("/Type"), PdfNameObject(name("/Action"))),
+          (name("/S"), PdfNameObject(name("/URI"))),
+          (name("/URI"), PdfString(uri_bytes(uri))),
+        ]),
+      )
   }
   PdfDictionary([
     (name("/Type"), PdfNameObject(name("/Annot"))),
@@ -867,7 +865,7 @@ fn link_annotation(
 /// (text links) or as a UTF-16 text string (image links); neither is an
 /// ASCII URI, and both mean the URI this function writes.
 ///
-/// Named destinations (`#name` targets) are byte-string identifiers, not
+/// Named destinations (`Named` targets) are byte-string identifiers, not
 /// URIs, and keep their UTF-8 bytes.
 fn uri_bytes(target : String) -> Bytes {
   let bytes = @utf8.encode(target)

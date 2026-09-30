@@ -110,3 +110,14 @@ test "page model serializes to canonical json (one-way; no FromJson yet)" {
     ],
   })
 }
+
+///|
+test "LinkTarget::parse reads a link string by the #name convention" {
+  assert_eq(@pagelayout.LinkTarget::parse("#intro"), Named("intro"))
+  assert_eq(@pagelayout.LinkTarget::parse("#"), Named(""))
+  assert_eq(
+    @pagelayout.LinkTarget::parse("https://a.example/#intro"),
+    Uri("https://a.example/#intro"),
+  )
+  assert_eq(@pagelayout.LinkTarget::parse("intro"), Uri("intro"))
+}
