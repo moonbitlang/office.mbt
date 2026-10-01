@@ -224,10 +224,22 @@ fn pdf_truetype_subset_font_directory(
 /// payloads are written in source table-order. Set `rewrite_cmap=true` for the
 /// source `ImplicitInFontFile` higher-subset path; the default preserves the
 /// original cmap table like the main subset path.
+///
+/// The `head` table is the source font's, bounding box included, as cpdf
+/// writes it. Set `recompute_head=true` to write it as TTFunk (Prawn)
+/// writes a subset's instead: the bounding box (`xMin`, `yMin`, `xMax`,
+/// `yMax`) is the union of the bounding boxes in the headers of the glyphs
+/// the subset keeps, simple and composite (`(0, 0, 0, 0)` if none has an
+/// outline), every table's directory checksum is recomputed from the
+/// subset's bytes, and `checkSumAdjustment` is set so that the whole font
+/// sums to `0xB1B0AFBA`. A renderer may size its glyph cache from the
+/// font's bounding box, so a subset carrying the full font's box can
+/// rasterize differently from one carrying its own.
 pub fn pdf_truetype_subset_font(
   data : BytesView,
   subset_codepoints : ArrayView[Int],
   rewrite_cmap? : Bool = false,
+  recompute_head? : Bool = false,
 ) -> @core.PdfBytes raise @core.PdfError {
   let major = pdf_truetype_required_u16(data, 0, "font header")
   let minor = pdf_truetype_required_u16(data, 2, "font header")
@@ -261,5 +273,111 @@ pub fn pdf_truetype_subset_font(
   for payload in payloads {
     position = pdf_truetype_write_view_at(output, position, payload.bytes)
   }
+  if recompute_head {
+    pdf_truetype_recompute_head(Bytes::from_array(output))
+  } else {
+    Bytes::from_array(output)
+  }
+}
+
+///|
+/// The checksum of `length` bytes of a font from `offset` (OpenType `head`
+/// table, "Calculating Checksums"): the sum, modulo 2^32, of its big-endian
+/// 32-bit words, a short last word padded with zeros.
+fn pdf_truetype_checksum(
+  data : ArrayView[Byte],
+  offset : Int,
+  length : Int,
+) -> UInt {
+  let end = offset + length
+  let mut sum = 0U
+  for word_start = offset; word_start < end; word_start = word_start + 4 {
+    let mut word = 0U
+    for index in word_start..<(word_start + 4) {
+      let byte = if index < end && index < data.length() {
+        data[index].to_uint()
+      } else {
+        0U
+      }
+      word = (word << 8) | byte
+    }
+    sum = sum + word
+  }
+  sum
+}
+
+///|
+/// The union of the bounding boxes in the headers of a font's glyphs
+/// (`xMin`, `yMin`, `xMax`, `yMax`), simple and composite alike; a glyph
+/// with no outline (a zero-length `loca` range) has none. A font whose
+/// glyphs are all empty has the box `(0, 0, 0, 0)`.
+fn pdf_truetype_glyph_bounds(
+  data : BytesView,
+) -> (Int, Int, Int, Int) raise @core.PdfError {
+  let glyf = pdf_truetype_required_table(data, "glyf")
+  let offsets = pdf_truetype_loca_offsets(data)
+  let mut bounds : (Int, Int, Int, Int)? = None
+  for index in 0..<(offsets.length() - 1) {
+    let start = offsets[index]
+    if offsets[index + 1] <= start {
+      continue
+    }
+    let at = glyf.offset + start
+    let x_min = pdf_truetype_required_i16(data, at + 2, "glyf table")
+    let y_min = pdf_truetype_required_i16(data, at + 4, "glyf table")
+    let x_max = pdf_truetype_required_i16(data, at + 6, "glyf table")
+    let y_max = pdf_truetype_required_i16(data, at + 8, "glyf table")
+    bounds = Some(
+      match bounds {
+        None => (x_min, y_min, x_max, y_max)
+        Some((left, bottom, right, top)) =>
+          (left.min(x_min), bottom.min(y_min), right.max(x_max), top.max(y_max))
+      },
+    )
+  }
+  bounds.unwrap_or((0, 0, 0, 0))
+}
+
+///|
+/// Rewrite a font's `head` table as TTFunk's subsetter writes a subset's:
+/// the bounding box is the union of the glyphs the font has outlines for,
+/// every table's directory checksum is recomputed, and `checkSumAdjustment`
+/// makes the whole font sum to `0xB1B0AFBA`.
+fn pdf_truetype_recompute_head(
+  font : Bytes,
+) -> @core.PdfBytes raise @core.PdfError {
+  let head = pdf_truetype_required_table(font, "head")
+  if head.length < 54 || head.offset + 54 > font.length() {
+    raise SoftError("Truncated TrueType head table")
+  }
+  let (x_min, y_min, x_max, y_max) = pdf_truetype_glyph_bounds(font)
+  let output = font.to_array()
+  // checkSumAdjustment is zero while the checksums are taken
+  ignore(pdf_truetype_write_u32_uint_at(output, head.offset + 8, 0U))
+  for index, value in [x_min, y_min, x_max, y_max] {
+    ignore(
+      pdf_truetype_write_u16_at(
+        output,
+        head.offset + 36 + index * 2,
+        value & 0xFFFF,
+      ),
+    )
+  }
+  for index, record in pdf_truetype_tables(font) {
+    ignore(
+      pdf_truetype_write_u32_uint_at(
+        output,
+        12 + index * 16 + 4,
+        pdf_truetype_checksum(output, record.offset, record.length),
+      ),
+    )
+  }
+  ignore(
+    pdf_truetype_write_u32_uint_at(
+      output,
+      head.offset + 8,
+      0xB1B0AFBAU - pdf_truetype_checksum(output, 0, output.length()),
+    ),
+  )
   Bytes::from_array(output)
 }

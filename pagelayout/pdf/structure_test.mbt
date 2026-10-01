@@ -259,6 +259,37 @@ test "each initial zoom is its own destination" {
   inspect(open_action(Fit), content="/Fit")
   inspect(open_action(FitH), content="/FitH 100")
   inspect(open_action(FitV), content="/FitV 0")
+  // positions measured like a page item's, from the page's top-left corner
+  inspect(open_action(FitHAt(top=0)), content="/FitH 100")
+  inspect(open_action(FitHAt(top=30)), content="/FitH 70")
+  // above the page: Prawn's top, the last page's height, on a shorter
+  // first page
+  inspect(open_action(FitHAt(top=100.0 - 841.89)), content="/FitH 841.89")
+  inspect(open_action(FitVAt(left=0)), content="/FitV 0")
+  inspect(open_action(FitVAt(left=12.5)), content="/FitV 12.5")
+}
+
+///|
+test "an initial zoom position must be finite" {
+  for
+    zoom in [
+      @pdf.FitHAt(top=0.0 / 0.0),
+      FitHAt(top=1.0 / 0.0),
+      FitVAt(left=-1.0 / 0.0),
+    ] {
+    try
+      @pdf.render_pdf(
+        text_model("x"),
+        options=@pdf.RenderOptions::new(initial_zoom=zoom),
+      )
+    catch {
+      @pdf.RenderOptionError(message) =>
+        assert_true(message.has_prefix("initial zoom position"))
+      e => fail("unexpected error \{e}")
+    } noraise {
+      _ => fail("\{@debug.to_string(zoom)} was accepted")
+    }
+  }
 }
 
 ///|

@@ -51,6 +51,8 @@ pub(all) enum InitialZoom {
   Fit
   FitH
   FitV
+  FitHAt(top~ : Double)
+  FitVAt(left~ : Double)
 } derive(Eq, @debug.Debug)
 #deprecated
 pub fn InitialZoom::equal(Self, Self) -> Bool
