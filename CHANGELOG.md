@@ -15,23 +15,26 @@ covers changes that have landed on `main` but are not yet published.
 ### moonbitlang/pagelayout [Unreleased]
 
 - Embedded TrueType subsets now carry their own `head` bounding box, the
-  union of the boxes of the glyphs they keep, instead of the whole font's,
-  and valid table checksums and `checkSumAdjustment`, as TTFunk (Prawn,
-  asciidoctor-pdf) writes a subset. Poppler derives its glyph cache cells
-  from the font's box, so the whole font's box made pagelayout's text
-  anti-alias differently from Prawn's. The embedded font bytes change;
-  layout, extracted text and SVG output do not, and PDF rasters differ
-  only in glyph edge anti-aliasing. Uses pdflite's new `recompute_head`
-  option, so this release of pagelayout requires the pdflite release that
-  carries it.
+  union of the boxes in the headers of the glyphs they keep, instead of the
+  whole font's, and valid table checksums and `checkSumAdjustment`, as
+  TTFunk (Prawn, asciidoctor-pdf) writes a subset. Poppler derives its
+  glyph cache cells from the font's box, so the whole font's box made
+  pagelayout's text anti-alias differently from Prawn's. The embedded font
+  bytes change. On the office-cli DOCX fixtures, extracted text, layout and
+  SVG output were unchanged and PDF rasters differed only along glyph edges
+  (about 0.05–0.09% of pixels). The recomputed box trusts the glyph
+  headers: a font whose headers underreport its outlines' extent is not
+  corrected. Uses pdflite's new `recompute_head` option, so this release
+  of pagelayout requires the pdflite release that carries it.
 - **BREAKING** (exhaustive matches only): `InitialZoom` has two new
   variants, `FitHAt(top~)` and `FitVAt(left~)`, an open action at a given
   position: `[page /FitH t]` with the window's top `top` points below the
   first page's top edge (measured like a page item's `y_pt`; negative is
   above the page), and `[page /FitV left]`. `FitH` and `FitV` are
-  unchanged (`FitHAt(top=0)` and `FitVAt(left=0)`). Prawn (asciidoctor-pdf)
-  writes the *last* page's height as the first page's `/FitH` top, which is
-  `FitHAt(top=first_height - last_height)`. `render_pdf` raises
+  unchanged (`FitHAt(top=0)` and `FitVAt(left=0)`). asciidoctor-pdf takes
+  the first page's `/FitH` top from the height of the page that is current
+  when it sets the open action (before any back cover is added), which is
+  `FitHAt(top=first_height - current_height)`. `render_pdf` raises
   `RenderOptionError` for a position that is not finite. Code that
   constructs `InitialZoom` is unaffected; code that matches it exhaustively
   must handle the new variants.
@@ -42,10 +45,14 @@ covers changes that have landed on `main` but are not yet published.
   `recompute_head=true` the subset's `head` table is written as TTFunk 1.7
   writes a subset's: the bounding box (`xMin`, `yMin`, `xMax`, `yMax`) is
   the union of the boxes in the headers of the glyphs the subset keeps,
-  simple and composite (all zero when none has an outline), every table's
-  directory checksum is recomputed, and `checkSumAdjustment` makes the font
-  sum to `0xB1B0AFBA`. The default keeps cpdf's output, the source font's
-  `head` and checksums, byte for byte.
+  simple and composite, every table's directory checksum is recomputed,
+  and `checkSumAdjustment` makes the font sum to `0xB1B0AFBA`. Only glyphs
+  with an empty `loca` range are skipped; as an exception kept for parity
+  with TTFunk 1.7.0, a glyph that has data but `numberOfContours == 0`
+  still contributes the box stored in its header, where OpenType's `head`
+  box covers only glyphs with contours. The box is all zero when every
+  kept glyph has an empty `loca` range. The default keeps cpdf's output,
+  the source font's `head` and checksums, byte for byte.
 
 ### moonbitlang/pagelayout [0.6.0]
 

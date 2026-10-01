@@ -130,9 +130,10 @@ pub(all) enum InitialZoom {
   /// The page's width, the point `top` points below the page's top edge at
   /// the top of the window: `[page /FitH t]` with `t` the page's height
   /// less `top`. `top` is measured like a page item's `y_pt`, so
-  /// `FitHAt(top=0)` is `FitH`. It may be negative, above the page: Prawn
-  /// (asciidoctor-pdf) writes the *last* page's height as the first page's
-  /// `/FitH` top, which is `FitHAt(top=first_height - last_height)`.
+  /// `FitHAt(top=0)` is `FitH`. It may be negative, above the page:
+  /// asciidoctor-pdf takes the first page's `/FitH` top from the height of
+  /// the page that is current when it sets the open action (before any back
+  /// cover is added), which is `FitHAt(top=first_height - current_height)`.
   FitHAt(top~ : Double)
   /// The page's height, the point `left` points right of the page's left
   /// edge at the left of the window (`[page /FitV left]`). `FitVAt(left=0)`

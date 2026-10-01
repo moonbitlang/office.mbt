@@ -229,12 +229,19 @@ fn pdf_truetype_subset_font_directory(
 /// writes it. Set `recompute_head=true` to write it as TTFunk (Prawn)
 /// writes a subset's instead: the bounding box (`xMin`, `yMin`, `xMax`,
 /// `yMax`) is the union of the bounding boxes in the headers of the glyphs
-/// the subset keeps, simple and composite (`(0, 0, 0, 0)` if none has an
-/// outline), every table's directory checksum is recomputed from the
-/// subset's bytes, and `checkSumAdjustment` is set so that the whole font
-/// sums to `0xB1B0AFBA`. A renderer may size its glyph cache from the
-/// font's bounding box, so a subset carrying the full font's box can
-/// rasterize differently from one carrying its own.
+/// the subset keeps, simple and composite, every table's directory checksum
+/// is recomputed from the subset's bytes, and `checkSumAdjustment` is set
+/// so that the whole font sums to `0xB1B0AFBA`. A renderer may size its
+/// glyph cache from the font's bounding box, so a subset carrying the full
+/// font's box can rasterize differently from one carrying its own.
+///
+/// Only glyphs with an empty `loca` range are left out of the box. As an
+/// exception kept for parity with TTFunk 1.7.0, a glyph that has data but
+/// `numberOfContours == 0` still contributes the box stored in its header,
+/// where OpenType's `head` box covers only glyphs with contours. The box is
+/// `(0, 0, 0, 0)` when every kept glyph has an empty `loca` range. The
+/// headers are trusted as stored: a box that underreports a glyph's
+/// outline is not corrected.
 pub fn pdf_truetype_subset_font(
   data : BytesView,
   subset_codepoints : ArrayView[Int],
@@ -308,9 +315,11 @@ fn pdf_truetype_checksum(
 
 ///|
 /// The union of the bounding boxes in the headers of a font's glyphs
-/// (`xMin`, `yMin`, `xMax`, `yMax`), simple and composite alike; a glyph
-/// with no outline (a zero-length `loca` range) has none. A font whose
-/// glyphs are all empty has the box `(0, 0, 0, 0)`.
+/// (`xMin`, `yMin`, `xMax`, `yMax`), simple and composite alike, as TTFunk
+/// 1.7.0 aggregates them: only a glyph with a zero-length `loca` range is
+/// skipped, so a glyph with data but no contours still counts its stored
+/// header box (OpenType would leave it out). A font whose glyphs are all
+/// empty has the box `(0, 0, 0, 0)`.
 fn pdf_truetype_glyph_bounds(
   data : BytesView,
 ) -> (Int, Int, Int, Int) raise @core.PdfError {

@@ -262,11 +262,36 @@ test "each initial zoom is its own destination" {
   // positions measured like a page item's, from the page's top-left corner
   inspect(open_action(FitHAt(top=0)), content="/FitH 100")
   inspect(open_action(FitHAt(top=30)), content="/FitH 70")
-  // above the page: Prawn's top, the last page's height, on a shorter
-  // first page
+  // above the page: asciidoctor-pdf's top, a taller page's height, on a
+  // shorter first page
   inspect(open_action(FitHAt(top=100.0 - 841.89)), content="/FitH 841.89")
   inspect(open_action(FitVAt(left=0)), content="/FitV 0")
   inspect(open_action(FitVAt(left=12.5)), content="/FitV 12.5")
+}
+
+///|
+test "a positioned initial zoom is measured on the first page" {
+  // a short first page (200 x 100) followed by a taller one (300 x 841.89)
+  let model = text_model("x")
+  model.pages.push({ width_pt: 300, height_pt: 841.89, items: [], })
+  let open_action = fn(zoom : @pdf.InitialZoom) raise {
+    let document = @pdflite.pdf_read_document_from_bytes(
+      @pdf.render_pdf(model, options=@pdf.RenderOptions::new(initial_zoom=zoom)),
+    )
+    guard document.catalog().lookup_immediate(name("/OpenAction"))
+      is Some(PdfArray([PdfIndirect(page), PdfNameObject(fit), .. rest])) else {
+      fail("no open action")
+    }
+    assert_true(page == document.page_reference_numbers()[0])
+    [name_text(fit), ..rest.map(number)].join(" ")
+  }
+  // the top is converted against the first page's height, not the second's
+  inspect(open_action(FitHAt(top=0)), content="/FitH 100")
+  inspect(open_action(FitHAt(top=40)), content="/FitH 60")
+  // asciidoctor-pdf's top when the taller page is current: above the first
+  inspect(open_action(FitHAt(top=100.0 - 841.89)), content="/FitH 841.89")
+  inspect(open_action(FitVAt(left=0)), content="/FitV 0")
+  inspect(open_action(FitVAt(left=25)), content="/FitV 25")
 }
 
 ///|

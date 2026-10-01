@@ -172,6 +172,37 @@ test "recompute_head writes an all-zero box when no kept glyph has an outline" {
 }
 
 ///|
+test "recompute_head counts the stored box of a glyph with no contours" {
+  // TTFunk 1.7.0 parity, unlike OpenType: only an empty loca range is
+  // skipped, so a glyph with data but numberOfContours == 0 still counts
+  let contourless : Array[Int] = []
+  for value in [0, 10, 20, 30, 40] {
+    truetype_push_i16_for_test(contourless, value)
+  }
+  // glyph 0 (.notdef) empty, glyph 1 the contourless glyph, mapped from `A`
+  let (glyf, offsets) = truetype_glyf_table_for_test([[], contourless])
+  let font = truetype_table_font_for_test([
+    ("head", truetype_head_table_for_test(1000, -999, -999, 1999, 1999, 1)),
+    ("maxp", truetype_maxp_table_for_test(2)),
+    (
+      "cmap",
+      truetype_cmap_table_for_test([
+        (3, 1, truetype_format6_subtable_for_test(65, [1])),
+      ]),
+    ),
+    ("loca", truetype_loca_long_table_for_test(offsets)),
+    ("glyf", glyf),
+  ])
+  let subset = try! @pdflite.pdf_truetype_subset_font(
+    font,
+    [65],
+    recompute_head=true,
+  )
+  @test.assert_eq(truetype_head_bbox_for_test(subset), (10, 20, 30, 40))
+  assert_true(truetype_checksums_valid_for_test(subset))
+}
+
+///|
 test "recompute_head writes valid checksums and only changes the head" {
   let font = truetype_head_bbox_font_for_test(notdef_outline=true)
   let plain = try! @pdflite.pdf_truetype_subset_font(font, [65, 66])
