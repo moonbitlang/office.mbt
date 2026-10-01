@@ -225,6 +225,11 @@ fn pdf_truetype_subset_font_directory(
 /// source `ImplicitInFontFile` higher-subset path; the default preserves the
 /// original cmap table like the main subset path.
 ///
+/// The directory header's `searchRange`, `entrySelector` and `rangeShift`
+/// are computed as OpenType specifies, from `floor(log2(numTables))`; this
+/// departs from cpdf, which writes `entrySelector` as `int(ln(searchRange /
+/// 16))` and `rangeShift` as `numTables * 16`.
+///
 /// The `head` table is the source font's, bounding box included, as cpdf
 /// writes it. Set `recompute_head=true` to write it as TTFunk (Prawn)
 /// writes a subset's instead: the bounding box (`xMin`, `yMin`, `xMax`,
@@ -255,7 +260,9 @@ pub fn pdf_truetype_subset_font(
     data, sorted_tables, subset_codepoints, rewrite_cmap,
   )
   let table_count = records.length()
-  let search_power = pdf_truetype_power_two_leq(table_count)
+  let (search_range, entry_selector, range_shift) = pdf_truetype_table_directory_search_fields(
+    table_count,
+  )
   let mut output_length = 12 + table_count * 16
   for payload in payloads {
     output_length += payload.bytes.length()
@@ -264,13 +271,9 @@ pub fn pdf_truetype_subset_font(
   let mut position = pdf_truetype_write_u16_at(output, 0, major)
   position = pdf_truetype_write_u16_at(output, position, minor)
   position = pdf_truetype_write_u16_at(output, position, table_count)
-  position = pdf_truetype_write_u16_at(output, position, 16 * search_power)
-  position = pdf_truetype_write_u16_at(
-    output,
-    position,
-    pdf_truetype_source_entry_selector(search_power),
-  )
-  position = pdf_truetype_write_u16_at(output, position, table_count * 16)
+  position = pdf_truetype_write_u16_at(output, position, search_range)
+  position = pdf_truetype_write_u16_at(output, position, entry_selector)
+  position = pdf_truetype_write_u16_at(output, position, range_shift)
   for record in records {
     position = pdf_truetype_write_tag_at(output, position, record.tag)
     position = pdf_truetype_write_u32_uint_at(output, position, record.checksum)

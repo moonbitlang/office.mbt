@@ -173,15 +173,19 @@ fn pdf_truetype_write_view_at(
 }
 
 ///|
-fn pdf_truetype_power_two_leq(value : Int) -> Int {
-  let mut current = 1
-  while current * 2 <= value {
-    current *= 2
+/// The binary-search fields of an sfnt table directory header for
+/// `table_count` tables, as `(searchRange, entrySelector, rangeShift)`
+/// (OpenType "Table Directory"): with `p = floor(log2(table_count))`,
+/// `searchRange = 2^p * 16`, `entrySelector = p` and
+/// `rangeShift = table_count * 16 - searchRange`. A count below one is
+/// treated as one.
+fn pdf_truetype_table_directory_search_fields(
+  table_count : Int,
+) -> (Int, Int, Int) {
+  for power = 1, log2 = 0; power * 2 <= table_count; {
+    continue power * 2, log2 + 1
+  } nobreak {
+    let search_range = power * 16
+    (search_range, log2, (table_count * 16 - search_range).max(0))
   }
-  current
-}
-
-///|
-fn pdf_truetype_source_entry_selector(power_two : Int) -> Int {
-  @math.ln(power_two.to_double()).to_int()
 }
