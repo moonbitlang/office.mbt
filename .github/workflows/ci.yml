@@ -57,6 +57,9 @@ jobs:
     timeout-minutes: 20
     env:
       EXPECTED_HEAD: ${{ github.event.pull_request.head.sha || github.sha }}
+      # Warnings are errors on the stable channel. Nightly only reports them:
+      # it surfaces upstream deprecations before stable has the replacement.
+      DENY_WARN: ${{ matrix.channel == 'latest' && '--deny-warn' || '' }}
     steps:
       - name: Checkout
         uses: actions/checkout@v5
@@ -100,19 +103,19 @@ jobs:
 
       # Type check all workspace members (native).
       - name: Type check
-        run: moon check
+        run: moon check $DENY_WARN
 
       # Type check all workspace members for the wasm backend. mbtexcel's library + xlsx
       # CLI target wasm; docx2html's library packages also build for wasm (its
       # native-only CLI is skipped for this target).
       - name: Type check (wasm)
-        run: moon check --target wasm
+        run: moon check $DENY_WARN --target wasm
 
       # Keep the JavaScript runtime honest as well. Floating-point formatting
       # and target-specific package declarations have both regressed here
       # without affecting native or Wasm builds.
       - name: Type check (js)
-        run: moon check --target js
+        run: moon check $DENY_WARN --target js
 
   # The three test backends. Previously three serial steps in one job.
   #
