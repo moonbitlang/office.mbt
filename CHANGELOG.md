@@ -12,7 +12,7 @@ Breaking and notable changes for the published modules in this workspace.
 Entries are grouped by module and by the version they ship in; `Unreleased`
 covers changes that have landed on `main` but are not yet published.
 
-### moonbitlang/pagelayout [Unreleased]
+### moonbitlang/pagelayout [0.7.0]
 
 - Embedded TrueType subsets now carry their own `head` bounding box, the
   union of the boxes in the headers of the glyphs they keep, instead of the
@@ -25,7 +25,7 @@ covers changes that have landed on `main` but are not yet published.
   (about 0.05–0.09% of pixels). The recomputed box trusts the glyph
   headers: a font whose headers underreport its outlines' extent is not
   corrected. Uses pdflite's new `recompute_head` option, so this release
-  of pagelayout requires the pdflite release that carries it.
+  of pagelayout requires moonbitlang/pdflite 0.3.1.
 - **BREAKING** (exhaustive matches only): `InitialZoom` has two new
   variants, `FitHAt(top~)` and `FitVAt(left~)`, an open action at a given
   position: `[page /FitH t]` with the window's top `top` points below the
@@ -39,7 +39,7 @@ covers changes that have landed on `main` but are not yet published.
   constructs `InitialZoom` is unaffected; code that matches it exhaustively
   must handle the new variants.
 
-### moonbitlang/pdflite [Unreleased]
+### moonbitlang/pdflite [0.3.1]
 
 - `pdf_truetype_subset_font` takes `recompute_head? : Bool = false`. With
   `recompute_head=true` the subset's `head` table is written as TTFunk 1.7
