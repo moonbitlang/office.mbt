@@ -100,19 +100,19 @@ jobs:
 
       # Type check all workspace members (native).
       - name: Type check
-        run: moon check
+        run: moon check --deny-warn
 
       # Type check all workspace members for the wasm backend. mbtexcel's library + xlsx
       # CLI target wasm; docx2html's library packages also build for wasm (its
       # native-only CLI is skipped for this target).
       - name: Type check (wasm)
-        run: moon check --target wasm
+        run: moon check --deny-warn --target wasm
 
       # Keep the JavaScript runtime honest as well. Floating-point formatting
       # and target-specific package declarations have both regressed here
       # without affecting native or Wasm builds.
       - name: Type check (js)
-        run: moon check --target js
+        run: moon check --deny-warn --target js
 
   # The three test backends. Previously three serial steps in one job.
   #
