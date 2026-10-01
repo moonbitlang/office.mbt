@@ -1581,7 +1581,7 @@ pub fn pdf_truetype_partition_subsets(PdfEncoding, ArrayView[Int]) -> @truetype.
 
 pub fn pdf_truetype_subset_cmap_table(BytesView, ArrayView[Int]) -> @truetype.PdfTrueTypeSubsetTable raise @core.PdfError
 
-pub fn pdf_truetype_subset_font(BytesView, ArrayView[Int], rewrite_cmap? : Bool) -> Bytes raise @core.PdfError
+pub fn pdf_truetype_subset_font(BytesView, ArrayView[Int], rewrite_cmap? : Bool, recompute_head? : Bool) -> Bytes raise @core.PdfError
 
 pub fn pdf_truetype_subset_glyf_table(BytesView, ArrayView[Int]) -> @truetype.PdfTrueTypeSubsetTable raise @core.PdfError
 

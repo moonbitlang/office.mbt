@@ -811,12 +811,21 @@ fn postscript_name(program : Bytes) -> String? {
 /// Subset a font program to the characters used and add it as a
 /// flate-compressed `/FontFile2` stream. `/Length1` is the *uncompressed*
 /// program length, so it is taken before the stream is encoded.
+///
+/// The subset's `head` is written as TTFunk (Prawn) writes a subset's: its
+/// bounding box is that of the glyphs kept, not the whole font's, and its
+/// checksums are valid. Poppler sizes its glyph cache from that box, so a
+/// subset carrying the whole font's box is anti-aliased differently.
 fn embedded_program(
   document : @pdflite.PdfDocument,
   program : Bytes,
   codepoints : Array[Int],
 ) -> Int raise {
-  let subset = @pdflite.pdf_truetype_subset_font(program, codepoints)
+  let subset = @pdflite.pdf_truetype_subset_font(
+    program,
+    codepoints,
+    recompute_head=true,
+  )
   let stream = @syntax.pdf_stream(
     PdfDictionary([
       (name("/Length"), PdfInteger(subset.length())),

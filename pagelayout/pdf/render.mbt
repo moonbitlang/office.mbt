@@ -369,7 +369,8 @@ fn pdf_face(spec : @pagelayout.FontSpec, options : RenderOptions) -> PdfFace {
 /// `RenderOptions`); `render_pdf(model)` uses the bundled fonts and writes
 /// none of them. Raises `RenderOptionError` for options it cannot honour:
 /// page labels that do not match the page count, malformed dates, custom
-/// metadata keys that are empty, repeated or name a standard entry.
+/// metadata keys that are empty, repeated or name a standard entry, an
+/// initial zoom position that is not finite.
 pub fn render_pdf(
   model : @pagelayout.PageModel,
   options? : RenderOptions = RenderOptions::new(),
@@ -379,6 +380,15 @@ pub fn render_pdf(
     raise RenderOptionError(
       "\{options.page_labels.length()} page labels for \{model.pages.length()} pages",
     )
+  }
+  match options.initial_zoom {
+    Some(FitHAt(top=position) | FitVAt(left=position)) =>
+      if position.is_nan() || position.is_inf() {
+        raise RenderOptionError(
+          "initial zoom position \{position} is not finite",
+        )
+      }
+    _ => ()
   }
   let document = @pdflite.pdf_document_empty()
   document.set_version(1, 7)
@@ -714,6 +724,9 @@ fn add_navigation(
         Fit => [PdfNameObject(name("/Fit"))]
         FitH => [PdfNameObject(name("/FitH")), PdfReal(height)]
         FitV => [PdfNameObject(name("/FitV")), PdfReal(0.0)]
+        FitHAt(top~) =>
+          [PdfNameObject(name("/FitH")), PdfReal(flip(height, top))]
+        FitVAt(left~) => [PdfNameObject(name("/FitV")), PdfReal(left)]
       }
       catalog.push((name("/OpenAction"), PdfArray([PdfIndirect(first), ..fit])))
     }
