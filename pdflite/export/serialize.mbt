@@ -128,7 +128,11 @@ fn SerializeContext::new_ref(self : SerializeContext) -> Int {
 }
 
 ///|
-fn SerializeContext::put(self : SerializeContext, ref_ : Int, obj : Obj) -> Unit {
+fn SerializeContext::put(
+  self : SerializeContext,
+  ref_ : Int,
+  obj : Obj,
+) -> Unit {
   self.objects[ref_] = Plain(obj)
 }
 
@@ -203,7 +207,10 @@ fn SerializeContext::register_validation_error(
 }
 
 ///|
-fn SerializeContext::set_location(self : SerializeContext, loc : Location) -> Unit {
+fn SerializeContext::set_location(
+  self : SerializeContext,
+  loc : Location,
+) -> Unit {
   self.location = Some(loc)
 }
 

@@ -43,7 +43,7 @@ priv struct CIDFont {
 
 ///|
 fn CIDFont::new(font : Font) -> CIDFont {
-  { font, glyphs: [], used: {}, cmap_entries: {} }
+  { font, glyphs: [], used: {}, cmap_entries: {}, }
 }
 
 ///|
@@ -90,7 +90,7 @@ priv struct FontContainer {
 
 ///|
 fn FontContainer::new(font : Font, ref_ : Int) -> FontContainer {
-  { font, cid_font: CIDFont::new(font), ref_ }
+  { font, cid_font: CIDFont::new(font), ref_, }
 }
 
 ///|
@@ -99,9 +99,7 @@ fn FontContainer::new(font : Font, ref_ : Int) -> FontContainer {
 fn subset_tag(font : Font, glyphs : Array[Int]) -> String {
   // FNV-1a over the key, the PostScript name and the glyphs.
   let mut h = 0xcbf29ce484222325UL
-  let feed = (v : Int) => {
-    h = (h ^ (v & 0xFF).to_uint64()) * 0x100000001b3UL
-  }
+  let feed = (v : Int) => h = (h ^ (v & 0xFF).to_uint64()) * 0x100000001b3UL
   for c in font.key {
     feed(c.to_int())
   }
@@ -306,7 +304,8 @@ fn CIDFont::serialize(
   let (x0, y0, x1, y1) = if font.kind == Glyf {
     let mut b = None
     for g in sorted {
-      if font.glyph_bbox(g) is Some((a, c, d, e)) && (a != 0.0 || c != 0.0 || d != 0.0 || e != 0.0) {
+      if font.glyph_bbox(g) is Some((a, c, d, e)) &&
+        (a != 0.0 || c != 0.0 || d != 0.0 || e != 0.0) {
         b = Some(
           match b {
             None => (a, c, d, e)
@@ -340,7 +339,12 @@ fn CIDFont::serialize(
       ("Flags", Int(flags)),
       (
         "FontBBox",
-        pdf_rect(to_pdf_units(x0), to_pdf_units(y0), to_pdf_units(x1), to_pdf_units(y1)),
+        pdf_rect(
+          to_pdf_units(x0),
+          to_pdf_units(y0),
+          to_pdf_units(x1),
+          to_pdf_units(y1),
+        ),
       ),
       ("ItalicAngle", Real(font.italic_angle)),
       ("Ascent", Real(ascent)),

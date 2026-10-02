@@ -10,7 +10,7 @@ pub(all) struct Point {
 
 ///|
 pub fn Point::from_xy(x : Double, y : Double) -> Point {
-  { x, y }
+  { x, y, }
 }
 
 ///|
@@ -24,7 +24,7 @@ pub(all) struct Size {
 /// Create a new size; `None` unless both dimensions are positive and finite.
 pub fn Size::from_wh(width : Double, height : Double) -> Size? {
   if width > 0.0 && height > 0.0 && !width.is_inf() && !height.is_inf() {
-    Some({ width, height })
+    Some({ width, height, })
   } else {
     None
   }
@@ -54,7 +54,7 @@ pub fn Rect::from_ltrb(
     !top.is_nan() &&
     !right.is_nan() &&
     !bottom.is_nan() {
-    Some({ left, top, right, bottom })
+    Some({ left, top, right, bottom, })
   } else {
     None
   }
@@ -114,7 +114,7 @@ pub fn bbox_of_points(pts : ArrayView[Point]) -> Rect? {
     r = @math.maximum(r, p.x)
     b = @math.maximum(b, p.y)
   }
-  Some({ left: l, top: t, right: r, bottom: b })
+  Some({ left: l, top: t, right: r, bottom: b, })
 }
 
 ///|
@@ -137,7 +137,7 @@ pub(all) struct Transform {
 
 ///|
 pub fn Transform::identity() -> Transform {
-  { sx: 1.0, ky: 0.0, kx: 0.0, sy: 1.0, tx: 0.0, ty: 0.0 }
+  { sx: 1.0, ky: 0.0, kx: 0.0, sy: 1.0, tx: 0.0, ty: 0.0, }
 }
 
 ///|
@@ -149,17 +149,17 @@ pub fn Transform::from_row(
   tx : Double,
   ty : Double,
 ) -> Transform {
-  { sx, ky, kx, sy, tx, ty }
+  { sx, ky, kx, sy, tx, ty, }
 }
 
 ///|
 pub fn Transform::from_translate(tx : Double, ty : Double) -> Transform {
-  { sx: 1.0, ky: 0.0, kx: 0.0, sy: 1.0, tx, ty }
+  { sx: 1.0, ky: 0.0, kx: 0.0, sy: 1.0, tx, ty, }
 }
 
 ///|
 pub fn Transform::from_scale(sx : Double, sy : Double) -> Transform {
-  { sx, ky: 0.0, kx: 0.0, sy, tx: 0.0, ty: 0.0 }
+  { sx, ky: 0.0, kx: 0.0, sy, tx: 0.0, ty: 0.0, }
 }
 
 ///|
@@ -278,12 +278,14 @@ pub fn Path::bounds(self : Path) -> Rect? {
 pub fn Path::transform(self : Path, ts : Transform) -> Path {
   let f = (p : Point) => ts.apply(p.x, p.y)
   {
-    segments: self.segments.map(seg => match seg {
-      MoveTo(p) => MoveTo(f(p))
-      LineTo(p) => LineTo(f(p))
-      QuadTo(p1, p2) => QuadTo(f(p1), f(p2))
-      CubicTo(p1, p2, p3) => CubicTo(f(p1), f(p2), f(p3))
-      Close => Close
+    segments: self.segments.map(seg => {
+      match seg {
+        MoveTo(p) => MoveTo(f(p))
+        LineTo(p) => LineTo(f(p))
+        QuadTo(p1, p2) => QuadTo(f(p1), f(p2))
+        CubicTo(p1, p2, p3) => CubicTo(f(p1), f(p2), f(p3))
+        Close => Close
+      }
     }),
   }
 }
@@ -298,7 +300,7 @@ pub struct PathBuilder {
 
 ///|
 pub fn PathBuilder::new() -> PathBuilder {
-  { segments: [], move_pending: false }
+  { segments: [], move_pending: false, }
 }
 
 ///|
@@ -306,9 +308,9 @@ pub fn PathBuilder::move_to(self : PathBuilder, x : Double, y : Double) -> Unit 
   // Consecutive move-tos replace each other.
   if self.segments.length() > 0 &&
     self.segments[self.segments.length() - 1] is MoveTo(_) {
-    self.segments[self.segments.length() - 1] = MoveTo({ x, y })
+    self.segments[self.segments.length() - 1] = MoveTo({ x, y, })
   } else {
-    self.segments.push(MoveTo({ x, y }))
+    self.segments.push(MoveTo({ x, y, }))
   }
   self.move_pending = false
 }
@@ -316,8 +318,8 @@ pub fn PathBuilder::move_to(self : PathBuilder, x : Double, y : Double) -> Unit 
 ///|
 fn PathBuilder::last_point(self : PathBuilder) -> Point {
   // The start of the last subpath after a close, else the last point.
-  let mut start = { x: 0.0, y: 0.0 }
-  let mut last = { x: 0.0, y: 0.0 }
+  let mut start = { x: 0.0, y: 0.0, }
+  let mut last = { x: 0.0, y: 0.0, }
   for seg in self.segments {
     match seg {
       MoveTo(p) => {
@@ -334,7 +336,7 @@ fn PathBuilder::last_point(self : PathBuilder) -> Point {
 ///|
 fn PathBuilder::inject_move(self : PathBuilder) -> Unit {
   if self.segments.is_empty() {
-    self.segments.push(MoveTo({ x: 0.0, y: 0.0 }))
+    self.segments.push(MoveTo({ x: 0.0, y: 0.0, }))
   } else if self.segments[self.segments.length() - 1] is Close {
     self.segments.push(MoveTo(self.last_point()))
   }
@@ -343,7 +345,7 @@ fn PathBuilder::inject_move(self : PathBuilder) -> Unit {
 ///|
 pub fn PathBuilder::line_to(self : PathBuilder, x : Double, y : Double) -> Unit {
   self.inject_move()
-  self.segments.push(LineTo({ x, y }))
+  self.segments.push(LineTo({ x, y, }))
 }
 
 ///|
@@ -355,7 +357,7 @@ pub fn PathBuilder::quad_to(
   y : Double,
 ) -> Unit {
   self.inject_move()
-  self.segments.push(QuadTo({ x: x1, y: y1 }, { x, y }))
+  self.segments.push(QuadTo({ x: x1, y: y1, }, { x, y, }))
 }
 
 ///|
@@ -369,7 +371,7 @@ pub fn PathBuilder::cubic_to(
   y : Double,
 ) -> Unit {
   self.inject_move()
-  self.segments.push(CubicTo({ x: x1, y: y1 }, { x: x2, y: y2 }, { x, y }))
+  self.segments.push(CubicTo({ x: x1, y: y1, }, { x: x2, y: y2, }, { x, y, }))
 }
 
 ///|

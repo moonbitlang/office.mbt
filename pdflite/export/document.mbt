@@ -27,8 +27,11 @@ pub fn PageSettings::from_wh(width : Double, height : Double) -> PageSettings? {
 }
 
 ///|
-pub fn PageSettings::with_trim_box(self : PageSettings, rect : Rect) -> PageSettings {
-  { ..self, trim_box: Some(rect) }
+pub fn PageSettings::with_trim_box(
+  self : PageSettings,
+  rect : Rect,
+) -> PageSettings {
+  { ..self, trim_box: Some(rect), }
 }
 
 ///|
@@ -36,7 +39,7 @@ pub fn PageSettings::with_page_label(
   self : PageSettings,
   label : PageLabel,
 ) -> PageSettings {
-  { ..self, page_label: label }
+  { ..self, page_label: label, }
 }
 
 ///|
@@ -95,7 +98,11 @@ pub fn Page::surface(self : Page) -> Surface {
     ),
     sub_builders: [],
     push_instructions: [],
-    mcid: if self.sc.settings.enable_tagging { Some(0) } else { None },
+    mcid: if self.sc.settings.enable_tagging {
+      Some(0)
+    } else {
+      None
+    },
     kind: PageSurface(self),
   }
 }
@@ -186,7 +193,8 @@ fn SerializeContext::serialize_page(
       )
     ) &&
     self.settings.enable_tagging {
-    if self.settings.pdf_version() >= StructureOrderTabbing.minimum_pdf_version() {
+    if self.settings.pdf_version() >=
+      StructureOrderTabbing.minimum_pdf_version() {
       d.set("Tabs", Name("S"))
     } else {
       self.register_validation_error(
@@ -213,12 +221,15 @@ pub struct Document {
 ///|
 /// Create a new document.
 pub fn Document::new_with(settings : SerializeSettings) -> Document {
-  { sc: SerializeContext::new(settings) }
+  { sc: SerializeContext::new(settings), }
 }
 
 ///|
 /// Start a new page.
-pub fn Document::start_page_with(self : Document, settings : PageSettings) -> Page {
+pub fn Document::start_page_with(
+  self : Document,
+  settings : PageSettings,
+) -> Page {
   let sc = self.sc
   let page_index = sc.page_infos.length()
   sc.page_infos.push({
@@ -347,7 +358,9 @@ fn SerializeContext::xmp(
       )
     }
     if m.keywords is Some(k) {
-      sb.write_string("<pdf:Keywords>\{xml_escape(join(k, ", "))}</pdf:Keywords>")
+      sb.write_string(
+        "<pdf:Keywords>\{xml_escape(join(k, ", "))}</pdf:Keywords>",
+      )
     }
     if m.authors is Some(a) {
       sb.write_string(
@@ -418,6 +431,14 @@ fn SerializeContext::xmp(
 /// Finish the document and return the PDF bytes.
 pub fn Document::finish(self : Document) -> Bytes raise ExportError {
   let sc = self.sc
+  // Write an empty (A4) page if none has been created yet.
+  if sc.page_infos.is_empty() {
+    let page = self.start_page_with(
+      PageSettings::from_wh(595.0, 842.0).unwrap(),
+    )
+    page.surface().finish()
+    page.finish()
+  }
   let settings = sc.settings
   // Page labels.
   let mut page_labels_ref = None

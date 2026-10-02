@@ -11,7 +11,7 @@ pub(all) struct XyzDestination {
 
 ///|
 pub fn XyzDestination::new(page_index : Int, point : Point) -> XyzDestination {
-  { page_index, point }
+  { page_index, point, }
 }
 
 ///|
@@ -26,7 +26,7 @@ pub fn NamedDestination::new(
   name : String,
   xyz_dest : XyzDestination,
 ) -> NamedDestination {
-  { name, xyz_dest }
+  { name, xyz_dest, }
 }
 
 ///|
@@ -76,7 +76,7 @@ pub(all) struct LinkAnnotation {
 
 ///|
 pub fn LinkAnnotation::new(rect : Rect, target : Target) -> LinkAnnotation {
-  { rect, quad_points: None, target }
+  { rect, quad_points: None, target, }
 }
 
 ///|
@@ -121,7 +121,7 @@ pub fn Annotation::new_link(
   alt : String?,
   location? : Location? = None,
 ) -> Annotation {
-  { link, alt, struct_parent: None, location }
+  { link, alt, struct_parent: None, location, }
 }
 
 ///|
@@ -175,7 +175,8 @@ fn Annotation::serialize(
     d.set("Contents", TextStr(alt))
   }
   match self.alt {
-    None => sc.register_validation_error(MissingAnnotationAltText(self.location))
+    None =>
+      sc.register_validation_error(MissingAnnotationAltText(self.location))
     Some(a) =>
       if a.is_empty() {
         sc.register_validation_error(MissingAnnotationAltText(self.location))
@@ -193,8 +194,11 @@ pub(all) struct OutlineNode {
 }
 
 ///|
-pub fn OutlineNode::new(text : String, destination : XyzDestination) -> OutlineNode {
-  { children: [], text, destination }
+pub fn OutlineNode::new(
+  text : String,
+  destination : XyzDestination,
+) -> OutlineNode {
+  { children: [], text, destination, }
 }
 
 ///|
@@ -210,7 +214,7 @@ pub(all) struct Outline {
 
 ///|
 pub fn Outline::new() -> Outline {
-  { children: [] }
+  { children: [], }
 }
 
 ///|
@@ -280,12 +284,12 @@ pub fn PageLabel::new(
   prefix : String?,
   offset : Int?,
 ) -> PageLabel {
-  { style, prefix, offset }
+  { style, prefix, offset, }
 }
 
 ///|
 pub fn PageLabel::default() -> PageLabel {
-  { style: None, prefix: None, offset: None }
+  { style: None, prefix: None, offset: None, }
 }
 
 ///|
@@ -343,7 +347,11 @@ pub(all) struct DateTime {
 ///|
 pub fn DateTime::new(year : Int) -> DateTime {
   {
-    year: if year > 9999 { 9999 } else { year },
+    year: if year > 9999 {
+      9999
+    } else {
+      year
+    },
     month: None,
     day: None,
     hour: None,
@@ -367,37 +375,37 @@ fn clamp(v : Int, lo : Int, hi : Int) -> Int {
 
 ///|
 pub fn DateTime::month(self : DateTime, m : Int) -> DateTime {
-  { ..self, month: Some(clamp(m, 1, 12)) }
+  { ..self, month: Some(clamp(m, 1, 12)), }
 }
 
 ///|
 pub fn DateTime::day(self : DateTime, d : Int) -> DateTime {
-  { ..self, day: Some(clamp(d, 1, 31)) }
+  { ..self, day: Some(clamp(d, 1, 31)), }
 }
 
 ///|
 pub fn DateTime::hour(self : DateTime, h : Int) -> DateTime {
-  { ..self, hour: Some(clamp(h, 0, 23)) }
+  { ..self, hour: Some(clamp(h, 0, 23)), }
 }
 
 ///|
 pub fn DateTime::minute(self : DateTime, m : Int) -> DateTime {
-  { ..self, minute: Some(clamp(m, 0, 59)) }
+  { ..self, minute: Some(clamp(m, 0, 59)), }
 }
 
 ///|
 pub fn DateTime::second(self : DateTime, s : Int) -> DateTime {
-  { ..self, second: Some(clamp(s, 0, 59)) }
+  { ..self, second: Some(clamp(s, 0, 59)), }
 }
 
 ///|
 pub fn DateTime::utc_offset_hour(self : DateTime, h : Int) -> DateTime {
-  { ..self, utc_offset_hour: Some(clamp(h, -23, 23)) }
+  { ..self, utc_offset_hour: Some(clamp(h, -23, 23)), }
 }
 
 ///|
 pub fn DateTime::utc_offset_minute(self : DateTime, m : Int) -> DateTime {
-  { ..self, utc_offset_minute: clamp(m, 0, 59) }
+  { ..self, utc_offset_minute: clamp(m, 0, 59), }
 }
 
 ///|
@@ -486,7 +494,7 @@ pub fn Metadata::title(self : Metadata, title : String) -> Metadata {
   if title.is_empty() {
     self
   } else {
-    { ..self, title: Some(title) }
+    { ..self, title: Some(title), }
   }
 }
 
@@ -495,7 +503,7 @@ pub fn Metadata::description(self : Metadata, d : String) -> Metadata {
   if d.is_empty() {
     self
   } else {
-    { ..self, description: Some(d) }
+    { ..self, description: Some(d), }
   }
 }
 
@@ -504,7 +512,7 @@ pub fn Metadata::keywords(self : Metadata, k : Array[String]) -> Metadata {
   if k.is_empty() {
     self
   } else {
-    { ..self, keywords: Some(k) }
+    { ..self, keywords: Some(k), }
   }
 }
 
@@ -513,13 +521,13 @@ pub fn Metadata::authors(self : Metadata, a : Array[String]) -> Metadata {
   if a.is_empty() {
     self
   } else {
-    { ..self, authors: Some(a) }
+    { ..self, authors: Some(a), }
   }
 }
 
 ///|
 pub fn Metadata::language(self : Metadata, l : String) -> Metadata {
-  { ..self, language: Some(l) }
+  { ..self, language: Some(l), }
 }
 
 ///|
@@ -527,7 +535,7 @@ pub fn Metadata::creator(self : Metadata, c : String) -> Metadata {
   if c.is_empty() {
     self
   } else {
-    { ..self, creator: Some(c) }
+    { ..self, creator: Some(c), }
   }
 }
 
@@ -536,23 +544,23 @@ pub fn Metadata::producer(self : Metadata, p : String) -> Metadata {
   if p.is_empty() {
     self
   } else {
-    { ..self, producer: Some(p) }
+    { ..self, producer: Some(p), }
   }
 }
 
 ///|
 pub fn Metadata::document_id(self : Metadata, id : String) -> Metadata {
-  { ..self, document_id: Some(id) }
+  { ..self, document_id: Some(id), }
 }
 
 ///|
 pub fn Metadata::creation_date(self : Metadata, d : DateTime) -> Metadata {
-  { ..self, creation_date: Some(d) }
+  { ..self, creation_date: Some(d), }
 }
 
 ///|
 pub fn Metadata::text_direction(self : Metadata, d : TextDirection) -> Metadata {
-  { ..self, text_direction: Some(d) }
+  { ..self, text_direction: Some(d), }
 }
 
 ///|

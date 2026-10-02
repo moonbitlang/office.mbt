@@ -118,7 +118,7 @@ pub(all) struct Validators {
 
 ///|
 pub fn Validators::empty() -> Validators {
-  { a: None, ua: None }
+  { a: None, ua: None, }
 }
 
 ///|
@@ -156,7 +156,7 @@ pub fn Validators::prohibits(
   if a is None && ua is None {
     None
   } else {
-    Some({ a, ua })
+    Some({ a, ua, })
   }
 }
 
@@ -176,7 +176,7 @@ pub fn Validators::requires_display_doc_title(self : Validators) -> Bool {
 
 ///|
 pub fn Validators::requires_tagging(self : Validators) -> Bool {
-  (self.a is Some(A1_A | A2_A | A3_A)) || self.ua is Some(_)
+  self.a is Some(A1_A | A2_A | A3_A) || self.ua is Some(_)
 }
 
 ///|
@@ -190,7 +190,9 @@ pub fn Validators::prohibits_info_dict(self : Validators) -> Bool {
 }
 
 ///|
-pub fn Validators::requires_embedded_files_when_empty(self : Validators) -> Bool {
+pub fn Validators::requires_embedded_files_when_empty(
+  self : Validators,
+) -> Bool {
   self.a is Some(A4F)
 }
 
@@ -208,7 +210,7 @@ pub(all) struct Configuration {
 
 ///|
 pub fn Configuration::default() -> Configuration {
-  { version: Pdf17, validators: Validators::empty() }
+  { version: Pdf17, validators: Validators::empty(), }
 }
 
 ///|
@@ -280,7 +282,10 @@ pub(all) enum ValidationError {
 ///|
 /// Structural equality of validation errors (fonts by identity), used to
 /// deduplicate errors.
-pub fn ValidationError::same(self : ValidationError, other : ValidationError) -> Bool {
+pub fn ValidationError::same(
+  self : ValidationError,
+  other : ValidationError,
+) -> Bool {
   match (self, other) {
     (TooLongString, TooLongString)
     | (TooLongName, TooLongName)
@@ -408,10 +413,7 @@ fn archival_prohibits(a : Archival, error : ValidationError) -> Bool {
 }
 
 ///|
-fn accessibility_prohibits(
-  _a : Accessibility,
-  error : ValidationError,
-) -> Bool {
+fn accessibility_prohibits(_a : Accessibility, error : ValidationError) -> Bool {
   match error {
     ContainsNotDefGlyph(_, _, _)
     | NoCodepointMapping(_, _, _)

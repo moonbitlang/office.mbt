@@ -165,19 +165,38 @@ pub fn Surface::draw_glyphs(
       if self.has_complex_fill_or_stroke() {
         // Fill as text and stroke separately (krilla outlines the glyphs;
         // here the stroke is drawn as stroked text).
-        self.get_mut().draw_glyphs(sc, start, Some(f), None, glyphs, font, text, font_size)
-        self.get_mut().draw_glyphs(sc, start, None, Some(s), glyphs, font, text, font_size)
+        self
+        .get_mut()
+        .draw_glyphs(sc, start, Some(f), None, glyphs, font, text, font_size)
+        self
+        .get_mut()
+        .draw_glyphs(sc, start, None, Some(s), glyphs, font, text, font_size)
       } else {
-        self.get_mut().draw_glyphs(sc, start, Some(f), Some(s), glyphs, font, text, font_size)
+        self
+        .get_mut()
+        .draw_glyphs(sc, start, Some(f), Some(s), glyphs, font, text, font_size)
       }
     (None, Some(s)) =>
-      self.get_mut().draw_glyphs(sc, start, None, Some(s), glyphs, font, text, font_size)
+      self
+      .get_mut()
+      .draw_glyphs(sc, start, None, Some(s), glyphs, font, text, font_size)
     (Some(f), None) =>
-      self.get_mut().draw_glyphs(sc, start, Some(f), None, glyphs, font, text, font_size)
+      self
+      .get_mut()
+      .draw_glyphs(sc, start, Some(f), None, glyphs, font, text, font_size)
     (None, None) =>
       self
       .get_mut()
-      .draw_glyphs(sc, start, Some(Fill::default()), None, glyphs, font, text, font_size)
+      .draw_glyphs(
+        sc,
+        start,
+        Some(Fill::default()),
+        None,
+        glyphs,
+        font,
+        text,
+        font_size,
+      )
   }
 }
 
@@ -216,16 +235,24 @@ pub fn Surface::push_blend_mode(self : Surface, mode : String) -> Unit {
 
 ///|
 /// Push a clip path.
-pub fn Surface::push_clip_path(self : Surface, path : Path, rule : FillRule) -> Unit {
+pub fn Surface::push_clip_path(
+  self : Surface,
+  path : Path,
+  rule : FillRule,
+) -> Unit {
   self.push_instructions.push(PushClipPath)
   self.get_mut().push_clip_path(path, rule)
 }
 
 ///|
 /// Push a mask.
-pub fn Surface::push_mask(self : Surface, stream : Stream, luminosity : Bool) -> Unit {
+pub fn Surface::push_mask(
+  self : Surface,
+  stream : Stream,
+  luminosity : Bool,
+) -> Unit {
   self.push_instructions.push(
-    PushMask({ stream, luminosity, custom_bbox: None }),
+    PushMask({ stream, luminosity, custom_bbox: None, }),
   )
   self.sub_builders.push(ContentBuilder::new(Transform::identity(), true))
 }
@@ -283,5 +310,9 @@ pub fn Surface::draw_image(self : Surface, image : Image, size : Size) -> Unit {
 pub fn Surface::draw_stream(self : Surface, stream : Stream) -> Unit {
   self
   .get_mut()
-  .draw_xobject(self.sc, XObject::new(stream, false, false, None), ExtGState::new())
+  .draw_xobject(
+    self.sc,
+    XObject::new(stream, false, false, None),
+    ExtGState::new(),
+  )
 }

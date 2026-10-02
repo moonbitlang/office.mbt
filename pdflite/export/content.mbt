@@ -10,7 +10,7 @@ priv struct Content {
 
 ///|
 fn Content::new() -> Content {
-  { buf: @buffer.new(), depth: 0 }
+  { buf: @buffer.new(), depth: 0, }
 }
 
 ///|
@@ -140,7 +140,7 @@ fn ContentBuilder::finish(self : ContentBuilder) -> Stream {
     content: self.content.finish(),
     bbox: match self.bbox {
       Some(b) => b
-      None => { left: 0.0, top: 0.0, right: 1.0, bottom: 1.0 }
+      None => { left: 0.0, top: 0.0, right: 1.0, bottom: 1.0, }
     },
     validation_errors: self.validation_errors,
     resources: self.rd,
@@ -193,7 +193,10 @@ fn ContentBuilder::end_marked_content(self : ContentBuilder) -> Unit {
 }
 
 ///|
-fn ContentBuilder::concat_transform(self : ContentBuilder, ts : Transform) -> Unit {
+fn ContentBuilder::concat_transform(
+  self : ContentBuilder,
+  ts : Transform,
+) -> Unit {
   self.graphics_states.transform(ts)
 }
 
@@ -222,7 +225,7 @@ fn ContentBuilder::restore_graphics_state(self : ContentBuilder) -> Unit {
 ///|
 fn ContentBuilder::set_blend_mode(self : ContentBuilder, mode : String) -> Unit {
   if mode != "Normal" {
-    self.graphics_states.combine({ ..ExtGState::new(), blend_mode: Some(mode) })
+    self.graphics_states.combine({ ..ExtGState::new(), blend_mode: Some(mode), })
   }
 }
 
@@ -238,7 +241,10 @@ fn ContentBuilder::expand_bbox(self : ContentBuilder, new_bbox : Rect) -> Unit {
 }
 
 ///|
-fn ContentBuilder::set_fill_opacity(self : ContentBuilder, alpha : Double) -> Unit {
+fn ContentBuilder::set_fill_opacity(
+  self : ContentBuilder,
+  alpha : Double,
+) -> Unit {
   if alpha != 1.0 {
     self.graphics_states.combine({
       ..ExtGState::new(),
@@ -253,7 +259,10 @@ fn ContentBuilder::set_stroke_opacity(
   alpha : Double,
 ) -> Unit {
   if alpha != 1.0 {
-    self.graphics_states.combine({ ..ExtGState::new(), stroking_alpha: Some(alpha) })
+    self.graphics_states.combine({
+      ..ExtGState::new(),
+      stroking_alpha: Some(alpha),
+    })
   }
 }
 
@@ -285,8 +294,11 @@ fn ContentBuilder::apply_isolated_op(
 }
 
 ///|
-fn ContentBuilder::content_draw_path(self : ContentBuilder, path : Path) -> Unit {
-  let mut prev = { x: 0.0, y: 0.0 }
+fn ContentBuilder::content_draw_path(
+  self : ContentBuilder,
+  path : Path,
+) -> Unit {
+  let mut prev = { x: 0.0, y: 0.0, }
   for seg in path.segments {
     match seg {
       MoveTo(p) => {
@@ -423,7 +435,9 @@ fn ContentBuilder::push_clip_path(
   rule : FillRule,
 ) -> Unit {
   self.content_save_state()
-  self.content_draw_path(path.transform(self.cur_transform_with_root_transform()))
+  self.content_draw_path(
+    path.transform(self.cur_transform_with_root_transform()),
+  )
   self.content.op(if rule == EvenOdd { "W*" } else { "W" })
   self.content.op("n")
 }
@@ -478,7 +492,7 @@ fn ContentBuilder::draw_masked(
   stream : Stream,
 ) -> Unit {
   let mask_ref = sc.register_mask(mask)
-  let state = { ..ExtGState::new(), mask: Some(mask_ref) }
+  let state = { ..ExtGState::new(), mask: Some(mask_ref), }
   self.uses_mask = true
   let x_object = XObject::new(stream, false, true, None)
   self.draw_xobject(sc, x_object, state)
@@ -530,7 +544,7 @@ fn ContentBuilder::draw_image(
         size.height,
       )
       sb.concat_transform(ts)
-      sb.expand_bbox({ left: 0.0, top: 0.0, right: 1.0, bottom: 1.0 })
+      sb.expand_bbox({ left: 0.0, top: 0.0, right: 1.0, bottom: 1.0, })
     },
     sb => {
       let r = sc.register_image(image)
@@ -648,7 +662,7 @@ fn ContentBuilder::content_set_fill_stroke_properties(
         let name = self.rd.register(Pattern, pr)
         if shading_mask is Some(mask) {
           let mask_ref = sc.register_mask(mask)
-          let state = { ..ExtGState::new(), mask: Some(mask_ref) }
+          let state = { ..ExtGState::new(), mask: Some(mask_ref), }
           self.uses_mask = true
           let r = sc.register_ext_g_state(state)
           let gs = self.rd.register(ExtGState, r)

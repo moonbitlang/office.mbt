@@ -45,7 +45,7 @@ pub struct DictBuilder {
 
 ///|
 pub fn DictBuilder::new() -> DictBuilder {
-  { entries: [] }
+  { entries: [], }
 }
 
 ///|
@@ -191,7 +191,13 @@ pub fn text_string_bytes(s : String) -> Bytes {
   let mut ascii = true
   for c in s {
     let cp = c.to_int()
-    if cp > 0x7E || (cp < 0x20 && cp != '\n'.to_int() && cp != '\r'.to_int() && cp != '\t'.to_int()) {
+    if cp > 0x7E ||
+      (
+        cp < 0x20 &&
+        cp != '\n'.to_int() &&
+        cp != '\r'.to_int() &&
+        cp != '\t'.to_int()
+      ) {
       ascii = false
       break
     }
@@ -312,7 +318,7 @@ pub fn write_file(
   buf.write_byte(b'\x80')
   buf.write_byte(b'\n')
   let offsets : Array[Int?] = Array::make(count + 1, None)
-  for i in 1..=count {
+  for i in 1..<=count {
     guard objects.get(i) is Some(object) else { continue }
     offsets[i] = Some(buf.length())
     write_ascii(buf, "\{i} 0 obj\n")
@@ -332,7 +338,7 @@ pub fn write_file(
   let xref_offset = buf.length()
   write_ascii(buf, "xref\n0 \{count + 1}\n")
   write_ascii(buf, "0000000000 65535 f\r\n")
-  for i in 1..=count {
+  for i in 1..<=count {
     match offsets[i] {
       Some(off) => {
         let s = off.to_string()

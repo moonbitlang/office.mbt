@@ -95,7 +95,7 @@ fn Mask::new_from_shading(
   builder.concat_transform(shading_transform)
   builder.draw_shading(sc, shading)
   builder.restore_graphics_state()
-  Some({ stream: builder.finish(), luminosity: true, custom_bbox: Some(bbox) })
+  Some({ stream: builder.finish(), luminosity: true, custom_bbox: Some(bbox), })
 }
 
 ///|
@@ -142,7 +142,7 @@ fn TilingPattern::new(
     builder.draw_opacified(sc, base_opacity, stream)
     builder.finish()
   }
-  { stream, transform, width, height }
+  { stream, transform, width, height, }
 }
 
 ///|
@@ -234,7 +234,12 @@ fn LinearGradient::gradient_properties(
 ) -> (GradientProperties, Transform) {
   if self.spread_method == Pad {
     (
-      RadialAxial([self.x1, self.y1, self.x2, self.y2], false, self.stops, self.anti_alias),
+      RadialAxial(
+        [self.x1, self.y1, self.x2, self.y2],
+        false,
+        self.stops,
+        self.anti_alias,
+      ),
       self.transform,
     )
   } else {
@@ -314,7 +319,7 @@ fn ShadingFunction::new(
   properties : GradientProperties,
   use_opacities : Bool,
 ) -> ShadingFunction {
-  { properties, use_opacities }
+  { properties, use_opacities, }
 }
 
 ///|
@@ -329,7 +334,7 @@ fn ShadingPattern::new(
   props : GradientProperties,
   transform : Transform,
 ) -> ShadingPattern {
-  { function: ShadingFunction::new(props, false), transform }
+  { function: ShadingFunction::new(props, false), transform, }
 }
 
 ///|
@@ -459,10 +464,10 @@ fn SerializeContext::register_shading_function(
     RadialAxial(coords, radial, stops, anti_alias) => {
       let stops = stops.copy()
       if stops.length() > 0 && stops[0].offset != 0.0 {
-        stops.insert(0, { ..stops[0], offset: 0.0 })
+        stops.insert(0, { ..stops[0], offset: 0.0, })
       }
       if stops.length() > 0 && stops[stops.length() - 1].offset != 1.0 {
-        stops.push({ ..stops[stops.length() - 1], offset: 1.0 })
+        stops.push({ ..stops[stops.length() - 1], offset: 1.0, })
       }
       let function = if stops.length() == 2 {
         self.serialize_exponential(
@@ -492,11 +497,17 @@ fn SerializeContext::register_shading_function(
         r,
         Dict([
           ("ShadingType", Int(1)),
-          ("ColorSpace", shading_color_space(psg.stops[0].color, f.use_opacities)),
+          (
+            "ColorSpace",
+            shading_color_space(psg.stops[0].color, f.use_opacities),
+          ),
           ("Matrix", Transform::identity().to_pdf()),
           ("AntiAlias", Bool(psg.anti_alias)),
           ("Function", Ref(function)),
-          ("Domain", Arr([Real(d.left), Real(d.right), Real(d.top), Real(d.bottom)])),
+          (
+            "Domain",
+            Arr([Real(d.left), Real(d.right), Real(d.top), Real(d.bottom)]),
+          ),
         ]),
       )
     }
@@ -549,7 +560,8 @@ fn encode_spread_method(
     return
   }
   let length = max - min
-  for op in [
+  for
+    op in [
       PsReal(length),
       PsReal(min),
       PsInt(2),
@@ -618,7 +630,8 @@ fn encode_stops_impl(
       if_stops.push(PsReal(c))
     }
   } else {
-    for op in [
+    for
+      op in [
         PsReal(stops_min),
         PsOp("sub"),
         PsReal(stops_max),
@@ -629,7 +642,8 @@ fn encode_stops_impl(
       if_stops.push(op)
     }
     for i in 0..<c0.length() {
-      for op in [
+      for
+        op in [
           PsInt(i),
           PsOp("index"),
           PsReal(c0[i]),
@@ -666,7 +680,8 @@ fn SerializeContext::serialize_postscript_function(
   let code = []
   match p.gradient_type {
     Sweep =>
-      for op in [
+      for
+        op in [
           PsReal(p.cy),
           PsOp("sub"),
           PsOp("exch"),
@@ -702,8 +717,8 @@ fn SerializeContext::serialize_postscript_function(
   }
   let padded = stops.copy()
   if stops.length() > 0 {
-    padded.insert(0, { ..stops[0], offset: 0.0 })
-    padded.push({ ..stops[stops.length() - 1], offset: 1.0 })
+    padded.insert(0, { ..stops[0], offset: 0.0, })
+    padded.push({ ..stops[stops.length() - 1], offset: 1.0, })
   }
   encode_stops_impl(padded[:], p.min, p.max, code, use_opacities)
   let sb = StringBuilder::new()
@@ -713,7 +728,10 @@ fn SerializeContext::serialize_postscript_function(
     r,
     [
       ("FunctionType", Int(4)),
-      ("Domain", Arr([Real(d.left), Real(d.right), Real(d.top), Real(d.bottom)])),
+      (
+        "Domain",
+        Arr([Real(d.left), Real(d.right), Real(d.top), Real(d.bottom)]),
+      ),
       ("Range", range_obj(if use_opacities { 1 } else { 3 })),
     ],
     utf8_bytes(sb.to_string()),

@@ -172,7 +172,7 @@ pub(all) struct Fill {
 
 ///|
 pub fn Fill::default() -> Fill {
-  { paint: Color(Color::black()), opacity: 1.0, rule: NonZero }
+  { paint: Color(Color::black()), opacity: 1.0, rule: NonZero, }
 }
 
 ///|

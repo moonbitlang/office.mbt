@@ -44,7 +44,7 @@ pub struct ResourceDictionary {
 
 ///|
 fn ResourceDictionary::new() -> ResourceDictionary {
-  { entries: [] }
+  { entries: [], }
 }
 
 ///|
@@ -97,7 +97,12 @@ pub(all) struct ExtGState {
 
 ///|
 fn ExtGState::new() -> ExtGState {
-  { non_stroking_alpha: None, stroking_alpha: None, blend_mode: None, mask: None }
+  {
+    non_stroking_alpha: None,
+    stroking_alpha: None,
+    blend_mode: None,
+    mask: None,
+  }
 }
 
 ///|
@@ -111,7 +116,10 @@ fn ExtGState::empty(self : ExtGState) -> Bool {
 ///|
 fn ExtGState::combine(self : ExtGState, other : ExtGState) -> ExtGState {
   {
-    non_stroking_alpha: opt_or(other.non_stroking_alpha, self.non_stroking_alpha),
+    non_stroking_alpha: opt_or(
+      other.non_stroking_alpha,
+      self.non_stroking_alpha,
+    ),
     stroking_alpha: opt_or(other.stroking_alpha, self.stroking_alpha),
     blend_mode: opt_or(other.blend_mode, self.blend_mode),
     mask: opt_or(other.mask, self.mask),
@@ -132,7 +140,7 @@ priv struct GraphicsStates {
 
 ///|
 fn GraphicsStates::new() -> GraphicsStates {
-  { states: [{ ext_g_state: ExtGState::new(), ctm: Transform::identity() }] }
+  { states: [{ ext_g_state: ExtGState::new(), ctm: Transform::identity(), }], }
 }
 
 ///|
@@ -162,7 +170,10 @@ fn GraphicsStates::combine(self : GraphicsStates, other : ExtGState) -> Unit {
 ///|
 fn GraphicsStates::transform(self : GraphicsStates, ts : Transform) -> Unit {
   let cur = self.cur()
-  self.states[self.states.length() - 1] = { ..cur, ctm: cur.ctm.pre_concat(ts) }
+  self.states[self.states.length() - 1] = {
+    ..cur,
+    ctm: cur.ctm.pre_concat(ts),
+  }
 }
 
 ///|
@@ -184,7 +195,7 @@ pub struct Stream {
 pub fn Stream::empty() -> Stream {
   {
     content: Bytes::default(),
-    bbox: { left: 0.0, top: 0.0, right: 1.0, bottom: 1.0 },
+    bbox: { left: 0.0, top: 0.0, right: 1.0, bottom: 1.0, },
     validation_errors: [],
     resources: ResourceDictionary::new(),
     uses_mask: false,

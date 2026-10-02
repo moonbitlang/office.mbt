@@ -89,7 +89,7 @@ pub(all) struct SpanTag {
 
 ///|
 pub fn SpanTag::empty() -> SpanTag {
-  { lang: None, alt_text: None, expanded: None, actual_text: None }
+  { lang: None, alt_text: None, expanded: None, actual_text: None, }
 }
 
 ///|
@@ -324,7 +324,7 @@ pub(all) struct Sides[T] {
 
 ///|
 pub fn[T] Sides::uniform(v : T) -> Sides[T] {
-  { before: v, after: v, start: v, end: v }
+  { before: v, after: v, start: v, end: v, }
 }
 
 ///|
@@ -436,7 +436,7 @@ pub(all) struct TagKind {
 
 ///|
 pub fn TagKind::new(name : TagName) -> TagKind {
-  { name, attrs: [], location: None }
+  { name, attrs: [], location: None, }
 }
 
 ///|
@@ -613,12 +613,15 @@ pub(all) struct TagGroup {
 
 ///|
 pub fn TagGroup::new(tag : TagKind) -> TagGroup {
-  { tag, children: [] }
+  { tag, children: [], }
 }
 
 ///|
-pub fn TagGroup::with_children(tag : TagKind, children : Array[Node]) -> TagGroup {
-  { tag, children }
+pub fn TagGroup::with_children(
+  tag : TagKind,
+  children : Array[Node],
+) -> TagGroup {
+  { tag, children, }
 }
 
 ///|
@@ -635,7 +638,7 @@ pub(all) struct TagTree {
 
 ///|
 pub fn TagTree::new() -> TagTree {
-  { children: [], lang: None }
+  { children: [], lang: None, }
 }
 
 ///|
@@ -731,7 +734,10 @@ fn TagSerializer::group(
   if tag.name == Hn {
     match tag.title() {
       None => sc.register_validation_error(MissingHeadingTitle)
-      Some(t) => if t.is_empty() { sc.register_validation_error(MissingHeadingTitle) }
+      Some(t) =>
+        if t.is_empty() {
+          sc.register_validation_error(MissingHeadingTitle)
+        }
     }
   }
   if tag.name == Figure || tag.name == Formula {
@@ -827,8 +833,14 @@ fn TagSerializer::group(
       }
       Width(w) => layout.set("Width", Real(w))
       Height(h) => layout.set("Height", Real(h))
-      BackgroundColor(c) => if pdf15 { layout.set("BackgroundColor", c.to_obj()) }
-      BorderColor(s) => if pdf15 { layout.set("BorderColor", s.to_obj(c => c.to_obj())) }
+      BackgroundColor(c) =>
+        if pdf15 {
+          layout.set("BackgroundColor", c.to_obj())
+        }
+      BorderColor(s) =>
+        if pdf15 {
+          layout.set("BorderColor", s.to_obj(c => c.to_obj()))
+        }
       BorderStyle(s) =>
         if pdf15 {
           layout.set("BorderStyle", s.to_obj(b => Name(b.name())))
@@ -917,7 +929,11 @@ fn TagSerializer::children(
           kids.push(Int(mcid))
         } else {
           kids.push(
-            Dict([("Type", Name("MCR")), ("Pg", Ref(page_ref)), ("MCID", Int(mcid))]),
+            Dict([
+              ("Type", Name("MCR")),
+              ("Pg", Ref(page_ref)),
+              ("MCID", Int(mcid)),
+            ]),
           )
         }
       }
@@ -936,7 +952,11 @@ fn TagSerializer::children(
         self.parent_tree_map[key] = annot_ref
         info.annotations[annot_index] = (annot_ref, Some(parent_ref))
         kids.push(
-          Dict([("Type", Name("OBJR")), ("Pg", Ref(page_ref)), ("Obj", Ref(annot_ref))]),
+          Dict([
+            ("Type", Name("OBJR")),
+            ("Pg", Ref(page_ref)),
+            ("Obj", Ref(annot_ref)),
+          ]),
         )
       }
       Content(Dummy) => ()
@@ -972,12 +992,7 @@ fn SerializeContext::serialize_tag_tree(
   self : SerializeContext,
   tree : TagTree,
 ) -> Int raise ExportError {
-  let ts = {
-    sc: self,
-    parent_tree_map: {},
-    id_tree: {},
-    note_id: 1,
-  }
+  let ts = { sc: self, parent_tree_map: {}, id_tree: {}, note_id: 1, }
   let struct_tree_root_ref = self.new_ref()
   let root_ref = self.new_ref()
   let children_refs = []

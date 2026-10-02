@@ -221,7 +221,10 @@ pub fn Font::has_table(self : Font, tag : String) -> Bool {
 }
 
 ///|
-fn read_postscript_name(data : Bytes, tables : Map[String, (Int, Int)]) -> String? {
+fn read_postscript_name(
+  data : Bytes,
+  tables : Map[String, (Int, Int)],
+) -> String? {
   guard tables.get("name") is Some((name, _)) else { return None }
   let count = rd_u16(data, name + 2)
   let storage = name + rd_u16(data, name + 4)
@@ -266,7 +269,10 @@ fn Font::glyph_range(self : Font, glyph : Int) -> (Int, Int)? {
   }
   let long = rd_i16(self.data, head + 50) != 0
   let (start, end) = if long {
-    (rd_u32(self.data, loca + 4 * glyph), rd_u32(self.data, loca + 4 * glyph + 4))
+    (
+      rd_u32(self.data, loca + 4 * glyph),
+      rd_u32(self.data, loca + 4 * glyph + 4),
+    )
   } else {
     (
       2 * rd_u16(self.data, loca + 2 * glyph),
@@ -309,17 +315,22 @@ fn Font::glyph_components(self : Font, glyph : Int) -> Array[Int] {
 
 ///|
 /// The bounding box stored in the header of a `glyf` glyph.
-fn Font::glyph_bbox(self : Font, glyph : Int) -> (Double, Double, Double, Double)? {
+fn Font::glyph_bbox(
+  self : Font,
+  glyph : Int,
+) -> (Double, Double, Double, Double)? {
   guard self.glyph_range(glyph) is Some((start, end)) else { return None }
   if end - start < 10 {
     return None
   }
-  Some((
-    rd_i16(self.data, start + 2).to_double(),
-    rd_i16(self.data, start + 4).to_double(),
-    rd_i16(self.data, start + 6).to_double(),
-    rd_i16(self.data, start + 8).to_double(),
-  ))
+  Some(
+    (
+      rd_i16(self.data, start + 2).to_double(),
+      rd_i16(self.data, start + 4).to_double(),
+      rd_i16(self.data, start + 6).to_double(),
+      rd_i16(self.data, start + 8).to_double(),
+    ),
+  )
 }
 
 ///|
@@ -392,7 +403,8 @@ fn Font::subset_glyf(self : Font, keep : Map[Int, Unit]) -> Bytes {
   }
   push_u32(loca, glyf.length())
   let tables : Array[(String, Bytes)] = []
-  for tag in [
+  for
+    tag in [
       "OS/2", "cvt ", "fpgm", "glyf", "head", "hhea", "hmtx", "loca", "maxp", "prep",
     ] {
     match tag {
@@ -421,7 +433,7 @@ fn Font::subset_glyf(self : Font, keep : Map[Int, Unit]) -> Bytes {
   }
   let n = tables.length()
   let mut entry_selector = 0
-  while (1 << (entry_selector + 1)) <= n {
+  while 1 << (entry_selector + 1) <= n {
     entry_selector += 1
   }
   let search_range = (1 << entry_selector) * 16
@@ -469,14 +481,15 @@ fn Font::subset_glyf(self : Font, keep : Map[Int, Unit]) -> Bytes {
 ///|
 /// The face's own sfnt data (extracted from a collection if necessary).
 fn Font::face_data(self : Font) -> Bytes {
-  if self.index == 0 && !(self.data.length() >= 4 && rd_tag(self.data, 0) == "ttcf") {
+  if self.index == 0 &&
+    !(self.data.length() >= 4 && rd_tag(self.data, 0) == "ttcf") {
     return self.data
   }
   let tags = self.tables.keys().collect()
   tags.sort()
   let n = tags.length()
   let mut entry_selector = 0
-  while (1 << (entry_selector + 1)) <= n {
+  while 1 << (entry_selector + 1) <= n {
     entry_selector += 1
   }
   let search_range = (1 << entry_selector) * 16

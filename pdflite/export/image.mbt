@@ -55,7 +55,10 @@ pub(all) struct Image {
 }
 
 ///|
-fn SerializeContext::register_image(self : SerializeContext, image : Image) -> Int {
+fn SerializeContext::register_image(
+  self : SerializeContext,
+  image : Image,
+) -> Int {
   let key = "image:\{image.key}:\{image.interpolate}"
   self.cached(key, r => {
     if image.interpolate {

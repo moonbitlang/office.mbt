@@ -144,7 +144,7 @@ fn glyph_spans(
     } else {
       None
     }
-    out.push({ glyphs: head, actual_text })
+    out.push({ glyphs: head, actual_text, })
   }
   out
 }
@@ -208,7 +208,7 @@ fn get_glyphs_bbox(
     bt = @math.minimum(bt, y - g.y_offset * size)
     bb = @math.maximum(bb, y - g.y_offset * size)
   }
-  { left: bl, top: bt, right: br, bottom: bb }
+  { left: bl, top: bt, right: br, bottom: bb, }
 }
 
 ///|
@@ -243,7 +243,7 @@ fn ContentBuilder::draw_glyphs(
       sb.expand_bbox(bbox)
       bbox
     } else {
-      { left: 0.0, top: 0.0, right: 1.0, bottom: 1.0 }
+      { left: 0.0, top: 0.0, right: 1.0, bottom: 1.0, }
     }
     sb.content_set_fill_properties(sc, bbox, fill)
   }
@@ -253,20 +253,20 @@ fn ContentBuilder::draw_glyphs(
       sb.expand_bbox(bbox)
       bbox
     } else {
-      { left: 0.0, top: 0.0, right: 1.0, bottom: 1.0 }
+      { left: 0.0, top: 0.0, right: 1.0, bottom: 1.0, }
     }
     sb.content_set_stroke_properties(sc, bbox, stroke)
   }
-  let set_fill_opacity = (sb : ContentBuilder, fill : Fill) => if !(
-      fill.paint is Pattern(_)
-    ) {
-    sb.set_fill_opacity(fill.opacity)
+  let set_fill_opacity = (sb : ContentBuilder, fill : Fill) => {
+    if !(fill.paint is Pattern(_)) {
+      sb.set_fill_opacity(fill.opacity)
+    }
   }
-  let set_stroke_opacity = (sb : ContentBuilder, stroke : Stroke) => if !(
-      stroke.paint is Pattern(_)
-    ) {
-    sb.set_stroke_opacity(stroke.opacity)
-    sb.set_fill_opacity(stroke.opacity)
+  let set_stroke_opacity = (sb : ContentBuilder, stroke : Stroke) => {
+    if !(stroke.paint is Pattern(_)) {
+      sb.set_stroke_opacity(stroke.opacity)
+      sb.set_fill_opacity(stroke.opacity)
+    }
   }
   match (fill, stroke) {
     (Some(f), Some(s)) => {
@@ -372,7 +372,7 @@ fn ContentBuilder::fill_stroke_glyph_run(
         sc,
         cur_x,
         cur_y,
-        { glyphs, actual_text: None },
+        { glyphs, actual_text: None, },
         mode,
         fc,
         text,
@@ -450,7 +450,9 @@ fn ContentBuilder::encode_consecutive_glyph_run(
   self.content.name(font_name)
   self.content.num(size)
   self.content.op("Tf")
-  self.content.transform_text(Transform::from_row(1.0, 0.0, 0.0, -1.0, cur_x.val, cur_y))
+  self.content.transform_text(
+    Transform::from_row(1.0, 0.0, 0.0, -1.0, cur_x.val, cur_y),
+  )
   let font = fc.font
   for g in glyphs {
     if g.glyph_id == 0 || font.postscript_name == Some("LastResort") {
