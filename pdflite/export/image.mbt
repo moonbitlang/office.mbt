@@ -1,6 +1,6 @@
 // Raster images (port of the parts of krilla's `graphics::image` that Typst
 // uses: 8-bit gray/RGB samples with an optional alpha channel and ICC
-// profile, and JPEG passthrough).
+// profile, and JPEG and PNG passthrough).
 
 ///|
 /// The color space of image samples.
@@ -36,6 +36,11 @@ pub(all) enum ImageData {
   Samples(Bytes, Bytes?)
   /// A JPEG file, embedded as is.
   Jpeg(Bytes)
+  /// The image data of a PNG file (its concatenated `IDAT` chunks), embedded
+  /// as is with a PNG predictor (krilla's `Repr::Png`): the zlib stream, the
+  /// number of samples per pixel, the bit depth and, for indexed images, the
+  /// palette (`PLTE`). The color space is the base of an indexed image.
+  Png(Bytes, Int, Int, Bytes?)
 }
 
 ///|
@@ -94,7 +99,20 @@ fn SerializeContext::register_image(
           ),
         )
     }
-    d.set("BitsPerComponent", Int(8))
+    // An indexed PNG uses the color space as the base of its palette
+    // (krilla's `set_indexed_colorspace`).
+    if image.data is Png(_, _, _, Some(palette)) &&
+      d.get("ColorSpace") is Some(base) {
+      d.set(
+        "ColorSpace",
+        Arr([Name("Indexed"), base, Int(palette.length() / 3 - 1), Str(palette)]),
+      )
+    }
+    let bits_per_component = match image.data {
+      Png(_, _, bit_depth, _) => bit_depth
+      Samples(_) | Jpeg(_) => 8
+    }
+    d.set("BitsPerComponent", Int(bits_per_component))
     if image.interpolate {
       d.set("Interpolate", Bool(true))
     }
@@ -126,6 +144,19 @@ fn SerializeContext::register_image(
           )
         }
         d.set("Filter", Name("DCTDecode"))
+        self.put_stream(r, d.entries(), data, compress=false)
+      }
+      Png(data, colors, bit_depth, _) => {
+        d.set("Filter", Name("FlateDecode"))
+        d.set(
+          "DecodeParms",
+          Dict([
+            ("Predictor", Int(15)),
+            ("Colors", Int(colors)),
+            ("BitsPerComponent", Int(bit_depth)),
+            ("Columns", Int(image.width)),
+          ]),
+        )
         self.put_stream(r, d.entries(), data, compress=false)
       }
     }

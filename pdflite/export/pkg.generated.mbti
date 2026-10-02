@@ -281,6 +281,7 @@ pub(all) enum ImageColorspace {
 pub(all) enum ImageData {
   Samples(Bytes, Bytes?)
   Jpeg(Bytes)
+  Png(Bytes, Int, Int, Bytes?)
 }
 
 pub(all) enum Indirect {
