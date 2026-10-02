@@ -145,6 +145,11 @@ pub fn Color::black() -> Self
 pub fn Color::rgb(Int, Int, Int) -> Self
 pub fn Color::to_pdf_color(Self) -> Array[Double]
 
+pub(all) struct ColorGlyphs {
+  is_color : (Int) -> Bool
+  draw : (Int, Int, Surface) -> Bool
+}
+
 pub(all) struct Configuration {
   version : PdfVersion
   validators : Validators
@@ -261,6 +266,7 @@ pub struct Font {
 pub fn Font::advance_width(Self, Int) -> Double?
 pub fn Font::has_table(Self, String) -> Bool
 pub fn Font::new(Bytes, Int, key? : String) -> Self?
+pub fn Font::set_color_glyphs(Self, ColorGlyphs) -> Unit
 
 pub(all) struct Glyph {
   glyph_id : Int

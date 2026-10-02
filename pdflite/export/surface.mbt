@@ -150,6 +150,28 @@ pub fn Surface::end_tagged(self : Surface) -> Unit {
 }
 
 ///|
+/// The context color of color glyphs: the rgb fill, else the rgb stroke,
+/// else black (`0xRRGGBB`).
+fn Surface::context_color(self : Surface) -> Int {
+  let rgb = match self.fill {
+    Some(f) => f.paint.as_rgb()
+    None => None
+  }
+  let rgb = match rgb {
+    Some(_) => rgb
+    None =>
+      match self.stroke {
+        Some(s) => s.paint.as_rgb()
+        None => None
+      }
+  }
+  match rgb {
+    Some((r, g, b)) => (r << 16) | (g << 8) | b
+    None => 0
+  }
+}
+
+///|
 /// Draw a sequence of glyphs with the current fill and/or stroke.
 pub fn Surface::draw_glyphs(
   self : Surface,
@@ -160,43 +182,25 @@ pub fn Surface::draw_glyphs(
   font_size : Double,
 ) -> Unit {
   let sc = self.sc
+  let ctx = self.context_color()
+  let draw = (fill : Fill?, stroke : Stroke?) => {
+    self
+    .get_mut()
+    .draw_glyphs(sc, start, fill, stroke, ctx, glyphs, font, text, font_size)
+  }
   match (self.fill, self.stroke) {
     (Some(f), Some(s)) =>
       if self.has_complex_fill_or_stroke() {
         // Fill as text and stroke separately (krilla outlines the glyphs;
         // here the stroke is drawn as stroked text).
-        self
-        .get_mut()
-        .draw_glyphs(sc, start, Some(f), None, glyphs, font, text, font_size)
-        self
-        .get_mut()
-        .draw_glyphs(sc, start, None, Some(s), glyphs, font, text, font_size)
+        draw(Some(f), None)
+        draw(None, Some(s))
       } else {
-        self
-        .get_mut()
-        .draw_glyphs(sc, start, Some(f), Some(s), glyphs, font, text, font_size)
+        draw(Some(f), Some(s))
       }
-    (None, Some(s)) =>
-      self
-      .get_mut()
-      .draw_glyphs(sc, start, None, Some(s), glyphs, font, text, font_size)
-    (Some(f), None) =>
-      self
-      .get_mut()
-      .draw_glyphs(sc, start, Some(f), None, glyphs, font, text, font_size)
-    (None, None) =>
-      self
-      .get_mut()
-      .draw_glyphs(
-        sc,
-        start,
-        Some(Fill::default()),
-        None,
-        glyphs,
-        font,
-        text,
-        font_size,
-      )
+    (None, Some(s)) => draw(None, Some(s))
+    (Some(f), None) => draw(Some(f), None)
+    (None, None) => draw(Some(Fill::default()), None)
   }
 }
 

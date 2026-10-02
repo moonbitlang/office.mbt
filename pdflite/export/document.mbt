@@ -488,6 +488,9 @@ pub fn Document::finish(self : Document) -> Bytes raise ExportError {
   }
   // Fonts.
   for c in sc.font_containers {
+    for t3 in c.type3 {
+      t3.serialize(sc)
+    }
     if !c.cid_font.is_empty() {
       c.cid_font.serialize(sc, c.ref_)
     }

@@ -357,7 +357,11 @@ fn SerializeContext::register_shading_pattern(
 }
 
 ///|
-fn shading_color_space(color : Color, use_opacities : Bool) -> Obj {
+fn shading_color_space(
+  sc : SerializeContext,
+  color : Color,
+  use_opacities : Bool,
+) -> Obj {
   if use_opacities {
     return Name("DeviceGray")
   }
@@ -365,7 +369,11 @@ fn shading_color_space(color : Color, use_opacities : Bool) -> Obj {
     Regular(Rgb(_, _, _)) => Name("DeviceRGB")
     Regular(Luma(_)) => Name("DeviceGray")
     Regular(Cmyk(_, _, _, _)) => Name("DeviceCMYK")
-    Separation(_, _) => Name("DeviceRGB")
+    Separation(_, _) =>
+      match sc.register_colorspace(color) {
+        Some(r) => Ref(r)
+        None => Name("DeviceRGB")
+      }
   }
 }
 
@@ -374,15 +382,7 @@ fn stop_components(stop : Stop, use_opacities : Bool) -> Array[Double] {
   if use_opacities {
     [stop.opacity]
   } else {
-    match stop.color {
-      // Separation colors in gradients are drawn with their fallback.
-      Separation(_, space) =>
-        match space.fallback {
-          Rgb(_, _, _) as c => c.to_pdf_color()
-          c => c.to_pdf_color()
-        }
-      c => c.to_pdf_color()
-    }
+    stop.color.to_pdf_color()
   }
 }
 
@@ -481,7 +481,10 @@ fn SerializeContext::register_shading_function(
         r,
         Dict([
           ("ShadingType", Int(if radial { 3 } else { 2 })),
-          ("ColorSpace", shading_color_space(stops[0].color, f.use_opacities)),
+          (
+            "ColorSpace",
+            shading_color_space(self, stops[0].color, f.use_opacities),
+          ),
           ("AntiAlias", Bool(anti_alias)),
           ("Function", Ref(function)),
           ("Coords", Arr(coords.map(v => Real(v)))),
@@ -499,7 +502,7 @@ fn SerializeContext::register_shading_function(
           ("ShadingType", Int(1)),
           (
             "ColorSpace",
-            shading_color_space(psg.stops[0].color, f.use_opacities),
+            shading_color_space(self, psg.stops[0].color, f.use_opacities),
           ),
           ("Matrix", Transform::identity().to_pdf()),
           ("AntiAlias", Bool(psg.anti_alias)),

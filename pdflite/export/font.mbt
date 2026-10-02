@@ -80,20 +80,6 @@ fn CIDFont::set_codepoints(
 }
 
 ///|
-/// All PDF fonts belonging to an OpenType font.
-priv struct FontContainer {
-  font : Font
-  cid_font : CIDFont
-  /// The reference of the `Type0` font.
-  ref_ : Int
-}
-
-///|
-fn FontContainer::new(font : Font, ref_ : Int) -> FontContainer {
-  { font, cid_font: CIDFont::new(font), ref_, }
-}
-
-///|
 /// The subset tag of a font (six uppercase letters derived from the font
 /// and its glyph set).
 fn subset_tag(font : Font, glyphs : Array[Int]) -> String {
@@ -179,10 +165,20 @@ fn write_cmap_entry(
 
 ///|
 /// Build a ToUnicode CMap stream.
-fn to_unicode_cmap(entries : Array[(Int, String)]) -> Bytes {
+fn to_unicode_cmap(
+  entries : Array[(Int, String)],
+  one_byte? : Bool = false,
+) -> Bytes {
   let sb = StringBuilder::new()
   sb.write_string(
-    "%!PS-Adobe-3.0 Resource-CMap\n%%DocumentNeededResources: procset CIDInit\n%%IncludeResource: procset CIDInit\n%%BeginResource: CMap Custom\n%%Title: (Custom Adobe Identity 0)\n%%Version: 1\n%%EndComments\n/CIDInit /ProcSet findresource begin\n12 dict begin\nbegincmap\n/CIDSystemInfo 3 dict dup begin\n    /Registry (Adobe) def\n    /Ordering (Identity) def\n    /Supplement 0 def\nend def\n/CMapName /Custom def\n/CMapVersion 1 def\n/CMapType 0 def\n/WMode 0 def\n1 begincodespacerange\n<0000> <ffff>\nendcodespacerange\n",
+    "%!PS-Adobe-3.0 Resource-CMap\n%%DocumentNeededResources: procset CIDInit\n%%IncludeResource: procset CIDInit\n%%BeginResource: CMap Custom\n%%Title: (Custom Adobe Identity 0)\n%%Version: 1\n%%EndComments\n/CIDInit /ProcSet findresource begin\n12 dict begin\nbegincmap\n/CIDSystemInfo 3 dict dup begin\n    /Registry (Adobe) def\n    /Ordering (Identity) def\n    /Supplement 0 def\nend def\n/CMapName /Custom def\n/CMapVersion 1 def\n/CMapType 0 def\n/WMode 0 def\n",
+  )
+  sb.write_string(
+    if one_byte {
+      "1 begincodespacerange\n<00> <ff>\nendcodespacerange\n"
+    } else {
+      "1 begincodespacerange\n<0000> <ffff>\nendcodespacerange\n"
+    },
   )
   let mut i = 0
   while i < entries.length() {
@@ -190,7 +186,13 @@ fn to_unicode_cmap(entries : Array[(Int, String)]) -> Bytes {
     sb.write_string("\{n} beginbfchar\n")
     for k in i..<(i + n) {
       let (g, text) = entries[k]
-      sb.write_string("<\{hex4(g)}> <")
+      sb.write_string(
+        if one_byte {
+          "<\{hex4(g).unsafe_substring(start=2, end=4)}> <"
+        } else {
+          "<\{hex4(g)}> <"
+        },
+      )
       for j in 0..<text.length() {
         sb.write_string(hex4(text.unsafe_get(j).to_int()))
       }

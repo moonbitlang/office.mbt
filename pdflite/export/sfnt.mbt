@@ -85,6 +85,8 @@ pub struct Font {
   kind : OutlineKind
   /// An identifier used to derive subset tags.
   key : String
+  /// The color glyph hook.
+  priv mut color : ColorGlyphs?
 }
 
 ///|
@@ -201,6 +203,7 @@ pub fn Font::new(data : Bytes, index : Int, key? : String = "") -> Font? {
     fs_type,
     kind,
     key,
+    color: None,
   })
 }
 

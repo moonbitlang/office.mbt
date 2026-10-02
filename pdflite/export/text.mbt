@@ -17,8 +17,10 @@ fn glyph_text(text : String, g : Glyph) -> String {
 /// `/ActualText` (krilla `use_text_spanner`). Also registers the codepoints
 /// of glyphs as long as no span is needed.
 fn use_text_spanner(
+  sc : SerializeContext,
   glyphs : ArrayView[Glyph],
   text : String,
+  context_color : Int,
   fc : FontContainer,
 ) -> Bool {
   if glyphs.is_empty() {
@@ -27,11 +29,11 @@ fn use_text_spanner(
   let mut do_text_span = false
   let check_single = (glyph : Glyph) => {
     if !do_text_span {
-      let cid = fc.cid_font.add_glyph(glyph.glyph_id)
+      let (fid, code) = fc.add_glyph(sc, glyph.glyph_id, context_color)
       let t = glyph_text(text, glyph)
-      match fc.cid_font.get_codepoints(cid) {
+      match fc.get_codepoints(fid, code) {
         Some(c) => if c != t { do_text_span = true }
-        None => fc.cid_font.set_codepoints(cid, t, glyph.location)
+        None => fc.set_codepoints(fid, code, t, glyph.location)
       }
     }
   }
@@ -60,18 +62,20 @@ priv struct GlyphSpan {
 /// Segment a glyph run into spans that either need an `/ActualText` or not
 /// (krilla `GlyphSpanner`).
 fn glyph_spans(
+  sc : SerializeContext,
   slice : ArrayView[Glyph],
   text : String,
   reversed : Bool,
   forbid_invalid_codepoints : Bool,
+  context_color : Int,
   fc : FontContainer,
 ) -> Array[GlyphSpan] {
   let out = []
   let func = (g : Glyph, previous_range : (Int, Int)?) => {
-    let cid = fc.cid_font.add_glyph(g.glyph_id)
+    let (fid, code) = fc.add_glyph(sc, g.glyph_id, context_color)
     let range = (g.text_start, g.text_end)
     let t = glyph_text(text, g)
-    let codepoints = fc.cid_font.get_codepoints(cid)
+    let codepoints = fc.get_codepoints(fid, code)
     // Check if the glyph has already been assigned codepoints that don't
     // match the one we are seeing right now.
     let incompatible = match codepoints {
@@ -87,7 +91,7 @@ fn glyph_spans(
     if !incompatible &&
       (!same_prev || forbid_invalid_codepoints) &&
       codepoints != Some(t) {
-      fc.cid_font.set_codepoints(cid, t, g.location)
+      fc.set_codepoints(fid, code, t, g.location)
     }
     (range, incompatible)
   }
@@ -152,15 +156,22 @@ fn glyph_spans(
 ///|
 /// Segment glyphs into groups that can be shown with one operator (same y
 /// offset, no y advance).
-fn glyph_groups(slice : ArrayView[Glyph]) -> Array[ArrayView[Glyph]] {
+fn glyph_groups(
+  sc : SerializeContext,
+  slice : ArrayView[Glyph],
+  context_color : Int,
+  fc : FontContainer,
+) -> Array[ArrayView[Glyph]] {
   let out = []
   let mut slice = slice
   while !slice.is_empty() {
     let first = slice[0]
+    let first_fid = fc.add_glyph(sc, first.glyph_id, context_color).0
     let mut count = 1
     while count < slice.length() {
       let next = slice[count]
-      if first.y_offset != next.y_offset ||
+      if first_fid != fc.add_glyph(sc, next.glyph_id, context_color).0 ||
+        first.y_offset != next.y_offset ||
         first.y_advance != 0.0 ||
         next.y_advance != 0.0 {
         break
@@ -226,6 +237,7 @@ fn ContentBuilder::draw_glyphs(
   start : Point,
   fill : Fill?,
   stroke : Stroke?,
+  context_color : Int,
   glyphs : ArrayView[Glyph],
   font : Font,
   text : String,
@@ -268,52 +280,27 @@ fn ContentBuilder::draw_glyphs(
       sb.set_fill_opacity(stroke.opacity)
     }
   }
+  let run = (mode : RenderMode, action : (ContentBuilder) -> Unit) => {
+    self.fill_stroke_glyph_run(
+      sc, x, y, mode, action, context_color, glyphs, font, text, font_size,
+    )
+  }
   match (fill, stroke) {
     (Some(f), Some(s)) => {
       set_fill_opacity(self, f)
       set_stroke_opacity(self, s)
-      self.fill_stroke_glyph_run(
-        sc,
-        x,
-        y,
-        FillStrokeMode,
-        sb => {
-          fill_action(sb, f)
-          stroke_action(sb, s)
-        },
-        glyphs,
-        font,
-        text,
-        font_size,
-      )
+      run(FillStrokeMode, sb => {
+        fill_action(sb, f)
+        stroke_action(sb, s)
+      })
     }
     (Some(f), None) => {
       set_fill_opacity(self, f)
-      self.fill_stroke_glyph_run(
-        sc,
-        x,
-        y,
-        FillMode,
-        sb => fill_action(sb, f),
-        glyphs,
-        font,
-        text,
-        font_size,
-      )
+      run(FillMode, sb => fill_action(sb, f))
     }
     (None, Some(s)) => {
       set_stroke_opacity(self, s)
-      self.fill_stroke_glyph_run(
-        sc,
-        x,
-        y,
-        StrokeMode,
-        sb => stroke_action(sb, s),
-        glyphs,
-        font,
-        text,
-        font_size,
-      )
+      run(StrokeMode, sb => stroke_action(sb, s))
     }
     (None, None) => ()
   }
@@ -328,6 +315,7 @@ fn ContentBuilder::fill_stroke_glyph_run(
   y : Double,
   mode : RenderMode,
   action : (ContentBuilder) -> Unit,
+  context_color : Int,
   glyphs : ArrayView[Glyph],
   font : Font,
   text : String,
@@ -353,31 +341,24 @@ fn ContentBuilder::fill_stroke_glyph_run(
     action(sb)
     sb.content.op("BT")
     let fc = sc.register_font_container(font)
-    let do_text_span = reversed || use_text_spanner(glyphs, text, fc)
-    if do_text_span {
-      let spans = glyph_spans(
+    let do_text_span = reversed ||
+      use_text_spanner(sc, glyphs, text, context_color, fc)
+    let spans = if do_text_span {
+      glyph_spans(
+        sc,
         glyphs,
         text,
         reversed,
         sc.settings.validators().requires_codepoint_mappings(),
+        context_color,
         fc,
       )
-      for span in spans {
-        sb.fill_stroke_glyph_span(
-          sc, cur_x, cur_y, span, mode, fc, text, font_size, reversed,
-        )
-      }
     } else {
+      [{ glyphs, actual_text: None, }]
+    }
+    for span in spans {
       sb.fill_stroke_glyph_span(
-        sc,
-        cur_x,
-        cur_y,
-        { glyphs, actual_text: None, },
-        mode,
-        fc,
-        text,
-        font_size,
-        reversed,
+        sc, cur_x, cur_y, span, mode, context_color, fc, text, font_size, reversed,
       )
     }
     sb.content.op("ET")
@@ -392,6 +373,7 @@ fn ContentBuilder::fill_stroke_glyph_span(
   cur_y : Ref[Double],
   span : GlyphSpan,
   mode : RenderMode,
+  context_color : Int,
   fc : FontContainer,
   text : String,
   font_size : Double,
@@ -406,8 +388,11 @@ fn ContentBuilder::fill_stroke_glyph_span(
     self.content.name("ReversedChars")
     self.content.op("BMC")
   }
-  for group in glyph_groups(span.glyphs) {
+  for group in glyph_groups(sc, span.glyphs, context_color, fc) {
     let first = group[0]
+    let fid = fc.add_glyph(sc, first.glyph_id, context_color).0
+    // Type 3 fonts are always filled.
+    let mode = if fid >= 0 { FillMode } else { mode }
     self.content.raw(
       match mode {
         FillMode => "0"
@@ -420,6 +405,8 @@ fn ContentBuilder::fill_stroke_glyph_span(
       sc,
       cur_x,
       cur_y.val - first.y_offset * font_size,
+      fid,
+      context_color,
       fc,
       font_size,
       group,
@@ -441,12 +428,14 @@ fn ContentBuilder::encode_consecutive_glyph_run(
   sc : SerializeContext,
   cur_x : Ref[Double],
   cur_y : Double,
+  fid : Int,
+  context_color : Int,
   fc : FontContainer,
   size : Double,
   glyphs : ArrayView[Glyph],
   text : String,
 ) -> Unit {
-  let font_name = self.rd.register(Font, fc.ref_)
+  let font_name = self.rd.register(Font, fc.font_ref(fid))
   self.content.name(font_name)
   self.content.num(size)
   self.content.op("Tf")
@@ -464,19 +453,20 @@ fn ContentBuilder::encode_consecutive_glyph_run(
   // A single glyph without an x offset is shown with `Tj`.
   if glyphs.length() == 1 && glyphs[0].x_offset.abs() <= 0.001 {
     let g = glyphs[0]
-    let cid = fc.cid_font.add_glyph(g.glyph_id)
-    self.content.obj(Str(encode_cid(cid)))
+    let code = fc.add_glyph(sc, g.glyph_id, context_color).1
+    self.content.obj(Str(encode_code(fid, code)))
     self.content.op("Tj")
     cur_x.val = cur_x.val + g.x_advance * size
     return
   }
   // Individual positioning with `TJ`.
+  let upem = fc.units_per_em(fid)
   let items : Array[Obj] = []
   let encoded = @buffer.new()
   let mut adjustment = 0.0
   for g in glyphs {
-    let cid = fc.cid_font.add_glyph(g.glyph_id)
-    let scale = (v : Double) => v * pdf_units_per_em
+    let code = fc.add_glyph(sc, g.glyph_id, context_color).1
+    let scale = (v : Double) => v * upem
     let x_advance = scale(g.x_advance)
     let font_advance = match font.advance_width(g.glyph_id) {
       Some(n) => Some(scale(n / font.units_per_em))
@@ -490,10 +480,11 @@ fn ContentBuilder::encode_consecutive_glyph_run(
         items.push(Str(encoded.to_bytes()))
         encoded.reset()
       }
-      items.push(Real(-(adjustment / pdf_units_per_em * pdf_units_per_em)))
+      // Adjustments are always in 1000 units, even for Type 3 fonts.
+      items.push(Real(-(adjustment / upem * pdf_units_per_em)))
       adjustment = 0.0
     }
-    encoded.write_bytes(encode_cid(cid))
+    encoded.write_bytes(encode_code(fid, code))
     if font_advance is Some(fa) {
       adjustment += x_advance - fa
     }
