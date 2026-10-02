@@ -33,14 +33,17 @@ fn pdf_page_tree_kids_number(node : @syntax.PdfObject) -> Int {
 /// object number, or None to skip it.
 ///
 /// A node or a `/Kids` array that is its own ancestor (a cycle) raises
-/// `PageTreeExpected`, as does a node deeper than 10000 levels. Every node
-/// visited, direct or not, and every `/Kids` array held by reference that
-/// a branch expands costs one step, and more than `2 * object_count + 16`
-/// steps raise `PageTreeExpected` too: a tree whose nodes are all held by
-/// reference, each node and `/Kids` array appearing once, takes at most
-/// `object_count` steps, while a
-/// node or array shared by many parents (which a recursive walk would
-/// visit once per parent, multiplying the tree) uses the allowance up.
+/// `PageTreeExpected`, as does a node deeper than 10000 levels. The root,
+/// every kid examined (visited, or skipped by `child`: null, unresolved,
+/// or of a kind the caller skips) and every `/Kids` array held by
+/// reference that a branch expands cost one step each, so the walk's work
+/// is proportional to its steps, and more than `2 * object_count + 16`
+/// steps raise `PageTreeExpected` too. A well-formed tree, every kid a
+/// reference to a node object of its own and each `/Kids` array appearing
+/// once, takes at most `object_count` steps; a node or array shared by
+/// many parents (which a recursive walk would visit once per parent,
+/// multiplying the tree) or many kids that are not nodes use the
+/// allowance up.
 fn[S] PdfDocument::pdf_page_tree_walk(
   self : PdfDocument,
   root : @syntax.PdfObject,
@@ -66,7 +69,6 @@ fn[S] PdfDocument::pdf_page_tree_walk(
     state : S,
     depth : Int,
   ) raise @core.PdfError {
-    charge()
     if depth > 10000 {
       raise PageTreeExpected
     }
@@ -91,6 +93,8 @@ fn[S] PdfDocument::pdf_page_tree_walk(
     }
     stack.push({ kids, next: 0, state: child_state, depth, entered, })
   }
+  // the root costs a step; every other node is paid for as a kid, below
+  charge()
   enter(root, root_number, state, root_depth)
   while stack.last() is Some(frame) {
     if frame.next >= frame.kids.length() {
@@ -102,6 +106,8 @@ fn[S] PdfDocument::pdf_page_tree_walk(
     }
     let kid = frame.kids[frame.next]
     frame.next += 1
+    // every kid examined costs a step, whether it is visited or skipped
+    charge()
     match child(kid) {
       Some((node, number)) => enter(node, number, frame.state, frame.depth + 1)
       None => ()

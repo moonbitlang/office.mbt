@@ -134,3 +134,21 @@ test "the extraction helpers skip direct kids, so a self-listing array ends" {
   }
   assert_eq(doc.pdf_page_tree_nodes_not_pages(), [root])
 }
+
+///|
+test "each extraction helper counts skipped kids against the allowance" {
+  // 1,000 branches sharing one referenced array of 10,000 nulls
+  let doc = pdf_document_empty()
+  let kids = doc.add_object(PdfArray(Array::make(10000, PdfNull)))
+  let branches : Array[@syntax.PdfObject] = []
+  for _ in 0..<1000 {
+    branches.push(
+      PdfIndirect(doc.add_object(tree_walk_wb_pages(PdfIndirect(kids)))),
+    )
+  }
+  let root = doc.add_object(tree_walk_wb_pages(PdfArray(branches)))
+  ignore(doc.add_root(root, []))
+  for error in tree_walk_extract_errors(doc) {
+    assert_true(error is Some(PageTreeExpected))
+  }
+}

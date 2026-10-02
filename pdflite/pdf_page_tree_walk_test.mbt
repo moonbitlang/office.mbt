@@ -89,7 +89,8 @@ test "a /Kids array that lists a node holding the same array is rejected" {
     tree_walk_error(() => {
       @pdflite.pdf_read_document_from_bytes(tree_walk_self_listing_pdf())
     }) {
-    Some(_) => ()
+    Some(PageTreeExpected) => ()
+    Some(_) => fail("reading raised an error other than PageTreeExpected")
     None => {
       let doc = @pdflite.pdf_read_document_from_bytes(
         tree_walk_self_listing_pdf(),
@@ -296,4 +297,45 @@ test "a page listed more often than the allowance permits is rejected" {
   assert_eq(doc.endpage(), 15)
   listed(40)
   assert_true(tree_walk_error(() => doc.endpage()) is Some(PageTreeExpected))
+}
+
+///|
+/// A root over `branches` branches that all hold, by reference, one
+/// `/Kids` array of `nulls` nulls: `branches + 2` objects, and
+/// `branches * nulls` kids to examine.
+fn tree_walk_shared_nulls_doc(
+  branches : Int,
+  nulls : Int,
+) -> @pdflite.PdfDocument raise {
+  let doc = @pdflite.pdf_document_empty()
+  let kids = doc.add_object(PdfArray(Array::make(nulls, PdfNull)))
+  let branch_refs : Array[@syntax.PdfObject] = []
+  for _ in 0..<branches {
+    branch_refs.push(
+      PdfIndirect(doc.add_object(tree_walk_pages(PdfIndirect(kids)))),
+    )
+  }
+  let root = doc.add_object(tree_walk_pages(PdfArray(branch_refs)))
+  ignore(doc.add_root(root, []))
+  doc
+}
+
+///|
+test "kids that are skipped still count against the allowance" {
+  // 1,002 objects; ten million null kids to scan without the limit
+  let doc = tree_walk_shared_nulls_doc(1000, 10000)
+  tree_walk_all_rejected(doc)
+}
+
+///|
+test "a few null kids are skipped where they were before" {
+  let doc = @pdflite.pdf_document_empty()
+  let page = doc.add_object(
+    tree_walk_dict([("/Type", PdfNameObject(tree_walk_name("/Page")))]),
+  )
+  let root = doc.add_object(
+    tree_walk_pages(PdfArray([PdfNull, PdfIndirect(page), PdfNull, PdfNull])),
+  )
+  ignore(doc.add_root(root, []))
+  assert_eq(doc.page_reference_numbers(), [page])
 }

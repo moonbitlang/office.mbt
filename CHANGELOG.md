@@ -25,17 +25,24 @@ covers changes that have landed on `main` but are not yet published.
   `/Kids` array holding a direct node that lists the same array), where
   the recursive walks overflowed the stack or looped; for a tree deeper
   than 10,000 levels, as before; and once it has taken more than
-  `2 * object_count + 16` steps, a step being each node visited, direct
-  or by reference, and each `/Kids` array held by reference that a
-  branch expands. A tree whose nodes are all held by reference, each
-  node and `/Kids` array appearing once, takes at most `object_count`
-  steps. The limit stops trees that sharing multiplies (each level
-  listing the level below twice, through references or through direct
-  nodes in a referenced array), but it also rejects documents the
+  `2 * object_count + 16` steps. A step is the root, each kid examined,
+  whether it is visited or skipped (`page_reference_numbers` and the
+  extraction helpers skip null or unresolved kids and kids that are not
+  references; counting pages and `pages_of_pagetree` reject kids that do
+  not resolve to dictionaries, as before), and each `/Kids` array held
+  by reference that a branch expands; so the work of a walk is
+  proportional to its steps. A well-formed tree, every kid a
+  reference to a node object of its own and each `/Kids` array appearing
+  once, takes at most `object_count` steps. The limit stops trees that
+  sharing multiplies (each level listing the level below twice, through
+  references or through direct nodes in a referenced array) and repeated
+  scans of a shared `/Kids` array of skipped entries (1,000 branches
+  sharing an array of 10,000 nulls), but it also rejects documents the
   recursive walks accepted: a page or node listed by many parents, or
-  many times by one, past the allowance (a page listed 40 times in a
-  two-object document). A node shared by a few parents is still visited
-  once per parent, and inherits from each.
+  many times by one, or more skipped kids than the allowance leaves room
+  for (a page listed 40 times in a two-object document). A node shared
+  by a few parents is still visited once per parent, and inherits from
+  each.
 
 ### moonbitlang/pagelayout [0.7.0]
 
