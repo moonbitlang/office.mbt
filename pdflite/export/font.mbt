@@ -218,22 +218,24 @@ fn CIDFont::serialize(
   root_ref : Int,
 ) -> Unit raise ExportError {
   let font = self.font
-  let is_cff = font.kind == Cff
-  match font.kind {
-    NoOutlines => raise FontError(font, "font is missing an outline table")
-    // krilla converts CFF2 fonts to CFF with its subsetter; there is no way
-    // to embed them in PDF as they are.
-    Cff2 => raise FontError(font, "CFF2 fonts are not supported")
-    Cff =>
-      // CID-keyed CFF fonts are embedded as bare CFF programs (like krilla
-      // does after subsetting), others as OpenType font programs, which
-      // require PDF 1.6.
-      if !font.is_cid_keyed() && sc.settings.pdf_version() < Pdf16 {
-        raise FontError(
-          font, "embedding a CFF font that is not CID-keyed requires PDF 1.6 or later",
-        )
-      }
-    Glyf => ()
+  let is_cff = font.kind == Cff || font.kind == Cff2
+  if font.kind == NoOutlines {
+    raise FontError(font, "font is missing an outline table")
+  }
+  // CFF fonts are embedded as bare CID-keyed CFF programs, like krilla does
+  // after subsetting (name-keyed fonts are converted).
+  let cff_program = if font.kind == Cff {
+    // Like krilla's subsetter, reject used glyphs of name-keyed fonts
+    // composed with `seac` (whose components are found by glyph names).
+    if font.cff_uses_seac(self.glyphs) is Some(error) {
+      raise FontError(font, "failed to subset font: \{error}")
+    }
+    match font.cid_keyed_cff() {
+      Some(data) => Some(data)
+      None => raise FontError(font, "failed to subset font: malformed font")
+    }
+  } else {
+    None
   }
   // Restricted license embedding (see krilla for why `& 0xF == 2`).
   if (font.fs_type & 0xF) == 2 {
@@ -391,10 +393,13 @@ fn CIDFont::serialize(
   sc.put_content_stream(cmap_ref, [], to_unicode_cmap(entries))
   // The font program.
   if is_cff {
-    match font.table_data("CFF ") {
-      Some(cff) if font.is_cid_keyed() =>
+    match cff_program {
+      Some(cff) =>
         sc.put_stream(data_ref, [("Subtype", Name("CIDFontType0C"))], cff)
-      _ =>
+      // CFF2 fonts (which krilla converts to CFF with its subsetter) are
+      // embedded as OpenType font programs, which PDF doesn't define for
+      // CFF2 outlines; some viewers can show them.
+      None =>
         sc.put_stream(
           data_ref,
           [("Subtype", Name("OpenType"))],

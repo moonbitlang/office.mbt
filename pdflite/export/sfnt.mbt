@@ -89,6 +89,8 @@ pub struct Font {
   priv mut color : ColorGlyphs?
   /// The CID of each glyph of a CID-keyed CFF font.
   priv cids : Array[Int]?
+  /// The structure of the `CFF ` table.
+  priv cff : CffTable?
 }
 
 ///|
@@ -216,13 +218,15 @@ pub fn Font::new(data : Bytes, index : Int, key? : String = "") -> Font? {
     NoOutlines
   }
   let mut cids = None
+  let mut cff = None
   if kind == Cff {
     guard tables.get("CFF ") is Some((off, len)) else { return None }
-    match cff_keying(data, off, len) {
-      Some(CidKeyed(c)) => cids = Some(c)
-      Some(NameKeyed) => ()
-      None => return None
+    guard cff_table(data, off, len) is Some(table) else { return None }
+    if table.is_cid_keyed() {
+      guard table.cids(data) is Some(c) else { return None }
+      cids = Some(c)
     }
+    cff = Some(table)
   }
   Some({
     data,
@@ -244,6 +248,7 @@ pub fn Font::new(data : Bytes, index : Int, key? : String = "") -> Font? {
     key,
     color: None,
     cids,
+    cff,
   })
 }
 
@@ -264,11 +269,32 @@ fn Font::is_cid_keyed(self : Font) -> Bool {
 }
 
 ///|
-/// The data of a table.
-fn Font::table_data(self : Font, tag : String) -> Bytes? {
-  match self.tables.get(tag) {
-    Some((off, len)) => Some(self.data[off:off + len].to_owned())
-    None => None
+/// Why the glyphs of a name-keyed CFF font can't be embedded, if one uses
+/// `seac` or is malformed (subsetter's error messages).
+fn Font::cff_uses_seac(self : Font, glyphs : Array[Int]) -> String? {
+  guard self.cff is Some(table) && !table.is_cid_keyed() else { return None }
+  guard table.programs(self.data) is Some(programs) else {
+    return Some("malformed font")
+  }
+  for g in glyphs {
+    match programs.uses_seac(self.data, g) {
+      Some(false) => ()
+      Some(true) => return Some("unsupported feature in font")
+      None => return Some("malformed font")
+    }
+  }
+  None
+}
+
+///|
+/// The CID-keyed CFF program to embed: the `CFF ` table of CID-keyed fonts,
+/// a converted table for name-keyed ones (`None` if the conversion fails).
+fn Font::cid_keyed_cff(self : Font) -> Bytes? {
+  guard self.cff is Some(table) else { return None }
+  if table.is_cid_keyed() {
+    Some(self.data[table.start:table.end].to_owned())
+  } else {
+    table.to_cid_keyed(self.data)
   }
 }
 

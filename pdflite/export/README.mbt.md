@@ -61,8 +61,9 @@ dictionary and XMP), embedded files and tagged PDF.
 ## Known limitations
 
 - TrueType fonts are subset by emptying unused glyphs (glyph IDs are kept);
-  CFF fonts are embedded whole. CFF2 fonts are rejected, and CFF fonts that
-  are not CID-keyed need PDF 1.6 (they are embedded as OpenType).
+  CFF fonts are embedded whole as CID-keyed CFF programs (name-keyed ones are
+  converted). CFF2 fonts, which krilla converts to CFF, are embedded as
+  OpenType font programs, which PDF doesn't define for CFF2 outlines.
 - There is no CMYK output profile: CMYK colors stay in DeviceCMYK, which
   PDF/A reports as `MissingCMYKProfile`.
 - No `CIDSet` is written (PDF/A-1 requires one).

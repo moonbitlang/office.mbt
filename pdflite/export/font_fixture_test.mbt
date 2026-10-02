@@ -91,7 +91,12 @@ fn composite_glyph(component : Int) -> Array[Int] {
 ///|
 /// A minimal CFF table with `n` glyphs (all `endchar`). A CID-keyed table
 /// has the ROS operator and a charset mapping glyphs 1.. to CIDs 100..
-fn cff_table(n : Int, cid_keyed : Bool) -> Array[Int] {
+fn cff_table(
+  n : Int,
+  cid_keyed : Bool,
+  seac? : Int = -1,
+  seac_in_subr? : Int = -1,
+) -> Array[Int] {
   let int32 = (v : Int) => {
     [29, (v >> 24) & 0xFF, (v >> 16) & 0xFF, (v >> 8) & 0xFF, v & 0xFF]
   }
@@ -122,11 +127,22 @@ fn cff_table(n : Int, cid_keyed : Bool) -> Array[Int] {
     index([])
   }
   let charset = if cid_keyed { [1, 0, 100, n - 2] } else { [] }
+  // A name-keyed font has a Private DICT (defaultWidthX 0, local Subrs at
+  // offset 4) followed by one local subroutine (`return`).
+  let private = if cid_keyed { [] } else { [139, 20, 143, 19] }
+  // Subroutine 0 returns, subroutine 1 composes an accented glyph with
+  // `seac` (0 0 65 66 endchar).
+  let subrs = if cid_keyed {
+    []
+  } else {
+    index([[11], [139, 139, 204, 205, 14]])
+  }
   // The size of the Top DICT doesn't depend on the offsets (all int32).
-  let dict_size = if cid_keyed { 9 + 12 } else { 6 }
+  let dict_size = if cid_keyed { 9 + 12 } else { 6 + 11 }
   let top_size = 2 + 1 + 2 + dict_size
   let charset_at = 4 + names.length() + top_size + strings.length() + 2
-  let charstrings_at = charset_at + charset.length()
+  let private_at = charset_at + charset.length()
+  let charstrings_at = private_at + private.length() + subrs.length()
   let dict = []
   if cid_keyed {
     // ROS: Adobe (SID 391), Identity (SID 392), supplement 0.
@@ -142,6 +158,15 @@ fn cff_table(n : Int, cid_keyed : Bool) -> Array[Int] {
     dict.push(b)
   }
   dict.push(17)
+  if !cid_keyed {
+    for b in int32(private.length()) {
+      dict.push(b)
+    }
+    for b in int32(private_at) {
+      dict.push(b)
+    }
+    dict.push(18)
+  }
   let out = FontBytes::new()
   out.bytes([1, 0, 4, 1])
   out.bytes(names)
@@ -149,7 +174,23 @@ fn cff_table(n : Int, cid_keyed : Bool) -> Array[Int] {
   out.bytes(strings)
   out.bytes(index([])) // Global Subrs
   out.bytes(charset)
-  out.bytes(index(Array::make(n, [14])))
+  out.bytes(private)
+  out.bytes(subrs)
+  // Glyph `seac` uses `seac` directly, `seac_in_subr` calls subroutine 1
+  // (biased index 1 - 107).
+  out.bytes(
+    index(
+      Array::makei(n, g => {
+        if g == seac {
+          [139, 139, 204, 205, 14]
+        } else if g == seac_in_subr {
+          [33, 10]
+        } else {
+          [14]
+        }
+      }),
+    ),
+  )
   out.out
 }
 
@@ -257,6 +298,9 @@ fn test_font_tables(
     // The exporter embeds CFF fonts as a whole, only reading the charset of
     // CID-keyed fonts.
     "cff" => tables.push(("CFF ", cff_table(n, false)))
+    // Glyph 1 uses `seac`, glyph 2 calls a subroutine using it.
+    "cff-seac" =>
+      tables.push(("CFF ", cff_table(n, false, seac=1, seac_in_subr=2)))
     "cid-cff" | "cff2" =>
       tables.push(
         (if outlines == "cff2" { "CFF2" } else { "CFF " }, cff_table(n, true)),

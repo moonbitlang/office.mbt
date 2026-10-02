@@ -30,9 +30,10 @@ covers changes that have landed on `main` but are not yet published.
   (info dictionary and XMP), embedded files and a tag tree, and are
   checked against PDF/A and PDF/UA (`ExportError::Validation`). Known
   limitations: TrueType fonts are subset by emptying unused glyphs and
-  CFF fonts are embedded whole; CFF2 fonts are rejected, and CFF fonts
-  that are not CID-keyed need PDF 1.6; there is no CMYK output profile
-  and no `CIDSet`. See `pdflite/export/README.mbt.md`.
+  CFF fonts are embedded whole (as CID-keyed CFF); CFF2 fonts are
+  embedded as OpenType font programs (krilla converts them to CFF); there
+  is no CMYK output profile and no `CIDSet`. See
+  `pdflite/export/README.mbt.md`.
 - Depend on moonbitlang/x 0.5.5.
 
 ### moonbitlang/pagelayout [0.7.1]

@@ -216,3 +216,144 @@ test "validator internals" {
     ),
   )
 }
+
+///|
+/// A name-keyed CFF table (header, Name INDEX "X", Top DICT, empty String
+/// and Global Subr INDEXes, Private DICT with one local subroutine, three
+/// charstrings).
+fn wb_name_keyed_cff() -> Bytes {
+  let top : Array[Byte] = []
+  // FullName (SID 0), CharStrings, Private.
+  for b in [b'\x8B', b'\x02'] {
+    top.push(b)
+  }
+  cff_push_int32(top, 4 + 6 + 2 + 1 + 2 + 19 + 2 + 2 + 4 + 6)
+  cff_push_op(top, 17)
+  cff_push_int32(top, 4)
+  cff_push_int32(top, 4 + 6 + 2 + 1 + 2 + 19 + 2 + 2)
+  cff_push_op(top, 18)
+  let out : Array[Byte] = [b'\x01', b'\x00', b'\x04', b'\x01']
+  for b in [b'\x00', b'\x01', b'\x01', b'\x01', b'\x02', b'X'] {
+    out.push(b)
+  }
+  for b in [b'\x00', b'\x01', b'\x01', b'\x01', (top.length() + 1).to_byte()] {
+    out.push(b)
+  }
+  for b in top {
+    out.push(b)
+  }
+  for b in [b'\x00', b'\x00', b'\x00', b'\x00'] {
+    out.push(b)
+  }
+  // Private DICT: defaultWidthX 0, Subrs at offset 4.
+  for b in [b'\x8B', b'\x14', b'\x8F', b'\x13'] {
+    out.push(b)
+  }
+  // Local Subrs: one `return`.
+  for b in [b'\x00', b'\x01', b'\x01', b'\x01', b'\x02', b'\x0B'] {
+    out.push(b)
+  }
+  // CharStrings: three `endchar`s.
+  for
+    b in [
+      b'\x00', b'\x03', b'\x01', b'\x01', b'\x02', b'\x03', b'\x04', b'\x0E', b'\x0E',
+      b'\x0E',
+    ] {
+    out.push(b)
+  }
+  Bytes::from_array(out)
+}
+
+///|
+test "name-keyed CFF tables are converted to CID-keyed ones" {
+  let data = wb_name_keyed_cff()
+  let table = cff_table(data, 0, data.length()).unwrap()
+  inspect(table.is_cid_keyed(), content="false")
+  inspect(table.num_glyphs, content="3")
+  let converted = table.to_cid_keyed(data).unwrap()
+  let t = cff_table(converted, 0, converted.length()).unwrap()
+  inspect(t.is_cid_keyed(), content="true")
+  // An identity charset, the original charstrings and strings plus the
+  // registry and ordering.
+  debug_inspect(
+    t.cids(converted),
+    content=(
+      #|Some([0, 1, 2])
+    ),
+  )
+  inspect(
+    converted[t.charstrings.0:t.charstrings.1] ==
+    data[table.charstrings.0:table.charstrings.1],
+    content="true",
+  )
+  inspect(
+    t.strings.map(r => wb_latin1(converted[r.0:r.1])).join(" "),
+    content=(
+      #|Adobe Identity
+    ),
+  )
+  // The Top DICT: ROS, the kept FullName, a default FontMatrix and the
+  // offsets.
+  debug_inspect(
+    t.top.map(e => (e.op, e.operands)),
+    content=(
+      #|[
+      #|  (1230, [391, 392, 0]),
+      #|  (2, [0]),
+      #|  (1207, [0, 0, 0, 0, 0, 0]),
+      #|  (1234, [3]),
+      #|  (15, [113]),
+      #|  (17, [166]),
+      #|  (1236, [126]),
+      #|  (1237, [118]),
+      #|]
+    ),
+  )
+  // The Font DICT refers to a copy of the Private DICT, whose local
+  // subroutines follow at the same relative offset.
+  let fd_array = cff_operands(t.top, 1236).unwrap()[0]
+  let (fds, _) = cff_index(converted, fd_array, converted.length()).unwrap()
+  let fd = cff_dict(converted, fds[0].0, fds[0].1).unwrap()
+  let private = cff_operands(fd, 18).unwrap()
+  inspect(
+    converted[private[1]:private[1] + private[0] + 6] == data[38:48],
+    content="true",
+  )
+  // FDSelect format 3: one range with Font DICT 0.
+  let fd_select = cff_operands(t.top, 1237).unwrap()[0]
+  debug_inspect(
+    converted[fd_select:fd_select + 8],
+    content=(
+      #|<BytesView: [0x03, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00, 0x03]>
+    ),
+  )
+}
+
+///|
+test "seac detection follows subroutines with all number encodings" {
+  // data: [return] [0 0 65 66 endchar] then charstrings calling subroutine
+  // 215 (108 + bias 107) with a two-byte number and a hintmask with an
+  // implicit vstem before it.
+  let data : Bytes = [
+    0x0B, 0x8B, 0x8B, 0xCC, 0xCD, 0x0E, 0xF7, 0x00, 0x0A, 0x8B, 0x8C, 0x8B, 0x8C,
+    0x13, 0xC0, 0xF7, 0x00, 0x0A, 0x0E, 0xFF, 0x00, 0x01, 0x00, 0x00, 0x0E,
+  ]
+  let local_subrs = Array::makei(216, i => {
+    if i == 215 {
+      (1, 6)
+    } else {
+      (0, 1)
+    }
+  })
+  let programs = CffPrograms::{
+    charstrings: [(6, 9), (9, 19), (19, 25)],
+    global_subrs: [],
+    local_subrs,
+  }
+  debug_inspect(
+    [0, 1, 2].map(g => programs.uses_seac(data, g)),
+    content=(
+      #|[Some(true), Some(true), Some(false)]
+    ),
+  )
+}

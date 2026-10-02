@@ -431,10 +431,18 @@ test "font descriptor flags" {
 }
 
 ///|
-test "CFF fonts are embedded as OpenType font programs" {
+test "name-keyed CFF fonts are embedded as converted CID-keyed CFF programs" {
   let data = test_font_data(outlines="cff")
   let font = @export.Font::new(data, 0).unwrap()
-  let p = parse(text_page(font, [glyph(1, 0, 1)], "A"))
+  // Like krilla after subsetting, also in PDF 1.4.
+  let p = parse(
+    text_page(
+      font,
+      [glyph(1, 0, 1)],
+      "A",
+      settings=settings_with(version=Pdf14),
+    ),
+  )
   let f0 = p.font0()
   inspect(
     p.show(f0),
@@ -449,15 +457,10 @@ test "CFF fonts are embedded as OpenType font programs" {
       #|<</Type /Font /Subtype /CIDFontType0 /BaseFont /BZDIMV+TestSans-Bold /CIDSystemInfo <</Registry (Adobe) /Ordering (Identity) /Supplement 0>> /FontDescriptor R /DW 0 /W [0 [500] 1 [600]]>>
     ),
   )
+  // CIDs are glyph IDs.
+  inspect(contains(p.content(p.page(0)), "<0001> Tj"), content="true")
   let file = p.path(cid, ["FontDescriptor", "FontFile3"])
-  inspect(
-    p.show(file),
-    content=(
-      #|stream<</Subtype /OpenType /Filter /FlateDecode /Length 248>>
-    ),
-  )
-  // The font program is embedded unchanged.
-  inspect(p.stream_data(file) == data, content="true")
+  inspect(p.show(p.get(file, "Subtype")), content="/CIDFontType0C")
 }
 
 ///|
@@ -709,41 +712,30 @@ test "CID-keyed CFF fonts address glyphs by the CIDs of their charset" {
 }
 
 ///|
-test "unsupported CFF fonts" {
-  // CFF2 can't be embedded without conversion.
+test "CFF2 fonts and malformed CFF tables" {
+  // CFF2 fonts can't be converted (krilla's subsetter does): they are
+  // embedded as OpenType font programs.
   let cff2 = test_font(outlines="cff2")
   debug_inspect(cff2.kind, content="Cff2")
+  let p = parse(text_page(cff2, [glyph(1, 0, 1)], "A"))
+  let cid = p.items(p.get(p.font0(), "DescendantFonts"))[0]
+  let file = p.path(cid, ["FontDescriptor", "FontFile3"])
+  inspect(p.show(p.get(file, "Subtype")), content="/OpenType")
+  // A name-keyed CFF font without a Private DICT can't be converted.
+  let data = test_font_data(outlines="cff")
+  let cff = table_record(data, "CFF ")
+  let cff_at = (data[cff + 8].to_int() << 24) |
+    (data[cff + 9].to_int() << 16) |
+    (data[cff + 10].to_int() << 8) |
+    data[cff + 11].to_int()
+  // (The Private operator is the last byte of the Top DICT: 18 -> 13.)
+  let top_end = cff_at + 4 + 6 + 2 + 1 + 2 + 17 - 1
+  let no_private = @export.Font::new(patch(data, top_end, [13]), 0).unwrap()
   inspect(
-    export_result(() => text_page(cff2, [glyph(1, 0, 1)], "A")),
+    export_result(() => text_page(no_private, [glyph(1, 0, 1)], "A")),
     content=(
-      #|FontError: CFF2 fonts are not supported
+      #|FontError: failed to subset font: malformed font
     ),
-  )
-  // Name-keyed CFF fonts are embedded as OpenType font programs (PDF 1.6).
-  let cff = test_font(outlines="cff")
-  inspect(
-    export_result(() => {
-      text_page(
-        cff,
-        [glyph(1, 0, 1)],
-        "A",
-        settings=settings_with(version=Pdf15),
-      )
-    }),
-    content=(
-      #|FontError: embedding a CFF font that is not CID-keyed requires PDF 1.6 or later
-    ),
-  )
-  inspect(
-    export_result(() => {
-      text_page(
-        cff,
-        [glyph(1, 0, 1)],
-        "A",
-        settings=settings_with(version=Pdf16),
-      )
-    }),
-    content="ok",
   )
   // A malformed CFF table is rejected.
   let data = test_font_data(outlines="cff")
@@ -766,5 +758,23 @@ test "TrueType font programs have a Length1" {
   inspect(
     p.show(p.get(file, "Length1")) == p.stream_data(file).length().to_string(),
     content="true",
+  )
+}
+
+///|
+test "glyphs composed with seac are rejected like krilla's subsetter does" {
+  // `seac` refers to its components by glyph names, which a CID-keyed font
+  // doesn't have.
+  let font = test_font(outlines="cff-seac")
+  let draw = (g : Int) => {
+    export_result(() => text_page(font, [glyph(g, 0, 1)], "A"))
+  }
+  inspect(
+    [draw(1), draw(2), draw(3)].join("\n"),
+    content=(
+      #|FontError: failed to subset font: unsupported feature in font
+      #|FontError: failed to subset font: unsupported feature in font
+      #|ok
+    ),
   )
 }
