@@ -82,8 +82,9 @@ pub fn pdf_content_initial_path_state(
     clipping_path: pdf_content_initial_clipping_path(minx, miny, maxx, maxy),
     colourspace_stroke: PdfDeviceGray,
     colourspace_non_stroke: PdfDeviceGray,
-    colour_stroke: PdfContentColourFloats([1.0]),
-    colour_non_stroke: PdfContentColourFloats([1.0]),
+    // black (ISO 32000-1, 8.4.1); cpdfcontent starts from 1.0, white
+    colour_stroke: PdfContentColourFloats([0.0]),
+    colour_non_stroke: PdfContentColourFloats([0.0]),
     line_width: 1.0,
     line_cap: 0,
     line_join: 0,

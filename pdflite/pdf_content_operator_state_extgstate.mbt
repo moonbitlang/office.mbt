@@ -1,13 +1,17 @@
 ///|
-/// Apply cpdfcontent's source-shaped `gs` ExtGState resource dictionary.
+/// Apply the `gs` operator: the ExtGState dictionary `name` in the
+/// resources' `/ExtGState`. (cpdfcontent applies the whole `/ExtGState`
+/// resource dictionary instead, so its `gs` never takes effect.)
 pub fn PdfDocument::content_apply_extgstate_resource_op(
   self : PdfDocument,
   state : PdfContentOperatorState,
   resources : @syntax.PdfObject,
-  _name : @core.PdfName,
+  name : @core.PdfName,
 ) -> PdfContentOperatorState raise @core.PdfError {
   let extgstate = match
-    self.lookup_direct(pdf_content_extgstate_resource_name, resources) {
+    self
+    .lookup_direct(pdf_content_extgstate_resource_name, resources)
+    .bind(dictionary => self.lookup_direct(name, dictionary)) {
     Some(PdfDictionary(_) as dictionary) => dictionary
     _ => @syntax.pdf_dictionary([])
   }

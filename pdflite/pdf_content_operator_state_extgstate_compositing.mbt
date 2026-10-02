@@ -1,5 +1,5 @@
 ///|
-/// Apply cpdfcontent blend and black-point-compensation from a resolved ExtGState dictionary.
+/// Apply blend mode, soft mask and black-point compensation from a resolved ExtGState dictionary.
 pub fn PdfDocument::content_apply_extgstate_compositing_op(
   self : PdfDocument,
   state : PdfContentOperatorState,
@@ -8,6 +8,12 @@ pub fn PdfDocument::content_apply_extgstate_compositing_op(
   let mut output = state
   match self.lookup_direct(pdf_content_extgstate_bm_name, extgstate) {
     Some(value) => output = { ..output, blend_mode: value, }
+    None => ()
+  }
+  // the soft mask (cpdfcontent stores it as the halftone); /None clears it
+  match self.lookup_direct(pdf_content_extgstate_smask_name, extgstate) {
+    Some(PdfNameObject(_)) => output = { ..output, soft_mask: PdfNull, }
+    Some(value) => output = { ..output, soft_mask: value, }
     None => ()
   }
   match
