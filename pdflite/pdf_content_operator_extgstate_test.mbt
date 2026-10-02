@@ -228,7 +228,13 @@ test "cpdfcontent operator state applies ExtGState font parameters" {
 }
 
 ///|
-test "cpdfcontent operator state applies source-shaped ExtGState resources" {
+test "operator state applies the named ExtGState resource" {
+  let soft_mask = @syntax.pdf_dictionary([
+    (
+      content_operator_ext_name_for_test("/S"),
+      PdfNameObject(content_operator_ext_name_for_test("/Luminosity")),
+    ),
+  ])
   let doc = @pdflite.pdf_document_empty()
   let initial = @pdflite.pdf_content_initial_operator_state(
     0.0, 0.0, 100.0, 200.0,
@@ -251,16 +257,22 @@ test "cpdfcontent operator state applies source-shaped ExtGState resources" {
     (
       extgstate_key,
       @syntax.pdf_dictionary([
-        (content_operator_ext_name_for_test("/LW"), PdfReal(2.5)),
         (
-          content_operator_ext_name_for_test("/Font"),
-          PdfArray([PdfIndirect(7), PdfInteger(16)]),
+          gs_name,
+          @syntax.pdf_dictionary([
+            (content_operator_ext_name_for_test("/LW"), PdfReal(2.5)),
+            (
+              content_operator_ext_name_for_test("/Font"),
+              PdfArray([PdfIndirect(7), PdfInteger(16)]),
+            ),
+            (
+              content_operator_ext_name_for_test("/BM"),
+              PdfNameObject(content_operator_ext_name_for_test("/Multiply")),
+            ),
+            (content_operator_ext_name_for_test("/TK"), PdfBoolean(false)),
+            (content_operator_ext_name_for_test("/SMask"), soft_mask),
+          ]),
         ),
-        (
-          content_operator_ext_name_for_test("/BM"),
-          PdfNameObject(content_operator_ext_name_for_test("/Multiply")),
-        ),
-        (content_operator_ext_name_for_test("/TK"), PdfBoolean(false)),
       ]),
     ),
   ])
@@ -275,28 +287,48 @@ test "cpdfcontent operator state applies source-shaped ExtGState resources" {
     PdfNameObject(content_operator_ext_name_for_test("/Multiply")),
   )
   @test.assert_eq(state.text_state.knockout, false)
+  @test.assert_eq(state.soft_mask, soft_mask)
+  // /SMask /None clears it
+  let cleared = try! doc.content_apply_extgstate_resource_op(
+    state,
+    @syntax.pdf_dictionary([
+      (
+        extgstate_key,
+        @syntax.pdf_dictionary([
+          (
+            gs_name,
+            @syntax.pdf_dictionary([
+              (
+                content_operator_ext_name_for_test("/SMask"),
+                PdfNameObject(content_operator_ext_name_for_test("/None")),
+              ),
+            ]),
+          ),
+        ]),
+      ),
+    ]),
+    gs_name,
+  )
+  @test.assert_eq(cleared.soft_mask, PdfNull)
   @test.assert_eq(
     try! @pdflite.pdf_content_apply_extgstate_resource_op(
       doc, initial, resources, gs_name,
     ),
     state,
   )
-  let spec_shaped_resources = @syntax.pdf_dictionary([
+  // the /ExtGState resource dictionary itself is not a graphics state
+  // (cpdfcontent applies it as one)
+  let whole_dictionary = @syntax.pdf_dictionary([
     (
       extgstate_key,
       @syntax.pdf_dictionary([
-        (
-          gs_name,
-          @syntax.pdf_dictionary([
-            (content_operator_ext_name_for_test("/LW"), PdfReal(9.0)),
-          ]),
-        ),
+        (content_operator_ext_name_for_test("/LW"), PdfReal(9.0)),
       ]),
     ),
   ])
   @test.assert_eq(
     try! doc.content_apply_extgstate_resource_op(
-      initial, spec_shaped_resources, gs_name,
+      initial, whole_dictionary, gs_name,
     ),
     initial,
   )

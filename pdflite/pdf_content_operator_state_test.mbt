@@ -446,7 +446,15 @@ test "cpdfcontent operator state applies single resource operator dispatcher" {
         ),
       ]),
     ),
-    (extgstate_key, @syntax.pdf_dictionary([(alpha_key, PdfReal(0.4))])),
+    (
+      extgstate_key,
+      @syntax.pdf_dictionary([
+        (
+          content_operator_name_for_test("/GS1"),
+          @syntax.pdf_dictionary([(alpha_key, PdfReal(0.4))]),
+        ),
+      ]),
+    ),
   ])
   let moved = try! doc.content_apply_resource_op(
     initial,
