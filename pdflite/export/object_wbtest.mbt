@@ -10,7 +10,7 @@ fn wb_latin1(b : BytesView) -> String {
 }
 
 ///|
-test "format_real writes integers plainly and at most five decimals" {
+test "format_real writes the shortest digits of the f32 value like pdf-writer" {
   let cases = [
     0.0,
     1.0,
@@ -29,7 +29,9 @@ test "format_real writes integers plainly and at most five decimals" {
   ]
   inspect(
     cases.map(format_real).join(" "),
-    content="0 1 -3 0.5 -0.25 0.33333 0.66667 123.45679 0 0.00001 0 10000000000 0 0",
+    content=(
+      #|0 1 -3 0.5 -0.25 0.33333334 0.6666667 123.45679 0.000004 0.000005 -0.000001 10000000000 0 0
+    ),
   )
 }
 
@@ -169,15 +171,14 @@ test "DictBuilder replaces entries in place" {
 }
 
 ///|
-test "format_real handles values beyond the five-decimal Int64 range" {
-  // `v * 100000` used to overflow an Int64 from about 9.2e13 on, writing
-  // garbage like `92233720368547.75807`.
+test "format_real handles large values" {
+  // (Never in exponent notation, which PDF doesn't have.)
   inspect(
     [1.5e15, -2.5e15 - 1.0, 123456789012345.6, 1.0e20, -1.5e25]
     .map(format_real)
     .join(" "),
     content=(
-      #|1500000000000000 -2500000000000001 123456789012346 100000000000000000000 -15000000000000000000000000
+      #|1500000000000000 -2500000000000000 123456790000000 100000000000000000000 -15000000000000000000000000
     ),
   )
 }
@@ -409,6 +410,27 @@ test "seac detection tracks the stack depth through computed values" {
       #|  Some(true),
       #|  None,
       #|]
+    ),
+  )
+}
+
+///|
+test "streams get exactly one Length" {
+  let objects : Map[Int, Indirect] = {
+    1: Stream([("Length", Int(99)), ("Foo", Int(1))], b"abc"),
+  }
+  let text = wb_latin1(write_file("1.7", objects, 1, 1, None, None))
+  inspect(text.contains("<</Foo 1\n/Length 3\n>>"), content="true")
+}
+
+///|
+test "format_real keeps small values and never writes exponents" {
+  inspect(
+    [0.000001, 1.0e-7, -2.5e-9, 1.0e-40, 3.0e39, 0.1, 1.0e-6 * 3.0]
+    .map(format_real)
+    .join(" "),
+    content=(
+      #|0.000001 0.0000001 -0.0000000025 0.0000000000000000000000000000000000000001 3000000000000000000000000000000000000000 0.1 0.000003
     ),
   )
 }

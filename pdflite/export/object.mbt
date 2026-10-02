@@ -87,48 +87,85 @@ fn pdf_rect(x0 : Double, y0 : Double, x1 : Double, y1 : Double) -> Obj {
 }
 
 ///|
-/// Format a real number like pdf-writer: integral values are written as
-/// integers, others with at most five decimal places.
+/// Format a real number like pdf-writer, which writes `f32`s: integral
+/// values as integers, others with the shortest decimal digits that read
+/// back as the same `f32` (ryu), never in exponent notation. Non-finite
+/// values (which pdf-writer writes as invalid `NaN`/`inf` tokens) are
+/// written as `0`.
 fn format_real(v : Double) -> String {
   if v.is_nan() || v.is_inf() {
     return "0"
   }
-  if v == v.floor() && v.abs() < 2147483647.0 {
-    return v.to_int().to_string()
-  }
-  // From here on, `v * 100000` doesn't fit into an Int64 (and doubles have
-  // no five decimal places of precision left anyway).
-  if v.abs() >= 9.0e13 {
+  let f = Float::from_double(v)
+  let x = f.to_double()
+  if x.is_inf() {
+    // Beyond the range of `f32`.
     return integral_string(v.round())
   }
-  let neg = v < 0.0
-  let scaled = (v.abs() * 100000.0 + 0.5).floor()
-  if scaled == 0.0 {
-    return "0"
+  if x == x.floor() && x.abs() < 2147483648.0 {
+    return x.to_int().to_string()
   }
-  let scaled = scaled.to_int64()
-  let int_part = scaled / 100000L
-  let mut frac = scaled % 100000L
+  // The shortest digits `n * 10^exp` (at most 9 significant digits) that
+  // round to the same `f32`.
+  let a = x.abs()
+  let mut e = @math.log10(a).floor().to_int()
+  if pow10(e) > a {
+    e -= 1
+  } else if pow10(e + 1) <= a {
+    e += 1
+  }
+  let mut digits = 0L
+  let mut exp = 0
+  for p in 1..<=9 {
+    exp = e - p + 1
+    let n = scale10(a, -exp).round()
+    digits = n.to_int64()
+    if Float::from_double(scale10(n, exp)) == f.abs() {
+      break
+    }
+  }
+  while digits != 0L && digits % 10L == 0L {
+    digits = digits / 10L
+    exp += 1
+  }
+  let s = digits.to_string()
   let sb = StringBuilder()
-  if neg {
+  if x < 0.0 {
     sb.write_char('-')
   }
-  sb.write_string(int_part.to_string())
-  if frac != 0L {
-    // Five digits, trailing zeros trimmed.
-    let mut digits = 5
-    while frac % 10L == 0L {
-      frac = frac / 10L
-      digits -= 1
+  if exp >= 0 {
+    sb.write_string(s)
+    for _ in 0..<exp {
+      sb.write_char('0')
     }
+  } else if s.length() > -exp {
+    let point = s.length() + exp
+    sb.write_string(s.unsafe_substring(start=0, end=point))
     sb.write_char('.')
-    let s = frac.to_string()
-    for _ in 0..<(digits - s.length()) {
+    sb.write_string(s.unsafe_substring(start=point, end=s.length()))
+  } else {
+    sb.write_string("0.")
+    for _ in 0..<(-exp - s.length()) {
       sb.write_char('0')
     }
     sb.write_string(s)
   }
   sb.to_string()
+}
+
+///|
+fn pow10(e : Int) -> Double {
+  @math.pow(10.0, e.to_double())
+}
+
+///|
+/// `v * 10^e`, dividing for negative `e` (which is exact more often).
+fn scale10(v : Double, e : Int) -> Double {
+  if e >= 0 {
+    v * pow10(e)
+  } else {
+    v / pow10(-e)
+  }
 }
 
 ///|
@@ -363,7 +400,9 @@ fn write_file(
     match object {
       Plain(obj) => write_obj(buf, obj)
       Stream(dict, data) => {
-        let entries = dict.copy()
+        // The length of the data, replacing any `/Length` of the dictionary
+        // (e.g. of streams copied from other files).
+        let entries = dict.filter(e => e.0 != "Length")
         entries.push(("Length", Int(data.length())))
         write_obj(buf, Dict(entries))
         write_ascii(buf, "\nstream\n")
