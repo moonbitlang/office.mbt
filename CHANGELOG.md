@@ -19,13 +19,15 @@ covers changes that have landed on `main` but are not yet published.
   raster image: the first page, or the one a `page` parameter names
   (`application/pdf; page=2`). `render_pdf` imports the page as a Form
   XObject (pdflite's new `PdfDocument::import_page`), reading each
-  distinct PDF once per render and importing each (bytes, media type)
+  distinct PDF (and walking its page tree) once per render, and once per
+  `unembeddable_images` call, and importing each (bytes, media type)
   once. A PDF that cannot be read, a page it does not have, or a `page`
   parameter that is not a positive integer is skipped like any other
   image the backend cannot draw, and `unembeddable_images` reports it
-  (`PDF this backend cannot read`, `PDF without the page to draw`). The
-  SVG backend is unchanged: it embeds the bytes as a data URI, which
-  browsers do not draw for a PDF. Requires the unreleased pdflite below.
+  (`PDF this backend cannot read`, `PDF without the page to draw`, `PDF
+  page this backend cannot import`). The SVG backend is unchanged: it
+  embeds the bytes as a data URI, which browsers do not draw for a PDF.
+  Requires the unreleased pdflite below.
 
 ### moonbitlang/pdflite [Unreleased]
 
@@ -65,24 +67,41 @@ covers changes that have landed on `main` but are not yet published.
   two-object document). A node shared by a few parents is still visited
   once per parent, and inherits from each.
 - `PdfDocument::import_page(source, page_number)` imports a page of
-  another document as a Form XObject, the way Prawn's templates import a
-  page: the form's `/BBox` is the page's crop box clipped to its media
-  box, its `/Matrix` turns that box upright by the page's `/Rotate` with
-  its lower-left corner at the origin, and it carries the page's
-  resources and transparency `/Group`. A single content stream keeps its
-  filters and encoded bytes; several are decoded, joined and
-  Flate-compressed. Every object the form reaches is copied under a new
-  object number (streams with their encoded data), without following
-  references back into the source's page tree, which become `null`; the
-  source document is not modified. Annotations and document-level data
-  are not imported. It returns a `PdfImportedPage`: the form's object
-  number and the size it fills, `(0, 0)` to `(width, height)`. It raises
-  `BadPageSpecification` for a page the source does not have, `HardError`
-  for an encrypted source, and the reader's errors for malformed boxes or
-  content.
-- `PdfDocument::page_display_size(page_number)` is the size a viewer
-  shows a page at (and `import_page` reports): its crop box clipped to
-  its media box, with width and height swapped for `/Rotate` 90 or 270.
+  another document as a Form XObject. Like prawn-templates (which
+  asciidoctor-pdf uses), the page and the objects it needs are copied;
+  prawn-templates copies the page object graph as a page, this builds a
+  Form XObject that can be drawn anywhere, scaled like an image. The
+  form's `/BBox` is the page's visible box (its media box clipped to its
+  crop box, PDF 32000-1 §14.11.2), its `/Matrix` turns that box upright
+  by the page's `/Rotate` with its lower-left corner at the origin and
+  scales it by its `/UserUnit`, and it carries the page's resources and
+  transparency `/Group`, inherited attributes included. A single content
+  stream keeps its filters and encoded bytes; several are decoded, joined
+  and Flate-compressed. Every object the form reaches is copied under a
+  new object number (streams with their encoded data); references to the
+  source's page tree nodes, or to any other dictionary whose resolved
+  `/Type` is `/Page` or `/Pages`, become `null`. The source document is
+  not modified, and a failed import adds nothing. Annotations and
+  document-level data are not imported. It returns a `PdfImportedPage`:
+  the form's object number and the size it fills, `(0, 0)` to
+  `(width, height)`.
+- `PdfPageSource::new(document)` reads a document's page tree once for
+  importing (`page_count`, `page_display_size`, and the `source` of
+  `import_page`). It raises `PageTreeExpected` for a page tree with a
+  cycle (or a node shared by two parents) or a malformed node, and
+  `HardError` for an encrypted document, as prawn-templates refuses one.
+  `page_display_size(page_number)` is the size a viewer shows a page at
+  (and `import_page` reports): the visible box scaled by `/UserUnit`,
+  width and height swapped for `/Rotate` 90 or 270. Both raise
+  `BadPageSpecification` for a page the source does not have; the
+  rectangle parser's errors or `BadRectangle` for a malformed box or an
+  empty visible box (a crop box outside the media box is not widened to
+  the media box); `PageRotationExpected` for a `/Rotate` that is not a
+  multiple of 90; and `BadNumberArgument` for a `/UserUnit` that is not
+  a positive number. Walking the page tree and the objects a page
+  reaches uses explicit worklists, so deep or cyclic graphs in malformed
+  files are errors or bounded walks rather than stack overflows; direct
+  objects nested more than 256 deep raise `HardError`.
 
 ### moonbitlang/pagelayout [0.7.0]
 

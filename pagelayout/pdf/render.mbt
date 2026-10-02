@@ -1134,6 +1134,8 @@ pub fn unembeddable_images(
   model : @pagelayout.PageModel,
 ) -> Array[(String, Int)] {
   let document = @pdflite.pdf_document_empty()
+  // the documents behind PDF images, read once whatever page they show
+  let sources = PdfSources::new()
   let reasons : Array[String] = []
   let counts : Map[String, Int] = Map([])
   // Only successful conversions are cached by `render_pdf`, so a failing
@@ -1164,7 +1166,7 @@ pub fn unembeddable_images(
     let why = match verdict.get(key) {
       Some(cached) => cached
       None => {
-        let computed = image_verdict(document, image)
+        let computed = image_verdict(document, image, sources)
         verdict[key] = computed
         computed
       }
@@ -1189,6 +1191,7 @@ pub fn unembeddable_images(
 fn image_verdict(
   document : @pdflite.PdfDocument,
   image : @pagelayout.ImageItem,
+  sources : PdfSources,
 ) -> String? {
   match image.mime {
     // pdflite reads greyscale, truecolour and palette PNG, interlaced or
@@ -1213,7 +1216,7 @@ fn image_verdict(
       }
     other =>
       match pdf_image_page(other) {
-        Some(page) => pdf_image_verdict(image.data, page)
+        Some(page) => pdf_image_verdict(document, sources, image.data, page)
         None => Some("\{other} is not an embeddable image format")
       }
   }

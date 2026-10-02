@@ -3,11 +3,21 @@
 // content and every object its resources reach are copied into the
 // importing document under new object numbers, so the page can be drawn
 // (scaled and placed like an image) on any page of it.
+//
+// Every walk over the source (its page tree, the objects a page reaches)
+// keeps an explicit worklist rather than recursing, so a deep or cyclic
+// graph in a malformed file is an error or a bounded walk, never a stack
+// overflow.
 
 ///|
 fn pdf_import_name(text : String) -> @core.PdfName {
   @core.pdf_name_of_bytes(@ascii.encode(text))
 }
+
+///|
+/// How deeply direct objects (arrays and dictionaries inside one object)
+/// may nest in a copied object.
+let pdf_import_max_nesting : Int = 256
 
 ///|
 /// A page of another document, imported as a Form XObject by
@@ -28,108 +38,273 @@ pub struct PdfImportedPage {
 } derive(Eq, Debug)
 
 ///|
-/// The visible box of `page`: its crop box clipped to its media box, or
-/// the media box when it has no crop box (or one outside the media box).
-fn PdfDocument::pdf_import_visible_box(
+/// A leaf of a source's page tree, with the attributes it inherits
+/// (PDF 32000-1 §7.7.3.4), still unresolved.
+priv struct PdfImportLeaf {
+  page : @syntax.PdfObject
+  resources : @syntax.PdfObject?
+  mediabox : @syntax.PdfObject?
+  cropbox : @syntax.PdfObject?
+  rotate : @syntax.PdfObject?
+}
+
+///|
+/// A document whose pages are to be imported (see
+/// `PdfDocument::import_page`): its page tree, walked once.
+struct PdfPageSource {
+  document : PdfDocument
+  pages : Array[PdfImportLeaf]
+  /// the object numbers of the page tree's nodes, pages included, which
+  /// an imported page's objects never reach into
+  tree : Map[Int, Unit]
+}
+
+///|
+/// Whether `object` is a dictionary (or a stream) whose `/Type`, resolved,
+/// is `/Page` or `/Pages`.
+fn PdfDocument::pdf_import_is_page_node(
   self : PdfDocument,
-  page : @page.PdfPage,
-) -> @geometry.PdfRectangle raise @core.PdfError {
-  let media = self.parse_rectangle(page.mediabox)
-  let crop = match self.lookup_direct(pdf_import_name("/CropBox"), page.rest) {
-    Some(box) => Some(self.parse_rectangle(box)) catch { _ => None }
-    None => None
+  object : @syntax.PdfObject,
+) -> Bool {
+  let dictionary = match object {
+    PdfStreamObject(stream) => stream.dictionary
+    other => other
   }
-  let visible = match crop {
+  match self.lookup_direct(pdf_import_name("/Type"), dictionary) {
+    Some(PdfNameObject(kind)) =>
+      kind == pdf_import_name("/Page") || kind == pdf_import_name("/Pages")
+    _ => false
+  }
+}
+
+///|
+/// Read `document`'s page tree to import its pages: its leaves in order,
+/// with their inherited attributes. A node reached twice (a cycle, or a
+/// node shared by two parents), a `/Pages` node without a `/Kids` array or
+/// a kid that is not a dictionary raises `PageTreeExpected`; an encrypted
+/// document raises `HardError`, as prawn-templates refuses one.
+pub fn PdfPageSource::new(
+  document : PdfDocument,
+) -> PdfPageSource raise @core.PdfError {
+  if document.is_encrypted() {
+    raise HardError("cannot import a page of an encrypted document")
+  }
+  let catalog = match document.pdf_page_active_catalog() {
+    Some((catalog, _)) => catalog
+    None => raise RootExpected
+  }
+  guard document.direct(catalog).lookup_immediate(pdf_import_name("/Pages"))
+    is Some(root) else {
+    raise PageTreeExpected
+  }
+  let pages : Array[PdfImportLeaf] = []
+  let tree : Map[Int, Unit] = Map([])
+  let kids_key = pdf_import_name("/Kids")
+  let type_key = pdf_import_name("/Type")
+  // nodes still to visit, the next one last
+  let stack : Array[(@syntax.PdfObject, PdfImportLeaf)] = [
+    (
+      root,
+      {
+        page: PdfNull,
+        resources: None,
+        mediabox: None,
+        cropbox: None,
+        rotate: None,
+      },
+    ),
+  ]
+  while stack.pop() is Some((reference, inherited)) {
+    match reference {
+      PdfIndirect(number) => {
+        if tree.contains(number) {
+          raise PageTreeExpected
+        }
+        tree[number] = ()
+      }
+      _ => ()
+    }
+    let node = document.direct(reference)
+    guard node is PdfDictionary(_) else { raise PageTreeExpected }
+    let own = (key : String, from : @syntax.PdfObject?) => {
+      match node.lookup_immediate(pdf_import_name(key)) {
+        Some(PdfNull) | None => from
+        value => value
+      }
+    }
+    let attributes = PdfImportLeaf::{
+      page: node,
+      resources: own("/Resources", inherited.resources),
+      mediabox: own("/MediaBox", inherited.mediabox),
+      cropbox: own("/CropBox", inherited.cropbox),
+      rotate: own("/Rotate", inherited.rotate),
+    }
+    let kind = match document.lookup_direct(type_key, node) {
+      Some(PdfNameObject(kind)) => Some(kind)
+      _ => None
+    }
+    let kids = document.lookup_direct(kids_key, node)
+    let branch = kind == Some(pdf_import_name("/Pages")) ||
+      (kind != Some(pdf_import_name("/Page")) && kids is Some(PdfArray(_)))
+    if branch {
+      guard kids is Some(PdfArray(kids)) else { raise PageTreeExpected }
+      for i = kids.length() - 1; i >= 0; i = i - 1 {
+        stack.push((kids[i], attributes))
+      }
+    } else {
+      pages.push(attributes)
+    }
+  }
+  { document, pages, tree, }
+}
+
+///|
+/// How many pages the source has.
+pub fn PdfPageSource::page_count(self : PdfPageSource) -> Int {
+  self.pages.length()
+}
+
+///|
+fn PdfPageSource::leaf(
+  self : PdfPageSource,
+  page_number : Int,
+) -> PdfImportLeaf raise @core.PdfError {
+  guard page_number >= 1 && page_number <= self.pages.length() else {
+    raise BadPageSpecification(
+      "page \{page_number} of a document of \{self.pages.length()} pages",
+    )
+  }
+  self.pages[page_number - 1]
+}
+
+///|
+/// What a page shows and how: its visible box (in default user space
+/// units), its rotation and its user unit.
+priv struct PdfImportGeometry {
+  box : @geometry.PdfRectangle
+  rotate : @page.PdfPageRotation
+  unit : Double
+}
+
+///|
+fn pdf_import_finite(value : Double) -> Bool {
+  !(value.is_nan() || value.is_inf())
+}
+
+///|
+/// The visible box of a page (PDF 32000-1 §14.11.2): its media box (US
+/// Letter when it has none, as pdflite's page tree reader assumes) clipped
+/// to its crop box when it has one; a malformed box raises the rectangle
+/// parser's error, and an empty or degenerate visible box `BadRectangle`.
+/// `/Rotate` must be a multiple of 90 (`PageRotationExpected`) and
+/// `/UserUnit` (PDF 32000-1 §14.11.2, Table 30) a positive number
+/// (`BadNumberArgument`).
+fn PdfPageSource::geometry(
+  self : PdfPageSource,
+  leaf : PdfImportLeaf,
+) -> PdfImportGeometry raise @core.PdfError {
+  let document = self.document
+  let media = match leaf.mediabox {
+    Some(box) => document.parse_rectangle(box)
+    None => { min_x: 0.0, min_y: 0.0, max_x: 612.0, max_y: 792.0, }
+  }
+  let box = match leaf.cropbox {
     Some(crop) => {
-      let clipped = @geometry.PdfRectangle::{
+      let crop = document.parse_rectangle(crop)
+      @geometry.PdfRectangle::{
         min_x: double_max(crop.min_x, media.min_x),
         min_y: double_max(crop.min_y, media.min_y),
         max_x: double_min(crop.max_x, media.max_x),
         max_y: double_min(crop.max_y, media.max_y),
       }
-      if clipped.max_x > clipped.min_x && clipped.max_y > clipped.min_y {
-        clipped
-      } else {
-        media
-      }
     }
     None => media
   }
-  let finite = (v : Double) => !(v.is_nan() || v.is_inf())
-  guard finite(visible.min_x) &&
-    finite(visible.min_y) &&
-    finite(visible.max_x) &&
-    finite(visible.max_y) &&
-    visible.max_x > visible.min_x &&
-    visible.max_y > visible.min_y else {
+  guard pdf_import_finite(box.min_x) &&
+    pdf_import_finite(box.min_y) &&
+    pdf_import_finite(box.max_x) &&
+    pdf_import_finite(box.max_y) &&
+    box.max_x > box.min_x &&
+    box.max_y > box.min_y else {
     raise BadRectangle
   }
-  visible
-}
-
-///|
-/// Page `page_number` (1-based) of the page tree, or
-/// `BadPageSpecification` when the document has no such page.
-fn PdfDocument::pdf_import_page_of_tree(
-  self : PdfDocument,
-  page_number : Int,
-) -> @page.PdfPage raise @core.PdfError {
-  let pages = self.pages_of_pagetree()
-  guard page_number >= 1 && page_number <= pages.length() else {
-    raise BadPageSpecification(
-      "page \{page_number} of a document of \{pages.length()} pages",
-    )
+  let rotate = match leaf.rotate.map(r => document.direct(r)) {
+    None | Some(PdfNull) => @page.Rotate0
+    Some(PdfInteger(degrees)) => @page.pdf_page_rotation_of_int(degrees)
+    Some(PdfReal(degrees) | PdfExactReal(degrees)) if pdf_import_finite(degrees) &&
+      degrees == degrees.floor() &&
+      degrees.abs() < 1.0e9 => @page.pdf_page_rotation_of_int(degrees.to_int())
+    Some(_) => raise NumberExpected
   }
-  pages[page_number - 1]
+  let unit = match
+    document.lookup_direct(pdf_import_name("/UserUnit"), leaf.page) {
+    None => 1.0
+    Some(PdfInteger(n)) if n > 0 => n.to_double()
+    Some(PdfReal(n) | PdfExactReal(n)) if pdf_import_finite(n) && n > 0.0 => n
+    Some(_) => raise BadNumberArgument("/UserUnit is not a positive number")
+  }
+  { box, rotate, unit, }
 }
 
 ///|
-/// The size, in points, at which a viewer shows page `page_number`
-/// (1-based): its crop box clipped to its media box (the media box when
-/// it has no crop box), with width and height swapped when its `/Rotate`
-/// is 90 or 270. This is the size `PdfDocument::import_page` reports.
-///
-/// Raises `BadPageSpecification` when the document has no such page and
-/// `RectangleExpected` or `BadRectangle` when its boxes are malformed or
-/// empty.
-pub fn PdfDocument::page_display_size(
-  self : PdfDocument,
-  page_number : Int,
-) -> (Double, Double) raise @core.PdfError {
-  let page = self.pdf_import_page_of_tree(page_number)
-  let box = self.pdf_import_visible_box(page)
-  let (w, h) = (box.max_x - box.min_x, box.max_y - box.min_y)
-  match page.rotate {
+/// The size, in points, at which a viewer shows `geometry`'s page.
+fn PdfImportGeometry::size(self : PdfImportGeometry) -> (Double, Double) {
+  let w = (self.box.max_x - self.box.min_x) * self.unit
+  let h = (self.box.max_y - self.box.min_y) * self.unit
+  match self.rotate {
     Rotate90 | Rotate270 => (h, w)
     Rotate0 | Rotate180 => (w, h)
   }
 }
 
 ///|
-/// The form matrix that turns the page's visible box upright with its
-/// lower-left corner at the origin, as a viewer applies `/Rotate`
-/// (clockwise).
-fn pdf_import_matrix(
-  box : @geometry.PdfRectangle,
-  rotate : @page.PdfPageRotation,
-) -> Array[Double] {
-  match rotate {
+/// The size, in points, at which a viewer shows page `page_number`
+/// (1-based): its visible box, the media box clipped to the crop box,
+/// scaled by its `/UserUnit`, with width and height swapped when its
+/// `/Rotate` is 90 or 270. This is the size `PdfDocument::import_page`
+/// reports.
+///
+/// Raises `BadPageSpecification` when the source has no such page,
+/// `RectangleExpected`, `BadRectangle` or `NumberExpected` when its boxes
+/// are malformed or the visible box is empty, `PageRotationExpected` for a
+/// `/Rotate` that is not a multiple of 90 and `BadNumberArgument` for a
+/// `/UserUnit` that is not a positive number.
+pub fn PdfPageSource::page_display_size(
+  self : PdfPageSource,
+  page_number : Int,
+) -> (Double, Double) raise @core.PdfError {
+  self.geometry(self.leaf(page_number)).size()
+}
+
+///|
+/// The form matrix that turns the visible box upright with its lower-left
+/// corner at the origin, as a viewer applies `/Rotate` (clockwise), then
+/// scales it by the user unit.
+fn PdfImportGeometry::matrix(self : PdfImportGeometry) -> Array[Double] {
+  let box = self.box
+  let matrix = match self.rotate {
     Rotate0 => [1.0, 0.0, 0.0, 1.0, -box.min_x, -box.min_y]
     Rotate90 => [0.0, -1.0, 1.0, 0.0, -box.min_y, box.max_x]
     Rotate180 => [-1.0, 0.0, 0.0, -1.0, box.max_x, box.max_y]
     Rotate270 => [0.0, 1.0, -1.0, 0.0, box.max_y, -box.min_x]
   }
+  matrix.map(v => v * self.unit)
 }
 
 ///|
 /// `object` with indirect references renumbered through `numbers`; a
 /// reference to an object that was not copied becomes `null`. Streams get
-/// their raw (still encoded) data and a direct `/Length`.
+/// their raw (still encoded) data and a direct `/Length`. Direct objects
+/// nested deeper than `pdf_import_max_nesting` raise `HardError`.
 fn PdfDocument::pdf_import_rewrite(
   self : PdfDocument,
   object : @syntax.PdfObject,
   numbers : Map[Int, Int],
+  depth? : Int = 0,
 ) -> @syntax.PdfObject raise @core.PdfError {
+  if depth > pdf_import_max_nesting {
+    raise HardError("objects nested too deeply to import")
+  }
   match object {
     PdfIndirect(number) =>
       match numbers.get(number) {
@@ -137,18 +312,22 @@ fn PdfDocument::pdf_import_rewrite(
         None => PdfNull
       }
     PdfArray(items) =>
-      PdfArray(items.map(item => self.pdf_import_rewrite(item, numbers)))
+      PdfArray(
+        items.map(item => {
+          self.pdf_import_rewrite(item, numbers, depth=depth + 1)
+        }),
+      )
     PdfDictionary(entries) =>
       PdfDictionary(
         entries.map(entry => {
-          (entry.0, self.pdf_import_rewrite(entry.1, numbers))
+          (entry.0, self.pdf_import_rewrite(entry.1, numbers, depth=depth + 1))
         }),
       )
     PdfStreamObject(stream) => {
       let data = object.stream_bytes()
       let length = pdf_import_name("/Length")
       let entries : Array[(@core.PdfName, @syntax.PdfObject)] = match
-        self.pdf_import_rewrite(stream.dictionary, numbers) {
+        self.pdf_import_rewrite(stream.dictionary, numbers, depth=depth + 1) {
         PdfDictionary(entries) => entries.filter(entry => entry.0 != length)
         _ => []
       }
@@ -160,14 +339,62 @@ fn PdfDocument::pdf_import_rewrite(
 }
 
 ///|
+/// The object numbers `object` reaches, in the order first reached:
+/// everything but the page tree's nodes (and any other page or page tree
+/// node, by its resolved `/Type`), and not through `/Parent` (up a tree
+/// the page's resources do not need) or `/Length` (written directly).
+fn PdfPageSource::reached(
+  self : PdfPageSource,
+  object : @syntax.PdfObject,
+) -> Array[Int] {
+  let document = self.document
+  let skipped = [pdf_import_name("/Parent"), pdf_import_name("/Length")]
+  let found : Map[Int, Unit] = Map([])
+  let excluded : Map[Int, Unit] = Map([])
+  let work : Array[@syntax.PdfObject] = [object]
+  while work.pop() is Some(next) {
+    match next {
+      PdfIndirect(number) => {
+        if number <= 0 ||
+          found.contains(number) ||
+          excluded.contains(number) ||
+          self.tree.contains(number) {
+          continue
+        }
+        let resolved = document.lookup_object_or_null(number)
+        if document.pdf_import_is_page_node(resolved) {
+          excluded[number] = ()
+          continue
+        }
+        found[number] = ()
+        work.push(resolved)
+      }
+      PdfArray(items) =>
+        for i = items.length() - 1; i >= 0; i = i - 1 {
+          work.push(items[i])
+        }
+      PdfDictionary(entries) =>
+        for i = entries.length() - 1; i >= 0; i = i - 1 {
+          if !skipped.contains(entries[i].0) {
+            work.push(entries[i].1)
+          }
+        }
+      PdfStreamObject(stream) => work.push(stream.dictionary)
+      _ => ()
+    }
+  }
+  found.keys().to_array()
+}
+
+///|
 /// The page's content as one stream: a single content stream keeps its
 /// filters and encoded bytes; several are decoded and joined (PDF 32000-1
 /// §7.8.2), then Flate-compressed.
 fn PdfDocument::pdf_import_content(
   self : PdfDocument,
-  page : @page.PdfPage,
+  page : @syntax.PdfObject,
 ) -> (Array[(@core.PdfName, @syntax.PdfObject)], Bytes) raise @core.PdfError {
-  match page.content {
+  match self.pdf_page_content_list(self.pdf_page_content_object(page)) {
     [] => ([], Bytes::new(0))
     [single] =>
       match self.direct(single) {
@@ -208,33 +435,35 @@ fn PdfDocument::pdf_import_content(
 
 ///|
 /// Import page `page_number` (1-based) of `source` into this document as a
-/// Form XObject, the way Prawn's templates import a page: what is drawn is
-/// the page's visible box (its crop box clipped to its media box), turned
-/// upright by its `/Rotate`, with its content and resources. Annotations,
-/// the structure tree and other document-level data are not imported.
+/// Form XObject. Like prawn-templates (which asciidoctor-pdf uses), the
+/// page and the objects it needs are copied, here into a Form XObject
+/// rather than a page: what is drawn is the page's visible box (the media
+/// box clipped to the crop box), turned upright by its `/Rotate` and
+/// scaled by its `/UserUnit`, with its content and resources.
+/// Annotations, the structure tree and other document-level data are not
+/// imported.
 ///
 /// The page's content stream keeps its filters and encoded bytes (several
 /// content streams are joined and compressed); every object the page's
 /// resources (and transparency `/Group`) reach is copied under a new
 /// object number, streams with their encoded data, so the source document
-/// is left as it was. A reference to a page or page tree node is not
-/// followed and becomes `null`. Importing the same page twice copies it
-/// twice.
+/// is left as it was. References to the source's page tree nodes, or to
+/// any other page or page tree node, are not followed and become `null`.
+/// Importing the same page twice copies it twice.
 ///
-/// Raises `BadPageSpecification` when `source` has no such page,
-/// `HardError` when it is encrypted, and the reader's errors when the page
-/// tree, its boxes or its content are malformed.
+/// Raises what `PdfPageSource::page_display_size` raises, `HardError` for
+/// direct objects nested too deeply, and the reader's errors for
+/// malformed content.
 pub fn PdfDocument::import_page(
   self : PdfDocument,
-  source : PdfDocument,
+  source : PdfPageSource,
   page_number : Int,
 ) -> PdfImportedPage raise @core.PdfError {
-  if source.is_encrypted() {
-    raise HardError("cannot import a page of an encrypted document")
-  }
-  let page = source.pdf_import_page_of_tree(page_number)
-  let box = source.pdf_import_visible_box(page)
-  let (filters, data) = source.pdf_import_content(page)
+  let document = source.document
+  let leaf = source.leaf(page_number)
+  let geometry = source.geometry(leaf)
+  let (filters, data) = document.pdf_import_content(leaf.page)
+  let box = geometry.box
   let entries : Array[(@core.PdfName, @syntax.PdfObject)] = [
     (pdf_import_name("/Type"), PdfNameObject(pdf_import_name("/XObject"))),
     (pdf_import_name("/Subtype"), PdfNameObject(pdf_import_name("/Form"))),
@@ -250,41 +479,40 @@ pub fn PdfDocument::import_page(
     ),
     (
       pdf_import_name("/Matrix"),
-      PdfArray(pdf_import_matrix(box, page.rotate).map(v => PdfReal(v))),
+      PdfArray(geometry.matrix().map(v => PdfReal(v))),
     ),
-    (pdf_import_name("/Resources"), page.resources),
+    (pdf_import_name("/Resources"), leaf.resources.unwrap_or(PdfDictionary([]))),
   ]
-  match source.lookup_direct(pdf_import_name("/Group"), page.rest) {
+  match leaf.page.lookup_immediate(pdf_import_name("/Group")) {
+    Some(PdfNull) | None => ()
     Some(group) => entries.push((pdf_import_name("/Group"), group))
-    None => ()
   }
   entries.append(filters)
   let form = @syntax.pdf_stream(PdfDictionary(entries), StreamGot(data))
-  // everything the form reaches, but not back up into a page tree
-  let type_key = pdf_import_name("/Type")
-  let reached = source.referenced_object_numbers(
-    form,
-    no_follow_entries=[pdf_import_name("/Parent"), pdf_import_name("/Length")],
-    no_follow_contains=[
-      (type_key, PdfNameObject(pdf_import_name("/Page"))),
-      (type_key, PdfNameObject(pdf_import_name("/Pages"))),
-    ],
-  )
+  let reached = source.reached(form)
   let numbers : Map[Int, Int] = Map([])
   for number in reached {
     numbers[number] = self.add_object(PdfNull)
   }
-  for number in reached {
-    let copied = source.pdf_import_rewrite(
-      source.lookup_object_or_null(number),
-      numbers,
-    )
-    self.add_object_given_number(numbers[number], copied)
+  // copy everything before adding anything, so a failure leaves this
+  // document without the placeholders
+  let copies = {
+    errdefer (for _, renumbered in numbers {
+      self.remove_object(renumbered)
+    })
+    let copies = reached.map(number => {
+      document.pdf_import_rewrite(
+        document.lookup_object_or_null(number),
+        numbers,
+      )
+    })
+    copies.push(document.pdf_import_rewrite(form, numbers))
+    copies
   }
-  let object = self.add_object(source.pdf_import_rewrite(form, numbers))
-  let (width, height) = match page.rotate {
-    Rotate90 | Rotate270 => (box.max_y - box.min_y, box.max_x - box.min_x)
-    Rotate0 | Rotate180 => (box.max_x - box.min_x, box.max_y - box.min_y)
+  for i, number in reached {
+    self.add_object_given_number(numbers[number], copies[i])
   }
+  let object = self.add_object(copies[copies.length() - 1])
+  let (width, height) = geometry.size()
   { object, width, height, }
 }

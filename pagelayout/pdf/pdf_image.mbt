@@ -33,10 +33,10 @@ fn pdf_image_page(mime : String) -> Int? {
 }
 
 ///|
-/// The documents behind a render's PDF images, read once each: None for
-/// bytes that are not a readable PDF.
+/// The documents behind PDF images, each read (and its page tree walked)
+/// once: the error for bytes that are not a readable PDF.
 priv struct PdfSources {
-  documents : Map[Bytes, @pdflite.PdfDocument?]
+  documents : Map[Bytes, Result[@pdflite.PdfPageSource, @core.PdfError]]
 }
 
 ///|
@@ -45,16 +45,25 @@ fn PdfSources::new() -> PdfSources {
 }
 
 ///|
-fn PdfSources::read(self : PdfSources, data : Bytes) -> @pdflite.PdfDocument? {
-  match self.documents.get(data) {
-    Some(document) => document
+fn PdfSources::read(
+  self : PdfSources,
+  data : Bytes,
+) -> @pdflite.PdfPageSource raise @core.PdfError {
+  let source = match self.documents.get(data) {
+    Some(source) => source
     None => {
-      let document = Some(@pdflite.pdf_read_document_from_bytes(data)) catch {
-        _ => None
+      let source = Ok(
+        @pdflite.PdfPageSource::new(@pdflite.pdf_read_document_from_bytes(data)),
+      ) catch {
+        error => Err(error)
       }
-      self.documents[data] = document
-      document
+      self.documents[data] = source
+      source
     }
+  }
+  match source {
+    Ok(source) => source
+    Err(error) => raise error
   }
 }
 
@@ -68,19 +77,24 @@ fn import_pdf_image(
   data : Bytes,
   page : Int,
 ) -> (Int, Double, Double)? {
-  guard sources.read(data) is Some(source) else { return None }
+  let source = sources.read(data) catch { _ => return None }
   let imported = document.import_page(source, page) catch { _ => return None }
   Some((imported.object, imported.width, imported.height))
 }
 
 ///|
 /// Why page `page` of the PDF `data` cannot be drawn, or None when it can.
-fn pdf_image_verdict(data : Bytes, page : Int) -> String? {
-  let source = @pdflite.pdf_read_document_from_bytes(data) catch {
+fn pdf_image_verdict(
+  scratch : @pdflite.PdfDocument,
+  sources : PdfSources,
+  data : Bytes,
+  page : Int,
+) -> String? {
+  let source = sources.read(data) catch {
     _ => return Some("PDF this backend cannot read")
   }
   // importing into a scratch document checks what `render_pdf` will do
-  try ignore(@pdflite.pdf_document_empty().import_page(source, page)) catch {
+  try ignore(scratch.import_page(source, page)) catch {
     BadPageSpecification(_) => Some("PDF without the page to draw")
     _ => Some("PDF page this backend cannot import")
   } noraise {

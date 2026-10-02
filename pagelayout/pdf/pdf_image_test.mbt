@@ -146,3 +146,14 @@ test "PDF images that cannot be drawn are skipped and reported" {
     ("PDF this backend cannot read", 1),
   ])
 }
+
+///|
+test "a PDF page whose crop box lies outside its media box is not drawn" {
+  // no xref table: the reader reconstructs it
+  let source = b"%PDF-1.4\n1 0 obj\n<< /Type /Catalog /Pages 2 0 R >>\nendobj\n2 0 obj\n<< /Type /Pages /Kids [3 0 R] /Count 1 >>\nendobj\n3 0 obj\n<< /Type /Page /Parent 2 0 R /MediaBox [0 0 200 100] /CropBox [300 300 400 400] >>\nendobj\ntrailer\n<< /Root 1 0 R >>\n%%EOF\n"
+  let model = pdf_image_model([pdf_image_item(source, "application/pdf")])
+  assert_eq(pdf_image_forms(@pdf.render_pdf(model)).length(), 0)
+  assert_eq(@pdf.unembeddable_images(model), [
+    ("PDF page this backend cannot import", 1),
+  ])
+}
