@@ -28,22 +28,26 @@ fn PdfDocument::pdf_page_find_inherited_attribute(
   key : @core.PdfName,
   depth : Int,
 ) -> @syntax.PdfObject? raise @core.PdfError {
-  if depth > 10000 {
-    raise PageTreeExpected
+  // up the /Parent chain without recursion; a cycle ends at the depth guard
+  let mut current = object
+  let mut depth = depth
+  while true {
+    if depth > 10000 {
+      raise PageTreeExpected
+    }
+    if self.lookup_direct(key, current) is Some(_) {
+      return None
+    }
+    guard self.lookup_direct(pdf_page_parent_key(), current) is Some(parent) else {
+      return None
+    }
+    if parent.lookup_immediate(key) is Some(value) {
+      return Some(value)
+    }
+    current = parent
+    depth += 1
   }
-  match self.lookup_direct(key, object) {
-    Some(_) => None
-    None =>
-      match self.lookup_direct(pdf_page_parent_key(), object) {
-        Some(parent) =>
-          match parent.lookup_immediate(key) {
-            Some(value) => Some(value)
-            None =>
-              self.pdf_page_find_inherited_attribute(parent, key, depth + 1)
-          }
-        None => None
-      }
-  }
+  None
 }
 
 ///|
