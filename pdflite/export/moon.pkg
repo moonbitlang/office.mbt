@@ -1,0 +1,11 @@
+import {
+  "moonbitlang/pdflite/flate",
+  "moonbitlang/core/buffer",
+  "moonbitlang/core/math",
+}
+
+import {
+  "moonbitlang/core/test",
+} for "test"
+
+warnings = "-missing_doc-implicit_impl_as_method-deprecated_syntax-unused_value-unused_constructor-unused_field-missing_invariant-missing_reasoning"
