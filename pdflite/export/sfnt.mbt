@@ -32,7 +32,7 @@ fn rd_u32(data : Bytes, at : Int) -> Int {
 
 ///|
 fn rd_tag(data : Bytes, at : Int) -> String {
-  let sb = StringBuilder::new()
+  let sb = StringBuilder()
   for i in 0..<4 {
     if at + i < data.length() {
       sb.write_char(data[at + i].to_int().unsafe_to_char())
@@ -48,7 +48,7 @@ pub(all) enum OutlineKind {
   Cff
   Cff2
   NoOutlines
-} derive(Eq, Show)
+} derive(Eq, Debug)
 
 ///|
 /// An OpenType font face to embed.
@@ -103,7 +103,7 @@ pub fn Font::new(data : Bytes, index : Int, key? : String = "") -> Font? {
     return None
   }
   let num_tables = rd_u16(data, base + 4)
-  let tables : Map[String, (Int, Int)] = {}
+  let tables : Map[String, (Int, Int)] = Map([])
   for i in 0..<num_tables {
     let rec = base + 12 + 16 * i
     if rec + 16 > data.length() {
@@ -245,13 +245,13 @@ fn read_postscript_name(
       continue
     }
     if platform == 3 || platform == 0 {
-      let sb = StringBuilder::new()
+      let sb = StringBuilder()
       for k in 0..<(len / 2) {
         sb.write_char(rd_u16(data, off + 2 * k).unsafe_to_char())
       }
       return Some(sb.to_string())
     } else if platform == 1 && fallback is None {
-      let sb = StringBuilder::new()
+      let sb = StringBuilder()
       for k in 0..<len {
         sb.write_char(data[off + k].to_int().unsafe_to_char())
       }
@@ -393,12 +393,12 @@ fn push_u32(buf : @buffer.Buffer, v : Int) -> Unit {
 /// keeping glyph IDs: glyphs outside the subset become empty.
 fn Font::subset_glyf(self : Font, keep : Map[Int, Unit]) -> Bytes {
   // Rebuild glyf and loca (long format).
-  let glyf = @buffer.new()
-  let loca = @buffer.new()
+  let glyf = Buffer()
+  let loca = Buffer()
   for g in 0..<self.num_glyphs {
     push_u32(loca, glyf.length())
     if keep.contains(g) && self.glyph_range(g) is Some((start, end)) {
-      glyf.write_bytes(self.data[start:end].to_bytes())
+      glyf.write_bytes(self.data[start:end].to_owned())
       while glyf.length() % 4 != 0 {
         glyf.write_byte(b'\x00')
       }
@@ -415,7 +415,7 @@ fn Font::subset_glyf(self : Font, keep : Map[Int, Unit]) -> Bytes {
       "loca" => tables.push((tag, loca.to_bytes()))
       _ =>
         if self.tables.get(tag) is Some((off, len)) {
-          let bytes = self.data[off:off + len].to_bytes()
+          let bytes = self.data[off:off + len].to_owned()
           if tag == "head" {
             // Long loca format, zero checksum adjustment.
             let arr = bytes.to_array()
@@ -440,7 +440,7 @@ fn Font::subset_glyf(self : Font, keep : Map[Int, Unit]) -> Bytes {
     entry_selector += 1
   }
   let search_range = (1 << entry_selector) * 16
-  let out = @buffer.new()
+  let out = Buffer()
   push_u32(out, 0x00010000)
   push_u16(out, n)
   push_u16(out, search_range)
@@ -496,7 +496,7 @@ fn Font::face_data(self : Font) -> Bytes {
     entry_selector += 1
   }
   let search_range = (1 << entry_selector) * 16
-  let out = @buffer.new()
+  let out = Buffer()
   let version = if self.kind == Cff || self.kind == Cff2 {
     0x4F54544F
   } else {
@@ -513,14 +513,14 @@ fn Font::face_data(self : Font) -> Bytes {
     for c in tag {
       out.write_byte(c.to_int().to_byte())
     }
-    push_u32(out, checksum(self.data[off:off + len].to_bytes()))
+    push_u32(out, checksum(self.data[off:off + len].to_owned()))
     push_u32(out, offset)
     push_u32(out, len)
     offset += (len + 3) / 4 * 4
   }
   for tag in tags {
     let (off, len) = self.tables.get(tag).unwrap()
-    out.write_bytes(self.data[off:off + len].to_bytes())
+    out.write_bytes(self.data[off:off + len].to_owned())
     while out.length() % 4 != 0 {
       out.write_byte(b'\x00')
     }

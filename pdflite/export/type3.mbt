@@ -174,12 +174,12 @@ fn encode_code(fid : Int, code : Int) -> Bytes {
 fn Type3Font::serialize(self : Type3Font, sc : SerializeContext) -> Unit {
   let rd = ResourceDictionary::new()
   let font = self.font
-  let mut font_bbox : Rect = { left: 0.0, top: 0.0, right: 1.0, bottom: 1.0, }
+  let mut font_bbox = Rect::{ left: 0.0, top: 0.0, right: 1.0, bottom: 1.0, }
   let char_procs = []
   for index, glyph in self.glyphs {
     let (gid, color) = glyph
     let builder = ContentBuilder::new(Transform::identity(), true)
-    let surface : Surface = {
+    let surface = Surface::{
       sc,
       fill: None,
       stroke: None,

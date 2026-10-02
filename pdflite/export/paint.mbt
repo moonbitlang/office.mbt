@@ -7,7 +7,7 @@ pub(all) enum RegularColor {
   Rgb(Int, Int, Int)
   Luma(Int)
   Cmyk(Int, Int, Int, Int)
-} derive(Eq, Show)
+} derive(Eq, Debug)
 
 ///|
 /// The colorant of a separation color space.
@@ -15,14 +15,14 @@ pub(all) enum SeparationColorant {
   AllColorants
   NoColorant
   Custom(String)
-} derive(Eq, Show)
+} derive(Eq, Debug)
 
 ///|
 /// A separation color space: a colorant with a fallback color.
 pub(all) struct SeparationSpace {
   colorant : SeparationColorant
   fallback : RegularColor
-} derive(Eq, Show)
+} derive(Eq, Debug)
 
 ///|
 /// A color.
@@ -30,7 +30,7 @@ pub(all) enum Color {
   Regular(RegularColor)
   /// A separation (spot) color with an 8-bit tint.
   Separation(Int, SeparationSpace)
-} derive(Eq, Show)
+} derive(Eq, Debug)
 
 ///|
 pub fn Color::rgb(r : Int, g : Int, b : Int) -> Color {
@@ -78,7 +78,7 @@ pub(all) struct Stop {
   color : Color
   /// The opacity of the stop (between 0 and 1).
   opacity : Double
-} derive(Eq, Show)
+} derive(Eq, Debug)
 
 ///|
 /// How to extend a gradient beyond its stops.
@@ -86,7 +86,7 @@ pub(all) enum SpreadMethod {
   Pad
   Reflect
   Repeat
-} derive(Eq, Show)
+} derive(Eq, Debug)
 
 ///|
 pub(all) struct LinearGradient {
@@ -98,7 +98,7 @@ pub(all) struct LinearGradient {
   spread_method : SpreadMethod
   stops : Array[Stop]
   anti_alias : Bool
-} derive(Eq, Show)
+} derive(Eq, Debug)
 
 ///|
 pub(all) struct RadialGradient {
@@ -112,7 +112,7 @@ pub(all) struct RadialGradient {
   spread_method : SpreadMethod
   stops : Array[Stop]
   anti_alias : Bool
-} derive(Eq, Show)
+} derive(Eq, Debug)
 
 ///|
 pub(all) struct SweepGradient {
@@ -124,7 +124,7 @@ pub(all) struct SweepGradient {
   spread_method : SpreadMethod
   stops : Array[Stop]
   anti_alias : Bool
-} derive(Eq, Show)
+} derive(Eq, Debug)
 
 ///|
 /// A tiling pattern.
@@ -159,7 +159,7 @@ pub fn Paint::as_rgb(self : Paint) -> (Int, Int, Int)? {
 pub(all) enum FillRule {
   NonZero
   EvenOdd
-} derive(Eq, Show)
+} derive(Eq, Debug)
 
 ///|
 /// A fill.
@@ -180,21 +180,21 @@ pub(all) enum LineCap {
   Butt
   Round
   Square
-} derive(Eq, Show)
+} derive(Eq, Debug)
 
 ///|
 pub(all) enum LineJoin {
   Miter
   Round
   Bevel
-} derive(Eq, Show)
+} derive(Eq, Debug)
 
 ///|
 /// A dash pattern.
 pub(all) struct StrokeDash {
   array : Array[Double]
   offset : Double
-} derive(Eq, Show)
+} derive(Eq, Debug)
 
 ///|
 /// A stroke.

@@ -7,7 +7,7 @@
 pub(all) struct XyzDestination {
   page_index : Int
   point : Point
-} derive(Eq, Show)
+} derive(Eq, Debug)
 
 ///|
 pub fn XyzDestination::new(page_index : Int, point : Point) -> XyzDestination {
@@ -19,7 +19,7 @@ pub fn XyzDestination::new(page_index : Int, point : Point) -> XyzDestination {
 pub(all) struct NamedDestination {
   name : String
   xyz_dest : XyzDestination
-} derive(Eq, Show)
+} derive(Eq, Debug)
 
 ///|
 pub fn NamedDestination::new(
@@ -34,7 +34,7 @@ pub fn NamedDestination::new(
 pub(all) enum Destination {
   Xyz(XyzDestination)
   Named(NamedDestination)
-} derive(Eq, Show)
+} derive(Eq, Debug)
 
 ///|
 fn Destination::to_obj(
@@ -57,14 +57,14 @@ fn Destination::to_obj(
 pub(all) enum Action {
   /// A link to a URI.
   Link(String)
-} derive(Eq, Show)
+} derive(Eq, Debug)
 
 ///|
 /// The target of a link.
 pub(all) enum Target {
   Destination(Destination)
   Action(Action)
-} derive(Eq, Show)
+} derive(Eq, Debug)
 
 ///|
 /// A link annotation.
@@ -91,7 +91,7 @@ pub fn LinkAnnotation::new_with_quad_points(
       pts.push(p)
     }
   }
-  let b = bbox_of_points(pts[:]).unwrap()
+  let b = bbox_of_points(pts).unwrap()
   // Expand the bounding box by a little (Acrobat bug).
   let eps = 0.001
   {
@@ -268,7 +268,7 @@ pub(all) enum NumberingStyle {
   UpperRoman
   LowerAlpha
   UpperAlpha
-} derive(Eq, Show)
+} derive(Eq, Debug)
 
 ///|
 /// A page label.
@@ -276,7 +276,7 @@ pub(all) struct PageLabel {
   style : NumberingStyle?
   prefix : String?
   offset : Int?
-} derive(Eq, Show)
+} derive(Eq, Debug)
 
 ///|
 pub fn PageLabel::new(
@@ -329,7 +329,7 @@ fn PageLabel::to_obj(self : PageLabel) -> Obj {
 pub(all) enum TextDirection {
   LeftToRight
   RightToLeft
-} derive(Eq, Show)
+} derive(Eq, Debug)
 
 ///|
 /// A date and time.
@@ -342,7 +342,7 @@ pub(all) struct DateTime {
   second : Int?
   utc_offset_hour : Int?
   utc_offset_minute : Int
-} derive(Eq, Show)
+} derive(Eq, Debug)
 
 ///|
 pub fn DateTime::new(year : Int) -> DateTime {
@@ -420,7 +420,7 @@ fn pad2(v : Int) -> String {
 ///|
 fn pad4(v : Int) -> String {
   let s = v.to_string()
-  let sb = StringBuilder::new()
+  let sb = StringBuilder()
   for _ in 0..<(4 - s.length()) {
     sb.write_char('0')
   }
@@ -576,7 +576,7 @@ fn Metadata::has_document_info(self : Metadata) -> Bool {
 
 ///|
 fn join(items : Array[String], sep : String) -> String {
-  let sb = StringBuilder::new()
+  let sb = StringBuilder()
   for i, s in items {
     if i > 0 {
       sb.write_string(sep)
@@ -594,7 +594,7 @@ pub(all) enum AssociationKind {
   Alternative
   Supplement
   Unspecified
-} derive(Eq, Show)
+} derive(Eq, Debug)
 
 ///|
 /// An embedded file.

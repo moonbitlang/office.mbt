@@ -17,7 +17,7 @@ pub(all) enum ArtifactType {
   Page
   Background
   Other
-} derive(Eq, Show)
+} derive(Eq, Debug)
 
 ///|
 fn ArtifactType::map_pdf_version(
@@ -166,7 +166,7 @@ pub(all) enum Identifier {
   Annotation(Int, Int)
   /// Content that is not part of the structure tree.
   Dummy
-} derive(Eq, Show)
+} derive(Eq, Debug)
 
 ///|
 priv struct AnnotationIdentifier {
@@ -216,7 +216,7 @@ pub(all) enum TagName {
   Title
   Strong
   Em
-} derive(Eq, Show)
+} derive(Eq, Debug)
 
 ///|
 /// The numbering of a list.
@@ -230,7 +230,7 @@ pub(all) enum ListNumbering {
   UpperRoman
   LowerAlpha
   UpperAlpha
-} derive(Eq, Show)
+} derive(Eq, Debug)
 
 ///|
 fn ListNumbering::name(self : ListNumbering) -> String {
@@ -253,7 +253,7 @@ pub(all) enum TableHeaderScope {
   Row
   Column
   Both
-} derive(Eq, Show)
+} derive(Eq, Debug)
 
 ///|
 /// The placement of a structure element.
@@ -263,7 +263,7 @@ pub(all) enum Placement {
   Before
   Start
   End
-} derive(Eq, Show)
+} derive(Eq, Debug)
 
 ///|
 /// A border style.
@@ -278,7 +278,7 @@ pub(all) enum BorderStyle {
   Ridge
   Inset
   Outset
-} derive(Eq, Show)
+} derive(Eq, Debug)
 
 ///|
 fn BorderStyle::name(self : BorderStyle) -> String {
@@ -302,7 +302,7 @@ pub(all) enum LineHeight {
   NormalHeight
   AutoHeight
   CustomHeight(Double)
-} derive(Eq, Show)
+} derive(Eq, Debug)
 
 ///|
 /// A text decoration type.
@@ -311,7 +311,7 @@ pub(all) enum TextDecorationType {
   Underline
   Overline
   LineThrough
-} derive(Eq, Show)
+} derive(Eq, Debug)
 
 ///|
 /// Values for the four sides `[before after start end]`.
@@ -320,7 +320,7 @@ pub(all) struct Sides[T] {
   after : T
   start : T
   end : T
-} derive(Eq, Show)
+} derive(Eq, Debug)
 
 ///|
 pub fn[T] Sides::uniform(v : T) -> Sides[T] {
@@ -344,7 +344,7 @@ pub(all) struct NaiveRgbColor {
   red : Int
   green : Int
   blue : Int
-} derive(Eq, Show)
+} derive(Eq, Debug)
 
 ///|
 fn NaiveRgbColor::to_obj(self : NaiveRgbColor) -> Obj {
@@ -674,7 +674,7 @@ fn identifier_key(id : Identifier) -> String {
 
 ///|
 fn bytes_key(b : Bytes) -> String {
-  let sb = StringBuilder::new()
+  let sb = StringBuilder()
   for x in b {
     sb.write_string(hex4(x.to_int()))
   }
@@ -922,7 +922,7 @@ fn TagSerializer::children(
         }
         let key = identifier_key(id)
         if self.parent_tree_map.contains(key) {
-          abort("the identifier \{id} appears twice in the tag tree")
+          abort("the identifier \{Repr(id)} appears twice in the tag tree")
         }
         self.parent_tree_map[key] = parent_ref
         if struct_page_ref == Some(page_ref) {
@@ -947,7 +947,7 @@ fn TagSerializer::children(
         }
         let key = identifier_key(id)
         if self.parent_tree_map.contains(key) {
-          abort("identifier \{id} appears twice in the tag tree")
+          abort("identifier \{Repr(id)} appears twice in the tag tree")
         }
         self.parent_tree_map[key] = annot_ref
         info.annotations[annot_index] = (annot_ref, Some(parent_ref))
@@ -992,7 +992,12 @@ fn SerializeContext::serialize_tag_tree(
   self : SerializeContext,
   tree : TagTree,
 ) -> Int raise ExportError {
-  let ts = { sc: self, parent_tree_map: {}, id_tree: {}, note_id: 1, }
+  let ts = TagSerializer::{
+    sc: self,
+    parent_tree_map: {},
+    id_tree: {},
+    note_id: 1,
+  }
   let struct_tree_root_ref = self.new_ref()
   let root_ref = self.new_ref()
   let children_refs = []

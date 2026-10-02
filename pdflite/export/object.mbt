@@ -104,7 +104,7 @@ pub fn format_real(v : Double) -> String {
   let scaled = scaled.to_int64()
   let int_part = scaled / 100000L
   let mut frac = scaled % 100000L
-  let sb = StringBuilder::new()
+  let sb = StringBuilder()
   if neg {
     sb.write_char('-')
   }
@@ -162,7 +162,7 @@ fn write_ascii(buf : @buffer.Buffer, s : String) -> Unit {
 ///|
 /// Encode a string as UTF-8 bytes.
 pub fn utf8_bytes(s : String) -> Bytes {
-  let buf = @buffer.new()
+  let buf = Buffer()
   for c in s {
     let cp = c.to_int()
     if cp < 0x80 {
@@ -202,7 +202,7 @@ pub fn text_string_bytes(s : String) -> Bytes {
       break
     }
   }
-  let buf = @buffer.new()
+  let buf = Buffer()
   if ascii {
     for c in s {
       buf.write_byte(c.to_int().to_byte())
@@ -310,7 +310,7 @@ pub fn write_file(
   info : Int?,
   file_id : (Bytes, Bytes)?,
 ) -> Bytes {
-  let buf = @buffer.new()
+  let buf = Buffer()
   write_ascii(buf, "%PDF-\{version}\n%")
   buf.write_byte(b'\x80')
   buf.write_byte(b'\x80')

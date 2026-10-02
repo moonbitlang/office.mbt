@@ -100,7 +100,7 @@ fn subset_tag(font : Font, glyphs : Array[Int]) -> String {
     feed(g)
     feed(g >> 8)
   }
-  let sb = StringBuilder::new()
+  let sb = StringBuilder()
   for _ in 0..<6 {
     sb.write_char(('A'.to_int() + (h % 26UL).to_int()).unsafe_to_char())
     h = h / 26UL
@@ -110,7 +110,7 @@ fn subset_tag(font : Font, glyphs : Array[Int]) -> String {
 
 ///|
 fn hex4(v : Int) -> String {
-  let sb = StringBuilder::new()
+  let sb = StringBuilder()
   for shift in [12, 8, 4, 0] {
     sb.write_char(hex_digits[(v >> shift) & 0xF].unsafe_to_char())
   }
@@ -169,7 +169,7 @@ fn to_unicode_cmap(
   entries : Array[(Int, String)],
   one_byte? : Bool = false,
 ) -> Bytes {
-  let sb = StringBuilder::new()
+  let sb = StringBuilder()
   sb.write_string(
     "%!PS-Adobe-3.0 Resource-CMap\n%%DocumentNeededResources: procset CIDInit\n%%IncludeResource: procset CIDInit\n%%BeginResource: CMap Custom\n%%Title: (Custom Adobe Identity 0)\n%%Version: 1\n%%EndComments\n/CIDInit /ProcSet findresource begin\n12 dict begin\nbegincmap\n/CIDSystemInfo 3 dict dup begin\n    /Registry (Adobe) def\n    /Ordering (Identity) def\n    /Supplement 0 def\nend def\n/CMapName /Custom def\n/CMapVersion 1 def\n/CMapType 0 def\n/WMode 0 def\n",
   )
@@ -182,7 +182,7 @@ fn to_unicode_cmap(
   )
   let mut i = 0
   while i < entries.length() {
-    let n = @math.minimum(100.0, (entries.length() - i).to_double()).to_int()
+    let n = @cmp.minimum(100.0, (entries.length() - i).to_double()).to_int()
     sb.write_string("\{n} beginbfchar\n")
     for k in i..<(i + n) {
       let (g, text) = entries[k]
@@ -313,10 +313,10 @@ fn CIDFont::serialize(
             None => (a, c, d, e)
             Some((p, q, r, s)) =>
               (
-                @math.minimum(p, a),
-                @math.minimum(q, c),
-                @math.maximum(r, d),
-                @math.maximum(s, e),
+                @cmp.minimum(p, a),
+                @cmp.minimum(q, c),
+                @cmp.maximum(r, d),
+                @cmp.maximum(s, e),
               )
           },
         )

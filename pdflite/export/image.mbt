@@ -8,7 +8,7 @@ pub(all) enum ImageColorspace {
   Luma
   Rgb
   Cmyk
-} derive(Eq, Show)
+} derive(Eq, Debug)
 
 ///|
 fn ImageColorspace::components(self : ImageColorspace) -> Int {

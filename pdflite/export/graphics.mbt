@@ -723,8 +723,8 @@ fn SerializeContext::serialize_postscript_function(
     padded.insert(0, { ..stops[0], offset: 0.0, })
     padded.push({ ..stops[stops.length() - 1], offset: 1.0, })
   }
-  encode_stops_impl(padded[:], p.min, p.max, code, use_opacities)
-  let sb = StringBuilder::new()
+  encode_stops_impl(padded, p.min, p.max, code, use_opacities)
+  let sb = StringBuilder()
   encode_ps(code, sb)
   let d = p.domain
   self.put_content_stream(

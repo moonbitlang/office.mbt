@@ -93,7 +93,7 @@ pub(all) struct ExtGState {
   stroking_alpha : Double?
   blend_mode : String?
   mask : Int?
-} derive(Eq, Show)
+} derive(Eq, Debug)
 
 ///|
 fn ExtGState::new() -> ExtGState {
@@ -194,7 +194,7 @@ pub struct Stream {
 ///|
 pub fn Stream::empty() -> Stream {
   {
-    content: Bytes::default(),
+    content: Default::default(),
     bbox: { left: 0.0, top: 0.0, right: 1.0, bottom: 1.0, },
     validation_errors: [],
     resources: ResourceDictionary::new(),

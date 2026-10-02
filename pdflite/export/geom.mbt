@@ -6,7 +6,7 @@
 pub(all) struct Point {
   x : Double
   y : Double
-} derive(Eq, Show)
+} derive(Eq, Debug)
 
 ///|
 pub fn Point::from_xy(x : Double, y : Double) -> Point {
@@ -18,7 +18,7 @@ pub fn Point::from_xy(x : Double, y : Double) -> Point {
 pub(all) struct Size {
   width : Double
   height : Double
-} derive(Eq, Show)
+} derive(Eq, Debug)
 
 ///|
 /// Create a new size; `None` unless both dimensions are positive and finite.
@@ -37,7 +37,7 @@ pub(all) struct Rect {
   top : Double
   right : Double
   bottom : Double
-} derive(Eq, Show)
+} derive(Eq, Debug)
 
 ///|
 /// Create a rectangle from its left, top, right and bottom edges; `None` if
@@ -79,23 +79,23 @@ pub fn Rect::height(self : Rect) -> Double {
 /// The smallest rectangle containing both rectangles.
 pub fn Rect::union(self : Rect, other : Rect) -> Rect {
   {
-    left: @math.minimum(self.left, other.left),
-    top: @math.minimum(self.top, other.top),
-    right: @math.maximum(self.right, other.right),
-    bottom: @math.maximum(self.bottom, other.bottom),
+    left: @cmp.minimum(self.left, other.left),
+    top: @cmp.minimum(self.top, other.top),
+    right: @cmp.maximum(self.right, other.right),
+    bottom: @cmp.maximum(self.bottom, other.bottom),
   }
 }
 
 ///|
 /// The bounding box of the transformed rectangle.
 pub fn Rect::transform(self : Rect, ts : Transform) -> Rect {
-  let pts = [
+  let pts : ReadOnlyArray[Point] = [
     ts.apply(self.left, self.top),
     ts.apply(self.right, self.top),
     ts.apply(self.right, self.bottom),
     ts.apply(self.left, self.bottom),
   ]
-  bbox_of_points(pts[:]).unwrap()
+  bbox_of_points(pts).unwrap()
 }
 
 ///|
@@ -109,10 +109,10 @@ pub fn bbox_of_points(pts : ArrayView[Point]) -> Rect? {
   let mut r = pts[0].x
   let mut b = pts[0].y
   for p in pts {
-    l = @math.minimum(l, p.x)
-    t = @math.minimum(t, p.y)
-    r = @math.maximum(r, p.x)
-    b = @math.maximum(b, p.y)
+    l = @cmp.minimum(l, p.x)
+    t = @cmp.minimum(t, p.y)
+    r = @cmp.maximum(r, p.x)
+    b = @cmp.maximum(b, p.y)
   }
   Some({ left: l, top: t, right: r, bottom: b, })
 }
@@ -133,7 +133,7 @@ pub(all) struct Transform {
   sy : Double
   tx : Double
   ty : Double
-} derive(Eq, Show)
+} derive(Eq, Debug)
 
 ///|
 pub fn Transform::identity() -> Transform {
@@ -243,13 +243,13 @@ pub(all) enum PathSegment {
   QuadTo(Point, Point)
   CubicTo(Point, Point, Point)
   Close
-} derive(Eq, Show)
+} derive(Eq, Debug)
 
 ///|
 /// A path.
 pub(all) struct Path {
   segments : Array[PathSegment]
-} derive(Eq, Show)
+} derive(Eq, Debug)
 
 ///|
 /// The bounding box of the points of the path (control points included),
@@ -271,7 +271,7 @@ pub fn Path::bounds(self : Path) -> Rect? {
       Close => ()
     }
   }
-  bbox_of_points(pts[:])
+  bbox_of_points(pts)
 }
 
 ///|
@@ -318,8 +318,8 @@ pub fn PathBuilder::move_to(self : PathBuilder, x : Double, y : Double) -> Unit 
 ///|
 fn PathBuilder::last_point(self : PathBuilder) -> Point {
   // The start of the last subpath after a close, else the last point.
-  let mut start = { x: 0.0, y: 0.0, }
-  let mut last = { x: 0.0, y: 0.0, }
+  let mut start = Point::{ x: 0.0, y: 0.0, }
+  let mut last = Point::{ x: 0.0, y: 0.0, }
   for seg in self.segments {
     match seg {
       MoveTo(p) => {

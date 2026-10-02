@@ -3,8 +3,8 @@
 
 ///|
 fn glyph_text(text : String, g : Glyph) -> String {
-  let start = @math.maximum(0.0, g.text_start.to_double()).to_int()
-  let end = @math.minimum(text.length().to_double(), g.text_end.to_double()).to_int()
+  let start = @cmp.maximum(0.0, g.text_start.to_double()).to_int()
+  let end = @cmp.minimum(text.length().to_double(), g.text_end.to_double()).to_int()
   if start >= end {
     ""
   } else {
@@ -214,10 +214,10 @@ fn get_glyphs_bbox(
   for g in glyphs {
     x += g.x_advance * size
     y -= g.y_advance * size
-    bl = @math.minimum(bl, x + g.x_offset * size)
-    br = @math.maximum(br, x + g.x_offset * size)
-    bt = @math.minimum(bt, y - g.y_offset * size)
-    bb = @math.maximum(bb, y - g.y_offset * size)
+    bl = @cmp.minimum(bl, x + g.x_offset * size)
+    br = @cmp.maximum(br, x + g.x_offset * size)
+    bt = @cmp.minimum(bt, y - g.y_offset * size)
+    bb = @cmp.maximum(bb, y - g.y_offset * size)
   }
   { left: bl, top: bt, right: br, bottom: bb, }
 }
@@ -325,8 +325,8 @@ fn ContentBuilder::fill_stroke_glyph_run(
     return
   }
   self.apply_isolated_op(sc, _ => (), sb => {
-    let cur_x = Ref::new(x)
-    let cur_y = Ref::new(y)
+    let cur_x = Ref::{ val: x, }
+    let cur_y = Ref::{ val: y, }
     // When the glyph ranges are monotonically decreasing, the glyphs are in
     // reverse order and we should write `/ReversedChars` marked content.
     let mut reversed = glyphs.length() > 1
@@ -462,7 +462,7 @@ fn ContentBuilder::encode_consecutive_glyph_run(
   // Individual positioning with `TJ`.
   let upem = fc.units_per_em(fid)
   let items : Array[Obj] = []
-  let encoded = @buffer.new()
+  let encoded = Buffer()
   let mut adjustment = 0.0
   for g in glyphs {
     let code = fc.add_glyph(sc, g.glyph_id, context_color).1

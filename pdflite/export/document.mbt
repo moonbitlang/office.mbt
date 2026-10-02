@@ -144,7 +144,7 @@ pub fn Page::finish(self : Page) -> Unit {
     sc.register_validation_error(e)
   }
   let stream_ref = sc.new_ref()
-  let page = {
+  let page = InternalPage::{
     stream_ref,
     stream: self.stream,
     settings: self.settings,
@@ -304,7 +304,7 @@ pub fn Document::tagging_enabled(self : Document) -> Bool {
 
 ///|
 fn xml_escape(s : String) -> String {
-  let sb = StringBuilder::new()
+  let sb = StringBuilder()
   for c in s {
     match c {
       '<' => sb.write_string("&lt;")
@@ -327,7 +327,7 @@ fn stable_hash_hex(parts : Array[String]) -> String {
     }
     h = (h ^ 0xFFUL) * 0x100000001b3UL
   }
-  let sb = StringBuilder::new()
+  let sb = StringBuilder()
   for i in 0..<16 {
     let nib = ((h >> (60 - 4 * i)) & 0xFUL).to_int()
     sb.write_char(hex_digits[nib].unsafe_to_char())
@@ -342,7 +342,7 @@ fn SerializeContext::xmp(
   instance_id : String,
   document_id : String,
 ) -> String {
-  let sb = StringBuilder::new()
+  let sb = StringBuilder()
   sb.write_string(
     "<?xpacket begin=\"\u{FEFF}\" id=\"W5M0MpCehiHzreSzNTczkc9d\"?><x:xmpmeta xmlns:x=\"adobe:ns:meta/\" x:xmptk=\"xmp-writer\"><rdf:RDF xmlns:rdf=\"http://www.w3.org/1999/02/22-rdf-syntax-ns#\"><rdf:Description rdf:about=\"\" xmlns:dc=\"http://purl.org/dc/elements/1.1/\" xmlns:xmp=\"http://ns.adobe.com/xap/1.0/\" xmlns:pdf=\"http://ns.adobe.com/pdf/1.3/\" xmlns:xmpMM=\"http://ns.adobe.com/xap/1.0/mm/\" xmlns:xmpTPg=\"http://ns.adobe.com/xap/1.0/t/pg/\" xmlns:pdfaid=\"http://www.aiim.org/pdfa/ns/id/\" xmlns:pdfuaid=\"http://www.aiim.org/pdfua/ns/id/\">",
   )

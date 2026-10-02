@@ -9,7 +9,7 @@ pub(all) enum PdfVersion {
   Pdf16
   Pdf17
   Pdf20
-} derive(Eq, Compare, Show)
+} derive(Eq, Compare, Debug)
 
 ///|
 pub fn PdfVersion::as_str(self : PdfVersion) -> String {
@@ -58,20 +58,20 @@ pub(all) enum Archival {
   A4
   A4F
   A4E
-} derive(Eq, Show)
+} derive(Eq, Debug)
 
 ///|
 /// An accessibility (PDF/UA) validator.
 pub(all) enum Accessibility {
   UA1
-} derive(Eq, Show)
+} derive(Eq, Debug)
 
 ///|
 /// A validator.
 pub(all) enum Validator {
   A(Archival)
   Ua(Accessibility)
-} derive(Eq, Show)
+} derive(Eq, Debug)
 
 ///|
 pub fn Validator::as_str(self : Validator) -> String {
@@ -114,7 +114,7 @@ pub fn Archival::as_str(self : Archival) -> String {
 pub(all) struct Validators {
   a : Archival?
   ua : Accessibility?
-} derive(Eq, Show)
+} derive(Eq, Debug)
 
 ///|
 pub fn Validators::empty() -> Validators {
@@ -134,7 +134,7 @@ pub fn Validators::to_array(self : Validators) -> Array[Validator] {
     out.push(Validator::A(a))
   }
   if self.ua is Some(ua) {
-    out.push(Validator::Ua(ua))
+    out.push(Ua(ua))
   }
   out
 }
@@ -206,7 +206,7 @@ pub fn Validators::specifies_associated_files(self : Validators) -> Bool {
 pub(all) struct Configuration {
   version : PdfVersion
   validators : Validators
-} derive(Eq, Show)
+} derive(Eq, Debug)
 
 ///|
 pub fn Configuration::default() -> Configuration {
@@ -219,7 +219,7 @@ pub(all) enum VersionedFeature {
   StructureOrderTabbing
   HeaderFooterArtifactSubtypes
   TableHeaderScope
-} derive(Eq, Show)
+} derive(Eq, Debug)
 
 ///|
 pub fn VersionedFeature::minimum_pdf_version(
@@ -239,7 +239,7 @@ pub(all) enum EmbedError {
   MissingDate
   MissingDescription
   MissingMimeType
-} derive(Eq, Show)
+} derive(Eq, Debug)
 
 ///|
 /// A location: an opaque identifier provided by the user (Typst passes raw

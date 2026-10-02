@@ -10,7 +10,7 @@ priv struct Content {
 
 ///|
 fn Content::new() -> Content {
-  { buf: @buffer.new(), depth: 0, }
+  { buf: Buffer(), depth: 0, }
 }
 
 ///|
@@ -298,7 +298,7 @@ fn ContentBuilder::content_draw_path(
   self : ContentBuilder,
   path : Path,
 ) -> Unit {
-  let mut prev = { x: 0.0, y: 0.0, }
+  let mut prev = Point::{ x: 0.0, y: 0.0, }
   for seg in path.segments {
     match seg {
       MoveTo(p) => {
@@ -782,7 +782,7 @@ fn calculate_stroke_bbox(stroke : Stroke, path : Path) -> Rect? {
   guard path.bounds() is Some(b) else { return None }
   let mut w = stroke.width / 2.0
   if stroke.line_join == Miter {
-    w = w * @math.maximum(stroke.miter_limit, 1.0)
+    w = w * @cmp.maximum(stroke.miter_limit, 1.0)
   }
   if stroke.line_cap == Square {
     w = w * 1.4142135623730951

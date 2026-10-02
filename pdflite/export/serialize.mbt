@@ -248,7 +248,7 @@ fn SerializeContext::register_colorspace(
     Regular(_) => None
     Separation(_, space) => {
       self.validate_separation(space)
-      let key = "sep:\{space}"
+      let key = "sep:\{Repr(space)}"
       Some(
         self.cached(key, r => {
           let name = match space.colorant {
@@ -364,7 +364,7 @@ fn SerializeContext::register_ext_g_state(
   self : SerializeContext,
   state : ExtGState,
 ) -> Int {
-  let key = "gs:\{state.non_stroking_alpha}:\{state.stroking_alpha}:\{state.blend_mode}:\{state.mask}"
+  let key = "gs:\{Repr(state)}"
   self.cached(key, r => {
     let d = DictBuilder::new()
     d.set("Type", Name("ExtGState"))
