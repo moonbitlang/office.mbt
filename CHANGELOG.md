@@ -12,7 +12,7 @@ Breaking and notable changes for the published modules in this workspace.
 Entries are grouped by module and by the version they ship in; `Unreleased`
 covers changes that have landed on `main` but are not yet published.
 
-### moonbitlang/pagelayout [Unreleased]
+### moonbitlang/pagelayout [0.7.1]
 
 - An `ImageItem` whose `mime` is `application/pdf` draws a page of the
   PDF in `data` as vector graphics, scaled to the item's box like a
@@ -27,9 +27,9 @@ covers changes that have landed on `main` but are not yet published.
   (`PDF this backend cannot read`, `PDF without the page to draw`, `PDF
   page this backend cannot import`). The SVG backend is unchanged: it
   embeds the bytes as a data URI, which browsers do not draw for a PDF.
-  Requires the unreleased pdflite below.
+  Requires moonbitlang/pdflite 0.3.2.
 
-### moonbitlang/pdflite [Unreleased]
+### moonbitlang/pdflite [0.3.2]
 
 - Page tree walks no longer recurse. Counting pages (`endpage`,
   `pages_of_pagetree_quick`, which the reader uses while loading),
