@@ -374,3 +374,17 @@ test "DictBuilder replaces entries in place" {
   )
   inspect(d.get("C") is None, content="true")
 }
+
+///|
+test "format_real handles values beyond the five-decimal Int64 range" {
+  // `v * 100000` used to overflow an Int64 from about 9.2e13 on, writing
+  // garbage like `92233720368547.75807`.
+  inspect(
+    [1.5e15, -2.5e15 - 1.0, 123456789012345.6, 1.0e20, -1.5e25]
+    .map(@export.format_real)
+    .join(" "),
+    content=(
+      #|1500000000000000 -2500000000000001 123456789012346 100000000000000000000 -15000000000000000000000000
+    ),
+  )
+}

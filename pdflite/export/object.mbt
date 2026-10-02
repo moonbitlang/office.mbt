@@ -96,6 +96,11 @@ pub fn format_real(v : Double) -> String {
   if v == v.floor() && v.abs() < 2147483647.0 {
     return v.to_int().to_string()
   }
+  // From here on, `v * 100000` doesn't fit into an Int64 (and doubles have
+  // no five decimal places of precision left anyway).
+  if v.abs() >= 9.0e13 {
+    return integral_string(v.round())
+  }
   let neg = v < 0.0
   let scaled = (v.abs() * 100000.0 + 0.5).floor()
   if scaled == 0.0 {
@@ -122,6 +127,39 @@ pub fn format_real(v : Double) -> String {
       sb.write_char('0')
     }
     sb.write_string(s)
+  }
+  sb.to_string()
+}
+
+///|
+/// The decimal digits of an integral value.
+fn integral_string(v : Double) -> String {
+  if v.abs() < 9.0e18 {
+    return v.to_int64().to_string()
+  }
+  // `Double::to_string` uses exponent notation from 1e21 on (`1.5e+300`),
+  // which is not valid PDF syntax: expand it.
+  let s = v.to_string()
+  guard s.find("e+") is Some(e) else { return s }
+  let mut exp = 0
+  for c in s.unsafe_substring(start=e + 2, end=s.length()) {
+    exp = exp * 10 + (c.to_int() - '0'.to_int())
+  }
+  let sb = StringBuilder()
+  let mut frac_digits = 0
+  let mut after_point = false
+  for c in s.unsafe_substring(start=0, end=e) {
+    if c == '.' {
+      after_point = true
+    } else {
+      sb.write_char(c)
+      if after_point {
+        frac_digits += 1
+      }
+    }
+  }
+  for _ in 0..<(exp - frac_digits) {
+    sb.write_char('0')
   }
   sb.to_string()
 }
