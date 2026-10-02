@@ -993,9 +993,9 @@ test "pdf_truetype_subset_font assembles source table directory" {
   @test.assert_eq(@core.pdf_int_array_of_bytes(subset[0:12]), [
     0, 1, 0, 0, // scaler type
      0, 5, // numTables
-     0, 64, // searchRange = 16 * pow2lt 5
-     0, 1, // source entrySelector = int(ln 4)
-     0, 80, // source rangeShift = numTables * 16
+     0, 64, // searchRange = 16 * 2^floor(log2 5)
+     0, 2, // entrySelector = floor(log2 5)
+     0, 16, // rangeShift = numTables * 16 - searchRange
   ])
   @test.assert_eq(@pdflite.pdf_truetype_tables(subset), [
     { tag: "head", checksum: 0x10000036U, offset: 92, length: 54, },

@@ -234,3 +234,46 @@ test "recompute_head writes valid checksums and only changes the head" {
   // the subset still maps and lays out its characters
   @test.assert_eq(@pdflite.pdf_truetype_cmap_glyph(subset, 66), Some(2))
 }
+
+///|
+/// The `(sfntVersion, numTables, searchRange, entrySelector, rangeShift)`
+/// fields of a font's 12-byte table directory header.
+fn truetype_directory_header_for_test(
+  font : BytesView,
+) -> (UInt, Int, Int, Int, Int) {
+  let u16 = (at : Int) => (font[at].to_int() << 8) | font[at + 1].to_int()
+  let version = (u16(0).reinterpret_as_uint() << 16) |
+    u16(2).reinterpret_as_uint()
+  (version, u16(4), u16(6), u16(8), u16(10))
+}
+
+///|
+test "subset fonts write OpenType table directory search fields" {
+  let font = truetype_head_bbox_font_for_test(notdef_outline=true)
+  let plain = try! @pdflite.pdf_truetype_subset_font(font, [65, 66])
+  let recomputed = try! @pdflite.pdf_truetype_subset_font(
+    font,
+    [65, 66],
+    recompute_head=true,
+  )
+  let implicit = try! @pdflite.pdf_truetype_subset_font(
+    font,
+    [65, 66],
+    rewrite_cmap=true,
+  )
+  for subset in [plain, recomputed, implicit] {
+    let (_, count, search_range, entry_selector, range_shift) = truetype_directory_header_for_test(
+      subset,
+    )
+    @test.assert_eq(count, @pdflite.pdf_truetype_tables(subset).length())
+    @test.assert_eq(search_range, (1 << entry_selector) * 16)
+    assert_true(search_range <= count * 16 && search_range * 2 > count * 16)
+    @test.assert_eq(range_shift, count * 16 - search_range)
+  }
+  debug_inspect(
+    truetype_directory_header_for_test(recomputed),
+    content=(
+      #|(65536, 5, 64, 2, 16)
+    ),
+  )
+}
