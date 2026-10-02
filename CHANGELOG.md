@@ -14,35 +14,41 @@ covers changes that have landed on `main` but are not yet published.
 
 ### moonbitlang/pdflite [Unreleased]
 
-- Page tree walks no longer recurse: counting pages (`endpage`,
+- Page tree walks no longer recurse. Counting pages (`endpage`,
   `pages_of_pagetree_quick`, which the reader uses while loading),
-  `pages_of_pagetree`, `page_reference_numbers`, the page extraction
-  helpers and inherited-attribute lookups share one walk that keeps a
-  frame per level of the path (its space grows with the tree's depth,
-  not its width) and resolves each kid when it reaches it. It raises
-  `PageTreeExpected` for a node or a `/Kids` array held by reference
-  that is its own ancestor (a page tree node listing itself, or a
-  `/Kids` array holding a direct node that lists the same array), where
-  the recursive walks overflowed the stack or looped; for a tree deeper
-  than 10,000 levels, as before; and once it has taken more than
-  `2 * object_count + 16` steps. A step is the root, each kid examined,
-  whether it is visited or skipped (`page_reference_numbers` and the
-  extraction helpers skip null or unresolved kids and kids that are not
-  references; counting pages and `pages_of_pagetree` reject kids that do
-  not resolve to dictionaries, as before), and each `/Kids` array held
-  by reference that a branch expands; so the work of a walk is
-  proportional to its steps. A well-formed tree, every kid a
-  reference to a node object of its own and each `/Kids` array appearing
-  once, takes at most `object_count` steps. The limit stops trees that
-  sharing multiplies (each level listing the level below twice, through
-  references or through direct nodes in a referenced array) and repeated
-  scans of a shared `/Kids` array of skipped entries (1,000 branches
-  sharing an array of 10,000 nulls), but it also rejects documents the
-  recursive walks accepted: a page or node listed by many parents, or
-  many times by one, or more skipped kids than the allowance leaves room
-  for (a page listed 40 times in a two-object document). A node shared
-  by a few parents is still visited once per parent, and inherits from
-  each.
+  `pages_of_pagetree`, `page_reference_numbers` and the page extraction
+  helpers share one walk that keeps a frame per level of the path (its
+  space grows with the tree's depth, not its width) and resolves each kid
+  when it reaches it. Inherited-attribute lookups climb `/Parent` in a
+  loop of their own, bounded by the 10,000-level depth limit.
+- The shared walk raises `PageTreeExpected`:
+  - for a node, or a `/Kids` array held by reference, that is its own
+    ancestor (a page tree node listing itself, or a `/Kids` array holding
+    a direct node that lists the same array), where the recursive walks
+    overflowed the stack or looped;
+  - for a tree deeper than 10,000 levels, as before;
+  - once it has taken more than `2 * object_count + 16` steps.
+- A step is the root, each kid examined (visited or skipped) and each
+  `/Kids` array held by reference that a branch expands. Which kids are
+  skipped depends on the function: counting pages and `pages_of_pagetree`
+  reject kids that do not resolve to dictionaries, as before;
+  `page_reference_numbers` and the extraction helpers skip null kids and
+  kids that are not references, and `pdf_page_reference_numbers_unordered`
+  keeps the numbers of references that do not resolve.
+- The walk's own overhead is proportional to its steps; what a caller does
+  per node (reading dictionaries, copying pages) is not metered by the
+  limit. A well-formed tree (every kid a reference to a node object of its
+  own, each `/Kids` array appearing once) takes at most `object_count`
+  steps.
+- The limit stops trees that sharing multiplies (each level listing the
+  level below twice, through references or through direct nodes in a
+  referenced array), and repeated scans of a shared `/Kids` array of
+  skipped entries (1,000 branches sharing an array of 10,000 nulls).
+- It also rejects some documents the recursive walks accepted: a page or
+  node listed by many parents, or many times by one, or more skipped kids
+  than the allowance leaves room for (a page listed 40 times in a
+  two-object document). A node shared by a few parents is still visited
+  once per parent, and inherits from each.
 
 ### moonbitlang/pagelayout [0.7.0]
 
