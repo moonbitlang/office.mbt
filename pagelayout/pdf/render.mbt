@@ -401,7 +401,9 @@ pub fn render_pdf(
   // media type as well as bytes: the same bytes under a different type
   // are a different image as far as the reader is concerned, and reusing
   // an earlier decode would draw a picture the document did not ask for.
-  let image_cache : Map[(Bytes, String), Int] = Map([])
+  let image_cache : Map[(Bytes, String), (Int, Double, Double)] = Map([])
+  // the documents behind PDF images, read once each
+  let pdf_sources = PdfSources::new()
 
   // Both font shapes subset the program they embed, and the character set
   // is also what decides which shape a font takes, so this has to be known
@@ -470,13 +472,20 @@ pub fn render_pdf(
       emit_run(ops, run, face, font_resource_name(number), page_height)
     }
     let image = fn(image : @pagelayout.ImageItem, page_height : Double) {
-      match image_object(document, image, image_cache) {
-        Some(number) => {
+      match image_object(document, image, image_cache, pdf_sources) {
+        Some((number, natural_w, natural_h)) => {
           if !images_set.contains(number) {
             images_set[number] = ()
             images.push(number)
           }
-          emit_image(ops, image, image_resource_name(number), page_height)
+          emit_image(
+            ops,
+            image,
+            image_resource_name(number),
+            page_height,
+            natural_w~,
+            natural_h~,
+          )
         }
         // a format pdflite cannot embed is skipped rather than
         // written as something a reader would reject
@@ -1033,7 +1042,10 @@ fn image_resource_name(number : Int) -> @core.PdfName {
 }
 
 ///|
-/// Add an image XObject, or None for a format pdflite cannot embed.
+/// Add an image XObject, or None for a format pdflite cannot embed: its
+/// object number and its natural size, the box it fills when drawn with
+/// the identity matrix (the unit square for a raster image, the page's
+/// size for a PDF page).
 ///
 /// Images repeat across pages (a logo in a header), so each distinct
 /// (bytes, media type) pair becomes one XObject. The cache belongs to a single render:
@@ -1043,45 +1055,67 @@ fn image_resource_name(number : Int) -> @core.PdfName {
 fn image_object(
   document : @pdflite.PdfDocument,
   image : @pagelayout.ImageItem,
-  cache : Map[(Bytes, String), Int],
-) -> Int? {
+  cache : Map[(Bytes, String), (Int, Double, Double)],
+  sources : PdfSources,
+) -> (Int, Double, Double)? {
   let key = (image.data, image.mime)
   match cache.get(key) {
-    Some(number) => return Some(number)
+    Some(placed) => return Some(placed)
     None => ()
   }
   // a malformed or unsupported image is skipped rather than aborting a
   // whole document over one picture
-  let object = match image.mime {
-    "image/png" =>
-      @pdflite.pdf_image_object_of_png_data(document, image.data) catch {
+  let placed = match image.mime {
+    "image/png" => {
+      let object = @pdflite.pdf_image_object_of_png_data(document, image.data) catch {
         _ => return None
       }
-    "image/jpeg" =>
-      @pdflite.pdf_image_object_of_jpeg_data(image.data) catch {
+      (document.add_object(object), 1.0, 1.0)
+    }
+    "image/jpeg" => {
+      let object = @pdflite.pdf_image_object_of_jpeg_data(image.data) catch {
         _ => return None
       }
-    _ => return None
+      (document.add_object(object), 1.0, 1.0)
+    }
+    mime =>
+      match pdf_image_page(mime) {
+        Some(page) =>
+          match import_pdf_image(document, sources, image.data, page) {
+            Some(placed) => placed
+            None => return None
+          }
+        None => return None
+      }
   }
-  let number = document.add_object(object)
-  cache[key] = number
-  Some(number)
+  cache[key] = placed
+  Some(placed)
 }
 
 ///|
-/// Draw an image XObject into its box. A PDF image occupies the unit
-/// square, so the transform carries its size, and the y flip uses the
-/// box's bottom edge.
+/// Draw an image XObject into its box. The XObject fills the box from the
+/// origin to its natural size (`natural_w` by `natural_h`: the unit square
+/// for a raster image), so the transform scales that to the box, and the
+/// y flip uses the box's bottom edge.
 fn emit_image(
   ops : Array[@content.PdfContentOp],
   image : @pagelayout.ImageItem,
   resource : @core.PdfName,
   page_height : Double,
+  natural_w? : Double = 1.0,
+  natural_h? : Double = 1.0,
 ) -> Unit {
   let y = flip(page_height, image.y_pt + image.h_pt)
   ops.push(Op_q)
   ops.push(
-    Op_cm({ a: image.w_pt, b: 0, c: 0, d: image.h_pt, e: image.x_pt, f: y, }),
+    Op_cm({
+      a: image.w_pt / natural_w,
+      b: 0,
+      c: 0,
+      d: image.h_pt / natural_h,
+      e: image.x_pt,
+      f: y,
+    }),
   )
   ops.push(Op_Do(resource))
   ops.push(Op_Q)
@@ -1177,6 +1211,10 @@ fn image_verdict(
       } catch {
         _ => Some("JPEG this backend cannot read")
       }
-    other => Some("\{other} is not an embeddable image format")
+    other =>
+      match pdf_image_page(other) {
+        Some(page) => pdf_image_verdict(image.data, page)
+        None => Some("\{other} is not an embeddable image format")
+      }
   }
 }

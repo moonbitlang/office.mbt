@@ -12,6 +12,21 @@ Breaking and notable changes for the published modules in this workspace.
 Entries are grouped by module and by the version they ship in; `Unreleased`
 covers changes that have landed on `main` but are not yet published.
 
+### moonbitlang/pagelayout [Unreleased]
+
+- An `ImageItem` whose `mime` is `application/pdf` draws a page of the
+  PDF in `data` as vector graphics, scaled to the item's box like a
+  raster image: the first page, or the one a `page` parameter names
+  (`application/pdf; page=2`). `render_pdf` imports the page as a Form
+  XObject (pdflite's new `PdfDocument::import_page`), reading each
+  distinct PDF once per render and importing each (bytes, media type)
+  once. A PDF that cannot be read, a page it does not have, or a `page`
+  parameter that is not a positive integer is skipped like any other
+  image the backend cannot draw, and `unembeddable_images` reports it
+  (`PDF this backend cannot read`, `PDF without the page to draw`). The
+  SVG backend is unchanged: it embeds the bytes as a data URI, which
+  browsers do not draw for a PDF. Requires the unreleased pdflite below.
+
 ### moonbitlang/pdflite [Unreleased]
 
 - Page tree walks no longer recurse. Counting pages (`endpage`,
