@@ -101,7 +101,14 @@ pub(all) struct RectItem {
 } derive(Eq, Debug, ToJson)
 
 ///|
-/// A placed raster image; `data` is the encoded file, not pixels.
+/// A placed image; `data` is the encoded file, not pixels, and `mime` its
+/// media type: `image/png` or `image/jpeg`, a raster image stretched to
+/// the box, or `application/pdf`, a page of a PDF drawn as vector
+/// graphics, scaled to the box: the first page, or the one a `page`
+/// parameter names (`application/pdf; page=2`). The PDF backend skips
+/// images it cannot draw (see `@pdf.unembeddable_images`); the SVG
+/// backend embeds every image as a data URI, which for a PDF page browsers
+/// do not draw.
 pub(all) struct ImageItem {
   x_pt : Double
   y_pt : Double

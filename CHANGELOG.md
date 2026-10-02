@@ -12,6 +12,23 @@ Breaking and notable changes for the published modules in this workspace.
 Entries are grouped by module and by the version they ship in; `Unreleased`
 covers changes that have landed on `main` but are not yet published.
 
+### moonbitlang/pagelayout [Unreleased]
+
+- An `ImageItem` whose `mime` is `application/pdf` draws a page of the
+  PDF in `data` as vector graphics, scaled to the item's box like a
+  raster image: the first page, or the one a `page` parameter names
+  (`application/pdf; page=2`). `render_pdf` imports the page as a Form
+  XObject (pdflite's new `PdfDocument::import_page`), reading each
+  distinct PDF (and walking its page tree) once per render, and once per
+  `unembeddable_images` call, and importing each (bytes, media type)
+  once. A PDF that cannot be read, a page it does not have, or a `page`
+  parameter that is not a positive integer is skipped like any other
+  image the backend cannot draw, and `unembeddable_images` reports it
+  (`PDF this backend cannot read`, `PDF without the page to draw`, `PDF
+  page this backend cannot import`). The SVG backend is unchanged: it
+  embeds the bytes as a data URI, which browsers do not draw for a PDF.
+  Requires the unreleased pdflite below.
+
 ### moonbitlang/pdflite [Unreleased]
 
 - Page tree walks no longer recurse. Counting pages (`endpage`,
@@ -49,6 +66,49 @@ covers changes that have landed on `main` but are not yet published.
   than the allowance leaves room for (a page listed 40 times in a
   two-object document). A node shared by a few parents is still visited
   once per parent, and inherits from each.
+- `PdfDocument::import_page(source, page_number)` imports a page of
+  another document as a Form XObject. Like prawn-templates (which
+  asciidoctor-pdf uses), the page and the objects it needs are copied;
+  prawn-templates copies the page object graph as a page, this builds a
+  Form XObject that can be drawn anywhere, scaled like an image. The
+  form's `/BBox` is the page's visible box (its media box clipped to its
+  crop box, PDF 32000-1 §14.11.2), its `/Matrix` turns that box upright
+  by the page's `/Rotate` with its lower-left corner at the origin and
+  scales it by its `/UserUnit`, and it carries the page's resources and
+  transparency `/Group`, inherited attributes included. A single content
+  stream keeps its filters and encoded bytes; several are decoded, joined
+  and Flate-compressed. Every object the form reaches is copied under a
+  new object number (streams with their encoded data); references to the
+  source's page tree nodes, or to any other dictionary whose resolved
+  `/Type` is `/Page` or `/Pages`, become `null`. The source document is
+  not modified. Everything is copied before the target changes, so a
+  failed import leaves the target as it was: no object added, no object
+  number taken, nothing in its event log. Annotations and
+  document-level data are not imported. It returns a `PdfImportedPage`:
+  the form's object number and the size it fills, `(0, 0)` to
+  `(width, height)`.
+- `PdfPageSource::new(document)` reads a document's page tree once for
+  importing (`page_count`, `page_display_size`, and the `source` of
+  `import_page`). It raises `PageTreeExpected` for a page tree with a
+  cycle (or a node shared by two parents) or a malformed node, and
+  `HardError` for an encrypted document, as prawn-templates refuses one.
+  `page_display_size(page_number)` is the size a viewer shows a page at
+  (and `import_page` reports): the visible box scaled by `/UserUnit`,
+  width and height swapped for `/Rotate` 90 or 270. Both raise
+  `BadPageSpecification` for a page the source does not have; the
+  rectangle parser's errors or `BadRectangle` for a malformed box or an
+  empty visible box (a crop box outside the media box is not widened to
+  the media box); `PageRotationExpected` for a `/Rotate` that is not a
+  multiple of 90; and `BadNumberArgument` for a `/UserUnit` that is not
+  a positive number. Inherited attributes follow PDF 32000-1 §7.7.3.4; an
+  entry whose value is null, directly or through a reference, is absent
+  and inherits. Both walks use explicit worklists, not recursion: the
+  page tree walk visits each node and each `/Kids` array held by
+  reference once, and a second visit raises `PageTreeExpected`, so a
+  cycle ends it; the walk over what a page reaches visits each object
+  once. A copied object's direct nesting (arrays and dictionaries inside
+  it) is limited to 256 levels, past which `import_page` raises
+  `HardError`.
 
 ### moonbitlang/pagelayout [0.7.0]
 
