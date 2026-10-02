@@ -44,7 +44,7 @@ pub fn Color::black() -> Color {
 
 ///|
 /// The components of the color in its PDF color space.
-pub fn Color::to_pdf_color(self : Color) -> Array[Double] {
+fn Color::to_pdf_color(self : Color) -> Array[Double] {
   match self {
     Regular(c) => c.to_pdf_color()
     Separation(tint, _) => [tint.to_double() / 255.0]
@@ -52,7 +52,7 @@ pub fn Color::to_pdf_color(self : Color) -> Array[Double] {
 }
 
 ///|
-pub fn RegularColor::to_pdf_color(self : RegularColor) -> Array[Double] {
+fn RegularColor::to_pdf_color(self : RegularColor) -> Array[Double] {
   let f = (v : Int) => v.to_double() / 255.0
   match self {
     Rgb(r, g, b) => [f(r), f(g), f(b)]
@@ -217,4 +217,78 @@ fn paint_has_translucent_stops(paint : Paint) -> Bool {
     SweepGradient(g) => g.stops.iter().any(s => s.opacity != 1.0)
     _ => false
   }
+}
+
+///|
+/// The stops of a gradient paint.
+fn paint_stops(paint : Paint) -> Array[Stop]? {
+  match paint {
+    LinearGradient(g) => Some(g.stops)
+    RadialGradient(g) => Some(g.stops)
+    SweepGradient(g) => Some(g.stops)
+    Color(_) | Pattern(_) => None
+  }
+}
+
+///|
+/// Whether the paint is a gradient without stops, which paints nothing
+/// (krilla panics on these).
+fn paint_is_empty(paint : Paint) -> Bool {
+  paint_stops(paint) is Some([])
+}
+
+///|
+/// The opacity to draw a paint with: gradients with a single stop are drawn
+/// as a solid color with the stop's opacity. (krilla sets the stop opacity
+/// after the graphics state has been written, so that it has no effect.)
+fn paint_opacity(paint : Paint, opacity : Double) -> Double {
+  match paint_stops(paint) {
+    Some([stop]) => opacity * stop.opacity
+    _ => opacity
+  }
+}
+
+///|
+/// The components of a color converted to RGB (for gradients mixing color
+/// spaces).
+fn RegularColor::to_rgb(self : RegularColor) -> (Int, Int, Int) {
+  match self {
+    Rgb(r, g, b) => (r, g, b)
+    Luma(l) => (l, l, l)
+    Cmyk(c, m, y, k) => {
+      let f = (v : Int) => (255 - v) * (255 - k) / 255
+      (f(c), f(m), f(y))
+    }
+  }
+}
+
+///|
+/// Gradient stops whose colors all have the same number of components:
+/// mixed stops are converted to RGB (separation colors via their fallback).
+/// The shading function interpolates the components of all stops in the
+/// color space of the first stop (krilla asserts that they match).
+fn normalize_stops(stops : Array[Stop]) -> Array[Stop] {
+  let kind = (c : Color) => {
+    match c {
+      Regular(Rgb(_, _, _)) => 0
+      Regular(Luma(_)) => 1
+      Regular(Cmyk(_, _, _, _)) => 2
+      Separation(_, _) => 3
+    }
+  }
+  if stops.iter().all(s => kind(s.color) == kind(stops[0].color)) {
+    return stops
+  }
+  stops.map(s => {
+    let (r, g, b) = match s.color {
+      Regular(c) => c.to_rgb()
+      Separation(tint, space) => {
+        // Mix white (no ink) with the fallback (full ink).
+        let (r, g, b) = space.fallback.to_rgb()
+        let mix = (v : Int) => 255 - (255 - v) * tint / 255
+        (mix(r), mix(g), mix(b))
+      }
+    }
+    { ..s, color: Color::rgb(r, g, b), }
+  })
 }

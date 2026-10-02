@@ -87,37 +87,63 @@ pub struct Font {
   key : String
   /// The color glyph hook.
   priv mut color : ColorGlyphs?
+  /// The CID of each glyph of a CID-keyed CFF font.
+  priv cids : Array[Int]?
 }
 
 ///|
 /// Parse a font face from a font file and a collection index.
 pub fn Font::new(data : Bytes, index : Int, key? : String = "") -> Font? {
+  // Offsets and lengths are validated up front, so that all later reads and
+  // slices stay in bounds (reads past the end of a table only see bytes of
+  // the file, never panic).
   let mut base = 0
   if data.length() >= 12 && rd_tag(data, 0) == "ttcf" {
     let count = rd_u32(data, 8)
-    if index >= count {
+    if index < 0 ||
+      count < 0 ||
+      index >= count ||
+      16 + 4 * index > data.length() {
       return None
     }
     base = rd_u32(data, 12 + 4 * index)
   } else if index != 0 {
     return None
   }
+  if base < 0 || base > data.length() - 12 {
+    return None
+  }
   let num_tables = rd_u16(data, base + 4)
+  if base + 12 + 16 * num_tables > data.length() {
+    return None
+  }
   let tables : Map[String, (Int, Int)] = Map([])
   for i in 0..<num_tables {
     let rec = base + 12 + 16 * i
-    if rec + 16 > data.length() {
-      return None
-    }
     let tag = rd_tag(data, rec)
+    // `rd_u32` returns negative values for offsets and lengths >= 2^31.
     let offset = rd_u32(data, rec + 8)
     let length = rd_u32(data, rec + 12)
-    if offset + length <= data.length() {
-      tables[tag] = (offset, length)
+    if offset < 0 || length < 0 || offset > data.length() - length {
+      return None
+    }
+    tables[tag] = (offset, length)
+  }
+  // The tables that are read without further length checks.
+  // (`head`, `hhea` and `maxp` are required, like in ttf-parser.)
+  for entry in [("head", 54), ("hhea", 36), ("maxp", 6)] {
+    match tables.get(entry.0) {
+      Some((_, len)) => if len < entry.1 { return None }
+      None => return None
     }
   }
   guard tables.get("head") is Some((head, _)) else { return None }
-  let units_per_em = rd_u16(data, head + 18).to_double()
+  // Like ttf-parser, which rejects other values.
+  let units_per_em = rd_u16(data, head + 18)
+  if units_per_em < 16 || units_per_em > 16384 {
+    return None
+  }
+  let units_per_em = units_per_em.to_double()
   let bbox = (
     rd_i16(data, head + 36).to_double(),
     rd_i16(data, head + 38).to_double(),
@@ -127,6 +153,9 @@ pub fn Font::new(data : Bytes, index : Int, key? : String = "") -> Font? {
   let num_glyphs = match tables.get("maxp") {
     Some((maxp, _)) => rd_u16(data, maxp + 4)
     None => 0
+  }
+  if num_glyphs == 0 {
+    return None
   }
   // Horizontal metrics.
   let advances = []
@@ -151,7 +180,8 @@ pub fn Font::new(data : Bytes, index : Int, key? : String = "") -> Font? {
   let mut cap_height = None
   let mut weight = 400.0
   let mut fs_type = 0
-  if tables.get("OS/2") is Some((os2, len)) {
+  // (Shorter tables than the fields read are ignored.)
+  if tables.get("OS/2") is Some((os2, len)) && len >= 72 {
     let version = rd_u16(data, os2)
     weight = rd_u16(data, os2 + 4).to_double()
     fs_type = rd_u16(data, os2 + 8)
@@ -169,7 +199,7 @@ pub fn Font::new(data : Bytes, index : Int, key? : String = "") -> Font? {
   }
   let mut italic_angle = 0.0
   let mut is_monospaced = false
-  if tables.get("post") is Some((post, _)) {
+  if tables.get("post") is Some((post, len)) && len >= 16 {
     // rd_u32 returns the bits as a (possibly negative) Int, i.e. the
     // signed 16.16 fixed value.
     let fixed = rd_u32(data, post + 4)
@@ -184,6 +214,15 @@ pub fn Font::new(data : Bytes, index : Int, key? : String = "") -> Font? {
     Cff2
   } else {
     NoOutlines
+  }
+  let mut cids = None
+  if kind == Cff {
+    guard tables.get("CFF ") is Some((off, len)) else { return None }
+    match cff_keying(data, off, len) {
+      Some(CidKeyed(c)) => cids = Some(c)
+      Some(NameKeyed) => ()
+      None => return None
+    }
   }
   Some({
     data,
@@ -204,7 +243,33 @@ pub fn Font::new(data : Bytes, index : Int, key? : String = "") -> Font? {
     kind,
     key,
     color: None,
+    cids,
   })
+}
+
+///|
+/// The CID of a glyph in the embedded font program: for CID-keyed CFF fonts
+/// from the charset, else the glyph ID.
+fn Font::cid(self : Font, glyph : Int) -> Int {
+  match self.cids {
+    Some(cids) if glyph >= 0 && glyph < cids.length() => cids[glyph]
+    _ => glyph
+  }
+}
+
+///|
+/// Whether the font is a CID-keyed CFF font.
+fn Font::is_cid_keyed(self : Font) -> Bool {
+  self.cids is Some(_)
+}
+
+///|
+/// The data of a table.
+fn Font::table_data(self : Font, tag : String) -> Bytes? {
+  match self.tables.get(tag) {
+    Some((off, len)) => Some(self.data[off:off + len].to_owned())
+    None => None
+  }
 }
 
 ///|
@@ -265,12 +330,15 @@ fn read_postscript_name(
 /// The byte range of a glyph in the `glyf` table.
 fn Font::glyph_range(self : Font, glyph : Int) -> (Int, Int)? {
   guard self.tables.get("head") is Some((head, _)) else { return None }
-  guard self.tables.get("loca") is Some((loca, _)) else { return None }
+  guard self.tables.get("loca") is Some((loca, loca_len)) else { return None }
   guard self.tables.get("glyf") is Some((glyf, glyf_len)) else { return None }
   if glyph < 0 || glyph >= self.num_glyphs {
     return None
   }
   let long = rd_i16(self.data, head + 50) != 0
+  if (if long { 4 } else { 2 }) * (glyph + 2) > loca_len {
+    return None
+  }
   let (start, end) = if long {
     (
       rd_u32(self.data, loca + 4 * glyph),
@@ -282,7 +350,7 @@ fn Font::glyph_range(self : Font, glyph : Int) -> (Int, Int)? {
       2 * rd_u16(self.data, loca + 2 * glyph + 2),
     )
   }
-  if start > end || end > glyf_len {
+  if start < 0 || start > end || end > glyf_len {
     return None
   }
   Some((glyf + start, glyf + end))

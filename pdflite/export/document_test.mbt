@@ -40,12 +40,6 @@ test "the PDF version is written in the header" {
     versions.map(v => v.as_str()).join(", "),
     content="PDF 1.4, PDF 1.5, PDF 1.6, PDF 1.7, PDF 2.0",
   )
-  debug_inspect(
-    versions.map(v => v.deprecates_cid_set()),
-    content=(
-      #|[false, false, false, false, true]
-    ),
-  )
 }
 
 ///|

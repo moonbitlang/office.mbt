@@ -663,3 +663,113 @@ test "panic marked content missing from the tag tree" {
   doc.set_tag_tree(@export.TagTree::new())
   doc.finish() |> ignore
 }
+
+///|
+test "tagged content inside layers refers to the layer's form XObject" {
+  let doc = @export.Document::new_with(tagged_settings())
+  let page = doc.start_page_with(
+    @export.PageSettings::from_wh(100.0, 100.0).unwrap(),
+  )
+  let s = page.surface()
+  let on_page = tagged_rect(s, Other)
+  s.push_opacity(0.5)
+  let layer_a = tagged_rect(s, Other)
+  let layer_b = tagged_rect(s, Other)
+  s.push_isolated()
+  let nested = tagged_rect(s, Other)
+  s.pop()
+  s.pop()
+  s.finish()
+  page.finish()
+  debug_inspect(
+    [on_page, layer_a, layer_b, nested],
+    content=(
+      #|[
+      #|  PageContent(0, 0),
+      #|  StreamContent(0, 0, 0),
+      #|  StreamContent(0, 0, 1),
+      #|  StreamContent(0, 1, 0),
+      #|]
+    ),
+  )
+  let tree = @export.TagTree::new()
+  tree.push(group(kind(P), [Leaf(on_page), Leaf(layer_a)]))
+  tree.push(group(kind(P), [Leaf(layer_b), Leaf(nested)]))
+  doc.set_tag_tree(tree)
+  let p = parse(doc.finish())
+  inspect(
+    p.struct_tree(),
+    content=(
+      #|/Document
+      #|  /P K=[0 <</Type /MCR /Pg R /Stm R /MCID 0>>]
+      #|  /P K=[<</Type /MCR /Pg R /Stm R /MCID 1>> <</Type /MCR /Pg R /Stm R /MCID 0>>]
+      #|
+    ),
+  )
+  let x0 = p.path(p.page(0), ["Resources", "XObject", "x0"])
+  inspect(
+    p.show(p.get(x0, "StructParents")),
+    content=(
+      #|1
+    ),
+  )
+  inspect(
+    p.content(x0),
+    content=(
+      #|/P <</MCID 0
+      #|>> BDC
+      #|q
+      #|0 0 0 rg
+      #|0 0 m
+      #|5 0 l
+      #|5 5 l
+      #|0 5 l
+      #|h
+      #|f
+      #|Q
+      #|EMC
+      #|/P <</MCID 1
+      #|>> BDC
+      #|q
+      #|0 0 0 rg
+      #|0 0 m
+      #|5 0 l
+      #|5 5 l
+      #|0 5 l
+      #|h
+      #|f
+      #|Q
+      #|EMC
+      #|q
+      #|/x0 Do
+      #|Q
+      #|
+    ),
+  )
+  let x1 = p.path(x0, ["Resources", "XObject", "x0"])
+  inspect(
+    p.show(p.get(x1, "StructParents")),
+    content=(
+      #|0
+    ),
+  )
+  // The MCRs point to the forms.
+  let elems = p.items(
+    p.get(p.items(p.get(p.get(p.catalog(), "StructTreeRoot"), "K"))[0], "K"),
+  )
+  let mcr = p.items(p.get(elems[0], "K"))[1]
+  inspect(p.show(p.get(mcr, "Stm")) == p.show(x0), content="true")
+  let root = p.get(p.catalog(), "StructTreeRoot")
+  inspect(
+    p.show_deep(p.path(root, ["ParentTree", "Nums"])),
+    content=(
+      #|[0 [R] 1 [R R] 2 [R]]
+    ),
+  )
+  inspect(
+    p.show(p.get(root, "ParentTreeNextKey")),
+    content=(
+      #|3
+    ),
+  )
+}

@@ -55,6 +55,15 @@ fn SerializeContext::register_xobject(
   d.set("Subtype", Name("Form"))
   d.set("Resources", x.stream.resources.to_pdf())
   d.set("BBox", x.bbox().to_pdf())
+  // A layer with tagged content is a struct parent.
+  if x.stream.struct_info is Some((stream_id, num_mcids)) &&
+    num_mcids > 0 &&
+    self.settings.enable_tagging {
+    let sp = self.struct_parents.length()
+    self.struct_parents.push(Stream(stream_id, num_mcids))
+    self.tag_stream_refs[stream_id] = r
+    d.set("StructParents", Int(sp))
+  }
   if use_group {
     let g = DictBuilder::new()
     g.set("Type", Name("Group"))
@@ -62,7 +71,7 @@ fn SerializeContext::register_xobject(
     if x.isolated {
       g.set("I", Bool(true))
     }
-    g.set("CS", Name("DeviceRGB"))
+    g.set("CS", self.regular_color_space_obj(Rgb(0, 0, 0)))
     d.set("Group", g.finish())
   }
   self.put_content_stream(r, d.entries(), x.stream.content)
@@ -237,7 +246,7 @@ fn LinearGradient::gradient_properties(
       RadialAxial(
         [self.x1, self.y1, self.x2, self.y2],
         false,
-        self.stops,
+        normalize_stops(self.stops),
         self.anti_alias,
       ),
       self.transform,
@@ -259,7 +268,7 @@ fn LinearGradient::gradient_properties(
         max: self.x1 + dist,
         cx: 0.0,
         cy: 0.0,
-        stops: self.stops,
+        stops: normalize_stops(self.stops),
         domain: get_expanded_bbox(bbox, full),
         spread_method: self.spread_method,
         gradient_type: Linear,
@@ -279,7 +288,7 @@ fn RadialGradient::gradient_properties(
     RadialAxial(
       [self.fx, self.fy, self.fr, self.cx, self.cy, self.cr],
       true,
-      self.stops,
+      normalize_stops(self.stops),
       self.anti_alias,
     ),
     self.transform,
@@ -297,7 +306,7 @@ fn SweepGradient::gradient_properties(
       max: self.end_angle,
       cx: self.cx,
       cy: self.cy,
-      stops: self.stops,
+      stops: normalize_stops(self.stops),
       domain: get_expanded_bbox(bbox, self.transform),
       spread_method: self.spread_method,
       gradient_type: Sweep,
@@ -363,12 +372,10 @@ fn shading_color_space(
   use_opacities : Bool,
 ) -> Obj {
   if use_opacities {
-    return Name("DeviceGray")
+    return sc.regular_color_space_obj(Luma(0))
   }
   match color {
-    Regular(Rgb(_, _, _)) => Name("DeviceRGB")
-    Regular(Luma(_)) => Name("DeviceGray")
-    Regular(Cmyk(_, _, _, _)) => Name("DeviceCMYK")
+    Regular(c) => sc.regular_color_space_obj(c)
     Separation(_, _) =>
       match sc.register_colorspace(color) {
         Some(r) => Ref(r)
@@ -616,6 +623,9 @@ fn encode_stops_impl(
   use_opacities : Bool,
 ) -> Unit {
   if stops.length() == 1 {
+    // Replace the input value with the stop's color. (krilla doesn't pop the
+    // input value here, leaving one value too many on the stack.)
+    code.push(PsOp("pop"))
     for c in stop_components(stops[0], use_opacities) {
       code.push(PsReal(c))
     }
@@ -735,7 +745,18 @@ fn SerializeContext::serialize_postscript_function(
         "Domain",
         Arr([Real(d.left), Real(d.right), Real(d.top), Real(d.bottom)]),
       ),
-      ("Range", range_obj(if use_opacities { 1 } else { 3 })),
+      // The number of components of the stops' color space (krilla always
+      // declares three).
+      (
+        "Range",
+        range_obj(
+          if use_opacities || p.stops.is_empty() {
+            1
+          } else {
+            p.stops[0].color.to_pdf_color().length()
+          },
+        ),
+      ),
     ],
     utf8_bytes(sb.to_string()),
   )

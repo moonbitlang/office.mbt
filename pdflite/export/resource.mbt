@@ -38,8 +38,8 @@ fn ResourceKind::dict_key(self : ResourceKind) -> String {
 
 ///|
 /// The resources used by a content stream.
-pub struct ResourceDictionary {
-  priv entries : Array[(ResourceKind, Int, String)]
+priv struct ResourceDictionary {
+  entries : Array[(ResourceKind, Int, String)]
 }
 
 ///|
@@ -88,7 +88,7 @@ fn ResourceDictionary::to_pdf(self : ResourceDictionary) -> Obj {
 
 ///|
 /// An external graphics state.
-pub(all) struct ExtGState {
+priv struct ExtGState {
   non_stroking_alpha : Double?
   stroking_alpha : Double?
   blend_mode : String?
@@ -189,6 +189,8 @@ pub struct Stream {
   priv validation_errors : Array[ValidationError]
   priv resources : ResourceDictionary
   priv uses_mask : Bool
+  /// The stream ID and number of marked content IDs of tagged content.
+  priv struct_info : (Int, Int)?
 }
 
 ///|
@@ -199,6 +201,7 @@ pub fn Stream::empty() -> Stream {
     validation_errors: [],
     resources: ResourceDictionary::new(),
     uses_mask: false,
+    struct_info: None,
   }
 }
 

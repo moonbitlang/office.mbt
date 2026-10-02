@@ -35,12 +35,12 @@ pub fn PdfVersion::header(self : PdfVersion) -> String {
 }
 
 ///|
-pub fn PdfVersion::deprecates_cid_set(self : PdfVersion) -> Bool {
+fn PdfVersion::deprecates_cid_set(self : PdfVersion) -> Bool {
   self >= Pdf20
 }
 
 ///|
-pub fn PdfVersion::specifies_associated_files(self : PdfVersion) -> Bool {
+fn PdfVersion::specifies_associated_files(self : PdfVersion) -> Bool {
   self == Pdf20
 }
 
@@ -141,7 +141,7 @@ pub fn Validators::to_array(self : Validators) -> Array[Validator] {
 
 ///|
 /// The validators that prohibit the error, if any.
-pub fn Validators::prohibits(
+fn Validators::prohibits(
   self : Validators,
   error : ValidationError,
 ) -> Validators? {
@@ -161,7 +161,7 @@ pub fn Validators::prohibits(
 }
 
 ///|
-pub fn Validators::requires_codepoint_mappings(self : Validators) -> Bool {
+fn Validators::requires_codepoint_mappings(self : Validators) -> Bool {
   (match self.a {
     Some(A1_A | A2_A | A2_U | A3_A | A3_U | A4 | A4F | A4E) => true
     _ => false
@@ -170,34 +170,32 @@ pub fn Validators::requires_codepoint_mappings(self : Validators) -> Bool {
 }
 
 ///|
-pub fn Validators::requires_display_doc_title(self : Validators) -> Bool {
+fn Validators::requires_display_doc_title(self : Validators) -> Bool {
   self.ua is Some(_)
 }
 
 ///|
-pub fn Validators::requires_tagging(self : Validators) -> Bool {
+fn Validators::requires_tagging(self : Validators) -> Bool {
   self.a is Some(A1_A | A2_A | A3_A) || self.ua is Some(_)
 }
 
 ///|
-pub fn Validators::requires_annotation_flags(self : Validators) -> Bool {
+fn Validators::requires_annotation_flags(self : Validators) -> Bool {
   self.a is Some(_)
 }
 
 ///|
-pub fn Validators::prohibits_info_dict(self : Validators) -> Bool {
+fn Validators::prohibits_info_dict(self : Validators) -> Bool {
   self.a is Some(A4 | A4F | A4E)
 }
 
 ///|
-pub fn Validators::requires_embedded_files_when_empty(
-  self : Validators,
-) -> Bool {
+fn Validators::requires_embedded_files_when_empty(self : Validators) -> Bool {
   self.a is Some(A4F)
 }
 
 ///|
-pub fn Validators::specifies_associated_files(self : Validators) -> Bool {
+fn Validators::specifies_associated_files(self : Validators) -> Bool {
   self.a is Some(A3_A | A3_B | A3_U)
 }
 
@@ -282,7 +280,7 @@ pub(all) enum ValidationError {
 ///|
 /// Structural equality of validation errors (fonts by identity), used to
 /// deduplicate errors.
-pub fn ValidationError::same(
+fn ValidationError::same(
   self : ValidationError,
   other : ValidationError,
 ) -> Bool {

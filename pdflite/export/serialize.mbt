@@ -10,8 +10,10 @@ pub(all) struct SerializeSettings {
   pretty : Bool
   /// Whether to compress content streams.
   compress_content_streams : Bool
-  /// Whether to avoid device color spaces (accepted for API compatibility;
-  /// device color spaces are always used).
+  /// Whether to avoid device color spaces: RGB and gray colors use the
+  /// ICC-based sRGB and sGrey color spaces instead (forced by PDF/A). There
+  /// is no CMYK profile, so CMYK colors stay in DeviceCMYK and register
+  /// `ValidationError::MissingCMYKProfile`.
   no_device_cs : Bool
   /// Whether to keep the file ASCII compatible.
   ascii_compatible : Bool
@@ -63,30 +65,37 @@ priv enum StructParentElement {
   Page(Int, Int)
   /// An annotation.
   Annotation(AnnotationIdentifier)
+  /// A form XObject with tagged content: the stream ID and the number of
+  /// marked content IDs.
+  Stream(Int, Int)
 }
 
 ///|
 /// The serialization context.
-pub struct SerializeContext {
-  priv settings : SerializeSettings
-  priv mut cur_ref : Int
-  priv objects : Map[Int, Indirect]
-  priv cache : Map[String, Int]
-  priv validation_errors : Array[(ValidationError, Validators)]
-  priv mut location : Location?
-  priv page_infos : Array[PageInfo]
-  priv page_tree_ref : Int
-  priv font_containers : Array[FontContainer]
-  priv named_destinations : Map[String, (Int, XyzDestination)]
-  priv xyz_destinations : Array[(Int, XyzDestination)]
-  priv pages : Array[(Int, InternalPage)]
-  priv struct_parents : Array[StructParentElement]
-  priv mut outline : Outline?
-  priv mut tag_tree : TagTree?
-  priv embedded_files : Map[String, Int]
-  priv custom_heading_roles : Map[Int, Unit]
-  priv separation_fallbacks : Array[(SeparationColorant, RegularColor)]
-  priv mut metadata : Metadata?
+priv struct SerializeContext {
+  settings : SerializeSettings
+  mut cur_ref : Int
+  objects : Map[Int, Indirect]
+  cache : Map[String, Int]
+  validation_errors : Array[(ValidationError, Validators)]
+  mut location : Location?
+  page_infos : Array[PageInfo]
+  page_tree_ref : Int
+  font_containers : Array[FontContainer]
+  named_destinations : Map[String, (Int, XyzDestination)]
+  xyz_destinations : Array[(Int, XyzDestination)]
+  pages : Array[(Int, InternalPage)]
+  struct_parents : Array[StructParentElement]
+  mut outline : Outline?
+  mut tag_tree : TagTree?
+  embedded_files : Map[String, Int]
+  custom_heading_roles : Map[Int, Unit]
+  separation_fallbacks : Array[(SeparationColorant, RegularColor)]
+  mut metadata : Metadata?
+  /// The number of form XObjects with tagged content.
+  mut num_tag_streams : Int
+  /// The reference of each form XObject with tagged content.
+  tag_stream_refs : Map[Int, Int]
 }
 
 ///|
@@ -97,6 +106,7 @@ fn SerializeContext::new(settings : SerializeSettings) -> SerializeContext {
     ..settings,
     enable_tagging: settings.enable_tagging || validators.requires_tagging(),
     xmp_metadata: settings.xmp_metadata || !validators.is_empty(),
+    no_device_cs: settings.no_device_cs || validators.a is Some(_),
   }
   {
     settings,
@@ -118,6 +128,8 @@ fn SerializeContext::new(settings : SerializeSettings) -> SerializeContext {
     custom_heading_roles: {},
     separation_fallbacks: [],
     metadata: None,
+    num_tag_streams: 0,
+    tag_stream_refs: Map([]),
   }
 }
 
@@ -190,7 +202,7 @@ fn SerializeContext::cached(
 }
 
 ///|
-pub fn SerializeContext::serialize_settings(
+fn SerializeContext::serialize_settings(
   self : SerializeContext,
 ) -> SerializeSettings {
   self.settings
@@ -238,6 +250,84 @@ fn SerializeContext::validate_separation(
 }
 
 ///|
+/// The ICC profile stream for sRGB (`rgb`) or sGrey, matching the PDF
+/// version (krilla `PdfVersion::rgb_icc`/`grey_icc`).
+fn SerializeContext::icc_profile(self : SerializeContext, rgb : Bool) -> Int {
+  let v4 = self.settings.pdf_version() >= Pdf17
+  self.cached(if rgb { "icc:srgb" } else { "icc:sgrey" }, r => {
+    let n = if rgb { 3 } else { 1 }
+    let data = match (rgb, v4) {
+      (true, true) => srgb_v4_icc
+      (true, false) => srgb_v2_icc
+      (false, true) => sgrey_v4_icc
+      (false, false) => sgrey_v2_icc
+    }
+    self.put_stream(r, [("N", Int(n)), ("Range", range_obj(n))], data)
+  })
+}
+
+///|
+/// The ICC-based sRGB (`rgb`) or sGrey color space.
+fn SerializeContext::icc_color_space(
+  self : SerializeContext,
+  rgb : Bool,
+) -> Int {
+  self.cached(if rgb { "cs:srgb" } else { "cs:sgrey" }, r => {
+    self.put(r, Arr([Name("ICCBased"), Ref(self.icc_profile(rgb))]))
+  })
+}
+
+///|
+/// The color space of a regular color: `None` for device color spaces
+/// (krilla `RegularColor::color_space`).
+fn SerializeContext::regular_color_space(
+  self : SerializeContext,
+  color : RegularColor,
+) -> Int? {
+  let no_device_cs = self.settings.no_device_cs
+  match color {
+    Rgb(_, _, _) =>
+      if no_device_cs {
+        Some(self.icc_color_space(true))
+      } else {
+        None
+      }
+    Luma(_) =>
+      if no_device_cs {
+        Some(self.icc_color_space(false))
+      } else {
+        None
+      }
+    Cmyk(_, _, _, _) => {
+      if no_device_cs {
+        self.register_validation_error(MissingCMYKProfile)
+      }
+      None
+    }
+  }
+}
+
+///|
+/// The color space of a regular color as an object (a device color space
+/// name or a reference).
+fn SerializeContext::regular_color_space_obj(
+  self : SerializeContext,
+  color : RegularColor,
+) -> Obj {
+  match self.regular_color_space(color) {
+    Some(r) => Ref(r)
+    None =>
+      Name(
+        match color {
+          Rgb(_, _, _) => "DeviceRGB"
+          Luma(_) => "DeviceGray"
+          Cmyk(_, _, _, _) => "DeviceCMYK"
+        },
+      )
+  }
+}
+
+///|
 /// Register a color space resource for a color, `None` for device color
 /// spaces.
 fn SerializeContext::register_colorspace(
@@ -245,7 +335,7 @@ fn SerializeContext::register_colorspace(
   color : Color,
 ) -> Int? {
   match color {
-    Regular(_) => None
+    Regular(c) => self.regular_color_space(c)
     Separation(_, space) => {
       self.validate_separation(space)
       let key = "sep:\{Repr(space)}"
@@ -256,14 +346,11 @@ fn SerializeContext::register_colorspace(
             NoColorant => "None"
             Custom(n) => n
           }
-          let (alt, comps) = match space.fallback {
-            Rgb(_, _, _) => ("DeviceRGB", space.fallback.to_pdf_color())
-            Luma(_) => ("DeviceGray", space.fallback.to_pdf_color())
-            Cmyk(_, _, _, _) => ("DeviceCMYK", space.fallback.to_pdf_color())
-          }
+          let alt = self.regular_color_space_obj(space.fallback)
+          let comps = space.fallback.to_pdf_color()
           // A type 2 (exponential) function from the tint (white for no
           // ink) to the fallback color (full ink).
-          let c0 = if alt == "DeviceCMYK" { 0.0 } else { 1.0 }
+          let c0 = if space.fallback is Cmyk(_, _, _, _) { 0.0 } else { 1.0 }
           let range = []
           for _ in comps {
             range.push(Real(0.0))
@@ -277,7 +364,7 @@ fn SerializeContext::register_colorspace(
             ("C1", Arr(comps.map(c => Real(c)))),
             ("N", Int(1)),
           ])
-          self.put(r, Arr([Name("Separation"), Name(name), Name(alt), func]))
+          self.put(r, Arr([Name("Separation"), Name(name), alt, func]))
         }),
       )
     }

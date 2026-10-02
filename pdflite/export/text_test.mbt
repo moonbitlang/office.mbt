@@ -453,7 +453,7 @@ test "CFF fonts are embedded as OpenType font programs" {
   inspect(
     p.show(file),
     content=(
-      #|stream<</Subtype /OpenType /Filter /FlateDecode /Length 220>>
+      #|stream<</Subtype /OpenType /Filter /FlateDecode /Length 248>>
     ),
   )
   // The font program is embedded unchanged.
@@ -653,5 +653,118 @@ test "Type 3 fonts are only described in PDF 1.5 and later" {
       #|600 0 d0
       #|
     ),
+  )
+}
+
+///|
+test "CID-keyed CFF fonts address glyphs by the CIDs of their charset" {
+  // The charset maps glyphs 1, 2, ... to CIDs 100, 101, ...
+  let data = test_font_data(outlines="cid-cff")
+  let font = @export.Font::new(data, 0).unwrap()
+  let p = parse(text_page(font, [glyph(1, 0, 1), glyph(2, 1, 2)], "AB"))
+  // The codes in the content stream are CIDs (0x64 = 100) ...
+  inspect(contains(p.content(p.page(0)), "[<00640065>] TJ"), content="true")
+  let f0 = p.font0()
+  let cid = p.items(p.get(f0, "DescendantFonts"))[0]
+  // ... as are the widths ...
+  inspect(
+    p.show(p.get(cid, "W")),
+    content=(
+      #|[0 [500] 100 [600] 101 [550]]
+    ),
+  )
+  inspect(p.has(cid, "CIDToGIDMap"), content="false")
+  // ... and the ToUnicode mappings.
+  let cmap = latin1(p.stream_data(p.get(f0, "ToUnicode")))
+  inspect(
+    cmap_body(cmap),
+    content=(
+      #|2 beginbfchar
+      #|<0064> <0041>
+      #|<0065> <0042>
+      #|endbfchar
+      #|
+    ),
+  )
+  // The bare CFF program is embedded (like krilla does after subsetting).
+  let file = p.path(cid, ["FontDescriptor", "FontFile3"])
+  inspect(p.show(p.get(file, "Subtype")), content="/CIDFontType0C")
+  let cff = cff_table(6, true)
+  inspect(
+    p.stream_data(file) == Bytes::from_array(cff.map(b => b.to_byte())),
+    content="true",
+  )
+  // CID-keyed CFF fonts work in PDF 1.4.
+  inspect(
+    export_result(() => {
+      text_page(
+        font,
+        [glyph(1, 0, 1)],
+        "A",
+        settings=settings_with(version=Pdf14),
+      )
+    }),
+    content="ok",
+  )
+}
+
+///|
+test "unsupported CFF fonts" {
+  // CFF2 can't be embedded without conversion.
+  let cff2 = test_font(outlines="cff2")
+  debug_inspect(cff2.kind, content="Cff2")
+  inspect(
+    export_result(() => text_page(cff2, [glyph(1, 0, 1)], "A")),
+    content=(
+      #|FontError: CFF2 fonts are not supported
+    ),
+  )
+  // Name-keyed CFF fonts are embedded as OpenType font programs (PDF 1.6).
+  let cff = test_font(outlines="cff")
+  inspect(
+    export_result(() => {
+      text_page(
+        cff,
+        [glyph(1, 0, 1)],
+        "A",
+        settings=settings_with(version=Pdf15),
+      )
+    }),
+    content=(
+      #|FontError: embedding a CFF font that is not CID-keyed requires PDF 1.6 or later
+    ),
+  )
+  inspect(
+    export_result(() => {
+      text_page(
+        cff,
+        [glyph(1, 0, 1)],
+        "A",
+        settings=settings_with(version=Pdf16),
+      )
+    }),
+    content="ok",
+  )
+  // A malformed CFF table is rejected.
+  let data = test_font_data(outlines="cff")
+  let rec = table_record(data, "CFF ")
+  let at = (data[rec + 8].to_int() << 24) |
+    (data[rec + 9].to_int() << 16) |
+    (data[rec + 10].to_int() << 8) |
+    data[rec + 11].to_int()
+  inspect(
+    @export.Font::new(patch(data, at + 4, [0xFF, 0xFF, 9]), 0) is None,
+    content="true",
+  )
+}
+
+///|
+test "TrueType font programs have a Length1" {
+  let p = parse(text_page(test_font(), [glyph(1, 0, 1)], "A"))
+  let cid = p.items(p.get(p.font0(), "DescendantFonts"))[0]
+  let file = p.path(cid, ["FontDescriptor", "FontFile2"])
+  inspect(
+    p.show(p.get(file, "Length1")) == p.stream_data(file).length().to_string(),
+    content="true",
   )
 }

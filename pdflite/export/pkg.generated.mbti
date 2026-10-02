@@ -2,26 +2,11 @@
 package "moonbitlang/pdflite/export"
 
 import {
-  "moonbitlang/core/buffer",
   "moonbitlang/core/debug",
 }
 
 // Values
-pub fn bbox_of_points(ArrayView[Point]) -> Rect?
-
-pub fn format_real(Double) -> String
-
-pub fn pdf_rect(Double, Double, Double, Double) -> Obj
-
-pub fn text_string_bytes(String) -> Bytes
-
 pub fn utf8_bytes(String) -> Bytes
-
-pub fn write_file(String, Map[Int, Indirect], Int, Int, Int?, (Bytes, Bytes)?) -> Bytes
-
-pub fn write_name(@buffer.Buffer, String) -> Unit
-
-pub fn write_obj(@buffer.Buffer, Obj) -> Unit
 
 // Errors
 pub(all) suberror ExportError {
@@ -144,7 +129,6 @@ pub(all) enum Color {
 pub fn Color::as_rgb(Self) -> (Int, Int, Int)?
 pub fn Color::black() -> Self
 pub fn Color::rgb(Int, Int, Int) -> Self
-pub fn Color::to_pdf_color(Self) -> Array[Double]
 
 pub(all) struct ColorGlyphs {
   is_color : (Int) -> Bool
@@ -187,15 +171,6 @@ pub(all) enum Destination {
   Named(NamedDestination)
 } derive(Eq, @debug.Debug)
 
-pub struct DictBuilder {
-  entries : Array[(String, Obj)]
-}
-pub fn DictBuilder::entries(Self) -> Array[(String, Obj)]
-pub fn DictBuilder::finish(Self) -> Obj
-pub fn DictBuilder::get(Self, String) -> Obj?
-pub fn DictBuilder::new() -> Self
-pub fn DictBuilder::set(Self, String, Obj) -> Unit
-
 pub struct Document {
   // private fields
 }
@@ -226,13 +201,6 @@ pub(all) struct EmbeddedFile {
   location : UInt64?
   modification_date : DateTime?
 }
-
-pub(all) struct ExtGState {
-  non_stroking_alpha : Double?
-  stroking_alpha : Double?
-  blend_mode : String?
-  mask : Int?
-} derive(Eq, @debug.Debug)
 
 pub(all) struct Fill {
   paint : Paint
@@ -283,6 +251,7 @@ pub(all) struct Glyph {
 pub(all) enum Identifier {
   PageContent(Int, Int)
   Annotation(Int, Int)
+  StreamContent(Int, Int, Int)
   Dummy
 } derive(Eq, @debug.Debug)
 
@@ -523,9 +492,7 @@ pub(all) enum PdfVersion {
   Pdf20
 } derive(Compare, Eq, @debug.Debug)
 pub fn PdfVersion::as_str(Self) -> String
-pub fn PdfVersion::deprecates_cid_set(Self) -> Bool
 pub fn PdfVersion::header(Self) -> String
-pub fn PdfVersion::specifies_associated_files(Self) -> Bool
 
 pub(all) enum Placement {
   Block
@@ -563,7 +530,6 @@ pub(all) struct Rect {
 pub fn Rect::from_ltrb(Double, Double, Double, Double) -> Self?
 pub fn Rect::from_xywh(Double, Double, Double, Double) -> Self?
 pub fn Rect::height(Self) -> Double
-pub fn Rect::to_pdf(Self) -> Obj
 pub fn Rect::transform(Self, Transform) -> Self
 pub fn Rect::union(Self, Self) -> Self
 pub fn Rect::width(Self) -> Double
@@ -573,11 +539,6 @@ pub(all) enum RegularColor {
   Luma(Int)
   Cmyk(Int, Int, Int, Int)
 } derive(Eq, @debug.Debug)
-pub fn RegularColor::to_pdf_color(Self) -> Array[Double]
-
-pub struct ResourceDictionary {
-  // private fields
-}
 
 pub(all) enum SeparationColorant {
   AllColorants
@@ -589,11 +550,6 @@ pub(all) struct SeparationSpace {
   colorant : SeparationColorant
   fallback : RegularColor
 } derive(Eq, @debug.Debug)
-
-pub struct SerializeContext {
-  // private fields
-}
-pub fn SerializeContext::serialize_settings(Self) -> SerializeSettings
 
 pub(all) struct SerializeSettings {
   pretty : Bool
@@ -810,7 +766,6 @@ pub fn Transform::invert(Self) -> Self?
 pub fn Transform::is_identity(Self) -> Bool
 pub fn Transform::post_concat(Self, Self) -> Self
 pub fn Transform::pre_concat(Self, Self) -> Self
-pub fn Transform::to_pdf(Self) -> Obj
 
 pub(all) enum ValidationError {
   TooLongString
@@ -842,7 +797,6 @@ pub(all) enum ValidationError {
   EmbeddedPDF(UInt64?)
   RequiresNewerPdfVersion(VersionedFeature, UInt64?)
 }
-pub fn ValidationError::same(Self, Self) -> Bool
 
 pub(all) enum Validator {
   A(Archival)
@@ -857,14 +811,6 @@ pub(all) struct Validators {
 } derive(Eq, @debug.Debug)
 pub fn Validators::empty() -> Self
 pub fn Validators::is_empty(Self) -> Bool
-pub fn Validators::prohibits(Self, ValidationError) -> Self?
-pub fn Validators::prohibits_info_dict(Self) -> Bool
-pub fn Validators::requires_annotation_flags(Self) -> Bool
-pub fn Validators::requires_codepoint_mappings(Self) -> Bool
-pub fn Validators::requires_display_doc_title(Self) -> Bool
-pub fn Validators::requires_embedded_files_when_empty(Self) -> Bool
-pub fn Validators::requires_tagging(Self) -> Bool
-pub fn Validators::specifies_associated_files(Self) -> Bool
 pub fn Validators::to_array(Self) -> Array[Validator]
 
 pub(all) enum VersionedFeature {

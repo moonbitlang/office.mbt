@@ -133,11 +133,31 @@ pub fn Surface::start_tagged(self : Surface, tag : ContentTag) -> Identifier {
       }
       Dummy
     }
-    _ => {
-      self.get_mut().start_marked_content_with_properties(sc, Some(mcid), tag)
-      self.mcid = Some(mcid + 1)
-      PageContent(page.page_index, mcid)
-    }
+    _ =>
+      if self.sub_builders.is_empty() {
+        self.get_mut().start_marked_content_with_properties(sc, Some(mcid), tag)
+        self.mcid = Some(mcid + 1)
+        PageContent(page.page_index, mcid)
+      } else {
+        // Inside a layer, the content ends up in a form XObject: its marked
+        // content IDs are counted per stream, and the structure tree refers
+        // to them with the stream (krilla writes page MCIDs here, which
+        // don't exist in the page's content stream).
+        let builder = self.get_mut()
+        let stream_id = match builder.tag_stream {
+          Some(id) => id
+          None => {
+            let id = sc.num_tag_streams
+            sc.num_tag_streams += 1
+            builder.tag_stream = Some(id)
+            id
+          }
+        }
+        let stream_mcid = builder.tag_mcids
+        builder.tag_mcids += 1
+        builder.start_marked_content_with_properties(sc, Some(stream_mcid), tag)
+        StreamContent(page.page_index, stream_id, stream_mcid)
+      }
   }
 }
 

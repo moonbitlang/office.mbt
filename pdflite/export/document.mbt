@@ -604,6 +604,28 @@ pub fn Document::finish(self : Document) -> Bytes raise ExportError {
   if page_labels_ref is Some(r) {
     cat.set("PageLabels", Ref(r))
   }
+  // PDF/A requires an output intent; it is always sRGB (krilla
+  // `serialize_destination_profiles`).
+  if settings.validators().a is Some(_) {
+    let profile = sc.icc_profile(true)
+    let v4 = settings.pdf_version() >= Pdf17
+    let oi_ref = sc.new_ref()
+    sc.put(
+      oi_ref,
+      Dict([
+        ("Type", Name("OutputIntent")),
+        ("DestOutputProfile", Ref(profile)),
+        ("S", Name("GTS_PDFA1")),
+        ("OutputConditionIdentifier", TextStr("Custom")),
+        ("OutputCondition", TextStr("sRGB")),
+        ("RegistryName", TextStr("")),
+        ("Info", TextStr(if v4 { "sRGB v4.2" } else { "sRGB v2.1" })),
+      ]),
+    )
+    let r = sc.new_ref()
+    sc.put(r, Arr([Ref(oi_ref)]))
+    cat.set("OutputIntents", Ref(r))
+  }
   match sc.metadata {
     Some({ language: Some(lang), .. }) => cat.set("Lang", TextStr(lang))
     _ => sc.register_validation_error(NoDocumentLanguage)

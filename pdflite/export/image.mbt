@@ -82,7 +82,17 @@ fn SerializeContext::register_image(
         )
         d.set("ColorSpace", Arr([Name("ICCBased"), Ref(icc_ref)]))
       }
-      None => d.set("ColorSpace", Name(image.colorspace.device_name()))
+      None =>
+        d.set(
+          "ColorSpace",
+          self.regular_color_space_obj(
+            match image.colorspace {
+              Luma => Luma(0)
+              Rgb => Rgb(0, 0, 0)
+              Cmyk => Cmyk(0, 0, 0, 0)
+            },
+          ),
+        )
     }
     d.set("BitsPerComponent", Int(8))
     if image.interpolate {

@@ -98,6 +98,11 @@ priv struct ContentBuilder {
   mut uses_mask : Bool
   bbox_important : Bool
   mut active_marked_content : Bool
+  /// For the content stream of a layer (a form XObject) with tagged content:
+  /// its stream ID (see `Identifier::StreamContent`).
+  mut tag_stream : Int?
+  /// The number of marked content IDs in the stream.
+  mut tag_mcids : Int
 }
 
 ///|
@@ -115,6 +120,8 @@ fn ContentBuilder::new(
     uses_mask: false,
     bbox_important,
     active_marked_content: false,
+    tag_stream: None,
+    tag_mcids: 0,
   }
 }
 
@@ -145,6 +152,10 @@ fn ContentBuilder::finish(self : ContentBuilder) -> Stream {
     validation_errors: self.validation_errors,
     resources: self.rd,
     uses_mask: self.uses_mask,
+    struct_info: match self.tag_stream {
+      Some(id) => Some((id, self.tag_mcids))
+      None => None
+    },
   }
 }
 
@@ -348,6 +359,15 @@ fn ContentBuilder::draw_path(
   fill : Fill?,
   stroke : Stroke?,
 ) -> Unit {
+  // Gradients without stops paint nothing.
+  let fill = match fill {
+    Some(f) if paint_is_empty(f.paint) => None
+    _ => fill
+  }
+  let stroke = match stroke {
+    Some(s) if paint_is_empty(s.paint) => None
+    _ => stroke
+  }
   if fill is None && stroke is None {
     return
   }
@@ -384,13 +404,13 @@ fn ContentBuilder::draw_path(
     // PDF viewers don't show patterns with fill/stroke opacities
     // consistently, so the opacity is accounted for in the pattern itself.
     if !(fill.paint is Pattern(_)) {
-      sb.set_fill_opacity(fill.opacity)
+      sb.set_fill_opacity(paint_opacity(fill.paint, fill.opacity))
     }
   }
   let stroke_prep = (sb : ContentBuilder, stroke : Stroke, sbbox : Rect) => {
     sb.expand_bbox(sbbox)
     if !(stroke.paint is Pattern(_)) {
-      sb.set_stroke_opacity(stroke.opacity)
+      sb.set_stroke_opacity(paint_opacity(stroke.paint, stroke.opacity))
     }
   }
   match (fill, stroke) {
@@ -647,8 +667,10 @@ fn ContentBuilder::content_set_fill_stroke_properties(
   let write_gradient = (props : GradientProperties, transform : Transform) => {
     match props.single_stop_color() {
       Some((color, opacity)) => {
-        // Write gradients with one stop as a solid color fill.
-        self.set_fill_opacity(opacity)
+        // Write gradients with one stop as a solid color fill (the stop's
+        // opacity has been applied with the fill or stroke opacity, see
+        // `paint_opacity`).
+        ignore(opacity)
         let cs = self.cs_to_content_cs(sc, color)
         self.set_solid(cs, color, stroke)
       }

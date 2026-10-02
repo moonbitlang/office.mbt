@@ -164,6 +164,9 @@ pub(all) enum Identifier {
   PageContent(Int, Int)
   /// An annotation: page index and annotation index.
   Annotation(Int, Int)
+  /// Marked content in a layer (a form XObject drawn on a page): page index,
+  /// stream ID and MCID within the stream.
+  StreamContent(Int, Int, Int)
   /// Content that is not part of the structure tree.
   Dummy
 } derive(Eq, Debug)
@@ -667,6 +670,7 @@ priv struct TagSerializer {
 fn identifier_key(id : Identifier) -> String {
   match id {
     PageContent(p, m) => "p\{p}:\{m}"
+    StreamContent(_, s, m) => "s\{s}:\{m}"
     Annotation(p, a) => "a\{p}:\{a}"
     Dummy => "d"
   }
@@ -937,6 +941,31 @@ fn TagSerializer::children(
           )
         }
       }
+      Content(StreamContent(page_index, stream_id, mcid) as id) => {
+        guard sc.page_infos.get(page_index) is Some(info) else {
+          abort(
+            "tag tree contains identifier from page \{page_index + 1}, but document only has \{sc.page_infos.length()} pages",
+          )
+        }
+        guard sc.tag_stream_refs.get(stream_id) is Some(stream_ref) else {
+          abort(
+            "the identifier \{Repr(id)} belongs to a layer that was not drawn",
+          )
+        }
+        let key = identifier_key(id)
+        if self.parent_tree_map.contains(key) {
+          abort("the identifier \{Repr(id)} appears twice in the tag tree")
+        }
+        self.parent_tree_map[key] = parent_ref
+        kids.push(
+          Dict([
+            ("Type", Name("MCR")),
+            ("Pg", Ref(info.ref_)),
+            ("Stm", Ref(stream_ref)),
+            ("MCID", Int(mcid)),
+          ]),
+        )
+      }
       Content(Annotation(page_index, annot_index) as id) => {
         guard sc.page_infos.get(page_index) is Some(info) else {
           abort("tag tree contains an annotation from a missing page")
@@ -1047,6 +1076,25 @@ fn SerializeContext::serialize_tag_tree(
               None =>
                 abort(
                   "page tag identifier \{page_index}:\{mcid} doesn't appear in the tag tree",
+                )
+            }
+          }
+          self.put(list_ref, Arr(refs))
+          nums.push(Int(index))
+          nums.push(Ref(list_ref))
+        }
+        Stream(stream_id, num_mcids) => {
+          let list_ref = self.new_ref()
+          let refs = []
+          for mcid in 0..<num_mcids {
+            match
+              ts.parent_tree_map.get(
+                identifier_key(StreamContent(0, stream_id, mcid)),
+              ) {
+              Some(r) => refs.push(Ref(r))
+              None =>
+                abort(
+                  "layer tag identifier \{stream_id}:\{mcid} doesn't appear in the tag tree",
                 )
             }
           }

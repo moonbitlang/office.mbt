@@ -89,6 +89,71 @@ fn composite_glyph(component : Int) -> Array[Int] {
 }
 
 ///|
+/// A minimal CFF table with `n` glyphs (all `endchar`). A CID-keyed table
+/// has the ROS operator and a charset mapping glyphs 1.. to CIDs 100..
+fn cff_table(n : Int, cid_keyed : Bool) -> Array[Int] {
+  let int32 = (v : Int) => {
+    [29, (v >> 24) & 0xFF, (v >> 16) & 0xFF, (v >> 8) & 0xFF, v & 0xFF]
+  }
+  let index = (items : Array[Array[Int]]) => {
+    let out = FontBytes::new()
+    out.u16(items.length())
+    if items.length() > 0 {
+      out.bytes([1]) // offSize
+      let mut off = 1
+      out.bytes([off])
+      for item in items {
+        off += item.length()
+        out.bytes([off])
+      }
+      for item in items {
+        out.bytes(item)
+      }
+    }
+    out.out
+  }
+  let names = index([[0x58]])
+  let strings = if cid_keyed {
+    index([
+      "Adobe".to_array().map(c => c.to_int()),
+      "Identity".to_array().map(c => c.to_int()),
+    ])
+  } else {
+    index([])
+  }
+  let charset = if cid_keyed { [1, 0, 100, n - 2] } else { [] }
+  // The size of the Top DICT doesn't depend on the offsets (all int32).
+  let dict_size = if cid_keyed { 9 + 12 } else { 6 }
+  let top_size = 2 + 1 + 2 + dict_size
+  let charset_at = 4 + names.length() + top_size + strings.length() + 2
+  let charstrings_at = charset_at + charset.length()
+  let dict = []
+  if cid_keyed {
+    // ROS: Adobe (SID 391), Identity (SID 392), supplement 0.
+    for b in [28, 1, 135, 28, 1, 136, 139, 12, 30] {
+      dict.push(b)
+    }
+    for b in int32(charset_at) {
+      dict.push(b)
+    }
+    dict.push(15)
+  }
+  for b in int32(charstrings_at) {
+    dict.push(b)
+  }
+  dict.push(17)
+  let out = FontBytes::new()
+  out.bytes([1, 0, 4, 1])
+  out.bytes(names)
+  out.bytes(index([dict]))
+  out.bytes(strings)
+  out.bytes(index([])) // Global Subrs
+  out.bytes(charset)
+  out.bytes(index(Array::make(n, [14])))
+  out.out
+}
+
+///|
 fn test_font_tables(
   fs_type : Int,
   ps_name : String,
@@ -189,8 +254,13 @@ fn test_font_tables(
       tables.push(("glyf", glyf.out))
       tables.push(("loca", loca.out))
     }
-    // The exporter embeds CFF fonts as a whole without parsing them.
-    "cff" => tables.push(("CFF ", [1, 0, 4, 1]))
+    // The exporter embeds CFF fonts as a whole, only reading the charset of
+    // CID-keyed fonts.
+    "cff" => tables.push(("CFF ", cff_table(n, false)))
+    "cid-cff" | "cff2" =>
+      tables.push(
+        (if outlines == "cff2" { "CFF2" } else { "CFF " }, cff_table(n, true)),
+      )
     _ => ()
   }
   tables
@@ -207,7 +277,7 @@ fn test_font_data(
 ) -> Bytes {
   let tables = test_font_tables(fs_type, ps_name, outlines, italic, monospaced)
   let out = FontBytes::new()
-  out.u32(if outlines == "cff" { 0x4F54544F } else { 0x00010000 })
+  out.u32(if outlines is ("glyf" | "none") { 0x00010000 } else { 0x4F54544F })
   out.u16(tables.length())
   out.u16(0)
   out.u16(0)
@@ -385,4 +455,120 @@ test "font collections" {
     ),
   )
   inspect(@export.Font::new(data, 1) is None, content="true")
+}
+
+///|
+/// Patch big-endian bytes of font data.
+fn patch(data : Bytes, at : Int, bytes : Array[Int]) -> Bytes {
+  let arr = data.to_array()
+  for i, b in bytes {
+    arr[at + i] = b.to_byte()
+  }
+  Bytes::from_array(arr)
+}
+
+///|
+/// The offset of a table record of the synthetic font.
+fn table_record(data : Bytes, tag : String) -> Int {
+  let n = (data[4].to_int() << 8) | data[5].to_int()
+  for i in 0..<n {
+    let rec = 12 + 16 * i
+    let mut t = ""
+    for k in 0..<4 {
+      t = t + data[rec + k].to_int().unsafe_to_char().to_string()
+    }
+    if t == tag {
+      return rec
+    }
+  }
+  abort("no table \{tag}")
+}
+
+///|
+test "Font::new rejects fonts with out-of-bounds or invalid structures" {
+  let data = test_font_data()
+  let head = table_record(data, "head")
+  let glyf = table_record(data, "glyf")
+  let rejected = (d : Bytes) => @export.Font::new(d, 0) is None
+  let cases = [
+    // A table offset with the high bit set (negative as a signed value).
+    patch(data, glyf + 8, [0x80, 0, 0, 0]),
+    // A table length reaching past the end.
+    patch(data, glyf + 12, [0x7F, 0xFF, 0xFF, 0xFF]),
+    // More tables than fit into the file.
+    patch(data, 4, [0xFF, 0xFF]),
+    // A head table that is too short.
+    patch(data, head + 12, [0, 0, 0, 20]),
+    // Zero units per em.
+    patch(
+      data,
+      (
+        (data[head + 8].to_int() << 24) |
+        (data[head + 9].to_int() << 16) |
+        (data[head + 10].to_int() << 8) |
+        data[head + 11].to_int()
+      ) +
+      18,
+      [0, 0],
+    ),
+    // Truncated data.
+    data[0:40].to_owned(),
+  ]
+  debug_inspect(
+    cases.map(rejected),
+    content=(
+      #|[true, true, true, true, true, true]
+    ),
+  )
+  // Collections: a negative face index, an index past the count, and a face
+  // offset past the end.
+  let ttc = (offset : Int) => {
+    let b = FontBytes::new()
+    b.bytes([0x74, 0x74, 0x63, 0x66])
+    b.u32(0x00010000)
+    b.u32(1)
+    b.u32(offset)
+    Bytes::from_array(b.out.map(x => x.to_byte()))
+  }
+  debug_inspect(
+    [
+      @export.Font::new(ttc(16), -1) is None,
+      @export.Font::new(ttc(16), 1) is None,
+      @export.Font::new(ttc(0x7FFFFFF0), 0) is None,
+      @export.Font::new(ttc(-16), 0) is None,
+    ],
+    content=(
+      #|[true, true, true, true]
+    ),
+  )
+}
+
+///|
+test "glyphs with broken outlines are dropped from the subset" {
+  // A loca entry pointing before the glyf table is ignored instead of
+  // panicking when the font is subset.
+  let data = test_font_data()
+  let loca = table_record(data, "loca")
+  let loca_at = (data[loca + 8].to_int() << 24) |
+    (data[loca + 9].to_int() << 16) |
+    (data[loca + 10].to_int() << 8) |
+    data[loca + 11].to_int()
+  let font = @export.Font::new(
+    patch(data, loca_at + 4, [0xFF, 0xFF, 0xFF, 0xF0]),
+    0,
+  ).unwrap()
+  inspect(
+    export_result(() => {
+      one_page(s => {
+        s.draw_glyphs(
+          @export.Point::from_xy(0.0, 10.0),
+          [glyph(1, 0, 1), glyph(2, 1, 2)],
+          font,
+          "AB",
+          10.0,
+        )
+      })
+    }),
+    content="ok",
+  )
 }

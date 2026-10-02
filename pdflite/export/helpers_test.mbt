@@ -244,7 +244,7 @@ fn Parsed::show_into(
     PdfNull => sb.write_string("null")
     PdfBoolean(b) => sb.write_string(b.to_string())
     PdfInteger(i) => sb.write_string(i.to_string())
-    PdfReal(r) | PdfExactReal(r) => sb.write_string(@export.format_real(r))
+    PdfReal(r) | PdfExactReal(r) => sb.write_string(r.to_string())
     PdfString(s) => {
       let mut printable = true
       for b in s {

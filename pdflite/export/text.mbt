@@ -243,6 +243,15 @@ fn ContentBuilder::draw_glyphs(
   text : String,
   font_size : Double,
 ) -> Unit {
+  // Gradients without stops paint nothing.
+  let fill = match fill {
+    Some(f) if paint_is_empty(f.paint) => None
+    _ => fill
+  }
+  let stroke = match stroke {
+    Some(s) if paint_is_empty(s.paint) => None
+    _ => stroke
+  }
   if fill is None && stroke is None {
     return
   }
@@ -271,13 +280,14 @@ fn ContentBuilder::draw_glyphs(
   }
   let set_fill_opacity = (sb : ContentBuilder, fill : Fill) => {
     if !(fill.paint is Pattern(_)) {
-      sb.set_fill_opacity(fill.opacity)
+      sb.set_fill_opacity(paint_opacity(fill.paint, fill.opacity))
     }
   }
   let set_stroke_opacity = (sb : ContentBuilder, stroke : Stroke) => {
     if !(stroke.paint is Pattern(_)) {
-      sb.set_stroke_opacity(stroke.opacity)
-      sb.set_fill_opacity(stroke.opacity)
+      let opacity = paint_opacity(stroke.paint, stroke.opacity)
+      sb.set_stroke_opacity(opacity)
+      sb.set_fill_opacity(opacity)
     }
   }
   let run = (mode : RenderMode, action : (ContentBuilder) -> Unit) => {

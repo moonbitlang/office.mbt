@@ -859,13 +859,13 @@ test "sweep and repeating gradients use PostScript functions" {
   inspect(
     p.show(p.resolve(f)),
     content=(
-      #|stream<</FunctionType 4 /Domain [0 10 0 10] /Range [0 1 0 1 0 1] /Length 310>>
+      #|stream<</FunctionType 4 /Domain [0 10 0 10] /Range [0 1 0 1 0 1] /Length 314>>
     ),
   )
   inspect(
     latin1(p.stream_data(f)),
     content=(
-      #|{ 5 sub exch 5 sub dup dup 0.0001 lt exch -0.0001 gt and { pop 0.0001 } if atan dup 0 le { pop 1 0 0 } { dup 360 le { 0 sub 360 0 sub div 0 index 1 exch 0 1 sub mul add 1 index 0 exch 0 0 sub mul add 2 index 0 exch 1 0 sub mul add 4 -1 roll pop } { dup 360 le { pop 0 0 1 } { 0 0 1 } ifelse } ifelse } ifelse }
+      #|{ 5 sub exch 5 sub dup dup 0.0001 lt exch -0.0001 gt and { pop 0.0001 } if atan dup 0 le { pop 1 0 0 } { dup 360 le { 0 sub 360 0 sub div 0 index 1 exch 0 1 sub mul add 1 index 0 exch 0 0 sub mul add 2 index 0 exch 1 0 sub mul add 4 -1 roll pop } { dup 360 le { pop 0 0 1 } { pop 0 0 1 } ifelse } ifelse } ifelse }
     ),
   )
   let shading = p.path(p.page(0), ["Resources", "Pattern", "p1", "Shading"])
@@ -878,7 +878,7 @@ test "sweep and repeating gradients use PostScript functions" {
   inspect(
     latin1(p.stream_data(p.get(shading, "Function"))),
     content=(
-      #|{ pop 4 0 2 index 1 index sub dup 3 index div floor exch 1 index 4 index mul sub exch cvi abs 2 mod 0 gt { 2 index exch sub } if add 3 1 roll pop pop dup 0 le { pop 1 0 0 } { dup 4 le { 0 sub 4 0 sub div 0 index 1 exch 0 1 sub mul add 1 index 0 exch 0 0 sub mul add 2 index 0 exch 1 0 sub mul add 4 -1 roll pop } { dup 4 le { pop 0 0 1 } { 0 0 1 } ifelse } ifelse } ifelse }
+      #|{ pop 4 0 2 index 1 index sub dup 3 index div floor exch 1 index 4 index mul sub exch cvi abs 2 mod 0 gt { 2 index exch sub } if add 3 1 roll pop pop dup 0 le { pop 1 0 0 } { dup 4 le { 0 sub 4 0 sub div 0 index 1 exch 0 1 sub mul add 1 index 0 exch 0 0 sub mul add 2 index 0 exch 1 0 sub mul add 4 -1 roll pop } { dup 4 le { pop 0 0 1 } { pop 0 0 1 } ifelse } ifelse } ifelse }
     ),
   )
 }
@@ -1171,29 +1171,6 @@ test "validators" {
       #|[Pdf17, Pdf17]
     ),
   )
-  inspect(v.requires_tagging(), content="true")
-  inspect(v.requires_codepoint_mappings(), content="true")
-  inspect(v.requires_display_doc_title(), content="true")
-  inspect(v.requires_annotation_flags(), content="true")
-  inspect(v.prohibits_info_dict(), content="false")
-  debug_inspect(
-    v.prohibits(NoDocumentTitle),
-    content=(
-      #|Some({ a: None, ua: Some(UA1) })
-    ),
-  )
-  debug_inspect(
-    v.prohibits(MissingTagging),
-    content=(
-      #|Some({ a: Some(A2_A), ua: Some(UA1) })
-    ),
-  )
-  debug_inspect(
-    v.prohibits(TooLongArray),
-    content=(
-      #|None
-    ),
-  )
   inspect(@export.Validators::empty().is_empty(), content="true")
   let all : Array[@export.Archival] = [
     A1_A,
@@ -1244,4 +1221,404 @@ test "panic unbalanced push on finish" {
   let s = page.surface()
   s.push_opacity(0.5)
   s.finish()
+}
+
+///|
+test "no_device_cs uses ICC-based sRGB and sGrey color spaces" {
+  let settings = { ..plain_settings(), no_device_cs: true, }
+  let linear = @export.LinearGradient::{
+    x1: 0.0,
+    y1: 0.0,
+    x2: 10.0,
+    y2: 0.0,
+    transform: @export.Transform::identity(),
+    spread_method: Pad,
+    stops: stops2(@export.Color::rgb(255, 0, 0), @export.Color::rgb(0, 0, 255)),
+    anti_alias: false,
+  }
+  let p = parse(
+    one_page(
+      s => {
+        s.set_fill(Some(fill_of(solid(255, 0, 0))))
+        s.set_stroke(Some(stroke_of(Color(Regular(Luma(51))), 1.0)))
+        s.draw_path(rect_path(0.0, 0.0, 10.0, 10.0))
+        s.push_opacity(0.5)
+        s.set_stroke(None)
+        s.set_fill(Some(fill_of(LinearGradient(linear))))
+        s.draw_path(rect_path(0.0, 0.0, 10.0, 10.0))
+        s.pop()
+        s.set_fill(
+          Some(
+            fill_of(
+              Color(
+                Separation(255, {
+                  colorant: Custom("S"),
+                  fallback: Rgb(0, 0, 0),
+                }),
+              ),
+            ),
+          ),
+        )
+        s.draw_path(rect_path(0.0, 0.0, 10.0, 10.0))
+        s.draw_image(
+          {
+            key: "i",
+            width: 1,
+            height: 1,
+            colorspace: Luma,
+            data: Samples(b"\x00", None),
+            icc: None,
+            interpolate: false,
+            inverted_cmyk: false,
+          },
+          @export.Size::from_wh(1.0, 1.0).unwrap(),
+        )
+      },
+      settings~,
+    ),
+  )
+  inspect(
+    p.content(p.page(0)),
+    content=(
+      #|q
+      #|1 0 0 -1 0 100 cm
+      #|/c0 cs
+      #|1 0 0 scn
+      #|/c1 CS
+      #|0.2 SCN
+      #|0 0 m
+      #|10 0 l
+      #|10 10 l
+      #|0 10 l
+      #|h
+      #|B
+      #|Q
+      #|q
+      #|1 0 0 -1 0 100 cm
+      #|/g0 gs
+      #|/x0 Do
+      #|Q
+      #|q
+      #|1 0 0 -1 0 100 cm
+      #|/c2 cs
+      #|1 scn
+      #|0 0 m
+      #|10 0 l
+      #|10 10 l
+      #|0 10 l
+      #|h
+      #|f
+      #|Q
+      #|q
+      #|1 0 0 1 0 99 cm
+      #|/x1 Do
+      #|Q
+      #|
+    ),
+  )
+  let res = p.get(p.page(0), "Resources")
+  inspect(
+    p.show_deep(p.get(res, "ColorSpace")),
+    content=(
+      #|<</c0 [/ICCBased R] /c1 [/ICCBased R] /c2 [/Separation /S R <</FunctionType 2 /Domain [0 1] /Range [0 1 0 1 0 1] /C0 [1 1 1] /C1 [0 0 0] /N 1>>]>>
+    ),
+  )
+  let srgb = p.path(res, ["ColorSpace", "c0"])
+  let profile = p.items(srgb)[1]
+  inspect(
+    p.show(profile),
+    content=(
+      #|stream<</N 3 /Range [0 1 0 1 0 1] /Filter /FlateDecode /Length 316>>
+    ),
+  )
+  // The v4 sRGB profile for PDF 1.7.
+  inspect(p.stream_data(profile)[8], content="b'\\x04'")
+  // Transparency groups, shadings and separations use the ICC-based spaces.
+  let x0 = p.path(res, ["XObject", "x0"])
+  inspect(p.show(p.path(x0, ["Group", "CS"])) == p.show(srgb), content="true")
+  let shading = p.path(x0, ["Resources", "Pattern", "p0", "Shading"])
+  inspect(p.show(p.get(shading, "ColorSpace")) == p.show(srgb), content="true")
+  let sep = p.path(res, ["ColorSpace", "c2"])
+  inspect(p.show(p.items(sep)[2]) == p.show(srgb), content="true")
+  let image = p.path(res, ["XObject", "x1"])
+  inspect(
+    p.show(p.get(image, "ColorSpace")) ==
+    p.show(p.path(res, ["ColorSpace", "c1"])),
+    content="true",
+  )
+}
+
+///|
+test "PDF/A uses ICC-based colors and an sRGB output intent" {
+  let draw = (s : @export.Surface) => {
+    s.set_fill(Some(fill_of(solid(255, 0, 0))))
+    s.draw_path(rect_path(0.0, 0.0, 10.0, 10.0))
+  }
+  let p = parse(
+    one_page(s => draw(s), settings=settings_with(a=Some(A2_B), version=Pdf16)),
+  )
+  inspect(
+    p.content(p.page(0)),
+    content=(
+      #|q
+      #|1 0 0 -1 0 100 cm
+      #|/c0 cs
+      #|1 0 0 scn
+      #|0 0 m
+      #|10 0 l
+      #|10 10 l
+      #|0 10 l
+      #|h
+      #|f
+      #|Q
+      #|
+    ),
+  )
+  let oi = p.items(p.get(p.catalog(), "OutputIntents"))
+  inspect(
+    p.show(oi[0]),
+    content=(
+      #|<</Type /OutputIntent /DestOutputProfile R /S /GTS_PDFA1 /OutputConditionIdentifier (Custom) /OutputCondition (sRGB) /RegistryName () /Info (sRGB v2.1)>>
+    ),
+  )
+  // PDF 1.4 to 1.6 use the v2 profile.
+  let profile = p.get(oi[0], "DestOutputProfile")
+  inspect(p.stream_data(profile)[8], content="b'\\x02'")
+  // The page's color space uses the same profile.
+  let cs = p.path(p.page(0), ["Resources", "ColorSpace", "c0"])
+  inspect(p.show(p.items(cs)[1]) == p.show(p.resolve(profile)), content="true")
+  // There is no CMYK profile.
+  inspect(
+    export_result(() => {
+      one_page(
+        s => {
+          s.set_fill(Some(fill_of(Color(Regular(Cmyk(0, 0, 0, 255))))))
+          s.draw_path(rect_path(0.0, 0.0, 10.0, 10.0))
+        },
+        settings=settings_with(a=Some(A2_B)),
+      )
+    }),
+    content=(
+      #|Validation: MissingCMYKProfile by PDF/A-2b
+    ),
+  )
+}
+
+///|
+test "PostScript functions declare the components of the stops' color space" {
+  let sweep = @export.SweepGradient::{
+    cx: 5.0,
+    cy: 5.0,
+    start_angle: 0.0,
+    end_angle: 360.0,
+    transform: @export.Transform::identity(),
+    spread_method: Pad,
+    stops: stops2(Regular(Luma(0)), Regular(Luma(255))),
+    anti_alias: false,
+  }
+  let p = parse(
+    one_page(s => {
+      s.set_fill(Some(fill_of(SweepGradient(sweep))))
+      s.draw_path(rect_path(0.0, 0.0, 10.0, 10.0))
+      s.set_fill(
+        Some(
+          fill_of(
+            SweepGradient({
+              ..sweep,
+              stops: stops2(
+                Regular(Cmyk(255, 0, 0, 0)),
+                Regular(Cmyk(0, 0, 0, 255)),
+              ),
+            }),
+          ),
+        ),
+      )
+      s.draw_path(rect_path(0.0, 0.0, 10.0, 10.0))
+    }),
+  )
+  let range = (name : String) => {
+    let shading = p.path(p.page(0), ["Resources", "Pattern", name, "Shading"])
+    p.show(p.get(shading, "ColorSpace")) +
+    " " +
+    p.show(p.path(shading, ["Function", "Range"]))
+  }
+  inspect(
+    range("p0"),
+    content=(
+      #|/DeviceGray [0 1]
+    ),
+  )
+  inspect(
+    range("p1"),
+    content=(
+      #|/DeviceCMYK [0 1 0 1 0 1 0 1]
+    ),
+  )
+}
+
+///|
+test "single-stop gradients apply the stop opacity" {
+  let one_stop = (opacity : Double) => @export.LinearGradient::{
+    x1: 0.0,
+    y1: 0.0,
+    x2: 10.0,
+    y2: 0.0,
+    transform: @export.Transform::identity(),
+    spread_method: Pad,
+    stops: [{ offset: 0.5, color: @export.Color::rgb(0, 0, 255), opacity, }],
+    anti_alias: false,
+  }
+  let p = parse(
+    one_page(s => {
+      s.set_fill(
+        Some({ ..fill_of(LinearGradient(one_stop(0.5))), opacity: 0.5, }),
+      )
+      s.draw_path(rect_path(0.0, 0.0, 10.0, 10.0))
+      s.set_fill(None)
+      s.set_stroke(Some(stroke_of(LinearGradient(one_stop(0.4)), 1.0)))
+      s.draw_path(rect_path(0.0, 0.0, 10.0, 10.0))
+    }),
+  )
+  inspect(
+    p.content(p.page(0)),
+    content=(
+      #|q
+      #|1 0 0 -1 0 100 cm
+      #|/g0 gs
+      #|0 0 1 rg
+      #|0 0 m
+      #|10 0 l
+      #|10 10 l
+      #|0 10 l
+      #|h
+      #|f
+      #|Q
+      #|q
+      #|1 0 0 -1 0 100 cm
+      #|/g1 gs
+      #|0 0 1 RG
+      #|0 0 m
+      #|10 0 l
+      #|10 10 l
+      #|0 10 l
+      #|h
+      #|S
+      #|Q
+      #|
+    ),
+  )
+  inspect(
+    p.show_deep(p.path(p.page(0), ["Resources", "ExtGState"])),
+    content=(
+      #|<</g0 <</Type /ExtGState /ca 0.25>> /g1 <</Type /ExtGState /CA 0.4>>>>
+    ),
+  )
+}
+
+///|
+test "gradients without stops paint nothing and mixed stops are converted" {
+  let empty = @export.LinearGradient::{
+    x1: 0.0,
+    y1: 0.0,
+    x2: 10.0,
+    y2: 0.0,
+    transform: @export.Transform::identity(),
+    spread_method: Pad,
+    stops: [],
+    anti_alias: false,
+  }
+  let p = parse(
+    one_page(s => {
+      s.set_fill(Some(fill_of(LinearGradient(empty))))
+      s.draw_path(rect_path(0.0, 0.0, 10.0, 10.0))
+      s.set_fill(
+        Some(
+          fill_of(
+            SweepGradient({
+              cx: 0.0,
+              cy: 0.0,
+              start_angle: 0.0,
+              end_angle: 90.0,
+              transform: @export.Transform::identity(),
+              spread_method: Pad,
+              stops: [],
+              anti_alias: false,
+            }),
+          ),
+        ),
+      )
+      s.set_stroke(Some(stroke_of(solid(0, 0, 0), 1.0)))
+      s.draw_path(rect_path(0.0, 0.0, 10.0, 10.0))
+      s.set_stroke(None)
+      s.set_fill(
+        Some(
+          fill_of(
+            LinearGradient({
+              ..empty,
+              stops: [
+                { offset: 0.0, color: Regular(Luma(0)), opacity: 1.0, },
+                {
+                  offset: 0.5,
+                  color: Regular(Cmyk(0, 255, 255, 0)),
+                  opacity: 1.0,
+                },
+                {
+                  offset: 1.0,
+                  color: Separation(128, {
+                    colorant: Custom("S"),
+                    fallback: Rgb(0, 0, 255),
+                  }),
+                  opacity: 1.0,
+                },
+              ],
+            }),
+          ),
+        ),
+      )
+      s.draw_path(rect_path(0.0, 0.0, 10.0, 10.0))
+    }),
+  )
+  // Only the stroke of the second path and the third path are drawn.
+  inspect(
+    p.content(p.page(0)),
+    content=(
+      #|q
+      #|1 0 0 -1 0 100 cm
+      #|0 0 0 RG
+      #|0 0 m
+      #|10 0 l
+      #|10 10 l
+      #|0 10 l
+      #|h
+      #|S
+      #|Q
+      #|q
+      #|1 0 0 -1 0 100 cm
+      #|/Pattern cs
+      #|/p0 scn
+      #|0 0 m
+      #|10 0 l
+      #|10 10 l
+      #|0 10 l
+      #|h
+      #|f
+      #|Q
+      #|
+    ),
+  )
+  let shading = p.path(p.page(0), ["Resources", "Pattern", "p0", "Shading"])
+  inspect(
+    p.show(p.get(shading, "ColorSpace")),
+    content=(
+      #|/DeviceRGB
+    ),
+  )
+  let f = p.get(shading, "Function")
+  inspect(
+    p.items(p.get(f, "Functions")).map(g => p.show(g)).join("\n"),
+    content=(
+      #|<</FunctionType 2 /Range [0 1 0 1 0 1] /C0 [0 0 0] /C1 [1 0 0] /Domain [0 1] /N 1>>
+      #|<</FunctionType 2 /Range [0 1 0 1 0 1] /C0 [1 0 0] /C1 [0.49804 0.49804 1] /Domain [0 1] /N 1>>
+    ),
+  )
 }

@@ -39,18 +39,18 @@ pub(all) enum Indirect {
 
 ///|
 /// A dictionary builder.
-pub struct DictBuilder {
+priv struct DictBuilder {
   entries : Array[(String, Obj)]
 }
 
 ///|
-pub fn DictBuilder::new() -> DictBuilder {
+fn DictBuilder::new() -> DictBuilder {
   { entries: [], }
 }
 
 ///|
 /// Set (or replace) an entry.
-pub fn DictBuilder::set(self : DictBuilder, key : String, value : Obj) -> Unit {
+fn DictBuilder::set(self : DictBuilder, key : String, value : Obj) -> Unit {
   for i, entry in self.entries {
     if entry.0 == key {
       self.entries[i] = (key, value)
@@ -61,7 +61,7 @@ pub fn DictBuilder::set(self : DictBuilder, key : String, value : Obj) -> Unit {
 }
 
 ///|
-pub fn DictBuilder::get(self : DictBuilder, key : String) -> Obj? {
+fn DictBuilder::get(self : DictBuilder, key : String) -> Obj? {
   for entry in self.entries {
     if entry.0 == key {
       return Some(entry.1)
@@ -71,25 +71,25 @@ pub fn DictBuilder::get(self : DictBuilder, key : String) -> Obj? {
 }
 
 ///|
-pub fn DictBuilder::finish(self : DictBuilder) -> Obj {
+fn DictBuilder::finish(self : DictBuilder) -> Obj {
   Dict(self.entries)
 }
 
 ///|
-pub fn DictBuilder::entries(self : DictBuilder) -> Array[(String, Obj)] {
+fn DictBuilder::entries(self : DictBuilder) -> Array[(String, Obj)] {
   self.entries
 }
 
 ///|
 /// A rectangle as a PDF array `[x0 y0 x1 y1]`.
-pub fn pdf_rect(x0 : Double, y0 : Double, x1 : Double, y1 : Double) -> Obj {
+fn pdf_rect(x0 : Double, y0 : Double, x1 : Double, y1 : Double) -> Obj {
   Arr([Real(x0), Real(y0), Real(x1), Real(y1)])
 }
 
 ///|
 /// Format a real number like pdf-writer: integral values are written as
 /// integers, others with at most five decimal places.
-pub fn format_real(v : Double) -> String {
+fn format_real(v : Double) -> String {
   if v.is_nan() || v.is_inf() {
     return "0"
   }
@@ -225,7 +225,7 @@ pub fn utf8_bytes(s : String) -> Bytes {
 ///|
 /// Encode a text string: printable ASCII as is, everything else as UTF-16BE
 /// with a byte order mark.
-pub fn text_string_bytes(s : String) -> Bytes {
+fn text_string_bytes(s : String) -> Bytes {
   let mut ascii = true
   for c in s {
     let cp = c.to_int()
@@ -288,7 +288,7 @@ fn write_string_bytes(buf : @buffer.Buffer, bytes : Bytes) -> Unit {
 
 ///|
 /// Write a name (with the leading slash).
-pub fn write_name(buf : @buffer.Buffer, name : String) -> Unit {
+fn write_name(buf : @buffer.Buffer, name : String) -> Unit {
   buf.write_byte(b'/')
   for b in utf8_bytes(name) {
     let b = b.to_int()
@@ -303,7 +303,7 @@ pub fn write_name(buf : @buffer.Buffer, name : String) -> Unit {
 
 ///|
 /// Serialize an object.
-pub fn write_obj(buf : @buffer.Buffer, obj : Obj) -> Unit {
+fn write_obj(buf : @buffer.Buffer, obj : Obj) -> Unit {
   match obj {
     Null => write_ascii(buf, "null")
     Bool(b) => write_ascii(buf, if b { "true" } else { "false" })
@@ -340,7 +340,7 @@ pub fn write_obj(buf : @buffer.Buffer, obj : Obj) -> Unit {
 
 ///|
 /// Serialize a whole file from its indirect objects (numbered `1..=count`).
-pub fn write_file(
+fn write_file(
   version : String,
   objects : Map[Int, Indirect],
   count : Int,

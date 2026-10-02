@@ -100,7 +100,7 @@ pub fn Rect::transform(self : Rect, ts : Transform) -> Rect {
 
 ///|
 /// The bounding box of some points.
-pub fn bbox_of_points(pts : ArrayView[Point]) -> Rect? {
+fn bbox_of_points(pts : ArrayView[Point]) -> Rect? {
   if pts.is_empty() {
     return None
   }
@@ -120,7 +120,7 @@ pub fn bbox_of_points(pts : ArrayView[Point]) -> Rect? {
 ///|
 /// The PDF array of a rectangle (`[left top right bottom]` in the
 /// rectangle's own coordinates).
-pub fn Rect::to_pdf(self : Rect) -> Obj {
+fn Rect::to_pdf(self : Rect) -> Obj {
   pdf_rect(self.left, self.top, self.right, self.bottom)
 }
 
@@ -224,7 +224,7 @@ pub fn Transform::invert(self : Transform) -> Transform? {
 
 ///|
 /// The PDF matrix array.
-pub fn Transform::to_pdf(self : Transform) -> Obj {
+fn Transform::to_pdf(self : Transform) -> Obj {
   Arr([
     Real(self.sx),
     Real(self.ky),

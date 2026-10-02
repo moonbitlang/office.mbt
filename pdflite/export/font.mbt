@@ -31,13 +31,15 @@ pub(all) struct Glyph {
 }
 
 ///|
-/// A CID-keyed font.
+/// A CID-keyed font. Glyphs are added by glyph ID and addressed by their CID
+/// in the embedded font program (`Font::cid`): the glyph ID for TrueType and
+/// name-keyed CFF fonts, the charset's CID for CID-keyed CFF fonts.
 priv struct CIDFont {
   font : Font
-  /// The used glyphs in order of first use.
+  /// The used glyph IDs in order of first use.
   glyphs : Array[Int]
   used : Map[Int, Unit]
-  /// The text of each glyph.
+  /// The text of each CID.
   cmap_entries : Map[Int, (String, Location?)]
 }
 
@@ -58,7 +60,7 @@ fn CIDFont::add_glyph(self : CIDFont, glyph : Int) -> Int {
     self.used[glyph] = ()
     self.glyphs.push(glyph)
   }
-  glyph
+  self.font.cid(glyph)
 }
 
 ///|
@@ -126,6 +128,7 @@ fn write_cmap_entry(
   entry : (String, Location?)?,
   g : Int,
   out : Array[(Int, String)],
+  code? : Int = g,
 ) -> Unit {
   match entry {
     None => sc.register_validation_error(NoCodepointMapping(font, g, None))
@@ -157,7 +160,7 @@ fn write_cmap_entry(
         sc.register_validation_error(UnicodePrivateArea(font, g, c, loc))
       }
       if !text.is_empty() {
-        out.push((g, text))
+        out.push((code, text))
       }
     }
   }
@@ -215,9 +218,22 @@ fn CIDFont::serialize(
   root_ref : Int,
 ) -> Unit raise ExportError {
   let font = self.font
-  let is_cff = font.kind == Cff || font.kind == Cff2
-  if font.kind == NoOutlines {
-    raise FontError(font, "font is missing an outline table")
+  let is_cff = font.kind == Cff
+  match font.kind {
+    NoOutlines => raise FontError(font, "font is missing an outline table")
+    // krilla converts CFF2 fonts to CFF with its subsetter; there is no way
+    // to embed them in PDF as they are.
+    Cff2 => raise FontError(font, "CFF2 fonts are not supported")
+    Cff =>
+      // CID-keyed CFF fonts are embedded as bare CFF programs (like krilla
+      // does after subsetting), others as OpenType font programs, which
+      // require PDF 1.6.
+      if !font.is_cid_keyed() && sc.settings.pdf_version() < Pdf16 {
+        raise FontError(
+          font, "embedding a CFF font that is not CID-keyed requires PDF 1.6 or later",
+        )
+      }
+    Glyf => ()
   }
   // Restricted license embedding (see krilla for why `& 0xF == 2`).
   if (font.fs_type & 0xF) == 2 {
@@ -263,13 +279,18 @@ fn CIDFont::serialize(
   let to_pdf_units = (v : Double) => v / font.units_per_em * pdf_units_per_em
   let sorted = keep.keys().collect()
   sorted.sort()
-  let widths = []
+  let cid_widths = []
   for g in sorted {
     let w = font.advance_width(g).unwrap_or(0.0)
     if w != 0.0 {
-      widths.push(Int(g))
-      widths.push(Arr([Real(to_pdf_units(w))]))
+      cid_widths.push((font.cid(g), w))
     }
+  }
+  cid_widths.sort_by_key(e => e.0)
+  let widths = []
+  for e in cid_widths {
+    widths.push(Int(e.0))
+    widths.push(Arr([Real(to_pdf_units(e.1))]))
   }
   let cid = DictBuilder::new()
   cid.set("Type", Name("Font"))
@@ -363,14 +384,26 @@ fn CIDFont::serialize(
     if g == 0 || !self.used.contains(g) {
       continue
     }
-    write_cmap_entry(sc, font, self.cmap_entries.get(g), g, entries)
+    let cid = font.cid(g)
+    write_cmap_entry(sc, font, self.cmap_entries.get(cid), g, entries, code=cid)
   }
+  entries.sort_by_key(e => e.0)
   sc.put_content_stream(cmap_ref, [], to_unicode_cmap(entries))
   // The font program.
   if is_cff {
-    sc.put_stream(data_ref, [("Subtype", Name("OpenType"))], font.face_data())
+    match font.table_data("CFF ") {
+      Some(cff) if font.is_cid_keyed() =>
+        sc.put_stream(data_ref, [("Subtype", Name("CIDFontType0C"))], cff)
+      _ =>
+        sc.put_stream(
+          data_ref,
+          [("Subtype", Name("OpenType"))],
+          font.face_data(),
+        )
+    }
   } else {
-    sc.put_stream(data_ref, [], font.subset_glyf(keep))
+    let data = font.subset_glyf(keep)
+    sc.put_stream(data_ref, [("Length1", Int(data.length()))], data)
   }
 }
 
