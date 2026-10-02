@@ -81,7 +81,9 @@ covers changes that have landed on `main` but are not yet published.
   new object number (streams with their encoded data); references to the
   source's page tree nodes, or to any other dictionary whose resolved
   `/Type` is `/Page` or `/Pages`, become `null`. The source document is
-  not modified, and a failed import adds nothing. Annotations and
+  not modified. Everything is copied before the target changes, so a
+  failed import leaves the target as it was: no object added, no object
+  number taken, nothing in its event log. Annotations and
   document-level data are not imported. It returns a `PdfImportedPage`:
   the form's object number and the size it fills, `(0, 0)` to
   `(width, height)`.
@@ -98,10 +100,15 @@ covers changes that have landed on `main` but are not yet published.
   empty visible box (a crop box outside the media box is not widened to
   the media box); `PageRotationExpected` for a `/Rotate` that is not a
   multiple of 90; and `BadNumberArgument` for a `/UserUnit` that is not
-  a positive number. Walking the page tree and the objects a page
-  reaches uses explicit worklists, so deep or cyclic graphs in malformed
-  files are errors or bounded walks rather than stack overflows; direct
-  objects nested more than 256 deep raise `HardError`.
+  a positive number. Inherited attributes follow PDF 32000-1 §7.7.3.4; an
+  entry whose value is null, directly or through a reference, is absent
+  and inherits. Both walks use explicit worklists, not recursion: the
+  page tree walk visits each node and each `/Kids` array held by
+  reference once, and a second visit raises `PageTreeExpected`, so a
+  cycle ends it; the walk over what a page reaches visits each object
+  once. A copied object's direct nesting (arrays and dictionaries inside
+  it) is limited to 256 levels, past which `import_page` raises
+  `HardError`.
 
 ### moonbitlang/pagelayout [0.7.0]
 

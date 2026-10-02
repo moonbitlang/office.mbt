@@ -678,14 +678,29 @@ test "objects nested too deeply are an error that leaves the target as it was" {
   }
   let root = source.add_pagetree([page])
   ignore(source.add_root(root, []))
-  let target = @pdflite.pdf_document_empty()
+  let pages = @pdflite.PdfPageSource::new(source)
+  // a target with a page of its own, and an identical one never imported into
+  let target_for_test = () => {
+    let target = @pdflite.pdf_document_empty()
+    let root = target.add_pagetree([import_blank_page_for_test()])
+    ignore(target.add_root(root, []))
+    target
+  }
+  let target = target_for_test()
+  let untouched = target_for_test()
   assert_true(
-    import_error_for_test(() => {
-      target.import_page(@pdflite.PdfPageSource::new(source), 1)
-    })
+    import_error_for_test(() => target.import_page(pages, 1))
     is Some(HardError(_)),
   )
-  assert_eq(target.object_numbers().length(), 0)
+  // no object, no event, no number taken: the same file, and the next object
+  // gets the number it would have
+  assert_eq(target.object_numbers(), untouched.object_numbers())
+  assert_eq(target.event_log(), untouched.event_log())
+  assert_eq(
+    @pdflite.pdf_write_document(target),
+    @pdflite.pdf_write_document(untouched),
+  )
+  assert_eq(target.add_object(PdfNull), untouched.add_object(PdfNull))
 }
 
 ///|
@@ -989,4 +1004,94 @@ test "import_page reads pages and resources from an object stream" {
     is Some(PdfNameObject(base)) &&
     base == import_name_for_test("/Helvetica"),
   )
+}
+
+///|
+test "a direct page tree node in a /Kids array that lists itself is an error" {
+  // 2 0 obj << /Type /Pages /Kids 3 0 R /Count 1 >>
+  // 3 0 obj [<< /Type /Pages /Kids 3 0 R /Count 1 >>]
+  let doc = @pdflite.pdf_document_empty()
+  let root = doc.add_object(PdfNull)
+  let kids = doc.add_object(PdfNull)
+  let node = (kids : Int) => {
+    import_dict_for_test([
+      ("/Type", import_type_for_test("/Pages")),
+      ("/Kids", PdfIndirect(kids)),
+      ("/Count", PdfInteger(1)),
+    ])
+  }
+  doc.add_object_given_number(root, node(kids))
+  doc.add_object_given_number(kids, PdfArray([node(kids)]))
+  ignore(doc.add_root(root, []))
+  assert_true(
+    import_error_for_test(() => @pdflite.PdfPageSource::new(doc))
+    is Some(PageTreeExpected),
+  )
+}
+
+///|
+test "entries that are null through a reference are absent and inherit" {
+  let doc = @pdflite.pdf_document_empty()
+  let null = doc.add_object(PdfNull)
+  let font = doc.add_object(
+    import_dict_for_test([
+      ("/Type", import_type_for_test("/Font")),
+      ("/Subtype", import_type_for_test("/Type1")),
+      ("/BaseFont", import_type_for_test("/Courier")),
+    ]),
+  )
+  let root = doc.add_object(PdfNull)
+  let page = doc.add_object(
+    import_dict_for_test([
+      ("/Type", import_type_for_test("/Page")),
+      ("/Parent", PdfIndirect(root)),
+      ("/MediaBox", PdfIndirect(null)),
+      ("/CropBox", PdfIndirect(null)),
+      ("/Rotate", PdfIndirect(null)),
+      ("/Resources", PdfIndirect(null)),
+      ("/Group", PdfIndirect(null)),
+    ]),
+  )
+  doc.add_object_given_number(
+    root,
+    import_dict_for_test([
+      ("/Type", import_type_for_test("/Pages")),
+      ("/Kids", PdfArray([PdfIndirect(page)])),
+      ("/Count", PdfInteger(1)),
+      ("/MediaBox", import_box_for_test(0, 0, 300, 300)),
+      ("/CropBox", import_box_for_test(0, 0, 200, 100)),
+      ("/Rotate", PdfInteger(90)),
+      (
+        "/Resources",
+        import_dict_for_test([
+          ("/Font", import_dict_for_test([("/F1", PdfIndirect(font))])),
+        ]),
+      ),
+    ]),
+  )
+  ignore(doc.add_root(root, []))
+  let pages = @pdflite.PdfPageSource::new(doc)
+  // the root's crop box, turned by the root's /Rotate
+  assert_eq(pages.page_display_size(1), (100.0, 200.0))
+  let target = @pdflite.pdf_document_empty()
+  let imported = target.import_page(pages, 1)
+  let form = target.lookup_object_or_null(imported.object)
+  assert_true(import_lookup_for_test(target, form, "/Group") is None)
+  let resources = import_lookup_for_test(target, form, "/Resources").unwrap()
+  let fonts = import_lookup_for_test(target, resources, "/Font").unwrap()
+  assert_true(import_lookup_for_test(target, fonts, "/F1") is Some(_))
+}
+
+///|
+test "a failed lookup of a page leaves the target as it was" {
+  let source = import_source_for_test()
+  let pages = @pdflite.PdfPageSource::new(source)
+  let target = @pdflite.pdf_document_empty()
+  let log = target.event_log()
+  assert_true(
+    import_error_for_test(() => target.import_page(pages, 9))
+    is Some(BadPageSpecification(_)),
+  )
+  assert_eq(target.event_log(), log)
+  assert_eq(target.add_object(PdfNull), 1)
 }

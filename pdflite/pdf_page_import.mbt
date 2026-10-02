@@ -4,10 +4,12 @@
 // importing document under new object numbers, so the page can be drawn
 // (scaled and placed like an image) on any page of it.
 //
-// Every walk over the source (its page tree, the objects a page reaches)
-// keeps an explicit worklist rather than recursing, so a deep or cyclic
-// graph in a malformed file is an error or a bounded walk, never a stack
-// overflow.
+// The walks over the source keep explicit worklists rather than recursing.
+// The page tree walk visits each node and each `/Kids` array held by
+// reference once (a second visit is an error, so a cycle ends it), and
+// the walk over what a page reaches visits each object once; the only
+// recursion left is over the direct nesting inside one copied object,
+// which is limited to `pdf_import_max_nesting` levels.
 
 ///|
 fn pdf_import_name(text : String) -> @core.PdfName {
@@ -79,10 +81,12 @@ fn PdfDocument::pdf_import_is_page_node(
 
 ///|
 /// Read `document`'s page tree to import its pages: its leaves in order,
-/// with their inherited attributes. A node reached twice (a cycle, or a
-/// node shared by two parents), a `/Pages` node without a `/Kids` array or
-/// a kid that is not a dictionary raises `PageTreeExpected`; an encrypted
-/// document raises `HardError`, as prawn-templates refuses one.
+/// with their inherited attributes (an entry whose value is null, directly
+/// or through a reference, is absent and inherits). A node or a `/Kids`
+/// array held by reference that is reached twice (a cycle, or one shared
+/// by two parents), a `/Pages` node without a `/Kids` array or a kid that
+/// is not a dictionary raises `PageTreeExpected`; an encrypted document
+/// raises `HardError`, as prawn-templates refuses one.
 pub fn PdfPageSource::new(
   document : PdfDocument,
 ) -> PdfPageSource raise @core.PdfError {
@@ -126,10 +130,12 @@ pub fn PdfPageSource::new(
     }
     let node = document.direct(reference)
     guard node is PdfDictionary(_) else { raise PageTreeExpected }
+    // an entry whose value is null, directly or through a reference, is
+    // absent (PDF 32000-1 §7.3.7, §7.3.9) and so inherits
     let own = (key : String, from : @syntax.PdfObject?) => {
       match node.lookup_immediate(pdf_import_name(key)) {
-        Some(PdfNull) | None => from
-        value => value
+        Some(value) if document.direct(value) != PdfNull => Some(value)
+        _ => from
       }
     }
     let attributes = PdfImportLeaf::{
@@ -142,6 +148,17 @@ pub fn PdfPageSource::new(
     let kind = match document.lookup_direct(type_key, node) {
       Some(PdfNameObject(kind)) => Some(kind)
       _ => None
+    }
+    // a /Kids array held by reference is part of the tree too: a direct
+    // node in an array that lists itself would otherwise loop
+    match node.lookup_immediate(kids_key) {
+      Some(PdfIndirect(number)) => {
+        if tree.contains(number) {
+          raise PageTreeExpected
+        }
+        tree[number] = ()
+      }
+      _ => ()
     }
     let kids = document.lookup_direct(kids_key, node)
     let branch = kind == Some(pdf_import_name("/Pages")) ||
@@ -452,8 +469,10 @@ fn PdfDocument::pdf_import_content(
 /// Importing the same page twice copies it twice.
 ///
 /// Raises what `PdfPageSource::page_display_size` raises, `HardError` for
-/// direct objects nested too deeply, and the reader's errors for
-/// malformed content.
+/// direct objects nested more than 256 deep in a copied object, and the
+/// reader's errors for malformed content. Everything is copied before this
+/// document changes, so a failed import leaves it as it was: no object
+/// added, no object number taken, nothing in its event log.
 pub fn PdfDocument::import_page(
   self : PdfDocument,
   source : PdfPageSource,
@@ -484,35 +503,56 @@ pub fn PdfDocument::import_page(
     (pdf_import_name("/Resources"), leaf.resources.unwrap_or(PdfDictionary([]))),
   ]
   match leaf.page.lookup_immediate(pdf_import_name("/Group")) {
-    Some(PdfNull) | None => ()
-    Some(group) => entries.push((pdf_import_name("/Group"), group))
+    Some(group) if document.direct(group) != PdfNull =>
+      entries.push((pdf_import_name("/Group"), group))
+    _ => ()
   }
   entries.append(filters)
   let form = @syntax.pdf_stream(PdfDictionary(entries), StreamGot(data))
   let reached = source.reached(form)
-  let numbers : Map[Int, Int] = Map([])
-  for number in reached {
-    numbers[number] = self.add_object(PdfNull)
-  }
-  // copy everything before adding anything, so a failure leaves this
-  // document without the placeholders
-  let copies = {
-    errdefer (for _, renumbered in numbers {
-      self.remove_object(renumbered)
-    })
-    let copies = reached.map(number => {
-      document.pdf_import_rewrite(
-        document.lookup_object_or_null(number),
-        numbers,
-      )
-    })
-    copies.push(document.pdf_import_rewrite(form, numbers))
-    copies
-  }
+  // copy everything under provisional numbers (1, 2, ...) first: a failure
+  // leaves this document exactly as it was, no object allocated
+  let provisional : Map[Int, Int] = Map([])
   for i, number in reached {
-    self.add_object_given_number(numbers[number], copies[i])
+    provisional[number] = i + 1
   }
-  let object = self.add_object(copies[copies.length() - 1])
+  let copies = reached.map(number => {
+    document.pdf_import_rewrite(
+      document.lookup_object_or_null(number),
+      provisional,
+    )
+  })
+  let form = document.pdf_import_rewrite(form, provisional)
+  let numbers = reached.map(_ => self.add_object(PdfNull))
+  for i, copy in copies {
+    self.add_object_given_number(numbers[i], pdf_import_renumber(copy, numbers))
+  }
+  let object = self.add_object(pdf_import_renumber(form, numbers))
   let (width, height) = geometry.size()
   { object, width, height, }
+}
+
+///|
+/// `object`, copied with provisional numbers (`k` for the `k`th object
+/// copied), with its references to the numbers the copies were added under.
+/// The copy was bounded by `pdf_import_max_nesting`, and so is this.
+fn pdf_import_renumber(
+  object : @syntax.PdfObject,
+  numbers : Array[Int],
+) -> @syntax.PdfObject {
+  match object {
+    PdfIndirect(k) => PdfIndirect(numbers[k - 1])
+    PdfArray(items) =>
+      PdfArray(items.map(item => pdf_import_renumber(item, numbers)))
+    PdfDictionary(entries) =>
+      PdfDictionary(
+        entries.map(entry => (entry.0, pdf_import_renumber(entry.1, numbers))),
+      )
+    PdfStreamObject(stream) =>
+      @syntax.pdf_stream(
+        pdf_import_renumber(stream.dictionary, numbers),
+        stream.data,
+      )
+    other => other
+  }
 }
