@@ -717,8 +717,10 @@ pub(all) struct TagKind {
   attrs : Array[Attr]
   mut location : UInt64?
 }
+pub fn TagKind::alt_text(Self) -> String?
 pub fn TagKind::get_id(Self) -> Bytes?
 pub fn TagKind::get_lang(Self) -> String?
+pub fn TagKind::heading_level(Self) -> Int
 pub fn TagKind::new(TagName) -> Self
 pub fn TagKind::remove_like(Self, Attr) -> Unit
 pub fn TagKind::set(Self, Attr) -> Unit

@@ -495,7 +495,7 @@ pub fn TagKind::get_id(self : TagKind) -> Bytes? {
 }
 
 ///|
-fn TagKind::heading_level(self : TagKind) -> Int {
+pub fn TagKind::heading_level(self : TagKind) -> Int {
   for a in self.attrs {
     if a is HeadingLevel(l) {
       return l
@@ -525,7 +525,7 @@ fn TagKind::title(self : TagKind) -> String? {
 }
 
 ///|
-fn TagKind::alt_text(self : TagKind) -> String? {
+pub fn TagKind::alt_text(self : TagKind) -> String? {
   for a in self.attrs {
     if a is AltText(t) {
       return Some(t)
