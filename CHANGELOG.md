@@ -12,12 +12,18 @@ Breaking and notable changes for the published modules in this workspace.
 Entries are grouped by module and by the version they ship in; `Unreleased`
 covers changes that have landed on `main` but are not yet published.
 
-### moonbitlang/pdflite [Unreleased]
+### moonbitlang/pdflite [0.3.3]
 
+- The content operator state follows ISO 32000-1 where it had followed
+  cpdf's cpdfcontent (#595): the initial stroke and fill colour is black
+  (DeviceGray 0.0, was 1.0); `gs` applies the ExtGState it names
+  (`/ExtGState /<name>`, was the `/ExtGState` resource dictionary itself, so
+  a real `gs` never took effect); `/SMask` sets `soft_mask` and `/None`
+  clears it (was stored as `halftone`).
 - TrueType subsets now carry correct OpenType table directory search fields
   (`entrySelector = floor(log2(numTables))`, `rangeShift = numTables * 16 -
   searchRange`). The previous values, ported from cpdf, were wrong for every
-  table count other than 1. Embedded subset font bytes change; checksums
+  table count other than 1 (#591). Embedded subset font bytes change; checksums
   (including `recompute_head`'s `checkSumAdjustment`) remain valid.
 - New package `moonbitlang/pdflite/export`: a PDF writer modelled on
   krilla (the parts Typst's PDF exporter uses). A `Document` has pages
