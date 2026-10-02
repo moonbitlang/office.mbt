@@ -323,6 +323,59 @@ pub fn Surface::pop(self : Surface) -> Unit {
 }
 
 ///|
+/// An embedder of external objects, e.g. the pages of a PDF file (krilla's
+/// `pdf` module, where hayro-write extracts them).
+///
+/// Contract:
+/// - `key` identifies the XObject within the document: the first draw with
+///   a key calls `write` once, later draws (on any page) reuse the object
+///   written then, so equal keys must denote equal objects.
+/// - `write(root, new_ref, put)` must write a form XObject with the
+///   reference `root` and all objects it depends on, allocating further
+///   references with `new_ref` and writing them with `put`. A `/Length`
+///   in stream dictionaries is replaced by the actual length.
+/// - The form is drawn with the current transformation matrix of the
+///   surface (y-down, origin at the top-left corner): to draw a page of a
+///   PDF (y-up), push a flipping transform, or give the form a `/Matrix`.
+///   `bbox` is the area the form draws in the surface's current user space
+///   (i.e. after the form's `/Matrix`); it extends the bounding boxes of
+///   enclosing layers and patterns.
+/// - Neither the PDF version nor the validators are checked against the
+///   imported content (krilla rejects embedded PDFs with a newer version;
+///   callers have to check this themselves).
+pub(all) struct ExternalXObject {
+  /// Identifies the XObject; XObjects with the same key are written once.
+  key : String
+  /// The bounding box of the XObject in the current user space.
+  bbox : Rect
+  write : (Int, () -> Int, (Int, Indirect) -> Unit) -> Unit
+}
+
+///|
+/// Draw an external XObject by reference (krilla's `draw_pdf_page` minus
+/// the transforms). The first use of each XObject registers a
+/// `ValidationError::EmbeddedPDF` at the current location.
+pub fn Surface::draw_external_xobject(
+  self : Surface,
+  xobject : ExternalXObject,
+) -> Unit {
+  let sc = self.sc
+  let r = sc.cached("external-xobject:" + xobject.key, r => {
+    sc.register_validation_error(EmbeddedPDF(sc.location))
+    (xobject.write)(r, () => sc.new_ref(), (id, obj) => sc.objects[id] = obj)
+  })
+  self.get_mut().draw_xobject_by_reference(sc, xobject.bbox, r)
+}
+
+///|
+/// The reference of the page tree (the parent of all pages). External
+/// objects that contain page objects (e.g. hayro-write extracting a page
+/// with its annotations) use it as their `/Parent`.
+pub fn Surface::page_tree_ref(self : Surface) -> Int {
+  self.sc.page_tree_ref
+}
+
+///|
 /// Draw a raster image scaled to the given size.
 pub fn Surface::draw_image(self : Surface, image : Image, size : Size) -> Unit {
   self.get_mut().draw_image(self.sc, image, size)

@@ -617,7 +617,7 @@ test "Type 3 fonts for color glyphs" {
     p.content(x0),
     content=(
       #|q
-      #|0 0.50196 0 rg
+      #|0 0.5019608 0 rg
       #|0 0 m
       #|600 0 l
       #|600 700 l

@@ -202,6 +202,12 @@ pub(all) struct EmbeddedFile {
   modification_date : DateTime?
 }
 
+pub(all) struct ExternalXObject {
+  key : String
+  bbox : Rect
+  write : (Int, () -> Int, (Int, Indirect) -> Unit) -> Unit
+}
+
 pub(all) struct Fill {
   paint : Paint
   opacity : Double
@@ -623,6 +629,7 @@ pub struct Surface {
   // private fields
 }
 pub fn Surface::ctm(Self) -> Transform
+pub fn Surface::draw_external_xobject(Self, ExternalXObject) -> Unit
 pub fn Surface::draw_glyphs(Self, Point, ArrayView[Glyph], Font, String, Double) -> Unit
 pub fn Surface::draw_image(Self, Image, Size) -> Unit
 pub fn Surface::draw_path(Self, Path) -> Unit
@@ -630,6 +637,7 @@ pub fn Surface::draw_stream(Self, Stream) -> Unit
 pub fn Surface::end_tagged(Self) -> Unit
 pub fn Surface::finish(Self) -> Unit
 pub fn Surface::finish_stream(Self) -> Stream
+pub fn Surface::page_tree_ref(Self) -> Int
 pub fn Surface::pop(Self) -> Unit
 pub fn Surface::push_blend_mode(Self, String) -> Unit
 pub fn Surface::push_clip_path(Self, Path, FillRule) -> Unit

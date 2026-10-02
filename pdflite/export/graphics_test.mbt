@@ -59,7 +59,7 @@ test "fill with device colors" {
       #|Q
       #|q
       #|1 0 0 -1 0 100 cm
-      #|0.50196 g
+      #|0.5019608 g
       #|10 0 m
       #|20 0 l
       #|20 10 l
@@ -700,8 +700,8 @@ test "linear and radial gradients are shading patterns" {
   inspect(
     p.items(p.get(f, "Functions")).map(g => p.show(g)).join("\n"),
     content=(
-      #|<</FunctionType 2 /Range [0 1] /C0 [0] /C1 [0.50196] /Domain [0 1] /N 1>>
-      #|<</FunctionType 2 /Range [0 1] /C0 [0.50196] /C1 [1] /Domain [0 1] /N 1>>
+      #|<</FunctionType 2 /Range [0 1] /C0 [0] /C1 [0.5019608] /Domain [0 1] /N 1>>
+      #|<</FunctionType 2 /Range [0 1] /C0 [0.5019608] /C1 [1] /Domain [0 1] /N 1>>
       #|<</FunctionType 2 /Range [0 1] /C0 [1] /C1 [1] /Domain [0 1] /N 1>>
     ),
   )
@@ -1037,7 +1037,7 @@ test "separation colors register a color space" {
       #|q
       #|1 0 0 -1 0 100 cm
       #|/c0 cs
-      #|0.50196 scn
+      #|0.5019608 scn
       #|/c0 CS
       #|1 SCN
       #|0 0 m
@@ -1618,7 +1618,7 @@ test "gradients without stops paint nothing and mixed stops are converted" {
     p.items(p.get(f, "Functions")).map(g => p.show(g)).join("\n"),
     content=(
       #|<</FunctionType 2 /Range [0 1 0 1 0 1] /C0 [0 0 0] /C1 [1 0 0] /Domain [0 1] /N 1>>
-      #|<</FunctionType 2 /Range [0 1 0 1 0 1] /C0 [1 0 0] /C1 [0.49804 0.49804 1] /Domain [0 1] /N 1>>
+      #|<</FunctionType 2 /Range [0 1 0 1 0 1] /C0 [1 0 0] /C1 [0.49803922 0.49803922 1] /Domain [0 1] /N 1>>
     ),
   )
 }
