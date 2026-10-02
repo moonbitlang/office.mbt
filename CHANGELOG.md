@@ -49,6 +49,25 @@ covers changes that have landed on `main` but are not yet published.
   than the allowance leaves room for (a page listed 40 times in a
   two-object document). A node shared by a few parents is still visited
   once per parent, and inherits from each.
+- `PdfDocument::import_page(source, page_number)` imports a page of
+  another document as a Form XObject, the way Prawn's templates import a
+  page: the form's `/BBox` is the page's crop box clipped to its media
+  box, its `/Matrix` turns that box upright by the page's `/Rotate` with
+  its lower-left corner at the origin, and it carries the page's
+  resources and transparency `/Group`. A single content stream keeps its
+  filters and encoded bytes; several are decoded, joined and
+  Flate-compressed. Every object the form reaches is copied under a new
+  object number (streams with their encoded data), without following
+  references back into the source's page tree, which become `null`; the
+  source document is not modified. Annotations and document-level data
+  are not imported. It returns a `PdfImportedPage`: the form's object
+  number and the size it fills, `(0, 0)` to `(width, height)`. It raises
+  `BadPageSpecification` for a page the source does not have, `HardError`
+  for an encrypted source, and the reader's errors for malformed boxes or
+  content.
+- `PdfDocument::page_display_size(page_number)` is the size a viewer
+  shows a page at (and `import_page` reports): its crop box clipped to
+  its media box, with width and height swapped for `/Rotate` 90 or 270.
 
 ### moonbitlang/pagelayout [0.7.0]
 

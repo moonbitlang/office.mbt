@@ -2736,6 +2736,7 @@ pub fn PdfDocument::image_resolution_json(Self, ArrayView[Int], Double, inline? 
 pub fn PdfDocument::image_resolution_json_blob(Self, ArrayView[Int], Double, inline? : Bool) -> Bytes raise @core.PdfError
 pub fn PdfDocument::images_json(Self, ArrayView[Int], inline? : Bool) -> Json raise @core.PdfError
 pub fn PdfDocument::images_json_blob(Self, ArrayView[Int], inline? : Bool) -> Bytes raise @core.PdfError
+pub fn PdfDocument::import_page(Self, Self, Int) -> PdfImportedPage raise @core.PdfError
 pub fn PdfDocument::impose(Self, Double, Double, fit? : Bool, columns? : Bool, rtl? : Bool, btt? : Bool, center? : Bool, margin? : Double, spacing? : Double, line_width? : Double, fast? : Bool, process_struct_tree? : Bool) -> Self raise @core.PdfError
 pub fn PdfDocument::indirect_number(Self, @core.PdfName, @syntax.PdfObject) -> Int?
 pub fn PdfDocument::info_blob(Self, encoding? : @metadata.PdfMetadataEncoding, unit? : @geometry.PdfUnit) -> Bytes raise @core.PdfError
@@ -2809,6 +2810,7 @@ pub fn PdfDocument::pad_after(Self, ArrayView[Int], pad_with? : Self?) -> Self r
 pub fn PdfDocument::pad_before(Self, ArrayView[Int], pad_with? : Self?) -> Self raise @core.PdfError
 pub fn PdfDocument::pad_to_multiple(Self, Int) -> Self raise @core.PdfError
 pub fn PdfDocument::page_content_json(Self, ArrayView[Int]) -> Json raise @core.PdfError
+pub fn PdfDocument::page_display_size(Self, Int) -> (Double, Double) raise @core.PdfError
 pub fn PdfDocument::page_info_json(Self, ArrayView[Int], unit? : @geometry.PdfUnit) -> Json raise @core.PdfError
 pub fn PdfDocument::page_info_json_blob(Self, ArrayView[Int], unit? : @geometry.PdfUnit) -> Bytes raise @core.PdfError
 pub fn PdfDocument::page_info_text(Self, ArrayView[Int], unit? : @geometry.PdfUnit) -> Bytes raise @core.PdfError
@@ -3532,6 +3534,18 @@ pub fn PdfImage::not_equal(Self, Self) -> Bool
 pub fn PdfImage::to_json(Self) -> Json
 #deprecated
 pub fn PdfImage::to_repr(Self) -> @debug.Repr
+
+pub struct PdfImportedPage {
+  object : Int
+  width : Double
+  height : Double
+} derive(Eq, @debug.Debug)
+#deprecated
+pub fn PdfImportedPage::equal(Self, Self) -> Bool
+#deprecated
+pub fn PdfImportedPage::not_equal(Self, Self) -> Bool
+#deprecated
+pub fn PdfImportedPage::to_repr(Self) -> @debug.Repr
 
 pub(all) struct PdfInterpolationFunction {
   c0 : Array[Double]
