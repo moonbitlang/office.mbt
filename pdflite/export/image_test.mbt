@@ -234,3 +234,173 @@ test "image validation" {
   )
   inspect(draw(rgb_image(alpha=Some(b"\x00\x00")), A2_B), content="ok")
 }
+
+///|
+/// A PNG passthrough image from unfiltered scanlines (filter type 0).
+fn png_image(
+  width : Int,
+  rows : Array[Array[Int]],
+  colorspace : @export.ImageColorspace,
+  colors : Int,
+  bit_depth : Int,
+  palette? : Bytes? = None,
+  icc? : Bytes? = None,
+) -> @export.Image {
+  let raw : Array[Byte] = []
+  for row in rows {
+    raw.push(b'\x00')
+    for b in row {
+      raw.push(b.to_byte())
+    }
+  }
+  {
+    key: "png:\{colors}:\{bit_depth}:\{palette is Some(_)}:\{icc is Some(_)}",
+    width,
+    height: rows.length(),
+    colorspace,
+    data: Png(
+      @flate.pdf_flate_encode(Bytes::from_array(raw)),
+      colors,
+      bit_depth,
+      palette,
+    ),
+    icc,
+    interpolate: false,
+    inverted_cmyk: false,
+  }
+}
+
+///|
+test "PNG passthrough images keep their IDAT data with a PNG predictor" {
+  let images = [
+    png_image(2, [[255, 0, 0, 0, 0, 255]], Rgb, 3, 8),
+    png_image(3, [[0, 128, 255]], Luma, 1, 8),
+    png_image(
+      4,
+      [[0b00011011]],
+      Rgb,
+      1,
+      2,
+      palette=Some(b"\xff\x00\x00\x00\xff\x00\x00\x00\xff\xff\xff\xff"),
+    ),
+    png_image(
+      1,
+      [[0]],
+      Rgb,
+      1,
+      8,
+      palette=Some(b"\x10\x20\x30"),
+      icc=Some(b"icc"),
+    ),
+    png_image(1, [[0x12, 0x34]], Luma, 1, 16),
+  ]
+  let p = parse(
+    one_page(s => {
+      for image in images {
+        s.draw_image(image, @export.Size::from_wh(10.0, 10.0).unwrap())
+      }
+    }),
+  )
+  let xobjects = p.path(p.page(0), ["Resources", "XObject"])
+  inspect(
+    p.keys(xobjects).map(k => p.show(p.get(xobjects, k))).join("\n"),
+    content=(
+      #|stream<</Type /XObject /Subtype /Image /Width 2 /Height 1 /ColorSpace /DeviceRGB /BitsPerComponent 8 /Filter /FlateDecode /DecodeParms <</Predictor 15 /Colors 3 /BitsPerComponent 8 /Columns 2>> /Length 13>>
+      #|stream<</Type /XObject /Subtype /Image /Width 3 /Height 1 /ColorSpace /DeviceGray /BitsPerComponent 8 /Filter /FlateDecode /DecodeParms <</Predictor 15 /Colors 1 /BitsPerComponent 8 /Columns 3>> /Length 12>>
+      #|stream<</Type /XObject /Subtype /Image /Width 4 /Height 1 /ColorSpace [/Indexed /DeviceRGB 3 <FF000000FF000000FFFFFFFF>] /BitsPerComponent 2 /Filter /FlateDecode /DecodeParms <</Predictor 15 /Colors 1 /BitsPerComponent 2 /Columns 4>> /Length 10>>
+      #|stream<</Type /XObject /Subtype /Image /Width 1 /Height 1 /ColorSpace [/Indexed [/ICCBased R] 0 <102030>] /BitsPerComponent 8 /Filter /FlateDecode /DecodeParms <</Predictor 15 /Colors 1 /BitsPerComponent 8 /Columns 1>> /Length 10>>
+      #|stream<</Type /XObject /Subtype /Image /Width 1 /Height 1 /ColorSpace /DeviceGray /BitsPerComponent 16 /Filter /FlateDecode /DecodeParms <</Predictor 15 /Colors 1 /BitsPerComponent 16 /Columns 1>> /Length 11>>
+    ),
+  )
+  // The reader undoes the predictor.
+  debug_inspect(
+    p.stream_data(p.get(xobjects, "x0")),
+    content=(
+      #|<Bytes: [0xff, 0x00, 0x00, 0x00, 0x00, 0xff]>
+    ),
+  )
+  debug_inspect(
+    p.stream_data(p.get(xobjects, "x2")),
+    content=(
+      #|<Bytes: [0x1b]>
+    ),
+  )
+}
+
+///|
+test "invalid PNG passthrough images are rejected" {
+  let draw = (image : @export.Image) => {
+    export_result(() => {
+      one_page(s => {
+        s.draw_image(image, @export.Size::from_wh(1.0, 1.0).unwrap())
+      })
+    })
+  }
+  let rgb = png_image(1, [[1, 2, 3]], Rgb, 3, 8)
+  let results = [
+    // Alpha channels must use samples with a mask.
+    draw(png_image(1, [[1, 2, 3, 4]], Rgb, 4, 8)),
+    draw(png_image(1, [[1, 2]], Luma, 2, 8)),
+    // Unsupported depths and color spaces.
+    draw(png_image(1, [[1]], Rgb, 3, 4)),
+    draw(png_image(1, [[1]], Cmyk, 4, 8)),
+    draw(png_image(1, [[1]], Luma, 3, 8)),
+    // Palettes.
+    draw(png_image(1, [[0]], Rgb, 3, 8, palette=Some(b"\x00\x00\x00"))),
+    draw(png_image(1, [[0]], Rgb, 1, 16, palette=Some(b"\x00\x00\x00"))),
+    draw(png_image(1, [[0]], Rgb, 1, 8, palette=Some(b"\x00\x00"))),
+    draw(
+      png_image(
+        1,
+        [[0]],
+        Rgb,
+        1,
+        1,
+        palette=Some(b"\x00\x00\x00\x01\x01\x01\x02\x02\x02"),
+      ),
+    ),
+    draw(png_image(1, [[0]], Rgb, 1, 8, palette=Some(b""))),
+    draw(png_image(1, [[0]], Luma, 1, 8, palette=Some(b"\x00\x00\x00"))),
+    // Empty data.
+    draw({ ..rgb, data: Png(b"", 3, 8, None), }),
+  ]
+  inspect(
+    results.join("\n"),
+    content=(
+      #|ImageError: unsupported PNG image (4 samples of 8 bits per pixel)
+      #|ImageError: unsupported PNG image (2 samples of 8 bits per pixel)
+      #|ImageError: unsupported PNG image (3 samples of 4 bits per pixel)
+      #|ImageError: unsupported PNG image (4 samples of 8 bits per pixel)
+      #|ImageError: unsupported PNG image (3 samples of 8 bits per pixel)
+      #|ImageError: an indexed PNG image needs 1 sample of 1, 2, 4 or 8 bits per pixel
+      #|ImageError: an indexed PNG image needs 1 sample of 1, 2, 4 or 8 bits per pixel
+      #|ImageError: invalid PNG palette
+      #|ImageError: invalid PNG palette
+      #|ImageError: invalid PNG palette
+      #|ImageError: the palette of an indexed PNG image must be RGB
+      #|ImageError: the PNG image data is empty
+    ),
+  )
+  // 16-bit samples need PDF 1.5.
+  let sixteen = png_image(1, [[0, 1, 0, 2, 0, 3]], Rgb, 3, 16)
+  inspect(
+    export_result(() => {
+      one_page(
+        s => s.draw_image(sixteen, @export.Size::from_wh(1.0, 1.0).unwrap()),
+        settings=settings_with(version=Pdf14),
+      )
+    }),
+    content=(
+      #|ImageError: 16 bit images are not supported in this export mode
+    ),
+  )
+  inspect(
+    export_result(() => {
+      one_page(
+        s => s.draw_image(sixteen, @export.Size::from_wh(1.0, 1.0).unwrap()),
+        settings=settings_with(version=Pdf15),
+      )
+    }),
+    content="ok",
+  )
+}

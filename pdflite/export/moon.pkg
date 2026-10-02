@@ -7,6 +7,7 @@ import {
 
 import {
   "moonbitlang/pdflite",
+  "moonbitlang/pdflite/flate",
   "moonbitlang/pdflite/core",
   "moonbitlang/pdflite/syntax",
   "moonbitlang/core/debug",

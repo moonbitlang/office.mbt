@@ -693,6 +693,9 @@ pub fn Document::finish(self : Document) -> Bytes raise ExportError {
     cat.set("AF", Arr(sorted.map(e => Ref(e.1))))
   }
   sc.put(catalog_ref, cat.finish())
+  if sc.error is Some(e) {
+    raise e
+  }
   // Validation errors (deduplicated, in order).
   if !sc.validation_errors.is_empty() {
     let errors : Array[(ValidationError, Validators)] = []

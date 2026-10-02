@@ -96,6 +96,9 @@ priv struct SerializeContext {
   mut num_tag_streams : Int
   /// The reference of each form XObject with tagged content.
   tag_stream_refs : Map[Int, Int]
+  /// The first error that aborts the export (raised when the document is
+  /// finished, like krilla's deferred image errors).
+  mut error : ExportError?
 }
 
 ///|
@@ -130,6 +133,7 @@ fn SerializeContext::new(settings : SerializeSettings) -> SerializeContext {
     metadata: None,
     num_tag_streams: 0,
     tag_stream_refs: Map([]),
+    error: None,
   }
 }
 
@@ -215,6 +219,17 @@ fn SerializeContext::register_validation_error(
 ) -> Unit {
   if self.settings.validators().prohibits(error) is Some(validators) {
     self.validation_errors.push((error, validators))
+  }
+}
+
+///|
+/// Register an error that aborts the export (the first one is raised).
+fn SerializeContext::register_error(
+  self : SerializeContext,
+  error : ExportError,
+) -> Unit {
+  if self.error is None {
+    self.error = Some(error)
   }
 }
 

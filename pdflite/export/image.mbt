@@ -39,7 +39,13 @@ pub(all) enum ImageData {
   /// The image data of a PNG file (its concatenated `IDAT` chunks), embedded
   /// as is with a PNG predictor (krilla's `Repr::Png`): the zlib stream, the
   /// number of samples per pixel, the bit depth and, for indexed images, the
-  /// palette (`PLTE`). The color space is the base of an indexed image.
+  /// palette (`PLTE`). Only non-interlaced images without alpha qualify
+  /// (images with alpha use `Samples` with a mask): grayscale (`Luma`, 1
+  /// sample of 1, 2, 4, 8 or 16 bits), RGB (`Rgb`, 3 samples of 8 or 16
+  /// bits) and indexed images (`Rgb`, the base of the palette; 1 sample of 1,
+  /// 2, 4 or 8 bits; 1 to 256 RGB palette entries, at most `2^bits`). Other
+  /// combinations make `Document::finish` raise an `ImageError`, as do 16-bit
+  /// samples before PDF 1.5.
   Png(Bytes, Int, Int, Bytes?)
 }
 
@@ -66,6 +72,25 @@ fn SerializeContext::register_image(
 ) -> Int {
   let key = "image:\{image.key}:\{image.interpolate}"
   self.cached(key, r => {
+    if image.data is Png(data, colors, bit_depth, palette) {
+      match png_error(image, data, colors, bit_depth, palette) {
+        Some(msg) => {
+          self.register_error(ImageError(self.location, msg))
+          return
+        }
+        None => ()
+      }
+      // krilla `KrillaError::SixteenBitImage`.
+      if bit_depth == 16 && self.settings.pdf_version() < Pdf15 {
+        self.register_error(
+          ImageError(
+            self.location,
+            "16 bit images are not supported in this export mode",
+          ),
+        )
+        return
+      }
+    }
     if image.interpolate {
       self.register_validation_error(ImageInterpolation(self.location))
     }
@@ -161,4 +186,48 @@ fn SerializeContext::register_image(
       }
     }
   })
+}
+
+///|
+/// Why PNG data can't be embedded as is, if it can't.
+fn png_error(
+  image : Image,
+  data : Bytes,
+  colors : Int,
+  bit_depth : Int,
+  palette : Bytes?,
+) -> String? {
+  if data.is_empty() {
+    return Some("the PNG image data is empty")
+  }
+  if image.width <= 0 || image.height <= 0 {
+    return Some("the PNG image is empty")
+  }
+  match palette {
+    Some(palette) => {
+      let entries = palette.length() / 3
+      if colors != 1 || !(bit_depth is (1 | 2 | 4 | 8)) {
+        Some(
+          "an indexed PNG image needs 1 sample of 1, 2, 4 or 8 bits per pixel",
+        )
+      } else if palette.length() % 3 != 0 ||
+        entries < 1 ||
+        entries > 256 ||
+        entries > 1 << bit_depth {
+        Some("invalid PNG palette")
+      } else if image.colorspace != Rgb {
+        Some("the palette of an indexed PNG image must be RGB")
+      } else {
+        None
+      }
+    }
+    None =>
+      match (image.colorspace, colors, bit_depth) {
+        (Luma, 1, 1 | 2 | 4 | 8 | 16) | (Rgb, 3, 8 | 16) => None
+        _ =>
+          Some(
+            "unsupported PNG image (\{colors} samples of \{bit_depth} bits per pixel)",
+          )
+      }
+  }
 }

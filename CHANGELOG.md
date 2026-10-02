@@ -47,6 +47,11 @@ covers changes that have landed on `main` but are not yet published.
   dictionaries get exactly one `/Length`, and reals are written like
   pdf-writer writes `f32`s (shortest digits, no exponents) instead of with
   at most five decimals.
+- `pdflite/export`: `ImageData::Png` embeds the `IDAT` data of
+  non-interlaced PNG images without alpha as is, with a PNG predictor
+  (grayscale, RGB and indexed images, krilla's `Repr::Png`). Invalid
+  combinations of samples, bit depth and palette, and 16-bit samples
+  before PDF 1.5, make `Document::finish` raise an `ImageError`.
 - Depend on moonbitlang/x 0.5.5.
 
 ### moonbitlang/pagelayout [0.7.1]
