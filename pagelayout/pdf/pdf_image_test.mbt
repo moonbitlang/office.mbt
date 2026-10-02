@@ -157,3 +157,44 @@ test "a PDF page whose crop box lies outside its media box is not drawn" {
     ("PDF page this backend cannot import", 1),
   ])
 }
+
+///|
+/// A PDF file with a valid classic xref table whose page tree never ends:
+/// the root holds its `/Kids` array by reference, and that array holds a
+/// direct node listing the same array.
+fn pdf_image_self_listing_source() -> Bytes {
+  let objects = [
+    "<< /Type /Catalog /Pages 2 0 R >>", "<< /Type /Pages /Kids 3 0 R /Count 1 >>",
+    "[<< /Type /Pages /Kids 3 0 R /Count 1 >>]",
+  ]
+  let text = StringBuilder()
+  text.write_string("%PDF-1.4\n")
+  let offsets = []
+  for i, body in objects {
+    offsets.push(text.to_string().length())
+    text.write_string("\{i + 1} 0 obj\n\{body}\nendobj\n")
+  }
+  let xref = text.to_string().length()
+  text.write_string("xref\n0 \{objects.length() + 1}\n0000000000 65535 f \n")
+  for offset in offsets {
+    let digits = offset.to_string()
+    text.write_string("0".repeat(10 - digits.length()) + digits + " 00000 n \n")
+  }
+  text.write_string(
+    "trailer\n<< /Size \{objects.length() + 1} /Root 1 0 R >>\nstartxref\n\{xref}\n%%EOF\n",
+  )
+  @utf8.encode(text.to_string())
+}
+
+///|
+test "a PDF image whose page tree never ends is skipped and reported" {
+  let model = pdf_image_model([
+    pdf_image_item(pdf_image_self_listing_source(), "application/pdf"),
+  ])
+  let bytes = @pdf.render_pdf(model)
+  assert_eq(pdf_image_forms(bytes).length(), 0)
+  assert_eq(@pdflite.pdf_read_document_from_bytes(bytes).endpage(), 1)
+  assert_eq(@pdf.unembeddable_images(model), [
+    ("PDF this backend cannot read", 1),
+  ])
+}
