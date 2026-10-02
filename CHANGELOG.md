@@ -19,6 +19,21 @@ covers changes that have landed on `main` but are not yet published.
   searchRange`). The previous values, ported from cpdf, were wrong for every
   table count other than 1. Embedded subset font bytes change; checksums
   (including `recompute_head`'s `checkSumAdjustment`) remain valid.
+- New package `moonbitlang/pdflite/export`: a PDF writer modelled on
+  krilla (the parts Typst's PDF exporter uses). A `Document` has pages
+  whose `Surface` draws paths (device, ICC-based and separation colors,
+  gradients, tiling patterns), clip paths, opacity, blend modes, masks,
+  transforms, glyph runs (TrueType and CFF fonts as CID-keyed `Type0`
+  fonts with `ToUnicode` maps, color glyphs through Type 3 fonts) and
+  raster images (samples with alpha, JPEG passthrough). Documents carry
+  link annotations, outlines, named destinations, page labels, metadata
+  (info dictionary and XMP), embedded files and a tag tree, and are
+  checked against PDF/A and PDF/UA (`ExportError::Validation`). Known
+  limitations: TrueType fonts are subset by emptying unused glyphs and
+  CFF fonts are embedded whole; CFF2 fonts are rejected, and CFF fonts
+  that are not CID-keyed need PDF 1.6; there is no CMYK output profile
+  and no `CIDSet`. See `pdflite/export/README.mbt.md`.
+- Depend on moonbitlang/x 0.5.5.
 
 ### moonbitlang/pagelayout [0.7.1]
 
