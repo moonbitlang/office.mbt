@@ -17,14 +17,25 @@ covers changes that have landed on `main` but are not yet published.
 - Page tree walks no longer recurse: counting pages (`endpage`,
   `pages_of_pagetree_quick`, which the reader uses while loading),
   `pages_of_pagetree`, `page_reference_numbers`, the page extraction
-  helpers and inherited-attribute lookups keep an explicit worklist. A
-  node or a `/Kids` array held by reference that is its own ancestor (a
-  page tree node listing itself, or a `/Kids` array holding a direct node
-  that lists the same array) now raises `PageTreeExpected` instead of
-  overflowing the stack or looping, as do trees deeper than 10,000 levels
-  (as before) and sharing that multiplies the tree past twice the
-  document's object count. A page or node shared by two parents is still
-  visited once per parent.
+  helpers and inherited-attribute lookups share one walk that keeps a
+  frame per level of the path (its space grows with the tree's depth,
+  not its width) and resolves each kid when it reaches it. It raises
+  `PageTreeExpected` for a node or a `/Kids` array held by reference
+  that is its own ancestor (a page tree node listing itself, or a
+  `/Kids` array holding a direct node that lists the same array), where
+  the recursive walks overflowed the stack or looped; for a tree deeper
+  than 10,000 levels, as before; and once it has taken more than
+  `2 * object_count + 16` steps, a step being each node visited, direct
+  or by reference, and each `/Kids` array held by reference that a
+  branch expands. A tree whose nodes are all held by reference, each
+  node and `/Kids` array appearing once, takes at most `object_count`
+  steps. The limit stops trees that sharing multiplies (each level
+  listing the level below twice, through references or through direct
+  nodes in a referenced array), but it also rejects documents the
+  recursive walks accepted: a page or node listed by many parents, or
+  many times by one, past the allowance (a page listed 40 times in a
+  two-object document). A node shared by a few parents is still visited
+  once per parent, and inherits from each.
 
 ### moonbitlang/pagelayout [0.7.0]
 

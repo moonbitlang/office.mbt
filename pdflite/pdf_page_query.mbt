@@ -9,36 +9,43 @@ fn pdf_page_reference_numbers_inner(
     raise PageTreeExpected
   }
   let output : Array[Int] = []
-  pdf.pdf_page_tree_walk(pages_node, node_number, depth, (), (node, number, _) => {
-    match pdf.lookup_direct(pdf_page_type_key(), node) {
-      Some(PdfNameObject(name)) if name == pdf_page_type_page() => {
-        output.push(number)
-        None
-      }
-      _ =>
-        match pdf.lookup_direct(pdf_page_kids_key(), node) {
-          Some(PdfArray(kids)) => {
-            let children = []
-            for kid in kids {
-              match kid {
-                PdfIndirect(kid_number) => {
-                  let child = pdf.direct(kid)
-                  if child != PdfNull {
-                    children.push((child, kid_number, ()))
-                  }
-                }
-                _ => ()
-              }
+  pdf.pdf_page_tree_walk(
+    pages_node,
+    node_number,
+    depth,
+    (),
+    (node, number, _) => {
+      match pdf.lookup_direct(pdf_page_type_key(), node) {
+        Some(PdfNameObject(name)) if name == pdf_page_type_page() => {
+          output.push(number)
+          None
+        }
+        _ =>
+          match pdf.lookup_direct(pdf_page_kids_key(), node) {
+            Some(PdfArray(kids)) =>
+              Some((pdf_page_tree_kids_number(node), kids, ()))
+            _ => {
+              output.push(number)
+              None
             }
-            Some((pdf_page_tree_kids_number(node), children))
           }
-          _ => {
-            output.push(number)
+      }
+    },
+    // only kids held by reference that resolve to something
+    kid => {
+      match kid {
+        PdfIndirect(number) => {
+          let child = pdf.direct(kid)
+          if child != PdfNull {
+            Some((child, number))
+          } else {
             None
           }
         }
-    }
-  })
+        _ => None
+      }
+    },
+  )
   output
 }
 
@@ -55,35 +62,39 @@ fn PdfDocument::pdf_pages_of_pagetree_quick_node(
     return 0
   }
   let mut count = 0
-  self.pdf_page_tree_walk(node, -1, depth, (), (node, _, _) => {
-    match self.lookup_direct(pdf_page_type_key(), node) {
-      Some(PdfNameObject(name)) if name != pdf_page_type_pages() => {
-        count += 1
-        None
-      }
-      _ =>
-        match self.lookup_direct(pdf_page_kids_key(), node) {
-          Some(PdfArray(kids)) => {
-            let children = []
-            for kid in kids {
-              match kid {
-                PdfIndirect(number) => {
-                  let child = self.lookup_object_or_null(number)
-                  if child == PdfNull {
-                    raise PageTreeExpected
-                  }
-                  children.push((child, number, ()))
-                }
-                PdfDictionary(_) => children.push((kid, -1, ()))
-                _ => raise PageTreeExpected
-              }
-            }
-            Some((pdf_page_tree_kids_number(node), children))
-          }
-          _ => raise PageTreeExpected
+  self.pdf_page_tree_walk(
+    node,
+    -1,
+    depth,
+    (),
+    (node, _, _) => {
+      match self.lookup_direct(pdf_page_type_key(), node) {
+        Some(PdfNameObject(name)) if name != pdf_page_type_pages() => {
+          count += 1
+          None
         }
-    }
-  })
+        _ =>
+          match self.lookup_direct(pdf_page_kids_key(), node) {
+            Some(PdfArray(kids)) =>
+              Some((pdf_page_tree_kids_number(node), kids, ()))
+            _ => raise PageTreeExpected
+          }
+      }
+    },
+    kid => {
+      match kid {
+        PdfIndirect(number) => {
+          let child = self.lookup_object_or_null(number)
+          if child == PdfNull {
+            raise PageTreeExpected
+          }
+          Some((child, number))
+        }
+        PdfDictionary(_) => Some((kid, -1))
+        _ => raise PageTreeExpected
+      }
+    },
+  )
   count
 }
 

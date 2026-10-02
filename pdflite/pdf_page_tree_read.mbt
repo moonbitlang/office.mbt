@@ -32,14 +32,14 @@ priv struct PdfPageInherited {
 }
 
 ///|
-/// A branch node's children, with the attributes they inherit, for
+/// A branch node's kids, with the attributes they inherit, for
 /// `pdf_page_tree_walk`; a branch without a `/Kids` array raises
 /// `PageTreeExpected`.
 fn PdfDocument::pdf_page_branch_children(
   self : PdfDocument,
   node : @syntax.PdfObject,
   inherited : PdfPageInherited,
-) -> (Int, Array[(@syntax.PdfObject, Int, PdfPageInherited)]) raise @core.PdfError {
+) -> (Int, Array[@syntax.PdfObject], PdfPageInherited) raise @core.PdfError {
   let passed = PdfPageInherited::{
     resources: pdf_page_inherited_object(
       self.lookup_direct(pdf_page_resources_key(), node),
@@ -56,17 +56,7 @@ fn PdfDocument::pdf_page_branch_children(
     rotate: self.pdf_page_inherited_rotation(node, inherited.rotate),
   }
   match self.lookup_direct(pdf_page_kids_key(), node) {
-    Some(PdfArray(kids)) => {
-      let children = []
-      for kid in kids {
-        let number = match kid {
-          PdfIndirect(number) => number
-          _ => -1
-        }
-        children.push((self.pdf_page_direct_child(kid), number, passed))
-      }
-      (pdf_page_tree_kids_number(node), children)
-    }
+    Some(PdfArray(kids)) => (pdf_page_tree_kids_number(node), kids, passed)
     _ => raise PageTreeExpected
   }
 }
@@ -187,27 +177,41 @@ fn PdfDocument::pdf_pages_of_node(
     cropbox: inherited_cropbox,
     rotate: inherited_rotate,
   }
-  self.pdf_page_tree_walk(node, -1, depth, inherited, (node, _, inherited) => {
-    let branch = match self.lookup_direct(pdf_page_type_key(), node) {
-      Some(PdfNameObject(name)) if name == pdf_page_type_pages() => true
-      None => self.lookup_direct(pdf_page_kids_key(), node) is Some(PdfArray(_))
-      _ => false
-    }
-    if branch {
-      Some(self.pdf_page_branch_children(node, inherited))
-    } else {
-      pages.push(
-        self.pdf_page_leaf(
-          node,
-          inherited.resources,
-          inherited.mediabox,
-          inherited.cropbox,
-          inherited.rotate,
-          last_mediabox,
-        ),
-      )
-      None
-    }
-  })
+  self.pdf_page_tree_walk(
+    node,
+    -1,
+    depth,
+    inherited,
+    (node, _, inherited) => {
+      let branch = match self.lookup_direct(pdf_page_type_key(), node) {
+        Some(PdfNameObject(name)) if name == pdf_page_type_pages() => true
+        None =>
+          self.lookup_direct(pdf_page_kids_key(), node) is Some(PdfArray(_))
+        _ => false
+      }
+      if branch {
+        Some(self.pdf_page_branch_children(node, inherited))
+      } else {
+        pages.push(
+          self.pdf_page_leaf(
+            node,
+            inherited.resources,
+            inherited.mediabox,
+            inherited.cropbox,
+            inherited.rotate,
+            last_mediabox,
+          ),
+        )
+        None
+      }
+    },
+    kid => {
+      let number = match kid {
+        PdfIndirect(number) => number
+        _ => -1
+      }
+      Some((self.pdf_page_direct_child(kid), number))
+    },
+  )
   pages
 }

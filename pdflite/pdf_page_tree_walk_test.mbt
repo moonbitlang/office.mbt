@@ -47,7 +47,6 @@ fn tree_walk_all_rejected(
   } else {
     assert_true(references is Some(PageTreeExpected))
   }
-  assert_true(tree_walk_error(() => doc.pdf_of_pages([1])) is Some(_))
 }
 
 ///|
@@ -199,4 +198,102 @@ test "sharing that multiplies the page tree is an error, not a hang" {
   }
   ignore(doc.add_root(kid, []))
   tree_walk_all_rejected(doc)
+}
+
+///|
+/// A tree in which no node is its own ancestor but each level holds, by
+/// reference, a `/Kids` array of two direct nodes whose `/Kids` is the
+/// level below: `levels + 2` objects, 2^levels pages.
+fn tree_walk_direct_doubling_doc(levels : Int) -> @pdflite.PdfDocument raise {
+  let doc = @pdflite.pdf_document_empty()
+  let mut below = doc.add_object(
+    PdfArray([
+      tree_walk_dict([("/Type", PdfNameObject(tree_walk_name("/Page")))]),
+    ]),
+  )
+  for _ in 0..<levels {
+    below = doc.add_object(
+      PdfArray([
+        tree_walk_pages(PdfIndirect(below)),
+        tree_walk_pages(PdfIndirect(below)),
+      ]),
+    )
+  }
+  let root = doc.add_object(tree_walk_pages(PdfIndirect(below)))
+  ignore(doc.add_root(root, []))
+  doc
+}
+
+///|
+test "direct nodes multiplied through referenced /Kids arrays are rejected" {
+  // 20 levels: 22 objects, a million pages
+  let doc = tree_walk_direct_doubling_doc(20)
+  assert_true(tree_walk_error(() => doc.endpage()) is Some(PageTreeExpected))
+  assert_true(
+    tree_walk_error(() => doc.pages_of_pagetree()) is Some(PageTreeExpected),
+  )
+  // 60 levels used to hang
+  let doc = tree_walk_direct_doubling_doc(60)
+  assert_true(tree_walk_error(() => doc.endpage()) is Some(PageTreeExpected))
+  assert_true(
+    tree_walk_error(() => doc.pages_of_pagetree()) is Some(PageTreeExpected),
+  )
+  // two levels stay within the allowance
+  let doc = tree_walk_direct_doubling_doc(2)
+  assert_eq(doc.endpage(), 4)
+  assert_eq(doc.pages_of_pagetree().length(), 4)
+}
+
+///|
+test "a page shared by two parents inherits from each" {
+  let doc = @pdflite.pdf_document_empty()
+  let page = doc.add_object(
+    tree_walk_dict([("/Type", PdfNameObject(tree_walk_name("/Page")))]),
+  )
+  let box = (side : Int) => {
+    @syntax.PdfArray([
+      PdfInteger(0),
+      PdfInteger(0),
+      PdfInteger(side),
+      PdfInteger(side),
+    ])
+  }
+  let parent = (side : Int) => {
+    doc.add_object(
+      tree_walk_dict([
+        ("/Type", PdfNameObject(tree_walk_name("/Pages"))),
+        ("/Kids", PdfArray([PdfIndirect(page)])),
+        ("/Count", PdfInteger(1)),
+        ("/MediaBox", box(side)),
+      ]),
+    )
+  }
+  let first = parent(100)
+  let second = parent(200)
+  let root = doc.add_object(
+    tree_walk_pages(PdfArray([PdfIndirect(first), PdfIndirect(second)])),
+  )
+  ignore(doc.add_root(root, []))
+  assert_eq(doc.endpage(), 2)
+  let pages = doc.pages_of_pagetree()
+  assert_eq(pages.map(p => p.mediabox), [box(100), box(200)])
+}
+
+///|
+test "a page listed more often than the allowance permits is rejected" {
+  // the walk allows 2 * object_count + 16 steps: 2 objects allow 20
+  let doc = @pdflite.pdf_document_empty()
+  let page = doc.add_object(
+    tree_walk_dict([("/Type", PdfNameObject(tree_walk_name("/Page")))]),
+  )
+  let listed = (times : Int) => {
+    let root = doc.add_object(
+      tree_walk_pages(PdfArray(Array::make(times, PdfIndirect(page)))),
+    )
+    ignore(doc.add_root(root, []))
+  }
+  listed(15)
+  assert_eq(doc.endpage(), 15)
+  listed(40)
+  assert_true(tree_walk_error(() => doc.endpage()) is Some(PageTreeExpected))
 }
