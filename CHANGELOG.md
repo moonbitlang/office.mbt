@@ -12,6 +12,20 @@ Breaking and notable changes for the published modules in this workspace.
 Entries are grouped by module and by the version they ship in; `Unreleased`
 covers changes that have landed on `main` but are not yet published.
 
+### moonbitlang/pdflite [Unreleased]
+
+- Page tree walks no longer recurse: counting pages (`endpage`,
+  `pages_of_pagetree_quick`, which the reader uses while loading),
+  `pages_of_pagetree`, `page_reference_numbers`, the page extraction
+  helpers and inherited-attribute lookups keep an explicit worklist. A
+  node or a `/Kids` array held by reference that is its own ancestor (a
+  page tree node listing itself, or a `/Kids` array holding a direct node
+  that lists the same array) now raises `PageTreeExpected` instead of
+  overflowing the stack or looping, as do trees deeper than 10,000 levels
+  (as before) and sharing that multiplies the tree past twice the
+  document's object count. A page or node shared by two parents is still
+  visited once per parent.
+
 ### moonbitlang/pagelayout [0.7.0]
 
 - Embedded TrueType subsets now carry their own `head` bounding box, the

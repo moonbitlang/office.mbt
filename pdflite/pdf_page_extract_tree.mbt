@@ -20,32 +20,43 @@ fn PdfDocument::pdf_page_tree_nodes_not_pages_inner(
   if depth > 10000 {
     raise PageTreeExpected
   }
-  match self.lookup_direct(pdf_page_type_key(), node) {
-    Some(PdfNameObject(name)) if name == pdf_page_type_page() => []
-    _ =>
-      match self.lookup_direct(pdf_page_kids_key(), node) {
-        Some(PdfArray(kids)) => {
-          let nodes : Array[Int] = Array(capacity=kids.length() + 1)
-          nodes.push(node_number)
-          for kid in kids {
-            match kid {
-              PdfIndirect(number) =>
-                for
-                  nested in self.pdf_page_tree_nodes_not_pages_inner(
-                    self.direct(kid),
-                    number,
-                    depth + 1,
-                  ) {
-                  nodes.push(nested)
-                }
-              _ => ()
-            }
+  let nodes : Array[Int] = []
+  self.pdf_page_tree_walk(node, node_number, depth, (), (node, number, _) => {
+    match self.lookup_direct(pdf_page_type_key(), node) {
+      Some(PdfNameObject(name)) if name == pdf_page_type_page() => None
+      _ =>
+        match self.lookup_direct(pdf_page_kids_key(), node) {
+          Some(PdfArray(kids)) => {
+            nodes.push(number)
+            Some(
+              (
+                pdf_page_tree_kids_number(node),
+                self.pdf_page_tree_indirect_kids(kids),
+              ),
+            )
           }
-          nodes
+          _ => None
         }
-        _ => []
-      }
+    }
+  })
+  nodes
+}
+
+///|
+/// The kids held by reference, resolved, with their numbers (the extract
+/// helpers skip direct kids).
+fn PdfDocument::pdf_page_tree_indirect_kids(
+  self : PdfDocument,
+  kids : Array[@syntax.PdfObject],
+) -> Array[(@syntax.PdfObject, Int, Unit)] {
+  let children = []
+  for kid in kids {
+    match kid {
+      PdfIndirect(number) => children.push((self.direct(kid), number, ()))
+      _ => ()
+    }
   }
+  children
 }
 
 ///|
@@ -70,31 +81,30 @@ fn PdfDocument::pdf_page_reference_numbers_unordered_inner(
   if depth > 10000 {
     raise PageTreeExpected
   }
-  match self.lookup_direct(pdf_page_type_key(), node) {
-    Some(PdfNameObject(name)) if name == pdf_page_type_page() => [node_number]
-    _ =>
-      match self.lookup_direct(pdf_page_kids_key(), node) {
-        Some(PdfArray(kids)) => {
-          let numbers : Array[Int] = Array(capacity=kids.length())
-          for kid in kids {
-            match kid {
-              PdfIndirect(number) =>
-                for
-                  page_number in self.pdf_page_reference_numbers_unordered_inner(
-                    self.direct(kid),
-                    number,
-                    depth + 1,
-                  ) {
-                  numbers.push(page_number)
-                }
-              _ => ()
-            }
-          }
-          numbers
-        }
-        _ => [node_number]
+  let numbers : Array[Int] = []
+  self.pdf_page_tree_walk(node, node_number, depth, (), (node, number, _) => {
+    match self.lookup_direct(pdf_page_type_key(), node) {
+      Some(PdfNameObject(name)) if name == pdf_page_type_page() => {
+        numbers.push(number)
+        None
       }
-  }
+      _ =>
+        match self.lookup_direct(pdf_page_kids_key(), node) {
+          Some(PdfArray(kids)) =>
+            Some(
+              (
+                pdf_page_tree_kids_number(node),
+                self.pdf_page_tree_indirect_kids(kids),
+              ),
+            )
+          _ => {
+            numbers.push(number)
+            None
+          }
+        }
+    }
+  })
+  numbers
 }
 
 ///|
@@ -216,26 +226,37 @@ fn PdfDocument::pdf_page_fixup_parents_inner(
   if depth > 10000 {
     raise PageTreeExpected
   }
-  let node = self.lookup_object_or_null(node_number)
-  match node.lookup_immediate(pdf_page_parent_key()) {
-    Some(PdfIndirect(_)) =>
-      self.add_object_given_number(
-        node_number,
-        node.add_dict_entry(pdf_page_parent_key(), PdfIndirect(parent_number)),
-      )
-    _ => ()
-  }
-  match self.lookup_direct(pdf_page_kids_key(), node) {
-    Some(PdfArray(kids)) =>
-      for kid in kids {
-        match kid {
-          PdfIndirect(number) =>
-            self.pdf_page_fixup_parents_inner(node_number, number, depth + 1)
-          _ => ()
+  // each node is read when visited, after its earlier siblings' subtrees
+  // were fixed, as the recursive walk read it
+  self.pdf_page_tree_walk(PdfNull, node_number, depth, parent_number, (
+    _,
+    number,
+    parent_number,
+  ) => {
+    let node = self.lookup_object_or_null(number)
+    match node.lookup_immediate(pdf_page_parent_key()) {
+      Some(PdfIndirect(_)) =>
+        self.add_object_given_number(
+          number,
+          node.add_dict_entry(pdf_page_parent_key(), PdfIndirect(parent_number)),
+        )
+      _ => ()
+    }
+    match self.lookup_direct(pdf_page_kids_key(), node) {
+      Some(PdfArray(kids)) => {
+        let children = []
+        for kid in kids {
+          match kid {
+            PdfIndirect(kid_number) =>
+              children.push((@syntax.PdfNull, kid_number, number))
+            _ => ()
+          }
         }
+        Some((pdf_page_tree_kids_number(node), children))
       }
-    _ => ()
-  }
+      _ => None
+    }
+  })
 }
 
 ///|

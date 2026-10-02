@@ -157,8 +157,10 @@ test "private page tree readers cover guard branches" {
     fail("expected malformed child")
   }
   let missing_kids : Result[Array[@page.PdfPage], Error] = try
-    doc.pdf_pages_of_branch(
-      PdfDictionary([]),
+    doc.pdf_pages_of_node(
+      PdfDictionary([
+        (pdf_page_type_key(), PdfNameObject(pdf_page_type_pages())),
+      ]),
       None,
       None,
       None,
