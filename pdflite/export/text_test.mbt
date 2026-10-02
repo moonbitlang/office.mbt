@@ -778,3 +778,65 @@ test "glyphs composed with seac are rejected like krilla's subsetter does" {
     ),
   )
 }
+
+///|
+test "cluster ranges outside the text are clamped" {
+  let font = test_font()
+  // Two glyphs sharing a cluster past the end of the text (an ActualText
+  // span), and a reversed run with out-of-range clusters.
+  let p = parse(
+    text_page(font, [glyph(1, 5, 9), glyph(2, 5, 9), glyph(1, -3, 1)], "AB"),
+  )
+  inspect(
+    p.content(p.page(0)),
+    content=(
+      #|q
+      #|1 0 0 -1 0 100 cm
+      #|0 0 0 rg
+      #|BT
+      #|/Span <</ActualText ()
+      #|>> BDC
+      #|/ReversedChars BMC
+      #|0 Tr
+      #|/f0 10 Tf
+      #|1 0 0 -1 10 50 Tm
+      #|[<00010002>] TJ
+      #|EMC
+      #|EMC
+      #|/Span <</ActualText (A)
+      #|>> BDC
+      #|/ReversedChars BMC
+      #|0 Tr
+      #|/f0 10 Tf
+      #|1 0 0 -1 21.5 50 Tm
+      #|<0001> Tj
+      #|EMC
+      #|EMC
+      #|ET
+      #|Q
+      #|
+    ),
+  )
+  let p = parse(text_page(font, [glyph(2, 7, 9), glyph(1, 3, 4)], "AB"))
+  inspect(
+    p.content(p.page(0)),
+    content=(
+      #|q
+      #|1 0 0 -1 0 100 cm
+      #|0 0 0 rg
+      #|BT
+      #|/Span <</ActualText ()
+      #|>> BDC
+      #|/ReversedChars BMC
+      #|0 Tr
+      #|/f0 10 Tf
+      #|1 0 0 -1 10 50 Tm
+      #|[<00020001>] TJ
+      #|EMC
+      #|EMC
+      #|ET
+      #|Q
+      #|
+    ),
+  )
+}

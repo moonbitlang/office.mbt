@@ -13,6 +13,33 @@ fn glyph_text(text : String, g : Glyph) -> String {
 }
 
 ///|
+/// The glyphs with their cluster ranges clamped to the text
+/// (`0 <= text_start <= text_end <= text.length()`).
+fn clamp_clusters(glyphs : ArrayView[Glyph], text : String) -> Array[Glyph] {
+  let len = text.length()
+  glyphs
+  .iter()
+  .map(g => {
+    let start = if g.text_start < 0 {
+      0
+    } else if g.text_start > len {
+      len
+    } else {
+      g.text_start
+    }
+    let end = if g.text_end < start {
+      start
+    } else if g.text_end > len {
+      len
+    } else {
+      g.text_end
+    }
+    { ..g, text_start: start, text_end: end, }
+  })
+  .collect()
+}
+
+///|
 /// Whether a run of glyphs needs to be segmented into spans with
 /// `/ActualText` (krilla `use_text_spanner`). Also registers the codepoints
 /// of glyphs as long as no span is needed.
@@ -255,6 +282,9 @@ fn ContentBuilder::draw_glyphs(
   if fill is None && stroke is None {
     return
   }
+  // Clamp the cluster ranges to the text, so that all later uses (codepoint
+  // mappings, `/ActualText`, reversed-text checks) stay in bounds.
+  let glyphs = clamp_clusters(glyphs, text)[:]
   let (x, y) = (start.x, start.y)
   self.graphics_states.save_state()
   let bbox_important = self.bbox_important

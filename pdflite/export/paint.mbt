@@ -268,15 +268,18 @@ fn RegularColor::to_rgb(self : RegularColor) -> (Int, Int, Int) {
 /// The shading function interpolates the components of all stops in the
 /// color space of the first stop (krilla asserts that they match).
 fn normalize_stops(stops : Array[Stop]) -> Array[Stop] {
-  let kind = (c : Color) => {
-    match c {
-      Regular(Rgb(_, _, _)) => 0
-      Regular(Luma(_)) => 1
-      Regular(Cmyk(_, _, _, _)) => 2
-      Separation(_, _) => 3
+  // Stops share a color space if they have the same process color space or
+  // the same separation space (colorant and fallback).
+  let same_space = (a : Color, b : Color) => {
+    match (a, b) {
+      (Regular(Rgb(_, _, _)), Regular(Rgb(_, _, _)))
+      | (Regular(Luma(_)), Regular(Luma(_)))
+      | (Regular(Cmyk(_, _, _, _)), Regular(Cmyk(_, _, _, _))) => true
+      (Separation(_, x), Separation(_, y)) => x == y
+      _ => false
     }
   }
-  if stops.iter().all(s => kind(s.color) == kind(stops[0].color)) {
+  if stops.iter().all(s => same_space(s.color, stops[0].color)) {
     return stops
   }
   stops.map(s => {

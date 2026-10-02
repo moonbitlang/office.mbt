@@ -3,7 +3,7 @@
 
 ///|
 fn rd_u16(data : Bytes, at : Int) -> Int {
-  if at < 0 || at + 2 > data.length() {
+  if at < 0 || at > data.length() - 2 {
     return 0
   }
   (data[at].to_int() << 8) | data[at + 1].to_int()
@@ -21,7 +21,7 @@ fn rd_i16(data : Bytes, at : Int) -> Int {
 
 ///|
 fn rd_u32(data : Bytes, at : Int) -> Int {
-  if at < 0 || at + 4 > data.length() {
+  if at < 0 || at > data.length() - 4 {
     return 0
   }
   (data[at].to_int() << 24) |
@@ -105,7 +105,8 @@ pub fn Font::new(data : Bytes, index : Int, key? : String = "") -> Font? {
     if index < 0 ||
       count < 0 ||
       index >= count ||
-      16 + 4 * index > data.length() {
+      // (Without multiplying `index`, which could overflow.)
+      index > (data.length() - 16) / 4 {
       return None
     }
     base = rd_u32(data, 12 + 4 * index)

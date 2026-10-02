@@ -357,3 +357,58 @@ test "seac detection follows subroutines with all number encodings" {
     ),
   )
 }
+
+///|
+test "seac detection tracks the stack depth through computed values" {
+  let programs = [
+    // 0 0 65 65 1 add endchar: four operands after `add`.
+    [0x8B, 0x8B, 0xCC, 0xCC, 0x8C, 0x0C, 0x0A, 0x0E],
+    // 100 2 div endchar: only a (computed) width.
+    [0xEF, 0x8D, 0x0C, 0x0C, 0x0E],
+    // 0 30 2 div hstem endchar: a computed stem.
+    [0x8B, 0xA9, 0x8D, 0x0C, 0x0C, 0x01, 0x0E],
+    // 1 2 dup exch drop 7 8 endchar: four operands after stack operators.
+    [0x8C, 0x8D, 0x0C, 0x1B, 0x0C, 0x1C, 0x0C, 0x12, 0x92, 0x93, 0x0E],
+    // 1 2 3 4 5 6 2 1 roll drop drop endchar: four operands.
+    [
+      0x8C, 0x8D, 0x8E, 0x8F, 0x90, 0x91, 0x8D, 0x8C, 0x0C, 0x1E, 0x0C, 0x12, 0x0C,
+      0x12, 0x0E,
+    ],
+    // 1 2 3 4 1 put drop endchar: one operand left.
+    [0x8C, 0x8D, 0x8E, 0x8F, 0x8C, 0x0C, 0x14, 0x0C, 0x12, 0x0E],
+    // Seven operands consumed by `hflex`, then endchar.
+    [0x8B, 0x8B, 0x8B, 0x8B, 0x8B, 0x8B, 0x8B, 0x0C, 0x22, 0x0E],
+    // random callsubr: a computed subroutine index can't be followed.
+    [0x0C, 0x17, 0x0A, 0x0E],
+    // drop on an empty stack: malformed.
+    [0x0C, 0x12, 0x0E],
+  ]
+  let data : Array[Byte] = []
+  let charstrings = []
+  for p in programs {
+    let start = data.length()
+    for b in p {
+      data.push(b.to_byte())
+    }
+    charstrings.push((start, data.length()))
+  }
+  let cff = CffPrograms::{ charstrings, global_subrs: [], local_subrs: [], }
+  debug_inspect(
+    Array::makei(programs.length(), g => {
+      cff.uses_seac(Bytes::from_array(data), g)
+    }),
+    content=(
+      #|[
+      #|  Some(true),
+      #|  Some(false),
+      #|  Some(false),
+      #|  Some(true),
+      #|  Some(true),
+      #|  Some(false),
+      #|  Some(false),
+      #|  Some(true),
+      #|  None,
+      #|]
+    ),
+  )
+}

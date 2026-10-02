@@ -528,15 +528,21 @@ fn cff_subr_bias(count : Int) -> Int {
 /// `endchar` (accented characters composed by StandardEncoding codes, which
 /// can't be resolved once the font is CID-keyed); `None` if the charstring
 /// is malformed. krilla's subsetter rejects these glyphs.
+///
+/// The operand stack is simulated with its exact depth; values computed by
+/// the arithmetic and storage operators are unknown (`None`). A subroutine
+/// call with an unknown index can't be followed and counts as possibly
+/// using `seac`.
 fn CffPrograms::uses_seac(
   self : CffPrograms,
   data : Bytes,
   glyph : Int,
 ) -> Bool? {
   guard self.charstrings.get(glyph) is Some(program) else { return None }
-  let stack : Array[Int] = []
+  let stack : Array[Int?] = []
   let hints = Ref::{ val: 0, }
-  // 0: returned, 1: endchar, 2: seac, -1: malformed.
+  let pop = () => stack.pop()
+  // 0: returned, 1: endchar, 2: (may be) seac, -1: malformed.
   fn run(range : (Int, Int), depth : Int) -> Int {
     if depth > 10 {
       return -1
@@ -545,7 +551,7 @@ fn CffPrograms::uses_seac(
     while pos < range.1 {
       let b0 = data[pos].to_int()
       if b0 >= 32 && b0 <= 246 {
-        stack.push(b0 - 139)
+        stack.push(Some(b0 - 139))
         pos += 1
       } else if b0 >= 247 && b0 <= 254 {
         if pos + 2 > range.1 {
@@ -553,31 +559,35 @@ fn CffPrograms::uses_seac(
         }
         let b1 = data[pos + 1].to_int()
         stack.push(
-          if b0 <= 250 {
-            (b0 - 247) * 256 + b1 + 108
-          } else {
-            -(b0 - 251) * 256 - b1 - 108
-          },
+          Some(
+            if b0 <= 250 {
+              (b0 - 247) * 256 + b1 + 108
+            } else {
+              -(b0 - 251) * 256 - b1 - 108
+            },
+          ),
         )
         pos += 2
       } else if b0 == 28 {
         if pos + 3 > range.1 {
           return -1
         }
-        stack.push(rd_i16(data, pos + 1))
+        stack.push(Some(rd_i16(data, pos + 1)))
         pos += 3
       } else if b0 == 255 {
-        // A 16.16 fixed-point number (its integer part).
+        // A 16.16 fixed-point number: only integers are known.
         if pos + 5 > range.1 {
           return -1
         }
-        stack.push(rd_u32(data, pos + 1) >> 16)
+        let v = rd_u32(data, pos + 1)
+        stack.push(if (v & 0xFFFF) == 0 { Some(v >> 16) } else { None })
         pos += 5
       } else {
         pos += 1
         match b0 {
           10 | 29 => {
-            guard stack.pop() is Some(index) else { return -1 }
+            guard pop() is Some(index) else { return -1 }
+            guard index is Some(index) else { return 2 }
             let subrs = if b0 == 10 {
               self.local_subrs
             } else {
@@ -592,19 +602,24 @@ fn CffPrograms::uses_seac(
             }
           }
           11 => return 0
+          // `endchar` with four or more operands is `seac`.
           14 => return if stack.length() >= 4 { 2 } else { 1 }
-          1 | 3 | 18 | 23 => {
+          1 | 3 | 18 | 23 | 19 | 20 => {
             hints.val += stack.length() / 2
             stack.clear()
-          }
-          19 | 20 => {
-            hints.val += stack.length() / 2
-            stack.clear()
-            pos += (hints.val + 7) / 8
+            if b0 == 19 || b0 == 20 {
+              pos += (hints.val + 7) / 8
+            }
           }
           12 => {
+            if pos >= range.1 {
+              return -1
+            }
+            let b1 = data[pos].to_int()
             pos += 1
-            stack.clear()
+            if !cff_escaped_op(stack, b1) {
+              return -1
+            }
           }
           _ => stack.clear()
         }
@@ -617,4 +632,121 @@ fn CffPrograms::uses_seac(
     -1 => None
     _ => Some(false)
   }
+}
+
+///|
+/// Apply an escaped Type 2 operator to the simulated stack (`false` on a
+/// stack underflow).
+fn cff_escaped_op(stack : Array[Int?], op : Int) -> Bool {
+  let need = match op {
+    3 | 4 | 10 | 11 | 12 | 15 | 20 | 24 | 28 => 2
+    5 | 9 | 14 | 18 | 21 | 26 | 27 | 29 => 1
+    22 => 4
+    30 => 2
+    _ => 0
+  }
+  if stack.length() < need {
+    return false
+  }
+  let pop = () => stack.pop().unwrap()
+  match op {
+    // and, or, eq, div, ifelse (unknown result).
+    3 | 4 | 15 | 12 => {
+      pop() |> ignore
+      pop() |> ignore
+      stack.push(None)
+    }
+    22 => {
+      for _ in 0..<4 {
+        pop() |> ignore
+      }
+      stack.push(None)
+    }
+    // add, sub, mul.
+    10 | 11 | 24 => {
+      let b = pop()
+      let a = pop()
+      stack.push(
+        match (a, b) {
+          (Some(a), Some(b)) =>
+            Some(
+              if op == 10 {
+                a + b
+              } else if op == 11 {
+                a - b
+              } else {
+                a * b
+              },
+            )
+          _ => None
+        },
+      )
+    }
+    // not, sqrt, get (unknown result).
+    5 | 26 | 21 => {
+      pop() |> ignore
+      stack.push(None)
+    }
+    // abs, neg.
+    9 | 14 =>
+      stack.push(
+        match pop() {
+          Some(v) => Some(if op == 14 { -v } else if v < 0 { -v } else { v })
+          None => None
+        },
+      )
+    // drop.
+    18 => pop() |> ignore
+    // put.
+    20 => {
+      pop() |> ignore
+      pop() |> ignore
+    }
+    // random.
+    23 => stack.push(None)
+    // dup.
+    27 => {
+      let v = pop()
+      stack.push(v)
+      stack.push(v)
+    }
+    // exch.
+    28 => {
+      let b = pop()
+      let a = pop()
+      stack.push(b)
+      stack.push(a)
+    }
+    // index: copy the i-th element from the top (the top for i < 0).
+    29 =>
+      match pop() {
+        Some(i) => {
+          let i = if i < 0 { 0 } else { i }
+          if i >= stack.length() {
+            return false
+          }
+          stack.push(stack[stack.length() - 1 - i])
+        }
+        None => stack.push(None)
+      }
+    // roll: the depth doesn't change; the rolled values become unknown.
+    30 => {
+      let _ = pop()
+      match pop() {
+        Some(n) if n >= 0 && n <= stack.length() =>
+          for k in (stack.length() - n)..<stack.length() {
+            stack[k] = None
+          }
+        Some(_) => return false
+        None =>
+          for k in 0..<stack.length() {
+            stack[k] = None
+          }
+      }
+    }
+    // dotsection, the flex operators and reserved operators clear the
+    // stack.
+    _ => stack.clear()
+  }
+  true
 }

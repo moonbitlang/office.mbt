@@ -616,3 +616,14 @@ test "glyphs with broken outlines are dropped from the subset" {
     content="ok",
   )
 }
+
+///|
+test "collection indices that overflow the directory size are rejected" {
+  let b = FontBytes::new()
+  b.bytes([0x74, 0x74, 0x63, 0x66])
+  b.u32(0x00010000)
+  b.u32(0x7FFFFFFF)
+  let data = Bytes::from_array(b.out.map(x => x.to_byte()))
+  inspect(@export.Font::new(data, 536870908) is None, content="true")
+  inspect(@export.Font::new(data, 0x7FFFFFFE) is None, content="true")
+}

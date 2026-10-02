@@ -1622,3 +1622,81 @@ test "gradients without stops paint nothing and mixed stops are converted" {
     ),
   )
 }
+
+///|
+test "gradients between different separation spaces are converted to RGB" {
+  let red = @export.SeparationSpace::{
+    colorant: Custom("Red"),
+    fallback: Rgb(255, 0, 0),
+  }
+  let blue = @export.SeparationSpace::{
+    colorant: Custom("Blue"),
+    fallback: Rgb(0, 0, 255),
+  }
+  let gradient = @export.LinearGradient::{
+    x1: 0.0,
+    y1: 0.0,
+    x2: 10.0,
+    y2: 0.0,
+    transform: @export.Transform::identity(),
+    spread_method: Pad,
+    stops: stops2(Separation(255, red), Separation(255, blue)),
+    anti_alias: false,
+  }
+  let p = parse(
+    one_page(s => {
+      s.set_fill(Some(fill_of(LinearGradient(gradient))))
+      s.draw_path(rect_path(0.0, 0.0, 10.0, 10.0))
+      // The same colorant with a different fallback is a different space.
+      s.set_fill(
+        Some(
+          fill_of(
+            LinearGradient({
+              ..gradient,
+              stops: stops2(
+                Separation(255, red),
+                Separation(255, { ..red, fallback: Rgb(0, 255, 0), }),
+              ),
+            }),
+          ),
+        ),
+      )
+      s.draw_path(rect_path(0.0, 0.0, 10.0, 10.0))
+      // The same space keeps the separation.
+      s.set_fill(
+        Some(
+          fill_of(
+            LinearGradient({
+              ..gradient,
+              stops: stops2(Separation(0, red), Separation(255, red)),
+            }),
+          ),
+        ),
+      )
+      s.draw_path(rect_path(0.0, 0.0, 10.0, 10.0))
+    }),
+  )
+  let shading = (name : String) => {
+    let sh = p.path(p.page(0), ["Resources", "Pattern", name, "Shading"])
+    p.show(p.get(sh, "ColorSpace")) + " " + p.show(p.get(sh, "Function"))
+  }
+  inspect(
+    shading("p0"),
+    content=(
+      #|/DeviceRGB <</FunctionType 2 /Range [0 1 0 1 0 1] /C0 [1 0 0] /C1 [0 0 1] /Domain [0 1] /N 1>>
+    ),
+  )
+  // Converted through the fallbacks: red to green.
+  inspect(
+    shading("p1"),
+    content=(
+      #|/DeviceRGB <</FunctionType 2 /Range [0 1 0 1 0 1] /C0 [1 0 0] /C1 [0 1 0] /Domain [0 1] /N 1>>
+    ),
+  )
+  inspect(
+    shading("p2"),
+    content=(
+      #|[/Separation /Red /DeviceRGB <</FunctionType 2 /Domain [0 1] /Range [0 1 0 1 0 1] /C0 [1 1 1] /C1 [1 0 0] /N 1>>] <</FunctionType 2 /Range [0 1] /C0 [0] /C1 [1] /Domain [0 1] /N 1>>
+    ),
+  )
+}
