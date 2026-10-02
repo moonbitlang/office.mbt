@@ -12,6 +12,14 @@ Breaking and notable changes for the published modules in this workspace.
 Entries are grouped by module and by the version they ship in; `Unreleased`
 covers changes that have landed on `main` but are not yet published.
 
+### moonbitlang/pdflite [Unreleased]
+
+- TrueType subsets now carry correct OpenType table directory search fields
+  (`entrySelector = floor(log2(numTables))`, `rangeShift = numTables * 16 -
+  searchRange`). The previous values, ported from cpdf, were wrong for every
+  table count other than 1. Embedded subset font bytes change; checksums
+  (including `recompute_head`'s `checkSumAdjustment`) remain valid.
+
 ### moonbitlang/pagelayout [0.7.1]
 
 - An `ImageItem` whose `mime` is `application/pdf` draws a page of the
