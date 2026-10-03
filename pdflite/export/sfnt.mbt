@@ -94,6 +94,9 @@ pub struct Font {
   /// The glyph metrics at the location of the variation coordinates, if it
   /// is not the default location.
   priv glyph_metrics : @skrifa.GlyphMetrics?
+  /// Whether the font has a readable `CFF ` table (krilla's `is_cff`, also
+  /// when the font has `glyf` outlines too).
+  priv has_cff : Bool
 }
 
 ///|
@@ -195,9 +198,10 @@ pub fn Font::new_variable(
   let font_ref = @read_fonts.FontRef::from_index(data, index) catch {
     _ => return None
   }
+  let has_cff = ok(() => font_ref.cff()) is Some(_)
   let kind = if tables.contains("glyf") {
     Glyf
-  } else if ok(() => font_ref.cff()) is Some(_) {
+  } else if has_cff {
     Cff
   } else if font_ref.data_for_tag("CFF2") is Some(cff2) &&
     ok(() => @ps.Cff2::read(cff2.as_bytes())) is Some(_) {
@@ -329,6 +333,7 @@ pub fn Font::new_variable(
     color: None,
     variation_coordinates: variation_coordinates.to_owned(),
     glyph_metrics,
+    has_cff,
   })
 }
 

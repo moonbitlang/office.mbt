@@ -43,7 +43,8 @@ fn hmtx_subset(ctx : Context) -> Unit raise SubsetError {
   }
 
   // Find out the last index we need to include the advance width for.
-  if new_metrics.length() > 0x10000 || new_metrics.length() == 0 {
+  // (`u16::try_from(len)` and the `- 1`.)
+  if new_metrics.length() > 0xFFFF || new_metrics.length() == 0 {
     raise OverflowError
   }
   let mut last_advance_width_index = new_metrics.length() - 1

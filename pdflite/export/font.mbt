@@ -554,7 +554,9 @@ fn CIDFont::serialize(
   let cid_set_ref = sc.new_ref()
   let data_ref = sc.new_ref()
   let glyph_remapper = self.glyph_remapper
-  let is_cff = font.kind == Cff
+  // (Like krilla: a font with a readable CFF table is embedded as a CFF
+  // font even if the subsetter chose its glyf outlines.)
+  let is_cff = font.has_cff
   if font.kind == NoOutlines {
     raise FontError(font, "font is missing an outline table")
   }

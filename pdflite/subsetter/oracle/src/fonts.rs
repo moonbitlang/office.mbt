@@ -533,7 +533,7 @@ pub fn index(items: &[Vec<u8>], cff2: bool, off_size: Option<u8>) -> Vec<u8> {
     let size = off_size.unwrap_or(if total <= 0xFF { 1 } else if total <= 0xFFFF { 2 } else if total <= 0xFFFFFF { 3 } else { 4 });
     w.u8(size);
     let mut off = 1u32;
-    let mut put = |w: &mut W, v: u32| match size {
+    let put = |w: &mut W, v: u32| match size {
         1 => { w.u8(v as u8); }
         2 => { w.u16(v as u16); }
         3 => { w.u24(v); }
@@ -950,7 +950,7 @@ pub fn gvar(axis_count: u16, shared: &[Vec<f32>], glyphs: &[Vec<u8>], long: bool
     w.u32(0x00010000).u16(axis_count).u16(shared.len() as u16).u32(shared_at as u32);
     w.u16(n as u16).u16(long as u16).u32(data_at as u32);
     let mut off = 0usize;
-    let mut put = |w: &mut W, off: usize| if long { w.u32(off as u32); } else { w.u16((off / 2) as u16); };
+    let put = |w: &mut W, off: usize| if long { w.u32(off as u32); } else { w.u16((off / 2) as u16); };
     for g in glyphs {
         put(&mut w, off);
         off += g.len();
