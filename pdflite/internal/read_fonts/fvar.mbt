@@ -227,14 +227,15 @@ fn Avar::minor_version(self : Avar) -> Int {
 
 ///|
 /// The segment maps of axis `i` (`None` if missing or malformed).
+///
+/// Like read-fonts' `axis_segment_maps()`, a `VarLenArray` over all of the
+/// data after the header: the declared axis count does not limit it.
 fn Avar::segment_maps(self : Avar, i : Int) -> SegmentMaps? {
-  let axis_count = self.data.read_u16(6) catch { _ => return None }
-  if i >= axis_count {
+  if self.data.len() <= 8 {
     return None
   }
   let mut pos = 8
-  for k in 0..<i {
-    ignore(k)
+  for _ in 0..<i {
     let n = self.data.read_u16(pos) catch { _ => return None }
     pos += 2 + 4 * n
   }
@@ -246,24 +247,38 @@ fn Avar::segment_maps(self : Avar, i : Int) -> SegmentMaps? {
 }
 
 ///|
-/// The end of the segment maps (where version 2 fields start).
-fn Avar::segment_maps_end(self : Avar) -> Int? {
-  let axis_count = self.data.read_u16(6) catch { _ => return None }
+/// The end of the segment maps (where version 2 fields start):
+/// `total_len_for_count(axis_count).unwrap_or(0)` after the header.
+fn Avar::segment_maps_end(self : Avar) -> Int {
+  let axis_count = self.data.read_u16(6) catch { _ => 0 }
   let mut pos = 8
   for _ in 0..<axis_count {
-    let n = self.data.read_u16(pos) catch { _ => return None }
+    let n = self.data.read_u16(pos) catch { _ => return 8 }
     pos += 2 + 4 * n
   }
-  Some(pos)
+  pos
+}
+
+///|
+/// The avar2 offset at `delta` bytes after the segment maps (only present in
+/// version 2.x tables).
+fn Avar::v2_offset(self : Avar, delta : Int) -> UInt? {
+  if self.major_version() != 2 {
+    return None
+  }
+  let offset = self.data.read_u32(self.segment_maps_end() + delta) catch {
+    _ => return None
+  }
+  if offset == 0 {
+    None
+  } else {
+    Some(offset)
+  }
 }
 
 ///|
 fn Avar::axis_index_map(self : Avar) -> Result[DeltaSetIndexMap, ReadError]? {
-  guard self.segment_maps_end() is Some(pos) else { return None }
-  let offset = self.data.read_u32(pos) catch { _ => return None }
-  if offset == 0 {
-    return None
-  }
+  guard self.v2_offset(0) is Some(offset) else { return None }
   Some(
     capture(() => DeltaSetIndexMap::read(resolve_offset32(self.data, offset))),
   )
@@ -271,11 +286,7 @@ fn Avar::axis_index_map(self : Avar) -> Result[DeltaSetIndexMap, ReadError]? {
 
 ///|
 fn Avar::var_store(self : Avar) -> Result[ItemVariationStore, ReadError]? {
-  guard self.segment_maps_end() is Some(pos) else { return None }
-  let offset = self.data.read_u32(pos + 4) catch { _ => return None }
-  if offset == 0 {
-    return None
-  }
+  guard self.v2_offset(4) is Some(offset) else { return None }
   Some(
     capture(() => ItemVariationStore::read(resolve_offset32(self.data, offset))),
   )

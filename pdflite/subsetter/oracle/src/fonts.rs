@@ -1253,6 +1253,10 @@ pub fn all() -> Vec<(&'static str, Vec<u8>)> {
         // A region count past the end of the HVAR region list: the region
         // array reads as empty and every region as one without axes.
         ("tt_var_hvar_regions", patch_table(tt_var(true), "HVAR", 35, 57)),
+        // An avar axis count of 0: the segment maps are still read.
+        ("tt_var_avar_count0", patch_table(tt_var(false), "avar", 7, 0)),
+        // A null gvar shared tuples offset: no glyph has variation data.
+        ("tt_var_gvar_null", patch_table(tt_var(false), "gvar", 11, 0)),
         ("malformed_cff", malformed_cff),
         ("unknown", b"\x00\x02\x00\x00\x00\x00\x00\x00".to_vec()),
     ]

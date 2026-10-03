@@ -16,8 +16,9 @@ covers changes that have landed on `main` but are not yet published.
 
 - New package `moonbitlang/pdflite/subsetter`: a port of the Rust
   `subsetter` crate 0.2.6 (with its `variable-fonts` feature),
-  byte-identical with the crate on its oracle tests and on a sweep over
-  local fonts (`pdflite/subsetter/oracle`). It subsets TrueType and CFF
+  byte-identical with the crate on its oracle tests, on a sweep over
+  local fonts and on single-byte mutations of the test fonts
+  (`pdflite/subsetter/oracle`). It subsets TrueType and CFF
   fonts with new, consecutive glyph IDs (CFF fonts become CID-keyed with an
   identity charset), instantiates variable fonts (`gvar`, `avar`, `HVAR`)
   and converts CFF2 fonts to TrueType. Outlines and variations come from

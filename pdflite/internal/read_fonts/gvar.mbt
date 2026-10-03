@@ -54,9 +54,12 @@ fn Gvar::glyph_variation_data_array_offset(self : Gvar) -> UInt {
 
 ///|
 /// The shared tuples (each `axis_count` F2Dot14 values; empty if out of
-/// bounds).
+/// bounds). A null offset is an error (`Offset32::resolve_with_args`).
 fn Gvar::shared_tuples(self : Gvar) -> FontData raise ReadError {
   let offset = self.data.read_u32(8)
+  if offset == 0 {
+    raise NullOffset
+  }
   if offset > self.data.len().reinterpret_as_uint() {
     raise OutOfBounds
   }

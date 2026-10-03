@@ -1,6 +1,7 @@
 // A differential sweep over real fonts, which can't be committed: run by
 // `pdflite/subsetter/oracle/sweep.sh`, which subsets the fonts of a
-// manifest with the Rust crate and points `SUBSETTER_SWEEP` at the results.
+// manifest with the Rust crate and points `SUBSETTER_SWEEP` at the results
+// (`oracle/mutations.sh` does the same for byte mutations of the fixtures).
 // Without the variable, the test does nothing.
 
 ///|
@@ -65,6 +66,10 @@ test "subsets of local fonts are byte-identical with the Rust crate" {
     let want = expected[i]
     let same = if want.has_prefix("ok ") {
       actual == "same"
+    } else if want == "panic" {
+      // Where the Rust crate panics (e.g. `unreachable!()` writing a
+      // non-finite real number), the port returns an error.
+      actual.has_prefix("err ")
     } else {
       actual == want
     }
