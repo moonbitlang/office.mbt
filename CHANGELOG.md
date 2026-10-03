@@ -12,6 +12,21 @@ Breaking and notable changes for the published modules in this workspace.
 Entries are grouped by module and by the version they ship in; `Unreleased`
 covers changes that have landed on `main` but are not yet published.
 
+### moonbitlang/pdflite [Unreleased]
+
+- `pdflite/export`: `Surface::draw_external_xobject` draws form XObjects
+  that a callback writes once per key and document (e.g. pages of other
+  PDFs extracted by hayro-write; see `ExternalXObject` for the contract),
+  and `Surface::page_tree_ref` gives such objects their `/Parent`. Stream
+  dictionaries get exactly one `/Length`, and reals are written like
+  pdf-writer writes `f32`s (shortest digits, no exponents) instead of with
+  at most five decimals (#593).
+- `pdflite/export`: `ImageData::Png` embeds the `IDAT` data of
+  non-interlaced PNG images without alpha as is, with a PNG predictor
+  (grayscale, RGB and indexed images, krilla's `Repr::Png`). Invalid
+  combinations of samples, bit depth and palette, and 16-bit samples
+  before PDF 1.5, make `Document::finish` raise an `ImageError` (#594).
+
 ### moonbitlang/pdflite [0.3.3]
 
 - The content operator state follows ISO 32000-1 where it had followed
@@ -40,13 +55,6 @@ covers changes that have landed on `main` but are not yet published.
   embedded as OpenType font programs (krilla converts them to CFF); there
   is no CMYK output profile and no `CIDSet`. See
   `pdflite/export/README.mbt.md`.
-- `pdflite/export`: `Surface::draw_external_xobject` draws form XObjects
-  that a callback writes once per key and document (e.g. pages of other
-  PDFs extracted by hayro-write; see `ExternalXObject` for the contract),
-  and `Surface::page_tree_ref` gives such objects their `/Parent`. Stream
-  dictionaries get exactly one `/Length`, and reals are written like
-  pdf-writer writes `f32`s (shortest digits, no exponents) instead of with
-  at most five decimals.
 - Depend on moonbitlang/x 0.5.5.
 
 ### moonbitlang/pagelayout [0.7.1]
