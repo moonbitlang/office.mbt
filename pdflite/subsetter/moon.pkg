@@ -1,6 +1,11 @@
 import {
+  "moonbitlang/pdflite/internal/font_types",
+  "moonbitlang/pdflite/internal/read_fonts",
+  "moonbitlang/pdflite/internal/skrifa",
   "moonbitlang/core/buffer",
   "moonbitlang/core/bigint",
+  "moonbitlang/core/double",
+  "moonbitlang/core/cmp",
   "moonbitlang/core/math",
 }
 

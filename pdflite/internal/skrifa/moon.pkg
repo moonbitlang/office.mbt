@@ -1,0 +1,5 @@
+import {
+  "moonbitlang/pdflite/internal/font_types",
+  "moonbitlang/pdflite/internal/read_fonts",
+  "moonbitlang/pdflite/internal/read_fonts/ps",
+}
