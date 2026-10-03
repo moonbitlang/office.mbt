@@ -12,7 +12,7 @@ Breaking and notable changes for the published modules in this workspace.
 Entries are grouped by module and by the version they ship in; `Unreleased`
 covers changes that have landed on `main` but are not yet published.
 
-### moonbitlang/pdflite [Unreleased]
+### moonbitlang/pdflite [0.3.4]
 
 - `pdflite/export`: `Surface::draw_external_xobject` draws form XObjects
   that a callback writes once per key and document (e.g. pages of other
