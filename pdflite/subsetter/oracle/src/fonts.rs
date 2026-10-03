@@ -1174,6 +1174,21 @@ pub fn cff2_var() -> Vec<u8> {
 }
 
 /// All fixture fonts by name.
+/// Sets the byte at `offset` in table `tag` of an sfnt (table checksums are
+/// left as they are).
+pub fn patch_table(mut font: Vec<u8>, tag: &str, offset: usize, value: u8) -> Vec<u8> {
+    let count = u16::from_be_bytes([font[4], font[5]]) as usize;
+    for i in 0..count {
+        let rec = 12 + 16 * i;
+        if &font[rec..rec + 4] == tag.as_bytes() {
+            let start = u32::from_be_bytes(font[rec + 8..rec + 12].try_into().unwrap()) as usize;
+            font[start + offset] = value;
+            return font;
+        }
+    }
+    panic!("no table {tag}")
+}
+
 pub fn all() -> Vec<(&'static str, Vec<u8>)> {
     let tt_short = sfnt(0x00010000, &tt_tables(false, tt_post()));
     let tt_long_v3 = sfnt(0x74727565, &tt_tables(true, post_v3()));
@@ -1233,6 +1248,11 @@ pub fn all() -> Vec<(&'static str, Vec<u8>)> {
         ("tt_var", tt_var(false)),
         ("tt_var_hvar", tt_var(true)),
         ("cff2", cff2_var()),
+        // A CFF2 header size below 5: the Top DICT still starts at 5.
+        ("cff2_header4", patch_table(cff2_var(), "CFF2", 2, 4)),
+        // A region count past the end of the HVAR region list: the region
+        // array reads as empty and every region as one without axes.
+        ("tt_var_hvar_regions", patch_table(tt_var(true), "HVAR", 35, 57)),
         ("malformed_cff", malformed_cff),
         ("unknown", b"\x00\x02\x00\x00\x00\x00\x00\x00".to_vec()),
     ]

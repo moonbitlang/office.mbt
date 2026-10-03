@@ -206,7 +206,10 @@ fn parse(data : Bytes, index : Int) -> Face raise SubsetError {
   let mut kind = kind
   // Parse font collection header if necessary.
   if kind == Collection {
-    r = Reader::new_at(data, 12 + 4 * index)
+    // (`12 + 4 * (index as usize)` with `index: u32`, in 64 bits.)
+    let pos = 12UL + 4UL * index.reinterpret_as_uint().to_uint64()
+    guard pos + 4UL <= data.length().to_uint64() else { raise MalformedFont }
+    r = Reader::new_at(data, pos.to_int())
     guard r.read_u32() is Some(offset) else { raise MalformedFont }
     let offset = u32_offset(offset)
     guard offset <= data.length() else { raise MalformedFont }
@@ -238,7 +241,7 @@ fn parse(data : Bytes, index : Int) -> Face raise SubsetError {
 /// Construct a brand-new font.
 fn construct(ctx : Context) -> Bytes {
   // (Tags are unique, so the stable sort by tag is a plain sort.)
-  ctx.tables.sort_by((a, b) => a.0.compare(b.0))
+  ctx.tables.sort_by((a, b) => Compare::compare(a.0, b.0))
   let w = Writer::new()
   w.write_u32(ctx.flavor.magic())
 
@@ -446,7 +449,9 @@ priv struct Face {
 
 ///|
 fn Face::table(self : Face, tag : Tag) -> BytesView? {
-  guard binary_search_by(self.records, record => record.tag.compare(tag))
+  guard binary_search_by(self.records, record => {
+      Compare::compare(record.tag, tag)
+    })
     is Ok(i) else {
     return None
   }

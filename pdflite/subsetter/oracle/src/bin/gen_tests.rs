@@ -35,6 +35,7 @@ fn hex_literal(data: &[u8], indent: &str) -> String {
 
 struct Case {
     font: &'static str,
+    /// (Passed to MoonBit as the `Int` with the same bits.)
     index: u32,
     glyphs: Vec<u16>,
     /// `None` for `subset`, else the coordinates of `subset_with_variations`.
@@ -75,6 +76,9 @@ fn main() {
     cases.push(case("ttc", 0, &[1, 4], None));
     cases.push(case("ttc", 1, &[2, 3], None));
     cases.push(case("ttc", 2, &[2, 3], None));
+    // `12 + 4 * index` computed in 64 bits (wraps to face 1 in 32 bits).
+    cases.push(case("ttc", 1073741825, &[1], None));
+    cases.push(case("ttc", u32::MAX, &[1], None));
     let var_coords: &[&[(&str, f32)]] = &[
         &[],
         &[("wght", 400.0)],
@@ -101,6 +105,12 @@ fn main() {
         }
     }
     cases.push(case("cff2", 0, &[1], None));
+    for c in [&[][..], &[("wght", 900.0)]] {
+        cases.push(case("cff2_header4", 0, &[1], Some(c)));
+        cases.push(case("tt_var_hvar_regions", 0, &[1, 2, 3, 4, 5], Some(c)));
+    }
+    cases.push(case("tt_var_hvar_regions", 0, &[1, 2, 3, 4, 5], Some(&[("wght", 650.0), ("wdth", 150.0)])));
+    cases.push(case("cff2_header4", 0, &[1], None));
     cases.push(case("malformed_cff", 0, &[], None));
     cases.push(case("unknown", 0, &[], None));
 
@@ -146,12 +156,12 @@ fn main() {
         println!("test \"oracle {i}: {} {} [{}] {}\" {{", c.font, c.index, glyphs, coords.replace('"', "'"));
         match result {
             Ok(sub) => {
-                println!("  check_subset(fixture_{}, {}, [{}], {}, expected=from_hex(", c.font, c.index, glyphs, coords);
+                println!("  check_subset(fixture_{}, {}, [{}], {}, expected=from_hex(", c.font, c.index as i32, glyphs, coords);
                 print!("{}", hex_literal(&sub, "    "));
                 println!("  ))");
             }
             Err(e) => {
-                println!("  check_subset(fixture_{}, {}, [{}], {}, error=\"{e}\")", c.font, c.index, glyphs, coords);
+                println!("  check_subset(fixture_{}, {}, [{}], {}, error=\"{e}\")", c.font, c.index as i32, glyphs, coords);
             }
         }
         println!("}}");

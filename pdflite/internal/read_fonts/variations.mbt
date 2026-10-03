@@ -243,12 +243,12 @@ pub fn VariationRegionList::axis_count(self : VariationRegionList) -> Int {
 }
 
 ///|
+/// The number of regions in the region array (`ComputedArray::len`): zero
+/// if the array is out of bounds or its regions have no axes.
 pub fn VariationRegionList::region_count(self : VariationRegionList) -> Int {
   let count = self.data.read_u16(2) catch { _ => 0 }
-  // `read_with_args(range).unwrap_or_default()` (in 64 bits: the product
-  // of two `u16` counts overflows an `Int`)
-  if 4L + count.to_int64() * self.axis_count().to_int64() * 6L >
-    self.data.len().to_int64() {
+  let axis_count = self.axis_count()
+  if axis_count == 0 || !self.regions_in_bounds(count, axis_count) {
     0
   } else {
     count
@@ -256,15 +256,36 @@ pub fn VariationRegionList::region_count(self : VariationRegionList) -> Int {
 }
 
 ///|
-/// The region at `index` (`OutOfBounds` if out of range).
+/// Whether the `variation_regions` byte range is in bounds (in 64 bits: the
+/// product of two `u16` counts overflows an `Int`).
+fn VariationRegionList::regions_in_bounds(
+  self : VariationRegionList,
+  count : Int,
+  axis_count : Int,
+) -> Bool {
+  4L + count.to_int64() * axis_count.to_int64() * 6L <=
+  self.data.len().to_int64()
+}
+
+///|
+/// The region at `index` (`ComputedArray::get`).
+///
+/// Like read-fonts, an out-of-bounds region array reads as the default
+/// (empty) `ComputedArray`, whose `get` yields a region without axes for
+/// every index, as does an array of regions with zero axes. Otherwise an
+/// index past the last region is `OutOfBounds`.
 pub fn VariationRegionList::get(
   self : VariationRegionList,
   index : Int,
 ) -> VariationRegion raise ReadError {
-  if index < 0 || index >= self.region_count() {
+  let count = self.data.read_u16(2) catch { _ => 0 }
+  let axis_count = self.axis_count()
+  if axis_count == 0 || !self.regions_in_bounds(count, axis_count) {
+    return { data: FontData::empty(), axis_count: 0, }
+  }
+  if index < 0 || index >= count {
     raise OutOfBounds
   }
-  let axis_count = self.axis_count()
   let start = 4 + index * axis_count * 6
   { data: self.data.slice(start, start + axis_count * 6).unwrap(), axis_count, }
 }

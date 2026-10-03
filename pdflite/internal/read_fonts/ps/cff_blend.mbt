@@ -160,19 +160,25 @@ pub struct Cff2 {
 ///|
 /// Read a CFF2 table: header (major, minor, headerSize, topDictLength),
 /// the Top DICT and the global subroutine index.
+///
+/// Like read-fonts' generated `Cff2Header`, the Top DICT starts at
+/// `max(headerSize, 5)` and an out-of-bounds Top DICT range reads as empty
+/// data (as does the trailing data after it). The global subroutines are
+/// read with the CFF2 `Index` table reader, which needs at least 5 bytes.
 pub fn Cff2::read(data : BytesView) -> Cff2 raise PsError {
   if data.length() < 5 {
     raise Read(OutOfBounds)
   }
   let header_size = data[2].to_int()
   let top_dict_length = (data[3].to_int() << 8) | data[4].to_int()
-  if header_size > data.length() ||
-    top_dict_length > data.length() - header_size {
-    raise Read(OutOfBounds)
+  let start = if header_size > 5 { header_size } else { 5 }
+  let end = start + top_dict_length
+  let (top_dict_data, trailing) = if end <= data.length() {
+    (data[start:end], data[end:])
+  } else {
+    (data[0:0], data[0:0])
   }
-  let top_dict_data = data[header_size:header_size + top_dict_length]
-  let trailing = data[header_size + top_dict_length:]
-  let global_subrs = Index::new(trailing, true)
+  let global_subrs = Index::Format1(Index1::read2(trailing))
   { data, top_dict_data, global_subrs, }
 }
 
