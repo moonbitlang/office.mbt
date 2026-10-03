@@ -33,9 +33,9 @@ pub fn GlyphRemapper::remapped_gids(Self) -> ArrayView[Int]
 pub struct Tag {
   // private fields
 } derive(Eq, Hash)
+pub fn Tag::from_bytes(BytesView) -> Self?
 pub fn Tag::from_str(StringView) -> Self?
 pub fn Tag::get(Self) -> Bytes
-pub fn Tag::new(Bytes) -> Self
 pub impl Compare for Tag
 pub impl Show for Tag
 

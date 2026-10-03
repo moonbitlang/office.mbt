@@ -137,9 +137,15 @@ pub fn GlyphRemapper::num_gids(self : GlyphRemapper) -> Int {
 }
 
 ///|
-/// Remap a glyph ID (`0..=65535`), or return the existing mapping if the
-/// glyph ID has already been remapped before.
+/// Remap a glyph ID, or return the existing mapping if the glyph ID has
+/// already been remapped before.
+///
+/// Glyph IDs are `u16`s: other values abort, like remapping more than 65535
+/// glyphs (the Rust crate panics).
 pub fn GlyphRemapper::remap(self : GlyphRemapper, old : Int) -> Int {
+  if old < 0 || old > 0xFFFF {
+    abort("glyph ID out of range")
+  }
   self.inner.remap(old)
 }
 

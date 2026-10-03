@@ -245,8 +245,10 @@ pub fn VariationRegionList::axis_count(self : VariationRegionList) -> Int {
 ///|
 pub fn VariationRegionList::region_count(self : VariationRegionList) -> Int {
   let count = self.data.read_u16(2) catch { _ => 0 }
-  // `read_with_args(range).unwrap_or_default()`
-  if 4 + count * self.axis_count() * 6 > self.data.len() {
+  // `read_with_args(range).unwrap_or_default()` (in 64 bits: the product
+  // of two `u16` counts overflows an `Int`)
+  if 4L + count.to_int64() * self.axis_count().to_int64() * 6L >
+    self.data.len().to_int64() {
     0
   } else {
     count
@@ -427,16 +429,20 @@ pub fn ItemVariationData::delta_set(
   let long_words = (word_delta_count & 0x8000) != 0
   let word_delta_count = word_delta_count & 0x7FFF
   // `delta_sets()` is empty if the rows don't fit into the data.
+  // (In 64 bits, like Rust's `usize`.)
   let sets_start = 6 + 2 * region_count
-  let sets_len = bytes_per_row * self.item_count()
-  let sets = match self.data.slice(sets_start, sets_start + sets_len) {
-    Some(d) => d
-    None => FontData::empty()
+  let sets_end = sets_start.to_int64() +
+    bytes_per_row.to_int64() * self.item_count().to_int64()
+  let sets = if sets_end <= self.data.len().to_int64() {
+    self.data.slice(sets_start, sets_end.to_int()).unwrap_or(FontData::empty())
+  } else {
+    FontData::empty()
   }
-  let offset = bytes_per_row * inner_index
-  let cursor = match sets.split_off(offset) {
-    Some(d) => d.cursor()
-    None => FontData::empty().cursor()
+  let offset = bytes_per_row.to_int64() * inner_index.to_int64()
+  let cursor = if offset <= sets.len().to_int64() {
+    sets.split_off(offset.to_int()).unwrap_or(FontData::empty()).cursor()
+  } else {
+    FontData::empty().cursor()
   }
   let out = []
   for pos in 0..<region_count {

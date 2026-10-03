@@ -514,12 +514,13 @@ pub struct Tag {
 } derive(Eq, Hash)
 
 ///|
-/// Create a new tag from its four bytes.
-pub fn Tag::new(tag : Bytes) -> Tag {
-  if tag.length() != 4 {
-    abort("a tag has four bytes")
+/// Create a tag from its four bytes (`None` for another length).
+pub fn Tag::from_bytes(tag : BytesView) -> Tag? {
+  if tag.length() == 4 {
+    Some({ bytes: tag.to_owned(), })
+  } else {
+    None
   }
-  { bytes: tag, }
 }
 
 ///|
