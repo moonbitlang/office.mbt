@@ -294,7 +294,7 @@ fn compile_program(program : Array[Instruction]) -> Bytes {
     match instr {
       Operand(num) => num.write(w)
       Op(op) => op.write(w)
-      HintMask(hm) => w.extend(hm)
+      HintMask(hm) => w.write_bytes(hm)
     }
   }
   w.finish()

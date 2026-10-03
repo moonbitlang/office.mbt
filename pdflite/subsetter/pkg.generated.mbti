@@ -1,0 +1,44 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "moonbitlang/pdflite/subsetter"
+
+// Values
+pub fn subset(Bytes, Int, GlyphRemapper) -> Bytes raise SubsetError
+
+pub fn subset_with_variations(Bytes, Int, ArrayView[(Tag, Float)], GlyphRemapper) -> Bytes raise SubsetError
+
+// Errors
+pub(all) suberror SubsetError {
+  UnknownKind
+  MalformedFont
+  Unimplemented
+  SubsetError
+  OverflowError
+  CFFError
+} derive(Eq)
+pub impl Show for SubsetError
+
+// Types and methods
+pub struct GlyphRemapper {
+  // private fields
+}
+pub fn GlyphRemapper::copy(Self) -> Self
+pub fn GlyphRemapper::get(Self, Int) -> Int?
+pub fn GlyphRemapper::new() -> Self
+pub fn GlyphRemapper::new_from_glyphs(ArrayView[Int]) -> Self
+pub fn GlyphRemapper::new_from_glyphs_sorted(ArrayView[Int]) -> Self
+pub fn GlyphRemapper::num_gids(Self) -> Int
+pub fn GlyphRemapper::remap(Self, Int) -> Int
+pub fn GlyphRemapper::remapped_gids(Self) -> ArrayView[Int]
+
+pub struct Tag {
+  // private fields
+} derive(Eq, Hash)
+pub fn Tag::from_str(StringView) -> Self?
+pub fn Tag::get(Self) -> Bytes
+pub fn Tag::new(Bytes) -> Self
+pub impl Compare for Tag
+pub impl Show for Tag
+
+// Type aliases
+
+// Traits

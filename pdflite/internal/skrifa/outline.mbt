@@ -65,7 +65,7 @@ pub fn OutlineGlyph::draw_unscaled(
   pen : &OutlinePen,
 ) -> AdjustedMetrics raise DrawError {
   // `LocationRef::effective_coords`
-  let coords = if LocationRef(location.to_array()).is_default() {
+  let coords = if LocationRef(location.to_owned()).is_default() {
     location[0:0]
   } else {
     location

@@ -34,14 +34,6 @@ fn Cursor::read_u8(self : Cursor) -> Int raise PsError {
 }
 
 ///|
-fn Cursor::read_u16(self : Cursor) -> Int raise PsError {
-  let p = self.pos
-  self.advance_by(2)
-  self.check(p, 2)
-  (self.data[p].to_int() << 8) | self.data[p + 1].to_int()
-}
-
-///|
 fn Cursor::read_i16(self : Cursor) -> Int raise PsError {
   let p = self.pos
   self.advance_by(2)

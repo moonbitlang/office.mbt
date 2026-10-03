@@ -60,7 +60,7 @@ pub fn FontData::new(bytes : BytesView) -> FontData {
 
 ///|
 pub fn FontData::empty() -> FontData {
-  { bytes: b""[:], }
+  { bytes: b"", }
 }
 
 ///|

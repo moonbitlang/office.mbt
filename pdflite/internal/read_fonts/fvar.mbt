@@ -175,21 +175,19 @@ pub fn Fvar::user_to_normalized(
       for i in 0..<actual_len {
         let var_index = match avar.axis_index_map() {
           Some(Ok(map)) =>
-            match (try? map.get(i.reinterpret_as_uint())) {
-              Ok(index) => index
-              Err(_) => continue
+            map.get(i.reinterpret_as_uint()) catch {
+              _ => continue
             }
           _ => { outer: 0, inner: i & 0xFFFF, }
         }
-        match (try? varstore.compute_float_delta(var_index, coords_2dot14[:])) {
-          Ok(delta) =>
-            fixed_coords[i] = fixed_clamp(
-              apply_avar2_delta(fixed_coords[i], delta),
-              Fixed::neg_one(),
-              Fixed::one(),
-            )
-          Err(_) => ()
+        let delta = varstore.compute_float_delta(var_index, coords_2dot14) catch {
+          _ => continue
         }
+        fixed_coords[i] = fixed_clamp(
+          apply_avar2_delta(fixed_coords[i], delta),
+          Fixed::neg_one(),
+          Fixed::one(),
+        )
       }
     _ => ()
   }
@@ -266,7 +264,9 @@ fn Avar::axis_index_map(self : Avar) -> Result[DeltaSetIndexMap, ReadError]? {
   if offset == 0 {
     return None
   }
-  Some(try? DeltaSetIndexMap::read(resolve_offset32(self.data, offset)))
+  Some(
+    capture(() => DeltaSetIndexMap::read(resolve_offset32(self.data, offset))),
+  )
 }
 
 ///|
@@ -276,7 +276,9 @@ fn Avar::var_store(self : Avar) -> Result[ItemVariationStore, ReadError]? {
   if offset == 0 {
     return None
   }
-  Some(try? ItemVariationStore::read(resolve_offset32(self.data, offset)))
+  Some(
+    capture(() => ItemVariationStore::read(resolve_offset32(self.data, offset))),
+  )
 }
 
 ///|
@@ -407,7 +409,7 @@ pub fn FontRef::hvar(self : FontRef) -> Hvar raise ReadError {
 fn Hvar::item_variation_store(
   self : Hvar,
 ) -> Result[ItemVariationStore, ReadError] {
-  try? ({
+  capture(() => {
     let offset = self.data.read_u32(4)
     ItemVariationStore::read(resolve_offset32(self.data, offset))
   })
@@ -419,7 +421,9 @@ fn Hvar::mapping(self : Hvar, at : Int) -> Result[DeltaSetIndexMap, ReadError]? 
   if offset == 0 {
     return None
   }
-  Some(try? DeltaSetIndexMap::read(resolve_offset32(self.data, offset)))
+  Some(
+    capture(() => DeltaSetIndexMap::read(resolve_offset32(self.data, offset))),
+  )
 }
 
 ///|
@@ -452,4 +456,14 @@ pub fn Hvar::lsb_delta(
     glyph_id.to_u32(),
     coords,
   )
+}
+
+///|
+/// Runs `f`, capturing the result (Rust's `Result`).
+fn[T] capture(f : () -> T raise ReadError) -> Result[T, ReadError] {
+  try f() catch {
+    e => Err(e)
+  } noraise {
+    v => Ok(v)
+  }
 }

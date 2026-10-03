@@ -112,7 +112,7 @@ pub fn GlyphRemapper::new_from_glyphs(glyphs : ArrayView[Int]) -> GlyphRemapper 
 pub fn GlyphRemapper::new_from_glyphs_sorted(
   glyphs : ArrayView[Int],
 ) -> GlyphRemapper {
-  let sorted = glyphs.to_array()
+  let sorted = glyphs.to_owned()
   sorted.sort()
   let dedup = []
   for g in sorted {
@@ -158,5 +158,5 @@ pub fn GlyphRemapper::get(self : GlyphRemapper, old : Int) -> Int? {
 ///
 /// 0 (0), 3 (1), 39 (2), 8 (3), 10 (4), 2 (5)
 pub fn GlyphRemapper::remapped_gids(self : GlyphRemapper) -> ArrayView[Int] {
-  self.inner.backward[:]
+  self.inner.backward
 }

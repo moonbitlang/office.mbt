@@ -67,7 +67,7 @@ pub impl CharstringContext for CffContext with fn seac_components(
   let charset = match cff.charset(0) {
     Some(c) => c
     None =>
-      Charset::new(b""[:], 0, self.charstrings.count()) catch {
+      Charset::new(b"", 0, self.charstrings.count()) catch {
         _ => raise MissingCharset
       }
   }
@@ -230,7 +230,7 @@ fn Evaluator::evaluate(
   let seen_endchar = self.evaluate_impl(charstring_data, 0)
   if !self.is_type1 && !seen_endchar {
     // FreeType simulates an endchar operator for CFF and CFF2
-    ignore(self.evaluate_operator(EndChar, Cursor::new(b""[:]), 0))
+    ignore(self.evaluate_operator(EndChar, Cursor::new(b""), 0))
   }
   if self.is_open {
     self.sink.close()

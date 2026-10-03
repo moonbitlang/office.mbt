@@ -20,7 +20,7 @@ pub fn Cff::read(data : BytesView) -> Cff raise PsError {
   let start = 4 + (if hdr_size > 4 { hdr_size - 4 } else { 0 })
   let trailing = match get_from(data, start) {
     Some(d) => d
-    None => b""[:]
+    None => b""
   }
   let mut d = trailing
   let names = Index1::read(d)
@@ -95,7 +95,7 @@ pub fn Cff::string(self : Cff, id : Sid) -> BytesView? {
 ///|
 fn ascii_bytes(s : String) -> BytesView {
   let b = Bytes::makei(s.length(), i => s[i].to_byte())
-  b[:]
+  b
 }
 
 ///|

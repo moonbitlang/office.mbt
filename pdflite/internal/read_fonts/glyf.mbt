@@ -189,7 +189,7 @@ pub fn SimpleGlyph::instructions(self : SimpleGlyph) -> BytesView {
   let start = self.instruction_length_offset() + 2
   match self.data.get(start, start + self.instruction_length()) {
     Some(v) => v
-    None => b""[:]
+    None => b""
   }
 }
 
@@ -198,7 +198,7 @@ pub fn SimpleGlyph::glyph_data(self : SimpleGlyph) -> BytesView {
   let start = self.instruction_length_offset() + 2 + self.instruction_length()
   match self.data.get(start, self.data.len()) {
     Some(v) => v
-    None => b""[:]
+    None => b""
   }
 }
 

@@ -138,11 +138,6 @@ priv struct LazyArray16 {
 }
 
 ///|
-fn LazyArray16::default(size : Int) -> LazyArray16 {
-  { data: b""[:], size, }
-}
-
-///|
 /// Returns array's length.
 fn LazyArray16::len(self : LazyArray16) -> Int {
   (self.data.length() / self.size) & 0xFFFF

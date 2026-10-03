@@ -46,17 +46,6 @@ pub fn Size::linear_scale(self : Size, units_per_em : Int) -> Float {
 }
 
 ///|
-/// FreeType computes a 16.16 scale factor that converts to 26.6.
-fn Size::fixed_linear_scale(self : Size, units_per_em : Int) -> Fixed {
-  match self.0 {
-    Some(ppem) if units_per_em > 0 =>
-      Fixed::from_bits((ppem * 64.0).to_int()) / Fixed::from_bits(units_per_em)
-    // This is an identity scale for the pattern `mul_div(value, scale, 64)`
-    _ => Fixed::from_bits(0x10000 * 64)
-  }
-}
-
-///|
 /// Reference to an ordered sequence of normalized variation coordinates.
 pub(all) struct LocationRef(Array[F2Dot14])
 

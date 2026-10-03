@@ -62,7 +62,7 @@ pub fn Index1::offsets(self : Index1) -> BytesView {
   let (s, e) = self.offsets_range()
   match get_range(self.data, s, e) {
     Some(v) => v
-    None => b""[:]
+    None => b""
   }
 }
 
@@ -74,7 +74,7 @@ pub fn Index1::data(self : Index1) -> BytesView {
   let len = if len < 0 { 0 } else { len }
   match get_range(self.data, start, start + len) {
     Some(v) => v
-    None => b""[:]
+    None => b""
   }
 }
 

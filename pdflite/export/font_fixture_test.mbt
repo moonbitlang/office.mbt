@@ -138,11 +138,28 @@ fn cff_table(
     index([[11], [139, 139, 204, 205, 14]])
   }
   // The size of the Top DICT doesn't depend on the offsets (all int32).
-  let dict_size = if cid_keyed { 9 + 12 } else { 6 + 11 }
+  // A CID-keyed font also has an FDSelect (format 3, one range) and an
+  // FDArray with one Font DICT whose Private DICT is empty.
+  let dict_size = if cid_keyed { 9 + 12 + 14 } else { 6 + 11 }
   let top_size = 2 + 1 + 2 + dict_size
   let charset_at = 4 + names.length() + top_size + strings.length() + 2
-  let private_at = charset_at + charset.length()
+  let fd_select = if cid_keyed { [3, 0, 1, 0, 0, 0, 0, n] } else { [] }
+  let fd_select_at = charset_at + charset.length()
+  let font_dict_size = 1 + 5 + 1
+  let fd_array_size = if cid_keyed { 2 + 1 + 2 + font_dict_size } else { 0 }
+  let fd_array_at = fd_select_at + fd_select.length()
+  let private_at = fd_array_at + fd_array_size
   let charstrings_at = private_at + private.length() + subrs.length()
+  let fd_array = if cid_keyed {
+    let font_dict = [139]
+    for b in int32(private_at) {
+      font_dict.push(b)
+    }
+    font_dict.push(18)
+    index([font_dict])
+  } else {
+    []
+  }
   let dict = []
   if cid_keyed {
     // ROS: Adobe (SID 391), Identity (SID 392), supplement 0.
@@ -153,6 +170,16 @@ fn cff_table(
       dict.push(b)
     }
     dict.push(15)
+    for b in int32(fd_array_at) {
+      dict.push(b)
+    }
+    dict.push(12)
+    dict.push(36)
+    for b in int32(fd_select_at) {
+      dict.push(b)
+    }
+    dict.push(12)
+    dict.push(37)
   }
   for b in int32(charstrings_at) {
     dict.push(b)
@@ -174,6 +201,8 @@ fn cff_table(
   out.bytes(strings)
   out.bytes(index([])) // Global Subrs
   out.bytes(charset)
+  out.bytes(fd_select)
+  out.bytes(fd_array)
   out.bytes(private)
   out.bytes(subrs)
   // Glyph `seac` uses `seac` directly, `seac_in_subr` calls subroutine 1
@@ -191,6 +220,78 @@ fn cff_table(
       }),
     ),
   )
+  out.out
+}
+
+///|
+/// A minimal CFF2 table: the boxes of the glyf font as charstrings (no
+/// variation store).
+fn cff2_table() -> Array[Int] {
+  let num = (v : Int) => {
+    if v >= -107 && v <= 107 {
+      [v + 139]
+    } else {
+      [28, (v >> 8) & 0xFF, v & 0xFF]
+    }
+  }
+  let box_cs = (x0 : Int, y0 : Int, x1 : Int, y1 : Int) => {
+    let out = []
+    for b in num(x0) + num(y0) + [21] {
+      out.push(b) // rmoveto
+    }
+    for b in num(x1 - x0) + [6] + num(y1 - y0) + [7] + num(x0 - x1) + [6] {
+      out.push(b) // hlineto, vlineto, hlineto
+    }
+    out
+  }
+  let charstrings = [
+    box_cs(50, 0, 450, 700),
+    box_cs(0, 0, 600, 700),
+    box_cs(100, -100, 500, 700),
+    box_cs(0, 0, 600, 900),
+    [],
+    box_cs(0, 0, 700, 700),
+  ]
+  // A CFF2 INDEX (32-bit count, 2-byte offsets).
+  let index2 = (items : Array[Array[Int]]) => {
+    let out = FontBytes::new()
+    out.u32(items.length())
+    if items.length() > 0 {
+      out.bytes([2]) // offSize
+      let mut off = 1
+      out.u16(off)
+      for item in items {
+        off += item.length()
+        out.u16(off)
+      }
+      for item in items {
+        out.bytes(item)
+      }
+    }
+    out.out
+  }
+  let int32 = (v : Int) => {
+    [29, (v >> 24) & 0xFF, (v >> 16) & 0xFF, (v >> 8) & 0xFF, v & 0xFF]
+  }
+  // Top DICT: CharStrings and FDArray offsets (5-byte integers).
+  let top_size = 6 + 7
+  let global_subrs = index2([])
+  let charstrings_at = 5 + top_size + global_subrs.length()
+  let charstrings = index2(charstrings)
+  let fd_array_at = charstrings_at + charstrings.length()
+  // One Font DICT with an empty Private DICT (at the end of the table).
+  let font_dict_size = 1 + 5 + 1
+  let fd_array_size = 4 + 1 + 2 * 2 + font_dict_size
+  let private_at = fd_array_at + fd_array_size
+  let font_dict = [139] + int32(private_at) + [18]
+  let top = int32(charstrings_at) + [17] + int32(fd_array_at) + [12, 36]
+  let out = FontBytes::new()
+  out.bytes([2, 0, 5])
+  out.u16(top.length())
+  out.bytes(top)
+  out.bytes(global_subrs)
+  out.bytes(charstrings)
+  out.bytes(index2([font_dict]))
   out.out
 }
 
@@ -301,10 +402,10 @@ fn test_font_tables(
     // Glyph 1 uses `seac`, glyph 2 calls a subroutine using it.
     "cff-seac" =>
       tables.push(("CFF ", cff_table(n, false, seac=1, seac_in_subr=2)))
-    "cid-cff" | "cff2" =>
-      tables.push(
-        (if outlines == "cff2" { "CFF2" } else { "CFF " }, cff_table(n, true)),
-      )
+    "cid-cff" => tables.push(("CFF ", cff_table(n, true)))
+    "cff2" => tables.push(("CFF2", cff2_table()))
+    // A CFF table in a CFF2 font (not a valid CFF2 table).
+    "bad-cff2" => tables.push(("CFF2", cff_table(n, true)))
     _ => ()
   }
   tables
@@ -320,6 +421,9 @@ fn test_font_data(
   monospaced? : Bool = false,
 ) -> Bytes {
   let tables = test_font_tables(fs_type, ps_name, outlines, italic, monospaced)
+  // Table records are sorted by tag (OpenType requires it, and the
+  // subsetter looks tables up by binary search).
+  tables.sort_by((a, b) => a.0.compare(b.0))
   let out = FontBytes::new()
   out.u32(if outlines is ("glyf" | "none") { 0x00010000 } else { 0x4F54544F })
   out.u16(tables.length())
@@ -403,8 +507,8 @@ test "the synthetic font parses" {
       #|(
       #|  1000,
       #|  6,
-      #|  900,
-      #|  -250,
+      #|  800,
+      #|  -200,
       #|  Some(680),
       #|  0,
       #|  700,
@@ -588,9 +692,9 @@ test "Font::new rejects fonts with out-of-bounds or invalid structures" {
 }
 
 ///|
-test "glyphs with broken outlines are dropped from the subset" {
-  // A loca entry pointing before the glyf table is ignored instead of
-  // panicking when the font is subset.
+test "glyphs with broken outlines make subsetting fail" {
+  // A loca entry pointing before the glyf table makes the subsetter fail
+  // (like the Rust crate) instead of panicking.
   let data = test_font_data()
   let loca = table_record(data, "loca")
   let loca_at = (data[loca + 8].to_int() << 24) |
@@ -613,7 +717,7 @@ test "glyphs with broken outlines are dropped from the subset" {
         )
       })
     }),
-    content="ok",
+    content="FontError: failed to subset font: malformed font",
   )
 }
 

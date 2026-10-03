@@ -12,7 +12,7 @@ priv struct Writer {
 ///|
 /// Create a new writable stream of binary data.
 fn Writer::new() -> Writer {
-  { buf: @buffer.new(size_hint=1024), failed: false, }
+  { buf: Buffer(size_hint=1024), failed: false, }
 }
 
 ///|
@@ -53,7 +53,7 @@ fn Writer::write_i32(self : Writer, v : Int) -> Unit {
 
 ///|
 /// Give bytes into the writer.
-fn Writer::extend(self : Writer, bytes : BytesView) -> Unit {
+fn Writer::write_bytes(self : Writer, bytes : BytesView) -> Unit {
   self.buf.write_bytesview(bytes)
 }
 

@@ -21,7 +21,7 @@ fn glyf_closure(
   glyph_remapper : GlyphRemapper,
 ) -> Unit raise SubsetError {
   guard GlyfTable::new(face) is Some(table) else { raise MalformedFont }
-  let process_glyphs = glyph_remapper.remapped_gids().to_array()
+  let process_glyphs = glyph_remapper.remapped_gids().to_owned()
   while process_glyphs.pop() is Some(glyph) {
     glyph_remapper.remap(glyph) |> ignore
     guard table.glyph_data(glyph) is Some(glyph_data) else { continue }
@@ -63,7 +63,7 @@ fn glyf_subset(ctx : Context) -> Unit raise SubsetError {
           raise MalformedFont
         }
         hmtx_data.push((advance, lsb))
-        data[:]
+        data
       }
     }
   })
@@ -90,7 +90,7 @@ fn glyf_subset_with(
   }
   for entry in subsetted_entries {
     write_offset(sub_glyf.len())
-    sub_glyf.extend(entry)
+    sub_glyf.write_bytes(entry)
     if !ctx.long_loca {
       sub_glyf.align(2)
     }
@@ -98,8 +98,8 @@ fn glyf_subset_with(
 
   // Write the final offset.
   write_offset(sub_glyf.len())
-  ctx.push(Tag::loca(), sub_loca.finish()[:])
-  ctx.push(Tag::glyf(), sub_glyf.finish()[:])
+  ctx.push(Tag::loca(), sub_loca.finish())
+  ctx.push(Tag::glyf(), sub_glyf.finish())
 }
 
 ///|
@@ -247,7 +247,7 @@ fn remap_component_glyph(
     if done {
       if (flags & we_have_instructions) != 0 {
         guard r.tail() is Some(tail) else { raise MalformedFont }
-        w.extend(tail)
+        w.write_bytes(tail)
       }
       break
     }

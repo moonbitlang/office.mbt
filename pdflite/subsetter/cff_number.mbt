@@ -15,7 +15,7 @@ priv enum Number {
   Integer(Int)
   /// A 16.16 fixed-point number (`FixedNumber`, charstrings only).
   Fixed(Int)
-} derive(Eq)
+}
 
 ///|
 fn Number::from_i32(num : Int) -> Number {

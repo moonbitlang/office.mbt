@@ -13,10 +13,10 @@ fn head_subset(ctx : Context) -> Unit raise SubsetError {
   if head.length() < 52 {
     raise MalformedFont
   }
-  let head = head.to_bytes().to_array()
+  let head = head.to_owned().to_array()
   head[50] = 0
   head[51] = if ctx.long_loca { 1 } else { 0 }
-  ctx.push(Tag::head(), Bytes::from_array(head)[:])
+  ctx.push(Tag::head(), Bytes::from_array(head))
 }
 
 // --- hmtx ---
@@ -62,15 +62,15 @@ fn hmtx_subset(ctx : Context) -> Unit raise SubsetError {
     }
     sub_hmtx.write_i16(metric.1)
   }
-  ctx.push(Tag::hmtx(), sub_hmtx.finish()[:])
+  ctx.push(Tag::hmtx(), sub_hmtx.finish())
   guard ctx.expect_table(Tag::hhea()) is Some(hhea) else { raise MalformedFont }
   if hhea.length() < 2 {
     raise MalformedFont
   }
   let sub_hhea = Writer::new()
-  sub_hhea.extend(hhea[:hhea.length() - 2])
+  sub_hhea.write_bytes(hhea[:hhea.length() - 2])
   sub_hhea.write_u16(last_advance_width_index + 1)
-  ctx.push(Tag::hhea(), sub_hhea.finish()[:])
+  ctx.push(Tag::hhea(), sub_hhea.finish())
 }
 
 ///|
@@ -168,11 +168,11 @@ fn maxp_subset(ctx : Context) -> Unit raise SubsetError {
       }
       None => {
         guard r.tail() is Some(tail) else { raise MalformedFont }
-        sub_maxp.extend(tail)
+        sub_maxp.write_bytes(tail)
       }
     }
   }
-  ctx.push(Tag::maxp(), sub_maxp.finish()[:])
+  ctx.push(Tag::maxp(), sub_maxp.finish())
 }
 
 ///|
@@ -234,7 +234,7 @@ fn name_subset(ctx : Context) -> Unit raise SubsetError {
   }
   let w = Writer::new()
   subsetted_table.write(w)
-  ctx.push(Tag::name(), w.finish()[:])
+  ctx.push(Tag::name(), w.finish())
 }
 
 ///|
@@ -246,18 +246,18 @@ fn name_subset_table(table : NameTable) -> NameTable? {
   let storage = Writer::new()
   // (Release-mode `u16` arithmetic wraps.)
   let mut cur_storage_offset = 0
-  let name_deduplicator : Map[Bytes, Int] = {}
+  let name_deduplicator : Map[Bytes, Int] = Map([])
   for i, record in names {
     let start = record.string_offset
     let end = (record.string_offset + record.length) & 0xFFFF
     if start > end || end > table.storage.length() {
       return None
     }
-    let name = table.storage[start:end].to_bytes()
+    let name = table.storage[start:end].to_owned()
     let offset = match name_deduplicator.get(name) {
       Some(o) => o
       None => {
-        storage.extend(name[:])
+        storage.write_bytes(name)
         let offset = cur_storage_offset
         cur_storage_offset = (cur_storage_offset + record.length) & 0xFFFF
         name_deduplicator[name] = offset
@@ -266,7 +266,7 @@ fn name_subset_table(table : NameTable) -> NameTable? {
     }
     names[i] = { ..record, string_offset: offset, }
   }
-  Some({ names, storage: storage.finish()[:], })
+  Some({ names, storage: storage.finish(), })
 }
 
 ///|
@@ -292,7 +292,7 @@ fn NameTable::write(self : NameTable, w : Writer) -> Unit {
     w.write_u16(name.length)
     w.write_u16(name.string_offset)
   }
-  w.extend(self.storage)
+  w.write_bytes(self.storage)
 }
 
 ///|
@@ -364,7 +364,7 @@ fn post_subset(ctx : Context) -> Unit raise SubsetError {
   guard PostTable::parse(post) is Some(table) else { raise MalformedFont }
   let names = table.names()
   let sub_post = Writer::new()
-  sub_post.extend(table.header)
+  sub_post.write_bytes(table.header)
   sub_post.write_u16(ctx.mapper.num_gids())
   let string_storage = Writer::new()
   let mut string_index = 0
@@ -380,7 +380,7 @@ fn post_subset(ctx : Context) -> Unit raise SubsetError {
       let index = index - 258
       // Phetsarath-Regular.ttf from Google Fonts seems to have a wrong name
       // table. If name cannot be fetched, use empty name instead.
-      let name = if index < names.length() { names[index] } else { b""[:] }
+      let name = if index < names.length() { names[index] } else { b"" }
       let name_len = name.length()
       let index = string_index + 258
       if index > 0xFFFF {
@@ -388,12 +388,12 @@ fn post_subset(ctx : Context) -> Unit raise SubsetError {
       }
       sub_post.write_u16(index)
       string_storage.write_u8(name_len)
-      string_storage.extend(name)
+      string_storage.write_bytes(name)
       string_index += 1
     }
   }
-  sub_post.extend(string_storage.finish()[:])
-  ctx.push(Tag::post(), sub_post.finish()[:])
+  sub_post.write_bytes(string_storage.finish())
+  ctx.push(Tag::post(), sub_post.finish())
 }
 
 ///|

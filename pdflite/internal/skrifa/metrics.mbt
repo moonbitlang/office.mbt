@@ -24,10 +24,10 @@ pub fn GlyphMetrics::new(
     None => 0
   }
   // `LocationRef::effective_coords`
-  let coords = if LocationRef(location.to_array()).is_default() {
+  let coords = if LocationRef(location.to_owned()).is_default() {
     []
   } else {
-    location.to_array()
+    location.to_owned()
   }
   let loca_glyf = match (ok(() => font.loca(None)), ok(() => font.glyf())) {
     (Some(loca), Some(glyf)) => Some((loca, glyf))
@@ -64,9 +64,9 @@ pub fn GlyphMetrics::advance_width(
     Some(hvar) =>
       // FreeType truncates metric deltas...
       advance += match
-        (try? hvar.advance_width_delta(glyph_id, self.coords[:])) {
-        Ok(delta) => trunc_f64_to_i32(delta.to_f64())
-        Err(_) => 0
+        ok(() => hvar.advance_width_delta(glyph_id, self.coords)) {
+        Some(delta) => trunc_f64_to_i32(delta.to_f64())
+        None => 0
       }
     None =>
       if self.gvar is Some(_) {
@@ -120,8 +120,8 @@ fn GlyphMetrics::metric_deltas_from_gvar(
 ) -> (Int, Int)? {
   guard self.loca_glyf is Some((loca, glyf)) else { return None }
   guard self.gvar is Some(gvar) else { return None }
-  guard (try? gvar.phantom_point_deltas(glyf, loca, self.coords[:], glyph_id))
-    is Ok(Some(deltas)) else {
+  guard ok(() => gvar.phantom_point_deltas(glyf, loca, self.coords, glyph_id))
+    is Some(Some(deltas)) else {
     return None
   }
   let d0 = deltas[0].0

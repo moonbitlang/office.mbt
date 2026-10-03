@@ -17,7 +17,6 @@ fn Interjector::is_skrifa(self : Interjector) -> Bool {
 
 ///|
 priv struct SkrifaInterjector {
-  font_ref : @read_fonts.FontRef
   location : Array[@font_types.F2Dot14]
   outlines : @skrifa.OutlineGlyphCollection
   metrics : @skrifa.GlyphMetrics
@@ -29,7 +28,7 @@ fn SkrifaInterjector::new(
   index : Int,
   location : ArrayView[(Tag, Float)],
 ) -> SkrifaInterjector? {
-  let font_ref = @read_fonts.FontRef::from_index(data[:], index) catch {
+  let font_ref = @read_fonts.FontRef::from_index(data, index) catch {
     _ => return None
   }
   let settings = location.map(entry => {
@@ -44,7 +43,6 @@ fn SkrifaInterjector::new(
   })
   let location = @skrifa.axes_location(font_ref, settings)
   Some({
-    font_ref,
     location,
     outlines: @skrifa.OutlineGlyphCollection::new(font_ref),
     metrics: @skrifa.GlyphMetrics::new(font_ref, location),
@@ -67,7 +65,7 @@ fn SkrifaInterjector::interject(
   let outline_builder = OutlinePath::new()
   let glyph_id = @font_types.GlyphId::from_int(glyph)
   if self.outlines.get(glyph_id) is Some(outline_glyph) {
-    let _ = outline_glyph.draw_unscaled(self.location[:], outline_builder) catch {
+    let _ = outline_glyph.draw_unscaled(self.location, outline_builder) catch {
       _ => return None
     }
   }
@@ -241,7 +239,6 @@ priv enum PathEl {
   MoveTo(Point)
   LineTo(Point)
   QuadTo(Point, Point)
-  CurveTo(Point, Point, Point)
   ClosePath
 }
 
@@ -277,11 +274,6 @@ fn BezPath::control_box(self : BezPath) -> (Double, Double, Double, Double) {
       QuadTo(p0, p1) => {
         add(p0)
         add(p1)
-      }
-      CurveTo(p0, p1, p2) => {
-        add(p0)
-        add(p1)
-        add(p2)
       }
       ClosePath => ()
     }
@@ -469,7 +461,6 @@ fn simple_glyph_from_bezpath(path : BezPath) -> SimpleGlyph? {
         c.push({ point: p0, on_curve: false, })
         c.push({ point: p1, on_curve: true, })
       }
-      CurveTo(_, _, _) => return None
       ClosePath => {
         guard current is Some(c) else { return None }
         // remove last point in closed path if has same coords as the move
@@ -729,7 +720,7 @@ fn cff2_subset(ctx : Context) -> Unit raise SubsetError {
           raise MalformedFont
         }
         hmtx_data.push((advance, lsb))
-        data[:]
+        data
       }
     }
   })

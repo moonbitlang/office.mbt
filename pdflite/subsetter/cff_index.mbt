@@ -53,7 +53,7 @@ priv struct Index {
 
 ///|
 fn Index::default() -> Index {
-  { data: b""[:], offsets: { data: b""[:], offset_size: 1, }, }
+  { data: b"", offsets: { data: b"", offset_size: 1, }, }
 }
 
 ///|
@@ -112,7 +112,7 @@ fn parse_index_impl(count : Int, r : Reader) -> Index? {
   guard read_offset_size(r) is Some(offset_size) else { return None }
   let offsets_len = (count + 1) * offset_size
   guard r.read_bytes(offsets_len) is Some(data) else { return None }
-  let offsets = { data, offset_size, }
+  let offsets = VarOffsets::{ data, offset_size, }
   match offsets.last() {
     Some(last_offset) => {
       guard r.read_bytes(last_offset) is Some(data) else { return None }
@@ -132,7 +132,7 @@ fn skip_index(r : Reader) -> Unit? {
   guard read_offset_size(r) is Some(offset_size) else { return None }
   let offsets_len = (count + 1) * offset_size
   guard r.read_bytes(offsets_len) is Some(data) else { return None }
-  let offsets = { data, offset_size, }
+  let offsets = VarOffsets::{ data, offset_size, }
   if offsets.last() is Some(last_offset) {
     r.skip_bytes(last_offset)
   }
@@ -196,7 +196,7 @@ fn create_index(data : Array[BytesView]) -> OwnedIndex raise SubsetError {
   }
   let header_size = w.len()
   for el in data {
-    w.extend(el)
+    w.write_bytes(el)
   }
   { header_size, data: w.finish(), }
 }

@@ -128,16 +128,16 @@ fn prepare_context(
   // do have variations, we use `skrifa` to instance. For CFF2, we _always_
   // use `skrifa` to instance.
   let interjector = if flavor == Cff {
-    Interjector::Dummy
+    Dummy
   } else {
     guard SkrifaInterjector::new(data, index, variation_coordinates)
       is Some(interjector) else {
       raise MalformedFont
     }
     if flavor == TrueType && interjector.is_default_location() {
-      Interjector::Dummy
+      Dummy
     } else {
-      Interjector::Skrifa(interjector)
+      Skrifa(interjector)
     }
   }
   {
@@ -201,12 +201,12 @@ fn subset_context(ctx : Context) -> Bytes raise SubsetError {
 ///|
 /// Parse a font face from OpenType data.
 fn parse(data : Bytes, index : Int) -> Face raise SubsetError {
-  let mut r = Reader::new(data[:])
+  let mut r = Reader::new(data)
   guard read_font_kind(r) is Some(kind) else { raise UnknownKind }
   let mut kind = kind
   // Parse font collection header if necessary.
   if kind == Collection {
-    r = Reader::new_at(data[:], 12 + 4 * index)
+    r = Reader::new_at(data, 12 + 4 * index)
     guard r.read_u32() is Some(offset) else { raise MalformedFont }
     let offset = u32_offset(offset)
     guard offset <= data.length() else { raise MalformedFont }
@@ -278,13 +278,13 @@ fn construct(ctx : Context) -> Bytes {
       }
       checksum_adjustment_offset = Some(offset + 8)
       let zeroed = Bytes::from_array(arr)
-      ctx.tables[i] = (tag, zeroed[:])
+      ctx.tables[i] = (tag, zeroed)
       zeroed[:]
     } else {
       data
     }
     let len = data.length()
-    w.extend(tag.bytes[:])
+    w.write_bytes(tag.bytes)
     w.write_u32(checksum(data))
     w.write_u32(offset.reinterpret_as_uint())
     w.write_u32(len.reinterpret_as_uint())
@@ -299,7 +299,7 @@ fn construct(ctx : Context) -> Bytes {
   // Write tables.
   for entry in ctx.tables {
     // Write data plus padding zeros to align to 4 bytes.
-    w.extend(entry.1)
+    w.write_bytes(entry.1)
     w.align(4)
   }
 
@@ -307,7 +307,7 @@ fn construct(ctx : Context) -> Bytes {
   let data = w.finish()
   match checksum_adjustment_offset {
     Some(i) => {
-      let sum = checksum(data[:])
+      let sum = checksum(data)
       let val = 0xB1B0AFBAU - sum
       let arr = data.to_array()
       arr[i] = (val >> 24).to_byte()
@@ -681,7 +681,6 @@ fn Tag::cff2() -> Tag {
 /// Locates a table in the font file.
 priv struct TableRecord {
   tag : Tag
-  checksum : UInt
   offset : UInt
   length : UInt
 }
@@ -689,8 +688,9 @@ priv struct TableRecord {
 ///|
 fn read_table_record(r : Reader) -> TableRecord? {
   guard r.read_bytes(4) is Some(tag) else { return None }
-  guard r.read_u32() is Some(checksum) else { return None }
+  // (The checksum is not checked.)
+  guard r.read_u32() is Some(_) else { return None }
   guard r.read_u32() is Some(offset) else { return None }
   guard r.read_u32() is Some(length) else { return None }
-  Some({ tag: { bytes: tag.to_bytes(), }, checksum, offset, length, })
+  Some({ tag: { bytes: tag.to_owned(), }, offset, length, })
 }

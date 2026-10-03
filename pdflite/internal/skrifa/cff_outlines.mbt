@@ -91,7 +91,7 @@ fn CffTopDict::new(
 ///|
 fn get_from_or_empty(data : BytesView, offset : Int) -> BytesView {
   if offset < 0 || offset > data.length() {
-    b""[:]
+    b""
   } else {
     data[offset:]
   }

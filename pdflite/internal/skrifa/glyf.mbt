@@ -17,7 +17,6 @@ const MAX_POINTS : Int = 65535
 pub struct GlyfOutlines {
   font : FontRef
   priv hmtx : @read_fonts.Hmtx
-  priv hvar : @read_fonts.Hvar?
   priv loca : @read_fonts.Loca
   priv glyf : @read_fonts.Glyf
   priv gvar : @read_fonts.Gvar?
@@ -79,11 +78,11 @@ pub fn GlyfOutlines::new(font : FontRef) -> GlyfOutlines? {
   }
   let fpgm = match font.data_for_tag("fpgm") {
     Some(d) => d.as_bytes()
-    None => b""[:]
+    None => b""
   }
   let prep = match font.data_for_tag("prep") {
     Some(d) => d.as_bytes()
-    None => b""[:]
+    None => b""
   }
   // Copy FreeType's logic on whether to use the interpreter
   let prefer_interpreter = !(max_instructions == 0 &&
@@ -96,7 +95,6 @@ pub fn GlyfOutlines::new(font : FontRef) -> GlyfOutlines? {
   Some({
     font,
     hmtx,
-    hvar: ok(() => font.hvar()),
     loca,
     gvar: ok(() => font.gvar()),
     glyf,
@@ -402,7 +400,6 @@ priv struct ScaledOutline {
   flags : ArrayView[Int]
   contours : ArrayView[Int]
   phantom_x : FixedArray[Int]
-  phantom_y : FixedArray[Int]
 }
 
 ///|
@@ -426,7 +423,6 @@ fn FreeTypeScaler::scale(
     flags: self.memory.flags[0:n],
     contours: self.memory.contours[0:self.contour_count],
     phantom_x: self.phantom_x,
-    phantom_y: self.phantom_y,
   }
 }
 
@@ -488,17 +484,19 @@ fn FreeTypeScaler::load(
 fn FreeTypeScaler::load_empty(
   self : FreeTypeScaler,
   glyph_id : GlyphId,
-) -> Unit raise DrawError {
+) -> Unit {
   // Roughly corresponds to the FreeType code for empty glyphs.
   if self.has_variations() {
     let gvar = self.outlines.gvar.unwrap()
-    let deltas = try? gvar.phantom_point_deltas(
-      self.outlines.glyf,
-      self.outlines.loca,
-      self.coords,
-      glyph_id,
-    )
-    if deltas is Ok(Some(deltas)) {
+    let deltas = ok(() => {
+      gvar.phantom_point_deltas(
+        self.outlines.glyf,
+        self.outlines.loca,
+        self.coords,
+        glyph_id,
+      )
+    })
+    if deltas is Some(Some(deltas)) {
       for i in 0..<2 {
         let (dx, dy) = deltas[i]
         self.phantom_x[i] = self.phantom_x[i] + Fixed::from_bits(dx).to_i32()
@@ -834,7 +832,7 @@ fn simple_glyph_deltas(
   }
   // Empty variation data for a glyph is not an error (upstream returns
   // early without clearing the delta buffer).
-  guard (try? gvar.glyph_variation_data(glyph_id.to_u32())) is Ok(var_data) else {
+  guard ok(() => gvar.glyph_variation_data(glyph_id.to_u32())) is Some(var_data) else {
     return true
   }
   for i in 0..<n {
@@ -843,30 +841,32 @@ fn simple_glyph_deltas(
   }
   guard var_data is Some(var_data) else { return true }
   let flags = FixedArray::makei(n, i => mem.flags[flags_base + i])
-  let result = try? (for entry in var_data.active_tuples_at(coords) {
-    let (tuple, scalar) = entry
-    // Fast path: tuple contains all points, we can simply accumulate the
-    // deltas directly.
-    if tuple.has_deltas_for_all_points() {
-      tuple.accumulate_dense_deltas(mem.deltas_x, mem.deltas_y, n, scalar)
-    } else {
-      // Infer missing deltas by interpolation. Prepare our working
-      // buffer by converting the points to 16.16 and clearing the
-      // HAS_DELTA flags.
-      for i in 0..<n {
-        mem.iup_x[i] = Fixed::from_i32(mem.unscaled_x[i]).to_bits()
-        mem.iup_y[i] = Fixed::from_i32(mem.unscaled_y[i]).to_bits()
-        flags[i] = flags[i] & 0xFB
-      }
-      tuple.accumulate_sparse_deltas(mem.iup_x, mem.iup_y, flags, n, scalar)
-      guard interpolate_deltas(mem, n, flags, contours) else {
-        raise @read_fonts.ReadError::OutOfBounds
-      }
-      for i in 0..<n {
-        mem.deltas_x[i] = mem.deltas_x[i] +
-          (mem.iup_x[i] - Fixed::from_i32(mem.unscaled_x[i]).to_bits())
-        mem.deltas_y[i] = mem.deltas_y[i] +
-          (mem.iup_y[i] - Fixed::from_i32(mem.unscaled_y[i]).to_bits())
+  let result = ok(() => {
+    for entry in var_data.active_tuples_at(coords) {
+      let (tuple, scalar) = entry
+      // Fast path: tuple contains all points, we can simply accumulate the
+      // deltas directly.
+      if tuple.has_deltas_for_all_points() {
+        tuple.accumulate_dense_deltas(mem.deltas_x, mem.deltas_y, n, scalar)
+      } else {
+        // Infer missing deltas by interpolation. Prepare our working
+        // buffer by converting the points to 16.16 and clearing the
+        // HAS_DELTA flags.
+        for i in 0..<n {
+          mem.iup_x[i] = Fixed::from_i32(mem.unscaled_x[i]).to_bits()
+          mem.iup_y[i] = Fixed::from_i32(mem.unscaled_y[i]).to_bits()
+          flags[i] = flags[i] & 0xFB
+        }
+        tuple.accumulate_sparse_deltas(mem.iup_x, mem.iup_y, flags, n, scalar)
+        guard interpolate_deltas(mem, n, flags, contours) else {
+          raise @read_fonts.ReadError::OutOfBounds
+        }
+        for i in 0..<n {
+          mem.deltas_x[i] = mem.deltas_x[i] +
+            (mem.iup_x[i] - Fixed::from_i32(mem.unscaled_x[i]).to_bits())
+          mem.deltas_y[i] = mem.deltas_y[i] +
+            (mem.iup_y[i] - Fixed::from_i32(mem.unscaled_y[i]).to_bits())
+        }
       }
     }
   })
@@ -874,7 +874,7 @@ fn simple_glyph_deltas(
   for i in 0..<n {
     mem.flags[flags_base + i] = flags[i]
   }
-  result is Ok(_)
+  result is Some(_)
 }
 
 ///|
@@ -893,11 +893,11 @@ fn composite_glyph_deltas(
     mem.composite_deltas_y[base + i] = 0
   }
   // Errors when reading the variation data are ignored (zero deltas).
-  guard (try? gvar.glyph_variation_data(glyph_id.to_u32()))
-    is Ok(Some(var_data)) else {
+  guard ok(() => gvar.glyph_variation_data(glyph_id.to_u32()))
+    is Some(Some(var_data)) else {
     return true
   }
-  let result = try? ({
+  let result = ok(() => {
     let xs = FixedArray::make(count, 0)
     let ys = FixedArray::make(count, 0)
     for entry in var_data.active_tuples_at(coords) {
@@ -920,7 +920,7 @@ fn composite_glyph_deltas(
       mem.composite_deltas_y[base + i] = ys[i]
     }
   })
-  result is Ok(_)
+  result is Some(_)
 }
 
 ///|

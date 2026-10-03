@@ -345,9 +345,7 @@ fn tuple_get(t : FontData, i : Int) -> F2Dot14 {
 ///|
 /// A single set of tuple variation data.
 pub struct TupleVariation {
-  priv axis_count : Int
   priv header : TupleVariationHeader
-  priv shared_tuples : FontData
   priv serialized_data : FontData
   priv shared_point_numbers : FontData?
 }
@@ -381,9 +379,7 @@ pub fn GlyphVariationData::active_tuples_at(
       out.push(
         (
           {
-            axis_count: self.axis_count,
             header,
-            shared_tuples: self.shared_tuples,
             serialized_data: var_data,
             shared_point_numbers: self.shared_point_numbers,
           },

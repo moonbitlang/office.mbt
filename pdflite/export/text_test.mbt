@@ -65,20 +65,20 @@ test "a glyph run embeds a Type0 font with a CIDFontType2 descendant" {
   inspect(
     p.show(f0),
     content=(
-      #|<</Type /Font /Subtype /Type0 /BaseFont /BKEBSU+TestSans-Bold /Encoding /Identity-H /DescendantFonts [R] /ToUnicode R>>
+      #|<</Type /Font /Subtype /Type0 /BaseFont /ZMYWSZ+TestSans-Bold /Encoding /Identity-H /DescendantFonts [R] /ToUnicode R>>
     ),
   )
   let cid = p.items(p.get(f0, "DescendantFonts"))[0]
   inspect(
     p.show(cid),
     content=(
-      #|<</Type /Font /Subtype /CIDFontType2 /BaseFont /BKEBSU+TestSans-Bold /CIDSystemInfo <</Registry (Adobe) /Ordering (Identity) /Supplement 0>> /FontDescriptor R /DW 0 /CIDToGIDMap /Identity /W [0 [500] 1 [600] 2 [550]]>>
+      #|<</Type /Font /Subtype /CIDFontType2 /BaseFont /ZMYWSZ+TestSans-Bold /CIDSystemInfo <</Registry (Adobe) /Ordering (Identity) /Supplement 0>> /FontDescriptor R /DW 0 /CIDToGIDMap /Identity /W [0 0 500 1 1 600 2 2 550]>>
     ),
   )
   inspect(
     p.show(p.get(cid, "FontDescriptor")),
     content=(
-      #|<</Type /FontDescriptor /FontName /BKEBSU+TestSans-Bold /Flags 131076 /FontBBox [0 -100 600 700] /ItalicAngle 0 /Ascent 900 /Descent -250 /CapHeight 680 /StemV 168.6 /FontFile2 R>>
+      #|<</Type /FontDescriptor /FontName /ZMYWSZ+TestSans-Bold /Flags 131076 /FontBBox [0 -100 600 700] /ItalicAngle 0 /Ascent 800 /Descent -200 /CapHeight 680 /StemV 168.6 /CIDSet R /FontFile2 R>>
     ),
   )
   let cmap = latin1(p.stream_data(p.get(f0, "ToUnicode")))
@@ -96,42 +96,51 @@ test "a glyph run embeds a Type0 font with a CIDFontType2 descendant" {
 }
 
 ///|
-test "the embedded TrueType font is subset by glyph ID" {
+test "the embedded TrueType font is subset with new glyph IDs" {
   let font = test_font()
-  // Glyph 3 is a composite of glyph 1: both are kept.
+  // Glyph 3 is a composite of glyph 1: both are kept. The CIDs are the new
+  // glyph IDs in the order of first use (3 -> 1, 2 -> 2), the component is
+  // added last (1 -> 3) by the subsetter.
   let p = parse(text_page(font, [glyph(3, 0, 1), glyph(2, 1, 2)], "ÄB"))
+  inspect(contains(p.content(p.page(0)), "[<00010002>] TJ"), content="true")
   let f0 = p.font0()
   let cid = p.items(p.get(f0, "DescendantFonts"))[0]
-  // Widths of all kept glyphs, including .notdef.
+  // Widths of the used glyphs by CID, including .notdef.
   inspect(
     p.show(p.get(cid, "W")),
     content=(
-      #|[0 [500] 1 [600] 2 [550] 3 [600]]
+      #|[0 0 500 1 1 600 2 2 550]
     ),
   )
   let file = p.path(cid, ["FontDescriptor", "FontFile2"])
+  // No /Length1 (like krilla).
+  inspect(p.has(file, "Length1"), content="false")
   let subset = @export.Font::new(p.stream_data(file), 0).unwrap()
-  inspect(subset.num_glyphs, content="6")
-  // Re-embedding the subset shows which glyphs still have outlines: the
-  // bounding boxes of glyphs 4 (no outline) and 5 (dropped) are gone.
-  let p2 = parse(
-    text_page(subset, [0, 1, 2, 3, 4, 5].map(g => glyph(g, 0, 1)), "x"),
+  inspect(subset.num_glyphs, content="4")
+  debug_inspect(
+    [0, 1, 2, 3].map(g => subset.advance_width(g)),
+    content=(
+      #|[Some(500), Some(600), Some(550), Some(600)]
+    ),
   )
-  let cid2 = p2.items(p2.get(p2.font0(), "DescendantFonts"))[0]
+  // The font bounding box is the union of the outlines of the subset.
   inspect(
-    p2.show(p2.path(cid2, ["FontDescriptor", "FontBBox"])),
+    p.show(p.path(cid, ["FontDescriptor", "FontBBox"])),
     content=(
       #|[0 -100 600 900]
     ),
   )
-  // The subset keeps the tables needed for rendering, with a long loca.
+  // The CIDSet has the 4 glyphs of the subset.
+  let cid_set = p.path(cid, ["FontDescriptor", "CIDSet"])
+  inspect(p.stream_data(cid_set) == b"\xF0", content="true")
+  // The subset keeps the tables needed for rendering (the cmap, OS/2 and
+  // others are dropped).
   debug_inspect(
-    ["OS/2", "glyf", "head", "hhea", "hmtx", "loca", "maxp", "name", "post"].map(t => {
-        subset.has_table(t)
-      },
-    ),
+    [
+      "OS/2", "cmap", "glyf", "head", "hhea", "hmtx", "loca", "maxp", "name", "post",
+    ].map(t => subset.has_table(t)),
     content=(
-      #|[true, true, true, true, true, true, true, false, false]
+      #|[false, false, true, true, true, true, true, true, true, true]
     ),
   )
 }
@@ -220,7 +229,7 @@ test "glyph clusters and conflicting mappings use ActualText spans" {
       #|0 Tr
       #|/f0 10 Tf
       #|1 0 0 -1 21.5 50 Tm
-      #|<0004> Tj
+      #|<0003> Tj
       #|ET
       #|Q
       #|
@@ -234,7 +243,7 @@ test "glyph clusters and conflicting mappings use ActualText spans" {
     content=(
       #|2 beginbfchar
       #|<0001> <006600660069>
-      #|<0004> <0020>
+      #|<0003> <0020>
       #|endbfchar
       #|
     ),
@@ -305,7 +314,7 @@ test "right-to-left runs are marked as reversed chars" {
       #|0 Tr
       #|/f0 10 Tf
       #|1 0 0 -1 10 50 Tm
-      #|[<00020001>] TJ
+      #|[<00010002>] TJ
       #|EMC
       #|ET
       #|Q
@@ -447,14 +456,14 @@ test "name-keyed CFF fonts are embedded as converted CID-keyed CFF programs" {
   inspect(
     p.show(f0),
     content=(
-      #|<</Type /Font /Subtype /Type0 /BaseFont /BZDIMV+TestSans-Bold-Identity-H /Encoding /Identity-H /DescendantFonts [R] /ToUnicode R>>
+      #|<</Type /Font /Subtype /Type0 /BaseFont /OMMPIC+TestSans-Bold-Identity-H /Encoding /Identity-H /DescendantFonts [R] /ToUnicode R>>
     ),
   )
   let cid = p.items(p.get(f0, "DescendantFonts"))[0]
   inspect(
     p.show(cid),
     content=(
-      #|<</Type /Font /Subtype /CIDFontType0 /BaseFont /BZDIMV+TestSans-Bold /CIDSystemInfo <</Registry (Adobe) /Ordering (Identity) /Supplement 0>> /FontDescriptor R /DW 0 /W [0 [500] 1 [600]]>>
+      #|<</Type /Font /Subtype /CIDFontType0 /BaseFont /OMMPIC+TestSans-Bold /CIDSystemInfo <</Registry (Adobe) /Ordering (Identity) /Supplement 0>> /FontDescriptor R /DW 0 /W [0 0 500 1 1 600]>>
     ),
   )
   // CIDs are glyph IDs.
@@ -660,20 +669,21 @@ test "Type 3 fonts are only described in PDF 1.5 and later" {
 }
 
 ///|
-test "CID-keyed CFF fonts address glyphs by the CIDs of their charset" {
-  // The charset maps glyphs 1, 2, ... to CIDs 100, 101, ...
+test "CID-keyed CFF fonts are subset with identity CIDs" {
+  // The charset of the font maps glyphs 1, 2, ... to CIDs 100, 101, ...,
+  // the subset's charset is the identity.
   let data = test_font_data(outlines="cid-cff")
   let font = @export.Font::new(data, 0).unwrap()
-  let p = parse(text_page(font, [glyph(1, 0, 1), glyph(2, 1, 2)], "AB"))
-  // The codes in the content stream are CIDs (0x64 = 100) ...
-  inspect(contains(p.content(p.page(0)), "[<00640065>] TJ"), content="true")
+  let p = parse(text_page(font, [glyph(2, 0, 1), glyph(1, 1, 2)], "BA"))
+  // The codes in the content stream are the new glyph IDs ...
+  inspect(contains(p.content(p.page(0)), "[<00010002>] TJ"), content="true")
   let f0 = p.font0()
   let cid = p.items(p.get(f0, "DescendantFonts"))[0]
   // ... as are the widths ...
   inspect(
     p.show(p.get(cid, "W")),
     content=(
-      #|[0 [500] 100 [600] 101 [550]]
+      #|[0 0 500 1 1 550 2 2 600]
     ),
   )
   inspect(p.has(cid, "CIDToGIDMap"), content="false")
@@ -683,20 +693,17 @@ test "CID-keyed CFF fonts address glyphs by the CIDs of their charset" {
     cmap_body(cmap),
     content=(
       #|2 beginbfchar
-      #|<0064> <0041>
-      #|<0065> <0042>
+      #|<0001> <0042>
+      #|<0002> <0041>
       #|endbfchar
       #|
     ),
   )
-  // The bare CFF program is embedded (like krilla does after subsetting).
+  // The bare CFF program of the subset is embedded.
   let file = p.path(cid, ["FontDescriptor", "FontFile3"])
   inspect(p.show(p.get(file, "Subtype")), content="/CIDFontType0C")
-  let cff = cff_table(6, true)
-  inspect(
-    p.stream_data(file) == Bytes::from_array(cff.map(b => b.to_byte())),
-    content="true",
-  )
+  let cff = p.stream_data(file)
+  inspect(cff[0:4] == b"\x01\x00\x04\x04", content="true")
   // CID-keyed CFF fonts work in PDF 1.4.
   inspect(
     export_result(() => {
@@ -712,16 +719,32 @@ test "CID-keyed CFF fonts address glyphs by the CIDs of their charset" {
 }
 
 ///|
-test "CFF2 fonts and malformed CFF tables" {
-  // CFF2 fonts can't be converted (krilla's subsetter does): they are
-  // embedded as OpenType font programs.
+test "CFF2 fonts are converted to TrueType and malformed CFF tables" {
+  // The subsetter converts CFF2 fonts to TrueType fonts (/FontFile2).
   let cff2 = test_font(outlines="cff2")
   debug_inspect(cff2.kind, content="Cff2")
   let p = parse(text_page(cff2, [glyph(1, 0, 1)], "A"))
-  let cid = p.items(p.get(p.font0(), "DescendantFonts"))[0]
-  let file = p.path(cid, ["FontDescriptor", "FontFile3"])
-  inspect(p.show(p.get(file, "Subtype")), content="/OpenType")
-  // A name-keyed CFF font without a Private DICT can't be converted.
+  let f0 = p.font0()
+  inspect(
+    p.show(p.get(f0, "BaseFont")).has_suffix("-Identity-H"),
+    content="false",
+  )
+  let cid = p.items(p.get(f0, "DescendantFonts"))[0]
+  inspect(p.show(p.get(cid, "Subtype")), content="/CIDFontType2")
+  let file = p.path(cid, ["FontDescriptor", "FontFile2"])
+  let subset = @export.Font::new(p.stream_data(file), 0).unwrap()
+  debug_inspect(subset.kind, content="Glyf")
+  inspect(
+    p.show(p.path(cid, ["FontDescriptor", "FontBBox"])),
+    content=(
+      #|[0 0 600 700]
+    ),
+  )
+  // A CFF table in a CFF2 font has no outlines.
+  let bad = test_font(outlines="bad-cff2")
+  debug_inspect(bad.kind, content="NoOutlines")
+  // A name-keyed CFF font without a Private DICT is subset with an empty
+  // one.
   let data = test_font_data(outlines="cff")
   let cff = table_record(data, "CFF ")
   let cff_at = (data[cff + 8].to_int() << 24) |
@@ -733,32 +756,18 @@ test "CFF2 fonts and malformed CFF tables" {
   let no_private = @export.Font::new(patch(data, top_end, [13]), 0).unwrap()
   inspect(
     export_result(() => text_page(no_private, [glyph(1, 0, 1)], "A")),
-    content=(
-      #|FontError: failed to subset font: malformed font
-    ),
+    content="ok",
   )
-  // A malformed CFF table is rejected.
+  // A font with a malformed CFF table has no outlines (like krilla, which
+  // checks that the CFF table can be read).
   let data = test_font_data(outlines="cff")
   let rec = table_record(data, "CFF ")
   let at = (data[rec + 8].to_int() << 24) |
     (data[rec + 9].to_int() << 16) |
     (data[rec + 10].to_int() << 8) |
     data[rec + 11].to_int()
-  inspect(
-    @export.Font::new(patch(data, at + 4, [0xFF, 0xFF, 9]), 0) is None,
-    content="true",
-  )
-}
-
-///|
-test "TrueType font programs have a Length1" {
-  let p = parse(text_page(test_font(), [glyph(1, 0, 1)], "A"))
-  let cid = p.items(p.get(p.font0(), "DescendantFonts"))[0]
-  let file = p.path(cid, ["FontDescriptor", "FontFile2"])
-  inspect(
-    p.show(p.get(file, "Length1")) == p.stream_data(file).length().to_string(),
-    content="true",
-  )
+  let malformed = @export.Font::new(patch(data, at + 4, [0xFF, 0xFF, 9]), 0)
+  debug_inspect(malformed.map(f => f.kind), content="Some(NoOutlines)")
 }
 
 ///|
@@ -831,7 +840,7 @@ test "cluster ranges outside the text are clamped" {
       #|0 Tr
       #|/f0 10 Tf
       #|1 0 0 -1 10 50 Tm
-      #|[<00020001>] TJ
+      #|[<00010002>] TJ
       #|EMC
       #|EMC
       #|ET

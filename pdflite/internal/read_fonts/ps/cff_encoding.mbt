@@ -69,7 +69,7 @@ pub fn CustomEncoding::new(data : BytesView) -> CustomEncoding raise PsError {
       let count = cursor.read_u8()
       cursor.read_array(count, 3)
     } else {
-      b""[:]
+      b""
     }
   }
   let format = header & 0x7F

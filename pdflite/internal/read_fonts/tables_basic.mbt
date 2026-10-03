@@ -354,6 +354,12 @@ pub fn Os2::us_width_class(self : Os2) -> Int {
 }
 
 ///|
+/// The embedding licensing rights (`fsType`).
+pub fn Os2::fs_type(self : Os2) -> Int {
+  u16_at(self.data, 8)
+}
+
+///|
 pub fn Os2::y_strikeout_size(self : Os2) -> Int {
   i16_at(self.data, 26)
 }

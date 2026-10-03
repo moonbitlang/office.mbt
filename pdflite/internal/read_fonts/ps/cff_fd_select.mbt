@@ -23,7 +23,7 @@ pub fn FdSelect::read(data : BytesView) -> FdSelect raise PsError {
         raise oob()
       }
       let n_ranges = read_u16_at(data, 1)
-      Format3(get_range(data, 3, 3 + n_ranges * 3).unwrap_or(b""[:]))
+      Format3(get_range(data, 3, 3 + n_ranges * 3).unwrap_or(b""))
     }
     4 => {
       if data.length() < 9 {
@@ -32,9 +32,9 @@ pub fn FdSelect::read(data : BytesView) -> FdSelect raise PsError {
       let n_ranges = read_u32_at(data, 1)
       let len = n_ranges.to_int64() * 6L
       if n_ranges < 0 || len > 2147483647L {
-        Format4(b""[:])
+        Format4(b"")
       } else {
-        Format4(get_range(data, 5, 5 + len.to_int()).unwrap_or(b""[:]))
+        Format4(get_range(data, 5, 5 + len.to_int()).unwrap_or(b""))
       }
     }
     other => raise Read(@read_fonts.ReadError::InvalidFormat(other.to_int64()))

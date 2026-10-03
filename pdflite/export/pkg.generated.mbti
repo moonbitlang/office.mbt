@@ -3,6 +3,7 @@ package "moonbitlang/pdflite/export"
 
 import {
   "moonbitlang/core/debug",
+  "moonbitlang/pdflite/subsetter",
 }
 
 // Values
@@ -241,7 +242,9 @@ pub struct Font {
 pub fn Font::advance_width(Self, Int) -> Double?
 pub fn Font::has_table(Self, String) -> Bool
 pub fn Font::new(Bytes, Int, key? : String) -> Self?
+pub fn Font::new_variable(Bytes, Int, ArrayView[(@subsetter.Tag, Float)], key? : String) -> Self?
 pub fn Font::set_color_glyphs(Self, ColorGlyphs) -> Unit
+pub fn Font::variation_coordinates(Self) -> ArrayView[(@subsetter.Tag, Float)]
 
 pub(all) struct Glyph {
   glyph_id : Int

@@ -151,15 +151,15 @@ fn cff_subset(ctx : Context) -> Unit raise SubsetError {
   w.write_u8(4)
   w.write_u8(4)
   // Name INDEX
-  w.extend(table.names)
+  w.write_bytes(table.names)
   // Top DICT INDEX
   rewrite_top_dict_index(table.top_dict_data, offsets, sid_remapper, w)
   // String INDEX
   let index = create_index(sid_remapper.sorted_strings())
-  w.extend(index.data[:])
+  w.write_bytes(index.data)
   // Global Subr INDEX
   // We desubroutinized, so no global subroutines and thus empty index.
-  w.extend(OwnedIndex::default().data[:])
+  w.write_bytes(OwnedIndex::default().data)
 
   // Charsets
   offsets.charset_offset.update_value(w.len())
@@ -198,7 +198,7 @@ fn cff_subset(ctx : Context) -> Unit raise SubsetError {
 
   // Charstrings INDEX
   offsets.char_strings_offset.update_value(w.len())
-  w.extend(create_index(char_strings.map(b => b[:])).data[:])
+  w.write_bytes(create_index(char_strings.map(b => b)).data)
   if w.failed {
     // (Upstream panics when writing a non-finite real number.)
     raise SubsetError
@@ -207,7 +207,7 @@ fn cff_subset(ctx : Context) -> Unit raise SubsetError {
 
   // Rewrite the dummy offsets.
   update_offsets(offsets, subsetted_font)
-  ctx.push(Tag::cff(), Bytes::from_iter(subsetted_font.iter())[:])
+  ctx.push(Tag::cff(), Bytes::from_iter(subsetted_font.iter()))
 }
 
 ///|
@@ -244,7 +244,7 @@ fn subset_charstrings(
       })
     Sid(sid) => [SubroutineHandler::new(sid.local_subrs.items())]
   }
-  let used_fds : Map[Int, Unit] = {}
+  let used_fds : Map[Int, Unit] = Map([])
   let char_strings = []
   for old_gid in remapper.remapped_gids() {
     let fd_index = match table.font_kind {
@@ -284,7 +284,7 @@ fn get_sid_remapper(table : CffTable, fd_remapper : Remapper) -> SidRemapper? {
     } else {
       match table.strings.get(sid - STANDARD_STRING_LEN) {
         Some(string) => {
-          sid_remapper.remap_with_old_sid(sid, string.to_bytes()) |> ignore
+          sid_remapper.remap_with_old_sid(sid, string.to_owned()) |> ignore
           Some(())
         }
         None => None
@@ -430,7 +430,7 @@ fn SidRemapper::remap_with_old_sid(
 ///|
 /// The strings, ordered by their new SID.
 fn SidRemapper::sorted_strings(self : SidRemapper) -> Array[BytesView] {
-  self.strings.map(s => s[:])
+  self.strings.map(s => s)
 }
 
 // --- charset ---
@@ -458,7 +458,6 @@ fn rewrite_charset(gid_mapper : GlyphRemapper, w : Writer) -> Unit {
 
 ///|
 priv struct TopDictData {
-  mut charset : Int?
   mut char_strings : Int?
   mut private : (Int, Int)?
   mut fd_array : Int?
@@ -473,8 +472,7 @@ priv struct TopDictData {
 
 ///|
 fn parse_top_dict_index(r : Reader) -> TopDictData? {
-  let top_dict : TopDictData = {
-    charset: None,
+  let top_dict = TopDictData::{
     char_strings: None,
     private: None,
     fd_array: None,
@@ -503,8 +501,8 @@ fn parse_top_dict_index(r : Reader) -> TopDictData? {
       guard dict_parser.parse_sid() is Some(v) else { return None }
       top_dict.font_name = Some(v)
     } else if operator == op_charset {
-      guard dict_parser.parse_offset() is Some(v) else { return None }
-      top_dict.charset = Some(v)
+      // (Only validated: the charset is rewritten.)
+      guard dict_parser.parse_offset() is Some(_) else { return None }
     } else if operator == op_encoding {
       // We don't care about encoding since we convert to CID-keyed font
       // anyway.
@@ -643,7 +641,7 @@ fn rewrite_top_dict_index(
   let finished = sub_w.finish()
 
   // TOP DICT INDEX always has size 1 in CFF.
-  let index = create_index([finished[:]])
+  let index = create_index([finished])
 
   // The offsets we calculated before were calculated under the assumption
   // that the contents of sub_w will be appended directly to w. However, when
@@ -654,7 +652,7 @@ fn rewrite_top_dict_index(
   offsets.char_strings_offset.adjust_location(index.header_size)
   offsets.fd_array_offset.adjust_location(index.header_size)
   offsets.fd_select_offset.adjust_location(index.header_size)
-  w.extend(index.data[:])
+  w.write_bytes(index.data)
 }
 
 // --- font dict ---
@@ -677,9 +675,9 @@ fn parse_font_dict(
   font_data : BytesView,
   font_dict_data : BytesView,
 ) -> FontDict? {
-  let font_dict : FontDict = {
+  let font_dict = FontDict::{
     local_subrs: Index::default(),
-    private_dict: b""[:],
+    private_dict: b"",
     font_name: None,
     font_matrix: None,
   }
@@ -777,7 +775,7 @@ fn rewrite_font_dict_index(
     }
     dicts.push(w.finish()[:])
   }
-  w.extend(create_index(dicts).data[:])
+  w.write_bytes(create_index(dicts).data)
 }
 
 ///|
@@ -804,7 +802,7 @@ fn generate_font_dict_index(
   write_integer_5_bytes(offsets.private_dicts_lens[0].value, sub_w)
   write_integer_5_bytes(offsets.private_dicts_offsets[0].value, sub_w)
   op_private.write(sub_w)
-  w.extend(create_index([sub_w.finish()[:]]).data[:])
+  w.write_bytes(create_index([sub_w.finish()]).data)
 }
 
 // --- private dict ---
@@ -873,7 +871,7 @@ fn rewrite_private_dict(
   }
   offsets.private_dicts_lens[dict_index].update_value(private_dict_len)
   offsets.private_dicts_offsets[dict_index].update_value(private_dict_offset)
-  w.extend(private_dict_data[:])
+  w.write_bytes(private_dict_data)
 }
 
 // --- CID fonts ---
@@ -882,7 +880,6 @@ fn rewrite_private_dict(
 /// Metadata necessary for processing CID-keyed fonts.
 priv struct CIDMetadata {
   font_dicts : Array[FontDict]
-  fd_array : Index
   fd_select : FDSelect
 }
 
@@ -916,7 +913,7 @@ fn parse_cid_metadata(
     }
     font_dicts.push(font_dict)
   }
-  Some({ font_dicts, fd_array, fd_select, })
+  Some({ font_dicts, fd_select, })
 }
 
 ///|
@@ -1004,9 +1001,9 @@ priv struct SIDMetadata {
 
 ///|
 fn parse_sid_metadata(data : BytesView, top_dict : TopDictData) -> SIDMetadata {
-  let default : SIDMetadata = {
+  let default = SIDMetadata::{
     local_subrs: Index::default(),
-    private_dict_data: b""[:],
+    private_dict_data: b"",
   }
   guard top_dict.private is Some((start, end)) else { return default }
   guard start <= end && end <= data.length() else { return default }
