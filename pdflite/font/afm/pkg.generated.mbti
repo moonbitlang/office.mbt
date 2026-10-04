@@ -13,6 +13,8 @@ pub fn pdf_afm_view_equals(BytesView, BytesView) -> Bool
 
 pub fn pdf_read_afm(BytesView) -> PdfAfmData raise @core.PdfError
 
+pub fn pdf_read_afm_kern_pairs(BytesView) -> Array[(Bytes, Bytes, Int)] raise @core.PdfError
+
 // Errors
 
 // Types and methods

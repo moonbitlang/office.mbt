@@ -93,3 +93,12 @@ pub fn pdf_standard_font_substitute_font_name(font : PdfStandardFont) -> String 
     font.to_standard14_data_font(),
   )
 }
+
+///|
+/// The kerning pairs of this standard font by glyph name, unencoded glyphs
+/// included (see `@standard14.PdfStandardFont::kern_pairs_by_name`).
+pub fn PdfStandardFont::kern_pairs_by_name(
+  self : PdfStandardFont,
+) -> Array[(String, String, Int)] {
+  self.to_standard14_data_font().kern_pairs_by_name()
+}

@@ -239,3 +239,40 @@ pub fn pdf_read_afm(data : BytesView) -> PdfAfmData raise PdfError {
   }
   { headers, char_metrics, kerns, char_name_widths, }
 }
+
+///|
+/// Parses every kerning pair of Adobe Font Metrics data by glyph name:
+/// `(left, right, adjustment)` for each `KPX` line, in file order.
+///
+/// Unlike `PdfAfmData::kerns`, which keeps pairs between glyphs with a
+/// character code, this keeps pairs involving unencoded glyphs (`C -1`),
+/// such as the accented letters of the standard fonts, which a caller
+/// re-encoding text (WinAnsi, say) needs. Raises `PdfError::AfmExpected` or
+/// `PdfError::NumberExpected` for a malformed pair line.
+pub fn pdf_read_afm_kern_pairs(
+  data : BytesView,
+) -> Array[(PdfBytes, PdfBytes, Int)] raise PdfError {
+  let lines = @core.byte_cursor_of_view(data).read_line_views()
+  let kern_lines = pdf_afm_section_lines(
+    lines, "StartKernPairs", "EndKernPairs",
+  )
+  let pairs : Array[(PdfBytes, PdfBytes, Int)] = Array(
+    capacity=kern_lines.length(),
+  )
+  for line in kern_lines {
+    if pdf_afm_trim_line_end(line).length() >= 5 {
+      let tokens = @core.pdf_split_whitespace_tokens(line)
+      if tokens.length() < 4 || !pdf_afm_view_equals_ascii(tokens[0], "KPX") {
+        raise AfmExpected
+      }
+      pairs.push(
+        (
+          tokens[1].to_owned(),
+          tokens[2].to_owned(),
+          pdf_afm_parse_int(tokens[3]),
+        ),
+      )
+    }
+  }
+  pairs
+}
