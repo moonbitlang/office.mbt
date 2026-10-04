@@ -34,6 +34,40 @@ pub(all) struct Glyph {
 }
 
 ///|
+/// A mapping from dense, non-negative codes (CIDs or Type 3 codes) to their
+/// string in the original text and the location of the glyph, indexed
+/// directly by code.
+priv struct CmapEntries {
+  entries : Array[(String, Location?)?]
+}
+
+///|
+fn CmapEntries::new() -> CmapEntries {
+  { entries: [], }
+}
+
+///|
+fn CmapEntries::get(self : CmapEntries, code : Int) -> (String, Location?)? {
+  if code >= 0 && code < self.entries.length() {
+    self.entries[code]
+  } else {
+    None
+  }
+}
+
+///|
+fn CmapEntries::set(
+  self : CmapEntries,
+  code : Int,
+  entry : (String, Location?),
+) -> Unit {
+  while self.entries.length() <= code {
+    self.entries.push(None)
+  }
+  self.entries[code] = Some(entry)
+}
+
+///|
 /// A CID-keyed font.
 priv struct CIDFont {
   /// The _actual_ underlying OTF font of the CID-keyed font.
@@ -42,7 +76,7 @@ priv struct CIDFont {
   /// corresponding GID in the font subset.
   glyph_remapper : @subsetter.GlyphRemapper
   /// A mapping from CIDs to their string in the original text.
-  cmap_entries : Map[Int, (String, Location?)]
+  cmap_entries : CmapEntries
   /// The widths of the glyphs, _indexed by their CID_.
   widths : Array[Float]
   mut is_empty : Bool
@@ -55,7 +89,7 @@ fn CIDFont::new(font : Font) -> CIDFont {
   let widths = [Float::from_double(font.advance_width(0).unwrap_or(0.0))]
   {
     glyph_remapper: @subsetter.GlyphRemapper::new(),
-    cmap_entries: {},
+    cmap_entries: CmapEntries::new(),
     widths,
     font,
     is_empty: true,
@@ -97,7 +131,7 @@ fn CIDFont::set_codepoints(
   text : String,
   location : Location?,
 ) -> Unit {
-  self.cmap_entries[cid] = (text, location)
+  self.cmap_entries.set(cid, (text, location))
 }
 
 ///|

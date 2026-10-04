@@ -22,7 +22,7 @@ fn Content::raw(self : Content, s : String) -> Unit {
 
 ///|
 fn Content::num(self : Content, v : Double) -> Unit {
-  self.raw(format_real(v))
+  write_real(self.buf, v)
   self.buf.write_byte(b' ')
 }
 

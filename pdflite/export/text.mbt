@@ -13,6 +13,18 @@ fn glyph_text(text : String, g : Glyph) -> String {
 }
 
 ///|
+/// `glyph_text` as a view, for comparisons that need no copy.
+fn glyph_text_view(text : String, g : Glyph) -> StringView {
+  let start = @cmp.maximum(0.0, g.text_start.to_double()).to_int()
+  let end = @cmp.minimum(text.length().to_double(), g.text_end.to_double()).to_int()
+  if start >= end {
+    ""
+  } else {
+    text.view(start_offset=start, end_offset=end)
+  }
+}
+
+///|
 /// The glyphs with their cluster ranges clamped to the text
 /// (`0 <= text_start <= text_end <= text.length()`).
 fn clamp_clusters(glyphs : ArrayView[Glyph], text : String) -> Array[Glyph] {
@@ -57,10 +69,13 @@ fn use_text_spanner(
   let check_single = (glyph : Glyph) => {
     if !do_text_span {
       let (fid, code) = fc.add_glyph(sc, glyph.glyph_id, context_color)
-      let t = glyph_text(text, glyph)
       match fc.get_codepoints(fid, code) {
-        Some(c) => if c != t { do_text_span = true }
-        None => fc.set_codepoints(fid, code, t, glyph.location)
+        Some(c) =>
+          if c.view() != glyph_text_view(text, glyph) {
+            do_text_span = true
+          }
+        None =>
+          fc.set_codepoints(fid, code, glyph_text(text, glyph), glyph.location)
       }
     }
   }
@@ -101,12 +116,12 @@ fn glyph_spans(
   let func = (g : Glyph, previous_range : (Int, Int)?) => {
     let (fid, code) = fc.add_glyph(sc, g.glyph_id, context_color)
     let range = (g.text_start, g.text_end)
-    let t = glyph_text(text, g)
+    let t = glyph_text_view(text, g)
     let codepoints = fc.get_codepoints(fid, code)
     // Check if the glyph has already been assigned codepoints that don't
     // match the one we are seeing right now.
     let incompatible = match codepoints {
-      Some(c) => c != t
+      Some(c) => c.view() != t
       None => false
     }
     // Only set the codepoint if there isn't a previous, different mapping,
@@ -117,8 +132,8 @@ fn glyph_spans(
     }
     if !incompatible &&
       (!same_prev || forbid_invalid_codepoints) &&
-      codepoints != Some(t) {
-      fc.set_codepoints(fid, code, t, g.location)
+      !(codepoints is Some(c) && c.view() == t) {
+      fc.set_codepoints(fid, code, t.to_owned(), g.location)
     }
     (range, incompatible)
   }
@@ -483,8 +498,9 @@ fn ContentBuilder::encode_consecutive_glyph_run(
     Transform::from_row(1.0, 0.0, 0.0, -1.0, cur_x.val, cur_y),
   )
   let font = fc.font
+  let last_resort = font.postscript_name == Some("LastResort")
   for g in glyphs {
-    if g.glyph_id == 0 || font.postscript_name == Some("LastResort") {
+    if g.glyph_id == 0 || last_resort {
       sc.register_validation_error(
         ContainsNotDefGlyph(font, g.location, glyph_text(text, g)),
       )
@@ -504,9 +520,9 @@ fn ContentBuilder::encode_consecutive_glyph_run(
   let items : Array[Obj] = []
   let encoded = Buffer()
   let mut adjustment = 0.0
+  let scale = (v : Double) => v * upem
   for g in glyphs {
     let code = fc.add_glyph(sc, g.glyph_id, context_color).1
-    let scale = (v : Double) => v * upem
     let x_advance = scale(g.x_advance)
     let font_advance = match font.advance_width(g.glyph_id) {
       Some(n) => Some(scale(n / font.units_per_em))
@@ -524,7 +540,7 @@ fn ContentBuilder::encode_consecutive_glyph_run(
       items.push(Real(-(adjustment / upem * pdf_units_per_em)))
       adjustment = 0.0
     }
-    encoded.write_bytes(encode_code(fid, code))
+    write_code(encoded, fid, code)
     if font_advance is Some(fa) {
       adjustment += x_advance - fa
     }

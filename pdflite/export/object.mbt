@@ -93,17 +93,36 @@ fn pdf_rect(x0 : Double, y0 : Double, x1 : Double, y1 : Double) -> Obj {
 /// values (which pdf-writer writes as invalid `NaN`/`inf` tokens) are
 /// written as `0`.
 fn format_real(v : Double) -> String {
+  let buf = Buffer()
+  write_real(buf, v)
+  let sb = StringBuilder()
+  for b in buf.contents() {
+    sb.write_char(b.to_int().unsafe_to_char())
+  }
+  sb.to_string()
+}
+
+///|
+/// Write `format_real(v)` to `buf` without intermediate strings.
+fn write_real(buf : @buffer.Buffer, v : Double) -> Unit {
   if v.is_nan() || v.is_inf() {
-    return "0"
+    buf.write_byte(b'0')
+    return
   }
   let f = Float::from_double(v)
   let x = f.to_double()
   if x.is_inf() {
     // Beyond the range of `f32`.
-    return integral_string(v.round())
+    write_ascii(buf, integral_string(v.round()))
+    return
   }
   if x == x.floor() && x.abs() < 2147483648.0 {
-    return x.to_int().to_string()
+    let i = x.to_int()
+    if i < 0 {
+      buf.write_byte(b'-')
+    }
+    write_decimal(buf, i.abs().to_int64(), -1)
+    return
   }
   // The shortest digits `n * 10^exp` (at most 9 significant digits) that
   // round to the same `f32`.
@@ -128,34 +147,80 @@ fn format_real(v : Double) -> String {
     digits = digits / 10L
     exp += 1
   }
-  let s = digits.to_string()
-  let sb = StringBuilder()
   if x < 0.0 {
-    sb.write_char('-')
+    buf.write_byte(b'-')
   }
+  let len = decimal_length(digits)
   if exp >= 0 {
-    sb.write_string(s)
+    write_decimal(buf, digits, -1)
     for _ in 0..<exp {
-      sb.write_char('0')
+      buf.write_byte(b'0')
     }
-  } else if s.length() > -exp {
-    let point = s.length() + exp
-    sb.write_string(s.unsafe_substring(start=0, end=point))
-    sb.write_char('.')
-    sb.write_string(s.unsafe_substring(start=point, end=s.length()))
+  } else if len > -exp {
+    write_decimal(buf, digits, len + exp)
   } else {
-    sb.write_string("0.")
-    for _ in 0..<(-exp - s.length()) {
-      sb.write_char('0')
+    buf.write_byte(b'0')
+    buf.write_byte(b'.')
+    for _ in 0..<(-exp - len) {
+      buf.write_byte(b'0')
     }
-    sb.write_string(s)
+    write_decimal(buf, digits, -1)
   }
-  sb.to_string()
 }
 
 ///|
+/// Powers of ten `10^0 ..= 10^18` as `Int64`s.
+let int64_pow10 : ReadOnlyArray[Int64] = [
+  1L, 10L, 100L, 1000L, 10000L, 100000L, 1000000L, 10000000L, 100000000L, 1000000000L,
+  10000000000L, 100000000000L, 1000000000000L, 10000000000000L, 100000000000000L,
+  1000000000000000L, 10000000000000000L, 100000000000000000L, 1000000000000000000L,
+]
+
+///|
+/// The number of decimal digits of a non-negative `n` (1 for 0).
+fn decimal_length(n : Int64) -> Int {
+  let mut len = 1
+  while len < int64_pow10.length() && n >= int64_pow10[len] {
+    len += 1
+  }
+  len
+}
+
+///|
+/// Write the decimal digits of a non-negative `n`, with a decimal point
+/// before the digit at index `point` (none if `point` is negative).
+fn write_decimal(buf : @buffer.Buffer, n : Int64, point : Int) -> Unit {
+  let len = decimal_length(n)
+  let mut rest = n
+  for i = len - 1; i >= 0; i = i - 1 {
+    if len - 1 - i == point {
+      buf.write_byte(b'.')
+    }
+    let unit = int64_pow10[i]
+    let digit = rest / unit
+    buf.write_byte((digit.to_int() + '0'.to_int()).to_byte())
+    rest = rest - digit * unit
+  }
+}
+
+///|
+/// The powers of ten `10^0 ..= 10^22`, all exactly representable.
+let double_pow10 : ReadOnlyArray[Double] = [
+  1.0e0, 1.0e1, 1.0e2, 1.0e3, 1.0e4, 1.0e5, 1.0e6, 1.0e7, 1.0e8, 1.0e9, 1.0e10, 1.0e11,
+  1.0e12, 1.0e13, 1.0e14, 1.0e15, 1.0e16, 1.0e17, 1.0e18, 1.0e19, 1.0e20, 1.0e21,
+  1.0e22,
+]
+
+///|
+/// `10^e`, equal to `@math.pow(10.0, e)` for every `e`: the table holds the
+/// exact values `pow` returns for `0 <= e <= 22`, and other exponents (which
+/// only very small or very large reals need) still call `pow`.
 fn pow10(e : Int) -> Double {
-  @math.pow(10.0, e.to_double())
+  if e >= 0 && e < double_pow10.length() {
+    double_pow10[e]
+  } else {
+    @math.pow(10.0, e.to_double())
+  }
 }
 
 ///|
@@ -327,14 +392,27 @@ fn write_string_bytes(buf : @buffer.Buffer, bytes : Bytes) -> Unit {
 /// Write a name (with the leading slash).
 fn write_name(buf : @buffer.Buffer, name : String) -> Unit {
   buf.write_byte(b'/')
-  for b in utf8_bytes(name) {
-    let b = b.to_int()
-    if is_regular_name_byte(b) {
-      buf.write_byte(b.to_byte())
+  for c in name {
+    let cp = c.to_int()
+    if cp < 0x80 {
+      write_name_byte(buf, cp)
     } else {
-      buf.write_byte(b'#')
-      write_hex_byte(buf, b)
+      // Non-ASCII characters are escaped byte by byte of their UTF-8.
+      for b in utf8_bytes(c.to_string()) {
+        write_name_byte(buf, b.to_int())
+      }
     }
+  }
+}
+
+///|
+#inline
+fn write_name_byte(buf : @buffer.Buffer, b : Int) -> Unit {
+  if is_regular_name_byte(b) {
+    buf.write_byte(b.to_byte())
+  } else {
+    buf.write_byte(b'#')
+    write_hex_byte(buf, b)
   }
 }
 
@@ -345,7 +423,7 @@ fn write_obj(buf : @buffer.Buffer, obj : Obj) -> Unit {
     Null => write_ascii(buf, "null")
     Bool(b) => write_ascii(buf, if b { "true" } else { "false" })
     Int(i) => write_ascii(buf, i.to_string())
-    Real(r) => write_ascii(buf, format_real(r))
+    Real(r) => write_real(buf, r)
     Name(n) => write_name(buf, n)
     Str(s) => write_string_bytes(buf, s)
     TextStr(s) => write_string_bytes(buf, text_string_bytes(s))
