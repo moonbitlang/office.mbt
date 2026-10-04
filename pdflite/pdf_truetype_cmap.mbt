@@ -189,6 +189,54 @@ fn pdf_truetype_cmap_format4_glyphs(
 }
 
 ///|
+/// Format 12 (segmented coverage): groups of consecutive codepoints, each
+/// mapped to consecutive glyphs, which reach the codepoints beyond the BMP.
+/// The format has its groups in order and apart; one that is not (or that
+/// ends past U+10FFFF, or maps past glyph 0xFFFF) is passed over, so a
+/// table is read in time linear in the codepoints there are.
+fn pdf_truetype_cmap_format12_glyphs(
+  data : BytesView,
+  subtable_offset : Int,
+  entries : PdfTrueTypeCMapBuilder,
+) -> Unit {
+  guard pdf_truetype_read_u32_as_int(data, subtable_offset + 12)
+    is Some(declared) else {
+    return
+  }
+  let groups_offset = subtable_offset + 16
+  guard groups_offset >= 16 && groups_offset <= data.length() else { return }
+  // (no more groups than the data has room for)
+  let group_count = declared.min((data.length() - groups_offset) / 12)
+  // the lowest codepoint the next group may start at
+  let mut next = 0
+  for group in 0..<group_count {
+    let at = groups_offset + group * 12
+    guard (
+        pdf_truetype_read_u32_as_int(data, at),
+        pdf_truetype_read_u32_as_int(data, at + 4),
+        pdf_truetype_read_u32_as_int(data, at + 8),
+      )
+      is (Some(start), Some(end), Some(glyph)) else {
+      continue
+    }
+    if start < next ||
+      end < start ||
+      end > 0x10FFFF ||
+      glyph > 0xFFFF - (end - start) {
+      continue
+    }
+    for codepoint in start..<=end {
+      pdf_truetype_push_cmap_glyph(
+        entries,
+        codepoint,
+        glyph + codepoint - start,
+      )
+    }
+    next = end + 1
+  }
+}
+
+///|
 fn pdf_truetype_cmap_subtable_glyphs(
   data : BytesView,
   subtable_offset : Int,
@@ -198,6 +246,8 @@ fn pdf_truetype_cmap_subtable_glyphs(
     Some(0) => pdf_truetype_cmap_format0_glyphs(data, subtable_offset, entries)
     Some(4) => pdf_truetype_cmap_format4_glyphs(data, subtable_offset, entries)
     Some(6) => pdf_truetype_cmap_format6_glyphs(data, subtable_offset, entries)
+    Some(12) =>
+      pdf_truetype_cmap_format12_glyphs(data, subtable_offset, entries)
     _ => ()
   }
 }
@@ -214,7 +264,7 @@ fn pdf_truetype_identity_cmap_glyphs() -> Array[@truetype.PdfTrueTypeCMapGlyph] 
 ///
 /// This ports the cmap-table reader used by `Cpdftruetype.parse` before the
 /// later width/subset writer stages. Source-supported cmap formats 0, 4, and 6
-/// are decoded; later encoding subtables replace earlier mappings for the same
+/// are decoded, and format 12 (the codepoints beyond the BMP) besides; later encoding subtables replace earlier mappings for the same
 /// codepoint, matching the source `Hashtbl.add`/`find` behavior. A font with no
 /// cmap table follows the source fallback of mapping byte codes `0..255` to the
 /// same glyph index.

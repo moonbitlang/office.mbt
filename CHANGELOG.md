@@ -12,6 +12,13 @@ Breaking and notable changes for the published modules in this workspace.
 Entries are grouped by module and by the version they ship in; `Unreleased`
 covers changes that have landed on `main` but are not yet published.
 
+### moonbitlang/pdflite [Unreleased]
+
+- TrueType `cmap` format 12 (segmented coverage) is read, so
+  `pdf_truetype_cmap_glyphs` and what is built on it (pagelayout's fonts)
+  map the codepoints beyond the BMP — emoji, CJK extensions — that a font
+  has, instead of leaving them `.notdef`.
+
 ### moonbitlang/pdflite [0.3.5]
 
 - New package `moonbitlang/pdflite/subsetter`: a port of the Rust
