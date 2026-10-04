@@ -1,14 +1,16 @@
 ///|
-/// A format 12 cmap subtable of `groups` (start, end, first glyph),
-/// declaring `declared` of them.
+/// A format 12 (or `format` 13) cmap subtable of `groups` (start, end, first
+/// glyph), declaring `declared` of them in `length` bytes.
 fn truetype_format12_subtable_for_test(
   groups : ArrayView[(Int, Int, Int)],
   declared? : Int = groups.length(),
+  length? : Int = 16 + groups.length() * 12,
+  format? : Int = 12,
 ) -> Array[Int] {
   let output : Array[Int] = []
-  truetype_push_u16_for_test(output, 12)
+  truetype_push_u16_for_test(output, format)
   truetype_push_u16_for_test(output, 0)
-  truetype_push_u32_for_test(output, 16 + groups.length() * 12)
+  truetype_push_u32_for_test(output, length)
   truetype_push_u32_for_test(output, 0)
   truetype_push_u32_for_test(output, declared)
   for group in groups {
@@ -115,4 +117,98 @@ test "pdf_truetype_cmap_glyphs reads a format 12 table cut short" {
     @pdflite.pdf_truetype_cmap_glyphs(font[:font.length() - 26]),
     [],
   )
+}
+
+///|
+test "pdf_truetype_cmap_glyphs reads format 12 groups within the table's length" {
+  // two groups declared, in a table whose length has room for one: the
+  // bytes after it are not its groups
+  let font = truetype_cmap_font_for_test([
+    (
+      3,
+      10,
+      truetype_format12_subtable_for_test(
+        [(0x41, 0x41, 5), (0x50, 0x50, 9)],
+        length=28,
+      ),
+    ),
+  ])
+  @test.assert_eq(@pdflite.pdf_truetype_cmap_glyphs(font), [
+    { codepoint: 0x41, glyph_index: 5, },
+  ])
+}
+
+///|
+test "pdf_truetype_cmap_glyphs reads format 13, each group one glyph" {
+  let font = truetype_cmap_font_for_test([
+    (
+      3,
+      10,
+      truetype_format12_subtable_for_test(
+        [(0x41, 0x42, 5), (0x1F600, 0x1F601, 0xFFFF)],
+        format=13,
+      ),
+    ),
+  ])
+  @test.assert_eq(@pdflite.pdf_truetype_cmap_glyphs(font), [
+    { codepoint: 0x41, glyph_index: 5, },
+    { codepoint: 0x42, glyph_index: 5, },
+    { codepoint: 0x1F600, glyph_index: 0xFFFF, },
+    { codepoint: 0x1F601, glyph_index: 0xFFFF, },
+  ])
+}
+
+///|
+/// A format 10 cmap subtable: `glyphs` for the codepoints from `first`,
+/// declaring `declared` of them.
+fn truetype_format10_subtable_for_test(
+  first : Int,
+  glyphs : ArrayView[Int],
+  declared? : Int = glyphs.length(),
+) -> Array[Int] {
+  let output : Array[Int] = []
+  truetype_push_u16_for_test(output, 10)
+  truetype_push_u16_for_test(output, 0)
+  truetype_push_u32_for_test(output, 20 + glyphs.length() * 2)
+  truetype_push_u32_for_test(output, 0)
+  truetype_push_u32_for_test(output, first)
+  truetype_push_u32_for_test(output, declared)
+  for glyph in glyphs {
+    truetype_push_u16_for_test(output, glyph)
+  }
+  output
+}
+
+///|
+test "pdf_truetype_cmap_glyphs reads format 10, a run of codepoints' glyphs" {
+  let font = truetype_cmap_font_for_test([
+    (3, 10, truetype_format10_subtable_for_test(0x1F600, [3, 4])),
+  ])
+  @test.assert_eq(@pdflite.pdf_truetype_cmap_glyphs(font), [
+    { codepoint: 0x1F600, glyph_index: 3, },
+    { codepoint: 0x1F601, glyph_index: 4, },
+  ])
+  // no more than there are, and none past the last codepoint
+  let more = truetype_cmap_font_for_test([
+    (
+      3,
+      10,
+      truetype_format10_subtable_for_test(0x10FFFF, [3, 4], declared=0x7FFFFFFF),
+    ),
+  ])
+  @test.assert_eq(@pdflite.pdf_truetype_cmap_glyphs(more), [
+    { codepoint: 0x10FFFF, glyph_index: 3, },
+  ])
+}
+
+///|
+test "pdf_truetype_cmap_glyphs reads a cmap of tables without end to a bound" {
+  // every table maps all of Unicode again: read for ever, tables enough
+  // would take for ever. The reading stops once every codepoint has been
+  // mapped a few times over.
+  let all = truetype_format12_subtable_for_test([(0, 0x10FFFF, 1)], format=13)
+  let font = truetype_cmap_font_for_test(Array::makei(20, i => (3, i, all)))
+  let entries = @pdflite.pdf_truetype_cmap_glyphs(font)
+  @test.assert_eq(entries.length(), 0x110000)
+  @test.assert_eq(entries[0x10FFFF], { codepoint: 0x10FFFF, glyph_index: 1, })
 }

@@ -14,10 +14,13 @@ covers changes that have landed on `main` but are not yet published.
 
 ### moonbitlang/pdflite [Unreleased]
 
-- TrueType `cmap` format 12 (segmented coverage) is read, so
+- TrueType `cmap` formats 10, 12 and 13 (the 32-bit ones) are read, so
   `pdf_truetype_cmap_glyphs` and what is built on it (pagelayout's fonts)
   map the codepoints beyond the BMP — emoji, CJK extensions — that a font
   has, instead of leaving them `.notdef`.
+- Reading a `cmap` is bounded: a font whose tables, segments or encoding
+  records map the same ranges again and again is read until every codepoint
+  has been mapped eight times over, not without end.
 
 ### moonbitlang/pdflite [0.3.5]
 
