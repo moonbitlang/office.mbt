@@ -111,6 +111,23 @@ fn main() {
     }
     cases.push(case("tt_var_hvar_regions", 0, &[1, 2, 3, 4, 5], Some(&[("wght", 650.0), ("wdth", 150.0)])));
     cases.push(case("cff2_header4", 0, &[1], None));
+    for font in ["tt_var_varc_full", "tt_var_varc_full2"] {
+        for c in var_coords {
+            for set in [&[3u16][..], &[4], &[5], &[0, 1, 2, 3, 4, 5]] {
+                cases.push(case(font, 0, set, Some(c)));
+            }
+        }
+    }
+    for c in [&[][..], &[("wght", 900.0)], &[("wght", 200.0)], &[("wght", 650.0)]] {
+        for set in [&[3u16][..], &[4], &[5], &[0, 1, 2, 3, 4, 5]] {
+            cases.push(case("cff2_varc", 0, set, Some(c)));
+        }
+    }
+    for font in ["tt_var_varc_cycle", "tt_var_varc_stale"] {
+        for set in [&[2u16][..], &[3], &[4], &[1, 2, 3, 4, 5]] {
+            cases.push(case(font, 0, set, Some(&[("wght", 650.0), ("wdth", 150.0)])));
+        }
+    }
     for font in ["tt_var_avar_count0", "tt_var_gvar_null", "tt_var_varc_empty", "tt_var_varc_nocov", "tt_var_varc"] {
         for c in [&[][..], &[("wght", 650.0), ("wdth", 150.0)], &[("wght", 100.0)]] {
             cases.push(case(font, 0, &[1, 2, 3, 4, 5], Some(c)));

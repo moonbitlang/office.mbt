@@ -18,11 +18,11 @@ covers changes that have landed on `main` but are not yet published.
   `subsetter` crate 0.2.6 (with its `variable-fonts` feature),
   byte-identical with the crate on its oracle tests, on a sweep over
   local fonts and on single-byte mutations of the test fonts
-  (`pdflite/subsetter/oracle`). It subsets TrueType and CFF
-  fonts with new, consecutive glyph IDs (CFF fonts become CID-keyed with an
-  identity charset), instantiates variable fonts (`gvar`, `avar`, `HVAR`)
-  and converts CFF2 fonts to TrueType. Outlines and variations come from
-  internal ports of read-fonts 0.39.2 and skrifa 0.42.1
+  (`pdflite/subsetter/oracle`). It subsets TrueType and CFF fonts with
+  new, consecutive glyph IDs (CFF fonts become CID-keyed with an identity
+  charset), instantiates variable fonts (`gvar`, `avar`, `HVAR`, `VARC`
+  variable composites) and converts CFF2 fonts to TrueType. Outlines and
+  variations come from internal ports of read-fonts 0.39.2 and skrifa 0.42.1
   (`pdflite/internal/*`, from typst.mbt, extended with variations and CFF2).
 - `pdflite/export` embeds fonts like krilla: subsets made with
   `pdflite/subsetter` whose CIDs are the new glyph IDs (content streams,

@@ -1189,6 +1189,336 @@ pub fn patch_table(mut font: Vec<u8>, tag: &str, offset: usize, value: u8) -> Ve
     panic!("no table {tag}")
 }
 
+/// A CFF2-style INDEX (`u32` count, offset size 4).
+pub fn index2(items: &[Vec<u8>]) -> Vec<u8> {
+    let mut w = W::new();
+    w.u32(items.len() as u32);
+    if items.is_empty() {
+        return w.0;
+    }
+    w.u8(4);
+    let mut offset = 1u32;
+    w.u32(offset);
+    for item in items {
+        offset += item.len() as u32;
+        w.u32(offset);
+    }
+    for item in items {
+        w.bytes(item);
+    }
+    w.0
+}
+
+/// A VARC `uint32var`.
+pub fn u32var(value: u32) -> Vec<u8> {
+    if value < 0x80 {
+        vec![value as u8]
+    } else if value < 0x4000 {
+        vec![0x80 | (value >> 8) as u8, value as u8]
+    } else if value < 0x20_0000 {
+        vec![0xC0 | (value >> 16) as u8, (value >> 8) as u8, value as u8]
+    } else if value < 0x1000_0000 {
+        vec![0xE0 | (value >> 24) as u8, (value >> 16) as u8, (value >> 8) as u8, value as u8]
+    } else {
+        let mut v = vec![0xF0];
+        v.extend(value.to_be_bytes());
+        v
+    }
+}
+
+/// Packed deltas: one run per entry of `runs`, each `(kind, values)` with
+/// kind 0 (zeros), 1 (i8), 2 (i16) or 4 (i32).
+pub fn packed(runs: &[(u8, Vec<i32>)]) -> Vec<u8> {
+    let mut out = Vec::new();
+    for (kind, values) in runs {
+        let control = (values.len() - 1) as u8
+            | match kind {
+                0 => 0x80,
+                1 => 0x00,
+                2 => 0x40,
+                _ => 0xC0,
+            };
+        out.push(control);
+        for v in values {
+            match kind {
+                0 => {}
+                1 => out.push(*v as i8 as u8),
+                2 => out.extend((*v as i16).to_be_bytes()),
+                _ => out.extend(v.to_be_bytes()),
+            }
+        }
+    }
+    out
+}
+
+/// A table with subtables at offsets: `header` followed by the subtables,
+/// whose offsets (relative to the table start) are written at the given
+/// positions of the header as `u32`s (`u24`s for `width` 3).
+pub fn with_subtables(header: Vec<u8>, subtables: &[(usize, usize, Vec<u8>)]) -> Vec<u8> {
+    let mut out = header;
+    for (pos, width, data) in subtables {
+        let offset = out.len() as u32;
+        let bytes = offset.to_be_bytes();
+        out[*pos..*pos + *width].copy_from_slice(&bytes[4 - *width..]);
+        out.extend(data);
+    }
+    out
+}
+
+/// A VARC component record.
+pub struct VarcComp {
+    pub flags: u32,
+    pub gid: u32,
+    pub condition: Option<u32>,
+    pub axes: Option<(u32, Vec<u8>)>,
+    pub axis_values_var: Option<u32>,
+    pub transform_var: Option<u32>,
+    /// The transform fields in record order (translate x/y, rotation,
+    /// scale x/y, center x/y, skew x/y) for the flags that are set.
+    pub fields: Vec<i16>,
+    pub reserved: Vec<u32>,
+}
+
+impl VarcComp {
+    pub fn bytes(&self) -> Vec<u8> {
+        let mut out = u32var(self.flags);
+        if self.flags & 0x1000 != 0 {
+            out.extend(&self.gid.to_be_bytes()[1..]);
+        } else {
+            out.extend((self.gid as u16).to_be_bytes());
+        }
+        if let Some(c) = self.condition {
+            out.extend(u32var(c));
+        }
+        if let Some((index, values)) = &self.axes {
+            out.extend(u32var(*index));
+            out.extend(values);
+        }
+        if let Some(v) = self.axis_values_var {
+            out.extend(u32var(v));
+        }
+        if let Some(v) = self.transform_var {
+            out.extend(u32var(v));
+        }
+        for f in &self.fields {
+            out.extend(f.to_be_bytes());
+        }
+        for r in &self.reserved {
+            out.extend(u32var(*r));
+        }
+        out
+    }
+}
+
+pub fn comp(flags: u32, gid: u32) -> VarcComp {
+    VarcComp { flags, gid, condition: None, axes: None, axis_values_var: None, transform_var: None, fields: vec![], reserved: vec![] }
+}
+
+/// A sparse variation region: `(axis index, start, peak, end)` in 2.14.
+pub fn sparse_region(axes: &[(u16, f32, f32, f32)]) -> Vec<u8> {
+    let mut w = W::new();
+    w.u16(axes.len() as u16);
+    for (axis, start, peak, end) in axes {
+        w.u16(*axis).i16((start * 16384.0) as i16).i16((peak * 16384.0) as i16).i16((end * 16384.0) as i16);
+    }
+    w.0
+}
+
+/// A multi item variation store with the given regions and variation data
+/// (`(region indices, delta sets)`).
+pub fn multi_var_store(regions: &[Vec<u8>], data: &[(Vec<u16>, Vec<Vec<u8>>)]) -> Vec<u8> {
+    let mut list = W::new();
+    list.u16(regions.len() as u16);
+    for _ in regions {
+        list.u32(0);
+    }
+    let list = with_subtables(list.0, &regions.iter().enumerate().map(|(i, r)| (2 + 4 * i, 4, r.clone())).collect::<Vec<_>>());
+    let mut header = W::new();
+    header.u16(1).u32(0).u16(data.len() as u16);
+    for _ in data {
+        header.u32(0);
+    }
+    let mut subtables = vec![(2usize, 4usize, list)];
+    for (i, (indices, sets)) in data.iter().enumerate() {
+        let mut d = W::new();
+        d.u8(1).u16(indices.len() as u16);
+        for r in indices {
+            d.u16(*r);
+        }
+        d.bytes(&index2(sets));
+        subtables.push((8 + 4 * i, 4, d.0));
+    }
+    with_subtables(header.0, &subtables)
+}
+
+/// A condition table.
+pub enum Cond {
+    Range(u16, f32, f32),
+    Value(i16, u32),
+    And(Vec<Cond>),
+    Or(Vec<Cond>),
+    Not(Box<Cond>),
+}
+
+impl Cond {
+    pub fn bytes(&self) -> Vec<u8> {
+        let mut w = W::new();
+        match self {
+            Cond::Range(axis, min, max) => {
+                w.u16(1).u16(*axis).i16((min * 16384.0) as i16).i16((max * 16384.0) as i16);
+                w.0
+            }
+            Cond::Value(default, var_idx) => {
+                w.u16(2).i16(*default).u32(*var_idx);
+                w.0
+            }
+            Cond::And(conds) | Cond::Or(conds) => {
+                w.u16(if matches!(self, Cond::And(_)) { 3 } else { 4 }).u8(conds.len() as u8);
+                for _ in conds {
+                    w.u24(0);
+                }
+                let subs = conds.iter().enumerate().map(|(i, c)| (3 + 3 * i, 3, c.bytes())).collect::<Vec<_>>();
+                with_subtables(w.0, &subs)
+            }
+            Cond::Not(c) => {
+                w.u16(5).u24(0);
+                with_subtables(w.0, &[(2, 3, c.bytes())])
+            }
+        }
+    }
+}
+
+/// A VARC table.
+pub fn varc_table(
+    coverage: Vec<u8>,
+    store: Option<Vec<u8>>,
+    conditions: Option<Vec<Cond>>,
+    axis_indices: Option<Vec<Vec<u8>>>,
+    glyphs: &[Vec<VarcComp>],
+) -> Vec<u8> {
+    let mut header = W::new();
+    header.u16(1).u16(0).u32(0).u32(0).u32(0).u32(0).u32(0);
+    let mut subtables = vec![(4usize, 4usize, coverage)];
+    if let Some(store) = store {
+        subtables.push((8, 4, store));
+    }
+    if let Some(conds) = conditions {
+        let mut list = W::new();
+        list.u32(conds.len() as u32);
+        for _ in &conds {
+            list.u32(0);
+        }
+        let subs = conds.iter().enumerate().map(|(i, c)| (4 + 4 * i, 4, c.bytes())).collect::<Vec<_>>();
+        subtables.push((12, 4, with_subtables(list.0, &subs)));
+    }
+    if let Some(indices) = axis_indices {
+        subtables.push((16, 4, index2(&indices)));
+    }
+    let records: Vec<Vec<u8>> = glyphs.iter().map(|g| g.iter().flat_map(|c| c.bytes()).collect()).collect();
+    subtables.push((20, 4, index2(&records)));
+    with_subtables(header.0, &subtables)
+}
+
+/// A coverage table of format 1.
+pub fn coverage1(glyphs: &[u16]) -> Vec<u8> {
+    let mut w = W::new();
+    w.u16(1).u16(glyphs.len() as u16);
+    for g in glyphs {
+        w.u16(*g);
+    }
+    w.0
+}
+
+/// A coverage table of format 2: `(start, end, start coverage index)`.
+pub fn coverage2(ranges: &[(u16, u16, u16)]) -> Vec<u8> {
+    let mut w = W::new();
+    w.u16(2).u16(ranges.len() as u16);
+    for (s, e, i) in ranges {
+        w.u16(*s).u16(*e).u16(*i);
+    }
+    w.0
+}
+
+/// The VARC table of the `tt_var_varc_full` fixture: glyphs 3, 4 and 5 are
+/// variable composites of the glyf glyphs 1 and 2 (with transforms, axis
+/// values, conditions and variations of all of them) and of each other.
+pub fn varc_full(coverage: Vec<u8>, second_axis: u16) -> Vec<u8> {
+    let regions = vec![
+        sparse_region(&[(0, 0.0, 1.0, 1.0)]),
+        sparse_region(&[(second_axis, 0.0, 1.0, 1.0)]),
+        sparse_region(&[(0, 0.0, 0.5, 1.0), (second_axis, 0.0, 1.0, 1.0)]),
+        sparse_region(&[(0, -1.0, -1.0, 0.0)]),
+    ];
+    let data = vec![
+        (vec![0, 1, 2], vec![
+            // 0: translate x/y (2 values per region)
+            packed(&[(1, vec![40, -20]), (0, vec![0, 0]), (2, vec![-300, 1000])]),
+            // 1: axis values (2 axes)
+            packed(&[(2, vec![4096, -2048, 0, 8192]), (1, vec![10, -10])]),
+            // 2: a condition value
+            packed(&[(1, vec![3, -2, 1])]),
+            // 3: all transform fields (8 values per region)
+            packed(&[
+                (1, vec![12, 1000 / 8, 64, -64, 100, 50, -30, 7]),
+                (4, vec![70000, -400, 0, 512, -512, 1, 2, 3]),
+                (0, vec![0; 8]),
+            ]),
+        ]),
+        (vec![3, 0], vec![
+            // 0: rotation and scale x
+            packed(&[(2, vec![2048, -100, -1024, 300])]),
+        ]),
+    ];
+    let store = multi_var_store(&regions, &data);
+    let conditions = vec![
+        Cond::Range(0, 0.25, 1.0),
+        Cond::Value(-1, 2),
+        Cond::And(vec![Cond::Range(second_axis, -1.0, 0.5), Cond::Value(0, 2)]),
+        Cond::Or(vec![Cond::Range(0, -1.0, -0.5), Cond::Range(second_axis, 0.75, 1.0)]),
+        Cond::Not(Box::new(Cond::Range(0, 0.0, 0.0))),
+    ];
+    let axis_indices = vec![
+        packed(&[(1, vec![0, second_axis as i32])]),
+        packed(&[(1, vec![second_axis as i32])]),
+    ];
+    let mut g3a = comp(0x0010 | 0x0020 | 0x0008, 1);
+    g3a.transform_var = Some(0);
+    g3a.fields = vec![100, -50];
+    let mut g3b = comp(0x0002 | 0x0004 | 0x0100, 2);
+    g3b.axes = Some((0, packed(&[(2, vec![8192, -4096])])));
+    g3b.axis_values_var = Some(1);
+    g3b.fields = vec![1536];
+    let mut g3c = comp(0x0080 | 0x0001 | 0x0040, 1);
+    g3c.condition = Some(0);
+    g3c.fields = vec![1024];
+    let mut g4a = comp(0x0002 | 0x0010, 3);
+    g4a.axes = Some((1, packed(&[(2, vec![16384])])));
+    g4a.fields = vec![300];
+    let mut g4b = comp(0x0080 | 0x0010 | 0x0020, 2);
+    g4b.condition = Some(2);
+    g4b.fields = vec![-20, 40];
+    let mut g4c = comp(0x0080, 1);
+    g4c.condition = Some(3);
+    let mut g4d = comp(0x0080 | 0x1000 | 0x0400 | 0x0040, 2);
+    g4d.condition = Some(4);
+    g4d.fields = vec![-1365, 50];
+    let g4e = comp(0, 4);
+    let mut g5a = comp(0x0008 | 0x0010 | 0x0040 | 0x0100 | 0x0200 | 0x0400 | 0x0800 | 0x2000 | 0x4000 | 0x0001_0000, 2);
+    g5a.transform_var = Some(3);
+    g5a.fields = vec![10, 512, 1100, 900, 30, -40, 200, -300];
+    g5a.reserved = vec![12345];
+    let mut g5b = comp(0x0008 | 0x0040 | 0x0100, 3);
+    g5b.transform_var = Some(1 << 16);
+    g5b.fields = vec![-512, 1024];
+    varc_table(
+        coverage,
+        Some(store),
+        Some(conditions),
+        Some(axis_indices),
+        &[vec![g3a, g3b, g3c], vec![g4a, g4b, g4c, g4d, g4e], vec![g5a, g5b]],
+    )
+}
+
 /// Rebuilds an sfnt with an extra table.
 pub fn add_table(font: &[u8], tag: &'static str, data: Vec<u8>) -> Vec<u8> {
     let magic = u32::from_be_bytes(font[0..4].try_into().unwrap());
@@ -1295,6 +1625,17 @@ pub fn all() -> Vec<(&'static str, Vec<u8>)> {
         // A VARC table not covering the subset glyphs: they use the glyf
         // outlines (VARC outlines themselves are not supported).
         ("tt_var_varc", add_table(&tt_var(false), "VARC", varc(Some(&[7, 9])))),
+        // VARC outlines.
+        ("tt_var_varc_full", add_table(&tt_var(true), "VARC", varc_full(coverage1(&[3, 4, 5]), 1))),
+        ("tt_var_varc_full2", add_table(&tt_var(false), "VARC", varc_full(coverage2(&[(3, 5, 0)]), 1))),
+        ("cff2_varc", add_table(&cff2_var(), "VARC", varc_full(coverage1(&[3, 4, 5]), 0))),
+        // Glyph 2 covered too (a cycle 2 -> 2 -> 3 -> 2 in the VARC glyphs):
+        // base glyphs drawn for components that are on the glyph stack need
+        // more memory than the VARC outline allocates.
+        ("tt_var_varc_cycle", patch_table(add_table(&tt_var(false), "VARC", varc_full(coverage2(&[(3, 5, 0)]), 1)), "VARC", 29, 2)),
+        // Unreadable gvar data for glyph 2: skrifa applies the stale deltas
+        // of an earlier component from the shared memory buffer.
+        ("tt_var_varc_stale", patch_table(add_table(&tt_var(true), "VARC", varc_full(coverage1(&[3, 4, 5]), 1)), "gvar", 26, 128)),
         ("malformed_cff", malformed_cff),
         ("unknown", b"\x00\x02\x00\x00\x00\x00\x00\x00".to_vec()),
     ]

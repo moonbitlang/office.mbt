@@ -56,12 +56,17 @@ test "subsets of local fonts are byte-identical with the Rust crate" {
     catch {
       e => "err \{e}"
     } noraise {
-      sub =>
-        if @fs.read_file_to_bytes("\{dir}/rust_out/\{i}.bin") == sub {
+      sub => {
+        // (No file if the Rust crate failed.)
+        let want = @fs.read_file_to_bytes("\{dir}/rust_out/\{i}.bin") catch {
+          _ => b""
+        }
+        if want == sub {
           "same"
         } else {
           "ok \{sub.length()}"
         }
+      }
     }
     let want = expected[i]
     let same = if want.has_prefix("ok ") {

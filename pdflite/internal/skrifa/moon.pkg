@@ -2,6 +2,18 @@ import {
   "moonbitlang/pdflite/internal/font_types",
   "moonbitlang/pdflite/internal/read_fonts",
   "moonbitlang/pdflite/internal/read_fonts/ps",
+  "moonbitlang/core/cmp",
+  "moonbitlang/core/math",
 }
 
-warnings = "-missing_doc-implicit_impl_as_method-unqualified_local_using-result_error_return-prefer_fixed_array-unqualified_record-unnecessary_annotation"
+// (`moonbitlang/core/math` is only used on non-native targets.)
+
+warnings = "-missing_doc-implicit_impl_as_method-unqualified_local_using-result_error_return-prefer_fixed_array-unqualified_record-unnecessary_annotation-unused_package"
+
+options(
+  "native-stub": [ "trig_stub.c" ],
+  targets: {
+    "trig_native.mbt": [ "native" ],
+    "trig_other.mbt": [ "not", "native" ],
+  },
+)

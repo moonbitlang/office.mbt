@@ -1,5 +1,5 @@
-// Port of skrifa 0.42.1 `src/outline/mod.rs` (unhinted drawing of glyf, CFF
-// and CFF2 sources at a location in variation space; VARC, hinting,
+// Port of skrifa 0.42.1 `src/outline/mod.rs` (unhinted drawing of glyf, CFF,
+// CFF2 and VARC sources at a location in variation space; hinting,
 // autohinting and the HarfBuzz path style are not supported).
 
 ///|
@@ -35,8 +35,7 @@ priv enum OutlineKind {
   GlyfKind(GlyfOutlines, GlyfOutline)
   // Third field is subfont index
   CffKind(CffOutlines, GlyphId, Int)
-  // VARC outlines (not supported: drawing fails).
-  VarcKind(GlyphId)
+  VarcKind(VarcOutlines, VarcOutline)
 }
 
 ///|
@@ -51,7 +50,7 @@ pub fn OutlineGlyph::glyph_id(self : OutlineGlyph) -> GlyphId {
   match self.kind {
     GlyfKind(_, outline) => outline.glyph_id
     CffKind(_, gid, _) => gid
-    VarcKind(gid) => gid
+    VarcKind(_, outline) => outline.glyph_id
   }
 }
 
@@ -88,7 +87,10 @@ pub fn OutlineGlyph::draw_unscaled(
       }
       { has_overlaps: false, lsb: None, advance_width: None, }
     }
-    VarcKind(_) => raise NoSources
+    VarcKind(varc, outline) => {
+      varc.draw(outline, coords, pen)
+      { has_overlaps: false, lsb: None, advance_width: None, }
+    }
   }
 }
 
@@ -151,183 +153,16 @@ pub fn OutlineGlyphCollection::get(
     }
     CollCff(cff) =>
       Some({ kind: CffKind(cff, glyph_id, cff.subfont_index(glyph_id)), })
-    CollVarc(varc) =>
-      if varc.coverage_index(glyph_id) is Some(coverage_index) {
-        // `varc.outline(glyph_id).ok()?`: computing the component memory
-        // reads the glyph's record (`varc.glyph(coverage_index)?`), so a
-        // missing record means no outline. (Its components are not parsed:
-        // VARC outlines can't be drawn by this port.)
-        guard varc.has_glyph(coverage_index) else { return None }
-        Some({ kind: VarcKind(glyph_id), })
-      } else {
-        // `fallback_outline_kind`
-        match varc.base {
-          VarcBaseGlyf(glyf) => {
-            let outline = glyf.outline(glyph_id) catch { _ => return None }
-            Some({ kind: GlyfKind(glyf, outline), })
+    CollVarc(varc) => {
+      let outline = varc.outline(glyph_id) catch { _ => return None }
+      match outline {
+        Some(outline) => Some({ kind: VarcKind(varc, outline), })
+        None =>
+          match varc.fallback_outline_kind(glyph_id) {
+            Some(kind) => Some({ kind, })
+            None => None
           }
-          VarcBaseCff(cff) =>
-            Some({ kind: CffKind(cff, glyph_id, cff.subfont_index(glyph_id)), })
-        }
-      }
-  }
-}
-
-///|
-/// The base outlines of a VARC font.
-priv enum VarcBaseOutlines {
-  VarcBaseGlyf(GlyfOutlines)
-  VarcBaseCff(CffOutlines)
-}
-
-///|
-/// The parts of skrifa's `varc::Outlines` that decide whether a font's
-/// outlines come from its `VARC` table: the constructor (which fails, so
-/// that the glyf or CFF outlines are used instead, if any of the tables it
-/// reads is unreadable) and the coverage lookup (glyphs not covered by the
-/// `VARC` table use the base outlines).
-priv struct VarcOutlines {
-  varc : FontData
-  base : VarcBaseOutlines
-  coverage : FontData
-}
-
-///|
-/// `varc::Outlines::new`.
-fn VarcOutlines::new(font : FontRef) -> VarcOutlines? {
-  // `font.varc().ok()?` (Varc::MIN_SIZE: version and five offsets)
-  guard font.data_for_tag("VARC") is Some(varc) else { return None }
-  if varc.len() < 24 {
-    return None
-  }
-  let base = match GlyfOutlines::new(font) {
-    Some(glyf) => VarcBaseGlyf(glyf)
-    None =>
-      match CffOutlines::new(font) {
-        Some(cff) => VarcBaseCff(cff)
-        None => return None
-      }
-  }
-  // `GlyphHMetrics::new(font)?` and `font.head().ok()?`
-  let _ = font.hmtx() catch { _ => return None }
-  let _ = font.head() catch { _ => return None }
-  // `varc.coverage().ok()?`: a non-null `Offset32` to a coverage table of
-  // format 1 or 2.
-  let coverage = resolve_varc_offset(varc, 4) catch { _ => return None }
-  let format = coverage.read_u16(0) catch { _ => return None }
-  if (format != 1 && format != 2) || coverage.len() < 4 {
-    return None
-  }
-  // `varc.multi_var_store().transpose().ok()?` (nullable) and the region
-  // list of the store.
-  let store_offset = varc.read_u32(8) catch { _ => return None }
-  if store_offset != 0 {
-    let store = resolve_varc_offset(varc, 8) catch { _ => return None }
-    // MultiItemVariationStore::MIN_SIZE
-    if store.len() < 8 {
-      return None
-    }
-    let regions = resolve_varc_offset(store, 2) catch { _ => return None }
-    // SparseVariationRegionList::MIN_SIZE
-    if regions.len() < 2 {
-      return None
-    }
-  }
-  Some({ varc, base, coverage, })
-}
-
-///|
-/// Whether `Varc::glyph(nth)` succeeds: the `var_composite_glyphs` offset
-/// resolves to a CFF2-style INDEX with an object at `nth`.
-fn VarcOutlines::has_glyph(self : VarcOutlines, nth : Int) -> Bool {
-  let glyphs = resolve_varc_offset(self.varc, 20) catch { _ => return false }
-  let index = @ps.Index1::read2(glyphs.as_bytes()) catch { _ => return false }
-  let _ = index.get(nth) catch { _ => return false }
-  true
-}
-
-///|
-/// Resolves the `Offset32` at `at` in `data` (`ResolveOffset::resolve`).
-fn resolve_varc_offset(data : FontData, at : Int) -> FontData raise ReadError {
-  let offset = data.read_u32(at)
-  if offset == 0 {
-    raise NullOffset
-  }
-  if offset > data.len().reinterpret_as_uint() {
-    raise OutOfBounds
-  }
-  data.split_off(offset.reinterpret_as_int()).unwrap()
-}
-
-///|
-/// `CoverageTable::get`: the coverage index of a glyph, if covered.
-fn VarcOutlines::coverage_index(
-  self : VarcOutlines,
-  glyph_id : GlyphId,
-) -> Int? {
-  let gid = glyph_id.to_u32()
-  // `GlyphId16::try_from`
-  if gid > 0xFFFF {
-    return None
-  }
-  let gid = gid.reinterpret_as_int()
-  let data = self.coverage
-  let format = data.read_u16(0) catch { _ => return None }
-  let count = data.read_u16(2) catch { _ => return None }
-  if format == 1 {
-    // `glyph_array()`: empty if out of bounds
-    let count = if 4 + 2 * count > data.len() { 0 } else { count }
-    let at = (i : Int) => data.read_u16(4 + 2 * i) catch { _ => 0 }
-    match rust_binary_search_by(count, i => at(i).compare(gid)) {
-      Ok(i) => Some(i)
-      Err(_) => None
-    }
-  } else {
-    // `range_records()`: (start, end, start coverage index) records
-    let count = if 4 + 6 * count > data.len() { 0 } else { count }
-    let at = (i : Int, k : Int) => {
-      data.read_u16(4 + 6 * i + 2 * k) catch {
-        _ => 0
       }
     }
-    match
-      rust_binary_search_by(count, i => {
-        if at(i, 1) < gid {
-          -1
-        } else if at(i, 0) > gid {
-          1
-        } else {
-          0
-        }
-      }) {
-      // (`u16` arithmetic, wrapping as in release builds)
-      Ok(i) => Some((at(i, 2) + gid - at(i, 0)) & 0xFFFF)
-      Err(_) => None
-    }
-  }
-}
-
-///|
-/// Rust's `slice::binary_search_by` (std 1.89) over indices `0..len`: the
-/// probed indices depend only on the length, which matters for unsorted or
-/// duplicate entries.
-fn rust_binary_search_by(len : Int, f : (Int) -> Int) -> Result[Int, Int] {
-  let mut size = len
-  if size == 0 {
-    return Err(0)
-  }
-  let mut base = 0
-  while size > 1 {
-    let half = size / 2
-    let mid = base + half
-    let cmp = f(mid)
-    base = if cmp > 0 { base } else { mid }
-    size -= half
-  }
-  let cmp = f(base)
-  if cmp == 0 {
-    Ok(base)
-  } else {
-    Err(base + (if cmp < 0 { 1 } else { 0 }))
   }
 }

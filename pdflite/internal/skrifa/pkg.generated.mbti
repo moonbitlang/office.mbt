@@ -97,7 +97,7 @@ pub struct GlyfOutlines {
   // private fields
 }
 pub fn GlyfOutlines::compute_scale(Self, Float?) -> (Bool, @font_types.F26Dot6)
-pub fn GlyfOutlines::draw_unscaled(Self, GlyfOutline, ArrayView[@font_types.F2Dot14], &@read_fonts.OutlinePen) -> (Float, Float) raise DrawError
+pub fn GlyfOutlines::draw_unscaled(Self, GlyfOutline, ArrayView[@font_types.F2Dot14], &@read_fonts.OutlinePen, memory? : FixedArray[Byte]) -> (Float, Float) raise DrawError
 pub fn GlyfOutlines::new(@read_fonts.FontRef) -> Self?
 pub fn GlyfOutlines::outline(Self, @font_types.GlyphId) -> GlyfOutline raise DrawError
 

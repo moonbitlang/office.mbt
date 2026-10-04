@@ -39,12 +39,12 @@ fn main() {
             continue;
         }
         let cases: &[(&[u16], &str)] = match name {
-            "tt_var" | "tt_var_hvar" | "tt_var_hvar_regions" | "tt_var_avar_count0" | "tt_var_gvar_null" | "tt_var_varc_empty" | "tt_var_varc_nocov" | "tt_var_varc" => &[
+            "tt_var" | "tt_var_hvar" | "tt_var_hvar_regions" | "tt_var_avar_count0" | "tt_var_gvar_null" | "tt_var_varc_empty" | "tt_var_varc_nocov" | "tt_var_varc" | "tt_var_varc_full" | "tt_var_varc_full2" | "tt_var_varc_cycle" | "tt_var_varc_stale" => &[
                 (&[1, 2, 3, 4, 5], "wght=650,wdth=150"),
                 (&[0, 1, 2, 3, 4, 5], "wght=100"),
                 (&[1, 3], ""),
             ],
-            "cff2" | "cff2_header4" => &[(&[1, 2, 3], "wght=900"), (&[0, 1, 2, 3, 4, 5], "wght=200")],
+            "cff2" | "cff2_header4" | "cff2_varc" => &[(&[1, 2, 3], "wght=900"), (&[0, 1, 2, 3, 4, 5], "wght=200")],
             _ => &[(&[0, 1, 2, 3, 4, 5, 6, 7, 8, 9], "")],
         };
         for pos in 0..data.len() {

@@ -530,22 +530,31 @@ pub fn Tag::from_bytes(tag : BytesView) -> Tag? {
 
 ///|
 /// Tries to create a new tag from a string. Returns `None` if the string is
-/// not 4 bytes in size.
+/// not 4 bytes in size (in UTF-8).
 pub fn Tag::from_str(s : StringView) -> Tag? {
   let bytes = []
   for c in s {
     let cp = c.to_int()
-    if cp >= 0x80 {
-      // (Rust: the UTF-8 length of the string must be 4.)
+    if cp < 0x80 {
+      bytes.push(cp)
+    } else if cp < 0x800 {
+      bytes.push(0xC0 | (cp >> 6))
+      bytes.push(0x80 | (cp & 0x3F))
+    } else if cp < 0x10000 {
+      bytes.push(0xE0 | (cp >> 12))
+      bytes.push(0x80 | ((cp >> 6) & 0x3F))
+      bytes.push(0x80 | (cp & 0x3F))
+    } else {
+      bytes.push(0xF0 | (cp >> 18))
+      bytes.push(0x80 | ((cp >> 12) & 0x3F))
+      bytes.push(0x80 | ((cp >> 6) & 0x3F))
+      bytes.push(0x80 | (cp & 0x3F))
+    }
+    if bytes.length() > 4 {
       return None
     }
-    bytes.push(cp.to_byte())
   }
-  if bytes.length() == 4 {
-    Some({ bytes: Bytes::from_array(bytes), })
-  } else {
-    None
-  }
+  Tag::from_bytes(Bytes::from_array(bytes.map(b => b.to_byte())))
 }
 
 ///|

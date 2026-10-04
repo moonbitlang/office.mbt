@@ -359,6 +359,99 @@ fn FreeTypeOutlineMemory::new(outline : GlyfOutline) -> FreeTypeOutlineMemory {
 }
 
 ///|
+/// The regions of the memory buffer in upstream's order
+/// (`FreeTypeOutlineMemory::new` without hinting): `(points, size)` for the
+/// point arrays (pairs of `i32`), then the contours (`u16`) and the flags
+/// (`u8`).
+fn FreeTypeOutlineMemory::point_regions(
+  self : FreeTypeOutlineMemory,
+  has_variations : Bool,
+) -> Array[(FixedArray[Int], FixedArray[Int])] {
+  let regions = [
+    (self.scaled_x, self.scaled_y),
+    (self.unscaled_x, self.unscaled_y),
+  ]
+  if has_variations {
+    regions.push((self.deltas_x, self.deltas_y))
+    regions.push((self.iup_x, self.iup_y))
+    regions.push((self.composite_deltas_x, self.composite_deltas_y))
+  }
+  regions
+}
+
+///|
+fn read_i32_le(image : FixedArray[Byte], at : Int) -> Int {
+  if at + 4 > image.length() {
+    return 0
+  }
+  image[at].to_int() |
+  (image[at + 1].to_int() << 8) |
+  (image[at + 2].to_int() << 16) |
+  (image[at + 3].to_int() << 24)
+}
+
+///|
+fn write_le(image : FixedArray[Byte], at : Int, v : Int, size : Int) -> Unit {
+  for k in 0..<size {
+    if at + k < image.length() {
+      image[at + k] = ((v >> (8 * k)) & 0xFF).to_byte()
+    }
+  }
+}
+
+///|
+/// Fills the buffers from a memory image.
+fn FreeTypeOutlineMemory::load(
+  self : FreeTypeOutlineMemory,
+  image : FixedArray[Byte],
+  has_variations : Bool,
+) -> Unit {
+  let mut at = 0
+  for region in self.point_regions(has_variations) {
+    let (xs, ys) = region
+    for i in 0..<xs.length() {
+      xs[i] = read_i32_le(image, at)
+      ys[i] = read_i32_le(image, at + 4)
+      at += 8
+    }
+  }
+  for i in 0..<self.contours.length() {
+    self.contours[i] = read_i32_le(image, at) & 0xFFFF
+    at += 2
+  }
+  for i in 0..<self.flags.length() {
+    self.flags[i] = if at < image.length() { image[at].to_int() } else { 0 }
+    at += 1
+  }
+}
+
+///|
+/// Stores the buffers into a memory image.
+fn FreeTypeOutlineMemory::store(
+  self : FreeTypeOutlineMemory,
+  image : FixedArray[Byte],
+  has_variations : Bool,
+) -> Unit {
+  let mut at = 0
+  for region in self.point_regions(has_variations) {
+    let (xs, ys) = region
+    for i in 0..<xs.length() {
+      write_le(image, at, xs[i], 4)
+      write_le(image, at + 4, ys[i], 4)
+      at += 8
+    }
+  }
+  for i in 0..<self.contours.length() {
+    write_le(image, at, self.contours[i], 2)
+    at += 2
+  }
+  for i in 0..<self.flags.length() {
+    write_le(image, at, self.flags[i], 1)
+    at += 1
+  }
+}
+
+///|
 /// The unhinted FreeType style scaler (unscaled outlines only: skrifa's
 /// `Size::unscaled()`, in font units stored as 26.6).
 priv struct FreeTypeScaler {
@@ -1111,16 +1204,29 @@ fn interp_coord(
 ///|
 /// Draws an unscaled, unhinted outline (in font units) to the pen and
 /// returns the adjusted `(lsb, advance width)`.
+///
+/// With `memory`, the scaler's buffers start with (and are stored back
+/// into) its contents, laid out like upstream's memory buffer: VARC glyphs
+/// draw their components with one buffer, and upstream reads the stale
+/// deltas of an earlier component for a glyph with unreadable variation
+/// data.
 pub fn GlyfOutlines::draw_unscaled(
   self : GlyfOutlines,
   outline : GlyfOutline,
   coords : ArrayView[F2Dot14],
   pen : &OutlinePen,
+  memory? : FixedArray[Byte],
 ) -> (Float, Float) raise DrawError {
-  let scaled = FreeTypeScaler::unhinted(self, outline, coords).scale(
-    outline.glyph,
-    outline.glyph_id,
-  )
+  let scaler = FreeTypeScaler::unhinted(self, outline, coords)
+  if memory is Some(image) {
+    scaler.memory.load(image, outline.has_variations)
+  }
+  let scaled = {
+    defer (if memory is Some(image) {
+      scaler.memory.store(image, outline.has_variations)
+    })
+    scaler.scale(outline.glyph, outline.glyph_id)
+  }
   to_path(scaled.xs, scaled.ys, scaled.flags, scaled.contours, pen) catch {
     e => raise ToPath(e)
   }
