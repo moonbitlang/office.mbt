@@ -763,15 +763,19 @@ fn compute_tuple_deltas(
   let data = multi_variation_data(store, outer) catch {
     _ => raise InvalidCollectionIndex(outer.reinterpret_as_uint())
   }
-  let region_count = data.read_u16(1) catch { _ => 0 }
+  let declared_count = data.read_u16(1) catch { _ => 0 }
   // `region_indices()`: empty if out of bounds
-  let region_count = if 3 + 2 * region_count > data.len() {
+  let region_count = if 3 + 2 * declared_count > data.len() {
     0
   } else {
-    region_count
+    declared_count
   }
-  // `delta_set(inner)`: an `Index2` over the rest of the data.
-  let raw_delta_sets = data.split_off(3 + 2 * region_count).unwrap()
+  // `delta_set(inner)`: an `Index2` over the data after the (declared)
+  // region indices (`raw_delta_sets()`: empty if out of bounds).
+  let raw_delta_sets = match data.split_off(3 + 2 * declared_count) {
+    Some(rest) => rest
+    None => FontData::empty()
+  }
   let deltas = PackedDeltaFetcher::new(index2_get(raw_delta_sets, inner), None)
   let mut skip = 0
   for i in 0..<region_count {

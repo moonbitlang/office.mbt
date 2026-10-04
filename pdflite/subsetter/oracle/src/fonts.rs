@@ -1633,6 +1633,30 @@ pub fn all() -> Vec<(&'static str, Vec<u8>)> {
         // base glyphs drawn for components that are on the glyph stack need
         // more memory than the VARC outline allocates.
         ("tt_var_varc_cycle", patch_table(add_table(&tt_var(false), "VARC", varc_full(coverage2(&[(3, 5, 0)]), 1)), "VARC", 29, 2)),
+        // Variation data whose region indices run past its end: the delta
+        // sets are read after the declared indices (and are missing).
+        ("tt_var_varc_short_data", {
+            let font = add_table(&tt_var(true), "VARC", varc_full(coverage1(&[3, 4, 5]), 1));
+            let count = u16::from_be_bytes([font[4], font[5]]) as usize;
+            let rec = (0..count).map(|i| 12 + 16 * i).find(|r| &font[*r..*r + 4] == b"VARC").unwrap();
+            let start = u32::from_be_bytes(font[rec + 8..rec + 12].try_into().unwrap()) as usize;
+            let len = u32::from_be_bytes(font[rec + 12..rec + 16].try_into().unwrap()) as usize;
+            let mut varc = font[start..start + len].to_vec();
+            let store = u32::from_be_bytes(varc[8..12].try_into().unwrap()) as usize;
+            // Redirect the first variation data to a truncated one.
+            let new_offset = (varc.len() - store) as u32;
+            varc[store + 8..store + 12].copy_from_slice(&new_offset.to_be_bytes());
+            varc.extend([0x01, 0xff, 0xff, 0x00, 0x00, 0x00, 0x04, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01]);
+            let mut tables = Vec::new();
+            for i in 0..count {
+                let r = 12 + 16 * i;
+                let tag: &'static str = Box::leak(std::str::from_utf8(&font[r..r + 4]).unwrap().to_string().into_boxed_str());
+                let s = u32::from_be_bytes(font[r + 8..r + 12].try_into().unwrap()) as usize;
+                let l = u32::from_be_bytes(font[r + 12..r + 16].try_into().unwrap()) as usize;
+                tables.push((tag, if tag == "VARC" { varc.clone() } else { font[s..s + l].to_vec() }));
+            }
+            sfnt(0x00010000, &tables)
+        }),
         // Unreadable gvar data for glyph 2: skrifa applies the stale deltas
         // of an earlier component from the shared memory buffer.
         ("tt_var_varc_stale", patch_table(add_table(&tt_var(true), "VARC", varc_full(coverage1(&[3, 4, 5]), 1)), "gvar", 26, 128)),

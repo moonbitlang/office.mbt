@@ -123,7 +123,7 @@ fn main() {
             cases.push(case("cff2_varc", 0, set, Some(c)));
         }
     }
-    for font in ["tt_var_varc_cycle", "tt_var_varc_stale"] {
+    for font in ["tt_var_varc_cycle", "tt_var_varc_stale", "tt_var_varc_short_data"] {
         for set in [&[2u16][..], &[3], &[4], &[1, 2, 3, 4, 5]] {
             cases.push(case(font, 0, set, Some(&[("wght", 650.0), ("wdth", 150.0)])));
         }
