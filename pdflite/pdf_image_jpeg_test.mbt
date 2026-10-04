@@ -11,8 +11,10 @@ fn image_jpeg_of_components_for_test(
 ) -> @core.PdfBytes {
   let bytes : Array[Int] = [0xFF, 0xD8]
   if jfif {
+    // APP0: "JFIF", version 1.1, no units, density 1 by 1, no thumbnail
     bytes.append([
-      0xFF, 0xE0, 0x00, 0x09, 0x4A, 0x46, 0x49, 0x46, 0x00, 0xAA, 0xBB,
+      0xFF, 0xE0, 0x00, 0x10, 0x4A, 0x46, 0x49, 0x46, 0x00, 0x01, 0x01, 0x00, 0x00,
+      0x01, 0x00, 0x01, 0x00, 0x00,
     ])
   }
   if adobe {
@@ -284,12 +286,22 @@ test "pdf_image_object_of_jpeg_data has components named R, G and B untransforme
   ])
   @test.assert_eq(transform(rgb), Some(PdfInteger(0)))
   // JFIF's are YCbCr whatever they are named, and Adobe's marker says its own
-  let jfif = named(image_jpeg_of_components_for_test(3, false), 23)
+  let jfif = named(image_jpeg_of_components_for_test(3, false), 30)
   @test.assert_eq(@codec.pdf_jpeg_info_view(jfif).jfif, true)
   @test.assert_eq(@codec.pdf_jpeg_info_view(jfif).component_ids, [
     0x52, 0x47, 0x42,
   ])
   @test.assert_eq(transform(jfif), None)
+  // (a JFIF marker of the name alone is not one, as libjpeg has it)
+  let short_app0 : Array[Byte] = [..bare[:2]]
+  for
+    value in [0xFF, 0xE0, 0x00, 0x09, 0x4A, 0x46, 0x49, 0x46, 0x00, 0xAA, 0xBB] {
+    short_app0.push(value.to_byte())
+  }
+  short_app0.append(bare[2:].to_array())
+  let short = named(Bytes::from_array(short_app0), 23)
+  @test.assert_eq(@codec.pdf_jpeg_info_view(short).jfif, false)
+  @test.assert_eq(transform(short), Some(PdfInteger(0)))
   let adobe = named(image_jpeg_of_components_for_test(3, true, jfif=false), 28)
   @test.assert_eq(@codec.pdf_jpeg_info_view(adobe).component_ids, [
     0x52, 0x47, 0x42,

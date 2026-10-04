@@ -341,7 +341,8 @@ pub fn pdf_jpeg_info_view(data : BytesView) -> PdfJpegInfo raise @core.PdfError 
       hierarchical = true
     }
     if marker == 0xE0 &&
-      segment_length >= 7 &&
+      // (JFIF's header whole, as libjpeg asks: its name and 9 bytes more)
+      segment_length >= 16 &&
       data[segment_start + 2:segment_start + 7] == b"JFIF\x00" {
       jfif = true
     }
