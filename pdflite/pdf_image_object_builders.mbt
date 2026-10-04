@@ -33,19 +33,44 @@ pub fn pdf_image_object_of_jpeg_data(
   data : BytesView,
 ) -> @syntax.PdfObject raise @core.PdfError {
   let (width, height) = @codec.pdf_jpeg_dimensions_view(data)
+  // its samples: grey, colour or CMYK, of the frame's precision
+  let info = @codec.pdf_jpeg_info_view(data)
+  let color_space = match info.components {
+    1 => pdf_image_device_gray_name()
+    3 => pdf_image_device_rgb_name()
+    4 => pdf_image_device_cmyk_name()
+    _ => raise InvalidJPEGBlock
+  }
   let payload = data.to_owned()
-  @syntax.pdf_stream(
-    PdfDictionary([
-      (pdf_image_length_key(), PdfInteger(payload.length())),
-      (pdf_image_filter_key(), PdfNameObject(pdf_image_dctdecode_name())),
-      (pdf_image_bits_per_component_key(), PdfInteger(8)),
-      (pdf_image_colorspace_key(), PdfNameObject(pdf_image_device_rgb_name())),
-      (pdf_image_subtype_key(), PdfNameObject(pdf_image_image_name())),
-      (pdf_image_width_key(), PdfInteger(width)),
-      (pdf_image_height_key(), PdfInteger(height)),
-    ]),
-    StreamGot(payload),
-  )
+  let entries : Array[(@core.PdfName, @syntax.PdfObject)] = [
+    (pdf_image_length_key(), PdfInteger(payload.length())),
+    (pdf_image_filter_key(), PdfNameObject(pdf_image_dctdecode_name())),
+    (pdf_image_bits_per_component_key(), PdfInteger(info.bits)),
+    (pdf_image_colorspace_key(), PdfNameObject(color_space)),
+    (pdf_image_subtype_key(), PdfNameObject(pdf_image_image_name())),
+    (pdf_image_width_key(), PdfInteger(width)),
+    (pdf_image_height_key(), PdfInteger(height)),
+  ]
+  // Adobe writes CMYK samples inverted (its APP14 marker says it is
+  // Adobe's): a /Decode of each component's range reversed puts them right
+  if info.components == 4 && info.adobe {
+    entries.push(
+      (
+        pdf_image_decode_key(),
+        PdfArray([
+          PdfInteger(1),
+          PdfInteger(0),
+          PdfInteger(1),
+          PdfInteger(0),
+          PdfInteger(1),
+          PdfInteger(0),
+          PdfInteger(1),
+          PdfInteger(0),
+        ]),
+      ),
+    )
+  }
+  @syntax.pdf_stream(PdfDictionary(entries), StreamGot(payload))
 }
 
 ///|

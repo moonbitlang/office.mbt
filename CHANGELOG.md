@@ -12,6 +12,15 @@ Breaking and notable changes for the published modules in this workspace.
 Entries are grouped by module and by the version they ship in; `Unreleased`
 covers changes that have landed on `main` but are not yet published.
 
+### moonbitlang/pdflite [Unreleased]
+
+- JPEG images take their colour space and bits from the frame header:
+  `/DeviceGray` for one component, `/DeviceRGB` for three, `/DeviceCMYK` for
+  four (other counts raise `InvalidJPEGBlock`), instead of always 8-bit
+  `/DeviceRGB`. A CMYK JPEG with an Adobe (APP14) marker, whose samples Adobe
+  writes inverted, gets `/Decode [1 0 1 0 1 0 1 0]`. New
+  `@codec.pdf_jpeg_info_view` reads the frame and the marker.
+
 ### moonbitlang/pdflite [0.3.5]
 
 - New package `moonbitlang/pdflite/subsetter`: a port of the Rust

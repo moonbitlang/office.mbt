@@ -267,3 +267,77 @@ pub fn pdf_jpeg_backup_dimensions(
 ) -> (Int, Int) raise @core.PdfError {
   pdf_jpeg_backup_dimensions_view(data)
 }
+
+///|
+/// What a JPEG's frame header and markers say of its samples.
+pub(all) struct PdfJpegInfo {
+  width : Int
+  height : Int
+  /// bits a sample (the frame's precision)
+  bits : Int
+  /// samples a pixel: 1 is greyscale, 3 colour, 4 CMYK
+  components : Int
+  /// whether it has an Adobe (APP14) marker: Adobe writes CMYK samples
+  /// inverted
+  adobe : Bool
+}
+
+///|
+/// What a JPEG's first frame header (any SOF marker) says of its samples,
+/// and whether an Adobe marker comes before its scan. Raises
+/// `JPEGDimensionsExpected` without a frame header.
+pub fn pdf_jpeg_info_view(data : BytesView) -> PdfJpegInfo raise @core.PdfError {
+  if data.length() < 2 || data[0].to_int() != 0xFF || data[1].to_int() != 0xD8 {
+    raise BadJPEGHeader
+  }
+  let mut frame : (Int, Int, Int, Int)? = None
+  let mut adobe = false
+  let mut index = 2
+  while index < data.length() {
+    let (marker, segment_start) = pdf_jpeg_next_marker(data, index) catch {
+      // (markers run out: what was found stands)
+      _ => break
+    }
+    // the scan, or the end of the image: the markers are done
+    if marker == 0xDA || marker == 0xD9 {
+      break
+    }
+    if pdf_jpeg_marker_without_segment_length(marker) {
+      index = segment_start
+      continue
+    }
+    let segment_length = pdf_jpeg_word_at(
+      data,
+      segment_start,
+      JPEGDimensionsExpected,
+    )
+    if segment_length < 2 {
+      raise InvalidJPEGBlock
+    }
+    if segment_length > data.length() - segment_start {
+      raise JPEGDimensionsExpected
+    }
+    if frame is None && pdf_jpeg_marker_has_dimensions(marker) {
+      if segment_length < 8 {
+        raise JPEGDimensionsExpected
+      }
+      frame = Some(
+        (
+          data[segment_start + 2].to_int(),
+          pdf_jpeg_word_at(data, segment_start + 3, JPEGDimensionsExpected),
+          pdf_jpeg_word_at(data, segment_start + 5, JPEGDimensionsExpected),
+          data[segment_start + 7].to_int(),
+        ),
+      )
+    } else if marker == 0xEE &&
+      segment_length >= 7 &&
+      data[segment_start + 2:segment_start + 7] == b"Adobe" {
+      adobe = true
+    }
+    index = segment_start + segment_length
+  }
+  guard frame is Some((bits, height, width, components)) else {
+    raise JPEGDimensionsExpected
+  }
+  { width, height, bits, components, adobe, }
+}
