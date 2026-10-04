@@ -21,6 +21,10 @@ pub(all) enum PdfPNGTransparency {
   /// transparent, as its samples (grey, or red, green and blue) of the
   /// image's bit depth.
   PdfPNGColourKey(Array[Int])
+  /// A palette image: the alpha of the palette's first entries, a byte each;
+  /// the entries past them are opaque. Only with an entry below 255: a
+  /// `tRNS` of opaque entries declares no transparency.
+  PdfPNGPaletteAlpha(@core.PdfBytes)
 } derive(Debug, Eq, ToJson)
 
 ///|
@@ -153,7 +157,7 @@ fn pdf_read_png_view_inner(data : BytesView) -> PdfPNG raise @core.PdfError {
   }
   let idat_chunks : Array[@core.PdfBytes] = []
   let mut palette : @core.PdfBytes? = None
-  let mut trns_entries : Int? = None
+  let mut trns : @core.PdfBytes? = None
   let mut transparency : PdfPNGTransparency? = None
   let mut done = false
   while !done {
@@ -192,30 +196,18 @@ fn pdf_read_png_view_inner(data : BytesView) -> PdfPNG raise @core.PdfError {
               ),
             )
           }
-        } else if chunk_type == pdf_png_trns_chunk_type && color_type == 3 {
-          // A palette with real per-entry alpha would need the
-          // transparency rebuilt as an /SMask, which forces a full decode
-          // this passthrough deliberately avoids. Refusing keeps the loss
-          // visible (the caller reports the image unreadable) instead of
-          // drawing it opaque, which would be quietly wrong.
-          //
-          // A tRNS whose entries are all 255 declares no transparency at
-          // all, though — every listed entry is fully opaque and PNG
-          // defines the unlisted rest as opaque too — so that common
-          // encoder artefact takes the normal path rather than losing the
-          // picture.
-          for index in 0..<chunk_data.length() {
-            if chunk_data[index] != b'\xff' {
-              raise BadPNG("read_png: palette transparency not supported")
-            }
-          }
+        } else if chunk_type == pdf_png_trns_chunk_type &&
+          color_type == 3 &&
+          idat_chunks.is_empty() {
+          // A palette's per-entry alpha (as a colour key, only a chunk before
+          // the image data counts).
           // PNG allows one tRNS at most. Last-write-wins would let a
           // second, shorter chunk hide that the first named entries the
           // palette does not have.
-          if trns_entries is Some(_) {
+          if trns is Some(_) {
             raise BadPNG("read_png: duplicate tRNS chunk")
           }
-          trns_entries = Some(chunk_data.length())
+          trns = Some(chunk_data)
         }
     }
   }
@@ -231,9 +223,9 @@ fn pdf_read_png_view_inner(data : BytesView) -> PdfPNG raise @core.PdfError {
       // tRNS may not name more entries than the palette has. Checked
       // here rather than at the chunk, because the scan is
       // order-independent and the palette may not have been seen yet.
-      match trns_entries {
-        Some(entries) =>
-          if entries > plte.length() / 3 {
+      match trns {
+        Some(alpha) =>
+          if alpha.length() > plte.length() / 3 {
             raise BadPNG("read_png: tRNS longer than the palette")
           }
         None => ()
@@ -246,6 +238,14 @@ fn pdf_read_png_view_inner(data : BytesView) -> PdfPNG raise @core.PdfError {
     // rather than carried.
     (_, _) => None
   }
+  // A tRNS whose entries are all 255 declares no transparency at all —
+  // every listed entry is fully opaque and PNG defines the unlisted rest as
+  // opaque too — so that common encoder artefact needs no mask.
+  let transparency = match trns {
+    Some(alpha) if palette is Some(_) && alpha.iter().any(a => a != b'\xff') =>
+      Some(PdfPNGPaletteAlpha(alpha))
+    _ => transparency
+  }
   let concatenated = pdf_png_concat(idat_chunks)
   let idat = if interlace_method == 1 {
     pdf_png_deinterlace(width, height, bit_depth, color_type, concatenated)
@@ -257,8 +257,8 @@ fn pdf_read_png_view_inner(data : BytesView) -> PdfPNG raise @core.PdfError {
 
 ///|
 /// Read a PNG from a byte view, de-interlacing an Adam7 image into a
-/// sequential IDAT stream. Palette images carry their PLTE; real palette
-/// transparency (a tRNS entry below 255) is refused rather than dropped.
+/// sequential IDAT stream. Palette images carry their PLTE, and their tRNS
+/// when it makes any entry transparent.
 pub fn pdf_read_png_view(data : BytesView) -> PdfPNG raise @core.PdfError {
   pdf_read_png_view_inner(data) catch {
     BadPNG(message) => raise BadPNG(message)
@@ -271,8 +271,8 @@ pub fn pdf_read_png_view(data : BytesView) -> PdfPNG raise @core.PdfError {
 
 ///|
 /// Read a PNG from owned bytes, de-interlacing an Adam7 image into a
-/// sequential IDAT stream. Palette images carry their PLTE; real palette
-/// transparency (a tRNS entry below 255) is refused rather than dropped.
+/// sequential IDAT stream. Palette images carry their PLTE, and their tRNS
+/// when it makes any entry transparent.
 pub fn pdf_read_png(data : @core.PdfBytes) -> PdfPNG raise @core.PdfError {
   pdf_read_png_view(data)
 }

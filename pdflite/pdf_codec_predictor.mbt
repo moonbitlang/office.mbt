@@ -7,7 +7,17 @@ fn pdf_predictor_scanline_width(
   if colors <= 0 || bits_per_component <= 0 || columns <= 0 {
     raise PredictorExpected
   }
-  (colors * bits_per_component * columns + 7) / 8
+  // counted wide, a factor at a time: a row of 2^31 bits or more is
+  // refused, not wrapped
+  let pixel = colors.to_int64() * bits_per_component.to_int64()
+  if pixel > 0x7FFFFFFFL {
+    raise PredictorExpected
+  }
+  let bits = pixel * columns.to_int64() + 7L
+  if bits > 0x7FFFFFFFL {
+    raise PredictorExpected
+  }
+  (bits / 8L).to_int()
 }
 
 ///|
@@ -18,7 +28,11 @@ fn pdf_predictor_bytes_per_pixel(
   if colors <= 0 || bits_per_component <= 0 {
     raise PredictorExpected
   }
-  (colors * bits_per_component + 7) / 8
+  let bits = colors.to_int64() * bits_per_component.to_int64() + 7L
+  if bits > 0x7FFFFFFFL {
+    raise PredictorExpected
+  }
+  (bits / 8L).to_int()
 }
 
 ///|

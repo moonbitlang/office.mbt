@@ -1201,9 +1201,8 @@ fn image_verdict(
         ignore(@pdflite.pdf_image_object_of_png_data(document, image.data))
         None
       } catch {
-        // The reader rejects palette transparency by design — embedding
-        // it opaque would be quietly wrong — but also rejects malformed
-        // or truncated files, so the reason cannot claim which without
+        // The reader rejects malformed or truncated files (and a 16-bit
+        // palette image), so the reason cannot claim which without
         // inspecting further.
         _ => Some("PNG this backend cannot read")
       }
