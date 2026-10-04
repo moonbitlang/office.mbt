@@ -12,7 +12,7 @@ Breaking and notable changes for the published modules in this workspace.
 Entries are grouped by module and by the version they ship in; `Unreleased`
 covers changes that have landed on `main` but are not yet published.
 
-### moonbitlang/pdflite [Unreleased]
+### moonbitlang/pdflite [0.3.6]
 
 - Faster PDF export (typst.mbt: `bench/long.typ` to PDF 296 -> 255 ms,
   `bench/longer.typ` 1.39 -> 1.24 s). `pdflite/export` writes reals
