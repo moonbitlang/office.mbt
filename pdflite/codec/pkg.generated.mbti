@@ -58,7 +58,8 @@ pub(all) struct PdfJpegInfo {
   height : Int
   bits : Int
   components : Int
-  adobe : Bool
+  frame : Int
+  adobe_transform : Int?
 }
 
 // Type aliases

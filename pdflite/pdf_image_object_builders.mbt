@@ -28,20 +28,31 @@ pub(all) struct PdfExtractedImageFile {
 } derive(Debug, Eq, ToJson)
 
 ///|
-/// Build a PDF image XObject for JPEG data.
+/// Build a PDF image XObject for JPEG data: the file as it is, under
+/// `/DCTDecode`, with the size and colour space its frame header gives
+/// (one component is grey, three colour, four CMYK).
+///
+/// Any JPEG that filter decodes is taken — baseline, extended sequential or
+/// progressive (PDF 1.3), of 8-bit samples, whatever markers it starts with —
+/// and any other (lossless, arithmetic-coded, 12-bit, of two components)
+/// raises `InvalidJPEGBlock`. A four-component JPEG with an Adobe marker has
+/// its samples inverted, as Adobe writes them, and gets the `/Decode` that
+/// puts them right.
 pub fn pdf_image_object_of_jpeg_data(
   data : BytesView,
 ) -> @syntax.PdfObject raise @core.PdfError {
-  let (width, height) = @codec.pdf_jpeg_dimensions_view(data)
-  // its samples: grey, colour or CMYK, of the frame's precision
   let info = @codec.pdf_jpeg_info_view(data)
+  // what DCTDecode decodes: Huffman-coded sequential or progressive frames
+  if info.frame != 0xC0 && info.frame != 0xC1 && info.frame != 0xC2 {
+    raise InvalidJPEGBlock
+  }
   let color_space = match info.components {
     1 => pdf_image_device_gray_name()
     3 => pdf_image_device_rgb_name()
     4 => pdf_image_device_cmyk_name()
     _ => raise InvalidJPEGBlock
   }
-  // DCTDecode has samples of 8 bits only
+  // of 8-bit samples only
   if info.bits != 8 {
     raise InvalidJPEGBlock
   }
@@ -52,12 +63,12 @@ pub fn pdf_image_object_of_jpeg_data(
     (pdf_image_bits_per_component_key(), PdfInteger(8)),
     (pdf_image_colorspace_key(), PdfNameObject(color_space)),
     (pdf_image_subtype_key(), PdfNameObject(pdf_image_image_name())),
-    (pdf_image_width_key(), PdfInteger(width)),
-    (pdf_image_height_key(), PdfInteger(height)),
+    (pdf_image_width_key(), PdfInteger(info.width)),
+    (pdf_image_height_key(), PdfInteger(info.height)),
   ]
-  // Adobe writes CMYK samples inverted (its APP14 marker says it is
+  // Adobe writes four components inverted (its APP14 marker says it is
   // Adobe's): a /Decode of each component's range reversed puts them right
-  if info.components == 4 && info.adobe {
+  if info.components == 4 && info.adobe_transform is Some(_) {
     entries.push(
       (
         pdf_image_decode_key(),

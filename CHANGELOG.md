@@ -14,12 +14,20 @@ covers changes that have landed on `main` but are not yet published.
 
 ### moonbitlang/pdflite [Unreleased]
 
-- JPEG images take their colour space from the frame header: `/DeviceGray`
-  for one component, `/DeviceRGB` for three, `/DeviceCMYK` for four, instead
-  of always `/DeviceRGB` (other counts, and samples not of 8 bits, raise
-  `InvalidJPEGBlock`). A CMYK JPEG with an Adobe (APP14) marker, whose samples Adobe
-  writes inverted, gets `/Decode [1 0 1 0 1 0 1 0]`. New
-  `@codec.pdf_jpeg_info_view` reads the frame and the marker.
+- JPEG images: `pdf_image_object_of_jpeg_data` takes every JPEG `/DCTDecode`
+  decodes — baseline, extended sequential or progressive, whatever markers it
+  starts with (Adobe's CMYK files often have no JFIF header) — where it took
+  only JFIF or Exif baseline files, and takes the colour space from the frame
+  header: `/DeviceGray` for one component, `/DeviceRGB` for three,
+  `/DeviceCMYK` for four, instead of always `/DeviceRGB`. A four-component
+  JPEG with an Adobe (APP14) marker, whose samples Adobe writes inverted, gets
+  `/Decode [1 0 1 0 1 0 1 0]`. Lossless, arithmetic-coded and 12-bit JPEGs,
+  and those of two components, raise `InvalidJPEGBlock`; a JPEG that ends
+  before its frame header raises `JPEGDimensionsExpected` (it could raise
+  `BadJPEGHeader`).
+- New `@codec.pdf_jpeg_info_view` (`PdfJpegInfo`): a JPEG's size, sample
+  precision, components, frame type and Adobe colour transform, read from
+  any JPEG.
 
 ### moonbitlang/pdflite [0.3.5]
 

@@ -277,21 +277,29 @@ pub(all) struct PdfJpegInfo {
   bits : Int
   /// samples a pixel: 1 is greyscale, 3 colour, 4 CMYK
   components : Int
-  /// whether it has an Adobe (APP14) marker: Adobe writes CMYK samples
-  /// inverted
-  adobe : Bool
+  /// the frame header's marker, which says how the image is coded: 0xC0
+  /// baseline, 0xC1 extended sequential, 0xC2 progressive (the three PDF's
+  /// DCTDecode has; progressive since PDF 1.3), 0xC3 and above lossless,
+  /// differential or arithmetic
+  frame : Int
+  /// the colour transform of its Adobe (APP14) marker — 0 none (RGB, or
+  /// CMYK), 1 YCbCr, 2 YCCK — or None without the marker. Adobe writes
+  /// the samples of four components inverted.
+  adobe_transform : Int?
 }
 
 ///|
-/// What a JPEG's first frame header (any SOF marker) says of its samples,
-/// and whether an Adobe marker comes before its scan. Raises
-/// `JPEGDimensionsExpected` without a frame header.
+/// What a JPEG's first frame header (any SOF marker) says of its size and
+/// samples, and its Adobe marker's colour transform when one comes before
+/// its scan. Unlike `pdf_jpeg_dimensions_view` it asks for no JFIF or Exif
+/// header and takes any frame. Raises `BadJPEGHeader` for data that does not
+/// start a JPEG and `JPEGDimensionsExpected` without a frame header.
 pub fn pdf_jpeg_info_view(data : BytesView) -> PdfJpegInfo raise @core.PdfError {
   if data.length() < 2 || data[0].to_int() != 0xFF || data[1].to_int() != 0xD8 {
     raise BadJPEGHeader
   }
-  let mut frame : (Int, Int, Int, Int)? = None
-  let mut adobe = false
+  let mut frame : (Int, Int, Int, Int, Int)? = None
+  let mut adobe_transform : Int? = None
   let mut index = 2
   while index < data.length() {
     let (marker, segment_start) = pdf_jpeg_next_marker(data, index) catch {
@@ -323,6 +331,7 @@ pub fn pdf_jpeg_info_view(data : BytesView) -> PdfJpegInfo raise @core.PdfError 
       }
       frame = Some(
         (
+          marker,
           data[segment_start + 2].to_int(),
           pdf_jpeg_word_at(data, segment_start + 3, JPEGDimensionsExpected),
           pdf_jpeg_word_at(data, segment_start + 5, JPEGDimensionsExpected),
@@ -333,12 +342,12 @@ pub fn pdf_jpeg_info_view(data : BytesView) -> PdfJpegInfo raise @core.PdfError 
       // (Adobe's marker whole: its name, version, flags and transform)
       segment_length >= 14 &&
       data[segment_start + 2:segment_start + 7] == b"Adobe" {
-      adobe = true
+      adobe_transform = Some(data[segment_start + 13].to_int())
     }
     index = segment_start + segment_length
   }
-  guard frame is Some((bits, height, width, components)) else {
+  guard frame is Some((marker, bits, height, width, components)) else {
     raise JPEGDimensionsExpected
   }
-  { width, height, bits, components, adobe, }
+  { width, height, bits, components, frame: marker, adobe_transform, }
 }

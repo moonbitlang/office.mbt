@@ -434,8 +434,9 @@ test "pdf draw control image data helpers propagate parser errors" {
   } noraise {
     value => Ok(value)
   }
-  guard bad_jpeg is Err(@core.PdfError::BadJPEGHeader) else {
-    fail("expected BadJPEGHeader")
+  // (a JPEG that ends before its frame header)
+  guard bad_jpeg is Err(@core.PdfError::JPEGDimensionsExpected) else {
+    fail("expected JPEGDimensionsExpected")
   }
   let bad_png : Result[Unit, Error] = try
     control.add_png_data(
@@ -477,8 +478,8 @@ test "pdf draw control image data helpers propagate parser errors" {
   } noraise {
     value => Ok(value)
   }
-  guard bad_alias_jpeg is Err(@core.PdfError::BadJPEGHeader) else {
-    fail("expected BadJPEGHeader through addjpeg wrapper")
+  guard bad_alias_jpeg is Err(@core.PdfError::JPEGDimensionsExpected) else {
+    fail("expected JPEGDimensionsExpected through addjpeg wrapper")
   }
   let bad_alias_png : Result[Unit, Error] = try
     @pdflite.pdf_addpng(

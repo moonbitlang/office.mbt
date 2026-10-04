@@ -1,14 +1,20 @@
 ///|
-/// A JPEG's markers up to its frame header: JFIF, an Adobe marker when
-/// `adobe`, and a baseline frame of `components` samples a pixel.
+/// A JPEG's markers up to its frame header: JFIF when `jfif`, an Adobe
+/// marker when `adobe`, and a frame (baseline, or of marker `frame`) of
+/// `components` samples a pixel of `precision` bits.
 fn image_jpeg_of_components_for_test(
   components : Int,
   adobe : Bool,
   precision? : Int = 8,
+  frame? : Int = 0xC0,
+  jfif? : Bool = true,
 ) -> @core.PdfBytes {
-  let bytes : Array[Int] = [
-    0xFF, 0xD8, 0xFF, 0xE0, 0x00, 0x09, 0x4A, 0x46, 0x49, 0x46, 0x00, 0xAA, 0xBB,
-  ]
+  let bytes : Array[Int] = [0xFF, 0xD8]
+  if jfif {
+    bytes.append([
+      0xFF, 0xE0, 0x00, 0x09, 0x4A, 0x46, 0x49, 0x46, 0x00, 0xAA, 0xBB,
+    ])
+  }
   if adobe {
     // APP14: "Adobe", version, flags, colour transform
     bytes.append([
@@ -16,10 +22,11 @@ fn image_jpeg_of_components_for_test(
       0x00, 0x00, 0x00,
     ])
   }
-  // SOF0: length, precision 8, height 300, width 400, the components
+  // the frame header: length, precision, height 300, width 400, the
+  // components
   bytes.append([
     0xFF,
-    0xC0,
+    frame,
     0x00,
     8 + 3 * components,
     precision,
@@ -130,4 +137,73 @@ test "pdf_image_object_of_jpeg_data refuses a frame of two samples a pixel" {
   guard result is Err(@core.PdfError::InvalidJPEGBlock) else {
     fail("expected InvalidJPEGBlock")
   }
+}
+
+///|
+test "pdf_image_object_of_jpeg_data takes every JPEG DCTDecode decodes" {
+  let taken = (jpeg : @core.PdfBytes) => {
+    try @pdflite.pdf_image_object_of_jpeg_data(jpeg) catch {
+      InvalidJPEGBlock => false
+      err => raise err
+    } noraise {
+      _ => true
+    }
+  }
+  // baseline, extended sequential and progressive frames
+  for frame in [0xC0, 0xC1, 0xC2] {
+    @test.assert_eq(
+      taken(image_jpeg_of_components_for_test(3, false, frame~)),
+      true,
+    )
+  }
+  // not lossless, differential or arithmetic-coded ones
+  for frame in [0xC3, 0xC5, 0xC9, 0xCA] {
+    @test.assert_eq(
+      taken(image_jpeg_of_components_for_test(3, false, frame~)),
+      false,
+    )
+  }
+  // whatever it starts with: Adobe's CMYK often has no JFIF header
+  let cmyk = image_jpeg_of_components_for_test(4, true, jfif=false)
+  @test.assert_eq(taken(cmyk), true)
+  guard image_jpeg_colour_for_test(cmyk) is (_, Some(_)) else {
+    fail("expected Adobe's CMYK, without a JFIF header, to get a /Decode")
+  }
+}
+
+///|
+test "pdf_jpeg_info_view reads the frame and the Adobe marker" {
+  let info = @codec.pdf_jpeg_info_view(
+    image_jpeg_of_components_for_test(4, true, frame=0xC2, jfif=false),
+  )
+  @test.assert_eq(
+    (info.width, info.height, info.bits, info.components, info.frame),
+    (400, 300, 8, 4, 0xC2),
+  )
+  // (the transform of the test's marker is 0: CMYK as stored)
+  @test.assert_eq(info.adobe_transform, Some(0))
+  let plain = @codec.pdf_jpeg_info_view(
+    image_jpeg_of_components_for_test(1, false),
+  )
+  @test.assert_eq((plain.components, plain.frame), (1, 0xC0))
+  @test.assert_eq(plain.adobe_transform, None)
+  // not a JPEG; a JPEG that ends before its frame
+  let failure = (data : @core.PdfBytes) => {
+    try @codec.pdf_jpeg_info_view(data) catch {
+      BadJPEGHeader => "BadJPEGHeader"
+      JPEGDimensionsExpected => "JPEGDimensionsExpected"
+      _ => "another error"
+    } noraise {
+      _ => "none"
+    }
+  }
+  @test.assert_eq(failure(image_bytes_for_test([0x89, 0x50])), "BadJPEGHeader")
+  @test.assert_eq(
+    failure(image_bytes_for_test([0xFF, 0xD8, 0xFF, 0xDB])),
+    "JPEGDimensionsExpected",
+  )
+  @test.assert_eq(
+    failure(image_bytes_for_test([0xFF, 0xD8, 0xFF, 0xD9])),
+    "JPEGDimensionsExpected",
+  )
 }
