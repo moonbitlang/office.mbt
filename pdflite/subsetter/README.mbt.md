@@ -46,6 +46,7 @@ test "subset a font" {
 The `oracle` directory has the generator of `oracle_test.mbt` and
 `oracle_native_test.mbt` (synthetic fonts subset by the Rust crate),
 `sweep.sh`, which compares the port with the Rust crate on local fonts
-(`sweep/`), and `mutations.sh`, which compares them on every single-byte
-mutation of the synthetic fonts. Where the Rust crate panics on invalid
+(`sweep/`), and `mutations.sh`, which compares them on single-byte
+variants of the synthetic fonts (each byte set to `0x00`, `0xFF`, `b ^ 0x01`,
+`b ^ 0x80`, `b + 1` and `b - 1`). Where the Rust crate panics on invalid
 data, the port returns an error instead.

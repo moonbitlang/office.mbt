@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
-# Compare pdflite/subsetter with the Rust crate on every single-byte
-# mutation of the synthetic fixtures (`src/bin/mutations.rs`; ~180k cases,
-# about a minute in release mode).
+# Compare pdflite/subsetter with the Rust crate on single-byte variants of
+# the synthetic fixtures (up to six replacement values per byte, see
+# `src/bin/mutations.rs`; ~420k cases, a few minutes in release mode).
 #
 # Usage: pdflite/subsetter/oracle/mutations.sh [work dir] [font...]
 set -euo pipefail

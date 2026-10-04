@@ -1,4 +1,4 @@
-//! A differential mutation sweep: every single-byte mutation (to 0x00,
+//! A differential mutation sweep: single-byte variants (each byte set to 0x00,
 //! 0xFF, `b ^ 0x01`, `b ^ 0x80`, `b + 1` and `b - 1`) of the synthetic
 //! fixtures of `fonts.rs`, subset with the `subsetter` crate. Writes the
 //! mutated fonts and a manifest in the format of `sweep` plus a label column

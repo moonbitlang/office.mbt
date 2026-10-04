@@ -115,73 +115,53 @@ pub fn Font::new_variable(
   variation_coordinates : ArrayView[(@subsetter.Tag, Float)],
   key? : String = "",
 ) -> Font? {
-  // Offsets and lengths are validated up front, so that all later reads and
-  // slices stay in bounds (reads past the end of a table only see bytes of
-  // the file, never panic).
-  let mut base = 0
-  if data.length() >= 12 && rd_tag(data, 0) == "ttcf" {
-    let count = rd_u32(data, 8)
-    if index < 0 ||
-      count < 0 ||
-      index >= count ||
-      // (Without multiplying `index`, which could overflow.)
-      index > (data.length() - 16) / 4 {
-      return None
-    }
-    base = rd_u32(data, 12 + 4 * index)
-  } else if index != 0 {
-    return None
+  // Like krilla's `Font::new_variable`: the font must be readable by
+  // read-fonts (`FontRef::from_index`) and have a readable `head` table;
+  // other tables are read lazily and may be missing or out of bounds.
+  let font_ref = @read_fonts.FontRef::from_index(data, index) catch {
+    _ => return None
   }
-  if base < 0 || base > data.length() - 12 {
-    return None
-  }
-  let num_tables = rd_u16(data, base + 4)
-  if base + 12 + 16 * num_tables > data.length() {
-    return None
-  }
-  let tables : Map[String, (Int, Int)] = Map([])
-  for i in 0..<num_tables {
-    let rec = base + 12 + 16 * i
-    let tag = rd_tag(data, rec)
-    // `rd_u32` returns negative values for offsets and lengths >= 2^31.
-    let offset = rd_u32(data, rec + 8)
-    let length = rd_u32(data, rec + 12)
-    if offset < 0 || length < 0 || offset > data.length() - length {
-      return None
-    }
-    tables[tag] = (offset, length)
-  }
-  // The tables that are read without further length checks.
-  // (`head`, `hhea` and `maxp` are required, like in ttf-parser.)
-  for entry in [("head", 54), ("hhea", 36), ("maxp", 6)] {
-    match tables.get(entry.0) {
-      Some((_, len)) => if len < entry.1 { return None }
-      None => return None
-    }
-  }
-  guard tables.get("head") is Some((head, _)) else { return None }
-  // Like ttf-parser, which rejects other values.
-  let units_per_em = rd_u16(data, head + 18)
-  if units_per_em < 16 || units_per_em > 16384 {
+  let head_table = font_ref.head() catch { _ => return None }
+  let units_per_em = head_table.units_per_em()
+  // (krilla would divide by zero; such a font is rejected instead.)
+  if units_per_em == 0 {
     return None
   }
   let units_per_em = units_per_em.to_double()
   let bbox = (
-    rd_i16(data, head + 36).to_double(),
-    rd_i16(data, head + 38).to_double(),
-    rd_i16(data, head + 40).to_double(),
-    rd_i16(data, head + 42).to_double(),
+    head_table.x_min().to_double(),
+    head_table.y_min().to_double(),
+    head_table.x_max().to_double(),
+    head_table.y_max().to_double(),
   )
-  let num_glyphs = match tables.get("maxp") {
-    Some((maxp, _)) => rd_u16(data, maxp + 4)
+  // skrifa's `GlyphNames::num_glyphs`: from `maxp`, else 0.
+  let num_glyphs = match ok(() => font_ref.maxp()) {
+    Some(maxp) => maxp.num_glyphs()
     None => 0
   }
-  if num_glyphs == 0 {
-    return None
+  // The table records whose data is in bounds (read-fonts' `table_data`).
+  let base = if rd_tag(data, 0) == "ttcf" {
+    rd_u32(data, 12 + 4 * index)
+  } else {
+    0
   }
-  // krilla checks that the outline tables can be read.
-  let font_ref = @read_fonts.FontRef::from_index(data, index) catch {
-    _ => return None
+  let tables : Map[String, (Int, Int)] = Map([])
+  let num_tables = rd_u16(data, base + 4)
+  for i in 0..<num_tables {
+    let rec = base + 12 + 16 * i
+    if rec < 0 || rec > data.length() - 16 {
+      break
+    }
+    let tag = rd_tag(data, rec)
+    // `rd_u32` returns negative values for offsets and lengths >= 2^31.
+    let offset = rd_u32(data, rec + 8)
+    let length = rd_u32(data, rec + 12)
+    if offset >= 0 &&
+      length >= 0 &&
+      offset <= data.length() - length &&
+      !tables.contains(tag) {
+      tables[tag] = (offset, length)
+    }
   }
   let has_cff = ok(() => font_ref.cff()) is Some(_)
   let kind = if tables.contains("glyf") {
@@ -286,7 +266,7 @@ pub fn Font::new_variable(
   // skrifa's `Attributes`: the OS/2 weight class, else the head's macStyle.
   let weight = match os2 {
     Some(os2) => os2.us_weight_class().to_double()
-    None => if (rd_u16(data, head + 44) & 1) != 0 { 700.0 } else { 400.0 }
+    None => if (head_table.mac_style() & 1) != 0 { 700.0 } else { 400.0 }
   }
   // (OS/2 `fsType`, for the restricted license check.)
   let fs_type = match os2 {
@@ -313,7 +293,12 @@ pub fn Font::new_variable(
     kind,
     key,
     color: None,
-    variation_coordinates: variation_coordinates.to_owned(),
+    // krilla stores the coordinates as `FiniteF32`s (non-finite values
+    // become 0); the location of the metrics uses the values as given.
+    variation_coordinates: variation_coordinates.map(entry => {
+      let (tag, value) = entry
+      (tag, if value.is_nan() || value.is_inf() { 0.0 } else { value })
+    }),
     glyph_metrics,
     has_cff,
   })

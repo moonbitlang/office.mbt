@@ -633,11 +633,13 @@ fn table_record(data : Bytes, tag : String) -> Int {
 }
 
 ///|
-test "Font::new rejects fonts with out-of-bounds or invalid structures" {
+test "Font::new accepts and rejects fonts like krilla" {
   let data = test_font_data()
   let head = table_record(data, "head")
   let glyf = table_record(data, "glyf")
   let rejected = (d : Bytes) => @export.Font::new(d, 0) is None
+  // krilla only requires read-fonts' table directory and a readable `head`
+  // table: out-of-bounds table records count as missing tables.
   let cases = [
     // A table offset with the high bit set (negative as a signed value).
     patch(data, glyf + 8, [0x80, 0, 0, 0]),
@@ -647,7 +649,8 @@ test "Font::new rejects fonts with out-of-bounds or invalid structures" {
     patch(data, 4, [0xFF, 0xFF]),
     // A head table that is too short.
     patch(data, head + 12, [0, 0, 0, 20]),
-    // Zero units per em.
+    // Zero units per em (rejected unlike krilla, which would divide by
+    // zero).
     patch(
       data,
       (
@@ -665,8 +668,12 @@ test "Font::new rejects fonts with out-of-bounds or invalid structures" {
   debug_inspect(
     cases.map(rejected),
     content=(
-      #|[true, true, true, true, true, true]
+      #|[false, false, true, true, true, true]
     ),
+  )
+  debug_inspect(
+    @export.Font::new(patch(data, glyf + 8, [0x80, 0, 0, 0]), 0).map(f => f.kind),
+    content="Some(NoOutlines)",
   )
   // Collections: a negative face index, an index past the count, and a face
   // offset past the end.
@@ -756,5 +763,18 @@ test "advance widths come from skrifa's glyph metrics" {
     content=(
       #|[Some(0), Some(0), Some(0), None]
     ),
+  )
+}
+
+///|
+test "non-finite variation coordinates are stored as zero" {
+  let font = @export.Font::new_variable(test_font_data(), 0, [
+    (@subsetter.Tag::from_str("wght").unwrap(), (1.0 : Float) / 0.0),
+    (@subsetter.Tag::from_str("wdth").unwrap(), (0.0 : Float) / 0.0),
+    (@subsetter.Tag::from_str("opsz").unwrap(), 12.5),
+  ]).unwrap()
+  debug_inspect(
+    font.variation_coordinates().map(c => c.1),
+    content="[0, 0, 12.5]",
   )
 }

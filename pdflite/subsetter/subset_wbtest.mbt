@@ -179,15 +179,24 @@ test "Rust f32 parsing" {
 
 ///|
 test "Tag::from_str takes strings of four UTF-8 bytes" {
-  inspect(Tag::from_str("wght").map(t => t.get()), content="Some(b\"wght\")")
-  inspect(
+  debug_inspect(
+    Tag::from_str("wght").map(t => t.get()),
+    content=(
+      #|Some(<Bytes: [0x77, 0x67, 0x68, 0x74]>)
+    ),
+  )
+  debug_inspect(
     Tag::from_str("éab").map(t => t.get()),
-    content="Some(b\"\\xc3\\xa9ab\")",
+    content=(
+      #|Some(<Bytes: [0xc3, 0xa9, 0x61, 0x62]>)
+    ),
   )
   inspect(Tag::from_str("wghtx") is None, content="true")
   inspect(Tag::from_str("éabc") is None, content="true")
-  inspect(
+  debug_inspect(
     Tag::from_str("😀").map(t => t.get()),
-    content="Some(b\"\\xf0\\x9f\\x98\\x80\")",
+    content=(
+      #|Some(<Bytes: [0xf0, 0x9f, 0x98, 0x80]>)
+    ),
   )
 }

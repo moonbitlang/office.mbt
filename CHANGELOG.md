@@ -17,7 +17,7 @@ covers changes that have landed on `main` but are not yet published.
 - New package `moonbitlang/pdflite/subsetter`: a port of the Rust
   `subsetter` crate 0.2.6 (with its `variable-fonts` feature),
   byte-identical with the crate on its oracle tests, on a sweep over
-  local fonts and on single-byte mutations of the test fonts
+  local fonts and on single-byte variants of the test fonts
   (`pdflite/subsetter/oracle`). It subsets TrueType and CFF fonts with
   new, consecutive glyph IDs (CFF fonts become CID-keyed with an identity
   charset), instantiates variable fonts (`gvar`, `avar`, `HVAR`, `VARC`
@@ -41,9 +41,14 @@ covers changes that have landed on `main` but are not yet published.
   and an uppercase code space range. `Font::new_variable` creates a font at
   variation coordinates (advances from `HVAR`/`gvar`, cap height with
   `MVAR`), which the subset instantiates.
-- `pdflite/export`: a font whose CFF table can't be read has no outlines
-  (`Font::new` used to fail), and a broken `loca` table makes subsetting
-  fail (`FontError`) like in krilla.
+- `pdflite/export`: `Font::new` accepts fonts like krilla: it requires a
+  readable table directory and `head` table (with nonzero units per em);
+  table records out of bounds count as missing tables, and `hhea`/`maxp`
+  are optional (they used to make `Font::new` fail). A font whose CFF
+  table can't be read has no outlines, a broken `loca` table makes
+  subsetting fail (`FontError`), advances always come from skrifa's glyph
+  metrics, and non-finite variation coordinates are subset as 0, like in
+  krilla.
 
 ### moonbitlang/pdflite [0.3.4]
 
