@@ -19,7 +19,7 @@ import {
   "moonbitlang/mbtexcel@0.2.1",
   "moonbitlang/pagelayout@0.2.1",
   "moonbitlang/x@0.4.50",
-  "moonbit-community/flate@0.8.1",
+  "moonbit-community/flate@0.8.5",
   "moonbit-community/unicode@0.5.2",
 }
 

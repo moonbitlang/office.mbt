@@ -29,7 +29,7 @@ priv struct Type3Font {
   /// The glyphs (glyph ID and context color) in code order.
   glyphs : Array[(Int, Int)]
   widths : Array[Double]
-  cmap_entries : Map[Int, (String, Location?)]
+  cmap_entries : CmapEntries
   /// The reference of the font dictionary.
   ref_ : Int
 }
@@ -95,7 +95,7 @@ fn FontContainer::add_glyph(
       font: self.font,
       glyphs: [],
       widths: [],
-      cmap_entries: {},
+      cmap_entries: CmapEntries::new(),
       ref_: sc.new_ref(),
     })
   }
@@ -135,7 +135,7 @@ fn FontContainer::set_codepoints(
   if fid < 0 {
     self.cid_font.set_codepoints(code, text, location)
   } else {
-    self.type3[fid].cmap_entries[code] = (text, location)
+    self.type3[fid].cmap_entries.set(code, (text, location))
   }
 }
 
@@ -161,6 +161,16 @@ fn FontContainer::units_per_em(self : FontContainer, fid : Int) -> Double {
 
 ///|
 /// Encode a code of a PDF font.
+fn write_code(buf : @buffer.Buffer, fid : Int, code : Int) -> Unit {
+  if fid < 0 {
+    buf.write_byte(((code >> 8) & 0xFF).to_byte())
+  }
+  buf.write_byte((code & 0xFF).to_byte())
+}
+
+///|
+/// The bytes of a code: two big-endian bytes for a CID, one for a Type 3
+/// code (see `write_code`).
 fn encode_code(fid : Int, code : Int) -> Bytes {
   if fid < 0 {
     encode_cid(code)
