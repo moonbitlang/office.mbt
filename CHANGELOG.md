@@ -21,15 +21,16 @@ covers changes that have landed on `main` but are not yet published.
   header: `/DeviceGray` for one component, `/DeviceRGB` for three,
   `/DeviceCMYK` for four, instead of always `/DeviceRGB`. A four-component
   JPEG with an Adobe (APP14) marker, whose samples Adobe writes inverted, gets
-  `/Decode [1 0 1 0 1 0 1 0]`. Lossless, arithmetic-coded, hierarchical and
+  `/Decode [1 0 1 0 1 0 1 0]`; three components named `R`, `G`, `B` with no
+  JFIF or Adobe marker are RGB as they are, and get `/ColorTransform 0`. Lossless, arithmetic-coded, hierarchical and
   12-bit JPEGs, and those of two components, raise `InvalidJPEGBlock`; a JPEG that ends
   before its frame header raises `JPEGDimensionsExpected` (it could raise
   `BadJPEGHeader`).
   `pdf_image_document_of_jpeg_data` makes a progressive JPEG's document PDF
   1.3.
 - New `@codec.pdf_jpeg_info_view` (`PdfJpegInfo`): a JPEG's size, sample
-  precision, components, frame type, Adobe colour transform and whether it
-  is hierarchical, read from any JPEG.
+  precision, components and their identifiers, frame type, JFIF and Adobe
+  markers and whether it is hierarchical, read from any JPEG.
 
 ### moonbitlang/pdflite [0.3.5]
 

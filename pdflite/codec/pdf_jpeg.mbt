@@ -278,6 +278,11 @@ pub(all) struct PdfJpegInfo {
   /// the components of a pixel (as a rule one is greyscale, three colour
   /// and four CMYK; what they are is the markers' and the decoder's to say)
   components : Int
+  /// the identifier of each component, as the frame header has them
+  /// (JFIF's are 1, 2 and 3; some writers name them: `R`, `G`, `B`)
+  component_ids : Array[Int]
+  /// whether it has a JFIF (APP0) marker, whose three components are YCbCr
+  jfif : Bool
   /// the frame header's marker, which says how the image is coded: 0xC0
   /// baseline, 0xC1 extended sequential, 0xC2 progressive (the three PDF's
   /// DCTDecode has; progressive since PDF 1.3), 0xC3 and above lossless,
@@ -303,6 +308,8 @@ pub fn pdf_jpeg_info_view(data : BytesView) -> PdfJpegInfo raise @core.PdfError 
     raise BadJPEGHeader
   }
   let mut frame : (Int, Int, Int, Int, Int)? = None
+  let component_ids : Array[Int] = []
+  let mut jfif = false
   let mut adobe_transform : Int? = None
   let mut hierarchical = false
   let mut index = 2
@@ -333,6 +340,11 @@ pub fn pdf_jpeg_info_view(data : BytesView) -> PdfJpegInfo raise @core.PdfError 
     if marker == 0xDE {
       hierarchical = true
     }
+    if marker == 0xE0 &&
+      segment_length >= 7 &&
+      data[segment_start + 2:segment_start + 7] == b"JFIF\x00" {
+      jfif = true
+    }
     if frame is None && pdf_jpeg_marker_has_dimensions(marker) {
       if segment_length < 8 {
         raise JPEGDimensionsExpected
@@ -346,6 +358,14 @@ pub fn pdf_jpeg_info_view(data : BytesView) -> PdfJpegInfo raise @core.PdfError 
           data[segment_start + 7].to_int(),
         ),
       )
+      // (the identifiers the segment has room for)
+      for index in 0..<data[segment_start + 7].to_int() {
+        let at = segment_start + 8 + 3 * index
+        if at >= segment_start + segment_length {
+          break
+        }
+        component_ids.push(data[at].to_int())
+      }
     } else if marker == 0xEE &&
       // (Adobe's marker whole: its name, version, flags and transform)
       segment_length >= 14 &&
@@ -362,6 +382,8 @@ pub fn pdf_jpeg_info_view(data : BytesView) -> PdfJpegInfo raise @core.PdfError 
     height,
     bits,
     components,
+    component_ids,
+    jfif,
     frame: marker,
     adobe_transform,
     hierarchical,

@@ -38,8 +38,9 @@ pub(all) struct PdfExtractedImageFile {
 /// components) raises `InvalidJPEGBlock`. A four-component JPEG with an Adobe
 /// marker has its samples inverted, as Adobe writes them, and gets the
 /// `/Decode` that puts them right. The components' colour transform is the
-/// filter's own: the Adobe marker's, else YCbCr for three components and
-/// none for others.
+/// filter's own (the Adobe marker's, else YCbCr for three components and
+/// none for others), but for three components named R, G and B with no
+/// Adobe or JFIF marker, which are RGB as they are: `/ColorTransform 0`.
 ///
 /// A progressive JPEG needs PDF 1.3: `pdf_image_document_of_jpeg_data`
 /// makes its document one; a document the image is added to is the
@@ -73,6 +74,20 @@ pub fn pdf_image_object_of_jpeg_data(
     (pdf_image_width_key(), PdfInteger(info.width)),
     (pdf_image_height_key(), PdfInteger(info.height)),
   ]
+  // Three components are YCbCr to the filter unless an Adobe marker says
+  // otherwise. Without that marker, or JFIF's, components named R, G and B
+  // are what they are named (as libjpeg takes them): no transform.
+  if info.components == 3 &&
+    info.adobe_transform is None &&
+    !info.jfif &&
+    info.component_ids == [0x52, 0x47, 0x42] {
+    entries.push(
+      (
+        pdf_decodeparms_key(),
+        PdfDictionary([(pdf_image_name("/ColorTransform"), PdfInteger(0))]),
+      ),
+    )
+  }
   // Adobe writes four components inverted (its APP14 marker says it is
   // Adobe's): a /Decode of each component's range reversed puts them right
   if info.components == 4 && info.adobe_transform is Some(_) {

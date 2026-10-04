@@ -58,6 +58,8 @@ pub(all) struct PdfJpegInfo {
   height : Int
   bits : Int
   components : Int
+  component_ids : Array[Int]
+  jfif : Bool
   frame : Int
   adobe_transform : Int?
   hierarchical : Bool

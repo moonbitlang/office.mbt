@@ -252,3 +252,47 @@ test "pdf_image_document_of_jpeg_data is of PDF 1.3 for a progressive JPEG" {
   @test.assert_eq(baseline.version(), plain.version())
   @test.assert_eq(baseline.version().1 < 3, true)
 }
+
+///|
+test "pdf_image_object_of_jpeg_data has components named R, G and B untransformed" {
+  let transform = (jpeg : @core.PdfBytes) => {
+    guard @pdflite.pdf_image_object_of_jpeg_data(jpeg)
+      is PdfStreamObject(stream) else {
+      fail("expected a JPEG stream object")
+    }
+    match
+      stream.dictionary.lookup_immediate(image_name_for_test("/DecodeParms")) {
+      Some(parms) => Some(image_lookup_for_test(parms, "/ColorTransform"))
+      None => None
+    }
+  }
+  // the frame's component identifiers follow its count: R, G, B for 1, 2, 3
+  let named = (jpeg : @core.PdfBytes, at : Int) => {
+    let bytes = jpeg.to_array()
+    bytes[at] = b'R'
+    bytes[at + 3] = b'G'
+    bytes[at + 6] = b'B'
+    Bytes::from_array(bytes)
+  }
+  // with no JFIF or Adobe marker they are RGB as they are
+  let bare = image_jpeg_of_components_for_test(3, false, jfif=false)
+  @test.assert_eq(@codec.pdf_jpeg_info_view(bare).component_ids, [1, 2, 3])
+  @test.assert_eq(transform(bare), None)
+  let rgb = named(bare, 12)
+  @test.assert_eq(@codec.pdf_jpeg_info_view(rgb).component_ids, [
+    0x52, 0x47, 0x42,
+  ])
+  @test.assert_eq(transform(rgb), Some(PdfInteger(0)))
+  // JFIF's are YCbCr whatever they are named, and Adobe's marker says its own
+  let jfif = named(image_jpeg_of_components_for_test(3, false), 23)
+  @test.assert_eq(@codec.pdf_jpeg_info_view(jfif).jfif, true)
+  @test.assert_eq(@codec.pdf_jpeg_info_view(jfif).component_ids, [
+    0x52, 0x47, 0x42,
+  ])
+  @test.assert_eq(transform(jfif), None)
+  let adobe = named(image_jpeg_of_components_for_test(3, true, jfif=false), 28)
+  @test.assert_eq(@codec.pdf_jpeg_info_view(adobe).component_ids, [
+    0x52, 0x47, 0x42,
+  ])
+  @test.assert_eq(transform(adobe), None)
+}
