@@ -436,7 +436,7 @@ fn pdf_png_colour_key(data : BytesView) -> Array[Int]? {
     // a chunk length is under 2^31, and the chunk (with its CRC) in the data
     guard data[at].to_int() < 0x80 else { return None }
     let length = be(at, 4)
-    guard at + 12 + length <= data.length() else { return None }
+    guard length <= data.length() - at - 12 else { return None }
     let kind = data[at + 4:at + 8]
     let body = at + 8
     if kind == b"IDAT" || kind == b"IEND" {

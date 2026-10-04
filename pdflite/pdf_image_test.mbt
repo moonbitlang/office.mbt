@@ -1475,16 +1475,20 @@ test "pdf_image_object_of_png_data stops at a chunk length past the data" {
   ])
   // the tEXt chunk (after the signature and IHDR) claims 0xFFFFFFF4 bytes,
   // which would step the chunk walk back on itself
-  let bytes = png.to_array()
-  bytes[33] = b'\xFF'
-  bytes[34] = b'\xFF'
-  bytes[35] = b'\xFF'
-  bytes[36] = b'\xF4'
+  // (and one just under 2^31, which would overflow the bound)
+  for length in [[0xFF, 0xFF, 0xFF, 0xF4], [0x7F, 0xFF, 0xFF, 0xD3]] {
+    let bytes = png.to_array()
+    for k in 0..<4 {
+      bytes[33 + k] = length[k].to_byte()
+    }
+    image_png_mask_absent_for_test(Bytes::from_array(bytes))
+  }
+}
+
+///|
+fn image_png_mask_absent_for_test(png : @core.PdfBytes) -> Unit raise {
   let document = @pdflite.pdf_document_empty()
-  let object = @pdflite.pdf_image_object_of_png_data(
-    document,
-    Bytes::from_array(bytes),
-  ) catch {
+  let object = @pdflite.pdf_image_object_of_png_data(document, png) catch {
     _ => return
   }
   guard object is PdfStreamObject(stream) else { return }
