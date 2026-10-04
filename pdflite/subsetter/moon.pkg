@@ -10,3 +10,10 @@ import {
 }
 
 warnings = "-missing_doc-implicit_impl_as_method"
+
+options(
+  targets: {
+    // Depends on the platform's `f32` trigonometry, like the Rust oracle.
+    "oracle_native_test.mbt": [ "native" ],
+  },
+)

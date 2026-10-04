@@ -1519,6 +1519,31 @@ pub fn varc_full(coverage: Vec<u8>, second_axis: u16) -> Vec<u8> {
     )
 }
 
+/// A VARC table rotating and skewing the glyf glyphs 1 and 2.
+pub fn varc_rot() -> Vec<u8> {
+    let store = multi_var_store(&[], &[]);
+    let rot = |gid: u32, r: i16| {
+        let mut c = comp(0x0040, gid);
+        c.fields = vec![r];
+        c
+    };
+    let mut skew = comp(0x2000 | 0x4000 | 0x0010, 1);
+    skew.fields = vec![35, 777, -1234];
+    let mut all = comp(0x0010 | 0x0020 | 0x0040 | 0x0100 | 0x0200 | 0x0400 | 0x0800 | 0x2000 | 0x4000, 2);
+    all.fields = vec![-17, 23, 1365, 1100, 900, 135, -635, 300, -2047];
+    varc_table(
+        coverage1(&[3, 4, 5]),
+        Some(store),
+        None,
+        None,
+        &[
+            vec![rot(1, -3129), rot(2, 1), rot(1, 5), rot(2, 333), rot(1, 2047), rot(2, -4095)],
+            vec![skew, rot(2, 1024), rot(1, -2048)],
+            vec![all, rot(1, 3000)],
+        ],
+    )
+}
+
 /// Rebuilds an sfnt with an extra table.
 pub fn add_table(font: &[u8], tag: &'static str, data: Vec<u8>) -> Vec<u8> {
     let magic = u32::from_be_bytes(font[0..4].try_into().unwrap());
@@ -1657,6 +1682,8 @@ pub fn all() -> Vec<(&'static str, Vec<u8>)> {
             }
             sfnt(0x00010000, &tables)
         }),
+        // VARC rotations and skews (f32 trigonometry).
+        ("tt_var_varc_rot", add_table(&tt_var(false), "VARC", varc_rot())),
         // Unreadable gvar data for glyph 2: skrifa applies the stale deltas
         // of an earlier component from the shared memory buffer.
         ("tt_var_varc_stale", patch_table(add_table(&tt_var(true), "VARC", varc_full(coverage1(&[3, 4, 5]), 1)), "gvar", 26, 128)),

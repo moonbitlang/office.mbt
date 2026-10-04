@@ -21,7 +21,9 @@ The subsets are meant for embedding in PDFs as CID fonts:
   space coordinates (TrueType outlines through `gvar`, metrics through
   `HVAR`); CFF2 fonts are converted to TrueType fonts, also at the default
   location. Glyphs with `VARC` (variable composite) records are drawn from
-  their components like skrifa does.
+  their components like skrifa does (rotations and skews use the
+  platform's `f32` trigonometry on native targets, like Rust; other targets
+  can differ in the last bit).
 
 ```moonbit check
 ///|
@@ -41,8 +43,9 @@ test "subset a font" {
 }
 ```
 
-The `oracle` directory has the generator of `oracle_test.mbt` (synthetic
-fonts subset by the Rust crate), `sweep.sh`, which compares the port with
-the Rust crate on local fonts (`sweep/`), and `mutations.sh`, which compares
-them on every single-byte mutation of the synthetic fonts. Where the Rust
-crate panics on invalid data, the port returns an error instead.
+The `oracle` directory has the generator of `oracle_test.mbt` and
+`oracle_native_test.mbt` (synthetic fonts subset by the Rust crate),
+`sweep.sh`, which compares the port with the Rust crate on local fonts
+(`sweep/`), and `mutations.sh`, which compares them on every single-byte
+mutation of the synthetic fonts. Where the Rust crate panics on invalid
+data, the port returns an error instead.
