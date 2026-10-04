@@ -60,15 +60,28 @@ fn pdf_truetype_cmap_glyph_from_entries(
 priv struct PdfTrueTypeCMapBuilder {
   entries : Array[@truetype.PdfTrueTypeCMapGlyph]
   positions : Map[Int, Int]
-  /// The mappings still to be read. A cmap's tables overlap, and map a
-  /// codepoint a few times over; a hostile one (its tables, segments or
-  /// records all the same range again and again) would map without end.
+  /// The steps the reading has left: a mapping read is one, and so is a
+  /// record, segment or group looked at. A cmap's tables overlap, and map
+  /// a codepoint a few times over; a hostile one (its records, segments or
+  /// groups the same again and again, mapping or not) would be read
+  /// without end.
   mut budget : Int
 }
 
 ///|
-/// The mappings a cmap is read for: every codepoint eight times over.
+/// The steps a cmap is read for: every codepoint eight times over.
 let pdf_truetype_cmap_budget : Int = 8 * 0x110000
+
+///|
+/// Spend a step of the reading's budget: false once it is spent.
+fn PdfTrueTypeCMapBuilder::step(self : PdfTrueTypeCMapBuilder) -> Bool {
+  if self.budget <= 0 {
+    false
+  } else {
+    self.budget -= 1
+    true
+  }
+}
 
 ///|
 /// Map `codepoint` to `glyph_index`, replacing an earlier mapping of it in
@@ -79,10 +92,9 @@ fn pdf_truetype_push_cmap_glyph(
   codepoint : Int,
   glyph_index : Int,
 ) -> Bool {
-  if entries.budget <= 0 {
+  if !entries.step() {
     return false
   }
-  entries.budget -= 1
   let normalized = pdf_truetype_normalize_u16(glyph_index)
   match entries.positions.get(codepoint) {
     Some(index) =>
@@ -156,6 +168,9 @@ fn pdf_truetype_cmap_format4_glyphs(
       let id_range_offset_offset = id_delta_offset + seg_count * 2
       let glyph_index_array_start = id_range_offset_offset + seg_count * 2
       for segment in 0..<seg_count {
+        if !entries.step() {
+          break
+        }
         match
           (
             pdf_truetype_read_u16(data, end_codes_offset + segment * 2),
@@ -259,6 +274,9 @@ fn pdf_truetype_cmap_groups_glyphs(
   // the lowest codepoint the next group may start at
   let mut next = 0
   for group in 0..<group_count {
+    if !entries.step() {
+      return
+    }
     let at = subtable_offset + 16 + group * 12
     guard (
         pdf_truetype_read_u32_as_int(data, at),
@@ -406,7 +424,7 @@ pub fn pdf_truetype_cmap_glyphs(
         match pdf_truetype_read_u16(data, cmap_offset + 2) {
           Some(record_count) => {
             for record_index in 0..<record_count {
-              if entries.budget <= 0 {
+              if !entries.step() {
                 break
               }
               let record_offset = cmap_offset + 4 + record_index * 8

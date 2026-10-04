@@ -212,3 +212,24 @@ test "pdf_truetype_cmap_glyphs reads a cmap of tables without end to a bound" {
   @test.assert_eq(entries.length(), 0x110000)
   @test.assert_eq(entries[0x10FFFF], { codepoint: 0x10FFFF, glyph_index: 1, })
 }
+
+///|
+test "pdf_truetype_cmap_glyphs reads groups that map nothing to a bound too" {
+  // records without end of groups that are passed over: looking at a group
+  // is a step of the reading as mapping a codepoint is
+  let nothing = truetype_format12_subtable_for_test(
+    Array::make(4000, (0x50, 0x4F, 1)),
+  )
+  let font = truetype_cmap_font_for_test(
+    [
+      (3, 1, truetype_format6_subtable_for_test(0x41, [7])),
+      ..Array::makei(3000, i => (3, i, nothing)),
+      (3, 10, truetype_format6_subtable_for_test(0x42, [8])),
+    ],
+  )
+  // 12 million groups to look at are past the budget: the last table is
+  // not reached
+  @test.assert_eq(@pdflite.pdf_truetype_cmap_glyphs(font), [
+    { codepoint: 0x41, glyph_index: 7, },
+  ])
+}
