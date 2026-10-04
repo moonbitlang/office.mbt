@@ -23,6 +23,27 @@ covers changes that have landed on `main` but are not yet published.
   `scripts/gen_standard14_kern_pairs.mbtx` from the AFM files.
 - `pdf_read_afm_kern_pairs` parses an AFM's pairs by glyph name.
 
+### moonbitlang/pdflite [0.3.6]
+
+- Faster PDF export (typst.mbt: `bench/long.typ` to PDF 296 -> 255 ms,
+  `bench/longer.typ` 1.39 -> 1.24 s). `pdflite/export` writes reals
+  directly into the output buffer with exact table powers of ten instead of
+  calling `@math.pow` about a dozen times per number (bit-identical to the
+  previous `pow`-based search, checked on 100k values on every backend),
+  keeps ToUnicode entries and the subsetter's glyph remapping in dense
+  arrays instead of hash maps, and avoids per-glyph string and byte copies
+  when encoding glyph runs and names. Output bytes are unchanged.
+- Flate streams reuse one `@zlib.Encoder` per compression level through
+  the new `Encoder::reset` (flate 0.8.5), which avoids allocating and
+  filling about half a MiB of encoder tables per stream; the output equals
+  a fresh encoder's. The cached encoders stay alive for the process.
+- Depends on `moonbit-community/flate` 0.8.5 (from 0.8.1). Its level-6
+  parser changed in 0.8.4, so Flate streams (in PDFs, and in DOCX/XLSX
+  packages written by the other workspace modules) can differ in their
+  compressed bytes; decompressed content is unchanged. On typst.mbt's
+  benchmarks PDFs change size by -0.07% to +0.33%. 0.8.5 compresses about
+  25% faster than 0.8.4 with identical output.
+
 ### moonbitlang/pdflite [0.3.5]
 
 - New package `moonbitlang/pdflite/subsetter`: a port of the Rust

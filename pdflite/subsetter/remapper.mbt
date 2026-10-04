@@ -7,8 +7,10 @@
 priv struct Remapper {
   /// The counter that keeps track of the next number to be assigned.
   mut counter : Int
-  /// The map that maps numbers from their old value to their new value.
-  forward : Map[Int, Int]
+  /// The map that maps numbers from their old value to their new value,
+  /// stored densely by old value (`-1` = not remapped). Old values are
+  /// glyph IDs or font DICT indices, so the table stays small.
+  mut forward : FixedArray[Int]
   /// The vector that stores the "reverse" mapping, i.e. given a new number,
   /// it allows to map back to the old one.
   backward : Array[Int]
@@ -17,14 +19,14 @@ priv struct Remapper {
 
 ///|
 fn Remapper::new(limit : Int) -> Remapper {
-  { counter: 0, forward: {}, backward: [], limit, }
+  { counter: 0, forward: [], backward: [], limit, }
 }
 
 ///|
 fn Remapper::copy(self : Remapper) -> Remapper {
   {
     counter: self.counter,
-    forward: Map::from_iter(self.forward.iter()),
+    forward: self.forward.copy(),
     backward: self.backward.copy(),
     limit: self.limit,
   }
@@ -33,7 +35,13 @@ fn Remapper::copy(self : Remapper) -> Remapper {
 ///|
 /// Get the new mapping of a value that has been remapped before.
 fn Remapper::get(self : Remapper, old : Int) -> Int? {
-  self.forward.get(old)
+  guard old >= 0 && old < self.forward.length() else { return None }
+  let value = self.forward[old]
+  if value < 0 {
+    None
+  } else {
+    Some(value)
+  }
 }
 
 ///|
@@ -41,19 +49,28 @@ fn Remapper::get(self : Remapper, old : Int) -> Int? {
 /// already has been remapped, and assigning a new number if it has not been
 /// remapped.
 fn Remapper::remap(self : Remapper, old : Int) -> Int {
-  match self.forward.get(old) {
-    Some(v) => v
-    None => {
-      let value = self.counter
-      self.backward.push(old)
-      if self.counter + 1 >= self.limit {
-        abort("remapper was overflowed")
-      }
-      self.counter += 1
-      self.forward[old] = value
-      value
-    }
+  // Old values are glyph IDs (checked by `GlyphRemapper::remap`) or font
+  // DICT indices, so they are never negative.
+  guard old >= 0 else { abort("remapper value out of range") }
+  if old < self.forward.length() && self.forward[old] >= 0 {
+    return self.forward[old]
   }
+  let value = self.counter
+  self.backward.push(old)
+  if self.counter + 1 >= self.limit {
+    abort("remapper was overflowed")
+  }
+  self.counter += 1
+  if old >= self.forward.length() {
+    let grown = FixedArray::make(
+      (old + 1).max(self.forward.length() * 2).max(64),
+      -1,
+    )
+    self.forward.blit_to(grown, len=self.forward.length())
+    self.forward = grown
+  }
+  self.forward[old] = value
+  value
 }
 
 ///|
