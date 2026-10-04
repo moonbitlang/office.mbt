@@ -187,7 +187,7 @@ test "the shipping encoder produces identical bytes on every backend" {
       #|short period L6 -> 29/4206590865824530627
       #|short period L9 -> 29/4206590865824530627
       #|ascii text L1 -> 78/4818767968346529930
-      #|ascii text L6 -> 75/1093528484905272696
+      #|ascii text L6 -> 75/3603607800458324543
       #|ascii text L9 -> 75/1093528484905272696
       #|incompressible L1 -> 4107/1796056689918308922
       #|incompressible L6 -> 4107/1796056689918308922

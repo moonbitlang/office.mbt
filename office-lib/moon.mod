@@ -19,7 +19,7 @@ import {
   "moonbitlang/docx2html@0.6.1",
   "moonbitlang/async@0.22.4",
   "moonbitlang/x@0.4.50",
-  "moonbit-community/flate@0.8.1",
+  "moonbit-community/flate@0.8.5",
 }
 
 preferred_target = "native"
