@@ -32,9 +32,40 @@ pub fn pdf_flate_encode(data : @core.PdfBytes) -> @core.PdfBytes {
 }
 
 ///|
+
+///|
+/// One reusable encoder per level. An encoder allocates about half a MiB of
+/// window and match-finder tables, which dominates the cost of the many small
+/// streams in a PDF; `reset` keeps them and yields exactly the output of a
+/// fresh encoder. Encoding never suspends or calls back, so uses of a cached
+/// encoder cannot overlap, and an encode abandoned by a panic is undone by
+/// the next `reset`.
+let pdf_flate_encoders : FixedArray[@zlib.Encoder?] = FixedArray::make(10, None)
+
+///|
+/// The output window drained after every encoder step (see
+/// `pdf_flate_encoders` for why sharing it is safe).
+let pdf_flate_scratch : FixedArray[Byte] = FixedArray::make(32768, b'\x00')
+
+///|
+fn pdf_flate_encoder(level : Int) -> @zlib.Encoder {
+  match pdf_flate_encoders[level] {
+    Some(encoder) => {
+      encoder.reset()
+      encoder
+    }
+    None => {
+      let encoder = @zlib.Encoder(level~)
+      pdf_flate_encoders[level] = Some(encoder)
+      encoder
+    }
+  }
+}
+
+///|
 fn pdf_flate_encode_stream(data : BytesView, level : Int) -> Bytes {
-  let encoder = @zlib.Encoder(level~)
-  let scratch = FixedArray::make(32768, b'\x00')
+  let encoder = pdf_flate_encoder(level)
+  let scratch = pdf_flate_scratch
   let output = @buffer.Buffer()
   for pos = 0 {
     let status = encoder.step(data[pos:], scratch.mut_view(), action=Finish)

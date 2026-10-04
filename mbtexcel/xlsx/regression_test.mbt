@@ -11,7 +11,7 @@ test "large workbook regression snapshot" {
   inspect(
     bytes.length(),
     content=(
-      #|9934
+      #|9644
     ),
   )
   let parsed = @xlsx.read(bytes)
