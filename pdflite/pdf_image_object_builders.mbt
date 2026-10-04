@@ -215,8 +215,8 @@ fn PdfPNG::pdf_image_split_alpha(
 
 ///|
 /// A palette image's soft mask: each pixel's alpha, its palette entry's in
-/// `alpha` (opaque past its end; an index past the palette is its last
-/// entry, as PDF draws it), 8 bits a pixel, flate-compressed. Raises
+/// `alpha` (opaque past its end, and so for an index past the palette, as
+/// PNG has decoders recover), 8 bits a pixel, flate-compressed. Raises
 /// BadPNG for image data short of the raster (or a raster too large).
 fn PdfPNG::pdf_image_palette_mask(
   self : PdfPNG,
@@ -252,18 +252,14 @@ fn PdfPNG::pdf_image_palette_mask(
   }
   let per_byte = 8 / depth
   let max = (1 << depth) - 1
-  // an index past the palette is drawn as its last entry (PDF clamps it to
-  // hival), and so masked as it
-  let last = match self.palette {
-    Some(plte) => plte.length() / 3 - 1
-    None => max
-  }
   let mask = Array::make(self.width * self.height, b'\xFF')
   for y in 0..<self.height {
     for x in 0..<self.width {
       let at = y * row_bytes + x / per_byte
       let shift = 8 - depth * (x % per_byte + 1)
-      let index = ((indices[at].to_int() >> shift) & max).min(last)
+      let index = (indices[at].to_int() >> shift) & max
+      // (opaque past the alpha there is, and so past the palette, where PNG
+      // has decoders make an index an opaque pixel)
       if index < alpha.length() {
         mask[y * self.width + x] = alpha[index]
       }

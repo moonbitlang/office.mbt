@@ -28,6 +28,8 @@ covers changes that have landed on `main` but are not yet published.
 - A predictor row (`/Columns` × `/Colors` × `/BitsPerComponent`) of 2^31 bits
   or more raises `PredictorExpected` instead of wrapping, which could hang
   decoding.
+- `pdf_read_png` refuses a PNG of zero width or height (`BadPNG`), which PNG
+  has not.
 
 ### moonbitlang/pdflite [0.3.5]
 

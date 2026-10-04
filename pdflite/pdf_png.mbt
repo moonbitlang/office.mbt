@@ -108,6 +108,10 @@ fn pdf_read_png_view_inner(data : BytesView) -> PdfPNG raise @core.PdfError {
     byte_cursor_read_u32_be(header),
     "read_png: height too large",
   )
+  // PNG has no image without pixels
+  if width == 0 || height == 0 {
+    raise BadPNG("read_png: zero width or height")
+  }
   let bit_depth = match header.read_byte() {
     Some(byte) => byte.to_int()
     None => raise EndOfInput

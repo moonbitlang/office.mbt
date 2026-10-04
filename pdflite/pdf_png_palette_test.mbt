@@ -442,9 +442,9 @@ test "a palette image's mask needs all its data, of a size that fits" {
 }
 
 ///|
-test "a palette mask treats an index past the palette as its last entry" {
-  // two entries, the second transparent; index 2 is drawn (PDF clamps it)
-  // as entry 1, so it is masked as entry 1
+test "a palette mask has an index past the palette opaque" {
+  // two entries, the second transparent; index 2 is neither: PNG has
+  // decoders recover with an opaque pixel
   let file = png_palette_file_for_test(2, 1, 8, 0, [
     ([0x50, 0x4C, 0x54, 0x45], png_palette_bytes_for_test([0, 0, 0, 9, 9, 9])),
     ([0x74, 0x52, 0x4E, 0x53], png_palette_bytes_for_test([255, 0])),
@@ -454,7 +454,7 @@ test "a palette mask treats an index past the palette as its last entry" {
     ),
   ])
   let (_, mask) = png_palette_smask_for_test(file)
-  @test.assert_eq(mask, png_palette_bytes_for_test([255, 0]))
+  @test.assert_eq(mask, png_palette_bytes_for_test([255, 255]))
 }
 
 ///|
@@ -472,4 +472,27 @@ test "a palette image's soft mask raises the document to PDF 1.4" {
   let plain = @pdflite.pdf_document_empty()
   ignore(@pdflite.pdf_image_object_of_png_data(plain, sequential))
   @test.assert_eq(plain.version(), (1, 0))
+}
+
+///|
+test "pdf_read_png refuses an image without pixels" {
+  // PNG has no zero width or height; nor is there a raster to make of one
+  let plte = png_palette_bytes_for_test([0, 0, 0])
+  for size in [(0, 1), (1, 0), (268435455, 0)] {
+    let file = png_palette_file_for_test(size.0, size.1, 8, 0, [
+      ([0x50, 0x4C, 0x54, 0x45], plte),
+      ([0x74, 0x52, 0x4E, 0x53], png_palette_bytes_for_test([0])),
+      ([0x49, 0x44, 0x41, 0x54], @flate.pdf_flate_encode(b"")),
+    ])
+    let result : Result[@pdflite.PdfPNG, Error] = try
+      @pdflite.pdf_read_png(file)
+    catch {
+      err => Err(err)
+    } noraise {
+      value => Ok(value)
+    }
+    guard result is Err(@core.PdfError::BadPNG(_)) else {
+      fail("expected BadPNG for \{size.0} by \{size.1}")
+    }
+  }
 }
