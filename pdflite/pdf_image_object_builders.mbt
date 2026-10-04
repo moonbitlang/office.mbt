@@ -432,7 +432,7 @@ fn pdf_png_colour_key(data : BytesView) -> Array[Int]? {
     _ => return None
   }
   let mut at = 8
-  while at + 8 <= data.length() {
+  while data.length() - at >= 8 {
     // a chunk length is under 2^31, and the chunk (with its CRC) in the data
     guard data[at].to_int() < 0x80 else { return None }
     let length = be(at, 4)
