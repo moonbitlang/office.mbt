@@ -1526,3 +1526,44 @@ test "pdf_image_object_of_png_data raises the version its masks need" {
   ignore(@pdflite.pdf_image_object_of_png_data(unmasked, plain))
   @test.assert_eq(unmasked.version(), (1, 0))
 }
+
+///|
+test "pdf_read_png reads a colour key as the image's transparency" {
+  let trns : ReadOnlyArray[Int] = [0x74, 0x52, 0x4E, 0x53]
+  let idat_type : ReadOnlyArray[Int] = [0x49, 0x44, 0x41, 0x54]
+  let idat = @flate.pdf_flate_encode(
+    image_bytes_for_test([0, 0, 0, 0, 0, 0, 0]),
+  )
+  let key = (depth : Int, color_type : Int, chunks : Array[Array[Int]]) => {
+    let all : Array[(ArrayView[Int], @core.PdfBytes)] = chunks.map(c => {
+      let chunk : (ArrayView[Int], @core.PdfBytes) = (
+        trns,
+        image_bytes_for_test(c),
+      )
+      chunk
+    })
+    all.push((idat_type, idat))
+    @pdflite.pdf_read_png(
+      image_png_with_chunks_for_test(1, 1, depth, color_type, all),
+    ).transparency
+  }
+  let colour_key = (samples : Array[Int]) => {
+    let transparency : @pdflite.PdfPNGTransparency? = Some(
+      PdfPNGColourKey(samples),
+    )
+    transparency
+  }
+  // grey, and truecolour's red, green and blue
+  @test.assert_eq(key(8, 0, [[0, 0x42]]), colour_key([0x42]))
+  @test.assert_eq(key(8, 2, [[0, 1, 0, 2, 0, 3]]), colour_key([1, 2, 3]))
+  // samples of 16 bits whole, of fewer without the bits above them
+  @test.assert_eq(key(16, 0, [[0x12, 0x34]]), colour_key([0x1234]))
+  @test.assert_eq(key(2, 0, [[0xFF, 0xFE]]), colour_key([2]))
+  // a chunk of another length is not a colour key; the first of two is
+  @test.assert_eq(key(8, 0, [[0x42]]), None)
+  @test.assert_eq(key(8, 2, [[0, 1]]), None)
+  @test.assert_eq(key(8, 0, [[0, 1, 0, 2]]), None)
+  @test.assert_eq(key(8, 0, [[0, 1], [0, 2]]), colour_key([1]))
+  // none without the chunk
+  @test.assert_eq(key(8, 0, []), None)
+}

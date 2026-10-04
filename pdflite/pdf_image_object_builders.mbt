@@ -236,29 +236,27 @@ pub fn PdfDocument::pdf_image_object_of_png_data(
     components,
     predictor,
   )
-  // a greyscale or truecolour PNG's colour key (tRNS): the pixels of that
-  // colour are transparent, a /Mask of each sample's range
-  if png.color_type == 0 || png.color_type == 2 {
-    match pdf_png_colour_key(data) {
-      Some(key) => {
-        // colour-key masks are PDF 1.3
-        self.pdf_image_raise_version(1, 3)
-        entries.push(
-          (
-            pdf_image_mask_key(),
-            PdfArray(
-              key
-              .map(v => {
-                let n : @syntax.PdfObject = PdfInteger(v)
-                [n, n]
-              })
-              .flatten(),
-            ),
+  // a colour key: the pixels of that colour are transparent, a /Mask of
+  // each sample's range
+  match png.transparency {
+    Some(PdfPNGColourKey(key)) => {
+      // colour-key masks are PDF 1.3
+      self.pdf_image_raise_version(1, 3)
+      entries.push(
+        (
+          pdf_image_mask_key(),
+          PdfArray(
+            key
+            .map(v => {
+              let n : @syntax.PdfObject = PdfInteger(v)
+              [n, n]
+            })
+            .flatten(),
           ),
-        )
-      }
-      None => ()
+        ),
+      )
     }
+    None => ()
   }
   match mask_data {
     Some(mask) => {
@@ -407,50 +405,6 @@ pub fn pdf_obj_of_jbig2_data(
   global? : BytesView? = None,
 ) -> (@syntax.PdfObject, Array[(Int, @syntax.PdfObject)]) raise @core.PdfError {
   pdf_image_obj_of_jbig2_data(data, global~)
-}
-
-///|
-/// The colour key a greyscale or truecolour PNG's tRNS chunk declares: the
-/// sample value of its transparent pixels (grey, or red, green and blue),
-/// or None without one. tRNS comes before the image data, which ends the
-/// search.
-fn pdf_png_colour_key(data : BytesView) -> Array[Int]? {
-  let be = (at : Int, width : Int) => {
-    let mut value = 0
-    for k in 0..<width {
-      value = (value << 8) | data[at + k].to_int()
-    }
-    value
-  }
-  guard data.length() > 25 else { return None }
-  // the samples are of the bit depth (PNG has decoders clear the bits above)
-  let depth = data[24].to_int()
-  let sample_mask = if depth < 16 { (1 << depth) - 1 } else { 0xFFFF }
-  let samples = match data[25].to_int() {
-    0 => 1
-    2 => 3
-    _ => return None
-  }
-  let mut at = 8
-  while data.length() - at >= 8 {
-    // a chunk length is under 2^31, and the chunk (with its CRC) in the data
-    guard data[at].to_int() < 0x80 else { return None }
-    let length = be(at, 4)
-    guard length <= data.length() - at - 12 else { return None }
-    let kind = data[at + 4:at + 8]
-    let body = at + 8
-    if kind == b"IDAT" || kind == b"IEND" {
-      return None
-    }
-    if kind == b"tRNS" {
-      guard length >= 2 * samples && body + 2 * samples <= data.length() else {
-        return None
-      }
-      return Some(Array::makei(samples, i => be(body + 2 * i, 2) & sample_mask))
-    }
-    at = body + length + 4
-  }
-  None
 }
 
 ///|

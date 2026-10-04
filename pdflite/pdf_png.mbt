@@ -14,6 +14,16 @@ let pdf_png_trns_chunk_type : UInt = 0x74524E53U
 let pdf_png_max_int64 : Int64 = 2147483647L
 
 ///|
+/// What a PNG without an alpha channel says of its transparency, in its
+/// `tRNS` chunk.
+pub(all) enum PdfPNGTransparency {
+  /// Greyscale and truecolour: the one colour whose pixels are fully
+  /// transparent, as its samples (grey, or red, green and blue) of the
+  /// image's bit depth.
+  PdfPNGColourKey(Array[Int])
+} derive(Debug, Eq, ToJson)
+
+///|
 /// Parsed PNG metadata and concatenated IDAT payload.
 ///
 /// This mirrors the small `Cpdfpng` surface needed for image insertion,
@@ -22,6 +32,8 @@ let pdf_png_max_int64 : Int64 = 2147483647L
 /// equivalent sequential one when it is read, so consumers never see
 /// interlacing. `palette` carries the PLTE payload (RGB triples) for
 /// colour type 3 and is `None` for every other type.
+/// `transparency` is what a `tRNS` chunk before the image data declares,
+/// `None` without one.
 pub(all) struct PdfPNG {
   width : Int
   height : Int
@@ -29,6 +41,7 @@ pub(all) struct PdfPNG {
   color_type : Int
   idat : @core.PdfBytes
   palette : @core.PdfBytes?
+  transparency : PdfPNGTransparency?
 } derive(Debug, Eq, ToJson)
 
 ///|
@@ -141,6 +154,7 @@ fn pdf_read_png_view_inner(data : BytesView) -> PdfPNG raise @core.PdfError {
   let idat_chunks : Array[@core.PdfBytes] = []
   let mut palette : @core.PdfBytes? = None
   let mut trns_entries : Int? = None
+  let mut transparency : PdfPNGTransparency? = None
   let mut done = false
   while !done {
     try pdf_png_read_chunk(cursor) catch {
@@ -151,6 +165,33 @@ fn pdf_read_png_view_inner(data : BytesView) -> PdfPNG raise @core.PdfError {
           idat_chunks.push(chunk_data)
         } else if chunk_type == pdf_png_plte_chunk_type {
           palette = Some(chunk_data)
+        } else if chunk_type == pdf_png_trns_chunk_type &&
+          (color_type == 0 || color_type == 2) {
+          // A colour key: one two-byte sample for grey, three for red, green
+          // and blue. As decoders have it, only a chunk of just that, before
+          // the image data, counts, and the first of them; the bits above
+          // the bit depth are cleared.
+          let samples = if color_type == 0 { 1 } else { 3 }
+          if transparency is None &&
+            idat_chunks.is_empty() &&
+            chunk_data.length() == 2 * samples {
+            let sample_mask = if bit_depth < 16 {
+              (1 << bit_depth) - 1
+            } else {
+              0xFFFF
+            }
+            transparency = Some(
+              PdfPNGColourKey(
+                Array::makei(samples, i => {
+                  (
+                    (chunk_data[2 * i].to_int() << 8) |
+                    chunk_data[2 * i + 1].to_int()
+                  ) &
+                  sample_mask
+                }),
+              ),
+            )
+          }
         } else if chunk_type == pdf_png_trns_chunk_type && color_type == 3 {
           // A palette with real per-entry alpha would need the
           // transparency rebuilt as an /SMask, which forces a full decode
@@ -162,8 +203,7 @@ fn pdf_read_png_view_inner(data : BytesView) -> PdfPNG raise @core.PdfError {
           // all, though — every listed entry is fully opaque and PNG
           // defines the unlisted rest as opaque too — so that common
           // encoder artefact takes the normal path rather than losing the
-          // picture. tRNS on colour types 0/2 (a transparent colour key)
-          // stays ignored, as it always was.
+          // picture.
           for index in 0..<chunk_data.length() {
             if chunk_data[index] != b'\xff' {
               raise BadPNG("read_png: palette transparency not supported")
@@ -212,7 +252,7 @@ fn pdf_read_png_view_inner(data : BytesView) -> PdfPNG raise @core.PdfError {
   } else {
     concatenated
   }
-  { width, height, bit_depth, color_type, idat, palette, }
+  { width, height, bit_depth, color_type, idat, palette, transparency, }
 }
 
 ///|
