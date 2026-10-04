@@ -12,6 +12,46 @@ Breaking and notable changes for the published modules in this workspace.
 Entries are grouped by module and by the version they ship in; `Unreleased`
 covers changes that have landed on `main` but are not yet published.
 
+### moonbitlang/pdflite [Unreleased]
+
+- New package `moonbitlang/pdflite/subsetter`: a port of the Rust
+  `subsetter` crate 0.2.6 (with its `variable-fonts` feature),
+  byte-identical with the crate on its oracle tests, on a sweep over
+  local fonts and on single-byte variants of the test fonts
+  (`pdflite/subsetter/oracle`). It subsets TrueType and CFF fonts with
+  new, consecutive glyph IDs (CFF fonts become CID-keyed with an identity
+  charset), instantiates variable fonts (`gvar`, `avar`, `HVAR`, `VARC`
+  variable composites) and converts CFF2 fonts to TrueType. Outlines and
+  variations come from internal ports of read-fonts 0.39.2 and skrifa 0.42.1
+  (`pdflite/internal/*`, from typst.mbt, extended with variations and CFF2).
+- `pdflite/export` embeds fonts like krilla: subsets made with
+  `pdflite/subsetter` whose CIDs are the new glyph IDs (content streams,
+  `/W`, `/ToUnicode` and validation errors use them), CFF subsets as
+  `/FontFile3` `/CIDFontType0C` programs and TrueType subsets (also of CFF2
+  fonts) as `/FontFile2` without `/Length1`. CFF fonts used to be embedded
+  whole and TrueType fonts with all glyph IDs; PDFs with large fonts shrink
+  accordingly (typst.mbt's showcase, with a few Chinese characters in
+  PingFang SC, from 13.4 MB to 1.6 MB). Also like krilla: subset tags are
+  SipHash-1-3 hashes of the glyph remapping, `/W` uses the `first last
+  width` form with `f32` arithmetic, `/FontBBox` is the union of the
+  outlines of the subset, the descriptor's `/Ascent` and `/Descent` are the
+  OS/2 typo metrics, the PostScript name is the first name ID 6 record, a
+  font with a readable CFF table is embedded as a CFF font, PDF versions
+  before 2.0 get a `/CIDSet`, the ToUnicode CMap has `/Type /CMap /WMode 0`
+  and an uppercase code space range. `Font::new_variable` creates a font at
+  variation coordinates (advances from `HVAR`/`gvar`, cap height with
+  `MVAR`), which the subset instantiates.
+- `pdflite/export`: `Font::new` accepts fonts like krilla: it requires a
+  readable table directory and `head` table (with nonzero units per em);
+  tables are looked up like read-fonts (null or out-of-bounds records are
+  missing tables), `hhea`/`maxp` are optional (they used to make
+  `Font::new` fail) and the glyph count is skrifa's (`maxp`, or the charset
+  of a name-keyed CFF font without `post` names). A font whose CFF
+  table can't be read has no outlines, a broken `loca` table makes
+  subsetting fail (`FontError`), advances always come from skrifa's glyph
+  metrics, and non-finite variation coordinates are subset as 0, like in
+  krilla.
+
 ### moonbitlang/pdflite [0.3.4]
 
 - `pdflite/export`: `Surface::draw_external_xobject` draws form XObjects

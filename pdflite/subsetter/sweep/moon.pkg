@@ -1,0 +1,8 @@
+import {
+  "moonbitlang/pdflite/subsetter",
+  "moonbitlang/core/env",
+  "moonbitlang/core/string",
+  "moonbitlang/x/fs",
+} for "test"
+
+supported_targets = "+native"

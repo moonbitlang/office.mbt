@@ -1,0 +1,480 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "moonbitlang/pdflite/internal/read_fonts/ps"
+
+import {
+  "moonbitlang/core/debug",
+  "moonbitlang/pdflite/internal/font_types",
+  "moonbitlang/pdflite/internal/read_fonts",
+}
+
+// Values
+pub const MAX_BLUE_VALUES : Int = 7
+
+pub const MAX_STEM_SNAPS : Int = 12
+
+pub const NESTING_DEPTH_LIMIT : Int = 10
+
+pub fn combine_scaled(@font_types.FontMatrix, @font_types.FontMatrix, Int) -> @font_types.FontMatrix
+
+pub fn entries(BytesView, blend_state? : BlendState?) -> Array[Result[Entry, PsError]]
+
+pub fn evaluate(&CharstringContext, BytesView, &CommandSink, blend_state? : BlendState?) -> @font_types.Fixed? raise PsError
+
+pub fn ok_entries(BytesView) -> Array[Entry]
+
+pub let standard_strings : FixedArray[String]
+
+// Errors
+pub(all) suberror PsError {
+  InvalidFontFormat
+  InvalidIndexOffsetSize(Int)
+  ZeroOffsetInIndex
+  InvalidVariationStoreIndex(Int)
+  StackOverflow
+  StackUnderflow
+  InvalidStackAccess(Int)
+  ExpectedI32StackEntry(Int)
+  InvalidNumber
+  InvalidDictOperator(Int)
+  InvalidCharstringOperator(Int)
+  CharstringNestingDepthLimitExceeded
+  MissingSubroutines
+  MissingBlendState
+  MissingFdArray
+  MissingPrivateDict
+  MissingCharstrings
+  MissingCharset
+  InvalidSeacCode(Int)
+  Read(@read_fonts.ReadError)
+}
+pub impl Show for PsError
+
+// Types and methods
+pub(all) struct BcdComponents {
+  error : @font_types.Fixed?
+  number : Int
+  sign : Int
+  exponent : Int
+  exponent_add : Int
+  integer_len : Int
+  fraction_len : Int
+} derive(Eq, @debug.Debug)
+pub fn BcdComponents::value(Self, Bool) -> @font_types.Fixed
+
+pub struct BlendState {
+  store : @read_fonts.ItemVariationStore
+  coords : ArrayView[@font_types.F2Dot14]
+  mut store_index : Int
+  mut region_indices : Array[Int]
+  scalars : FixedArray[@font_types.Fixed]
+}
+pub fn BlendState::new(@read_fonts.ItemVariationStore, ArrayView[@font_types.F2Dot14], Int) -> Self raise PsError
+pub fn BlendState::region_count(Self) -> Int
+pub fn BlendState::scalar(Self, Int) -> @font_types.Fixed raise PsError
+pub fn BlendState::set_store_index(Self, Int) -> Unit raise PsError
+
+pub(all) struct Blues {
+  values : Array[(@font_types.Fixed, @font_types.Fixed)]
+} derive(Eq, @debug.Debug)
+pub fn Blues::default() -> Self
+pub fn Blues::new(Array[@font_types.Fixed]) -> Self
+
+pub struct Cff {
+  data : BytesView
+  names : Index1
+  top_dicts : Index1
+  strings : Index1
+  global_subrs : Index1
+}
+pub fn Cff::charset(Self, Int) -> Charset? raise PsError
+pub fn Cff::global_subrs(Self) -> Index1
+pub fn Cff::name(Self, Int) -> BytesView?
+pub fn Cff::names(Self) -> Index1
+pub fn Cff::offset_data(Self) -> BytesView
+pub fn Cff::read(BytesView) -> Self raise PsError
+pub fn Cff::string(Self, Sid) -> BytesView?
+pub fn Cff::strings(Self) -> Index1
+pub fn Cff::top_dicts(Self) -> Index1
+
+pub struct Cff2 {
+  data : BytesView
+  top_dict_data : BytesView
+  global_subrs : Index
+}
+pub fn Cff2::global_subrs(Self) -> Index
+pub fn Cff2::offset_data(Self) -> BytesView
+pub fn Cff2::read(BytesView) -> Self raise PsError
+pub fn Cff2::top_dict_data(Self) -> BytesView
+
+pub struct CffContext {
+  data : BytesView
+  charstrings : Index
+  global_subrs : Index
+  subrs : Index
+}
+pub fn CffContext::new(BytesView, Index, Index, Index) -> Self
+pub impl CharstringContext for CffContext
+
+pub struct CffFontRef {
+  data : BytesView
+  is_cff2 : Bool
+  upem : Int
+  global_subrs : Index
+  top_dict_index : Int
+  // private fields
+}
+pub fn CffFontRef::charset(Self) -> Charset?
+pub fn CffFontRef::charstrings(Self) -> Index
+pub fn CffFontRef::data(Self) -> BytesView
+pub fn CffFontRef::draw(Self, Subfont, @font_types.GlyphId, Array[@font_types.F2Dot14], Float?, &@read_fonts.OutlinePen) -> Float? raise PsError
+pub fn CffFontRef::encoding(Self) -> Encoding?
+pub fn CffFontRef::evaluate_charstring(Self, Subfont, @font_types.GlyphId, Array[@font_types.F2Dot14], &CommandSink) -> @font_types.Fixed? raise PsError
+pub fn CffFontRef::global_subrs(Self) -> Index
+pub fn CffFontRef::is_cid(Self) -> Bool
+pub fn CffFontRef::matrix(Self) -> ScaledFontMatrix?
+pub fn CffFontRef::new(BytesView, Int, Int?) -> Self raise PsError
+pub fn CffFontRef::new_cff(BytesView, Int, Int?) -> Self raise PsError
+pub fn CffFontRef::num_glyphs(Self) -> Int
+pub fn CffFontRef::num_subfonts(Self) -> Int
+pub fn CffFontRef::string(Self, Sid) -> BytesView?
+pub fn CffFontRef::strings(Self) -> Index?
+pub fn CffFontRef::subfont(Self, Int, Array[@font_types.F2Dot14]) -> Subfont raise PsError
+pub fn CffFontRef::subfont_hinted(Self, Int, Array[@font_types.F2Dot14]) -> (Subfont, HintingParams) raise PsError
+pub fn CffFontRef::subfont_index(Self, @font_types.GlyphId) -> Int?
+pub fn CffFontRef::transform(Self, Subfont, Float?) -> Transform
+pub fn CffFontRef::upem(Self) -> Int
+pub fn CffFontRef::version(Self) -> Int
+
+pub struct Charset {
+  kind : CharsetKind
+  num_glyphs : Int
+}
+pub fn Charset::glyph_id(Self, Sid) -> @font_types.GlyphId raise PsError
+pub fn Charset::iter(Self) -> Iter[(@font_types.GlyphId, Sid)]
+pub fn Charset::kind(Self) -> CharsetKind
+pub fn Charset::new(BytesView, Int, Int) -> Self raise PsError
+pub fn Charset::num_glyphs(Self) -> Int
+pub fn Charset::string_id(Self, @font_types.GlyphId) -> Sid raise PsError
+pub fn Charset::to_array(Self) -> Array[(@font_types.GlyphId, Sid)]
+
+pub enum CharsetKind {
+  IsoAdobe
+  Expert
+  ExpertSubset
+  Custom(CustomCharset)
+}
+
+pub(all) enum CharstringKind {
+  Type1
+  Type2
+} derive(Eq, @debug.Debug)
+
+pub enum CustomCharset {
+  Format0(BytesView)
+  Format1(BytesView)
+  Format2(BytesView)
+}
+
+pub enum CustomEncoding {
+  Format0(BytesView, BytesView)
+  Format1(BytesView, BytesView)
+}
+pub fn CustomEncoding::map(Self, Charset, Int) -> @font_types.GlyphId?
+pub fn CustomEncoding::new(BytesView) -> Self raise PsError
+
+pub(all) enum DictOperator {
+  Version
+  Notice
+  FullName
+  FamilyName
+  Weight
+  FontBbox
+  CharstringsOffset
+  PrivateDictRange
+  VariationStoreOffset
+  Copyright
+  IsFixedPitch
+  ItalicAngle
+  UnderlinePosition
+  UnderlineThickness
+  PaintType
+  CharstringType
+  FontMatrix
+  StrokeWidth
+  FdArrayOffset
+  FdSelectOffset
+  BlueValues
+  OtherBlues
+  FamilyBlues
+  FamilyOtherBlues
+  SubrsOffset
+  VariationStoreIndex
+  BlueScale
+  BlueShift
+  BlueFuzz
+  LanguageGroup
+  ExpansionFactor
+  Encoding
+  Charset
+  UniqueId
+  Xuid
+  SyntheticBase
+  PostScript
+  BaseFontName
+  BaseFontBlend
+  Ros
+  CidFontVersion
+  CidFontRevision
+  CidFontType
+  CidCount
+  UidBase
+  FontName
+  StdHw
+  StdVw
+  DefaultWidthX
+  NominalWidthX
+  Blend
+  StemSnapH
+  StemSnapV
+  ForceBold
+  InitialRandomSeed
+} derive(Eq, @debug.Debug)
+
+pub struct Encoding {
+  encoding : RawEncoding
+  charset : Charset
+}
+pub fn Encoding::charset(Self) -> Charset
+pub fn Encoding::map(Self, Byte) -> @font_types.GlyphId?
+pub fn Encoding::predefined(Self) -> PredefinedEncoding?
+
+pub(all) enum Entry {
+  Version(Sid)
+  Notice(Sid)
+  FullName(Sid)
+  FamilyName(Sid)
+  Weight(Sid)
+  FontBbox(FixedArray[@font_types.Fixed])
+  CharstringsOffset(Int)
+  PrivateDictRange(UInt64, UInt64)
+  VariationStoreOffset(Int)
+  Copyright(Sid)
+  IsFixedPitch(Bool)
+  ItalicAngle(@font_types.Fixed)
+  UnderlinePosition(@font_types.Fixed)
+  UnderlineThickness(@font_types.Fixed)
+  PaintType(Int)
+  CharstringType(Int)
+  FontMatrix(ScaledFontMatrix)
+  StrokeWidth(@font_types.Fixed)
+  FdArrayOffset(Int)
+  FdSelectOffset(Int)
+  BlueValues(Blues)
+  OtherBlues(Blues)
+  FamilyBlues(Blues)
+  FamilyOtherBlues(Blues)
+  SubrsOffset(Int)
+  VariationStoreIndex(Int)
+  BlueScale(@font_types.Fixed)
+  BlueShift(@font_types.Fixed)
+  BlueFuzz(@font_types.Fixed)
+  LanguageGroup(Int)
+  ExpansionFactor(@font_types.Fixed)
+  Encoding(Int)
+  Charset(Int)
+  UniqueId(Int)
+  Xuid
+  SyntheticBase(Int)
+  PostScript(Sid)
+  BaseFontName(Sid)
+  BaseFontBlend
+  Ros(registry~ : Sid, ordering~ : Sid, supplement~ : @font_types.Fixed)
+  CidFontVersion(@font_types.Fixed)
+  CidFontRevision(@font_types.Fixed)
+  CidFontType(Int)
+  CidCount(Int)
+  UidBase(Int)
+  FontName(Sid)
+  StdHw(@font_types.Fixed)
+  StdVw(@font_types.Fixed)
+  DefaultWidthX(@font_types.Fixed)
+  NominalWidthX(@font_types.Fixed)
+  StemSnapH(StemSnaps)
+  StemSnapV(StemSnaps)
+  ForceBold(Bool)
+  InitialRandomSeed(Int)
+} derive(Eq, @debug.Debug)
+
+pub enum FdSelect {
+  Format0(BytesView)
+  Format3(BytesView)
+  Format4(BytesView)
+}
+pub fn FdSelect::font_index(Self, @font_types.GlyphId) -> Int?
+pub fn FdSelect::read(BytesView) -> Self raise PsError
+
+pub(all) struct HintingParams {
+  mut blues : Blues
+  mut family_blues : Blues
+  mut other_blues : Blues
+  mut family_other_blues : Blues
+  mut blue_scale : @font_types.Fixed
+  mut blue_shift : @font_types.Fixed
+  mut blue_fuzz : @font_types.Fixed
+  mut language_group : Int
+} derive(Eq, @debug.Debug)
+pub fn HintingParams::default() -> Self
+
+pub(all) enum Index {
+  Empty
+  Format1(Index1)
+}
+pub fn Index::count(Self) -> Int
+pub fn Index::get(Self, Int) -> BytesView raise PsError
+pub fn Index::get_offset(Self, Int) -> Int raise PsError
+pub fn Index::new(BytesView, Bool) -> Self raise PsError
+pub fn Index::off_size(Self) -> Int
+pub fn Index::size_in_bytes(Self) -> Int raise PsError
+pub fn Index::subr_bias(Self) -> Int
+
+pub struct Index1 {
+  data : BytesView
+  count_size : Int
+}
+pub fn Index1::count(Self) -> Int
+pub fn Index1::data(Self) -> BytesView
+pub fn Index1::get(Self, Int) -> BytesView raise PsError
+pub fn Index1::get_offset(Self, Int) -> Int raise PsError
+pub fn Index1::off_size(Self) -> Int
+pub fn Index1::offsets(Self) -> BytesView
+pub fn Index1::read(BytesView) -> Self raise PsError
+pub fn Index1::read2(BytesView) -> Self raise PsError
+pub fn Index1::size_in_bytes(Self) -> Int raise PsError
+
+pub struct NopFilterSink {
+  mut is_open : Bool
+  mut start : (@font_types.Fixed, @font_types.Fixed)?
+  inner : &CommandSink
+  // private fields
+}
+pub fn NopFilterSink::new(&CommandSink) -> Self
+pub impl CommandSink for NopFilterSink
+
+pub(all) enum Number {
+  I32(Int)
+  Fixed(@font_types.Fixed)
+} derive(Eq, @debug.Debug)
+
+pub struct PenSink {
+  pen : &@read_fonts.OutlinePen
+}
+pub fn PenSink::new(&@read_fonts.OutlinePen) -> Self
+pub impl CommandSink for PenSink
+
+pub(all) enum PredefinedEncoding {
+  Standard
+  Expert
+  IsoLatin1
+} derive(Eq, @debug.Debug)
+pub fn PredefinedEncoding::name(Self, Int) -> String
+pub fn PredefinedEncoding::sid(Self, Int) -> Sid?
+
+pub enum RawEncoding {
+  Predefined(PredefinedEncoding)
+  Custom(CustomEncoding)
+}
+pub fn RawEncoding::map(Self, Charset, Int) -> @font_types.GlyphId?
+pub fn RawEncoding::new(BytesView, Int) -> Self raise PsError
+
+pub(all) struct ScaledFontMatrix {
+  matrix : @font_types.FontMatrix
+  scale : Int
+} derive(Eq, @debug.Debug)
+pub fn ScaledFontMatrix::normalize(Self) -> Self
+
+pub(all) struct Sid(Int) derive(Compare, Eq, Hash, @debug.Debug)
+pub fn Sid::new(Int) -> Self
+pub fn Sid::resolve_standard(Self) -> Result[String, Int]
+pub fn Sid::to_u16(Self) -> Int
+
+pub struct Stack {
+  values : FixedArray[Int]
+  value_is_fixed : FixedArray[Bool]
+  mut top : Int
+}
+pub fn Stack::apply_blend(Self, BlendState) -> Unit raise PsError
+pub fn Stack::apply_delta_prefix_sum(Self) -> Unit
+pub fn Stack::clear(Self) -> Unit
+pub fn Stack::drop(Self, Int) -> Unit
+pub fn Stack::fixed_array(Self, Int, Int) -> FixedArray[@font_types.Fixed]
+pub fn Stack::fixed_values(Self) -> Array[@font_types.Fixed]
+pub fn Stack::get_fixed(Self, Int) -> @font_types.Fixed
+pub fn Stack::get_i32(Self, Int) -> Int raise PsError
+pub fn Stack::is_empty(Self) -> Bool
+pub fn Stack::len(Self) -> Int
+pub fn Stack::len_is_odd(Self) -> Bool
+pub fn Stack::new() -> Self
+pub fn Stack::pop_fixed(Self) -> @font_types.Fixed
+pub fn Stack::pop_i32(Self) -> Int raise PsError
+pub fn Stack::push(Self, Number) -> Unit raise PsError
+pub fn Stack::push_fixed(Self, @font_types.Fixed) -> Unit raise PsError
+pub fn Stack::push_i32(Self, Int) -> Unit raise PsError
+
+pub(all) struct StemSnaps {
+  values : Array[@font_types.Fixed]
+} derive(Eq, @debug.Debug)
+pub fn StemSnaps::new(Array[@font_types.Fixed]) -> Self
+
+pub struct Subfont {
+  mut subrs_offset : UInt
+  mut default_width : @font_types.Fixed?
+  mut nominal_width : @font_types.Fixed
+  matrix : ScaledFontMatrix?
+  mut vs_index : Int
+}
+pub fn Subfont::default_width(Self) -> @font_types.Fixed?
+pub fn Subfont::matrix(Self) -> ScaledFontMatrix?
+pub fn Subfont::nominal_width(Self) -> @font_types.Fixed
+pub fn Subfont::subrs_offset(Self) -> UInt
+pub fn Subfont::vs_index(Self) -> Int
+
+pub(all) struct Transform {
+  matrix : @font_types.FontMatrix
+  scale : @font_types.Fixed?
+} derive(Eq, @debug.Debug)
+pub fn Transform::compute_scale(Float, Int) -> @font_types.Fixed
+pub fn Transform::identity() -> Self
+pub fn Transform::transform_h_metric(Self, @font_types.Fixed) -> @font_types.Fixed
+
+pub struct TransformSink {
+  inner : &CommandSink
+  matrix : @font_types.FontMatrix?
+  scale : @font_types.Fixed?
+}
+pub fn TransformSink::from_matrix_scale(&CommandSink, @font_types.FontMatrix, @font_types.Fixed?) -> Self
+pub fn TransformSink::new(&CommandSink, Transform) -> Self
+pub impl CommandSink for TransformSink
+
+// Type aliases
+
+// Traits
+pub(open) trait CharstringContext {
+  fn kind(Self) -> CharstringKind
+  fn seac_components(Self, Int, Int) -> (BytesView, BytesView) raise PsError
+  fn global_subr(Self, Int) -> BytesView raise PsError
+  fn subr(Self, Int) -> BytesView raise PsError
+  fn weight_vector(Self) -> Array[@font_types.Fixed]
+}
+
+pub(open) trait CommandSink {
+  fn move_to(Self, @font_types.Fixed, @font_types.Fixed) -> Unit
+  fn line_to(Self, @font_types.Fixed, @font_types.Fixed) -> Unit
+  fn curve_to(Self, @font_types.Fixed, @font_types.Fixed, @font_types.Fixed, @font_types.Fixed, @font_types.Fixed, @font_types.Fixed) -> Unit
+  fn close(Self) -> Unit
+  fn hstem(Self, @font_types.Fixed, @font_types.Fixed) -> Unit
+  fn vstem(Self, @font_types.Fixed, @font_types.Fixed) -> Unit
+  fn hint_mask(Self, BytesView) -> Unit
+  fn counter_mask(Self, BytesView) -> Unit
+  fn clear_hints(Self) -> Unit
+  fn finish(Self) -> Unit
+}

@@ -96,6 +96,7 @@ fn cff_table(
   cid_keyed : Bool,
   seac? : Int = -1,
   seac_in_subr? : Int = -1,
+  iso_adobe_charset? : Bool = false,
 ) -> Array[Int] {
   let int32 = (v : Int) => {
     [29, (v >> 24) & 0xFF, (v >> 16) & 0xFF, (v >> 8) & 0xFF, v & 0xFF]
@@ -138,11 +139,32 @@ fn cff_table(
     index([[11], [139, 139, 204, 205, 14]])
   }
   // The size of the Top DICT doesn't depend on the offsets (all int32).
-  let dict_size = if cid_keyed { 9 + 12 } else { 6 + 11 }
+  // A CID-keyed font also has an FDSelect (format 3, one range) and an
+  // FDArray with one Font DICT whose Private DICT is empty.
+  let dict_size = if cid_keyed {
+    9 + 12 + 14
+  } else {
+    6 + 11 + (if iso_adobe_charset { 2 } else { 0 })
+  }
   let top_size = 2 + 1 + 2 + dict_size
   let charset_at = 4 + names.length() + top_size + strings.length() + 2
-  let private_at = charset_at + charset.length()
+  let fd_select = if cid_keyed { [3, 0, 1, 0, 0, 0, 0, n] } else { [] }
+  let fd_select_at = charset_at + charset.length()
+  let font_dict_size = 1 + 5 + 1
+  let fd_array_size = if cid_keyed { 2 + 1 + 2 + font_dict_size } else { 0 }
+  let fd_array_at = fd_select_at + fd_select.length()
+  let private_at = fd_array_at + fd_array_size
   let charstrings_at = private_at + private.length() + subrs.length()
+  let fd_array = if cid_keyed {
+    let font_dict = [139]
+    for b in int32(private_at) {
+      font_dict.push(b)
+    }
+    font_dict.push(18)
+    index([font_dict])
+  } else {
+    []
+  }
   let dict = []
   if cid_keyed {
     // ROS: Adobe (SID 391), Identity (SID 392), supplement 0.
@@ -152,6 +174,21 @@ fn cff_table(
     for b in int32(charset_at) {
       dict.push(b)
     }
+    dict.push(15)
+    for b in int32(fd_array_at) {
+      dict.push(b)
+    }
+    dict.push(12)
+    dict.push(36)
+    for b in int32(fd_select_at) {
+      dict.push(b)
+    }
+    dict.push(12)
+    dict.push(37)
+  }
+  if iso_adobe_charset {
+    // charset 0 (ISOAdobe)
+    dict.push(139)
     dict.push(15)
   }
   for b in int32(charstrings_at) {
@@ -174,6 +211,8 @@ fn cff_table(
   out.bytes(strings)
   out.bytes(index([])) // Global Subrs
   out.bytes(charset)
+  out.bytes(fd_select)
+  out.bytes(fd_array)
   out.bytes(private)
   out.bytes(subrs)
   // Glyph `seac` uses `seac` directly, `seac_in_subr` calls subroutine 1
@@ -191,6 +230,78 @@ fn cff_table(
       }),
     ),
   )
+  out.out
+}
+
+///|
+/// A minimal CFF2 table: the boxes of the glyf font as charstrings (no
+/// variation store).
+fn cff2_table() -> Array[Int] {
+  let num = (v : Int) => {
+    if v >= -107 && v <= 107 {
+      [v + 139]
+    } else {
+      [28, (v >> 8) & 0xFF, v & 0xFF]
+    }
+  }
+  let box_cs = (x0 : Int, y0 : Int, x1 : Int, y1 : Int) => {
+    let out = []
+    for b in num(x0) + num(y0) + [21] {
+      out.push(b) // rmoveto
+    }
+    for b in num(x1 - x0) + [6] + num(y1 - y0) + [7] + num(x0 - x1) + [6] {
+      out.push(b) // hlineto, vlineto, hlineto
+    }
+    out
+  }
+  let charstrings = [
+    box_cs(50, 0, 450, 700),
+    box_cs(0, 0, 600, 700),
+    box_cs(100, -100, 500, 700),
+    box_cs(0, 0, 600, 900),
+    [],
+    box_cs(0, 0, 700, 700),
+  ]
+  // A CFF2 INDEX (32-bit count, 2-byte offsets).
+  let index2 = (items : Array[Array[Int]]) => {
+    let out = FontBytes::new()
+    out.u32(items.length())
+    if items.length() > 0 {
+      out.bytes([2]) // offSize
+      let mut off = 1
+      out.u16(off)
+      for item in items {
+        off += item.length()
+        out.u16(off)
+      }
+      for item in items {
+        out.bytes(item)
+      }
+    }
+    out.out
+  }
+  let int32 = (v : Int) => {
+    [29, (v >> 24) & 0xFF, (v >> 16) & 0xFF, (v >> 8) & 0xFF, v & 0xFF]
+  }
+  // Top DICT: CharStrings and FDArray offsets (5-byte integers).
+  let top_size = 6 + 7
+  let global_subrs = index2([])
+  let charstrings_at = 5 + top_size + global_subrs.length()
+  let charstrings = index2(charstrings)
+  let fd_array_at = charstrings_at + charstrings.length()
+  // One Font DICT with an empty Private DICT (at the end of the table).
+  let font_dict_size = 1 + 5 + 1
+  let fd_array_size = 4 + 1 + 2 * 2 + font_dict_size
+  let private_at = fd_array_at + fd_array_size
+  let font_dict = [139] + int32(private_at) + [18]
+  let top = int32(charstrings_at) + [17] + int32(fd_array_at) + [12, 36]
+  let out = FontBytes::new()
+  out.bytes([2, 0, 5])
+  out.u16(top.length())
+  out.bytes(top)
+  out.bytes(global_subrs)
+  out.bytes(charstrings)
+  out.bytes(index2([font_dict]))
   out.out
 }
 
@@ -298,13 +409,15 @@ fn test_font_tables(
     // The exporter embeds CFF fonts as a whole, only reading the charset of
     // CID-keyed fonts.
     "cff" => tables.push(("CFF ", cff_table(n, false)))
+    "cff-iso-adobe" =>
+      tables.push(("CFF ", cff_table(n, false, iso_adobe_charset=true)))
     // Glyph 1 uses `seac`, glyph 2 calls a subroutine using it.
     "cff-seac" =>
       tables.push(("CFF ", cff_table(n, false, seac=1, seac_in_subr=2)))
-    "cid-cff" | "cff2" =>
-      tables.push(
-        (if outlines == "cff2" { "CFF2" } else { "CFF " }, cff_table(n, true)),
-      )
+    "cid-cff" => tables.push(("CFF ", cff_table(n, true)))
+    "cff2" => tables.push(("CFF2", cff2_table()))
+    // A CFF table in a CFF2 font (not a valid CFF2 table).
+    "bad-cff2" => tables.push(("CFF2", cff_table(n, true)))
     _ => ()
   }
   tables
@@ -320,6 +433,9 @@ fn test_font_data(
   monospaced? : Bool = false,
 ) -> Bytes {
   let tables = test_font_tables(fs_type, ps_name, outlines, italic, monospaced)
+  // Table records are sorted by tag (OpenType requires it, and the
+  // subsetter looks tables up by binary search).
+  tables.sort_by((a, b) => a.0.compare(b.0))
   let out = FontBytes::new()
   out.u32(if outlines is ("glyf" | "none") { 0x00010000 } else { 0x4F54544F })
   out.u16(tables.length())
@@ -403,8 +519,8 @@ test "the synthetic font parses" {
       #|(
       #|  1000,
       #|  6,
-      #|  900,
-      #|  -250,
+      #|  800,
+      #|  -200,
       #|  Some(680),
       #|  0,
       #|  700,
@@ -529,11 +645,13 @@ fn table_record(data : Bytes, tag : String) -> Int {
 }
 
 ///|
-test "Font::new rejects fonts with out-of-bounds or invalid structures" {
+test "Font::new accepts and rejects fonts like krilla" {
   let data = test_font_data()
   let head = table_record(data, "head")
   let glyf = table_record(data, "glyf")
   let rejected = (d : Bytes) => @export.Font::new(d, 0) is None
+  // krilla only requires read-fonts' table directory and a readable `head`
+  // table: out-of-bounds table records count as missing tables.
   let cases = [
     // A table offset with the high bit set (negative as a signed value).
     patch(data, glyf + 8, [0x80, 0, 0, 0]),
@@ -543,7 +661,8 @@ test "Font::new rejects fonts with out-of-bounds or invalid structures" {
     patch(data, 4, [0xFF, 0xFF]),
     // A head table that is too short.
     patch(data, head + 12, [0, 0, 0, 20]),
-    // Zero units per em.
+    // Zero units per em (rejected unlike krilla, which would divide by
+    // zero).
     patch(
       data,
       (
@@ -561,8 +680,12 @@ test "Font::new rejects fonts with out-of-bounds or invalid structures" {
   debug_inspect(
     cases.map(rejected),
     content=(
-      #|[true, true, true, true, true, true]
+      #|[false, false, true, true, true, true]
     ),
+  )
+  debug_inspect(
+    @export.Font::new(patch(data, glyf + 8, [0x80, 0, 0, 0]), 0).map(f => f.kind),
+    content="Some(NoOutlines)",
   )
   // Collections: a negative face index, an index past the count, and a face
   // offset past the end.
@@ -588,9 +711,9 @@ test "Font::new rejects fonts with out-of-bounds or invalid structures" {
 }
 
 ///|
-test "glyphs with broken outlines are dropped from the subset" {
-  // A loca entry pointing before the glyf table is ignored instead of
-  // panicking when the font is subset.
+test "glyphs with broken outlines make subsetting fail" {
+  // A loca entry pointing before the glyf table makes the subsetter fail
+  // (like the Rust crate) instead of panicking.
   let data = test_font_data()
   let loca = table_record(data, "loca")
   let loca_at = (data[loca + 8].to_int() << 24) |
@@ -613,7 +736,7 @@ test "glyphs with broken outlines are dropped from the subset" {
         )
       })
     }),
-    content="ok",
+    content="FontError: failed to subset font: malformed font",
   )
 }
 
@@ -626,4 +749,71 @@ test "collection indices that overflow the directory size are rejected" {
   let data = Bytes::from_array(b.out.map(x => x.to_byte()))
   inspect(@export.Font::new(data, 536870908) is None, content="true")
   inspect(@export.Font::new(data, 0x7FFFFFFE) is None, content="true")
+}
+
+///|
+test "advance widths come from skrifa's glyph metrics" {
+  let data = test_font_data()
+  let hmtx = table_record(data, "hmtx")
+  let offset = (data[hmtx + 8].to_int() << 24) |
+    (data[hmtx + 9].to_int() << 16) |
+    (data[hmtx + 10].to_int() << 8) |
+    data[hmtx + 11].to_int()
+  // An advance of 40000 units (wraps in skrifa's 26.6 fixed point scaling).
+  let font = @export.Font::new(patch(data, offset + 4, [0x9C, 0x40]), 0).unwrap()
+  debug_inspect(
+    [0, 1, 2].map(g => font.advance_width(g)),
+    content=(
+      #|[Some(500), Some(-25536), Some(550)]
+    ),
+  )
+  // An `hmtx` table too short for its `hMetrics` array: read-fonts reads
+  // the array as empty.
+  let font = @export.Font::new(patch(data, hmtx + 12, [0, 0, 0, 8]), 0).unwrap()
+  debug_inspect(
+    [0, 1, 5, 6].map(g => font.advance_width(g)),
+    content=(
+      #|[Some(0), Some(0), Some(0), None]
+    ),
+  )
+}
+
+///|
+test "non-finite variation coordinates are stored as zero" {
+  let font = @export.Font::new_variable(test_font_data(), 0, [
+    (@subsetter.Tag::from_str("wght").unwrap(), (1.0 : Float) / 0.0),
+    (@subsetter.Tag::from_str("wdth").unwrap(), (0.0 : Float) / 0.0),
+    (@subsetter.Tag::from_str("opsz").unwrap(), 12.5),
+  ]).unwrap()
+  debug_inspect(
+    font.variation_coordinates().map(c => c.1),
+    content="[0, 0, 12.5]",
+  )
+}
+
+///|
+test "tables are looked up like read-fonts" {
+  // A null `post` offset is a missing table: no italic angle and not
+  // monospaced (krilla's metrics).
+  let data = test_font_data(italic=true, monospaced=true)
+  let font = @export.Font::new(data, 0).unwrap()
+  debug_inspect((font.italic_angle, font.is_monospaced), content="(-12, true)")
+  let post = table_record(data, "post")
+  let font = @export.Font::new(patch(data, post + 8, [0, 0, 0, 0]), 0).unwrap()
+  debug_inspect((font.italic_angle, font.is_monospaced), content="(0, false)")
+  debug_inspect(font.has_table("post"), content="false")
+  // Without a readable `maxp` table, the glyph count of a name-keyed CFF
+  // font comes from its charset (skrifa's `GlyphNames`; the `post` table
+  // has no names).
+  let data = test_font_data(outlines="cff-iso-adobe")
+  let maxp = table_record(data, "maxp")
+  let font = @export.Font::new(patch(data, maxp + 8, [0, 0, 0, 0]), 0).unwrap()
+  debug_inspect(font.num_glyphs, content="6")
+  let font = @export.Font::new(
+    patch(test_font_data(), table_record(test_font_data(), "maxp") + 8, [
+      0, 0, 0, 0,
+    ]),
+    0,
+  ).unwrap()
+  debug_inspect(font.num_glyphs, content="0")
 }

@@ -1,0 +1,18 @@
+[package]
+name = "subsetter-oracle"
+version = "0.0.0"
+edition = "2021"
+publish = false
+description = "Generates the oracle tests of moonbitlang/pdflite/subsetter from the subsetter crate"
+
+[workspace]
+
+[dependencies]
+subsetter = { version = "=0.2.6", features = ["variable-fonts"] }
+skrifa = "=0.42.1"
+write-fonts = "=0.48.1"
+kurbo = "=0.13.1"
+sha2 = "0.10"
+
+[profile.release]
+debug = false

@@ -1,0 +1,158 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "moonbitlang/pdflite/internal/skrifa"
+
+import {
+  "moonbitlang/core/debug",
+  "moonbitlang/pdflite/internal/font_types",
+  "moonbitlang/pdflite/internal/read_fonts",
+  "moonbitlang/pdflite/internal/read_fonts/ps",
+}
+
+// Values
+pub const GLYF_COMPOSITE_RECURSION_LIMIT : Int = 32
+
+pub const PHANTOM_POINT_COUNT : Int = 4
+
+pub fn axes_location(@read_fonts.FontRef, ArrayView[(UInt, Float)]) -> Array[@font_types.F2Dot14]
+
+// Errors
+pub(all) suberror DrawError {
+  NoSources
+  GlyphNotFound(@font_types.GlyphId)
+  InsufficientMemory
+  RecursionLimitExceeded(@font_types.GlyphId)
+  TooManyPoints(@font_types.GlyphId)
+  HintingFailed(String)
+  InvalidAnchorPoint(@font_types.GlyphId, Int)
+  PostScript(@ps.PsError)
+  ToPath(ToPathError)
+  Read(@read_fonts.ReadError)
+  HarfBuzzHintingUnsupported
+}
+pub impl Show for DrawError
+
+pub(all) suberror ToPathError {
+  ContourOrder(Int)
+  ExpectedQuad(Int)
+  ExpectedQuadOrOnCurve(Int)
+  ExpectedCubic(Int)
+  PointFlagMismatch(num_points~ : Int, num_flags~ : Int)
+}
+pub impl Show for ToPathError
+
+// Types and methods
+pub(all) struct AdjustedMetrics {
+  has_overlaps : Bool
+  lsb : Float?
+  advance_width : Float?
+} derive(Eq, @debug.Debug)
+
+pub struct CffOutlines {
+  font : @read_fonts.FontRef
+  offset_data : BytesView
+  global_subrs : @ps.Index
+  version : Int
+  units_per_em : Int
+  // private fields
+}
+pub fn CffOutlines::from_cff(@read_fonts.FontRef, Int) -> Self?
+pub fn CffOutlines::from_cff2(@read_fonts.FontRef, Int) -> Self?
+pub fn CffOutlines::glyph_count(Self) -> Int
+pub fn CffOutlines::is_cff2(Self) -> Bool
+pub fn CffOutlines::new(@read_fonts.FontRef) -> Self?
+pub fn CffOutlines::subfont_index(Self, @font_types.GlyphId) -> Int
+
+pub struct GlyfOutline {
+  glyph_id : @font_types.GlyphId
+  glyph : @read_fonts.Glyph?
+  mut points : Int
+  mut contours : Int
+  mut max_simple_points : Int
+  mut max_other_points : Int
+  mut max_component_delta_stack : Int
+  mut max_stack : Int
+  mut cvt_count : Int
+  mut storage_count : Int
+  mut max_twilight_points : Int
+  mut has_hinting : Bool
+  has_variations : Bool
+  mut has_overlaps : Bool
+}
+
+pub struct GlyfOutlines {
+  font : @read_fonts.FontRef
+  fpgm : BytesView
+  prep : BytesView
+  cvt_len : Int
+  max_function_defs : Int
+  max_instruction_defs : Int
+  max_twilight_points : Int
+  max_stack_elements : Int
+  max_storage : Int
+  glyph_count : Int
+  units_per_em : Int
+  os2_vmetrics : (Int, Int)
+  prefer_interpreter : Bool
+  fractional_size_hinting : Bool
+  // private fields
+}
+pub fn GlyfOutlines::compute_scale(Self, Float?) -> (Bool, @font_types.F26Dot6)
+pub fn GlyfOutlines::draw_unscaled(Self, GlyfOutline, ArrayView[@font_types.F2Dot14], &@read_fonts.OutlinePen, memory? : FixedArray[Byte]) -> (Float, Float) raise DrawError
+pub fn GlyfOutlines::new(@read_fonts.FontRef) -> Self?
+pub fn GlyfOutlines::outline(Self, @font_types.GlyphId) -> GlyfOutline raise DrawError
+
+pub struct GlyphMetrics {
+  // private fields
+}
+pub fn GlyphMetrics::advance_width(Self, @font_types.GlyphId) -> Float?
+pub fn GlyphMetrics::new(@read_fonts.FontRef, ArrayView[@font_types.F2Dot14]) -> Self
+
+pub(all) struct LocationRef(Array[@font_types.F2Dot14])
+pub fn LocationRef::coords(Self) -> Array[@font_types.F2Dot14]
+pub fn LocationRef::default() -> Self
+pub fn LocationRef::is_default(Self) -> Bool
+
+pub struct OutlineGlyph {
+  // private fields
+}
+pub fn OutlineGlyph::draw_unscaled(Self, ArrayView[@font_types.F2Dot14], &@read_fonts.OutlinePen) -> AdjustedMetrics raise DrawError
+pub fn OutlineGlyph::glyph_id(Self) -> @font_types.GlyphId
+
+pub struct OutlineGlyphCollection {
+  // private fields
+}
+pub fn OutlineGlyphCollection::format(Self) -> OutlineGlyphFormat?
+pub fn OutlineGlyphCollection::get(Self, @font_types.GlyphId) -> OutlineGlyph?
+pub fn OutlineGlyphCollection::new(@read_fonts.FontRef) -> Self
+
+pub(all) enum OutlineGlyphFormat {
+  Glyf
+  Cff
+  Cff2
+  Varc
+} derive(Eq, @debug.Debug)
+
+pub(all) struct Size(Float?) derive(Eq, @debug.Debug)
+pub fn Size::linear_scale(Self, Int) -> Float
+pub fn Size::new(Float) -> Self
+pub fn Size::ppem(Self) -> Float?
+pub fn Size::unscaled() -> Self
+
+// Type aliases
+pub using @font_types {type F26Dot6}
+
+pub using @font_types {type F2Dot14}
+
+pub using @font_types {type Fixed}
+
+pub using @read_fonts {type FontData}
+
+pub using @read_fonts {type FontRef}
+
+pub using @font_types {type GlyphId}
+
+pub using @read_fonts {type ReadError}
+
+pub using @read_fonts {trait OutlinePen}
+
+// Traits

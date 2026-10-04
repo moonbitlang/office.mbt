@@ -1,0 +1,19 @@
+import {
+  "moonbitlang/pdflite/internal/font_types",
+  "moonbitlang/pdflite/internal/read_fonts",
+  "moonbitlang/pdflite/internal/skrifa",
+  "moonbitlang/core/buffer",
+  "moonbitlang/core/bigint",
+  "moonbitlang/core/double",
+  "moonbitlang/core/cmp",
+  "moonbitlang/core/math",
+}
+
+warnings = "-missing_doc-implicit_impl_as_method"
+
+options(
+  targets: {
+    // Depends on the platform's `f32` trigonometry, like the Rust oracle.
+    "oracle_native_test.mbt": [ "native" ],
+  },
+)

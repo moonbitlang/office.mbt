@@ -1,0 +1,209 @@
+//! Generates `pdflite/subsetter/oracle_test.mbt`: the synthetic fixture
+//! fonts of `fonts.rs` subset with the `subsetter` crate (0.2.6, with the
+//! dependency versions of Typst's lockfile, see `Cargo.lock`).
+//!
+//! Run from this directory:
+//!
+//! ```sh
+//! cargo run --release --offline --bin gen_tests > ../oracle_test.mbt
+//! cargo run --release --offline --bin gen_tests native > ../oracle_native_test.mbt
+//! moon fmt
+//! ```
+//!
+//! The `native` cases depend on the platform's `f32` trigonometry (VARC
+//! rotations and skews, which Rust computes with the C library, like the
+//! port on native targets); they run on native targets only.
+
+use subsetter::{subset, subset_with_variations, GlyphRemapper, Tag};
+use subsetter_oracle::fonts;
+
+fn hex(data: &[u8]) -> String {
+    data.iter().map(|b| format!("{b:02x}")).collect()
+}
+
+/// A MoonBit multi-line string literal with the hex digits.
+fn hex_literal(data: &[u8], indent: &str) -> String {
+    let h = hex(data);
+    let mut out = String::new();
+    for chunk in h.as_bytes().chunks(96) {
+        out.push_str(indent);
+        out.push_str("#|");
+        out.push_str(std::str::from_utf8(chunk).unwrap());
+        out.push('\n');
+    }
+    if h.is_empty() {
+        out.push_str(indent);
+        out.push_str("#|\n");
+    }
+    out
+}
+
+struct Case {
+    font: &'static str,
+    /// (Passed to MoonBit as the `Int` with the same bits.)
+    index: u32,
+    glyphs: Vec<u16>,
+    /// `None` for `subset`, else the coordinates of `subset_with_variations`.
+    coords: Option<Vec<(&'static str, f32)>>,
+}
+
+fn case(font: &'static str, index: u32, glyphs: &[u16], coords: Option<&[(&'static str, f32)]>) -> Case {
+    Case { font, index, glyphs: glyphs.to_vec(), coords: coords.map(|c| c.to_vec()) }
+}
+
+fn main() {
+    let fonts = fonts::all();
+    let get = |name: &str| fonts.iter().find(|f| f.0 == name).unwrap().1.clone();
+    let mut cases = Vec::new();
+    let static_sets: &[&[u16]] = &[&[], &[1], &[5], &[4], &[9], &[1, 1, 3, 2], &[11, 0, 8, 7], &[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11], &[12], &[3, 4, 5, 9, 1, 2]];
+    for set in static_sets {
+        cases.push(case("tt", 0, set, None));
+        cases.push(case("tt", 0, set, Some(&[])));
+    }
+    for set in [&[1u16, 4][..], &[9, 8, 7, 6, 5, 4, 3, 2, 1]] {
+        cases.push(case("tt_long", 0, set, None));
+    }
+    let cff_sets: &[&[u16]] = &[&[], &[1], &[2, 3], &[4, 5], &[6], &[7], &[5, 4, 3, 2, 1, 0], &[3, 3, 1]];
+    for set in cff_sets {
+        cases.push(case("cff", 0, set, None));
+    }
+    cases.push(case("cff", 0, &[1, 2], Some(&[("wght", 700.0)])));
+    for set in [&[1u16, 2][..], &[0, 1, 2, 3, 4, 5]] {
+        cases.push(case("cff_matrix", 0, set, None));
+    }
+    let cid_sets: &[&[u16]] = &[&[], &[1], &[2, 5, 9], &[0, 1, 2, 3, 4, 5, 6, 7, 8, 9], &[3, 3, 7], &[10]];
+    for set in cid_sets {
+        cases.push(case("cid", 0, set, None));
+    }
+    for set in [&[1u16, 4, 8][..], &[9, 8, 7, 6, 5, 4, 3, 2, 1, 0]] {
+        cases.push(case("cid_fd0", 0, set, None));
+    }
+    cases.push(case("ttc", 0, &[1, 4], None));
+    cases.push(case("ttc", 1, &[2, 3], None));
+    cases.push(case("ttc", 2, &[2, 3], None));
+    // `12 + 4 * index` computed in 64 bits (wraps to face 1 in 32 bits).
+    cases.push(case("ttc", 1073741825, &[1], None));
+    cases.push(case("ttc", u32::MAX, &[1], None));
+    let var_coords: &[&[(&str, f32)]] = &[
+        &[],
+        &[("wght", 400.0)],
+        &[("wght", 900.0)],
+        &[("wght", 100.0)],
+        &[("wght", 650.0), ("wdth", 150.0)],
+        &[("wdth", 50.0)],
+        &[("xxxx", 3.0), ("wght", 250.0)],
+        &[("wght", 2000.0)],
+        &[("wght", 300.0), ("wght", 525.5)],
+        &[("wdth", 75.25), ("wght", 433.0)],
+    ];
+    for font in ["tt_var", "tt_var_hvar"] {
+        for c in var_coords {
+            for set in [&[1u16][..], &[3, 4, 5], &[0, 1, 2, 3, 4, 5]] {
+                cases.push(case(font, 0, set, Some(c)));
+            }
+        }
+        cases.push(case(font, 0, &[2, 4], None));
+    }
+    for c in [&[][..], &[("wght", 900.0)], &[("wght", 200.0)], &[("wght", 650.0)], &[("wght", 401.0)]] {
+        for set in [&[1u16][..], &[2, 3], &[0, 1, 2, 3, 4, 5]] {
+            cases.push(case("cff2", 0, set, Some(c)));
+        }
+    }
+    cases.push(case("cff2", 0, &[1], None));
+    for c in [&[][..], &[("wght", 900.0)]] {
+        cases.push(case("cff2_header4", 0, &[1], Some(c)));
+        cases.push(case("tt_var_hvar_regions", 0, &[1, 2, 3, 4, 5], Some(c)));
+    }
+    cases.push(case("tt_var_hvar_regions", 0, &[1, 2, 3, 4, 5], Some(&[("wght", 650.0), ("wdth", 150.0)])));
+    cases.push(case("cff2_header4", 0, &[1], None));
+    for font in ["tt_var_varc_full", "tt_var_varc_full2"] {
+        for c in var_coords {
+            for set in [&[3u16][..], &[4], &[5], &[0, 1, 2, 3, 4, 5]] {
+                cases.push(case(font, 0, set, Some(c)));
+            }
+        }
+    }
+    for c in [&[][..], &[("wght", 900.0)], &[("wght", 200.0)], &[("wght", 650.0)]] {
+        for set in [&[3u16][..], &[4], &[5], &[0, 1, 2, 3, 4, 5]] {
+            cases.push(case("cff2_varc", 0, set, Some(c)));
+        }
+    }
+    for font in ["tt_var_varc_cycle", "tt_var_varc_stale", "tt_var_varc_short_data"] {
+        for set in [&[2u16][..], &[3], &[4], &[1, 2, 3, 4, 5]] {
+            cases.push(case(font, 0, set, Some(&[("wght", 650.0), ("wdth", 150.0)])));
+        }
+    }
+    for font in ["tt_var_avar_count0", "tt_var_gvar_null", "tt_var_varc_empty", "tt_var_varc_nocov", "tt_var_varc"] {
+        for c in [&[][..], &[("wght", 650.0), ("wdth", 150.0)], &[("wght", 100.0)]] {
+            cases.push(case(font, 0, &[1, 2, 3, 4, 5], Some(c)));
+        }
+    }
+    cases.push(case("malformed_cff", 0, &[], None));
+    cases.push(case("unknown", 0, &[], None));
+
+    let mut native_cases = Vec::new();
+    for c in [&[][..], &[("wght", 650.0), ("wdth", 150.0)], &[("wght", 100.0)]] {
+        for set in [&[3u16][..], &[4], &[5], &[1, 2, 3, 4, 5]] {
+            native_cases.push(case("tt_var_varc_rot", 0, set, Some(c)));
+        }
+    }
+    let native = std::env::args().nth(1).as_deref() == Some("native");
+    let (cases, prefix, command) = if native {
+        (native_cases, "oracle native", "gen_tests native")
+    } else {
+        (cases, "oracle", "gen_tests")
+    };
+
+    println!("// Generated by `cargo run --release --offline --bin {command}` in");
+    println!("// `pdflite/subsetter/oracle` (and `moon fmt`) from the `subsetter` crate.");
+    println!("// Do not edit.");
+    let mut used = Vec::new();
+    for c in &cases {
+        if !used.contains(&c.font) {
+            used.push(c.font);
+        }
+    }
+    for name in &used {
+        println!();
+        println!("///|");
+        println!("let fixture_{name} : Bytes = from_hex(");
+        print!("{}", hex_literal(&get(name), "  "));
+        println!(")");
+    }
+    for (i, c) in cases.iter().enumerate() {
+        let data = get(c.font);
+        let mut remapper = GlyphRemapper::new();
+        for g in &c.glyphs {
+            remapper.remap(*g);
+        }
+        let result = match &c.coords {
+            None => subset(&data, c.index, &remapper),
+            Some(coords) => {
+                let coords: Vec<(Tag, f32)> = coords.iter().map(|(t, v)| (t.parse().unwrap(), *v)).collect();
+                subset_with_variations(&data, c.index, &coords, &remapper)
+            }
+        };
+        let glyphs = c.glyphs.iter().map(|g| g.to_string()).collect::<Vec<_>>().join(", ");
+        let coords = match &c.coords {
+            None => "None".to_string(),
+            Some(coords) => format!(
+                "Some([{}])",
+                coords.iter().map(|(t, v)| format!("(\"{t}\", {v:?})")).collect::<Vec<_>>().join(", ")
+            ),
+        };
+        println!();
+        println!("///|");
+        println!("test \"{prefix} {i}: {} {} [{}] {}\" {{", c.font, c.index, glyphs, coords.replace('"', "'"));
+        match result {
+            Ok(sub) => {
+                println!("  check_subset(fixture_{}, {}, [{}], {}, expected=from_hex(", c.font, c.index as i32, glyphs, coords);
+                print!("{}", hex_literal(&sub, "    "));
+                println!("  ))");
+            }
+            Err(e) => {
+                println!("  check_subset(fixture_{}, {}, [{}], {}, error=\"{e}\")", c.font, c.index as i32, glyphs, coords);
+            }
+        }
+        println!("}}");
+    }
+}

@@ -58,12 +58,13 @@ by a user hook); raster images (8-bit samples with alpha, JPEG passthrough);
 link annotations, outlines, named destinations, page labels, metadata (info
 dictionary and XMP), embedded files and tagged PDF.
 
+Fonts are subset like krilla does, with `pdflite/subsetter` (a port of the
+`subsetter` crate): CIDs are the new glyph IDs, CFF subsets are embedded as
+CID-keyed CFF programs, TrueType subsets (also of CFF2 fonts, which the
+subsetter converts) as TrueType font programs. Variable fonts
+(`Font::new_variable`) are instantiated at their variation coordinates.
+
 ## Known limitations
 
-- TrueType fonts are subset by emptying unused glyphs (glyph IDs are kept);
-  CFF fonts are embedded whole as CID-keyed CFF programs (name-keyed ones are
-  converted). CFF2 fonts, which krilla converts to CFF, are embedded as
-  OpenType font programs, which PDF doesn't define for CFF2 outlines.
 - There is no CMYK output profile: CMYK colors stay in DeviceCMYK, which
   PDF/A reports as `MissingCMYKProfile`.
-- No `CIDSet` is written (PDF/A-1 requires one).

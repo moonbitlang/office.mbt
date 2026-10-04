@@ -1,0 +1,480 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "moonbitlang/pdflite/internal/read_fonts"
+
+import {
+  "moonbitlang/core/debug",
+  "moonbitlang/pdflite/internal/font_types",
+}
+
+// Values
+pub const ARGS_ARE_XY_VALUES : Int = 0x0002
+
+pub const ARG_1_AND_2_ARE_WORDS : Int = 0x0001
+
+pub const CFF_SFNT_VERSION : UInt = 0x4F54544F
+
+pub const HEAD_FLAG_FORCE_INTEGER_PPEM : Int = 0x0008
+
+pub const MAC_STYLE_BOLD : Int = 0x0001
+
+pub const MAC_STYLE_ITALIC : Int = 0x0002
+
+pub const MORE_COMPONENTS : Int = 0x0020
+
+pub const NAME_ID_FAMILY_NAME : Int = 1
+
+pub const OS2_SELECTION_ITALIC : Int = 0x0001
+
+pub const OS2_SELECTION_OBLIQUE : Int = 0x0200
+
+pub const OS2_SELECTION_USE_TYPO_METRICS : Int = 0x0080
+
+pub const OVERLAP_COMPOUND : Int = 0x0400
+
+pub const ROUND_XY_TO_GRID : Int = 0x0004
+
+pub const SCALED_COMPONENT_OFFSET : Int = 0x0800
+
+pub const TRUE_SFNT_VERSION : UInt = 0x74727565
+
+pub const TTC_HEADER_TAG : UInt = 0x74746366
+
+pub const TT_SFNT_VERSION : UInt = 0x00010000
+
+pub const UNSCALED_COMPONENT_OFFSET : Int = 0x1000
+
+pub const USE_MY_METRICS : Int = 0x0200
+
+pub const WE_HAVE_AN_X_AND_Y_SCALE : Int = 0x0040
+
+pub const WE_HAVE_A_SCALE : Int = 0x0008
+
+pub const WE_HAVE_A_TWO_BY_TWO : Int = 0x0080
+
+pub const WE_HAVE_INSTRUCTIONS : Int = 0x0100
+
+pub fn advance_delta(Result[DeltaSetIndexMap, ReadError]?, Result[ItemVariationStore, ReadError], UInt, ArrayView[@font_types.F2Dot14]) -> @font_types.Fixed raise ReadError
+
+pub fn compute_checksum(BytesView) -> UInt
+
+pub fn english_or_first(Array[LocalizedString]) -> LocalizedString?
+
+pub fn item_delta(Result[DeltaSetIndexMap, ReadError]?, Result[ItemVariationStore, ReadError], UInt, ArrayView[@font_types.F2Dot14]) -> @font_types.Fixed raise ReadError
+
+pub let no_variation_index : DeltaSetIndex
+
+// Errors
+pub(all) suberror ReadError {
+  OutOfBounds
+  InvalidFormat(Int64)
+  InvalidSfnt(UInt)
+  InvalidTtc(@font_types.Tag)
+  InvalidCollectionIndex(UInt)
+  InvalidArrayLen
+  ValidationError
+  NullOffset
+  TableIsMissing(@font_types.Tag)
+  MetricIsMissing(@font_types.Tag)
+  MalformedData(String)
+}
+pub impl Show for ReadError
+
+// Types and methods
+pub(all) enum Anchor {
+  Offset(x~ : Int, y~ : Int)
+  Point(base~ : Int, component~ : Int)
+} derive(Eq, @debug.Debug)
+
+pub struct Avar {
+  data : FontData
+}
+
+pub struct CffTable {
+  data : FontData
+}
+pub fn CffTable::offset_data(Self) -> BytesView
+
+pub(all) struct Component {
+  flags : Int
+  glyph : Int
+  anchor : Anchor
+  transform : ComponentTransform
+} derive(Eq, @debug.Debug)
+
+pub(all) struct ComponentTransform {
+  xx : @font_types.F2Dot14
+  yx : @font_types.F2Dot14
+  xy : @font_types.F2Dot14
+  yy : @font_types.F2Dot14
+} derive(Eq, @debug.Debug)
+
+pub struct CompositeGlyph {
+  data : FontData
+}
+pub fn CompositeGlyph::component_data(Self) -> FontData
+pub fn CompositeGlyph::component_glyphs_and_flags(Self) -> (Array[(Int, Int)], BytesView?)
+pub fn CompositeGlyph::components(Self) -> Array[Component]
+pub fn CompositeGlyph::instructions(Self) -> BytesView?
+
+pub(all) struct Cursor {
+  data : FontData
+  mut pos : Int
+}
+pub fn Cursor::advance_by(Self, Int) -> Unit
+pub fn Cursor::is_empty(Self) -> Bool
+pub fn Cursor::position(Self) -> Int raise ReadError
+pub fn Cursor::read_array(Self, Int, Int) -> FontData raise ReadError
+pub fn Cursor::read_i16(Self) -> Int raise ReadError
+pub fn Cursor::read_i32(Self) -> Int raise ReadError
+pub fn Cursor::read_i8(Self) -> Int raise ReadError
+pub fn Cursor::read_u16(Self) -> Int raise ReadError
+pub fn Cursor::read_u24(Self) -> Int raise ReadError
+pub fn Cursor::read_u32(Self) -> UInt raise ReadError
+pub fn Cursor::read_u8(Self) -> Int raise ReadError
+pub fn Cursor::remaining(Self) -> FontData?
+pub fn Cursor::remaining_bytes(Self) -> Int
+
+pub(all) struct DeltaSetIndex {
+  outer : Int
+  inner : Int
+} derive(Eq, @debug.Debug)
+
+pub struct DeltaSetIndexMap {
+  entry_format : Int
+  map_count : Int
+  map_data : FontData
+}
+pub fn DeltaSetIndexMap::get(Self, UInt) -> DeltaSetIndex raise ReadError
+pub fn DeltaSetIndexMap::read(FontData) -> Self raise ReadError
+
+pub(all) struct FontData {
+  bytes : BytesView
+}
+pub fn FontData::as_bytes(Self) -> BytesView
+pub fn FontData::cursor(Self) -> Cursor
+pub fn FontData::empty() -> Self
+pub fn FontData::get(Self, Int, Int) -> BytesView?
+pub fn FontData::is_empty(Self) -> Bool
+pub fn FontData::len(Self) -> Int
+pub fn FontData::new(BytesView) -> Self
+pub fn FontData::read_array(Self, Int, Int, Int) -> Self raise ReadError
+pub fn FontData::read_f2dot14(Self, Int) -> @font_types.F2Dot14 raise ReadError
+pub fn FontData::read_fixed(Self, Int) -> @font_types.Fixed raise ReadError
+pub fn FontData::read_i16(Self, Int) -> Int raise ReadError
+pub fn FontData::read_i32(Self, Int) -> Int raise ReadError
+pub fn FontData::read_i8(Self, Int) -> Int raise ReadError
+pub fn FontData::read_u16(Self, Int) -> Int raise ReadError
+pub fn FontData::read_u24(Self, Int) -> Int raise ReadError
+pub fn FontData::read_u32(Self, Int) -> UInt raise ReadError
+pub fn FontData::read_u8(Self, Int) -> Int raise ReadError
+pub fn FontData::slice(Self, Int, Int) -> Self?
+pub fn FontData::split_off(Self, Int) -> Self?
+
+pub struct FontRef {
+  data : FontData
+  table_directory : TableDirectory
+  ttc_index : Int
+  in_ttc : Bool
+  // private fields
+}
+pub fn FontRef::avar(Self) -> Avar raise ReadError
+pub fn FontRef::cff(Self) -> CffTable raise ReadError
+pub fn FontRef::data(Self) -> FontData
+pub fn FontRef::data_for_tag(Self, String) -> FontData?
+pub fn FontRef::from_index(BytesView, Int) -> Self raise ReadError
+pub fn FontRef::fvar(Self) -> Fvar raise ReadError
+pub fn FontRef::glyf(Self) -> Glyf raise ReadError
+pub fn FontRef::gvar(Self) -> Gvar raise ReadError
+pub fn FontRef::head(Self) -> Head raise ReadError
+pub fn FontRef::hhea(Self) -> Hhea raise ReadError
+pub fn FontRef::hmtx(Self) -> Hmtx raise ReadError
+pub fn FontRef::hvar(Self) -> Hvar raise ReadError
+pub fn FontRef::loca(Self, Bool?) -> Loca raise ReadError
+pub fn FontRef::localized_strings(Self, Int) -> Array[LocalizedString]
+pub fn FontRef::maxp(Self) -> Maxp raise ReadError
+pub fn FontRef::mvar(Self) -> Mvar raise ReadError
+pub fn FontRef::name(Self) -> Name raise ReadError
+pub fn FontRef::new(BytesView) -> Self raise ReadError
+pub fn FontRef::os2(Self) -> Os2 raise ReadError
+pub fn FontRef::table_data(Self, @font_types.Tag) -> FontData?
+pub fn FontRef::table_directory(Self) -> TableDirectory
+pub fn FontRef::ttc_index(Self) -> Int?
+
+pub struct Fvar {
+  data : FontData
+}
+pub fn Fvar::axes(Self) -> Array[VariationAxisRecord] raise ReadError
+pub fn Fvar::axis_count(Self) -> Int
+pub fn Fvar::user_to_normalized(Self, Avar?, ArrayView[(UInt, @font_types.Fixed)], FixedArray[@font_types.F2Dot14]) -> Unit
+
+pub struct Glyf {
+  data : FontData
+}
+pub fn Glyf::offset_data(Self) -> FontData
+
+pub enum Glyph {
+  Simple(SimpleGlyph)
+  Composite(CompositeGlyph)
+}
+pub fn Glyph::number_of_contours(Self) -> Int
+pub fn Glyph::read(FontData) -> Self raise ReadError
+pub fn Glyph::x_max(Self) -> Int
+pub fn Glyph::x_min(Self) -> Int
+pub fn Glyph::y_max(Self) -> Int
+pub fn Glyph::y_min(Self) -> Int
+
+pub(all) struct GlyphDelta {
+  position : Int
+  x_delta : Int
+  y_delta : Int
+}
+pub fn GlyphDelta::apply_scalar(Self, @font_types.Fixed) -> (Int, Int)
+
+pub struct GlyphVariationData {
+  axis_count : Int
+  shared_tuples : FontData
+  shared_point_numbers : FontData?
+  tuple_count : Int
+  header_data : FontData
+  serialized_data : FontData
+}
+pub fn GlyphVariationData::active_tuples_at(Self, ArrayView[@font_types.F2Dot14]) -> Array[(TupleVariation, @font_types.Fixed)]
+
+pub struct Gvar {
+  data : FontData
+}
+pub fn Gvar::axis_count(Self) -> Int
+pub fn Gvar::glyph_variation_data(Self, UInt) -> GlyphVariationData? raise ReadError
+pub fn Gvar::phantom_point_deltas(Self, Glyf, Loca, ArrayView[@font_types.F2Dot14], @font_types.GlyphId) -> Array[(Int, Int)]? raise ReadError
+
+pub struct Head {
+  data : FontData
+}
+pub fn Head::flags(Self) -> Int
+pub fn Head::index_to_loc_format(Self) -> Int
+pub fn Head::mac_style(Self) -> Int
+pub fn Head::units_per_em(Self) -> Int
+pub fn Head::x_max(Self) -> Int
+pub fn Head::x_min(Self) -> Int
+pub fn Head::y_max(Self) -> Int
+pub fn Head::y_min(Self) -> Int
+
+pub struct Hhea {
+  data : FontData
+}
+pub fn Hhea::advance_width_max(Self) -> Int
+pub fn Hhea::ascender(Self) -> Int
+pub fn Hhea::descender(Self) -> Int
+pub fn Hhea::line_gap(Self) -> Int
+pub fn Hhea::number_of_h_metrics(Self) -> Int
+
+pub struct Hmtx {
+  h_metrics : FontData
+  left_side_bearings : FontData
+}
+pub fn Hmtx::advance(Self, @font_types.GlyphId) -> Int?
+pub fn Hmtx::h_metric_advance(Self, Int) -> Int
+pub fn Hmtx::h_metric_side_bearing(Self, Int) -> Int
+pub fn Hmtx::left_side_bearing(Self, Int) -> Int
+pub fn Hmtx::num_h_metrics(Self) -> Int
+pub fn Hmtx::num_left_side_bearings(Self) -> Int
+pub fn Hmtx::side_bearing(Self, @font_types.GlyphId) -> Int?
+
+pub struct Hvar {
+  data : FontData
+}
+pub fn Hvar::advance_width_delta(Self, @font_types.GlyphId, ArrayView[@font_types.F2Dot14]) -> @font_types.Fixed raise ReadError
+pub fn Hvar::lsb_delta(Self, @font_types.GlyphId, ArrayView[@font_types.F2Dot14]) -> @font_types.Fixed raise ReadError
+
+pub struct ItemVariationData {
+  data : FontData
+}
+pub fn ItemVariationData::delta_row_len(Int, Int) -> Int
+pub fn ItemVariationData::delta_set(Self, Int) -> Array[Int]
+pub fn ItemVariationData::item_count(Self) -> Int
+pub fn ItemVariationData::region_index_count(Self) -> Int
+pub fn ItemVariationData::region_indexes(Self) -> Array[Int]
+pub fn ItemVariationData::word_delta_count(Self) -> Int
+
+pub struct ItemVariationStore {
+  data : FontData
+}
+pub fn ItemVariationStore::compute_delta(Self, DeltaSetIndex, ArrayView[@font_types.F2Dot14]) -> Int raise ReadError
+pub fn ItemVariationStore::compute_float_delta(Self, DeltaSetIndex, ArrayView[@font_types.F2Dot14]) -> Double raise ReadError
+pub fn ItemVariationStore::item_variation_data(Self, Int) -> ItemVariationData? raise ReadError
+pub fn ItemVariationStore::item_variation_data_count(Self) -> Int
+pub fn ItemVariationStore::read(FontData) -> Self raise ReadError
+pub fn ItemVariationStore::variation_region_list(Self) -> VariationRegionList raise ReadError
+
+pub enum Loca {
+  Short(FontData)
+  Long(FontData)
+}
+pub fn Loca::get_glyf(Self, @font_types.GlyphId, Glyf) -> Glyph? raise ReadError
+pub fn Loca::get_raw(Self, Int) -> UInt?
+pub fn Loca::len(Self) -> Int
+
+pub struct LocalizedString {
+  language : String?
+  value : NameString?
+}
+pub fn LocalizedString::chars(Self) -> Array[Char]
+pub fn LocalizedString::language(Self) -> String?
+
+pub struct Maxp {
+  data : FontData
+}
+pub fn Maxp::max_function_defs(Self) -> Int?
+pub fn Maxp::max_instruction_defs(Self) -> Int?
+pub fn Maxp::max_size_of_instructions(Self) -> Int?
+pub fn Maxp::max_stack_elements(Self) -> Int?
+pub fn Maxp::max_storage(Self) -> Int?
+pub fn Maxp::max_twilight_points(Self) -> Int?
+pub fn Maxp::num_glyphs(Self) -> Int
+pub fn Maxp::version(Self) -> Version16Dot16
+
+pub struct Mvar {
+  data : FontData
+}
+pub fn Mvar::metric_delta(Self, UInt, ArrayView[@font_types.F2Dot14]) -> @font_types.Fixed raise ReadError
+
+pub struct Name {
+  data : FontData
+}
+pub fn Name::count(Self) -> Int
+pub fn Name::lang_tag_record(Self) -> Array[(Int, Int)]?
+pub fn Name::name_record(Self) -> Array[NameRecord]
+pub fn Name::storage_offset(Self) -> Int
+pub fn Name::string_data(Self) -> FontData
+pub fn Name::version(Self) -> Int
+
+pub(all) enum NameEncoding {
+  Utf16Be
+  MacRoman
+  Unknown
+} derive(Eq, @debug.Debug)
+pub fn NameEncoding::new(Int, Int) -> Self
+
+pub(all) struct NameRecord {
+  platform_id : Int
+  encoding_id : Int
+  language_id : Int
+  name_id : Int
+  length : Int
+  string_offset : Int
+} derive(@debug.Debug)
+pub fn NameRecord::string(Self, FontData) -> NameString raise ReadError
+
+pub struct NameString {
+  data : BytesView
+  encoding : NameEncoding
+}
+pub fn NameString::chars(Self) -> Array[Char]
+pub fn NameString::to_string(Self) -> String
+
+pub(all) struct NullPen {
+}
+pub impl OutlinePen for NullPen
+
+pub struct Os2 {
+  data : FontData
+}
+pub fn Os2::fs_selection(Self) -> Int
+pub fn Os2::fs_type(Self) -> Int
+pub fn Os2::s_cap_height(Self) -> Int?
+pub fn Os2::s_typo_ascender(Self) -> Int
+pub fn Os2::s_typo_descender(Self) -> Int
+pub fn Os2::s_typo_line_gap(Self) -> Int
+pub fn Os2::sx_height(Self) -> Int?
+pub fn Os2::us_weight_class(Self) -> Int
+pub fn Os2::us_width_class(Self) -> Int
+pub fn Os2::us_win_ascent(Self) -> Int
+pub fn Os2::us_win_descent(Self) -> Int
+pub fn Os2::version(Self) -> Int
+pub fn Os2::x_avg_char_width(Self) -> Int
+pub fn Os2::y_strikeout_position(Self) -> Int
+pub fn Os2::y_strikeout_size(Self) -> Int
+
+pub(all) enum PathElement {
+  MoveTo(x~ : Float, y~ : Float)
+  LineTo(x~ : Float, y~ : Float)
+  QuadTo(cx0~ : Float, cy0~ : Float, x~ : Float, y~ : Float)
+  CurveTo(cx0~ : Float, cy0~ : Float, cx1~ : Float, cy1~ : Float, x~ : Float, y~ : Float)
+  Close
+} derive(Eq, @debug.Debug)
+
+pub(all) struct RecordingPen {
+  elements : Array[PathElement]
+}
+pub fn RecordingPen::new() -> Self
+pub impl OutlinePen for RecordingPen
+
+pub struct SimpleGlyph {
+  data : FontData
+}
+pub fn SimpleGlyph::end_pts_of_contours(Self) -> Array[Int]
+pub fn SimpleGlyph::glyph_data(Self) -> BytesView
+pub fn SimpleGlyph::has_overlapping_contours(Self) -> Bool
+pub fn SimpleGlyph::instruction_length(Self) -> Int
+pub fn SimpleGlyph::instructions(Self) -> BytesView
+pub fn SimpleGlyph::num_points(Self) -> Int
+pub fn SimpleGlyph::number_of_contours(Self) -> Int
+pub fn SimpleGlyph::read_points_fast(Self, FixedArray[Int], FixedArray[Int], FixedArray[Int], Int) -> Unit raise ReadError
+
+pub struct TableDirectory {
+  data : FontData
+}
+pub fn TableDirectory::num_tables(Self) -> Int
+pub fn TableDirectory::sfnt_version(Self) -> UInt
+pub fn TableDirectory::table_records(Self) -> Array[TableRecord]
+
+pub(all) struct TableRecord {
+  tag : @font_types.Tag
+  checksum : UInt
+  offset : UInt
+  length : UInt
+} derive(@debug.Debug)
+
+pub struct TupleVariation {
+  // private fields
+}
+pub fn TupleVariation::accumulate_dense_deltas(Self, FixedArray[Int], FixedArray[Int], Int, @font_types.Fixed) -> Unit raise ReadError
+pub fn TupleVariation::accumulate_sparse_deltas(Self, FixedArray[Int], FixedArray[Int], FixedArray[Int], Int, @font_types.Fixed) -> Unit raise ReadError
+pub fn TupleVariation::deltas(Self) -> Array[GlyphDelta]
+pub fn TupleVariation::has_deltas_for_all_points(Self) -> Bool
+
+pub(all) struct VariationAxisRecord {
+  axis_tag : UInt
+  min_value : @font_types.Fixed
+  default_value : @font_types.Fixed
+  max_value : @font_types.Fixed
+}
+pub fn VariationAxisRecord::normalize(Self, @font_types.Fixed) -> @font_types.Fixed
+
+pub struct VariationRegion {
+  data : FontData
+  axis_count : Int
+}
+pub fn VariationRegion::compute_scalar(Self, ArrayView[@font_types.F2Dot14]) -> @font_types.Fixed
+pub fn VariationRegion::compute_scalar_f32(Self, ArrayView[@font_types.F2Dot14]) -> Float
+
+pub struct VariationRegionList {
+  data : FontData
+}
+pub fn VariationRegionList::axis_count(Self) -> Int
+pub fn VariationRegionList::get(Self, Int) -> VariationRegion raise ReadError
+pub fn VariationRegionList::region_count(Self) -> Int
+
+pub(all) struct Version16Dot16(UInt) derive(Eq, @debug.Debug)
+pub fn Version16Dot16::to_major_minor(Self) -> (Int, Int)
+
+// Type aliases
+
+// Traits
+pub(open) trait OutlinePen {
+  fn move_to(Self, Float, Float) -> Unit
+  fn line_to(Self, Float, Float) -> Unit
+  fn quad_to(Self, Float, Float, Float, Float) -> Unit
+  fn curve_to(Self, Float, Float, Float, Float, Float, Float) -> Unit
+  fn close(Self) -> Unit
+}

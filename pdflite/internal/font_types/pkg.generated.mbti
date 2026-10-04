@@ -1,0 +1,122 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "moonbitlang/pdflite/internal/font_types"
+
+import {
+  "moonbitlang/core/debug",
+}
+
+// Values
+pub let fixed_int_mask : Int
+
+pub fn saturate_i32(Int64) -> Int
+
+pub fn trunc_i16(Int) -> Int
+
+// Errors
+
+// Types and methods
+pub(all) struct BoundingBox[T] {
+  x_min : T
+  y_min : T
+  x_max : T
+  y_max : T
+} derive(Eq, @debug.Debug)
+
+pub(all) struct F26Dot6(Int) derive(Compare, Eq, Hash, @debug.Debug)
+pub fn F26Dot6::abs(Self) -> Self
+pub fn F26Dot6::floor(Self) -> Self
+pub fn F26Dot6::fract(Self) -> Self
+pub fn F26Dot6::from_bits(Int) -> Self
+pub fn F26Dot6::from_f64(Double) -> Self
+pub fn F26Dot6::from_i32(Int) -> Self
+pub fn F26Dot6::mul_div(Self, Self, Self) -> Self
+pub fn F26Dot6::one() -> Self
+pub fn F26Dot6::round(Self) -> Self
+pub fn F26Dot6::to_bits(Self) -> Int
+pub fn F26Dot6::to_f32(Self) -> Float
+pub fn F26Dot6::to_f64(Self) -> Double
+pub fn F26Dot6::to_i32(Self) -> Int
+pub fn F26Dot6::zero() -> Self
+pub impl Add for F26Dot6
+pub impl Div for F26Dot6
+pub impl Mul for F26Dot6
+pub impl Neg for F26Dot6
+pub impl Sub for F26Dot6
+
+pub(all) struct F2Dot14(Int) derive(Compare, Eq, Hash, @debug.Debug)
+pub fn F2Dot14::from_bits(Int) -> Self
+pub fn F2Dot14::from_f32(Float) -> Self
+pub fn F2Dot14::one() -> Self
+pub fn F2Dot14::to_bits(Self) -> Int
+pub fn F2Dot14::to_f32(Self) -> Float
+pub fn F2Dot14::to_fixed(Self) -> Fixed
+pub fn F2Dot14::zero() -> Self
+
+pub(all) struct Fixed(Int) derive(Compare, Eq, Hash, @debug.Debug)
+pub fn Fixed::abs(Self) -> Self
+pub fn Fixed::checked_add(Self, Self) -> Self?
+pub fn Fixed::floor(Self) -> Self
+pub fn Fixed::fract(Self) -> Self
+pub fn Fixed::from_bits(Int) -> Self
+pub fn Fixed::from_f64(Double) -> Self
+pub fn Fixed::from_i32(Int) -> Self
+pub fn Fixed::max_value() -> Self
+pub fn Fixed::min_value() -> Self
+pub fn Fixed::mul_div(Self, Self, Self) -> Self
+pub fn Fixed::neg_one() -> Self
+pub fn Fixed::one() -> Self
+pub fn Fixed::round(Self) -> Self
+pub fn Fixed::saturating_add(Self, Self) -> Self
+pub fn Fixed::saturating_sub(Self, Self) -> Self
+pub fn Fixed::to_bits(Self) -> Int
+pub fn Fixed::to_f26dot6(Self) -> F26Dot6
+pub fn Fixed::to_f2dot14(Self) -> F2Dot14
+pub fn Fixed::to_f32(Self) -> Float
+pub fn Fixed::to_f64(Self) -> Double
+pub fn Fixed::to_i32(Self) -> Int
+pub fn Fixed::wrapping_add(Self, Self) -> Self
+pub fn Fixed::wrapping_sub(Self, Self) -> Self
+pub fn Fixed::zero() -> Self
+pub impl Add for Fixed
+pub impl Div for Fixed
+pub impl Mul for Fixed
+pub impl Neg for Fixed
+pub impl Sub for Fixed
+
+pub(all) struct FontMatrix {
+  xx : Fixed
+  yx : Fixed
+  xy : Fixed
+  yy : Fixed
+  dx : Fixed
+  dy : Fixed
+} derive(Eq, @debug.Debug)
+pub fn FontMatrix::elements(Self) -> FixedArray[Fixed]
+pub fn FontMatrix::from_elements(FixedArray[Fixed]) -> Self
+pub fn FontMatrix::identity() -> Self
+pub fn FontMatrix::transform(Self, Fixed, Fixed) -> (Fixed, Fixed)
+
+pub(all) struct GlyphId(UInt) derive(Compare, Eq, Hash, @debug.Debug)
+pub fn GlyphId::from_int(Int) -> Self
+pub fn GlyphId::new(UInt) -> Self
+pub fn GlyphId::notdef() -> Self
+pub fn GlyphId::to_int(Self) -> Int
+pub fn GlyphId::to_u16(Self) -> Int?
+pub fn GlyphId::to_u32(Self) -> UInt
+pub impl Show for GlyphId
+
+pub(all) struct Point[T] {
+  x : T
+  y : T
+} derive(Eq, @debug.Debug)
+pub fn[T] Point::new(T, T) -> Self[T]
+
+pub(all) struct Tag(UInt) derive(Compare, Eq, Hash, @debug.Debug)
+pub fn Tag::from_u32(UInt) -> Self
+pub fn Tag::new(String) -> Self
+pub fn Tag::to_u32(Self) -> UInt
+pub impl Show for Tag
+
+// Type aliases
+
+// Traits

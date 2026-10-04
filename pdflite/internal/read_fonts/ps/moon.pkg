@@ -1,0 +1,6 @@
+import {
+  "moonbitlang/pdflite/internal/font_types",
+  "moonbitlang/pdflite/internal/read_fonts",
+}
+
+warnings = "-missing_doc-implicit_impl_as_method-unqualified_local_using-result_error_return-prefer_fixed_array-unqualified_record-unnecessary_annotation"
