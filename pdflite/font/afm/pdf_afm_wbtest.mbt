@@ -50,6 +50,9 @@ test "pdf_read_afm_kern_pairs keeps pairs of unencoded glyphs" {
       #|C -1 ; WX 556 ; N eacute ; B 40 -15 516 734 ;
       #|EndCharMetrics
       #|StartKernPairs 3
+      #|Comment a comment line among the pairs
+      #|
+      #|KPY A V 5
       #|KPX A V -70
       #|KPX V eacute -60
       #|KPX eacute V -15
@@ -74,7 +77,7 @@ test "pdf_read_afm_kern_pairs keeps pairs of unencoded glyphs" {
   let malformed = afm_wb_ascii_for_test(
     (
       #|StartKernPairs 1
-      #|KPX A
+      #|KPX
       #|EndKernPairs
     ),
   )
