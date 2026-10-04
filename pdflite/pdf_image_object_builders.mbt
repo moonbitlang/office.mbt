@@ -174,43 +174,79 @@ fn pdf_image_png_dictionary(
 fn PdfPNG::pdf_image_split_alpha(
   self : PdfPNG,
 ) -> (@core.PdfBytes, @core.PdfBytes) raise @core.PdfError {
-  if self.bit_depth > 8 {
-    raise BadPNG("Cannot use alpha PNGs with >8bpp")
+  // PNG has alpha with samples of 8 or 16 bits: one byte or two
+  let sample = match self.bit_depth {
+    8 => 1
+    16 => 2
+    depth =>
+      raise BadPNG(
+        "obj_of_png_data/split_mask: bad bit depth " + depth.to_string(),
+      )
   }
   let components = match self.color_type {
     4 => 1
     6 => 3
     _ => raise BadPNG("obj_of_png_data/split_mask: bad colortype")
   }
-  let decoded = pdf_decode_predictor(
-    15,
-    components + 1,
-    self.bit_depth,
-    self.width,
-    @flate.pdf_flate_decode(self.idat),
-  )
-  let stride = components + 1
-  if decoded.length() % stride != 0 {
-    raise BadPNG("obj_of_png_data/split_mask: malformed alpha data")
-  }
+  // (whole pixels: a row of byte samples has no padding)
+  let (decoded, _) = self.pdf_image_png_raster(components + 1)
+  let stride = (components + 1) * sample
   let pixels = decoded.length() / stride
-  let colors = Array::make(pixels * components, b'\x00')
-  let mask = Array::make(pixels, b'\x00')
-  let mut color_position = 0
-  let mut mask_position = 0
+  let color_bytes = components * sample
+  let colors = Array::make(pixels * color_bytes, b'\x00')
+  let mask = Array::make(pixels * sample, b'\x00')
   for pixel in 0..<pixels {
     let offset = pixel * stride
-    for component in 0..<components {
-      colors[color_position] = decoded[offset + component]
-      color_position += 1
+    for k in 0..<color_bytes {
+      colors[pixel * color_bytes + k] = decoded[offset + k]
     }
-    mask[mask_position] = decoded[offset + components]
-    mask_position += 1
+    for k in 0..<sample {
+      mask[pixel * sample + k] = decoded[offset + color_bytes + k]
+    }
   }
   (
     @flate.pdf_flate_encode(Bytes::from_array(colors)),
     @flate.pdf_flate_encode(Bytes::from_array(mask)),
   )
+}
+
+///|
+/// A PNG's samples unfiltered, `channels` of its depth a pixel, with the
+/// bytes of a row (each padded to a byte). Raises BadPNG for image data
+/// short of the raster, or a raster too large: nothing is made up where
+/// data is missing, and no size wraps.
+fn PdfPNG::pdf_image_png_raster(
+  self : PdfPNG,
+  channels : Int,
+) -> (@core.PdfBytes, Int) raise @core.PdfError {
+  // counted wide: each row a filter byte and its samples
+  let row_bits64 = self.width.to_int64() *
+    (channels * self.bit_depth).to_int64()
+  let row_bytes64 = (row_bits64 + 7L) / 8L
+  let size64 = self.height.to_int64() * (row_bytes64 + 1L)
+  let pixels64 = self.width.to_int64() * self.height.to_int64()
+  if row_bits64 + 7L > 0x7FFFFFFFL ||
+    size64 > 0x7FFFFFFFL ||
+    pixels64 > 0x7FFFFFFFL {
+    raise BadPNG("obj_of_png_data: image too large")
+  }
+  let row_bytes = row_bytes64.to_int()
+  let size = size64.to_int()
+  let raster = @flate.pdf_flate_decode(self.idat)
+  if raster.length() < size {
+    raise BadPNG("obj_of_png_data: image data truncated")
+  }
+  let samples = pdf_decode_predictor_view(
+    15,
+    channels,
+    self.bit_depth,
+    self.width,
+    raster[:size],
+  )
+  if samples.length() != self.height * row_bytes {
+    raise BadPNG("obj_of_png_data: image data truncated")
+  }
+  (samples, row_bytes)
 }
 
 ///|
@@ -226,30 +262,7 @@ fn PdfPNG::pdf_image_palette_mask(
   if depth != 1 && depth != 2 && depth != 4 && depth != 8 {
     raise BadPNG("obj_of_png_data: bad palette bit depth")
   }
-  // the raster's size, checked wide: each row a filter byte and its indices
-  let row_bytes64 = (self.width.to_int64() * depth.to_int64() + 7L) / 8L
-  let size64 = self.height.to_int64() * (row_bytes64 + 1L)
-  let pixels64 = self.width.to_int64() * self.height.to_int64()
-  if size64 > 0x7FFFFFFFL || pixels64 > 0x7FFFFFFFL {
-    raise BadPNG("obj_of_png_data: palette image too large")
-  }
-  let row_bytes = row_bytes64.to_int()
-  let size = size64.to_int()
-  // all of it, or the mask would be made up where the data is missing
-  let raster = @flate.pdf_flate_decode(self.idat)
-  if raster.length() < size {
-    raise BadPNG("obj_of_png_data: palette image data truncated")
-  }
-  let indices = pdf_decode_predictor_view(
-    15,
-    1,
-    depth,
-    self.width,
-    raster[:size],
-  )
-  if indices.length() < self.height * row_bytes {
-    raise BadPNG("obj_of_png_data: palette image data truncated")
-  }
+  let (indices, row_bytes) = self.pdf_image_png_raster(1)
   let per_byte = 8 / depth
   let max = (1 << depth) - 1
   let mask = Array::make(self.width * self.height, b'\xFF')
@@ -341,6 +354,10 @@ pub fn PdfDocument::pdf_image_object_of_png_data(
       entries.push((pdf_image_smask_key(), PdfIndirect(smask_number)))
     }
     None => ()
+  }
+  // samples of 16 bits are PDF 1.5
+  if png.bit_depth == 16 {
+    self.pdf_image_raise_version(1, 5)
   }
   @syntax.pdf_stream(PdfDictionary(entries), StreamGot(image_data))
 }
