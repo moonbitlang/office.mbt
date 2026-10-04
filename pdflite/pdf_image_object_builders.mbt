@@ -240,7 +240,9 @@ pub fn PdfDocument::pdf_image_object_of_png_data(
   // colour are transparent, a /Mask of each sample's range
   if png.color_type == 0 || png.color_type == 2 {
     match pdf_png_colour_key(data) {
-      Some(key) =>
+      Some(key) => {
+        // colour-key masks are PDF 1.3
+        self.pdf_image_raise_version(1, 3)
         entries.push(
           (
             pdf_image_mask_key(),
@@ -254,6 +256,7 @@ pub fn PdfDocument::pdf_image_object_of_png_data(
             ),
           ),
         )
+      }
       None => ()
     }
   }
@@ -270,6 +273,8 @@ pub fn PdfDocument::pdf_image_object_of_png_data(
         PdfDictionary(mask_entries),
         StreamGot(mask),
       )
+      // soft masks are PDF 1.4
+      self.pdf_image_raise_version(1, 4)
       let smask_number = self.add_object(smask)
       entries.push((pdf_image_smask_key(), PdfIndirect(smask_number)))
     }
@@ -418,6 +423,9 @@ fn pdf_png_colour_key(data : BytesView) -> Array[Int]? {
     value
   }
   guard data.length() > 25 else { return None }
+  // the samples are of the bit depth (PNG has decoders clear the bits above)
+  let depth = data[24].to_int()
+  let sample_mask = if depth < 16 { (1 << depth) - 1 } else { 0xFFFF }
   let samples = match data[25].to_int() {
     0 => 1
     2 => 3
@@ -425,7 +433,10 @@ fn pdf_png_colour_key(data : BytesView) -> Array[Int]? {
   }
   let mut at = 8
   while at + 8 <= data.length() {
+    // a chunk length is under 2^31, and the chunk (with its CRC) in the data
+    guard data[at].to_int() < 0x80 else { return None }
     let length = be(at, 4)
+    guard at + 12 + length <= data.length() else { return None }
     let kind = data[at + 4:at + 8]
     let body = at + 8
     if kind == b"IDAT" || kind == b"IEND" {
@@ -435,9 +446,23 @@ fn pdf_png_colour_key(data : BytesView) -> Array[Int]? {
       guard length >= 2 * samples && body + 2 * samples <= data.length() else {
         return None
       }
-      return Some(Array::makei(samples, i => be(body + 2 * i, 2)))
+      return Some(Array::makei(samples, i => be(body + 2 * i, 2) & sample_mask))
     }
     at = body + length + 4
   }
   None
+}
+
+///|
+/// Raise the document's PDF version to `major.minor` when it is below it,
+/// as an image feature of that version needs.
+fn PdfDocument::pdf_image_raise_version(
+  self : PdfDocument,
+  major : Int,
+  minor : Int,
+) -> Unit {
+  let (m, n) = self.version()
+  if m < major || (m == major && n < minor) {
+    self.set_version(major, minor)
+  }
 }

@@ -1449,3 +1449,76 @@ test "pdf_image_object_of_png_data masks a PNG's colour key" {
   let (plain, _) = image_png_rgb_for_test()
   @test.assert_eq(image_png_mask_for_test(plain), None)
 }
+
+///|
+test "pdf_image_object_of_png_data clears a colour key's unused bits" {
+  let trns : ReadOnlyArray[Int] = [0x74, 0x52, 0x4E, 0x53]
+  let idat_type : ReadOnlyArray[Int] = [0x49, 0x44, 0x41, 0x54]
+  // an 8-bit greyscale key of 0x0142 is the sample 0x42
+  let grey = image_png_with_chunks_for_test(2, 1, 8, 0, [
+    (trns, image_bytes_for_test([0x01, 0x42])),
+    (idat_type, @flate.pdf_flate_encode(image_bytes_for_test([0, 0x42, 7]))),
+  ])
+  @test.assert_eq(
+    image_png_mask_for_test(grey),
+    Some(PdfArray([PdfInteger(0x42), PdfInteger(0x42)])),
+  )
+}
+
+///|
+test "pdf_image_object_of_png_data stops at a chunk length past the data" {
+  let text_type : ReadOnlyArray[Int] = [0x74, 0x45, 0x58, 0x74]
+  let idat_type : ReadOnlyArray[Int] = [0x49, 0x44, 0x41, 0x54]
+  let png = image_png_with_chunks_for_test(2, 1, 8, 0, [
+    (text_type, image_bytes_for_test([0x61])),
+    (idat_type, @flate.pdf_flate_encode(image_bytes_for_test([0, 0x42, 7]))),
+  ])
+  // the tEXt chunk (after the signature and IHDR) claims 0xFFFFFFF4 bytes,
+  // which would step the chunk walk back on itself
+  let bytes = png.to_array()
+  bytes[33] = b'\xFF'
+  bytes[34] = b'\xFF'
+  bytes[35] = b'\xFF'
+  bytes[36] = b'\xF4'
+  let document = @pdflite.pdf_document_empty()
+  let object = @pdflite.pdf_image_object_of_png_data(
+    document,
+    Bytes::from_array(bytes),
+  ) catch {
+    _ => return
+  }
+  guard object is PdfStreamObject(stream) else { return }
+  try image_lookup_for_test(stream.dictionary, "/Mask") catch {
+    _ => ()
+  } noraise {
+    _ => fail("unexpected /Mask")
+  }
+}
+
+///|
+test "pdf_image_object_of_png_data raises the version its masks need" {
+  let trns : ReadOnlyArray[Int] = [0x74, 0x52, 0x4E, 0x53]
+  let idat_type : ReadOnlyArray[Int] = [0x49, 0x44, 0x41, 0x54]
+  let grey = image_png_with_chunks_for_test(2, 1, 8, 0, [
+    (trns, image_bytes_for_test([0, 0x42])),
+    (idat_type, @flate.pdf_flate_encode(image_bytes_for_test([0, 0x42, 7]))),
+  ])
+  // a colour key is PDF 1.3
+  let keyed = @pdflite.pdf_document_empty()
+  ignore(@pdflite.pdf_image_object_of_png_data(keyed, grey))
+  @test.assert_eq(keyed.version(), (1, 3))
+  // a soft mask, 1.4
+  let soft = @pdflite.pdf_document_empty()
+  ignore(@pdflite.pdf_image_object_of_png_data(soft, image_png_rgba_for_test()))
+  @test.assert_eq(soft.version(), (1, 4))
+  // a later version stays
+  let later = @pdflite.pdf_document_empty()
+  later.set_version(1, 7)
+  ignore(@pdflite.pdf_image_object_of_png_data(later, grey))
+  @test.assert_eq(later.version(), (1, 7))
+  // an image without a mask needs none
+  let (plain, _) = image_png_rgb_for_test()
+  let unmasked = @pdflite.pdf_document_empty()
+  ignore(@pdflite.pdf_image_object_of_png_data(unmasked, plain))
+  @test.assert_eq(unmasked.version(), (1, 0))
+}

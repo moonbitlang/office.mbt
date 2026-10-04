@@ -17,6 +17,8 @@ covers changes that have landed on `main` but are not yet published.
 - PNG colour keys: a greyscale or truecolour PNG with a `tRNS` chunk gets the
   `/Mask` range of its transparent colour (`[g g]`, `[r r g g b b]`), as
   Prawn and other PNG embedders write it, instead of being drawn opaque.
+- PNG images raise the document to the PDF version their masks need: 1.3 for a
+  colour key, 1.4 for an alpha channel's soft mask.
 
 ### moonbitlang/pdflite [0.3.5]
 
