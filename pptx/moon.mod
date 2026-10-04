@@ -5,7 +5,7 @@ version = "0.1.0"
 
 import {
   "moonbitlang/async@0.22.4",
-  "moonbit-community/flate@0.8.1",
+  "moonbit-community/flate@0.8.5",
   "moonbitlang/ooxml@0.1.0",
 }
 
