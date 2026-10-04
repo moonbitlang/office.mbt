@@ -59,7 +59,7 @@ pub struct Font {
   data : Bytes
   /// The index of the face in a collection.
   index : Int
-  priv tables : Map[String, (Int, Int)]
+  priv font_ref : @read_fonts.FontRef
   /// The number of font units per em.
   units_per_em : Double
   /// The number of glyphs.
@@ -134,37 +134,9 @@ pub fn Font::new_variable(
     head_table.x_max().to_double(),
     head_table.y_max().to_double(),
   )
-  // skrifa's `GlyphNames::num_glyphs`: from `maxp`, else 0.
-  let num_glyphs = match ok(() => font_ref.maxp()) {
-    Some(maxp) => maxp.num_glyphs()
-    None => 0
-  }
-  // The table records whose data is in bounds (read-fonts' `table_data`).
-  let base = if rd_tag(data, 0) == "ttcf" {
-    rd_u32(data, 12 + 4 * index)
-  } else {
-    0
-  }
-  let tables : Map[String, (Int, Int)] = Map([])
-  let num_tables = rd_u16(data, base + 4)
-  for i in 0..<num_tables {
-    let rec = base + 12 + 16 * i
-    if rec < 0 || rec > data.length() - 16 {
-      break
-    }
-    let tag = rd_tag(data, rec)
-    // `rd_u32` returns negative values for offsets and lengths >= 2^31.
-    let offset = rd_u32(data, rec + 8)
-    let length = rd_u32(data, rec + 12)
-    if offset >= 0 &&
-      length >= 0 &&
-      offset <= data.length() - length &&
-      !tables.contains(tag) {
-      tables[tag] = (offset, length)
-    }
-  }
+  let num_glyphs = glyph_names_num_glyphs(font_ref)
   let has_cff = ok(() => font_ref.cff()) is Some(_)
-  let kind = if tables.contains("glyf") {
+  let kind = if font_ref.data_for_tag("glyf") is Some(_) {
     Glyf
   } else if has_cff {
     Cff
@@ -253,14 +225,18 @@ pub fn Font::new_variable(
       }
     None => None
   }
-  let (italic_angle, is_monospaced) = match tables.get("post") {
-    // read-fonts' `post` requires 32 bytes.
-    Some((post, len)) if len >= 32 =>
+  // skrifa's `Metrics`: from the `post` table (read-fonts requires 32
+  // bytes).
+  let (italic_angle, is_monospaced) = match font_ref.data_for_tag("post") {
+    Some(post) if post.len() >= 32 => {
+      let angle = post.read_i32(4) catch { _ => 0 }
+      let fixed_pitch = post.read_u32(12) catch { _ => 0 }
       (
         // `Fixed::to_f64() as f32`
-        Float::from_double(rd_u32(data, post + 4).to_double() / 65536.0).to_double(),
-        rd_u32(data, post + 12) != 0,
+        Float::from_double(angle.to_double() / 65536.0).to_double(),
+        fixed_pitch != 0,
       )
+    }
     _ => (0.0, false)
   }
   // skrifa's `Attributes`: the OS/2 weight class, else the head's macStyle.
@@ -278,7 +254,7 @@ pub fn Font::new_variable(
   Some({
     data,
     index,
-    tables,
+    font_ref,
     units_per_em,
     num_glyphs,
     ascent,
@@ -305,6 +281,46 @@ pub fn Font::new_variable(
 }
 
 ///|
+/// skrifa's `GlyphNames::num_glyphs`: the `maxp` glyph count (or 0), unless
+/// the `post` table has no glyph names and the font has a name-keyed CFF
+/// table, whose charset gives the count.
+fn glyph_names_num_glyphs(font_ref : @read_fonts.FontRef) -> Int {
+  let num_glyphs = match ok(() => font_ref.maxp()) {
+    Some(maxp) => maxp.num_glyphs()
+    None => 0
+  }
+  // `post.num_names()` (read-fonts' `post` requires 32 bytes; upstream
+  // panics for a version 2.0 table without its glyph count, which counts as
+  // no names here)
+  let post_names = match font_ref.data_for_tag("post") {
+    Some(post) if post.len() >= 32 => {
+      let version = post.read_u32(0) catch { _ => 0 }
+      match version {
+        0x00010000U => 258
+        0x00020000U => post.read_u16(32) catch { _ => 0 }
+        _ => 0
+      }
+    }
+    _ => 0
+  }
+  if post_names != 0 {
+    return num_glyphs
+  }
+  match ok(() => font_ref.cff()) {
+    Some(cff) => {
+      let charset = @ps.Cff::read(cff.offset_data()).charset(0) catch {
+        _ => None
+      }
+      match charset {
+        Some(charset) => charset.num_glyphs()
+        None => num_glyphs
+      }
+    }
+    None => num_glyphs
+  }
+}
+
+///|
 /// The variation coordinates of the font.
 pub fn Font::variation_coordinates(
   self : Font,
@@ -328,7 +344,7 @@ pub fn Font::advance_width(self : Font, glyph : Int) -> Double? {
 ///|
 /// Whether the font has a table.
 pub fn Font::has_table(self : Font, tag : String) -> Bool {
-  self.tables.contains(tag)
+  self.font_ref.data_for_tag(tag) is Some(_)
 }
 
 ///|

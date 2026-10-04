@@ -575,10 +575,52 @@ pub impl Compare for Tag with fn compare(self, other) {
 }
 
 ///|
+/// Rust's `Display`: the tag as UTF-8, or `...` if it isn't valid UTF-8.
 pub impl Show for Tag with fn output(self, logger) {
-  for b in self.bytes {
-    logger.write_char(b.to_int().unsafe_to_char())
+  match decode_utf8_strict(self.bytes) {
+    Some(s) => logger.write_string(s)
+    None => logger.write_string("...")
   }
+}
+
+///|
+/// `std::str::from_utf8`: `None` for invalid UTF-8 (overlong encodings,
+/// surrogates and code points past U+10FFFF included).
+fn decode_utf8_strict(bytes : Bytes) -> String? {
+  let sb = StringBuilder()
+  let n = bytes.length()
+  let mut i = 0
+  while i < n {
+    let b0 = bytes[i].to_int()
+    let (len, min, init) = if b0 < 0x80 {
+      (1, 0, b0)
+    } else if b0 >= 0xC2 && b0 <= 0xDF {
+      (2, 0x80, b0 & 0x1F)
+    } else if b0 >= 0xE0 && b0 <= 0xEF {
+      (3, 0x800, b0 & 0x0F)
+    } else if b0 >= 0xF0 && b0 <= 0xF4 {
+      (4, 0x10000, b0 & 0x07)
+    } else {
+      return None
+    }
+    if i + len > n {
+      return None
+    }
+    let mut cp = init
+    for k in 1..<len {
+      let b = bytes[i + k].to_int()
+      if (b & 0xC0) != 0x80 {
+        return None
+      }
+      cp = (cp << 6) | (b & 0x3F)
+    }
+    if cp < min || cp > 0x10FFFF || (cp >= 0xD800 && cp <= 0xDFFF) {
+      return None
+    }
+    sb.write_char(cp.unsafe_to_char())
+    i += len
+  }
+  Some(sb.to_string())
 }
 
 ///|

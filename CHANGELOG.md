@@ -43,8 +43,10 @@ covers changes that have landed on `main` but are not yet published.
   `MVAR`), which the subset instantiates.
 - `pdflite/export`: `Font::new` accepts fonts like krilla: it requires a
   readable table directory and `head` table (with nonzero units per em);
-  table records out of bounds count as missing tables, and `hhea`/`maxp`
-  are optional (they used to make `Font::new` fail). A font whose CFF
+  tables are looked up like read-fonts (null or out-of-bounds records are
+  missing tables), `hhea`/`maxp` are optional (they used to make
+  `Font::new` fail) and the glyph count is skrifa's (`maxp`, or the charset
+  of a name-keyed CFF font without `post` names). A font whose CFF
   table can't be read has no outlines, a broken `loca` table makes
   subsetting fail (`FontError`), advances always come from skrifa's glyph
   metrics, and non-finite variation coordinates are subset as 0, like in

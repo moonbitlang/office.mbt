@@ -96,6 +96,7 @@ fn cff_table(
   cid_keyed : Bool,
   seac? : Int = -1,
   seac_in_subr? : Int = -1,
+  iso_adobe_charset? : Bool = false,
 ) -> Array[Int] {
   let int32 = (v : Int) => {
     [29, (v >> 24) & 0xFF, (v >> 16) & 0xFF, (v >> 8) & 0xFF, v & 0xFF]
@@ -140,7 +141,11 @@ fn cff_table(
   // The size of the Top DICT doesn't depend on the offsets (all int32).
   // A CID-keyed font also has an FDSelect (format 3, one range) and an
   // FDArray with one Font DICT whose Private DICT is empty.
-  let dict_size = if cid_keyed { 9 + 12 + 14 } else { 6 + 11 }
+  let dict_size = if cid_keyed {
+    9 + 12 + 14
+  } else {
+    6 + 11 + (if iso_adobe_charset { 2 } else { 0 })
+  }
   let top_size = 2 + 1 + 2 + dict_size
   let charset_at = 4 + names.length() + top_size + strings.length() + 2
   let fd_select = if cid_keyed { [3, 0, 1, 0, 0, 0, 0, n] } else { [] }
@@ -180,6 +185,11 @@ fn cff_table(
     }
     dict.push(12)
     dict.push(37)
+  }
+  if iso_adobe_charset {
+    // charset 0 (ISOAdobe)
+    dict.push(139)
+    dict.push(15)
   }
   for b in int32(charstrings_at) {
     dict.push(b)
@@ -399,6 +409,8 @@ fn test_font_tables(
     // The exporter embeds CFF fonts as a whole, only reading the charset of
     // CID-keyed fonts.
     "cff" => tables.push(("CFF ", cff_table(n, false)))
+    "cff-iso-adobe" =>
+      tables.push(("CFF ", cff_table(n, false, iso_adobe_charset=true)))
     // Glyph 1 uses `seac`, glyph 2 calls a subroutine using it.
     "cff-seac" =>
       tables.push(("CFF ", cff_table(n, false, seac=1, seac_in_subr=2)))
@@ -777,4 +789,31 @@ test "non-finite variation coordinates are stored as zero" {
     font.variation_coordinates().map(c => c.1),
     content="[0, 0, 12.5]",
   )
+}
+
+///|
+test "tables are looked up like read-fonts" {
+  // A null `post` offset is a missing table: no italic angle and not
+  // monospaced (krilla's metrics).
+  let data = test_font_data(italic=true, monospaced=true)
+  let font = @export.Font::new(data, 0).unwrap()
+  debug_inspect((font.italic_angle, font.is_monospaced), content="(-12, true)")
+  let post = table_record(data, "post")
+  let font = @export.Font::new(patch(data, post + 8, [0, 0, 0, 0]), 0).unwrap()
+  debug_inspect((font.italic_angle, font.is_monospaced), content="(0, false)")
+  debug_inspect(font.has_table("post"), content="false")
+  // Without a readable `maxp` table, the glyph count of a name-keyed CFF
+  // font comes from its charset (skrifa's `GlyphNames`; the `post` table
+  // has no names).
+  let data = test_font_data(outlines="cff-iso-adobe")
+  let maxp = table_record(data, "maxp")
+  let font = @export.Font::new(patch(data, maxp + 8, [0, 0, 0, 0]), 0).unwrap()
+  debug_inspect(font.num_glyphs, content="6")
+  let font = @export.Font::new(
+    patch(test_font_data(), table_record(test_font_data(), "maxp") + 8, [
+      0, 0, 0, 0,
+    ]),
+    0,
+  ).unwrap()
+  debug_inspect(font.num_glyphs, content="0")
 }

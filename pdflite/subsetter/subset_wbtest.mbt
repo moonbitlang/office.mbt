@@ -200,3 +200,12 @@ test "Tag::from_str takes strings of four UTF-8 bytes" {
     ),
   )
 }
+
+///|
+test "tags display like Rust" {
+  inspect(Tag::from_str("wght").unwrap(), content="wght")
+  inspect(Tag::from_str("éab").unwrap(), content="éab")
+  inspect(Tag::from_bytes(b"\xff\xfeab").unwrap(), content="...")
+  inspect(Tag::from_bytes(b"\xed\xa0\x80a").unwrap(), content="...")
+  inspect(Tag::from_bytes(b"\xc0\x80ab").unwrap(), content="...")
+}
