@@ -34,16 +34,23 @@ pub(all) struct PdfExtractedImageFile {
 ///
 /// Any JPEG that filter decodes is taken — baseline, extended sequential or
 /// progressive (PDF 1.3), of 8-bit samples, whatever markers it starts with —
-/// and any other (lossless, arithmetic-coded, 12-bit, of two components)
-/// raises `InvalidJPEGBlock`. A four-component JPEG with an Adobe marker has
-/// its samples inverted, as Adobe writes them, and gets the `/Decode` that
-/// puts them right.
+/// and any other (lossless, arithmetic-coded, hierarchical, 12-bit, of two
+/// components) raises `InvalidJPEGBlock`. A four-component JPEG with an Adobe
+/// marker has its samples inverted, as Adobe writes them, and gets the
+/// `/Decode` that puts them right. The components' colour transform is the
+/// filter's own: the Adobe marker's, else YCbCr for three components and
+/// none for others.
+///
+/// A progressive JPEG needs PDF 1.3: `pdf_image_document_of_jpeg_data`
+/// makes its document one; a document the image is added to is the
+/// caller's to raise.
 pub fn pdf_image_object_of_jpeg_data(
   data : BytesView,
 ) -> @syntax.PdfObject raise @core.PdfError {
   let info = @codec.pdf_jpeg_info_view(data)
   // what DCTDecode decodes: Huffman-coded sequential or progressive frames
-  if info.frame != 0xC0 && info.frame != 0xC1 && info.frame != 0xC2 {
+  if info.hierarchical ||
+    (info.frame != 0xC0 && info.frame != 0xC1 && info.frame != 0xC2) {
     raise InvalidJPEGBlock
   }
   let color_space = match info.components {

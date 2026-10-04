@@ -60,6 +60,7 @@ pub(all) struct PdfJpegInfo {
   components : Int
   frame : Int
   adobe_transform : Int?
+  hierarchical : Bool
 }
 
 // Type aliases

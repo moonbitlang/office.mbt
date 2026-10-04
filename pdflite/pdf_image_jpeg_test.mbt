@@ -207,3 +207,48 @@ test "pdf_jpeg_info_view reads the frame and the Adobe marker" {
     "JPEGDimensionsExpected",
   )
 }
+
+///|
+test "pdf_image_object_of_jpeg_data refuses a hierarchical JPEG" {
+  // a DHP marker before the frames: the first frame, baseline as it may be,
+  // is one of several sizes and not the image
+  let plain = image_jpeg_of_components_for_test(3, false, jfif=false)
+  let bytes : Array[Byte] = [..plain[:2]]
+  for
+    value in [
+      0xFF, 0xDE, 0x00, 0x0B, 0x08, 0x01, 0x2C, 0x01, 0x90, 0x01, 0x01, 0x11, 0x00,
+    ] {
+    bytes.push(value.to_byte())
+  }
+  bytes.append(plain[2:].to_array())
+  let jpeg = Bytes::from_array(bytes)
+  @test.assert_eq(@codec.pdf_jpeg_info_view(jpeg).hierarchical, true)
+  @test.assert_eq(@codec.pdf_jpeg_info_view(plain).hierarchical, false)
+  let result : Result[@syntax.PdfObject, Error] = try
+    @pdflite.pdf_image_object_of_jpeg_data(jpeg)
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
+  guard result is Err(@core.PdfError::InvalidJPEGBlock) else {
+    fail("expected InvalidJPEGBlock")
+  }
+}
+
+///|
+test "pdf_image_document_of_jpeg_data is of PDF 1.3 for a progressive JPEG" {
+  let progressive = @pdflite.pdf_image_document_of_jpeg_data(
+    image_jpeg_of_components_for_test(3, false, frame=0xC2),
+  )
+  @test.assert_eq(progressive.version(), (1, 3))
+  // a baseline one is of the version it was
+  let baseline = @pdflite.pdf_image_document_of_jpeg_data(
+    image_jpeg_of_components_for_test(3, false),
+  )
+  let plain = @pdflite.pdf_image_document_of_jpeg_data(
+    image_jpeg_for_document_test(),
+  )
+  @test.assert_eq(baseline.version(), plain.version())
+  @test.assert_eq(baseline.version().1 < 3, true)
+}

@@ -275,7 +275,8 @@ pub(all) struct PdfJpegInfo {
   height : Int
   /// bits a sample (the frame's precision)
   bits : Int
-  /// samples a pixel: 1 is greyscale, 3 colour, 4 CMYK
+  /// the components of a pixel (as a rule one is greyscale, three colour
+  /// and four CMYK; what they are is the markers' and the decoder's to say)
   components : Int
   /// the frame header's marker, which says how the image is coded: 0xC0
   /// baseline, 0xC1 extended sequential, 0xC2 progressive (the three PDF's
@@ -286,6 +287,9 @@ pub(all) struct PdfJpegInfo {
   /// CMYK), 1 YCbCr, 2 YCCK — or None without the marker. Adobe writes
   /// the samples of four components inverted.
   adobe_transform : Int?
+  /// whether it is of hierarchical mode (a DHP marker before its frames):
+  /// frames of several sizes, the first not the image's
+  hierarchical : Bool
 }
 
 ///|
@@ -300,6 +304,7 @@ pub fn pdf_jpeg_info_view(data : BytesView) -> PdfJpegInfo raise @core.PdfError 
   }
   let mut frame : (Int, Int, Int, Int, Int)? = None
   let mut adobe_transform : Int? = None
+  let mut hierarchical = false
   let mut index = 2
   while index < data.length() {
     let (marker, segment_start) = pdf_jpeg_next_marker(data, index) catch {
@@ -325,6 +330,9 @@ pub fn pdf_jpeg_info_view(data : BytesView) -> PdfJpegInfo raise @core.PdfError 
     if segment_length > data.length() - segment_start {
       raise JPEGDimensionsExpected
     }
+    if marker == 0xDE {
+      hierarchical = true
+    }
     if frame is None && pdf_jpeg_marker_has_dimensions(marker) {
       if segment_length < 8 {
         raise JPEGDimensionsExpected
@@ -349,5 +357,13 @@ pub fn pdf_jpeg_info_view(data : BytesView) -> PdfJpegInfo raise @core.PdfError 
   guard frame is Some((marker, bits, height, width, components)) else {
     raise JPEGDimensionsExpected
   }
-  { width, height, bits, components, frame: marker, adobe_transform, }
+  {
+    width,
+    height,
+    bits,
+    components,
+    frame: marker,
+    adobe_transform,
+    hierarchical,
+  }
 }
