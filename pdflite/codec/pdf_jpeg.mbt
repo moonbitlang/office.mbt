@@ -330,7 +330,8 @@ pub fn pdf_jpeg_info_view(data : BytesView) -> PdfJpegInfo raise @core.PdfError 
         ),
       )
     } else if marker == 0xEE &&
-      segment_length >= 7 &&
+      // (Adobe's marker whole: its name, version, flags and transform)
+      segment_length >= 14 &&
       data[segment_start + 2:segment_start + 7] == b"Adobe" {
       adobe = true
     }

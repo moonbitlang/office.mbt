@@ -41,11 +41,15 @@ pub fn pdf_image_object_of_jpeg_data(
     4 => pdf_image_device_cmyk_name()
     _ => raise InvalidJPEGBlock
   }
+  // DCTDecode has samples of 8 bits only
+  if info.bits != 8 {
+    raise InvalidJPEGBlock
+  }
   let payload = data.to_owned()
   let entries : Array[(@core.PdfName, @syntax.PdfObject)] = [
     (pdf_image_length_key(), PdfInteger(payload.length())),
     (pdf_image_filter_key(), PdfNameObject(pdf_image_dctdecode_name())),
-    (pdf_image_bits_per_component_key(), PdfInteger(info.bits)),
+    (pdf_image_bits_per_component_key(), PdfInteger(8)),
     (pdf_image_colorspace_key(), PdfNameObject(color_space)),
     (pdf_image_subtype_key(), PdfNameObject(pdf_image_image_name())),
     (pdf_image_width_key(), PdfInteger(width)),
