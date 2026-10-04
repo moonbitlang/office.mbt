@@ -1189,6 +1189,38 @@ pub fn patch_table(mut font: Vec<u8>, tag: &str, offset: usize, value: u8) -> Ve
     panic!("no table {tag}")
 }
 
+/// Rebuilds an sfnt with an extra table.
+pub fn add_table(font: &[u8], tag: &'static str, data: Vec<u8>) -> Vec<u8> {
+    let magic = u32::from_be_bytes(font[0..4].try_into().unwrap());
+    let count = u16::from_be_bytes([font[4], font[5]]) as usize;
+    let mut tables: Vec<(&str, Vec<u8>)> = Vec::new();
+    for i in 0..count {
+        let rec = 12 + 16 * i;
+        let t: &'static str = Box::leak(std::str::from_utf8(&font[rec..rec + 4]).unwrap().to_string().into_boxed_str());
+        let start = u32::from_be_bytes(font[rec + 8..rec + 12].try_into().unwrap()) as usize;
+        let len = u32::from_be_bytes(font[rec + 12..rec + 16].try_into().unwrap()) as usize;
+        tables.push((t, font[start..start + len].to_vec()));
+    }
+    tables.push((tag, data));
+    sfnt(magic, &tables)
+}
+
+/// A VARC table (version 1.0) with a coverage table of format 1 for
+/// `covered` (or a null coverage offset) and no other subtables.
+pub fn varc(covered: Option<&[u16]>) -> Vec<u8> {
+    let mut w = W::new();
+    w.u16(1).u16(0);
+    w.u32(if covered.is_some() { 24 } else { 0 });
+    w.u32(0).u32(0).u32(0).u32(0);
+    if let Some(gids) = covered {
+        w.u16(1).u16(gids.len() as u16);
+        for g in gids {
+            w.u16(*g);
+        }
+    }
+    w.0
+}
+
 pub fn all() -> Vec<(&'static str, Vec<u8>)> {
     let tt_short = sfnt(0x00010000, &tt_tables(false, tt_post()));
     let tt_long_v3 = sfnt(0x74727565, &tt_tables(true, post_v3()));
@@ -1257,6 +1289,12 @@ pub fn all() -> Vec<(&'static str, Vec<u8>)> {
         ("tt_var_avar_count0", patch_table(tt_var(false), "avar", 7, 0)),
         // A null gvar shared tuples offset: no glyph has variation data.
         ("tt_var_gvar_null", patch_table(tt_var(false), "gvar", 11, 0)),
+        // Unreadable VARC tables: the glyf outlines are used.
+        ("tt_var_varc_empty", add_table(&tt_var(false), "VARC", vec![])),
+        ("tt_var_varc_nocov", add_table(&tt_var(false), "VARC", varc(None))),
+        // A VARC table not covering the subset glyphs: they use the glyf
+        // outlines (VARC outlines themselves are not supported).
+        ("tt_var_varc", add_table(&tt_var(false), "VARC", varc(Some(&[7, 9])))),
         ("malformed_cff", malformed_cff),
         ("unknown", b"\x00\x02\x00\x00\x00\x00\x00\x00".to_vec()),
     ]

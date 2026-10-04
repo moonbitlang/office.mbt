@@ -64,7 +64,6 @@ pub struct Font {
   units_per_em : Double
   /// The number of glyphs.
   num_glyphs : Int
-  priv advances : Array[Int]
   /// The ascender in font units.
   ascent : Double
   /// The descender in font units (negative below the baseline).
@@ -93,7 +92,7 @@ pub struct Font {
   priv variation_coordinates : Array[(@subsetter.Tag, Float)]
   /// The glyph metrics at the location of the variation coordinates, if it
   /// is not the default location.
-  priv glyph_metrics : @skrifa.GlyphMetrics?
+  priv glyph_metrics : @skrifa.GlyphMetrics
   /// Whether the font has a readable `CFF ` table (krilla's `is_cff`, also
   /// when the font has `glyf` outlines too).
   priv has_cff : Bool
@@ -180,20 +179,6 @@ pub fn Font::new_variable(
   if num_glyphs == 0 {
     return None
   }
-  // Horizontal metrics.
-  let advances = []
-  if tables.get("hhea") is Some((hhea, _)) {
-    let n = rd_u16(data, hhea + 34)
-    if tables.get("hmtx") is Some((hmtx, len)) {
-      let mut last = 0
-      for g in 0..<num_glyphs {
-        if g < n && 4 * g + 2 <= len {
-          last = rd_u16(data, hmtx + 4 * g)
-        }
-        advances.push(last)
-      }
-    }
-  }
   // krilla checks that the outline tables can be read.
   let font_ref = @read_fonts.FontRef::from_index(data, index) catch {
     _ => return None
@@ -221,11 +206,9 @@ pub fn Font::new_variable(
   })
   let location = @skrifa.axes_location(font_ref, settings)
   let is_default = location.iter().all(c => c == @font_types.F2Dot14::zero())
-  let glyph_metrics = if is_default {
-    None
-  } else {
-    Some(@skrifa.GlyphMetrics::new(font_ref, location))
-  }
+  // krilla: `font_ref.glyph_metrics(Size::unscaled(), &location)` (also at
+  // the default location).
+  let glyph_metrics = @skrifa.GlyphMetrics::new(font_ref, location)
   // krilla's `FontInfo::new`: the line metrics come from the OS/2 typo
   // metrics, falling back to skrifa's `Metrics` (FreeType's choice of OS/2
   // and hhea metrics, with `MVAR` deltas at non-default locations).
@@ -318,7 +301,6 @@ pub fn Font::new_variable(
     tables,
     units_per_em,
     num_glyphs,
-    advances,
     ascent,
     descent,
     cap_height,
@@ -349,18 +331,12 @@ pub fn Font::variation_coordinates(
 /// The advance width of a glyph in font units (at the location of the
 /// variation coordinates).
 pub fn Font::advance_width(self : Font, glyph : Int) -> Double? {
-  match self.glyph_metrics {
-    Some(metrics) =>
-      match metrics.advance_width(@font_types.GlyphId::from_int(glyph)) {
-        Some(w) => Some(w.to_double())
-        None => None
-      }
-    None =>
-      if glyph >= 0 && glyph < self.advances.length() {
-        Some(self.advances[glyph].to_double())
-      } else {
-        None
-      }
+  if glyph < 0 {
+    return None
+  }
+  match self.glyph_metrics.advance_width(@font_types.GlyphId::from_int(glyph)) {
+    Some(w) => Some(w.to_double())
+    None => None
   }
 }
 

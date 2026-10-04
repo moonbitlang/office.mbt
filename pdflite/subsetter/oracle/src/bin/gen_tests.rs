@@ -111,7 +111,7 @@ fn main() {
     }
     cases.push(case("tt_var_hvar_regions", 0, &[1, 2, 3, 4, 5], Some(&[("wght", 650.0), ("wdth", 150.0)])));
     cases.push(case("cff2_header4", 0, &[1], None));
-    for font in ["tt_var_avar_count0", "tt_var_gvar_null"] {
+    for font in ["tt_var_avar_count0", "tt_var_gvar_null", "tt_var_varc_empty", "tt_var_varc_nocov", "tt_var_varc"] {
         for c in [&[][..], &[("wght", 650.0), ("wdth", 150.0)], &[("wght", 100.0)]] {
             cases.push(case(font, 0, &[1, 2, 3, 4, 5], Some(c)));
         }

@@ -20,7 +20,10 @@ The subsets are meant for embedding in PDFs as CID fonts:
 - `subset_with_variations` instantiates variable fonts at the given user
   space coordinates (TrueType outlines through `gvar`, metrics through
   `HVAR`); CFF2 fonts are converted to TrueType fonts, also at the default
-  location. `VARC` (variable composites) outlines are not supported.
+  location. `VARC` (variable composites) outlines are not supported:
+  glyphs with a `VARC` record make subsetting fail (glyphs without one, and
+  fonts whose `VARC` table is unreadable, use their glyf or CFF outlines,
+  like skrifa).
 
 ```moonbit check
 ///|

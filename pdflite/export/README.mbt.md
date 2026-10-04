@@ -66,6 +66,6 @@ subsetter converts) as TrueType font programs. Variable fonts
 
 ## Known limitations
 
-- Fonts with `VARC` (variable composite) outlines can't be subset.
+- Glyphs with `VARC` (variable composite) outlines can't be subset.
 - There is no CMYK output profile: CMYK colors stay in DeviceCMYK, which
   PDF/A reports as `MissingCMYKProfile`.

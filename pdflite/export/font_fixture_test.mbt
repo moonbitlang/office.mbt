@@ -731,3 +731,30 @@ test "collection indices that overflow the directory size are rejected" {
   inspect(@export.Font::new(data, 536870908) is None, content="true")
   inspect(@export.Font::new(data, 0x7FFFFFFE) is None, content="true")
 }
+
+///|
+test "advance widths come from skrifa's glyph metrics" {
+  let data = test_font_data()
+  let hmtx = table_record(data, "hmtx")
+  let offset = (data[hmtx + 8].to_int() << 24) |
+    (data[hmtx + 9].to_int() << 16) |
+    (data[hmtx + 10].to_int() << 8) |
+    data[hmtx + 11].to_int()
+  // An advance of 40000 units (wraps in skrifa's 26.6 fixed point scaling).
+  let font = @export.Font::new(patch(data, offset + 4, [0x9C, 0x40]), 0).unwrap()
+  debug_inspect(
+    [0, 1, 2].map(g => font.advance_width(g)),
+    content=(
+      #|[Some(500), Some(-25536), Some(550)]
+    ),
+  )
+  // An `hmtx` table too short for its `hMetrics` array: read-fonts reads
+  // the array as empty.
+  let font = @export.Font::new(patch(data, hmtx + 12, [0, 0, 0, 8]), 0).unwrap()
+  debug_inspect(
+    [0, 1, 5, 6].map(g => font.advance_width(g)),
+    content=(
+      #|[Some(0), Some(0), Some(0), None]
+    ),
+  )
+}
