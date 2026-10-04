@@ -214,18 +214,57 @@ test "pdf_truetype_cmap_glyphs reads a cmap of tables without end to a bound" {
 }
 
 ///|
+/// A font of a cmap whose encoding `records` each point at one of
+/// `subtables` (by index): a subtable may be shared by many records.
+fn truetype_cmap_font_of_records_for_test(
+  subtables : ArrayView[Array[Int]],
+  records : ArrayView[Int],
+) -> @core.PdfBytes {
+  let offsets : Array[Int] = []
+  let mut offset = 4 + records.length() * 8
+  for subtable in subtables {
+    offsets.push(offset)
+    offset += subtable.length()
+  }
+  let cmap : Array[Int] = []
+  truetype_push_u16_for_test(cmap, 0)
+  truetype_push_u16_for_test(cmap, records.length())
+  for i, record in records {
+    truetype_push_u16_for_test(cmap, 3)
+    truetype_push_u16_for_test(cmap, i)
+    truetype_push_u32_for_test(cmap, offsets[record])
+  }
+  for subtable in subtables {
+    truetype_append_for_test(cmap, subtable)
+  }
+  let output : Array[Int] = []
+  truetype_push_u32_for_test(output, 0x00010000)
+  truetype_push_u16_for_test(output, 1)
+  truetype_push_u16_for_test(output, 0)
+  truetype_push_u16_for_test(output, 0)
+  truetype_push_u16_for_test(output, 0)
+  truetype_append_for_test(output, [0x63, 0x6D, 0x61, 0x70])
+  truetype_push_u32_for_test(output, 0)
+  truetype_push_u32_for_test(output, 28)
+  truetype_push_u32_for_test(output, cmap.length())
+  truetype_append_for_test(output, cmap)
+  truetype_bytes_for_test(output)
+}
+
+///|
 test "pdf_truetype_cmap_glyphs reads groups that map nothing to a bound too" {
-  // records without end of groups that are passed over: looking at a group
-  // is a step of the reading as mapping a codepoint is
+  // records without end of one table of groups that are passed over:
+  // looking at a group is a step of the reading as mapping a codepoint is
   let nothing = truetype_format12_subtable_for_test(
     Array::make(4000, (0x50, 0x4F, 1)),
   )
-  let font = truetype_cmap_font_for_test(
+  let font = truetype_cmap_font_of_records_for_test(
     [
-      (3, 1, truetype_format6_subtable_for_test(0x41, [7])),
-      ..Array::makei(3000, i => (3, i, nothing)),
-      (3, 10, truetype_format6_subtable_for_test(0x42, [8])),
+      truetype_format6_subtable_for_test(0x41, [7]),
+      nothing,
+      truetype_format6_subtable_for_test(0x42, [8]),
     ],
+    [0, ..Array::make(3000, 1), 2],
   )
   // 12 million groups to look at are past the budget: the last table is
   // not reached
