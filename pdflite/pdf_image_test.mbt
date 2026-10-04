@@ -1361,3 +1361,91 @@ test "pdf_image_document_of_jpeg_data requires title for PDF/UA subformat" {
     fail("expected missing PDF/UA image title to raise TitleExpected")
   }
 }
+
+///|
+/// A PNG with `chunks` (type, data) between IHDR and IEND, in that order.
+fn image_png_with_chunks_for_test(
+  width : Int,
+  height : Int,
+  bit_depth : Int,
+  color_type : Int,
+  chunks : ArrayView[(ArrayView[Int], @core.PdfBytes)],
+) -> @core.PdfBytes {
+  let output : Array[Byte] = []
+  for value in [0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A] {
+    image_push_byte_for_test(output, value)
+  }
+  image_append_bytes_for_test(
+    output,
+    image_png_chunk_for_test(
+      [0x49, 0x48, 0x44, 0x52],
+      image_png_header_for_test(width, height, bit_depth, color_type, 0),
+    ),
+  )
+  for chunk in chunks {
+    image_append_bytes_for_test(
+      output,
+      image_png_chunk_for_test(chunk.0, chunk.1),
+    )
+  }
+  image_append_bytes_for_test(
+    output,
+    image_png_chunk_for_test([0x49, 0x45, 0x4E, 0x44], []),
+  )
+  Bytes::from_array(output)
+}
+
+///|
+/// The /Mask of the image XObject built from `png`, if it has one.
+fn image_png_mask_for_test(png : @core.PdfBytes) -> @syntax.PdfObject? {
+  let document = @pdflite.pdf_document_empty()
+  let object = try! @pdflite.pdf_image_object_of_png_data(document, png)
+  guard object is PdfStreamObject(stream) else { return None }
+  try image_lookup_for_test(stream.dictionary, "/Mask") catch {
+    _ => None
+  } noraise {
+    mask => Some(mask)
+  }
+}
+
+///|
+test "pdf_image_object_of_png_data masks a PNG's colour key" {
+  let trns : ReadOnlyArray[Int] = [0x74, 0x52, 0x4E, 0x53]
+  let idat_type : ReadOnlyArray[Int] = [0x49, 0x44, 0x41, 0x54]
+  // greyscale: the grey sample 0x42 is transparent
+  let grey = image_png_with_chunks_for_test(2, 1, 8, 0, [
+    (trns, image_bytes_for_test([0, 0x42])),
+    (idat_type, @flate.pdf_flate_encode(image_bytes_for_test([0, 0x42, 7]))),
+  ])
+  @test.assert_eq(
+    image_png_mask_for_test(grey),
+    Some(PdfArray([PdfInteger(0x42), PdfInteger(0x42)])),
+  )
+  // truecolour: the colour (1, 2, 3) is
+  let rgb = image_png_with_chunks_for_test(1, 1, 8, 2, [
+    (trns, image_bytes_for_test([0, 1, 0, 2, 0, 3])),
+    (idat_type, @flate.pdf_flate_encode(image_bytes_for_test([0, 1, 2, 3]))),
+  ])
+  @test.assert_eq(
+    image_png_mask_for_test(rgb),
+    Some(
+      PdfArray([
+        PdfInteger(1),
+        PdfInteger(1),
+        PdfInteger(2),
+        PdfInteger(2),
+        PdfInteger(3),
+        PdfInteger(3),
+      ]),
+    ),
+  )
+  // a tRNS after the image data is not one (PNG puts it before)
+  let late = image_png_with_chunks_for_test(2, 1, 8, 0, [
+    (idat_type, @flate.pdf_flate_encode(image_bytes_for_test([0, 0x42, 7]))),
+    (trns, image_bytes_for_test([0, 0x42])),
+  ])
+  @test.assert_eq(image_png_mask_for_test(late), None)
+  // nor is there a mask without one
+  let (plain, _) = image_png_rgb_for_test()
+  @test.assert_eq(image_png_mask_for_test(plain), None)
+}

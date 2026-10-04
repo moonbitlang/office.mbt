@@ -12,6 +12,12 @@ Breaking and notable changes for the published modules in this workspace.
 Entries are grouped by module and by the version they ship in; `Unreleased`
 covers changes that have landed on `main` but are not yet published.
 
+### moonbitlang/pdflite [Unreleased]
+
+- PNG colour keys: a greyscale or truecolour PNG with a `tRNS` chunk gets the
+  `/Mask` range of its transparent colour (`[g g]`, `[r r g g b b]`), as
+  Prawn and other PNG embedders write it, instead of being drawn opaque.
+
 ### moonbitlang/pdflite [0.3.5]
 
 - New package `moonbitlang/pdflite/subsetter`: a port of the Rust
