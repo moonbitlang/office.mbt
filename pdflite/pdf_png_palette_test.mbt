@@ -191,28 +191,95 @@ test "pdf_image_object_of_png_data embeds a palette image as /Indexed" {
 }
 
 ///|
-test "pdf_read_png rejects real palette transparency rather than dropping it" {
-  // tRNS on a palette image names per-entry alpha. Embedding without it
-  // would draw the image opaque — quietly wrong — so the reader refuses
-  // and the caller reports the image unreadable. One entry below 255 is
-  // enough.
-  let (_, _, palette, _) = png_palette_p8_for_test()
-  let file = png_palette_file_for_test(4, 2, 8, 0, [
-    ([0x50, 0x4C, 0x54, 0x45], palette),
-    ([0x74, 0x52, 0x4E, 0x53], png_palette_bytes_for_test([255, 128])),
-    ([0x49, 0x44, 0x41, 0x54], @flate.pdf_flate_encode(b"\x00\x00\x00\x00\x00")),
+/// `file` with a tRNS of `alpha` spliced in at byte `at` (before its IDAT).
+fn png_palette_with_trns_for_test(
+  file : @core.PdfBytes,
+  at : Int,
+  alpha : ArrayView[Int],
+) -> @core.PdfBytes {
+  let output : Array[Byte] = [..file[:at]]
+  image_append_bytes_for_test(
+    output,
+    image_png_chunk_for_test(
+      [0x74, 0x52, 0x4E, 0x53],
+      png_palette_bytes_for_test(alpha),
+    ),
+  )
+  output.append(file[at:].to_array())
+  Bytes::from_array(output)
+}
+
+///|
+/// The soft mask `file`'s image gets, decoded, with its dictionary.
+fn png_palette_smask_for_test(
+  file : @core.PdfBytes,
+) -> (@syntax.PdfObject, @core.PdfBytes) raise {
+  let document = @pdflite.pdf_document_empty()
+  let object = @pdflite.pdf_image_object_of_png_data(document, file)
+  guard object is PdfStreamObject(stream) &&
+    stream.dictionary.lookup_immediate(image_name_for_test("/SMask"))
+    is Some(PdfIndirect(number)) &&
+    document.lookup_object_or_null(number) is PdfStreamObject(smask) &&
+    smask.data is StreamGot(payload) else {
+    fail("expected an /SMask")
+  }
+  (smask.dictionary, @flate.pdf_flate_decode(payload))
+}
+
+///|
+test "a palette image's transparency becomes its soft mask" {
+  // tRNS gives the first palette entries' alpha (here entry 1 is half
+  // transparent); the rest are opaque. The mask has each pixel's.
+  let (sequential, _, _, _) = png_palette_p8_for_test()
+  let file = png_palette_with_trns_for_test(sequential, 60, [255, 128])
+  let png = @pdflite.pdf_read_png(file)
+  @test.assert_eq(
+    png.transparency,
+    Some(PdfPNGPaletteAlpha(png_palette_bytes_for_test([255, 128]))),
+  )
+  // a tRNS after the image data is not one, as decoders have it
+  let late = @pdflite.pdf_read_png(
+    png_palette_with_trns_for_test(sequential, sequential.length() - 12, [0]),
+  )
+  @test.assert_eq(late.transparency, None)
+  let (dictionary, mask) = png_palette_smask_for_test(file)
+  // the raster is 0 1 2 3 / 4 0 1 2
+  @test.assert_eq(
+    mask,
+    png_palette_bytes_for_test([255, 128, 255, 255, 255, 255, 128, 255]),
+  )
+  // 8 bits a pixel, uncompressed by a predictor, greyscale
+  @test.assert_eq(
+    image_lookup_for_test(dictionary, "/BitsPerComponent"),
+    PdfInteger(8),
+  )
+  @test.assert_eq(
+    image_lookup_for_test(dictionary, "/ColorSpace"),
+    PdfNameObject(image_name_for_test("/DeviceGray")),
+  )
+  @test.assert_eq(image_lookup_for_test(dictionary, "/Width"), PdfInteger(4))
+  @test.assert_eq(image_lookup_for_test(dictionary, "/Height"), PdfInteger(2))
+  @test.assert_eq(
+    dictionary.lookup_immediate(image_name_for_test("/DecodeParms")),
+    None,
+  )
+}
+
+///|
+test "a 2-bit palette image's mask unpacks its indices, interlaced or not" {
+  // the raster's rows: 0 1 2 3 0 / 1 2 3 0 1 / 2 3 0 1 2 / 3 0 1 2 3 /
+  // 0 1 2 3 0; entry 0 is transparent, entry 1 a quarter opaque
+  let (sequential, interlaced, _, _) = png_palette_p2_for_test()
+  let expected = png_palette_bytes_for_test([
+    0, 64, 255, 255, 0, 64, 255, 255, 0, 64, 255, 255, 0, 64, 255, 255, 0, 64, 255,
+    255, 0, 64, 255, 255, 0,
   ])
-  let refused : Result[@pdflite.PdfPNG, Error] = try
-    @pdflite.pdf_read_png(file)
-  catch {
-    err => Err(err)
-  } noraise {
-    value => Ok(value)
+  for file in [sequential, interlaced] {
+    let (_, mask) = png_palette_smask_for_test(
+      png_palette_with_trns_for_test(file, 57, [0, 64]),
+    )
+    @test.assert_eq(mask, expected)
   }
-  guard refused is Err(@core.PdfError::BadPNG(message)) else {
-    fail("expected palette transparency to raise BadPNG")
-  }
-  @test.assert_eq(message, "read_png: palette transparency not supported")
 }
 
 ///|
@@ -341,4 +408,91 @@ test "pdf_read_png rejects a 16-bit palette image" {
     fail("expected a 16-bit palette image to raise BadPNG")
   }
   @test.assert_eq(message, "read_png: bit depth 16 invalid for a palette image")
+}
+
+///|
+test "a palette image's mask needs all its data, of a size that fits" {
+  let plte = png_palette_bytes_for_test([0, 0, 0, 255, 255, 255])
+  let refused = (width : Int, height : Int, raster : ArrayView[Int]) => {
+    let file = png_palette_file_for_test(width, height, 8, 0, [
+      ([0x50, 0x4C, 0x54, 0x45], plte),
+      ([0x74, 0x52, 0x4E, 0x53], png_palette_bytes_for_test([0, 128])),
+      (
+        [0x49, 0x44, 0x41, 0x54],
+        @flate.pdf_flate_encode(png_palette_bytes_for_test(raster)),
+      ),
+    ])
+    try
+      @pdflite.pdf_image_object_of_png_data(@pdflite.pdf_document_empty(), file)
+    catch {
+      BadPNG(_) => true
+      _ => false
+    } noraise {
+      _ => false
+    }
+  }
+  // 2x2 with only its first row's filter byte and one index
+  @test.assert_eq(refused(2, 2, [0, 1]), true)
+  // a row wider than the data
+  @test.assert_eq(refused(536870910, 1, [0]), true)
+  // more pixels than fit
+  @test.assert_eq(refused(65536, 65536, [0]), true)
+  // the whole raster is fine
+  @test.assert_eq(refused(2, 2, [0, 1, 0, 0, 0, 1]), false)
+}
+
+///|
+test "a palette mask has an index past the palette opaque" {
+  // two entries, the second transparent; index 2 is neither: PNG has
+  // decoders recover with an opaque pixel
+  let file = png_palette_file_for_test(2, 1, 8, 0, [
+    ([0x50, 0x4C, 0x54, 0x45], png_palette_bytes_for_test([0, 0, 0, 9, 9, 9])),
+    ([0x74, 0x52, 0x4E, 0x53], png_palette_bytes_for_test([255, 0])),
+    (
+      [0x49, 0x44, 0x41, 0x54],
+      @flate.pdf_flate_encode(png_palette_bytes_for_test([0, 0, 2])),
+    ),
+  ])
+  let (_, mask) = png_palette_smask_for_test(file)
+  @test.assert_eq(mask, png_palette_bytes_for_test([255, 255]))
+}
+
+///|
+test "a palette image's soft mask raises the document to PDF 1.4" {
+  let (sequential, _, _, _) = png_palette_p8_for_test()
+  let document = @pdflite.pdf_document_empty()
+  ignore(
+    @pdflite.pdf_image_object_of_png_data(
+      document,
+      png_palette_with_trns_for_test(sequential, 60, [255, 128]),
+    ),
+  )
+  @test.assert_eq(document.version(), (1, 4))
+  // without transparency it needs none
+  let plain = @pdflite.pdf_document_empty()
+  ignore(@pdflite.pdf_image_object_of_png_data(plain, sequential))
+  @test.assert_eq(plain.version(), (1, 0))
+}
+
+///|
+test "pdf_read_png refuses an image without pixels" {
+  // PNG has no zero width or height; nor is there a raster to make of one
+  let plte = png_palette_bytes_for_test([0, 0, 0])
+  for size in [(0, 1), (1, 0), (268435455, 0)] {
+    let file = png_palette_file_for_test(size.0, size.1, 8, 0, [
+      ([0x50, 0x4C, 0x54, 0x45], plte),
+      ([0x74, 0x52, 0x4E, 0x53], png_palette_bytes_for_test([0])),
+      ([0x49, 0x44, 0x41, 0x54], @flate.pdf_flate_encode(b"")),
+    ])
+    let result : Result[@pdflite.PdfPNG, Error] = try
+      @pdflite.pdf_read_png(file)
+    catch {
+      err => Err(err)
+    } noraise {
+      value => Ok(value)
+    }
+    guard result is Err(@core.PdfError::BadPNG(_)) else {
+      fail("expected BadPNG for \{size.0} by \{size.1}")
+    }
+  }
 }

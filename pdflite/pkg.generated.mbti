@@ -3658,6 +3658,7 @@ pub fn PdfPNG::to_repr(Self) -> @debug.Repr
 
 pub(all) enum PdfPNGTransparency {
   PdfPNGColourKey(Array[Int])
+  PdfPNGPaletteAlpha(Bytes)
 } derive(Eq, ToJson, @debug.Debug)
 #deprecated
 pub fn PdfPNGTransparency::equal(Self, Self) -> Bool

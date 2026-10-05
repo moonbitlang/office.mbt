@@ -214,6 +214,61 @@ fn PdfPNG::pdf_image_split_alpha(
 }
 
 ///|
+/// A palette image's soft mask: each pixel's alpha, its palette entry's in
+/// `alpha` (opaque past its end, and so for an index past the palette, as
+/// PNG has decoders recover), 8 bits a pixel, flate-compressed. Raises
+/// BadPNG for image data short of the raster (or a raster too large).
+fn PdfPNG::pdf_image_palette_mask(
+  self : PdfPNG,
+  alpha : @core.PdfBytes,
+) -> @core.PdfBytes raise @core.PdfError {
+  let depth = self.bit_depth
+  if depth != 1 && depth != 2 && depth != 4 && depth != 8 {
+    raise BadPNG("obj_of_png_data: bad palette bit depth")
+  }
+  // the raster's size, checked wide: each row a filter byte and its indices
+  let row_bytes64 = (self.width.to_int64() * depth.to_int64() + 7L) / 8L
+  let size64 = self.height.to_int64() * (row_bytes64 + 1L)
+  let pixels64 = self.width.to_int64() * self.height.to_int64()
+  if size64 > 0x7FFFFFFFL || pixels64 > 0x7FFFFFFFL {
+    raise BadPNG("obj_of_png_data: palette image too large")
+  }
+  let row_bytes = row_bytes64.to_int()
+  let size = size64.to_int()
+  // all of it, or the mask would be made up where the data is missing
+  let raster = @flate.pdf_flate_decode(self.idat)
+  if raster.length() < size {
+    raise BadPNG("obj_of_png_data: palette image data truncated")
+  }
+  let indices = pdf_decode_predictor_view(
+    15,
+    1,
+    depth,
+    self.width,
+    raster[:size],
+  )
+  if indices.length() < self.height * row_bytes {
+    raise BadPNG("obj_of_png_data: palette image data truncated")
+  }
+  let per_byte = 8 / depth
+  let max = (1 << depth) - 1
+  let mask = Array::make(self.width * self.height, b'\xFF')
+  for y in 0..<self.height {
+    for x in 0..<self.width {
+      let at = y * row_bytes + x / per_byte
+      let shift = 8 - depth * (x % per_byte + 1)
+      let index = (indices[at].to_int() >> shift) & max
+      // (opaque past the alpha there is, and so past the palette, where PNG
+      // has decoders make an index an opaque pixel)
+      if index < alpha.length() {
+        mask[y * self.width + x] = alpha[index]
+      }
+    }
+  }
+  @flate.pdf_flate_encode(Bytes::from_array(mask))
+}
+
+///|
 /// Build a PDF image XObject for PNG data, adding an `/SMask` object to
 /// `self` when the PNG carries an alpha channel.
 pub fn PdfDocument::pdf_image_object_of_png_data(
@@ -226,6 +281,9 @@ pub fn PdfDocument::pdf_image_object_of_png_data(
       let (colors, mask) = png.pdf_image_split_alpha()
       (colors, Some(mask), false)
     }
+    // a palette's alpha: the indices stay as they are, the mask is made
+    3 if png.transparency is Some(PdfPNGPaletteAlpha(alpha)) =>
+      (png.idat, Some(png.pdf_image_palette_mask(alpha)), true)
     _ => (png.idat, None, true)
   }
   let components = png.pdf_image_png_components()
@@ -256,16 +314,22 @@ pub fn PdfDocument::pdf_image_object_of_png_data(
         ),
       )
     }
-    None => ()
+    // (a palette's alpha is the soft mask made above)
+    Some(PdfPNGPaletteAlpha(_)) | None => ()
   }
   match mask_data {
     Some(mask) => {
+      // (an alpha channel's depth is the image's; a palette's, 8 bits)
       let mask_entries = pdf_image_png_dictionary(
-        png,
+        if png.color_type == 3 {
+          { ..png, bit_depth: 8, }
+        } else {
+          png
+        },
         mask,
         PdfNameObject(pdf_image_device_gray_name()),
         1,
-        predictor,
+        false,
       )
       let smask = @syntax.pdf_stream(
         PdfDictionary(mask_entries),

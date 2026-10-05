@@ -1338,3 +1338,28 @@ test "@codec.pdf_run_length_encode flushes long literal chunks" {
   @test.assert_eq(encoded[131].to_int(), 128)
   @test.assert_eq(@codec.pdf_run_length_decode(encoded), input)
 }
+
+///|
+test "pdf_decode_predictor refuses a row of 2^31 bits or more" {
+  // 536870910 columns of 8 bits wrapped the row's byte count to -1, and
+  // counting the rows never ended
+  for
+    parameters in [
+      (1, 8, 536870910),
+      (3, 16, 0x7FFFFFFF),
+      (0x7FFFFFFF, 2, 1),
+      (1073741829, 8, 1932735283),
+    ] {
+    let (colors, bits, columns) = parameters
+    let result : Result[@core.PdfBytes, Error] = try
+      @pdflite.pdf_decode_predictor(15, colors, bits, columns, b"\x00\x00")
+    catch {
+      err => Err(err)
+    } noraise {
+      value => Ok(value)
+    }
+    guard result is Err(@core.PdfError::PredictorExpected) else {
+      fail("expected PredictorExpected for \{colors} \{bits} \{columns}")
+    }
+  }
+}

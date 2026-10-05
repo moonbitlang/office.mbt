@@ -87,12 +87,10 @@ fn pdf_png_adam7_extent(full : Int, start : Int, step : Int) -> Int {
 /// Bytes one scanline of `columns` pixels occupies, computed in 64-bit so a
 /// hostile IHDR overflows into an error rather than a small positive size.
 ///
-/// The bound is on the bit count rather than the byte count, because the
-/// shared predictor helpers recompute `colors * bits * columns + 7` in
-/// `Int` (`pdf_predictor_scanline_width`). A width that fits a byte count
-/// but wraps that product would leave the re-filter reading a negative
-/// scanline width and emitting an empty stream — a silently blank image
-/// rather than an error.
+/// The bound is on the bit count rather than the byte count: it is the
+/// bound the shared predictor helpers put on a row
+/// (`pdf_predictor_scanline_width` refuses one of 2^31 bits or more), so a
+/// width refused there is refused here, as a PNG.
 fn pdf_png_stride(
   columns : Int,
   bits_per_pixel : Int,
