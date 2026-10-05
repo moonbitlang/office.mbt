@@ -14,6 +14,13 @@ covers changes that have landed on `main` but are not yet published.
 
 ### moonbitlang/pdflite [Unreleased]
 
+- PNG colour keys: `pdf_read_png` reads a greyscale or truecolour PNG's
+  `tRNS` chunk as `PdfPNG.transparency` (`PdfPNGColourKey`, the transparent
+  colour's samples), and the image built from it gets that colour's `/Mask`
+  range (`[g g]`, `[r r g g b b]`) instead of being drawn opaque. `PdfPNG`
+  gains the field (breaking for code that constructs a `PdfPNG` literal).
+- PNG images raise the document to the PDF version their masks need: 1.3 for a
+  colour key, 1.4 for an alpha channel's soft mask.
 - Standard fonts kern by glyph name: `PdfStandardFont::kern_pairs_by_name`
   gives every pair of Adobe's Core 14 AFM files (2,705 for Helvetica),
   those of unencoded glyphs such as the accented letters included, which

@@ -3645,6 +3645,7 @@ pub(all) struct PdfPNG {
   color_type : Int
   idat : Bytes
   palette : Bytes?
+  transparency : PdfPNGTransparency?
 } derive(Eq, ToJson, @debug.Debug)
 #deprecated
 pub fn PdfPNG::equal(Self, Self) -> Bool
@@ -3654,6 +3655,18 @@ pub fn PdfPNG::not_equal(Self, Self) -> Bool
 pub fn PdfPNG::to_json(Self) -> Json
 #deprecated
 pub fn PdfPNG::to_repr(Self) -> @debug.Repr
+
+pub(all) enum PdfPNGTransparency {
+  PdfPNGColourKey(Array[Int])
+} derive(Eq, ToJson, @debug.Debug)
+#deprecated
+pub fn PdfPNGTransparency::equal(Self, Self) -> Bool
+#deprecated
+pub fn PdfPNGTransparency::not_equal(Self, Self) -> Bool
+#deprecated
+pub fn PdfPNGTransparency::to_json(Self) -> Json
+#deprecated
+pub fn PdfPNGTransparency::to_repr(Self) -> @debug.Repr
 
 type PdfPageSource
 pub fn PdfPageSource::new(PdfDocument) -> Self raise @core.PdfError

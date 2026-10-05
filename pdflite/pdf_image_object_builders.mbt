@@ -236,6 +236,28 @@ pub fn PdfDocument::pdf_image_object_of_png_data(
     components,
     predictor,
   )
+  // a colour key: the pixels of that colour are transparent, a /Mask of
+  // each sample's range
+  match png.transparency {
+    Some(PdfPNGColourKey(key)) => {
+      // colour-key masks are PDF 1.3
+      self.pdf_image_raise_version(1, 3)
+      entries.push(
+        (
+          pdf_image_mask_key(),
+          PdfArray(
+            key
+            .map(v => {
+              let n : @syntax.PdfObject = PdfInteger(v)
+              [n, n]
+            })
+            .flatten(),
+          ),
+        ),
+      )
+    }
+    None => ()
+  }
   match mask_data {
     Some(mask) => {
       let mask_entries = pdf_image_png_dictionary(
@@ -249,6 +271,8 @@ pub fn PdfDocument::pdf_image_object_of_png_data(
         PdfDictionary(mask_entries),
         StreamGot(mask),
       )
+      // soft masks are PDF 1.4
+      self.pdf_image_raise_version(1, 4)
       let smask_number = self.add_object(smask)
       entries.push((pdf_image_smask_key(), PdfIndirect(smask_number)))
     }
@@ -381,4 +405,18 @@ pub fn pdf_obj_of_jbig2_data(
   global? : BytesView? = None,
 ) -> (@syntax.PdfObject, Array[(Int, @syntax.PdfObject)]) raise @core.PdfError {
   pdf_image_obj_of_jbig2_data(data, global~)
+}
+
+///|
+/// Raise the document's PDF version to `major.minor` when it is below it,
+/// as an image feature of that version needs.
+fn PdfDocument::pdf_image_raise_version(
+  self : PdfDocument,
+  major : Int,
+  minor : Int,
+) -> Unit {
+  let (m, n) = self.version()
+  if m < major || (m == major && n < minor) {
+    self.set_version(major, minor)
+  }
 }
