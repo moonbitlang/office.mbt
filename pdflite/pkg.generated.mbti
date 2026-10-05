@@ -3769,6 +3769,7 @@ pub fn PdfStandardFont::baseline_adjustment(Self) -> Int
 #deprecated
 pub fn PdfStandardFont::equal(Self, Self) -> Bool
 pub fn PdfStandardFont::flags(Self) -> Int
+pub fn PdfStandardFont::kern_pairs_by_name(Self) -> Array[(String, String, Int)]
 pub fn PdfStandardFont::name(Self) -> String
 #deprecated
 pub fn PdfStandardFont::not_equal(Self, Self) -> Bool
