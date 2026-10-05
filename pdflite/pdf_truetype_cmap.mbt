@@ -60,16 +60,41 @@ fn pdf_truetype_cmap_glyph_from_entries(
 priv struct PdfTrueTypeCMapBuilder {
   entries : Array[@truetype.PdfTrueTypeCMapGlyph]
   positions : Map[Int, Int]
+  /// The steps the reading has left: a mapping read is one, and so is a
+  /// record, segment or group looked at. A cmap's tables overlap, and map
+  /// a codepoint a few times over; a hostile one (its records, segments or
+  /// groups the same again and again, mapping or not) would be read
+  /// without end.
+  mut budget : Int
+}
+
+///|
+/// The steps a cmap is read for: every codepoint eight times over.
+let pdf_truetype_cmap_budget : Int = 8 * 0x110000
+
+///|
+/// Spend a step of the reading's budget: false once it is spent.
+fn PdfTrueTypeCMapBuilder::step(self : PdfTrueTypeCMapBuilder) -> Bool {
+  if self.budget <= 0 {
+    false
+  } else {
+    self.budget -= 1
+    true
+  }
 }
 
 ///|
 /// Map `codepoint` to `glyph_index`, replacing an earlier mapping of it in
-/// place.
+/// place. False once the reading's budget is spent, when nothing more is
+/// mapped.
 fn pdf_truetype_push_cmap_glyph(
   entries : PdfTrueTypeCMapBuilder,
   codepoint : Int,
   glyph_index : Int,
-) -> Unit {
+) -> Bool {
+  if !entries.step() {
+    return false
+  }
   let normalized = pdf_truetype_normalize_u16(glyph_index)
   match entries.positions.get(codepoint) {
     Some(index) =>
@@ -79,6 +104,7 @@ fn pdf_truetype_push_cmap_glyph(
       entries.entries.push({ codepoint, glyph_index: normalized, })
     }
   }
+  true
 }
 
 ///|
@@ -92,7 +118,9 @@ fn pdf_truetype_cmap_format0_glyphs(
     if offset >= data.length() {
       break
     }
-    pdf_truetype_push_cmap_glyph(entries, codepoint, data[offset].to_int())
+    if !pdf_truetype_push_cmap_glyph(entries, codepoint, data[offset].to_int()) {
+      break
+    }
   }
 }
 
@@ -111,11 +139,13 @@ fn pdf_truetype_cmap_format6_glyphs(
       for index in 0..<entry_count {
         match pdf_truetype_read_u16(data, subtable_offset + 10 + index * 2) {
           Some(glyph_index) =>
-            pdf_truetype_push_cmap_glyph(
-              entries,
-              first_code + index,
-              glyph_index,
-            )
+            if !pdf_truetype_push_cmap_glyph(
+                entries,
+                first_code + index,
+                glyph_index,
+              ) {
+              break
+            }
           None => break
         }
       }
@@ -138,6 +168,9 @@ fn pdf_truetype_cmap_format4_glyphs(
       let id_range_offset_offset = id_delta_offset + seg_count * 2
       let glyph_index_array_start = id_range_offset_offset + seg_count * 2
       for segment in 0..<seg_count {
+        if !entries.step() {
+          break
+        }
         match
           (
             pdf_truetype_read_u16(data, end_codes_offset + segment * 2),
@@ -152,11 +185,13 @@ fn pdf_truetype_cmap_format4_glyphs(
                   continue
                 }
                 if range_offset == 0 {
-                  pdf_truetype_push_cmap_glyph(
-                    entries,
-                    codepoint,
-                    codepoint + delta,
-                  )
+                  if !pdf_truetype_push_cmap_glyph(
+                      entries,
+                      codepoint,
+                      codepoint + delta,
+                    ) {
+                    break
+                  }
                 } else {
                   let glyph_offset = glyph_index_array_start +
                     (
@@ -169,11 +204,13 @@ fn pdf_truetype_cmap_format4_glyphs(
                   match pdf_truetype_read_i16(data, glyph_offset) {
                     Some(value) => {
                       let base = if value == 0 { codepoint } else { value }
-                      pdf_truetype_push_cmap_glyph(
-                        entries,
-                        codepoint,
-                        base + delta,
-                      )
+                      if !pdf_truetype_push_cmap_glyph(
+                          entries,
+                          codepoint,
+                          base + delta,
+                        ) {
+                        break
+                      }
                     }
                     None => break
                   }
@@ -189,6 +226,126 @@ fn pdf_truetype_cmap_format4_glyphs(
 }
 
 ///|
+/// The entries of `size` bytes a 32-bit subtable (formats 10, 12 and 13:
+/// a `length` at byte 4) has room for after its `header` bytes, at most
+/// `declared`: within the length it gives itself, and within the data.
+fn pdf_truetype_cmap32_entries(
+  data : BytesView,
+  subtable_offset : Int,
+  header : Int,
+  size : Int,
+  declared : Int,
+) -> Int {
+  guard pdf_truetype_read_u32_as_int(data, subtable_offset + 4) is Some(length) else {
+    return 0
+  }
+  // (an offset near 2^31 would wrap)
+  guard subtable_offset >= 0 && subtable_offset <= data.length() - header else {
+    return 0
+  }
+  let room = length.min(data.length() - subtable_offset) - header
+  if room <= 0 {
+    0
+  } else {
+    declared.min(room / size)
+  }
+}
+
+///|
+/// Formats 12 (segmented coverage) and 13 (many-to-one): groups of
+/// consecutive codepoints, each mapped to consecutive glyphs (format 12)
+/// or all to one glyph (format 13, `many_to_one`), which reach the
+/// codepoints beyond the BMP. The formats have their groups in order and
+/// apart; one that is not (or that ends past U+10FFFF, or maps past glyph
+/// 0xFFFF) is passed over.
+fn pdf_truetype_cmap_groups_glyphs(
+  data : BytesView,
+  subtable_offset : Int,
+  entries : PdfTrueTypeCMapBuilder,
+  many_to_one~ : Bool,
+) -> Unit {
+  guard pdf_truetype_read_u32_as_int(data, subtable_offset + 12)
+    is Some(declared) else {
+    return
+  }
+  let group_count = pdf_truetype_cmap32_entries(
+    data, subtable_offset, 16, 12, declared,
+  )
+  // the lowest codepoint the next group may start at
+  let mut next = 0
+  for group in 0..<group_count {
+    if !entries.step() {
+      return
+    }
+    let at = subtable_offset + 16 + group * 12
+    guard (
+        pdf_truetype_read_u32_as_int(data, at),
+        pdf_truetype_read_u32_as_int(data, at + 4),
+        pdf_truetype_read_u32_as_int(data, at + 8),
+      )
+      is (Some(start), Some(end), Some(glyph)) else {
+      continue
+    }
+    let last_glyph = if many_to_one { glyph } else { glyph + (end - start) }
+    if start < next ||
+      end < start ||
+      end > 0x10FFFF ||
+      glyph > 0xFFFF ||
+      last_glyph > 0xFFFF {
+      continue
+    }
+    for codepoint in start..<=end {
+      let glyph_index = if many_to_one {
+        glyph
+      } else {
+        glyph + codepoint - start
+      }
+      if !pdf_truetype_push_cmap_glyph(entries, codepoint, glyph_index) {
+        return
+      }
+    }
+    next = end + 1
+  }
+}
+
+///|
+/// Format 10 (trimmed array): the glyphs of a run of codepoints from a
+/// first one, which may be beyond the BMP.
+fn pdf_truetype_cmap_format10_glyphs(
+  data : BytesView,
+  subtable_offset : Int,
+  entries : PdfTrueTypeCMapBuilder,
+) -> Unit {
+  guard (
+      pdf_truetype_read_u32_as_int(data, subtable_offset + 12),
+      pdf_truetype_read_u32_as_int(data, subtable_offset + 16),
+    )
+    is (Some(first_code), Some(declared)) else {
+    return
+  }
+  let count = pdf_truetype_cmap32_entries(
+    data, subtable_offset, 20, 2, declared,
+  )
+  for index in 0..<count {
+    // (no codepoint past the last)
+    if first_code > 0x10FFFF - index {
+      break
+    }
+    match pdf_truetype_read_u16(data, subtable_offset + 20 + index * 2) {
+      Some(glyph_index) =>
+        if !pdf_truetype_push_cmap_glyph(
+            entries,
+            first_code + index,
+            glyph_index,
+          ) {
+          break
+        }
+      None => break
+    }
+  }
+}
+
+///|
 fn pdf_truetype_cmap_subtable_glyphs(
   data : BytesView,
   subtable_offset : Int,
@@ -198,6 +355,22 @@ fn pdf_truetype_cmap_subtable_glyphs(
     Some(0) => pdf_truetype_cmap_format0_glyphs(data, subtable_offset, entries)
     Some(4) => pdf_truetype_cmap_format4_glyphs(data, subtable_offset, entries)
     Some(6) => pdf_truetype_cmap_format6_glyphs(data, subtable_offset, entries)
+    Some(10) =>
+      pdf_truetype_cmap_format10_glyphs(data, subtable_offset, entries)
+    Some(12) =>
+      pdf_truetype_cmap_groups_glyphs(
+        data,
+        subtable_offset,
+        entries,
+        many_to_one=false,
+      )
+    Some(13) =>
+      pdf_truetype_cmap_groups_glyphs(
+        data,
+        subtable_offset,
+        entries,
+        many_to_one=true,
+      )
     _ => ()
   }
 }
@@ -214,14 +387,19 @@ fn pdf_truetype_identity_cmap_glyphs() -> Array[@truetype.PdfTrueTypeCMapGlyph] 
 ///
 /// This ports the cmap-table reader used by `Cpdftruetype.parse` before the
 /// later width/subset writer stages. Source-supported cmap formats 0, 4, and 6
-/// are decoded; later encoding subtables replace earlier mappings for the same
+/// are decoded, and the 32-bit formats 10, 12 and 13 (which reach the
+/// codepoints beyond the BMP) besides; later encoding subtables replace earlier mappings for the same
 /// codepoint, matching the source `Hashtbl.add`/`find` behavior. A font with no
 /// cmap table follows the source fallback of mapping byte codes `0..255` to the
 /// same glyph index.
 pub fn pdf_truetype_cmap_glyphs(
   data : BytesView,
 ) -> Array[@truetype.PdfTrueTypeCMapGlyph] {
-  let entries = PdfTrueTypeCMapBuilder::{ entries: [], positions: {}, }
+  let entries = PdfTrueTypeCMapBuilder::{
+    entries: [],
+    positions: {},
+    budget: pdf_truetype_cmap_budget,
+  }
   match pdf_truetype_read_u16(data, 4) {
     Some(table_count) => {
       let mut cmap_offset = -1
@@ -246,6 +424,9 @@ pub fn pdf_truetype_cmap_glyphs(
         match pdf_truetype_read_u16(data, cmap_offset + 2) {
           Some(record_count) => {
             for record_index in 0..<record_count {
+              if !entries.step() {
+                break
+              }
               let record_offset = cmap_offset + 4 + record_index * 8
               match pdf_truetype_read_u32_as_int(data, record_offset + 4) {
                 Some(subtable_offset) =>
