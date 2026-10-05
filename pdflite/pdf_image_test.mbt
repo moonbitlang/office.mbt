@@ -980,12 +980,72 @@ test "pdf_image_document_of_png_data preserves alpha mask in image document" {
 }
 
 ///|
-test "pdf_image_object_of_png_data rejects 16-bit alpha PNGs" {
+/// The image `png` becomes: its samples and its soft mask's, decoded, and
+/// the bits a component of each.
+fn image_png_alpha_split_for_test(
+  png : @core.PdfBytes,
+) -> (@core.PdfBytes, @core.PdfBytes, @syntax.PdfObject, @syntax.PdfObject) raise {
+  let document = @pdflite.pdf_document_empty()
+  let object = @pdflite.pdf_image_object_of_png_data(document, png)
+  guard object is PdfStreamObject(stream) &&
+    stream.data is StreamGot(image_data) &&
+    image_lookup_for_test(stream.dictionary, "/SMask") is PdfIndirect(number) &&
+    document.lookup_object_or_null(number) is PdfStreamObject(smask) &&
+    smask.data is StreamGot(mask_data) else {
+    fail("expected an image with an /SMask")
+  }
+  (
+    @flate.pdf_flate_decode(image_data),
+    @flate.pdf_flate_decode(mask_data),
+    image_lookup_for_test(stream.dictionary, "/BitsPerComponent"),
+    image_lookup_for_test(smask.dictionary, "/BitsPerComponent"),
+  )
+}
+
+///|
+test "pdf_image_object_of_png_data splits 16-bit alpha into a 16-bit SMask" {
+  // truecolour with alpha, two pixels of two-byte samples, the second
+  // Sub-filtered (each byte less the one a pixel, eight bytes, before)
+  let rgba = image_png_for_test(2, 1, 16, 6, 0, [
+    @flate.pdf_flate_encode(
+      image_bytes_for_test([
+        1, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x10, 0x10, 0x10, 0x10,
+        0x10, 0x10, 0x10, 0x10,
+      ]),
+    ),
+  ])
+  let (colors, mask, bits, mask_bits) = image_png_alpha_split_for_test(rgba)
+  @test.assert_eq(
+    colors,
+    image_bytes_for_test([
+      0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x11, 0x12, 0x13, 0x14, 0x15, 0x16,
+    ]),
+  )
+  @test.assert_eq(mask, image_bytes_for_test([0x07, 0x08, 0x17, 0x18]))
+  @test.assert_eq(bits, PdfInteger(16))
+  @test.assert_eq(mask_bits, PdfInteger(16))
+  // greyscale with alpha
+  let grey = image_png_for_test(2, 1, 16, 4, 0, [
+    @flate.pdf_flate_encode(
+      image_bytes_for_test([0, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08]),
+    ),
+  ])
+  let (colors, mask, bits, mask_bits) = image_png_alpha_split_for_test(grey)
+  @test.assert_eq(colors, image_bytes_for_test([0x01, 0x02, 0x05, 0x06]))
+  @test.assert_eq(mask, image_bytes_for_test([0x03, 0x04, 0x07, 0x08]))
+  @test.assert_eq(bits, PdfInteger(16))
+  @test.assert_eq(mask_bits, PdfInteger(16))
+}
+
+///|
+test "pdf_image_object_of_png_data rejects alpha at a depth PNG has none at" {
   let document = @pdflite.pdf_document_empty()
   let result : Result[@syntax.PdfObject, Error] = try
     @pdflite.pdf_image_object_of_png_data(
       document,
-      image_png_for_test(1, 1, 16, 6, 0, []),
+      image_png_for_test(1, 1, 4, 6, 0, [
+        @flate.pdf_flate_encode(image_bytes_for_test([0, 0, 0])),
+      ]),
     )
   catch {
     err => Err(err)
@@ -993,7 +1053,7 @@ test "pdf_image_object_of_png_data rejects 16-bit alpha PNGs" {
     value => Ok(value)
   }
   guard result is Err(@core.PdfError::BadPNG(_)) else {
-    fail("expected 16-bit alpha PNG to raise BadPNG")
+    fail("expected 4-bit alpha PNG to raise BadPNG")
   }
 }
 
@@ -1566,4 +1626,50 @@ test "pdf_read_png reads a colour key as the image's transparency" {
   @test.assert_eq(key(8, 0, [[0, 1], [0, 2]]), colour_key([1]))
   // none without the chunk
   @test.assert_eq(key(8, 0, []), None)
+}
+
+///|
+test "pdf_image_object_of_png_data needs all of an alpha image's data" {
+  let refused = (width : Int, depth : Int, raster : ArrayView[Int]) => {
+    try
+      @pdflite.pdf_image_object_of_png_data(
+        @pdflite.pdf_document_empty(),
+        image_png_for_test(width, 1, depth, 6, 0, [
+          @flate.pdf_flate_encode(image_bytes_for_test(raster)),
+        ]),
+      )
+    catch {
+      BadPNG(_) => true
+      _ => false
+    } noraise {
+      _ => false
+    }
+  }
+  // a 16-bit pixel short of its last byte (the alpha's low byte)
+  @test.assert_eq(refused(1, 16, [0, 1, 2, 3, 4, 5, 6, 7]), true)
+  @test.assert_eq(refused(1, 16, [0, 1, 2, 3, 4, 5, 6, 7, 8]), false)
+  // an 8-bit one short of a pixel
+  @test.assert_eq(refused(2, 8, [0, 1, 2, 3, 4]), true)
+  // a row whose bits do not fit
+  @test.assert_eq(refused(67108863, 16, [0]), true)
+}
+
+///|
+test "pdf_image_object_of_png_data raises 16-bit samples' document to PDF 1.5" {
+  // truecolour, with and without alpha
+  for
+    image in [
+      image_png_for_test(1, 1, 16, 2, 0, [
+        @flate.pdf_flate_encode(image_bytes_for_test([0, 1, 2, 3, 4, 5, 6])),
+      ]),
+      image_png_for_test(1, 1, 16, 6, 0, [
+        @flate.pdf_flate_encode(
+          image_bytes_for_test([0, 1, 2, 3, 4, 5, 6, 7, 8]),
+        ),
+      ]),
+    ] {
+    let document = @pdflite.pdf_document_empty()
+    ignore(@pdflite.pdf_image_object_of_png_data(document, image))
+    @test.assert_eq(document.version(), (1, 5))
+  }
 }

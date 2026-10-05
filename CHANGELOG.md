@@ -30,6 +30,11 @@ covers changes that have landed on `main` but are not yet published.
   decoding.
 - `pdf_read_png` refuses a PNG of zero width or height (`BadPNG`), which PNG
   has not.
+- 16-bit PNGs with an alpha channel (greyscale or truecolour) are embedded,
+  their two-byte samples split into a 16-bit image and a 16-bit `/SMask`,
+  instead of being refused; a 16-bit PNG raises the document to PDF 1.5.
+- A PNG with alpha (a channel, or a palette's) whose image data is short of
+  its width and height is refused (`BadPNG`) rather than given a made-up mask.
 - Standard fonts kern by glyph name: `PdfStandardFont::kern_pairs_by_name`
   gives every pair of Adobe's Core 14 AFM files (2,705 for Helvetica),
   those of unencoded glyphs such as the accented letters included, which
