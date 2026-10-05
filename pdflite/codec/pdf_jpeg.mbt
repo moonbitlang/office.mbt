@@ -267,3 +267,126 @@ pub fn pdf_jpeg_backup_dimensions(
 ) -> (Int, Int) raise @core.PdfError {
   pdf_jpeg_backup_dimensions_view(data)
 }
+
+///|
+/// What a JPEG's frame header and markers say of its samples.
+pub(all) struct PdfJpegInfo {
+  width : Int
+  height : Int
+  /// bits a sample (the frame's precision)
+  bits : Int
+  /// the components of a pixel (as a rule one is greyscale, three colour
+  /// and four CMYK; what they are is the markers' and the decoder's to say)
+  components : Int
+  /// the identifier of each component, as the frame header has them
+  /// (JFIF's are 1, 2 and 3; some writers name them: `R`, `G`, `B`)
+  component_ids : Array[Int]
+  /// whether it has a JFIF (APP0) marker, whose three components are YCbCr
+  jfif : Bool
+  /// the frame header's marker, which says how the image is coded: 0xC0
+  /// baseline, 0xC1 extended sequential, 0xC2 progressive (the three PDF's
+  /// DCTDecode has; progressive since PDF 1.3), 0xC3 and above lossless,
+  /// differential or arithmetic
+  frame : Int
+  /// the colour transform of its Adobe (APP14) marker — 0 none (RGB, or
+  /// CMYK), 1 YCbCr, 2 YCCK — or None without the marker. Adobe writes
+  /// the samples of four components inverted.
+  adobe_transform : Int?
+  /// whether it is of hierarchical mode (a DHP marker before its frames):
+  /// frames of several sizes, the first not the image's
+  hierarchical : Bool
+}
+
+///|
+/// What a JPEG's first frame header (any SOF marker) says of its size and
+/// samples, and its Adobe marker's colour transform when one comes before
+/// its scan. Unlike `pdf_jpeg_dimensions_view` it asks for no JFIF or Exif
+/// header and takes any frame. Raises `BadJPEGHeader` for data that does not
+/// start a JPEG and `JPEGDimensionsExpected` without a frame header.
+pub fn pdf_jpeg_info_view(data : BytesView) -> PdfJpegInfo raise @core.PdfError {
+  if data.length() < 2 || data[0].to_int() != 0xFF || data[1].to_int() != 0xD8 {
+    raise BadJPEGHeader
+  }
+  let mut frame : (Int, Int, Int, Int, Int)? = None
+  let component_ids : Array[Int] = []
+  let mut jfif = false
+  let mut adobe_transform : Int? = None
+  let mut hierarchical = false
+  let mut index = 2
+  while index < data.length() {
+    let (marker, segment_start) = pdf_jpeg_next_marker(data, index) catch {
+      // (markers run out: what was found stands)
+      _ => break
+    }
+    // the scan, or the end of the image: the markers are done
+    if marker == 0xDA || marker == 0xD9 {
+      break
+    }
+    if pdf_jpeg_marker_without_segment_length(marker) {
+      index = segment_start
+      continue
+    }
+    let segment_length = pdf_jpeg_word_at(
+      data,
+      segment_start,
+      JPEGDimensionsExpected,
+    )
+    if segment_length < 2 {
+      raise InvalidJPEGBlock
+    }
+    if segment_length > data.length() - segment_start {
+      raise JPEGDimensionsExpected
+    }
+    if marker == 0xDE {
+      hierarchical = true
+    }
+    if marker == 0xE0 &&
+      // (JFIF's header whole, as libjpeg asks: its name and 9 bytes more)
+      segment_length >= 16 &&
+      data[segment_start + 2:segment_start + 7] == b"JFIF\x00" {
+      jfif = true
+    }
+    if frame is None && pdf_jpeg_marker_has_dimensions(marker) {
+      if segment_length < 8 {
+        raise JPEGDimensionsExpected
+      }
+      frame = Some(
+        (
+          marker,
+          data[segment_start + 2].to_int(),
+          pdf_jpeg_word_at(data, segment_start + 3, JPEGDimensionsExpected),
+          pdf_jpeg_word_at(data, segment_start + 5, JPEGDimensionsExpected),
+          data[segment_start + 7].to_int(),
+        ),
+      )
+      // (the identifiers the segment has room for)
+      for index in 0..<data[segment_start + 7].to_int() {
+        let at = segment_start + 8 + 3 * index
+        if at >= segment_start + segment_length {
+          break
+        }
+        component_ids.push(data[at].to_int())
+      }
+    } else if marker == 0xEE &&
+      // (Adobe's marker whole: its name, version, flags and transform)
+      segment_length >= 14 &&
+      data[segment_start + 2:segment_start + 7] == b"Adobe" {
+      adobe_transform = Some(data[segment_start + 13].to_int())
+    }
+    index = segment_start + segment_length
+  }
+  guard frame is Some((marker, bits, height, width, components)) else {
+    raise JPEGDimensionsExpected
+  }
+  {
+    width,
+    height,
+    bits,
+    components,
+    component_ids,
+    jfif,
+    frame: marker,
+    adobe_transform,
+    hierarchical,
+  }
+}

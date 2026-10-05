@@ -223,19 +223,25 @@ pub fn pdf_image_of_input(
 }
 
 ///|
-/// Build a single-page PDF document from JPEG data.
+/// Build a single-page PDF document from JPEG data (of PDF 1.3 at least for
+/// a progressive JPEG, which older versions have not).
 pub fn pdf_image_document_of_jpeg_data(
   data : BytesView,
   process_struct_tree? : Bool = false,
   subformat? : PdfUASubformat? = None,
   title? : String? = None,
 ) -> PdfDocument raise @core.PdfError {
-  pdf_image_document_of_object(
+  let document = pdf_image_document_of_object(
     pdf_image_object_of_jpeg_data(data),
     process_struct_tree~,
     subformat~,
     title~,
   )
+  let (major, minor) = document.version()
+  if @codec.pdf_jpeg_info_view(data).frame == 0xC2 && major == 1 && minor < 3 {
+    document.set_version(1, 3)
+  }
+  document
 }
 
 ///|

@@ -100,6 +100,11 @@ let pdf_image_device_gray_name_value : @core.PdfName = pdf_image_name(
 )
 
 ///|
+let pdf_image_device_cmyk_name_value : @core.PdfName = pdf_image_name(
+  "/DeviceCMYK",
+)
+
+///|
 let pdf_image_indexed_name_value : @core.PdfName = pdf_image_name("/Indexed")
 
 ///|
@@ -331,6 +336,11 @@ fn pdf_image_device_rgb_name() -> @core.PdfName {
 ///|
 fn pdf_image_device_gray_name() -> @core.PdfName {
   pdf_image_device_gray_name_value
+}
+
+///|
+fn pdf_image_device_cmyk_name() -> @core.PdfName {
+  pdf_image_device_cmyk_name_value
 }
 
 ///|
