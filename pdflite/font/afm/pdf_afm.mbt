@@ -171,6 +171,10 @@ fn pdf_afm_kern(
   metrics : ArrayView[(PdfBytes, Int, Int)],
 ) -> (Int, Int, Int)? raise PdfError {
   let tokens = @core.pdf_split_whitespace_tokens(line)
+  // blank lines, comments and other kinds of pair: no KPX pair
+  if pdf_afm_kern_line_skipped(tokens) {
+    return None
+  }
   if tokens.length() >= 4 && pdf_afm_view_equals_ascii(tokens[0], "KPX") {
     let first = pdf_afm_lookup_char_number(metrics, tokens[1])
     let second = pdf_afm_lookup_char_number(metrics, tokens[2])
@@ -230,12 +234,60 @@ pub fn pdf_read_afm(data : BytesView) -> PdfAfmData raise PdfError {
   )
   let kerns : Array[(Int, Int, Int)] = Array(capacity=kern_lines.length())
   for line in kern_lines {
-    if pdf_afm_trim_line_end(line).length() >= 5 {
-      match pdf_afm_kern(line, raw_metrics) {
-        Some(kern) => kerns.push(kern)
-        None => ()
-      }
+    match pdf_afm_kern(line, raw_metrics) {
+      Some(kern) => kerns.push(kern)
+      None => ()
     }
   }
   { headers, char_metrics, kerns, char_name_widths, }
+}
+
+///|
+/// Parses every kerning pair of Adobe Font Metrics data by glyph name:
+/// `(left, right, adjustment)` for each `KPX` line, in file order.
+///
+/// Unlike `PdfAfmData::kerns`, which keeps pairs between glyphs with a
+/// character code, this keeps pairs involving unencoded glyphs (`C -1`),
+/// such as the accented letters of the standard fonts, which a caller
+/// re-encoding text (WinAnsi, say) needs. Blank lines, comments and other kinds
+/// of pair (`KP`, `KPH`, `KPY`) are skipped; raises `PdfError::AfmExpected` or
+/// `PdfError::NumberExpected` for a malformed `KPX` line or
+/// any other line.
+pub fn pdf_read_afm_kern_pairs(
+  data : BytesView,
+) -> Array[(PdfBytes, PdfBytes, Int)] raise PdfError {
+  let lines = @core.byte_cursor_of_view(data).read_line_views()
+  let kern_lines = pdf_afm_section_lines(
+    lines, "StartKernPairs", "EndKernPairs",
+  )
+  let pairs : Array[(PdfBytes, PdfBytes, Int)] = Array(
+    capacity=kern_lines.length(),
+  )
+  for line in kern_lines {
+    let tokens = @core.pdf_split_whitespace_tokens(line)
+    // blank lines, comments and the other kinds of pair (KP, KPH, KPY) are
+    // not KPX pairs
+    if pdf_afm_kern_line_skipped(tokens) {
+      continue
+    }
+    if tokens.length() < 4 || !pdf_afm_view_equals_ascii(tokens[0], "KPX") {
+      raise AfmExpected
+    }
+    pairs.push(
+      (tokens[1].to_owned(), tokens[2].to_owned(), pdf_afm_parse_int(tokens[3])),
+    )
+  }
+  pairs
+}
+
+///|
+/// Whether a kern-section line holds no KPX pair but may stand there (the
+/// AFM specification): blank, a comment, or another kind of pair (`KP`,
+/// `KPH`, `KPY`).
+fn pdf_afm_kern_line_skipped(tokens : Array[BytesView]) -> Bool {
+  tokens.length() == 0 ||
+  pdf_afm_view_equals_ascii(tokens[0], "Comment") ||
+  pdf_afm_view_equals_ascii(tokens[0], "KP") ||
+  pdf_afm_view_equals_ascii(tokens[0], "KPH") ||
+  pdf_afm_view_equals_ascii(tokens[0], "KPY")
 }
