@@ -142,3 +142,46 @@ pub fn PdfStandardFont::afm_data(self : PdfStandardFont) -> PdfAfmData {
 pub fn pdf_standard14_afm_data(font : PdfStandardFont) -> PdfAfmData {
   font.afm_data()
 }
+
+///|
+/// The kerning pairs of this standard font by glyph name, from Adobe's AFM
+/// file: `(left, right, adjustment)` in 1/1000 em for every pair, those of
+/// unencoded glyphs (the accented letters) included. `afm_data().kerns`
+/// keeps only the pairs between glyphs that have a character code, so text
+/// re-encoded by glyph name (WinAnsi, say) kerns with these. Courier,
+/// Symbol and ZapfDingbats have none.
+pub fn PdfStandardFont::kern_pairs_by_name(
+  self : PdfStandardFont,
+) -> Array[(String, String, Int)] {
+  let pairs : Array[(String, String, Int)] = []
+  for line in pdf_standard14_kern_pairs_table(self).split("\n") {
+    let tokens = line.split(" ").map(t => t.to_owned()).to_array()
+    guard tokens.length() >= 3 else { continue }
+    let left = tokens[0]
+    let mut i = 1
+    while i + 1 < tokens.length() {
+      pairs.push((left, tokens[i], pdf_standard14_parse_int(tokens[i + 1])))
+      i += 2
+    }
+  }
+  pairs
+}
+
+///|
+/// A generated table's integer (an optional minus sign, then digits).
+fn pdf_standard14_parse_int(text : String) -> Int {
+  let mut value = 0
+  let mut negative = false
+  for c in text {
+    match c {
+      '-' => negative = true
+      '0'..='9' => value = value * 10 + (c.to_int() - '0'.to_int())
+      _ => ()
+    }
+  }
+  if negative {
+    -value
+  } else {
+    value
+  }
+}

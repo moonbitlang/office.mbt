@@ -14,5 +14,6 @@ options(
   targets: {
     "pdf_standard14_substitute_test.mbt": [ "wasm-gc", "js", "native", "llvm" ],
     "pdf_standard14_width_test.mbt": [ "wasm-gc", "js", "native", "llvm" ],
+    "pdf_standard14_kern_pairs_test.mbt": [ "wasm-gc", "js", "native", "llvm" ],
   },
 )
