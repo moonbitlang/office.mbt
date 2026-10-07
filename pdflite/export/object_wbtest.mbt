@@ -24,13 +24,52 @@ test "format_real writes the shortest digits of the f32 value like pdf-writer" {
     0.000005,
     -0.000001,
     1.0e10,
+    2147483647.0,
+    -2147483648.0,
     1.0 / 0.0,
     0.0 / 0.0,
   ]
   inspect(
     cases.map(format_real).join(" "),
     content=(
-      #|0 1 -3 0.5 -0.25 0.33333334 0.6666667 123.45679 0.000004 0.000005 -0.000001 10000000000 0 0
+      #|0 1 -3 0.5 -0.25 0.33333334 0.6666667 123.45679 0.000004 0.000005 -0.000001 10000000000.0 2147483600.0 -2147483648 0 0
+    ),
+  )
+}
+
+///|
+test "format_real writes what pdf-writer writes" {
+  let mut checked = 0
+  for case in real_oracle_cases[:] {
+    let (bits, expected) = case
+    let got = format_real(Float::reinterpret_from_uint(bits).to_double())
+    if bits == 0x4F000000U {
+      // 2^31, where pdf-writer writes the saturated cast (`format_real`).
+      assert_eq(expected, "2147483647")
+      assert_eq(got, "2147483600.0")
+    } else if got != expected {
+      fail("\{bits.to_string(radix=16)}: \{got}, pdf-writer: \{expected}")
+    }
+    checked += 1
+  }
+  inspect(
+    checked,
+    content=(
+      #|8876
+    ),
+  )
+}
+
+///|
+test "format_real rounds an exact tie to the even digit" {
+  // 142.203125, 198.203125, 242.953125, 454.890625: `f32`s exactly, and
+  // halfway between two eight-digit decimals that both read back as them.
+  inspect(
+    [142.203125, 198.203125, 242.953125, 454.890625, 0.0078125]
+    .map(format_real)
+    .join(" "),
+    content=(
+      #|142.20312 198.20312 242.95312 454.89062 0.0078125
     ),
   )
 }
@@ -237,118 +276,4 @@ test "format_real keeps small values and never writes exponents" {
       #|0.000001 0.0000001 -0.0000000025 0.0000000000000000000000000000000000000001 3000000000000000000000000000000000000000 0.1 0.000003
     ),
   )
-}
-
-///|
-/// The previous `format_real`, computing every power of ten with
-/// `@math.pow`: the reference for the table-driven writer.
-fn format_real_reference(v : Double) -> String {
-  if v.is_nan() || v.is_inf() {
-    return "0"
-  }
-  let f = Float::from_double(v)
-  let x = f.to_double()
-  if x.is_inf() {
-    // Beyond the range of `f32`.
-    return integral_string(v.round())
-  }
-  if x == x.floor() && x.abs() < 2147483648.0 {
-    return x.to_int().to_string()
-  }
-  // The shortest digits `n * 10^exp` (at most 9 significant digits) that
-  // round to the same `f32`.
-  let a = x.abs()
-  let mut e = @math.log10(a).floor().to_int()
-  if reference_pow10(e) > a {
-    e -= 1
-  } else if reference_pow10(e + 1) <= a {
-    e += 1
-  }
-  let mut digits = 0L
-  let mut exp = 0
-  for p in 1..<=9 {
-    exp = e - p + 1
-    let n = reference_scale10(a, -exp).round()
-    digits = n.to_int64()
-    if Float::from_double(reference_scale10(n, exp)) == f.abs() {
-      break
-    }
-  }
-  while digits != 0L && digits % 10L == 0L {
-    digits = digits / 10L
-    exp += 1
-  }
-  let s = digits.to_string()
-  let sb = StringBuilder()
-  if x < 0.0 {
-    sb.write_char('-')
-  }
-  if exp >= 0 {
-    sb.write_string(s)
-    for _ in 0..<exp {
-      sb.write_char('0')
-    }
-  } else if s.length() > -exp {
-    let point = s.length() + exp
-    sb.write_string(s.unsafe_substring(start=0, end=point))
-    sb.write_char('.')
-    sb.write_string(s.unsafe_substring(start=point, end=s.length()))
-  } else {
-    sb.write_string("0.")
-    for _ in 0..<(-exp - s.length()) {
-      sb.write_char('0')
-    }
-    sb.write_string(s)
-  }
-  sb.to_string()
-}
-
-///|
-fn reference_pow10(e : Int) -> Double {
-  @math.pow(10.0, e.to_double())
-}
-
-///|
-fn reference_scale10(v : Double, e : Int) -> Double {
-  if e >= 0 {
-    v * reference_pow10(e)
-  } else {
-    v / reference_pow10(-e)
-  }
-}
-
-///|
-test "format_real agrees with the pow-based reference" {
-  for e in 0..<=22 {
-    assert_eq(pow10(e), @math.pow(10.0, e.to_double()))
-  }
-  let values : Array[Double] = [
-    0.1, 0.01, 0.001, 0.0001, 1.0e-5, 1.0e-6, 1.0e-7, 1.0e-10, 1.0e-20, 1.0e-30,
-    1.0e-38, 1.0e-40, 1.0e-45, 0.30000001, 99.999999, 999999.94, 16777215.0, 16777217.0,
-    2147483647.0, 2147483648.0, 2147483649.5, 1.0e15, 1.0e22, 3.4028234663852886e38,
-    3.5e38, 1.0e300, -1.0e300,
-  ]
-  let mut state = 0x2545F491U
-  let next = () => {
-    state = state * 1664525U + 1013904223U
-    state
-  }
-  for _ in 0..<20000 {
-    // Arbitrary finite f32 bit patterns cover every exponent.
-    let bits = next()
-    let f = Float::reinterpret_from_uint(bits)
-    if !f.is_nan() && !f.is_inf() {
-      values.push(f.to_double())
-    }
-    // Typical page coordinates and scales.
-    let k = (next() >> 8).reinterpret_as_int()
-    values.push(k.to_double() / 100.0)
-    values.push(k.to_double() / 1000.0 - 5000.0)
-    values.push(k.to_double() * 0.0123456789)
-    values.push(1.0 / (k.to_double() + 1.0))
-  }
-  for v in values {
-    assert_eq(format_real(v), format_real_reference(v))
-    assert_eq(format_real(-v), format_real_reference(-v))
-  }
 }

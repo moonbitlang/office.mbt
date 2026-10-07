@@ -1,0 +1,12 @@
+[package]
+name = "export-oracle"
+version = "0.0.0"
+edition = "2021"
+publish = false
+description = "Generates the oracle test of moonbitlang/pdflite/export's real numbers from the pdf-writer crate"
+
+[workspace]
+
+[dependencies]
+pdf-writer = "=0.15.0"
+ryu = "=1.0.23"
