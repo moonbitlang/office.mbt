@@ -92,11 +92,12 @@ fn pdf_rect(x0 : Double, y0 : Double, x1 : Double, y1 : Double) -> Obj {
 /// decimal digits that read back as the same `f32` (ryu's: the closest to
 /// the value, an exact tie to the even digit), never in exponent notation;
 /// an integral value beyond `i32` and below 1e12 ends in `.0`, as ryu
-/// writes it. Two deviations: non-finite values (which pdf-writer writes as
-/// invalid `NaN`/`inf` tokens) are written as `0`, and 2^31 as
-/// `2147483600.0`, its shortest digits (pdf-writer writes `2147483647`: its
-/// test for an integer, `value as i32 as f32 == value`, holds for the
-/// saturated cast).
+/// writes it. Three deviations: non-finite values (which pdf-writer writes
+/// as invalid `NaN`/`inf` tokens) are written as `0`; a finite value beyond
+/// the range of `f32` (which becomes `inf` there) as the digits of the
+/// rounded double; and 2^31 as `2147483600.0`, its shortest digits
+/// (pdf-writer writes `2147483647`: its test for an integer,
+/// `value as i32 as f32 == value`, holds for the saturated cast).
 /// `real_oracle_wbtest.mbt` has what pdf-writer writes for 8876 values.
 fn format_real(v : Double) -> String {
   let buf = Buffer()

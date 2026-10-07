@@ -21,19 +21,21 @@ priv struct FloatingDecimal32 {
 const RYU_FLOAT_POW5_BITCOUNT : Int = 61
 
 ///|
-/// `e == 0 ? 1 : ceil(log_2(5^e))`; requires `0 <= e <= 3528`.
+/// `e == 0 ? 1 : ceil(log_2(5^e))`. In signed arithmetic, which holds for
+/// what `ryu_f2d` asks (`0 <= e <= 47`; the crate's unsigned version up to
+/// 3528).
 fn ryu_pow5bits(e : Int) -> Int {
   ((e * 1217359) >> 19) + 1
 }
 
 ///|
-/// `floor(log_10(2^e))`; requires `0 <= e <= 1650`.
+/// `floor(log_10(2^e))`, for what `ryu_f2d` asks (`0 <= e <= 102`).
 fn ryu_log10_pow2(e : Int) -> Int {
   (e * 78913) >> 18
 }
 
 ///|
-/// `floor(log_10(5^e))`; requires `0 <= e <= 2620`.
+/// `floor(log_10(5^e))`, for what `ryu_f2d` asks (`0 <= e <= 151`).
 fn ryu_log10_pow5(e : Int) -> Int {
   (e * 732923) >> 20
 }
