@@ -12,6 +12,19 @@ Breaking and notable changes for the published modules in this workspace.
 Entries are grouped by module and by the version they ship in; `Unreleased`
 covers changes that have landed on `main` but are not yet published.
 
+### moonbitlang/pdflite [Unreleased]
+
+- `export`: a real number is written with the digits pdf-writer writes. The
+  shortest digits of the `f32` are now ryu's (a port of its `f2d`): a value
+  exactly halfway between two shortest decimals goes to the even one
+  (`142.203125` is written `142.20312`, it was `142.20313`; 487 of the
+  100 000 values of the previous test change, each in its last digit), and
+  an integral value beyond the range of `i32` and below 1e12 ends in `.0`
+  (`10000000000.0`), as ryu writes it. `export/oracle` generates
+  `real_oracle_wbtest.mbt`, what the pdf-writer crate writes for 8876
+  values; the one value that is written differently on purpose is 2^31
+  (`format_real`).
+
 ### moonbitlang/pdflite [0.3.7]
 
 - PNG colour keys: `pdf_read_png` reads a greyscale or truecolour PNG's

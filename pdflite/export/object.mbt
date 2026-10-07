@@ -88,10 +88,17 @@ fn pdf_rect(x0 : Double, y0 : Double, x1 : Double, y1 : Double) -> Obj {
 
 ///|
 /// Format a real number like pdf-writer, which writes `f32`s: integral
-/// values as integers, others with the shortest decimal digits that read
-/// back as the same `f32` (ryu), never in exponent notation. Non-finite
-/// values (which pdf-writer writes as invalid `NaN`/`inf` tokens) are
-/// written as `0`.
+/// values in the range of `i32` as integers, others with the shortest
+/// decimal digits that read back as the same `f32` (ryu's: the closest to
+/// the value, an exact tie to the even digit), never in exponent notation;
+/// an integral value beyond `i32` and below 1e12 ends in `.0`, as ryu
+/// writes it. Three deviations: non-finite values (which pdf-writer writes
+/// as invalid `NaN`/`inf` tokens) are written as `0`; a finite value beyond
+/// the range of `f32` (which becomes `inf` there) as the digits of the
+/// rounded double; and 2^31 as `2147483600.0`, its shortest digits
+/// (pdf-writer writes `2147483647`: its test for an integer,
+/// `value as i32 as f32 == value`, holds for the saturated cast).
+/// `real_oracle_wbtest.mbt` has what pdf-writer writes for 8876 values.
 fn format_real(v : Double) -> String {
   let buf = Buffer()
   write_real(buf, v)
@@ -116,33 +123,20 @@ fn write_real(buf : @buffer.Buffer, v : Double) -> Unit {
     write_ascii(buf, integral_string(v.round()))
     return
   }
-  if x == x.floor() && x.abs() < 2147483648.0 {
-    let i = x.to_int()
-    if i < 0 {
+  if x == x.floor() && x >= -2147483648.0 && x < 2147483648.0 {
+    let i = x.to_int64()
+    if i < 0L {
       buf.write_byte(b'-')
     }
-    write_decimal(buf, i.abs().to_int64(), -1)
+    write_decimal(buf, i.abs(), -1)
     return
   }
   // The shortest digits `n * 10^exp` (at most 9 significant digits) that
-  // round to the same `f32`.
-  let a = x.abs()
-  let mut e = @math.log10(a).floor().to_int()
-  if pow10(e) > a {
-    e -= 1
-  } else if pow10(e + 1) <= a {
-    e += 1
-  }
-  let mut digits = 0L
-  let mut exp = 0
-  for p in 1..<=9 {
-    exp = e - p + 1
-    let n = scale10(a, -exp).round()
-    digits = n.to_int64()
-    if Float::from_double(scale10(n, exp)) == f.abs() {
-      break
-    }
-  }
+  // round to the same `f32`, as ryu chooses them.
+  let bits = f.reinterpret_as_uint()
+  let decimal = ryu_f2d(bits & 0x7FFFFFU, (bits >> 23) & 0xFFU)
+  let mut digits = UInt64::extend_uint(decimal.mantissa).reinterpret_as_int64()
+  let mut exp = decimal.exponent
   while digits != 0L && digits % 10L == 0L {
     digits = digits / 10L
     exp += 1
@@ -154,6 +148,13 @@ fn write_real(buf : @buffer.Buffer, v : Double) -> Unit {
   if exp >= 0 {
     write_decimal(buf, digits, -1)
     for _ in 0..<exp {
+      buf.write_byte(b'0')
+    }
+    // Below 1e12 (as an `f32`) pdf-writer writes ryu's text, which marks an
+    // integral value with `.0`; from there on Rust's `Display`, which does
+    // not.
+    if x.abs() < 999999995904.0 {
+      buf.write_byte(b'.')
       buf.write_byte(b'0')
     }
   } else if len > -exp {
@@ -200,36 +201,6 @@ fn write_decimal(buf : @buffer.Buffer, n : Int64, point : Int) -> Unit {
     let digit = rest / unit
     buf.write_byte((digit.to_int() + '0'.to_int()).to_byte())
     rest = rest - digit * unit
-  }
-}
-
-///|
-/// The powers of ten `10^0 ..= 10^22`, all exactly representable.
-let double_pow10 : ReadOnlyArray[Double] = [
-  1.0e0, 1.0e1, 1.0e2, 1.0e3, 1.0e4, 1.0e5, 1.0e6, 1.0e7, 1.0e8, 1.0e9, 1.0e10, 1.0e11,
-  1.0e12, 1.0e13, 1.0e14, 1.0e15, 1.0e16, 1.0e17, 1.0e18, 1.0e19, 1.0e20, 1.0e21,
-  1.0e22,
-]
-
-///|
-/// `10^e`, equal to `@math.pow(10.0, e)` for every `e`: the table holds the
-/// exact values `pow` returns for `0 <= e <= 22`, and other exponents (which
-/// only very small or very large reals need) still call `pow`.
-fn pow10(e : Int) -> Double {
-  if e >= 0 && e < double_pow10.length() {
-    double_pow10[e]
-  } else {
-    @math.pow(10.0, e.to_double())
-  }
-}
-
-///|
-/// `v * 10^e`, dividing for negative `e` (which is exact more often).
-fn scale10(v : Double, e : Int) -> Double {
-  if e >= 0 {
-    v * pow10(e)
-  } else {
-    v / pow10(-e)
   }
 }
 
