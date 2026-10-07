@@ -51,10 +51,9 @@ fn wb_archive_retained_cost(bytes : BytesView) -> Int64 raise {
       .with_entries_limit(transaction_max_archive_entries)
       .with_entry_limit(transaction_max_entry_uncompressed_bytes)
       .with_total_limit(transaction_max_total_uncompressed_bytes)
-      .with_preserved_source_limit(transaction_max_total_preserved_source_bytes),
+      .with_preserved_source_limit(transaction_archive_source_limit(bytes)),
   )
-  bytes.length().to_int64() +
-  archive.retained_size_estimate() +
+  transaction_archive_retained_cost(bytes, archive) +
   transaction_archive_name_reserve(
     archive, "test package", "office.transaction.invalid_input",
   )
@@ -117,10 +116,9 @@ test "archive name projections are bounded and charged before indexing" {
       .with_entries_limit(transaction_max_archive_entries)
       .with_entry_limit(transaction_max_entry_uncompressed_bytes)
       .with_total_limit(transaction_max_total_uncompressed_bytes)
-      .with_preserved_source_limit(transaction_max_total_preserved_source_bytes),
+      .with_preserved_source_limit(transaction_archive_source_limit(many_bytes)),
   )
-  let base_cost = many_bytes.length().to_int64() +
-    parsed.retained_size_estimate()
+  let base_cost = transaction_archive_retained_cost(many_bytes, parsed)
   let name_reserve = transaction_archive_name_reserve(
     parsed, "input package", "office.transaction.invalid_input",
   )
@@ -272,7 +270,7 @@ fn wb_read_transaction_archive_with_limits(
       .with_entries_limit(max_entries)
       .with_entry_limit(max_entry_uncompressed_bytes)
       .with_total_limit(max_total_uncompressed_bytes)
-      .with_preserved_source_limit(transaction_max_total_preserved_source_bytes),
+      .with_preserved_source_limit(transaction_archive_source_limit(bytes)),
   ) catch {
     ZipError(LimitExceeded(kind, limit, actual), _) =>
       raise resource_limit_error(

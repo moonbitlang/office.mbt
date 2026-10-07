@@ -729,24 +729,15 @@ test "detect_format enforces the complete OPC central-header boundary" {
   let exact = @zip_fixture.with_central_header_size(
     source, "[Content_Types].xml", 65_535,
   )
-  let exact_archive = @zip.read(exact)
-  let mut content_types_header_size = -1
-  for entry in exact_archive.entries() {
-    if entry.name() == "[Content_Types].xml" {
-      content_types_header_size = match entry.raw_central_record() {
-        Some(record) => record.length() - 4
-        None => -1
-      }
-    }
-  }
-  if content_types_header_size < 0 {
-    fail("fixture lost [Content_Types].xml")
-  }
-  assert_eq(content_types_header_size, 65_535)
   inspect(@office.detect_format("book.xlsx", exact).name(), content="xlsx")
 
   let oversized = @zip_fixture.with_central_header_size(
     source, "[Content_Types].xml", 65_536,
+  )
+  // Decoded-archive validation has no serialized-header contract.
+  assert_eq(
+    @office.detect_archive_format("book.xlsx", @zip.read(oversized)),
+    Xlsx,
   )
   try @office.detect_format("book.xlsx", oversized) catch {
     err =>

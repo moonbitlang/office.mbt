@@ -128,17 +128,6 @@ fn zip_limit_kind_name(kind : @mbtzip.LimitKind) -> String {
 }
 
 ///|
-/// Size of an entry's OPC Central Directory File Header excluding the four-byte
-/// ZIP signature (ECMA-376 Part 2 §7.3.6). Pristine entries report their exact
-/// preserved record; in-memory entries have no Extra/File Comment fields yet.
-fn entry_central_directory_file_header_size(entry : @mbtzip.Entry) -> Int {
-  match entry.raw_central_record() {
-    Some(record) => record.length() - 4
-    None => 42 + @utf8.encode(entry.name()).length()
-  }
-}
-
-///|
 const MAX_OPC_ZIP_ENTRY_NAME_BYTES_WITHOUT_METADATA : Int = 65_493
 
 ///|
@@ -699,6 +688,12 @@ pub fn validate_docx_package_report_limited(
       return findings.report()
     }
   }
+  @opc_zip.validate_zip_headers(data) catch {
+    error => {
+      findings.add("invalid ZIP archive: \{findings.text(error.to_string())}")
+      return findings.report()
+    }
+  }
   validate_docx_archive_into(archive, findings)
   findings.report()
 }
@@ -706,6 +701,8 @@ pub fn validate_docx_package_report_limited(
 ///|
 /// Validates an already materialized DOCX archive without reading or inflating
 /// the package again. The caller retains ownership; validation is read-only.
+/// Checks decoded parts and relationships. Use `validate_docx_package` to also
+/// validate the original ZIP header layout.
 pub fn validate_docx_archive(archive : @mbtzip.Archive) -> Array[String] {
   default_findings(
     validate_docx_archive_limited(
@@ -720,6 +717,7 @@ pub fn validate_docx_archive(archive : @mbtzip.Archive) -> Array[String] {
 /// Archive-backed validation with a hard finding count and per-message scalar
 /// ceiling applied during production rather than after an unbounded array is
 /// built.
+/// Original ZIP header layout is checked only by the package-byte entry points.
 pub fn validate_docx_archive_limited(
   archive : @mbtzip.Archive,
   max_findings~ : Int,
@@ -750,6 +748,7 @@ pub fn validate_docx_archive_limited(
 ///|
 /// Archive-backed validation with typed resource-exhaustion status preserved
 /// independently of bounded human findings.
+/// Original ZIP header layout is checked only by the package-byte entry points.
 pub fn validate_docx_archive_report_limited(
   archive : @mbtzip.Archive,
   max_findings~ : Int,
@@ -790,12 +789,6 @@ fn validate_docx_archive_into(
     let name = entry.name()
     if !findings.consume_zip_entry_name(name) {
       return
-    }
-    if entry_central_directory_file_header_size(entry) >
-      MAX_OPC_CENTRAL_DIRECTORY_FILE_HEADER_BYTES {
-      findings.add(
-        "central-directory file header exceeds the OPC \{MAX_OPC_CENTRAL_DIRECTORY_FILE_HEADER_BYTES}-byte limit: \{findings.text(name)}",
-      )
     }
     if seen.contains(name) {
       findings.add("duplicate entry name: \{findings.text(name)}")
