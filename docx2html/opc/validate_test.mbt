@@ -188,8 +188,18 @@ test "OPC validation enforces the complete central-directory header limit" {
   assert_eq(oversized.length(), 65_494)
   let archive = try! @mbtzip.read(minimal_docx())
   archive.add(oversized, b"payload")
-  let report = @opc.validate_docx_archive_report_limited(
+  let decoded = @opc.validate_docx_archive_report_limited(
     archive,
+    max_findings=8,
+    max_message_chars=128,
+  )
+  assert_false(
+    decoded
+    .findings()
+    .any(finding => finding.contains("central-directory file header exceeds")),
+  )
+  let report = @opc.validate_docx_package_report_limited(
+    @mbtzip.write_preserving(archive),
     max_findings=8,
     max_message_chars=128,
   )

@@ -196,6 +196,13 @@ async fn read_office_package(
     error if cancelled() => raise error
     error => raise office_zip_read_failure(error, file, expected)
   }
+  @opc_zip.validate_zip_headers(data, checkpoint=() => {
+    check_office_read_cancelled(cancelled)
+  }) catch {
+    CliFailure(_) as error => raise error
+    error =>
+      raise CliFailure(identify_error(InvalidPackage(error.to_string()), file))
+  }
   let format = detect_office_archive_format(file, archive, cancelled)
   { file, format, bytes: data, archive, }
 }

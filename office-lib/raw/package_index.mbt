@@ -1604,7 +1604,7 @@ fn read_bounded_archive(data : BytesView) -> @zip.Archive raise RawError {
       }),
     )
   }
-  @zip.read(
+  let archive = @zip.read(
     data,
     limits=@zip.ReadLimits::default()
       .with_package_limit(raw_max_package_bytes)
@@ -1628,6 +1628,14 @@ fn read_bounded_archive(data : BytesView) -> @zip.Archive raise RawError {
         "office.raw.invalid_package", "package is not a bounded readable ZIP archive",
       )
   }
+  @opc_zip.validate_zip_headers(data) catch {
+    error =>
+      raise raw_error(
+        "office.raw.invalid_package",
+        "package failed OPC ZIP header validation: \{error}",
+      )
+  }
+  archive
 }
 
 ///|

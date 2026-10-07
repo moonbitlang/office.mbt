@@ -1,5 +1,6 @@
 import {
   "moonbitlang/office-lib" @office,
+  "moonbitlang/ooxml/opc" @opc_zip,
   "moonbit-community/flate/zip",
   "moonbitlang/async",
   "moonbitlang/async/fs" @afs,
