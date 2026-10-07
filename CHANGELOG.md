@@ -12,7 +12,7 @@ Breaking and notable changes for the published modules in this workspace.
 Entries are grouped by module and by the version they ship in; `Unreleased`
 covers changes that have landed on `main` but are not yet published.
 
-### moonbitlang/pdflite [Unreleased]
+### moonbitlang/pdflite [0.3.8]
 
 - `export`: a real number is written with the digits pdf-writer writes. The
   shortest digits of the `f32` are now ryu's (a port of its `f2d`): a value
