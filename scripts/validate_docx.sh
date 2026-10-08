@@ -66,7 +66,8 @@ ensure_validator_built() {
   fi
   acquire_lock
   if ! validator_build_is_current; then
-    "$DOTNET" build "$DOTNET_PROJECT" -p:UseAppHost=false >/dev/null
+    # Captured callers need EOF when this build exits; no persistent compiler may inherit its pipes.
+    "$DOTNET" build "$DOTNET_PROJECT" --disable-build-servers -p:UseSharedCompilation=false -p:UseAppHost=false >/dev/null
     touch "$BUILD_STAMP"
   fi
   release_lock

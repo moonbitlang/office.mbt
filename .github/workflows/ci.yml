@@ -77,6 +77,9 @@ jobs:
 
       # Format check across the whole workspace, including executable package
       # manifests now that every member uses the supported `pkgtype` syntax.
+      - name: Validator captured-pipe regression
+        run: python3 scripts/tests/test_validator_build.py
+
       - name: DOCX corpus projection regression
         run: python3 docx2html/tests/corpus/projection_check.py
 
