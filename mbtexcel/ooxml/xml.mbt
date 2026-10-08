@@ -7,7 +7,7 @@ pub fn xml_needs_escape(value : StringView, attr~ : Bool) -> Bool {
   for i in 0..<value.length() {
     match value[i] {
       '&' | '<' | '>' => return true
-      '"' | '\'' => if attr { return true }
+      '"' | '\'' | '\n' | '\r' | '\t' => if attr { return true }
       _ => ()
     }
   }
@@ -86,6 +86,9 @@ fn XmlOutputBuilder::write_attr(
       unit if unit == ('&' : UInt16) => Some("&amp;")
       unit if unit == ('<' : UInt16) => Some("&lt;")
       unit if unit == ('>' : UInt16) => Some("&gt;")
+      unit if unit == ('\n' : UInt16) => Some("&#10;")
+      unit if unit == ('\r' : UInt16) => Some("&#13;")
+      unit if unit == ('\t' : UInt16) => Some("&#9;")
       unit if unit == ('"' : UInt16) => Some("&quot;")
       unit if unit == ('\'' : UInt16) => Some("&apos;")
       _ => None
@@ -145,7 +148,7 @@ pub fn escape_xml_text(value : StringView) -> String {
 }
 
 ///|
-/// Escape an XML attribute value (`&`, `<`, `>`, `"`, `'`). Returns the input
+/// Escape XML attribute delimiters and LF/CR/TAB as character references. Returns the input
 /// unchanged when no escaping is needed.
 pub fn escape_xml_attr(value : StringView) -> String {
   if !xml_needs_escape(value, attr=true) {
@@ -158,6 +161,9 @@ pub fn escape_xml_attr(value : StringView) -> String {
       unit if unit == ('&' : UInt16) => Some("&amp;")
       unit if unit == ('<' : UInt16) => Some("&lt;")
       unit if unit == ('>' : UInt16) => Some("&gt;")
+      unit if unit == ('\n' : UInt16) => Some("&#10;")
+      unit if unit == ('\r' : UInt16) => Some("&#13;")
+      unit if unit == ('\t' : UInt16) => Some("&#9;")
       unit if unit == ('"' : UInt16) => Some("&quot;")
       unit if unit == ('\'' : UInt16) => Some("&apos;")
       _ => None

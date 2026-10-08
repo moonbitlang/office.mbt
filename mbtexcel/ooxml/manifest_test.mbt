@@ -97,3 +97,23 @@ test "workbook manifest limited serializers stop at exact UTF-8 ceilings" {
     content="true",
   )
 }
+
+///|
+test "manifest attribute whitespace is escaped within byte limits" {
+  let manifest = @ooxml.WorkbookManifest::new(0)
+  manifest.add_workbook_relationship("urn:test", "part\nwith\rwhite\tspace.xml")
+  let xml = manifest.workbook_rels_xml()
+  debug_inspect(
+    xml.contains("Target=\"part&#10;with&#13;white&#9;space.xml\""),
+    content="true",
+  )
+  // This fixture is ASCII, so its string length equals its UTF-8 byte length.
+  debug_inspect(
+    manifest.workbook_rels_xml_limited(xml.length()) == Some(xml),
+    content="true",
+  )
+  debug_inspect(
+    manifest.workbook_rels_xml_limited(xml.length() - 1),
+    content="None",
+  )
+}
