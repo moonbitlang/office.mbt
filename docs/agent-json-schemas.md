@@ -1206,9 +1206,8 @@ capped at 10,000 ops; an empty `ops` array yields a blank document.
   `size` (points, 1–1638 — Word's cap), `highlight` (an ST_HighlightColor
   name: `yellow`, `green`, `cyan`, `magenta`, `blue`, `red`, `darkBlue`,
   `darkCyan`, `darkGreen`, `darkMagenta`, `darkRed`, `darkYellow`,
-  `darkGray`, `lightGray`, `black`, `white`; omit the key for no
-  highlight — `"none"` is rejected because the reader normalizes it to
-  absent, so it cannot round-trip) — the exact writer surface, so anything the writer fails closed on fails the batch too,
+  `darkGray`, `lightGray`, `black`, `white`, `none`; omit the key for no
+  direct highlight, or use `"none"` to cancel inherited highlighting) — the exact writer surface, so anything the writer fails closed on fails the batch too,
   with the op's address. Two read-back keys are named differently:
   `docx.element/1` reports `strike` as `strikethrough` and `vertical` as
   `vertical_alignment`.
