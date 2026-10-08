@@ -983,6 +983,32 @@ pub fn Style::with_border(self : Style, border : Array[Border]) -> Style {
 }
 
 ///|
+/// Replaces the number format while preserving font, fill, border and protection.
+pub fn Style::with_number_format(self : Style, format_code : String) -> Style {
+  {
+    ..self,
+    number_format: Some(Custom(format_code)),
+    num_fmt: None,
+    decimal_places: None,
+    custom_num_fmt: None,
+    neg_red: None,
+  }
+}
+
+///|
+/// Replaces the number format with a built-in format ID.
+pub fn Style::with_builtin_number_format(self : Style, id : Int) -> Style {
+  {
+    ..self,
+    number_format: Some(Builtin(id)),
+    num_fmt: None,
+    decimal_places: None,
+    custom_num_fmt: None,
+    neg_red: None,
+  }
+}
+
+///|
 /// Creates a Style with only protection settings.
 pub fn Style::protection(protection : Protection) -> Style {
   {
@@ -1000,7 +1026,8 @@ pub fn Style::protection(protection : Protection) -> Style {
 }
 
 ///|
-fn Style::with_protection(self : Style, protection : Protection) -> Style {
+/// Returns a style with updated protection, preserving all other properties.
+pub fn Style::with_protection(self : Style, protection : Protection) -> Style {
   {
     number_format: self.number_format,
     num_fmt: self.num_fmt,
