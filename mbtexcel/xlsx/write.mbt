@@ -162,6 +162,9 @@ fn LimitedXmlBuilder::write_xml_attr(
       unit if unit == ('&' : UInt16) => Some("&amp;")
       unit if unit == ('<' : UInt16) => Some("&lt;")
       unit if unit == ('>' : UInt16) => Some("&gt;")
+      unit if unit == ('\n' : UInt16) => Some("&#10;")
+      unit if unit == ('\r' : UInt16) => Some("&#13;")
+      unit if unit == ('\t' : UInt16) => Some("&#9;")
       unit if unit == ('"' : UInt16) => Some("&quot;")
       unit if unit == ('\'' : UInt16) => Some("&apos;")
       _ => None

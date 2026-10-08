@@ -65,3 +65,13 @@ test "escaping handles megabyte-safe spans without per-character output" {
   assert_eq(attr.length(), span.length() + "&quot;tail".length())
   assert_true(attr.has_suffix("&quot;tail"))
 }
+
+///|
+test "attribute whitespace uses character references" {
+  debug_inspect(@ooxml.xml_needs_escape("\n\r\t", attr=true), content="true")
+  debug_inspect(
+    @ooxml.escape_xml_attr("A\nB\rC\tD"),
+    content="\"A&#10;B&#13;C&#9;D\"",
+  )
+  debug_inspect(@ooxml.escape_xml_text("A\nB\tC"), content="\"A\\nB\\tC\"")
+}

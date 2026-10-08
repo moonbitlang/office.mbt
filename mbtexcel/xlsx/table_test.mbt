@@ -125,3 +125,23 @@ test "table style flags and header row" {
   inspect(table.show_row_stripes, content="false")
   inspect(table.show_column_stripes, content="true")
 }
+
+///|
+test "table column attribute whitespace survives XML serialization" {
+  let workbook = @xlsx.Workbook::new()
+  let sheet = workbook.add_sheet("Sheet1")
+  let heading = "Line1\nLine2\rLine3\tEnd"
+  sheet.add_table("A1:A2", "Whitespace", [heading]) |> ignore
+  let bytes = @xlsx.write(workbook)
+  let archive = @zip.read(bytes)
+  let xml = @encoding/utf8.decode(archive.get("xl/tables/table1.xml").unwrap())
+  debug_inspect(
+    xml.contains("name=\"Line1&#10;Line2&#13;Line3&#9;End\""),
+    content="true",
+  )
+  let reopened = @xlsx.read(bytes)
+  debug_inspect(
+    reopened.get_tables("Sheet1")[0].columns[0],
+    content="\"Line1\\nLine2\\rLine3\\tEnd\"",
+  )
+}
