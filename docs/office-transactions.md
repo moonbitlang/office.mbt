@@ -101,12 +101,6 @@ remains, even when an archive lies in its declared size, so compressed
 expansion cannot bypass preflight. Exceeding any bound fails before publication
 with `office.transaction.resource_limit_exceeded`.
 
-Transactions validate the OPC central-directory header limit against the
-original source and candidate bytes after bounded ZIP decoding. The shared
-OPC check supports classic ZIP and ZIP64 without inspecting flate's preserved
-record storage. Archive-only validators check decoded contents and relationships;
-they do not certify the original serialized ZIP layout.
-
 Those per-package ceilings sit inside one conservative 384 MiB live
 materialization budget for the complete transaction. The transaction reserves
 64 MiB for raw indexes, XML metadata, preservation maps, archive forks, and
@@ -122,15 +116,10 @@ individually legal but would make the two live archive snapshots exceed the
 envelope therefore fails with `kind=live_materialized_bytes` before any
 temporary file is created.
 
-Office computes this budget from public archive contents and its own per-entry
-allowance, without depending on the ZIP library's allocation layout. Each read
-limits retained source records to the smaller of the package length and the
-preserved-source ceiling, and charges that entire allowance. Before inflation,
-it also reserves decoded-name, archive-comment, and entry bookkeeping space.
-Overlapping ZIP records cannot bypass the copied-record limit. These are
-conservative application allowances, not an exact process-memory measurement;
-packages near the envelope may be rejected even when their actual retained
-records would occupy less space.
+Retained ZIP records are capped at the smaller of the package length and the
+preserved-source limit. That entire allowance counts toward the transaction
+budget, so packages near the ceiling can be rejected even when their actual
+retained records occupy less space.
 
 The mutation callback receives that remaining allowance as
 `TransactionBudget::max_candidate_package_bytes()`. Package serializers must
