@@ -47,14 +47,14 @@ test "conditional format color scale, data bar, icon set" {
   data_bar.set_bar_color("#638EC6")
   sheet.set_conditional_format("C1:C2", [data_bar])
   let icons = @xlsx.ConditionalFormatOptions::new("icon_set")
-  icons.set_icon_style("3Stars")
+  icons.set_icon_style("3Symbols")
   sheet.set_conditional_format("D1:D2", [icons])
   let formats = sheet.conditional_formats()
   inspect(formats[0].contains("colorScale"), content="true")
   inspect(formats[0].contains("rgb=\"FFFF0000\""), content="true")
   inspect(formats[1].contains("dataBar"), content="true")
   inspect(formats[1].contains("rgb=\"FF638EC6\""), content="true")
-  inspect(formats[2].contains("iconSet=\"3Stars\""), content="true")
+  inspect(formats[2].contains("iconSet=\"3Symbols\""), content="true")
   let first_color = match formats[0].find("<color rgb=") {
     Some(value) => value
     None => fail("missing color tag")
