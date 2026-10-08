@@ -139,6 +139,39 @@ test "table column attribute whitespace survives XML serialization" {
     xml.contains("name=\"Line1&#10;Line2&#13;Line3&#9;End\""),
     content="true",
   )
+  let (entries, largest, total) = archive_uncompressed_stats(bytes)
+  let bounded = @xlsx.write_limited(
+    workbook,
+    @xlsx.WriteLimits::with_values(
+      max_output_bytes=bytes.length() + 1024,
+      max_archive_entries=entries,
+      max_entry_uncompressed_bytes=largest,
+      max_total_uncompressed_bytes=total,
+    ),
+  )
+  let bounded_archive = @zip.read(bounded)
+  debug_inspect(
+    @encoding/utf8.decode(bounded_archive.get("xl/tables/table1.xml").unwrap()) ==
+    xml,
+    content="true",
+  )
+  let too_small : Result[Bytes, Error] = Ok(
+    @xlsx.write_limited(
+      workbook,
+      @xlsx.WriteLimits::with_values(
+        max_output_bytes=bytes.length() + 1024,
+        max_archive_entries=entries,
+        max_entry_uncompressed_bytes=largest,
+        max_total_uncompressed_bytes=total - 1,
+      ),
+    ),
+  ) catch {
+    error => Err(error)
+  }
+  debug_inspect(
+    too_small is Err(@xlsx.ResourceLimitExceeded(_)),
+    content="true",
+  )
   let reopened = @xlsx.read(bytes)
   debug_inspect(
     reopened.get_tables("Sheet1")[0].columns[0],
