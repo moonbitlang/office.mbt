@@ -2114,19 +2114,7 @@ fn write_styles_xml(
         continue
       }
       sb.write_view("    <dxf>")
-      match style.number_format {
-        Some(Builtin(id)) => sb.write_view("<numFmt numFmtId=\"\{id}\"/>")
-        Some(Custom(code)) =>
-          match num_fmt_ids.get(code) {
-            Some(id) => {
-              sb.write_view("<numFmt numFmtId=\"\{id}\" formatCode=\"")
-              sb.write_xml_attr(code)
-              sb.write_view("\"/>")
-            }
-            None => ()
-          }
-        None => ()
-      }
+      // CT_Dxf is an ordered sequence: font, numFmt, fill, alignment, border, protection.
       match style.font {
         Some(font) =>
           if has_font {
@@ -2253,6 +2241,19 @@ fn write_styles_xml(
           }
         None => ()
       }
+      match style.number_format {
+        Some(Builtin(id)) => sb.write_view("<numFmt numFmtId=\"\{id}\"/>")
+        Some(Custom(code)) =>
+          match num_fmt_ids.get(code) {
+            Some(id) => {
+              sb.write_view("<numFmt numFmtId=\"\{id}\" formatCode=\"")
+              sb.write_xml_attr(code)
+              sb.write_view("\"/>")
+            }
+            None => ()
+          }
+        None => ()
+      }
       match style.fill {
         Some(fill) =>
           if has_fill {
@@ -2343,53 +2344,6 @@ fn write_styles_xml(
           }
         None => ()
       }
-      match style.border {
-        Some(border) =>
-          if has_border {
-            let entry = border_lines_for_style(border)
-            sb.write_view("<border")
-            if entry.diagonal_up {
-              sb.write_view(" diagonalUp=\"1\"")
-            }
-            if entry.diagonal_down {
-              sb.write_view(" diagonalDown=\"1\"")
-            }
-            sb.write_view(">")
-            for line in entry.lines {
-              let (side, style, color) = line
-              if (side == "vertical" || side == "horizontal") &&
-                style <= 0 &&
-                color == None {
-                continue
-              }
-              if style <= 0 {
-                sb.write_view("<\{side}/>")
-                continue
-              }
-              let style_name = border_styles[style]
-              sb.write_view("<\{side} style=\"")
-              sb.write_xml_attr(style_name)
-              sb.write_view("\">")
-              match color {
-                Some(value) => {
-                  let normalized = value.replace_all(old="#", new="")
-                  let rgb = if normalized.length() == 6 {
-                    "FF" + normalized
-                  } else {
-                    normalized
-                  }
-                  sb.write_view("<color rgb=\"")
-                  sb.write_xml_attr(rgb)
-                  sb.write_view("\"/>")
-                }
-                None => ()
-              }
-              sb.write_view("</\{side}>")
-            }
-            sb.write_view("</border>")
-          }
-        None => ()
-      }
       match style.alignment {
         Some(a) =>
           if has_alignment {
@@ -2451,6 +2405,53 @@ fn write_styles_xml(
               None => ()
             }
             sb.write_view("/>")
+          }
+        None => ()
+      }
+      match style.border {
+        Some(border) =>
+          if has_border {
+            let entry = border_lines_for_style(border)
+            sb.write_view("<border")
+            if entry.diagonal_up {
+              sb.write_view(" diagonalUp=\"1\"")
+            }
+            if entry.diagonal_down {
+              sb.write_view(" diagonalDown=\"1\"")
+            }
+            sb.write_view(">")
+            for line in entry.lines {
+              let (side, style, color) = line
+              if (side == "vertical" || side == "horizontal") &&
+                style <= 0 &&
+                color == None {
+                continue
+              }
+              if style <= 0 {
+                sb.write_view("<\{side}/>")
+                continue
+              }
+              let style_name = border_styles[style]
+              sb.write_view("<\{side} style=\"")
+              sb.write_xml_attr(style_name)
+              sb.write_view("\">")
+              match color {
+                Some(value) => {
+                  let normalized = value.replace_all(old="#", new="")
+                  let rgb = if normalized.length() == 6 {
+                    "FF" + normalized
+                  } else {
+                    normalized
+                  }
+                  sb.write_view("<color rgb=\"")
+                  sb.write_xml_attr(rgb)
+                  sb.write_view("\"/>")
+                }
+                None => ()
+              }
+              sb.write_view("</\{side}>")
+            }
+            sb.write_view("</border>")
           }
         None => ()
       }
