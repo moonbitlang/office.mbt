@@ -38,6 +38,7 @@ fn empty_body_reader(relationships : Relationships) -> BodyReader {
   {
     colors: RunColors::empty(),
     paragraph_color: None,
+    paragraph_highlight: None,
     styles: SortedMap([]),
     zip: try! @zip.zip_archive(Map([])),
     relationship_index: RelationshipIndex::build(relationships),
@@ -75,6 +76,7 @@ fn body_reader_with_stable_numbering(
   {
     colors: RunColors::empty(),
     paragraph_color: None,
+    paragraph_highlight: None,
     styles,
     zip: try! @zip.zip_archive(Map([])),
     relationship_index: RelationshipIndex::build({ relationships: [], }),
@@ -1617,7 +1619,9 @@ test "docx reader treats empty highlight as no highlight" {
       read_highlight(Some("none")),
       read_highlight(Some("yellow")),
     ],
-    content="[None, None, None, Some(\"yellow\")]",
+    content=(
+      #|[None, None, Some("none"), Some("yellow")]
+    ),
   )
 }
 
@@ -1984,6 +1988,7 @@ test "docx table properties include table style name" {
   let reader = BodyReader::{
     colors: RunColors::empty(),
     paragraph_color: None,
+    paragraph_highlight: None,
     styles: SortedMap([
       (
         "TableNormal",
@@ -3892,6 +3897,7 @@ fn drawing_image_reader_with_images(read_images : Bool) -> BodyReader {
   {
     colors: RunColors::empty(),
     paragraph_color: None,
+    paragraph_highlight: None,
     styles: SortedMap([]),
     zip: try! @zip.zip_archive({ "word/media/tiny.png": b"abc" }),
     relationship_index: relationship_index([
@@ -4022,6 +4028,7 @@ test "docx linked DrawingML images use the external loader" {
   let reader = BodyReader::{
     colors: RunColors::empty(),
     paragraph_color: None,
+    paragraph_highlight: None,
     styles: SortedMap([]),
     zip: try! @zip.zip_archive(Map([])),
     relationship_index: relationship_index([
@@ -4063,6 +4070,7 @@ test "docx linked DrawingML image loader tries decoded file URI paths" {
   let reader = BodyReader::{
     colors: RunColors::empty(),
     paragraph_color: None,
+    paragraph_highlight: None,
     styles: SortedMap([]),
     zip: try! @zip.zip_archive(Map([])),
     relationship_index: relationship_index([
@@ -4104,6 +4112,7 @@ test "docx embedded DrawingML images ignore relationship target mode" {
   let reader = BodyReader::{
     colors: RunColors::empty(),
     paragraph_color: None,
+    paragraph_highlight: None,
     styles: SortedMap([]),
     zip: try! @zip.zip_archive({ "word/media/hat.png": b"abc" }),
     relationship_index: relationship_index([
@@ -4145,6 +4154,7 @@ test "docx DrawingML image relationship ids follow Mammoth truthiness" {
   let linked_reader = BodyReader::{
     colors: RunColors::empty(),
     paragraph_color: None,
+    paragraph_highlight: None,
     styles: SortedMap([]),
     zip: try! @zip.zip_archive(Map([])),
     relationship_index: relationship_index([
@@ -4185,6 +4195,7 @@ test "docx DrawingML image relationship ids follow Mammoth truthiness" {
   let blank_link_reader = BodyReader::{
     colors: RunColors::empty(),
     paragraph_color: None,
+    paragraph_highlight: None,
     styles: SortedMap([]),
     zip: try! @zip.zip_archive({ "word/media/tiny.png": b"abc" }),
     relationship_index: relationship_index([
@@ -4405,6 +4416,7 @@ test "docx image reader records Mammoth-compatible warnings" {
   let missing_entry_reader = BodyReader::{
     colors: RunColors::empty(),
     paragraph_color: None,
+    paragraph_highlight: None,
     styles: SortedMap([]),
     zip: try! @zip.zip_archive(Map([])),
     relationship_index: relationship_index([
@@ -4512,6 +4524,7 @@ test "docx image reader records Mammoth-compatible warnings" {
   let external_reader = BodyReader::{
     colors: RunColors::empty(),
     paragraph_color: None,
+    paragraph_highlight: None,
     styles: SortedMap([]),
     zip: try! @zip.zip_archive(Map([])),
     relationship_index: relationship_index([
@@ -4544,6 +4557,7 @@ test "docx image reader records Mammoth-compatible warnings" {
   let bounded_external_reader = BodyReader::{
     colors: RunColors::empty(),
     paragraph_color: None,
+    paragraph_highlight: None,
     styles: SortedMap([]),
     zip: try! @zip.zip_archive(Map([])),
     relationship_index: relationship_index([
@@ -4578,6 +4592,7 @@ test "docx image reader records Mammoth-compatible warnings" {
   let repeated_external_reader = BodyReader::{
     colors: RunColors::empty(),
     paragraph_color: None,
+    paragraph_highlight: None,
     styles: SortedMap([]),
     zip: try! @zip.zip_archive(Map([])),
     relationship_index: relationship_index([
@@ -4620,6 +4635,7 @@ test "docx image reader records Mammoth-compatible warnings" {
   let unsupported_reader = BodyReader::{
     colors: RunColors::empty(),
     paragraph_color: None,
+    paragraph_highlight: None,
     styles: SortedMap([]),
     zip: try! @zip.zip_archive({ "word/media/hat.emf": b"abc" }),
     relationship_index: relationship_index([

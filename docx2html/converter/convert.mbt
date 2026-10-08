@@ -374,7 +374,8 @@ fn DocumentConverter::convert_run(
     None => ()
   }
   match properties.highlight {
-    Some(_) =>
+    Some("none") | None => ()
+    Some(highlight) =>
       match
         @style_map.find_style_mapping(
           Run(children~, properties~),
@@ -384,9 +385,18 @@ fn DocumentConverter::convert_run(
           ],
         ) {
         Some(mapping) => paths.push(mapping.to)
-        None => ()
+        None =>
+          if highlight_css(highlight) is Some(value) {
+            paths.push([
+              {
+                tag: "span",
+                attributes: { "style": "background-color: " + value },
+                fresh: false,
+                separator: None,
+              },
+            ])
+          }
       }
-    None => ()
   }
   if properties.is_small_caps {
     paths.push(path_for_property(self, element, "smallCaps", None))
@@ -926,4 +936,28 @@ fn html_nodes_are_empty(nodes : Array[HtmlNode]) -> Bool {
     }
   }
   true
+}
+
+///|
+// Use Word's closed ST_HighlightColor palette, not arbitrary CSS color names.
+fn highlight_css(value : String) -> String? {
+  match value {
+    "black" => Some("#000000")
+    "blue" => Some("#0000FF")
+    "cyan" => Some("#00FFFF")
+    "green" => Some("#00FF00")
+    "magenta" => Some("#FF00FF")
+    "red" => Some("#FF0000")
+    "yellow" => Some("#FFFF00")
+    "white" => Some("#FFFFFF")
+    "darkBlue" => Some("#000080")
+    "darkCyan" => Some("#008080")
+    "darkGreen" => Some("#008000")
+    "darkMagenta" => Some("#800080")
+    "darkRed" => Some("#800000")
+    "darkYellow" => Some("#808000")
+    "darkGray" => Some("#808080")
+    "lightGray" => Some("#C0C0C0")
+    _ => None
+  }
 }

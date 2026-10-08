@@ -160,6 +160,7 @@ fn is_highlight_color(value : String) -> Bool {
   | "green"
   | "lightGray"
   | "magenta"
+  | "none"
   | "red"
   | "white"
   | "yellow")
@@ -1133,11 +1134,6 @@ fn parse_inline(
   }
   let highlight = match optional_string(spec, "highlight", at) {
     Some(highlight) => {
-      if highlight == "none" {
-        raise BatchError(
-          "\{at}.highlight: omit the key instead of 'none' (the reader normalizes 'none' to absent, so it cannot round-trip)",
-        )
-      }
       if !is_highlight_color(highlight) {
         raise BatchError(
           "\{at}.highlight '\{highlight}' is not an ST_HighlightColor name (yellow, green, cyan, red, ...)",

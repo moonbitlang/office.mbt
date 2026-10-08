@@ -19,12 +19,10 @@ test "input contract inventory is stable, ordered, and versioned" {
   assert_eq(first.stringify(), input_contract_inventory().stringify())
   guard first is Object(fields) else { fail("inventory must be an object") }
   assert_eq(fields.get("schema"), Some(Json::string(schema_input_contracts)))
-  assert_eq(
+  debug_inspect(
     fields.get("fingerprint"),
-    Some(
-      Json::string(
-        "sha256:ab831a2d3a833ad082ae7a76053622ed17f9e4fc83ba54b5a082ac69630f22a5",
-      ),
+    content=(
+      #|Some(String("sha256:c9e7474e1d70adf780fb71e5bb0054502018aa17a7abf522f9f5352e3626de6c"))
     ),
   )
   guard fields.get("contracts") is Some(Array(records)) else {

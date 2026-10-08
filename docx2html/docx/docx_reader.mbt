@@ -901,6 +901,7 @@ fn DocumentParts::story_body_reader(self : DocumentParts) -> BodyReader {
   {
     colors: self.colors,
     paragraph_color: None,
+    paragraph_highlight: None,
     styles: self.styles,
     zip: self.zip,
     relationship_index: self.relationship_index,
@@ -1985,6 +1986,7 @@ fn read_note_part_at_path(
   let reader = BodyReader::{
     colors,
     paragraph_color: None,
+    paragraph_highlight: None,
     styles,
     zip,
     relationship_index: RelationshipIndex::build(part_relationships),
@@ -2093,6 +2095,7 @@ fn read_comments_for_document(
   let reader = BodyReader::{
     colors,
     paragraph_color: None,
+    paragraph_highlight: None,
     styles,
     zip,
     relationship_index: RelationshipIndex::build(part_relationships),
@@ -2258,6 +2261,7 @@ fn read_document_xml_with_messages(
   let reader = BodyReader::{
     colors,
     paragraph_color: None,
+    paragraph_highlight: None,
     styles,
     zip,
     relationship_index,
@@ -2285,6 +2289,7 @@ fn read_document_xml_with_messages(
 priv struct BodyReader {
   colors : RunColors
   mut paragraph_color : String?
+  mut paragraph_highlight : String?
   styles : StableStringMap[StyleInfo]
   zip : ZipArchive
   relationship_index : RelationshipIndex
@@ -2697,11 +2702,15 @@ fn BodyReader::read_paragraph_elements_with_prefix(
   deleted_prefix : Array[ReaderNode],
 ) -> ReaderItem raise DocxError {
   let previous_color = self.paragraph_color
+  let previous_highlight = self.paragraph_highlight
   let paragraph_style = element
     .first_or_empty("w:pPr")
     .first_or_empty("w:pStyle")
     .attribute("w:val")
   self.paragraph_color = self.colors.style_color("paragraph", paragraph_style)
+  self.paragraph_highlight = self.colors.style_value(
+    "paragraph", paragraph_style, "highlight",
+  )
   let properties = self.read_paragraph_properties(
     element.first_or_empty("w:pPr"),
   )
@@ -2732,6 +2741,7 @@ fn BodyReader::read_paragraph_elements_with_prefix(
     ),
   })
   self.paragraph_color = previous_color
+  self.paragraph_highlight = previous_highlight
   result
 }
 
@@ -3491,11 +3501,18 @@ fn BodyReader::read_run_properties(
       self.colors.read_node_color(element.first_or_empty("w:color")),
       prefer_color(
         self.colors.style_color("character", style_id),
-        prefer_color(self.paragraph_color, self.colors.default_color),
+        prefer_color(self.paragraph_color, self.colors.defaults.get("color")),
       ),
     ),
-    highlight: read_highlight(
-      element.first_or_empty("w:highlight").attribute("w:val"),
+    highlight: first_some(
+      read_highlight(element.first_or_empty("w:highlight").attribute("w:val")),
+      first_some(
+        self.colors.style_value("character", style_id, "highlight"),
+        first_some(
+          self.paragraph_highlight,
+          self.colors.defaults.get("highlight"),
+        ),
+      ),
     ),
   }
 }
@@ -3616,7 +3633,7 @@ fn[T] first_some(first : T?, second : T?) -> T? {
 ///|
 fn read_highlight(value : String?) -> String? {
   match value {
-    Some("") | Some("none") | None => None
+    Some("") | None => None
     Some(value) => Some(value)
   }
 }

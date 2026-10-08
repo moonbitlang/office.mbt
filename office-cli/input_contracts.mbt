@@ -216,7 +216,7 @@ fn docx_input_contract() -> InputContractCore {
           ("vertical", "enum(superscript|subscript)"),
           ("font", "xml_attribute_string"),
           ("size", "integer(1..1638)"),
-          ("highlight", "ST_HighlightColor except none"),
+          ("highlight", "ST_HighlightColor"),
         ],
         required=["text"],
       ),
