@@ -477,7 +477,7 @@ fn write_run(
   let nodes : Array[XmlNode] = []
   // CT_RPr is an ENFORCED sequence — the Microsoft SDK rejects out-of-order
   // children. Emission order here must stay: rFonts, b, i, caps, smallCaps,
-  // strike, sz, szCs, highlight, u, vertAlign.
+  // strike, color, sz, szCs, highlight, u, vertAlign.
   let rpr : Array[XmlNode] = []
   if properties.style_id is Some(_) || properties.style_name is Some(_) {
     raise Unsupported(
@@ -512,6 +512,22 @@ fn write_run(
   }
   if properties.is_strikethrough {
     rpr.push(XmlElement(@xml.xml_element("w:strike")))
+  }
+  match properties.color {
+    Some(color) => {
+      let value = if color == "auto" {
+        "auto"
+      } else {
+        match color_hex(color) {
+          Some(hex) => hex
+          None => raise Unsupported(message="run color must be RRGGBB or auto")
+        }
+      }
+      rpr.push(
+        XmlElement(@xml.xml_element("w:color", attributes={ "w:val": value })),
+      )
+    }
+    None => ()
   }
   match properties.font_size {
     Some(points) => {

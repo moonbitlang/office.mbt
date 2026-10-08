@@ -36,6 +36,8 @@ fn convert_document_to_html(
 ///|
 fn empty_body_reader(relationships : Relationships) -> BodyReader {
   {
+    colors: RunColors::empty(),
+    paragraph_color: None,
     styles: SortedMap([]),
     zip: try! @zip.zip_archive(Map([])),
     relationship_index: RelationshipIndex::build(relationships),
@@ -71,6 +73,8 @@ fn body_reader_with_stable_numbering(
   numbering : NumberingMap,
 ) -> BodyReader {
   {
+    colors: RunColors::empty(),
+    paragraph_color: None,
     styles,
     zip: try! @zip.zip_archive(Map([])),
     relationship_index: RelationshipIndex::build({ relationships: [], }),
@@ -1978,6 +1982,8 @@ test "docx table properties include table style name" {
     #|<w:tbl xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:tblPr><w:tblStyle w:val="TableNormal" /></w:tblPr></w:tbl>
   let root = read_xml_string(xml, namespace_map=office_namespace_map())
   let reader = BodyReader::{
+    colors: RunColors::empty(),
+    paragraph_color: None,
     styles: SortedMap([
       (
         "TableNormal",
@@ -3884,6 +3890,8 @@ test "docx transparent wrappers pass through children" {
 ///|
 fn drawing_image_reader_with_images(read_images : Bool) -> BodyReader {
   {
+    colors: RunColors::empty(),
+    paragraph_color: None,
     styles: SortedMap([]),
     zip: try! @zip.zip_archive({ "word/media/tiny.png": b"abc" }),
     relationship_index: relationship_index([
@@ -4012,6 +4020,8 @@ test "docx linked DrawingML images use the external loader" {
     #|<wp:inline xmlns:wp="http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" xmlns:pic="http://schemas.openxmlformats.org/drawingml/2006/picture" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><wp:docPr id="1" name="Picture" descr="It's a hat" /><a:graphic><a:graphicData><pic:pic><pic:blipFill><a:blip r:link="rLinkedImage" /></pic:blipFill></pic:pic></a:graphicData></a:graphic></wp:inline>
   let root = read_xml_string(xml, namespace_map=office_namespace_map())
   let reader = BodyReader::{
+    colors: RunColors::empty(),
+    paragraph_color: None,
     styles: SortedMap([]),
     zip: try! @zip.zip_archive(Map([])),
     relationship_index: relationship_index([
@@ -4051,6 +4061,8 @@ test "docx linked DrawingML image loader tries decoded file URI paths" {
     #|<wp:inline xmlns:wp="http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" xmlns:pic="http://schemas.openxmlformats.org/drawingml/2006/picture" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><wp:docPr id="1" name="Picture" /><a:graphic><a:graphicData><pic:pic><pic:blipFill><a:blip r:link="rLinkedImage" /></pic:blipFill></pic:pic></a:graphicData></a:graphic></wp:inline>
   let root = read_xml_string(xml, namespace_map=office_namespace_map())
   let reader = BodyReader::{
+    colors: RunColors::empty(),
+    paragraph_color: None,
     styles: SortedMap([]),
     zip: try! @zip.zip_archive(Map([])),
     relationship_index: relationship_index([
@@ -4090,6 +4102,8 @@ test "docx embedded DrawingML images ignore relationship target mode" {
     #|<wp:inline xmlns:wp="http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" xmlns:pic="http://schemas.openxmlformats.org/drawingml/2006/picture" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><wp:docPr id="1" name="Picture" descr="It's a hat" /><a:graphic><a:graphicData><pic:pic><pic:blipFill><a:blip r:embed="rEmbeddedImage" /></pic:blipFill></pic:pic></a:graphicData></a:graphic></wp:inline>
   let root = read_xml_string(xml, namespace_map=office_namespace_map())
   let reader = BodyReader::{
+    colors: RunColors::empty(),
+    paragraph_color: None,
     styles: SortedMap([]),
     zip: try! @zip.zip_archive({ "word/media/hat.png": b"abc" }),
     relationship_index: relationship_index([
@@ -4129,6 +4143,8 @@ test "docx DrawingML image relationship ids follow Mammoth truthiness" {
     namespace_map=office_namespace_map(),
   )
   let linked_reader = BodyReader::{
+    colors: RunColors::empty(),
+    paragraph_color: None,
     styles: SortedMap([]),
     zip: try! @zip.zip_archive(Map([])),
     relationship_index: relationship_index([
@@ -4167,6 +4183,8 @@ test "docx DrawingML image relationship ids follow Mammoth truthiness" {
     namespace_map=office_namespace_map(),
   )
   let blank_link_reader = BodyReader::{
+    colors: RunColors::empty(),
+    paragraph_color: None,
     styles: SortedMap([]),
     zip: try! @zip.zip_archive({ "word/media/tiny.png": b"abc" }),
     relationship_index: relationship_index([
@@ -4385,6 +4403,8 @@ test "docx image reader records Mammoth-compatible warnings" {
     namespace_map=office_namespace_map(),
   )
   let missing_entry_reader = BodyReader::{
+    colors: RunColors::empty(),
+    paragraph_color: None,
     styles: SortedMap([]),
     zip: try! @zip.zip_archive(Map([])),
     relationship_index: relationship_index([
@@ -4490,6 +4510,8 @@ test "docx image reader records Mammoth-compatible warnings" {
     namespace_map=office_namespace_map(),
   )
   let external_reader = BodyReader::{
+    colors: RunColors::empty(),
+    paragraph_color: None,
     styles: SortedMap([]),
     zip: try! @zip.zip_archive(Map([])),
     relationship_index: relationship_index([
@@ -4520,6 +4542,8 @@ test "docx image reader records Mammoth-compatible warnings" {
   )
   let diagnostics = ReaderDiagnosticCollector::new(8, 512)
   let bounded_external_reader = BodyReader::{
+    colors: RunColors::empty(),
+    paragraph_color: None,
     styles: SortedMap([]),
     zip: try! @zip.zip_archive(Map([])),
     relationship_index: relationship_index([
@@ -4552,6 +4576,8 @@ test "docx image reader records Mammoth-compatible warnings" {
   let repeated_diagnostics = ReaderDiagnosticCollector::new(8, 64)
   let large_target = "x".repeat(1024 * 1024)
   let repeated_external_reader = BodyReader::{
+    colors: RunColors::empty(),
+    paragraph_color: None,
     styles: SortedMap([]),
     zip: try! @zip.zip_archive(Map([])),
     relationship_index: relationship_index([
@@ -4592,6 +4618,8 @@ test "docx image reader records Mammoth-compatible warnings" {
     namespace_map=office_namespace_map(),
   )
   let unsupported_reader = BodyReader::{
+    colors: RunColors::empty(),
+    paragraph_color: None,
     styles: SortedMap([]),
     zip: try! @zip.zip_archive({ "word/media/hat.emf": b"abc" }),
     relationship_index: relationship_index([

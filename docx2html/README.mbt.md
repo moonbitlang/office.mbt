@@ -45,6 +45,31 @@ source document is allowed to read sibling files. Use `read_docx_with_messages`
 when you need the parsed document model together with DOCX reader diagnostics;
 `read_docx` is the document-only convenience wrapper.
 
+## Text colors
+
+HTML conversion preserves direct `w:color` values, document defaults, and
+paragraph/character style colors, including `basedOn` inheritance. Direct run
+formatting wins over character styles, which win over paragraph styles and
+document defaults. Theme parts are resolved through package relationships;
+RGB and system-color fallback values, settings color-scheme remapping,
+`themeTint`, and `themeShade` are supported.
+Colors become inline CSS on text spans. `auto` resets to the browser's initial
+text color; absent colors leave the page's CSS unchanged. Markdown stays plain.
+
+`RunProperties.color` contains a resolved six-digit `RRGGBB` value or `auto`.
+Use `run_properties(color=Some("C00000"))` for authored text. The DOCX writer
+also preserves this property; literal `RunProperties` records must now include
+`color` (use `None` for the previous behavior). Invalid strings are not emitted
+as CSS and are rejected by the DOCX writer. Theme references are resolved to RGB
+in this semantic model, rather than retained for later theme editing.
+
+This does not add conditional table-style color resolution or change the
+separate `pagelayout` SVG/PDF renderer. Conditional table styles are tracked in
+[#563](https://github.com/moonbitlang/office.mbt/issues/563); preserving source
+theme identity and background-aware automatic colors are tracked in
+[#570](https://github.com/moonbitlang/office.mbt/issues/570) and
+[#571](https://github.com/moonbitlang/office.mbt/issues/571).
+
 ## Style Maps
 
 Pass explicit style-map lines with `style_map`. If you already have a

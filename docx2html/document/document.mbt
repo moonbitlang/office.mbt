@@ -115,6 +115,8 @@ pub(all) struct RunProperties {
   font : String?
   font_size : Int?
   highlight : String?
+  /// Resolved RRGGBB text color, or "auto" for the consumer default.
+  color : String?
 } derive(Debug, Eq)
 
 ///|
@@ -132,6 +134,7 @@ pub fn run_properties(
   font? : String? = None,
   font_size? : Int? = None,
   highlight? : String? = None,
+  color? : String? = None,
 ) -> RunProperties {
   {
     style_id: none_if_empty(style_id),
@@ -146,6 +149,7 @@ pub fn run_properties(
     font: none_if_empty(font),
     font_size,
     highlight: none_if_empty(highlight),
+    color: none_if_empty(color),
   }
 }
 

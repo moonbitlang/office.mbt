@@ -75,7 +75,9 @@ test "read_docx_with_messages exposes reader diagnostics" {
   debug_inspect(loaded.messages, content="[]")
   inspect(
     @docx2html.convert_document_to_html(loaded.document).value,
-    content="<p><img src=\"data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAoAAAAKCAIAAAACUFjqAAAAAXNSR0IArs4c6QAAAAlwSFlzAAAOvgAADr4B6kKxwAAAABNJREFUKFNj/M+ADzDhlWUYqdIAQSwBE8U+X40AAAAASUVORK5CYII=\" /></p>",
+    content=(
+      #|<p><span style="color: initial"><img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAoAAAAKCAIAAAACUFjqAAAAAXNSR0IArs4c6QAAAAlwSFlzAAAOvgAADr4B6kKxwAAAABNJREFUKFNj/M+ADzDhlWUYqdIAQSwBE8U+X40AAAAASUVORK5CYII=" /></span></p>
+    ),
   )
 }
 
@@ -92,7 +94,12 @@ test "pretty printing expands element content" {
 ///|
 test "convert_to_html reads XML with UTF-8 byte order mark" {
   let result = @docx2html.convert_to_html(utf8_bom_docx())
-  inspect(result.value, content="<p>This XML has a byte order mark.</p>")
+  inspect(
+    result.value,
+    content=(
+      #|<p><span style="color: #000000">This XML has a byte order mark.</span></p>
+    ),
+  )
   debug_inspect(result.messages, content="[]")
 }
 
@@ -540,7 +547,9 @@ test "external linked images can be loaded when explicitly enabled" {
   )
   inspect(
     result.value,
-    content="<p><img src=\"data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAoAAAAKCAIAAAACUFjqAAAAAXNSR0IArs4c6QAAAAlwSFlzAAAOvgAADr4B6kKxwAAAABNJREFUKFNj/M+ADzDhlWUYqdIAQSwBE8U+X40AAAAASUVORK5CYII=\" /></p>",
+    content=(
+      #|<p><span style="color: initial"><img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAoAAAAKCAIAAAACUFjqAAAAAXNSR0IArs4c6QAAAAlwSFlzAAAOvgAADr4B6kKxwAAAABNJREFUKFNj/M+ADzDhlWUYqdIAQSwBE8U+X40AAAAASUVORK5CYII=" /></span></p>
+    ),
   )
   debug_inspect(result.messages, content="[]")
   let markdown = @docx2html.convert_to_markdown(
@@ -612,7 +621,9 @@ test "endnotes are appended to text" {
   let result = @docx2html.convert_to_html(endnotes_docx(), id_prefix="doc-42-")
   inspect(
     result.value,
-    content="<p>Ouch<sup><a href=\"#doc-42-endnote-2\" id=\"doc-42-endnote-ref-2\">[1]</a></sup>.<sup><a href=\"#doc-42-endnote-3\" id=\"doc-42-endnote-ref-3\">[2]</a></sup></p><ol><li id=\"doc-42-endnote-2\"><p> A tachyon walks into a bar. <a href=\"#doc-42-endnote-ref-2\">↑</a></p></li><li id=\"doc-42-endnote-3\"><p> Fin. <a href=\"#doc-42-endnote-ref-3\">↑</a></p></li></ol>",
+    content=(
+      #|<p><span style="color: initial">Ouch<sup><a href="#doc-42-endnote-2" id="doc-42-endnote-ref-2">[1]</a></sup>.<sup><a href="#doc-42-endnote-3" id="doc-42-endnote-ref-3">[2]</a></sup></span></p><ol><li id="doc-42-endnote-2"><p><span style="color: initial"> A tachyon walks into a bar.</span> <a href="#doc-42-endnote-ref-2">↑</a></p></li><li id="doc-42-endnote-3"><p><span style="color: initial"> Fin.</span> <a href="#doc-42-endnote-ref-3">↑</a></p></li></ol>
+    ),
   )
   debug_inspect(result.messages, content="[]")
 }
@@ -625,7 +636,9 @@ test "relationships are handled inside footnotes" {
   )
   inspect(
     result.value,
-    content="<p><sup><a href=\"#doc-42-footnote-1\" id=\"doc-42-footnote-ref-1\">[1]</a></sup></p><ol><li id=\"doc-42-footnote-1\"><p> <a href=\"http://www.example.com\">Example</a> <a href=\"#doc-42-footnote-ref-1\">↑</a></p></li></ol>",
+    content=(
+      #|<p><sup><a href="#doc-42-footnote-1" id="doc-42-footnote-ref-1">[1]</a></sup></p><ol><li id="doc-42-footnote-1"><p> <a href="http://www.example.com"><span style="color: #0000FF">Example</span></a> <a href="#doc-42-footnote-ref-1">↑</a></p></li></ol>
+    ),
   )
   debug_inspect(result.messages, content="[]")
 }

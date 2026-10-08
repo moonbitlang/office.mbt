@@ -569,6 +569,7 @@ fn annotation_id_or_missing(value : String?) -> String {
 /// frozen body-only surface) and `read_docx_package` (body + sections +
 /// header/footer stories).
 priv struct DocumentParts {
+  colors : RunColors
   zip : ZipArchive
   xml_budget : @xml.XmlReadBudget?
   diagnostics : ReaderDiagnosticCollector?
@@ -697,10 +698,10 @@ fn DocumentParts::build(
     NumberingPartRole,
     main_document.relationship_dialect,
   )
-  let styles = match styles_part {
+  let styles_root = match styles_part {
     Some(part) => {
       content_types.require_wordprocessing_part(zip, part, StylesPartRole)
-      read_styles_xml(
+      Some(
         read_wordprocessing_role_xml_part(
           zip,
           part,
@@ -709,8 +710,19 @@ fn DocumentParts::build(
         ),
       )
     }
+    None => None
+  }
+  let styles = match styles_root {
+    Some(root) => read_styles_xml(root)
     None => SortedMap([])
   }
+  let colors = read_run_colors(
+    zip,
+    relationships,
+    base_path,
+    styles_root,
+    xml_budget?,
+  )
   let paragraph_style_ids : Array[String] = []
   for key, _info in styles {
     if key.has_prefix("paragraph:") {
@@ -743,6 +755,7 @@ fn DocumentParts::build(
     None
   }
   let notes_result = read_notes_for_document(
+    colors~,
     zip,
     styles,
     numbering,
@@ -759,6 +772,7 @@ fn DocumentParts::build(
     diagnostics?,
   )
   let comments_result = read_comments_for_document(
+    colors~,
     zip,
     styles,
     numbering,
@@ -791,6 +805,7 @@ fn DocumentParts::build(
     main_document_path,
     main_relationship_dialect: main_document.relationship_dialect,
     root,
+    colors,
     styles,
     numbering,
     content_types,
@@ -820,6 +835,7 @@ fn DocumentParts::read_document(
   match self.story_reader_mode {
     TolerantReader =>
       read_document_xml_with_messages(
+        colors=self.colors,
         self.root,
         self.styles,
         self.numbering,
@@ -883,6 +899,8 @@ fn DocumentParts::read_document_joined(
 /// `read_document_xml_with_messages`' construction exactly.
 fn DocumentParts::story_body_reader(self : DocumentParts) -> BodyReader {
   {
+    colors: self.colors,
+    paragraph_color: None,
     styles: self.styles,
     zip: self.zip,
     relationship_index: self.relationship_index,
@@ -1890,6 +1908,7 @@ fn read_notes_for_document(
   xml_budget? : @xml.XmlReadBudget,
   annotation_path_budget? : AnnotationPathBudget,
   diagnostics? : ReaderDiagnosticCollector,
+  colors? : RunColors = RunColors::empty(),
 ) -> NotesReadResult raise DocxError {
   let notes : Array[Note] = []
   let annotation_ids : Array[String?] = []
@@ -1902,6 +1921,7 @@ fn read_notes_for_document(
     reader_projections~,
     reader_projection_sources~,
     styles~,
+    colors~,
     numbering~,
     content_types~,
     external_files~,
@@ -1921,6 +1941,7 @@ fn read_notes_for_document(
     reader_projections~,
     reader_projection_sources~,
     styles~,
+    colors~,
     numbering~,
     content_types~,
     external_files~,
@@ -1951,6 +1972,7 @@ fn read_note_part_at_path(
   xml_budget? : @xml.XmlReadBudget,
   annotation_path_budget? : AnnotationPathBudget,
   diagnostics? : ReaderDiagnosticCollector,
+  colors? : RunColors = RunColors::empty(),
 ) -> NotesReadResult raise DocxError {
   if !zip.exists(path) {
     return { notes: [], annotation_ids: [], messages: [], }
@@ -1961,6 +1983,8 @@ fn read_note_part_at_path(
     xml_budget?,
   )
   let reader = BodyReader::{
+    colors,
+    paragraph_color: None,
     styles,
     zip,
     relationship_index: RelationshipIndex::build(part_relationships),
@@ -2043,6 +2067,7 @@ fn read_comments_for_document(
   annotation_path_budget? : AnnotationPathBudget,
   comments_part_path? : String,
   diagnostics? : ReaderDiagnosticCollector,
+  colors? : RunColors = RunColors::empty(),
 ) -> CommentsReadResult raise DocxError {
   let authoritative = match comments_part_path {
     Some(path) => Some(path)
@@ -2066,6 +2091,8 @@ fn read_comments_for_document(
     xml_budget?,
   )
   let reader = BodyReader::{
+    colors,
+    paragraph_color: None,
     styles,
     zip,
     relationship_index: RelationshipIndex::build(part_relationships),
@@ -2219,6 +2246,7 @@ fn read_document_xml_with_messages(
   external_files? : ExternalFileAccess = default_external_file_access(),
   read_images? : Bool = true,
   diagnostics? : ReaderDiagnosticCollector,
+  colors? : RunColors = RunColors::empty(),
 ) -> DocxReadResult raise DocxError {
   let body = match root.first("w:body") {
     Some(body) => body
@@ -2228,6 +2256,8 @@ fn read_document_xml_with_messages(
       )
   }
   let reader = BodyReader::{
+    colors,
+    paragraph_color: None,
     styles,
     zip,
     relationship_index,
@@ -2253,6 +2283,8 @@ fn read_document_xml_with_messages(
 
 ///|
 priv struct BodyReader {
+  colors : RunColors
+  mut paragraph_color : String?
   styles : StableStringMap[StyleInfo]
   zip : ZipArchive
   relationship_index : RelationshipIndex
@@ -2664,6 +2696,12 @@ fn BodyReader::read_paragraph_elements_with_prefix(
   element : ReaderNode,
   deleted_prefix : Array[ReaderNode],
 ) -> ReaderItem raise DocxError {
+  let previous_color = self.paragraph_color
+  let paragraph_style = element
+    .first_or_empty("w:pPr")
+    .first_or_empty("w:pStyle")
+    .attribute("w:val")
+  self.paragraph_color = self.colors.style_color("paragraph", paragraph_style)
   let properties = self.read_paragraph_properties(
     element.first_or_empty("w:pPr"),
   )
@@ -2683,7 +2721,7 @@ fn BodyReader::read_paragraph_elements_with_prefix(
   // The extras are structural: owned by this paragraph, erased as its
   // siblings. That split is the extras mechanism itself, and the erase
   // walker -- not any caller -- is what flattens it back.
-  New({
+  let result = New({
     source: element,
     local_effects: [],
     shape: ReaderParagraph(
@@ -2693,6 +2731,8 @@ fn BodyReader::read_paragraph_elements_with_prefix(
       properties~,
     ),
   })
+  self.paragraph_color = previous_color
+  result
 }
 
 ///|
@@ -3447,6 +3487,13 @@ fn BodyReader::read_run_properties(
     ),
     font: non_empty_attribute(element.first_or_empty("w:rFonts"), "w:ascii"),
     font_size: read_font_size(element.first_or_empty("w:sz").attribute("w:val")),
+    color: prefer_color(
+      self.colors.read_node_color(element.first_or_empty("w:color")),
+      prefer_color(
+        self.colors.style_color("character", style_id),
+        prefer_color(self.paragraph_color, self.colors.default_color),
+      ),
+    ),
     highlight: read_highlight(
       element.first_or_empty("w:highlight").attribute("w:val"),
     ),
