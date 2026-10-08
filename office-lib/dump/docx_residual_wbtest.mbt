@@ -796,3 +796,20 @@ test "blank image alt drops with disclosure" {
     residual.map(entry => entry.code).contains("docx.image_alt_dropped"),
   )
 }
+
+///|
+test "dump retains explicit highlight reset for batch replay" {
+  let residual : Array[DumpResidual] = []
+  let specs = wb_run_specs(
+    [@document.text("reset")],
+    @document.run_properties(highlight=Some("none")),
+    residual,
+  )
+  debug_inspect(
+    specs.map(spec => spec.stringify()),
+    content=(
+      #|["{\"text\":\"reset\",\"highlight\":\"none\"}"]
+    ),
+  )
+  debug_inspect(residual.length(), content="0")
+}

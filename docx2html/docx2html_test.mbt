@@ -1982,7 +1982,9 @@ test "document converter maps caps and highlight run properties" {
   let highlighted = run_text("Hello.", run_properties(highlight=Some("yellow")))
   inspect(
     @docx2html.convert_document_to_html(highlighted).value,
-    content="Hello.",
+    content=(
+      #|<span style="background-color: #FFFF00">Hello.</span>
+    ),
   )
   inspect(
     @docx2html.convert_document_to_html(highlighted, style_map=[

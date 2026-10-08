@@ -558,11 +558,6 @@ fn write_run(
     Some(highlight) => {
       // w:highlight/@w:val is the closed ST_HighlightColor enum; anything
       // else passes the structural belt but is schema-invalid.
-      if highlight == "none" {
-        raise Unsupported(
-          message="omit the highlight property instead of 'none' (the reader normalizes 'none' to absent, so it cannot round-trip)",
-        )
-      }
       if !is_highlight_color(highlight) {
         raise Unsupported(
           message="unsupported highlight color '\{highlight}' (ST_HighlightColor names like yellow, green, cyan)",

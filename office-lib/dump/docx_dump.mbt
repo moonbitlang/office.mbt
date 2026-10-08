@@ -52,6 +52,7 @@ fn docx_highlight_color(value : String) -> Bool {
   | "green"
   | "lightGray"
   | "magenta"
+  | "none"
   | "red"
   | "white"
   | "yellow")
@@ -470,7 +471,7 @@ fn docx_segment_spec(
     Some(highlight) =>
       if docx_highlight_color(highlight) {
         spec["highlight"] = Json::string(highlight)
-      } else if highlight != "none" {
+      } else {
         ctx.residual.push(
           docx_residual(
             "docx.highlight_dropped",

@@ -448,7 +448,7 @@ test "review round 3: number lexemes must be plain decimal integers" {
 }
 
 ///|
-test "review round 3: XML-unrepresentable characters and highlight 'none' are rejected" {
+test "review round 3: XML-unrepresentable characters are rejected" {
   // The text guard rejects a lone surrogate before the writer would abort
   // in UTF-8 encoding. It can only arrive through programmatic Json now:
   // MoonBit literals cannot spell one, and core rejects unpaired \uXXXX
@@ -491,13 +491,6 @@ test "review round 3: XML-unrepresentable characters and highlight 'none' are re
       #|{"schema": "docx.batch/1", "ops": [{"op": "paragraph", "params": {"runs": [{"link": {"href": "https://a.example/\uffff", "text": "x"}}]}}]}
     ),
     "ops[0].params.runs[0].link.href contains a character XML cannot represent",
-  )
-  // 'none' is normalized to absent by the reader, so it cannot round-trip.
-  expect_batch_error(
-    (
-      #|{"schema": "docx.batch/1", "ops": [{"op": "paragraph", "params": {"runs": [{"text": "a", "highlight": "none"}]}}]}
-    ),
-    "ops[0].params.runs[0].highlight: omit the key instead of 'none'",
   )
 }
 
@@ -1121,4 +1114,14 @@ test "L1: the docx.annotate/1 envelope parses strictly" {
     ),
     "the envelope's comment.paragraphs[0].runs[0]: notes cannot nest",
   )
+}
+
+///|
+test "explicit no highlight is accepted" {
+  let script = parse_str(
+    (
+      #|{"schema": "docx.batch/1", "ops": [{"op": "paragraph", "params": {"runs": [{"text": "a", "highlight": "none"}]}}]}
+    ),
+  )
+  debug_inspect(script.op_count(), content="1")
 }

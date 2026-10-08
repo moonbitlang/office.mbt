@@ -783,7 +783,7 @@ test "review round 2 (batch): writer fails closed on invalid run property values
 }
 
 ///|
-test "review round 3 (batch): XML-unrepresentable characters and highlight 'none' fail closed" {
+test "review round 3 (batch): XML-unrepresentable characters fail closed" {
   // A lone surrogate reaches the writer only through constructed input:
   // MoonBit literals cannot spell one, and core's surrogate-escape rejection
   // (moonbitlang/core@298b811f) closed the @json.parse route. Slicing an
@@ -810,19 +810,6 @@ test "review round 3 (batch): XML-unrepresentable characters and highlight 'none
       ]),
     ],
     "a hyperlink href contains a character XML cannot represent",
-  )
-  // The reader normalizes highlight 'none' to absent, so writing it would
-  // break write -> read symmetry.
-  expect_unsupported(
-    [
-      @docx2html.paragraph([
-        @docx2html.run(
-          [@docx2html.text("x")],
-          properties=@docx2html.run_properties(highlight=Some("none")),
-        ),
-      ]),
-    ],
-    "omit the highlight property instead of 'none'",
   )
 }
 

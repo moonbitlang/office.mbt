@@ -353,6 +353,7 @@ fn HeaderFooterCollector::read_part_story(
   let reader = BodyReader::{
     colors: self.parts.colors,
     paragraph_color: None,
+    paragraph_highlight: None,
     styles: self.parts.styles,
     zip: self.parts.zip,
     relationship_index: RelationshipIndex::build(part_relationships),

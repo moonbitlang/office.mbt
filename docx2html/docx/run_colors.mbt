@@ -1,10 +1,10 @@
 ///|
 priv struct RunColors {
   theme : Map[String, String]
-  styles : Map[String, (String?, String?)]
+  styles : Map[String, (String?, Map[String, String])]
   default_styles : Map[String, String]
-  resolved_styles : Map[String, String?]
-  default_color : String?
+  resolved_styles : Map[String, Map[String, String?]]
+  defaults : Map[String, String]
 }
 
 ///|
@@ -14,7 +14,7 @@ fn RunColors::empty() -> RunColors {
     styles: Map([]),
     default_styles: Map([]),
     resolved_styles: Map([]),
-    default_color: None,
+    defaults: Map([]),
   }
 }
 
@@ -144,12 +144,25 @@ fn RunColors::style_color(
   kind : String,
   id : String?,
 ) -> String? {
+  self.style_value(kind, id, "color")
+}
+
+///|
+// Resolve each property independently: an absent value continues through basedOn.
+fn RunColors::style_value(
+  self : RunColors,
+  kind : String,
+  id : String?,
+  property : String,
+) -> String? {
+  let cache = self.resolved_styles.get_or_default(property, Map([]))
+  self.resolved_styles[property] = cache
   let mut current = prefer_color(id, self.default_styles.get(kind))
   let seen : Map[String, Bool] = Map([])
   let mut result : String? = None
   while current is Some(id) {
     let key = style_lookup_key(kind, id)
-    if self.resolved_styles.get(key) is Some(cached) {
+    if cache.get(key) is Some(cached) {
       result = cached
       break
     }
@@ -158,9 +171,10 @@ fn RunColors::style_color(
     }
     seen[key] = true
     match self.styles.get(key) {
-      Some((parent, color)) => {
-        if color is Some(_) {
-          result = color
+      Some((parent, values)) => {
+        let value = values.get(property)
+        if value is Some(_) {
+          result = value
           break
         }
         current = parent
@@ -169,7 +183,7 @@ fn RunColors::style_color(
     }
   }
   for key, _ in seen {
-    self.resolved_styles[key] = result
+    cache[key] = result
   }
   result
 }
@@ -280,9 +294,7 @@ fn read_run_colors(
     if id != "" && !colors.styles.contains(key) {
       colors.styles[key] = (
         style.first_or_empty("w:basedOn").attributes.get("w:val"),
-        colors.read_color(
-          style.first_or_empty("w:rPr").first_or_empty("w:color"),
-        ),
+        colors.read_style_values(style.first_or_empty("w:rPr")),
       )
       if style.attributes.get("w:default") is Some("1" | "true" | "on") &&
         !colors.default_styles.contains(kind) {
@@ -292,12 +304,11 @@ fn read_run_colors(
   }
   {
     ..colors,
-    default_color: colors.read_color(
+    defaults: colors.read_style_values(
       root
       .first_or_empty("w:docDefaults")
       .first_or_empty("w:rPrDefault")
-      .first_or_empty("w:rPr")
-      .first_or_empty("w:color"),
+      .first_or_empty("w:rPr"),
     ),
   }
 }
@@ -308,4 +319,20 @@ fn prefer_color(first : String?, fallback : String?) -> String? {
     Some(_) => first
     None => fallback
   }
+}
+
+///|
+fn RunColors::read_style_values(
+  self : RunColors,
+  rpr : XmlElement,
+) -> Map[String, String] {
+  let values : Map[String, String] = Map([])
+  if self.read_color(rpr.first_or_empty("w:color")) is Some(color) {
+    values["color"] = color
+  }
+  if read_highlight(rpr.first_or_empty("w:highlight").attributes.get("w:val"))
+    is Some(highlight) {
+    values["highlight"] = highlight
+  }
+  values
 }

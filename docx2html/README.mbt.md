@@ -45,6 +45,19 @@ source document is allowed to read sibling files. Use `read_docx_with_messages`
 when you need the parsed document model together with DOCX reader diagnostics;
 `read_docx` is the document-only convenience wrapper.
 
+## Text highlights
+
+HTML conversion emits safe `background-color` spans for Word's 16 named
+highlight colors. Direct formatting overrides character styles, paragraph
+styles, and document defaults; `basedOn` chains are followed independently for
+each property. Explicit `none` cancels inherited highlighting and survives DOCX
+read/write. Missing highlights leave HTML unchanged; invalid values never enter
+CSS. Run/paragraph shading and conditional table styles are separate features.
+
+A matching custom `highlight` style mapping takes precedence over the default
+span. `none` does not match highlight mappings. The reader now retains
+`RunProperties.highlight = Some("none")` instead of collapsing it to `None`.
+
 ## Text colors
 
 HTML conversion preserves direct `w:color` values, document defaults, and
