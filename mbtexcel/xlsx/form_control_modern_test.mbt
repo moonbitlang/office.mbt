@@ -122,3 +122,27 @@ test "modern control references share collision-free VML IDs with retained notes
     content="true",
   )
 }
+
+///|
+test "form controls use the standard host-control VML shape definition" {
+  let wb = @xlsx.Workbook::new()
+  let sheet = wb.add_sheet("Widgets")
+  sheet.add_form_control(@xlsx.FormControl::new("A1", "Button", text="Run"))
+  let zip = @zip.read(@xlsx.write(wb))
+  let vml = @encoding/utf8.decode(
+    zip.get("xl/drawings/vmlDrawing1.vml").unwrap(),
+  )
+  // Excel for Mac must recognize the complete host-control definition.
+  // Otherwise saving converts it into a custom master without its path,
+  // and reopening renders the control as a curved arrow.
+  debug_inspect(
+    vml.contains(
+      "<v:shapetype id=\"_x0000_t201\" coordsize=\"21600,21600\" o:spt=\"201\" path=\"m,l,21600r21600,l21600,xe\">\n" +
+      "    <v:stroke joinstyle=\"miter\"/>\n" +
+      "    <v:path shadowok=\"f\" o:extrusionok=\"f\" strokeok=\"f\" fillok=\"f\" o:connecttype=\"rect\"/>\n" +
+      "    <o:lock v:ext=\"edit\" shapetype=\"t\"/>\n" +
+      "  </v:shapetype>",
+    ),
+    content="true",
+  )
+}

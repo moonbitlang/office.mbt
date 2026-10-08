@@ -393,10 +393,13 @@ fn write_form_controls_vml(
   sb.write_view("    <o:idmap v:ext=\"edit\" data=\"\{sheet_id}\"/>\n")
   sb.write_view("  </o:shapelayout>\n")
   sb.write_view(
-    "  <v:shapetype id=\"_x0000_t201\" coordsize=\"21600,21600\" o:spt=\"202\" path=\"m0,0l0,21600,21600,21600,21600,0xe\">\n",
+    "  <v:shapetype id=\"_x0000_t201\" coordsize=\"21600,21600\" o:spt=\"201\" path=\"m,l,21600r21600,l21600,xe\">\n",
   )
   sb.write_view("    <v:stroke joinstyle=\"miter\"/>\n")
-  sb.write_view("    <v:path o:connecttype=\"rect\"/>\n")
+  sb.write_view(
+    "    <v:path shadowok=\"f\" o:extrusionok=\"f\" strokeok=\"f\" fillok=\"f\" o:connecttype=\"rect\"/>\n",
+  )
+  sb.write_view("    <o:lock v:ext=\"edit\" shapetype=\"t\"/>\n")
   sb.write_view("  </v:shapetype>\n")
   for index, control in controls {
     let shape_id = shape_id_start + index
