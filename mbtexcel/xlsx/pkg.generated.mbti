@@ -1833,8 +1833,11 @@ pub fn Style::protection(Protection) -> Self
 pub fn Style::to_repr(Self) -> @debug.Repr
 pub fn Style::with_alignment(Self, Alignment) -> Self
 pub fn Style::with_border(Self, Array[Border]) -> Self
+pub fn Style::with_builtin_number_format(Self, Int) -> Self
 pub fn Style::with_fill(Self, Fill) -> Self
 pub fn Style::with_font(Self, Font) -> Self
+pub fn Style::with_number_format(Self, String) -> Self
+pub fn Style::with_protection(Self, Protection) -> Self
 
 pub struct Table {
   id : Int
