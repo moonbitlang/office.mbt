@@ -344,6 +344,35 @@ fn DocumentConverter::convert_run(
 ) -> Array[HtmlNode] {
   let mut nodes = self.convert_children(children)
   let paths : Array[Array[HtmlPathElement]] = []
+  match properties.color {
+    Some(color) => {
+      let css = if color == "auto" {
+        Some("initial")
+      } else if color.length() == 6 &&
+        color
+        .iter()
+        .all(c => {
+          (c >= '0' && c <= '9') ||
+          (c >= 'a' && c <= 'f') ||
+          (c >= 'A' && c <= 'F')
+        }) {
+        Some("#" + color.to_upper())
+      } else {
+        None
+      }
+      if css is Some(value) {
+        paths.push([
+          {
+            tag: "span",
+            attributes: { "style": "color: " + value },
+            fresh: false,
+            separator: None,
+          },
+        ])
+      }
+    }
+    None => ()
+  }
   match properties.highlight {
     Some(_) =>
       match

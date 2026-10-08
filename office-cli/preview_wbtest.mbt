@@ -165,7 +165,12 @@ async test "docx preview embeds bounded images and escapes hostile text" {
       @async.protect_from_cancel(() => @afs.rmdir(directory, recursive=true))
     }
     let bytes = @word.write_docx([
-      @word.paragraph([@word.run([@word.text("<script>alert(1)</script>")])]),
+      @word.paragraph([
+        @word.run(
+          [@word.text("<script>alert(1)</script>")],
+          properties=@word.run_properties(color=Some("C00000")),
+        ),
+      ]),
       @word.paragraph([
         @word.run([
           @word.image("image/png", preview_probe_png, alt_text=Some("dot")),
@@ -179,6 +184,12 @@ async test "docx preview embeds bounded images and escapes hostile text" {
     assert_true(html.contains("<title>" + path + "</title>"))
     assert_true(html.contains("data:image/png;base64,"))
     assert_true(html.contains("alt=\"dot\""))
+    debug_inspect(
+      html.contains(
+        "<span style=\"color: #C00000\">&lt;script&gt;alert(1)&lt;/script&gt;</span>",
+      ),
+      content="true",
+    )
     assert_false(html.contains("<script>"))
     assert_true(html.contains("&lt;script&gt;alert(1)&lt;/script&gt;"))
     assert_eq(stats.images_embedded, 1)

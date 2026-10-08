@@ -551,6 +551,11 @@ covers changes that have landed on `main` but are not yet published.
 
 ### moonbitlang/docx2html [Unreleased]
 
+- Preserve run text colors in HTML conversion and DOCX writing, including
+  document defaults, paragraph/character style inheritance, and theme colors
+  with tint/shade. Add `RunProperties.color` and the optional `color` argument
+  to `run_properties`; literal run-property records must supply the new field.
+
 - Depend on `ooxml/uri` for OPC part names and relationship URI rules.
   Existing `docx2html/opc` functions and registry types remain available through
   re-exports; DOCX-specific validation and resource budgets remain in DOCX.

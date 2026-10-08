@@ -351,6 +351,8 @@ fn HeaderFooterCollector::read_part_story(
     xml_budget?=self.parts.xml_budget,
   )
   let reader = BodyReader::{
+    colors: self.parts.colors,
+    paragraph_color: None,
     styles: self.parts.styles,
     zip: self.parts.zip,
     relationship_index: RelationshipIndex::build(part_relationships),

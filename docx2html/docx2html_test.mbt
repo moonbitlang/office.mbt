@@ -1740,6 +1740,7 @@ test "style map style-name matchers are case-insensitive" {
     vertical_alignment: Baseline,
     font: None,
     font_size: None,
+    color: None,
     highlight: None,
   }
   let table_properties = @docx2html.TableProperties::{
@@ -1800,6 +1801,7 @@ test "document converter warns for unrecognised styles" {
     vertical_alignment: Baseline,
     font: None,
     font_size: None,
+    color: None,
     highlight: None,
   }
   debug_inspect(
@@ -1866,6 +1868,7 @@ test "document converter wraps inline run properties" {
     vertical_alignment: Baseline,
     font: None,
     font_size: None,
+    color: None,
     highlight: None,
   }
   let doc = @docx2html.document([

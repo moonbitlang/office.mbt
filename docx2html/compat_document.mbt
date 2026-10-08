@@ -92,6 +92,7 @@ pub fn run_properties(
   font? : String? = None,
   font_size? : Int? = None,
   highlight? : String? = None,
+  color? : String? = None,
 ) -> RunProperties {
   @document.run_properties(
     style_id~,
@@ -106,6 +107,7 @@ pub fn run_properties(
     font~,
     font_size~,
     highlight~,
+    color~,
   )
 }
 
