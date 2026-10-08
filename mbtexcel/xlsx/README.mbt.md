@@ -784,3 +784,32 @@ test "document properties" {
 | **Features** | `add_chart`, `add_table`, `add_data_validation`, `add_comment`, `add_hyperlink`, `add_image` |
 | **Layout** | `set_page_margins`, `set_page_layout`, `set_header_footer`, `set_panes` |
 | **Navigation** | `max_row`, `max_col`, `rows`, `cols`, `cells` |
+
+### Multi-value AutoFilters
+
+`set_auto_filter` accepts any number of equality comparisons joined by `or`
+(or `||`), for example `x == EMEA or x == APAC or x == AMER`. Other comparisons,
+including wildcard expressions, remain limited to one or two custom conditions.
+Only `and`/`&&` and `or`/`||` are accepted as conjunctions.
+
+Use `set_auto_filter_values` when values already exist as data, without quoting
+or expression parsing:
+
+```mbt check
+///|
+test "literal multi-value auto filter" {
+  let wb = @xlsx.Workbook::new()
+  ignore(wb.add_sheet("Regions"))
+  wb.set_auto_filter_values("Regions", "B1:D50", [
+    { column: "B", values: ["EMEA", "APAC", "North America", "or"], },
+  ])
+}
+```
+
+The worksheet method takes the same range and options without the sheet name.
+Both methods replace the entire filter. Column names are absolute worksheet
+columns, must lie inside the range, and repeated columns use the last option.
+Value lists must be nonempty and are copied; an empty options array sets only
+filter arrows. Literal values retain spaces, quotes, `*`, `?`, and `blanks`
+without interpreting them as expression syntax or special filter keywords.
+These methods store filter criteria; they do not automatically hide rows.

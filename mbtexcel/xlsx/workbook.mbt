@@ -2895,6 +2895,24 @@ pub fn Workbook::set_auto_filter(
 }
 
 ///|
+/// Replaces the sheet filter with literal checkbox lists and updates its filter
+/// database name. See `Worksheet::set_auto_filter_values` for list semantics.
+pub fn Workbook::set_auto_filter_values(
+  self : Workbook,
+  sheet_name : StringView,
+  range_ref : String,
+  options : ArrayView[AutoFilterValuesOption],
+) -> Unit raise XlsxError {
+  let sheet = self.require_sheet(sheet_name)
+  sheet.set_auto_filter_values(range_ref, options)
+  let abs_range = auto_filter_abs_range_ref(range_ref)
+  let refers_to = "'\{escape_sheet_name(sheet_name)}'!\{abs_range}"
+  upsert_defined_name_for_scope(
+    self, "_xlnm._FilterDatabase", sheet_name, refers_to,
+  )
+}
+
+///|
 pub fn Workbook::clear_auto_filter(
   self : Workbook,
   sheet_name : StringView,
