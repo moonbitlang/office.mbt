@@ -334,5 +334,11 @@ fn RunColors::read_style_values(
     is Some(highlight) {
     values["highlight"] = highlight
   }
+  for property in ["sz", "szCs"] {
+    let raw = rpr.first_or_empty("w:" + property).attributes.get("w:val")
+    if read_font_size(raw) is Some(_) && raw is Some(value) {
+      values[property] = value
+    }
+  }
   values
 }

@@ -902,6 +902,8 @@ fn DocumentParts::story_body_reader(self : DocumentParts) -> BodyReader {
     colors: self.colors,
     paragraph_color: None,
     paragraph_highlight: None,
+    paragraph_font_size: None,
+    paragraph_font_size_cs: None,
     styles: self.styles,
     zip: self.zip,
     relationship_index: self.relationship_index,
@@ -1987,6 +1989,8 @@ fn read_note_part_at_path(
     colors,
     paragraph_color: None,
     paragraph_highlight: None,
+    paragraph_font_size: None,
+    paragraph_font_size_cs: None,
     styles,
     zip,
     relationship_index: RelationshipIndex::build(part_relationships),
@@ -2096,6 +2100,8 @@ fn read_comments_for_document(
     colors,
     paragraph_color: None,
     paragraph_highlight: None,
+    paragraph_font_size: None,
+    paragraph_font_size_cs: None,
     styles,
     zip,
     relationship_index: RelationshipIndex::build(part_relationships),
@@ -2262,6 +2268,8 @@ fn read_document_xml_with_messages(
     colors,
     paragraph_color: None,
     paragraph_highlight: None,
+    paragraph_font_size: None,
+    paragraph_font_size_cs: None,
     styles,
     zip,
     relationship_index,
@@ -2290,6 +2298,8 @@ priv struct BodyReader {
   colors : RunColors
   mut paragraph_color : String?
   mut paragraph_highlight : String?
+  mut paragraph_font_size : String?
+  mut paragraph_font_size_cs : String?
   styles : StableStringMap[StyleInfo]
   zip : ZipArchive
   relationship_index : RelationshipIndex
@@ -2703,6 +2713,8 @@ fn BodyReader::read_paragraph_elements_with_prefix(
 ) -> ReaderItem raise DocxError {
   let previous_color = self.paragraph_color
   let previous_highlight = self.paragraph_highlight
+  let previous_font_size = self.paragraph_font_size
+  let previous_font_size_cs = self.paragraph_font_size_cs
   let paragraph_style = element
     .first_or_empty("w:pPr")
     .first_or_empty("w:pStyle")
@@ -2710,6 +2722,12 @@ fn BodyReader::read_paragraph_elements_with_prefix(
   self.paragraph_color = self.colors.style_color("paragraph", paragraph_style)
   self.paragraph_highlight = self.colors.style_value(
     "paragraph", paragraph_style, "highlight",
+  )
+  self.paragraph_font_size = self.colors.style_value(
+    "paragraph", paragraph_style, "sz",
+  )
+  self.paragraph_font_size_cs = self.colors.style_value(
+    "paragraph", paragraph_style, "szCs",
   )
   let properties = self.read_paragraph_properties(
     element.first_or_empty("w:pPr"),
@@ -2742,6 +2760,8 @@ fn BodyReader::read_paragraph_elements_with_prefix(
   })
   self.paragraph_color = previous_color
   self.paragraph_highlight = previous_highlight
+  self.paragraph_font_size = previous_font_size
+  self.paragraph_font_size_cs = previous_font_size_cs
   result
 }
 
@@ -3496,7 +3516,18 @@ fn BodyReader::read_run_properties(
       element.first_or_empty("w:vertAlign").attribute("w:val"),
     ),
     font: non_empty_attribute(element.first_or_empty("w:rFonts"), "w:ascii"),
-    font_size: read_font_size(element.first_or_empty("w:sz").attribute("w:val")),
+    font_size: self.read_effective_font_size(
+      element,
+      style_id,
+      "sz",
+      self.paragraph_font_size,
+    ),
+    font_size_cs: self.read_effective_font_size(
+      element,
+      style_id,
+      "szCs",
+      self.paragraph_font_size_cs,
+    ),
     color: prefer_color(
       self.colors.read_node_color(element.first_or_empty("w:color")),
       prefer_color(
@@ -3595,14 +3626,19 @@ fn read_vertical_alignment(value : String?) -> VerticalAlignment {
 }
 
 ///|
-fn read_font_size(value : String?) -> Int? {
+fn read_font_size(value : String?) -> Double? {
   match value {
     Some(text) =>
       if is_ascii_decimal_string(text) {
         try @string.parse_int(text) catch {
           _ => None
         } noraise {
-          value => Some(value / 2)
+          value =>
+            if value >= 1 && value <= 3276 {
+              Some(value.to_double() / 2.0)
+            } else {
+              None
+            }
         }
       } else {
         None
@@ -4450,4 +4486,23 @@ fn BodyReader::calculate_typed_table_row_spans(
     )
   }
   rows
+}
+
+///|
+fn BodyReader::read_effective_font_size(
+  self : BodyReader,
+  element : ReaderNode,
+  style_id : String?,
+  property : String,
+  paragraph : String?,
+) -> Double? {
+  first_some(
+    read_font_size(element.first_or_empty("w:" + property).attribute("w:val")),
+    read_font_size(
+      first_some(
+        self.colors.style_value("character", style_id, property),
+        first_some(paragraph, self.colors.defaults.get(property)),
+      ),
+    ),
+  )
 }

@@ -344,6 +344,19 @@ fn DocumentConverter::convert_run(
 ) -> Array[HtmlNode] {
   let mut nodes = self.convert_children(children)
   let paths : Array[Array[HtmlPathElement]] = []
+  if properties.font_size is Some(points) &&
+    points >= 0.5 &&
+    points <= 1638.0 &&
+    points * 2.0 == (points * 2.0).to_int().to_double() {
+    paths.push([
+      {
+        tag: "span",
+        attributes: { "style": "font-size: " + points.to_string() + "pt" },
+        fresh: false,
+        separator: None,
+      },
+    ])
+  }
   match properties.color {
     Some(color) => {
       let css = if color == "auto" {

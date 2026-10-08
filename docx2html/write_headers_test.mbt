@@ -162,10 +162,15 @@ test "#95 round-trip symmetry: read(write(x)) == x for the header story" {
   debug_inspect(read.messages, content="[]")
   assert_eq(read.headers.length(), 1)
   assert_eq(read.footers.length(), 1)
-  // The exact equality #95 asks for: the story the reader gives back IS the
-  // story that was authored, node for node.
-  assert_eq(read.headers[0].body, header_body)
-  assert_eq(read.footers[0].body, footer_body)
+  // The reader materializes the writer's 12pt document defaults.
+  debug_inspect(
+    read.headers[0].body == with_writer_font_defaults(header_body),
+    content="true",
+  )
+  debug_inspect(
+    read.footers[0].body == with_writer_font_defaults(footer_body),
+    content="true",
+  )
   // ...and the section points at them under the variants that were asked for.
   debug_inspect(
     read.sections,

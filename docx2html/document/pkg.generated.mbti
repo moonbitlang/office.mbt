@@ -51,7 +51,7 @@ pub fn paragraph_properties(style_id? : String?, style_name? : String?, numberin
 
 pub fn run(Array[DocumentElement], properties? : RunProperties) -> DocumentElement
 
-pub fn run_properties(style_id? : String?, style_name? : String?, is_bold? : Bool, is_underline? : Bool, is_italic? : Bool, is_strikethrough? : Bool, is_all_caps? : Bool, is_small_caps? : Bool, vertical_alignment? : VerticalAlignment, font? : String?, font_size? : Int?, highlight? : String?, color? : String?) -> RunProperties
+pub fn run_properties(style_id? : String?, style_name? : String?, is_bold? : Bool, is_underline? : Bool, is_italic? : Bool, is_strikethrough? : Bool, is_all_caps? : Bool, is_small_caps? : Bool, vertical_alignment? : VerticalAlignment, font? : String?, font_size? : Double?, font_size_cs? : Double?, highlight? : String?, color? : String?) -> RunProperties
 
 pub fn tab() -> DocumentElement
 
@@ -222,7 +222,8 @@ pub(all) struct RunProperties {
   is_small_caps : Bool
   vertical_alignment : VerticalAlignment
   font : String?
-  font_size : Int?
+  font_size : Double?
+  font_size_cs : Double?
   highlight : String?
   color : String?
 } derive(Eq, @debug.Debug)

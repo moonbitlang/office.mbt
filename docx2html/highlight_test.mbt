@@ -105,7 +105,8 @@ test "explicit no highlight round trips" {
   ]
   let bytes = @docx2html.write_docx(body)
   debug_inspect(
-    @docx2html.read_docx(bytes) == @docx2html.document(body),
+    @docx2html.read_docx(bytes) ==
+    @docx2html.document(with_writer_font_defaults(body)),
     content=(
       #|true
     ),
@@ -113,7 +114,7 @@ test "explicit no highlight round trips" {
   debug_inspect(
     @docx2html.convert_to_html(bytes).value,
     content=(
-      #|"<p>reset</p>"
+      #|"<p><span style=\"font-size: 12pt\">reset</span></p>"
     ),
   )
 }

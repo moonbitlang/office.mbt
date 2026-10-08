@@ -354,6 +354,8 @@ fn HeaderFooterCollector::read_part_story(
     colors: self.parts.colors,
     paragraph_color: None,
     paragraph_highlight: None,
+    paragraph_font_size: None,
+    paragraph_font_size_cs: None,
     styles: self.parts.styles,
     zip: self.parts.zip,
     relationship_index: RelationshipIndex::build(part_relationships),

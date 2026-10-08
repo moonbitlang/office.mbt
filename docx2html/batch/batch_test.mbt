@@ -156,13 +156,13 @@ test "review round 2: numbers must be exact in-range integers" {
     (
       #|{"schema": "docx.batch/1", "ops": [{"op": "paragraph", "params": {"runs": [{"text": "a", "size": 0}]}}]}
     ),
-    "ops[0].params.runs[0].size must be between 1 and 1638",
+    "ops[0].params.runs[0].size must be a half-point increment in 0.5..1638",
   )
   expect_batch_error(
     (
       #|{"schema": "docx.batch/1", "ops": [{"op": "paragraph", "params": {"runs": [{"text": "a", "size": 1639}]}}]}
     ),
-    "ops[0].params.runs[0].size must be between 1 and 1638",
+    "ops[0].params.runs[0].size must be a half-point increment in 0.5..1638",
   )
   expect_batch_error(
     (
@@ -424,7 +424,7 @@ test "review round 3: number lexemes must be plain decimal integers" {
     (
       #|{"schema": "docx.batch/1", "ops": [{"op": "paragraph", "params": {"runs": [{"text": "a", "size": 0.999999999999999999999999}]}}]}
     ),
-    "ops[0].params.runs[0].size must be a plain decimal integer",
+    "ops[0].params.runs[0].size must be a decimal half-point increment",
   )
   expect_script_text_error(
     (

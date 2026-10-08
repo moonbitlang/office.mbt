@@ -22,7 +22,7 @@ test "input contract inventory is stable, ordered, and versioned" {
   debug_inspect(
     fields.get("fingerprint"),
     content=(
-      #|Some(String("sha256:c9e7474e1d70adf780fb71e5bb0054502018aa17a7abf522f9f5352e3626de6c"))
+      #|Some(String("sha256:d10d403ff88fa1c4488fd2a51608272c086c87a711c2423e1420636b2bd0124e"))
     ),
   )
   guard fields.get("contracts") is Some(Array(records)) else {

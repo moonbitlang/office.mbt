@@ -1740,6 +1740,7 @@ test "style map style-name matchers are case-insensitive" {
     vertical_alignment: Baseline,
     font: None,
     font_size: None,
+    font_size_cs: None,
     color: None,
     highlight: None,
   }
@@ -1801,6 +1802,7 @@ test "document converter warns for unrecognised styles" {
     vertical_alignment: Baseline,
     font: None,
     font_size: None,
+    font_size_cs: None,
     color: None,
     highlight: None,
   }
@@ -1868,6 +1870,7 @@ test "document converter wraps inline run properties" {
     vertical_alignment: Baseline,
     font: None,
     font_size: None,
+    font_size_cs: None,
     color: None,
     highlight: None,
   }

@@ -54,7 +54,7 @@ test "written documents are structurally valid and round-trip semantically" {
       style_name=Some("heading 1"),
     ),
   )
-  assert_eq(children, expected)
+  debug_inspect(children == with_writer_font_defaults(expected), content="true")
   // The written heading is recognized by this repo's own heading detection
   // (style id + emitted styles part with the Mammoth-convention name).
   let payload = @inspect.outline(result.document, file="w.docx")
@@ -77,7 +77,7 @@ test "the written document converts to the expected HTML" {
   inspect(
     @docx2html.convert_to_html(bytes).value,
     content=(
-      #|<h1>Quarterly Report</h1><p><strong>Bold lead. </strong><em>Italic tail with size.</em></p><p>tab:	 spaced <br />after break</p>
+      #|<h1><span style="font-size: 12pt">Quarterly Report</span></h1><p><strong><span style="font-size: 12pt">Bold lead. </span></strong><em><span style="font-size: 14pt">Italic tail with size.</span></em></p><p><span style="font-size: 12pt">tab:	 spaced <br />after break</span></p>
     ),
   )
 }
@@ -244,7 +244,7 @@ test "all-flags formatting round-trips exactly" {
   guard result.document is Document(children~, ..) else {
     fail("expected Document")
   }
-  assert_eq(children, body)
+  debug_inspect(children == with_writer_font_defaults(body), content="true")
 }
 
 ///|
@@ -293,7 +293,7 @@ test "tables round-trip: header rows, column spans, and row spans" {
   guard result.document is Document(children~, ..) else {
     fail("expected Document")
   }
-  assert_eq(children, body)
+  debug_inspect(children == with_writer_font_defaults(body), content="true")
 }
 
 ///|
@@ -469,14 +469,14 @@ test "lists round-trip: ordered and unordered at several levels" {
   guard result.document is Document(children~, ..) else {
     fail("expected Document")
   }
-  assert_eq(children, body)
+  debug_inspect(children == with_writer_font_defaults(body), content="true")
   // The converter renders the shallow levels as real lists; its deep-level
   // fallback to a plain paragraph for level 9 is pre-existing Mammoth
   // parity, pinned here as documentation.
   inspect(
     @docx2html.convert_to_html(bytes).value,
     content=(
-      #|<ol><li>first<ul><li>nested bullet</li></ul></li></ol><p>deep ordered</p><p>plain after</p>
+      #|<ol><li><span style="font-size: 12pt">first</span><ul><li><span style="font-size: 12pt">nested bullet</span></li></ul></li></ol><p><span style="font-size: 12pt">deep ordered</span></p><p><span style="font-size: 12pt">plain after</span></p>
     ),
   )
 }
@@ -532,12 +532,12 @@ test "hyperlinks and images round-trip" {
   guard result.document is Document(children~, ..) else {
     fail("expected Document")
   }
-  assert_eq(children, body)
+  debug_inspect(children == with_writer_font_defaults(body), content="true")
   // The converter emits a data-URI img and a real link.
   inspect(
     @docx2html.convert_to_html(bytes).value,
     content=(
-      #|<p><a href="https://example.com/page">visit</a><a href="#section2" target="_blank">jump</a></p><p><img alt="dot grid" src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAoAAAAKCAIAAAACUFjqAAAAAXNSR0IArs4c6QAAAAlwSFlzAAAOvgAADr4B6kKxwAAAABNJREFUKFNj/M+ADzDhlWUYqdIAQSwBE8U+X40AAAAASUVORK5CYII=" /></p>
+      #|<p><a href="https://example.com/page"><span style="font-size: 12pt">visit</span></a><a href="#section2" target="_blank"><span style="font-size: 12pt">jump</span></a></p><p><span style="font-size: 12pt"><img alt="dot grid" src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAoAAAAKCAIAAAACUFjqAAAAAXNSR0IArs4c6QAAAAlwSFlzAAAOvgAADr4B6kKxwAAAABNJREFUKFNj/M+ADzDhlWUYqdIAQSwBE8U+X40AAAAASUVORK5CYII=" /></span></p>
     ),
   )
 }
@@ -662,7 +662,7 @@ test "multiple images and images inside hyperlinks and cells round-trip" {
   guard result.document is Document(children~, ..) else {
     fail("expected Document")
   }
-  assert_eq(children, body)
+  debug_inspect(children == with_writer_font_defaults(body), content="true")
   // Three distinct media parts were emitted.
   let archive = @mbtzip.read(bytes)
   let mut media_count = 0
@@ -737,7 +737,7 @@ test "review round 2 (batch): writer fails closed on invalid run property values
         ),
       ]),
     ],
-    "font size 0pt is outside the supported range",
+    "font size 0pt must be a half-point increment",
   )
   expect_unsupported(
     [
@@ -748,7 +748,7 @@ test "review round 2 (batch): writer fails closed on invalid run property values
         ),
       ]),
     ],
-    "font size 1639pt is outside the supported range",
+    "font size 1639pt must be a half-point increment",
   )
   // C0 controls (other than tab) are XML-1.0-illegal in text and the
   // escaper would pass them through.

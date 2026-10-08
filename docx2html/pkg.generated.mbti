@@ -136,7 +136,7 @@ pub fn read_xml_string(String, namespace_map? : Map[String, String]) -> @xml.Xml
 
 pub fn run(Array[@document.DocumentElement], properties? : @document.RunProperties) -> @document.DocumentElement
 
-pub fn run_properties(style_id? : String?, style_name? : String?, is_bold? : Bool, is_underline? : Bool, is_italic? : Bool, is_strikethrough? : Bool, is_all_caps? : Bool, is_small_caps? : Bool, vertical_alignment? : @document.VerticalAlignment, font? : String?, font_size? : Int?, highlight? : String?, color? : String?) -> @document.RunProperties
+pub fn run_properties(style_id? : String?, style_name? : String?, is_bold? : Bool, is_underline? : Bool, is_italic? : Bool, is_strikethrough? : Bool, is_all_caps? : Bool, is_small_caps? : Bool, vertical_alignment? : @document.VerticalAlignment, font? : String?, font_size? : Double?, font_size_cs? : Double?, highlight? : String?, color? : String?) -> @document.RunProperties
 
 pub fn simplify_html(Array[@html.HtmlNode]) -> Array[@html.HtmlNode]
 

@@ -186,7 +186,7 @@ async test "docx preview embeds bounded images and escapes hostile text" {
     assert_true(html.contains("alt=\"dot\""))
     debug_inspect(
       html.contains(
-        "<span style=\"color: #C00000\">&lt;script&gt;alert(1)&lt;/script&gt;</span>",
+        "<span style=\"color: #C00000\"><span style=\"font-size: 12pt\">&lt;script&gt;alert(1)&lt;/script&gt;</span></span>",
       ),
       content="true",
     )

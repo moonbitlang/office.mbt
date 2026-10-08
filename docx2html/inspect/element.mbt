@@ -103,7 +103,11 @@ fn element_attributes(
       }
       set_optional(out, "font", properties.font)
       match properties.font_size {
-        Some(size) => out["font_size"] = count_json(size)
+        Some(size) => out["font_size"] = Json::number(size)
+        None => ()
+      }
+      match properties.font_size_cs {
+        Some(size) => out["font_size_cs"] = Json::number(size)
         None => ()
       }
       set_optional(out, "highlight", properties.highlight)

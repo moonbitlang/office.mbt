@@ -107,6 +107,7 @@ test "element payload for a styled paragraph and its run" {
       "bold": true,
       "font": "Arial",
       "font_size": 32,
+      "font_size_cs": 32,
       "children": [],
     },
   )

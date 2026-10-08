@@ -1108,7 +1108,7 @@ fn parse_inline(
     spec,
     [
       "text", "bold", "italic", "underline", "strike", "all_caps", "small_caps",
-      "vertical", "font", "size", "highlight",
+      "vertical", "font", "size", "size_cs", "highlight",
     ],
     at,
   )
@@ -1125,12 +1125,11 @@ fn parse_inline(
       )
     None => Baseline
   }
-  let size = if spec.get("size") is Some(_) {
-    Some(
-      int_value(spec, "size", at, min=1, max=MAX_FONT_SIZE_POINTS, default=0),
-    )
-  } else {
-    None
+  let size = font_size_value(spec, "size", at)
+  let size_cs = match spec.get("size_cs") {
+    Some(Null) => None
+    None => size
+    _ => font_size_value(spec, "size_cs", at)
   }
   let highlight = match optional_string(spec, "highlight", at) {
     Some(highlight) => {
@@ -1154,6 +1153,7 @@ fn parse_inline(
       vertical_alignment=vertical,
       font=checked_attribute(optional_string(spec, "font", at), at + ".font"),
       font_size=size,
+      font_size_cs=size_cs,
       highlight~,
     ),
     text,
@@ -1568,10 +1568,10 @@ fn lex_json_string(
 ///   `@json.parse` is last-wins per ECMA-404, which would let
 ///   `{"op": "table", "op": "paragraph"}` silently drop half an op. Keys
 ///   compare DECODED, so `"op"` duplicates `"op"`.
-/// - **Numbers must be plain decimal integers.** Every numeric field in
-///   docx.batch/1 is an integer, and a `Json` Double cannot distinguish
-///   `1` from `0.999999999999999999999999` — fractions and exponents are
-///   rejected at the lexeme, before precision is lost.
+/// - **Numbers are checked before rounding.** Sizes accept decimal half-point
+///   increments; other numeric fields require plain decimal integers. Exponents
+///   are rejected. A `Json` Double cannot distinguish `1` from
+///   `0.999999999999999999999999`, so validate the original lexeme first.
 ///
 /// Structure is tracked per `{`/`[` frame; malformed JSON is left for
 /// `@json.parse` to diagnose.
@@ -1675,9 +1675,18 @@ pub fn check_script_text(text : String) -> Unit raise BatchError {
             Some(frame) if frame.is_object => Some(frame.pending_key)
             _ => None
           }
-          raise BatchError(
-            "\{render_scan_path(frames, leaf)} must be a plain decimal integer — docx batch scripts have no fractional fields (got '\{lexeme_builder.to_string()}')",
-          )
+          let lexeme = lexeme_builder.to_string()
+          if leaf is Some("size" | "size_cs") {
+            if !is_half_point_lexeme(lexeme) {
+              raise BatchError(
+                "\{render_scan_path(frames, leaf)} must be a decimal half-point increment (got '\{lexeme}')",
+              )
+            }
+          } else {
+            raise BatchError(
+              "\{render_scan_path(frames, leaf)} must be a plain decimal integer (got '\{lexeme}')",
+            )
+          }
         }
         index = cursor
       }
@@ -2142,4 +2151,49 @@ pub fn parse_annotate(json : Json) -> AnnotateEnvelope raise BatchError {
     )
   }
   { author, initials, date, body, }
+}
+
+///|
+fn font_size_value(
+  spec : Map[String, Json],
+  key : String,
+  at : String,
+) -> Double? raise BatchError {
+  match spec.get(key) {
+    None => None
+    Some(Number(value, ..)) => {
+      if !(value >= 0.5 && value <= MAX_FONT_SIZE_POINTS.to_double()) ||
+        value * 2.0 != (value * 2.0).to_int().to_double() {
+        raise BatchError(
+          "\{at}.\{key} must be a half-point increment in 0.5..\{MAX_FONT_SIZE_POINTS}",
+        )
+      }
+      Some(value)
+    }
+    Some(_) => raise BatchError("\{at}.\{key} must be a number")
+  }
+}
+
+///|
+fn is_half_point_lexeme(value : String) -> Bool {
+  let mut decimal = false
+  let mut first_fraction = false
+  for c in value {
+    if c == '.' && !decimal {
+      decimal = true
+      first_fraction = true
+    } else if decimal {
+      if first_fraction {
+        if c != '0' && c != '5' {
+          return false
+        }
+        first_fraction = false
+      } else if c != '0' {
+        return false
+      }
+    } else if c < '0' || c > '9' {
+      return false
+    }
+  }
+  decimal && !first_fraction
 }

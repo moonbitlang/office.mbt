@@ -819,7 +819,11 @@ fn element_properties_json(element : @document.DocumentElement) -> Json {
       fields["vertical_alignment"] = Json::string(vertical)
       set_optional_json(fields, "font", properties.font)
       match properties.font_size {
-        Some(size) => fields["font_size"] = Json::number(size.to_double())
+        Some(size) => fields["font_size"] = Json::number(size)
+        None => ()
+      }
+      match properties.font_size_cs {
+        Some(size) => fields["font_size_cs"] = Json::number(size)
         None => ()
       }
       set_optional_json(fields, "highlight", properties.highlight)

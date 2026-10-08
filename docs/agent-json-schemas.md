@@ -1105,8 +1105,8 @@ only when true; `null` is never emitted):
   `style_id`, `style_name`, `numbering` (`{ordered, level}`), `alignment`
 - `r`: `text`, `style_id`, `style_name`, `bold`, `italic`, `underline`,
   `strikethrough`, `all_caps`, `small_caps`, `vertical_alignment`
-  (`superscript`/`subscript`), `font`, `font_size` (**points** — the reader
-  halves OOXML's `w:sz` half-points, truncating odd values), `highlight`
+  (`superscript`/`subscript`), `font`, `font_size` and `font_size_cs` (**points**, preserving half-points from
+  `w:sz` and `w:szCs` independently), `highlight`
 - `tbl`: `style_id`, `style_name`
 - `tr`: `header` (true for header rows)
 - `tc`: `col_span`, `row_span` (present only when ≠ 1)
@@ -1162,9 +1162,9 @@ unknown keys are unaffected):
 The consumed (input) schema: **strict** validation — an unknown schema, op,
 key, or enum value, a duplicate key within one object, or a wrong value
 type fails naming the 0-based op index and the offending key; nothing is
-repaired. Numbers must be plain decimal integers — no fraction or
-exponent (`2.9` and `1e2` are errors, never coerced; every numeric field
-in this schema is an integer). Strings destined for the document reject
+repaired. Sizes (`size`, `size_cs`) accept decimal half-point increments;
+other numbers must be plain decimal integers. Exponents are rejected, and
+invalid fractions are rejected before floating-point rounding. Strings destined for the document reject
 characters XML cannot carry: C0 controls (text additionally rejects raw
 `\n`/`\r` — paragraphs are the line-break unit), unpaired surrogates,
 and U+FFFE/U+FFFF. **Fresh-document-only**: the output path must not exist
@@ -1203,7 +1203,9 @@ capped at 10,000 ops; an empty `ops` array yields a blank document.
   them.
 - run spec: `text` plus `bold/italic/underline/strike/all_caps/small_caps`
   (booleans), `vertical` (`superscript`/`subscript`), `font` (non-empty),
-  `size` (points, 1–1638 — Word's cap), `highlight` (an ST_HighlightColor
+  `size` and `size_cs` (points, 0.5–1638 in half-point increments;
+  omitted `size_cs` defaults to `size` for authored runs;
+  explicit `size_cs: null` preserves absence), `highlight` (an ST_HighlightColor
   name: `yellow`, `green`, `cyan`, `magenta`, `blue`, `red`, `darkBlue`,
   `darkCyan`, `darkGreen`, `darkMagenta`, `darkRed`, `darkYellow`,
   `darkGray`, `lightGray`, `black`, `white`, `none`; omit the key for no
@@ -1229,7 +1231,7 @@ capped at 10,000 ops; an empty `ops` array yields a blank document.
 ## `docx.batch/2` — authoring with comments, stories, and fields (`docx batch <output> <script.json>`)
 
 `docx.batch/2` WIDENS `/1`: every `/1` script parses unchanged under
-either declaration, and everything above (strict validation, integer
+either declaration, and everything above (strict validation, numeric
 lexemes, character rules, fresh-document-only, atomicity, the op cap)
 applies verbatim. The additions are the `comment`, `header`, and
 `footer` ops and the `{"field": ...}` run — declaring `/2` is required

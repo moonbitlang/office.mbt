@@ -90,7 +90,8 @@ pub fn run_properties(
   is_small_caps? : Bool = false,
   vertical_alignment? : VerticalAlignment = Baseline,
   font? : String? = None,
-  font_size? : Int? = None,
+  font_size? : Double? = None,
+  font_size_cs? : Double? = font_size,
   highlight? : String? = None,
   color? : String? = None,
 ) -> RunProperties {
@@ -106,6 +107,7 @@ pub fn run_properties(
     vertical_alignment~,
     font~,
     font_size~,
+    font_size_cs~,
     highlight~,
     color~,
   )

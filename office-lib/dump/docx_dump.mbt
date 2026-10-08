@@ -446,24 +446,33 @@ fn docx_segment_spec(
       }
     None => ()
   }
-  match properties.font_size {
-    // the parser's ST_HpsMeasure window; a 0.5pt run reads back as 0 and
-    // an oversized one past 1638, either of which the parser rejects —
-    // keep the run, disclose the size
-    Some(size) =>
-      if size >= 1 && size <= 1638 {
-        spec["size"] = Json::number(size.to_double())
+  for
+    (key, value) in [
+      ("size", properties.font_size),
+      ("size_cs", properties.font_size_cs),
+    ] {
+    if value is Some(size) {
+      if size >= 0.5 &&
+        size <= 1638.0 &&
+        size * 2.0 == (size * 2.0).to_int().to_double() {
+        spec[key] = Json::number(size)
       } else {
         ctx.residual.push(
           docx_residual(
             "docx.font_size_dropped",
             "block",
             docx_location(block),
-            "font size \{size}pt is outside the writable range 1..1638",
+            "font size \{size}pt must be a half-point increment in 0.5..1638",
           ),
         )
       }
-    None => ()
+    }
+  }
+  if properties.font_size is Some(_) &&
+    properties.font_size_cs is None &&
+    spec.contains("size") {
+    // Omission in authored batch input mirrors size; null preserves absence.
+    spec["size_cs"] = Json::null()
   }
   match properties.highlight {
     // the writer takes the closed ST_HighlightColor list; the reader

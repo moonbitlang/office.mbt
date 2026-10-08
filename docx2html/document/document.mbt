@@ -113,7 +113,9 @@ pub(all) struct RunProperties {
   is_small_caps : Bool
   vertical_alignment : VerticalAlignment
   font : String?
-  font_size : Int?
+  font_size : Double?
+  /// Independent complex-script point size (w:szCs).
+  font_size_cs : Double?
   highlight : String?
   /// Resolved RRGGBB text color, or "auto" for the consumer default.
   color : String?
@@ -132,7 +134,8 @@ pub fn run_properties(
   is_small_caps? : Bool = false,
   vertical_alignment? : VerticalAlignment = Baseline,
   font? : String? = None,
-  font_size? : Int? = None,
+  font_size? : Double? = None,
+  font_size_cs? : Double? = font_size,
   highlight? : String? = None,
   color? : String? = None,
 ) -> RunProperties {
@@ -148,6 +151,7 @@ pub fn run_properties(
     vertical_alignment,
     font: none_if_empty(font),
     font_size,
+    font_size_cs,
     highlight: none_if_empty(highlight),
     color: none_if_empty(color),
   }

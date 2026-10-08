@@ -1,14 +1,24 @@
 ///|
 test "convert_to_html reads single paragraph docx fixture" {
   let result = @docx2html.convert_to_html(single_paragraph_docx())
-  inspect(result.value, content="<p>Walking on imported air</p>")
+  inspect(
+    result.value,
+    content=(
+      #|<p><span style="font-size: 11pt">Walking on imported air</span></p>
+    ),
+  )
   debug_inspect(result.messages, content="[]")
 }
 
 ///|
 test "generic convert reads docx fixture with typed output format" {
   let html = @docx2html.convert(single_paragraph_docx())
-  inspect(html.value, content="<p>Walking on imported air</p>")
+  inspect(
+    html.value,
+    content=(
+      #|<p><span style="font-size: 11pt">Walking on imported air</span></p>
+    ),
+  )
   debug_inspect(html.messages, content="[]")
   let markdown = @docx2html.convert(
     single_paragraph_docx(),
@@ -76,7 +86,7 @@ test "read_docx_with_messages exposes reader diagnostics" {
   inspect(
     @docx2html.convert_document_to_html(loaded.document).value,
     content=(
-      #|<p><span style="color: initial"><img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAoAAAAKCAIAAAACUFjqAAAAAXNSR0IArs4c6QAAAAlwSFlzAAAOvgAADr4B6kKxwAAAABNJREFUKFNj/M+ADzDhlWUYqdIAQSwBE8U+X40AAAAASUVORK5CYII=" /></span></p>
+      #|<p><span style="color: initial"><span style="font-size: 12pt"><img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAoAAAAKCAIAAAACUFjqAAAAAXNSR0IArs4c6QAAAAlwSFlzAAAOvgAADr4B6kKxwAAAABNJREFUKFNj/M+ADzDhlWUYqdIAQSwBE8U+X40AAAAASUVORK5CYII=" /></span></span></p>
     ),
   )
 }
@@ -87,7 +97,13 @@ test "pretty printing expands element content" {
     single_paragraph_docx(),
     pretty_print=true,
   )
-  inspect(result.value, content="<p>\n  Walking on imported air\n</p>")
+  inspect(
+    result.value,
+    content=(
+      #|<p><span style="font-size: 11pt">Walking on imported air</span>
+      #|</p>
+    ),
+  )
   debug_inspect(result.messages, content="[]")
 }
 
@@ -97,7 +113,7 @@ test "convert_to_html reads XML with UTF-8 byte order mark" {
   inspect(
     result.value,
     content=(
-      #|<p><span style="color: #000000">This XML has a byte order mark.</span></p>
+      #|<p><span style="color: #000000"><span style="font-size: 11pt">This XML has a byte order mark.</span></span></p>
     ),
   )
   debug_inspect(result.messages, content="[]")
@@ -403,12 +419,22 @@ test "convert_to_markdown applies document transform option" {
 ///|
 test "simple list is converted to list elements" {
   let result = @docx2html.convert_to_html(simple_list_docx())
-  inspect(result.value, content="<ul><li>Apple</li><li>Banana</li></ul>")
+  inspect(
+    result.value,
+    content=(
+      #|<ul><li><span style="font-size: 11pt">Apple</span></li><li><span style="font-size: 11pt">Banana</span></li></ul>
+    ),
+  )
   let without_default_style_map = @docx2html.convert_to_html(
     simple_list_docx(),
     include_default_style_map=false,
   )
-  inspect(without_default_style_map.value, content="<p>Apple</p><p>Banana</p>")
+  inspect(
+    without_default_style_map.value,
+    content=(
+      #|<p><span style="font-size: 11pt">Apple</span></p><p><span style="font-size: 11pt">Banana</span></p>
+    ),
+  )
   debug_inspect(
     without_default_style_map.messages,
     content=(
@@ -422,7 +448,9 @@ test "word tables are converted to html tables" {
   let result = @docx2html.convert_to_html(tables_docx())
   inspect(
     result.value,
-    content="<p>Above</p><table><tr><td><p>Top left</p></td><td><p>Top right</p></td></tr><tr><td><p>Bottom left</p></td><td><p>Bottom right</p></td></tr></table><p>Below</p>",
+    content=(
+      #|<p><span style="font-size: 11pt">Above</span></p><table><tr><td><p><span style="font-size: 11pt">Top left</span></p></td><td><p><span style="font-size: 11pt">Top right</span></p></td></tr><tr><td><p><span style="font-size: 11pt">Bottom left</span></p></td><td><p><span style="font-size: 11pt">Bottom right</span></p></td></tr></table><p><span style="font-size: 11pt">Below</span></p>
+    ),
   )
   debug_inspect(result.messages, content="[]")
 }
@@ -431,11 +459,15 @@ test "word tables are converted to html tables" {
 test "underline is ignored by default and configurable" {
   inspect(
     @docx2html.convert_to_html(underline_docx()).value,
-    content="<p><strong>The Sunset Tree</strong></p>",
+    content=(
+      #|<p><strong><span style="font-size: 11pt">The Sunset Tree</span></strong></p>
+    ),
   )
   inspect(
     @docx2html.convert_to_html(underline_docx(), style_map=["u => em"]).value,
-    content="<p><strong>The <em>Sunset</em> Tree</strong></p>",
+    content=(
+      #|<p><strong><span style="font-size: 11pt">The </span><em><span style="font-size: 11pt">Sunset</span></em><span style="font-size: 11pt"> Tree</span></strong></p>
+    ),
   )
 }
 
@@ -443,18 +475,27 @@ test "underline is ignored by default and configurable" {
 test "strikethrough uses default and custom mappings" {
   inspect(
     @docx2html.convert_to_html(strikethrough_docx()).value,
-    content="<p><s>Today's Special: Salmon</s> Sold out</p>",
+    content=(
+      #|<p><s><span style="font-size: 11pt">Today's Special: Salmon</span></s><span style="font-size: 11pt"> Sold out</span></p>
+    ),
   )
   inspect(
     @docx2html.convert_to_html(strikethrough_docx(), style_map=["strike => del"]).value,
-    content="<p><del>Today's Special: Salmon</del> Sold out</p>",
+    content=(
+      #|<p><del><span style="font-size: 11pt">Today's Special: Salmon</span></del><span style="font-size: 11pt"> Sold out</span></p>
+    ),
   )
 }
 
 ///|
 test "strict docx format is read" {
   let result = @docx2html.convert_to_html(strict_format_docx())
-  inspect(result.value, content="<p>Test</p>")
+  inspect(
+    result.value,
+    content=(
+      #|<p><span style="font-size: 11pt">Test</span></p>
+    ),
+  )
   debug_inspect(result.messages, content="[]")
 }
 
@@ -477,7 +518,9 @@ test "inline images referenced relative to document part are included" {
   let result = @docx2html.convert_to_html(tiny_picture_docx())
   inspect(
     result.value,
-    content="<p><img src=\"data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAoAAAAKCAIAAAACUFjqAAAAAXNSR0IArs4c6QAAAAlwSFlzAAAOvgAADr4B6kKxwAAAABNJREFUKFNj/M+ADzDhlWUYqdIAQSwBE8U+X40AAAAASUVORK5CYII=\" /></p>",
+    content=(
+      #|<p><span style="font-size: 11pt"><img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAoAAAAKCAIAAAACUFjqAAAAAXNSR0IArs4c6QAAAAlwSFlzAAAOvgAADr4B6kKxwAAAABNJREFUKFNj/M+ADzDhlWUYqdIAQSwBE8U+X40AAAAASUVORK5CYII=" /></span></p>
+    ),
   )
 }
 
@@ -487,7 +530,12 @@ test "convert_to_html applies custom image converter to docx images" {
     { "src": image.content_type }
   })
   let result = @docx2html.convert_to_html(tiny_picture_docx(), convert_image~)
-  inspect(result.value, content="<p><img src=\"image/png\" /></p>")
+  inspect(
+    result.value,
+    content=(
+      #|<p><span style="font-size: 11pt"><img src="image/png" /></span></p>
+    ),
+  )
   let convert_image_from_data = @docx2html.img_element(fn(image) {
     let encoded = @base64.encode(image.data)
     { "src": encoded[:2].to_owned() + "," + image.content_type }
@@ -496,7 +544,12 @@ test "convert_to_html applies custom image converter to docx images" {
     tiny_picture_docx(),
     convert_image=convert_image_from_data,
   )
-  inspect(data_result.value, content="<p><img src=\"iV,image/png\" /></p>")
+  inspect(
+    data_result.value,
+    content=(
+      #|<p><span style="font-size: 11pt"><img src="iV,image/png" /></span></p>
+    ),
+  )
   debug_inspect(data_result.messages, content="[]")
 }
 
@@ -507,7 +560,9 @@ test "inline images referenced relative to package base are included" {
   )
   inspect(
     result.value,
-    content="<p><img src=\"data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAoAAAAKCAIAAAACUFjqAAAAAXNSR0IArs4c6QAAAAlwSFlzAAAOvgAADr4B6kKxwAAAABNJREFUKFNj/M+ADzDhlWUYqdIAQSwBE8U+X40AAAAASUVORK5CYII=\" /></p>",
+    content=(
+      #|<p><span style="font-size: 11pt"><img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAoAAAAKCAIAAAACUFjqAAAAAXNSR0IArs4c6QAAAAlwSFlzAAAOvgAADr4B6kKxwAAAABNJREFUKFNj/M+ADzDhlWUYqdIAQSwBE8U+X40AAAAASUVORK5CYII=" /></span></p>
+    ),
   )
 }
 
@@ -548,7 +603,7 @@ test "external linked images can be loaded when explicitly enabled" {
   inspect(
     result.value,
     content=(
-      #|<p><span style="color: initial"><img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAoAAAAKCAIAAAACUFjqAAAAAXNSR0IArs4c6QAAAAlwSFlzAAAOvgAADr4B6kKxwAAAABNJREFUKFNj/M+ADzDhlWUYqdIAQSwBE8U+X40AAAAASUVORK5CYII=" /></span></p>
+      #|<p><span style="color: initial"><span style="font-size: 12pt"><img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAoAAAAKCAIAAAACUFjqAAAAAXNSR0IArs4c6QAAAAlwSFlzAAAOvgAADr4B6kKxwAAAABNJREFUKFNj/M+ADzDhlWUYqdIAQSwBE8U+X40AAAAASUVORK5CYII=" /></span></span></p>
     ),
   )
   debug_inspect(result.messages, content="[]")
@@ -595,7 +650,9 @@ test "footnotes are appended to text" {
   let result = @docx2html.convert_to_html(footnotes_docx(), id_prefix="doc-42-")
   inspect(
     result.value,
-    content="<p>Ouch<sup><a href=\"#doc-42-footnote-1\" id=\"doc-42-footnote-ref-1\">[1]</a></sup>.<sup><a href=\"#doc-42-footnote-2\" id=\"doc-42-footnote-ref-2\">[2]</a></sup></p><ol><li id=\"doc-42-footnote-1\"><p> A tachyon walks into a bar. <a href=\"#doc-42-footnote-ref-1\">↑</a></p></li><li id=\"doc-42-footnote-2\"><p> Fin. <a href=\"#doc-42-footnote-ref-2\">↑</a></p></li></ol>",
+    content=(
+      #|<p><span style="font-size: 11pt">Ouch<sup><a href="#doc-42-footnote-1" id="doc-42-footnote-ref-1">[1]</a></sup>.<sup><a href="#doc-42-footnote-2" id="doc-42-footnote-ref-2">[2]</a></sup></span></p><ol><li id="doc-42-footnote-1"><p><span style="font-size: 10pt"> A tachyon walks into a bar.</span> <a href="#doc-42-footnote-ref-1">↑</a></p></li><li id="doc-42-footnote-2"><p><span style="font-size: 10pt"> Fin.</span> <a href="#doc-42-footnote-ref-2">↑</a></p></li></ol>
+    ),
   )
   debug_inspect(result.messages, content="[]")
   let markdown = @docx2html.convert_to_markdown(footnotes_docx())
@@ -622,7 +679,7 @@ test "endnotes are appended to text" {
   inspect(
     result.value,
     content=(
-      #|<p><span style="color: initial">Ouch<sup><a href="#doc-42-endnote-2" id="doc-42-endnote-ref-2">[1]</a></sup>.<sup><a href="#doc-42-endnote-3" id="doc-42-endnote-ref-3">[2]</a></sup></span></p><ol><li id="doc-42-endnote-2"><p><span style="color: initial"> A tachyon walks into a bar.</span> <a href="#doc-42-endnote-ref-2">↑</a></p></li><li id="doc-42-endnote-3"><p><span style="color: initial"> Fin.</span> <a href="#doc-42-endnote-ref-3">↑</a></p></li></ol>
+      #|<p><span style="color: initial"><span style="font-size: 12pt">Ouch<sup><a href="#doc-42-endnote-2" id="doc-42-endnote-ref-2">[1]</a></sup>.<sup><a href="#doc-42-endnote-3" id="doc-42-endnote-ref-3">[2]</a></sup></span></span></p><ol><li id="doc-42-endnote-2"><p><span style="color: initial"><span style="font-size: 10pt"> A tachyon walks into a bar.</span></span> <a href="#doc-42-endnote-ref-2">↑</a></p></li><li id="doc-42-endnote-3"><p><span style="color: initial"><span style="font-size: 10pt"> Fin.</span></span> <a href="#doc-42-endnote-ref-3">↑</a></p></li></ol>
     ),
   )
   debug_inspect(result.messages, content="[]")
@@ -637,7 +694,7 @@ test "relationships are handled inside footnotes" {
   inspect(
     result.value,
     content=(
-      #|<p><sup><a href="#doc-42-footnote-1" id="doc-42-footnote-ref-1">[1]</a></sup></p><ol><li id="doc-42-footnote-1"><p> <a href="http://www.example.com"><span style="color: #0000FF">Example</span></a> <a href="#doc-42-footnote-ref-1">↑</a></p></li></ol>
+      #|<p><span style="font-size: 11pt"><sup><a href="#doc-42-footnote-1" id="doc-42-footnote-ref-1">[1]</a></sup></span></p><ol><li id="doc-42-footnote-1"><p><span style="font-size: 10pt"> </span><a href="http://www.example.com"><span style="color: #0000FF"><span style="font-size: 10pt">Example</span></span></a> <a href="#doc-42-footnote-ref-1">↑</a></p></li></ol>
     ),
   )
   debug_inspect(result.messages, content="[]")
@@ -647,7 +704,9 @@ test "relationships are handled inside footnotes" {
 test "comments are appended when comment references are style mapped" {
   inspect(
     @docx2html.convert_to_html(comments_docx()).value,
-    content="<p>Ouch.</p>",
+    content=(
+      #|<p><span style="font-size: 11pt">Ouch.</span></p>
+    ),
   )
   let result = @docx2html.convert_to_html(
     comments_docx(),
@@ -656,7 +715,9 @@ test "comments are appended when comment references are style mapped" {
   )
   inspect(
     result.value,
-    content="<p>Ouch<sup><a href=\"#doc-42-comment-0\" id=\"doc-42-comment-ref-0\">[MW1]</a></sup>.<sup><a href=\"#doc-42-comment-2\" id=\"doc-42-comment-ref-2\">[MW2]</a></sup></p><dl><dt id=\"doc-42-comment-0\">Comment [MW1]</dt><dd><p>A tachyon walks into a bar. <a href=\"#doc-42-comment-ref-0\">↑</a></p></dd><dt id=\"doc-42-comment-2\">Comment [MW2]</dt><dd><p>Fin. <a href=\"#doc-42-comment-ref-2\">↑</a></p></dd></dl>",
+    content=(
+      #|<p><span style="font-size: 11pt">Ouch</span><span style="font-size: 8pt"><sup><a href="#doc-42-comment-0" id="doc-42-comment-ref-0">[MW1]</a></sup></span><span style="font-size: 11pt">.</span><span style="font-size: 8pt"><sup><a href="#doc-42-comment-2" id="doc-42-comment-ref-2">[MW2]</a></sup></span></p><dl><dt id="doc-42-comment-0">Comment [MW1]</dt><dd><p><span style="font-size: 10pt">A tachyon walks into a bar.</span> <a href="#doc-42-comment-ref-0">↑</a></p></dd><dt id="doc-42-comment-2">Comment [MW2]</dt><dd><p><span style="font-size: 10pt">Fin.</span> <a href="#doc-42-comment-ref-2">↑</a></p></dd></dl>
+    ),
   )
   debug_inspect(result.messages, content="[]")
 }
@@ -673,31 +734,41 @@ test "embedded style maps are combined after explicit mappings" {
   )
   inspect(
     @docx2html.convert_to_html(embedded_style_map_docx()).value,
-    content="<h1>Walking on imported air</h1>",
+    content=(
+      #|<h1><span style="font-size: 11pt">Walking on imported air</span></h1>
+    ),
   )
   inspect(
     @docx2html.convert_to_html(embedded_style_map_docx(), style_map=["p => p"]).value,
-    content="<p>Walking on imported air</p>",
+    content=(
+      #|<p><span style="font-size: 11pt">Walking on imported air</span></p>
+    ),
   )
   inspect(
     @docx2html.convert_to_html(embedded_style_map_docx(), style_map=[
       "r => strong",
     ]).value,
-    content="<h1><strong>Walking on imported air</strong></h1>",
+    content=(
+      #|<h1><strong><span style="font-size: 11pt">Walking on imported air</span></strong></h1>
+    ),
   )
   inspect(
     @docx2html.convert_to_html(
       embedded_style_map_docx(),
       include_embedded_style_map=false,
     ).value,
-    content="<p>Walking on imported air</p>",
+    content=(
+      #|<p><span style="font-size: 11pt">Walking on imported air</span></p>
+    ),
   )
   inspect(
     @docx2html.convert_to_html(
       embedded_style_map_docx(),
       include_default_style_map=false,
     ).value,
-    content="<h1>Walking on imported air</h1>",
+    content=(
+      #|<h1><span style="font-size: 11pt">Walking on imported air</span></h1>
+    ),
   )
   inspect(
     @docx2html.convert_to_html(
@@ -705,7 +776,9 @@ test "embedded style maps are combined after explicit mappings" {
       include_default_style_map=false,
       include_embedded_style_map=false,
     ).value,
-    content="<p>Walking on imported air</p>",
+    content=(
+      #|<p><span style="font-size: 11pt">Walking on imported air</span></p>
+    ),
   )
 }
 
@@ -718,7 +791,9 @@ test "embedded style maps written into docx affect conversion" {
   )
   inspect(
     @docx2html.convert_to_html(rewritten).value,
-    content="<h2>Walking on imported air</h2>",
+    content=(
+      #|<h2><span style="font-size: 11pt">Walking on imported air</span></h2>
+    ),
   )
   inspect(
     @docx2html.convert_to_markdown(rewritten).value,
@@ -727,7 +802,9 @@ test "embedded style maps written into docx affect conversion" {
   let replaced = @docx2html.embed_style_map(rewritten, "p => p")
   inspect(
     @docx2html.convert_to_html(replaced).value,
-    content="<p>Walking on imported air</p>",
+    content=(
+      #|<p><span style="font-size: 11pt">Walking on imported air</span></p>
+    ),
   )
   inspect(
     @docx2html.convert_to_markdown(replaced).value,
@@ -740,7 +817,12 @@ test "invalid explicit style maps warn while valid mappings still apply" {
   let result = @docx2html.convert_to_html(single_paragraph_docx(), style_map=[
     "????", "p => h1",
   ])
-  inspect(result.value, content="<h1>Walking on imported air</h1>")
+  inspect(
+    result.value,
+    content=(
+      #|<h1><span style="font-size: 11pt">Walking on imported air</span></h1>
+    ),
+  )
   debug_inspect(
     result.messages,
     content=(
@@ -762,6 +844,11 @@ test "invalid explicit style maps warn while valid mappings still apply" {
 ///|
 test "text boxes are appended after their containing paragraph" {
   let result = @docx2html.convert_to_html(text_box_docx())
-  inspect(result.value, content="<p>Datum plane</p>")
+  inspect(
+    result.value,
+    content=(
+      #|<p><span style="font-size: 11pt">Datum plane</span></p>
+    ),
+  )
   debug_inspect(result.messages, content="[]")
 }
