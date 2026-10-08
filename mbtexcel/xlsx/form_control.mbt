@@ -328,6 +328,52 @@ fn form_control_vml_preset(control_type : StringView) -> FormControlVmlPreset? {
 }
 
 ///|
+// Shared pixel geometry keeps the VML and SpreadsheetML control anchors aligned.
+fn form_control_end_anchor(
+  sheet : Worksheet,
+  control : FormControl,
+) -> (Int, Int, Int, Int) raise XlsxError {
+  let (row, col) = cell_ref_to_rc(control.cell)
+  let row0 = row - 1
+  let col0 = col - 1
+  let base_width_px = match control.width {
+    Some(v) => v
+    None => 140
+  }
+  let base_height_px = match control.height {
+    Some(v) => v
+    None => 60
+  }
+  let scale_x = match control.format.scale_x {
+    Some(v) => if v <= 0.0 { 1.0 } else { v }
+    None => 1.0
+  }
+  let scale_y = match control.format.scale_y {
+    Some(v) => if v <= 0.0 { 1.0 } else { v }
+    None => 1.0
+  }
+  let width_px = (Double::from_int(base_width_px) * scale_x).to_int()
+  let height_px = (Double::from_int(base_height_px) * scale_y).to_int()
+  let mut col_end0 = col0
+  let mut x2 = width_px
+  let mut cur_col = col
+  while x2 >= sheet.col_width_pixels(cur_col) {
+    x2 = x2 - sheet.col_width_pixels(cur_col)
+    cur_col = cur_col + 1
+    col_end0 = col_end0 + 1
+  }
+  let mut row_end0 = row0
+  let mut y2 = height_px
+  let mut cur_row = row
+  while y2 >= sheet.row_height_pixels(cur_row) {
+    y2 = y2 - sheet.row_height_pixels(cur_row)
+    cur_row = cur_row + 1
+    row_end0 = row_end0 + 1
+  }
+  (col_end0, x2, row_end0, y2)
+}
+
+///|
 fn write_form_controls_vml(
   sheet_id : Int,
   sheet : Worksheet,
@@ -347,10 +393,13 @@ fn write_form_controls_vml(
   sb.write_view("    <o:idmap v:ext=\"edit\" data=\"\{sheet_id}\"/>\n")
   sb.write_view("  </o:shapelayout>\n")
   sb.write_view(
-    "  <v:shapetype id=\"_x0000_t201\" coordsize=\"21600,21600\" o:spt=\"202\" path=\"m0,0l0,21600,21600,21600,21600,0xe\">\n",
+    "  <v:shapetype id=\"_x0000_t201\" coordsize=\"21600,21600\" o:spt=\"201\" path=\"m,l,21600r21600,l21600,xe\">\n",
   )
   sb.write_view("    <v:stroke joinstyle=\"miter\"/>\n")
-  sb.write_view("    <v:path o:connecttype=\"rect\"/>\n")
+  sb.write_view(
+    "    <v:path shadowok=\"f\" o:extrusionok=\"f\" strokeok=\"f\" fillok=\"f\" o:connecttype=\"rect\"/>\n",
+  )
+  sb.write_view("    <o:lock v:ext=\"edit\" shapetype=\"t\"/>\n")
   sb.write_view("  </v:shapetype>\n")
   for index, control in controls {
     let shape_id = shape_id_start + index
@@ -358,40 +407,7 @@ fn write_form_controls_vml(
     let (row, col) = cell_ref_to_rc(control.cell)
     let row0 = row - 1
     let col0 = col - 1
-    let base_width_px = match control.width {
-      Some(v) => v
-      None => 140
-    }
-    let base_height_px = match control.height {
-      Some(v) => v
-      None => 60
-    }
-    let scale_x = match control.format.scale_x {
-      Some(v) => if v <= 0.0 { 1.0 } else { v }
-      None => 1.0
-    }
-    let scale_y = match control.format.scale_y {
-      Some(v) => if v <= 0.0 { 1.0 } else { v }
-      None => 1.0
-    }
-    let width_px = (Double::from_int(base_width_px) * scale_x).to_int()
-    let height_px = (Double::from_int(base_height_px) * scale_y).to_int()
-    let mut col_end0 = col0
-    let mut x2 = width_px
-    let mut cur_col = col
-    while x2 >= sheet.col_width_pixels(cur_col) {
-      x2 = x2 - sheet.col_width_pixels(cur_col)
-      cur_col = cur_col + 1
-      col_end0 = col_end0 + 1
-    }
-    let mut row_end0 = row0
-    let mut y2 = height_px
-    let mut cur_row = row
-    while y2 >= sheet.row_height_pixels(cur_row) {
-      y2 = y2 - sheet.row_height_pixels(cur_row)
-      cur_row = cur_row + 1
-      row_end0 = row_end0 + 1
-    }
+    let (col_end0, x2, row_end0, y2) = form_control_end_anchor(sheet, control)
     let anchor = "\{col0}, 0, \{row0}, 0, \{col_end0}, \{x2}, \{row_end0}, \{y2}"
     let preset = form_control_vml_preset(control.control_type)
     sb.write_view("  <v:shape id=\"_x0000_s\{shape_id}\" type=\"#_x0000_t201\"")

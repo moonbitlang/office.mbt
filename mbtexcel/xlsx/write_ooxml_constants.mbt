@@ -117,3 +117,9 @@ let ct_shared_strings = "application/vnd.openxmlformats-officedocument.spreadshe
 
 ///|
 let ct_theme = "application/vnd.openxmlformats-officedocument.theme+xml"
+
+///|
+let ct_control_properties = "application/vnd.ms-excel.controlproperties+xml"
+
+///|
+let rel_control_properties = "http://schemas.openxmlformats.org/officeDocument/2006/relationships/ctrlProp"

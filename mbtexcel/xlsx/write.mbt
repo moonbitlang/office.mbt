@@ -2126,6 +2126,7 @@ fn write_worksheet_xml(
   slicer_rel_ids_x15 : ArrayView[Int],
   legacy_drawing_rel_id : Int?,
   legacy_drawing_hf_rel_id : Int?,
+  control_ids? : (Int, Int),
   budget? : WritePartBudget,
 ) -> String raise XlsxError {
   fn write_worksheet_ext_lst_xml(
@@ -2666,6 +2667,11 @@ fn write_worksheet_xml(
   }
   match picture_rel_id {
     Some(rel_id) => sb.write_view("  <picture r:id=\"rId\{rel_id}\"/>\n")
+    None => ()
+  }
+  match control_ids {
+    Some((shape_id, rel_id)) =>
+      write_worksheet_controls(sb, sheet, shape_id, rel_id)
     None => ()
   }
   if table_rel_ids.length() > 0 {
@@ -3324,6 +3330,7 @@ fn write_with_io(
   let added_extensions : Map[String, Bool] = Map([])
   let mut image_index = 1
   let mut chart_index = 1
+  let mut control_index = 1
   let mut vml_index = 1
   let mut comment_index = 1
   let mut drawing_index = sheet_count + 1
@@ -3556,9 +3563,10 @@ fn write_with_io(
       Some(xml) =>
         match form_control_vml_xml {
           Some(control_xml) => {
-            let merged = merge_vml_drawings(
+            let merged = merge_vml_drawings_with_shapetype(
               xml,
               control_xml,
+              "_x0000_t201",
               budget?=legacy_vml_budget.remaining_budget(),
             )
             legacy_vml_budget.consume(merged)
@@ -3711,6 +3719,27 @@ fn write_with_io(
       }
       None => None
     }
+    let control_targets : Array[String] = []
+    let control_ids = if form_controls.length() > 0 {
+      let first_rel_id = rel_id
+      for control in form_controls {
+        let path = "xl/ctrlProps/ctrlProp\{control_index}.xml"
+        control_targets.push("../ctrlProps/ctrlProp\{control_index}.xml")
+        archive.add_text(
+          path,
+          write_form_control_properties(
+            control,
+            budget?=archive.next_part_budget(),
+          ),
+        )
+        manifest.add_content_override("/" + path, ct_control_properties)
+        control_index += 1
+        rel_id += 1
+      }
+      Some((form_control_shape_id_start, first_rel_id))
+    } else {
+      None
+    }
     let sheet_xml = write_worksheet_xml(
       sheet,
       string_map,
@@ -3725,6 +3754,7 @@ fn write_with_io(
       slicer_rel_ids_x15,
       legacy_drawing_rel_id,
       legacy_drawing_hf_rel_id,
+      control_ids?,
       budget?=archive.next_part_budget(),
     )
     archive.add_text(worksheet_part_path(sheet_id), sheet_xml)
@@ -3749,6 +3779,7 @@ fn write_with_io(
         comment_targets,
         vml_targets,
         picture_targets,
+        control_targets~,
         budget?=archive.next_part_budget(),
       )
       archive.add_text(worksheet_rels_part_path(sheet_id), sheet_rels_xml)
