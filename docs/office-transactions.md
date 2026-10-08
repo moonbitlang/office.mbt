@@ -116,6 +116,11 @@ individually legal but would make the two live archive snapshots exceed the
 envelope therefore fails with `kind=live_materialized_bytes` before any
 temporary file is created.
 
+Retained ZIP records are capped at the smaller of the package length and the
+preserved-source limit. That entire allowance counts toward the transaction
+budget, so packages near the ceiling can be rejected even when their actual
+retained records occupy less space.
+
 The mutation callback receives that remaining allowance as
 `TransactionBudget::max_candidate_package_bytes()`. Package serializers must
 apply it during sizing, not after returning bytes. Archive-backed raw mutation

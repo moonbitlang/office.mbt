@@ -104,11 +104,6 @@ const RELATIONSHIP_ELEMENT : String = "{http://schemas.openxmlformats.org/packag
 const RELATIONSHIPS_CONTENT_TYPE : String = "application/vnd.openxmlformats-package.relationships+xml"
 
 ///|
-/// ECMA-376 Part 2 §7.3.6 limits a Central Directory File Header, excluding
-/// its four-byte ZIP signature, to 65,535 bytes.
-const MAX_OPC_CENTRAL_DIRECTORY_FILE_HEADER_BYTES : Int = 65_535
-
-///|
 const TRANSITIONAL_OFFICE_DOCUMENT_REL : String = "http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument"
 
 ///|
@@ -1850,18 +1845,6 @@ fn zip_limit_kind_name(kind : @zip.LimitKind) -> String {
 }
 
 ///|
-/// Size of an entry's OPC Central Directory File Header excluding the
-/// four-byte ZIP signature (ECMA-376 Part 2 §7.3.6). Pristine entries report
-/// their exact preserved record; in-memory entries have no Extra/File Comment
-/// fields yet.
-fn entry_central_directory_file_header_size(entry : @zip.Entry) -> Int {
-  match entry.raw_central_record() {
-    Some(record) => record.length() - 4
-    None => 42 + @utf8.encode(entry.name()).length()
-  }
-}
-
-///|
 fn format_from_archive(
   archive : @zip.Archive,
   part_index : ArchivePartIndex,
@@ -1875,12 +1858,6 @@ fn format_from_archive(
       raise InvalidPackage("duplicate entry name: \{name}")
     }
     physical_names[name] = true
-    if entry_central_directory_file_header_size(entry) >
-      MAX_OPC_CENTRAL_DIRECTORY_FILE_HEADER_BYTES {
-      raise InvalidPackage(
-        "central-directory file header exceeds the OPC \{MAX_OPC_CENTRAL_DIRECTORY_FILE_HEADER_BYTES}-byte limit: \{name}",
-      )
-    }
     let actual_crc = match
       @flate_checksum.crc32_cancellable(
         entry.data(),
@@ -2058,6 +2035,14 @@ pub fn detect_format(
     _ if cancelled() => raise Cancelled
     _ => raise InvalidPackage("archive is not a readable ZIP")
   }
+  @opc_zip.validate_zip_headers(data, checkpoint=() => {
+    if cancelled() {
+      raise Cancelled
+    }
+  }) catch {
+    Cancelled => raise Cancelled
+    error => raise InvalidPackage(error.to_string())
+  }
   detect_archive_format(
     path,
     archive,
@@ -2071,6 +2056,8 @@ pub fn detect_format(
 /// Identifies a structurally valid XLSX or DOCX package from an archive that
 /// the caller has already materialized. This lets resource-constrained callers
 /// parse with their own ZIP limits without parsing the package a second time.
+/// Checks decoded parts and relationships; original ZIP header layout is checked
+/// by `detect_format`, which has access to the serialized package.
 pub fn detect_archive_format(
   path : StringView,
   archive : @zip.Archive,

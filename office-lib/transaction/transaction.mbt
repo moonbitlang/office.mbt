@@ -65,12 +65,8 @@ fn zip_limit_kind_name(kind : @zip.LimitKind) -> String {
 }
 
 ///|
-/// Before inflation, reserve the source buffer, copied local/central records,
-/// decoded names, and bounded entry/runtime bookkeeping. The post-read check
-/// replaces this conservative preflight with `Archive::retained_size_estimate`.
-let transaction_package_retention_multiplier : Int64 = 3L
-
-///|
+/// Office's per-entry allowance for archive and index bookkeeping. This is a
+/// transaction budget policy, not a measurement of the ZIP runtime layout.
 let transaction_archive_entry_reserve : Int64 = 512L
 
 ///|
@@ -628,9 +624,45 @@ fn check_package_size(
 }
 
 ///|
+/// Bound copied source records by the input size. This is an enforced reader
+/// limit: overlapping records that need more copies are rejected, not assumed
+/// to fit merely because they reference a bounded input buffer.
+fn transaction_archive_source_limit(bytes : BytesView) -> Int {
+  bytes.length().min(transaction_max_total_preserved_source_bytes)
+}
+
+///|
 fn transaction_archive_preflight_overhead(bytes : BytesView) -> Int64 {
-  bytes.length().to_int64() * transaction_package_retention_multiplier +
+  let source_limit = transaction_archive_source_limit(bytes).to_int64()
+  // Every decoded name comes from a charged central record; its UTF-16 storage
+  // needs at most twice its UTF-8 byte count. The archive comment is separately
+  // retained and has a 16-bit length in the ZIP end record.
+  let name_reserve = source_limit * 2L
+  let comment_reserve = bytes.length().min(65_535).to_int64()
+  bytes.length().to_int64() +
+  source_limit +
+  name_reserve +
+  comment_reserve +
   transaction_max_archive_entries.to_int64() * transaction_archive_entry_reserve
+}
+
+///|
+/// Charge the enforced source-record allowance and public archive contents.
+/// Fixed bookkeeping remains Office policy; no ZIP allocation layout is read.
+fn transaction_archive_retained_cost(
+  bytes : BytesView,
+  archive : @zip.Archive,
+) -> Int64 {
+  let mut total = bytes.length().to_int64() +
+    transaction_archive_source_limit(bytes).to_int64() +
+    archive.comment().length().to_int64()
+  for entry in archive.entries() {
+    total = total +
+      entry.data().length().to_int64() +
+      entry.name().length().to_int64() * 2L +
+      transaction_archive_entry_reserve
+  }
+  total
 }
 
 ///|
@@ -675,7 +707,6 @@ fn read_transaction_archive(
   retained : Int64,
   live_limit : Int64,
 ) -> (@zip.Archive, Int64) raise TransactionError {
-  let package_bytes = bytes.length().to_int64()
   let preflight_overhead = transaction_archive_preflight_overhead(bytes)
   let available = live_limit - retained - preflight_overhead
   if available <= 0L {
@@ -698,7 +729,7 @@ fn read_transaction_archive(
       .with_entries_limit(transaction_max_archive_entries)
       .with_entry_limit(transaction_max_entry_uncompressed_bytes)
       .with_total_limit(aggregate_limit)
-      .with_preserved_source_limit(transaction_max_total_preserved_source_bytes),
+      .with_preserved_source_limit(transaction_archive_source_limit(bytes)),
   ) catch {
     ZipError(LimitExceeded(TotalUncompressedBytes, _limit, actual), _) if aggregate_limit <
       transaction_max_total_uncompressed_bytes =>
@@ -720,11 +751,17 @@ fn read_transaction_archive(
         "unreadable bounded ZIP package during " + phase,
       )
   }
+  @opc_zip.validate_zip_headers(bytes) catch {
+    error =>
+      raise transaction_error(
+        invalid_code,
+        bounded_text(error.to_string(), 320),
+      )
+  }
   let name_reserve = transaction_archive_name_reserve(
     archive, phase, invalid_code,
   )
-  let archive_cost = package_bytes +
-    archive.retained_size_estimate() +
+  let archive_cost = transaction_archive_retained_cost(bytes, archive) +
     name_reserve
   let actual = retained + archive_cost
   if actual > live_limit {

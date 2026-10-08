@@ -1,5 +1,6 @@
 import {
   "moonbitlang/ooxml/uri",
+  "moonbitlang/ooxml/opc" @opc_zip,
   "moonbitlang/docx2html/core",
   "moonbitlang/docx2html/xml",
   "moonbit-community/flate/zip" @mbtzip,
