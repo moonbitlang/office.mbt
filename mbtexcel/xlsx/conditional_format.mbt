@@ -219,6 +219,8 @@ pub fn ConditionalFormatOptions::set_bar_only(
 }
 
 ///|
+/// Select a base SpreadsheetML icon set. The x14-only styles `3Stars`,
+/// `3Triangles`, and `5Boxes` are rejected when setting conditional formatting.
 pub fn ConditionalFormatOptions::set_icon_style(
   self : ConditionalFormatOptions,
   value : String,
@@ -471,15 +473,13 @@ fn icon_set_steps(icon_style : StringView) -> Array[String]? {
     | "3ArrowsGray"
     | "3Flags"
     | "3Signs"
-    | "3Stars"
     | "3Symbols"
     | "3Symbols2"
     | "3TrafficLights1"
-    | "3TrafficLights2"
-    | "3Triangles" => Some(["0", "33", "67"])
+    | "3TrafficLights2" => Some(["0", "33", "67"])
     "4Arrows" | "4ArrowsGray" | "4Rating" | "4RedToBlack" | "4TrafficLights" =>
       Some(["0", "25", "50", "75"])
-    "5Arrows" | "5ArrowsGray" | "5Boxes" | "5Quarters" | "5Rating" =>
+    "5Arrows" | "5ArrowsGray" | "5Quarters" | "5Rating" =>
       Some(["0", "20", "40", "60", "80"])
     _ => None
   }
