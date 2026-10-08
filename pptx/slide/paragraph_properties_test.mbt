@@ -448,3 +448,14 @@ test "Paragraph::with_end_run_properties round-trips a built paragraph" {
     content="Some(Pt(32))",
   )
 }
+
+///|
+test "pPr hundredth-point spacing survives serialization" {
+  let slide = @slide.Slide::parse(
+    slide_with_ppr("<a:pPr><a:lnSpc><a:spcPts val=\"113\"/></a:lnSpc></a:pPr>"),
+  )
+  debug_inspect(
+    ppr_of(@slide.Slide::parse(slide.serialize())).line_spacing,
+    content="Some(Points(Pt(1.13)))",
+  )
+}

@@ -269,7 +269,7 @@ fn write_text_spacing(
     Points(pt) => {
       w.start_element(@xml.QName::new(@oxml.drawing_ns, "spcPts"))
       let Pt(v) = pt
-      let centi = (v * 100.0).to_int()
+      let centi = (v * 100.0).round().to_int()
       w.attribute(@xml.QName::unqualified("val"), centi.to_string())
       w.end_element()
     }
@@ -399,7 +399,7 @@ fn write_run_properties(
   match p.font_size {
     Some(pt) => {
       let Pt(v) = pt
-      let centi = (v * 100.0).to_int()
+      let centi = (v * 100.0).round().to_int()
       w.attribute(@xml.QName::unqualified("sz"), centi.to_string())
     }
     None => ()
@@ -407,7 +407,7 @@ fn write_run_properties(
   match p.character_spacing {
     Some(pt) => {
       let Pt(v) = pt
-      let centi = (v * 100.0).to_int()
+      let centi = (v * 100.0).round().to_int()
       w.attribute(@xml.QName::unqualified("spc"), centi.to_string())
     }
     None => ()
@@ -415,7 +415,7 @@ fn write_run_properties(
   match p.kerning {
     Some(pt) => {
       let Pt(v) = pt
-      let centi = (v * 100.0).to_int()
+      let centi = (v * 100.0).round().to_int()
       w.attribute(@xml.QName::unqualified("kern"), centi.to_string())
     }
     None => ()

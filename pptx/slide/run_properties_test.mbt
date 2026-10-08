@@ -477,3 +477,16 @@ test "builder: with_text_outline + with_text_effects emit and round-trip" {
     content="Emu(63500)",
   )
 }
+
+// Regression adapted from t-ujiie-g/moon-pptx#37 (MIT).
+
+///|
+test "rPr: hundredth-of-a-point values survive a round-trip exactly" {
+  let slide = @slide.Slide::parse(
+    slide_with_rpr("<a:rPr sz=\"113\" spc=\"-29\" kern=\"201\"/>"),
+  )
+  let rp = rpr_of(@slide.Slide::parse(slide.serialize()))
+  debug_inspect(rp.font_size.unwrap(), content="Pt(1.13)")
+  debug_inspect(rp.character_spacing.unwrap(), content="Pt(-0.29)")
+  debug_inspect(rp.kerning.unwrap(), content="Pt(2.01)")
+}
