@@ -215,7 +215,8 @@ fn docx_input_contract() -> InputContractCore {
           ("small_caps", "boolean"),
           ("vertical", "enum(superscript|subscript)"),
           ("font", "xml_attribute_string"),
-          ("size", "integer(1..1638)"),
+          ("size", "number(0.5..1638, step 0.5)"),
+          ("size_cs", "number(0.5..1638, step 0.5)|null"),
           ("highlight", "ST_HighlightColor"),
         ],
         required=["text"],
@@ -318,8 +319,9 @@ fn docx_input_contract() -> InputContractCore {
     operations,
     constraints: [
       "docx.batch/1 is accepted as the paragraph/table-only subset", "unknown and duplicate members are rejected",
-      "all numeric lexemes are plain decimal integers", "document text must be XML-serializable",
-      "the destination is fresh; existing documents are not mutated", "header and footer ops attach to the document's single section; they produce no body block and cannot be commented on",
+      "size and size_cs accept decimal half-points; other numeric lexemes are plain decimal integers",
+      "document text must be XML-serializable", "the destination is fresh; existing documents are not mutated",
+      "header and footer ops attach to the document's single section; they produce no body block and cannot be commented on",
     ],
     limits: Json::object({
       "max_script_bytes": Json::number(

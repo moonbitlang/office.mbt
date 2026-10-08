@@ -39,6 +39,8 @@ fn empty_body_reader(relationships : Relationships) -> BodyReader {
     colors: RunColors::empty(),
     paragraph_color: None,
     paragraph_highlight: None,
+    paragraph_font_size: None,
+    paragraph_font_size_cs: None,
     styles: SortedMap([]),
     zip: try! @zip.zip_archive(Map([])),
     relationship_index: RelationshipIndex::build(relationships),
@@ -77,6 +79,8 @@ fn body_reader_with_stable_numbering(
     colors: RunColors::empty(),
     paragraph_color: None,
     paragraph_highlight: None,
+    paragraph_font_size: None,
+    paragraph_font_size_cs: None,
     styles,
     zip: try! @zip.zip_archive(Map([])),
     relationship_index: RelationshipIndex::build({ relationships: [], }),
@@ -1989,6 +1993,8 @@ test "docx table properties include table style name" {
     colors: RunColors::empty(),
     paragraph_color: None,
     paragraph_highlight: None,
+    paragraph_font_size: None,
+    paragraph_font_size_cs: None,
     styles: SortedMap([
       (
         "TableNormal",
@@ -3898,6 +3904,8 @@ fn drawing_image_reader_with_images(read_images : Bool) -> BodyReader {
     colors: RunColors::empty(),
     paragraph_color: None,
     paragraph_highlight: None,
+    paragraph_font_size: None,
+    paragraph_font_size_cs: None,
     styles: SortedMap([]),
     zip: try! @zip.zip_archive({ "word/media/tiny.png": b"abc" }),
     relationship_index: relationship_index([
@@ -4029,6 +4037,8 @@ test "docx linked DrawingML images use the external loader" {
     colors: RunColors::empty(),
     paragraph_color: None,
     paragraph_highlight: None,
+    paragraph_font_size: None,
+    paragraph_font_size_cs: None,
     styles: SortedMap([]),
     zip: try! @zip.zip_archive(Map([])),
     relationship_index: relationship_index([
@@ -4071,6 +4081,8 @@ test "docx linked DrawingML image loader tries decoded file URI paths" {
     colors: RunColors::empty(),
     paragraph_color: None,
     paragraph_highlight: None,
+    paragraph_font_size: None,
+    paragraph_font_size_cs: None,
     styles: SortedMap([]),
     zip: try! @zip.zip_archive(Map([])),
     relationship_index: relationship_index([
@@ -4113,6 +4125,8 @@ test "docx embedded DrawingML images ignore relationship target mode" {
     colors: RunColors::empty(),
     paragraph_color: None,
     paragraph_highlight: None,
+    paragraph_font_size: None,
+    paragraph_font_size_cs: None,
     styles: SortedMap([]),
     zip: try! @zip.zip_archive({ "word/media/hat.png": b"abc" }),
     relationship_index: relationship_index([
@@ -4155,6 +4169,8 @@ test "docx DrawingML image relationship ids follow Mammoth truthiness" {
     colors: RunColors::empty(),
     paragraph_color: None,
     paragraph_highlight: None,
+    paragraph_font_size: None,
+    paragraph_font_size_cs: None,
     styles: SortedMap([]),
     zip: try! @zip.zip_archive(Map([])),
     relationship_index: relationship_index([
@@ -4196,6 +4212,8 @@ test "docx DrawingML image relationship ids follow Mammoth truthiness" {
     colors: RunColors::empty(),
     paragraph_color: None,
     paragraph_highlight: None,
+    paragraph_font_size: None,
+    paragraph_font_size_cs: None,
     styles: SortedMap([]),
     zip: try! @zip.zip_archive({ "word/media/tiny.png": b"abc" }),
     relationship_index: relationship_index([
@@ -4417,6 +4435,8 @@ test "docx image reader records Mammoth-compatible warnings" {
     colors: RunColors::empty(),
     paragraph_color: None,
     paragraph_highlight: None,
+    paragraph_font_size: None,
+    paragraph_font_size_cs: None,
     styles: SortedMap([]),
     zip: try! @zip.zip_archive(Map([])),
     relationship_index: relationship_index([
@@ -4525,6 +4545,8 @@ test "docx image reader records Mammoth-compatible warnings" {
     colors: RunColors::empty(),
     paragraph_color: None,
     paragraph_highlight: None,
+    paragraph_font_size: None,
+    paragraph_font_size_cs: None,
     styles: SortedMap([]),
     zip: try! @zip.zip_archive(Map([])),
     relationship_index: relationship_index([
@@ -4558,6 +4580,8 @@ test "docx image reader records Mammoth-compatible warnings" {
     colors: RunColors::empty(),
     paragraph_color: None,
     paragraph_highlight: None,
+    paragraph_font_size: None,
+    paragraph_font_size_cs: None,
     styles: SortedMap([]),
     zip: try! @zip.zip_archive(Map([])),
     relationship_index: relationship_index([
@@ -4593,6 +4617,8 @@ test "docx image reader records Mammoth-compatible warnings" {
     colors: RunColors::empty(),
     paragraph_color: None,
     paragraph_highlight: None,
+    paragraph_font_size: None,
+    paragraph_font_size_cs: None,
     styles: SortedMap([]),
     zip: try! @zip.zip_archive(Map([])),
     relationship_index: relationship_index([
@@ -4636,6 +4662,8 @@ test "docx image reader records Mammoth-compatible warnings" {
     colors: RunColors::empty(),
     paragraph_color: None,
     paragraph_highlight: None,
+    paragraph_font_size: None,
+    paragraph_font_size_cs: None,
     styles: SortedMap([]),
     zip: try! @zip.zip_archive({ "word/media/hat.emf": b"abc" }),
     relationship_index: relationship_index([

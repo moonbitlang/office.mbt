@@ -529,30 +529,26 @@ fn write_run(
     }
     None => ()
   }
-  match properties.font_size {
-    Some(points) => {
-      // ST_HpsMeasure is a positive half-point measure and Word caps font
-      // size at 1638pt; outside that the doubled value is invalid OOXML.
-      if points < 1 || points > MAX_FONT_SIZE_POINTS {
+  for
+    (tag, size) in [
+      ("w:sz", properties.font_size),
+      ("w:szCs", properties.font_size_cs),
+    ] {
+    if size is Some(points) {
+      if !(points >= 0.5 && points <= MAX_FONT_SIZE_POINTS.to_double()) ||
+        points * 2.0 != (points * 2.0).to_int().to_double() {
         raise Unsupported(
-          message="font size \{points}pt is outside the supported range 1..\{MAX_FONT_SIZE_POINTS}",
+          message="font size \{points}pt must be a half-point increment in 0.5..\{MAX_FONT_SIZE_POINTS}",
         )
       }
-      // The reader halves w:sz (half-points → points); the writer doubles
-      // back, so read(write(x)) preserves the value exactly.
-      let half_points = (points * 2).to_string()
       rpr.push(
         XmlElement(
-          @xml.xml_element("w:sz", attributes={ "w:val": half_points }),
-        ),
-      )
-      rpr.push(
-        XmlElement(
-          @xml.xml_element("w:szCs", attributes={ "w:val": half_points }),
+          @xml.xml_element(tag, attributes={
+            "w:val": (points * 2.0).to_int().to_string(),
+          }),
         ),
       )
     }
-    None => ()
   }
   match properties.highlight {
     Some(highlight) => {

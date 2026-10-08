@@ -155,7 +155,7 @@ test "DOCX color write and read preserve RGB and auto while Markdown stays plain
   debug_inspect(
     @docx2html.convert_to_html(bytes).value,
     content=(
-      #|"<p><strong><span style=\"color: #C00000\">red</span></strong><span style=\"color: initial\">auto</span></p>"
+      #|"<p><strong><span style=\"color: #C00000\"><span style=\"font-size: 12pt\">red</span></span></strong><span style=\"color: initial\"><span style=\"font-size: 12pt\">auto</span></span></p>"
     ),
   )
   debug_inspect(

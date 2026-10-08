@@ -813,3 +813,36 @@ test "dump retains explicit highlight reset for batch replay" {
   )
   debug_inspect(residual.length(), content="0")
 }
+
+///|
+test "dump preserves independent half-point sizes for replay" {
+  let residual : Array[DumpResidual] = []
+  let specs = wb_run_specs(
+    [@document.text("half")],
+    @document.run_properties(font_size=Some(10.5), font_size_cs=Some(12.5)),
+    residual,
+  )
+  debug_inspect(
+    specs.map(spec => spec.stringify()),
+    content=(
+      #|["{\"text\":\"half\",\"size\":10.5,\"size_cs\":12.5}"]
+    ),
+  )
+  debug_inspect(residual.length(), content="0")
+}
+
+///|
+test "dump does not invent a complex-script size from the regular size" {
+  let residual : Array[DumpResidual] = []
+  let specs = wb_run_specs(
+    [@document.text("regular")],
+    @document.run_properties(font_size=Some(10.5), font_size_cs=None),
+    residual,
+  )
+  debug_inspect(
+    specs.map(spec => spec.stringify()),
+    content=(
+      #|["{\"text\":\"regular\",\"size\":10.5,\"size_cs\":null}"]
+    ),
+  )
+}

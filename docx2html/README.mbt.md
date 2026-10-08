@@ -45,6 +45,30 @@ source document is allowed to read sibling files. Use `read_docx_with_messages`
 when you need the parsed document model together with DOCX reader diagnostics;
 `read_docx` is the document-only convenience wrapper.
 
+## Font sizes
+
+`RunProperties.font_size` is now `Double?` in points, so `w:sz="21"`
+reads as `10.5` and HTML emits `font-size: 10.5pt`. Sizes resolve through
+character styles, paragraph styles, `basedOn`, and document defaults. The
+writer's existing 12pt defaults now appear explicitly in the read model and HTML.
+
+Migration: numeric literals such as `font_size=Some(14)` still compile; convert
+an `Int` variable with `.to_double()`. Direct record literals must add
+`font_size_cs` (use `None` for no explicit complex-script size). Constructors
+default `font_size_cs` to `font_size`, preserving the previous authored-document
+behavior; pass `font_size_cs=None` to omit `w:szCs`, or a distinct point size to
+write it independently. Reading preserves and inherits `w:szCs` independently.
+HTML currently applies the regular size to the whole run; script-dependent
+mixed-run sizing and `w:cs`/`w:rtl` shaping are not implemented.
+
+Writers and batch input accept 0.5–1638pt in exact half-point increments and
+reject non-finite or fractional-quarter values. Batch `size` and `size_cs` use
+point-valued JSON numbers; raw scripts accept decimal `.0`/`.5` with trailing
+zeros, but reject exponents and decimals that would round into a valid size.
+`size_cs: null` explicitly omits the complex-script size instead of copying
+`size`. The inspect/read JSON fields are `font_size` and `font_size_cs`; dump/replay
+preserves both as `size` and `size_cs`. Missing sizes emit no font-size CSS.
+
 ## Text highlights
 
 HTML conversion emits safe `background-color` spans for Word's 16 named

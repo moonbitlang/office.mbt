@@ -229,7 +229,7 @@ echo "$r" | jq -e '.success == true and (.data.content | contains("ht=\"15\""))'
 moon build --target wasm docx2html/cmd/docx
 d=$(moon run --target wasm docx2html/cmd/docx -- convert docx2html/tests/cram/fixtures/single-paragraph.docx 2>docx-wasm.err) || { echo "docx convert failed; stderr:"; cat docx-wasm.err; exit 1; }
 echo "docx convert -> $d"
-test "$d" = "<p>Walking on imported air</p>" || { echo "unexpected output; stderr:"; cat docx-wasm.err; exit 1; }
+test "$d" = '<p><span style="font-size: 11pt">Walking on imported air</span></p>' || { echo "unexpected output; stderr:"; cat docx-wasm.err; exit 1; }
 # Agent JSON surface: validate the outline payload structurally.
 o=$(moon run --target wasm docx2html/cmd/docx -- outline docx2html/tests/cram/fixtures/tiny-picture.docx 2>docx-wasm.err) || { echo "docx outline failed; stderr:"; cat docx-wasm.err; exit 1; }
 echo "$o" | jq -e '.schema == "docx.outline/1"

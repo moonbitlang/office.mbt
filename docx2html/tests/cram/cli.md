@@ -21,7 +21,7 @@ Convert DOCX documents to HTML or Markdown.
 
 ```mooncram
 $ printf '%s\n' "$(docx2html.exe "$TESTDIR/fixtures/single-paragraph.docx")"
-<p>Walking on imported air</p>
+<p><span style="font-size: 11pt">Walking on imported air</span></p>
 ```
 
 ## Convert To Markdown On Stdout
@@ -36,14 +36,14 @@ Walking on imported air
 
 ```mooncram
 $ printf 'p => h1\n' > style-map; printf '%s\n' "$(docx2html.exe --style-map style-map "$TESTDIR/fixtures/single-paragraph.docx")"
-<h1>Walking on imported air</h1>
+<h1><span style="font-size: 11pt">Walking on imported air</span></h1>
 ```
 
 ## Write To An Explicit Output File
 
 ```mooncram
 $ docx2html.exe "$TESTDIR/fixtures/single-paragraph.docx" single.html; printf '%s\n' "$(cat single.html)"
-<p>Walking on imported air</p>
+<p><span style="font-size: 11pt">Walking on imported air</span></p>
 ```
 
 ## Write Images Beside The Converted Document
@@ -53,7 +53,7 @@ converted document as `<input-basename>.html`.
 
 ```mooncram
 $ mkdir out; docx2html.exe --output-dir out "$TESTDIR/fixtures/tiny-picture.docx"; printf '%s\n' "$(cat out/tiny-picture.html)"; test -s out/1.png && echo image-written
-<p><img src="1.png" /></p>
+<p><span style="font-size: 11pt"><img src="1.png" /></span></p>
 image-written
 ```
 
