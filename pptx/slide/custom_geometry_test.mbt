@@ -359,3 +359,24 @@ test "parse: multiple <a:path> children land in source order" {
   debug_inspect(cg.paths[0].w, content="Emu(100)")
   debug_inspect(cg.paths[1].w, content="Emu(200)")
 }
+
+// Regression adapted from t-ujiie-g/moon-pptx#37 (MIT).
+
+///|
+test "round-trip: arcTo angles that are not whole degrees survive" {
+  let body = "<a:custGeom><a:pathLst><a:path>" +
+    "<a:arcTo wR=\"500\" hR=\"600\" stAng=\"59\" swAng=\"-61\"/>" +
+    "</a:path></a:pathLst></a:custGeom>"
+  let slide = @slide.Slide::parse(slide_with_sp_pr(body))
+  let cg = match @slide.Slide::parse(slide.serialize()).shapes[0] {
+    AutoShape({ geometry: Some(Custom(cg)), .. }) => cg
+    _ => fail("expected a custom-geometry AutoShape")
+  }
+  match cg.paths[0].commands[0] {
+    ArcTo(_, _, Literal(st), Literal(sw)) => {
+      debug_inspect(st.to_ooxml(), content="59")
+      debug_inspect(sw.to_ooxml(), content="-61")
+    }
+    _ => fail("expected ArcTo with literal angles")
+  }
+}
