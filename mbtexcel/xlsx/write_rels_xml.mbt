@@ -52,6 +52,7 @@ fn write_sheet_rels_xml(
   comment_targets : ArrayView[String],
   vml_targets : ArrayView[String],
   image_targets : ArrayView[String],
+  control_targets? : ArrayView[String] = [],
   budget? : WritePartBudget,
 ) -> String raise XlsxError {
   let sb = LimitedXmlBuilder::new(budget)
@@ -91,6 +92,10 @@ fn write_sheet_rels_xml(
   for target in image_targets {
     write_relationship(sb, rel_id, rel_image, target)
     rel_id = rel_id + 1
+  }
+  for target in control_targets {
+    write_relationship(sb, rel_id, rel_control_properties, target)
+    rel_id += 1
   }
   sb.write_view("</Relationships>")
   sb.to_string()

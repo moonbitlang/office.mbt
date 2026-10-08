@@ -77,6 +77,12 @@ mbtexcel can write and parse VML form controls including macro/cellLink/checked,
 sizing (width/height + anchor), scroll/spin options (val/min/max/inc/page +
 horizontal), basic `GraphicOptions` flags (printObject/positioning), and
 per-control VML presets (fill/stroke + common `<x:ClientData>` defaults).
+Newly written controls also have Office 2010 control-property parts and worksheet
+references, sharing shape IDs and anchor geometry with VML. The control-property
+relationship uses the OfficeDocument namespace specified by
+[MS-XLSX section 2.1.1](https://learn.microsoft.com/en-us/openspecs/office_standards/ms-xlsx/3d054a6d-4f94-4082-837a-f939fd8d4a45).
+Retained VML reconciliation and imported-control provenance remain tracked in
+[#257](https://github.com/moonbitlang/office.mbt/issues/257).
 
 Remaining gaps are mostly long-tail preset/styling parity for specific control
 types and edge-case behaviors.
