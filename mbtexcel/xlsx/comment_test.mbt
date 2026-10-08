@@ -681,3 +681,22 @@ test "comment duplicate + invalid sheet name" {
   }
   inspect(bad is Err(@xlsx.XlsxError::InvalidSheetName(_)), content="true")
 }
+
+///|
+test "comment VML style contains named offset declarations" {
+  let workbook = @xlsx.Workbook::new()
+  workbook.add_sheet("Sheet1") |> ignore
+  workbook.add_comment("Sheet1", plain_comment("A1", "Author", "Note"))
+  let archive = @zip.read(@xlsx.write(workbook))
+  let vml = @encoding/utf8.decode(
+    archive.get("xl/drawings/vmlDrawing1.vml").unwrap().data(),
+  )
+  debug_inspect(
+    vml.contains("position:absolute;margin-left:73.5pt;margin-top:0pt;"),
+    content="true",
+  )
+  debug_inspect(
+    vml.contains("<x:Anchor>0, 15, 0, 2, 2, 15, 3, 16</x:Anchor>"),
+    content="true",
+  )
+}

@@ -92,7 +92,7 @@ fn write_comments_vml(
     let col0 = col - 1
     let anchor = "\{col0}, 15, \{row0}, 2, \{col0 + 2}, 15, \{row0 + 3}, 16"
     sb.write_view(
-      "  <v:shape id=\"_x0000_s\{shape_id}\" type=\"#_x0000_t202\" style=\"position:absolute;73.5pt;width:108pt;height:59.25pt;z-index:1;visibility:hidden\" fillcolor=\"#ffffe1\" o:insetmode=\"auto\">\n",
+      "  <v:shape id=\"_x0000_s\{shape_id}\" type=\"#_x0000_t202\" style=\"position:absolute;margin-left:73.5pt;margin-top:0pt;width:108pt;height:59.25pt;z-index:1;visibility:hidden\" fillcolor=\"#ffffe1\" o:insetmode=\"auto\">\n",
     )
     sb.write_view("    <v:fill color2=\"#ffffe1\"/>\n")
     sb.write_view("    <v:shadow on=\"t\" color=\"black\" obscured=\"t\"/>\n")
