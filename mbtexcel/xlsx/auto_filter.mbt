@@ -5,6 +5,19 @@ pub(all) struct AutoFilterOption {
 } derive(Debug)
 
 ///|
+/// A checkbox-list criterion. Values are literal cell text, not expressions:
+/// spaces, quotes, wildcards, and words such as "blanks" are preserved.
+/// `column` is an absolute worksheet column name (for example "C").
+pub(all) struct AutoFilterValuesOption {
+  column : String
+  values : Array[String]
+} derive(Debug)
+
+///|
+#deprecated("implicit trait-method promotion is being removed; call via the trait")
+pub extend AutoFilterValuesOption with @debug.Debug::{to_repr}
+
+///|
 pub type AutoFilterOptions = AutoFilterOption
 
 ///|
@@ -142,18 +155,25 @@ fn parse_filter_tokens(
 fn parse_filter_expression(
   tokens : ArrayView[String],
 ) -> (Array[Int], Array[String]) raise XlsxError {
-  if tokens.length() == 7 {
-    let cond = tokens[3].to_lower()
-    let conditional = if cond == "or" || tokens[3] == "||" { 1 } else { 0 }
-    let (op1, token1) = parse_filter_tokens(tokens[:3])
-    let (op2, token2) = parse_filter_tokens(tokens[4:7])
-    ([op1, conditional, op2], [token1, token2])
-  } else if tokens.length() == 3 {
-    let (op, token) = parse_filter_tokens(tokens)
-    ([op], [token])
-  } else {
+  if tokens.length() < 3 || (tokens.length() + 1) % 4 != 0 {
     raise InvalidAutoFilter(msg="auto filter expression invalid")
   }
+  let ops : Array[Int] = []
+  let values : Array[String] = []
+  for i = 0; i < tokens.length(); i = i + 4 {
+    if i > 0 {
+      let conditional = match tokens[i - 1].to_lower() {
+        "or" | "||" => 1
+        "and" | "&&" => 0
+        _ => raise InvalidAutoFilter(msg="auto filter conjunction invalid")
+      }
+      ops.push(conditional)
+    }
+    let (op, value) = parse_filter_tokens(tokens[i:i + 3])
+    ops.push(op)
+    values.push(value)
+  }
+  (ops, values)
 }
 
 ///|
@@ -177,11 +197,20 @@ fn auto_filter_column_from_expression(
 ) -> AutoFilterColumn raise XlsxError {
   let tokens = tokenize_filter_expression(expression)
   let (ops, values) = parse_filter_expression(tokens)
-  if ops.length() == 1 && ops[0] == 2 {
+  let mut is_value_list = true
+  for i, op in ops {
+    if op != (if i % 2 == 0 { 2 } else { 1 }) {
+      is_value_list = false
+    }
+  }
+  if is_value_list {
     return { col, filters: Some(values), custom_filters: None, }
   }
-  if ops.length() == 3 && ops[0] == 2 && ops[1] == 1 && ops[2] == 2 {
-    return { col, filters: Some(values), custom_filters: None, }
+  // SpreadsheetML customFilters can contain at most two comparisons.
+  if values.length() > 2 {
+    raise InvalidAutoFilter(
+      msg="only equality OR chains support more than two values",
+    )
   }
   let custom_filters : Array[AutoFilterCustomFilter] = []
   if ops.length() == 1 {
@@ -225,6 +254,44 @@ fn auto_filter_from_options(
     let mut replaced = false
     for i, existing in columns {
       if existing.col == column.col {
+        columns[i] = column
+        replaced = true
+        break
+      }
+    }
+    if !replaced {
+      columns.push(column)
+    }
+  }
+  { range_ref: normalized, columns, }
+}
+
+///|
+fn auto_filter_from_values(
+  range_ref : String,
+  options : ArrayView[AutoFilterValuesOption],
+) -> AutoFilter raise XlsxError {
+  let normalized = normalize_range_ref(range_ref)
+  let (_, min_col, _, max_col) = parse_range_ref(normalized)
+  let columns : Array[AutoFilterColumn] = []
+  for opt in options {
+    let col = column_name_to_number(opt.column) catch {
+      _ => raise InvalidAutoFilter(msg="auto filter column invalid")
+    }
+    if col < min_col || col > max_col {
+      raise InvalidAutoFilter(msg="auto filter column out of range")
+    }
+    if opt.values.is_empty() {
+      raise InvalidAutoFilter(msg="auto filter values must not be empty")
+    }
+    let column : AutoFilterColumn = {
+      col,
+      filters: Some(opt.values.copy()),
+      custom_filters: None,
+    }
+    let mut replaced = false
+    for i, existing in columns {
+      if existing.col == col {
         columns[i] = column
         replaced = true
         break

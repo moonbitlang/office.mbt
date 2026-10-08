@@ -189,6 +189,13 @@ pub(all) struct AutoFilterOption {
 #deprecated
 pub fn AutoFilterOption::to_repr(Self) -> @debug.Repr
 
+pub(all) struct AutoFilterValuesOption {
+  column : String
+  values : Array[String]
+} derive(@debug.Debug)
+#deprecated
+pub fn AutoFilterValuesOption::to_repr(Self) -> @debug.Repr
+
 pub struct Border {
   typ : String
   mut color : String?
@@ -2074,6 +2081,7 @@ pub fn Workbook::set_active_sheet(Self, Int) -> Unit
 pub fn Workbook::set_app_properties(Self, AppProperties) -> Unit
 pub fn Workbook::set_app_props(Self, AppProperties) -> Unit
 pub fn Workbook::set_auto_filter(Self, StringView, String, ArrayView[AutoFilterOption]) -> Unit raise XlsxError
+pub fn Workbook::set_auto_filter_values(Self, StringView, String, ArrayView[AutoFilterValuesOption]) -> Unit raise XlsxError
 pub fn Workbook::set_calc_props(Self, CalcPropsOptions?) -> Unit raise XlsxError
 pub fn Workbook::set_cell(Self, StringView, String, String) -> Unit raise XlsxError
 pub fn Workbook::set_cell_bool(Self, StringView, String, Bool) -> Unit raise XlsxError
@@ -2312,6 +2320,7 @@ pub fn Worksheet::row_stream(Self) -> RowStream
 pub fn Worksheet::row_visible(Self, Int) -> Bool raise XlsxError
 pub fn Worksheet::rows(Self) -> Rows
 pub fn Worksheet::set_auto_filter(Self, String, ArrayView[AutoFilterOption]) -> Unit raise XlsxError
+pub fn Worksheet::set_auto_filter_values(Self, String, ArrayView[AutoFilterValuesOption]) -> Unit raise XlsxError
 pub fn Worksheet::set_cell(Self, String, String) -> Unit raise XlsxError
 pub fn Worksheet::set_cell_formula(Self, String, String, value? : String) -> Unit raise XlsxError
 pub fn Worksheet::set_cell_formula_opts(Self, String, String, opts? : FormulaOpts, value? : String) -> Unit raise XlsxError

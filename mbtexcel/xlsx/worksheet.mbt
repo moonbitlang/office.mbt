@@ -305,6 +305,20 @@ pub fn Worksheet::set_auto_filter(
 }
 
 ///|
+/// Replaces the worksheet filter with literal checkbox lists. Repeated columns
+/// use the last option. Each list must be nonempty; no options sets only the
+/// filter range. Values are copied, and rows are not automatically hidden.
+pub fn Worksheet::set_auto_filter_values(
+  self : Worksheet,
+  range_ref : String,
+  options : ArrayView[AutoFilterValuesOption],
+) -> Unit raise XlsxError {
+  self.ensure_stream_idle()
+  let filter = auto_filter_from_values(range_ref, options)
+  self.auto_filter = Some(filter)
+}
+
+///|
 pub fn Worksheet::clear_auto_filter(self : Worksheet) -> Unit raise XlsxError {
   self.ensure_stream_idle()
   self.auto_filter = None
