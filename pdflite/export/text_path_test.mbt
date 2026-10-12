@@ -348,11 +348,195 @@ test "many runs with one font: codes, cmap and widths" {
       #|
     ),
   )
-  let cid = p.path(f0, ["DescendantFonts"])
+  let cid = p.items(p.get(f0, "DescendantFonts"))[0]
   inspect(
-    p.show(cid),
+    p.show(p.get(cid, "W")),
     content=(
-      #|[R]
+      #|[0 0 500 1 1 250 2 2 550 3 3 700 4 4 600]
+    ),
+  )
+}
+
+///|
+test "Type 3 codes beyond 255 go on in a second font" {
+  let font = test_font()
+  font.set_color_glyphs({ is_color: g => g != 2, draw: (_, _, _) => false, })
+  // 53 context colors with five colored glyphs each are 265 codes; glyph 2
+  // is not colored and stays in the CID font, between them in every run.
+  // The last runs are drawn again with earlier colors.
+  let colors = []
+  for k in 0..<53 {
+    colors.push(k)
+  }
+  colors.push(51)
+  colors.push(0)
+  colors.push(52)
+  let p = parse(
+    one_page(s => {
+      for k in colors {
+        s.set_fill(Some({ ..@export.Fill::default(), paint: solid(k, 0, 0), }))
+        s.draw_glyphs(
+          @export.Point::from_xy(10.0, 50.0),
+          [
+            glyph(1, 0, 1),
+            glyph(3, 1, 2),
+            glyph(2, 2, 3),
+            glyph(4, 3, 4),
+            glyph(5, 4, 5),
+            glyph(0, 5, 6),
+          ],
+          font,
+          "ABCDEF",
+          10.0,
+        )
+      }
+    }),
+  )
+  let lines = []
+  for line in shown(p.content(p.page(0))).split("\n") {
+    let line = line.to_owned()
+    if !line.has_suffix(" Tm") && line != "" {
+      lines.push(line)
+    }
+  }
+  // The first fifty runs are six lines each (three groups: the font and
+  // the string); what follows is the runs that cross the boundary and the
+  // three that draw earlier colors again.
+  let sb = StringBuilder()
+  for i in 0..<6 {
+    sb.write_string(lines[i] + "\n")
+  }
+  sb.write_string("...\n")
+  for i in 300..<lines.length() {
+    sb.write_string(lines[i] + "\n")
+  }
+  inspect(
+    sb.to_string(),
+    content=(
+      #|/f0 10 Tf
+      #|[<0001>] TJ
+      #|/f1 10 Tf
+      #|<0001> Tj
+      #|/f0 10 Tf
+      #|[<020304>] TJ
+      #|...
+      #|/f0 10 Tf
+      #|[<FAFB>] TJ
+      #|/f1 10 Tf
+      #|<0001> Tj
+      #|/f0 10 Tf
+      #|[<FCFDFE>] TJ
+      #|/f0 10 Tf
+      #|<FF> Tj
+      #|/f2 10 Tf
+      #|<00> Tj
+      #|/f1 10 Tf
+      #|<0001> Tj
+      #|/f2 10 Tf
+      #|[<010203>] TJ
+      #|/f2 10 Tf
+      #|[<0405>] TJ
+      #|/f1 10 Tf
+      #|<0001> Tj
+      #|/f2 10 Tf
+      #|[<060708>] TJ
+      #|/f0 10 Tf
+      #|<FF> Tj
+      #|/f2 10 Tf
+      #|<00> Tj
+      #|/f1 10 Tf
+      #|<0001> Tj
+      #|/f2 10 Tf
+      #|[<010203>] TJ
+      #|/f0 10 Tf
+      #|[<0001>] TJ
+      #|/f1 10 Tf
+      #|<0001> Tj
+      #|/f0 10 Tf
+      #|[<020304>] TJ
+      #|/f2 10 Tf
+      #|[<0405>] TJ
+      #|/f1 10 Tf
+      #|<0001> Tj
+      #|/f2 10 Tf
+      #|[<060708>] TJ
+      #|
+    ),
+  )
+  inspect(
+    p.show(p.path(p.page(0), ["Resources", "Font"])),
+    content=(
+      #|<</f0 R /f1 R /f2 R>>
+    ),
+  )
+}
+
+///|
+test "a font that is given another color glyph hook asks it about every glyph again" {
+  let font = test_font()
+  let hook = (a : Int) => @export.ColorGlyphs::{
+    is_color: g => g == a,
+    draw: (_, _, _) => false,
+  }
+  // The same two glyphs under no hook, a hook for the second, a hook for
+  // the first, the hook for the second again and a hook for neither.
+  let p = parse(
+    one_page(s => {
+      let draw = () => {
+        s.draw_glyphs(
+          @export.Point::from_xy(10.0, 50.0),
+          [glyph(1, 0, 1), glyph(3, 1, 2)],
+          font,
+          "AB",
+          10.0,
+        )
+      }
+      draw()
+      font.set_color_glyphs(hook(3))
+      draw()
+      draw()
+      font.set_color_glyphs(hook(1))
+      draw()
+      font.set_color_glyphs(hook(3))
+      draw()
+      font.set_color_glyphs(hook(0))
+      draw()
+    }),
+  )
+  inspect(
+    shown(p.content(p.page(0))),
+    content=(
+      #|/f0 10 Tf
+      #|1 0 0 -1 10 50 Tm
+      #|[<00010002>] TJ
+      #|/f0 10 Tf
+      #|1 0 0 -1 10 50 Tm
+      #|<0001> Tj
+      #|/f1 10 Tf
+      #|1 0 0 -1 16 50 Tm
+      #|<00> Tj
+      #|/f0 10 Tf
+      #|1 0 0 -1 10 50 Tm
+      #|<0001> Tj
+      #|/f1 10 Tf
+      #|1 0 0 -1 16 50 Tm
+      #|<00> Tj
+      #|/f1 10 Tf
+      #|1 0 0 -1 10 50 Tm
+      #|<01> Tj
+      #|/f0 10 Tf
+      #|1 0 0 -1 16 50 Tm
+      #|<0002> Tj
+      #|/f0 10 Tf
+      #|1 0 0 -1 10 50 Tm
+      #|<0001> Tj
+      #|/f1 10 Tf
+      #|1 0 0 -1 16 50 Tm
+      #|<00> Tj
+      #|/f0 10 Tf
+      #|1 0 0 -1 10 50 Tm
+      #|[<00010002>] TJ
+      #|
     ),
   )
 }
