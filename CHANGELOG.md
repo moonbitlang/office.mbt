@@ -4,6 +4,34 @@ Breaking and notable changes for the published modules in this workspace.
 Entries are grouped by module and by the version they ship in; `Unreleased`
 covers changes that have landed on `main` but are not yet published.
 
+### moonbitlang/pagelayout [Unreleased]
+
+- DOCX body inline pictures now occupy their source position in the paragraph,
+  participate in wrapping and line height, and paginate with their text instead
+  of appearing in a separate block after it. Oversized pictures scale to the
+  paragraph measure.
+- **API:** adds `Block::ParagraphWithImages`, `Block::paragraph_with_images`,
+  `paragraph.InlineImage`, and `layout_paragraph_with_images`. Consumers matching
+  every `Block` variant must handle the new variant. Existing paragraph inputs
+  and `layout_paragraph` remain supported.
+- Body content controls retain their displayed paragraphs/tables. Unsupported
+  floating drawings, nested tables, section breaks, notes, math, text boxes and
+  alternate content are reported through `DocxDocument.unsupported`, while
+  deleted and historical property content does not trigger false warnings.
+- Inline image blocks in page furniture retain coordinates and dynamic page
+  field offsets. DOCX table-cell and header/footer image reading, floating text
+  wrapping, nested tables and multiple section geometry remain unsupported.
+
+### moonbitlang/mbtexcel [Unreleased]
+
+- HTML previews preserve two-color linear gradient direction, border weight and
+  CSS line styles (dash-dot variants approximate dashed), combined underline/strike, and resolved theme/indexed colors
+  with tint. Invalid colors and unsupported path gradients remain omitted.
+- `style_css` accepts optional workbook context for theme/indexed colors.
+- Frozen worksheets expose nonnegative `data-freeze-rows` and
+  `data-freeze-columns` on their section for browser consumers. Split panes do
+  not masquerade as frozen panes.
+
 ### moonbitlang/pdflite [0.4.0]
 
 - **BREAKING** (builds that use flate 0.8 elsewhere): requires

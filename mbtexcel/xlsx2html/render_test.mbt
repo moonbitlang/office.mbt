@@ -71,7 +71,7 @@ test "full-document snapshot: styles, merge, widths, chart, image, freeze" {
       #|</head>
       #|<body>
       #|<h1>report.xlsx</h1>
-      #|<section data-sheet="Report">
+      #|<section data-sheet="Report" data-freeze-rows="2" data-freeze-columns="0">
       #|<h2>Report</h2>
       #|<table>
       #|<colgroup>

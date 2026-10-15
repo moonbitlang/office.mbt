@@ -21,7 +21,7 @@ pub fn row_height_px(Double) -> Int
 
 pub fn sanitize_utf16_lossy(String) -> (String, Int)
 
-pub fn style_css(@xlsx.Style) -> String
+pub fn style_css(@xlsx.Style, workbook? : @xlsx.Workbook) -> String
 
 // Errors
 pub suberror RenderError {

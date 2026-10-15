@@ -1277,16 +1277,16 @@ fn inline_drawing() -> String {
 }
 
 ///|
-test "an inline drawing becomes an image block at its authored size" {
+test "an inline drawing stays in its paragraph at its authored size" {
   let doc = @docx.read_docx(docx_with_image(inline_drawing()))
   json_inspect(doc.unsupported, content=[])
-  // paragraph, then the image
-  inspect(doc.blocks.length(), content="2")
-  guard! doc.blocks[1] is ImageBlock(width_pt~, height_pt~, mime~, ..)
+  inspect(doc.blocks.length(), content="1")
+  guard! doc.blocks[0] is ParagraphWithImages(images~, ..)
+  guard! images.get(0) is Some(image)
   // 1828800 EMU = 144pt, 914400 = 72pt
-  inspect(width_pt, content="144")
-  inspect(height_pt, content="72")
-  inspect(mime, content="image/png")
+  inspect(image.width_pt, content="144")
+  inspect(image.height_pt, content="72")
+  inspect(image.mime, content="image/png")
 }
 
 ///|
@@ -1318,6 +1318,7 @@ test "a floating drawing is reported rather than misplaced" {
   )
   // one paragraph, no image block
   inspect(doc.blocks.length(), content="1")
+  assert_true(doc.unsupported.contains("floating drawing"))
 }
 
 ///|

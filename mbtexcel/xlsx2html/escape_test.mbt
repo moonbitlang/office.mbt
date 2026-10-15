@@ -96,9 +96,12 @@ test "style_css renders safe declarations and omits invalid colors" {
     @xlsx.Font::with_values(color="</style><script>alert(1)</script>"),
   )
   inspect(@xlsx2html.style_css(hostile), content="")
-  // Non-solid fills are omitted per the documented fidelity limits.
+  // Linear gradients retain their source colors and direction.
   let gradient = @xlsx.Style::new().with_fill(
     @xlsx.Fill::gradient("4472C4", "FFFFFF"),
   )
-  inspect(@xlsx2html.style_css(gradient), content="")
+  inspect(
+    @xlsx2html.style_css(gradient),
+    content="background-image:linear-gradient(180deg,#4472C4 0%,#FFFFFF 100%);",
+  )
 }

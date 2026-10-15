@@ -12,6 +12,8 @@ pub fn field_kind(String) -> FieldKind
 
 pub fn layout_paragraph(ParagraphInput, Double, fonts? : @fonts.FontRegistry) -> ParagraphLayout
 
+pub fn layout_paragraph_with_images(ParagraphInput, Double, Array[InlineImage], fonts? : @fonts.FontRegistry) -> InlineParagraphLayout
+
 // Errors
 
 // Types and methods
@@ -43,6 +45,27 @@ pub fn FieldKind::not_equal(Self, Self) -> Bool
 pub fn FieldKind::to_json(Self) -> Json
 #deprecated
 pub fn FieldKind::to_repr(Self) -> @debug.Repr
+
+pub(all) struct InlineImage {
+  offset_utf16 : Int
+  width_pt : Double
+  height_pt : Double
+  data : Bytes
+  mime : String
+} derive(Eq, ToJson, @debug.Debug)
+#deprecated
+pub fn InlineImage::equal(Self, Self) -> Bool
+#deprecated
+pub fn InlineImage::not_equal(Self, Self) -> Bool
+#deprecated
+pub fn InlineImage::to_json(Self) -> Json
+#deprecated
+pub fn InlineImage::to_repr(Self) -> @debug.Repr
+
+pub(all) struct InlineParagraphLayout {
+  layout : ParagraphLayout
+  images : Array[PlacedInlineImage]
+}
 
 pub(all) struct LineBox {
   baseline_pt : Double
@@ -120,6 +143,16 @@ pub fn ParagraphStyle::to_json(Self) -> Json
 #deprecated
 pub fn ParagraphStyle::to_repr(Self) -> @debug.Repr
 pub fn ParagraphStyle::with_hanging_tab_stop(Self) -> Self
+
+pub(all) struct PlacedInlineImage {
+  line : Int
+  x_pt : Double
+  y_pt : Double
+  width_pt : Double
+  height_pt : Double
+  data : Bytes
+  mime : String
+}
 
 pub(all) struct PlacedRun {
   font : @pagelayout.FontSpec

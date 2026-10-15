@@ -191,3 +191,33 @@ test "empty paragraph still occupies one line" {
   assert_eq(layout.lines[0].runs.length(), 0)
   inspect(layout.height_pt, content="14.6484375")
 }
+
+///|
+test "leading inline image respects first line indent and stays atomic" {
+  let image = @paragraph.InlineImage::{
+    offset_utf16: 0,
+    width_pt: 200,
+    height_pt: 100,
+    data: b"image",
+    mime: "image/png",
+  }
+  let rich = @paragraph.layout_paragraph_with_images(
+    para("\uFFFCafter", first=20),
+    100,
+    [image],
+  )
+  debug_inspect(
+    rich.images.map(image => (image.width_pt, image.height_pt, image.x_pt)),
+    content="[(80, 40, 20)]",
+  )
+  debug_inspect(
+    (
+      rich.layout.lines.length() > 1,
+      rich.layout.lines[0].height_pt >= 40,
+      rich.layout.lines.all(line => {
+        line.runs.all(run => !run.text.contains("\uFFFC"))
+      }),
+    ),
+    content="(true, true, true)",
+  )
+}

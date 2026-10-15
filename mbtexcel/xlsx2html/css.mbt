@@ -49,9 +49,9 @@ pub fn css_color(raw : String) -> String? {
 
 ///|
 /// The CSS declarations for a resolved style, as `property: value;`
-/// pairs, or `""` when nothing renderable is set. Theme/indexed colors
-/// have no literal value here and are omitted (never guessed).
-pub fn style_css(style : @xlsx.Style) -> String {
+/// pairs, or `""` when nothing renderable is set. Pass `workbook` to resolve
+/// theme and indexed colors; without it, only literal colors are emitted.
+pub fn style_css(style : @xlsx.Style, workbook? : @xlsx.Workbook) -> String {
   let out = StringBuilder()
   match style.font {
     Some(font) => {
@@ -61,8 +61,16 @@ pub fn style_css(style : @xlsx.Style) -> String {
       if font.italic.unwrap_or(false) {
         out.write_string("font-style:italic;")
       }
+      let decorations : Array[String] = []
       if font.strike.unwrap_or(false) {
-        out.write_string("text-decoration:line-through;")
+        decorations.push("line-through")
+      }
+      if font.underline is Some(underline) && underline != "none" {
+        decorations.push("underline")
+      }
+      if !decorations.is_empty() {
+        let decoration = decorations.join(" ")
+        out.write_string("text-decoration:\{decoration};")
       }
       match font.size {
         Some(size) if size > 0.0 => {
@@ -71,30 +79,39 @@ pub fn style_css(style : @xlsx.Style) -> String {
         }
         _ => ()
       }
-      match font.color {
-        Some(color) =>
-          match css_color(color) {
-            Some(css) => out.write_string("color:\{css};")
-            None => ()
-          }
+      match
+        resolved_css_color(
+          font.color,
+          font.color_theme,
+          font.color_indexed,
+          font.color_tint,
+          workbook,
+        ) {
+        Some(css) => out.write_string("color:\{css};")
         None => ()
       }
     }
     None => ()
   }
   match style.fill {
-    // Only a solid pattern fill renders (typ "pattern", patternType
-    // solid = 1, matching what Fill::solid writes); gradients and other
-    // pattern types are omitted per the documented fidelity limits.
     Some(fill) =>
-      if fill.typ.unwrap_or("pattern") == "pattern" &&
+      if fill.typ == Some("gradient") {
+        match gradient_css(fill) {
+          Some(css) => out.write_string("background-image:\{css};")
+          None => ()
+        }
+      } else if fill.typ.unwrap_or("pattern") == "pattern" &&
         fill.pattern.unwrap_or(1) == 1 {
-        match fill.colors {
-          Some(colors) if colors.length() > 0 =>
-            match css_color(colors[0]) {
-              Some(css) => out.write_string("background-color:\{css};")
-              None => ()
-            }
+        let raw = fill.colors.bind(colors => colors.get(0))
+        match
+          resolved_css_color(
+            raw,
+            fill.fg_theme,
+            fill.fg_indexed,
+            fill.fg_tint,
+            workbook,
+          ) {
+          Some(css) => out.write_string("background-color:\{css};")
           _ => ()
         }
       }
@@ -135,9 +152,7 @@ pub fn style_css(style : @xlsx.Style) -> String {
           "bottom" => "border-bottom"
           _ => continue
         }
-        // An unset color is Excel's default ink; a malformed color means
-        // the side is omitted, never guessed. Border line styles are all
-        // rendered as thin solid in v1 (documented limitation).
+        // An unset color is Excel's default ink; malformed colors are omitted.
         let color = match border.color {
           Some(raw) =>
             match css_color(raw) {
@@ -146,9 +161,94 @@ pub fn style_css(style : @xlsx.Style) -> String {
             }
           None => "#000000"
         }
-        out.write_string("\{side}:1px solid \{color};")
+        let line = match border.style.unwrap_or(0) {
+          1 => "1px solid"
+          2 => "2px solid"
+          3 | 9 | 11 => "1px dashed"
+          4 => "1px dotted"
+          5 => "3px solid"
+          6 => "3px double"
+          7 => "0.5px solid"
+          8 | 10 | 12 | 13 => "2px dashed"
+          _ => continue
+        }
+        out.write_string("\{side}:\{line} \{color};")
       }
     None => ()
   }
   out.to_string()
+}
+
+///|
+// Resolve only colors explicitly present in the source. Workbook context is
+// optional so existing callers that supply literal colors remain supported.
+fn resolved_css_color(
+  raw : String?,
+  theme : Int32?,
+  indexed : Int32?,
+  tint : Double?,
+  workbook : @xlsx.Workbook?,
+) -> String? {
+  let theme_count = workbook
+    .map(book => book.theme_colors.map(colors => colors.length()).unwrap_or(10))
+    .unwrap_or(0)
+  let color = match (raw, theme, indexed, workbook) {
+    (_, Some(value), _, Some(book)) if value >= 0 && value < theme_count =>
+      Some(book.get_base_color("", 0, theme_color=value))
+    (Some(value), _, _, _) => Some(value)
+    (_, _, Some(value), Some(book)) if value >= 0 && value < 64 =>
+      Some(book.get_base_color("", value))
+    _ => None
+  }
+  color.bind(value => {
+    guard css_color(value) is Some(valid) else { return None }
+    match tint {
+      Some(t) if t >= -1.0 && t <= 1.0 =>
+        css_color(@xlsx.theme_color(valid[1:].to_owned(), t))
+      Some(_) => None
+      None => Some(valid)
+    }
+  })
+}
+
+///|
+// OOXML linear gradient degrees run clockwise from left to right; CSS degrees
+// start at the upward direction. Symmetric variants repeat the first color.
+fn gradient_css(fill : @xlsx.Fill) -> String? {
+  guard fill.colors is Some(colors) && colors.length() == 2 else { return None }
+  guard gradient_color(colors[0]) is Some(first) &&
+    gradient_color(colors[1]) is Some(last) else {
+    return None
+  }
+  let shading = fill.shading.unwrap_or(0)
+  let degree = match shading {
+    0 | 2 => 180
+    1 => 0
+    3 | 5 => 90
+    4 => 270
+    6 | 8 => 135
+    7 => 345
+    9 | 11 => 225
+    10 => 45
+    // Path gradients have different geometry and are not approximated here.
+    _ => return None
+  }
+  let stops = if shading is (2 | 5 | 8 | 11) {
+    "\{first} 0%,\{last} 50%,\{first} 100%"
+  } else {
+    "\{first} 0%,\{last} 100%"
+  }
+  Some("linear-gradient(\{degree}deg,\{stops})")
+}
+
+///|
+// The fill API accepts one leading hash; validate the whole remaining value.
+fn gradient_color(raw : String) -> String? {
+  css_color(
+    if raw.has_prefix("#") && (raw.length() == 7 || raw.length() == 9) {
+      raw[1:].to_owned()
+    } else {
+      raw
+    },
+  )
 }

@@ -47,6 +47,13 @@ pub(all) enum Block {
     keep_next~ : Bool,
     widow_control~ : Bool
   )
+  ParagraphWithImages(
+    input~ : @paragraph.ParagraphInput,
+    images~ : Array[@paragraph.InlineImage],
+    keep_lines~ : Bool,
+    keep_next~ : Bool,
+    widow_control~ : Bool
+  )
   /// A table. `keep_next` glues it to the block that follows, as for a
   /// paragraph; rows split across pages unless a row says `cant_split`,
   /// and `w:tblHeader` rows repeat on each continuation.
@@ -75,6 +82,18 @@ pub fn Block::paragraph(
 }
 
 ///|
+/// A paragraph whose U+FFFC placeholders carry baseline-aligned images.
+pub fn Block::paragraph_with_images(
+  input : @paragraph.ParagraphInput,
+  images : Array[@paragraph.InlineImage],
+  keep_lines~ : Bool = false,
+  keep_next~ : Bool = false,
+  widow_control~ : Bool = true,
+) -> Block {
+  ParagraphWithImages(input~, images~, keep_lines~, keep_next~, widow_control~)
+}
+
+///|
 /// A table block with Word's defaults.
 pub fn Block::table(table : @table.Table, keep_next~ : Bool = false) -> Block {
   TableBlock(table~, keep_next~)
@@ -96,6 +115,7 @@ priv struct LineSlot {
   rel_baseline_pt : Double // baseline within this slot
   height_pt : Double
   runs : Array[@paragraph.PlacedRun]
+  images : Array[@pagelayout.ImageItem]
 }
 
 ///|
@@ -165,15 +185,39 @@ fn lay_blocks(
           }),
         )
       }
-      Paragraph(input~, keep_lines~, keep_next~, widow_control~) => {
-        let layout = @paragraph.layout_paragraph(input, content_width)
+      Paragraph(input~, keep_lines~, keep_next~, widow_control~)
+      | ParagraphWithImages(input~, keep_lines~, keep_next~, widow_control~, ..) => {
+        let images = match block {
+          ParagraphWithImages(images~, ..) => images
+          _ => []
+        }
+        let rich = @paragraph.layout_paragraph_with_images(
+          input, content_width, images,
+        )
+        let layout = rich.layout
         let slots : Array[LineSlot] = []
         let mut top = input.style.space_before_pt
-        for line in layout.lines {
+        let mut next_image = 0
+        for index, line in layout.lines {
+          let line_images : Array[@pagelayout.ImageItem] = []
+          while next_image < rich.images.length() &&
+                rich.images[next_image].line == index {
+            let image = rich.images[next_image]
+            line_images.push({
+              x_pt: image.x_pt,
+              y_pt: image.y_pt - top,
+              w_pt: image.width_pt,
+              h_pt: image.height_pt,
+              data: image.data,
+              mime: image.mime,
+            })
+            next_image += 1
+          }
           slots.push({
             rel_baseline_pt: line.baseline_pt - top,
             height_pt: line.height_pt,
             runs: line.runs,
+            images: line_images,
           })
           top += line.height_pt
         }
@@ -241,6 +285,15 @@ fn PageCursor::place_slot(self : PageCursor, slot : LineSlot) -> Unit {
         text: run.text,
         advances_pt: run.advances_pt,
         color: run.color,
+      }),
+    )
+  }
+  for image in slot.images {
+    page.items.push(
+      Image({
+        ..image,
+        x_pt: self.section.margin_left_pt + image.x_pt,
+        y_pt: self.y + image.y_pt,
       }),
     )
   }
@@ -491,19 +544,45 @@ fn furniture_items(
   let mut y = 0.0
   for block in blocks {
     match block {
-      Paragraph(input~, ..) => {
+      Paragraph(input~, ..) | ParagraphWithImages(input~, ..) => {
+        let source_images = match block {
+          ParagraphWithImages(images~, ..) => images
+          _ => []
+        }
+        let images : Array[@paragraph.InlineImage] = []
+        let mut source_offset = 0
+        let mut resolved_offset = 0
         // a PAGE or NUMPAGES run takes the real value here, where the
         // page is finally known
         let resolved = if input.has_fields() {
           let runs : Array[@paragraph.RunInput] = []
           for run in input.runs {
-            runs.push(run.evaluate(page_number, page_count))
+            let evaluated = run.evaluate(page_number, page_count)
+            for image in source_images {
+              if image.offset_utf16 >= source_offset &&
+                image.offset_utf16 < source_offset + run.text.length() &&
+                run.field is NotAField {
+                images.push({
+                  ..image,
+                  offset_utf16: image.offset_utf16 -
+                  source_offset +
+                  resolved_offset,
+                })
+              }
+            }
+            source_offset += run.text.length()
+            resolved_offset += evaluated.text.length()
+            runs.push(evaluated)
           }
           @paragraph.ParagraphInput::{ ..input, runs, }
         } else {
+          images.append(source_images)
           input
         }
-        let laid = @paragraph.layout_paragraph(resolved, width)
+        let rich = @paragraph.layout_paragraph_with_images(
+          resolved, width, images,
+        )
+        let laid = rich.layout
         for line in laid.lines {
           for run in line.runs {
             let font = model.add_font(run.font)
@@ -522,6 +601,21 @@ fn furniture_items(
               ),
             )
           }
+        }
+        for image in rich.images {
+          out.push(
+            (
+              y + image.y_pt,
+              Image({
+                x_pt: image.x_pt,
+                y_pt: 0,
+                w_pt: image.width_pt,
+                h_pt: image.height_pt,
+                data: image.data,
+                mime: image.mime,
+              }),
+            ),
+          )
         }
         y += laid.height_pt
       }
@@ -566,8 +660,12 @@ fn furniture_items(
 fn furniture_varies(furniture : PageFurniture) -> Bool {
   for blocks in [furniture.header, furniture.footer] {
     for block in blocks {
-      if block is Paragraph(input~, ..) && input.has_fields() {
-        return true
+      match block {
+        Paragraph(input~, ..) | ParagraphWithImages(input~, ..) =>
+          if input.has_fields() {
+            return true
+          }
+        _ => ()
       }
     }
   }
@@ -578,9 +676,15 @@ fn furniture_varies(furniture : PageFurniture) -> Bool {
 fn furniture_height(items : Array[(Double, @pagelayout.PageItem)]) -> Double {
   let mut tallest = 0.0
   for entry in items {
-    let (dy, _) = entry
-    if dy > tallest {
-      tallest = dy
+    let (dy, item) = entry
+    // Text offsets are baselines; image offsets locate their top edge.
+    // ImageBlock also retains its position within the furniture in y_pt.
+    let bottom = match item {
+      Image(image) => dy + image.y_pt + image.h_pt
+      _ => dy
+    }
+    if bottom > tallest {
+      tallest = bottom
     }
   }
   tallest
@@ -594,6 +698,8 @@ fn offset_item(
 ) -> @pagelayout.PageItem {
   match item {
     Text(run) => Text({ ..run, x_pt: run.x_pt + dx, baseline_pt: dy, })
+    Image(image) =>
+      Image({ ..image, x_pt: image.x_pt + dx, y_pt: image.y_pt + dy, })
     other => other
   }
 }

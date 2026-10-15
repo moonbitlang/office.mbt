@@ -64,3 +64,21 @@ three sources:
 
 Hand the same `FontRegistry` to layout and to `@pdf.RenderOptions`, so that
 text is drawn in the face it was measured with.
+
+## Inline pictures and layout diagnostics
+
+`Block::paragraph_with_images` accepts a paragraph with U+FFFC placeholders and
+`paragraph.InlineImage` entries whose UTF-16 offsets refer to the concatenated
+runs. Images are atomic during line breaking, align their bottom to the text
+baseline, reserve line height, and emit image page items rather than placeholder
+text. The DOCX body reader supplies this representation automatically for
+supported inline PNG/JPEG pictures. Existing `Block::Paragraph` inputs remain
+unchanged; exhaustive matches over `Block` must include `ParagraphWithImages`.
+
+`DocxDocument.unsupported` reports detected layout omissions. Body content
+controls preserve displayed children, but control semantics and controls in table
+cells are not fully implemented. Floating drawing wrapping, nested tables,
+paragraph section geometry, footnotes/endnotes, math, text boxes, alternate
+content, and inline picture reading in table cells/header/footer stories remain
+limited. Callers should display reported limitations and avoid interpreting an
+empty list as a complete OOXML conformance check.

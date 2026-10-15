@@ -87,7 +87,7 @@ pub fn render_workbook(
   )
   head.write_string("\n")
   for style_id in style_order {
-    let css = style_css(workbook.get_style(style_id))
+    let css = style_css(workbook.get_style(style_id), workbook~)
     if css != "" {
       head.write_string(".s\{style_id}{\{css}}\n")
     }
@@ -142,7 +142,17 @@ fn render_worksheet(
   style_order : Array[Int32],
   style_seen : Map[Int32, Unit],
 ) -> Unit raise {
-  body.write_string("<section data-sheet=\"\{escape_html_attribute(name)}\">\n")
+  let panes = workbook.get_panes(name)
+  let freeze = if panes.freeze {
+    let rows = if panes.y_split > 0 { panes.y_split } else { 0 }
+    let columns = if panes.x_split > 0 { panes.x_split } else { 0 }
+    " data-freeze-rows=\"\{rows}\" data-freeze-columns=\"\{columns}\""
+  } else {
+    ""
+  }
+  body.write_string(
+    "<section data-sheet=\"\{escape_html_attribute(name)}\"\{freeze}>\n",
+  )
   body.write_string("<h2>\{escape_html(name)}</h2>\n")
   let mut sheet_rows = worksheet.max_row()
   let mut sheet_cols = worksheet.max_col()

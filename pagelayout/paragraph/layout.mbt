@@ -56,6 +56,21 @@ pub fn layout_paragraph(
   width_pt : Double,
   fonts? : @fonts.FontRegistry,
 ) -> ParagraphLayout {
+  layout_paragraph_with_images(input, width_pt, [], fonts?).layout
+}
+
+///|
+/// Images participate in wrapping and line height, aligned to the baseline.
+/// All U+FFFC code units are reserved for images and never emitted as text.
+/// Missing or invalid images (including unusable line measures) are omitted
+/// together with their placeholder and advance. Valid images scale to the
+/// available width at their actual line position, retaining aspect ratio.
+pub fn layout_paragraph_with_images(
+  input : ParagraphInput,
+  width_pt : Double,
+  images : Array[InlineImage],
+  fonts? : @fonts.FontRegistry,
+) -> InlineParagraphLayout {
   // 1. concatenate runs; measure each with its resolved face
   let sb = StringBuilder()
   let advances : Array[Double] = []
@@ -99,6 +114,30 @@ pub fn layout_paragraph(
     offset += run.text.length()
   }
   let text = sb.to_string()
+  // U+FFFC is reserved for pictures, including rejected/missing entries.
+  for i in 0..<text.length() {
+    if text[i].to_int() == 0xFFFC {
+      advances[i] = 0.0
+    }
+  }
+  let source_images : Map[Int32, InlineImage] = Map([])
+  for image in images {
+    let at = image.offset_utf16
+    if at < 0 ||
+      at >= text.length() ||
+      text[at].to_int() != 0xFFFC ||
+      image.width_pt <= 0.0 ||
+      image.height_pt <= 0.0 ||
+      image.width_pt.is_inf() ||
+      image.height_pt.is_inf() ||
+      image.width_pt.is_nan() ||
+      image.height_pt.is_nan() {
+      continue
+    }
+    advances[at] = image.width_pt
+    source_images[at] = image
+  }
+  let placed_images : Array[PlacedInlineImage] = []
 
   // A tab is not a glyph: it advances the pen to the next stop, so its
   // width depends on the text before it — which depends on where the
@@ -117,9 +156,11 @@ pub fn layout_paragraph(
   let style = input.style
   let content_width = width_pt - style.indent_left_pt - style.indent_right_pt
   let first_width = content_width - style.indent_first_pt
-  let mut lines = @linebreak.break_lines(
-    text, advances, first_width, content_width,
+  let (initial_lines, initial_images) = break_image_lines(
+    text, advances, first_width, content_width, source_images,
   )
+  let mut lines = initial_lines
+  let mut inline = initial_images
 
   // Re-resolve each line's tabs from that line's own origin, then break
   // again. The first pass measured every tab from the paragraph start,
@@ -134,7 +175,11 @@ pub fn layout_paragraph(
       }
       resolve_tabs(text, advances, style.tabs, origin, line.start, line.end)
     }
-    lines = @linebreak.break_lines(text, advances, first_width, content_width)
+    let (resolved_lines, resolved_images) = break_image_lines(
+      text, advances, first_width, content_width, source_images,
+    )
+    lines = resolved_lines
+    inline = resolved_images
   }
 
   // 3. place each line: vertical metrics, alignment, justification
@@ -170,6 +215,15 @@ pub fn layout_paragraph(
       ascent = face.ascent_pt(size)
       natural = face.line_height_pt(size)
     }
+    let descent = natural - ascent
+    for at in line.start..<line.end {
+      if inline.get(at) is Some(image) && image.height_pt > ascent {
+        ascent = image.height_pt
+      }
+    }
+    if ascent + descent > natural {
+      natural = ascent + descent
+    }
     let line_height = match style.line_spacing {
       Single => natural
       Multiple(m) => natural * m
@@ -203,30 +257,52 @@ pub fn layout_paragraph(
     let placed : Array[PlacedRun] = []
     let mut pen = x
     for seg in segments {
-      let seg_text = text[seg.start:seg.end].to_owned()
-      let seg_advances : Array[Double] = Array(capacity=seg.end - seg.start)
-      let mut seg_width = 0.0
-      for j in seg.start..<seg.end {
-        let mut a = advances[j]
-        if extra_per_space > 0 && text[j].to_int() == 0x20 {
-          a += extra_per_space
+      let mut start = seg.start
+      for end in seg.start..<=seg.end {
+        let marker = end < seg.end && text[end].to_int() == 0xFFFC
+        let image = if marker { inline.get(end) } else { None }
+        if end != seg.end && !marker {
+          continue
         }
-        seg_advances.push(a)
-        seg_width += a
+        let seg_advances : Array[Double] = Array(capacity=end - start)
+        let mut seg_width = 0.0
+        for j in start..<end {
+          let mut a = advances[j]
+          if extra_per_space > 0 && text[j].to_int() == 0x20 {
+            a += extra_per_space
+          }
+          seg_advances.push(a)
+          seg_width += a
+        }
+        if end > start {
+          placed.push({
+            font: {
+              family: segment_family(seg),
+              bold: seg.style.bold,
+              italic: seg.style.italic,
+            },
+            size_pt: seg.style.size_pt,
+            x_pt: pen,
+            text: text[start:end].to_owned(),
+            advances_pt: seg_advances,
+            color: seg.style.color,
+          })
+        }
+        pen += seg_width
+        if image is Some(image) {
+          placed_images.push({
+            line: line_index,
+            x_pt: pen,
+            y_pt: y + ascent - image.height_pt,
+            width_pt: image.width_pt,
+            height_pt: image.height_pt,
+            data: image.data,
+            mime: image.mime,
+          })
+          pen += image.width_pt
+        }
+        start = end + 1
       }
-      placed.push({
-        font: {
-          family: segment_family(seg),
-          bold: seg.style.bold,
-          italic: seg.style.italic,
-        },
-        size_pt: seg.style.size_pt,
-        x_pt: pen,
-        text: seg_text,
-        advances_pt: seg_advances,
-        color: seg.style.color,
-      })
-      pen += seg_width
     }
     line_boxes.push({
       baseline_pt: y + ascent,
@@ -235,7 +311,108 @@ pub fn layout_paragraph(
     })
     y += line_height
   }
-  { height_pt: y + style.space_after_pt, lines: line_boxes, }
+  {
+    layout: { height_pt: y + style.space_after_pt, lines: line_boxes, },
+    images: placed_images,
+  }
+}
+
+///|
+// Greedy image-aware line breaking. Ordinary text uses the shared breaker;
+// images are fitted only after the actual line origin and prefix are known.
+// Authored sizes remain separate so a legal-break rewind or tab reflow can
+// place a picture on a wider continuation line without retaining an old scale.
+fn break_image_lines(
+  text : String,
+  advances : Array[Double],
+  first_width : Double,
+  rest_width : Double,
+  source : Map[Int32, InlineImage],
+) -> (Array[@linebreak.LineRange], Map[Int32, InlineImage]) {
+  let fitted : Map[Int32, InlineImage] = Map([])
+  if source.is_empty() {
+    return (
+      @linebreak.break_lines(text, advances, first_width, rest_width),
+      fitted,
+    )
+  }
+  let lines : Array[@linebreak.LineRange] = []
+  let mut start = 0
+  let mut width = 0.0
+  let mut spaces = 0.0
+  let mut last_break = -1
+  let mut i = 0
+  while i < text.length() {
+    let unit = text[i].to_int()
+    if unit == 0x0A {
+      lines.push({ start, end: i, width_pt: width, })
+      start = i + 1
+      width = 0.0
+      spaces = 0.0
+      last_break = -1
+      i += 1
+      continue
+    }
+    if unit == 0x20 {
+      spaces += advances[i]
+      i += 1
+      continue
+    }
+    if @linebreak.can_break_at(text, i) {
+      last_break = i
+    }
+    let limit = if lines.is_empty() { first_width } else { rest_width }
+    let nominal = source.get(i)
+    let advance = nominal.map(image => image.width_pt).unwrap_or(advances[i])
+    if width + spaces + advance > limit &&
+      width > 0.0 &&
+      !(unit >= 0xDC00 && unit <= 0xDFFF) {
+      let end = if last_break > start { last_break } else { i }
+      let mut visible_end = end
+      while visible_end > start && text[visible_end - 1].to_int() == 0x20 {
+        visible_end -= 1
+      }
+      let mut committed = 0.0
+      for j in start..<visible_end {
+        committed += advances[j]
+      }
+      lines.push({ start, end, width_pt: committed, })
+      start = end
+      width = 0.0
+      spaces = 0.0
+      last_break = -1
+      i = end
+      continue
+    }
+    if nominal is Some(image) {
+      let remaining = limit - width - spaces
+      fitted.remove(i)
+      advances[i] = 0.0
+      if remaining > 0.0 && !remaining.is_inf() && !remaining.is_nan() {
+        let scale = if image.width_pt > remaining {
+          remaining / image.width_pt
+        } else {
+          1.0
+        }
+        let image = {
+          ..image,
+          width_pt: image.width_pt * scale,
+          height_pt: image.height_pt * scale,
+        }
+        if image.width_pt > 0.0 && image.height_pt > 0.0 {
+          fitted[i] = image
+          advances[i] = image.width_pt
+        }
+      }
+    }
+    width += spaces + advances[i]
+    spaces = 0.0
+    i += 1
+  }
+  if start < text.length() || lines.is_empty() {
+    lines.push({ start, end: text.length(), width_pt: width, })
+  }
+  (lines, fitted)
 }
 
 ///|

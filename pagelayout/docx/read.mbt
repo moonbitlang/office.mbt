@@ -10,6 +10,7 @@
 /// package matches on. Both transitional and strict WML are mapped.
 fn namespace_map() -> Map[String, String] {
   {
+    "http://schemas.openxmlformats.org/markup-compatibility/2006": "mc",
     "http://schemas.openxmlformats.org/wordprocessingml/2006/main": "w",
     "http://purl.oclc.org/ooxml/wordprocessingml/main": "w",
     // the _rels parts use their own (default-prefixed) namespace
@@ -18,6 +19,8 @@ fn namespace_map() -> Map[String, String] {
     "http://purl.oclc.org/ooxml/officeDocument/relationships": "r",
     "http://schemas.openxmlformats.org/drawingml/2006/main": "a",
     "http://purl.oclc.org/ooxml/drawingml/main": "a",
+    "http://schemas.openxmlformats.org/officeDocument/2006/math": "m",
+    "http://purl.oclc.org/ooxml/officeDocument/math": "m",
     // inline/anchored drawings and the picture shape they wrap
     "http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing": "wp",
     "http://purl.oclc.org/ooxml/drawingml/wordprocessingDrawing": "wp",
@@ -38,8 +41,7 @@ pub(all) struct DocxDocument {
   furniture : @paginate.PageFurniture
   /// The header/footer relationship ids the section named.
   furniture_refs : FurnitureRefs
-  /// Block-level content this milestone does not lay out (tables,
-  /// content controls), one entry per occurrence in document order.
+  /// Detected unsupported content and layout, one entry per occurrence.
   /// Non-empty means the render is incomplete — callers should say so
   /// rather than presenting the output as the whole document.
   unsupported : Array[String]
@@ -48,7 +50,10 @@ pub(all) struct DocxDocument {
 ///|
 /// Read `w:t`, `w:tab`, and `w:br` out of one `w:r`, honoring
 /// `xml:space="preserve"`.
-fn run_text(run : @xml.XmlElement) -> String {
+fn run_text(
+  run : @xml.XmlElement,
+  drawing~ : (@xml.XmlElement, Int32) -> Bool = (_, _) => false,
+) -> String {
   let sb = StringBuilder()
   for child in run.children {
     guard child is XmlElement(el) else { continue }
@@ -59,6 +64,10 @@ fn run_text(run : @xml.XmlElement) -> String {
           sb.write_string(text)
         }
       "w:tab" => sb.write_string("\t")
+      "w:drawing" =>
+        if drawing(el, sb.to_string().length()) {
+          sb.write_string("\uFFFC")
+        }
       "w:br" =>
         // textWrapping is the default and may also be written explicitly
         // (Word does so whenever w:clear is present); page and column
@@ -139,18 +148,6 @@ fn ends_with_page_break(runs : Array[(@xml.XmlElement, String?)]) -> Bool {
 /// Returns the block, whether a page break precedes it, and whether one
 /// follows it.
 /// Inline drawings in a paragraph, in document order.
-fn paragraph_images(para : @xml.XmlElement) -> Array[ImageRef] {
-  let out : Array[ImageRef] = []
-  for drawing in para.descendants_by_tag_name("w:drawing") {
-    match read_drawing(drawing) {
-      Some(image) => out.push(image)
-      None => ()
-    }
-  }
-  out
-}
-
-///|
 /// Where a run sits relative to a complex field.
 priv enum FieldState {
   FieldOutside
@@ -166,6 +163,9 @@ fn read_paragraph(
   numbering~ : @numbering.Numbering = @numbering.Numbering::empty(),
   counters~ : @numbering.Counters = @numbering.Counters::new(),
   default_tab_pt~ : Double = 36.0,
+  resolve_image~ : (String) -> (Bytes, String)? = _ => None,
+  image_reason~ : (String) -> String = _ => "image",
+  unsupported~ : Array[String] = [],
 ) -> (@paginate.Block, Bool, Bool) {
   let (direct_para, style_id) = match para.first("w:pPr") {
     Some(ppr) => read_para_props(ppr)
@@ -173,6 +173,8 @@ fn read_paragraph(
   }
   let resolved_para = sheet.resolve_para(style_id, direct_para)
   let runs : Array[@paragraph.RunInput] = []
+  let images : Array[@paragraph.InlineImage] = []
+  let mut text_offset = 0
   let source_runs : Array[(@xml.XmlElement, String?)] = []
   collect_runs(para, source_runs)
   // Word writes a field as either a self-contained w:fldSimple or a
@@ -205,7 +207,26 @@ fn read_paragraph(
     if state is FieldInstruction {
       continue
     }
-    let text = run_text(run)
+    let text = run_text(run, drawing=(drawing, offset) => {
+      guard read_drawing(drawing) is Some(image) else { return false }
+      match resolve_image(image.relationship) {
+        Some((data, mime)) => {
+          images.push({
+            offset_utf16: text_offset + offset,
+            width_pt: image.width.to_pt(),
+            height_pt: image.height.to_pt(),
+            data,
+            mime,
+          })
+          true
+        }
+        None => {
+          unsupported.push(image_reason(image.relationship))
+          false
+        }
+      }
+    })
+    text_offset += text.length()
     if text.length() == 0 {
       continue
     }
@@ -313,6 +334,14 @@ fn read_paragraph(
             style: marker_style,
             field: NotAField,
           })
+          for i, image in images {
+            images[i] = {
+              ..image,
+              offset_utf16: image.offset_utf16 +
+              label.length() +
+              separator.length(),
+            }
+          }
         }
         None => ()
       }
@@ -332,12 +361,22 @@ fn read_paragraph(
   if sheet.hang_ind_tab {
     style = style.with_hanging_tab_stop()
   }
-  let block = @paginate.Block::paragraph(
-    { runs, style, },
-    keep_lines=resolved_para.keep_lines.unwrap_or(false),
-    keep_next=resolved_para.keep_next.unwrap_or(false),
-    widow_control=resolved_para.widow_control.unwrap_or(true),
-  )
+  let block = if images.is_empty() {
+    @paginate.Block::paragraph(
+      { runs, style, },
+      keep_lines=resolved_para.keep_lines.unwrap_or(false),
+      keep_next=resolved_para.keep_next.unwrap_or(false),
+      widow_control=resolved_para.widow_control.unwrap_or(true),
+    )
+  } else {
+    @paginate.Block::paragraph_with_images(
+      { runs, style, },
+      images,
+      keep_lines=resolved_para.keep_lines.unwrap_or(false),
+      keep_next=resolved_para.keep_next.unwrap_or(false),
+      widow_control=resolved_para.widow_control.unwrap_or(true),
+    )
+  }
   (
     block,
     resolved_para.page_break_before.unwrap_or(false),
@@ -365,9 +404,9 @@ pub fn read_document(
   let unsupported : Array[String] = []
   let mut refs = FurnitureRefs::empty()
   let body = document.first_or_empty("w:body")
+  collect_layout_warnings(body, unsupported)
   let mut section = @paginate.SectionProps::default()
-  for child in body.children {
-    guard child is XmlElement(el) else { continue }
+  for el in layout_body_elements(body) {
     match el.name {
       "w:p" => {
         let (block, breaks_before, breaks_after) = read_paragraph(
@@ -377,30 +416,14 @@ pub fn read_document(
           numbering~,
           counters~,
           default_tab_pt~,
+          resolve_image~,
+          image_reason~,
+          unsupported~,
         )
         if breaks_before && blocks.length() > 0 {
           blocks.push(PageBreak)
         }
         blocks.push(block)
-        // a paragraph's inline drawings follow it as their own blocks;
-        // true inline-with-text placement needs a run kind the paragraph
-        // model does not have
-        for image in paragraph_images(el) {
-          match resolve_image(image.relationship) {
-            Some(media) => {
-              let (data, mime) = media
-              blocks.push(
-                @paginate.Block::image(
-                  image.width.to_pt(),
-                  image.height.to_pt(),
-                  data,
-                  mime,
-                ),
-              )
-            }
-            None => unsupported.push(image_reason(image.relationship))
-          }
-        }
         if breaks_after {
           blocks.push(PageBreak)
         }
@@ -416,9 +439,6 @@ pub fn read_document(
             read_table(el, sheet, theme~, numbering~, counters~),
           ),
         )
-      // block content this milestone does not lay out yet. Recording it
-      // keeps the omission visible instead of silently losing text.
-      "w:sdt" => unsupported.push("content control")
       _ => ()
     }
   }
@@ -645,10 +665,9 @@ pub fn render_docx(docx : Bytes) -> @pagelayout.PageModel raise {
 // Known gaps, all surfaced by review and deliberately left for later
 // milestones rather than half-implemented:
 //
-//   * Content controls (`w:sdt`) at block level are not laid out; each
-//     occurrence is recorded in `DocxDocument::unsupported` so a caller
-//     can say the render is incomplete instead of presenting it as the
-//     whole document. Tables are laid out, but nested tables (a `w:tbl`
+//   * Content controls (`w:sdt`) at body level display their content but
+//     not control semantics; the approximation is reported. Controls in table
+//     cells are not yet expanded. Tables are laid out, but nested tables (a `w:tbl`
 //     inside a `w:tc`) are not yet.
 //   * `w:tab` reaches the engine as U+0009 but there is no tab-stop
 //     model, so tab-aligned layouts collapse. For the same reason a list
