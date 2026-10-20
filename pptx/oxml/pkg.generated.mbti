@@ -116,7 +116,7 @@ pub fn parse_effect_list(@xml.XmlReader) -> EffectList raise EffectError
 
 pub fn parse_fill(@xml.XmlReader, @xml.QName, Array[(@xml.QName, String)]) -> Fill raise FillError
 
-pub fn parse_signed_int(String) -> Int?
+pub fn parse_signed_int(String) -> Int32?
 
 pub fn parse_signed_int64(String) -> Int64?
 
@@ -202,8 +202,8 @@ pub impl Show for StrokeError
 
 pub(all) suberror Utf8Error {
   InvalidUtf16
-  StrayContinuation(Int)
-  TruncatedSequence(Int)
+  StrayContinuation(Int32)
+  TruncatedSequence(Int32)
 } derive(Eq, @debug.Debug)
 pub fn Utf8Error::equal(Self, Self) -> Bool
 pub fn Utf8Error::not_equal(Self, Self) -> Bool
@@ -430,8 +430,8 @@ pub fn GradientStop::to_repr(Self) -> @debug.Repr
 
 pub(all) struct ImageDimensions {
   format : ImageFormat
-  width_px : Int
-  height_px : Int
+  width_px : Int32
+  height_px : Int32
   dpi_x : Double
   dpi_y : Double
 } derive(Eq, @debug.Debug)

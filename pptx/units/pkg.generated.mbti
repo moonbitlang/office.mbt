@@ -12,9 +12,9 @@ pub let emu_per_inch : Int64
 
 pub let emu_per_pt : Int64
 
-pub let ooxml_per_degree : Int
+pub let ooxml_per_degree : Int32
 
-pub let ooxml_per_percent : Int
+pub let ooxml_per_percent : Int32
 
 // Errors
 pub(all) suberror UnitsError {
@@ -32,10 +32,10 @@ pub impl Show for UnitsError
 pub(all) struct Angle(Double) derive(Eq, @debug.Debug)
 pub fn Angle::degrees(Self) -> Double
 pub fn Angle::equal(Self, Self) -> Bool
-pub fn Angle::from_ooxml(Int) -> Self
+pub fn Angle::from_ooxml(Int32) -> Self
 pub fn Angle::not_equal(Self, Self) -> Bool
 pub fn Angle::output(Self, &Logger) -> Unit
-pub fn Angle::to_ooxml(Self) -> Int
+pub fn Angle::to_ooxml(Self) -> Int32
 pub fn Angle::to_repr(Self) -> @debug.Repr
 pub fn Angle::to_string(Self) -> String
 pub impl Show for Angle
@@ -66,7 +66,7 @@ pub impl Show for ColorTransform
 
 pub(all) struct Emu(Int64) derive(Compare, Eq, @debug.Debug)
 pub fn Emu::add(Self, Self) -> Self
-pub fn Emu::compare(Self, Self) -> Int
+pub fn Emu::compare(Self, Self) -> Int32
 pub fn Emu::equal(Self, Self) -> Bool
 pub fn Emu::neg(Self) -> Self
 pub fn Emu::not_equal(Self, Self) -> Bool
@@ -110,10 +110,10 @@ pub impl Show for Inch
 
 pub(all) struct Percentage(Double) derive(Eq, @debug.Debug)
 pub fn Percentage::equal(Self, Self) -> Bool
-pub fn Percentage::from_ooxml(Int) -> Self
+pub fn Percentage::from_ooxml(Int32) -> Self
 pub fn Percentage::not_equal(Self, Self) -> Bool
 pub fn Percentage::output(Self, &Logger) -> Unit
-pub fn Percentage::to_ooxml(Self) -> Int
+pub fn Percentage::to_ooxml(Self) -> Int32
 pub fn Percentage::to_repr(Self) -> @debug.Repr
 pub fn Percentage::to_string(Self) -> String
 pub fn Percentage::value(Self) -> Double
@@ -130,12 +130,12 @@ pub fn Pt::value(Self) -> Double
 pub impl Show for Pt
 
 pub struct RgbColor {
-  r : Int
-  g : Int
-  b : Int
+  r : Int32
+  g : Int32
+  b : Int32
 } derive(Eq, @debug.Debug)
 pub fn RgbColor::equal(Self, Self) -> Bool
-pub fn RgbColor::new(Int, Int, Int) -> Self
+pub fn RgbColor::new(Int32, Int32, Int32) -> Self
 pub fn RgbColor::not_equal(Self, Self) -> Bool
 pub fn RgbColor::output(Self, &Logger) -> Unit
 pub fn RgbColor::parse_hex(String) -> Self raise UnitsError

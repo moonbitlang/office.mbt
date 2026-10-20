@@ -7,13 +7,13 @@ import {
 }
 
 // Values
-pub fn span_edit(start~ : Int, end~ : Int, Bytes) -> SpanEdit raise @core.DocxError
+pub fn span_edit(start~ : Int32, end~ : Int32, Bytes) -> SpanEdit raise @core.DocxError
 
 pub fn splice_docx(BytesView, SplicePlan) -> Bytes raise @core.DocxError
 
-pub fn splice_docx_archive(@zip.Archive, SplicePlan, max_output_bytes~ : Int, require_pins? : Bool, limits? : SpliceLimits) -> Bytes raise @core.DocxError
+pub fn splice_docx_archive(@zip.Archive, SplicePlan, max_output_bytes~ : Int32, require_pins? : Bool, limits? : SpliceLimits) -> Bytes raise @core.DocxError
 
-pub fn splice_limits(max_archive_entries~ : Int, max_changed_parts~ : Int, max_part_name_chars~ : Int, max_entry_uncompressed_bytes~ : Int, max_total_uncompressed_bytes~ : Int, max_materialized_bytes~ : Int, max_xml_tokens~ : Int) -> SpliceLimits raise @core.DocxError
+pub fn splice_limits(max_archive_entries~ : Int32, max_changed_parts~ : Int32, max_part_name_chars~ : Int32, max_entry_uncompressed_bytes~ : Int32, max_total_uncompressed_bytes~ : Int32, max_materialized_bytes~ : Int32, max_xml_tokens~ : Int32) -> SpliceLimits raise @core.DocxError
 
 pub fn stage_spliced_archive(@zip.Archive, SplicePlan, require_pins? : Bool, limits? : SpliceLimits) -> @zip.Archive raise @core.DocxError
 
@@ -27,7 +27,7 @@ pub struct SpanEdit {
 pub struct SpliceLimits {
   // private fields
 }
-pub fn SpliceLimits::with_max_materialized_bytes(Self, Int) -> Self raise @core.DocxError
+pub fn SpliceLimits::with_max_materialized_bytes(Self, Int32) -> Self raise @core.DocxError
 
 pub struct SplicePlan {
   // private fields

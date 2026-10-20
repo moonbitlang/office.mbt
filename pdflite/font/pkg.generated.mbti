@@ -12,7 +12,7 @@ import {
 
 // Types and methods
 pub(all) struct PdfFontListEntry {
-  page : Int
+  page : Int32
   name : String
   subtype : String
   basefont : String
@@ -29,7 +29,7 @@ pub fn PdfFontListEntry::to_json(Self) -> Json
 pub fn PdfFontListEntry::to_repr(Self) -> @debug.Repr
 
 pub(all) struct PdfFontTableEntry {
-  code : Int
+  code : Int32
   unicode : String
   utf8 : String
   unicode_name : String
@@ -45,7 +45,7 @@ pub fn PdfFontTableEntry::to_json(Self) -> Json
 pub fn PdfFontTableEntry::to_repr(Self) -> @debug.Repr
 
 pub(all) struct PdfMissingFontEntry {
-  page : Int
+  page : Int32
   name : String
   subtype : String
   basefont : String

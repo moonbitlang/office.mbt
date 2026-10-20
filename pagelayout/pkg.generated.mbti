@@ -28,22 +28,22 @@ pub fn AnchorItem::to_json(Self) -> Json
 pub fn AnchorItem::to_repr(Self) -> @debug.Repr
 
 pub(all) struct Color {
-  r : Int
-  g : Int
-  b : Int
+  r : Int32
+  g : Int32
+  b : Int32
 } derive(Eq, ToJson, @debug.Debug)
 #deprecated
 pub fn Color::equal(Self, Self) -> Bool
 #deprecated
 pub fn Color::not_equal(Self, Self) -> Bool
-pub fn Color::rgb(Int, Int, Int) -> Self
+pub fn Color::rgb(Int32, Int32, Int32) -> Self
 pub fn Color::to_hex(Self) -> String
 #deprecated
 pub fn Color::to_json(Self) -> Json
 #deprecated
 pub fn Color::to_repr(Self) -> @debug.Repr
 
-pub(all) struct EighthPoints(Int) derive(Eq, ToJson, @debug.Debug)
+pub(all) struct EighthPoints(Int32) derive(Eq, ToJson, @debug.Debug)
 #deprecated
 pub fn EighthPoints::equal(Self, Self) -> Bool
 #deprecated
@@ -54,7 +54,7 @@ pub fn EighthPoints::to_pt(Self) -> Double
 #deprecated
 pub fn EighthPoints::to_repr(Self) -> @debug.Repr
 
-pub(all) struct Emu(Int) derive(Eq, ToJson, @debug.Debug)
+pub(all) struct Emu(Int32) derive(Eq, ToJson, @debug.Debug)
 #deprecated
 pub fn Emu::equal(Self, Self) -> Bool
 #deprecated
@@ -93,7 +93,7 @@ pub fn FontSpec::to_json(Self) -> Json
 pub fn FontSpec::to_repr(Self) -> @debug.Repr
 
 pub(all) struct GlyphRun {
-  font : Int
+  font : Int32
   size_pt : Double
   x_pt : Double
   baseline_pt : Double
@@ -186,7 +186,7 @@ pub fn GraphicOp::to_json(Self) -> Json
 #deprecated
 pub fn GraphicOp::to_repr(Self) -> @debug.Repr
 
-pub(all) struct HalfPoints(Int) derive(Eq, ToJson, @debug.Debug)
+pub(all) struct HalfPoints(Int32) derive(Eq, ToJson, @debug.Debug)
 #deprecated
 pub fn HalfPoints::equal(Self, Self) -> Bool
 #deprecated
@@ -326,7 +326,7 @@ pub(all) struct PageModel {
   fonts : Array[FontSpec]
   pages : Array[Page]
 } derive(Eq, ToJson, @debug.Debug)
-pub fn PageModel::add_font(Self, FontSpec) -> Int
+pub fn PageModel::add_font(Self, FontSpec) -> Int32
 #deprecated
 pub fn PageModel::equal(Self, Self) -> Bool
 pub fn PageModel::new() -> Self
@@ -446,7 +446,7 @@ pub fn TextPaint::to_json(Self) -> Json
 #deprecated
 pub fn TextPaint::to_repr(Self) -> @debug.Repr
 
-pub(all) struct Twips(Int) derive(Eq, ToJson, @debug.Debug)
+pub(all) struct Twips(Int32) derive(Eq, ToJson, @debug.Debug)
 #deprecated
 pub fn Twips::equal(Self, Self) -> Bool
 #deprecated

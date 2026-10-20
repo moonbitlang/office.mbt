@@ -97,8 +97,8 @@ pub(all) struct ParaProps {
   keep_next : Bool?
   widow_control : Bool?
   page_break_before : Bool?
-  num_id : Int?
-  num_level : Int?
+  num_id : Int32?
+  num_level : Int32?
   tabs : Array[@paragraph.TabStop]?
 } derive(Eq, ToJson, @debug.Debug)
 pub fn ParaProps::empty() -> Self

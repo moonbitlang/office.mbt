@@ -11,8 +11,8 @@ import {
 
 // Types and methods
 pub(all) struct PdfTrueTypeCMapGlyph {
-  codepoint : Int
-  glyph_index : Int
+  codepoint : Int32
+  glyph_index : Int32
 } derive(Eq, ToJson, @debug.Debug)
 #deprecated
 pub fn PdfTrueTypeCMapGlyph::equal(Self, Self) -> Bool
@@ -24,14 +24,14 @@ pub fn PdfTrueTypeCMapGlyph::to_json(Self) -> Json
 pub fn PdfTrueTypeCMapGlyph::to_repr(Self) -> @debug.Repr
 
 pub(all) struct PdfTrueTypeDescriptorMetrics {
-  ascent : Int
-  descent : Int
-  capheight : Int
-  xheight : Int
-  avgwidth : Int
-  italicangle : Int
-  nonsymbolic_flags : Int
-  symbolic_flags : Int
+  ascent : Int32
+  descent : Int32
+  capheight : Int32
+  xheight : Int32
+  avgwidth : Int32
+  italicangle : Int32
+  nonsymbolic_flags : Int32
+  symbolic_flags : Int32
 } derive(Eq, ToJson, @debug.Debug)
 #deprecated
 pub fn PdfTrueTypeDescriptorMetrics::equal(Self, Self) -> Bool
@@ -43,9 +43,9 @@ pub fn PdfTrueTypeDescriptorMetrics::to_json(Self) -> Json
 pub fn PdfTrueTypeDescriptorMetrics::to_repr(Self) -> @debug.Repr
 
 pub(all) struct PdfTrueTypeGlyphByteRange {
-  glyph_index : Int
-  start_offset : Int
-  end_offset : Int
+  glyph_index : Int32
+  start_offset : Int32
+  end_offset : Int32
 } derive(Eq, ToJson, @debug.Debug)
 #deprecated
 pub fn PdfTrueTypeGlyphByteRange::equal(Self, Self) -> Bool
@@ -57,16 +57,16 @@ pub fn PdfTrueTypeGlyphByteRange::to_json(Self) -> Json
 pub fn PdfTrueTypeGlyphByteRange::to_repr(Self) -> @debug.Repr
 
 pub(all) struct PdfTrueTypeMetrics {
-  units_per_em : Int
-  minx : Int
-  miny : Int
-  maxx : Int
-  maxy : Int
-  index_to_loc_format : Int
-  num_glyphs : Int
-  num_of_long_hor_metrics : Int
-  advance_widths : Array[Int]
-  max_width : Int
+  units_per_em : Int32
+  minx : Int32
+  miny : Int32
+  maxx : Int32
+  maxy : Int32
+  index_to_loc_format : Int32
+  num_glyphs : Int32
+  num_of_long_hor_metrics : Int32
+  advance_widths : Array[Int32]
+  max_width : Int32
 } derive(Eq, ToJson, @debug.Debug)
 #deprecated
 pub fn PdfTrueTypeMetrics::equal(Self, Self) -> Bool
@@ -78,25 +78,25 @@ pub fn PdfTrueTypeMetrics::to_json(Self) -> Json
 pub fn PdfTrueTypeMetrics::to_repr(Self) -> @debug.Repr
 
 pub(all) struct PdfTrueTypeParsedSubset {
-  flags : Int
-  minx : Int
-  miny : Int
-  maxx : Int
-  maxy : Int
-  italicangle : Int
-  ascent : Int
-  descent : Int
-  capheight : Int
-  stemv : Int
-  xheight : Int
-  avgwidth : Int
-  maxwidth : Int
-  firstchar : Int
-  lastchar : Int
-  widths : Array[Int]
+  flags : Int32
+  minx : Int32
+  miny : Int32
+  maxx : Int32
+  maxy : Int32
+  italicangle : Int32
+  ascent : Int32
+  descent : Int32
+  capheight : Int32
+  stemv : Int32
+  xheight : Int32
+  avgwidth : Int32
+  maxwidth : Int32
+  firstchar : Int32
+  lastchar : Int32
+  widths : Array[Int32]
   subset_fontfile : Bytes
-  subset : Array[Int]
-  tounicode : Array[(Int, Bytes)]?
+  subset : Array[Int32]
+  tounicode : Array[(Int32, Bytes)]?
 } derive(Eq, @debug.Debug)
 #deprecated
 pub fn PdfTrueTypeParsedSubset::equal(Self, Self) -> Bool
@@ -106,8 +106,8 @@ pub fn PdfTrueTypeParsedSubset::not_equal(Self, Self) -> Bool
 pub fn PdfTrueTypeParsedSubset::to_repr(Self) -> @debug.Repr
 
 pub(all) struct PdfTrueTypeSubsetPartition {
-  main_subset : Array[Int]
-  higher_subsets : Array[Array[Int]]
+  main_subset : Array[Int32]
+  higher_subsets : Array[Array[Int32]]
 } derive(Eq, ToJson, @debug.Debug)
 #deprecated
 pub fn PdfTrueTypeSubsetPartition::equal(Self, Self) -> Bool
@@ -119,7 +119,7 @@ pub fn PdfTrueTypeSubsetPartition::to_json(Self) -> Json
 pub fn PdfTrueTypeSubsetPartition::to_repr(Self) -> @debug.Repr
 
 pub(all) struct PdfTrueTypeSubsetTable {
-  length : Int
+  length : Int32
   bytes : Bytes
 } derive(Eq, @debug.Debug)
 #deprecated
@@ -131,9 +131,9 @@ pub fn PdfTrueTypeSubsetTable::to_repr(Self) -> @debug.Repr
 
 pub(all) struct PdfTrueTypeTableRecord {
   tag : String
-  checksum : UInt
-  offset : Int
-  length : Int
+  checksum : UInt32
+  offset : Int32
+  length : Int32
 } derive(Eq, ToJson, @debug.Debug)
 #deprecated
 pub fn PdfTrueTypeTableRecord::equal(Self, Self) -> Bool

@@ -7,7 +7,7 @@ import {
 }
 
 // Values
-pub fn format_counter(Int, NumberFormat) -> String
+pub fn format_counter(Int32, NumberFormat) -> String
 
 pub fn number_format(String) -> NumberFormat
 
@@ -15,7 +15,7 @@ pub fn number_format(String) -> NumberFormat
 
 // Types and methods
 pub(all) struct AbstractNum {
-  levels : Map[Int, Level]
+  levels : Map[Int32, Level]
 } derive(Eq, ToJson, @debug.Debug)
 #deprecated
 pub fn AbstractNum::equal(Self, Self) -> Bool
@@ -27,17 +27,17 @@ pub fn AbstractNum::to_json(Self) -> Json
 pub fn AbstractNum::to_repr(Self) -> @debug.Repr
 
 pub struct Counters {
-  values : Map[String, Int]
+  values : Map[String, Int32]
   started : Map[String, Unit]
 }
-pub fn Counters::advance(Self, Numbering, Int, Int) -> String?
+pub fn Counters::advance(Self, Numbering, Int32, Int32) -> String?
 pub fn Counters::new() -> Self
 
 pub(all) struct Level {
   format : NumberFormat
   text : String
-  start : Int
-  restart : Int?
+  start : Int32
+  restart : Int32?
   is_legal : Bool
   suffix : Suffix
   indent_left : @pagelayout.Twips?
@@ -46,7 +46,7 @@ pub(all) struct Level {
   font_family : String?
   size : @pagelayout.HalfPoints?
 } derive(Eq, ToJson, @debug.Debug)
-pub fn Level::default(Int) -> Self
+pub fn Level::default(Int32) -> Self
 #deprecated
 pub fn Level::equal(Self, Self) -> Bool
 #deprecated
@@ -57,9 +57,9 @@ pub fn Level::to_json(Self) -> Json
 pub fn Level::to_repr(Self) -> @debug.Repr
 
 pub(all) struct NumInstance {
-  abstract_id : Int
-  overrides : Map[Int, Level]
-  start_overrides : Map[Int, Int]
+  abstract_id : Int32
+  overrides : Map[Int32, Level]
+  start_overrides : Map[Int32, Int32]
 } derive(Eq, ToJson, @debug.Debug)
 #deprecated
 pub fn NumInstance::equal(Self, Self) -> Bool
@@ -89,13 +89,13 @@ pub fn NumberFormat::to_json(Self) -> Json
 pub fn NumberFormat::to_repr(Self) -> @debug.Repr
 
 pub struct Numbering {
-  abstracts : Map[Int, AbstractNum]
-  instances : Map[Int, NumInstance]
+  abstracts : Map[Int32, AbstractNum]
+  instances : Map[Int32, NumInstance]
 }
 pub fn Numbering::empty() -> Self
-pub fn Numbering::level(Self, Int, Int) -> Level
-pub fn Numbering::new(Map[Int, AbstractNum], Map[Int, NumInstance]) -> Self
-pub fn Numbering::start_override(Self, Int, Int) -> Int?
+pub fn Numbering::level(Self, Int32, Int32) -> Level
+pub fn Numbering::new(Map[Int32, AbstractNum], Map[Int32, NumInstance]) -> Self
+pub fn Numbering::start_override(Self, Int32, Int32) -> Int32?
 
 pub(all) enum Suffix {
   SuffTab

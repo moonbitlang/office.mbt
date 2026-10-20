@@ -6,25 +6,25 @@ import {
 }
 
 // Values
-pub fn pdf_invert_page_range(Int, ArrayView[Int]) -> Array[Int]
+pub fn pdf_invert_page_range(Int32, ArrayView[Int32]) -> Array[Int32]
 
-pub fn pdf_invert_range(Int, ArrayView[Int]) -> Array[Int]
+pub fn pdf_invert_range(Int32, ArrayView[Int32]) -> Array[Int32]
 
-pub fn pdf_parse_pagespec_for_count(Int, String, strict_bounds? : Bool) -> Array[Int] raise @core.PdfError
+pub fn pdf_parse_pagespec_for_count(Int32, String, strict_bounds? : Bool) -> Array[Int32] raise @core.PdfError
 
-pub fn pdf_parse_pagespec_with_selectors(Int, String, PdfPageSpecSelectors?) -> Array[Int] raise @core.PdfError
+pub fn pdf_parse_pagespec_with_selectors(Int32, String, PdfPageSpecSelectors?) -> Array[Int32] raise @core.PdfError
 
-pub fn pdf_parse_pagespec_without_pdf(String) -> Array[Int] raise @core.PdfError
+pub fn pdf_parse_pagespec_without_pdf(String) -> Array[Int32] raise @core.PdfError
 
-pub fn pdf_string_of_pagespec_for_count(Int, ArrayView[Int]) -> String
+pub fn pdf_string_of_pagespec_for_count(Int32, ArrayView[Int32]) -> String
 
 // Errors
 
 // Types and methods
 pub(all) struct PdfPageSpecSelectors {
   resolve_references : (BytesView) -> Bytes raise @core.PdfError
-  select_dimensions : (ArrayView[Int], Bool) -> Array[Int] raise @core.PdfError
-  select_annotated : (ArrayView[Int]) -> Array[Int] raise @core.PdfError
+  select_dimensions : (ArrayView[Int32], Bool) -> Array[Int32] raise @core.PdfError
+  select_annotated : (ArrayView[Int32]) -> Array[Int32] raise @core.PdfError
 }
 
 // Type aliases

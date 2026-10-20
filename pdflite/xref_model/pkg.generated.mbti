@@ -11,8 +11,8 @@ import {
 
 // Types and methods
 pub(all) struct ObjectStreamReference {
-  object_stream_number : Int
-  index : Int
+  object_stream_number : Int32
+  index : Int32
 } derive(Eq, @debug.Debug)
 #deprecated
 pub fn ObjectStreamReference::equal(Self, Self) -> Bool

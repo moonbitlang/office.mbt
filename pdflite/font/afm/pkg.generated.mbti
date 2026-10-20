@@ -7,22 +7,22 @@ import {
 }
 
 // Values
-pub fn pdf_afm_parse_int(BytesView) -> Int raise @core.PdfError
+pub fn pdf_afm_parse_int(BytesView) -> Int32 raise @core.PdfError
 
 pub fn pdf_afm_view_equals(BytesView, BytesView) -> Bool
 
 pub fn pdf_read_afm(BytesView) -> PdfAfmData raise @core.PdfError
 
-pub fn pdf_read_afm_kern_pairs(BytesView) -> Array[(Bytes, Bytes, Int)] raise @core.PdfError
+pub fn pdf_read_afm_kern_pairs(BytesView) -> Array[(Bytes, Bytes, Int32)] raise @core.PdfError
 
 // Errors
 
 // Types and methods
 pub(all) struct PdfAfmData {
   headers : Array[(Bytes, Bytes)]
-  char_metrics : Array[(Int, Int)]
-  kerns : Array[(Int, Int, Int)]
-  char_name_widths : Array[(Bytes, Int)]
+  char_metrics : Array[(Int32, Int32)]
+  kerns : Array[(Int32, Int32, Int32)]
+  char_name_widths : Array[(Bytes, Int32)]
 } derive(Eq, ToJson, @debug.Debug)
 #deprecated
 pub fn PdfAfmData::equal(Self, Self) -> Bool

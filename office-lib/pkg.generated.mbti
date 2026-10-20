@@ -61,27 +61,27 @@ pub const SCHEMA_XLSX_QUERY : String = "office.xlsx.query/1"
 
 pub const SCHEMA_XLSX_TEXT : String = "office.xlsx.text/1"
 
-pub const SELECTOR_MAX_DEPTH : Int = 32
+pub const SELECTOR_MAX_DEPTH : Int32 = 32
 
-pub const SELECTOR_MAX_LENGTH : Int = 2048
+pub const SELECTOR_MAX_LENGTH : Int32 = 2048
 
-pub const SELECTOR_MAX_NAME_LENGTH : Int = 32
+pub const SELECTOR_MAX_NAME_LENGTH : Int32 = 32
 
-pub const SELECTOR_MAX_SELECTIONS : Int = 32
+pub const SELECTOR_MAX_SELECTIONS : Int32 = 32
 
-pub const SELECTOR_MAX_VALUE_LENGTH : Int = 256
+pub const SELECTOR_MAX_VALUE_LENGTH : Int32 = 256
 
-pub const XLSX_TRANSACTION_MAX_CANDIDATE_ARCHIVE_BYTES : Int = 25165824
+pub const XLSX_TRANSACTION_MAX_CANDIDATE_ARCHIVE_BYTES : Int32 = 25165824
 
-pub const XLSX_TRANSACTION_MAX_CANDIDATE_ENTRY_BYTES : Int = 12582912
+pub const XLSX_TRANSACTION_MAX_CANDIDATE_ENTRY_BYTES : Int32 = 12582912
 
-pub const XLSX_TRANSACTION_MAX_DECODED_XML_BYTES : Int = 16777216
+pub const XLSX_TRANSACTION_MAX_DECODED_XML_BYTES : Int32 = 16777216
 
-pub const XLSX_TRANSACTION_MAX_MATERIALIZED_CELLS : Int = 32_768
+pub const XLSX_TRANSACTION_MAX_MATERIALIZED_CELLS : Int32 = 32_768
 
-pub const XLSX_TRANSACTION_MAX_ROW_COLUMN_LINES : Int = 32_768
+pub const XLSX_TRANSACTION_MAX_ROW_COLUMN_LINES : Int32 = 32_768
 
-pub const XLSX_TRANSACTION_MAX_XML_MARKUP_TOKENS : Int = 262_144
+pub const XLSX_TRANSACTION_MAX_XML_MARKUP_TOKENS : Int32 = 262_144
 
 pub fn capabilities_data(format? : DocumentFormat, operation? : String) -> Json
 
@@ -93,9 +93,9 @@ pub fn capability_formats() -> Array[CapabilityFormat]
 
 pub fn capability_records(format? : DocumentFormat, operation? : String) -> Array[Json]
 
-pub fn detect_archive_format(StringView, @zip.Archive, max_xml_part_bytes? : Int, max_xml_total_units? : Int, cancelled? : () -> Bool) -> DocumentFormat raise OfficeError
+pub fn detect_archive_format(StringView, @zip.Archive, max_xml_part_bytes? : Int32, max_xml_total_units? : Int32, cancelled? : () -> Bool) -> DocumentFormat raise OfficeError
 
-pub fn detect_format(StringView, BytesView, max_package_bytes? : Int, max_archive_entries? : Int, max_entry_uncompressed_bytes? : Int, max_total_uncompressed_bytes? : Int, max_xml_part_bytes? : Int, max_xml_total_units? : Int, cancelled? : () -> Bool) -> DocumentFormat raise OfficeError
+pub fn detect_format(StringView, BytesView, max_package_bytes? : Int32, max_archive_entries? : Int32, max_entry_uncompressed_bytes? : Int32, max_total_uncompressed_bytes? : Int32, max_xml_part_bytes? : Int32, max_xml_total_units? : Int32, cancelled? : () -> Bool) -> DocumentFormat raise OfficeError
 
 pub fn find_capability_command(StringView) -> CapabilityCommand?
 
@@ -128,7 +128,7 @@ pub(all) suberror OfficeError {
   UnsupportedFileExtension(String)
   InvalidPackage(String)
   FormatMismatch(expected~ : DocumentFormat, actual~ : DocumentFormat)
-  ResourceLimit(kind~ : String, limit~ : Int, actual~ : Int)
+  ResourceLimit(kind~ : String, limit~ : Int32, actual~ : Int32)
   Cancelled
 } derive(Eq, @debug.Debug)
 #deprecated
@@ -144,7 +144,7 @@ pub fn OfficeError::to_string(Self) -> String
 pub impl Show for OfficeError
 
 pub(all) suberror SelectorError {
-  SelectorError(code~ : String, offset~ : Int, input~ : String, message~ : String)
+  SelectorError(code~ : String, offset~ : Int32, input~ : String, message~ : String)
 }
 #deprecated
 pub fn SelectorError::output(Self, &Logger) -> Unit
@@ -207,12 +207,12 @@ pub(all) struct CapabilityVariant {
 }
 
 pub struct CellAddress {
-  column : Int
-  row : Int
+  column : Int32
+  row : Int32
 }
-pub fn CellAddress::column(Self) -> Int
+pub fn CellAddress::column(Self) -> Int32
 pub fn CellAddress::render(Self) -> String
-pub fn CellAddress::row(Self) -> Int
+pub fn CellAddress::row(Self) -> Int32
 
 pub(all) enum DocumentFormat {
   Xlsx
@@ -256,7 +256,7 @@ pub(all) struct ProtocolWarning {
 }
 
 pub enum SegmentSelection {
-  Position(Int)
+  Position(Int32)
   Key(String, String)
 }
 
@@ -271,7 +271,7 @@ pub struct SelectorSegment {
 }
 pub fn SelectorSegment::key_value(Self, StringView) -> String?
 pub fn SelectorSegment::name(Self) -> String
-pub fn SelectorSegment::position(Self) -> Int?
+pub fn SelectorSegment::position(Self) -> Int32?
 pub fn SelectorSegment::selection(Self) -> SegmentSelection?
 
 pub enum SelectorStability {

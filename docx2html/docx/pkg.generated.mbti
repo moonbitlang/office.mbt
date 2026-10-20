@@ -16,17 +16,17 @@ import {
 // Values
 pub const MAX_AUTHORED_MEDIA_BYTES : Int64 = 67108864
 
-pub const MAX_AUTHORED_MEDIA_PARTS : Int = 1000
+pub const MAX_AUTHORED_MEDIA_PARTS : Int32 = 1000
 
 pub fn author_docx_bytes(@batch.BatchScript, Map[String, Bytes], limits? : @opc.PackageLimits) -> Bytes raise @core.DocxError
 
 pub fn comment_anchor_fragments(id~ : String, wordprocessing_namespace? : String) -> (String, String)
 
-pub fn comment_definition_fragment(CommentSpec, id~ : String, para_ids? : Array[String], max_output_bytes? : Int, wordprocessing_namespace? : String) -> String raise @core.DocxError
+pub fn comment_definition_fragment(CommentSpec, id~ : String, para_ids? : Array[String], max_output_bytes? : Int32, wordprocessing_namespace? : String) -> String raise @core.DocxError
 
-pub fn comment_reply(author~ : String, initials? : String, date? : String, reply_to~ : Int, done? : Bool, Array[@document.DocumentElement]) -> CommentSpec raise @core.DocxError
+pub fn comment_reply(author~ : String, initials? : String, date? : String, reply_to~ : Int32, done? : Bool, Array[@document.DocumentElement]) -> CommentSpec raise @core.DocxError
 
-pub fn comment_spec(author~ : String, initials? : String, date? : String, from~ : Int, to~ : Int, done? : Bool, Array[@document.DocumentElement]) -> CommentSpec raise @core.DocxError
+pub fn comment_spec(author~ : String, initials? : String, date? : String, from~ : Int32, to~ : Int32, done? : Bool, Array[@document.DocumentElement]) -> CommentSpec raise @core.DocxError
 
 pub fn convert(BytesView, output_format? : @converter.OutputFormat, style_map? : Array[String], include_default_style_map? : Bool, include_embedded_style_map? : Bool, ignore_empty_paragraphs? : Bool, id_prefix? : String, pretty_print? : Bool, convert_image? : (@document.Image) -> @converter.ImageConversion, transform_document? : (@document.DocumentElement) -> @document.DocumentElement, external_file_access? : Bool, read_external_file? : (String) -> Bytes?) -> @core.ConversionResult raise @core.DocxError
 
@@ -38,7 +38,7 @@ pub fn docx_delete_refusal_prose(String) -> String
 
 pub fn docx_delete_refusal_slug(String) -> String?
 
-pub fn docx_direct_body_paragraph_count(DocxAnnotatedResult) -> Int raise @core.DocxError
+pub fn docx_direct_body_paragraph_count(DocxAnnotatedResult) -> Int32 raise @core.DocxError
 
 pub fn docx_direct_format(bold? : Bool, italic? : Bool, underline? : Bool, color? : String) -> DocxDirectFormat raise @core.DocxError
 
@@ -46,17 +46,17 @@ pub fn docx_paragraph_anchor_index(DocxAnnotatedResult, DocxStoryPartSource) -> 
 
 pub fn docx_paragraph_anchor_join_index(DocxAnnotatedResult, DocxStoryPartSource) -> DocxParagraphAnchorJoinIndex raise @core.DocxError
 
-pub fn docx_paragraph_direct_format(DocxAnnotatedResult, DocxStoryPartSource, path~ : String, start~ : Int, end~ : Int, format~ : DocxDirectFormat) -> String? raise @core.DocxError
+pub fn docx_paragraph_direct_format(DocxAnnotatedResult, DocxStoryPartSource, path~ : String, start~ : Int32, end~ : Int32, format~ : DocxDirectFormat) -> String? raise @core.DocxError
 
-pub fn docx_paragraph_direct_format_spans(DocxAnnotatedResult, DocxStoryPartSource, path~ : String, spans~ : Array[(Int, Int)], format~ : DocxDirectFormat) -> String? raise @core.DocxError
+pub fn docx_paragraph_direct_format_spans(DocxAnnotatedResult, DocxStoryPartSource, path~ : String, spans~ : Array[(Int32, Int32)], format~ : DocxDirectFormat) -> String? raise @core.DocxError
 
-pub fn docx_paragraph_format_preserved(DocxAnnotatedResult, DocxStoryPartSource, DocxAnnotatedResult, DocxStoryPartSource, path~ : String, spans~ : Array[(Int, Int)], format~ : DocxDirectFormat) -> String? raise @core.DocxError
+pub fn docx_paragraph_format_preserved(DocxAnnotatedResult, DocxStoryPartSource, DocxAnnotatedResult, DocxStoryPartSource, path~ : String, spans~ : Array[(Int32, Int32)], format~ : DocxDirectFormat) -> String? raise @core.DocxError
 
 pub fn docx_paragraph_projection(DocxAnnotatedResult, DocxStoryPartSource, path~ : String) -> String?
 
-pub fn docx_paragraphs_direct_format(DocxAnnotatedResult, DocxStoryPartSource, requests~ : Array[(String, Array[(Int, Int)])], format~ : DocxDirectFormat) -> Array[String?] raise @core.DocxError
+pub fn docx_paragraphs_direct_format(DocxAnnotatedResult, DocxStoryPartSource, requests~ : Array[(String, Array[(Int32, Int32)])], format~ : DocxDirectFormat) -> Array[String?] raise @core.DocxError
 
-pub fn docx_paragraphs_format_preserved(DocxAnnotatedResult, DocxStoryPartSource, DocxAnnotatedResult, DocxStoryPartSource, requests~ : Array[(String, Array[(Int, Int)])], format~ : DocxDirectFormat) -> Array[String?] raise @core.DocxError
+pub fn docx_paragraphs_format_preserved(DocxAnnotatedResult, DocxStoryPartSource, DocxAnnotatedResult, DocxStoryPartSource, requests~ : Array[(String, Array[(Int32, Int32)])], format~ : DocxDirectFormat) -> Array[String?] raise @core.DocxError
 
 pub fn docx_paragraphs_projection(DocxAnnotatedResult, DocxStoryPartSource, paths~ : Array[String]) -> Array[String?]
 
@@ -64,7 +64,7 @@ pub fn embed_style_map(BytesView, String) -> Bytes raise @core.DocxError
 
 pub fn extract_raw_text(BytesView, external_file_access? : Bool, read_external_file? : (String) -> Bytes?) -> @core.ConversionResult raise @core.DocxError
 
-pub fn find_docx_matches(DocxAnnotatedResult, DocxStoryPartSource, needle~ : String, within? : String, context? : Int, limit? : Int) -> DocxMatchList raise @core.DocxError
+pub fn find_docx_matches(DocxAnnotatedResult, DocxStoryPartSource, needle~ : String, within? : String, context? : Int32, limit? : Int32) -> DocxMatchList raise @core.DocxError
 
 pub fn header_footer_spec(variant~ : String, Array[@document.DocumentElement]) -> HeaderFooterSpec raise @core.DocxError
 
@@ -80,25 +80,25 @@ pub fn para_id_inventory_archive_limited(DocxAnnotatedResult, @zip.Archive, @xml
 
 pub fn para_id_state_delta_violation(Map[String, Array[String]], Map[String, Array[String]]) -> String?
 
-pub fn plan_comment_addition(DocxAnnotatedResult, BytesView, at_relative~ : String, to_relative~ : String, CommentSpec, max_fragment_bytes? : Int) -> (@splice.SplicePlan, String) raise @core.DocxError
+pub fn plan_comment_addition(DocxAnnotatedResult, BytesView, at_relative~ : String, to_relative~ : String, CommentSpec, max_fragment_bytes? : Int32) -> (@splice.SplicePlan, String) raise @core.DocxError
 
-pub fn plan_comment_addition_archive(DocxAnnotatedResult, @zip.Archive, at_relative~ : String, to_relative~ : String, CommentSpec, xml_budget? : @xml.XmlReadBudget, max_fragment_bytes? : Int) -> (@splice.SplicePlan, String) raise @core.DocxError
+pub fn plan_comment_addition_archive(DocxAnnotatedResult, @zip.Archive, at_relative~ : String, to_relative~ : String, CommentSpec, xml_budget? : @xml.XmlReadBudget, max_fragment_bytes? : Int32) -> (@splice.SplicePlan, String) raise @core.DocxError
 
-pub fn plan_comment_reply(DocxAnnotatedResult, BytesView, parent_id~ : String, CommentSpec, max_fragment_bytes? : Int) -> (@splice.SplicePlan, String) raise @core.DocxError
+pub fn plan_comment_reply(DocxAnnotatedResult, BytesView, parent_id~ : String, CommentSpec, max_fragment_bytes? : Int32) -> (@splice.SplicePlan, String) raise @core.DocxError
 
-pub fn plan_comment_reply_archive(DocxAnnotatedResult, @zip.Archive, parent_id~ : String, CommentSpec, xml_budget? : @xml.XmlReadBudget, max_fragment_bytes? : Int) -> (@splice.SplicePlan, String) raise @core.DocxError
+pub fn plan_comment_reply_archive(DocxAnnotatedResult, @zip.Archive, parent_id~ : String, CommentSpec, xml_budget? : @xml.XmlReadBudget, max_fragment_bytes? : Int32) -> (@splice.SplicePlan, String) raise @core.DocxError
 
 pub fn plan_comment_resolution(DocxAnnotatedResult, BytesView, comment_id~ : String, done~ : Bool) -> @splice.SplicePlan raise @core.DocxError
 
 pub fn plan_comment_resolution_archive(DocxAnnotatedResult, @zip.Archive, comment_id~ : String, done~ : Bool, xml_budget? : @xml.XmlReadBudget) -> @splice.SplicePlan raise @core.DocxError
 
-pub fn plan_docx_format(DocxAnnotatedResult, DocxStoryPartSource, format~ : DocxDirectFormat, text? : String, within? : String, nth? : Int, range? : (Int, Int)) -> (@splice.SplicePlan, DocxFormatReceipt) raise @core.DocxError
+pub fn plan_docx_format(DocxAnnotatedResult, DocxStoryPartSource, format~ : DocxDirectFormat, text? : String, within? : String, nth? : Int32, range? : (Int32, Int32)) -> (@splice.SplicePlan, DocxFormatReceipt) raise @core.DocxError
 
 pub fn plan_docx_paragraph_deletion(DocxAnnotatedResult, at~ : String) -> (@splice.SplicePlan, DocxDeleteReceipt) raise @core.DocxError
 
 pub fn plan_docx_paragraph_insertion(DocxAnnotatedResult, at~ : String, before~ : Bool, content~ : DocxInsertContent, used_para_ids~ : Array[String]) -> (@splice.SplicePlan, DocxInsertReceipt) raise @core.DocxError
 
-pub fn plan_docx_replacements(DocxAnnotatedResult, DocxStoryPartSource, needle~ : String, replacement~ : String, within? : String, nth? : Int) -> (@splice.SplicePlan, DocxReplaceReceipt) raise @core.DocxError
+pub fn plan_docx_replacements(DocxAnnotatedResult, DocxStoryPartSource, needle~ : String, replacement~ : String, within? : String, nth? : Int32) -> (@splice.SplicePlan, DocxReplaceReceipt) raise @core.DocxError
 
 pub fn plan_run_format(BytesView, prefix~ : String, attr_prefix? : String, extension_prefixes? : Array[String], format~ : DocxDirectFormat) -> RunFormatPlan raise @core.DocxError
 
@@ -110,11 +110,11 @@ pub fn read_docx_annotated(BytesView, external_file_access? : Bool, read_externa
 
 pub fn read_docx_annotated_archive(@zip.Archive, external_file_access? : Bool, read_external_file? : (String) -> Bytes?) -> DocxAnnotatedResult raise @core.DocxError
 
-pub fn read_docx_annotated_archive_joined_projection_limited(@zip.Archive, @xml.XmlReadBudget, external_file_access? : Bool, read_external_file? : (String) -> Bytes?, max_diagnostics? : Int, max_diagnostic_chars? : Int, expected_main_document_path? : String) -> DocxAnnotatedResult raise @core.DocxError
+pub fn read_docx_annotated_archive_joined_projection_limited(@zip.Archive, @xml.XmlReadBudget, external_file_access? : Bool, read_external_file? : (String) -> Bytes?, max_diagnostics? : Int32, max_diagnostic_chars? : Int32, expected_main_document_path? : String) -> DocxAnnotatedResult raise @core.DocxError
 
-pub fn read_docx_annotated_archive_limited(@zip.Archive, @xml.XmlReadBudget, external_file_access? : Bool, read_external_file? : (String) -> Bytes?, max_diagnostics? : Int, max_diagnostic_chars? : Int, expected_main_document_path? : String) -> DocxAnnotatedResult raise @core.DocxError
+pub fn read_docx_annotated_archive_limited(@zip.Archive, @xml.XmlReadBudget, external_file_access? : Bool, read_external_file? : (String) -> Bytes?, max_diagnostics? : Int32, max_diagnostic_chars? : Int32, expected_main_document_path? : String) -> DocxAnnotatedResult raise @core.DocxError
 
-pub fn read_docx_annotated_archive_tolerant_limited(@zip.Archive, @xml.XmlReadBudget, external_file_access? : Bool, read_external_file? : (String) -> Bytes?, max_diagnostics? : Int, max_diagnostic_chars? : Int, expected_main_document_path? : String) -> DocxAnnotatedResult raise @core.DocxError
+pub fn read_docx_annotated_archive_tolerant_limited(@zip.Archive, @xml.XmlReadBudget, external_file_access? : Bool, read_external_file? : (String) -> Bytes?, max_diagnostics? : Int32, max_diagnostic_chars? : Int32, expected_main_document_path? : String) -> DocxAnnotatedResult raise @core.DocxError
 
 pub fn read_docx_package(BytesView, external_file_access? : Bool, read_external_file? : (String) -> Bytes?) -> DocxPackageResult raise @core.DocxError
 
@@ -178,7 +178,7 @@ pub struct CommentInfo {
 }
 pub fn CommentInfo::anchors(Self) -> Array[AnnotationAnchor]
 pub fn CommentInfo::author(Self) -> String?
-pub fn CommentInfo::body_paragraphs(Self) -> Int
+pub fn CommentInfo::body_paragraphs(Self) -> Int32
 pub fn CommentInfo::date(Self) -> String?
 pub fn CommentInfo::defined(Self) -> Bool
 pub fn CommentInfo::done(Self) -> Bool?
@@ -221,7 +221,7 @@ pub fn DocxAnnotatedResult::story_run_span(Self, String, String) -> NodeSpan?
 pub struct DocxDeleteCutWitness {
   // private fields
 }
-pub fn DocxDeleteCutWitness::expected_length(Self) -> Int
+pub fn DocxDeleteCutWitness::expected_length(Self) -> Int32
 pub fn DocxDeleteCutWitness::matches(Self, BytesView) -> Bool
 pub fn DocxDeleteCutWitness::part(Self) -> String
 
@@ -258,61 +258,61 @@ pub struct DocxFormatAffected {
   expected : String
   para_id : String?
   anchor_status : String
-  runs_changed : Int
-  runs_already_satisfied : Int
-  splits : Int
+  runs_changed : Int32
+  runs_already_satisfied : Int32
+  splits : Int32
 }
 pub fn DocxFormatAffected::anchor_status(Self) -> String
 pub fn DocxFormatAffected::expected(Self) -> String
 pub fn DocxFormatAffected::para_id(Self) -> String?
 pub fn DocxFormatAffected::path(Self) -> String
-pub fn DocxFormatAffected::runs_already_satisfied(Self) -> Int
-pub fn DocxFormatAffected::runs_changed(Self) -> Int
-pub fn DocxFormatAffected::splits(Self) -> Int
+pub fn DocxFormatAffected::runs_already_satisfied(Self) -> Int32
+pub fn DocxFormatAffected::runs_changed(Self) -> Int32
+pub fn DocxFormatAffected::splits(Self) -> Int32
 
 pub struct DocxFormatReceipt {
   mode : String
   requested_text : String?
   requested_within : String?
-  requested_nth : Int?
-  requested_range : (Int, Int)?
-  selected : Array[Int]
+  requested_nth : Int32?
+  requested_range : (Int32, Int32)?
+  selected : Array[Int32]
   spans : Array[DocxFormatSpan]
   affected : Array[DocxFormatAffected]
-  runs_changed : Int
-  runs_already_satisfied : Int
-  splits : Int
-  byte_edits : Int
+  runs_changed : Int32
+  runs_already_satisfied : Int32
+  splits : Int32
+  byte_edits : Int32
 }
 pub fn DocxFormatReceipt::affected(Self) -> Array[DocxFormatAffected]
-pub fn DocxFormatReceipt::byte_edits(Self) -> Int
+pub fn DocxFormatReceipt::byte_edits(Self) -> Int32
 pub fn DocxFormatReceipt::mode(Self) -> String
-pub fn DocxFormatReceipt::requested_nth(Self) -> Int?
-pub fn DocxFormatReceipt::requested_range(Self) -> (Int, Int)?
+pub fn DocxFormatReceipt::requested_nth(Self) -> Int32?
+pub fn DocxFormatReceipt::requested_range(Self) -> (Int32, Int32)?
 pub fn DocxFormatReceipt::requested_text(Self) -> String?
 pub fn DocxFormatReceipt::requested_within(Self) -> String?
-pub fn DocxFormatReceipt::runs_already_satisfied(Self) -> Int
-pub fn DocxFormatReceipt::runs_changed(Self) -> Int
-pub fn DocxFormatReceipt::selected(Self) -> Array[Int]
+pub fn DocxFormatReceipt::runs_already_satisfied(Self) -> Int32
+pub fn DocxFormatReceipt::runs_changed(Self) -> Int32
+pub fn DocxFormatReceipt::selected(Self) -> Array[Int32]
 pub fn DocxFormatReceipt::spans(Self) -> Array[DocxFormatSpan]
-pub fn DocxFormatReceipt::splits(Self) -> Int
+pub fn DocxFormatReceipt::splits(Self) -> Int32
 
 pub struct DocxFormatSpan {
   path : String
   para_id : String?
   anchor_status : String
-  start : Int
-  end : Int
+  start : Int32
+  end : Int32
   text : String
   source_runs : Array[String]
 }
 pub fn DocxFormatSpan::anchor_status(Self) -> String
 pub fn DocxFormatSpan::copy(Self) -> Self
-pub fn DocxFormatSpan::end(Self) -> Int
+pub fn DocxFormatSpan::end(Self) -> Int32
 pub fn DocxFormatSpan::para_id(Self) -> String?
 pub fn DocxFormatSpan::path(Self) -> String
 pub fn DocxFormatSpan::source_runs(Self) -> Array[String]
-pub fn DocxFormatSpan::start(Self) -> Int
+pub fn DocxFormatSpan::start(Self) -> Int32
 pub fn DocxFormatSpan::text(Self) -> String
 
 pub(all) struct DocxInsertContent {
@@ -346,11 +346,11 @@ pub fn DocxInsertRun::not_equal(Self, Self) -> Bool
 pub fn DocxInsertRun::to_repr(Self) -> @debug.Repr
 
 pub struct DocxMatch {
-  ordinal : Int
+  ordinal : Int32
   story : String
   path : String
-  start : Int
-  end : Int
+  start : Int32
+  end : Int32
   text : String
   context_before : String
   context_after : String
@@ -367,24 +367,24 @@ pub fn DocxMatch::anchor_status(Self) -> String
 pub fn DocxMatch::context_after(Self) -> String
 pub fn DocxMatch::context_before(Self) -> String
 pub fn DocxMatch::copy(Self) -> Self
-pub fn DocxMatch::end(Self) -> Int
-pub fn DocxMatch::ordinal(Self) -> Int
+pub fn DocxMatch::end(Self) -> Int32
+pub fn DocxMatch::ordinal(Self) -> Int32
 pub fn DocxMatch::para_id(Self) -> String?
 pub fn DocxMatch::path(Self) -> String
 pub fn DocxMatch::physical_para_ids(Self) -> Array[String]
 pub fn DocxMatch::reason(Self) -> String
 pub fn DocxMatch::run_kinds(Self) -> Array[String]
 pub fn DocxMatch::runs(Self) -> Array[String]
-pub fn DocxMatch::start(Self) -> Int
+pub fn DocxMatch::start(Self) -> Int32
 pub fn DocxMatch::story(Self) -> String
 pub fn DocxMatch::text(Self) -> String
 
 pub struct DocxMatchList {
   matches : Array[DocxMatch]
-  total : Int
+  total : Int32
 }
 pub fn DocxMatchList::matches(Self) -> Array[DocxMatch]
-pub fn DocxMatchList::total(Self) -> Int
+pub fn DocxMatchList::total(Self) -> Int32
 pub fn DocxMatchList::truncated(Self) -> Bool
 
 pub(all) struct DocxPackageResult {
@@ -402,20 +402,20 @@ pub fn DocxPackageResult::not_equal(Self, Self) -> Bool
 pub fn DocxPackageResult::to_repr(Self) -> @debug.Repr
 
 pub enum DocxParaIdCarrierResolution {
-  ResolvedCarrier(Int)
+  ResolvedCarrier(Int32)
   CarrierInvalid
   CarrierNotFound
-  CarrierAmbiguous(Array[Int])
+  CarrierAmbiguous(Array[Int32])
   CarrierInMultiPhysical
 }
 
 pub enum DocxParaIdResolution {
-  ResolvedOccurrence(Int, Int)
+  ResolvedOccurrence(Int32, Int32)
   ParaIdInvalid
   ParaIdNotFound
-  ParaIdAmbiguous(Array[Int])
+  ParaIdAmbiguous(Array[Int32])
   ParaIdInMultiPhysical
-  ParaIdUnjoined(Int)
+  ParaIdUnjoined(Int32)
 }
 
 pub struct DocxParagraphAnchor {
@@ -429,22 +429,22 @@ pub struct DocxParagraphAnchorIndex {
   // private fields
 }
 pub fn DocxParagraphAnchorIndex::anchor_at(Self, String) -> DocxParagraphAnchor?
-pub fn DocxParagraphAnchorIndex::anchor_of_paragraph(Self, Int) -> DocxParagraphAnchor?
-pub fn DocxParagraphAnchorIndex::paragraphs_with_para_id(Self, String) -> Array[Int]
+pub fn DocxParagraphAnchorIndex::anchor_of_paragraph(Self, Int32) -> DocxParagraphAnchor?
+pub fn DocxParagraphAnchorIndex::paragraphs_with_para_id(Self, String) -> Array[Int32]
 pub fn DocxParagraphAnchorIndex::resolve_para_id_carrier(Self, String) -> DocxParaIdCarrierResolution
-pub fn DocxParagraphAnchorIndex::scan_path_of_paragraph(Self, Int) -> String?
+pub fn DocxParagraphAnchorIndex::scan_path_of_paragraph(Self, Int32) -> String?
 
 pub struct DocxParagraphAnchorJoinIndex {
   // private fields
 }
 pub fn DocxParagraphAnchorJoinIndex::anchor_index(Self) -> DocxParagraphAnchorIndex
-pub fn DocxParagraphAnchorJoinIndex::join_of_occurrence(Self, Int) -> DocxParagraphJoin?
-pub fn DocxParagraphAnchorJoinIndex::occurrence_count(Self) -> Int
-pub fn DocxParagraphAnchorJoinIndex::occurrence_of_paragraph(Self, Int) -> Int?
+pub fn DocxParagraphAnchorJoinIndex::join_of_occurrence(Self, Int32) -> DocxParagraphJoin?
+pub fn DocxParagraphAnchorJoinIndex::occurrence_count(Self) -> Int32
+pub fn DocxParagraphAnchorJoinIndex::occurrence_of_paragraph(Self, Int32) -> Int32?
 pub fn DocxParagraphAnchorJoinIndex::resolve_para_id(Self, String) -> DocxParaIdResolution
 
 pub enum DocxParagraphJoin {
-  Joined(Int, DocxParagraphAnchor)
+  Joined(Int32, DocxParagraphAnchor)
   Unjoined(String)
 }
 
@@ -471,15 +471,15 @@ pub fn DocxReplaceAffected::para_id(Self) -> String?
 pub fn DocxReplaceAffected::path(Self) -> String
 
 pub struct DocxReplaceReceipt {
-  selected : Array[Int]
-  replaced : Int
+  selected : Array[Int32]
+  replaced : Int32
   affected : Array[DocxReplaceAffected]
   matches : Array[DocxMatch]
 }
 pub fn DocxReplaceReceipt::affected(Self) -> Array[DocxReplaceAffected]
 pub fn DocxReplaceReceipt::matches(Self) -> Array[DocxMatch]
-pub fn DocxReplaceReceipt::replaced(Self) -> Int
-pub fn DocxReplaceReceipt::selected(Self) -> Array[Int]
+pub fn DocxReplaceReceipt::replaced(Self) -> Int32
+pub fn DocxReplaceReceipt::selected(Self) -> Array[Int32]
 
 pub enum DocxStoryPartAuthority {
   RelationshipBacked
@@ -500,10 +500,10 @@ pub struct HeaderFooterSpec {
 pub struct NodeSpan {
   // private fields
 }
-pub fn NodeSpan::byte_end(Self) -> Int
-pub fn NodeSpan::byte_start(Self) -> Int
-pub fn NodeSpan::close_tag_start(Self) -> Int?
-pub fn NodeSpan::content_start(Self) -> Int?
+pub fn NodeSpan::byte_end(Self) -> Int32
+pub fn NodeSpan::byte_start(Self) -> Int32
+pub fn NodeSpan::close_tag_start(Self) -> Int32?
+pub fn NodeSpan::content_start(Self) -> Int32?
 pub fn NodeSpan::self_closing(Self) -> Bool
 
 pub struct NoteInfo {
@@ -528,19 +528,19 @@ pub fn RevisionInfo::path(Self) -> String
 pub struct RevisionNameEdit {
   // private fields
 }
-pub fn RevisionNameEdit::end(Self) -> Int
+pub fn RevisionNameEdit::end(Self) -> Int32
 pub fn RevisionNameEdit::replacement(Self) -> String
-pub fn RevisionNameEdit::start(Self) -> Int
+pub fn RevisionNameEdit::start(Self) -> Int32
 
 pub struct RevisionSpan {
   // private fields
 }
 pub fn RevisionSpan::author(Self) -> String?
-pub fn RevisionSpan::byte_end(Self) -> Int
-pub fn RevisionSpan::byte_start(Self) -> Int
-pub fn RevisionSpan::close_tag_start(Self) -> Int?
+pub fn RevisionSpan::byte_end(Self) -> Int32
+pub fn RevisionSpan::byte_start(Self) -> Int32
+pub fn RevisionSpan::close_tag_start(Self) -> Int32?
 pub fn RevisionSpan::container_path(Self) -> String?
-pub fn RevisionSpan::content_start(Self) -> Int?
+pub fn RevisionSpan::content_start(Self) -> Int32?
 pub fn RevisionSpan::date(Self) -> String?
 pub fn RevisionSpan::declares_namespaces(Self) -> Bool
 pub fn RevisionSpan::id(Self) -> String?
@@ -552,9 +552,9 @@ pub fn RevisionSpan::supported(Self) -> Bool
 pub struct RunFormatEdit {
   // private fields
 }
-pub fn RunFormatEdit::end(Self) -> Int
+pub fn RunFormatEdit::end(Self) -> Int32
 pub fn RunFormatEdit::replacement(Self) -> String
-pub fn RunFormatEdit::start(Self) -> Int
+pub fn RunFormatEdit::start(Self) -> Int32
 
 pub struct RunFormatPlan {
   // private fields
@@ -566,7 +566,7 @@ pub struct RunTextReceipt {
   // private fields
 }
 pub fn RunTextReceipt::at_relative(Self) -> String
-pub fn RunTextReceipt::edit_count(Self) -> Int
+pub fn RunTextReceipt::edit_count(Self) -> Int32
 pub fn RunTextReceipt::replaced_text(Self) -> String
 pub fn RunTextReceipt::result_text(Self) -> String
 pub fn RunTextReceipt::story_part(Self) -> String

@@ -41,7 +41,7 @@ pub fn note(String, String, Array[DocumentElement]) -> Note
 
 pub fn note_reference(String, String) -> DocumentElement
 
-pub fn numbering(Bool, Int) -> Numbering
+pub fn numbering(Bool, Int32) -> Numbering
 
 pub fn page_break() -> DocumentElement
 
@@ -57,7 +57,7 @@ pub fn tab() -> DocumentElement
 
 pub fn table(Array[DocumentElement], properties? : TableProperties) -> DocumentElement
 
-pub fn table_cell(Array[DocumentElement], col_span? : Int, row_span? : Int) -> DocumentElement
+pub fn table_cell(Array[DocumentElement], col_span? : Int32, row_span? : Int32) -> DocumentElement
 
 pub fn table_properties(style_id? : String?, style_name? : String?) -> TableProperties
 
@@ -112,7 +112,7 @@ pub(all) enum DocumentElement {
   Image(Image)
   Table(children~ : Array[DocumentElement], properties~ : TableProperties)
   TableRow(children~ : Array[DocumentElement], is_header~ : Bool)
-  TableCell(children~ : Array[DocumentElement], col_span~ : Int, row_span~ : Int)
+  TableCell(children~ : Array[DocumentElement], col_span~ : Int32, row_span~ : Int32)
   Break(BreakType)
   BookmarkStart(String)
   Field(instruction~ : String, result~ : String)
@@ -126,7 +126,7 @@ pub fn DocumentElement::to_raw_text(Self) -> String
 pub fn DocumentElement::to_repr(Self) -> @debug.Repr
 
 pub(all) struct DocumentSection {
-  ends_after_paragraph : Int?
+  ends_after_paragraph : Int32?
   headers : Array[SectionRef]
   footers : Array[SectionRef]
 } derive(Eq, @debug.Debug)
@@ -187,7 +187,7 @@ pub fn Note::to_repr(Self) -> @debug.Repr
 
 pub(all) struct Numbering {
   is_ordered : Bool
-  level : Int
+  level : Int32
 } derive(Eq, @debug.Debug)
 #deprecated
 pub fn Numbering::equal(Self, Self) -> Bool
@@ -237,7 +237,7 @@ pub fn RunProperties::to_repr(Self) -> @debug.Repr
 
 pub(all) struct SectionRef {
   variant : String
-  part : Int
+  part : Int32
 } derive(Eq, @debug.Debug)
 #deprecated
 pub fn SectionRef::equal(Self, Self) -> Bool

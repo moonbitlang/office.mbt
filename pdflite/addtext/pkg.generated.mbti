@@ -15,7 +15,7 @@ pub fn pdf_addtext_diagonal_offsets(@geometry.PdfRectangle, @geometry.PdfPositio
 
 pub fn pdf_addtext_get_urls_line(String) -> PdfAddTextUrlLine raise @core.PdfError
 
-pub fn pdf_addtext_initial_line_offsets(@geometry.PdfPosition, Int, Double, Double) -> (Double, Double)
+pub fn pdf_addtext_initial_line_offsets(@geometry.PdfPosition, Int32, Double, Double) -> (Double, Double)
 
 pub fn pdf_addtext_justification_offset(PdfAddTextRotation, Double, Double, @geometry.PdfPosition, PdfAddTextJustification) -> Double
 
@@ -95,13 +95,13 @@ pub fn PdfAddTextPreparedLine::to_json(Self) -> Json
 pub fn PdfAddTextPreparedLine::to_repr(Self) -> @debug.Repr
 
 pub(all) struct PdfAddTextReplacementValues {
-  page_number : Int
-  end_page : Int
+  page_number : Int32
+  end_page : Int32
   filename : String
   page_label : String
   end_label : String
-  bates : Int
-  bates_pad : Int?
+  bates : Int32
+  bates_pad : Int32?
   bookmarks : Array[String]
 } derive(Eq, ToJson, @debug.Debug)
 #deprecated
@@ -146,8 +146,8 @@ pub fn PdfAddTextRotation::to_repr(Self) -> @debug.Repr
 
 pub(all) struct PdfAddTextUrl {
   url : String
-  start : Int
-  end : Int
+  start : Int32
+  end : Int32
 } derive(Eq, ToJson, @debug.Debug)
 #deprecated
 pub fn PdfAddTextUrl::equal(Self, Self) -> Bool

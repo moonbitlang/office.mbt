@@ -9,13 +9,13 @@ import {
 }
 
 // Values
-pub fn cell_name_to_coordinates(StringView) -> (Int, Int) raise @xlsx.XlsxError
+pub fn cell_name_to_coordinates(StringView) -> (Int32, Int32) raise @xlsx.XlsxError
 
-pub fn column_name_to_number(StringView) -> Int raise @xlsx.XlsxError
+pub fn column_name_to_number(StringView) -> Int32 raise @xlsx.XlsxError
 
-pub fn column_number_to_name(Int) -> String raise @xlsx.XlsxError
+pub fn column_number_to_name(Int32) -> String raise @xlsx.XlsxError
 
-pub fn coordinates_to_cell_name(Int, Int, abs? : Bool) -> String raise @xlsx.XlsxError
+pub fn coordinates_to_cell_name(Int32, Int32, abs? : Bool) -> String raise @xlsx.XlsxError
 
 pub fn decrypt(BytesView, options? : @xlsx.Options, limits? : @xlsx.ReadLimits) -> Bytes raise @xlsx.XlsxError
 
@@ -25,7 +25,7 @@ pub fn excel_date_to_time(Double, use_1904_format? : Bool) -> @time.ZonedDateTim
 
 pub fn hsl_to_rgb(Double, Double, Double) -> (Byte, Byte, Byte)
 
-pub fn join_cell_name(StringView, Int) -> String raise @xlsx.XlsxError
+pub fn join_cell_name(StringView, Int32) -> String raise @xlsx.XlsxError
 
 pub fn new_data_validation(Bool) -> @xlsx.DataValidation
 
@@ -47,7 +47,7 @@ pub async fn[R : @io.Reader] read_zip_reader(R, password? : String, options? : @
 
 pub fn rgb_to_hsl(Byte, Byte, Byte) -> (Double, Double, Double)
 
-pub fn split_cell_name(StringView) -> (String, Int) raise @xlsx.XlsxError
+pub fn split_cell_name(StringView) -> (String, Int32) raise @xlsx.XlsxError
 
 pub fn theme_color(String, Double) -> String
 

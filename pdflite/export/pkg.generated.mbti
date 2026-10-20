@@ -31,7 +31,7 @@ pub(all) enum Action {
 pub(all) struct Annotation {
   link : LinkAnnotation
   alt : String?
-  mut struct_parent : Int?
+  mut struct_parent : Int32?
   location : UInt64?
 }
 pub fn Annotation::new_link(LinkAnnotation, String?, location? : UInt64?) -> Self
@@ -86,15 +86,15 @@ pub(all) enum Attr {
   Expanded(String)
   ActualText(String)
   Title(String)
-  HeadingLevel(Int)
+  HeadingLevel(Int32)
   ListNumbering(ListNumbering)
   Summary(String)
   HeaderScope(TableHeaderScope)
   CellHeaders(Array[Bytes])
-  RowSpan(Int)
-  ColSpan(Int)
+  RowSpan(Int32)
+  ColSpan(Int32)
   Placement(Placement)
-  BBox(Int, Rect)
+  BBox(Int32, Rect)
   Width(Double)
   Height(Double)
   BackgroundColor(NaiveRgbColor)
@@ -125,15 +125,15 @@ pub(all) enum BorderStyle {
 
 pub(all) enum Color {
   Regular(RegularColor)
-  Separation(Int, SeparationSpace)
+  Separation(Int32, SeparationSpace)
 } derive(Eq, @debug.Debug)
-pub fn Color::as_rgb(Self) -> (Int, Int, Int)?
+pub fn Color::as_rgb(Self) -> (Int32, Int32, Int32)?
 pub fn Color::black() -> Self
-pub fn Color::rgb(Int, Int, Int) -> Self
+pub fn Color::rgb(Int32, Int32, Int32) -> Self
 
 pub(all) struct ColorGlyphs {
-  is_color : (Int) -> Bool
-  draw : (Int, Int, Surface) -> Bool
+  is_color : (Int32) -> Bool
+  draw : (Int32, Int32, Surface) -> Bool
 }
 
 pub(all) struct Configuration {
@@ -149,23 +149,23 @@ pub(all) enum ContentTag {
 }
 
 pub(all) struct DateTime {
-  year : Int
-  month : Int?
-  day : Int?
-  hour : Int?
-  minute : Int?
-  second : Int?
-  utc_offset_hour : Int?
-  utc_offset_minute : Int
+  year : Int32
+  month : Int32?
+  day : Int32?
+  hour : Int32?
+  minute : Int32?
+  second : Int32?
+  utc_offset_hour : Int32?
+  utc_offset_minute : Int32
 } derive(Eq, @debug.Debug)
-pub fn DateTime::day(Self, Int) -> Self
-pub fn DateTime::hour(Self, Int) -> Self
-pub fn DateTime::minute(Self, Int) -> Self
-pub fn DateTime::month(Self, Int) -> Self
-pub fn DateTime::new(Int) -> Self
-pub fn DateTime::second(Self, Int) -> Self
-pub fn DateTime::utc_offset_hour(Self, Int) -> Self
-pub fn DateTime::utc_offset_minute(Self, Int) -> Self
+pub fn DateTime::day(Self, Int32) -> Self
+pub fn DateTime::hour(Self, Int32) -> Self
+pub fn DateTime::minute(Self, Int32) -> Self
+pub fn DateTime::month(Self, Int32) -> Self
+pub fn DateTime::new(Int32) -> Self
+pub fn DateTime::second(Self, Int32) -> Self
+pub fn DateTime::utc_offset_hour(Self, Int32) -> Self
+pub fn DateTime::utc_offset_minute(Self, Int32) -> Self
 
 pub(all) enum Destination {
   Xyz(XyzDestination)
@@ -206,7 +206,7 @@ pub(all) struct EmbeddedFile {
 pub(all) struct ExternalXObject {
   key : String
   bbox : Rect
-  write : (Int, () -> Int, (Int, Indirect) -> Unit) -> Unit
+  write : (Int32, () -> Int32, (Int32, Indirect) -> Unit) -> Unit
 }
 
 pub(all) struct Fill {
@@ -223,9 +223,9 @@ pub(all) enum FillRule {
 
 pub struct Font {
   data : Bytes
-  index : Int
+  index : Int32
   units_per_em : Double
-  num_glyphs : Int
+  num_glyphs : Int32
   ascent : Double
   descent : Double
   cap_height : Double?
@@ -234,27 +234,27 @@ pub struct Font {
   is_monospaced : Bool
   postscript_name : String?
   bbox : (Double, Double, Double, Double)
-  fs_type : Int
+  fs_type : Int32
   kind : OutlineKind
   key : String
   // private fields
 }
-pub fn Font::advance_width(Self, Int) -> Double?
+pub fn Font::advance_width(Self, Int32) -> Double?
 pub fn Font::has_table(Self, String) -> Bool
-pub fn Font::new(Bytes, Int, key? : String) -> Self?
-pub fn Font::new_variable(Bytes, Int, ArrayView[(@subsetter.Tag, Float)], key? : String) -> Self?
+pub fn Font::new(Bytes, Int32, key? : String) -> Self?
+pub fn Font::new_variable(Bytes, Int32, ArrayView[(@subsetter.Tag, Float)], key? : String) -> Self?
 pub fn Font::set_color_glyphs(Self, ColorGlyphs) -> Unit
 pub fn Font::variation_coordinates(Self) -> ArrayView[(@subsetter.Tag, Float)]
 
 pub struct FontSubset {
   // private fields
 }
-pub fn FontSubset::size(Self) -> Int
+pub fn FontSubset::size(Self) -> Int32
 
 pub(all) struct Glyph {
-  glyph_id : Int
-  text_start : Int
-  text_end : Int
+  glyph_id : Int32
+  text_start : Int32
+  text_end : Int32
   x_advance : Double
   x_offset : Double
   y_advance : Double
@@ -263,16 +263,16 @@ pub(all) struct Glyph {
 }
 
 pub(all) enum Identifier {
-  PageContent(Int, Int)
-  Annotation(Int, Int)
-  StreamContent(Int, Int, Int)
+  PageContent(Int32, Int32)
+  Annotation(Int32, Int32)
+  StreamContent(Int32, Int32, Int32)
   Dummy
 } derive(Eq, @debug.Debug)
 
 pub(all) struct Image {
   key : String
-  width : Int
-  height : Int
+  width : Int32
+  height : Int32
   colorspace : ImageColorspace
   data : ImageData
   icc : Bytes?
@@ -290,7 +290,7 @@ pub(all) enum ImageColorspace {
 pub(all) enum ImageData {
   Samples(Bytes, Bytes?)
   Jpeg(Bytes)
-  Png(Bytes, Int, Int, Bytes?)
+  Png(Bytes, Int32, Int32, Bytes?)
   Deflated(Bytes, Bytes?)
 }
 
@@ -351,7 +351,7 @@ pub(all) enum ListNumbering {
 pub struct Memo {
   // private fields
 }
-pub fn Memo::Memo(deflate? : (Bytes, (Bytes) -> Bytes) -> Bytes, subset? : (Font, ArrayView[Int], () -> FontSubset raise ExportError) -> FontSubset raise ExportError) -> Self
+pub fn Memo::Memo(deflate? : (Bytes, (Bytes) -> Bytes) -> Bytes, subset? : (Font, ArrayView[Int32], () -> FontSubset raise ExportError) -> FontSubset raise ExportError) -> Self
 
 pub(all) struct Metadata {
   title : String?
@@ -378,9 +378,9 @@ pub fn Metadata::text_direction(Self, TextDirection) -> Self
 pub fn Metadata::title(Self, String) -> Self
 
 pub(all) struct NaiveRgbColor {
-  red : Int
-  green : Int
-  blue : Int
+  red : Int32
+  green : Int32
+  blue : Int32
 } derive(Eq, @debug.Debug)
 
 pub(all) struct NamedDestination {
@@ -405,14 +405,14 @@ pub(all) enum NumberingStyle {
 pub(all) enum Obj {
   Null
   Bool(Bool)
-  Int(Int)
+  Int(Int32)
   Real(Double)
   Name(String)
   Str(Bytes)
   TextStr(String)
   Arr(Array[Obj])
   Dict(Array[(String, Obj)])
-  Ref(Int)
+  Ref(Int32)
 }
 
 pub(all) struct Outline {
@@ -442,16 +442,16 @@ pub struct Page {
 pub fn Page::add_annotation(Self, Annotation) -> Unit
 pub fn Page::add_tagged_annotation(Self, Annotation) -> Identifier
 pub fn Page::finish(Self) -> Unit
-pub fn Page::index(Self) -> Int
+pub fn Page::index(Self) -> Int32
 pub fn Page::surface(Self) -> Surface
 
 pub(all) struct PageLabel {
   style : NumberingStyle?
   prefix : String?
-  offset : Int?
+  offset : Int32?
 } derive(Eq, @debug.Debug)
 pub fn PageLabel::default() -> Self
-pub fn PageLabel::new(NumberingStyle?, String?, Int?) -> Self
+pub fn PageLabel::new(NumberingStyle?, String?, Int32?) -> Self
 
 pub(all) struct PageSettings {
   surface_size : Size
@@ -470,7 +470,7 @@ pub(all) enum Paint {
   SweepGradient(SweepGradient)
   Pattern(Pattern)
 }
-pub fn Paint::as_rgb(Self) -> (Int, Int, Int)?
+pub fn Paint::as_rgb(Self) -> (Int32, Int32, Int32)?
 
 pub(all) struct Path {
   segments : Array[PathSegment]
@@ -557,9 +557,9 @@ pub fn Rect::union(Self, Self) -> Self
 pub fn Rect::width(Self) -> Double
 
 pub(all) enum RegularColor {
-  Rgb(Int, Int, Int)
-  Luma(Int)
-  Cmyk(Int, Int, Int, Int)
+  Rgb(Int32, Int32, Int32)
+  Luma(Int32)
+  Cmyk(Int32, Int32, Int32, Int32)
 } derive(Eq, @debug.Debug)
 
 pub(all) enum SeparationColorant {
@@ -653,7 +653,7 @@ pub fn Surface::draw_stream(Self, Stream) -> Unit
 pub fn Surface::end_tagged(Self) -> Unit
 pub fn Surface::finish(Self) -> Unit
 pub fn Surface::finish_stream(Self) -> Stream
-pub fn Surface::page_tree_ref(Self) -> Int
+pub fn Surface::page_tree_ref(Self) -> Int32
 pub fn Surface::pop(Self) -> Unit
 pub fn Surface::push_blend_mode(Self, String) -> Unit
 pub fn Surface::push_clip_path(Self, Path, FillRule) -> Unit
@@ -701,7 +701,7 @@ pub(all) struct TagKind {
 pub fn TagKind::alt_text(Self) -> String?
 pub fn TagKind::get_id(Self) -> Bytes?
 pub fn TagKind::get_lang(Self) -> String?
-pub fn TagKind::heading_level(Self) -> Int
+pub fn TagKind::heading_level(Self) -> Int32
 pub fn TagKind::new(TagName) -> Self
 pub fn TagKind::remove_like(Self, Attr) -> Unit
 pub fn TagKind::set(Self, Attr) -> Unit
@@ -803,9 +803,9 @@ pub(all) enum ValidationError {
   MissingCMYKProfile
   InconsistentSeparationFallback(SeparationColorant)
   ContainsNotDefGlyph(Font, UInt64?, String)
-  NoCodepointMapping(Font, Int, UInt64?)
-  InvalidCodepointMapping(Font, Int, Char, UInt64?)
-  UnicodePrivateArea(Font, Int, Char, UInt64?)
+  NoCodepointMapping(Font, Int32, UInt64?)
+  InvalidCodepointMapping(Font, Int32, Char, UInt64?)
+  UnicodePrivateArea(Font, Int32, Char, UInt64?)
   RestrictedLicense(Font)
   NoDocumentLanguage
   NoDocumentTitle
@@ -845,10 +845,10 @@ pub(all) enum VersionedFeature {
 pub fn VersionedFeature::minimum_pdf_version(Self) -> PdfVersion
 
 pub(all) struct XyzDestination {
-  page_index : Int
+  page_index : Int32
   point : Point
 } derive(Eq, @debug.Debug)
-pub fn XyzDestination::new(Int, Point) -> Self
+pub fn XyzDestination::new(Int32, Point) -> Self
 
 // Type aliases
 pub type Location = UInt64

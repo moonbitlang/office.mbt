@@ -47,7 +47,7 @@ pub fn FieldKind::to_json(Self) -> Json
 pub fn FieldKind::to_repr(Self) -> @debug.Repr
 
 pub(all) struct InlineImage {
-  offset_utf16 : Int
+  offset_utf16 : Int32
   width_pt : Double
   height_pt : Double
   data : Bytes
@@ -145,7 +145,7 @@ pub fn ParagraphStyle::to_repr(Self) -> @debug.Repr
 pub fn ParagraphStyle::with_hanging_tab_stop(Self) -> Self
 
 pub(all) struct PlacedInlineImage {
-  line : Int
+  line : Int32
   x_pt : Double
   y_pt : Double
   width_pt : Double
@@ -178,7 +178,7 @@ pub(all) struct RunInput {
 } derive(Eq, ToJson, @debug.Debug)
 #deprecated
 pub fn RunInput::equal(Self, Self) -> Bool
-pub fn RunInput::evaluate(Self, Int, Int) -> Self
+pub fn RunInput::evaluate(Self, Int32, Int32) -> Self
 #deprecated
 pub fn RunInput::not_equal(Self, Self) -> Bool
 pub fn RunInput::plain(String, RunStyle) -> Self

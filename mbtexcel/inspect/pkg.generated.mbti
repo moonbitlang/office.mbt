@@ -33,7 +33,7 @@ pub fn chart_series(String) -> Array[ChartSeriesMeta]
 
 pub fn chart_title(String) -> String?
 
-pub fn effective_style_id(@xlsx.Workbook, String, String, row~ : Int, col~ : Int) -> Int raise @xlsx.XlsxError
+pub fn effective_style_id(@xlsx.Workbook, String, String, row~ : Int32, col~ : Int32) -> Int32 raise @xlsx.XlsxError
 
 pub fn lint(@xlsx.Workbook, file~ : String, sheet? : String) -> Json raise
 
@@ -73,10 +73,10 @@ pub impl Show for RangeError
 
 // Types and methods
 pub struct CellRange {
-  col_lo : Int
-  row_lo : Int
-  col_hi : Int
-  row_hi : Int
+  col_lo : Int32
+  row_lo : Int32
+  col_hi : Int32
+  row_hi : Int32
 } derive(Eq, @debug.Debug)
 pub fn CellRange::cell_count(Self) -> Int64
 pub fn CellRange::cells(Self) -> Array[String] raise @xlsx.XlsxError

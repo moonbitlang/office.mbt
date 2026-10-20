@@ -21,7 +21,7 @@ pub fn annotated_text_lines(@docx.DocxAnnotatedResult) -> Array[String]
 
 pub fn element(@document.DocumentElement, file~ : String, path~ : String, headers? : Array[@document.HeaderFooterPart], footers? : Array[@document.HeaderFooterPart]) -> Json raise @paths.PathError
 
-pub fn heading_level(@document.ParagraphProperties) -> Int?
+pub fn heading_level(@document.ParagraphProperties) -> Int32?
 
 pub fn outline(@document.DocumentElement, file~ : String, messages? : Array[@core.Message], headers? : Array[@document.HeaderFooterPart], footers? : Array[@document.HeaderFooterPart], sections? : Array[@document.DocumentSection]) -> Json
 

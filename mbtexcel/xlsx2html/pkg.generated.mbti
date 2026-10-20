@@ -7,7 +7,7 @@ import {
 }
 
 // Values
-pub fn col_width_px(Double) -> Int
+pub fn col_width_px(Double) -> Int32
 
 pub fn css_color(String) -> String?
 
@@ -15,11 +15,11 @@ pub fn escape_html(String) -> String
 
 pub fn escape_html_attribute(String) -> String
 
-pub fn render_workbook(@xlsx.Workbook, title~ : String, sheet? : String, max_rows? : Int, max_cols? : Int, include_images? : Bool, calc? : Bool) -> String raise
+pub fn render_workbook(@xlsx.Workbook, title~ : String, sheet? : String, max_rows? : Int32, max_cols? : Int32, include_images? : Bool, calc? : Bool) -> String raise
 
-pub fn row_height_px(Double) -> Int
+pub fn row_height_px(Double) -> Int32
 
-pub fn sanitize_utf16_lossy(String) -> (String, Int)
+pub fn sanitize_utf16_lossy(String) -> (String, Int32)
 
 pub fn style_css(@xlsx.Style, workbook? : @xlsx.Workbook) -> String
 

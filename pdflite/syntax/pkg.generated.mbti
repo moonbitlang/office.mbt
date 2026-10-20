@@ -33,7 +33,7 @@ pub fn pdf_cursor_lex_token(@core.ByteCursor) -> PdfLexeme raise @core.PdfError
 
 pub fn pdf_cursor_lex_tokens(@core.ByteCursor) -> Array[PdfLexeme] raise @core.PdfError
 
-pub fn pdf_cursor_matches_ascii_at(@core.ByteCursor, Int, ArrayView[Int]) -> Bool
+pub fn pdf_cursor_matches_ascii_at(@core.ByteCursor, Int32, ArrayView[Int32]) -> Bool
 
 pub fn pdf_cursor_read_regular_token_view(@core.ByteCursor) -> BytesView
 
@@ -41,9 +41,9 @@ pub fn pdf_cursor_read_until_whitespace_or_delimiter(@core.ByteCursor) -> BytesV
 
 pub fn pdf_dictionary(ArrayView[(@core.PdfName, PdfObject)]) -> PdfObject
 
-pub fn pdf_hex_value(Int) -> Int?
+pub fn pdf_hex_value(Int32) -> Int32?
 
-pub fn pdf_is_number_start_byte(Int) -> Bool
+pub fn pdf_is_number_start_byte(Int32) -> Bool
 
 pub fn pdf_lex_bytes(Bytes) -> Array[PdfLexeme] raise @core.PdfError
 
@@ -53,9 +53,9 @@ pub fn pdf_lex_view(BytesView) -> Array[PdfLexeme] raise @core.PdfError
 
 pub fn pdf_lexeme_debug_name(PdfLexeme) -> String
 
-pub fn pdf_lexeme_indirect_object_header_at(ArrayView[PdfLexeme], Int) -> Bool
+pub fn pdf_lexeme_indirect_object_header_at(ArrayView[PdfLexeme], Int32) -> Bool
 
-pub fn pdf_number_view_int(BytesView) -> Int?
+pub fn pdf_number_view_int(BytesView) -> Int32?
 
 pub fn pdf_object_length_name() -> @core.PdfName
 
@@ -67,7 +67,7 @@ pub fn pdf_parse_indirect_object_lexemes(ArrayView[PdfLexeme]) -> PdfParsedIndir
 
 pub fn pdf_parse_indirect_object_prefix_lexemes(ArrayView[PdfLexeme]) -> PdfParsedIndirectObject raise @core.PdfError
 
-pub fn pdf_parse_indirect_object_segment_at(ArrayView[PdfLexeme], Int) -> (PdfParsedIndirectObject, Int, Bool) raise @core.PdfError
+pub fn pdf_parse_indirect_object_segment_at(ArrayView[PdfLexeme], Int32) -> (PdfParsedIndirectObject, Int32, Bool) raise @core.PdfError
 
 pub fn pdf_parse_indirect_object_segments(ArrayView[PdfLexeme]) -> (Array[PdfParsedIndirectObject], PdfParsedIndirectObject?) raise @core.PdfError
 
@@ -95,7 +95,7 @@ pub fn pdf_string_of_lexeme(PdfLexeme) -> String
 
 pub fn pdf_string_of_lexemes(ArrayView[PdfLexeme]) -> String
 
-pub fn stream_to_get(@core.ByteCursor, Int, Int) -> ToGet
+pub fn stream_to_get(@core.ByteCursor, Int32, Int32) -> ToGet
 
 // Errors
 
@@ -103,7 +103,7 @@ pub fn stream_to_get(@core.ByteCursor, Int, Int) -> ToGet
 pub(all) enum PdfLexeme {
   LexNull
   LexBool(Bool)
-  LexInt(Int)
+  LexInt(Int32)
   LexReal(Double)
   LexString(Bytes)
   LexName(@core.PdfName)
@@ -131,7 +131,7 @@ pub fn PdfLexeme::to_repr(Self) -> @debug.Repr
 pub(all) enum PdfObject {
   PdfNull
   PdfBoolean(Bool)
-  PdfInteger(Int)
+  PdfInteger(Int32)
   PdfReal(Double)
   PdfExactReal(Double)
   PdfString(Bytes)
@@ -139,14 +139,14 @@ pub(all) enum PdfObject {
   PdfArray(Array[PdfObject])
   PdfDictionary(Array[(@core.PdfName, PdfObject)])
   PdfStreamObject(PdfStream)
-  PdfIndirect(Int)
+  PdfIndirect(Int32)
 } derive(Eq, ToJson, @debug.Debug)
 pub fn PdfObject::add_dict_entry(Self, @core.PdfName, Self) -> Self raise @core.PdfError
 pub fn PdfObject::deep_copy(Self) -> Self
 pub fn PdfObject::dictionary_view(Self) -> ArrayView[(@core.PdfName, Self)]?
 #deprecated
 pub fn PdfObject::equal(Self, Self) -> Bool
-pub fn PdfObject::find_indirect(Self, @core.PdfName) -> Int? raise @core.PdfError
+pub fn PdfObject::find_indirect(Self, @core.PdfName) -> Int32? raise @core.PdfError
 pub fn PdfObject::get_stream(Self) -> Unit raise @core.PdfError
 pub fn PdfObject::lookup_immediate(Self, @core.PdfName) -> Self?
 #deprecated
@@ -161,8 +161,8 @@ pub fn PdfObject::to_repr(Self) -> @debug.Repr
 pub fn PdfObject::unique_key(Self, String) -> @core.PdfName raise @core.PdfError
 
 pub(all) struct PdfParsedIndirectObject {
-  number : Int
-  generation : Int
+  number : Int32
+  generation : Int32
   object : PdfObject
 } derive(Eq, ToJson, @debug.Debug)
 #deprecated
@@ -203,8 +203,8 @@ pub fn PdfStreamData::to_repr(Self) -> @debug.Repr
 
 pub(all) enum PdfStreamDataCrypt {
   PdfStreamDataNoCrypt
-  PdfStreamDataArc4Decrypt(Int, Int, Bytes, Int)
-  PdfStreamDataAesV2Decrypt(Int, Int, Bytes, Int)
+  PdfStreamDataArc4Decrypt(Int32, Int32, Bytes, Int32)
+  PdfStreamDataAesV2Decrypt(Int32, Int32, Bytes, Int32)
   PdfStreamDataAesV3Decrypt(Bytes)
 } derive(Eq, ToJson, @debug.Debug)
 pub fn PdfStreamDataCrypt::decrypt(Self, BytesView) -> Bytes raise @core.PdfError
@@ -221,18 +221,18 @@ pub fn PdfStreamDataCrypt::to_repr(Self) -> @debug.Repr
 
 pub(all) struct ToGet {
   input : @core.ByteCursor
-  position : Int
-  length : Int
+  position : Int32
+  length : Int32
   crypt : PdfStreamDataCrypt
 } derive(Eq, ToJson, @debug.Debug)
 pub fn ToGet::crypt(Self) -> PdfStreamDataCrypt
 #deprecated
 pub fn ToGet::equal(Self, Self) -> Bool
 pub fn ToGet::input(Self) -> @core.ByteCursor
-pub fn ToGet::length(Self) -> Int
+pub fn ToGet::length(Self) -> Int32
 #deprecated
 pub fn ToGet::not_equal(Self, Self) -> Bool
-pub fn ToGet::position(Self) -> Int
+pub fn ToGet::position(Self) -> Int32
 #deprecated
 pub fn ToGet::to_json(Self) -> Json
 #deprecated

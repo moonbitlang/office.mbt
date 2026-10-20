@@ -35,15 +35,15 @@ pub fn resolve_target(String, String) -> String?
 
 pub fn validate_docx_archive(@zip.Archive) -> Array[String]
 
-pub fn validate_docx_archive_limited(@zip.Archive, max_findings~ : Int, max_message_chars~ : Int, max_zip_entry_name_chars? : Int, max_zip_total_entry_name_chars? : Int, max_xml_source_units? : Int, max_xml_tokens? : Int, max_xml_materialized_chars? : Int, max_xml_token_chars? : Int, cancelled? : () -> Bool) -> (Array[String], Bool)
+pub fn validate_docx_archive_limited(@zip.Archive, max_findings~ : Int32, max_message_chars~ : Int32, max_zip_entry_name_chars? : Int32, max_zip_total_entry_name_chars? : Int32, max_xml_source_units? : Int32, max_xml_tokens? : Int32, max_xml_materialized_chars? : Int32, max_xml_token_chars? : Int32, cancelled? : () -> Bool) -> (Array[String], Bool)
 
-pub fn validate_docx_archive_report_limited(@zip.Archive, max_findings~ : Int, max_message_chars~ : Int, max_zip_entry_name_chars? : Int, max_zip_total_entry_name_chars? : Int, max_xml_source_units? : Int, max_xml_tokens? : Int, max_xml_materialized_chars? : Int, max_xml_token_chars? : Int, cancelled? : () -> Bool) -> DocxValidationReport
+pub fn validate_docx_archive_report_limited(@zip.Archive, max_findings~ : Int32, max_message_chars~ : Int32, max_zip_entry_name_chars? : Int32, max_zip_total_entry_name_chars? : Int32, max_xml_source_units? : Int32, max_xml_tokens? : Int32, max_xml_materialized_chars? : Int32, max_xml_token_chars? : Int32, cancelled? : () -> Bool) -> DocxValidationReport
 
 pub fn validate_docx_package(BytesView) -> Array[String]
 
-pub fn validate_docx_package_limited(BytesView, max_findings~ : Int, max_message_chars~ : Int, max_zip_package_bytes? : Int, max_zip_entries? : Int, max_zip_entry_uncompressed_bytes? : Int, max_zip_total_uncompressed_bytes? : Int, max_zip_total_preserved_source_bytes? : Int, max_zip_entry_name_chars? : Int, max_zip_total_entry_name_chars? : Int, max_xml_source_units? : Int, max_xml_tokens? : Int, max_xml_materialized_chars? : Int, max_xml_token_chars? : Int) -> (Array[String], Bool)
+pub fn validate_docx_package_limited(BytesView, max_findings~ : Int32, max_message_chars~ : Int32, max_zip_package_bytes? : Int32, max_zip_entries? : Int32, max_zip_entry_uncompressed_bytes? : Int32, max_zip_total_uncompressed_bytes? : Int32, max_zip_total_preserved_source_bytes? : Int32, max_zip_entry_name_chars? : Int32, max_zip_total_entry_name_chars? : Int32, max_xml_source_units? : Int32, max_xml_tokens? : Int32, max_xml_materialized_chars? : Int32, max_xml_token_chars? : Int32) -> (Array[String], Bool)
 
-pub fn validate_docx_package_report_limited(BytesView, max_findings~ : Int, max_message_chars~ : Int, max_zip_package_bytes? : Int, max_zip_entries? : Int, max_zip_entry_uncompressed_bytes? : Int, max_zip_total_uncompressed_bytes? : Int, max_zip_total_preserved_source_bytes? : Int, max_zip_entry_name_chars? : Int, max_zip_total_entry_name_chars? : Int, max_xml_source_units? : Int, max_xml_tokens? : Int, max_xml_materialized_chars? : Int, max_xml_token_chars? : Int) -> DocxValidationReport
+pub fn validate_docx_package_report_limited(BytesView, max_findings~ : Int32, max_message_chars~ : Int32, max_zip_package_bytes? : Int32, max_zip_entries? : Int32, max_zip_entry_uncompressed_bytes? : Int32, max_zip_total_uncompressed_bytes? : Int32, max_zip_total_preserved_source_bytes? : Int32, max_zip_entry_name_chars? : Int32, max_zip_total_entry_name_chars? : Int32, max_xml_source_units? : Int32, max_xml_tokens? : Int32, max_xml_materialized_chars? : Int32, max_xml_token_chars? : Int32) -> DocxValidationReport
 
 pub fn zip_item_name_from_logical_part_name(StringView) -> String?
 
@@ -99,10 +99,10 @@ pub fn PackageBuilder::build_limited(Self, PackageLimits) -> Bytes raise Package
 pub fn PackageBuilder::new() -> Self
 
 pub(all) struct PackageLimits {
-  max_output_bytes : Int
-  max_entries : Int
-  max_entry_uncompressed_bytes : Int
-  max_total_uncompressed_bytes : Int
+  max_output_bytes : Int32
+  max_entries : Int32
+  max_entry_uncompressed_bytes : Int32
+  max_total_uncompressed_bytes : Int32
 }
 
 // Type aliases

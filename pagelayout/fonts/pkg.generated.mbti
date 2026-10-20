@@ -12,7 +12,7 @@ pub fn resolve_family(String) -> String
 
 pub fn standard_fonts() -> Array[String]
 
-pub fn uncovered(String, String, bold? : Bool, italic? : Bool) -> Array[(Int, Int)]
+pub fn uncovered(String, String, bold? : Bool, italic? : Bool) -> Array[(Int32, Int32)]
 
 // Errors
 pub(all) suberror FaceMetricsError {
@@ -40,20 +40,20 @@ pub struct FaceMetrics {
   family : String
   bold : Bool
   italic : Bool
-  units_per_em : Int
-  ascender : Int
-  descender : Int
-  line_gap : Int
+  units_per_em : Int32
+  ascender : Int32
+  descender : Int32
+  line_gap : Int32
   // private fields
 }
-pub fn FaceMetrics::advance_pt(Self, Int, Double) -> Double
+pub fn FaceMetrics::advance_pt(Self, Int32, Double) -> Double
 pub fn FaceMetrics::ascent_pt(Self, Double) -> Double
-pub fn FaceMetrics::cmap_entries(Self) -> Iter2[Int, Int]
+pub fn FaceMetrics::cmap_entries(Self) -> Iter2[Int32, Int32]
 pub fn FaceMetrics::descent_pt(Self, Double) -> Double
-pub fn FaceMetrics::glyph_id(Self, Int) -> Int?
-pub fn FaceMetrics::has_char(Self, Int) -> Bool
+pub fn FaceMetrics::glyph_id(Self, Int32) -> Int32?
+pub fn FaceMetrics::has_char(Self, Int32) -> Bool
 pub fn FaceMetrics::line_height_pt(Self, Double) -> Double
-pub fn FaceMetrics::new(family~ : String, bold? : Bool, italic? : Bool, units_per_em~ : Int, ascender~ : Int, descender~ : Int, line_gap~ : Int, advances~ : Array[Int], cmap~ : Map[Int, Int]) -> Self raise FaceMetricsError
+pub fn FaceMetrics::new(family~ : String, bold? : Bool, italic? : Bool, units_per_em~ : Int32, ascender~ : Int32, descender~ : Int32, line_gap~ : Int32, advances~ : Array[Int32], cmap~ : Map[Int32, Int32]) -> Self raise FaceMetricsError
 
 pub struct FontRegistry {
   // private fields
@@ -70,7 +70,7 @@ pub fn FontRegistry::register_standard(Self, String, FaceMetrics, standard~ : St
 pub fn FontRegistry::registered_face(Self, String, bold? : Bool, italic? : Bool) -> RegisteredFace?
 pub fn FontRegistry::resolve_family(Self, String) -> String
 pub fn FontRegistry::seal(Self) -> Unit
-pub fn FontRegistry::uncovered(Self, String, String, bold? : Bool, italic? : Bool) -> Array[(Int, Int)]
+pub fn FontRegistry::uncovered(Self, String, String, bold? : Bool, italic? : Bool) -> Array[(Int32, Int32)]
 pub impl Default for FontRegistry
 
 pub struct RegisteredFace {

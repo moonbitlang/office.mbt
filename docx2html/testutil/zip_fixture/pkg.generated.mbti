@@ -2,9 +2,9 @@
 package "moonbitlang/docx2html/testutil/zip_fixture"
 
 // Values
-pub fn classic_central_directory_offset(BytesView) -> Int raise
+pub fn classic_central_directory_offset(BytesView) -> Int32 raise
 
-pub fn with_central_header_size(BytesView, String, Int) -> Bytes raise
+pub fn with_central_header_size(BytesView, String, Int32) -> Bytes raise
 
 // Errors
 

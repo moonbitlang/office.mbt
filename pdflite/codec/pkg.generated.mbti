@@ -26,21 +26,21 @@ pub fn pdf_cursor_read_jpeg_data(@core.ByteCursor) -> Bytes raise @core.PdfError
 
 pub fn pdf_get_jpeg_data(@core.ByteCursor) -> Bytes raise @core.PdfError
 
-pub fn pdf_jpeg_backup_dimensions(Bytes) -> (Int, Int) raise @core.PdfError
+pub fn pdf_jpeg_backup_dimensions(Bytes) -> (Int32, Int32) raise @core.PdfError
 
-pub fn pdf_jpeg_backup_dimensions_view(BytesView) -> (Int, Int) raise @core.PdfError
+pub fn pdf_jpeg_backup_dimensions_view(BytesView) -> (Int32, Int32) raise @core.PdfError
 
-pub fn pdf_jpeg_dimensions(Bytes) -> (Int, Int) raise @core.PdfError
+pub fn pdf_jpeg_dimensions(Bytes) -> (Int32, Int32) raise @core.PdfError
 
-pub fn pdf_jpeg_dimensions_view(BytesView) -> (Int, Int) raise @core.PdfError
+pub fn pdf_jpeg_dimensions_view(BytesView) -> (Int32, Int32) raise @core.PdfError
 
 pub fn pdf_jpeg_info_view(BytesView) -> PdfJpegInfo raise @core.PdfError
 
-pub fn pdf_lzw_decode(Bytes, early_change? : Int) -> Bytes raise @core.PdfError
+pub fn pdf_lzw_decode(Bytes, early_change? : Int32) -> Bytes raise @core.PdfError
 
-pub fn pdf_lzw_decode_view(BytesView, early_change? : Int) -> Bytes raise @core.PdfError
+pub fn pdf_lzw_decode_view(BytesView, early_change? : Int32) -> Bytes raise @core.PdfError
 
-pub fn pdf_lzw_decode_view_prefix(BytesView, early_change? : Int) -> (Bytes, Int) raise @core.PdfError
+pub fn pdf_lzw_decode_view_prefix(BytesView, early_change? : Int32) -> (Bytes, Int32) raise @core.PdfError
 
 pub fn pdf_run_length_decode(Bytes) -> Bytes
 
@@ -54,14 +54,14 @@ pub fn pdf_run_length_encode_view(BytesView) -> Bytes
 
 // Types and methods
 pub(all) struct PdfJpegInfo {
-  width : Int
-  height : Int
-  bits : Int
-  components : Int
-  component_ids : Array[Int]
+  width : Int32
+  height : Int32
+  bits : Int32
+  components : Int32
+  component_ids : Array[Int32]
   jfif : Bool
-  frame : Int
-  adobe_transform : Int?
+  frame : Int32
+  adobe_transform : Int32?
   hierarchical : Bool
 }
 

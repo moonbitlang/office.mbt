@@ -7,13 +7,13 @@ import {
 }
 
 // Values
-pub fn pdf_colours() -> Array[(String, Int)]
+pub fn pdf_colours() -> Array[(String, Int32)]
 
 pub let pdf_content_black : PdfContentColour
 
-pub fn pdf_css_colour_value(String) -> Int?
+pub fn pdf_css_colour_value(String) -> Int32?
 
-pub fn pdf_css_colours() -> Array[(String, Int)]
+pub fn pdf_css_colours() -> Array[(String, Int32)]
 
 pub fn pdf_draw_colour_of_string(String) -> PdfDrawColour
 

@@ -29,7 +29,7 @@ pub struct QName {
   local_name : String
 } derive(Eq, Hash, @debug.Debug)
 pub fn QName::equal(Self, Self) -> Bool
-pub fn QName::hash(Self) -> Int
+pub fn QName::hash(Self) -> Int32
 pub fn QName::hash_combine(Self, Hasher) -> Unit
 pub fn QName::is_qualified(Self) -> Bool
 pub fn QName::new(String, String) -> Self

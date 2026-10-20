@@ -28,7 +28,7 @@ pub fn PdfOcg::to_repr(Self) -> @debug.Repr
 
 pub(all) struct PdfOcgAppDict {
   event : PdfOcgEvent
-  ocgs : Array[Int]
+  ocgs : Array[Int32]
   category : Array[@core.PdfName]
 } derive(Eq, ToJson, @debug.Debug)
 #deprecated
@@ -44,14 +44,14 @@ pub(all) struct PdfOcgConfig {
   name : Bytes?
   creator : Bytes?
   base_state : PdfOcgState
-  on : Array[Int]
-  off : Array[Int]
+  on : Array[Int32]
+  off : Array[Int32]
   intent : Array[@core.PdfName]
   usage_applications : Array[PdfOcgAppDict]
-  order : Array[(Bytes?, Array[Int])]?
+  order : Array[(Bytes?, Array[Int32])]?
   list_mode : PdfOcgListMode
-  radio_button_groups : Array[Array[Int]]?
-  locked : Array[Int]
+  radio_button_groups : Array[Array[Int32]]?
+  locked : Array[Int32]
 } derive(Eq, ToJson, @debug.Debug)
 #deprecated
 pub fn PdfOcgConfig::equal(Self, Self) -> Bool
@@ -125,7 +125,7 @@ pub fn PdfOcgUsage::to_json(Self) -> Json
 pub fn PdfOcgUsage::to_repr(Self) -> @debug.Repr
 
 pub(all) struct PdfOptionalContent {
-  ocgs : Array[(Int, PdfOcg)]
+  ocgs : Array[(Int32, PdfOcg)]
   default_config : PdfOcgConfig
   configs : Array[PdfOcgConfig]
 } derive(Eq, ToJson, @debug.Debug)

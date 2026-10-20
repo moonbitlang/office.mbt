@@ -26,9 +26,9 @@ pub fn comment(String, Array[@document.DocumentElement], author_name? : String, 
 
 pub fn comment_reference(String) -> @document.DocumentElement
 
-pub fn comment_reply(author~ : String, initials? : String, date? : String, reply_to~ : Int, done? : Bool, Array[@document.DocumentElement]) -> @docx.CommentSpec raise DocxError
+pub fn comment_reply(author~ : String, initials? : String, date? : String, reply_to~ : Int32, done? : Bool, Array[@document.DocumentElement]) -> @docx.CommentSpec raise DocxError
 
-pub fn comment_spec(author~ : String, initials? : String, date? : String, from~ : Int, to~ : Int, done? : Bool, Array[@document.DocumentElement]) -> @docx.CommentSpec raise DocxError
+pub fn comment_spec(author~ : String, initials? : String, date? : String, from~ : Int32, to~ : Int32, done? : Bool, Array[@document.DocumentElement]) -> @docx.CommentSpec raise DocxError
 
 pub fn convert(BytesView, output_format? : @converter.OutputFormat, style_map? : Array[String], include_default_style_map? : Bool, include_embedded_style_map? : Bool, ignore_empty_paragraphs? : Bool, id_prefix? : String, pretty_print? : Bool, convert_image? : (@document.Image) -> @converter.ImageConversion, transform_document? : (@document.DocumentElement) -> @document.DocumentElement, external_file_access? : Bool, read_external_file? : (String) -> Bytes?) -> @core.ConversionResult raise DocxError
 
@@ -102,7 +102,7 @@ pub fn note_reference(String, String) -> @document.DocumentElement
 
 pub fn note_spec(Array[@document.DocumentElement]) -> @docx.NoteSpec raise DocxError
 
-pub fn numbering(Bool, Int) -> @document.Numbering
+pub fn numbering(Bool, Int32) -> @document.Numbering
 
 pub fn open_zip(BytesView) -> @zip.ZipArchive raise DocxError
 
@@ -148,7 +148,7 @@ pub fn tab() -> @document.DocumentElement
 
 pub fn table(Array[@document.DocumentElement], properties? : @document.TableProperties) -> @document.DocumentElement
 
-pub fn table_cell(Array[@document.DocumentElement], col_span? : Int, row_span? : Int) -> @document.DocumentElement
+pub fn table_cell(Array[@document.DocumentElement], col_span? : Int32, row_span? : Int32) -> @document.DocumentElement
 
 pub fn table_properties(style_id? : String?, style_name? : String?) -> @document.TableProperties
 

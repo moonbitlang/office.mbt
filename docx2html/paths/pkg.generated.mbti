@@ -44,8 +44,8 @@ pub struct ParsedPath {
 
 pub enum PathRoot {
   Body
-  Header(Int)
-  Footer(Int)
+  Header(Int32)
+  Footer(Int32)
   Footnotes
   Endnotes
   Comments
@@ -57,7 +57,7 @@ pub struct PathStep {
 }
 
 pub enum StepSelector {
-  Ordinal(Int)
+  Ordinal(Int32)
   ById(String)
 }
 

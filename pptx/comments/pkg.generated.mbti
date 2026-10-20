@@ -23,9 +23,9 @@ pub impl Show for CommentsError
 
 // Types and methods
 pub(all) struct Comment {
-  author_id : Int
+  author_id : Int32
   dt : String?
-  idx : Int
+  idx : Int32
   pos : CommentPos
   text : String
   extension : Array[@xml.XmlElement]
@@ -35,11 +35,11 @@ pub fn Comment::not_equal(Self, Self) -> Bool
 pub fn Comment::to_repr(Self) -> @debug.Repr
 
 pub(all) struct CommentAuthor {
-  id : Int
+  id : Int32
   name : String
   initials : String
-  last_idx : Int
-  clr_idx : Int
+  last_idx : Int32
+  clr_idx : Int32
   extension : Array[@xml.XmlElement]
 } derive(Eq, @debug.Debug)
 pub fn CommentAuthor::equal(Self, Self) -> Bool

@@ -11,7 +11,7 @@ import {
 // Values
 pub fn pdf_annotation_make(PdfAnnotationSubtype, contents? : Bytes?, border? : PdfAnnotationBorder, rectangle? : @geometry.PdfRectangle, colour? : PdfAnnotationColour?, subject? : Bytes?) -> PdfAnnotation
 
-pub fn pdf_annotation_make_border(Double, vertical_radius? : Double, horizontal_radius? : Double, style? : PdfAnnotationStyle, dash_array? : ArrayView[Int]) -> PdfAnnotationBorder
+pub fn pdf_annotation_make_border(Double, vertical_radius? : Double, horizontal_radius? : Double, style? : PdfAnnotationStyle, dash_array? : ArrayView[Int32]) -> PdfAnnotationBorder
 
 // Errors
 
@@ -39,7 +39,7 @@ pub(all) struct PdfAnnotationBorder {
   vertical_radius : Double
   horizontal_radius : Double
   style : PdfAnnotationStyle
-  dash_array : Array[Int]
+  dash_array : Array[Int32]
 } derive(Eq, ToJson, @debug.Debug)
 #deprecated
 pub fn PdfAnnotationBorder::equal(Self, Self) -> Bool
@@ -51,9 +51,9 @@ pub fn PdfAnnotationBorder::to_json(Self) -> Json
 pub fn PdfAnnotationBorder::to_repr(Self) -> @debug.Repr
 
 pub(all) struct PdfAnnotationColour {
-  red : Int
-  green : Int
-  blue : Int
+  red : Int32
+  green : Int32
+  blue : Int32
 } derive(Eq, ToJson, @debug.Debug)
 #deprecated
 pub fn PdfAnnotationColour::equal(Self, Self) -> Bool

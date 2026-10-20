@@ -6,11 +6,11 @@ import {
 }
 
 // Values
-pub fn build_sample_chart_isolated(Int) -> FixedArray[Byte] raise @presentation.PptxError
+pub fn build_sample_chart_isolated(Int32) -> FixedArray[Byte] raise @presentation.PptxError
 
 pub fn build_sample_deck() -> FixedArray[Byte] raise @presentation.PptxError
 
-pub fn build_sample_isolated(Int) -> FixedArray[Byte] raise @presentation.PptxError
+pub fn build_sample_isolated(Int32) -> FixedArray[Byte] raise @presentation.PptxError
 
 // Errors
 

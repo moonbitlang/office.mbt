@@ -13,19 +13,19 @@ pub fn pdf_page_label_complete(ArrayView[PdfPageLabel]) -> Array[PdfPageLabel]
 
 pub fn pdf_page_label_lowercase(Bytes) -> Bytes
 
-pub fn pdf_page_label_number_bytes(Int, PdfPageLabelStyle) -> Bytes
+pub fn pdf_page_label_number_bytes(Int32, PdfPageLabelStyle) -> Bytes
 
-pub fn pdf_page_label_of_page_number(Int, ArrayView[PdfPageLabel]) -> PdfPageLabel?
+pub fn pdf_page_label_of_page_number(Int32, ArrayView[PdfPageLabel]) -> PdfPageLabel?
 
-pub fn pdf_page_label_of_single(Int, PdfPageLabel) -> PdfPageLabel
+pub fn pdf_page_label_of_single(Int32, PdfPageLabel) -> PdfPageLabel
 
-pub fn pdf_page_label_roman_upper(Int) -> Bytes
+pub fn pdf_page_label_roman_upper(Int32) -> Bytes
 
 pub fn pdf_page_label_style_of_string(String) -> PdfPageLabelStyle raise @core.PdfError
 
-pub fn pdf_page_label_text_of_page_number(Int, ArrayView[PdfPageLabel]) -> Bytes?
+pub fn pdf_page_label_text_of_page_number(Int32, ArrayView[PdfPageLabel]) -> Bytes?
 
-pub fn pdf_page_label_text_of_single(Int, PdfPageLabel) -> Bytes
+pub fn pdf_page_label_text_of_single(Int32, PdfPageLabel) -> Bytes
 
 pub fn pdf_string_of_page_label(PdfPageLabel) -> Bytes
 
@@ -35,8 +35,8 @@ pub fn pdf_string_of_page_label(PdfPageLabel) -> Bytes
 pub(all) struct PdfPageLabel {
   label_style : PdfPageLabelStyle
   label_prefix : Bytes?
-  start_page : Int
-  start_value : Int
+  start_page : Int32
+  start_value : Int32
 } derive(Eq, ToJson, @debug.Debug)
 #deprecated
 pub fn PdfPageLabel::equal(Self, Self) -> Bool

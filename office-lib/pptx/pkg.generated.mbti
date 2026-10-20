@@ -8,7 +8,7 @@ import {
 // Values
 pub async fn create_presentation(@transaction.CreateTransactionOptions, title? : String) -> @transaction.TransactionReport
 
-pub fn read_presentation(Bytes, max_elements? : Int, max_text_chars? : Int, cancelled? : () -> Bool) -> PresentationSummary raise
+pub fn read_presentation(Bytes, max_elements? : Int32, max_text_chars? : Int32, cancelled? : () -> Bool) -> PresentationSummary raise
 
 // Errors
 
@@ -20,11 +20,11 @@ pub struct PresentationSummary {
 }
 
 pub struct SlideSummary {
-  index : Int
+  index : Int32
   part : String
   text : String
   notes : String
-  shape_count : Int
+  shape_count : Int32
 }
 
 // Type aliases

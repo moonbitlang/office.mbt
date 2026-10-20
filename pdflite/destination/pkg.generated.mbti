@@ -36,8 +36,8 @@ pub fn PdfDestination::to_json(Self) -> Json
 pub fn PdfDestination::to_repr(Self) -> @debug.Repr
 
 pub(all) enum PdfTargetPage {
-  TargetPageObject(Int)
-  TargetOtherDocPageNumber(Int)
+  TargetPageObject(Int32)
+  TargetOtherDocPageNumber(Int32)
 } derive(Eq, ToJson, @debug.Debug)
 #deprecated
 pub fn PdfTargetPage::equal(Self, Self) -> Bool

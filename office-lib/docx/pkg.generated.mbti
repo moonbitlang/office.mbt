@@ -12,27 +12,27 @@ import {
 }
 
 // Values
-pub const MAX_ANNOTATION_ANCHOR_ORDINAL : Int = 9999999
+pub const MAX_ANNOTATION_ANCHOR_ORDINAL : Int32 = 9999999
 
-pub const MAX_ANNOTATION_OPS : Int = 128
+pub const MAX_ANNOTATION_OPS : Int32 = 128
 
 pub const MAX_ANNOTATION_TOTAL_GROWTH : Int64 = 33554432
 
-pub const MAX_COMMENT_FRAGMENT_BYTES : Int = 1048576
+pub const MAX_COMMENT_FRAGMENT_BYTES : Int32 = 1048576
 
-pub const MAX_EDIT_FIND_UNITS : Int = 4096
+pub const MAX_EDIT_FIND_UNITS : Int32 = 4096
 
-pub const MAX_EDIT_OCCURRENCE : Int = 1_000_000
+pub const MAX_EDIT_OCCURRENCE : Int32 = 1_000_000
 
-pub const MAX_EDIT_OPS : Int = 64
+pub const MAX_EDIT_OPS : Int32 = 64
 
-pub const MAX_EDIT_REPLACE_UNITS : Int = 65536
+pub const MAX_EDIT_REPLACE_UNITS : Int32 = 65536
 
-pub const MAX_EDIT_RUN_PATH_UNITS : Int = 4096
+pub const MAX_EDIT_RUN_PATH_UNITS : Int32 = 4096
 
-pub const MAX_EDIT_SCAN_UNITS : Int = 67108864
+pub const MAX_EDIT_SCAN_UNITS : Int32 = 67108864
 
-pub const MAX_REVISION_SELECTOR_UNITS : Int = 4096
+pub const MAX_REVISION_SELECTOR_UNITS : Int32 = 4096
 
 pub const SCHEMA_ANNOTATION_BATCH : String = "docx.annotation-batch/1"
 
@@ -74,9 +74,9 @@ pub async fn transact_docx_delete_paragraph(@transaction.TransactionOptions, at~
 
 pub async fn transact_docx_edit(@transaction.TransactionOptions, DocxEditScript, allow_unmatched~ : Bool) -> DocxEditResult
 
-pub async fn transact_docx_find_replace(@transaction.TransactionOptions, needle~ : String, replacement~ : String, within? : String, nth? : Int, expect? : Int, allow_zero? : Bool, preflight? : (DocxFindReplaceReport) -> Unit raise) -> DocxFindReplaceResult
+pub async fn transact_docx_find_replace(@transaction.TransactionOptions, needle~ : String, replacement~ : String, within? : String, nth? : Int32, expect? : Int32, allow_zero? : Bool, preflight? : (DocxFindReplaceReport) -> Unit raise) -> DocxFindReplaceResult
 
-pub async fn transact_docx_format(@transaction.TransactionOptions, format~ : @moonbitlang/docx2html/docx.DocxDirectFormat, text? : String, within? : String, nth? : Int, range? : (Int, Int), expect? : Int, allow_zero? : Bool, preflight? : (DocxFormatReport) -> Unit raise) -> DocxFormatResult
+pub async fn transact_docx_format(@transaction.TransactionOptions, format~ : @moonbitlang/docx2html/docx.DocxDirectFormat, text? : String, within? : String, nth? : Int32, range? : (Int32, Int32), expect? : Int32, allow_zero? : Bool, preflight? : (DocxFormatReport) -> Unit raise) -> DocxFormatResult
 
 pub async fn transact_docx_insert_paragraph(@transaction.TransactionOptions, at~ : String, before~ : Bool, content~ : @moonbitlang/docx2html/docx.DocxInsertContent) -> DocxInsertParagraphResult
 
@@ -141,7 +141,7 @@ pub fn DocxAnnotationOpResult::not_equal(Self, Self) -> Bool
 pub fn DocxAnnotationOpResult::to_repr(Self) -> @debug.Repr
 
 pub(all) struct DocxAnnotationReport {
-  mut ops_applied : Int
+  mut ops_applied : Int32
   results : Array[DocxAnnotationOpResult]
   labels : Array[(String, String)]
   changed_parts : Array[String]
@@ -155,12 +155,12 @@ pub fn DocxAnnotationReport::not_equal(Self, Self) -> Bool
 pub fn DocxAnnotationReport::to_repr(Self) -> @debug.Repr
 
 pub(all) struct DocxAuthorReport {
-  ops : Int
-  comments : Int
-  footnotes : Int
-  endnotes : Int
-  headers : Int
-  footers : Int
+  ops : Int32
+  comments : Int32
+  footnotes : Int32
+  endnotes : Int32
+  headers : Int32
+  footers : Int32
 } derive(Eq, @debug.Debug)
 #deprecated
 pub fn DocxAuthorReport::equal(Self, Self) -> Bool
@@ -198,7 +198,7 @@ pub(all) struct DocxEditOpResult {
   op : String
   find : String
   replace : String
-  occurrence : Int?
+  occurrence : Int32?
   at : String?
   expect : String?
   text : String?
@@ -207,9 +207,9 @@ pub(all) struct DocxEditOpResult {
   selector_author : String?
   selector_type : String?
   selector_all : Bool
-  mut matched : Int
-  mut replacements : Int
-  mut resolved : Int
+  mut matched : Int32
+  mut replacements : Int32
+  mut resolved : Int32
 } derive(Eq, @debug.Debug)
 #deprecated
 pub fn DocxEditOpResult::equal(Self, Self) -> Bool
@@ -219,16 +219,16 @@ pub fn DocxEditOpResult::not_equal(Self, Self) -> Bool
 pub fn DocxEditOpResult::to_repr(Self) -> @debug.Repr
 
 pub(all) struct DocxEditReport {
-  mut ops_applied : Int
-  mut replacements : Int
-  mut revisions_resolved : Int
+  mut ops_applied : Int32
+  mut replacements : Int32
+  mut revisions_resolved : Int32
   results : Array[DocxEditOpResult]
   unmatched : Array[DocxTemplateFinding]
-  mut unmatched_total : Int
+  mut unmatched_total : Int32
   unsupported : Array[DocxTemplateFinding]
-  mut unsupported_total : Int
+  mut unsupported_total : Int32
   conflicts : Array[DocxTemplateFinding]
-  mut conflicts_total : Int
+  mut conflicts_total : Int32
   locations : Array[DocxTemplateFinding]
   mut locations_truncated : Bool
   stories_scanned : Array[String]
@@ -249,7 +249,7 @@ pub struct DocxEditResult {
 pub struct DocxEditScript {
   // private fields
 }
-pub fn DocxEditScript::length(Self) -> Int
+pub fn DocxEditScript::length(Self) -> Int32
 pub fn DocxEditScript::schema(Self) -> String
 
 pub struct DocxEditSession {
@@ -263,12 +263,12 @@ pub fn DocxEditSession::queue_comment_addition(Self, at_relative~ : String, to_r
 pub fn DocxEditSession::queue_comment_reply(Self, parent_id~ : String, @moonbitlang/docx2html/docx.CommentSpec) -> String raise @transaction.TransactionError
 pub fn DocxEditSession::queue_comment_resolution(Self, comment_id~ : String, done~ : Bool) -> Unit raise @transaction.TransactionError
 pub fn DocxEditSession::queue_delete_paragraph(Self, at~ : String) -> @moonbitlang/docx2html/docx.DocxDeleteReceipt raise @transaction.TransactionError
-pub fn DocxEditSession::queue_find_replace(Self, needle~ : String, replacement~ : String, within? : String, nth? : Int) -> (@moonbitlang/docx2html/docx.DocxReplaceReceipt, String?) raise @transaction.TransactionError
-pub fn DocxEditSession::queue_format(Self, format~ : @moonbitlang/docx2html/docx.DocxDirectFormat, text? : String, within? : String, nth? : Int, range? : (Int, Int)) -> (@moonbitlang/docx2html/docx.DocxFormatReceipt, String?) raise @transaction.TransactionError
+pub fn DocxEditSession::queue_find_replace(Self, needle~ : String, replacement~ : String, within? : String, nth? : Int32) -> (@moonbitlang/docx2html/docx.DocxReplaceReceipt, String?) raise @transaction.TransactionError
+pub fn DocxEditSession::queue_format(Self, format~ : @moonbitlang/docx2html/docx.DocxDirectFormat, text? : String, within? : String, nth? : Int32, range? : (Int32, Int32)) -> (@moonbitlang/docx2html/docx.DocxFormatReceipt, String?) raise @transaction.TransactionError
 pub fn DocxEditSession::queue_insert_paragraph(Self, at~ : String, before~ : Bool, content~ : @moonbitlang/docx2html/docx.DocxInsertContent) -> @moonbitlang/docx2html/docx.DocxInsertReceipt raise @transaction.TransactionError
 pub fn DocxEditSession::queue_plan(Self, @splice.SplicePlan) -> Unit raise @transaction.TransactionError
 pub fn DocxEditSession::queue_run_text_replacement(Self, at_relative~ : String, expect~ : String, text~ : String) -> @moonbitlang/docx2html/docx.RunTextReceipt raise @transaction.TransactionError
-pub fn DocxEditSession::queue_span_edit(Self, String, start~ : Int, end~ : Int, Bytes) -> Unit raise @transaction.TransactionError
+pub fn DocxEditSession::queue_span_edit(Self, String, start~ : Int32, end~ : Int32, Bytes) -> Unit raise @transaction.TransactionError
 pub fn DocxEditSession::source_part_fingerprints(Self) -> Array[DocxPartFingerprint]
 
 pub struct DocxFindReplaceReport {
@@ -278,9 +278,9 @@ pub struct DocxFindReplaceReport {
 pub fn DocxFindReplaceReport::affected(Self) -> Array[@moonbitlang/docx2html/docx.DocxReplaceAffected]
 pub fn DocxFindReplaceReport::affected_paths(Self) -> Array[String]
 pub fn DocxFindReplaceReport::matches(Self) -> Array[@moonbitlang/docx2html/docx.DocxMatch]
-pub fn DocxFindReplaceReport::replaced(Self) -> Int
+pub fn DocxFindReplaceReport::replaced(Self) -> Int32
 pub fn DocxFindReplaceReport::resolved_within(Self) -> String?
-pub fn DocxFindReplaceReport::selected(Self) -> Array[Int]
+pub fn DocxFindReplaceReport::selected(Self) -> Array[Int32]
 
 pub struct DocxFindReplaceResult {
   report : DocxFindReplaceReport
@@ -294,18 +294,18 @@ pub struct DocxFormatReport {
 }
 pub fn DocxFormatReport::affected(Self) -> Array[@moonbitlang/docx2html/docx.DocxFormatAffected]
 pub fn DocxFormatReport::affected_paths(Self) -> Array[String]
-pub fn DocxFormatReport::byte_edits(Self) -> Int
+pub fn DocxFormatReport::byte_edits(Self) -> Int32
 pub fn DocxFormatReport::mode(Self) -> String
-pub fn DocxFormatReport::requested_nth(Self) -> Int?
-pub fn DocxFormatReport::requested_range(Self) -> (Int, Int)?
+pub fn DocxFormatReport::requested_nth(Self) -> Int32?
+pub fn DocxFormatReport::requested_range(Self) -> (Int32, Int32)?
 pub fn DocxFormatReport::requested_text(Self) -> String?
 pub fn DocxFormatReport::requested_within(Self) -> String?
 pub fn DocxFormatReport::resolved_within(Self) -> String?
-pub fn DocxFormatReport::runs_already_satisfied(Self) -> Int
-pub fn DocxFormatReport::runs_changed(Self) -> Int
-pub fn DocxFormatReport::selected(Self) -> Array[Int]
+pub fn DocxFormatReport::runs_already_satisfied(Self) -> Int32
+pub fn DocxFormatReport::runs_changed(Self) -> Int32
+pub fn DocxFormatReport::selected(Self) -> Array[Int32]
 pub fn DocxFormatReport::spans(Self) -> Array[@moonbitlang/docx2html/docx.DocxFormatSpan]
-pub fn DocxFormatReport::splits(Self) -> Int
+pub fn DocxFormatReport::splits(Self) -> Int32
 
 pub struct DocxFormatResult {
   report : DocxFormatReport
@@ -329,16 +329,16 @@ pub fn DocxInsertParagraphResult::transaction(Self) -> @transaction.TransactionR
 pub struct DocxPartFingerprint {
   // private fields
 }
-pub fn DocxPartFingerprint::byte_length(Self) -> Int
-pub fn DocxPartFingerprint::crc32(Self) -> UInt
+pub fn DocxPartFingerprint::byte_length(Self) -> Int32
+pub fn DocxPartFingerprint::crc32(Self) -> UInt32
 pub fn DocxPartFingerprint::part(Self) -> String
 
 pub(all) struct DocxRegionOutcome {
   name : String
   source_location : String
-  records : Int
-  replaced : Int
-  escapes_applied : Int
+  records : Int32
+  replaced : Int32
+  escapes_applied : Int32
 } derive(Eq, @debug.Debug)
 #deprecated
 pub fn DocxRegionOutcome::equal(Self, Self) -> Bool
@@ -350,7 +350,7 @@ pub fn DocxRegionOutcome::to_repr(Self) -> @debug.Repr
 pub struct DocxTemplateDocumentResult {
   report : DocxTemplateReport
   regions : Array[DocxRegionOutcome]
-  scalar_paragraphs_skipped : Int
+  scalar_paragraphs_skipped : Int32
   transaction : @transaction.TransactionReport
 }
 
@@ -366,20 +366,20 @@ pub fn DocxTemplateFinding::not_equal(Self, Self) -> Bool
 pub fn DocxTemplateFinding::to_repr(Self) -> @debug.Repr
 
 pub(all) struct DocxTemplateReport {
-  mut placeholders_found : Int
-  mut replaced : Int
-  mut escapes_applied : Int
-  mut distinct_keys_used : Int
+  mut placeholders_found : Int32
+  mut replaced : Int32
+  mut escapes_applied : Int32
+  mut distinct_keys_used : Int32
   missing : Array[DocxTemplateFinding]
   unused : Array[String]
   malformed : Array[DocxTemplateFinding]
   unsupported : Array[DocxTemplateFinding]
   locations : Array[DocxTemplateFinding]
   mut locations_truncated : Bool
-  mut missing_total : Int
-  mut malformed_total : Int
-  mut unsupported_total : Int
-  mut unused_total : Int
+  mut missing_total : Int32
+  mut malformed_total : Int32
+  mut unsupported_total : Int32
+  mut unused_total : Int32
   stories_scanned : Array[String]
   mut changed : Bool
 } derive(Eq, @debug.Debug)

@@ -7,31 +7,31 @@ import {
 }
 
 // Values
-pub const MAX_TEMPLATE_KEYS : Int = 4096
+pub const MAX_TEMPLATE_KEYS : Int32 = 4096
 
-pub const MAX_TEMPLATE_PATH_ORDINAL_DIGITS : Int = 7
+pub const MAX_TEMPLATE_PATH_ORDINAL_DIGITS : Int32 = 7
 
-pub const MAX_TEMPLATE_REGIONS : Int = 64
+pub const MAX_TEMPLATE_REGIONS : Int32 = 64
 
-pub const MAX_TEMPLATE_REGION_RECORDS : Int = 4096
+pub const MAX_TEMPLATE_REGION_RECORDS : Int32 = 4096
 
-pub const MAX_TEMPLATE_SHEET_ROW : Int = 1048576
+pub const MAX_TEMPLATE_SHEET_ROW : Int32 = 1048576
 
-pub const MAX_TEMPLATE_STORY_ORDINAL : Int = 99
+pub const MAX_TEMPLATE_STORY_ORDINAL : Int32 = 99
 
-pub const MAX_TEMPLATE_TOTAL_REGION_ROWS : Int = 10000
+pub const MAX_TEMPLATE_TOTAL_REGION_ROWS : Int32 = 10000
 
-pub const MAX_TEMPLATE_VALUE_UNITS : Int = 65536
+pub const MAX_TEMPLATE_VALUE_UNITS : Int32 = 65536
 
 pub const SCHEMA_TEMPLATE_DATA : String = "office.template.data/1"
 
-pub fn parse_template_data(String, max_keys? : Int, max_value_units? : Int) -> Map[String, TemplateValue] raise TemplateDataError
+pub fn parse_template_data(String, max_keys? : Int32, max_value_units? : Int32) -> Map[String, TemplateValue] raise TemplateDataError
 
-pub fn parse_template_document(String, max_keys? : Int, max_value_units? : Int, max_regions? : Int, max_region_records? : Int, max_total_region_rows? : Int) -> TemplateData raise TemplateDataError
+pub fn parse_template_document(String, max_keys? : Int32, max_value_units? : Int32, max_regions? : Int32, max_region_records? : Int32, max_total_region_rows? : Int32) -> TemplateData raise TemplateDataError
 
-pub fn scan_literal(Array[String], String, @ref.Ref[Int]) -> Array[TemplateSpan] raise TemplateScanError
+pub fn scan_literal(Array[String], String, @ref.Ref[Int32]) -> Array[TemplateSpan] raise TemplateScanError
 
-pub fn scan_placeholders(Array[String], @ref.Ref[Int]) -> TemplateScan raise TemplateScanError
+pub fn scan_placeholders(Array[String], @ref.Ref[Int32]) -> TemplateScan raise TemplateScanError
 
 pub fn template_key_ok(String) -> Bool
 
@@ -77,8 +77,8 @@ pub(all) struct TemplateRegion {
 pub fn TemplateRegion::to_repr(Self) -> @debug.Repr
 
 pub(all) enum TemplateRegionAddress {
-  SheetRow(sheet~ : String, row~ : Int)
-  TableRow(story~ : TemplateStory, table~ : Int, row~ : Int)
+  SheetRow(sheet~ : String, row~ : Int32)
+  TableRow(story~ : TemplateStory, table~ : Int32, row~ : Int32)
 } derive(Eq, @debug.Debug)
 pub fn TemplateRegionAddress::equal(Self, Self) -> Bool
 pub fn TemplateRegionAddress::not_equal(Self, Self) -> Bool
@@ -94,10 +94,10 @@ pub fn TemplateScan::not_equal(Self, Self) -> Bool
 pub fn TemplateScan::to_repr(Self) -> @debug.Repr
 
 pub(all) struct TemplateSpan {
-  start_segment : Int
-  start_offset : Int
-  end_segment : Int
-  end_offset : Int
+  start_segment : Int32
+  start_offset : Int32
+  end_segment : Int32
+  end_offset : Int32
 } derive(Eq, @debug.Debug)
 pub fn TemplateSpan::equal(Self, Self) -> Bool
 pub fn TemplateSpan::not_equal(Self, Self) -> Bool
@@ -105,8 +105,8 @@ pub fn TemplateSpan::to_repr(Self) -> @debug.Repr
 
 pub(all) enum TemplateStory {
   BodyStory
-  HeaderStory(Int)
-  FooterStory(Int)
+  HeaderStory(Int32)
+  FooterStory(Int32)
 } derive(Eq, @debug.Debug)
 pub fn TemplateStory::equal(Self, Self) -> Bool
 pub fn TemplateStory::not_equal(Self, Self) -> Bool

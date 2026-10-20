@@ -9,7 +9,7 @@ import {
 // Values
 pub fn raw_edit(@office-lib.DocumentFormat, Bytes, RawEditRequest) -> RawMutation raise RawError
 
-pub fn raw_edit_archive(@office-lib.DocumentFormat, @zip.Archive, RawEditRequest, max_package_bytes~ : Int) -> RawMutation raise RawError
+pub fn raw_edit_archive(@office-lib.DocumentFormat, @zip.Archive, RawEditRequest, max_package_bytes~ : Int32) -> RawMutation raise RawError
 
 pub fn raw_edit_request(String, String, RawAction, xml? : String, attribute? : String, value? : String, namespaces? : Array[(String, String)], all? : Bool) -> RawEditRequest raise RawError
 
@@ -25,7 +25,7 @@ pub fn raw_read(StringView, BytesView, String) -> RawPartData raise RawError
 
 pub fn raw_replace_part(@office-lib.DocumentFormat, Bytes, String, String) -> RawMutation raise RawError
 
-pub fn raw_replace_part_archive(@office-lib.DocumentFormat, @zip.Archive, String, String, max_package_bytes~ : Int) -> RawMutation raise RawError
+pub fn raw_replace_part_archive(@office-lib.DocumentFormat, @zip.Archive, String, String, max_package_bytes~ : Int32) -> RawMutation raise RawError
 
 pub fn resolve_raw_action(StringView) -> RawAction?
 
@@ -78,7 +78,7 @@ pub fn RawMutation::action_name(Self) -> String
 pub fn RawMutation::part_name(Self) -> String
 pub fn RawMutation::result_bytes(Self, Bytes) -> Bytes
 pub fn RawMutation::reuses_original(Self) -> Bool
-pub fn RawMutation::selected_count(Self) -> Int
+pub fn RawMutation::selected_count(Self) -> Int32
 pub fn RawMutation::to_json(Self) -> Json
 
 type RawPackageResult
@@ -97,10 +97,10 @@ pub struct RawPartInfo {
   name : String
   content_type : String
   xml : Bool
-  size : Int
+  size : Int32
   aliases : ReadOnlyArray[String]
 }
-pub fn RawPartInfo::byte_size(Self) -> Int
+pub fn RawPartInfo::byte_size(Self) -> Int32
 pub fn RawPartInfo::is_xml(Self) -> Bool
 pub fn RawPartInfo::media_type(Self) -> String
 pub fn RawPartInfo::part_name(Self) -> String

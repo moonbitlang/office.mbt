@@ -97,10 +97,10 @@ pub fn AnimStart::to_repr(Self) -> @debug.Repr
 
 pub struct AnimStep {
   effect : AnimEffect
-  target_shape_id : Int
+  target_shape_id : Int32
   start : AnimStart
-  duration_ms : Int
-  paragraph : Int?
+  duration_ms : Int32
+  paragraph : Int32?
 } derive(Eq, @debug.Debug)
 pub fn AnimStep::equal(Self, Self) -> Bool
 pub fn AnimStep::not_equal(Self, Self) -> Bool
@@ -162,7 +162,7 @@ pub fn AutoNumType::not_equal(Self, Self) -> Bool
 pub fn AutoNumType::to_repr(Self) -> @debug.Repr
 
 pub(all) struct AutoShape {
-  id : Int
+  id : Int32
   name : String
   placeholder : Placeholder?
   transform : Transform?
@@ -174,19 +174,19 @@ pub(all) struct AutoShape {
   hyperlink : ShapeHyperlink?
   extension : Array[@xml.XmlElement]
 } derive(Eq, @debug.Debug)
-pub fn AutoShape::ellipse(id~ : Int, name~ : String, x~ : @units.Emu, y~ : @units.Emu, cx~ : @units.Emu, cy~ : @units.Emu) -> Self
+pub fn AutoShape::ellipse(id~ : Int32, name~ : String, x~ : @units.Emu, y~ : @units.Emu, cx~ : @units.Emu, cy~ : @units.Emu) -> Self
 pub fn AutoShape::equal(Self, Self) -> Bool
 pub fn AutoShape::not_equal(Self, Self) -> Bool
-pub fn AutoShape::of_preset(id~ : Int, name~ : String, PresetShape, x~ : @units.Emu, y~ : @units.Emu, cx~ : @units.Emu, cy~ : @units.Emu) -> Self
-pub fn AutoShape::rect(id~ : Int, name~ : String, x~ : @units.Emu, y~ : @units.Emu, cx~ : @units.Emu, cy~ : @units.Emu) -> Self
-pub fn AutoShape::round_rect(id~ : Int, name~ : String, x~ : @units.Emu, y~ : @units.Emu, cx~ : @units.Emu, cy~ : @units.Emu) -> Self
-pub fn AutoShape::textbox(id~ : Int, name~ : String, x~ : @units.Emu, y~ : @units.Emu, cx~ : @units.Emu, cy~ : @units.Emu, String) -> Self
+pub fn AutoShape::of_preset(id~ : Int32, name~ : String, PresetShape, x~ : @units.Emu, y~ : @units.Emu, cx~ : @units.Emu, cy~ : @units.Emu) -> Self
+pub fn AutoShape::rect(id~ : Int32, name~ : String, x~ : @units.Emu, y~ : @units.Emu, cx~ : @units.Emu, cy~ : @units.Emu) -> Self
+pub fn AutoShape::round_rect(id~ : Int32, name~ : String, x~ : @units.Emu, y~ : @units.Emu, cx~ : @units.Emu, cy~ : @units.Emu) -> Self
+pub fn AutoShape::textbox(id~ : Int32, name~ : String, x~ : @units.Emu, y~ : @units.Emu, cx~ : @units.Emu, cy~ : @units.Emu, String) -> Self
 pub fn AutoShape::to_repr(Self) -> @debug.Repr
 pub fn AutoShape::with_effects(Self, @oxml.EffectList) -> Self
 pub fn AutoShape::with_fill(Self, @oxml.Fill) -> Self
 pub fn AutoShape::with_flip(Self, h? : Bool, v? : Bool) -> Self
 pub fn AutoShape::with_hyperlink(Self, url~ : String) -> Self
-pub fn AutoShape::with_hyperlink_to_slide(Self, slide_idx~ : Int) -> Self
+pub fn AutoShape::with_hyperlink_to_slide(Self, slide_idx~ : Int32) -> Self
 pub fn AutoShape::with_no_fill(Self) -> Self
 pub fn AutoShape::with_no_stroke(Self) -> Self
 pub fn AutoShape::with_rotation(Self, @units.Angle) -> Self
@@ -195,7 +195,7 @@ pub fn AutoShape::with_text_body(Self, TextBody) -> Self
 
 pub(all) enum Background {
   Properties(BackgroundProperties)
-  StyleReference(Int, @oxml.Color)
+  StyleReference(Int32, @oxml.Color)
 } derive(Eq, @debug.Debug)
 pub fn Background::equal(Self, Self) -> Bool
 pub fn Background::not_equal(Self, Self) -> Bool
@@ -232,7 +232,7 @@ pub fn BodyProperties::to_repr(Self) -> @debug.Repr
 pub(all) enum Bullet {
   BulNone
   Char(String)
-  AutoNum(AutoNumType, Int)
+  AutoNum(AutoNumType, Int32)
   Picture(String)
 } derive(Eq, @debug.Debug)
 pub fn Bullet::equal(Self, Self) -> Bool
@@ -250,8 +250,8 @@ pub fn CapsKind::not_equal(Self, Self) -> Bool
 pub fn CapsKind::to_repr(Self) -> @debug.Repr
 
 pub(all) struct ConnectionEnd {
-  shape_id : Int
-  idx : Int
+  shape_id : Int32
+  idx : Int32
 } derive(Eq, @debug.Debug)
 pub fn ConnectionEnd::equal(Self, Self) -> Bool
 pub fn ConnectionEnd::not_equal(Self, Self) -> Bool
@@ -267,7 +267,7 @@ pub fn ConnectionSite::not_equal(Self, Self) -> Bool
 pub fn ConnectionSite::to_repr(Self) -> @debug.Repr
 
 pub(all) struct Connector {
-  id : Int
+  id : Int32
   name : String
   transform : Transform?
   geometry : Geometry?
@@ -282,7 +282,7 @@ pub fn Connector::equal(Self, Self) -> Bool
 pub fn Connector::not_equal(Self, Self) -> Bool
 pub fn Connector::to_repr(Self) -> @debug.Repr
 pub fn Connector::with_hyperlink(Self, url~ : String) -> Self
-pub fn Connector::with_hyperlink_to_slide(Self, slide_idx~ : Int) -> Self
+pub fn Connector::with_hyperlink_to_slide(Self, slide_idx~ : Int32) -> Self
 
 pub(all) struct CustomGeometry {
   adjust_values : Array[ShapeAdjustValue]
@@ -305,13 +305,13 @@ pub fn DateMode::not_equal(Self, Self) -> Bool
 pub fn DateMode::to_repr(Self) -> @debug.Repr
 
 pub(all) enum EmphasisEffect {
-  Spin(Int)
-  GrowShrink(Int)
+  Spin(Int32)
+  GrowShrink(Int32)
   ChangeFillColor(@units.RgbColor)
 } derive(Eq, @debug.Debug)
 pub fn EmphasisEffect::equal(Self, Self) -> Bool
 pub fn EmphasisEffect::not_equal(Self, Self) -> Bool
-pub fn EmphasisEffect::preset_id(Self) -> Int
+pub fn EmphasisEffect::preset_id(Self) -> Int32
 pub fn EmphasisEffect::to_repr(Self) -> @debug.Repr
 
 pub(all) struct Field {
@@ -344,7 +344,7 @@ pub fn Geometry::not_equal(Self, Self) -> Bool
 pub fn Geometry::to_repr(Self) -> @debug.Repr
 
 pub(all) struct GraphicFrame {
-  id : Int
+  id : Int32
   name : String
   transform : Transform?
   content : GraphicFrameContent
@@ -353,13 +353,13 @@ pub(all) struct GraphicFrame {
 } derive(Eq, @debug.Debug)
 pub fn GraphicFrame::equal(Self, Self) -> Bool
 pub fn GraphicFrame::not_equal(Self, Self) -> Bool
-pub fn GraphicFrame::of_chart_ex_ref(id~ : Int, name~ : String, x~ : @units.Emu, y~ : @units.Emu, cx~ : @units.Emu, cy~ : @units.Emu, String) -> Self
-pub fn GraphicFrame::of_chart_ref(id~ : Int, name~ : String, x~ : @units.Emu, y~ : @units.Emu, cx~ : @units.Emu, cy~ : @units.Emu, String) -> Self
-pub fn GraphicFrame::of_diagram_ref(id~ : Int, name~ : String, x~ : @units.Emu, y~ : @units.Emu, cx~ : @units.Emu, cy~ : @units.Emu, dm~ : String, lo~ : String, qs~ : String, cs~ : String) -> Self
-pub fn GraphicFrame::of_table(id~ : Int, name~ : String, x~ : @units.Emu, y~ : @units.Emu, cx~ : @units.Emu, cy~ : @units.Emu, Table) -> Self
+pub fn GraphicFrame::of_chart_ex_ref(id~ : Int32, name~ : String, x~ : @units.Emu, y~ : @units.Emu, cx~ : @units.Emu, cy~ : @units.Emu, String) -> Self
+pub fn GraphicFrame::of_chart_ref(id~ : Int32, name~ : String, x~ : @units.Emu, y~ : @units.Emu, cx~ : @units.Emu, cy~ : @units.Emu, String) -> Self
+pub fn GraphicFrame::of_diagram_ref(id~ : Int32, name~ : String, x~ : @units.Emu, y~ : @units.Emu, cx~ : @units.Emu, cy~ : @units.Emu, dm~ : String, lo~ : String, qs~ : String, cs~ : String) -> Self
+pub fn GraphicFrame::of_table(id~ : Int32, name~ : String, x~ : @units.Emu, y~ : @units.Emu, cx~ : @units.Emu, cy~ : @units.Emu, Table) -> Self
 pub fn GraphicFrame::to_repr(Self) -> @debug.Repr
 pub fn GraphicFrame::with_hyperlink(Self, url~ : String) -> Self
-pub fn GraphicFrame::with_hyperlink_to_slide(Self, slide_idx~ : Int) -> Self
+pub fn GraphicFrame::with_hyperlink_to_slide(Self, slide_idx~ : Int32) -> Self
 
 pub(all) enum GraphicFrameContent {
   TableContent(Table)
@@ -372,7 +372,7 @@ pub fn GraphicFrameContent::not_equal(Self, Self) -> Bool
 pub fn GraphicFrameContent::to_repr(Self) -> @debug.Repr
 
 pub(all) struct GroupShape {
-  id : Int
+  id : Int32
   name : String
   transform : Transform?
   child_offset : Point?
@@ -386,12 +386,12 @@ pub fn GroupShape::not_equal(Self, Self) -> Bool
 pub fn GroupShape::to_repr(Self) -> @debug.Repr
 pub fn GroupShape::with_flip(Self, h? : Bool, v? : Bool) -> Self
 pub fn GroupShape::with_hyperlink(Self, url~ : String) -> Self
-pub fn GroupShape::with_hyperlink_to_slide(Self, slide_idx~ : Int) -> Self
+pub fn GroupShape::with_hyperlink_to_slide(Self, slide_idx~ : Int32) -> Self
 pub fn GroupShape::with_rotation(Self, @units.Angle) -> Self
 
 pub(all) enum HyperlinkTarget {
   ExternalUrl(String)
-  InternalSlide(Int)
+  InternalSlide(Int32)
 } derive(Eq, @debug.Debug)
 pub fn HyperlinkTarget::equal(Self, Self) -> Bool
 pub fn HyperlinkTarget::not_equal(Self, Self) -> Bool
@@ -489,7 +489,7 @@ pub fn ParagraphContent::not_equal(Self, Self) -> Bool
 pub fn ParagraphContent::to_repr(Self) -> @debug.Repr
 
 pub(all) struct ParagraphProperties {
-  level : Int
+  level : Int32
   alignment : TextAlignment?
   margin_left : @units.Emu?
   indent : @units.Emu?
@@ -553,7 +553,7 @@ pub fn PathPoint::not_equal(Self, Self) -> Bool
 pub fn PathPoint::to_repr(Self) -> @debug.Repr
 
 pub(all) struct Picture {
-  id : Int
+  id : Int32
   name : String
   transform : Transform?
   geometry : Geometry?
@@ -564,17 +564,17 @@ pub(all) struct Picture {
   hyperlink : ShapeHyperlink?
   extension : Array[@xml.XmlElement]
 } derive(Eq, @debug.Debug)
-pub fn Picture::builder(id~ : Int, name~ : String, String, x~ : @units.Emu, y~ : @units.Emu, cx~ : @units.Emu, cy~ : @units.Emu) -> PictureUncropped
+pub fn Picture::builder(id~ : Int32, name~ : String, String, x~ : @units.Emu, y~ : @units.Emu, cx~ : @units.Emu, cy~ : @units.Emu) -> PictureUncropped
 pub fn Picture::equal(Self, Self) -> Bool
 pub fn Picture::not_equal(Self, Self) -> Bool
-pub fn Picture::of_image(id~ : Int, name~ : String, String, x~ : @units.Emu, y~ : @units.Emu, cx~ : @units.Emu, cy~ : @units.Emu) -> Self
-pub fn Picture::of_media(id~ : Int, name~ : String, MediaKind, link_id~ : String, media_embed_id~ : String, poster_embed_id~ : String, x~ : @units.Emu, y~ : @units.Emu, cx~ : @units.Emu, cy~ : @units.Emu) -> Self
-pub fn Picture::of_svg_image(id~ : Int, name~ : String, png_embed_id~ : String, svg_embed_id~ : String, x~ : @units.Emu, y~ : @units.Emu, cx~ : @units.Emu, cy~ : @units.Emu) -> Self
+pub fn Picture::of_image(id~ : Int32, name~ : String, String, x~ : @units.Emu, y~ : @units.Emu, cx~ : @units.Emu, cy~ : @units.Emu) -> Self
+pub fn Picture::of_media(id~ : Int32, name~ : String, MediaKind, link_id~ : String, media_embed_id~ : String, poster_embed_id~ : String, x~ : @units.Emu, y~ : @units.Emu, cx~ : @units.Emu, cy~ : @units.Emu) -> Self
+pub fn Picture::of_svg_image(id~ : Int32, name~ : String, png_embed_id~ : String, svg_embed_id~ : String, x~ : @units.Emu, y~ : @units.Emu, cx~ : @units.Emu, cy~ : @units.Emu) -> Self
 pub fn Picture::to_repr(Self) -> @debug.Repr
 pub fn Picture::with_crop(Self, left? : @units.Percentage, top? : @units.Percentage, right? : @units.Percentage, bottom? : @units.Percentage) -> Self
 pub fn Picture::with_flip(Self, h? : Bool, v? : Bool) -> Self
 pub fn Picture::with_hyperlink(Self, url~ : String) -> Self
-pub fn Picture::with_hyperlink_to_slide(Self, slide_idx~ : Int) -> Self
+pub fn Picture::with_hyperlink_to_slide(Self, slide_idx~ : Int32) -> Self
 pub fn Picture::with_rotation(Self, @units.Angle) -> Self
 
 pub struct PictureCropped {
@@ -597,7 +597,7 @@ pub fn PictureUncropped::with_effects(Self, outline? : @oxml.Stroke, effects? : 
 
 pub(all) struct Placeholder {
   ph_type : String
-  idx : Int
+  idx : Int32
 } derive(Eq, @debug.Debug)
 pub fn Placeholder::equal(Self, Self) -> Bool
 pub fn Placeholder::kind(Self) -> PlaceholderType
@@ -888,7 +888,7 @@ pub fn RunProperties::with_font_for_all_scripts(Self, String) -> Self
 pub fn RunProperties::with_font_size(Self, @units.Pt) -> Self
 pub fn RunProperties::with_highlight(Self, @units.RgbColor) -> Self
 pub fn RunProperties::with_hyperlink(Self, String, tooltip? : String) -> Self
-pub fn RunProperties::with_hyperlink_to_slide(Self, Int, tooltip? : String) -> Self
+pub fn RunProperties::with_hyperlink_to_slide(Self, Int32, tooltip? : String) -> Self
 pub fn RunProperties::with_italic(Self) -> Self
 pub fn RunProperties::with_kerning(Self, @units.Pt) -> Self
 pub fn RunProperties::with_text_effects(Self, @oxml.EffectList) -> Self
@@ -904,11 +904,11 @@ pub(all) enum Shape {
   Unknown(@xml.XmlElement)
 } derive(Eq, @debug.Debug)
 pub fn Shape::equal(Self, Self) -> Bool
-pub fn Shape::id(Self) -> Int?
+pub fn Shape::id(Self) -> Int32?
 pub fn Shape::name(Self) -> String?
 pub fn Shape::not_equal(Self, Self) -> Bool
 pub fn Shape::to_repr(Self) -> @debug.Repr
-pub fn Shape::with_id(Self, Int) -> Self
+pub fn Shape::with_id(Self, Int32) -> Self
 
 pub(all) struct ShapeAdjustValue {
   name : String
@@ -927,7 +927,7 @@ pub fn ShapeHyperlink::equal(Self, Self) -> Bool
 pub fn ShapeHyperlink::external(String) -> Self
 pub fn ShapeHyperlink::not_equal(Self, Self) -> Bool
 pub fn ShapeHyperlink::to_repr(Self) -> @debug.Repr
-pub fn ShapeHyperlink::to_slide(Int) -> Self
+pub fn ShapeHyperlink::to_slide(Int32) -> Self
 
 pub(all) struct Size {
   cx : @units.Emu
@@ -947,10 +947,10 @@ pub(all) struct Slide {
   extension : Array[@xml.XmlElement]
 } derive(Eq, @debug.Debug)
 pub fn Slide::body(Self) -> Shape?
-pub fn Slide::duplicate_shape_ids(Self) -> Array[Int]
+pub fn Slide::duplicate_shape_ids(Self) -> Array[Int32]
 pub fn Slide::equal(Self, Self) -> Bool
 pub fn Slide::map_shapes(Self, (Shape) -> Shape) -> Self
-pub fn Slide::next_shape_id(Self) -> Int
+pub fn Slide::next_shape_id(Self) -> Int32
 pub fn Slide::not_equal(Self, Self) -> Bool
 pub fn Slide::parse(FixedArray[Byte]) -> Self raise SlideError
 pub fn Slide::parse_with_root(FixedArray[Byte], String) -> Self raise SlideError
@@ -962,21 +962,21 @@ pub fn Slide::title(Self) -> Shape?
 pub fn Slide::to_repr(Self) -> @debug.Repr
 pub fn Slide::with_animations(Self, Timeline) -> Self
 pub fn Slide::with_background(Self, @oxml.Fill) -> Self
-pub fn Slide::with_background_ref(Self, Int, @oxml.Color) -> Self
+pub fn Slide::with_background_ref(Self, Int32, @oxml.Color) -> Self
 pub fn Slide::with_date(Self, DateMode) -> Self
 pub fn Slide::with_footer(Self, String) -> Self
-pub fn Slide::with_placeholder(Self, PlaceholderType, Int, text? : String) -> Self
+pub fn Slide::with_placeholder(Self, PlaceholderType, Int32, text? : String) -> Self
 pub fn Slide::with_shape(Self, Shape) -> Self
-pub fn Slide::with_shape_at(Self, Int, Shape) -> Self raise SlideError
+pub fn Slide::with_shape_at(Self, Int32, Shape) -> Self raise SlideError
 pub fn Slide::with_shape_auto_id(Self, Shape) -> Self
-pub fn Slide::with_shape_by_id(Self, Int, (Shape) -> Shape) -> Self raise SlideError
-pub fn Slide::with_shape_mapped(Self, Int, (Shape) -> Shape) -> Self raise SlideError
+pub fn Slide::with_shape_by_id(Self, Int32, (Shape) -> Shape) -> Self raise SlideError
+pub fn Slide::with_shape_mapped(Self, Int32, (Shape) -> Shape) -> Self raise SlideError
 pub fn Slide::with_slide_number(Self, Bool) -> Self
 pub fn Slide::with_transition(Self, Transition) -> Self
 pub fn Slide::without_animations(Self) -> Self
 pub fn Slide::without_background(Self) -> Self
-pub fn Slide::without_shape(Self, Int) -> Self raise SlideError
-pub fn Slide::without_shape_by_id(Self, Int) -> Self raise SlideError
+pub fn Slide::without_shape(Self, Int32) -> Self raise SlideError
+pub fn Slide::without_shape_by_id(Self, Int32) -> Self raise SlideError
 pub fn Slide::without_transition(Self) -> Self
 
 pub(all) enum StrikeKind {
@@ -997,14 +997,14 @@ pub(all) struct Table {
 } derive(Eq, @debug.Debug)
 pub fn Table::equal(Self, Self) -> Bool
 pub fn Table::not_equal(Self, Self) -> Bool
-pub fn Table::of_grid(rows~ : Int, cols~ : Int, col_width~ : @units.Emu, row_height~ : @units.Emu) -> Self
+pub fn Table::of_grid(rows~ : Int32, cols~ : Int32, col_width~ : @units.Emu, row_height~ : @units.Emu) -> Self
 pub fn Table::of_rows(Array[TableRow], col_widths~ : Array[@units.Emu]) -> Self
 pub fn Table::to_repr(Self) -> @debug.Repr
 pub fn Table::with_style(Self, TableStylePreset, first_row? : Bool, band_row? : Bool) -> Self
 
 pub(all) struct TableCell {
-  grid_span : Int
-  row_span : Int
+  grid_span : Int32
+  row_span : Int32
   h_merge : Bool
   v_merge : Bool
   text_body : TextBody?
@@ -1015,7 +1015,7 @@ pub fn TableCell::empty() -> Self
 pub fn TableCell::equal(Self, Self) -> Bool
 pub fn TableCell::h_merge_covered() -> Self
 pub fn TableCell::hv_merge_covered() -> Self
-pub fn TableCell::merged_origin(String, grid_span? : Int, row_span? : Int) -> Self
+pub fn TableCell::merged_origin(String, grid_span? : Int32, row_span? : Int32) -> Self
 pub fn TableCell::not_equal(Self, Self) -> Bool
 pub fn TableCell::of_text(String) -> Self
 pub fn TableCell::to_repr(Self) -> @debug.Repr
@@ -1200,13 +1200,13 @@ pub fn TextSpacing::to_repr(Self) -> @debug.Repr
 pub struct Timeline {
   steps : Array[AnimStep]
 } derive(Eq, @debug.Debug)
-pub fn Timeline::after_previous(Self, AnimEffect, Int, paragraph? : Int, duration_ms? : Int) -> Self
+pub fn Timeline::after_previous(Self, AnimEffect, Int32, paragraph? : Int32, duration_ms? : Int32) -> Self
 pub fn Timeline::equal(Self, Self) -> Bool
 pub fn Timeline::new() -> Self
 pub fn Timeline::not_equal(Self, Self) -> Bool
-pub fn Timeline::on_click(Self, AnimEffect, Int, paragraph? : Int, duration_ms? : Int) -> Self
+pub fn Timeline::on_click(Self, AnimEffect, Int32, paragraph? : Int32, duration_ms? : Int32) -> Self
 pub fn Timeline::to_repr(Self) -> @debug.Repr
-pub fn Timeline::with_previous(Self, AnimEffect, Int, paragraph? : Int, duration_ms? : Int) -> Self
+pub fn Timeline::with_previous(Self, AnimEffect, Int32, paragraph? : Int32, duration_ms? : Int32) -> Self
 
 pub struct Transform {
   offset : Point
@@ -1226,7 +1226,7 @@ pub struct Transition {
   kind : TransitionKind
   speed : TransitionSpeed
   advance_on_click : Bool
-  advance_after : Int?
+  advance_after : Int32?
   extension : Array[@xml.XmlElement]
 } derive(Eq, @debug.Debug)
 pub fn Transition::cover(TransitionDirection) -> Self
@@ -1241,7 +1241,7 @@ pub fn Transition::push(TransitionSide) -> Self
 pub fn Transition::split(TransitionOrientation, TransitionInOut) -> Self
 pub fn Transition::to_repr(Self) -> @debug.Repr
 pub fn Transition::wipe(TransitionSide) -> Self
-pub fn Transition::with_advance_after(Self, Int) -> Self
+pub fn Transition::with_advance_after(Self, Int32) -> Self
 pub fn Transition::with_on_click(Self, Bool) -> Self
 pub fn Transition::with_speed(Self, TransitionSpeed) -> Self
 pub fn Transition::without_advance_after(Self) -> Self
@@ -1305,7 +1305,7 @@ pub(all) enum TransitionKind {
   Split(TransitionOrientation, TransitionInOut)
   Strips(TransitionCorner)
   Wedge
-  Wheel(Int)
+  Wheel(Int32)
   Wipe(TransitionSide)
   Zoom(TransitionInOut)
 } derive(Eq, @debug.Debug)
@@ -1394,13 +1394,13 @@ pub(all) enum VisualEffect {
   RandomBars(AnimOrientation)
   Dissolve
   Wedge
-  Wheel(Int)
+  Wheel(Int32)
 } derive(Eq, @debug.Debug)
 pub fn VisualEffect::equal(Self, Self) -> Bool
 pub fn VisualEffect::filter(Self) -> String?
 pub fn VisualEffect::fly_direction(Self) -> AnimDirection?
 pub fn VisualEffect::not_equal(Self, Self) -> Bool
-pub fn VisualEffect::preset_id(Self) -> Int
+pub fn VisualEffect::preset_id(Self) -> Int32
 pub fn VisualEffect::to_repr(Self) -> @debug.Repr
 
 pub(all) enum WrapKind {

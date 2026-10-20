@@ -27,14 +27,14 @@ pub fn pdf_string_of_date(PdfDate) -> String raise @core.PdfError
 
 // Types and methods
 pub(all) struct PdfDate {
-  year : Int
-  month : Int
-  day : Int
-  hour : Int
-  minute : Int
-  second : Int
-  hour_offset : Int
-  minute_offset : Int
+  year : Int32
+  month : Int32
+  day : Int32
+  hour : Int32
+  minute : Int32
+  second : Int32
+  hour_offset : Int32
+  minute_offset : Int32
 } derive(Eq, ToJson, @debug.Debug)
 #deprecated
 pub fn PdfDate::equal(Self, Self) -> Bool
@@ -46,14 +46,14 @@ pub fn PdfDate::to_json(Self) -> Json
 pub fn PdfDate::to_repr(Self) -> @debug.Repr
 
 pub(all) struct PdfStrftimeTime {
-  tm_sec : Int
-  tm_min : Int
-  tm_hour : Int
-  tm_mday : Int
-  tm_mon : Int
-  tm_year : Int
-  tm_wday : Int
-  tm_yday : Int
+  tm_sec : Int32
+  tm_min : Int32
+  tm_hour : Int32
+  tm_mday : Int32
+  tm_mon : Int32
+  tm_year : Int32
+  tm_wday : Int32
+  tm_yday : Int32
   tm_isdst : Bool
 } derive(Eq, ToJson, @debug.Debug)
 #deprecated

@@ -9,11 +9,11 @@ import {
 }
 
 // Values
-pub const GLYF_COMPOSITE_RECURSION_LIMIT : Int = 32
+pub const GLYF_COMPOSITE_RECURSION_LIMIT : Int32 = 32
 
-pub const PHANTOM_POINT_COUNT : Int = 4
+pub const PHANTOM_POINT_COUNT : Int32 = 4
 
-pub fn axes_location(@read_fonts.FontRef, ArrayView[(UInt, Float)]) -> Array[@font_types.F2Dot14]
+pub fn axes_location(@read_fonts.FontRef, ArrayView[(UInt32, Float)]) -> Array[@font_types.F2Dot14]
 
 // Errors
 pub(all) suberror DrawError {
@@ -23,7 +23,7 @@ pub(all) suberror DrawError {
   RecursionLimitExceeded(@font_types.GlyphId)
   TooManyPoints(@font_types.GlyphId)
   HintingFailed(String)
-  InvalidAnchorPoint(@font_types.GlyphId, Int)
+  InvalidAnchorPoint(@font_types.GlyphId, Int32)
   PostScript(@ps.PsError)
   ToPath(ToPathError)
   Read(@read_fonts.ReadError)
@@ -32,11 +32,11 @@ pub(all) suberror DrawError {
 pub impl Show for DrawError
 
 pub(all) suberror ToPathError {
-  ContourOrder(Int)
-  ExpectedQuad(Int)
-  ExpectedQuadOrOnCurve(Int)
-  ExpectedCubic(Int)
-  PointFlagMismatch(num_points~ : Int, num_flags~ : Int)
+  ContourOrder(Int32)
+  ExpectedQuad(Int32)
+  ExpectedQuadOrOnCurve(Int32)
+  ExpectedCubic(Int32)
+  PointFlagMismatch(num_points~ : Int32, num_flags~ : Int32)
 }
 pub impl Show for ToPathError
 
@@ -51,29 +51,29 @@ pub struct CffOutlines {
   font : @read_fonts.FontRef
   offset_data : BytesView
   global_subrs : @ps.Index
-  version : Int
-  units_per_em : Int
+  version : Int32
+  units_per_em : Int32
   // private fields
 }
-pub fn CffOutlines::from_cff(@read_fonts.FontRef, Int) -> Self?
-pub fn CffOutlines::from_cff2(@read_fonts.FontRef, Int) -> Self?
-pub fn CffOutlines::glyph_count(Self) -> Int
+pub fn CffOutlines::from_cff(@read_fonts.FontRef, Int32) -> Self?
+pub fn CffOutlines::from_cff2(@read_fonts.FontRef, Int32) -> Self?
+pub fn CffOutlines::glyph_count(Self) -> Int32
 pub fn CffOutlines::is_cff2(Self) -> Bool
 pub fn CffOutlines::new(@read_fonts.FontRef) -> Self?
-pub fn CffOutlines::subfont_index(Self, @font_types.GlyphId) -> Int
+pub fn CffOutlines::subfont_index(Self, @font_types.GlyphId) -> Int32
 
 pub struct GlyfOutline {
   glyph_id : @font_types.GlyphId
   glyph : @read_fonts.Glyph?
-  mut points : Int
-  mut contours : Int
-  mut max_simple_points : Int
-  mut max_other_points : Int
-  mut max_component_delta_stack : Int
-  mut max_stack : Int
-  mut cvt_count : Int
-  mut storage_count : Int
-  mut max_twilight_points : Int
+  mut points : Int32
+  mut contours : Int32
+  mut max_simple_points : Int32
+  mut max_other_points : Int32
+  mut max_component_delta_stack : Int32
+  mut max_stack : Int32
+  mut cvt_count : Int32
+  mut storage_count : Int32
+  mut max_twilight_points : Int32
   mut has_hinting : Bool
   has_variations : Bool
   mut has_overlaps : Bool
@@ -83,15 +83,15 @@ pub struct GlyfOutlines {
   font : @read_fonts.FontRef
   fpgm : BytesView
   prep : BytesView
-  cvt_len : Int
-  max_function_defs : Int
-  max_instruction_defs : Int
-  max_twilight_points : Int
-  max_stack_elements : Int
-  max_storage : Int
-  glyph_count : Int
-  units_per_em : Int
-  os2_vmetrics : (Int, Int)
+  cvt_len : Int32
+  max_function_defs : Int32
+  max_instruction_defs : Int32
+  max_twilight_points : Int32
+  max_stack_elements : Int32
+  max_storage : Int32
+  glyph_count : Int32
+  units_per_em : Int32
+  os2_vmetrics : (Int32, Int32)
   prefer_interpreter : Bool
   fractional_size_hinting : Bool
   // private fields
@@ -133,7 +133,7 @@ pub(all) enum OutlineGlyphFormat {
 } derive(Eq, @debug.Debug)
 
 pub(all) struct Size(Float?) derive(Eq, @debug.Debug)
-pub fn Size::linear_scale(Self, Int) -> Float
+pub fn Size::linear_scale(Self, Int32) -> Float
 pub fn Size::new(Float) -> Self
 pub fn Size::ppem(Self) -> Float?
 pub fn Size::unscaled() -> Self

@@ -8,15 +8,15 @@ import {
 }
 
 // Values
-pub fn cell_span_pt(Array[Double], Int, Int) -> Double
+pub fn cell_span_pt(Array[Double], Int32, Int32) -> Double
 
-pub fn column_offset_pt(Array[Double], Int) -> Double
+pub fn column_offset_pt(Array[Double], Int32) -> Double
 
-pub fn emit_rows(@pagelayout.PageModel, TableLayoutResult, Double, Double, Int, Int, repeat_header? : Bool) -> Array[@pagelayout.PageItem]
+pub fn emit_rows(@pagelayout.PageModel, TableLayoutResult, Double, Double, Int32, Int32, repeat_header? : Bool) -> Array[@pagelayout.PageItem]
 
 pub fn layout_table(Table, Double) -> TableLayoutResult
 
-pub fn rows_height_pt(TableLayoutResult, Int, Int, repeat_header? : Bool) -> Double
+pub fn rows_height_pt(TableLayoutResult, Int32, Int32, repeat_header? : Bool) -> Double
 
 // Errors
 
@@ -53,7 +53,7 @@ pub fn Borders::to_repr(Self) -> @debug.Repr
 pub(all) struct Cell {
   content : Array[@paragraph.ParagraphInput]
   width : Width
-  grid_span : Int
+  grid_span : Int32
   vmerge : VMerge
   borders : Borders
   margins : CellMargins
@@ -61,7 +61,7 @@ pub(all) struct Cell {
 } derive(Eq, ToJson, @debug.Debug)
 #deprecated
 pub fn Cell::equal(Self, Self) -> Bool
-pub fn Cell::new(Array[@paragraph.ParagraphInput], width? : Width, grid_span? : Int, vmerge? : VMerge, borders? : Borders, margins? : CellMargins, shading? : @pagelayout.Color?) -> Self
+pub fn Cell::new(Array[@paragraph.ParagraphInput], width? : Width, grid_span? : Int32, vmerge? : VMerge, borders? : Borders, margins? : CellMargins, shading? : @pagelayout.Color?) -> Self
 #deprecated
 pub fn Cell::not_equal(Self, Self) -> Bool
 #deprecated
@@ -93,8 +93,8 @@ pub(all) struct PlacedCell {
   borders : Borders
   margins : CellMargins
   shading : @pagelayout.Color?
-  column : Int
-  grid_span : Int
+  column : Int32
+  grid_span : Int32
 } derive(Eq, ToJson, @debug.Debug)
 #deprecated
 pub fn PlacedCell::equal(Self, Self) -> Bool
@@ -145,7 +145,7 @@ pub(all) struct Table {
   borders : Borders
   indent : @pagelayout.Twips
 } derive(Eq, ToJson, @debug.Debug)
-pub fn Table::column_count(Self) -> Int
+pub fn Table::column_count(Self) -> Int32
 #deprecated
 pub fn Table::equal(Self, Self) -> Bool
 pub fn Table::new(Array[Row], grid? : Array[@pagelayout.Twips], width? : Width, layout? : TableLayout, borders? : Borders, indent? : @pagelayout.Twips) -> Self

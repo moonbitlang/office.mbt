@@ -14,9 +14,9 @@ pub const XLSX_BATCH_SCHEMA : String = "xlsx.batch/2"
 
 pub fn docx_dump_op_chunks(Array[Json]) -> Array[Array[Json]]
 
-pub fn dump_docx_document(@docx.DocxAnnotatedResult, source_file~ : String, source_bytes~ : Int, source_sha256? : String?, cancelled? : () -> Bool) -> DumpEnvelope raise DumpError
+pub fn dump_docx_document(@docx.DocxAnnotatedResult, source_file~ : String, source_bytes~ : Int32, source_sha256? : String?, cancelled? : () -> Bool) -> DumpEnvelope raise DumpError
 
-pub fn dump_xlsx_workbook(@xlsx.Workbook, source_file~ : String, source_bytes~ : Int, source_sha256? : String?, cancelled? : () -> Bool) -> DumpEnvelope raise
+pub fn dump_xlsx_workbook(@xlsx.Workbook, source_file~ : String, source_bytes~ : Int32, source_sha256? : String?, cancelled? : () -> Bool) -> DumpEnvelope raise
 
 pub fn parse_dump_envelope(Json) -> DumpEnvelope raise DumpParseError
 
@@ -52,7 +52,7 @@ pub fn ReplayError::to_repr(Self) -> @debug.Repr
 // Types and methods
 pub(all) struct DumpAsset {
   content_type : String
-  size : Int
+  size : Int32
   data : String
 } derive(Eq, ToJson)
 pub fn DumpAsset::equal(Self, Self) -> Bool
@@ -62,7 +62,7 @@ pub fn DumpAsset::to_json(Self) -> Json
 pub(all) struct DumpEnvelope {
   format : String
   source_file : String
-  source_bytes : Int
+  source_bytes : Int32
   source_sha256 : String?
   batch_schema : String
   create_sheet : String?

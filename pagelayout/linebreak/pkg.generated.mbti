@@ -9,9 +9,9 @@ import {
 // Values
 pub fn break_lines(String, Array[Double], Double, Double) -> Array[LineRange]
 
-pub fn can_break_at(String, Int) -> Bool
+pub fn can_break_at(String, Int32) -> Bool
 
-pub fn is_cjk(Int) -> Bool
+pub fn is_cjk(Int32) -> Bool
 
 pub fn measure(String, @fonts.FaceMetrics, Double, fallback_face? : @fonts.FaceMetrics) -> Measured
 
@@ -19,8 +19,8 @@ pub fn measure(String, @fonts.FaceMetrics, Double, fallback_face? : @fonts.FaceM
 
 // Types and methods
 pub(all) struct LineRange {
-  start : Int
-  end : Int
+  start : Int32
+  end : Int32
   width_pt : Double
 } derive(Eq, ToJson, @debug.Debug)
 #deprecated

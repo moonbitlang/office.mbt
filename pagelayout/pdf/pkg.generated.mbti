@@ -10,11 +10,11 @@ import {
 // Values
 pub fn is_pdf_date(String) -> Bool
 
-pub fn pdf_date(Int64, offset_seconds? : Int) -> String
+pub fn pdf_date(Int64, offset_seconds? : Int32) -> String
 
 pub fn render_pdf(@pagelayout.PageModel, options? : RenderOptions) -> Bytes raise
 
-pub fn unembeddable_images(@pagelayout.PageModel) -> Array[(String, Int)]
+pub fn unembeddable_images(@pagelayout.PageModel) -> Array[(String, Int32)]
 
 // Errors
 pub(all) suberror RenderOptionError {
@@ -63,7 +63,7 @@ pub fn InitialZoom::to_repr(Self) -> @debug.Repr
 
 pub(all) enum OutlineDest {
   Named(String)
-  Position(page~ : Int, x~ : Double, y~ : Double)
+  Position(page~ : Int32, x~ : Double, y~ : Double)
 } derive(Eq, @debug.Debug)
 #deprecated
 pub fn OutlineDest::equal(Self, Self) -> Bool
@@ -74,7 +74,7 @@ pub fn OutlineDest::to_repr(Self) -> @debug.Repr
 
 pub(all) struct OutlineEntry {
   title : String
-  level : Int
+  level : Int32
   dest : OutlineDest
   open : Bool
 } derive(Eq, @debug.Debug)

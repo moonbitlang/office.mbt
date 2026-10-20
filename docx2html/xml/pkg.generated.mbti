@@ -40,13 +40,13 @@ pub fn read_xml_string_with_root_namespace_uri(String, namespace_map? : Map[Stri
 
 pub fn write_xml_fragment(XmlElement, namespaces? : Map[String, String]) -> String
 
-pub fn write_xml_fragment_limited(XmlElement, max_output_bytes~ : Int, namespaces? : Map[String, String]) -> String raise @core.DocxError
+pub fn write_xml_fragment_limited(XmlElement, max_output_bytes~ : Int32, namespaces? : Map[String, String]) -> String raise @core.DocxError
 
 pub fn write_xml_string(XmlElement, namespaces? : Map[String, String]) -> String
 
 pub fn xml_element(String, attributes? : Map[String, String], children? : Array[XmlNode]) -> XmlElement
 
-pub fn xml_read_budget(max_source_units~ : Int, max_tokens~ : Int, max_materialized_chars~ : Int, max_token_chars~ : Int, cancelled? : () -> Bool) -> XmlReadBudget
+pub fn xml_read_budget(max_source_units~ : Int32, max_tokens~ : Int32, max_materialized_chars~ : Int32, max_token_chars~ : Int32, cancelled? : () -> Bool) -> XmlReadBudget
 
 pub fn xml_text(String) -> XmlNode
 
@@ -84,7 +84,7 @@ pub fn XmlNode::to_repr(Self) -> @debug.Repr
 pub struct XmlReadBudget {
   // private fields
 }
-pub fn XmlReadBudget::charge_derived_chars(Self, Int) -> Unit raise @core.DocxError
+pub fn XmlReadBudget::charge_derived_chars(Self, Int32) -> Unit raise @core.DocxError
 
 pub(all) enum XmlSourceEncoding {
   Utf8

@@ -27,8 +27,8 @@ pub(all) struct Area3DChartBody {
   series : Array[ChartSeriesCore]
   d_lbls : DLbls?
   drop_lines : @xml.XmlElement?
-  gap_depth : Int?
-  ax_ids : Array[Int]
+  gap_depth : Int32?
+  ax_ids : Array[Int32]
   extension : Array[@xml.XmlElement]
 } derive(Eq, @debug.Debug)
 pub fn Area3DChartBody::equal(Self, Self) -> Bool
@@ -44,7 +44,7 @@ pub(all) struct AreaChartBody {
   series : Array[ChartSeriesCore]
   d_lbls : DLbls?
   drop_lines : @xml.XmlElement?
-  ax_ids : Array[Int]
+  ax_ids : Array[Int32]
   extension : Array[@xml.XmlElement]
 } derive(Eq, @debug.Debug)
 pub fn AreaChartBody::equal(Self, Self) -> Bool
@@ -85,7 +85,7 @@ pub fn Axis::to_string(Self) -> String
 pub impl Show for Axis
 
 pub(all) struct AxisCore {
-  ax_id : Int
+  ax_id : Int32
   scaling : Scaling?
   delete : Bool?
   ax_pos : AxPos?
@@ -98,7 +98,7 @@ pub(all) struct AxisCore {
   tick_lbl_pos : TickLblPos?
   sp_pr : @xml.XmlElement?
   tx_pr : @xml.XmlElement?
-  cross_ax : Int?
+  cross_ax : Int32?
   crosses : Crosses?
   crosses_at : String?
   extension : Array[@xml.XmlElement]
@@ -116,10 +116,10 @@ pub(all) struct Bar3DChartBody {
   vary_colors : Bool?
   series : Array[ChartSeriesCore]
   d_lbls : DLbls?
-  gap_width : Int?
-  gap_depth : Int?
+  gap_width : Int32?
+  gap_depth : Int32?
   shape : BarShape?
-  ax_ids : Array[Int]
+  ax_ids : Array[Int32]
   extension : Array[@xml.XmlElement]
 } derive(Eq, @debug.Debug)
 pub fn Bar3DChartBody::equal(Self, Self) -> Bool
@@ -135,9 +135,9 @@ pub(all) struct BarChartBody {
   vary_colors : Bool?
   series : Array[ChartSeriesCore]
   d_lbls : DLbls?
-  gap_width : Int?
-  overlap : Int?
-  ax_ids : Array[Int]
+  gap_width : Int32?
+  overlap : Int32?
+  ax_ids : Array[Int32]
   extension : Array[@xml.XmlElement]
 } derive(Eq, @debug.Debug)
 pub fn BarChartBody::equal(Self, Self) -> Bool
@@ -197,10 +197,10 @@ pub(all) struct BubbleChartBody {
   series : Array[BubbleSeriesCore]
   d_lbls : DLbls?
   bubble_3d : Bool?
-  bubble_scale : Int?
+  bubble_scale : Int32?
   show_neg_bubbles : Bool?
   size_represents : SizeRepresents?
-  ax_ids : Array[Int]
+  ax_ids : Array[Int32]
   extension : Array[@xml.XmlElement]
 } derive(Eq, @debug.Debug)
 pub fn BubbleChartBody::equal(Self, Self) -> Bool
@@ -238,8 +238,8 @@ pub fn BubbleSeries::to_string(Self) -> String
 pub impl Show for BubbleSeries
 
 pub(all) struct BubbleSeriesCore {
-  idx : Int
-  order : Int
+  idx : Int32
+  order : Int32
   tx : @xml.XmlElement?
   sp_pr : @xml.XmlElement?
   trendlines : Array[Trendline]
@@ -259,7 +259,7 @@ pub(all) struct Chart {
   date1904 : Bool?
   lang : String?
   rounded_corners : Bool?
-  style : Int?
+  style : Int32?
   chart : ChartBody
   extension : Array[@xml.XmlElement]
 } derive(Eq, @debug.Debug)
@@ -271,7 +271,7 @@ pub fn Chart::of_bar(ChartData, bar_dir? : BarDir, grouping? : BarGrouping) -> S
 pub fn Chart::of_bar_3d(ChartData, bar_dir? : BarDir, grouping? : BarGrouping, shape? : BarShape) -> Self
 pub fn Chart::of_bubble(BubbleData) -> Self
 pub fn Chart::of_combo(ChartPlot, ChartPlot, secondary_axis? : Bool) -> Self
-pub fn Chart::of_doughnut(ChartData, hole_size? : Int) -> Self
+pub fn Chart::of_doughnut(ChartData, hole_size? : Int32) -> Self
 pub fn Chart::of_line(ChartData, grouping? : Grouping) -> Self
 pub fn Chart::of_line_3d(ChartData, grouping? : Grouping) -> Self
 pub fn Chart::of_of_pie(ChartData, of_pie_type? : OfPieType, split_type? : SplitType) -> Self
@@ -353,7 +353,7 @@ pub(all) enum ChartOption {
   DataLabels(DLblPos)
   DataLabelsHidden
   DataTable(Bool)
-  Style(Int)
+  Style(Int32)
   RoundedCorners(Bool)
   PlotVisibleOnly(Bool)
   DisplayBlanks(DisplayBlanksAs)
@@ -386,8 +386,8 @@ pub fn ChartSeries::to_string(Self) -> String
 pub impl Show for ChartSeries
 
 pub(all) struct ChartSeriesCore {
-  idx : Int
-  order : Int
+  idx : Int32
+  order : Int32
   tx : @xml.XmlElement?
   sp_pr : @xml.XmlElement?
   trendlines : Array[Trendline]
@@ -432,7 +432,7 @@ pub fn Crosses::to_xml(Self) -> String
 pub impl Show for Crosses
 
 pub(all) struct DLbl {
-  idx : Int
+  idx : Int32
   delete : Bool?
   layout : Layout?
   tx : @xml.XmlElement?
@@ -516,8 +516,8 @@ pub(all) struct DoughnutChartBody {
   vary_colors : Bool?
   series : Array[ChartSeriesCore]
   d_lbls : DLbls?
-  first_slice_ang : Int?
-  hole_size : Int?
+  first_slice_ang : Int32?
+  hole_size : Int32?
   extension : Array[@xml.XmlElement]
 } derive(Eq, @debug.Debug)
 pub fn DoughnutChartBody::equal(Self, Self) -> Bool
@@ -579,7 +579,7 @@ pub fn LayoutTarget::to_xml(Self) -> String
 pub impl Show for LayoutTarget
 
 pub(all) struct LegendEntry {
-  idx : Int
+  idx : Int32
   delete : Bool?
   tx_pr : @xml.XmlElement?
   extension : Array[@xml.XmlElement]
@@ -613,8 +613,8 @@ pub(all) struct Line3DChartBody {
   series : Array[ChartSeriesCore]
   d_lbls : DLbls?
   drop_lines : @xml.XmlElement?
-  gap_depth : Int?
-  ax_ids : Array[Int]
+  gap_depth : Int32?
+  ax_ids : Array[Int32]
   extension : Array[@xml.XmlElement]
 } derive(Eq, @debug.Debug)
 pub fn Line3DChartBody::equal(Self, Self) -> Bool
@@ -634,7 +634,7 @@ pub(all) struct LineChartBody {
   up_down_bars : @xml.XmlElement?
   marker : Bool?
   smooth : Bool?
-  ax_ids : Array[Int]
+  ax_ids : Array[Int32]
   extension : Array[@xml.XmlElement]
 } derive(Eq, @debug.Debug)
 pub fn LineChartBody::equal(Self, Self) -> Bool
@@ -679,11 +679,11 @@ pub(all) struct OfPieChartBody {
   vary_colors : Bool?
   series : Array[ChartSeriesCore]
   d_lbls : DLbls?
-  gap_width : Int?
+  gap_width : Int32?
   split_type : SplitType?
   split_pos : String?
   cust_split : @xml.XmlElement?
-  second_pie_size : Int?
+  second_pie_size : Int32?
   ser_lines : Array[@xml.XmlElement]
   extension : Array[@xml.XmlElement]
 } derive(Eq, @debug.Debug)
@@ -737,7 +737,7 @@ pub(all) struct PieChartBody {
   vary_colors : Bool?
   series : Array[ChartSeriesCore]
   d_lbls : DLbls?
-  first_slice_ang : Int?
+  first_slice_ang : Int32?
   extension : Array[@xml.XmlElement]
 } derive(Eq, @debug.Debug)
 pub fn PieChartBody::equal(Self, Self) -> Bool
@@ -793,7 +793,7 @@ pub(all) struct RadarChartBody {
   vary_colors : Bool?
   series : Array[ChartSeriesCore]
   d_lbls : DLbls?
-  ax_ids : Array[Int]
+  ax_ids : Array[Int32]
   extension : Array[@xml.XmlElement]
 } derive(Eq, @debug.Debug)
 pub fn RadarChartBody::equal(Self, Self) -> Bool
@@ -836,7 +836,7 @@ pub(all) struct ScatterChartBody {
   vary_colors : Bool?
   series : Array[ScatterSeriesCore]
   d_lbls : DLbls?
-  ax_ids : Array[Int]
+  ax_ids : Array[Int32]
   extension : Array[@xml.XmlElement]
 } derive(Eq, @debug.Debug)
 pub fn ScatterChartBody::equal(Self, Self) -> Bool
@@ -873,8 +873,8 @@ pub fn ScatterSeries::to_string(Self) -> String
 pub impl Show for ScatterSeries
 
 pub(all) struct ScatterSeriesCore {
-  idx : Int
-  order : Int
+  idx : Int32
+  order : Int32
   tx : @xml.XmlElement?
   sp_pr : @xml.XmlElement?
   trendlines : Array[Trendline]
@@ -941,7 +941,7 @@ pub(all) struct StockChartBody {
   drop_lines : @xml.XmlElement?
   hi_low_lines : @xml.XmlElement?
   up_down_bars : @xml.XmlElement?
-  ax_ids : Array[Int]
+  ax_ids : Array[Int32]
   extension : Array[@xml.XmlElement]
 } derive(Eq, @debug.Debug)
 pub fn StockChartBody::equal(Self, Self) -> Bool
@@ -966,7 +966,7 @@ pub(all) struct Surface3DChartBody {
   wireframe : Bool?
   series : Array[ChartSeriesCore]
   band_fmts : @xml.XmlElement?
-  ax_ids : Array[Int]
+  ax_ids : Array[Int32]
   extension : Array[@xml.XmlElement]
 } derive(Eq, @debug.Debug)
 pub fn Surface3DChartBody::equal(Self, Self) -> Bool
@@ -980,7 +980,7 @@ pub(all) struct SurfaceChartBody {
   wireframe : Bool?
   series : Array[ChartSeriesCore]
   band_fmts : @xml.XmlElement?
-  ax_ids : Array[Int]
+  ax_ids : Array[Int32]
   extension : Array[@xml.XmlElement]
 } derive(Eq, @debug.Debug)
 pub fn SurfaceChartBody::equal(Self, Self) -> Bool
@@ -1024,8 +1024,8 @@ pub(all) struct Trendline {
   name : String?
   sp_pr : @xml.XmlElement?
   trendline_type : TrendlineType
-  order : Int?
-  period : Int?
+  order : Int32?
+  period : Int32?
   forward : String?
   backward : String?
   intercept : String?

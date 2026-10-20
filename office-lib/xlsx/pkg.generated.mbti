@@ -41,11 +41,11 @@ pub struct XlsxCreateResult {
 pub(all) struct XlsxRegionOutcome {
   name : String
   source_location : String
-  output_rows_start : Int
-  output_rows_count : Int
-  records : Int
-  replaced : Int
-  escapes_applied : Int
+  output_rows_start : Int32
+  output_rows_count : Int32
+  records : Int32
+  replaced : Int32
+  escapes_applied : Int32
 } derive(Eq, @debug.Debug)
 pub fn XlsxRegionOutcome::equal(Self, Self) -> Bool
 pub fn XlsxRegionOutcome::not_equal(Self, Self) -> Bool
@@ -54,7 +54,7 @@ pub fn XlsxRegionOutcome::to_repr(Self) -> @debug.Repr
 pub struct XlsxTemplateDocumentResult {
   report : XlsxTemplateReport
   regions : Array[XlsxRegionOutcome]
-  scalar_cells_skipped : Int
+  scalar_cells_skipped : Int32
   transaction : @transaction.TransactionReport
 }
 
@@ -67,20 +67,20 @@ pub fn XlsxTemplateFinding::not_equal(Self, Self) -> Bool
 pub fn XlsxTemplateFinding::to_repr(Self) -> @debug.Repr
 
 pub(all) struct XlsxTemplateReport {
-  mut placeholders_found : Int
-  mut replaced : Int
-  mut escapes_applied : Int
-  mut distinct_keys_used : Int
+  mut placeholders_found : Int32
+  mut replaced : Int32
+  mut escapes_applied : Int32
+  mut distinct_keys_used : Int32
   missing : Array[XlsxTemplateFinding]
   unused : Array[String]
   malformed : Array[XlsxTemplateFinding]
   unsupported : Array[XlsxTemplateFinding]
   locations : Array[XlsxTemplateFinding]
   mut locations_truncated : Bool
-  mut missing_total : Int
-  mut malformed_total : Int
-  mut unsupported_total : Int
-  mut unused_total : Int
+  mut missing_total : Int32
+  mut malformed_total : Int32
+  mut unsupported_total : Int32
+  mut unused_total : Int32
   mut changed : Bool
 } derive(Eq, @debug.Debug)
 pub fn XlsxTemplateReport::equal(Self, Self) -> Bool

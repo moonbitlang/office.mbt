@@ -8,9 +8,9 @@ import {
 }
 
 // Values
-pub async fn atomic_write_new(String, BytesView, permission? : Int) -> Unit
+pub async fn atomic_write_new(String, BytesView, permission? : Int32) -> Unit
 
-pub fn create_transaction_options(String, dry_run? : Bool, overwrite? : Bool, permission? : Int) -> CreateTransactionOptions raise TransactionError
+pub fn create_transaction_options(String, dry_run? : Bool, overwrite? : Bool, permission? : Int32) -> CreateTransactionOptions raise TransactionError
 
 pub async fn transact(TransactionOptions, (@office-lib.DocumentFormat, Bytes, @zip.Archive, TransactionBudget) -> TransactionMutation raise, validators? : Array[TransactionValidator], identifier? : TransactionIdentifier) -> TransactionReport
 
@@ -24,7 +24,7 @@ pub fn transaction_mutation(Bytes, warnings? : Array[@office-lib.ProtocolWarning
 
 pub fn transaction_mutation_with_manifest(Bytes, Array[String], warnings? : Array[@office-lib.ProtocolWarning]) -> TransactionMutation raise TransactionError
 
-pub fn transaction_options(String, output_path? : String, dry_run? : Bool, overwrite? : Bool, permission? : Int) -> TransactionOptions raise TransactionError
+pub fn transaction_options(String, output_path? : String, dry_run? : Bool, overwrite? : Bool, permission? : Int32) -> TransactionOptions raise TransactionError
 
 pub fn transaction_reuse_original(warnings? : Array[@office-lib.ProtocolWarning]) -> TransactionMutation raise TransactionError
 
@@ -50,7 +50,7 @@ pub struct CreateTransactionOptions {
   output_path : String
   dry_run : Bool
   overwrite : Bool
-  permission : Int
+  permission : Int32
 }
 
 pub struct PreservationReport {
@@ -66,16 +66,16 @@ pub struct PreservationReport {
 pub struct TransactionBudget {
   // private fields
 }
-pub fn TransactionBudget::max_archive_entries(Self) -> Int
-pub fn TransactionBudget::max_candidate_package_bytes(Self) -> Int
-pub fn TransactionBudget::max_entry_uncompressed_bytes(Self) -> Int
-pub fn TransactionBudget::max_part_name_chars(Self) -> Int
-pub fn TransactionBudget::max_preservation_parts(Self) -> Int
-pub fn TransactionBudget::max_splice_materialized_bytes(Self) -> Int
-pub fn TransactionBudget::max_splice_xml_tokens(Self) -> Int
-pub fn TransactionBudget::max_total_uncompressed_bytes(Self) -> Int
-pub fn TransactionBudget::max_validation_findings(Self) -> Int
-pub fn TransactionBudget::max_validation_message_chars(Self) -> Int
+pub fn TransactionBudget::max_archive_entries(Self) -> Int32
+pub fn TransactionBudget::max_candidate_package_bytes(Self) -> Int32
+pub fn TransactionBudget::max_entry_uncompressed_bytes(Self) -> Int32
+pub fn TransactionBudget::max_part_name_chars(Self) -> Int32
+pub fn TransactionBudget::max_preservation_parts(Self) -> Int32
+pub fn TransactionBudget::max_splice_materialized_bytes(Self) -> Int32
+pub fn TransactionBudget::max_splice_xml_tokens(Self) -> Int32
+pub fn TransactionBudget::max_total_uncompressed_bytes(Self) -> Int32
+pub fn TransactionBudget::max_validation_findings(Self) -> Int32
+pub fn TransactionBudget::max_validation_message_chars(Self) -> Int32
 
 pub struct TransactionIdentifier {
   name : String
@@ -104,7 +104,7 @@ pub struct TransactionOptions {
   output_path : String?
   dry_run : Bool
   overwrite : Bool
-  permission : Int
+  permission : Int32
 }
 
 pub struct TransactionReport {
@@ -115,8 +115,8 @@ pub struct TransactionReport {
   dry_run : Bool
   changed : Bool
   committed : Bool
-  original_size : Int?
-  result_size : Int
+  original_size : Int32?
+  result_size : Int32
   replaced_existing : Bool
   overwritten_size : Int64?
   validations : ReadOnlyArray[ValidationSummary]
@@ -140,7 +140,7 @@ pub struct ValidationFinding {
 pub struct ValidationSummary {
   name : String
   passed : Bool
-  finding_count : Int
+  finding_count : Int32
 }
 
 // Type aliases

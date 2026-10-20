@@ -6,7 +6,7 @@ import {
 }
 
 // Values
-pub fn render_page(@pagelayout.PageModel, Int) -> String
+pub fn render_page(@pagelayout.PageModel, Int32) -> String
 
 pub fn render_pages(@pagelayout.PageModel) -> Array[String]
 
