@@ -1,6 +1,6 @@
 name = "moonbitlang/pagelayout"
 
-version = "0.8.0"
+version = "0.8.1"
 
 readme = "README.mbt.md"
 
@@ -13,8 +13,8 @@ keywords = [ "layout", "pagination", "docx", "svg", "pdf", "typesetting" ]
 description = "Paginated document layout engine: format-neutral page-model IR with SVG/PDF backends."
 
 import {
-  "moonbitlang/async@0.22.4",
-  "moonbitlang/x@0.4.50",
+  "moonbitlang/async@0.22.5",
+  "moonbitlang/x@0.5.6",
   "moonbitlang/docx2html@0.7.0",
   "moonbitlang/pdflite@0.4.0",
   "moonbit-community/flate@0.9.0",

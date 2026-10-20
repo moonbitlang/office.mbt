@@ -1,10 +1,10 @@
 name = "moonbitlang/pdf2md"
 
-version = "0.1.2"
+version = "0.1.3"
 
 import {
   "moonbitlang/pdflite@0.4.0",
-  "moonbitlang/async@0.22.4",
+  "moonbitlang/async@0.22.5",
 }
 
 readme = "README.md"

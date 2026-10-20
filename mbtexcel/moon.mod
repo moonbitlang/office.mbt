@@ -1,10 +1,10 @@
 name = "moonbitlang/mbtexcel"
 
-version = "0.3.0"
+version = "0.3.1"
 
 import {
-  "moonbitlang/async@0.22.4",
-  "moonbitlang/x@0.5.5",
+  "moonbitlang/async@0.22.5",
+  "moonbitlang/x@0.5.6",
   "moonbit-community/flate@0.9.0",
 }
 

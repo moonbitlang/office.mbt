@@ -1,10 +1,10 @@
 // Modified for office.mbt: official module namespace and workspace integration.
 name = "moonbitlang/pptx"
 
-version = "0.1.0"
+version = "0.1.1"
 
 import {
-  "moonbitlang/async@0.22.4",
+  "moonbitlang/async@0.22.5",
   "moonbit-community/flate@0.9.0",
   "moonbitlang/ooxml@0.1.0",
 }

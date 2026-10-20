@@ -1,10 +1,10 @@
 name = "moonbitlang/ooxml"
 
-version = "0.1.0"
+version = "0.1.1"
 
 import {
   "moonbit-community/flate@0.9.0",
-  "Milky2018/xml@0.5.0",
+  "Milky2018/xml@0.6.1",
 }
 
 readme = "README.md"

@@ -1,11 +1,11 @@
 name = "moonbitlang/pdflite"
 
-version = "0.4.0"
+version = "0.4.1"
 
 import {
   "moonbit-community/flate@0.9.0",
-  "moonbitlang/async@0.22.4",
-  "moonbitlang/x@0.5.5",
+  "moonbitlang/async@0.22.5",
+  "moonbitlang/x@0.5.6",
 }
 
 readme = "README.mbt.md"
